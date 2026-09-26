@@ -277,7 +277,9 @@ test('"Uygula" pencereyi KAPATMIYOR ve uygulandığını okutuyor', async ({ pag
   expect(r.acik).toBe(true);                 // ESKİDEN kapanıyordu
   expect(r.shown).toBeCloseTo(-30, 4);       // seçim de unutulmadı
   // "İşledi mi?" sorusunun ekranda cevabı var: modele yazılan açı okunuyor.
-  expect(r.okumalar.join(' | ')).toMatch(/Modele işlenen açı✓\s*-30\.00°/);
+  expect(r.okumalar.join(' | ')).toMatch(/Modele işlenen açı\s*-30\.00°/);
+  // ...ve modele yazılanın gösterilenle AYNI olduğunu onay ikonu söyler (karar 10·B).
+  expect(await page.evaluate(() => !!document.querySelector('#ve-fw-ang .ve-fw-reads .mf-ico-check'))).toBe(true);
 });
 
 async function sahneAng(page) {

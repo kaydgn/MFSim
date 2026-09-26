@@ -711,9 +711,9 @@ describe('adım eşlemesi ve yüzeyler', () => {
       const dolu = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
       expect(dolu).toContain('ve-fw-st-ok');
       expect(dolu).not.toContain('ve-fw-st-err');
-      // ...ve TAMAMLANMIŞ adım da rozet taşıyor (✓). Yalnız hata varken
+      // ...ve TAMAMLANMIŞ adım da rozet taşıyor (onay ikonu). Yalnız hata varken
       // çizilseydi "tamam" hâli sessiz kalırdı — bildirilen eksiklik buydu.
-      expect(dolu).toContain('>✓</span>');
+      expect(dolu).toMatch(/class="ve-fw-step-n"[^>]*><span class="mf-ico mf-ico-check"/);
     });
 
     test('YEDİ adımın yedisi de durum sınıfı taşıyor — sessiz adım yok', () => {
@@ -1550,12 +1550,13 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
   // TERSİ (fead-spin.test.js → "LİSTE SIRASI KAYIŞIN GİDİŞİNİN TERSİ"), yani
   // kayış CW akıyor ve krank CW dönüyor. Kullanıcı bunu üç turda dört kez
   // bildirdi; sihirbazın basılı düğmesi artık CW.
-  test('SİHİRBAZDA KRANK CW — Gates sırası kurulunca basılı düğme ↻', () => {
+  test('SİHİRBAZDA KRANK CW — Gates sırası kurulunca basılı düğme CW', () => {
     ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((k) => {
       kabuk(); wiz.veFeadWizSeed(k);
       const b = wiz.veFeadWizBuild();
       expect(b.spin).toBe(-1);                      // krank saat yönünde
-      expect(M.veFeadSpinLabel(b.spin).kisa).toBe('\u21bb CW');
+      expect(M.veFeadSpinLabel(b.spin).kisa).toBe('CW');
+      expect(M.veFeadSpinLabel(b.spin).ikon).toBe('rotate-cw');
       expect(wiz.veFeadWizSpinHTML(b)).toMatch(/ve-fw-spin-on"[^>]*onclick="veFeadWizSpinSet\(-1\)"/);
       // Düzlem adı etiketin İÇİNDE — "CW" tek başına hiçbir şey söylemez.
       expect(M.veFeadSpinLabel(b.spin).uzun).toContain(M._feadPlaneName());

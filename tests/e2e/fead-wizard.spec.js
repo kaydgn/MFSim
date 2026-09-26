@@ -498,7 +498,8 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     const oku = () => [...document.querySelectorAll('#ve-fw-nav .ve-fw-step')].map((li) => {
       const n = li.querySelector('.ve-fw-step-n');
       return { durum: (li.className.match(/ve-fw-st-(\w+)/) || [])[1] || null,
-               rozet: n ? n.textContent : null,
+               // tamamlanmış adımın rozeti onay ikonu (karar 10·B), eksik adımınki sayı
+               rozet: n ? (n.querySelector('.mf-ico-check') ? 'tik' : n.textContent) : null,
                serit: getComputedStyle(li).borderLeftColor,
                zemin: n ? getComputedStyle(n).backgroundColor : null };
     });
@@ -510,7 +511,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(kirmizi.length).toBeGreaterThan(0);
     kirmizi.forEach((r) => {
       expect(r.serit).toBe(r.zemin);              // şerit ve rozet AYNI renkte
-      expect(Number(r.rozet)).toBeGreaterThan(0); // sayı, ✓ değil
+      expect(Number(r.rozet)).toBeGreaterThan(0); // sayı, onay ikonu değil
     });
     // ...ve renk gerçekten kırmızı ailesinden. AİLE TONDAN (HSV) ölçülür:
     // ilk hâli kanal farkıyla ölçüyordu (R > G + 60 / G > R + 60) ve Atölye
@@ -533,11 +534,11 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(k.h <= 20 || k.h >= 340).toBe(true);
     expect(k.s).toBeGreaterThan(0.4);
 
-    // DOLU örnek: altısı da YEŞİL ve ✓ taşıyor.
+    // DOLU örnek: altısı da YEŞİL ve onay ikonu taşıyor.
     await page.evaluate(() => veFeadWizSeed('AG00976_GATES_2025'));
     const dolu = await page.evaluate(oku);
     expect(dolu.every((r) => r.durum === 'ok')).toBe(true);
-    expect(dolu.every((r) => r.rozet === '✓')).toBe(true);
+    expect(dolu.every((r) => r.rozet === 'tik')).toBe(true);
     const y = hsv(dolu[0].zemin);                  // yeşil ailesi
     expect(y.h).toBeGreaterThanOrEqual(90);
     expect(y.h).toBeLessThanOrEqual(170);

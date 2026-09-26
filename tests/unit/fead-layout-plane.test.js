@@ -353,7 +353,8 @@ describe('ÇİZİM AYNALANMAZ — konumlar raporun Layout Data\'sıdır', () => 
       expect(b.spin).toBe(-1);
       const et = M.veFeadSpinLabel(b.spin);
       expect(et.sense).toBe(-1);                  // etiket çizilen yönü basar
-      expect(et.kisa).toBe('\u21bb CW');
+      expect(et.kisa).toBe('CW');
+      expect(et.ikon).toBe('rotate-cw');           // yön işareti çizgi ikon (karar 10·B)
       expect(et.uzun).toContain('Gates rapor düzlemi');
     });
   });

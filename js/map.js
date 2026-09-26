@@ -35,7 +35,7 @@ function veExpandRoadMap(nodeId) {
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-map"></span> Güzergah Haritası' + badge + '</span>' +
-    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
+    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">' + veIkon('x') + '</button>';
   modal.appendChild(header);
   
   // Toolbar
@@ -333,7 +333,7 @@ function _veRestoreRoute(nodeId, node, map) {
         '<span style="color:var(--accent-primary);"><span class="mf-ico mf-ico-ruler"></span> <b>' + (td / 1000).toFixed(2) + ' km</b></span>' +
         '<span style="color:var(--accent-success);"><span class="mf-ico mf-ico-bar-chart"></span> <b>' + segs2.length + '</b> seg.</span>' +
         '<span style="color:var(--accent-warning);"><span class="mf-ico mf-ico-ruler"></span> Ort: <b>%' + (node.data.routeAvgGrade || 0).toFixed(1) + '</b></span>' +
-        '<span style="color:var(--accent-danger);">↑ Max: <b>%' + maxE.toFixed(1) + '</b></span>' +
+        '<span style="color:var(--accent-danger);">' + veIkon('arrow-up') + ' Max: <b>%' + maxE.toFixed(1) + '</b></span>' +
         '</div>';
     }
   }
@@ -373,7 +373,7 @@ function veSearchLocation(nodeId) {
   function doSearch() {
     var q = input.value.trim();
     if(!q) return;
-    btn.textContent = '⏳';
+    btn.innerHTML = veIkon('clock', '', 'Aranıyor');
     fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q) + '&limit=1')
       .then(function(r) { return r.json(); })
       .then(function(data) {
@@ -781,12 +781,12 @@ function veFetchElevations(coords) {
   return tryOpenMeteo()
     .catch(function(e) {
       console.warn('Open-Meteo başarısız, Open-Elevation deneniyor...', e.message);
-      showToast('⚠ Open-Meteo yanıt vermedi, alternatif deneniyor...', 'warning');
+      showToast('Open-Meteo yanıt vermedi, alternatif deneniyor…', 'warning');
       return tryOpenElevation();
     })
     .catch(function(e) {
       console.warn('Open-Elevation başarısız, Open Topo Data deneniyor...', e.message);
-      showToast('⚠ Alternatif API yanıt vermedi, son seçenek deneniyor...', 'warning');
+      showToast('Alternatif API yanıt vermedi, son seçenek deneniyor…', 'warning');
       return tryOpenTopoData();
     })
     .then(function(coarseElev) {
@@ -827,7 +827,7 @@ function veCalcElevation(nodeId, onComplete) {
 
   if(coords.length < 2) { showToast('Yetersiz nokta', 'warning'); return; }
 
-  showToast('⏳ Yükseklik verisi alınıyor... (' + coords.length + ' nokta)');
+  showToast('Yükseklik verisi alınıyor… (' + coords.length + ' nokta)', 'info');
 
   // 3 katmanlı elevation API (Open-Meteo → Open Topo Data → Open-Elevation)
   veFetchElevations(coords)
@@ -1207,7 +1207,7 @@ function veCalcDistGradeProfile(nodeId) {
       '</div>' +
       '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:5px 8px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:var(--fs-micro);">' +
       '<span style="color:var(--text-muted);">Başlangıç:</span><span style="color:#b39ddb; font-weight:600;">' + elevFirst.toFixed(0) + 'm</span>' +
-      '<span style="color:var(--text-muted); opacity:0.4;">→</span>' +
+      '<span style="color:var(--text-muted); opacity:0.4;">' + veIkon('arrow-right') + '</span>' +
       '<span style="color:var(--text-muted);">Bitiş:</span><span style="color:#b39ddb; font-weight:600;">' + elevLast.toFixed(0) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
       '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--accent-warning); font-weight:700;">' + (elevFirst - elevLast).toFixed(1) + 'm</span>' +
@@ -1829,7 +1829,7 @@ function _veWaypointNameDialog(nodeId, dist, callback) {
   box.innerHTML =
     '<div style="padding:10px 14px; background:linear-gradient(135deg, #e65100 0%, #ff9800 100%); display:flex; align-items:center; justify-content:space-between;">' +
       '<span style="font-size:var(--fs-md); font-weight:700; color:#fff;"><span class="mf-ico mf-ico-map-pin"></span> Referans noktası ekle</span>' +
-      '<button onclick="document.getElementById(\'ve-wp-name-dialog\').remove()" style="width:24px; height:24px; background:transparent; border:1px solid rgba(255,255,255,0.3); border-radius:var(--radius-sm); color:#fff; cursor:pointer; font-size:var(--fs-lg);">✕</button>' +
+      '<button onclick="document.getElementById(\'ve-wp-name-dialog\').remove()" style="width:24px; height:24px; background:transparent; border:1px solid rgba(255,255,255,0.3); border-radius:var(--radius-sm); color:#fff; cursor:pointer; font-size:var(--fs-lg);">' + veIkon('x') + '</button>' +
     '</div>' +
     '<div style="padding:14px 16px;">' +
       '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-bottom:8px;">Mesafe: <b style="color:var(--accent-primary);">' + distKm + ' km</b></div>' +
@@ -1885,7 +1885,7 @@ function _veWaypointUpdateList(nodeId) {
     html += '<td style="padding:2px 4px; text-align:center;">';
     html += '<button onclick="veWaypointRenameUI(\'' + nodeId + '\',\'' + w.id + '\')" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); font-size:var(--fs-tiny); padding:0 2px;" title="İsim değiştir"><span class="mf-ico mf-ico-edit"></span></button>';
     if(!w.auto) {
-      html += '<button onclick="veWaypointRemoveUI(\'' + nodeId + '\',\'' + w.id + '\')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:var(--fs-tiny); padding:0 2px;" title="Sil">✕</button>';
+      html += '<button onclick="veWaypointRemoveUI(\'' + nodeId + '\',\'' + w.id + '\')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:var(--fs-tiny); padding:0 2px;" title="Sil">' + veIkon('x') + '</button>';
     }
     html += '</td>';
     html += '</tr>';
@@ -2320,13 +2320,13 @@ function _veAltUpdateLineList(nodeId) {
   html += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:3px 4px; text-align:center; border-bottom:1px solid var(--border-color); width:24px;">#</th><th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Eğim</th><th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Δh</th><th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Mesafe</th><th style="padding:3px 4px; text-align:center; border-bottom:1px solid var(--border-color); width:24px;"></th></tr></thead><tbody>';
   for(var i = 0; i < lines.length; i++) {
     var l = lines[i];
-    var egimIcon = l.grade > 1 ? '↓' : (l.grade < -1 ? '↑' : '→');
+    var egimIcon = veIkon(l.grade > 1 ? 'trending-down' : (l.grade < -1 ? 'trending-up' : 'arrow-right'));   // eğim yönü (karar 10·B)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:' + l.color + '; color:#000; font-size:var(--fs-micro); font-weight:700;">' + (i + 1) + '</span></td>';
     html += '<td style="padding:2px 4px; text-align:right; font-weight:600; color:' + l.color + ';">' + egimIcon + ' %' + l.grade.toFixed(2) + '</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + l.deltaH.toFixed(1) + 'm</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + l.dist.toFixed(0) + 'm</td>';
-    html += '<td style="padding:2px 4px; text-align:center;"><button onclick="veAltRemoveGradeLineUI(\'' + nodeId + '\',' + i + ')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:var(--fs-body); padding:0; line-height:1;" title="Sil">✕</button></td>';
+    html += '<td style="padding:2px 4px; text-align:center;"><button onclick="veAltRemoveGradeLineUI(\'' + nodeId + '\',' + i + ')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:var(--fs-body); padding:0; line-height:1;" title="Sil">' + veIkon('x') + '</button></td>';
     html += '</tr>';
   }
   html += '</tbody></table>';
@@ -2438,11 +2438,11 @@ function _veScenarioSegmentsTableHTML(segments, editable) {
     var s = segments[i];
     var egimIcon, egimLabel, egimColor;
     if(s.grade > 0.5) {
-      egimIcon = '↓'; egimLabel = 'Yokuş aşağı'; egimColor = 'var(--accent-success)';
+      egimIcon = veIkon('trending-down'); egimLabel = 'Yokuş aşağı'; egimColor = 'var(--accent-success)';
     } else if(s.grade < -0.5) {
-      egimIcon = '↑'; egimLabel = 'Yokuş yukarı'; egimColor = 'var(--accent-danger)';
+      egimIcon = veIkon('trending-up'); egimLabel = 'Yokuş yukarı'; egimColor = 'var(--accent-danger)';
     } else {
-      egimIcon = '→'; egimLabel = 'Düz yol'; egimColor = 'var(--text-secondary)';
+      egimIcon = veIkon('arrow-right'); egimLabel = 'Düz yol'; egimColor = 'var(--text-secondary)';
     }
     var cmd = s.command || 'full_throttle';
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -2450,8 +2450,8 @@ function _veScenarioSegmentsTableHTML(segments, editable) {
     if(hasWaypoints) {
       var routeLabel = '';
       if(s.startWaypoint && s.endWaypoint) routeLabel = s.startWaypoint + ' → ' + s.endWaypoint;
-      else if(s.startWaypoint) routeLabel = s.startWaypoint + ' →';
-      else if(s.endWaypoint) routeLabel = '→ ' + s.endWaypoint;
+      else if(s.startWaypoint) routeLabel = s.startWaypoint + ' →';   // metin: güzergâh adı ("A → B"nin yarısı)
+      else if(s.endWaypoint) routeLabel = '→ ' + s.endWaypoint;   // metin: güzergâh adı ("A → B"nin yarısı)
       html += '<td style="padding:3px 6px; text-align:left; border-right:1px solid var(--border-color); color:var(--accent-warning); font-size:var(--fs-micro); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + routeLabel + '">' + routeLabel + '</td>';
     }
     html += '<td style="padding:3px 6px; text-align:left; border-right:1px solid var(--border-color); color:' + egimColor + '; white-space:nowrap;">' + egimIcon + ' ' + egimLabel + '</td>';
@@ -2606,7 +2606,7 @@ function veExpandProfileChart(nodeId, chartType) {
     '</select></div>' +
     '<button onclick="veUpdateProfilesExpanded(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:color-mix(in srgb, var(--accent-success) 65%, #000); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">Güncelle</button>' +
     '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:var(--accent-primary); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">↔ Yönü çevir</button>' +
-    '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button></div>';
+    '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">' + veIkon('x') + '</button></div>';
   modal.appendChild(header);
 
   // Chart container
@@ -2817,7 +2817,7 @@ function getTerminatorPropertiesHTML(node) {
   
   if(!inConn) {
     html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:12px; text-align:center;">';
-    html += '<div style="font-size:var(--fs-md); color:var(--text-muted);">⚠ Henüz bir bileşene bağlanmadı</div>';
+    html += '<div style="font-size:var(--fs-md); color:var(--text-muted);">' + veIkon('alert-triangle') + ' Henüz bir bileşene bağlanmadı</div>';
     html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-top:4px;">Bir bileşenin çıkış portuna bağlayın</div>';
     html += '</div>';
   } else {
@@ -2856,11 +2856,11 @@ function getTerminatorPropertiesHTML(node) {
         html += '<span style="color:var(--text-muted); font-size:var(--fs-tiny); width:14px; text-align:center;">' + (idx + 1) + '</span>';
         html += '<span style="color:var(--text-primary);">' + name + '</span>';
         if(isLast) {
-          html += '<span style="margin-left:auto; font-size:var(--fs-tiny); color:var(--accent-danger);">← kesim noktası</span>';
+          html += '<span style="margin-left:auto; font-size:var(--fs-tiny); color:var(--accent-danger);">' + veIkon('arrow-left') + ' kesim noktası</span>';
         }
         html += '</div>';
         if(idx < chain.length - 1) {
-          html += '<div style="text-align:center; color:var(--text-muted); font-size:var(--fs-tiny); line-height:1;">↓</div>';
+          html += '<div style="text-align:center; color:var(--text-muted); font-size:var(--fs-tiny); line-height:1;">' + veIkon('arrow-down') + '</div>';
         }
       });
       html += '</div>';

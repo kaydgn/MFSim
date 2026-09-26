@@ -99,9 +99,14 @@ const kisa = (nm) => String(nm).replace(/ .*/, '');
 // ÇİZİM AYNALANMAZ (2026-09-07): ekranda görülen yön, modelin `spin`'inin
 // KENDİSİ. Ve `spin` kayışın GERÇEK dönüşüdür (2026-09-08): Gates tablo
 // sırasında kurulu bütün örneklerde liste CCW dolanır, kayış CW akar, krank
-// CW döner. `ORNEK_SPIN` bu sabittir; glif ondan basılır.
+// CW döner. `ORNEK_SPIN` bu sabittir; rozet ondan basılır: yön İKONU + kısa ad
+// (karar 10·B — eskiden '↻ CW' karakteriydi).
 const ORNEK_SPIN = -1;
-const glif = (spin) => (spin > 0 ? '\u21ba CCW' : '\u21bb CW');
+const glif = (spin) => (spin > 0 ? 'rotate-ccw CCW' : 'rotate-cw CW');
+const rozetYazisi = (el) => {
+  const ik = el.querySelector('.mf-ico');
+  return (ik ? (ik.className.match(/mf-ico-(rotate-c?cw)/) || [])[1] + ' ' : '') + el.textContent.trim();
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('yön NEREDEN geliyor', () => {
@@ -408,8 +413,8 @@ describe('rozet ve panel', () => {
     // liste CCW, kayış CW, krank CW. Rozet modelin `spin`'ini basmak zorunda;
     // ayrışırsa sessiz kalır, çünkü ikisi de ayrı ayrı makul görünür.
     expect(M.veFeadNaturalSense(s.b.order)).toBe(ORNEK_SPIN);
-    expect(r.textContent).toBe(glif(ORNEK_SPIN));
-    expect(r.textContent).toBe('\u21bb CW');
+    expect(rozetYazisi(r)).toBe(glif(ORNEK_SPIN));
+    expect(rozetYazisi(r)).toBe('rotate-cw CW');
     expect(r.style.cssText).toContain('--text-secondary');
 
     // Gergi gevşek tarafta → yeşil
@@ -456,9 +461,9 @@ describe('rozet ve panel', () => {
     const a2 = el(); fead.veFeadApplyBadge(a2, b);
     const ters = a2.querySelector('.ve-fead-badge');        // çevrilmiş → CCW
 
-    expect(ilk.textContent).toBe(glif(ORNEK_SPIN));
-    expect(ters.textContent).toBe(glif(-ORNEK_SPIN));
-    expect(ilk.textContent).not.toBe(ters.textContent);  // ters çevirmek İŞE YARADI
+    expect(rozetYazisi(ilk)).toBe(glif(ORNEK_SPIN));
+    expect(rozetYazisi(ters)).toBe(glif(-ORNEK_SPIN));
+    expect(rozetYazisi(ilk)).not.toBe(rozetYazisi(ters));  // ters çevirmek İŞE YARADI
     expect(ters.style.background).toBe(ilk.style.background);   // AYNI renk
     expect(ilk.style.cssText).not.toContain('--accent-warning');
     expect(ilk.style.cssText).not.toContain('--accent-primary');

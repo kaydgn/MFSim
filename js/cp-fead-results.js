@@ -100,7 +100,7 @@ function _feadResStaleNote(st) {
   if(st.k === 'bayat')
     return '<div class="ve-fr-note" data-d="warn"><b>Bu sonuç eski modele ait.</b> Model çözümden sonra '
       + 'değişti; sayılar artık tuvaldeki modeli anlatmıyor. FEAD alt topolojisinde Çözücü → '
-      + '<b>▶ Hesapla</b> ile yeniden çözün.</div>';
+      + '<b>' + veIkon('play') + ' Hesapla</b> ile yeniden çözün.</div>';
   if(st.k === 'kayip')
     return '<div class="ve-fr-note" data-d="off">Bu sonucun modeli artık projede yok (FEAD kartı '
       + 'silinmiş ya da başka bir proje sekmesinde).</div>';
@@ -249,7 +249,7 @@ function veFeadResSummaryOpen() {
         title: 'Teori + türetme + bu modelin çözümü (HTML)' },
       { onclick: "veFeadGenerateReport(null,'summary')", icon: 'download', label: 'Özet rapor',
         title: 'Tedarikçi sonuç sayfalarının düzeni (HTML)' },
-      { onclick: 'veCloseDetailedReport()', label: '✕ Kapat', danger: true }
+      { onclick: 'veCloseDetailedReport()', icon: 'x', label: 'Kapat', danger: true }
     ]
   }) : '';
   overlay.innerHTML = bant + '<div class="ve-fr-doc">' + veFeadResSummaryHTML(R) + '</div>';

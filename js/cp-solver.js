@@ -156,7 +156,7 @@ function getSolverPropertiesHTML(node) {
   if(chain && chain.length > 0) {
     html += '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:3px;">';
     chain.forEach(function(n, i) {
-      if(i > 0) html += '<span style="color:var(--text-muted); font-size:var(--fs-micro);">→</span>';
+      if(i > 0) html += '<span style="color:var(--text-muted); font-size:var(--fs-micro);">' + veIkon('arrow-right') + '</span>';
       html += '<span style="color:var(--accent-primary); font-weight:500; background:var(--bg-tertiary); padding:1px 6px; border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:var(--fs-micro);">' + escapeHTML(n.customName || n.def.name) + '</span>';
     });
     html += '</div>';
@@ -169,7 +169,7 @@ function getSolverPropertiesHTML(node) {
   // ===== HESAPLA BUTONU =====
   html += '<div style="margin-top:14px;">';
   html += '<button onclick="veSolverRunProfessional()" style="width:100%; padding:8px 12px; font-size:var(--fs-body); font-weight:600; background:linear-gradient(135deg, color-mix(in srgb, var(--accent-success) 65%, #000), color-mix(in srgb, var(--accent-success) 82%, #000)); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(27,94,32,0.25); transition:all 0.15s; letter-spacing:0.03em;" onmouseenter="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(27,94,32,0.35)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(27,94,32,0.25)\'">';
-  html += '▶ Hesapla';
+  html += veIkon('play') + ' Hesapla';
   html += '</button>';
   html += '</div>';
   html += '</div>';                                   // ve-cp-col--out kapat
@@ -326,7 +326,7 @@ function getGearShiftPropertiesHTML(node) {
     var pk = profileKeys[pi];
     var pn = VE_FT_SHIFT_PROFILES[pk].name || pk;
     var sel = (pk === selectedKey) ? ' selected' : '';
-    var isActive = (pk === activeProfileKey) ? ' ★' : '';
+    var isActive = (pk === activeProfileKey) ? ' — canvas\'taki' : '';   // seçenek metni ikon taşıyamaz: işaret yazıya döndü
     html += '<option value="' + pk + '"' + sel + '>' + pn + isActive + '</option>';
   }
   html += '</select>';
@@ -341,7 +341,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   if (pk !== activeProfileKey && activeProfileKey !== selectedKey) {
-    html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:4px;">★ Canvas\'taki şanzıman profili: ' + (VE_FT_SHIFT_PROFILES[activeProfileKey] ? VE_FT_SHIFT_PROFILES[activeProfileKey].name : activeProfileKey) + '</div>';
+    html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:4px;">' + veIkon('star') + ' Canvas\'taki şanzıman profili: ' + (VE_FT_SHIFT_PROFILES[activeProfileKey] ? VE_FT_SHIFT_PROFILES[activeProfileKey].name : activeProfileKey) + '</div>';
   }
   html += '</div>';
 
@@ -397,7 +397,7 @@ function getGearShiftPropertiesHTML(node) {
       model2C2L = 'Segmentli';
       formula2C2L = 'ESL ≥ ' + cs2L.linear.validFrom + ': a=' + cs2L.linear.a + ', b=' + cs2L.linear.b;
       if (cs2L.lookup && cs2L.lookup.length > 0) {
-        formula2C2L += '<br>Lookup: [' + cs2L.lookup.map(function(p) { return p[0] + '→' + p[1]; }).join(', ') + ']';
+        formula2C2L += '<br>Lookup: [' + cs2L.lookup.map(function(p) { return p[0] + '→' + p[1]; }).join(', ') + ']';   // metin: formülün eşleme çifti
       }
       if (shiftRefRPM >= cs2L.linear.validFrom) {
         thr2C2L = (cs2L.linear.a * shiftRefRPM + cs2L.linear.b).toFixed(0);

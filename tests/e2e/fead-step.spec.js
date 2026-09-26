@@ -176,7 +176,8 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
 
   // ── 3) HESAPLA (3B'de): dört halka, gergi kolu, sayı tablosu ─────────────
   await page.locator('#ve-fw-3b-hesapla').click();
-  await expect(yan).toContainText('✓ 4 kasnak');
+  await expect(yan).toContainText('4 kasnak');
+  await expect(yan.locator('.ve-fw-dim .mf-ico-check').first()).toBeVisible();   // onay çizgi ikon (karar 10·B)
   expect((await page.evaluate(() => veFeadWiz3bDurum())).halka).toBe(4);
   const capler = await yan.locator('tr[data-ve-3b-kasnak] td:nth-child(2)').allInnerTexts();
   expect(capler.map((t) => +t.replace(',', '.')).sort((a, b) => a - b)).toEqual([75, 75, 127, 160]);
@@ -323,7 +324,7 @@ test('ALT MONTAJA rol: parçaya tıkla → yolda üst düğüme çık → rol b�
   await page.mouse.click(krk.x, krk.y);
   await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-crank"]').click();
   await page.locator('#ve-fw-3b-hesapla').click();
-  await expect(yan).toContainText('✓ 2 kasnak');
+  await expect(yan).toContainText('2 kasnak');
   expect((await page.evaluate(() => veFeadWiz3bDurum())).halka).toBe(2);
   await page.locator('#ve-fw-3b-onden').click();
   const ekr = await page.evaluate(() => {

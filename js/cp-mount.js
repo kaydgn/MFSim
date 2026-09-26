@@ -431,7 +431,7 @@ function getMntModulePropertiesHTML(node){
     html+='<tr><td style="border:1px solid var(--border-color); color:var(--text-muted);">Alt topoloji henüz açılmadı</td></tr>';
   }
   html+='</table>';
-  html+='<button onclick="veMntOpenEditor(\''+node.id+'\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt topolojiyi aç</button>';
+  html+='<button onclick="veMntOpenEditor(\''+node.id+'\')" style="width:100%; padding:14px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">' + veIkon('play') + ' Alt topolojiyi aç</button>';
   html+='</div>';
   return html;
 }
@@ -925,7 +925,7 @@ function _mntPtoSection(node){
     body += '<div style="display:flex; gap:8px; padding:8px 10px; margin-bottom:8px; border:1px solid var(--accent-warning); '
       + 'background:color-mix(in srgb, var(--accent-warning) 11%, transparent); border-radius:var(--radius-sm); '
       + 'font-size:var(--fs-tiny); line-height:1.5; color:var(--text-secondary);">'
-      + '<span style="color:var(--accent-warning); font-weight:700;">⚠</span>'
+      + veDurumIkon('warn')
       + '<span><b style="color:var(--accent-warning);">Kütle iki kez sayılıyor olabilir.</b> Topolojide hem <b>PTO Toplam</b> ('
       + cf.groups.length + ') hem de ayrı <b>PTO/Pompa</b> (' + cf.parts.length + ') bileşeni var. '
       + 'İki giriş yolu aynı kütleyi temsil eder — birini seçip diğerini silin.</span></div>';
@@ -1251,8 +1251,8 @@ function getMntExamplePropertiesHTML(node){
   list.forEach(function(e){ left+='<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; });
   left+='</select>';
   left+=_mntExampleDetailsHTML(ex);
-  left+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:var(--fs-md); font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği aktar</button>';
-  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">↓ İç topolojiyi JSON dışa aktar</button>';
+  left+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:var(--fs-md); font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">' + veIkon('play') + ' Örneği aktar</button>';
+  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">' + veIkon('download') + ' İç topolojiyi JSON dışa aktar</button>';
   left+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
 
   // ── SAĞ (önizleme): topoloji şeması — geniş sütunda büyük gösterilir ──
@@ -1300,7 +1300,7 @@ function _mntRenderExampleReport(warnings, silent){
   var el = (typeof document!=='undefined') ? document.getElementById('ve-mnt-example-report') : null;
   if(!el) return;
   if(!warnings.length){
-    el.innerHTML='<div style="padding:9px 11px; background:color-mix(in srgb, var(--accent-success) 12%, transparent); border:1px solid var(--accent-success); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-success);"><b>✓ Model tutarlı</b> — herhangi bir uyarı yok.</div>';
+    el.innerHTML='<div style="padding:9px 11px; background:color-mix(in srgb, var(--accent-success) 12%, transparent); border:1px solid var(--accent-success); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-success);"><b>' + veIkon('check') + ' Model tutarlı</b> — herhangi bir uyarı yok.</div>';
     return;
   }
   var errN=warnings.filter(function(w){return w.level==='err';}).length;
@@ -1871,7 +1871,7 @@ function getMnt2DViewPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
   html+='<div style="display:flex; gap:6px; margin-bottom:7px;">';
-  html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:var(--fs-body); background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">↻ Yenile</button>';
+  html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:var(--fs-body); background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('refresh') + ' Yenile</button>';
   html+='</div>';
   html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:8px; overflow:auto;"></div>';
   html+='</div>';
@@ -2351,8 +2351,8 @@ function _mntLibOptionRow(node, e, sel){
   h+='<span class="mntlib-opt-name">'+_mntEsc(e.name)+'</span>';
   h+='<span class="mntlib-kz">kz '+Math.round(_mntNum(e.sz))+'</span>';
   // ∿ / ✓ yuvaları HER satırda basılır (gerekmiyorsa boş) → kz sütunu hizalı kalır
-  h+='<span class="mntlib-wave"'+(_mntEntryHasLaw(e)?' title="nonlineer eğri">∿':'>')+'</span>';
-  h+='<span class="mntlib-check">'+(isSel?'✓':'')+'</span>';
+  h+='<span class="mntlib-wave"'+(_mntEntryHasLaw(e)?' title="nonlineer eğri">'+veIkon('activity'):'>')+'</span>';
+  h+='<span class="mntlib-check">'+(isSel?veIkon('check'):'')+'</span>';
   h+='</div>';
   return h;
 }
@@ -2365,11 +2365,11 @@ function _mntLibTrigger(node, sel){
     h+='<span class="mntlib-dot" style="background:'+_mntLibDotColor(sel)+';"></span>';
     h+='<span class="mntlib-trigger-name">'+_mntEsc(sel.name)+'</span>';
     h+='<span class="mntlib-kz">kz '+Math.round(_mntNum(sel.sz))+'</span>';
-    if(_mntEntryHasLaw(sel)) h+='<span class="mntlib-wave" title="nonlineer eğri">∿</span>';
+    if(_mntEntryHasLaw(sel)) h+='<span class="mntlib-wave" title="nonlineer eğri">'+veIkon('activity')+'</span>';
   } else {
     h+='<span class="mntlib-trigger-name empty">Takoz seçin…</span>';
   }
-  h+='<span class="mntlib-caret">▾</span></button>';
+  h+=veIkon('chevron-down', 'mntlib-caret')+'</button>';
   return h;
 }
 // Açılır liste gövdesi: arama kutusu + iki grup (Özel / Gömülü) + satırlar.
@@ -2542,8 +2542,8 @@ function _mntLibDetail(node, e){
   var badge=isCustom?_mntLibBadge('ÖZEL','var(--accent-success)')
     :(e.overridden?_mntLibBadge('DEĞİŞTİRİLDİ','var(--accent-warning)'):_mntLibBadge('GÖMÜLÜ','var(--accent-primary)'));
   var actionBtn=isCustom
-    ? '<button onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Bu takozu sil" style="background:none; border:1px solid var(--accent-danger); color:var(--accent-danger); cursor:pointer; padding:4px 8px; font-size:var(--fs-tiny); border-radius:var(--radius-sm); white-space:nowrap;">✕ Sil</button>'
-    : '<button onclick="veMntLibResetBuiltin(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Fabrika ayarına dön" style="background:none; border:1px solid var(--accent-warning); color:var(--accent-warning); cursor:pointer; padding:4px 8px; font-size:var(--fs-tiny); border-radius:var(--radius-sm); white-space:nowrap;">↺ Fabrika</button>';
+    ? '<button onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Bu takozu sil" style="background:none; border:1px solid var(--accent-danger); color:var(--accent-danger); cursor:pointer; padding:4px 8px; font-size:var(--fs-tiny); border-radius:var(--radius-sm); white-space:nowrap;">' + veIkon('trash') + ' Sil</button>'
+    : '<button onclick="veMntLibResetBuiltin(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Fabrika ayarına dön" style="background:none; border:1px solid var(--accent-warning); color:var(--accent-warning); cursor:pointer; padding:4px 8px; font-size:var(--fs-tiny); border-radius:var(--radius-sm); white-space:nowrap;">' + veIkon('rotate-ccw') + ' Fabrika</button>';
   var inner='';
   inner+='<div style="display:flex; align-items:center; gap:8px; margin-bottom:13px;">'
     +'<div style="flex:1; min-width:0; max-width:340px;">'+_mntLibInp(node.id, e.key, 'name', e.name, true, setter)+'</div>'
@@ -2845,7 +2845,7 @@ function veMntLibCurveRemovePoint(nodeId, key, idx){
 // Özel girdi için eğri editörü kartı (kütüphane panelinde, özel tablonun altında).
 function _mntLibCurveEditor(node, e){
   var pts = Array.isArray(e.curveZ) ? e.curveZ : null;
-  var head='<div style="display:flex; justify-content:flex-end; margin-bottom:6px;"><button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="background:none; border:1px solid var(--border-color); color:var(--text-muted); cursor:pointer; padding:2px 8px; font-size:var(--fs-tiny); border-radius:var(--radius-sm);">Kapat ✕</button></div>';
+  var head='<div style="display:flex; justify-content:flex-end; margin-bottom:6px;"><button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="background:none; border:1px solid var(--border-color); color:var(--text-muted); cursor:pointer; padding:2px 8px; font-size:var(--fs-tiny); border-radius:var(--radius-sm);">Kapat ' + veIkon('x') + '</button></div>';
   var inner;
   if(!pts || pts.length<2){
     inner = '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin-bottom:8px;">'
@@ -2860,7 +2860,7 @@ function _mntLibCurveEditor(node, e){
       inner += '<tr>'
         + '<td style="'+_mntMxTd()+';"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
         + '<td style="'+_mntMxTd()+';"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
-        + '<td style="'+_mntMxTd()+';"><button onclick="veMntLibCurveRemovePoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:var(--fs-body); line-height:1;">✕</button></td>'
+        + '<td style="'+_mntMxTd()+';"><button onclick="veMntLibCurveRemovePoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:var(--fs-body); line-height:1;">' + veIkon('x') + '</button></td>'
         + '</tr>';
     });
     inner += '</tbody></table></div>';
@@ -3081,7 +3081,7 @@ function getMntSolverPropertiesHTML(node){
   html+='</div>';
   html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Yarım sinüs darbe (şok deneylerinin standardı). Boş → <b>'+MNT_SHOCK_G+' g / '+MNT_SHOCK_MS+' ms</b>. Sonuçlar\'da <b>şok yanıtı</b> kanallarını üretir; yük durumlarına ve modal çözüme etkisi yoktur.</div>';
   html+='</div>';
-  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:var(--fs-md); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:var(--radius-sm);">▶ Hesapla</button>';
+  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:var(--fs-md); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:var(--radius-sm);">' + veIkon('play') + ' Hesapla</button>';
   html+='<div id="ve-mnt-results"></div>';
   html+='</div>';
   return html;
@@ -3281,7 +3281,7 @@ function _mntCaseIterLabel(rc, prep){
   var ck=rc.res.checks||{};
   if(prep.solvedNL){
     var it=ck.newtonIters||1;
-    return 'Newton '+it+' iter'+((ck.converged===false)?' ⚠':' ✓');
+    return 'Newton '+it+' iter'+((ck.converged===false)?' · yakınsamadı':'');   // düz metin (kaçışlanıyor)
   }
   return 'lineer'+((ck.clampCount>0)?(' · '+ck.clampCount+' durdurucu'):'');
 }
@@ -3387,7 +3387,7 @@ function _mntSolverStatusHTML(R){
   var modalWarn=(R.modes||[]).filter(function(m){return m && m.warning;}).length;
 
   var h='<div style="padding:9px 11px; border:1px solid var(--accent-success); background:color-mix(in srgb, var(--accent-success) 10%, transparent); border-radius:var(--radius-sm);">';
-  h+='<div style="display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; font-size:var(--fs-body); font-weight:700; color:var(--accent-success);"><span>✓ Çözüldü</span>'
+  h+='<div style="display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; font-size:var(--fs-body); font-weight:700; color:var(--accent-success);"><span>' + veIkon('check') + ' Çözüldü</span>'
     + '<span style="font-weight:400; color:var(--text-muted); font-size:var(--fs-micro);">'+nC+' kütle · '+nM+' takoz · '+nCase+' yük durumu · '+nMode+' mod</span></div>';
   h+='<div style="margin-top:5px; font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">'
     + 'Toplam kütle <b style="color:var(--text-primary);">'+_mntFmt(mp.m,1)+' kg</b> · '
@@ -3405,17 +3405,17 @@ function _mntSolverStatusHTML(R){
   h+='</div>';
 
   var warns=[];
-  if(R.nlNoCurve) warns.push(['ℹ', 'Nonlineer seçildi ama hiç eğri tanımlı değil → lineer çözüldü. Takoz Özellikleri\'nden z-eğrisi ekleyin.', 'var(--accent-warning)']);
-  if(failed)    warns.push(['✗', failed+' yük durumu çözülemedi (K tekil)', 'var(--accent-danger)']);
-  if(notConv)   warns.push(['⚠', notConv+' durumda çözücü yakınsamadı', 'var(--accent-danger)']);
-  if(tension)   warns.push(['⟂', tension+' durumda çekme / lift-off', 'var(--accent-warning)']);
-  if(clamp)     warns.push(['▢', clamp+' durumda metal-metal durdurucu', 'var(--accent-warning)']);
-  if(overlin)   warns.push(['~', overlin+' durumda ±10 mm lineer bandı aşıldı', 'var(--accent-warning)']);
-  if(modalWarn) warns.push(['♪', modalWarn+' modda f≈0 (serbest mod) uyarısı', 'var(--accent-warning)']);
+  if(R.nlNoCurve) warns.push(['info', 'Nonlineer seçildi ama hiç eğri tanımlı değil → lineer çözüldü. Takoz Özellikleri\'nden z-eğrisi ekleyin.', 'var(--accent-warning)']);
+  if(failed)    warns.push(['x', failed+' yük durumu çözülemedi (K tekil)', 'var(--accent-danger)']);
+  if(notConv)   warns.push(['alert-triangle', notConv+' durumda çözücü yakınsamadı', 'var(--accent-danger)']);
+  if(tension)   warns.push(['arrow-up', tension+' durumda çekme / lift-off', 'var(--accent-warning)']);
+  if(clamp)     warns.push(['square', clamp+' durumda metal-metal durdurucu', 'var(--accent-warning)']);
+  if(overlin)   warns.push(['trending-up', overlin+' durumda ±10 mm lineer bandı aşıldı', 'var(--accent-warning)']);
+  if(modalWarn) warns.push(['activity', modalWarn+' modda f≈0 (serbest mod) uyarısı', 'var(--accent-warning)']);
   if(warns.length){
     h+='<div style="margin-top:8px; padding:8px 10px; border:1px solid var(--border-color); background:var(--bg-secondary); border-radius:var(--radius-sm); font-size:var(--fs-tiny); line-height:1.65; color:var(--text-secondary);">';
     h+='<div style="font-weight:700; color:var(--text-heading); margin-bottom:2px; font-size:var(--fs-tiny);">Notlar</div>';
-    warns.forEach(function(w){ h+='<div><span style="display:inline-block; width:14px; color:'+w[2]+';">'+w[0]+'</span>'+_mntEsc(w[1])+'</div>'; });
+    warns.forEach(function(w){ h+='<div><span style="display:inline-block; width:16px; color:'+w[2]+';">'+veIkon(w[0])+'</span>'+_mntEsc(w[1])+'</div>'; });
     h+='</div>';
   }
 
@@ -3462,7 +3462,7 @@ function _mntFsOverlay(title, innerHTML, onMount, onClose){
   box.style.cssText='width:96vw; height:94vh; max-width:1600px; display:flex; flex-direction:column; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 24px 70px rgba(0,0,0,0.6); overflow:hidden;';
   function close(){ document.removeEventListener('keydown', onKey); try{ if(onClose) onClose(); }catch(e){} ov.remove(); }
   function onKey(e){ if(e.key==='Escape') close(); }
-  box.innerHTML='<div style="display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary); flex-shrink:0;"><span style="font-weight:700; font-size:var(--fs-title); color:var(--text-heading);">'+title+'</span><div style="flex:1;"></div><button id="ve-mnt-fs-x" title="Kapat (Esc)" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-h2); line-height:1;">✕</button></div>'
+  box.innerHTML='<div style="display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary); flex-shrink:0;"><span style="font-weight:700; font-size:var(--fs-title); color:var(--text-heading);">'+title+'</span><div style="flex:1;"></div><button id="ve-mnt-fs-x" title="Kapat (Esc)" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-h2); line-height:1;">' + veIkon('x') + '</button></div>'
     +'<div id="ve-mnt-fs-body" style="flex:1; min-height:0; position:relative; display:flex; flex-direction:column;">'+innerHTML+'</div>';
   ov.appendChild(box); document.body.appendChild(ov);
   ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });

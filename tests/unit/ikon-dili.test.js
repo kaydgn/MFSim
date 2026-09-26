@@ -30,6 +30,15 @@ const ASAMA1 = ['index.html', 'css/styles.css', 'viewer/index.html', 'viewer/js/
   'js/measure-import-ui.js', 'js/signal-tree.js', 'js/deploy-status.js', 'js/topology.js',
   'js/ui-core.js', 'js/components.js', 'js/state.js', 'js/loader.js', 'js/module-loader.js',
   'js/annotations.js', 'js/cp-core.js', 'js/radio.js', 'js/empty-hint.js', 'js/tabs.js', 'js/theme.js'];
+// Aşama 2: bileşen panelleri (js/cp-*.js — rapor üreticileri aşama 3'te),
+// yardımcı bileşenler, harita, çözücü paneli, FEAD köprüsünün yön etiketi.
+// Kılavuz metinleri (guide-*.js) belge — tools/ikon-dili.js başlığında sebebi.
+const RAPOR = /^cp-(fead-report|fead-summary|mount-report)\.js$/;
+const ASAMA2 = fs.readdirSync(path.join(KOK, 'js'))
+  .filter((f) => /^cp-.*\.js$/.test(f) && !RAPOR.test(f))
+  .concat(['component-extras.js', 'map.js', 'solver.js', 'fead-model.js'])
+  .map((f) => 'js/' + f)
+  .filter((f) => !ASAMA1.includes(f));
 
 describe('kural — ikon işi ile metin ayrılıyor', () => {
   const yakalar = (m, f) => T.tara(m, f || 'a.js').map((x) => x.konum + ' ' + x.glif);
@@ -51,6 +60,11 @@ describe('kural — ikon işi ile metin ayrılıyor', () => {
     ['// ✕ ile kapatın'],                                    // yorum
     ["var re = /[▶▼]/;"]                                     // düzenli ifade
   ])('geçer: %s', (m) => expect(yakalar(m)).toEqual([]));
+  test('kaçışla yazılmış karakter de karakterdir (\\u21bb CW)', () => {
+    // FEAD'in dönüş rozeti '↻ CW'yi kaçışla yazıyordu ve taramaya hiç girmiyordu.
+    expect(yakalar("x = '\\u21bb CW';")).toEqual(['baş ↻']);
+    expect(yakalar("x = '1C\\u21922C';")).toEqual([]);   // metnin içindeki ok yine metin
+  });
   test('HTML: tuşun adı metindir, öğenin tek içeriği değildir', () => {
     expect(yakalar('<kbd>↑</kbd><kbd>↓</kbd> gezin', 'a.html')).toEqual([]);
     expect(yakalar('<span>▲</span>', 'a.html')).toEqual(['öğe ▲']);
@@ -96,7 +110,8 @@ describe('kaynakta adı geçen her ikon TANIMLI', () => {
   });
 });
 
-describe.each([['aşama 1 — kabuk', ASAMA1]])('%s', (ad, dosyalar) => {
+describe.each([['aşama 1 — kabuk', ASAMA1], ['aşama 2 — bileşen panelleri', ASAMA2]])('%s', (ad, dosyalar) => {
+  test('liste boş değil', () => expect(dosyalar.length).toBeGreaterThan(15));
   test('ikon işi gören sembol karakteri yok', () => {
     const s = dosyalar.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' [' + x.konum + ' ' + x.glif + '] ' + x.metin);
     expect(s).toEqual([]);
@@ -151,7 +166,14 @@ describe('tek üretici', () => {
 });
 
 describe('js/ikon.js', () => {
-  const { veIkon, veIkonDegis } = require('../../js/ikon.js');
+  const { veIkon, veIkonDegis, veDurumIkon } = require('../../js/ikon.js');
+  test('durum işareti: onay / uyarı / ret — rengi sınıftan, adıyla okunur', () => {
+    expect(veDurumIkon('ok')).toBe('<span class="mf-ico mf-ico-check ve-durum ve-durum-ok" role="img" aria-label="Uygun"></span>');
+    expect(veDurumIkon('err', 'Limit aşıldı')).toContain('mf-ico-x ve-durum ve-durum-err" role="img" aria-label="Limit aşıldı"');
+    expect(veDurumIkon('bilinmeyen')).toContain('mf-ico-alert-triangle ve-durum ve-durum-warn');   // bilinmeyen tür uyarıya düşer
+    const css = oku('css/styles.css');
+    ['ok', 'warn', 'err'].forEach((t) => expect(css).toMatch(new RegExp('\\.ve-durum-' + t + '\\{\\s*color:var\\(--ink-')));
+  });
   test('süs ikonu ekran okuyucudan gizli; tek başına anlam taşıyan ikon adıyla okunur', () => {
     expect(veIkon('x')).toBe('<span class="mf-ico mf-ico-x" aria-hidden="true"></span>');
     expect(veIkon('check', 'ok', 'Uygun "tam"')).toBe(

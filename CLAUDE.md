@@ -291,8 +291,10 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   ("1C→2C") ve düz metin çıktı (çözücü günlüğü, TXT rapor, tuval yazısı) kapsam
   dışı; değişkene konup günlüğe giden karakter `// metin: <sebep>` ile işaretlenir.
   Bilinmeyen ikon adı SESSİZCE dolu bir kare çizer. Görüntüleyiciyle paylaşılan
-  dosyalar `veIkon` çağırmaz (orada yok). Kapı: `ikon-dili.test.js`; kapsam aşama
-  aşama büyür (bugün kabuk).
+  dosyalar `veIkon` çağırmaz (orada yok). Durum işareti (onay/uyarı/ret) tek
+  üreticiden: `veDurumIkon`. Kılavuz METNİ ve `<option>` metni kapsam dışı
+  (indirilen kılavuzda ikon basılmaz; seçenek ikon taşıyamaz). Kapı:
+  `ikon-dili.test.js`; kapsam aşama aşama büyür (bugün kabuk + bileşen panelleri).
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

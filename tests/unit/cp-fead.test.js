@@ -80,6 +80,11 @@ const kasnak = (type, data, name) => ({
 // ÇİZİM AYNALANMAZ — X işareti sabit (bkz. fead-model.js, "TEK ÇERÇEVE VAR").
 const SX = () => 1;
 
+// Durum rozetinin hükmü ikonundan okunur (karar 10·B — eskiden '✓'/'✗' karakteri):
+// ROZETİN kendisine bakılır; paftanın silme düğmesi de bir çarpı ikonu taşıyor.
+const ROZET_OK = /ve-fead-kan-durum ok"[^>]*><b><span class="mf-ico mf-ico-check"/;
+const ROZET_NO = /ve-fead-kan-durum no"[^>]*><b><span class="mf-ico mf-ico-x"/;
+
 describe('Alt-sistem sözleşmesi', () => {
   test('modül paneli "Alt topolojiyi aç" kancasını düğümün id\'siyle kurar', () => {
     const html = fead.getFeadModulePropertiesHTML({ id: 'comp-3', type: 'fead-analysis', data: {} });
@@ -1006,13 +1011,13 @@ describe('Kayış Yolu kanvas kartı', () => {
     const { lay, crk } = kurCozulur();
     const saglam = fead.veFeadLayoutCardHTML(lay);
     expect(saglam).toMatch(/data-ve="belt"/);
-    expect(saglam).toMatch(/✓/);
+    expect(saglam).toMatch(ROZET_OK);
     expect(saglam).not.toMatch(/KAPANMIYOR|İÇİNDEN/);
 
     crk.data.contact = 'back';
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(html).toMatch(/data-ve="belt"/);               // sayılar var → çizilir
-    expect(html).toMatch(/✗/);                            // ama geçersiz
+    expect(html).toMatch(ROZET_NO);                       // ama geçersiz
     expect(html).toMatch(/KAPANMIYOR|İÇİNDEN geçiyor/);   // ve sebebi YAZILI
   });
 
@@ -1034,7 +1039,7 @@ describe('Kayış Yolu kanvas kartı', () => {
     const { lay } = kurCozulur();
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(html).toMatch(/class="ve-fead-kan-durum ok"/);
-    expect(html).toMatch(/✓/);
+    expect(html).toMatch(ROZET_OK);
     // KISA HÂL: görünen okuma Σsarım. Kasnak sayısı ve boy kaybolmuyor —
     // ikincil metinde duruyor, ayrıca `title`da tamamı var.
     expect(html).toMatch(/Σsarım/);
@@ -1051,7 +1056,7 @@ describe('Kayış Yolu kanvas kartı', () => {
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(typeof html).toBe('string');
     expect(html).toMatch(/class="ve-fead-kan-durum no"/);
-    expect(html).toMatch(/✗/);
+    expect(html).toMatch(ROZET_NO);
     // KÖTÜ HÂL TAM CÜMLE: sebebi rozetin İÇİNDE yazıyor, yalnız `title`da değil.
     expect(html).toMatch(/<span>Kayış yolu kapanmadı<\/span>/);
   });
@@ -2575,10 +2580,10 @@ describe('durum şeridi — aynalanmış çevrim', () => {
       .map(([a, b]) => ({ id: 'c' + a.id + b.id, from: a.id, to: b.id, fromPort: 'output', toPort: 'input' }));
   };
 
-  test('düz çevrim: ✓ ve Σsarım 360°', () => {
+  test('düz çevrim: onay ve Σsarım 360°', () => {
     kurDort();
     const h = fead.veFeadLayoutCardStrip(veFeadBuildFromCanvas(), 'mean');
-    expect(h).toMatch(/✓/);
+    expect(h).toMatch(ROZET_OK);
     expect(h).toMatch(/Σsarım 360\.0°/);
     expect(h).not.toMatch(/ters yön/);
   });
@@ -2608,7 +2613,7 @@ describe('durum şeridi — aynalanmış çevrim', () => {
       fromPort: 'output', toPort: 'input' }));
   };
 
-  test('Σ = −360° veren düzen ÇÖZÜLÜYOR ve şerit onu ✗ saymıyor', () => {
+  test('Σ = −360° veren düzen ÇÖZÜLÜYOR ve şerit onu ret saymıyor', () => {
     kurNegatif();
     const build = veFeadBuildFromCanvas();
     expect(build.ok).toBe(true);
@@ -2618,12 +2623,12 @@ describe('durum şeridi — aynalanmış çevrim', () => {
     const inv = (sg - bk) * 180 / Math.PI;
     expect(inv).toBeCloseTo(-360, 1);                       // gerçekten negatif
     const h = fead.veFeadLayoutCardStrip(build, 'mean');
-    expect(h).toMatch(/✓/);
-    expect(h).not.toMatch(/✗/);
+    expect(h).toMatch(ROZET_OK);
+    expect(h).not.toMatch(ROZET_NO);
     expect(h).toMatch(/ters yön/);
   });
 
-  test('çözülemeyen model ✗ kalır (kapı yalnız işareti gevşetti)', () => {
+  test('çözülemeyen model ret kalır (kapı yalnız işareti gevşetti)', () => {
     kurNegatif();
     // "Zinciri kopar" ARTIK YAPILAMIYOR (kablo 2026-09-09'da kalktı ve liste
     // tanımı gereği kapalı). Çözülemezliğin kalan gerçek kaynağı GEOMETRİ:
@@ -2632,7 +2637,7 @@ describe('durum şeridi — aynalanmış çevrim', () => {
     global.nodes[1].data.x = global.nodes[0].data.x;
     global.nodes[1].data.y = global.nodes[0].data.y;
     const h = fead.veFeadLayoutCardStrip(veFeadBuildFromCanvas(), 'mean');
-    expect(h).toMatch(/✗/);
+    expect(h).toMatch(ROZET_NO);
   });
 });
 
