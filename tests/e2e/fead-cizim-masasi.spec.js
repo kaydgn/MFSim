@@ -284,3 +284,77 @@ test('PALETTEN BIRAK: açıklığa girer, kapalı açıklık ve boşluk REDDEDİ
   await expect(pafta.locator('tr[data-ve-node]')).toHaveCount(once.length + 1);
   expect(hatalar).toEqual([]);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KAYIŞ ÇİZİMDE TIKLANIR (2026-09-26) — "Kayış Özellikleri" kutusu kalktı
+// ═══════════════════════════════════════════════════════════════════════════
+// Kullanıcı isteği: *"'kayış özellikleri' bileşenini de kaldırmanı istiyorum.
+// Onun yerine kanvas üzerindeki kayış tıklanabilir olacak tıpkı diğer
+// bileşenler gibi."* Node'da HİÇ koşmayan halkalar: görünmez isabet yolunun
+// gerçek fareyi alması (`pointer-events="stroke"` + saydam çizgi), `:hover`
+// yerine sınıfla yanan hale, mousedown'ın kartın sürüklemesini durdurması ve
+// kökteki Delete dinleyicisinin silinmez tipi ayıklaması.
+test('KAYIŞA TIKLA: Kayış Özellikleri açılır — kutusu yok, silinmez, iki çizimde işaretli', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await ornek(page);
+  const on = await page.evaluate(() => {
+    const b = window.nodes.find((n) => n.type === 'fead-belt');
+    return { palet: document.querySelectorAll('.ve-component[data-type="fead-belt"]').length,
+             kutu: !!document.getElementById(b.id) };
+  });
+  expect(on).toEqual({ palet: 0, kutu: false });           // palette yok, kanvasta kutusu yok
+
+  // Kayışın bir AÇIKLIĞININ ortası — kasnak halkasından uzak.
+  const a = await aciklik(page, 1);
+  await page.mouse.move(a.x, a.y);
+  await page.waitForTimeout(250);
+  const hov = await page.evaluate((p) => {
+    const e = document.elementFromPoint(p.x, p.y);
+    return { hale: +getComputedStyle(document.querySelector('[data-ve="belt-hov"]')).opacity,
+             hedef: e && e.getAttribute('class'), imlec: e && getComputedStyle(e).cursor };
+  }, a);
+  expect(hov.hedef).toMatch(/ve-fead-hit-kayis/);
+  expect(hov.imlec).toBe('pointer');
+  expect(hov.hale).toBeGreaterThan(0);
+
+  const kartYeri = () => page.evaluate(() => {
+    const k = window.nodes.find((x) => x.type === 'fead-layout' && !(x.data || {}).katOn);
+    return [k.x, k.y];
+  });
+  const once = await kartYeri();
+  await page.mouse.click(a.x, a.y);
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => {
+    const ov = document.getElementById('ve-properties-overlay');
+    return {
+      secili: window.selectedNodes.map((n) => n.type),
+      acik: !!ov && getComputedStyle(ov).display !== 'none',
+      baslik: document.getElementById('ve-properties-title').textContent.trim(),
+      cop: ov.querySelectorAll('.ve-prop-del').length,
+      isaret: [...document.querySelectorAll('.ve-node[data-type="fead-layout"]')]
+        .map((k) => k.querySelectorAll('path[data-ve="belt"].is-sel').length),
+    };
+  });
+  expect(r.secili).toEqual(['fead-belt']);
+  expect(r.acik).toBe(true);
+  expect(r.baslik).toContain('Kayış Özellikleri');
+  expect(r.cop).toBe(0);                                    // silinmez tip çöp kutusu göstermez
+  expect(r.isaret).toEqual([1, 1]);                         // iki çizimde de seçili
+  expect(await kartYeri()).toEqual(once);                   // tık kartı SÜRÜKLEMEDİ
+
+  // DELETE kayışı silmez, sebebini söyler.
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-belt').length)).toBe(1);
+  expect((await page.locator('.ve-toast, [class*="toast"]').allInnerTexts()).join(' ')).toMatch(/silinmez/);
+
+  // İKİNCİ YOL: paftanın başlığındaki kayış künyesi.
+  await page.evaluate(() => { veTogglePropertiesPanel(false); clearSelection(); });
+  await page.waitForTimeout(200);
+  await page.locator('.ve-fead-pafta [data-ve="kayis-kunye"]').first().click();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.selectedNodes.map((n) => n.type))).toEqual(['fead-belt']);
+  expect(hatalar).toEqual([]);
+});

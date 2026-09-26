@@ -141,7 +141,12 @@ Beş mutasyonla ölçüldü, beşi de kırmızı: nominal açıyı yine geometri
 alma, panelin köken ayrımını kapatma, yalnız kenetlenme dalını kapatma, kayış
 panelinden uyarı kutusunu kaldırma, şüpheli sayıyı işaretlememe.
 
-##### Kipin TOPOLOJİ YÜZEYİ — kayış düğümünde tıklanabilir rozet
+##### Kipin TOPOLOJİ YÜZEYİ — Pafta başlığındaki anahtar (önce kayış kutusunun rozeti)
+
+> **2026-09-26:** kayışın kanvasta kutusu kalktı (SKILL.md kural 4); rozetin
+> asılacağı eleman yok. Anahtar Kayış Tablosu'nun (Pafta) başlığına, kayış
+> künyesinin yanına taşındı (`veFeadKipDugmeHTML`). Aşağıdaki kurallar
+> (aynı alan, renk anlamı, kilit, `saveState`) anahtarda aynen geçerli.
 
 Kullanıcı isteği: *"Topoloji üzerinden çok basit bir şekilde 'kayış boyu sabit'
 veya 'kayış boyu değişken' seçeneği olsun."*
@@ -152,17 +157,18 @@ aynısı: iki ayrı ayar tutulsa panel bir kipi, rozet başkasını gösterirdi.
 
 | Yüzey | Ne | Nerede |
 |-------|-----|--------|
-| Kanvas | Tıklanabilir rozet `SABİT` ↔ `SERBEST` | `veFeadApplyBeltModeBadge` |
+| Kanvas | Tıklanabilir anahtar `SABİT` ↔ `SERBEST` (Pafta başlığı) | `veFeadKipDugmeHTML` |
 | Panel | Açılır seçici + kipe göre değişen künye | `getFeadBeltPropertiesHTML` |
 
-**Rozet salt gösterge değil, SEÇİM YÜZEYİ.** 60×54'lük kayış kutusuna açılır
-liste sığmıyor, iki durumlu bir anahtar sığıyor. Renk kipin anlamını taşıyor:
+**Anahtar salt gösterge değil, SEÇİM YÜZEYİ.** Başlık şeridine (eskiden 60×54'lük
+kayış kutusuna) açılır liste sığmıyor, iki durumlu bir anahtar sığıyor. Renk kipin anlamını taşıyor:
 `SABİT` mavi (bir GİRDİ), `SERBEST` amber (bir ÇIKTI — kayışın kendi rengi ve
 bu modülde "hesaplanmış" demek).
 
-**Rozet `mousedown`'ı DURDURMAK ZORUNDA:** düğüm sürüklemesi orada başlıyor
+**`mousedown` DURDURULMAK ZORUNDA:** düğüm sürüklemesi orada başlıyor
 (`veAttachNodeDrag`), durdurulmazsa tık hiç gelmiyor — yön gülünde ölçülmüş
-"hareketsiz tık kayboluyor" sınıfının aynısı.
+"hareketsiz tık kayboluyor" sınıfının aynısı. Anahtar paftanın içinde ve
+pafta `mousedown`'ı zaten yutuyor (`_feadPaftaKur`).
 
 **Serbest kipte "Efektif boy" bir ALAN DEĞİL, bir OKUMA.** Alan kaldırılıp
 yerine hiçbir şey konmasaydı kullanıcı "boy nereden geldi" sorusuyla baş başa

@@ -9405,6 +9405,13 @@ body.ve-fead-surukleniyor, body.ve-fead-surukleniyor *{ cursor:grabbing !importa
 [data-ve="pulley-hov"].is-hov, [data-ve="pulley-hov"].is-sel{ opacity:1; }
 [data-ve="pulley-hov"].is-sel{ stroke:var(--accent-primary); stroke-width:1.3; stroke-dasharray:3 2.5; }
 circle[data-ve="pulley"].is-hov, circle[data-ve="pulley"].is-sel{ stroke-width:3; }
+/* KAYIŞ DA TIKLANIR (2026-09-26): görünmez isabet yolu + hale. Hale kayışın
+   kendi renginde, altında; kayışın kendisi kalınlaşır. */
+.ve-fead-hit-kayis{ cursor:pointer; }
+[data-ve="belt-hov"]{ opacity:0; transition:opacity .12s ease; }
+[data-ve="belt-hov"].is-hov{ opacity:.22; }
+[data-ve="belt-hov"].is-sel{ opacity:.34; }
+path[data-ve="belt"].is-hov, path[data-ve="belt"].is-sel{ stroke-width:3.6; }
 text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:var(--text-heading); }
 /* Punto SVG niteliğinde (çizimin kendi birimi, öteki etiketler gibi). */
 [data-ve="drag-readout"]{
@@ -9414,7 +9421,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 [data-ve="drag-span"]{ pointer-events:none; }
 [data-ve="drag-span"] rect{ fill:var(--bg-secondary); stroke:var(--accent-warning); stroke-width:1; }
 [data-ve="drag-span"] text{ font-weight:600; fill:var(--text-primary); }
-@media (prefers-reduced-motion: reduce){ [data-ve="pulley-hov"]{ transition:none; } }
+@media (prefers-reduced-motion: reduce){ [data-ve="pulley-hov"], [data-ve="belt-hov"]{ transition:none; } }
 /* PALETTEN BIRAKMA İZİ (veFeadPaletUstunde): hedef açıklık + hayalet kasnak.
    Kapalı açıklık (gergi ↔ sürücü) kırmızı; açıklıktan uzaksa yalnız soluk
    hayalet — nereye düşeceği bırakmadan ÖNCE okunsun. */
@@ -9644,7 +9651,27 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 }
 .ve-fead-pf-bas > .ad > b{ color:var(--text-secondary); font-weight:600; }
 .ve-fead-pf-bas > .ad > .br{ text-transform:none; }
-.ve-fead-pf-bas > .kunye{ color:var(--text-secondary); }
+/* Kayış künyesi bir DÜĞME: Kayış Özellikleri penceresini açar (kayışın
+   kanvasta kutusu yok). Dinlenmede metin gibi, üstüne gelince zemin. */
+.ve-fead-pf-bas > .kunye{
+  font:inherit; letter-spacing:inherit; text-transform:inherit; color:var(--text-secondary);
+  background:none; border:0; border-radius:var(--radius-xs); padding:2px 4px; margin:0 -4px;
+  cursor:pointer;
+}
+.ve-fead-pf-bas > .kunye:hover{ background:var(--bg-tertiary); color:var(--text-heading); }
+.ve-fead-pf-bas > .kunye:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+/* KAYIŞ BOYU KİPİ — eski kayış kutusunun rozeti. SABİT bir girdi (vurgu),
+   SERBEST bir çıktı (amber, kayışın rengi); kilitliyken tıklama geçişe
+   ulaşır ama hiçbir şey yazmaz. */
+.ve-fead-pf-kip{
+  font:inherit; font-size:var(--fs-micro); font-weight:700; letter-spacing:.02em; line-height:1;
+  padding:3px 5px; border-radius:var(--radius-xs); border:1px solid transparent; cursor:pointer;
+}
+.ve-fead-pf-kip.sabit{ color:var(--on-accent); background:var(--accent-primary); }
+.ve-fead-pf-kip.serbest{ color:var(--on-warning); background:var(--accent-warning); }
+.ve-fead-pf-kip.kilit{ cursor:default; opacity:.85; }
+.ve-fead-pf-kip:not(.kilit):hover{ border-color:var(--text-heading); }
+.ve-fead-pf-kip:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-fead-pf-hukum{ text-transform:none; letter-spacing:0; color:var(--ink-danger); }
 .ve-fead-pf-hukum > b{ font-weight:700; }
 .ve-fead-pf-bas > .ve-fead-tbl-add{ margin-left:auto; }

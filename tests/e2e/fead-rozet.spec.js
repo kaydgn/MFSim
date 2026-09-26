@@ -16,12 +16,12 @@
  *
  * ── NEDEN SİLİNMEDİ ────────────────────────────────────────────────────────
  * Kalan iki test canlı yüzeyleri ölçüyor ve BAŞKA HİÇBİR E2E onlara bakmıyor:
- *   • kayış boyu kipi rozeti (SABİT / SERBEST) ve KİLİTLİ hâli
+ *   • kayış boyu kipi anahtarı (SABİT / SERBEST) ve KİLİTLİ hâli — 2026-09-26'dan
+ *     beri Kayış Tablosu'nun (Pafta) başlığında; kayışın kutusu kalktı
  *   • dönüş yönü rozeti — tıklanınca kayış sırasını gerçekten çeviriyor mu
- * İkisi de yalnız gerçek tarayıcıda ölçülebilir: `veFeadApplyBeltModeBadge`
- * DOM kutusuna yapışıyor, tıklama `veAttachNodeDrag`'in `mousedown`ıyla
- * yarışıyor, ve kart `innerHTML` ile yeniden kuruluyor. Node tarafı
- * `fead-spin.test.js`'te — orada rozetin TIKLANMASI diye bir şey yok.
+ * İkisi de yalnız gerçek tarayıcıda ölçülebilir: tıklama kanvas düğümünün
+ * `mousedown`ıyla yarışıyor ve pafta bir kare sonra yeniden kuruluyor. Node
+ * tarafı `cp-fead.test.js` ve `fead-spin.test.js`'te.
  *
  * ── NE DEĞİŞTİ (yön çevirme testinde) ──────────────────────────────────────
  * Eski test yönün taşıyıcısı olarak KABLOLARI ve gidiş oklarını ölçüyordu.
@@ -96,32 +96,45 @@ async function ortayaTasi(page, id) {
 }
 
 test.describe('FEAD kanvas rozetleri', () => {
-  // ── KAYIŞ BOYU KİPİ ROZETİ ───────────────────────────────────────────────
+  // ── KAYIŞ BOYU KİPİ ANAHTARI — PAFTA'NIN BAŞLIĞINDA ─────────────────────
   //
   // Gergi avara merkezinden çözüldüğünde kayış boyu yapısal olarak bir ÇIKTI
-  // ve kip KİLİTLİ. Rozet o hâlde TIKLAMAYI REDDETMEK zorunda: tıklanabilir
-  // kalsaydı kullanıcı "SABİT"e çevirir, rozet öyle görünür, çözücü yine
-  // serbest koşardı — bu modülün sessiz hata sınıfı.
-  test('kayış boyu kipi rozeti KİLİTLİ — gerçek tık kipi değiştirmiyor', async ({ page }) => {
+  // ve kip KİLİTLİ. Anahtar o hâlde TIKLAMAYI REDDETMEK zorunda: tıklanabilir
+  // kalsaydı kullanıcı "SABİT"e çevirir, anahtar öyle görünür, çözücü yine
+  // serbest koşardı — bu modülün sessiz hata sınıfı. Eskiden kayış kutusunun
+  // rozetiydi; kutu 2026-09-26'da kalktı.
+  test('kayış boyu kipi anahtarı KİLİTLİ — gerçek tık kipi değiştirmiyor', async ({ page }) => {
     await bootApp(page);
     await openFeadWithExample(page);
 
     const beltId = await page.evaluate(() =>
       window.nodes.find((n) => n.type === 'fead-belt').id);
-    await ortayaTasi(page, beltId);
+    // Kayışın kanvasta KUTUSU YOK — anahtarın tek yeri paftanın başlığı.
+    expect(await page.evaluate((id) => !!document.getElementById(id), beltId)).toBe(false);
 
-    const rozet = page.locator('#' + beltId + ' .ve-fead-badge');
-    await expect(rozet).toHaveText('SERBEST');
+    const anahtar = page.locator('.ve-fead-pafta .ve-fead-pf-kip').first();
+    await expect(anahtar).toHaveText('SERBEST');
+    await expect(anahtar).toHaveAttribute('aria-disabled', 'true');
     // Boy TÜRETİLMİŞ ve gergi var → kip kilitli.
     expect(await page.evaluate(() => ({
       turetildi: veFeadBuildFromCanvas().beltLengthDerived,
       kilit: veFeadBeltModeLocked(window.nodes),
     }))).toEqual({ turetildi: true, kilit: true });
+    // Rengi CSS'ten: SERBEST amber (kayışın rengi), sabit vurgu rengi değil.
+    expect(await anahtar.evaluate((el) => getComputedStyle(el).backgroundColor))
+      .toBe(await page.evaluate(() => {
+        const d = document.createElement('div');
+        d.style.color = 'var(--accent-warning)'; document.body.appendChild(d);
+        const c = getComputedStyle(d).color; d.remove(); return c;
+      }));
 
-    // GERÇEK TIK — rozet reddetmeli: ne metin ne de düğüm verisi değişir.
-    await rozet.click();
-    await page.waitForTimeout(150);
-    await expect(page.locator('#' + beltId + ' .ve-fead-badge')).toHaveText('SERBEST');
+    // GERÇEK TIK — anahtar reddetmeli: ne metin ne de düğüm verisi değişir.
+    // `force`: Playwright `aria-disabled`ı "etkin değil" sayıp beklerdi (yani
+    // işaret doğru okunuyor); zorla tık gerçek fare olayını yine gönderir ve
+    // reddi yapan şey işleyicinin kendi kilidi.
+    await anahtar.click({ force: true });
+    await page.waitForTimeout(250);
+    await expect(page.locator('.ve-fead-pafta .ve-fead-pf-kip').first()).toHaveText('SERBEST');
     expect(await page.evaluate((id) => {
       const n = window.nodes.find((x) => x.id === id);
       return { kip: n.data.lengthMode, turetildi: veFeadBuildFromCanvas().beltLengthDerived };

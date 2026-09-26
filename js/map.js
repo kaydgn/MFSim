@@ -3041,6 +3041,17 @@ function deleteSelectedNodes() {
       if(selectedNodes.length === 0) return;
     }
   }
+  // SİLİNMEZ BİLEŞEN: tip sebebini beyan eder (`componentDefs.noDelete`).
+  // FEAD kayışı — kutusu yok, modelde tek kopya ve onsuz model kurulamıyor;
+  // penceredeki çöp kutusu da Delete tuşu da buradan geçer.
+  var _silinmez = selectedNodes.filter(function(n) {
+    return !!((componentDefs[n.type] || {}).noDelete);
+  });
+  if(_silinmez.length) {
+    showToast(componentDefs[_silinmez[0].type].noDelete, 'warning');
+    selectedNodes = selectedNodes.filter(function(n) { return _silinmez.indexOf(n) < 0; });
+    if(selectedNodes.length === 0) return;
+  }
   // Silinenlerin kopyası: aşağıda `selectedNodes` boşaltılıyor, ama silme
   // sonrası uzlaştırmaları (FEAD Konum Bağı) NE silindiğini bilmek zorunda.
   var _silinen = selectedNodes.slice();

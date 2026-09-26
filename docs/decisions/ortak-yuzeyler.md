@@ -50,6 +50,25 @@ okunuyor, açılışta yükseliyor — sentetik tiple) + `tests/e2e/kart-yuzey.s
 kullanıcısı Kayış Tablosu kartıydı; kart 2026-09-23'te kanvastan indi, bugün
 taban beyan eden bir tip yok ama mekanizma ve kapısı duruyor.
 
+### Silinmez tip kendini beyan eder (`componentDefs.noDelete`, 2026-09-26)
+
+**Hüküm.** Bir bileşen tipi silinemiyorsa bunu tanımında SEBEP METNİYLE
+beyan eder (`noDelete: '…'`). Genel silme yolu (`map.js` →
+`deleteSelectedNodes`) o düğümleri seçimden ayıklar ve sebebi uyarı olarak
+söyler; özellik penceresi çöp kutusunu hiç çizmez (`cp-core.js`).
+
+**Gerekçe.** Silme üç kapıdan geliyor — Delete tuşu (`ui-core.js`),
+penceredeki çöp kutusu, toplu seçim — ve üçü de `deleteSelectedNodes`e iniyor.
+Kapıyı oraya koymak üçünü birden kapatıyor; tipe özgü bir dal (vites
+kontrolünün "zorunlu" dalı gibi) her yeni tipte kopyalanırdı. İlk kullanıcı
+kutusuz FEAD kayışı: silinse kullanıcının onu geri kurabileceği bir yol
+kalmazdı (palette yok, kanvasta kutusu yok) ve model kurulamazdı.
+
+**Kapı:** `tests/unit/fead-cizim-masasi.test.js` → *"kayış SİLİNMEZ"*
+(fonksiyon kaynaktan sökülüp koşturuluyor: kasnak siliniyor, kayış kalıyor,
+uyarı sebebi taşıyor) + `tests/e2e/fead-cizim-masasi.spec.js` → *"KAYIŞA
+TIKLA"* (gerçek Delete tuşu, pencerede çöp kutusu yok).
+
 ### Topoloji sınır çerçevesi ADI da sarar (`veNodeLabelOverflow`)
 
 Kesikli çerçeve (`veBoundaryBox` → `veUpdateBoundary`) yalnız KUTULARI sarıyordu;

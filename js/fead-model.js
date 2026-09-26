@@ -608,7 +608,7 @@ function veFeadSolveArmClamped(sys, kind, target){
   if(!Number.isFinite(target)){
     out.error = (kind === 'tension') ? 'Tasarım gerginliği çözülemedi.'
               : (kind === 'arm')     ? 'Gergi kolunun nominal açısı çözülemedi.'
-                                     : 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).';
+                                     : 'Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).';
     return out;
   }
   var isT = (kind === 'tension'), isArm = (kind === 'arm');
@@ -1206,7 +1206,7 @@ function veFeadPosSelection(build, mode){
   });
   if(!out.ghosts.length)
     out.note = 'Bütün kol konumları aynı açıda — kayış toleransı ve aşınma payı 0 '
-             + 'girilmiş (Kayış Özellikleri panelinde). Tolerans girilince konum '
+             + 'girilmiş (çizimde kayışa tıklayın → Kayış Özellikleri). Tolerans girilince konum '
              + 'zarfı burada görünür.';
   return out;
 }
@@ -3448,7 +3448,7 @@ var VE_FEAD_ERROR_MAP = [
   [/tensioner\.(\w+) gerekli/i, 'Gergi panelinde eksik alan: $1'],
   [/kasnagi icin od \(dis cap\)/i, 'Bir kasnağın dış çapı girilmedi.'],
   [/kasnagi icin x,y gerekli/i, 'Bir kasnağın konumu (X / Y) girilmedi.'],
-  [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).'],
+  [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).'],
   // Tasarım gerginliği artık sorulmuyor, türetiliyor — bu hata "girilmedi"
   // demek yerine türetmenin neden yapılamadığını göstermeli.
   [/designTensionN veya slackN gerekli/i,
@@ -3552,7 +3552,9 @@ function veFeadBuildSystem(nodeList, opt){
   // düğümü atmak, kartı "nodes" global'ini elle taramaya zorlardı — köprü
   // katmanının DOM'suz kalması tam olarak bunu engellemek için.
   out.solver = solvNode;
-  if(!beltNode) out.errors.push('Kayış Özellikleri bileşeni yok. Sol paletten ekleyin.');
+  // Kayışın kutusu ve palet satırı yok (2026-09-26); düğümü açılış yüzeyi ya
+  // da sihirbaz kurar. Tavsiye kullanıcının YAPABİLECEĞİ şeyi söyler.
+  if(!beltNode) out.errors.push('Kayış tanımı yok — modeli Başlangıç Sihirbazı ile kurun; kayışı o ekler.');
   if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
 
   // ── GERGİ KRANKIN ÇIKIŞINDA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ──────────
@@ -3675,7 +3677,7 @@ function veFeadBuildSystem(nodeList, opt){
   out.beltDataMode = veFeadBeltDataMode(bd);
   var effLength = _feadNum(bd.effLength != null ? bd.effLength : bd.length, 0);
   if(beltMode === 'fixed' && !(effLength > 0))
-    out.errors.push('Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).');
+    out.errors.push('Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).');
   var ribs = _feadNum(bd.ribs, 0);
   if(!(ribs > 0)) out.errors.push('Kayış kanal (kaburga) sayısı girilmedi.');
   var cfgBelt = {

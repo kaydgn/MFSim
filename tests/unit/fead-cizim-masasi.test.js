@@ -209,6 +209,148 @@ describe('etkileşim katmanı', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  2b) KAYIŞ ÇİZİMDE TIKLANIR (2026-09-26) — kutusu kalktı
+// ═══════════════════════════════════════════════════════════════════════════
+// Kullanıcı isteği: *"'kayış özellikleri' bileşenini de kaldırmanı istiyorum.
+// Onun yerine kanvas üzerindeki kayış tıklanabilir olacak tıpkı diğer
+// bileşenler gibi."* Kasnakların kalıbı: düğüm modelde, kanvasta kutusu yok,
+// penceresi çizimdeki kayıştan açılır. Hata sınıfları:
+//   • isabet yolu kasnak halkalarının ÜSTÜNDE olursa sarım yayındaki tık
+//     kasnağı değil kayışı açar;
+//   • yol CSS'siz belgeye (kılavuz) görünür nitelikle sızarsa kayışın üstüne
+//     12 px'lik siyah bir şerit çizilir;
+//   • mousedown durdurulmazsa kartın sürüklemesi başlar ve tık hiç gelmez.
+describe('kayış çizimde tıklanır', () => {
+  const kart = (id) => ({ id: id || 'kart', type: 'fead-layout', def: componentDefs['fead-layout'], data: {} });
+  const secim = () => {
+    global.clearSelection = () => { global.selectedNodes = []; };
+    global.addToSelection = (n) => { global.selectedNodes.push(n); };
+    global.veTogglePropertiesPanel = jest.fn();
+  };
+  afterEach(() => {
+    ['clearSelection', 'addToSelection', 'veTogglePropertiesPanel'].forEach((k) => delete global[k]);
+  });
+
+  test('kartta: isabet yolu kasnak halkalarının ALTINDA, görünmez; hale opacity 0', () => {
+    kurOrnek();
+    const k = kart(); global.nodes.push(k);
+    const d = dom(fead.veFeadLayoutCardHTML(k));
+    const grup = d.querySelector('g[data-ve="hit"]');
+    const yol = grup.querySelector('path.ve-fead-hit-kayis');
+    expect(yol).not.toBeNull();
+    // SVG'de önce gelen ALTTA: kasnak halkaları onun üstünde.
+    expect(grup.firstElementChild).toBe(yol);
+    expect(yol.getAttribute('data-fead-k')).toBe('ex-belt');
+    expect(yol.getAttribute('stroke')).toBe('transparent');
+    expect(yol.getAttribute('fill')).toBe('none');
+    expect(yol.getAttribute('pointer-events')).toBe('stroke');
+    expect(yol.getAttribute('onmousedown')).toBe('event.stopPropagation()');
+    expect(yol.getAttribute('onclick')).toMatch(/veFeadKayisAc\(\)/);
+    // AYNI eğri: görünen kayışla isabet yolu tek `d`.
+    const kayis = d.querySelector('path[data-ve="belt"]');
+    expect(yol.getAttribute('d')).toBe(kayis.getAttribute('d'));
+    expect(kayis.getAttribute('data-fead-k')).toBe('ex-belt');
+    const hale = d.querySelector('[data-ve="belt-hov"]');
+    expect(hale.getAttribute('opacity')).toBe('0');
+    expect(hale.getAttribute('pointer-events')).toBe('none');
+  });
+
+  test('raporun çizimi kayış kimliği, halesi ve isabet yolu TAŞIMAZ', () => {
+    const { build } = kurOrnek();
+    const svg = fead.veFeadLayoutSVG(build, 440, 416);
+    expect(svg).not.toContain('ve-fead-hit-kayis');
+    expect(svg).not.toContain('belt-hov');
+    expect(svg).not.toContain('veFeadKayisAc');
+    expect(dom(svg).querySelector('path[data-ve="belt"]').hasAttribute('data-fead-k')).toBe(false);
+  });
+
+  test('kayışa tık: kayış SEÇİLİR, penceresi AÇILIR, İKİ çizimde işaretli', () => {
+    kurOrnek(); secim();
+    ['k1', 'k2'].forEach((id) => {
+      const k = kart(id); global.nodes.push(k);
+      const el = document.createElement('div');
+      el.id = id; el.className = 've-node';
+      el.innerHTML = fead.veFeadLayoutCardHTML(k);
+      document.body.appendChild(el);
+    });
+    expect(fead.veFeadKayisAc()).toBe(true);
+    expect(global.selectedNodes.map((n) => n.id)).toEqual(['ex-belt']);
+    // `addToSelection` yalnız İÇERİĞİ doldurur; pencereyi açan çağrı ayrı.
+    expect(global.veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+    ['k1', 'k2'].forEach((id) => {
+      const yanan = [...document.querySelectorAll('#' + id + ' [data-fead-k="ex-belt"].is-sel')];
+      expect(yanan.length).toBe(3);                 // hale + kayış + isabet yolu
+    });
+    // Kasnakların hiçbiri seçili değil.
+    expect(document.querySelectorAll('[data-fead-k].is-sel:not([data-fead-k="ex-belt"])')).toHaveLength(0);
+  });
+
+  test('fare altı kayışı iki çizimde yakar; kayış yoksa tık hiçbir şey açmaz', () => {
+    kurOrnek(); secim();
+    const k = kart(); global.nodes.push(k);
+    const el = document.createElement('div');
+    el.id = 'kart'; el.innerHTML = fead.veFeadLayoutCardHTML(k);
+    document.body.appendChild(el);
+    fead.veFeadCizimUzerinde('ex-belt');
+    expect(document.querySelectorAll('[data-fead-k="ex-belt"].is-hov')).toHaveLength(3);
+    fead.veFeadCizimUzerinde(null);
+    global.nodes = global.nodes.filter((n) => n.type !== 'fead-belt');
+    expect(fead.veFeadKayisAc()).toBe(false);
+    expect(global.veTogglePropertiesPanel).not.toHaveBeenCalled();
+  });
+
+  test('veFeadKayisGaranti: yoksa KURAR ve seçimi bırakmaz; varsa dokunmaz', () => {
+    sahteKurulum(); secim();
+    global.nodes = [{ id: 'w', type: 'fead-wizard', def: componentDefs['fead-wizard'], data: {} }];
+    global.createNode = jest.fn((type) => {
+      const n = { id: 'yeni-' + type, type, def: componentDefs[type], x: 3000, y: 3000, data: {} };
+      global.nodes.push(n); global.selectedNodes = [n];      // gerçek createNode da seçer
+      return n;
+    });
+    const n = fead.veFeadKayisGaranti();
+    expect(n.type).toBe('fead-belt');
+    expect(global.selectedNodes).toEqual([]);
+    expect(fead.veFeadKayisGaranti()).toBe(n);                 // ikinci çağrı: aynı düğüm
+    expect(global.createNode).toHaveBeenCalledTimes(1);
+  });
+
+  test('kayış SİLİNMEZ — genel silme yolu onu ayıklar ve sebebini söyler', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '../../js/map.js'), 'utf8');
+    const bas = src.indexOf('function deleteSelectedNodes()');
+    let i = src.indexOf('{', bas), der = 0, j = i;
+    for (; j < src.length; j++) { if (src[j] === '{') der++; else if (src[j] === '}' && --der === 0) break; }
+    const govde = src.slice(bas, j + 1);
+    const kayis = { id: 'k', type: 'fead-belt' }, krank = { id: 'c', type: 'fead-crank' };
+    const G = { nodes: [kayis, krank], connections: [], selectedNodes: [kayis, krank] };
+    const toast = jest.fn();
+    const sil = new Function('G', 'componentDefs', 'showToast',
+      'var nodes = G.nodes, connections = G.connections, selectedNodes = G.selectedNodes;'
+      + 'function veIsTCConnectedToGearbox(){ return false; }'
+      + 'function showEmptyProperties(){} function updateAllConnections(){} function updateNodeCount(){}'
+      + govde + '; deleteSelectedNodes(); G.nodes = nodes;');
+    sil(G, componentDefs, toast);
+    expect(G.nodes.map((n) => n.id)).toEqual(['k']);           // kasnak gitti, kayış kaldı
+    expect(toast).toHaveBeenCalledWith(componentDefs['fead-belt'].noDelete, 'warning');
+    // Penceresinde çöp kutusu da yok (cp-core.js — tip beyan ediyor).
+    const core = fs.readFileSync(path.join(__dirname, '../../js/cp-core.js'), 'utf8');
+    expect(core).toMatch(/if\(!\(componentDefs\[node\.type\] \|\| \{\}\)\.noDelete\)\s*\n\s*html \+= '<button class="ve-prop-del"/);
+  });
+
+  test('paletten kayış BIRAKILAMAZ — satırı yok (tek kopya zaten açılışta)', () => {
+    // Satır geri gelirse bırakılan ikinci kayış `maxInstances` duvarına
+    // çarpar: palette duran bir öğe her denemede yalnız "en fazla 1 tane"
+    // derdi. Kasnak satırları DURUYOR — çizime bırakılarak ekleniyorlar.
+    const fs = require('fs');
+    const path = require('path');
+    const idx = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
+    expect(idx).not.toMatch(/data-type="fead-belt"/);
+    expect(idx).toMatch(/data-type="fead-crank"/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  3) SEÇİM VE FARE ALTI SINIFLA — kart yeniden KURULMADAN
 // ═══════════════════════════════════════════════════════════════════════════
 describe('seçim ve fare altı', () => {

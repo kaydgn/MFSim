@@ -50,8 +50,12 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
   const acilis = await page.evaluate(() => window.nodes.map((n) => n.type).sort());
   // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı (kullanıcı: *"Gerek yok"*)
-  // — sunduğu liste sihirbazın 1. adımında zaten vardı.
-  expect(acilis).toEqual(['fead-layout', 'fead-wizard']);
+  // — sunduğu liste sihirbazın 1. adımında zaten vardı. KAYIŞ açılışta KURULUR
+  // ama KUTUSUZ (2026-09-26): çizimde tıklanır, kanvasta kutusu yok.
+  expect(acilis).toEqual(['fead-belt', 'fead-layout', 'fead-wizard']);
+  expect(await page.evaluate(() =>
+    window.nodes.filter((n) => !veIsCanvasHidden(n)).map((n) => n.type).sort()))
+    .toEqual(['fead-layout', 'fead-wizard']);
   // Boş kart kendi boş hâlini söylüyor ve iki yolu da gösteriyor.
   expect(await page.evaluate(() =>
     (document.querySelector('.ve-fead-kan-bos') || {}).textContent || '')).toMatch(/henüz kasnak yok/);
@@ -120,19 +124,24 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   expect(durum.cozucu).toBe(1);
   expect(durum.rapor).toBe(1);
   expect(durum.kasnakTeli).toBe(0);          // KASNAKLAR BAĞLANMIYOR
-  // KASNAKLARIN KUTUSU DA YOK: kanvastaki her kutu bir araç düğümü.
+  // KASNAKLARIN VE KAYIŞIN KUTUSU YOK (kayış 2026-09-26'dan beri çizimde
+  // tıklanıyor): kanvastaki her kutu görünür bir araç düğümü.
   const kutu = await page.evaluate(() => {
     const kas = (n) => !!(componentDefs[n.type] || {}).isFeadPulley;
+    const kay = window.nodes.find((n) => n.type === 'fead-belt');
     return {
       kasnakDom: window.nodes.filter(kas).filter((n) => document.getElementById(n.id)).length,
+      kayisDom: (kay && document.getElementById(kay.id)) ? 1 : 0,
       domToplam: document.querySelectorAll('#ve-canvas .ve-node').length,
-      aracSay: window.nodes.filter((n) => !kas(n)).length,
+      aracSay: window.nodes.filter((n) => !veIsCanvasHidden(n)).length,
     };
   });
   expect(kutu.kasnakDom).toBe(0);
+  expect(kutu.kayisDom).toBe(0);
   expect(kutu.domToplam).toBe(kutu.aracSay);
-  // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış + çözücü + şema + İŞLETME kartı + rapor
-  // + sihirbaz (taslağı taşıdığı için KALIR) = 12.
+  // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış (kutusuz, açılışın kurduğu düğüm
+  // DEVRALINDI) + çözücü + şema + İŞLETME kartı + rapor + sihirbaz (taslağı
+  // taşıdığı için KALIR) = 12.
   //
   // SAYI 13 → 12 (2026-09-23): Kayış Tablosu kanvas düğümü olmaktan çıktı.
   // Kanvas GEOMETRİ ve İŞLETME olarak iki kart; kurucu ikincisini kurmayı
