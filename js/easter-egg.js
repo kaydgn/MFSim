@@ -35,13 +35,13 @@ var MF_DHO_CONFIG = {
 
   // Sana özel ithaf satırı (opsiyonel) — örn. mezuniyet yılın, filon, gemin.
   // Boş bırakırsan gösterilmez. Örnek: 'Bir DHO mezununun emeğiyle · 1998'
-  ithaf: 'Bir Deniz Harp Okulu mezununun emeğiyle. ⚓',
+  ithaf: 'Bir Deniz Harp Okulu mezununun emeğiyle. ⚓',   // metin: ithafın kendi sözü (kişisel metin, ikon değil)
 
   // Onur penceresindeki "temaya geç" düğmesi (opsiyonel). Uygulamanın
   // "Donanma Mavisi" temasına tek tıkla geçer. temaButonu:false ile gizlenir.
   temaButonu: true,
   temaId: 'koyu',
-  temaButonEtiketi: '⚓ Donanma Mavisi temasına geç'
+  temaButonEtiketi: 'Donanma Mavisi temasına geç'
 };
 
 var _mfDhoBuilt = false;
@@ -169,7 +169,7 @@ function _mfDhoBuild() {
   }
   body += '<div class="mf-dho-foot">';
   if (c.temaButonu && c.temaId) {
-    body += '<button class="mf-dho-cta" type="button" onclick="veDenizHarpApplyTheme()">' + _mfDhoEsc(c.temaButonEtiketi || 'Temayı uygula') + '</button>';
+    body += '<button class="mf-dho-cta" type="button" onclick="veDenizHarpApplyTheme()">' + veIkon('anchor') + ' ' + _mfDhoEsc(c.temaButonEtiketi || 'Temayı uygula') + '</button>';
   }
   if (c.ithaf) body += '<div class="mf-dho-dedication">' + _mfDhoEsc(c.ithaf) + '</div>';
   body += '<div class="mf-dho-brand">MFSim ⚓ Sancak selamda</div>';
@@ -216,7 +216,7 @@ function veDenizHarpToggle() {
 function veDenizHarpApplyTheme() {
   var id = MF_DHO_CONFIG.temaId || 'koyu';
   if (typeof changeTheme === 'function') changeTheme(id);
-  if (typeof showToast === 'function') showToast('Donanma Mavisi teması uygulandı ⚓', 'success');
+  if (typeof showToast === 'function') showToast('Donanma Mavisi teması uygulandı', 'success');
   veDenizHarpClose();
 }
 

@@ -1972,7 +1972,7 @@ function getRoadPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;">';
   html += '<span class="sw-pkg-name"><span class="mf-ico mf-ico-clipboard"></span> Segment tablosu</span>';
-  html += '<button onclick="veManualSegAdd(\'' + node.id + '\')" title="Segment ekle" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--accent-success); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); font-weight:700; flex-shrink:0;">+</button>';
+  html += '<button onclick="veManualSegAdd(\'' + node.id + '\')" title="Segment ekle" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--accent-success); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); font-weight:700; flex-shrink:0;">' + veIkon('plus') + '</button>';
   html += '</div>';
   html += '<div class="sw-pkg-body" style="padding:0;">';
   html += '<div id="ve-road-mseg-table-' + node.id + '">';
@@ -2104,7 +2104,7 @@ function _veManualSegTableHTML(nodeId, segs) {
     var deltaH = _veManualSegCalcDH(s);
     html += '<td style="padding:2px 3px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + deltaH.toFixed(1) + '</td>';
     // Sil
-    html += '<td style="padding:1px 1px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-tiny); font-weight:700;">×</button></td>';
+    html += '<td style="padding:1px 1px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-tiny); font-weight:700;">' + veIkon('x') + '</button></td>';
     html += '</tr>';
   }
   html += '</tbody></table>';

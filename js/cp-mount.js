@@ -2216,9 +2216,9 @@ function _mnt2DViewSVG(data){
     var vb='0 0 '+FIG_W+' '+_mnt2DR(VB_H);
     return '<div class="ve-mnt2d-figwrap">'
       + '<div class="ve-mnt2d-zoomctl">'
-      +   '<button type="button" data-z="in" title="Yakınlaştır" aria-label="Yakınlaştır">+</button>'
-      +   '<button type="button" data-z="out" title="Uzaklaştır" aria-label="Uzaklaştır">−</button>'
-      +   '<button type="button" data-z="reset" title="Sıfırla" aria-label="Sıfırla">⟲</button>'
+      +   '<button type="button" data-z="in" title="Yakınlaştır" aria-label="Yakınlaştır">' + veIkon('plus') + '</button>'
+      +   '<button type="button" data-z="out" title="Uzaklaştır" aria-label="Uzaklaştır">' + veIkon('minus') + '</button>'
+      +   '<button type="button" data-z="reset" title="Sıfırla" aria-label="Sıfırla">' + veIkon('rotate-ccw') + '</button>'
       + '</div>'
       + '<svg class="ve-mnt2d-fig" viewBox="'+vb+'" data-vb="'+vb+'" preserveAspectRatio="xMidYMid meet"'
       +   ' style="display:block; width:100%; height:auto; touch-action:none; cursor:grab; font-family:'+_MNT2D_YUZ+';">'
@@ -2853,7 +2853,7 @@ function _mntLibCurveEditor(node, e){
       + 'bir Takoz\'a uygulandığında çözücü onu <b>nonlineer</b> (Newton) çözer. Tanımlanmazsa statik kz ile lineer kalır.</div>'
       + '<button onclick="veMntLibCurveEnable(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="width:100%; padding:7px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">＋ z-eğrisi ekle (sz\'den lineer tohum)</button>';
   } else {
-    inner = '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-bottom:7px;">δ: sehim [mm], f: kuvvet [N] (basma <b>−</b>). Çözücü δ\'ya göre sıralar; monoton eğri önerilir.</div>';
+    inner = '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-bottom:7px;">δ: sehim [mm], f: kuvvet [N] (basma <b>−</b>). Çözücü δ\'ya göre sıralar; monoton eğri önerilir.</div>';   // metin: işaret kuralı (basma eksi)
     inner += '<div style="overflow-x:auto;"><table class="ve-pnl-tbl ve-pnl-tbl--tiny" style="margin-bottom:7px;"><thead><tr>'
       + '<th style="'+_mntMxTh()+';">δ [mm]</th><th style="'+_mntMxTh()+';">f [N]</th><th style="'+_mntMxTh()+';"></th></tr></thead><tbody>';
     pts.forEach(function(p,i){

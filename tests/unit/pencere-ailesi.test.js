@@ -86,9 +86,14 @@ describe('başlık TEK bileşen', () => {
 
   test('ortak başlığı kuran her pencere', () => {
     for (const f of ['js/shortcuts-help.js', 'js/guide-kit.js', 'js/cp-programlar.js',
-      'js/tablo-pencere.js', 'js/solver-pro.js']) {
+      'js/tablo-pencere.js', 'js/solver-pro.js',
+      // küçük pencereler (karar 10·B, aşama 3): BMC hesap raporu · TXT yazarı · diyagram künyesi
+      'js/graphics.js', 'js/results.js', 'js/sensors.js']) {
       expect([f, /ve-settings-header/.test(KAYNAK[f])]).toEqual([f, true]);
     }
+    // Eski lacivert degrade (başlık bandı + eylem düğmesi) kalmadı — üç küçük
+    // pencere onu kendi satır içi stiliyle ve yazı karakteriyle ✕'le çiziyordu.
+    expect(Object.keys(KAYNAK).filter((f) => /#1a365d/i.test(KAYNAK[f]))).toEqual([]);
     expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(5);
   });
 

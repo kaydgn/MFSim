@@ -294,7 +294,7 @@ function veFeadWiz3bPanelHTML(s, secili){
       else if(d === secili) h += '<b data-ve-3b-yol="' + d + '">' + _fwEsc(so.agac[d].ad) + '</b>';
       else h += '<button type="button" class="ve-fw-3b-yolb" data-ve-3b-yol="' + d + '" onclick="veFeadWiz3bSec(' + d + ')">'
         + _fwEsc(so.agac[d].ad) + '</button>';
-      if(k < yol.length - 1) h += '<span class="ve-fw-dim">›</span>';
+      if(k < yol.length - 1) h += veIkon('chevron-right', 've-fw-dim ve-fw-3b-ayrac');
     });
     h += '</div>';
     var ata = -1;

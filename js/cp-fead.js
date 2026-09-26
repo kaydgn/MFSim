@@ -1804,7 +1804,7 @@ function veFeadPowerCurveCard(node){
     h += '<tr>' + hucre('rpm', p && p.rpm, '10') + hucre('kw', p && p.kw, '0.01')
       + '<td class="ve-fp-duty-oku">' + (Number.isFinite(motor) ? _feadFmt(motor, 0) : '—') + '</td>'
       + '<td class="tight"><button type="button" class="ve-fp-duty-sil"'
-      + ' onclick="veFeadCurveRemove(\'' + node.id + '\',' + pi + ')" title="Satırı sil" aria-label="Satırı sil">×</button></td></tr>';
+      + ' onclick="veFeadCurveRemove(\'' + node.id + '\',' + pi + ')" title="Satırı sil" aria-label="Satırı sil">' + veIkon('x') + '</button></td></tr>';
   });
   h += '</tbody></table></div>';
 
@@ -2130,7 +2130,7 @@ function veFeadMountReadout(node){
   var p = veFeadTensionerPivot(td);
   if(!p) return '';
   return '<div class="ve-fp-grid" style="--fp-k:1;">'
-    + _feadRO('↳ gövdenin montaj konumu (türedi)',
+    + _feadRO(veIkon('corner-down-right') + ' gövdenin montaj konumu (türedi)',
         _feadFmt(p[0], 2) + ' / ' + _feadFmt(p[1], 2), '[mm]')
     + '</div>';
 }
@@ -2183,7 +2183,7 @@ function veFeadArmReadout(node){
              _feadFmt(veFeadArmShownDeg(th), 2) + '°');
   h += satir('θ_kol — mutlak (gövde→merkez)', _feadFmt(th, 2) + '°');
   var p = veFeadTensionerPivot(td);
-  if(p) h += satir('↳ gövdenin montaj konumu (türedi)',
+  if(p) h += satir(veIkon('corner-down-right') + ' gövdenin montaj konumu (türedi)',
     _feadFmt(p[0], 2) + ' / ' + _feadFmt(p[1], 2), 'var(--ink-warning)');
 
   if(!b || !b.ok){
@@ -7680,7 +7680,7 @@ function veFeadDutyEditor(node, build){
         + ' class="ve-fp-inp ve-fp-inp--tight"></td>';
     });
     h += '<td class="tight"><button type="button" class="ve-fp-duty-sil"'
-      + ' onclick="veFeadDutyRemove(\'' + node.id + '\',' + ri + ')" title="Satırı sil" aria-label="Satırı sil">×</button></td></tr>';
+      + ' onclick="veFeadDutyRemove(\'' + node.id + '\',' + ri + ')" title="Satırı sil" aria-label="Satırı sil">' + veIkon('x') + '</button></td></tr>';
   });
   h += '</tbody></table></div>';
 
@@ -7748,12 +7748,12 @@ function veFeadModelTable(build){
   if(Number.isFinite(build.armAbsDeg)){
     h += satir('Gergi kol çalışma açısı', _feadFmt(build.armAbsDeg, 2) + '° · girdi', true);
     if(build.pivot)
-      h += satir('↳ gövde montaj konumu (türedi)',
+      h += satir(veIkon('corner-down-right') + ' gövde montaj konumu (türedi)',
         _feadFmt(build.pivot[0], 2) + ' / ' + _feadFmt(build.pivot[1], 2) + ' mm', true);
     if(Number.isFinite(build.freeAngleDeg))
-      h += satir('↳ serbest açı (hesaba giren)', _feadFmt(build.freeAngleDeg, 2) + '°', true);
+      h += satir(veIkon('corner-down-right') + ' serbest açı (hesaba giren)', _feadFmt(build.freeAngleDeg, 2) + '°', true);
     if(build.ok && build.sys)
-      h += satir('↳ dönüş yönü (sense)', (build.sys.tensioner.sense > 0 ? '+1' : '−1'), true);
+      h += satir(veIkon('corner-down-right') + ' dönüş yönü (sense)', (build.sys.tensioner.sense > 0 ? '+1' : '−1'), true);
   }
   if(build.drive)
     h += satir('Tahrik oranı', _feadFmt(build.drive.ratio, 4)

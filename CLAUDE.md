@@ -286,15 +286,18 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   (`sinyal-ad-tazele.test.js`).
 - **TEK İKON AİLESİ** (kullanıcı kararı 10·B). Arayüzde ikon işi gören her şey
   `css/icons.css`'teki çizgi ikondur — JS'te `veIkon(ad)` / `veIkonDegis(el, ad)`
-  (`js/ikon.js`, yükleyiciden önce). Sembol karakteri (▶ ▼ ✓ ✕ ⚠ ★) yazı tipinden
-  çizilir ve aynı şeritte ikinci bir çizim dili olur. Metnin İÇİNDEKİ karakter
-  ("1C→2C") ve düz metin çıktı (çözücü günlüğü, TXT rapor, tuval yazısı) kapsam
-  dışı; değişkene konup günlüğe giden karakter `// metin: <sebep>` ile işaretlenir.
-  Bilinmeyen ikon adı SESSİZCE dolu bir kare çizer. Görüntüleyiciyle paylaşılan
-  dosyalar `veIkon` çağırmaz (orada yok). Durum işareti (onay/uyarı/ret) tek
-  üreticiden: `veDurumIkon`. Kılavuz METNİ ve `<option>` metni kapsam dışı
-  (indirilen kılavuzda ikon basılmaz; seçenek ikon taşıyamaz). Kapı:
-  `ikon-dili.test.js`; kapsam aşama aşama büyür (bugün kabuk + bileşen panelleri).
+  (`js/ikon.js`, yükleyiciden önce). Sembol karakteri (▶ ▼ ✓ ✕ ⚠ ★; öğenin TEK
+  içeriğiyken × + − de) yazı tipinden çizilir ve aynı şeritte ikinci bir çizim
+  dili olur. Metnin İÇİNDEKİ karakter ("1C→2C", "3 × 4") ve düz metin çıktı
+  (çözücü günlüğü, TXT rapor, tuval yazısı, yorum motorunun paragrafı) kapsam
+  dışı; değişkene konup düz metne giden karakter `// metin: <sebep>` ile
+  işaretlenir. İndirilen/basılan BELGENİN gövdesi tipografik ✓/✗ taşır (maske
+  ikon kopyalanınca boş hücre olur): `tools/ikon-dili.js` → `BELGE` ·
+  `BELGE_DOSYA`. Bilinmeyen ikon adı SESSİZCE dolu bir kare çizer.
+  Görüntüleyiciyle paylaşılan dosyalar `veIkon` çağırmaz (orada yok). Durum
+  işareti (onay/uyarı/ret) tek üreticiden: `veDurumIkon`. Kılavuz METNİ ve
+  `<option>` metni kapsam dışı. Kapı: `ikon-dili.test.js` — kılavuz metni
+  dışındaki HER ürün dosyası; yeni dosya kendiliğinden kapıya girer.
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

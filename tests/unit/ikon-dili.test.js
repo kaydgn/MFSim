@@ -9,7 +9,9 @@
  * Kapılar:
  *   · css/icons.css ÜRETİLİR (tools/ikonlar.js) — elle düzenlenmez
  *   · kaynakta adı geçen her ikon tanımlı — bilinmeyen ad dolu bir KARE çizer
- *   · aşama dosyalarında ikon işi gören sembol karakteri yok (tools/ikon-dili.js)
+ *   · aşama dosyalarında ikon işi gören sembol karakteri yok (tools/ikon-dili.js);
+ *     aşama 3'ten beri kapı LİSTE DEĞİL KURAL: kılavuz metni dışındaki her
+ *     ürün dosyası taranır, yeni dosya kendiliğinden kapıya girer
  *   · tek üretici: master rozeti, bildirim ikonu tablosu, program simgesi eşlemesi
  */
 const fs = require('fs');
@@ -39,6 +41,14 @@ const ASAMA2 = fs.readdirSync(path.join(KOK, 'js'))
   .concat(['component-extras.js', 'map.js', 'solver.js', 'fead-model.js'])
   .map((f) => 'js/' + f)
   .filter((f) => !ASAMA1.includes(f));
+// Aşama 3: geri kalan HER ürün dosyası — Sonuçlar, rapor üreticilerinin
+// paneli, sensörler, Ölçüm Görüntüleyici, CAN Çözümleyici, oyunlar. Dışarıda
+// kalan tek şey kılavuz METNİ (guide-*.js — sebebi tools/ikon-dili.js'te).
+const dizin = (d) => fs.readdirSync(path.join(KOK, d)).filter((f) => f.endsWith('.js')).map((f) => d + '/' + f);
+const URUN = dizin('js').filter((f) => !/^js\/guide-/.test(f))
+  .concat(dizin('viewer/js'), dizin('candbc/js'), ['index.html', 'viewer/index.html', 'candbc/index.html'])
+  .concat(fs.readdirSync(path.join(KOK, 'css')).filter((f) => f.endsWith('.css')).map((f) => 'css/' + f));
+const ASAMA3 = URUN.filter((f) => !ASAMA1.includes(f) && !ASAMA2.includes(f));
 
 describe('kural — ikon işi ile metin ayrılıyor', () => {
   const yakalar = (m, f) => T.tara(m, f || 'a.js').map((x) => x.konum + ' ' + x.glif);
@@ -64,6 +74,38 @@ describe('kural — ikon işi ile metin ayrılıyor', () => {
     // FEAD'in dönüş rozeti '↻ CW'yi kaçışla yazıyordu ve taramaya hiç girmiyordu.
     expect(yakalar("x = '\\u21bb CW';")).toEqual(['baş ↻']);
     expect(yakalar("x = '1C\\u21922C';")).toEqual([]);   // metnin içindeki ok yine metin
+  });
+  // Aşama 1 ve 2 bu sınıfı GÖRMEDEN "0" dedi: satır silen "×", sekme ekleyen
+  // "+", yakınlaştıran "−" — yalnız öğenin TEK içeriğiyken ikondur.
+  test.each([
+    ['<button class="ve-row-del">×</button>', 'yalnız ×'],
+    ['<div class="ve-tab-add">+</div>', 'yalnız +'],
+    ['<button title="Uzaklaş">−</button>', 'yalnız −'],
+    ["h = '<span>↔</span> Yatay aynala';", 'öğe ↔'],       // yeni ok ailesi
+    ["t = '↳ gövdenin montaj konumu';", 'baş ↳'],
+    ['<span>⟲</span> Varsayılana dön', 'öğe ⟲']
+  ])('yakalanır (aşama 3): %s', (m, k) => expect(yakalar(m)).toEqual([k]));
+  test.each([
+    ["x = a + ' × ' + b;"],                                  // çarpım
+    ["u = { unit: '−' };"],                                  // birim
+    ["h = '<b>3 × 4</b>';"],                                 // metnin içi
+    ["t = 'sol ↔ sağ';"],                                    // bağıntı
+    ["j = '<span class=\"p\">+</span>';   // metin: tuş birleşimi (Ctrl + S)"]
+  ])('geçer (aşama 3): %s', (m) => expect(yakalar(m)).toEqual([]));
+  test('belge üreticisi: dosyanın TAMAMI belge, yalnız adı yazılı işlev arayüz', () => {
+    const f = 'js/cp-mount-report.js';
+    const s = "function getMntReportPropertiesHTML(n){ return '<b>✓</b>'; }\n"
+      + 'function veMntGenerateReport(){}\n'
+      + "function _mntRepX(){ return '<b>✓</b>'; }";
+    expect(T.tara(s, f).map((x) => x.satir)).toEqual([1]);        // yalnız panel
+    // Adı yazılı arayüz işlevi yoksa tarama PATLAR: yeniden adlandırma panelin
+    // kapıdan sessizce çıkması olurdu.
+    expect(() => T.tara("function x(){ return '<b>✓</b>'; }", f, { kati: true })).toThrow(/BELGE_DOSYA işlevi yok/);
+    expect(T.sapmalar(f)).toEqual([]);                                    // gerçek dosya: işlevler yerinde
+    // Karışık dosyada önek: indirilen AP raporunun bölümleri (_veRepSec…)
+    const r = "function _veRepSecFoo(){ return '<b>✓</b>'; }\nfunction _veReportAntet(){}\n"
+      + "function _veReportAssemble(){}\nfunction _veMakeReportHelpers(){}\nfunction ui(){ return '<b>✓</b>'; }";
+    expect(T.tara(r, 'js/results.js').map((x) => x.satir)).toEqual([5]);
   });
   test('HTML: tuşun adı metindir, öğenin tek içeriği değildir', () => {
     expect(yakalar('<kbd>↑</kbd><kbd>↓</kbd> gezin', 'a.html')).toEqual([]);
@@ -93,7 +135,8 @@ describe('kaynakta adı geçen her ikon TANIMLI', () => {
   // yok, uyarı yok. Sınıf, yardımcı çağrısı ve üçlü koşulun iki kolu taranır.
   const dosyalar = fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f)
     .concat(['index.html', 'css/styles.css', 'viewer/index.html', 'candbc/index.html'])
-    .concat(fs.readdirSync(path.join(KOK, 'viewer/js')).map((f) => 'viewer/js/' + f));
+    .concat(fs.readdirSync(path.join(KOK, 'viewer/js')).map((f) => 'viewer/js/' + f))
+    .concat(fs.readdirSync(path.join(KOK, 'candbc/js')).map((f) => 'candbc/js/' + f));
   const ADI = [/mf-ico-([a-z0-9-]+)(?![a-z0-9-]*['"]?\s*\+)/g, /veIkon\(\s*'([a-z0-9-]+)'/g,
     /veIkonDegis\([^,()]+,\s*'([a-z0-9-]+)'/g,
     /veIkon(?:Degis)?\([^'()]*?\?\s*'([a-z0-9-]+)'\s*:\s*'([a-z0-9-]+)'/g];
@@ -110,7 +153,8 @@ describe('kaynakta adı geçen her ikon TANIMLI', () => {
   });
 });
 
-describe.each([['aşama 1 — kabuk', ASAMA1], ['aşama 2 — bileşen panelleri', ASAMA2]])('%s', (ad, dosyalar) => {
+describe.each([['aşama 1 — kabuk', ASAMA1], ['aşama 2 — bileşen panelleri', ASAMA2],
+  ['aşama 3 — geri kalan her ürün dosyası', ASAMA3]])('%s', (ad, dosyalar) => {
   test('liste boş değil', () => expect(dosyalar.length).toBeGreaterThan(15));
   test('ikon işi gören sembol karakteri yok', () => {
     const s = dosyalar.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' [' + x.konum + ' ' + x.glif + '] ' + x.metin);
@@ -188,5 +232,25 @@ describe('js/ikon.js', () => {
     veIkonDegis(bos, 'x');
     expect(bos.className).toBe('mf-ico mf-ico-x');
     expect(() => veIkonDegis(null, 'x')).not.toThrow();
+  });
+});
+
+describe('aşama 3 — üreticiler', () => {
+  test('yorumun uyarı paragrafı çizgi ikonla başlar; düz metnin işareti ekrana çıkmaz', () => {
+    // Yorum motoru (mount-brief.js) DÜZ METİN yazar ve uyarıyı "⚠ " ile
+    // işaretler; ekranda ikona çeviren trace-view.js → _veTrRich.
+    const TV = require('../../js/trace-view.js');
+    const h = TV.veTrNoteHTML([{ title: 'Şok', paras: ['⚠ **Newton** <yakınsamadı>', 'Olağan paragraf'] }]);
+    expect(h).toContain('mf-ico-alert-triangle ve-trace-note-uyari');
+    expect(h).not.toContain('⚠');
+    expect(h).toContain('&lt;yakınsamadı&gt;');                          // metin yine kaçışlı
+    expect((h.match(/mf-ico-alert-triangle/g) || []).length).toBe(1);   // yalnız uyarı paragrafı
+  });
+  test('ikonun sınıfını yazan aç/kapa: Sonuçlar ile Görüntüleyici aynı iki adı kullanır', () => {
+    const govde = (f) => { const s = oku(f), i = s.indexOf('function veToggleTree('); return s.slice(i, s.indexOf('\n}\n', i)); };
+    [govde('js/results.js'), govde('viewer/js/board.js')].forEach((g) => {
+      expect(g).toMatch(/'chevron-down' : 'chevron-right'/);
+      expect(g).not.toMatch(/textContent/);
+    });
   });
 });

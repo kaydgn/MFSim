@@ -850,7 +850,7 @@ function getVEFTGearRowHTML(nodeId, name, ratio, eff, lockup) {
   // Lockup: shift profilinden otomatik belirlenir, kullanıcı değiştiremez
   var lockupLabel = lockup ? '<span style="color:var(--accent-success); font-weight:600;">L</span>' : '<span style="color:var(--text-muted);">C</span>';
   html += '<td class="tight" style="font-size:var(--fs-tiny);">' + lockupLabel + '<input type="hidden" value="' + (lockup ? 'true' : 'false') + '"></td>';
-  html += '<td class="tight"><button class="ve-row-del" onclick="removeVEFTGearRow(this, \'' + nodeId + '\')" title="Satırı sil">×</button></td>';
+  html += '<td class="tight"><button class="ve-row-del" onclick="removeVEFTGearRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
   return html;
 }
@@ -2026,7 +2026,7 @@ function getVEGearboxRowHTML(nodeId, gear, ratio, note) {
   html += '<td class="tight"><input type="text" value="' + gear + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEGearboxDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="number" step="0.001" value="' + ratio + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEGearboxDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="text" value="' + note + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEGearboxDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><button onclick="removeVEGearboxRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:var(--fs-tiny); background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;" title="Satırı sil">×</button></td>';
+  html += '<td class="tight"><button class="ve-row-del" onclick="removeVEGearboxRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
   return html;
 }
