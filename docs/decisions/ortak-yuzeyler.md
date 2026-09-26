@@ -1372,3 +1372,20 @@ hücrenin anlam rengini eziyordu (etiket/değer ayrımı, eşleşme noktası,
 kırmızı uyarılar); sebebi olan `#333` üreteçten kalktı.
 
 **Kapı.** `rapor-hiza.test.js` + `rapor-hiza.spec.js`.
+
+## Orta kalınlık Windows'ta yarı kalın (2026-09-26, kullanıcı kararı 5·B)
+
+**Hüküm.** `--font-sans` yığının başında `'MFSim Segoe'` takma ailesi
+durur: YALNIZ `local()` adlarından kurulu sekiz yüz (400 Segoe UI, 500–650
+Semibold, 651–750 Bold, 751+ Black; italikleri ayrı). `url(` yok; Windows
+dışında yüzler bulunamaz ve yığın Inter'e düşer. `veThemeFontFaceCss`
+belgelere yalnız gömülü (`url(`) yüz taşır.
+
+**Gerekçe.** Segoe UI'da 500 yok; tarayıcı 500 isteyen sekme, tablo başlığı
+ve sinyal adını (CSS'te 27, JS'te 166 bildirim) 400 çiziyor ve vurgu
+kayboluyordu. Kullanıcı üç yolu kendi ekranında karşılaştırıp Semibold'u
+seçti. Mekanizma Chromium'da ölçüldü (yerel adla bulunan kalın yüz 500'de
+seçiliyor, bulunamayan yüz `error` olup sonraki aileye düşüyor); Windows
+dışında 397 yazı öğesinin 397'si birebir aynı genişlikte.
+
+**Kapı.** `tek-yazi-tipi.test.js` → *"5·B"* + `tek-yazi-tipi.spec.js`.

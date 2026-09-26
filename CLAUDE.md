@@ -252,6 +252,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `kart-yuzey.spec.js` → *"EN KÜÇÜK ÖLÇÜ"*.
 - **TEK YAZI TİPİ: `--font-sans`** — Windows'ta Segoe UI (kullanıcı kendi
   ekranında seçti, 2026-09-25), başka yerde gömülü Inter (`css/fonts.css`).
+  Yığının başı `'MFSim Segoe'`: yalnız `local()` adlarından kurulu takma aile,
+  Segoe UI'da olmayan 500'ü Semibold'la çizer (kararı 5·B); hiçbir şey
+  gömmez, Windows dışında düşer.
   Başlık, gövde, etiket, sayı, form ve TUVAL dâhil. İNDİRİLEN BELGELER gömülü
   Inter'le yazar (A4 düzenleri onunla ölçüldü); `veThemeFontFaceCss()` yığındaki
   GÖMÜLÜ aileyi gömer, ilk aileyi değil. Rakam hizası `tabular-nums` ile. Tuval

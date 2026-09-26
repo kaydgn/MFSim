@@ -35,7 +35,8 @@ const BUILD = path.join(ROOT, 'MFSim_Code.html');
 // BAŞI — kullanıcının kendi ekranında seçtiği Segoe UI; jetondan okunur ki
 // yüz bir daha değişince bu dosya ikinci bir kopya tutmasın. Gömülü yüz
 // (Windows dışı ve indirilen belgeler) Inter. Test makinesinde Segoe UI yok:
-// orada ekran GÖMÜLÜ yüzle çizilir, ölçülen şey hâlâ tek aile.
+// orada ekran GÖMÜLÜ yüzle çizilir, ölçülen şey hâlâ tek aile. 2026-09-26'dan
+// beri başta 'MFSim Segoe' (5·B): Segoe UI'ın yerel adlı ağırlık eşlemesi.
 const ARAYUZ = /--font-sans:\s*['"]?([^'",;]+)/.exec(fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8'))[1].trim();
 const GOMULU = 'Inter';
 
@@ -157,7 +158,8 @@ test('başlık da gövde de aynı aile — ayrı bir başlık yüzü YOK', async
     };
     return { baslik: yap('h3'), govde: yap('div'), marka: getComputedStyle(document.querySelector('.ve-welcome-logo')).fontFamily.split(',')[0].replace(/["']/g, '').trim() };
   });
-  expect(ARAYUZ).toBe('Segoe UI');
+  // Başta 5·B'nin takma ailesi: aynı Segoe UI, 500'ü Semibold'la çizer
+  expect(ARAYUZ).toBe('MFSim Segoe');
   expect(olcum).toEqual({ baslik: ARAYUZ, govde: ARAYUZ, marka: ARAYUZ });
 });
 
@@ -255,6 +257,8 @@ test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü göm�
     // Yığının başı Segoe UI — gömülemez; gömülen yığındaki GÖMÜLÜ aile.
     const yuz = (html.match(/@font-face\s*\{[^}]*font-family:\s*["']?Inter/g) || []).length;
     expect(yuz, ad + ': gömülü Inter kuralı').toBeGreaterThanOrEqual(8);
+    // Takma aile (5·B) yalnız yerel ad taşır; belgeye girerse ölü bayttır
+    expect((html.match(/@font-face\s*\{[^}]*MFSim Segoe/g) || []).length, ad + ': takma aile').toBe(0);
     expect(html, ad).not.toMatch(/Archivo|Source Serif|IBM Plex/);
     const p = await browser.newPage();
     await p.route('**/*', (r) => (r.request().url().startsWith('data:') ? r.continue() : r.abort()));
