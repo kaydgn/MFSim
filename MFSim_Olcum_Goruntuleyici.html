@@ -9794,11 +9794,16 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 /* SİLME satıra gelene kadar GÖRÜNMEZ — altı satırda altı ✕ sürekli
    dururken tablonun ilk okunan işareti bir silme düğmesiydi. Klavye yolu
    kapanmıyor (`:focus-visible` geri getiriyor). Gergi satırında PASİF. */
+/* Kutu 14 px: 22 px'lik sütunun dolgudan (2·4) kalan içi. İkon 1,1em
+   (12 px) + 2·3 dolguyla 18 px'e çıkıyor ve hücre içeriğini KESİYORDU —
+   fead-tablo.spec.js "hiçbir hücre içeriğini kesmiyor" (1366 ve 1920). */
 .ve-fead-tbl-del{
-  background:none; border:none; cursor:pointer; padding:1px 3px; line-height:1;
-  font-size:var(--fs-tiny); color:var(--text-muted);
+  display:inline-flex; align-items:center; justify-content:center;
+  width:14px; height:14px; padding:0; vertical-align:middle;
+  background:none; border:none; cursor:pointer; color:var(--text-muted);
   border-radius:var(--radius-sm); opacity:0; transition:opacity .12s;
 }
+.ve-fead-tbl-del .mf-ico{ width:10px; height:10px; vertical-align:0; }
 .ve-fead-pf-satir:hover .ve-fead-tbl-del,
 .ve-fead-pf-satir.is-sel .ve-fead-tbl-del{ opacity:1; }
 .ve-fead-tbl-del:hover{ background:var(--accent-danger); color:var(--on-danger); opacity:1; }

@@ -186,7 +186,8 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
     return { sinif: r.className,
              // işaret çizgi ikon (karar 10·B): adını sınıfından oku
              isaret: ((r.querySelector('b .mf-ico') || {}).className || '').replace(/^.*mf-ico-/, ''),
-             birincil: r.querySelector('span').textContent,
+             // İLK ÇOCUK span: işaretin <b>'si de artık bir <span> (ikon) taşıyor
+             birincil: r.querySelector(':scope > span').textContent,
              ikincil: r.querySelector('i') ? r.querySelector('i').textContent : null,
              renk: getComputedStyle(r).color };
   }, id);

@@ -50,6 +50,18 @@ async function feadOrnek(page) {
 const adSay = (page, id) => page.evaluate((i) =>
   document.getElementById(i).querySelectorAll('svg text[data-ve="name"]').length, id);
 
+// Kartı KAMERAYLA kadraja al. Tuval kabı kaymaz (ui-core.js → veKabiEsitle):
+// Playwright'ın tık öncesi kaydırması kameraya aktarılıp kap 0'a döner, ve
+// kap eksiye hiç kaymadığı için sol-üstte kalan bir kart "görünüre
+// kaydırılamaz" — tık 180 sn "element is outside of the viewport" der.
+const kadraj = (page, id) => page.evaluate((i) => {
+  const n = window.nodes.find((x) => x.id === i);
+  const w = document.getElementById('ve-canvas-wrapper');
+  canvasOffset.x = w.clientWidth / 2 - (n.x + (n.width || 440) / 2 - 3000) * canvasZoom;
+  canvasOffset.y = w.clientHeight / 2 - (n.y + (n.height || 460) / 2 - 3000) * canvasZoom;
+  updateCanvasTransform();
+}, id);
+
 test('KATMAN PANELİ: açılır, çizimi değiştirir, açık kalır', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
@@ -212,6 +224,7 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   expect(await adSay(page, b)).toBe(6);
 
   // İkinci kartı ÇIPLAK YOL yap: gerçek düğme ve gerçek kutucuklarla.
+  await kadraj(page, b);
   await page.locator('#' + b + ' ' + KAT).click();
   await page.waitForTimeout(300);
   const p2 = page.locator('#' + b + ' .ve-fead-kat');
@@ -228,6 +241,7 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
 
   // İKİNCİ PANEL AÇILINCA BİRİNCİSİ KAPANIR: iki panel aynı anda açıkken
   // hangi kartın ayarına baktığın okunmuyor.
+  await kadraj(page, a);
   await page.locator('#' + a + ' ' + KAT).click();
   await page.waitForTimeout(350);
   await expect(page.locator('#' + a + ' .ve-fead-kat')).toHaveCount(1);
@@ -271,6 +285,7 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   expect(r2).toBeTruthy();
   expect(await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout').length)).toBe(4);
   await expect(page.locator('#' + r2 + ' ' + KAT)).toHaveCount(1);
+  await kadraj(page, r2);
   await page.locator('#' + r2 + ' ' + KAT).click();
   await page.waitForTimeout(300);
   await page.locator('#' + r2 + ' .ve-fead-kat-islem.onayar button').nth(1).click();
