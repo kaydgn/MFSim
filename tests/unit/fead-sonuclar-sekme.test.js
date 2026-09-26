@@ -221,7 +221,7 @@ describe('Sonuçlar sayfası yüzleri', () => {
     veActiveSolverTabId = 'fead';
     veUpdateResultsTree();
     const h = document.getElementById('ve-results-tree').innerHTML;
-    expect(h).toContain('FEAD Kayış Tahriki');
+    expect(h).toContain('FEAD kayış tahriki');
     expect(h).toContain('Güncel');
     expect(h).toContain('Çevrim · Açıklık gerginlikleri');
     expect(h).toContain('Campbell · Burulma modları');
