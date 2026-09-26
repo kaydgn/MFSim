@@ -91,4 +91,26 @@ const AG_REF = {
   yay: { preload: 8.59, kArm: 0.482, meanLoad: 24.5442, loadStopRelDeg: 62.4 },
 };
 
-module.exports = { feadStep, AG, AG_REF, gergiParcasi, ag00686Step, D, X };
+// Tedarikçinin gergisi ALT MONTAJ (kasnak + kol ayrı parça), yanında bir krank.
+// Kullanıcı: "STEP alt parçalı gelir; bir üst komple olur, onun altında
+// parçalar olur" — rol üst düğüme verilir, iki parça tek birim olur.
+function gergiAltMontaj() {
+  const yz = new Y.StepYaz();
+  const kok = yz.urun('ROOT', 'MONTAJ');
+  const grg = yz.urun('GERGI-ASSY', 'OTOMATİK GERGİ');
+  const kas = yz.urun('P1', 'KASNAK');
+  const kol = yz.urun('P2', 'KOL');
+  const krk = yz.urun('P3', 'KRANK');
+  yz.govde(kas, Y.profilYuzleri(yz, Y.eksen(), Y.duzProfil({ od: 75 })));
+  yz.govde(kol, Y.profilYuzleri(yz, Y.eksen([90, 0, 0]), Y.pivotProfil()));
+  yz.govde(krk, Y.profilYuzleri(yz, Y.eksen(), Y.kanalliProfil({ od: 150, n: 8 })));
+  [kas, kol, krk].forEach((u) => yz.temsil(u));
+  const t1 = yz.tak(grg, kas, 'P1.1', [0, 0, 0]), t2 = yz.tak(grg, kol, 'P2.1', [0, 0, 0]);
+  yz.temsil(grg);
+  const t3 = yz.tak(kok, grg, 'GERGI-ASSY.1', [0, 120, 0]), t4 = yz.tak(kok, krk, 'P3.1', [0, -150, 0]);
+  yz.temsil(kok);
+  [t1, t2, t3, t4].forEach((t) => yz.bagla(t));
+  return yz.metin();
+}
+
+module.exports = { gergiAltMontaj, feadStep, AG, AG_REF, gergiParcasi, ag00686Step, D, X };

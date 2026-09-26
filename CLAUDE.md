@@ -68,7 +68,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   model KURMAZ ve **rolü kullanıcı verir** — analiz yalnız rol verilen
   parçalarda; çıktı FEAD örnek kaydı biçiminde, sihirbaz onu örnek gibi
   yükler. OCCT gömülmez. Kurallar FEAD skill'inde (kural 34). `index.html`
-  yükler; arayüzü sihirbazın 1. adımındaki **"STEP'ten başla"** kartı.
+  yükler; arayüzü sihirbazın 1. adımındaki **"STEP'ten başla"** kartı ve
+  dosya okununca açılan **3B görüntüleyici** (`js/cp-fead-3b.js`: parçaya
+  tıkla → rol). `js/step-ucgen.js` yüzleri **yalnız görüntü için** üçgenler —
+  ölçüm analitik kalır.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
 - `tools/karsilama-secici.{js,html}` + `tools/karsilama-kunye.json` — karşılama
   karelerinin **seçim tahtası**: numaralı/gruplanmış/büyütülebilir 28 kare, tıklanan
