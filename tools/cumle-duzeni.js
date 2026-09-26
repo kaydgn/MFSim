@@ -45,7 +45,8 @@ const DEFTER = _kolon ? [..._kolon[1].matchAll(/\bt:'([^']+)'/g)].map((m) => m[1
 // adımın başlığı, satırın tipi ve kurulan düğümün adı üçü de bu. Tek üreticiden OKUNUR.
 const _ten = oku('js/cp-fead-wizard.js').match(/var VE_FW_TEN_AD = '([^']+)'/);
 const AD = _ten ? [_ten[1]] : [];
-const URUN = ['MFSim — Araç Performans Simülasyonu', 'Araç Performans Simülasyon Yazılımı'];
+const URUN = ['MFSim — Araç Performans Simülasyonu', 'Araç Performans Simülasyon Yazılımı',
+  'MFSim Projesi', 'MFSim Raporu'];   // son ikisi varsayılan dosya adı
 const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cmd', 'Home', 'End',
   'Vector', 'CANoe', 'Excel', 'GitHub', 'Windows', 'Gates', 'Allison', 'Cummins', 'Lucide', 'Edge',
   'Inter', 'Segoe', 'Workflow', 'Run', 'Grid', 'Minimap', 'Coast-Down', 'Hubload', 'Mean', 'Governed',
@@ -57,7 +58,7 @@ const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cm
   // kişi adları (yöntemler, diyagramlar)
   'Euler', 'Newton', 'Raphson', 'Newmark', 'Heun', 'Ralston', 'Runge', 'Kutta', 'Dormand', 'Prince', 'Campbell',
   'Rayleigh', 'Hermite', 'Fritsch', 'Carlson', 'Coulomb', 'Fourier', 'Bode', 'Nyquist', 'Kelvin', 'Voigt',
-  'Info', 'Log']);
+  'Info', 'Log', 'K-Factor', 'Drawbar', 'Pull', 'Ratio']);
 const KISALTMA = new Set(['Ort', 'Ağ', 'Ör', 'Örn', 'Maks', 'Min', 'Max', 'vb', 'vs', 'No', 'Nr', 'Ref',
   'Std', 'Yakl', 'bkz', 'Bkz', 'yak']);
 const COK = [...new Set([...BILESEN, ...YUZEY, ...YER, ...DEFTER, ...AD])].filter((a) => /\s/.test(a)).sort((a, b) => b.length - a.length);
@@ -78,9 +79,12 @@ function cumle(t) {
     (m, o, a) => (BILESEN.includes(a) ? o + '\u0000' + (tut.push(a) - 1) + '\u0001' : m));
   let bas = true;
   s = s.replace(/(\S+)(\s*)/g, (tam, w, bosluk) => {
-    // " / " ile dizilmiş seçenekler de ayrı bölüttür ("Klima / Alternatör"); ok da
+    // " / " ile dizilmiş seçenekler de ayrı bölüttür ("Klima / Alternatör"), " – " de
+    // ("Motor devri – Araç hızı": iki büyüklük); ok da
     // ("Otomatik → Lineer": sonucun adı).
-    if (/^[—:·|/→⇒]$/.test(w) || /^[▶▷►✓✔✗✕⚠●○＋+↓↑⚙★☆📄]+$/u.test(w)) { bas = true; return w + bosluk; }
+    // "+" bir ikon değil bağlaçtır ("Sağ tık + sürükle"); başta durunca ("+ Satır ekle")
+    // zaten harf taşımadığı için bölüt başını bozmaz.
+    if (/^[—–:·|│/→⇒]$/.test(w) || /^[▶▷►✓✔✗✕⚠●○↓↑⚙★☆📄]+$/u.test(w)) { bas = true; return w + bosluk; }
     if (/^[“"]/.test(w)) bas = true;                          // tırnak içindeki ad kendi bölütüdür
     // Tireli birleşik kelime de parçalanır ("Kayış-Kasnak"); bütünü bir terimse ("Coast-Down") kalır.
     const butun = w.replace(/^[(“"']+|[.,)”"':;]+$/g, '');
@@ -112,6 +116,12 @@ const YARDIMCI_UCLU = new RegExp(YARDIMCI.source.replace("\\(\\s*'([^'\\n]{3,70}
   "\\(\\s*(?:[^'(),\\n]|'[^'\\n]*')*?\\?\\s*'([^'\\n]{3,70})'\\s*:\\s*'([^'\\n]{3,70})'"), 'g');
 const DESEN = [/label:\s*'([^'\n]{3,70})'/g, />\s*([^<>{}\n]{3,70}?)\s*</g,
   /(?:title|aria-label|placeholder)="([^"\n]{3,70})"/g, /title:\s*'([^'\n]{3,70})'/g, /eyebrow:\s*'([^'\n]{3,70})'/g, /\bph:\s*'([^'\n]{3,70})'/g, /\bbaslik:\s*'([^'\n]{3,70})'/g, /\bad:\s*'([^'\n]{3,70})'/g,
+  // Üçlü koşulun iki kolu da arayüz metni olabilir: 'Tam analiz modu' : 'Kısmi analiz modu'.
+  /\?\s*'([^'\n]{3,70})'\s*:/g, /\?\s*'[^'\n]*'\s*:\s*'([^'\n]{3,70})'/g,
+  // Etiket eşlemesi ('ecm': 'Konvertör değerlendirmesi') ve düz atama (var t = '…';).
+  /'[\w.-]+'\s*:\s*'([^'\n]{3,70})'/g, /(?:var|let|const)\s+\w+\s*=\s*'([^'\n]{3,70})'\s*;/g,
+  // Çözücü günlüğü (console.log değil): düz metin tablo, "│" hücre ayırır.
+  /(?<![.\w$])log\(\s*'([^'\n]{3,120})'/g,
   YARDIMCI, YARDIMCI_UCLU, /data-ve-tablo-baslik="([^"\n]{3,70})"/g,
   /\['[gam](?:\d+|Ek)',\s*'[^'\n]*',\s*'([^'\n]{3,70})'\]/g,   // kılavuz bölüm başlıkları (VE_GUIDE_*_SECTIONS)
   /_gfSahneKart2\('\w+',\s*'([^'\n]{3,70})'/g, /_feadBosDugme\([^,]+,\s*'([^'\n]{3,70})'/g];
@@ -119,8 +129,28 @@ const DESEN = [/label:\s*'([^'\n]{3,70})'/g, />\s*([^<>{}\n]{3,70}?)\s*</g,
 // Çıplak "+" yetmez: "+ Satır ekle" düğmesinin kendisi "+" taşıyor ve süzgeç
 // bir dönem onu bu yüzden hiç taramıyordu.
 const BIRLESTIRME = /[{}=;$]|\bfunction\b|'\s*,\s*'|['"]\s*\+|\+\s*['"]/;
+// `name:` bileşen adlarında ve verilerde (ön ayar, Allison profili, yük
+// durumu) de geçtiği için yalnız bu blokların İÇİ taranır: sinyal adları,
+// sensör paketleri ve diyagramları, Sonuçlar sekmeleri. Hepsi yalnız görüntü
+// (eşleme hep kimlikle).
+const SINYAL_BLOK = ['var COMPONENT_SIGNALS = {', 'var SW_DIAGRAM_SIGNALS = {', 'var SENSOR_PACKAGES = [',
+  'var veSolverTabDefs = ['];
+const BLOK_ALAN = /\b(?:name|xAxis|yAxis):\s*'([^'\n]{2,70})'/g;
+function blokSonu(s, i) {
+  const a = s.indexOf('\n};', i), b = s.indexOf('\n];', i);
+  return a < 0 ? b : b < 0 ? a : Math.min(a, b);
+}
+function sinyalAdlari(s) {
+  const out = [];
+  SINYAL_BLOK.forEach((bas) => {
+    const i = s.indexOf(bas);
+    if (i < 0) return;
+    for (const m of s.slice(i, blokSonu(s, i)).matchAll(BLOK_ALAN)) out.push(m[1]);
+  });
+  return out;
+}
 function etiketler(f) {
-  const s = oku(f), out = [];
+  const s = oku(f), out = sinyalAdlari(s);
   for (const re of DESEN) {
     let m; re.lastIndex = 0;
     while ((m = re.exec(s))) {
@@ -135,7 +165,7 @@ function etiketler(f) {
   return out;
 }
 
-module.exports = { cumle, etiketler, DESEN, BIRLESTIRME, BILESEN, YUZEY, DEFTER, AD, TEK, URUN };
+module.exports = { cumle, etiketler, sinyalAdlari, SINYAL_BLOK, BLOK_ALAN, blokSonu, DESEN, BIRLESTIRME, BILESEN, YUZEY, DEFTER, AD, TEK, URUN };
 
 if (require.main === module) {
   let n = 0;

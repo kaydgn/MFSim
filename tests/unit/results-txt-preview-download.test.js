@@ -1,11 +1,11 @@
 /**
  * results-txt-preview-download.test.js
  * ─────────────────────────────────────
- * TXT önizlemesindeki "HTML İndir" düğmesi, EKRANDAKİ TXT'yi indirir.
+ * TXT önizlemesindeki "HTML indir" düğmesi, EKRANDAKİ TXT'yi indirir.
  *
  * Neden test edilmeye değer: js/results.js'te aynı adla İKİ üst-seviye
  * `veDownloadReportHTML` bildirimi vardı (satır ~2302 ve ~3467). İkincisi
- * birincisini eziyordu, dolayısıyla dört TXT önizleme panelindeki "HTML İndir"
+ * birincisini eziyordu, dolayısıyla dört TXT önizleme panelindeki "HTML indir"
  * düğmesi TXT'yi değil TASARIMLI raporu üretmeye çalışıyordu: kullanıcı ya
  * "Rapor verisi bulunamadı" uyarısı alıyor ya da baktığından başka bir belge
  * indiriyordu. 1229 üst-seviye fonksiyon içinde kimse fark etmemişti ve
@@ -119,12 +119,12 @@ describe('düğme kablolaması — hangi düğme hangi üreticiye gidiyor', () =
     return b && (b.match(/onclick="(ve[A-Za-z]+)\(\)"/) || [])[1];
   };
 
-  test('"HTML İndir" TXT önizleme üreticisine gider (tasarımlı rapora DEĞİL)', () => {
-    expect(hedef('HTML İndir')).toBe('veDownloadTXTPreviewAsHTML');
+  test('"HTML indir" TXT önizleme üreticisine gider (tasarımlı rapora DEĞİL)', () => {
+    expect(hedef('HTML indir')).toBe('veDownloadTXTPreviewAsHTML');
   });
 
-  test('"TXT İndir" ham metin indiricisine gider', () => {
-    expect(hedef('TXT İndir')).toBe('veDownloadTXTFromPreview');
+  test('"TXT indir" ham metin indiricisine gider', () => {
+    expect(hedef('TXT indir')).toBe('veDownloadTXTFromPreview');
   });
 
   test('dört TXT panelinin hepsi AYNI kabuğa gider', () => {

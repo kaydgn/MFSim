@@ -1250,156 +1250,156 @@ function vePortStyleAttr(node, portType){
 var COMPONENT_SIGNALS = {
   'engine': {
     outputs: [
-      {id: 'rpm', name: 'Motor Devri', unit: 'rpm'},
-      {id: 'torque', name: 'Net Motor Torku', unit: 'Nm'},
-      {id: 'power', name: 'Motor Gücü', unit: 'kW'},
-      {id: 'angular_vel', name: 'Açısal Hız', unit: 'rad/s'}
+      {id: 'rpm', name: 'Motor devri', unit: 'rpm'},
+      {id: 'torque', name: 'Net motor torku', unit: 'Nm'},
+      {id: 'power', name: 'Motor gücü', unit: 'kW'},
+      {id: 'angular_vel', name: 'Açısal hız', unit: 'rad/s'}
     ]
   },
   'torque-converter': {
     outputs: [
-      {id: 'rpm_in', name: 'Pompa Devri (Giriş)', unit: 'rpm'},
-      {id: 'torque_in', name: 'Pompa Torku (Giriş)', unit: 'Nm'},
-      {id: 'rpm_out', name: 'Türbin Devri (Çıkış)', unit: 'rpm'},
-      {id: 'torque_out', name: 'Türbin Torku (Çıkış)', unit: 'Nm'},
-      {id: 'power_in', name: 'Giriş Gücü', unit: 'kW'},
-      {id: 'power_out', name: 'Çıkış Gücü', unit: 'kW'},
-      {id: 'power_loss', name: 'Güç Kaybı', unit: 'kW'},
-      {id: 'efficiency', name: 'Konvertör Verimi (η)', unit: '%'},
-      {id: 'slip', name: 'Kayma Oranı (1−SR)', unit: '%'},
-      {id: 'torque_ratio', name: 'Tork Çarpanı (τ)', unit: '−'},
-      {id: 'speed_ratio', name: 'Hız Oranı (SR)', unit: '−'},
-      {id: 'heat_rejection', name: 'Isı Reddi', unit: 'kW'},
+      {id: 'rpm_in', name: 'Pompa devri (giriş)', unit: 'rpm'},
+      {id: 'torque_in', name: 'Pompa torku (giriş)', unit: 'Nm'},
+      {id: 'rpm_out', name: 'Türbin devri (çıkış)', unit: 'rpm'},
+      {id: 'torque_out', name: 'Türbin torku (çıkış)', unit: 'Nm'},
+      {id: 'power_in', name: 'Giriş gücü', unit: 'kW'},
+      {id: 'power_out', name: 'Çıkış gücü', unit: 'kW'},
+      {id: 'power_loss', name: 'Güç kaybı', unit: 'kW'},
+      {id: 'efficiency', name: 'Konvertör verimi (η)', unit: '%'},
+      {id: 'slip', name: 'Kayma oranı (1−SR)', unit: '%'},
+      {id: 'torque_ratio', name: 'Tork çarpanı (τ)', unit: '−'},
+      {id: 'speed_ratio', name: 'Hız oranı (SR)', unit: '−'},
+      {id: 'heat_rejection', name: 'Isı reddi', unit: 'kW'},
       {id: 'kfactor', name: 'K-Factor', unit: 'rpm/√Nm'}
     ]
   },
   'ec-matching': {
     outputs: [
       {id: 'stall_speed', name: 'Stall Speed', unit: 'rpm'},
-      {id: 'stall_turbine_torque', name: 'Stall Türbin Torku', unit: 'Nm'},
+      {id: 'stall_turbine_torque', name: 'Stall türbin torku', unit: 'Nm'},
       {id: 'sr_at_governed', name: 'SR @ Governed', unit: '−'},
-      {id: 'min_engine_speed', name: 'Min Motor Devri', unit: 'rpm'},
-      {id: 'recommended_tc', name: 'Önerilen Konvertör', unit: '−'}
+      {id: 'min_engine_speed', name: 'Min motor devri', unit: 'rpm'},
+      {id: 'recommended_tc', name: 'Önerilen konvertör', unit: '−'}
     ]
   },
   'engine-gearbox-matching': {
     outputs: [
       {id: 'power_at_gov', name: 'Motor Gücü@Gov', unit: 'kW'},
       {id: 'torque_at_gov', name: 'Motor Torku@Gov', unit: 'Nm'},
-      {id: 'recommended_gb', name: 'Önerilen Şanzıman', unit: '−'}
+      {id: 'recommended_gb', name: 'Önerilen şanzıman', unit: '−'}
     ]
   },
   'gearbox': {
     outputs: [
-      {id: 'rpm_in', name: 'Giriş Devri', unit: 'rpm'},
-      {id: 'torque_in', name: 'Giriş Torku', unit: 'Nm'},
-      {id: 'rpm_out', name: 'Çıkış Devri', unit: 'rpm'},
-      {id: 'torque_out', name: 'Çıkış Torku', unit: 'Nm'},
-      {id: 'power_in', name: 'Giriş Gücü', unit: 'kW'},
-      {id: 'power_out', name: 'Çıkış Gücü', unit: 'kW'},
-      {id: 'power_loss', name: 'Güç Kaybı', unit: 'kW'},
-      {id: 'gear', name: 'Aktif Vites', unit: '−'},
-      {id: 'ratio', name: 'Vites Oranı', unit: '−'},
-      {id: 'gear_mode', name: 'Vites Modu (C/L)', unit: '−'},
-      {id: 'efficiency', name: 'Vites Verimi', unit: '%'}
+      {id: 'rpm_in', name: 'Giriş devri', unit: 'rpm'},
+      {id: 'torque_in', name: 'Giriş torku', unit: 'Nm'},
+      {id: 'rpm_out', name: 'Çıkış devri', unit: 'rpm'},
+      {id: 'torque_out', name: 'Çıkış torku', unit: 'Nm'},
+      {id: 'power_in', name: 'Giriş gücü', unit: 'kW'},
+      {id: 'power_out', name: 'Çıkış gücü', unit: 'kW'},
+      {id: 'power_loss', name: 'Güç kaybı', unit: 'kW'},
+      {id: 'gear', name: 'Aktif vites', unit: '−'},
+      {id: 'ratio', name: 'Vites oranı', unit: '−'},
+      {id: 'gear_mode', name: 'Vites modu (C/L)', unit: '−'},
+      {id: 'efficiency', name: 'Vites verimi', unit: '%'}
     ]
   },
   'shift-controller': {
     outputs: [
-      {id: 'current_gear', name: 'Aktif Vites No', unit: '−'},
-      {id: 'gear_mode', name: 'Vites Modu (1C/2L/…)', unit: '−'},
-      {id: 'lockup_state', name: 'Lockup Durumu', unit: '0/1'},
-      {id: 'n_output', name: 'Şanzıman Çıkış Devri', unit: 'rpm'},
+      {id: 'current_gear', name: 'Aktif vites no', unit: '−'},
+      {id: 'gear_mode', name: 'Vites modu (1C/2L/…)', unit: '−'},
+      {id: 'lockup_state', name: 'Lockup durumu', unit: '0/1'},
+      {id: 'n_output', name: 'Şanzıman çıkış devri', unit: 'rpm'},
       {id: 'n_out_ratio', name: 'N_out / N_shift_ref', unit: '−'}
     ]
   },
   'transfer': {
     outputs: [
-      {id: 'rpm_in', name: 'Giriş Devri', unit: 'rpm'},
-      {id: 'torque_in', name: 'Giriş Torku', unit: 'Nm'},
-      {id: 'rpm_out', name: 'Çıkış Devri', unit: 'rpm'},
-      {id: 'torque_out', name: 'Çıkış Torku', unit: 'Nm'},
-      {id: 'power_in', name: 'Giriş Gücü', unit: 'kW'},
-      {id: 'power_out', name: 'Çıkış Gücü', unit: 'kW'},
-      {id: 'power_loss', name: 'Güç Kaybı', unit: 'kW'}
+      {id: 'rpm_in', name: 'Giriş devri', unit: 'rpm'},
+      {id: 'torque_in', name: 'Giriş torku', unit: 'Nm'},
+      {id: 'rpm_out', name: 'Çıkış devri', unit: 'rpm'},
+      {id: 'torque_out', name: 'Çıkış torku', unit: 'Nm'},
+      {id: 'power_in', name: 'Giriş gücü', unit: 'kW'},
+      {id: 'power_out', name: 'Çıkış gücü', unit: 'kW'},
+      {id: 'power_loss', name: 'Güç kaybı', unit: 'kW'}
     ]
   },
   'propshaft': {
     outputs: [
-      {id: 'rpm_in', name: 'Giriş Devri', unit: 'rpm'},
-      {id: 'torque_in', name: 'Giriş Torku', unit: 'Nm'},
-      {id: 'rpm_out', name: 'Çıkış Devri', unit: 'rpm'},
-      {id: 'torque_out', name: 'Çıkış Torku', unit: 'Nm'},
-      {id: 'power_in', name: 'Giriş Gücü', unit: 'kW'},
-      {id: 'power_out', name: 'Çıkış Gücü', unit: 'kW'},
-      {id: 'power_loss', name: 'Güç Kaybı', unit: 'kW'}
+      {id: 'rpm_in', name: 'Giriş devri', unit: 'rpm'},
+      {id: 'torque_in', name: 'Giriş torku', unit: 'Nm'},
+      {id: 'rpm_out', name: 'Çıkış devri', unit: 'rpm'},
+      {id: 'torque_out', name: 'Çıkış torku', unit: 'Nm'},
+      {id: 'power_in', name: 'Giriş gücü', unit: 'kW'},
+      {id: 'power_out', name: 'Çıkış gücü', unit: 'kW'},
+      {id: 'power_loss', name: 'Güç kaybı', unit: 'kW'}
     ]
   },
   'differential': {
     outputs: [
-      {id: 'rpm_in', name: 'Giriş Devri', unit: 'rpm'},
-      {id: 'torque_in', name: 'Giriş Torku', unit: 'Nm'},
-      {id: 'rpm_out', name: 'Yarım Aks Devri', unit: 'rpm'},
-      {id: 'torque_out', name: 'Yarım Aks Torku', unit: 'Nm'},
-      {id: 'power_in', name: 'Giriş Gücü', unit: 'kW'},
-      {id: 'power_out', name: 'Çıkış Gücü', unit: 'kW'},
-      {id: 'power_loss', name: 'Güç Kaybı', unit: 'kW'}
+      {id: 'rpm_in', name: 'Giriş devri', unit: 'rpm'},
+      {id: 'torque_in', name: 'Giriş torku', unit: 'Nm'},
+      {id: 'rpm_out', name: 'Yarım aks devri', unit: 'rpm'},
+      {id: 'torque_out', name: 'Yarım aks torku', unit: 'Nm'},
+      {id: 'power_in', name: 'Giriş gücü', unit: 'kW'},
+      {id: 'power_out', name: 'Çıkış gücü', unit: 'kW'},
+      {id: 'power_loss', name: 'Güç kaybı', unit: 'kW'}
     ]
   },
   'wheel': {
     outputs: [
-      {id: 'rpm_in', name: 'Tekerlek Devri', unit: 'rpm'},
-      {id: 'torque_in', name: 'Tekerlek Torku', unit: 'Nm'},
-      {id: 'speed', name: 'Araç Hızı', unit: 'km/h'},
-      {id: 'force', name: 'Çekiş Kuvveti', unit: 'N'},
-      {id: 'power_out', name: 'Tekerlek Gücü', unit: 'kW'},
-      {id: 'tractive_effort', name: 'Çekiş Kuvveti (TE)', unit: 'kN'},
+      {id: 'rpm_in', name: 'Tekerlek devri', unit: 'rpm'},
+      {id: 'torque_in', name: 'Tekerlek torku', unit: 'Nm'},
+      {id: 'speed', name: 'Araç hızı', unit: 'km/h'},
+      {id: 'force', name: 'Çekiş kuvveti', unit: 'N'},
+      {id: 'power_out', name: 'Tekerlek gücü', unit: 'kW'},
+      {id: 'tractive_effort', name: 'Çekiş kuvveti (TE)', unit: 'kN'},
       {id: 'drawbar_pull', name: 'Drawbar Pull (DP)', unit: 'kN'},
-      {id: 'net_grade', name: 'Net Eğim Kapasitesi', unit: '%'}
+      {id: 'net_grade', name: 'Net eğim kapasitesi', unit: '%'}
     ]
   },
   'vehicle': {
     outputs: [
-      {id: 'v_speed', name: 'Araç Hızı', unit: 'km/h'},
+      {id: 'v_speed', name: 'Araç hızı', unit: 'km/h'},
       {id: 'v_accel', name: 'İvme', unit: 'm/s²'},
       {id: 'v_accel_g', name: 'İvme (g)', unit: 'g'},
-      {id: 'v_distance', name: 'Kat Edilen Mesafe', unit: 'm'},
+      {id: 'v_distance', name: 'Kat edilen mesafe', unit: 'm'},
       {id: 'v_decel_g', name: 'Yavaşlama', unit: 'g'},
-      {id: 'v_kinetic_energy', name: 'Kinetik Enerji', unit: 'kJ'},
-      {id: 'v_effective_mass', name: 'Eşdeğer Kütle', unit: 'kg'}
+      {id: 'v_kinetic_energy', name: 'Kinetik enerji', unit: 'kJ'},
+      {id: 'v_effective_mass', name: 'Eşdeğer kütle', unit: 'kg'}
     ]
   },
   'road': {
     outputs: [
-      {id: 'r_grade_force', name: 'Eğim Kuvveti', unit: 'N'},
-      {id: 'r_rolling_force', name: 'Yuvarlanma Direnci', unit: 'N'},
-      {id: 'r_aero_force', name: 'Aerodinamik Direnç', unit: 'N'},
-      {id: 'r_total_resist', name: 'Toplam Direnç', unit: 'N'},
-      {id: 'r_net_force', name: 'Net Kuvvet', unit: 'N'},
-      {id: 'r_current_grade', name: 'Anlık Eğim', unit: '%'},
-      {id: 'r_current_segment', name: 'Aktif Segment', unit: '#'}
+      {id: 'r_grade_force', name: 'Eğim kuvveti', unit: 'N'},
+      {id: 'r_rolling_force', name: 'Yuvarlanma direnci', unit: 'N'},
+      {id: 'r_aero_force', name: 'Aerodinamik direnç', unit: 'N'},
+      {id: 'r_total_resist', name: 'Toplam direnç', unit: 'N'},
+      {id: 'r_net_force', name: 'Net kuvvet', unit: 'N'},
+      {id: 'r_current_grade', name: 'Anlık eğim', unit: '%'},
+      {id: 'r_current_segment', name: 'Aktif segment', unit: '#'}
     ]
   },
   'solver': {
     outputs: [
-      {id: 'time', name: 'Simülasyon Zamanı', unit: 's'},
-      {id: 'tractive_effort', name: 'Çekiş Kuvveti (TE)', unit: 'kN'},
+      {id: 'time', name: 'Simülasyon zamanı', unit: 's'},
+      {id: 'tractive_effort', name: 'Çekiş kuvveti (TE)', unit: 'kN'},
       {id: 'drawbar_pull', name: 'Drawbar Pull (DP)', unit: 'kN'},
-      {id: 'wheel_power', name: 'Tekerlek Gücü (WP)', unit: 'kW'},
-      {id: 'net_grade', name: 'Net Eğim Kapasitesi', unit: '%'},
-      {id: 'heat_rejection', name: 'Toplam Isı Reddi', unit: 'kW'}
+      {id: 'wheel_power', name: 'Tekerlek gücü (WP)', unit: 'kW'},
+      {id: 'net_grade', name: 'Net eğim kapasitesi', unit: '%'},
+      {id: 'heat_rejection', name: 'Toplam ısı reddi', unit: 'kW'}
     ]
   },
   'scenario': {
     outputs: [
-      {id: 'sc_throttle', name: 'Gaz Pedalı', unit: '%'},
-      {id: 'sc_brake', name: 'Fren Kuvveti', unit: 'N'}
+      {id: 'sc_throttle', name: 'Gaz pedalı', unit: '%'},
+      {id: 'sc_brake', name: 'Fren kuvveti', unit: 'N'}
     ]
   },
   'gear-shift': {
     outputs: [
-      {id: 'current_gear', name: 'Aktif Vites', unit: '−'},
-      {id: 'shift_time', name: 'Geçiş Süresi', unit: 's'}
+      {id: 'current_gear', name: 'Aktif vites', unit: '−'},
+      {id: 'shift_time', name: 'Geçiş süresi', unit: 's'}
     ]
   }
 };

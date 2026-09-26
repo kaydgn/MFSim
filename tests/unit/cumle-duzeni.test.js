@@ -13,11 +13,15 @@
  *   2 — bileşen panelleri: cp-*.js (rapor üreticileri hariç), yardımcı
  *       bileşenler, güzergâh haritası, çözücü ve üç modül kılavuzu (kılavuz
  *       kartı panelde BAŞLIĞIYLA arar — iki taraf aynı kuraldan geçmeli)
- *   3 — sonuçlar, raporlar, sinyal adları (sırada)
+ *   3a — Sonuçlar: results.js, sensör paketleri, sinyal adları (COMPONENT_SIGNALS ·
+ *       SW_DIAGRAM_SIGNALS — `name:` yalnız bu blokların içinde taranır) ve
+ *       Çözücü günlüğü; kayıtlı panodaki eski ad açılışta tazelenir
+ *       (sinyal-ad-tazele.test.js)
+ *   3b — grafikler ve rapor üreticileri (sırada)
  */
 const fs = require('fs');
 const path = require('path');
-const { cumle, etiketler, BIRLESTIRME, BILESEN, YUZEY, DEFTER, AD } = require('../../tools/cumle-duzeni.js');
+const { cumle, etiketler, sinyalAdlari, BIRLESTIRME, BILESEN, YUZEY, DEFTER, AD } = require('../../tools/cumle-duzeni.js');
 
 const KOK = path.join(__dirname, '../..');
 const ASAMA1 = ['index.html', 'viewer/index.html', 'js/ribbon.js', 'js/command-palette.js',
@@ -60,6 +64,10 @@ describe('kural', () => {
     ['Otomatik → Lineer', 'Otomatik → Lineer'],               // ok sonrası sonucun adı
     ['Efektif Çap', 'Efektif Çap'],                           // defter sütunu
     ['3 · Otomatik Gergi', '3 · Otomatik Gergi'],             // sihirbazın gergi adı
+    ['Motor Devri – Araç Hızı', 'Motor devri – Araç hızı'],   // " – " iki büyüklüğü ayırır
+    ['Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır', 'Scroll — Yakınlaştır  │  Sağ tık + sürükle — Kaydır'],
+    ['  │  Motor Gücü (P_engine)    │ ', '  │  Motor gücü (P_engine)    │ '],   // günlük tablosu
+    ['Speed Ratio (SR)', 'Speed Ratio (SR)'],                 // İngilizce terim (8·A)
   ])('%s → %s', (a, b) => expect(cumle(a)).toBe(b));
 
   test('bileşen adları componentDefs\'ten okunuyor — sinyal adları değil', () => {
@@ -70,6 +78,23 @@ describe('kural', () => {
 
   // Defter sütunları ve gergi adı KAYNAKTAN okunur: liste bulunamazsa koruma
   // sessizce boşalır ve "Efektif Çap" küçülürdü.
+  // Sinyal tablosu bileşen tablosuyla aynı dosyada ve ikisi de `name:` yazıyor:
+  // okuyucu yalnız bloğun içini almalı, yoksa bileşen adları da "düzeltilirdi".
+  test('sinyal adları yalnız sinyal bloklarından okunuyor', () => {
+    const src = fs.readFileSync(path.join(KOK, 'js/components.js'), 'utf8');
+    const ad = sinyalAdlari(src);
+    expect(ad.length).toBeGreaterThan(60);
+    expect(ad).toContain('Motor devri');
+    expect(ad).not.toContain('Tork Konvertörü');
+  });
+
+  // Günlük ve TXT raporu hizası BOŞLUKLA kurulu: dönüşüm uzunluğu değiştirseydi
+  // tablo sütunları kayardı. Türkçe küçük harf ('İ' → 'i', 'I' → 'ı') tek karakter.
+  test('dönüşüm metnin uzunluğunu korur', () => {
+    const t = ['İvme – Araç Hızı', 'Isı Reddi', '  │  Güç Aktarma Kaybı (P_dt) │ ', 'TC Isı Kaybı (P_TC)'];
+    t.forEach((x) => expect(cumle(x).length).toBe(x.length));
+  });
+
   // "+ Satır ekle" düğmesi "+" taşıyor ama birleştirme değil; ' + ad + ' ise öyle.
   test('birleştirme süzgeci düğmenin "+"sını atlamıyor', () => {
     expect(BIRLESTIRME.test('+ Satır Ekle')).toBe(false);
@@ -104,7 +129,10 @@ function kucukYuzey(dosyalar) {
   return [...new Set(out)];
 }
 
-describe.each([['aşama 1 — kabuk', ASAMA1, 400], ['aşama 2 — bileşen panelleri', ASAMA2, 300]])('%s', (ad, dosyalar, enAz) => {
+const ASAMA3 = ['js/results.js', 'js/sensors.js'];
+
+describe.each([['aşama 1 — kabuk', ASAMA1, 400], ['aşama 2 — bileşen panelleri', ASAMA2, 300],
+  ['aşama 3a — Sonuçlar', ASAMA3, 300]])('%s', (ad, dosyalar, enAz) => {
   test('tarama boşa çalışmıyor', () => {
     expect(dosyalar.flatMap(etiketler).length).toBeGreaterThan(enAz);
   });

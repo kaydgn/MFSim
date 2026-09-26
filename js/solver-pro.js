@@ -242,7 +242,7 @@ function veSolverRunProfessional() {
       var chainStr = chain.map(function(n) { return n.customName || n.def.name; }).join(' → ');
       log('Güç aktarma zinciri: ' + chainStr, 'ok');
       if(chain._isPartial) {
-        log('  ⚠ Kısmi zincir tespit edildi (Sonlandırıcı mevcut)', 'warn');
+        log('  ⚠ Kısmi zincir tespit edildi (sonlandırıcı mevcut)', 'warn');
       }
     } else {
       log('Güç aktarma zinciri oluşturulamadı!', 'err');
@@ -543,7 +543,7 @@ function veSolverRunProfessional() {
     var road = nodes.find(function(n) { return n.type === 'road'; });
     if(road) {
       var rd = road.data || {};
-      log('[Yol/Arazi parametreleri]', 'info');
+      log('[Yol/arazi parametreleri]', 'info');
       log('  Eğim modu       : ' + (rd.egimMode === 'segment' ? 'Segment bazlı' : 'Manuel'), 'dim');
       if(rd.egimMode === 'segment' && rd.routeSegments && rd.routeSegments.length > 0) {
         var segs = rd.routeSegments;
@@ -859,7 +859,7 @@ function veSolverRunProfessional() {
         
         var totalSteps = simResult.time.length;
         var finalTime = simResult.solverStats ? (simResult.solverStats.steps * (simResult.solverStats.dt || 0.01)) : simResult.time[totalSteps - 1];
-        var mode = simResult.mode === 'partial' ? 'Kısmi Analiz' : simResult.mode === 'full-throttle' ? 'Tam Gaz Hızlanma' : 'Tam Analiz';
+        var mode = simResult.mode === 'partial' ? 'Kısmi analiz' : simResult.mode === 'full-throttle' ? 'Tam gaz hızlanma' : 'Tam analiz';
         
         log('Entegrasyon tamamlandı (' + elapsed + ' s).', 'ok');
 
@@ -876,7 +876,7 @@ function veSolverRunProfessional() {
         if(_hasSegDriveResult && simResult.mode === 'full-throttle') {
           logSpacer();
           log('═══════════════════════════════════════════', 'info');
-          log('PERFORMANS ANALİZİ (Tam Gaz Hızlanma)', 'info');
+          log('PERFORMANS ANALİZİ (tam gaz hızlanma)', 'info');
           log('═══════════════════════════════════════════', 'info');
         }
 
@@ -939,9 +939,9 @@ function veSolverRunProfessional() {
           // Girdi segmentlerini logla
           var _inputSegs = simResult.segmentDriveInputSegments || [];
           if(_inputSegs.length > 0) {
-            log('Girdi Segmentleri (' + _inputSegs.length + ' adet):', 'info');
+            log('Girdi segmentleri (' + _inputSegs.length + ' adet):', 'info');
             _inputSegs.forEach(function(iseg) {
-              var cmdL = iseg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+              var cmdL = iseg.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
               log('  Seg ' + iseg.no + ': mesafe=' + (iseg.distance || 0).toFixed(0) + 'm, eğim=%' + (iseg.grade || 0).toFixed(2) + ', komut=' + cmdL);
             });
           }
@@ -967,12 +967,12 @@ function veSolverRunProfessional() {
 
             var _computedSegs = _segDrv.segmentSummary.length;
             var _expectedSegs = _inputSegs.length || _sds.segments || 0;
-            log('Segment Bazlı Özet (' + _computedSegs + '/' + _expectedSegs + ' segment hesaplandı):', 'info');
+            log('Segment bazlı özet (' + _computedSegs + '/' + _expectedSegs + ' segment hesaplandı):', 'info');
             if(_computedSegs < _expectedSegs) {
               log('  ⚠ UYARI: ' + (_expectedSegs - _computedSegs) + ' segment hesaplanamadı!', 'error');
             }
             _segDrv.segmentSummary.forEach(function(ss) {
-              var cmdLabel = ss.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+              var cmdLabel = ss.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
               var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';
               log('  ' + cmdIcon + ' Seg ' + ss.no + ' [' + cmdLabel + ', %' + ss.grade.toFixed(1) + ']: ' +
                 ss.startSpeed_kmh.toFixed(1) + ' → ' + ss.endSpeed_kmh.toFixed(1) + ' km/h, ' +
@@ -1014,7 +1014,7 @@ function veSolverRunProfessional() {
             if(sh.length > 0) {
               logSpacer();
               var i_tr = trg.ratio || trg.oran || '?';
-              log('Vites Geçiş Tablosu — ' + trg.kademe + ' (i=' + i_tr + ') — ' + sh.length + ' geçiş:', 'info');
+              log('Vites geçiş tablosu — ' + trg.kademe + ' (i=' + i_tr + ') — ' + sh.length + ' geçiş:', 'info');
               veLogCappedList(sh, log, function(s) {
                 return '  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
                   + ' | V=' + s.v_kmh.toFixed(1) + ' km/h | N=' + s.N_engine.toFixed(0)
@@ -1034,7 +1034,7 @@ function veSolverRunProfessional() {
           var sh = simResult.solverStats.shiftHistory;
           if(sh.length > 0) {
             logSpacer();
-            log('Vites Geçiş Tablosu (' + sh.length + ' geçiş):', 'info');
+            log('Vites geçiş tablosu (' + sh.length + ' geçiş):', 'info');
             veLogCappedList(sh, log, function(s) {
               return '  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
                 + ' | V=' + s.v_kmh.toFixed(1) + ' km/h | N=' + s.N_engine.toFixed(0)
@@ -1096,13 +1096,13 @@ function veSolverRunProfessional() {
             var maxWP = Math.max.apply(null, r.WP);
             var maxGr = Math.max.apply(null, r.netGrade);
             var maxHeat = Math.max.apply(null, r.heatRejection);
-            log('  Maks. Çekme Kuvveti (TE) : ' + maxTE.toFixed(2) + ' kN');
+            log('  Maks. çekme kuvveti (TE) : ' + maxTE.toFixed(2) + ' kN');
             log('  Maks. Drawbar Pull  (DP) : ' + maxDP.toFixed(2) + ' kN');
-            log('  Maks. Tekerlek Gücü (WP) : ' + maxWP.toFixed(1) + ' kW');
-            log('  Maks. Net Eğim          : %' + maxGr.toFixed(1));
-            log('  Maks. Isı Reddi         : ' + maxHeat.toFixed(1) + ' kW');
+            log('  Maks. tekerlek gücü (WP) : ' + maxWP.toFixed(1) + ' kW');
+            log('  Maks. net eğim          : %' + maxGr.toFixed(1));
+            log('  Maks. ısı reddi         : ' + maxHeat.toFixed(1) + ' kW');
             if(ss.reachedMaxSpeed) {
-              log('  Maks. Hız               : ' + ss.maxSpeed_kmh.toFixed(1) + ' km/h (' + ss.finalGear + ')', 'ok');
+              log('  Maks. hız               : ' + ss.maxSpeed_kmh.toFixed(1) + ' km/h (' + ss.finalGear + ')', 'ok');
             }
             
             // ── 2. Hızlanma Süreleri ──
@@ -1291,13 +1291,13 @@ function veSolverRunProfessional() {
               logSpacer();
               log('ENERJİ DENGESİ — GÜÇ AKIŞI:', 'info');
               log('  ┌─────────────────────────────────────────────────┐');
-              log('  │  Güç Bileşeni            │  Maks [kW] │ Ort [kW]│');
+              log('  │  Güç bileşeni            │  Maks [kW] │ Ort [kW]│');
               log('  ├─────────────────────────────────────────────────┤');
-              log('  │  Motor Gücü (P_engine)    │ ' + pad(eb.maxP_engine.toFixed(1), 9) + '  │ ' + pad(eb.avgP_engine.toFixed(1), 7) + ' │');
-              var _tcHeatLbl = nodes.some(function(n){return n.type==='torque-converter';}) ? 'TC Isı Kaybı (P_TC)' : 'Aktarma Isı (P_ısı)';
+              log('  │  Motor gücü (P_engine)    │ ' + pad(eb.maxP_engine.toFixed(1), 9) + '  │ ' + pad(eb.avgP_engine.toFixed(1), 7) + ' │');
+              var _tcHeatLbl = nodes.some(function(n){return n.type==='torque-converter';}) ? 'TC ısı kaybı (P_TC)' : 'Aktarma ısı (P_ısı)';
               log('  │  ' + _tcHeatLbl + '      │ ' + pad(eb.maxP_TC_heat.toFixed(1), 9) + '  │ ' + pad(eb.avgP_TC_heat.toFixed(1), 7) + ' │');
-              log('  │  Güç Aktarma Kaybı (P_dt) │ ' + pad(eb.maxP_drivetrain.toFixed(1), 9) + '  │ ' + pad(eb.avgP_drivetrain.toFixed(1), 7) + ' │');
-              log('  │  Tekerlek Gücü (P_wheel)  │ ' + pad(eb.maxP_wheel.toFixed(1), 9) + '  │ ' + pad(eb.avgP_wheel.toFixed(1), 7) + ' │');
+              log('  │  Güç aktarma kaybı (P_dt) │ ' + pad(eb.maxP_drivetrain.toFixed(1), 9) + '  │ ' + pad(eb.avgP_drivetrain.toFixed(1), 7) + ' │');
+              log('  │  Tekerlek gücü (P_wheel)  │ ' + pad(eb.maxP_wheel.toFixed(1), 9) + '  │ ' + pad(eb.avgP_wheel.toFixed(1), 7) + ' │');
               log('  ├─────────────────────────────────────────────────┤');
               log('  │  Yuvarlanma (P_rolling)    │             │ ' + pad(eb.avgP_rolling.toFixed(1), 7) + ' │');
               log('  │  Aerodinamik (P_aero)      │             │ ' + pad(eb.avgP_aero.toFixed(1), 7) + ' │');
@@ -1385,7 +1385,7 @@ function veSolverRunProfessional() {
           
           log('┌─ t=0 (Başlangıç Anı) ─────────────────', 'info');
           log('│ Hız              : ' + simResult.speed[0].toFixed(1) + ' km/h', 'dim');
-          log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[0].toFixed(0) : '—') + ' d/d', 'dim');
+          log('│ Motor devri      : ' + (simResult.rpm ? simResult.rpm[0].toFixed(0) : '—') + ' d/d', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
           // F_grade fizik konvansiyonunda: pozitif = yokuşa direnç (frenleyici),
@@ -1396,9 +1396,9 @@ function veSolverRunProfessional() {
             return (etki >= 0 ? '+' : '-') + Math.abs(etki).toFixed(0) + ' N  (' +
                    (etki > 0 ? 'hızlandırıcı' : etki < 0 ? 'frenleyici' : 'etkisiz') + ')';
           }
-          log('│   Eğim Kuvveti    (F_grade) : ' + _egimEtki(Fg0));
-          log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(Fr0).toFixed(0) + ' N  (frenleme)');
-          log('│   Hava Direnci    (F_aero)  : -' + Math.abs(Fa0).toFixed(0) + ' N  (frenleme)');
+          log('│   Eğim kuvveti    (F_grade) : ' + _egimEtki(Fg0));
+          log('│   Yuvarlanma dir. (F_roll)  : -' + Math.abs(Fr0).toFixed(0) + ' N  (frenleme)');
+          log('│   Hava direnci    (F_aero)  : -' + Math.abs(Fa0).toFixed(0) + ' N  (frenleme)');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + topDirenc0.toFixed(0) + ' N');
           log('│   NET KUVVET               : ' + (Fn0 >= 0 ? '+' : '') + Fn0.toFixed(0) + ' N' + (Fn0 > 10 ? '  → hızlanıyor' : (Fn0 < -10 ? '  → yavaşlıyor' : '  → dengede')));
@@ -1419,12 +1419,12 @@ function veSolverRunProfessional() {
           
           log('┌─ t=' + simResult.time[li].toFixed(1) + 's (Bitiş Anı) ─────────────────', 'info');
           log('│ Hız              : ' + simResult.speed[li].toFixed(1) + ' km/h', 'dim');
-          log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[li].toFixed(0) : '—') + ' d/d', 'dim');
+          log('│ Motor devri      : ' + (simResult.rpm ? simResult.rpm[li].toFixed(0) : '—') + ' d/d', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
-          log('│   Eğim Kuvveti    (F_grade) : ' + _egimEtki(FgL));
-          log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(FrL).toFixed(0) + ' N');
-          log('│   Hava Direnci    (F_aero)  : -' + Math.abs(FaL).toFixed(0) + ' N');
+          log('│   Eğim kuvveti    (F_grade) : ' + _egimEtki(FgL));
+          log('│   Yuvarlanma dir. (F_roll)  : -' + Math.abs(FrL).toFixed(0) + ' N');
+          log('│   Hava direnci    (F_aero)  : -' + Math.abs(FaL).toFixed(0) + ' N');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + topDirencL.toFixed(0) + ' N');
           log('│   NET KUVVET               : ' + (FnL >= 0 ? '+' : '') + FnL.toFixed(0) + ' N' + (FnL > 10 ? '  → hızlanıyor' : (FnL < -10 ? '  → yavaşlıyor' : '  → dengede')));

@@ -270,7 +270,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   tools/cumle-duzeni.js <dosya>` sapmaları listeler). Kılavuz panel kartını
   BAŞLIĞIYLA arar — kart adı iki tarafta birlikte değişir. Kapı:
   `cumle-duzeni.test.js`; kapsam aşama aşama büyür (bugün kabuk + bileşen
-  panelleri + kılavuzlar).
+  panelleri + kılavuzlar + Sonuçlar). Sinyal adı panoya KOPYA yazılır: ad
+  tablosu değişirse `veResSinyalAdTazele` harfi açılışta tazeler
+  (`sinyal-ad-tazele.test.js`).
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

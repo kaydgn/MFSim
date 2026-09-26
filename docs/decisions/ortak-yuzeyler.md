@@ -1502,15 +1502,28 @@ başlığı, yer tutucu, kılavuz bölüm başlıkları; birleştirme süzgeci a
 çıplak "+"yı değil yalnız tırnağa bitişik "+"yı atlar — "+ Satır ekle" hiç
 taranmıyordu) ve kabukta 12 etiket daha çıktı: 9'u aşama 1 listesinin
 unuttuğu dört kabuk dosyasında, artık listede.
-3 — sonuçlar, rapor üreticileri, sinyal adları ve Çözücü günlüğü (sırada).
-Günlük düz metin bir tablo; üçlü koşuldan gelen satır adları komşularıyla
-birlikte çevrilsin diye bu aşamaya kaldı.
+3a — Sonuçlar: `results.js`, sensör paketleri, sinyal adları ve Çözücü
+günlüğü: 330 + 84 etiket → 0. `name:` bileşen adlarında ve verilerde (ön
+ayar, Allison profili, yük durumu) de geçtiği için yalnız dört bloğun İÇİ
+taranır (`COMPONENT_SIGNALS`, `SW_DIAGRAM_SIGNALS`, `SENSOR_PACKAGES`,
+`veSolverTabDefs`). Günlük düz metin tablo; dönüşüm uzunluğu korur, "│"
+hücre ayırır.
+3b — grafikler (`graphics.js`) ve rapor üreticileri (sırada).
+
+**Kayıtlı panoda sinyal adı bir KOPYA.** Eşleme hep kimlikle, ama şerit adı
+projeye yazılıyor ("Motor — Motor Devri"). Ad tablosu değişince
+`veResSinyalAdTazele` Sonuçlar'a girişte yalnız SİNYAL kısmının harfini
+tazeler; kaynak kısmı (düğüm adı) ve modül kanalları dokunulmaz. Kapı:
+`sinyal-ad-tazele.test.js` (tazeleyici etkisizken 2, çağrı kalkınca 1 testle
+düşüyor).
 
 **Aşama 2'nin eklediği özel adlar.** Kayış Tablosu'nun sütun adları
 kullanıcının hesap defterinin başlıklarıdır ("Efektif Çap", "Sarım Açısı" —
 `VE_FEAD_TABLE_COLS`'tan okunur); sihirbazın gergiye verdiği ad ("Otomatik
 Gergi", kullanıcı kararı 2026-08-31 — `VE_FW_TEN_AD`'dan okunur); kişi adları
-(Euler, Newton, Campbell…). "→" de bölüt başlatır ("Otomatik → Lineer");
+(Euler, Newton, Campbell…). "→", "│" ve boşluklu " – " de bölüt başlatır
+("Otomatik → Lineer", "Motor devri – Araç hızı"); "+" başlatmaz ("Sağ tık +
+sürükle");
 tireli birleşik kelimenin her parçası ayrı kelimedir ("Kayış-kasnak"), bütünü
 bir terimse kalır ("Coast-Down").
 
@@ -1521,5 +1534,5 @@ sahnesinden 7'si hata vermeden boş dönerdi (ölçüldü).
 **Kapı.** `cumle-duzeni.test.js`: kuralın örnekleri, bileşen adları
 kaynaktan, her aşamanın dosyalarında sapma yok, yüzey adı küçültülmüyor,
 kılavuzun aradığı her kart başlığı panelde var. Düzeltme öncesi kaynakta
-aşama 1'de 94 (+12), aşama 2'de 386 sapmayla; eski kılavuz + yeni panelle 7
+aşama 1'de 94 (+12 +84), aşama 2'de 386, aşama 3a'da 330 sapmayla; eski kılavuz + yeni panelle 7
 bulunamayan kartla düşüyor.
