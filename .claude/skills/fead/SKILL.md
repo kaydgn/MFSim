@@ -659,7 +659,7 @@ olurdu.
     `tests/unit/step-ucgen.test.js` (kaplama TAM · alan · hacim ve yön · su
     geçirmezlik · baştaki Delaunay · ölçülmüş kusurlar) +
     `tests/e2e/fead-step.spec.js` (gerçek File · UYGULAMANIN KENDİ karesi
-    çiziyor · 3B'de tıklayıp rol · alt montaj · halkalar · önden/arkadan yön
+    çiziyor · sığdırma montajın kendi noktalarıyla · 3B'de tıklayıp rol · alt montaj · halkalar · önden/arkadan yön
     ve XY düzleminde yukarı · hesap seçimi kaldırır · Esc · kart altından
     değişince 3B kapanır · bırakma · Modeli Kur).
 

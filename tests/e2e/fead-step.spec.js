@@ -80,6 +80,34 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   await expect(page.locator('#ve-fw-3b')).toBeVisible();
   await expect(page.locator('#ve-fw-3b-tuval')).toHaveAttribute('data-durum', 'hazir', { timeout: 30000 });
   expect((await page.evaluate(() => veFeadWiz3bDurum())).parca).toBe(5);
+  // SIĞDIRMA montajın KENDİ noktalarıyla: eksene hizalı kutunun köşeleriyle
+  // sığdırmak eğik bakışta modeli küçültüyordu (kullanıcının dosyasında tuvalin
+  // %29'u). Ölçülen: örneklenmiş köşelerin izdüşümünün yarı genişliği (NDC) —
+  // bu dosyada noktalarla 0,85, kutuyla 0,77; eşik ikisinin ortasında.
+  const doluluk = () => page.evaluate(() => {
+    const V = _fw3b;
+    V.camera.updateMatrixWorld();
+    let x0 = 1, x1 = -1, y0 = 1, y1 = -1;
+    (veFeadWizStp().ag || []).forEach((a) => {
+      if (!a) return;
+      for (let i = 0; i < a.uc.length; i += 30) {
+        const p = new THREE.Vector3(a.uc[i], a.uc[i + 1], a.uc[i + 2]).project(V.camera);
+        x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
+      }
+    });
+    return Math.max((x1 - x0) / 2, (y1 - y0) / 2);
+  });
+  let dol = await doluluk();
+  expect(dol).toBeGreaterThan(0.81);
+  expect(dol).toBeLessThan(1);
+  // "Sığdır" düğmesi de aynı noktalarla: tekerlekle uzaklaş → sığdır
+  const tuv0 = await page.locator('#ve-fw-3b-tuval').boundingBox();
+  await page.mouse.move(tuv0.x + tuv0.width / 2, tuv0.y + tuv0.height / 2);
+  await page.mouse.wheel(0, 600);
+  await expect.poll(doluluk).toBeLessThan(0.6);
+  await page.locator('.ve-fw-3b-bas button', { hasText: 'Sığdır' }).click();
+  dol = await doluluk();
+  expect(dol).toBeGreaterThan(0.81);
   // Tuval gerçekten ÇİZİLDİ — UYGULAMANIN KENDİ karesinde: ortada zemin
   // renginden farklı pikseller. Tampon kareden sonra silinir, yani pikseller
   // uygulamanın render çağrısının hemen ardından okunur. Test sahneyi kendisi
