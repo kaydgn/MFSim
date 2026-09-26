@@ -1315,3 +1315,60 @@ içinde kırıyordu (motor penceresi ve üç aksesuar penceresi).
 
 **Kapı.** `mufettis-sigma.spec.js` → *"düğme yazısı N satır"* (her pencere,
 sütunda ve modalda) + `panel-dugme.test.js`.
+
+## Liste ve sayı alanı tek dilde (2026-09-26, kullanıcı kararı 11·B)
+
+**Hüküm.** Tek satırlı her açılır listenin okunu TEK kural çizer
+(`select:not([multiple]):not([size])`): kararın örneğindeki çizgi ok (Lucide
+chevron-down, 6×3 px), iki gradyanla, rengi `--text-muted`. Sayı alanında
+tarayıcının yukarı/aşağı oku yok; ↑/↓ tuşları çalışır.
+
+**Gerekçe.** 33 liste Windows'un okuyla, FEAD çubuğu ayrı bir kamayla
+çiziliyordu; 338 sayı alanı fare üstünde ok açıyor ve ok için ayrılan yer
+sağa yaslı rakamı kenardan 15–16 px içeri itiyordu. SVG değil gradyan:
+arka plan SVG'si tema değişkenini okuyamaz. `!important` bilerek: satır içi
+`background:` kısaltması oku siler.
+
+**Kapı.** `denetim-dili.test.js` (tek kural, çizgi ok, sayı alanı) +
+`mufettis-sigma.spec.js` → *"yerel liste"* / *"sayı alanı oklu"*.
+
+## Kaydırma çubuğu CSS'in niyeti (2026-09-26, kullanıcı kararı 12·B)
+
+**Hüküm.** Çubuk `::-webkit-scrollbar` ile çizilir (8 px, yuvarlak, oksuz).
+Standart `scrollbar-width` / `scrollbar-color` yalnız
+`@supports not selector(::-webkit-scrollbar)` bloğunda — yani Firefox'ta.
+`scrollbar-width: none` (gizlemek) serbest.
+
+**Gerekçe.** Chromium 121'den beri standart özellik `::-webkit-scrollbar`'ı
+KAPATIR: Edge'de tarayıcının 10 px'lik oklu çubuğu çiziliyordu.
+
+**Kapı.** `kaydirma-cubugu.spec.js` (gerçek çizim, Playwright'ın
+`--hide-scrollbars` bayrağı kapalı) + `denetim-dili.test.js`.
+
+## Veri ızgarası tablo gibi (2026-09-26, kullanıcı kararı 13·B)
+
+**Hüküm.** Satır başına birden çok alan taşıyan tablo `table.ve-izgara`
+taşır: dikey çizgi ve hücre zemini yok, girdinin kutusu yalnız fare
+üstünde ve yazarken. Izgara girdisi satır içi zemin/çerçeve TAŞIMAZ. Sayı
+sağa ve başlığın sağ kenarına oturur (hücre dolgusu + çerçeve + iç dolgu =
+sıradan hücrenin dolgusu). Satır başına tek alanlı form tabloları kapsam
+dışı.
+
+**Gerekçe.** Beş ızgarada 189 girdinin 189'u dinlenmede kutuluydu ve
+tablonun çizgisiyle çift çizgi okunuyordu; satır içi stil fare/odak
+durumunu ifade edemez.
+
+**Kapı.** `veri-izgara.test.js` + `mufettis-sigma.spec.js` →
+*"ızgarada kutulu hücre"*.
+
+## Rapor tablosunda sayı sağa, renk ezilmez (2026-09-26, kullanıcı kararı 14·B)
+
+**Hüküm.** Ayrıntılı raporda tamamı sayı olan sütun, başlığıyla birlikte
+sağa yaslı; ad ve metin sütunu solda, ✓/✗ ortada. `.dr-body table td`
+rengi `!important` ile ZORLAMAZ; rapor üreteci sabit onaltılık renk yazmaz.
+
+**Gerekçe.** 1517 sayı hücresinin 1364'ü ortalıydı. Renk zorlaması 212
+hücrenin anlam rengini eziyordu (etiket/değer ayrımı, eşleşme noktası,
+kırmızı uyarılar); sebebi olan `#333` üreteçten kalktı.
+
+**Kapı.** `rapor-hiza.test.js` + `rapor-hiza.spec.js`.

@@ -194,7 +194,7 @@ function getEnginePropertiesHTML(node) {
                  ' style="' + (sheetHeight ? 'max-height:' + sheetHeight + 'px; ' : '') +
                  'overflow-y:auto; overflow-x:hidden; border:1px solid var(--border-color);' +
                  ' border-radius:var(--radius-sm); border-bottom:none;">';
-    sheetHtml += '<table class="ve-eng-sheet">';
+    sheetHtml += '<table class="ve-eng-sheet ve-izgara">';
     sheetHtml += '<colgroup><col class="c-n"><col class="c-a"><col class="c-b"><col class="c-c">' +
                  '<col class="c-d"><col class="c-e"><col class="c-f"><col class="c-x"></colgroup>';
     sheetHtml += '<thead><tr><th class="n"> </th>';
@@ -312,30 +312,31 @@ function getEnginePropertiesHTML(node) {
     accHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between;">Aksesuar Kayıpları' +
                '<span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-muted);">kW</span></div>';
 
-    accHtml += '<table class="ve-eng-acc" style="width:100%; table-layout:fixed; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
-    accHtml += '<thead><tr style="background:var(--bg-secondary);">';
-    accHtml += '<th style="text-align:left; border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Aksesuar</th>';
-    accHtml += '<th style="text-align:right; border:1px solid var(--border-color); font-weight:500; color:var(--text-muted); width:56px;">Std</th>';
-    accHtml += '<th style="text-align:right; border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:56px;">Kul.</th>';
+    // Görünüş CSS'te (.ve-eng-acc + table.ve-izgara, 13·B): satır içi zemin
+    // ve çerçeve fare/odak durumunu ifade edemiyordu, kutu dinlenmede kalıyordu.
+    accHtml += '<table class="ve-eng-acc ve-izgara">';
+    accHtml += '<thead><tr><th class="lbl">Aksesuar</th>';
+    accHtml += '<th class="num" style="width:56px; color:var(--text-muted);">Std</th>';
+    accHtml += '<th class="num" style="width:56px;">Kul.</th>';
     accHtml += '</tr></thead><tbody id="ve-acc-table-' + node.id + '">';
 
     accData.forEach(function(acc, idx) {
       // Kaybı 0 olan satır sessizleşir — hangi aksesuarın gerçekten güç
       // çektiği tek bakışta okunsun.
       var _tone = (acc.userLoss || 0) > 0 ? 'var(--text-secondary)' : 'var(--text-muted)';
-      accHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
-      accHtml += '<td style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); color:' + _tone + '; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + acc.name + '</td>';
-      accHtml += '<td class="num" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color);"><input type="number" class="ve-acc-std-' + node.id + '" data-idx="' + idx + '" value="' + (acc.standardLoss || 0) + '" step="0.1" min="0" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
-      accHtml += '<td class="num" style="background:var(--bg-tertiary);"><input type="number" class="ve-acc-user-' + node.id + '" data-idx="' + idx + '" value="' + (acc.userLoss || 0) + '" step="0.1" min="0" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
+      accHtml += '<tr>';
+      accHtml += '<td class="lbl" style="color:' + _tone + ';">' + acc.name + '</td>';
+      accHtml += '<td class="num"><input type="number" class="ve-acc-std-' + node.id + '" data-idx="' + idx + '" value="' + (acc.standardLoss || 0) + '" step="0.1" min="0" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
+      accHtml += '<td class="num"><input type="number" class="ve-acc-user-' + node.id + '" data-idx="' + idx + '" value="' + (acc.userLoss || 0) + '" step="0.1" min="0" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
       accHtml += '</tr>';
     });
 
     var totalStd = accData.reduce(function(s, a) { return s + (a.standardLoss || 0); }, 0);
     var totalUser = accData.reduce(function(s, a) { return s + (a.userLoss || 0); }, 0);
-    accHtml += '<tr style="background:var(--bg-secondary); font-weight:600;">';
-    accHtml += '<td style="border:1px solid var(--border-color); color:var(--text-heading);">Toplam</td>';
-    accHtml += '<td id="ve-acc-total-std-' + node.id + '" style="border:1px solid var(--border-color); text-align:right; color:var(--text-muted);">' + totalStd.toFixed(1) + '</td>';
-    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="border:1px solid var(--border-color); text-align:right; color:var(--accent-warning);">' + totalUser.toFixed(1) + '</td>';
+    accHtml += '<tr class="top">';
+    accHtml += '<td class="lbl">Toplam</td>';
+    accHtml += '<td id="ve-acc-total-std-' + node.id + '" style="color:var(--text-muted);">' + totalStd.toFixed(1) + '</td>';
+    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="color:var(--accent-warning);">' + totalUser.toFixed(1) + '</td>';
     accHtml += '</tr>';
     accHtml += '</tbody></table>';
     // "Kayıpları Uygula" doğrulama sütununa taşındı — sonucu orada okunuyor.

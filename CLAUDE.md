@@ -276,6 +276,14 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   özgü dal YAZILMAZ — Takoz'un 42 satırlık dağınık dalı ikinci modülde
   kopyalanacaktı ve biri zaten unutulmuştu ("Sonuçları Temizle" FEAD'i
   silmiyordu). Kapı: `fead-sonuclar-sekme.test.js` + `mount-results-tab.test.js`.
+- **DENETİM DİLİ TEK** (kullanıcı kararları 11–14, 2026-09-26). Liste okunu
+  TEK kural çizer (`select:not([multiple])`, çizgi ok, `--text-muted`); sayı
+  alanı oksuz; kaydırma çubuğu `::-webkit-scrollbar` (standart `scrollbar-*`
+  yalnız Firefox bloğunda — Chromium 121+ onu kapatıyor); veri ızgarası
+  (`table.ve-izgara`) kutuyu yalnız fare/odakta gösterir, girdisi satır içi
+  zemin/çerçeve TAŞIMAZ; raporda sayı sütunu başlığıyla sağa, hücre rengi
+  `!important` ile ezilmez. Kapı: `denetim-dili` · `veri-izgara` ·
+  `rapor-hiza` (test + spec) · `kaydirma-cubugu.spec.js` · `mufettis-sigma.spec.js`.
 - **Artifact önizlemesi kaldırıldı**, ama `build.js`'teki
   `maskRawTextKeepOffsets` **KALIR**: rapor üreticileri HTML şablonu bastığı
   için gerçek belgede sahte `</body>` geçiyor ve kalkan onun içindir.

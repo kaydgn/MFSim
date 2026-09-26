@@ -64,22 +64,22 @@ function getTransferPropertiesHTML(node) {
     html += '<div class="sw-section-title">Kademe Tablosu</div>';
     
     html += '<div style="border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden;">';
-    html += '<table class="ve-pnl-tbl">';
+    html += '<table class="ve-pnl-tbl ve-izgara">';
     html += '<thead>';
     html += '<tr>';
-    html += '<th style="width:30%;">Kademe</th>';
-    html += '<th style="width:35%;">Oran</th>';
-    html += '<th style="width:35%;">Verim [%]</th>';
+    html += '<th class="lbl" style="width:30%;">Kademe</th>';
+    html += '<th class="num" style="width:35%;">Oran</th>';
+    html += '<th class="num" style="width:35%;">Verim [%]</th>';
     html += '</tr>';
     html += '</thead>';
     html += '<tbody>';
     
     ftTrGears.forEach(function(g, idx) {
-      var isLast = idx === ftTrGears.length - 1;
-      html += '<tr style="' + (isLast ? '' : 'border-bottom:1px solid var(--border-color);') + '">';
-      html += '<td style="background:var(--bg-tertiary); font-weight:500; color:var(--text-secondary);">' + g.kademe + '</td>';
-      html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-fttr-ratio-' + node.id + '-' + idx + '" value="' + g.ratio + '" step="0.001" min="0.1" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
-      html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-fttr-eff-' + node.id + '-' + idx + '" value="' + g.eff + '" step="0.01" min="80" max="100" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
+      // Satır çizgisi ve hücre zemini tablonun kuralından (table.ve-izgara, 13·B)
+      html += '<tr>';
+      html += '<td class="lbl" style="font-weight:500; color:var(--text-secondary);">' + g.kademe + '</td>';
+      html += '<td><input type="number" id="ve-fttr-ratio-' + node.id + '-' + idx + '" value="' + g.ratio + '" step="0.001" min="0.1" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
+      html += '<td><input type="number" id="ve-fttr-eff-' + node.id + '-' + idx + '" value="' + g.eff + '" step="0.01" min="80" max="100" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
       html += '</tr>';
     });
     

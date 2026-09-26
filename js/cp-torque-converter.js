@@ -98,13 +98,13 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-section-title">Konvertör Veri Tablosu</div>';
     html += '<div class="sw-pkg-desc" style="margin-bottom:8px;"><b>SR</b> = Türbin/Pump Devir Oranı. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı.</div>';
     html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
-    html += '<table class="ve-pnl-tbl">';
+    html += '<table class="ve-pnl-tbl ve-izgara">';
     html += '<thead>';
     html += '<tr>';
-    html += '<th>SR<br>[-]</th>';
-    html += '<th>K<sub>pump</sub><br>[rpm/√Nm]</th>';
-    html += '<th>τ<br>[-]</th>';
-    html += '<th style="color:var(--accent-primary);">η<br>[%]</th>';
+    html += '<th class="num">SR<br>[-]</th>';
+    html += '<th class="num">K<sub>pump</sub><br>[rpm/√Nm]</th>';
+    html += '<th class="num">τ<br>[-]</th>';
+    html += '<th class="num" style="color:var(--accent-primary);">η<br>[%]</th>';
     html += '<th style="width:28px;"></th>';
     html += '</tr></thead>';
     html += '<tbody id="ve-tc-table-' + node.id + '">';
@@ -829,14 +829,17 @@ function onVEFTTCSelect(nodeId, value) {
 // ===== TORK KONVERTÖRÜ TABLO FONKSİYONLARI (Tam Gaz) =====
 
 function getVETCRowHTML(nodeId, sr, kpump, tau) {
+  // Izgara hücresi satır içi zemin/çerçeve TAŞIMAZ (table.ve-izgara, 13·B):
+  // kutu fare üstünde ve yazarken CSS'ten gelir; satır içi stil o durumu
+  // ifade edemiyordu ve kutu dinlenmede kalıyordu.
   var html = '<tr>';
-  html += '<td class="tight"><input type="number" value="' + (sr !== undefined && sr !== '' ? sr : '') + '" step="0.01" min="0" max="1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (kpump !== undefined && kpump !== '' ? kpump : '') + '" step="0.01" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (tau !== undefined && tau !== '' ? tau : '') + '" step="0.001" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="number" value="' + (sr !== undefined && sr !== '' ? sr : '') + '" step="0.01" min="0" max="1" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="number" value="' + (kpump !== undefined && kpump !== '' ? kpump : '') + '" step="0.01" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="number" value="' + (tau !== undefined && tau !== '' ? tau : '') + '" step="0.001" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
   var etaVal = (sr !== '' && sr !== undefined && tau !== '' && tau !== undefined) ? (parseFloat(sr) * parseFloat(tau) * 100) : '';
   var etaStr = (!isNaN(etaVal) && etaVal !== '') ? etaVal.toFixed(1) : '';
-  html += '<td class="tight"><input type="text" value="' + etaStr + '" readonly style="width:100%; padding:4px; font-size:var(--fs-body); background:transparent; color:var(--accent-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center; cursor:default; font-weight:500;" tabindex="-1"></td>';
-  html += '<td class="tight"><button onclick="removeVETCRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:var(--fs-tiny); background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;" title="Satırı sil">×</button></td>';
+  html += '<td class="tight"><input type="text" class="f" value="' + etaStr + '" readonly tabindex="-1"></td>';
+  html += '<td class="tight"><button class="ve-row-del" onclick="removeVETCRow(this, \'' + nodeId + '\')" title="Satırı sil">×</button></td>';
   html += '</tr>';
   return html;
 }

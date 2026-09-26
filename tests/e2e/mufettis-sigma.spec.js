@@ -118,6 +118,30 @@ const pencereOlc = async (tip) => {
   ic.querySelectorAll('input[type=number]').forEach((s) => {
     if (s.offsetWidth && getComputedStyle(s).appearance !== 'textfield') sorun.push('sayı alanı oklu');
   });
+  // VERİ IZGARASI TABLO GİBİ (2026-09-26, kullanıcı kararı 13·B): satır başına
+  // iki ya da daha çok düzenlenebilir alan taşıyan tabloda hücrenin kutusu
+  // DİNLENMEDE yok — yalnız fare üstünde ve yazarken. Önce beş ızgarada 189
+  // girdinin 189'u çerçeveli ve zeminliydi. Form tabloları kapsam dışı:
+  // orada kutu alanın kendisini gösterir. Formun TEK satırında yan yana iki
+  // alan olabilir (çözücünün "ATol / RTol"u) — ızgara sayılmak için çok
+  // alanlı satır en az iki tane ve alanlı satırların en az yarısı olmalı.
+  const bos = (c) => /^(transparent|rgba\(\d+, \d+, \d+, 0\))$/.test(c);
+  const zemin = (el) => { for (let e = el; e; e = e.parentElement) { const b = getComputedStyle(e).backgroundColor; if (!bos(b)) return b; } return ''; };
+  ic.querySelectorAll('table').forEach((t) => {
+    if (!t.offsetWidth) return;
+    const DUZ = 'input[type=number]:not([readonly]), input[type=text]:not([readonly])';
+    const cok = [...t.rows].filter((tr) => tr.querySelectorAll(DUZ).length >= 2).length;
+    const alanli = [...t.rows].filter((tr) => tr.querySelector(DUZ)).length;
+    if (cok < 2 || cok * 2 < alanli) return;
+    let kutu = 0;
+    t.querySelectorAll('td input:not([type=hidden]):not([type=checkbox]):not([type=radio])').forEach((g) => {
+      if (!g.offsetWidth || g === document.activeElement || g.matches(':hover')) return;
+      const c = getComputedStyle(g), hz = zemin(g.parentElement);
+      const kenar = parseFloat(c.borderTopWidth) > 0 && !bos(c.borderTopColor) && c.borderTopColor !== hz;
+      if (kenar || (!bos(c.backgroundColor) && c.backgroundColor !== hz)) kutu++;
+    });
+    if (kutu) sorun.push(`ızgarada kutulu hücre ${kutu}`);
+  });
   const r = { tip, sutun: ov.getBoundingClientRect().width < innerWidth, tasma: ic.scrollWidth - ic.clientWidth, kesik, enSag,
     listede: VE_SUTUNA_SIGMAYAN.indexOf(tip) >= 0, sorun: [...new Set(sorun)].slice(0, 4) };
   veTogglePropertiesPanel(false); await new Promise((res) => setTimeout(res, 260));
