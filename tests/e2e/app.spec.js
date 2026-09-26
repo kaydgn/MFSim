@@ -61,15 +61,20 @@ test.describe('Statik kabuk (giriş öncesi)', () => {
     await expect(page.locator('#ve-ribbon')).toHaveCount(1);
   });
 
-  test('hızlı erişim çubuğunda kaydet / geri al / yinele var', async ({ page }) => {
+  test('kaydet / geri al / yinele banttan kalktı — yolu açık', async ({ page }) => {
     await page.goto('/index.html');
     // KAYDET/GERİ/İLERİ İKONLARI BANTTAN KALKTI (Atölye bandı, 2026-09-22):
     // maket onları taşımıyor ve bantta kaldıkları sürece üst satır eski
     // şeridin aynısı okunuyordu. Hüküm kaybolmadı, YOLU değişti — üçü de
     // klavyeden ve paletten erişilebilir. Kapı o yolu tutuyor:
     await expect(page.locator('#ve-qat')).toHaveCount(0);
+    // İşlevler GİRİŞTEN SONRA var: state.js ve toolbar.js ertelenmiş öbekte
+    // (`text/x-mfsim-defer`). Giriş öncesi sorulunca `undo` tanımsızdı ve
+    // halka yolun kendisini değil yükleme sırasını ölçüp düşüyordu.
+    await page.fill('#mfsim-login-password', 'mfsim2024');
+    await page.press('#mfsim-login-password', 'Enter');
+    await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
     const tuslar = await page.evaluate(() => ({
-      kaydet: /key === 's'/.test(String(window.veSaveTopology && 1) + document.documentElement.innerHTML.slice(0, 0)) || true,
       geriAl: typeof window.undo === 'function',
       ileriAl: typeof window.redo === 'function',
       kaydetFn: typeof window.veSaveTopology === 'function',
