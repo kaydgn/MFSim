@@ -93,6 +93,19 @@ describe('belge iskeleti', () => {
     for (let i = 1; i <= N; i++) expect(DOC).toContain('Sayfa ' + i + ' / ' + N);
   });
 
+  // Sayfa AD İLE aranıyor (`_fsrSheetNo`): ad listede yoksa atıf sessizce "—"
+  // basar. Başlık da kendi sabitinde duruyor — listeyle ayrışırsa sayfanın
+  // başlığı ile altlığı iki ayrı ad söyler. Cümle düzenine geçişte (karar 9·B)
+  // üçü birlikte döndü; biri unutulsa hiçbir test kırılmıyordu.
+  test('sayfa atfının ve başlığın adı SAYFA LİSTESİNDE', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../../js/cp-fead-summary.js'), 'utf8');
+    const atif = [...src.matchAll(/_fsrSheetNo\('([^']+)'\)/g)].map((m) => m[1]);
+    expect(atif.length).toBeGreaterThan(0);
+    atif.forEach((ad) => expect(SU.VE_FSR_SHEETS).toContain(ad));
+    const baslik = [...src.matchAll(/_fsrH1\('([^']+)'/g)].map((m) => m[1]);
+    SU.VE_FSR_SHEETS.forEach((ad) => expect(baslik).toContain(ad));
+  });
+
   test('tek dosya ve çevrimdışı — harici URL yok', () => {
     const dis = (DOC.replace(/https?:\/\/www\.w3\.org\/[^"')\s]*/g, '')
       .match(/https?:\/\/[^"')\s]+/g) || []);
@@ -366,7 +379,7 @@ describe('tedarikçi sayfa düzeni', () => {
     // −161,97 / 91,29 — tedarikçi sayfasının kendi değerleri
     expect(Math.abs(mean.idlerX - (-161.97))).toBeLessThan(0.2);
     const ten = R.build.sys.pulleys.filter((p) => p.tensioner)[0];
-    const tbl = s2.slice(s2.indexOf('Kasnak Yerleşimi'));
+    const tbl = s2.slice(s2.indexOf('Kasnak yerleşimi'));
     const hucre = hucreler(tbl, ten.name, 2).map(say);   // yardımcı etiketi zaten atlar
     expect(Math.abs(hucre[0] - mean.idlerX)).toBeLessThan(0.1);
     expect(Math.abs(hucre[1] - mean.idlerY)).toBeLessThan(0.1);
@@ -379,7 +392,7 @@ describe('tedarikçi sayfa düzeni', () => {
   // izlenimini bırakmaktır.
   test('sayfa 1: şema · künyeler · kritik sayılar · frekans', () => {
     const s1 = SU._fsrSheet1(R, NODE);
-    ['Kayış', 'Otomatik gergi', 'Doğal Frekans Haritası', 'Serbest Açıklık Titreşimi',
+    ['Kayış', 'Otomatik gergi', 'Doğal frekans haritası', 'Serbest açıklık titreşimi',
      'Tasarım gerginliği', 'En düşük kayma emniyeti', 'B10 kayış ömrü',
      'Kapalı çevrim', 'Çalışma çevrimi'].forEach((b) => expect(s1).toContain(b));
     expect((s1.match(/class="card[ "]/g) || []).length).toBe(5);
@@ -392,9 +405,9 @@ describe('tedarikçi sayfa düzeni', () => {
     const s1 = SU._fsrSheet1(R, NODE);
     expect(s1).toMatch(/<b>Hüküm:<\/b> en düşük f₁ \/ ateşleme/);
     expect(s1).toMatch(/f₁ \/ ateşleme/);
-    expect(s1.indexOf('Doğal Frekans Haritası')).toBeLessThan(s1.indexOf('Serbest Açıklık Titreşimi'));
+    expect(s1.indexOf('Doğal frekans haritası')).toBeLessThan(s1.indexOf('Serbest açıklık titreşimi'));
     // BURULMA DA AYNI SAYFADA: üçü de titreşim, üçü de birlikte okunmalı
-    expect(s1).toContain('Sistem Burulma Titreşimi');
+    expect(s1).toContain('Sistem burulma titreşimi');
     expect(s1).toMatch(/Rijit cisim/);
   });
 
@@ -462,8 +475,8 @@ describe('rapor türü seçimi', () => {
     global.veFeadResults = R;
     const d = RP.getFeadReportPropertiesHTML({ id: 'n1', type: 'fead-report', data: {} });
     const s = RP.getFeadReportPropertiesHTML({ id: 'n1', type: 'fead-report', data: { reportKind: 'summary' } });
-    expect(d).toContain('Detaylı Raporu Oluştur');
-    expect(s).toContain('Özet Raporu Oluştur');
+    expect(d).toContain('Detaylı raporu Oluştur');
+    expect(s).toContain('Özet raporu Oluştur');
     delete global.veFeadResults;
   });
 });
@@ -559,7 +572,7 @@ describe('kozmetik — okunabilirlik kararları', () => {
 
   test('sayfa 4 girdi tablosundan sabit sütunlar gerçekten düşmüş', () => {
     const s4 = SU._fsrSheet4(R, NODE);
-    const blok = s4.slice(s4.indexOf('Çalışma Çevrimi Girdisi'), s4.indexOf('Ortalama Gerginlikler'));
+    const blok = s4.slice(s4.indexOf('Çalışma çevrimi girdisi'), s4.indexOf('Ortalama Gerginlikler'));
     expect(blok).toMatch(/tablodan çıkarıldı/);
     expect(blok).not.toContain('Sıcaklık<br>[°C]');      // sabitti (90 °C)
     expect(blok).toContain('Sıcaklık');                   // ama künyede duruyor
@@ -663,7 +676,7 @@ describe('kozmetik — okunabilirlik kararları', () => {
   // o sayı bir marj değil KAPASİTEDİR" diyor — vurgu metnin tersini bağırdı.
   test('kırmızı yalnız hükmü VEREBİLEN kasnakta', () => {
     const s5 = SU._fsrSheet6(R, NODE);
-    const blok = s5.slice(s5.indexOf('Kayma Emniyet Faktörü'), s5.indexOf('Kaburga Yorulma'));
+    const blok = s5.slice(s5.indexOf('Kayma emniyet faktörü'), s5.indexOf('Kaburga Yorulma'));
     expect(blok).toContain('yük taşımaz');
     expect(blok).toContain('class="pas"');
     const st = RP._frSlipStats(R);
@@ -814,7 +827,7 @@ describe('doğruluk — sessiz sayı hataları', () => {
     // ve üç titreşim yüzeyinin üçü de sayfa 1'de duruyor
     const s1 = SU._fsrSheet1(R, NODE);
     expect(s1).toContain('data-ve="span-freq"');
-    expect(s1).toContain('Sistem Burulma Titreşimi');
+    expect(s1).toContain('Sistem burulma titreşimi');
   });
 
   // ── MANŞETTE MODELİN EN İYİ KESTİRİMİ ──────────────────────────────────
@@ -843,12 +856,12 @@ describe('kapsam — ayrıntılı raporun bölümleri', () => {
   // Kapı yalnız başlığa bakmaz: basılan her hücre Q = 9549·P/n olmalı.
   test('mil torku basılıyor ve Q = 9549·P/n tutuyor', () => {
     const s4 = SU._fsrSheet4(R, NODE);
-    expect(s4).toContain('Aksesuar Mil Torku');
+    expect(s4).toContain('Aksesuar mil torku');
     const d = R.analysis.duty[0];
     const yuk = d.perPulley.filter((q) => Number(q.powerKw) > 0);
     expect(yuk.length).toBeGreaterThan(0);
     const t = s4.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
-    const i = t.indexOf('Aksesuar Mil Torku');
+    const i = t.indexOf('Aksesuar mil torku');
     const g = t.slice(i).split('|').map((x) => x.trim()).filter(Boolean);
     const k = g.indexOf(String(Math.round(d.engineRpm)));
     expect(k).toBeGreaterThan(0);
@@ -862,14 +875,14 @@ describe('kapsam — ayrıntılı raporun bölümleri', () => {
   // ── §8.15 YÜK DURUMUNUN YORULMAYA KATKISI ──────────────────────────────
   test('yük katkısı basılıyor ve payların toplamı %100', () => {
     const s4 = SU._fsrSheet4(R, NODE);
-    expect(s4).toContain('Yük Durumunun Yorulmaya Katkısı');
+    expect(s4).toContain('Yük durumunun yorulmaya katkısı');
     const f = R.fatigue;
     expect(f.perLoadPct.length).toBe(R.duty.length);
     const top = f.perLoadPct.reduce((a, r) => a + Number(r.sharePct), 0);
     expect(Math.abs(top - 100)).toBeLessThan(0.5);
     // Σ satırı BASILIYOR ve basılan sayı gerçekten toplam
     const t = s4.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
-    const i = t.indexOf('Yük Durumunun Yorulmaya Katkısı');
+    const i = t.indexOf('Yük durumunun yorulmaya katkısı');
     expect(t.slice(i)).toContain('Σ');
   });
 
@@ -882,7 +895,7 @@ describe('kapsam — ayrıntılı raporun bölümleri', () => {
     expect(Number.isFinite(T.firstElasticHz)).toBe(true);
     expect(T.rigidBodyModes).toBe(1);
     const t = s1.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
-    const i = t.indexOf('Sistem Burulma Titreşimi');
+    const i = t.indexOf('Sistem burulma titreşimi');
     const g = t.slice(i);
     expect(g).toContain('Rijit cisim');
     // her elastik mod frekansı tabloda
@@ -1131,7 +1144,7 @@ describe('FEAD özet · metin kendi sayısıyla tutarlı', () => {
 
   test('sayfa atfı SAYFA LİSTESİNDEN türüyor', () => {
     const g = govde(DOC);
-    const i = SU.VE_FSR_SHEETS.indexOf('Dayanım ve Titreşim');
+    const i = SU.VE_FSR_SHEETS.indexOf('Dayanım ve titreşim');
     expect(i).toBeGreaterThanOrEqual(0);
     expect(g).toContain('bkz. sayfa ' + (i + 1));
   });

@@ -173,11 +173,11 @@ function getMntReportPropertiesHTML(node){
               ? '<div style="color:var(--text-muted);">f<sub>ateş</sub> = (N/60)·(z/2) = <b style="color:var(--text-primary);">'+_rF(_fFire,1)+' Hz</b></div>'
               : '<div style="color:var(--accent-warning);">Ateşleme frekansı hesaplanamıyor — Motor bileşenine rölanti devri ve silindir sayısını girin (§8.8 atlanır).</div>')
         + '</div></div>';
-    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
+    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu oluştur ve indir</button>';
   } else {
     html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
         + '<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir.</div>';
-    html+='<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu Oluştur ve İndir</button>';
+    html+='<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu oluştur ve indir</button>';
   }
   html+='<div id="ve-mnt-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
   html+='</div>';
@@ -410,15 +410,15 @@ function _mntRepAntet(R){
   return ''
   + '<div class="antet">'
   + '  <div class="band">'
-  + '    <div class="eyebrow">Analiz Raporu · Güç Aktarma Organları Mühendisliği</div>'
-  + '    <h1>Güç Grubu Takoz Sistemi: Çökme ve Titreşim Analizi</h1>'
+  + '    <div class="eyebrow">Analiz raporu · Güç Aktarma Organları Mühendisliği</div>'
+  + '    <h1>Güç grubu takoz sistemi: Çökme ve titreşim analizi</h1>'
   + '    <div class="sub">Elastik mesnetler üzerindeki güç grubunun statik çökme ve rijit gövde titreşim analizi — projede tanımlı modelden otomatik üretilmiştir</div>'
   + '  </div>'
   + '  <div class="fields">'
-  + '    <div class="f"><div class="k">Doküman Türü</div><div class="v">Analiz Raporu</div></div>'
+  + '    <div class="f"><div class="k">Doküman türü</div><div class="v">Analiz raporu</div></div>'
   + '    <div class="f"><div class="k">Model</div><div class="v">'+nC+' bileşen · '+nM+' takoz</div></div>'
-  + '    <div class="f"><div class="k">Toplam Kütle</div><div class="v">'+mass+' kg</div></div>'
-  + '    <div class="f"><div class="k">Çözüm Yöntemi</div><div class="v">'+_rEsc(method)+'</div></div>'
+  + '    <div class="f"><div class="k">Toplam kütle</div><div class="v">'+mass+' kg</div></div>'
+  + '    <div class="f"><div class="k">Çözüm yöntemi</div><div class="v">'+_rEsc(method)+'</div></div>'
   + '    <div class="f"><div class="k">Tarih</div><div class="v">'+_rEsc(date)+'</div></div>'
   + '  </div>'
   + '</div>';
@@ -485,7 +485,7 @@ function _mntRepSection8(R, opts){
   _repTblNo=0; _repFigNo=1;   // her rapor üretiminde sıfırla
   var C=_rMountCore();
   var geom=_mntRepGeom(R);
-  var h='<h2 id="s8"><span class="no">8</span>Sayısal Örnek: Bu Modelin Çözümü</h2>';
+  var h='<h2 id="s8"><span class="no">8</span>Sayısal örnek: Bu modelin çözümü</h2>';
   h+='<p>Bölüm 2–7\'deki yöntem, projede tanımlı güç grubuna uygulanır. Tüm kütle ve takozlar iç topolojiden otomatik toplanır; girdiler aşağıda listelenir, ardından kütle birleştirme, rijitlik, statik çökme, tork süperpozisyonu, tüm yük durumları ve modal analiz adımları bu modelin gerçek değerleriyle çözülür. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
   h+=_mntRepNLNote(R);
   h+=_mntRepCritical(R);
@@ -1938,7 +1938,7 @@ function _mntRepConsistency(R){
 function _mntRepCompliance(R, opts){
   opts=opts||{};
   var modes=R.modes||[];
-  var h='<h2 id="uygunluk"><span class="no">✓</span>Motor Takozu Uygunluğu</h2>';
+  var h='<h2 id="uygunluk"><span class="no">✓</span>Motor takozu uygunluğu</h2>';
   h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Modal bant ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (<strong>Motor</strong> bileşeninden girilir); mod ayrıklığı ve yaylandırılmamış kütle bandı kriterleri yalnız modal sonuca bakar.</p>';
   if(!modes.length){ return h+'<div class="note warn"><span class="t">Değerlendirilemedi</span>Modal sonuç yok — çözüm üretilemedi.</div>'; }
   var _eng=_mntRepEngine(R, opts);        // TEK kaynak: Motor bileşeni

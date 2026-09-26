@@ -225,10 +225,10 @@ describe('§8 zenginleştirmeleri', () => {
   });
 });
 
-describe('Motor Takozu Uygunluğu (hedef kontrolü)', () => {
+describe('Motor takozu uygunluğu (hedef kontrolü)', () => {
   test('6 kriter tablosu + genel hüküm (idle girdisiyle tam değerlendirme)', () => {
     const h = rep._mntRepCompliance(R, { idleRpm: 650, cylinders: 6 });
-    expect(h).toContain('Motor Takozu Uygunluğu');
+    expect(h).toContain('Motor takozu uygunluğu');
     ['Modal bant — tüm modlar', 'Modlar arası ayrıklık', 'Yaylandırılmamış kütle bandı',
      'transmissibility', 'Vites başına takoz kuvvetleri', 'Genel hüküm'].forEach(s =>
       expect(h).toContain(s));

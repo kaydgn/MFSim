@@ -1719,9 +1719,9 @@ function _gfSec12(){
   h += _gfAlanTablo('İki rapor türü', [
     ['Detaylı', 'Teori bölümleri 1–7 ve 9–10 · Ek A · çözümün sayısal bölümü (18 alt bölüm) · '
       + 'uygunluk hükmü', 'Yöntemi de belgelemek, hesabı denetletmek'],
-    ['Özet', 'Tedarikçi çıktısının biçiminde altı sayfa: Genel Bakış · Geometri · Gergi '
-      + 'Çalışma Zarfı · Çalışma Çevrimi ve Torklar · Gerginlik ve Hubload · Dayanım ve '
-      + 'Titreşim', 'Sonuçları paylaşmak, tedarikçi raporuyla yan yana koymak']
+    ['Özet', 'Tedarikçi çıktısının biçiminde altı sayfa: Genel bakış · Geometri · Gergi '
+      + 'çalışma zarfı · Çalışma çevrimi ve torklar · Gerginlik ve Hubload · Dayanım ve '
+      + 'titreşim', 'Sonuçları paylaşmak, tedarikçi raporuyla yan yana koymak']
   ], ['Tür', 'İçerik', 'Ne zaman']);
   h += _gfNot('Rapor çözülen modeli anlatır',
       'Belge, <strong>Hesapla</strong>’ya bastığınız andaki modeli anlatır. Çözümden sonra bir '

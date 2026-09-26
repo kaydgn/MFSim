@@ -569,7 +569,7 @@ describe('sahneler programın kendi bileşeni', () => {
       'kayış künyesi': 'Gereken efektif boy',
       'kayış kataloğu': 'gereken boya en yakınlar',
       'çözücü paneli': 'Algılanan model',
-      'rapor paneli': 'Detaylı Raporu',
+      'rapor paneli': 'Detaylı raporu',
       'dönüş yönü': 'Kayış Dönüş Yönü'
     };
     const eksik = Object.keys(gerek)

@@ -94,7 +94,7 @@ describe('veGenerateFTCalcTraceReport — smoke', () => {
     const low = veGenerateFTCalcTraceReport(null, 'Test', 'low');
     expect(typeof low).toBe('string');
     expect(low.charAt(0)).not.toBe('(');                         // hata mesajı değil
-    expect(low).toMatch(/Transfer Kademesi\s*:\s*Low/);          // düşük kademe başlıkta
+    expect(low).toMatch(/Transfer kademesi\s*:\s*Low/);          // düşük kademe başlıkta
     // yüksek ve düşük farklı içerik (farklı transfer oranı → farklı devir/kuvvet)
     expect(low).not.toBe(txt);
   });

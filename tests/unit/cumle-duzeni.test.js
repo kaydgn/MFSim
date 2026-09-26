@@ -17,7 +17,9 @@
  *       SW_DIAGRAM_SIGNALS — `name:` yalnız bu blokların içinde taranır) ve
  *       Çözücü günlüğü; kayıtlı panodaki eski ad açılışta tazelenir
  *       (sinyal-ad-tazele.test.js)
- *   3b — grafikler ve rapor üreticileri (sırada)
+ *   3b — grafikler ve TXT raporları (graphics.js) ve rapor üreticileri (FEAD
+ *       ayrıntılı + özet, takoz); özet raporun sayfa adları ADLA aranıyor —
+ *       kapısı cp-fead-summary.test.js'te
  */
 const fs = require('fs');
 const path = require('path');
@@ -68,6 +70,15 @@ describe('kural', () => {
     ['Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır', 'Scroll — Yakınlaştır  │  Sağ tık + sürükle — Kaydır'],
     ['  │  Motor Gücü (P_engine)    │ ', '  │  Motor gücü (P_engine)    │ '],   // günlük tablosu
     ['Speed Ratio (SR)', 'Speed Ratio (SR)'],                 // İngilizce terim (8·A)
+    ['Doğrulanmamıştır (Not 1).', 'Doğrulanmamıştır (Not 1).'],   // numaralı atıf
+    ['Kriter 1 ve Kriter 2', 'Kriter 1 ve Kriter 2'],
+    ['Küme Takoz Modülüyle Aynıdır', 'Küme Takoz modülüyle aynıdır'],   // modülün adı
+    ['Güç / Ağırlık Oranı', 'Güç / ağırlık oranı'],           // " / " bölüt başlatmaz…
+    ['Klima / Alternatör / Hava Kompresörü', 'Klima / Alternatör / Hava Kompresörü'],   // …ardındaki bileşen adı kalır
+    ['Güç Grubu Müdürlüğü — Görsel Editör', 'Güç Grubu Müdürlüğü — Görsel editör'],   // birim adı
+    ['Ag. Merkezi-On Aks (a1)', 'Ag. merkezi-on aks (a1)'],   // ASCII kısaltma cümle bitirmez
+    ['Rapor No', 'Rapor No'],                                 // numara kısaltması
+    ['Rapor, Çözücü Sonuçlarından Üretilir.', 'Rapor, Çözücü sonuçlarından üretilir.'],   // bileşenin sonuçları
   ])('%s → %s', (a, b) => expect(cumle(a)).toBe(b));
 
   test('bileşen adları componentDefs\'ten okunuyor — sinyal adları değil', () => {
@@ -96,7 +107,8 @@ describe('kural', () => {
   });
 
   // "+ Satır ekle" düğmesi "+" taşıyor ama birleştirme değil; ' + ad + ' ise öyle.
-  test('birleştirme süzgeci düğmenin "+"sını atlamıyor', () => {
+  test('birleştirme süzgeci düğmenin "+"sını atlamıyor; etiket taşıyan dizeyi atlıyor', () => {
+    expect(BIRLESTIRME.test('<h3>8.1 Kritik sonuç özeti</h3>')).toBe(true);   // metnini `>…<` tarıyor
     expect(BIRLESTIRME.test('+ Satır Ekle')).toBe(false);
     expect(BIRLESTIRME.test("' + ad + '")).toBe(true);
     expect(BIRLESTIRME.test('Toplam: ' + "' + n")).toBe(true);
@@ -129,10 +141,11 @@ function kucukYuzey(dosyalar) {
   return [...new Set(out)];
 }
 
-const ASAMA3 = ['js/results.js', 'js/sensors.js'];
+const ASAMA3 = ['js/results.js', 'js/sensors.js', 'js/graphics.js',
+  'js/cp-fead-report.js', 'js/cp-fead-summary.js', 'js/cp-mount-report.js'];
 
 describe.each([['aşama 1 — kabuk', ASAMA1, 400], ['aşama 2 — bileşen panelleri', ASAMA2, 300],
-  ['aşama 3a — Sonuçlar', ASAMA3, 300]])('%s', (ad, dosyalar, enAz) => {
+  ['aşama 3 — Sonuçlar ve raporlar', ASAMA3, 300]])('%s', (ad, dosyalar, enAz) => {
   test('tarama boşa çalışmıyor', () => {
     expect(dosyalar.flatMap(etiketler).length).toBeGreaterThan(enAz);
   });

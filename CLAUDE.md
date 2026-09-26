@@ -277,8 +277,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   terim (8·A). Kural TEK kaynakta: `tools/cumle-duzeni.js` (`node
   tools/cumle-duzeni.js <dosya>` sapmaları listeler). Kılavuz panel kartını
   BAŞLIĞIYLA arar — kart adı iki tarafta birlikte değişir. Kapı:
-  `cumle-duzeni.test.js`; kapsam aşama aşama büyür (bugün kabuk + bileşen
-  panelleri + kılavuzlar + Sonuçlar). Sinyal adı panoya KOPYA yazılır: ad
+  `cumle-duzeni.test.js`; kapsam: kabuk, bileşen panelleri, kılavuzlar,
+  Sonuçlar ve raporlar. Sinyal adı panoya KOPYA yazılır: ad
   tablosu değişirse `veResSinyalAdTazele` harfi açılışta tazeler
   (`sinyal-ad-tazele.test.js`).
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
