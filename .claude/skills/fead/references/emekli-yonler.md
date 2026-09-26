@@ -76,3 +76,36 @@ ilişkili" demiyor, "kayış buradan geçiyor" diyor. Dışa aktarma (SVG/PNG) d
 kasnağı daire + kesikli çeperle çiziyor — ekranda daire olanın çıktıda kutu
 çıkması `node.data.labelPos` hatasının aynı sınıfıydı.
 
+
+#### KAYIŞ TABLOSU — KART LİSTESİ ve ÇEKMECE (2026-09-21 → 09-26)
+
+> **BU BÖLÜM BAYAT — anlatılan iki yüzey kodda YOK.** 2026-09-26'da Pafta'ya
+> (SKILL.md kural 14: tablo Kayış Yolu kartının içinde, çizimin altında)
+> yerlerini bıraktılar. Aynı yön yeniden denenirse nelerin ölçülmüş olduğunu
+> bilmek için duruyor.
+
+**KART LİSTESİ (2026-09-21, tasarım tezgâhı → "C · Kart Listesi").** `<table>`
+kalkmıştı: her satır bir `.ve-fead-krt`, üç bölge (`kim` · `gir` · `coz`);
+bölge genişlikleri `veFeadKartBolgeW` ile sütun listesinden türeyip
+`--fead-krt-*` özel özellikleriyle geçiyordu. `coz` bölgesi `1fr` ve genişliği
+yazılmıyordu — sabit yazılınca genişletilen kartın sağında ölü şerit kalıyordu
+(782 px kartta 12 px). Kayış boyu ve Σ toplam KÜNYEDEYDİ (`rowspan`lı kayış
+boyu hücresi beş satır boyunca ~170 px boş kalıyordu); Dönüş Yönü iki durumlu
+segmentti. Kılavuzun ölçekleyicisi genişliği `--fead-krt-en`den okuyordu
+(bölgeleri toplamak `1fr`i atlıyordu: 768 yerine 534). Emekli sebebi:
+kullanıcı çekmecedeki hâlini *"çok kaba duruyor"* buldu ve tezgâh III'te
+Pafta'yı seçti. Kart listesinden Pafta'ya geçen kurallar (görünüm CSS'te, ad
+hücresi bir bağlantı, bölge içinde defter sırası, eklenen satır görünür) kural
+14'te duruyor.
+
+**ÇEKMECE (2026-09-23 → 09-26).** Tablo kanvas kartından (`fead-table`) inip
+Kayış Yolu kartının "Tablo" düğmesiyle açılan, modal olmayan bir pencere oldu
+(`veFeadTabloAc` · `veFeadTabloKapat` · `#ve-fead-tablo`); 09-24'ten itibaren
+tuvalin ALTINA yapışık bir satırdı. Tuval o kadar kısalıyor, kamera yalnız
+kesilen çizimde sığdırıyor, hiç yakınlaşmıyor ve kapanınca dönüyordu. Üst
+kenarda tutamak vardı (boy oturumluk, tuvale en az 180 px). FEAD'den çıkınca
+kapanıyor, arka plan kaydının gidiş-dönüşünde kapanmıyordu. Kanvasla
+ÖLÇEKLENMİYORDU (sayılar arayüzün `--fs-lg` basamağında), başlığı kabuk
+bandıydı. Ölçülen bedeli (AG00810, 1920×952): tuvalden 266 px (870 → 604),
+kasnak ↔ satır mesafesi 659–785 px. Pafta'da tuval 870 px'te kalıyor, mesafe
+302–405 px.

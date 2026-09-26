@@ -174,18 +174,19 @@ describe('iki kanvas — geometri ↔ işletme (tek tip)', () => {
 
   // TAZELEME TEK KAPIDAN (modül kuralı 11): kartlar HEP BİRLİKTE. Kart başına
   // ayrı çağrı, altı düzenleme yolundan birinde birinin unutulması demek.
-  // Kayış Tablosu artık kart değil pencere; kapalıyken sayılmaz (açıkken
-  // sayıldığı `fead-table.test.js` → "tazeleme TEK KAPIDAN").
-  test('veFeadRefreshCards iki kanvası da kurar', () => {
+  // Kayış Tablosu kartın katmanı (Pafta): geometri kartında AÇIK, işletme
+  // kartında kapalı — tek kapı iki çizimi ve bir tabloyu sayar.
+  test('veFeadRefreshCards iki kanvası ve geometri kartının tablosunu kurar', () => {
     const { pack } = kur();
     const hedef = pack.nodes.filter((n) => n.type === 'fead-layout');
     expect(hedef).toHaveLength(2);
     document.body.innerHTML = '<div id="ve-canvas"></div>' + hedef.map((n) =>
       '<div id="' + n.id + '" class="ve-node"><div class="ve-node-box"></div></div>').join('');
-    expect(veFeadRefreshCards()).toBe(2);
+    expect(veFeadRefreshCards()).toBe(3);
     hedef.forEach((n) => {
       const el = document.getElementById(n.id);
       expect(el.querySelector('.ve-fead-layout-card')).not.toBeNull();
+      expect(!!el.querySelector('.ve-fead-pafta')).toBe(!(n.data && n.data.katOn === 'isletme'));
     });
   });
 

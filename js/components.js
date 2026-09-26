@@ -739,10 +739,10 @@ var componentDefs = {
     // yerden gelir (VE_FEAD_LAYOUT_W/H → aşağıdaki döngü).
   },
   // KAYIŞ TABLOSU (`fead-table`) KANVAS BİLEŞENİ DEĞİL (2026-09-23, Çizim
-  // Masası): kanvasta 7 px'e küçülen bir formdu, artık kanvas kartının
-  // "Tablo" düğmesiyle tuvalin altında açılan bir çekmece (cp-fead.js →
-  // veFeadTabloAc).
-  // Kayıtlı düğümler şema 7 göçüyle silinir (fead-model.js).
+  // Masası): kanvasta 7 px'e küçülen bir formdu. Bugün Kayış Yolu kartının
+  // KATMANI — çizimin altında, kartın "Tablo" düğmesiyle (Pafta, 2026-09-26;
+  // cp-fead.js → veFeadTabloToggle). Kayıtlı düğümler şema 7 göçüyle silinir
+  // (fead-model.js).
   // KONUM BAĞI (`fead-coordlink`) KALDIRILDI (2026-09-09). Bileşen yalnız
   // kanvastaki kutu konumu ile mm koordinatı arasındaki bağı açıp kapatıyordu;
   // kasnakların kutusu kalkınca (noCanvasBox) bağlanacak bir konum kalmadı ve
@@ -912,6 +912,13 @@ var VE_MODULE_LEGACY_H = 66;
 // %12.4 → %8.4, yani büyüme SVG'ye orantısından FAZLA geçiyor.
 var VE_FEAD_LAYOUT_W = 440;
 var VE_FEAD_LAYOUT_H = 500;
+// PAFTA (2026-09-26): KAYIŞ TABLOSU KARTIN İÇİNDE, çizimin altında — ve tablolu
+// kart GENİŞ. Kullanıcı: *"o tablonun olduğu kanvas, diğer kanvasa göre daha
+// geniş olsun… daha rahat okunsun tablodakiler."* Genişlik tablonun
+// sütunlarından: 424 px sabit sütun + 194 px KASNAK + 2×10 dolgu + 2×1 kutu kenarı
+// (cp-fead.js → VE_FEAD_TABLE_COLS). Tablosuz kart VE_FEAD_LAYOUT_W'de kalır.
+// Tipin varsayılanı bu: varsayılan ön ayar (geometri) tabloyu gösteriyor.
+var VE_FEAD_PAFTA_W = 640;
 // AŞILMIŞ VARSAYILANLAR — biri BİREBİR duruyorsa (yani kullanıcı hiç
 // dokunmamışsa) güncel ölçüye yükseltilir; bilerek verilmiş her ölçü korunur.
 // Modül kartındaki kuralın aynısı, bkz. veModuleSizeFor.
@@ -984,7 +991,10 @@ function veFeadLayoutSizeFor(node) {
     if(!def || !def[kartlar[i].flag]) continue;
     for(j = 0; j < kartlar[i].legacy.length; j++) {
       if(w === kartlar[i].legacy[j].w && h === kartlar[i].legacy[j].h)
-        return { w: kartlar[i].w, h: kartlar[i].h, changed: true };
+        // Genişlik KARTIN TABLOSUNDAN (Pafta): tablolu kart geniş, tablosuz dar.
+        return { w: (typeof veFeadKartVarsayilanW === 'function')
+                      ? veFeadKartVarsayilanW(node) : kartlar[i].w,
+                 h: kartlar[i].h, changed: true };
     }
   }
   // TABANIN ALTINDA KAYITLI KART YÜKSELTİLİR. Taban yalnız sürüklemeye
@@ -1011,7 +1021,7 @@ function veFeadNormalizeLayoutSize(node) {
 if(typeof componentDefs !== 'undefined') {
   Object.keys(componentDefs).forEach(function(t) {
     if(componentDefs[t] && componentDefs[t].isFeadLayout) {
-      componentDefs[t].defaultWidth = VE_FEAD_LAYOUT_W;
+      componentDefs[t].defaultWidth = VE_FEAD_PAFTA_W;
       componentDefs[t].defaultHeight = VE_FEAD_LAYOUT_H;
     }
     if(componentDefs[t] && componentDefs[t].isSubsystem) {

@@ -35,7 +35,12 @@ var MAX_UNDO_STEPS = 50;
 // SÜRÜM 7 (2026-09-23): FEAD KAYIŞ TABLOSU KANVASTAN İNDİ — tablo artık kanvas
 // kartının açtığı bir pencere (Çizim Masası). Kayıtlı `fead-table` düğümleri
 // silinir (veFeadMigrateTableOff); veri taşımıyorlardı.
-var VE_SCHEMA_VERSION = 7;
+//
+// SÜRÜM 8 (2026-09-26): KAYIŞ TABLOSU KARTIN İÇİNDE (Pafta) ve tablolu kart
+// GENİŞ. Dokunulmamış ölçüdeki geometri kartı genişler, sağındaki kart fark
+// kadar kayar (veFeadMigratePafta); göç olmasaydı her eski proje tabloyu dar
+// kartta, yatay kaydırmayla açardı.
+var VE_SCHEMA_VERSION = 8;
 
 // ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
 //
@@ -238,6 +243,9 @@ function veApplyLegacyMigrations(state) {
   if(v < 6 && typeof veFeadMigrateRunToLayout === 'function') veFeadMigrateRunToLayout(state);
   // TABLO KANVASTAN İNDİ: kayıtlı tablo kartı silinir (veri taşımıyordu).
   if(v < 7 && typeof veFeadMigrateTableOff === 'function') veFeadMigrateTableOff(state);
+  // TABLO KARTA GİRDİ: tablolu kart genişler (komşusu kayar). Kart ekleyen
+  // 5. adımdan SONRA — o adımın koyduğu işletme kartı da kaydırılanlar arasında.
+  if(v < 8 && typeof veFeadMigratePafta === 'function') veFeadMigratePafta(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

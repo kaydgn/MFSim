@@ -250,12 +250,10 @@ test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async
   const jeton = await page.evaluate(() =>
     parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')));
   const topoloji = await boy(['.ve-sidebar-header', '#ve-doc-dock', '.ve-properties-header']);
-  // Kayış Tablosu çekmecesinin başlığı da bir bant: 26 px'lik kapat düğmesi
-  // 26 px'lik bandı 27'ye iterdi (bantta 22 px).
-  await page.evaluate(() => { veTogglePropertiesPanel(false); veFeadTabloAc(); });
-  await page.waitForTimeout(400);
-  const cekmece = await boy(['.ve-fead-tablo-bas']);
-  await page.evaluate(() => { veFeadTabloKapat(); veSubTabDegistir('sonuclar'); });
+  // Kayış Tablosu çekmecesinin başlığı da bir banttı; çekmece 2026-09-26'da
+  // emekli (tablo Kayış Yolu kartının içinde, kanvasla ölçekleniyor — kabuk
+  // bandı değil).
+  await page.evaluate(() => { veTogglePropertiesPanel(false); veSubTabDegistir('sonuclar'); });
   await page.waitForTimeout(800);
   const sonuclar = await boy(['.ve-results-head', '.ve-trace-toolbar']);
   await page.evaluate(() => veTxtPreviewShow('Bant', 'SATIR', 'bant.txt', 'fead'));
@@ -263,10 +261,10 @@ test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async
   const rapor = await boy(['.ve-rep-head']);
   // Jeton ince (önce 36, sonra 30 px) ama en yüksek içeriği (25) sığdırıyor.
   expect(jeton).toBeLessThanOrEqual(26);
-  // Yedi bandın yedisi de ölçüldü (bulunamayan bant sessizce geçmesin) ve
-  // yedisi de tam jeton: içerik hiçbirini büyütmüyor.
-  const hepsi = [...topoloji, ...cekmece, ...sonuclar, ...rapor];
-  expect(hepsi).toHaveLength(7);
+  // Altı bandın altısı da ölçüldü (bulunamayan bant sessizce geçmesin) ve
+  // altısı da tam jeton: içerik hiçbirini büyütmüyor.
+  const hepsi = [...topoloji, ...sonuclar, ...rapor];
+  expect(hepsi).toHaveLength(6);
   expect(hepsi.filter((x) => / YOK$/.test(x))).toEqual([]);
   expect(hepsi.filter((x) => Math.abs(parseFloat(x.split(' ').pop()) - jeton) > 0.5)).toEqual([]);
 });

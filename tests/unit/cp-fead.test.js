@@ -37,6 +37,9 @@ global.veIsCanvasHidden = veIsCanvasHidden;
 // altısını da sol şeride diziyordu — kapı yeşil kalmazdı ama sebebi de
 // görünmezdi. Gerçek programda componentDefs zaten global (klasik script).
 global.componentDefs = componentDefs;
+// Tersi de: components.js eski ölçüyü yükseltirken kartın TABLOSUNU cp-fead.js'e
+// soruyor (Pafta — tablolu kart geniş). Tarayıcıda ikisi de üst-seviye.
+global.veFeadKartVarsayilanW = fead.veFeadKartVarsayilanW;
 eval(loadSource('fead-belts.js'));
 eval(loadSource('fead-duty.js'));
 // GLOBAL'E YAZILMASI ŞART: cp-fead.js `require` ile yükleniyor, dolayısıyla
@@ -1023,7 +1026,10 @@ describe('Kayış Yolu kanvas kartı', () => {
     const html = fead.veFeadLayoutCardHTML(lay);
     // Kabuk konumlandırılmış ve çizim onun içinde: rozet, çubuk ve katman
     // paneli üçü de buna göre yerleşiyor.
-    expect(html).toContain('<div class="ve-fead-kanvas"><div class="ciz">');
+    // (Tablo açık kartta kabuk `pafta-var` taşır: çizim tablonun ÜSTÜNDE kalan
+    // yer. Tablonun kendisi bu HTML'de DEĞİL — kartın kalıcı kabında, Pafta.)
+    expect(html).toMatch(/<div class="ve-fead-kanvas( pafta-var)?"><div class="ciz">/);
+    expect(html).not.toContain('ve-fead-pafta');
     // ESKİ BANTLARIN İMZASI: her biri üst kenarlıklı, akışa giren bir kutuydu.
     expect(html).not.toMatch(/flex:0 0 auto;[^"]*border-top/);
     expect(html).not.toMatch(/border-top:1px solid var\(--border-color\)/);
@@ -1087,7 +1093,8 @@ describe('Kayış Yolu kanvas kartı', () => {
       require('path').join(__dirname, '../../js/cp-fead.js'), 'utf8');
     expect((src.match(/altPay:/g) || []).length).toBe(1);
     const fn = src.slice(src.indexOf('function veFeadLayoutCardHTML'));
-    expect(fn.slice(0, fn.indexOf('\n}'))).toContain('altPay: VE_FEAD_YUZ_ALT');
+    // Tablo açık kartta çubuk çizimin ÜSTÜNDE değil (tablonun altında): pay 0.
+    expect(fn.slice(0, fn.indexOf('\n}'))).toContain('altPay: tabloVar ? 0 : VE_FEAD_YUZ_ALT');
   });
 
   // YÜZEN OLMAK BİR CSS DURUMU: yukarıdaki kapılar yalnız sınıfın basıldığını
@@ -1117,9 +1124,10 @@ describe('Kayış Yolu kanvas kartı', () => {
     // sarıyordu — yüzen çubuğun bütün kazancı geri gidiyordu.
     expect(CSS).not.toMatch(/\.ve-fead-yuz\{[^}]*left:50%/);
     expect(CSS).toMatch(/\.ve-fead-yuz\{[^}]*margin-inline:auto/);
-    // KATMAN PANELİ ÇUBUĞUN ÜSTÜNDE: hizanın tek kaynağı `--fead-kat-alt` ve
-    // JS tarafındaki gül payı (VE_FEAD_YUZ_ALT) onunla aynı sayıyı söylüyor.
-    expect(CSS).toMatch(/--fead-kat-alt:50px/);
+    // KATMAN PANELİ ÇUBUĞUN ÜSTÜNDE: hizanın tek kaynağı `--fead-kat-alt` =
+    // çubuk bandı (50 px, JS'te VE_FEAD_YUZ_UST) + tablo açıksa tablonun boyu.
+    expect(CSS).toMatch(/--fead-kat-alt:calc\(var\(--fead-yuz-ust, 50px\) \+ var\(--fead-paf-h, 0px\)\)/);
+    expect(CSS).toMatch(/\.ve-fead-layout-card\{ --fead-yuz-ust:50px; \}/);
     expect(CSS).toMatch(/\.ve-fead-kat\{[^}]*bottom:calc\(var\(--fead-kat-alt/);
   });
 
@@ -1269,23 +1277,33 @@ describe('şema işaretleri', () => {
 });
 
 describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
-  test('componentDefs ölçüyü VE_FEAD_LAYOUT_W/H sabitlerinden alır', () => {
-    expect(componentDefs['fead-layout'].defaultWidth).toBe(VE_FEAD_LAYOUT_W);
+  test('componentDefs ölçüyü sabitlerden alır — tipin varsayılanı TABLOLU kart', () => {
+    // PAFTA (2026-09-26): varsayılan ön ayar (geometri) tabloyu gösteriyor ve
+    // tablolu kart GENİŞ (kullanıcı: "tablonun olduğu kanvas diğerine göre daha
+    // geniş olsun"). Tablosuz kart eski ölçüsünde.
+    expect(componentDefs['fead-layout'].defaultWidth).toBe(VE_FEAD_PAFTA_W);
     expect(componentDefs['fead-layout'].defaultHeight).toBe(VE_FEAD_LAYOUT_H);
+    expect(VE_FEAD_PAFTA_W).toBeGreaterThan(VE_FEAD_LAYOUT_W);
     // Şema okunabilir olmak zorunda: küçük kutu bu kartı taşımıyor
     expect(VE_FEAD_LAYOUT_W).toBeGreaterThan(300);
     expect(VE_FEAD_LAYOUT_H).toBeGreaterThan(240);
-    // KULLANICI İSTEĞİ (2026-08-26): "kanvas biraz BOYUNA GENİŞ" — kart
-    // yükseklik-baskın olmak zorunda. Yalnız iki alt sınır tutulsaydı 500×440
-    // (yani YATAY) da geçerdi ve istek sessizce geri alınmış olurdu.
+    // KULLANICI İSTEĞİ (2026-08-26): "kanvas biraz BOYUNA GENİŞ" — TABLOSUZ
+    // kart yükseklik-baskın olmak zorunda. (Tablolu kartta tablo çizimin
+    // altında yer istiyor; o kart genişliği tablonun sütunlarından alır.)
     expect(VE_FEAD_LAYOUT_H).toBeGreaterThan(VE_FEAD_LAYOUT_W);
   });
 
-  test('eski 60×56 kayıt kart ölçüsüne YÜKSELİR', () => {
+  // Genişlik KARTIN TABLOSUNDAN (Pafta): varsayılan ön ayar tabloyu gösteriyor
+  // → geniş; işletme kartı tablosuz → dar.
+  test('eski 60×56 kayıt kart ölçüsüne YÜKSELİR — genişliği tablosundan', () => {
     const n = { type: 'fead-layout', width: VE_FEAD_LAYOUT_LEGACY_W, height: VE_FEAD_LAYOUT_LEGACY_H };
     expect(veFeadNormalizeLayoutSize(n)).toBe(true);
-    expect(n.width).toBe(VE_FEAD_LAYOUT_W);
+    expect(n.width).toBe(VE_FEAD_PAFTA_W);
     expect(n.height).toBe(VE_FEAD_LAYOUT_H);
+    const isl = { type: 'fead-layout', width: VE_FEAD_LAYOUT_LEGACY_W, height: VE_FEAD_LAYOUT_LEGACY_H,
+                  data: { katOn: 'isletme' } };
+    expect(veFeadNormalizeLayoutSize(isl)).toBe(true);
+    expect(isl.width).toBe(VE_FEAD_LAYOUT_W);
   });
 
   // Kart ölçüsü 420×340 → 440×500 büyüdüğünde, bugüne kadar kaydedilmiş HER
@@ -1297,25 +1315,28 @@ describe('Kayış Yolu düğümünün ölçüsü — tek kaynak', () => {
     VE_FEAD_LAYOUT_LEGACY.forEach((e) => {
       const n = { type: 'fead-layout', width: e.w, height: e.h };
       expect(veFeadNormalizeLayoutSize(n)).toBe(true);
-      expect(n.width).toBe(VE_FEAD_LAYOUT_W);
+      expect(n.width).toBe(VE_FEAD_PAFTA_W);
       expect(n.height).toBe(VE_FEAD_LAYOUT_H);
     });
-    // Listedeki hiçbir çift GÜNCEL ölçü olamaz: olursa göç kendi kendini
-    // sonsuza kadar "değişti" sayar ve saveState her açılışta kirlenirdi.
+    // Listedeki hiçbir çift GÜNCEL ölçü olamaz (iki güncel ölçü var: tablolu ve
+    // tablosuz): olursa göç kendi kendini sonsuza kadar "değişti" sayar ve
+    // saveState her açılışta kirlenirdi.
     VE_FEAD_LAYOUT_LEGACY.forEach((e) => {
-      expect(e.w === VE_FEAD_LAYOUT_W && e.h === VE_FEAD_LAYOUT_H).toBe(false);
+      [VE_FEAD_LAYOUT_W, VE_FEAD_PAFTA_W].forEach((w) =>
+        expect(e.w === w && e.h === VE_FEAD_LAYOUT_H).toBe(false));
     });
   });
 
   test('kullanıcının bilerek verdiği ölçü KORUNUR', () => {
     // Ölçü ne GÜNCEL ne de AŞILMIŞ hiçbir çiftle örtüşmemeli: 640×500 seçilseydi
-    // yükseklik VE_FEAD_LAYOUT_H'in ta kendisi olurdu ve "korunuyor" iddiası
-    // tek alandan ayrışırdı (test yine geçerdi, ama yanlış sebepten).
-    const n = { type: 'fead-layout', width: 640, height: 420 };
-    expect(VE_FEAD_LAYOUT_LEGACY.concat([{ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H }])
+    // hem genişlik (tablolu kart) hem yükseklik güncel ölçü olurdu ve
+    // "korunuyor" iddiası yanlış sebepten geçerdi.
+    const n = { type: 'fead-layout', width: 700, height: 420 };
+    expect(VE_FEAD_LAYOUT_LEGACY.concat([{ w: VE_FEAD_LAYOUT_W, h: VE_FEAD_LAYOUT_H },
+                                         { w: VE_FEAD_PAFTA_W, h: VE_FEAD_LAYOUT_H }])
       .some((e) => e.w === n.width || e.h === n.height)).toBe(false);
     expect(veFeadNormalizeLayoutSize(n)).toBe(false);
-    expect(n.width).toBe(640);
+    expect(n.width).toBe(700);
     expect(n.height).toBe(420);
   });
 
@@ -2006,8 +2027,11 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana', () => {
     fead.veFeadLoadExample('AG00976_GATES_2025');
     delete global.createNode; delete global.veArrangeModuleBase;
 
-    const kanvasYuva = yakalanan.filter((a) => a && a.w === T('fead-layout').defaultWidth);
+    // Kanvas yuvaları: tablolu kart GENİŞ, tablosuz kart dar (Pafta).
+    const kanvasYuva = yakalanan.filter((a) => a && a.h === T('fead-layout').defaultHeight
+                                               && [VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W].includes(a.w));
     expect(kanvasYuva).toHaveLength(2);
+    expect(kanvasYuva.map((a) => a.w)).toEqual([VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W]);
     // Geometri kartı paketin İLK kanvası — boş kart onun yuvasını almalı.
     const beklenen = { x: Math.round(3000 + kanvasYuva[0].lx),
                        y: Math.round(3000 + kanvasYuva[0].ly) };
@@ -2052,7 +2076,7 @@ describe('YEDEK YERLEŞİM — kanvaslar yan yana', () => {
     // Yuvalar ölçü taşıyor mu ve kanvas olanlar hangileri: genişlik+yükseklik
     // yalnız büyük kartlara yazılıyor (veArrangeModuleBase onları 65×60 sayarsa
     // grubu yanlış ortalıyor).
-    const buyuk = yakalanan.filter((a) => a && a.w === T('fead-layout').defaultWidth
+    const buyuk = yakalanan.filter((a) => a && [VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_W].includes(a.w)
                                             && a.h === T('fead-layout').defaultHeight);
     expect(buyuk).toHaveLength(2);
     expect(buyuk[0].ly).toBe(buyuk[1].ly);                       // YAN YANA

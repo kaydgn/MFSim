@@ -6,8 +6,10 @@
 ## ÖNCE BUNU OKU — ÇİZİM MASASI (2026-09-23)
 
 **HÜKÜM: kasnak Kayış Yolu ÇİZİMİNDE seçilir, taşınır ve eklenir; Kayış
-Tablosu kanvastan İNDİ ve kartın "Tablo" düğmesiyle açılan, modal olmayan
-bir çekmece oldu — tuvalin ALTINA yapışık (2026-09-24, SKILL.md kural 14).** Kullanıcı kararı (tasarım tezgâhı II, üç canlı
+Tablosu bir kanvas bileşeni DEĞİL, Kayış Yolu kartının İÇİNDE, çizimin
+altında (Pafta, 2026-09-26, SKILL.md kural 14).** Arada iki dönem geçti ve
+ikisi de emekli: çekmece (09-23 → 09-26) ve kart listesi —
+`emekli-yonler.md`. Kullanıcı kararı (tasarım tezgâhı II, üç canlı
 prototip): *"Çizim Masası çok güzel. Kodlamaya başla."* Gerekçe ölçülmüştü:
 kanvas kartı olarak tablo açılış yakınlaştırmasında 7,1 px'e iniyor ve
 kanvasın %39'unu kaplıyordu; kasnağın YERİ ise yalnız sayı olarak
@@ -18,19 +20,19 @@ girilebiliyordu.
 | X/Y yalnız tablodan | çizimde sürükle (0,1 mm ızgara) · ok 1 mm / Shift 10 mm | `veFeadCizimBas` · `veFeadKasnakKaydir` · `veFeadCizimTus` |
 | Panel yalnız tablodaki addan | çizimdeki kasnağa TIKLA ya da tablodaki ad | `veFeadCizimBas` (hareketsiz bırakma = tık) |
 | Kasnak ekle: tablonun seçicisi (konumsuz, gerginin önüne) | paletten kayışın ÜSTÜNE bırak → iki komşunun arasına, bırakılan noktaya | `veFeadPaletBirak` · `veFeadAciklikSec` · `veFeadAradanEkle` |
-| Paletten kanvasa bırakma SESSİZ | çizim dışına bırakılan kasnak tabloya eklenir ve tablo açılır | `veFeadPaletBirak` |
-| `fead-table` kanvas kartı | `#ve-fead-tablo` çekmecesi (kanvas alanının satırı, tuvalin altında) | `veFeadTabloAc` · `veFeadTabloToggle` |
+| Paletten kanvasa bırakma SESSİZ | çizim dışına bırakılan kasnak tabloya eklenir; hiçbir kartta tablo açık değilse geometri kartınınki açılır | `veFeadPaletBirak` · `_feadTabloGoster` |
+| `fead-table` kanvas kartı | Kayış Yolu kartının Paftası (çizimin altında, kartla ölçeklenir; tablolu kart 640 px) | `veFeadTabloAcik` · `veFeadTabloToggle` · `veFeadKartTabloOlcu` |
 | Açılış yüzeyi: sihirbaz + tablo | sihirbaz + BOŞ Kayış Yolu kartı (örnek/sihirbaz onu DEVRALIR) | `veFeadPopulateStarter` · `veFeadLoadExample` · `veFeadWizCreate` |
 | Yerleşim: tablo üstte, kanvaslar altta | kanvaslar tek sıra, künyeler solda | `veFeadArrangeByCoords` · `veFeadFallbackSlots` |
 
 Kuralların kendisi SKILL.md → **kural 32**; kapılar
 `tests/unit/fead-cizim-masasi.test.js` + `tests/e2e/fead-cizim-masasi.spec.js`
-+ `tests/e2e/fead-tablo.spec.js` (çekmece). Aşağıdaki "Kanvasta KAYIŞ
-TABLOSU" bölümünün kart listesi kuralları ÇEKMECEDE aynen geçerli; kanvas
-KARTINA özgü satırları (kart ölçüsü, taşıma tutamağı, kart içi tekerlek, en
-küçük kart ölçüsü) EMEKLİ — genel mekanizmaları (`veWheelInnerPane`,
-`veNodeMinSize`) duruyor ve sentetik bir kartla `tests/e2e/kart-yuzey.spec.js`
-kapısında.
++ `tests/e2e/fead-tablo.spec.js` (Pafta). Aşağıdaki "Kanvasta KAYIŞ
+TABLOSU" bölümünün defterden okunan kuralları (sütun kimlikleri, virgüllü
+ondalık, sıra okları, sürücü kilidi) PAFTADA aynen geçerli; `fead-table`
+kanvas KARTINA özgü satırları (kart ölçüsü, taşıma tutamağı, en küçük kart
+ölçüsü) EMEKLİ — genel mekanizmaları (`veWheelInnerPane`, `veNodeMinSize`)
+duruyor ve sentetik bir kartla `tests/e2e/kart-yuzey.spec.js` kapısında.
 
 ## ÖNCE BUNU OKU — KASNAKLARIN KANVASTA KUTUSU YOK (2026-09-09)
 
@@ -725,9 +727,11 @@ alınca sarım açıları birebir geri geliyor (`154.3 · 52.8 · 198.4 · 64.3 
 
 #### Kanvasta KAYIŞ TABLOSU (`fead-table`) — veri giriş yüzeyi
 
-> **2026-09-23'ten beri kanvas kartı değil, pencere** (bkz. dosyanın başı —
-> Çizim Masası). Kart listesinin kuralları pencerede aynen geçerli; kartın
-> kanvastaki hâline özgü satırlar emekli.
+> **2026-09-26'dan beri Kayış Yolu kartının Paftası** (bkz. dosyanın başı ve
+> SKILL.md kural 14). Aşağıdaki defter kuralları paftada aynen geçerli; iki
+> fark: **Kayış Uzunluğu sütunu YOK** (boy çevrime ait — kartın sağ üst
+> rozetinde) ve **Dönüş Yönü bir metin düğmesi** (tık çevirir), açılır liste
+> değil. `fead-table` kartına özgü satırlar emekli.
 
 Sütunlar mühendisin kendi hesap sayfasından birebir: **KASNAK · X(mm) · Y(mm) ·
 Efektif Çap(mm) · D(mm) · Kasnak Dönüş Yönü · Sarım Açısı(°) · Span

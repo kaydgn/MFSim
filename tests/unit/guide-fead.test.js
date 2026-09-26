@@ -603,17 +603,16 @@ describe('sahneler programın kendi bileşeni', () => {
     expect(f).not.toBe('');
     // Alan adları tablonun KENDİ sütun listesinden gelmeli — sahne elle
     // yazılmış bir iskelet değil, üreticinin çıktısı.
-    VE_FEAD_TABLE_COLS.filter((c) => ['gir', 'coz', 'ozet'].indexOf(c.yer) >= 0)
+    VE_FEAD_TABLE_COLS.filter((c) => ['gir', 'coz'].indexOf(c.yer) >= 0)
       .forEach((c) => { expect(f).toContain(c.t); expect(f).toContain(c.kt || c.t); });
-    // ...ve KART LİSTESİ, ızgara değil: sahnede `<table>` yok.
-    expect(f).toContain('ve-fead-krt');
-    expect(f).not.toContain('<tbody');
+    // ...ve PAFTA: Gates'in Layout Data'sı gibi kıl çizgili bir TABLO.
+    expect(f).toContain('ve-fead-pf-t');
+    expect(f).toContain('<tbody');
     // ...ve satırlar örnek modelin GERÇEK kasnaklarını taşımalı: sahne canlı
     // çözülmüş bir modelin üstünde duruyor, boş bir iskelet değil.
     expect(f).toContain('Alternatör');
-    expect(f).toContain('Σsarım');
-    // Çözümden gelen sayı: kapanan çevrimin işareti.
-    expect(f).toMatch(/360[.,]00/);
+    // Çözümden gelen sayı: sarım sütunu gerçek bir değer basıyor.
+    expect(f).toMatch(/class="k-sar cz"[^>]*>\d+\.\d</);
   });
 
   test('şerit düğmesi sahnesi ŞERİT KAYIT DEFTERİNDEN', () => {
@@ -743,10 +742,8 @@ describe('sahneler programın kendi bileşeni', () => {
     // `.gk-sahne` çerçevesi, Şekil 1 baskıda sağdan 16 px taşıyordu. Kapı
     // artık iki taşıyıcının AYNI payı kullandığını tutuyor — biri sessizce
     // küçülürse baskıda o sahne kırpılır ve Node'da hiçbir şey görünmez.
-    const bolgeTop = ['kim', 'gir', 'son']
-      .reduce((a, y) => a + CP.veFeadKartBolgeW(y), 0)
-      + CP.veFeadKartBolgeW('coz');
-    expect(dogal - bolgeTop).toBe(60);
+    const kolTop = CP._feadPaftaKolonlar(VE_FEAD_PAFTA_W).reduce((a, c) => a + c.px, 0);
+    expect(dogal - kolTop).toBe(60);
     const z = /zoom:([\d.]+)/.exec(f);
     const oran = z ? Number(z[1]) : 1;
     if (z) {
@@ -764,8 +761,8 @@ describe('sahneler programın kendi bileşeni', () => {
     // olacağını. İkisi ayrı olmak zorunda: `veGuideScene`in ölçekleme dalı
     // bugün kılavuzda hiç koşmuyor ve sessizce bozulabilirdi.
     const sayfa = KIT._gkPageWidth();
-    const genis = '<div class="ve-fead-krt-wrap" style="--fead-krt-en:'
-      + (sayfa * 2) + 'px;"></div>';
+    const genis = '<table><colgroup><col style="width:' + sayfa + 'px">'
+      + '<col style="width:' + sayfa + 'px"></colgroup></table>';
     const dogal = KIT._gkNaturalWidth(genis);
     expect(dogal).toBeGreaterThan(sayfa);
     const s = KIT.veGuideScene(genis, 'deneme');
@@ -1030,8 +1027,8 @@ describe('kılavuz ↔ program: kart adları', () => {
     // (kart okuması için "Ø eff", defterle karşılaştırma için "Efektif Çap").
     // Kapı İKİSİNİ birden tutuyor: kılavuz defterin adını kullanmalı, kart da
     // onu taşımalı — biri değişirse öteki sessizce eskimesin.
-    const deger = VE_FEAD_TABLE_COLS.filter((c) => ['gir', 'coz', 'ozet'].indexOf(c.yer) >= 0);
-    expect(deger.length).toBe(8);
+    const deger = VE_FEAD_TABLE_COLS.filter((c) => ['gir', 'coz'].indexOf(c.yer) >= 0);
+    expect(deger.length).toBe(7);
     deger.forEach((c) => {
       expect(DOC).toContain(c.t);                             // kılavuz: defterin adı
       expect(PANEL['Kayış Tablosu']).toContain(c.t);          // kart: `title`da
@@ -1080,7 +1077,7 @@ describe('kılavuz ↔ program: kart adları', () => {
     ['Tıklamak', 'Sürüklemek', 'Ok tuşları', 'Delete', 'Kayışın üstüne bırakmak', 'Tablo']
       .forEach((e) => expect(tablo).toContain(e));
     // Kapının tuttuğu davranışlar programda GERÇEKTEN var.
-    ['veFeadCizimBas', 'veFeadCizimTus', 'veFeadPaletBirak', 'veFeadTabloAc']
+    ['veFeadCizimBas', 'veFeadCizimTus', 'veFeadPaletBirak', 'veFeadTabloToggle']
       .forEach((f) => expect(typeof CP[f]).toBe('function'));
   });
 
@@ -1274,8 +1271,9 @@ describe('kılavuz ↔ program: TIRNAKLANAN metinler', () => {
 // eleman olmalı.
 describe('kılavuz ↔ Kayış Tablosu: Σsarım okumasının ADRESİ', () => {
   // Kart, zarfın kendisinden değil DOĞRUDAN üreticiden alınır: bu kapı
-  // kartın iç YERLEŞİMİNİ ölçüyor, Ek A'nın ad eşlemesini değil.
-  const KART = (() => {
+  // yerleşimi ölçüyor, Ek A'nın ad eşlemesini değil. PAFTA (2026-09-26): kapanış
+  // hükmü tabloda TEKRARLANMAZ — adresi Kayış Yolu kartının sağ üst rozeti.
+  const [KART, TABLO] = (() => {
     const pack = veFeadExampleNodes('AG00976_GATES_2025');
     pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
     const eskiN = global.nodes;
@@ -1283,19 +1281,23 @@ describe('kılavuz ↔ Kayış Tablosu: Σsarım okumasının ADRESİ', () => {
     global.nodes = pack.nodes;
     global.connections = pack.connections;
     try {
-      return veFeadTableCardHTML(null);
+      const geo = pack.nodes.find((n) => n.type === 'fead-layout' && !(n.data && n.data.katOn));
+      return [veFeadLayoutCardHTML(geo), veFeadTableCardHTML(null)];
     } finally {
       global.nodes = eskiN;
       global.connections = eskiC;
     }
   })();
 
-  test('Σsarım okuması kartın ÜST künyesinde basılıyor', () => {
-    const bas = KART.indexOf('Σsarım');
-    expect(bas).toBeGreaterThan(-1);
-    // Üst künye kartın BAŞINDA: kasnak listesi ondan sonra geliyor.
-    expect(bas).toBeLessThan(KART.indexOf('ve-fead-krt-wrap'));
-    expect(KART.slice(0, bas)).toContain('ve-fead-tbl-head');
+  test('Σsarım okuması kartın ROZETİNDE basılıyor — tabloda değil', () => {
+    const roz = /<div class="ve-fead-kan-durum ok"[^>]*>[\s\S]*?<\/div>/.exec(KART);
+    expect(roz).toBeTruthy();
+    expect(roz[0]).toContain('Σsarım 360.0°');
+    expect(TABLO).not.toContain('Σsarım');
+    // Kılavuz da o adresi gösteriyor (§4'ün son adımı).
+    const s4 = DOC.slice(DOC.indexOf('id="g4"'), DOC.indexOf('id="g5"'));
+    expect(s4).toContain('<strong>sağ üstündeki</strong> <strong>✓ Σsarım</strong> rozetine');
+    expect(DOC).not.toMatch(/üst künyedeki/);
   });
 
   test('kılavuz Kayış Tablosu’nu ALT ŞERİTLE anlatmıyor', () => {

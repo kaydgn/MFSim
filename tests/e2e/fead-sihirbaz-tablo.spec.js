@@ -5,8 +5,8 @@
  * dediğimizde bu yapı gelecek değil mi? Yoksa hâlâ bileşenler mi gelecek?"*
  *
  * Cevap: kasnaklar MODELDE düğüm olarak kurulur (kutuları yok — 2026-09-09)
- * ve Kayış Yolu çiziminde görünür; kayış SIRASI Kayış Tablosu'nda (kartın
- * düğmesiyle açılan pencere). Bu dosya onu gerçek tarayıcıda ölçüyor.
+ * ve Kayış Yolu çiziminde görünür; kayış SIRASI Kayış Tablosu'nda (geometri
+ * kartının çiziminin altındaki Pafta). Bu dosya onu gerçek tarayıcıda ölçüyor.
  *
  * Node'da HİÇ koşmayan halka: sihirbazın GERÇEK "Modeli Kur" düğmesine
  * tıklamak, createNode'un maxInstances kapısına çarpması ve kurulum sonrası
@@ -34,7 +34,7 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   }, null, { timeout: 90000 });
 
   // FEAD alt topolojisi — açılışta sihirbaz + BOŞ Kayış Yolu kartı gelir, VE
-  // SİHİRBAZ AÇILIR (tablo 2026-09-23'ten beri kartın açtığı pencere).
+  // SİHİRBAZ AÇILIR (tablo 2026-09-26'dan beri kartın kendi katmanı).
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'),
     null, { timeout: 20000 });
@@ -167,29 +167,32 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   const toastlar = (await page.locator('.ve-toast, [class*="toast"]').allInnerTexts()).join(' ');
   expect(toastlar).not.toMatch(/en fazla 1 tane/);
 
-  // ── 3) TABLO KURULAN MODELİ GÖSTERİYOR — kartın düğmesiyle açılan pencere
-  await page.locator('.ve-fead-tablo-dugme').first().click();
-  const kart = page.locator('#ve-fead-tablo');
+  // ── 3) TABLO KURULAN MODELİ GÖSTERİYOR — geometri kartının Paftası ──────
+  // Tablo 2026-09-26'dan beri Kayış Yolu kartının KATMANI: geometri ön ayarlı
+  // kartta çizimin altında hep açık, düğmeye basmak gerekmiyor. İşletme kartı
+  // tablosuz — sihirbazın kurduğu iki kanvastan yalnız biri taşıyor.
+  const kart = page.locator('.ve-fead-pafta');
+  await expect(kart).toHaveCount(1);
   await expect(kart).toBeVisible();
-  await expect(kart.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
+  await expect(kart.locator('tr[data-ve-node]')).toHaveCount(6);
   // ETİKET KISA, DEFTERİN ADI `title`DA. `textContent`, `innerText` DEĞİL:
   // ikincisi CSS'in `text-transform`unu uyguluyor ("Ø eff" → "Ø EFF").
   const govde = await kart.evaluate((el) => el.textContent);
-  ['Ø eff', 'Sarım', 'Span', 'Kayış boyu']
+  ['Ø eff', 'Sarım', 'Span']
     .forEach((t) => expect(govde).toContain(t));
   const ipuclari = await kart.evaluate((el) =>
     [...el.querySelectorAll('[title]')].map((e) => e.getAttribute('title')).join(' | '));
-  ['Efektif Çap (mm)', 'Kasnak Dönüş Yönü', 'Kayış Uzunluğu (mm)']
+  ['Efektif Çap (mm)', 'Kasnak Dönüş Yönü', 'Span Uzunluğu (mm)']
     .forEach((t) => expect(ipuclari).toContain(t));
-  // YÖN: açılır liste değil İKİ DURUMLU SEGMENT (altı satır, altısında da).
+  // YÖN: açılır liste değil METİN DÜĞMESİ (altı satır, altısında da).
   await expect(kart.locator('select[data-ve="spin"]')).toHaveCount(0);
-  await expect(kart.locator('.ve-fead-krt-seg[data-ve="spin"]')).toHaveCount(6);
+  await expect(kart.locator('button.ve-fead-pf-yon[data-ve="spin"]')).toHaveCount(6);
   await expect(kart.locator('select[data-ve="add-pulley"]')).toHaveCount(1);
-  // KAYIŞ BOYU KÜNYEDE: ızgaradaki `rowspan`lı birleşik hücrenin yerini aldı
-  // (boy satıra değil ÇEVRİME ait).
+  // KAYIŞ BOYU ROZETTE: boy satıra değil ÇEVRİME ait — tabloda ne birleşik
+  // hücre ne künye satırı var; kartın sağ üst rozeti taşıyor.
   await expect(kart.locator('td[rowspan]')).toHaveCount(0);
-  await expect(kart.locator('.ve-fead-tbl-kunye', { hasText: 'Kayış boyu' }))
-    .toHaveCount(1);
+  await expect(page.locator('.ve-fead-layout-card:has(.ve-fead-pafta) .ve-fead-kan-durum'))
+    .toHaveAttribute('title', /L [\d.]+ mm/);
 
   // ── 4) ÇÖZÜM ÖNİZLEMEYLE BİREBİR ────────────────────────────────────────
   const kurulan = await page.evaluate(() => {

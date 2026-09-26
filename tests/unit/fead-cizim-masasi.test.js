@@ -3,8 +3,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  *
  * Kullanıcı kararı (2026-09-23, tasarım tezgâhı II): *"Çizim Masası çok
- * güzel."* Kayış Yolu kartının çizimi giriş yüzeyi oldu; Kayış Tablosu
- * kanvastan indi ve kartın "Tablo" düğmesiyle açılan bir pencereye geçti.
+ * güzel."* Kayış Yolu kartının çizimi giriş yüzeyi oldu. Kayış Tablosu bugün
+ * kartın KATMANI — çizimin altında (Pafta, 2026-09-26; çekmece emekli).
  *
  * Hata sınıfı bu modülün her yerinde olduğu gibi SESSİZ:
  *   • ters köprü (ekran → mm) yanlışsa kasnak imlecin altından kaçar ama
@@ -67,8 +67,11 @@ const anlik = () => JSON.stringify(global.nodes.map((n) => [n.id, n.type, n.data
 function sahteKurulum() {
   let derinlik = 0, k = 0;
   global.veStateBatch = (fn) => {
-    derinlik++;
-    try { return fn(); } finally { derinlik--; if (!derinlik) saveState(); }
+    derinlik++; global.__topluDerinlik = derinlik;
+    try { return fn(); } finally {
+      derinlik--; global.__topluDerinlik = derinlik;
+      if (!derinlik) saveState();
+    }
   };
   global.createNode = jest.fn((type) => {
     const d = componentDefs[type] || {};
@@ -526,44 +529,65 @@ describe('açıklığa ekle — TEK geri-al adımı', () => {
     expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/^Buraya eklenemez — /), 'warning');
   });
 
+  // Kart kurulumu: düğüm DOM'u + tek tazeleme kapısı (çizim + tablo).
+  const kurKart = (id, data) => {
+    const d = componentDefs['fead-layout'];
+    const n = { id, type: 'fead-layout', def: d, x: 0, y: 0,
+                width: d.defaultWidth, height: d.defaultHeight, data: data || {} };
+    global.nodes.push(n);
+    const el = document.createElement('div');
+    el.id = id;
+    el.innerHTML = '<div class="ve-node-box"></div>';
+    document.body.appendChild(el);
+    return { n, el };
+  };
+  const kare = () => new Promise((r) => (typeof requestAnimationFrame === 'function'
+    ? requestAnimationFrame(r) : setTimeout(r, 0)));
+
   test('paletten bırakma: kasnak olmayan tip FEAD\'in değil; çizim dışı TABLOYA gider', () => {
     kurOrnek();
     sahteKurulum();
     const kap = document.createElement('div');
     kap.id = 've-canvas-wrapper';
     document.body.appendChild(kap);
+    // Hiçbir kartta tablo açık değil: bırakılan kasnağın satırı görünsün diye
+    // geometri kartının tablosu açılır — ekleme ile birlikte TEK geri-al adımı.
+    global.nodes = global.nodes.filter((n) => n.type !== 'fead-layout');
+    const { n: kart } = kurKart('k1', { tablo: 0 });
     const e = { target: kap, clientX: 10, clientY: 10 };
     expect(fead.veFeadPaletBirak(e, 'fead-report')).toBe(false);   // kanvasın kendi yolu
     const once = global.nodes.length;
+    // Gerçek saveState toplu kurulum sürerken YIĞINA YAZMAZ (state.js); sahte
+    // olan yalnız saydığı için adım, toplu kurulumun DIŞINDA yapılan çağrıdır.
+    const adim = [];
+    saveState.mockImplementation(() => { if (!global.__topluDerinlik) adim.push(1); });
     expect(fead.veFeadPaletBirak(e, 'fead-waterpump')).toBe(true);
     expect(global.nodes.length).toBe(once + 1);
-    // Eskiden bu yol SESSİZDİ: kutusuz düğüm kuruluyor, ekranda hiçbir şey
-    // değişmiyordu. Tablo açılır ki satırı ve boş koordinatı görünsün.
-    expect(document.getElementById('ve-fead-tablo')).toBeTruthy();
-    fead.veFeadTabloKapat();
+    expect(fead.veFeadTabloAcik(kart)).toBe(true);
+    expect(adim).toHaveLength(1);
+    saveState.mockImplementation(() => {});
+    // Tablo zaten açıksa dokunulmaz.
+    expect(fead.veFeadPaletBirak(e, 'fead-ps')).toBe(true);
+    expect(fead.veFeadTabloAcik(kart)).toBe(true);
   });
 
-  // AÇIK PENCERE eklemeden SONRA tazelenir ve yeni kasnağı GERGİNİN ÖNÜNDE
+  // KARTIN TABLOSU eklemeden SONRA tazelenir ve yeni kasnağı GERGİNİN ÖNÜNDE
   // gösterir. Tazeleme indis yazılmadan önce koşsaydı (ya da hiç koşmasaydı)
-  // pencere eski satırları ya da yeni kasnağı gerginin ardında gösterirdi —
-  // ölçüldü: çağrı silinince bu dosyadaki öteki kapılar YEŞİL kalıyordu.
-  test('tablonun ekleyicisi AÇIK PENCEREYİ tazeler — yeni satır gerginin önünde', async () => {
+  // tablo eski satırları ya da yeni kasnağı gerginin ardında gösterirdi.
+  test('tablonun ekleyicisi KARTIN TABLOSUNU tazeler — yeni satır gerginin önünde', async () => {
     kurOrnek();
     sahteKurulum();
-    const kap = document.createElement('div');
-    kap.id = 've-canvas-wrapper';
-    document.body.appendChild(kap);
-    expect(fead.veFeadTabloAc()).toBe(true);
+    const { el } = kurKart('k1');
+    fead.veFeadRefreshCards();
+    await kare();
     expect(fead.veFeadTableAdd('fead-waterpump')).toBe(true);
-    await new Promise((r) => (typeof requestAnimationFrame === 'function'
-      ? requestAnimationFrame(r) : setTimeout(r, 0)));
-    const satir = [...document.querySelectorAll('#ve-fead-tablo .ve-fead-krt[data-ve-node]')]
-      .map((el) => el.getAttribute('data-ve-node'));
+    await kare();
+    const satir = [...el.querySelectorAll('.ve-fead-pafta tr[data-ve-node]')]
+      .map((x) => x.getAttribute('data-ve-node'));
     const yeni = global.nodes.find((n) => n.type === 'fead-waterpump').id;
     expect(satir).toHaveLength(7);
     expect(satir[satir.length - 1]).toBe('ex-TEN');
     expect(satir[satir.length - 2]).toBe(yeni);
-    fead.veFeadTabloKapat();
   });
 
   test('tablonun ekleyicisi de TEK adım — yığındaki durum SIRAYI taşıyor', () => {
@@ -583,156 +607,52 @@ describe('açıklığa ekle — TEK geri-al adımı', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  7) KAYIŞ TABLOSU ÇEKMECESİ — TUVALİN ALTINDA, ÜSTÜNDE DEĞİL
+//  7) KAYIŞ TABLOSU KARTIN İÇİNDE — ÇEKMECE EMEKLİ (Pafta, 2026-09-26)
 // ═══════════════════════════════════════════════════════════════════════════
-// Kullanıcı (2026-09-24): "Tablo açılıyor fakat kötü bir yere geliyor."
-// Ölçüldü (1366×768, AG00976): tuvalin ÜSTÜNDE yüzen kart tuval alanının %45'ini ve
-// minimap'in %65'ini örtüyor, çizimleri 0,83 → 0,49'a küçültüyordu; ana
-// topolojiye dönülünce de SATIRSIZ bir tablo olarak açık kalıyordu. Çekmece
-// artık kanvas alanının bir SATIRI: tuval kısalır, hiçbir şey örtülmez.
-// Gerçek tarayıcı halkaları (kenarlar, minimap, tutamak sürüklemesi, kamera):
-// tests/e2e/fead-tablo.spec.js → "ÇEKMECE".
-describe('Kayış Tablosu çekmecesi', () => {
-  const kutu = (el, r) => {
-    el.getBoundingClientRect = () => Object.assign({ left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 }, r);
-  };
+// Çekmece tuvalin altına yapışık bir pencereydi ve ölçüldü (1920×952,
+// AG00810): kasnak ile satırı arası 659–785 px, açılınca tuval 870 → 604 px.
+// Tablo artık kartın katmanı: kanvas alanına satır eklenmez, tuval kısalmaz,
+// kamera oynamaz. Gerçek tarayıcı halkaları tests/e2e/fead-tablo.spec.js'te.
+describe('Kayış Tablosu kartın içinde — çekmece emekli', () => {
   const KABUK = '<div class="ve-canvas-area"><div class="ve-doc-dock" id="ve-doc-dock"></div>'
     + '<div class="ve-split-container" id="ve-split-container"><div class="ve-split-pane focused">'
     + '<div class="ve-canvas-wrapper" id="ve-canvas-wrapper"></div></div></div>'
     + '<div id="ve-status-bar" class="ve-status-bar"></div></div>';
-  const cerceve = () => new Promise((r) => (typeof requestAnimationFrame === 'function'
+  const kare = () => new Promise((r) => (typeof requestAnimationFrame === 'function'
     ? requestAnimationFrame(r) : setTimeout(r, 0)));
-  afterEach(() => {
-    fead.veFeadTabloKapat();
-    delete global.veFitViewToContent; delete global.updateCanvasTransform;
-    delete global.canvasZoom; delete global.canvasOffset;
-    jest.restoreAllMocks();
-  });
+  afterEach(() => { delete global.veFitViewToContent; });
 
-  test('YERİ: kanvas alanının satırı — tuvalin ALTINDA, durum şeridinin ÜSTÜNDE, tuvalin İÇİNDE DEĞİL', () => {
+  test('tablo KARTIN içinde — kanvas alanına satır eklenmiyor, kamera oynamıyor', async () => {
     document.body.innerHTML = KABUK;
     kurOrnek();
-    expect(fead.veFeadTabloAc()).toBe(true);
-    const p = document.getElementById('ve-fead-tablo');
-    expect(p.parentNode.className).toBe('ve-canvas-area');
-    expect(p.previousElementSibling.id).toBe('ve-split-container');
-    expect(p.nextElementSibling.id).toBe('ve-status-bar');
-    // Eskiden tuval kabının İÇİNDEYDİ ve onu örtüyordu.
-    expect(document.getElementById('ve-canvas-wrapper').contains(p)).toBe(false);
-    // Kabuk parçası: bir BÖLGE, iletişim kutusu değil.
-    expect(p.getAttribute('role')).toBe('region');
-  });
-
-  test('FEAD içeriği kalmayınca çekmece KAPANIR — ana topolojide satırsız tablo kalmaz', async () => {
-    document.body.innerHTML = KABUK;
-    kurOrnek();
-    expect(fead.veFeadTabloAc()).toBe(true);
-    expect(fead._feadTabloBaglam()).toBe(true);
-    // Ana topoloji: yalnız modül kartı.
-    global.nodes = [{ id: 'm', type: 'fead-analysis', def: componentDefs['fead-analysis'], data: {} }];
-    expect(fead._feadTabloBaglam()).toBe(false);
+    const d = componentDefs['fead-layout'];
+    global.nodes.push({ id: 'k1', type: 'fead-layout', def: d, x: 0, y: 0,
+                        width: d.defaultWidth, height: d.defaultHeight, data: {} });
+    const el = document.createElement('div');
+    el.id = 'k1'; el.innerHTML = '<div class="ve-node-box"></div>';
+    document.getElementById('ve-canvas-wrapper').appendChild(el);
+    global.veFitViewToContent = jest.fn();
+    const alan = document.querySelector('.ve-canvas-area');
+    const cocuk0 = alan.children.length;
     fead.veFeadRefreshCards();
-    await cerceve();
+    await kare();
+    expect(el.querySelector('.ve-fead-pafta tr[data-ve-node]')).toBeTruthy();
+    expect(alan.children.length).toBe(cocuk0);                 // kabuğa satır YOK
     expect(document.getElementById('ve-fead-tablo')).toBeNull();
-    // Düğmelerin basılılığı da düşer.
-    expect(document.querySelectorAll('.ve-fead-tablo-dugme[aria-pressed="true"]')).toHaveLength(0);
+    // Tabloyu kapatıp açmak kamerayı OYNATMAZ (çekmece sığdırıyordu).
+    fead.veFeadTabloToggle('k1');
+    fead.veFeadTabloToggle('k1');
+    expect(veFitViewToContent).not.toHaveBeenCalled();
   });
 
-  test('BOŞ FEAD topolojisinde (açılış kartı var, kasnak yok) çekmece AÇIK kalır', async () => {
-    document.body.innerHTML = KABUK;
-    global.nodes = [{ id: 'k', type: 'fead-layout', def: componentDefs['fead-layout'], data: {} }];
-    expect(fead.veFeadTabloAc()).toBe(true);
-    fead.veFeadRefreshCards();
-    await cerceve();
-    expect(document.getElementById('ve-fead-tablo')).toBeTruthy();
-  });
-
-  test('FEAD\'den KULLANICI çıkarken çekmece kapanır; SESSİZ gidiş-dönüşte dokunulmaz', () => {
+  test('FEAD\'den çıkarken kapatılacak pencere YOK; ana topolojide tablo YOK', async () => {
     const src = loadSource('cp-fead.js');
     const govde = src.slice(src.indexOf('function veFeadCloseEditor('), src.indexOf('function veFeadCollapseToRoot('));
-    expect(govde).toMatch(/if\(!_silent\) veFeadTabloKapat\(\);/);
-    // Kapanış tuval takasından ÖNCE: kamera bu topolojide geri dönsün.
-    expect(govde.indexOf('veFeadTabloKapat')).toBeLessThan(govde.indexOf('veSerializeCurrentState'));
-  });
-
-  // Kamera: tuval kısalınca açılıştan ÖNCE tam görünen bir çizim yeni alt
-  // kenarda kesiliyorsa YALNIZ çizimler sığdırılır ve hiç yakınlaşılmaz.
-  describe('kamera', () => {
-    const ONCE = { left: 284, right: 1600, top: 74, bottom: 975 };     // çekmeceden önce
-    const sahne = (kartAlt) => {
-      document.body.innerHTML = KABUK;
-      kurOrnek();
-      global.nodes.push({ id: 'kart', type: 'fead-layout', def: componentDefs['fead-layout'], data: {} });
-      const el = document.createElement('div'); el.id = 'kart';
-      document.body.appendChild(el);
-      kutu(document.getElementById('ve-canvas-wrapper'), { left: 284, right: 1600, top: 74, bottom: 600 });
-      kutu(el, { left: 540, right: 980, top: 275, bottom: kartAlt });
-      global.canvasZoom = 1; global.canvasOffset = { x: 0, y: 0 };
-      global.veFitViewToContent = jest.fn(() => {
-        global.canvasZoom = 0.8; global.canvasOffset.x = 40; global.canvasOffset.y = -30;
-      });
-      global.updateCanvasTransform = jest.fn();
-    };
-
-    test('kesilen çizim → yalnız çizimler sığdırılır, YAKINLAŞILMAZ', () => {
-      sahne(775);
-      expect(fead._feadTabloCizimiGoster(ONCE)).toBe(true);
-      const o = veFitViewToContent.mock.calls[0][0];
-      expect(o.bottomInset).toBeUndefined();          // tuvalin kendisi kısa, örtü yok
-      expect(o.maxZoom).toBeLessThanOrEqual(1);       // ilk hâli 1,00 → 1,11 yakınlaşıyordu
-      expect(o.only({ type: 'fead-layout' })).toBe(true);
-      expect(o.only({ type: 'fead-solver' })).toBe(false);
-      expect(o.only({ type: 'fead-crank' })).toBe(false);
-    });
-
-    test('çizim yeni tuvale sığıyorsa kamera OYNAMAZ', () => {
-      sahne(590);
-      expect(fead._feadTabloCizimiGoster(ONCE)).toBe(false);
-      expect(veFitViewToContent).not.toHaveBeenCalled();
-    });
-
-    test('çizim açılıştan ÖNCE de kesikse (kullanıcı yakınlaşmış) kamera OYNAMAZ', () => {
-      sahne(1100);
-      expect(fead._feadTabloCizimiGoster(ONCE)).toBe(false);
-      expect(veFitViewToContent).not.toHaveBeenCalled();
-    });
-
-    test('kapanınca kamera ESKİ yerine döner — kullanıcı oynattıysa dokunulmaz', () => {
-      sahne(775);
-      fead._feadTabloCizimiGoster(ONCE);
-      expect(fead._feadTabloKameraGeri()).toBe(true);
-      expect([canvasZoom, canvasOffset.x, canvasOffset.y]).toEqual([1, 0, 0]);
-
-      sahne(775);
-      fead._feadTabloCizimiGoster(ONCE);
-      global.canvasOffset.x += 120;                   // kullanıcı kaydırdı
-      expect(fead._feadTabloKameraGeri()).toBe(false);
-      expect([canvasZoom, canvasOffset.x]).toEqual([0.8, 160]);
-    });
-  });
-
-  test('TUTAMAK: yükseklik sınırlar içinde kalır ve yeniden açılışta hatırlanır', () => {
+    expect(govde).not.toMatch(/veFeadTablo/);
+    // Ana topoloji: yalnız modül kartı — tazeleme kapısının tablo ayağı boş döner.
     document.body.innerHTML = KABUK;
-    kurOrnek();
-    jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
-      if (this.id === 've-canvas-wrapper') return { top: 0, bottom: 500, left: 0, right: 1000, width: 1000, height: 500 };
-      if (this.id === 've-fead-tablo') return { top: 500, bottom: 800, left: 0, right: 1000, width: 1000, height: 300 };
-      return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 };
-    });
-    expect(fead.veFeadTabloAc()).toBe(true);
-    const p = document.getElementById('ve-fead-tablo');
-    expect(fead._feadTabloBoyut(p, 40)).toBe(150);    // başlık + künye + satırlar sığsın
-    expect(fead._feadTabloBoyut(p, 5000)).toBe(620);  // tuvale en az 180 px kalır
-    expect(fead._feadTabloBoyut(p, 400)).toBe(400);
-    expect(p.style.height).toBe('400px');
-    fead.veFeadTabloKapat();
-    expect(fead.veFeadTabloAc()).toBe(true);
-    expect(document.getElementById('ve-fead-tablo').style.height).toBe('400px');
-    // Çift tık / 0: içerik kadarına döner ve bir sonraki açılışa taşınmaz.
-    expect(fead._feadTabloBoyut(document.getElementById('ve-fead-tablo'), 0)).toBe(0);
-    expect(document.getElementById('ve-fead-tablo').style.height).toBe('');
-    fead.veFeadTabloKapat();
-    expect(fead.veFeadTabloAc()).toBe(true);
-    expect(document.getElementById('ve-fead-tablo').style.height).toBe('');
+    global.nodes = [{ id: 'm', type: 'fead-analysis', def: componentDefs['fead-analysis'], data: {} }];
+    expect(fead.veFeadRefreshTableCards()).toBe(0);
+    expect(document.querySelectorAll('.ve-fead-pafta')).toHaveLength(0);
   });
 });

@@ -4,7 +4,9 @@
  * Kart 2026-09-21'e kadar DÖRT yatay bant taşıyordu ve her biri yüksekliğini
  * ÇİZİMDEN alıyordu (iki seçici şeridi 44 px + durum şeridi 20 px + titreşim
  * açıkken kazanç şeridi 20 px daha). Bantlar kalktı: çizim kartın tamamını
- * alıyor, denetimler çizimin üstünde yüzüyor.
+ * alıyor, denetimler çizimin üstünde yüzüyor. Geometri kartında Kayış
+ * Tablosu (Pafta, 2026-09-26) çizimin altında: çizimden alınan tek şey o ve
+ * altındaki çubuk satırı.
  *
  * NODE'DA HİÇ KOŞMAYAN HALKALAR — jsdum yerleşim hesaplamaz, bu dosyanın
  * varlık sebebi tam olarak bunlar:
@@ -63,8 +65,11 @@ const olc = (page, id) => page.evaluate((i) => {
   const yuz = R(el.querySelector('.ve-fead-yuz'));
   const gul = R(el.querySelector('[data-ve="compass"]'));
   const kanvas = R(el.querySelector('.ve-fead-kanvas'));
+  const paf = R(el.querySelector('.ve-fead-pafta'));
+  const kart = el.querySelector('.ve-fead-layout-card');
   return {
-    kartH: n.height, kartW: n.width, kutu, kanvas, yuz, gul,
+    kartH: n.height, kartW: n.width, kutu, kanvas, yuz, gul, paf,
+    yuzUst: parseFloat(getComputedStyle(kart).getPropertyValue('--fead-yuz-ust')),
     ciz: R(el.querySelector('.ve-fead-kanvas > .ciz')),
     svg: R(el.querySelector('.ve-fead-kanvas > .ciz > svg')),
     rozet: R(el.querySelector('.ve-fead-kan-durum')),
@@ -73,6 +78,7 @@ const olc = (page, id) => page.evaluate((i) => {
     katDugme: el.querySelectorAll('.ve-fead-yuz .ve-fead-kat-dugme:not(.ve-fead-tablo-dugme)').length,
     tabloDugme: el.querySelectorAll('.ve-fead-yuz .ve-fead-tablo-dugme').length,
     gulOrtuldu: ort(gul, yuz),
+    gulTabloda: ort(gul, paf),
     // Bant kalıntısı: akışa giren, üst kenarlıklı kutu.
     bant: el.querySelectorAll('.ve-fead-card-body > div:not(.ve-fead-kanvas)').length,
   };
@@ -86,17 +92,29 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
 
   const id = await page.evaluate(() => window.nodes.find(
     (n) => n.type === 'fead-layout' && !(n.data || {}).katOn).id);
+  const idIsletme = await page.evaluate(() => window.nodes.find(
+    (n) => n.type === 'fead-layout' && (n.data || {}).katOn === 'isletme').id);
   const m = await olc(page, id);
 
-  // ── 1) ÇİZİM KARTIN TAMAMINI ALIYOR ────────────────────────────────────
+  // ── 1) ÇİZİM KARTIN TAMAMINI ALIYOR — tablo ve çubuk satırı DIŞINDA ────
   // Bant döneminde çizime kartın yüksekliğinden 64 px eksiği kalıyordu
   // (440×500 kartta 436), titreşim açıkken 416. Şimdi kabuk ne kadarsa çizim
-  // de o kadar.
+  // de o kadar. Geometri kartında Kayış Tablosu (Pafta, 2026-09-26) çizimin
+  // ALTINDA ve çubuk onun altındaki satırda: çizimden alınan yalnız o ikisi,
+  // ve üçü birbirine binmiyor.
   expect(Math.round(m.ciz.h)).toBe(Math.round(m.kanvas.h));
-  expect(Math.round(m.svg.h)).toBe(Math.round(m.kanvas.h));
   expect(Math.round(m.svg.w)).toBe(Math.round(m.kanvas.w));
+  expect(m.paf).not.toBeNull();
+  expect(Math.round(m.svg.h + m.paf.h + m.yuzUst)).toBe(Math.round(m.kanvas.h));
+  expect(m.svg.b).toBeLessThanOrEqual(m.paf.t + 1);
+  expect(m.paf.b).toBeLessThanOrEqual(m.yuz.t + 1);
   // Kabuk da kartın gövdesinin tamamı: aralarında yalnız kenarlık payı var.
   expect(m.kutu.h - m.kanvas.h).toBeLessThanOrEqual(4);
+  // TABLOSUZ kart (işletme ön ayarı): çizim kabuğun TAMAMI.
+  const mi = await olc(page, idIsletme);
+  expect(mi.paf).toBeNull();
+  expect(Math.round(mi.svg.h)).toBe(Math.round(mi.kanvas.h));
+  expect(Math.round(mi.svg.w)).toBe(Math.round(mi.kanvas.w));
 
   // ── 2) YÜZEN ÇUBUK: TEK SATIR, KARTIN İÇİNDE ───────────────────────────
   // `left:50%` ile ortalanırsa mutlak kabın sığdırma genişliği "kap − left"
@@ -104,8 +122,8 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
   // yerine 110 px. Yüzen çubuğun bütün kazancı geri giderdi.
   expect(m.secici).toBe(3);
   expect(m.katDugme).toBe(1);
-  // Kayış Tablosu'nun KAPISI da çubukta (Çizim Masası, 2026-09-23) ve
-  // çubuk onunla da TEK SATIR kalıyor — aşağıdaki yükseklik kapısı ikisini
+  // Kayış Tablosu'nun düğmesi de çubukta (tabloyu kartın içinde açar/kapar)
+  // ve çubuk onunla da TEK SATIR kalıyor — aşağıdaki yükseklik kapısı ikisini
   // birlikte ölçüyor.
   expect(m.tabloDugme).toBe(1);
   expect(m.yuz.h).toBeLessThan(48);                         // tek satır
@@ -125,6 +143,7 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
   // okunuyor. Çözüm çizimi küçültmek değil, gülü yukarı almaktı.
   expect(m.gul).not.toBeNull();
   expect(m.gulOrtuldu).toBe(false);
+  expect(m.gulTabloda).toBe(false);                        // tablonun altında da değil
 
   // ── 4) DURUM ROZETİ SAĞ ÜSTTE ──────────────────────────────────────────
   expect(m.rozet.t - m.kanvas.t).toBeLessThan(12);
@@ -143,7 +162,9 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
   const v = await olc(page, id);
   expect(v.vib).not.toBeNull();
   expect(Math.round(v.ciz.h)).toBe(Math.round(m.ciz.h));     // çizim DEĞİŞMEDİ
-  // Şerit çubuğun ÜSTÜNDE ve ikisi çakışmıyor.
+  expect(Math.round(v.svg.h)).toBe(Math.round(m.svg.h));
+  // Şerit tablonun ve çubuğun ÜSTÜNDE, hiçbiriyle çakışmıyor.
+  expect(v.vib.b).toBeLessThanOrEqual(v.paf.t + 1);
   expect(v.vib.b).toBeLessThanOrEqual(v.yuz.t + 1);
   expect(v.vib.l).toBeGreaterThanOrEqual(v.kutu.l - 1);
   expect(v.vib.r).toBeLessThanOrEqual(v.kutu.r + 1);

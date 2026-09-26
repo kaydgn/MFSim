@@ -38,10 +38,9 @@ async function bootApp(page) {
 }
 
 // Kasnağın panelini KULLANICININ yolundan açar: Kayış Tablosu'ndaki ad
-// düğmesi. Tablo 2026-09-23'ten beri kanvas kartı değil, Kayış Yolu kartının
-// "Tablo" düğmesiyle açılan PENCERE (Çizim Masası); tablonun alanlarını ölçen
-// halkalar onu açık okuyor. (Öbür yol çizimdeki kasnağa tıklamak —
-// `fead-cizim-masasi.spec.js`.)
+// düğmesi. Tablo 2026-09-26'dan beri Kayış Yolu kartının KATMANI (Pafta):
+// geometri ön ayarlı kartta çizimin altında hep açık, düğmeye basmak gerekmez.
+// (Öbür yol çizimdeki kasnağa tıklamak — `fead-cizim-masasi.spec.js`.)
 async function kasnakPaneliAc(page) {
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
@@ -51,9 +50,8 @@ async function kasnakPaneliAc(page) {
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
   await page.waitForFunction(() => window.nodes.filter((n) => n.type === 'fead-layout').length === 2,
     null, { timeout: 20000 });
-  await page.locator('.ve-fead-tablo-dugme').first().click();
-  const tablo = page.locator('#ve-fead-tablo');
-  await expect(tablo.locator('.ve-fead-krt[data-ve-node]')).toHaveCount(6);
+  const tablo = page.locator('.ve-fead-pafta');
+  await expect(tablo.locator('tr[data-ve-node]')).toHaveCount(6);
   await tablo.locator('.ve-fead-tbl-name').first().click();
   await expect(page.locator('#ve-properties-overlay')).toBeVisible();
   await page.waitForTimeout(400);
@@ -70,16 +68,19 @@ test('panel alanı ile tablo alanı AYNI gramer — etiket üstte, aynı tipogra
     };
     const pf = document.querySelector('.ve-fp-f');
     const pl = pf && pf.querySelector('.ve-fp-l');
-    const tf = document.querySelector('.ve-fead-krt-fld');
-    const tl = tf && tf.querySelector('i');
-    return { panelAlan: oku(pf), panelEtiket: oku(pl), tabloAlan: oku(tf), tabloEtiket: oku(tl) };
+    // Tablonun etiketi SÜTUN BAŞI: değerin üstünde, sütun başına bir kez.
+    const tl = document.querySelector('.ve-fead-pafta th.k-x');
+    const td = document.querySelector('.ve-fead-pafta tr[data-ve-node] td.k-x');
+    const ust = tl && td ? { baslikAlt: tl.getBoundingClientRect().bottom,
+                             degerUst: td.getBoundingClientRect().top } : null;
+    return { panelAlan: oku(pf), panelEtiket: oku(pl), tabloEtiket: oku(tl), ust };
   });
 
   expect(r.panelAlan).not.toBeNull();
-  expect(r.tabloAlan).not.toBeNull();
-  // ETİKET ÜSTTE: ikisi de sütun akışı
+  expect(r.tabloEtiket).not.toBeNull();
+  // ETİKET ÜSTTE: panelde sütun akışı, tabloda başlık satırı değerin üstünde
   expect(r.panelAlan.yon).toBe('column');
-  expect(r.tabloAlan.yon).toBe('column');
+  expect(r.ust.baslikAlt).toBeLessThanOrEqual(r.ust.degerUst + 0.5);
   // AYNI TİPOGRAFİ: iki yüzey arasında geçen kullanıcı aynı dili okur
   expect(r.panelEtiket.font).toBe(r.tabloEtiket.font);
   expect(r.panelEtiket.punto).toBe(r.tabloEtiket.punto);
@@ -87,13 +88,13 @@ test('panel alanı ile tablo alanı AYNI gramer — etiket üstte, aynı tipogra
   expect(r.panelEtiket.renk).toBe(r.tabloEtiket.renk);
 });
 
-test('TÜRETİLEN değer OYUK zeminde — tablonun çözüm bölgesiyle aynı yüzey', async ({ page }) => {
+test('TÜRETİLEN değer OYUK zeminde — tablonun çözüm sütunlarıyla aynı yüzey', async ({ page }) => {
   await kasnakPaneliAc(page);
   const r = await page.evaluate(() => {
     const jeton = (ad) => getComputedStyle(document.documentElement).getPropertyValue(ad).trim();
     const ro = document.querySelector('.ve-fp-inp[readonly]');
     const yaz = document.querySelector('.ve-fp-inp:not([readonly])');
-    const coz = document.querySelector('.ve-fead-krt > .coz');
+    const coz = document.querySelector('.ve-fead-pafta tr[data-ve-node] td.cz');
     const hex = (h) => { h = h.trim(); return h; };
     const rgb = (c) => {
       const d = document.createElement('div'); d.style.color = c;
@@ -109,7 +110,7 @@ test('TÜRETİLEN değer OYUK zeminde — tablonun çözüm bölgesiyle aynı y�
   });
 
   expect(r.turetilen).not.toBeNull();
-  // Panelin türetilen değeri = tablonun çözüm bölgesi = OYUK jeton
+  // Panelin türetilen değeri = tablonun çözüm sütunu = OYUK jeton
   expect(r.turetilen).toBe(r.oyukJeton);
   expect(r.tabloCoz).toBe(r.oyukJeton);
   // ve YÜKSELEN zemin DEĞİL — kapatılan ters işaret bu

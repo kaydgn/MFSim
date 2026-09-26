@@ -63,9 +63,12 @@ test('SÜRÜKLE: konum girdisi imleçle birlikte yazılır, tek geri-al adımı'
   const undo0 = await page.evaluate(() => undoStack.length);
   const s = await page.evaluate((k) => {
     const svg = document.querySelector('#' + k + ' .ve-fead-kanvas svg[data-fead-xf]');
-    // ekran px → mm: çizicinin ölçeği × kanvasın yakınlaştırması
-    return +svg.getAttribute('data-fead-xf').split(' ')[0]
-      * (svg.getBoundingClientRect().width / svg.viewBox.baseVal.width);
+    // ekran px → mm: çizicinin ölçeği × SVG'nin EKRAN MATRİSİ (viewBox'ın
+    // `meet` ölçeği + kanvasın yakınlaştırması; ürünün ters köprüsüyle aynı
+    // kaynak). Genişlik oranı yalnız genişlikle sınırlı kutuda doğru: tablolu
+    // kartta çizim yükseklikle sınırlı ve oran %0,4 sapıyordu (102,7 mm'de
+    // 0,55 mm).
+    return +svg.getAttribute('data-fead-xf').split(' ')[0] * svg.getScreenCTM().a;
   }, h.kart);
 
   await page.mouse.move(h.x, h.y);
@@ -270,10 +273,14 @@ test('PALETTEN BIRAK: açıklığa girer, kapalı açıklık ve boşluk REDDEDİ
   expect(await sira()).toEqual(once);
   expect(await page.evaluate(() => document.querySelectorAll('[data-ve="birak-iz"]').length)).toBe(0);
 
-  // ── 4) ÇİZİMİN DIŞINA: tablonun ekleyicisi + tablo açılıyor ─────────────
+  // ── 4) ÇİZİMİN DIŞINA: tablonun ekleyicisi — eklenen satır Paftada ─────
+  // Geometri kartının tablosu zaten açık; kapalı olsaydı ekleyici açardı
+  // (birim kapısı: fead-cizim-masasi.test.js).
   await birak(page, 'fead-waterpump', { x: 1500, y: 950 }, false);
   const dis = await sira();
   expect(dis).toHaveLength(once.length + 1);
-  await expect(page.locator('#ve-fead-tablo')).toBeVisible();
+  const pafta = page.locator('.ve-fead-pafta');
+  await expect(pafta).toBeVisible();
+  await expect(pafta.locator('tr[data-ve-node]')).toHaveCount(once.length + 1);
   expect(hatalar).toEqual([]);
 });
