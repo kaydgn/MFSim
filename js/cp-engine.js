@@ -2713,17 +2713,22 @@ function updateVEMotorChart(nodeId) {
   function xScale(x) { return margin.left + (x - xMin) / (xMax - xMin) * plotWidth; }
   function yScaleTorque(y) { return _pcYFromNorm(_pcNormTorque(y)); }
   function yScalePower(y) { return _pcYFromNorm(_pcNormPower(y)); }
-  
-  // Arka plan grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+
+  // Eksen bölmeleri YUVARLAK adımla (graphics.js → veEksenBolme). Izgara sol
+  // eksenin bölmelerine oturur ve rengini temadan alır: beyaz %5 açık temada
+  // hiç görünmüyordu, bölmeler de etiketlerle hizalı değildi (5'e karşı 4).
+  var bolX = veEksenBolme(xMin, xMax, 5);
+  var bolT = veEksenBolme(visTorqueLo, visTorqueHi, 5);
+  var bolP = veEksenBolme(visPowerLo, visPowerHi, 5);
+  ctx.strokeStyle = veThemeRgba('--border-color', 0.5, 'rgba(128,128,128,0.2)');
   ctx.lineWidth = 1;
-  for(var i = 0; i <= 5; i++) {
-    var gy = margin.top + plotHeight * i / 5;
+  bolT.degerler.forEach(function(v) {
+    var gy = Math.round(yScaleTorque(v)) + 0.5;
     ctx.beginPath();
     ctx.moveTo(margin.left, gy);
     ctx.lineTo(margin.left + plotWidth, gy);
     ctx.stroke();
-  }
+  });
   
   // Eksen çizgileri NÖTR: eksenin rengi bir bilgi taşımıyordu; seri rengi
   // eğrinin kendisinde ve göstergede zaten var.
@@ -2751,32 +2756,26 @@ function updateVEMotorChart(nodeId) {
   ctx.fillStyle = VE_ENG_C.etiket;
   ctx.font = veThemeFont('micro');
   ctx.textAlign = 'center';
-  for(var i = 0; i <= 4; i++) {
-    var xVal = xMin + (xMax - xMin) * i / 4;
-    var xPos = xScale(xVal);
-    ctx.fillText(Math.round(xVal), xPos, margin.top + plotHeight + 15);
-  }
+  bolX.degerler.forEach(function(v) {
+    ctx.fillText(v.toFixed(bolX.basamak), xScale(v), margin.top + plotHeight + 15);
+  });
   ctx.fillText('Devir [rpm]', margin.left + plotWidth / 2, 200 - 5);
-  
+
   // Sol Y ekseni etiketleri (Tork) — çok eksenli grafikte etiket, ait olduğu
   // eğrinin tonunu taşır (osiloskop/CANoe kuralı). Eksen ÇİZGİSİ nötr kaldı
   // ki tonlama iki kez tekrarlanmasın.
   ctx.fillStyle = VE_ENG_C.seri1;
   ctx.textAlign = 'right';
-  for(var i = 0; i <= 4; i++) {
-    var yVal = visTorqueLo + (visTorqueHi - visTorqueLo) * i / 4;
-    var yPos = yScaleTorque(yVal);
-    ctx.fillText(Math.round(yVal), margin.left - 5, yPos + 3);
-  }
-  
+  bolT.degerler.forEach(function(v) {
+    ctx.fillText(v.toFixed(bolT.basamak), margin.left - 5, yScaleTorque(v) + 3);
+  });
+
   // Sağ Y ekseni etiketleri (Güç)
   ctx.fillStyle = VE_ENG_C.seri2;
   ctx.textAlign = 'left';
-  for(var i = 0; i <= 4; i++) {
-    var yVal = visPowerLo + (visPowerHi - visPowerLo) * i / 4;
-    var yPos = yScalePower(yVal);
-    ctx.fillText(Math.round(yVal), margin.left + plotWidth + 5, yPos + 3);
-  }
+  bolP.degerler.forEach(function(v) {
+    ctx.fillText(v.toFixed(bolP.basamak), margin.left + plotWidth + 5, yScalePower(v) + 3);
+  });
   
   // Eğriler plot alanına kırpılır — yakınlaştırınca eksen bölgesine taşmasın
   ctx.save();
@@ -2991,13 +2990,16 @@ function updateVENetChart(nodeId) {
   function yScaleT(y) { return margin.top + plotHeight - y / yMaxTorque * plotHeight; }
   function yScaleP(y) { return margin.top + plotHeight - y / yMaxPower * plotHeight; }
   
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  // Izgara sol eksenin YUVARLAK bölmelerinde, renk temadan (updateVEMotorChart ile aynı kural)
+  var bolX = veEksenBolme(xMin, xMax, 5);
+  var bolT = veEksenBolme(0, yMaxTorque, 5);
+  var bolP = veEksenBolme(0, yMaxPower, 5);
+  ctx.strokeStyle = veThemeRgba('--border-color', 0.5, 'rgba(128,128,128,0.2)');
   ctx.lineWidth = 1;
-  for(var i = 0; i <= 5; i++) {
-    var gy = margin.top + plotHeight * i / 5;
+  bolT.degerler.forEach(function(v) {
+    var gy = Math.round(yScaleT(v)) + 0.5;
     ctx.beginPath(); ctx.moveTo(margin.left, gy); ctx.lineTo(margin.left + plotWidth, gy); ctx.stroke();
-  }
+  });
   
   // Eksenler
   ctx.strokeStyle = VE_ENG_C.eksen; ctx.lineWidth = 1;
@@ -3007,19 +3009,16 @@ function updateVENetChart(nodeId) {
   
   // X etiketleri
   ctx.fillStyle = VE_ENG_C.etiket; ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
-  for(var i = 0; i <= 4; i++) {
-    var xVal = xMin + (xMax - xMin) * i / 4;
-    ctx.fillText(Math.round(xVal), xScale(xVal), margin.top + plotHeight + 15);
-  }
+  bolX.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolX.basamak), xScale(v), margin.top + plotHeight + 15); });
   ctx.fillText('Devir [rpm]', margin.left + plotWidth / 2, 200 - 5);
-  
+
   // Sol Y (Tork)
   ctx.fillStyle = VE_ENG_C.seri1; ctx.textAlign = 'right';
-  for(var i = 0; i <= 4; i++) { ctx.fillText(Math.round(yMaxTorque * i / 4), margin.left - 5, yScaleT(yMaxTorque * i / 4) + 3); }
-  
+  bolT.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolT.basamak), margin.left - 5, yScaleT(v) + 3); });
+
   // Sağ Y (Güç)
   ctx.fillStyle = VE_ENG_C.seri2; ctx.textAlign = 'left';
-  for(var i = 0; i <= 4; i++) { ctx.fillText(Math.round(yMaxPower * i / 4), margin.left + plotWidth + 5, yScaleP(yMaxPower * i / 4) + 3); }
+  bolP.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolP.basamak), margin.left + plotWidth + 5, yScaleP(v) + 3); });
   
   // Çizim yardımcısı
   function drawLine(pts, scaleFn, color, width, dash) {

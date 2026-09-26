@@ -86,9 +86,12 @@ function _veSettingsRenderAppearance() {
   // YAZILMAZ: dosyayı paylaşan herkes onu da paylaşırdı.
   var _kAd = (typeof veKimlikAd === 'function') ? veKimlikAd() : '';
   var _kBh = (typeof veKimlikBasHarf === 'function') ? veKimlikBasHarf(_kAd) : '';
-  html += '<h3 class="ve-settings-section-title">Kimlik</h3>'
+  // Avatar hesap menüsündekiyle AYNI daire (.ve-avatar-menu-av, boşu dâhil):
+  // bu bloğun sınıflarının kuralı hiç yazılmamıştı ve baş harfler 16 px
+  // çıplak metin olarak ayrı satıra düşüyordu (ölçüldü).
+  html += '<h4 class="ve-settings-subhead">Kimlik</h4>'
        +  '<div class="ve-set-kimlik">'
-       +    '<span class="ve-set-kimlik-av' + (_kBh ? '' : ' bos') + '">' + _kBh + '</span>'
+       +    '<span class="ve-avatar-menu-av ve-set-kimlik-av' + (_kBh ? '' : ' bos') + '" aria-hidden="true">' + _kBh + '</span>'
        +    '<label class="ve-fp-f" style="flex:1;">'
        +      '<span class="ve-fp-l">Ad</span>'
        +      '<input class="ve-fp-inp ve-fp-inp--text" id="ve-set-kimlik-ad" type="text"'
@@ -99,6 +102,7 @@ function _veSettingsRenderAppearance() {
        +  '</div>'
        +  '<p class="ve-set-not">Avatarda baş harfleri görünür. Bu tarayıcıda saklanır,'
        +  ' proje dosyasına yazılmaz.</p>';
+  html += '<h4 class="ve-settings-subhead">Tema</h4>';
   html += '<p class="ve-settings-desc">Program tek bir tasarım dili taşır; ' +
           'seçtiğin şey o dilin zemini. Seçim anında uygulanır ve hatırlanır.</p>';
   html += '<div class="ve-settings-theme-grid">';

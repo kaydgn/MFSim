@@ -2392,13 +2392,16 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
   ctx.rect(pad.l, pad.t, pw, ph);
   ctx.clip();
 
-  // Arka plan grid
+  // Arka plan grid — irtifa ekseninin YUVARLAK bölmelerinde (graphics.js →
+  // veEksenBolme); eskiden aralık dörde bölünüyordu ve etiketler 812 · 837 m
+  // gibi okunuyordu.
+  var bolY = veEksenBolme(yMin, yMin + yRange, 4);
   ctx.strokeStyle = 'rgba(128,128,128,0.15)';
   ctx.lineWidth = 0.5;
-  for(var gy = 0; gy <= 4; gy++) {
-    var yy = pad.t + (gy / 4) * ph;
+  bolY.degerler.forEach(function(v) {
+    var yy = toY(v);
     ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(W - pad.r, yy); ctx.stroke();
-  }
+  });
 
   // Segment alanlarını renklendirme
   var segStart = 0;
@@ -2478,20 +2481,23 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
   ctx.fillStyle = 'rgba(128,128,128,0.7)';
   ctx.font = veThemeFont('micro');
   ctx.textAlign = 'right';
-  for(var ly = 0; ly <= 4; ly++) {
-    var val = yMin + (1 - ly / 4) * yRange;
-    ctx.fillText(val.toFixed(0) + ' m', pad.l - 3, pad.t + (ly / 4) * ph + 3);
-  }
+  bolY.degerler.forEach(function(v) {
+    ctx.fillText(v.toFixed(bolY.basamak) + ' m', pad.l - 3, toY(v) + 3);
+  });
 
-  // X ekseni etiketleri (mesafe) — görünen aralığı izler. Uçtaki etiket
-  // tuvalin İÇİNE kıstırılır: ortalı yazılınca sağ ucu kesiliyordu.
+  // X ekseni etiketleri (mesafe) — görünen aralığı izler, bölmeler YUVARLAK
+  // ve eksenin TEK birimi var (eskiden aynı eksende "750 m" ile "1.5 km" yan
+  // yana düşebiliyordu). Uçtaki etiket tuvalin İÇİNE kıstırılır: ortalı
+  // yazılınca sağ ucu kesiliyordu.
   ctx.textAlign = 'center';
-  for(var lx = 0; lx <= 4; lx++) {
-    var dVal = xLo + (lx / 4) * (xHi - xLo);
-    var label = dVal >= 1000 ? (dVal / 1000).toFixed(1) + ' km' : dVal.toFixed(0) + ' m';
+  var bolD = veEksenBolme(xLo, xHi, 4);
+  var km = xHi >= 1000;
+  var kmBasamak = veAxisDecimals(bolD.adim / 1000);
+  bolD.degerler.forEach(function(dVal) {
+    var label = km ? (dVal / 1000).toFixed(kmBasamak) + ' km' : dVal.toFixed(bolD.basamak) + ' m';
     var yarim = ctx.measureText(label).width / 2;
     ctx.fillText(label, Math.max(yarim + 1, Math.min(toX(dVal), W - yarim - 1)), H - 4);
-  }
+  });
 
   // ── Etkileşim (js/panel-chart.js) ──
   if(typeof pcAttach === 'function') {

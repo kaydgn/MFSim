@@ -26,6 +26,24 @@ function veLogCappedList(arr, logFn, lineFn, whatNote) {
   }
 }
 
+/**
+ * Çözüm sonundaki uyarı özeti. Özet uyarıları YENİDEN SAYMAZ ve her satırın
+ * başına "⚠"i bir kez koyar. Eskiden 'warn' tipiyle yazılıyordu, o tip de her
+ * satırı listeye bir kez daha ekliyordu: 8 uyarılık koşu "HESAP TAMAMLANDI —
+ * (18 uyarı)" diye bitiyordu, özetin kendi başlığı listenin sonunda dokuzuncu
+ * uyarı gibi görünüyordu ve zaten "⚠" ile gelen uyarılar "⚠ ⚠" basılıyordu.
+ * @param {Array} uyarilar  log'a 'warn' tipiyle yazılmış metinler
+ * @returns {{sayi:number, baslik:string, satirlar:string[]}}
+ */
+function veSolverUyariOzeti(uyarilar) {
+  var liste = (uyarilar || []).map(function(w) { return String(w).replace(/^\s*(⚠\s*)+/, ''); });
+  return {
+    sayi: liste.length,
+    baslik: 'Uyarılar (' + liste.length + '):',
+    satirlar: liste.map(function(w) { return '  ⚠ ' + w; })
+  };
+}
+
 function veSolverRunProfessional() {
   // Tek modül — veActiveModule her zaman 'full-throttle'
   if(!veActiveModule) veActiveModule = 'full-throttle';
@@ -124,6 +142,7 @@ function veSolverRunProfessional() {
     var color = 'var(--text-secondary)';
     if(type === 'ok') color = '#2e9e44';
     else if(type === 'warn') { color = '#c88a20'; warnings.push(text); }
+    else if(type === 'warn-ozet') color = '#c88a20';  // özet satırı: uyarı rengi, SAYILMAZ
     else if(type === 'err') { color = '#d04040'; errors.push(text); }
     else if(type === 'fatal') color = '#d04040';  // Kırmızı ama errors'a ekleme
     else if(type === 'head') color = 'var(--accent-primary)';
@@ -1449,10 +1468,12 @@ function veSolverRunProfessional() {
           veUpdateResultsTree();
         }
 
-        // Uyarı özeti
-        if(warnings.length > 0) {
-          log('Uyarılar (' + warnings.length + '):', 'warn');
-          warnings.forEach(function(w) { log('  ⚠ ' + w, 'warn'); });
+        // Uyarı özeti — 'warn-ozet' tipiyle: özet satırları listeye EKLENMEZ,
+        // aşağıdaki "(N uyarı)" özetin başlığıyla aynı sayıyı söyler.
+        var uyariOzet = veSolverUyariOzeti(warnings);
+        if(uyariOzet.sayi > 0) {
+          log(uyariOzet.baslik, 'warn-ozet');
+          uyariOzet.satirlar.forEach(function(s) { log(s, 'warn-ozet'); });
           logSpacer();
         }
 
