@@ -107,6 +107,8 @@ beforeEach(() => {
   delete window.__MFSIM_KARSILAMA;
   delete window.__MFSIM_ACILIS_KARE;
   delete window.VE_KARSILAMA_GORSELLER;
+  delete window.veKarsilamaEkranaUygun;
+  delete window.veKarsilamaEkranOlcusu;
 });
 afterEach(() => {
   jest.useRealTimers();
@@ -171,6 +173,28 @@ describe('açılış karesi — seçim ve boyama', () => {
     expect(foto.style.backgroundImage).toContain(secilen);
     expect(document.getElementById('mfsim-loading-screen').className)
       .toContain('mfsim-has-photo');
+  });
+
+  // Kullanıcı kararı 6·2: ekranda ×1,25'ten fazla büyüyen kare dönmez — açılış
+  // karesi de slaytla AYNI süzgeçten geçer (js/karsilama-gorseller.js).
+  test('açılış karesi ekrana göre süzülür — büyüyen kare hiç seçilmez', async () => {
+    const K = require('../../js/karsilama-gorseller.js');
+    window.VE_KARSILAMA_GORSELLER = ['karsilama-01.webp', 'karsilama-04.webp'];  // 1024 px · 1920 px
+    window.veKarsilamaEkranaUygun = K.veKarsilamaEkranaUygun;
+    window.veKarsilamaEkranOlcusu = () => [1920, 1080];
+    const gercek = Math.random;
+    const secilen = new Set();
+    try {
+      for (const r of [0, 0.3, 0.6, 0.99]) {
+        Math.random = () => r;
+        document.body.innerHTML = '';
+        kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+        baslat();
+        await ilerlet(10);
+        secilen.add(window.__MFSIM_ACILIS_KARE);
+      }
+    } finally { Math.random = gercek; }
+    expect([...secilen]).toEqual(['karsilama-04.webp']);
   });
 
   test('gömülü kare varsa data URI kullanılır (çevrimdışı tek dosya)', async () => {

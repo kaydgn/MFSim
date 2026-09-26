@@ -459,3 +459,66 @@ describe('CSS — okunurluk ve kırpma', () => {
     expect(CSS).toMatch(/prefers-reduced-motion[\s\S]{0,400}\.ve-welcome-kare\.is-on\{[^}]*animation:\s*none/);
   });
 });
+
+// ═══ 6) EKRANA GÖRE SÜZGEÇ (kullanıcı kararı 6·2, 2026-09-26) ═══════════════
+// Ekranda ×1,25'ten fazla büyüyen kare DÖNMEZ; dosyalar kalır, liste ekrana
+// göre süzülür. Ölçüler webp başlığından ÜRETİLİR (tools/karsilama-webp.js) —
+// elle yazılmış bir ölçü sessizce bayatlar ve süzgeç yanlış kareyi eler.
+const KMOD = require('../../js/karsilama-gorseller.js');
+const { webpOlcu } = require('../../tools/karsilama-webp.js');
+
+describe('Kaynak ölçüsü — webp başlığından, elle yazılmaz', () => {
+  test('ölçü haritası liste ile bire bir (eksik ya da öksüz ölçü yok)', () => {
+    expect(Object.keys(KMOD.VE_KARSILAMA_OLCU).sort()).toEqual(LISTE.slice().sort());
+  });
+
+  test('her ölçü dosyanın kendi başlığıyla aynı', () => {
+    const fark = LISTE.filter((ad) => {
+      const o = webpOlcu(fs.readFileSync(path.join(DIR, ad)));
+      const m = KMOD.VE_KARSILAMA_OLCU[ad];
+      return !m || m[0] !== o[0] || m[1] !== o[1];
+    });
+    expect(fark).toEqual([]);
+  });
+});
+
+describe("Ekranda ×1,25'ten fazla büyüyen kare dönmez", () => {
+  const U = KMOD.veKarsilamaEkranaUygun;
+  const buyutme = (ad, W, H) => { const o = KMOD.VE_KARSILAMA_OLCU[ad]; return Math.max(W / o[0], H / o[1]); };
+
+  test('1920×1080 (kullanıcının ekranı): kalanın hepsi ≤ 1,25, elenenin hepsi > 1,25', () => {
+    const kalan = U(LISTE, 1920, 1080);
+    const elenen = LISTE.filter((a) => !kalan.includes(a));
+    expect(kalan.filter((a) => buyutme(a, 1920, 1080) > 1.25)).toEqual([]);
+    expect(elenen.filter((a) => buyutme(a, 1920, 1080) <= 1.25)).toEqual([]);
+    expect(kalan.length).toBeGreaterThanOrEqual(2);        // slayt olarak kalıyor
+  });
+
+  test('her kare büyüyorsa eşik en keskin kareye göre ölçeklenir', () => {
+    const o = KMOD.VE_KARSILAMA_OLCU;
+    const ek = { 'z-a.webp': [1000, 600], 'z-b.webp': [900, 540], 'z-c.webp': [500, 300] };
+    Object.assign(o, ek);
+    try {
+      // 2000×1200: büyütmeler 2,0 · 2,22 · 4,0 → eşik 1,25 × 2,0 = 2,5
+      expect(U(Object.keys(ek), 2000, 1200)).toEqual(['z-a.webp', 'z-b.webp']);
+      // 1000×600: en keskin kare büyümüyor (1,0) → eşik kararın kendisi, 1,25
+      expect(U(Object.keys(ek), 1000, 600)).toEqual(['z-a.webp', 'z-b.webp']);
+      // 800×480: hepsi küçülüyor ya da 1,6 → z-c elenir
+      expect(U(Object.keys(ek), 800, 480)).toEqual(['z-a.webp', 'z-b.webp']);
+    } finally { Object.keys(ek).forEach((k) => delete o[k]); }
+  });
+
+  test('ölçüsü bilinmeyen kare elenmez; ekran ölçülemezse liste olduğu gibi', () => {
+    expect(U(['bilinmeyen.webp'], 1920, 1080)).toEqual(['bilinmeyen.webp']);
+    expect(U(LISTE, 0, 0)).toEqual(LISTE);
+    expect(U([], 1920, 1080)).toEqual([]);
+  });
+
+  test('slayt AYNI süzgeçten geçiyor — elenen kare karılmış listede yok', () => {
+    global.veKarsilamaEkranaUygun = U;
+    global.veKarsilamaEkranOlcusu = () => [1920, 1080];
+    try {
+      expect(_veSlaytKarilmis().slice().sort()).toEqual(U(LISTE, 1920, 1080).slice().sort());
+    } finally { delete global.veKarsilamaEkranaUygun; delete global.veKarsilamaEkranOlcusu; }
+  });
+});
