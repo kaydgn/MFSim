@@ -1,6 +1,6 @@
 ---
 name: fead
-description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kasnakların kanvasta KUTUSU OLMAMASI (giriş Kayış Yolu çiziminden — Çizim Masası; kesin sayı Kayış Tablosu çekmecesinde), gergi tanımı, katalog ve rapor kuralları buradadır.
+description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js, js/fead-step.js, js/step-p21.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kasnakların kanvasta KUTUSU OLMAMASI (giriş Kayış Yolu çiziminden — Çizim Masası; kesin sayı Kayış Tablosu çekmecesinde), gergi tanımı, katalog ve rapor kuralları buradadır.
 ---
 
 # FEAD modülü — dokunmadan önce
@@ -552,6 +552,36 @@ olurdu.
     "yorum TEKRAR ETMEZ": 11 örnek × iki kayış kipi × Ayır/ön ayar düzeni),
     `fead-sonuclar-sekme.test.js` (kablolama + "Sonuçları Temizle"),
     `tests/e2e/fead-sonuclar.spec.js` (sayfa boyu kart, gerçek çizim).
+
+34. **STEP'TEN KASNAK GEOMETRİSİ — OKUYUCU ANLAM YÜKLEMEZ, TANIYICI MODEL
+    KURMAZ** (2026-09-26, kullanıcı isteği: CATIA/3DEXPERIENCE montajından
+    kasnakları okumak). `js/step-p21.js` (saf JS STEP okuyucusu: birim ·
+    montaj dönüşümü · yüz) → `js/fead-step.js` (tanıyıcı) → çıktı FEAD ÖRNEK
+    KAYDI biçiminde; sihirbaz onu örnek gibi yükler (2. adım), ikinci kurulum
+    yolu açılmaz. OCCT gömülmez: hafifi bile tek dosyayı gönderim sınırının
+    üstüne çıkarıyor ve STEP'i üçgene çevirip dosyada yazılı yarıçapı
+    kaybediyordu. Kurallar — her biri gerçek dosyada ölçülmüş bir hataya karşı:
+    • **Dış çap kaburga tepesidir**, en büyük çap değil (krank omzu Ø150,5 /
+      tepe Ø147; klima çemberi Ø151 / tepe Ø137). Tepe iki kanal tabanı
+      arasındaki yüzlerden; tor tepesi yüzün İÇİNDEyse R + r.
+    • **Kanal = inen yanağı izleyen çıkan yanak** (70° ± 0,75°); tek yanak kanal
+      değil — gevşek kural klimayı 9 kanallı okuyordu. Adım profili verir.
+    • **Düz kasnak = kayışı taşıyan yüzey**: düzleme dik, kayış genişliğini
+      (kanal × adım) kapsayan, düzlemde ortalanmış; aynı yarıçaplı basamaklar
+      aralarında ÇIKINTI yoksa tek yüzeydir (bitişiklik ölçüt değil).
+    • **Rol addan önerilir**, geometriden tahmin edilmez; **bakış yönü**
+      görünür bir varsayılandır (motor = orijin düzlemin arkasında; orijin
+      düzlemdeyse `bakis.kaynak: 'varsayilan'` + uyarı) — ayna modeli yine
+      çözer, yalnız krankın dönüş yönünü çevirir.
+    • **Birim dosyanın bağlamından**, tahmin edilmez; MAPPED_ITEM montajı
+      desteklenmez ve uyarıyla söylenir.
+    • **Kayışa dokunulmaz** (kullanıcı kararı): sıra ağaç sırasıdır ve
+      `siraKaynagi: 'agac'` ile işaretlidir; kayış parçası kasnak sayılmaz.
+    • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
+      TEK ise yazılır (kural 19'un gerekçesi).
+    Kapı: `tests/unit/fead-step.test.js` (sentetik dosyalar
+    `tests/helpers/step-yaz.js` ile, gerçek dosyanın kalıbında) — en değerlisi
+    Gates AG00686'nın STEP → köprü zinciri (span %0,5 · sarım 0,2°).
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
