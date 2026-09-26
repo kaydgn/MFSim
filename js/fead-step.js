@@ -239,12 +239,15 @@ function veFeadStpOku(metin){
   if(typeof veStepP21Oku === 'function')
     P = { veStepP21Oku: veStepP21Oku, veStepP21Montaj: veStepP21Montaj, veStepP21Yuz: veStepP21Yuz, veStepP21Baslik: veStepP21Baslik };
   else if(typeof require === 'function'){ try { P = require('./step-p21.js'); } catch(e0){ P = null; } }
-  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: {}, agac: [], parcalar: [], _yuz: [] };
+  // _model + _geo: 3B görüntüleyicinin üçgenleyicisi (js/step-ucgen.js) için —
+  // parça başına yüz kimlikleri, dünya dönüşümü ve birim. Ölçüm onlardan alınmaz.
+  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: {}, agac: [], parcalar: [], _yuz: [], _model: null, _geo: [] };
   if(!P){ out.hatalar.push('STEP okuyucusu (js/step-p21.js) yüklenmemiş.'); return out; }
   var t0 = Date.now(), model, mt;
   try { model = P.veStepP21Oku(metin); } catch(e){ out.hatalar.push('Dosya okunamadı: ' + e.message); return out; }
   if(model.hatalar.length){ out.hatalar = model.hatalar.slice(); return out; }
   out.baslik = P.veStepP21Baslik(model);
+  out._model = model;
   out.sureMs.oku = Date.now() - t0;
   var t1 = Date.now();
   try { mt = P.veStepP21Montaj(model); } catch(e2){ out.hatalar.push('Montaj ağacı okunamadı: ' + e2.message); return out; }
@@ -282,6 +285,7 @@ function veFeadStpOku(metin){
     var pi = out.parcalar.length;
     out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: yuzler.length });
     out._yuz.push(yuzler);
+    out._geo.push({ yuzler: yuzler.length ? p.yuzler : [], M: p.M, birim: p.birim });
     for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
   });
   out.sureMs.yuz = Date.now() - t2;

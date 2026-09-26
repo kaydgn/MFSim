@@ -8648,6 +8648,69 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-stp-kol{ stroke:var(--accent-warning); stroke-width:2; }
 .ve-fw-stp-pivot{ fill:var(--bg-secondary); stroke:var(--accent-warning); stroke-width:1.5; }
 
+/* ── STEP'İN 3B GÖRÜNTÜLEYİCİSİ (js/cp-fead-3b.js) ───────────────────────
+   Sihirbazın içinde, modalı TAMAMEN kaplar (açı seçicisi gibi ortalanmış bir
+   kutu değil: montaj büyük, yer lazım). Solda tuval, sağda panel; üst bant
+   pencere ailesinin başlığı. Dar pencerede panel tuvalin ALTINA iner —
+   karar ekrana değil pencereye sorulur. Rol rengi VERİ olarak satır içinde
+   (`--renk`): 3B malzemeyle aynı tablodan (VE_FW_3B_ROL_RENK). */
+.ve-fw-3b{ position:absolute; inset:0; z-index:6; display:flex; flex-direction:column;
+  background:var(--bg-primary); container-type:inline-size; container-name:vefw3b; }
+/* Bant, yazı ve kapat pencere ailesinin (.ve-settings-header) — burada yalnız
+   bandın metinli düğmeleri ve dosya adının kısalması */
+.ve-fw-3b-bas{ flex:none; gap:6px; }
+.ve-fw-3b-bas > span{ white-space:nowrap; }
+.ve-fw-3b-bas .ve-fw-dim{ min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:400; }
+/* Bandın metinli düğmeleri: mini düğmenin görünüşü, genişliği metinden */
+.ve-fw-3b-bas .ve-fw-3b-metin{ width:auto; height:22px; padding:0 8px; white-space:nowrap; }
+.ve-fw-3b-govde{ flex:1; min-height:0; display:grid; grid-template-columns:minmax(0, 1fr) 320px; }
+.ve-fw-3b-tuval{ position:relative; min-width:0; min-height:0; overflow:hidden;
+  background:var(--bg-secondary); cursor:grab; touch-action:none; }
+.ve-fw-3b-tuval.surukle{ cursor:grabbing; }
+.ve-fw-3b-tuval canvas{ display:block; width:100%; height:100%; }
+.ve-fw-3b-ilerleme{ position:absolute; left:10px; bottom:8px; font-size:var(--fs-tiny);
+  color:var(--text-secondary); pointer-events:none; font-variant-numeric:tabular-nums; }
+.ve-fw-3b-ilerleme:empty{ display:none; }
+.ve-fw-3b-ipucu{ position:absolute; pointer-events:none; padding:3px 8px; white-space:nowrap;
+  font-size:var(--fs-tiny); color:var(--text-primary); background:var(--bg-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 2px 8px var(--shadow-color); }
+.ve-fw-3b-yok{ margin:24px; color:var(--text-secondary); }
+.ve-fw-3b-yan{ min-height:0; overflow:auto; padding:10px 12px; display:flex; flex-direction:column; gap:14px;
+  border-left:1px solid var(--border-color); background:var(--bg-primary); }
+.ve-fw-3b-bolum h4{ margin:0 0 6px; font-size:var(--fs-tiny); font-weight:600; letter-spacing:.04em;
+  text-transform:uppercase; color:var(--text-secondary); }
+.ve-fw-3b-bolum > * + *{ margin-top:6px; }
+.ve-fw-3b-yol{ display:flex; flex-wrap:wrap; align-items:center; gap:2px 5px; font-size:var(--fs-body); }
+.ve-fw-3b-yol b{ color:var(--text-primary); }
+/* Yol ve liste düğmeleri BAĞLANTI gibi: dinlenmede boş, fare altında altı çizili */
+.ve-fw-3b-yolb{ padding:0; border:0; background:none; font:inherit; color:var(--ink-accent); cursor:pointer;
+  text-align:left; overflow-wrap:anywhere; }
+.ve-fw-3b-yolb:hover{ text-decoration:underline; }
+.ve-fw-3b-yolb:focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-sm); }
+.ve-fw-3b-roller{ display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.ve-fw-3b-rol{ display:flex; align-items:center; gap:6px; min-width:0; padding:4px 7px;
+  font:inherit; font-size:var(--fs-tiny); color:var(--text-primary); text-align:left; cursor:pointer;
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); }
+.ve-fw-3b-rol:hover{ border-color:var(--border-hover); }
+.ve-fw-3b-rol[aria-pressed="true"]{ border-color:var(--accent-primary); background:var(--accent-tint-10);
+  box-shadow:inset 0 0 0 1px var(--accent-primary); }
+.ve-fw-3b-rol:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fw-3b-renk{ flex:none; width:10px; height:10px; border-radius:50%; background:var(--renk, var(--text-muted));
+  box-shadow:0 0 0 1px var(--border-color); }
+.ve-fw-3b-atanan{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:3px; }
+.ve-fw-3b-atanan li{ display:flex; align-items:center; gap:6px; padding:3px 4px; border-radius:var(--radius-sm);
+  font-size:var(--fs-tiny); }
+.ve-fw-3b-atanan li.on{ background:var(--accent-tint-8); }
+.ve-fw-3b-atanan li .ve-fw-3b-yolb{ flex:1; min-width:0; }
+.ve-fw-3b-atanan li .ve-fw-dim{ flex:none; }
+.ve-fw-3b-tbl{ width:100%; font-size:var(--fs-tiny); }
+.ve-fw-3b-tbl td:first-child{ display:flex; align-items:center; gap:6px; }
+.ve-fw-3b-tbl .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
+@container vefw3b (max-width: 760px){
+  .ve-fw-3b-govde{ grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(220px, 1fr) minmax(0, 42%); }
+  .ve-fw-3b-yan{ border-left:0; border-top:1px solid var(--border-color); }
+}
+
 /* Satır işlemleri sütunu üç düğme taşıyor; aralarındaki boşluk daralan
    sütunda taşmanın ilk sebebiydi. */
 .ve-fw-tbl-kasnak td:nth-child(9){ padding-left:2px; padding-right:2px; }
