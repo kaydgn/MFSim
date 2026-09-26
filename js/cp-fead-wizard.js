@@ -1150,8 +1150,10 @@ function veFeadWizRender(){
 }
 
 function veFeadWizNavHTML(b){
-  var h = '<div class="ve-fw-brand"><b>Başlangıç Sihirbazı</b><span>FEAD · kayış-kasnak</span></div>';
-  h += '<ol class="ve-fw-steps">';
+  // Rayın başında marka bloğu YOK: pencerenin başlık bandı "FEAD Başlangıç
+  // Sihirbazı" diyor ve blok onu 54 px'lik ikinci bir başlık olarak
+  // tekrarlıyordu (kullanıcı: "header kısmı boyuna çok büyük").
+  var h = '<ol class="ve-fw-steps">';
   VE_FW_STEPS.forEach(function(s, i){
     // İKİ AYRI KANAL, ÇAKIŞMIYOR: zemin tinti + kalın başlık HANGİ ADIMDA
     // olduğumuzu, renk (sol şerit · numara dairesi · rozet) o adımın DURUMUNU

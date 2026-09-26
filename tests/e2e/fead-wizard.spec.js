@@ -436,6 +436,56 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     });
   });
 
+  // ── ÜST BÖLGE KABUK BANDI KADAR (kullanıcı bildirimi, 2026-09-26) ───────
+  //
+  // *"'Başlangıç Sihirbazı' penceresinin başlığının olduğu header kısmı boyuna
+  // çok büyük."* ÖLÇÜLDÜ (öncesi, 1920×952): başlık bandı 39 px (içeriği 27),
+  // altında başlığı tekrarlayan 54 px'lik marka bloğu, iki satırlık adım
+  // başlığı 39 px, alt çubuk 41 px — ilk adım bandın 63 px altından başlıyordu.
+  // Hesaplanmış yükseklik Node'da yok; birim kapısı yalnız CSS metnine bakar.
+  test('ÜST BÖLGE İNCE: başlık ve alt çubuk tam bant, marka yok, adım başlığı tek satır', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 952 });
+    await bootApp(page);
+    await openFead(page);
+    await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
+
+    const m = await page.evaluate(() => {
+      const ov = document.getElementById('ve-feadwiz-overlay');
+      const r = (s) => { const e = ov.querySelector(s); return e ? e.getBoundingClientRect() : null; };
+      const bant = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h'));
+      const bas = r('.ve-settings-header'), h2 = r('.ve-fw-head h2'), p = r('.ve-fw-head p');
+      // Öteki dört pencere AYNI sınıfı paylaşıyor: sihirbaza özel bir başlık
+      // üçüncü bir pencere dili olurdu.
+      const oteki = ['ve-status-overlay', 've-komuta-overlay', 've-import-overlay', 've-settings-overlay'].map((id) => {
+        const o = document.getElementById(id);
+        const d = o.style.display; o.style.display = 'flex';
+        const h = o.querySelector('.ve-settings-header').getBoundingClientRect().height;
+        o.style.display = d; return h;
+      });
+      return {
+        kapat: r('.ve-settings-close').height,
+        footBtn: [...ov.querySelectorAll('#ve-fw-foot button')].map((b) => b.getBoundingClientRect().height),
+        bant, bas: bas.height, basAlt: bas.bottom, foot: r('#ve-fw-foot').height,
+        marka: !!ov.querySelector('.ve-fw-brand'), ilkAdim: r('.ve-fw-step').top,
+        adimBas: r('.ve-fw-head').height, h2Alt: h2.bottom, pAlt: p.bottom, oteki,
+      };
+    });
+    // Jetonun DEĞERİ değil jetonun kendisi: bant bir kez daha incelirse
+    // (36 → 30 → 26) başlık da onunla gelir, kapı kırılmaz.
+    expect(m.bant).toBeLessThan(39);
+    expect(m.bas).toBe(m.bant);                                   // eskiden 39
+    expect(m.foot).toBe(m.bas);                                   // eskiden 41 ↔ 39
+    // Başlığın kapat düğmesi ile alt çubuğun düğmeleri TEK boy (bant düğmesi):
+    // yazıdan türeyen düğme çubuğu 1 px uzatıyor ve toleransla geçerdi.
+    expect(m.footBtn.length).toBe(3);
+    m.footBtn.forEach((h) => expect(h).toBe(m.kapat));
+    expect(m.marka).toBe(false);                                  // eskiden 54 px
+    expect(m.ilkAdim - m.basAlt).toBeLessThanOrEqual(10);         // eskiden 63
+    expect(m.adimBas).toBeLessThanOrEqual(24);                    // eskiden 39 (iki satır)
+    expect(Math.abs(m.h2Alt - m.pAlt)).toBeLessThanOrEqual(4);    // aynı taban çizgisi (eskiden 19)
+    m.oteki.forEach((h) => expect(h).toBe(m.bant));               // eskiden dördü de 39
+  });
+
   test('adım rayı ÜÇ durumu da gerçekten yakıyor — renkle', async ({ page }) => {
     // *"eksik girdi olduğunda kırmızı, girdiler tam olduğunda belirgin yeşil."*
     // Kapı sınıf ADINA değil HESAPLANMIŞ RENGE bakıyor: sınıf basılıp CSS
