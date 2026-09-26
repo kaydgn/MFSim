@@ -1324,7 +1324,7 @@
   <div class="ve-properties" id="ve-properties" role="dialog" aria-labelledby="ve-properties-title">
     <div class="ve-properties-header">
       <span id="ve-properties-title" style="display:inline-flex;align-items:center;gap:8px;flex:1;"><span class="mf-ico mf-ico-sliders"></span>Özellikler</span>
-      <button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Kapat">✕</button>
+      <button class="ve-properties-close" type="button" onclick="veTogglePropertiesPanel(false)" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
     </div>
     <div class="ve-properties-content"></div>
   </div>
@@ -1334,8 +1334,8 @@
 <div id="ve-status-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseStatusModal()">
   <div class="ve-settings-modal" role="dialog" aria-labelledby="ve-status-title">
     <div class="ve-settings-header">
-      <span id="ve-status-title"><span class="mf-ico mf-ico-refresh"></span> Program Durumu</span>
-      <button class="ve-settings-close" onclick="veCloseStatusModal()" title="Kapat" aria-label="Kapat">✕</button>
+      <span id="ve-status-title"><span class="mf-ico mf-ico-activity"></span> Program Durumu</span>
+      <button class="ve-settings-close" type="button" onclick="veCloseStatusModal()" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
     </div>
     <div class="ve-settings-body" style="flex-direction:column;">
       <section class="ve-settings-content" id="ve-status-content" style="width:100%;"></section>
@@ -1351,7 +1351,7 @@
   <div class="ve-settings-modal ve-komuta-modal" role="dialog" aria-labelledby="ve-komuta-title">
     <div class="ve-settings-header">
       <span id="ve-komuta-title"><span class="mf-ico mf-ico-lock"></span> Komuta Penceresi</span>
-      <button class="ve-settings-close" onclick="veKomutaKapat()" title="Kapat" aria-label="Kapat">✕</button>
+      <button class="ve-settings-close" type="button" onclick="veKomutaKapat()" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
     </div>
     <div class="ve-settings-body ve-komuta-body" id="ve-komuta-content"></div>
   </div>
@@ -1374,7 +1374,7 @@
   <div class="ve-settings-modal ve-imp-modal" role="dialog" aria-labelledby="ve-import-title">
     <div class="ve-settings-header">
       <span id="ve-import-title"><span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</span>
-      <button class="ve-settings-close" onclick="veImpCloseModal()" title="Kapat" aria-label="Kapat">✕</button>
+      <button class="ve-settings-close" type="button" onclick="veImpCloseModal()" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
     </div>
     <div class="ve-imp-body" id="ve-import-content"></div>
     <div class="ve-imp-footer">
@@ -1393,8 +1393,8 @@
 <div id="ve-feadwiz-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veFeadWizClose(true)">
   <div class="ve-settings-modal ve-fw-modal" role="dialog" aria-labelledby="ve-fw-title">
     <div class="ve-settings-header">
-      <span id="ve-fw-title">🧭 FEAD Başlangıç Sihirbazı</span>
-      <button class="ve-settings-close" onclick="veFeadWizClose(true)" title="Kapat" aria-label="Kapat">✕</button>
+      <span id="ve-fw-title"><span class="mf-ico mf-ico-wand"></span> FEAD Başlangıç Sihirbazı</span>
+      <button class="ve-settings-close" type="button" onclick="veFeadWizClose(true)" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
     </div>
     <div class="ve-fw-shell">
       <nav class="ve-fw-nav" id="ve-fw-nav"></nav>
@@ -1421,8 +1421,8 @@
 <div id="ve-settings-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseSettings()">
   <div class="ve-settings-modal" role="dialog" aria-labelledby="ve-settings-title">
     <div class="ve-settings-header">
-      <span id="ve-settings-title"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</span>
-      <button class="ve-settings-close" onclick="veCloseSettings()" title="Kapat" aria-label="Kapat">✕</button>
+      <span id="ve-settings-title"><span class="mf-ico mf-ico-settings"></span> Ayarlar</span>
+      <button class="ve-settings-close" type="button" onclick="veCloseSettings()" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
     </div>
     <div class="ve-settings-body">
       <nav class="ve-settings-nav" id="ve-settings-nav">

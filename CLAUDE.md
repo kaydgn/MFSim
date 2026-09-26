@@ -260,6 +260,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sürüklemede hem AÇILIŞTA uygulanır (yoksa kuraldan önce kaydedilmiş kart
   bozuk açılır). Kapı: `fead-table.test.js` (mekanizma, sentetik tip) +
   `kart-yuzey.spec.js` → *"EN KÜÇÜK ÖLÇÜ"*.
+- **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
+  pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
+  (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da
+  elle SVG değil), başlık ikonu pencereyi açan ŞERİT girişinin ikonu; köşe ve
+  gölge jetondan. Komut paleti arama alanını başlık tutar. Kapı:
+  `pencere-ailesi.test.js` + `pencere-ailesi.spec.js`.
 - **MİNİMAP İÇERİĞİ ÖRTMEZ** (`js/minimap.js` → `_mmOtoDenetle`). Açık kutu
   bir karta, adına ya da nota değiyorsa köşedeki düğmesine iner, köşe
   boşalınca açılır; soluk durmak yetmiyordu (soluk kutu tıklamayı yutuyor).

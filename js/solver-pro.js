@@ -54,26 +54,21 @@ function veSolverRunProfessional() {
   // z-index, çözücü ayar penceresinin (.ve-properties-overlay = 100020) ÜSTÜNDE
   // olmalı — "Hesapla" bu penceresinin içinden çağrılıyor. Aksi halde simülasyon
   // penceresi ayar penceresinin arkasına düşer.
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.72);z-index:100050;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
+  // Perde ve gölge JETONDAN (pencere ailesi, doku haritası K6): sabit
+  // rgba(0,0,0,.72) + bulanıklık ve sabit gölge öteki pencerelerden ayrışıyordu.
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--scrim);z-index:100050;display:flex;align-items:center;justify-content:center;';
   
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:2px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;';
+  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-xl);display:flex;flex-direction:column;overflow:hidden;';
   
-  // Header — keskin, iç içe pencere
+  // Başlık: pencere ailesinin ortak bileşeni (.ve-settings-header) — 26 px
+  // bant, şeritteki "Çözücü" girişinin ikonu, çizgi ikonlu kapat. Kapat ve
+  // LOG çözüm bitene kadar gizli.
   var header = document.createElement('div');
-  header.style.cssText = 'padding:8px 14px;background:var(--bg-secondary);border-bottom:2px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;';
-  header.innerHTML = '<div style="display:flex;align-items:center;gap:10px;">' +
-    '<div style="display:flex;gap:3px;">' +
-      '<span style="width:8px;height:8px;border-radius:var(--radius-xs);background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
-      '<span style="width:8px;height:8px;border-radius:var(--radius-xs);background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
-      '<span style="width:8px;height:8px;border-radius:var(--radius-xs);background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
-    '</div>' +
-    '<div style="font-weight:700;font-size:var(--fs-md);color:var(--text-heading);letter-spacing:0.06em;text-transform:uppercase;">MFSim — Çözücü</div>' +
-  '</div>' +
-  '<div style="display:flex;align-items:center;gap:5px;">' +
-    '<button id="ve-solver-log-dl" style="display:none;padding:3px 9px;font-size:var(--fs-micro);font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-xs);color:var(--text-muted);cursor:pointer;letter-spacing:0.03em;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-download"></span> LOG</button>' +
-    '<button id="ve-solver-modal-close" style="width:22px;height:22px;border-radius:var(--radius-xs);background:transparent;border:1px solid var(--border-color);color:var(--text-muted);cursor:pointer;font-size:var(--fs-tiny);display:none;" onclick="document.getElementById(\'ve-solver-modal-overlay\').remove()">✕</button>' +
-  '</div>';
+  header.className = 've-settings-header';
+  header.innerHTML = '<span><span class="mf-ico mf-ico-play"></span> Çözücü</span>' +
+    '<button id="ve-solver-log-dl" type="button" title="Çözüm LOG\'unu indir" style="display:none;height:22px;box-sizing:border-box;margin-right:4px;padding:0 8px;font-size:var(--fs-tiny);font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-download"></span> LOG</button>' +
+    '<button id="ve-solver-modal-close" class="ve-settings-close" type="button" title="Kapat" aria-label="Kapat" style="display:none;" onclick="document.getElementById(\'ve-solver-modal-overlay\').remove()"><span class="mf-ico mf-ico-x"></span></button>';
   modal.appendChild(header);
   
   // Progress bar — keskin panel

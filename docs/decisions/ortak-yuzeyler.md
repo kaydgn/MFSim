@@ -1448,3 +1448,27 @@ O anki kutuyla ölçmek titretir: inen kutu artık değmez, açılır, yine değ
 mutantın 10'u) + `minimap-ortmez.spec.js` (düzeltme öncesi yapıda 4 testin 3'ü
 düşüyor; dördüncüsü "köşe boşsa açık kalır" ve her durumda inen bir kutuya
 karşı duruyor).
+
+## Pencere ailesi tek başlık (2026-09-26, doku haritası K6)
+
+**Hüküm.** Uygulamanın her penceresi ortak başlığı taşır
+(`.ve-settings-header` + `.ve-settings-close`; Özellikler'de aynı ölçüdeki
+`.ve-properties-header/-close`): bant `--bant-h` ve `--bant-zemin`, başlık
+yazısı kabuk bandınınki (`--fs-body`/600, "Bileşenler" ve müfettiş başlığıyla
+aynı), kapat 22 px kutu ve `.mf-ico-x` çizgi ikonu, başlıkta bir çizgi ikon.
+Başlık ikonu pencereyi açan şerit girişinin ikonudur. Kabuğun köşesi
+`--radius-lg`, gölgesi `--shadow-xl`, perdesi `--scrim`. Komut paleti arama
+alanını başlık tutar.
+
+**Gerekçe.** Dokuz pencerede 4 ayrı bant boyu (26 · 40 · 49 · 63 px), 5 ayrı
+başlık yazısı, 3 ayrı kapat biçimi vardı (✕ yazı karakteri, 26 ve 30 px elle
+SVG). Beş başlıkta ikon yoktu, ikisininki şeritle ayrışıyordu (Ayarlar
+kaydırıcı ↔ dişli, Program Durumu yenile ↔ etkinlik), FEAD sihirbazınınki bir
+emojiydi. Çözücü 2 px çizgi, sabit gölge ve bulanık perdeyle çiziliyordu.
+Önerilen 40 px bant uygulanmadı: aynı gün kayda geçen kullanıcı kararı
+("başlığın olduğu header kısmı boyuna çok büyük", yukarıda *Pencere başlığı da
+aynı bant*) bandı 26 px'e indirmişti; aile o karara göre kuruldu.
+
+**Kapı.** `pencere-ailesi.test.js` (düzeltme öncesi kaynakta 17 testin 13'ü
+düşüyor) + `pencere-ailesi.spec.js` (düzeltme öncesi yapıda sapmaları pencere
+adıyla sayarak düşüyor).

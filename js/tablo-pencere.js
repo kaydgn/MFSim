@@ -180,11 +180,11 @@ function veTabloAc(anahtar){
   var baslik = birim.getAttribute('data-ve-tablo-baslik') || 'Tablo';
   var ozet = birim.getAttribute('data-ve-tablo-ozet') || '';
   perde.innerHTML = '<div class="ve-tablo-pencere" role="dialog" aria-modal="true" aria-labelledby="ve-tablo-baslik">'
-    + '<div class="ve-tablo-bas"><b id="ve-tablo-baslik">' + _veTabloEsc(baslik) + '</b>'
-    + (ozet ? '<em>' + _veTabloEsc(ozet) + '</em>' : '')
-    + '<button type="button" class="ve-tablo-kapat" aria-label="Kapat" title="Kapat (Esc)">'
-    + '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor"'
-    + ' stroke-width="1.6" stroke-linecap="round"/></svg></button></div>'
+    + '<div class="ve-settings-header ve-tablo-bas"><span><span class="mf-ico mf-ico-grid"></span>'
+    + '<b id="ve-tablo-baslik">' + _veTabloEsc(baslik) + '</b>'
+    + (ozet ? '<em>' + _veTabloEsc(ozet) + '</em>' : '') + '</span>'
+    + '<button type="button" class="ve-settings-close ve-tablo-kapat" aria-label="Kapat" title="Kapat (Esc)">'
+    + '<span class="mf-ico mf-ico-x"></span></button></div>'
     + '<div class="ve-tablo-govde"></div></div>';
   document.body.appendChild(perde);
   // Perdenin kendisine tıklamak kapatır; pencerenin içine tıklamak değil.
