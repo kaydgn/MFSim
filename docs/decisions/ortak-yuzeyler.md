@@ -1424,3 +1424,27 @@ eler ve liste ya boşalır ya da en bulanıklar dâhil hepsine döner.
 
 **Kapı.** `karsilama-slayt.test.js` → *"Kaynak ölçüsü"* + *"×1,25"* ·
 `loader-splash.test.js` → *"açılış karesi ekrana göre süzülür"*.
+
+## Minimap içeriği örtmez (2026-09-26, doku haritası K5)
+
+**Hüküm.** Açık minimap kutusu bir kartın kutusuna, adına ya da nota
+(yazı notu: kutusu; çerçeve notu: kenarı ve tutamakları) 6 px'ten fazla
+yaklaşırsa kutu köşedeki düğmesine iner (`oto`), köşe boşalınca kendiliğinden
+açılır. Ölçü açık hâlin kutusuyla alınır (`--mm-w/--mm-h`). Oto iniş
+kullanıcının tercihini yazmaz; oto inmişken düğmeye basmak, köşe boşalana
+kadar geçerli bir istektir. Kullanıcının kendi indirdiği kutu köşe boşken de
+inik kalır. Haritayı sürüklerken durum değişmez. Tuvalin kabı
+`ResizeObserver` ile gözlenir.
+
+**Gerekçe.** 1366×657'lik pencerede (Edge'de 1366×768 ekran) üç modülün 29
+örneği × kasnak paneli kapalı/açık = 58 durumun 13'ünde kutu bir denetimi ya
+da kart adını örtüyordu (FEAD 4, AP 7, Takoz 2); 1920×945'te 0. Soluk durmak
+(opacity .62) görüntüyü açıyordu ama tıklamayı yine yutuyordu. Kasnak paneli
+açılınca tuval pencere boyu değişmeden daralıyor ve kamera yerinde kalıyor;
+yalnız pencerenin `resize` olayını dinleyen minimap bunu hiç görmüyordu.
+O anki kutuyla ölçmek titretir: inen kutu artık değmez, açılır, yine değer.
+
+**Kapı.** `minimap-ortmez.test.js` (düzeltmenin her parçasını bozan 10
+mutantın 10'u) + `minimap-ortmez.spec.js` (düzeltme öncesi yapıda 4 testin 3'ü
+düşüyor; dördüncüsü "köşe boşsa açık kalır" ve her durumda inen bir kutuya
+karşı duruyor).

@@ -19,7 +19,86 @@ var _mmDirty = false;
 var _mmRafPending = false;
 var _mmMap = null;             // son çizim eşlemesi (etkileşim için): {minX,minY,s,ox,oy}
 var _mmDragging = false;
-var _mmCollapsed = false;
+var _mmCollapsed = false;      // KULLANICININ seçimi (düğme · şerit · komut paleti) — kalıcı
+var _mmOto = false;            // açık kutu içeriğe değiyor → köşedeki düğmesine indi
+var _mmZorla = false;          // oto inmişken kullanıcı açtı → köşe boşalana dek açık kalır
+
+// ── ÖRTMEZ: açık kutu içeriğe değiyorsa minimap köşedeki düğmesine iner ─────
+// Soluk durmak (opacity) yetmiyordu: soluk kutu tıklamayı yine yutuyor.
+// 1366×657'lik pencerede kutu FEAD kartının çubuğundaki düğmeleri, AP'de
+// lastik kartının adını örtüyordu; kasnak paneli açılınca tuval daralıyor ve
+// kamera yerinde kalıyor.
+//
+// Oto iniş kalıcı DEĞİL ve kullanıcının tercihini YAZMAZ; köşe boşalınca kutu
+// kendiliğinden açılır. Oto inmişken düğmeye basmak bir istektir: kutu o köşe
+// boşalana kadar açık kalır. Ölçü AÇIK hâlin kutusuyla alınır, o anki kutuyla
+// değil — yoksa inen kutu artık değmez, açılır, yine değer: titrer.
+var VE_MINIMAP_PAY = 6;        // içeriğe bu kadar yaklaşan kutu da değmiş sayılır (px)
+
+// SAF: iki dikdörtgen ({l,t,r,b}) alanı olan bir parçada kesişiyor mu?
+function _mmKesisir(a, b) {
+  return Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0 &&
+         Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0;
+}
+
+// SAF: kutu parçalardan birine değiyor mu? `ic` taşıyan parça bir HALKADIR
+// (çerçeve notu): kutu çerçevenin boş içine düşebilir, kenarına düşemez.
+function veMinimapOrtuyor(kutu, parcalar) {
+  if(!kutu || !parcalar) return false;
+  for(var i = 0; i < parcalar.length; i++) {
+    var p = parcalar[i];
+    if(!_mmKesisir(kutu, p)) continue;
+    if(p.ic && kutu.l >= p.ic.l && kutu.r <= p.ic.r && kutu.t >= p.ic.t && kutu.b <= p.ic.b) continue;
+    return true;
+  }
+  return false;
+}
+
+// SAF: içeriğin GÖRÜNÜM (#ve-canvas-wrapper) koordinatındaki parçaları.
+//   dugumler — nodes; notlar — annotations; kamera — {zoom, x, y} (canvasOffset)
+//   olcAd    — node → {w,h} (tarayıcıda veMeasureNodeLabel); yoksa ad sayılmaz
+//   olcNot   — not → {w,h} (yazı notu genişliği metinden gelir); yoksa kayıttaki ölçü
+// Düğüm: kutu + adın taşan kısmı, sınır çerçevesiyle AYNI kuraldan
+// (veNodeLabelOverflow). Kutusuz düğüm (FEAD kasnağı) yok sayılır: kanvasta
+// çizilen bir şeyi yok. Yazı notu kutudur; çerçeve notu halkadır (ad üstte
+// -9 px, tutamaklar köşelerde -5 px dışarı taşar).
+function veMinimapIcerikParcalari(dugumler, notlar, kamera, olcAd, olcNot) {
+  var z = (kamera && kamera.zoom > 0) ? kamera.zoom : 1;
+  var ox = (kamera && isFinite(kamera.x)) ? kamera.x : 0;
+  var oy = (kamera && isFinite(kamera.y)) ? kamera.y : 0;
+  var P = VE_MINIMAP_PAY;
+  function ekran(l, t, r, b, pay) {
+    return { l: (l - CANVAS_OFFSET_MM) * z + ox - pay, t: (t - CANVAS_OFFSET_MM) * z + oy - pay,
+             r: (r - CANVAS_OFFSET_MM) * z + ox + pay, b: (b - CANVAS_OFFSET_MM) * z + oy + pay };
+  }
+  var out = [];
+  (dugumler || []).forEach(function(n) {
+    if(!n || !isFinite(n.x) || !isFinite(n.y)) return;
+    if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
+    var ds = (typeof veNodeDefaultSize === 'function') ? veNodeDefaultSize(n.type) : { w: 65, h: 60 };
+    var w = isFinite(n.width) ? n.width : ds.w;
+    var h = isFinite(n.height) ? n.height : ds.h;
+    var of = { left: 0, right: 0, top: 0, bottom: 0 };
+    if(typeof olcAd === 'function' && typeof veNodeLabelOverflow === 'function' &&
+       !((typeof veIsModuleNode === 'function') && veIsModuleNode(n))) {
+      of = veNodeLabelOverflow((n.data && n.data.labelPos) || 'bottom', w, h, olcAd(n));
+    }
+    out.push(ekran(n.x - of.left, n.y - of.top, n.x + w + of.right, n.y + h + of.bottom, P));
+  });
+  (notlar || []).forEach(function(a) {
+    if(!a || !isFinite(a.x) || !isFinite(a.y)) return;
+    var o = (typeof olcNot === 'function') ? olcNot(a) : null;
+    var w = (o && o.w > 0) ? o.w : (a.width || 0), h = (o && o.h > 0) ? o.h : (a.height || 0);
+    if(a.type === 'frame') {
+      var halka = ekran(a.x - 6, a.y - 10, a.x + w + 6, a.y + h + 6, P);
+      halka.ic = ekran(a.x + 8, a.y + 8, a.x + w - 8, a.y + h - 8, -P);
+      out.push(halka);
+    } else {
+      out.push(ekran(a.x, a.y, a.x + w, a.y + h, P));
+    }
+  });
+  return out;
+}
 
 // prefers-reduced-motion — geçişleri kısmak için CSS hallediyor; JS'te iş yok.
 
@@ -87,6 +166,10 @@ function _mmRender() {
   var bbox = _mmContentBBox();
   if(!bbox) { el.classList.add('ve-minimap-hidden'); return; }
   el.classList.remove('ve-minimap-hidden');
+
+  // Örtüyor mu? Ölçüden ÖNCE: inmiş kutunun tuvali display:none, aşağıdaki
+  // boyut kapısı onu hiç buraya bırakmazdı ve kutu bir daha açılamazdı.
+  _mmOtoDenetle(el);
 
   // Sayfa pasifse (ata display:none → boyut 0 / offsetParent yok) çizme; sekme
   // aktifleşince bir sonraki güncelleme çizer.
@@ -213,14 +296,54 @@ function _mmPanToEvent(e) {
   if(typeof updateCanvasTransform === 'function') updateCanvasTransform();
 }
 
+// Düğme GÖRÜNENİ çevirir: inmiş kutuyu açar, açık kutuyu indirir. Oto inmiş
+// kutuyu açmak tercihi değiştirmez (zaten açık), yalnız köşe boşalana kadar
+// oto inişi geri çeker.
 function veMinimapToggle() {
   var el = document.getElementById('ve-minimap');
   if(!el) return;
-  _mmCollapsed = !el.classList.contains('collapsed');
-  el.classList.toggle('collapsed', _mmCollapsed);
-  _mmSyncToggleIcon();
+  if(el.classList.contains('collapsed')) { _mmCollapsed = false; _mmZorla = _mmOto; }
+  else { _mmCollapsed = true; _mmZorla = false; }
   try { localStorage.setItem('veMinimapCollapsed', _mmCollapsed ? '1' : '0'); } catch(e){}
-  if(!_mmCollapsed) veMinimapUpdate();
+  _mmSinifEsitle(el);
+}
+
+// Açık hâlin kutusu, görünüm (#ve-canvas-wrapper) koordinatında. Sağ-alt köşe
+// iki hâlde de aynı yere çapalı; genişlik/yükseklik CSS jetonundan
+// (--mm-w/--mm-h) okunur, çünkü inmiş kutunun kendi ölçüsü 34 px.
+function _mmAcikKutu(el) {
+  if(!el || el.offsetParent === null) return null;
+  var r = el.offsetLeft + el.offsetWidth, b = el.offsetTop + el.offsetHeight;
+  var cs = getComputedStyle(el);
+  var w = parseFloat(cs.getPropertyValue('--mm-w')) || 196;
+  var h = parseFloat(cs.getPropertyValue('--mm-h')) || 134;
+  return { l: r - w, t: b - h, r: r, b: b };
+}
+
+function _mmOtoDenetle(el) {
+  if(_mmDragging) return;                  // haritayı sürüklerken kutu elden kaçmasın
+  var kutu = _mmAcikKutu(el);
+  if(!kutu) return;
+  var notEl = function(a) { var d = document.getElementById(a.id); return d ? { w: d.offsetWidth, h: d.offsetHeight } : null; };
+  var parcalar = veMinimapIcerikParcalari(
+    (typeof nodes !== 'undefined') ? nodes : [],
+    (typeof annotations !== 'undefined') ? annotations : [],
+    { zoom: (typeof canvasZoom !== 'undefined') ? canvasZoom : 1,
+      x: (typeof canvasOffset !== 'undefined') ? canvasOffset.x : 0,
+      y: (typeof canvasOffset !== 'undefined') ? canvasOffset.y : 0 },
+    (typeof veMeasureNodeLabel === 'function') ? veMeasureNodeLabel : null, notEl);
+  _mmOto = veMinimapOrtuyor(kutu, parcalar);
+  if(!_mmOto) _mmZorla = false;            // köşe boşaldı: istek yerine getirildi
+  _mmSinifEsitle(el);
+}
+
+function _mmSinifEsitle(el) {
+  var kapali = _mmCollapsed || (_mmOto && !_mmZorla);
+  var degisti = el.classList.contains('collapsed') !== kapali;
+  el.classList.toggle('collapsed', kapali);
+  el.classList.toggle('oto', kapali && !_mmCollapsed);
+  _mmSyncToggleIcon();
+  if(degisti && !kapali) veMinimapUpdate(); // açılan kutu çizilsin
 }
 
 function _mmSyncToggleIcon() {
@@ -228,7 +351,9 @@ function _mmSyncToggleIcon() {
   var el = document.getElementById('ve-minimap');
   if(!btn || !el) return;
   var collapsed = el.classList.contains('collapsed');
-  btn.title = collapsed ? 'Genel görünümü göster' : 'Genel görünümü gizle';
+  btn.title = !collapsed ? 'Genel görünümü gizle'
+    : el.classList.contains('oto') ? 'Genel görünümü göster — altındaki içeriği örtmesin diye küçüldü'
+    : 'Genel görünümü göster';
   btn.setAttribute('aria-label', btn.title);
   // collapsed → harita ikonu (aç), açık → köşeye küçült ikonu
   btn.innerHTML = collapsed
@@ -243,8 +368,8 @@ function veMinimapInit() {
   var toggle = document.getElementById('ve-minimap-toggle');
 
   // Kullanıcı tercihini geri yükle
-  try { if(localStorage.getItem('veMinimapCollapsed') === '1') el.classList.add('collapsed'); } catch(e){}
-  _mmSyncToggleIcon();
+  try { _mmCollapsed = localStorage.getItem('veMinimapCollapsed') === '1'; } catch(e){}
+  _mmSinifEsitle(el);
 
   if(toggle) {
     toggle.addEventListener('click', function(e){ e.stopPropagation(); veMinimapToggle(); });
@@ -266,10 +391,21 @@ function veMinimapInit() {
     if(!_mmDragging) return;
     _mmPanToEvent(e);
   });
-  document.addEventListener('mouseup', function() { _mmDragging = false; });
+  document.addEventListener('mouseup', function() {
+    if(!_mmDragging) return;
+    _mmDragging = false;
+    veMinimapUpdate();                     // sürükleme boyunca bekleyen örtüşme denetimi
+  });
 
   if(typeof window !== 'undefined') {
     window.addEventListener('resize', function(){ veMinimapUpdate(); });
+  }
+  // Tuval pencere boyu değişmeden de daralır: müfettiş sütunu açılınca kamera
+  // yerinde kalır, kutu içeriğin üstüne kayar. Pencerenin resize olayı bunu
+  // hiç görmüyordu.
+  var wrapper = document.getElementById('ve-canvas-wrapper');
+  if(wrapper && typeof ResizeObserver === 'function') {
+    new ResizeObserver(function(){ veMinimapUpdate(); }).observe(wrapper);
   }
 
   veMinimapUpdate();
@@ -282,5 +418,6 @@ if(typeof document !== 'undefined' && typeof document.addEventListener === 'func
 }
 
 if(typeof module !== 'undefined' && module.exports) {
-  module.exports = { veMinimapUpdate: veMinimapUpdate, veMinimapToggle: veMinimapToggle };
+  module.exports = { veMinimapUpdate: veMinimapUpdate, veMinimapToggle: veMinimapToggle,
+    veMinimapOrtuyor: veMinimapOrtuyor, veMinimapIcerikParcalari: veMinimapIcerikParcalari };
 }

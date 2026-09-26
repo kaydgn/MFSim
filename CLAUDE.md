@@ -257,6 +257,13 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sürüklemede hem AÇILIŞTA uygulanır (yoksa kuraldan önce kaydedilmiş kart
   bozuk açılır). Kapı: `fead-table.test.js` (mekanizma, sentetik tip) +
   `kart-yuzey.spec.js` → *"EN KÜÇÜK ÖLÇÜ"*.
+- **MİNİMAP İÇERİĞİ ÖRTMEZ** (`js/minimap.js` → `_mmOtoDenetle`). Açık kutu
+  bir karta, adına ya da nota değiyorsa köşedeki düğmesine iner, köşe
+  boşalınca açılır; soluk durmak yetmiyordu (soluk kutu tıklamayı yutuyor).
+  Ölçü AÇIK hâlin kutusuyla (`--mm-w/--mm-h`), o anki kutuyla değil — yoksa
+  titrer. Oto iniş tercihi yazmaz; tuval pencere boyu değişmeden daraldığı
+  için (müfettiş sütunu) kap gözlenir. Kapı: `minimap-ortmez.test.js` +
+  `minimap-ortmez.spec.js`.
 - **TEK YAZI TİPİ: `--font-sans`** — Windows'ta Segoe UI (kullanıcı kendi
   ekranında seçti, 2026-09-25), başka yerde gömülü Inter (`css/fonts.css`).
   Yığının başı `'MFSim Segoe'`: yalnız `local()` adlarından kurulu takma aile,
