@@ -97,61 +97,85 @@ class StepYaz {
 
   // ── dönel yüzler ──────────────────────────────────────────────────────────
   // Yerel eksen: `merkez` noktasından `z` yönünde; profil (s, r) bu eksene göre.
-  // Her dönel yüz İKİ YARIM yüz olarak yazılır ve aynı yüzeyi paylaşır.
+  // Her dönel yüz İKİ YARIM yüz olarak yazılır, aynı yüzeyi paylaşır ve ortak
+  // kenarlarını (0° ve 180°'deki yan kenarlar) PAYLAŞIR — gerçek bir B-rep gibi.
+  // Yönler ISO 10303-42'ye uyar: kenarın `same_sense`i yayın hangi taraftan
+  // döndüğünü, yönlü kenarın bayrağı döngüdeki yönünü söyler (üçgenleyici bu
+  // ikisine güvenir; tanıyıcı yalnız çemberlerin kendisini okur).
   _cember(eks, s, r) {
     const c = eks.nokta(s);
     return this.ekle("CIRCLE('',#" + this.cerceve(c, eks.z, eks.x) + ',' + f(this.L(r)) + ')');
   }
-  _kenar(egri, p1, p2) {
-    const v1 = this.ekle("VERTEX_POINT('',#" + this.nokta(p1) + ')');
-    const v2 = this.ekle("VERTEX_POINT('',#" + this.nokta(p2) + ')');
-    const ec = this.ekle("EDGE_CURVE('',#" + v1 + ',#' + v2 + ',#' + egri + ',.T.)');
-    return this.ekle("ORIENTED_EDGE('',*,*,#" + ec + ',.T.)');
-  }
+  tepe(p) { return this.ekle("VERTEX_POINT('',#" + this.nokta(p) + ')'); }
+  kenarEgri(v1, v2, egri, ayni = true) { return this.ekle("EDGE_CURVE('',#" + v1 + ',#' + v2 + ',#' + egri + ',' + (ayni ? '.T.' : '.F.') + ')'); }
+  yonlu(ec, yon = true) { return this.ekle("ORIENTED_EDGE('',*,*,#" + ec + ',' + (yon ? '.T.' : '.F.') + ')'); }
   _cizgi(p1, p2) {
     const d = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
     const L = Math.hypot(...d) || 1;
     const vec = this.ekle("VECTOR('',#" + this.yon(d.map((v) => v / L)) + ',' + f(this.L(L)) + ')');
     return this.ekle("LINE('',#" + this.nokta(p1) + ',#' + vec + ')');
   }
-  _yuz(yuzey, kenarlar, ic) {
-    const dongu = this.ekle("EDGE_LOOP('',(" + kenarlar.map((k) => '#' + k).join(',') + '))');
-    const sinir = [this.ekle("FACE_OUTER_BOUND('',#" + dongu + ',.T.)')];
-    if (ic) sinir.push(this.ekle("FACE_BOUND('',#" + this.ekle("EDGE_LOOP('',(" + ic.map((k) => '#' + k).join(',') + '))') + ',.T.)'));
-    return this.ekle("ADVANCED_FACE('',(" + sinir.map((b) => '#' + b).join(',') + '),#' + yuzey + ',.T.)');
+  // Yüz: dış döngü + (isteğe bağlı) delikler; her döngü yönlü kenar listesi
+  yuz(yuzey, dis, delikler = [], ayni = true) {
+    const sinir = [this.ekle("FACE_OUTER_BOUND('',#" + this.ekle("EDGE_LOOP('',(" + dis.map((k) => '#' + k).join(',') + '))') + ',.T.)')];
+    delikler.forEach((d) => sinir.push(this.ekle("FACE_BOUND('',#" + this.ekle("EDGE_LOOP('',(" + d.map((k) => '#' + k).join(',') + '))') + ',.T.)')));
+    return this.ekle("ADVANCED_FACE('',(" + sinir.map((b) => '#' + b).join(',') + '),#' + yuzey + ',' + (ayni ? '.T.' : '.F.') + ')');
   }
-  // Profil parçası → yüz(ler). parca: {tip:'dogru'|'yay', s0,r0,s1,r1, (yay için) sm, R, rk, bol}
+  // Profil parçası → yüz(ler). parca: {tip:'dogru'|'yay', s0,r0,s1,r1, (yay için) sm, R, rk}
   donel(eks, parca, yuzler) {
     const { s0, r0, s1, r1 } = parca;
+    const P = (s, r, a) => eks.cevre(s, r, a);
+    if (parca.tip !== 'yay' && Math.abs(s1 - s0) < 1e-12) {
+      // Düzlem halka: dış çember saat yönünün tersine (düzlem normali z), iç
+      // çember delik — ters yönlü.
+      if (Math.abs(r1 - r0) < 1e-12) return;
+      const yuzey = this.ekle("PLANE('',#" + this.cerceve(eks.nokta(s0), eks.z, eks.x) + ')');
+      const rd = Math.max(r0, r1), ri = Math.min(r0, r1);
+      const vd = this.tepe(P(s0, rd, 0));
+      const dis = [this.yonlu(this.kenarEgri(vd, vd, this._cember(eks, s0, rd)), true)];
+      const delik = [];
+      if (ri > 0) {
+        const vi = this.tepe(P(s0, ri, 0));
+        delik.push([this.yonlu(this.kenarEgri(vi, vi, this._cember(eks, s0, ri)), false)]);
+      }
+      yuzler.push(this.yuz(yuzey, dis, delik));
+      return;
+    }
     let yuzey;
     if (parca.tip === 'yay') {
       yuzey = this.ekle("TOROIDAL_SURFACE('',#" + this.cerceve(eks.nokta(parca.sm), eks.z, eks.x) + ',' + f(this.L(parca.R)) + ',' + f(this.L(parca.rk)) + ')');
     } else if (Math.abs(r1 - r0) < 1e-12) {
       yuzey = this.ekle("CYLINDRICAL_SURFACE('',#" + this.cerceve(eks.nokta(s0), eks.z, eks.x) + ',' + f(this.L(r0)) + ')');
-    } else if (Math.abs(s1 - s0) < 1e-12) {
-      yuzey = this.ekle("PLANE('',#" + this.cerceve(eks.nokta(s0), eks.z, eks.x) + ')');
-      const dis = this._cember(eks, s0, Math.max(r0, r1)), ic = this._cember(eks, s0, Math.min(r0, r1));
-      const p = eks.nokta(s0);
-      const a = this._kenar(dis, eks.cevre(s0, Math.max(r0, r1), 0), eks.cevre(s0, Math.max(r0, r1), 0));
-      const b = Math.min(r0, r1) > 0 ? this._kenar(ic, eks.cevre(s0, Math.min(r0, r1), 0), eks.cevre(s0, Math.min(r0, r1), 0)) : null;
-      yuzler.push(this._yuz(yuzey, [a], b ? [b] : null));
-      void p;
-      return;
     } else {
       // Koni: yerleşim s0'da, yarıçap r0; eksen yönü yarıçapın BÜYÜDÜĞÜ taraf
       const yari = Math.atan(Math.abs(r1 - r0) / Math.abs(s1 - s0));
       const zk = (r1 > r0) === (s1 > s0) ? eks.z : eks.z.map((v) => -v);
       yuzey = this.ekle("CONICAL_SURFACE('',#" + this.cerceve(eks.nokta(s0), zk, eks.x) + ',' + f(this.L(r0)) + ',' + f(this.A(yari)) + ')');
     }
-    // İki yarım yüz: 0–180° ve 180–360°
     const c0 = this._cember(eks, s0, r0), c1 = this._cember(eks, s1, r1);
-    for (const [a0, a1] of [[0, Math.PI], [Math.PI, 2 * Math.PI]]) {
-      const k1 = this._kenar(c0, eks.cevre(s0, r0, a0), eks.cevre(s0, r0, a1));
-      const k2 = this._kenar(this._cizgi(eks.cevre(s0, r0, a1), eks.cevre(s1, r1, a1)), eks.cevre(s0, r0, a1), eks.cevre(s1, r1, a1));
-      const k3 = this._kenar(c1, eks.cevre(s1, r1, a1), eks.cevre(s1, r1, a0));
-      const k4 = this._kenar(this._cizgi(eks.cevre(s1, r1, a0), eks.cevre(s0, r0, a0)), eks.cevre(s1, r1, a0), eks.cevre(s0, r0, a0));
-      yuzler.push(this._yuz(yuzey, [k1, k2, k3, k4]));
-    }
+    const v00 = this.tepe(P(s0, r0, 0)), v0p = this.tepe(P(s0, r0, Math.PI));
+    const v10 = this.tepe(P(s1, r1, 0)), v1p = this.tepe(P(s1, r1, Math.PI));
+    // Yan kenar (s0, r0) → (s1, r1), a açısında: koni/silindirde doğru, torda küçük çember yayı
+    const yan = (a, va, vb) => {
+      if (parca.tip !== 'yay') return this.kenarEgri(va, vb, this._cizgi(P(s0, r0, a), P(s1, r1, a)));
+      const x = eks.x, z = eks.z, y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
+      const er = [0, 1, 2].map((i) => Math.cos(a) * x[i] + Math.sin(a) * y[i]);
+      const et = [0, 1, 2].map((i) => -Math.sin(a) * x[i] + Math.cos(a) * y[i]);
+      const m = eks.nokta(parca.sm).map((v, i) => v + parca.R * er[i]);
+      // Çerçeve x = e_r, z = −e_t → çemberin y'si torun ekseni: θ, torun v'sidir
+      const cem = this.ekle("CIRCLE('',#" + this.cerceve(m, et.map((v) => -v), er) + ',' + f(this.L(parca.rk)) + ')');
+      const va0 = Math.atan2(s0 - parca.sm, r0 - parca.R), vb0 = Math.atan2(s1 - parca.sm, r1 - parca.R);
+      let d = vb0 - va0;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d <= -Math.PI) d += 2 * Math.PI;
+      return this.kenarEgri(va, vb, cem, d > 0);
+    };
+    const y0 = yan(0, v00, v10), yp = yan(Math.PI, v0p, v1p);
+    const alt1 = this.kenarEgri(v00, v0p, c0), alt2 = this.kenarEgri(v0p, v00, c0);
+    const ust1 = this.kenarEgri(v10, v1p, c1), ust2 = this.kenarEgri(v1p, v10, c1);
+    const o = (e, y) => this.yonlu(e, y);
+    yuzler.push(this.yuz(yuzey, [o(alt1, true), o(yp, true), o(ust1, false), o(y0, false)]));
+    yuzler.push(this.yuz(yuzey, [o(alt2, true), o(y0, true), o(ust2, false), o(yp, false)]));
   }
   // Yüz listesinden bir gövde (varsayılan: yüzey modeli, 3DEXPERIENCE gibi)
   govde(u, yuzler, tur = 'kabuk') {

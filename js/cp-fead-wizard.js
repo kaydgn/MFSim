@@ -909,6 +909,7 @@ function veFeadWizOpen(nodeId){
 
 function veFeadWizClose(kaydet){
   if(typeof document === 'undefined') return;
+  if(typeof veFeadWiz3bKapat === 'function') veFeadWiz3bKapat();
   var ov = document.getElementById('ve-feadwiz-overlay');
   if(ov) ov.style.display = 'none';
   document.removeEventListener('keydown', veFeadWizKey);
@@ -929,6 +930,8 @@ function veFeadWizClose(kaydet){
 
 function veFeadWizKey(e){
   if(!e) return;
+  // TEK ESC TEK KATMAN: 3B görüntüleyici açıksa yalnız o kapanır
+  if(e.key === 'Escape' && typeof veFeadWiz3bAcik === 'function' && veFeadWiz3bAcik()){ veFeadWiz3bKapat(); return; }
   if(e.key === 'Escape'){ veFeadWizClose(true); return; }
   // Adımlar arası klavye gezinmesi: metin alanındayken ok tuşları alanın
   // kendisine ait (imleç), o yüzden yalnız Alt ile.
@@ -1192,6 +1195,9 @@ function veFeadWizRender(){
   // kapatma bayrağını temizler ama kaplama ekranda KALIRDI (ölçüldü, gerçek
   // tarayıcı): yazma olur, pencere durur, kullanıcı ikinci kez uygular.
   if(typeof veFeadWizAngRender === 'function') veFeadWizAngRender();
+  // 3B GÖRÜNTÜLEYİCİ DE (js/cp-fead-3b.js): rol, hesap, bakış ve aktarım hep
+  // buradan geçer; pencerenin paneli ve renkleri kartla aynı durumu okur.
+  if(typeof veFeadWiz3bTazele === 'function') veFeadWiz3bTazele();
 }
 
 function veFeadWizNavHTML(b){
@@ -1504,6 +1510,8 @@ function veFeadWizReset(){
 // Aktarımın izi durumda kalır (`st.stepKaynak`), sıranın kaynağı da
 // (`st.siraKaynagi`).
 var _fwStp = null;
+// Kartın durumu — 3B görüntüleyici (js/cp-fead-3b.js) aynı nesneyi okur
+function veFeadWizStp(){ return _fwStp; }
 
 // TEK OLABİLEN ROLLER: model tek sürücü ve tek gergi taşır. İkisinden birinin
 // iki düğüme verilmesi hesabı DURDURUR — ikinci gergi ötekinin üstüne, ikinci
@@ -1575,6 +1583,9 @@ function veFeadWizStpOku(metin, ad, kap){
   if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosya okunamadı.';
   _fwStp = s;
   veFeadWizRender();
+  // Akışın ikinci adımı 3B'de seçmek (kullanıcı kararı, 2026-09-26): dosya
+  // okununca görüntüleyici açılır. THREE yoksa açılmaz, kartın tablosu kalır.
+  if(s.durum === 'hazir' && typeof veFeadWiz3bAc === 'function') veFeadWiz3bAc();
   return s;
 }
 function veFeadWizStpDrop(e){
@@ -1759,6 +1770,9 @@ function _fwStpKartHTML(){
     + '<input type="file" class="ve-fw-stp-file" accept=".stp,.step,.stpz,.p21"'
     + ' onchange="veFeadWizStpDosya(this.files && this.files[0]); this.value=\'\';">'
     + (s ? 'Başka dosya seç…' : 'STEP dosyası seç…') + '</label>';
+  if(s && s.durum === 'hazir' && typeof veFeadWiz3bAc === 'function')
+    h += '<button type="button" class="ve-fw-btn" id="ve-fw-stp-3b" onclick="veFeadWiz3bAc()"'
+      + ' title="Montajı 3B görüntüleyicide açın; parçaya tıklayıp rolünü verin">3B\'de seç</button>';
   if(s && s.durum !== 'okunuyor')
     h += '<button type="button" class="ve-fw-mini" title="Dosyayı karttan kaldır" onclick="veFeadWizStpKapat()">✕</button>';
   h += '</div>';
@@ -4036,6 +4050,9 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizStpDrop: veFeadWizStpDrop, veFeadWizStpSurukle: veFeadWizStpSurukle,
     veFeadWizStpHesapla: veFeadWizStpHesapla, _fwStpCizimSVG: _fwStpCizimSVG,
     veFeadWizSiraOnay: veFeadWizSiraOnay, VE_FW_SIRA_AGAC: VE_FW_SIRA_AGAC,
-    veFeadWizStp: function(){ return _fwStp; }
+    veFeadWizStp: veFeadWizStp,
+    // 3B görüntüleyicinin paneli (js/cp-fead-3b.js) bunları kullanıyor
+    _fwEsc: _fwEsc, _fwFmt: _fwFmt, _fwStpRolAd: _fwStpRolAd, _fwStpRolDenetim: _fwStpRolDenetim,
+    _fwStpSecim: _fwStpSecim, veFeadWizKey: veFeadWizKey
   };
 }

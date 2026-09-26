@@ -1,6 +1,6 @@
 ---
 name: fead
-description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js, js/fead-step.js, js/step-p21.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kasnakların kanvasta KUTUSU OLMAMASI (giriş Kayış Yolu çiziminden — Çizim Masası; kesin sayı kartın içindeki Kayış Tablosu'nda — Pafta), gergi tanımı, katalog ve rapor kuralları buradadır.
+description: MFSim FEAD (kayış-kasnak / accessory belt drive) modülünün karar kaydı ve dokunulmazlıkları. js/fead-core.js, js/fead-model.js, js/fead-belts.js, js/fead-duty.js, js/fead-tensioners.js, js/cp-fead.js, js/cp-fead-report.js, js/cp-fead-summary.js, js/cp-fead-wizard.js, js/guide-fead.js, js/fead-step.js, js/step-p21.js, js/step-ucgen.js dosyalarından birine ya da FEAD testlerine (tests/unit/fead-*, cp-fead*, gates-archive, guide-fead, tests/e2e/fead-*) dokunmadan ÖNCE çağır. Çekirdeğin birebir durma kuralı, 2095 referans değerlik doğrulama kapısı, kasnakların kanvasta KUTUSU OLMAMASI (giriş Kayış Yolu çiziminden — Çizim Masası; kesin sayı kartın içindeki Kayış Tablosu'nda — Pafta), gergi tanımı, katalog ve rapor kuralları buradadır.
 ---
 
 # FEAD modülü — dokunmadan önce
@@ -605,14 +605,66 @@ olurdu.
       elle yazılan değer kullanıcının kararı (uyarı yok).
     • Kart bir **bırakma alanı** (`data-ve-dropzone`): yoksa ölçüm içe
       aktarması `.stp`'yi reddedip "okunamaz" derdi.
+    **3B görüntüleyici** (`js/cp-fead-3b.js`, sihirbazın içinde `#ve-fw-3b`;
+    kullanıcı akışı: *"3B görüntüleyicide parçaları manuel olarak seçeceğiz,
+    ardından bir butona tıklayınca çaplar, merkezler hesaplanacak"*):
+    • Dosya okununca AÇILIR (THREE yoksa açılmaz, kartın tablosu kalır). Durum
+      kartla ORTAK (`veFeadWizStp()`); tazeleme `veFeadWizRender`ın sonundan —
+      rol, hesap, bakış, aktarım hep oradan geçer. Rol düğmesi kartın işlevidir
+      (`veFeadWizStpRol`), hesap da (`veFeadWizStpHesapla`): ikinci bir yol yok.
+    • Tıklanan PARÇA seçilir; **alt montaja rol yoldan** verilir (kök · alt
+      montaj · parça; kök bütün montajdır, tıklanmaz). Bir yolda TEK rol
+      (kartın kuralı): birimin içindeki parçaya rol vermek birimin rolünü
+      KALDIRIR, bölmez — panel bunu söyler. Seçili düğümün dışı solar —
+      seçimin hangi parçaları kapsadığı böyle okunur. Başarılı hesaptan sonra
+      seçim kalkar (halkalar her kasnakta okunsun).
+    • Renk rolden, TEK tablodan (`VE_FW_3B_ROL_RENK` → tema jetonu): malzeme de
+      paneldeki nokta da oradan; rolsüz parça soluk metin tonu.
+    • Hesap sonucu 3B'de dış çap halkası + gergi kolu/pivotu (başlık tonunda,
+      derinlik sınaması kapalı); **"Önden bak" 2B çizimin eksenleri**
+      (`veFeadStp2B`: sağ · yukarı · bakış) — 3B ile tablo aynı resmi gösterir.
+      Yukarı DÜZLEMDEN gelir: XY düzleminde kameranın varsayılan yukarısı (Z)
+      bakış yönüne paraleldir ve resim keyfi bir açıyla döner.
+    • Başlık PENCERE AİLESİNİN (`.ve-settings-header` + 22 px çizgi kapat,
+      ikon `mf-ico-box`): kaplama sihirbazın kendi başlığını da örtüyor.
+    • **Tek Esc tek katman**: Esc önce 3B'yi kapatır; sihirbaz kapanınca WebGL
+      bağlamı bırakılır. Üçgenler kartta saklanır (`_fwStp.ag`), üçgenleme
+      kare kare (24 ms bütçe) — dosyanızda 1,5 sn, tek seferde arayüz donardı.
+    **Üçgenleyici** (`js/step-ucgen.js`): **üçgen YALNIZ görüntü içindir** —
+    çap ve merkez analitik kalır (OCCT'yi bırakmanın gerekçesi). Kenar bir kez
+    örneklenir, iki yüz AYNI noktaları kullanır (su geçirmez); sınır kenarı
+    ne çevrilir ne bölünür. Ölçülmüş kusurların hükümleri:
+    • Kutup payı 10⁻³ mm (CATIA kutup köşesini eksenden 1,6·10⁻⁴ mm'ye kadar
+      uzak yazıyor; 10⁻⁹ sahte sarım üretti).
+    • İnceltme Delaunay çevirmeli: çevirmesiz ikiye bölme kulak kırpmanın
+      yelpazesini çoğaltıyordu (bir tor şeridi 5.120 köşe, montaj 3,78 milyon
+      üçgen). Delaunay ölçeği yay × √eğrilik (oran ≤ 10:1) — eşyönlü ölçek
+      ince torları gereksiz sıklaştırıyordu. Kiriş hatası YÜZEYİN
+      noktalarıyla ölçülür (sınırın yüzeyden ayrılığı bölmeyle küçülmez).
+    • Doğru üstünde biten kırpmanın son üçgeni yazılır (eğri yüzeyde o doğru
+      bir yaydır); kiriş payından ince iki döngülü yüz fermuarla örülür.
+    • Kırpmanın çıktısı inceltmeden ÖNCE de çevrilir: düzlem yüz hiç
+      inceltilmez, eğri yüzde bölme sonrası yasallaştırma yalnız bölünen
+      kenara bakar (dosyada baştaki çevirme olmadan %12 fazla üçgen).
+    • Üçgen vermeyen yüz kenarlarıyla çizilir ve sayılır (`kenarYuz`) — dosyada
+      iki tane, ikisi de aynı çemberin yayı ile kirişi arasında ≈ 0 alanlı.
+    • B-spline ters çevirmesi düğüm aralığı başına 3 ızgara noktasından başlar
+      (sabit 40×40 uzun bir yüzeyde yanlış yerel en küçüğe iniyordu).
     Kapılar: `tests/unit/fead-step.test.js` (sentetik dosyalar
     `tests/helpers/step-yaz.js` + `step-ornek.js`, gerçek dosyanın kalıbında;
     rolü TEST verir) — en değerlisi Gates AG00686'nın STEP → köprü zinciri
     (span %0,5 · sarım 0,2°) ve *"ROL KULLANICININ"* (seçilmemiş kasnak,
     iki izli damper, kaburgalı avara); `tests/unit/fead-wizard-step.test.js`
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
-    · sıra · künye · .stpZ) + `tests/e2e/fead-step.spec.js` (gerçek File ·
-    elle rol · çizim · bırakma · Modeli Kur).
+    · sıra · künye · .stpZ) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
+    renk · panel · otomatik açılış · Esc · tazeleme kancası) +
+    `tests/unit/step-ucgen.test.js` (kaplama TAM · alan · hacim ve yön · su
+    geçirmezlik · baştaki Delaunay · ölçülmüş kusurlar) +
+    `tests/e2e/fead-step.spec.js` (gerçek File · UYGULAMANIN KENDİ karesi
+    çiziyor · başlık ailenin · sığdırma montajın kendi noktalarıyla · 3B'de
+    tıklayıp rol · alt montaj · halkalar · önden/arkadan yön
+    ve XY düzleminde yukarı · hesap seçimi kaldırır · Esc · kart altından
+    değişince 3B kapanır · bırakma · Modeli Kur).
 
 35. **SEKME ADI DURUMUNU TAŞIR — kural köprünün, kapı ANLAŞMA** (2026-09-26,
     kullanıcı: *"kullanıcı bu kısmı görmeyebilir ve eksik bilgi girebilir"* →
