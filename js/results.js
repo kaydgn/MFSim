@@ -465,7 +465,7 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
       html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
-      html += '<span style="font-weight:600;">İçe Aktarılan Ölçümler</span>';
+      html += '<span style="font-weight:600;">İçe aktarılan ölçümler</span>';
       html += ' <span class="ve-tree-count">' +
               impChannels + ' sinyal</span>';
       html += '</div>';

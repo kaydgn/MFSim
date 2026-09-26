@@ -761,7 +761,7 @@ function _gkBuild(){
   ov.setAttribute('hidden', '');
   ov.innerHTML =
     '<div class="ve-help-panel" role="dialog" aria-modal="true" aria-label="Kullanım kılavuzları">'
-    + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-clipboard"></span> Kullanım Kılavuzları</span>'
+    + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-clipboard"></span> Kullanım kılavuzları</span>'
     + '<button class="ve-settings-close" type="button" title="Kapat (Esc)" aria-label="Kapat" '
     + 'onclick="veGuideKitClose()"><span class="mf-ico mf-ico-x"></span></button></div>'
     + '<div class="ve-help-body" id="ve-guide-kit-body"></div>'

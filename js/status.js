@@ -106,14 +106,14 @@ function _veStatusRender() {
   if(updateAvailable) {
     html += '<div class="ve-status-update-banner">';
     html += '<div class="ve-status-update-banner-info">';
-    html += '<div class="ve-status-update-banner-title"><span class="mf-ico mf-ico-bell"></span> Yeni Sürüm Mevcut</div>';
+    html += '<div class="ve-status-update-banner-title"><span class="mf-ico mf-ico-bell"></span> Yeni sürüm mevcut</div>';
     html += '<div class="ve-status-update-banner-desc">Yeni sürüm indirildi; uygulanması için sayfanın yenilenmesi gerekiyor.</div>';
     html += '</div>';
-    html += '<button class="ve-status-update-banner-btn" onclick="_veApplyUpdate()"><span class="mf-ico mf-ico-refresh"></span> Şimdi Güncelle</button>';
+    html += '<button class="ve-status-update-banner-btn" onclick="_veApplyUpdate()"><span class="mf-ico mf-ico-refresh"></span> Şimdi güncelle</button>';
     html += '</div>';
   }
 
-  html += '<h3 class="ve-settings-section-title">Mevcut Sürüm</h3>';
+  html += '<h3 class="ve-settings-section-title">Mevcut sürüm</h3>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Durum</span>';
   html += '<div class="ve-settings-value" style="display:flex;align-items:center;gap:10px;">';
   html += '<span class="ve-deploy-dot ' + dotClass + '" style="position:relative;margin:0;width:11px;height:11px;cursor:default;"></span>';
@@ -135,11 +135,11 @@ function _veStatusRender() {
   }
 
   html += '<div class="ve-settings-btn-row">';
-  html += '<button id="ve-status-refresh-btn" class="ve-settings-btn" onclick="veStatusRefreshNow()"><span class="mf-ico mf-ico-refresh"></span> Tekrar Kontrol Et</button>';
+  html += '<button id="ve-status-refresh-btn" class="ve-settings-btn" onclick="veStatusRefreshNow()"><span class="mf-ico mf-ico-refresh"></span> Tekrar kontrol et</button>';
   html += '</div>';
 
   // Son güncellemeler bölümü — GitHub commits API
-  html += '<h3 class="ve-settings-section-title" style="margin-top:24px;">Son Güncellemeler</h3>';
+  html += '<h3 class="ve-settings-section-title" style="margin-top:24px;">Son güncellemeler</h3>';
   html += '<p class="ve-settings-desc">main branch\'ine yapılan son commit\'ler.</p>';
   html += '<div id="ve-status-commits"><div style="color:var(--text-muted);font-size:var(--fs-body);padding:10px 0;">Yükleniyor...</div></div>';
 
@@ -258,7 +258,7 @@ function _veStatusRenderCommits(commits) {
         if(dateStr) html += '<div><span class="ve-status-commit-meta-label">Tarih</span>' + _veStatusEsc(dateStr) + '</div>';
         html += '<div><span class="ve-status-commit-meta-label">Commit</span><code style="font-size:var(--fs-tiny);opacity:0.85;">' + _veStatusEsc(fullSha) + '</code></div>';
         html += '</div>';
-        html += '<div class="ve-status-commit-actions"><a href="' + url + '" target="_blank" rel="noopener" class="ve-settings-btn"><span class="mf-ico mf-ico-link"></span> GitHub\'da Aç</a></div>';
+        html += '<div class="ve-status-commit-actions"><a href="' + url + '" target="_blank" rel="noopener" class="ve-settings-btn"><span class="mf-ico mf-ico-link"></span> GitHub\'da aç</a></div>';
         html += '</div>';
         html += '</li>';
         });

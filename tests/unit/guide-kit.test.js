@@ -212,7 +212,7 @@ describe('şerit bağı', () => {
   test('iki komut da şeritte tanımlı', () => {
     expect(RIBBON_SRC).toContain("run:'veGuideKitOpen'");
     expect(RIBBON_SRC).toContain("run:'veGuideOpenCurrent'");
-    expect(RIBBON_SRC).toContain("label: 'Kullanım Kılavuzları'");
+    expect(RIBBON_SRC).toContain("label: 'Kullanım kılavuzları'");
   });
 
   test('ikisi de VE_RIBBON_ALWAYS_ON içinde', () => {

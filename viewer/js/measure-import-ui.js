@@ -8,7 +8,7 @@
 //   3. "X ekseni ne olsun?" → açılır liste, ön seçim genelde Time sütunu
 //   4. Y eksenine gidecek sütunlar TİKLİ KUTUlarla seçilir (çok sütunlu
 //      dosyalarda arama + Tümü/Hiçbiri ile)
-//   5. "Diyagramlara Aktar" → seçilenler ölçüm penceresinde şeritlere düşer
+//   5. "Diyagramlara aktar" → seçilenler ölçüm penceresinde şeritlere düşer
 //
 // Neden tek pencerede: dosya→sayfa→başlık→X→Y beş ayrı adıma bölünürse
 // kullanıcı X'i seçerken sütun listesini göremez. Önizleme tablosu üstte
@@ -187,7 +187,7 @@ function veImpEscHandler(e) {
 function veImpRender() {
   var el = document.getElementById('ve-import-content');
   if(!el) return;
-  // Alt çubuk her çizimde durumla eşitlenir: "Diyagramlara Aktar" seçim
+  // Alt çubuk her çizimde durumla eşitlenir: "Diyagramlara aktar" seçim
   // yokken etkin görünürse kullanıcı boş bir aktarım deneyip hata alır.
   setTimeout(veImpSyncFooter, 0);
 
@@ -438,14 +438,14 @@ function veImpSetQuery(v) {
   if(s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
 }
 
-// "Diyagramlara Aktar" yalnızca seçim varken etkin.
+// "Diyagramlara aktar" yalnızca seçim varken etkin.
 function veImpSyncFooter() {
   var btn = document.getElementById('ve-import-apply');
   if(!btn) return;
   var n = 0;
   Object.keys(veImpUI.ySel).forEach(function(k) { if(veImpUI.ySel[k]) n++; });
   btn.disabled = !veImpUI.rows || n === 0;
-  btn.textContent = n > 0 ? ('Diyagramlara Aktar (' + n + ')') : 'Diyagramlara Aktar';
+  btn.textContent = n > 0 ? ('Diyagramlara aktar (' + n + ')') : 'Diyagramlara aktar';
 }
 
 // ── Uygulama ──────────────────────────────────────────────────────────────

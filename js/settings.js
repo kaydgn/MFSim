@@ -194,7 +194,7 @@ function _veSettingsRenderAutosave() {
     var d = Math.floor(h / 24);
     return d + ' gün önce';
   }
-  var html = '<h3 class="ve-settings-section-title">Periyodik Yedekleme</h3>';
+  var html = '<h3 class="ve-settings-section-title">Periyodik yedekleme</h3>';
   html += '<p class="ve-settings-desc">Aktif projeyi belirli aralıklarla tarayıcı depolamasına otomatik kaydeder. Beklenmedik kapanmalarda son yedek "Geri yükle" ile açılabilir.</p>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Sıklık</span><div class="ve-settings-radios">';
   var labels = { 0: 'Kapalı', 5: '5 dakika', 10: '10 dakika', 30: '30 dakika' };
@@ -226,7 +226,7 @@ function _veSettingsRenderShortcuts() {
     ['Mouse: Tekerlek',    'Yakınlaştır / uzaklaştır'],
     ['Mouse: Sürükle (bileşen)', 'Topolojiye bileşen ekle']
   ];
-  var html = '<h3 class="ve-settings-section-title">Klavye & Fare Kısayolları</h3>';
+  var html = '<h3 class="ve-settings-section-title">Klavye & fare kısayolları</h3>';
   html += '<p class="ve-settings-desc">Sıkça kullanılan kontroller.</p>';
   html += '<table class="ve-settings-table"><tbody>';
   rows.forEach(function(r) {
@@ -286,7 +286,7 @@ function _veSettingsRenderData() {
   } catch(e) {}
   var hasBackup = false;
   try { hasBackup = !!localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
-  var html = '<h3 class="ve-settings-section-title">Yerel Depolama</h3>';
+  var html = '<h3 class="ve-settings-section-title">Yerel depolama</h3>';
   html += '<p class="ve-settings-desc">Uygulama tüm tercih ve yedeklerini tarayıcının yerel depolamasında tutar.</p>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Toplam boyut</span><div class="ve-settings-value">' + _veSettingsFmtBytes(bytes) + ' (' + keys.length + ' anahtar)</div></div>';
   html += '<div class="ve-settings-btn-row" style="flex-direction:column; align-items:stretch; gap:8px; margin-top:14px;">';

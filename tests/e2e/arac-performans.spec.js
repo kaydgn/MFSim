@@ -154,9 +154,9 @@ test.describe('Araç Performans — alt-sistem düğümü', () => {
 
     // Üst seviye: "Modüller" görünür; güç aktarma bileşenleri + Takoz Alt Bileşenleri gizli
     expect(await catVisible('Modüller')).toBe(true);
-    expect(await catVisible('Güç Kaynağı')).toBe(false);
+    expect(await catVisible('Güç kaynağı')).toBe(false);
     expect(await catVisible('Ölçüm')).toBe(false);
-    expect(await catVisible('Takoz Alt Bileşenleri')).toBe(false);
+    expect(await catVisible('Takoz alt bileşenleri')).toBe(false);
 
     // Araç Performans bloğunu aç
     // Kanvas uzayının merkezi 3000,3000 (CSS'te -3000 px kaydırma, bkz.
@@ -175,16 +175,16 @@ test.describe('Araç Performans — alt-sistem düğümü', () => {
     // veShowAllSidebarComponents, 'module' kapsam kuralı). Test eskiden
     // burada `true` bekliyordu; o beklenti kuraldan ÖNCEYE ait ve kırmızı
     // yanan şey uygulamanın hatası değil testin kendisiydi.
-    expect(await catVisible('Güç Kaynağı')).toBe(true);
+    expect(await catVisible('Güç kaynağı')).toBe(true);
     expect(await catVisible('Ölçüm')).toBe(true);
-    expect(await catVisible('Takoz Alt Bileşenleri')).toBe(false);
+    expect(await catVisible('Takoz alt bileşenleri')).toBe(false);
     expect(await catVisible('Modüller')).toBe(false);
 
     // Geri dön → üst seviye kapsamı
     await page.locator('.ve-arac-breadcrumb button').click();
     await page.waitForFunction(() => window.veAracStack.length === 0 && window.nodes.length === 1,
       null, { timeout: 10000 });
-    expect(await catVisible('Güç Kaynağı')).toBe(false);
+    expect(await catVisible('Güç kaynağı')).toBe(false);
   });
 
   // Çıkış düğmesi çerçevenin İÇİNDE, SOL ÜST köşede durur. İki aşama geçti:

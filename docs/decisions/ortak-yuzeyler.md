@@ -1472,3 +1472,29 @@ aynı bant*) bandı 26 px'e indirmişti; aile o karara göre kuruldu.
 **Kapı.** `pencere-ailesi.test.js` (düzeltme öncesi kaynakta 17 testin 13'ü
 düşüyor) + `pencere-ailesi.spec.js` (düzeltme öncesi yapıda sapmaları pencere
 adıyla sayarak düşüyor).
+
+## Etiketler cümle düzeninde (2026-09-26, kullanıcı kararı 9·B)
+
+**Hüküm.** Çok kelimeli bir arayüz etiketinde yalnız ilk kelime (ve "—",
+"·", ":" sonrasındaki bölütün ilk kelimesi) büyük harfle başlar. Özel adlar
+olduğu gibi kalır: bileşen adları (`componentDefs[*].name`, kapı onları
+OKUR), yüzey adları (Araç Performans, Takoz Çökme-Titreşim, Komuta Penceresi,
+Program Arşivi, Program Durumu, Kayış Tablosu, Kayış Yolu, Çizim Masası, Veri
+Gezgini, Sonuç Özeti, Ölçüm Görüntüleyici, CAN Çözümleyici), ürünün adı ve
+künyesi, kısaltmalar, tuşlar, markalar ve İngilizce terimler (karar 8·A).
+Yüzey adı küçültülmez: komut paletindeki "Program durumu" "Program Durumu"
+oldu.
+
+**Gerekçe.** Taranan 16 ekranda 2+ kelimelik 145 etiketin 79'u Başlık
+Düzeni'nde, 66'sı cümle düzenindeydi; Ayarlar birini, komut paleti ötekini
+kullanıyordu. Kullanıcı Windows'un kendi dilini (cümle düzeni) seçti.
+
+**Aşamalar.** 1 — kabuk (şerit, komut paleti, sağ tık menüleri, Ayarlar,
+Program Durumu, Kısayollar, Komuta, palet kategorileri, pencere başlıkları,
+Sonuçlar kabuğu, içe aktarma, görüntüleyici). Bileşen panelleri, kılavuzlar ve
+raporlar sonraki aşamalar; her aşama dosyalarını kapının `KABUK` listesine
+ekler.
+
+**Kapı.** `cumle-duzeni.test.js`: kuralın kendisi, bileşen adları kaynaktan,
+yüzey adının küçültülmemesi. Düzeltme öncesi kaynakta 94 etiket ve 4 küçük
+yüzey adıyla düşüyor.
