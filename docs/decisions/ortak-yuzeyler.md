@@ -1508,7 +1508,12 @@ ayar, Allison profili, yük durumu) de geçtiği için yalnız dört bloğun İ�
 taranır (`COMPONENT_SIGNALS`, `SW_DIAGRAM_SIGNALS`, `SENSOR_PACKAGES`,
 `veSolverTabDefs`). Günlük düz metin tablo; dönüşüm uzunluğu korur, "│"
 hücre ayırır.
-3b — grafikler (`graphics.js`) ve rapor üreticileri (sırada).
+3b — grafikler ve TXT raporları (`graphics.js`), rapor üreticileri (FEAD
+ayrıntılı + özet, takoz): 218 etiket → 0. Tarama küçük harfli `kv(…)`
+yardımcısını da kapsıyor (TXT anahtarlarının yarısı görülmüyordu); etiket
+taşıyan dize atlanır, metnini `>…<` tarar. Özet raporun sayfa adı ADLA
+aranıyor (`_fsrSheetNo`): liste, başlık ve atıf birlikte döner — kapısı
+`cp-fead-summary.test.js` → *"sayfa atfının ve başlığın adı"*.
 
 **Kayıtlı panoda sinyal adı bir KOPYA.** Eşleme hep kimlikle, ama şerit adı
 projeye yazılıyor ("Motor — Motor Devri"). Ad tablosu değişince
@@ -1522,8 +1527,10 @@ kullanıcının hesap defterinin başlıklarıdır ("Efektif Çap", "Sarım Aç�
 `VE_FEAD_TABLE_COLS`'tan okunur); sihirbazın gergiye verdiği ad ("Otomatik
 Gergi", kullanıcı kararı 2026-08-31 — `VE_FW_TEN_AD`'dan okunur); kişi adları
 (Euler, Newton, Campbell…). "→", "│" ve boşluklu " – " de bölüt başlatır
-("Otomatik → Lineer", "Motor devri – Araç hızı"); "+" başlatmaz ("Sağ tık +
-sürükle");
+("Otomatik → Lineer", "Motor devri – Araç hızı"); "+" ve " / " başlatmaz
+("Sağ tık + sürükle", "Güç / ağırlık oranı" — ardındaki tek kelimelik bileşen
+adı yine korunur: "Klima / Alternatör"); numaralı atıf ("Not 1", "Kriter 2"),
+modülün adı ("Takoz modülü") ve birim adları ("Güç Grubu Müdürlüğü") korunur;
 tireli birleşik kelimenin her parçası ayrı kelimedir ("Kayış-kasnak"), bütünü
 bir terimse kalır ("Coast-Down").
 
@@ -1534,7 +1541,7 @@ sahnesinden 7'si hata vermeden boş dönerdi (ölçüldü).
 **Kapı.** `cumle-duzeni.test.js`: kuralın örnekleri, bileşen adları
 kaynaktan, her aşamanın dosyalarında sapma yok, yüzey adı küçültülmüyor,
 kılavuzun aradığı her kart başlığı panelde var. Düzeltme öncesi kaynakta
-aşama 1'de 94 (+12 +84), aşama 2'de 386, aşama 3a'da 330 sapmayla; eski kılavuz + yeni panelle 7
+aşama 1'de 94 (+12 +84), aşama 2'de 386, aşama 3a'da 330, aşama 3b'de 218 sapmayla; eski kılavuz + yeni panelle 7
 bulunamayan kartla düşüyor.
 
 ## Tuval kabı kaymaz, kamera kayar (2026-09-26)

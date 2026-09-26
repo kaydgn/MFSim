@@ -344,7 +344,7 @@ var SENSOR_PACKAGES = [
     requires: ['vehicle', 'engine', 'torque-converter'],
     dependsOn: ['performance', 'engine-analysis', 'tc-analysis', 'traction-analysis'],
     diagrams: [
-      { id:'transfer-compare', name:'Yüksek / Düşük kademe hız karşılaştırması', xAxis:'Zaman (s)', yAxis:'Hız (km/h)',
+      { id:'transfer-compare', name:'Yüksek / düşük kademe hız karşılaştırması', xAxis:'Zaman (s)', yAxis:'Hız (km/h)',
         significance:'İki transfer kademe V(t) eğrilerinin üst üste bindirilmesi. Kesişim noktası taktik karar sınırı.',
         note:'İki ayrı simülasyon gerektirir.' },
       { id:'efficiency-chain', name:'Güç aktarma verim zinciri – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Verim (%)',

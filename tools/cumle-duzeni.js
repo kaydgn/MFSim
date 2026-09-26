@@ -35,7 +35,9 @@ const BILESEN = [...oku('js/components.js').matchAll(/^  '[a-z0-9-]+':\s*\{\s*\n
 const YUZEY = ['Araç Performans', 'Takoz Çökme-Titreşim', 'Komuta Penceresi', 'Program Arşivi',
   'Program Durumu', 'Kayış Tablosu', 'Kayış Yolu', 'Çizim Masası', 'Veri Gezgini', 'Sonuç Özeti',
   'Ölçüm Görüntüleyici', 'CAN Çözümleyici', 'Çalışma Noktası'];
-const YER = ['Bolu Tüneli'];
+const YER = ['Bolu Tüneli', 'Güç Grubu Müdürlüğü', 'Güç Aktarma Organları Mühendisliği'];   // yer ve birim adları
+const MODUL = ['Takoz'];                 // "Takoz modülü" (FEAD kısaltma, Araç Performans yüzey adı)
+const ATIF = ['Not', 'Bölüm', 'Tablo', 'Şekil', 'Kriter', 'Adım', 'Ek', 'Denklem', 'Sayfa', 'Madde', 'Kural'];
 // Kayış Tablosu'nun sütun adları kullanıcının hesap DEFTERİNİN başlıklarıdır
 // ("Efektif Çap", "Sarım Açısı"): tablo ve kılavuz onları defterle
 // karşılaştırılsın diye birebir taşır. Listeden OKUNUR, elle yazılmaz.
@@ -58,8 +60,8 @@ const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cm
   // kişi adları (yöntemler, diyagramlar)
   'Euler', 'Newton', 'Raphson', 'Newmark', 'Heun', 'Ralston', 'Runge', 'Kutta', 'Dormand', 'Prince', 'Campbell',
   'Rayleigh', 'Hermite', 'Fritsch', 'Carlson', 'Coulomb', 'Fourier', 'Bode', 'Nyquist', 'Kelvin', 'Voigt',
-  'Info', 'Log', 'K-Factor', 'Drawbar', 'Pull', 'Ratio']);
-const KISALTMA = new Set(['Ort', 'Ağ', 'Ör', 'Örn', 'Maks', 'Min', 'Max', 'vb', 'vs', 'No', 'Nr', 'Ref',
+  'Info', 'Log', 'K-Factor', 'Drawbar', 'Pull', 'Ratio', 'Cr', 'Retarder', 'No']);
+const KISALTMA = new Set(['Ort', 'Ağ', 'Ag', 'Ör', 'Örn', 'Maks', 'Min', 'Max', 'vb', 'vs', 'No', 'Nr', 'Ref',
   'Std', 'Yakl', 'bkz', 'Bkz', 'yak']);
 const COK = [...new Set([...BILESEN, ...YUZEY, ...YER, ...DEFTER, ...AD])].filter((a) => /\s/.test(a)).sort((a, b) => b.length - a.length);
 
@@ -74,17 +76,26 @@ function cumle(t) {
   // "PTO/Pompa": eğik çizgiyle dizilmiş bileşen adlarının hepsi bileşen adıdır.
   s = s.replace(/[A-ZÇĞİÖŞÜ][\p{L}]*(?:\/[A-ZÇĞİÖŞÜ][\p{L}]*)+/gu,
     (m) => (m.split('/').every((x) => BILESEN.includes(x)) ? '\u0000' + (tut.push(m) - 1) + '\u0001' : m));
-  // Tek kelimelik bileşen adı, ardından "(adet) bileşen…" ya da "panel…" geliyorsa bileşenin adıdır.
-  s = s.replace(/(^|\s)([A-ZÇĞİÖŞÜ][\p{Ll}]+)(?=\s+(?:\([^)]*\)\s+)?(?:[Bb]ileşen|panel))/gu,
+  // Tek kelimelik bileşen adı, ardından "(adet) bileşen…", "panel…", "pencere…", "kart…" ya da
+  // "sonuç…" geliyorsa bileşenin adıdır ("Çözücü sonuçlarından", "Rapor penceresi").
+  s = s.replace(/(^|\s)([A-ZÇĞİÖŞÜ][\p{Ll}]+)(?=\s+(?:\([^)]*\)\s+)?(?:[Bb]ileşen|[Pp]anel|[Pp]encere|[Kk]art|[Ss]onuç))/gu,
     (m, o, a) => (BILESEN.includes(a) ? o + '\u0000' + (tut.push(a) - 1) + '\u0001' : m));
+  // " / " seçenek dizer ama bölüt başlatmaz ("Güç / ağırlık oranı", "Yüksek / düşük kademe");
+  // ardındaki tek kelimelik bileşen adı yine addır ("Klima / Alternatör").
+  s = s.replace(/(\/\s+)([A-ZÇĞİÖŞÜ][\p{Ll}]+)/gu,
+    (m, o, a) => (BILESEN.includes(a) ? o + '\u0000' + (tut.push(a) - 1) + '\u0001' : m));
+  // Modülün tek kelimelik adı ("Takoz modülü") ve numaralı atıf ("Not 1", "Kriter 2", "Ek A").
+  s = s.replace(/(^|\s)([A-ZÇĞİÖŞÜ][\p{Ll}]+)(?=\s+[Mm]odül)/gu,
+    (m, o, a) => (MODUL.includes(a) ? o + '\u0000' + (tut.push(a) - 1) + '\u0001' : m));
+  s = s.replace(/(^|[\s(])([A-ZÇĞİÖŞÜ][\p{Ll}]+)(?=\s+(?:\d|[A-Z](?![\p{L}])))/gu,
+    (m, o, a) => (ATIF.includes(a) ? o + '\u0000' + (tut.push(a) - 1) + '\u0001' : m));
   let bas = true;
   s = s.replace(/(\S+)(\s*)/g, (tam, w, bosluk) => {
-    // " / " ile dizilmiş seçenekler de ayrı bölüttür ("Klima / Alternatör"), " – " de
-    // ("Motor devri – Araç hızı": iki büyüklük); ok da
+    // " – " iki büyüklüğü ayırır ("Motor devri – Araç hızı"); ok da
     // ("Otomatik → Lineer": sonucun adı).
     // "+" bir ikon değil bağlaçtır ("Sağ tık + sürükle"); başta durunca ("+ Satır ekle")
     // zaten harf taşımadığı için bölüt başını bozmaz.
-    if (/^[—–:·|│/→⇒]$/.test(w) || /^[▶▷►✓✔✗✕⚠●○↓↑⚙★☆📄]+$/u.test(w)) { bas = true; return w + bosluk; }
+    if (/^[—–:·|│→⇒]$/.test(w) || /^[▶▷►✓✔✗✕⚠●○↓↑⚙★☆📄]+$/u.test(w)) { bas = true; return w + bosluk; }
     if (/^[“"]/.test(w)) bas = true;                          // tırnak içindeki ad kendi bölütüdür
     // Tireli birleşik kelime de parçalanır ("Kayış-Kasnak"); bütünü bir terimse ("Coast-Down") kalır.
     const butun = w.replace(/^[(“"']+|[.,)”"':;]+$/g, '');
@@ -110,7 +121,7 @@ function cumle(t) {
 // girmiyordu ve aynı pencerede iki düzen yan yana kalıyordu. Kılavuzun kart
 // araması (_gfSahneKart2(fn, 'Başlık')) panelin başlığıyla BİREBİR eşleşmek
 // zorunda (veGuideCard metinle arar) — o yüzden o argüman da taranır.
-const YARDIMCI = /\b_?[A-Za-z0-9]*(?:Card|Kart|Row|Field|Read|Title|Hint|Badge|Tablo|Not|Uyari|Onay|H1|H2|Blk|KV|Label|Sect|Grp|Overlay|Btn|Dugme|Note)[A-Za-z0-9]*\(\s*'([^'\n]{3,70})'/g;
+const YARDIMCI = /\b_?[A-Za-z0-9]*(?:Card|Kart|Row|Field|Read|Title|Hint|Badge|Tablo|Not|Uyari|Onay|H1|H2|Blk|KV|kv|Label|Sect|Grp|Overlay|Btn|Dugme|Note)[A-Za-z0-9]*\(\s*'([^'\n]{3,70})'/g;
 // Başlık bir üçlü koşuldan da gelebilir: _feadCard(k === 'dev' ? 'Devir sınırları' : 'Güç eğrisi', …).
 const YARDIMCI_UCLU = new RegExp(YARDIMCI.source.replace("\\(\\s*'([^'\\n]{3,70})'",
   "\\(\\s*(?:[^'(),\\n]|'[^'\\n]*')*?\\?\\s*'([^'\\n]{3,70})'\\s*:\\s*'([^'\\n]{3,70})'"), 'g');
@@ -128,7 +139,9 @@ const DESEN = [/label:\s*'([^'\n]{3,70})'/g, />\s*([^<>{}\n]{3,70}?)\s*</g,
 // Yakalanan parça bir dize BİRLEŞTİRMESİNİN içiyse (' + ad + ') etiket değildir.
 // Çıplak "+" yetmez: "+ Satır ekle" düğmesinin kendisi "+" taşıyor ve süzgeç
 // bir dönem onu bu yüzden hiç taramıyordu.
-const BIRLESTIRME = /[{}=;$]|\bfunction\b|'\s*,\s*'|['"]\s*\+|\+\s*['"]/;
+// Etiket (<h3>…</h3>) taşıyan dize de atlanır: metin düğümlerini `>…<` deseni
+// ayrıca tarıyor; bütün dize alınsa ilk "kelime" <h3>8.1 olur ve başlık küçülürdü.
+const BIRLESTIRME = /[{}=;$]|\bfunction\b|'\s*,\s*'|['"]\s*\+|\+\s*['"]|<\/?[a-zA-Z]/;
 // `name:` bileşen adlarında ve verilerde (ön ayar, Allison profili, yük
 // durumu) de geçtiği için yalnız bu blokların İÇİ taranır: sinyal adları,
 // sensör paketleri ve diyagramları, Sonuçlar sekmeleri. Hepsi yalnız görüntü

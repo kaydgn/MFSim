@@ -37,12 +37,12 @@
 //   nasıl duruyor · nerede duruyor · kol nasıl geziyor · ne kadar yükleniyor ·
 //   ne kadar dayanıyor
 var VE_FSR_SHEETS = [
-  'Genel Bakış',
+  'Genel bakış',
   'Geometri',
-  'Gergi Çalışma Zarfı',
-  'Çalışma Çevrimi ve Torklar',
+  'Gergi çalışma zarfı',
+  'Çalışma çevrimi ve torklar',
   'Gerginlik ve Hubload',
-  'Dayanım ve Titreşim'
+  'Dayanım ve titreşim'
 ];
 
 // ─── TEPE YÜK: HESAPLANIYOR AMA DOĞRULANMIYOR ──────────────────────────────
@@ -168,7 +168,7 @@ function _fsrSheet(no, title, body, R, node){
   h += '<div class="hdr-logo">' + _fsrLogo() + '</div>';
   h += '<div class="hdr-org">' + _frEsc(d.orgName || 'Mühendislik') + '<br>'
      + _frEsc(d.orgAddr || '') + '</div>';
-  h += '<div class="hdr-title"><b>Aksesuar Kayış Tahrik Sistemi</b><br>' + _frEsc(title) + '</div>';
+  h += '<div class="hdr-title"><b>Aksesuar kayış tahrik sistemi</b><br>' + _frEsc(title) + '</div>';
   h += '</div>';
   h += '<div class="hdr-sub"><span>Hazırlayan: ' + _frEsc(d.author || '—') + '</span>'
      + '<span>Tasarım: ' + _frEsc(d.docNo || '—') + (d.revision ? ' · rev ' + _frEsc(d.revision) : '')
@@ -314,7 +314,7 @@ function _fsrSheet1(R, node){
   var sf = _frNum(R.serviceFact);
   var kod = _fsrCodes(sys);
 
-  var h = _fsrH1('Genel Bakış', 'Sistem künyesi, yerleşim ve kritik sonuçlar');
+  var h = _fsrH1('Genel bakış', 'Sistem künyesi, yerleşim ve kritik sonuçlar');
 
   // ŞEMANIN ÖLÇÜSÜ — kullanıcı bildirimi (2026-08-26): *"Şekiller çok büyük.
   // Gerçekten bu kadar büyük olmasına gerek yok."* ÖLÇÜLDÜ ve haklıydı: tam
@@ -399,7 +399,7 @@ function _fsrSheet1(R, node){
       + ' saat',
       life.inValidRange ? 'çap penceresi içinde'
         : 'ampirik düzeltmeli · ham ' + _frF(life.hoursB10, 0) + ' saat — bkz. sayfa '
-          + _fsrSheetNo('Dayanım ve Titreşim'),
+          + _fsrSheetNo('Dayanım ve titreşim'),
       life.inValidRange ? 'ok' : 'uy'],
     ['Kapalı çevrim', _frFs(sig, 2) + '°', 'Σ işaretli sarım · 360° olmalı', kapali ? 'ok' : 'no'],
     ['Çalışma çevrimi', duty.length + ' devir', 'toplam süre payı ' + _frPct(dcTop, 1)]
@@ -416,7 +416,7 @@ function _fsrSheet1(R, node){
   // ("Gates raporundaki tüm şekilleri çıkar bakalım") ve ölçüm onu doğruladı:
   // Gates'in beş şekil türünden ÜÇÜ bizde yoktu. Üçünün de üreticisi
   // ayrıntılı raporda ZATEN vardı — eksik olan yerleşimdi, hesap değil.
-  h += _fsrBlk('Doğal Frekans Haritası',
+  h += _fsrBlk('Doğal frekans haritası',
     _fsrFig(typeof _frFreqFigure === 'function' ? _frFreqFigure : null, R, 780, 150),
     'Eğriler serbest açıklıkların temel enine titreşim frekansı; kesikli doğru ateşleme '
     + 'frekansı (3 × devir / 60). Sayısal karşılığı aşağıdaki tablodadır.');
@@ -470,7 +470,7 @@ function _fsrSheet2(R, node){
             Number.isFinite(_frNum(p.inertiaKgM2))
               ? _frFs(p.inertiaKgM2, Math.abs(_frNum(p.inertiaKgM2)) < 0.01 ? 5 : 4) : '—'];
   });
-  h += _fsrBlk('Kasnak Yerleşimi',
+  h += _fsrBlk('Kasnak yerleşimi',
     _fsrT(['Kod', 'Kasnak', 'X<br>[mm]', 'Y<br>[mm]', 'Dış çap<br>[mm]', 'Pitch Ø<br>[mm]',
            'Efektif Ø<br>[mm]', 'Temas', 'Atalet<br>[kg·m²]'], lay, { ilkIkiSol: true }),
     mean ? '† Gergi kasnağının konumu bir girdi değildir: kol açısından türeyen çalışma merkezidir.' : '');
@@ -498,7 +498,7 @@ function _fsrSheet2(R, node){
       (d.perPulley || []).forEach(function(x){ c.push(_frF(x.accessoryRpm, 0)); });
       return c;
     });
-    h += _fsrBlk('Aksesuar Devirleri [d/d]',
+    h += _fsrBlk('Aksesuar devirleri [d/d]',
       _fsrT(['Motor devri<br>[d/d]'].concat(kod), rows, { ilkSol: true }),
       'Devirler kasnak pitch çaplarından hesaplanır; oranlar üstteki tablodadır.');
   }
@@ -518,7 +518,7 @@ function _fsrSheet2(R, node){
             _frFs(yay, 2), _frFs(sp, 2)];
   });
   bal.push(['<b>Σ</b>', '', '', '<b>' + _frFs(topYay, 2) + '</b>', '<b>' + _frFs(topSpan, 2) + '</b>']);
-  h += _fsrBlk('Kayış Boyu Dengesi',
+  h += _fsrBlk('Kayış boyu dengesi',
     _fsrT(['Kod', 'Efektif Ø<br>[mm]', 'Sarım<br>[°]', 'Sarım yayı<br>[mm]',
            'Çıkış açıklığı<br>[mm]'], bal, { ilkSol: true }),
     'Σ sarım yayı ' + _frFs(topYay, 2) + ' mm + Σ açıklık ' + _frFs(topSpan, 2) + ' mm = <b>'
@@ -536,7 +536,7 @@ function _fsrSheet3(R, node){
   var TR = (typeof VE_FEAD_POSITIONS !== 'undefined')
     ? VE_FEAD_POSITIONS.reduce(function(o, p){ o[p.core] = p.label; return o; }, {}) : {};
 
-  var h = _fsrH1('Gergi Çalışma Zarfı', 'Kol açısı, kayış boyu ve gerginliğin birlikte değişimi');
+  var h = _fsrH1('Gergi çalışma zarfı', 'Kol açısı, kayış boyu ve gerginliğin birlikte değişimi');
 
   var head = ['Büyüklük'].concat(pos.map(function(p){
     return (p.position === 'Mean' ? '<span class="hi">' : '<span>')
@@ -579,7 +579,7 @@ function _fsrSheet3(R, node){
   // basıldığı için ayrıntılı raporun kendi künyesi buraya gelmiyor.
   var esikT = (typeof veFeadSlipThreshold === 'function')
     ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null;
-  h += '<div class="col">' + _fsrBlk('Gerginliğin Kol Açısına Bağımlılığı',
+  h += '<div class="col">' + _fsrBlk('Gerginliğin kol açısına bağımlılığı',
     _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 390, 520),
     'Kalın eğri hesaplanan gerginlik, kesikli eğriler ±%10 bandı. Dikey çizgiler altı kol '
     + 'konumu.'
@@ -588,7 +588,7 @@ function _fsrSheet3(R, node){
                + 'gerginliği (' + _frEsc(_fsrKisaAd(sys, esikT.pulley) || esikT.pulley)
                + ' @ ' + _frF(esikT.engineRpm, 0) + ' d/d). Tasarım gerginliği bunun '
                + _frFs(esikT.margin, 2) + ' katıdır.' : '')) + '</div>';
-  h += '<div class="col">' + _fsrBlk('Kayış Take-up Eğrisi',
+  h += '<div class="col">' + _fsrBlk('Kayış take-up eğrisi',
     _fsrFig(typeof _frTakeupChartRaw === 'function' ? _frTakeupChartRaw : null, R, 390, 520),
     'Düşey eksen gereken efektif kayış boyu. Take-up oranı, eğrinin çalışma noktasındaki '
     + 'anlık eğimidir.') + '</div>';
@@ -603,7 +603,7 @@ function _fsrSheet3(R, node){
 function _fsrSheet4(R, node){
   var duty = (R.analysis && R.analysis.duty) || [], raw = R.duty || [];
   var sys = R.build && R.build.sys;
-  var h = _fsrH1('Çalışma Çevrimi ve Torklar', 'Girdi, aksesuar mil torku ve yorulma katkısı');
+  var h = _fsrH1('Çalışma çevrimi ve torklar', 'Girdi, aksesuar mil torku ve yorulma katkısı');
   if(!duty.length) return h + '<div class="nofig">Çalışma çevrimi tanımlı değil.</div>';
 
   var kod = _fsrCodes(sys);
@@ -626,7 +626,7 @@ function _fsrSheet4(R, node){
   var lcHead = ['Motor devri<br>[d/d]', 'Süre payı<br>[%]', 'Sıcaklık<br>[°C]']
     .concat(yukIdx.map(function(i){ return kod[i] + '<br>[kW]'; })).concat(['Σ sürücü<br>[kW]']);
   var lcSbt = _fsrConstCols(lcHead, lc, 1), lcSade = _fsrStripCols(lcHead, lc, lcSbt);
-  h += _fsrBlk('Çalışma Çevrimi Girdisi',
+  h += _fsrBlk('Çalışma çevrimi girdisi',
     _fsrT(lcSade.head, lcSade.rows, { ilkSol: true }),
     'Sürücü gücü girdi değildir; aksesuar güçlerinin toplamı olarak hesaplanır. '
     + _fsrConstNote(lcSbt));
@@ -671,7 +671,7 @@ function _fsrSheet5(R, node){
 // ═══════════════════ SAYFA 6 — DAYANIM VE TİTREŞİM ══════════════════════════
 function _fsrSheet6(R, node){
   var duty = (R.analysis && R.analysis.duty) || [], sys = R.build && R.build.sys;
-  var h = _fsrH1('Dayanım ve Titreşim', 'Kayma emniyeti, yorulma, ömür ve burulma');
+  var h = _fsrH1('Dayanım ve titreşim', 'Kayma emniyeti, yorulma, ömür ve burulma');
   if(!duty.length) return h + '<div class="nofig">Çalışma çevrimi tanımlı değil.</div>';
   var kod = _fsrCodes(sys), sf = _frNum(R.serviceFact);
   var b2 = (sys && sys.belt) || {};
@@ -711,7 +711,7 @@ function _fsrSheet6(R, node){
       + (Number.isFinite(sf) && sf > 0 ? ', istenen ≥ ' + _frF(sf, 2) : '') + (ok ? ' ✓' : ' ✗')
       + '. Yük taşımayan kasnaklarda gerginlik oranı ≈ 1; değer marj değil kapasitedir.';
   }
-  h += _fsrBlk('Kayma Emniyet Faktörü'
+  h += _fsrBlk('Kayma emniyet faktörü'
       + (Number.isFinite(sf) && sf > 0 ? ' <span class="kvi">servis faktörü ' + _frF(sf, 2) + '</span>' : ''),
     _fsrT(slipHead, mrows, { ilkSol: true }), hukum);
   void 0;
@@ -723,7 +723,7 @@ function _fsrSheet6(R, node){
       return ['<b>' + _frEsc(kod[i]) + '</b>', _frFs(p.dEffMm, 1),
               p.contact === 'back' ? 'sırt' : 'kaburgalı', _frFs(p.sharePct, 2)];
     });
-    h += '<div class="col">' + _fsrBlk('Kaburga Yorulma Dağılımı',
+    h += '<div class="col">' + _fsrBlk('Kaburga yorulma dağılımı',
       _fsrT(['Kod', 'Efektif Ø<br>[mm]', 'Temas', 'Pay<br>[%]'], fr, { ilkSol: true }),
       'Pay, kasnak başına yorulma hasarının oranıdır. Sıralama yorulma üssünden bağımsızdır; '
       + 'mutlak paylar değildir (Not 3).') + '</div>';
@@ -741,7 +741,7 @@ function _fsrSheet6(R, node){
   // 410 px yiyorlardı; yan yana 210. Grafiğin kutusu 390 birim seçiliyor ki
   // 345 px'lik sütuna 0,885 ölçekle otursun ve puntolar 10,6 px'te kalsın —
   // sütun genişliği seçilseydi ölçek 1 kalır, yazı gövdeden büyük görünürdü.
-  h += '<div class="col">' + _fsrBlk('Kayma Emniyeti — Kasnak Başına En Düşük',
+  h += '<div class="col">' + _fsrBlk('Kayma emniyeti — Kasnak başına en düşük',
     _fsrFig(typeof _frSlipFigure === 'function' ? _frSlipFigure : null, R, 390, 200, sf),
     'Çubuk boyu: kasnak başına en düşük emniyet faktörü. Soluk çubuk yük taşımayan '
     + 'kasnaktır.') + '</div>';
@@ -761,7 +761,7 @@ function _fsrSheet6(R, node){
       + 'kalibrasyon sabiti geometri toplamının ölçeğini soğurur, üs değişince ömür '
       + 'yüzlerce kat kayar. Kaburga yorulma DAĞILIMI seçtiğiniz modeli kullanır. '
       + omurNot;
-  h += _fsrBlk('Kayış Ömrü', _fsrKVT(om), omurNot);
+  h += _fsrBlk('Kayış ömrü', _fsrKVT(om), omurNot);
 
   // TEPE YÜK DAYANIM SAYFASINDA: bir yatak/braket seçim büyüklüğü, ve
   // damgasının gerekçesi (kalibrasyon takımı yok) burada okunmalı.
@@ -829,7 +829,7 @@ function _fsrVibBlock(R){
     var f1 = _frNum(d0.firingHz), f2 = _frNum(duty[duty.length - 1].firingHz);
     var vHead = ['Açıklık', 'Boy<br>[mm]', 'f₁ aralığı<br>[Hz]', 'Çırpınma'];
     var vSbt = _fsrConstCols(vHead, rows, 1), vSade = _fsrStripCols(vHead, rows, vSbt);
-    h += _fsrBlk('Serbest Açıklık Titreşimi',
+    h += _fsrBlk('Serbest açıklık titreşimi',
       _fsrT(vSade.head, vSade.rows, { ilkSol: true }),
       rezHuk
       + 'Ateşleme frekansı bandı ' + _frFs(f1, 1) + ' – ' + _frFs(f2, 1) + ' Hz. Değerler '
@@ -960,7 +960,7 @@ function _fsrTorqueBlock(R){
   });
   var head = ['Motor devri<br>[d/d]'].concat(yuk.map(function(i){ return kod[i] + '<br>[Nm]'; }));
   var sbt = _fsrConstCols(head, rows, 1), sade = _fsrStripCols(head, rows, sbt);
-  return _fsrBlk('Aksesuar Mil Torku (ortalama)',
+  return _fsrBlk('Aksesuar mil torku (ortalama)',
     _fsrT(sade.head, sade.rows, { ilkSol: true }),
     'Q = 9549 · P ⁄ n. Ortalama çalışma torkudur; ivmelenmede atalet momentlerinden doğan '
     + 'tepe torklar dahil değildir (Not 6). ' + _fsrConstNote(sbt));
@@ -983,7 +983,7 @@ function _fsrLoadCaseBlock(R){
     return [_frF(r.engineRpm, 0), _frFs(r.vMs, 1), _frF(Tt, 0), _frF(Ts, 0), _frFs(r.sharePct, 1)];
   });
   rows.push(['<b>Σ</b>', '', '', '', '<b>' + _frFs(top, 1) + '</b>']);
-  return _fsrBlk('Yük Durumunun Yorulmaya Katkısı',
+  return _fsrBlk('Yük durumunun yorulmaya katkısı',
     _fsrT(['Motor devri<br>[d/d]', 'Kayış hızı<br>[m/s]', 'Gergin taraf<br>[N]',
            'Boş taraf<br>[N]', 'Katkı<br>[%]'], rows, { ilkSol: true }),
     'Katkı: süre payı, tur sayısı ve o devirdeki gergin/boş taraf gerginlikleri birlikte '
@@ -1006,7 +1006,7 @@ function _fsrTorsionalBlock(R){
   var fs = duty.map(function(d){ return _frNum(d.firingHz); }).filter(Number.isFinite);
   var lo = fs.length ? Math.min.apply(null, fs) : NaN, hi = fs.length ? Math.max.apply(null, fs) : NaN;
   var ic = (T.elasticHz || []).filter(function(f){ return f >= lo && f <= hi; });
-  return _fsrBlk('Sistem Burulma Titreşimi',
+  return _fsrBlk('Sistem burulma titreşimi',
     _fsrT(['Mod', 'Frekans<br>[Hz]', 'Karşılık gelen<br>motor devri [d/d]'], rows, { ilkSol: true }),
     '<b>Hüküm:</b> ateşleme bandı ' + _frFs(lo, 1) + ' – ' + _frFs(hi, 1) + ' Hz; bu bandın '
     + 'içine <b>' + ic.length + '</b> elastik mod düşüyor'

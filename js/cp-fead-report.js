@@ -95,9 +95,9 @@ function _frH2(idx){
 // Varsayılan `detailed`: alanı olmayan eski projeler bugüne kadarki
 // davranışlarını birebir korusun.
 var VE_FEAD_REPORT_KINDS = [
-  { key: 'detailed', ad: 'Detaylı Rapor',
+  { key: 'detailed', ad: 'Detaylı rapor',
     aciklama: 'Teori + türetme + bu modelin çözümü. Akademik biçim, KaTeX matematik.' },
-  { key: 'summary',  ad: 'Özet Rapor',
+  { key: 'summary',  ad: 'Özet rapor',
     aciklama: 'Beş sonuç sayfası: özet, geometri, gergi zarfı, kayma, hubload.' }
 ];
 function veFeadReportKind(node){
@@ -127,7 +127,7 @@ function getFeadReportPropertiesHTML(node){
   var R = _frResults();
   var solved = !!(R && R.ok);
   var kind = veFeadReportKind(node);
-  var kAd = (kind === 'summary') ? 'Özet Raporu' : 'Detaylı Raporu';
+  var kAd = (kind === 'summary') ? 'Özet raporu' : 'Detaylı raporu';
 
   var durum = solved
     ? '<div class="ve-fp-durum" data-d="ok"><b>Model çözüldü</b> — '
@@ -162,7 +162,7 @@ function _frKindPicker(node, kind){
       + '<b>' + k.ad + '</b><em>' + k.aciklama + '</em></button>';
   });
   ic += '</div>';
-  return _feadCard('Rapor Türü', 'hangi belge indirilecek', 'var(--accent-primary)', ic);
+  return _feadCard('Rapor türü', 'hangi belge indirilecek', 'var(--accent-primary)', ic);
 }
 
 // Doküman künyesi — antete ve §8.18'e akan dört alan. Tedarikçi sayfasının
@@ -188,7 +188,7 @@ function _frDocFields(node){
     + ' oninput="veFeadSet(\'' + node.id + '\',\'notes\',this.value)"'
     + ' placeholder="2026-08-18 | Gergi montaj konumu 5 mm sola alındı">'
     + _frEsc(d.notes == null ? '' : d.notes) + '</textarea></label></div>';
-  return _feadCard('Doküman Künyesi', 'antete ve §8.18\'e akar', 'var(--accent-warning)', ic);
+  return _feadCard('Doküman künyesi', 'antete ve §8.18\'e akar', 'var(--accent-warning)', ic);
 }
 
 // ═══════════════════ TALEP-ÜZERİNE VARLIK YÜKLEME ═══════════════════════════
@@ -353,8 +353,8 @@ function _frAntet(R, node){
 
   var h = '<div class="antet">';
   h += '<div class="band">';
-  h += '<div class="eyebrow">MFSim · FEAD Modülü · Otomatik Rapor</div>';
-  h += '<h1>Aksesuar Kayış Tahrik Sistemi (FEAD)</h1>';
+  h += '<div class="eyebrow">MFSim · FEAD modülü · Otomatik rapor</div>';
+  h += '<h1>Aksesuar kayış tahrik sistemi (FEAD)</h1>';
   h += '<div class="sub">Geometri · Gerginlik ve Hubload · Kayma Emniyeti · Kaburga Yorulması ve B10 Ömrü</div>';
   h += '</div>';
   h += '<div class="fields">';

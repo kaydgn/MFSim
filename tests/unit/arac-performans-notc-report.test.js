@@ -5,7 +5,7 @@
  *
  * Doğrulananlar:
  *  - Konvertör Eşleşmesi bölümü TK yokken GÖSTERİLMEZ (kaldırıldı).
- *  - Genel Bilgiler'de "Tork Konvertoru" satırı TK yokken gösterilmez.
+ *  - Genel Bilgiler'de "Tork konvertoru" satırı TK yokken gösterilmez.
  *  - Motor adındaki " | tork&güç" etiketi ayrıştırılır (yalnız görünen ad).
  *  - Kutu bordürü uzun adlarla bozulmaz (tüm '  |' satırları eşit genişlik).
  */
@@ -78,7 +78,7 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
     expect(section).not.toContain('KONVERTÖR EŞLEŞMESİ');
   });
 
-  test('Genel Bilgiler\'de "Tork Konvertoru" satırı TK yokken yok', () => {
+  test('Genel Bilgiler\'de "Tork konvertoru" satırı TK yokken yok', () => {
     expect(section).not.toContain('Tork Konvertörü');
   });
 
@@ -116,7 +116,7 @@ describe('TK VARSA rapor — konvertör bölümleri KORUNUR (ileride TK eklenirs
     section = report.slice(i, e > i ? e : report.length);
   });
 
-  test('TK varsa Genel Bilgiler\'de "Tork Konvertoru" satırı VAR (adıyla)', () => {
+  test('TK varsa Genel Bilgiler\'de "Tork konvertoru" satırı VAR (adıyla)', () => {
     expect(sim.reportSnapshot.hasTC).toBe(true);
     expect(section).toContain('Tork Konvertörü');
     expect(section).toContain('Test Konvertor');
@@ -135,25 +135,25 @@ describe('TK VARSA rapor — konvertör bölümleri KORUNUR (ileride TK eklenirs
   });
 });
 
-describe('Rapor ince ayarları — Shift Profili / Düşük Kademe eğim / Bölüm 4 YORUM', () => {
+describe('Rapor ince ayarları — Shift profili / Düşük Kademe eğim / Bölüm 4 YORUM', () => {
   test('kayıtlı shift profili YOKSA "Governed" gösterilir', () => {
     const sim = buildSim(null, { shiftProfile: '' });
     expect(sim.reportSnapshot.shiftProfileRegistered).toBe(false);
-    expect(veGenerateFTTxtReport(sim, 'Test')).toMatch(/Shift Profili\s*:\s*Governed/);
+    expect(veGenerateFTTxtReport(sim, 'Test')).toMatch(/Shift profili\s*:\s*Governed/);
   });
 
   test('kayıtlı profil VARSA profil adı gösterilir', () => {
     const sim = buildSim(null, { shiftProfile: 'gm8l90_perf' });
     expect(sim.reportSnapshot.shiftProfileRegistered).toBe(true);
-    expect(veGenerateFTTxtReport(sim, 'Test')).toMatch(/Shift Profili\s*:\s*gm8l90_perf/);
+    expect(veGenerateFTTxtReport(sim, 'Test')).toMatch(/Shift profili\s*:\s*gm8l90_perf/);
   });
 
   test('düşük kademe VARSA Eğim Kabiliyeti özeti düşük kademeden gelir', () => {
     const sim = buildSim(null, { twoRange: true });
     expect(sim.gradeability.low).toBeTruthy();
     const rep = veGenerateFTTxtReport(sim, 'Test');
-    expect(rep).toContain('Stall/Kalkış Eğim (Düşük)');
-    expect(rep).toContain('%80 Eğim Kabiliyeti (Düşük)');
+    expect(rep).toContain('Stall/kalkış eğim (Düşük)');
+    expect(rep).toContain('%80 Eğim kabiliyeti (Düşük)');
     expect(rep).not.toContain('Stall Eğim (Durma)');    // eski yüksek-kademe satırları kaldırıldı
   });
 
