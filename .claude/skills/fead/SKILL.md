@@ -618,6 +618,26 @@ olurdu.
     (gerçek klavye → `onchange` → kayıt kancası; dar müfettişte tek satır;
     iki temada kontrast).
 
+36. **KAYNAKLI VARSAYILAN KÖPRÜDE, ÇEKİRDEK BİREBİR** (2026-09-26, literatür
+    turu). Çekirdeğin kaynaksız ya da tek markaya bağlı sabiti köprüde
+    kapatılır (kural 1 ve 27'nin kalıbı):
+    • **Gates PK birim kütlesi** boş alanda 0,018 (`VE_FEAD_DEFAULTS.beltMassPerRib`,
+      Gates 508C el kitabı; çekirdeğin 0,0144'ü hiçbir kaynakta yok). Değer her
+      zaman geçer, künye yalnız TÜKETİLDİĞİNDE (kayış verisi açıkken) deftere
+      yazılır; panelin yer tutucusu aynı fonksiyonu okur (`veFeadBeltMassOf`).
+    • **Kord rijitliği** PK'nın öteki markalarına Gates'in ETKİN değeriyle
+      geçer ve sınır `limits`te yazılır (`veFeadCordStiffness`, üç çağrı yeri
+      `veFeadTorsionalOpt`'tan); PK dışında sayı uydurulmaz.
+    • **Çevrim kaydı kaynağının sıcaklığını taşır** (`degC`; paylaşılan
+      çevrimde çoğunluk) — yeni alan `_fdDutyDeep` beyaz listesine de girer.
+    • **§8.12: merkezkaç payı oranın İÇİNDE** (kural 28); sırt μ'nün kaynağı
+      Dayco US 8,192,315.
+    Hangi sabitin açık kaynakta karşılığı olduğu: `references/uc-katman-ve-cekirdek.md`
+    → *"açık kaynak karşılığı"*. Kapılar: `fead-defaults.test.js` ③④,
+    `fead-denetim-bulgular.test.js` → *"kord rijitliği markadan bağımsız"*,
+    `fead-duty.test.js` → *"sıcaklık kaynağından"*, `cp-fead-report.test.js` →
+    *"katılmamıştır hükmü geri gelmez"*.
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.

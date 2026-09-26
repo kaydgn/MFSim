@@ -96,6 +96,53 @@ describe('kütüphane ↔ kaynak', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SICAKLIK KAYDIN ALANI — kaynağınınki (2026-09-26 düzeltmesi). Kütüphane her
+// çevrime 90 °C yazıyordu ve dosyanın notu "14 sistemin 14'ünde 90 °C"
+// diyordu; raporların duty tablosundaki T sütunu 70 · 80 · 90 · 92 °C.
+// B10 2^(ΔT/23) ile ölçeklendiği için AG00902-4 kaynağına göre 1,83×,
+// AG00879-5 1,35× KISA ömür veriyordu — sessizce.
+describe('sıcaklık kaynağından', () => {
+  const anahtar = (rpm, dc) => rpm.join(',') + '|' + dc.join(',');
+  function kaynakSicakliklari() {
+    const out = {};
+    (function tara(o) {
+      if (!o || typeof o !== 'object') return;
+      if (Array.isArray(o.duty) && o.duty.length && o.duty[0] && o.duty[0].dcPct != null
+          && o.degC != null) {
+        const k = anahtar(o.duty.map((r) => r.engineRpm), o.duty.map((r) => r.dcPct));
+        (out[k] = out[k] || []).push(o.degC);
+      }
+      Object.keys(o).forEach((k) => { if (k !== 'duty') tara(o[k]); });
+    })(FX);
+    const b = M.VE_FEAD_EXAMPLES.BMC_FEAD_2026.solver.duty;
+    const kb = anahtar(b.map((r) => r.rpm), b.map((r) => r.dcPct));
+    (out[kb] = out[kb] || []).push(b[0].degC);
+    return out;
+  }
+
+  test('her kayıt KAYNAĞININ sıcaklığını taşıyor (paylaşılan çevrimde çoğunluk)', () => {
+    const sic = kaynakSicakliklari();
+    D.VE_FEAD_DUTY_DB.forEach((r) => {
+      const liste = sic[anahtar(r.rpm, r.dcPct)];
+      expect(liste && liste.length).toBeGreaterThan(0);
+      const sayim = {};
+      liste.forEach((t) => { sayim[t] = (sayim[t] || 0) + 1; });
+      const cogunluk = Number(Object.keys(sayim).reduce((a, b) => (sayim[b] > sayim[a] ? b : a)));
+      expect({ key: r.key, degC: r.degC }).toEqual({ key: r.key, degC: cogunluk });
+      // satırlar kaydın sıcaklığıyla doğuyor; KOPYA da alanı taşıyor
+      D.veFeadDutyRowsOf(r.key).forEach((row) => expect(row.degC).toBe(r.degC));
+      expect(D.veFeadDutyOf(r.key).degC).toBe(r.degC);
+    });
+    // Arşiv TEK sıcaklık değil — düzeltmenin var olma sebebi.
+    expect(new Set(D.VE_FEAD_DUTY_DB.map((r) => r.degC)).size).toBeGreaterThan(1);
+  });
+
+  test('çağıranın verdiği sıcaklık kaydınkini ezer', () => {
+    D.veFeadDutyRowsOf('AG00902-4', 105).forEach((row) => expect(row.degC).toBe(105));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 describe('okuyucular', () => {
   test('liste KOPYA döner — katalog güncellemesi eski projeyi bozmaz', () => {
     const a = D.veFeadDutyList();
@@ -110,7 +157,7 @@ describe('okuyucular', () => {
     expect(rows.length).toBe(6);
     rows.forEach((r) => {
       expect(r.kw).toEqual({});
-      expect(r.degC).toBe(D.VE_FEAD_DUTY_DEGC);
+      expect(r.degC).toBe(D.veFeadDutyOf('AG00686-6').degC);
       expect(Number.isFinite(r.rpm)).toBe(true);
     });
   });

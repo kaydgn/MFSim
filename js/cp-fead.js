@@ -2511,13 +2511,23 @@ function getFeadBeltPropertiesHTML(node){
 
   html += veFeadBeltCatalogCard(node, serbest);
 
+  // YER TUTUCU BOŞ ALANIN ETKİN DEĞERİDİR — çözüm de aynı fonksiyonu okuyor
+  // (veFeadBeltMassOf). Eskiden sabit '0.0196' yazıyordu: boş bırakan
+  // kullanıcı o sayıyı görüyor, çözüm ise çekirdeğin kaynaksız 0,0144'ünü
+  // kullanıyordu.
+  var _mk = (typeof veFeadBeltMassOf === 'function')
+    ? veFeadBeltMassOf(node.data && node.data.profile, node.data && node.data.brand)
+    : { value: NaN, source: '' };
   html += _feadCard('Malzeme', 'opsiyonel', 'var(--accent-success)',
       _feadGrid(node, [
-        { key:'massPerRibKgM', label:'Kaburga başına kütle [kg/m]', ph:'0.0196', step:'0.0001' }
+        { key:'massPerRibKgM', label:'Kaburga başına kütle [kg/m]',
+          ph: (_mk.value > 0 ? String(_mk.value) : ''), step:'0.0001' }
       ], 1)
-    + _feadHint('Yalnız span frekansı için. Boş bırakılırsa katalog değeri kullanılır — ama '
-        + 'Gates PK kataloğu 0.0144 kg/m/kaburga derken hem kesit tahmini hem de ölçülmüş '
-        + 'frekans haritasından geri-hesap <b>0.0196</b> veriyor. Frekans önemliyse elle girin.'));
+    + _feadHint('Yalnız açıklık frekansı ve çırpınma için. Boş bırakılırsa '
+        + (_mk.value > 0 ? '<b>' + _feadEsc(String(_mk.value).replace('.', ',')) + '</b> kullanılır ('
+            + _feadEsc(_mk.source) + '). ' : 'katalog değeri kullanılır. ')
+        + 'Yayımlanmış PK değerleri 0,018–0,023 aralığında; Gates HD raporunun frekans '
+        + 'haritasından geri-hesap 0,0196. Ölçülmüş bir değeriniz varsa girin.'));
   var _mal = html;
 
   var sekmeler = [{ k:'pro', ad:'Profil',   govde: _pro },
