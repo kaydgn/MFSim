@@ -231,7 +231,10 @@ function showNodeProperties(node) {
   if(node.customName && node.def && node.def.name && node.customName !== node.def.name)
     html += '<div class="ve-prop-tip">' + node.def.name + '</div>';
   html += '</div>';  // ve-prop-meta
-  html += '<button class="ve-prop-del" onclick="deleteSelectedNodes()" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
+  // Silinmez tip (componentDefs.noDelete — FEAD kayışı) çöp kutusu göstermez:
+  // basılınca yalnız "silinmez" diyecek bir düğme, dinlenmede bir yalandır.
+  if(!(componentDefs[node.type] || {}).noDelete)
+    html += '<button class="ve-prop-del" onclick="deleteSelectedNodes()" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
   html += '</div>';  // ve-prop-identity
   
   // Node tipine göre özel içerik

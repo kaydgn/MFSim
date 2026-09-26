@@ -683,13 +683,13 @@ function getGearboxPropertiesHTML(node) {
     html += '<div class="sw-pkg-body">';
     
     html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
-    html += '<table class="ve-pnl-tbl">';
+    html += '<table class="ve-pnl-tbl ve-izgara">';
     html += '<thead>';
     html += '<tr>';
-    html += '<th style="width:18%;">Vites</th>';
-    html += '<th style="width:24%;">Oran<br>(i_gear)</th>';
-    html += '<th style="width:24%;">Verim<br>(η) [%]</th>';
-    html += '<th style="width:14%;">Mod</th>';
+    html += '<th class="lbl" style="width:18%;">Vites</th>';
+    html += '<th class="num" style="width:24%;">Oran<br>(i_gear)</th>';
+    html += '<th class="num" style="width:24%;">Verim<br>(η) [%]</th>';
+    html += '<th style="width:14%; text-align:center;">Mod</th>';
     html += '<th style="width:12%;"></th>';
     html += '</tr></thead>';
     html += '<tbody id="ve-ftgear-table-' + node.id + '">';
@@ -840,14 +840,17 @@ var VE_FT_GB_DEFAULT_GEARS = [
 ];
 
 function getVEFTGearRowHTML(nodeId, name, ratio, eff, lockup) {
+  // Izgara hücresi satır içi zemin/çerçeve TAŞIMAZ (table.ve-izgara, 13·B):
+  // kutu fare üstünde ve yazarken CSS'ten gelir; satır içi stil o durumu
+  // ifade edemiyordu ve kutu dinlenmede kalıyordu.
   var html = '<tr>';
-  html += '<td class="tight"><input type="text" value="' + (name || '') + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (ratio !== undefined && ratio !== '' ? ratio : '') + '" step="0.001" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (eff !== undefined && eff !== '' ? eff : '') + '" step="0.01" min="0" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="text" class="ad" value="' + (name || '') + '" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="number" value="' + (ratio !== undefined && ratio !== '' ? ratio : '') + '" step="0.001" min="0" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="number" value="' + (eff !== undefined && eff !== '' ? eff : '') + '" step="0.01" min="0" max="100" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
   // Lockup: shift profilinden otomatik belirlenir, kullanıcı değiştiremez
   var lockupLabel = lockup ? '<span style="color:var(--accent-success); font-weight:600;">L</span>' : '<span style="color:var(--text-muted);">C</span>';
   html += '<td class="tight" style="font-size:var(--fs-tiny);">' + lockupLabel + '<input type="hidden" value="' + (lockup ? 'true' : 'false') + '"></td>';
-  html += '<td class="tight"><button onclick="removeVEFTGearRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:var(--fs-tiny); background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;" title="Sil">×</button></td>';
+  html += '<td class="tight"><button class="ve-row-del" onclick="removeVEFTGearRow(this, \'' + nodeId + '\')" title="Satırı sil">×</button></td>';
   html += '</tr>';
   return html;
 }

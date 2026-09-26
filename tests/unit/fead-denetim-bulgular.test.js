@@ -24,7 +24,7 @@ const DEG = Math.PI / 180;
 // eşitleniyor, yani çalışma noktası kurgu gereği biliniyor.
 function kurSys(o) {
   o = o || {};
-  const belt = { profile: 'PK', brand: 'GATES', ribs: 6, massPerRibKgM: 0.0196 };
+  const belt = { profile: o.profile || 'PK', brand: o.brand || 'GATES', ribs: 6, massPerRibKgM: 0.0196 };
   const TC = [430, 270];
   const P = [
     { name: 'KRANK', od: 180, contact: 'grooved', x: 0, y: 0, crank: true, inertiaKgM2: 0.060 },
@@ -410,5 +410,57 @@ describe('bulgu 4·5·6 — mevcut korumalar yerinde duruyor', () => {
     expect(F.FATIGUE.distributionNote).toBeUndefined();
     // Toplam yine de sağlam — model değil defter eksik.
     expect(d.perPulley.reduce((a, p) => a + p.sharePct, 0)).toBeCloseTo(100, 9);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KORD RİJİTLİĞİ MARKADAN BAĞIMSIZ (PK) — 2026-09-26 literatür turu
+// ═══════════════════════════════════════════════════════════════════════════
+// Çekirdeğin BELT_DB'sinde `cordStiffnessNPerRib` yalnız Gates PK'da var.
+// Optibelt / ContiTech seçilince çekirdek atıyordu ve burulma sonucu ÜÇ çağrı
+// yerinde birden yoktu. Değer Gates Mode 1'e uydurulmuş ETKİN bir parametre
+// (literatürün ölçtüğü EA'nın 2–4 kat altında); aynı PK geometrisinde öteki
+// markaya da o değer geçer ve sınır sonuçta yazılır. PK DIŞINDA uydurulmaz.
+describe('kord rijitliği markadan bağımsız (PK)', () => {
+  const ref = F.BELT_DB.PK.GATES.cordStiffnessNPerRib;
+
+  test('çekirdek Gates dışı PK markasında gerçekten ATIYOR — düzeltmenin sebebi', () => {
+    ['OPTIBELT', 'CONTITECH'].forEach((marka) => {
+      const { sys } = kurSys({ brand: marka });
+      expect(F.BELT_DB.PK[marka].cordStiffnessNPerRib).toBeUndefined();
+      expect(() => F.torsionalModel(sys, {})).toThrow(/kord rijitligi yok/);
+    });
+  });
+
+  test('köprü Gates PK\'nın etkin değerini BİREBİR geçer — üç çağrı yeri de', () => {
+    ['OPTIBELT', 'CONTITECH'].forEach((marka) => {
+      const b = kurBuild({ brand: marka });
+      const o = veFeadTorsionalOpt(b, {});
+      expect(o.cordStiffnessN).toBe(ref * 6);
+      // aynı sayının açıkça verildiği hâlle özdeş sonuç
+      const acik = F.torsionalModel(b.sys, { cordStiffnessN: ref * 6 }).elasticHz;
+      expect(veFeadTorsionalNorm(F.torsionalModel(b.sys, o)).elasticHz).toEqual(acik);
+      // mod listesi ve animasyon aynı seçenek üreticisinden geçiyor
+      const L = veFeadVibModeList(b, {});
+      expect(L && L.length).toBeGreaterThan(0);
+      expect(L[0]).toBeCloseTo(acik[0], 9);
+      expect(veFeadVibModePayload(b, 0, 1, {})).toBeTruthy();
+    });
+  });
+
+  test('Gates kaydında hiçbir şey DEĞİŞMİYOR (seçenek eklenmez)', () => {
+    const b = kurBuild({ brand: 'GATES' });
+    expect(veFeadTorsionalOpt(b, {}).cordStiffnessN).toBeUndefined();
+    expect(veFeadCordStiffness(b.sys).devralindi).toBe(false);
+  });
+
+  test('PK DIŞINDA sayı uydurulmaz, sebep Türkçe yazılır', () => {
+    const { sys } = kurSys({ profile: 'PJ', brand: 'OPTIBELT' });
+    expect(veFeadCordStiffness(sys)).toBeNull();
+    let msg = '';
+    try { F.torsionalModel(sys, {}); } catch (e) { msg = e.message; }
+    const tr = veFeadTranslateError(msg);
+    expect(tr).toMatch(/kord rijitliği kalibrasyonu yok/);
+    expect(tr).not.toMatch(/BELT_DB|opt\.cordStiffnessN/);
   });
 });

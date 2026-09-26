@@ -55,6 +55,20 @@ olurdu.
    `veFeadMmToCanvas`, `veFeadSyncMmFromCanvas`, `veFeadSyncCanvasFromMm`,
    `veFeadNodeCenter`, `veFeadDragTensioner`, `veFeadCoordLinkOn`). Kapı:
    `cp-fead.test.js` → *"kasnak KUTULARI ve kanvas↔mm köprüsü KALDIRILDI"*.
+   **KAYIŞIN DA KUTUSU YOK** (2026-09-26, kullanıcı isteği: *"'kayış
+   özellikleri' bileşenini de kaldırmanı istiyorum. Onun yerine kanvas
+   üzerindeki kayış tıklanabilir olacak"*). Aynı kalıp: düğüm modelde,
+   penceresi çizimdeki kayıştan açılır (`veFeadKayisAc`) — görünmez 12 px'lik
+   isabet yolu kasnak halkalarının ALTINDA (sarım yayındaki tık kasnağındır)
+   — ya da paftanın künyesinden. Paletten de çıktı, dolayısıyla **her FEAD
+   topolojisinde tek kayış VAR**: açılış yüzeyi kurar, eski kayıtta yoksa
+   açılışta geri-al tabanına eklenir (`veFeadKayisGaranti`), silinmez
+   (`componentDefs.noDelete`). **Örnek kurucusu devraldığı kayışa örneğin
+   verisini TAM yazar** — yazmasaydı kayış açılışın boş künyesiyle kalırdı ve
+   model başka bir kayışı çözerdi (sessiz). Kapılar: `fead-cizim-masasi.test.js`
+   → *"kayış çizimde tıklanır"*, `cp-fead.test.js` → *"açılışın kayışı
+   devralınır"* + *"FEAD editörü açılışı"*, `fead-cizim-masasi.spec.js` →
+   *"KAYIŞA TIKLA"*.
 5. **BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı
    isteği). `veFeadOpenEditor` KAYITSIZ bir alt topoloji kurduğunda
    (`_yeniTopoloji` bayrağı) `veFeadWizOpenAny()` çağrılır; kurulmuş bir modele
@@ -186,6 +200,11 @@ olurdu.
     - **KAYIŞ BOYU VE Σsarım TABLODA DEĞİL, KARTIN ROZETİNDE** (sağ üst):
       ikisi de satıra değil çevrime ait; tablo tekrarlamaz
       (`fead-spin-flip.test.js`).
+    - **BAŞLIKTA KAYIŞ KÜNYESİ BİR DÜĞME + KİP ANAHTARI** (2026-09-26): künye
+      Kayış Özellikleri penceresini açar (kayışın kutusu yok, kural 4);
+      yanındaki SERBEST/SABİT anahtarı eski kayış kutusunun rozeti
+      (`veFeadKipDugmeHTML`). Kilitliyken `aria-disabled`, `disabled` DEĞİL —
+      devre dışı düğme ipucunu göstermiyor, kullanıcı nedenini okuyamazdı.
     - **YÖN BİR METİN DÜĞMESİ** (simge + Sağ/Sol, tık çevirir) — seçilen
       tasarımın hücresi. Seçenek sayısı ikiden çıkarsa geri alınır. Gerginin
       ✕'i pasif (gergi tekil).
@@ -666,6 +685,26 @@ olurdu.
     Kapılar: `fead-sekme-durum.test.js` + `tests/e2e/fead-sekme-durum.spec.js`
     (gerçek klavye → `onchange` → kayıt kancası; dar müfettişte tek satır;
     iki temada kontrast).
+
+36. **KAYNAKLI VARSAYILAN KÖPRÜDE, ÇEKİRDEK BİREBİR** (2026-09-26, literatür
+    turu). Çekirdeğin kaynaksız ya da tek markaya bağlı sabiti köprüde
+    kapatılır (kural 1 ve 27'nin kalıbı):
+    • **Gates PK birim kütlesi** boş alanda 0,018 (`VE_FEAD_DEFAULTS.beltMassPerRib`,
+      Gates 508C el kitabı; çekirdeğin 0,0144'ü hiçbir kaynakta yok). Değer her
+      zaman geçer, künye yalnız TÜKETİLDİĞİNDE (kayış verisi açıkken) deftere
+      yazılır; panelin yer tutucusu aynı fonksiyonu okur (`veFeadBeltMassOf`).
+    • **Kord rijitliği** PK'nın öteki markalarına Gates'in ETKİN değeriyle
+      geçer ve sınır `limits`te yazılır (`veFeadCordStiffness`, üç çağrı yeri
+      `veFeadTorsionalOpt`'tan); PK dışında sayı uydurulmaz.
+    • **Çevrim kaydı kaynağının sıcaklığını taşır** (`degC`; paylaşılan
+      çevrimde çoğunluk) — yeni alan `_fdDutyDeep` beyaz listesine de girer.
+    • **§8.12: merkezkaç payı oranın İÇİNDE** (kural 28); sırt μ'nün kaynağı
+      Dayco US 8,192,315.
+    Hangi sabitin açık kaynakta karşılığı olduğu: `references/uc-katman-ve-cekirdek.md`
+    → *"açık kaynak karşılığı"*. Kapılar: `fead-defaults.test.js` ③④,
+    `fead-denetim-bulgular.test.js` → *"kord rijitliği markadan bağımsız"*,
+    `fead-duty.test.js` → *"sıcaklık kaynağından"*, `cp-fead-report.test.js` →
+    *"katılmamıştır hükmü geri gelmez"*.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

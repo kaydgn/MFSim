@@ -691,10 +691,21 @@ var componentDefs = {
   // topolojiye bağlanmaz. İç topolojide tek kopya (maxInstances:1) durur ve
   // kayış tipini/kesitini/uzunluğunu taşır. Sembol: poly-V kesiti (sırtlar
   // aşağı bakar — kasnak tarafı) + künye satırları.
+  //
+  // KANVASTA KUTUSU YOK (2026-09-26, kullanıcı isteği: *"'kayış özellikleri'
+  // bileşenini de kaldırmanı istiyorum. Onun yerine kanvas üzerindeki kayış
+  // tıklanabilir olacak tıpkı diğer bileşenler gibi."*). Kasnaklarla aynı
+  // kalıp: düğüm MODELDE durur (panel, geri-al, kayıt, göç), penceresi Kayış
+  // Yolu çizimindeki KAYIŞA tıklanınca açılır (cp-fead.js → veFeadKayisAc).
+  // Paletten de çıktı: her FEAD topolojisinde tek kayış var ve onu açılış
+  // yüzeyi kuruyor (veFeadPopulateStarter · veFeadKayisGaranti).
   'fead-belt': {
     name: 'Kayış Özellikleri',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="14" y="12" width="72" height="76" rx="6" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5"/><path d="M24 30 H76 V40 L67 52 L58 40 L49 52 L40 40 L31 52 L24 40 Z" fill="var(--accent-warning, #8a6a12)" fill-opacity="0.18" stroke="var(--accent-warning, #8a6a12)" stroke-width="3" stroke-linejoin="round"/><line x1="26" y1="66" x2="74" y2="66" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="76" x2="58" y2="76" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isFeadBelt: true, maxInstances: 1,
+    inputs: 0, outputs: 0, noCanvasBox: true, isFeadBelt: true, maxInstances: 1,
+    // SİLİNMEZ (map.js deleteSelectedNodes · cp-core.js): kutusu yokken
+    // silinse kullanıcının onu geri kurabileceği bir yol kalmazdı.
+    noDelete: 'Kayış modelin parçası, silinmez — özelliklerini penceresinden değiştirin.',
     defaultWidth: 60, defaultHeight: 54
   },
   'fead-solver': {
@@ -1572,6 +1583,13 @@ function veSlaytKaynak(ad) {
 function _veSlaytKarilmis() {
   var liste = (typeof VE_KARSILAMA_GORSELLER !== 'undefined' && VE_KARSILAMA_GORSELLER)
     ? VE_KARSILAMA_GORSELLER.slice() : [];
+  // Ekrana göre süzülür (kullanıcı kararı 6·2): ×1,25'ten fazla büyüyen kare
+  // dönmez. Açılış ekranı (js/loader.js › paintPhoto) AYNI süzgeçten geçer —
+  // yoksa açılış karesi slaytta olmayan bir kare olabilirdi.
+  if(typeof veKarsilamaEkranaUygun === 'function' && typeof veKarsilamaEkranOlcusu === 'function') {
+    var eo = veKarsilamaEkranOlcusu();
+    liste = veKarsilamaEkranaUygun(liste, eo[0], eo[1]);
+  }
   for(var i = liste.length - 1; i > 0; i--) {   // Fisher-Yates
     var j = Math.floor(Math.random() * (i + 1));
     var t = liste[i]; liste[i] = liste[j]; liste[j] = t;

@@ -60,7 +60,9 @@ dışında sistematik 0.55×.
 
 `CALIBRATION.muEffGrooved = 0.90` (kaburgalı, **etkin** = düz-kayış eşdeğeri;
 Euler–Eytelwein'e doğrudan girer, ayrıca kama düzeltmesi uygulanmaz) ve
-`muBackside = 0.35` (sırt, **kalibre edilmemiş**).
+`muBackside = 0.35` (sırt, **kalibre edilmemiş** — ama artık kaynaksız da değil:
+Dayco US 8,192,315 B2, SAE J2432 odası, kuru, düz sırt kasnağı: geleneksel
+sırtlarda %10 kaymada 0,36–0,42; 0,35 hafif muhafazakâr).
 
 **0,90 DOĞRU ve emniyetli tarafta** — literatür taraması (2026-09) üç bağımsız
 ölçümle tutarlı buldu ve üçünün de altında: Gerbert & Hansson 1990 ham μ 0,31 →
@@ -85,12 +87,19 @@ sürece geçerlidir; temas başlayınca etkin μ düz-kayış değerine doğru i
 duruyor (kural 1) — düzeltmesi de dışarıdan gelmeli. Kayıt burada, ve doğru
 köken **rapora basılıyor** (§8.12) ki okuyucu yanlış gerekçeyi görmesin.
 
-**İKİ AÇIK SINIR, ikisi de §8.12'de yazılı:** (1) `e^(μφ)` bir **tam kayma**
+**İKİ SINIR, ikisi de §8.12'de yazılı:** (1) `e^(μφ)` bir **tam kayma**
 (gross slip) eşiğidir, "hiç kayma yok" değil — sürünme her yük düzeyinde var
-(Balta ve ark. 2015; Leamy & Wasfy 2002). (2) **Merkezkaç terimi yok**: ölçüt
-`(T₁−T_c)/(T₂−T_c) ≤ e^(μφ)` olmalı, `T_c = m′v²`. İhmal gereken μ'yü DÜŞÜK
-gösteriyor (emniyetsiz yön) ve devirle büyüyor — 8PK/ø160/φ=2,5 rad için
-hesaplandı: 1500 d/d %1,2 · 2500 d/d %3,4 · 3500 d/d %7,5.
+(%0,2–1,2 hız kaybı, Balta ve ark. 2015; Leamy & Wasfy 2002). (2) **Merkezkaç
+payı oranın İÇİNDE** (kural 28): zincir gergi dengesinden gelir, hareketli
+kayışta kasnağa binen kuvvet `2(T − m′v²)·sin(φ/2)` ve yay onu dengeler — yani
+zincirin gerginliği zaten `T − m′v²`, oran literatürün düzeltilmiş ölçütü
+`(T₁−m′v²)/(T₂−m′v²) ≤ e^(μφ)`'nin kendisi. Kalan etki gerginin etkinliği
+(iyi tahrikte η ≈ 0,78; Kong 2003, Beikmann 1997'den): etkin gerginlik
+`(1−η)·m′v²` kadar düşer, SF birkaç yüzde iyimser.
+> **2026-09-26'ya kadar burada ve §8.12'de TERSİ yazıyordu** ("merkezkaç
+> terimi yok, ihmal μ'yü düşük gösteriyor"). Kural 28 ile çelişiyordu; zinciri
+> gerçek gerginlik sanmaktan doğmuştu. Kapı: `cp-fead-report.test.js` →
+> *"katılmamıştır hükmü geri gelmez"*.
 
 **Gates bu sayıyı doğrulayamaz:** 11 raporun metin katmanında `friction` geçişi
 **sıfır** — Gates bir μ basmıyor, dolayısıyla 2095 değerlik kapı kaymayı
@@ -101,6 +110,32 @@ Kapı: `fead-core.test.js` → *"CALIBRATION — sürtünme katsayıları"* (de�
 ve `opt.muGrooved` geçiş yolunun SF'yi `e^(Δμ·φ)` oranında sürdüğünü ölçer) +
 `cp-fead-report.test.js` → *"§8.12 — sürtünme katsayısının künyesi"* (değer
 CALIBRATION'dan okunuyor, rapora kopyalanmamış).
+
+##### Gates kökenli sabitlerin açık kaynak karşılığı (2026-09-26 literatür turu)
+
+Hesap YÖNTEMLERİNİN hiçbiri Gates'e ait değil: geometri, gergi dengesi
+(Olatunde 2008 denk. 3.8 ile özdeş), gerilme zinciri, hubload, kapstan, hareketli
+tel (Mote 1965; Wickert & Mote 1990), burulma yapısı (Hwang ve ark. 1994;
+Beikmann ve ark. 1996). 2095 değerin 2028'i Gates'in girdileriyle Gates'in
+çıktısını yeniden üretiyor — Gates orada cevap anahtarı. Gates'e UYDURULMUŞ ya
+da Gates'ten OKUNMUŞ sayıların hükmü:
+
+| Sabit | Değer | Açık kaynak | Hüküm |
+|---|---|---|---|
+| μ kaburgalı · sırt | 0,90 · 0,35 | Gerbert 1990, Lotfy 1996, Kubas 2019 · Dayco US 8,192,315 | kaynaklı |
+| Kayış giriş açısı sınırı | 0,90° | Bando US 7,899,651 ("genelde 0,5–1,0°") | aralıkta |
+| `kFlat` | 0,70 | yok; Bando geometrisi ≈ (L₁+L₂)/L₃ | desteklenmiyor, kalibre değil |
+| Kavis payı | 0 | Beikmann/Zhang/Kong: `EA/l_i` (Litens 0,5 kullanıyor) | kaynaklı |
+| Yorulma çap üssü m | 5,6 | Gates US 3,956,929: %14 çap → 2× ömür ⇒ 5,29 | mertebe |
+| ΔT½ | 23 °C | Gates (V-kayış): ortamda ~20 °C, içte 10 °C | mertebe; tek 70 °C raporu (AG00902-1275) seçtiriyor |
+| Kord rijitliği | 11 kN/kaburga | ölçülen EA 18–43 kN/kaburga (Čepon 2011, Michon 2006, Shangguan 2013); dinamik ≥ statik | ETKİN parametre — Gates'e bağlı |
+| Sırt ağırlığı w; B10 takımı (C, 0,96, pencere, 0,55×) | — | PK için yayımlanmış sabit yok | Gates'e bağlı |
+| Gates PK `h_b`/`h_r` | 1,2 / 1,1 | ISO 9981 nominal b_e 2,0 "kayışa özgü"; ContiTech 1,5/1,5; Optibelt 1,6 | kayışa özgü (her marka kendi kataloğundan) |
+| Tolerans ±5/±6 @1400 · aşınma %0,7 · boy ofseti 1,3 mm | — | kamu tablolarının eşikleri 1000/1200/1500; take-up bütçesi %1,6–3; ofset kuralı yok | Gates'e özgü |
+| Gates PK birim kütlesi | 0,0144 | Gates 508C: 18 g/m/kaburga (Bando 0,018, ContiTech 0,021) | köprüde 0,018 — kural 36 |
+
+Ölçümler (duyarlılık taramaları, kaynak bağlantıları) PR gövdesinde ve o turun
+Artifact'ında; burada yalnız hüküm.
 
 ##### Burulma modeli — çekirdeğe SONRADAN girdi, kapısı AYRI
 

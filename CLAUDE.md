@@ -79,7 +79,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   adının hangi resmin hangisi olduğunu söylememesi. **Üretilen sayfa git'e dâhil
   DEĞİL** (28 kare gömülü, klasörle bayatlar); künye elle yazılır ama klasörle iki
   yönlü bağlıdır (`tests/unit/karsilama-secici.test.js`).
-- `tools/karsilama-webp.js` — slayta **yeni kare ekleme**: JPEG/PNG → webp + liste.
+- `tools/karsilama-webp.js` — slayta **yeni kare ekleme**: JPEG/PNG → webp + liste
+  + **kaynak ölçüsü** (`VE_KARSILAMA_OLCU`, webp başlığından; elle yazılmaz).
+  Ekranda ×1,25'ten fazla büyüyen kare dönmez (kararı 6·2) — süzgeç bu ölçüyü okur.
   Numara devam eder, **silinen karenin numarası boş kalır** — 28 dosyayı yeniden
   adlandırmak kullanıcının ekranda öğrendiği numaraları geçersiz kılardı.
 - `tools/karsilama-bul.js` + `tools/karsilama-aday-secici.{js,html}` — karşılama
@@ -139,7 +141,7 @@ paylaşır (stack + `node.data.subTopology` + breadcrumb çipi + sidebar kapsam�
 |-------|--------------|-----------------|-----------|--------------------|
 | Araç Performans | `arac-performans` | `arac-performans` | `js/cp-arac-performans.js` | Güç akışı |
 | Takoz Çökme-Titreşim | `mount-analysis` | `mount-analysis` | `js/cp-mount.js` | Salt görsel (çözücü tipe göre toplar) |
-| FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **YOK — kasnakların kanvasta KUTUSU BİLE yok** (`noCanvasBox`). Kasnak Kayış Yolu **ÇİZİMİNDE** seçilir, sürüklenir ve paletten kayışın üstüne bırakılarak eklenir (**Çizim Masası**); kesin sayı ve sıra **Kayış Tablosu'nda** — kartın İÇİNDE, çizimin altında (**Pafta**; kanvas bileşeni değil, kartın katmanı: geometri ön ayarında açık, kartın "Tablo" düğmesi açar/kapar; tablolu kart 640 px, tablosuz 440). Kanvas kartının **TEK tipi var** (`fead-layout`); geometri ↔ işletme ayrımı bir **ÖN AYAR** (`node.data.katOn`), tip değil; kartta **yatay bant YOK** — denetimler çizimin üstünde yüzer. Kart **çoğaltılabilir** ve her kart kendi KATMANLARINI seçer (`node.data.kat`) |
+| FEAD (kayış-kasnak) | `fead-analysis` | `fead-analysis` | `js/cp-fead.js` | **YOK — kasnakların ve kayışın kanvasta KUTUSU BİLE yok** (`noCanvasBox`). Kasnak Kayış Yolu **ÇİZİMİNDE** seçilir, sürüklenir ve paletten kayışın üstüne bırakılarak eklenir (**Çizim Masası**); kayışa tıklamak Kayış Özellikleri'ni açar (tek kayış her topolojide VAR, silinmez); kesin sayı ve sıra **Kayış Tablosu'nda** — kartın İÇİNDE, çizimin altında (**Pafta**; kanvas bileşeni değil, kartın katmanı: geometri ön ayarında açık, kartın "Tablo" düğmesi açar/kapar; tablolu kart 640 px, tablosuz 440). Kanvas kartının **TEK tipi var** (`fead-layout`); geometri ↔ işletme ayrımı bir **ÖN AYAR** (`node.data.katOn`), tip değil; kartta **yatay bant YOK** — denetimler çizimin üstünde yüzer. Kart **çoğaltılabilir** ve her kart kendi KATMANLARINI seçer (`node.data.kat`) |
 
 Yeni bir modül eklerken dokunulan yerler: `js/components.js` (`componentDefs`
 tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
@@ -246,6 +248,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kaydırılamaz — olay oradan kabarıyor. Koşul ÇİFT: `overflow` izin veriyor
   **ve** içerik sığmıyor; yalnız birincisi taşması olmayan her kapta tekerleği
   yutar. Kapı: `kart-yuzey.spec.js` → *"TEKERLEK"* (sentetik kart).
+- **SİLİNMEZ TİP KENDİNİ BEYAN EDER** (`componentDefs.noDelete` = sebep
+  metni): genel silme yolu (`map.js` → `deleteSelectedNodes`) onu ayıklayıp
+  sebebi söyler, pencere çöp kutusunu çizmez (`cp-core.js`). Delete tuşu,
+  çöp kutusu ve toplu seçim aynı kapıdan geçer. İlk kullanıcısı kutusuz FEAD
+  kayışı. Kapı: `fead-cizim-masasi.test.js` → *"kayış SİLİNMEZ"*.
 - **KARTIN EN KÜÇÜK ÖLÇÜSÜNÜ TİPİ SÖYLER** (`componentDefs.minWidth/minHeight`
   → `js/node-resize.js` `veNodeMinSize`). Genel 50×50 tabanı içeriği olan bir
   kart için sessiz kayıp üretir (gövde tamamen örtülür, alanlar işaretsiz
@@ -253,8 +260,18 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sürüklemede hem AÇILIŞTA uygulanır (yoksa kuraldan önce kaydedilmiş kart
   bozuk açılır). Kapı: `fead-table.test.js` (mekanizma, sentetik tip) +
   `kart-yuzey.spec.js` → *"EN KÜÇÜK ÖLÇÜ"*.
+- **MİNİMAP İÇERİĞİ ÖRTMEZ** (`js/minimap.js` → `_mmOtoDenetle`). Açık kutu
+  bir karta, adına ya da nota değiyorsa köşedeki düğmesine iner, köşe
+  boşalınca açılır; soluk durmak yetmiyordu (soluk kutu tıklamayı yutuyor).
+  Ölçü AÇIK hâlin kutusuyla (`--mm-w/--mm-h`), o anki kutuyla değil — yoksa
+  titrer. Oto iniş tercihi yazmaz; tuval pencere boyu değişmeden daraldığı
+  için (müfettiş sütunu) kap gözlenir. Kapı: `minimap-ortmez.test.js` +
+  `minimap-ortmez.spec.js`.
 - **TEK YAZI TİPİ: `--font-sans`** — Windows'ta Segoe UI (kullanıcı kendi
   ekranında seçti, 2026-09-25), başka yerde gömülü Inter (`css/fonts.css`).
+  Yığının başı `'MFSim Segoe'`: yalnız `local()` adlarından kurulu takma aile,
+  Segoe UI'da olmayan 500'ü Semibold'la çizer (kararı 5·B); hiçbir şey
+  gömmez, Windows dışında düşer.
   Başlık, gövde, etiket, sayı, form ve TUVAL dâhil. İNDİRİLEN BELGELER gömülü
   Inter'le yazar (A4 düzenleri onunla ölçüldü); `veThemeFontFaceCss()` yığındaki
   GÖMÜLÜ aileyi gömer, ilk aileyi değil. Rakam hizası `tabular-nums` ile. Tuval
@@ -279,6 +296,14 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   özgü dal YAZILMAZ — Takoz'un 42 satırlık dağınık dalı ikinci modülde
   kopyalanacaktı ve biri zaten unutulmuştu ("Sonuçları Temizle" FEAD'i
   silmiyordu). Kapı: `fead-sonuclar-sekme.test.js` + `mount-results-tab.test.js`.
+- **DENETİM DİLİ TEK** (kullanıcı kararları 11–14, 2026-09-26). Liste okunu
+  TEK kural çizer (`select:not([multiple])`, çizgi ok, `--text-muted`); sayı
+  alanı oksuz; kaydırma çubuğu `::-webkit-scrollbar` (standart `scrollbar-*`
+  yalnız Firefox bloğunda — Chromium 121+ onu kapatıyor); veri ızgarası
+  (`table.ve-izgara`) kutuyu yalnız fare/odakta gösterir, girdisi satır içi
+  zemin/çerçeve TAŞIMAZ; raporda sayı sütunu başlığıyla sağa, hücre rengi
+  `!important` ile ezilmez. Kapı: `denetim-dili` · `veri-izgara` ·
+  `rapor-hiza` (test + spec) · `kaydirma-cubugu.spec.js` · `mufettis-sigma.spec.js`.
 - **Artifact önizlemesi kaldırıldı**, ama `build.js`'teki
   `maskRawTextKeepOffsets` **KALIR**: rapor üreticileri HTML şablonu bastığı
   için gerçek belgede sahte `</body>` geçiyor ve kalkan onun içindir.
@@ -494,8 +519,8 @@ FEAD satırları modül skill'ine taşındı
 | `tests/unit/topology-wiring.test.js` | `js/ui-core.js` `veTryConnectPorts` + `js/connections.js` topoloji imzası | **Kanvasta tel çekmek**: geçersiz port çifti (çıkış→çıkış, giriş→giriş, kendine) bağlantı kurmaz ama SESSİZ de kalmaz; doğru çift her iki yönden de aynı bağlantıyı kurar; topoloji imzası tel/düğüm değişince değişir, düğüm SÜRÜKLENİNCE değişmez (kart 30 karede 0 kez yeniden kurulur) |
 | `tests/unit/fead-table.test.js` | `js/cp-fead.js` Kayış Tablosu (Pafta) + `js/fead-model.js` sıra | **Kasnakların sayısal giriş yüzeyi — 2026-09-26'dan beri Kayış Yolu kartının PAFTASI**: sütun kimlikleri kullanıcının hesap sayfasına karşı ölçülü (efektif çap = OD+2·hb / OD+2·hr, Σişaretli sarım 360°, L = Σspan + Σ(sarım·r)); türetilen sütunlar ÇEKİRDEKTEN; girdi sütunları geometri çözülemese de dolu; virgüllü ondalık (`63,5` → 63.5); satır taşıma ve sürücü kilidi; Dönüş Yönü METİN DÜĞMESİ ve `contact` yazar; ekle/sil (gergi tekil, ekleme gerginin önüne, `saveState` mutasyondan önce); görünüm CSS'te, durum kuralları jetondan, ölçü sabitleri CSS'le birebir; tazeleme TEK KAPIDAN ve bir kare sonra — ODAK ve yazılmamış metin korunur; **açıklık ön ayarın alanı** (`tablo`; düğme ön ayara dönünce alanı SİLER, ön ayar uygulamak temizler); **kart ölçüsü tabloyu izler** (440 ↔ 640 yalnız varsayılan ölçüde, sağdaki komşu kayar) ve şema 8 göçü DOM'a dokunmadan; paftanın boyu satırlardan (tavan %55, taban iki satır); göbekte satır numarası yalnız tablo açıkken; Enter alttaki satırın aynı sütunu; pafta mousedown'ı yutar; ad düğmesi paneli AÇAR; **tablo bir kanvas bileşeni DEĞİL** (tip · palet · panel yok) |
 | `tests/e2e/fead-tablo.spec.js` + `fead-sihirbaz-tablo.spec.js` | Kayış Tablosu — Pafta (gerçek tarayıcı) | **Pafta**: geometri kartının çiziminin altında ve çubuğun üstünde (işletme kartında yok); gerçek `63,5` yazımı modeli ve çözümü değiştirir; Sekme ve Enter odağı düşürmüyor; satır oku, sürücü kilidi, yön düğmesi (efektif çap +0,2 mm), sil/ekle; **Tablo düğmesi** kartı 640 ↔ 440 çeviriyor ve komşu kayıyor; fare/odak/seçili satır CSS'ten, çözüm sütunu oyuk, satır ↔ iki çizimde işaret; **1366×768 · 1920×1080**: tuval kısalmıyor, kartlar görünür, tablo kartı geniş, yatay kaydırma yok, **hiçbir hücre içeriğini kesmiyor**, yazı çizimin ad etiketiyle orantılı (1920'de ≥ 12 px); hücreye basmak kartı taşımıyor, tekerlek listeyi kaydırıyor, eklenen satır görünür; arka plan kaydından sonra tablo yerinde, ana topolojide tablo yok; Ctrl+Z örneği TEK adımda geri alıyor ve açılış kartı kalıyor. **Sihirbazın 'Modeli Kur'u**: 6 kasnak + iki kanvas (açılışın boş kartı DEVRALINIR) + kayış + çözücü + rapor + sihirbaz = 12 düğüm, 0 tel, uyarı yok, tabloda 6 satır ve 6 yön düğmesi, kayış boyu kartın rozetinde, çözüm önizlemeyle birebir |
-| `tests/unit/fead-cizim-masasi.test.js` | `js/cp-fead.js` Çizim Masası | **Kasnak çizimde seçilir, taşınır, eklenir**: ters köprü (ekran → mm) isabet halkasını kasnağın KONUM GİRDİSİNE döndürüyor (gergide `cenX/cenY`); etkileşim katmanı yalnız kartta ve CSS'siz belgede GÖRÜNMEZ; fare altı iki çizimde sınıfla, kart kurulmadan; ok tuşu TAM adım (ızgaraya yuvarlamaz), kayışı koparan adım yazılmaz; açıklık seçimi ve halkanın içi/dışı bağımsız kâhinle (aynalanmış düzen dâhil); ekleme adayı KOPYADA çözülür, gergi ↔ sürücü açıklığı kapalı, ekleme ve tablonun ekleyicisi TEK geri-al adımı; **çekmece emekli, tablo kartın Paftası** — çizim dışına bırakılan kasnak TEK geri-al adımında geometri kartının tablosunu açar, ekleyici kartın tablosunu tazeler, `#ve-fead-tablo` hiç kurulmaz |
-| `tests/e2e/fead-cizim-masasi.spec.js` | Çizim Masası (gerçek tarayıcı) | Sürükleme imleçle birlikte yazar (0,1 mm ızgara, künye ve iki açıklık boyu ekranda) ve TEK adım; koparan konum yazılmaz, sebebi şeritte; tık pencereyi açar ve iki çizimde işaretler; klavye gergide avara merkezini tam adımla oynatır; paletten bırakma açıklığa girer (iz hedefi söyler), kapalı açıklık kırmızı ve reddedilir, boşluk reddedilir, çizim dışı tabloya gider ve satırı Paftada görünür |
+| `tests/unit/fead-cizim-masasi.test.js` | `js/cp-fead.js` Çizim Masası | **Kasnak çizimde seçilir, taşınır, eklenir**: ters köprü (ekran → mm) isabet halkasını kasnağın KONUM GİRDİSİNE döndürüyor (gergide `cenX/cenY`); etkileşim katmanı yalnız kartta ve CSS'siz belgede GÖRÜNMEZ; fare altı iki çizimde sınıfla, kart kurulmadan; ok tuşu TAM adım (ızgaraya yuvarlamaz), kayışı koparan adım yazılmaz; açıklık seçimi ve halkanın içi/dışı bağımsız kâhinle (aynalanmış düzen dâhil); ekleme adayı KOPYADA çözülür, gergi ↔ sürücü açıklığı kapalı, ekleme ve tablonun ekleyicisi TEK geri-al adımı; **kayış çizimde tıklanır** (2026-09-26) — isabet yolu kasnak halkalarının ALTINDA ve görünmez niteliklerle, raporun çiziminde yok; tık kayışı seçer, pencereyi açar ve iki çizimde işaretler; `veFeadKayisGaranti` yoksa kurar (seçimi bırakmaz), varsa dokunmaz; kayış SİLİNMEZ (genel silme yolu ayıklar, pencerede çöp kutusu yok); **çekmece emekli, tablo kartın Paftası** — çizim dışına bırakılan kasnak TEK geri-al adımında geometri kartının tablosunu açar, ekleyici kartın tablosunu tazeler, `#ve-fead-tablo` hiç kurulmaz |
+| `tests/e2e/fead-cizim-masasi.spec.js` | Çizim Masası (gerçek tarayıcı) | Sürükleme imleçle birlikte yazar (0,1 mm ızgara, künye ve iki açıklık boyu ekranda) ve TEK adım; koparan konum yazılmaz, sebebi şeritte; tık pencereyi açar ve iki çizimde işaretler; klavye gergide avara merkezini tam adımla oynatır; paletten bırakma açıklığa girer (iz hedefi söyler), kapalı açıklık kırmızı ve reddedilir, boşluk reddedilir, çizim dışı tabloya gider ve satırı Paftada görünür; **KAYIŞA TIKLA** — palette ve kanvasta kayış kutusu yok, gerçek fare görünmez isabet yolunu alıyor (el imleci, hale), tık Kayış Özellikleri'ni açıyor ve kartı sürüklemiyor, iki çizimde işaretli, Delete kayışı silmiyor ve sebebini söylüyor, paftanın künyesi de açıyor |
 | `tests/e2e/kart-yuzey.spec.js` | `js/node-resize.js` + `js/ui-core.js` | **İki ortak kural, sentetik kartla**: tutamak sürüklemesi tipin en küçük ölçüsünde duruyor; kart içindeki TAŞAN liste tekerleği önce alıyor, taşmayan kap almıyor |
 | `tests/unit/fit-view.test.js` | `js/ui-core.js` `veFitViewToContent` | Seçeneksiz çağrı eski davranış; `only` süzülmeyeni kadrajdan çıkarıyor; kap çok küçükse kamera oynamıyor; `bottomInset` YOK (tablo kartın içinde; tuvali örten bir şey yok) |
 | `tests/unit/fead-katman.test.js` | `js/cp-fead.js` katmanlar + `js/components.js` | **Kart ne çizeceğine kendi karar verir**: liste TEK KAYNAK — her katmanın çiziciye giden seçeneği var, çizici onu OKUYOR ve kart kurucusu bayrağı GEÇİYOR (üçünden biri kopunca kutucuk panelde görünür, çizimde hiçbir şey yapmaz); iki ÖN AYARIN varsayılanı farklı ve tip döneminin aynısı; **eksik anahtar varsayılana düşer** (eski kayıt çıplak şemayla açılmasın); tanınmayan ön ayar adı da varsayılana düşer; bağlı katman (adlar kapalıyken "adı kısalt"); seçim kart başına ve öteki kartın alanı bile açılmıyor; `saveState` mutasyondan ÖNCE; **ön ayar ADIYLA yazılır** (`katOn`), sekiz bayrağın kopyasıyla değil, ve elle seçimleri temizler; **ön ayar DEVRİ de belirler** (geometri `off`) ama yazılmış bir alanı EZMEZ ve söz söylemediği alana (titreşim · kol konumu) dokunmaz; varsayılan ön ayar `kat` ile `katOn`u SİLER; panel yalnız açık kart için basılır ve açıklık MODELDE DEĞİL; her ön ayar için bir düğme var, açık olan BASILI ve elle kutucuk oynayınca basılılık düşüyor; **`fead-run` diye bir tip YOK** — `componentDefs`te de, `index.html` paletinde de, `components.js` kodunda da; **kol konumu kart başına** (`veFeadPosModeShared` KALDIRILDI); iki kart aynı tipten ama iki ayrı resim çiziyor; **her bayrak çizimi gerçekten değiştiriyor** (kural, liste değil); adlar kapalıyken dar kartta yer de ayrılmıyor (240×180'de yarıçap 17,0 → 25,0); görünüm CSS'te ve durum kuralları var |

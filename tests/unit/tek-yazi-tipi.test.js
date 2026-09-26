@@ -45,7 +45,12 @@ function kurallar(css) {
   const re = /([^{}]+)\{([^{}]*)\}/g;
   let m;
   while ((m = re.exec(maskele(css)))) {
-    out.push({ sec: m[1].trim().replace(/\s+/g, ' '), govde: m[2], satir: css.slice(0, m.index).split('\n').length });
+    const sec = m[1].trim().replace(/\s+/g, ' ');
+    // @font-face bir stil kuralı değil YÜZ TANIMI: içindeki `font-family` ve
+    // `font-weight: 100 499` tanımlayıcıdır, bildirim değil. Yüzlerin kendi
+    // kapıları var (yukarıda Inter, aşağıda 5·B'nin takma ailesi).
+    if (/^@font-face$/.test(sec)) continue;
+    out.push({ sec, govde: m[2], satir: css.slice(0, m.index).split('\n').length });
   }
   return out;
 }
@@ -89,9 +94,16 @@ describe('Inter — gömülü yüz', () => {
     expect(eksik).toEqual([]);
   });
 
+  // Tek istisna 'MFSim Segoe' (5·B): YALNIZ yerel adlardan kurulu, hiçbir
+  // şey gömmez — ikinci bir yüz değil, Segoe UI'ın ağırlık eşlemesi.
   test('css/ altında başka @font-face yok — başlık yüzü EMEKLİ', () => {
-    const baska = fs.readdirSync(path.join(ROOT, 'css')).filter((f) => f.endsWith('.css'))
-      .filter((f) => f !== 'fonts.css' && /@font-face/.test(read('css/' + f)));
+    const baska = [];
+    fs.readdirSync(path.join(ROOT, 'css')).filter((f) => f.endsWith('.css') && f !== 'fonts.css').forEach((f) => {
+      (read('css/' + f).replace(/\/\*[\s\S]*?\*\//g, '').match(/@font-face\s*\{[^}]*\}/g) || []).forEach((b) => {
+        const takma = /font-family:\s*['"]MFSim Segoe['"]/.test(b) && !/url\(/.test(b) && /src:\s*local\(/.test(b);
+        if (!takma) baska.push(f + ': ' + b.slice(0, 80));
+      });
+    });
     expect(baska).toEqual([]);
     expect(fs.existsSync(path.join(ROOT, 'css/fonts-display.css'))).toBe(false);
     expect(fs.existsSync(path.join(ROOT, 'tools/build-display-font.js'))).toBe(false);
@@ -161,11 +173,13 @@ describe('CSS — tek aile kuralı', () => {
   // ekranında seçtiği Segoe UI; hemen ardından GÖMÜLÜ yüz. Gömülü yüz ikinci
   // sıradan kayarsa Windows dışındaki makine ve indirilen belge sessizce
   // sistemin rastgele yazısına düşer — hiçbir şey patlamaz.
-  test('yığın: önce Segoe UI, hemen ardından gömülü Inter', () => {
+  // 2026-09-26: başa 'MFSim Segoe' geldi (5·B) — aynı Segoe UI, yalnız 500'ü
+  // Semibold'la çizen yerel takma aile. Windows dışında bulunamaz ve düşer.
+  test('yığın: takma aile, Segoe UI, hemen ardından gömülü Inter', () => {
     const m = /--font-sans:\s*([^;]+);/.exec(maskele(STYLES));
     expect(m).toBeTruthy();
     const aileler = m[1].split(',').map((a) => a.replace(/["']/g, '').trim());
-    expect(aileler.slice(0, 2)).toEqual(['Segoe UI', 'Inter']);
+    expect(aileler.slice(0, 3)).toEqual(['MFSim Segoe', 'Segoe UI', 'Inter']);
     // Gömülü olan (css/fonts.css'te @font-face'i bulunan) YALNIZ ikincisi.
     const gomulu = aileler.filter((a) => YUZLER.some((b) => new RegExp("font-family:\\s*['\"]?" + a + "['\"]?\\s*;").test(b)));
     expect(gomulu).toEqual(['Inter']);
@@ -293,5 +307,65 @@ describe('belgeler de tek yüz — raporlar, özet, kılavuz', () => {
     // Hiçbir üretici paketin kaldırılan alanını okumuyor (okusaydı sessizce
     // `undefined` gömerdi — belge yazı tipsiz açılırdı).
     expect(JS.filter(({ src }) => /\bA\.fontsCss|MNT_REPORT_ASSETS\.fontsCss/.test(src)).map(({ f }) => f)).toEqual([]);
+  });
+});
+
+// ORTA KALINLIK WINDOWS'TA YARI KALIN (2026-09-26, kullanıcı kararı 5·B).
+// Segoe UI'da 500 yok; tarayıcı 500 isteyen yazıyı 400 çiziyordu. 'MFSim
+// Segoe' yalnız YEREL adlardan kurulu bir takma aile. Mekanizma Chromium'da
+// ölçüldü (Liberation Sans ile: sistem ailesi 500'ü 400 genişliğinde, takma
+// aile 700 genişliğinde çiziyor; bulunamayan yerel yüz 'error' olup yığında
+// sonraki aileye düşüyor). Segoe UI'ın kendisi bu makinede yok.
+describe("5·B — Windows'ta 500 yarı kalın", () => {
+  const YERELLER = (STYLES.replace(/\/\*[\s\S]*?\*\//g, '').match(/@font-face\s*\{[^}]*\}/g) || [])
+    .filter((b) => /font-family:\s*['"]MFSim Segoe['"]/.test(b))
+    .map((b) => {
+      const [lo, hi] = (/font-weight:\s*(\d+)\s+(\d+)/.exec(b) || []).slice(1).map(Number);
+      return {
+        stil: (/font-style:\s*(\w+)/.exec(b) || [])[1], lo, hi,
+        yerel: [...b.matchAll(/local\(['"]([^'"]+)['"]\)/g)].map((m) => m[1]), url: /url\(/.test(b),
+      };
+    });
+  const bul = (stil, w) => YERELLER.filter((y) => y.stil === stil && w >= y.lo && w <= y.hi);
+
+  test('hiçbir şey gömülmez — sekiz yüzün sekizi yerel ad', () => {
+    expect(YERELLER.length).toBe(8);
+    expect(YERELLER.filter((y) => y.url || !y.yerel.length)).toEqual([]);
+  });
+
+  test.each([
+    [400, 'Segoe UI', 'Segoe UI Italic'],
+    [500, 'Segoe UI Semibold', 'Segoe UI Semibold Italic'],
+    [600, 'Segoe UI Semibold', 'Segoe UI Semibold Italic'],
+    [700, 'Segoe UI Bold', 'Segoe UI Bold Italic'],
+    [800, 'Segoe UI Black', 'Segoe UI Black Italic'],
+  ])('%i → %s · italik %s', (w, duz, egik) => {
+    const n = bul('normal', w), i = bul('italic', w);
+    expect([n.length, i.length]).toEqual([1, 1]);           // aralıklar örtüşmüyor
+    expect([n[0].yerel[0], i[0].yerel[0]]).toEqual([duz, egik]);
+  });
+
+  test('aralıklar 100–1000 boşluksuz — hiçbir ağırlık yüzsüz kalmıyor', () => {
+    ['normal', 'italic'].forEach((stil) => {
+      const r = YERELLER.filter((y) => y.stil === stil).sort((a, b) => a.lo - b.lo);
+      expect([r[0].lo, r[r.length - 1].hi]).toEqual([100, 1000]);
+      for (let i = 1; i < r.length; i++) expect(r[i].lo).toBe(r[i - 1].hi + 1);
+    });
+  });
+
+  test('belgelere yalnız GÖMÜLÜ yüz taşınır — takma aile ölü bayt olmaz', () => {
+    const src = read('js/theme.js');
+    const fn = (ad) => src.match(new RegExp('function ' + ad + '\\(\\) \\{[\\s\\S]*?\\n\\}'))[0];
+    const st = document.createElement('style');
+    st.textContent = "@font-face{font-family:'Inter';font-weight:400;src:url(data:font/woff2;base64,AAAA)}"
+      + "@font-face{font-family:'MFSim Segoe';font-weight:500 650;src:local('Segoe UI Semibold')}";
+    document.head.appendChild(st);
+    document.documentElement.style.setProperty('--font-sans', "'MFSim Segoe', 'Segoe UI', 'Inter', sans-serif");
+    let yuzler;
+    try {
+      yuzler = new Function(fn('veThemeFontFamily') + '\n' + fn('veThemeFontFaceCss') + '\nreturn veThemeFontFaceCss();')();
+    } finally { st.remove(); document.documentElement.style.removeProperty('--font-sans'); }
+    expect(yuzler).toMatch(/Inter/);
+    expect(yuzler).not.toMatch(/MFSim Segoe/);
   });
 });

@@ -47,6 +47,7 @@ ve `veFeadSet` hepsi düğüm kimliğinden çalışıyor); değişen tek şey ku
 | Kalktı | Yerine |
 |---|---|
 | Kasnak kutusu, adı, rozetleri | Kayış Tablosu satırı (ada tıkla → panel) |
+| Kayış Özellikleri kutusu ve kip rozeti (2026-09-26) | çizimdeki kayış (tık → Kayış Özellikleri) · paftanın künyesi + SERBEST/SABİT anahtarı |
 
 **BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı isteği:
 *"FEAD modülünü ana topoloji kısmından açtığım zaman, direkt karşıma 'Başlangıç

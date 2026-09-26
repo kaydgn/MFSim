@@ -404,6 +404,12 @@ function veFeadPopulateStarter(){
     ? veArrangeModuleBase(yuva)
     : { x:3000, y:3000 };
   var created = [];
+  // KAYIŞ DÜĞÜMÜ İLK KURULAN (2026-09-26): kutusu yok, yuvası yok; kanvasta
+  // görünmez ama modelin parçası (bkz. veFeadKayisGaranti). Önce kurulur ki
+  // seçim — createNode her düğümü seçili bırakıyor — eskisi gibi açılışın
+  // kartında kalsın.
+  var _kayis = veFeadKayisGaranti();
+  if(_kayis) created.push(_kayis);
   tipler.forEach(function(tip, k){
     var slot = yuva[k] || { lx: k * 150, ly: 20 };
     var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
@@ -446,6 +452,12 @@ function veFeadOpenEditor(nodeId, _silent){
   // Eski kayıt göçü (data.dia → data.od) ve temas/sürücü rozetleri, alt
   // topoloji YÜKLENDİKTEN sonra: düğümler artık canlı ve DOM'da.
   if(typeof veFeadMigrateAll === 'function' && typeof nodes !== 'undefined') veFeadMigrateAll(nodes);
+  // KAYIŞ DÜĞÜMÜ YOKSA EKLENİR (2026-09-26): kutusu ve palet satırı kalktı,
+  // eski bir kayıtta eksikse kullanıcının onu kurabileceği bir yol kalmadı.
+  // Açılışın parçası, düzenleme değil: geri-al yığınının TABANINA yazılır
+  // (gömülü durum zaten geçmiş taşımıyor — veSanitizeEmbeddedState).
+  if(!_yeniTopoloji && !_feadKayisDugumu() && veFeadKayisGaranti()
+     && typeof veStateResetBaseline === 'function') veStateResetBaseline();
   // ORİJİN GÖÇÜ. Konum fiziksel; eski projelerde krank (0,0)'da olmayabilir.
   // Göç TANIM GEREĞİ bir öteleme (geometriye etkisi ölçüldü: 0.00e+0), yani
   // sessizce yapılabilir. "Kutuları koordinata oturt" adımı 2026-09-09'da
@@ -714,40 +726,41 @@ function veFeadSet(nodeId, key, val){
 // yüzeyde duruyor: tip varsayılanı → kasnak paneli → Kayış Tablosu'nun
 // "Kasnak Dönüş Yönü" sütunu.
 //
-// Geriye kutusu OLAN iki tip kaldı ve ikisi de rozetini kendi çiziyor.
+// Geriye kutusu OLAN tek rozetli tip kaldı: Dönüş Yönü.
+//
+// KAYIŞ KİPİ ROZETİ KALDIRILDI (2026-09-26) — kasnak K/S rozetinin aynı
+// sınıfı: kayışın da kutusu kalktı (`noCanvasBox`), rozetin asılacağı eleman
+// hiç kurulmuyor. Kip anahtarı yaşıyor, taşıyıcısı değişti: Pafta'nın
+// başlığında, kayış künyesinin yanında (veFeadKipDugmeHTML) — kullanıcının
+// "topoloji üzerinden çok basit bir şekilde sabit / değişken" isteği orada.
 function veFeadApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
   var old = nodeEl.querySelector('.ve-fead-badge');
   if(old) old.remove();
-  if(_feadDefOf(node).isFeadBelt) return veFeadApplyBeltModeBadge(nodeEl, node);
   if(_feadDefOf(node).isFeadSpin) return veFeadApplySpinBadge(nodeEl, node);
   return false;
 }
 
-// KAYIŞ BOYU KİPİ ROZETİ — kanvasta, TIKLANABİLİR.
+// KAYIŞ BOYU KİPİ ANAHTARI — Pafta'nın başlığında, TIKLANABİLİR.
 //
-// Kip `node.data.lengthMode` alanında ve panel ile kanvas AYNI alanı okuyor
-// (Kayış Yolu kartındaki kol konumu seçicisinin kuralının aynısı: iki ayrı
-// ayar tutulsa panel bir kipi, kanvastaki rozet başkasını gösterirdi).
+// Kip `node.data.lengthMode` alanında ve pencere ile anahtar AYNI alanı okuyor
+// (kol konumu seçicisinin kuralı: iki ayrı ayar tutulsa pencere bir kipi,
+// anahtar başkasını gösterirdi).
 //
-// Rozet SEÇİM YÜZEYİ, salt gösterge değil: kullanıcı "topoloji üzerinden çok
-// basit bir şekilde" seçebilmeli. 60×54'lük kayış kutusuna açılır liste
-// sığmıyor, iki durumlu bir anahtar sığıyor.
+// Renk kipin ANLAMINI taşıyor: SABİT bir GİRDİ (vurgu rengi — pencerede
+// girilen her şeyin rengi), SERBEST bir ÇIKTI (amber — kayışın kendi rengi, ve
+// bu modülde "hesaplanmış" demek). Görünüm CSS'te (`.ve-fead-pf-kip`).
 //
-// Renk kipin ANLAMINI taşıyor: SABİT bir GİRDİ (mavi — panelde girilen her
-// şeyin rengi), SERBEST bir ÇIKTI (amber — kayışın kendi rengi, ve bu modülde
-// "hesaplanmış" demek).
-function veFeadApplyBeltModeBadge(nodeEl, node){
-  // Gergi zarf kipindeyse kip KİLİTLİ: kayış boyu yapısal olarak bir çıktı.
-  // Rozet bunu göstermek ve TIKLAMAYI REDDETMEK zorunda — tıklanabilir kalsaydı
-  // kullanıcı "SABİT"e çevirir, rozet öyle görünür, çözücü yine serbest koşardı.
+// KİLİTLİ HÂL `disabled` DEĞİL: devre dışı düğme ipucunu göstermiyor ve
+// kullanıcı NEDEN seçemediğini okuyamazdı. `aria-disabled` + geçişin kendi
+// kilidi (veFeadToggleBeltMode kilitliyken hiçbir şey yazmaz).
+function veFeadKipDugmeHTML(){
+  var n = _feadKayisDugumu();
+  if(!n) return '';
   var kilit = (typeof veFeadBeltModeLocked === 'function') && veFeadBeltModeLocked();
   var serbest = kilit || ((typeof veFeadBeltMode === 'function')
-    ? (veFeadBeltMode(node.data) === 'free') : false);
-  var b = document.createElement('span');
-  b.className = 've-fead-badge';
-  b.textContent = serbest ? 'SERBEST' : 'SABİT';
-  b.title = kilit
+    ? (veFeadBeltMode(n.data) === 'free') : false);
+  var ipucu = kilit
     ? 'Kayış boyu SERBEST ve KİLİTLİ: kasnak merkezleri ve gergi künyesi '
       + 'verildiğinde kol nominal yay yüküne oturuyor ve boy o çözümün sonucu. '
       + 'Girdi olarak seçilemez.'
@@ -755,31 +768,15 @@ function veFeadApplyBeltModeBadge(nodeEl, node){
     ? 'Kayış boyu SERBEST: tasarımdan hesaplanıyor (gergi nominal açısında). '
       + 'Tıkla → sabit boya geç.'
     : 'Kayış boyu SABİT: girilen boy kullanılıyor. Tıkla → tasarımdan hesaplansın.';
-  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
-    + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
-    + 'padding:2px 4px; border-radius:var(--radius-xs);'
-    + 'color:' + (serbest ? 'var(--on-warning)' : 'var(--on-accent)')
-    + '; background:' + (serbest ? 'var(--accent-warning)'
-                                 : 'var(--accent-primary)')
-    + '; border:1px solid var(--bg-primary);'
-    + (kilit ? 'cursor:default; opacity:0.85;' : '');
-  // Rozete basmak düğümü SÜRÜKLEMEYE başlatmamalı: veAttachNodeDrag mousedown'ı
-  // yakalıyor ve sürükleme başlarsa tık hiç gelmiyor.
-  b.onmousedown = function(e){ e.stopPropagation(); };
-  b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
-  b.onclick = function(e){
-    e.stopPropagation(); e.preventDefault();
-    if(kilit) return;
-    veFeadToggleBeltMode(node.id);
-  };
-  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
-  box.appendChild(b);
-  return true;
+  return '<button type="button" class="ve-fead-pf-kip ' + (serbest ? 'serbest' : 'sabit')
+    + (kilit ? ' kilit" aria-disabled="true"' : '"')
+    + ' data-ve="kip" onclick="veFeadToggleBeltMode(\'' + _feadEsc(n.id) + '\')"'
+    + ' title="' + _feadEsc(ipucu) + '">' + (serbest ? 'SERBEST' : 'SABİT') + '</button>';
 }
 
-// Kipi çevir. saveState mutasyondan SONRA çağrılıyor (rozet bir kullanıcı
-// kararı, geri alınabilmeli) ve rozet ile Kayış Yolu kartı birlikte tazeleniyor
-// — kart kipe göre başka bir boy gösteriyor.
+// Kipi çevir. saveState mutasyondan SONRA çağrılıyor (anahtar bir kullanıcı
+// kararı, geri alınabilmeli) ve kartlar — paftanın anahtarı dâhil — birlikte
+// tazeleniyor: kart kipe göre başka bir boy gösteriyor.
 function veFeadToggleBeltMode(nodeId){
   if(typeof nodes === 'undefined') return null;
   var node = nodes.find(function(n){ return n.id === nodeId; });
@@ -2511,13 +2508,23 @@ function getFeadBeltPropertiesHTML(node){
 
   html += veFeadBeltCatalogCard(node, serbest);
 
+  // YER TUTUCU BOŞ ALANIN ETKİN DEĞERİDİR — çözüm de aynı fonksiyonu okuyor
+  // (veFeadBeltMassOf). Eskiden sabit '0.0196' yazıyordu: boş bırakan
+  // kullanıcı o sayıyı görüyor, çözüm ise çekirdeğin kaynaksız 0,0144'ünü
+  // kullanıyordu.
+  var _mk = (typeof veFeadBeltMassOf === 'function')
+    ? veFeadBeltMassOf(node.data && node.data.profile, node.data && node.data.brand)
+    : { value: NaN, source: '' };
   html += _feadCard('Malzeme', 'opsiyonel', 'var(--accent-success)',
       _feadGrid(node, [
-        { key:'massPerRibKgM', label:'Kaburga başına kütle [kg/m]', ph:'0.0196', step:'0.0001' }
+        { key:'massPerRibKgM', label:'Kaburga başına kütle [kg/m]',
+          ph: (_mk.value > 0 ? String(_mk.value) : ''), step:'0.0001' }
       ], 1)
-    + _feadHint('Yalnız span frekansı için. Boş bırakılırsa katalog değeri kullanılır — ama '
-        + 'Gates PK kataloğu 0.0144 kg/m/kaburga derken hem kesit tahmini hem de ölçülmüş '
-        + 'frekans haritasından geri-hesap <b>0.0196</b> veriyor. Frekans önemliyse elle girin.'));
+    + _feadHint('Yalnız açıklık frekansı ve çırpınma için. Boş bırakılırsa '
+        + (_mk.value > 0 ? '<b>' + _feadEsc(String(_mk.value).replace('.', ',')) + '</b> kullanılır ('
+            + _feadEsc(_mk.source) + '). ' : 'katalog değeri kullanılır. ')
+        + 'Yayımlanmış PK değerleri 0,018–0,023 aralığında; Gates HD raporunun frekans '
+        + 'haritasından geri-hesap 0,0196. Ölçülmüş bir değeriniz varsa girin.'));
   var _mal = html;
 
   var sekmeler = [{ k:'pro', ad:'Profil',   govde: _pro },
@@ -3299,6 +3306,46 @@ function _feadNodeById(id){
   if(typeof nodes === 'undefined' || !id) return null;
   for(var i = 0; i < nodes.length; i++) if(nodes[i].id === id) return nodes[i];
   return null;
+}
+
+// ── KAYIŞ ÇİZİMDE TIKLANIR (2026-09-26) ────────────────────────────────────
+// Kullanıcı isteği: *"'kayış özellikleri' bileşenini de kaldırmanı istiyorum.
+// Onun yerine kanvas üzerindeki kayış tıklanabilir olacak tıpkı diğer
+// bileşenler gibi."* Kasnaklarla aynı kalıp: düğüm MODELDE (panel, geri-al,
+// kayıt, göç), kanvasta KUTUSU YOK (components.js `noCanvasBox`), penceresi
+// çizimdeki kayıştan ve paftanın künyesinden açılır.
+function _feadKayisDugumu(){
+  if(typeof nodes === 'undefined' || !nodes) return null;
+  for(var i = 0; i < nodes.length; i++) if(_feadDefOf(nodes[i]).isFeadBelt) return nodes[i];
+  return null;
+}
+function _feadKayisId(){ var n = _feadKayisDugumu(); return n ? n.id : ''; }
+
+// Kasnağın ad düğmesinin kalıbı (veFeadTableOpen): seç + pencereyi AÇ.
+// `addToSelection` yalnız pencerenin İÇERİĞİNİ doldurur; açan çağrı ayrı.
+function veFeadKayisAc(){
+  var n = _feadKayisDugumu();
+  if(!n) return false;
+  veFeadTableOpen(n.id);
+  veFeadCizimIsaretle();
+  return true;
+}
+
+// KAYIŞ DÜĞÜMÜ HER FEAD TOPOLOJİSİNDE VAR. Kutusu ve palet satırı kalktı,
+// kullanıcının onu ekleyebileceği bir yol yok — ve onsuz model kurulamıyor.
+// Açılış yüzeyi kurar (veFeadPopulateStarter); eski bir kayıtta yoksa FEAD'e
+// girerken eklenir (veFeadOpenEditor). Kutusuz olduğu için konumu bir şey
+// ifade etmez. `createNode` kutusuz düğümü SEÇİLİ bırakıyor (paletten
+// bırakılan kasnağın paneli açılsın diye); burada kimse bir şey bırakmadı.
+function veFeadKayisGaranti(){
+  if(typeof nodes === 'undefined' || typeof createNode !== 'function') return null;
+  var n = _feadKayisDugumu();
+  if(n) return n;
+  var once = nodes.length;
+  createNode('fead-belt', 3000, 3000);
+  if(nodes.length <= once) return null;
+  if(typeof clearSelection === 'function') clearSelection();
+  return nodes[nodes.length - 1];
 }
 
 // Seçim ve fare altı işareti SINIFLA eşitlenir, kart yeniden KURULMAZ: fare
@@ -4486,6 +4533,10 @@ function veFeadLayoutSVG(build, W, H, opts){
   // DÜZENLENEBİLİR ÇİZİM (kanvas kartı) kendi mm dönüşümünü taşır: sürükleme
   // fareyi mm'ye buradan çevirir, ikinci bir ölçek hesabı yapmaz.
   var _duzen = !!(opts.edit && opts.inline && opts.nodeId);
+  // KAYIŞ DA TIKLANIR (2026-09-26): kutusu kalkan kayış düğümünün penceresi
+  // çizimdeki kayıştan açılıyor. Kimlik yalnız düzenlenebilir kartta basılır —
+  // rapor ve dışa aktarma aynı çiziciyi kullanıyor.
+  var _kayisId = _duzen ? _feadKayisId() : '';
   var editAttr = _duzen
     ? ' data-fead-xf="' + [s, offX, offY, minX, maxY].map(function(v){
         return Math.round(v * 1e6) / 1e6; }).join(' ') + '"'
@@ -4556,7 +4607,15 @@ function veFeadLayoutSVG(build, W, H, opts){
     }
   });
 
-  svg += '<path data-ve="belt" d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.6" stroke-linejoin="round"/>';
+  // KAYIŞIN HALESİ VE KENDİSİ kayış düğümünün kimliğini taşır: seçim ve fare
+  // üstü kasnaklardaki gibi SINIFLA eşitlenir (veFeadCizimIsaretle), kart
+  // yeniden kurulmaz. Hale görünmez sunum niteliğiyle doğar (`opacity="0"`) —
+  // kılavuz kartı CSS'siz gömüyor. İsabet yolu aşağıda, isabet katmanında.
+  var _kk = _kayisId ? ' data-fead-k="' + _feadEsc(_kayisId) + '"' : '';
+  if(_kayisId)
+    svg += '<path data-ve="belt-hov"' + _kk + ' d="' + d + '" fill="none" stroke="var(--accent-warning)"'
+        + ' stroke-width="9" stroke-linejoin="round" opacity="0" pointer-events="none"/>';
+  svg += '<path data-ve="belt"' + _kk + ' d="' + d + '" fill="none" stroke="var(--accent-warning)" stroke-width="2.6" stroke-linejoin="round"/>';
   // Dişler kayışın ÜSTÜNE çizilir (yolun kendisi altta kalsın) ve YALNIZ ana
   // konumda: hayalet yollarda diş sırası okunmaz, yalnız gürültü olurdu.
   // ── GERİLME HARİTASI — renk yalnız AÇIKLIKLARDA ─────────────────────────
@@ -4804,6 +4863,20 @@ function veFeadLayoutSVG(build, W, H, opts){
     var _hit = ps.map(function(p, k){ return { p: p, k: k }; })
       .sort(function(a, b){ return b.p.rPitch - a.p.rPitch; });
     svg += '<g data-ve="hit">';
+    // KAYIŞIN İSABET YOLU kasnak halkalarının ALTINDA: sarım yayı kasnağın
+    // üstünden geçiyor ve oradaki tık kasnağındır. 12 px kalın ve görünmez;
+    // yalnız TIK — kayışın taşınacak bir konumu yok. mousedown DURDURULUR:
+    // kart bir kanvas düğümü, durdurulmasa kartın sürüklemesi başlar ve tık
+    // hiç gelmez (gülün ve eski kip rozetinin ölçülmüş sınıfı).
+    if(_kayisId){
+      var _bid = _feadEsc(_kayisId);
+      svg += '<path class="ve-fead-hit-kayis" data-fead-k="' + _bid + '" d="' + d + '"'
+          + ' fill="none" stroke="transparent" stroke-width="12" stroke-linejoin="round" pointer-events="stroke"'
+          + ' onmousedown="event.stopPropagation()" ondblclick="event.stopPropagation()"'
+          + ' onclick="event.stopPropagation(); veFeadKayisAc()"'
+          + ' onmouseenter="veFeadCizimUzerinde(\'' + _bid + '\')" onmouseleave="veFeadCizimUzerinde(null)">'
+          + '<title>Kayış — tıkla: Kayış Özellikleri penceresini aç</title></path>';
+    }
     _hit.forEach(function(o){
       var n = build.order[o.k];
       if(!n) return;
@@ -6119,16 +6192,22 @@ function veFeadTableCardHTML(node, opt){
   var W = (node && node.width) || _feadKartW().genis;
   var cols = _feadPaftaKolonlar(W);
 
-  // ── BAŞLIK ŞERİDİ: ad · kayış künyesi · gergi hükmü · ekleyici ──────────
-  // Kayış tipi/markası SALT OKUNUR: kaynağı "Kayış Özellikleri" bileşeni ve
-  // orada katalog seçicisiyle birlikte duruyor. İkinci bir giriş açmak,
-  // katalog kapısını atlayan bir yol açardı.
+  // ── BAŞLIK ŞERİDİ: ad · kayış künyesi + kip · gergi hükmü · ekleyici ────
+  // Kayış tipi/markası BURADA YAZILMAZ, penceresine GİDİLİR: künye bir düğme
+  // ve Kayış Özellikleri penceresini açar (kayışın kanvasta kutusu yok —
+  // öbür yol çizimdeki kayışa tıklamak). İkinci bir giriş açmak, pencerede
+  // katalog seçicisiyle birlikte duran kapıyı atlayan bir yol açardı.
+  // Yanındaki KİP ANAHTARI eski kayış kutusunun rozetiydi (veFeadKipDugmeHTML).
   var kunye = [belt.profile, belt.brand].filter(function(x){ return !!x; }).join(' · ');
+  var kayisVar = !!_feadKayisDugumu();
   var h = '<div class="ve-fead-pf-bas">'
     + '<span class="ad" title="Gates raporunun Layout Data tablosu — kayış sırası'
     + ' sürücüden başlar, gergiyle biter"><b>Layout Data</b> · <span class="br">mm</span></span>'
-    + (kunye ? '<span class="kunye" title="Kayış tipi · markası — Kayış Özellikleri kartından">'
-               + _feadEsc(kunye) + '</span>' : '')
+    + (kayisVar
+        ? '<button type="button" class="kunye" data-ve="kayis-kunye" onclick="veFeadKayisAc()"'
+          + ' title="Kayış — tıkla: Kayış Özellikleri penceresini aç (profil, marka, boy, katalog)">'
+          + _feadEsc(kunye || 'Kayış') + '</button>' + veFeadKipDugmeHTML()
+        : '')
     // GERGİNİN YERİ HÜKMÜ — SIRANIN DÜZENLENDİĞİ YÜZEYDE. `tensionerOrder`
     // köprüde zaten hesaplanıyor (kural 16) ama yalnız uyarı kutularında ve
     // sihirbazın 2. adımında basılıyordu; sırayı ▲▼ ile değiştiren kullanıcı
@@ -7919,7 +7998,18 @@ function veFeadLoadExample(key){
     var _d1 = (typeof componentDefs !== 'undefined' && componentDefs[src.type]) || {};
     if(_d1.maxInstances && typeof nodes !== 'undefined'){
       var _var = nodes.filter(function(n){ return n.type === src.type; });
-      if(_var.length >= _d1.maxInstances){ idMap[src.id] = _var[0].id; return; }
+      if(_var.length >= _d1.maxInstances){
+        // DEVRALINAN DÜĞÜM ÖRNEĞİN VERİSİNİ ALIR. Açılış yüzeyi kayış düğümünü
+        // kendisi kuruyor (2026-09-26, kutusu kalktı); veri yazılmasaydı örnek
+        // kasnaklarını kurar ama kayış AÇILIŞIN BOŞ künyesiyle kalırdı — profil,
+        // boy, kip: model yine çözülür, sayılar başka bir kayışın olur (sessiz).
+        // TAM DEĞİŞTİRME, birleştirme değil: kalan bir alan (eski kip, eski
+        // tolerans) örneğin kayışını sessizce başkalaştırırdı.
+        _var[0].data = JSON.parse(JSON.stringify(src.data || {}));
+        idMap[src.id] = _var[0].id;
+        kuruldu.push(_var[0]);
+        return;
+      }
     }
     var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
     createNode(src.type, base.x + yer[i].lx, base.y + yer[i].ly);
@@ -8368,7 +8458,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadKatmanPanelHTML: veFeadKatmanPanelHTML,
     veFeadKatmanDugmeHTML: veFeadKatmanDugmeHTML,
     veFeadApplyBadge: veFeadApplyBadge,
-    veFeadApplyBeltModeBadge: veFeadApplyBeltModeBadge,
+    veFeadKipDugmeHTML: veFeadKipDugmeHTML,
+    veFeadKayisAc: veFeadKayisAc,
+    veFeadKayisGaranti: veFeadKayisGaranti,
 
     veFeadArmReadout: veFeadArmReadout, veFeadMountReadout: veFeadMountReadout,
     veFeadBandSVG: veFeadBandSVG,

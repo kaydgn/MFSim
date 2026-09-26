@@ -194,11 +194,37 @@ describe('§8.12 — sürtünme katsayısının künyesi', () => {
     expect(p).toMatch(/kalibre edilmemiştir/);
     // Sınır 2 — e^(μφ) bir TAM KAYMA eşiği, "hiç kayma yok" değil.
     expect(p).toMatch(/tam kayma/);
-    // Sınır 3 — merkezkaç terimi hesaba katılmıyor ve hangi yönde yanıltıyor.
+    // Sınır 3 — merkezkaç: oran ZATEN etkin gerginlikten (kural 28); yazılı
+    // kalan sınır gerginin etkinliği.
     expect(p).toMatch(/[Mm]erkezkaç/);
-    expect(p).toMatch(/katılmamıştır/);
+    expect(p).toMatch(/etkin<\/i> gerginliktir/);
+    expect(p).toMatch(/η ≈ 0,78/);
     // ESKİ CÜMLE GERİ GELMESİN: değeri gizleyen hâli.
     expect(p).not.toMatch(/Sürtünme katsayıları çekirdeğin kalibrasyon sabitleridir/);
+  });
+
+  // ─── MERKEZKAÇ CÜMLESİ KÖPRÜNÜN SÖZLEŞMESİYLE ÇELİŞEMEZ ────────────────────
+  // Not 2026-09-26'ya kadar "merkezkaç terimi hesaba katılmamıştır; ihmal
+  // gereken μ'yü düşük gösterir" diyordu. Köprü ise zinciri ETKİN gerginlik
+  // sayıyor ve açıklık frekansında gerçeğe dönmek için m′v²'yi ayrıca
+  // EKLİYOR (veFeadSpanFreqRows, kural 28). İki cümle aynı belgede ikisi
+  // birden doğru olamaz: zincir etkinse kapstan oranı düzeltilmiş ölçütün
+  // kendisidir. Kapı eski hükmü ve onun "emniyetsiz yön" gerekçesini keser.
+  test('merkezkaç: oran zaten ETKİN gerginlikten — "katılmamıştır" hükmü geri gelmez', () => {
+    const p = s812();
+    expect(p).not.toMatch(/katılmamıştır/);
+    expect(p).not.toMatch(/μ'yü olduğundan düşük gösterir/);
+    expect(p).toMatch(/2\(T − m′v²\)·sin\(φ\/2\)/);
+  });
+
+  // SIRT μ ARTIK KAYNAKSIZ DEĞİL: 2026-09 taraması bir birincil ölçüm buldu.
+  // "Bulunamadı" cümlesi bayat kalırsa okuyucu değerin dayanaksız olduğunu
+  // sanır; kaynak adıyla ve ölçtüğü aralıkla basılır.
+  test('sırt μ: Dayco ölçümü adıyla ve aralığıyla basılıyor', () => {
+    const p = s812();
+    expect(p).toMatch(/Dayco US 8,192,315/);
+    expect(p).toMatch(/0,36–0,42/);
+    expect(p).not.toMatch(/birincil bir ölçüm bulunamadı/);
   });
 });
 

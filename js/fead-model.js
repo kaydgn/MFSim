@@ -159,8 +159,36 @@ var VE_FEAD_DEFAULTS = {
   // Arşiv: kol 0,0009 ×3 · 0,0040 · 0,0060 · 0,0076 ×2 → medyan 0,0040
   //        kütle 0,50 ×3 · 0,80 ×4                     → medyan 0,80
   tenArmInertiaKgM2: 0.0040,
-  tenPulleyMassKg: 0.80
+  tenPulleyMassKg: 0.80,
+
+  // KAYIŞ BİRİM KÜTLESİ [kg/m/kaburga] — profil/marka başına, YALNIZ KAYNAĞI
+  // OLAN çift. Bu blokta Gates ARŞİVİNDEN gelmeyen tek satır: çekirdeğin Gates
+  // PK kaydı 0,0144 taşıyor ve o sayıyı veren hiçbir kaynak yok (2026-09-26
+  // literatür turu). Gates'in KENDİ yayımlanmış sabiti 18 g/m/kaburga (Model
+  // 508C Sonic Tension Meter Manual → "Belt Mass Constants", Micro-V K; ölçer
+  // kaburga sayısıyla kendisi çarpar). Aynı bantta Bando 0,018, ContiTech
+  // 0,021; ölçülen 0,0178 (Michon 2006, 6 kaburga) · 0,0192 (Čepon 2011,
+  // 5PK). Çekirdek dokunulmaz (kural 1) → alan boşsa köprü bu sayıyı geçer.
+  // 0,0144 açıklık frekansını √(0,018/0,0144) = %11,8 YÜKSEK veriyordu.
+  // Listede olmayan çift çekirdeğin kataloğunda kalır (ContiTech PK 0,021
+  // kendi kataloğuyla birebir).
+  beltMassPerRib: {
+    'PK/GATES': { value: 0.018,
+      source: 'Gates 508C el kitabı (Belt Mass Constants, Micro-V K): 18 g/m/kaburga' }
+  }
 };
+
+// Boş kütle alanının ETKİN değeri ve kaynağı — köprünün kaynaklı varsayılanı,
+// yoksa çekirdeğin kataloğu. Panel yer tutucusu ve çözüm AYNI cevabı okur.
+function veFeadBeltMassOf(profile, brand){
+  var p = String(profile || 'PK').toUpperCase(), b = String(brand || 'GATES').toUpperCase();
+  var k = VE_FEAD_DEFAULTS.beltMassPerRib[p + '/' + b];
+  if(k && k.value > 0) return { value: k.value, source: k.source, bridge: true };
+  var db = (typeof FEADCore !== 'undefined' && FEADCore.BELT_DB) ? FEADCore.BELT_DB : null;
+  var c = db && db[p] && db[p][b] && db[p][b].massPerRibKgM;
+  return (c > 0) ? { value: c, source: 'çekirdek kataloğu (' + p + ' · ' + b + ')', bridge: false }
+                 : { value: NaN, source: '', bridge: false };
+}
 
 // ATALET VARSAYILANI OLMAYAN TİPLER BİLEREK BOŞ: su pompası, direksiyon
 // pompası, hava kompresörü ve aksesuar olarak kullanılan fan kasnağı arşivin
@@ -580,7 +608,7 @@ function veFeadSolveArmClamped(sys, kind, target){
   if(!Number.isFinite(target)){
     out.error = (kind === 'tension') ? 'Tasarım gerginliği çözülemedi.'
               : (kind === 'arm')     ? 'Gergi kolunun nominal açısı çözülemedi.'
-                                     : 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).';
+                                     : 'Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).';
     return out;
   }
   var isT = (kind === 'tension'), isArm = (kind === 'arm');
@@ -1178,7 +1206,7 @@ function veFeadPosSelection(build, mode){
   });
   if(!out.ghosts.length)
     out.note = 'Bütün kol konumları aynı açıda — kayış toleransı ve aşınma payı 0 '
-             + 'girilmiş (Kayış Özellikleri panelinde). Tolerans girilince konum '
+             + 'girilmiş (çizimde kayışa tıklayın → Kayış Özellikleri). Tolerans girilince konum '
              + 'zarfı burada görünür.';
   return out;
 }
@@ -3420,12 +3448,18 @@ var VE_FEAD_ERROR_MAP = [
   [/tensioner\.(\w+) gerekli/i, 'Gergi panelinde eksik alan: $1'],
   [/kasnagi icin od \(dis cap\)/i, 'Bir kasnağın dış çapı girilmedi.'],
   [/kasnagi icin x,y gerekli/i, 'Bir kasnağın konumu (X / Y) girilmedi.'],
-  [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).'],
+  [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).'],
   // Tasarım gerginliği artık sorulmuyor, türetiliyor — bu hata "girilmedi"
   // demek yerine türetmenin neden yapılamadığını göstermeli.
   [/designTensionN veya slackN gerekli/i,
    'Tasarım gerginliği yay dengesinden türetilemedi (gergi yay künyesi veya kol geometrisi eksik).'],
   [/bilinmeyen kayis profili/i, 'Kayış profili tanınmıyor (PK / PJ / PH / PL / PM).'],
+  // Kord rijitliği yalnız PK'da var (Gates Mode 1'e kalibre etkin değer; PK'nın
+  // öteki markaları onu devralır — veFeadCordStiffness). PK dışında sayı
+  // UYDURULMAZ; çekirdeğin teknik cümlesi yerine sebebi söylenir.
+  [/kayis kord rijitligi yok[\s\S]*/i,
+   'Bu kayış profili için kord rijitliği kalibrasyonu yok (yalnız PK profilinde, Gates '
+   + 'raporlarının Mode 1 değerlerine uydurulmuş bir etkin değer var); burulma modeli kurulmadı.'],
   [/markasi yok/i, 'Bu kayış profilinde seçilen marka yok.'],
   [/hedef .* erisilebilir araligin disinda/i,
    'Gergi kolu bu kayış boyuna ulaşamıyor. Kayış boyu, gergi pivotu veya kol boyu uyumsuz.'],
@@ -3518,7 +3552,9 @@ function veFeadBuildSystem(nodeList, opt){
   // düğümü atmak, kartı "nodes" global'ini elle taramaya zorlardı — köprü
   // katmanının DOM'suz kalması tam olarak bunu engellemek için.
   out.solver = solvNode;
-  if(!beltNode) out.errors.push('Kayış Özellikleri bileşeni yok. Sol paletten ekleyin.');
+  // Kayışın kutusu ve palet satırı yok (2026-09-26); düğümü açılış yüzeyi ya
+  // da sihirbaz kurar. Tavsiye kullanıcının YAPABİLECEĞİ şeyi söyler.
+  if(!beltNode) out.errors.push('Kayış tanımı yok — modeli Başlangıç Sihirbazı ile kurun; kayışı o ekler.');
   if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
 
   // ── GERGİ KRANKIN ÇIKIŞINDA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ──────────
@@ -3641,7 +3677,7 @@ function veFeadBuildSystem(nodeList, opt){
   out.beltDataMode = veFeadBeltDataMode(bd);
   var effLength = _feadNum(bd.effLength != null ? bd.effLength : bd.length, 0);
   if(beltMode === 'fixed' && !(effLength > 0))
-    out.errors.push('Kayış efektif boyu girilmedi (Kayış Özellikleri panelinde).');
+    out.errors.push('Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).');
   var ribs = _feadNum(bd.ribs, 0);
   if(!(ribs > 0)) out.errors.push('Kayış kanal (kaburga) sayısı girilmedi.');
   var cfgBelt = {
@@ -3673,6 +3709,20 @@ function veFeadBuildSystem(nodeList, opt){
       VE_FEAD_DEFAULTS.wearPct, 'oran', '14 Gates sisteminin 10\'u: %0,70');
   var mpr = _feadNum(bd.massPerRibKgM, 0);
   if(mpr > 0) cfgBelt.massPerRibKgM = mpr;
+  else if(_feadBlank(bd.massPerRibKgM)){
+    // KAYNAKLI VARSAYILAN (bkz. VE_FEAD_DEFAULTS.beltMassPerRib). Değer HER
+    // ZAMAN geçer — bütün tüketiciler (açıklık frekansı, çırpınma, senaryo,
+    // raporun künyesi) aynı sys.belt'i okusun. Deftere ise YALNIZ TÜKETİLDİĞİNDE
+    // yazılır: kütle yalnız "Kayış Tipine Bağlı Çıktılar" açıkken bir hesaba
+    // giriyor; kapalıyken "varsayıldı" demek, hiçbir sayıyı etkilemeyen bir
+    // alanı kullanıcıya iş diye göstermek olurdu (kural 25'in tersi).
+    var mVar = veFeadBeltMassOf(cfgBelt.profile, cfgBelt.brand);
+    if(mVar.bridge){
+      cfgBelt.massPerRibKgM = mVar.value;
+      if(out.beltDataMode === 'full')
+        _varsay('kayış birim kütlesi', mVar.value, 'kg/m/kaburga', mVar.source);
+    }
+  }
 
   // ── Gergi ──
   // TEK KOORDİNAT: AVARA MERKEZİ (`cenX/cenY`), diğer bütün kasnaklarla aynı
@@ -4299,8 +4349,38 @@ function veFeadTorsionalNorm(T){
   return T;
 }
 
+// ─── KORD RİJİTLİĞİ: PK'DA MARKADAN BAĞIMSIZ ETKİN DEĞER ────────────────────
+//
+// Çekirdeğin BELT_DB'sinde `cordStiffnessNPerRib` yalnız Gates PK kaydında var
+// (Gates "System Resonance (Mode 1)" değerlerine kalibre ETKİN parametre).
+// Optibelt ya da ContiTech seçilince çekirdek "kord rijitliği yok" diye atıyor
+// ve burulma sonucu ÜÇ çağrı yerinde birden (panel/rapor, mod listesi, mod
+// animasyonu) hiç üretilmiyordu — sihirbaz bu markaları sunduğu hâlde.
+//
+// Sayı bir malzeme sabiti DEĞİL: literatürün ölçtüğü EA 18–43 kN/kaburga
+// (Čepon 2011, Michon 2006, Shangguan 2013), bu değer onun 2–4 kat altında,
+// yani modelin eksik esnekliğini (kaburga kayması, bağlantılar) soğuruyor.
+// Aynı PK kaburga geometrisinde başka markaya da AYNI etkin değer geçer ve
+// sınır sonucun İÇİNDE yazılır (kural 10). PK dışında kalibrasyon YOK →
+// sayı uydurulmaz, çekirdek açık hatasını verir (VE_FEAD_ERROR_MAP).
+// Kapı: fead-denetim-bulgular.test.js → "kord rijitliği markadan bağımsız".
+function veFeadCordStiffness(sys){
+  if(!sys || !sys.belt || typeof FEADCore === 'undefined') return null;
+  var ribs = _feadNum(sys.belt.ribs, NaN);
+  var bp = sys._bp || {};
+  if(sys.belt.cordStiffnessN != null || (bp.cordStiffnessNPerRib != null && ribs > 0))
+    return { devralindi: false };
+  var prof = String(sys.belt.profile || 'PK').toUpperCase();
+  var ref = FEADCore.BELT_DB && FEADCore.BELT_DB.PK && FEADCore.BELT_DB.PK.GATES;
+  if(prof !== 'PK' || !ref || !(ref.cordStiffnessNPerRib > 0) || !(ribs > 0)) return null;
+  return { devralindi: true, perRib: ref.cordStiffnessNPerRib, N: ref.cordStiffnessNPerRib * ribs,
+           marka: String(sys.belt.brand || '').toUpperCase() };
+}
+
 function veFeadTorsionalOpt(build, opts){
   var o = {};
+  var ks = veFeadCordStiffness(build && build.sys);
+  if(ks && ks.devralindi) o.cordStiffnessN = ks.N;
   var J = _feadNum(opts && opts.crankInertia, NaN);
   if(!Number.isFinite(J) || !(J > 0)) return o;
   var i = (build && build.sys) ? build.sys._crkIdx : -1;
@@ -4555,6 +4635,15 @@ function veFeadAnalyze(build, opts){
   try {
     out.torsional = veFeadTorsionalNorm(
       FEADCore.torsionalModel(build.sys, veFeadTorsionalOpt(build, opts)));
+    // DEVRALINAN KORD RİJİTLİĞİ SONUCUN İÇİNDE (bkz. veFeadCordStiffness).
+    var _ks = veFeadCordStiffness(build.sys);
+    if(out.torsional && _ks && _ks.devralindi){
+      out.torsional.cordStiffness = { perRib: _ks.perRib, devralindi: true, marka: _ks.marka };
+      out.limits.push('Burulma modeli: ' + (_ks.marka || 'seçilen marka') + ' kayışı için kord '
+        + 'rijitliği kalibre edilmedi; Gates PK\'nın etkin değeri (' + Math.round(_ks.perRib / 1000)
+        + ' kN/kaburga) kullanıldı. Bu değer Gates kayışlarının Mode 1\'ine uydurulmuş etkin bir '
+        + 'parametredir, malzeme sabiti değildir; bu markada 1. mod yalnız mertebe göstergesidir.');
+    }
   } catch(e){
     out.torsional = null;
     out.warnings.push('Burulma modeli: ' + veFeadTranslateError(e && e.message));
@@ -4827,7 +4916,8 @@ if (typeof module !== 'undefined' && module.exports) {
     _feadIsPulley: _feadIsPulley,
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
     VE_FEAD_DEFAULTS: VE_FEAD_DEFAULTS, veFeadDefaultInertia: veFeadDefaultInertia,
-    veFeadDefaultBeltTol: veFeadDefaultBeltTol,
+    veFeadDefaultBeltTol: veFeadDefaultBeltTol, veFeadBeltMassOf: veFeadBeltMassOf,
+    veFeadCordStiffness: veFeadCordStiffness,
     // Paylaşılan saf yardımcılar. Tarayıcıda global oldukları için cp-fead.js,
     // connections.js ve cp-fead.js doğrudan çağırıyor;
     // testte de aynı adlarla kurulabilsinler diye dışa veriliyorlar.

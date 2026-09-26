@@ -2219,6 +2219,14 @@ function _frSlipSection(R){
      + '<b>μ<sub>kaburgalı</sub> = ' + _frF(_muG, 2) + '</b> · '
      + '<b>μ<sub>sırt</sub> = ' + _frF(_muB, 2) + '</b>.</p>';
   // KÖKENİ VE SINIRI YANINDA. İkisi AYNI kuvvette değil ve bu yazılmalı.
+  //
+  // MERKEZKAÇ CÜMLESİ DÜZELTİLDİ (2026-09-26, literatür turu). Not eskiden
+  // "merkezkaç terimi hesaba katılmamıştır; ihmal gereken μ'yü düşük gösterir"
+  // diyordu ve köprünün kendi sözleşmesiyle çelişiyordu (kural 28,
+  // veFeadSpanFreqRows): hareketli kayışta kasnağa binen kuvvet
+  // 2(T − m′v²)·sin(φ/2), gergi yayı onu dengeliyor, yani zincirin gerginliği
+  // ZATEN etkin gerginlik ve oran literatürün düzeltilmiş ölçütüyle aynı.
+  // Yazılı kalan sınır gerginin o payı tam karşılayamaması (etkinlik η).
   h += '<div class="note" style="font-size:12.5px;">'
      + '<b>Sürtünme katsayılarının kökeni ve geçerlilik sınırı.</b> '
      + 'μ<sub>kaburgalı</sub> bir <i>etkin</i> (düz-kayış eşdeğeri) katsayıdır: '
@@ -2228,14 +2236,22 @@ function _frSlipSection(R){
      + '§5.3.3) ölçümü 0,934; Kubas (Arch. Automot. Eng. 84(2), 2019, Tab. 1) '
      + 'kaburga başına eşleştirilmiş yükte 0,97 — ve üçünün de <b>altında</b> '
      + 'kaldığı için emniyetli taraftadır. '
-     + 'μ<sub>sırt</sub> <b>kalibre edilmemiştir</b>: Poly-V sırtı ile düz kasnak '
-     + 'için birincil bir ölçüm bulunamadı (2026-09 taraması); değer tipik '
-     + 'kauçuk–metal mertebesindedir ve düz kasnakta gerilme oranı ≈1 olduğu '
-     + 'için SF üzerindeki etkisi küçüktür. '
+     + 'μ<sub>sırt</sub> <b>kalibre edilmemiştir</b>. Bulunabilen tek birincil '
+     + 'ölçüm bir patentte: Dayco US 8,192,315 B2 (SAE J2432 test odası, kuru, '
+     + 'düz sırt kasnağı) geleneksel sırtlarda %10 kaymada 0,36–0,42 ölçüyor. '
+     + 'Kullanılan değer bunun hafifçe altında, yani muhafazakârdır; düz kasnakta '
+     + 'gerilme oranı ≈1 olduğu için SF üzerindeki etkisi zaten küçüktür. '
      + '<b>Bağıntının sınırı:</b> e<sup>μφ</sup> bir <i>tam kayma</i> (gross slip) '
      + 'eşiğidir, "hiç kayma yok" eşiği değil — sürünme (creep) her yük düzeyinde '
-     + 'vardır. Merkezkaç terimi (T<sub>c</sub> = m′v²) hesaba <b>katılmamıştır</b>; '
-     + 'ihmal, gereken μ\'yü olduğundan düşük gösterir ve etkisi devirle büyür.'
+     + 'vardır (ölçülen hız kaybı %0,2–1,2; Balta ve ark. 2015). '
+     + '<b>Merkezkaç payı oranın içindedir.</b> Hareketli kayışta kasnağa binen '
+     + 'kuvvet 2(T − m′v²)·sin(φ/2)\'dir ve gergi yayı bu kuvveti dengeler; '
+     + 'tablodaki gerginlikler bu yüzden <i>etkin</i> gerginliktir (T − m′v²) ve '
+     + 'oran, literatürün düzeltilmiş ölçütü (T<sub>1</sub> − m′v²)/(T<sub>2</sub> − m′v²) '
+     + '≤ e<sup>μφ</sup> ile aynıdır. Kalan etki, gerginin merkezkaç payını tam '
+     + 'karşılayamamasıdır (gergi etkinliği; iyi bir tahrikte η ≈ 0,78 — Kong 2003, '
+     + 'Beikmann 1997\'den): yüksek devirde etkin gerginlik (1 − η)·m′v² kadar düşer '
+     + 've SF birkaç yüzde iyimser kalabilir.'
      + '</div>';
   return h;
 }

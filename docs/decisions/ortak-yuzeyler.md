@@ -50,6 +50,25 @@ okunuyor, açılışta yükseliyor — sentetik tiple) + `tests/e2e/kart-yuzey.s
 kullanıcısı Kayış Tablosu kartıydı; kart 2026-09-23'te kanvastan indi, bugün
 taban beyan eden bir tip yok ama mekanizma ve kapısı duruyor.
 
+### Silinmez tip kendini beyan eder (`componentDefs.noDelete`, 2026-09-26)
+
+**Hüküm.** Bir bileşen tipi silinemiyorsa bunu tanımında SEBEP METNİYLE
+beyan eder (`noDelete: '…'`). Genel silme yolu (`map.js` →
+`deleteSelectedNodes`) o düğümleri seçimden ayıklar ve sebebi uyarı olarak
+söyler; özellik penceresi çöp kutusunu hiç çizmez (`cp-core.js`).
+
+**Gerekçe.** Silme üç kapıdan geliyor — Delete tuşu (`ui-core.js`),
+penceredeki çöp kutusu, toplu seçim — ve üçü de `deleteSelectedNodes`e iniyor.
+Kapıyı oraya koymak üçünü birden kapatıyor; tipe özgü bir dal (vites
+kontrolünün "zorunlu" dalı gibi) her yeni tipte kopyalanırdı. İlk kullanıcı
+kutusuz FEAD kayışı: silinse kullanıcının onu geri kurabileceği bir yol
+kalmazdı (palette yok, kanvasta kutusu yok) ve model kurulamazdı.
+
+**Kapı:** `tests/unit/fead-cizim-masasi.test.js` → *"kayış SİLİNMEZ"*
+(fonksiyon kaynaktan sökülüp koşturuluyor: kasnak siliniyor, kayış kalıyor,
+uyarı sebebi taşıyor) + `tests/e2e/fead-cizim-masasi.spec.js` → *"KAYIŞA
+TIKLA"* (gerçek Delete tuşu, pencerede çöp kutusu yok).
+
 ### Topoloji sınır çerçevesi ADI da sarar (`veNodeLabelOverflow`)
 
 Kesikli çerçeve (`veBoundaryBox` → `veUpdateBoundary`) yalnız KUTULARI sarıyordu;
@@ -1315,3 +1334,117 @@ içinde kırıyordu (motor penceresi ve üç aksesuar penceresi).
 
 **Kapı.** `mufettis-sigma.spec.js` → *"düğme yazısı N satır"* (her pencere,
 sütunda ve modalda) + `panel-dugme.test.js`.
+
+## Liste ve sayı alanı tek dilde (2026-09-26, kullanıcı kararı 11·B)
+
+**Hüküm.** Tek satırlı her açılır listenin okunu TEK kural çizer
+(`select:not([multiple]):not([size])`): kararın örneğindeki çizgi ok (Lucide
+chevron-down, 6×3 px), iki gradyanla, rengi `--text-muted`. Sayı alanında
+tarayıcının yukarı/aşağı oku yok; ↑/↓ tuşları çalışır.
+
+**Gerekçe.** 33 liste Windows'un okuyla, FEAD çubuğu ayrı bir kamayla
+çiziliyordu; 338 sayı alanı fare üstünde ok açıyor ve ok için ayrılan yer
+sağa yaslı rakamı kenardan 15–16 px içeri itiyordu. SVG değil gradyan:
+arka plan SVG'si tema değişkenini okuyamaz. `!important` bilerek: satır içi
+`background:` kısaltması oku siler.
+
+**Kapı.** `denetim-dili.test.js` (tek kural, çizgi ok, sayı alanı) +
+`mufettis-sigma.spec.js` → *"yerel liste"* / *"sayı alanı oklu"*.
+
+## Kaydırma çubuğu CSS'in niyeti (2026-09-26, kullanıcı kararı 12·B)
+
+**Hüküm.** Çubuk `::-webkit-scrollbar` ile çizilir (8 px, yuvarlak, oksuz).
+Standart `scrollbar-width` / `scrollbar-color` yalnız
+`@supports not selector(::-webkit-scrollbar)` bloğunda — yani Firefox'ta.
+`scrollbar-width: none` (gizlemek) serbest.
+
+**Gerekçe.** Chromium 121'den beri standart özellik `::-webkit-scrollbar`'ı
+KAPATIR: Edge'de tarayıcının 10 px'lik oklu çubuğu çiziliyordu.
+
+**Kapı.** `kaydirma-cubugu.spec.js` (gerçek çizim, Playwright'ın
+`--hide-scrollbars` bayrağı kapalı) + `denetim-dili.test.js`.
+
+## Veri ızgarası tablo gibi (2026-09-26, kullanıcı kararı 13·B)
+
+**Hüküm.** Satır başına birden çok alan taşıyan tablo `table.ve-izgara`
+taşır: dikey çizgi ve hücre zemini yok, girdinin kutusu yalnız fare
+üstünde ve yazarken. Izgara girdisi satır içi zemin/çerçeve TAŞIMAZ. Sayı
+sağa ve başlığın sağ kenarına oturur (hücre dolgusu + çerçeve + iç dolgu =
+sıradan hücrenin dolgusu). Satır başına tek alanlı form tabloları kapsam
+dışı.
+
+**Gerekçe.** Beş ızgarada 189 girdinin 189'u dinlenmede kutuluydu ve
+tablonun çizgisiyle çift çizgi okunuyordu; satır içi stil fare/odak
+durumunu ifade edemez.
+
+**Kapı.** `veri-izgara.test.js` + `mufettis-sigma.spec.js` →
+*"ızgarada kutulu hücre"*.
+
+## Rapor tablosunda sayı sağa, renk ezilmez (2026-09-26, kullanıcı kararı 14·B)
+
+**Hüküm.** Ayrıntılı raporda tamamı sayı olan sütun, başlığıyla birlikte
+sağa yaslı; ad ve metin sütunu solda, ✓/✗ ortada. `.dr-body table td`
+rengi `!important` ile ZORLAMAZ; rapor üreteci sabit onaltılık renk yazmaz.
+
+**Gerekçe.** 1517 sayı hücresinin 1364'ü ortalıydı. Renk zorlaması 212
+hücrenin anlam rengini eziyordu (etiket/değer ayrımı, eşleşme noktası,
+kırmızı uyarılar); sebebi olan `#333` üreteçten kalktı.
+
+**Kapı.** `rapor-hiza.test.js` + `rapor-hiza.spec.js`.
+
+## Orta kalınlık Windows'ta yarı kalın (2026-09-26, kullanıcı kararı 5·B)
+
+**Hüküm.** `--font-sans` yığının başında `'MFSim Segoe'` takma ailesi
+durur: YALNIZ `local()` adlarından kurulu sekiz yüz (400 Segoe UI, 500–650
+Semibold, 651–750 Bold, 751+ Black; italikleri ayrı). `url(` yok; Windows
+dışında yüzler bulunamaz ve yığın Inter'e düşer. `veThemeFontFaceCss`
+belgelere yalnız gömülü (`url(`) yüz taşır.
+
+**Gerekçe.** Segoe UI'da 500 yok; tarayıcı 500 isteyen sekme, tablo başlığı
+ve sinyal adını (CSS'te 27, JS'te 166 bildirim) 400 çiziyor ve vurgu
+kayboluyordu. Kullanıcı üç yolu kendi ekranında karşılaştırıp Semibold'u
+seçti. Mekanizma Chromium'da ölçüldü (yerel adla bulunan kalın yüz 500'de
+seçiliyor, bulunamayan yüz `error` olup sonraki aileye düşüyor); Windows
+dışında 397 yazı öğesinin 397'si birebir aynı genişlikte.
+
+**Kapı.** `tek-yazi-tipi.test.js` → *"5·B"* + `tek-yazi-tipi.spec.js`.
+
+## Büyüyen karşılama karesi dönmez (2026-09-26, kullanıcı kararı 6·2)
+
+**Hüküm.** Slayt ve açılış ekranı kareyi `veKarsilamaEkranaUygun`dan geçirir:
+ekranı kaplarken (cover) fiziksel pikselde ×1,25'ten fazla büyüyen kare
+dönmez. Eşik en keskin kareye göre ölçeklenir (1,25 × en küçük büyütme,
+1'in altındaysa 1). Dosyalar kalır; ölçüsü bilinmeyen kare elenmez; ekran
+ölçülemezse liste olduğu gibi. Kaynak ölçüsü (`VE_KARSILAMA_OLCU`) webp
+başlığından üretilir — `tools/karsilama-webp.js` listeyle birlikte yazar.
+
+**Gerekçe.** 1920×1080'de 48 karenin 26'sı büyütülüyor, 17'si ×1,25'i aşıyor
+ve yumuşuyordu. Kalite düşürülmez kararı duruyor. Sabit eşik 4K'da her kareyi
+eler ve liste ya boşalır ya da en bulanıklar dâhil hepsine döner.
+
+**Kapı.** `karsilama-slayt.test.js` → *"Kaynak ölçüsü"* + *"×1,25"* ·
+`loader-splash.test.js` → *"açılış karesi ekrana göre süzülür"*.
+
+## Minimap içeriği örtmez (2026-09-26, doku haritası K5)
+
+**Hüküm.** Açık minimap kutusu bir kartın kutusuna, adına ya da nota
+(yazı notu: kutusu; çerçeve notu: kenarı ve tutamakları) 6 px'ten fazla
+yaklaşırsa kutu köşedeki düğmesine iner (`oto`), köşe boşalınca kendiliğinden
+açılır. Ölçü açık hâlin kutusuyla alınır (`--mm-w/--mm-h`). Oto iniş
+kullanıcının tercihini yazmaz; oto inmişken düğmeye basmak, köşe boşalana
+kadar geçerli bir istektir. Kullanıcının kendi indirdiği kutu köşe boşken de
+inik kalır. Haritayı sürüklerken durum değişmez. Tuvalin kabı
+`ResizeObserver` ile gözlenir.
+
+**Gerekçe.** 1366×657'lik pencerede (Edge'de 1366×768 ekran) üç modülün 29
+örneği × kasnak paneli kapalı/açık = 58 durumun 13'ünde kutu bir denetimi ya
+da kart adını örtüyordu (FEAD 4, AP 7, Takoz 2); 1920×945'te 0. Soluk durmak
+(opacity .62) görüntüyü açıyordu ama tıklamayı yine yutuyordu. Kasnak paneli
+açılınca tuval pencere boyu değişmeden daralıyor ve kamera yerinde kalıyor;
+yalnız pencerenin `resize` olayını dinleyen minimap bunu hiç görmüyordu.
+O anki kutuyla ölçmek titretir: inen kutu artık değmez, açılır, yine değer.
+
+**Kapı.** `minimap-ortmez.test.js` (düzeltmenin her parçasını bozan 10
+mutantın 10'u) + `minimap-ortmez.spec.js` (düzeltme öncesi yapıda 4 testin 3'ü
+düşüyor; dördüncüsü "köşe boşsa açık kalır" ve her durumda inen bir kutuya
+karşı duruyor).

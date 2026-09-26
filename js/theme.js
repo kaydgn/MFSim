@@ -128,7 +128,7 @@ function veThemeFontFamily() {
   try {
     aile = getComputedStyle(document.documentElement).getPropertyValue('--font-sans').trim();
   } catch(e) {}
-  return aile || "'Segoe UI', Inter, -apple-system, sans-serif";
+  return aile || "'MFSim Segoe', 'Segoe UI', Inter, -apple-system, sans-serif";
 }
 // TUVALİN YAZI BOYU DA ÖLÇEKTEN (2026-09-25). Grafikler boyu sayıyla
 // yazıyordu (7–13 px) ve arayüzün ölçeği bir basamak büyüdüğünde hiçbiri
@@ -187,7 +187,9 @@ function veThemeFontFaceCss() {
         var r = kurallar[j];
         if (r.type !== 5) continue;                       // CSSRule.FONT_FACE_RULE
         var ad = String((r.style && r.style.getPropertyValue('font-family')) || '').replace(/["']/g, '').trim();
-        if (ad && aileler.indexOf(ad.toLowerCase()) >= 0) out.push(r.cssText);
+        // Yalnız GÖMÜLÜ yüz (url): 'MFSim Segoe' yalnız yerel adlardan kurulu
+        // (5·B) — belgeye taşınacak bir şeyi yok, taşınırsa ölü bayttır.
+        if (ad && aileler.indexOf(ad.toLowerCase()) >= 0 && /url\(/.test(r.cssText)) out.push(r.cssText);
       }
     }
   } catch (e) {}

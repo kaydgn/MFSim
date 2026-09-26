@@ -505,6 +505,7 @@ test('CTRL+Z: örnek TEK adımda geri alınır, açılış kartı SİLİNMEZ', a
     kanvas: window.nodes.filter((n) => n.type === 'fead-layout').length,
     bos: /henüz kasnak yok/.test((document.querySelector('.ve-fead-kanvas') || {}).textContent || ''),
     satir: document.querySelectorAll('.ve-fead-pafta tr[data-ve-node]').length,
+    kayis: window.nodes.filter((n) => n.type === 'fead-belt').length,
     undo: (window.undoStack || []).length }));
 
   const yuklu = await durum();
@@ -526,9 +527,14 @@ test('CTRL+Z: örnek TEK adımda geri alınır, açılış kartı SİLİNMEZ', a
   expect(sonra.kanvas).toBe(1);                     // açılış kartı DURUYOR
   expect(sonra.bos).toBe(true);                     // ve boş hâlini söylüyor
   expect(sonra.satir).toBe(0);                      // tablosu da boş
+  // KAYIŞ AÇILIŞIN PARÇASI (2026-09-26): kutusu yok ve silinemiyor, yani
+  // geri-al onu götürseydi kullanıcının geri kurabileceği bir yol kalmazdı.
+  expect(sonra.kayis).toBe(1);
 
   await geriAl(5);                                  // taban: daha fazlası bir şey silmez
-  expect((await durum()).dugum).toBe(2);            // sihirbaz + kanvas
+  const taban = await durum();
+  expect(taban.dugum).toBe(3);                      // kayış (kutusuz) + sihirbaz + kanvas
+  expect(taban.kayis).toBe(1);
 
   await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
   await page.keyboard.press('Control+y');

@@ -71,6 +71,36 @@ function listeyiYaz(adlar) {
   fs.writeFileSync(LISTE, yeni);
 }
 
+/** WebP başlığından [genişlik, yükseklik] px: VP8 (kayıplı), VP8L (kayıpsız),
+ *  VP8X (genişletilmiş). Tarayıcının çözücüsüyle 48 karenin 48'inde aynı
+ *  (2026-09-26). tests/unit/karsilama-slayt.test.js de bunu kullanır. */
+function webpOlcu(buf) {
+  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WEBP') {
+    throw new Error('webp değil');
+  }
+  const tur = buf.toString('ascii', 12, 16);
+  if (tur === 'VP8X') return [1 + buf.readUIntLE(24, 3), 1 + buf.readUIntLE(27, 3)];
+  if (tur === 'VP8L') { const b = buf.readUInt32LE(21); return [1 + (b & 0x3fff), 1 + ((b >> 14) & 0x3fff)]; }
+  if (tur === 'VP8 ') return [buf.readUInt16LE(26) & 0x3fff, buf.readUInt16LE(28) & 0x3fff];
+  throw new Error('bilinmeyen webp parçası: ' + tur);
+}
+
+/** Kaynak ölçüsü haritasını klasörden YENİDEN üretir (kullanıcı kararı 6·2:
+ *  ekranda ×1,25'ten fazla büyüyen kare dönmez — süzgeç bu ölçüleri okur). */
+function olcuyuYaz(adlar) {
+  const kaynak = fs.readFileSync(LISTE, 'utf8');
+  const govde = adlar.map((a) => {
+    const [w, h] = webpOlcu(fs.readFileSync(path.join(KLASOR, a)));
+    return "  '" + a + "': [" + w + ', ' + h + ']';
+  }).join(',\n');
+  const yeni = kaynak.replace(
+    /(var VE_KARSILAMA_OLCU = \{)[\s\S]*?(\n\};)/,
+    (m, bas, son) => bas + '\n' + govde + son
+  );
+  if (yeni === kaynak) throw new Error('ölçü çapası tutmadı: ' + LISTE);
+  fs.writeFileSync(LISTE, yeni);
+}
+
 async function main() {
   const o = ayristir(process.argv.slice(2));
   if (o.yardim || !o.dosyalar.length) {
@@ -128,6 +158,7 @@ async function main() {
 
   const adlar = fs.readdirSync(KLASOR).filter((f) => f.endsWith('.webp')).sort();
   listeyiYaz(adlar);
+  olcuyuYaz(adlar);
 
   const toplam = adlar.reduce((t, a) => t + fs.statSync(path.join(KLASOR, a)).size, 0);
   console.log(`\n${eklenen.length} kare eklendi · klasör ${adlar.length} kare · ` +
@@ -138,4 +169,8 @@ async function main() {
   }
 }
 
-main().catch((e) => { console.error('HATA:', e.message); process.exit(1); });
+if (require.main === module) {
+  main().catch((e) => { console.error('HATA:', e.message); process.exit(1); });
+}
+
+module.exports = { webpOlcu, olcuyuYaz };
