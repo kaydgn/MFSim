@@ -761,12 +761,9 @@ function _gkBuild(){
   ov.setAttribute('hidden', '');
   ov.innerHTML =
     '<div class="ve-help-panel" role="dialog" aria-modal="true" aria-label="Kullanım kılavuzları">'
-    + '<div class="ve-help-head"><h3>Kullanım Kılavuzları</h3>'
-    + '<button class="ve-help-close" type="button" title="Kapat (Esc)" aria-label="Kapat" '
-    + 'onclick="veGuideKitClose()">'
-    + '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
-    + 'stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/>'
-    + '<line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
+    + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-clipboard"></span> Kullanım Kılavuzları</span>'
+    + '<button class="ve-settings-close" type="button" title="Kapat (Esc)" aria-label="Kapat" '
+    + 'onclick="veGuideKitClose()"><span class="mf-ico mf-ico-x"></span></button></div>'
     + '<div class="ve-help-body" id="ve-guide-kit-body"></div>'
     + '<div class="ve-help-foot"><span id="ve-guide-kit-foot"></span>'
     + '<span class="ve-help-brand">MFSim</span></div></div>';
