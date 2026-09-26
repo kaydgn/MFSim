@@ -138,6 +138,12 @@ function saveState() {
   try {
     if(typeof veFeadRefreshLayoutCards === 'function') veFeadRefreshLayoutCards();
   } catch(e) {}
+  // Açık FEAD penceresinin SEKME DURUMLARI da aynı olaydan: sayı alanları
+  // paneli yeniden kurmuyor (odak düşmesin diye) ve durum satırı bir düzenleme
+  // geride kalırdı. Yalnız durum satırlarına dokunur (bkz. veFeadSekmeTazele).
+  try {
+    if(typeof veFeadSekmeTazele === 'function') veFeadSekmeTazele();
+  } catch(e) {}
 }
 
 // YIĞINDAKİ DURUM BİR ANLIK GÖRÜNTÜDÜR — canlı modele BAĞLANMAZ.

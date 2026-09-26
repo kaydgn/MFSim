@@ -1090,23 +1090,304 @@ function veFeadPanelTab(nodeId, key){
   return true;
 }
 
-// Sekme şeridi + gövdeler. Rozet SAYISI çağırana ait (`s.rozet`), çünkü
-// "eksik" tanımı sekmeye göre değişiyor ve ikinci bir doğrulama listesi
-// tutmak köprü değişince sessizce eskirdi.
+// Sekme şeridi + gövdeler. Her sekme ADININ altında DURUMUNU taşır
+// (`s.durum` — bkz. `veFeadSekmeDurumlari`); durumu olmayan pencerede (araç
+// pencereleri) yalnız ad basılır. Eski sayı rozeti bu satıra yerini bıraktı
+// ve KALKTI: çözücünün satır sayısı artık Çevrim sekmesinin durum satırı.
 function veFeadTabsHTML(nodeId, sekmeler, aktif){
   var h = '<div class="ve-fp-tabs" role="tablist" id="ve-fp-tabs-' + nodeId + '">';
   sekmeler.forEach(function(s){
+    var D = s.durum || null;
     h += '<button type="button" class="ve-fp-tab" role="tab" data-k="' + s.k + '"'
+      + (D ? ' data-d="' + D.d + '"' : '')
       + ' aria-selected="' + (s.k === aktif ? 'true' : 'false') + '"'
-      + ' onclick="veFeadPanelTab(\'' + nodeId + '\',\'' + s.k + '\')">' + _feadEsc(s.ad)
-      + (s.rozet ? '<b data-d="' + (s.rozetD || 'warn') + '">' + _feadEsc(s.rozet) + '</b>' : '')
+      + ' onclick="veFeadPanelTab(\'' + nodeId + '\',\'' + s.k + '\')">'
+      + '<span class="ve-fp-tab-ad">' + _feadEsc(s.ad) + '</span>'
+      + (D ? _feadSekmeDurumHTML(D) : '')
       + '</button>';
   });
-  h += '</div><div id="ve-fp-panes-' + nodeId + '">';
+  h += '</div>' + veFeadEksikBandi(nodeId, sekmeler)
+     + '<div id="ve-fp-panes-' + nodeId + '">';
   sekmeler.forEach(function(s){
     h += '<div data-k="' + s.k + '"' + (s.k === aktif ? '' : ' hidden') + '>' + s.govde + '</div>';
   });
   return h + '</div>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SEKME DURUMU — "bu sekmede eksik bir şey var mı"
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı isteği (2026-09-26, ekran görüntüsüyle): *"kullanıcı bu kısmı
+// görmeyebilir ve eksik bilgi girebilir"* → tasarım tezgâhından **B · Durumlu
+// Sekmeler** seçildi. Sekme adının altında bir durum satırı, eksik varsa
+// şeridin altında sebebini ve oraya giden bağlantıyı yazan bir bant.
+//
+// DÖRT DURUM, dördü de koddan okunur — tahmin edilmez:
+//   ok     hesabın kullandığı bütün alanlar dolu
+//   eksik  boş alanın bir SONUCU var: köprünün hatası, varsayılan uyarısı,
+//          bir kapının 'wait'i ya da sessiz sıfır. Sonuç `neden`de yazılı.
+//   bos    boş ama yerine başka kaynak var (isteğe bağlı)
+//   yok    bu düğümde hiçbir hesap sekmeyi okumuyor — sürücünün devir sınırı
+//          ve güç eğrisi (iki kapı da sürücüyü atlar, sürücünün gücü
+//          öteki kasnakların toplamıdır). Kural 25: sorulan her alanın bir
+//          tüketicisi olmalı; bu sekmeler sürücüde ALAN SORMAZ, sebebini yazar.
+//
+// KURALLAR KÖPRÜNÜN KENDİ YÜKLEMLERİ, ikinci bir liste değil: `veFeadHasOD`,
+// `veFeadAccLimits` (katalogtan gelen sınır DOLU sayılır — yalnız ham alana
+// bakan bir sayım katalog seçmiş kullanıcıya "0/3" derdi), `veFeadBeltMode`
+// + `veFeadBeltModeLocked`, `veFeadResolveDriver` (sürücü açıkça seçilmemişse
+// köprünün TİPTEN seçtiği), `veFeadPresetOf`, `veFeadResultState`. Yine de
+// ayrı yazılmış bir doğrulama köprü değişince sessizce eskirdi — kapı bu
+// yüzden ANLAŞMAYI ölçer: her zorunlu alan gerçek bir modelde tek tek
+// boşaltılır ve hem sekme 'eksik' der hem köprü hatasını/uyarısını verir
+// (`tests/unit/fead-sekme-durum.test.js`). KÖPRÜYE YENİ ZORUNLU ALAN
+// EKLEYEN, ONU BURAYA DA EKLER.
+function _feadDurum(d, yazi, neden){
+  var o = { d: d, yazi: yazi };
+  if(neden) o.neden = neden;
+  return o;
+}
+function _feadDolu(v){ return Number.isFinite(_feadNum(v, NaN)); }
+function _feadIlkBuyuk(t){ t = String(t || ''); return t.charAt(0).toLocaleUpperCase('tr') + t.slice(1); }
+
+function veFeadSekmeDurumlari(node, build){
+  if(!node) return null;
+  var def = _feadDefOf(node);
+  if(def.isFeadTensioner) return _feadGergiDurum(node);
+  if(def.isFeadPulley)    return _feadKasnakDurum(node, _feadDurumModel(build));
+  if(def.isFeadBelt)      return _feadKayisDurum(node);
+  if(def.isFeadSolver)    return _feadCozucuDurum(node, _feadDurumModel(build));
+  return null;                                  // araç pencereleri: durum yok
+}
+function _feadDurumModel(build){
+  if(build) return build;
+  try { return (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null; }
+  catch(e){ return null; }
+}
+
+// Köprünün sürücüsü: açık işaret → TİP → ilk kasnak (`veFeadResolveDriver`).
+// Yalnız `data.driver`a bakmak, işaretsiz krankı sürücü saymayıp iki ölü
+// sekmeyi "eksik" diye gösterirdi.
+function _feadEtkinSurucuMu(node, build){
+  var drv = (build && Array.isArray(build.order) && build.order.length
+             && typeof veFeadResolveDriver === 'function') ? veFeadResolveDriver(build.order) : null;
+  return drv ? (drv.id === node.id) : !!(node.data && node.data.driver);
+}
+
+function _feadCapNot(node){
+  var dd = (typeof VE_FEAD_DEFAULT_DIA !== 'undefined' && VE_FEAD_DEFAULT_DIA[node.type]) || 100;
+  return 'Dış çap girilmedi — tipe göre ' + dd + ' mm varsayıldı; kayış boyu ve sarım açıları '
+    + 'bu varsayıma dayanıyor.';
+}
+
+function _feadKasnakDurum(node, build){
+  var d = node.data || {}, def = _feadDefOf(node), out = {};
+  // GEOMETRİ — konum köprünün HATASI, çap VARSAYILAN UYARISI.
+  var konum = _feadDolu(d.x) && _feadDolu(d.y);
+  if(!konum) out.geo = _feadDurum('eksik', 'konum yok',
+    'Konum X / Y girilmedi — kayış yolu bu kasnak olmadan çözülemiyor.');
+  else if(!veFeadHasOD(node)) out.geo = _feadDurum('eksik', 'çap yok', _feadCapNot(node));
+  else out.geo = _feadDurum('ok', 'tamam');
+  // ROL — zorunlu alanı yok: sürücü bir rol, atalet boşsa Gates medyanı
+  // (varsayılan listesinde yazılı), katalog modeli isteğe bağlı.
+  out.rol = _feadDurum('ok', 'tamam');
+  if(def.isFeadIdler) return out;               // avarada bu iki sekme hiç açılmaz
+
+  if(_feadEtkinSurucuMu(node, build)){
+    out.dev = _feadDurum('yok', 'kullanılmaz');
+    out.egr = _feadDurum('yok', 'kullanılmaz');
+    return out;
+  }
+
+  // DEVİR SINIRLARI — iki kapının girdisi (fead-checks.js).
+  var lim = (typeof veFeadAccLimits === 'function') ? veFeadAccLimits(node) : null, n = 0;
+  if(lim) ['optimum', 'maxCont', 'maxPeak'].forEach(function(k){ if(lim[k] && lim[k].rpm > 0) n++; });
+  out.dev = (n === 3) ? _feadDurum('ok', 'tamam')
+    : _feadDurum('eksik', n + '/3 girildi', n === 0
+        ? 'Üçü de boş: bu kasnak devir kapılarında değerlendirilemiyor — uygun sayılmaz.'
+        : (3 - n) + ' sınır boş: devir kapıları bu kasnak için eksik kalıyor.');
+
+  // GÜÇ EĞRİSİ — çevrimdeki boş kW hücresi önce bu eğriden, sonra katalogdan
+  // dolar; ikisi de yoksa köprü O SATIRDA 0 kW YAZAR (`veFeadDutyToCore`) —
+  // sessiz sıfır. Eğri boş ama çevrim kW'ı taşıyorsa sekme isteğe bağlıdır.
+  var pts = (typeof veFeadPowerCurve === 'function') ? veFeadPowerCurve(node) : [];
+  var pre = (typeof veFeadPresetOf === 'function') ? veFeadPresetOf(node) : null;
+  if(pts.length) out.egr = _feadDurum('ok', pts.length + ' nokta');
+  else if(pre && pre.curve) out.egr = _feadDurum('ok', 'katalogdan');
+  else {
+    var sn = build && build.solver;
+    var rows = (sn && typeof veFeadDutyRows === 'function') ? veFeadDutyRows(sn) : [];
+    var bos = rows.filter(function(r){
+      if(!(r.rpm > 0)) return false;
+      var v = r.kw ? r.kw[node.id] : undefined;
+      return v === undefined || v === null || v === '';
+    }).length;
+    out.egr = bos
+      ? _feadDurum('eksik', 'kW eksik', 'Çalışma çevriminin ' + bos + ' satırında bu kasnağın '
+          + 'kW değeri yok ve güç eğrisi de yok — o satırlarda yük 0 kW sayılıyor.')
+      : _feadDurum('bos', 'isteğe bağlı');
+  }
+  return out;
+}
+
+function _feadGergiDurum(node){
+  var d = node.data || {}, out = {};
+  if(!(_feadDolu(d.cenX) && _feadDolu(d.cenY)))
+    out.geo = _feadDurum('eksik', 'merkez yok', 'Avara merkezi (X / Y) girilmedi — kayış yolu '
+      + 'bu noktadan geçiyor; model çözülemiyor.');
+  else if(!veFeadHasOD(node)) out.geo = _feadDurum('eksik', 'çap yok', _feadCapNot(node));
+  else out.geo = _feadDurum('ok', 'tamam');
+
+  var kol = [];
+  if(!(_feadNum(d.armLen, 0) > 0)) kol.push('kol boyu');
+  if(!_feadDolu(d.armMeanDeg))     kol.push('kol çalışma açısı');
+  out.kol = kol.length
+    ? _feadDurum('eksik', (2 - kol.length) + '/2 girildi', _feadIlkBuyuk(kol.join(' ve '))
+        + ' girilmedi — gergi gövdesinin montaj konumu kurulamıyor; model çözülemiyor.')
+    : _feadDurum('ok', 'tamam');
+
+  // Yay dengesi üç sayıdan (`veFeadSpringSetup`): ön yük, katsayı (> 0),
+  // çalışma momenti. Eksik olan ADIYLA yazılır — köprünün "çalışma momenti
+  // girilmedi" hatası katsayı boşken de düşüyor, o yüzden ondan okunmaz.
+  var yay = [];
+  if(!_feadDolu(d.preload))           yay.push('ön yük');
+  if(!(_feadNum(d.kArm, NaN) > 0))    yay.push('yay katsayısı');
+  if(!_feadDolu(d.meanLoad))          yay.push('çalışma momenti');
+  out.yay = yay.length
+    ? _feadDurum('eksik', (3 - yay.length) + '/3 girildi', _feadIlkBuyuk(yay.join(', '))
+        + ' girilmedi — yay dengesi ve kolun nominal açısı kurulamıyor; model çözülemiyor.')
+    : _feadDurum('ok', 'tamam');
+  return out;
+}
+
+function _feadKayisDurum(node){
+  var d = node.data || {}, out = {};
+  out.pro = (_feadNum(d.ribs, 0) > 0) ? _feadDurum('ok', 'tamam')
+    : _feadDurum('eksik', 'kanal yok', 'Kanal (kaburga) sayısı girilmedi — model çözülemiyor.');
+  // Gergi varsa kip KİLİTLİ serbesttir (köprünün aynı kuralı): boy bir sonuç.
+  var kilit = (typeof veFeadBeltModeLocked === 'function') && veFeadBeltModeLocked();
+  var kip = kilit ? 'free' : veFeadBeltMode(d);
+  var L = _feadNum(d.effLength != null ? d.effLength : d.length, 0);
+  out.boy = (kip === 'free') ? _feadDurum('ok', 'tasarımdan')
+    : (L > 0) ? _feadDurum('ok', 'tamam')
+    : _feadDurum('eksik', 'boy yok', 'Sabit kipte kayış efektif boyu girilmedi — model çözülemiyor.');
+  out.mal = (_feadNum(d.massPerRibKgM, 0) > 0) ? _feadDurum('ok', 'tamam')
+    : _feadDurum('bos', 'isteğe bağlı');
+  return out;
+}
+
+function _feadCozucuDurum(node, build){
+  var d = node.data || {}, out = {};
+  // GİRDİLER — iki kapının motor devirleri (`veFeadCheckOpt`). Örneklerin
+  // HİÇBİRİNDE governed yok (kural 19) ve kapının "değerlendirilemedi" demesi
+  // doğru; bu satır o sonucu pencerenin tepesine taşıyor, yeni bir kural
+  // koymuyor.
+  var gov = _feadNum(d.governedRpm, 0) > 0, ovr = _feadNum(d.overspeedRpm, 0) > 0;
+  var ne = [];
+  if(!gov) ne.push('Governed devri girilmedi: çevrim oranı kapısı değerlendirilemiyor.');
+  if(!ovr) ne.push('Overspeed girilmedi: aksesuarların anlık devir sınırı denetlenmiyor.');
+  out.gir = ne.length ? _feadDurum('eksik', ((gov ? 1 : 0) + (ovr ? 1 : 0)) + '/2 girildi', ne.join(' '))
+                      : _feadDurum('ok', 'tamam');
+
+  out.mod = (build && build.ok) ? _feadDurum('ok', 'çözüldü')
+    : _feadDurum('eksik', 'çözülemiyor', ((build && build.errors && build.errors[0])
+        || 'Model çözülemiyor.'));
+
+  var satir = (typeof veFeadDutyRows === 'function')
+    ? veFeadDutyRows(node).filter(function(r){ return r.rpm > 0; }).length : 0;
+  out.cev = satir ? _feadDurum('ok', satir + ' satır')
+    : _feadDurum('eksik', 'boş', 'Çalışma çevrimi boş — gerilme, hubload, kayma ve frekans '
+        + 'hesaplanamaz.');
+
+  var R = (typeof veFeadResultState === 'function') ? veFeadResultState(null, node.id) : { k: 'yok' };
+  out.son = (R.k === 'guncel') ? _feadDurum('ok', 'güncel')
+    : (R.k === 'bilinmiyor') ? _feadDurum('ok', 'var')
+    : (R.k === 'bayat') ? _feadDurum('eksik', 'bayat', 'Son hesap bayat: model hesaptan sonra '
+        + 'değişti — yeniden hesaplayın.')
+    : (R.k === 'hata') ? _feadDurum('eksik', 'hata', 'Son hesap hata verdi — ayrıntısı Sonuç sekmesinde.')
+    : _feadDurum('bos', 'hesaplanmadı');
+  return out;
+}
+
+// Sekmenin durum satırı. Nokta süs değil: renk körlüğünde ve gri basımda
+// dört durumu BİÇİM ayırır (dolu · kesikli halka · yok).
+function _feadSekmeDurumHTML(D){
+  return '<span class="ve-fp-tab-d" data-d="' + D.d + '"><i aria-hidden="true"></i>'
+    + _feadEsc(D.yazi) + '</span>';
+}
+
+// EKSİK BANDI — şeridin altında, yalnız eksik varken. Her eksik sekme için
+// SONUCU (`neden`) ve oraya giden bağlantı; sonuç eskiden yalnız sağ sütunun
+// dibinde yazıyordu ve 380 px'lik müfettişte kaydırmadan görünmüyordu.
+function veFeadEksikBandi(nodeId, sekmeler){
+  var eks = (sekmeler || []).filter(function(s){ return s.durum && s.durum.d === 'eksik'; });
+  if(!eks.length) return '';
+  return '<div class="ve-fp-eksik" role="status" id="ve-fp-eksik-' + nodeId + '">'
+    + eks.map(function(s){
+        return '<div class="ve-fp-eksik-s"><span class="mf-ico mf-ico-alert-triangle" aria-hidden="true"></span>'
+          + '<span class="ve-fp-eksik-t"><b>' + _feadEsc(s.ad) + '</b> — '
+          + _feadEsc(s.durum.neden || '') + '</span>'
+          + '<button type="button" onclick="veFeadEksikGit(\'' + nodeId + '\',\'' + s.k + '\')">'
+          + (s.k === 'son' ? 'Aç' : 'Doldur') + ' →</button></div>';
+      }).join('')
+    + '</div>';
+}
+
+// Bantın bağlantısı: sekmeyi açar ve İLK BOŞ girişe odaklanır. Boş giriş
+// yoksa (sonuç sekmesi, çevrim tablosu) odak sekmenin kendisine gider —
+// klavyeyle gelen kullanıcı nerede olduğunu kaybetmesin.
+function veFeadEksikGit(nodeId, k){
+  if(!veFeadPanelTab(nodeId, k)) return false;
+  var gov = document.getElementById('ve-fp-panes-' + nodeId);
+  var pn = gov && gov.querySelector('[data-k="' + k + '"]');
+  var hedef = pn ? Array.prototype.filter.call(
+      pn.querySelectorAll('input.ve-fp-inp:not([readonly]):not([disabled])'),
+      function(i){ return String(i.value).trim() === ''; })[0] : null;
+  if(!hedef){
+    var kap = document.getElementById('ve-fp-tabs-' + nodeId);
+    hedef = kap && kap.querySelector('.ve-fp-tab[data-k="' + k + '"]');
+  }
+  if(hedef && hedef.focus){
+    hedef.focus();
+    if(hedef.scrollIntoView) hedef.scrollIntoView({ block: 'nearest' });
+  }
+  return true;
+}
+
+// DURUM YERİNDE TAZELENİR, PANEL KURULMAZ. Sayı alanları (`veFeadSet`) paneli
+// yeniden kurmuyor — kursaydı Sekme ile geçilen bir sonraki alanın odağı
+// düşerdi (bu deponun tekrar eden dersi). Ama durum satırı o zaman bir
+// düzenleme geride kalırdı: "0/3" yazan sekmeye üç sınır girildiği hâlde.
+// `saveState` "girdi değişti" olayının tek kaynağı ve bunu oradan çağırır;
+// yalnız durum satırlarına ve banda dokunur, girdi elemanlarına DOKUNMAZ.
+function veFeadSekmeTazele(){
+  if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
+  var n = 0, build;
+  Array.prototype.forEach.call(document.querySelectorAll('.ve-fp-tabs[id^="ve-fp-tabs-"]'), function(kap){
+    var id = kap.id.slice('ve-fp-tabs-'.length);
+    var node = nodes.filter(function(x){ return x.id === id; })[0];
+    if(!node) return;
+    if(build === undefined) build = _feadDurumModel(null);
+    var D = veFeadSekmeDurumlari(node, build);
+    if(!D) return;
+    var sekmeler = [];
+    Array.prototype.forEach.call(kap.querySelectorAll('.ve-fp-tab'), function(b){
+      var k = b.getAttribute('data-k'), yeni = D[k];
+      var adEl = b.querySelector('.ve-fp-tab-ad');
+      sekmeler.push({ k: k, ad: adEl ? adEl.textContent : k, durum: yeni || null });
+      if(!yeni) return;
+      b.setAttribute('data-d', yeni.d);
+      var eski = b.querySelector('.ve-fp-tab-d');
+      if(eski) eski.outerHTML = _feadSekmeDurumHTML(yeni);
+      else b.insertAdjacentHTML('beforeend', _feadSekmeDurumHTML(yeni));
+    });
+    var bant = document.getElementById('ve-fp-eksik-' + id);
+    var html = veFeadEksikBandi(id, sekmeler);
+    if(bant){ if(html) bant.outerHTML = html; else bant.remove(); }
+    else if(html) kap.insertAdjacentHTML('afterend', html);
+    n++;
+  });
+  return n;
 }
 
 // ── SAĞ SÜTUN — GİRDİNİN SONUCU ───────────────────────────────────────────
@@ -1288,7 +1569,14 @@ function veFeadToolSide(node, baslik, kaynak, satirlar, ekBlok){
 // kursaydı biri `ve-fp-side`ı sekme gövdesinin İÇİNE koyup (ölçüldü: aynı DOM
 // nesnesi kalıyor, kapı fark etmiyordu) tasarımın bütün katkısını sessizce
 // yok edebilirdi.
-function veFeadPanelShell(node, sekmeler, yan){
+//
+// SEKME DURUMLARI DA BURADA BAĞLANIR: pencere kurucusu durum yazmaz, kabuk
+// düğümün tipinden sorar (`veFeadSekmeDurumlari`). Kurucu zaten hesapladıysa
+// (kasnak: sürücünün iki sekmesinin GÖVDESİ de duruma bağlı) dördüncü
+// argümanla verir — ikinci kez hesaplanmasın.
+function veFeadPanelShell(node, sekmeler, yan, durumlar){
+  var D = (durumlar !== undefined) ? durumlar : veFeadSekmeDurumlari(node);
+  if(D) sekmeler.forEach(function(s){ if(!s.durum && D[s.k]) s.durum = D[s.k]; });
   var aktif = veFeadPanelTabOf(node.id, sekmeler.map(function(s){ return s.k; }));
   return '<div class="sw-panel ve-fp">'
     + '<div class="ve-fp-split"><div class="ve-fp-main">'
@@ -1361,12 +1649,35 @@ function getFeadPulleyPropertiesHTML(node){
   // AVARA kayıştan güç çekmez: devir sınırı da güç eğrisi de onun için
   // sorulmuyordu, sekme de açılmıyor (kural 25 — sorulan her alanın bir
   // tüketicisi olmak zorunda, tersi de geçerli).
+  // SÜRÜCÜDE AYNI KURAL, SEKME KALIR: iki kapı da sürücüyü atlar ve
+  // sürücünün gücü öteki kasnakların toplamıdır — yani bu iki sekmeye
+  // yazılan hiçbir sayı bir sonuca ulaşmaz. Sekme "kullanılmaz" diye durur ve
+  // ALAN SORMAZ, sebebini yazar; avaradan farkı, sürücülüğün bir ROL olması
+  // (kural 8): işaret başka kasnağa geçince sekmeler geri gelir.
+  var durumlar = veFeadSekmeDurumlari(node);
   if(!isIdler){
-    sekmeler.push({ k:'dev', ad:'Devir Sınırları', govde: veFeadAccLimitCard(node) });
-    sekmeler.push({ k:'egr', ad:'Güç Eğrisi',      govde: veFeadPowerCurveCard(node) });
+    var olu = !!(durumlar && durumlar.dev && durumlar.dev.d === 'yok');
+    sekmeler.push({ k:'dev', ad:'Devir Sınırları',
+                    govde: olu ? _feadSurucuNotu('dev') : veFeadAccLimitCard(node) });
+    sekmeler.push({ k:'egr', ad:'Güç Eğrisi',
+                    govde: olu ? _feadSurucuNotu('egr') : veFeadPowerCurveCard(node) });
   }
 
-  return veFeadPanelShell(node, sekmeler, veFeadPulleySide(node));
+  return veFeadPanelShell(node, sekmeler, veFeadPulleySide(node), durumlar);
+}
+
+function _feadSurucuNotu(k){
+  return _feadCard(k === 'dev' ? 'Devir Sınırları' : 'Güç Eğrisi', 'sürücüde kullanılmaz',
+      'var(--text-muted)',
+      '<div class="ve-fp-olu">'
+      + '<b>Sürücü kasnakta bu sekme hiçbir hesaba girmiyor.</b> '
+      + (k === 'dev'
+          ? 'Devir kapılarının ikisi de sürücüyü atlar: sürücünün devri motor devrinin '
+            + 'kendisidir, sınır aksesuarlar için denetlenir.'
+          : 'Sürücünün gücü girilmez — öteki kasnakların çektiği gücün toplamından çıkar; '
+            + 'çalışma çevrimi tablosunda sürücü sütunu bu yüzden yok.')
+      + ' Sürücü işareti başka bir kasnağa geçerse bu sekme o kasnakta açılır.'
+      + '</div>');
 }
 
 // ── BMC AKSESUAR KÜNYESİ + DEVİR SINIRLARI ─────────────────────────────────
@@ -6961,8 +7272,7 @@ function getFeadSolverPropertiesHTML(node){
 
   var sekmeler = [{ k:'gir', ad:'Girdiler', govde: _gir },
                   { k:'mod', ad:'Model',    govde: _mod },
-                  { k:'cev', ad:'Çevrim',   govde: _cev,
-                    rozet: satirSay ? String(satirSay) : '', rozetD: 'ok' },
+                  { k:'cev', ad:'Çevrim',   govde: _cev },
                   { k:'son', ad:'Sonuç',    govde: _son }];
 
   // SON HESAP SONUCUN KENDİSİNDEN. Burası eskiden `veFeadResults[node.id]`
@@ -8223,7 +8533,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadOpenEditor: veFeadOpenEditor,
     veFeadPanelTab: veFeadPanelTab, veFeadPanelTabOf: veFeadPanelTabOf,
     veFeadTabsHTML: veFeadTabsHTML, veFeadPulleySide: veFeadPulleySide,
-    veFeadToolSide: veFeadToolSide, veFeadPanelShell: veFeadPanelShell, _feadSideGates: _feadSideGates,
+    veFeadToolSide: veFeadToolSide, veFeadPanelShell: veFeadPanelShell,
+    veFeadSekmeDurumlari: veFeadSekmeDurumlari, veFeadEksikBandi: veFeadEksikBandi,
+    veFeadEksikGit: veFeadEksikGit, veFeadSekmeTazele: veFeadSekmeTazele, _feadSideGates: _feadSideGates,
     veFeadBeltSideRows: veFeadBeltSideRows,
     veFeadPanelTabState: function(){ return VE_FEAD_PANEL_TAB; },
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
