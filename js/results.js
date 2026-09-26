@@ -876,19 +876,19 @@ function veRenderDetailedReport(filter) {
   ];
   var accHTML = '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-md);">';
   accHTML += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:6px 14px; text-align:left; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Aksesuar</th>';
-  accHTML += '<th style="padding:6px 14px; text-align:center; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500; width:150px;">Standart Kayıp (kW)</th>';
-  accHTML += '<th style="padding:6px 14px; text-align:center; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500; width:170px;">Kullanıcı Tanımlı Kayıp (kW)</th>';
+  accHTML += '<th style="padding:6px 14px; text-align:right; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500; width:150px;">Standart Kayıp (kW)</th>';
+  accHTML += '<th style="padding:6px 14px; text-align:right; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500; width:170px;">Kullanıcı Tanımlı Kayıp (kW)</th>';
   accHTML += '</tr></thead><tbody>';
   var totalStd = 0, totalUser = 0;
   accData.forEach(function(a) {
     totalStd += a.standardLoss; totalUser += a.userLoss;
     accHTML += '<tr><td style="padding:5px 14px; border-bottom:1px solid var(--border-light); color:var(--text-primary);">' + a.name + '</td>';
-    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + a.standardLoss.toFixed(1) + '</td>';
-    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + a.userLoss.toFixed(1) + '</td></tr>';
+    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + a.standardLoss.toFixed(1) + '</td>';
+    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + a.userLoss.toFixed(1) + '</td></tr>';
   });
   accHTML += '<tr style="background:var(--bg-tertiary);"><td style="padding:5px 14px; font-weight:700; color:var(--text-primary);">Toplam</td>';
-  accHTML += '<td style="padding:5px 14px; text-align:center; font-weight:700; color:var(--text-primary);">' + totalStd.toFixed(1) + '</td>';
-  accHTML += '<td style="padding:5px 14px; text-align:center; font-weight:700; color:var(--text-primary);">' + totalUser.toFixed(1) + '</td></tr>';
+  accHTML += '<td style="padding:5px 14px; text-align:right; font-weight:700; color:var(--text-primary);">' + totalStd.toFixed(1) + '</td>';
+  accHTML += '<td style="padding:5px 14px; text-align:right; font-weight:700; color:var(--text-primary);">' + totalUser.toFixed(1) + '</td></tr>';
   accHTML += '</tbody></table>';
   
   // ═══ MOTOR ═══
@@ -912,8 +912,9 @@ function veRenderDetailedReport(filter) {
     motorDetailHTML += '<div style="overflow-x:auto;">';
     motorDetailHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
     motorDetailHTML += '<thead><tr style="background:var(--bg-tertiary);">';
-    ['Devir<br>(rpm)','Brüt Güç<br>(kW)','Brüt Tork<br>(N·m)','Net Güç<br>Fan Açık (kW)','Net Tork<br>Fan Açık (N·m)','Net Güç<br>Fan Kapalı (kW)','Net Tork<br>Fan Kapalı (N·m)','Tanım'].forEach(function(th) {
-      motorDetailHTML += '<th style="padding:5px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); color:var(--text-secondary); font-weight:500; text-align:center; white-space:nowrap;">' + th + '</th>';
+    ['Devir<br>(rpm)','Brüt Güç<br>(kW)','Brüt Tork<br>(N·m)','Net Güç<br>Fan Açık (kW)','Net Tork<br>Fan Açık (N·m)','Net Güç<br>Fan Kapalı (kW)','Net Tork<br>Fan Kapalı (N·m)','Tanım'].forEach(function(th, i) {
+      // Sayı sütunu sağa, son sütun (Tanım) metin — sola (14·B)
+      motorDetailHTML += '<th style="padding:5px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); color:var(--text-secondary); font-weight:500; text-align:' + (i < 7 ? 'right' : 'left') + '; white-space:nowrap;">' + th + '</th>';
     });
     motorDetailHTML += '</tr></thead><tbody>';
     
@@ -933,11 +934,11 @@ function veRenderDetailedReport(filter) {
       if(rpm === R.governed) ident = 'Pik Governed';
       if(rpm === R.noLoad || (rpm > R.governed && netTrk <= 0)) ident = 'Yüksüz Governed';
       
-      var td = function(v) { return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + v + '</td>'; };
+      var td = function(v) { return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + v + '</td>'; };
       motorDetailHTML += '<tr>';
-      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + rpm + '</td>';
+      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + rpm + '</td>';
       motorDetailHTML += td(grossPwr.toFixed(1)) + td(grossTrk.toFixed(1)) + td(netPwrFanOn.toFixed(1)) + td(netTrkFanOn.toFixed(1)) + td(netPwr.toFixed(1)) + td(netTrk.toFixed(1));
-      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); text-align:center; color:var(--text-muted); font-style:italic; font-size:var(--fs-tiny);">' + ident + '</td>';
+      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--text-muted); font-style:italic; font-size:var(--fs-tiny);">' + ident + '</td>';
       motorDetailHTML += '</tr>';
     });
     motorDetailHTML += '</tbody></table></div>';
@@ -998,27 +999,27 @@ function veRenderDetailedReport(filter) {
   var driveHTML = '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body); margin-bottom:12px;">';
   driveHTML += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:5px 12px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Bileşen</th>';
   driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Açıklama</th>';
-  driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Oran</th>';
-  driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Verim (%)</th></tr></thead><tbody>';
+  driveHTML += '<th style="padding:5px 12px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Oran</th>';
+  driveHTML += '<th style="padding:5px 12px; text-align:right; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Verim (%)</th></tr></thead><tbody>';
   
   (R.propshafts.length > 0 ? R.propshafts : [{name:'Kardan Mili',eff:98.60}]).forEach(function(ps) {
     driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">' + ps.name + '</td>';
     driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">Tek</td>';
-    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">1.000</td>';
-    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + ps.eff.toFixed(2) + '</td></tr>';
+    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">1.000</td>';
+    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + ps.eff.toFixed(2) + '</td></tr>';
   });
 
   driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">' + R.diffName + '</td>';
   driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">Tek</td>';
-  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + R.diffRatio.toFixed(3) + '</td>';
-  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + R.diffEff.toFixed(2) + '</td></tr>';
+  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + R.diffRatio.toFixed(3) + '</td>';
+  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + R.diffEff.toFixed(2) + '</td></tr>';
   
   if(R.hasTransfer && R.transferGears.length > 0) {
     R.transferGears.forEach(function(tr, i) {
       driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">' + (i === 0 ? R.transferName : '') + '</td>';
       driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + tr.kademe + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + tr.ratio.toFixed(3) + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + tr.eff.toFixed(2) + '</td></tr>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + tr.ratio.toFixed(3) + '</td>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + tr.eff.toFixed(2) + '</td></tr>';
     });
   }
   driveHTML += '</tbody></table>';
@@ -1027,9 +1028,9 @@ function veRenderDetailedReport(filter) {
     driveHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
     driveHTML += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:5px 12px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Toplam Aktarma Oranı</th>';
     driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Kademe</th>';
-    driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Oran</th>';
-    driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Verim (%)</th>';
-    driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">N/V Oranı<br>(rpm/kph)</th></tr></thead><tbody>';
+    driveHTML += '<th style="padding:5px 12px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Oran</th>';
+    driveHTML += '<th style="padding:5px 12px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Verim (%)</th>';
+    driveHTML += '<th style="padding:5px 12px; text-align:right; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">N/V Oranı<br>(rpm/kph)</th></tr></thead><tbody>';
     R.transferGears.forEach(function(tr) {
       var psEffT = 1; R.propshafts.forEach(function(ps){ psEffT *= ps.eff / 100; });
       var oR = R.diffRatio * tr.ratio;
@@ -1037,9 +1038,9 @@ function veRenderDetailedReport(filter) {
       var nv = R.tireRadius > 0 ? (oR * 1000 / (R.tireRadius * 2 * Math.PI * 60)).toFixed(3) : '—';
       driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light);"></td>';
       driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + tr.kademe + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + oR.toFixed(3) + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + oE.toFixed(2) + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + nv + '</td></tr>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + oR.toFixed(3) + '</td>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + oE.toFixed(2) + '</td>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + nv + '</td></tr>';
     });
     driveHTML += '</tbody></table>';
   }
@@ -1109,8 +1110,10 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '<div style="overflow-x:auto;">';
     ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
     ecmHTML += '<thead><tr style="background:var(--bg-tertiary);">';
-    ['Durum','Konvertör','Stall τ','Stall rpm','Min N rpm','T_turb N·m','SR@Gov','C5','C7','C8'].forEach(function(th){
-      ecmHTML += '<th style="padding:5px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); color:var(--text-secondary); font-weight:500; text-align:center; white-space:nowrap;">' + th + '</th>';
+    // Hiza (14·B): ad sola, sayı sağa, ✓/✗ işareti ortada
+    ['Durum','Konvertör','Stall τ','Stall rpm','Min N rpm','T_turb N·m','SR@Gov','C5','C7','C8'].forEach(function(th, i){
+      var al = i < 2 ? 'left' : (i < 7 ? 'right' : 'center');
+      ecmHTML += '<th style="padding:5px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); color:var(--text-secondary); font-weight:500; text-align:' + al + '; white-space:nowrap;">' + th + '</th>';
     });
     ecmHTML += '</tr></thead><tbody>';
     
@@ -1118,12 +1121,12 @@ function veRenderDetailedReport(filter) {
       var stI = r.status==='recommended'?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':r.status==='caution'?'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>':r.status==='not-recommended'?'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
       var stT = r.status==='recommended'?'Önerilen':r.status==='caution'?'Dikkat':r.status==='not-recommended'?'Önerilmez':'Uyumsuz';
       var stC = r.status==='recommended'?'var(--accent-success)':r.status==='caution'?'var(--accent-warning)':r.status==='not-recommended'?'var(--accent-warning)':'var(--accent-danger)';
-      var td = function(v,c){return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:'+(c||'var(--text-primary)')+';">'+v+'</td>';};
+      var td = function(v,c,al){return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:'+(al||'center')+'; color:'+(c||'var(--text-primary)')+';">'+v+'</td>';};
       ecmHTML += '<tr>';
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); white-space:nowrap;"><span style="font-weight:600; color:'+stC+'; font-size:var(--fs-tiny);">'+stI+' '+stT+'</span></td>';
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">'+r.name+'</td>';
-      ecmHTML += td(r.stallTau.toFixed(2)) + td(r.stallSpeed.toFixed(0)) + td(r.minSpeed.toFixed(0), r.c5ok?'#333':'#dc2626');
-      ecmHTML += td(r.tTurbineStall.toFixed(0), r.c7ok?'#333':'#dc2626') + td(r.srGov.toFixed(3), r.c8ok?'#333':'#d97706');
+      ecmHTML += td(r.stallTau.toFixed(2), null, 'right') + td(r.stallSpeed.toFixed(0), null, 'right') + td(r.minSpeed.toFixed(0), r.c5ok?'var(--text-primary)':'var(--accent-danger)', 'right');
+      ecmHTML += td(r.tTurbineStall.toFixed(0), r.c7ok?'var(--text-primary)':'var(--accent-danger)', 'right') + td(r.srGov.toFixed(3), r.c8ok?'var(--text-primary)':'var(--accent-warning)', 'right');
       ecmHTML += td(r.c5ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + td(r.c7ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + td(r.c8ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>');
       ecmHTML += '</tr>';
     });
@@ -1240,20 +1243,20 @@ function veRenderDetailedReport(filter) {
       h += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
       h += '<thead><tr style="background:var(--bg-tertiary);">';
       h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:left; color:var(--text-secondary); font-weight:500; width:280px;">Eğim Kabiliyeti</th>';
-      h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">% Eğim</th>';
-      h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Araç Hızı<br>(km/h)</th>';
+      h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">% Eğim</th>';
+      h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Araç Hızı<br>(km/h)</th>';
       h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Vites<br>Kademe</th>';
       h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); text-align:left; color:var(--text-secondary); font-weight:500;">Eşleşme Noktası</th>';
       h += '</tr></thead><tbody>';
       
-      h += '<tr>' + _tdName('Durma Eğim Kabiliyeti (Stall)') + _td(veGradeDisplay(gd.stallGrade, 1)) + _td('') + _td(gd.stallGear) + _tdL('Stall') + '</tr>';
-      h += '<tr>' + _tdName('Kalkış Eğim Kabiliyeti (Launch)') + _td(veGradeDisplay(gd.launchGrade, 1)) + _td('') + _td(gd.launchGear) + _tdL('') + '</tr>';
-      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(veGradeDisplay(gd.lowSpeedGrade, 1)) + _td(gd.lowSpeedV.toFixed(1)) + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
-      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0') + _td(gd.maxSpeedFlat.toFixed(1)) + _td(gd.maxSpeedFlatGear) + _tdL('Yol Yükü') + '</tr>';
+      h += '<tr>' + _tdName('Durma Eğim Kabiliyeti (Stall)') + _td(veGradeDisplay(gd.stallGrade, 1), 'right') + _td('', 'right') + _td(gd.stallGear) + _tdL('Stall') + '</tr>';
+      h += '<tr>' + _tdName('Kalkış Eğim Kabiliyeti (Launch)') + _td(veGradeDisplay(gd.launchGrade, 1), 'right') + _td('', 'right') + _td(gd.launchGear) + _tdL('') + '</tr>';
+      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(veGradeDisplay(gd.lowSpeedGrade, 1), 'right') + _td(gd.lowSpeedV.toFixed(1), 'right') + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
+      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0', 'right') + _td(gd.maxSpeedFlat.toFixed(1), 'right') + _td(gd.maxSpeedFlatGear) + _tdL('Yol Yükü') + '</tr>';
       
       gd.gradeTable.forEach(function(row) {
         if(row.v_max <= 0 && row.grade > 0) return;
-        h += '<tr>' + _tdName('') + _td(row.grade.toFixed(1)) + _td(row.v_max.toFixed(1)) + _td(row.gear) + _tdL('') + '</tr>';
+        h += '<tr>' + _tdName('') + _td(row.grade.toFixed(1), 'right') + _td(row.v_max.toFixed(1), 'right') + _td(row.gear) + _tdL('') + '</tr>';
       });
       
       h += '</tbody></table></div>';
@@ -1319,19 +1322,19 @@ function veRenderDetailedReport(filter) {
       bh += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
       bh += '<thead><tr style="background:var(--bg-tertiary);">';
       bh += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:left; color:var(--text-secondary); font-weight:500; width:280px;">Hız</th>';
-      bh += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Süre<br>(saniye)</th>';
-      bh += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); text-align:center; color:var(--text-secondary); font-weight:500;">Mesafe<br>(m)</th>';
+      bh += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Süre<br>(saniye)</th>';
+      bh += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); text-align:right; color:var(--text-secondary); font-weight:500;">Mesafe<br>(m)</th>';
       bh += '</tr></thead><tbody>';
       
       ad.rows.forEach(function(row) {
         bh += '<tr>';
         bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); color:var(--text-primary);">0 — ' + row.targetSpeed + ' km/h</td>';
         if(row.time === null) {
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-muted); font-style:italic;">Hıza ulaşılamıyor</td>';
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:center; color:var(--text-muted); font-style:italic;">Hıza ulaşılamıyor</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-muted); font-style:italic;">Hıza ulaşılamıyor</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; color:var(--text-muted); font-style:italic;">Hıza ulaşılamıyor</td>';
         } else {
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + row.time.toFixed(1) + '</td>';
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + Math.round(row.distance) + '</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + row.time.toFixed(1) + '</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + Math.round(row.distance) + '</td>';
         }
         bh += '</tr>';
       });
@@ -4596,14 +4599,14 @@ function _ftBuildTable(steps) {
   html += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
   html += '<thead><tr style="background:var(--bg-tertiary);">';
   html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:left; color:var(--text-secondary); font-weight:500;">Vites<br>Kademe</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Araç Hızı<br>(km/h)</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Motor Devri<br>(rpm)</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Çıkış Devri<br>(rpm)</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Çekiş Kuvveti<br>(kN)</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Net Çekiş<br>(kN)</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Tekerlek<br>Gücü (kW)</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Net Eğim<br>(%)</th>';
-  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Isı Reddi<br>(kW)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Araç Hızı<br>(km/h)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Motor Devri<br>(rpm)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Çıkış Devri<br>(rpm)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Çekiş Kuvveti<br>(kN)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Net Çekiş<br>(kN)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Tekerlek<br>Gücü (kW)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Net Eğim<br>(%)</th>';
+  html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:right; color:var(--text-secondary); font-weight:500;">Isı Reddi<br>(kW)</th>';
   html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); text-align:left; color:var(--text-secondary); font-weight:500;">Eşleşme<br>Noktası</th>';
   html += '</tr></thead><tbody>';
   
@@ -4616,14 +4619,14 @@ function _ftBuildTable(steps) {
     
     html += '<tr style="' + borderTop + '">';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:500; color:var(--text-primary);">' + s.gear + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + s.speed.toFixed(1) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + Math.round(s.engineRPM) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + Math.round(s.outputRPM) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + s.te.toFixed(2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; ' + dpColor + '">' + s.dp.toFixed(2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + s.wheelPower.toFixed(1) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; ' + grColor + '">' + s.netGrade.toFixed(2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + s.heatRejection.toFixed(2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.speed.toFixed(1) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + Math.round(s.engineRPM) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + Math.round(s.outputRPM) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.te.toFixed(2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; ' + dpColor + '">' + s.dp.toFixed(2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.wheelPower.toFixed(1) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; ' + grColor + '">' + s.netGrade.toFixed(2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.heatRejection.toFixed(2) + '</td>';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--accent-primary); font-style:italic; font-size:var(--fs-tiny); white-space:nowrap;">' + (s.matchPoint || '') + '</td>';
     html += '</tr>';
     prevGear = s.gear;

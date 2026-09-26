@@ -5030,24 +5030,31 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 
 .ve-eng-sheet{ width:100%; table-layout:fixed; border-collapse:collapse;
   }
+/* Izgara TABLO gibi durur (13·B, aşağıda `table.ve-izgara`): dikey çizgi ve
+   hücre zemini yok, satırı açık bir çizgi ayırır. Girdi hücresinin kutusu
+   ve türetilen sütunun (ƒ) farkı artık zeminden değil davranıştan okunur:
+   girdi fare üstünde kutusunu gösterir, türetilen hücre göstermez. */
 .ve-properties-content .ve-eng-sheet th{
   position:sticky; top:0; z-index:1; padding:4px 5px !important;
   background:var(--bg-tertiary); border-bottom:1px solid var(--border-color);
-  border-right:1px solid var(--border-color); border-left:none;
+  border-left:0; border-right:0;
   font-weight:500; text-align:right; white-space:nowrap; }
 .ve-properties-content .ve-eng-sheet td{ padding:3px 5px !important; text-align:right;
-  border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); }
+  border-bottom:1px solid var(--border-light); border-left:0; border-right:0; }
 .ve-properties-content .ve-eng-sheet td.n,
 .ve-properties-content .ve-eng-sheet th.n{ padding:3px 2px !important; text-align:center;
-  background:var(--bg-tertiary); color:var(--text-muted); }
-.ve-properties-content .ve-eng-sheet td.in{ padding:1px 2px !important; background:var(--bg-input); }
-.ve-eng-sheet td.in input{ width:100%; box-sizing:border-box; padding:3px 4px;
-  text-align:right;
-  color:var(--text-primary); background:transparent;
-  border:1px solid transparent; border-radius:var(--radius-sm); }
-.ve-eng-sheet td.in input:focus{ border-color:var(--accent-primary); outline:none;
-  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent); }
-.ve-eng-sheet td.f{ background:var(--bg-secondary); }        /* türetilen, düzenlenemez */
+  color:var(--text-muted); }
+.ve-properties-content .ve-eng-sheet td.in{ padding:1px 2px !important; }
+.ve-eng-sheet tbody tr:hover{ background:var(--accent-tint-8); }
+/* Aksesuar kayıpları: görünüş satır içi stildeydi (her hücreye zemin + dört
+   kenar çizgisi); ızgara kuralı satır içi stili yenemediği için CSS'e geldi. */
+.ve-eng-acc{ width:100%; table-layout:fixed; border-collapse:collapse;
+  font-size:var(--fs-body); border:1px solid var(--border-color); }
+.ve-properties-content .ve-eng-acc td{ border-bottom:1px solid var(--border-light); }
+.ve-properties-content .ve-eng-acc td.lbl{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-properties-content .ve-eng-acc tr.top td{ border-top:1px solid var(--border-color);
+  border-bottom:0; font-weight:600; text-align:right; }
+.ve-properties-content .ve-eng-acc tr.top td.lbl{ text-align:left; color:var(--text-heading); }
 .ve-properties-content .ve-eng-sheet tfoot td{ background:var(--bg-input); color:var(--text-muted);
   text-align:left; font-family:inherit; }
 .ve-properties-content .ve-eng-sheet tfoot td.n{ background:var(--bg-tertiary); text-align:center; }
@@ -5469,6 +5476,46 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   outline:none;
   border-color:var(--accent-primary);
   box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+/* ── VERİ IZGARASI TABLO GİBİ (2026-09-26, kullanıcı kararı 13·B) ─────────
+   Hücrenin kutusu yalnız fare üstünde ve yazarken çıkar. Önce beş ızgarada
+   (motor · aksesuar · TK · şanzıman · transfer) 189 girdinin 189'u
+   dinlenmede çerçeveli ve zeminliydi; tablonun kendi çizgisiyle yan yana
+   çift çizgi okunuyordu. Form tabloları (satır başına TEK alan) kapsam
+   DIŞI: orada kutu alanın kendisini gösterir. Izgara girdisi satır içi
+   zemin/çerçeve TAŞIMAZ, çünkü satır içi stil fare ve odak durumunu ifade
+   edemez (kapı: veri-izgara.test.js + mufettis-sigma.spec.js). Sayı sağa,
+   satır adı sola (14·B'nin kuralı). */
+.ve-properties-content table.ve-izgara td input[type="number"],
+.ve-properties-content table.ve-izgara td input[type="text"]{
+  background:transparent; border-color:transparent;
+  text-align:right; font-variant-numeric:tabular-nums;
+  padding-left:4px; padding-right:4px;
+}
+/* RAKAM BAŞLIĞIN ALTINA OTURUR: girdi hücresinin dolgusu + girdinin
+   çerçevesi + iç dolgusu = sıradan hücrenin dolgusu (3 + 1 + 4 = 8 px;
+   hücresi 5 px olan motor ve aksesuar tablolarında 0 + 1 + 4 = 5 px).
+   Yoksa sağa yaslı sayı başlığın 3–7 px solunda bitiyordu. Kutu fare
+   üstünde hücreyi doldurur. */
+.ve-properties-content table.ve-izgara td:has(> input:not([type=hidden])){
+  padding-left:3px !important; padding-right:3px !important;
+}
+.ve-properties-content table.ve-eng-sheet.ve-izgara td.in,
+.ve-properties-content table.ve-eng-acc.ve-izgara td.num{
+  padding-left:0 !important; padding-right:0 !important;
+}
+.ve-properties-content table.ve-izgara th{ border-left:0; border-right:0; }
+.ve-properties-content table.ve-izgara th.num{ text-align:right; }
+.ve-properties-content table.ve-izgara tbody tr:hover{ background:var(--accent-tint-8); }
+.ve-properties-content table.ve-izgara td input.ad{ text-align:left; }
+.ve-properties-content table.ve-izgara td input.f{
+  color:var(--accent-primary); font-weight:500; cursor:default;
+}
+.ve-properties-content table.ve-izgara td input:not([readonly]):hover{
+  border-color:var(--border-color); background:var(--bg-input);
+}
+.ve-properties-content table.ve-izgara td input:not([readonly]):focus{
+  border-color:var(--accent-primary); background:var(--bg-input);
 }
 .ve-properties-content table th{
   text-align:left;
@@ -6520,7 +6567,13 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .dr-girdi-wrapper{overflow:hidden;transition:max-height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s ease;padding-bottom:8px;}
 .dr-body table{background:var(--bg-secondary) !important;color:var(--text-primary) !important;}
 .dr-body table th{color:var(--text-secondary) !important;background:var(--bg-tertiary) !important;border-color:var(--border-color) !important;}
-.dr-body table td{color:var(--text-primary) !important;border-color:var(--border-light) !important;}
+/* Hücre RENGİ zorlanmaz (2026-09-26): `color:… !important` rapordaki 212
+   hücrenin anlam rengini eziyordu — etiket/değer ayrımı (56), soluk notlar
+   (27), eşleşme noktası vurgusu (124) ve kırmızı/turuncu uyarılar (5:
+   negatif çekiş, tutmayan kriter) metin rengine düşüyordu. Zorlamanın
+   sebebi olan sabit `#333` üreteçten kalktı; rengi olmayan hücre tablonun
+   rengini miras alır. Kapı: rapor-hiza.test.js. */
+.dr-body table td{border-color:var(--border-light) !important;}
 .dr-body table tr:hover td{background:var(--bg-tertiary) !important;}
 .dr-chart-tooltip{position:absolute;pointer-events:none;background:var(--bg-secondary);border:1px solid rgba(255,255,255,0.15);border-radius:var(--radius-sm);padding:8px 12px;font-size:var(--fs-tiny);color:var(--text-primary);line-height:1.6;box-shadow:var(--shadow-lg);z-index:10;max-width:280px;white-space:nowrap;opacity:0;transition:opacity 0.18s cubic-bezier(0.4,0,0.2,1);}
 .dr-chart-tooltip.visible{opacity:1;}
