@@ -578,6 +578,10 @@ function _gfSec2(){
 
 function _gfSec3(){
   var h = _gfH2(2);
+  // ÖRNEK SAYISI SİHİRBAZIN GÖSTERDİĞİ LİSTEDEN (`veFeadExampleKeys` — gizli
+  // kayıtlar sayılmaz), elle yazılmaz: yazılan sayı listeyle birlikte değişmez.
+  var _ornekSay = (typeof veFeadExampleKeys === 'function') ? veFeadExampleKeys().length : 0;
+  var _ornekMetin = _ornekSay ? _ornekSay + ' hazır örnekten' : 'hazır örneklerden';
   h += '<h3>3.1 Modülü açmak</h3>';
   h += _gfAdimlar([
     'Karşılama ekranında <strong>FEAD</strong> kartına tıklayın. Ana tuvale tek bir '
@@ -614,8 +618,8 @@ function _gfSec3(){
       + 'geometri kartı olarak kullanır, üçüncü bir çizim kurmaz.'
   ]);
   h += _gfAlanTablo('Sihirbaz adımları ↔ bu kılavuzun bölümleri', [
-    ['1 · Başlangıç', 'Sistem adı · <strong>on bir hazır örnekten</strong> doldurma',
-      'Bölüm 3.3'],
+    ['1 · Başlangıç', 'Sistem adı · <strong>STEP dosyasından</strong> ya da <strong>'
+      + _ornekMetin + '</strong> doldurma', 'Bölüm 3.3 ve 3.5'],
     ['2 · Kasnaklar', 'Tip · çap · koordinat · temas tarafı · sürücü · '
       + '<strong>kayış sırası</strong> (↑ ↓)', 'Bölüm 4, 5 ve 6'],
     ['3 · Otomatik Gergi', 'Avara merkezi · kol boyu · kol açısı · yay künyesi', 'Bölüm 7'],
@@ -639,9 +643,9 @@ function _gfSec3(){
     + 'beklediğini görmenin en hızlı yolu.</p>';
   h += _gfAdimlar([
     'Sihirbazın <strong>1 · Başlangıç</strong> adımını açın.',
-    '<strong>On bir kayıtlı sistem</strong> arasından birini seçin — hepsi gerçek araçlara '
-      + 'ait ve hepsi tedarikçiden <em>dönen</em> Gates raporlarından çıkarılmıştır. Seçim '
-      + 'bütün adımların alanlarını bir anda doldurur.',
+    '<strong>' + (_ornekSay ? _ornekSay + ' kayıtlı sistem' : 'Kayıtlı sistemler') + '</strong> '
+      + 'arasından birini seçin — hepsi gerçek araçlara ait ve hepsi tedarikçiden <em>dönen</em> '
+      + 'Gates raporlarından çıkarılmıştır. Seçim bütün adımların alanlarını bir anda doldurur.',
     'Adımları gezip değerleri görün, sonra son adımda <strong>modeli kurun</strong>. '
       + 'Kasnaklar çizimde ve <strong>Kayış Tablosu’nda</strong> (kartın <em>Tablo</em> '
       + 'düğmesi) sırasıyla belirir.'
@@ -697,6 +701,46 @@ function _gfSec3(){
     + 'model değil. Şeritteki <strong>Otomatik Düzenle</strong> düğmesi onları dizer: Kayış '
     + 'Yolu kartları sağda yan yana, künye kartları solda. Kasnaklar dizilmez — '
     + 'dizilecek bir kutuları yok.');
+  h += '<h3>3.5 Yol D — kendi CAD montajınızdan (STEP)</h3>';
+  h += '<p>CATIA ya da 3DEXPERIENCE’ta çizdiğiniz düzeni <strong>STEP dosyası</strong> olarak '
+    + 'verirseniz kasnakların dış çapı, kanal sayısı ve merkezleri, gerginin avara merkezi, kol '
+    + 'boyu ve kol açısı <strong>dosyadan okunur</strong>. Hangi parçanın ne olduğunu siz '
+    + 'onaylarsınız; sihirbaz geri kalanını örnek yükler gibi doldurur.</p>';
+  h += _gfAdimlar([
+    'CAD’de ürün ağacını STEP olarak kaydedin: <code>.stp</code> ya da sıkıştırılmış '
+      + '<code>.stpZ</code>, AP214 veya AP242, <strong>katı geometri</strong>. Yalnız üçgen ağ '
+      + 'taşıyan bir dosyada okunacak yüzey yoktur.',
+    'Sihirbazın <strong>1 · Başlangıç</strong> adımında <strong>STEP dosyası seç…</strong> '
+      + 'düğmesine basın ya da dosyayı kartın üstüne bırakın.',
+    'Listede her kasnağın <strong>rolünü</strong> kontrol edin. Öneri parçanın ADINDAN gelir '
+      + '(KRANK, KLİMA, AVARA, GERGİ …); yanlışsa listeden değiştirin, modele girmesini '
+      + 'istemediğiniz parçayı <em>— aktarma —</em> yapın. Model tek krank ve tek gergi taşır.',
+    '<strong>Bakış</strong> yönünü kontrol edin: <em>Önden</em>, kasnakların önünden, motorun '
+      + 'karşısından bakıştır. Klima krankın hangi yanında görünüyorsa listedeki X de o yanda '
+      + 'olmalı; değilse <em>Arkadan</em>’ı seçin.',
+    '<strong>Sihirbaza aktar</strong>’a basın. Sonra <strong>2 · Kasnaklar</strong> adımında '
+      + 'kayış sırasını doğrulayın ve <strong>3 · Otomatik Gergi</strong> adımında yay künyesini '
+      + 'seçin.'
+  ]);
+  h += _gfAlanTablo('STEP dosyasından ne okunur', [
+    ['Kasnak dış çapı', '<strong>Kaburga tepesi</strong> — omuz ya da flanş değil', 'okunur'],
+    ['Kanal sayısı · profil', 'Kanal adımından (PK = 3,56 mm …)', 'okunur; kayışa yazılmaz'],
+    ['Kasnak merkezi', 'Kayış düzleminde X · Y, krank orijinde', 'okunur'],
+    ['Gergi', 'Avara merkezi · kol boyu · kol açısı · parça kodu', 'okunur'],
+    ['Yay künyesi', 'Ön yük · katsayı · çalışma momenti', '<strong>okunmaz</strong> — 3. adımda seçilir'],
+    ['Kayış', 'Profil · kanal · boy', '<strong>okunmaz</strong> — elle girilir'],
+    ['Kayış sırası', 'Kayışın hangi kasnaktan hangisine geçtiği',
+      '<strong>okunmaz</strong> — ağaç sırası gelir']
+  ], ['Ne', 'Nasıl', 'Durum']);
+  h += _gfUyari('Kayış sırası dosyada yok',
+      'STEP montajı kasnakları taşır, kayışın sırasını taşımaz. Sihirbaz ürün ağacının sırasını '
+    + 'kullanır ve <strong>2 · Kasnaklar</strong> adımını uyarıyla işaretler: kayış yolunu '
+    + 'şemada kontrol edin, gerekirse ↑ ↓ ile düzeltin ya da <strong>✓ Sıra doğru</strong> ile '
+    + 'onaylayın.');
+  h += _gfNot('Künye dosyadaki gergiyi sessizce değiştirmez',
+      'Künye seçmek gerginin parça alanlarını (kol boyu · kasnak çapı · parça kodu) katalogdan '
+    + 'yazar. Seçtiğiniz künye STEP’teki parçadan farklıysa gergi adımı farkı adıyla gösterir; '
+    + 'elle yazdığınız değer için uyarı çıkmaz.');
   h += _gfSahneSerit();
   return h;
 }

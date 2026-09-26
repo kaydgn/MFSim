@@ -39,7 +39,7 @@
 // sırasını taşıdığı için kurulumda veFeadRouteFlip'ten geçiyor.
 
 var VE_FW_STEPS = [
-  { key:'kaynak', ad:'Başlangıç',      ipucu:'Sistem adı · örnekten doldur' },
+  { key:'kaynak', ad:'Başlangıç',      ipucu:'Sistem adı · STEP dosyası · örnekten doldur' },
   // KAYIŞ YOLU ADIMI KALDIRILDI (kullanıcı isteği, 2026-09-04): *"Kayış yolu
   // kısmını kaldıralım. Gerek yok. O işi zaten 'kasnaklar' kısmından
   // yapıyoruz."*
@@ -341,6 +341,7 @@ function veFeadWizRouteMove(key, delta){
   if(r.indexOf('__ten__') === 1 && (i === 1 || j === 1)) return false;
   var t = r[i]; r[i] = r[j]; r[j] = t;
   _fwState.route = r;
+  delete _fwState.siraKaynagi;           // sıra artık kullanıcının
   veFeadWizRender();
   return true;
 }
@@ -351,6 +352,7 @@ function veFeadWizRouteReverse(){
   var r = veFeadWizRoute(_fwState);
   if(r.length > 2) _fwState.route = [r[0]].concat(r.slice(1).reverse());
   else _fwState.route = r;
+  delete _fwState.siraKaynagi;           // sıra artık kullanıcının
   veFeadWizRender();
 }
 
@@ -551,8 +553,31 @@ function veFeadWizSeed(key){
   if(typeof veFeadExampleOf !== 'function') return false;
   var ex = veFeadExampleOf(key);
   if(!ex) return false;
-  var st = veFeadWizDefault();
+  var st = _fwSeedKayit(ex);
   st.ad = ex.name || key;
+  // HANGİ ÖRNEKTEN DOLDURULDUĞUNUN İZİ. Hesaba girmiyor; 1. adımdaki kartın
+  // "yüklendi" işaretini besliyor ve taslakla birlikte düğümde kalıyor, yani
+  // kullanıcı geri döndüğünde hangi örnekle başladığını görüyor.
+  st.seededFrom = key;
+  _fwState = st;
+  _fwStep = 0;
+  veFeadWizRender();
+  return true;
+}
+
+// ÖRNEK KAYDI → DURUM (DOM'suz). İKİ KAYNAK TEK YOLDAN: kayıt defterindeki
+// örnek (`veFeadWizSeed`) ve STEP dosyasından gelen kayıt (`veFeadWizStpAktar`)
+// — FEAD kural 34: "sihirbaz onu örnek gibi yükler, ikinci kurulum yolu
+// açılmaz". İkinci bir kopyalayıcı, kural 20'nin sessiz sınıfını (bir yöne
+// eklenip ötekine eklenmeyen alan) ikiye katlardı.
+//
+// Kayıt kayış ya da çözücü TAŞIMIYORSA (STEP) o bölümler BOŞ DURUMDAN kalır:
+// kayışa dokunulmaz (kullanıcı kararı, 2026-09-26: *"Kayışı zaten biz manuel
+// olarak dolduruyoruz"*). Eskiden `ex.belt || {}` yazılıydı — kayıtsız bir
+// kaynak profili ve kanal sayısını SİLERDİ.
+function _fwSeedKayit(ex){
+  var st = veFeadWizDefault();
+  st.ad = ex.name || st.ad;
   var keyMap = {};
   ex.pulleys.forEach(function(p){
     var d = p.data || {};
@@ -586,27 +611,22 @@ function veFeadWizSeed(key){
   // sabit, kalanı ters). Köprü kurarken geri çevirir — sayılar birebir.
   st.route = veFeadRouteFlip((ex.route || []).map(function(k){ return keyMap[k]; })
     .filter(function(k){ return !!k; }));
-  st.belt = JSON.parse(JSON.stringify(ex.belt || {}));
-  st.solver = JSON.parse(JSON.stringify(ex.solver || {}));
-  // Duty kW'ı örnekte KASNAK ANAHTARIYLA yazılı; sihirbaz da anahtarla tutuyor
-  // (kimliğe çeviri tek yerde: veFeadWizNodes). Çeviri burada yapılsaydı
-  // sihirbaz durumu düğüm kurma ayrıntısına bağlanırdı.
-  (st.solver.duty || []).forEach(function(r){
-    var kaynak = r.kwByKey || r.kw || {};
-    var kw = {};
-    Object.keys(kaynak).forEach(function(k){ if(keyMap[k]) kw[keyMap[k]] = kaynak[k]; });
-    r.kw = kw;
-    delete r.kwByKey;
-  });
+  if(ex.belt) st.belt = JSON.parse(JSON.stringify(ex.belt));
+  if(ex.solver){
+    st.solver = JSON.parse(JSON.stringify(ex.solver));
+    // Duty kW'ı örnekte KASNAK ANAHTARIYLA yazılı; sihirbaz da anahtarla tutuyor
+    // (kimliğe çeviri tek yerde: veFeadWizNodes). Çeviri burada yapılsaydı
+    // sihirbaz durumu düğüm kurma ayrıntısına bağlanırdı.
+    (st.solver.duty || []).forEach(function(r){
+      var kaynak = r.kwByKey || r.kw || {};
+      var kw = {};
+      Object.keys(kaynak).forEach(function(k){ if(keyMap[k]) kw[keyMap[k]] = kaynak[k]; });
+      r.kw = kw;
+      delete r.kwByKey;
+    });
+  }
   st.temizle = false;
-  // HANGİ ÖRNEKTEN DOLDURULDUĞUNUN İZİ. Hesaba girmiyor; 1. adımdaki kartın
-  // "yüklendi" işaretini besliyor ve taslakla birlikte düğümde kalıyor, yani
-  // kullanıcı geri döndüğünde hangi örnekle başladığını görüyor.
-  st.seededFrom = key;
-  _fwState = st;
-  _fwStep = 0;
-  veFeadWizRender();
-  return true;
+  return st;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -828,6 +848,28 @@ function veFeadWizIssues(b, step){
   (b.warnings || []).forEach(function(m){
     if(step === undefined || veFeadWizStepOf(m) === step) out.push({ tur: 'warn', m: m });
   });
+  // STEP'TEN GELEN SIRA BİR VARSAYIM (kural 34) — model o sırayla çözülebilir
+  // ve yine de yanlış olabilir; sıra elle değişene ya da onaylanana kadar
+  // Kasnaklar adımı uyarı taşır.
+  var st = _fwState;
+  if(st && st.siraKaynagi === 'agac' && (step === undefined || step === 1))
+    out.push({ tur: 'warn', m: VE_FW_SIRA_AGAC });
+  // STEP ↔ KÜNYE: künye gerginin parça alanlarını YAZAR (kol · çap · parça
+  // kodu; kural 17). CAD'deki gergi başka bir parçaysa dosyadan gelen sayılar
+  // sessizce katalogunkilerle değişirdi — fark yalnız künye seçiliyken
+  // söylenir (elle yazılan değer kullanıcının kendi kararıdır).
+  var sk = st && st.stepKaynak && st.stepKaynak.gergi, tn = st && st.ten;
+  if(sk && tn && tn.tenLib && (step === undefined || step === 2)){
+    if(sk.tenPart && tn.tenPart && sk.tenPart !== tn.tenPart)
+      out.push({ tur: 'warn', m: 'Seçilen künyenin parçası ' + tn.tenPart
+        + ', STEP dosyasındaki gergi ' + sk.tenPart + '.' });
+    [['armLen', 'kol boyu', ' mm'], ['od', 'kasnak çapı', ' mm']].forEach(function(a){
+      var v = _fwNum(tn[a[0]], NaN), ref = sk[a[0]];
+      if(Number.isFinite(ref) && Number.isFinite(v) && Math.abs(v - ref) > 0.05)
+        out.push({ tur: 'warn', m: 'Künyenin ' + a[1] + ' ' + _fwFmt(v, 3) + a[2]
+          + ', STEP dosyasında ' + _fwFmt(ref, 3) + a[2] + '.' });
+    });
+  }
   return out;
 }
 
@@ -843,6 +885,9 @@ function veFeadWizOpen(nodeId){
   var ov = document.getElementById('ve-feadwiz-overlay');
   if(!ov) return false;
   _fwNodeId = nodeId || null;
+  // STEP kartı oturumluk ve AÇAN DÜĞÜME ait: başka bir FEAD sisteminin
+  // sihirbazı öncekinin dosyasını göstermemeli.
+  if(_fwStp && _fwStp.nodeId !== _fwNodeId) _fwStp = null;
   // KALDIĞI YERDEN: yarım bırakılmış sihirbaz düğümde duruyor. Durum
   // kopyalanarak alınıyor — kullanıcı "İptal" derse düğümdeki kayıt bozulmasın.
   var node = (typeof nodes !== 'undefined' && nodes)
@@ -1323,6 +1368,9 @@ function _fwStepKaynak(b){
   var durum = yuklu === null ? ''
     : '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(yukluAd || 'Boş başla') + '</b> yüklendi'
       + (yukluAlt ? ' <em>' + _fwEsc(yukluAlt) + '</em>' : '') + '</div>';
+  // STEP'TEN BAŞLA ÖRNEKLERDEN ÖNCE: kullanıcının kendi tasarımının yolu bu,
+  // örnekler öğrenme yolu (kural 34).
+  h += _fwCard('STEP\'ten başla', 'var(--accent-primary)', _fwStpKartHTML());
   h += _fwCard('Örnekten doldur', 'var(--accent-success)',
       _fwField('Örnek', sel) + gezinme + durum);
 
@@ -1431,6 +1479,306 @@ function veFeadWizReset(){
   _fwState.seededFrom = '';          // "Boş başla" da bir SEÇİMDİR
   _fwStep = 0;
   veFeadWizRender();
+}
+
+// ── 1 · BAŞLANGIÇ: STEP'TEN BAŞLA ──────────────────────────────────────────
+//
+// Kullanıcı isteği (2026-09-26): *"ben programa STEP dosyasını atarım …
+// oradan neyin ne olduğunu manuel olarak seçeriz. Program çapları yapıları vs
+// otomatik olarak çıkarır."* Rol onayı burada LİSTEDEN; 3B görüntüleyici
+// sonraki adım.
+//
+// ZİNCİR: baytlar → `veStepP21Metin` (düz · gzip · zip) → `veFeadStpOku`
+// (tanıyıcı) → kullanıcının rol ve bakış onayı → `veFeadStpKayit` (örnek
+// kaydı) → `_fwSeedKayit` (örnek tohumunun AYNI yolu). Kart geometri
+// HESAPLAMAZ; tanıyıcının sayılarını okur (FEAD kural 34).
+//
+// OTURUMLUK, KAYDEDİLMEZ: `_fwStp` tanıyıcının çıktısını tutar (gerçek
+// dosyada 3,6 KB) ama `node.data.wiz`e YAZILMAZ — dosya bir KAYNAK, ürünü
+// sihirbaz durumu. Aktarımın izi durumda kalır (`st.stepKaynak`), sıranın
+// kaynağı da (`st.siraKaynagi`).
+var _fwStp = null;
+
+// TEK OLABİLEN ROLLER: model tek sürücü ve tek gergi taşır. İkisinden birinin
+// iki parçaya verilmesi aktarımı DURDURUR — tanıyıcı ikinci gergiyi atlar,
+// ikinci krank sürücüsüz bir krank olurdu; ikisi de sessiz olurdu.
+var VE_FW_STP_TEKIL = ['fead-crank', 'fead-tensioner'];
+
+function _fwStpRolAd(tip){
+  return tip === 'fead-tensioner' ? _fwTenAd() : _fwDefName(tip);
+}
+function _fwStpParcaAd(s, i){
+  var k = s.sonuc.kasnaklar[i];
+  return String(s.sonuc.parcalar[k.parca].ad || '').replace(/\s+/g, ' ').trim();
+}
+// Kullanıcının seçimi → tanıyıcının kayıt seçenekleri. Orijin KULLANICININ
+// seçtiği krank (öneri değil): rolü başka parçaya veren kullanıcı koordinatların
+// o kasnaktan ölçülmesini bekler.
+function _fwStpSecim(s){
+  var m = s.roller.indexOf('fead-crank');
+  return { roller: s.roller.slice(), ayna: !!s.ayna, merkez: m >= 0 ? m : undefined };
+}
+
+// Dosya → metin → tanıyıcı. Okuma asenkron (File API); ayrıştırma bir kare
+// SONRA — 8 MB'lık dosyada ~0,5 sn ana iş parçacığını tutuyor ve "okunuyor"
+// durumu çizilmeden donmuş bir düğme görünürdü.
+function veFeadWizStpDosya(dosya){
+  if(!dosya) return null;
+  var ad = dosya.name || 'STEP';
+  _fwStp = { dosya: ad, durum: 'okunuyor', nodeId: _fwNodeId };
+  veFeadWizRender();
+  var oku = (typeof dosya.arrayBuffer === 'function') ? dosya.arrayBuffer()
+    : new Promise(function(ok, red){
+        var fr = new FileReader();
+        fr.onload = function(){ ok(fr.result); };
+        fr.onerror = function(){ red(fr.error || new Error('okunamadı')); };
+        fr.readAsArrayBuffer(dosya);
+      });
+  return oku.then(function(buf){
+    return new Promise(function(ok){
+      setTimeout(function(){ ok(veFeadWizStpBayt(buf, ad)); }, 20);
+    });
+  }, function(e){
+    _fwStp = { dosya: ad, durum: 'hata', hata: 'Dosya okunamadı: ' + ((e && e.message) || e),
+               nodeId: _fwNodeId };
+    veFeadWizRender();
+    return _fwStp;
+  });
+}
+function veFeadWizStpBayt(bayt, ad){
+  var m;
+  try {
+    if(typeof veStepP21Metin !== 'function') throw new Error('STEP okuyucusu (js/step-p21.js) yüklenmemiş.');
+    m = veStepP21Metin(bayt);
+  } catch(e){
+    _fwStp = { dosya: ad, durum: 'hata', hata: (e && e.message) || String(e), nodeId: _fwNodeId };
+    veFeadWizRender();
+    return _fwStp;
+  }
+  return veFeadWizStpOku(m.metin, ad, m.kap);
+}
+// DOM'suz çekirdek: metin → kart durumu. Roller tanıyıcının ÖNERİSİYLE açılır
+// (addan; geometriden tahmin edilmez — kural 34) ve kullanıcı değiştirir.
+function veFeadWizStpOku(metin, ad, kap){
+  var sonuc = (typeof veFeadStpOku === 'function') ? veFeadStpOku(metin)
+    : { ok: false, hatalar: ['FEAD tanıyıcısı (js/fead-step.js) yüklenmemiş.'], kasnaklar: [], parcalar: [] };
+  var s = { dosya: ad || 'STEP', kap: kap || 'duz', durum: sonuc.ok ? 'hazir' : 'hata',
+            sonuc: sonuc, ayna: false, nodeId: _fwNodeId,
+            roller: (sonuc.kasnaklar || []).map(function(k){ return k.rolOneri || null; }) };
+  if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosyada kasnak bulunamadı.';
+  _fwStp = s;
+  veFeadWizRender();
+  return s;
+}
+function veFeadWizStpDrop(e){
+  if(!e) return false;
+  if(e.preventDefault) e.preventDefault();
+  var el = e.currentTarget;
+  if(el && el.classList){ el.setAttribute('data-surukle', '0'); el.classList.remove('ve-fw-stp-on'); }
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(!f) return false;
+  veFeadWizStpDosya(f);
+  return true;
+}
+// Bırakma alanının işareti: dragenter/dragleave ALT elemanlarda da tetikleniyor,
+// sayaç olmadan işaret her satırın üstünde yanıp söner.
+function veFeadWizStpSurukle(el, giris){
+  if(!el || !el.classList) return;
+  var n = (parseInt(el.getAttribute('data-surukle') || '0', 10) || 0) + (giris ? 1 : -1);
+  if(n < 0) n = 0;
+  el.setAttribute('data-surukle', String(n));
+  el.classList.toggle('ve-fw-stp-on', n > 0);
+}
+function veFeadWizStpRol(i, tip){
+  var s = _fwStp;
+  if(!s || !s.roller || !(i >= 0 && i < s.roller.length)) return false;
+  s.roller[i] = tip || null;
+  veFeadWizRender();
+  return true;
+}
+function veFeadWizStpAyna(ayna){
+  if(!_fwStp || _fwStp.durum !== 'hazir') return false;
+  _fwStp.ayna = !!ayna;
+  veFeadWizRender();
+  return true;
+}
+function veFeadWizStpKapat(){
+  _fwStp = null;
+  veFeadWizRender();
+}
+
+// Aktarım kapısı — sebebiyle. `engel` aktarımı durdurur, `uyari` durdurmaz;
+// uyarıların çoğu tanıyıcının ve kayıt üreticisinin KENDİ listesi (ikinci bir
+// denetim listesi, onlar değişince sessizce eskirdi).
+function veFeadWizStpDenetim(s){
+  s = s || _fwStp;
+  var out = { engel: [], uyari: [] };
+  if(!s || s.durum !== 'hazir'){ out.engel.push('Okunmuş bir STEP dosyası yok.'); return out; }
+  VE_FW_STP_TEKIL.forEach(function(tip){
+    var kim = [];
+    s.roller.forEach(function(r, i){ if(r === tip) kim.push(_fwStpParcaAd(s, i)); });
+    if(kim.length > 1)
+      out.engel.push(_fwStpRolAd(tip) + ' rolü ' + kim.length + ' parçada: ' + kim.join(' · ')
+        + '. Model tek ' + _fwStpRolAd(tip).toLocaleLowerCase('tr') + ' taşır.');
+  });
+  if(!s.roller.some(function(r){ return !!r; })) out.engel.push('Hiçbir parçaya rol verilmedi.');
+  (s.sonuc.uyarilar || []).forEach(function(m){ out.uyari.push(m); });
+  if(typeof veFeadStpKayit === 'function' && !out.engel.length)
+    veFeadStpKayit(s.sonuc, _fwStpSecim(s)).uyarilar.forEach(function(m){ out.uyari.push(m); });
+  return out;
+}
+
+// AKTAR: kayıt → sihirbaz durumu, örnek tohumunun yolundan. Aktarım bir
+// BAŞLANGIÇ eylemidir (örnek seçmek gibi): durumu baştan kurar.
+function veFeadWizStpAktar(){
+  var s = _fwStp;
+  var d = veFeadWizStpDenetim(s);
+  if(d.engel.length){
+    if(typeof showToast === 'function') showToast(d.engel[0], 'warning');
+    return null;
+  }
+  var kayit = veFeadStpKayit(s.sonuc, _fwStpSecim(s));
+  var st = _fwSeedKayit(kayit);
+  st.ad = kayit.name;
+  // SIRA BİR VARSAYIMDIR (kural 34): dosya kayışın hangi kasnaktan hangisine
+  // geçtiğini taşımıyor. Kullanıcı sırayı elle değiştirene ya da onaylayana
+  // kadar Kasnaklar adımı uyarı taşır (veFeadWizIssues).
+  st.siraKaynagi = 'agac';
+  var ten = kayit.pulleys.filter(function(p){ return p.type === 'fead-tensioner'; })[0];
+  st.stepKaynak = { dosya: s.dosya, kasnak: kayit.pulleys.length, ayna: !!s.ayna,
+    gergi: ten ? { od: ten.data.od, armLen: ten.data.armLen, tenPart: ten.data.tenPart || '' } : null };
+  _fwState = st;
+  _fwStep = 0;
+  s.aktarim = JSON.stringify(_fwStpSecim(s));
+  veFeadWizRender();
+  return kayit;
+}
+
+// Kayış sırasının STEP ağacından geldiğini kullanıcı doğruladı.
+function veFeadWizSiraOnay(){
+  if(!_fwState || !_fwState.siraKaynagi) return false;
+  delete _fwState.siraKaynagi;
+  veFeadWizRender();
+  return true;
+}
+var VE_FW_SIRA_AGAC = 'Kayış sırası STEP ağacından geldi — dosya kayışın kasnak sırasını '
+  + 'taşımıyor. ↑ ↓ ile düzeltin; doğruysa "Sıra doğru" ile onaylayın.';
+
+function _fwStpKartHTML(){
+  var s = _fwStp, st = _fwState || {};
+  var h = '<div class="ve-fw-stp" data-ve-dropzone="step"'
+    + ' ondragenter="veFeadWizStpSurukle(this, true)" ondragleave="veFeadWizStpSurukle(this, false)"'
+    + ' ondragover="event.preventDefault()" ondrop="veFeadWizStpDrop(event)">';
+  // KARTIN DÜĞMELERİ BİRİNCİL DEĞİL: adımın tek birincil eylemi alttaki
+  // "İleri →". İki dolu düğme yarışıyordu ve "İleri"yi sınıfıyla arayan
+  // gerçek tarayıcı testi iki elemana çarpıp düştü (fead-sihirbaz-tablo.spec).
+  h += '<div class="ve-fw-rowbtns">'
+    + '<label class="ve-fw-btn ve-fw-stp-sec"'
+    + ' title="STEP dosyasını seçin ya da bu alana bırakın — .stp · .step · .stpZ (AP214 / AP242, katı geometri)">'
+    + '<input type="file" class="ve-fw-stp-file" accept=".stp,.step,.stpz,.p21"'
+    + ' onchange="veFeadWizStpDosya(this.files && this.files[0]); this.value=\'\';">'
+    + (s ? 'Başka dosya seç…' : 'STEP dosyası seç…') + '</label>';
+  if(s && s.durum !== 'okunuyor')
+    h += '<button type="button" class="ve-fw-mini" title="Dosyayı karttan kaldır" onclick="veFeadWizStpKapat()">✕</button>';
+  h += '</div>';
+
+  if(!s){
+    // Önceki aktarımın izi (kart oturumluk; durum kalıcı).
+    if(st.stepKaynak)
+      h += '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(st.stepKaynak.dosya) + '</b> aktarılmıştı'
+        + ' <em>' + st.stepKaynak.kasnak + ' kasnak</em></div>';
+    return h + '</div>';
+  }
+  if(s.durum === 'okunuyor')
+    return h + '<div class="ve-fw-seeded ve-fw-stp-wait">⏳ <b>' + _fwEsc(s.dosya) + '</b> okunuyor…</div></div>';
+  if(s.durum === 'hata')
+    return h + '<div class="ve-fw-issues"><div class="ve-fw-issue ve-fw-issue-err">✗ <b>'
+      + _fwEsc(s.dosya) + '</b> — ' + _fwEsc(s.hata) + '</div></div></div>';
+
+  var so = s.sonuc, sm = so.sureMs || {};
+  var sure = ((sm.oku || 0) + (sm.montaj || 0) + (sm.analiz || 0)) / 1000;
+  var bas = so.baslik || {};
+  h += '<div class="ve-fw-seeded">✓ <b>' + _fwEsc(s.dosya) + '</b> okundu <em>'
+    + _fwEsc([bas.sistem || bas.onisleyici || '',
+              s.kap !== 'duz' ? 'sıkıştırılmış (' + s.kap + ')' : '',
+              so.parcalar.length + ' parça', so.kasnaklar.length + ' kasnak',
+              sure.toFixed(2) + ' sn'].filter(Boolean).join(' · '))
+    + '</em></div>';
+
+  // ── PARÇA LİSTESİ ─────────────────────────────────────────────────────
+  var iki = (typeof veFeadStp2B === 'function') ? veFeadStp2B(so, _fwStpSecim(s)) : null;
+  var kol = {};
+  (so.gergiler || []).forEach(function(g){ kol[g.kasnak] = g.kolBoy; });
+  var sec = [['', '— aktarma —']]
+    .concat(VE_FW_PULLEY_TYPES.map(function(t){ return [t, _fwDefName(t)]; }))
+    .concat([['fead-tensioner', _fwTenAd()]]);
+  var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-stp"><thead><tr>'
+    + '<th>Parça</th><th>Rol</th><th>Kasnak</th><th>X [mm]</th><th>Y [mm]</th></tr></thead><tbody>';
+  so.kasnaklar.forEach(function(k, i){
+    var p = so.parcalar[k.parca], rol = s.roller[i] || '';
+    var xy = iki ? iki.kasnaklar[i] : null;
+    var tanim = 'Ø' + _fwFmt(k.od, 1) + ' · '
+      + (k.tur === 'kanalli' ? k.kanal + ' × ' + (k.profil || '?') : 'düz')
+      + (kol[i] !== undefined ? ' · kol ' + _fwFmt(kol[i], 1) : '');
+    t += '<tr class="ve-fw-stp-r' + (rol ? '' : ' ve-fw-stp-off') + '" data-ve-stp="' + i + '">'
+      + '<td title="' + _fwEsc(p.ornek || p.id || '') + '">' + _fwEsc(_fwStpParcaAd(s, i)) + '</td>'
+      + '<td><select class="ve-fw-inp" onchange="veFeadWizStpRol(' + i + ', this.value)">'
+      + sec.map(function(o){
+          return '<option value="' + o[0] + '"' + (o[0] === rol ? ' selected' : '') + '>'
+            + _fwEsc(o[1]) + '</option>'; }).join('')
+      + '</select></td>'
+      + '<td>' + _fwEsc(tanim) + '</td>'
+      + '<td class="ve-fw-num">' + (xy ? _fwFmt(xy.x, 1) : '—') + '</td>'
+      + '<td class="ve-fw-num">' + (xy ? _fwFmt(xy.y, 1) : '—') + '</td></tr>';
+  });
+  // Kasnağı OLMAYAN ama rolü olan parçalar da listede: kayış (dokunulmaz) ve
+  // adı bir aksesuar diyen ama kasnağı tanınamayan parça — ikincisi listeden
+  // düşseydi aksesuar modelden SESSİZCE eksilirdi.
+  so.parcalar.forEach(function(p){
+    if(p.kasnaklar.length || !p.rolOneri) return;
+    var kayis = p.rolOneri === 'kayis';
+    t += '<tr class="ve-fw-stp-r ve-fw-stp-off' + (kayis ? '' : ' ve-fw-stp-warn') + '">'
+      + '<td title="' + _fwEsc(p.ornek || p.id || '') + '">' + _fwEsc(p.ad) + '</td>'
+      + '<td>' + (kayis ? 'Kayış' : _fwEsc(_fwStpRolAd(p.rolOneri))) + '</td>'
+      + '<td colspan="3">' + (kayis ? 'dokunulmaz — kayış elle girilir' : 'kasnak yüzeyi bulunamadı') + '</td></tr>';
+  });
+  h += t + '</tbody></table></div>';
+
+  // ── BAKIŞ ─────────────────────────────────────────────────────────────
+  var kaynak = so.bakis && so.bakis.kaynak === 'orijin'
+    ? 'Dosyadan: montaj orijini kayış düzleminin arkasında (motor tarafı).'
+    : 'Dosyadan çıkarılamadı — varsayılan.';
+  h += _fwField('Bakış', '<div class="ve-fw-spinbox">'
+    + '<button type="button" class="ve-fw-spin' + (s.ayna ? '' : ' ve-fw-spin-on') + '"'
+      + ' title="Önden: kasnakların önünden, motorun karşısından. ' + _fwEsc(kaynak) + '"'
+      + ' onclick="veFeadWizStpAyna(false)">Önden</button>'
+    + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '"'
+      + ' title="Arkadan: x ekseni aynalanır; krankın dönüş yönü de ters okunur."'
+      + ' onclick="veFeadWizStpAyna(true)">Arkadan</button></div>');
+
+  // ── AKTAR ─────────────────────────────────────────────────────────────
+  var d = veFeadWizStpDenetim(s);
+  var aktarildi = !!(st.stepKaynak && s.aktarim);
+  var degisti = aktarildi && s.aktarim !== JSON.stringify(_fwStpSecim(s));
+  h += '<div class="ve-fw-rowbtns">'
+    + '<button type="button" id="ve-fw-stp-aktar" class="ve-fw-btn"'
+    + (d.engel.length ? ' disabled' : '') + ' onclick="veFeadWizStpAktar()">'
+    + (aktarildi ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button></div>';
+  if(aktarildi && !degisti)
+    h += '<div class="ve-fw-seeded">✓ <b>' + st.stepKaynak.kasnak + ' kasnak</b> sihirbaza aktarıldı'
+      + ' <em>' + _fwEsc(st.stepKaynak.dosya) + '</em></div>';
+  var liste = d.engel.map(function(m){ return { tur: 'err', m: m }; })
+    .concat(d.uyari.map(function(m){ return { tur: 'warn', m: m }; }));
+  if(degisti) liste.unshift({ tur: 'warn', m: 'Rol ya da bakış aktarımdan sonra değişti; sihirbaz eski seçimle dolu.' });
+  if(liste.length){
+    h += '<div class="ve-fw-issues">';
+    liste.forEach(function(it){
+      h += '<div class="ve-fw-issue ve-fw-issue-' + it.tur + '">' + (it.tur === 'err' ? '✗' : '!')
+        + ' ' + _fwEsc(it.m) + '</div>';
+    });
+    h += '</div>';
+  }
+  return h + '</div>';
 }
 
 // ── 2 · KASNAKLAR ──────────────────────────────────────────────────────────
@@ -1554,7 +1902,12 @@ function _fwStepKasnak(b){
     + 'gidiş yönünü ⇄ ile çevirebilirsiniz.)</p>'
     + '<div class="ve-fw-rowbtns">'
       + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">'
-      + '⇄ Kayış yönünü çevir</button></div>'
+      + '⇄ Kayış yönünü çevir</button>'
+      + (st.siraKaynagi === 'agac'
+          ? '<button type="button" id="ve-fw-sira-onay" class="ve-fw-btn" onclick="veFeadWizSiraOnay()"'
+            + ' title="Sıra STEP ağacından geldi. Kayış yolunu doğruladıysanız onaylayın.">✓ Sıra doğru</button>'
+          : '')
+      + '</div>'
     );
 
   // ── DÖNÜŞ YÖNÜ ───────────────────────────────────────────────────────────
@@ -3574,6 +3927,15 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizNavHTML: veFeadWizNavHTML, veFeadWizFootHTML: veFeadWizFootHTML,
     veFeadWizLiveHTML: veFeadWizLiveHTML, veFeadWizReset: veFeadWizReset,
     getFeadWizardPropertiesHTML: getFeadWizardPropertiesHTML,
-    _fwSet: _fwSet, _fwSetRender: _fwSetRender, _fwGet: _fwGet
+    _fwSet: _fwSet, _fwSetRender: _fwSetRender, _fwGet: _fwGet,
+    // STEP'ten başla (kural 34)
+    _fwSeedKayit: _fwSeedKayit, _fwStpKartHTML: _fwStpKartHTML,
+    veFeadWizStpDosya: veFeadWizStpDosya, veFeadWizStpBayt: veFeadWizStpBayt,
+    veFeadWizStpOku: veFeadWizStpOku, veFeadWizStpRol: veFeadWizStpRol,
+    veFeadWizStpAyna: veFeadWizStpAyna, veFeadWizStpKapat: veFeadWizStpKapat,
+    veFeadWizStpDenetim: veFeadWizStpDenetim, veFeadWizStpAktar: veFeadWizStpAktar,
+    veFeadWizStpDrop: veFeadWizStpDrop, veFeadWizStpSurukle: veFeadWizStpSurukle,
+    veFeadWizSiraOnay: veFeadWizSiraOnay, VE_FW_SIRA_AGAC: VE_FW_SIRA_AGAC,
+    veFeadWizStp: function(){ return _fwStp; }
   };
 }

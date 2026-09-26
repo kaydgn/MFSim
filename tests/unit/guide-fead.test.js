@@ -451,6 +451,27 @@ describe('içerik yönlendirici', () => {
     expect(DOC).toMatch(/Sihirbaz(ı)? ile karşılar/);
   });
 
+  // ÖRNEK SAYISI SİHİRBAZIN LİSTESİNDEN — kılavuza elle yazılmaz. Sayılan,
+  // KULLANICININ GÖRDÜĞÜ liste (`veFeadExampleKeys`): BMC kaydı kayıt
+  // defterinde duruyor ama listeden gizli (kullanıcı isteği 2026-09-04), yani
+  // defterin tamamını saymak kılavuza bir fazla yazdırırdı.
+  test('örnek sayısı sihirbazın gösterdiği listeden — elle yazılmaz', () => {
+    const n = M.veFeadExampleKeys().length;
+    expect(n).toBeLessThan(Object.keys(M.VE_FEAD_EXAMPLES).length);   // gizli kayıt var
+    expect(DOC).toContain(n + ' hazır örnekten');
+    expect(DOC).toContain(n + ' kayıtlı sistem');
+  });
+
+  // STEP YOLU KILAVUZDA — sihirbazın kendisinde açıklama paragrafı YOK
+  // (kullanıcı kararı 2026-09-02), yani "neyi okur, neyi okumaz" sorusunun
+  // cevabının tek yeri burası (FEAD kural 34).
+  test('STEP\'ten başlamak anlatılıyor: okunmayan üç şey adıyla', () => {
+    expect(DOC).toContain('3.5 Yol D');
+    expect(DOC).toContain('STEP dosyasından ne okunur');
+    ['Yay künyesi', 'Kayış sırası', '✓ Sıra doğru'].forEach((x) => expect(DOC).toContain(x));
+    expect(DOC).toMatch(/Kayış sırası dosyada yok/);
+  });
+
   // AÇILIŞ KARTLARI PROGRAMDAN OKUNUR — kılavuza sayı yazılmaz.
   //
   // Bu liste iki kez değişti: önce "Başlangıç ve Örnekler" eklendi, sonra
