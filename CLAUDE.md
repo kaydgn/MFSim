@@ -320,8 +320,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `sayi-dili.test.js` + `sayi-pencere.spec.js` (ekran) + `sayi-belge.spec.js`
   (belge, TeX, TXT hizası); ölçüt tek yerde, kendi testiyle:
   `tests/helpers/sayi-olcu.js`. Kapsam aşama aşama büyür (bugün grafik
-  çekirdeği, Sonuçlar, bütün pencereler ve üç modülün belgeleri; çözücü
-  günlüğü ve CAN sırada).
+  çekirdeği, Sonuçlar, bütün pencereler, üç modülün belgeleri ve çözücü
+  günlüğü; CAN ve kalan kabuk dosyaları sırada).
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri

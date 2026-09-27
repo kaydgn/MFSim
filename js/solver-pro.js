@@ -21,7 +21,7 @@ function veLogCappedList(arr, logFn, lineFn, whatNote) {
   var shown = Math.min(n, VE_LOG_LIST_CAP);
   for(var i = 0; i < shown; i++) logFn(lineFn(arr[i], i));
   if(n > shown) {
-    logFn('  … ' + (n - shown) + ' satır daha (toplam ' + n + ') — log okunabilirliği için gizlendi.', 'dim');
+    logFn('  … ' + veSayi(n - shown, 0) + ' satır daha (toplam ' + veSayi(n, 0) + ') — log okunabilirliği için gizlendi.', 'dim');
     if(whatNote) logFn('    ' + whatNote, 'dim');
   }
 }
@@ -127,12 +127,12 @@ function veSolverRunProfessional() {
   
   function setProgress(pct, phase) {
     barEl.style.width = pct + '%';
-    pctEl.textContent = pct + '%';
+    pctEl.textContent = '%' + pct;
     if(phase) phaseEl.textContent = phase;
   }
   
   function log(text, type) {
-    var ts = ((performance.now() - startTime) / 1000).toFixed(2);
+    var ts = veSayi(((performance.now() - startTime) / 1000), 2);
     var prefix = '[' + ts + 's] ';
     var color = 'var(--text-secondary)';
     if(type === 'ok') color = '#2e9e44';
@@ -285,8 +285,8 @@ function veSolverRunProfessional() {
       var rows = ed.torqueData || [];
       log('[Motor] ' + (eng.customName || 'Motor'), 'info');
       log('  Tork verisi     : ' + rows.length + ' satır' + (rows.length >= 2 ? '' : ' ⚠ En az 2 satır gerekli'), rows.length >= 2 ? 'ok' : 'err');
-      log('  Motor verimi    : ' + (ed.verim || 100) + '%', 'dim');
-      log('  Governed RPM    : ' + (ed.governedRpm || 2100) + ' d/d', 'dim');
+      log('  Motor verimi    : %' + veSayi(ed.verim || 100), 'dim');
+      log('  Governed RPM    : ' + veSayi(ed.governedRpm || 2100) + ' d/d', 'dim');
       // Aksesuar kayıpları
       if(veActiveModule === 'full-throttle') {
         var _acc = ed.accessories || [];
@@ -298,9 +298,9 @@ function veSolverRunProfessional() {
           else _otherL += l;
         });
         if(_fanL + _otherL > 0) {
-          log('  Aksesuar kayıp  : Fan=' + _fanL.toFixed(1) + ' kW, Diğer=' + _otherL.toFixed(1) + ' kW (toplam ' + (_fanL + _otherL).toFixed(1) + ' kW @ governed)', 'ok');
+          log('  Aksesuar kayıp  : Fan=' + veSayi(_fanL, 1) + ' kW; Diğer=' + veSayi(_otherL, 1) + ' kW (toplam ' + veSayi(_fanL + _otherL, 1) + ' kW @ governed)', 'ok');
           _acc.forEach(function(a) {
-            if((parseFloat(a.userLoss) || 0) > 0) log('    • ' + a.name + ': ' + a.userLoss + ' kW', 'dim');
+            if((parseFloat(a.userLoss) || 0) > 0) log('    • ' + a.name + ': ' + veSayi(a.userLoss) + ' kW', 'dim');
           });
           log('  » NET motor torku kullanılıyor (brüt − aksesuar)', 'dim');
         } else {
@@ -330,13 +330,13 @@ function veSolverRunProfessional() {
         var spLog = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
         var logRefRPM = spLog.shiftRefRPM || gd.shiftRefRPM || null;
         if(logRefRPM) {
-          log('  Shift Ref. RPM  : ' + logRefRPM + ' (kullanıcı tanımlı)', 'dim');
+          log('  Shift Ref. RPM  : ' + veSayi(logRefRPM) + ' (kullanıcı tanımlı)', 'dim');
         } else {
           // governed speed'i bul
           var engN = nodes.find(function(n) { return n.type === 'engine'; });
           var engSp = engN ? ((engN.data || {}).motorSpecs || {}) : {};
           var govLog = parseFloat(engSp.governedSpeed) || parseFloat((engN || {}).data ? engN.data.governedRpm : 0) || 0;
-          if(govLog) log('  Shift Ref. RPM  : ' + govLog + ' (motor governed)', 'dim');
+          if(govLog) log('  Shift Ref. RPM  : ' + veSayi(govLog) + ' (motor governed)', 'dim');
         }
         var spLogData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
         var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
@@ -347,22 +347,22 @@ function veSolverRunProfessional() {
             var csLog = spLogData.converterShifts;
             if(csLog['1C2C']) {
               var thr1C = csLog['1C2C'].a * refForLog + (csLog['1C2C'].b || 0);
-              log('  1C→2C eşik      : N_out = ' + Math.round(thr1C) + ' (' + csLog['1C2C'].a + '×' + refForLog + '+' + (csLog['1C2C'].b || 0) + ')', 'dim');
+              log('  1C→2C eşik      : N_out = ' + veSayi(Math.round(thr1C), 0) + ' (' + veSayi(csLog['1C2C'].a) + '×' + veSayi(refForLog) + '+' + veSayi(csLog['1C2C'].b || 0) + ')', 'dim');
             }
             if(csLog['2C2L']) {
               var cs2L = csLog['2C2L'];
               if(cs2L.type === 'segmented') {
                 var thr2L = cs2L.linear.a * refForLog + cs2L.linear.b;
-                log('  2C→2L eşik      : N_out = ' + Math.round(thr2L) + ' (' + cs2L.linear.a + '×' + refForLog + '+' + cs2L.linear.b + ', ESL≥' + cs2L.linear.validFrom + ')', 'dim');
-                if(cs2L.lookup) log('  2C→2L lookup    : ' + cs2L.lookup.map(function(p) { return p[0] + '→' + p[1]; }).join(', '), 'dim');
+                log('  2C→2L eşik      : N_out = ' + veSayi(Math.round(thr2L), 0) + ' (' + veSayi(cs2L.linear.a) + '×' + veSayi(refForLog) + '+' + veSayi(cs2L.linear.b) + '; ESL≥' + veSayi(cs2L.linear.validFrom) + ')', 'dim');
+                if(cs2L.lookup) log('  2C→2L lookup    : ' + cs2L.lookup.map(function(p) { return veSayi(p[0]) + '→' + veSayi(p[1]); }).join('; '), 'dim');
               } else {
                 var thr2Ls = (cs2L.a || 0) * refForLog + (cs2L.b || 0);
-                log('  2C→2L eşik      : N_out = ' + Math.round(thr2Ls) + ' (' + (cs2L.a || 0) + '×' + refForLog + '+' + (cs2L.b || 0) + ')', 'dim');
+                log('  2C→2L eşik      : N_out = ' + veSayi(Math.round(thr2Ls), 0) + ' (' + veSayi(cs2L.a || 0) + '×' + veSayi(refForLog) + '+' + veSayi(cs2L.b || 0) + ')', 'dim');
               }
             }
           } else if(_hasTCNode) {
-            if(spLogData.shift1C2C_outRatio) log('  1C→2C eşik      : N_out = ' + Math.round(spLogData.shift1C2C_outRatio * refForLog) + ' (' + spLogData.shift1C2C_outRatio + ' × ' + refForLog + ')', 'dim');
-            if(spLogData.shift2C2L_outRatio) log('  2C→2L eşik      : N_out = ' + Math.round(spLogData.shift2C2L_outRatio * refForLog) + ' (' + spLogData.shift2C2L_outRatio + ' × ' + refForLog + ')', 'dim');
+            if(spLogData.shift1C2C_outRatio) log('  1C→2C eşik      : N_out = ' + veSayi(Math.round(spLogData.shift1C2C_outRatio * refForLog), 0) + ' (' + veSayi(spLogData.shift1C2C_outRatio) + ' × ' + veSayi(refForLog) + ')', 'dim');
+            if(spLogData.shift2C2L_outRatio) log('  2C→2L eşik      : N_out = ' + veSayi(Math.round(spLogData.shift2C2L_outRatio * refForLog), 0) + ' (' + veSayi(spLogData.shift2C2L_outRatio) + ' × ' + veSayi(refForLog) + ')', 'dim');
           }
           if(spLogData.lockupShifts) {
             log('  ' + (_hasTCNode ? 'Lockup geçişleri' : 'Vites geçiş eşik.') + ': N_out = a × ESL + b (per-gear kalibrasyon)', 'dim');
@@ -374,22 +374,22 @@ function veSolverRunProfessional() {
               var detail = '';
               if(ls.type === 'segments') { detail = 'segments'; }
               else if(ls.type === 'piecewise') { detail = 'piecewise'; }
-              else { detail = ls.a + '×' + refForLog + (ls.b >= 0 ? '+' : '') + ls.b; if(ls.capValue !== undefined) detail += ', cap=' + ls.capValue + '<' + ls.capBelow; else if(ls.minCap !== undefined) detail += ', cap=' + ls.minCap; }
-              log('    ' + label + ': N_out ≥ ' + thr.toFixed(1) + ' (' + detail + ')', 'dim');
+              else { detail = veSayi(ls.a) + '×' + veSayi(refForLog) + (ls.b >= 0 ? '+' : '') + veSayi(ls.b); if(ls.capValue !== undefined) detail += '; cap=' + veSayi(ls.capValue) + '<' + veSayi(ls.capBelow); else if(ls.minCap !== undefined) detail += '; cap=' + veSayi(ls.minCap); }
+              log('    ' + label + ': N_out ≥ ' + veSayi(thr, 1) + ' (' + detail + ')', 'dim');
             });
           } else {
-            log('  ' + (_hasTCNode ? 'Lockup shift    ' : 'Vites shift     ') + ': ' + (refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + spLogData.lockupOffset + ')', 'dim');
+            log('  ' + (_hasTCNode ? 'Lockup shift    ' : 'Vites shift     ') + ': ' + veSayi(refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + veSayi(spLogData.lockupOffset) + ')', 'dim');
           }
         }
         fwd.forEach(function(g) {
-          log('    ' + g.name + ': i=' + g.ratio + ', η=' + g.eff + '%' + (_hasTCNode ? (', ' + (g.lockup ? 'Lockup' : 'Converter')) : ''), 'dim');
+          log('    ' + g.name + ': i=' + veSayi(g.ratio) + '; η=%' + veSayi(g.eff) + (_hasTCNode ? ('; ' + (g.lockup ? 'Lockup' : 'Converter')) : ''), 'dim');
         });
       } else {
         var gears = gd.gearData || [];
         log('  Vites sayısı    : ' + gears.length, gears.length > 0 ? 'ok' : 'warn');
         log('  Seçili vites    : ' + (gd.selectedGear || 'Belirtilmemiş'), gd.selectedGear ? 'ok' : 'warn');
-        log('  Aktif oran      : ' + (gd.selectedGearRatio || '—'));
-        log('  Verim           : ' + (gd.efficiency || 98) + '%', 'dim');
+        log('  Aktif oran      : ' + veSayi(gd.selectedGearRatio));
+        log('  Verim           : %' + veSayi(gd.efficiency || 98), 'dim');
       }
     }
     logSpacer();
@@ -402,11 +402,11 @@ function veSolverRunProfessional() {
       if(veActiveModule === 'full-throttle') {
         var tcArr = td.tcData || [];
         log('  TC verisi       : ' + tcArr.length + ' nokta', tcArr.length >= 2 ? 'ok' : 'warn');
-        log('  Pump torque drop: ' + (td.pumpTorqueDrop !== undefined ? td.pumpTorqueDrop : 17.6) + ' Nm', 'dim');
+        log('  Pump torque drop: ' + veSayi(td.pumpTorqueDrop !== undefined ? td.pumpTorqueDrop : 17.6) + ' Nm', 'dim');
         if(tcArr.length < 2) log('  ⚠ TC verisi eksik veya yetersiz', 'warn');
       } else {
         log('  Kilitli         : ' + (td.isLocked ? 'Evet (1:1)' : 'Hayır'), 'dim');
-        log('  TC oranı        : ' + (td.tcRatio || 1.0), 'dim');
+        log('  TC oranı        : ' + veSayi(td.tcRatio || 1.0), 'dim');
       }
     }
     
@@ -416,9 +416,9 @@ function veSolverRunProfessional() {
       psNodes.forEach(function(ps, idx) {
         var psd = ps.data || {};
         log('[Propşaft' + (psNodes.length > 1 ? ' ' + (idx+1) : '') + '] ' + (ps.customName || (psd.psName || 'Propşaft')), 'info');
-        log('  Oran            : 1.000 (geçiş mili)', 'dim');
-        log('  Verim           : ' + (psd.psEff || 98.60) + '%', 'dim');
-        log('  Atalet          : ' + (psd.psInertia || 0.5) + ' kg·m²', 'dim');
+        log('  Oran            : 1,000 (geçiş mili)', 'dim');
+        log('  Verim           : %' + veSayi(psd.psEff || 98.60), 'dim');
+        log('  Atalet          : ' + veSayi(psd.psInertia || 0.5) + ' kg·m²', 'dim');
       });
     }
     
@@ -434,12 +434,12 @@ function veSolverRunProfessional() {
         ];
         log('  Kademe sayısı   : ' + ftTrG.length, 'ok');
         ftTrG.forEach(function(g) {
-          log('    ' + g.kademe + ': i=' + (g.ratio || g.oran) + ', η=' + (g.eff || g.verim) + '%', 'dim');
+          log('    ' + g.kademe + ': i=' + veSayi(g.ratio || g.oran) + '; η=%' + veSayi(g.eff || g.verim), 'dim');
         });
         log('  » Her kademe için ayrı hesap yapılacak', 'dim');
       } else {
         log('  Aktif kademe    : ' + (trd.selectedMode || 'Belirtilmemiş'), trd.selectedMode ? 'ok' : 'warn');
-        log('  Aktif oran      : ' + (trd.selectedRatio || '—'));
+        log('  Aktif oran      : ' + veSayi(trd.selectedRatio));
       }
     }
     
@@ -451,8 +451,8 @@ function veSolverRunProfessional() {
         var masterLabel = diff.isMasterDiff ? ' ★ MASTER' : (allDiffs.length > 1 ? ' (SLAVE)' : '');   // metin: günlük satırı
         log('[Diferansiyel' + (allDiffs.length > 1 ? ' ' + (idx+1) : '') + masterLabel + '] ' + (diff.customName || 'Diferansiyel'), 'info');
         if(diff.isMasterDiff || allDiffs.length === 1) {
-          log('  Oran            : ' + (dd.diffRatio || 6.54), dd.diffRatio ? 'ok' : 'warn');
-          if(!dd.diffRatio) log('  ⚠ diffRatio undefined — varsayılan 6.54 kullanılacak', 'warn');
+          log('  Oran            : ' + veSayi(dd.diffRatio || 6.54), dd.diffRatio ? 'ok' : 'warn');
+          if(!dd.diffRatio) log('  ⚠ diffRatio undefined — varsayılan 6,54 kullanılacak', 'warn');
         } else {
           log('  Bu diferansiyel semboliktir, parametreler Master\'dan okunur.', 'dim');
         }
@@ -485,20 +485,20 @@ function veSolverRunProfessional() {
         var h = parseFloat(vd.ftHeight) || 3.2;
         var w = parseFloat(vd.ftWidth) || 2.5;
         var rho = parseFloat(vd.ftRho) || 1.225;
-        log('  Araç ağırlığı   : ' + (mass || '—') + ' kg', mass > 0 ? 'ok' : 'err');
-        log('  Cd              : ' + cd, 'dim');
-        log('  Frontal alan    : ' + (h * w).toFixed(2) + ' m² (' + h + '×' + w + ')', 'dim');
-        log('  Hava yoğunluğu  : ' + rho + ' kg/m³', 'dim');
+        log('  Araç ağırlığı   : ' + veSayi(mass) + ' kg', mass > 0 ? 'ok' : 'err');
+        log('  Cd              : ' + veSayi(cd), 'dim');
+        log('  Frontal alan    : ' + veSayi(h * w, 2) + ' m² (' + veSayi(h) + '×' + veSayi(w) + ')', 'dim');
+        log('  Hava yoğunluğu  : ' + veSayi(rho) + ' kg/m³', 'dim');
         log('  Başlangıç hızı  : 0 km/h (sabit — tam gaz kalkış)', 'dim');
         if(!mass || mass <= 0) log('  ✗ Araç ağırlığı (GVW) girişi gerekli!', 'err');
       } else {
         // Diğer mod alanları
         var mass = parseFloat(vd.mass);
         var speed = parseFloat(vd.initialSpeed);
-        log('  Araç ağırlığı   : ' + (mass || '—') + ' kg', mass > 0 ? 'ok' : 'err');
-        log('  İlk hız         : ' + (speed || '—') + ' km/h', speed >= 0 ? 'ok' : 'err');
-        log('  Cd              : ' + (vd.cd || 0.65), 'dim');
-        log('  Frontal alan    : ' + (vd.frontalArea || 6.7) + ' m²', 'dim');
+        log('  Araç ağırlığı   : ' + veSayi(mass) + ' kg', mass > 0 ? 'ok' : 'err');
+        log('  İlk hız         : ' + veSayi(speed) + ' km/h', speed >= 0 ? 'ok' : 'err');
+        log('  Cd              : ' + veSayi(vd.cd || 0.65), 'dim');
+        log('  Frontal alan    : ' + veSayi(vd.frontalArea || 6.7) + ' m²', 'dim');
         if(!mass || mass <= 0) log('  ✗ Araç ağırlığı girişi gerekli!', 'err');
         if(speed === undefined || speed === '' || isNaN(speed)) log('  ✗ İlk hız girişi gerekli!', 'err');
       }
@@ -516,25 +516,25 @@ function veSolverRunProfessional() {
         var r = parseFloat(wd.ftTireRadius) || 0.573;
         var crr = parseFloat(wd.ftCrr) || 0.0035;
         var sf = parseFloat(wd.ftSurfaceFactor) || 1.00;
-        log('  Dinamik yarıçap : ' + r + ' m', 'ok');
-        log('  Crr (nominal)   : ' + crr, 'dim');
+        log('  Dinamik yarıçap : ' + veSayi(r) + ' m', 'ok');
+        log('  Crr (nominal)   : ' + veSayi(crr), 'dim');
         log('  Crr hız modeli  : Aktif (iSCAAN evrensel düzeltme)', 'dim');
         var f50 = FT_SOLVER.getCrrEffective(crr, 50/3.6);
         var f100 = FT_SOLVER.getCrrEffective(crr, 100/3.6);
-        log('    @ 0 km/h      : ' + crr.toFixed(5) + ' (×1.000)', 'dim');
-        log('    @ 50 km/h     : ' + f50.toFixed(5) + ' (×' + (f50/crr).toFixed(3) + ')', 'dim');
-        log('    @ 100 km/h    : ' + f100.toFixed(5) + ' (×' + (f100/crr).toFixed(3) + ')', 'dim');
-        log('  Yüzey faktörü   : ' + sf, 'dim');
+        log('    @ 0 km/h      : ' + veSayi(crr, 5) + ' (×1,000)', 'dim');
+        log('    @ 50 km/h     : ' + veSayi(f50, 5) + ' (×' + veSayi(f50/crr, 3) + ')', 'dim');
+        log('    @ 100 km/h    : ' + veSayi(f100, 5) + ' (×' + veSayi(f100/crr, 3) + ')', 'dim');
+        log('  Yüzey faktörü   : ' + veSayi(sf), 'dim');
       } else {
-        log('  Yarıçap         : ' + (wd.wheelRadius || 0.60876) + ' m', 'ok');
+        log('  Yarıçap         : ' + veSayi(wd.wheelRadius || 0.60876) + ' m', 'ok');
         var mfCrr = parseFloat(wd.rollingResistance) || 0.010;
-        log('  Crr (nominal)   : ' + mfCrr, 'dim');
+        log('  Crr (nominal)   : ' + veSayi(mfCrr), 'dim');
         log('  Crr hız modeli  : Aktif (iSCAAN evrensel düzeltme)', 'dim');
-        log('  δ (döner kütle) : ' + (wd.rotatingMass || 1.08), 'dim');
+        log('  δ (döner kütle) : ' + veSayi(wd.rotatingMass || 1.08), 'dim');
       }
       var rCheck = veActiveModule === 'full-throttle' ? parseFloat(wd.ftTireRadius) : parseFloat(wd.wheelRadius);
       if(rCheck && (rCheck < 0.1 || rCheck > 2)) {
-        log('  ⚠ Tekerlek yarıçapı olağandışı: ' + rCheck + ' m', 'warn');
+        log('  ⚠ Tekerlek yarıçapı olağandışı: ' + veSayi(rCheck) + ' m', 'warn');
       }
     }
     logSpacer();
@@ -551,23 +551,23 @@ function veSolverRunProfessional() {
         var minE = 0, maxE = 0;
         segs.forEach(function(s) { if(s.egim > maxE) maxE = s.egim; if(s.egim < minE) minE = s.egim; });
         log('  Segment sayısı  : ' + segs.length, 'ok');
-        log('  Toplam mesafe   : ' + (totalD/1000).toFixed(2) + ' km', 'ok');
-        log('  Eğim aralığı   : %' + minE.toFixed(1) + ' ... %' + maxE.toFixed(1), 'ok');
+        log('  Toplam mesafe   : ' + veSayi(totalD/1000, 2) + ' km', 'ok');
+        log('  Eğim aralığı   : %' + veSayi(minE, 1) + ' ... %' + veSayi(maxE, 1), 'ok');
         log('  ─── Segment detayları ───', 'dim');
         var cumD = 0;
         segs.forEach(function(s, i) {
           cumD += s.mesafe;
           var icon = s.egim > 1 ? '↓' : (s.egim < -1 ? '↑' : '→');   // metin: günlük satırı
-          log('    [' + (i+1) + '] ' + s.mesafe.toFixed(0) + 'm  %' + s.egim.toFixed(1) + ' ' + icon + '  (kümülatif: ' + (cumD/1000).toFixed(2) + ' km)', 'dim');
+          log('    [' + (i+1) + '] ' + veSayi(s.mesafe, 0) + 'm  %' + veSayi(s.egim, 1) + ' ' + icon + '  (kümülatif: ' + veSayi(cumD/1000, 2) + ' km)', 'dim');
         });
         log('  » Dinamik eğim aktif: her adımda mesafeye göre eğim güncellenir', 'head');
       } else if(rd.egimMode !== 'segment') {
         var grade = parseFloat(rd.grade);
-        log('  Arazi eğimi     : ' + (grade || 0) + '%', grade !== undefined && grade !== '' ? 'ok' : 'warn');
+        log('  Arazi eğimi     : %' + veSayi(grade || 0), grade !== undefined && grade !== '' ? 'ok' : 'warn');
       }
-      log('  Yükseklik       : ' + (rd.altitude || '—') + ' m', 'dim');
-      log('  Sıcaklık        : ' + (rd.temperature || '—') + ' °C', 'dim');
-      log('  Hava yoğunluğu  : ' + (rd.airDensity || 'Hesaplanmadı') + ' kg/m³', rd.airDensity ? 'ok' : 'warn');
+      log('  Yükseklik       : ' + veSayi(rd.altitude) + ' m', 'dim');
+      log('  Sıcaklık        : ' + veSayi(rd.temperature) + ' °C', 'dim');
+      log('  Hava yoğunluğu  : ' + (rd.airDensity ? veSayi(rd.airDensity) : 'Hesaplanmadı') + ' kg/m³', rd.airDensity ? 'ok' : 'warn');
     }
     logSpacer();
     
@@ -583,11 +583,11 @@ function veSolverRunProfessional() {
         log('  Yöntem          : ' + ftMLabel, 'dim');
         if(sd.method === 'rk45') {
           log('  Adım boyutu     : Adaptif (Dormand-Prince)', 'dim');
-          log('  ATol / RTol     : ' + (sd.ftAtol || 1e-6) + ' / ' + (sd.ftRtol || 1e-4), 'dim');
+          log('  ATol / RTol     : ' + veSayiUstel(sd.ftAtol || 1e-6, 0) + ' / ' + veSayiUstel(sd.ftRtol || 1e-4, 0), 'dim');
         } else {
-          log('  Δt              : ' + (sd.ftDt || 0.01) + ' s — sabit', 'dim');
+          log('  Δt              : ' + veSayi(sd.ftDt || 0.01) + ' s — sabit', 'dim');
         }
-        log('  Güvenlik limiti : ' + (sd.maxSimTime || (typeof VE_DEFAULT_MAX_SIM_TIME !== 'undefined' ? VE_DEFAULT_MAX_SIM_TIME : 300)) + ' s', 'dim');
+        log('  Güvenlik limiti : ' + veSayi(sd.maxSimTime || (typeof VE_DEFAULT_MAX_SIM_TIME !== 'undefined' ? VE_DEFAULT_MAX_SIM_TIME : 300)) + ' s', 'dim');
         log('  Bitiş koşulu   : F_net ≤ 0 (son vites, çekiş = direnç)', 'dim');
         log('  Tork interpol.  : PCHIP Spline (C¹ sürekli)', 'dim');
       } else {
@@ -595,14 +595,14 @@ function veSolverRunProfessional() {
         var mLabel = sd.method === 'heun' ? 'Heun (2. derece)' : sd.method === 'rk4' ? 'RK4 (4. derece)' : sd.method === 'rk45' ? 'RK45 Dormand-Prince (adaptif)' : sd.method === 'ralston' ? 'Ralston (2. derece)' : 'Basit Euler';
         var simTime = sd.timeMode === 'stop' ? (sd.maxSimTime || 300) : (sd.duration || 60);
         var res = sd.resolution || 200;
-        var dtCalc = (simTime / res).toFixed(4);
+        var dtCalc = veSayi(simTime / res, 4);
         log('  Zaman modu      : ' + (sd.timeMode === 'stop' ? 'Durma analizi' : 'Belirli süre'), 'dim');
-        log('  Simülasyon süresi: ' + simTime + ' s', 'dim');
+        log('  Simülasyon süresi: ' + veSayi(simTime) + ' s', 'dim');
         if(sd.method === 'rk45') {
-          log('  Çıktı noktası   : ' + res, 'dim');
-          log('  ATol / RTol     : ' + (sd.atol || 1e-6) + ' / ' + (sd.rtol || 1e-4), 'dim');
+          log('  Çıktı noktası   : ' + veSayi(res), 'dim');
+          log('  ATol / RTol     : ' + veSayiUstel(sd.atol || 1e-6, 0) + ' / ' + veSayiUstel(sd.rtol || 1e-4, 0), 'dim');
         } else {
-          log('  Çözünürlük      : ' + res + ' adım', 'dim');
+          log('  Çözünürlük      : ' + veSayi(res) + ' adım', 'dim');
           log('  Δt (hesaplanan) : ' + dtCalc + ' s', 'dim');
         }
         log('  Yöntem          : ' + mLabel, 'dim');
@@ -616,7 +616,7 @@ function veSolverRunProfessional() {
         }
       
         if(sd.timeMode === 'stop') {
-          log('  Durma eşiği     : ' + (sd.stopSpeed || 2) + ' km/h', 'dim');
+          log('  Durma eşiği     : ' + veSayi(sd.stopSpeed || 2) + ' km/h', 'dim');
         }
       }
     }
@@ -709,7 +709,7 @@ function veSolverRunProfessional() {
                         : sd.method === 'euler' ? 'Euler'
                         : 'RK4';
       var ftDtShown = parseFloat(sd.ftDt) || 0.01;
-      log('Yöntem: ' + ftMethodLabel + ' | Δt = ' + ftDtShown + ' s | Güvenlik limiti: ' + ftMaxTime + ' s');
+      log('Yöntem: ' + ftMethodLabel + ' | Δt = ' + veSayi(ftDtShown) + ' s | Güvenlik limiti: ' + veSayi(ftMaxTime) + ' s');
       log('Mod: Tam Gaz Hızlanma — V=0 → Maks Hız (F_net ≤ 0)');
     } else {
     var mLabel = sd.method === 'heun' ? 'Heun' : sd.method === 'rk4' ? 'RK4' : sd.method === 'rk45' ? 'RK45 (adaptif)' : sd.method === 'ralston' ? 'Ralston' : 'Euler';
@@ -719,7 +719,7 @@ function veSolverRunProfessional() {
     var _segRoad = nodes.find(function(n) { return n.type === 'road'; });
     var _isSegMode = _segRoad && _segRoad.data && _segRoad.data.egimMode === 'segment' && _segRoad.data.routeSegments;
     
-    log('Yöntem: ' + mLabel + ' | ' + (sd.method === 'rk45' ? 'Çıktı: ' + res + ' nokta' : 'Adım: ' + res) + ' | Süre: ' + simTime + 's');
+    log('Yöntem: ' + mLabel + ' | ' + (sd.method === 'rk45' ? 'Çıktı: ' + veSayi(res) + ' nokta' : 'Adım: ' + veSayi(res)) + ' | Süre: ' + veSayi(simTime) + 's');
     if(_isSegMode) {
       log('Segment bazlı dinamik eğim aktif (' + _segRoad.data.routeSegments.length + ' segment)', 'head');
       var _totalRouteDist = 0;
@@ -727,10 +727,10 @@ function veSolverRunProfessional() {
       var _vehicle = nodes.find(function(n) { return n.type === 'vehicle'; });
       var _v0 = (_vehicle && _vehicle.data) ? (parseFloat(_vehicle.data.initialSpeed) || 60) : 60;
       var _estTime = _totalRouteDist / (_v0 / 3.6);
-      log('  Güzergah mesafesi: ' + (_totalRouteDist/1000).toFixed(2) + ' km, Tahmini süre: ~' + _estTime.toFixed(0) + ' s', 'dim');
+      log('  Güzergah mesafesi: ' + veSayi(_totalRouteDist/1000, 2) + ' km, Tahmini süre: ~' + veSayi(_estTime, 0) + ' s', 'dim');
       if(sd.timeMode !== 'stop' && simTime < _estTime * 0.8) {
         log('  ⚠ Simülasyon süresi güzergahı tamamlamak için yetersiz olabilir!', 'warn');
-        log('    Önerilen süre: ' + Math.ceil(_estTime * 1.3) + ' s veya "Durma Analizi" kullanın', 'warn');
+        log('    Önerilen süre: ' + veSayi(Math.ceil(_estTime * 1.3), 0) + ' s veya "Durma Analizi" kullanın', 'warn');
       }
     }
     } // end validation
@@ -841,7 +841,8 @@ function veSolverRunProfessional() {
         } else {
           simResult = veRunSimulationEngine();
         }
-        var elapsed = ((performance.now() - t0) / 1000).toFixed(3);
+        var elapsedS = (performance.now() - t0) / 1000;
+        var elapsed = veSayi(elapsedS, 3);
         
         window.veSimResults = simResult;
         
@@ -866,8 +867,8 @@ function veSolverRunProfessional() {
         // Adım bütçesi hedef süreye varmadan bittiyse sonuç EKSİKTİR — sessiz kalma.
         if(simResult.solverStats && simResult.solverStats.truncatedByStepBudget) {
           log('  ⚠ Adım bütçesi doldu: simülasyon ' +
-              (simResult.solverStats.simEndTime || 0).toFixed(2) + ' s\'de kesildi (hedef ' +
-              (simResult.solverStats.maxTime || 0) + ' s). Sonuç EKSİK.', 'warn');
+              veSayi(simResult.solverStats.simEndTime || 0, 2) + ' s\'de kesildi (hedef ' +
+              veSayi(simResult.solverStats.maxTime || 0) + ' s). Sonuç EKSİK.', 'warn');
           log('    Δt\'yi büyütün ya da sabit adımlı bir yöntem (RK4) kullanın.', 'warn');
         }
 
@@ -883,29 +884,29 @@ function veSolverRunProfessional() {
         logSpacer();
         log('Sonuç Özeti:', 'info');
         log('  Analiz modu     : ' + mode);
-        log('  Toplam adım     : ' + totalSteps);
-        log('  Simülasyon süresi: ' + finalTime.toFixed(2) + ' s');
-        log('  Hesap süresi    : ' + elapsed + ' s (' + (totalSteps / parseFloat(elapsed) / 1000).toFixed(1) + 'k adım/s)', 'dim');
+        log('  Toplam adım     : ' + veSayi(totalSteps, 0));
+        log('  Simülasyon süresi: ' + veSayi(finalTime, 2) + ' s');
+        log('  Hesap süresi    : ' + elapsed + ' s (' + veSayi(totalSteps / elapsedS / 1000, 1) + 'k adım/s)', 'dim');
         
         if(simResult.speed && simResult.speed.length > 0) {
           var v0 = simResult.speed[0];
           var vF = simResult.speed[totalSteps - 1];
           var vMax = (simResult.solverStats && simResult.solverStats.maxSpeed_kmh !== undefined) ? simResult.solverStats.maxSpeed_kmh : Math.max.apply(null, simResult.speed);
           var vMin = Math.min.apply(null, simResult.speed);
-          log('  Başlangıç hız   : ' + v0.toFixed(2) + ' km/h');
-          log('  Son hız         : ' + vF.toFixed(2) + ' km/h');
-          log('  Maks. hız       : ' + vMax.toFixed(2) + ' km/h');
-          log('  Min. hız        : ' + vMin.toFixed(2) + ' km/h');
+          log('  Başlangıç hız   : ' + veSayi(v0, 2) + ' km/h');
+          log('  Son hız         : ' + veSayi(vF, 2) + ' km/h');
+          log('  Maks. hız       : ' + veSayi(vMax, 2) + ' km/h');
+          log('  Min. hız        : ' + veSayi(vMin, 2) + ' km/h');
         }
         if(simResult.rpm && simResult.rpm.length > 0) {
           var rpmF = simResult.rpm[totalSteps - 1];
           var rpmMax = Math.max.apply(null, simResult.rpm);
-          log('  Son motor devri : ' + rpmF.toFixed(0) + ' d/d');
-          log('  Maks. devir     : ' + rpmMax.toFixed(0) + ' d/d');
+          log('  Son motor devri : ' + veSayi(rpmF, 0) + ' d/d');
+          log('  Maks. devir     : ' + veSayi(rpmMax, 0) + ' d/d');
         }
         if(simResult.distance && simResult.distance.length > 0) {
           var distF = simResult.distance[totalSteps - 1];
-          log('  Kat. mesafe     : ' + distF.toFixed(1) + ' m');
+          log('  Kat. mesafe     : ' + veSayi(distF, 1) + ' m');
           
           // Segment bazlı özet
           var _roadNode = nodes.find(function(n) { return n.type === 'road'; });
@@ -920,7 +921,7 @@ function veSolverRunProfessional() {
               _cumDist += _rd.routeSegments[_si].mesafe;
               if(distF >= _cumDist - 1) segsTraversed = _si + 1;
             }
-            log('  Güzergah ilerleme: %' + pctDone.toFixed(1) + ' (' + segsTraversed + '/' + _rd.routeSegments.length + ' segment)');
+            log('  Güzergah ilerleme: %' + veSayi(pctDone, 1) + ' (' + segsTraversed + '/' + _rd.routeSegments.length + ' segment)');
             if(distF >= _totalRouteDist - 1) {
               log('  ✓ Güzergah tamamlandı!', 'ok');
             }
@@ -942,7 +943,7 @@ function veSolverRunProfessional() {
             log('Girdi segmentleri (' + _inputSegs.length + ' adet):', 'info');
             _inputSegs.forEach(function(iseg) {
               var cmdL = iseg.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
-              log('  Seg ' + iseg.no + ': mesafe=' + (iseg.distance || 0).toFixed(0) + 'm, eğim=%' + (iseg.grade || 0).toFixed(2) + ', komut=' + cmdL);
+              log('  Seg ' + iseg.no + ': mesafe=' + veSayi(iseg.distance || 0, 0) + 'm; eğim=%' + veSayi(iseg.grade || 0, 2) + '; komut=' + cmdL);
             });
           }
 
@@ -952,17 +953,17 @@ function veSolverRunProfessional() {
             var _sds = _segDrv.solverStats || {};
 
             logSpacer();
-            var trLabel = trg.kademe + ' (i=' + (parseFloat(trg.ratio || trg.oran) || 0).toFixed(3) + ')';
+            var trLabel = trg.kademe + ' (i=' + veSayi((parseFloat(trg.ratio || trg.oran) || 0), 3) + ')';
             log('Transfer: ' + trLabel, 'info');
 
             // Güç aktarma parametreleri
             if(_sds.i_axle) {
-              log('  i_axle=' + _sds.i_axle.toFixed(3) +
-                  '  r_tire=' + (_sds.r_tire || 0).toFixed(3) + 'm' +
-                  '  GVW=' + (_sds.m_vehicle || 0).toFixed(0) + 'kg' +
-                  '  Crr=' + (_sds.Crr || 0).toFixed(4) +
-                  '  Cd=' + (_sds.Cd || 0).toFixed(3) +
-                  '  A=' + (_sds.A_frontal || 0).toFixed(2) + 'm²', 'dim');
+              log('  i_axle=' + veSayi(_sds.i_axle, 3) +
+                  '  r_tire=' + veSayi(_sds.r_tire || 0, 3) + 'm' +
+                  '  GVW=' + veSayi(_sds.m_vehicle || 0, 0) + 'kg' +
+                  '  Crr=' + veSayi(_sds.Crr || 0, 4) +
+                  '  Cd=' + veSayi(_sds.Cd || 0, 3) +
+                  '  A=' + veSayi(_sds.A_frontal || 0, 2) + 'm²', 'dim');
             }
 
             var _computedSegs = _segDrv.segmentSummary.length;
@@ -974,30 +975,30 @@ function veSolverRunProfessional() {
             _segDrv.segmentSummary.forEach(function(ss) {
               var cmdLabel = ss.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
               var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';   // metin: günlük satırı
-              log('  ' + cmdIcon + ' Seg ' + ss.no + ' [' + cmdLabel + ', %' + ss.grade.toFixed(1) + ']: ' +
-                ss.startSpeed_kmh.toFixed(1) + ' → ' + ss.endSpeed_kmh.toFixed(1) + ' km/h, ' +
-                ss.actualDist.toFixed(0) + 'm, ' + ss.duration.toFixed(1) + 's');
+              log('  ' + cmdIcon + ' Seg ' + ss.no + ' [' + cmdLabel + '; %' + veSayi(ss.grade, 1) + ']: ' +
+                veSayi(ss.startSpeed_kmh, 1) + ' → ' + veSayi(ss.endSpeed_kmh, 1) + ' km/h; ' +
+                veSayi(ss.actualDist, 0) + 'm; ' + veSayi(ss.duration, 1) + 's');
             });
 
             logSpacer();
-            log('  Başlangıç hızı : ' + _sds.initSpeed_kmh.toFixed(1) + ' km/h');
-            log('  Son hız        : ' + _sds.finalSpeed_kmh.toFixed(1) + ' km/h');
-            log('  Toplam mesafe  : ' + _sds.totalDistance.toFixed(0) + ' m');
-            log('  Toplam adım   : ' + _sds.steps);
+            log('  Başlangıç hızı : ' + veSayi(_sds.initSpeed_kmh, 1) + ' km/h');
+            log('  Son hız        : ' + veSayi(_sds.finalSpeed_kmh, 1) + ' km/h');
+            log('  Toplam mesafe  : ' + veSayi(_sds.totalDistance, 0) + ' m');
+            log('  Toplam adım   : ' + veSayi(_sds.steps, 0));
             log('  Son vites      : ' + (_sds.finalGear || '—') + (nodes.some(function(n){return n.type==='torque-converter';}) ? (_sds.isLockup ? ' (Lockup)' : ' (Converter)') : ''));
 
             if(_sds.shiftHistory && _sds.shiftHistory.length > 0) {
               log('  Vites geçişleri (' + _sds.shiftHistory.length + '):', 'dim');
               _sds.shiftHistory.forEach(function(sh) {
-                log('    t=' + sh.t.toFixed(2) + 's | ' + sh.fromMode + ' → ' + sh.toMode + ' | V=' + sh.v_kmh.toFixed(1) + ' km/h', 'dim');
+                log('    t=' + veSayi(sh.t, 2) + 's | ' + sh.fromMode + ' → ' + sh.toMode + ' | V=' + veSayi(sh.v_kmh, 1) + ' km/h', 'dim');
               });
             }
 
             if(_segDrv.speed && _segDrv.speed.length > 0) {
               var _sdMaxV = Math.max.apply(null, _segDrv.speed);
               var _sdMinV = Math.min.apply(null, _segDrv.speed);
-              log('  Maks. hız      : ' + _sdMaxV.toFixed(1) + ' km/h');
-              log('  Min. hız       : ' + _sdMinV.toFixed(1) + ' km/h');
+              log('  Maks. hız      : ' + veSayi(_sdMaxV, 1) + ' km/h');
+              log('  Min. hız       : ' + veSayi(_sdMinV, 1) + ' km/h');
             }
           });
         }
@@ -1014,18 +1015,18 @@ function veSolverRunProfessional() {
             if(sh.length > 0) {
               logSpacer();
               var i_tr = trg.ratio || trg.oran || '?';
-              log('Vites geçiş tablosu — ' + trg.kademe + ' (i=' + i_tr + ') — ' + sh.length + ' geçiş:', 'info');
+              log('Vites geçiş tablosu — ' + trg.kademe + ' (i=' + veSayi(i_tr) + ') — ' + veSayi(sh.length, 0) + ' geçiş:', 'info');
               veLogCappedList(sh, log, function(s) {
-                return '  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
-                  + ' | V=' + s.v_kmh.toFixed(1) + ' km/h | N=' + s.N_engine.toFixed(0)
-                  + ' rpm | SR=' + s.SR.toFixed(3);
+                return '  t=' + veSayi(s.t, 2) + 's | ' + s.fromMode + ' → ' + s.toMode
+                  + ' | V=' + veSayi(s.v_kmh, 1) + ' km/h | N=' + veSayi(s.N_engine, 0)
+                  + ' rpm | SR=' + veSayi(s.SR, 3);
               }, 'Tam liste için Log İndir düğmesini kullanın.');
               if(r.solverStats.suppressedHunts > 0) {
-                log('  ⚠ ' + r.solverStats.suppressedHunts + ' vites salınımı (hunt) bastırıldı — ' +
+                log('  ⚠ ' + veSayi(r.solverStats.suppressedHunts, 0) + ' vites salınımı (hunt) bastırıldı — ' +
                     'shift profili şanzıman oranlarıyla tam uyuşmuyor olabilir.', 'warn');
               }
               if(r.solverStats.reachedMaxSpeed) {
-                log('  ✓ Maks. hız: ' + r.solverStats.maxSpeed_kmh.toFixed(1) + ' km/h (' + r.solverStats.finalGear + ')', 'ok');
+                log('  ✓ Maks. hız: ' + veSayi(r.solverStats.maxSpeed_kmh, 1) + ' km/h (' + r.solverStats.finalGear + ')', 'ok');
               }
             }
           });
@@ -1034,11 +1035,11 @@ function veSolverRunProfessional() {
           var sh = simResult.solverStats.shiftHistory;
           if(sh.length > 0) {
             logSpacer();
-            log('Vites geçiş tablosu (' + sh.length + ' geçiş):', 'info');
+            log('Vites geçiş tablosu (' + veSayi(sh.length, 0) + ' geçiş):', 'info');
             veLogCappedList(sh, log, function(s) {
-              return '  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
-                + ' | V=' + s.v_kmh.toFixed(1) + ' km/h | N=' + s.N_engine.toFixed(0)
-                + ' rpm | SR=' + s.SR.toFixed(3);
+              return '  t=' + veSayi(s.t, 2) + 's | ' + s.fromMode + ' → ' + s.toMode
+                + ' | V=' + veSayi(s.v_kmh, 1) + ' km/h | N=' + veSayi(s.N_engine, 0)
+                + ' rpm | SR=' + veSayi(s.SR, 3);
             }, 'Tam liste için Log İndir düğmesini kullanın.');
           }
         }
@@ -1047,7 +1048,7 @@ function veSolverRunProfessional() {
         // Sonuç kartını da güncelle
         var resultEl = document.getElementById('ve-solver-result');
         if(resultEl) {
-          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:var(--fs-h2);color:var(--ink-success);">' + veIkon('check-circle') + '</div><div style="font-weight:600;font-size:var(--fs-lg);color:var(--text-heading);">Hesaplama tamamlandı</div><div style="font-size:var(--fs-tiny);color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + totalSteps + ' adım | ' + finalTime.toFixed(1) + ' s</div></div>';
+          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:var(--fs-h2);color:var(--ink-success);">' + veIkon('check-circle') + '</div><div style="font-weight:600;font-size:var(--fs-lg);color:var(--text-heading);">Hesaplama tamamlandı</div><div style="font-size:var(--fs-tiny);color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + veSayi(totalSteps, 0) + ' adım | ' + veSayi(finalTime, 1) + ' s</div></div>';
           resultEl.innerHTML = rhtml;
         }
         
@@ -1085,7 +1086,7 @@ function veSolverRunProfessional() {
             
             logSpacer();
             log('═══════════════════════════════════════════', 'head');
-            log('  ' + trg.kademe.toUpperCase() + ' RANGE — PERFORMANS ANALİZİ (i=' + i_tr + ')', 'head');
+            log('  ' + trg.kademe.toUpperCase() + ' RANGE — PERFORMANS ANALİZİ (i=' + veSayi(i_tr) + ')', 'head');
             log('═══════════════════════════════════════════', 'head');
             logSpacer();
             
@@ -1096,13 +1097,13 @@ function veSolverRunProfessional() {
             var maxWP = Math.max.apply(null, r.WP);
             var maxGr = Math.max.apply(null, r.netGrade);
             var maxHeat = Math.max.apply(null, r.heatRejection);
-            log('  Maks. çekme kuvveti (TE) : ' + maxTE.toFixed(2) + ' kN');
-            log('  Maks. Drawbar Pull  (DP) : ' + maxDP.toFixed(2) + ' kN');
-            log('  Maks. tekerlek gücü (WP) : ' + maxWP.toFixed(1) + ' kW');
-            log('  Maks. net eğim          : %' + maxGr.toFixed(1));
-            log('  Maks. ısı reddi         : ' + maxHeat.toFixed(1) + ' kW');
+            log('  Maks. çekme kuvveti (TE) : ' + veSayi(maxTE, 2) + ' kN');
+            log('  Maks. Drawbar Pull  (DP) : ' + veSayi(maxDP, 2) + ' kN');
+            log('  Maks. tekerlek gücü (WP) : ' + veSayi(maxWP, 1) + ' kW');
+            log('  Maks. net eğim          : %' + veSayi(maxGr, 1));
+            log('  Maks. ısı reddi         : ' + veSayi(maxHeat, 1) + ' kW');
             if(ss.reachedMaxSpeed) {
-              log('  Maks. hız               : ' + ss.maxSpeed_kmh.toFixed(1) + ' km/h (' + ss.finalGear + ')', 'ok');
+              log('  Maks. hız               : ' + veSayi(ss.maxSpeed_kmh, 1) + ' km/h (' + ss.finalGear + ')', 'ok');
             }
             
             // ── 2. Hızlanma Süreleri ──
@@ -1112,7 +1113,7 @@ function veSolverRunProfessional() {
             targets.forEach(function(tgt) {
               for(var ai = 0; ai < sLen; ai++) {
                 if(sData[ai] >= tgt) {
-                  log('  0 → ' + tgt + ' km/h : ' + r.time[ai].toFixed(2) + ' s  (' + r.distance[ai].toFixed(0) + ' m)');
+                  log('  0 → ' + tgt + ' km/h : ' + veSayi(r.time[ai], 2) + ' s  (' + veSayi(r.distance[ai], 0) + ' m)');
                   break;
                 }
                 if(ai === sLen - 1) {
@@ -1123,7 +1124,7 @@ function veSolverRunProfessional() {
             
             // ── 3. Vites Geçiş Doğrulama ──
             logSpacer();
-            log('VİTES GEÇİŞ DOĞRULAMA (' + sh.length + ' geçiş):', 'info');
+            log('VİTES GEÇİŞ DOĞRULAMA (' + veSayi(sh.length, 0) + ' geçiş):', 'info');
             if(sh.length > 0) {
               var shiftErrors = 0;
               // Doğrulama TÜM geçişler için yapılır (hata sayımı eksilmesin), ama
@@ -1153,7 +1154,7 @@ function veSolverRunProfessional() {
                     var noutDiff = Math.abs(actualNout - expectedNout);
                     if(noutDiff > 15) {
                       statusIcon = '⚠';   // metin: günlük satırı
-                      statusNote = ' (N_out beklenen: ' + expectedNout.toFixed(0) + ', gerçek: ' + actualNout.toFixed(0) + ', fark: ' + noutDiff.toFixed(0) + ')';
+                      statusNote = ' (N_out beklenen: ' + veSayi(expectedNout, 0) + '; gerçek: ' + veSayi(actualNout, 0) + '; fark: ' + veSayi(noutDiff, 0) + ')';
                       shiftErrors++;
                     }
                   } else {
@@ -1162,7 +1163,7 @@ function veSolverRunProfessional() {
                     var rpmDiff = Math.abs((s.N_engine || 0) - expectedRPM);
                     if(rpmDiff > 10) {
                       statusIcon = '⚠';   // metin: günlük satırı
-                      statusNote = ' (beklenen: ' + expectedRPM + ' rpm, fark: ' + rpmDiff.toFixed(0) + ')';
+                      statusNote = ' (beklenen: ' + veSayi(expectedRPM, 0) + ' rpm; fark: ' + veSayi(rpmDiff, 0) + ')';
                       shiftErrors++;
                     }
                   }
@@ -1181,9 +1182,9 @@ function veSolverRunProfessional() {
                 }
                 
                 if(_si < VE_LOG_LIST_CAP) {
-                  log('  ' + statusIcon + ' ' + s.fromMode + ' → ' + s.toMode + ' @ V=' + (s.v_kmh||0).toFixed(1) + ' km/h, N=' + (s.N_engine||0).toFixed(0) + ' rpm [' + shiftType + ']' + statusNote);
+                  log('  ' + statusIcon + ' ' + s.fromMode + ' → ' + s.toMode + ' @ V=' + veSayi(s.v_kmh || 0, 1) + ' km/h; N=' + veSayi(s.N_engine || 0, 0) + ' rpm [' + shiftType + ']' + statusNote);
                 } else if(_si === VE_LOG_LIST_CAP) {
-                  log('  … ' + (sh.length - VE_LOG_LIST_CAP) + ' satır daha (toplam ' + sh.length +
+                  log('  … ' + veSayi(sh.length - VE_LOG_LIST_CAP, 0) + ' satır daha (toplam ' + veSayi(sh.length, 0) +
                       ') — log okunabilirliği için gizlendi. Doğrulama hepsi için yapıldı.', 'dim');
                 }
               });
@@ -1200,7 +1201,7 @@ function veSolverRunProfessional() {
             // ── 4. Kinematik Doğrulama (Kompakt) ──
             logSpacer();
             log('KİNEMATİK DOĞRULAMA:', 'info');
-            log('  Drivetrain: r=' + (ss.r_tire||'?') + 'm × i_ps=' + (ss.i_propshaft||1) + ' × i_tr=' + i_tr + ' × i_axle=' + (ss.i_axle||'?'), 'dim');
+            log('  Drivetrain: r=' + veSayi(ss.r_tire) + 'm × i_ps=' + veSayi(ss.i_propshaft || 1) + ' × i_tr=' + veSayi(i_tr) + ' × i_axle=' + veSayi(ss.i_axle), 'dim');
             
             var kinErrors = 0;
             var kinChecked = 0;
@@ -1231,9 +1232,9 @@ function veSolverRunProfessional() {
             }
             
             if(kinErrors === 0) {
-              log('  ✓ N_output doğrulama: ' + kinChecked + '/' + kinChecked + ' nokta BAŞARILI (maks. sapma: ' + maxNoutErr.toFixed(1) + ' rpm)', 'ok');
+              log('  ✓ N_output doğrulama: ' + kinChecked + '/' + kinChecked + ' nokta BAŞARILI (maks. sapma: ' + veSayi(maxNoutErr, 1) + ' rpm)', 'ok');
             } else {
-              log('  ✗ N_output doğrulama: ' + kinErrors + '/' + kinChecked + ' noktada sapma (maks: ' + maxNoutErr.toFixed(1) + ' rpm)', 'err');
+              log('  ✗ N_output doğrulama: ' + kinErrors + '/' + kinChecked + ' noktada sapma (maks: ' + veSayi(maxNoutErr, 1) + ' rpm)', 'err');
             }
             
             // TC çalışma aralığı kontrolü (sadece converter modlu viteslerde)
@@ -1250,10 +1251,10 @@ function veSolverRunProfessional() {
               }
             }
             if(convSamples > 0) {
-              log('  ✓ TC çalışma aralığı: SR=[' + minSR.toFixed(3) + ' – ' + maxSR.toFixed(3) + '], τ=[' + minTau.toFixed(3) + ' – ' + maxTau.toFixed(3) + '] (' + convSamples + ' nokta)', 'ok');
+              log('  ✓ TC çalışma aralığı: SR=[' + veSayi(minSR, 3) + ' – ' + veSayi(maxSR, 3) + ']; τ=[' + veSayi(minTau, 3) + ' – ' + veSayi(maxTau, 3) + '] (' + veSayi(convSamples, 0) + ' nokta)', 'ok');
               // Stall torque ratio kontrolü
               if(maxTau > 2.0) {
-                log('    Stall τ = ' + maxTau.toFixed(3) + ' (tipik aralık: 1.8–2.5)', 'dim');
+                log('    Stall τ = ' + veSayi(maxTau, 3) + ' (tipik aralık: 1,8–2,5)', 'dim');
               }
             }
             
@@ -1264,9 +1265,9 @@ function veSolverRunProfessional() {
               if(gml.match(/L$/) && r.SR && Math.abs(r.SR[li] - 1.0) > 0.001) lockSR_err++;
             }
             if(lockSR_err === 0) {
-              log('  ✓ Lockup modu: Tüm L-viteslerde SR = 1.000', 'ok');
+              log('  ✓ Lockup modu: Tüm L-viteslerde SR = 1,000', 'ok');
             } else {
-              log('  ✗ Lockup modu: ' + lockSR_err + ' noktada SR ≠ 1.0', 'err');
+              log('  ✗ Lockup modu: ' + veSayi(lockSR_err, 0) + ' noktada SR ≠ 1,0', 'err');
             }
             
             // ── 5. Enerji Dengesi Analizi ──
@@ -1282,7 +1283,7 @@ function veSolverRunProfessional() {
             if(energyErrors === 0) {
               log('  ✓ Enerji tutarlılığı: WP = TE × V doğrulandı', 'ok');
             } else {
-              log('  ⚠ Enerji tutarlılığı: ' + energyErrors + ' noktada WP ≠ TE×V (>0.5 kW fark)', 'warn');
+              log('  ⚠ Enerji tutarlılığı: ' + veSayi(energyErrors, 0) + ' noktada WP ≠ TE×V (>0,5 kW fark)', 'warn');
             }
 
             // 5b. Güç akışı dağılımı (enerji dengesi dizileri varsa)
@@ -1290,26 +1291,35 @@ function veSolverRunProfessional() {
             if(eb) {
               logSpacer();
               log('ENERJİ DENGESİ — GÜÇ AKIŞI:', 'info');
-              log('  ┌─────────────────────────────────────────────────┐');
-              log('  │  Güç bileşeni            │  Maks [kW] │ Ort [kW]│');
-              log('  ├─────────────────────────────────────────────────┤');
-              log('  │  Motor gücü (P_engine)    │ ' + pad(eb.maxP_engine.toFixed(1), 9) + '  │ ' + pad(eb.avgP_engine.toFixed(1), 7) + ' │');
+              // Kutu sütun genişliklerinden kurulur. Satırlar elle yazılmış
+              // dizgilerdi: kenar ve başlık 53, üst bölüm 54, alt bölüm 56
+              // karakterdi — sağ kenar ve sütun çizgileri iki ayrı yerde kayıktı.
+              var KG = [27, 12, 10];   // ad · maks · ort (iç genişlik)
+              var kCizgi = function(sol, ara, sag) { return '  ' + sol + KG.map(function(w) { return new Array(w + 1).join('─'); }).join(ara) + sag; };
+              var kSatir = function(ad, maks, ort) {
+                var sola = function(t, w) { t = String(t); while(t.length < w) t += ' '; return t; };
+                return '  │' + sola('  ' + ad, KG[0]) + '│' + pad(maks + ' ', KG[1]) + '│' + pad(ort + ' ', KG[2]) + '│';
+              };
+              log(kCizgi('┌', '┬', '┐'));
+              log(kSatir('Güç bileşeni', 'Maks [kW]', 'Ort [kW]'));
+              log(kCizgi('├', '┼', '┤'));
+              log(kSatir('Motor gücü (P_engine)', veSayi(eb.maxP_engine, 1), veSayi(eb.avgP_engine, 1)));
               var _tcHeatLbl = nodes.some(function(n){return n.type==='torque-converter';}) ? 'TC ısı kaybı (P_TC)' : 'Aktarma ısı (P_ısı)';
-              log('  │  ' + _tcHeatLbl + '      │ ' + pad(eb.maxP_TC_heat.toFixed(1), 9) + '  │ ' + pad(eb.avgP_TC_heat.toFixed(1), 7) + ' │');
-              log('  │  Güç aktarma kaybı (P_dt) │ ' + pad(eb.maxP_drivetrain.toFixed(1), 9) + '  │ ' + pad(eb.avgP_drivetrain.toFixed(1), 7) + ' │');
-              log('  │  Tekerlek gücü (P_wheel)  │ ' + pad(eb.maxP_wheel.toFixed(1), 9) + '  │ ' + pad(eb.avgP_wheel.toFixed(1), 7) + ' │');
-              log('  ├─────────────────────────────────────────────────┤');
-              log('  │  Yuvarlanma (P_rolling)    │             │ ' + pad(eb.avgP_rolling.toFixed(1), 7) + ' │');
-              log('  │  Aerodinamik (P_aero)      │             │ ' + pad(eb.avgP_aero.toFixed(1), 7) + ' │');
-              log('  │  Eğim (P_grade)            │             │ ' + pad(eb.avgP_grade.toFixed(1), 7) + ' │');
-              log('  │  Hızlanma (P_accel)        │             │ ' + pad(eb.avgP_accel.toFixed(1), 7) + ' │');
-              log('  └─────────────────────────────────────────────────┘');
-              log('  Toplam verim: η = ' + eb.eta_avg.toFixed(1) + '% (ort.) | ' + eb.eta_min.toFixed(1) + '% (min) | ' + eb.eta_max.toFixed(1) + '% (maks)');
-              log('  Maks. artık (residual): ' + eb.maxResidual_kW.toFixed(3) + ' kW (' + eb.samples + ' nokta)');
+              log(kSatir(_tcHeatLbl, veSayi(eb.maxP_TC_heat, 1), veSayi(eb.avgP_TC_heat, 1)));
+              log(kSatir('Güç aktarma kaybı (P_dt)', veSayi(eb.maxP_drivetrain, 1), veSayi(eb.avgP_drivetrain, 1)));
+              log(kSatir('Tekerlek gücü (P_wheel)', veSayi(eb.maxP_wheel, 1), veSayi(eb.avgP_wheel, 1)));
+              log(kCizgi('├', '┼', '┤'));
+              log(kSatir('Yuvarlanma (P_rolling)', '', veSayi(eb.avgP_rolling, 1)));
+              log(kSatir('Aerodinamik (P_aero)', '', veSayi(eb.avgP_aero, 1)));
+              log(kSatir('Eğim (P_grade)', '', veSayi(eb.avgP_grade, 1)));
+              log(kSatir('Hızlanma (P_accel)', '', veSayi(eb.avgP_accel, 1)));
+              log(kCizgi('└', '┴', '┘'));
+              log('  Toplam verim: η = %' + veSayi(eb.eta_avg, 1) + ' (ort.) | %' + veSayi(eb.eta_min, 1) + ' (min) | %' + veSayi(eb.eta_max, 1) + ' (maks)');
+              log('  Maks. artık (residual): ' + veSayi(eb.maxResidual_kW, 3) + ' kW (' + veSayi(eb.samples, 0) + ' nokta)');
               if(eb.maxResidual_kW < 0.5) {
                 log('  ✓ Newton dengesi: F_traction = F_resist + m_eff × a doğrulandı', 'ok');
               } else {
-                log('  ⚠ Newton dengesi sapması: ' + eb.maxResidual_kW.toFixed(3) + ' kW', 'warn');
+                log('  ⚠ Newton dengesi sapması: ' + veSayi(eb.maxResidual_kW, 3) + ' kW', 'warn');
               }
 
               // Kayıp dağılımı yüzdeleri (ortalama üzerinden)
@@ -1317,7 +1327,7 @@ function veSolverRunProfessional() {
                 var pctTC = eb.avgP_TC_heat / eb.avgP_engine * 100;
                 var pctDT = eb.avgP_drivetrain / eb.avgP_engine * 100;
                 var pctWheel = eb.avgP_wheel / eb.avgP_engine * 100;
-                log('  Güç dağılımı: Tekerlek ' + pctWheel.toFixed(1) + '% | ' + (nodes.some(function(n){return n.type==='torque-converter';}) ? 'TC ısı' : 'Aktarma ısı') + ' ' + pctTC.toFixed(1) + '% | Drivetrain ' + pctDT.toFixed(1) + '%', 'dim');
+                log('  Güç dağılımı: Tekerlek %' + veSayi(pctWheel, 1) + ' | ' + (nodes.some(function(n){return n.type==='torque-converter';}) ? 'TC ısı' : 'Aktarma ısı') + ' %' + veSayi(pctTC, 1) + ' | Drivetrain %' + veSayi(pctDT, 1), 'dim');
               }
             }
             
@@ -1330,7 +1340,7 @@ function veSolverRunProfessional() {
               if(gmp.match(/L$/) && r.rpm[pi] > maxLockupRPM) maxLockupRPM = r.rpm[pi];
             }
             if(maxLockupRPM > governed + 50) {
-              physWarn.push('Lockup modda motor devri governed aşıyor: ' + maxLockupRPM.toFixed(0) + ' > ' + governed + ' rpm');
+              physWarn.push('Lockup modda motor devri governed aşıyor: ' + veSayi(maxLockupRPM, 0) + ' > ' + veSayi(governed, 0) + ' rpm');
             }
             
             // DP negatife düştüğü hız = gerçek maks hız
@@ -1339,7 +1349,7 @@ function veSolverRunProfessional() {
               if(r.DP[di] < 0 && r.DP[di-1] >= 0) { dpCrossIdx = di; break; }
             }
             if(dpCrossIdx > 0) {
-              log('  ✓ Maks. sürdürülebilir hız: ' + sData[dpCrossIdx].toFixed(1) + ' km/h (DP = 0 noktası)', 'ok');
+              log('  ✓ Maks. sürdürülebilir hız: ' + veSayi(sData[dpCrossIdx], 1) + ' km/h (DP = 0 noktası)', 'ok');
             }
             
             // Isı reddi monotonluk kontrolü (genelde hızla artar)
@@ -1384,8 +1394,8 @@ function veSolverRunProfessional() {
           var kap0 = Math.abs(Fg0) > 0 ? (topDirenc0 / Math.abs(Fg0)) * 100 : 0;
           
           log('┌─ t=0 (Başlangıç Anı) ─────────────────', 'info');
-          log('│ Hız              : ' + simResult.speed[0].toFixed(1) + ' km/h', 'dim');
-          log('│ Motor devri      : ' + (simResult.rpm ? simResult.rpm[0].toFixed(0) : '—') + ' d/d', 'dim');
+          log('│ Hız              : ' + veSayi(simResult.speed[0], 1) + ' km/h', 'dim');
+          log('│ Motor devri      : ' + (simResult.rpm ? veSayi(simResult.rpm[0], 0) : '—') + ' d/d', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
           // F_grade fizik konvansiyonunda: pozitif = yokuşa direnç (frenleyici),
@@ -1393,18 +1403,18 @@ function veSolverRunProfessional() {
           // işaretiyle yazar (F_roll/F_aero hep '-'), yani eğimin etkisi −F_grade.
           function _egimEtki(fg) {
             var etki = -fg;                       // harekete etkisi
-            return (etki >= 0 ? '+' : '-') + Math.abs(etki).toFixed(0) + ' N  (' +
+            return (etki >= 0 ? '+' : '-') + veSayi(Math.abs(etki), 0) + ' N  (' +
                    (etki > 0 ? 'hızlandırıcı' : etki < 0 ? 'frenleyici' : 'etkisiz') + ')';
           }
           log('│   Eğim kuvveti    (F_grade) : ' + _egimEtki(Fg0));
-          log('│   Yuvarlanma dir. (F_roll)  : -' + Math.abs(Fr0).toFixed(0) + ' N  (frenleme)');
-          log('│   Hava direnci    (F_aero)  : -' + Math.abs(Fa0).toFixed(0) + ' N  (frenleme)');
+          log('│   Yuvarlanma dir. (F_roll)  : -' + veSayi(Math.abs(Fr0), 0) + ' N  (frenleme)');
+          log('│   Hava direnci    (F_aero)  : -' + veSayi(Math.abs(Fa0), 0) + ' N  (frenleme)');
           log('│   ─────────────────────────────');
-          log('│   TOPLAM DİRENÇ            : ' + topDirenc0.toFixed(0) + ' N');
-          log('│   NET KUVVET               : ' + (Fn0 >= 0 ? '+' : '') + Fn0.toFixed(0) + ' N' + (Fn0 > 10 ? '  → hızlanıyor' : (Fn0 < -10 ? '  → yavaşlıyor' : '  → dengede')));
+          log('│   TOPLAM DİRENÇ            : ' + veSayi(topDirenc0, 0) + ' N');
+          log('│   NET KUVVET               : ' + (Fn0 >= 0 ? '+' : '') + veSayi(Fn0, 0) + ' N' + (Fn0 > 10 ? '  → hızlanıyor' : (Fn0 < -10 ? '  → yavaşlıyor' : '  → dengede')));
           if(Math.abs(Fg0) > 0) {
             log('│', 'dim');
-            log('│   Kapasite: %' + kap0.toFixed(1), kap0 >= 100 ? 'ok' : 'warn');
+            log('│   Kapasite: %' + veSayi(kap0, 1), kap0 >= 100 ? 'ok' : 'warn');
           }
           log('└──────────────────────────────────────────');
           logSpacer();
@@ -1417,20 +1427,20 @@ function veSolverRunProfessional() {
           var topDirencL = Math.abs(FrL) + Math.abs(FaL);
           var kapL = Math.abs(FgL) > 0 ? (topDirencL / Math.abs(FgL)) * 100 : 0;
           
-          log('┌─ t=' + simResult.time[li].toFixed(1) + 's (Bitiş Anı) ─────────────────', 'info');
-          log('│ Hız              : ' + simResult.speed[li].toFixed(1) + ' km/h', 'dim');
-          log('│ Motor devri      : ' + (simResult.rpm ? simResult.rpm[li].toFixed(0) : '—') + ' d/d', 'dim');
+          log('┌─ t=' + veSayi(simResult.time[li], 1) + 's (Bitiş Anı) ─────────────────', 'info');
+          log('│ Hız              : ' + veSayi(simResult.speed[li], 1) + ' km/h', 'dim');
+          log('│ Motor devri      : ' + (simResult.rpm ? veSayi(simResult.rpm[li], 0) : '—') + ' d/d', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
           log('│   Eğim kuvveti    (F_grade) : ' + _egimEtki(FgL));
-          log('│   Yuvarlanma dir. (F_roll)  : -' + Math.abs(FrL).toFixed(0) + ' N');
-          log('│   Hava direnci    (F_aero)  : -' + Math.abs(FaL).toFixed(0) + ' N');
+          log('│   Yuvarlanma dir. (F_roll)  : -' + veSayi(Math.abs(FrL), 0) + ' N');
+          log('│   Hava direnci    (F_aero)  : -' + veSayi(Math.abs(FaL), 0) + ' N');
           log('│   ─────────────────────────────');
-          log('│   TOPLAM DİRENÇ            : ' + topDirencL.toFixed(0) + ' N');
-          log('│   NET KUVVET               : ' + (FnL >= 0 ? '+' : '') + FnL.toFixed(0) + ' N' + (FnL > 10 ? '  → hızlanıyor' : (FnL < -10 ? '  → yavaşlıyor' : '  → dengede')));
+          log('│   TOPLAM DİRENÇ            : ' + veSayi(topDirencL, 0) + ' N');
+          log('│   NET KUVVET               : ' + (FnL >= 0 ? '+' : '') + veSayi(FnL, 0) + ' N' + (FnL > 10 ? '  → hızlanıyor' : (FnL < -10 ? '  → yavaşlıyor' : '  → dengede')));
           if(Math.abs(FgL) > 0) {
             log('│', 'dim');
-            log('│   Kapasite: %' + kapL.toFixed(1), kapL >= 100 ? 'ok' : 'warn');
+            log('│   Kapasite: %' + veSayi(kapL, 1), kapL >= 100 ? 'ok' : 'warn');
           }
           log('└──────────────────────────────────────────');
           logSpacer();
@@ -1444,7 +1454,7 @@ function veSolverRunProfessional() {
           } else {
             log('  ✗ Direnç kuvvetleri YETERSİZ', 'err');
           }
-          log('  Hız değişimi: ' + (hizDeg >= 0 ? '+' : '') + hizDeg.toFixed(2) + ' km/h (' + (hizDeg > 0.5 ? 'hızlandı' : (hizDeg < -0.5 ? 'yavaşladı' : 'dengede')) + ')');
+          log('  Hız değişimi: ' + (hizDeg >= 0 ? '+' : '') + veSayi(hizDeg, 2) + ' km/h (' + (hizDeg > 0.5 ? 'hızlandı' : (hizDeg < -0.5 ? 'yavaşladı' : 'dengede')) + ')');
           logSpacer();
         }
         

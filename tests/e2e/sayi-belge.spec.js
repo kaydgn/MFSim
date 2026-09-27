@@ -24,6 +24,11 @@
  * sondaki yüzde ve 9 noktalı ondalık (sarım açısı "156.23°", "%0.33");
  * formüllerinde 49 çıplak virgül ("T_s=12760,7" → "12760, 7" çiziliyordu).
  *
+ * ÇÖZÜCÜ GÜNLÜĞÜ (aşama 3c) aynı çözümde: 546 noktalı ondalık, 55 gruplanmamış
+ * sayı, 22 sondaki yüzde ("η=98.93%"); enerji dengesi kutusunun 16 satırı
+ * kayıktı (kenar ve başlık 53, üst bölüm 54, alt bölüm 56 karakter). Zaman
+ * damgası taranır ama hizaya girmez ("[9,99s]" → "[10,00s]" satırı uzatır).
+ *
  * Node'da koşamaz: belgeler gerçek bir çözümden üretiliyor.
  */
 const { test, expect } = require('@playwright/test');
@@ -79,7 +84,7 @@ const olc = (belgeler) => {
   return { sorun, adlar, taranan };
 };
 
-test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indirilen rapor Türkçe sayı yazıyor; TXT hizası bozulmuyor', async ({ page, browser }) => {
+test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri, indirilen rapor ve çözücü günlüğü Türkçe sayı yazıyor; hiza bozulmuyor', async ({ page, browser }) => {
   await page.setViewportSize({ width: 1920, height: 1032 });
   await page.addInitScript(() => {
     const f = CanvasRenderingContext2D.prototype.fillText;
@@ -117,6 +122,9 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indiri
     veSolverRunProfessional();
   });
   await page.waitForFunction(() => window.veSimResults && window.veSimResults.reportSnapshot, null, { timeout: 180000 });
+  // Çözücü günlüğü (aşama 3c): son satırı yazılana kadar beklenir.
+  await page.waitForFunction(() => /Sonuçlar sayfasındadır/.test((document.getElementById('ve-sp-log') || {}).innerText || ''), null, { timeout: 60000 });
+  const gunluk = await page.evaluate(() => document.getElementById('ve-sp-log').innerText);
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const o = document.getElementById('ve-solver-modal-overlay'); if (o) o.remove(); });
 
@@ -156,6 +164,7 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indiri
     'ayrıntılı rapor': rapor,
     'ayrıntılı raporun grafikleri': tuval,
     'indirilen HTML rapor': indirilen.metin,
+    'çözücü günlüğü': gunluk,
   });
   const sorun = [], adlar = {};
   let taranan = 0;
@@ -166,7 +175,9 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indiri
     for (const [k, n] of Object.entries(r.adlar)) adlar[k] = (adlar[k] || 0) + n;
   }
   const hiza = [];
-  for (const [ad, metin] of Object.entries(txt)) {
+  // Günlüğün zaman damgası hizaya girmez: "[9,99s]" → "[10,00s]" satırı uzatır.
+  const gunlukSade = gunluk.replace(/^\[[\d.,]+s\] ?/gm, '');
+  for (const [ad, metin] of Object.entries(Object.assign({}, txt, { 'çözücü günlüğü': gunlukSade }))) {
     kutuIhlal(metin).forEach((x) => hiza.push(`${ad} · kutu · ${x}`));
     tabloIhlal(metin).forEach((x) => hiza.push(`${ad} · tablo · ${x}`));
   }
@@ -175,6 +186,8 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indiri
 
   expect(taranan).toBeGreaterThan(400000);
   expect(tuval.length).toBeGreaterThan(200);                // grafikler gerçekten çizildi
+  expect(gunlukSade).toMatch(/ENERJİ DENGESİ[\s\S]*┌[\s\S]*└/);   // günlüğün kutusu gerçekten var
+  expect(gunlukSade).toMatch(/Hesap süresi\s*: \d+,\d{3} s \(\d[\d.]*,\dk adım\/s\)/);   // hız sayı kalıyor (Infinity değil)
   expect(indirilen.tex.length).toBeGreaterThan(500);         // formüller gerçekten var
   expect(sorun).toEqual([]);
   expect(hiza).toEqual([]);
