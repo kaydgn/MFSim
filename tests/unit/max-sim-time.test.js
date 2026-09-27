@@ -45,8 +45,8 @@ describe('VE_DEFAULT_MAX_SIM_TIME tek kaynak', () => {
     const src = readJs('cp-solver.js');
     // Eski hâl: <input type="hidden" ... ve-solver-maxtime-
     expect(src).not.toMatch(/type="hidden"[^>]*ve-solver-maxtime-/);
-    // Yeni hâl: number input + değişimde kaydeden handler
-    expect(src).toMatch(/type="number"[^>]*ve-solver-maxtime-/);
+    // Yeni hâl: sayı alanı (Türkçe, js/sayi-alan.js) + değişimde kaydeden handler
+    expect(src).toMatch(/inputmode="decimal"[^>]*ve-solver-maxtime-/);
     const row = src.slice(src.indexOf('ve-solver-maxtime-'));
     expect(row.slice(0, 400)).toMatch(/onVESolverParamChange/);
   });

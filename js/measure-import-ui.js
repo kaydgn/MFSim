@@ -256,7 +256,7 @@ function veImpPreviewHTML() {
   var h = '<div class="ve-imp-sec"><div class="ve-imp-sec-head">' +
           '<span>Önizleme</span>' +
           '<label class="ve-imp-inline">Başlık satırı' +
-          '<input type="number" min="1" max="' + veImpUI.rows.length + '" value="' + (L.headerRow + 1) + '"' +
+          '<input type="text" inputmode="decimal" min="1" max="' + veImpUI.rows.length + '" value="' + (L.headerRow + 1) + '"' +
           ' onchange="veImpSetHeaderRow(this.value)" style="width:64px;">' +
           '</label></div>';
 

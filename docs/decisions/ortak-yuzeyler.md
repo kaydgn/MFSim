@@ -1666,9 +1666,8 @@ ikisi birden; günlük hız oranını "1.090" yazıyordu (Türkçe okuyan: bin d
 **Girdi yolu.** Okuyucu (`veSayiOku`) iki yazımı da kabul eder ve virgülsüz
 noktayı ONDALIK sayar — dişli oranı "1.000" bugün böyle yazılıyor. Bedeli:
 gruplanmış tam sayı ("1.800") geri okunamaz. Girdi alanına bu yüzden gruplu
-sayı yazılmaz; ekrandan kopyalanan gruplu tam sayının bir alana yapıştırılması
-bilerek kalan bir risktir. Kapının ilk sürümü bu bin kat hatayı yakaladı
-(999,99 → "1.000" → 1).
+sayı yazılmaz. Kapının ilk sürümü bu bin kat hatayı yakaladı
+(999,99 → "1.000" → 1). Yapıştırma artık sessiz değil (aşama 2b).
 
 **Aşama 1 (grafik çekirdeği).** Eksen ve ipucu yazıcısı (`veFormatAxisVal`,
 `veFormatTooltipVal`, görüntüleyicideki davranış kopyası dâhil), imleç
@@ -1678,3 +1677,33 @@ sütunu. Görüntüleyici yazıcıyı sekizinci birebir kopya olarak taşıyor.
 **Kapı.** `sayi-dili.test.js`: yazıcı ve okuyucunun davranışı (gidiş-dönüş,
 -0, üstel, belirsiz tam sayı), tarayıcının kuralı, aşama dosyalarında
 işaretsiz `toFixed` yok.
+
+### Aşama 2b — sayı alanı (2026-09-27)
+
+**Hüküm.** Sayı alanı `type="text" inputmode="decimal"` yazılır,
+`type="number"` DEĞİL. `js/sayi-alan.js` alanı Türkçe gösterir (rakamlara
+dokunmadan: "3.510" → "3,510") ve `.value`'yu makine biçiminde geri verir;
+kaynak değeri makine biçiminde yazar, işleyiciler (`parseFloat(el.value)`)
+değişmez. Yapıştırılan sayı alanın biçimine çevrilir ("1.714,6 mm" → 1714,6);
+gruplu tam sayı ("1.800") ondalık okunur, alan işaretlenir ve bildirim çıkar.
+`step` taşıyan alanda ↑/↓ eski sayı alanının adım kuralıyla çalışır; fare
+tekerleği adım atmaz.
+
+**Gerekçe.** Chromium'un sayı alanı virgülü tanımıyor (tr-TR yerel ayarında
+da ölçüldü): üç modülün 55 penceresinde 520 düzenlenebilir alanın 520'si
+"12,5" → 125, "1.716,2" → 1,7162 okuyordu. Modele giden: araç Cd "0,65" → 65,
+araç kütlesi "15.200,5" → 15,2005, takoz kütlesi "124,5" → 1245, gergi kol
+boyu "90,5" → 905. Hepsi sessiz. Tek tek işleyici değiştirmek yerine alanın
+kendisi çevrildi: yüz kadar işleyiciden birinin unutulması yine sessiz olurdu.
+Görünen noktalı alan 265 → 0.
+
+**Bedel.** Tipe bakan seçici kırılır: dönüşüm şanzıman vites tablosunun
+`input[type="number"]` seçicisini de metin olarak değiştirdi ve seçici
+geçersizleşti — vites tablosu hiç okunmayacaktı. Sayı alanını tipiyle seçen
+kod `input[inputmode="decimal"]` yazar; kapı sabit seçicilerin hepsini
+jsdom'da çalıştırıyor.
+
+**Kapı.** `sayi-alan.test.js` (saf işlevler, alanın davranışı, kaynakta
+`type="number"` yok, yükleme sırası, seçicilerin geçerliliği, vites satırı
+okuyucusu) + `sayi-alan.spec.js` (gerçek klavye ve yapıştırma, işleyicinin
+modele yazdığı sayı, görüntüleyicide katman).

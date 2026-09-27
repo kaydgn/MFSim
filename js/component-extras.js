@@ -361,7 +361,7 @@ function getScenarioPropertiesHTML(node) {
   
   // Gaz pedal oranı
   var showThrottle = ['partial_throttle','full_throttle','custom'].indexOf(scenarioType) > -1;
-  html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
+  html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Senaryo tipi simülasyon davranışını belirler.</td></tr>';
 
@@ -384,7 +384,7 @@ function getScenarioPropertiesHTML(node) {
     html += '<div class="sw-pkg-body">';
     html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse;">';
     html += '<tr><th style="padding:5px 6px; text-align:left; width:50%; font-weight:500; color:var(--text-secondary);">Başlangıç hızı [km/h]</th>';
-    html += '<td style="padding:5px 6px;"><input type="number" id="ve-scenario-seg-initspeed-' + node.id + '" value="' + segInitSpeed + '" step="5" min="0" max="200" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
+    html += '<td style="padding:5px 6px;"><input type="text" inputmode="decimal" id="ve-scenario-seg-initspeed-' + node.id + '" value="' + segInitSpeed + '" step="5" min="0" max="200" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
     html += '</table>';
     html += '<div class="sw-pkg-desc">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
     html += '</div></div>'; // sw-pkg-body + sw-pkg-card
@@ -438,7 +438,7 @@ function getCoastDownPropertiesHTML(node) {
   html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Giriş yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-cd-method-' + node.id + '" onchange="onVECoastDownChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="manual"' + (method==='manual'?' selected':'') + '>Manuel Crr girişi</option><option value="test"' + (method==='test'?' selected':'') + '>Test verisinden hesapla</option></select></td></tr>';
   
   // Manuel Crr
-  html += '<tr id="ve-cd-crr-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (method==='test'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Crr [-]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-cd-crr-' + node.id + '" value="' + crr + '" step="0.001" min="0" placeholder="0.015" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVECoastDownChange(\'' + node.id + '\')"></td></tr>';
+  html += '<tr id="ve-cd-crr-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (method==='test'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Crr [-]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-cd-crr-' + node.id + '" value="' + crr + '" step="0.001" min="0" placeholder="0.015" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVECoastDownChange(\'' + node.id + '\')"></td></tr>';
   
   // Sihirbaz butonu - sadece test modunda
   html += '<tr id="ve-cd-wizard-row-' + node.id + '" style="' + (method!=='test'?'display:none;':'') + '"><td colspan="2" style="padding:8px 6px; background:var(--bg-tertiary);"><button onclick="veOpenCoastDownWizard(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:var(--fs-body); font-weight:600; background:linear-gradient(135deg, var(--accent-primary), color-mix(in srgb, var(--accent-primary) 80%, #000)); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'"><span class="mf-ico mf-ico-wand"></span> Sihirbazı çalıştır</button></td></tr>';
@@ -532,13 +532,13 @@ function getObstacleCrossingPropertiesHTML(node) {
   // a₁ — ağırlık merkezi-ön aks mesafesi
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Ağ. merkezi–ön aks <span style="color:var(--text-muted); font-weight:400;">a₁ [m]</span></th>';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-a1-' + nid + '" value="' + a1 + '" step="0.001" min="0" placeholder="2.100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-a1-' + nid + '" value="' + a1 + '" step="0.001" min="0" placeholder="2.100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
 
   // a₂ — ağırlık merkezi-arka aks mesafesi
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Ağ. merkezi–arka aks <span style="color:var(--text-muted); font-weight:400;">a₂ [m]</span></th>';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-a2-' + nid + '" value="' + a2 + '" step="0.001" min="0" placeholder="1.900" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-a2-' + nid + '" value="' + a2 + '" step="0.001" min="0" placeholder="1.900" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
 
   // Dingil mesafesi L (otomatik)
@@ -556,7 +556,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   // Engel yüksekliği h
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Engel yüksekliği <span style="color:var(--text-muted); font-weight:400;">h [m]</span></th>';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-height-' + nid + '" value="' + obsHeight + '" step="0.01" min="0" placeholder="0.50" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-height-' + nid + '" value="' + obsHeight + '" step="0.01" min="0" placeholder="0.50" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
 
   html += '</table>';
@@ -582,7 +582,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   // Yüklü Lastik Yarıçapı (kullanıcı girer)
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yüklü lastik yarıçapı <span style="color:var(--text-muted); font-weight:400;">R<sub>eff</sub> [m]</span></th>';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-loaded-radius-' + nid + '" value="' + loadedTireRadius + '" step="0.001" min="0" placeholder="0.540" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-loaded-radius-' + nid + '" value="' + loadedTireRadius + '" step="0.001" min="0" placeholder="0.540" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Yüklü koşulda ve köşe teması göz önünde bulundurularak girilmelidir. Lastiğin zemine temas ettiği andaki efektif yarıçaptır.</td></tr>';
 
@@ -590,7 +590,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Köşe defleksiyonu <span style="color:var(--text-muted); font-weight:400;">δ<sub>corner</sub> [mm]</span></th>';
   var cornerDefl = (node.data.cornerDeflection !== undefined && node.data.cornerDeflection !== null) ? node.data.cornerDeflection : '';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-corner-defl-' + nid + '" value="' + cornerDefl + '" step="1" min="0" max="100" placeholder="15" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-corner-defl-' + nid + '" value="' + cornerDefl + '" step="1" min="0" max="100" placeholder="15" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Engel köşesinde oluşan ek lastik ezilmesi. Tipik değerler: sert lastik / düşük yük için 5–10 mm, normal koşullar için 10–20 mm, yumuşak lastik / ağır yük için 20–30 mm. Boş bırakılırsa köşe düzeltmesi yapılmaz.</td></tr>';
 
@@ -624,7 +624,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Şanzıman çıkış tork limiti <span style="color:var(--text-muted); font-weight:400;">[Nm]</span></th>';
   var gbTorqueLimit = (node.data.gbTorqueLimit !== undefined && node.data.gbTorqueLimit !== null) ? node.data.gbTorqueLimit : '';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-gb-torque-limit-' + nid + '" value="' + gbTorqueLimit + '" step="10" min="0" placeholder="ör: 3200" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-gb-torque-limit-' + nid + '" value="' + gbTorqueLimit + '" step="10" min="0" placeholder="ör: 3200" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman çıkışındaki maksimum tork değeri. Girilirse şanzıman çıkış torku bu değerle sınırlandırılır. Boş bırakılırsa sınırlama uygulanmaz.</td></tr>';
 
@@ -772,14 +772,14 @@ function veOpenCoastDownWizard(nodeId) {
 
     // Sol sütun
     '<table style="border-collapse:collapse; font-size:var(--fs-body); border-right:1px solid var(--border-color);">' +
-    '<tr style="' + pRowStyle + '"><th style="' + pThStyle + '">Araç kütlesi m</th><td style="' + pTdStyle + '"><input type="number" id="cdw-mass" value="' + defMass + '" step="1" placeholder="18000" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">kg</span></td></tr>' +
-    '<tr><th style="' + pThStyle + '">Frontal alan A</th><td style="' + pTdStyle + '"><input type="number" id="cdw-area" value="' + defArea + '" step="0.01" placeholder="7.8" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">m²</span></td></tr>' +
+    '<tr style="' + pRowStyle + '"><th style="' + pThStyle + '">Araç kütlesi m</th><td style="' + pTdStyle + '"><input type="text" inputmode="decimal" id="cdw-mass" value="' + defMass + '" step="1" placeholder="18000" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">kg</span></td></tr>' +
+    '<tr><th style="' + pThStyle + '">Frontal alan A</th><td style="' + pTdStyle + '"><input type="text" inputmode="decimal" id="cdw-area" value="' + defArea + '" step="0.01" placeholder="7.8" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">m²</span></td></tr>' +
     '</table>' +
 
     // Sağ sütun
     '<table style="border-collapse:collapse; font-size:var(--fs-body);">' +
-    '<tr style="' + pRowStyle + '"><th style="' + pThStyle + '">Hava yoğunluğu ρ</th><td style="' + pTdStyle + '"><input type="number" id="cdw-rho" value="' + defRho + '" step="0.01" placeholder="1.225" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">kg/m³</span></td></tr>' +
-    '<tr><th style="' + pThStyle + '">CFD Cd</th><td style="' + pTdStyle + '"><input type="number" id="cdw-cd-input" value="' + defCd + '" step="0.001" placeholder="0.65" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">[-]</span></td></tr>' +
+    '<tr style="' + pRowStyle + '"><th style="' + pThStyle + '">Hava yoğunluğu ρ</th><td style="' + pTdStyle + '"><input type="text" inputmode="decimal" id="cdw-rho" value="' + defRho + '" step="0.01" placeholder="1.225" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">kg/m³</span></td></tr>' +
+    '<tr><th style="' + pThStyle + '">CFD Cd</th><td style="' + pTdStyle + '"><input type="text" inputmode="decimal" id="cdw-cd-input" value="' + defCd + '" step="0.001" placeholder="0.65" style="' + pInpStyle + '"> <span style="font-size:var(--fs-tiny); color:var(--text-muted);">[-]</span></td></tr>' +
     '</table>' +
 
     '</div></div>';
@@ -892,12 +892,12 @@ function cdwAddRow() {
   var tdInp = 'padding:4px 3px; text-align:center;';
   var tdCalc = 'padding:4px 10px; text-align:center;';
   tr.innerHTML = '<td style="padding:4px 3px; text-align:center; width:22px;"><button onclick="this.closest(\'tr\').remove()" style="background:none; border:none; color:var(--accent-danger); cursor:pointer; font-size:var(--fs-body); padding:0; opacity:0.4;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.4\'">' + veIkon('x') + '</button></td>' +
-    '<td style="' + tdInp + '"><input type="number" step="0.1" class="cdw-v1" style="' + inpStyle + '"></td>' +
-    '<td style="' + tdInp + '"><input type="number" step="0.1" class="cdw-v2" style="' + inpStyle + '"></td>' +
-    '<td style="' + tdInp + '"><input type="number" step="0.01" class="cdw-dt" style="' + inpStyle + '"></td>' +
-    '<td style="' + tdInp + '"><input type="number" step="0.01" class="cdw-z1" style="' + inpStyle + '"></td>' +
-    '<td style="' + tdInp + '"><input type="number" step="0.01" class="cdw-z2" style="' + inpStyle + '"></td>' +
-    '<td style="' + tdInp + '"><input type="number" step="0.01" class="cdw-dx" style="' + inpStyle + '"></td>' +
+    '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.1" class="cdw-v1" style="' + inpStyle + '"></td>' +
+    '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.1" class="cdw-v2" style="' + inpStyle + '"></td>' +
+    '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.01" class="cdw-dt" style="' + inpStyle + '"></td>' +
+    '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.01" class="cdw-z1" style="' + inpStyle + '"></td>' +
+    '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.01" class="cdw-z2" style="' + inpStyle + '"></td>' +
+    '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.01" class="cdw-dx" style="' + inpStyle + '"></td>' +
     '<td style="' + tdCalc + '"><span class="cdw-vavg" style="' + spanStyle + '"></span></td>' +
     '<td style="' + tdCalc + '"><span class="cdw-acc" style="' + spanStyle + '"></span></td>' +
     '<td style="' + tdCalc + '"><span class="cdw-grade" style="' + spanStyle + '"></span></td>' +
@@ -1378,39 +1378,39 @@ function getWheelPropertiesHTML(node) {
     // Yuvarlanma Yarıçapı
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yuvarlanma yarıçapı <span style="color:var(--text-muted); font-weight:400;">[m]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftwh-radius-' + node.id + '" value="' + ftTireRadius + '" step="0.001" min="0.1" max="2" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftwh-radius-' + node.id + '" value="' + ftTireRadius + '" step="0.001" min="0.1" max="2" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     // rev/km (readonly)
     var roStyle = 'width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:default;';
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">rev/km</th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ftwh-revkm-' + node.id + '" value="' + revPerKm + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftwh-revkm-' + node.id + '" value="' + revPerKm + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
     html += '</tr>';
     
     // Tekerlek Sayısı (readonly, topolojiden sayılır)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tekerlek sayısı</th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ftwh-count-' + node.id + '" value="' + ftTireCount + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftwh-count-' + node.id + '" value="' + ftTireCount + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
     html += '</tr>';
     
     // Toplam Lastik/Jant Ataleti
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Toplam lastik/jant ataleti <span style="color:var(--text-muted); font-weight:400;">[kg·m²]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftwh-inertia-' + node.id + '" value="' + ftTireInertia + '" step="0.01" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftwh-inertia-' + node.id + '" value="' + ftTireInertia + '" step="0.01" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     // Yuvarlanma Direnci Katsayısı
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yuvarlanma direnci katsayısı <span style="color:var(--text-muted); font-weight:400;">(Crr)</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftwh-crr-' + node.id + '" value="' + ftCrr + '" step="0.001" min="0.001" max="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftwh-crr-' + node.id + '" value="' + ftCrr + '" step="0.001" min="0.001" max="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     html += '<tr><td colspan="2" style="padding:4px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;"><span style="color:var(--accent-primary);">ℹ</span> Yuvarlanma direnci hızla birlikte otomatik olarak artırılır (iSCAAN evrensel düzeltme modeli: 80 km/h\'de ~%50 artış).</td></tr>';
     
     // Yüzey Faktörü
     html += '<tr>';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yüzey faktörü</th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftwh-surface-' + node.id + '" value="' + ftSurfaceFactor + '" step="0.01" min="0.5" max="3" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftwh-surface-' + node.id + '" value="' + ftSurfaceFactor + '" step="0.01" min="0.5" max="3" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '</table>';
@@ -1479,7 +1479,7 @@ function getWheelPropertiesHTML(node) {
   // Tekerlek yarıçapı
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Tekerlek yarıçapı [m]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-wheel-radius-' + node.id + '" value="' + wheelRadius + '" step="0.00001" min="0.1" max="2" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEWheelParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-wheel-radius-' + node.id + '" value="' + wheelRadius + '" step="0.00001" min="0.1" max="2" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEWheelParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -1495,7 +1495,7 @@ function getWheelPropertiesHTML(node) {
   
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yuvarlanma direnci Crr [-]' + (crrLocked ? ' <span class="mf-ico mf-ico-lock"></span>' : '') + '</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-wheel-crr-' + node.id + '" value="' + crrValue + '" step="0.001" min="0.001" max="0.1" ' + (crrLocked ? 'readonly' : '') + ' style="width:100%; padding:5px; font-size:var(--fs-body); background:' + (crrLocked ? 'var(--bg-secondary)' : 'var(--bg-input)') + '; color:' + (crrLocked ? 'var(--accent-primary)' : 'var(--text-primary)') + '; border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;' + (crrLocked ? ' cursor:not-allowed; font-weight:600;' : '') + '" onchange="onVEWheelParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-wheel-crr-' + node.id + '" value="' + crrValue + '" step="0.001" min="0.001" max="0.1" ' + (crrLocked ? 'readonly' : '') + ' style="width:100%; padding:5px; font-size:var(--fs-body); background:' + (crrLocked ? 'var(--bg-secondary)' : 'var(--bg-input)') + '; color:' + (crrLocked ? 'var(--accent-primary)' : 'var(--text-primary)') + '; border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;' + (crrLocked ? ' cursor:not-allowed; font-weight:600;' : '') + '" onchange="onVEWheelParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -1510,7 +1510,7 @@ function getWheelPropertiesHTML(node) {
   // Döner kütle faktörü
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Döner kütle faktörü δ [-]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-wheel-delta-' + node.id + '" value="' + rotatingMass + '" step="0.01" min="1" max="1.5" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEWheelParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-wheel-delta-' + node.id + '" value="' + rotatingMass + '" step="0.01" min="1" max="1.5" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEWheelParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   html += '<tr>';
@@ -1726,12 +1726,12 @@ function getVehiclePropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Toplam kütle (GVW) <span style="color:var(--text-muted); font-weight:400;">[kg]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-gvw-' + node.id + '" value="' + ftGVW + '" step="100" min="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-gvw-' + node.id + '" value="' + ftGVW + '" step="100" min="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '<tr>';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tahrikli tekerleklerdeki ağırlık <span style="color:var(--text-muted); font-weight:400;">[%]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-driven-' + node.id + '" value="' + ftDrivenWeight + '" step="1" min="0" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-driven-' + node.id + '" value="' + ftDrivenWeight + '" step="1" min="0" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '</table>';
@@ -1747,32 +1747,32 @@ function getVehiclePropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Yükseklik <span style="color:var(--text-muted); font-weight:400;">[m]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-height-' + node.id + '" value="' + ftHeight + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-height-' + node.id + '" value="' + ftHeight + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Genişlik <span style="color:var(--text-muted); font-weight:400;">[m]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-width-' + node.id + '" value="' + ftWidth + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-width-' + node.id + '" value="' + ftWidth + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Alın alanı (A) <span style="color:var(--text-muted); font-weight:400;">[m²]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ftv-area-' + node.id + '" value="' + ftA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-area-' + node.id + '" value="' + ftA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
     html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Cd <span style="color:var(--text-muted); font-weight:400;">(Aerodinamik sürtünme katsayısı)</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-cd-' + node.id + '" value="' + ftCd + '" step="0.001" min="0" max="2" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-cd-' + node.id + '" value="' + ftCd + '" step="0.001" min="0" max="2" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">CdA <span style="color:var(--text-muted); font-weight:400;">[m²]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ftv-cda-' + node.id + '" value="' + ftCdA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-cda-' + node.id + '" value="' + ftCdA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
     html += '</tr>';
     
     html += '<tr>';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hava yoğunluğu (ρ) <span style="color:var(--text-muted); font-weight:400;">[kg/m³]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-rho-' + node.id + '" value="' + ftRho + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-rho-' + node.id + '" value="' + ftRho + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '</table>';
@@ -1800,19 +1800,19 @@ function getVehiclePropertiesHTML(node) {
   // Araç ağırlığı
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">Araç ağırlığı [kg]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-vehicle-mass-' + node.id + '" value="' + mass + '" step="100" min="100" placeholder="Örn. 20900" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-mass-' + node.id + '" value="' + mass + '" step="100" min="100" placeholder="Örn. 20900" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   // İlk hız
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">İlk hız [km/h]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-vehicle-speed-' + node.id + '" value="' + initialSpeed + '" step="0.01" min="0" placeholder="Örn. 49.97" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-speed-' + node.id + '" value="' + initialSpeed + '" step="0.01" min="0" placeholder="Örn. 49.97" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   // Sürüklenme katsayısı
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Sürüklenme katsayısı Cd [-]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-vehicle-cd-' + node.id + '" value="' + cd + '" step="0.01" min="0" max="2" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-cd-' + node.id + '" value="' + cd + '" step="0.01" min="0" max="2" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">CFD analizinden alınır. Askeri araçlarda tipik aralık 0.63–0.67.</td>';
@@ -1821,7 +1821,7 @@ function getVehiclePropertiesHTML(node) {
   // Frontal alan
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Araç frontal alanı [m²]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-vehicle-area-' + node.id + '" value="' + frontalArea + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-area-' + node.id + '" value="' + frontalArea + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">CAD datadan, aracın en kalın kesitinin alanı olarak girilebilir.</td>';
@@ -1846,7 +1846,7 @@ function getVehiclePropertiesHTML(node) {
   var calcEff = veCalcTotalDriveEfficiency();
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Aktarma organları toplam verimi [%]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-vehicle-eff-' + node.id + '" value="' + calcEff.toFixed(1) + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed; font-weight:600;"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-eff-' + node.id + '" value="' + calcEff.toFixed(1) + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed; font-weight:600;"></td>';
   html += '</tr>';
   html += '<tr>';
   html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman, transfer kutusu ve diferansiyelin toplam mekanik verimi. Her bileşenin kendi veriminden otomatik hesaplanır. Tipik değer: %92–95 arası.</td>';
@@ -2097,9 +2097,9 @@ function _veManualSegTableHTML(nodeId, segs) {
     html += '<option value="flat"' + (dir==='flat'?' selected':'') + '>Düz</option>';
     html += '</select></td>';
     // Eğim %
-    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.gradePct || 0) + '" data-idx="' + i + '" data-field="gradePct" step="0.5" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:var(--fs-micro); background:var(--bg-input); color:' + dirColor + '; border:1px solid transparent; border-radius:var(--radius-sm); text-align:right; font-weight:600; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="text" inputmode="decimal" value="' + (s.gradePct || 0) + '" data-idx="' + i + '" data-field="gradePct" step="0.5" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:var(--fs-micro); background:var(--bg-input); color:' + dirColor + '; border:1px solid transparent; border-radius:var(--radius-sm); text-align:right; font-weight:600; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
     // Mesafe
-    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.distance || 0) + '" data-idx="' + i + '" data-field="distance" step="50" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:var(--radius-sm); text-align:right; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="text" inputmode="decimal" value="' + (s.distance || 0) + '" data-idx="' + i + '" data-field="distance" step="50" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:var(--radius-sm); text-align:right; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
     // Δh (hesaplanan, sadece okunur)
     var deltaH = _veManualSegCalcDH(s);
     html += '<td style="padding:2px 3px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + deltaH.toFixed(1) + '</td>';
@@ -2577,17 +2577,17 @@ function getParametricPropertiesHTML(node) {
       
       html += '<div>';
       html += '<label style="font-size:var(--fs-micro); color:var(--text-muted); display:block;">Min</label>';
-      html += '<input type="number" value="' + (p.min !== undefined ? p.min : '') + '" onchange="veUpdateParametric(\'' + node.id + '\',' + idx + ',\'min\',this.value)" style="width:100%;padding:3px 5px;font-size:var(--fs-tiny);background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);box-sizing:border-box;">';
+      html += '<input type="text" inputmode="decimal" value="' + (p.min !== undefined ? p.min : '') + '" onchange="veUpdateParametric(\'' + node.id + '\',' + idx + ',\'min\',this.value)" style="width:100%;padding:3px 5px;font-size:var(--fs-tiny);background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);box-sizing:border-box;">';
       html += '</div>';
       
       html += '<div>';
       html += '<label style="font-size:var(--fs-micro); color:var(--text-muted); display:block;">Max</label>';
-      html += '<input type="number" value="' + (p.max !== undefined ? p.max : '') + '" onchange="veUpdateParametric(\'' + node.id + '\',' + idx + ',\'max\',this.value)" style="width:100%;padding:3px 5px;font-size:var(--fs-tiny);background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);box-sizing:border-box;">';
+      html += '<input type="text" inputmode="decimal" value="' + (p.max !== undefined ? p.max : '') + '" onchange="veUpdateParametric(\'' + node.id + '\',' + idx + ',\'max\',this.value)" style="width:100%;padding:3px 5px;font-size:var(--fs-tiny);background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);box-sizing:border-box;">';
       html += '</div>';
       
       html += '<div>';
       html += '<label style="font-size:var(--fs-micro); color:var(--text-muted); display:block;">Adım</label>';
-      html += '<input type="number" value="' + (p.step !== undefined ? p.step : '') + '" onchange="veUpdateParametric(\'' + node.id + '\',' + idx + ',\'step\',this.value)" style="width:100%;padding:3px 5px;font-size:var(--fs-tiny);background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);box-sizing:border-box;">';
+      html += '<input type="text" inputmode="decimal" value="' + (p.step !== undefined ? p.step : '') + '" onchange="veUpdateParametric(\'' + node.id + '\',' + idx + ',\'step\',this.value)" style="width:100%;padding:3px 5px;font-size:var(--fs-tiny);background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);box-sizing:border-box;">';
       html += '</div>';
       
       html += '</div>';

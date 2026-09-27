@@ -3043,9 +3043,9 @@ function veTrShowLaneScale(laneIdx, e) {
   pop.className = 've-trace-pop';
   pop.innerHTML =
     '<div class="ve-trace-pop-title">' + veSigEsc(built ? built.title : 'Şerit') + '</div>' +
-    '<label>En az<input type="number" step="any" id="ve-trace-scale-min" value="' +
+    '<label>En az<input type="text" inputmode="decimal" step="any" id="ve-trace-scale-min" value="' +
       (L.min != null ? L.min : (built ? Number(built.yMin.toFixed(4)) : 0)) + '"></label>' +   // makine: sayı alanının değeri
-    '<label>En çok<input type="number" step="any" id="ve-trace-scale-max" value="' +
+    '<label>En çok<input type="text" inputmode="decimal" step="any" id="ve-trace-scale-max" value="' +
       (L.max != null ? L.max : (built ? Number(built.yMax.toFixed(4)) : 1)) + '"></label>' +   // makine: sayı alanının değeri
     '<div class="ve-trace-pop-row">' +
       '<button type="button" data-act="scale-auto">Otomatik</button>' +

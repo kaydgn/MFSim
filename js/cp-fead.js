@@ -609,7 +609,7 @@ function _feadGrid(node, cells, cols){
   cells.forEach(function(c){
     var v = (node.data && node.data[c.key] !== undefined && node.data[c.key] !== null) ? node.data[c.key] : '';
     h += '<label class="ve-fp-f"><span class="ve-fp-l">' + c.label + '</span>'
-      + '<input class="ve-fp-inp" type="number" id="ve-fead-' + c.key + '-' + node.id + '"'
+      + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="ve-fead-' + c.key + '-' + node.id + '"'
       + ' value="' + _feadEsc(v) + '" step="' + (c.step || 'any') + '"'
       + (c.ph ? ' placeholder="' + _feadEsc(c.ph) + '"' : '')
       + ' onchange="' + (c.setter || 'veFeadSet') + '(\'' + node.id + '\',\'' + c.key
@@ -1797,7 +1797,7 @@ function veFeadPowerCurveCard(node){
     }
     var hucre = function(key, val, step){
       return '<td class="tight">'
-        + '<input type="number" value="' + _feadEsc(val == null ? '' : val) + '" step="' + step + '"'
+        + '<input type="text" inputmode="decimal" value="' + _feadEsc(val == null ? '' : val) + '" step="' + step + '"'
         + ' onchange="veFeadCurveSet(\'' + node.id + '\',' + pi + ',\'' + key + '\',this.value)"'
         + ' class="ve-fp-inp ve-fp-inp--tight"></td>';
     };
@@ -7658,7 +7658,7 @@ function veFeadDutyEditor(node, build){
   rows.forEach(function(r, ri){
     var cell = function(key, val, step){
       return '<td class="tight">'
-        + '<input type="number" value="' + _feadEsc(val) + '" step="' + (step || 'any') + '"'
+        + '<input type="text" inputmode="decimal" value="' + _feadEsc(val) + '" step="' + (step || 'any') + '"'
         + ' onchange="veFeadDutySet(\'' + node.id + '\',' + ri + ',\'' + key + '\',this.value)"'
         + ' class="ve-fp-inp ve-fp-inp--tight"></td>';
     };
@@ -7673,7 +7673,7 @@ function veFeadDutyEditor(node, build){
       var _rs = build.sys || build.ratioSys;
       var oto = (v === '' && _rs) ? veFeadAutoKw(_rs, yukIdx[n.id], n, r.rpm) : null;
       h += '<td class="tight">'
-        + '<input type="number" value="' + _feadEsc(v) + '" step="0.01"'
+        + '<input type="text" inputmode="decimal" value="' + _feadEsc(v) + '" step="0.01"'
         + (oto != null ? ' placeholder="' + _feadFmt(oto, 2) + '"' : ' placeholder="0"')
         + ' title="' + (oto != null ? 'Katalogdan: ' + _feadFmt(oto, 2) + ' kW (boş bırakırsanız bu kullanılır)' : 'Boş = 0 kW')
         + '" onchange="veFeadDutySet(\'' + node.id + '\',' + ri + ',\'kw:' + n.id + '\',this.value)"'

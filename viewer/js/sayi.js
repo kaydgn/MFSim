@@ -10,12 +10,13 @@
  * SVG yol verisi `toFixed` ile noktalı kalır; satır `// makine: <sebep>`
  * taşır (kapı: tests/unit/sayi-dili.test.js).
  *
- * GİRDİ ALANINA GRUPLAMASIZ yazılır ({ binlik: false }): gruplanmış TAM SAYI
- * ("1.800") okurken bin sekiz yüz mü, bir virgül sekiz mi belli değildir ve
- * okuyucu (veSayiOku) onu bugünkü gibi 1,8 okur — sessiz bin kat hata.
- * Okuyucu virgülsüz noktayı bilerek ONDALIK sayar: dişli oranı "1.000",
- * "2.480" bugün böyle yazılıyor. Ondalık taşıyan gruplu sayı ("1.716,2")
- * belirsiz değildir — virgül binliği belirler.
+ * GİRDİ ALANI kaynağa MAKİNE biçiminde yazılır; Türkçe gösteren ve `.value`'yu
+ * makine biçiminde geri veren js/sayi-alan.js'tir. Alanda GRUPLAMA YOKTUR:
+ * gruplanmış TAM SAYI ("1.800") okurken bin sekiz yüz mü, bir virgül sekiz mi
+ * belli değildir ve okuyucu onu bugünkü gibi 1,8 okur. Okuyucu virgülsüz
+ * noktayı bilerek ONDALIK sayar: dişli oranı "1.000", "2.480" bugün böyle
+ * yazılıyor. Ondalık taşıyan gruplu sayı ("1.716,2") belirsiz değildir —
+ * virgül binliği belirler.
  *
  * Ölçüm Görüntüleyici'de BİREBİR kopya (viewer/sync.js); js/ikon.js gibi
  * yükleyiciden önce yüklenir.
@@ -50,18 +51,26 @@ function veSayiUstel(v, basamak, opt) {
   return s;
 }
 
+// Girdi metni → MAKİNE biçimi: "1.716,2" → "1716.2". Virgül VARSA noktalar
+// binliktir, YOKSA nokta ondalıktır (bugünkü davranış). Rakamlar olduğu gibi
+// kalır ("2.480" → "2.480"); sayı değilse '' — tarayıcının sayı alanı da
+// bozuk girdide '' döndürüyordu.
+function veSayiMakine(s) {
+  if(typeof s === 'number') return isFinite(s) ? String(s) : '';
+  var t = String(s == null ? '' : s).trim().replace(/[−‒–]/g, '-').replace(/\s/g, '');
+  if(!t) return '';
+  if(t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');
+  return /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t) ? t : '';
+}
+
 // Girdi → sayı. "63,5" · "63.5" · "1.716,2" · "1716,2" · " −2,5 " okunur.
-// Virgül VARSA noktalar binliktir, YOKSA nokta ondalıktır (bugünkü davranış).
 // Boş ya da bozuk → NaN.
 function veSayiOku(s) {
   if(typeof s === 'number') return s;
-  var t = String(s == null ? '' : s).trim().replace(/[−‒–]/g, '-').replace(/\s/g, '');
-  if(!t) return NaN;
-  if(t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');
-  if(!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t)) return NaN;
-  return parseFloat(t);
+  var t = veSayiMakine(s);
+  return t ? parseFloat(t) : NaN;
 }
 
 if(typeof module !== 'undefined' && module.exports) {
-  module.exports = { veSayi: veSayi, veSayiUstel: veSayiUstel, veSayiOku: veSayiOku };
+  module.exports = { veSayi: veSayi, veSayiUstel: veSayiUstel, veSayiMakine: veSayiMakine, veSayiOku: veSayiOku };
 }

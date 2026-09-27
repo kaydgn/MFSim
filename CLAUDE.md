@@ -79,7 +79,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kabuk üreteçte tek yerde). `css/icons.css` elle düzenlenmez: `node tools/ikonlar.js`.
   `tools/ikon-dili.js` — ikon işi gören sembol karakterinin tarayıcısı (karar 10·B).
 - `js/sayi.js` — **tek sayı yazıcısı** (`veSayi` · `veSayiOku`, karar 7·C);
-  `tools/sayi-dili.js` işaretsiz `toFixed`'in tarayıcısı.
+  `tools/sayi-dili.js` işaretsiz `toFixed`'in tarayıcısı. `js/sayi-alan.js` —
+  **Türkçe sayı alanı**: `inputmode="decimal"` alanı 1716,25 gösterir, `.value`
+  makine biçiminde döner.
 - `tools/karsilama-secici.{js,html}` + `tools/karsilama-kunye.json` — karşılama
   karelerinin **seçim tahtası**: numaralı/gruplanmış/büyütülebilir 28 kare, tıklanan
   kare "kaldırılacak" işareti alır ve karar Artifact `db`'sine yazılır. Sebep, dosya
@@ -309,6 +311,15 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   (dişli oranı "1.000"), yani "1.800" 1,8 okunur — sessiz bin kat hata.
   Görüntüleyici yazıcıyı birebir taşır. Kapı: `sayi-dili.test.js`; kapsam
   aşama aşama büyür (bugün grafik çekirdeği: eksen, imleç, sinyal ağacı, pano).
+- **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
+  `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
+  `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri
+  verir — işleyici `parseFloat(el.value)` yazmaya devam eder. Sayı alanı
+  virgülü tanımıyordu: 520 alanın 520'si "12,5" → 125 okuyordu (Cd "0,65" →
+  65). Gruplu tam sayı yapıştırılırsa ("1.800") ondalık okunur ama alan
+  işaretlenir ve bildirim çıkar. Sayı alanını TİPİYLE seçen kod
+  `input[inputmode="decimal"]` kullanır. Kapı: `sayi-alan.test.js` +
+  `sayi-alan.spec.js`.
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da
@@ -366,11 +377,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
-dosyası olarak dağıtılıyor. `viewer/js/` altındaki SEKİZ dosya `js/`'ten
+dosyası olarak dağıtılıyor. `viewer/js/` altındaki DOKUZ dosya `js/`'ten
 **birebir kopya** (`trace-view.js`'te iki işaretli fark hariç). Bu yüzden:
 
 **İçe aktarma / şerit diyagramı tarafında bir düzeltme yaparsan
-(`sayi.js`, `xlsx-read.js`, `measure-import*.js`, `measure-core.js`,
+(`sayi.js`, `sayi-alan.js`, `xlsx-read.js`, `measure-import*.js`, `measure-core.js`,
 `signal-tree.js`, `trace-view.js`, `measure-dropzone.js`), düzeltmeyi
 `viewer/js/` altına da taşı:**
 
