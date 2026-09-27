@@ -127,6 +127,33 @@ test('sekmeler: kare listesi, istatistik ve tanı dolu gelir', async ({ page }) 
   expect(errors).toEqual([]);
 });
 
+// Karar 7·C: ekrandaki sayı Türkçe (1.716,2; yüzde önde). Sekmelerin görünen
+// yazısı, üst bant ve durum çubuğu, tuvale çizilen eksen yazısı taranır —
+// ölçüt MFSim'in pencere ve belge taramalarıyla aynı (tests/helpers/sayi-olcu.js).
+test('sayılar Türkçe: noktalı ondalık, gruplanmamış sayı, sondaki yüzde yok', async ({ page }) => {
+  const { tara } = require('../helpers/sayi-olcu.js');
+  await page.addInitScript(() => {
+    const f = CanvasRenderingContext2D.prototype.fillText;
+    window.__cdbFill = [];
+    CanvasRenderingContext2D.prototype.fillText = function (t) { window.__cdbFill.push(String(t)); return f.apply(this, arguments); };
+  });
+  await open(page);
+  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.waitForFunction(() => cdbState.store && cdbState.store.n > 0, null, { timeout: 20000 });
+  await page.waitForTimeout(500);
+  const parca = [];
+  for (const tab of ['frames', 'stats', 'diag']) {
+    await page.click(`#cdb-tabs button[data-tab="${tab}"]`);
+    await page.waitForTimeout(150);
+    parca.push(await page.innerText('#cdb-pane-alt'));
+  }
+  parca.push(await page.innerText('body'));
+  parca.push(await page.evaluate(() => [...new Set(window.__cdbFill)].join('\n')));
+  const metin = parca.join('\n');
+  expect(metin.length).toBeGreaterThan(3000);
+  expect(tara(metin).sorun.map((x) => `${x.tur} "${x.sayi}" ⟨${x.bag}⟩`)).toEqual([]);
+});
+
 test('tema düğmesi üç durumu dolaşır ve grafiği yeniden çizer', async ({ page }) => {
   await open(page);
   const t0 = await page.getAttribute('html', 'data-theme');

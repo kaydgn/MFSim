@@ -203,20 +203,26 @@ function cdbNiceStep(span, want) {
   return s * mag;
 }
 
+// Sayı yazıcısı can-decode.js'te (tarayıcıda global, bu dosyadan önce
+// yükleniyor). Birim testi bu dosyayı tek başına require ettiği için orada
+// yanındaki dosyadan alınır.
+var CDB_YAZ = (typeof cdbSayi === 'function') ? { sayi: cdbSayi, ustel: cdbSayiUstel }
+  : (function() { var d = require('./can-decode.js'); return { sayi: d.cdbSayi, ustel: d.cdbSayiUstel }; })();
+
 function cdbFmtNum(v, step) {
   if (!isFinite(v)) return '—';
   var dec = 0;
   if (step && step < 1) dec = Math.min(6, Math.ceil(-Math.log(step) / Math.LN10));
   var a = Math.abs(v);
-  if (a >= 1e6 || (a > 0 && a < 1e-4)) return v.toExponential(2);
-  return v.toFixed(dec);
+  if (a >= 1e6 || (a > 0 && a < 1e-4)) return CDB_YAZ.ustel(v, 2);
+  return CDB_YAZ.sayi(v, dec);
 }
 
 function cdbFmtTime(t, step) {
   var a = Math.abs(t);
-  if (step >= 1) return t.toFixed(a >= 100 ? 0 : 1) + ' s';
-  if (step >= 0.001) return t.toFixed(3) + ' s';
-  return (t * 1000).toFixed(3) + ' ms';
+  if (step >= 1) return CDB_YAZ.sayi(t, a >= 100 ? 0 : 1) + ' s';
+  if (step >= 0.001) return CDB_YAZ.sayi(t, 3) + ' s';
+  return CDB_YAZ.sayi(t * 1000, 3) + ' ms';
 }
 
 // Şeridin Y aralığı. yScope='window' ise yalnız GÖRÜNEN pencereye bakar —

@@ -91,7 +91,7 @@ function cdbExFrame(t, id, ext, bytes) {
   var idh = (id >>> 0).toString(16).toUpperCase();
   var w = ext ? 8 : 3;
   while (idh.length < w) idh = '0' + idh;
-  return { t: t, line: '(' + t.toFixed(6) + ') can0 ' + idh + '#' + hex };
+  return { t: t, line: '(' + t.toFixed(6) + ') can0 ' + idh + '#' + hex };   // makine: candump kayıt satırı
 }
 
 /**

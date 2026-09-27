@@ -205,7 +205,7 @@ function cdbOrphanIds() {
 }
 
 function cdbThousands(n) {
-  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return cdbSayi(n, 0);
 }
 
 // ── Etkileşim ─────────────────────────────────────────────────────────────

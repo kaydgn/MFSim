@@ -1859,3 +1859,19 @@ Tarih (`toLocaleString('tr-TR')`) ve CSS değeri makine işaretiyle kalır.
 **Kapı.** `sayi-dili.test.js` → *"bütün ürün"* (mutasyonla ölçüldü: hiçbir
 aşama listesinde olmamış `settings.js`'e geri konan `toFixed` düşürüyor) +
 `sayi-pencere.spec.js` (dört kural; 3c yapısında 4 bulgu).
+
+### Aşama 3e — CAN Çözümleyici (2026-09-27)
+
+**Hüküm.** CAN Çözümleyici de Türkçe yazar. `js/`'ten dosya almadığı için
+(candbc/README) yazıcı ikinci kez yazıldı: `cdbSayi` · `cdbSayiUstel`
+(`can-decode.js`), `veSayi`'nin davranış İKİZİ. Birimi `%` olan sinyal yüzdeyi
+öne alır ("%37,2"). CSV Excel-TR biçiminde: zaman sütunu da değer sütunu gibi
+virgüllü (noktalı zaman Türkçe Excel'de binlik ayracı okunuyordu).
+
+**Gerekçe.** Örnek kayıt yüklendiğinde ekranda (üç sekme + bant + eksen
+yazısı) 251 noktalı ondalık, 4 gruplanmamış sayı, 258 sondaki yüzde → 0.
+
+**Kapı.** `can-sayi.test.js` — iki yazıcı aynı tohumlarla karşılaştırılır
+(CAN yazıcısından binlik silinince 34 durum düşüyor), CAN kaynağında
+işaretsiz yazım yok + `can-cozumleyici.spec.js` → ekran taraması (MFSim'in
+ölçütüyle, `tests/helpers/sayi-olcu.js`).

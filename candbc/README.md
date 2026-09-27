@@ -119,6 +119,17 @@ seyreltmesi bir gerilim sıçramasını sessizce siler.
 Ad bloğu **olukta**, çizim alanının dışındadır: içeri konan yatay lejant
 eğrilerin üstüne biniyor (orada ölçülmüş).
 
+### 11. Sayı yazımı MFSim'inkiyle AYNI, kodu ayrı
+
+Ekrana giden sayı Türkçe yazılır (MFSim karar 7·C): ondalık virgül, binlik
+nokta, yüzde önde — `1.451,625 rpm`, `%37,2`. Yazıcı `cdbSayi` ·
+`cdbSayiUstel` (`can-decode.js`); MFSim'in `veSayi`'siyle **aynı sonucu**
+verir ama kodu paylaşmaz (yukarıdaki kural). İki kopya sessizce ayrışabilir —
+kapı davranışı ölçer: `tests/unit/can-sayi.test.js` iki yazıcıyı aynı
+tohumlarla karşılaştırır, E2E ekranın tamamını tarar. Makine biçimi
+`// makine: <sebep>` taşır: örnek kayıt satırı (candump) noktalı; CSV
+Excel-TR biçiminde (ayraç `;`, zaman ve değer ondalığı `,`).
+
 ---
 
 ## Desteklenen kayıt biçimleri
@@ -145,4 +156,5 @@ değiştirir.
 | `tests/unit/can-decode.test.js` | **Bit düzeni** (Intel/Motorola, elle hesaplanmış referanslar), işaret, IEEE float, çoklama, kısa kare |
 | `tests/unit/can-log.test.js` | Beş biçim + biçim yarışı + kare deposu + çözülemeyen satır sayacı |
 | `tests/unit/can-chart.test.js` | Eksen adımı, imleç örneklemesi, ondalık türetme + **gidiş-dönüş** (üret → yaz → ayrıştır → çöz → karşılaştır) |
+| `tests/unit/can-sayi.test.js` | Sayı yazıcısı MFSim'inkiyle aynı (tohum karşılaştırması), biçimlendiriciler Türkçe, kaynakta işaretsiz yazım yok, CSV Excel-TR |
 | `tests/unit/source-hygiene.test.js` | `candbc/js/` üst-seviye ad çakışması ve kontrol karakteri |
