@@ -688,7 +688,7 @@ var VE_FEAD_MIN_TAKEUP_RATIO = 0.02;
 // "ne kadar uzakta" olduğunu görmeden düzeltemez.
 function veFeadAtLimitText(al){
   if(!al) return '';
-  var f1 = function(x){ return (Math.round(x * 10) / 10).toFixed(1); };
+  var f1 = function(x){ return veSayi(Math.round(x * 10) / 10, 1); };
   if(al.kind === 'arm'){
     return 'Gerginin nominal çalışma açısı (' + f1(al.target) + '°) bu yerleşimde '
       + 'kolun erişebildiği aralığın dışında (0…' + f1(al.rangeMax) + '°). '
@@ -727,14 +727,14 @@ function veFeadViolationText(v){
   if(!v) return '';
   if(v.type === 'wrapSum')
     return 'Kayış yolu KAPANMIYOR: işaretli sarım toplamı '
-      + v.signedWrapDeg.toFixed(2) + '° (360° olmalı, fark '
-      + v.deltaDeg.toFixed(2) + '°). Sayılar hesaplandı ama bu YOL geçersiz — '
+      + veSayi(v.signedWrapDeg, 2) + '° (360° olmalı, fark '
+      + veSayi(v.deltaDeg, 2) + '°). Sayılar hesaplandı ama bu YOL geçersiz — '
       + 'kasnak sırası kayışın gidiş yönünde mi, temas tarafları doğru mu?';
   if(v.type === 'clearance')
     return 'Kayış bir kasnağın İÇİNDEN geçiyor: '
       + (v.items || []).map(function(c){
           return c.span + ' spanı ' + c.pulley + ' kasnağını '
-            + (-c.clearanceMm).toFixed(1) + ' mm kesiyor'; }).join('; ')
+            + veSayi(-c.clearanceMm, 1) + ' mm kesiyor'; }).join('; ')
       + '. Sayılar hesaplandı ama bu yerleşim fiziksel değil.';
   return v.message || '';
 }
@@ -3236,7 +3236,7 @@ function veFeadMigrateTableOff(state){
 // "Gergi kranka komşu olmalı" gibi bir konum kuralı YANLIŞ olurdu: aralarında
 // güç ÇEKMEYEN bir avara bulunabilir ve bu geçerlidir (sentetik olarak
 // ölçüldü). Sayılan şey komşuluk değil, GÜÇ.
-function _feadFmt3(x){ return Number.isFinite(x) ? x.toFixed(1) : '—'; }
+function _feadFmt3(x){ return Number.isFinite(x) ? veSayi(x, 1) : '—'; }
 
 function veFeadTensionerSide(row, tensionerName){
   var out = { ok: true, anchorN: NaN, minN: NaN, minName: null,
@@ -3990,8 +3990,8 @@ function veFeadBuildSystem(nodeList, opt){
     var tolD = veFeadDefaultBeltTol(sys.belt.effLength);
     sys.belt.tolerance = tolD; cfgBelt.tolerance = tolD;
     _varsay('kayış boy toleransı ±', tolD, 'mm',
-      'Gates basamağı: boy < ' + VE_FEAD_DEFAULTS.beltTolBreakMm + ' mm → ±'
-      + VE_FEAD_DEFAULTS.beltTolShortMm + ', üstü → ±' + VE_FEAD_DEFAULTS.beltTolLongMm);
+      'Gates basamağı: boy < ' + veSayi(VE_FEAD_DEFAULTS.beltTolBreakMm) + ' mm → ±'
+      + veSayi(VE_FEAD_DEFAULTS.beltTolShortMm) + ', üstü → ±' + veSayi(VE_FEAD_DEFAULTS.beltTolLongMm));
   }
   // meanRel ÖNCEDEN TOHUMLANIR. Kenetlenmiş bir çalışma noktasında çekirdeğin
   // kendi meanRel'i yine bisect'e girip atardı; önbelleğe yazınca zincirin

@@ -318,7 +318,7 @@ describe('pafta HTML\'i', () => {
     expect(h).not.toMatch(/Çevrim kapalı|Çevrim AÇIK|Σsarım|Σ toplam|Efektif boy/);
     // Hüküm rozette ve AYNI modelden.
     const rozet = fead.veFeadLayoutCardStrip(build, 'mean');
-    expect(rozet).toContain('Σsarım 360.0°');
+    expect(rozet).toContain('Σsarım 360,0°');
     expect(rozet).toContain('ve-fead-kan-durum ok');
   });
 
@@ -367,10 +367,10 @@ describe('pafta HTML\'i', () => {
     const k = dom(paftaHTML());
     const hucre = [...k.querySelectorAll('td.cz')].map((el) => el.textContent);
     expect(hucre).toHaveLength(18);                // 6 satır × (eff, sarım, span)
-    hucre.forEach((t) => expect(t).toMatch(/^-?\d+\.\d$/));
-    expect(hucre[0]).toBe(T.rows[0].effDiaMm.toFixed(1));
-    expect(hucre[1]).toBe(T.rows[0].wrapDeg.toFixed(1));
-    expect(hucre[2]).toBe(T.rows[0].spanMm.toFixed(1));
+    hucre.forEach((t) => expect(t).toMatch(/^-?\d{1,3}(\.\d{3})*,\d$/));   // Türkçe: 1.716,2
+    expect(hucre[0]).toBe(veSayi(T.rows[0].effDiaMm, 1));
+    expect(hucre[1]).toBe(veSayi(T.rows[0].wrapDeg, 1));
+    expect(hucre[2]).toBe(veSayi(T.rows[0].spanMm, 1));
   });
 
   // ── EKLEYİCİ BAŞLIK ŞERİDİNDE ─────────────────────────────────────────────
@@ -616,7 +616,7 @@ describe('sütun listesi', () => {
     // Boy kartın rozetinde, modelin kendi sayısıyla.
     const { build } = kurOrnek();
     const T = fead.veFeadTableRows(build);
-    expect(fead.veFeadLayoutCardStrip(build, 'mean')).toContain('L ' + T.LeffMm.toFixed(1) + ' mm');
+    expect(fead.veFeadLayoutCardStrip(build, 'mean')).toContain('L ' + veSayi(T.LeffMm, 1) + ' mm');
   });
 });
 

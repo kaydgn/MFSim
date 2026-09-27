@@ -108,6 +108,9 @@ Kontrol listesi — hepsinin testi var, atlarsan kırmızıya döner:
 - Anahtarlar **tekil** — yoksa `kayit: 05` hangi kaydı gösterdiği belirsiz
 - Her kaydın `anahtar`ı ve gösterilecek bir adı dolu
 - `olc(null)` ve `olc([])` patlamıyor, `[]` dönüyor
+- `dosya` **çıplak Node'da** yükleniyor: yüklenirken tarayıcı globali
+  (`veSayi`…) okuyan modül yalnız doğrulayıcıda çöker — jest `setup.js`'te
+  onları kurduğu için görmez (`komuta-dogrula.test.js` → *"çıplak Node"*)
 - Yukarıdaki **skill tablosuna bir satır** ekle
 
 Görünüm `css/styles.css`'te: satır içi CSS `:hover`/`:focus-visible`/`.secili`

@@ -164,7 +164,7 @@ describe('biçimleme ve arama', () => {
   test('boyut ölçeğe göre yazılıyor', () => {
     expect(veProgramlarBoyut(512)).toBe('512 B');
     expect(veProgramlarBoyut(2048)).toBe('2 KB');
-    expect(veProgramlarBoyut(12 * 1048576)).toBe('12.0 MB');
+    expect(veProgramlarBoyut(12 * 1048576)).toBe('12,0 MB');
   });
 
   test('boyutsuz kayıt boş dize verir — "0 B" yazılmaz', () => {

@@ -117,9 +117,9 @@ function _vpaEsc(s) {
 // değişir, kayda yazılsa ilk build'de bayatlardı (programlar/README.md).
 function veProgramlarBoyut(n) {
   if(typeof n !== 'number' || !isFinite(n) || n <= 0) return '';
-  if(n < 1024) return n + ' B';
-  if(n < 1048576) return (n / 1024).toFixed(0) + ' KB';
-  return (n / 1048576).toFixed(1) + ' MB';
+  if(n < 1024) return veSayi(n, 0) + ' B';
+  if(n < 1048576) return veSayi(n / 1024, 0) + ' KB';
+  return veSayi(n / 1048576, 1) + ' MB';
 }
 
 var VE_PROGRAMLAR_KUMELER = [

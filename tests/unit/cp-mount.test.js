@@ -840,7 +840,7 @@ describe('2D Görünüm bileşeni', () => {
     });
     expect(svg).toContain('Ağırlık merkezi');       // bileşen hover başlığı
     expect(svg).toContain('Birleşik ağırlık merkezi'); // birleşik CG hover
-    expect(svg).toMatch(/1386[.,]3 kg/);            // kütle bilgisi
+    expect(svg).toMatch(/1\.386,3 kg/);            // kütle bilgisi
   });
 });
 

@@ -325,7 +325,7 @@ describe('L_pitch − L_eff = h_b·Σ(d·φ) — işaretli', () => {
     if (typeof veFeadYolDurumu !== 'function') return;
     const d = veFeadYolDurumu(build, 'mean');
     expect(d.ok).toBe(true);
-    expect(d.sag).toMatch(/^Σsarım −?-?360\.0° \(ters yön\)$/);
+    expect(d.sag).toMatch(/^Σsarım −?-?360,0° \(ters yön\)$/);
     const h = String(veFeadTableCardHTML({ id: 'tbl', type: 'fead-layout', data: {} }));
     expect(h).not.toMatch(/360 olmalı|Çevrim AÇIK/);          // tablo hükmü tekrarlamıyor
   });

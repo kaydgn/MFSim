@@ -47,7 +47,7 @@ function getECMatchingPropertiesHTML(node) {
   html += '<div style="position:relative;">';
   html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" role="img" aria-label="Motor net tork eğrisi ve konvertör kapasite eğrileri — etkileşimli: Ctrl+tekerlek yakınlaştırır, sağ tık sürükleme kaydırır" title="İmleçle değerleri okuyun · Ctrl + tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Sol tık: sıfırla" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color);"></canvas>';
   html += '</div>';
-  html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.<br><b>Etkileşim:</b> imleçle gezinerek değerleri okuyun · <b>Ctrl + tekerlek</b> yakınlaştırır · <b>sağ tık + sürükle</b> kaydırır · <b>sol tık</b> sıfırlar · <b>Büyüt</b> tam ekran açar.</div>';
+  html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0,80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0,80 SR çalışma noktalarını verir.<br><b>Etkileşim:</b> imleçle gezinerek değerleri okuyun · <b>Ctrl + tekerlek</b> yakınlaştırır · <b>sağ tık + sürükle</b> kaydırır · <b>sol tık</b> sıfırlar · <b>Büyüt</b> tam ekran açar.</div>';
   html += '</div></div>';
   html += '</div>';  // ve-cp-col--out kapat
   html += '</div>';  // ve-cp-grid kapat
@@ -142,11 +142,11 @@ function runECMatchingAnalysis(nodeId) {
     var c9c10html = '';
     if(gbLimits.grossInputPower !== null || gbLimits.grossInputTorque !== null) {
       c9c10html += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">';
-      c9c10html += '<span>Governed güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + powerAtGov.toFixed(0) + ' kW</b>';
-      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c9ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputPower + ' kW ' + (c9ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
+      c9c10html += '<span>Governed güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + veSayi(powerAtGov, 0) + ' kW</b>';
+      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c9ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputPower, 0) + ' kW ' + (c9ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
       c9c10html += '</span>';
-      c9c10html += '<span>Governed tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + torqueAtGov.toFixed(0) + ' Nm</b>';
-      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c10ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputTorque + ' Nm ' + (c10ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
+      c9c10html += '<span>Governed tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + veSayi(torqueAtGov, 0) + ' Nm</b>';
+      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c10ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputTorque, 0) + ' Nm ' + (c10ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
       c9c10html += '</span>';
       c9c10html += '</div>';
     }
@@ -154,8 +154,8 @@ function runECMatchingAnalysis(nodeId) {
       '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name"><span class="mf-ico mf-ico-wrench"></span> ' + engineName + '</span></div>' +
       '<div class="sw-pkg-body">' +
       '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
-      '<span>Peak tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
-      '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
+      '<span>Peak tork: <b style="color:var(--text-primary);">' + veSayi(peakT, 0) + ' N·m @ ' + veSayi(peakRPM, 0) + ' rpm</b></span>' +
+      '<span>Governed: <b style="color:var(--text-primary);">' + veSayi(governed) + ' rpm</b></span>' +
       '<span>Pump düşüm: <b style="color:var(--text-primary);">TC\'ye bağlı</b></span>' +
       '</div>' + c9c10html + '</div></div>';
   }
@@ -321,11 +321,11 @@ function runECMatchingAnalysis(nodeId) {
     h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
-    h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + peakRPM + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
-    h += '<b style="color:var(--text-primary);">C7</b> — Stall Türbin Torku ≤ ' + turbineRating.toFixed(0) + ' N·m: Stall\'da türbin torku şanzıman limitini aşmamalı.<br>';
-    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0.80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).<br>';
-    if(gbLimits.grossInputPower !== null) h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov ≤ ' + gbLimits.grossInputPower + ' kW: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
-    if(gbLimits.grossInputTorque !== null) h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov ≤ ' + gbLimits.grossInputTorque + ' N·m: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.';
+    h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + veSayi(peakRPM, 0) + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
+    h += '<b style="color:var(--text-primary);">C7</b> — Stall Türbin Torku ≤ ' + veSayi(turbineRating, 0) + ' N·m: Stall\'da türbin torku şanzıman limitini aşmamalı.<br>';
+    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0,80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).<br>';
+    if(gbLimits.grossInputPower !== null) h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov ≤ ' + veSayi(gbLimits.grossInputPower, 0) + ' kW: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
+    if(gbLimits.grossInputTorque !== null) h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov ≤ ' + veSayi(gbLimits.grossInputTorque, 0) + ' N·m: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color); font-size:var(--fs-micro); color:var(--text-muted); font-style:italic;">Referans doküman: TD-148G</div>';
     h += '</div></div></div>';
     
@@ -334,8 +334,8 @@ function runECMatchingAnalysis(nodeId) {
       h += '<div style="margin-bottom:8px; padding:8px 10px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm);">';
       h += '<div style="font-size:var(--fs-body); font-weight:700; color:var(--accent-danger);">' + veIkon('x') + ' Şanzıman giriş limiti aşılıyor</div>';
       h += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); margin-top:2px;">';
-      if(!c9ok) h += 'C9: Motor gücü (' + powerAtGov.toFixed(0) + ' kW) > Şanzıman giriş güç limiti (' + gbLimits.grossInputPower + ' kW)<br>';
-      if(!c10ok) h += 'C10: Motor torku (' + torqueAtGov.toFixed(0) + ' Nm) > Şanzıman giriş tork limiti (' + gbLimits.grossInputTorque + ' Nm)';
+      if(!c9ok) h += 'C9: Motor gücü (' + veSayi(powerAtGov, 0) + ' kW) > Şanzıman giriş güç limiti (' + veSayi(gbLimits.grossInputPower, 0) + ' kW)<br>';
+      if(!c10ok) h += 'C10: Motor torku (' + veSayi(torqueAtGov, 0) + ' Nm) > Şanzıman giriş tork limiti (' + veSayi(gbLimits.grossInputTorque, 0) + ' Nm)';
       h += '</div></div>';
     }
 
@@ -392,11 +392,11 @@ function runECMatchingAnalysis(nodeId) {
       h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name
          + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-success); color:#fff; padding:0 4px; border-radius:var(--radius-sm);" title="Bu konvertör Tork Konvertörü bileşenine yüklü">' + veIkon('check') + '</span>' : '')
          + '</td>';
-      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.stallTau.toFixed(2) + '</td>';
-      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.stallSpeed.toFixed(0) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c5ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + r.minSpeed.toFixed(0) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c7ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + r.tTurbineStall.toFixed(0) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c8ok ? 'var(--text-primary)' : 'var(--accent-warning)') + ';">' + r.srGov.toFixed(3) + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + veSayi(r.stallTau, 2) + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + veSayi(r.stallSpeed, 0) + '</td>';
+      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c5ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + veSayi(r.minSpeed, 0) + '</td>';
+      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c7ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + veSayi(r.tTurbineStall, 0) + '</td>';
+      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c8ok ? 'var(--text-primary)' : 'var(--accent-warning)') + ';">' + veSayi(r.srGov, 3) + '</td>';
       h += '<td style="border:1px solid var(--border-color);">' + (r.c5ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td>';
       h += '<td style="border:1px solid var(--border-color);">' + (r.c7ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td>';
       h += '<td style="border:1px solid var(--border-color);">' + (r.c8ok ? veDurumIkon('ok') : veDurumIkon('warn')) + '</td>';
@@ -417,12 +417,12 @@ function runECMatchingAnalysis(nodeId) {
     if(results.length > 0 && results[0].status === 'recommended') {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-success);">';
       h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-success);"><span class="mf-ico mf-ico-trophy"></span> Önerilen: ' + results[0].name + '</span></div>';
-      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">Stall: ' + results[0].stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + results[0].srGov.toFixed(3) + ' | T_turb: ' + results[0].tTurbineStall.toFixed(0) + ' N·m</div></div>';
+      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">Stall: ' + veSayi(results[0].stallSpeed, 0) + ' rpm | SR@Gov: ' + veSayi(results[0].srGov, 3) + ' | T_turb: ' + veSayi(results[0].tTurbineStall, 0) + ' N·m</div></div>';
       h += '</div>';
     } else if(results.length > 0) {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-warning);">';
       h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-warning);">' + veIkon('alert-triangle') + ' Tam uyumlu konvertör bulunamadı</span></div>';
-      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + results[0].srGov.toFixed(3) + '). Lockup modunda çalışacağından performans kabul edilebilir olabilir.</div></div>';
+      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + veSayi(results[0].srGov, 3) + '). Lockup modunda çalışacağından performans kabul edilebilir olabilir.</div></div>';
       h += '</div>';
     }
     
@@ -517,12 +517,12 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   for(var gt = Math.ceil(minT / tStep) * tStep; gt <= maxT; gt += tStep) {
     ctx.beginPath(); ctx.moveTo(ml, yPos(gt)); ctx.lineTo(ml + pw, yPos(gt)); ctx.stroke();
     ctx.fillStyle = tc.textMuted; ctx.font = veThemeFont('micro'); ctx.textAlign = 'right';
-    ctx.fillText(Math.round(gt), ml - 4, yPos(gt) + 3);
+    ctx.fillText(veSayi(gt, 0), ml - 4, yPos(gt) + 3);
   }
   for(var gr = Math.ceil(minRPM / rpmStep) * rpmStep; gr <= maxRPM; gr += rpmStep) {
     ctx.beginPath(); ctx.moveTo(xPos(gr), mt); ctx.lineTo(xPos(gr), mt + ph); ctx.stroke();
     ctx.fillStyle = tc.textMuted; ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
-    ctx.fillText(Math.round(gr), xPos(gr), mt + ph + 14);
+    ctx.fillText(veSayi(gr, 0), xPos(gr), mt + ph + 14);
   }
 
   // Eksen etiketleri
@@ -631,7 +631,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   ctx.fillStyle = veThemeRgba('--accent-warning', 1); ctx.font = veThemeFont('tiny', 'bold'); ctx.textAlign = 'left';
   // pumpDrop konvertörler arası ORTALAMA (bkz. chartPumpDrop) → ham float
   // basılırsa etikete 23.67059823029812 gibi bir değer sızar. 1 ondalık yeter.
-  ctx.fillText('Motor (Net − ort. ' + pumpDrop.toFixed(1) + ' N·m)', xPos(torqueData[0].rpm) + 4, yPos(torqueData[0].torque - pumpDrop) - 8);
+  ctx.fillText('Motor (Net − ort. ' + veSayi(pumpDrop, 1) + ' N·m)', xPos(torqueData[0].rpm) + 4, yPos(torqueData[0].torque - pumpDrop) - 8);
   
   // Governed çizgisi
   ctx.beginPath();
@@ -644,7 +644,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   ctx.restore();   // kirpma biter — asagidaki etiketler plot alaninin DISINDA
   ctx.fillStyle = isDark ? '#7a8599' : '#64748b'; ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
   if(governed >= minRPM && governed <= maxRPM) {
-    ctx.fillText('Gov ' + governed, xPos(governed), mt + ph + 26);
+    ctx.fillText('Gov ' + veSayi(governed, 0), xPos(governed), mt + ph + 26);
   }
   
   // ── INTERSECTION DOTS (small chart) ──
@@ -698,7 +698,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   // yazının üstünden akıyordu.
   ctx.font = veThemeFont('micro'); ctx.textAlign = 'right';
   var ly = mt + 8;
-  var lejant = '── Stall   --- 0.80 SR';
+  var lejant = '── Stall   --- 0,80 SR';
   var lejantSol = ml + pw - 4 - ctx.measureText(lejant).width;
   var lejantPx = veThemeFs('micro');
   ctx.save(); ctx.globalAlpha = 0.88; ctx.fillStyle = tc.bg;
@@ -718,7 +718,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   var ipucu;
   if((zoomState.scale || 1) > 1.05 || (zoomState.scale || 1) < 0.95) {
     ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.font = veThemeFont('micro', 'bold');
-    ipucu = zoomState.scale.toFixed(1) + '× — sol tık: sıfırla';
+    ipucu = veSayi(zoomState.scale, 1) + '× — sol tık: sıfırla';
   } else {
     ctx.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
     ctx.font = veThemeFont('micro');
@@ -869,12 +869,12 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name"><span class="mf-ico mf-ico-wrench"></span> ' + engineName + '</span></div>' +
       '<div class="sw-pkg-body">' +
       '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
-      '<span>Peak tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
-      '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
+      '<span>Peak tork: <b style="color:var(--text-primary);">' + veSayi(peakT, 0) + ' N·m @ ' + veSayi(peakRPM, 0) + ' rpm</b></span>' +
+      '<span>Governed: <b style="color:var(--text-primary);">' + veSayi(governed) + ' rpm</b></span>' +
       '</div>' +
       '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">' +
-      '<span>Güç@Gov: <b style="color:var(--text-primary);">' + powerAtGov.toFixed(0) + ' kW</b></span>' +
-      '<span>Tork@Gov: <b style="color:var(--text-primary);">' + torqueAtGov.toFixed(0) + ' N·m</b></span>' +
+      '<span>Güç@Gov: <b style="color:var(--text-primary);">' + veSayi(powerAtGov, 0) + ' kW</b></span>' +
+      '<span>Tork@Gov: <b style="color:var(--text-primary);">' + veSayi(torqueAtGov, 0) + ' N·m</b></span>' +
       '</div></div></div>';
   }
 
@@ -889,11 +889,11 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 
     if(preset.grossInputPower !== null) {
       c9ok = powerAtGov <= preset.grossInputPower;
-      c9detail = preset.grossInputPower + ' kW';
+      c9detail = veSayi(preset.grossInputPower, 0) + ' kW';
     }
     if(preset.grossInputTorque !== null) {
       c10ok = torqueAtGov <= preset.grossInputTorque;
-      c10detail = preset.grossInputTorque + ' N·m';
+      c10detail = veSayi(preset.grossInputTorque, 0) + ' N·m';
     }
 
     var status, score;
@@ -948,8 +948,8 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
     h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol kriterleri</div>';
-    h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + powerAtGov.toFixed(0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
-    h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + torqueAtGov.toFixed(0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
+    h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + veSayi(powerAtGov, 0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
+    h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + veSayi(torqueAtGov, 0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color);">';
     h += '<span style="color:var(--accent-success);">Önerilen</span>: ≥15% marj | <span style="color:var(--accent-warning);">Dikkat</span>: 5-15% marj | <span style="color:#f97316;">Sıkı</span>: &lt;5% marj | <span style="color:var(--accent-danger);">Uyumsuz</span>: Limit aşılıyor';
     h += '</div></div></div></div>';
@@ -1010,10 +1010,10 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       h += '<td style="border:1px solid var(--border-color);" title="' + statusText + '"><span style="font-size:var(--fs-tiny);">' + statusIcon + '</span></td>';
       h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis;">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:white; padding:0 3px; border-radius:var(--radius-sm);">' + veIkon('check') + '</span>' : '') + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.gearCount + '</td>';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? r.grossInputPower : '—') + '</td>';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? r.grossInputTorque : '—') + '</td>';
-      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.netTurbineTorque !== null ? r.netTurbineTorque : '—') + '</td>';
-      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? veSayi(r.grossInputPower) : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? veSayi(r.grossInputTorque) : '—') + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.netTurbineTorque !== null ? veSayi(r.netTurbineTorque) : '—') + '</td>';
+      h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? veSayi(r.maxOutputSpeed) : '—') + '</td>';
       h += '<td style="border:1px solid var(--border-color); font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c9ok ? veDurumIkon('ok') : veDurumIkon('err'))) + '</td>';
       h += '<td style="border:1px solid var(--border-color); font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c10ok ? veDurumIkon('ok') : veDurumIkon('err'))) + '</td>';
       // DÜĞME HÜCRESİ İNCE PAYLI (`egm-sec`, css/styles.css): panel kabuğunun
@@ -1270,7 +1270,7 @@ function ecmExpandChart(nodeId) {
   footer.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:18px; height:3px; background:#f59e0b; border-radius:1px;"></span><span style="font-weight:700; color:#f59e0b;">Motor</span></span>' +
     '<span style="opacity:0.3;">│</span>' + legendItems +
     '<span style="opacity:0.3; margin-left:4px;">│</span>' +
-    '<span style="color:var(--text-muted); font-size:var(--fs-micro);">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0.80 SR &nbsp; ● Kesişim</span>' +
+    '<span style="color:var(--text-muted); font-size:var(--fs-micro);">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0,80 SR &nbsp; ● Kesişim</span>' +
     '<span style="margin-left:auto; display:flex; align-items:center; gap:10px;">' +
     '<span id="ecm-zoom-indicator" style="display:none; color:#60a5fa; font-weight:600; font-size:var(--fs-tiny); cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
     '<span style="color:var(--text-muted); font-size:var(--fs-micro);">Scroll — Yakınlaştır &nbsp;│&nbsp; Sağ Tık + Sürükle — Kaydır</span>' +
@@ -1376,14 +1376,14 @@ function ecmDrawModalChart() {
     ctx.strokeStyle = gridColor; ctx.lineWidth = 0.5;
     ctx.beginPath(); ctx.moveTo(ml, yPos(gt)); ctx.lineTo(ml + pw, yPos(gt)); ctx.stroke();
     ctx.fillStyle = textColor; ctx.textAlign = 'right';
-    ctx.fillText(gt, ml - 8, yPos(gt) + 4);
+    ctx.fillText(veSayi(gt, 0), ml - 8, yPos(gt) + 4);
   }
   var rpmStart = Math.ceil(minRPM / rpmStep) * rpmStep;
   for(var gr = rpmStart; gr <= maxRPM; gr += rpmStep) {
     ctx.strokeStyle = gridColor; ctx.lineWidth = 0.5;
     ctx.beginPath(); ctx.moveTo(xPos(gr), mt); ctx.lineTo(xPos(gr), mt + ph); ctx.stroke();
     ctx.fillStyle = textColor; ctx.textAlign = 'center';
-    ctx.fillText(gr, xPos(gr), mt + ph + 18);
+    ctx.fillText(veSayi(gr, 0), xPos(gr), mt + ph + 18);
   }
   
   // Axis labels
@@ -1491,7 +1491,7 @@ function ecmDrawModalChart() {
   // Motor label
   ctx.fillStyle = veThemeRgba('--accent-warning', 1); ctx.font = veThemeFont('md', 'bold'); ctx.textAlign = 'left';
   // Ortalama düşüm — ham basılırsa uzun ondalık sızar (bkz. ecmAveragePumpDrop)
-  ctx.fillText('Motor (Net − ort. ' + d.pumpDrop.toFixed(1) + ' N·m)', xPos(d.torqueData[1].rpm) + 6, yPos(d.torqueData[1].torque - d.pumpDrop) - 12);
+  ctx.fillText('Motor (Net − ort. ' + veSayi(d.pumpDrop, 1) + ' N·m)', xPos(d.torqueData[1].rpm) + 6, yPos(d.torqueData[1].torque - d.pumpDrop) - 12);
   
   // Governed line
   ctx.beginPath();
@@ -1500,7 +1500,7 @@ function ecmDrawModalChart() {
   ctx.moveTo(xPos(d.governed), mt); ctx.lineTo(xPos(d.governed), mt + ph);
   ctx.stroke(); ctx.setLineDash([]);
   ctx.fillStyle = isDark ? '#7a8599' : '#64748b'; ctx.font = veThemeFont('tiny'); ctx.textAlign = 'center';
-  ctx.fillText('Governed ' + d.governed + ' rpm', xPos(d.governed), mt + ph + 34);
+  ctx.fillText('Governed ' + veSayi(d.governed, 0) + ' rpm', xPos(d.governed), mt + ph + 34);
   
   // ── INTERSECTION DOTS: Motor eğrisi × Konvertör stall eğrileri ──
   try {
@@ -1572,7 +1572,7 @@ function ecmDrawModalChart() {
         ctx.fillStyle = curve.color;
         ctx.font = veThemeFont('tiny', 'bold');
         ctx.textAlign = 'center';
-        ctx.fillText(Math.round(foundRPM) + ' rpm', px, py - 13);
+        ctx.fillText(veSayi(foundRPM, 0) + ' rpm', px, py - 13);
       }
       
       // 0.80 SR intersection
@@ -1624,7 +1624,7 @@ function ecmDrawModalChart() {
     ctx.fillStyle = veThemeRgba('--accent-primary', isDark ? 0.25 : 0.15, 'rgba(59,130,246,0.15)');
     ctx.font = veThemeFont('body');
     ctx.textAlign = 'right';
-    ctx.fillText('' + _ecmZoom.scale.toFixed(1) + '× — scroll ile yakınlaştırın, tıklayarak sıfırlayın', ml + pw - 4, mt + 14);
+    ctx.fillText('' + veSayi(_ecmZoom.scale, 1) + '× — scroll ile yakınlaştırın, tıklayarak sıfırlayın', ml + pw - 4, mt + 14);
   }
   
   // Store data for interaction — paylaşılan bağlam sözleşmesi (bkz. dosya başı).
@@ -1745,7 +1745,7 @@ function ecmUpdateZoomIndicatorFor(canvas, scale) {
   var zoomEl = ecmEls(ctx).zoomInd;
   if(!zoomEl) return;
   if(scale > 1.05 || scale < 0.95) {
-    zoomEl.textContent = scale.toFixed(1) + '×';
+    zoomEl.textContent = veSayi(scale, 1) + '×';
     zoomEl.style.display = 'inline';
   } else {
     zoomEl.style.display = 'none';
@@ -1865,7 +1865,7 @@ function ecmChartMouseMove(e) {
   
   // Build tooltip — compact
   var html = '<div style="display:flex; align-items:baseline; gap:8px; margin-bottom:5px; padding-bottom:4px; border-bottom:1px solid var(--border-color);">';
-  html += '<span style="font-weight:700; color:var(--text-heading); font-size:var(--fs-body);">' + rpm.toFixed(0) + ' rpm</span>';
+  html += '<span style="font-weight:700; color:var(--text-heading); font-size:var(--fs-body);">' + veSayi(rpm, 0) + ' rpm</span>';
   html += '</div>';
   
   // Motor line
@@ -1874,7 +1874,7 @@ function ecmChartMouseMove(e) {
     html += '<div style="display:flex; align-items:center; gap:6px; padding:2px 0; ' + motorHL + '">';
     html += '<span style="width:16px; height:3px; background:#f59e0b; border-radius:1px; flex-shrink:0;"></span>';
     html += '<span style="color:#f59e0b; font-weight:600; min-width:65px;">Motor</span>';
-    html += '<span style="color:var(--text-primary); font-weight:600;">' + motorT.toFixed(0) + ' N·m</span>';
+    html += '<span style="color:var(--text-primary); font-weight:600;">' + veSayi(motorT, 0) + ' N·m</span>';
     html += '</div>';
   }
   
@@ -1889,9 +1889,9 @@ function ecmChartMouseMove(e) {
     html += '<div style="display:flex; align-items:center; gap:6px; padding:2px 0; ' + hl + '">';
     html += '<span style="width:16px; height:3px; background:' + c.color + '; border-radius:1px; flex-shrink:0;"></span>';
     html += '<span style="color:' + c.color + '; font-weight:600; min-width:65px;">' + c.name + '</span>';
-    html += '<span style="color:var(--text-primary);">' + c.tStall.toFixed(0) + '</span>';
+    html += '<span style="color:var(--text-primary);">' + veSayi(c.tStall, 0) + '</span>';
     if(c.t80 !== null && c.t80 < data.maxT * 1.1) {
-      html += '<span style="color:var(--text-muted); font-size:var(--fs-micro);">(0.80: ' + c.t80.toFixed(0) + ')</span>';
+      html += '<span style="color:var(--text-muted); font-size:var(--fs-micro);">(0,80: ' + veSayi(c.t80, 0) + ')</span>';
     }
     html += '</div>';
   });

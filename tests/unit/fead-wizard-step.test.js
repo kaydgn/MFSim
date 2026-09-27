@@ -492,7 +492,7 @@ describe('STEP ↔ KÜNYE: künye CAD\'deki gergiyi sessizce değiştirmez', () 
     wiz.veFeadWizTenLib('AG00879');                 // T38665 · kol 56
     const u = uyarilar();
     expect(u).toMatch(/künyenin parçası T38665, STEP dosyasındaki gergi T38624/);
-    expect(u).toMatch(/kol boyu 56\.000 mm, STEP dosyasında 90\.000 mm/);
+    expect(u).toMatch(/kol boyu 56,000 mm, STEP dosyasında 90,000 mm/);
   });
 
   test('ELLE GİRİLEN değer kullanıcının kararı — uyarı yok', () => {

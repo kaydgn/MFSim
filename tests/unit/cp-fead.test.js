@@ -438,7 +438,7 @@ describe('kayış boyu kipi — topoloji seçicisi', () => {
     global.connections = pack.connections;
     const html = fead.getFeadBeltPropertiesHTML(belt);
     expect(html).toMatch(/Gereken efektif boy/);
-    expect(html).toMatch(/1715[.,]\d+ mm/);          // türetilen boy basılı
+    expect(html).toMatch(/1\.715,\d+ mm/);          // türetilen boy basılı
     expect(html).toMatch(/kol 28[.,]\d+°/);          // hangi kol açısından geldiği
   });
 
@@ -727,7 +727,7 @@ describe('gergi paneli TEK koordinat soruyor', () => {
   test('türeyen montaj konumu panelde BASILIYOR', () => {
     const html = fead.getFeadTensionerPropertiesHTML(tam());
     expect(html).toMatch(/montaj konumu \(türedi\)/);
-    expect(html).toMatch(/-250\.00 \/ 110\.00/);
+    expect(html).toMatch(/-250,00 \/ 110,00/);
     expect(html).not.toMatch(/undefined|NaN/);
   });
 
@@ -741,7 +741,7 @@ describe('gergi paneli TEK koordinat soruyor', () => {
     global.nodes = []; global.connections = [];
     const html = fead.getFeadTensionerPropertiesHTML(tam());
     expect(html).toMatch(/montaj konumu \(türedi\)/);
-    expect(html).toMatch(/-250\.00 \/ 110\.00/);
+    expect(html).toMatch(/-250,00 \/ 110,00/);
     // ve okuma KOL KÜNYESİ kartının içinde — onu belirleyen iki alanın yanında
     const i = html.indexOf('Kol künyesi');
     const j = html.indexOf('Yay künyesi');
@@ -810,7 +810,7 @@ describe('çözücü paneli: birinci kademe ve motor künyesi', () => {
     const html = fead.veFeadDriveCard(sv);
     expect(html).toMatch(/veFeadSet\('[^']+','crankOD'/);
     expect(html).toMatch(/veFeadSet\('[^']+','fanOD'/);
-    expect(html).toMatch(/1\.0985/);                       // 197.32 / 179.62
+    expect(html).toMatch(/1,0985/);                        // 197,32 / 179,62
     expect(html).not.toMatch(/veFeadSet\('[^']+','driveRatio'/);
   });
 
@@ -1115,7 +1115,7 @@ describe('Kayış Yolu kanvas kartı', () => {
       expect(cub).toContain("veFeadSetChoice('" + lay.id + "','" + k + "'"));
     // KOL LİSTESİ KISA ADLA (`kisa`): tam ad çubuğa sığmıyordu (105 px isterken
     // 51 px). Tam ad seçeneğin ipucunda ve çizimin künyesinde duruyor.
-    expect(cub).toMatch(/<option value="mean" title="Çalışma \(Mean\)"[^>]*>Mean · [\d.]+°<\/option>/);
+    expect(cub).toMatch(/<option value="mean" title="Çalışma \(Mean\)"[^>]*>Mean · [\d.,]+°<\/option>/);
     expect(cub).not.toMatch(/>Çalışma \(Mean\) ·/);
     expect(cub).toMatch(/<option value="scn" title="Senaryo — motor çevrimi"[^>]*>Senaryo<\/option>/);
   });
@@ -2584,7 +2584,7 @@ describe('durum şeridi — aynalanmış çevrim', () => {
     kurDort();
     const h = fead.veFeadLayoutCardStrip(veFeadBuildFromCanvas(), 'mean');
     expect(h).toMatch(ROZET_OK);
-    expect(h).toMatch(/Σsarım 360\.0°/);
+    expect(h).toMatch(/Σsarım 360,0°/);
     expect(h).not.toMatch(/ters yön/);
   });
 

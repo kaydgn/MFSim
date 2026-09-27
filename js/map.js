@@ -288,11 +288,11 @@ function _veRestoreRoute(nodeId, node, map) {
   var dhDiv = document.getElementById('ve-road-dh-' + nodeId);
   var gradeDiv = document.getElementById('ve-road-avggrade-' + nodeId);
   if(resultDiv) resultDiv.style.display = 'block';
-  if(node.data.routeTotalDist && distDiv) distDiv.textContent = (node.data.routeTotalDist / 1000).toFixed(2) + ' km';
-  if(node.data.routeAvgGrade !== undefined && gradeDiv) gradeDiv.textContent = '%' + node.data.routeAvgGrade.toFixed(1);
+  if(node.data.routeTotalDist && distDiv) distDiv.textContent = veSayi(node.data.routeTotalDist / 1000, 2) + ' km';
+  if(node.data.routeAvgGrade !== undefined && gradeDiv) gradeDiv.textContent = '%' + veSayi(node.data.routeAvgGrade, 1);
   if(node.data.routeElevations && node.data.routeElevations.length >= 2 && dhDiv) {
     var dh = node.data.routeElevations[0].elevation - node.data.routeElevations[node.data.routeElevations.length - 1].elevation;
-    dhDiv.textContent = dh.toFixed(0) + ' m';
+    dhDiv.textContent = veSayi(dh, 0) + ' m';
   }
 
   // Segment markerları geri koy
@@ -313,9 +313,9 @@ function _veRestoreRoute(nodeId, node, map) {
         weight: isEndpoint ? 2 : 1.2
       }).addTo(map);
       var ttHtml = '<b>' + (isEndpoint ? (pi === 0 ? 'BAŞLANGIÇ' : 'BİTİŞ') : 'Nokta ' + (pi + 1)) + '</b>';
-      ttHtml += '<br>Mesafe: ' + (cumDist / 1000).toFixed(2) + ' km';
-      if(pt.elevation !== undefined) ttHtml += '<br>Yükseklik: ' + pt.elevation.toFixed(0) + ' m';
-      if(pi < segs.length && segs[pi] && segs[pi].egim !== undefined) ttHtml += '<br>Segment eğim: %' + segs[pi].egim.toFixed(1);
+      ttHtml += '<br>Mesafe: ' + veSayi(cumDist / 1000, 2) + ' km';
+      if(pt.elevation !== undefined) ttHtml += '<br>Yükseklik: ' + veSayi(pt.elevation, 0) + ' m';
+      if(pi < segs.length && segs[pi] && segs[pi].egim !== undefined) ttHtml += '<br>Segment eğim: %' + veSayi(segs[pi].egim, 1);
       cm.bindTooltip(ttHtml, { direction: 'top', offset: [0, -6] });
       veRoadSegMarkers[nodeId].push(cm);
     }
@@ -330,10 +330,10 @@ function _veRestoreRoute(nodeId, node, map) {
       segs2.forEach(function(seg) { var e = seg && seg.egim !== undefined ? seg.egim : 0; if(e > maxE) maxE = e; if(e < minE) minE = e; });
       var td = node.data.routeTotalDist || 0;
       segBilgi.innerHTML = '<div style="display:flex; gap:8px; flex-wrap:wrap; font-size:var(--fs-tiny);">' +
-        '<span style="color:var(--accent-primary);"><span class="mf-ico mf-ico-ruler"></span> <b>' + (td / 1000).toFixed(2) + ' km</b></span>' +
+        '<span style="color:var(--accent-primary);"><span class="mf-ico mf-ico-ruler"></span> <b>' + veSayi(td / 1000, 2) + ' km</b></span>' +
         '<span style="color:var(--accent-success);"><span class="mf-ico mf-ico-bar-chart"></span> <b>' + segs2.length + '</b> seg.</span>' +
-        '<span style="color:var(--accent-warning);"><span class="mf-ico mf-ico-ruler"></span> Ort: <b>%' + (node.data.routeAvgGrade || 0).toFixed(1) + '</b></span>' +
-        '<span style="color:var(--accent-danger);">' + veIkon('arrow-up') + ' Max: <b>%' + maxE.toFixed(1) + '</b></span>' +
+        '<span style="color:var(--accent-warning);"><span class="mf-ico mf-ico-ruler"></span> Ort: <b>%' + veSayi(node.data.routeAvgGrade || 0, 1) + '</b></span>' +
+        '<span style="color:var(--accent-danger);">' + veIkon('arrow-up') + ' Max: <b>%' + veSayi(maxE, 1) + '</b></span>' +
         '</div>';
     }
   }
@@ -492,7 +492,7 @@ function veCalcRouteAndProfiles(nodeId) {
       // Kesikli çizgiyi kaldır (OSRM rotası artık görünür)
       if(veRoadPolylines[nodeId]) { map.removeLayer(veRoadPolylines[nodeId]); veRoadPolylines[nodeId] = null; }
 
-      var distKm = (route.distance / 1000).toFixed(2);
+      var distKm = veSayi(route.distance / 1000, 2);
       showToast('Rota bulundu: ' + distKm + ' km — Yükseklik verisi alınıyor...');
 
       // Sonuç kutusunu göster
@@ -546,7 +546,7 @@ function veCalcRouteOSRM(nodeId) {
       // Kesikli çizgiyi kaldır
       if(veRoadPolylines[nodeId]) { map.removeLayer(veRoadPolylines[nodeId]); veRoadPolylines[nodeId] = null; }
 
-      var distKm = (route.distance / 1000).toFixed(2);
+      var distKm = veSayi(route.distance / 1000, 2);
       var pointCount = latlngs.length;
       showToast('Rota bulundu: ' + distKm + ' km (' + pointCount + ' nokta)');
       
@@ -571,7 +571,7 @@ function veCalcRouteOSRM(nodeId) {
       intervals.forEach(function(iv) {
         var estSegs = Math.ceil(route.distance / iv);
         var active = iv === curInterval;
-        segBtns.innerHTML += '<button onclick="veSetSegmentInterval(\'' + nodeId + '\',' + iv + ')" style="padding:2px 6px; font-size:var(--fs-micro); border-radius:var(--radius-sm); border:1px solid ' + (active ? 'var(--accent-primary)' : 'var(--border-color)') + '; background:' + (active ? 'var(--accent-primary)' : 'var(--bg-tertiary)') + '; color:' + (active ? 'white' : 'var(--text-secondary)') + '; cursor:pointer;">' + iv + 'm (~' + estSegs + ')</button>';
+        segBtns.innerHTML += '<button data-iv="' + iv + '" onclick="veSetSegmentInterval(\'' + nodeId + '\',' + iv + ')" style="padding:2px 6px; font-size:var(--fs-micro); border-radius:var(--radius-sm); border:1px solid ' + (active ? 'var(--accent-primary)' : 'var(--border-color)') + '; background:' + (active ? 'var(--accent-primary)' : 'var(--bg-tertiary)') + '; color:' + (active ? 'white' : 'var(--text-secondary)') + '; cursor:pointer;">' + iv + 'm (~' + estSegs + ')</button>';
       });
       
       // Node verilerine kaydet
@@ -588,7 +588,7 @@ function veSetSegmentInterval(nodeId, interval) {
   var segBtns = document.getElementById('ve-road-seg-btns-' + nodeId);
   if(segBtns) {
     segBtns.querySelectorAll('button').forEach(function(btn) {
-      var iv = parseInt(btn.textContent);
+      var iv = parseInt(btn.getAttribute('data-iv'), 10);   // yazıdan değil: yazı Türkçe sayı taşır
       var active = iv === interval;
       btn.style.border = '1px solid ' + (active ? 'var(--accent-primary)' : 'var(--border-color)');
       btn.style.background = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
@@ -1028,8 +1028,8 @@ function veCalcElevation(nodeId, onComplete) {
     var distDiv = document.getElementById('ve-road-dist-' + nodeId);
     var dhDiv = document.getElementById('ve-road-dh-' + nodeId);
     if(resultDiv) resultDiv.style.display = 'block';
-    if(distDiv) distDiv.textContent = (toplamMesafe / 1000).toFixed(2) + ' km';
-    if(dhDiv) dhDiv.textContent = yukseklikFark.toFixed(0) + ' m';
+    if(distDiv) distDiv.textContent = veSayi(toplamMesafe / 1000, 2) + ' km';
+    if(dhDiv) dhDiv.textContent = veSayi(yukseklikFark, 0) + ' m';
 
     // ═══ ORTAM PARAMETRELERİNİ OTOMATİK DOLDUR ═══
     // Yükseklik
@@ -1051,7 +1051,7 @@ function veCalcElevation(nodeId, onComplete) {
     // Haritada waypoint'leri göster
     _veWaypointShowOnMap(nodeId);
 
-    showToast('Rakım verisi okundu: ' + gpsSamples.length + ' sample, ' + (toplamMesafe / 1000).toFixed(2) + ' km');
+    showToast('Rakım verisi okundu: ' + gpsSamples.length + ' sample, ' + veSayi(toplamMesafe / 1000, 2) + ' km');
 
     // Callback (profil oluşturma vb.)
     if(typeof onComplete === 'function') onComplete();
@@ -1104,10 +1104,10 @@ function veCalcAirDensityRoad(nodeId) {
   if(isNaN(h) || isNaN(T)) { showToast('Yükseklik ve sıcaklık giriniz', 'warning'); return; }
   var P0=101325,T0=288.15,L=0.0065,R=287.05,g=9.80665;
   var Tk=T+273.15, P=P0*Math.pow(1-L*h/T0,g/(R*L)), rho=P/(R*Tk);
-  densEl.value = rho.toFixed(4);
+  densEl.value = rho.toFixed(4);   // makine: sayı alanının değeri
   var node = nodes.find(function(n){return n.id===nodeId;});
   if(node){if(!node.data)node.data={};node.data.airDensity=rho;}
-  showToast('Hava yoğunluğu: '+rho.toFixed(4)+' kg/m³');
+  showToast('Hava yoğunluğu: '+veSayi(rho, 4)+' kg/m³');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1206,13 +1206,13 @@ function veCalcDistGradeProfile(nodeId) {
       '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'altitude\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-maximize"></span></button>' +
       '</div>' +
       '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:5px 8px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:var(--fs-micro);">' +
-      '<span style="color:var(--text-muted);">Başlangıç:</span><span style="color:#b39ddb; font-weight:600;">' + elevFirst.toFixed(0) + 'm</span>' +
+      '<span style="color:var(--text-muted);">Başlangıç:</span><span style="color:#b39ddb; font-weight:600;">' + veSayi(elevFirst, 0) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">' + veIkon('arrow-right') + '</span>' +
-      '<span style="color:var(--text-muted);">Bitiş:</span><span style="color:#b39ddb; font-weight:600;">' + elevLast.toFixed(0) + 'm</span>' +
+      '<span style="color:var(--text-muted);">Bitiş:</span><span style="color:#b39ddb; font-weight:600;">' + veSayi(elevLast, 0) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
-      '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--accent-warning); font-weight:700;">' + (elevFirst - elevLast).toFixed(1) + 'm</span>' +
+      '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--accent-warning); font-weight:700;">' + veSayi(elevFirst - elevLast, 1) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
-      '<span style="font-size:var(--fs-micro); color:var(--text-muted);">' + (gpsSamples ? gpsSamples.length + ' sample' : '') + ' | ' + totalDist.toFixed(0) + ' m</span>' +
+      '<span style="font-size:var(--fs-micro); color:var(--text-muted);">' + (gpsSamples ? gpsSamples.length + ' sample' : '') + ' | ' + veSayi(totalDist, 0) + ' m</span>' +
       '</div>';
   }
 
@@ -1347,7 +1347,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   // Y etiketleri
   ctx.fillStyle = textColor; ctx.font = veThemeFont('micro'); ctx.textAlign = 'right';
   for(var ly = Math.ceil(yMin / yStep) * yStep; ly <= yMax; ly += yStep) {
-    ctx.fillText('%' + ly.toFixed(0), padL - 4, toY(ly) + 3);
+    ctx.fillText('%' + veSayi(ly, 0), padL - 4, toY(ly) + 3);
   }
 
   // X etiketleri (mesafe — her zaman metre)
@@ -1361,7 +1361,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   for(var lx = 0; lx <= xMax; lx += xStep) {
     if(lx < xMin) continue;
     // Uçtaki etiket tuvalin İÇİNE kıstırılır (ortalı yazılınca sağ ucu kesiliyordu).
-    var xt = lx.toFixed(0), xYarim = ctx.measureText(xt).width / 2;
+    var xt = veSayi(lx, 0), xYarim = ctx.measureText(xt).width / 2;
     ctx.fillText(xt, Math.min(toX(lx), W - xYarim - 1), H - padB + 14);
   }
 
@@ -1378,7 +1378,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont('micro', 600); ctx.textAlign = 'right';
-    ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
+    ctx.fillText(veSayi(zs, 1) + 'x', W - padR - 26, padT - 4);
   }
 
   // Çizim alanı kırp
@@ -1467,7 +1467,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
     ctx.fillStyle = veThemeRgba('--accent-warning', 1);
     ctx.font = veThemeFont('micro', 600);
     ctx.textAlign = 'left';
-    ctx.fillText('Ort: %' + routeAvgGrade.toFixed(2), padL + 4, avgY - 4);
+    ctx.fillText('Ort: %' + veSayi(routeAvgGrade, 2), padL + 4, avgY - 4);
   }
 
   // ── Bölge seçimi overlay ──
@@ -1499,7 +1499,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
           ctx.fillStyle = veThemeRgba('--accent-warning', 1);
           ctx.font = veThemeFont('micro', 700);
           ctx.textAlign = 'center';
-          ctx.fillText('Seçim Ort: %' + sel.avgGrade.toFixed(2), (selX1 + selX2) / 2, selAvgY - 6);
+          ctx.fillText('Seçim Ort: %' + veSayi(sel.avgGrade, 2), (selX1 + selX2) / 2, selAvgY - 6);
         }
       }
     }
@@ -1591,8 +1591,8 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
       if(nid) {
         var selEl = document.getElementById('ve-road-selection-grade-' + nid);
         if(selEl) {
-          selEl.innerHTML = '<span style="color:#ffeb3b; font-weight:700;">Seçim: %' + selAvg.toFixed(2) + '</span>' +
-            '<span style="color:var(--text-muted); margin-left:6px;">(' + selDist.toFixed(0) + ' m)</span>';
+          selEl.innerHTML = '<span style="color:#ffeb3b; font-weight:700;">Seçim: %' + veSayi(selAvg, 2) + '</span>' +
+            '<span style="color:var(--text-muted); margin-left:6px;">(' + veSayi(selDist, 0) + ' m)</span>';
           selEl.style.fontStyle = 'normal';
         }
       }
@@ -1807,7 +1807,7 @@ function _veWaypointShowOnMap(nodeId) {
     }).addTo(map);
     // Nokta adı kullanıcının yazdığı serbest metin ve proje dosyasına yazılıyor;
     // ham gömülünce '<' içeren bir ad balonu sessizce bozuyordu.
-    var ttHtml = '<b>' + escapeHTML(wp.name) + '</b><br>Mesafe: ' + (wp.dist / 1000).toFixed(2) + ' km<br>Rakım: ' + wp.elev.toFixed(0) + ' m';
+    var ttHtml = '<b>' + escapeHTML(wp.name) + '</b><br>Mesafe: ' + veSayi(wp.dist / 1000, 2) + ' km<br>Rakım: ' + veSayi(wp.elev, 0) + ' m';
     marker.bindTooltip(ttHtml, { direction: 'top', offset: [0, -20] });
     _veWaypointMarkers[nodeId].push(marker);
   });
@@ -1823,7 +1823,7 @@ function _veWaypointNameDialog(nodeId, dist, callback) {
   ov.style.cssText = 'position:fixed; inset:0; z-index:200000; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;';
   ov.addEventListener('mousedown', function(e) { if(e.target === ov) { ov.remove(); } });
 
-  var distKm = (dist / 1000).toFixed(2);
+  var distKm = veSayi(dist / 1000, 2);
   var box = document.createElement('div');
   box.style.cssText = 'width:320px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
   box.innerHTML =
@@ -1880,8 +1880,8 @@ function _veWaypointUpdateList(nodeId) {
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-block; width:10px; height:10px; border-radius:var(--radius-xs); background:' + color + ';"></span></td>';
     html += '<td style="padding:2px 4px; text-align:left; font-weight:600; color:' + color + '; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + w.name + '">' + w.name + '</td>';
-    html += '<td style="padding:2px 4px; text-align:right;">' + (w.dist / 1000).toFixed(2) + ' km</td>';
-    html += '<td style="padding:2px 4px; text-align:right;">' + w.elev.toFixed(0) + ' m</td>';
+    html += '<td style="padding:2px 4px; text-align:right;">' + veSayi(w.dist / 1000, 2) + ' km</td>';
+    html += '<td style="padding:2px 4px; text-align:right;">' + veSayi(w.elev, 0) + ' m</td>';
     html += '<td style="padding:2px 4px; text-align:center;">';
     html += '<button onclick="veWaypointRenameUI(\'' + nodeId + '\',\'' + w.id + '\')" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); font-size:var(--fs-tiny); padding:0 2px;" title="İsim değiştir"><span class="mf-ico mf-ico-edit"></span></button>';
     if(!w.auto) {
@@ -2024,7 +2024,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   // Y etiketleri (rakım)
   ctx.fillStyle = textColor; ctx.font = veThemeFont('micro'); ctx.textAlign = 'right';
   for(var ly = Math.ceil(yMin / yStep) * yStep; ly <= yMax; ly += yStep) {
-    ctx.fillText(ly.toFixed(0) + 'm', padL - 4, toY(ly) + 3);
+    ctx.fillText(veSayi(ly, 0) + 'm', padL - 4, toY(ly) + 3);
   }
 
   // X etiketleri (mesafe — her zaman metre)
@@ -2038,7 +2038,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   for(var lx = 0; lx <= xMax; lx += xStep) {
     if(lx < xMin) continue;
     // Uçtaki etiket tuvalin İÇİNE kıstırılır (ortalı yazılınca sağ ucu kesiliyordu).
-    var xt = lx.toFixed(0), xYarim = ctx.measureText(xt).width / 2;
+    var xt = veSayi(lx, 0), xYarim = ctx.measureText(xt).width / 2;
     ctx.fillText(xt, Math.min(toX(lx), W - xYarim - 1), H - padB + 14);
   }
 
@@ -2053,19 +2053,19 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   var sampleInfo = pts.length + ' sample';
   if(pts.length > 1) {
     var avgInterval = (totalDist / (pts.length - 1));
-    sampleInfo += ' @ ~' + avgInterval.toFixed(0) + 'm';
+    sampleInfo += ' @ ~' + veSayi(avgInterval, 0) + 'm';
   }
   ctx.fillText('Rakım profili (GPS) — ' + sampleInfo, padL + plotW / 2, 14);
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = veThemeFont('micro', 600); ctx.textAlign = 'right';
-    ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
+    ctx.fillText(veSayi(zs, 1) + 'x', W - padR - 26, padT - 4);
   }
 
   // Başlangıç / Bitiş etiketleri (rakım değerleri ile)
-  var startElev = pts[0].elev.toFixed(0);
-  var endElev = pts[pts.length - 1].elev.toFixed(0);
+  var startElev = veSayi(pts[0].elev, 0);
+  var endElev = veSayi(pts[pts.length - 1].elev, 0);
   ctx.font = veThemeFont('micro', 600);
   ctx.fillStyle = veThemeRgba('--seri-4', 1); ctx.textAlign = 'left';
   ctx.fillText('A ' + startElev + 'm ▸', padL + 4, H - padB - 4);
@@ -2133,7 +2133,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.fillStyle = gl.color;
     ctx.font = veThemeFont('micro', 700);
     ctx.textAlign = 'center';
-    var glLabel = '%' + gl.grade.toFixed(2) + '  Δh:' + gl.deltaH.toFixed(1) + 'm';
+    var glLabel = '%' + veSayi(gl.grade, 2) + '  Δh:' + veSayi(gl.deltaH, 1) + 'm';
     // Arka plan kutusu
     var glLabelW = ctx.measureText(glLabel).width + 8;
     ctx.fillStyle = 'rgba(15,18,24,0.8)';
@@ -2183,7 +2183,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.strokeStyle = veThemeRgba('--bg-input', 1); ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(wpX, wpY, 4.5, 0, Math.PI * 2); ctx.stroke();
     // Etiket kutusu: çizginin sağına açılır, sağ kenara yetişirse soluna
-    var wpLabel = wp.name + ' · ' + (wp.dist / 1000).toFixed(1) + ' km';
+    var wpLabel = wp.name + ' · ' + veSayi(wp.dist / 1000, 1) + ' km';
     var wpLabelW = ctx.measureText(wpLabel).width + 6;
     var wpX0 = (wpX + 3 + wpLabelW > W - padR) ? wpX - 3 - wpLabelW : wpX + 3;
     wpEtiket.push({ x0: wpX0, x1: wpX0 + wpLabelW, y: padT + 11, t: wpLabel, renk: wpColor });
@@ -2223,7 +2223,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
       ctx.fillStyle = dp.color;
       ctx.font = veThemeFont('tiny', 700);
       ctx.textAlign = 'center';
-      var pvLabel = '%' + pvGrade.toFixed(2) + '  Δh:' + pvDh.toFixed(1) + 'm  (' + pvDist.toFixed(0) + 'm)';
+      var pvLabel = '%' + veSayi(pvGrade, 2) + '  Δh:' + veSayi(pvDh, 1) + 'm  (' + veSayi(pvDist, 0) + 'm)';
       var pvMidX = (toX(dp.x1) + toX(dp.x2)) / 2;
       var pvMidY = Math.min(toY(dp.y1), toY(dp.y2)) - 14;
       ctx.fillText(pvLabel, pvMidX, pvMidY);
@@ -2323,9 +2323,9 @@ function _veAltUpdateLineList(nodeId) {
     var egimIcon = veIkon(l.grade > 1 ? 'trending-down' : (l.grade < -1 ? 'trending-up' : 'arrow-right'));   // eğim yönü (karar 10·B)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:' + l.color + '; color:#000; font-size:var(--fs-micro); font-weight:700;">' + (i + 1) + '</span></td>';
-    html += '<td style="padding:2px 4px; text-align:right; font-weight:600; color:' + l.color + ';">' + egimIcon + ' %' + l.grade.toFixed(2) + '</td>';
-    html += '<td style="padding:2px 4px; text-align:right;">' + l.deltaH.toFixed(1) + 'm</td>';
-    html += '<td style="padding:2px 4px; text-align:right;">' + l.dist.toFixed(0) + 'm</td>';
+    html += '<td style="padding:2px 4px; text-align:right; font-weight:600; color:' + l.color + ';">' + egimIcon + ' %' + veSayi(l.grade, 2) + '</td>';
+    html += '<td style="padding:2px 4px; text-align:right;">' + veSayi(l.deltaH, 1) + 'm</td>';
+    html += '<td style="padding:2px 4px; text-align:right;">' + veSayi(l.dist, 0) + 'm</td>';
     html += '<td style="padding:2px 4px; text-align:center;"><button onclick="veAltRemoveGradeLineUI(\'' + nodeId + '\',' + i + ')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:var(--fs-body); padding:0; line-height:1;" title="Sil">' + veIkon('x') + '</button></td>';
     html += '</tr>';
   }
@@ -2455,9 +2455,9 @@ function _veScenarioSegmentsTableHTML(segments, editable) {
       html += '<td style="padding:3px 6px; text-align:left; border-right:1px solid var(--border-color); color:var(--accent-warning); font-size:var(--fs-micro); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + routeLabel + '">' + routeLabel + '</td>';
     }
     html += '<td style="padding:3px 6px; text-align:left; border-right:1px solid var(--border-color); color:' + egimColor + '; white-space:nowrap;">' + egimIcon + ' ' + egimLabel + '</td>';
-    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color); font-weight:600; color:' + egimColor + ';">' + s.grade.toFixed(2) + '</td>';
-    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color);">' + s.distance.toFixed(0) + '</td>';
-    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color);">' + s.deltaH.toFixed(1) + '</td>';
+    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color); font-weight:600; color:' + egimColor + ';">' + veSayi(s.grade, 2) + '</td>';
+    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color);">' + veSayi(s.distance, 0) + '</td>';
+    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color);">' + veSayi(s.deltaH, 1) + '</td>';
     if(editable) {
       html += '<td style="padding:2px 4px; text-align:center;"><select data-seg-idx="' + i + '" onchange="onVESegmentCommandChange(this)" style="padding:2px 4px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
       html += '<option value="full_throttle"' + (cmd === 'full_throttle' ? ' selected' : '') + '>Tam gaz</option>';

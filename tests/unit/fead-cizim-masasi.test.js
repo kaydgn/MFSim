@@ -465,7 +465,7 @@ describe('veFeadYolDurumu', () => {
     const { build } = kurOrnek();
     const d = fead.veFeadYolDurumu(build, 'mean');
     expect(d.ok).toBe(true);
-    expect(d.sag).toMatch(/^Σsarım 360\.0°/);
+    expect(d.sag).toMatch(/^Σsarım 360,0°/);
     delete bul('ex-ALT').data.x;
     const b2 = fead.veFeadYolDurumu(M.veFeadBuildSystem(global.nodes), 'mean');
     expect(b2.ok).toBe(false);

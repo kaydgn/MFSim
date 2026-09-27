@@ -615,7 +615,7 @@ describe('sahneler programın kendi bileşeni', () => {
     // çözülmüş bir modelin üstünde duruyor, boş bir iskelet değil.
     expect(f).toContain('Alternatör');
     // Çözümden gelen sayı: sarım sütunu gerçek bir değer basıyor.
-    expect(f).toMatch(/class="k-sar cz"[^>]*>\d+\.\d</);
+    expect(f).toMatch(/class="k-sar cz"[^>]*>\d+,\d</);
   });
 
   test('şerit düğmesi sahnesi ŞERİT KAYIT DEFTERİNDEN', () => {
@@ -1295,7 +1295,7 @@ describe('kılavuz ↔ Kayış Tablosu: Σsarım okumasının ADRESİ', () => {
   test('Σsarım okuması kartın ROZETİNDE basılıyor — tabloda değil', () => {
     const roz = /<div class="ve-fead-kan-durum ok"[^>]*>[\s\S]*?<\/div>/.exec(KART);
     expect(roz).toBeTruthy();
-    expect(roz[0]).toContain('Σsarım 360.0°');
+    expect(roz[0]).toContain('Σsarım 360,0°');
     expect(TABLO).not.toContain('Σsarım');
     // Kılavuz da o adresi gösteriyor (§4'ün son adımı).
     const s4 = DOC.slice(DOC.indexOf('id="g4"'), DOC.indexOf('id="g5"'));

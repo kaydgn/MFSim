@@ -189,7 +189,7 @@ describe('okuyucular', () => {
     const et = D.veFeadDutyList().map(D.veFeadDutyLabel);
     expect(new Set(et).size).toBe(et.length);
     // Motor devri birimi RPM (kullanıcı isteği, 2026-09-01).
-    et.forEach((x) => expect(x).toMatch(/\d+ nokta · \d+–\d+ RPM/));
+    et.forEach((x) => expect(x).toMatch(/\d+ nokta · [\d.]+–[\d.]+ RPM/));   // Türkçe sayı: 800–2.750
     // İki yüzey de AYNI üreticiyi çağırıyor; kendi kopyasını kurmuyor.
     expect(WIZ_SRC).toContain('veFeadDutyLabel');
     expect(PANEL_SRC).toContain('veFeadDutyLabel');

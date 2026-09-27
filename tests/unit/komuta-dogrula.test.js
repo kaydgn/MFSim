@@ -75,6 +75,16 @@ describe('güncel fiş geçer', () => {
     expect(r.cikti).toContain('FİŞ GÜNCEL');
   });
 
+  // Betik modülü ÇIPLAK Node'da require ediyor: tarayıcının yüklediği
+  // globaller (veSayi…) orada yok, jest'te ise setup.js onları kuruyor — yani
+  // yükleme anında global okuyan bir modül burada çöker ve jest bunu görmez.
+  // mount-core.js'in örnek defteri özet satırlarını yüklenirken yazıyor.
+  test.each(K.VE_KOMUTA_TEZGAHLAR.map((t) => t.id))('her tezgâh çıplak Node\'da ölçülür: %s', (id) => {
+    const t = K.VE_KOMUTA_TEZGAHLAR.find((x) => x.id === id);
+    const r = calistir(fis({ tezgah: id, dosya: t.dosya, olcum: guncelOzet(id), istek: 'incele', kayit: [] }));
+    expect([r.kod, r.cikti]).toEqual([0, expect.stringContaining('FİŞ GÜNCEL')]);
+  });
+
   test('var olan hedefler için kalan kayıt sayısını yazıyor', () => {
     const hedef = VE_KARSILAMA_GORSELLER.slice(0, 2).map((f) => /(\d+)/.exec(f)[1]);
     const r = calistir(fis({ istek: 'kaldir', kayit: hedef }));

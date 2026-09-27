@@ -91,12 +91,12 @@ describe('ƒ sütunları (D kayıp · E net tork · F net güç)', () => {
     // E = 433.3 × 9549.3 / 1800 = 2298.6 Nm
     const n = mountPanel(engineNode('comp-1'));
     const row = sheetRows(n.id)[1];
-    expect(derivedOf(row)).toEqual(['14.1', '2298.7', '433.3']);
+    expect(derivedOf(row)).toEqual(['14,1', '2.298,7', '433,3']);
   });
 
   test('governed devrinde kayıp tam kullanıcı değeri (oran = 1)', () => {
     const n = mountPanel(engineNode('comp-1'));
-    expect(derivedOf(sheetRows(n.id)[2])[0]).toBe('22.4');
+    expect(derivedOf(sheetRows(n.id)[2])[0]).toBe('22,4');
   });
 
   test('ƒ değerleri çözücünün gördüğü kayıpla BİREBİR aynı', () => {
@@ -107,9 +107,9 @@ describe('ƒ sütunları (D kayıp · E net tork · F net güç)', () => {
       const solverLoss = veAccessoryLossKw(n.data.accessories, rpm, 2100);
       const solverNetP = Math.max(0, AZRA_ROWS[i].power - solverLoss);
       const [d, e, f] = derivedOf(tr);
-      expect(d).toBe(solverLoss.toFixed(1));
-      expect(f).toBe(solverNetP.toFixed(1));
-      expect(e).toBe((solverNetP * 9549.3 / rpm).toFixed(1));
+      expect(d).toBe(veSayi(solverLoss, 1));
+      expect(f).toBe(veSayi(solverNetP, 1));
+      expect(e).toBe(veSayi(solverNetP * 9549.3 / rpm, 1));
     });
   });
 
@@ -121,9 +121,9 @@ describe('ƒ sütunları (D kayıp · E net tork · F net güç)', () => {
     mountPanel(n);
     const last = sheetRows(n.id)[1];
     const [, e, f] = derivedOf(last);
-    expect(f).toBe('0.0');
-    expect(e).toBe('0.0');
-    expect(parseFloat(f)).toBeGreaterThanOrEqual(0);
+    expect(f).toBe('0,0');
+    expect(e).toBe('0,0');
+    expect(veSayiOku(f)).toBeGreaterThanOrEqual(0);
   });
 
   test('boş / geçersiz devir satırında ƒ hücreleri "—"', () => {
@@ -144,24 +144,24 @@ describe('veEngSheetSyncDerived', () => {
     row.querySelectorAll('input')[2].value = '500';
     onVEMotorDataChange(n.id);
     // 500 − 14.11 = 485.9 kW
-    expect(derivedOf(sheetRows(n.id)[1])[2]).toBe('485.9');
+    expect(derivedOf(sheetRows(n.id)[1])[2]).toBe('485,9');
     expect(n.data.torqueData[1].power).toBe(500);
   });
 
   test('governed değişimi ƒ sütunlarını tazeler (kayıp devir oranına bağlı)', () => {
     const n = mountPanel(engineNode('comp-1'));
-    expect(derivedOf(sheetRows(n.id)[1])[0]).toBe('14.1');   // governed 2100
+    expect(derivedOf(sheetRows(n.id)[1])[0]).toBe('14,1');   // governed 2100
     document.getElementById('ve-ft-spec-governedSpeed-' + n.id).value = '1800';
     onVEFTSpecChange(n.id);
     // governed 1800 → 1800 rpm'de oran 1 → kayıp tam 22.4
-    expect(derivedOf(sheetRows(n.id)[1])[0]).toBe('22.4');
+    expect(derivedOf(sheetRows(n.id)[1])[0]).toBe('22,4');
   });
 
   test('aksesuar kaybı değişimi tüm satırların ƒ sütunlarını tazeler', () => {
     const n = mountPanel(engineNode('comp-1'));
     document.querySelectorAll('.ve-acc-user-' + n.id)[0].value = '0';
     onVEAccChange(n.id);
-    expect(derivedOf(sheetRows(n.id)[1])).toEqual(['0.0', '2373.5', '447.4']);
+    expect(derivedOf(sheetRows(n.id)[1])).toEqual(['0,0', '2.373,5', '447,4']);
   });
 
   test('satır silinince numaralar 1..n yeniden yazılır ve A1:Cn etiketi güncellenir', () => {
@@ -183,17 +183,18 @@ describe('veEngSheetSyncDerived', () => {
 describe('özet şeridi (brüt − aksesuar = net)', () => {
   test('üç figür de NET TEPE devrinde okunur ve aritmetik kapanır', () => {
     const n = mountPanel(engineNode('comp-1'));
-    const gp2 = parseFloat(metric('gp2', n.id));
-    const loss2 = parseFloat(metric('loss2', n.id));
-    const np2 = parseFloat(metric('np2', n.id));
+    // Yazı Türkçe ("447,4"): parseFloat onu 447 okurdu ve aritmetik tesadüfen kapanırdı.
+    const gp2 = veSayiOku(metric('gp2', n.id));
+    const loss2 = veSayiOku(metric('loss2', n.id));
+    const np2 = veSayiOku(metric('np2', n.id));
     expect(gp2 - loss2).toBeCloseTo(np2, 1);
-    expect(metric('rpm2', n.id)).toBe('1800');
+    expect(metric('rpm2', n.id)).toBe('1.800');
   });
 
   test('özet kaybı governed kaybından KÜÇÜK (fan küp yasası)', () => {
     // Governed kaybını tepe güçten düşmek kapanmayan bir denklem üretirdi.
     const n = mountPanel(engineNode('comp-1'));
-    const loss2 = parseFloat(metric('loss2', n.id));
+    const loss2 = veSayiOku(metric('loss2', n.id));
     const lossGov = veCalcAccLossAtRPM(n.data.accessories, 2100, 2100);
     expect(loss2).toBeLessThan(lossGov);
     expect(loss2).toBeCloseTo(14.1, 1);
@@ -212,27 +213,27 @@ describe('özet şeridi (brüt − aksesuar = net)', () => {
 describe('doğrulama metrikleri', () => {
   test('altı metrik dolar; brüt/net tepe ayrı devirlerde olabilir', () => {
     const n = mountPanel(engineNode('comp-1'));
-    expect(metric('gp', n.id)).toBe('447.4 kW @ 1800');
-    expect(metric('np', n.id)).toBe('433.3 kW @ 1800');
-    expect(metric('gt', n.id)).toBe('3000 Nm @ 1100');
-    expect(metric('loss', n.id)).toBe('22.4 kW @ 2100');
-    expect(metric('pts', n.id)).toBe('3 satır · 1100–2100 rpm');
+    expect(metric('gp', n.id)).toBe('447,4 kW @ 1.800');
+    expect(metric('np', n.id)).toBe('433,3 kW @ 1.800');
+    expect(metric('gt', n.id)).toBe('3.000 Nm @ 1.100');
+    expect(metric('loss', n.id)).toBe('22,4 kW @ 2.100');
+    expect(metric('pts', n.id)).toBe('3 satır · 1.100–2.100 rpm');
   });
 
   test('governed rozeti kaybı eksi işaretiyle ve devriyle gösterir', () => {
     const n = mountPanel(engineNode('comp-1'));
-    expect(document.getElementById('ve-net-badge-' + n.id).textContent).toBe('−22.4 kW @ 2100');
+    expect(document.getElementById('ve-net-badge-' + n.id).textContent).toBe('−22,4 kW @ 2.100');
   });
 
   test('governed yayılım şeridi render anında donmaz', () => {
     // Şerit HTML'e gömülü sabit değerle yazılıyordu: governed 1600'e çekilince
     // rozet/metrik 1600 derken şerit hâlâ 2100 gösteriyordu.
     const n = mountPanel(engineNode('comp-1'));
-    expect(document.getElementById('ve-eng-govbar-' + n.id).textContent).toBe('2100');
+    expect(document.getElementById('ve-eng-govbar-' + n.id).textContent).toBe('2.100');
     document.getElementById('ve-ft-spec-governedSpeed-' + n.id).value = '1600';
     onVEFTSpecChange(n.id);
-    expect(document.getElementById('ve-eng-govbar-' + n.id).textContent).toBe('1600');
-    expect(document.getElementById('ve-net-badge-' + n.id).textContent).toContain('1600');
+    expect(document.getElementById('ve-eng-govbar-' + n.id).textContent).toBe('1.600');
+    expect(document.getElementById('ve-net-badge-' + n.id).textContent).toContain('1.600');
   });
 
   test('veri yokken metrikler "—" kalır (uydurma sayı yok)', () => {

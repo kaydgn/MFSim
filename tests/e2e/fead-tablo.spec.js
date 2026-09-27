@@ -164,7 +164,8 @@ test('PAFTA: kartın altında — yazılır, Sekme/Enter, sıra, yön, sil/ekle,
 
   // ── 7) DÖNÜŞ YÖNÜ: yazı düğme, tık öteki yöne — `contact` + efektif çap ─
   const avara = () => satirAd('Avara 1');
-  const eff = async () => parseFloat(await avara().locator('td.k-eff').innerText());
+  // Hücre Türkçe yazar ("59,4"; karar 7·C) — parseFloat onu 59 okurdu.
+  const eff = async () => Number((await avara().locator('td.k-eff').innerText()).trim().replace(/\./g, '').replace(',', '.'));
   const effOnce = await eff();
   await expect(avara().locator('button.ve-fead-pf-yon')).toHaveAttribute('data-yon', 'Sol');
   await avara().locator('button.ve-fead-pf-yon').click();

@@ -49,7 +49,7 @@ function getTorqueConverterPropertiesHTML(node) {
         html += '<optgroup label="Allison ' + _familyLabels[fam] + '">';
         famTCs.forEach(function(key) {
           var p = VE_FT_TC_PRESETS[key];
-          var stallInfo = (p.data.length > 0) ? ' (τ₀=' + p.data[0].tau.toFixed(2) + ')' : ' — veri eksik';   // seçenek metni: ikon taşıyamaz
+          var stallInfo = (p.data.length > 0) ? ' (τ₀=' + veSayi(p.data[0].tau, 2) + ')' : ' — veri eksik';   // seçenek metni: ikon taşıyamaz
           var dis = p.incomplete ? ' disabled style="color:var(--text-muted);"' : '';
           html += '<option value="' + key + '"' + (tcPresetKey === key ? ' selected' : '') + dis + '>' + p.name + stallInfo + '</option>';
         });
@@ -61,7 +61,7 @@ function getTorqueConverterPropertiesHTML(node) {
       html += '<optgroup label="Allison ' + _familyLabels[_gbFamily] + ' (' + compatTCs.length + ' konvertör)">';
       compatTCs.forEach(function(key) {
         var p = VE_FT_TC_PRESETS[key];
-        var stallInfo = (p.data.length > 0) ? ' (τ₀=' + p.data[0].tau.toFixed(2) + ')' : ' — veri eksik';
+        var stallInfo = (p.data.length > 0) ? ' (τ₀=' + veSayi(p.data[0].tau, 2) + ')' : ' — veri eksik';
         var dis = p.incomplete ? ' disabled style="color:var(--text-muted);"' : '';
         html += '<option value="' + key + '"' + (tcPresetKey === key ? ' selected' : '') + dis + '>' + p.name + stallInfo + '</option>';
       });
@@ -149,7 +149,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
     html += '<span style="color:#4aa3ff;"><span class="ve-lejant-nokta"></span>τ Tork oranı</span>';
     html += '<span style="color:#ff6b6b;"><span class="ve-lejant-nokta"></span>η Verim [%]</span>';
-    html += '<span style="color:var(--text-muted); opacity:0.5;">┆ Coupling (SR=0.88)</span>';
+    html += '<span style="color:var(--text-muted); opacity:0.5;">┆ Coupling (SR=0,88)</span>';
     html += '</div>';
     html += '</div></div>';
     
@@ -222,7 +222,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-210',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Yüksek stall tork oranı (2.05). Geniş yelpaze, genel amaçlı.',
+    description: '1000/2000 serisi. Yüksek stall tork oranı (2,05). Geniş yelpaze, genel amaçlı.',
     data: [
       {sr:0.00, kpump:101.50, tau:2.05},
       {sr:0.10, kpump:101.91, tau:1.96},
@@ -248,7 +248,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-211',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Orta-yüksek tork çarpanı (1.90). İyi kalkış performansı.',
+    description: '1000/2000 serisi. Orta-yüksek tork çarpanı (1,90). İyi kalkış performansı.',
     data: [
       {sr:0.00, kpump:91.67, tau:1.90},
       {sr:0.10, kpump:91.12, tau:1.85},
@@ -274,7 +274,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-221',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Orta tork çarpanı (1.73). Dengeli kalkış/cruise.',
+    description: '1000/2000 serisi. Orta tork çarpanı (1,73). Dengeli kalkış/cruise.',
     data: [
       {sr:0.00, kpump:84.01, tau:1.73},
       {sr:0.10, kpump:83.32, tau:1.66},
@@ -300,7 +300,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-222',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Düşük tork çarpanı (1.58). Yüksek hız, düşük stall.',
+    description: '1000/2000 serisi. Düşük tork çarpanı (1,58). Yüksek hız, düşük stall.',
     data: [
       {sr:0.00, kpump:73.13, tau:1.58},
       {sr:0.10, kpump:73.36, tau:1.56},
@@ -327,7 +327,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-411',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Yüksek stall tork oranı (2.71). Düşük hızlı ağır yük uygulamaları.',
+    description: 'Yüksek stall tork oranı (2,71). Düşük hızlı ağır yük uygulamaları.',
     data: [
       {sr:0.00, kpump:97.98, tau:2.71},
       {sr:0.10, kpump:96.79, tau:2.49},
@@ -353,7 +353,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-413',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Yüksek tork çarpanı (2.44). Orta-ağır yük, iyi kalkış performansı.',
+    description: 'Yüksek tork çarpanı (2,44). Orta-ağır yük, iyi kalkış performansı.',
     data: [
       {sr:0.00, kpump:73.33, tau:2.44},
       {sr:0.10, kpump:73.04, tau:2.27},
@@ -379,7 +379,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-415',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Orta tork çarpanı (2.35). Genel amaçlı ağır hizmet uygulamaları.',
+    description: 'Orta tork çarpanı (2,35). Genel amaçlı ağır hizmet uygulamaları.',
     data: [
       {sr:0.00, kpump:68.18, tau:2.35},
       {sr:0.10, kpump:68.28, tau:2.20},
@@ -405,7 +405,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-417',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Orta tork çarpanı (2.20). Dengeli kalkış/cruise performansı.',
+    description: 'Orta tork çarpanı (2,20). Dengeli kalkış/cruise performansı.',
     data: [
       {sr:0.00, kpump:60.54, tau:2.20},
       {sr:0.10, kpump:60.99, tau:2.08},
@@ -431,7 +431,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-418',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Düşük stall tork oranı (1.98). Yüksek verimli, az kayıplı tasarım.',
+    description: 'Düşük stall tork oranı (1,98). Yüksek verimli, az kayıplı tasarım.',
     data: [
       {sr:0.00, kpump:61.14, tau:1.98},
       {sr:0.10, kpump:61.83, tau:1.94},
@@ -457,7 +457,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-419',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Orta-düşük tork çarpanı (2.02). İyi cruise verimliliği.',
+    description: 'Orta-düşük tork çarpanı (2,02). İyi cruise verimliliği.',
     data: [
       {sr:0.00, kpump:54.94, tau:2.02},
       {sr:0.10, kpump:55.58, tau:1.94},
@@ -483,7 +483,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-421',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'En düşük tork çarpanı (1.77). Yüksek hızlı uygulamalar, düşük stall.',
+    description: 'En düşük tork çarpanı (1,77). Yüksek hızlı uygulamalar, düşük stall.',
     data: [
       {sr:0.00, kpump:47.89, tau:1.77},
       {sr:0.10, kpump:48.12, tau:1.73},
@@ -510,7 +510,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-521',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Yüksek stall tork oranı (2.42). Ağır yük, düşük hız uygulamaları.',
+    description: '4000 serisi. Yüksek stall tork oranı (2,42). Ağır yük, düşük hız uygulamaları.',
     data: [
       {sr:0.00, kpump:50.68, tau:2.42},
       {sr:0.10, kpump:50.84, tau:2.22},
@@ -536,7 +536,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-531',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Yüksek tork çarpanı (2.34). İyi kalkış, geniş çalışma aralığı.',
+    description: '4000 serisi. Yüksek tork çarpanı (2,34). İyi kalkış, geniş çalışma aralığı.',
     data: [
       {sr:0.00, kpump:44.82, tau:2.34},
       {sr:0.10, kpump:45.37, tau:2.15},
@@ -562,7 +562,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-541',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Orta tork çarpanı (1.90). Dengeli performans.',
+    description: '4000 serisi. Orta tork çarpanı (1,90). Dengeli performans.',
     data: [
       {sr:0.00, kpump:39.71, tau:1.90},
       {sr:0.10, kpump:40.79, tau:1.79},
@@ -588,7 +588,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-551',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Orta-düşük tork çarpanı (1.79). İyi cruise verimliliği.',
+    description: '4000 serisi. Orta-düşük tork çarpanı (1,79). İyi cruise verimliliği.',
     data: [
       {sr:0.00, kpump:38.22, tau:1.79},
       {sr:0.10, kpump:39.18, tau:1.69},
@@ -614,7 +614,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-561',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Düşük tork çarpanı (1.58). Yüksek hız uygulamaları.',
+    description: '4000 serisi. Düşük tork çarpanı (1,58). Yüksek hız uygulamaları.',
     data: [
       {sr:0.00, kpump:35.41, tau:1.58},
       {sr:0.10, kpump:35.72, tau:1.54},
@@ -640,7 +640,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-571',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. En düşük tork çarpanı (1.62). Yüksek hız, düşük stall.',
+    description: '4000 serisi. En düşük tork çarpanı (1,62). Yüksek hız, düşük stall.',
     data: [
       {sr:0.00, kpump:32.45, tau:1.62},
       {sr:0.10, kpump:32.03, tau:1.56},
@@ -837,7 +837,7 @@ function getVETCRowHTML(nodeId, sr, kpump, tau) {
   html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (kpump !== undefined && kpump !== '' ? kpump : '') + '" step="0.01" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (tau !== undefined && tau !== '' ? tau : '') + '" step="0.001" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
   var etaVal = (sr !== '' && sr !== undefined && tau !== '' && tau !== undefined) ? (parseFloat(sr) * parseFloat(tau) * 100) : '';
-  var etaStr = (!isNaN(etaVal) && etaVal !== '') ? etaVal.toFixed(1) : '';
+  var etaStr = (!isNaN(etaVal) && etaVal !== '') ? etaVal.toFixed(1) : '';   // makine: sayı alanının değeri
   html += '<td class="tight"><input type="text" inputmode="decimal" class="f" value="' + etaStr + '" readonly tabindex="-1"></td>';
   html += '<td class="tight"><button class="ve-row-del" onclick="removeVETCRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
@@ -907,7 +907,7 @@ function onVETCDataChange(nodeId) {
       var tau = parseFloat(inputs[2].value);
       // η hesapla ve readonly alana yaz
       var eta = (!isNaN(sr) && !isNaN(tau)) ? (sr * tau * 100) : NaN;
-      inputs[3].value = !isNaN(eta) ? eta.toFixed(1) : '';
+      inputs[3].value = !isNaN(eta) ? eta.toFixed(1) : '';   // makine: sayı alanının değeri
       
       if(!isNaN(sr) || !isNaN(kpump) || !isNaN(tau)) {
         tcData.push({
@@ -1012,16 +1012,16 @@ function drawVETCTauChart(nodeId, pts) {
   
   // X etiketleri
   ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
-  bolX.degerler.forEach(function(v) { ctx.fillText(v.toFixed(Math.max(1, bolX.basamak)), xS(v), margin.top + ph + 15); });
+  bolX.degerler.forEach(function(v) { ctx.fillText(veSayi(v, Math.max(1, bolX.basamak)), xS(v), margin.top + ph + 15); });
   ctx.fillText('SR [-]', margin.left + pw / 2, 200 - 5);
 
   // Sol Y etiketleri (τ)
   ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.textAlign = 'right';
-  bolT.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolT.basamak), margin.left - 5, yT(v) + 3); });
+  bolT.degerler.forEach(function(v) { ctx.fillText(veSayi(v, bolT.basamak), margin.left - 5, yT(v) + 3); });
 
   // Sağ Y etiketleri (η)
   ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.textAlign = 'left';
-  bolE.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolE.basamak), margin.left + pw + 5, yE(v) + 3); });
+  bolE.degerler.forEach(function(v) { ctx.fillText(veSayi(v, bolE.basamak), margin.left + pw + 5, yE(v) + 3); });
   
   // Eğriler plot alanına kırpılır (yakınlaştırma taşmasın)
   ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();
@@ -1054,9 +1054,9 @@ function drawVETCTauChart(nodeId, pts) {
       tooltipHTML: function(sr) {
         var tv = vePcInterpY(_tauPts, sr), ev = vePcInterpY(_etaPts, sr);
         if(tv === null && ev === null) return null;
-        var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + sr.toFixed(3) + '</div>';
-        if(tv !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#4aa3ff;border-radius:1px;"></span><span style="color:#4aa3ff; font-weight:600; min-width:26px;">&tau;</span><span>' + tv.toFixed(3) + '</span></div>';
-        if(ev !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#ff6b6b;border-radius:1px;"></span><span style="color:#ff6b6b; font-weight:600; min-width:26px;">&eta;</span><span>' + ev.toFixed(1) + ' %</span></div>';
+        var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + veSayi(sr, 3) + '</div>';
+        if(tv !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#4aa3ff;border-radius:1px;"></span><span style="color:#4aa3ff; font-weight:600; min-width:26px;">&tau;</span><span>' + veSayi(tv, 3) + '</span></div>';
+        if(ev !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#ff6b6b;border-radius:1px;"></span><span style="color:#ff6b6b; font-weight:600; min-width:26px;">&eta;</span><span>' + veSayi(ev, 1) + ' %</span></div>';
         return h;
       }
     });
@@ -1115,12 +1115,12 @@ function drawVETCKpumpChart(nodeId, pts) {
   
   // X etiketleri
   ctx.fillStyle = veThemeRgba('--text-muted', 1); ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
-  bolX.degerler.forEach(function(v) { ctx.fillText(v.toFixed(Math.max(1, bolX.basamak)), xS(v), margin.top + ph + 15); });
+  bolX.degerler.forEach(function(v) { ctx.fillText(veSayi(v, Math.max(1, bolX.basamak)), xS(v), margin.top + ph + 15); });
   ctx.fillText('SR [-]', margin.left + pw / 2, 180 - 5);
 
   // Y etiketleri
   ctx.fillStyle = veThemeRgba('--seri-3', 1); ctx.textAlign = 'right';
-  bolK.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolK.basamak), margin.left - 5, yS(v) + 3); });
+  bolK.degerler.forEach(function(v) { ctx.fillText(veSayi(v, bolK.basamak), margin.left - 5, yS(v) + 3); });
   
   // Eğri plot alanına kırpılır
   ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();
@@ -1146,8 +1146,8 @@ function drawVETCKpumpChart(nodeId, pts) {
       tooltipHTML: function(sr) {
         var kv = vePcInterpY(_kPts, sr);
         if(kv === null) return null;
-        return '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + sr.toFixed(3) + '</div>' +
-               '<div style="display:flex; gap:6px; align-items:center;"><span style="width:14px;height:3px;background:#a78bfa;border-radius:1px;"></span><span style="color:#a78bfa; font-weight:600;">K<sub>pump</sub></span><span>' + kv.toFixed(2) + '</span></div>';
+        return '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + veSayi(sr, 3) + '</div>' +
+               '<div style="display:flex; gap:6px; align-items:center;"><span style="width:14px;height:3px;background:#a78bfa;border-radius:1px;"></span><span style="color:#a78bfa; font-weight:600;">K<sub>pump</sub></span><span>' + veSayi(kv, 2) + '</span></div>';
       }
     });
     pcDrawHint(ctx, canvas, margin.left, margin.top, pw, true);

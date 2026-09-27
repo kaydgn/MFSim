@@ -149,7 +149,7 @@ function _fstProfil(yuzler, g){
       }
     }
     var r = { tip: f.tip, s0: s0, s1: s1, rA: rA, rB: rB, rMin: rMin, rMax: rMax, yariAci: f.yariAci, yuz: f.id };
-    var k = [f.tip, s0.toFixed(4), s1.toFixed(4), rMin.toFixed(4), rMax.toFixed(4)].join('|');
+    var k = [f.tip, s0.toFixed(4), s1.toFixed(4), rMin.toFixed(4), rMax.toFixed(4)].join('|');   // makine: tekilleştirme anahtarı
     if(!satir[k]) satir[k] = r;
   });
   return Object.keys(satir).map(function(k){ return satir[k]; }).sort(function(a, b){ return a.s0 - b.s0 || a.rMin - b.rMin; });
@@ -434,17 +434,17 @@ function veFeadStpCoz(sonuc, roller){
 
   // ── UYARILAR ───────────────────────────────────────────────────────────
   var profiller = {};
-  out.kasnaklar.forEach(function(k){ if(k.tur === 'kanalli') profiller[k.profil || ('adım ' + k.adim.toFixed(2))] = 1; });
+  out.kasnaklar.forEach(function(k){ if(k.tur === 'kanalli') profiller[k.profil || ('adım ' + veSayi(k.adim, 2))] = 1; });
   if(Object.keys(profiller).length > 1)
     out.uyarilar.push('Kanallı kasnakların profili farklı: ' + Object.keys(profiller).join(', ') + '.');
   out.kasnaklar.forEach(function(k){
     if(k.tur === 'kanalli' && !k.profil)
-      out.uyarilar.push('"' + k.ad + '": kanal adımı ' + k.adim.toFixed(3) + ' mm hiçbir ISO 9982 profiline uymuyor.');
+      out.uyarilar.push('"' + k.ad + '": kanal adımı ' + veSayi(k.adim, 3) + ' mm hiçbir ISO 9982 profiline uymuyor.');
   });
   sapmalar.forEach(function(s){
     if(Math.abs(s.eksenel) > 0.5 || s.aci > 0.1)
       out.uyarilar.push('"' + out.kasnaklar[s.kasnak].ad + '" ortak düzlemden '
-        + s.eksenel.toFixed(2) + ' mm eksenel, ' + s.aci.toFixed(2) + '° açısal kaçık.');
+        + veSayi(s.eksenel, 2) + ' mm eksenel; ' + veSayi(s.aci, 2) + '° açısal kaçık.');
   });
   if(out.bakis.kaynak === 'varsayilan')
     out.uyarilar.push('Bakış yönü dosyadan çıkarılamadı (modelin orijini kayış düzleminde). Önden bakışı onaylayın.');

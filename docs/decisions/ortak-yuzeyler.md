@@ -1707,3 +1707,47 @@ jsdom'da çalıştırıyor.
 `type="number"` yok, yükleme sırası, seçicilerin geçerliliği, vites satırı
 okuyucusu) + `sayi-alan.spec.js` (gerçek klavye ve yapıştırma, işleyicinin
 modele yazdığı sayı, görüntüleyicide katman).
+
+### Aşama 2c — bileşen pencereleri (2026-09-27)
+
+**Hüküm.** Her `cp-*.js` penceresi (belge üreten üçü hariç), araç ek
+bileşenleri, yol haritası, FEAD köprüsünün iletileri ve FEAD kataloglarının
+etiketleri (gergi · çevrim · motor · STEP) `veSayi`'den yazar: tablo hücresi,
+rozet, ipucu, seçenek metni, tuval ekseni, bildirim, elle yazılmış özet
+(örnek kayıt defteri, ön ayar açıklaması, yardım metni). Sayı alanına giden
+değer (`// makine: sayı alanının değeri`), SVG koordinatı ve hesaba giren
+yuvarlama makine biçiminde kalır. `_feadFmt`, `_fwFmt`, `_mntFmt` gibi modül
+yazıcıları `veSayi`'ye yaslanır — çağıranlar değişmez. AD OLAN sayı kalır:
+şanzıman modeli (Allison 3200 SP), parça numarası, ön ayar adı, formül
+sabiti (P × 9550 / n), tarih.
+
+**Gerekçe.** 55 pencerenin görünen yazısı, `title`'ı ve tuvale çizilen yazısı
+tarandı: 311 noktalı ondalık, 246 gruplanmamış 4+ haneli sayı → 22 ve 86,
+kalanların hepsi ad. `toFixed` taraması bunların yarısından azını görüyordu:
+doğrudan birleştirilen sayı ("+ preset.maxOutputSpeed +", vites formülünün
+dokuz kopyası) ve elle yazılmış özet kaynak taramasına görünmez.
+Kapının kendi sayımı: 2b yapısında 371 bulgu (araç 311 · FEAD 41 · takoz 19),
+2c'de 0.
+
+**Yüklenirken yazılan özet Node'da da yüklenir.** Takoz örnek defterinin
+özet satırları (`mount-core.js` → `MOUNT_EXAMPLES.specs`) modül yüklenirken
+kuruluyor ve komuta doğrulayıcısı dosyayı çıplak Node'da `require` ediyor —
+orada `veSayi` global değil; jest'te `setup.js` onu kurduğu için birim test
+bunu görmez. Yazıcı yanındaki `sayi.js`'ten alınır.
+
+**Ekrandaki yazı sayıya geri okunmaz.** İki okuyucu vardı: sahil testi
+sihirbazı Crr ortalamasını kendi hücresinin YAZISINDAN `parseFloat` ile
+aktarıyordu ("0,00650" → 0 aktarılırdı, sessiz) ve yol haritasının segment
+düğmesi aralığı düğmenin yazısından okuyordu. Değer artık kendi niteliğinde
+(`data-deger` · `data-iv`); kural bütün ürün kaynağında kapılı.
+
+**Ayraç.** Ondalık virgülle koordinat üçlüsü "(12,5, 34, −7)" okunamaz;
+ayraç `; ` oldu.
+
+**Kapı.** `sayi-dili.test.js` → aşama 2c (dosya listesi dizinden türer: yeni
+pencere kendiliğinden kapsamda) + "ekrandaki YAZI sayıya geri okunmaz"
+(kaynak kuralı + Crr'nin davranış testi) + `sayi-pencere.spec.js` (her
+modülün her penceresi açılır, ekran ölçülür; ad sınıfına girmeyen her
+eşleşme penceresiyle birlikte söylenir) + seçenek METNİ kuralı (`<option>`
+elle yazılır, `toFixed` taşımaz) + `komuta-dogrula.test.js` → *"her tezgâh
+çıplak Node'da ölçülür"*.

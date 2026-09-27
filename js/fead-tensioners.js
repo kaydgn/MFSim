@@ -300,7 +300,7 @@ function veFeadTenLabel(rec){
   if(!rec) return '';
   var a = Number(rec.armLen), m = Number(rec.meanNm);
   if(!Number.isFinite(a) || !Number.isFinite(m)) return String(rec.key || '');
-  return (rec.part || '?') + ' · kol ' + a + ' mm · ' + m.toFixed(2) + ' Nm';
+  return (rec.part || '?') + ' · kol ' + veSayi(a) + ' mm · ' + veSayi(m, 2) + ' Nm';
 }
 
 function veFeadTensionerOf(key){
@@ -401,7 +401,7 @@ function veFeadTensionerDrift(td){
     out.drift.push('temas tarafı ' + td.contact + ' (künye ' + rec.contact + ')');
   var m = say(td.meanLoad);
   if(rec.meanNm != null && Number.isFinite(m) && Math.abs(m - rec.meanNm) > 1e-6)
-    out.montaj.push('çalışma momenti ' + m + ' Nm (künye ' + rec.meanNm + ')');
+    out.montaj.push('çalışma momenti ' + veSayi(m) + ' Nm (künye ' + veSayi(rec.meanNm) + ')');
   return out;
 }
 
@@ -430,8 +430,8 @@ function veFeadTensionerBandCheck(td){
   out.relNomDeg = rel;
   if(isFinite(rel) && (rel < VE_FEAD_TEN_BAND.relNomDeg.min
                     || rel > VE_FEAD_TEN_BAND.relNomDeg.max))
-    out.outside.push('nominal kol dönmesi ' + rel.toFixed(2) + '° (ölçülen bant '
-      + VE_FEAD_TEN_BAND.relNomDeg.min + '…' + VE_FEAD_TEN_BAND.relNomDeg.max + '°)');
+    out.outside.push('nominal kol dönmesi ' + veSayi(rel, 2) + '° (ölçülen bant '
+      + veSayi(VE_FEAD_TEN_BAND.relNomDeg.min) + '…' + veSayi(VE_FEAD_TEN_BAND.relNomDeg.max) + '°)');
   out.ok = out.outside.length === 0;
   return out;
 }

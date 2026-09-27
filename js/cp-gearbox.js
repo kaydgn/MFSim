@@ -71,7 +71,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-pkg-body">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading);">' + profileName + '</div>';
   if(shiftRefRPM !== governed) {
-    html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:2px;">Shift Ref. RPM: ' + shiftRefRPM + ' (motor governed: ' + governed + ')</div>';
+    html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:2px;">Shift Ref. RPM: ' + veSayi(shiftRefRPM) + ' (motor governed: ' + veSayi(governed) + ')</div>';
   }
   html += '</div></div>';
 
@@ -84,7 +84,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Lockup Mode Shift tablosu</span></div>';
   html += '<div class="sw-pkg-body">';
-  html += '<div class="sw-pkg-desc">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + shiftRefRPM + ' − ' + lockupOffset + ' = <b>' + N_shift_lockup + ' rpm</b></div>';
+  html += '<div class="sw-pkg-desc">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + veSayi(shiftRefRPM) + ' − ' + veSayi(lockupOffset) + ' = <b>' + veSayi(N_shift_lockup) + ' rpm</b></div>';
   
   if(governed <= 0) {
     html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed Speed giriniz.</div>';
@@ -117,8 +117,8 @@ function getShiftControllerPropertiesHTML(node) {
       
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<td style="font-weight:500;">' + fromNum + 'L → ' + toNum + 'L</td>';
-      html += '<td>' + N_shift_lockup + '</td>';
-      html += '<td>' + i_gear_from.toFixed(3) + '</td>';
+      html += '<td>' + veSayi(N_shift_lockup, 0) + '</td>';
+      html += '<td>' + veSayi(i_gear_from, 3) + '</td>';
       html += '</tr>';
     }
     
@@ -126,7 +126,7 @@ function getShiftControllerPropertiesHTML(node) {
     
     // Bilgilendirme
     if(!diffNode || (i_diff <= 1.01 && !diffData.diffRatio)) {
-      html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Diferansiyel oranı tanımlı değil (i_diff=' + i_diff.toFixed(3) + '). Diferansiyel bileşenini kontrol edin.</div>';
+      html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Diferansiyel oranı tanımlı değil (i_diff=' + veSayi(i_diff, 3) + '). Diferansiyel bileşenini kontrol edin.</div>';
     }
   }
   
@@ -152,20 +152,20 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</tr></thead><tbody>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td style="font-weight:500;">1C→2C oran (N_out/N_gov)</td>';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">' + shift1C2C_outRatio + '</td>';
-  html += '<td style="color:var(--text-muted);">N_out ≥ ' + shift1C2C_outRatio + ' × N_shift_ref → 1C→2C shift</td>';
+  html += '<td style="font-weight:600; color:var(--accent-primary);">' + veSayi(shift1C2C_outRatio) + '</td>';
+  html += '<td style="color:var(--text-muted);">N_out ≥ ' + veSayi(shift1C2C_outRatio) + ' × N_shift_ref → 1C→2C shift</td>';
   html += '</tr>';
   html += '<tr>';
   html += '<td style="font-weight:500;">2C→2L oran (N_out/N_gov)</td>';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">' + shift2C2L_outRatio + '</td>';
-  html += '<td style="color:var(--text-muted);">N_out ≥ ' + shift2C2L_outRatio + ' × N_shift_ref → lockup engage</td>';
+  html += '<td style="font-weight:600; color:var(--accent-primary);">' + veSayi(shift2C2L_outRatio) + '</td>';
+  html += '<td style="color:var(--text-muted);">N_out ≥ ' + veSayi(shift2C2L_outRatio) + ' × N_shift_ref → lockup engage</td>';
   html += '</tr>';
   html += '</tbody></table>';
   
   // Shift mantığı kuralları
   html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:8px; border:1px solid var(--border-color); font-size:var(--fs-tiny); line-height:1.6; color:var(--text-secondary);">';
-  html += '1C → 2C: shift @ N_out ≥ ' + shift1C2C_outRatio + ' × N_shift_ref<br>';
-  html += '2C → 2L: shift @ N_out ≥ ' + shift2C2L_outRatio + ' × N_shift_ref (lockup engage)';
+  html += '1C → 2C: shift @ N_out ≥ ' + veSayi(shift1C2C_outRatio) + ' × N_shift_ref<br>';
+  html += '2C → 2L: shift @ N_out ≥ ' + veSayi(shift2C2L_outRatio) + ' × N_shift_ref (lockup engage)';
   html += '</div>';
   
   // Bilgi kutusu
@@ -191,19 +191,19 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<span style="color:var(--accent-primary);">Adım 1: Converter modunda 1C → 2C upshift</span>\n';
   html += '  Eğer mode == CONVERTER VE gear == F1:\n';
   html += '    N_out = N_engine × SR / i_gear_F1\n';
-  html += '    Eğer N_out >= ' + shift1C2C_outRatio + ' × N_shift_ref:\n';
+  html += '    Eğer N_out >= ' + veSayi(shift1C2C_outRatio) + ' × N_shift_ref:\n';
   html += '      → gear = F2, mode = CONVERTER (2C)\n\n';
   
   html += '<span style="color:var(--accent-primary);">Adım 2: Converter → Lockup geçişi (2C → 2L)</span>\n';
   html += '  Eğer mode == CONVERTER VE gear == F2:\n';
   html += '    N_out = N_engine × SR / i_gear_F2\n';
-  html += '    Eğer N_out >= ' + shift2C2L_outRatio + ' × N_shift_ref:\n';
+  html += '    Eğer N_out >= ' + veSayi(shift2C2L_outRatio) + ' × N_shift_ref:\n';
   html += '      → mode = LOCKUP (2L)\n';
   html += '      → N_engine = N_turbine (1:1 mekanik kilit)\n\n';
   
   html += '<span style="color:var(--accent-primary);">Adım 3: Lockup modunda upshift (2L→3L→...→6L)</span>\n';
   html += '  Eğer mode == LOCKUP:\n';
-  html += '    N_shift = N_shift_ref − ' + lockupOffset + '\n';
+  html += '    N_shift = N_shift_ref − ' + veSayi(lockupOffset) + '\n';
   html += '    Eğer N_engine >= N_shift:\n';
   html += '      next_gear = bir üst vites\n';
   html += '      Eğer next_gear var VE lockup destekliyse:\n';
@@ -223,12 +223,12 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
   html += ' │                              └ Son vites, governed\'a kadar\n';
-  html += ' │                     └ N_eng >= N_ref−' + lockupOffset + ' → 6L\n';
-  html += ' │                └ N_eng >= N_ref−' + lockupOffset + ' → 5L\n';
-  html += ' │           └ N_eng >= N_ref−' + lockupOffset + ' → 4L\n';
-  html += ' │      └ N_eng >= N_ref−' + lockupOffset + ' → 3L\n';
-  html += ' │ └ N_out >= ' + shift2C2L_outRatio + '×N_ref → lockup engage\n';
-  html += ' └ N_out >= ' + shift1C2C_outRatio + '×N_ref → 2C';
+  html += ' │                     └ N_eng >= N_ref−' + veSayi(lockupOffset) + ' → 6L\n';
+  html += ' │                └ N_eng >= N_ref−' + veSayi(lockupOffset) + ' → 5L\n';
+  html += ' │           └ N_eng >= N_ref−' + veSayi(lockupOffset) + ' → 4L\n';
+  html += ' │      └ N_eng >= N_ref−' + veSayi(lockupOffset) + ' → 3L\n';
+  html += ' │ └ N_out >= ' + veSayi(shift2C2L_outRatio) + '×N_ref → lockup engage\n';
+  html += ' └ N_out >= ' + veSayi(shift1C2C_outRatio) + '×N_ref → 2C';
   html += '</div>';
 
   html += '</div></div>';
@@ -351,7 +351,7 @@ function veShiftControllerStep(state, params) {
       result.gearIndex = 1;
       result.mode = 'CONVERTER';
       result.shifted = true;
-      result.shiftType = 'N_out-ratio (' + N_out.toFixed(0) + ' >= ' + threshold_1C2C.toFixed(0) + ')';
+      result.shiftType = 'N_out-ratio (' + N_out.toFixed(0) + ' >= ' + threshold_1C2C.toFixed(0) + ')';   // makine: iç durum etiketi, ekrana gitmiyor
       return result;
     }
   }
@@ -366,7 +366,7 @@ function veShiftControllerStep(state, params) {
     if(N_out_2 >= threshold_2C2L) {
       result.mode = 'LOCKUP';
       result.shifted = true;
-      result.shiftType = 'lockup-engage (N_out=' + N_out_2.toFixed(0) + ')';
+      result.shiftType = 'lockup-engage (N_out=' + N_out_2.toFixed(0) + ')';   // makine: iç durum etiketi, ekrana gitmiyor
       return result;
     }
   }
@@ -471,10 +471,10 @@ function getGearboxPropertiesHTML(node) {
         html += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 8px; margin-bottom:8px; font-size:var(--fs-tiny); line-height:1.5;">';
         html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:2px; font-size:var(--fs-tiny);">Şanzıman limitleri</div>';
         html += '<div style="display:flex; flex-wrap:wrap; gap:4px 12px; color:var(--text-secondary);">';
-        if(_lp.grossInputPower) html += '<span>Giriş güç: <b style="color:var(--text-primary);">' + _lp.grossInputPower + ' kW</b></span>';
-        if(_lp.grossInputTorque) html += '<span>Giriş tork: <b style="color:var(--text-primary);">' + _lp.grossInputTorque + ' Nm</b></span>';
-        if(_lp.netTurbineTorque) html += '<span>Türbin tork: <b style="color:var(--text-primary);">' + _lp.netTurbineTorque + ' Nm</b></span>';
-        if(_lp.maxOutputSpeed) html += '<span>Max çıkış: <b style="color:var(--text-primary);">' + _lp.maxOutputSpeed + ' rpm</b></span>';
+        if(_lp.grossInputPower) html += '<span>Giriş güç: <b style="color:var(--text-primary);">' + veSayi(_lp.grossInputPower) + ' kW</b></span>';
+        if(_lp.grossInputTorque) html += '<span>Giriş tork: <b style="color:var(--text-primary);">' + veSayi(_lp.grossInputTorque) + ' Nm</b></span>';
+        if(_lp.netTurbineTorque) html += '<span>Türbin tork: <b style="color:var(--text-primary);">' + veSayi(_lp.netTurbineTorque) + ' Nm</b></span>';
+        if(_lp.maxOutputSpeed) html += '<span>Max çıkış: <b style="color:var(--text-primary);">' + veSayi(_lp.maxOutputSpeed) + ' rpm</b></span>';
         html += '</div></div>';
       }
     }
@@ -535,7 +535,7 @@ function getGearboxPropertiesHTML(node) {
       if(cs['1C2C']) {
         html += '<tr style="border-bottom:1px solid var(--border-color);">';
         html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:var(--fs-tiny);">1C→2C</th>';
-        html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary);">' + cs['1C2C'].a + ' × ESL ' + (cs['1C2C'].b >= 0 ? '+ ' : '− ') + Math.abs(cs['1C2C'].b || 0) + '</td>';
+        html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary);">' + _veGbFormul(cs['1C2C'].a, cs['1C2C'].b) + '</td>';
         html += '</tr>';
       }
       if(cs['2C2L']) {
@@ -543,11 +543,11 @@ function getGearboxPropertiesHTML(node) {
         html += '<tr style="border-bottom:1px solid var(--border-color);">';
         html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:var(--fs-tiny);">2C→2L</th>';
         if(cs2L.type === 'segmented') {
-          var linStr = cs2L.linear.a + ' × ESL ' + (cs2L.linear.b >= 0 ? '+ ' : '− ') + Math.abs(cs2L.linear.b);
-          var lookupStr = cs2L.lookup.map(function(p) { return p[0] + ':' + p[1]; }).join(', ');
-          html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.3;">ESL ≥ ' + cs2L.linear.validFrom + ': ' + linStr + '<br>ESL &lt; ' + cs2L.linear.validFrom + ': Lookup [' + lookupStr + ']</td>';
+          var linStr = _veGbFormul(cs2L.linear.a, cs2L.linear.b);
+          var lookupStr = cs2L.lookup.map(function(p) { return veSayi(p[0]) + ': ' + veSayi(p[1]); }).join('; ');
+          html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.3;">ESL ≥ ' + veSayi(cs2L.linear.validFrom) + ': ' + linStr + '<br>ESL &lt; ' + veSayi(cs2L.linear.validFrom) + ': Lookup [' + lookupStr + ']</td>';
         } else {
-          html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary);">' + cs2L.a + ' × ESL ' + ((cs2L.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(cs2L.b || 0) + '</td>';
+          html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary);">' + _veGbFormul(cs2L.a, cs2L.b) + '</td>';
         }
         html += '</tr>';
       }
@@ -577,19 +577,19 @@ function getGearboxPropertiesHTML(node) {
         var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
         var formula;
         if(ls.type === 'piecewise') {
-          var lowF = ls.low.a + ' × ESL ' + ((ls.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.low.b || 0);
-          var highF = ls.high.a + ' × ESL ' + ((ls.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.high.b || 0);
-          formula = 'ESL ≤ ' + ls.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ls.breakpoint + ': ' + highF;
+          var lowF = _veGbFormul(ls.low.a, ls.low.b);
+          var highF = _veGbFormul(ls.high.a, ls.high.b);
+          formula = 'ESL ≤ ' + veSayi(ls.breakpoint) + ': ' + lowF + '<br>ESL &gt; ' + veSayi(ls.breakpoint) + ': ' + highF;
         } else if(ls.type === 'segments') {
           formula = ls.segments.map(function(seg, i) {
-            if(seg.cap !== undefined) return 'ESL ≤ ' + seg.maxESL + ': ' + seg.cap + ' (cap)';
-            var f = seg.a + ' × ESL ' + ((seg.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(seg.b || 0);
-            return seg.maxESL ? ('ESL ≤ ' + seg.maxESL + ': ' + f) : f;
+            if(seg.cap !== undefined) return 'ESL ≤ ' + veSayi(seg.maxESL) + ': ' + veSayi(seg.cap) + ' (cap)';
+            var f = _veGbFormul(seg.a, seg.b);
+            return seg.maxESL ? ('ESL ≤ ' + veSayi(seg.maxESL) + ': ' + f) : f;
           }).join('<br>');
         } else {
-          formula = ls.a + ' × ESL ' + ((ls.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.b || 0);
-          if(ls.capValue !== undefined) formula += ' (cap: ' + ls.capValue + ', ESL &lt; ' + ls.capBelow + ')';
-          else if(ls.minCap !== undefined) formula += ' (min: ' + ls.minCap + ')';
+          formula = _veGbFormul(ls.a, ls.b);
+          if(ls.capValue !== undefined) formula += ' (cap: ' + veSayi(ls.capValue) + '; ESL &lt; ' + veSayi(ls.capBelow) + ')';
+          else if(ls.minCap !== undefined) formula += ' (min: ' + veSayi(ls.minCap) + ')';
         }
         html += '<tr style="border-bottom:1px solid var(--border-color);">';
         html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:var(--fs-tiny);">' + label + '</th>';
@@ -619,18 +619,18 @@ function getGearboxPropertiesHTML(node) {
         var label = dk.replace(/(\d+)to(\d+)/, '$1→$2');
         var formula;
         if(ds.type === 'piecewise') {
-          var lowF = ds.low.a + ' × ESL ' + ((ds.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.low.b || 0);
-          var highF = ds.high.a + ' × ESL ' + ((ds.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.high.b || 0);
-          formula = 'ESL ≤ ' + ds.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ds.breakpoint + ': ' + highF;
+          var lowF = _veGbFormul(ds.low.a, ds.low.b);
+          var highF = _veGbFormul(ds.high.a, ds.high.b);
+          formula = 'ESL ≤ ' + veSayi(ds.breakpoint) + ': ' + lowF + '<br>ESL &gt; ' + veSayi(ds.breakpoint) + ': ' + highF;
         } else if(ds.type === 'segments') {
           formula = ds.segments.map(function(seg) {
-            if(seg.cap !== undefined) return 'ESL ≤ ' + seg.maxESL + ': ' + seg.cap + ' (cap)';
-            var f = seg.a + ' × ESL ' + ((seg.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(seg.b || 0);
-            return seg.maxESL ? ('ESL ≤ ' + seg.maxESL + ': ' + f) : f;
+            if(seg.cap !== undefined) return 'ESL ≤ ' + veSayi(seg.maxESL) + ': ' + veSayi(seg.cap) + ' (cap)';
+            var f = _veGbFormul(seg.a, seg.b);
+            return seg.maxESL ? ('ESL ≤ ' + veSayi(seg.maxESL) + ': ' + f) : f;
           }).join('<br>');
         } else {
-          formula = ds.a + ' × ESL ' + ((ds.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.b || 0);
-          if(ds.capValue !== undefined) formula += ' (cap: ' + ds.capValue + ', ESL &lt; ' + ds.capBelow + ')';
+          formula = _veGbFormul(ds.a, ds.b);
+          if(ds.capValue !== undefined) formula += ' (cap: ' + veSayi(ds.capValue) + '; ESL &lt; ' + veSayi(ds.capBelow) + ')';
         }
         html += '<tr style="border-bottom:1px solid var(--border-color);">';
         html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--accent-warning); font-size:var(--fs-tiny);">' + label + '</th>';
@@ -666,7 +666,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</tr>';
     
     if(autoGoverned) {
-      html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary);"><span style="color:var(--accent-success);">' + veIkon('check') + '</span> Motor bileşeninden otomatik alındı: ' + autoGoverned + ' rpm</td></tr>';
+      html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary);"><span style="color:var(--accent-success);">' + veIkon('check') + '</span> Motor bileşeninden otomatik alındı: ' + veSayi(autoGoverned) + ' rpm</td></tr>';
     }
     
     html += '</table>';
@@ -838,6 +838,13 @@ var VE_FT_GB_DEFAULT_GEARS = [
   {name: 'F6', ratio: 0.652, eff: 98.05, lockup: true},
   {name: 'R1', ratio: 5.026, eff: 97.50, lockup: false}
 ];
+
+// Vites geçiş formülünün yazısı — "0,5361 × ESL − 39,6" (Türkçe sayı, karar 7·C).
+// Aynı kalıp dokuz yerde elle kuruluyordu; sayılar noktalı kalıyordu.
+function _veGbFormul(a, b) {
+  b = b || 0;
+  return veSayi(a) + ' × ESL ' + (b >= 0 ? '+ ' : '− ') + veSayi(Math.abs(b));
+}
 
 function getVEFTGearRowHTML(nodeId, name, ratio, eff, lockup) {
   // Izgara hücresi satır içi zemin/çerçeve TAŞIMAZ (table.ve-izgara, 13·B):
@@ -1931,7 +1938,7 @@ function onVEFTGBPresetSelect(nodeId, value) {
       ftGears.push({
         name: 'F' + g.gear,
         ratio: g.ratio,
-        eff: parseFloat(eff.toFixed(2)),
+        eff: parseFloat(eff.toFixed(2)),   // makine: yuvarlama
         lockup: (g.mode ? g.mode === 'L' : i > 0) // preset açık mod, yoksa F1 = converter, kalan lockup
       });
     });
@@ -1998,10 +2005,10 @@ function onVEFTGBPresetSelect(nodeId, value) {
 
   // Şanzıman limitleri bilgi mesajı
   var limitsInfo = [];
-  if(preset.grossInputPower) limitsInfo.push('Giriş Güç: ' + preset.grossInputPower + ' kW');
-  if(preset.grossInputTorque) limitsInfo.push('Giriş Tork: ' + preset.grossInputTorque + ' Nm');
-  if(preset.netTurbineTorque) limitsInfo.push('Türbin Tork: ' + preset.netTurbineTorque + ' Nm');
-  if(preset.maxOutputSpeed) limitsInfo.push('Max Çıkış: ' + preset.maxOutputSpeed + ' rpm');
+  if(preset.grossInputPower) limitsInfo.push('Giriş Güç: ' + veSayi(preset.grossInputPower) + ' kW');
+  if(preset.grossInputTorque) limitsInfo.push('Giriş Tork: ' + veSayi(preset.grossInputTorque) + ' Nm');
+  if(preset.netTurbineTorque) limitsInfo.push('Türbin Tork: ' + veSayi(preset.netTurbineTorque) + ' Nm');
+  if(preset.maxOutputSpeed) limitsInfo.push('Max Çıkış: ' + veSayi(preset.maxOutputSpeed) + ' rpm');
   if(limitsInfo.length > 0) {
     showToast('Şanzıman limitleri: ' + limitsInfo.join(' | '), 'info');
   }

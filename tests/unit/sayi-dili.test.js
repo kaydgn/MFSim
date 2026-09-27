@@ -30,6 +30,14 @@ const ASAMA1 = ['js/sayi.js', 'js/signal-tree.js', 'js/trace-view.js', 'js/measu
 // aynı sayfada grafik "1.381" derken yorum "1381" diyordu.
 const ASAMA2A = ['js/fead-signals.js', 'js/fead-brief.js', 'js/cp-fead-results.js',
   'js/mount-brief.js', 'js/mount-signals.js'];
+// Aşama 2c: bileşen pencereleri — her `cp-*.js` (belge üreten üçü aşama 3'te),
+// araç ek bileşenleri, yol haritası, FEAD köprüsünün iletileri. Yeni bir
+// pencere dosyası kendiliğinden kapsamda.
+const BELGE = ['js/cp-fead-report.js', 'js/cp-mount-report.js', 'js/cp-fead-summary.js'];
+const ASAMA2C = fs.readdirSync(path.join(KOK, 'js')).filter((f) => /^cp-.*\.js$/.test(f))
+  .map((f) => 'js/' + f).filter((f) => BELGE.indexOf(f) < 0)
+  .concat(['js/component-extras.js', 'js/map.js', 'js/fead-model.js',
+    'js/fead-tensioners.js', 'js/fead-duty.js', 'js/fead-engines.js', 'js/fead-step.js']);
 
 describe('veSayi — Türkçe yazım', () => {
   test.each([
@@ -136,6 +144,69 @@ describe('aşama 2a — modüllerin Sonuçlar katmanı (FEAD · Takoz)', () => {
       const govde = s.slice(i, s.indexOf('}', i));
       expect([f, /veSayi|_tr\(|_nTr\(/.test(govde)]).toEqual([f, false]);
     }
+  });
+});
+
+describe('aşama 2c — bileşen pencereleri', () => {
+  test('kapsam gerçekten bir şey tarıyor', () => {
+    expect(ASAMA2C.length).toBeGreaterThan(15);
+    ['js/cp-engine.js', 'js/cp-fead.js', 'js/cp-mount.js', 'js/map.js'].forEach((f) => expect(ASAMA2C).toContain(f));
+  });
+  test('işaretsiz sayı yazımı yok', () => {
+    const s = ASAMA2C.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
+    expect(s).toEqual([]);
+  });
+  // Seçenek metni elle yazılır ve `toFixed` taşımaz — tarayıcı onu görmez.
+  // Çözücünün Δt listesi "0.05 (hızlı)" yazıyordu. DEĞER makine kalır.
+  test('<option> METNİ noktalı ondalık taşımaz (değeri makine biçiminde kalır)', () => {
+    const { yorumsuzJs } = require('../../tools/ikon-dili.js');
+    const re = />[^<>]*?(?<![\w.,])\d+\.\d+[^<>]*<\/option>/;
+    const bulunan = [];
+    const dosyalar = fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f);
+    for (const f of dosyalar.concat(['index.html'])) {
+      const metin = f.endsWith('.js') ? yorumsuzJs(oku(f)) : oku(f);
+      metin.split('\n').forEach((l, i) => { if (re.test(l)) bulunan.push(f + ':' + (i + 1) + ' ' + l.match(re)[0]); });
+    }
+    expect(bulunan).toEqual([]);
+    expect(re.test('<option value="0.05">0.05 (hızlı)</option>')).toBe(true);    // kapı düşebiliyor
+    expect(re.test('<option value="0.05">0,05 (hızlı)</option>')).toBe(false);
+  });
+});
+
+describe('ekrandaki YAZI sayıya geri okunmaz', () => {
+  // Türkçe yazı "0,00650" parseFloat'ta 0, "1.000 m" parseInt'te 1 olur ve
+  // hiçbir şey patlamaz. Yazıdan sayı okuyan iki yer vardı: sahil testi
+  // sihirbazının Crr'si (aktarılan değer 0 olurdu) ve yol haritasının segment
+  // düğmesi. Değer artık yazıdan değil, kendi niteliğinden okunuyor.
+  const { yorumsuzJs } = require('../../tools/ikon-dili.js');
+  test('ürün kaynağında `parseFloat/parseInt/Number(… .textContent/.innerText/.innerHTML)` yok', () => {
+    const bulunan = [];
+    for (const d of ['js', 'viewer/js', 'candbc/js']) {
+      for (const f of fs.readdirSync(path.join(KOK, d)).filter((x) => x.endsWith('.js'))) {
+        yorumsuzJs(oku(d + '/' + f)).split('\n').forEach((l, i) => {
+          if (/\b(parseFloat|parseInt|Number)\s*\([^;]*\.(textContent|innerText|innerHTML)\b/.test(l)) bulunan.push(d + '/' + f + ':' + (i + 1));
+        });
+      }
+    }
+    expect(bulunan).toEqual([]);
+  });
+
+  test('sahil testi Crr\'si ekrandaki Türkçe yazıdan değil kendi niteliğinden aktarılır', () => {
+    const stubs = stubGlobals();
+    eval(loadSource('component-extras.js'));
+    global.nodes = [{ id: 'cd1', type: 'coast-down', data: {} }];
+    document.body.innerHTML = '<span id="cdw-crr-mean"></span><input id="cdw-cd-input" value="">';
+    const el = document.getElementById('cdw-crr-mean');
+    el.textContent = veSayi(0.0065, 5);                 // "0,00650" — parseFloat'ta 0
+    el.setAttribute('data-deger', (0.0065).toFixed(5)); // makine: hesaplayıcının yazdığı
+    cdwApplyResults('cd1');
+    expect(global.nodes[0].data.crr).toBe(0.0065);
+    // Sıfırlanan özet eski değeri taşımaz: aktarılacak bir şey yok.
+    cdwResetSummaries();
+    global.nodes[0].data = {};
+    cdwApplyResults('cd1');
+    expect(global.nodes[0].data.crr).toBeUndefined();
+    resetStubs(stubs);
   });
 });
 

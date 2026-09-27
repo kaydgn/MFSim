@@ -177,7 +177,7 @@ function _fw3bAgKur(){
     }
     var il = document.getElementById('ve-fw-3b-ilerleme');
     if(q.i < geo.length){
-      if(il) il.textContent = 'Yüzler hazırlanıyor… ' + q.yuz.toLocaleString('tr-TR') + ' / ' + q.toplam.toLocaleString('tr-TR');
+      if(il) il.textContent = 'Yüzler hazırlanıyor… ' + veSayi(q.yuz, 0) + ' / ' + veSayi(q.toplam, 0);
       V.kuyrukZaman = setTimeout(adim, 0);
       return;
     }

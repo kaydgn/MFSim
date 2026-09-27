@@ -630,8 +630,8 @@ function veShowRaporModal() {
       '<div id="ve-rapor-zaman-wrap" style="margin-bottom:12px; display:none;">' +
         '<label style="color:var(--text-muted); font-size:var(--fs-body); display:block; margin-bottom:3px;">Zaman adımı (motor freni CSV):</label>' +
         '<select id="ve-rapor-zaman-adimi" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
-          '<option value="0.5" selected>0.5 saniye</option>' +
-          '<option value="1.0">1.0 saniye</option>' +
+          '<option value="0.5" selected>0,5 saniye</option>' +
+          '<option value="1.0">1,0 saniye</option>' +
         '</select>' +
       '</div>' +
       '<div style="margin-bottom:14px;">' +

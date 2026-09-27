@@ -197,8 +197,9 @@ test.describe('FEAD kanvas rozetleri', () => {
           // düzenlemesinden sonra o div yüzen DENETİM ÇUBUĞU oldu ve L
           // sessizce `null` döndü (main'de de kırmızıydı, 2026-09-23 ölçüldü).
           const r = document.querySelector('.ve-fead-kan-durum');
-          const m = r && (r.getAttribute('title') || '').match(/L\s+([\d.]+)\s*mm/);
-          return m ? Number(m[1]) : null;
+          // Türkçe sayı (karar 7·C): "L 1.716,2 mm" — nokta binlik, virgül ondalık.
+          const m = r && (r.getAttribute('title') || '').match(/L\s+([\d.,]+)\s*mm/);
+          return m ? Number(m[1].replace(/\./g, '').replace(',', '.')) : null;
         })(),
       }));
 

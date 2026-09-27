@@ -420,7 +420,7 @@ function getPropshaftPropertiesHTML(node) {
   var roStyle = 'width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:default;';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Oran [-]</th>';
-  html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" value="' + psRatio.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+  html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" value="' + psRatio.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';   // makine: sayı alanının değeri
   html += '</tr>';
   
   // Verim
@@ -513,7 +513,7 @@ function getDifferentialPropertiesHTML(node) {
   html += '</tr>';
   
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Son tahrik oranı. Askeri araçlarda tipik değer: 4.5–8.0 arası.</td>';
+  html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Son tahrik oranı. Askeri araçlarda tipik değer: 4,5–8,0 arası.</td>';
   html += '</tr>';
   
   // Verim

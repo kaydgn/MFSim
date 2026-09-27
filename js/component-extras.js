@@ -508,7 +508,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   // Dingil mesafesi otomatik hesap
   var a1Val = parseFloat(a1);
   var a2Val = parseFloat(a2);
-  var wheelbaseStr = (!isNaN(a1Val) && !isNaN(a2Val) && a1Val > 0 && a2Val > 0) ? (a1Val + a2Val).toFixed(3) : '—';
+  var wheelbaseStr = (!isNaN(a1Val) && !isNaN(a2Val) && a1Val > 0 && a2Val > 0) ? veSayi(a1Val + a2Val, 3) : '—';
 
   // Şanzıman vitesleri
   var ftGears = gd.ftGearData || (typeof VE_FT_GB_DEFAULT_GEARS !== 'undefined' ? VE_FT_GB_DEFAULT_GEARS : []);
@@ -526,7 +526,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   // Araç ağırlığı (otomatik)
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Araç ağırlığı <span style="color:var(--text-muted); font-weight:400;">[kg]</span></th>';
-  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;">' + autoMass + ' <span style="font-size:var(--fs-micro); color:var(--text-muted); font-weight:400;">( Araç )</span></td>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;">' + veSayi(autoMass) + ' <span style="font-size:var(--fs-micro); color:var(--text-muted); font-weight:400;">( Araç )</span></td>';
   html += '</tr>';
 
   // a₁ — ağırlık merkezi-ön aks mesafesi
@@ -576,7 +576,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   // Yuvarlanma Yarıçapı (otomatik)
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yuvarlanma yarıçapı <span style="color:var(--text-muted); font-weight:400;">[m]</span></th>';
-  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;">' + autoTireRadius + ' <span style="font-size:var(--fs-micro); color:var(--text-muted); font-weight:400;">( Lastik )</span></td>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;">' + veSayi(autoTireRadius) + ' <span style="font-size:var(--fs-micro); color:var(--text-muted); font-weight:400;">( Lastik )</span></td>';
   html += '</tr>';
 
   // Yüklü Lastik Yarıçapı (kullanıcı girer)
@@ -606,7 +606,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><select id="ve-obs-gear-' + nid + '" onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   if(ftGears.length > 0) {
     ftGears.forEach(function(g, idx) {
-      html += '<option value="' + idx + '"' + (idx === selectedGearIdx ? ' selected' : '') + '>' + g.name + ' (i=' + g.ratio + ')</option>';
+      html += '<option value="' + idx + '"' + (idx === selectedGearIdx ? ' selected' : '') + '>' + g.name + ' (i=' + veSayi(g.ratio) + ')</option>';
     });
   } else {
     html += '<option value="0">Şanzıman bileşeni bulunamadı</option>';
@@ -617,7 +617,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   // Vites oranı (otomatik)
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Vites oranı <span style="color:var(--text-muted); font-weight:400;">i<sub>g</sub></span></th>';
-  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;"><span id="ve-obs-gear-ratio-' + nid + '">' + selectedGearRatio + '</span> <span style="font-size:var(--fs-micro); color:var(--text-muted); font-weight:400;">( Şanzıman )</span></td>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;"><span id="ve-obs-gear-ratio-' + nid + '">' + veSayi(selectedGearRatio) + '</span> <span style="font-size:var(--fs-micro); color:var(--text-muted); font-weight:400;">( Şanzıman )</span></td>';
   html += '</tr>';
 
   // Şanzıman çıkış tork limiti (kullanıcı girer)
@@ -664,7 +664,7 @@ function onVEObstacleCrossingChange(nodeId) {
   if(wbEl) {
     var a1v = parseFloat(a1El ? a1El.value : '');
     var a2v = parseFloat(a2El ? a2El.value : '');
-    wbEl.textContent = (!isNaN(a1v) && !isNaN(a2v) && a1v > 0 && a2v > 0) ? (a1v + a2v).toFixed(3) : '—';
+    wbEl.textContent = (!isNaN(a1v) && !isNaN(a2v) && a1v > 0 && a2v > 0) ? veSayi(a1v + a2v, 3) : '—';
   }
 
   // Engel yüksekliği
@@ -699,7 +699,7 @@ function onVEObstacleCrossingChange(nodeId) {
     var ftGears = gd.ftGearData || (typeof VE_FT_GB_DEFAULT_GEARS !== 'undefined' ? VE_FT_GB_DEFAULT_GEARS : []);
     var ratioEl = elFn('ve-obs-gear-ratio-' + nodeId);
     if(ratioEl && ftGears.length > 0 && node.data.selectedGearIdx < ftGears.length) {
-      ratioEl.textContent = ftGears[node.data.selectedGearIdx].ratio;
+      ratioEl.textContent = veSayi(ftGears[node.data.selectedGearIdx].ratio);
     }
   }
 
@@ -852,7 +852,7 @@ function veOpenCoastDownWizard(nodeId) {
   // Footer
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex; align-items:center; gap:10px; padding:6px 16px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:var(--fs-body); color:var(--text-muted);';
-  footer.innerHTML = '<span>g = 9.81 m/s² sabit</span><span style="opacity:0.3;">│</span><span>Coast-Down Crr & Cd analizi</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
+  footer.innerHTML = '<span>g = 9,81 m/s² sabit</span><span style="opacity:0.3;">│</span><span>Coast-Down Crr & Cd analizi</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
   modal.appendChild(footer);
 
   overlay.appendChild(modal);
@@ -913,7 +913,7 @@ function cdwClearRows() {
 
 function cdwResetSummaries() {
   var ids = ['cdw-crr-mean','cdw-crr-std','cdw-crr-minmax','cdw-crr-rms','cdw-crr-r2','cdw-used-cd'];
-  ids.forEach(function(id) { var el = document.getElementById(id); if(el) el.textContent = '—'; });
+  ids.forEach(function(id) { var el = document.getElementById(id); if(el) { el.textContent = '—'; el.removeAttribute('data-deger'); } });
   var countIds = ['cdw-crr-count'];
   countIds.forEach(function(id) { var el = document.getElementById(id); if(el) el.textContent = '0'; });
   var hintEl = document.getElementById('cdw-crr-hint'); if(hintEl) hintEl.textContent = 'Crr hesaplanmadı.';
@@ -988,9 +988,9 @@ function cdwComputeCrr() {
     var grade = (isFinite(z1) && isFinite(z2)) ? (z2 - z1) / dx : 0;
 
     // Ara değerleri tabloya yaz
-    var vavgEl = row.querySelector('.cdw-vavg'); if(vavgEl) vavgEl.textContent = vavg_kmh.toFixed(2);
-    var accEl = row.querySelector('.cdw-acc'); if(accEl) accEl.textContent = a.toFixed(4);
-    var gradeEl = row.querySelector('.cdw-grade'); if(gradeEl) gradeEl.textContent = (grade * 100).toFixed(3);
+    var vavgEl = row.querySelector('.cdw-vavg'); if(vavgEl) vavgEl.textContent = veSayi(vavg_kmh, 2);
+    var accEl = row.querySelector('.cdw-acc'); if(accEl) accEl.textContent = veSayi(a, 4);
+    var gradeEl = row.querySelector('.cdw-grade'); if(gradeEl) gradeEl.textContent = veSayi(grade * 100, 3);
 
     // Crr hesapla: aero düzeltmeli
     var aeroTerm = k * cdCFD * vavg_ms * vavg_ms / g;
@@ -1001,7 +1001,7 @@ function cdwComputeCrr() {
       aObsArr.push(a);
       gradeArr.push(grade);
       vavgArr.push(vavg_ms);
-      var crrEl = row.querySelector('.cdw-crr'); if(crrEl) crrEl.textContent = crr.toFixed(5);
+      var crrEl = row.querySelector('.cdw-crr'); if(crrEl) crrEl.textContent = veSayi(crr, 5);
     }
   });
 
@@ -1012,11 +1012,15 @@ function cdwComputeCrr() {
     var crrMin = Math.min.apply(null, crrValues);
     var crrMax = Math.max.apply(null, crrValues);
 
-    document.getElementById('cdw-crr-mean').textContent = crrMean.toFixed(5);
-    document.getElementById('cdw-crr-std').textContent = crrStd_.toFixed(5);
-    document.getElementById('cdw-crr-minmax').textContent = crrMin.toFixed(5) + ' / ' + crrMax.toFixed(5);
+    // Aktarılan değer YAZIDAN okunmaz (Türkçe yazı "0,00650" parseFloat'ta 0
+    // olurdu): makine biçimi kendi niteliğinde, ekrandakiyle aynı yuvarlamada.
+    var ortEl = document.getElementById('cdw-crr-mean');
+    ortEl.textContent = veSayi(crrMean, 5);
+    ortEl.setAttribute('data-deger', crrMean.toFixed(5));   // makine: aktarılacak değer
+    document.getElementById('cdw-crr-std').textContent = veSayi(crrStd_, 5);
+    document.getElementById('cdw-crr-minmax').textContent = veSayi(crrMin, 5) + ' / ' + veSayi(crrMax, 5);
     document.getElementById('cdw-crr-count').textContent = String(crrValues.length);
-    document.getElementById('cdw-used-cd').textContent = cdCFD.toFixed(4);
+    document.getElementById('cdw-used-cd').textContent = veSayi(cdCFD, 4);
 
     // R² ve RMS: gözlenen ivme vs model ivmesi üzerinden
     // a_model_i = -g·Crr_mean - g·grade_i - k·Cd·vavg_i²
@@ -1031,10 +1035,10 @@ function cdwComputeCrr() {
     var rms = Math.sqrt(ssRes / n);
     var r2 = (ssTot > 0) ? (1 - ssRes / ssTot) : 0;
 
-    document.getElementById('cdw-crr-rms').textContent = rms.toFixed(6);
-    document.getElementById('cdw-crr-r2').textContent = r2.toFixed(5);
+    document.getElementById('cdw-crr-rms').textContent = veSayi(rms, 6);
+    document.getElementById('cdw-crr-r2').textContent = veSayi(r2, 5);
 
-    document.getElementById('cdw-crr-hint').textContent = 'Crr hesaplandı. CFD Cd=' + cdCFD.toFixed(4) + ' ile aero düzeltme uygulandı. ' + crrValues.length + ' satır, R²=' + r2.toFixed(4);
+    document.getElementById('cdw-crr-hint').textContent = 'Crr hesaplandı. CFD Cd=' + veSayi(cdCFD, 4) + ' ile aero düzeltme uygulandı. ' + crrValues.length + ' satır, R²=' + veSayi(r2, 4);
   } else {
     document.getElementById('cdw-crr-hint').textContent = 'Geçerli veri bulunamadı.';
   }
@@ -1086,7 +1090,8 @@ function cdwApplyResults(nodeId) {
   if(!node) return;
   if(!node.data) node.data = {};
 
-  var meanCrr = parseFloat((document.getElementById('cdw-crr-mean') || {}).textContent);
+  var ortEl = document.getElementById('cdw-crr-mean');
+  var meanCrr = parseFloat(ortEl ? ortEl.getAttribute('data-deger') : NaN);
 
   if(!isFinite(meanCrr)) {
     showToast('Aktarılacak Crr değeri bulunamadı. Önce hesaplama yapın.', 'warning');
@@ -1094,13 +1099,13 @@ function cdwApplyResults(nodeId) {
   }
 
   // Crr → Coast-Down bileşenine aktar
-  node.data.crr = parseFloat(meanCrr.toFixed(5));
+  node.data.crr = parseFloat(meanCrr.toFixed(5));   // makine: yuvarlama
   node.data.cdMethod = 'test';
 
   var crrEl = document.getElementById('ve-cd-crr-' + nodeId);
-  if(crrEl) crrEl.value = meanCrr.toFixed(5);
+  if(crrEl) crrEl.value = meanCrr.toFixed(5);   // makine: sayı alanının değeri
   var resultEl = document.getElementById('ve-cd-result-' + nodeId);
-  if(resultEl) resultEl.textContent = meanCrr.toFixed(5);
+  if(resultEl) resultEl.textContent = veSayi(meanCrr, 5);
 
   // CFD Cd → Vehicle bileşenine otomatik aktar
   var cdCFD = parseFloat(document.getElementById('cdw-cd-input').value);
@@ -1115,8 +1120,8 @@ function cdwApplyResults(nodeId) {
     if(vCdEl) vCdEl.value = cdCFD;
   }
 
-  var msg = 'Crr = ' + meanCrr.toFixed(5) + ' aktarıldı';
-  if(cdTransferred) msg += ' · Cd = ' + cdCFD.toFixed(4) + ' → Araç bileşenine aktarıldı';
+  var msg = 'Crr = ' + veSayi(meanCrr, 5) + ' aktarıldı';
+  if(cdTransferred) msg += ' · Cd = ' + veSayi(cdCFD, 4) + ' → Araç bileşenine aktarıldı';
   showToast(msg, 'success');
   veCloseCoastDownWizard();
 }
@@ -1355,7 +1360,7 @@ function getWheelPropertiesHTML(node) {
     var ftTireInertia = nodeData.ftTireInertia !== undefined ? nodeData.ftTireInertia : 56.0;
     var ftCrr = nodeData.ftCrr !== undefined ? nodeData.ftCrr : 0.0035;
     var ftSurfaceFactor = nodeData.ftSurfaceFactor !== undefined ? nodeData.ftSurfaceFactor : 1.00;
-    var revPerKm = ftTireRadius > 0 ? (1000 / (2 * Math.PI * ftTireRadius)).toFixed(1) : '—';
+    var revPerKm = ftTireRadius > 0 ? (1000 / (2 * Math.PI * ftTireRadius)).toFixed(1) : '—';   // makine: sayı alanının değeri
     
     var html = '<div class="sw-panel">';
 
@@ -1572,7 +1577,7 @@ function onVEFTWheelParamChange(nodeId) {
   // rev/km güncelle
   var r = node.data.ftTireRadius;
   var revKmEl = document.getElementById('ve-ftwh-revkm-' + nodeId);
-  if(revKmEl && r > 0) revKmEl.value = (1000 / (2 * Math.PI * r)).toFixed(1);
+  if(revKmEl && r > 0) revKmEl.value = (1000 / (2 * Math.PI * r)).toFixed(1);   // makine: sayı alanının değeri
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1620,7 +1625,7 @@ function veBuildTirePresetOptions(selectedId) {
     html += '<optgroup label="' + grp + ' Jant (' + tires.length + ')">';
     tires.forEach(function(t) {
       var sel = (t.id === selectedId) ? ' selected' : '';
-      html += '<option value="' + t.id + '"' + sel + '>' + t.name + ' — r=' + t.radius + 'm, I=' + t.inertia + 'kg·m²</option>';
+      html += '<option value="' + t.id + '"' + sel + '>' + t.name + ' — r=' + veSayi(t.radius) + ' m, I=' + veSayi(t.inertia) + ' kg·m²</option>';
     });
     html += '</optgroup>';
   });
@@ -1655,9 +1660,9 @@ function onVEFTTirePresetChange(nodeId, value) {
   if(nameEl) nameEl.value = preset.name;
   if(radiusEl) radiusEl.value = preset.radius;
   if(inertiaEl) inertiaEl.value = totalInertia;
-  if(revKmEl && preset.radius > 0) revKmEl.value = (1000 / (2 * Math.PI * preset.radius)).toFixed(1);
+  if(revKmEl && preset.radius > 0) revKmEl.value = (1000 / (2 * Math.PI * preset.radius)).toFixed(1);   // makine: sayı alanının değeri
   
-  showToast('Lastik yüklendi: ' + preset.name + ' (r=' + preset.radius + 'm, I=' + preset.inertia + '×' + (wheelCount||4) + '=' + totalInertia.toFixed(1) + ' kg·m²)', 'success');
+  showToast('Lastik yüklendi: ' + preset.name + ' (r=' + veSayi(preset.radius) + ' m, I=' + veSayi(preset.inertia) + '×' + (wheelCount||4) + '=' + veSayi(totalInertia, 1) + ' kg·m²)', 'success');
 }
 
 // Motor Freni — Lastik preset değişimi
@@ -1686,7 +1691,7 @@ function onVETirePresetChange(nodeId, value) {
     });
   }
   
-  showToast('Lastik yüklendi: ' + preset.name + ' (r=' + preset.radius + 'm)', 'success');
+  showToast('Lastik yüklendi: ' + preset.name + ' (r=' + veSayi(preset.radius) + ' m)', 'success');
 }
 
 // Araç özellikleri - Klasik arayüzdeki tüm parametreler
@@ -1757,7 +1762,7 @@ function getVehiclePropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Alın alanı (A) <span style="color:var(--text-muted); font-weight:400;">[m²]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-area-' + node.id + '" value="' + ftA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-area-' + node.id + '" value="' + ftA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';   // makine: sayı alanının değeri
     html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -1767,7 +1772,7 @@ function getVehiclePropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">CdA <span style="color:var(--text-muted); font-weight:400;">[m²]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-cda-' + node.id + '" value="' + ftCdA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftv-cda-' + node.id + '" value="' + ftCdA.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';   // makine: sayı alanının değeri
     html += '</tr>';
     
     html += '<tr>';
@@ -1846,7 +1851,7 @@ function getVehiclePropertiesHTML(node) {
   var calcEff = veCalcTotalDriveEfficiency();
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Aktarma organları toplam verimi [%]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-eff-' + node.id + '" value="' + calcEff.toFixed(1) + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed; font-weight:600;"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-eff-' + node.id + '" value="' + calcEff.toFixed(1) + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed; font-weight:600;"></td>';   // makine: sayı alanının değeri
   html += '</tr>';
   html += '<tr>';
   html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman, transfer kutusu ve diferansiyelin toplam mekanik verimi. Her bileşenin kendi veriminden otomatik hesaplanır. Tipik değer: %92–95 arası.</td>';
@@ -1930,8 +1935,8 @@ function onVEFTVehicleParamChange(nodeId) {
   var w = node.data.ftWidth !== undefined ? node.data.ftWidth : 2.500;
   var cd = node.data.ftCd !== undefined ? node.data.ftCd : 0.900;
   var A = h * w;
-  if(g('area')) g('area').value = A.toFixed(3);
-  if(g('cda')) g('cda').value = (cd * A).toFixed(3);
+  if(g('area')) g('area').value = A.toFixed(3);   // makine: sayı alanının değeri
+  if(g('cda')) g('cda').value = (cd * A).toFixed(3);   // makine: sayı alanının değeri
 
   // Çözümü etkileyen bir aero/kütle parametresi GERÇEKTEN değiştiyse, önceki
   // simülasyon sonucu ve raporun okuduğu reportSnapshot artık bayat. Kullanıcı
@@ -2102,7 +2107,7 @@ function _veManualSegTableHTML(nodeId, segs) {
     html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="text" inputmode="decimal" value="' + (s.distance || 0) + '" data-idx="' + i + '" data-field="distance" step="50" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:var(--fs-micro); background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:var(--radius-sm); text-align:right; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
     // Δh (hesaplanan, sadece okunur)
     var deltaH = _veManualSegCalcDH(s);
-    html += '<td style="padding:2px 3px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + deltaH.toFixed(1) + '</td>';
+    html += '<td style="padding:2px 3px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + veSayi(deltaH, 1) + '</td>';
     // Sil
     html += '<td style="padding:1px 1px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-tiny); font-weight:700;">' + veIkon('x') + '</button></td>';
     html += '</tr>';
@@ -2216,8 +2221,8 @@ function _veManualSegRefresh(nodeId) {
   var distEl = document.getElementById('ve-road-mseg-totdist-' + nodeId);
   var dhEl = document.getElementById('ve-road-mseg-totdh-' + nodeId);
   var cntEl = document.getElementById('ve-road-mseg-count-' + nodeId);
-  if(distEl) distEl.textContent = totDist >= 1000 ? (totDist / 1000).toFixed(2) + ' km' : totDist.toFixed(0) + ' m';
-  if(dhEl) dhEl.textContent = totDH.toFixed(1) + ' m';
+  if(distEl) distEl.textContent = totDist >= 1000 ? veSayi(totDist / 1000, 2) + ' km' : veSayi(totDist, 0) + ' m';
+  if(dhEl) dhEl.textContent = veSayi(totDH, 1) + ' m';
   if(cntEl) cntEl.textContent = segs.length + ' adet';
 
   // Profil diyagramını çiz
@@ -2475,7 +2480,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
   ctx.font = veThemeFont('micro');
   ctx.textAlign = 'right';
   bolY.degerler.forEach(function(v) {
-    ctx.fillText(v.toFixed(bolY.basamak) + ' m', pad.l - 3, toY(v) + 3);
+    ctx.fillText(veSayi(v, bolY.basamak) + ' m', pad.l - 3, toY(v) + 3);
   });
 
   // X ekseni etiketleri (mesafe) — görünen aralığı izler, bölmeler YUVARLAK
@@ -2487,7 +2492,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
   var km = xHi >= 1000;
   var kmBasamak = veAxisDecimals(bolD.adim / 1000);
   bolD.degerler.forEach(function(dVal) {
-    var label = km ? (dVal / 1000).toFixed(kmBasamak) + ' km' : dVal.toFixed(bolD.basamak) + ' m';
+    var label = km ? veSayi(dVal / 1000, kmBasamak) + ' km' : veSayi(dVal, bolD.basamak) + ' m';
     var yarim = ctx.measureText(label).width / 2;
     ctx.fillText(label, Math.max(yarim + 1, Math.min(toX(dVal), W - yarim - 1)), H - 4);
   });
@@ -2513,9 +2518,9 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
           if(d >= acc && d <= acc + sd) { seg = segs[q]; break; }
           acc += sd;
         }
-        var dLbl = d >= 1000 ? (d / 1000).toFixed(2) + ' km' : d.toFixed(0) + ' m';
+        var dLbl = d >= 1000 ? veSayi(d / 1000, 2) + ' km' : veSayi(d, 0) + ' m';
         var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + dLbl + '</div>';
-        h += '<div style="padding:1px 0;">İrtifa: <b>' + elev.toFixed(1) + ' m</b></div>';
+        h += '<div style="padding:1px 0;">İrtifa: <b>' + veSayi(elev, 1) + ' m</b></div>';
         if(seg) {
           var dirTxt = seg.direction === 'down' ? 'İniş' : seg.direction === 'up' ? 'Çıkış' : 'Düz';
           var dirCol = seg.direction === 'down' ? '#22c55e' : seg.direction === 'up' ? '#ef4444' : '#3b82f6';

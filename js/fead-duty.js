@@ -186,7 +186,7 @@ function veFeadDutyLabel(rec){
   var n = rec.rpm ? rec.rpm.length : 0;
   if(!n) return String(ad);
   return ad + '  ·  ' + n + ' nokta · '
-       + rec.rpm[0] + '–' + rec.rpm[n - 1] + ' RPM';
+       + veSayi(rec.rpm[0]) + '–' + veSayi(rec.rpm[n - 1]) + ' RPM';
 }
 
 // Kayıt → duty satırları. Satır biçimi hem çözücü düğümünün (`node.data.duty`)

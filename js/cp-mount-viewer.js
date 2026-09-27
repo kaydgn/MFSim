@@ -317,7 +317,7 @@ function _mntW(x,y,z){ return new THREE.Vector3(x, z, y); }
 
 // Hover tooltip için basit kaçış + sayısal biçim.
 function _mntViewerEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function _mntViewerN(v,d){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n.toFixed(d===undefined?1:d):'—'; }
+function _mntViewerN(v,d){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?veSayi(n, d===undefined?1:d):'—'; }
 
 // Kütle → CG işaret yarıçapı (A26 getCGMarkerRadiusFromMass portu)
 function _mntCGRadius(mass, ms){
@@ -386,7 +386,7 @@ function veMountViewerUpdate(){
     var kInfo='';
     if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:var(--text-muted);">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
     box.userData={ info:'<b style="color:var(--accent-success);">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
-      +'<br><span style="color:var(--text-muted);">Konum (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1)+kInfo };
+      +'<br><span style="color:var(--text-muted);">Konum (mm):</span> '+veSayi(x, 1)+' · '+veSayi(y, 1)+' · '+veSayi(z, 1)+kInfo };
     V.group.add(box);
     if(hasCG){
       var g=new THREE.BufferGeometry().setFromPoints([_mntW(cg[0],cg[1],cg[2]), _mntW(x,y,z)]);
@@ -405,8 +405,8 @@ function veMountViewerUpdate(){
       _mntViewerMarkerMat('--accent-warning', '#f59e0b', 20));
     s.position.copy(_mntW(x,y,z));
     s.userData={ info:'<b style="color:var(--accent-warning);">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
-      +'<br><span style="color:var(--text-muted);">Kütle:</span> '+(m>0?m.toFixed(1)+' kg':'—')
-      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1) };
+      +'<br><span style="color:var(--text-muted);">Kütle:</span> '+(m>0?veSayi(m, 1)+' kg':'—')
+      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+veSayi(x, 1)+' · '+veSayi(y, 1)+' · '+veSayi(z, 1) };
     V.group.add(s);
   });
 
@@ -416,8 +416,8 @@ function veMountViewerUpdate(){
       _mntViewerMarkerMat('--accent-danger', '#ef4444', 80));
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
     cgm.userData={ info:'<b style="color:var(--accent-danger);">Birleşik ağırlık merkezi</b>'
-      +'<br><span style="color:var(--text-muted);">Toplam kütle:</span> '+mSum.toFixed(1)+' kg'
-      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+cg[0].toFixed(1)+' · '+cg[1].toFixed(1)+' · '+cg[2].toFixed(1) };
+      +'<br><span style="color:var(--text-muted);">Toplam kütle:</span> '+veSayi(mSum, 1)+' kg'
+      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+veSayi(cg[0], 1)+' · '+veSayi(cg[1], 1)+' · '+veSayi(cg[2], 1) };
     V.group.add(cgm);
     // Kamera hedefini birleşik CG'ye getir (ilk kurulumda)
     if(!V._framed){ V.ctrl.target.copy(_mntW(cg[0],cg[1],cg[2])); _mntViewerUpdateCamera(); V._framed=true; }
