@@ -292,7 +292,7 @@ var veMntSignals = (function() {
       x.push(a);
       var rc = null;
       try {
-        rc = solveOne({ name: def.key + '@' + a.toFixed(3), n: def.vec(a), T: [0, 0, 0] });
+        rc = solveOne({ name: def.key + '@' + a.toFixed(3), n: def.vec(a), T: [0, 0, 0] });   // makine: çözücünün iç durum adı
       } catch(e) { rc = null; }
       var res = (rc && rc.res) ? rc.res : null;
       var pm = (res && res.perMount) ? res.perMount : null;
@@ -348,7 +348,7 @@ var veMntSignals = (function() {
   // hangi mertebenin ateşleme olduğu BİLİNEMEZ ve o etiket hiç yazılmaz.
   function _nTr(v, dec) {
     if(!isFinite(v)) return '—';
-    return v.toFixed(dec == null ? 2 : dec).replace('.', ',');
+    return veSayi(v, dec == null ? 2 : dec);   // Türkçe yazım (karar 7·C)
   }
 
   function _engineSpec(R) {

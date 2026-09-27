@@ -25,11 +25,12 @@
 var veFeadBrief = (function() {
   'use strict';
 
-  // Türkçe ondalık ayracı, binlik ayraç YOK — Takoz'un yorumuyla aynı biçim
-  // ("1381 N", "2750 d/dk"); iki modülün şeritleri yan yana aynı dili konuşsun.
+  // Türkçe yazım (karar 7·C, js/sayi.js): ondalık virgül, binlik nokta —
+  // Takoz'un yorumuyla aynı biçim ("1.381 N", "2.750 d/dk"); iki modülün
+  // şeritleri ve grafik çekirdeği yan yana aynı dili konuşsun.
   function n(v, dec) {
     if(!isFinite(v)) return '—';
-    return (v < 0 ? '−' : '') + Math.abs(v).toFixed(dec == null ? 1 : dec).replace('.', ',');
+    return veSayi(v, dec == null ? 1 : dec, { eksi: '−' });
   }
   function _chan(ds, id) {
     for(var i = 0; i < ds.channels.length; i++) if(ds.channels[i].id === id) return ds.channels[i];

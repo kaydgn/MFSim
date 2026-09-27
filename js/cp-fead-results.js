@@ -28,9 +28,10 @@ function _feadResEsc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+// Türkçe yazım (karar 7·C, js/sayi.js): ondalık virgül, binlik nokta.
 function _feadResN(v, dec) {
   if(!(typeof v === 'number' && isFinite(v))) return '—';
-  return (v < 0 ? '−' : '') + Math.abs(v).toFixed(dec == null ? 1 : dec).replace('.', ',');
+  return veSayi(v, dec == null ? 1 : dec, { eksi: '−' });
 }
 function _feadResSets() {
   var R = _feadResR();
@@ -411,7 +412,7 @@ function veFeadResSummaryHTML(R) {
         var c = [String(k + 1), _feadResN(m.fHz, 1), bi >= 0 ? '<b>' + _feadResEsc(dofAd[bi]) + '</b>' : '—'];
         amps.forEach(function(a) {
           var v = mx > 0 ? a / mx : 0;
-          c.push('<span class="ve-fr-bar' + (v < 0 ? ' neg' : '') + '" style="--fr-v:' + Math.abs(v).toFixed(3)
+          c.push('<span class="ve-fr-bar' + (v < 0 ? ' neg' : '') + '" style="--fr-v:' + Math.abs(v).toFixed(3)   // makine: CSS değişkeninin değeri
             + '" title="' + _feadResN(v, 2) + '"><i></i></span>');
         });
         return { c: c, cls: (m.fHz >= fLo && m.fHz <= fHi) ? 'is-warn' : '' };

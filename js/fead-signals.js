@@ -76,10 +76,12 @@ var veFeadSignals = (function() {
   function _loadedRatio() {
     return (typeof VE_FEAD_SLIP_LOADED_RATIO === 'number') ? VE_FEAD_SLIP_LOADED_RATIO : 1.01;
   }
-  // Sayı biçimi: Türkçe ondalık ayracı (kanal adında ve özet metninde).
+  // Sayı biçimi: Türkçe yazım (karar 7·C, js/sayi.js) — kanal ADINDA ve özet
+  // metninde. Kanal KİMLİĞİ sayıyı buradan geçirmez (_ordId): biçim değişse de
+  // kayıtlı panolar kanallarını bulur.
   function _tr(v, dec) {
     if(!isFinite(v)) return '—';
-    return (v < 0 ? '−' : '') + Math.abs(v).toFixed(dec == null ? 1 : dec).replace('.', ',');
+    return veSayi(v, dec == null ? 1 : dec, { eksi: '−' });
   }
 
   // Kayış tipine bağlı çıktılar açık mı — SONUCUN beyanından. Çözüm
