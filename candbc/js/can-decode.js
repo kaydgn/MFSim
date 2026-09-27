@@ -213,6 +213,30 @@ function cdbSigDecimals(sig) {
 // okunması gereken üç haneyi dışarı itiyor.
 var CDB_DISPLAY_DEC = 3;
 
+// ── SAYI YAZIMI (MFSim karar 7·C) ────────────────────────────────────────
+// Ekrana giden sayı Türkçe: ondalık VİRGÜL, binlik NOKTA — 1.716,2. MFSim'in
+// js/sayi.js'teki veSayi'siyle AYNI sonucu verir ama kodu PAYLAŞMAZ (bu
+// program js/'ten dosya almaz, README); aynılık tests/unit/can-sayi.test.js'te
+// ölçülür. Makine biçimi (CSV, örnek kayıt satırı) toFixed ile kalır.
+function cdbSayi(v, basamak) {
+  var n = (typeof v === 'number') ? v : (v === null || v === '' ? NaN : Number(v));
+  if (!isFinite(n)) return '—';
+  var s = (basamak == null) ? String(+n.toFixed(6)) : n.toFixed(basamak);   // makine: yazıcının kendisi
+  if (s.indexOf('e') >= 0) return cdbSayiUstel(n, 2);
+  var neg = s.charAt(0) === '-';
+  if (neg) s = s.slice(1);
+  if (neg && /^[0.]+$/.test(s)) neg = false;
+  var p = s.split('.');
+  var out = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (p.length > 1 ? ',' + p[1] : '');
+  return (neg ? '-' : '') + out;
+}
+
+function cdbSayiUstel(v, basamak) {
+  var n = Number(v);
+  if (!isFinite(n)) return '—';
+  return n.toExponential(basamak == null ? 2 : basamak).replace('.', ',');   // makine: yazıcının kendisi
+}
+
 // Sinyal değerinin okunur biçimi: VAL_ tablosu varsa METİN, yoksa çarpandan
 // türeyen ondalıkla sayı + birim. Kare listesi ve imleç rozeti AYNI
 // biçimlendiriciyi kullanır — ayrışırlarsa aynı sayı iki yerde iki türlü
@@ -220,8 +244,9 @@ var CDB_DISPLAY_DEC = 3;
 function cdbFmtSigVal(sig, v, withUnit) {
   var txt = cdbValueText(sig, v);
   if (txt !== null) return txt;
-  var s = v.toFixed(Math.min(cdbSigDecimals(sig), CDB_DISPLAY_DEC));
-  return (withUnit !== false && sig.unit) ? s + ' ' + sig.unit : s;
+  var s = cdbSayi(v, Math.min(cdbSigDecimals(sig), CDB_DISPLAY_DEC));
+  if (withUnit === false || !sig.unit) return s;
+  return sig.unit === '%' ? '%' + s : s + ' ' + sig.unit;   // yüzde önde (karar 7·C)
 }
 
 // Sinyal AYRIK mı? Ayrık sinyaller basamaklı çizilir: vites 3'ten 4'e geçerken
@@ -253,6 +278,8 @@ if (typeof module !== 'undefined' && module.exports) {
     cdbValueText: cdbValueText,
     cdbSigDecimals: cdbSigDecimals,
     cdbFmtSigVal: cdbFmtSigVal,
+    cdbSayi: cdbSayi,
+    cdbSayiUstel: cdbSayiUstel,
     cdbIsDiscrete: cdbIsDiscrete,
     cdbSigKey: cdbSigKey
   };

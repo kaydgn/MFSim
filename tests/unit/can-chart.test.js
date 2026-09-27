@@ -39,17 +39,18 @@ describe('cdbNiceStep — 1/2/5 × 10ⁿ ölçeği', () => {
 describe('cdbFmtNum / cdbFmtTime', () => {
   test('ondalık sayısı adımdan türer', () => {
     expect(chart.cdbFmtNum(12.345, 1)).toBe('12');
-    expect(chart.cdbFmtNum(12.345, 0.1)).toBe('12.3');
-    expect(chart.cdbFmtNum(12.345, 0.01)).toBe('12.35');
+    expect(chart.cdbFmtNum(12.345, 0.1)).toBe('12,3');   // Türkçe yazım (karar 7·C)
+    expect(chart.cdbFmtNum(12.345, 0.01)).toBe('12,35');
+    expect(chart.cdbFmtNum(12345, 1)).toBe('12.345');
   });
   test('çok büyük/küçük sayı üstel yazılır', () => {
     expect(chart.cdbFmtNum(1.2e7, 1)).toMatch(/e\+/);
     expect(chart.cdbFmtNum(0.0000012, 1e-7)).toMatch(/e-/);
   });
   test('zaman ekseni adıma göre saniye ya da milisaniye', () => {
-    expect(chart.cdbFmtTime(1.5, 1)).toBe('1.5 s');
-    expect(chart.cdbFmtTime(1.5, 0.01)).toBe('1.500 s');
-    expect(chart.cdbFmtTime(0.0015, 0.0001)).toBe('1.500 ms');
+    expect(chart.cdbFmtTime(1.5, 1)).toBe('1,5 s');
+    expect(chart.cdbFmtTime(1.5, 0.01)).toBe('1,500 s');
+    expect(chart.cdbFmtTime(0.0015, 0.0001)).toBe('1,500 ms');
   });
 });
 
@@ -93,17 +94,17 @@ describe('cdbSigDecimals — ondalık ÇARPANDAN türer', () => {
     const enumSig = { factor: 1, offset: 0, unit: '', valueType: 'int', values: { 2: 'Ikinci' } };
     expect(cdbFmtSigVal(enumSig, 2)).toBe('Ikinci');
     const rpm = { factor: 0.125, offset: 0, unit: 'rpm', valueType: 'int', values: null };
-    expect(cdbFmtSigVal(rpm, 1451.625)).toBe('1451.625 rpm');
-    expect(cdbFmtSigVal(rpm, 1451.625, false)).toBe('1451.625');
+    expect(cdbFmtSigVal(rpm, 1451.625)).toBe('1.451,625 rpm');
+    expect(cdbFmtSigVal(rpm, 1451.625, false)).toBe('1.451,625');
     expect(cdbFmtSigVal({ factor: 1, offset: 0, unit: '', valueType: 'int', values: null }, 0)).toBe('0');
   });
 
-  test('EKRANDA basamak üçle sınırlı — J1939 hızı "80.445313" diye yazılmaz', () => {
+  test('EKRANDA basamak üçle sınırlı — J1939 hızı "80,445313" diye yazılmaz', () => {
     // Çarpan 1/256; komşu ham değerler 0,0039 km/h arayla. Üçüncü ondalık
     // onları zaten ayırıyor, kalan üç hane yalnız rozeti şişiriyordu.
     const hiz = { factor: 0.00390625, offset: 0, unit: 'km/h', valueType: 'int', values: null };
     expect(cdbSigDecimals(hiz)).toBe(6);            // çarpanın gerçek ihtiyacı
-    expect(cdbFmtSigVal(hiz, 80.445313)).toBe('80.445 km/h');
+    expect(cdbFmtSigVal(hiz, 80.445313)).toBe('80,445 km/h');
   });
 });
 

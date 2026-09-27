@@ -30,8 +30,8 @@ function cdbToast(msg, kind) {
 
 function cdbBytesHuman(n) {
   if (n < 1024) return n + ' B';
-  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
-  return (n / 1024 / 1024).toFixed(1) + ' MB';
+  if (n < 1024 * 1024) return cdbSayi(n / 1024, 1) + ' KB';
+  return cdbSayi(n / 1024 / 1024, 1) + ' MB';
 }
 
 // Metin çözümü: DBC dosyaları sıklıkla Windows-1252/Latin-1'dir (Almanca ve
@@ -301,7 +301,7 @@ function cdbRenderFrames() {
     } else {
       dec = '<span class="cdb-dim">DBC\'de tanımsız</span>';
     }
-    h += '<tr><td class="num">' + st.t[fi].toFixed(6) + '</td>' +
+    h += '<tr><td class="num">' + cdbSayi(st.t[fi], 6) + '</td>' +
          '<td class="mono">' + cdbFmtId(st.id[fi], st.ext[fi] === 1) + '</td>' +
          '<td>' + cdbEsc(msg ? msg.name : '—') + '</td>' +
          '<td class="num">' + st.len[fi] + '</td>' +
@@ -318,7 +318,7 @@ function cdbRenderStats() {
   var keys = Object.keys(st.counts).sort(function(a, b) { return st.counts[b] - st.counts[a]; });
   var h = '<div class="cdb-alt-bar"><span class="cdb-alt-lbl">' + keys.length +
           ' ayrı kimlik · ' + cdbThousands(st.n) + ' kare · ' +
-          (st.t1 - st.t0).toFixed(3) + ' s</span></div>';
+          cdbSayi(st.t1 - st.t0, 3) + ' s</span></div>';
   h += '<table class="cdb-table"><thead><tr>' +
        '<th style="width:96px">Kimlik</th><th style="width:160px">Mesaj</th>' +
        '<th style="width:70px">Kare</th><th style="width:86px">Ort. periyot</th>' +
@@ -339,7 +339,7 @@ function cdbRenderStats() {
       if (d > hi) hi = d;
     }
     var avg = n ? sum / n : 0;
-    var ms = function(v) { return n ? (v * 1000).toFixed(1) + ' ms' : '—'; };
+    var ms = function(v) { return n ? cdbSayi(v * 1000, 1) + ' ms' : '—'; };
     var durum = msg ? (msg.signals.length + ' sinyal' + (msg.multiplexed ? ' · MUX' : '')) :
                       '<span class="cdb-warn">DBC\'de tanımsız</span>';
     if (msg && msg.cycleTime && n && Math.abs(avg * 1000 - msg.cycleTime) > msg.cycleTime * 0.25)
@@ -349,7 +349,7 @@ function cdbRenderStats() {
          '<td class="num">' + cdbThousands(idx.length) + '</td>' +
          '<td class="num">' + ms(avg) + '</td><td class="num">' + ms(lo === Infinity ? 0 : lo) + '</td>' +
          '<td class="num">' + ms(hi) + '</td>' +
-         '<td class="num">' + (msg && msg.cycleTime ? msg.cycleTime + ' ms' : '—') + '</td>' +
+         '<td class="num">' + (msg && msg.cycleTime ? cdbSayi(msg.cycleTime) + ' ms' : '—') + '</td>' +
          '<td>' + durum + '</td></tr>';
   }
   h += '</tbody></table>';
@@ -371,7 +371,7 @@ function cdbRenderDiag() {
       h += cdbKv('Çözülen kare', cdbThousands(st.n));
       h += cdbKv('Çözülemeyen satır', st.skipped ? '<span class="cdb-warn">' + cdbThousands(st.skipped) + '</span>' : '0');
       h += cdbKv('Zaman aralığı', st.noTime ? 'Kayıtta zaman damgası yok — kare sırası eksen olarak kullanıldı'
-                : st.t0.toFixed(6) + ' … ' + st.t1.toFixed(6) + ' s  (' + (st.t1 - st.t0).toFixed(3) + ' s)');
+                : cdbSayi(st.t0, 6) + ' … ' + cdbSayi(st.t1, 6) + ' s  (' + cdbSayi(st.t1 - st.t0, 3) + ' s)');
       h += cdbKv('Zaman artan sırada mı', st.timeMonotonic ? 'Evet' :
                 '<span class="cdb-warn">HAYIR — damgalar geriye atlıyor</span>');
       h += '</table>';
@@ -423,7 +423,7 @@ function cdbRenderDiag() {
     var tot = cdbState.store ? cdbState.store.n : 1;
     orphans.slice(0, 80).forEach(function(o) {
       h += '<tr><td class="mono">' + cdbEsc(o.label) + '</td><td class="num">' + cdbThousands(o.count) +
-           '</td><td class="num">%' + (o.count / tot * 100).toFixed(1) + '</td></tr>';
+           '</td><td class="num">%' + cdbSayi(o.count / tot * 100, 1) + '</td></tr>';
     });
     h += '</tbody></table></div>';
   }
@@ -444,14 +444,14 @@ function cdbUpdateStatus() {
            k + '</span><span class="ve-trace-st-v">' + v + '</span></span>';
   };
   var h = '';
-  h += g('Başlangıç', cdbChart.x0.toFixed(4) + ' s');
-  h += g('Bitiş', cdbChart.x1.toFixed(4) + ' s');
-  h += g('Genişlik', (cdbChart.x1 - cdbChart.x0).toFixed(4) + ' s');
-  if (cdbChart.cursorT !== null) h += g('İmleç', cdbChart.cursorT.toFixed(4) + ' s', 'cur');
+  h += g('Başlangıç', cdbSayi(cdbChart.x0, 4) + ' s');
+  h += g('Bitiş', cdbSayi(cdbChart.x1, 4) + ' s');
+  h += g('Genişlik', cdbSayi(cdbChart.x1 - cdbChart.x0, 4) + ' s');
+  if (cdbChart.cursorT !== null) h += g('İmleç', cdbSayi(cdbChart.cursorT, 4) + ' s', 'cur');
   if (cdbChart.pinT !== null) {
-    h += g('Sabit', cdbChart.pinT.toFixed(4) + ' s', 'pin');
+    h += g('Sabit', cdbSayi(cdbChart.pinT, 4) + ' s', 'pin');
     if (cdbChart.cursorT !== null)
-      h += g('Δt', (cdbChart.cursorT - cdbChart.pinT).toFixed(4) + ' s', 'pin');
+      h += g('Δt', cdbSayi(cdbChart.cursorT - cdbChart.pinT, 4) + ' s', 'pin');
   }
   h += '<span class="ve-trace-st-group right">';
   h += '<span class="ve-trace-st-k">Şerit</span><span class="ve-trace-st-v">' + cdbChart.lanes.length + '</span>';
@@ -504,8 +504,10 @@ function cdbExportCsv() {
         // CSV'de basamak SINIRLANMAZ: dosya okunmak için değil, başka bir
         // araçta işlenmek için üretiliyor. Ekrandaki üç basamak sınırı
         // (cdbFmtSigVal) burada bilgi kaybı olurdu.
-        rows.push(ser.t[i].toFixed(6) + ';' + meta.msg.name + ';' + meta.sig.name + ';' +
-                  ser.v[i].toFixed(cdbSigDecimals(meta.sig)).replace('.', ',') + ';' +
+        // Excel-TR biçimi: ayraç ';', ondalık ',' — zaman sütunu da değerinki gibi
+        // (noktalı zaman Türkçe Excel'de binlik ayracı okunur).
+        rows.push(ser.t[i].toFixed(6).replace('.', ',') + ';' + meta.msg.name + ';' + meta.sig.name + ';' +   // makine: CSV
+                  ser.v[i].toFixed(cdbSigDecimals(meta.sig)).replace('.', ',') + ';' +   // makine: CSV
                   (meta.sig.unit || '') + ';' + (txt || ''));
         n++;
       }

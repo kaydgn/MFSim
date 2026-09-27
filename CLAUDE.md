@@ -323,7 +323,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   TAMAMI — yeni dosya kendiliğinden girer; tek istisna dışarıdan gelen
   `fead-core.js`. `toFixed` taşımayan çıplak birleştirmeyi (`cd + ' kW'`)
   kaynak taraması görmez, ekran/belge/günlük taraması görür. CAN Çözümleyici
-  sırada.
+  `js/`'ten dosya almadığı için kendi yazıcısını taşır (`cdbSayi`); aynılık
+  `can-sayi.test.js`'te ölçülür.
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri
