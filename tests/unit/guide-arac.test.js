@@ -198,7 +198,7 @@ describe('§14 — CANLI koşu, elle yazılmış MFSim sayısı yok', () => {
     expect(t).toContain(RP._frFs(G.vmax[1.257], 1));
     expect(t).toContain(RP._frFs(G.vmax[2.337], 1));
     // ...ve sapma sütunu %1'in altında olmalı: kalibrasyon bandı bu.
-    const sapma = (t.match(/[+−-]\d+,\d+%/g) || [])
+    const sapma = (t.match(/%[+−-]\d+,\d+/g) || [])   // yüzde önde (karar 7·C)
       .map((s) => Math.abs(Number(s.replace('−', '-').replace(',', '.').replace('%', ''))));
     expect(sapma.length).toBeGreaterThanOrEqual(2);
     sapma.forEach((p) => expect(p).toBeLessThan(1));

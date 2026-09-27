@@ -17830,7 +17830,7 @@ function veImpHeaderHTML() {
   }
 
   var dataRows = Math.max(0, veImpUI.rows.length - veImpUI.layout.dataRow);
-  h += '<span class="ve-imp-badge">' + dataRows.toLocaleString('tr-TR') + ' satır</span>';
+  h += '<span class="ve-imp-badge">' + veSayi(dataRows, 0) + ' satır</span>';
   h += '<span class="ve-imp-badge">' + veImpUI.columns.length + ' sütun</span>';
   if(veImpUI.commaDecimal) h += '<span class="ve-imp-badge" title="Sayılar 1.234,56 biçiminde okunuyor">ondalık virgül</span>';
   h += '<button type="button" class="ve-imp-mini" onclick="veImpOpenPicker()">Başka dosya…</button>';
@@ -17838,7 +17838,7 @@ function veImpHeaderHTML() {
 
   if(veImpUI.truncated) {
     h += '<div class="ve-imp-warn">Dosya çok büyük: ilk ' +
-         VE_IMP_MAX_ROWS.toLocaleString('tr-TR') + ' satır alındı, gerisi okunmadı.</div>';
+         veSayi(VE_IMP_MAX_ROWS, 0) + ' satır alındı, gerisi okunmadı.</div>';
   }
   return h;
 }
@@ -17956,8 +17956,8 @@ function veImpColumnListHTML() {
 function veImpFmtNum(v) {
   if(v === null || v === undefined || !isFinite(v)) return '—';
   var a = Math.abs(v);
-  if(a !== 0 && (a < 0.001 || a >= 1e6)) return v.toExponential(2);
-  return String(Math.round(v * 1000) / 1000);
+  if(a !== 0 && (a < 0.001 || a >= 1e6)) return veSayiUstel(v, 2);
+  return veSayi(Math.round(v * 1000) / 1000);
 }
 
 // ── Etkileşim ─────────────────────────────────────────────────────────────

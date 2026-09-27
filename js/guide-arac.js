@@ -652,7 +652,7 @@ function _gaZamanAt(R, v){
 function _gaSapma(mf, ref){
   if(!Number.isFinite(mf) || !Number.isFinite(ref) || ref === 0) return '—';
   var p = (mf - ref) / ref * 100;
-  return (p >= 0 ? '+' : '') + _gaFs(p, 2) + '%';
+  return '%' + (p >= 0 ? '+' : '') + _gaFs(p, 2);
 }
 
 function _gaSec14(){

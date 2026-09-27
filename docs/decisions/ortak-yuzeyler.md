@@ -1840,3 +1840,22 @@ kopya ayrı tutuluyor.
 **Kapı.** `sayi-dili.test.js` → aşama 3c + `sayi-belge.spec.js` → AP testi
 günlüğü de tarıyor (dört yazım + kutu hizası, zaman damgası ayıklanarak; hız
 satırı sayı kalıyor). Eski yapıda 623 bulguyla düşüyor.
+
+### Aşama 3d — kalan kabuk ve ekrandaki sondaki yüzde (2026-09-27)
+
+**Hüküm.** Kaynak kapısı aşama listelerinden çıktı: `js/` ve `viewer/js/`'nin
+TAMAMI taranıyor, yeni dosya kendiliğinden giriyor. Tek istisna `fead-core.js`
+(dışarıdan geldi, birebir durur); istisnanın kendisi de ölçülüyor — çekirdek
+temizlenirse test istisnayı kaldırtır. Ekran taraması belge taramasının dört
+kuralını kullanıyor (sondaki yüzde ve boşluklu binlik eklendi).
+
+**Gerekçe.** Kalan 10 kabuk satırı (içe aktarma sihirbazının satır sayısı ve
+sütun aralığı — "0.123 … 45.6" `String()` ile noktalı —, KB/MB, yakınlaştırma
+etiketi, takoz öz-testi) ve ekranda 4 sondaki yüzde (eşleştirme lejantı
+"≥15% marj", FEAD çözücüsü "4,9%") → 0. Kaynakta bulunan üç sondaki yüzde daha:
+sihirbazın pay hücresi ve iki kılavuzun sapma sütunu ("+1,23%" → "%+1,23").
+Tarih (`toLocaleString('tr-TR')`) ve CSS değeri makine işaretiyle kalır.
+
+**Kapı.** `sayi-dili.test.js` → *"bütün ürün"* (mutasyonla ölçüldü: hiçbir
+aşama listesinde olmamış `settings.js`'e geri konan `toFixed` düşürüyor) +
+`sayi-pencere.spec.js` (dört kural; 3c yapısında 4 bulgu).

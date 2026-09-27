@@ -3657,7 +3657,7 @@ function _fwChecksCard(b){
   }
   function pay(v){
     var sinif = !Number.isFinite(v) ? 've-fw-ro' : (v < 0 ? 've-fw-err' : (v < 10 ? 've-fw-warn' : ''));
-    return '<span class="' + sinif + '">' + (Number.isFinite(v) ? _fwFmt(v, 1) + '%' : '—') + '</span>';
+    return '<span class="' + sinif + '">' + (Number.isFinite(v) ? '%' + _fwFmt(v, 1) : '—') + '</span>';
   }
   function tablo(bas, govde){
     return '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl"><thead><tr>' + bas

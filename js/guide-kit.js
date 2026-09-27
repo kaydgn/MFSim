@@ -876,7 +876,7 @@ function _gkDownload(html, k){
     document.body.appendChild(a); a.click();
     setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 400);
   }
-  _gkStatus('Kılavuz indirildi (' + Math.round(html.length / 1024) + ' KB).', 'success');
+  _gkStatus('Kılavuz indirildi (' + veSayi(html.length / 1024, 0) + ' KB).', 'success');
 }
 
 // Esc ile kapat — Klavye Kısayolları penceresinin kuralının aynısı.

@@ -319,9 +319,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   hücreyi uzatır: dolgu yetmezse sütun kayar — hizası ölçülür. Kapı:
   `sayi-dili.test.js` + `sayi-pencere.spec.js` (ekran) + `sayi-belge.spec.js`
   (belge, TeX, TXT hizası); ölçüt tek yerde, kendi testiyle:
-  `tests/helpers/sayi-olcu.js`. Kapsam aşama aşama büyür (bugün grafik
-  çekirdeği, Sonuçlar, bütün pencereler, üç modülün belgeleri ve çözücü
-  günlüğü; CAN ve kalan kabuk dosyaları sırada).
+  `tests/helpers/sayi-olcu.js`. Kaynak kapsamı `js/` ve `viewer/js/`'nin
+  TAMAMI — yeni dosya kendiliğinden girer; tek istisna dışarıdan gelen
+  `fead-core.js`. `toFixed` taşımayan çıplak birleştirmeyi (`cd + ' kW'`)
+  kaynak taraması görmez, ekran/belge/günlük taraması görür. CAN Çözümleyici
+  sırada.
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri

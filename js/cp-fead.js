@@ -7343,7 +7343,7 @@ function veFeadChecksCard(node, build){
     var renk = !Number.isFinite(p) ? 'var(--text-muted)'
              : p < 0  ? 'var(--ink-danger)'
              : p < 10 ? 'var(--ink-warning)' : 'var(--text-secondary)';
-    return '<span style="color:' + renk + ';">' + (Number.isFinite(p) ? _feadFmt(p, 1) + '%' : '—') + '</span>';
+    return '<span style="color:' + renk + ';">' + (Number.isFinite(p) ? '%' + _feadFmt(p, 1) : '—') + '</span>';
   }
 
   // 1 — merkez mesafesi

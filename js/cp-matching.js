@@ -951,7 +951,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + veSayi(powerAtGov, 0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
     h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + veSayi(torqueAtGov, 0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color);">';
-    h += '<span style="color:var(--accent-success);">Önerilen</span>: ≥15% marj | <span style="color:var(--accent-warning);">Dikkat</span>: 5-15% marj | <span style="color:#f97316;">Sıkı</span>: &lt;5% marj | <span style="color:var(--accent-danger);">Uyumsuz</span>: Limit aşılıyor';
+    h += '<span style="color:var(--accent-success);">Önerilen</span>: ≥%15 marj | <span style="color:var(--accent-warning);">Dikkat</span>: %5–15 marj | <span style="color:#f97316;">Sıkı</span>: &lt;%5 marj | <span style="color:var(--accent-danger);">Uyumsuz</span>: Limit aşılıyor';
     h += '</div></div></div></div>';
 
     // Tablo

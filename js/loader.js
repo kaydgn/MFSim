@@ -416,7 +416,7 @@
     var ico = $(ELS.ico);
     paintCetvel(k, K);
     // Disli de ayni tempoda: kademe basina bir centik, yukleme boyunca TAM TUR.
-    if (ico) ico.style.transform = 'rotate(' + (q * 360).toFixed(1) + 'deg)';
+    if (ico) ico.style.transform = 'rotate(' + (q * 360).toFixed(1) + 'deg)';   // makine: CSS dönüşü
     if (label && msg) msg.textContent = label;
   }
 

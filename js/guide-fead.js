@@ -1850,7 +1850,7 @@ var VE_GUIDE_FEAD_GATES = {
 function _gfSapma(bizim, gates){
   if(!Number.isFinite(bizim) || !Number.isFinite(gates) || gates === 0) return '—';
   var p = (bizim - gates) / gates * 100;
-  return (p >= 0 ? '+' : '') + _gfFs(p, 2) + '%';
+  return '%' + (p >= 0 ? '+' : '') + _gfFs(p, 2);
 }
 
 function _gfSec14(){

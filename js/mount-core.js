@@ -1944,6 +1944,7 @@ var veMountCore = (function() {
   // YÜKLENİRKEN kuruluyor ve dosya Node'da da require ediliyor (komuta
   // doğrulayıcısı) — orada veSayi global değil, yanındaki dosyadan alınır.
   const _sayi = (typeof veSayi === 'function') ? veSayi : require('./sayi.js').veSayi;
+  const _sayiUstel = (typeof veSayiUstel === 'function') ? veSayiUstel : require('./sayi.js').veSayiUstel;
   const _toplamKg = (ex) => _sayi(ex.components.reduce(function(s,c){ return s + (c.mass||0); }, 0), 1) + ' kg';
   const _aralik = (z) => { const lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
     return lo === hi ? _sayi(lo) : _sayi(lo) + ' – ' + _sayi(hi); };
@@ -2100,14 +2101,14 @@ var veMountCore = (function() {
       let iOk=true, iDetail='';
       for(let i=0;i<3;i++) for(let j=0;j<3;j++){
         if(!near(mp.I_G[i][j], expI[i][j], 0.01)){
-          iOk=false; iDetail+=' I['+i+']['+j+']='+mp.I_G[i][j].toFixed(4)+'≠'+expI[i][j];
+          iOk=false; iDetail+=' I['+i+']['+j+']='+_sayi(mp.I_G[i][j], 4)+'≠'+expI[i][j];
         }
       }
       check('T1','Kütle birleştirme',
         near(mp.m, 2294.522, 0.01) &&
         near(cgmm[0], 254.669, 0.01) && near(cgmm[1], 7.504, 0.01) && near(cgmm[2], 746.052, 0.01) &&
         iOk,
-        'm='+mp.m.toFixed(3)+' kg, cg=('+cgmm.map(v=>v.toFixed(3)).join(', ')+') mm'+iDetail);
+        'm='+_sayi(mp.m, 3)+' kg, cg=('+cgmm.map(v=>_sayi(v, 3)).join('; ')+') mm'+iDetail);
     }
 
     // ── T2: K_stat blokları (MN birimleri) ──
@@ -2121,13 +2122,13 @@ var veMountCore = (function() {
       const expThTh = [[0.7437,-0.0052,-0.9462],[-0.0052,2.5549,-0.0112],[-0.9462,-0.0112,4.8346]];
       let ok=true; let det='';
       for(let i=0;i<3;i++){
-        if(!near(Kstat[i][i]*s, expTT[i], 0.001)){ ok=false; det+=' K_tt['+i+']='+(Kstat[i][i]*s).toFixed(4); }
+        if(!near(Kstat[i][i]*s, expTT[i], 0.001)){ ok=false; det+=' K_tt['+i+']='+_sayi(Kstat[i][i]*s, 4); }
         for(let j=0;j<3;j++){
-          if(!near(Kstat[i][3+j]*s, expTTh[i][j], 0.001)){ ok=false; det+=' K_tθ['+i+']['+j+']='+(Kstat[i][3+j]*s).toFixed(4); }
-          if(!near(Kstat[3+i][3+j]*s, expThTh[i][j], 0.001)){ ok=false; det+=' K_θθ['+i+']['+j+']='+(Kstat[3+i][3+j]*s).toFixed(4); }
+          if(!near(Kstat[i][3+j]*s, expTTh[i][j], 0.001)){ ok=false; det+=' K_tθ['+i+']['+j+']='+_sayi(Kstat[i][3+j]*s, 4); }
+          if(!near(Kstat[3+i][3+j]*s, expThTh[i][j], 0.001)){ ok=false; det+=' K_θθ['+i+']['+j+']='+_sayi(Kstat[3+i][3+j]*s, 4); }
         }
       }
-      check('T2','K_stat blokları', ok, det || 'tüm bloklar ±0.001 MN içinde');
+      check('T2','K_stat blokları', ok, det || 'tüm bloklar ±0,001 MN içinde');
     }
 
     // ── T3: Statik durum ──
@@ -2142,17 +2143,17 @@ var veMountCore = (function() {
       // STANDART skew (v2): statik ux=+0.379, uy=+0.084, θz=−0.072 mrad; δz/fz aynı.
       let ok = near(u[0], 0.379, 0.005) && near(u[1], 0.084, 0.005) && near(u[2], -6.208, 0.005) &&
                near(th[0], -0.485, 0.005) && near(th[1], 1.901, 0.005) && near(th[2], -0.072, 0.005);
-      let det='q=('+u.map(v=>v.toFixed(3)).join(', ')+') mm, θ=('+th.map(v=>v.toFixed(3)).join(', ')+') mrad;';
+      let det='q=('+u.map(v=>_sayi(v, 3)).join('; ')+') mm, θ=('+th.map(v=>_sayi(v, 3)).join('; ')+') mrad;';
       stat.perMount.forEach((pm,i)=>{
         const dz=pm.delta[2]*1000, fz=pm.f[2]/1000;
         if(!near(dz, expDz[i], 0.005) || !near(fz, expFz[i], 0.005)) ok=false;
-        det += ' '+pm.name+': δz='+dz.toFixed(3)+' fz='+fz.toFixed(3)+';';
+        det += ' '+pm.name+': δz='+_sayi(dz, 3)+' fz='+_sayi(fz, 3)+';';
       });
       const sumFzKN = stat.sumF[2]/1000;
       if(!near(sumFzKN, -22.513, 0.005)) ok=false;
       if(!stat.checks.sumFzOk) ok=false;
       if(stat.checks.tensionCount !== 0) ok=false;
-      check('T3','Statik durum', ok, det+' Σfz='+sumFzKN.toFixed(3)+' kN, çekme='+stat.checks.tensionCount);
+      check('T3','Statik durum', ok, det+' Σfz='+_sayi(sumFzKN, 3)+' kN, çekme='+stat.checks.tensionCount);
     }
 
     // ── T4: Tork zinciri ──
@@ -2162,7 +2163,7 @@ var veMountCore = (function() {
       const Trev = torqueChain({Te:tq.Te, Rstall:tq.Rstall, iGear:tq.rev.iGear, iTransfer:tq.iTransfer, phiAxle:tq.rev.phiAxle, derate:tq.derate});
       check('T4','Tork zinciri',
         near(Tfwd, 6667.1, 0.5) && near(Trev, -23705.1, 0.5),
-        'T_fwd='+Tfwd.toFixed(1)+' N·m, T_rev='+Trev.toFixed(1)+' N·m');
+        'T_fwd='+_sayi(Tfwd, 1)+' N·m, T_rev='+_sayi(Trev, 1)+' N·m');
     }
 
     // ── T5: Forward süperpozisyon (+ T8d çekme senaryosu) ──
@@ -2176,7 +2177,7 @@ var veMountCore = (function() {
       fwd.perMount.forEach((pm,i)=>{
         const dz=pm.delta[2]*1000;
         if(!near(dz, expDz[i], 0.01)) ok=false;
-        det += ' '+dz.toFixed(3);
+        det += ' '+_sayi(dz, 3);
       });
       check('T5','Forward süperpozisyon', ok, det);
       // T8d: sol orta ve sol arka δz>0 → çekme bayrağı 2 (lift-off DOĞRU yön)
@@ -2199,7 +2200,7 @@ var veMountCore = (function() {
       modes.forEach((md,i)=>{
         if(!near(md.f_Hz, expF[i], 0.005)) ok=false;
         if(!expLabel[i].test(md.label)) ok=false;
-        det += ' '+md.f_Hz.toFixed(3)+'('+md.label+')';
+        det += ' '+_sayi(md.f_Hz, 3)+'('+md.label+')';
       });
       check('T6','Modal (K_dyn) frekans+etiket', ok, det);
     }
@@ -2214,7 +2215,7 @@ var veMountCore = (function() {
       let det='f(Hz):';
       modesStat.forEach((md,i)=>{
         if(!near(md.f_Hz, expF[i], 0.005)) ok=false;
-        det += ' '+md.f_Hz.toFixed(3);
+        det += ' '+_sayi(md.f_Hz, 3);
       });
       check('T7','Modal (K_stat) çapraz kontrol', ok, det);
     }
@@ -2260,7 +2261,7 @@ var veMountCore = (function() {
       let maxd = 0;
       if(ok) nl.perMount.forEach((pm,i)=>{ maxd = Math.max(maxd, Math.abs(pm.delta[2]-ref.perMount[i].delta[2])); });
       if(maxd > 1e-7) ok = false;   // 1e-7 m = 1e-4 mm
-      check('T9','Newton (solveCaseNL) lineer denklik', ok, 'maks|Δδz|='+(maxd*1000).toExponential(2)+' mm, converged='+(nl?nl.checks.converged:'—'));
+      check('T9','Newton (solveCaseNL) lineer denklik', ok, 'maks|Δδz|='+_sayiUstel(maxd*1000, 2)+' mm, converged='+(nl?nl.checks.converged:'—'));
     }
     // ── T10: Tanjant-modal lineer denklik ──
     // buildKtangentDyn(δ=0) lineer takozda buildK(dynamic)'e eşit → T6 frekansları.
@@ -2269,7 +2270,7 @@ var veMountCore = (function() {
       const expF = [5.039, 6.111, 8.364, 10.148, 12.071, 21.239];
       let ok = !!modesT && modesT.length===6;
       let det='f(Hz):';
-      if(ok) modesT.forEach((md,i)=>{ if(!near(md.f_Hz, expF[i], 0.005)) ok=false; det += ' '+md.f_Hz.toFixed(3); });
+      if(ok) modesT.forEach((md,i)=>{ if(!near(md.f_Hz, expF[i], 0.005)) ok=false; det += ' '+_sayi(md.f_Hz, 3); });
       check('T10','Tanjant-modal lineer denklik', ok, det);
     }
 
