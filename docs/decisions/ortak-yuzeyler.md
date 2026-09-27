@@ -1814,3 +1814,29 @@ yakalar.
 **Kapı.** `sayi-dili.test.js` → aşama 3b (işaretsiz yazım + formül yazıcısının
 davranışı) + `sayi-belge.spec.js` → FEAD ve Takoz (metin + `texTara`: noktalı
 ondalık ve çıplak virgül) + `sayi-olcu.test.js` → TeX kuralları.
+
+### Aşama 3c — çözücü günlüğü (2026-09-27)
+
+**Hüküm.** Araç Performans'ın çözüm günlüğü (`solver-pro.js`) ve öteki
+topolojilerin satırları (`solver.js`) `veSayi`'den yazar; zaman damgası da
+("[0,30s]"). Yüzde önde ("η=%98,93"), satır içindeki liste ayracı `; `
+("Fan=20,2 kW; Diğer=5,1 kW"). Tolerans üstel yazılır ("1e-6"): `veSayi` altı
+ondalıktan küçüğünü sıfıra yuvarlar (1e-7 → "0").
+
+**Gerekçe.** Aynı çözümde 546 noktalı ondalık, 55 gruplanmamış sayı, 22
+sondaki yüzde → 0. Günlüğün çoğu `toFixed` değil ÇIPLAK veri değeriydi
+(`cd`, `g.ratio`, `governedRpm`) — kaynak tarayıcısı onları görmüyor, günlük
+taraması görüyor.
+
+**Önceden var olan kusur.** Enerji dengesi kutusu elle yazılmış dizgilerdi:
+kenar ve başlık 53, üst bölüm 54, alt bölüm 56 karakter — sağ kenar ve sütun
+çizgileri iki ayrı yerde kayıktı (16 satır). Kutu artık sütun
+genişliklerinden kuruluyor (`┬ ┼ ┴` ile).
+
+**Tuzak.** Hız hesabı süreyi YAZIDAN okuyordu (`parseFloat(elapsed)`);
+Türkçe "0,759" orada 0 olur ve satır "Infinityk adım/s" basardı. Sayısal
+kopya ayrı tutuluyor.
+
+**Kapı.** `sayi-dili.test.js` → aşama 3c + `sayi-belge.spec.js` → AP testi
+günlüğü de tarıyor (dört yazım + kutu hizası, zaman damgası ayıklanarak; hız
+satırı sayı kalıyor). Eski yapıda 623 bulguyla düşüyor.

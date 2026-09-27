@@ -215,6 +215,23 @@ describe('aşama 3b — FEAD ve takoz belgeleri', () => {
   });
 });
 
+// Aşama 3c: çözücü günlüğü — Araç Performans'ın çözüm penceresi, eski hesap
+// yolunun kartı ve öteki topolojilerin satırları. Günlüğün kendisi
+// sayi-belge.spec.js'te (zaman damgası dâhil, kutu hizası damga ayıklanarak).
+const ASAMA3C = ['js/solver-pro.js', 'js/solver.js'];
+
+describe('aşama 3c — çözücü günlüğü', () => {
+  test('işaretsiz sayı yazımı yok', () => {
+    const s = ASAMA3C.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
+    expect(s).toEqual([]);
+  });
+  // Hız hesabı süreyi YAZIDAN okuyordu: parseFloat("0,759") = 0 → "Infinityk
+  // adım/s". Sayısal kopya ayrı tutulur.
+  test('günlükteki süre yazıdan geri okunmuyor', () => {
+    expect(oku('js/solver-pro.js')).not.toMatch(/parseFloat\(elapsed\)/);
+  });
+});
+
 describe('ekrandaki YAZI sayıya geri okunmaz', () => {
   // Türkçe yazı "0,00650" parseFloat'ta 0, "1.000 m" parseInt'te 1 olur ve
   // hiçbir şey patlamaz. Yazıdan sayı okuyan iki yer vardı: sahil testi
