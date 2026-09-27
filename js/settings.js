@@ -251,8 +251,8 @@ function _veSettingsLocalStorageBytes() {
 }
 function _veSettingsFmtBytes(n) {
   if(n < 1024) return n + ' B';
-  if(n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
-  return (n / 1024 / 1024).toFixed(2) + ' MB';
+  if(n < 1024 * 1024) return veSayi(n / 1024, 1) + ' KB';
+  return veSayi(n / 1024 / 1024, 2) + ' MB';
 }
 function veSettingsResetPreferences() {
   if(!confirm('Tema, panel durumu ve diğer tercihler sıfırlanacak (oturum ve otomatik yedek korunur). Devam edilsin mi?')) return;

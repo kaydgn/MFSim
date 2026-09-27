@@ -13,7 +13,7 @@ function veZoomIn() {
   canvasOffset.x = centerX - (centerX - canvasOffset.x) * zoomRatio;
   canvasOffset.y = centerY - (centerY - canvasOffset.y) * zoomRatio;
   updateCanvasTransform();
-  showToast('Zoom: ' + Math.round(canvasZoom * 100) + '%');
+  showToast('Zoom: %' + Math.round(canvasZoom * 100));
 }
 
 function veZoomOut() {
@@ -27,7 +27,7 @@ function veZoomOut() {
   canvasOffset.x = centerX - (centerX - canvasOffset.x) * zoomRatio;
   canvasOffset.y = centerY - (centerY - canvasOffset.y) * zoomRatio;
   updateCanvasTransform();
-  showToast('Zoom: ' + Math.round(canvasZoom * 100) + '%');
+  showToast('Zoom: %' + Math.round(canvasZoom * 100));
 }
 
 function veResetView() {

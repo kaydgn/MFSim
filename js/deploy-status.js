@@ -243,7 +243,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   var existing = document.getElementById('ve-deploy-popup');
   if(existing) existing.remove();
 
-  var fullDate = new Date(info.date).toLocaleString('tr-TR');
+  var fullDate = new Date(info.date).toLocaleString('tr-TR');   // makine: tarih — tr-TR yerel biçimi, sayı değil
   var msg = (info.message || '').split('\n')[0];
 
   var isPending = info.status === 'in_progress' || info.status === 'queued';

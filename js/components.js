@@ -1780,8 +1780,8 @@ function _veWelcomeInstallCardSheen() {
       if(!b) return;
       var r = b.kart.getBoundingClientRect();
       if(!r.width || !r.height) return;
-      b.kart.style.setProperty('--mx', (((b.x - r.left) / r.width) * 100).toFixed(1) + '%');
-      b.kart.style.setProperty('--my', (((b.y - r.top) / r.height) * 100).toFixed(1) + '%');
+      b.kart.style.setProperty('--mx', (((b.x - r.left) / r.width) * 100).toFixed(1) + '%');   // makine: CSS değişkeni
+      b.kart.style.setProperty('--my', (((b.y - r.top) / r.height) * 100).toFixed(1) + '%');   // makine: CSS değişkeni
     };
     if(typeof requestAnimationFrame === 'function') requestAnimationFrame(boya); else setTimeout(boya, 16);
   });

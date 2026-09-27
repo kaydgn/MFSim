@@ -21,23 +21,14 @@ const { veSayi, veSayiUstel, veSayiOku } = require('../../js/sayi.js');
 const KOK = path.join(__dirname, '../..');
 const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
 
-// Aşama 1: grafik çekirdeği — eksen, imleç okuması, sinyal ağacı, pano
-// tablosu. MFSim ile Ölçüm Görüntüleyici'de ortak.
-const ASAMA1 = ['js/sayi.js', 'js/signal-tree.js', 'js/trace-view.js', 'js/measure-core.js',
-  'viewer/js/board.js'];
-// Aşama 2a: modüllerin Sonuçlar katmanı — FEAD ve Takoz'un kanal adları,
-// şerit yorumları ve özet kartları. Virgüllüydüler ama binliği gruplamıyordu:
-// aynı sayfada grafik "1.381" derken yorum "1381" diyordu.
-const ASAMA2A = ['js/fead-signals.js', 'js/fead-brief.js', 'js/cp-fead-results.js',
-  'js/mount-brief.js', 'js/mount-signals.js'];
-// Aşama 2c: bileşen pencereleri — her `cp-*.js` (belge üreten üçü aşama 3'te),
-// araç ek bileşenleri, yol haritası, FEAD köprüsünün iletileri. Yeni bir
-// pencere dosyası kendiliğinden kapsamda.
-const BELGE = ['js/cp-fead-report.js', 'js/cp-mount-report.js', 'js/cp-fead-summary.js'];
-const ASAMA2C = fs.readdirSync(path.join(KOK, 'js')).filter((f) => /^cp-.*\.js$/.test(f))
-  .map((f) => 'js/' + f).filter((f) => BELGE.indexOf(f) < 0)
-  .concat(['js/component-extras.js', 'js/map.js', 'js/fead-model.js',
-    'js/fead-tensioners.js', 'js/fead-duty.js', 'js/fead-engines.js', 'js/fead-step.js']);
+// KAPSAM: ürünün TAMAMI — js/ ve viewer/js/'teki her dosya; yeni dosya
+// kendiliğinden girer. Kapsam aşama aşama büyüdü (1: grafik çekirdeği · 2a:
+// Sonuçlar katmanı · 2c: bileşen pencereleri · 3a–3b: belgeler · 3c: çözücü
+// günlüğü · 3d: kalan kabuk). Tek istisna dışarıdan gelen, birebir duran FEAD
+// çekirdeği; CAN Çözümleyici (candbc/) kendi yazıcısıyla ayrıca taranır.
+const ISTISNA = { 'js/fead-core.js': 'dışarıdan geldi, birebir durur (FEAD skill, kural 1)' };
+const URUN = ['js', 'viewer/js'].flatMap((d) => fs.readdirSync(path.join(KOK, d))
+  .filter((f) => f.endsWith('.js')).map((f) => d + '/' + f));
 
 describe('veSayi — Türkçe yazım', () => {
   test.each([
@@ -133,11 +124,23 @@ describe('tarayıcının kuralı', () => {
   });
 });
 
-describe('aşama 2a — modüllerin Sonuçlar katmanı (FEAD · Takoz)', () => {
-  test('işaretsiz sayı yazımı yok', () => {
-    const s = ASAMA2A.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
+describe('bütün ürün — işaretsiz sayı yazımı yok', () => {
+  test('js/ ve viewer/js/ TAMAMI (istisna dışında)', () => {
+    expect(URUN.length).toBeGreaterThan(100);   // ölçüldü: 114 dosya
+    const s = URUN.filter((f) => !ISTISNA[f]).flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
     expect(s).toEqual([]);
   });
+  // İstisna bir susturucu olmasın: dosya gerçekten var ve gerçekten sapıyor.
+  // Çekirdek dışarıdan güncellenip temizlenirse bu test istisnayı kaldırtır.
+  test('istisna listesi yalnız gerçekten sapan dosyayı tutuyor', () => {
+    for (const f of Object.keys(ISTISNA)) {
+      expect(fs.existsSync(path.join(KOK, f))).toBe(true);
+      expect(T.sapmalar(f).length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('aşama 2a — modüllerin Sonuçlar katmanı (FEAD · Takoz)', () => {
   test('kanal KİMLİĞİ sayıyı yazıcıdan geçirmez — biçim değişse de kayıtlı pano kanalını bulur', () => {
     for (const f of ['js/fead-signals.js', 'js/mount-signals.js']) {
       const s = oku(f), i = s.indexOf('function _ordId(');
@@ -148,14 +151,6 @@ describe('aşama 2a — modüllerin Sonuçlar katmanı (FEAD · Takoz)', () => {
 });
 
 describe('aşama 2c — bileşen pencereleri', () => {
-  test('kapsam gerçekten bir şey tarıyor', () => {
-    expect(ASAMA2C.length).toBeGreaterThan(15);
-    ['js/cp-engine.js', 'js/cp-fead.js', 'js/cp-mount.js', 'js/map.js'].forEach((f) => expect(ASAMA2C).toContain(f));
-  });
-  test('işaretsiz sayı yazımı yok', () => {
-    const s = ASAMA2C.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
-    expect(s).toEqual([]);
-  });
   // Seçenek metni elle yazılır ve `toFixed` taşımaz — tarayıcı onu görmez.
   // Çözücünün Δt listesi "0.05 (hızlı)" yazıyordu. DEĞER makine kalır.
   test('<option> METNİ noktalı ondalık taşımaz (değeri makine biçiminde kalır)', () => {
@@ -173,18 +168,8 @@ describe('aşama 2c — bileşen pencereleri', () => {
   });
 });
 
-// Aşama 3a: Araç Performans belgeleri — dört TXT üreteci ve detay matematik
-// (graphics.js), ayrıntılı rapor, grafikleri ve indirilen rapor (results.js),
-// eğim yazıcısı ve hesap çekirdeklerinin iletileri. Çekirdeklerdeki zaman
-// ızgarası yuvarlaması makine kalır. Belgenin kendisi sayi-belge.spec.js'te.
-const ASAMA3A = ['js/graphics.js', 'js/results.js', 'js/ft-performance.js', 'js/ft-obstacle.js',
-  'js/simulation-engine.js', 'js/numerics.js', 'js/ft-segment-drive.js'];
-
+// Aşama 3a: Araç Performans belgeleri. Belgenin kendisi sayi-belge.spec.js'te.
 describe('aşama 3a — Araç Performans belgeleri', () => {
-  test('işaretsiz sayı yazımı yok', () => {
-    const s = ASAMA3A.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
-    expect(s).toEqual([]);
-  });
   test('eğim yazıcısı Türkçe: rapor ve TXT aynı biçimi paylaşıyor', () => {
     const src = oku('js/ft-performance.js');
     expect(src).toMatch(/function veGradeDisplay[\s\S]{0,400}veSayi\(/);
@@ -197,13 +182,8 @@ describe('aşama 3a — Araç Performans belgeleri', () => {
 // onu yalnız gerçek belge ölçer (sayi-belge.spec.js → texTara).
 // mount-core.js'in öz-testi (selfTest) kapsam DIŞI: yalnız birim testleri
 // çağırıyor, hiçbir yüzeye yazmıyor.
-const ASAMA3B = BELGE.concat(['js/fead-report-template.js', 'js/mount-report-template.js']);
 
 describe('aşama 3b — FEAD ve takoz belgeleri', () => {
-  test('işaretsiz sayı yazımı yok', () => {
-    const s = ASAMA3B.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
-    expect(s).toEqual([]);
-  });
   test('formül yazıcıları ondalık virgülü {,} yapıyor, binlik noktaya dokunmuyor', () => {
     for (const [f, ad] of [['js/cp-fead-report.js', '_frTeX'], ['js/cp-mount-report.js', '_rTeX']]) {
       const m = oku(f).match(new RegExp('function ' + ad + '\\(s\\)\\{[^\\n]*\\}'));
@@ -218,13 +198,8 @@ describe('aşama 3b — FEAD ve takoz belgeleri', () => {
 // Aşama 3c: çözücü günlüğü — Araç Performans'ın çözüm penceresi, eski hesap
 // yolunun kartı ve öteki topolojilerin satırları. Günlüğün kendisi
 // sayi-belge.spec.js'te (zaman damgası dâhil, kutu hizası damga ayıklanarak).
-const ASAMA3C = ['js/solver-pro.js', 'js/solver.js'];
 
 describe('aşama 3c — çözücü günlüğü', () => {
-  test('işaretsiz sayı yazımı yok', () => {
-    const s = ASAMA3C.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
-    expect(s).toEqual([]);
-  });
   // Hız hesabı süreyi YAZIDAN okuyordu: parseFloat("0,759") = 0 → "Infinityk
   // adım/s". Sayısal kopya ayrı tutulur.
   test('günlükteki süre yazıdan geri okunmuyor', () => {
@@ -270,13 +245,6 @@ describe('ekrandaki YAZI sayıya geri okunmaz', () => {
 });
 
 describe('aşama 1 — grafik çekirdeği (eksen · imleç · sinyal ağacı · pano)', () => {
-  test('liste boş değil ve dosyalar var', () => {
-    ASAMA1.forEach((f) => expect(fs.existsSync(path.join(KOK, f))).toBe(true));
-  });
-  test('işaretsiz sayı yazımı yok', () => {
-    const s = ASAMA1.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
-    expect(s).toEqual([]);
-  });
   test('eksen ve ipucu yazıcıları (graphics.js + görüntüleyici kopyası) veSayi\'den geçiyor', () => {
     for (const f of ['js/graphics.js', 'viewer/js/board.js']) {
       const s = oku(f);

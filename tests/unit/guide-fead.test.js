@@ -331,8 +331,8 @@ describe('işlenmiş örnek CANLI hesaplanır', () => {
   });
 
   test('sapma yüzdesi işaretli ve Türkçe biçimde', () => {
-    expect(GF._gfSapma(101, 100)).toBe('+1,00%');
-    expect(GF._gfSapma(99, 100)).toBe('−1,00%');
+    expect(GF._gfSapma(101, 100)).toBe('%+1,00');   // yüzde önde (karar 7·C)
+    expect(GF._gfSapma(99, 100)).toBe('%−1,00');
     expect(GF._gfSapma(NaN, 100)).toBe('—');
     expect(GF._gfSapma(1, 0)).toBe('—');
   });

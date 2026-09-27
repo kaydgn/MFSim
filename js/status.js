@@ -238,7 +238,7 @@ function _veStatusRenderCommits(commits) {
         var author = (c.commit && c.commit.author && c.commit.author.name) || 'Bilinmiyor';
         var authorLogin = (c.author && c.author.login) || '';
         var date = c.commit && c.commit.author && c.commit.author.date;
-        var dateStr = date ? new Date(date).toLocaleString('tr-TR') : '';
+        var dateStr = date ? new Date(date).toLocaleString('tr-TR') : '';   // makine: tarih — tr-TR yerel biçimi, sayı değil
 
         html += '<li class="ve-status-commit" data-sha="' + fullSha + '">';
         html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(\'' + fullSha + '\')">';

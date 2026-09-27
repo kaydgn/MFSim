@@ -12,6 +12,10 @@
  * Bu tarama 2b yapısında 371 bulguyla düşüyor (araç 311 · FEAD 41 · takoz
  * 19), 2c'de 0 — ölçüldü, MFSIM_OLCUM_HTML ile eski yapı verilerek.
  *
+ * Aşama 3d: boşluklu binlik ve SONDAKİ YÜZDE de ölçülüyor (belge taramasının
+ * dört kuralı). 3c yapısında 4 bulgu: eşleştirme lejantı "≥15% marj · 5-15%
+ * marj · <5% marj" ve FEAD çözücüsünün "sürekli 4,9%" hücresi.
+ *
  * AD OLAN SAYI KALIR ve sınıflandırılır: şanzıman modeli (Allison 3200 SP),
  * parça numarası (AMC 137963, 57RS…), ön ayar adı (Duramax 6.6L, Wabco
  * 250cc @8.5bar), formül sabiti (P × 9550 / n), standart (ISO 9981), tarih,
@@ -48,11 +52,11 @@ const MODULLER = {
 };
 
 // Ölçüt tek yerde: tests/helpers/sayi-olcu.js (belge taraması da onu kullanır).
-// Ekrandaki sondaki yüzde ('97,0%') ayrı aşamada çevrilecek; burada henüz ölçülmüyor.
-const { NOKTA, GRUPSUZ, sinifla } = require('../helpers/sayi-olcu.js');
+const { NOKTA, GRUPSUZ, BOSLUKLU, SONDA_YUZDE, sinifla } = require('../helpers/sayi-olcu.js');
+const KURALLAR = [['nokta', NOKTA], ['grupsuz', GRUPSUZ], ['boşluklu', BOSLUKLU], ['sonda %', SONDA_YUZDE]];
 
 for (const [modul, M] of Object.entries(MODULLER)) {
-  test(`${modul}: pencerelerde noktalı ondalık ve gruplanmamış sayı YOK (adlar hariç)`, async ({ page }) => {
+  test(`${modul}: pencerelerde noktalı ondalık, gruplanmamış sayı ve sondaki yüzde YOK (adlar hariç)`, async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1032 });
     await page.addInitScript(() => {
       const f = CanvasRenderingContext2D.prototype.fillText;
@@ -80,6 +84,20 @@ for (const [modul, M] of Object.entries(MODULLER)) {
 
     const sorun = [], adlar = {};
     let taranan = 0;
+    // Sondaki yüzdede ad aranmaz (ad "%" ile bitmiyor) — belge taramasının kuralı.
+    const tarla = (tip, metin) => {
+      taranan += metin.length;
+      for (const [tur, re] of KURALLAR) {
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(metin))) {
+          const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ');
+          const ad = tur === 'sonda %' ? null : sinifla(m[0], bag);
+          if (ad) (adlar[ad] = adlar[ad] || new Set()).add(bag.trim());
+          else sorun.push(`${tip}: ${tur} "${m[0]}" ⟨${bag.trim()}⟩`);
+        }
+      }
+    };
     // TUVALDEKİ KARTLAR: kartın yazısı + kart içindeki SVG metni (FEAD Kayış
     // Yolu çizimindeki sarım açısı ve kol künyesi pencere taramasına görünmüyordu).
     const kartlar = await page.evaluate(() => {
@@ -89,20 +107,7 @@ for (const [modul, M] of Object.entries(MODULLER)) {
       return [...o].join('\n');
     });
     expect(kartlar.length).toBeGreaterThan(50);
-    const tuvalMetni = [['tuval kartları', kartlar]];
-    for (const [tip, metin] of tuvalMetni) {
-      taranan += metin.length;
-      for (const re of [NOKTA, GRUPSUZ]) {
-        re.lastIndex = 0;
-        let m;
-        while ((m = re.exec(metin))) {
-          const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ');
-          const ad = sinifla(m[0], bag);
-          if (ad) (adlar[ad] = adlar[ad] || new Set()).add(bag.trim());
-          else sorun.push(`${tip}: "${m[0]}" ⟨${bag.trim()}⟩`);
-        }
-      }
-    }
+    tarla('tuval kartları', kartlar);
     for (const tip of tipler) {
       const metin = await page.evaluate(async (tip) => {
         const n = nodes.find((x) => x.type === tip);
@@ -124,17 +129,7 @@ for (const [modul, M] of Object.entries(MODULLER)) {
         veTogglePropertiesPanel(false); await new Promise((r) => setTimeout(r, 200));
         return parca.join('\n');
       }, tip);
-      taranan += metin.length;
-      for (const re of [NOKTA, GRUPSUZ]) {
-        re.lastIndex = 0;
-        let m;
-        while ((m = re.exec(metin))) {
-          const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ');
-          const ad = sinifla(m[0], bag);
-          if (ad) (adlar[ad] = adlar[ad] || new Set()).add(bag.trim());
-          else sorun.push(`${tip}: "${m[0]}" ⟨${bag.trim()}⟩`);
-        }
-      }
+      tarla(tip, metin);
     }
     // Muaf tutulan her eşleşme çevresiyle basılır: sınıf listesi bir kaçış
     // kapısı olmasın, neyin ad sayıldığı koşuda okunabilsin.

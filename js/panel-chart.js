@@ -306,7 +306,7 @@ function pcDrawHint(ctx2d, canvas, ml, mt, pw, isDark) {
   if(pcIsZoomed(canvas)) {
     ctx2d.fillStyle = veThemeRgba('--seri-1', 1);
     ctx2d.font = veThemeFont('micro', 'bold');
-    ctx2d.fillText(canvas._pcZoom.scale.toFixed(1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
+    ctx2d.fillText(veSayi(canvas._pcZoom.scale, 1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
   } else {
     ctx2d.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
     ctx2d.font = veThemeFont('micro');
