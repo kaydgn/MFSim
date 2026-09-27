@@ -67,6 +67,15 @@ global.loadCanSource = function loadCanSource(file) {
   global.veDurumIkon = IK.veDurumIkon;
 }
 
+// TEK SAYI YAZICISI (js/sayi.js, karar 7·C) GERÇEK sürümüyle — aynı gerekçe:
+// yükleyiciden önce yüklenir, sayı yazan her modül onu varsayar.
+{
+  const SY = require(path.join(JS_DIR, 'sayi.js'));
+  global.veSayi = SY.veSayi;
+  global.veSayiUstel = SY.veSayiUstel;
+  global.veSayiOku = SY.veSayiOku;
+}
+
 // TUVAL YAZI YÜZÜ KÖPRÜSÜ (js/theme.js) HER TESTTE TANIMLI — `stubGlobals()`
 // çağrılmasa da. Tuval çizen modüller onu KOŞULSUZ çağırıyor (renk köprüsünün
 // aksine `typeof` kalkanı yok): tek yüz kapısı (`tek-yazi-tipi.test.js`) her

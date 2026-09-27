@@ -6,6 +6,9 @@
  * eksen "60.0  80.0  100  120" diye okunuyordu: aynı eksende iki farklı
  * basamak düzeni.
  *
+ * Yazım Türkçe (karar 7·C, js/sayi.js): ondalık virgül, binlik nokta —
+ * "0,5", "20.000,0", "4,00e-3".
+ *
  * Burada sessiz bir kayma "makul ama yanlış" bir eksen üretir — grafik
  * çalışır görünür, sayılar tutarsız okunur. Gözle ancak o eksen o aralıkta
  * çizilirse fark edilir; testin karşılığı burada.
@@ -56,20 +59,20 @@ describe('veFormatAxisVal — aynı eksende basamak sayısı DEĞİŞMEZ', () =>
   test('0,5 adımlı eksende her etiket tek basamaklı', () => {
     const dec = veAxisDecimals(0.5);
     const etiketler = [0, 0.5, 1, 1.5, 2].map((v) => veFormatAxisVal(v, dec));
-    expect(etiketler).toEqual(['0.0', '0.5', '1.0', '1.5', '2.0']);
+    expect(etiketler).toEqual(['0,0', '0,5', '1,0', '1,5', '2,0']);
   });
 
   test('sıfır ile büyük değer aynı eksende aynı basamağı alır', () => {
     const dec = veAxisDecimals(0.05);
-    expect(veFormatAxisVal(0, dec)).toBe('0.00');
-    expect(veFormatAxisVal(0.25, dec)).toBe('0.25');
-    expect(veFormatAxisVal(4, dec)).toBe('4.00');
+    expect(veFormatAxisVal(0, dec)).toBe('0,00');
+    expect(veFormatAxisVal(0.25, dec)).toBe('0,25');
+    expect(veFormatAxisVal(4, dec)).toBe('4,00');
   });
 
   test('negatif değerler de aynı basamakla yazılır', () => {
     const dec = veAxisDecimals(0.5);
-    expect(veFormatAxisVal(-1, dec)).toBe('-1.0');
-    expect(veFormatAxisVal(-0.5, dec)).toBe('-0.5');
+    expect(veFormatAxisVal(-1, dec)).toBe('-1,0');
+    expect(veFormatAxisVal(-0.5, dec)).toBe('-0,5');
   });
 
   test('10 binin üstünde tam sayı eksende k kısaltması korunur', () => {
@@ -78,14 +81,14 @@ describe('veFormatAxisVal — aynı eksende basamak sayısı DEĞİŞMEZ', () =>
   });
 
   test('ondalıklı eksende k kısaltmasına DÜŞMEZ (basamak bilgisi kaybolmasın)', () => {
-    expect(veFormatAxisVal(20000, 1)).toBe('20000.0');
+    expect(veFormatAxisVal(20000, 1)).toBe('20.000,0');
   });
 
   test('adım verilmezse eski davranış korunur (geriye dönük)', () => {
     // Çağrı yerlerinden biri güncellenmezse sessizce bozulmasın diye
     // parametresiz yol hâlâ çalışıyor olmalı.
     expect(veFormatAxisVal(100)).toBe('100');
-    expect(veFormatAxisVal(12.5)).toBe('12.5');
+    expect(veFormatAxisVal(12.5)).toBe('12,5');
     expect(veFormatAxisVal(20000)).toBe('20k');
   });
 });
@@ -129,7 +132,7 @@ describe('veFormatAxisVal — iki kopya da aynı davranmalı', () => {
         // "12k" istenen ondalığı atar ve 12345,6 ile 12345,7 aynı etikete
         // düşerdi: farklı iki bölme aynı sayıyı gösterirdi.
         expect(f(12345.6, 1)).not.toBe(f(12345.7, 1));
-        expect(f(12345.6, 1)).toBe('12345.6');
+        expect(f(12345.6, 1)).toBe('12.345,6');
       });
 
       test('dec === 0 iken 10000 üstü kısaltılır — eski davranış', () => {
@@ -170,7 +173,7 @@ describe('veFormatTooltipVal — iki kopya da aynı davranmalı', () => {
       });
 
       test('küçük sayı üstel kalır — bilgi kaybolmaz', () => {
-        expect(f(0.004)).toBe('4.00e-3');
+        expect(f(0.004)).toBe('4,00e-3');
       });
     });
   });

@@ -76,17 +76,17 @@ function veSigHighlight(text, q) {
          veSigEsc(t.slice(i + q.length));
 }
 
-// Liste ve denetçi için ölçü duyarlı sayı biçimi.
+// Liste ve denetçi için ölçü duyarlı sayı biçimi — Türkçe yazım (karar 7·C).
 function veSigFmt(v) {
   var n = Number(v);
   if(v == null || !isFinite(n)) return '—';
   var a = Math.abs(n);
-  if(a >= 10000) return n.toFixed(0);
-  if(a >= 1000)  return n.toFixed(1);
-  if(a >= 10)    return n.toFixed(2);
-  if(a >= 1)     return n.toFixed(3);
+  if(a >= 10000) return veSayi(n, 0);
+  if(a >= 1000)  return veSayi(n, 1);
+  if(a >= 10)    return veSayi(n, 2);
+  if(a >= 1)     return veSayi(n, 3);
   if(a === 0)    return '0';
-  return n.toFixed(4);
+  return veSayi(n, 4);
 }
 
 // ── Sinyal ↔ panel bağı ───────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ function veSigSparkPoints(series, w, h, samples) {
   for(i = 0; i < samples; i++) {
     x = (i / (samples - 1)) * (w - 2) + 1;
     y = span > 0 ? (1 - (vals[i] - mn) / span) * (h - 3) + 1.5 : h / 2;
-    pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+    pts.push(x.toFixed(1) + ',' + y.toFixed(1));   // makine: SVG nokta listesi
   }
   return pts.join(' ');
 }

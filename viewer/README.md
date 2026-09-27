@@ -54,7 +54,7 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 
 ## MFSim'den düzeltme taşıma
 
-Tek komut — yedi dosyanın hepsini `js/`'ten alır, `trace-view.js`'in iki yerel
+Tek komut — sekiz dosyanın hepsini `js/`'ten alır, `trace-view.js`'in iki yerel
 farkını yeniden uygular:
 
 ```bash
