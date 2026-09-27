@@ -41,7 +41,7 @@
 // bu dosya yalnız HTML kuruyor. (Aynı adı iki dosyada bildirmek üst-seviye
 // çakışması olurdu; tests/unit/source-hygiene.test.js buna kapı tutuyor.)
 function _feadEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function _feadFmt(x, dg){ if(!Number.isFinite(x)) return '—'; dg=(dg===undefined)?1:dg; return x.toFixed(dg); }
+function _feadFmt(x, dg){ if(!Number.isFinite(x)) return '—'; return veSayi(x, (dg===undefined)?1:dg); }
 
 // ── EMEKLİYE AYRILDI: veFeadBeltPath ────────────────────────────────────────
 // Bu dosyada kayış çevresini kendi hesaplayan bir fonksiyon vardı ve YANLIŞTI:
@@ -1175,7 +1175,7 @@ function _feadEtkinSurucuMu(node, build){
 
 function _feadCapNot(node){
   var dd = (typeof VE_FEAD_DEFAULT_DIA !== 'undefined' && VE_FEAD_DEFAULT_DIA[node.type]) || 100;
-  return 'Dış çap girilmedi — tipe göre ' + dd + ' mm varsayıldı; kayış boyu ve sarım açıları '
+  return 'Dış çap girilmedi — tipe göre ' + veSayi(dd) + ' mm varsayıldı; kayış boyu ve sarım açıları '
     + 'bu varsayıma dayanıyor.';
 }
 
@@ -1982,8 +1982,8 @@ function getFeadTensionerPropertiesHTML(node){
         + '<b>Kol ataleti</b> ve <b>kasnak kütlesi</b> burulma (dönel titreşim) modeline girer; '
         + 'ikisi de raporun "Tensioner Data" satırlarında yazar. Kol, kasnağı kol boyu '
         + 'yarıçapında taşıdığı için etkin atalet J<sub>kol</sub> + m·L² olur — <b>kütle '
-        + 'girilmezse birinci mod belirgin şekilde YÜKSEK çıkar</b> (BMC örneğinde 15.3 yerine '
-        + '20.3 Hz, +%32).'));
+        + 'girilmezse birinci mod belirgin şekilde YÜKSEK çıkar</b> (BMC örneğinde 15,3 yerine '
+        + '20,3 Hz, +%32).'));
 
   var _yay = html;
 
@@ -2020,7 +2020,7 @@ function veFeadTensionerLibCard(node){
   // yalnız kol boyu ve çalışma momenti.
   var opts = [['', '— elle gir —']].concat(liste.map(function(r){
     return [r.key, (typeof veFeadTenLabel === 'function') ? veFeadTenLabel(r)
-                   : ('kol ' + r.armLen + ' mm · ' + r.meanNm + ' Nm')];
+                   : ('kol ' + veSayi(r.armLen) + ' mm · ' + veSayi(r.meanNm) + ' Nm')];
   }));
   // ORTAK ALAN SATIRI (`.ve-fp-f--sel`), kendi flex'i DEĞİL: `flex:1` etiketi
   // bütün boşluğu yiyip seçiciyi sağ uca fırlatıyordu ve etiket üç satıra
@@ -2295,13 +2295,13 @@ function veFeadBandSVG(band, W, H, opt){
   // ızgara
   for(var g = 0; g <= 4; g++){
     var yv = yMax * g / 4, y = Y(yv);
-    s += '<line x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + (W - R)
-      + '" y2="' + y.toFixed(1) + '" stroke="' + C.grid + '" stroke-width="1"/>'
-      + '<text x="' + (L - 5) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end"'
-      + ' font-size="' + (pr ? 10 : 8) + '" fill="' + C.mut + '">' + Math.round(yv) + '</text>';
+    s += '<line x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + (W - R)   // makine: SVG koordinatı
+      + '" y2="' + y.toFixed(1) + '" stroke="' + C.grid + '" stroke-width="1"/>'   // makine: SVG koordinatı
+      + '<text x="' + (L - 5) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end"'   // makine: SVG koordinatı
+      + ' font-size="' + (pr ? 10 : 8) + '" fill="' + C.mut + '">' + veSayi(yv, 0) + '</text>';
   }
   [-180, -90, 0, 90, 180].forEach(function(v){
-    s += '<text x="' + X(v).toFixed(1) + '" y="' + (H - B + 12)
+    s += '<text x="' + X(v).toFixed(1) + '" y="' + (H - B + 12)   // makine: SVG koordinatı
       + '" text-anchor="middle" font-size="' + (pr ? 10 : 8) + '" fill="' + C.mut + '">'
       + v + '</text>';
   });
@@ -2309,8 +2309,8 @@ function veFeadBandSVG(band, W, H, opt){
   var st = band.step;
   band.samples.forEach(function(x){
     if(x.ok) return;
-    s += '<rect data-ve="band-block" x="' + X(x.deg - st / 2).toFixed(1) + '" y="' + T
-      + '" width="' + Math.max(1, X(st) - X(0)).toFixed(1) + '" height="' + (H - T - B)
+    s += '<rect data-ve="band-block" x="' + X(x.deg - st / 2).toFixed(1) + '" y="' + T   // makine: SVG koordinatı
+      + '" width="' + Math.max(1, X(st) - X(0)).toFixed(1) + '" height="' + (H - T - B)   // makine: SVG koordinatı
       + '" fill="' + C.kot + '" opacity="0.10"/>';
   });
   // T(θ) EĞRİSİ — YALNIZ KULLANILABİLİR AÇILAR, kopukluklar KORUNUYOR.
@@ -2328,7 +2328,7 @@ function veFeadBandSVG(band, W, H, opt){
   var seg = [], segs = [];
   band.samples.forEach(function(x){
     if(x.ok && Number.isFinite(x.tensionN)){
-      seg.push(X(x.deg).toFixed(1) + ',' + Y(x.tensionN).toFixed(1));
+      seg.push(X(x.deg).toFixed(1) + ',' + Y(x.tensionN).toFixed(1));   // makine: SVG nokta listesi
     } else if(seg.length){ segs.push(seg); seg = []; }
   });
   if(seg.length) segs.push(seg);
@@ -2337,28 +2337,28 @@ function veFeadBandSVG(band, W, H, opt){
       + '" fill="none" stroke="' + C.ana + '" stroke-width="' + (pr ? 1.8 : 1.5) + '"/>';
   });
   if(kirpik)
-    s += '<line data-ve="band-clip" x1="' + L + '" y1="' + Y(yMax).toFixed(1)
-      + '" x2="' + (W - R) + '" y2="' + Y(yMax).toFixed(1) + '" stroke="' + C.mut
+    s += '<line data-ve="band-clip" x1="' + L + '" y1="' + Y(yMax).toFixed(1)   // makine: SVG koordinatı
+      + '" x2="' + (W - R) + '" y2="' + Y(yMax).toFixed(1) + '" stroke="' + C.mut   // makine: SVG koordinatı
       + '" stroke-width="1" stroke-dasharray="3 3"/>';
   // KULLANICININ NOKTASI
   var u = _feadNum(band.userDeg, NaN);
   if(Number.isFinite(u)){
     var uu = ((u + 180) % 360 + 360) % 360 - 180, ux = X(uu);
-    s += '<line data-ve="band-user" x1="' + ux.toFixed(1) + '" y1="' + T + '" x2="'
-      + ux.toFixed(1) + '" y2="' + (H - B) + '" stroke="' + C.uy
+    s += '<line data-ve="band-user" x1="' + ux.toFixed(1) + '" y1="' + T + '" x2="'   // makine: SVG koordinatı
+      + ux.toFixed(1) + '" y2="' + (H - B) + '" stroke="' + C.uy   // makine: SVG koordinatı
       + '" stroke-width="1.4" stroke-dasharray="4 3"/>';
     if(Number.isFinite(Tu))
-      s += '<circle cx="' + ux.toFixed(1) + '" cy="' + Y(Tu).toFixed(1) + '" r="'
+      s += '<circle cx="' + ux.toFixed(1) + '" cy="' + Y(Tu).toFixed(1) + '" r="'   // makine: SVG koordinatı
         + (pr ? 4 : 3) + '" fill="' + C.uy + '"/>';
   }
   s += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (H - B)
     + '" stroke="' + C.ink + '" stroke-width="1"/>'
     + '<line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B)
     + '" stroke="' + C.ink + '" stroke-width="1"/>'
-    + '<text x="' + ((L + W - R) / 2).toFixed(0) + '" y="' + (H - 2)
+    + '<text x="' + ((L + W - R) / 2).toFixed(0) + '" y="' + (H - 2)   // makine: SVG koordinatı
     + '" text-anchor="middle" font-size="' + (pr ? 11 : 8) + '" fill="' + C.mut + '">'
     + 'kol çalışma açısı [°]</text>'
-    + '<text transform="translate(' + (pr ? 13 : 10) + ',' + (H / 2).toFixed(0)
+    + '<text transform="translate(' + (pr ? 13 : 10) + ',' + (H / 2).toFixed(0)   // makine: SVG dönüşümü
     + ') rotate(-90)" text-anchor="middle" font-size="' + (pr ? 11 : 8) + '" fill="'
     + C.mut + '">gerginlik [N]</text>';
   s += '</svg>';
@@ -2520,7 +2520,7 @@ function getFeadBeltPropertiesHTML(node){
           ph: (_mk.value > 0 ? String(_mk.value) : ''), step:'0.0001' }
       ], 1)
     + _feadHint('Yalnız açıklık frekansı ve çırpınma için. Boş bırakılırsa '
-        + (_mk.value > 0 ? '<b>' + _feadEsc(String(_mk.value).replace('.', ',')) + '</b> kullanılır ('
+        + (_mk.value > 0 ? '<b>' + _feadEsc(veSayi(_mk.value)) + '</b> kullanılır ('
             + _feadEsc(_mk.source) + '). ' : 'katalog değeri kullanılır. ')
         + 'Yayımlanmış PK değerleri 0,018–0,023 aralığında; Gates HD raporunun frekans '
         + 'haritasından geri-hesap 0,0196. Ölçülmüş bir değeriniz varsa girin.'));
@@ -2737,9 +2737,9 @@ function veFeadBeltDbHint(node){
   if(typeof FEADCore === 'undefined') return '';
   try {
     var bp = FEADCore.beltProps({ profile: (node.data.profile || 'PK'), brand: (node.data.brand || 'GATES') });
-    return 'Katalog: h<sub>b</sub> = ' + bp.hb + ' mm · h<sub>r</sub> = ' + bp.hr + ' mm · '
-      + 'kaburga adımı ' + bp.ribPitch + ' mm · min. kasnak çapı ' + bp.minPulleyDia + ' mm · '
-      + 'maks. hız ' + bp.maxSpeedMs + ' m/s.';
+    return 'Katalog: h<sub>b</sub> = ' + veSayi(bp.hb) + ' mm · h<sub>r</sub> = ' + veSayi(bp.hr) + ' mm · '
+      + 'kaburga adımı ' + veSayi(bp.ribPitch) + ' mm · min. kasnak çapı ' + veSayi(bp.minPulleyDia) + ' mm · '
+      + 'maks. hız ' + veSayi(bp.maxSpeedMs) + ' m/s.';
   } catch(e){
     return '<span style="color:var(--ink-danger);">' + _feadEsc(veFeadTranslateError(e && e.message)) + '</span>';
   }
@@ -4235,7 +4235,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     if(sel.primary){
       var _kMetin = sel.primary.label + '  ·  kol ' + _feadR(sel.primary.relDeg) + '°'
         + (Number.isFinite(sel.primary.tensionN)
-            ? '  ·  ' + Math.round(sel.primary.tensionN) + ' N' : '');
+            ? '  ·  ' + veSayi(sel.primary.tensionN, 0) + ' N' : '');
       kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_kMetin, 8.5), y0: 12 - 8, y1: 12 + 2 });
     }
     var _lMetin = 'dişli kenar = kayışın kaburgalı yüzü';
@@ -4249,7 +4249,7 @@ function veFeadLayoutSVG(build, W, H, opts){
       kutular.push({ x0: 0, x1: W, y0: H - ALT, y1: H });
       var _tm = opts.tension;
       if(_tm && _tm.spanN && _tm.spanN.length === (geom.spans || []).length){
-        var _gMetin = 'açıklık gerilmesi · ' + Math.round(_tm.engineRpm) + ' dev/dk';
+        var _gMetin = 'açıklık gerilmesi · ' + veSayi(_tm.engineRpm, 0) + ' dev/dk';
         kutular.push({ x0: pad - 6, x1: pad - 6 + Math.max(84, etW(_gMetin, 7)),
                        y0: H - ALT - 38 - 7, y1: H - ALT - 22 + 2 });
       }
@@ -4632,7 +4632,7 @@ function veFeadLayoutSVG(build, W, H, opts){
           + _feadSpanPathD(walk, i, T, vibDef) + '" fill="none" stroke="' + renk
           + '" stroke-width="4.4" stroke-linecap="round"><title>'
           + _feadEsc(geom.names[i] + ' → ' + geom.names[(i+1) % ps.length]
-                     + ' · ' + Math.round(TN) + ' N') + '</title></path>';
+                     + ' · ' + veSayi(TN, 0) + ' N') + '</title></path>';
       // SAYI RAMPA RENGİNDE DEĞİL, METİN RENGİNDE. Rampanın orta durağı kayışın
       // amberi olmak zorunda (harita açılıp kapanınca renk sıçramasın) ama o
       // amber AÇIK temada beyaz üstünde 2,3:1 kontrast veriyor — 9 px'lik bir
@@ -4659,11 +4659,11 @@ function veFeadLayoutSVG(build, W, H, opts){
           + '" width="' + f(LB/12 + 0.4) + '" height="6" fill="'
           + veFeadTensionColor(tmap.min + (tmap.max-tmap.min)*(q+0.5)/12, tmap.min, tmap.max) + '"/>';
     svg += '<text data-ve="tension-legend" x="' + LX + '" y="' + f(H - ALT - 38) + '" font-size="7" fill="var(--text-muted)"' + _hale + '>'
-        + 'açıklık gerilmesi · ' + Math.round(tmap.engineRpm) + ' dev/dk</text>'
+        + 'açıklık gerilmesi · ' + veSayi(tmap.engineRpm, 0) + ' dev/dk</text>'
       + '<text data-ve="tension-legend" x="' + LX + '" y="' + f(H - ALT - 22) + '" font-size="7" fill="var(--text-muted)"' + _hale + '>'
       + Math.round(tmap.min) + ' N</text>'
       + '<text data-ve="tension-legend" x="' + f(LX + LB) + '" y="' + f(H - ALT - 22) + '" text-anchor="end" font-size="7"'
-      + ' fill="var(--text-muted)"' + _hale + '>' + Math.round(tmap.max) + ' N</text>';
+      + ' fill="var(--text-muted)"' + _hale + '>' + veSayi(tmap.max, 0) + ' N</text>';
   }
   svg += '<path data-ve="rib" d="' + _feadTeethPath(walk, geom.sense, stepMm, toothMm, 0, T, vibDef) + '" fill="none"'
       + ' stroke="var(--accent-warning)" stroke-width="1" stroke-linecap="round" opacity="0.9">'
@@ -4788,7 +4788,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     svg += '<text data-ve="pos-label" x="' + f(pad - 6) + '" y="12" font-size="8.5"'
         + ' fill="var(--accent-warning)">' + _feadEsc(sel.primary.label)
         + '  ·  kol ' + f(sel.primary.relDeg) + '°'
-        + (Number.isFinite(sel.primary.tensionN) ? '  ·  ' + Math.round(sel.primary.tensionN) + ' N' : '')
+        + (Number.isFinite(sel.primary.tensionN) ? '  ·  ' + veSayi(sel.primary.tensionN, 0) + ' N' : '')
         + '</text>';
     // ANİMASYON KÜNYESİ. Ağır çekim katsayısı GİZLENMEZ: ekranda gördüğü hız
     // gerçek hız değil, oranlar gerçek — bu ayrım yazılı olmazsa kullanıcı
@@ -5823,7 +5823,7 @@ function _feadAnimLabel(kin, fallback, vib, scn){
     // yazılmazsa kullanıcı ekrandan devir okumaya kalkar.
     var kat0 = (kin && kin.slow < 0.999) ? '×1/' + Math.round(1/kin.slow) : '×1';
     return 'senaryo ' + _feadFmt(scn.T, 1) + ' s (gerçek zaman)  ·  dönüş ' + kat0
-         + ' ağır çekim  ·  tepe ' + scn.peak + ' dev/dk'
+         + ' ağır çekim  ·  tepe ' + veSayi(scn.peak, 0) + ' dev/dk'
          + (scn.egri ? '  ·  rampa tork eğrisinden' : '  ·  rampa DOĞRUSAL')
          + (vib ? '\nçırpma canlı · genlik ×' + _feadFmt(vib.gain, 0) + ' (KALİBRE DEĞİL)' : '');
   }
@@ -5838,14 +5838,14 @@ function _feadAnimLabel(kin, fallback, vib, scn){
       // aynı sayıyı basıyor — ikisinin eşleştiği görülsün diye burada da var.
       : 'çırpma ' + _feadFmt(Math.min.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
         + '–' + _feadFmt(Math.max.apply(null, vib.spans.map(function(x){ return x.f; })), 0)
-        + ' Hz @ ' + Math.round(vib.anchorN) + ' N'
+        + ' Hz @ ' + veSayi(vib.anchorN, 0) + ' N'
         + (vib.maxMode > 1 ? '  ·  mod 1–' + vib.maxMode : '  ·  mod 1')
         + '  ·  ζ ' + _feadFmt(vib.zeta, 2) + ' ×' + _feadFmt(vib.gain, 0)
         + ' (KALİBRE DEĞİL)';
   }
   if(!kin) return alt;
   var kat = (kin.slow >= 0.999) ? 'gerçek zaman'
-          : '×1/' + Math.round(1/kin.slow) + ' ağır çekim';
+          : '×1/' + veSayi(1/kin.slow, 0) + ' ağır çekim';
   return Math.round(kin.engineRpm) + ' dev/dk' + (fallback ? ' (varsayılan)' : '')
        + '  ·  kayış ' + _feadFmt(kin.beltMs, 1) + ' m/s  ·  ' + kat
        + (alt ? '  ·  ' + alt : '');
@@ -6774,10 +6774,10 @@ function _feadScnRezonans(st){
 }
 function _feadScnHud(scn, st){
   if(!st) return '';
-  var h = st.fazAd + '  ·  ' + Math.round(st.rpm) + ' dev/dk'
+  var h = st.fazAd + '  ·  ' + veSayi(st.rpm, 0) + ' dev/dk'
         + '  ·  kayış ' + _feadFmt(st.beltMs, 1) + ' m/s';
-  h += '  ·  T ' + Math.round(st.Tmin)
-     + (Math.round(st.Tmax) !== Math.round(st.Tmin) ? '–' + Math.round(st.Tmax) : '') + ' N';
+  h += '  ·  T ' + veSayi(st.Tmin, 0)
+     + (Math.round(st.Tmax) !== Math.round(st.Tmin) ? '–' + veSayi(st.Tmax, 0) : '') + ' N';
   var r = _feadScnRezonans(st);
   if(r) h += '   ⚠ REZONANS ' + ((scn && scn.adlar && scn.adlar[r.i]) ? scn.adlar[r.i] : ('açıklık ' + (r.i+1)))   // metin: çizimin SVG yazısı ve HUD textContent — ikon basılamaz
            + ' × ' + r.k + '. mertebe';
@@ -7243,11 +7243,11 @@ function getFeadSolverPropertiesHTML(node){
         [['PK-2_2p-MT3', 'PK-2_2p-MT3 (doğrulanmış, 8 sistem)'],
          ['PK-2_2a-MT3', 'PK-2_2a-MT3 (tek sistem — doğrulanmamış)']], 'PK-2_2p-MT3',
         'Gates raporunun "Pulley Contributions to Belt Rib Fatigue" başlığında yazan model adı. '
-        + 'İki takım sabit çok farklı (m 5.6 ↔ 4.05); yanlış seçim yorulma dağılımını kaydırır.')
+        + 'İki takım sabit çok farklı (m 5,6 ↔ 4,05); yanlış seçim yorulma dağılımını kaydırır.')
     + _feadHint('<b>Tasarım gerginliği sorulmaz</b> — gergi yay dengesinden türetilir '
         + '(T = M/(dL/dθ)); değeri "Algılanan Model" tablosunda yazar. '
         + '<b>Boy ofseti</b> tasarım başına kalibrasyon girdisidir '
-        + '(kuralı bilinmiyor; gözlenen aralık −0.3 … +3.5 mm).'));
+        + '(kuralı bilinmiyor; gözlenen aralık −0,3 … +3,5 mm).'));
 
   html += veFeadDriveCard(node);
   html += veFeadEngineCard(node);
@@ -7704,7 +7704,7 @@ function veFeadDutyEditor(node, build){
   var devirler = rows.map(function(r){ return _feadNum(r.rpm, NaN); })
     .filter(function(v){ return Number.isFinite(v); });
   var ozet = rows.length + ' devir noktası'
-    + (devirler.length ? ' · ' + Math.min.apply(null, devirler) + '–' + Math.max.apply(null, devirler) + ' d/dk' : '')
+    + (devirler.length ? ' · ' + veSayi(Math.min.apply(null, devirler)) + '–' + veSayi(Math.max.apply(null, devirler)) + ' d/dk' : '')
     + ' · ' + yuk.length + ' aksesuar sütunu';
   h = '<div class="ve-tablo" data-ve-tablo="fead-duty:' + _feadEsc(node.id) + '"'
     + ' data-ve-tablo-baslik="Çalışma çevrimi" data-ve-tablo-ozet="' + _feadEsc(ozet) + '">' + h + uyari + '</div>';
@@ -8398,7 +8398,7 @@ function veFeadResultVerdicts(R){
   if(!tersYerlesim && SF_ist > 0 && Number.isFinite(enKucukSF)){
     var gecti = enKucukSF >= SF_ist;
     h += '<div class="ve-fr-hukum" data-d="' + (gecti ? 'ok' : 'no') + '">'
-      + '<span>Servis faktörü ' + _feadFmt(SF_ist, 2) + ' &nbsp;·&nbsp; en kötü nokta ' + enKucukRpm + ' rpm</span>'
+      + '<span>Servis faktörü ' + _feadFmt(SF_ist, 2) + ' &nbsp;·&nbsp; en kötü nokta ' + veSayi(enKucukRpm, 0) + ' rpm</span>'
       + '<b>min SF = ' + _feadFmt(enKucukSF, 2) + ' ' + (gecti ? veDurumIkon('ok') + ' GEÇTİ' : veDurumIkon('err') + ' KALDI') + '</b></div>';
   }
   var neg = A.duty.some(function(d){ return d.warnings && d.warnings.length; });

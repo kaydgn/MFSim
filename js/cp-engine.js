@@ -238,7 +238,7 @@ function getEnginePropertiesHTML(node) {
                  'ƒ sütunları düzenlenemez, her hücre değişiminde yeniden hesaplanır: ' +
                  '<span style=" color:var(--text-secondary);">D = aksesuar kaybı(devir)</span> · ' +
                  '<span style=" color:var(--text-secondary);">F = max(0, C − D)</span> · ' +
-                 '<span style=" color:var(--text-secondary);">E = F × 9549.3 / A</span>. ' +
+                 '<span style=" color:var(--text-secondary);">E = F × 9549,3 / A</span>. ' +
                  'Çözücü ve raporlar E–F sütunlarını okur.</div>';
     sheetHtml += '</div>';  // ve-motor-data-area
   }
@@ -335,8 +335,8 @@ function getEnginePropertiesHTML(node) {
     var totalUser = accData.reduce(function(s, a) { return s + (a.userLoss || 0); }, 0);
     accHtml += '<tr class="top">';
     accHtml += '<td class="lbl">Toplam</td>';
-    accHtml += '<td id="ve-acc-total-std-' + node.id + '" style="color:var(--text-muted);">' + totalStd.toFixed(1) + '</td>';
-    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="color:var(--accent-warning);">' + totalUser.toFixed(1) + '</td>';
+    accHtml += '<td id="ve-acc-total-std-' + node.id + '" style="color:var(--text-muted);">' + veSayi(totalStd, 1) + '</td>';
+    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="color:var(--accent-warning);">' + veSayi(totalUser, 1) + '</td>';
     accHtml += '</tr>';
     accHtml += '</tbody></table>';
     // "Kayıpları Uygula" doğrulama sütununa taşındı — sonucu orada okunuyor.
@@ -350,7 +350,7 @@ function getEnginePropertiesHTML(node) {
     var lossAtGoverned = veCalcAccLossAtRPM(accData, initGoverned, initGoverned);
     netHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between;">Doğrulama' +
                '<span id="ve-net-badge-' + node.id + '" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--accent-warning);">−' +
-               lossAtGoverned.toFixed(1) + ' kW @ ' + initGoverned + '</span></div>';
+               veSayi(lossAtGoverned, 1) + ' kW @ ' + veSayi(initGoverned, 0) + '</span></div>';
 
     netHtml += '<div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:4px;">';
     netHtml += '<canvas id="ve-net-chart-' + node.id + '" style="width:100%; height:200px;"></canvas>';
@@ -380,7 +380,7 @@ function getEnginePropertiesHTML(node) {
     netHtml += fitHtml;      // Eğri Yaklaşımı — kartsız gövde (yukarıda üretildi)
 
     netHtml += '<div class="sw-chain-bar ok" style="margin:0;">' + veIkon('check') + ' Governed <span id="ve-eng-govbar-' +
-               node.id + '">' + initGoverned + '</span> rpm şanzımana ve vites mantığına yayıldı</div>';
+               node.id + '">' + veSayi(initGoverned, 0) + '</span> rpm şanzımana ve vites mantığına yayıldı</div>';
     netHtml += '<div class="sw-btn-row" style="margin:0;">';
     netHtml += '<button class="sw-btn sw-btn-primary" style="flex:1;" onclick="onVEApplyAccLosses(\'' + node.id + '\')">Kayıpları uygula</button>';
     netHtml += '<button class="sw-btn sw-btn-outline" onclick="veTogglePropertiesPanel(false)">Kapat</button>';
@@ -443,15 +443,15 @@ function getEnginePropertiesHTML(node) {
                 '; align-items:baseline; gap:8px; justify-content:flex-end; font-size:var(--fs-body);' +
                 ' padding-bottom:7px; margin-bottom:8px; border-bottom:1px solid var(--border-color);">';
     headHtml += _fig('Brüt tepe', '<span id="ve-eng-m-gp2-' + node.id + '">' +
-                (peakSum ? peakSum.grossPower.toFixed(1) : '—') + '</span> kW');
+                (peakSum ? veSayi(peakSum.grossPower, 1) : '—') + '</span> kW');
     headHtml += '<span style="color:var(--text-muted);">−</span>';   // metin: denklemin işlemi (brüt − aksesuar = net)
     headHtml += _fig('Aksesuar', '<span id="ve-eng-m-loss2-' + node.id + '">' +
-                (peakSum ? peakSum.loss.toFixed(1) : '—') + '</span> kW', 'var(--accent-warning)');
+                (peakSum ? veSayi(peakSum.loss, 1) : '—') + '</span> kW', 'var(--accent-warning)');
     headHtml += '<span style="color:var(--text-muted);">=</span>';
     headHtml += _fig('Net tepe', '<span id="ve-eng-m-np2-' + node.id + '">' +
-                (peakSum ? peakSum.netPower.toFixed(1) : '—') + '</span> kW', VE_ENG_C.seri2);
+                (peakSum ? veSayi(peakSum.netPower, 1) : '—') + '</span> kW', VE_ENG_C.seri2);
     headHtml += '<span style="color:var(--text-muted);">@ <span id="ve-eng-m-rpm2-' + node.id + '">' +
-                (peakSum ? peakSum.rpm : '—') + '</span> rpm</span>';
+                (peakSum ? veSayi(peakSum.rpm, 0) : '—') + '</span> rpm</span>';
     headHtml += '</div>';
   }
 
@@ -2024,9 +2024,9 @@ function veEngSheetRowHTML(nodeId, idx, rpm, torque, power, accData, governed) {
   var h = '<tr>';
   h += '<td class="n">' + idx + '</td>';
   h += inCell(rpm) + inCell(torque) + inCell(power);
-  h += fCell('var(--accent-warning)', loss.toFixed(1));
-  h += fCell(VE_ENG_C.seri1, netT.toFixed(1));
-  h += fCell(VE_ENG_C.seri2, netP.toFixed(1));
+  h += fCell('var(--accent-warning)', veSayi(loss, 1));
+  h += fCell(VE_ENG_C.seri1, veSayi(netT, 1));
+  h += fCell(VE_ENG_C.seri2, veSayi(netP, 1));
   h += '<td style="text-align:center;"><button class="ve-row-del" onclick="removeVEMotorRow(this, \'' +
        nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   return h + '</tr>';
@@ -2505,8 +2505,8 @@ function veUpdateAccTotals(nodeId) {
   
   var stdEl = document.getElementById('ve-acc-total-std-' + nodeId);
   var userEl = document.getElementById('ve-acc-total-user-' + nodeId);
-  if(stdEl) stdEl.textContent = totalStd.toFixed(1);
-  if(userEl) userEl.textContent = totalUser.toFixed(1);
+  if(stdEl) stdEl.textContent = veSayi(totalStd, 1);
+  if(userEl) userEl.textContent = veSayi(totalUser, 1);
 }
 
 // Motor parametreleri (specs) değişiklik handler — Tam Gaz modülü
@@ -2588,9 +2588,9 @@ function veEngSheetSyncDerived(nodeId) {
     if(!(rpm > 0)) { f[0].textContent = '—'; f[1].textContent = '—'; f[2].textContent = '—'; return; }
     var loss = veCalcAccLossAtRPM(acc, rpm, governed);
     var netP = Math.max(0, (parseFloat(inputs[2].value) || 0) - loss);
-    f[0].textContent = loss.toFixed(1);
-    f[1].textContent = (netP * 9549.3 / rpm).toFixed(1);
-    f[2].textContent = netP.toFixed(1);
+    f[0].textContent = veSayi(loss, 1);
+    f[1].textContent = veSayi(netP * 9549.3 / rpm, 1);
+    f[2].textContent = veSayi(netP, 1);
   });
   var range = document.getElementById('ve-sheet-range-' + nodeId);
   if(range) range.textContent = 'A1:C' + i + ' girdi · ƒ D:F türetilen';
@@ -2612,13 +2612,13 @@ function veEngUpdateMetrics(nodeId) {
     if(el) el.textContent = v;
   };
   var lossGov = veCalcAccLossAtRPM(acc, governed, governed);
-  set('loss', lossGov.toFixed(1) + ' kW @ ' + governed);   // metrik satırı: GOVERNED devri
+  set('loss', veSayi(lossGov, 1) + ' kW @ ' + veSayi(governed, 0));   // metrik satırı: GOVERNED devri
   var badge = document.getElementById('ve-net-badge-' + nodeId);
-  if(badge) badge.textContent = '−' + lossGov.toFixed(1) + ' kW @ ' + governed;
+  if(badge) badge.textContent = '−' + veSayi(lossGov, 1) + ' kW @ ' + veSayi(governed, 0);
   // Yayılım şeridi render anındaki değerde DONUYORDU: governed 1600'e çekilince
   // rozet/metrik 1600 derken şerit hâlâ 2100 yazıyordu.
   var govBar = document.getElementById('ve-eng-govbar-' + nodeId);
-  if(govBar) govBar.textContent = governed;
+  if(govBar) govBar.textContent = veSayi(governed, 0);
   if(!rows.length) {
     ['gp','np','gt','nt','pts','gp2','np2','loss2','rpm2'].forEach(function(k) { set(k, '—'); });
     return;
@@ -2631,18 +2631,18 @@ function veEngUpdateMetrics(nodeId) {
   });
   var top = function(key) { return net.reduce(function(m, r) { return r[key] > m[key] ? r : m; }, net[0]); };
   var gp = top('gP'), np = top('nP'), gt = top('gT'), nt = top('nT');
-  set('gp',  gp.gP.toFixed(1) + ' kW @ ' + gp.rpm);
-  set('np',  np.nP.toFixed(1) + ' kW @ ' + np.rpm);
-  set('gt',  gt.gT.toFixed(0) + ' Nm @ ' + gt.rpm);
-  set('nt',  nt.nT.toFixed(0) + ' Nm @ ' + nt.rpm);
-  set('pts', rows.length + ' satır · ' + net[0].rpm + '–' + net[net.length - 1].rpm + ' rpm');
+  set('gp',  veSayi(gp.gP, 1) + ' kW @ ' + veSayi(gp.rpm, 0));
+  set('np',  veSayi(np.nP, 1) + ' kW @ ' + veSayi(np.rpm, 0));
+  set('gt',  veSayi(gt.gT, 0) + ' Nm @ ' + veSayi(gt.rpm, 0));
+  set('nt',  veSayi(nt.nT, 0) + ' Nm @ ' + veSayi(nt.rpm, 0));
+  set('pts', rows.length + ' satır · ' + veSayi(net[0].rpm, 0) + '–' + veSayi(net[net.length - 1].rpm, 0) + ' rpm');
   // Özet şeridi: üç figür de NET TEPE devrinde okunur → brüt − kayıp = net kapanır
   var pk = veEngPeakSummary(rows, acc, governed);
   if(pk) {
-    set('gp2',   pk.grossPower.toFixed(1));
-    set('loss2', pk.loss.toFixed(1));
-    set('np2',   pk.netPower.toFixed(1));
-    set('rpm2',  pk.rpm);
+    set('gp2',   veSayi(pk.grossPower, 1));
+    set('loss2', veSayi(pk.loss, 1));
+    set('np2',   veSayi(pk.netPower, 1));
+    set('rpm2',  veSayi(pk.rpm, 0));
   }
 }
 
@@ -2758,7 +2758,7 @@ function updateVEMotorChart(nodeId) {
   ctx.font = veThemeFont('micro');
   ctx.textAlign = 'center';
   bolX.degerler.forEach(function(v) {
-    ctx.fillText(v.toFixed(bolX.basamak), xScale(v), margin.top + plotHeight + 15);
+    ctx.fillText(veSayi(v, bolX.basamak), xScale(v), margin.top + plotHeight + 15);
   });
   ctx.fillText('Devir [rpm]', margin.left + plotWidth / 2, 200 - 5);
 
@@ -2768,14 +2768,14 @@ function updateVEMotorChart(nodeId) {
   ctx.fillStyle = VE_ENG_C.seri1;
   ctx.textAlign = 'right';
   bolT.degerler.forEach(function(v) {
-    ctx.fillText(v.toFixed(bolT.basamak), margin.left - 5, yScaleTorque(v) + 3);
+    ctx.fillText(veSayi(v, bolT.basamak), margin.left - 5, yScaleTorque(v) + 3);
   });
 
   // Sağ Y ekseni etiketleri (Güç)
   ctx.fillStyle = VE_ENG_C.seri2;
   ctx.textAlign = 'left';
   bolP.degerler.forEach(function(v) {
-    ctx.fillText(v.toFixed(bolP.basamak), margin.left + plotWidth + 5, yScalePower(v) + 3);
+    ctx.fillText(veSayi(v, bolP.basamak), margin.left + plotWidth + 5, yScalePower(v) + 3);
   });
   
   // Eğriler plot alanına kırpılır — yakınlaştırınca eksen bölgesine taşmasın
@@ -2844,9 +2844,9 @@ function updateVEMotorChart(nodeId) {
         var t = vePcInterpY(torquePoints, rpm);
         var pw2 = vePcInterpY(powerPoints, rpm);
         if(t === null && pw2 === null) return null;
-        var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + Math.round(rpm) + ' rpm</div>';
-        if(t !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:' + VE_ENG_C.seri1 + ';border-radius:1px;"></span><span style="color:' + VE_ENG_C.seri1 + '; font-weight:600; min-width:42px;">Tork</span><span>' + t.toFixed(0) + ' N·m</span></div>';
-        if(pw2 !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:' + VE_ENG_C.seri2 + ';border-radius:1px;"></span><span style="color:' + VE_ENG_C.seri2 + '; font-weight:600; min-width:42px;">Güç</span><span>' + pw2.toFixed(1) + ' kW</span></div>';
+        var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + veSayi(rpm, 0) + ' rpm</div>';
+        if(t !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:' + VE_ENG_C.seri1 + ';border-radius:1px;"></span><span style="color:' + VE_ENG_C.seri1 + '; font-weight:600; min-width:42px;">Tork</span><span>' + veSayi(t, 0) + ' N·m</span></div>';
+        if(pw2 !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:' + VE_ENG_C.seri2 + ';border-radius:1px;"></span><span style="color:' + VE_ENG_C.seri2 + '; font-weight:600; min-width:42px;">Güç</span><span>' + veSayi(pw2, 1) + ' kW</span></div>';
         return h;
       }
     });
@@ -2895,7 +2895,7 @@ function onVEEngSheetPaste(nodeId) {
     if(tbody) {
       var html = '';
       parsed.forEach(function(r, i) {
-        html += veEngSheetRowHTML(nodeId, i + 1, r.rpm, r.torque, +r.power.toFixed(1), acc, gov);
+        html += veEngSheetRowHTML(nodeId, i + 1, r.rpm, r.torque, +r.power.toFixed(1), acc, gov);   // makine: yuvarlama, sayı alanına gidiyor
       });
       tbody.innerHTML = html;
     }
@@ -3010,16 +3010,16 @@ function updateVENetChart(nodeId) {
   
   // X etiketleri
   ctx.fillStyle = VE_ENG_C.etiket; ctx.font = veThemeFont('micro'); ctx.textAlign = 'center';
-  bolX.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolX.basamak), xScale(v), margin.top + plotHeight + 15); });
+  bolX.degerler.forEach(function(v) { ctx.fillText(veSayi(v, bolX.basamak), xScale(v), margin.top + plotHeight + 15); });
   ctx.fillText('Devir [rpm]', margin.left + plotWidth / 2, 200 - 5);
 
   // Sol Y (Tork)
   ctx.fillStyle = VE_ENG_C.seri1; ctx.textAlign = 'right';
-  bolT.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolT.basamak), margin.left - 5, yScaleT(v) + 3); });
+  bolT.degerler.forEach(function(v) { ctx.fillText(veSayi(v, bolT.basamak), margin.left - 5, yScaleT(v) + 3); });
 
   // Sağ Y (Güç)
   ctx.fillStyle = VE_ENG_C.seri2; ctx.textAlign = 'left';
-  bolP.degerler.forEach(function(v) { ctx.fillText(v.toFixed(bolP.basamak), margin.left + plotWidth + 5, yScaleP(v) + 3); });
+  bolP.degerler.forEach(function(v) { ctx.fillText(veSayi(v, bolP.basamak), margin.left + plotWidth + 5, yScaleP(v) + 3); });
   
   // Çizim yardımcısı
   function drawLine(pts, scaleFn, color, width, dash) {
@@ -3079,11 +3079,11 @@ function updateVENetChart(nodeId) {
                  '<span>' + val + ' ' + unit + '</span></div>';
         };
         var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px;' +
-                ' padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + Math.round(rpm) + ' rpm</div>';
-        if(gT !== null) h += line('Brüt tork', VE_ENG_C.etiket, gT.toFixed(0), 'N·m', true);
-        if(nT !== null) h += line('Net tork',  VE_ENG_C.seri1,  nT.toFixed(0), 'N·m');
-        if(gP !== null) h += line('Brüt güç',  VE_ENG_C.etiket, gP.toFixed(1), 'kW', true);
-        if(nP !== null) h += line('Net güç',   VE_ENG_C.seri2,  nP.toFixed(1), 'kW');
+                ' padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + veSayi(rpm, 0) + ' rpm</div>';
+        if(gT !== null) h += line('Brüt tork', VE_ENG_C.etiket, veSayi(gT, 0), 'N·m', true);
+        if(nT !== null) h += line('Net tork',  VE_ENG_C.seri1,  veSayi(nT, 0), 'N·m');
+        if(gP !== null) h += line('Brüt güç',  VE_ENG_C.etiket, veSayi(gP, 1), 'kW', true);
+        if(nP !== null) h += line('Net güç',   VE_ENG_C.seri2,  veSayi(nP, 1), 'kW');
         return h;
       }
     });
@@ -3132,7 +3132,7 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
       );
       
       html += '<b style="color:#4aa3ff;">Tork [Nm]</b> (' + torqueCoeffs.length + '. derece)';
-      html += ' <span style="color:var(--text-muted);">R²=' + torqueR2.toFixed(4) + '</span><br>';
+      html += ' <span style="color:var(--text-muted);">R²=' + veSayi(torqueR2, 4) + '</span><br>';
       html += '<span style="font-size:var(--fs-tiny);">T(n) = ' + formatVEPolynomial(torqueCoeffs) + '</span>';
     }
     
@@ -3152,7 +3152,7 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
         );
         
         html += '<br><b style="color:#ff6b6b;">Güç [kW]</b> (' + powerCoeffs.length + '. derece)';
-        html += ' <span style="color:var(--text-muted);">R²=' + powerR2.toFixed(4) + '</span><br>';
+        html += ' <span style="color:var(--text-muted);">R²=' + veSayi(powerR2, 4) + '</span><br>';
         html += '<span style="font-size:var(--fs-tiny);">P(n) = ' + formatVEPolynomial(powerCoeffs) + '</span>';
       }
     }
@@ -3207,14 +3207,14 @@ function formatVEPolynomial(coeffs) {
     
     var term = '';
     if(i === 0) {
-      term = c.toFixed(2);
+      term = veSayi(c, 2);
     } else {
       var sign = c >= 0 ? '+' : '-';
       var absC = Math.abs(c);
       if(absC < 0.001) {
-        term = sign + absC.toExponential(2) + '·n';
+        term = sign + veSayiUstel(absC, 2) + '·n';
       } else {
-        term = sign + absC.toFixed(4) + '·n';
+        term = sign + veSayi(absC, 4) + '·n';
       }
       if(i > 1) term += '^' + i;
     }

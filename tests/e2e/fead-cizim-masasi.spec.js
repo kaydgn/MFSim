@@ -84,7 +84,7 @@ test('SÜRÜKLE: konum girdisi imleçle birlikte yazılır, tek geri-al adımı'
   await page.waitForTimeout(300);
   const sonra = await veri(page, h.id);
 
-  expect(kunye.konum).toMatch(/^X -?\d+\.\d · Y -?\d+\.\d mm$/);
+  expect(kunye.konum).toMatch(/^X -?[\d.]+,\d · Y -?[\d.]+,\d mm$/);   // Türkçe sayı (7·C)
   expect(kunye.aciklik).toBe(2);
   expect(kunye.imlec).toBe('grabbing');
   // İMLEÇLE BİRLİKTE: 40 px sağa, 20 px yukarı = +40/s mm x, +20/s mm y (y YUKARI).

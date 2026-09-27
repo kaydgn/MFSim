@@ -345,7 +345,7 @@ describe('yüzey — kayış kipi KİLİTLİ', () => {
     expect(h).not.toMatch(/veFeadSet\('[^']+','armMeanDeg'/);
     expect(h).not.toMatch(/veFeadSet\('[^']+','pivotX'/);
     expect(h).toMatch(/montaj konumu \(türedi\)/);
-    expect(h).toMatch(/-250\.00 \/ 110\.00/);
+    expect(h).toMatch(/-250,00 \/ 110,00/);
   });
 
   test('avara hareketi okuması ÇIKAN boyu ve gerginliği basar', () => {

@@ -16,7 +16,7 @@
 
 // ─── Yardımcılar ─────────────────────────────────────────────────────────────
 function _mntNum(v, d){ if(v===undefined||v===null||v==='') return d===undefined?0:d; var x=(typeof v==='string')?v.trim().replace(',', '.'):v; var n=Number(x); return Number.isFinite(n)?n:(d===undefined?0:d); }
-function _mntFmt(x, dg){ if(!Number.isFinite(x)) return '—'; dg=(dg===undefined)?3:dg; return x.toFixed(dg); }
+function _mntFmt(x, dg){ if(!Number.isFinite(x)) return '—'; dg=(dg===undefined)?3:dg; return veSayi(x, dg); }
 function _mntEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _mntDeflColor(mm){ var a=Math.abs(mm); if(a<0.5) return '#22c55e'; if(a<1.0) return '#84cc16'; if(a<2.0) return '#eab308'; if(a<3.0) return '#f97316'; return '#ef4444'; }
 function _mntForceColor(kN){ var a=Math.abs(kN); if(a<5) return '#22c55e'; if(a<10) return '#84cc16'; if(a<20) return '#eab308'; if(a<30) return '#f97316'; return '#ef4444'; }
@@ -863,13 +863,13 @@ var _MNT_PTO_REF = {
   'mnt-pump': {
     head: ['Pompa','m [kg]','X [mm]','Y [mm]','Z [mm]'],
     rows: [['Üst Pompa 1','37','971,21','77,01','894,73'],
-           ['Üst Pompa 2','17,5','1271,20','77,01','894,73'],
-           ['Üst Pompa 3','17,5','1481,21','77,01','894,73'],
+           ['Üst Pompa 2','17,5','1.271,20','77,01','894,73'],
+           ['Üst Pompa 3','17,5','1.481,21','77,01','894,73'],
            ['Yan Pompa 1','21','991,21','−269,52','473,30']]
   },
   'mnt-pto-group': {
     head: ['Grup','m [kg]','X [mm]','Y [mm]','Z [mm]','Ixx','Iyy','Izz'],
-    rows: [['Üst PTO Grubu','97','1058,06','77,01','894,73','0,45','6,515','6,15'],
+    rows: [['Üst PTO Grubu','97','1.058,06','77,01','894,73','0,45','6,515','6,15'],
            ['Yan PTO Grubu','46','855,34','−269,52','473,30','0,136','0,915','0,915']]
   }
 };
@@ -1928,7 +1928,7 @@ function _mnt2DNiceTicks(min, max, target){
   return ticks;
 }
 // Eksen işaret etiketi — tam sayı mm, eksi işareti tipografik "−".
-function _mnt2DTick(v){ return Math.round(v).toString().replace('-','−'); }
+function _mnt2DTick(v){ return veSayi(v, 0, { eksi: '−' }); }
 function _mnt2DArrow(x1,y1,x2,y2,color,hl){
   hl=hl||7; var ang=Math.atan2(y2-y1,x2-x1);
   var ax=x2-hl*Math.cos(ang-0.42), ay=y2-hl*Math.sin(ang-0.42);
@@ -2145,23 +2145,23 @@ function _mnt2DFigure(o){
     var n=grp.length;
     grp.forEach(function(pt,k){
       var mx=pt.cx+(n>1?(k-(n-1)/2)*19:0), my=pt.cy;
-      var info=['Takoz — '+(pt.m.name||'Takoz'), 'Konum  ('+_mnt2DR(pt.m.x)+', '+_mnt2DR(pt.m.y)+', '+_mnt2DR(pt.m.z)+') mm'];
+      var info=['Takoz — '+(pt.m.name||'Takoz'), 'Konum  ('+veSayi(_mnt2DR(pt.m.x))+'; '+veSayi(_mnt2DR(pt.m.y))+'; '+veSayi(_mnt2DR(pt.m.z))+') mm'];
       svg+='<g'+_mnt2DInfoAttr(info)+'>'+_mnt2DMountMark(mx, my, o.vKey==='z', _MNT2D_C_MOUNT)+'</g>';
       items.push({cx:mx, cy:my, mr:9, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:9, bold:false});
     });
   });
   // bileşen CG (içi boş daire, kütleye göre boyut)
   o.comps.forEach(function(c){ var cv=(o.vKey==='y'?c.y:c.z), cx=o.px(hval(c)), cy=o.pyFn(cv), r=o.cr(c.mass);
-    var info=[c.name||'Bileşen', 'Ağırlık merkezi  ('+_mnt2DR(c.x)+', '+_mnt2DR(c.y)+', '+_mnt2DR(c.z)+') mm'];
-    if(c.mass>0) info.push('Kütle  '+c.mass.toFixed(1)+' kg');
+    var info=[c.name||'Bileşen', 'Ağırlık merkezi  ('+veSayi(_mnt2DR(c.x))+'; '+veSayi(_mnt2DR(c.y))+'; '+veSayi(_mnt2DR(c.z))+') mm'];
+    if(c.mass>0) info.push('Kütle  '+veSayi(c.mass, 1)+' kg');
     svg+='<g'+_mnt2DInfoAttr(info)+'>';
     svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="var(--bg-primary)" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.5"/></g>';
     items.push({cx:cx, cy:cy, mr:r, above:o.compAbove, text:o.compLabelFn(c), color:'var(--text-secondary)', size:9.5, bold:false});
   });
   // birleşik CG (jeodezik sembol)
   if(o.cg){ var gx=o.px(hval(o.cg)), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z);
-    var cgInfo=['Birleşik ağırlık merkezi', 'Konum  ('+_mnt2DR(o.cg.x)+', '+_mnt2DR(o.cg.y)+', '+_mnt2DR(o.cg.z)+') mm'];
-    if(o.cg.m>0) cgInfo.push('Toplam kütle  '+o.cg.m.toFixed(1)+' kg');
+    var cgInfo=['Birleşik ağırlık merkezi', 'Konum  ('+veSayi(_mnt2DR(o.cg.x))+'; '+veSayi(_mnt2DR(o.cg.y))+'; '+veSayi(_mnt2DR(o.cg.z))+') mm'];
+    if(o.cg.m>0) cgInfo.push('Toplam kütle  '+veSayi(o.cg.m, 1)+' kg');
     svg+='<g'+_mnt2DInfoAttr(cgInfo)+'>'+_mnt2DCGMark(gx,gy,10,_MNT2D_C_CG);
     svg+='<circle cx="'+_mnt2DR(gx)+'" cy="'+_mnt2DR(gy)+'" r="12" fill="transparent"/></g>';
     items.push({cx:gx, cy:gy, mr:11, above:o.compAbove, text:o.cgLabelFn(o.cg), color:'var(--text-primary)', size:10.5, bold:true});
@@ -2205,8 +2205,8 @@ function _mnt2DViewSVG(data){
   var mMin=ms.length?Math.min.apply(null,ms):0, mMax=ms.length?Math.max.apply(null,ms):1;
   function cr(m){ if(!(m>0)) return 7; var t=(mMax-mMin>1e-9)?(m-mMin)/(mMax-mMin):0.5; return 7+7*Math.sqrt(t); }
   function shortName(n){ n=String(n||''); return n.length>18?n.slice(0,17)+'…':n; }
-  function fmt1(v){ return (Math.round(v*10)/10).toString().replace('.',','); }
-  function rz(v){ return Math.round(v).toString().replace('-','−'); }
+  function fmt1(v){ return veSayi(Math.round(v*10)/10); }
+  function rz(v){ return veSayi(v, 0, { eksi: '−' }); }
   // Takoz etiketi — gerçek adı (kısaltılmış). Konum birleştirme olmadığından
   // her takoz kendi adıyla, kendi izdüşüm konumunda etiketlenir.
   function mntLabel(m){ return shortName(m.name||'Takoz'); }
@@ -2299,8 +2299,8 @@ function _mntLibInp(nodeId, key, field, val, isText, setter){
 // Kuvvet biçimlendirici — grafik ekseni için kompakt (6400→"6.4k"), tipografik −.
 function _mntFmtF(v){
   var a=Math.abs(v), s=(v<0)?'−':'';
-  if(a>=1000){ var k=a/1000; return s+(k>=10?Math.round(k):(Math.round(k*10)/10))+'k'; }
-  return s+Math.round(a);
+  if(a>=1000){ var k=a/1000; return s+veSayi(k>=10?Math.round(k):(Math.round(k*10)/10))+'k'; }
+  return s+veSayi(a, 0);
 }
 // [[δ,f],…] noktaları arasında lineer interpolasyon/klips (2 nokta veya spline yoksa).
 function _mntLinInterp(pts, x){
@@ -2349,7 +2349,7 @@ function _mntLibOptionRow(node, e, sel){
     +' onclick="veMntLibSelect(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">';
   h+='<span class="mntlib-dot" style="background:'+_mntLibDotColor(e)+';"></span>';
   h+='<span class="mntlib-opt-name">'+_mntEsc(e.name)+'</span>';
-  h+='<span class="mntlib-kz">kz '+Math.round(_mntNum(e.sz))+'</span>';
+  h+='<span class="mntlib-kz">kz '+veSayi(_mntNum(e.sz), 0)+'</span>';
   // ∿ / ✓ yuvaları HER satırda basılır (gerekmiyorsa boş) → kz sütunu hizalı kalır
   h+='<span class="mntlib-wave"'+(_mntEntryHasLaw(e)?' title="nonlineer eğri">'+veIkon('activity'):'>')+'</span>';
   h+='<span class="mntlib-check">'+(isSel?veIkon('check'):'')+'</span>';
@@ -2364,7 +2364,7 @@ function _mntLibTrigger(node, sel){
   if(sel){
     h+='<span class="mntlib-dot" style="background:'+_mntLibDotColor(sel)+';"></span>';
     h+='<span class="mntlib-trigger-name">'+_mntEsc(sel.name)+'</span>';
-    h+='<span class="mntlib-kz">kz '+Math.round(_mntNum(sel.sz))+'</span>';
+    h+='<span class="mntlib-kz">kz '+veSayi(_mntNum(sel.sz), 0)+'</span>';
     if(_mntEntryHasLaw(sel)) h+='<span class="mntlib-wave" title="nonlineer eğri">'+veIkon('activity')+'</span>';
   } else {
     h+='<span class="mntlib-trigger-name empty">Takoz seçin…</span>';
@@ -3273,7 +3273,7 @@ function _mntYield(){
 function _mntSci(x){
   if(!Number.isFinite(x)) return '—';
   var a=Math.abs(x);
-  return (a===0) ? '0' : (a>=100 || a<0.1) ? x.toExponential(1) : x.toFixed(2);
+  return (a===0) ? '0' : (a>=100 || a<0.1) ? veSayiUstel(x, 1) : veSayi(x, 2);
 }
 // Yük durumu için iterasyon/durum etiketi (progress alt satırı).
 function _mntCaseIterLabel(rc, prep){
@@ -3391,7 +3391,7 @@ function _mntSolverStatusHTML(R){
     + '<span style="font-weight:400; color:var(--text-muted); font-size:var(--fs-micro);">'+nC+' kütle · '+nM+' takoz · '+nCase+' yük durumu · '+nMode+' mod</span></div>';
   h+='<div style="margin-top:5px; font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">'
     + 'Toplam kütle <b style="color:var(--text-primary);">'+_mntFmt(mp.m,1)+' kg</b> · '
-    + 'CG (<b style="color:var(--text-primary);">'+_mntFmt(cgmm[0],0)+', '+_mntFmt(cgmm[1],0)+', '+_mntFmt(cgmm[2],0)+'</b>) mm</div>';
+    + 'CG (<b style="color:var(--text-primary);">'+_mntFmt(cgmm[0],0)+'; '+_mntFmt(cgmm[1],0)+'; '+_mntFmt(cgmm[2],0)+'</b>) mm</div>';
   var modeLbl = R.solveMode==='linear' ? 'Lineer — eğriler yok sayıldı'
     : R.solveMode==='nonlinear' ? (R.solvedNL ? 'Nonlineer (Newton)' : 'Nonlineer seçildi — eğri yok, lineer')
     : (R.solvedNL ? 'Otomatik → Nonlineer (Newton)' : 'Otomatik → Lineer');

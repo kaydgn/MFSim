@@ -1035,8 +1035,8 @@ describe('gergi künye etiketi — rapor adı YOK', () => {
   test('etiket kol boyu ve çalışma momentini yazar, rapor adını YAZMAZ', () => {
     liste().forEach((r) => {
       const et = TENS.veFeadTenLabel(r);
-      expect(et).toContain(String(r.armLen));
-      expect(et).toContain(r.meanNm.toFixed(2));
+      expect(et).toContain(veSayi(r.armLen));
+      expect(et).toContain(veSayi(r.meanNm, 2));
       expect(et).not.toContain(r.src);
       expect(et).not.toMatch(/AG0\d|Ten@|8PK1715HD/);
     });
@@ -1051,7 +1051,7 @@ describe('gergi künye etiketi — rapor adı YOK', () => {
     const tek = liste().map((r) => 'kol ' + r.armLen + ' mm · ' + r.meanNm.toFixed(1) + ' Nm');
     expect(new Set(tek).size).toBeLessThan(tek.length);   // 1 ondalık ÇAKIŞIYOR
     // Etiket PARÇA KODUYLA başlıyor (kullanıcı, 2026-09-01) — kodsuz kayıt "?".
-    et.forEach((e) => expect(e).toMatch(/^\S+ · kol \d+(\.\d+)? mm · \d+\.\d{2} Nm$/));
+    et.forEach((e) => expect(e).toMatch(/^\S+ · kol \d+(,\d+)? mm · \d+,\d{2} Nm$/));   // Türkçe sayı (7·C)
   });
 
   test('sayı UYDURULMAZ: eksik kayıtta NaN/undefined basılmaz', () => {
@@ -1862,7 +1862,7 @@ describe('kayış adımı — tek çıktı, profil kalır', () => {
     const h = wiz.veFeadWizStepHTML(3, b);
     expect(h).toContain('SERBEST (kilitli)');
     expect(h).toMatch(/Gereken boy \(çıktı\)/);
-    expect(h).toContain('1714.6');
+    expect(h).toContain('1.714,6');
     // Ne kapandığı ADIYLA yazılı — bir özet yüzeyin en pahalı sessiz hatası,
     // İÇERMEDİĞİ bir hesabın yapıldığı izlenimini bırakmasıdır.
     expect(h).toMatch(/KAPALI/);
@@ -2089,7 +2089,7 @@ describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
     const ten = ex.pulleys.filter((p) => (componentDefs[p.type] || {}).isFeadTensioner)[0];
     expect(kunye['Gergi']).toContain(ten.name);
     expect(kunye['Gergi']).toContain(String(ten.data.armLen));
-    expect(kunye['Gergi']).toContain(String(ten.data.meanLoad));
+    expect(kunye['Gergi']).toContain(veSayi(ten.data.meanLoad));
     expect(kunye['Gergi']).toContain(String(ten.data.armMeanDeg));
     expect(kunye['Gergi']).not.toBe('—');
 
@@ -2097,7 +2097,7 @@ describe('örnekten doldur — AÇILIR LİSTE, yüklenen belirgin', () => {
     // BİRİMLE BİRLİKTE: çıplak sayı TESADÜFEN geçiyordu — 8PK1392HD adı zaten
     // "1392" içeriyor, dolayısıyla `effLength` alanı künyeden tamamen düşse de
     // iddia yeşil kalıyordu (mutasyonla ölçüldü).
-    expect(kunye['Kayış']).toContain(String(ex.belt.effLength) + ' mm');
+    expect(kunye['Kayış']).toContain(veSayi(ex.belt.effLength) + ' mm');
     expect(kunye['Çalışma çevrimi'])
       .toContain(String(ex.solver.duty.length) + ' devir noktası');
     // Kasnak adları KASNAKLAR satırında — başka satıra saçılmıyor.
@@ -2756,7 +2756,7 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     expect(svg).toContain('<svg');
     expect(svg).toContain('data-k=');            // ölçek künyesi — fare için
     ['0°', '90°', '180°', '-90°'].forEach((e) => expect(svg).toContain('>' + e + '<'));
-    expect(svg).toContain('164.0°');             // seçili açı yazılı
+    expect(svg).toContain('164,0°');             // seçili açı yazılı
     // KOL YEŞİL OK (kullanıcı isteği, 2026-09-02): gövde + doldurulmuş uç.
     // İŞARETÇİYE bakıyor, nitelik SIRASINA değil: ok artık ortak üreticiden
     // (`veFeadArmArrowSVG`) geliyor ve `data-ve` niteliğini önce basıyor.
@@ -2946,7 +2946,7 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const h = wiz.veFeadWizAngHTML();
     const p = M.veFeadTensionerPivot({ cenX: sc.cx, cenY: sc.cy, armLen: sc.armLen,
                                        armMeanDeg: M.veFeadArmFromShown(164) });
-    expect(h).toContain(p[0].toFixed(2));
+    expect(h).toContain(veSayi(p[0], 2));
     expect(h).toContain('montaj konumu');
   });
 

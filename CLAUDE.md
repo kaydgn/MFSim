@@ -309,8 +309,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `// makine: <sebep>` taşır. GİRDİ ALANINA GRUPLU SAYI YAZILMAZ
   (`{ binlik: false }`): okuyucu `veSayiOku` virgülsüz noktayı ondalık sayar
   (dişli oranı "1.000"), yani "1.800" 1,8 okunur — sessiz bin kat hata.
-  Görüntüleyici yazıcıyı birebir taşır. Kapı: `sayi-dili.test.js`; kapsam
-  aşama aşama büyür (bugün grafik çekirdeği: eksen, imleç, sinyal ağacı, pano).
+  Görüntüleyici yazıcıyı birebir taşır. **Ekrandaki YAZI sayıya geri
+  okunmaz** (`parseFloat(el.textContent)` "0,0065"i 0 okur): değer kendi
+  niteliğinde taşınır. Koordinat üçlüsünde ayraç `; ` — "(12,5; 34; −7)".
+  Kapı: `sayi-dili.test.js` + `sayi-pencere.spec.js` (ekranı ölçer: doğrudan
+  birleştirilen sayıyı kaynak taraması görmez); kapsam aşama aşama büyür (bugün
+  grafik çekirdeği, Sonuçlar katmanı ve bütün bileşen pencereleri; belgeler aşama 3).
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri

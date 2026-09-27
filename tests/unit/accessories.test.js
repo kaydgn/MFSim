@@ -631,7 +631,7 @@ describe('panel üreticileri (smoke)', () => {
     nodes = [n]; connections = [];
     var h = veAccCurveTableHTML(n);
     expect(h).toContain('>1600<');                       // 2000 / 1.25
-    expect(h).toContain('>23.9<');                       // 4 × 9550 / 1600
+    expect(h).toContain('>23,9<');                       // 4 × 9550 / 1600
     expect(h).toContain('class="sw-chain-bar warn"');    // 1 nokta dışarıda
     expect((h.match(/<tr class="out">/g) || []).length).toBe(1);
   });
@@ -652,9 +652,9 @@ describe('panel üreticileri (smoke)', () => {
     nodes = [eng, n];
     connections = [{ id:'c1', from:'ac-1', to:'eng-1', fromPort:'output', toPort:'input-0' }];
     var h = veAccMetricsHTML(n);
-    expect(h).toContain('5.58 kW');
-    expect(h).toContain('24.2 Nm');
-    expect(h).toContain('%2.2');
+    expect(h).toContain('5,58 kW');          // Türkçe sayı (karar 7·C)
+    expect(h).toContain('24,2 Nm');
+    expect(h).toContain('%2,2');
 
     // Bağlantı yok → yüzde satırı hiç üretilmez (uydurma değer yok)
     connections = [];

@@ -85,7 +85,7 @@ function _fwNum(v, d){
 }
 function _fwFmt(x, dg){
   if(!Number.isFinite(x)) return '—';
-  return x.toFixed(dg === undefined ? 1 : dg);
+  return veSayi(x, dg === undefined ? 1 : dg);
 }
 function _fwDefName(type){
   var d = (typeof componentDefs !== 'undefined' && componentDefs[type]) || {};
@@ -1408,12 +1408,12 @@ function _fwStepKaynak(b){
     var kunye = [
       ['Kasnaklar', exSec.pulleys.map(function(p){ return _fwEsc(p.name); }).join(' · ')],
       ['Kayış', _fwEsc(bd.beltType || ((bd.ribs || '?') + bd.profile)) + ' · '
-        + bd.effLength + ' mm · tolerans ' + (bd.tolerance > 0 ? '±' + bd.tolerance + ' mm' : 'YOK')
-        + ' · aşınma ' + (bd.wearPct > 0 ? '%' + (bd.wearPct * 100).toFixed(2) : 'YOK')],
-      ['Gergi', tenP ? (_fwEsc(tenP.name) + ' · kol ' + tenP.data.armLen + ' mm · yay '
-        + tenP.data.meanLoad + ' Nm @ ' + tenP.data.armMeanDeg + '°') : '—'],
+        + veSayi(bd.effLength) + ' mm · tolerans ' + (bd.tolerance > 0 ? '±' + veSayi(bd.tolerance) + ' mm' : 'YOK')
+        + ' · aşınma ' + (bd.wearPct > 0 ? '%' + veSayi(bd.wearPct * 100, 2) : 'YOK')],
+      ['Gergi', tenP ? (_fwEsc(tenP.name) + ' · kol ' + veSayi(tenP.data.armLen) + ' mm · yay '
+        + veSayi(tenP.data.meanLoad) + ' Nm @ ' + veSayi(tenP.data.armMeanDeg) + '°') : '—'],
       ['Çalışma çevrimi', (exSec.solver.duty || []).length + ' devir noktası'
-        + ((exSec.solver.duty || [])[0] ? ' · ' + exSec.solver.duty[0].degC + ' °C' : '')]
+        + ((exSec.solver.duty || [])[0] ? ' · ' + veSayi(exSec.solver.duty[0].degC) + ' °C' : '')]
     ];
     var ih = '<div class="ve-fw-exnote">' + _fwEsc(exSec.note) + '</div>'
            + '<dl class="ve-fw-exspec">';
@@ -1803,7 +1803,7 @@ function _fwStpKartHTML(){
   h += '<div class="ve-fw-seeded">' + veIkon('check') + ' <b>' + _fwEsc(s.dosya) + '</b> okundu <em>'
     + _fwEsc([bas.sistem || bas.onisleyici || '',
               s.kap !== 'duz' ? 'sıkıştırılmış (' + s.kap + ')' : '',
-              so.parcalar.length + ' parça', sure.toFixed(2) + ' sn'].filter(Boolean).join(' · '))
+              so.parcalar.length + ' parça', veSayi(sure, 2) + ' sn'].filter(Boolean).join(' · '))
     + '</em></div>';
 
   // ── PARÇA AĞACI ─────────────────────────────────────────────────────────
@@ -2221,7 +2221,7 @@ function _fwStepGergi(b){
         // çünkü u(φ) = −u(θ)).
         _fwReadHTML(_fwTeX('\\vec{p} = \\vec{c} + a\\,(\\cos\\varphi,\\ \\sin\\varphi)',
                            'p = c + a·(cos φ, sin φ)   ·   φ = kol yönü'),
-          _piv[0].toFixed(2) + ' / ' + _piv[1].toFixed(2) + ' mm')
+          veSayi(_piv[0], 2) + ' / ' + veSayi(_piv[1], 2) + ' mm')
       );
   else
     // KART KAYBOLMAZ, EKSİĞİ SÖYLER.
@@ -2523,7 +2523,7 @@ function veFeadWizAngSVG(sc, shownDeg, zoom, W, H, hoverDeg){
    [sol, C[0] - R - 11, C[1] + 3, 'end'], ['-90', C[0], C[1] + R + 15, 'middle']]
     .forEach(function(e){
       h += '<text x="' + f(e[1]) + '" y="' + f(e[2]) + '" text-anchor="' + e[3]
-        + '" font-size="9" fill="var(--text-muted)">' + e[0] + '°</text>';
+        + '" font-size="9" fill="var(--text-muted)">' + veSayi(e[0]) + '°</text>';
     });
 
   // ── OLANAKLI AÇI BANDI — künyenin erişebildiği yay ─────────────────────
@@ -2686,7 +2686,7 @@ function veFeadWizAngHTML(){
     + '<div class="ve-fw-ang-row">'
       + '<label class="ve-fw-lbl" for="ve-fw-ang-in">Kol yönü [°]</label>'
       + '<input id="ve-fw-ang-in" type="text" inputmode="decimal" class="ve-fw-inp"'
-        + ' value="' + (Number.isFinite(d) ? _fwFmt(d, 2) : '') + '"'
+        + ' value="' + (Number.isFinite(d) ? d.toFixed(2) : '') + '"'   // makine: sayı alanının değeri
         + ' oninput="veFeadWizAngType(this.value)"'
         + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();veFeadWizAngOk();}">'
       + '<button type="button" class="ve-fw-btn ve-fw-btn-primary" onclick="veFeadWizAngOk()">Uygula</button>'
@@ -2813,7 +2813,7 @@ function veFeadWizAngPick(ev){
   veFeadWizAngPatch();
   if(typeof document === 'undefined') return;
   var el = document.getElementById('ve-fw-ang-in');
-  if(el){ el.value = _fwFmt(VE_FW_ANG.shown, 2); el.focus(); el.select(); }
+  if(el){ el.value = _fwNum(VE_FW_ANG.shown, NaN).toFixed(2); el.focus(); el.select(); }   // makine: sayı alanının değeri
 }
 function veFeadWizAngType(v){
   if(!VE_FW_ANG) return;
@@ -3187,7 +3187,7 @@ function _fwEngineOzet(s){
   var d = VE_FW_ENG_FIELDS.filter(function(f){ return /Rpm$/.test(f.yol.split('.')[1]); });
   var devir = d.map(function(f){
     var v = _fwEngVal(s, f);
-    return v === null ? '—' : String(v);
+    return v === null ? '—' : veSayi(v);
   }).join(' · ');
   return _fwRead('Devir sınırları (rölanti · governed · overspeed)', devir + ' RPM')
     + _fwRead('Silindir', (function(){ var v = _fwEngVal(s, VE_FW_ENG_FIELDS[0]); return v === null ? '—' : String(v); })())

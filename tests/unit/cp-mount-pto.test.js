@@ -195,7 +195,8 @@ describe('Destek bağlantıları — taşınan gövde kuralı', () => {
 describe('Referans tablosu ASR-SR-116 ile aynı', () => {
   // Panelde gösterilen değerler rapordan ELLE kopyalandı; bir hane kayarsa
   // kullanıcı yanlış mertebeyi referans alır. Kaynağa karşı kilitlenir.
-  const num = (s) => Number(String(s).replace('−', '-').replace(',', '.'));
+  // Tablo Türkçe yazar ("1.271,20", karar 7·C): tek okuyucudan geçer.
+  const num = (s) => veSayiOku(String(s));
 
   test('parça satırları Tablo 4 ile birebir', () => {
     const pto = cp._MNT_PTO_REF['mnt-pto'].rows.map((r) => r.map(num).slice(1));

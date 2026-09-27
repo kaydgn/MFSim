@@ -302,8 +302,8 @@ describe('SAĞ SÜTUN — sekmeden BAĞIMSIZ (tasarımın iddiası)', () => {
       return f ? f.querySelector('.ve-fp-inp').getAttribute('value') : null;
     };
 
-    expect(oku('Efektif \u00e7ap')).toBe(satir.effDiaMm.toFixed(1) + ' mm');
-    expect(oku('Sar\u0131m a\u00e7\u0131s\u0131')).toBe(satir.wrapDeg.toFixed(1) + '\u00b0');
+    expect(oku('Efektif \u00e7ap')).toBe(veSayi(satir.effDiaMm, 1) + ' mm');
+    expect(oku('Sar\u0131m a\u00e7\u0131s\u0131')).toBe(veSayi(satir.wrapDeg, 1) + '\u00b0');
     expect(oku('D\u00f6n\u00fc\u015f y\u00f6n\u00fc')).toBe(satir.spin);
     expect(oku('Kay\u0131\u015f s\u0131ras\u0131')).toBe(satir.index + ' / ' + T.rows.length);
 
@@ -313,7 +313,7 @@ describe('SAĞ SÜTUN — sekmeden BAĞIMSIZ (tasarımın iddiası)', () => {
     expect(Number(hedef.data.od).toFixed(1) + ' mm').not.toBe(oku('Efektif \u00e7ap'));
 
     // Çevrim kapanışı da tablodan: işaretli toplamın MUTLAK değeri.
-    expect(yan.textContent).toContain('\u03a3 ' + Math.abs(T.signedWrapDeg).toFixed(1) + '\u00b0');
+    expect(yan.textContent).toContain('\u03a3 ' + veSayi(Math.abs(T.signedWrapDeg), 1) + '\u00b0');
   });
 });
 
@@ -580,7 +580,7 @@ describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
     const ozet = birim.getAttribute('data-ve-tablo-ozet');
     const devir = coz.data.duty.map((r) => Number(r.rpm));
     expect(ozet).toContain(coz.data.duty.length + ' devir noktası');
-    expect(ozet).toContain(Math.min(...devir) + '–' + Math.max(...devir) + ' d/dk');
+    expect(ozet).toContain(veSayi(Math.min(...devir)) + '–' + veSayi(Math.max(...devir)) + ' d/dk');
     // Çevrim seçici birimin DIŞINDA: sütuna sığıyor, katlanmamalı.
     const sec = [...kap.querySelectorAll('select')].filter((s) => /veFeadDutyLib/.test(s.getAttribute('onchange') || ''))[0];
     expect(sec).toBeTruthy();

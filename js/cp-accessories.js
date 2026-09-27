@@ -161,7 +161,7 @@ function veAccGetNodeModel(node){
   if(isNaN(ratio)) ratio = info.defRatio;
   if(d.accPreset === '__manual__'){
     var kw = parseFloat(d.accManualKw); if(isNaN(kw)) kw = 0;
-    return { name: info.accName, kwConst: kw, driveRatio: ratio, label: 'Manuel ('+kw.toFixed(1)+' kW)' };
+    return { name: info.accName, kwConst: kw, driveRatio: ratio, label: 'Manuel ('+veSayi(kw, 1)+' kW)' };
   }
   var curve = veAccCurveOf(node);
   if(!curve || !curve.length) return null;   // seçim yapılmadı / eğri boş
@@ -276,11 +276,11 @@ function veSyncEngineAccessories(engineNode){
       row.curve = model.curve;
       delete row.kwConst;
       // Görüntü için governed devirdeki temsili kayıp
-      row.userLoss = +veAccInterpCurve(model.curve, gov * model.driveRatio).toFixed(2);
+      row.userLoss = +veAccInterpCurve(model.curve, gov * model.driveRatio).toFixed(2);   // makine: yuvarlama
     } else {
       row.kwConst = model.kwConst;
       delete row.curve;
-      row.userLoss = +(model.kwConst || 0).toFixed(2);
+      row.userLoss = +(model.kwConst || 0).toFixed(2);   // makine: yuvarlama
     }
   });
 
@@ -347,8 +347,8 @@ function getAccessoryPropertiesHTML(node){
 
   s1 += '<table class="ve-acc-tbl">';
   s1 += '<tr><th>Tahrik oranı [-]</th><td><input type="text" inputmode="decimal" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
-  s1 += '<tr><th>Motor idle</th><td class="ve-acc-ro">' + Math.round(ctx.idle) + ' rpm</td></tr>';
-  s1 += '<tr><th>Governed</th><td class="ve-acc-ro">' + Math.round(ctx.gov) + ' rpm</td></tr>';
+  s1 += '<tr><th>Motor idle</th><td class="ve-acc-ro">' + veSayi(ctx.idle, 0) + ' rpm</td></tr>';
+  s1 += '<tr><th>Governed</th><td class="ve-acc-ro">' + veSayi(ctx.gov, 0) + ' rpm</td></tr>';
   s1 += '</table>';
   s1 += '<div class="sw-footer" style="margin:0;">Aksesuar_devri = Motor_devri × oran. ' + info.label + ' motordan farklı devirde döner; oran preset ile gelir, elle değiştirilebilir.</div>';
 
@@ -435,7 +435,7 @@ function veAccCurveTableHTML(node){
     var engRpm = Math.round(p.rpm / ctx.ratio);
     var inRange = (engRpm >= ctx.idle && engRpm <= ctx.gov);
     if(!inRange) outCount++;
-    var nm = (inRange && engRpm > 0) ? (p.kw * 9550 / engRpm).toFixed(1) : '—';
+    var nm = (inRange && engRpm > 0) ? veSayi(p.kw * 9550 / engRpm, 1) : '—';
     var cls = inRange ? '' : ' class="out"';
     h += '<tr' + cls + '>';
     h += '<td class="num idx">' + (i+1) + '</td>';
@@ -455,7 +455,7 @@ function veAccCurveTableHTML(node){
     h += '<div class="sw-chain-bar fail">' + veIkon('x') + ' Eğri için en az 2 nokta gerekir.</div>';
   } else if(outCount){
     h += '<div class="sw-chain-bar warn">' + outCount + ' nokta motor aralığının ('
-       + Math.round(ctx.idle) + '–' + Math.round(ctx.gov) + ' rpm) dışında — çözücüde uç değere sabitlenir.</div>';
+       + veSayi(ctx.idle, 0) + '–' + veSayi(ctx.gov, 0) + ' rpm) dışında — çözücüde uç değere sabitlenir.</div>';
   }
 
   h += '<div class="sw-btn-row" style="justify-content:flex-start;margin:0;">';
@@ -483,11 +483,11 @@ function veAccMetricsHTML(node){
   }).length;
 
   var h = '<table class="ve-acc-tbl metrics">';
-  h += '<tr><th>Çekilen güç @ governed</th><td>' + govKw.toFixed(2) + ' kW</td></tr>';
-  h += '<tr><th>Kayıp tork (krank)</th><td>' + lossNm.toFixed(1) + ' Nm</td></tr>';
-  h += '<tr><th>Idle devirde kayıp</th><td>' + idleKw.toFixed(2) + ' kW</td></tr>';
+  h += '<tr><th>Çekilen güç @ governed</th><td>' + veSayi(govKw, 2) + ' kW</td></tr>';
+  h += '<tr><th>Kayıp tork (krank)</th><td>' + veSayi(lossNm, 1) + ' Nm</td></tr>';
+  h += '<tr><th>Idle devirde kayıp</th><td>' + veSayi(idleKw, 2) + ' kW</td></tr>';
   if(ctx.gross){
-    h += '<tr><th>Brüt tork (' + ctx.eng.id + ')</th><td>' + Math.round(ctx.gross) + ' Nm</td></tr>';
+    h += '<tr><th>Brüt tork (' + ctx.eng.id + ')</th><td>' + veSayi(ctx.gross, 0) + ' Nm</td></tr>';
   }
   if(model.curve){
     h += '<tr><th>Aralıktaki nokta</th><td>' + inRange + ' / ' + model.curve.length + '</td></tr>';
@@ -497,8 +497,8 @@ function veAccMetricsHTML(node){
   if(ctx.gross){
     var pct = lossNm / ctx.gross * 100;
     h += '<div class="ve-acc-share"><div class="row"><span>Net torktaki payı</span><span class="val">%'
-       + pct.toFixed(1) + '</span></div><div class="bar"><i style="width:' + Math.min(100, Math.max(0, pct)).toFixed(1) + '%"></i></div>'
-       + '<div class="note">' + Math.round(ctx.gross) + ' Nm brüt torkun ' + lossNm.toFixed(1)
+       + veSayi(pct, 1) + '</span></div><div class="bar"><i style="width:' + Math.min(100, Math.max(0, pct)).toFixed(1) + '%"></i></div>'   // makine: CSS genişliği (yalnız ikinci çağrı)
+       + '<div class="note">' + veSayi(ctx.gross, 0) + ' Nm brüt torkun ' + veSayi(lossNm, 1)
        + ' Nm\'si bu aksesuara gidiyor.</div></div>';
     h += '<div class="sw-chain-bar ok">' + veIkon('check') + ' Motorun net tork modeli güncellendi (' + ctx.eng.id + ')</div>';
   } else {
@@ -556,7 +556,7 @@ function veAccDrawChart(nodeId){
   // Rozet + açıklama
   var badge = document.getElementById('ve-acc-badge-' + nodeId);
   if(badge){
-    badge.textContent = model ? (govKw.toFixed(1) + ' kW @ ' + Math.round(gov) + ' rpm')
+    badge.textContent = model ? (veSayi(govKw, 1) + ' kW @ ' + veSayi(gov, 0) + ' rpm')
                               : (curveEmptied ? '– eğri boş' : '– model seçilmedi');
     badge.className = 'sw-pkg-badge ' + (model ? 'ok' : 'miss');   // yoklukta yeşil okunuyordu
   }
@@ -566,7 +566,7 @@ function veAccDrawChart(nodeId){
   var desc = document.getElementById('ve-acc-desc-' + nodeId);
   if(desc){
     desc.textContent = model
-      ? ('Motor ' + Math.round(idle) + '–' + Math.round(gov) + ' rpm aralığında bu aksesuarın çektiği güç (kW); motorun net torkundan düşülür. ' + (eng ? 'Bağlı motorun devir aralığı kullanıldı.' : 'Motor bağlı değil — varsayılan aralık.'))
+      ? ('Motor ' + veSayi(idle, 0) + '–' + veSayi(gov, 0) + ' rpm aralığında bu aksesuarın çektiği güç (kW); motorun net torkundan düşülür. ' + (eng ? 'Bağlı motorun devir aralığı kullanıldı.' : 'Motor bağlı değil — varsayılan aralık.'))
       : emptyMsg;
   }
 

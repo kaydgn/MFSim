@@ -285,7 +285,7 @@ describe('varsayılan künyesi YÜZEYE çıkıyor', () => {
       expect(h).toContain(d.source);
     });
     // sayı da basılıyor (yalnız etiket değil)
-    expect(h).toContain(String(D.inertiaKgM2['fead-idler']));
+    expect(h).toContain(veSayi(D.inertiaKgM2['fead-idler']));
     // ve varsayılan yoksa kutu HİÇ çıkmıyor
     expect(veFeadDefaultsBox(kur('AG00879_GATES_2023').build)).toBe('');
   });

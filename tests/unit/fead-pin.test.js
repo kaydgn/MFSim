@@ -256,8 +256,8 @@ describe('panel yüzeyi', () => {
     const h = fead.veFeadArmReadout(ten);
     expect(h).toMatch(SATIR('Konum pimi · yarıçap'));
     expect(h).toMatch(SATIR('Konum pimi · AÇI \\(imalat\\)'));
-    expect(h).toMatch(/31\.00 mm/);
-    expect(h).toMatch(new RegExp(build.pin.angleDeg.toFixed(2).replace('.', '\\.')));
+    expect(h).toMatch(/31,00 mm/);
+    expect(h).toContain(veSayi(build.pin.angleDeg, 2));
     expect(h).toMatch(/parça sabiti/);
     expect(h).not.toMatch(/undefined|NaN/);
   });

@@ -130,7 +130,7 @@ function getSolverPropertiesHTML(node) {
   // kesilir; kesilen koşu üst hızı olduğundan düşük raporlar, bu yüzden
   // değerin gizli kalmaması gerekiyor.
   html += '<tr style="border-bottom:1px solid var(--border-color);"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Güvenlik limiti [s]</th><td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" min="1" step="10" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;"></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Simülasyon en fazla bu kadar sürer. Koşu limite dayanırsa üst hıza ulaşılmadan kesilir — sonuç olduğundan düşük çıkar. Varsayılan ' + VE_DEFAULT_MAX_SIM_TIME + ' s.</td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Simülasyon en fazla bu kadar sürer. Koşu limite dayanırsa üst hıza ulaşılmadan kesilir — sonuç olduğundan düşük çıkar. Varsayılan ' + veSayi(VE_DEFAULT_MAX_SIM_TIME) + ' s.</td></tr>';
 
   html += '</table>';
   html += '</div>';                                   // ve-cp-col--in kapat (girdi)
@@ -335,9 +335,9 @@ function getGearShiftPropertiesHTML(node) {
   var lockupOffset = spData.lockupOffset || 0;
   html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:var(--fs-tiny);">';
   html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Aile:</span> <span style="color:var(--text-heading); font-weight:500;">' + (spData.family || '—') + '</span></div>';
-  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Lockup Offset:</span> <span style="color:var(--text-heading); font-weight:500;">' + lockupOffset + ' rpm</span></div>';
-  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Shift Ref:</span> <span style="color:var(--text-heading); font-weight:500;">' + (shiftRefRPM > 0 ? shiftRefRPM + ' rpm' : 'Tanımsız') + '</span></div>';
-  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Gov. RPM:</span> <span style="color:var(--text-heading); font-weight:500;">' + (governed > 0 ? governed + ' rpm' : 'Tanımsız') + '</span></div>';
+  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Lockup Offset:</span> <span style="color:var(--text-heading); font-weight:500;">' + veSayi(lockupOffset) + ' rpm</span></div>';
+  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Shift Ref:</span> <span style="color:var(--text-heading); font-weight:500;">' + (shiftRefRPM > 0 ? veSayi(shiftRefRPM) + ' rpm' : 'Tanımsız') + '</span></div>';
+  html += '<div style="background:var(--bg-secondary); padding:5px 7px; border-radius:var(--radius-sm);"><span style="color:var(--text-muted);">Gov. RPM:</span> <span style="color:var(--text-heading); font-weight:500;">' + (governed > 0 ? veSayi(governed) + ' rpm' : 'Tanımsız') + '</span></div>';
   html += '</div>';
 
   if (pk !== activeProfileKey && activeProfileKey !== selectedKey) {
@@ -375,12 +375,12 @@ function getGearShiftPropertiesHTML(node) {
 
   if (cs && cs['1C2C']) {
     model1C2C = 'Lineer';
-    formula1C2C = 'N<sub>out</sub> = ' + cs['1C2C'].a + ' × ESL + (' + (cs['1C2C'].b || 0) + ')';
-    thr1C2C = (cs['1C2C'].a * shiftRefRPM + (cs['1C2C'].b || 0)).toFixed(0);
+    formula1C2C = 'N<sub>out</sub> = ' + veSayi(cs['1C2C'].a) + ' × ESL + (' + veSayi(cs['1C2C'].b || 0) + ')';
+    thr1C2C = veSayi(cs['1C2C'].a * shiftRefRPM + (cs['1C2C'].b || 0), 0);
   } else {
     model1C2C = 'Sabit Oran';
-    formula1C2C = 'N<sub>out</sub> ≥ ' + ratio1C2C + ' × N<sub>ref</sub>';
-    thr1C2C = (ratio1C2C * shiftRefRPM).toFixed(0);
+    formula1C2C = 'N<sub>out</sub> ≥ ' + veSayi(ratio1C2C) + ' × N<sub>ref</sub>';
+    thr1C2C = veSayi(ratio1C2C * shiftRefRPM, 0);
   }
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td style="font-weight:600; color:var(--accent-primary);">1C → 2C</td>';
@@ -400,21 +400,21 @@ function getGearShiftPropertiesHTML(node) {
         formula2C2L += '<br>Lookup: [' + cs2L.lookup.map(function(p) { return p[0] + '→' + p[1]; }).join(', ') + ']';   // metin: formülün eşleme çifti
       }
       if (shiftRefRPM >= cs2L.linear.validFrom) {
-        thr2C2L = (cs2L.linear.a * shiftRefRPM + cs2L.linear.b).toFixed(0);
+        thr2C2L = veSayi(cs2L.linear.a * shiftRefRPM + cs2L.linear.b, 0);
       } else if (cs2L.lookup && cs2L.lookup.length > 0) {
-        thr2C2L = cs2L.lookup[cs2L.lookup.length - 1][1].toFixed(0);
+        thr2C2L = veSayi(cs2L.lookup[cs2L.lookup.length - 1][1], 0);
       } else {
         thr2C2L = '—';
       }
     } else {
       model2C2L = 'Lineer';
-      formula2C2L = 'N<sub>out</sub> = ' + cs2L.a + ' × ESL + (' + (cs2L.b || 0) + ')';
-      thr2C2L = (cs2L.a * shiftRefRPM + (cs2L.b || 0)).toFixed(0);
+      formula2C2L = 'N<sub>out</sub> = ' + veSayi(cs2L.a) + ' × ESL + (' + veSayi(cs2L.b || 0) + ')';
+      thr2C2L = veSayi(cs2L.a * shiftRefRPM + (cs2L.b || 0), 0);
     }
   } else if (spData.shift2C2L_outRatio) {
     model2C2L = 'Sabit Oran';
-    formula2C2L = 'N<sub>out</sub> ≥ ' + spData.shift2C2L_outRatio + ' × N<sub>ref</sub>';
-    thr2C2L = (spData.shift2C2L_outRatio * shiftRefRPM).toFixed(0);
+    formula2C2L = 'N<sub>out</sub> ≥ ' + veSayi(spData.shift2C2L_outRatio) + ' × N<sub>ref</sub>';
+    thr2C2L = veSayi(spData.shift2C2L_outRatio * shiftRefRPM, 0);
   } else {
     model2C2L = '—';
     formula2C2L = 'Tanımsız';
@@ -433,7 +433,7 @@ function getGearShiftPropertiesHTML(node) {
   // ── 3. Lockup-Mod Upshift Tablosu ──
   html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Lockup-mod Upshift eşikleri</div>';
-  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Lockup modda: N<sub>out</sub> = N<sub>engine</sub> / i<sub>gear</sub> (SR = 1.0). Geçiş koşulu: N<sub>out</sub> ≥ a × ESL + b</p>';
+  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Lockup modda: N<sub>out</sub> = N<sub>engine</sub> / i<sub>gear</sub> (SR = 1,0). Geçiş koşulu: N<sub>out</sub> ≥ a × ESL + b</p>';
 
   var luShifts = spData.lockupShifts;
   if (luShifts) {
@@ -459,24 +459,24 @@ function getGearShiftPropertiesHTML(node) {
       // Vites oranını bul
       var fromGearNum = parseInt(luKey.charAt(0)) || 0;
       var matchGear = fwdGears.length >= fromGearNum ? fwdGears[fromGearNum - 1] : null;
-      var iGear = matchGear ? (parseFloat(matchGear.ratio) || 1) : (ls.a ? (1 / ls.a).toFixed(3) : '—');
+      var iGear = matchGear ? (parseFloat(matchGear.ratio) || 1) : (ls.a ? veSayi(1 / ls.a, 3) : '—');
 
       var modelType, aVal, bVal, capVal;
       if (ls.type === 'piecewise') {
         modelType = 'Parçalı';
-        aVal = ls.low.a + ' / ' + ls.high.a;
-        bVal = (ls.low.b || 0) + ' / ' + (ls.high.b || 0);
-        capVal = 'BP: ' + ls.breakpoint;
+        aVal = veSayi(ls.low.a) + ' / ' + veSayi(ls.high.a);
+        bVal = veSayi(ls.low.b || 0) + ' / ' + veSayi(ls.high.b || 0);
+        capVal = 'BP: ' + veSayi(ls.breakpoint);
       } else if (ls.type === 'segments') {
         modelType = 'Segmentli';
-        aVal = ls.segments.filter(function(s) { return s.a !== undefined; }).map(function(s) { return s.a; }).join(' / ') || '—';
-        bVal = ls.segments.filter(function(s) { return s.b !== undefined; }).map(function(s) { return s.b; }).join(' / ') || '—';
-        capVal = ls.segments.filter(function(s) { return s.cap !== undefined; }).map(function(s) { return s.cap; }).join(', ') || '—';
+        aVal = ls.segments.filter(function(s) { return s.a !== undefined; }).map(function(s) { return veSayi(s.a); }).join(' / ') || '—';
+        bVal = ls.segments.filter(function(s) { return s.b !== undefined; }).map(function(s) { return veSayi(s.b); }).join(' / ') || '—';
+        capVal = ls.segments.filter(function(s) { return s.cap !== undefined; }).map(function(s) { return veSayi(s.cap); }).join('; ') || '—';
       } else {
         modelType = 'Lineer';
-        aVal = ls.a !== undefined ? ls.a : '—';
-        bVal = ls.b !== undefined ? ls.b : 0;
-        capVal = ls.minCap !== undefined ? ls.minCap : (ls.capValue !== undefined ? ls.capValue + ' (<' + ls.capBelow + ')' : '—');
+        aVal = ls.a !== undefined ? veSayi(ls.a) : '—';
+        bVal = veSayi(ls.b !== undefined ? ls.b : 0);
+        capVal = ls.minCap !== undefined ? veSayi(ls.minCap) : (ls.capValue !== undefined ? veSayi(ls.capValue) + ' (<' + veSayi(ls.capBelow) + ')' : '—');
       }
 
       // Geçiş adını oku: '2L3L' → '2L → 3L'
@@ -488,13 +488,13 @@ function getGearShiftPropertiesHTML(node) {
       html += '<td>' + aVal + '</td>';
       html += '<td>' + bVal + '</td>';
       html += '<td style=" color:var(--text-muted);">' + capVal + '</td>';
-      html += '<td>' + (typeof iGear === 'number' ? iGear.toFixed(3) : iGear) + '</td>';
-      html += '<td style="font-weight:600; color:var(--accent-success);">' + threshold.toFixed(0) + '</td>';
+      html += '<td>' + (typeof iGear === 'number' ? veSayi(iGear, 3) : iGear) + '</td>';
+      html += '<td style="font-weight:600; color:var(--accent-success);">' + veSayi(threshold, 0) + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table></div>';
   } else {
-    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center; padding:8px;">Bu profilde per-gear lockup shift verisi tanımlı değil. Sabit ofset kullanılır: N<sub>engine</sub> ≥ N<sub>ref</sub> − ' + lockupOffset + '</div>';
+    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center; padding:8px;">Bu profilde per-gear lockup shift verisi tanımlı değil. Sabit ofset kullanılır: N<sub>engine</sub> ≥ N<sub>ref</sub> − ' + veSayi(lockupOffset) + '</div>';
   }
   html += '</div>';
 
@@ -534,26 +534,26 @@ function getGearShiftPropertiesHTML(node) {
         var upKey = dsMatch[2] + 'L' + dsMatch[1] + 'L';
         if (luShifts[upKey]) {
           var upThr = calcLockupShiftThreshold(luShifts[upKey], shiftRefRPM);
-          hysteresis = (upThr - dsThr).toFixed(0);
+          hysteresis = veSayi(upThr - dsThr, 0);
         }
       }
 
       var dsModelType, dsAVal, dsBVal, dsCapVal;
       if (ds.type === 'piecewise') {
         dsModelType = 'Parçalı';
-        dsAVal = ds.low.a + ' / ' + ds.high.a;
-        dsBVal = (ds.low.b || 0) + ' / ' + (ds.high.b || 0);
-        dsCapVal = 'BP: ' + ds.breakpoint;
+        dsAVal = veSayi(ds.low.a) + ' / ' + veSayi(ds.high.a);
+        dsBVal = veSayi(ds.low.b || 0) + ' / ' + veSayi(ds.high.b || 0);
+        dsCapVal = 'BP: ' + veSayi(ds.breakpoint);
       } else if (ds.type === 'segments') {
         dsModelType = 'Segmentli';
-        dsAVal = ds.segments.filter(function(s) { return s.a !== undefined; }).map(function(s) { return s.a; }).join(' / ') || '—';
-        dsBVal = ds.segments.filter(function(s) { return s.b !== undefined; }).map(function(s) { return s.b; }).join(' / ') || '—';
-        dsCapVal = ds.segments.filter(function(s) { return s.cap !== undefined; }).map(function(s) { return s.cap; }).join(', ') || '—';
+        dsAVal = ds.segments.filter(function(s) { return s.a !== undefined; }).map(function(s) { return veSayi(s.a); }).join(' / ') || '—';
+        dsBVal = ds.segments.filter(function(s) { return s.b !== undefined; }).map(function(s) { return veSayi(s.b); }).join(' / ') || '—';
+        dsCapVal = ds.segments.filter(function(s) { return s.cap !== undefined; }).map(function(s) { return veSayi(s.cap); }).join('; ') || '—';
       } else {
         dsModelType = 'Lineer';
-        dsAVal = ds.a !== undefined ? ds.a : '—';
-        dsBVal = ds.b !== undefined ? ds.b : 0;
-        dsCapVal = ds.capValue !== undefined ? ds.capValue + ' (<' + ds.capBelow + ')' : (ds.minCap !== undefined ? ds.minCap : '—');
+        dsAVal = ds.a !== undefined ? veSayi(ds.a) : '—';
+        dsBVal = veSayi(ds.b !== undefined ? ds.b : 0);
+        dsCapVal = ds.capValue !== undefined ? veSayi(ds.capValue) + ' (<' + veSayi(ds.capBelow) + ')' : (ds.minCap !== undefined ? veSayi(ds.minCap) : '—');
       }
 
       // Geçiş adı: '6to5' → '6 → 5'
@@ -565,7 +565,7 @@ function getGearShiftPropertiesHTML(node) {
       html += '<td>' + dsAVal + '</td>';
       html += '<td>' + dsBVal + '</td>';
       html += '<td style=" color:var(--text-muted);">' + dsCapVal + '</td>';
-      html += '<td style="font-weight:600; color:var(--accent-danger);">' + dsThr.toFixed(0) + '</td>';
+      html += '<td style="font-weight:600; color:var(--accent-danger);">' + veSayi(dsThr, 0) + '</td>';
       html += '<td style="font-weight:500; color:var(--accent-warning);">' + hysteresis + '</td>';
       html += '</tr>';
     }
@@ -609,7 +609,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:8px 10px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">';
-  html += 'Tüm katsayılar iSCAAN çapraz validasyondan türetilmiştir. Tipik max hata: ±0.5 rpm (lineer), ±6-12 rpm (nonlineer bölgeler).';
+  html += 'Tüm katsayılar iSCAAN çapraz validasyondan türetilmiştir. Tipik max hata: ±0,5 rpm (lineer), ±6-12 rpm (nonlineer bölgeler).';
   html += '</div>';
   html += '</div>';
 
@@ -621,7 +621,7 @@ function getGearShiftPropertiesHTML(node) {
 
   html += '<div style="' + codeStyle + '">';
   html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, i_gear, current_gear, mode</span>\n';
-  html += '<span style="color:var(--text-muted);">ESL = ' + shiftRefRPM + ' rpm (Shift Referans)</span>\n\n';
+  html += '<span style="color:var(--text-muted);">ESL = ' + veSayi(shiftRefRPM) + ' rpm (Shift Referans)</span>\n\n';
 
   html += '<span style="color:var(--accent-warning); font-weight:600;">── CONVERTER MODU ──</span>\n\n';
   html += '<span style="color:var(--accent-primary);">1C → 2C (F1 → F2, converter):</span>\n';
@@ -633,7 +633,7 @@ function getGearShiftPropertiesHTML(node) {
 
   html += '<span style="color:var(--accent-warning); font-weight:600;">── LOCKUP MODU ──</span>\n\n';
   html += '<span style="color:var(--accent-primary);">Upshift (2L → 3L → ... → 6L):</span>\n';
-  html += '  N_out = N_engine / i_gear  (SR = 1.0)\n';
+  html += '  N_out = N_engine / i_gear  (SR = 1,0)\n';
   html += '  Koşul: N_out ≥ a × ESL + b\n';
   html += '  Shift sonrası: N_eng_yeni = N_eng × (i_eski / i_yeni)\n\n';
 
