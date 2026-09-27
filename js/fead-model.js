@@ -1961,7 +1961,7 @@ var VE_FEAD_EXAMPLES = {
     name: 'BMC Otomotif FEAD 5 — Gates AG00976 raporu',
     note: 'Tedarikçiden dönen Gates raporunun (8PK1715HD, Ten@-250/110, '
         + 'Corrected-IDR1, 05.06.2025) birebir modeli. Aynı 6 kasnaklı düzen, '
-        + 'ama gergi PİVOTU, kayış toleransı (±6 mm) ve aşınma payı (%0.60) '
+        + 'ama gergi PİVOTU, kayış toleransı (±6 mm) ve aşınma payı (%0,60) '
         + 'raporda var, tedarikçiye giden sayfada yok. Raporun sonuç '
         + 'sayfalarını geri üretir.',
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK1715HD', ribs:8,
@@ -4643,7 +4643,7 @@ function veFeadAnalyze(build, opts){
     if(out.torsional && _ks && _ks.devralindi){
       out.torsional.cordStiffness = { perRib: _ks.perRib, devralindi: true, marka: _ks.marka };
       out.limits.push('Burulma modeli: ' + (_ks.marka || 'seçilen marka') + ' kayışı için kord '
-        + 'rijitliği kalibre edilmedi; Gates PK\'nın etkin değeri (' + Math.round(_ks.perRib / 1000)
+        + 'rijitliği kalibre edilmedi; Gates PK\'nın etkin değeri (' + veSayi(_ks.perRib / 1000, 0)
         + ' kN/kaburga) kullanıldı. Bu değer Gates kayışlarının Mode 1\'ine uydurulmuş etkin bir '
         + 'parametredir, malzeme sabiti değildir; bu markada 1. mod yalnız mertebe göstergesidir.');
     }
@@ -4775,7 +4775,7 @@ function veFeadAnalyze(build, opts){
   // raporda %0.33, burulma 6 sistemde RMS ~%8.
   out.limits.push('Burulma (dönel titreşim) modeli KALİBRE bir modeldir, statik zincir gibi '
     + 'deterministik değildir: Gates "System Resonance (Mode 1)" değerlerine 6 sistemde '
-    + 'RMS ~%8 ile oturur (statik gerilme/geometri zinciri %0.33). Sonucu bir mertebe '
+    + 'RMS ~%8 ile oturur (statik gerilme/geometri zinciri %0,33). Sonucu bir mertebe '
     + 'göstergesi olarak okuyun; sertifikasyon için değil. Kayış kord rijitliği ve '
     + 'kavis payı bu kalibrasyonun serbest parametreleridir.');
   out.limits.push('Gergi KOL MODU tahmini (tensionerMode) ayrı ve daha kabadır — tek '

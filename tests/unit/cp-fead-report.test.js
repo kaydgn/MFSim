@@ -69,8 +69,8 @@ beforeEach(() => resetStubs(stubs));
 describe('sayı biçimi — Türkçe ve dürüst', () => {
   test('ondalık virgül, gereksiz sıfır kırpılır', () => {
     expect(RP._frF(20.000, 3)).toBe('20');
-    expect(RP._frF(1521.7, 1)).toBe('1521,7');
-    expect(RP._frFs(1521.7, 2)).toBe('1521,70');
+    expect(RP._frF(1521.7, 1)).toBe('1.521,7');       // binlik nokta (7·C)
+    expect(RP._frFs(1521.7, 2)).toBe('1.521,70');
   });
 
   // Boş hücre "sıfır" gibi okunur; '—' okunmaz.
@@ -731,12 +731,14 @@ describe('şablon ve içindekiler bağı', () => {
 //     türevden (0,5984) %25,1 farklı. Aynı ad, iki farklı sayı.
 //  3) Tasarım gerginliğinin GİRDİ olduğu, yay dengesinden türetilen değerin
 //     ise AYRI bir kanal olduğu hiçbir yerde yazmıyordu.
-const _sy = (x) => Number(String(x).replace(/\u2212/g, '-').replace(/\./g, '').replace(',', '.'));
+// Formüldeki sayı TeX yazımında: binlik nokta, ondalık {,} (karar 7·C).
+const _sy = (x) => Number(String(x).replace(/\{,\}/g, ',').replace(/\u2212/g, '-').replace(/\./g, '').replace(',', '.'));
 
 describe('§8.7 — denklem zinciri ELLE ÇALIŞILABİLİR', () => {
   test('(8.2) |f| = 2 sin(φ/2) — basılan sayı özdeşliği sağlıyor', () => {
-    const m = /\|\\mathbf\{f\}\| = \\big\|[^=]*\\big\| = 2\\sin\\frac\{\\varphi\}\{2\} = 2\\sin\\frac\{([\d,]+)\^\\circ\}\{2\} = ([\d,]+)/.exec(HTML8);
+    const m = /\|\\mathbf\{f\}\| = \\big\|[^=]*\\big\| = 2\\sin\\frac\{\\varphi\}\{2\} = 2\\sin\\frac\{(\d[\d.]*(?:\{,\}\d+)?)\^\\circ\}\{2\} = (\d[\d.]*(?:\{,\}\d+)?)/.exec(HTML8);
     expect(m).toBeTruthy();
+    expect(m[2]).toContain('{,}');                // KaTeX'te çıplak virgül noktalama boşluğu alır
     const phi = _sy(m[1]), f = _sy(m[2]);
     // Eşik basılan sayıların YUVARLAMASINDAN gelir (|f| 4 hane, φ 2 hane):
     // φ'nin son hanesindeki 0.005°'lik yuvarlama |f|'de ~4e-5 oynatır, iki
@@ -748,7 +750,7 @@ describe('§8.7 — denklem zinciri ELLE ÇALIŞILABİLİR', () => {
   });
 
   test('(8.3) dL/dθ = a·|f|·sinβ·(π/180) — çarpanlar basılan sonucu veriyor', () => {
-    const m = /= ([\d,]+)\\cdot ([\d,]+)\\cdot ([\d,]+)\\cdot\\frac\{\\pi\}\{180\} = ([\d,]+)\\ \\text\{mm\/\}/.exec(HTML8);
+    const m = /= (\d[\d.]*(?:\{,\}\d+)?)\\cdot (\d[\d.]*(?:\{,\}\d+)?)\\cdot (\d[\d.]*(?:\{,\}\d+)?)\\cdot\\frac\{\\pi\}\{180\} = (\d[\d.]*(?:\{,\}\d+)?)\\ \\text\{mm\/\}/.exec(HTML8);
     expect(m).toBeTruthy();
     const [a, f, sinB, tk] = [_sy(m[1]), _sy(m[2]), _sy(m[3]), _sy(m[4])];
     expect(a * f * sinB * Math.PI / 180).toBeCloseTo(tk, 3);
@@ -759,7 +761,7 @@ describe('§8.7 — denklem zinciri ELLE ÇALIŞILABİLİR', () => {
 
   // ★ ASIL KAPI: çevrim çarpanı bir kez TERS yazılmıştı.
   test('(8.4) mm/° → m/rad çevrimi DOĞRU YÖNDE ve basılan ara değeri veriyor', () => {
-    const m = /\\frac\{([\d,]+)\}\{1000\}\\cdot\\frac\{180\}\{\\pi\} = ([\d,]+)\\ \\text\{m\/rad\}/.exec(HTML8);
+    const m = /\\frac\{(\d[\d.]*(?:\{,\}\d+)?)\}\{1000\}\\cdot\\frac\{180\}\{\\pi\} = (\d[\d.]*(?:\{,\}\d+)?)\\ \\text\{m\/rad\}/.exec(HTML8);
     expect(m).toBeTruthy();                       // ters çarpanlı biçim eşleşmez
     const tk = _sy(m[1]), rad = _sy(m[2]);
     // tk BASILAN (4 ondalığa yuvarlı) değer; yuvarlama payı çarpanla taşınır
@@ -769,7 +771,7 @@ describe('§8.7 — denklem zinciri ELLE ÇALIŞILABİLİR', () => {
   });
 
   test('(8.5) T = M/(dL/dθ) — BASILAN sayılarla BASILAN sonucu veriyor', () => {
-    const m = /T = \\frac\{M\(\\theta\)\}\{[^}]*\}[^=]*= \\frac\{([\d,]+)\\ \\text\{Nm\}\}\{([\d,]+)\\ \\text\{m\/rad\}\} = ([\d,]+)\\ \\text\{N\}/.exec(HTML8);
+    const m = /T = \\frac\{M\(\\theta\)\}\{[^}]*\}[^=]*= \\frac\{(\d[\d.]*(?:\{,\}\d+)?)\\ \\text\{Nm\}\}\{(\d[\d.]*(?:\{,\}\d+)?)\\ \\text\{m\/rad\}\} = (\d[\d.]*(?:\{,\}\d+)?)\\ \\text\{N\}/.exec(HTML8);
     expect(m).toBeTruthy();
     const M = _sy(m[1]), rad = _sy(m[2]), T = _sy(m[3]);
     expect(M / rad).toBeCloseTo(T, 0);            // ← eski sürüm 2,13 veriyordu
@@ -956,7 +958,7 @@ describe('§8.6 — sarım açısının kuruluşu (φ nereden geliyor)', () => {
   });
 
   test('φ denklemi (8.1) tabloyla AYNI sayıları taşıyor', () => {
-    const m = /\\big\[\\, ([+-]1)\\cdot\\big\((\u2212?[\d,]+)\^\\circ - \((\u2212?[\d,]+)\^\\circ\)\\big\)\\big\]\\ \\mathrm\{mod\}\\ 360\^\\circ = ([\d,]+)/.exec(HTML8);
+    const m = /\\big\[\\, ([+-]1)\\cdot\\big\((\u2212?\d[\d.]*(?:\{,\}\d+)?)\^\\circ - \((\u2212?\d[\d.]*(?:\{,\}\d+)?)\^\\circ\)\\big\)\\big\]\\ \\mathrm\{mod\}\\ 360\^\\circ = (\d[\d.]*(?:\{,\}\d+)?)/.exec(HTML8);
     expect(m).toBeTruthy();
     const d = Number(m[1]), out = _sy(m[2]), inn = _sy(m[3]), phi = _sy(m[4]);
     expect(((((d * (out - inn)) % 360) + 360) % 360)).toBeCloseTo(phi, 1);
@@ -1380,8 +1382,8 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     // yerine koyardı. Boy artık bir ÇIKTI; model 1714,61 mm veriyor ve antet
     // bunu bir basamakla, yani 1714,6 olarak basıyor.
     expect(RA.build.sys.belt.effLength).toBeCloseTo(1714.6, 1);
-    expect(HA).toMatch(/1714,6 mm/);
-    expect(HA).not.toMatch(/8 kaburga · 1715 mm/);
+    expect(HA).toMatch(/1\.714,6 mm/);
+    expect(HA).not.toMatch(/8 kaburga · 1\.?715 mm/);
     // İkinci uzunluk (tahrik boyu) da adlandırılmış olmalı: antette iki farklı
     // sayı adsız yan yana durunca fark yuvarlama sanılıyordu.
     expect(HA).toMatch(/tahrik boyu/);
@@ -1799,7 +1801,7 @@ describe('uygunluk kapıları DONDURULMUŞ', () => {
 
   test('ölçüt metni R.checks\'in kendi sayısını taşıyor (governed 2222)', () => {
     const o = satirlar({ checks: SAHTE() });
-    expect(o[1][1]).toContain('2222');
+    expect(o[1][1]).toContain('2.222');
   });
 
   test('veFeadChecks HİÇ çağrılmıyor — rapor yeniden hesaplamıyor', () => {
@@ -1829,8 +1831,8 @@ describe('uygunluk kapıları DONDURULMUŞ', () => {
     R.checks = k2;
     const b = RP._frCompliance(R);
     expect(a).not.toBe(b);
-    expect(a).toContain('2222');
-    expect(b).toContain('3333');
+    expect(a).toContain('2.222');
+    expect(b).toContain('3.333');
 
     // MODEL değişse KAPI SATIRLARI oynamıyor — kanal model DEĞİL, R.checks.
     // Kural ÜÇ BMC KAPISI hakkında; uygunluk tablosunun öteki satırları başka

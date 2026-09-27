@@ -191,6 +191,30 @@ describe('aşama 3a — Araç Performans belgeleri', () => {
   });
 });
 
+// Aşama 3b: FEAD ve takoz belgeleri — FEAD raporu, FEAD özeti, takoz raporu
+// ve iki kuram şablonu. Virgül yazıyorlardı ama binliği gruplamıyordu; SVG
+// koordinatı makine kalır. Formüle giden sayı `{,}` taşır (_frTeX · _rTeX) —
+// onu yalnız gerçek belge ölçer (sayi-belge.spec.js → texTara).
+// mount-core.js'in öz-testi (selfTest) kapsam DIŞI: yalnız birim testleri
+// çağırıyor, hiçbir yüzeye yazmıyor.
+const ASAMA3B = BELGE.concat(['js/fead-report-template.js', 'js/mount-report-template.js']);
+
+describe('aşama 3b — FEAD ve takoz belgeleri', () => {
+  test('işaretsiz sayı yazımı yok', () => {
+    const s = ASAMA3B.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
+    expect(s).toEqual([]);
+  });
+  test('formül yazıcıları ondalık virgülü {,} yapıyor, binlik noktaya dokunmuyor', () => {
+    for (const [f, ad] of [['js/cp-fead-report.js', '_frTeX'], ['js/cp-mount-report.js', '_rTeX']]) {
+      const m = oku(f).match(new RegExp('function ' + ad + '\\(s\\)\\{[^\\n]*\\}'));
+      expect(m).not.toBeNull();
+      const yaz = new Function('return (' + m[0] + ')')();
+      expect(yaz('−12.760,7')).toBe('−12.760{,}7');
+      expect(yaz('1.500')).toBe('1.500');
+    }
+  });
+});
+
 describe('ekrandaki YAZI sayıya geri okunmaz', () => {
   // Türkçe yazı "0,00650" parseFloat'ta 0, "1.000 m" parseInt'te 1 olur ve
   // hiçbir şey patlamaz. Yazıdan sayı okuyan iki yer vardı: sahil testi

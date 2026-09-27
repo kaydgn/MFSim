@@ -16,14 +16,20 @@
  * ikisi de ölçülür (kural: tests/helpers/sayi-olcu.js, kendi testi var).
  *
  * Formül (KaTeX) metinden çıkarılır — innerText sayıyı parçalara bölüyor —
- * ve TeX kaynağında noktalı ondalık ayrıca aranır (Türkçe yazım "0{,}5").
+ * ve TeX kaynağı ayrıca taranır: noktalı ondalık ve ÇIPLAK virgül (Türkçe
+ * yazım "12.760{,}7"; çıplak virgülü KaTeX noktalama sayıp "12, 7" çiziyor).
+ *
+ * FEAD raporu, FEAD özeti ve takoz raporu (aşama 3b) zaten virgül yazıyordu
+ * ama binliği gruplamıyordu: aynı örneklerde 538 gruplanmamış sayı, 58
+ * sondaki yüzde ve 9 noktalı ondalık (sarım açısı "156.23°", "%0.33");
+ * formüllerinde 49 çıplak virgül ("T_s=12760,7" → "12760, 7" çiziliyordu).
  *
  * Node'da koşamaz: belgeler gerçek bir çözümden üretiliyor.
  */
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
-const { tara, kutuIhlal, tabloIhlal, TEX_NOKTA } = require('../helpers/sayi-olcu.js');
+const { tara, kutuIhlal, tabloIhlal, texTara } = require('../helpers/sayi-olcu.js');
 
 const BUILD = process.env.MFSIM_OLCUM_HTML || path.join(__dirname, '../..', 'MFSim_Code.html');
 test.beforeAll(() => {
@@ -39,10 +45,38 @@ const belgeMetni = async (browser, html) => {
   const r = await p.evaluate(() => {
     const tex = [...document.querySelectorAll('annotation[encoding="application/x-tex"]')].map((a) => a.textContent);
     document.querySelectorAll('.katex').forEach((k) => k.replaceWith(document.createTextNode('⟦TeX⟧')));
+    // Rapor ekindeki kod listesi JS sözdizimidir (wearPct:0.6) — makine biçimi.
+    document.querySelectorAll('pre').forEach((k) => k.replaceWith(document.createTextNode('⟦kod⟧')));
     return { metin: document.body.innerText, tex: tex.join('\n') };
   });
   await p.close();
   return r;
+};
+
+// Modülü açar, örneği yükler (giriş ekranından geçerek).
+const modulAc = async (page, modul, ornek) => {
+  await page.setViewportSize({ width: 1920, height: 1032 });
+  page.on('dialog', (d) => d.accept());
+  await page.goto('file://' + BUILD);
+  await page.fill('#mfsim-login-password', 'mfsim2024');
+  await page.press('#mfsim-login-password', 'Enter');
+  await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
+  await page.click(`.ve-module-card[data-module="${modul}"]`);
+  await page.waitForSelector('#mfsim-module-loading', { state: 'hidden', timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  await page.evaluate(ornek);
+  await page.waitForTimeout(2500);
+};
+const olc = (belgeler) => {
+  const sorun = [], adlar = {};
+  let taranan = 0;
+  for (const [ad, metin] of Object.entries(belgeler)) {
+    taranan += metin.length;
+    const r = tara(metin);
+    r.sorun.forEach((x) => sorun.push(`${ad} · ${x.tur} "${x.sayi}" ⟨${x.bag}⟩`));
+    for (const [k, n] of Object.entries(r.adlar)) adlar[k] = (adlar[k] || 0) + n;
+  }
+  return { sorun, adlar, taranan };
 };
 
 test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indirilen rapor Türkçe sayı yazıyor; TXT hizası bozulmuyor', async ({ page, browser }) => {
@@ -136,7 +170,7 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indiri
     kutuIhlal(metin).forEach((x) => hiza.push(`${ad} · kutu · ${x}`));
     tabloIhlal(metin).forEach((x) => hiza.push(`${ad} · tablo · ${x}`));
   }
-  const tex = (indirilen.tex.match(TEX_NOKTA) || []);
+  const tex = texTara(indirilen.tex);
   console.log('taranan', taranan, 'karakter · ad olarak kalan', JSON.stringify(adlar));
 
   expect(taranan).toBeGreaterThan(400000);
@@ -145,4 +179,37 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri ve indiri
   expect(sorun).toEqual([]);
   expect(hiza).toEqual([]);
   expect(tex).toEqual([]);
+});
+
+test('FEAD: ayrıntılı rapor ve özet Türkçe sayı yazıyor', async ({ page, browser }) => {
+  await modulAc(page, 'fead-analysis', "if (typeof veFeadWizClose === 'function') veFeadWizClose(false); veFeadLoadExample('AG00976_GATES_2025');");
+  await page.evaluate(() => { const s = nodes.find((x) => x.type === 'fead-solver'); if (s) veFeadSolve(s.id); });
+  await page.waitForFunction(() => window.veFeadResults && window.veFeadResults.ok, null, { timeout: 60000 });
+  const h = await page.evaluate(() => new Promise((ok) => _frEnsureAssets(() => {
+    const n = nodes.find((x) => x.type === 'fead-report') || null;
+    ok({ rapor: _frBuildReportHTML(window.veFeadResults, n), ozet: veFeadSummaryHTML(window.veFeadResults, n) });
+  })));
+  const rapor = await belgeMetni(browser, h.rapor), ozet = await belgeMetni(browser, h.ozet);
+  const r = olc({ 'FEAD raporu': rapor.metin, 'FEAD özeti': ozet.metin });
+  console.log('FEAD taranan', r.taranan, 'karakter · ad olarak kalan', JSON.stringify(r.adlar));
+  expect(r.taranan).toBeGreaterThan(60000);
+  expect(rapor.tex.length).toBeGreaterThan(2000);
+  expect(r.sorun).toEqual([]);
+  expect(texTara(rapor.tex + '\n' + ozet.tex)).toEqual([]);
+});
+
+test('Takoz: rapor Türkçe sayı yazıyor', async ({ page, browser }) => {
+  await modulAc(page, 'mount-analysis', "window.confirm = () => true; let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200); ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);");
+  await page.evaluate(() => { const s = nodes.find((x) => x.type === 'mnt-solver'); veMntSolverCompute(s.id); });
+  await page.waitForFunction(() => typeof _veMntLast !== 'undefined' && _veMntLast && !_veMntLast.error, null, { timeout: 120000 });
+  const html = await page.evaluate(() => new Promise((ok) => _mntReportEnsureAssets(() => {
+    const n = nodes.find((x) => x.type === 'mnt-report');
+    ok(_mntBuildReportHTML(_veMntLast, n && n.data ? { idleRpm: n.data.idleRpm, cylinders: n.data.cylinders, zeta: n.data.zeta } : {}));
+  })));
+  const rapor = await belgeMetni(browser, html);
+  const r = olc({ 'takoz raporu': rapor.metin });
+  console.log('Takoz taranan', r.taranan, 'karakter · ad olarak kalan', JSON.stringify(r.adlar));
+  expect(r.taranan).toBeGreaterThan(30000);
+  expect(r.sorun).toEqual([]);
+  expect(texTara(rapor.tex)).toEqual([]);
 });

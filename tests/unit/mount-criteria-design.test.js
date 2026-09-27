@@ -258,8 +258,8 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
   test('§8.15 yumuşatma tablosu üretilir; %100 satırı mevcut tasarım', () => {
     const h = rep._mntRepSoftening(R, {});
     expect(h).toContain('8.15 Rijitlik yumuşatma');
-    expect(h).toContain('100%');
-    expect(h).toContain('50%');
+    expect(h).toContain('%100');
+    expect(h).toContain('%50');
     expect(h).toContain(rep._rF(MODES[0].f_Hz, 2));           // mevcut mod 1 tabloda
   });
 

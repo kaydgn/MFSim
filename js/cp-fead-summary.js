@@ -163,7 +163,7 @@ function _fsrIdLines(R, node){
 // firma, sağda sistem adı + sayfa başlığı; altında kullanıcı/tasarım satırı.
 function _fsrSheet(no, title, body, R, node){
   var d = (node && node.data) || {};
-  var tarih = new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
+  var tarih = new Date().toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });   // makine: tarih — yerel biçimi tarayıcının, sayı değil
   var h = '<section class="sheet"><div class="hdr">';
   h += '<div class="hdr-logo">' + _fsrLogo() + '</div>';
   h += '<div class="hdr-org">' + _frEsc(d.orgName || 'Mühendislik') + '<br>'
@@ -893,7 +893,7 @@ function _fsrNotes(R){
 
   n.push('<b>Tepe gerginlik ve hubload doğrulanmamıştır.</b> Değerler hesaplanır (yarı-statik '
     + 'gerilme zinciri + kasnak başına atalet, kayış çevrimi kapatılarak), ancak modelin '
-    + 'doğrulama kümesi — 17 tedarikçi raporu, 2095 referans değer — tepe verisi içermez: '
+    + 'doğrulama kümesi — 17 tedarikçi raporu, 2.095 referans değer — tepe verisi içermez: '
     + 'bu tablo TEK bir referansa karşı ölçülebiliyor. O referansa karşı sapma gerginlikte '
     + VE_FSR_PEAK_BAND + ', hubloadda ' + VE_FSR_PEAK_HUB_BAND + '; tepe/ortalama oranı yük '
     + 'taşıyan kasnaklarda ' + VE_FSR_PEAK_SHAPE.mfsimYuklu + ' (referans '

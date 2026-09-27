@@ -1787,3 +1787,30 @@ etiketleri artık `veSayi` istiyor — o bağlamda çağrılırsa gürültüyle 
 gerçek bir çözümden üretilir; dört yazım, TXT'de kutu ve boşluk tablosu hizası,
 KaTeX'in TeX kaynağında noktalı ondalık) + `sayi-olcu.test.js` (ölçütün
 kendisi: her kural sentetik bozuk örnekte düşüyor).
+
+### Aşama 3b — FEAD ve takoz belgeleri (2026-09-27)
+
+**Hüküm.** FEAD raporu, FEAD özeti ve takoz raporu `veSayi`'den yazar
+(`_frF` · `_frFs` · `_rF` · `_rFs` onun sarmalayıcısı, belgede eksi `−`);
+yüzde önde. Formüle giden sayı `{,}` taşır (`_frTeX` · `_rTeX`) ve formül
+içindeki liste/koordinat ayracı `;` ("[0;0;-mg;0;0;0]", "(−161{,}97;\ 91{,}29)").
+
+**Gerekçe.** İki belge virgül yazıyordu ama binliği gruplamıyordu; kapı eski
+yapıda FEAD'de 533 (522 gruplanmamış, 8 noktalı, 3 sondaki yüzde), takozda 72
+(16 · 1 · 55) bulgu sayıyor → 0. Formüldeki çıplak virgül 7·C'den ÖNCE de
+vardı ve KaTeX onu noktalama sayıp "12760, 7" çiziyordu: 34 + 15 → 0.
+
+**Kaynak tarayıcısının göremediği sınıf.** `Math.round(x) + ' N'` gibi çıplak
+birleştirme `toFixed` taşımaz. Bu turda bulunanlar: geçici rejim notu "1100
+d/dk/s varsayıldı", çizimin gerilme ölçeğinin alt ucu, indirilen raporun KB'si.
+Kural eklenmedi — desen `veSayi(Math.round(x), 0)`'dan ayrılamıyor (ölçüldü:
+`js/`'teki 31 eşleşmenin kalanı ya sarılı ya makine); onları çıktı taramaları
+yakalar.
+
+**Kapsam dışı.** `fead-core.js` (dokunulmaz, notu belgeye gitmiyor) ·
+`mount-core.js` öz-testi (yalnız birim testi çağırıyor) · kayış ADI ("6PK1715")
+· denklem ve bölüm numarası ("(4.4)", "§8.18", başlık "9.1").
+
+**Kapı.** `sayi-dili.test.js` → aşama 3b (işaretsiz yazım + formül yazıcısının
+davranışı) + `sayi-belge.spec.js` → FEAD ve Takoz (metin + `texTara`: noktalı
+ondalık ve çıplak virgül) + `sayi-olcu.test.js` → TeX kuralları.
