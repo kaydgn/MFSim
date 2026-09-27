@@ -8,7 +8,7 @@
  *
  * NEDEN VAR
  *
- * `viewer/js/` altındaki SEKİZ dosya MFSim'in `js/` klasöründen kopyadır. Yedisi
+ * `viewer/js/` altındaki DOKUZ dosya MFSim'in `js/` klasöründen kopyadır. Sekizi
  * BİREBİR; `trace-view.js` iki yerel farkla. Bu adım README'de "elle uzlaştır"
  * diye yazılıydı ve elle uzlaştırma bir kez YANLIŞ yapıldı: bellekten yeniden
  * yazılan boş-durum bloğu, var olmayan bir DOM düğümüne innerHTML atıyordu.
@@ -32,6 +32,7 @@ var CHECK = process.argv.indexOf('--check') !== -1;
 // ── Birebir kopyalar ──────────────────────────────────────────────────────
 var VERBATIM = [
   'sayi.js',
+  'sayi-alan.js',
   'xlsx-read.js',
   'measure-core.js',
   'measure-import.js',
@@ -182,8 +183,8 @@ var AYRIK = [
 
 // Görüntüleyiciye özgü dosyalar (kopya DEĞİL). Aşağıdaki ters yön kapısı,
 // viewer/js/ altındaki her dosyanın ya izlenen bir kopya ya da burada ilan
-// edilmiş olmasını şart koşar — yoksa js/'ten kopyalanan 8. bir dosya sonsuza
-// dek senkron dışı kalırdı ve "SEKİZ dosya birebir kopya" kuralı yalnız insan
+// edilmiş olmasını şart koşar — yoksa js/'ten kopyalanan 10. bir dosya sonsuza
+// dek senkron dışı kalırdı ve "DOKUZ dosya birebir kopya" kuralı yalnız insan
 // hafızasıyla korunurdu.
 var VIEWER_OZGU = ['theme.js', 'board.js', 'app.js'];
 

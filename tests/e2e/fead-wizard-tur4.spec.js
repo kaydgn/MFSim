@@ -119,12 +119,16 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   const virgul = await page.evaluate(() => {
     const st = veFeadWizState();
     const pack = veFeadWizNodes(st);
-    return { alanTipi: [...document.querySelectorAll('.ve-fw-tbl tbody tr:nth-child(1) input')][3].type,
+    const alan = [...document.querySelectorAll('.ve-fw-tbl tbody tr:nth-child(1) input')][3];
+    return { alanTipi: alan.type,
+             gorunen: Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').get.call(alan),
              durum: st.pulleys[0].x, modele: pack.nodes[0].data.x };
   });
   console.log('VİRGÜL', JSON.stringify(virgul));
   expect(virgul.alanTipi).toBe('text');            // number OLSAYDI virgül yutulurdu
-  expect(String(virgul.durum)).toBe('123,45');     // alan virgülü GÖRDÜ
+  expect(virgul.gorunen).toBe('123,45');           // alan virgülü GÖRDÜ ve gösteriyor
+  // Durum makine biçiminde: js/sayi-alan.js alanın `.value`'sunu çeviriyor (7·C).
+  expect(String(virgul.durum)).toBe('123.45');
   expect(virgul.modele).toBeCloseTo(123.45, 9);    // model DOĞRU sayıyı aldı
 
   // ── 9 · NİSPİ AÇI ──────────────────────────────────────────────────────

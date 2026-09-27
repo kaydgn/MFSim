@@ -73,6 +73,7 @@ global.loadCanSource = function loadCanSource(file) {
   const SY = require(path.join(JS_DIR, 'sayi.js'));
   global.veSayi = SY.veSayi;
   global.veSayiUstel = SY.veSayiUstel;
+  global.veSayiMakine = SY.veSayiMakine;
   global.veSayiOku = SY.veSayiOku;
 }
 

@@ -85,7 +85,7 @@ function getTorqueConverterPropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Pump tork düşümü <span style="color:var(--text-muted); font-weight:400;">[N·m]</span></th>';
-    html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-tc-pump-drop-' + node.id + '" value="' + pumpTorqueDrop + '" step="0.1" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTCParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-tc-pump-drop-' + node.id + '" value="' + pumpTorqueDrop + '" step="0.1" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTCParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '</table>';
@@ -195,7 +195,7 @@ function getTorqueConverterPropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tork konvertörü oranı [-]</th>';
-    html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-tc-ratio-' + node.id + '" value="' + tcRatio + '" min="0.5" max="3" step="0.01" ' + (isLocked ? 'disabled' : '') + ' style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;' + (isLocked ? ' opacity:0.5; cursor:not-allowed;' : '') + '" onchange="onVETCParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-tc-ratio-' + node.id + '" value="' + tcRatio + '" min="0.5" max="3" step="0.01" ' + (isLocked ? 'disabled' : '') + ' style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;' + (isLocked ? ' opacity:0.5; cursor:not-allowed;' : '') + '" onchange="onVETCParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '<tr>';
@@ -833,12 +833,12 @@ function getVETCRowHTML(nodeId, sr, kpump, tau) {
   // kutu fare üstünde ve yazarken CSS'ten gelir; satır içi stil o durumu
   // ifade edemiyordu ve kutu dinlenmede kalıyordu.
   var html = '<tr>';
-  html += '<td class="tight"><input type="number" value="' + (sr !== undefined && sr !== '' ? sr : '') + '" step="0.01" min="0" max="1" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (kpump !== undefined && kpump !== '' ? kpump : '') + '" step="0.01" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (tau !== undefined && tau !== '' ? tau : '') + '" step="0.001" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (sr !== undefined && sr !== '' ? sr : '') + '" step="0.01" min="0" max="1" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (kpump !== undefined && kpump !== '' ? kpump : '') + '" step="0.01" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (tau !== undefined && tau !== '' ? tau : '') + '" step="0.001" min="0" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
   var etaVal = (sr !== '' && sr !== undefined && tau !== '' && tau !== undefined) ? (parseFloat(sr) * parseFloat(tau) * 100) : '';
   var etaStr = (!isNaN(etaVal) && etaVal !== '') ? etaVal.toFixed(1) : '';
-  html += '<td class="tight"><input type="text" class="f" value="' + etaStr + '" readonly tabindex="-1"></td>';
+  html += '<td class="tight"><input type="text" inputmode="decimal" class="f" value="' + etaStr + '" readonly tabindex="-1"></td>';
   html += '<td class="tight"><button class="ve-row-del" onclick="removeVETCRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
   return html;

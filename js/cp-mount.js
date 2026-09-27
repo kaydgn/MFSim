@@ -620,7 +620,7 @@ function _mntEnsureMassData(node){
 }
 function _mntInp(node, key, ph, step){
   var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
-  return '<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
+  return '<input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
 }
 function _mntRow(label, sub, inner){
   return '<tr style="border-bottom:1px solid var(--border-color);">'
@@ -657,7 +657,7 @@ function _mntTriple(node, title, unit, keys, subs, step, phs){
     var ph=(phs&&phs[i]!=null)?' placeholder="'+_mntEsc(phs[i])+'"':'';
     h+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
       +'<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">'+subs[i]+'</span>'
-      +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'"'+ph+' onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
+      +'<input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'"'+ph+' onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
       +'</label>';
   }
   h+='</div></div>';
@@ -668,7 +668,7 @@ function _mntSingle(node, title, unit, key, ph, step){
   var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
   return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
     +'<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400;">'+unit+'</span>':'')+'</div>'
-    +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:120px; min-width:0; '+_MNT_INP+'">'
+    +'<input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:120px; min-width:0; '+_MNT_INP+'">'
     +'</div>';
   // `min-width:0` ŞART: esnek kutuda bir girdinin otomatik en küçük boyu
   // kendi genişliğidir — 120 px'in altına hiç inmiyordu. 380 px'lik müfettiş
@@ -683,7 +683,7 @@ function _mntGrid(node, cells, cols){
     var v=(node.data[c.key]===undefined||node.data[c.key]===null)?'':node.data[c.key];
     h+='<label style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
       +'<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+c.label+'</span>'
-      +'<input type="number" id="ve-mnt-'+c.key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(c.step||'any')+'"'+(c.ph?' placeholder="'+_mntEsc(c.ph)+'"':'')+' onchange="veMntSet(\''+node.id+'\',\''+c.key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
+      +'<input type="text" inputmode="decimal" id="ve-mnt-'+c.key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(c.step||'any')+'"'+(c.ph?' placeholder="'+_mntEsc(c.ph)+'"':'')+' onchange="veMntSet(\''+node.id+'\',\''+c.key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
       +'</label>';
   });
   h+='</div>';
@@ -2293,7 +2293,7 @@ function _mntLibInp(nodeId, key, field, val, isText, setter){
   if(isText){
     return '<input type="text" value="'+_mntEsc(v)+'" onchange="'+fn+'(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+'">';
   }
-  return '<input type="number" value="'+_mntEsc(v)+'" step="1" onchange="'+fn+'(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+' text-align:right;">';
+  return '<input type="text" inputmode="decimal" value="'+_mntEsc(v)+'" step="1" onchange="'+fn+'(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+' text-align:right;">';
 }
 // ─── Grafik/detay yardımcıları (master-detay interaktif panel) ───────────────
 // Kuvvet biçimlendirici — grafik ekseni için kompakt (6400→"6.4k"), tipografik −.
@@ -2858,8 +2858,8 @@ function _mntLibCurveEditor(node, e){
       + '<th style="'+_mntMxTh()+';">δ [mm]</th><th style="'+_mntMxTh()+';">f [N]</th><th style="'+_mntMxTh()+';"></th></tr></thead><tbody>';
     pts.forEach(function(p,i){
       inner += '<tr>'
-        + '<td style="'+_mntMxTd()+';"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
-        + '<td style="'+_mntMxTd()+';"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+';"><input type="text" inputmode="decimal" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+';"><input type="text" inputmode="decimal" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
         + '<td style="'+_mntMxTd()+';"><button onclick="veMntLibCurveRemovePoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:var(--fs-body); line-height:1;">' + veIkon('x') + '</button></td>'
         + '</tr>';
     });
@@ -3056,7 +3056,7 @@ function getMntSolverPropertiesHTML(node){
   var _zd = _mntZetaDefault();
   html+='<div style="margin-bottom:10px;">';
   html+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Sönüm oranı ζ <span style="font-weight:400; color:var(--text-muted);">— tüm takozlar için tek değer</span></div>';
-  html+='<input type="number" min="0" max="1" step="0.001" value="'+_mntEsc(_z)+'" placeholder="'+_mntFmt(_zd,3)+'" '
+  html+='<input type="text" inputmode="decimal" min="0" max="1" step="0.001" value="'+_mntEsc(_z)+'" placeholder="'+_mntFmt(_zd,3)+'" '
       + 'onchange="veMntSetZeta(\''+node.id+'\',this.value)" '
       + 'style="width:100%; padding:6px 8px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
   html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Şirket kabulü olarak tüm montaja uygulanır (boş → '+_mntFmt(_zd,3)+'). Her takozun sönüm katsayısı <b>c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>)</b> ile buradan türetilir; ayrıca girilmez. Raporda tablo olarak çıkar.</div>';
@@ -3072,11 +3072,11 @@ function getMntSolverPropertiesHTML(node){
   html+='<div style="display:flex; gap:6px;">';
   html+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
       + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">tepe ivme [g]</span>'
-      + '<input type="number" min="0" step="0.1" value="'+_mntEsc(_sg)+'" placeholder="'+MNT_SHOCK_G+'" '
+      + '<input type="text" inputmode="decimal" min="0" step="0.1" value="'+_mntEsc(_sg)+'" placeholder="'+MNT_SHOCK_G+'" '
       + 'onchange="veMntSetShock(\''+node.id+'\',\'shockG\',this.value)" style="width:100%; '+_MNT_INP+'"></label>';
   html+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
       + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">süre [ms]</span>'
-      + '<input type="number" min="0" step="1" value="'+_mntEsc(_ss)+'" placeholder="'+MNT_SHOCK_MS+'" '
+      + '<input type="text" inputmode="decimal" min="0" step="1" value="'+_mntEsc(_ss)+'" placeholder="'+MNT_SHOCK_MS+'" '
       + 'onchange="veMntSetShock(\''+node.id+'\',\'shockMs\',this.value)" style="width:100%; '+_MNT_INP+'"></label>';
   html+='</div>';
   html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Yarım sinüs darbe (şok deneylerinin standardı). Boş → <b>'+MNT_SHOCK_G+' g / '+MNT_SHOCK_MS+' ms</b>. Sonuçlar\'da <b>şok yanıtı</b> kanallarını üretir; yük durumlarına ve modal çözüme etkisi yoktur.</div>';

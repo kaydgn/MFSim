@@ -1345,6 +1345,11 @@
     input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    /* TÜRKÇE SAYI ALANI (2026-09-27, karar 7·C — js/sayi-alan.js). Yapıştırılan
+       gruplu tam sayı ("1.800") iki türlü okunabilir: alan bir sonraki yazıma
+       kadar uyarı çerçevesi taşır. `!important` BİLEREK: panel alanlarının
+       odak kuralı `outline:none` yazıyor ve yapıştırılan alan odakta. */
+    input.ve-sayi-belirsiz { outline: 2px solid var(--accent-warning) !important; outline-offset: -2px; }
 
     /* ===== ODAK & METİN SEÇİMİ (erişilebilir focus-visible + selection) ===== */
     ::selection {

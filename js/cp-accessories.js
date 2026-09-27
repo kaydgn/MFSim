@@ -341,12 +341,12 @@ function getAccessoryPropertiesHTML(node){
 
   // Manuel kW (yalnız manuel modda)
   s1 += '<div id="ve-acc-manual-wrap-' + nid + '" style="display:' + (isManual ? 'block' : 'none') + ';">';
-  s1 += '<table class="ve-acc-tbl"><tr><th>Sabit güç [kW]</th><td><input type="number" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr></table>';
+  s1 += '<table class="ve-acc-tbl"><tr><th>Sabit güç [kW]</th><td><input type="text" inputmode="decimal" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr></table>';
   s1 += '<div class="sw-footer" style="margin:0;">Manuel modda güç tüm devirlerde sabit alınır.</div>';
   s1 += '</div>';
 
   s1 += '<table class="ve-acc-tbl">';
-  s1 += '<tr><th>Tahrik oranı [-]</th><td><input type="number" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
+  s1 += '<tr><th>Tahrik oranı [-]</th><td><input type="text" inputmode="decimal" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
   s1 += '<tr><th>Motor idle</th><td class="ve-acc-ro">' + Math.round(ctx.idle) + ' rpm</td></tr>';
   s1 += '<tr><th>Governed</th><td class="ve-acc-ro">' + Math.round(ctx.gov) + ' rpm</td></tr>';
   s1 += '</table>';
@@ -439,8 +439,8 @@ function veAccCurveTableHTML(node){
     var cls = inRange ? '' : ' class="out"';
     h += '<tr' + cls + '>';
     h += '<td class="num idx">' + (i+1) + '</td>';
-    h += '<td><input type="number" value="' + p.rpm + '" step="10" min="0" onchange="onVEAccCurveCellChange(\'' + nid + '\',' + i + ',\'rpm\',this.value)"></td>';
-    h += '<td><input type="number" value="' + p.kw + '" step="0.01" min="0" onchange="onVEAccCurveCellChange(\'' + nid + '\',' + i + ',\'kw\',this.value)"></td>';
+    h += '<td><input type="text" inputmode="decimal" value="' + p.rpm + '" step="10" min="0" onchange="onVEAccCurveCellChange(\'' + nid + '\',' + i + ',\'rpm\',this.value)"></td>';
+    h += '<td><input type="text" inputmode="decimal" value="' + p.kw + '" step="0.01" min="0" onchange="onVEAccCurveCellChange(\'' + nid + '\',' + i + ',\'kw\',this.value)"></td>';
     h += '<td class="num der">' + engRpm + '</td>';
     h += '<td class="num der">' + nm + '</td>';
     h += '<td class="del"><button class="ve-row-del" title="Satırı sil" onclick="onVEAccCurveDelRow(\'' + nid + '\',' + i + ')">' + veIkon('x') + '</button></td>';

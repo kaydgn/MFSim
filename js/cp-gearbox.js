@@ -517,7 +517,7 @@ function getGearboxPropertiesHTML(node) {
     var shiftRefVal = nodeData.shiftRefRPM || '';
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Shift Ref. RPM</th>';
-    html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-gb-shift-ref-' + node.id + '" value="' + shiftRefVal + '" placeholder="boş = motor governed" step="50" min="600" max="4000" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-shift-ref-' + node.id + '" value="' + shiftRefVal + '" placeholder="boş = motor governed" step="50" min="600" max="4000" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><span style="color:var(--accent-primary);">ℹ</span> iSCAAN raporlarındaki "Shift Speed &amp; Strategy" değeri. Genellikle motor governed hızına eşittir. Farklıysa buraya girin.</td></tr>';
     
@@ -556,12 +556,12 @@ function getGearboxPropertiesHTML(node) {
       // Basit oran bazlı converter model (3200SP, 4000SP)
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">1C→2C oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
-      html += '<td style="background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-shift-' + node.id + '" value="' + (spData.shift1C2C_outRatio || 0.2150) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+      html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-sr-shift-' + node.id + '" value="' + (spData.shift1C2C_outRatio || 0.2150) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
 
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">2C→2L oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
-      html += '<td style="background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-lockup-' + node.id + '" value="' + (spData.shift2C2L_outRatio || 0.3594) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+      html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-sr-lockup-' + node.id + '" value="' + (spData.shift2C2L_outRatio || 0.3594) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
 
       html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. N_out = N_engine × SR / i_gear.</td></tr>';
@@ -600,7 +600,7 @@ function getGearboxPropertiesHTML(node) {
       // Eski sabit ofset göster
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
       html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Lockup Shift Offset <span style="color:var(--text-muted); font-weight:400;">[rpm]</span></th>';
-      html += '<td style="background:var(--bg-tertiary);"><input type="text" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+      html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
     }
 
@@ -643,13 +643,13 @@ function getGearboxPropertiesHTML(node) {
     // Vites Sayısı (İleri)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Vites sayısı (ileri)</th>';
-    html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-gb-fwd-' + node.id + '" value="' + forwardGears + '" min="1" max="12" step="1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-fwd-' + node.id + '" value="' + forwardGears + '" min="1" max="12" step="1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     // Geri Vites Sayısı
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Geri vites sayısı</th>';
-    html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-gb-rev-' + node.id + '" value="' + reverseGears + '" min="0" max="4" step="1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-rev-' + node.id + '" value="' + reverseGears + '" min="0" max="4" step="1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     // Governed Speed — motordan otomatik alınır
@@ -662,7 +662,7 @@ function getGearboxPropertiesHTML(node) {
     if(autoGoverned) { nodeData.gbGovernedSpeed = parseFloat(autoGoverned); }
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Governed Speed <span style="color:var(--text-muted); font-weight:400;">[rpm]</span></th>';
-    html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-gb-governed-' + node.id + '" value="' + govValue + '"' + (govReadonly ? ' readonly tabindex="-1"' : '') + ' placeholder="' + (autoGoverned ? 'Motordan: ' + autoGoverned : 'Giriniz') + '" step="1" min="0" style="' + govStyle + '"' + (govReadonly ? '' : ' onchange="onVEFTGBParamChange(\'' + node.id + '\')"') + '></td>';
+    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-governed-' + node.id + '" value="' + govValue + '"' + (govReadonly ? ' readonly tabindex="-1"' : '') + ' placeholder="' + (autoGoverned ? 'Motordan: ' + autoGoverned : 'Giriniz') + '" step="1" min="0" style="' + govStyle + '"' + (govReadonly ? '' : ' onchange="onVEFTGBParamChange(\'' + node.id + '\')"') + '></td>';
     html += '</tr>';
     
     if(autoGoverned) {
@@ -799,7 +799,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</tr>';
   html += '<tr>';
   html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Seçili vites oranı</th>';
-  html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-gear-ratio-' + node.id + '" value="' + selectedGearRatio + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed;"></td>';
+  html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gear-ratio-' + node.id + '" value="' + selectedGearRatio + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed;"></td>';
   html += '</tr>';
   html += '</table>';
   
@@ -814,7 +814,7 @@ function getGearboxPropertiesHTML(node) {
   html += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">Şanzıman verimi [%]</th>';
-  html += '<td style="background:var(--bg-tertiary);"><input type="number" id="ve-gearbox-eff-' + node.id + '" value="' + gearboxEfficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEGearboxEffChange(\'' + node.id + '\')"></td>';
+  html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gearbox-eff-' + node.id + '" value="' + gearboxEfficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEGearboxEffChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr><td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
   html += '</table>';
@@ -845,8 +845,8 @@ function getVEFTGearRowHTML(nodeId, name, ratio, eff, lockup) {
   // ifade edemiyordu ve kutu dinlenmede kalıyordu.
   var html = '<tr>';
   html += '<td class="tight"><input type="text" class="ad" value="' + (name || '') + '" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (ratio !== undefined && ratio !== '' ? ratio : '') + '" step="0.001" min="0" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" value="' + (eff !== undefined && eff !== '' ? eff : '') + '" step="0.01" min="0" max="100" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (ratio !== undefined && ratio !== '' ? ratio : '') + '" step="0.001" min="0" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (eff !== undefined && eff !== '' ? eff : '') + '" step="0.01" min="0" max="100" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
   // Lockup: shift profilinden otomatik belirlenir, kullanıcı değiştiremez
   var lockupLabel = lockup ? '<span style="color:var(--accent-success); font-weight:600;">L</span>' : '<span style="color:var(--text-muted);">C</span>';
   html += '<td class="tight" style="font-size:var(--fs-tiny);">' + lockupLabel + '<input type="hidden" value="' + (lockup ? 'true' : 'false') + '"></td>';
@@ -896,8 +896,9 @@ function onVEFTGearDataChange(nodeId) {
   var ftGearData = [];
   var rows = tbody.querySelectorAll('tr');
   rows.forEach(function(tr) {
-    var textInputs = tr.querySelectorAll('input[type="text"]');
-    var numInputs = tr.querySelectorAll('input[type="number"]');
+    // Sayı alanı da `type="text"` (js/sayi-alan.js): ad alanı inputmode'suz olandır.
+    var textInputs = tr.querySelectorAll('input[type="text"]:not([inputmode="decimal"])');
+    var numInputs = tr.querySelectorAll('input[inputmode="decimal"]');
     var hiddenInput = tr.querySelector('input[type="hidden"]');
     if(textInputs.length >= 1 && numInputs.length >= 2) {
       var name = textInputs[0].value.trim();
@@ -2024,7 +2025,7 @@ function onVEGearboxEffChange(nodeId) {
 function getVEGearboxRowHTML(nodeId, gear, ratio, note) {
   var html = '<tr>';
   html += '<td class="tight"><input type="text" value="' + gear + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEGearboxDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td class="tight"><input type="number" step="0.001" value="' + ratio + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEGearboxDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td class="tight"><input type="text" inputmode="decimal" step="0.001" value="' + ratio + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEGearboxDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="text" value="' + note + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEGearboxDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><button class="ve-row-del" onclick="removeVEGearboxRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';
