@@ -417,11 +417,12 @@ describe('veSigCollectGroups', () => {
 // ── Biçimlendirme ────────────────────────────────────────────────────────────
 describe('veSigFmt', () => {
   test('büyüklüğe göre ondalık seçer', () => {
-    expect(S.veSigFmt(12345.678)).toBe('12346');
-    expect(S.veSigFmt(1234.5)).toBe('1234.5');
-    expect(S.veSigFmt(42.123)).toBe('42.12');
-    expect(S.veSigFmt(1.2345)).toBe('1.234');
-    expect(S.veSigFmt(0.012345)).toBe('0.0123');
+    // Türkçe yazım (karar 7·C): ondalık virgül, binlik nokta.
+    expect(S.veSigFmt(12345.678)).toBe('12.346');
+    expect(S.veSigFmt(1234.5)).toBe('1.234,5');
+    expect(S.veSigFmt(42.123)).toBe('42,12');
+    expect(S.veSigFmt(1.2345)).toBe('1,234');
+    expect(S.veSigFmt(0.012345)).toBe('0,0123');
     expect(S.veSigFmt(0)).toBe('0');
   });
 

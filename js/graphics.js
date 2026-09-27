@@ -368,11 +368,12 @@ function veFormatTooltipVal(v) {
   // Tam sıfır düz yazılır: aşağıdaki üstel dal 0'ı "0.00e+0" yapıyordu ve
   // imleç rozetinde/tabloda okunmuyordu.
   if(a === 0) return '0';
-  if(a >= 10000) return v.toFixed(0);
-  if(a >= 100) return v.toFixed(1);
-  if(a >= 1) return v.toFixed(2);
-  if(a >= 0.01) return v.toFixed(3);
-  return v.toExponential(2);
+  // Türkçe yazım (karar 7·C): ondalık virgül, binlik nokta — veSayi (js/sayi.js)
+  if(a >= 10000) return veSayi(v, 0);
+  if(a >= 100) return veSayi(v, 1);
+  if(a >= 1) return veSayi(v, 2);
+  if(a >= 0.01) return veSayi(v, 3);
+  return veSayiUstel(v, 2);
 }
 
 function veNiceStep(rough) {
@@ -426,22 +427,22 @@ function veFormatAxisVal(v, dec) {
   if(dec === undefined) {
     // Geriye dönük yol (adım bilinmiyorsa): eski davranış
     if(a === 0) return '0';
-    if(a >= 10000) return (v/1000).toFixed(0) + 'k';
-    if(a >= 100) return v.toFixed(0);
-    if(a >= 10) return v.toFixed(1);
-    if(a >= 1) return v.toFixed(1);
-    if(a >= 0.01) return v.toFixed(2);
+    if(a >= 10000) return veSayi(v / 1000, 0) + 'k';
+    if(a >= 100) return veSayi(v, 0);
+    if(a >= 10) return veSayi(v, 1);
+    if(a >= 1) return veSayi(v, 1);
+    if(a >= 0.01) return veSayi(v, 2);
     // KÜÇÜK DEĞER ÜSTEL YAZILIR. toFixed(3) burada 0,0001 ile 0,0005'i aynı
     // "0.000" etiketine çeviriyordu: log eksende birbirinden mertebe farklı
     // iki bölme aynı sayıyı gösteriyor, eksen okunamıyordu. Takoz
     // iletilebilirliği tam bu aralıkta (0,003 … 0,03).
-    return v.toExponential(1);
+    return veSayiUstel(v, 1);
   }
   // KISALTMA YALNIZ dec === 0 İKEN. Eksen bir ondalık istiyorsa (dec > 0)
   // "12k" o ondalığı atar ve 12345,6 ile 12345,7 aynı etikete düşer —
   // birbirinden farklı iki bölme aynı sayıyı gösterir.
-  if(a >= 10000 && dec === 0) return (v/1000).toFixed(0) + 'k';
-  return v.toFixed(dec);
+  if(a >= 10000 && dec === 0) return veSayi(v / 1000, 0) + 'k';
+  return veSayi(v, dec);
 }
 
 // ═══════ TABLO RENDERLAMA ═══════
@@ -514,7 +515,7 @@ function veRenderTable(slotIdx) {
   // X ekseni içe aktarılan bir ölçümden gelebilir: metin ya da boşluk
   // içerebilir, toFixed doğrudan çağrılamaz.
   var veTblX = function(v) {
-    return (typeof v === 'number' && isFinite(v)) ? v.toFixed(3) : (v == null ? '—' : String(v));
+    return (typeof v === 'number' && isFinite(v)) ? veSayi(v, 3) : (v == null ? '—' : String(v));
   };
 
   var n = timeArr.length;
@@ -3480,18 +3481,18 @@ function veExportResultsCSV() {
     var v = (ds && idx < ds.length) ? ds[idx] : null;
     if(v === null || v === undefined) return '';
     var num = Number(v);
-    if(isFinite(num)) return num.toFixed(4);
+    if(isFinite(num)) return num.toFixed(4);   // makine: CSV hücresi (noktalı ondalık, virgül ayraç)
     return '"' + String(v).replace(/"/g, '""') + '"';
   };
 
   for(var i = 0; i < n; i += step) {
-    var row = r.time[i].toFixed(4);
+    var row = r.time[i].toFixed(4);   // makine: CSV hücresi
     allData.forEach(function(ds) { row += ',' + csvCell(ds, i); });
     csv += row + '\n';
   }
   // Son satır
   if((n - 1) % step !== 0) {
-    var row = r.time[n - 1].toFixed(4);
+    var row = r.time[n - 1].toFixed(4);   // makine: CSV hücresi
     allData.forEach(function(ds) { row += ',' + csvCell(ds, n - 1); });
     csv += row + '\n';
   }

@@ -10308,6 +10308,76 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
      Sıra ÖNEMLİ: board.js, kendisinden önce gelen modüllerin globallerine
      çalışma anında bakıyor; app.js hepsinden sonra başlatıyor. -->
 <script>
+/**
+ * sayi.js — TEK SAYI YAZICISI (kullanıcı kararı 7·C, 2026-09-26)
+ * ───────────────────────────────────────────────────────────────────────────
+ * Ekrana, tuvale, günlüğe ve indirilen belgeye giden sayı Türkçe yazılır:
+ * ondalık VİRGÜL, binlik NOKTA — 1.716,2. Karar sayfasındaki ölçüm: 213 sayı
+ * noktalı (1716.2), 17 sayı virgüllü (1714,6), aynı modülde ikisi birden;
+ * günlük hız oranını "1.090" yazıyordu, Türkçe okuyan onu "bin doksan" okur.
+ *
+ * MAKİNE BİÇİMİ DEĞİŞMEZ: girdi alanının değeri, CSV, JSON, dosya adı ve
+ * SVG yol verisi `toFixed` ile noktalı kalır; satır `// makine: <sebep>`
+ * taşır (kapı: tests/unit/sayi-dili.test.js).
+ *
+ * GİRDİ ALANINA GRUPLAMASIZ yazılır ({ binlik: false }): gruplanmış TAM SAYI
+ * ("1.800") okurken bin sekiz yüz mü, bir virgül sekiz mi belli değildir ve
+ * okuyucu (veSayiOku) onu bugünkü gibi 1,8 okur — sessiz bin kat hata.
+ * Okuyucu virgülsüz noktayı bilerek ONDALIK sayar: dişli oranı "1.000",
+ * "2.480" bugün böyle yazılıyor. Ondalık taşıyan gruplu sayı ("1.716,2")
+ * belirsiz değildir — virgül binliği belirler.
+ *
+ * Ölçüm Görüntüleyici'de BİREBİR kopya (viewer/sync.js); js/ikon.js gibi
+ * yükleyiciden önce yüklenir.
+ */
+
+// v → "1.716,2". basamak: ondalık hane (verilmezse sayının kendisi, en çok 6).
+// opt.binlik (varsayılan true) · opt.eksi (varsayılan '-'; belgeler '−') ·
+// opt.isaret (true → pozitifte de '+'). Sayı değilse '—'.
+function veSayi(v, basamak, opt) {
+  opt = opt || {};
+  var n = (typeof v === 'number') ? v : (v === null || v === '' ? NaN : Number(v));
+  if(!isFinite(n)) return '—';
+  var s = (basamak == null) ? String(+n.toFixed(6)) : n.toFixed(basamak);   // makine: yazıcının kendisi
+  if(s.indexOf('e') >= 0) return veSayiUstel(n, 2, opt);
+  var neg = s.charAt(0) === '-';
+  if(neg) s = s.slice(1);
+  // "-0,0" yazılmaz: yuvarlanınca sıfıra inen eksi sayı işaretini bırakır
+  if(neg && /^[0.]+$/.test(s)) neg = false;
+  var p = s.split('.'), tam = p[0];
+  if(opt.binlik !== false) tam = tam.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  var out = (p.length > 1) ? tam + ',' + p[1] : tam;
+  if(neg) return (opt.eksi || '-') + out;
+  return (opt.isaret && n > 0 ? '+' : '') + out;
+}
+
+// Üstel yazım, ondalığı virgül: 1,23e-4 (çok küçük eksen/imleç değerleri).
+function veSayiUstel(v, basamak, opt) {
+  var n = Number(v);
+  if(!isFinite(n)) return '—';
+  var s = n.toExponential(basamak == null ? 2 : basamak).replace('.', ',');   // makine: yazıcının kendisi
+  if(s.charAt(0) === '-' && opt && opt.eksi) s = opt.eksi + s.slice(1);
+  return s;
+}
+
+// Girdi → sayı. "63,5" · "63.5" · "1.716,2" · "1716,2" · " −2,5 " okunur.
+// Virgül VARSA noktalar binliktir, YOKSA nokta ondalıktır (bugünkü davranış).
+// Boş ya da bozuk → NaN.
+function veSayiOku(s) {
+  if(typeof s === 'number') return s;
+  var t = String(s == null ? '' : s).trim().replace(/[−‒–]/g, '-').replace(/\s/g, '');
+  if(!t) return NaN;
+  if(t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');
+  if(!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t)) return NaN;
+  return parseFloat(t);
+}
+
+if(typeof module !== 'undefined' && module.exports) {
+  module.exports = { veSayi: veSayi, veSayiUstel: veSayiUstel, veSayiOku: veSayiOku };
+}
+
+</script>
+<script>
 // ═══════════════════════════════════════════════════════════════════════════
 // TEMA — işletim sistemini izler, kullanıcı geçersiz kılabilir
 // ═══════════════════════════════════════════════════════════════════════════
@@ -10615,7 +10685,7 @@ function veXAxisAllowed(xAxis, dataSource, slots) {
 function veCursorFmt(v) {
   if(v === null || v === undefined || !isFinite(v)) return '—';
   if(typeof veFormatTooltipVal === 'function') return veFormatTooltipVal(v);
-  return String(Math.round(v * 1000) / 1000);
+  return veSayi(Math.round(v * 1000) / 1000);
 }
 
 // İşaretli fark: pozitifte '+' öne konur (Δ okuması yön bilgisi taşımalı).
@@ -12195,17 +12265,17 @@ function veSigHighlight(text, q) {
          veSigEsc(t.slice(i + q.length));
 }
 
-// Liste ve denetçi için ölçü duyarlı sayı biçimi.
+// Liste ve denetçi için ölçü duyarlı sayı biçimi — Türkçe yazım (karar 7·C).
 function veSigFmt(v) {
   var n = Number(v);
   if(v == null || !isFinite(n)) return '—';
   var a = Math.abs(n);
-  if(a >= 10000) return n.toFixed(0);
-  if(a >= 1000)  return n.toFixed(1);
-  if(a >= 10)    return n.toFixed(2);
-  if(a >= 1)     return n.toFixed(3);
+  if(a >= 10000) return veSayi(n, 0);
+  if(a >= 1000)  return veSayi(n, 1);
+  if(a >= 10)    return veSayi(n, 2);
+  if(a >= 1)     return veSayi(n, 3);
   if(a === 0)    return '0';
-  return n.toFixed(4);
+  return veSayi(n, 4);
 }
 
 // ── Sinyal ↔ panel bağı ───────────────────────────────────────────────────────
@@ -12275,7 +12345,7 @@ function veSigSparkPoints(series, w, h, samples) {
   for(i = 0; i < samples; i++) {
     x = (i / (samples - 1)) * (w - 2) + 1;
     y = span > 0 ? (1 - (vals[i] - mn) / span) * (h - 3) + 1.5 : h / 2;
-    pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+    pts.push(x.toFixed(1) + ',' + y.toFixed(1));   // makine: SVG nokta listesi
   }
   return pts.join(' ');
 }
@@ -13093,11 +13163,12 @@ function veFormatTooltipVal(v) {
   // Tam sıfır düz yazılır: aşağıdaki üstel dal 0'ı "0.00e+0" yapıyordu ve
   // imleç rozetinde/tabloda okunmuyordu.
   if(a === 0) return '0';
-  if(a >= 10000) return v.toFixed(0);
-  if(a >= 100) return v.toFixed(1);
-  if(a >= 1) return v.toFixed(2);
-  if(a >= 0.01) return v.toFixed(3);
-  return v.toExponential(2);
+  // Türkçe yazım (karar 7·C): ondalık virgül, binlik nokta — veSayi (js/sayi.js)
+  if(a >= 10000) return veSayi(v, 0);
+  if(a >= 100) return veSayi(v, 1);
+  if(a >= 1) return veSayi(v, 2);
+  if(a >= 0.01) return veSayi(v, 3);
+  return veSayiUstel(v, 2);
 }
 
 function veNiceStep(rough) {
@@ -13126,19 +13197,19 @@ function veFormatAxisVal(v, dec) {
   var a = Math.abs(v);
   if(dec === undefined) {
     if(a === 0) return '0';
-    if(a >= 10000) return (v / 1000).toFixed(0) + 'k';
-    if(a >= 100) return v.toFixed(0);
-    if(a >= 10) return v.toFixed(1);
-    if(a >= 1) return v.toFixed(1);
-    if(a >= 0.01) return v.toFixed(2);
+    if(a >= 10000) return veSayi(v / 1000, 0) + 'k';
+    if(a >= 100) return veSayi(v, 0);
+    if(a >= 10) return veSayi(v, 1);
+    if(a >= 1) return veSayi(v, 1);
+    if(a >= 0.01) return veSayi(v, 2);
     // Küçük değer üstel yazılır: toFixed(3) 0,0001 ile 0,0005'i aynı "0.000"
     // etiketine çeviriyordu.
-    return v.toExponential(1);
+    return veSayiUstel(v, 1);
   }
   // KISALTMA YALNIZ dec === 0 İKEN. Eksen bir ondalık istiyorsa (dec > 0)
   // "12k" o ondalığı atar ve 12345,6 ile 12345,7 aynı etikete düşer.
-  if(a >= 10000 && dec === 0) return (v / 1000).toFixed(0) + 'k';
-  return v.toFixed(dec);
+  if(a >= 10000 && dec === 0) return veSayi(v / 1000, 0) + 'k';
+  return veSayi(v, dec);
 }
 
 // ── Veri kapısı ───────────────────────────────────────────────────────────
@@ -13522,7 +13593,7 @@ function veRenderTable(slotIdx) {
   // X değeri içe aktarılan bir ölçümden gelir: metin ya da boşluk içerebilir,
   // toFixed doğrudan çağrılamaz.
   var fmtX = function(v) {
-    return (typeof v === 'number' && isFinite(v)) ? v.toFixed(3) : (v == null ? '—' : String(v));
+    return (typeof v === 'number' && isFinite(v)) ? veSayi(v, 3) : (v == null ? '—' : String(v));
   };
   // Kanal metin olabilir (vites modu '1C'/'2L'); veFormatTooltipVal sayı bekler.
   var fmtY = function(v) {
@@ -15119,12 +15190,13 @@ function veTrLogTicks(geo) {
 }
 
 // Log bölmesinin etiketi: ondalık sayısı DEĞERİN kendi büyüklüğünden gelir.
-// Tek bir `dec` kullanılırsa aynı eksende "0.10" ile "100.00" yan yana yazılır.
+// Tek bir `dec` kullanılırsa aynı eksende "0,10" ile "100,00" yan yana yazılır.
+// Türkçe yazım (karar 7·C): sondaki sıfırlar virgülle birlikte düşer.
 function veTrFmtLogTick(v) {
   var a = Math.abs(v);
   var dec = a >= 10 ? 0 : (a >= 1 ? 1 : (a >= 0.1 ? 2 : 3));
-  var s = v.toFixed(dec);
-  if(dec > 0) s = s.replace(/\.?0+$/, '');
+  var s = veSayi(v, dec);
+  if(dec > 0) s = s.replace(/,?0+$/, '');
   return s;
 }
 
@@ -16824,9 +16896,9 @@ function veTrShowLaneScale(laneIdx, e) {
   pop.innerHTML =
     '<div class="ve-trace-pop-title">' + veSigEsc(built ? built.title : 'Şerit') + '</div>' +
     '<label>En az<input type="number" step="any" id="ve-trace-scale-min" value="' +
-      (L.min != null ? L.min : (built ? Number(built.yMin.toFixed(4)) : 0)) + '"></label>' +
+      (L.min != null ? L.min : (built ? Number(built.yMin.toFixed(4)) : 0)) + '"></label>' +   // makine: sayı alanının değeri
     '<label>En çok<input type="number" step="any" id="ve-trace-scale-max" value="' +
-      (L.max != null ? L.max : (built ? Number(built.yMax.toFixed(4)) : 1)) + '"></label>' +
+      (L.max != null ? L.max : (built ? Number(built.yMax.toFixed(4)) : 1)) + '"></label>' +   // makine: sayı alanının değeri
     '<div class="ve-trace-pop-row">' +
       '<button type="button" data-act="scale-auto">Otomatik</button>' +
       '<button type="button" class="primary" data-act="scale-ok">Uygula</button>' +

@@ -1652,3 +1652,29 @@ Ayrıca:
 **Kapı.** `ikon-dili.test.js` (aşama 3 + kural örnekleri + belge sınırı) ·
 `pencere-ailesi.test.js` (küçük pencereler) · `report-cosmetics.test.js`
 (tam ad).
+
+## Türkçe sayı yazımı (2026-09-27, kullanıcı kararı 7·C)
+
+**Hüküm.** Ekrana, tuvale, günlüğe ve belgeye giden sayı tek yazıcıdan geçer:
+`veSayi` (`js/sayi.js`) — ondalık virgül, binlik nokta (1.716,2). Makine
+biçimi (sayı alanının değeri, CSV, JSON, SVG yol verisi) noktalı kalır ve
+`// makine: <sebep>` ile işaretlenir.
+
+**Gerekçe.** Karar sayfası: 213 sayı noktalı, 17 sayı virgüllü, aynı modülde
+ikisi birden; günlük hız oranını "1.090" yazıyordu (Türkçe okuyan: bin doksan).
+
+**Girdi yolu.** Okuyucu (`veSayiOku`) iki yazımı da kabul eder ve virgülsüz
+noktayı ONDALIK sayar — dişli oranı "1.000" bugün böyle yazılıyor. Bedeli:
+gruplanmış tam sayı ("1.800") geri okunamaz. Girdi alanına bu yüzden gruplu
+sayı yazılmaz; ekrandan kopyalanan gruplu tam sayının bir alana yapıştırılması
+bilerek kalan bir risktir. Kapının ilk sürümü bu bin kat hatayı yakaladı
+(999,99 → "1.000" → 1).
+
+**Aşama 1 (grafik çekirdeği).** Eksen ve ipucu yazıcısı (`veFormatAxisVal`,
+`veFormatTooltipVal`, görüntüleyicideki davranış kopyası dâhil), imleç
+okuması, sinyal ağacı istatistiği, log eksen etiketi, pano tablosunun X
+sütunu. Görüntüleyici yazıcıyı sekizinci birebir kopya olarak taşıyor.
+
+**Kapı.** `sayi-dili.test.js`: yazıcı ve okuyucunun davranışı (gidiş-dönüş,
+-0, üstel, belirsiz tam sayı), tarayıcının kuralı, aşama dosyalarında
+işaretsiz `toFixed` yok.

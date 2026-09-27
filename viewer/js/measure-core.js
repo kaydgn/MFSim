@@ -130,7 +130,7 @@ function veXAxisAllowed(xAxis, dataSource, slots) {
 function veCursorFmt(v) {
   if(v === null || v === undefined || !isFinite(v)) return '—';
   if(typeof veFormatTooltipVal === 'function') return veFormatTooltipVal(v);
-  return String(Math.round(v * 1000) / 1000);
+  return veSayi(Math.round(v * 1000) / 1000);
 }
 
 // İşaretli fark: pozitifte '+' öne konur (Δ okuması yön bilgisi taşımalı).

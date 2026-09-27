@@ -1338,12 +1338,13 @@ function veTrLogTicks(geo) {
 }
 
 // Log bölmesinin etiketi: ondalık sayısı DEĞERİN kendi büyüklüğünden gelir.
-// Tek bir `dec` kullanılırsa aynı eksende "0.10" ile "100.00" yan yana yazılır.
+// Tek bir `dec` kullanılırsa aynı eksende "0,10" ile "100,00" yan yana yazılır.
+// Türkçe yazım (karar 7·C): sondaki sıfırlar virgülle birlikte düşer.
 function veTrFmtLogTick(v) {
   var a = Math.abs(v);
   var dec = a >= 10 ? 0 : (a >= 1 ? 1 : (a >= 0.1 ? 2 : 3));
-  var s = v.toFixed(dec);
-  if(dec > 0) s = s.replace(/\.?0+$/, '');
+  var s = veSayi(v, dec);
+  if(dec > 0) s = s.replace(/,?0+$/, '');
   return s;
 }
 
@@ -3043,9 +3044,9 @@ function veTrShowLaneScale(laneIdx, e) {
   pop.innerHTML =
     '<div class="ve-trace-pop-title">' + veSigEsc(built ? built.title : 'Şerit') + '</div>' +
     '<label>En az<input type="number" step="any" id="ve-trace-scale-min" value="' +
-      (L.min != null ? L.min : (built ? Number(built.yMin.toFixed(4)) : 0)) + '"></label>' +
+      (L.min != null ? L.min : (built ? Number(built.yMin.toFixed(4)) : 0)) + '"></label>' +   // makine: sayı alanının değeri
     '<label>En çok<input type="number" step="any" id="ve-trace-scale-max" value="' +
-      (L.max != null ? L.max : (built ? Number(built.yMax.toFixed(4)) : 1)) + '"></label>' +
+      (L.max != null ? L.max : (built ? Number(built.yMax.toFixed(4)) : 1)) + '"></label>' +   // makine: sayı alanının değeri
     '<div class="ve-trace-pop-row">' +
       '<button type="button" data-act="scale-auto">Otomatik</button>' +
       '<button type="button" class="primary" data-act="scale-ok">Uygula</button>' +

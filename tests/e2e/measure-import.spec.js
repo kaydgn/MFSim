@@ -270,7 +270,8 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
         if (i >= tr.length) return;
         const td = [...tr[i].querySelectorAll('td')].map((e) => e.innerText.trim());
         if (td[0] !== String(i + 1)) uyusmaz.push(`satır ${i}: sıra no ${td[0]}`);
-        if (Math.abs(parseFloat(td[1]) - xs[i]) > 1e-6) uyusmaz.push(`satır ${i}: X ${td[1]} ≠ ${xs[i]}`);
+        // Tablo Türkçe yazar (karar 7·C: "0,020"): hücre programın okuyucusuyla okunur
+        if (Math.abs(veSayiOku(td[1]) - xs[i]) > 1e-6) uyusmaz.push(`satır ${i}: X ${td[1]} ≠ ${xs[i]}`);
         seri.forEach((d, k) => {
           const bek = veFormatTooltipVal(d ? d[i] : null);
           if (td[2 + k] !== bek) uyusmaz.push(`satır ${i} sütun ${k}: ${td[2 + k]} ≠ ${bek}`);
@@ -310,7 +311,7 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
       const hiz = veGetSensorData(slot.sensors[1].id, slot.sensors[1].signal);
       const bas = [...document.querySelectorAll('#ve-table-0 th')].map((e) => e.innerText.trim());
       const x = [...document.querySelectorAll('#ve-table-body-0 tr')].slice(0, 3)
-        .map((t) => parseFloat(t.querySelectorAll('td')[1].innerText));
+        .map((t) => veSayiOku(t.querySelectorAll('td')[1].innerText));   // Türkçe yazım (karar 7·C)
       return { baslik: bas[1], x, ham: hiz.slice(0, 3) };
     });
     expect(r.baslik).toBe('VehSpeed [km/h]');

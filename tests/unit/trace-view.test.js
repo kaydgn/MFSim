@@ -612,10 +612,13 @@ describe('logaritmik X ekseni', () => {
 
   test('etiket ondalığı DEĞERİN büyüklüğünden gelir', () => {
     // Tek bir `dec` ile "0,10" ve "100,00" yan yana yazılıyordu.
-    expect(T.veTrFmtLogTick(0.1)).toBe('0.1');
+    // Türkçe yazım (karar 7·C): ondalık virgül, binlik nokta.
+    expect(T.veTrFmtLogTick(0.1)).toBe('0,1');
+    expect(T.veTrFmtLogTick(0.25)).toBe('0,25');
     expect(T.veTrFmtLogTick(1)).toBe('1');
     expect(T.veTrFmtLogTick(20)).toBe('20');
     expect(T.veTrFmtLogTick(100)).toBe('100');
+    expect(T.veTrFmtLogTick(2000)).toBe('2.000');
   });
 });
 
