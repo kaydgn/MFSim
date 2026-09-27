@@ -403,10 +403,10 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     const ds = setOf('fdefl');
     const id = ds.channels.find((c) => c.name === MOUNTS[0].name + ' · Z (düşey)').id;
     const t = text(B.forLane(ds, R, [id]));
-    // kstat_z = 1800 N/mm; eğriden okunan eğim bunu vermeli
-    expect(t).toContain('1800 N/mm');
+    // kstat_z = 1800 N/mm; eğriden okunan eğim bunu vermeli (Türkçe yazım, karar 7·C)
+    expect(t).toContain('1.800 N/mm');
     // Statik çalışma noktası (çökme) yazılıyor mu — sayı taşıyan cümle
-    expect(t).toMatch(/Statik çökme \*\*[\d,]+ mm\*\*/);
+    expect(t).toMatch(/Statik çökme \*\*[\d.,]+ mm\*\*/);
   });
 
   test('süpürme: çok takoz → en çok ve en az yüklenen', () => {

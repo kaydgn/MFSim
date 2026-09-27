@@ -233,7 +233,8 @@ describe('Sonuçlar kümeleri ve yorum', () => {
     // Sönme süresi settleTime ile birebir
     const dm = ds.channels.find((c) => c.id === 'dmax');
     const ts = B.settleTime(ds.x.data, dm.data, 0.05);
-    expect(t).toContain((ts * 1000).toFixed(ts * 1000 >= 100 ? 0 : 1).replace('.', ','));
+    // Yorum Türkçe yazar (karar 7·C): beklenen metin aynı yazıcıdan
+    expect(t).toContain(veSayi(ts * 1000, ts * 1000 >= 100 ? 0 : 1));
   });
 
   test('genlik durdurucuyu aşarsa TEMAS MODELLENİR — "geçersiz" demek yerine', () => {

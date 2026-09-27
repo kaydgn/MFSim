@@ -35,11 +35,10 @@
 var veMntBrief = (function() {
   'use strict';
 
-  // ── Sayı biçimi: Türkçe ondalık ayracı ──────────────────────────────────
+  // ── Sayı biçimi: Türkçe yazım (karar 7·C, js/sayi.js) ───────────────────
   function n(v, dec) {
     if(!isFinite(v)) return '—';
-    var d = (dec == null) ? 2 : dec;
-    return v.toFixed(d).replace('.', ',');
+    return veSayi(v, (dec == null) ? 2 : dec);
   }
   // Büyüklüğe göre otomatik ondalık — 0,004 ile 325 aynı kuralla yazılamaz.
   function na(v) {

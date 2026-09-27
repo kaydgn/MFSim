@@ -25,6 +25,11 @@ const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
 // tablosu. MFSim ile Ölçüm Görüntüleyici'de ortak.
 const ASAMA1 = ['js/sayi.js', 'js/signal-tree.js', 'js/trace-view.js', 'js/measure-core.js',
   'viewer/js/board.js'];
+// Aşama 2a: modüllerin Sonuçlar katmanı — FEAD ve Takoz'un kanal adları,
+// şerit yorumları ve özet kartları. Virgüllüydüler ama binliği gruplamıyordu:
+// aynı sayfada grafik "1.381" derken yorum "1381" diyordu.
+const ASAMA2A = ['js/fead-signals.js', 'js/fead-brief.js', 'js/cp-fead-results.js',
+  'js/mount-brief.js', 'js/mount-signals.js'];
 
 describe('veSayi — Türkçe yazım', () => {
   test.each([
@@ -117,6 +122,20 @@ describe('tarayıcının kuralı', () => {
     expect(yakalar('// eskiden v.toFixed(1) yazılıyordu')).toEqual([]);
     expect(yakalar("h += veSayi(v, 1) + ' mm';")).toEqual([]);
     expect(yakalar('row += n.toFixed(4);   // makine:')).toEqual([1]);
+  });
+});
+
+describe('aşama 2a — modüllerin Sonuçlar katmanı (FEAD · Takoz)', () => {
+  test('işaretsiz sayı yazımı yok', () => {
+    const s = ASAMA2A.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
+    expect(s).toEqual([]);
+  });
+  test('kanal KİMLİĞİ sayıyı yazıcıdan geçirmez — biçim değişse de kayıtlı pano kanalını bulur', () => {
+    for (const f of ['js/fead-signals.js', 'js/mount-signals.js']) {
+      const s = oku(f), i = s.indexOf('function _ordId(');
+      const govde = s.slice(i, s.indexOf('}', i));
+      expect([f, /veSayi|_tr\(|_nTr\(/.test(govde)]).toEqual([f, false]);
+    }
   });
 });
 
