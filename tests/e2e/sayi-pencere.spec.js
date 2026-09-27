@@ -80,6 +80,29 @@ for (const [modul, M] of Object.entries(MODULLER)) {
 
     const sorun = [], adlar = {};
     let taranan = 0;
+    // TUVALDEKİ KARTLAR: kartın yazısı + kart içindeki SVG metni (FEAD Kayış
+    // Yolu çizimindeki sarım açısı ve kol künyesi pencere taramasına görünmüyordu).
+    const kartlar = await page.evaluate(() => {
+      const o = new Set();
+      document.querySelectorAll('#ve-canvas .ve-node').forEach((n) => { if (n.offsetWidth) o.add(n.innerText); });
+      document.querySelectorAll('#ve-canvas svg text').forEach((t) => o.add(t.textContent));
+      return [...o].join('\n');
+    });
+    expect(kartlar.length).toBeGreaterThan(50);
+    const tuvalMetni = [['tuval kartları', kartlar]];
+    for (const [tip, metin] of tuvalMetni) {
+      taranan += metin.length;
+      for (const re of [NOKTA, GRUPSUZ]) {
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(metin))) {
+          const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ');
+          const ad = sinifla(m[0], bag);
+          if (ad) (adlar[ad] = adlar[ad] || new Set()).add(bag.trim());
+          else sorun.push(`${tip}: "${m[0]}" ⟨${bag.trim()}⟩`);
+        }
+      }
+    }
     for (const tip of tipler) {
       const metin = await page.evaluate(async (tip) => {
         const n = nodes.find((x) => x.type === tip);

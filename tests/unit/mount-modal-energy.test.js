@@ -455,10 +455,10 @@ describe('Rapor — §8.7 sönümlü sütunlar ve §8.14 modal enerji', () => {
     expect(rep._rE(4.5e-7, 1)).toBe('4,5·10<sup>−7</sup>');
     expect(rep._rE(NaN)).toBe('—');
     expect(rep._rE(1)).toBe('1');
-    expect(rep._rE(9999.9, 1)).toBe('9999,9');
+    expect(rep._rE(9999.9, 1)).toBe('9.999,9');       // binlik nokta (7·C)
     expect(rep._rE(10000)).toBe('1·10<sup>4</sup>');
     expect(rep._rE(0.5, 2)).toBe('0,5');            // 1e-3..1 düz basılır
-    expect(rep._rE(-1234.5, 1)).toBe('−1234,5');
+    expect(rep._rE(-1234.5, 1)).toBe('−1.234,5');
   });
 
   test('_rE mantisi yuvarlama sonrası NORMALİZE edilir ("10·10⁶" basılmaz)', () => {

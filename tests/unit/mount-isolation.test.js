@@ -115,7 +115,7 @@ describe('Rapor — tek hesap noktası (_mntRepIsolation)', () => {
   test('§8.8 düşey taban formülünü ve modal bandı gösteriyor', () => {
     const s8 = rep._mntRepFreqPlacement(R, {});
     expect(s8).toContain('f_{\\text{bounce}}');
-    expect(s8).toContain('12,69');
+    expect(s8).toContain('12{,}69');    // formülde (TeX) ondalık virgül {,} ile
     expect(s8).toContain('5,92');       // modal bant alt ucu
   });
 

@@ -26,10 +26,26 @@ describe('yazım taraması', () => {
     ['P_motor = T_net*omega/1000 kW', 'formül sabiti'],
     ['© 2026 BMC Otomotiv', 'telif yılı'],
     ['ayrıntısı §8.18 bölümünde', 'bölüm no'],
+    ['yay dengesinden (4.4) zaten belirlidir', 'denklem / bölüm no'],
+    ['ayrıntısı Bölüm 9.2 içinde', 'denklem / bölüm no'],
+    ['9.1 Dinamik rijitlik', 'bölüm başlığı'],
+    ['bkz. 9.1 Dinamik rijitlik bölümü', 'denklem / bölüm no'],
+    ['— Kong 2016, Beikmann 1996 verisi', 'kaynak yılı'],
+    ['Arch. Automot. Eng. 55(2), 2019, Tab. 3', 'kaynak yılı'],
+    ['TARİH 27 Eylül 2026', 'tarih'],
+    ['Q = 9549 · P ⁄ n', 'formül sabiti'],
   ])('ad olan sayı affedilir: %s → %s', (metin, sinif) => {
     const r = O.tara(metin);
     expect(r.sorun).toEqual([]);
     expect(Object.keys(r.adlar)).toEqual([sinif]);
+  });
+  test('satır başındaki bölüm başlığı ad sayılır, satır içindeki aynı biçim sayılmaz', () => {
+    expect(O.tara('önceki paragraf.\n8.10 Mod şekilleri\nmetin').sorun).toEqual([]);
+    expect(O.tara('önceki paragraf. 8.10 Mod şekilleri').sorun.map((x) => x.sayi)).toEqual(['8.10']);
+    expect(O.tara('yıl 2016 değil: 2016 rpm').sorun.map((x) => x.sayi)).toEqual(['2016', '2016']);
+  });
+  test('bölüm başlığı kalıbı birimi affetmez: "2.5 Nm" yine noktalı ondalık', () => {
+    expect(O.tara('tork 2.5 Nm').sorun.map((x) => x.sayi)).toEqual(['2.5']);
   });
   test('ad yalnız KENDİ çevresinde aranır — satırın uzağındaki ad affetmez', () => {
     expect(O.tara('Allison 3200 SP şanzımanı · çıkış devri 2800 rpm').sorun.map((s) => s.sayi)).toEqual(['2800']);
@@ -65,5 +81,14 @@ describe('TeX kaynağı', () => {
   test('noktalı ondalık yakalanır, {,} geçer', () => {
     expect('K_{1}=0{,}026909 \\quad g=9{,}81'.match(O.TEX_NOKTA)).toBeNull();
     expect('F=0.5\\rho'.match(O.TEX_NOKTA)).toEqual(['0.5']);
+  });
+  test('binlik nokta TeX\'te de ondalık sayılmaz', () => {
+    expect(O.texTara('T_s=12.760{,}7 \\quad N=1.500 \\quad T_s=−18.482{,}4')).toEqual([]);
+    expect(O.texTara('T_s=12760.7').map((x) => x.split(' ⟨')[0])).toEqual(['nokta "12760.7"']);
+  });
+  test('çıplak ondalık virgül yakalanır — KaTeX onu noktalama sayıp arkasına boşluk koyar', () => {
+    expect(O.texTara('T_s=12.760,7').map((x) => x.split(' ⟨')[0])).toEqual(['çıplak virgül "0,7"']);
+    expect(O.texTara('\\mathbf F=[0,0,-mg]').map((x) => x.split(' ⟨')[0])).toEqual(['çıplak virgül "0,0"']);
+    expect(O.texTara('\\mathbf F=[0;0;-mg] \\quad \\big(12{,}5;\\ 34\\big)')).toEqual([]);
   });
 });

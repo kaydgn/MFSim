@@ -30,10 +30,14 @@ const AD = [
   ['kompresör ön ayarı', /Wabco|Knorr|bar\b/],
   ['telif yılı', /©|\(c\)/],
   ['araç adı', /BMC|\d\.\dT\b/],
-  ['formül sabiti', new RegExp('× 9550|× 9549|9549[·,]|[*/×] ?' + SABIT + '(?![\\d.,])|(?<![\\d.,])' + SABIT + ' ?[*/×]')],
+  ['formül sabiti', new RegExp('× 9550|× 9549|9549 ?[·,]|[*/×] ?' + SABIT + '(?![\\d.,])|(?<![\\d.,])' + SABIT + ' ?[*/×]')],
   ['standart / kayış adı', /ISO|DIN|SAE|\dPK/],
-  ['tarih', /20\d\d-\d\d|\d\d\.\d\d\.20\d\d/],
+  ['tarih', /20\d\d-\d\d|\d\d\.\d\d\.20\d\d|(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık) (?:19|20)\d\d/],
+  // Kaynakça yılı: "Kong 2016", "Gerbert & Hansson (1987)", "Balta ve ark. 2015", "Eng. 55(2), 2019"
+  ['kaynak yılı', /[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?: ve ark\.| & [A-ZÇĞİÖŞÜ][a-zçğıöşü]+)? \(?(?:19|20)\d\d\b|\d+\(\d+\), (?:19|20)\d\d/],
   ['bölüm no', /§/],
+  // Denklem ve bölüm NUMARASI ondalık değil: "(4.4)", "Bölüm 8.18", başlık "9.1 Dinamik rijitlik".
+  ['denklem / bölüm no', /\(\d+\.\d+\)|Bölüm \d|Denklem|Tablo \d|Şekil \d|(?:^|\s)\d+\.\d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]{3,}/],
 ];
 
 // Eşleşmenin 14 karakter öncesine ve 10 karakter sonrasına bakılır: sınıf
@@ -54,7 +58,10 @@ function tara(metin) {
     let m;
     while ((m = re.exec(metin))) {
       const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ').trim();
-      const ad = tur === 'sonda %' ? null : sinifla(m[0], bag);
+      // Satır başında "8.10 Mod şekilleri": bölüm başlığının numarası, ondalık değil.
+      const baslik = tur === 'nokta' && (m.index === 0 || metin[m.index - 1] === '\n')
+        && /^ [A-ZÇĞİÖŞÜ]/.test(metin.slice(m.index + m[0].length, m.index + m[0].length + 2));
+      const ad = tur === 'sonda %' ? null : (baslik ? 'bölüm başlığı' : sinifla(m[0], bag));
       if (ad) adlar[ad] = (adlar[ad] || 0) + 1;
       else sorun.push({ tur, sayi: m[0], bag });
     }
@@ -129,7 +136,24 @@ function tabloIhlal(metin) {
   return [...out];
 }
 
-// Formülün TeX kaynağında noktalı ondalık ("0.5"); Türkçe yazım "0{,}5".
-const TEX_NOKTA = /(?<![\w.{])\d+\.\d+/g;
+// ── FORMÜLÜN TeX KAYNAĞI ────────────────────────────────────────────────────
+// Türkçe yazım TeX'te "12.760{,}7": binlik nokta sıradan karakter, ondalık
+// virgül süslü parantezde. İki yanlış yazım:
+//   TEX_NOKTA   noktalı ondalık "0.5". Binlik nokta ve üç haneli kesir
+//               SAYILMAZ — metindeki NOKTA'nın aynı kuralı.
+//   TEX_VIRGUL  çıplak ondalık virgül "12,7". KaTeX virgülü NOKTALAMA sayar ve
+//               arkasına ince boşluk koyar: "12, 7" okunur. Liste ayracı da
+//               bu yüzden ';' — "[0;0;-mg]", "(12{,}5;\ 34)".
+const TEX_NOKTA = /(?<![\w.{])(?:0\.\d+|\d+\.\d{1,2}(?!\d)|\d+\.\d{4,})/g;
+const TEX_VIRGUL = /\d,\d/g;
+function texTara(tex) {
+  const out = [];
+  for (const [tur, re] of [['nokta', TEX_NOKTA], ['çıplak virgül', TEX_VIRGUL]]) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(tex))) out.push(`${tur} "${m[0]}" ⟨${tex.slice(Math.max(0, m.index - 24), m.index + m[0].length + 12).replace(/\s+/g, ' ')}⟩`);
+  }
+  return out;
+}
 
-module.exports = { NOKTA, GRUPSUZ, BOSLUKLU, SONDA_YUZDE, AD, sinifla, tara, kutuIhlal, tabloIhlal, TEX_NOKTA };
+module.exports = { NOKTA, GRUPSUZ, BOSLUKLU, SONDA_YUZDE, AD, sinifla, tara, kutuIhlal, tabloIhlal, TEX_NOKTA, TEX_VIRGUL, texTara };

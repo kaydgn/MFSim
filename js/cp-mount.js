@@ -3158,7 +3158,7 @@ function _mntPrepareSolve(solverId){
     solvedNL:solvedNL, nlNoCurve:(mode==='nonlinear' && !solvedNL),
     zeta:_mntZetaOf(solver),               // şirket kabulü — tüm montaja tek değer
     loadCases:si.loadCases, gearDefs:_mntGearTorqueCases(gather.torque),
-    designDefs:[ {name:'3.5g Düşey',       n:[ 0,0,-3.5], T:[0,0,0]},
+    designDefs:[ {name:'3,5g Düşey',       n:[ 0,0,-3.5], T:[0,0,0]},
                  {name:'1g Yanal',         n:[ 0,1,-1  ], T:[0,0,0]},
                  {name:'1g Boyuna (fren)', n:[-1,0,-1  ], T:[0,0,0]} ]
   };

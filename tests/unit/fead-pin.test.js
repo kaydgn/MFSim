@@ -305,8 +305,9 @@ describe('rapor yüzeyi', () => {
     const eq = h.match(/\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]/g) || [];
     expect(eq.length).toBeGreaterThan(1);
     eq.forEach((e) => {
-      // ters bölüsüz noktalı virgül = yenmiş \; (ince boşluk)
-      expect(e.replace(/\\;/g, '')).not.toMatch(/;/);
+      // ters bölüsüz noktalı virgül = yenmiş \; (ince boşluk). Koordinat
+      // çiftinin ayracı ";\ " kasıtlı (karar 7·C: ondalık virgülle karışmasın).
+      expect(e.replace(/\\;/g, '').replace(/;\\ /g, '')).not.toMatch(/;/);
       // SEKME = yenmiş \t (\theta, \text, \times …)
       expect(e).not.toMatch(/\t/);
       // çıplak komut gövdesi = ters bölüsü yenmiş komut

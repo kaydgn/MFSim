@@ -17,26 +17,24 @@
 // ─── Küçük yardımcılar ───────────────────────────────────────────────────────
 function _rEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _rNum(v){ var n=Number(v); return Number.isFinite(n)?n:NaN; }
-// Sondaki sıfırları kırp: "20.000"→"20", "110.700"→"110.7", "-3.00"→"-3".
-// (Türkçe'de virgül ondalıktır; "20,000" gibi görünen değerler yanıltmasın.)
-function _rTrim(s){
-  if(s.indexOf('.')<0) return s;
-  return s.replace(/0+$/,'').replace(/\.$/,'');
-}
-// Türkçe ondalık (virgül) + gerçek eksi (−, U+2212). Boş/NaN → '—'.
+// Türkçe sayı (karar 7·C, tek yazıcı js/sayi.js): ondalık virgül, binlik
+// nokta, gerçek eksi (−, U+2212). Önce d haneye yuvarlanır, sondaki sıfırlar
+// atılır ("20,000"→"20"). Boş/NaN → '—'; yuvarlamadan doğan "−0" yazılmaz.
 function _rF(v, d){
   var n=Number(v); if(!Number.isFinite(n)) return '—';
-  var s=_rTrim(n.toFixed(d==null?2:d)).replace('.', ',');
-  if(s==='-0') s='0';                 // yuvarlamadan doğan "−0"ı engelle
-  return s.replace(/^-/, '−');
+  return veSayi(+n.toFixed(d==null?2:d), null, { eksi: '−' });   // makine: yuvarlama, yazan veSayi
 }
 // İşaretli (+/−, çökme için) Türkçe ondalık. Sıfır → işaretsiz "0".
 function _rFs(v, d){
   var n=Number(v); if(!Number.isFinite(n)) return '—';
-  var s=_rTrim(Math.abs(n).toFixed(d==null?2:d)).replace('.', ',');
+  var s=veSayi(+Math.abs(n).toFixed(d==null?2:d), null);   // makine: yuvarlama, yazan veSayi
   if(s==='0') return '0';
   return (n<0?'−':'+')+s;
 }
+// Formüle (TeX) giden sayı: ondalık virgül {,} ile. Çıplak virgülü KaTeX
+// NOKTALAMA sayar ve arkasına ince boşluk koyar ("12,7" → "12, 7"); binlik
+// nokta TeX'te sıradan karakterdir, olduğu gibi kalır.
+function _rTeX(s){ return String(s).replace(/,/g, '{,}'); }
 // Büyük/küçük mertebeler için bilimsel gösterim: 1,68·10⁶. 0,001 ≤ |v| < 10000
 // aralığında normal ondalık basılır — okunabilirlik için.
 // Mantis YUVARLAMA SONRASI normalize edilir: 9,9996·10⁶ değeri 2 haneye
@@ -49,7 +47,7 @@ function _rE(v, d){
   if(e>=-3 && e<4) return _rF(n, dd);
   var m=n/Math.pow(10,e);
   if(!Number.isFinite(m)) return '—';                 // subnormal: 10^e taşar
-  if(Math.abs(Number(m.toFixed(dd)))>=10){ m/=10; e+=1; }
+  if(Math.abs(Number(m.toFixed(dd)))>=10){ m/=10; e+=1; }   // makine: mantis yuvarlaması
   return _rF(m, dd)+'·10<sup>'+String(e).replace(/^-/, '−')+'</sup>';
 }
 function _rMountCore(){ return (typeof veMountCore!=='undefined')?veMountCore:(typeof window!=='undefined'?window.veMountCore:null); }
@@ -278,7 +276,7 @@ function veMntGenerateReport(nodeId){
     try {
       var html=_mntBuildReportHTML(R, opts);
       _mntReportDownload(html, 'takoz_cokme_titresim_raporu.html');
-      setStatus('İndirildi ✓ ('+Math.round(html.length/1024)+' KB)','var(--accent-success)');
+      setStatus('İndirildi ✓ ('+veSayi(html.length/1024, 0)+' KB)','var(--accent-success)');
       if(typeof showToast==='function') showToast('Rapor indirildi.','success');
     } catch(e){
       if(typeof showToast==='function') showToast('Rapor üretilemedi: '+e.message,'error');
@@ -695,18 +693,18 @@ function _mntRepFigure(geom, plane, no, caption){
   svg+='<text x="'+(ax)+'" y="'+(ay-10)+'" font-size="10.5" fill="#5a6270">'+(plane==='xy'?'+Y yukarı':'+Z yukarı')+'</text>';
   // orta çizgi (v=0)
   var y0=(minV<=0 && maxV>=0) ? sy(0) : (padT+plotH/2);
-  if(minV<=0 && maxV>=0){ svg+='<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="#c6c0b4" stroke-width="1.4" stroke-dasharray="7 5"/>'; }
+  if(minV<=0 && maxV>=0){ svg+='<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="#c6c0b4" stroke-width="1.4" stroke-dasharray="7 5"/>'; }   // makine: SVG koordinatı
   // kümele
   var mClust=_repCluster(geom.mounts.map(function(m){ return {x:sx(m[horiz]), y:sy(m[vert]), name:m.name}; }), 26);
   var cClust=_repCluster(geom.comps.map(function(c){ return {x:sx(c[horiz]), y:sy(c[vert]), name:c.name}; }), 18);
   // takoz kareleri (küme başına bir kare)
-  mClust.forEach(function(k){ svg+='<rect x="'+(k.x-7).toFixed(1)+'" y="'+(k.y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#26241f" stroke-width="1.8"/>'; });
+  mClust.forEach(function(k){ svg+='<rect x="'+(k.x-7).toFixed(1)+'" y="'+(k.y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#26241f" stroke-width="1.8"/>'; });   // makine: SVG koordinatı
   // bileşen CG daireleri
-  cClust.forEach(function(k){ svg+='<circle cx="'+k.x.toFixed(1)+'" cy="'+k.y.toFixed(1)+'" r="6" fill="none" stroke="#5a6270" stroke-width="1.6"/>'; });
+  cClust.forEach(function(k){ svg+='<circle cx="'+k.x.toFixed(1)+'" cy="'+k.y.toFixed(1)+'" r="6" fill="none" stroke="#5a6270" stroke-width="1.6"/>'; });   // makine: SVG koordinatı
   // birleşik CG (pinwheel G)
   if(geom.cg){
     var GX=sx(geom.cg[horiz]), GY=sy(geom.cg[vert]), r=11;
-    svg+='<g transform="translate('+GX.toFixed(1)+','+GY.toFixed(1)+')">'
+    svg+='<g transform="translate('+GX.toFixed(1)+','+GY.toFixed(1)+')">'   // makine: SVG koordinatı
        +'<circle r="'+r+'" fill="#fff" stroke="#26241f" stroke-width="1.6"/>'
        +'<path d="M0,0 L'+r+',0 A'+r+','+r+' 0 0 1 0,'+r+' Z M0,0 L-'+r+',0 A'+r+','+r+' 0 0 1 0,-'+r+' Z" fill="#26241f"/>'
        +'<text x="0" y="'+(-r-5)+'" text-anchor="middle" font-size="11.5" fill="#26241f" font-weight="600">G</text></g>';
@@ -716,7 +714,7 @@ function _mntRepFigure(geom, plane, no, caption){
   mClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'takoz'), dir:(k.y<=y0?-1:1), fs:9.5, col:'#26241f', marker:'sq' }); });
   cClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,19,17,'bileşen'), dir:(k.y<y0?-1:1), fs:10, col:'#5a6270', marker:'ci' }); });
   _repPlaceLabels(labels, H-2);
-  labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'">'+_rEsc(L.text)+'</text>'; });
+  labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'">'+_rEsc(L.text)+'</text>'; });   // makine: SVG koordinatı
   svg+='</svg>';
   return '<figure>'+svg+'<figcaption><b>Şekil '+no+' —</b> '+caption+'</figcaption></figure>';
 }
@@ -724,10 +722,10 @@ function _mntRepFigure(geom, plane, no, caption){
 // §8.1 — kütle birleştirme (m, c_G, I_G)
 function _mntRepStep1Mass(R){
   var m=R.mp.m, cg=R.mp.cg.map(function(v){return v*1000;}), I=R.mp.I_G;
-  function row(a){ return a.map(function(v){return _rF(v,1);}).join(' & '); }
+  function row(a){ return a.map(function(v){return _rTeX(_rF(v,1));}).join(' & '); }
   var h='<h3>8.1 Adım 1 — Kütle birleştirme</h3>';
   h+='<p>Denklem (4.1)–(4.2) uygulanır; toplam kütle, birleşik ağırlık merkezi ve ağırlık merkezine göre atalet tensörü:</p>';
-  h+='$$ m='+_rF(m,3)+'\\ \\text{kg},\\qquad \\mathbf c_G=\\begin{bmatrix}'+_rF(cg[0],2)+'\\\\ '+_rF(cg[1],2)+'\\\\ '+_rF(cg[2],2)+'\\end{bmatrix}\\text{mm},\\qquad '
+  h+='$$ m='+_rTeX(_rF(m,3))+'\\ \\text{kg},\\qquad \\mathbf c_G=\\begin{bmatrix}'+_rTeX(_rF(cg[0],2))+'\\\\ '+_rTeX(_rF(cg[1],2))+'\\\\ '+_rTeX(_rF(cg[2],2))+'\\end{bmatrix}\\text{mm},\\qquad '
     +'\\mathbf I_G=\\begin{bmatrix}'
     +row(I[0])+'\\\\ '+row(I[1])+'\\\\ '+row(I[2])
     +'\\end{bmatrix}\\text{kg}\\!\\cdot\\!\\text{m}^2 $$';
@@ -770,7 +768,7 @@ function _mntRepStep1Mass(R){
     });
     h+='</table>';
     h+='<p style="font-size:0.9em; color:#5a6270;">Çarpım terimlerinin köşegene oranı '
-      +_rF(100*oran,1)+'%. '
+      +'%'+_rF(100*oran,1)+'. '
       +(oran < 0.02
         ? 'Model eksenleri asal eksenlere pratik olarak çakışıktır; global köşegen değerler doğrudan yorumlanabilir.'
         : '<b>Model eksenleri asal eksenlerle çakışık değildir.</b> Dış bir yazılımın (Adams/CATIA) "aggregate mass" çıktısı ataleti asal eksende ve bir yönelim açısıyla basıyorsa, o sayılar buradaki global köşegenle DEĞİL, yukarıdaki asal atalet satırıyla karşılaştırılmalıdır.')
@@ -784,7 +782,7 @@ function _mntRepStep2Stiffness(R, C){
   var h='<h3>8.2 Adım 2 — Rijitlik matrisi</h3>';
   if(!C || !C.buildK){ return h+'<p>Rijitlik çekirdeği bulunamadı.</p>'; }
   var Ks=C.buildK(R.mounts, R.mp.cg, false);
-  function blk(K,r0,c0,sc,dec){ var o=[]; for(var i=0;i<3;i++){ var row=[]; for(var j=0;j<3;j++){ row.push(_rF(K[r0+i][c0+j]/sc,dec)); } o.push(row.join(' & ')); } return o.join('\\\\ '); }
+  function blk(K,r0,c0,sc,dec){ var o=[]; for(var i=0;i<3;i++){ var row=[]; for(var j=0;j<3;j++){ row.push(_rTeX(_rF(K[r0+i][c0+j]/sc,dec))); } o.push(row.join(' & ')); } return o.join('\\\\ '); }
   h+='<p>Denklem (5.2) blokları statik rijitliklerle (öteleme bloğu MN/m, kuplaj MN/rad, dönme MN·m/rad):</p>';
   h+='$$ \\mathbf K_{tt}=\\begin{bmatrix}'+blk(Ks,0,0,1e6,3)+'\\end{bmatrix},\\;\\; '
     +'\\mathbf K_{t\\theta}=\\begin{bmatrix}'+blk(Ks,0,3,1e6,3)+'\\end{bmatrix},\\;\\; '
@@ -799,7 +797,7 @@ function _mntRepStep3Static(R, geom){
   var stat=_mntRepFindCase(R,'Static');
   if(!stat || !stat.res){ return h+'<p>Statik durum çözülemedi.</p>'; }
   var res=stat.res, m=R.mp.m;
-  h+='<p>\\( \\mathbf F=[0,0,-mg,0,0,0]^{\\mathsf T} \\), \\( mg='+_rF(m*9.81/1000,2)+' \\) kN ile (6.1) çözülür. Takoz düşey sehimleri (δ_z) ve şasiye ilettikleri düşey kuvvetler:</p>';
+  h+='<p>\\( \\mathbf F=[0;0;-mg;0;0;0]^{\\mathsf T} \\), \\( mg='+_rTeX(_rF(m*9.81/1000,2))+' \\) kN ile (6.1) çözülür. Takoz düşey sehimleri (δ_z) ve şasiye ilettikleri düşey kuvvetler:</p>';
   var mounts=R.mounts;
   // Taşıma kapasitesi OPSİYONEL bir katalog verisidir (mnt.fCap [N], cp-mount.js
   // _mntToSI). Hiçbir takozda tanımlı değilse sütun HİÇ açılmaz — boş bir
@@ -855,7 +853,7 @@ function _mntRepLoadBar(R){
   rows.forEach(function(r,i){
     var y=top+i*rowH, bw=Math.max(2, r.v/max*barMax), cy=y+rowH/2;
     svg+='<text x="'+(padL-8)+'" y="'+(cy+4)+'" text-anchor="end" font-size="11" fill="#26241f">'+_rEsc(_mntRepShort(r.name,16))+'</text>';
-    svg+='<rect x="'+padL+'" y="'+(y+4)+'" width="'+bw.toFixed(1)+'" height="'+(rowH-10)+'" fill="#96441f"/>';
+    svg+='<rect x="'+padL+'" y="'+(y+4)+'" width="'+bw.toFixed(1)+'" height="'+(rowH-10)+'" fill="#96441f"/>';   // makine: SVG koordinatı
     svg+='<text x="'+(padL+bw+6)+'" y="'+(cy+4)+'" font-size="11" fill="#3c4350" font-family="Inter,system-ui,sans-serif">'+_rF(r.v,2)+' kN</text>';
   });
   svg+='</svg>';
@@ -872,7 +870,7 @@ function _mntRepStep4Torque(R){
     return h;
   }
   var Ts = fwd.loadCase && fwd.loadCase.T ? -fwd.loadCase.T[0] : NaN;
-  h+='<p>Tahrik hattı torku, güç grubuna X ekseni etrafında reaksiyon momenti olarak etkir (6.3). İleri vites için şaft torku \\( T_s='+_rF(Ts,1)+' \\) N·m; bu reaksiyon tek başına çözülüp statik çözümle toplanır (lineer süperpozisyon):</p>';
+  h+='<p>Tahrik hattı torku, güç grubuna X ekseni etrafında reaksiyon momenti olarak etkir (6.3). İleri vites için şaft torku \\( T_s='+_rTeX(_rF(Ts,1))+' \\) N·m; bu reaksiyon tek başına çözülüp statik çözümle toplanır (lineer süperpozisyon):</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Süperpozisyon: İleri (Forward) yük durumu, düşey sehimler [mm]</caption>';
   h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
   fwd.res.perMount.forEach(function(pm,i){
@@ -888,7 +886,7 @@ function _mntRepStep4Torque(R){
   var rev=_mntRepFindCase(R,'Reverse Torque');
   if(rev && rev.res){
     var Tr = rev.loadCase && rev.loadCase.T ? -rev.loadCase.T[0] : NaN;
-    h+='<p>Geri vites reaksiyonu \\( T_s='+_rFs(Tr,1)+' \\) N·m (yön ters) için aynı süperpozisyon:</p>';
+    h+='<p>Geri vites reaksiyonu \\( T_s='+_rTeX(_rFs(Tr,1))+' \\) N·m (yön ters) için aynı süperpozisyon:</p>';
     h+='<table><caption>Tablo '+_rTbl()+' — Süperpozisyon: Geri (Reverse) yük durumu, düşey sehimler [mm]</caption>';
     h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
     rev.res.perMount.forEach(function(pm,i){
@@ -990,7 +988,7 @@ function _mntRepStep5Modal(R, C){
       var phiMax=(modes[iMax] && modes[iMax].phi) || [0,0,0,0,0,0];
       var rotDom=Math.max(Math.abs(phiMax[3]),Math.abs(phiMax[4]),Math.abs(phiMax[5]))
                > Math.max(Math.abs(phiMax[0]),Math.abs(phiMax[1]),Math.abs(phiMax[2]));
-      h+='<p style="font-size:0.9em; color:#5a6270;">Girilen tek sönüm oranı \\( \\zeta='+_rF(zIn,4)+' \\) '
+      h+='<p style="font-size:0.9em; color:#5a6270;">Girilen tek sönüm oranı \\( \\zeta='+_rTeX(_rF(zIn,4))+' \\) '
         +'modlara <b>eşit dağılmaz</b>: burada '+_rF(zmin,4)+' – '+_rF(zmax,4)+' aralığında çıkar '
         +'(en sönümlü mod '+(iMax+1)+' — '+_rEsc(modes[iMax].label||'—')+'). Sebep, sönüm katsayılarının takoz başına '
         +'\\( c=2\\zeta\\sqrt{k_{\\text{din}}m_{\\text{pay}}} \\) ile türetilmesi ve her modun takozları farklı '
@@ -1036,7 +1034,7 @@ function _mntRepModeMatrix(modes){
       var val=Math.max(-1, Math.min(1, Number(v)||0));
       var L, Rr;
       if(val>=0){ L=50; Rr=50+val*47; } else { L=50+val*47; Rr=50; }
-      var bar='background:linear-gradient(90deg, transparent '+L.toFixed(1)+'%, rgba(36,66,95,0.20) '+L.toFixed(1)+'%, rgba(36,66,95,0.20) '+Rr.toFixed(1)+'%, transparent '+Rr.toFixed(1)+'%);';
+      var bar='background:linear-gradient(90deg, transparent '+L.toFixed(1) + '%, rgba(36,66,95,0.20) '+L.toFixed(1) + '%, rgba(36,66,95,0.20) '+Rr.toFixed(1) + '%, transparent '+Rr.toFixed(1) + '%);';   // makine: CSS gradyanı
       h+='<td style="'+bar+'">'+_rFs(v,2)+'</td>';
     });
     h+='</tr>';
@@ -1084,20 +1082,20 @@ function _mntRepFreqPlacement(R, opts){
   // (tanı) olarak gösterilir.
   var iso=_mntRepIsolation(R, opts);
   var fB=iso.fBounce, Tiso=iso.T, ok2=(Tiso<0.5);
-  var Tstr=isFinite(Tiso)?(_rF(Tiso*100,1)+'%'):'∞';
+  var Tstr=isFinite(Tiso)?('%'+_rF(Tiso*100,1)):'∞';
   // Tanı: modal bant ve bounce frekansının bant içindeki yeri.
   var fLo=modes[0].f_Hz, fHi=modes[modes.length-1].f_Hz;
 
   var h='<h3>8.8 Adım 8 — Frekans yerleşimi ve iletilebilirlik</h3>';
   h+='<p>Dört zamanlı motorun rölanti ateşleme frekansı \\( f_{\\text{ateş}}=\\dfrac{N}{60}\\cdot\\dfrac{z}{2} \\); '
-    +'girilen değerlerle \\( N='+_rF(rpm,0)+' \\) d/dk, \\( z='+_rF(z,0)+' \\) silindir → '
-    +'\\( f_{\\text{ateş}}='+_rF(fFire,1)+' \\) Hz; sönüm oranı \\( \\zeta='+_rF(zeta,4)+' \\) '
+    +'girilen değerlerle \\( N='+_rTeX(_rF(rpm,0))+' \\) d/dk, \\( z='+_rTeX(_rF(z,0))+' \\) silindir → '
+    +'\\( f_{\\text{ateş}}='+_rTeX(_rF(fFire,1))+' \\) Hz; sönüm oranı \\( \\zeta='+_rTeX(_rF(zeta,4))+' \\) '
     +'(Çözücü\'de tüm montaj için tek değer olarak girilir — bkz. §8.12).</p>';
 
   // Kriter 1 rozeti
   var cls1=ok1?'check':'warn';
   h+='<div class="note '+cls1+'"><span class="t">'+(ok1?'Uygun':'Dikkat')+' · Kriter 1 — Roll modu &lt; %50 ateşleme</span>';
-  h+='En yüksek rijit gövde (roll) modu <b>'+_rF(fRoll,2)+' Hz</b>, sınır \\( 0{,}5\\,f_{\\text{ateş}}='+_rF(lim1,1)+' \\) Hz\'in ';
+  h+='En yüksek rijit gövde (roll) modu <b>'+_rF(fRoll,2)+' Hz</b>, sınır \\( 0{,}5\\,f_{\\text{ateş}}='+_rTeX(_rF(lim1,1))+' \\) Hz\'in ';
   h+= ok1 ? '<b>altındadır</b> (f_ateş/f_roll = '+_rF(r1,2)+' ≥ 2) — ateşleme mertebesinden izole.'
          : '<b>ÜZERİNDEDİR</b> (f_ateş/f_roll = '+_rF(r1,2)+' &lt; 2) — %50 kriterini karşılamıyor; takoz dinamik rijitliklerini düşürmek (mod bandını aşağı taşımak) önerilir.';
   h+='</div>';
@@ -1106,7 +1104,7 @@ function _mntRepFreqPlacement(R, opts){
   h+='<p>İletilebilirlik <strong>düşey (bounce) doğal frekansı</strong> üzerinden değerlendirilir; '
     +'tahrik düşey olduğundan tek-serbestlik bağıntısının tabanı budur:</p>';
   h+='$$ f_{\\text{bounce}}=\\frac{1}{2\\pi}\\sqrt{\\frac{\\sum k_{z,\\text{din}}}{m}}='
-    +_rF(fB,2)+'\\ \\text{Hz},\\qquad r=\\frac{f_{\\text{ateş}}}{f_{\\text{bounce}}}='+_rF(iso.r,2)+' $$';
+    +_rTeX(_rF(fB,2))+'\\ \\text{Hz},\\qquad r=\\frac{f_{\\text{ateş}}}{f_{\\text{bounce}}}='+_rTeX(_rF(iso.r,2))+' $$';
   h+='<p style="font-size:0.9em; color:#5a6270;">Rijit gövde modları '+_rF(fLo,2)+'–'+_rF(fHi,2)+' Hz bandındadır. '
     +'Bounce modu simetrik yerleşimde tam ayrışır; asimetride pitch ile kuplajlanıp iki moda bölünür ve '
     +'\\( f_{\\text{bounce}} \\) aralarına düşer — bu modelde '+(fB>fLo&&fB<fHi?'öyledir':'bandın dışındadır, yerleşim gözden geçirilmelidir')+'.</p>';
@@ -1115,7 +1113,7 @@ function _mntRepFreqPlacement(R, opts){
   var cls2=ok2?'check':'warn';
   h+='<div class="note '+cls2+'"><span class="t">'+(ok2?'Uygun':'Dikkat')+' · Kriter 2 — Rölanti iletilebilirliği &lt; %50</span>';
   h+='\\( T=\\sqrt{\\tfrac{1+(2\\zeta r)^2}{(1-r^2)^2+(2\\zeta r)^2}} \\) = <b>'+Tstr+'</b> '
-    +'(sönümsüz karşılığı '+(isFinite(iso.T0)?_rF(iso.T0*100,1)+'%':'∞')+') ';
+    +'(sönümsüz karşılığı '+(isFinite(iso.T0)?'%'+_rF(iso.T0*100,1):'∞')+') ';
   h+= ok2 ? '&lt; %50 — güç grubu rölantide izole bölgede çalışır.'
          : '&ge; %50 — izolasyon yetersiz; düşey rijitliği düşürmek (f_bounce\'u aşağı taşımak) veya sönümü artırmak gerekir.';
   h+='</div>';
@@ -1154,7 +1152,7 @@ function _mntRepIso3Table(R, opts, sdof){
   h+='</table>';
   h+='<p style="font-size:0.9em; color:#5a6270;">\\( \\text{İzolasyon}\\,[\\%]=(1-T)\\cdot 100 \\). '
     +'Bu değerler <b>tam 6 serbestlik dereceli</b> frekans yanıtından okunur (dönme kuplajları dahil); '
-    +'yukarıdaki \\( T='+(isFinite(sdof && sdof.T)?_rF(sdof.T,4):'—')+' \\) ise düşey tek-serbestlik kestirimidir. '
+    +'yukarıdaki \\( T='+(isFinite(sdof && sdof.T)?_rTeX(_rF(sdof.T,4)):'—')+' \\) ise düşey tek-serbestlik kestirimidir. '
     +'İkisinin ayrışması normaldir — kestirim güç grubunu tek kütle-yay sayar, tabloda ise gerçek mod kuplajları vardır. '
     +'Tedarikçi raporlarında (AMC, Angst+Pfister) verilen "Isolation %" sütunu <b>bu tablodaki</b> büyüklüktür; '
     +'karşılaştırma buradan yapılmalıdır. Yaygın tasarım hedefi \\( T&lt;0{,}2 \\) (≥ %80 izolasyon); '
@@ -1246,7 +1244,7 @@ function _mntRepDamping(R){
   var zeta=_mntRepZeta(R, {});
   var h='<h3>8.12 Takoz sönüm katsayıları</h3>';
   h+='<p>Sönüm oranı \\( \\zeta \\) montaj genelinde <b>tek bir şirket kabulü</b> olarak girilir (Çözücü paneli); '
-    +'burada \\( \\zeta='+_rF(zeta,4)+' \\). Her takozun eksen başına viskoz sönüm katsayısı bu orandan, '
+    +'burada \\( \\zeta='+_rTeX(_rF(zeta,4))+' \\). Her takozun eksen başına viskoz sönüm katsayısı bu orandan, '
     +'takozun <b>dinamik rijitliği</b> ve üzerine düşen <b>statik yük payı</b> ile türetilir:</p>';
   h+='$$ c_{\\text{eksen}} = 2\\,\\zeta\\,\\sqrt{k_{\\text{din,eksen}}\\; m_{\\text{pay}}} $$';
   h+='<table><caption>Tablo '+_rTbl()+' — Takoz başına yük payı ve viskoz sönüm katsayıları</caption>';
@@ -1294,37 +1292,37 @@ function _mntRepFRFChart(pts, fFire){
     for(k=1;k<10;k++){
       var fv=k*Math.pow(10,d); if(fv<_FRF_FMIN||fv>_FRF_FMAX) continue;
       var X=px(fv);
-      s+='<line x1="'+X.toFixed(1)+'" y1="'+Tp+'" x2="'+X.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#c6c0b4" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';
+      s+='<line x1="'+X.toFixed(1)+'" y1="'+Tp+'" x2="'+X.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#c6c0b4" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
     }
   }
   for(d=lt0; d<=lt1; d++){
     for(k=1;k<10;k++){
       var tv=k*Math.pow(10,d); if(tv<_FRF_TMIN||tv>_FRF_TMAX) continue;
       var Y=py(tv);
-      s+='<line x1="'+L+'" y1="'+Y.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+Y.toFixed(1)+'" stroke="#c6c0b4" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';
+      s+='<line x1="'+L+'" y1="'+Y.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+Y.toFixed(1)+'" stroke="#c6c0b4" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
     }
   }
   // ── eksen etiketleri ──
   for(d=lf0; d<=lf1; d++){
     var fl=Math.pow(10,d);
-    s+='<text x="'+px(fl).toFixed(1)+'" y="'+(Tp+ph+16)+'" text-anchor="middle" font-size="11" fill="#3c4350">'+_rEsc(_rF(fl,fl<1?1:0))+'</text>';
+    s+='<text x="'+px(fl).toFixed(1)+'" y="'+(Tp+ph+16)+'" text-anchor="middle" font-size="11" fill="#3c4350">'+_rEsc(_rF(fl,fl<1?1:0))+'</text>';   // makine: SVG koordinatı
   }
   for(d=lt0; d<=lt1; d++){
     var tl=Math.pow(10,d);
-    s+='<text x="'+(L-7)+'" y="'+(py(tl)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#3c4350">'+_rEsc(tl<1?_rF(tl,2):_rF(tl,0))+'</text>';
+    s+='<text x="'+(L-7)+'" y="'+(py(tl)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#3c4350">'+_rEsc(tl<1?_rF(tl,2):_rF(tl,0))+'</text>';   // makine: SVG koordinatı
   }
   s+='<text x="'+(L+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="#26241f">Frekans [Hz]</text>';
   s+='<text x="14" y="'+(Tp+ph/2)+'" text-anchor="middle" font-size="12" fill="#26241f" transform="rotate(-90 14 '+(Tp+ph/2)+')">İletilebilirlik T</text>';
   // ── T = 1 referansı (izolasyon sınırı) ──
-  s+='<line x1="'+L+'" y1="'+py(1).toFixed(1)+'" x2="'+(L+pw)+'" y2="'+py(1).toFixed(1)+'" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="5 4"/>';
-  s+='<text x="'+(L+6)+'" y="'+(py(1)-5).toFixed(1)+'" font-size="10.5" fill="#6d5310">T = 1 (izolasyon yok)</text>';
+  s+='<line x1="'+L+'" y1="'+py(1).toFixed(1)+'" x2="'+(L+pw)+'" y2="'+py(1).toFixed(1)+'" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="5 4"/>';   // makine: SVG koordinatı
+  s+='<text x="'+(L+6)+'" y="'+(py(1)-5).toFixed(1)+'" font-size="10.5" fill="#6d5310">T = 1 (izolasyon yok)</text>';   // makine: SVG koordinatı
   // ── eğriler ──
   var path=function(arr){
     var p='', started=false;
     for(var i=0;i<pts.f.length;i++){
       var v=arr[i];
       if(!Number.isFinite(v)||v<=0){ started=false; continue; }
-      p += (started?'L':'M') + px(pts.f[i]).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';
+      p += (started?'L':'M') + px(pts.f[i]).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';   // makine: SVG koordinatı
       started=true;
     }
     return p;
@@ -1334,8 +1332,8 @@ function _mntRepFRFChart(pts, fFire){
   // ── f_ateş imleci ──
   if(Number.isFinite(fFire) && fFire>=_FRF_FMIN && fFire<=_FRF_FMAX){
     var XF=px(fFire);
-    s+='<line x1="'+XF.toFixed(1)+'" y1="'+Tp+'" x2="'+XF.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#1b7f4b" stroke-width="1.6" stroke-dasharray="4 3"/>';
-    s+='<text x="'+(XF+5).toFixed(1)+'" y="'+(Tp+13)+'" font-size="10.5" fill="#1b7f4b">f_ateş = '+_rEsc(_rF(fFire,1))+' Hz</text>';
+    s+='<line x1="'+XF.toFixed(1)+'" y1="'+Tp+'" x2="'+XF.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#1b7f4b" stroke-width="1.6" stroke-dasharray="4 3"/>';   // makine: SVG koordinatı
+    s+='<text x="'+(XF+5).toFixed(1)+'" y="'+(Tp+13)+'" font-size="10.5" fill="#1b7f4b">f_ateş = '+_rEsc(_rF(fFire,1))+' Hz</text>';   // makine: SVG koordinatı
   }
   // ── lejant ──
   s+='<g transform="translate('+(L+pw-190)+',' +(Tp+ph-46)+')">';
@@ -1380,11 +1378,11 @@ function _mntRepFRF(R, opts){
     var Tu=C.frfAt(R.mounts, R.mp.cg, M6, null,       fFire, 2, R.kBasis||null);
     h+='<table><caption>Tablo '+_rTbl()+' — Ateşleme frekansında iletilebilirlik: tam çözüm ve tek-serbestlik kestirimi</caption>';
     h+='<tr><th>Yöntem</th><th>Sönümlü</th><th>Sönümsüz</th></tr>';
-    h+='<tr><td class="l">Tam frekans yanıtı (6 SD)</td><td>'+_rF(Td*100,1)+'%</td><td>'+_rF(Tu*100,1)+'%</td></tr>';
-    h+='<tr><td class="l">Tek-serbestlik kestirimi (§8.8)</td><td>'+(isFinite(iso.T)?_rF(iso.T*100,1)+'%':'—')+'</td><td>'+(isFinite(iso.T0)?_rF(iso.T0*100,1)+'%':'—')+'</td></tr>';
+    h+='<tr><td class="l">Tam frekans yanıtı (6 SD)</td><td>%'+_rF(Td*100,1)+'</td><td>%'+_rF(Tu*100,1)+'</td></tr>';
+    h+='<tr><td class="l">Tek-serbestlik kestirimi (§8.8)</td><td>'+(isFinite(iso.T)?'%'+_rF(iso.T*100,1):'—')+'</td><td>'+(isFinite(iso.T0)?'%'+_rF(iso.T0*100,1):'—')+'</td></tr>';
     var dev=(Number.isFinite(Td)&&Td>0)?Math.abs(iso.T-Td)/Td*100:NaN;
     h+='</table>';
-    h+='<p style="font-size:0.9em; color:#5a6270;">Fark '+(Number.isFinite(dev)?_rF(dev,1)+'%':'—')
+    h+='<p style="font-size:0.9em; color:#5a6270;">Fark '+(Number.isFinite(dev)?'%'+_rF(dev,1):'—')
       +'. İzolasyon bölgesinde (r &gt; √2) tek-serbestlik kestirimi tam çözüme çok yakındır; '
       +'bu, §8.8 değerlendirmesinin bu model için geçerli olduğunu doğrular. Rezonans civarında '
       +'ikisi ayrışır — orada yalnız bu bölümün eğrisi kullanılmalıdır.</p>';
@@ -1469,8 +1467,8 @@ function _mntRepModalEnergy(R){
       h+='<tr><td class="c">'+(i+1)+'</td><td>'+_rF(modes[i].f_Hz,2)+'</td>';
       (e.bodies||[]).forEach(function(b){
         var p=Math.max(0, Math.min(100, b.pct||0));
-        var bar='background:linear-gradient(90deg, rgba(36,66,95,0.20) '+p.toFixed(1)+'%, transparent '+p.toFixed(1)+'%);';
-        h+='<td style="'+bar+'">'+_rF(b.pct,1)+'%</td>';
+        var bar='background:linear-gradient(90deg, rgba(36,66,95,0.20) '+p.toFixed(1) + '%, transparent '+p.toFixed(1) + '%);';   // makine: CSS gradyanı
+        h+='<td style="'+bar+'">%'+_rF(b.pct,1)+'</td>';
       });
       h+='<td class="l">'+_rEsc(modes[i].label||'—')+'</td></tr>';
     });
@@ -1659,13 +1657,13 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   items.forEach(function(it){
     var x=sx(it.p[horiz]), y=sy(it.p[vert]);
     if(it.tip==='t'){
-      s+='<rect x="'+(x-4).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" width="8" height="8" fill="none" stroke="#c9ced6" stroke-width="1.1"/>';
+      s+='<rect x="'+(x-4).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" width="8" height="8" fill="none" stroke="#c9ced6" stroke-width="1.1"/>';   // makine: SVG koordinatı
     } else if(it.box){
       var ye=yariEn(it), hh=it.box[vIdx]*1000*sc;
-      s+='<rect x="'+(x-ye[0]*sc).toFixed(1)+'" y="'+(y-hh/2).toFixed(1)+'" width="'+((ye[0]+ye[1])*sc).toFixed(1)+'" height="'+hh.toFixed(1)
+      s+='<rect x="'+(x-ye[0]*sc).toFixed(1)+'" y="'+(y-hh/2).toFixed(1)+'" width="'+((ye[0]+ye[1])*sc).toFixed(1)+'" height="'+hh.toFixed(1)   // makine: SVG koordinatı
         +'" rx="3" fill="none" stroke="#d3d8de" stroke-width="1.1" stroke-dasharray="4 3"/>';
     } else {
-      s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.6" fill="none" stroke="#d3d8de" stroke-width="1"/>';
+      s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.6" fill="none" stroke="#d3d8de" stroke-width="1"/>';   // makine: SVG koordinatı
     }
   });
 
@@ -1676,29 +1674,29 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
     var x1=sx(it.p[horiz]+dd[hIdx]*scale), y1=sy(it.p[vert]+dd[vIdx]*scale);
     var renk=(it.tip==='t')?'#8a3ca0':(it.ana?'#96441f':'#96a0ac');
     if(Math.abs(x1-x0)>0.8 || Math.abs(y1-y0)>0.8)
-      s+='<line class="disp" x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)
+      s+='<line class="disp" x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)   // makine: SVG koordinatı
         +'" stroke="'+renk+'" stroke-width="1" opacity="'+(it.ana||it.tip==='t'?0.4:0.3)+'"/>';
     if(it.tip==='t'){
-      s+='<rect x="'+(x1-4).toFixed(1)+'" y="'+(y1-4).toFixed(1)+'" width="8" height="8" fill="'+renk+'"/>';
+      s+='<rect x="'+(x1-4).toFixed(1)+'" y="'+(y1-4).toFixed(1)+'" width="8" height="8" fill="'+renk+'"/>';   // makine: SVG koordinatı
     } else if(it.box){
       // Ad YAZILMAZ: şekil üzerindeki metinler raporu kalabalıklaştırıyordu.
       // Hangi kutunun hangi gövde olduğu bölüm metninde (soldan sağa) verilir.
       var ye2=yariEn(it), h2=it.box[vIdx]*1000*sc;
-      s+='<g transform="rotate('+donme.toFixed(3)+' '+x1.toFixed(1)+' '+y1.toFixed(1)+')">'
-        +'<rect x="'+(x1-ye2[0]*sc).toFixed(1)+'" y="'+(y1-h2/2).toFixed(1)+'" width="'+((ye2[0]+ye2[1])*sc).toFixed(1)+'" height="'+h2.toFixed(1)
+      s+='<g transform="rotate('+donme.toFixed(3)+' '+x1.toFixed(1)+' '+y1.toFixed(1)+')">'   // makine: SVG koordinatı
+        +'<rect x="'+(x1-ye2[0]*sc).toFixed(1)+'" y="'+(y1-h2/2).toFixed(1)+'" width="'+((ye2[0]+ye2[1])*sc).toFixed(1)+'" height="'+h2.toFixed(1)   // makine: SVG koordinatı
         +'" rx="3" fill="rgba(36,66,95,0.13)" stroke="'+renk+'" stroke-width="1.4"/></g>';
-      s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="2" fill="'+renk+'"/>';
+      s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="2" fill="'+renk+'"/>';   // makine: SVG koordinatı
     } else {
       // Yardımcı gövde: küçük soluk nokta, etiket YOK (görsel kalabalığı bunlar yapıyordu)
-      s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="3" fill="'+renk+'"/>';
+      s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="3" fill="'+renk+'"/>';   // makine: SVG koordinatı
     }
   });
   // birleşik ağırlık merkezi (deforme konumda)
   var gx=sx(cgM[horiz]+phi[hIdx]*1000*scale), gy=sy(cgM[vert]+phi[vIdx]*1000*scale);
-  s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#26241f" stroke-width="1.5"/>';
-  s+='<line x1="'+(gx-7).toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+(gx+7).toFixed(1)+'" y2="'+gy.toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';
-  s+='<line x1="'+gx.toFixed(1)+'" y1="'+(gy-7).toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy+7).toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';
-  s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#26241f">G</text>';
+  s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#26241f" stroke-width="1.5"/>';   // makine: SVG koordinatı
+  s+='<line x1="'+(gx-7).toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+(gx+7).toFixed(1)+'" y2="'+gy.toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';   // makine: SVG koordinatı
+  s+='<line x1="'+gx.toFixed(1)+'" y1="'+(gy-7).toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy+7).toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';   // makine: SVG koordinatı
+  s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#26241f">G</text>';   // makine: SVG koordinatı
   s+='</svg>';
   // flex-grow = viewBox genişliği → ekrandaki genişlik de W ile orantılı olur,
   // yani K = kap/ΣW üçünde ortaktır (px/mm eşitliğinin dayanağı budur).
@@ -1851,10 +1849,10 @@ function _mntRepSoftening(R, opts){
   scan.forEach(function(row,k){
     var s=sonuc[k];
     var vurgu=(row.factor===1) ? ' style="background:rgba(36,66,95,0.10);"' : '';
-    h+='<tr'+vurgu+'><td class="c"><b>'+_rF(row.factor*100,0)+'%</b></td>';
+    h+='<tr'+vurgu+'><td class="c"><b>%'+_rF(row.factor*100,0)+'</b></td>';
     row.modes.forEach(function(m){ h+='<td>'+_rF(m.f_Hz,2)+'</td>'; });
     h+='<td>'+_rF(row.fBounce,2)+'</td>'
-      +'<td>'+(Number.isFinite(row.T)?_rF(row.T*100,1)+'%':'—')+'</td>'
+      +'<td>'+(Number.isFinite(row.T)?'%'+_rF(row.T*100,1):'—')+'</td>'
       +'<td class="c">'+tik(s.k1)+'</td><td class="c">'+tik(s.k1a)+'</td>'
       +'<td class="c">'+tik(s.k1b)+'</td><td class="c">'+tik(s.k2)+'</td></tr>';
   });
@@ -1879,7 +1877,7 @@ function _mntRepSoftening(R, opts){
       +'Mevcut rijitlikte en az bir kriter sağlanmıyor. Taranan seviyeler içinde kriterleri sağlayan '
       +'<b>en sert</b> tasarım <b>%'+_rF(f0.factor*100,0)+'</b> ölçek: modlar '
       +f0.modes.map(function(m){ return _rF(m.f_Hz,2); }).join(' / ')+' Hz, '
-      +'T = '+(Number.isFinite(f0.T)?_rF(f0.T*100,1)+'%':'—')+'. '
+      +'T = '+(Number.isFinite(f0.T)?'%'+_rF(f0.T*100,1):'—')+'. '
       +'Bu bir <em>hedef</em>tir; nihai takoz kataloğundan seçildikten sonra analiz tekrarlanmalıdır.</div>';
   } else {
     // Hangi kriter(ler) engelliyor? Yalnız "olmadı" demek kullanıcıyı kör bırakır;
@@ -1994,7 +1992,7 @@ function _mntRepCompliance(R, opts){
   if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
   else c2={st:(iso.T<T_GATE?'ok':'no'),
     bulgu:'f_ateş '+_rF(iso.fFire,1)+' Hz / f_bounce '+_rF(iso.fBounce,2)+' Hz → r='+_rF(iso.r,2)
-         +', T=<b>'+(isFinite(iso.T)?_rF(iso.T*100,1)+'%':'∞')+'</b> (§8.8) · '
+         +', T=<b>'+(isFinite(iso.T)?'%'+_rF(iso.T*100,1):'∞')+'</b> (§8.8) · '
          +(isFinite(iso.T)
             ? (iso.T<T_REF ? '%10 referans eşiğini de sağlıyor'
                            : '<span style="color:var(--warn);">%10 referans eşiğinin üzerinde</span>')

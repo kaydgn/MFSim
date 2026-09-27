@@ -313,12 +313,15 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   okunmaz** (`parseFloat(el.textContent)` "0,0065"i 0 okur): değer kendi
   niteliğinde taşınır. Koordinat üçlüsünde ve liste içinde ayraç `; ` —
   "(12,5; 34; −7)". Yüzde işareti ÖNDE: "%97,0". Formül sabiti gruplanmaz
-  ("P = T·ω/1000"), ondalığı virgül ("0,5·ρ"). TXT raporda gruplu sayı hücreyi
-  uzatır: dolgu yetmezse sütun kayar — hizası ölçülür. Kapı: `sayi-dili.test.js`
-  + `sayi-pencere.spec.js` (ekran) + `sayi-belge.spec.js` (belge + TXT hizası);
-  ölçüt tek yerde, kendi testiyle: `tests/helpers/sayi-olcu.js`. Kapsam aşama
-  aşama büyür (bugün grafik çekirdeği, Sonuçlar, bütün pencereler ve Araç
-  Performans belgeleri; FEAD/Takoz belgeleri, çözücü günlüğü ve CAN sırada).
+  ("P = T·ω/1000"), ondalığı virgül ("0,5·ρ"). FORMÜLE (TeX) giden sayıda
+  ondalık `{,}` ("12.760{,}7"): çıplak virgülü KaTeX noktalama sayıp arkasına
+  boşluk koyar ("12, 7") — yazıcı `_frTeX` · `_rTeX`. TXT raporda gruplu sayı
+  hücreyi uzatır: dolgu yetmezse sütun kayar — hizası ölçülür. Kapı:
+  `sayi-dili.test.js` + `sayi-pencere.spec.js` (ekran) + `sayi-belge.spec.js`
+  (belge, TeX, TXT hizası); ölçüt tek yerde, kendi testiyle:
+  `tests/helpers/sayi-olcu.js`. Kapsam aşama aşama büyür (bugün grafik
+  çekirdeği, Sonuçlar, bütün pencereler ve üç modülün belgeleri; çözücü
+  günlüğü ve CAN sırada).
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri

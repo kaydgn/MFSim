@@ -79,8 +79,10 @@ function hucreler(html, etiket, adet) {
   if (i < 0) return null;
   return t.slice(i).split('|').filter((s) => s.trim()).slice(1, 1 + adet).map((s) => s.trim());
 }
-// Türkçe biçimli sayıyı geri çevir: '−163,5' → -163.5
-const say = (s) => Number(String(s).replace('−', '-').replace(/\s/g, '').replace(',', '.'));
+// Belgenin sayısını geri çevir: '−163,5' → -163.5 · '1.381' → 1381. Belgede
+// nokta HER ZAMAN binliktir (ondalık virgül, karar 7·C) — veSayiOku girdi
+// alanı içindir, virgülsüz noktayı ondalık sayar.
+const say = (s) => Number(String(s).replace('−', '-').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('belge iskeleti', () => {
@@ -235,8 +237,8 @@ describe('gergi künyesi — merkez GİRDİ, montaj konumu TÜREV', () => {
     // Mutasyonla ölçüldü: merkez satırına pivotu yazmak HİÇBİR kapıyı
     // kırmıyordu. Kapı artık ikisinin farkını sayıyla tutuyor.
     const { al } = satirlar();
-    const say = (x) => (String(x).match(/−?\d+,\d+/g) || [])
-      .map((v) => Number(v.replace('−', '-').replace(',', '.')));
+    const say = (x) => (String(x).match(/−?\d{1,3}(?:\.\d{3})*,\d+/g) || [])
+      .map((v) => Number(v.replace('−', '-').replace(/\./g, '').replace(',', '.')));
     const c = say(al('Avara merkezi {X, Y}')).slice(0, 2);
     const p = say(al('Gövde montaj konumu')).slice(0, 2);
     expect(c.length).toBe(2);
@@ -425,7 +427,7 @@ describe('tedarikçi sayfa düzeni', () => {
     expect((s6.match(/<li>/g) || []).length).toBeGreaterThanOrEqual(6);
     // Damganın gerekçesi Not 1'de, sayısıyla
     expect(s6).toContain(SU.VE_FSR_PEAK_BAND);
-    expect(s6).toMatch(/2095 referans değer/);
+    expect(s6).toMatch(/2\.095 referans değer/);
     // Metin içindeki atıflar gerçek not numaralarını göstermeli
     [1, 2, 3, 4].forEach((n) => expect(DOC).toContain('(Not ' + n + ')'));
   });
@@ -439,7 +441,7 @@ describe('gerginlik grafiği ölçeği — Load ölçeğe GİRMEZ', () => {
   // çizgiye yapışıyordu — fonksiyonun kendi yorumunun tam tersi.
   test('y ekseni çalışma konumlarına göre, Load\'a göre DEĞİL', () => {
     const svg = RP.veFeadFigureRaw(RP._frTensionFigure, R, 820, 300);
-    const sayilar = [...svg.matchAll(/>([0-9][0-9.]*)</g)].map((m) => Number(m[1]))
+    const sayilar = [...svg.matchAll(/>([0-9][0-9.,]*)</g)].map((m) => say(m[1]))
       .filter((v) => Number.isFinite(v));
     const enBuyuk = Math.max.apply(null, sayilar);
     const pos = R.analysis.positions.filter((p) => !p.error);
@@ -659,7 +661,7 @@ describe('kozmetik — okunabilirlik kararları', () => {
     const svg = s3.slice(i0, s3.indexOf('</svg>', i0));
     // y ekseni etiketleri: text-anchor="end" olanlar
     const yEt = [...svg.matchAll(/text-anchor="end"[^>]*>([^<]+)<\/text>/g)]
-      .map((m) => Number(m[1].replace(/\s/g, '').replace('−', '-').replace(',', '.')))
+      .map((m) => say(m[1]))
       .filter(Number.isFinite);
     expect(yEt.length).toBeGreaterThanOrEqual(4);
     const adim = [];
@@ -841,8 +843,8 @@ describe('doğruluk — sessiz sayı hataları', () => {
     const duz = Math.round(R.life.hoursB10Corrected);
     const ham = Math.round(R.life.hoursB10);
     expect(duz).not.toBe(ham);                            // ikisi gerçekten ayrı
-    expect(kart).toContain(String(duz));                  // manşet: düzeltilmiş
-    expect(kart).toContain('ham ' + ham);                 // alt satır: ham
+    expect(kart).toContain(veSayi(duz, 0));               // manşet: düzeltilmiş (Türkçe yazım, 7·C)
+    expect(kart).toContain('ham ' + veSayi(ham, 0));      // alt satır: ham
   });
 });
 
@@ -1205,13 +1207,13 @@ describe('FEAD özet · kayma eşiği, kayış kimliği, yay momenti', () => {
     // olabilir ve fark edilmez).
     expect((DOC.match(/data-ve="slip-threshold"/g) || []).length).toBe(1);
     // Etiketteki sayı köprünün sayısı — elle yazılmış bir sabit değil.
-    const yuvar = String(Math.round(A.tensionN));
+    const yuvar = veSayi(Math.round(A.tensionN), 0);
     expect(DOC).toContain('kayma eşiği ' + yuvar + ' N');
 
     // Künye de aynı sayıyı, aynı kasnağı, aynı devri ve aynı payı anlatıyor.
     const g = govde(DOC);
     expect(g).toContain('kayma eşiği (' + yuvar + ' N)');
-    expect(g).toContain(String(A.engineRpm) + ' d/d');
+    expect(g).toContain(veSayi(A.engineRpm, 0) + ' d/d');
     const m = g.match(/Tasarım gerginliği bunun ([\d,]+) katıdır/);
     expect(m).toBeTruthy();
     expect(say(m[1])).toBeCloseTo(A.margin, 1);

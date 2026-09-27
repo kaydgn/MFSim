@@ -190,8 +190,8 @@ describe('Rapor §8.13', () => {
     expect(h).toContain('sönümsüz');
     expect(h).toContain('f_ateş');
     // _rF sondaki sıfırı kırpar: 22,0 → "22"
-    expect(h).toMatch(/<td>22%<\/td><td>21,9%<\/td>/);     // tam çözüm satırı
-    expect(h).toMatch(/<td>21,9%<\/td><td>21,8%<\/td>/);   // SDOF kestirimi satırı
+    expect(h).toMatch(/<td>%22<\/td><td>%21,9<\/td>/);     // tam çözüm satırı
+    expect(h).toMatch(/<td>%21,9<\/td><td>%21,8<\/td>/);   // SDOF kestirimi satırı
   });
 
   test('sönüm yoksa bölüm atlanır (uydurma eğri çizilmez)', () => {

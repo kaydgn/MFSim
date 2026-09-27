@@ -354,11 +354,11 @@ function veFeadScenarioBuild(build, opts){
   else
     notlar.push('Rampa şekli motorun tam yük tork eğrisinden; büyüklüğü ivme alanından.');
   notlar.push('Devir geçmişi DAYATILMIŞ — krank dinamiği simüle EDİLMİYOR (volan ataleti yok).');
-  notlar.push('Marş devri ' + inp.crankRpm + ' d/dk ve yavaşlama sabit: MFSim\'de marş ve motor freni verisi yok.');
+  notlar.push('Marş devri ' + veSayi(inp.crankRpm) + ' d/dk ve yavaşlama sabit: MFSim\'de marş ve motor freni verisi yok.');
   if(inp.kaynak.accelVarsayilan)
-    notlar.push('İvme girilmemiş, ' + VE_FEAD_SCN_ACCEL_DEF + ' d/dk/s varsayıldı.');
+    notlar.push('İvme girilmemiş, ' + veSayi(VE_FEAD_SCN_ACCEL_DEF, 0) + ' d/dk/s varsayıldı.');
   notlar.push('Gergi kolu dinamiği DAHİL DEĞİL (çekirdeğin peakEstimate sınırı).');
-  notlar.push('Gerilme ÇİZİLEN kol konumunun gerginliğinden (' + Math.round(stT) + ' N) yürüyor.');
+  notlar.push('Gerilme ÇİZİLEN kol konumunun gerginliğinden (' + veSayi(stT, 0) + ' N) yürüyor.');
   // KAYIŞ VERİSİ KAPISI. Açıklık frekansı katalog birim kütlesinden (m′) gelir;
   // kayış tipine bağlı çıktılar kapalıyken çözüm onu SİLİYOR ve panel
   // "üretilmiyor" diyor. Senaryo onu yeniden hesaplayıp "⚠ REZONANS" yazıyordu

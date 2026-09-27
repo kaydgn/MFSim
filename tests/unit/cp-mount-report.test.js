@@ -142,7 +142,7 @@ describe('§8 dinamik içerik — modelin gerçek değerleri', () => {
   });
   test('tork durumu var → §8.4 süperpozisyon tablosu üretiliyor', () => {
     expect(s8).toContain('Süperpozisyon');
-    expect(s8).toContain('2520'); // T_s [N·m]
+    expect(s8).toContain('T_s=2.520'); // T_s [N·m], formülde binlik nokta
   });
   test('modal frekanslar (6 mod) raporda', () => {
     expect(R.modes).toHaveLength(6);
@@ -210,7 +210,7 @@ describe('§8 zenginleştirmeleri', () => {
     expect(rep._mntRepFreqPlacement(R, { idleRpm: 0, cylinders: 6 })).toBe('');
     const h = rep._mntRepFreqPlacement(R, { idleRpm: 650, cylinders: 6 });
     expect(h).toContain('Frekans yerleşimi');
-    expect(h).toContain('32,5');                 // f_ateş = (650/60)*(6/2)
+    expect(h).toContain('32{,}5');               // f_ateş = (650/60)*(6/2), formülde (TeX) ondalık {,}
     expect(h).toMatch(/note (check|warn)/);
   });
   test('_mntRepCaseTr yük durumu adlarını Türkçeleştirir', () => {

@@ -67,7 +67,7 @@ const adKutulari = (svg) =>
 // değil ve `data-ve="wrap"` ile işaretli. Kutu kuralı adınkiyle aynı — çapa
 // nereye bakıyorsa kutu oradan büyür.
 const aciKutulari = (svg) =>
-  [...svg.matchAll(/<text data-ve="wrap" x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)" font-size="8"[^>]*>([-\d.]+)°</g)]
+  [...svg.matchAll(/<text data-ve="wrap" x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)" font-size="8"[^>]*>([-\d.,]+)°</g)]
     .map((m) => {
       const x = +m[1], y = +m[2], an = m[3], w = (m[4] + '°').length * 8 * 0.6;
       const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
@@ -442,13 +442,13 @@ describe('gerilme haritası', () => {
     const yollar = [...kart.matchAll(/data-ve="belt-tension" data-span="(\d+)"/g)];
     expect(yollar.length).toBe(build.order.length);
     const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), veFeadAnimRpmOf(build, run));
-    const sayilar = [...kart.matchAll(/data-ve="span-tension"[^>]*>(\d+) N</g)].map((m) => +m[1]);
+    const sayilar = [...kart.matchAll(/data-ve="span-tension"[^>]*>([\d.]+) N</g)].map((m) => +m[1].replace(/\./g, ''));
     expect(sayilar.sort((x, y) => x - y))
       .toEqual(ten.spanN.map((v) => Math.round(v)).sort((x, y) => x - y));
     // Ölçek çizilir: renk bir SIRALAMA, sayıya çevrilebilmesi için uçlar yazılı.
     expect(kart).toMatch(/data-ve="tension-scale"/);
-    expect(kart).toContain(Math.round(ten.min) + ' N');
-    expect(kart).toContain(Math.round(ten.max) + ' N');
+    expect(kart).toContain(veSayi(ten.min, 0) + ' N');
+    expect(kart).toContain(veSayi(ten.max, 0) + ' N');
   });
 
   test('renk gerilmeyle MONOTON — en gergin açıklık en sıcak', () => {

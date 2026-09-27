@@ -34,28 +34,28 @@ function _frNum(v){
   var n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 }
-// Sayı biçimi TÜRKÇE: ondalık ayırıcı virgül, eksi işareti GERÇEK eksi (−).
-// ASCII '-' ile U+2212 farkı raporun dizgisinde göze çarpıyor; Takoz raporu da
-// aynı kuralı uyguluyor. Geçersiz/boş değer '—' (em dash) basılır: boş hücre
-// "sıfır" gibi okunurdu.
+// Sayı biçimi TÜRKÇE (karar 7·C, tek yazıcı js/sayi.js): ondalık virgül,
+// binlik nokta, eksi işareti GERÇEK eksi (−). ASCII '-' ile U+2212 farkı
+// raporun dizgisinde göze çarpıyor; Takoz raporu da aynı kuralı uyguluyor.
+// Geçersiz/boş değer '—' (em dash) basılır: boş hücre "sıfır" gibi okunurdu.
 function _frF(v, d){
   var n = _frNum(v);
   if(!Number.isFinite(n)) return '—';
   d = (d == null) ? 1 : d;
-  var s = Math.abs(n).toFixed(d);
-  if(d > 0) s = s.replace(/\.?0+$/, '');
-  s = s.replace('.', ',');
-  if(s === '' || s === '0' && Object.is(n, -0)) return '0';
-  return (n < 0 && Number(Math.abs(n).toFixed(d)) !== 0 ? '−' : '') + s;
+  // Önce d haneye yuvarla, sonra sondaki sıfırları at (veSayi basamaksız):
+  // 1716,20 → 1.716,2. Yuvarlanınca sıfıra inen eksi işaretini bırakır.
+  return veSayi(+n.toFixed(d), null, { eksi: '−' });   // makine: yuvarlama, yazan veSayi
 }
 // Sabit basamaklı (tabloda hizalı sütun için): ondalık kırpılmaz.
 function _frFs(v, d){
   var n = _frNum(v);
   if(!Number.isFinite(n)) return '—';
-  d = (d == null) ? 1 : d;
-  var s = Math.abs(n).toFixed(d).replace('.', ',');
-  return (n < 0 && Number(Math.abs(n).toFixed(d)) !== 0 ? '−' : '') + s;
+  return veSayi(n, (d == null) ? 1 : d, { eksi: '−' });
 }
+// Formüle (TeX) giden sayı: ondalık virgül {,} ile. Çıplak virgülü KaTeX
+// NOKTALAMA sayar ve arkasına ince boşluk koyar ("12,7" → "12, 7"); binlik
+// nokta TeX'te sıradan karakterdir, olduğu gibi kalır.
+function _frTeX(s){ return String(s).replace(/,/g, '{,}'); }
 function _frPct(v, d){ var s = _frFs(v, d == null ? 1 : d); return s === '—' ? s : ('%' + s); }
 
 // Tablo / şekil numaraları — her rapor üretiminde sıfırlanır.
@@ -284,7 +284,7 @@ function veFeadGenerateReport(nodeId, turSec){
     if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_')
       + (kind === 'summary' ? '_Ozet' : '');
     _frDownload(html, ad + '_' + _frDateStamp() + '.html');
-    _frStatus('Rapor indirildi (' + Math.round(html.length / 1024) + ' KB).', 'var(--ink-success)');
+    _frStatus('Rapor indirildi (' + veSayi(html.length / 1024, 0) + ' KB).', 'var(--ink-success)');
     if(typeof showToast === 'function') showToast('FEAD raporu indirildi.', 'success');
   });
   return true;
@@ -726,7 +726,7 @@ function _frSummary(R){
             : ' <b>(çap penceresi dışında — §8.16)</b>'))
         : '—');
   h += sat('Çalışma çevrimi', ((R.duty || []).length) + ' devir noktası · toplam duty '
-        + _frF(_frDutySum(R), 1) + '%');
+        + '%' + _frF(_frDutySum(R), 1));
   h += '</div>';
   return h;
 }
@@ -828,7 +828,7 @@ function _frBeltTable(R){
   // BİRİM TUZAĞI: wearPct çekirdekte ORAN (0,007), tedarikçi sayfasında YÜZDE
   // (%0,70). Ham basılsaydı raporda "%0,007" görünür ve okuyan kişi payı
   // yüz kat küçük sanırdı. Testi var.
-  h += tr('Uzama + aşınma payı', _frPct(_frNum(b.wearPct) * 100, 2), '% (boyun)', 'girdi (oran olarak saklanır)');
+  h += tr('Uzama + aşınma payı', _frPct(_frNum(b.wearPct) * 100, 2), 'boy oranı', 'girdi (oran olarak saklanır)');
   if(bp){
     h += tr('Kaburgalı yüz kord ofseti h<sub>b</sub>', _frFs(bp.hb, 2), 'mm', 'profil sabiti');
     h += tr('Sırt kord ofseti h<sub>r</sub>', _frFs(bp.hr, 2), 'mm', 'profil sabiti');
@@ -954,9 +954,9 @@ function _frAngMark(cx, cy, rr, a1, da, renk, kal, dash){
   if(Math.abs(da) > 2 * Math.PI - 1e-6) da = (da > 0 ? 1 : -1) * (2 * Math.PI - 1e-3);
   var x1 = cx + rr * Math.cos(a1), y1 = cy + rr * Math.sin(a1);
   var x2 = cx + rr * Math.cos(a1 + da), y2 = cy + rr * Math.sin(a1 + da);
-  return '<path d="M' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' A' + rr.toFixed(2) + ' ' + rr.toFixed(2)
+  return '<path d="M' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' A' + rr.toFixed(2) + ' ' + rr.toFixed(2)   // makine: SVG koordinatı
     + ' 0 ' + (Math.abs(da) > Math.PI ? 1 : 0) + ' ' + (da > 0 ? 1 : 0) + ' '
-    + x2.toFixed(2) + ' ' + y2.toFixed(2)
+    + x2.toFixed(2) + ' ' + y2.toFixed(2)   // makine: SVG koordinatı
     + '" fill="none" stroke="' + renk + '" stroke-width="' + (kal || 1.4) + '"'
     + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>';
 }
@@ -1002,11 +1002,11 @@ function _frWrap(metin, maxCh){
 function _frLegend(x0, y0, genislik, satirlar, fs){
   var g = '', y = y0, maxCh = Math.floor(genislik / (fs * 0.6));
   satirlar.forEach(function(sr){
-    g += '<text x="' + x0 + '" y="' + (y + fs).toFixed(1) + '" font-size="' + (fs + 1)
+    g += '<text x="' + x0 + '" y="' + (y + fs).toFixed(1) + '" font-size="' + (fs + 1)   // makine: SVG koordinatı
        + '" fill="' + sr[2] + '" font-weight="600">' + _frEsc(sr[0]) + '</text>';
     y += (fs + 1) * 1.35;
     _frWrap(sr[1], maxCh - 3).forEach(function(t){
-      g += '<text x="' + (x0 + 10) + '" y="' + (y + fs * 0.85).toFixed(1) + '" font-size="' + fs
+      g += '<text x="' + (x0 + 10) + '" y="' + (y + fs * 0.85).toFixed(1) + '" font-size="' + fs   // makine: SVG koordinatı
          + '" fill="#5a6270">' + _frEsc(t) + '</text>';
       y += fs * 1.3;
     });
@@ -1052,7 +1052,7 @@ function _frLabels(W, H){
       if(!kutu) kutu = { x: Math.max(4, Math.min(W - 4 - w, X - w / 2)),
                          y: Math.max(2, Math.min(H - 2 - hh, Y - hh / 2)), w: w, h: hh };
       kutular.push(kutu);
-      return '<text x="' + (kutu.x + w / 2).toFixed(1) + '" y="' + (kutu.y + hh * 0.76).toFixed(1)
+      return '<text x="' + (kutu.x + w / 2).toFixed(1) + '" y="' + (kutu.y + hh * 0.76).toFixed(1)   // makine: SVG koordinatı
         + '" text-anchor="middle" font-size="' + fs + '" fill="' + renk + '">' + _frEsc(metin) + '</text>';
     },
     // Çizimin dışında kalması gereken alanı (alt künye) rezerve eder.
@@ -1235,9 +1235,9 @@ function _frWrapFigure(R){
     + '(§3.2). Aynı kuruluş her kasnakta geçerlidir; burada en büyük sarımlı kasnak seçilmiştir.');
   var esit = '<div class="eqno">$$ \\varphi = \\big[\\, d\\,\\big(\\theta_{\\text{çıkış}} '
     + '- \\theta_{\\text{giriş}}\\big) \\big]\\ \\mathrm{mod}\\ 360^\\circ = \\big[\\, '
-    + (q.d > 0 ? '+1' : '-1') + '\\cdot\\big(' + _frFs(q.thOut, 2) + '^\\circ - ('
-    + _frFs(q.thIn, 2) + '^\\circ)\\big)\\big]\\ \\mathrm{mod}\\ 360^\\circ = '
-    + _frFs(q.wrapCalc, 2) + '^\\circ $$<span class="tag">(' + _frEq() + ')</span></div>';
+    + (q.d > 0 ? '+1' : '-1') + '\\cdot\\big(' + _frTeX(_frFs(q.thOut, 2)) + '^\\circ - ('
+    + _frTeX(_frFs(q.thIn, 2)) + '^\\circ)\\big)\\big]\\ \\mathrm{mod}\\ 360^\\circ = '
+    + _frTeX(_frFs(q.wrapCalc, 2)) + '^\\circ $$<span class="tag">(' + _frEq() + ')</span></div>';
   return fig + esit;
 }
 
@@ -1485,14 +1485,14 @@ function _frOperatingPoint(R){
     h += '<p>Bileşke doğrultunun boyu yalnız gergi kasnağındaki sarım açısına bağlıdır:</p>';
     h += '<div class="eqno">$$ |\\mathbf{f}| = \\big|\\mathbf{u}_{\\text{çıkış}} '
        + '- \\mathbf{u}_{\\text{giriş}}\\big| = 2\\sin\\frac{\\varphi}{2} = 2\\sin\\frac{'
-       + _frFs(T.wrapDeg, 2) + '^\\circ}{2} = ' + _frFs(K.normF, 4)
+       + _frTeX(_frFs(T.wrapDeg, 2)) + '^\\circ}{2} = ' + _frTeX(_frFs(K.normF, 4))
        + ' $$<span class="tag">(' + _frEqRef.f + ')</span></div>';
     _frEqRef.takeup = _frEq();
     h += '<p>Take-up oranı, bu bileşkenin hareket yönü \\( \\mathbf{t} \\) üzerindeki '
        + 'izdüşümünün kol boyuyla çarpımıdır (4.3):</p>';
     h += '<div class="eqno">$$ \\frac{\\mathrm{d}L}{\\mathrm{d}\\theta} = a\\,|\\mathbf{f}|\\,\\sin\\beta'
-       + '\\cdot\\frac{\\pi}{180} = ' + _frFs(K.armLen, 1) + '\\cdot ' + _frFs(K.normF, 4) + '\\cdot '
-       + _frFs(sinB, 4) + '\\cdot\\frac{\\pi}{180} = ' + _frFs(takeup, 4)
+       + '\\cdot\\frac{\\pi}{180} = ' + _frTeX(_frFs(K.armLen, 1)) + '\\cdot ' + _frTeX(_frFs(K.normF, 4)) + '\\cdot '
+       + _frTeX(_frFs(sinB, 4)) + '\\cdot\\frac{\\pi}{180} = ' + _frTeX(_frFs(takeup, 4))
        + '\\ \\text{mm/}^\\circ $$<span class="tag">(' + _frEqRef.takeup + ')</span></div>';
   }
 
@@ -1502,11 +1502,11 @@ function _frOperatingPoint(R){
        + 'açıda yay momenti ile take-up oranı, kayış gerginliğini (4.3) ile verir. Bölme <b>m/rad</b> '
        + 'biriminde yapılmalıdır; mm/° değeri önce çevrilir:</p>';
     h += '<div class="eqno">$$ \\left(\\frac{\\mathrm{d}L}{\\mathrm{d}\\theta}\\right)_{\\text{m/rad}} = '
-       + '\\frac{' + _frFs(takeup, 4) + '}{1000}\\cdot\\frac{180}{\\pi} = ' + _frFs(takeupRad, 6)
+       + '\\frac{' + _frTeX(_frFs(takeup, 4)) + '}{1000}\\cdot\\frac{180}{\\pi} = ' + _frTeX(_frFs(takeupRad, 6))
        + '\\ \\text{m/rad} $$<span class="tag">(' + (_frEqRef.conv = _frEq()) + ')</span></div>';
     h += '<div class="eqno">$$ T = \\frac{M(\\theta)}{(\\mathrm{d}L/\\mathrm{d}\\theta)_{\\text{m/rad}}} = '
-       + '\\frac{' + _frFs(T.springNm, 2) + '\\ \\text{Nm}}{' + _frFs(takeupRad, 6) + '\\ \\text{m/rad}} = '
-       + _frF(T.tensionN, 0) + '\\ \\text{N} $$<span class="tag">(' + (_frEqRef.T = _frEq()) + ')</span></div>';
+       + '\\frac{' + _frTeX(_frFs(T.springNm, 2)) + '\\ \\text{Nm}}{' + _frTeX(_frFs(takeupRad, 6)) + '\\ \\text{m/rad}} = '
+       + _frTeX(_frF(T.tensionN, 0)) + '\\ \\text{N} $$<span class="tag">(' + (_frEqRef.T = _frEq()) + ')</span></div>';
   }
 
   h += '<table><caption>Tablo ' + _frTbl() + ' — Çalışma (Mean) konumu</caption>';
@@ -1578,10 +1578,10 @@ function _frPivotBlock(R){
      + 'bilgi sayfası ile dönen raporun <i>Layout Data</i> tablosu onu verir. Gövdenin '
      + 'motora bağlandığı nokta — kolun döndüğü eksen — bir girdi <b>değildir</b>; kol '
      + 'boyundan ve kolun çalışma konumundaki mutlak açısından türer:</p>';
-  h += '<div class="eq">$$ \\mathbf{p} \\;=\\; \\mathbf{c} \\;-\\; a\\,\\big(\\cos\\theta_{\\text{kol}},\\ '
-     + '\\sin\\theta_{\\text{kol}}\\big) \\;=\\; \\big(' + _frF(cx, 2) + ',\\ ' + _frF(cy, 2) + '\\big)'
-     + ' - ' + _frF(a, 1) + '\\big(\\cos ' + _frF(kol360, 2) + '^\\circ,\\ \\sin '
-     + _frF(kol360, 2) + '^\\circ\\big) = \\big(' + _frF(px, 2) + ',\\ ' + _frF(py, 2) + '\\big)'
+  h += '<div class="eq">$$ \\mathbf{p} \\;=\\; \\mathbf{c} \\;-\\; a\\,\\big(\\cos\\theta_{\\text{kol}};\\ '
+     + '\\sin\\theta_{\\text{kol}}\\big) \\;=\\; \\big(' + _frTeX(_frF(cx, 2)) + ';\\ ' + _frTeX(_frF(cy, 2)) + '\\big)'
+     + ' - ' + _frTeX(_frF(a, 1)) + '\\big(\\cos ' + _frTeX(_frF(kol360, 2)) + '^\\circ;\\ \\sin '
+     + _frTeX(_frF(kol360, 2)) + '^\\circ\\big) = \\big(' + _frTeX(_frF(px, 2)) + ';\\ ' + _frTeX(_frF(py, 2)) + '\\big)'
      + ' $$<span class="tag">(' + (_frEqRef.pivot = _frEq()) + ')</span></div>';
 
   h += '<table><caption>Tablo ' + _frTbl() + ' — Avara merkezinden montaj konumunun kuruluşu</caption>';
@@ -1726,9 +1726,9 @@ function _frPinBlock(R){
 
   if(pin && pin.ok){
     h += '<p>Bu sistemin gergisi <b>' + _frEsc(pin.part) + '</b>; parça çiziminden okunan '
-       + 'değerler \\( r = ' + _frFs(pin.rMm, 2) + '\\ \\text{mm} \\), '
-       + '\\( \\Delta_{\\text{parça}} = ' + _frFs(pin.offsetDeg, 2) + '^\\circ \\). '
-       + 'Girilen \\( \\theta_{\\text{kol}} = ' + _frFs(b.armAbsDeg, 2) + '^\\circ \\) ile pim, montaj konumu '
+       + 'değerler \\( r = ' + _frTeX(_frFs(pin.rMm, 2)) + '\\ \\text{mm} \\), '
+       + '\\( \\Delta_{\\text{parça}} = ' + _frTeX(_frFs(pin.offsetDeg, 2)) + '^\\circ \\). '
+       + 'Girilen \\( \\theta_{\\text{kol}} = ' + _frTeX(_frFs(b.armAbsDeg, 2)) + '^\\circ \\) ile pim, montaj konumu '
        + 'merkezinden <b>' + _frFs(pin.rMm, 2) + ' mm</b> uzakta ve <b>'
        + _frFs(pin.angleDeg, 2) + '°</b> yönünde durur.</p>';
     h += '<div class="note"><span class="t">Parça çizimi künyenin kendisini de doğruluyor'
@@ -1828,14 +1828,14 @@ function _frTakeupChart(R){
        + _frPolyline(c, [[r1, Lm + anlik * (rm - r1)], [r2, Lm - anlik * (r2 - rm)]], '#a8321f', 2.2, '6 4')
        + '</g>';
     var XM = c.sx(rm), YM = c.sy(Lm);
-    g += '<line data-ve="mean-line" x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1)
+    g += '<line data-ve="mean-line" x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1)   // makine: SVG koordinatı
        + '" y2="' + (c.H - c.pad.b) + '" stroke="#2a6140" stroke-width="1.6" stroke-dasharray="4 3"/>';
-    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + YM.toFixed(1) + '" r="4" fill="#2a6140"/>';
+    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + YM.toFixed(1) + '" r="4" fill="#2a6140"/>';   // makine: SVG koordinatı
     var et = 'teğetin eğimi = dL/dθ = ' + _frFs(anlik, 4) + ' mm/°';
     var xe = Math.min(XM + 10, c.W - _frTxtW(et, 11.5) - 8);
-    g += '<text x="' + xe.toFixed(1) + '" y="' + (YM - 12).toFixed(1) + '" font-size="11.5" fill="#a8321f">'
+    g += '<text x="' + xe.toFixed(1) + '" y="' + (YM - 12).toFixed(1) + '" font-size="11.5" fill="#a8321f">'   // makine: SVG koordinatı
        + _frEsc(et) + '</text>';
-    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2a6140">Mean</text>';
+    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2a6140">Mean</text>';   // makine: SVG koordinatı
   }
   return { g: g, sw: sw, K: K, anlik: anlik, ort: ort };
 }
@@ -1883,7 +1883,7 @@ function _frTakeupRateFigure(R, sw){
   // tepe noktası
   var tepe = pts[0];
   pts.forEach(function(p){ if(p.tk > tepe.tk) tepe = p; });
-  g += '<circle cx="' + c.sx(tepe.rel).toFixed(1) + '" cy="' + c.sy(tepe.tk).toFixed(1)
+  g += '<circle cx="' + c.sx(tepe.rel).toFixed(1) + '" cy="' + c.sy(tepe.tk).toFixed(1)   // makine: SVG koordinatı
      + '" r="4" fill="#6d5310"/>';
   var tm = 'tepe ' + _frFs(tepe.tk, 4) + ' mm/° @ ' + _frFs(tepe.rel, 1) + '°';
   // Tepe ile Mean çok yakın olabiliyor (BMC: 26,6° ↔ 28,5°) ve iki etiket üst
@@ -1893,15 +1893,15 @@ function _frTakeupRateFigure(R, sw){
   var tmW = _frTxtW(tm, 11);
   var tmX = yakin ? Math.max(c.pad.l + 4, c.sx(tepe.rel) - tmW - 10)
                   : Math.min(c.sx(tepe.rel) + 8, c.W - tmW - 8);
-  g += '<text x="' + tmX.toFixed(1) + '" y="' + (c.sy(tepe.tk) + (yakin ? 20 : -9)).toFixed(1)
+  g += '<text x="' + tmX.toFixed(1) + '" y="' + (c.sy(tepe.tk) + (yakin ? 20 : -9)).toFixed(1)   // makine: SVG koordinatı
      + '" font-size="11" fill="#6d5310">' + _frEsc(tm) + '</text>';
   if(K){
     var rm = rmT, tkm = _frNum(K.st.takeupMmPerDeg);
     var XM = c.sx(rm);
-    g += '<line x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1) + '" y2="'
+    g += '<line x1="' + XM.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + XM.toFixed(1) + '" y2="'   // makine: SVG koordinatı
        + (c.H - c.pad.b) + '" stroke="#2a6140" stroke-width="1.6" stroke-dasharray="4 3"/>';
-    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + c.sy(tkm).toFixed(1) + '" r="4" fill="#2a6140"/>';
-    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2a6140">Mean</text>';
+    g += '<circle cx="' + XM.toFixed(1) + '" cy="' + c.sy(tkm).toFixed(1) + '" r="4" fill="#2a6140"/>';   // makine: SVG koordinatı
+    g += '<text x="' + (XM + 6).toFixed(1) + '" y="' + (c.pad.t + 12) + '" font-size="11" fill="#2a6140">Mean</text>';   // makine: SVG koordinatı
   }
   var ilk = pts[0], son = pts[pts.length - 1];
   var aciklama = '';
@@ -2357,7 +2357,7 @@ function _frLifeSection(R){
   h += tr('B10 ömrü', '<b>' + _frF(L.hoursB10, 0) + '</b>', 'saat');
   if(Number.isFinite(_frNum(L.hoursB10Corrected)) && !L.inValidRange)
     h += tr('B10 — ampirik düzeltmeli', _frF(L.hoursB10Corrected, 0), 'saat');
-  h += tr('Hasar hızı', _frNum(L.damageRate).toExponential(3).replace('.', ','), '1/s');
+  h += tr('Hasar hızı', veSayiUstel(_frNum(L.damageRate), 3, { eksi: '−' }), '1/s');
   h += tr('Tur/saniye', _frFs(L.passesPerSec, 2), '1/s');
   h += tr('Çalışma çevrimi kapsamı', _frPct(_frNum(L.dutyCoverage) * 100, 1), '—');
   if(L.constants){
@@ -2541,7 +2541,7 @@ function _frTorsionalSection(R){
   }
 
   h += '<div class="note warn"><span class="t">Güven düzeyi: bu bölüm KALİBRE bir modeldir</span>'
-     + 'Bu belgenin geometri ve gerginlik zinciri 17 tedarikçi raporunun 2095 değerine <b>%0,33</b> '
+     + 'Bu belgenin geometri ve gerginlik zinciri 17 tedarikçi raporunun 2.095 değerine <b>%0,33</b> '
      + 'ile oturan deterministik bir hesaptır. Burulma modeli öyle değildir: iki serbest parametresi '
      + 'vardır (kayış kord rijitliği ve kavis payı) ve tedarikçi raporlarının "System Resonance '
      + '(Mode 1)" satırına altı sistemde <b>RMS ~%8</b> ile kalibre edilmiştir. Sonucu bir '
@@ -2605,7 +2605,7 @@ function _frNiceAxis(v0, v1, hedef){
   // Kayan nokta artığı: 0.30000000000000004 gibi bir bölme etiketi basılmasın.
   var ond = Math.max(0, -Math.floor(Math.log10(st)) + 1);
   var t = [];
-  for(var v = a; v <= b + st * 1e-6; v += st) t.push(Number(v.toFixed(ond)));
+  for(var v = a; v <= b + st * 1e-6; v += st) t.push(Number(v.toFixed(ond)));   // makine: eksen adımının yuvarlaması
   return { min: a, max: b, step: st, ticks: t };
 }
 
@@ -2633,16 +2633,16 @@ function _frChart(opt){
   var nX = tX ? tX.length - 1 : 5, nY = tY ? tY.length - 1 : 4, i;
   for(i = 0; i <= nX; i++){
     var xv = tX ? tX[i] : x0 + (x1 - x0) * i / nX, X = sx(xv);
-    g += '<line x1="' + X.toFixed(1) + '" y1="' + pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (H - pad.b)
+    g += '<line x1="' + X.toFixed(1) + '" y1="' + pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (H - pad.b)   // makine: SVG koordinatı
        + '" stroke="#e6e1d8" stroke-width="1"/>';
-    g += '<text x="' + X.toFixed(1) + '" y="' + (H - pad.b + 15) + '" text-anchor="middle" font-size="11" fill="#5a6270">'
+    g += '<text x="' + X.toFixed(1) + '" y="' + (H - pad.b + 15) + '" text-anchor="middle" font-size="11" fill="#5a6270">'   // makine: SVG koordinatı
        + _frF(xv, opt.xDec == null ? 0 : opt.xDec) + '</text>';
   }
   for(i = 0; i <= nY; i++){
     var yv = tY ? tY[i] : y0 + (y1 - y0) * i / nY, Y = sy(yv);
-    g += '<line x1="' + pad.l + '" y1="' + Y.toFixed(1) + '" x2="' + (W - pad.r) + '" y2="' + Y.toFixed(1)
+    g += '<line x1="' + pad.l + '" y1="' + Y.toFixed(1) + '" x2="' + (W - pad.r) + '" y2="' + Y.toFixed(1)   // makine: SVG koordinatı
        + '" stroke="#e6e1d8" stroke-width="1"/>';
-    g += '<text x="' + (pad.l - 7) + '" y="' + (Y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#5a6270">'
+    g += '<text x="' + (pad.l - 7) + '" y="' + (Y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#5a6270">'   // makine: SVG koordinatı
        + _frF(yv, opt.yDec == null ? 0 : opt.yDec) + '</text>';
   }
   g += '<line x1="' + pad.l + '" y1="' + pad.t + '" x2="' + pad.l + '" y2="' + (H - pad.b) + '" stroke="#26241f" stroke-width="1.2"/>';
@@ -2655,7 +2655,7 @@ function _frChart(opt){
 }
 function _frPolyline(c, pts, renk, kal, dash){
   if(!pts.length) return '';
-  var d = pts.map(function(p, i){ return (i ? 'L' : 'M') + c.sx(p[0]).toFixed(1) + ' ' + c.sy(p[1]).toFixed(1); }).join(' ');
+  var d = pts.map(function(p, i){ return (i ? 'L' : 'M') + c.sx(p[0]).toFixed(1) + ' ' + c.sy(p[1]).toFixed(1); }).join(' ');   // makine: SVG koordinatı
   return '<path d="' + d + '" fill="none" stroke="' + renk + '" stroke-width="' + (kal || 2)
     + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' stroke-linejoin="round"/>';
 }
@@ -2729,11 +2729,11 @@ function _frTensionFigure(R){
   if(esikTh && esikTh.tensionN > 0 && esikTh.tensionN < yMax){
     var yE = c.sy(esikTh.tensionN);
     g += '<g data-ve="slip-threshold">'
-       + '<rect x="' + c.pad.l + '" y="' + yE.toFixed(1) + '" width="' + (c.W - c.pad.l - c.pad.r)
-       + '" height="' + Math.max(0, (c.H - c.pad.b) - yE).toFixed(1) + '" fill="#9c2b2b" opacity="0.10"/>'
-       + '<line x1="' + c.pad.l + '" y1="' + yE.toFixed(1) + '" x2="' + (c.W - c.pad.r)
-       + '" y2="' + yE.toFixed(1) + '" stroke="#9c2b2b" stroke-width="1.4" stroke-dasharray="6 4"/>'
-       + '<text x="' + (c.pad.l + 6) + '" y="' + (yE - 4).toFixed(1) + '" font-size="10" fill="#9c2b2b">'
+       + '<rect x="' + c.pad.l + '" y="' + yE.toFixed(1) + '" width="' + (c.W - c.pad.l - c.pad.r)   // makine: SVG koordinatı
+       + '" height="' + Math.max(0, (c.H - c.pad.b) - yE).toFixed(1) + '" fill="#9c2b2b" opacity="0.10"/>'   // makine: SVG koordinatı
+       + '<line x1="' + c.pad.l + '" y1="' + yE.toFixed(1) + '" x2="' + (c.W - c.pad.r)   // makine: SVG koordinatı
+       + '" y2="' + yE.toFixed(1) + '" stroke="#9c2b2b" stroke-width="1.4" stroke-dasharray="6 4"/>'   // makine: SVG koordinatı
+       + '<text x="' + (c.pad.l + 6) + '" y="' + (yE - 4).toFixed(1) + '" font-size="10" fill="#9c2b2b">'   // makine: SVG koordinatı
        + 'kayma eşiği ' + _frF(esikTh.tensionN, 0) + ' N</text></g>';
   }
 
@@ -2759,10 +2759,10 @@ function _frTensionFigure(R){
   kume.forEach(function(k, idx){
     var X = c.sx(k.rel);
     var renk = k.mean ? '#2a6140' : '#6d5310';
-    g += '<line x1="' + X.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (c.H - c.pad.b)
+    g += '<line x1="' + X.toFixed(1) + '" y1="' + c.pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (c.H - c.pad.b)   // makine: SVG koordinatı
        + '" stroke="' + renk + '" stroke-width="' + (k.mean ? 2 : 1.3) + '" stroke-dasharray="4 3"/>';
     var sag = (X < c.W * 0.75);
-    g += '<text x="' + (X + (sag ? 4 : -4)).toFixed(1) + '" y="' + (c.pad.t + 11 + (idx % 2) * 12)
+    g += '<text x="' + (X + (sag ? 4 : -4)).toFixed(1) + '" y="' + (c.pad.t + 11 + (idx % 2) * 12)   // makine: SVG koordinatı
        + '" text-anchor="' + (sag ? 'start' : 'end') + '" font-size="10.5" fill="' + renk + '">'
        + _frEsc(k.adlar.join(' / ')) + '</text>';
   });
@@ -2847,18 +2847,18 @@ function _frSlipFigure(R, esik){
     var dolgu = kotu ? '#a8321f' : (yukTasir[i] ? '#96441f' : '#9aa3ad');
     g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="'
        + (yukTasir[i] ? '#26241f' : '#5a6270') + '">' + _frEsc(etAd[i]) + '</text>';
-    g += '<rect data-ve="sf-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="18" '
+    g += '<rect data-ve="sf-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="18" '   // makine: SVG koordinatı
        + 'fill="' + dolgu + '" opacity="' + (yukTasir[i] ? '0.82' : '0.55') + '"/>';
     var etX = Math.min(L + w + 6, W - R2 + 4);
-    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">' + _frFs(mins[i], 2) + '</text>';
+    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">' + _frFs(mins[i], 2) + '</text>';   // makine: SVG koordinatı
   });
   if(Number.isFinite(esik) && esik > 0){
     var X = L + (esik / maxV) * (W - L - R2);
-    g += '<line data-ve="sf-limit" x1="' + X.toFixed(1) + '" y1="14" x2="' + X.toFixed(1) + '" y2="' + (24 + isim.length * satir)
+    g += '<line data-ve="sf-limit" x1="' + X.toFixed(1) + '" y1="14" x2="' + X.toFixed(1) + '" y2="' + (24 + isim.length * satir)   // makine: SVG koordinatı
        + '" stroke="#a8321f" stroke-width="1.8" stroke-dasharray="5 4"/>';
     // Etiket ÇİZGİNİN ÜSTÜNDE: alt şeride yazılınca "SF = 1 kayma eşiği"
     // yazısıyla üst üste biniyordu (ölçüldü).
-    g += '<text x="' + (X + 4).toFixed(1) + '" y="12" font-size="11" fill="#a8321f">servis faktörü '
+    g += '<text x="' + (X + 4).toFixed(1) + '" y="12" font-size="11" fill="#a8321f">servis faktörü '   // makine: SVG koordinatı
        + _frF(esik, 2) + '</text>';
   }
   g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">' + _frEsc(altYazi) + '</text>';
@@ -2878,10 +2878,10 @@ function _frFatigueFigure(R){
     var v = _frNum(p.sharePct) || 0;
     var w = (v / maxV) * (W - L - R2);
     g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="#26241f">' + _frEsc(p.name) + '</text>';
-    g += '<rect data-ve="fatigue-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="17" '
+    g += '<rect data-ve="fatigue-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="17" '   // makine: SVG koordinatı
        + 'fill="' + (p.contact === 'back' ? '#6d5310' : '#96441f') + '" opacity="0.82"/>';
-    g += '<text x="' + (L + w + 6).toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">'
-       + _frFs(v, 1) + '%</text>';
+    g += '<text x="' + (L + w + 6).toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">'   // makine: SVG koordinatı
+       + '%' + _frFs(v, 1) + '</text>';
   });
   g += '<text x="' + L + '" y="' + (H - 8) + '" font-size="11" fill="#5a6270">lacivert: kaburgalı temas · kahve: sırt teması</text>';
   return _frFigWrap(g, 'Kasnakların kayış kaburga yorulmasına katkı payı (6.2). Küçük çaplı kasnaklar kayışı '
@@ -2964,7 +2964,7 @@ function _frFreqFigure(R){
       // Etiket çizginin BİTTİĞİ yerde: gösterge listesine dört satır daha
       // eklemek sağ payı büyütür ve grafiği daraltırdı.
       var ex = c.sx(xCik), ey = c.sy(k * egim * xCik);
-      g += '<text x="' + (ex - 3).toFixed(1) + '" y="' + (ey + 10).toFixed(1)
+      g += '<text x="' + (ex - 3).toFixed(1) + '" y="' + (ey + 10).toFixed(1)   // makine: SVG koordinatı
          + '" text-anchor="end" font-size="8.5" fill="#a8321f" opacity="0.85">'
          + k + '×</text>';
     }
@@ -2974,15 +2974,15 @@ function _frFreqFigure(R){
   var adim = Math.min(13, (c.H - c.pad.t - c.pad.b) / (spans.length + 1));
   spans.forEach(function(sp, si){
     var y = ly + si * adim;
-    g += '<line x1="' + lx + '" y1="' + (y - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (y - 4).toFixed(1)
+    g += '<line x1="' + lx + '" y1="' + (y - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (y - 4).toFixed(1)   // makine: SVG koordinatı
        + '" stroke="' + renk[si % renk.length] + '" stroke-width="2"/>';
-    g += '<text x="' + (lx + 21) + '" y="' + y.toFixed(1) + '" font-size="9.5" fill="#5a6270">'
+    g += '<text x="' + (lx + 21) + '" y="' + y.toFixed(1) + '" font-size="9.5" fill="#5a6270">'   // makine: SVG koordinatı
        + _frEsc(etiket[si]) + '</text>';
   });
   var yf = ly + spans.length * adim;
-  g += '<line x1="' + lx + '" y1="' + (yf - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (yf - 4).toFixed(1)
+  g += '<line x1="' + lx + '" y1="' + (yf - 4).toFixed(1) + '" x2="' + (lx + 16) + '" y2="' + (yf - 4).toFixed(1)   // makine: SVG koordinatı
      + '" stroke="#a8321f" stroke-width="2" stroke-dasharray="6 4"/>';
-  g += '<text x="' + (lx + 21) + '" y="' + yf.toFixed(1) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';
+  g += '<text x="' + (lx + 21) + '" y="' + yf.toFixed(1) + '" font-size="9.5" fill="#a8321f">ateşleme frekansı</text>';   // makine: SVG koordinatı
   return _frFigWrap(g, 'Açıklıkların temel enine titreşim frekansı ve motorun ateşleme frekansı (7.2)–(7.3); '
     + 'ince kesikli çizgiler ateşlemenin 2×, 3× ve 4× katlarıdır. Bir açıklık eğrisi bu '
     + 'çizgilerden birini kestiğinde o devirde rezonansa girer — kesişmelerin çoğu 1× '
@@ -3014,7 +3014,7 @@ function _frCheckRows(R, ekle){
   var cBulgu;
   if(!c.rows || !c.rows.length) cBulgu = _frEsc(c.note || 'değerlendirilemedi');
   else if(c.ok) cBulgu = c.rows.length + ' çiftin hepsi aralıkta; en dar pay '
-      + _frF(c.worst.payPct, 1) + '% (' + _frEsc(c.worst.cift) + ')';
+      + '%' + _frF(c.worst.payPct, 1) + ' (' + _frEsc(c.worst.cift) + ')';
   else cBulgu = c.rows.filter(function(r){ return !r.ok; })
       .map(function(r){ return _frEsc(r.cift) + ' a=' + _frF(r.a, 1)
         + ' ∉ [' + _frF(r.lo, 1) + ', ' + _frF(r.hi, 1) + ']'; }).join('; ');
@@ -3041,7 +3041,7 @@ function _frCheckRows(R, ekle){
   var sBulgu;
   if(!s.rows || !s.rows.length) sBulgu = _frEsc(s.note || 'değerlendirilemedi');
   else if(s.ok) sBulgu = s.rows.map(function(r){
-      return _frEsc(r.ad) + ' en dar pay ' + _frF(r.kritik.payPct, 1) + '% ('
+      return _frEsc(r.ad) + ' en dar pay %' + _frF(r.kritik.payPct, 1) + ' ('
         + _frEsc(r.kritik.ad) + ')'; }).join('; ');
   else {
     var ihlal = [];

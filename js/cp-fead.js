@@ -4132,7 +4132,7 @@ function veFeadLayoutSVG(build, W, H, opts){
       var vx = bx-ax, vy = by-ay, vl = Math.sqrt(vx*vx + vy*vy) || 1;
       var nx = vy/vl, ny = -vx/vl;
       if((mx-cx0)*nx + (my-cy0)*ny < 0){ nx = -nx; ny = -ny; }     // DIŞA
-      var yazi = Math.round(TN) + ' N', w = etW(yazi, 9);
+      var yazi = veSayi(TN, 0) + ' N', w = etW(yazi, 9);
       var X = Math.min(Math.max(mx + nx*13, 2 + w/2), W - ROSE - 2 - w/2);
       var Y = Math.min(Math.max(my + ny*13 + 3, 11), H - 4);
       _spanEt.push({ i:i, yazi:yazi, x:X, y:Y, x0:X-w/2, x1:X+w/2, y0:Y-8, y1:Y+2 });
@@ -4233,7 +4233,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     // `data-ve="rib-legend"`), ikinci bir dize yazılmaz: künye biçimi
     // değişirse engel de onunla değişsin.
     if(sel.primary){
-      var _kMetin = sel.primary.label + '  ·  kol ' + _feadR(sel.primary.relDeg) + '°'
+      var _kMetin = sel.primary.label + '  ·  kol ' + veSayi(_feadR(sel.primary.relDeg)) + '°'
         + (Number.isFinite(sel.primary.tensionN)
             ? '  ·  ' + veSayi(sel.primary.tensionN, 0) + ' N' : '');
       kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_kMetin, 8.5), y0: 12 - 8, y1: 12 + 2 });
@@ -4278,7 +4278,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     if(aciVar)
       ps.forEach(function(p, k){
         var X = offX + (p.c[0]-minX)*s, Yc = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
-        var w = etW(_feadR(geom.wrapDeg(k)) + '°', 8);
+        var w = etW(veSayi(_feadR(geom.wrapDeg(k))) + '°', 8);
         // SIRA ADINKİNİN TERSİ: ad üstü, açı altı tercih eder. Aynı sırayla
         // arasalardı ikisi de aynı yere koşar, yer değiştirme hiçbir şey
         // çözmezdi — kaçınma ancak tercihler ayrıştığında iş görür.
@@ -4661,7 +4661,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     svg += '<text data-ve="tension-legend" x="' + LX + '" y="' + f(H - ALT - 38) + '" font-size="7" fill="var(--text-muted)"' + _hale + '>'
         + 'açıklık gerilmesi · ' + veSayi(tmap.engineRpm, 0) + ' dev/dk</text>'
       + '<text data-ve="tension-legend" x="' + LX + '" y="' + f(H - ALT - 22) + '" font-size="7" fill="var(--text-muted)"' + _hale + '>'
-      + Math.round(tmap.min) + ' N</text>'
+      + veSayi(tmap.min, 0) + ' N</text>'
       + '<text data-ve="tension-legend" x="' + f(LX + LB) + '" y="' + f(H - ALT - 22) + '" text-anchor="end" font-size="7"'
       + ' fill="var(--text-muted)"' + _hale + '>' + veSayi(tmap.max, 0) + ' N</text>';
   }
@@ -4778,7 +4778,7 @@ function veFeadLayoutSVG(build, W, H, opts){
       var _ae = _aciEt[k] || { x: X, y: Y + R + 10, an: 'middle' };
       svg += '<text data-ve="wrap" x="' + f(_ae.x) + '" y="' + f(_ae.y) + '" text-anchor="'
           + _ae.an + '" font-size="8" fill="var(--ink-warning)">'
-          + f(geom.wrapDeg(k)) + '°</text>';
+          + veSayi(f(geom.wrapDeg(k))) + '°</text>';
     }
   });
 
@@ -4787,7 +4787,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   if(sel.primary){
     svg += '<text data-ve="pos-label" x="' + f(pad - 6) + '" y="12" font-size="8.5"'
         + ' fill="var(--accent-warning)">' + _feadEsc(sel.primary.label)
-        + '  ·  kol ' + f(sel.primary.relDeg) + '°'
+        + '  ·  kol ' + veSayi(f(sel.primary.relDeg)) + '°'
         + (Number.isFinite(sel.primary.tensionN) ? '  ·  ' + veSayi(sel.primary.tensionN, 0) + ' N' : '')
         + '</text>';
     // ANİMASYON KÜNYESİ. Ağır çekim katsayısı GİZLENMEZ: ekranda gördüğü hız
@@ -5651,7 +5651,7 @@ function veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes, katDugme){
            + '<option value="scn" title="Senaryo — motor çevrimi"' + (rpm === 'scn' ? ' selected' : '') + '>Senaryo</option>';
   veFeadAnimRpmChoices(build).forEach(function(c){
     rOpt += '<option value="' + c.rpm + '"' + (rpm === c.rpm ? ' selected' : '') + '>'
-         + c.rpm + ' dev/dk'
+         + veSayi(c.rpm, 0) + ' dev/dk'
          + (c.fallback ? ' (varsayılan)'
                        : (c.dcPct > 0 ? ' · %' + _feadFmt(c.dcPct, 0) : ''))
          + '</option>';
@@ -5771,7 +5771,7 @@ function veFeadVibStrip(node, build, vib, vibSel){
         + _feadFmt(Math.max.apply(null, vib.spans.map(function(x){ return x.mag; })), 1)
         + (vib.maxMode > 1 ? ' (mod ' + vib.maxMode + ')' : '')
         + (vib.anyFlutter ? ' · ÇIRPINMA' : '')
-        + (vib.extraSlow > 1.01 ? ' · ek ağır çekim ×1/' + Math.round(vib.extraSlow) : '');
+        + (vib.extraSlow > 1.01 ? ' · ek ağır çekim ×1/' + veSayi(vib.extraSlow, 0) : '');
   }
   // ── SÖNÜM KAYDIRICISI — genliğin yanında, aynı sebeple ──────────────────
   // ζ göreli genlikleri TEK BAŞINA belirliyor (tepe büyütmesi 1/(2ζ)) ve
@@ -5821,7 +5821,7 @@ function _feadAnimLabel(kin, fallback, vib, scn){
   if(scn){
     // İKİ HIZ TEK SATIRDA. Senaryo saati gerçek, dönüş ağır çekimde — bu
     // yazılmazsa kullanıcı ekrandan devir okumaya kalkar.
-    var kat0 = (kin && kin.slow < 0.999) ? '×1/' + Math.round(1/kin.slow) : '×1';
+    var kat0 = (kin && kin.slow < 0.999) ? '×1/' + veSayi(1/kin.slow, 0) : '×1';
     return 'senaryo ' + _feadFmt(scn.T, 1) + ' s (gerçek zaman)  ·  dönüş ' + kat0
          + ' ağır çekim  ·  tepe ' + veSayi(scn.peak, 0) + ' dev/dk'
          + (scn.egri ? '  ·  rampa tork eğrisinden' : '  ·  rampa DOĞRUSAL')
@@ -5846,7 +5846,7 @@ function _feadAnimLabel(kin, fallback, vib, scn){
   if(!kin) return alt;
   var kat = (kin.slow >= 0.999) ? 'gerçek zaman'
           : '×1/' + veSayi(1/kin.slow, 0) + ' ağır çekim';
-  return Math.round(kin.engineRpm) + ' dev/dk' + (fallback ? ' (varsayılan)' : '')
+  return veSayi(Math.round(kin.engineRpm), 0) + ' dev/dk' + (fallback ? ' (varsayılan)' : '')
        + '  ·  kayış ' + _feadFmt(kin.beltMs, 1) + ' m/s  ·  ' + kat
        + (alt ? '  ·  ' + alt : '');
 }
