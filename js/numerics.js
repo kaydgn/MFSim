@@ -348,7 +348,7 @@ function veRK45Solve(f, t0, v0, tEnd, opts) {
           var theta = (dt > 1e-15) ? (nextOutput - t_old) / dt : 0;
           // Dense Output: Hermite kubik ara deger
           var v_interp = veDenseOutputHermite(v_old, v, dt, k0_step, k6_step, theta);
-          out_t.push(parseFloat(nextOutput.toFixed(6)));
+          out_t.push(parseFloat(nextOutput.toFixed(6)));   // makine: zaman ızgarasının yuvarlaması
           out_v.push(Math.max(0, v_interp));
           out_dt.push(dt);
           out_err.push(err);
@@ -392,7 +392,7 @@ function veRK45Solve(f, t0, v0, tEnd, opts) {
 
   // Son noktayi ekle (tEnd'e ulasildiysa)
   if(out_t[out_t.length - 1] < tEnd - outputDt * 0.5) {
-    out_t.push(parseFloat(tEnd.toFixed(6)));
+    out_t.push(parseFloat(tEnd.toFixed(6)));   // makine: zaman ızgarasının yuvarlaması
     out_v.push(Math.max(0, v));
     out_dt.push(dt);
     out_err.push(0);

@@ -453,7 +453,7 @@ function veRunSimulationEngine() {
       // Durum hesapla
       var st = computePartialAccel(omega);
       
-      timeArr.push(parseFloat(t.toFixed(4)));
+      timeArr.push(parseFloat(t.toFixed(4)));   // makine: zaman ızgarasının yuvarlaması
       
       // ====== PER-COMPONENT KAYIT ======
       // Motor
@@ -1008,7 +1008,7 @@ function veRunSimulationEngine() {
     
     var st2 = computeAccelFull(v);
     
-    timeArr.push(parseFloat(t2.toFixed(4)));
+    timeArr.push(parseFloat(t2.toFixed(4)));   // makine: zaman ızgarasının yuvarlaması
     res_speed.push(v * 3.6);
     res_rpm.push(st2.rpm);
     res_engineTorque.push(st2.T_engine);

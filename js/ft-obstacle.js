@@ -77,12 +77,12 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
   }
   if(h > R_eff) {
     result.geometryFail = true;
-    result.geometryFailReason = 'Engel yüksekliği teker yarıçapını aşıyor (h=' + h.toFixed(3) + ' m > R_eff=' + R_eff.toFixed(3) + ' m), geometrik olarak aşılamaz.';
+    result.geometryFailReason = 'Engel yüksekliği teker yarıçapını aşıyor (h=' + veSayi(h, 3) + ' m > R_eff=' + veSayi(R_eff, 3) + ' m), geometrik olarak aşılamaz.';
     return result;
   }
   if(h === R_eff) {
     result.geometryFail = true;
-    result.geometryFailReason = 'Engel yüksekliği teker yarıçapına eşit (h=R_eff=' + R_eff.toFixed(3) + ' m). Moment kolu x=0, pratikte aşılamaz.';
+    result.geometryFailReason = 'Engel yüksekliği teker yarıçapına eşit (h=R_eff=' + veSayi(R_eff, 3) + ' m). Moment kolu x=0, pratikte aşılamaz.';
     return result;
   }
 
@@ -795,7 +795,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_gb_check = T_turbine_check * i_g * eta_gear_val;
     if(gbTorqueLimit_dyn && !gbLimitActivated && T_gb_check >= gbTorqueLimit_dyn) {
       gbLimitActivated = true;
-      addMilestone(msPrefix + 'gb_limit', (phase === 'front' ? 'On' : 'Arka') + ' teker: T_gb limite ulasti (' + Math.round(gbTorqueLimit_dyn) + ' Nm), motor tork %' + (motorTorquePct * 100).toFixed(1) + ' ile sinirlandirildi', {
+      addMilestone(msPrefix + 'gb_limit', (phase === 'front' ? 'On' : 'Arka') + ' teker: T_gb limite ulasti (' + veSayi(Math.round(gbTorqueLimit_dyn), 0) + ' Nm), motor tork %' + veSayi(motorTorquePct * 100, 1) + ' ile sinirlandirildi', {
         T_gb_out: T_gb_check, N_engine: N_engine
       });
     }
@@ -1044,7 +1044,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
           simComplete = true;
           simSuccess = false;
           reason = (phase === 'front' ? 'On' : 'Arka') + ' teker fazinda arac takildi (stall). T_wheel (' +
-                   T_wheel.toFixed(0) + ' Nm) < T_req (' + T_req_anlik.toFixed(0) + ' Nm).';
+                   veSayi(T_wheel, 0) + ' Nm) < T_req (' + veSayi(T_req_anlik, 0) + ' Nm).';
           addMilestone(phase === 'front' ? 'f_stall' : 'r_stall',
             (phase === 'front' ? 'On' : 'Arka') + ' teker: STALL — arac takildi', {
             T_wheel: T_wheel, T_req: T_req_anlik, N_engine: N_engine_new, phi_deg: phi_new * 180 / Math.PI

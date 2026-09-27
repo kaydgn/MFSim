@@ -883,7 +883,7 @@ function veRenderDetailedReport(filter) {
   if(filter && filterLabels[filter]) reportTitle = filterLabels[filter];
   
   // Hesaplamalar
-  var revPerKm = R.tireRadius > 0 ? (1000 / (2 * Math.PI * R.tireRadius)).toFixed(0) : '—';
+  var revPerKm = R.tireRadius > 0 ? veSayi((1000 / (2 * Math.PI * R.tireRadius)), 0) : '—';
   
   // Peak torque/power
   var peakTorque = 0, peakTorqueRpm = 0, peakPower = 0, peakPowerRpm = 0, govPower = 0;
@@ -908,17 +908,17 @@ function veRenderDetailedReport(filter) {
   // ═══ PLATFORM ═══
   var platformHTML = '';
   platformHTML += subHeader('Alan ve Ağırlık');
-  platformHTML += row('Alın Alanı', R.frontalArea.toFixed(3) + ' m²');
-  platformHTML += row('Yükseklik / Genişlik', R.height.toFixed(3) + ' m / ' + R.width.toFixed(3) + ' m');
-  platformHTML += row('Aerodinamik Direnç Katsayısı (Cd)', R.cd.toFixed(3));
-  platformHTML += row('Brüt Araç Ağırlığı', R.gvw.toFixed(0) + ' kg');
+  platformHTML += row('Alın Alanı', veSayi(R.frontalArea, 3) + ' m²');
+  platformHTML += row('Yükseklik / Genişlik', veSayi(R.height, 3) + ' m / ' + veSayi(R.width, 3) + ' m');
+  platformHTML += row('Aerodinamik Direnç Katsayısı (Cd)', veSayi(R.cd, 3));
+  platformHTML += row('Brüt Araç Ağırlığı', veSayi(R.gvw, 0) + ' kg');
   platformHTML += subHeader('Lastikler');
   platformHTML += row('Seçili Lastik', R.tireName);
   platformHTML += row('Lastik Devir/km', revPerKm + ' devir/km');
-  platformHTML += row('Lastik Yuvarlanma Yarıçapı', R.tireRadius.toFixed(3) + ' m');
-  platformHTML += row('Yuvarlanma Direnci (Crr)', R.crr.toFixed(4));
-  platformHTML += row('Yüzey Faktörü', R.surfFactor.toFixed(2));
-  platformHTML += row('Lastik/Tekerlek Ataleti (tahmini)', R.tireInertia.toFixed(4) + ' kg·m²');
+  platformHTML += row('Lastik Yuvarlanma Yarıçapı', veSayi(R.tireRadius, 3) + ' m');
+  platformHTML += row('Yuvarlanma Direnci (Crr)', veSayi(R.crr, 4));
+  platformHTML += row('Yüzey Faktörü', veSayi(R.surfFactor, 2));
+  platformHTML += row('Lastik/Tekerlek Ataleti (tahmini)', veSayi(R.tireInertia, 4) + ' kg·m²');
   platformHTML = tableWrap(platformHTML);
   
   // ═══ MOTOR KAYIPLARI ═══
@@ -936,27 +936,27 @@ function veRenderDetailedReport(filter) {
   accData.forEach(function(a) {
     totalStd += a.standardLoss; totalUser += a.userLoss;
     accHTML += '<tr><td style="padding:5px 14px; border-bottom:1px solid var(--border-light); color:var(--text-primary);">' + a.name + '</td>';
-    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + a.standardLoss.toFixed(1) + '</td>';
-    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + a.userLoss.toFixed(1) + '</td></tr>';
+    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(a.standardLoss, 1) + '</td>';
+    accHTML += '<td style="padding:5px 14px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(a.userLoss, 1) + '</td></tr>';
   });
   accHTML += '<tr style="background:var(--bg-tertiary);"><td style="padding:5px 14px; font-weight:700; color:var(--text-primary);">Toplam</td>';
-  accHTML += '<td style="padding:5px 14px; text-align:right; font-weight:700; color:var(--text-primary);">' + totalStd.toFixed(1) + '</td>';
-  accHTML += '<td style="padding:5px 14px; text-align:right; font-weight:700; color:var(--text-primary);">' + totalUser.toFixed(1) + '</td></tr>';
+  accHTML += '<td style="padding:5px 14px; text-align:right; font-weight:700; color:var(--text-primary);">' + veSayi(totalStd, 1) + '</td>';
+  accHTML += '<td style="padding:5px 14px; text-align:right; font-weight:700; color:var(--text-primary);">' + veSayi(totalUser, 1) + '</td></tr>';
   accHTML += '</tbody></table>';
   
   // ═══ MOTOR ═══
   var motorHTML = '';
   motorHTML += row('Motor Tanımı', R.engineName);
-  motorHTML += row('Silindir Hacmi', R.displacement > 0 ? R.displacement.toFixed(2) + ' L' : '—');
-  motorHTML += row('Pik Tork', peakTorque > 0 ? peakTorque.toFixed(1) + ' N·m' : '—');
-  motorHTML += row('Pik Tork Devri', peakTorqueRpm > 0 ? peakTorqueRpm + ' rpm' : '—');
-  motorHTML += row('Pik Güç', peakPower > 0 ? peakPower.toFixed(1) + ' kW' : '—');
-  motorHTML += row('Pik Güç Devri', peakPowerRpm > 0 ? peakPowerRpm + ' rpm' : '—');
-  motorHTML += row('Governed Güç', govPower > 0 ? govPower.toFixed(1) + ' kW' : '—');
-  motorHTML += row('Governed Devir', R.governed + ' rpm');
-  motorHTML += row('No-Load Governed', R.noLoad + ' rpm');
-  motorHTML += row('Rölanti Devri', R.idleRpm + ' rpm');
-  motorHTML += row('Motor Ataleti (tahmini)', R.engineInertia.toFixed(4) + ' kg·m²');
+  motorHTML += row('Silindir Hacmi', R.displacement > 0 ? veSayi(R.displacement, 2) + ' L' : '—');
+  motorHTML += row('Pik Tork', peakTorque > 0 ? veSayi(peakTorque, 1) + ' N·m' : '—');
+  motorHTML += row('Pik Tork Devri', peakTorqueRpm > 0 ? veSayi(peakTorqueRpm, 0) + ' rpm' : '—');
+  motorHTML += row('Pik Güç', peakPower > 0 ? veSayi(peakPower, 1) + ' kW' : '—');
+  motorHTML += row('Pik Güç Devri', peakPowerRpm > 0 ? veSayi(peakPowerRpm, 0) + ' rpm' : '—');
+  motorHTML += row('Governed Güç', govPower > 0 ? veSayi(govPower, 1) + ' kW' : '—');
+  motorHTML += row('Governed Devir', veSayi(R.governed, 0) + ' rpm');
+  motorHTML += row('No-Load Governed', veSayi(R.noLoad, 0) + ' rpm');
+  motorHTML += row('Rölanti Devri', veSayi(R.idleRpm, 0) + ' rpm');
+  motorHTML += row('Motor Ataleti (tahmini)', veSayi(R.engineInertia, 4) + ' kg·m²');
   motorHTML = tableWrap(motorHTML);
   
   // ═══ MOTOR DETAYLARI ═══
@@ -989,8 +989,8 @@ function veRenderDetailedReport(filter) {
       
       var td = function(v) { return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + v + '</td>'; };
       motorDetailHTML += '<tr>';
-      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + rpm + '</td>';
-      motorDetailHTML += td(grossPwr.toFixed(1)) + td(grossTrk.toFixed(1)) + td(netPwrFanOn.toFixed(1)) + td(netTrkFanOn.toFixed(1)) + td(netPwr.toFixed(1)) + td(netTrk.toFixed(1));
+      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(rpm, 0) + '</td>';
+      motorDetailHTML += td(veSayi(grossPwr, 1)) + td(veSayi(grossTrk, 1)) + td(veSayi(netPwrFanOn, 1)) + td(veSayi(netTrkFanOn, 1)) + td(veSayi(netPwr, 1)) + td(veSayi(netTrk, 1));
       motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--text-muted); font-style:italic; font-size:var(--fs-tiny);">' + ident + '</td>';
       motorDetailHTML += '</tr>';
     });
@@ -1012,7 +1012,7 @@ function veRenderDetailedReport(filter) {
   transHTML += row('Şanzıman Üretici', 'Allison Transmission');
   transHTML += row('Şanzıman', R.gbName);
   transHTML += row('Şanzıman Ailesi', R.gbFamily);
-  transHTML += row('Şanzıman Verimi', R.gbEff.toFixed(1) + '%');
+  transHTML += row('Şanzıman Verimi', '%' + veSayi(R.gbEff, 1));
   if(R.hasTC) transHTML += row('Tork Konvertörü', R.tcName);
   transHTML = tableWrap(transHTML);
   
@@ -1023,14 +1023,14 @@ function veRenderDetailedReport(filter) {
   var gHigh = R.gearData.length > 0 ? R.gearData[R.gearData.length - 1].name : '6';
   var controlHTML = '';
   controlHTML += row('Shift Profili', spName);
-  controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm');
+  controlHTML += row('Vites Geçiş Hızı ve Strateji', veSayi(R.shiftRefRPM, 0) + ' rpm');
   // Converter geçişleri
   if(spDataRes.converterShifts) {
     var csRes = spDataRes.converterShifts;
     var convParts = [];
-    if(csRes['1C2C']) convParts.push('1C\u21922C: ' + Math.round(csRes['1C2C'].a * R.shiftRefRPM + (csRes['1C2C'].b || 0)) + ' rpm');
+    if(csRes['1C2C']) convParts.push('1C\u21922C: ' + veSayi(Math.round(csRes['1C2C'].a * R.shiftRefRPM + (csRes['1C2C'].b || 0)), 0) + ' rpm');
     if(csRes['2C2L'] && csRes['2C2L'].type === 'segmented') {
-      convParts.push('2C\u21922L: ' + Math.round(csRes['2C2L'].linear.a * R.shiftRefRPM + csRes['2C2L'].linear.b) + ' rpm (ESL\u2265' + csRes['2C2L'].linear.validFrom + ')');
+      convParts.push('2C\u21922L: ' + veSayi(Math.round(csRes['2C2L'].linear.a * R.shiftRefRPM + csRes['2C2L'].linear.b), 0) + ' rpm (ESL\u2265' + veSayi(csRes['2C2L'].linear.validFrom) + ')');
     }
     if(convParts.length > 0) controlHTML += row('Converter Geçişleri', convParts.join(', '));
   }
@@ -1039,11 +1039,11 @@ function veRenderDetailedReport(filter) {
     var luSummary = Object.keys(spDataRes.lockupShifts).map(function(sk) {
       var ls = spDataRes.lockupShifts[sk];
       var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, R.shiftRefRPM) : (ls.a * R.shiftRefRPM + (ls.b || 0));
-      return sk.replace(/(\d+L)(\d+L)/, '$1\u2192$2') + ': ' + Math.round(thr) + ' rpm';
+      return sk.replace(/(\d+L)(\d+L)/, '$1\u2192$2') + ': ' + veSayi(Math.round(thr), 0) + ' rpm';
     }).join(', ');
     controlHTML += row('Lockup Geçişleri', luSummary);
   } else {
-    controlHTML += row('Kilitleme Ofseti', R.lockupOffset + ' rpm');
+    controlHTML += row('Kilitleme Ofseti', veSayi(R.lockupOffset) + ' rpm');
   }
   controlHTML += row('Ana Mod: Vitesler', 'Düşük = ' + gLow + ', Başlangıç = ' + gLow + ', Yüksek = ' + gHigh + ' (' + gLow + '-' + gLow + '-' + gHigh + ')');
   controlHTML = tableWrap(controlHTML);
@@ -1059,20 +1059,20 @@ function veRenderDetailedReport(filter) {
     driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">' + ps.name + '</td>';
     driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">Tek</td>';
     driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">1.000</td>';
-    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + ps.eff.toFixed(2) + '</td></tr>';
+    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(ps.eff, 2) + '</td></tr>';
   });
 
   driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">' + R.diffName + '</td>';
   driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">Tek</td>';
-  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + R.diffRatio.toFixed(3) + '</td>';
-  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + R.diffEff.toFixed(2) + '</td></tr>';
+  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(R.diffRatio, 3) + '</td>';
+  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(R.diffEff, 2) + '</td></tr>';
   
   if(R.hasTransfer && R.transferGears.length > 0) {
     R.transferGears.forEach(function(tr, i) {
       driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">' + (i === 0 ? R.transferName : '') + '</td>';
       driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + tr.kademe + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + tr.ratio.toFixed(3) + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + tr.eff.toFixed(2) + '</td></tr>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(tr.ratio, 3) + '</td>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(tr.eff, 2) + '</td></tr>';
     });
   }
   driveHTML += '</tbody></table>';
@@ -1088,11 +1088,11 @@ function veRenderDetailedReport(filter) {
       var psEffT = 1; R.propshafts.forEach(function(ps){ psEffT *= ps.eff / 100; });
       var oR = R.diffRatio * tr.ratio;
       var oE = (R.diffEff / 100) * (tr.eff / 100) * psEffT * 100;
-      var nv = R.tireRadius > 0 ? (oR * 1000 / (R.tireRadius * 2 * Math.PI * 60)).toFixed(3) : '—';
+      var nv = R.tireRadius > 0 ? veSayi((oR * 1000 / (R.tireRadius * 2 * Math.PI * 60)), 3) : '—';
       driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light);"></td>';
       driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + tr.kademe + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + oR.toFixed(3) + '</td>';
-      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + oE.toFixed(2) + '</td>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(oR, 3) + '</td>';
+      driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + veSayi(oE, 2) + '</td>';
       driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; font-weight:600; color:var(--text-primary);">' + nv + '</td></tr>';
     });
     driveHTML += '</tbody></table>';
@@ -1151,12 +1151,12 @@ function veRenderDetailedReport(filter) {
     // Motor bilgisi
     ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-bottom:12px;">';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:var(--fs-md);">Motor</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + R.engineName + '</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pik tork</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _peakT.toFixed(0) + ' N·m @ ' + _peakRPM + ' rpm</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Governed devir</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _gov + ' rpm</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pompa düşümü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _pDrop + ' N·m</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Türbin limiti</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _tRating + ' N·m</td></tr>';
-    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş güç limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
-    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş tork limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pik tork</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(_peakT, 0) + ' N·m @ ' + veSayi(_peakRPM, 0) + ' rpm</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Governed devir</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(_gov, 0) + ' rpm</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pompa düşümü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(_pDrop) + ' N·m</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Türbin limiti</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(_tRating, 0) + ' N·m</td></tr>';
+    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş güç limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + veSayi(_rPowerAtGov, 0) + ' / ' + veSayi(_rGbLimits.grossInputPower) + ' kW ' + (_rc9ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
+    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş tork limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + veSayi(_rTorqueAtGov, 0) + ' / ' + veSayi(_rGbLimits.grossInputTorque) + ' N·m ' + (_rc10ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
@@ -1180,8 +1180,8 @@ function veRenderDetailedReport(filter) {
       ecmHTML += '<tr>';
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); white-space:nowrap;"><span style="font-weight:600; color:'+stC+'; font-size:var(--fs-tiny);">'+stI+' '+stT+'</span></td>';
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">'+r.name+'</td>';
-      ecmHTML += td(r.stallTau.toFixed(2), null, 'right') + td(r.stallSpeed.toFixed(0), null, 'right') + td(r.minSpeed.toFixed(0), r.c5ok?'var(--text-primary)':'var(--accent-danger)', 'right');
-      ecmHTML += td(r.tTurbineStall.toFixed(0), r.c7ok?'var(--text-primary)':'var(--accent-danger)', 'right') + td(r.srGov.toFixed(3), r.c8ok?'var(--text-primary)':'var(--accent-warning)', 'right');
+      ecmHTML += td(veSayi(r.stallTau, 2), null, 'right') + td(veSayi(r.stallSpeed, 0), null, 'right') + td(veSayi(r.minSpeed, 0), r.c5ok?'var(--text-primary)':'var(--accent-danger)', 'right');
+      ecmHTML += td(veSayi(r.tTurbineStall, 0), r.c7ok?'var(--text-primary)':'var(--accent-danger)', 'right') + td(veSayi(r.srGov, 3), r.c8ok?'var(--text-primary)':'var(--accent-warning)', 'right');
       ecmHTML += td(r.c5ok ? veDurumIkon('ok') : veDurumIkon('err')) + td(r.c7ok ? veDurumIkon('ok') : veDurumIkon('err'))
                + td(r.c8ok ? veDurumIkon('ok') : veDurumIkon('warn'));
       ecmHTML += '</tr>';
@@ -1193,7 +1193,7 @@ function veRenderDetailedReport(filter) {
       var best = _ecmResults[0];
       ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-top:10px;">';
       ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:var(--fs-md);">Önerilen konvertör</td>';
-      ecmHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + (best.status==='recommended'?'<span class="mf-ico mf-ico-trophy"></span> ':'') + best.name + '  —  Stall: ' + best.stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + best.srGov.toFixed(3) + ' | T_turb: ' + best.tTurbineStall.toFixed(0) + ' N·m</td></tr>';
+      ecmHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + (best.status==='recommended'?'<span class="mf-ico mf-ico-trophy"></span> ':'') + best.name + '  —  Stall: ' + veSayi(best.stallSpeed, 0) + ' rpm | SR@Gov: ' + veSayi(best.srGov, 3) + ' | T_turb: ' + veSayi(best.tTurbineStall, 0) + ' N·m</td></tr>';
       ecmHTML += '</table>';
     }
     
@@ -1279,8 +1279,8 @@ function veRenderDetailedReport(filter) {
     ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart güç eğrisi</td></tr>';
     ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Kapalı</td>';
     ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Araç parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart</td></tr>';
-    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + R.diffRatio.toFixed(3) + '</td>';
-    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + trRatioHigh.toFixed(3) + '</td></tr>';
+    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(R.diffRatio, 3) + '</td>';
+    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(trRatioHigh, 3) + '</td></tr>';
     ftGradeHTML += '</table>';
     
     // Yardımcı fonksiyonlar
@@ -1307,12 +1307,12 @@ function veRenderDetailedReport(filter) {
       
       h += '<tr>' + _tdName('Durma Eğim Kabiliyeti (Stall)') + _td(veGradeDisplay(gd.stallGrade, 1), 'right') + _td('', 'right') + _td(gd.stallGear) + _tdL('Stall') + '</tr>';
       h += '<tr>' + _tdName('Kalkış Eğim Kabiliyeti (Launch)') + _td(veGradeDisplay(gd.launchGrade, 1), 'right') + _td('', 'right') + _td(gd.launchGear) + _tdL('') + '</tr>';
-      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(veGradeDisplay(gd.lowSpeedGrade, 1), 'right') + _td(gd.lowSpeedV.toFixed(1), 'right') + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
-      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0', 'right') + _td(gd.maxSpeedFlat.toFixed(1), 'right') + _td(gd.maxSpeedFlatGear) + _tdL('Yol Yükü') + '</tr>';
+      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(veGradeDisplay(gd.lowSpeedGrade, 1), 'right') + _td(veSayi(gd.lowSpeedV, 1), 'right') + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
+      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0,0', 'right') + _td(veSayi(gd.maxSpeedFlat, 1), 'right') + _td(gd.maxSpeedFlatGear) + _tdL('Yol Yükü') + '</tr>';
       
       gd.gradeTable.forEach(function(row) {
         if(row.v_max <= 0 && row.grade > 0) return;
-        h += '<tr>' + _tdName('') + _td(row.grade.toFixed(1), 'right') + _td(row.v_max.toFixed(1), 'right') + _td(row.gear) + _tdL('') + '</tr>';
+        h += '<tr>' + _tdName('') + _td(veSayi(row.grade, 1), 'right') + _td(veSayi(row.v_max, 1), 'right') + _td(row.gear) + _tdL('') + '</tr>';
       });
       
       h += '</tbody></table></div>';
@@ -1354,7 +1354,7 @@ function veRenderDetailedReport(filter) {
   var A = sim.acceleration;
   var ftAccelHTML = '';
   if(A && A.high) {
-    var axleR = R.diffRatio.toFixed(3);
+    var axleR = veSayi(R.diffRatio, 3);
     var trRatioAccel = A.high.transferRatio || 1.0;
     
     // Üst bilgi tablosu (gradeability ile aynı stil)
@@ -1364,7 +1364,7 @@ function veRenderDetailedReport(filter) {
     ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Kapalı</td>';
     ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Araç parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart</td></tr>';
     ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + axleR + '</td>';
-    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + trRatioAccel.toFixed(3) + '</td></tr>';
+    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(trRatioAccel, 3) + '</td></tr>';
     ftAccelHTML += '</table>';
     
     // Tek kademe tablosu oluşturucu
@@ -1384,13 +1384,13 @@ function veRenderDetailedReport(filter) {
       
       ad.rows.forEach(function(row) {
         bh += '<tr>';
-        bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); color:var(--text-primary);">0 — ' + row.targetSpeed + ' km/h</td>';
+        bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); color:var(--text-primary);">0 — ' + veSayi(row.targetSpeed) + ' km/h</td>';
         if(row.time === null) {
           bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-muted); font-style:italic;">Hıza ulaşılamıyor</td>';
           bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; color:var(--text-muted); font-style:italic;">Hıza ulaşılamıyor</td>';
         } else {
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + row.time.toFixed(1) + '</td>';
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + Math.round(row.distance) + '</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(row.time, 1) + '</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(Math.round(row.distance), 0) + '</td>';
         }
         bh += '</tr>';
       });
@@ -1469,14 +1469,14 @@ function veBuildGradeChartData(gradeResult) {
   var points = [];
   // Stall ve Launch (sadece < 900)
   if(gradeResult.stallGrade < 900) {
-    points.push({ x: 0, y: gradeResult.stallGrade, label: 'Durma (' + gradeResult.stallGrade.toFixed(1) + '%)' });
+    points.push({ x: 0, y: gradeResult.stallGrade, label: 'Durma (%' + veSayi(gradeResult.stallGrade, 1) + ')' });
   }
   if(gradeResult.launchGrade < 900) {
-    points.push({ x: 0, y: gradeResult.launchGrade, label: 'Kalkış (' + gradeResult.launchGrade.toFixed(1) + '%)' });
+    points.push({ x: 0, y: gradeResult.launchGrade, label: 'Kalkış (%' + veSayi(gradeResult.launchGrade, 1) + ')' });
   }
   // Düşük Hız
   if(gradeResult.lowSpeedGrade < 900) {
-    points.push({ x: gradeResult.lowSpeedV, y: gradeResult.lowSpeedGrade, label: 'Düşük hız (' + gradeResult.lowSpeedV.toFixed(0) + ' km/h, ' + gradeResult.lowSpeedGrade.toFixed(1) + '%)' });
+    points.push({ x: gradeResult.lowSpeedV, y: gradeResult.lowSpeedGrade, label: 'Düşük hız (' + veSayi(gradeResult.lowSpeedV, 0) + ' km/h, %' + veSayi(gradeResult.lowSpeedGrade, 1) + ')' });
   }
   // Grade tablosu (grade > 0 olanlar)
   for(var i = 0; i < gradeResult.gradeTable.length; i++) {
@@ -1589,11 +1589,11 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   // Labels
   ctx.fillStyle = (_drTC||_drThemeColors()).textMuted; ctx.font = veThemeFont('body'); ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) {
-    ctx.fillText(lx.toFixed(0), toX(lx), H - padB + 16);
+    ctx.fillText(veSayi(lx, 0), toX(lx), H - padB + 16);
   }
   ctx.textAlign = 'right';
   for(var ly = Math.ceil(yMin / yStep) * yStep; ly <= yMax; ly += yStep) {
-    ctx.fillText(ly.toFixed(0), padL - 8, toY(ly) + 4);
+    ctx.fillText(veSayi(ly, 0), padL - 8, toY(ly) + 4);
   }
   
   // Axis titles
@@ -1609,7 +1609,7 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'right';
-    ctx.fillText('' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
+    ctx.fillText('' + veSayi(zs, 1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
   }
   
   // Clip to plot area
@@ -1686,7 +1686,7 @@ function veDrawGradeabilityCharts(G) {
   var dataHigh = veBuildGradeChartData(G.high);
   if(dataHigh.length >= 2) {
     veRenderGradeChart('gradeChartHigh', dataHigh,
-      'Transfer Kutusu: Yüksek Kademe (' + G.high.transferRatio.toFixed(3) + ')', true);
+      'Transfer Kutusu: Yüksek Kademe (' + veSayi(G.high.transferRatio, 3) + ')', true);
   }
   
   // Düşük kademe (varsa)
@@ -1694,7 +1694,7 @@ function veDrawGradeabilityCharts(G) {
     var dataLow = veBuildGradeChartData(G.low);
     if(dataLow.length >= 2) {
       veRenderGradeChart('gradeChartLow', dataLow,
-        'Transfer Kutusu: Düşük Kademe (' + G.low.transferRatio.toFixed(3) + ')', false);
+        'Transfer Kutusu: Düşük Kademe (' + veSayi(G.low.transferRatio, 3) + ')', false);
     }
     var wrap = document.getElementById('gradeChartLowWrap');
     if(wrap) wrap.style.display = '';
@@ -1774,7 +1774,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'right';
-    ctx.fillText('' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
+    ctx.fillText('' + veSayi(zs, 1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
   }
   
   // Grid
@@ -1795,20 +1795,20 @@ function veRenderAccelChart(canvasId, chartData, title) {
   
   // Left Y labels (Time - blue)
   ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.font = veThemeFont('body'); ctx.textAlign = 'right';
-  for(var lt = 0; lt <= yTMax; lt += tStep) { ctx.fillText(lt.toString(), padL - 8, toYT(lt) + 4); }
+  for(var lt = 0; lt <= yTMax; lt += tStep) { ctx.fillText(veSayi(lt), padL - 8, toYT(lt) + 4); }
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.font = veThemeFont('body', 600); ctx.textAlign = 'center'; ctx.fillText('Süre (saniye)', 0, 0); ctx.restore();
   
   // Right Y labels (Distance - red)
   var dStep = yDMax <= 100 ? 20 : yDMax <= 300 ? 50 : yDMax <= 600 ? 100 : 200;
   ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.font = veThemeFont('body'); ctx.textAlign = 'left';
-  for(var ld = 0; ld <= yDMax; ld += dStep) { ctx.fillText(ld.toString(), W - padR + 8, toYD(ld) + 4); }
+  for(var ld = 0; ld <= yDMax; ld += dStep) { ctx.fillText(veSayi(ld), W - padR + 8, toYD(ld) + 4); }
   ctx.save(); ctx.translate(W - 10, padT + plotH / 2); ctx.rotate(Math.PI / 2);
   ctx.font = veThemeFont('body', 600); ctx.textAlign = 'center'; ctx.fillText('Mesafe (m)', 0, 0); ctx.restore();
   
   // X labels
   ctx.fillStyle = (_drTC||_drThemeColors()).textMuted; ctx.font = veThemeFont('body'); ctx.textAlign = 'center';
-  for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) { ctx.fillText(lx.toString(), toX(lx), H - padB + 16); }
+  for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) { ctx.fillText(veSayi(lx), toX(lx), H - padB + 16); }
   ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.font = veThemeFont('body', 600);
   ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   
@@ -1887,10 +1887,10 @@ function veRenderAccelChart(canvasId, chartData, title) {
 function veDrawAccelerationCharts(A) {
   if(!A || !A.high) return;
   var dataHigh = veBuildAccelChartData(A.high);
-  if(dataHigh.timePoints.length >= 2) veRenderAccelChart('accelChartHigh', dataHigh, 'Transfer Kutusu: Yüksek Kademe (' + A.high.transferRatio.toFixed(3) + ')');
+  if(dataHigh.timePoints.length >= 2) veRenderAccelChart('accelChartHigh', dataHigh, 'Transfer Kutusu: Yüksek Kademe (' + veSayi(A.high.transferRatio, 3) + ')');
   if(A.low) {
     var dataLow = veBuildAccelChartData(A.low);
-    if(dataLow.timePoints.length >= 2) veRenderAccelChart('accelChartLow', dataLow, 'Transfer Kutusu: Düşük Kademe (' + A.low.transferRatio.toFixed(3) + ')');
+    if(dataLow.timePoints.length >= 2) veRenderAccelChart('accelChartLow', dataLow, 'Transfer Kutusu: Düşük Kademe (' + veSayi(A.low.transferRatio, 3) + ')');
     var wrap = document.getElementById('accelChartLowWrap');
     if(wrap) wrap.style.display = '';
   } else {
@@ -2042,8 +2042,8 @@ function _drChartMouseMove(e) {
     if(nearest && nearDist <= _DR_SNAP_DIST) {
       snapOk = true;
       html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Eğim kabiliyeti</div>';
-      html += '<div>Hız: <b style="color:#60a5fa;">' + nearest.x.toFixed(1) + '</b> km/h</div>';
-      html += '<div>Eğim: <b style="color:#60a5fa;">' + nearest.y.toFixed(1) + '</b> %</div>';
+      html += '<div>Hız: <b style="color:#60a5fa;">' + veSayi(nearest.x, 1) + '</b> km/h</div>';
+      html += '<div>Eğim: <b style="color:#60a5fa;">%' + veSayi(nearest.y, 1) + '</b></div>';
       if(nearest.label) html += '<div style="border-top:1px solid rgba(255,255,255,0.15); margin-top:3px; padding-top:3px;">' + nearest.label + '</div>';
     }
   } else if(d.type === 'accel') {
@@ -2069,9 +2069,9 @@ function _drChartMouseMove(e) {
       for(var ti = 0; ti < d.tp.length; ti++) { if(Math.abs(d.tp[ti].x - snapSpeed) < 0.01) { tVal = d.tp[ti].y; break; } }
       for(var di = 0; di < d.dp.length; di++) { if(Math.abs(d.dp[di].x - snapSpeed) < 0.01) { dValI = d.dp[di].y; break; } }
       html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Hızlanma</div>';
-      html += '<div>Hız: <b style="color:#60a5fa;">' + snapSpeed.toFixed(1) + '</b> km/h</div>';
-      if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + tVal.toFixed(2) + '</b> s</div>';
-      if(dValI !== null) html += '<div>Mesafe: <b style="color:#8f3636;">' + Math.round(dValI) + '</b> m</div>';
+      html += '<div>Hız: <b style="color:#60a5fa;">' + veSayi(snapSpeed, 1) + '</b> km/h</div>';
+      if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + veSayi(tVal, 2) + '</b> s</div>';
+      if(dValI !== null) html += '<div>Mesafe: <b style="color:#8f3636;">' + veSayi(Math.round(dValI), 0) + '</b> m</div>';
     }
   } else if(d.type === 'distGrade') {
     // Hangi segmentte olduğunu bul
@@ -2081,12 +2081,12 @@ function _drChartMouseMove(e) {
       var spx2 = d.padL + (dps[si].xEnd - d.xMin) / (d.xMax - d.xMin) * d.plotW;
       if(mx >= spx1 && mx <= spx2) {
         snapOk = true;
-        var segLabel = dps[si].xStart.toFixed(0) + ' — ' + dps[si].xEnd.toFixed(0) + ' m';
+        var segLabel = veSayi(dps[si].xStart, 0) + ' — ' + veSayi(dps[si].xEnd, 0) + ' m';
         html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
         html += '<div>Mesafe: <b style="color:#60a5fa;">' + segLabel + '</b></div>';
-        html += '<div>Uzunluk: <b style="color:#60a5fa;">' + dps[si].mesafe.toFixed(0) + '</b> m</div>';
-        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + dps[si].grade.toFixed(1) + '</b></div>';
-        html += '<div>Δh: <b style="color:#60a5fa;">' + dps[si].deltaH.toFixed(1) + '</b> m</div>';
+        html += '<div>Uzunluk: <b style="color:#60a5fa;">' + veSayi(dps[si].mesafe, 0) + '</b> m</div>';
+        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + veSayi(dps[si].grade, 1) + '</b></div>';
+        html += '<div>Δh: <b style="color:#60a5fa;">' + veSayi(dps[si].deltaH, 1) + '</b> m</div>';
         break;
       }
     }
@@ -2104,10 +2104,10 @@ function _drChartMouseMove(e) {
           break;
         }
       }
-      var aptDistLabel = aptXVal.toFixed(0) + ' m';
+      var aptDistLabel = veSayi(aptXVal, 0) + ' m';
       html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Rakım profili</div>';
       html += '<div>Mesafe: <b style="color:#60a5fa;">' + aptDistLabel + '</b></div>';
-      html += '<div>Rakım: <b style="color:#b39ddb;">' + aptElev.toFixed(1) + '</b> m</div>';
+      html += '<div>Rakım: <b style="color:#b39ddb;">' + veSayi(aptElev, 1) + '</b> m</div>';
     }
   }
 
@@ -2265,7 +2265,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   for(var r = Math.ceil(rpmMin / rpmStep) * rpmStep; r <= rpmMax; r += rpmStep) {
     var lx = toX(r);
     if(lx < margin.left + 10 || lx > W - margin.right - 10) continue;
-    ctx.fillText(r.toLocaleString('tr-TR'), lx, H - margin.bottom + 16);
+    ctx.fillText(veSayi(r), lx, H - margin.bottom + 16);
   }
   ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.font = veThemeFont('body', 600);
   ctx.fillText('Devir (rpm)', margin.left + pw/2, H - 6);
@@ -2275,7 +2275,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   for(var pp = Math.ceil(pwrMin / pwrStep) * pwrStep; pp <= pwrMax; pp += pwrStep) {
     var yp = toYP(pp);
     if(yp < margin.top + 5 || yp > H - margin.bottom - 5) continue;
-    ctx.fillText(pp.toFixed(0), margin.left - 8, yp + 4);
+    ctx.fillText(veSayi(pp, 0), margin.left - 8, yp + 4);
   }
   ctx.save(); ctx.translate(16, margin.top + ph/2); ctx.rotate(-Math.PI/2);
   ctx.font = veThemeFont('body', 600); ctx.textAlign = 'center'; ctx.fillText('Güç (kW)', 0, 0); ctx.restore();
@@ -2286,7 +2286,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   for(var tt = Math.ceil(trkMin / trkStep) * trkStep; tt <= trkMax; tt += trkStep) {
     var yt = toYT(tt);
     if(yt < margin.top + 5 || yt > H - margin.bottom - 5) continue;
-    ctx.fillText(tt.toFixed(0), W - margin.right + 8, yt + 4);
+    ctx.fillText(veSayi(tt, 0), W - margin.right + 8, yt + 4);
   }
   ctx.save(); ctx.translate(W - 10, margin.top + ph/2); ctx.rotate(Math.PI/2);
   ctx.font = veThemeFont('body', 600); ctx.textAlign = 'center'; ctx.fillText('Tork (N·m)', 0, 0); ctx.restore();
@@ -2294,7 +2294,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'right';
-    ctx.fillText('' + zs.toFixed(1) + '×', W - margin.right - 4, margin.top + 14);
+    ctx.fillText('' + veSayi(zs, 1) + '×', W - margin.right - 4, margin.top + 14);
   }
   
   // Legend
@@ -2327,7 +2327,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
       if(_drEngZoom.scale === old) return;
       veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGov);
       var ind = document.getElementById('dr-engine-zoom-ind');
-      if(ind) { if(_drEngZoom.scale > 1.05 || _drEngZoom.scale < 0.95){ind.textContent=''+_drEngZoom.scale.toFixed(1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
+      if(ind) { if(_drEngZoom.scale > 1.05 || _drEngZoom.scale < 0.95){ind.textContent=''+veSayi(_drEngZoom.scale, 1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
     }, {passive:false});
     wrap.addEventListener('mousedown', function(e) {
       if(e.button !== 2) return; e.preventDefault();
@@ -2382,11 +2382,11 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
       });
       if(tip && nearest && bestPxDist <= _DR_SNAP_DIST) {
         var html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Motor eğrisi</div>';
-        html += '<div>Devir: <b style="color:#60a5fa;">' + nearest.rpm.toLocaleString('tr-TR') + '</b> rpm</div>';
-        html += '<div style="color:#93c5fd;">Brüt güç: <b>' + nearest.grossPwr.toFixed(1) + '</b> kW</div>';
-        html += '<div style="color:#93c5fd;">Net güç: <b>' + nearest.netPwr.toFixed(1) + '</b> kW</div>';
-        html += '<div style="color:#fca5a5;">Brüt tork: <b>' + nearest.grossTrk.toFixed(0) + '</b> N·m</div>';
-        html += '<div style="color:#fca5a5;">Net tork: <b>' + nearest.netTrk.toFixed(0) + '</b> N·m</div>';
+        html += '<div>Devir: <b style="color:#60a5fa;">' + veSayi(nearest.rpm) + '</b> rpm</div>';
+        html += '<div style="color:#93c5fd;">Brüt güç: <b>' + veSayi(nearest.grossPwr, 1) + '</b> kW</div>';
+        html += '<div style="color:#93c5fd;">Net güç: <b>' + veSayi(nearest.netPwr, 1) + '</b> kW</div>';
+        html += '<div style="color:#fca5a5;">Brüt tork: <b>' + veSayi(nearest.grossTrk, 0) + '</b> N·m</div>';
+        html += '<div style="color:#fca5a5;">Net tork: <b>' + veSayi(nearest.netTrk, 0) + '</b> N·m</div>';
         tip.innerHTML = html;
         tip.classList.add('visible');
         var tw = tip.offsetWidth || 200;
@@ -2467,7 +2467,7 @@ function veTxtCols(txtContent) {
 // (bkz. css .ve-rep-page pre). Ölçüyü JS'te hesaplayıp px yazmak yerine CSS'e
 // bırakmak, aynı kuralın indirilen HTML'de de birebir çalışmasını sağlıyor.
 function veTxtPageVars(txtContent) {
-  return '--rep-cols:' + veTxtCols(txtContent) + '; --rep-ch:' + veTxtCharRatio().toFixed(4) + ';';
+  return '--rep-cols:' + veTxtCols(txtContent) + '; --rep-ch:' + veTxtCharRatio().toFixed(4) + ';';   // makine: CSS değişkeni
 }
 
 // Belge gövdesi: TEK <pre>, sola yaslı. Kaçış için js/ui-core.js'teki tek
@@ -2548,7 +2548,7 @@ function veBuildReportHTML(content, title) {
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<title>' + t + '</title><style>' +
     ':root{--rp-w:794px;--rp-pad:45px;--rp-fs-max:11px;' +
-    '--rp-ch:' + veTxtCharRatio().toFixed(4) + ';--rp-cols:' + veTxtCols(content) + ';' +
+    '--rp-ch:' + veTxtCharRatio().toFixed(4) + ';--rp-cols:' + veTxtCols(content) + ';' +   // makine: CSS değişkeni
     "--rp-mono:'Consolas','Monaco','SF Mono','DejaVu Sans Mono','Courier New',monospace;}" +
     'html,body{margin:0;background:#f0ede7;}' +
     '.mf-wrap{padding:28px 24px 48px;}' +
@@ -2848,7 +2848,7 @@ function _veReportDownloadBlob(html, filename) {
 function _veMakeReportHelpers() {
   var esc = _veReportEsc;
   var tblNo = 0, figNo = 0, eqNo = 0;
-  function f(n, d) { var v = Number(n); if(!isFinite(v)) return '—'; return v.toFixed(d == null ? 2 : d); }
+  function f(n, d) { var v = Number(n); if(!isFinite(v)) return '—'; return veSayi(v, d == null ? 2 : d); }
   function cell(c, colA) {
     var v, a = colA || 'r', cls = '';
     if(c && typeof c === 'object') { v = c.v; if(c.a) a = c.a; if(c.cls) cls = c.cls; } else { v = c; }
@@ -2917,7 +2917,7 @@ function _veReportAntet(R, projectName, dateStr) {
   var esc = _veReportEsc;
   var eng = R ? esc(R.engineName) : '—';
   var gb = R ? esc(R.gbName) : '—';
-  var gvw = R ? (Number(R.gvw).toLocaleString('tr-TR') + ' kg') : '—';
+  var gvw = R ? (veSayi(Number(R.gvw)) + ' kg') : '—';
   var gears = (R && R.gearData) ? (R.gearData.length + ' ileri') : '—';
   return ''
     + '<div class="antet">'
@@ -2940,7 +2940,7 @@ function _veReportAntet(R, projectName, dateStr) {
 // GOLD ÖRNEK — diğer bölümler bunu birebir taklit eder.
 function _veRepSecPlatform(R, sim, H, charts) {
   if(!R) return null;
-  var revPerKm = (R.tireRadius > 0) ? (1000 / (2 * Math.PI * R.tireRadius)).toFixed(0) : '—';
+  var revPerKm = (R.tireRadius > 0) ? veSayi((1000 / (2 * Math.PI * R.tireRadius)), 0) : '—';
   var body = '';
   body += H.p('Bu bölüm, aracın aerodinamik ve kütle parametreleri ile lastik özelliklerini özetler. Bu değerler yol yükü (yuvarlanma ve aerodinamik direnç), çekiş kuvveti ve devir–hız dönüşümü hesaplarının temel girdileridir.');
 
@@ -3022,13 +3022,13 @@ function _veRepSecMotor(R, sim, H, charts) {
     ['Motor Tanımı', H.esc(R.engineName)],
     ['Silindir Hacmi', R.displacement > 0 ? H.f(R.displacement, 2) + ' L' : '—'],
     ['Pik Tork', peakTorque > 0 ? H.f(peakTorque, 1) + ' N·m' : '—'],
-    ['Pik Tork Devri', peakTorqueRpm > 0 ? peakTorqueRpm + ' rpm' : '—'],
+    ['Pik Tork Devri', peakTorqueRpm > 0 ? veSayi(peakTorqueRpm, 0) + ' rpm' : '—'],
     ['Pik Güç', peakPower > 0 ? H.f(peakPower, 1) + ' kW' : '—'],
-    ['Pik Güç Devri', peakPowerRpm > 0 ? peakPowerRpm + ' rpm' : '—'],
+    ['Pik Güç Devri', peakPowerRpm > 0 ? veSayi(peakPowerRpm, 0) + ' rpm' : '—'],
     ['Governed Güç', govPower > 0 ? H.f(govPower, 1) + ' kW' : '—'],
-    ['Governed Devir', R.governed + ' rpm'],
-    ['No-Load Governed', R.noLoad + ' rpm'],
-    ['Rölanti Devri', R.idleRpm + ' rpm'],
+    ['Governed Devir', veSayi(R.governed, 0) + ' rpm'],
+    ['No-Load Governed', veSayi(R.noLoad, 0) + ' rpm'],
+    ['Rölanti Devri', veSayi(R.idleRpm, 0) + ' rpm'],
     ['Motor Ataleti (tahmini)', H.f(R.engineInertia, 4) + ' kg·m²']
   ]);
 
@@ -3082,7 +3082,7 @@ function _veRepSecMotor(R, sim, H, charts) {
       if(rpm === R.governed) ident = 'Pik Governed';
       if(rpm === R.noLoad || (rpm > R.governed && netTrk <= 0)) ident = 'Yüksüz Governed';
       detRows.push([
-        rpm,
+        H.f(rpm, 0),
         H.f(grossPwr, 1),
         H.f(grossTrk, 1),
         H.f(netPwrFanOn, 1),
@@ -3159,7 +3159,7 @@ function _veRepSecTransmission(R, sim, H, charts) {
     ['Şanzıman Üretici', 'Allison Transmission'],
     ['Şanzıman', H.esc(R.gbName)],
     ['Şanzıman Ailesi', H.esc(R.gbFamily)],
-    ['Şanzıman Verimi', H.f(R.gbEff, 1) + '%'],
+    ['Şanzıman Verimi', '%' + H.f(R.gbEff, 1)],
     ['Tork Konvertörü', H.esc(R.tcName)]
   ]);
 
@@ -3178,9 +3178,9 @@ function _veRepSecTransmission(R, sim, H, charts) {
   if(spDataRes.converterShifts) {
     var csRes = spDataRes.converterShifts;
     var convParts = [];
-    if(csRes['1C2C']) convParts.push('1C→2C: ' + Math.round(csRes['1C2C'].a * R.shiftRefRPM + (csRes['1C2C'].b || 0)) + ' rpm');
+    if(csRes['1C2C']) convParts.push('1C→2C: ' + veSayi(Math.round(csRes['1C2C'].a * R.shiftRefRPM + (csRes['1C2C'].b || 0)), 0) + ' rpm');
     if(csRes['2C2L'] && csRes['2C2L'].type === 'segmented') {
-      convParts.push('2C→2L: ' + Math.round(csRes['2C2L'].linear.a * R.shiftRefRPM + csRes['2C2L'].linear.b) + ' rpm (ESL≥' + csRes['2C2L'].linear.validFrom + ')');
+      convParts.push('2C→2L: ' + veSayi(Math.round(csRes['2C2L'].linear.a * R.shiftRefRPM + csRes['2C2L'].linear.b), 0) + ' rpm (ESL≥' + veSayi(csRes['2C2L'].linear.validFrom) + ')');
     }
     if(convParts.length > 0) ctrlRows.push(['Converter Geçişleri', H.esc(convParts.join(', '))]);
   }
@@ -3190,7 +3190,7 @@ function _veRepSecTransmission(R, sim, H, charts) {
     var luSummary = Object.keys(spDataRes.lockupShifts).map(function(sk) {
       var ls = spDataRes.lockupShifts[sk];
       var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, R.shiftRefRPM) : (ls.a * R.shiftRefRPM + (ls.b || 0));
-      return sk.replace(/(\d+L)(\d+L)/, '$1→$2') + ': ' + Math.round(thr) + ' rpm';
+      return sk.replace(/(\d+L)(\d+L)/, '$1→$2') + ': ' + veSayi(Math.round(thr), 0) + ' rpm';
     }).join(', ');
     ctrlRows.push(['Lockup Geçişleri', H.esc(luSummary)]);
   } else {
@@ -3702,8 +3702,8 @@ function _veRepSecUpshift(R, sim, H, charts) {
       return [
         { v: H.esc(s.gear), a: 'l' },
         H.f(s.speed, 1),
-        String(Math.round(s.engineRPM)),
-        String(Math.round(s.outputRPM)),
+        String(veSayi(Math.round(s.engineRPM), 0)),
+        String(veSayi(Math.round(s.outputRPM), 0)),
         H.f(s.te, 2),
         { v: H.f(s.dp, 2), cls: (s.dp < 0 ? 'st-bad' : '') },
         H.f(s.wheelPower, 1),
@@ -4241,7 +4241,7 @@ function veDownloadReportHTML() {
           + '</body></html>';
 
         _veReportDownloadBlob(doc, _veReportSlug(projectName) + '_arac_performans_raporu.html');
-        if(typeof showToast === 'function') showToast('HTML rapor indirildi (' + Math.round(doc.length / 1024) + ' KB)', 'success');
+        if(typeof showToast === 'function') showToast('HTML rapor indirildi (' + veSayi(Math.round(doc.length / 1024), 0) + ' KB)', 'success');
       } catch(e) {
         if(typeof showToast === 'function') showToast('HTML rapor üretilemedi: ' + e.message, 'error');
         if(typeof console !== 'undefined') console.error('[Detaylı Rapor HTML]', e);
@@ -4278,7 +4278,7 @@ function veDrawReportECMChart(R) {
       if(_drEcmZoom.scale === old) return;
       _drEcmRedraw();
       var ind = document.getElementById('dr-ecm-zoom-ind');
-      if(ind) { if(_drEcmZoom.scale > 1.05 || _drEcmZoom.scale < 0.95){ind.textContent=''+_drEcmZoom.scale.toFixed(1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
+      if(ind) { if(_drEcmZoom.scale > 1.05 || _drEcmZoom.scale < 0.95){ind.textContent=''+veSayi(_drEcmZoom.scale, 1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
     }, {passive: false});
     wrap.addEventListener('mousedown', function(e) {
       if(e.button !== 2) return; e.preventDefault();
@@ -4357,8 +4357,8 @@ function _drEcmRedraw() {
   var tRange=maxT-minT, tStep=tRange>2000?500:tRange>800?200:tRange>400?100:50;
   var rRange=maxRPM-minRPM, rStep=rRange>2000?500:rRange>1000?200:100;
   ctx.strokeStyle=(_drTC||_drThemeColors()).border; ctx.lineWidth=0.5;
-  for(var gt=Math.ceil(minT/tStep)*tStep;gt<=maxT;gt+=tStep){ctx.beginPath();ctx.moveTo(ml,yP(gt));ctx.lineTo(ml+pw,yP(gt));ctx.stroke();ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font=veThemeFont('tiny');ctx.textAlign='right';ctx.fillText(gt,ml-5,yP(gt)+3);}
-  for(var gr=Math.ceil(minRPM/rStep)*rStep;gr<=maxRPM;gr+=rStep){ctx.beginPath();ctx.moveTo(xP(gr),mt);ctx.lineTo(xP(gr),mt+ph);ctx.stroke();ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font=veThemeFont('tiny');ctx.textAlign='center';ctx.fillText(gr,xP(gr),mt+ph+16);}
+  for(var gt=Math.ceil(minT/tStep)*tStep;gt<=maxT;gt+=tStep){ctx.beginPath();ctx.moveTo(ml,yP(gt));ctx.lineTo(ml+pw,yP(gt));ctx.stroke();ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font=veThemeFont('tiny');ctx.textAlign='right';ctx.fillText(veSayi(gt),ml-5,yP(gt)+3);}
+  for(var gr=Math.ceil(minRPM/rStep)*rStep;gr<=maxRPM;gr+=rStep){ctx.beginPath();ctx.moveTo(xP(gr),mt);ctx.lineTo(xP(gr),mt+ph);ctx.stroke();ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font=veThemeFont('tiny');ctx.textAlign='center';ctx.fillText(veSayi(gr),xP(gr),mt+ph+16);}
   
   // Axes
   ctx.strokeStyle=(_drTC||_drThemeColors()).axisLine;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
@@ -4389,10 +4389,10 @@ function _drEcmRedraw() {
   _td.forEach(function(d){var tp=d.torque-_pDrop;if(tp<0)tp=0;if(firstM){ctx.moveTo(xP(d.rpm),yP(tp));firstM=false;}else ctx.lineTo(xP(d.rpm),yP(tp));});
   ctx.lineTo(xP(_nlg),yP(0));ctx.stroke();
   ctx.fillStyle=veThemeRgba('--accent-warning', 1);ctx.font=veThemeFont('tiny', 'bold');ctx.textAlign='left';
-  var mLbl=_td[0];if(mLbl.rpm>minRPM&&mLbl.rpm<maxRPM)ctx.fillText('Motor (Net − '+_pDrop+')',xP(mLbl.rpm)+4,yP(mLbl.torque-_pDrop)-8);
+  var mLbl=_td[0];if(mLbl.rpm>minRPM&&mLbl.rpm<maxRPM)ctx.fillText('Motor (Net − '+veSayi(_pDrop, 1)+')',xP(mLbl.rpm)+4,yP(mLbl.torque-_pDrop)-8);
   
   // Governed line
-  if(_gov>minRPM&&_gov<maxRPM){ctx.beginPath();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.moveTo(xP(_gov),mt);ctx.lineTo(xP(_gov),mt+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font=veThemeFont('micro');ctx.textAlign='center';ctx.fillText('Gov '+_gov,xP(_gov),mt+ph+28);}
+  if(_gov>minRPM&&_gov<maxRPM){ctx.beginPath();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.moveTo(xP(_gov),mt);ctx.lineTo(xP(_gov),mt+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font=veThemeFont('micro');ctx.textAlign='center';ctx.fillText('Gov '+veSayi(_gov, 0),xP(_gov),mt+ph+28);}
   
   // Intersection dots
   try{var _pts=[];_td.forEach(function(d){_pts.push({rpm:d.rpm,torque:Math.max(0,d.torque-_pDrop)});});_pts.push({rpm:_nlg,torque:0});
@@ -4407,7 +4407,7 @@ function _drEcmRedraw() {
   ctx.restore();
   
   // Legend — SAĞA yaslı (sol ucu sabit yazılınca ölçekle büyüyen yazı taşar)
-  ctx.font=veThemeFont('micro');ctx.textAlign='right';ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.fillText('── Durma   --- 0.80 SR',ml+pw-6,mt+14);
+  ctx.font=veThemeFont('micro');ctx.textAlign='right';ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.fillText('── Durma   --- 0,80 SR',ml+pw-6,mt+14);
 }
 
 
@@ -4587,8 +4587,8 @@ function veBuildFTUpshiftsHTML(sim, R) {
   html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart güç eğrisi</td></tr>';
   html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Kapalı</td>';
   html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Araç parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart</td></tr>';
-  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + axleRatio.toFixed(3) + '</td>';
-  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + activeRatio.toFixed(3) + '</td></tr>';
+  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(axleRatio, 3) + '</td>';
+  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(activeRatio, 3) + '</td></tr>';
   html += '</table>';
   
   // ═══ HIGH RANGE ═══
@@ -4597,7 +4597,7 @@ function veBuildFTUpshiftsHTML(sim, R) {
   
   if(stepsHigh.length > 0) {
     if(hasTransfer) {
-      html += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')</div>';
+      html += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Yüksek Kademe (' + veSayi(activeRatio, 3) + ')</div>';
     }
     html += _ftBuildTable(stepsHigh);
     
@@ -4634,7 +4634,7 @@ function veBuildFTUpshiftsHTML(sim, R) {
     
     if(stepsLow.length > 0) {
       html += '<div style="height:20px;"></div>';
-      html += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')</div>';
+      html += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Düşük Kademe (' + veSayi(lowRatio, 3) + ')</div>';
       html += _ftBuildTable(stepsLow);
       
       html += '<div style="max-width:800px; margin:20px auto 0; position:relative;"><canvas id="ftUpshiftChartLow" height="450" style="cursor:crosshair;"></canvas>';
@@ -4673,14 +4673,14 @@ function _ftBuildTable(steps) {
     
     html += '<tr style="' + borderTop + '">';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:500; color:var(--text-primary);">' + s.gear + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.speed.toFixed(1) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + Math.round(s.engineRPM) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + Math.round(s.outputRPM) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.te.toFixed(2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; ' + dpColor + '">' + s.dp.toFixed(2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.wheelPower.toFixed(1) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; ' + grColor + '">' + s.netGrade.toFixed(2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + s.heatRejection.toFixed(2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(s.speed, 1) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(Math.round(s.engineRPM), 0) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(Math.round(s.outputRPM), 0) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(s.te, 2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; ' + dpColor + '">' + veSayi(s.dp, 2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(s.wheelPower, 1) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; ' + grColor + '">' + veSayi(s.netGrade, 2) + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(s.heatRejection, 2) + '</td>';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--accent-primary); font-style:italic; font-size:var(--fs-tiny); white-space:nowrap;">' + (s.matchPoint || '') + '</td>';
     html += '</tr>';
     prevGear = s.gear;
@@ -4830,14 +4830,14 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   // X labels
   ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.font = veThemeFont('body', 600); ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) {
-    ctx.fillText(lx.toString(), toX(lx), H - padB + 16);
+    ctx.fillText(veSayi(lx), toX(lx), H - padB + 16);
   }
   ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   
   // Left Y labels (RPM — blue)
   ctx.fillStyle = veThemeRgba('--seri-1', 1); ctx.font = veThemeFont('body'); ctx.textAlign = 'right';
   for(var lr = Math.ceil(yRPMMin / rStep) * rStep; lr <= yRPMMax; lr += rStep) {
-    ctx.fillText(lr.toString(), padL - 6, toYR(lr) + 4);
+    ctx.fillText(veSayi(lr), padL - 6, toYR(lr) + 4);
   }
   ctx.save(); ctx.translate(14, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.font = veThemeFont('body', 600); ctx.textAlign = 'center';
@@ -4847,7 +4847,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   var gStep = yGrMax > 200 ? 50 : yGrMax > 80 ? 20 : 10;
   ctx.fillStyle = veThemeRgba('--seri-2', 1); ctx.font = veThemeFont('body'); ctx.textAlign = 'left';
   for(var lg = Math.ceil(yGrMin / gStep) * gStep; lg <= yGrMax; lg += gStep) {
-    ctx.fillText(lg.toString(), W - padR + 6, toYG(lg) + 4);
+    ctx.fillText(veSayi(lg), W - padR + 6, toYG(lg) + 4);
   }
   ctx.save(); ctx.translate(W - 8, padT + plotH / 2); ctx.rotate(Math.PI / 2);
   ctx.font = veThemeFont('body', 600); ctx.textAlign = 'center';
@@ -4857,7 +4857,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'right';
-    ctx.fillText('\uD83D\uDD0D ' + zs.toFixed(1) + '\u00d7  Scroll: Zoom \u2014 Sa\u011f T\u0131k+S\u00fcr\u00fckle: Kayd\u0131r \u2014 \u00c7ift T\u0131k: S\u0131f\u0131rla', W - padR, padT - 8);
+    ctx.fillText('\uD83D\uDD0D ' + veSayi(zs, 1) + '\u00d7  Scroll: Zoom \u2014 Sa\u011f T\u0131k+S\u00fcr\u00fckle: Kayd\u0131r \u2014 \u00c7ift T\u0131k: S\u0131f\u0131rla', W - padR, padT - 8);
   }
   
   // Clip to plot area
@@ -4988,10 +4988,10 @@ function _ftUpshiftMouseMove(e) {
   }
 
   if(tooltip && best && bestPxDist <= _DR_SNAP_DIST) {
-    var ttHTML = '<span style="color:#fff; font-weight:600;">' + best.gear + '</span> — ' + best.speed.toFixed(1) + ' km/h<br>';
-    ttHTML += '<span style="color:#7db3e8;">Motor:</span> ' + Math.round(best.engineRPM) + ' rpm<br>';
-    ttHTML += '<span style="color:#e88e8e;">Eğim:</span> ' + best.netGrade.toFixed(2) + '%<br>';
-    ttHTML += '<span style="color:#ccc;">TE:</span> ' + best.te.toFixed(2) + ' kN  <span style="color:#ccc;">DP:</span> ' + best.dp.toFixed(2) + ' kN';
+    var ttHTML = '<span style="color:#fff; font-weight:600;">' + best.gear + '</span> — ' + veSayi(best.speed, 1) + ' km/h<br>';
+    ttHTML += '<span style="color:#7db3e8;">Motor:</span> ' + veSayi(Math.round(best.engineRPM), 0) + ' rpm<br>';
+    ttHTML += '<span style="color:#e88e8e;">Eğim:</span> %' + veSayi(best.netGrade, 2) + '<br>';
+    ttHTML += '<span style="color:#ccc;">TE:</span> ' + veSayi(best.te, 2) + ' kN  <span style="color:#ccc;">DP:</span> ' + veSayi(best.dp, 2) + ' kN';
     tooltip.innerHTML = ttHTML;
     tooltip.classList.add('visible');
     var tx = mx + 14, ty = my - 10;
@@ -6370,8 +6370,8 @@ function veCycleBoundaryOpacity() {
   veBoundaryOpacity = _veBoundaryOpacitySteps[idx];
   veUpdateBoundary();
   var btn = document.getElementById('ve-boundary-opacity-btn');
-  if(btn) btn.title = 'Sınır Opaklığı: ' + Math.round(veBoundaryOpacity * 100) + '%';
-  showToast('Sınır opaklığı: %' + Math.round(veBoundaryOpacity * 100));
+  if(btn) btn.title = 'Sınır Opaklığı: %' + veSayi(Math.round(veBoundaryOpacity * 100), 0);
+  showToast('Sınır opaklığı: %' + veSayi(Math.round(veBoundaryOpacity * 100), 0));
 }
 
 function veToggleBoundary() {

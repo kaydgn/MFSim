@@ -1751,3 +1751,39 @@ modülün her penceresi açılır, ekran ölçülür; ad sınıfına girmeyen he
 eşleşme penceresiyle birlikte söylenir) + seçenek METNİ kuralı (`<option>`
 elle yazılır, `toFixed` taşımaz) + `komuta-dogrula.test.js` → *"her tezgâh
 çıplak Node'da ölçülür"*.
+
+### Aşama 3a — Araç Performans belgeleri (2026-09-27)
+
+**Hüküm.** Altı TXT raporu (tam gaz · detay matematik × 2 · topoloji ·
+hızlanma-yavaşlama · engel aşma), ayrıntılı rapor, grafikleri ve indirilen
+HTML rapor `veSayi`'den yazar. Detay matematiğin boşluklu binliği ("13 150",
+ISO yazımı — karar sayfasında D, seçilmedi) noktalı binliğe döndü. Yüzde
+işareti önde ("%97,0"; işaretli marj "%+12,3"). Formül açıklamasındaki
+sabitin ondalığı virgül ("0,5 · ρ", "g = 9,81"); birim çevirme sabiti
+gruplanmaz ("/1000", "50000 Pa" — 9550 gibi). Liste içindeki ayraç ondalık
+virgülle çakışmasın diye `; ` ("[1.128; 2.930]", "i_tr = 1,090; eta = %97,0").
+Örneklerdeki transfer kademesi ADI da ("1.090 (hızlı)") Türkçe yazıldı; ad
+yalnız aynı veriden kurulan bir anahtar, rol orandan çözülüyor.
+
+**Gerekçe.** Aynı örnekte (isb340_tc411, segment sürüşü ve engel aşma açık)
+belgelerde 14.581 noktalı ondalık, 3.755 gruplanmamış sayı, 1.943 boşluklu
+binlik ve 26 sondaki yüzde → 0. Sayıların çoğu dört üretecin yerel `num()`
+kopyasından ve detay matematiğin `n()`/`ni()`'sinden geliyordu.
+
+**TXT hizası.** Gruplu sayı hücreyi uzatır; dolgu yetmezse sütun kayar. Ölçüt
+başlık değil tablonun kendi satırları: üst üste binen sayı aralıkları bir
+sütun, sütunda ya bütün bitişler ya bütün başlangıçlar aynı. Bu ölçüt
+7·C'den bağımsız, önceden var olan iki kusur buldu: segment tablosunun
+TOPLAM satırı bir karakter kayıktı (`pad('TOPLAM', 5)` altı harfi
+sığdırmıyordu) ve karşılaştırma tablosunda eğim "Komut"a bitişikti
+("0,0Tam gaz"). İkisi de düzeldi.
+
+**Bedel.** Kalibrasyon testi zinciri ayrı bir `vm` bağlamında, yalnız sayılan
+globallerle koşturuyor; `ft-performance.js`'in eğim yazıcısı ve kademe
+etiketleri artık `veSayi` istiyor — o bağlamda çağrılırsa gürültüyle patlar
+(sessiz değil). Bugün çağrılmıyor.
+
+**Kapı.** `sayi-dili.test.js` → aşama 3a + `sayi-belge.spec.js` (belgeler
+gerçek bir çözümden üretilir; dört yazım, TXT'de kutu ve boşluk tablosu hizası,
+KaTeX'in TeX kaynağında noktalı ondalık) + `sayi-olcu.test.js` (ölçütün
+kendisi: her kural sentetik bozuk örnekte düşüyor).

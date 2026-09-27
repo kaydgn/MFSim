@@ -33,7 +33,7 @@ eval(loadSource('trace-view.js'));
 eval(loadSource('results.js'));
 beforeEach(() => resetStubs(stubs));
 
-const SAYI = /^[-−+]?\d+([.,]\d+)?$/;
+const SAYI = /^[-−+]?(\d{1,3}(\.\d{3})+(,\d+)?|\d+([.,]\d+)?)$/;   // Türkçe gruplu da (7·C): 1.100,5
 
 function tablo(html) {
   const d = document.createElement('div');
