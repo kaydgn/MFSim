@@ -67,7 +67,7 @@ function getSolverPropertiesHTML(node) {
     html += '<label style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; align-items:center; gap:6px;">';
     html += 'Rapor zaman adımı:';
     html += '<select id="ve-solver-sdinterval-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="padding:3px 6px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-    html += '<option value="0.5"' + (sdReportInterval == 0.5 ? ' selected' : '') + '>0.5 s (varsayılan)</option>';
+    html += '<option value="0.5"' + (sdReportInterval == 0.5 ? ' selected' : '') + '>0,5 s (varsayılan)</option>';
     html += '<option value="1"' + (sdReportInterval == 1 ? ' selected' : '') + '>1 s</option>';
     html += '<option value="2"' + (sdReportInterval == 2 ? ' selected' : '') + '>2 s</option>';
     html += '<option value="5"' + (sdReportInterval == 5 ? ' selected' : '') + '>5 s</option>';
@@ -117,7 +117,7 @@ function getSolverPropertiesHTML(node) {
   // Sabit adım büyüklüğü (RK45 dışında)
   var ftDt = d.ftDt || 0.01;
   var showDtRow = method !== 'rk45';
-  html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0.05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0.02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0.01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0.005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0.001 (çok hassas)</option></select></td></tr>';
+  html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0,05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0,02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0,01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0,005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0,001 (çok hassas)</option></select></td></tr>';
 
   // RK45 tolerans ayarları
   var ftAtol = d.ftAtol !== undefined ? d.ftAtol : 1e-6;

@@ -156,6 +156,21 @@ describe('aşama 2c — bileşen pencereleri', () => {
     const s = ASAMA2C.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
     expect(s).toEqual([]);
   });
+  // Seçenek metni elle yazılır ve `toFixed` taşımaz — tarayıcı onu görmez.
+  // Çözücünün Δt listesi "0.05 (hızlı)" yazıyordu. DEĞER makine kalır.
+  test('<option> METNİ noktalı ondalık taşımaz (değeri makine biçiminde kalır)', () => {
+    const { yorumsuzJs } = require('../../tools/ikon-dili.js');
+    const re = />[^<>]*?(?<![\w.,])\d+\.\d+[^<>]*<\/option>/;
+    const bulunan = [];
+    const dosyalar = fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => 'js/' + f);
+    for (const f of dosyalar.concat(['index.html'])) {
+      const metin = f.endsWith('.js') ? yorumsuzJs(oku(f)) : oku(f);
+      metin.split('\n').forEach((l, i) => { if (re.test(l)) bulunan.push(f + ':' + (i + 1) + ' ' + l.match(re)[0]); });
+    }
+    expect(bulunan).toEqual([]);
+    expect(re.test('<option value="0.05">0.05 (hızlı)</option>')).toBe(true);    // kapı düşebiliyor
+    expect(re.test('<option value="0.05">0,05 (hızlı)</option>')).toBe(false);
+  });
 });
 
 describe('ekrandaki YAZI sayıya geri okunmaz', () => {

@@ -2472,8 +2472,8 @@ function getFeadBeltPropertiesHTML(node){
       ], 2)
     + (serbest ? veFeadDerivedLengthHTML(node) : '')
     + _feadHint('<b>Efektif boy</b> ISO 9981 boyudur — katalog adındaki sayının ta kendisi '
-        + '(8PK<b>1715</b> → 1715 mm). <b>Aşınma payı</b> ORAN olarak girilir '
-        + '(0.007 = %0.70). Konum tablosu bu üç sayıdan kurulur: Replace = L+tol+aşınma·L, '
+        + '(8PK<b>1715</b> → 1.715 mm). <b>Aşınma payı</b> ORAN olarak girilir '
+        + '(0,007 = %0,70). Konum tablosu bu üç sayıdan kurulur: Replace = L+tol+aşınma·L, '
         + 'Max = L+tol, Mean = L, Min = L−tol.'));
 
   // ── KAYIŞ TİPİNE BAĞLI ÇIKTILAR ANAHTARI ────────────────────────────────

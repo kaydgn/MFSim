@@ -1726,6 +1726,14 @@ tarandı: 311 noktalı ondalık, 246 gruplanmamış 4+ haneli sayı → 22 ve 86
 kalanların hepsi ad. `toFixed` taraması bunların yarısından azını görüyordu:
 doğrudan birleştirilen sayı ("+ preset.maxOutputSpeed +", vites formülünün
 dokuz kopyası) ve elle yazılmış özet kaynak taramasına görünmez.
+Kapının kendi sayımı: 2b yapısında 371 bulgu (araç 311 · FEAD 41 · takoz 19),
+2c'de 0.
+
+**Yüklenirken yazılan özet Node'da da yüklenir.** Takoz örnek defterinin
+özet satırları (`mount-core.js` → `MOUNT_EXAMPLES.specs`) modül yüklenirken
+kuruluyor ve komuta doğrulayıcısı dosyayı çıplak Node'da `require` ediyor —
+orada `veSayi` global değil; jest'te `setup.js` onu kurduğu için birim test
+bunu görmez. Yazıcı yanındaki `sayi.js`'ten alınır.
 
 **Ekrandaki yazı sayıya geri okunmaz.** İki okuyucu vardı: sahil testi
 sihirbazı Crr ortalamasını kendi hücresinin YAZISINDAN `parseFloat` ile
@@ -1740,4 +1748,6 @@ ayraç `; ` oldu.
 pencere kendiliğinden kapsamda) + "ekrandaki YAZI sayıya geri okunmaz"
 (kaynak kuralı + Crr'nin davranış testi) + `sayi-pencere.spec.js` (her
 modülün her penceresi açılır, ekran ölçülür; ad sınıfına girmeyen her
-eşleşme penceresiyle birlikte söylenir).
+eşleşme penceresiyle birlikte söylenir) + seçenek METNİ kuralı (`<option>`
+elle yazılır, `toFixed` taşımaz) + `komuta-dogrula.test.js` → *"her tezgâh
+çıplak Node'da ölçülür"*.

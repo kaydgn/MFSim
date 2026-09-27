@@ -9,10 +9,14 @@
  * DOĞRUDAN birleştirilen sayı ("+ preset.maxOutputSpeed +") ve elle yazılmış
  * özet metni hiçbir kaynak taramasına görünmez. Bu halka ekranı ölçer.
  *
+ * Bu tarama 2b yapısında 371 bulguyla düşüyor (araç 311 · FEAD 41 · takoz
+ * 19), 2c'de 0 — ölçüldü, MFSIM_OLCUM_HTML ile eski yapı verilerek.
+ *
  * AD OLAN SAYI KALIR ve sınıflandırılır: şanzıman modeli (Allison 3200 SP),
  * parça numarası (AMC 137963, 57RS…), ön ayar adı (Duramax 6.6L, Wabco
- * 250cc @8.5bar), formül sabiti (P × 9550 / n), tarih, bölüm numarası. Sınıfa
- * girmeyen her eşleşme düşürür ve penceresiyle birlikte adıyla söylenir.
+ * 250cc @8.5bar), formül sabiti (P × 9550 / n), standart (ISO 9981), tarih,
+ * bölüm numarası. Sınıfa girmeyen her eşleşme düşürür ve penceresiyle birlikte
+ * adıyla söylenir; muaf tutulanlar da çevresiyle basılır.
  *
  * Node'da koşamaz: pencereler gerçek veriyle ve tuvalleriyle kuruluyor.
  */
@@ -52,10 +56,11 @@ const GRUPSUZ = /(?<![\p{L}\d.,_\-])\d{4,}(?:[.,]\d+)?(?![\d\p{L}])/gu;
 const AD = [
   ['şanzıman modeli', /Allison|\bSP\b|\d{4}SP|8L90|8HP|ZF|Aile:/],
   ['parça / katalog no', /AMC|57RS|FR\d|TK0|\(A26\)|Valeo|Prestolite|Sanden|\d{9,}/],
-  ['motor ön ayarı', /Duramax|ISX|ISB|ISL|ISM|ISG|I6\b|\d\.\dL|Nm&/],
+  ['motor ön ayarı', /Duramax|ISX|ISB|ISL|ISM|ISG|I6\b|\d\.\dL|Nm&|\(\d{4} Nm\) \|/],
   ['kompresör ön ayarı', /Wabco|Knorr|bar\b/],
   ['araç adı', /BMC|\d\.\dT\b/],
   ['formül sabiti', /× 9550|× 9549,3/],
+  ['standart / kayış adı', /ISO|DIN|\dPK/],
   ['tarih', /20\d\d-\d\d/],
   ['bölüm no', /§/],
 ];
@@ -123,12 +128,15 @@ for (const [modul, M] of Object.entries(MODULLER)) {
         while ((m = re.exec(metin))) {
           const bag = metin.slice(Math.max(0, m.index - 30), m.index + m[0].length + 20).replace(/\s+/g, ' ');
           const ad = sinifla(m[0], bag);
-          if (ad) adlar[ad] = (adlar[ad] || 0) + 1;
+          if (ad) (adlar[ad] = adlar[ad] || new Set()).add(bag.trim());
           else sorun.push(`${tip}: "${m[0]}" ⟨${bag.trim()}⟩`);
         }
       }
     }
-    console.log(modul, 'taranan', taranan, 'karakter · ad olarak kalan', JSON.stringify(adlar));
+    // Muaf tutulan her eşleşme çevresiyle basılır: sınıf listesi bir kaçış
+    // kapısı olmasın, neyin ad sayıldığı koşuda okunabilsin.
+    console.log(modul, 'taranan', taranan, 'karakter · ad olarak kalan:');
+    for (const [ad, s] of Object.entries(adlar)) console.log('  ' + ad + ' (' + s.size + '): ' + [...s].join(' ‖ '));
     expect(taranan).toBeGreaterThan(5000);
     expect(sorun).toEqual([]);
   });

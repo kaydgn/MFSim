@@ -201,7 +201,7 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   // hücre ne künye satırı var; kartın sağ üst rozeti taşıyor.
   await expect(kart.locator('td[rowspan]')).toHaveCount(0);
   await expect(page.locator('.ve-fead-layout-card:has(.ve-fead-pafta) .ve-fead-kan-durum'))
-    .toHaveAttribute('title', /L [\d.]+ mm/);
+    .toHaveAttribute('title', /L [\d.,]+ mm/);   // Türkçe sayı: 1.716,2
 
   // ── 4) ÇÖZÜM ÖNİZLEMEYLE BİREBİR ────────────────────────────────────────
   const kurulan = await page.evaluate(() => {

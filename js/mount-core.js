@@ -1940,6 +1940,14 @@ var veMountCore = (function() {
   // model.components[i].at / model.mounts[i].at = [lx,ly]  (ops.) → görseldeki
   //   yerleşimi birebir eşlemek için elle yerel-piksel konum; verilmezse
   //   otomatik yerleşim (orta sıra kütleler, alt/üst sıra takozlar) uygulanır.
+  // Kartta görünen özet sayıları Türkçe yazılır (karar 7·C). Defter modül
+  // YÜKLENİRKEN kuruluyor ve dosya Node'da da require ediliyor (komuta
+  // doğrulayıcısı) — orada veSayi global değil, yanındaki dosyadan alınır.
+  const _sayi = (typeof veSayi === 'function') ? veSayi : require('./sayi.js').veSayi;
+  const _toplamKg = (ex) => _sayi(ex.components.reduce(function(s,c){ return s + (c.mass||0); }, 0), 1) + ' kg';
+  const _aralik = (z) => { const lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
+    return lo === hi ? _sayi(lo) : _sayi(lo) + ' – ' + _sayi(hi); };
+
   const MOUNT_EXAMPLES = {
     siper: {
       id: 'siper',
@@ -1950,9 +1958,9 @@ var veMountCore = (function() {
       specs: [
         ['Kütle gövdesi', String(SIPER_EXAMPLE.components.length)],
         ['Takoz', String(SIPER_EXAMPLE.mounts.length)],
-        ['Toplam kütle', SIPER_EXAMPLE.components.reduce(function(s,c){ return s + (c.mass||0); }, 0).toFixed(1) + ' kg'],
-        ['Motor torku', SIPER_EXAMPLE.torque.Te + ' N·m'],
-        ['Takoz statik (Z)', SIPER_EXAMPLE.mounts[0].kstat[2] + ' N/mm']
+        ['Toplam kütle', _toplamKg(SIPER_EXAMPLE)],
+        ['Motor torku', _sayi(SIPER_EXAMPLE.torque.Te) + ' N·m'],
+        ['Takoz statik (Z)', _sayi(SIPER_EXAMPLE.mounts[0].kstat[2]) + ' N/mm']
       ],
       // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ),
       // kullanıcının verdiği topoloji düzeniyle aynı yerleşimde yardımcı araçlar.
@@ -1982,15 +1990,14 @@ var veMountCore = (function() {
       specs: [
         ['Kütle gövdesi', String(TULGA_EXAMPLE.components.length)],
         ['Takoz', String(TULGA_EXAMPLE.mounts.length)],
-        ['Toplam kütle', TULGA_EXAMPLE.components.reduce(function(s,c){ return s + (c.mass||0); }, 0).toFixed(1) + ' kg'],
-        ['Motor torku', TULGA_EXAMPLE.torque.Te + ' N·m @ 1500 d/dk'],
-        ['Motor gücü', '156.6 kW @ 2300 d/dk'],
+        ['Toplam kütle', _toplamKg(TULGA_EXAMPLE)],
+        ['Motor torku', _sayi(TULGA_EXAMPLE.torque.Te) + ' N·m @ 1.500 d/dk'],
+        ['Motor gücü', '156,6 kW @ 2.300 d/dk'],
         // Takozlar aynı rijitlikte DEĞİL (ön/orta/arka farklı) → tek değer yerine
         // aralık göster; sabit kodlanmazsa model değişince kendiliğinden düzelir.
         ['Takoz statik (Z)', (function(){
           var z = TULGA_EXAMPLE.mounts.map(function(m){ return m.kstat[2]; });
-          var lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
-          return (lo === hi ? String(lo) : lo + ' – ' + hi) + ' N/mm';
+          return _aralik(z) + ' N/mm';
         })()]
       ],
       // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ).
@@ -2020,14 +2027,13 @@ var veMountCore = (function() {
       specs: [
         ['Kütle gövdesi', String(ASFAT_EXAMPLE.components.length)],
         ['Takoz', String(ASFAT_EXAMPLE.mounts.length)],
-        ['Toplam kütle', ASFAT_EXAMPLE.components.reduce(function(s,c){ return s + (c.mass||0); }, 0).toFixed(1) + ' kg'],
+        ['Toplam kütle', _toplamKg(ASFAT_EXAMPLE)],
         ['Rölanti · silindir', '600 d/dk · 6 → f_ateş 30 Hz'],
-        ['Sönüm oranı ζ', '0.02 (şirket kabulü)'],
+        ['Sönüm oranı ζ', '0,02 (şirket kabulü)'],
         // Ön ve arka takoz farklı → tek değer yanıltıcı olur; aralık göster.
         ['Takoz dinamik (Z)', (function(){
           var z = ASFAT_EXAMPLE.mounts.map(function(m){ return m.kdyn[2]; });
-          var lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
-          return (lo === hi ? String(lo) : lo + ' – ' + hi) + ' N/mm';
+          return _aralik(z) + ' N/mm';
         })()],
         ['Kaynak', 'BMC ASR-SR-116 · 04.08.2021']
       ],
