@@ -400,12 +400,12 @@
       "data": {
         "ftTrGears": [
           {
-            "kademe": "0.874 (hızlı)",
+            "kademe": "0,874 (hızlı)",
             "ratio": 0.874,
             "eff": 97
           },
           {
-            "kademe": "1.536 (yavaş)",
+            "kademe": "1,536 (yavaş)",
             "ratio": 1.536,
             "eff": 97
           }

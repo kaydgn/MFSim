@@ -463,7 +463,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var globalStep = 0;
 
   function recordStep(t_rec, v_rec, dist_rec, ph, segIdx) {
-    timeArr.push(parseFloat(t_rec.toFixed(4)));
+    timeArr.push(parseFloat(t_rec.toFixed(4)));   // makine: zaman ızgarasının yuvarlaması
     var v_kmh = v_rec * 3.6;
     res_speed.push(v_kmh); res_rpm.push(ph.N_engine); res_engineTorque.push(ph.T_engine);
     res_F_grade.push(ph.F_grade); res_F_rolling.push(ph.F_rolling); res_F_aero.push(ph.F_aero);

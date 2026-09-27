@@ -15,7 +15,7 @@ function veGradeDisplay(v, dec, pctPrefix) {
   if (v == null || isNaN(v)) return pctPrefix ? '%—' : '—';
   if (v >= 900) return pctPrefix ? '≥%100' : '≥100';
   if (v <= -900) return pctPrefix ? '≤−%100' : '≤−100';
-  var s = Number(v).toFixed(dec == null ? 1 : dec);
+  var s = veSayi(Number(v), dec == null ? 1 : dec);
   return pctPrefix ? '%' + s : s;
 }
 
@@ -1804,7 +1804,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     // karşılaştırmaları hep false. Sessizce maxSteps'i yakıp NaN dolu bir sonuç
     // döndürmek yerine, nerede bozulduğunu söyleyen bir hata at.
     if(!isFinite(v) || !isFinite(ph.accel)) {
-      throw new Error('Sayısal çözüm bozuldu (adım ' + step + ', t=' + t.toFixed(2) + ' s): ' +
+      throw new Error('Sayısal çözüm bozuldu (adım ' + step + ', t=' + veSayi(t, 2) + ' s): ' +
                       'hız=' + v + ', ivme=' + ph.accel + '. ' +
                       'Genellikle motor tork tablosu veya konvertör tablosundaki geçersiz/yinelenen ' +
                       'satırdan kaynaklanır — ilgili bileşenin verisini kontrol edin.');
@@ -1894,7 +1894,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       while(!accepted) {
         if(!isFinite(dt) || dt <= 0) dt = dt_min;   // NaN/0 dt'yi tabana çek
         if(++rk45Tries > 100) {
-          throw new Error('RK45 adaptif adım yakınsamadı (adım ' + step + ', t=' + t.toFixed(2) +
+          throw new Error('RK45 adaptif adım yakınsamadı (adım ' + step + ', t=' + veSayi(t, 2) +
                           ' s, dt=' + dt + '). Sabit adımlı bir yöntem (RK4) deneyin ya da ' +
                           'motor/konvertör tablolarını kontrol edin.');
         }
@@ -2365,8 +2365,8 @@ function veCalcGradeForRatio(ftData, m_kg, transferRatio, isLowGear, hasTC) {
   
   return {
     transferRatio: transferRatio,
-    label: isLowGear ? 'Transfer Kutusu: Düşük Kademe (' + transferRatio.toFixed(3) + ')' :
-                        'Transfer Kutusu: Yüksek Kademe (' + transferRatio.toFixed(3) + ')',
+    label: isLowGear ? 'Transfer Kutusu: Düşük Kademe (' + veSayi(transferRatio, 3) + ')' :
+                        'Transfer Kutusu: Yüksek Kademe (' + veSayi(transferRatio, 3) + ')',
     stallGrade: stallGrade, stallGear: ftData[stallIdx].gear,
     launchGrade: launchGrade, launchGear: ftData[stallIdx].gear,
     lowSpeedGrade: lowSpeedGrade, lowSpeedV: v_lowspd, lowSpeedGear: gearAtV(v_lowspd),
@@ -2469,7 +2469,7 @@ function veCalculateGradeability(simResult) {
   var result = {};
   var resActive = veCalcGradeForRatio(ftData, m_kg, activeRatio, activeIsLow, rs.hasTC);
   resActive.label = 'Transfer Kutusu: ' + (activeIsLow ? 'Düşük' : 'Yüksek') +
-    ' Kademe (' + activeRatio.toFixed(3) + ')';
+    ' Kademe (' + veSayi(activeRatio, 3) + ')';
 
   // Düşük-hız eğimini quasi-statik (~10 km/h oturmuş) noktadan override et (Fix A §1.3.3) —
   // transient iz o hızda motoru tam oturmamış gösterip çekişi düşük okuyor.
@@ -2533,7 +2533,7 @@ function veCalculateGradeability(simResult) {
     if(ftDataLow.length >= 2) {
       resOther = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, !activeIsLow, rs.hasTC);
       resOther.label = 'Transfer Kutusu: ' + (activeIsLow ? 'Yüksek' : 'Düşük') +
-        ' Kademe (' + lowRatio.toFixed(3) + ')';
+        ' Kademe (' + veSayi(lowRatio, 3) + ')';
       resOther.source = lowSimResult ? 'simulation' : 'scaling';
     }
   }
@@ -2600,7 +2600,7 @@ function veCalculateAcceleration(simResult) {
   var accActive = {
     transferRatio: activeRatio,
     label: 'Transfer Kutusu: ' + (activeIsLowA ? 'Düşük' : 'Yüksek') +
-      ' Kademe (' + activeRatio.toFixed(3) + ')',
+      ' Kademe (' + veSayi(activeRatio, 3) + ')',
     maxSpeed: Math.round(maxSpeed * 10) / 10,
     rows: veExtractAccelMilestones(speed, time, distance, maxSpeed)
   };
@@ -2623,7 +2623,7 @@ function veCalculateAcceleration(simResult) {
       accOther = {
         transferRatio: lowRatio,
         label: 'Transfer Kutusu: ' + (activeIsLowA ? 'Yüksek' : 'Düşük') +
-          ' Kademe (' + lowRatio.toFixed(3) + ')',
+          ' Kademe (' + veSayi(lowRatio, 3) + ')',
         maxSpeed: Math.round(lowMaxSpeed * 10) / 10,
         rows: veExtractAccelMilestones(lowSimResult.speed, lowSimResult.time, lowSimResult.distance, lowMaxSpeed),
         source: 'simulation'
@@ -2642,7 +2642,7 @@ function veCalculateAcceleration(simResult) {
       accOther = {
         transferRatio: lowRatio,
         label: 'Transfer Kutusu: ' + (activeIsLowA ? 'Yüksek' : 'Düşük') +
-          ' Kademe (' + lowRatio.toFixed(3) + ')',
+          ' Kademe (' + veSayi(lowRatio, 3) + ')',
         maxSpeed: lowMaxSpeedRound,
         rows: veExtractAccelMilestones(lowSpeed, lowTime, lowDist, lowMaxSpeedRound),
         source: 'scaling'

@@ -173,6 +173,24 @@ describe('aşama 2c — bileşen pencereleri', () => {
   });
 });
 
+// Aşama 3a: Araç Performans belgeleri — dört TXT üreteci ve detay matematik
+// (graphics.js), ayrıntılı rapor, grafikleri ve indirilen rapor (results.js),
+// eğim yazıcısı ve hesap çekirdeklerinin iletileri. Çekirdeklerdeki zaman
+// ızgarası yuvarlaması makine kalır. Belgenin kendisi sayi-belge.spec.js'te.
+const ASAMA3A = ['js/graphics.js', 'js/results.js', 'js/ft-performance.js', 'js/ft-obstacle.js',
+  'js/simulation-engine.js', 'js/numerics.js', 'js/ft-segment-drive.js'];
+
+describe('aşama 3a — Araç Performans belgeleri', () => {
+  test('işaretsiz sayı yazımı yok', () => {
+    const s = ASAMA3A.flatMap(T.sapmalar).map((x) => x.dosya + ':' + x.satir + ' ' + x.metin);
+    expect(s).toEqual([]);
+  });
+  test('eğim yazıcısı Türkçe: rapor ve TXT aynı biçimi paylaşıyor', () => {
+    const src = oku('js/ft-performance.js');
+    expect(src).toMatch(/function veGradeDisplay[\s\S]{0,400}veSayi\(/);
+  });
+});
+
 describe('ekrandaki YAZI sayıya geri okunmaz', () => {
   // Türkçe yazı "0,00650" parseFloat'ta 0, "1.000 m" parseInt'te 1 olur ve
   // hiçbir şey patlamaz. Yazıdan sayı okuyan iki yer vardı: sahil testi

@@ -47,29 +47,9 @@ const MODULLER = {
   },
 };
 
-// Noktalı ondalık: "0.5361" · "8.5" · "0.00355" (üç haneli kesir Türkçe binlikle
-// karışır: yalnız 0 ile başlayan ya da kesri 3 hane olmayan sayılır).
-const NOKTA = /(?<![\p{L}\d.,_\-])(?:0\.\d+|\d+\.\d{1,2}|\d+\.\d{4,})(?![\d.,])/gu;
-const GRUPSUZ = /(?<![\p{L}\d.,_\-])\d{4,}(?:[.,]\d+)?(?![\d\p{L}])/gu;
-
-// Ad olan sayının sınıfı — eşleşmenin 14 karakterlik çevresine bakılır.
-const AD = [
-  ['şanzıman modeli', /Allison|\bSP\b|\d{4}SP|8L90|8HP|ZF|Aile:/],
-  ['parça / katalog no', /AMC|57RS|FR\d|TK0|\(A26\)|Valeo|Prestolite|Sanden|\d{9,}/],
-  ['motor ön ayarı', /Duramax|ISX|ISB|ISL|ISM|ISG|I6\b|\d\.\dL|Nm&|\(\d{4} Nm\) \|/],
-  ['kompresör ön ayarı', /Wabco|Knorr|bar\b/],
-  ['araç adı', /BMC|\d\.\dT\b/],
-  ['formül sabiti', /× 9550|× 9549,3/],
-  ['standart / kayış adı', /ISO|DIN|\dPK/],
-  ['tarih', /20\d\d-\d\d/],
-  ['bölüm no', /§/],
-];
-const sinifla = (sayi, bag) => {
-  const i = bag.indexOf(sayi);
-  const cevre = bag.slice(Math.max(0, i - 14), i + sayi.length + 10);
-  for (const [ad, re] of AD) if (re.test(cevre)) return ad;
-  return null;
-};
+// Ölçüt tek yerde: tests/helpers/sayi-olcu.js (belge taraması da onu kullanır).
+// Ekrandaki sondaki yüzde ('97,0%') ayrı aşamada çevrilecek; burada henüz ölçülmüyor.
+const { NOKTA, GRUPSUZ, sinifla } = require('../helpers/sayi-olcu.js');
 
 for (const [modul, M] of Object.entries(MODULLER)) {
   test(`${modul}: pencerelerde noktalı ondalık ve gruplanmamış sayı YOK (adlar hariç)`, async ({ page }) => {

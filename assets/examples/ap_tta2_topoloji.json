@@ -395,12 +395,12 @@
       "data": {
         "ftTrGears": [
           {
-            "kademe": "1.054 (hızlı)",
+            "kademe": "1,054 (hızlı)",
             "ratio": 1.054,
             "eff": 97
           },
           {
-            "kademe": "2.337 (yavaş)",
+            "kademe": "2,337 (yavaş)",
             "ratio": 2.337,
             "eff": 97
           }

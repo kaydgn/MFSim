@@ -80,7 +80,7 @@ describe('veGenerateFTCalcTraceReport — smoke', () => {
   });
 
   test('adım izinde formül+sayı ikamesi var (F_aero substitution)', () => {
-    expect(txt).toMatch(/0\.5 \* rho \* Cd \* A \* v\^2/);       // aero formülü
+    expect(txt).toMatch(/0,5 \* rho \* Cd \* A \* v\^2/);       // aero formülü (Türkçe ondalık, 7·C)
     expect(txt).toMatch(/\(F_cekis - F_direnc\) \/ m_eff/);     // ivme formülü
     expect(txt).toMatch(/k1 = a\(v\)/);                          // RK4 iç adımı yazılmış
   });

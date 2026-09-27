@@ -26,14 +26,15 @@ describe('veGradeDisplay — sentinel ve normal değerler', () => {
     expect(veGradeDisplay(-999.9, 1)).toBe('≤−100');
   });
 
-  test('normal değerler ondalıkla, panel biçimi % önekiyle', () => {
-    expect(veGradeDisplay(42.34, 1)).toBe('42.3');
-    expect(veGradeDisplay(42.34, 1, true)).toBe('%42.3');
-    expect(veGradeDisplay(0, 1)).toBe('0.0');
+  // Türkçe sayı (karar 7·C): ondalık virgül, binlik nokta.
+  test('normal değerler Türkçe ondalıkla, panel biçimi % önekiyle', () => {
+    expect(veGradeDisplay(42.34, 1)).toBe('42,3');
+    expect(veGradeDisplay(42.34, 1, true)).toBe('%42,3');
+    expect(veGradeDisplay(0, 1)).toBe('0,0');
   });
 
   test('eşik: 900 altı gerçek değer sayılır', () => {
-    expect(veGradeDisplay(899.9, 1)).toBe('899.9');
+    expect(veGradeDisplay(899.9, 1)).toBe('899,9');
     expect(veGradeDisplay(900, 1)).toBe('≥100');
   });
 

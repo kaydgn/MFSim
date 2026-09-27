@@ -63,7 +63,7 @@ test('ayrıntılı rapor: sayı sütunu sağa yaslı, hücre rengi ezilmiyor', a
 
   const r = await page.evaluate(() => {
     const kok = document.getElementById('ve-report-overlay');
-    const SAYI = /^[-−+]?\d+([.,]\d+)?$/;
+    const SAYI = /^[-−+]?(\d{1,3}(\.\d{3})+(,\d+)?|\d+([.,]\d+)?)$/;   // Türkçe gruplu da (7·C): 1.100,5
     let sutun = 0, hucre = 0;
     const ters = [];
     kok.querySelectorAll('table').forEach((t) => {

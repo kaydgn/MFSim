@@ -151,9 +151,9 @@ describe('gerçek koşu — dizi sırası rolleri değiştirmiyor', () => {
   test('eğim: etiket metni de doğru kademeyi söylüyor', () => {
     [duz, ters].forEach(R => {
       expect(R.G.high.label).toContain('Yüksek Kademe');
-      expect(R.G.high.label).toContain('0.874');
+      expect(R.G.high.label).toContain('0,874');   // Türkçe ondalık (7·C)
       expect(R.G.low.label).toContain('Düşük Kademe');
-      expect(R.G.low.label).toContain('1.536');
+      expect(R.G.low.label).toContain('1,536');
     });
   });
 
