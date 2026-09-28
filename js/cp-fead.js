@@ -8647,6 +8647,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadKesitSVG: veFeadKesitSVG,
     veFeadBoyCizgileriHTML: veFeadBoyCizgileriHTML,
     veFeadKordKaynakAdi: veFeadKordKaynakAdi, veFeadHesapCapSecenekleri: veFeadHesapCapSecenekleri,
+    veFeadKayisMarkaAdi: veFeadKayisMarkaAdi, VE_FEAD_KAYIS_MARKALAR: VE_FEAD_KAYIS_MARKALAR,
     veFeadBeltCatalogCard: veFeadBeltCatalogCard,
     veFeadPickBelt: veFeadPickBelt,
     veFeadApplyLayoutCard: veFeadApplyLayoutCard,

@@ -401,3 +401,53 @@ test('kartın üstüne BIRAKILAN dosya okunur; ölçüm içe aktarma açılmaz',
   await expect(page.locator('#ve-fw-3b')).toBeHidden();
   expect(hatalar).toEqual([]);
 });
+
+// ── KABURGALI KASNAĞIN KESİTİ VE HESAP ÇAPI (6.2) ─────────────────────────────
+// Kullanıcı isteği (2026-09-28): 3B'de kaburgalı kasnak seçilince kesitin
+// değerleri kendiliğinden; kullanıcı hesaba girecek çapı oradan seçer. Kararlar:
+// seçim kayış için TEK, STEP'te varsayılan CAD eskizinin d_w'si.
+test('KESİT: eskizli dosyada krank seçilince kesit; hesap çapı düğmesi bütün kasnakları birlikte çevirir', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await feadAc(page);
+  await page.locator('.ve-fw-stp-file').setInputFiles({
+    name: 'AG00686.stpZ', mimeType: 'application/octet-stream', buffer: stpZ(O.ag00686Step({ eskiz: { hb: 1.5, hr: 1.5 } })),
+  });
+  await expect(page.locator('#ve-fw-3b-tuval')).toHaveAttribute('data-durum', 'hazir', { timeout: 30000 });
+  await page.evaluate(() => {
+    const s = veFeadWizStp();
+    s.sonuc.agac.forEach((d, i) => {
+      const t = /KRANK/.test(d.ad) ? 'fead-crank' : /KL[İI]MA/.test(d.ad) ? 'fead-ac' : /AVARA/.test(d.ad) ? 'fead-idler' : /KAYI/.test(d.ad) ? 'fead-belt' : null;
+      if (t) veFeadWizStpRol(i, t);
+    });
+  });
+  await page.locator('#ve-fw-3b-hesapla').click();
+  const yan = page.locator('#ve-fw-3b-yan');
+  const sutun = () => yan.locator('[data-ve-3b-hesapcap]').allTextContents();
+  // varsayılan CAD: kaburgalı d_b + 2·1,5 · sırt OD + 2·1,5
+  expect((await sutun()).sort()).toEqual(['130,0', '163,0', '78,0', '78,0'].sort());
+  // krank seçilince kesit
+  await page.evaluate(() => { const s = veFeadWizStp(); veFeadWiz3bSec(s.sonuc.agac.findIndex((d) => /KRANK/.test(d.ad))); });
+  const kesit = yan.locator('[data-ve-3b-kesit]');
+  await expect(kesit).toBeVisible();
+  await expect(kesit.locator('[data-ve-kesit="hesap"]')).toContainText('163,00');
+  await expect(kesit.locator('[data-ve-kesit="dw-cad"]')).toContainText('163,00');
+  await expect(kesit.locator('svg [data-ve-hesap="1"]')).toHaveCount(1);
+  // basılı düğme CSS'ten ayrışıyor (gerçek hesaplanmış zemin)
+  const zemin = await kesit.locator('[data-ve-hesapcap]').evaluateAll((l) => l.map((b) => getComputedStyle(b).backgroundColor));
+  expect(new Set(zemin).size).toBeGreaterThan(1);
+  // GERÇEK tıklama: d_b → bütün kasnaklar dış çapına
+  await kesit.locator('[data-ve-hesapcap="db"]').click();
+  expect((await sutun()).sort()).toEqual(['127,0', '160,0', '75,0', '75,0'].sort());
+  await expect(yan.locator('[data-ve-3b-kesit] [data-ve-kesit="hesap"]')).toContainText('160,00');
+  await yan.locator('[data-ve-3b-kesit] [data-ve-hesapcap="cad"]').click();
+  expect((await sutun()).sort()).toEqual(['130,0', '163,0', '78,0', '78,0'].sort());
+  // panel yatay kaymıyor (kesit tablosu 320 px'e sığıyor)
+  expect(await yan.evaluate((e) => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(1);
+  // aktarım: seçim ve ölçüler sihirbazın kayışına
+  await page.locator('#ve-fw-3b-aktar').click();
+  await expect(page.locator('#ve-fw-3b')).toBeHidden();
+  expect(await page.evaluate(() => veFeadWizState().belt)).toMatchObject({ hbCad: 1.5, hrCad: 1.5, hesapCap: 'cad' });
+  expect(hatalar).toEqual([]);
+});

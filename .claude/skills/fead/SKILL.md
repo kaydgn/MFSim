@@ -632,6 +632,16 @@ olurdu.
       `veFeadBeltFit` ile değerlendirir (numara − gereken · kolun yeri, yönüyle).
       Rol verilmezse kayışa dokunulmaz; sıra ağaç sırasıdır
       (`siraKaynagi: 'agac'`).
+    • **KAYIŞ ESKİZİ HESAP ÇAPINI VERİR** (2026-09-28, kural 39): kayış
+      biriminin kapalı eğrisi (`veStepP21Egri` — okuyucu anlam yüklemez) yay
+      yay kasnaklarla eşlenir; yay yarıçapı − OD/2 kaburgalıda h_b, sırtta
+      h_r (kullanıcının dosyasında dördü de 1,500). Tutarsızsa (> 0,01 mm)
+      yazılmaz. Kayıt `hbCad` · `hrCad`'yi yazar, seçim varsayılanı CAD
+      (kullanıcı kararı); seçim aktarımdan önce STEP oturumunda, sonra
+      sihirbazın kayışında — tek okuyucu `_fwStpHesapCap`. Hesaptan sonra 3B'de
+      seçilen kasnağın KESİTİ (ölçülen · katalog · CAD · hesap) ve seçici.
+      **Kanal tabanı yanakların uçlarına değen yüz** — iç alın/delik değil
+      (klimada 6,00 okunuyordu, gerçeği Ø130,10).
     • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
       TEK ise yazılır (kural 19'un gerekçesi). Kayıt µm'ye (açı 0,0001°)
       yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
@@ -713,7 +723,7 @@ olurdu.
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
     · sıra · künye · .stpZ) + `tests/unit/fead-step-oner.test.js` (gergi
     imzası · sekiz kuralın tuzak montajları · en küçük birim · iki aday ·
-    otomatik atama ve sönmesi) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
+    otomatik atama ve sönmesi) + `tests/unit/fead-step-eskiz.test.js` (eskiz okuma · h_b/h_r · kanal tabanı · varsayılan CAD · kesit · seçici) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
     kayış birimi · genişlik · aktarım · tek kayış · CAD'deki kayış kartı · tek
     rol listesi) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
     renk · panel · otomatik açılış · Esc · tazeleme kancası) +
