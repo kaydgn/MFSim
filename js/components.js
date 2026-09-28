@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-spin','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -236,6 +236,10 @@ function veSyncSidebarScope() {
   // geçen TEK nokta, dolayısıyla tazeleme de buraya ait.
   if(typeof veRibbonRender === 'function') veRibbonRender();
   veBantModulYaz();
+  // FEAD ARAÇLARI PENCERESİ de kapsamı görmeli (js/cp-fead-araclar.js): yalnız
+  // FEAD alt topolojisinde görünür. Modül aç/kapa bu fonksiyondan geçen TEK
+  // nokta — yukarıdaki şeridin gerekçesinin aynısı.
+  if(typeof veFeadAraclarKapsam === 'function') veFeadAraclarKapsam(scope);
 }
 
 // ÜST BANDIN MODÜL ADI — kaynağı `veSidebarScope`, yani modül aç/kapa'nın
@@ -708,10 +712,24 @@ var componentDefs = {
     noDelete: 'Kayış modelin parçası, silinmez — özelliklerini penceresinden değiştirin.',
     defaultWidth: 60, defaultHeight: 54
   },
+  // ── ÇÖZÜCÜ, RAPOR, SİHİRBAZ: KUTUSUZ ARAÇ DÜĞÜMLERİ (2026-09-28) ─────────
+  //
+  // Kullanıcı kararı (tasarım tezgâhı IV · A): *"FEAD modülündeki
+  // topoloji-bileşen mantığını kaldırmak istiyorum"* → *"A güzel. A'yı çok
+  // beğendim. Onu yapalım."* Üçü de kayışın kalıbına geçti: düğüm MODELDE
+  // durur çünkü VERİ taşır (Çözücü çevrimi · motoru · tahriki, Rapor türü ve
+  // künyesi, Sihirbaz taslağı), ama kanvasa kutu çizilmez; eylemleri ve
+  // durumu yüzen FEAD araçları penceresinde (js/cp-fead-araclar.js).
+  // Her FEAD topolojisinde TEK kopya vardır (açılış kurar, eski kayıtta
+  // eksikse açılışta geri-al tabanına eklenir — cp-fead.js →
+  // veFeadAraclarGaranti) ve SİLİNMEZ: kutusu yokken silinse kullanıcının
+  // onu geri kurabileceği bir yol kalmazdı. `maxInstances:1` örnek
+  // kurucusunun devralma yolunu açar (açılışın düğümü örneğin verisini alır).
   'fead-solver': {
     name: 'Çözücü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #8a6a12)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #a8502b)"/></svg>',
-    inputs: 0, outputs: 0, isFeadSolver: true
+    inputs: 0, outputs: 0, isFeadSolver: true, noCanvasBox: true, maxInstances: 1,
+    noDelete: 'Çözücü modelin parçası, silinmez — ayarları FEAD araçları penceresinden açılır.'
   },
   // "BAŞLANGIÇ VE ÖRNEKLER" (`fead-example`) KALDIRILDI (2026-09-09, kullanıcı
   // isteği: *"Gerek yok."*). Sunduğu iki şeyin ikisi de Başlangıç Sihirbazının
@@ -758,28 +776,13 @@ var componentDefs = {
   // kanvastaki kutu konumu ile mm koordinatı arasındaki bağı açıp kapatıyordu;
   // kasnakların kutusu kalkınca (noCanvasBox) bağlanacak bir konum kalmadı ve
   // bileşen hiçbir şey yapmayan bir rozete dönerdi.
-  // ── DÖNÜŞ YÖNÜ — kayış çevriminin CW / CCW seçimi ─────────────────────────
-  //
-  // Yön normalde bir AYAR DEĞİL: `loopSense` kasnak merkezlerinin kayış gidiş
-  // sırasındaki ayakkabı-bağı işaretinden okur, yani kabloları hangi sırada
-  // çektiysen yön odur. Bu düğüm o sırayı TERS YÜRÜTEREK yönü seçtiriyor —
-  // kabloya dokunmadan.
-  //
-  // GEOMETRİ YÖNDEN BAĞIMSIZ (ölçüldü: sarım kümesi, span kümesi ve L_eff
-  // birebir aynı), GERİLME ZİNCİRİ DEĞİL: gergi ankrajı gidiş yönünde
-  // yürüdüğü için ters yön gergiyi GERGİN tarafa düşürebiliyor ve span
-  // gerilmeleri negatife iniyor. O bir hata değil, geçersiz bir tasarımın
-  // işareti — panel sebebi adıyla yazıyor.
-  //
-  // DÜĞÜM YOKSA YÖN DOĞALDIR (kablolamadan). maxInstances:1 — iki kopya iki
-  // farklı yön isteyebilirdi.
-  'fead-spin': {
-    name: 'Dönüş Yönü',
-    // Kasnak (mavi) + çevresinde dönüş oku (amber): "bu halka hangi yöne gider".
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 A36 36 0 1 1 14 50" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="6" stroke-linecap="round"/><polygon points="5,55 14,36 23,55" fill="var(--accent-warning, #8a6a12)"/><circle cx="50" cy="50" r="20" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="50" cy="50" r="6" fill="var(--accent-primary, #a8502b)"/></svg>',
-    inputs: 0, outputs: 0, isFeadSpin: true, maxInstances: 1,
-    defaultWidth: 54, defaultHeight: 48
-  },
+  // DÖNÜŞ YÖNÜ (`fead-spin`) BİLEŞENİ KALKTI (2026-09-28, FEAD araçları
+  // penceresi). Düğüm hiçbir veri taşımıyordu — yön Kayış Tablosu'nun satır
+  // sırasından türer — ve yalnız rozetinin ve penceresinin tutacağıydı. Yön
+  // ve gergi tarafı hükmü artık pencerenin Yön bölümünde
+  // (js/cp-fead-araclar.js); kayıtlı düğümler şema 9 göçüyle silinir
+  // (fead-model.js → veFeadMigrateSpinOff). Rotayı çeviren işlem
+  // (veFeadToggleSpin) duruyor.
   // ── BAŞLANGIÇ SİHİRBAZI — adım adım model kurulumu ───────────────────────
   //
   // Kullanıcı isteği (2026-08-29): *"Bu bileşene tıkladığımızda adım adım bir
@@ -794,13 +797,16 @@ var componentDefs = {
     name: 'Başlangıç Sihirbazı',
     // Numaralı adımlar + son adımda onay işareti: "sırayla doldur, sonunda kur".
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="26" cy="26" r="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="26" cy="52" r="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="26" cy="78" r="9" fill="var(--accent-warning, #8a6a12)"/><line x1="26" y1="35" x2="26" y2="43" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="26" y1="61" x2="26" y2="69" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="44" y1="26" x2="82" y2="26" stroke="var(--text-muted, #676055)" stroke-width="5" stroke-linecap="round"/><line x1="44" y1="52" x2="74" y2="52" stroke="var(--text-muted, #676055)" stroke-width="5" stroke-linecap="round"/><path d="M46 78 l8 9 l17 -19" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    inputs: 0, outputs: 0, isFeadWizard: true, maxInstances: 1,
+    inputs: 0, outputs: 0, isFeadWizard: true, maxInstances: 1, noCanvasBox: true,
+    noDelete: 'Başlangıç Sihirbazı taslağı taşır, silinmez — FEAD araçları penceresinden açılır.',
     defaultWidth: 60, defaultHeight: 56
   },
   'fead-report': {
     name: 'Rapor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #a8502b)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #a8502b)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #a8502b)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isFeadReport: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isFeadReport: true, noCanvasBox: true, maxInstances: 1,
+    noDelete: 'Rapor modelin parçası, silinmez — FEAD araçları penceresinden indirilir.',
+    defaultWidth: 60, defaultHeight: 56
   },
 };
 

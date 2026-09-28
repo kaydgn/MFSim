@@ -8512,8 +8512,8 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-inp.ve-fw-lock:focus{ outline:none; border-color:var(--border-color); }
 
 /* DÖNÜŞ YÖNÜ — iki durumlu seçim, aynı üreticiden iki adımda basılıyor.
-   Renk hükmü TAŞIMAZ: CW ile CCW'nin ikisi de eşit meşru (kanvastaki
-   `fead-spin` rozetinin kuralının aynısı) — seçili olan vurgulanır, öteki
+   Renk hükmü TAŞIMAZ: CW ile CCW'nin ikisi de eşit meşru (FEAD araçları
+   penceresinin Yön anahtarıyla aynı kural) — seçili olan vurgulanır, öteki
    nötr kalır. */
 .ve-fw-spinbox{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .ve-fw-spin{
@@ -10188,6 +10188,139 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-fr-hukum[data-d="ok"] b{ color:var(--ink-success); }
 .ve-fr-hukum[data-d="no"]{ border-color:var(--accent-danger); }
 .ve-fr-hukum[data-d="no"] b{ color:var(--ink-danger); }
+
+/* ── FEAD ARAÇLARI PENCERESİ (js/cp-fead-araclar.js, 2026-09-28) ─────────────
+   Topolojinin araç kutularının yerine: tuval kabının sol üstündeki YUVADA
+   durur, başlığından taşınır, çift tıkla dört düğmelik bir şeride katlanır.
+   Başlık pencere ailesinin (.ve-settings-header); gövde çözücü penceresinin
+   dilinden (uygunluk satırları .ve-fp-gate, çip .ve-fr-chip — tek üretici).
+   Hesapla'nın rengi çözücü penceresindekiyle AYNI aile (--accent-warning):
+   aynı eylemin iki yüzeyde iki rengi olmasın. */
+.ve-fead-arac{
+  position:absolute; z-index:55; width:236px;
+  max-height:calc(100% - 24px); display:flex; flex-direction:column;
+  background:var(--bg-secondary); color:var(--text-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg); overflow:hidden;
+  font-size:var(--fs-body); line-height:1.4;
+}
+.ve-fead-arac.surukle{ box-shadow:var(--shadow-xl); opacity:.97; }
+.ve-fead-arac-bas{ cursor:grab; user-select:none; -webkit-user-select:none; flex:none; }
+.ve-fead-arac-bas:active{ cursor:grabbing; }
+.ve-fead-arac-ad{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Katla düğmesi pencere ailesinin kapat düğmesiyle AYNI ölçüde (22 px, çizgi
+   ikon) ama yıkıcı değil: fare altı tehlike rengi değil aksan. */
+.ve-fead-arac-katla{
+  width:22px; height:22px; flex:none; padding:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid transparent; border-radius:var(--radius-sm);
+  background:transparent; color:var(--text-muted); font-size:var(--fs-md);
+}
+.ve-fead-arac-katla:hover{ border-color:var(--accent-primary); background:var(--bg-input); color:var(--ink-accent); }
+.ve-fead-arac-katla:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fead-arac-govde{ overflow-y:auto; min-height:0; }
+.ve-fead-arac-bol{ padding:9px 12px 10px; border-bottom:1px solid var(--border-light); }
+.ve-fead-arac-bol:last-child{ border-bottom:none; }
+.ve-fead-arac-bol h4{
+  display:flex; align-items:center; justify-content:space-between; gap:6px;
+  margin:0 0 7px; font-size:var(--fs-micro); font-weight:700;
+  letter-spacing:var(--tracking-wide); text-transform:uppercase; color:var(--text-muted);
+}
+.ve-fead-arac-bol h4 .ve-fr-chip{ text-transform:none; letter-spacing:0; }
+.ve-fead-arac-kunye{
+  display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+  margin:0 0 8px; color:var(--text-secondary); overflow-wrap:anywhere;
+}
+.ve-fead-arac-kunye .ve-fead-arac-bag{ margin-left:-3px; text-align:left; }
+.ve-fead-arac-kunye b{ color:var(--text-heading); font-weight:600; }
+.ve-fead-arac-sat{ display:flex; align-items:center; gap:6px; }
+.ve-fead-arac-sat .bos{ flex:1; }
+.ve-fead-arac-btn{
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  padding:5px 10px; border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  background:var(--bg-input); color:var(--text-primary); font:inherit; font-weight:600; white-space:nowrap;
+}
+.ve-fead-arac-btn:hover{ border-color:var(--accent-primary); color:var(--ink-accent); }
+.ve-fead-arac-btn.birincil{ border-color:var(--accent-warning); background:var(--accent-warning); color:var(--on-warning); }
+.ve-fead-arac-btn.birincil:hover{ background:var(--ink-warning); border-color:var(--ink-warning); color:var(--on-warning); }
+.ve-fead-arac-btn[aria-disabled="true"]{
+  background:var(--bg-tertiary); border-color:var(--border-color); color:var(--text-muted); cursor:not-allowed;
+}
+.ve-fead-arac-btn:focus-visible,.ve-fead-arac-bag:focus-visible,
+.ve-fead-arac-seg button:focus-visible,.ve-fead-arac-ray-btn:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+/* Bağlantı: dinlenmede ZEMİNSİZ metin (düğme dolu, bağlantı boş — kural 14). */
+.ve-fead-arac-bag{
+  display:inline-flex; align-items:center; gap:4px; cursor:pointer; padding:1px 3px;
+  border:0; border-radius:var(--radius-sm); background:transparent;
+  color:var(--ink-accent); font:inherit; font-weight:600;
+}
+.ve-fead-arac-bag:hover{ background:var(--accent-tint-8); text-decoration:underline; }
+.ve-fead-arac-not{ margin:7px 0 0; font-size:var(--fs-micro); color:var(--text-muted); }
+.ve-fead-arac-alt{ margin-top:6px; }
+.ve-fead-arac-kpi{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:9px; }
+.ve-fead-arac-kpi > div{
+  min-width:0; padding:5px 7px; border:1px solid var(--border-color);
+  border-radius:var(--radius-sm); background:var(--bg-tertiary);
+}
+/* Etiket KESİLMEZ, sarar: kesilen etiket ("Kayma emniyeti …") okunmayan
+   bir sayı demekti. */
+.ve-fead-arac-kpi span{ display:block; font-size:var(--fs-micro); line-height:1.3; color:var(--text-muted); }
+.ve-fead-arac-kpi b{ font-size:var(--fs-md); font-weight:700; color:var(--text-heading); font-variant-numeric:tabular-nums; }
+.ve-fead-arac-kpi b i{ font-style:normal; font-weight:400; font-size:var(--fs-micro); color:var(--text-muted); margin-left:2px; }
+.ve-fead-arac-kpi > div[data-d="ok"] b{ color:var(--ink-success); }
+.ve-fead-arac-kpi > div[data-d="warn"] b{ color:var(--ink-warning); }
+.ve-fead-arac-kpi > div[data-d="no"] b{ color:var(--ink-danger); }
+/* BAYAT sonuç GİZLENMEZ (kural 10), soluk durur — çip bayatlığı yanında söylüyor. */
+.ve-fead-arac-kpi.bayat > div{ opacity:.6; }
+.ve-fead-arac-kapi{ margin-top:10px; }
+.ve-fead-arac-kapi .ve-fp-sect{ margin-bottom:4px; }
+.ve-fead-arac-seg{
+  display:inline-flex; border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  overflow:hidden; background:var(--bg-input);
+}
+.ve-fead-arac-seg button{
+  display:inline-flex; align-items:center; gap:4px; cursor:pointer; padding:4px 9px;
+  border:0; background:transparent; color:var(--text-secondary); font:inherit;
+}
+.ve-fead-arac-seg button + button{ border-left:1px solid var(--border-color); }
+.ve-fead-arac-seg button:hover{ background:var(--accent-tint-8); color:var(--ink-accent); }
+.ve-fead-arac-seg button[aria-checked="true"]{ background:var(--accent-tint-15); color:var(--ink-accent); font-weight:600; }
+.ve-fead-arac-seg button[aria-disabled="true"]{ color:var(--text-muted); cursor:not-allowed; background:transparent; }
+.ve-fead-arac-huk{ display:flex; align-items:flex-start; gap:6px; margin:8px 0 0; font-size:var(--fs-micro); line-height:1.45; }
+.ve-fead-arac-huk[data-d="ok"]{ color:var(--ink-success); }
+.ve-fead-arac-huk[data-d="no"]{ color:var(--ink-danger); }
+.ve-fead-arac-huk b{ font-weight:700; }
+/* KATLI HÂL: aynı pencerenin dar hâli — başlık, durum noktası, dört eylem. */
+.ve-fead-arac-ray{ display:none; flex-direction:column; align-items:center; gap:4px; padding:6px 0 8px; }
+.ve-fead-arac.katli{ width:44px; }
+.ve-fead-arac.katli .ve-fead-arac-govde,
+.ve-fead-arac.katli .ve-fead-arac-bas > span{ display:none; }
+.ve-fead-arac.katli .ve-fead-arac-bas{ justify-content:center; padding:1px 0; }
+.ve-fead-arac.katli .ve-fead-arac-ray{ display:flex; }
+.ve-fead-arac-ray-btn{
+  width:30px; height:30px; display:grid; place-items:center; cursor:pointer; padding:0;
+  border:1px solid transparent; border-radius:var(--radius-sm);
+  background:transparent; color:var(--text-secondary); font-size:var(--fs-md);
+}
+.ve-fead-arac-ray-btn:hover{ background:var(--accent-tint-8); color:var(--ink-accent); }
+.ve-fead-arac-ray-btn.birincil{ background:var(--accent-warning); color:var(--on-warning); }
+.ve-fead-arac-ray-btn.birincil:hover{ background:var(--ink-warning); }
+.ve-fead-arac-ray-btn[aria-disabled="true"]{ opacity:.45; cursor:not-allowed; }
+.ve-fead-arac-nokta{ width:8px; height:8px; margin:2px 0 4px; border-radius:50%; background:var(--text-muted); }
+.ve-fead-arac-nokta[data-d="ok"]{ background:var(--accent-success); }
+.ve-fead-arac-nokta[data-d="warn"]{ background:var(--accent-warning); }
+.ve-fead-arac-nokta[data-d="no"]{ background:var(--accent-danger); }
+/* YUVA — sürüklerken belirir; pencere yaklaşınca dolar, bırakınca yapışır. */
+.ve-fead-arac-yuva{
+  position:absolute; z-index:54; pointer-events:none; opacity:0;
+  border:2px dashed var(--accent-primary); border-radius:var(--radius-lg);
+  background:var(--accent-tint-8); transition:opacity .15s ease, background-color .15s ease;
+}
+.ve-fead-arac-yuva.goster{ opacity:.55; }
+.ve-fead-arac-yuva.yakin{ opacity:1; background:var(--accent-tint-15); }
+@media (prefers-reduced-motion: reduce){ .ve-fead-arac-yuva{ transition:none; } }
+/* Kılavuz sahnesi: aynı pencere, AKIŞTA — tuvalde mutlak konumlu. */
+.ve-fead-arac.ve-fead-arac-sahne{ position:relative; z-index:auto; max-height:none; }
 
 </style>
 

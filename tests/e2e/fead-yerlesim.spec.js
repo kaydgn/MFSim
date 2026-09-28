@@ -7,8 +7,8 @@
  *
  * İKİ YOL VAR ve ikisi de ölçülüyor:
  *
- *   1) OLAĞAN — `veFeadArrangeByCoords` koşuyor (kanvaslar yan yana,
- *      künyeler solda). Bu yol Node'da da ölçülebiliyor.
+ *   1) OLAĞAN — `veFeadArrangeByCoords` koşuyor (kanvaslar yan yana; araçların
+ *      kutusu yok — FEAD araçları penceresi). Bu yol Node'da da ölçülebiliyor.
  *
  *   2) YEDEK — kurucunun kendi ilk karesi. Yerleştirici çağrısı `try/catch`
  *      ile sarılı, yani o yol bir kez patlarsa GEÇERLİ KALAN sıra budur ve
@@ -73,9 +73,10 @@ function kapilar(r) {
   expect(r.kanvas).toHaveLength(2);
   expect(r.kanvas[0].y).toBe(r.kanvas[1].y);
   expect(r.kanvas[1].x).toBeGreaterThanOrEqual(r.kanvas[0].x + r.kanvas[0].w);
-  // KÜNYELER SOLDA — kanvas sırasının solunda, ona değmeden. (Tablo
-  // 2026-09-23'te kanvastan indi — Çizim Masası; üst sırayı artık o tutmuyor.)
-  expect(r.sol.length).toBeGreaterThan(0);
+  // KÜNYE YOK: araçların kutusu 2026-09-28'de kalktı (FEAD araçları
+  // penceresi) — tuvalde yalnız iki kanvas. Sol şerit bir gün dolarsa kural
+  // yine geçerli: kanvas sırasının solunda, ona değmeden.
+  expect(r.sol).toEqual([]);
   r.sol.forEach((a) => expect(a.x + a.w).toBeLessThanOrEqual(r.kanvas[0].x));
   // HİÇBİR KART ÇAKIŞMIYOR.
   expect(r.cakisma).toBe(0);
@@ -84,7 +85,7 @@ function kapilar(r) {
   expect(r.kutu.w).toBeGreaterThan(r.kutu.h);
 }
 
-test('örnek yüklenince: kanvaslar YAN YANA, künyeler solda', async ({ page }) => {
+test('örnek yüklenince: kanvaslar YAN YANA, tuvalde başka kutu yok', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await feadOrnek(page, false);

@@ -2618,10 +2618,9 @@ function veFeadExampleNodes(key){
   // veFeadReportKind alanı olmayan düğümü 'detailed' sayar, yani örnek
   // varsayılan rapor türüyle gelir (bkz. cp-fead-report.js).
   //
-  // SIRA ÖNEMLİ: veFeadArrangeByCoords'un sol şeridi araç düğümlerini `nodes`
-  // dizisi sırasına göre diziyor ve bu dizi buradan besleniyor. Kayış
-  // Özellikleri → Çözücü → Rapor sırası istenen sıradır; rapor solver'dan önce
-  // push edilseydi şeritte de onun üstünde çıkardı.
+  // Sıra bugün yerleşimi ETKİLEMEZ: araç düğümlerinin kutusu yok (2026-09-28,
+  // FEAD araçları penceresi — js/cp-fead-araclar.js); şeritte yalnız Kayış
+  // Yolu kartları diziliyor.
   nodesOut.push({ id:'ex-report',  type:'fead-report',  data:{} });
   // KAYIŞ SIRASI İNDİSTE, TELDE DEĞİL (2026-09-09). `ex.route` Gates TABLO
   // sırasıdır (rapordaki gibi durur; testler onu raporla satır satır
@@ -3217,6 +3216,30 @@ function veFeadMigrateTableOff(state){
   return n;
 }
 
+// ── ŞEMA 8 → 9: DÖNÜŞ YÖNÜ BİLEŞENİ KALKTI ──────────────────────────────────
+//
+// Kullanıcı kararı (2026-09-28, tasarım tezgâhı IV · A: *"A'yı çok beğendim.
+// Onu yapalım."*): FEAD araçları topolojide kutu olmaktan çıktı, yüzen
+// FEAD araçları penceresine geçti (js/cp-fead-araclar.js). Çözücü, Rapor ve
+// Sihirbaz VERİ taşıdığı için düğüm olarak kalır (kutusuz); Dönüş Yönü
+// düğümü HİÇBİR ŞEY taşımıyordu — yön tablo sırasından türer, düğüm yalnız
+// rozetinin ve penceresinin tutacağıydı. Yön artık pencerenin Yön bölümünde.
+// Göç olmasaydı kayıtlı projede tanımsız tipli bir düğüm kalırdı (ad yok,
+// panel yok); bağlantısı da yoktu (0/0 port).
+function veFeadMigrateSpinOff(state){
+  if(!state || !Array.isArray(state.nodes)) return 0;
+  var sil = {};
+  state.nodes.forEach(function(x){ if(x && x.type === 'fead-spin') sil[x.id] = true; });
+  var n = Object.keys(sil).length;
+  if(!n) return 0;
+  state.nodes = state.nodes.filter(function(x){ return !(x && sil[x.id]); });
+  if(Array.isArray(state.connections))
+    state.connections = state.connections.filter(function(c){
+      return !(c && (sil[c.from] || sil[c.to]));
+    });
+  return n;
+}
+
 // ── GERGİ GEVŞEK SPANDA MI? ────────────────────────────────────────────────
 //
 // Çekirdek ankrajı gergiye yazıyor (`spanTensions`: T[gergi] = designTensionN)
@@ -3558,7 +3581,7 @@ function veFeadBuildSystem(nodeList, opt){
   // Kayışın kutusu ve palet satırı yok (2026-09-26); düğümü açılış yüzeyi ya
   // da sihirbaz kurar. Tavsiye kullanıcının YAPABİLECEĞİ şeyi söyler.
   if(!beltNode) out.errors.push('Kayış tanımı yok — modeli Başlangıç Sihirbazı ile kurun; kayışı o ekler.');
-  if(!solvNode) out.warnings.push('Çözücü bileşeni yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
+  if(!solvNode) out.warnings.push('Çözücü düğümü yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
 
   // ── GERGİ KRANKIN ÇIKIŞINDA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ──────────
   //
@@ -4940,6 +4963,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMigrateRunCard: veFeadMigrateRunCard,
     veFeadMigrateRunToLayout: veFeadMigrateRunToLayout,
     veFeadMigrateTableOff: veFeadMigrateTableOff,
+    veFeadMigrateSpinOff: veFeadMigrateSpinOff,
     veFeadSpinLabel: veFeadSpinLabel,
     _feadPlaneName: _feadPlaneName,
     veFeadTensionerSide: veFeadTensionerSide,

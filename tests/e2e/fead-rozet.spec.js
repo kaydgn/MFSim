@@ -15,13 +15,15 @@
  * CI'da görünmedi.
  *
  * ── NEDEN SİLİNMEDİ ────────────────────────────────────────────────────────
- * Kalan iki test canlı yüzeyleri ölçüyor ve BAŞKA HİÇBİR E2E onlara bakmıyor:
+ * Kalan iki test canlı yüzeyleri ölçüyor:
  *   • kayış boyu kipi anahtarı (SABİT / SERBEST) ve KİLİTLİ hâli — 2026-09-26'dan
  *     beri Kayış Tablosu'nun (Pafta) başlığında; kayışın kutusu kalktı
- *   • dönüş yönü rozeti — tıklanınca kayış sırasını gerçekten çeviriyor mu
- * İkisi de yalnız gerçek tarayıcıda ölçülebilir: tıklama kanvas düğümünün
- * `mousedown`ıyla yarışıyor ve pafta bir kare sonra yeniden kuruluyor. Node
- * tarafı `cp-fead.test.js` ve `fead-spin.test.js`'te.
+ *   • yön anahtarı — 2026-09-28'den beri FEAD araçları penceresinin Yön
+ *     bölümünde (Dönüş Yönü kutusu ve rozeti kalktı); tıklanınca kayış
+ *     sırasını gerçekten çeviriyor mu, geometriyi çevirmiyor mu
+ * İkisi de yalnız gerçek tarayıcıda ölçülebilir: pafta bir kare sonra yeniden
+ * kuruluyor ve pencere çözümle birlikte tazeleniyor. Node tarafı
+ * `cp-fead.test.js`, `fead-spin.test.js` ve `fead-araclar.test.js`'te.
  *
  * ── NE DEĞİŞTİ (yön çevirme testinde) ──────────────────────────────────────
  * Eski test yönün taşıyıcısı olarak KABLOLARI ve gidiş oklarını ölçüyordu.
@@ -78,23 +80,6 @@ async function openFeadWithExample(page) {
   await page.waitForTimeout(300);
 }
 
-// Düğümü kanvasın açık ortasına taşı: rozet sidebar'ın ya da bir kartın
-// altında kalırsa GERÇEK fare olayı oraya gitmez ve test tıklamayı hiç sınamaz.
-async function ortayaTasi(page, id) {
-  await page.evaluate((nid) => {
-    const n = window.nodes.find((x) => x.id === nid);
-    const c = document.getElementById('ve-canvas').getBoundingClientRect();
-    const k = (typeof canvasZoom !== 'undefined' ? canvasZoom : 1);
-    const off = (typeof canvasOffset !== 'undefined') ? canvasOffset : { x: 0, y: 0 };
-    n.x = (c.width * 0.55 - off.x) / k;
-    n.y = (c.height * 0.5 - off.y) / k;
-    const el = document.getElementById(nid);
-    el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
-    if (typeof updateAllConnections === 'function') updateAllConnections();
-  }, id);
-  await page.waitForTimeout(200);
-}
-
 test.describe('FEAD kanvas rozetleri', () => {
   // ── KAYIŞ BOYU KİPİ ANAHTARI — PAFTA'NIN BAŞLIĞINDA ─────────────────────
   //
@@ -141,26 +126,29 @@ test.describe('FEAD kanvas rozetleri', () => {
     }, beltId)).toEqual({ kip: undefined, turetildi: true });
   });
 
-  // ── DÖNÜŞ YÖNÜ ROZETİ ────────────────────────────────────────────────────
+  // ── YÖN ANAHTARI (FEAD araçları penceresi) ──────────────────────────────
   //
-  // Rozet bir BAYRAK YAZMIYOR, kayış SIRASINI çeviriyor (`beltIndex`). Bu
+  // Anahtar bir BAYRAK YAZMIYOR, kayış SIRASINI çeviriyor (`beltIndex`). Bu
   // ayrımın bedeli ölçülmüş: yön bir alana yazılsaydı sıra ile bayrak
-  // ayrışabilir ve kart bayrağı, çekirdek sırayı okurdu.
+  // ayrışabilir ve kart bayrağı, çekirdek sırayı okurdu. Eskiden Dönüş Yönü
+  // kutusunun rozetiydi; kutu 2026-09-28'de kalktı (tasarım A), anahtar FEAD
+  // araçları penceresinin Yön bölümünde. Ölçüt gevşemedi, taşıyıcısı değişti.
   //
   // ÖLÇÜLEN ÜÇ ŞEY AYRI AYRI GEREKLİ:
-  //   1. rozetin metni döndü            → kullanıcı ne gördüğünü biliyor
+  //   1. seçili yönün metni döndü        → kullanıcı ne gördüğünü biliyor
   //   2. `beltIndex` sırası ters yürüdü → yönün gerçek taşıyıcısı
   //   3. `loop` ve L_eff KIL PAYI OYNAMADI → geometri yönden bağımsız
   // Üçüncüsü olmadan ilk ikisi "bir şeyler değişti" demekten ibaret kalırdı.
-  test('dönüş yönü rozeti kayış SIRASINI çeviriyor, geometriyi çevirmiyor',
+  test('yön anahtarı kayış SIRASINI çeviriyor, geometriyi çevirmiyor',
     async ({ page }) => {
       await bootApp(page);
       await openFeadWithExample(page);
 
-      const spinId = await page.evaluate(() => createNode('fead-spin', 0, 0).id);
-      await ortayaTasi(page, spinId);
-
-      const rz = page.locator('#' + spinId + ' .ve-fead-badge');
+      // Dönüş Yönü tipi yok — kutusu kurulamaz.
+      expect(await page.evaluate(() => !!componentDefs['fead-spin'])).toBe(false);
+      const yon = page.locator('#ve-fead-araclar .ve-fead-arac-govde [data-bol="yon"]');
+      const rz = yon.locator('[role="radio"][aria-checked="true"]');
+      const oteki = () => yon.locator('[role="radio"][aria-checked="false"]').click();
       // BEKLENEN YÖN CANLI MODELDEN, METİN ETİKET ÜRETİCİSİNDEN. Sabit
       // yazılsaydı kapı, ölçtüğü ilişkiyi değil bir yön tercihini savunurdu.
       const et = await page.evaluate(() => {
@@ -208,7 +196,7 @@ test.describe('FEAD kanvas rozetleri', () => {
       expect(once.L).toBeGreaterThan(1000);
       expect(once.anim).not.toBeNull();
 
-      await rz.click();
+      await oteki();
       await expect(rz).toHaveText(et.tersi);
       await page.waitForTimeout(300);
       const sonra = await oku();
@@ -231,8 +219,12 @@ test.describe('FEAD kanvas rozetleri', () => {
       expect(sonra.anim.loop).toBeCloseTo(once.anim.loop, 3);
       expect(sonra.L).toBeCloseTo(once.L, 3);
 
-      // İkinci tık başa döndürür.
+      // Öteki seçeneğe ikinci tık başa döndürür; SEÇİLİ olana basmak hiçbir
+      // şey yapmaz (iki durumlu anahtar).
       await rz.click();
+      await page.waitForTimeout(200);
+      await expect(rz).toHaveText(et.tersi);
+      await oteki();
       await expect(rz).toHaveText(et.bas);
       await page.waitForTimeout(300);
       expect((await oku()).sira).toBe(once.sira);

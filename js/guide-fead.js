@@ -343,21 +343,32 @@ function _gfSahnePanel(fn, altyazi, coz){
     var tip = { getFeadTensionerPropertiesHTML: 'fead-tensioner',
                 getFeadBeltPropertiesHTML: 'fead-belt',
                 getFeadSolverPropertiesHTML: 'fead-solver',
-                getFeadReportPropertiesHTML: 'fead-report',
-                getFeadSpinPropertiesHTML: 'fead-spin' }[fn];
+                getFeadReportPropertiesHTML: 'fead-report' }[fn];
     var n = null;
     O.pack.nodes.forEach(function(x){ if(x.type === tip && !n) n = x; });
-    if(!n && tip === 'fead-spin') n = { id: 'gk-spin', type: 'fead-spin', data: {} };
     return n ? window[fn](n) : '';
   }, coz);
   return html ? veGuideScene(html, altyazi) : '';
 }
 
-function _gfSahneSpin(){
-  return _gfSahnePanel('getFeadSpinPropertiesHTML',
-    'Dönüş Yönü penceresi, iki kategoride: <b>Yön</b> (çevrimin dönüşü ve nereden türediği) '
-    + 've <b>Etkisi</b> (yön değişince neyin değişip neyin değişmediği). <b>Yönü çevir</b> sağ '
-    + 'sütunda; üstündeki satır gerginin gevşek tarafta olup olmadığının hükmünü taşır.');
+// FEAD ARAÇLARI PENCERESİ — programın kendi üreticisi (`veFeadAraclarHTML`),
+// ÇÖZÜLMÜŞ örnekte: öğretici olan hâl, özet kartlarının ve gergi tarafı
+// hükmünün dolu olduğu hâl. Pencere tuvalde mutlak konumlu; sahnede akışta
+// durması `ve-fead-arac-sahne` sınıfının işi (css/styles.css). Dönüş Yönü
+// penceresinin sahnesi bunun yerine geçti: yön artık bu pencerenin bölümü.
+function _gfSahneAraclar(){
+  var html = _gfSahneHTML(function(){
+    if(typeof veFeadAraclarHTML !== 'function' || typeof veFeadAraclarDurum !== 'function') return '';
+    return '<section class="ve-fead-arac ve-fead-arac-sahne">'
+      + veFeadAraclarHTML(veFeadAraclarDurum()) + '</section>';
+  }, true);
+  if(!html) return '';
+  return veGuideScene(html,
+    '<b>FEAD araçları</b> penceresi, dört bölüm: <b>Model</b> (künye · Sihirbaz), '
+    + '<b>Çözüm</b> (durum · Hesapla · Ayarlar · özet kartları · uygunluk), <b>Rapor</b> '
+    + '(tür · İndir · Künye) ve <b>Yön</b> (CW | CCW · gergi tarafı hükmü). Tuvalin sol '
+    + 'üstündeki yuvada durur; başlığından taşınır, çift tıkla dar bir şeride katlanır.',
+    (typeof VE_FEAD_ARAC_EN === 'number' ? VE_FEAD_ARAC_EN : 236) + 26);
 }
 
 function _gfSahneGergiMerkez(){
@@ -473,7 +484,7 @@ var VE_GUIDE_FEAD_SECTIONS = [
   ['g2',  '2',    'Modülün haritası'],
   ['g3',  '3',    'Modüle girmek'],
   ['g4',  '4',    'Kasnakları girmek — Çizim ve Kayış Tablosu'],
-  ['g5',  '5',    'Kayış sırası ve Dönüş Yönü'],
+  ['g5',  '5',    'Kayış sırası ve dönüş yönü'],
   ['g6',  '6',    'Kasnak künyelerini girmek'],
   ['g7',  '7',    'Otomatik gergiyi tanımlamak'],
   ['g8',  '8',    'Kayış künyesi ve katalog'],
@@ -554,18 +565,21 @@ function _gfSec2(){
     ['Paneller', 'Çizimdeki kasnağa ya da tablodaki <strong>ada tıklayınca</strong> açılan '
       + 'özellik pencereleri. Tablonun taşımadığı her şey (temas tarafı, güç eğrisi, gergi '
       + 'künyesi, kayış, çözücü) buradan girilir.', 'Bölüm 6–9'],
-    ['Tuval', 'Yalnız <strong>araç kartlarını</strong> taşır: Kayış Yolu kartları, Kayış '
-      + 'Özellikleri, Çözücü, Rapor, Dönüş Yönü ve sihirbaz. Kasnaklar burada kutu olarak '
-      + '<strong>görünmez</strong> — modelde düğüm olarak dururlar ve çizimin içinde '
-      + 'görünürler.', 'Bölüm 3.4'],
+    ['<strong>FEAD araçları</strong>', 'Tuvalin sol üstündeki pencere: modeli kurmak '
+      + '(<strong>Sihirbaz</strong>), çözmek (<strong>Hesapla</strong> · <strong>Ayarlar</strong>), '
+      + 'raporu indirmek ve çevrimin <strong>yönünü</strong> çevirmek. Tuvalde bunların kutusu '
+      + '<strong>yoktur</strong> — tuvalde yalnız Kayış Yolu kartları durur; kasnaklar da, '
+      + 'kayış da, araçlar da modelde düğüm olarak yaşar.', 'Bölüm 2, 5.2, 10 ve 12'],
     ['Rapor', 'Tek dosyalık, çevrimdışı açılan HTML belge. İki tür: Detaylı ve Özet.',
       'Bölüm 12']
   ], ['Yüzey', 'Ne taşır', 'Kılavuzda']);
+  h += _gfSahneAraclar();
   h += _gfNot('Kasnakların kutusu neden yok',
       'Bir dönem kasnaklar da kanvasta kutuydu ve aralarına kayış teli çekiliyordu. Bugün '
     + 'değil: kasnak sırası bir <em>graf</em> değil bir <strong>liste</strong> ve o liste '
     + 'Kayış Tablosu’nun satır sırasıdır. Konum çizimde sürüklenerek ya da tabloda sayıyla '
-    + 'girilir; tuval de böylece yalnız araç kartlarını taşıyan bir çalışma tezgâhına dönüşür. '
+    + 'girilir; tuval de böylece yalnız Kayış Yolu kartlarını taşıyan bir çalışma tezgâhına '
+    + 'dönüşür, araçlar kenardaki pencerede durur. '
     + 'Elinizdeki tedarikçi bilgi sayfası zaten bir <em>tablodur</em> — program artık onu '
     + 'satır satır kopyalayabildiğiniz bir yüzey veriyor.');
   h += '<h3>2.1 Renk dili — mavi girdi, amber türeyen</h3>';
@@ -622,24 +636,24 @@ function _gfSec3(){
       + 'kullanın. Çıkarken modeliniz alt-sistem kutusunun içine kaydedilir.'
   ]);
   h += '<p><strong>Boş bir FEAD modülü sizi Başlangıç Sihirbazı ile karşılar</strong> — '
-    + 'pencere kendiliğinden açılır. Kapatırsanız tuvalde iki kart kalır: '
-    + '<strong>Başlangıç Sihirbazı</strong> (yeniden açmak için) ve boş bir '
-    + '<strong>Kayış Yolu</strong> kartı — çiziminde <em>Sihirbazla kur</em> düğmesi, altında '
-    + 'boş Kayış Tablosu ve onun <em>＋ Kasnak ekle</em> listesi durur. Hangi yolu seçerseniz '
+    + 'pencere kendiliğinden açılır. Kapatırsanız tuvalde boş bir <strong>Kayış Yolu</strong> '
+    + 'kartı kalır — çiziminde <em>Sihirbazla kur</em> düğmesi, altında boş Kayış Tablosu ve '
+    + 'onun <em>＋ Kasnak ekle</em> listesi durur — ve sol üstte <strong>FEAD araçları</strong> '
+    + 'penceresi (sihirbazı yeniden açmak için <strong>Sihirbaz</strong>). Hangi yolu seçerseniz '
     + 'seçin kasnaklar sonunda <strong>o kartta</strong> görünür. Buradan üç yol ayrılır.</p>';
   h += _gfNot('Sihirbaz yalnız İLK girişte açılır',
       'Kurulmuş bir modele geri döndüğünüzde pencere <strong>açılmaz</strong>; her girişte '
     + 'kapatılması gereken bir karşılama, karşılama olmaktan çıkıp engele dönerdi. '
-    + 'İstediğiniz zaman <strong>Başlangıç Sihirbazı</strong> kartına çift tıklayarak '
-    + 'açabilirsiniz.');
+    + 'İstediğiniz zaman <strong>FEAD araçları</strong> penceresindeki <strong>Sihirbaz</strong> '
+    + 'düğmesiyle açabilirsiniz.');
 
   h += '<h3>3.2 Yol A — Başlangıç Sihirbazı <span class="chip">önerilen</span></h3>';
   h += '<p>Sihirbaz, bir modeli kurmak için gereken bütün girdileri <strong>doğru sırayla</strong> '
     + 'sorar ve her adımda modeli canlı doğrular. Boş bir iç topolojide “önce ne koyayım” '
     + 'sorusunu ortadan kaldırır.</p>';
   h += _gfAdimlar([
-    'Modüle ilk girişte sihirbaz zaten açıktır; kapattıysanız '
-      + '<strong>Başlangıç Sihirbazı</strong> kartına çift tıklayın.',
+    'Modüle ilk girişte sihirbaz zaten açıktır; kapattıysanız <strong>FEAD araçları</strong> '
+      + 'penceresinde <strong>Sihirbaz</strong>’a basın.',
     'Adımları sırayla doldurun. Her adımın rozeti o adımda kalan eksik/uyarı sayısını '
       + 'gösterir, yani nereye dönmeniz gerektiğini okursunuz.',
     'Son adımda canlı çözümü ve kayış yolu şemasını görün, sonra <strong>modeli kurun</strong> '
@@ -711,8 +725,11 @@ function _gfSec3(){
       + '(ya da Kayış Tablosu başlığındaki kayış künyesine)',
       'Kayış Özellikleri penceresi — profil · marka · boy · katalog. Modelde tek kayış '
       + 'vardır; FEAD’e girince kendiliğinden kurulur ve silinmez'],
-    ['<strong>Araç kartları</strong>', 'Sol palet, <em>FEAD araçları</em> kategorisi',
-      'Kayış Yolu · Çözücü · Rapor · Başlangıç Sihirbazı · Dönüş Yönü']
+    ['<strong>İkinci bir çizim</strong>', 'Sol palet, <em>FEAD araçları</em> kategorisi',
+      'Kayış Yolu — aynı modelin başka katmanlarla ikinci resmi'],
+    ['<strong>Araçlar</strong>', 'Kutusu yok: tuvalin sol üstündeki <strong>FEAD araçları</strong> '
+      + 'penceresi', 'Sihirbaz · Hesapla · Ayarlar (Çözücü) · Rapor · Yön. Modelle birlikte '
+      + 'gelir, silinmez']
   ], ['Ne', 'Nereden', 'İçindekiler']);
   h += _gfNot('Kasnağı nereye bırakacağınız sırasını söyler',
       'Paletten sürüklediğiniz kasnağı çizimde bir <strong>açıklığın</strong> (iki kasnak '
@@ -725,15 +742,15 @@ function _gfSec3(){
     + 'tablonun ekleyicisine gider: otomatik gerginin <strong>önüne</strong> eklenir ve tablo '
     + 'açılır, konumunu orada yazarsınız.');
   h += '<p>Bir modeli kurmak için en az şunlar gerekir: <strong>üç kasnak</strong> (biri sürücü, '
-    + 'biri gergi), bir <strong>Kayış Yolu</strong> kartı (kasnakları gördüğünüz ve Kayış '
-    + 'Tablosu’nu açtığınız yer) ve <strong>Çözücü</strong>. Kayış modelle birlikte gelir: '
-    + 'kutusu yoktur, özelliklerine çizimdeki <strong>kayışa tıklayarak</strong> gidersiniz. '
-    + 'Raporu istediğiniz zaman ekleyebilirsiniz.</p>';
-  h += _gfNot('Araç kartlarını dizmek',
-      'Tuvalde yalnız araç kartları durduğu için yerleşim bir <em>okunurluk</em> meselesidir, '
-    + 'model değil. Şeritteki <strong>Otomatik düzenle</strong> düğmesi onları dizer: Kayış '
-    + 'Yolu kartları sağda yan yana, künye kartları solda. Kasnaklar dizilmez — '
-    + 'dizilecek bir kutuları yok.');
+    + 'biri gergi) ve bir <strong>Kayış Yolu</strong> kartı (kasnakları gördüğünüz ve Kayış '
+    + 'Tablosu’nu açtığınız yer). Kayış, Çözücü ve Rapor modelle birlikte gelir ve kutuları '
+    + 'yoktur: kayışın özelliklerine çizimdeki <strong>kayışa tıklayarak</strong>, Çözücü ile '
+    + 'Rapor’a <strong>FEAD araçları</strong> penceresinden gidersiniz.</p>';
+  h += _gfNot('Kartları dizmek',
+      'Tuvalde yalnız Kayış Yolu kartları durduğu için yerleşim bir <em>okunurluk</em> '
+    + 'meselesidir, model değil. Şeritteki <strong>Otomatik düzenle</strong> düğmesi onları '
+    + 'yan yana dizer ve kadrajı <strong>FEAD araçları</strong> penceresinin sağından başlatır. '
+    + 'Kasnaklar ve araçlar dizilmez — dizilecek bir kutuları yok.');
   h += '<h3>3.5 Yol D — kendi CAD montajınızdan (STEP)</h3>';
   h += '<p>CATIA ya da 3DEXPERIENCE’ta çizdiğiniz düzeni <strong>STEP dosyası</strong> olarak '
     + 'verirseniz kasnakların dış çapı, kanal sayısı ve merkezleri, gerginin avara merkezi, kol '
@@ -867,7 +884,7 @@ function _gfSec4(){
     + 'ardında, gömülü zeminde — <strong>çözücünün cevapladıkları</strong>. Çözüm sütunlarına '
     + 'yazılamaz.</p>';
   h += '<p>Grupların <em>içindeki</em> sıra defterin sırasıdır: girdi grubunda '
-    + '<strong>X · Y · D · Dönüş Yönü</strong>, çözüm grubunda <strong>Efektif Çap · '
+    + '<strong>X · Y · D · Kasnak Dönüş Yönü</strong>, çözüm grubunda <strong>Efektif Çap · '
     + 'Sarım Açısı · Span Uzunluğu</strong> — tedarikçi raporunu satır satır '
     + 'kopyalayabilirsiniz. Sütun başları kısadır (<em>Ø eff</em>, <em>Sarım</em>, '
     + '<em>Span</em>); <strong>defterdeki tam ad</strong> başlığın üstüne gelince görünür. '
@@ -974,8 +991,8 @@ function _gfSec5(){
     + 'sırayla dizilmiştir ve program da listeyi o sırada tutar — böylece raporu satır satır '
     + 'kopyalayabilirsiniz. Doğru kurulmuş bir modelde krank kasnağı '
     + '<strong>saat yönünde</strong> döner; şemadaki kasnak içi oklar bunu gösterir. Yol '
-    + 'tersine dönmüş görünüyorsa sırayı elle çevirmeye çalışmayın — <strong>Dönüş Yönü</strong> '
-    + 'kartını kullanın (Bölüm 5.2).');
+    + 'tersine dönmüş görünüyorsa sırayı elle çevirmeye çalışmayın — <strong>FEAD araçları</strong> '
+    + 'penceresinin <strong>Yön</strong> bölümünü kullanın (Bölüm 5.2).');
 
   h += '<h3>5.1 Kasnak Dönüş Yönü sütunu</h3>';
   h += '<p>Kartın girdi bölgesindeki <strong>Kasnak Dönüş Yönü</strong> alanı iki durumlu '
@@ -998,22 +1015,23 @@ function _gfSec5(){
     + 'yerinde <strong>—</strong> durur ve basılacak bir düğme çizilmez — uydurulmuş bir '
     + 'taraf sessizce başka bir yol çözdürürdü.');
 
-  h += '<h3>5.2 Dönüş Yönü kartı — bütün yolu çevirmek</h3>';
+  h += '<h3>5.2 Yön — bütün yolu çevirmek</h3>';
   h += '<p>Tek bir kasnağın yönü değil, <strong>çevrimin tamamının</strong> yönü yanlışsa '
     + 'tek tek düzeltmeye çalışmayın:</p>';
   h += _gfAdimlar([
-    'Paletten <strong>Dönüş Yönü</strong> kartını tuvale bırakın (bir kopya yeter).',
-    'Rozetine tıklayın: <code>↺ CCW</code> ↔ <code>↻ CW</code>. Bütün kayış yolu yerinde '
-      + 'çevrilir.',
-    'Rozetin <strong>rengine</strong> bakın — durumu glif, hükmü renk taşır.'
+    '<strong>FEAD araçları</strong> penceresinin <strong>Yön</strong> bölümünde '
+      + '<strong>CW</strong> ya da <strong>CCW</strong>’ye basın. Bütün kayış yolu yerinde '
+      + 'çevrilir; ayrı bir “yön” verisi yazılmaz, Kayış Tablosu’nun sırası çevrilir.',
+    'Sonuç bayatlar — <strong>Hesapla</strong>’ya basın.',
+    'Bölümün altındaki satıra bakın: gerginin hangi tarafta olduğunu söyler.'
   ]);
-  h += _gfAlanTablo('Dönüş Yönü rozetinin rengi', [
+  h += _gfAlanTablo('Yön bölümünün hükmü', [
     ['Yeşil', 'Gergi kayışın <strong>gevşek</strong> tarafında', 'Doğru yerleşim — devam edin'],
-    ['Kırmızı', 'Gergi kayışın <strong>gergin</strong> tarafında', 'Yönü çevirin ya da gergiyi '
+    ['Kırmızı', 'Gergi kayışın <strong>gergin</strong> tarafında; satır en düşük açıklık '
+      + 'gerilmesini ve ankrajın ne kadar altında kaldığını yazar', 'Yönü çevirin ya da gergiyi '
       + 'kayış sırasında sürücünün önüne alın'],
-    ['Nötr', 'Henüz çözüm yok', 'Model tamamlanınca renk gelir']
+    ['Satır yok', 'Güncel çözüm yok (hiç çözülmedi ya da yön değişti)', '<strong>Hesapla</strong>']
   ], ['Renk', 'Ne demek', 'Ne yapmalı']);
-  h += _gfSahneSpin();
   h += _gfUyari('Ters yerleşim hata vermez',
       'Gergi gergin tarafa düştüğünde geometri <strong>kusursuz çözülür</strong>: kapalı çevrim '
     + 'tutar, Σ sarım yine 360° çıkar, tablo yeşil görünür. Bozulan tek şey gerilme zinciridir — '
@@ -1352,7 +1370,8 @@ function _gfSec8(){
 
 function _gfSec9(){
   var h = _gfH2(8);
-  h += '<p><strong>Çözücü</strong> kutusuna çift tıklayın. Modelin geri kalanı burada '
+  h += '<p><strong>FEAD araçları</strong> penceresinin <em>Çözüm</em> bölümündeki <strong>Ayarlar</strong> '
+    + 'bağlantısına basın: <strong>Çözücü</strong> penceresi açılır. Modelin geri kalanı burada '
     + 'toplanır.</p>';
   h += _gfSahneAlgilanan();
   h += '<h3>9.1 FEAD tahriki — krank ile sürücü kasnak arasındaki oran</h3>';
@@ -1480,14 +1499,17 @@ function _gfSec10(){
     + 'gerektirmez — '
     + 'geometriden ve yay dengesinden gelirler.</p>';
   h += _gfAdimlar([
-    'Çözücü panelinde <strong>Algılanan model</strong> tablosuna bakın: kasnak sayısı, sürücü, '
+    'Çözücü penceresinde (FEAD araçları → <strong>Ayarlar</strong>) <strong>Algılanan '
+      + 'model</strong> tablosuna bakın: kasnak sayısı, sürücü, '
       + 'gergi, kayış künyesi, temas tarafı dağılımı, tahrik oranı, türetilen tasarım '
       + 'gerginliği ve “Geometri: çözüldü” satırı.',
     'Bir satır sarı ise o eksiği giderin. “Geometri: çözülemedi” yazıyorsa altındaki sebep '
       + 'kutusunu okuyun.',
-    'Model tamamsa ve en az bir devir noktası girdiyseniz <strong>▶ Hesapla</strong> düğmesi '
-      + 'etkinleşir. Basın.',
-    'Düğmenin altında sonuç blokları belirir. Bir hata varsa sebep aynı yerde yazılır.'
+    'Model tamamsa ve en az bir devir noktası girdiyseniz FEAD araçları penceresindeki '
+      + '<strong>Hesapla</strong> etkinleşir; pasifken üstüne gelince sebebini yazar. Basın '
+      + '(Çözücü penceresinin sağ sütunundaki düğme de aynı işi yapar).',
+    'Çözüm bölümünün durumu <strong>Güncel</strong> olur ve dört özet kartı belirir: kayma '
+      + 'emniyeti, gergi tarafı, ankraj ve burulma. Bir hata varsa sebep aynı yerde yazılır.'
   ]);
   h += _gfAlanTablo('“Hesapla” pasifse', [
     ['Model veya çevrim eksik', 'Geometri çözülmedi ya da hiç devir noktası yok',
@@ -1500,7 +1522,8 @@ function _gfSec10(){
       + 'işaretleyin'],
     ['Kayış yolu kapanmıyor', 'Σ işaretli sarım 360° çıkmıyor',
       'Kayış Tablosu’ndaki <strong>sırayı</strong> (↑ ↓) ve <strong>dönüş yönlerini</strong> '
-      + 'gözden geçirin; gerekirse Dönüş Yönü kartıyla bütün yolu çevirin (Bölüm 5)'],
+      + 'gözden geçirin; gerekirse FEAD araçları penceresinin Yön bölümüyle bütün yolu '
+      + 'çevirin (Bölüm 5)'],
     ['Kasnaklar çakışıyor', 'İki kasnağın çemberi kesişiyor — ortak teğet yok',
       'Tablodaki koordinatları ya da çapları düzeltin; program hangi çift olduğunu yazar'],
     ['Tasarım gerginliği türetilemedi', 'Kayış, gergi kolunun erişemeyeceği kadar kısa/uzun',
@@ -1619,17 +1642,19 @@ function _gfSec11(){
     + 'gelir. Gerginlik, hubload ve çırpınma o dayatılmış devirde <strong>gerçekten</strong> '
     + 'hesaplanır; devrin kendisi bir girdidir, bir sonuç değil.');
   h += '<h3>11.2 Kayış Tablosu ve tuval rozetleri</h3>';
-  h += '<p>Kasnakların kutusu olmadığı için tuvalde yalnız <strong>araç kartlarının</strong> '
+  h += '<p>Kasnakların kutusu olmadığı için tuvalde yalnız <strong>Kayış Yolu kartlarının</strong> '
     + 'rozetleri kalır; kasnak başına okumalar Kayış Yolu kartının altındaki Kayış '
-    + 'Tablosu’ndadır.</p>';
+    + 'Tablosu’ndadır, çözümün durumu FEAD araçları penceresindedir.</p>';
   h += _gfAlanTablo('Nerede ne okunur', [
     ['<strong>Kayış Tablosu</strong>', 'Kasnak başına efektif çap · dönüş yönü · sarım · span; '
       + 'kapanış hükmü kartın rozetinde (✓/✗ Σsarım)',
       'Sarım ve span <strong>çözümden</strong>; Σsarım 360,0° olmalı'],
     ['Kayış Tablosu başlığındaki kip anahtarı', '<code>SABİT</code> (vurgu rengi) ↔ '
       + '<code>SERBEST</code> (amber)', 'Tıklanabilir; avara merkezi girdiyken kilitli'],
-    ['Dönüş Yönü kartı rozeti', '<code>↺ CCW</code> ↔ <code>↻ CW</code>',
-      'Tıklanabilir; <strong>rengi</strong> gergi tarafı hükmünü taşır (Bölüm 5.2)']
+    ['FEAD araçları → Çözüm', 'Durum (<em>Güncel</em> · <em>Bayat — model değişti</em> · '
+      + '<em>Sonuç yok</em>) ve dört özet kartı', 'Bayat sonuç gizlenmez, soluk çizilir'],
+    ['FEAD araçları → Yön', '<code>CW</code> | <code>CCW</code> anahtarı ve gergi tarafı satırı',
+      'Tıklanabilir; satırın <strong>rengi</strong> gergi tarafı hükmünü taşır (Bölüm 5.2)']
   ], ['Nerede', 'Ne yazar', 'Not']);
   h += '<h3>11.3 Paneller</h3>';
   h += _gfAlanTablo('Hangi sonuç hangi panelde', [
@@ -1705,14 +1730,17 @@ function _gfSec11(){
 
 function _gfSec12(){
   var h = _gfH2(11);
-  h += '<p><strong>Rapor</strong> kutusuna çift tıklayın. Rapor çözülmüş modelden üretilir; '
-    + 'model çözülmemişse düğme pasiftir ve sebebi yazılır.</p>';
+  h += '<p>Rapor <strong>FEAD araçları</strong> penceresinin <strong>Rapor</strong> bölümünden '
+    + 'üretilir. Rapor çözülmüş modelden üretilir; model çözülmemişse <strong>İndir</strong> '
+    + 'pasiftir ve üstüne gelince sebebini yazar.</p>';
   h += _gfAdimlar([
-    'Rapor türünü seçin: <strong>Detaylı</strong> ya da <strong>Özet</strong>.',
-    '<strong>Doküman künyesi</strong> alanlarını doldurun: hazırlayan, doküman no, revizyon, '
-      + 'tasarım notları. Bunlar antete ve belgenin sonundaki notlar bölümüne akar.',
-    '<strong>Raporu oluştur ve indir</strong> düğmesine basın. İlk üretimde yazı tipleri ve '
-      + 'formül dizgisi (~1 MB) bir kez yüklenir.',
+    'Rapor türünü seçin: <strong>Özet</strong> ya da <strong>Detaylı</strong>.',
+    'Bölümün <strong>Künye</strong> bağlantısı Rapor penceresini açar; <strong>Doküman '
+      + 'künyesi</strong> alanlarını doldurun: hazırlayan, doküman no, revizyon, tasarım '
+      + 'notları. Bunlar antete ve belgenin sonundaki notlar bölümüne akar.',
+    '<strong>İndir</strong>’e basın (<strong>Rapor</strong> penceresindeki <strong>Raporu oluştur ve '
+      + 'indir</strong> düğmesi de aynı işi yapar). İlk üretimde yazı tipleri ve formül '
+      + 'dizgisi (~1 MB) bir kez yüklenir.',
     'İnen dosya tek parçadır ve çevrimdışı açılır; yazdırırsanız A4’e sığar.'
   ]);
   h += _gfSahneRapor();
@@ -2194,7 +2222,8 @@ function _gfSec14(){
     '<strong>Kol künyesi</strong> kartının altındaki türeyen montaj konumunun '
       + '−250,00 / 110,00 çıktığını görün: raporun <em>Tensioner Data → Pivot Point</em> '
       + 'satırı budur ve modele hiç girmedi.',
-    'Çözücüde <strong>▶ Hesapla</strong>’ya basın ve yukarıdaki sayıları karşılaştırın.'
+    'FEAD araçları penceresinde <strong>Hesapla</strong>’ya basın ve yukarıdaki sayıları '
+      + 'karşılaştırın.'
   ]);
   return h;
 }
@@ -2204,7 +2233,9 @@ function _gfEkA(){
   h += '<p>Bir alanı nerede bulacağınızı hatırlamak için. Panel adları programdaki '
     + 'başlıklarla birebir aynıdır.</p>';
   h += '<p>Kasnak ve gergi panelleri <strong>Kayış Tablosu’ndaki ada tıklanarak</strong> '
-    + 'açılır; kalan paneller kendi araç kartlarına çift tıklanarak.</p>';
+    + 'açılır; Kayış Özellikleri çizimdeki <strong>kayışa tıklanarak</strong>; Çözücü ve Rapor '
+    + 'pencereleri <strong>FEAD araçları</strong> penceresinden (<em>Ayarlar</em> · '
+    + '<em>Künye</em>).</p>';
   h += _gfTablo('Alan → panel eşlemesi',
     ['Aradığınız', 'Panel', 'Kart'],
     [
@@ -2252,8 +2283,10 @@ function _gfEkA(){
         'Kayış Yolu', 'Katmanlar'],
       ['Devir ve titreşim seçicisi, gerilme haritası, senaryo',
         'Kayış Yolu', 'Şema — İşletme ön ayarında'],
-      ['Rapor türü ve doküman künyesi', 'Rapor', '—'],
-      ['Çevrimin dönüş yönünü çevirmek', 'Dönüş Yönü', 'Kayış Dönüş Yönü · Gergi tarafı']
+      ['<strong>Hesaplamak · raporu indirmek · rapor türü</strong>', 'FEAD araçları',
+        'Çözüm · Rapor'],
+      ['Doküman künyesi', 'Rapor', 'Künye'],
+      ['Çevrimin dönüş yönünü çevirmek', 'FEAD araçları', 'Yön']
     ], ['l', 'c', 'l']);
   return h;
 }
@@ -2322,7 +2355,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _gfSahneKayisKunye: _gfSahneKayisKunye, _gfSahneKayisKatalog: _gfSahneKayisKatalog,
     _gfSahneAlgilanan: _gfSahneAlgilanan, _gfSahneCevrim: _gfSahneCevrim,
     _gfSahneRapor: _gfSahneRapor,
-    _gfSahneSpin: _gfSahneSpin,
+    _gfSahneAraclar: _gfSahneAraclar,
     veGuideFeadHTML: veGuideFeadHTML
   };
 }

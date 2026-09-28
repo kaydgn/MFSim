@@ -83,3 +83,48 @@ test('kap sığdırılamayacak kadar küçükse kamera OYNAMAZ', () => {
 test('bottomInset seçeneği YOK — kabın kendisi kısalıyor', () => {
   expect(loadSource('ui-core.js')).not.toMatch(/bottomInset/);
 });
+
+// ── SOL ÖRTÜ (2026-09-28, FEAD araçları penceresi) ─────────────────────────
+// Yuvadaki pencere tuvalin sol üstünü örter ve bunu `data-ve-ortu="sol"` ile
+// SÖYLER; sığdırma o genişliği görünür alandan düşer. Söylemeseydi açılış
+// kadrajında kart pencerenin ALTINDA kalırdı (gerçek tarayıcıda:
+// tests/e2e/fead-araclar.spec.js → "YUVADA").
+describe('SOL ÖRTÜ — tuvali örten yüzey kadrajdan düşülür', () => {
+  const ortu = (w, gizli) => {
+    const el = document.createElement('section');
+    el.setAttribute('data-ve-ortu', 'sol');
+    Object.defineProperty(el, 'offsetLeft', { configurable: true, get: () => 12 });
+    Object.defineProperty(el, 'offsetWidth', { configurable: true, get: () => w });
+    Object.defineProperty(el, 'offsetHeight', { configurable: true, get: () => 400 });
+    if (gizli) el.hidden = true;
+    document.getElementById('ve-canvas-wrapper').appendChild(el);
+    return el;
+  };
+  afterEach(() => document.querySelectorAll('[data-ve-ortu]').forEach((e) => e.remove()));
+  const kadraj = () => {
+    const k = nodes.map(ekran);
+    return { sol: Math.min(...k.map((b) => b.sol)), sag: Math.max(...k.map((b) => b.sag)) };
+  };
+
+  test('içerik örtünün SAĞINDA, kalan alanda — sağ pay eskisi, sol pay örtünün yanında', () => {
+    ortu(236);
+    expect(veTuvalSolOrtu(document.getElementById('ve-canvas-wrapper'))).toBe(12 + 236);
+    veFitViewToContent({ margin: 24 });
+    const k = kadraj();
+    expect(k.sol).toBeGreaterThanOrEqual(12 + 236);
+    expect(k.sol).toBeCloseTo(12 + 236 + 24, 6);
+    expect(W - k.sag).toBeCloseTo(24, 6);
+  });
+
+  test('örtü yokken, GİZLİYKEN ya da kabın yarısından GENİŞKEN davranış birebir eski hâli', () => {
+    veFitViewToContent({ margin: 24 });
+    const once = [canvasZoom, canvasOffset.x, canvasOffset.y];
+    const g = ortu(236, true);
+    veFitViewToContent({ margin: 24 });
+    expect([canvasZoom, canvasOffset.x, canvasOffset.y]).toEqual(once);
+    g.remove();
+    ortu(700);                                   // 712 > 1300/2 → örtü sayılmaz
+    veFitViewToContent({ margin: 24 });
+    expect([canvasZoom, canvasOffset.x, canvasOffset.y]).toEqual(once);
+  });
+});

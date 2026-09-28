@@ -365,15 +365,11 @@ function veFeadArrangeByCoords(opts){
   return true;
 }
 
-// İlk açılışta iç topolojiye İKİ açılış yüzeyi gelir: "Başlangıç Sihirbazı"
-// (sıfırdan kurulum — bütün girdileri adım adım sorar) ve "Başlangıç ve
-// Örnekler" (hazır bir düzeni tek tıkla kurar). Kullanıcı ya birinden başlar
-// ya da sidebar'dan kendi kayış düzenini elle kurar.
-//
-// İKİSİ BİRDEN, çünkü ikisi FARKLI soruya cevap: sihirbaz "kendi motorumun
-// verisini nasıl gireceğim", örnek ise "çalışan bir model neye benziyor"
-// diyene. Sihirbazın içinden de örnekle doldurulabiliyor (veFeadWizSeed), ama
-// oradaki yol formu doldurur — kanvasa kurmaz.
+// AÇILIŞ YÜZEYİ: BOŞ bir Kayış Yolu kartı + kutusuz araç düğümleri (kayış ·
+// Çözücü · Rapor · Sihirbaz). Tuvalde görünen tek şey kart; araçların eylemi
+// FEAD araçları penceresinde (js/cp-fead-araclar.js), sihirbaz da taze
+// topolojide kendiliğinden açılır (veFeadOpenEditor). Örnek sihirbazın 1.
+// adımında — "Başlangıç ve Örnekler" bileşeni 2026-09-09'da kalktı.
 function veFeadPopulateStarter(){
   // BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI (bkz. js/state.js → veStateBatch).
   // Bu kurucu ONİKİ düğüm kuruyor ve `createNode` her birinde `saveState()`
@@ -394,22 +390,21 @@ function veFeadPopulateStarter(){
     return _r;
   }
   if(typeof createNode !== 'function') return [];
-  // AÇILIŞ YÜZEYİ: sihirbaz + BOŞ BİR KAYIŞ YOLU KARTI (Çizim Masası,
-  // 2026-09-23). Kart boşken kendi boş hâlini çizer ("Sihirbazla kur" ·
-  // "Tabloyu aç"); sihirbazın "Modeli Kur"u onu geometri kartı olarak
-  // YENİDEN KULLANIR (tip + ön ayar eşleşmesi). Yerleşim ortak yuvadan.
-  var tipler = ['fead-wizard', 'fead-layout'];
+  // AÇILIŞ KARTI: BOŞ BİR KAYIŞ YOLU KARTI (Çizim Masası, 2026-09-23). Kart
+  // boşken kendi boş hâlini çizer ("Sihirbazla kur" · "Tabloyu aç");
+  // sihirbazın "Modeli Kur"u onu geometri kartı olarak YENİDEN KULLANIR
+  // (tip + ön ayar eşleşmesi). Yerleşim ortak yuvadan.
+  var tipler = ['fead-layout'];
   var yuva = veFeadFallbackSlots(tipler);
   var base = (typeof veArrangeModuleBase === 'function')
     ? veArrangeModuleBase(yuva)
     : { x:3000, y:3000 };
-  var created = [];
-  // KAYIŞ DÜĞÜMÜ İLK KURULAN (2026-09-26): kutusu yok, yuvası yok; kanvasta
-  // görünmez ama modelin parçası (bkz. veFeadKayisGaranti). Önce kurulur ki
-  // seçim — createNode her düğümü seçili bırakıyor — eskisi gibi açılışın
-  // kartında kalsın.
-  var _kayis = veFeadKayisGaranti();
-  if(_kayis) created.push(_kayis);
+  // ARAÇ DÜĞÜMLERİ İLK KURULANLAR (kayış 2026-09-26, Çözücü · Rapor ·
+  // Sihirbaz 2026-09-28): kutuları yok, yuvaları yok; kanvasta görünmezler ama
+  // modelin parçasıdırlar ve FEAD araçları penceresi onlara bağlanır (bkz.
+  // veFeadAraclarGaranti). Önce kurulurlar ki seçim — createNode her düğümü
+  // seçili bırakıyor — eskisi gibi açılışın kartında kalsın.
+  var created = veFeadAraclarGaranti();
   tipler.forEach(function(tip, k){
     var slot = yuva[k] || { lx: k * 150, ly: 20 };
     var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
@@ -452,11 +447,12 @@ function veFeadOpenEditor(nodeId, _silent){
   // Eski kayıt göçü (data.dia → data.od) ve temas/sürücü rozetleri, alt
   // topoloji YÜKLENDİKTEN sonra: düğümler artık canlı ve DOM'da.
   if(typeof veFeadMigrateAll === 'function' && typeof nodes !== 'undefined') veFeadMigrateAll(nodes);
-  // KAYIŞ DÜĞÜMÜ YOKSA EKLENİR (2026-09-26): kutusu ve palet satırı kalktı,
-  // eski bir kayıtta eksikse kullanıcının onu kurabileceği bir yol kalmadı.
-  // Açılışın parçası, düzenleme değil: geri-al yığınının TABANINA yazılır
-  // (gömülü durum zaten geçmiş taşımıyor — veSanitizeEmbeddedState).
-  if(!_yeniTopoloji && !_feadKayisDugumu() && veFeadKayisGaranti()
+  // EKSİK ARAÇ DÜĞÜMLERİ EKLENİR (kayış 2026-09-26, Çözücü · Rapor ·
+  // Sihirbaz 2026-09-28): kutuları ve palet satırları kalktı, eski bir kayıtta
+  // eksikse kullanıcının onları kurabileceği bir yol kalmadı. Açılışın
+  // parçası, düzenleme değil: geri-al yığınının TABANINA yazılır (gömülü
+  // durum zaten geçmiş taşımıyor — veSanitizeEmbeddedState).
+  if(!_yeniTopoloji && veFeadAraclarGaranti().length
      && typeof veStateResetBaseline === 'function') veStateResetBaseline();
   // ORİJİN GÖÇÜ. Konum fiziksel; eski projelerde krank (0,0)'da olmayabilir.
   // Göç TANIM GEREĞİ bir öteleme (geometriye etkisi ölçüldü: 0.00e+0), yani
@@ -468,6 +464,11 @@ function veFeadOpenEditor(nodeId, _silent){
   }
   veFeadRefreshBadges();
 
+  // FEAD ARAÇLARI PENCERESİ SIĞDIRMADAN ÖNCE görünür: yuvadaki pencere tuvalin
+  // solunu örtüyor ve sığdırma o genişliği ölçerek düşüyor (ui-core.js →
+  // veFitViewToContent). Kapsam senkronu aşağıda, sığdırmadan SONRA koşuyor;
+  // beklenseydi açılış kadrajında kart pencerenin altında kalırdı.
+  if(typeof veFeadAraclarKapsam === 'function') veFeadAraclarKapsam('fead-analysis');
   if(!_silent && typeof veFitViewToContent === 'function') veFitViewToContent();
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veFeadUpdateBreadcrumb();
@@ -488,8 +489,9 @@ function veFeadOpenEditor(nodeId, _silent){
   // `_silent` (autosave'in görünmez geri-girişi) de dışarıda: orada kullanıcı
   // FEAD'e girmiyor bile.
   //
-  // Kapatan için model YİNE KURULABİLİR: sihirbaz düğümü kanvasta duruyor ve
-  // Kayış Tablosu'nun kendi ekleyicisi çalışıyor — bu bir kapı değil bir
+  // Kapatan için model YİNE KURULABİLİR: FEAD araçları penceresinin Sihirbaz
+  // düğmesi ve boş kartın "Sihirbazla kur"u aynı pencereyi açıyor, Kayış
+  // Tablosu'nun kendi ekleyicisi de çalışıyor — bu bir kapı değil bir
   // karşılama.
   if(_yeniTopoloji && !_silent && typeof veFeadWizOpenAny === 'function'){
     try { veFeadWizOpenAny(); }
@@ -726,7 +728,10 @@ function veFeadSet(nodeId, key, val){
 // yüzeyde duruyor: tip varsayılanı → kasnak paneli → Kayış Tablosu'nun
 // "Kasnak Dönüş Yönü" sütunu.
 //
-// Geriye kutusu OLAN tek rozetli tip kaldı: Dönüş Yönü.
+// DÖNÜŞ YÖNÜ ROZETİ DE KALDIRILDI (2026-09-28): bileşenin kendisi kalktı
+// (FEAD araçları penceresi, js/cp-fead-araclar.js — yön ve gergi tarafı
+// hükmü pencerenin Yön bölümünde). Rozetli tip KALMADI; dağıtıcı yalnız eski
+// bir rozeti söker. Kural 12'nin negatif kapısı bu fonksiyonda duruyor.
 //
 // KAYIŞ KİPİ ROZETİ KALDIRILDI (2026-09-26) — kasnak K/S rozetinin aynı
 // sınıfı: kayışın da kutusu kalktı (`noCanvasBox`), rozetin asılacağı eleman
@@ -737,7 +742,6 @@ function veFeadApplyBadge(nodeEl, node){
   if(!nodeEl || !node || typeof document === 'undefined') return false;
   var old = nodeEl.querySelector('.ve-fead-badge');
   if(old) old.remove();
-  if(_feadDefOf(node).isFeadSpin) return veFeadApplySpinBadge(nodeEl, node);
   return false;
 }
 
@@ -839,54 +843,6 @@ function veFeadCurrentSpin(){
   return veFeadSpinOf(nodes);
 }
 
-function veFeadApplySpinBadge(nodeEl, node){
-  // ROZET KAYIŞIN GERÇEK DÖNÜŞÜNÜ BASAR: `veFeadCurrentSpin` liste sırasının
-  // dolanımını okuyup işaretini çeviriyor (liste gidişin tersi — fead-model.js
-  // → veFeadNaturalSense). Kart da aynı işaretten çiziyor; ikisi tek kaynak.
-  var sense = veFeadCurrentSpin();
-  var lbl = veFeadSpinLabel(sense);
-
-  // Hüküm oturumluk sonuçtan okunur; çözüm yoksa rozet renk İDDİA ETMEZ.
-  var _R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
-  var hkm = (_R && _R.tensionerSide) ? !!_R.tensionerSide.ok : null;
-
-  var bg = (hkm === true) ? 'var(--accent-success)'
-         : (hkm === false) ? 'var(--accent-danger)'
-         : 'var(--text-secondary)';
-  // METİN JETONU ZEMİNİN EŞİ: `--on-accent` birincil aksana göre kalibre,
-  // yeşil/kırmızı dolguya göre değil. Nötr hâlin zemini bir METİN rengi
-  // (`--text-secondary`) olduğu için oraya `--on-accent` de uymaz — tersi
-  // gerek, yani sayfanın kendi zemini.
-  var fg = (hkm === true) ? 'var(--on-success)'
-         : (hkm === false) ? 'var(--on-danger)'
-         : 'var(--bg-primary)';
-  var b = document.createElement('span');
-  b.className = 've-fead-badge';
-  b.innerHTML = (lbl.ikon ? veIkon(lbl.ikon) + ' ' : '') + _feadEsc(lbl.kisa);
-  b.title = (sense === 0
-      ? 'Kayış dönüş yönü okunamadı (kasnak koordinatları eksik).'
-      : 'Kayış çevrimi ' + lbl.uzun
-        + '. Yön TABLO sırasından türer; '
-        + 'tıkla → kayış yolunu ters çevir.')
-    + (hkm === false
-        ? '\n\nUYARI: bu yönde gergi kayışın GERGİN tarafına düşüyor; '
-          + 'span gerilmeleri ankrajın altına iniyor.'
-        : hkm === true ? '\n\nGergi gevşek tarafta: doğru.' : '');
-  b.style.cssText = 'position:absolute; top:-9px; right:-6px; z-index:3; cursor:pointer;'
-    + 'font-size:var(--fs-micro); font-weight:700; line-height:1; letter-spacing:0.02em;'
-    + 'padding:2px 4px; border-radius:var(--radius-xs);'
-    + 'color:' + fg + '; background:' + bg + '; border:1px solid var(--bg-primary);';
-  b.onmousedown = function(e){ e.stopPropagation(); };
-  b.ondblclick  = function(e){ e.stopPropagation(); e.preventDefault(); };
-  b.onclick = function(e){
-    e.stopPropagation(); e.preventDefault();
-    veFeadToggleSpin();
-  };
-  var box = nodeEl.querySelector('.ve-node-box') || nodeEl;
-  box.appendChild(b);
-  return true;
-}
-
 // ── YÖNÜ ÇEVİR ──────────────────────────────────────────────────────────────
 //
 // KAYIŞ SIRASI çevrilir (beltIndex), bir "yön" alanı yazılmaz — gerekçe
@@ -921,87 +877,6 @@ function veFeadToggleSpin(){
               k ? 'info' : 'warning');
   }
   return k;
-}
-
-// ── DÖNÜŞ YÖNÜ PENCERESİ — KRANK KASNAĞI AİLESİNDE ─────────────────────────
-// Kullanıcı isteği (2026-09-23): FEAD pencereleri Krank Kasnağı'nın yapısında,
-// KATEGORİ KATEGORİ. İki kategori: YÖN (çevrimin dönüşü, nereden türediği,
-// yanlış taraftaysa gerginin hükmü) ve ETKİSİ (yön değişince neyin değişip
-// neyin değişmediği). Pencerenin EYLEMİ "Yönü çevir" — çözücüdeki Hesapla'nın
-// yerinde, sekmeden bağımsız. Hüküm sağ sütunda bir DURUM satırı: cevap bir
-// sekmenin içine gömülürse öteki sekmedeyken görünmez.
-//
-// Görünüm CSS'te (`.ve-fp-yon` · `.ve-fp-liste` · `.ve-fp-durum[data-d]`):
-// eski panel yönün rengini, vurguları ve düğmeyi SATIR İÇİ yazıyordu ve
-// düğme fareye hiç tepki vermiyordu (kural 14).
-function getFeadSpinPropertiesHTML(node){
-  if(!node.data) node.data = {};
-  var sense = veFeadCurrentSpin();
-  var lbl = veFeadSpinLabel(sense);
-  var metin = sense ? lbl.uzun : '— (okunamadı)';
-  var R = (typeof veFeadResults !== 'undefined' && veFeadResults) ? veFeadResults : null;
-  var hkm = (R && R.tensionerSide) ? R.tensionerSide : null;
-  var ton = !hkm ? '' : hkm.ok ? 'success' : 'danger';
-
-  // DÜZLEM ADI TEK ÜRETİCİDEN (`_feadPlaneName`). Burada ikinci kez
-  // yazılsaydı, ayna bayrağı değişince pencere sessizce eskirdi.
-  //
-  // METİN TEL DÖNEMİNDEN KALMIŞTI: "kablolama sırasından türer", "tel from →
-  // to", "bağlantıları ters çevirir", "kanvastaki gidiş okları da döner".
-  // Kasnaklar 2026-09-09'da bağlanmaz oldu (sıra `beltIndex` alanında) ve
-  // kanvasta kutuları bile yok — dolayısıyla ne kablo var, ne gidiş oku.
-  // Kullanıcı panelde tarif edilen şeyi ekranda arıyordu.
-  var yon = _feadCard('Kayış Dönüş Yönü', 'kayış tablosundan', 'var(--accent-primary)',
-      '<div class="ve-fp-yon"' + (ton ? ' data-ton="' + ton + '"' : '') + '>'
-    + _feadEsc(metin) + '</div>'
-    + _feadHint('Yön bir ayar DEĞİL: <b>Kayış Tablosu\'nun satır sırasından</b> türer '
-        + '(<b>' + _feadEsc(
-            (typeof _feadPlaneName === 'function') ? _feadPlaneName() : 'çizim düzlemi')
-        + '</b>). Tablo sırası Gates raporlarının "Layout Data" yönündedir, yani '
-        + 'kayışın gidişinin TERSİ; köprü çekirdeğe o sırayı verir. Sürücü kayışı '
-        + 'kendine çektiği için gergin taraf ona GİREN açıklıktır. "Yönü çevir" '
-        + 'krank sabit kalacak şekilde kalan kasnakların sırasını ters çevirir — '
-        + 'tablodaki numaralar da onunla döner.'));
-
-  if(hkm && !hkm.ok){
-    yon += _feadCard('Gergi tarafı', 'hüküm', 'var(--accent-danger)',
-        '<div class="ve-fp-durum" data-d="no">'
-      + '<b>Gergi kayışın GERGİN tarafında.</b> '
-      + 'Ankraj ' + _feadFmt(hkm.anchorN, 1) + ' N, en düşük açıklık '
-      + _feadFmt(hkm.minN, 1) + ' N ("' + _feadEsc(hkm.minName || '—') + '") — '
-      + _feadFmt(hkm.deficitN, 1) + ' N altında. Otomatik gergi tanım gereği '
-      + '<b>gevşek</b> tarafa konur; gergin tarafta tahrik gerginliğinin tamamını '
-      + 'yayla karşılamak zorunda kalır ve durdurucusuna dayanır.</div>'
-      + _feadHint('Çare: <b>yönü çevirin</b> ya da gergiyi kayış sırasında sürücünün '
-        + 'önüne alın. Tasarım gerginliğini yükseltmek bir seçenek DEĞİL — o değer yay '
-        + 'dengesinden türüyor, panelde girilen bir alan değil.'));
-  }
-
-  // GEOMETRİ YÖNDEN BAĞIMSIZ, GERİLME DEĞİL — ve bunu pencere SÖYLÜYOR, çünkü
-  // kullanıcı "yönü çevirdim, sarım açıları neden aynı" diye sormasın.
-  var etk = _feadCard('Neyi değiştirir', 'ölçüldü', 'var(--text-muted)',
-      '<ul class="ve-fp-liste">'
-    + '<li><b>Değişmez:</b> sarım açıları, açıklıklar, efektif kayış boyu, Σsarım=360 '
-    + '— ölçüldü, kasnak başına fark 2,5e−14°</li>'
-    + '<li><b>Değişir:</b> hangi açıklığın GERGİN olduğu — yani span gerilmeleri, '
-    + 'hubload yönleri ve kayma emniyeti</li>'
-    + '<li><b>Değişir:</b> kasnakların dönüş yönü ve Kayış Tablosu\'ndaki sıra numaraları</li>'
-    + '</ul>');
-
-  var durum = !hkm
-    ? '<div class="ve-fp-durum"><b>Gergi tarafı:</b> hüküm için önce Çözücü '
-      + 'penceresinden çözüm koşturun.</div>'
-    : hkm.ok
-      ? '<div class="ve-fp-durum" data-d="ok">' + veIkon('check') + ' <b>Gergi gevşek tarafta</b> — ankraj '
-        + 'en düşük açıklık, gerilme zinciri bu yönde tutarlı.</div>'
-      : '<div class="ve-fp-durum" data-d="no">' + veIkon('x') + ' <b>Gergi GERGİN tarafında</b> — yönü '
-        + 'çevirin ya da gergiyi sürücünün önüne alın (Yön sekmesi).</div>';
-  var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadToggleSpin()">'
-    + '<span class="mf-ico mf-ico-refresh" aria-hidden="true"></span> Yönü çevir</button>';
-
-  var yan = veFeadToolSide(node, null, null, null, durum + eylem);
-  return veFeadPanelShell(node, [{ k:'yon', ad:'Yön',    govde: yon },
-                                 { k:'etk', ad:'Etkisi', govde: etk }], yan);
 }
 
 // Tüm kasnakların rozetini tazele (temas tarafı / sürücü değişince).
@@ -3336,15 +3211,44 @@ function veFeadKayisAc(){
 // girerken eklenir (veFeadOpenEditor). Kutusuz olduğu için konumu bir şey
 // ifade etmez. `createNode` kutusuz düğümü SEÇİLİ bırakıyor (paletten
 // bırakılan kasnağın paneli açılsın diye); burada kimse bir şey bırakmadı.
-function veFeadKayisGaranti(){
+function veFeadKayisGaranti(){ return _feadAracGaranti('fead-belt'); }
+
+// ── ARAÇ DÜĞÜMLERİ HER FEAD TOPOLOJİSİNDE VAR (2026-09-28) ─────────────────
+// Kayışın kalıbı Çözücü, Rapor ve Sihirbaz'a da uygulandı: kutuları kalktı,
+// eylemleri FEAD araçları penceresinde (js/cp-fead-araclar.js). Palette de
+// yoklar, yani eksik bir aracı kullanıcı kuramaz — pencere bir DÜĞÜME
+// bağlanır (Hesapla çözücünün çevrimini, İndir raporun türünü okur) ve
+// düğümsüz bir bölüm hiçbir şey yapmayan bir düğme olurdu. Liste TEK
+// KAYNAK: açılış yüzeyi de, eski kaydın tamamlanması da buradan.
+var VE_FEAD_ARAC_TIPLERI = ['fead-belt', 'fead-solver', 'fead-report', 'fead-wizard'];
+
+function _feadAracDugumu(tip){
+  if(typeof nodes === 'undefined' || !nodes) return null;
+  for(var i = 0; i < nodes.length; i++) if(nodes[i] && nodes[i].type === tip) return nodes[i];
+  return null;
+}
+
+// Tek araç: varsa DOKUNMAZ, yoksa kurar ve seçimi bırakır.
+function _feadAracGaranti(tip){
   if(typeof nodes === 'undefined' || typeof createNode !== 'function') return null;
-  var n = _feadKayisDugumu();
+  var n = _feadAracDugumu(tip);
   if(n) return n;
   var once = nodes.length;
-  createNode('fead-belt', 3000, 3000);
+  createNode(tip, 3000, 3000);
   if(nodes.length <= once) return null;
   if(typeof clearSelection === 'function') clearSelection();
   return nodes[nodes.length - 1];
+}
+
+// Bütün araçlar; YENİ kurulanları döndürür (boşsa hiçbir şey değişmedi).
+function veFeadAraclarGaranti(){
+  var yeni = [];
+  VE_FEAD_ARAC_TIPLERI.forEach(function(tip){
+    if(_feadAracDugumu(tip)) return;
+    var n = _feadAracGaranti(tip);
+    if(n) yeni.push(n);
+  });
+  return yeni;
 }
 
 // Seçim ve fare altı işareti SINIFLA eşitlenir, kart yeniden KURULMAZ: fare
@@ -5894,6 +5798,10 @@ function veFeadRefreshLayoutCards(){
     var el = document.getElementById(x.id);
     if(el && veFeadApplyLayoutCard(el, x)) n++;
   });
+  // FEAD ARAÇLARI PENCERESİ aynı olaydan tazelenir (js/cp-fead-araclar.js):
+  // durum çipi modelin imzasından BAYAT'a döner, Hesapla modelin tamlığına
+  // bakar — bir düzenleme geride kalsa pencere eskimiş bir hüküm gösterirdi.
+  try { if(typeof veFeadAraclarTazele === 'function') veFeadAraclarTazele(); } catch(e){}
   return n;
 }
 
@@ -7896,8 +7804,10 @@ function veFeadLoadExample(key){
   var yer = pack.example.pulleys.map(function(p, i){
     return { lx: 60 + (xs[i] - minX) * s, ly: 150 + (maxY - ys[i]) * s };
   });
-  // Araç kutuları. SIRA pack.nodes ile aynı olmak ZORUNDA — veFeadExampleNodes
-  // kasnakları önce, araçları (kayış künyesi · çözücü · kayış yolu) sonra ekliyor.
+  // Kasnaklardan sonrakiler. SIRA pack.nodes ile aynı olmak ZORUNDA —
+  // veFeadExampleNodes kasnakları önce, gerisini (kayış · çözücü · kayış yolu ·
+  // rapor) sonra ekliyor. Kutusuz tipler (kayış · çözücü · rapor — FEAD
+  // araçları penceresi, 2026-09-28) `null` yuva alır.
   //
   // KAYIŞ YOLU KARTI AYRI ŞERİTTE: 440×500'lük canlı şema üst şeride konsa
   // kasnak kümesinin üstüne biner ve komşu düğümlerin portları/rozetleri kartın
@@ -8255,17 +8165,21 @@ function veFeadSolve(nodeId){
       ? veFeadSignals.build(res) : [];
   } catch(e){ res.signals = []; }
   if(typeof window !== 'undefined') window.veFeadResults = res;
-  // ROZETLER SONUÇTAN SONRA TAZELENİR. Dönüş Yönü rozetinin RENGİ hükmü
-  // taşıyor (gergi gevşek tarafta mı) ve o hüküm ancak çözümle biliniyor.
-  // Tazeleme burada olmasaydı rozet TAM BİR ÇÖZÜM GERİDE kalırdı — ölçüldü
+  // HÜKÜM SONUÇTAN SONRA TAZELENİR. Gergi tarafı hükmü (gevşek tarafta mı)
+  // ancak çözümle biliniyor; taşıyıcısı bir dönem Dönüş Yönü rozetinin
+  // RENGİYDİ, bugün FEAD araçları penceresinin Yön bölümü (aşağıda). Tazeleme
+  // olmasaydı hüküm TAM BİR ÇÖZÜM GERİDE kalırdı — rozet döneminde ölçüldü
   // (gerçek tarayıcı): ileri yönde nötr, ters yönde YEŞİL, geri dönünce
-  // KIRMIZI. Yani renk her seferinde bir önceki modelin hükmünü gösteriyordu;
-  // sayı makul olduğu için sessiz.
+  // KIRMIZI; sayı makul olduğu için sessiz.
   if(typeof veFeadRefreshBadges === 'function') veFeadRefreshBadges();
   if(typeof showToast === 'function')
     showToast(res.ok ? 'FEAD çözüldü — ' + res.duty.length + ' devir noktası'
                      : 'Çözüm hatası: ' + res.error, res.ok ? 'success' : 'error');
   if(node) _feadRedraw(node);
+  // Pencerenin çipi ve özet kartları çözümü okur; _feadRedraw'ın saveState'i
+  // kartları tazeliyor ama çözüm o çağrının ÖNCESİNDE yazıldı — yine de
+  // açıkça tazelenir: kart tazelemesi yarın imzaya bağlansa pencere susardı.
+  try { if(typeof veFeadAraclarTazele === 'function') veFeadAraclarTazele(); } catch(e){}
   return res;
 }
 // ─── SONUÇ DURUMU — "bu sayılar hâlâ bu modelin mi?" ────────────────────────
@@ -8320,6 +8234,7 @@ function _feadForgetResults(){
   // devam etmesin (yük değişince faz çevrim boyunu aşabilir de).
   _feadAnimPhase = {};
   if(typeof window !== 'undefined') window.veFeadResults = null;
+  try { if(typeof veFeadAraclarTazele === 'function') veFeadAraclarTazele(); } catch(e){}
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8460,6 +8375,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadKipDugmeHTML: veFeadKipDugmeHTML,
     veFeadKayisAc: veFeadKayisAc,
     veFeadKayisGaranti: veFeadKayisGaranti,
+    veFeadAraclarGaranti: veFeadAraclarGaranti, VE_FEAD_ARAC_TIPLERI: VE_FEAD_ARAC_TIPLERI,
 
     veFeadArmReadout: veFeadArmReadout, veFeadMountReadout: veFeadMountReadout,
     veFeadBandSVG: veFeadBandSVG,
@@ -8474,8 +8390,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 
     veFeadCurrentSpin: veFeadCurrentSpin,
-    veFeadApplySpinBadge: veFeadApplySpinBadge, veFeadToggleSpin: veFeadToggleSpin,
-    getFeadSpinPropertiesHTML: getFeadSpinPropertiesHTML,
+    veFeadToggleSpin: veFeadToggleSpin,
 
 
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,

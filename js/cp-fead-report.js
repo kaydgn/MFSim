@@ -243,7 +243,7 @@ function _frFindReportNode(nodeId){
 }
 
 // `turSec` (isteğe bağlı): Sonuçlar sekmesinin iki satırı belgenin türünü
-// kendisi seçer — Rapor bileşeni olmayan bir modelde de iki belge üretilebilsin.
+// kendisi seçer — Rapor düğümü olmayan bir modelde de iki belge üretilebilsin.
 // Verilmezse tür bileşenin alanından (bugünkü davranış birebir).
 function veFeadGenerateReport(nodeId, turSec){
   var node = _frFindReportNode(nodeId);
@@ -253,8 +253,8 @@ function veFeadGenerateReport(nodeId, turSec){
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
   if(!R || !R.ok){
-    _frStatus('Rapor üretilemedi: model çözülmemiş. Önce Çözücü → ▶ Çöz.', 'var(--accent-warning)');
-    if(typeof showToast === 'function') showToast('Önce Çözücü ile modeli çözün.', 'warning');
+    _frStatus('Rapor üretilemedi: model çözülmemiş. Önce FEAD araçları → Hesapla.', 'var(--accent-warning)');
+    if(typeof showToast === 'function') showToast('Önce FEAD araçları penceresinden Hesapla ile modeli çözün.', 'warning');
     return null;
   }
   // BAYAT SONUÇTAN RAPOR — üretilir ama SÖYLENİR. Rapor bilerek ÇÖZÜLEN
@@ -263,7 +263,7 @@ function veFeadGenerateReport(nodeId, turSec){
   var _sd = (typeof veFeadResultState === 'function') ? veFeadResultState(R) : null;
   if(_sd && _sd.k === 'bayat' && typeof showToast === 'function')
     showToast('Rapor SON ÇÖZÜMÜ anlatır — model o zamandan beri değişti. Güncel sayılar için '
-      + 'Çözücü → ▶ Hesapla.', 'warning');
+      + 'FEAD araçları → Hesapla.', 'warning');
   _frStatus('Rapor varlıkları yükleniyor (KaTeX + fontlar, ~1 MB)…');
   _frAssetsTried = true;
   _frEnsureAssets(function(ok){

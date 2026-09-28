@@ -33,8 +33,9 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
 
-  // FEAD alt topolojisi — açılışta sihirbaz + BOŞ Kayış Yolu kartı gelir, VE
-  // SİHİRBAZ AÇILIR (tablo 2026-09-26'dan beri kartın kendi katmanı).
+  // FEAD alt topolojisi — açılışta BOŞ Kayış Yolu kartı + kutusuz araç
+  // düğümleri gelir, VE SİHİRBAZ AÇILIR (tablo 2026-09-26'dan beri kartın
+  // kendi katmanı; araçlar 2026-09-28'den beri FEAD araçları penceresinde).
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'),
     null, { timeout: 20000 });
@@ -51,11 +52,13 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   const acilis = await page.evaluate(() => window.nodes.map((n) => n.type).sort());
   // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı (kullanıcı: *"Gerek yok"*)
   // — sunduğu liste sihirbazın 1. adımında zaten vardı. KAYIŞ açılışta KURULUR
-  // ama KUTUSUZ (2026-09-26): çizimde tıklanır, kanvasta kutusu yok.
-  expect(acilis).toEqual(['fead-belt', 'fead-layout', 'fead-wizard']);
+  // ama KUTUSUZ (2026-09-26): çizimde tıklanır, kanvasta kutusu yok. ÇÖZÜCÜ ·
+  // RAPOR · SİHİRBAZ da (2026-09-28): eylemleri FEAD araçları penceresinde.
+  expect(acilis).toEqual(['fead-belt', 'fead-layout', 'fead-report', 'fead-solver', 'fead-wizard']);
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => !veIsCanvasHidden(n)).map((n) => n.type).sort()))
-    .toEqual(['fead-layout', 'fead-wizard']);
+    .toEqual(['fead-layout']);
+  await expect(page.locator('#ve-fead-araclar')).toBeVisible();
   // Boş kart kendi boş hâlini söylüyor ve iki yolu da gösteriyor.
   expect(await page.evaluate(() =>
     (document.querySelector('.ve-fead-kan-bos') || {}).textContent || '')).toMatch(/henüz kasnak yok/);
@@ -63,12 +66,11 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length)).toBe(0);
 
-  // Sihirbazı aç ve bir örnekle doldur (formu 7 adım elle doldurmak yerine)
-  await page.evaluate(() => {
-    const w = window.nodes.find((n) => n.type === 'fead-wizard');
-    veFeadWizOpen(w.id);
-    veFeadWizSeed('AG00976_GATES_2025');
-  });
+  // Sihirbazı FEAD araçları penceresinden aç ve bir örnekle doldur (formu 7
+  // adım elle doldurmak yerine).
+  await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="sihirbaz"]');
+  await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
+  await page.evaluate(() => veFeadWizSeed('AG00976_GATES_2025'));
   await page.waitForTimeout(300);
   const onizleme = await page.evaluate(() => {
     const b = veFeadWizBuild();
@@ -124,8 +126,9 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   expect(durum.cozucu).toBe(1);
   expect(durum.rapor).toBe(1);
   expect(durum.kasnakTeli).toBe(0);          // KASNAKLAR BAĞLANMIYOR
-  // KASNAKLARIN VE KAYIŞIN KUTUSU YOK (kayış 2026-09-26'dan beri çizimde
-  // tıklanıyor): kanvastaki her kutu görünür bir araç düğümü.
+  // KASNAKLARIN, KAYIŞIN VE ARAÇLARIN KUTUSU YOK (kayış 2026-09-26'dan beri
+  // çizimde tıklanıyor, araçlar 2026-09-28'den beri pencerede): kanvastaki
+  // her kutu bir Kayış Yolu kartı — iki tane.
   const kutu = await page.evaluate(() => {
     const kas = (n) => !!(componentDefs[n.type] || {}).isFeadPulley;
     const kay = window.nodes.find((n) => n.type === 'fead-belt');
@@ -139,9 +142,11 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   expect(kutu.kasnakDom).toBe(0);
   expect(kutu.kayisDom).toBe(0);
   expect(kutu.domToplam).toBe(kutu.aracSay);
+  expect(kutu.domToplam).toBe(2);
   // ÖKSÜZ DÜĞÜM YOK: 6 kasnak + kayış (kutusuz, açılışın kurduğu düğüm
   // DEVRALINDI) + çözücü + şema + İŞLETME kartı + rapor + sihirbaz (taslağı
-  // taşıdığı için KALIR) = 12.
+  // taşıdığı için KALIR) = 12. Araçlar açılışın kurduğu düğümler — sihirbaz
+  // onları YENİDEN KULLANIR (ikinci kopya kurmaz, `maxInstances`).
   //
   // SAYI 13 → 12 (2026-09-23): Kayış Tablosu kanvas düğümü olmaktan çıktı.
   // Kanvas GEOMETRİ ve İŞLETME olarak iki kart; kurucu ikincisini kurmayı

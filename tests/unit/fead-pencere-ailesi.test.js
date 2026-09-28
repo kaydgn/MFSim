@@ -179,7 +179,9 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
     kur('AG00976_GATES_2025');
     // Eylemi olan pencereler: düğmesi kategori sekmesine gömülseydi öteki
     // sekmedeyken görünmezdi (çözücüdeki Hesapla'nın gerekçesi).
-    const eylemli = ['fead-analysis', 'fead-solver', 'fead-report', 'fead-spin', 'fead-wizard'];
+    // (Dönüş Yönü penceresi 2026-09-28'de kalktı — yön FEAD araçları
+    // penceresinin bölümü; tipi yok, kapı `cp-fead.test.js`.)
+    const eylemli = ['fead-analysis', 'fead-solver', 'fead-report', 'fead-wizard'];
     const sorun = [];
     eylemli.forEach((t) => {
       let n = global.nodes.find((x) => x.type === t)

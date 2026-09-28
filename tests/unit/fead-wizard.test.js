@@ -107,11 +107,14 @@ describe('bileşen sözleşmesi', () => {
     expect(d.isFeadPulley).toBeFalsy();
   });
 
-  test('palet · kayıt defteri · panel dağıtımı · çift tık — beşi de bağlı', () => {
-    // Bir modülün beş dosyaya birden bağlanması bu projenin kendi kuralı
-    // biri unutulursa bileşen paletten
-    // sürüklenir ama paneli açılmaz ya da kaydedilen proje bozulur.
-    expect(IDX).toContain('data-type="fead-wizard"');
+  test('kayıt defteri · panel dağıtımı · araç penceresi bağlı; palet ve çift tık YOK', () => {
+    // Bir modülün birkaç dosyaya birden bağlanması bu projenin kendi kuralı:
+    // biri unutulursa kaydedilen proje bozulur ya da pencere açılmaz.
+    // KUTUSUZ (2026-09-28, FEAD araçları penceresi): sihirbaz paletten
+    // sürüklenmez ve kutusu olmadığı için çift tıklanmaz — pencerenin
+    // Sihirbaz düğmesi açar. Çift tık dalı ölü koddu, kalktı.
+    expect(IDX).not.toContain('data-type="fead-wizard"');
+    expect(componentDefs['fead-wizard'].noCanvasBox).toBe(true);
     expect(IDX).toContain('js/cp-fead-wizard.js');
     expect(IDX).toContain('id="ve-feadwiz-overlay"');
     expect(IDX).toContain('id="ve-fw-nav"');
@@ -122,8 +125,9 @@ describe('bileşen sözleşmesi', () => {
     expect(core).toContain("node.type === 'fead-wizard'");
     expect(core).toContain('getFeadWizardPropertiesHTML');
     const ui = fs.readFileSync(path.join(__dirname, '../../js/ui-core.js'), 'utf8');
-    expect(ui).toContain("node.type === 'fead-wizard'");
-    expect(ui).toContain('veFeadWizOpen');
+    expect(ui).not.toContain("node.type === 'fead-wizard'");
+    const arac = fs.readFileSync(path.join(__dirname, '../../js/cp-fead-araclar.js'), 'utf8');
+    expect(arac).toContain('veFeadWizOpen');
   });
 
   test('betik cp-fead.js\'ten SONRA yükleniyor', () => {
@@ -144,7 +148,7 @@ describe('bileşen sözleşmesi', () => {
     });
   });
 
-  test('başlangıçta İKİ açılış yüzeyi + kutusuz KAYIŞ düğümü kurulur', () => {
+  test('başlangıçta TEK açılış yüzeyi + kutusuz kayış ve araç düğümleri kurulur', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
     global.nodes = []; global.connections = [];
     let k = 0;
@@ -164,12 +168,16 @@ describe('bileşen sözleşmesi', () => {
     // sihirbazın 1. adımında zaten vardı ve FEAD'e girince sihirbaz açılıyor.
     // KAYIŞ DÜĞÜMÜ DE (2026-09-26): kutusu ve palet satırı kalktı, onu
     // kurabilecek tek yol açılış — onsuz model kurulamıyor. Kanvasta görünmez.
-    expect(out.map((n) => n.type).sort()).toEqual(['fead-belt', 'fead-layout', 'fead-wizard']);
-    expect(veIsCanvasHidden(out.find((n) => n.type === 'fead-belt'))).toBe(true);
-    // Görünen iki yüzey üst üste binmiyor (ikisi de aynı şeride konuyor).
+    // ARAÇLAR DA (2026-09-28): çözücü, rapor ve sihirbaz kutusuz; eylemleri
+    // FEAD araçları penceresinde. Pencere onları KURMAZ, bağlanır — kuran açılış.
+    expect(out.map((n) => n.type).sort())
+      .toEqual(['fead-belt', 'fead-layout', 'fead-report', 'fead-solver', 'fead-wizard']);
+    ['fead-belt', 'fead-report', 'fead-solver', 'fead-wizard'].forEach((t) => {
+      expect({ t, gizli: veIsCanvasHidden(out.find((n) => n.type === t)) }).toEqual({ t, gizli: true });
+    });
+    // Tuvalde görünen TEK yüzey boş Kayış Yolu kartı.
     const gorunen = out.filter((n) => !veIsCanvasHidden(n));
-    expect(gorunen).toHaveLength(2);
-    expect(Math.abs(gorunen[0].x - gorunen[1].x)).toBeGreaterThan(60);
+    expect(gorunen.map((n) => n.type)).toEqual(['fead-layout']);
   });
 });
 

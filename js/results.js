@@ -45,7 +45,7 @@ var veResultSources = [
     match: function(id) { var L = this.lib(); return !!(L && L.isFeadSensor(id)); },
     forget: function() { if(typeof _feadForgetResults === 'function') _feadForgetResults(); },
     kanal: 'FEAD kanalı',
-    cozum: 'FEAD alt topolojisinde Çözücü → ▶ Hesapla ile yeniden çözün.',
+    cozum: 'FEAD alt topolojisinde FEAD araçları → Hesapla ile yeniden çözün.',
     // Ağaç süsleri ve pano boş durumu FEAD'in kendi sunum dosyasında
     // (js/cp-fead-results.js) — burada yalnız bağlantı noktası duruyor.
     treeTop: function() { return (typeof veFeadResTreeTopHTML === 'function') ? veFeadResTreeTopHTML() : ''; },

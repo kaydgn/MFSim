@@ -373,19 +373,20 @@ describe('gergi tarafı hükmü', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('rozet ve panel', () => {
-  const el = () => {
+// YÖN YÜZEYİ FEAD ARAÇLARI PENCERESİNDE (2026-09-28, tasarım A). Dönüş Yönü
+// bileşeni — rozetli kutusu ve penceresi — kalktı; yön ve gergi tarafı hükmü
+// pencerenin Yön bölümünde (js/cp-fead-araclar.js). Rozetin ve panelin
+// kapıları aynı sözleşmeyi bu yüzeyde ölçüyor: DURUM anahtarda, HÜKÜM satırda,
+// yön ROTADAN, düzlem YAZILI, çözümden sonra hüküm GERİDE KALMAZ, ulaşılamaz
+// çare önerilmez, ve düğüme yön alanı yazılmaz.
+describe('Yön yüzeyi — FEAD araçları penceresi (rozetin ve panelin yerine)', () => {
+  const AR = require('../../js/cp-fead-araclar.js');
+  const yon = () => {
     const d = document.createElement('div');
-    const box = document.createElement('div');
-    box.className = 've-node-box';
-    d.appendChild(box);
-    return d;
+    d.innerHTML = AR.veFeadAraclarGovdeHTML(AR.veFeadAraclarDurum());
+    return d.querySelector('[data-bol="yon"]');
   };
-  const spinNode = () => {
-    const d = componentDefs['fead-spin'];
-    return { id: 'spin1', type: 'fead-spin', def: d, x: 0, y: 0,
-             width: d.defaultWidth, height: d.defaultHeight, data: {} };
-  };
+  const secili = (b) => b.querySelectorAll('[role="radio"][aria-checked="true"]');
 
   test('yön ROTA sırasından okunur, düğüm DİZİSİ sırasından değil', () => {
     // Bu kapı gerçek bir kusuru yakaladı: rozet `nodes.filter(isPulley)`
@@ -401,120 +402,118 @@ describe('rozet ve panel', () => {
     expect(fead.veFeadCurrentSpin()).toBe(-ORNEK_SPIN);
   });
 
-  test('rozet GLİFLE durumu, RENKLE hükmü taşır', () => {
+  test('anahtar DURUMU, satır HÜKMÜ taşır — çözüm yokken hüküm İDDİA EDİLMEZ', () => {
     const s = kur('AG00976_GATES_2025', false);
-    const b = spinNode(); global.nodes.push(b);
-
-    // Çözüm yokken renk İDDİA ETMEZ.
-    let a = el();
-    expect(fead.veFeadApplyBadge(a, b)).toBe(true);
-    let r = a.querySelector('.ve-fead-badge');
-    // ROZET KAYIŞIN GERÇEK DÖNÜŞÜNÜ BASAR: AG00976 Gates sırasında kurulu →
-    // liste CCW, kayış CW, krank CW. Rozet modelin `spin`'ini basmak zorunda;
-    // ayrışırsa sessiz kalır, çünkü ikisi de ayrı ayrı makul görünür.
     expect(M.veFeadNaturalSense(s.b.order)).toBe(ORNEK_SPIN);
-    expect(rozetYazisi(r)).toBe(glif(ORNEK_SPIN));
-    expect(rozetYazisi(r)).toBe('rotate-cw CW');
-    expect(r.style.cssText).toContain('--text-secondary');
-
-    // Gergi gevşek tarafta → yeşil
-    global.veFeadResults = { tensionerSide: { ok: true } };
-    a = el(); fead.veFeadApplyBadge(a, b);
-    expect(a.querySelector('.ve-fead-badge').style.cssText).toContain('--accent-success');
-
-    // Gergi gergin tarafta → kırmızı
-    global.veFeadResults = { tensionerSide: { ok: false } };
-    a = el(); fead.veFeadApplyBadge(a, b);
-    expect(a.querySelector('.ve-fead-badge').style.cssText).toContain('--accent-danger');
-  });
-
-  test('ÇÖZDÜKTEN SONRA rozet tazelenir — bir çözüm GERİDE kalmaz', () => {
-    // ÖLÇÜLDÜ (gerçek tarayıcı, tazeleme YOKKEN): ileri yönde nötr, ters
-    // yönde YEŞİL, geri dönünce KIRMIZI — renk her seferinde bir ÖNCEKİ
-    // modelin hükmünü gösteriyordu. Sessiz, çünkü sayı makul.
-    const s = kur('AG00976_GATES_2025', true);
-    const b = spinNode(); global.nodes.push(b);
-    const el0 = el(); el0.id = b.id;
-    document.body.appendChild(el0);
-    global.veFeadResults = null;
-    fead.veFeadApplyBadge(el0, b);
-    expect(el0.querySelector('.ve-fead-badge').style.cssText).toContain('--text-secondary');
-
-    // Çözüm koştur → rozet AYNI karede hükme geçmeli
+    let b = yon();
+    // ANAHTAR KAYIŞIN GERÇEK DÖNÜŞÜNÜ BASAR: AG00976 Gates sırasında kurulu →
+    // liste CCW, kayış CW, krank CW. Tek seçenek seçili, ikon + kısa ad.
+    expect(secili(b)).toHaveLength(1);
+    expect(Number(secili(b)[0].getAttribute('data-v'))).toBe(ORNEK_SPIN);
+    expect(rozetYazisi(secili(b)[0])).toBe(glif(ORNEK_SPIN));
+    expect(b.querySelector('.ve-fead-arac-huk')).toBeNull();
+    // İleri yönde çöz → gergi gevşek tarafta → yeşil satır
     const sv = s.ns.find((n) => n.type === 'fead-solver');
     fead.veFeadSolve(sv.id);
-    expect(global.veFeadResults.tensionerSide.ok).toBe(false);
-    expect(el0.querySelector('.ve-fead-badge').style.cssText).toContain('--accent-danger');
-    document.body.removeChild(el0);
+    expect(global.veFeadResults.tensionerSide.ok).toBe(true);
+    b = yon();
+    expect(b.querySelector('.ve-fead-arac-huk').getAttribute('data-d')).toBe('ok');
   });
 
-  test('CW ile CCW aynı renk ekseninde DEĞİL — glif ayırıyor', () => {
-    // İki mevcut rozette renk "mavi = GİRDİ, amber = TÜRETİLEN" demek.
-    // CW ve CCW ikisi de eşit meşru; birine amber vermek yalan olurdu.
+  test('ters yönde hüküm KIRMIZI ve sebebi SAYIYLA — ulaşılamaz çare önerilmez', () => {
+    const s = kur('AG00976_GATES_2025', true);
+    fead.veFeadSolve(s.ns.find((n) => n.type === 'fead-solver').id);
+    const R = global.veFeadResults;
+    expect(R.tensionerSide.ok).toBe(false);
+    const h = yon().querySelector('.ve-fead-arac-huk');
+    expect(h.getAttribute('data-d')).toBe('no');
+    const metin = h.textContent;
+    expect(metin).toContain('Gergi gergin tarafta');
+    expect(metin).toContain(veSayi(R.tensionerSide.minN, 1) + ' N');
+    expect(metin).toContain(veSayi(R.tensionerSide.deficitN, 1) + ' N');
+    expect(metin).not.toMatch(/undefined|NaN|\[object/);
+    // ULAŞILAMAZ ÇARE YASAK — tasarım gerginliği bir alan DEĞİL.
+    expect(metin).not.toMatch(/gerginliği yükselt/i);
+    expect(metin).toMatch(/Yönü çevirin/);
+  });
+
+  test('ÇÖZDÜKTEN SONRA hüküm tazelenir — bir çözüm GERİDE kalmaz', () => {
+    // ÖLÇÜLDÜ (rozet döneminde, gerçek tarayıcı, tazeleme YOKKEN): ileri
+    // yönde nötr, ters yönde YEŞİL, geri dönünce KIRMIZI — renk her seferinde
+    // bir ÖNCEKİ modelin hükmünü gösteriyordu. Pencere aynı dersi taşıyor:
+    // veFeadSolve onu AYNI karede tazeler, yön değişince hüküm DÜŞER.
+    document.body.innerHTML = '<div id="ve-canvas-wrapper"></div>';
+    global.veFeadAraclarTazele = AR.veFeadAraclarTazele;
+    try {
+      const s = kur('AG00976_GATES_2025', true);
+      AR._feadAracSifirla();
+      AR.veFeadAraclarKapsam('fead-analysis');
+      const pen = () => document.getElementById('ve-fead-araclar').querySelector('[data-bol="yon"]');
+      expect(pen().querySelector('.ve-fead-arac-huk')).toBeNull();
+      const sv = s.ns.find((n) => n.type === 'fead-solver');
+      fead.veFeadSolve(sv.id);
+      expect(pen().querySelector('.ve-fead-arac-huk').getAttribute('data-d')).toBe('no');
+      // Yönü çevir → sonuç BAYAT → eski yönün hükmü GÖSTERİLMEZ
+      // Ters kurulu model CCW (−ORNEK_SPIN); anahtarın öteki seçeneği CW.
+      expect(AR.veFeadAracEylem('yon', String(ORNEK_SPIN))).toBe(true);
+      expect(pen().querySelector('.ve-fead-arac-huk')).toBeNull();
+      fead.veFeadSolve(sv.id);
+      expect(pen().querySelector('.ve-fead-arac-huk').getAttribute('data-d')).toBe('ok');
+    } finally {
+      delete global.veFeadAraclarTazele;
+      AR._feadAracSifirla();
+      document.body.innerHTML = '<div id="ve-canvas"></div>';
+    }
+  });
+
+  test('CW ile CCW aynı renk ekseninde DEĞİL — seçim vurgu, hüküm ayrı satır', () => {
+    // CW ve CCW ikisi de eşit meşru; birine amber/yeşil/kırmızı vermek yalan
+    // olurdu. Seçili seçenek VURGU tonuyla (her iki yönde aynı kural), hüküm
+    // yalnız satırın rengi.
     const s = kur('AG00976_GATES_2025', false);
-    const b = spinNode(); global.nodes.push(b);
-    global.veFeadResults = { tensionerSide: { ok: true } };
-    const a1 = el(); fead.veFeadApplyBadge(a1, b);
-    const ilk = a1.querySelector('.ve-fead-badge');         // Gates sırası → CW
-
+    const ilk = secili(yon())[0];
     M.veFeadReverseRoute(global.nodes);
-    const a2 = el(); fead.veFeadApplyBadge(a2, b);
-    const ters = a2.querySelector('.ve-fead-badge');        // çevrilmiş → CCW
-
+    const ters = secili(yon())[0];
     expect(rozetYazisi(ilk)).toBe(glif(ORNEK_SPIN));
     expect(rozetYazisi(ters)).toBe(glif(-ORNEK_SPIN));
-    expect(rozetYazisi(ilk)).not.toBe(rozetYazisi(ters));  // ters çevirmek İŞE YARADI
-    expect(ters.style.background).toBe(ilk.style.background);   // AYNI renk
-    expect(ilk.style.cssText).not.toContain('--accent-warning');
-    expect(ilk.style.cssText).not.toContain('--accent-primary');
+    [ilk, ters].forEach((b) => expect(b.hasAttribute('data-d')).toBe(false));
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (css.match(/\.ve-fead-arac-seg button\[aria-checked="true"\]\{([^}]*)\}/) || [])[1] || '';
+    expect(kural).toMatch(/--accent-tint/);
+    expect(kural).not.toMatch(/warning|success|danger/);
   });
 
-  test('rozet mousedown\'ı durdurur ve tık yönü çevirir', () => {
+  test('anahtar yönü çevirir; SEÇİLİ olana basmak hiçbir şey yapmaz', () => {
     const s = kur('AG00976_GATES_2025', false);
-    const b = spinNode(); global.nodes.push(b);
-    const a = el(); fead.veFeadApplyBadge(a, b);
-    const r = a.querySelector('.ve-fead-badge');
-    let durdu = false;
-    r.onmousedown({ stopPropagation: () => { durdu = true; } });
-    expect(durdu).toBe(true);
-
-    const once = M.veFeadNaturalSense(s.b.order);
-    r.onclick({ stopPropagation() {}, preventDefault() {} });
-    const sonra = M.veFeadSpinOf(global.nodes);
-    expect(sonra).toBe(-once);
+    const once = M.veFeadSpinOf(global.nodes);
+    expect(AR.veFeadAracEylem('yon', String(once))).toBe(false);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    expect(AR.veFeadAracEylem('yon', String(-once))).toBe(true);
+    expect(M.veFeadSpinOf(global.nodes)).toBe(-once);
     expect(stubs.saveState).toHaveBeenCalled();
+    // Katlı şeridin tek düğmesi ("çevir") her basışta çevirir.
+    AR.veFeadAracEylem('yon', 'cevir');
+    expect(M.veFeadSpinOf(global.nodes)).toBe(once);
   });
 
-  test('panel yönü ve hükmü yazar, düğüme HİÇ yazmaz', () => {
+  test('yön ve düzlem YAZILI, geometrinin DEĞİŞMEDİĞİ söylenir; düğüme yön alanı YAZILMAZ', () => {
     const s = kur('AG00976_GATES_2025', false);
-    const b = spinNode(); global.nodes.push(b);
-    const once = JSON.stringify(b.data);
-
-    let h = fead.getFeadSpinPropertiesHTML(b);
-    // PANEL DE KAYIŞIN GERÇEK DÖNÜŞÜNÜ BASAR. Rozet ile panel aynı üreticiden
-    // besleniyor (`veFeadSpinLabel`); ikisi ayrışsaydı biri sessizce eskirdi.
-    const yon = ORNEK_SPIN;
-    expect(h).toContain(yon > 0 ? 'CCW (saat yönünün TERSİNE)' : 'CW (saat yönünde)');
-    // ÇELİŞEN BAŞLIK YASAK — ama ETİKETLİ karşı yön serbest. Uzun metin
-    // 2026-09-07'den beri öbür bakışı da adıyla veriyor ("… · Gates rapor
-    // düzleminde CCW"); körlemesine `not.toContain('CCW')` onu da yakalıyordu
-    // ve ölçtüğü şey artık yanlıştı. Ölçülen: BAŞLIK tek ve çizimle aynı.
-    expect(h).not.toContain(yon > 0 ? 'CW (saat yönünde) —' : 'CCW (saat yönünün TERSİNE) —');
-    expect(h).toContain('veFeadToggleSpin()');
+    const once = JSON.stringify(global.nodes.map((n) => n.data));
+    const b = yon();
     // DÜZLEM YAZILI OLMALI — hangi taraftan bakıldığı belirtilmeden CW/CCW
-    // hiçbir şey söylemez. Metin tek üreticiden (`_feadPlaneName`) geliyor.
-    expect(h).toContain(M._feadPlaneName());
-    expect(h).toContain('Değişmez');               // geometri yönden bağımsız
-    expect(JSON.stringify(b.data)).toBe(once);
-
-    global.veFeadResults = { tensionerSide: { ok: false, anchorN: 544, minN: -291.6,
-                                              minName: 'Avara 1', deficitN: 835.6, drain: ['x'] } };
-    h = fead.getFeadSpinPropertiesHTML(b);
-    expect(h).toContain('GERGİN tarafında');
-    expect(h).not.toMatch(/undefined|NaN|\[object/);
-    // ULAŞILAMAZ ÇARE YASAK — tasarım gerginliği panelde bir alan DEĞİL.
-    expect(h).not.toMatch(/gerginliği yükselt/i);
-    expect(h).toMatch(/yükseltilemez|bir alan değil/i);
+    // hiçbir şey söylemez. Etiket TEK üreticiden (`veFeadSpinLabel`).
+    const ipucu = secili(b)[0].getAttribute('title');
+    expect(ipucu).toBe(M.veFeadSpinLabel(ORNEK_SPIN).uzun);
+    expect(ipucu).toContain(M._feadPlaneName());
+    // Başlık neyin değişip neyin DEĞİŞMEDİĞİNİ söyler (geometri yönden bağımsız).
+    expect(b.querySelector('h4').getAttribute('title')).toMatch(/DEĞİŞMEZ/);
+    // Yön bir ALAN değil — okumak hiçbir düğüme yazmaz.
+    expect(JSON.stringify(global.nodes.map((n) => n.data))).toBe(once);
+    // Koordinatsız modelde yön 0: anahtar pasif, seçim iddia edilmez.
+    global.nodes = [];
+    const bos = yon();
+    expect(secili(bos)).toHaveLength(0);
+    bos.querySelectorAll('[role="radio"]').forEach((x) => expect(x.getAttribute('aria-disabled')).toBe('true'));
   });
 
   test('SONUÇ KARTI da doğru sebebi yazar, "gerginliği yükseltin" DEMEZ', () => {
@@ -534,52 +533,55 @@ describe('rozet ve panel', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('bileşen sözleşmesi', () => {
-  test('bağlanamaz araç düğümü, tek kopya, "ufak"', () => {
-    const d = componentDefs['fead-spin'];
-    expect(d).toBeTruthy();
-    expect(d.inputs).toBe(0);
-    expect(d.outputs).toBe(0);
-    expect(d.isFeadSpin).toBe(true);
-    expect(d.maxInstances).toBe(1);
-    const alan = (t) => (componentDefs[t].defaultWidth || 65)
-                      * (componentDefs[t].defaultHeight || 60);
-    // `fead-example` listeden düştü: bileşen 2026-09-09'da kaldırıldı
-    // (kullanıcı: *"Gerek yok"* — sihirbazın 1. adımı aynı listeyi taşıyor).
-    // `fead-table` de düştü (2026-09-23): tablo artık kanvas bileşeni değil,
-    // Kayış Yolu kartının açtığı pencere.
-    ['fead-belt', 'fead-report', 'fead-layout'].forEach((t) => {
-      expect(alan('fead-spin')).toBeLessThan(alan(t));
-    });
-  });
-
-  test('palet, kayıt defteri ve panel dağıtımı bağlı', () => {
+describe('Dönüş Yönü bileşeni KALKTI (2026-09-28)', () => {
+  // Negatif kapı: tip, palet satırı, panel dağıtımı ve üreticiler birlikte
+  // kalktı. Biri geri gelirse kutusu tuvale düşen ama paneli açılmayan (ya da
+  // paneli açılıp rozeti çizilmeyen) yarım bir bileşen doğar.
+  test('tip, palet, kayıt defteri ve panel dağıtımı YOK', () => {
     const fs = require('fs');
     const path = require('path');
     const root = path.join(__dirname, '../..');
+    expect(componentDefs['fead-spin']).toBeUndefined();
     const idx = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-    const i0 = idx.indexOf('FEAD araçları');
-    expect(i0).toBeGreaterThan(0);
-    expect(idx.slice(i0, idx.indexOf('</div>\n\n', i0))).toContain('data-type="fead-spin"');
-    expect(VE_MODULES['full-throttle'].components).toContain('fead-spin');
+    expect(idx).not.toContain('data-type="fead-spin"');
+    expect(VE_MODULES['full-throttle'].components).not.toContain('fead-spin');
     const core = fs.readFileSync(path.join(root, 'js/cp-core.js'), 'utf8');
-    expect(core).toContain("node.type === 'fead-spin'");
-    expect(core).toContain('getFeadSpinPropertiesHTML(node)');
+    expect(core).not.toContain("node.type === 'fead-spin'");
+    expect(core).not.toContain('getFeadSpinPropertiesHTML');
+    expect(fead.getFeadSpinPropertiesHTML).toBeUndefined();
+    expect(fead.veFeadApplySpinBadge).toBeUndefined();
   });
 
-  test('SİLME KANCASI YOK ve olmamalı — durum kablolarda', () => {
+  test('ŞEMA 9 GÖÇÜ: kayıtlı Dönüş Yönü düğümü ve telleri silinir, başka hiçbir şeye dokunulmaz', () => {
+    const st = {
+      nodes: [{ id: 'k', type: 'fead-crank', data: { od: 150 } },
+              { id: 'sp', type: 'fead-spin', data: {} },
+              { id: 'sv', type: 'fead-solver', data: { tdes: 1 } }],
+      connections: [{ from: 'sp', to: 'k' }, { from: 'k', to: 'sv' }]
+    };
+    expect(M.veFeadMigrateSpinOff(st)).toBe(1);
+    expect(st.nodes.map((n) => n.id)).toEqual(['k', 'sv']);
+    expect(st.connections).toEqual([{ from: 'k', to: 'sv' }]);
+    expect(st.nodes[1].data).toEqual({ tdes: 1 });
+    // İkinci kez: iş yok (göç bir kez koşar ama idempotent olmak zorunda).
+    expect(M.veFeadMigrateSpinOff(st)).toBe(0);
+  });
+
+  test('SİLME KANCASI YOK — yön SIRADA, düğümü silmek yönü değiştirmez', () => {
     // Konum Bağı'nda kanca ŞARTTI: düğüm iki gerçeği (kutu px ↔ mm) ayrı
     // tutuyordu ve silmek onları uzlaştırmasız bırakıyordu (81 mm patlaması).
-    // Burada yön kabloların İÇİNDE; düğmeyi silmek hiçbir şeyi ayrıştırmaz.
+    // Dönüş Yönü düğümü hiçbir şey taşımıyordu — yön kayış SIRASINDA; göçün
+    // onu silmesi yönü değiştirmez.
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.join(__dirname, '../../js/map.js'), 'utf8');
     expect(src).not.toContain('SpinAfterDelete');
     const s = kur('AG00976_GATES_2025', true);
     const once = M.veFeadNaturalSense(s.b.order);
-    global.nodes = global.nodes.filter((n) => n.type !== 'fead-spin');
-    expect(M.veFeadSpinOf(global.nodes))
-      .toBe(once);                                 // yön DEĞİŞMEDİ
+    const st = { nodes: global.nodes.concat([{ id: 'sp', type: 'fead-spin', data: {} }]),
+                 connections: [] };
+    expect(M.veFeadMigrateSpinOff(st)).toBe(1);
+    expect(M.veFeadSpinOf(st.nodes)).toBe(once);   // yön DEĞİŞMEDİ
   });
 });
 
