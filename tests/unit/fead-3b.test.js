@@ -65,6 +65,9 @@ describe('BİRİM: parça rollü atasına aittir — bir yolda tek rol', () => {
   test('rolsüz parça birimsiz; alt montaja rol verilince bütün parçaları onun; içindeki parçaya rol verilince birimin rolü kalkar', () => {
     const s = oku(O.gergiAltMontaj());
     const pi = (ad) => s.sonuc.parcalar.findIndex((p) => p.ad === ad);
+    // Okuma gergiyi ALT MONTAJ olarak bulur (5.2) — rolsüz hâlden başlamak için kaldır
+    expect(s.otomatik).toMatchObject({ dugum: dugum(s, /GERG/), tip: 'fead-tensioner' });
+    wiz.veFeadWizStpRol(dugum(s, /GERG/), '');
     expect(G.veFeadWiz3bBirim(s, pi('KASNAK'))).toBe(-1);
     wiz.veFeadWizStpRol(dugum(s, /GERG/), 'fead-tensioner');
     const g = dugum(s, /GERG/);

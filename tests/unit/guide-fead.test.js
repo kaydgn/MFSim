@@ -468,10 +468,11 @@ describe('içerik yönlendirici', () => {
   test('STEP\'ten başlamak anlatılıyor: okunmayan üç şey adıyla', () => {
     expect(DOC).toContain('3.5 Yol D');
     expect(DOC).toContain('STEP dosyasından ne okunur');
-    ['Yay künyesi', 'Kayış sırası', '✓ Sıra doğru', 'Çap ve merkezleri hesapla', 'hiçbir parça rol almamıştır',
-      '3B görüntüleyici', 'Önden bak', '3B’de seç']
+    // Açılışta yalnız GERGİ rol alır (5.2, kullanıcı sorusu 2026-09-28) — kasnaklar rolsüz
+    ['Yay künyesi', 'Kayış sırası', '✓ Sıra doğru', 'Çap ve merkezleri hesapla', 'Gergi otomatik bulunur',
+      'öteki parçalar rolsüzdür', 'Tek istisna: gergi', 'Gergi olabilir', '3B görüntüleyici', 'Önden bak', '3B’de seç']
       .forEach((x) => expect(DOC).toContain(x));
-    expect(DOC).not.toMatch(/Öneri parçanın ADINDAN/);          // ad önerisi kalktı
+    expect(DOC).not.toMatch(/Öneri parçanın ADINDAN/);          // kasnaklar için ad önerisi kalktı
     expect(DOC).toMatch(/Kayış sırası dosyada yok/);
   });
 

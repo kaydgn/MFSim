@@ -593,6 +593,20 @@ olurdu.
       ayna modeli yine çözer, yalnız krankın dönüş yönünü çevirir.
     • **Birim dosyanın bağlamından**, tahmin edilmez; MAPPED_ITEM montajı
       desteklenmez ve uyarıyla söylenir.
+    • **GERGİ DOSYA OKUNUNCA BULUNUR — tek istisna** (2026-09-28, kullanıcı:
+      *"modeli attığımız zaman otomatik gergi otomatik olarak bulunabilir
+      mi?"*). `veFeadStpOner` rol vermeden bütün birimleri (kök hariç) tarar;
+      imza: kayış düzleminde bir avara (RP) · ekseninde büyük gövde yok (R8) ·
+      ona paralel, kol aralığında (R4), disk DIŞINDA (R1), göbekli (r ≥ 20,
+      ≥ 8 yüz — R2), cıvata dairesinde EŞ olmayan (R3), başka kasnakla
+      eşeksenli olmayan (R5), kendisi kasnak olmayan (R6) bir pivot. Her kural
+      bir tuzak montajda TEK BAŞINA yük taşır; bayrak en küçük birime.
+      **Öneri bir karar değil**: sihirbaz rolü yalnız TEK aday varsa ve ad ·
+      kod · katalogdan biri de doğruluyorsa önceden verir (`s.otomatik`,
+      kartta ve 3B'de "otomatik" diye yazılı); doğrulanmayan aday yalnız
+      "Gergi olabilir" diye önerilir. Kullanıcı o düğüme dokunursa ya da
+      gergiyi başka parçaya verirse otomatik atama söner — seçimi kazanır.
+      Kasnak rolleri hâlâ kullanıcının (ad bir dosyada başka şey olabilir).
     • **Kayış YALNIZ rolü verilirse** (2026-09-28, kullanıcı: *"3B
       görüntüleyicide kayışı da seçelim"*): `fead-belt` birimi kasnak DEĞİL —
       yüzleri kasnak diye hiç incelenmez (kayışın yayları kasnak eksenleriyle
@@ -685,7 +699,9 @@ olurdu.
     (span %0,5 · sarım 0,2°) ve *"ROL KULLANICININ"* (seçilmemiş kasnak,
     iki izli damper, kaburgalı avara); `tests/unit/fead-wizard-step.test.js`
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
-    · sıra · künye · .stpZ) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
+    · sıra · künye · .stpZ) + `tests/unit/fead-step-oner.test.js` (gergi
+    imzası · sekiz kuralın tuzak montajları · en küçük birim · iki aday ·
+    otomatik atama ve sönmesi) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
     kayış birimi · genişlik · aktarım · tek kayış · CAD'deki kayış kartı · tek
     rol listesi) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
     renk · panel · otomatik açılış · Esc · tazeleme kancası) +
@@ -693,7 +709,7 @@ olurdu.
     geçirmezlik · baştaki Delaunay · ölçülmüş kusurlar) +
     `tests/e2e/fead-step.spec.js` (gerçek File · UYGULAMANIN KENDİ karesi
     çiziyor · başlık ailenin · sığdırma montajın kendi noktalarıyla · 3B'de
-    tıklayıp rol · kayış rolü · geniş pencere · alt montaj · halkalar · önden/arkadan yön
+    tıklayıp rol · otomatik gergi · kayış rolü · geniş pencere · alt montaj · halkalar · önden/arkadan yön
     ve XY düzleminde yukarı · hesap seçimi kaldırır · Esc · kart altından
     değişince 3B kapanır · bırakma · Modeli Kur).
 
