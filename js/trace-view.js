@@ -2363,6 +2363,28 @@ function veTrRenderToolbar() {
        '<span class="mf-ico mf-ico-chevron-down ve-trace-caret" aria-hidden="true"></span></button>';
   h += '</div>';
 
+  h += (mode === 'table') ? veTrTabloAraclari(n) : veTrIzAraclari(slot, n, zoomed);
+
+  h += '<span class="ve-trace-spacer"></span>';
+
+  h += '<div class="ve-trace-seg" role="group" aria-label="Görünüm">';
+  [['line', 'İz'], ['table', 'Tablo'], ['scatter3d', '3B']].forEach(function(m) {
+    h += '<button type="button" data-act="mode" data-mode="' + m[0] + '"' +
+         ' aria-pressed="' + (mode === m[0] ? 'true' : 'false') + '">' + m[1] + '</button>';
+  });
+  h += '</div>';
+
+  h += '<button type="button" class="ve-trace-btn danger" data-act="clear"' +
+       (n ? '' : ' disabled') + ' title="Tüm şeritleri kaldır">Temizle</button>';
+
+  el.innerHTML = h;
+}
+
+// İz (ve 3B) kipinin araçları: log eksenleri, yakınlaştırma, referans imleci,
+// şerit ayır/birleştir. Tablo kipinde hiçbiri bir şey yapmıyordu.
+function veTrIzAraclari(slot, n, zoomed) {
+  var h = '';
+
   // Log/lineer anahtarı — yalnız veri buna elverişliyse (tüm x > 0) görünür.
   // Frekans yanıtı gibi çok dekatlı eğrilerde lineer eksen okunmaz olur;
   // düğme kapalıyken de görünüp kilitli durmaz, hiç çizilmez: kullanabildiği
@@ -2414,19 +2436,22 @@ function veTrRenderToolbar() {
        (n > 1 ? '' : ' disabled') +
        ' title="Hangi şeritlerin tek diyagramda birleşeceğini seç — her sinyal kendi Y ekseninde kalır">Birleştir</button>';
 
-  h += '<span class="ve-trace-spacer"></span>';
+  return h;
+}
 
-  h += '<div class="ve-trace-seg" role="group" aria-label="Görünüm">';
-  [['line', 'İz'], ['table', 'Tablo'], ['scatter3d', '3B']].forEach(function(m) {
-    h += '<button type="button" data-act="mode" data-mode="' + m[0] + '"' +
-         ' aria-pressed="' + (mode === m[0] ? 'true' : 'false') + '">' + m[1] + '</button>';
-  });
-  h += '</div>';
-
-  h += '<button type="button" class="ve-trace-btn danger" data-act="clear"' +
-       (n ? '' : ' disabled') + ' title="Tüm şeritleri kaldır">Temizle</button>';
-
-  el.innerHTML = h;
+// TABLO kipinin araçları (js/sonuc-tablo.js): tablonun kendi iki eylemi.
+// İkisi de TÜM örnekleri alır — ekran uzun seriyi seyreltir, dışa aktarma değil.
+// İkon sınıfla yazılır, veIkon ile değil: bu dosya görüntüleyicide de koşuyor
+// ve orada js/ikon.js yok.
+function veTrTabloAraclari(n) {
+  var h = '<span class="ve-trace-sep"></span>';
+  h += '<button type="button" class="ve-trace-btn" data-act="tablo-kopyala"' + (n ? '' : ' disabled') +
+       ' title="Tablonun tüm örneklerini panoya kopyala — Excel\'e yapıştırılır">' +
+       '<span class="mf-ico mf-ico-clipboard" aria-hidden="true"></span>Kopyala</button>';
+  h += '<button type="button" class="ve-trace-btn" data-act="tablo-csv"' + (n ? '' : ' disabled') +
+       ' title="Tablonun tüm örneklerini CSV dosyası olarak indir">' +
+       '<span class="mf-ico mf-ico-download" aria-hidden="true"></span>CSV</button>';
+  return h;
 }
 
 // ── Eylemler ─────────────────────────────────────────────────────────────────
@@ -3288,11 +3313,14 @@ function veTrShellHTML() {
   h += '</div>';
   h += '<canvas class="ve-trace-axis" id="ve-trace-axis"></canvas>';
   h += '<div class="ve-trace-status" id="ve-trace-status"></div>';
-  h += '<div class="ve-trace-note" id="ve-trace-note"></div>';
   h += '</div>';
 
   // Tablo / 3B görünümü — veRenderSlot(0) buraya çizer
   h += '<div class="ve-trace-alt" id="ve-rslot-body-0" style="display:none;"></div>';
+  // Yorum şeridi grafik kabının DIŞINDA: Tablo ve 3B kipinde kap gizleniyor
+  // ve şerit onunla birlikte kayboluyordu (ölçüldü: FEAD yorumu tablo kipinde
+  // yoktu) — oysa veTrApplyMode tam da bunun için şeridi kipten bağımsız çizer.
+  h += '<div class="ve-trace-note" id="ve-trace-note"></div>';
   h += '</div>';
 
   h += '</div>';
@@ -3341,6 +3369,8 @@ function veTrBindToolbar() {
     else if(act === 'split-all') veTrSplitAll();
     else if(act === 'merge-all') veTrShowMergePicker(e);
     else if(act === 'clear') veTrClear();
+    else if(act === 'tablo-kopyala') { if(typeof veFoyKopyala === 'function') veFoyKopyala(); }
+    else if(act === 'tablo-csv') { if(typeof veFoyCsvIndir === 'function') veFoyCsvIndir(); }
     else if(act === 'mode') veTrSetMode(b.getAttribute('data-mode'));
   });
 }
@@ -3510,6 +3540,8 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrLaneGrabRect: veTrLaneGrabRect,
     veTrHitLane: veTrHitLane,
     veTrHitResize: veTrHitResize,
-    veTrBindPopupDismiss: veTrBindPopupDismiss
+    veTrBindPopupDismiss: veTrBindPopupDismiss,
+    veTrShellHTML: veTrShellHTML,
+    veTrTabloAraclari: veTrTabloAraclari
   };
 }

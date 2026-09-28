@@ -225,6 +225,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   yazılmaz — indirilen HTML'de JS yok). Üst bandı `veRepHeadHTML` **tek
   üretici** kurar ve `--bant-h`'tan beslenir; panel başına kopya bant
   kurulmaz.
+- **SONUÇLAR TABLOSU FÖYDÜR** (kullanıcı seçimi 2026-09-28). Tek üretici
+  `js/sonuc-tablo.js` — MFSim ile görüntüleyici paylaşır, veri çözümü her
+  programın `veFoyModel`inde. Sayı mürekkep renginde, sinyal rengi yalnız
+  başlıktaki noktada; sütun başına TEK ondalık; seyreltme not satırında
+  SÖYLENİR; başlık ve özet yapışık. Kopyala (sekme, virgüllü) ve CSV (`;`,
+  noktalı) TÜM örnekleri alır. Kapı: `sonuc-tablo.test.js` + `.spec.js`.
 - **KABUĞUN ÜST BANDI TEK ÇİZGİ, TUVAL KENARA YAPIŞIK.** Her sayfada yan yana
   duran başlıklar (Topoloji: "Bileşenler" · sekme bandı · müfettiş başlığı;
   Sonuçlar: Veri Gezgini · araç çubuğu · rapor bandı) ölçüyü ve zemini TEK
@@ -393,12 +399,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
-dosyası olarak dağıtılıyor. `viewer/js/` altındaki DOKUZ dosya `js/`'ten
+dosyası olarak dağıtılıyor. `viewer/js/` altındaki ON dosya `js/`'ten
 **birebir kopya** (`trace-view.js`'te iki işaretli fark hariç). Bu yüzden:
 
-**İçe aktarma / şerit diyagramı tarafında bir düzeltme yaparsan
+**İçe aktarma / şerit diyagramı / tablo tarafında bir düzeltme yaparsan
 (`sayi.js`, `sayi-alan.js`, `xlsx-read.js`, `measure-import*.js`, `measure-core.js`,
-`signal-tree.js`, `trace-view.js`, `measure-dropzone.js`), düzeltmeyi
+`signal-tree.js`, `trace-view.js`, `measure-dropzone.js`, `sonuc-tablo.js`), düzeltmeyi
 `viewer/js/` altına da taşı:**
 
 ```bash
@@ -618,7 +624,7 @@ FEAD satırları modül skill'ine taşındı
 | `tests/unit/simulation-engine-grade.test.js` | `js/simulation-engine.js` | Yol eğimi işaret konvansiyonu (harita ↔ fizik çevirisi) + dinamiğin değişmediğini bağlayan altın değerler |
 | `tests/unit/shot-tool.test.js` | `tools/shot.js` | Ekran görüntüsü aracının ayrıştırma çekirdeği: bilinmeyen bayrağın SESSİZCE yutulmaması (yanlış ekranın görüntüsü alınırdı), hedef takma adları, PNG ölçüsü, karşılaştırmanın İKİ GÖRÜNTÜYÜ TEK ÖLÇEKLE küçültmesi |
 | `tests/unit/build-freshness.test.js` | `viewer/build.js` + `candbc/build.js` + `package.json` | **Git'e dâhil üretilen dosyalar taze mi**: `css/` üç ürüne birden girdiği için bir tema rötuşu `MFSim_Olcum_Goruntuleyici.html` ve `MFSim_CAN_Cozumleyici.html`'i birden bayatlatıyor ve kapı eskiden YALNIZ CI'daydı. Derleme geçici yola yapılır (`MFSIM_BUILD_OUT`) — test çalışma ağacını kirletmez. Ayrıca `three` köken kapısı: npm bağımlılığı kaldırıldı (kullanılmıyordu, kurulum başına 30,1 MB), sürüm izi `index.html` ile `vendor/three.min.js` arasında bağlı |
-| `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok |
+| `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok, CSS'te seçicisiz kopuk bildirim yok |
 | `tests/unit/pchip-uc-kopya.test.js` | `js/numerics.js` + `js/ft-performance.js` + `js/mount-core.js` | **Tek PCHIP algoritmasının ÜÇ ayrı yazımı aynı eğriyi verir**: `assets/examples`'taki her sayısal tablo üç kopyada karşılaştırılır — ayrışma sessizdi, çünkü her dosya kendi başına doğru. **Bilerek ayrık üç nokta ÇİVİLİ**: tablo dışı (A/B düz — C doğrusal, gerekçesi `mount-core.js`), n=2 (A `null` döner, `veEvalPchip` sessizce `0` verir), geçersiz girdi (yalnız `ft-performance.js` adresli hata atar) |
 | `tests/unit/loader-splash.test.js` | `js/loader.js` + `index.html` açılış ekranı | **Açılış ekranı (AMBLEM)**: splash gövdesi ↔ `ELS` kimlik sözleşmesi (bir yeniden adlandırma cetveli sessizce durdururdu), `data-mfsim-stage` işaretlerinden öbeklerin kurulması (işaretsiz script bir öncekine yazılır; ad `&` içerebilir) ve **yalnız o anki öbeğin** Roma rakamıyla yazılması (rakam sıradan türer: IV, IX, XIV), etiketin yalnız öbek DEĞİŞİNCE belirmesi, atlanan modülün GÖRÜNÜR olması (uyarı satırı + öbek sürerken kehribar rakam) + yüklemenin devam etmesi, sürüm künyesi (modüler kopyada boş kalır), ipucu döngüsünün kapanışta DURMASI; **SAHNE**: kare listesinin defer OLMAMASI ve yükleyiciden ÖNCE gelmesi (defer setine düşerse açılış fotoğrafsız açılır), karenin seçilip boyanması + gömülü data URI ↔ dosya yolu, kare yoksa kâğıt zeminde açılıp yüklemenin yine bitmesi, **perdenin TEMANIN ZEMİNİNDEN türemesi** (tema-nötr siyah çıplak renk kapısından geçer ama açık temada koyu yazıyı koyu zemine oturturdu) ve fotoğrafsız hâlde hiç çizilmemesi, amblemin kapanışta kaymaması ve karşılama kartıyla aynı sol kenarda durması, modül giriş panelinin karşılama kartıyla BİREBİR geometrisi (left/genişlik/yarıçap/cam/gölge), **temanın ilk karede** uygulanması (kayıtlı tema hiçbir şey çizilmeden konuyor, eski kimlik ilk karede göçüyor, bozuk kayıt varsayılana düşüyor); **KADEME**: kademe sayısı tek kaynak (CSS jetonu `--mfsim-kademe`, loader onu OKUR ve cetvelin ızgarası da onunla çizilir — kademe başına bir bölme), ilerlemenin kademeye yuvarlanması (1/24'te cetvel hâlâ boş), son geçilen bölmenin VURGU taşıması ve bitişte vurgunun sönmesi, yüzdenin GÖRÜNMEMESİ (değer `aria-valuenow`da), dişlinin kademe başına bir çentik dönüp %100'de TAM TUR tamamlaması (devir teslimde dik durur), modül adının da kademeyle değişmesi, süsleme karelerinin (dönen dişli + parıltı) KALDIRILDIĞI |
 | `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı; düğme kablolaması artık ÜRETİLEN YÜZEYDEN ölçülüyor (kopya sayısı değil: bandı tek üretici kuruyor) ve dört panelin de aynı kabuğa gittiği |

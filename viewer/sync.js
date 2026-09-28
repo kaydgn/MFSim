@@ -8,7 +8,7 @@
  *
  * NEDEN VAR
  *
- * `viewer/js/` altındaki DOKUZ dosya MFSim'in `js/` klasöründen kopyadır. Sekizi
+ * `viewer/js/` altındaki ON dosya MFSim'in `js/` klasöründen kopyadır. Dokuzu
  * BİREBİR; `trace-view.js` iki yerel farkla. Bu adım README'de "elle uzlaştır"
  * diye yazılıydı ve elle uzlaştırma bir kez YANLIŞ yapıldı: bellekten yeniden
  * yazılan boş-durum bloğu, var olmayan bir DOM düğümüne innerHTML atıyordu.
@@ -38,7 +38,10 @@ var VERBATIM = [
   'measure-import.js',
   'measure-import-ui.js',
   'signal-tree.js',
-  'measure-dropzone.js'
+  'measure-dropzone.js',
+  // Sonuçlar › Tablo kipinin TEK üreticisi (föy, 2026-09-28): iki program
+  // aynı tabloyu yazar, kopyalar ve CSV'ye döker.
+  'sonuc-tablo.js'
 ];
 
 // ── trace-view.js: kopya + TAM OLARAK İKİ yerel fark ──────────────────────
@@ -178,13 +181,15 @@ var AYRIK = [
   { fn: 'veInheritedXAxis' }, { fn: 'veSyncBoardState' }, { fn: 'veWarnXAxisMismatch' },
   { fn: 'veAddSignalToSlot' }, { fn: 'veAddSensorToSlot' }, { fn: 'veRemoveSensorFromSlot' },
   { fn: 'veRenderSlot' }, { fn: 'veRenderTable' }, { fn: 'veGetAvailableXAxisOptions' },
-  { fn: 'veShowXAxisPicker' }, { fn: 'veSetSlotXAxis' }
+  { fn: 'veShowXAxisPicker' }, { fn: 'veSetSlotXAxis' },
+  // Föyün VERİ ÇÖZÜMÜ: görüntüleyicide tek kaynak içe aktarılan ölçüm
+  { fn: 'veFoyModel' }
 ];
 
 // Görüntüleyiciye özgü dosyalar (kopya DEĞİL). Aşağıdaki ters yön kapısı,
 // viewer/js/ altındaki her dosyanın ya izlenen bir kopya ya da burada ilan
 // edilmiş olmasını şart koşar — yoksa js/'ten kopyalanan 10. bir dosya sonsuza
-// dek senkron dışı kalırdı ve "DOKUZ dosya birebir kopya" kuralı yalnız insan
+// dek senkron dışı kalırdı ve "ON dosya birebir kopya" kuralı yalnız insan
 // hafızasıyla korunurdu.
 var VIEWER_OZGU = ['theme.js', 'board.js', 'app.js'];
 
