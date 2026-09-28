@@ -838,31 +838,25 @@ Yeşil testler tek başına "düzeldi" demek değildir: kullanıcının bildirdi
 senaryo birebir yeniden üretilip ESKİ kodda kırıldığı, YENİ kodda geçtiği
 ölçülmeden sonuç kesin dille sunulmaz.
 
-## Boşta koşan rutinler — kullanıcı yokken çalışan oturumlar
+## Zamanlanmış rutin YOK — kaldırıldı (2026-09-28)
 
-Dört zamanlanmış rutin (claude.ai → Routines) `main`i çeker, ölçer, **hiçbir
-şeyi merge etmez.** Gece oturumunda GitHub araçları YOK: PR açılamaz, dal
-itilir; PR'ı ertesi gün bir insan-oturumu açar.
+2026-09-10'da dört rutin kuruldu (gece tam E2E · günlük boyut nöbeti · haftalık
+mutasyon nöbeti · haftalık açık ayrışma işçisi) ve **2026-09-28'de kullanıcı
+isteğiyle hepsi kaldırıldı**: haftalık kullanım limitini tüketiyorlardı. Hesapta
+artık hiçbir Routine yok.
 
-| Rutin | Ne zaman (UTC) | Çıktısı |
-|-------|----------------|---------|
-| Gece tam E2E | hafta içi 00:00 | rapor + gerekirse `claude/gece-e2e-<tarih>` dalı |
-| Boyut nöbeti | her gün 04:17 | `docs/olcum/boyut.csv`'ye satır → `claude/boyut-nobeti` dalı |
-| Mutasyon nöbeti | cumartesi 01:23 | yakalanmayan mutantlar + kapı testi → `claude/mutasyon-<modül>-<tarih>` |
-| Açık ayrışma işçisi | perşembe 01:07 | `acik-ayrismalar.md`'nin ilk maddesine **yalnız kapı testi** → dal |
+**Kullanıcı açıkça istemedikçe yeni bir zamanlanmış rutin KURULMAZ.** Bir
+oturumun "boşta koşsun" diye kurduğu her rutin, kullanıcının o hafta kendi
+işine harcayacağı limitten yiyor; rutin kendi bedelini ödediğini ispat etmek
+zorundadır.
 
-Dördünün de uyduğu kurallar:
+Kaldırılırken ölçülen iki şey — bir dahaki öneri bunlara cevap vermeli:
 
-- **RUTİN PROMPTU ENVANTER İDDİA ETMEZ, ÖLÇER.** Gece E2E rutini "18 spec var"
-  yazıyordu; üç gün sonra 21 oldu ve prompt örnek olarak silinmiş bir spec'i
-  (`structural-geometry.spec.js`, Yapısal Analiz kaldırıldı) sayıyordu. Prompt
-  depoda olmadığı için hiçbir test onu tutamaz — **tek çare sayıyı koşarken
-  saymaktır** (`ls tests/e2e/*.spec.js | wc -l`).
-- **DEĞİŞMEMİŞ `main`'de KOŞULMAZ.** Ölçüldü: bir gece E2E turu 1 sa 49 dk /
-  $15,37. Değişmemiş bir ağaçta bu, bilinen sonucun ikinci kez satın
-  alınmasıdır. Rutin ilk iş `git log origin/main --since=...` bakar, boşsa çıkar.
-- **Bulgunun kalıcı bir yeri olmalı** — push bildirimi buharlaşır, transkript
-  aranmaz. Ya bir dal, ya `docs/olcum/` altındaki defter.
-- Modül kapısı rutinler için de geçerli: FEAD/Araç dosyalarına dokunacak bir
-  rutin, promptunda **önce skill'i çağırmakla** yükümlüdür.
-- Testi atlamak/gevşetmek yok, `main`'e itmek yok, merge yok.
+- **Bir gece E2E turu 1 sa 49 dk.** Değişmemiş `main`'de aynı sonucu ikinci kez
+  satın alıyordu; "değişmediyse çık" kapısı sonradan kondu ama tur yine de
+  haftanın beş gecesinde kuruluyordu.
+- **18 gün koşan günlük boyut nöbeti deftere TEK satır bırakmadı.** Bulguyu
+  `claude/boyut-nobeti` dalına itiyordu; dal hiç merge edilmediği için
+  `docs/olcum/boyut.csv` bugün hâlâ açılış satırından ibaret. Kural bundan
+  çıktı: **çıktısı merge edilen bir yere düşmeyen rutinin harcadığı limit
+  karşılıksızdır.**
