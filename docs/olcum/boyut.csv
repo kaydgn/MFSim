@@ -1,3 +1,4 @@
 tarih,sha,ham_bayt,gzip_bayt,assets_vendor_bayt,not
 2026-09-10,6369d6e,19091658,10188963,16199865,ilk satir - elle olculdu (defterin acilisi)
 2026-09-28,9304d45,28974069,17300552,23231921,karsilama 28->48 kare (+7.03 MB webp = +9.4 MB base64) - kalan ~0.5 MB kod (FEAD STEP 3B + ikon + sayi yazici); ilk gonderim-oturumu satiri
+2026-09-28,969a4d7,29009148,17311032,23231921,+35 KB kod (FEAD araclari penceresi #1047) - kare ve varlik degismedi
