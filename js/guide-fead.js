@@ -747,7 +747,8 @@ function _gfSec3(){
     'Sihirbazın <strong>1 · Başlangıç</strong> adımında <strong>STEP dosyası seç…</strong> '
       + 'düğmesine basın ya da dosyayı kartın üstüne bırakın.',
     'Dosya okununca <strong>3B görüntüleyici</strong> ekranı dolduran bir pencerede açılır ve '
-      + 'montajın tamamını gösterir; <strong>hiçbir parça rol almamıştır</strong>. Sol tuşla döndürün, sağ tuş ya da '
+      + 'montajın tamamını gösterir. <strong>Gergi otomatik bulunur</strong>: rolü verilmiş gelir ve '
+      + '“Gergi otomatik bulundu” diye yazılıdır; öteki parçalar rolsüzdür. Sol tuşla döndürün, sağ tuş ya da '
       + 'Shift ile kaydırın, tekerlekle yaklaşın; <strong>Sığdır</strong> montajı yeniden '
       + 'ortalar.',
     'Kayışa giren her parçaya <strong>tıklayın</strong> ve sağdaki panelden rolünü verin '
@@ -795,10 +796,18 @@ function _gfSec3(){
     + 'onaylayın.');
   h += _gfNot('Program adlara güvenmez',
       'Parça adları ve ağacın yapısı dosyadan dosyaya değişir; “ALT” bir dosyada alternatör, '
-    + 'ötekinde başka bir şey olabilir. Bu yüzden rolü siz verirsiniz ve program dosyanın '
-    + 'tamamını taramaz: başka bir kayışın kasnağı ya da çok kanallı bir damperin öteki izi '
-    + 'hesaba karışmaz. Kayış düzlemi seçtiğiniz parçaların çoğunun oturduğu düzlemdir; '
+    + 'ötekinde başka bir şey olabilir. Bu yüzden kasnakların rolünü siz verirsiniz ve program '
+    + 'yalnız seçtiğiniz parçaları inceler: başka bir kayışın kasnağı ya da çok kanallı bir damperin '
+    + 'öteki izi hesaba karışmaz. Kayış düzlemi seçtiğiniz parçaların çoğunun oturduğu düzlemdir; '
     + 'o düzlemin dışında kalan rollü bir parça aktarılmaz ve adıyla söylenir.');
+  h += _gfNot('Tek istisna: gergi',
+      'Gerginin biçimi kasnaklardan ayrışır: kayış düzleminde bir avara ve ona paralel, avaranın '
+    + 'dışında, göbekli bir dönme ekseni (gövdenin montaj konumu). Program bunu rol vermeden arar. Tek bir aday bulur ve adı, '
+    + 'parça kodu ya da gergi kataloğu da doğrularsa rolü önceden verir. Doğrulanmayan aday '
+    + 'yalnız <strong>Gergi olabilir</strong> diye önerilir; <strong>Gergi yap</strong> ile verilir. '
+    + 'Otomatik rolü kaldırabilir ya da gergiyi başka bir parçaya verebilirsiniz — seçiminiz kazanır. '
+    + 'Gergi alt montaj değil de dağınık parçalar hâlinde gelirse ya da dönme ekseni kasnağın içinde '
+    + 'kalan doğrusal bir gergiyse bulunmaz; rolü siz verirsiniz.');
   h += _gfNot('Künye dosyadaki gergiyi sessizce değiştirmez',
       'Künye seçmek gerginin parça alanlarını (kol boyu · kasnak çapı · parça kodu) katalogdan '
     + 'yazar. Seçtiğiniz künye STEP’teki parçadan farklıysa gergi adımı farkı adıyla gösterir; '

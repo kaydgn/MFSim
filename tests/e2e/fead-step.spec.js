@@ -63,11 +63,13 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
     name: 'AG00686.stpZ', mimeType: 'application/octet-stream', buffer: stpZ(O.ag00686Step()),
   });
   const satir = page.locator('.ve-fw-tbl-stp tr[data-ve-stp]');
-  // Kartın ağacı (3B'nin arkasında): bütün parçalar (kayış dâhil), HİÇBİRİ rol almamış
+  // Kartın ağacı (3B'nin arkasında): bütün parçalar (kayış dâhil); YALNIZ GERGİ rol
+  // almış — dosya okununca otomatik bulundu (5.2: imza + ad · kod · katalog) ve işaretli
   await expect(satir).toHaveCount(5, { timeout: 20000 });
-  await expect(page.locator('.ve-fw-stp .ve-fw-seeded')).toContainText('sıkıştırılmış (gzip)');
-  expect(await satir.locator('select').evaluateAll((l) => l.map((s) => s.value))).toEqual(['', '', '', '', '']);
-  await expect(page.locator('#ve-fw-stp-hesapla')).toBeDisabled();
+  await expect(page.locator('.ve-fw-stp .ve-fw-seeded').first()).toContainText('sıkıştırılmış (gzip)');
+  expect(await satir.locator('select').evaluateAll((l) => l.map((s) => s.value))).toEqual(['', '', '', 'fead-tensioner', '']);
+  await expect(page.locator('.ve-fw-stp [data-ve-otomatik]')).toContainText('Gergi otomatik bulundu');
+  await expect(page.locator('.ve-fw-stp .ve-fw-oto-rozet')).toHaveCount(1);
   // Tablo kartın içinde: yatay kaydırma yok (1366 × 768)
   const tasma = await page.evaluate(() => {
     const w = document.querySelector('.ve-fw-tbl-stp').closest('.ve-fw-tblwrap');
@@ -300,6 +302,9 @@ test('ALT MONTAJA rol: parçaya tıkla → yolda üst düğüme çık → rol b�
     name: 'GERGI.stp', mimeType: 'application/octet-stream', buffer: Buffer.from(O.gergiAltMontaj(), 'latin1'),
   });
   await expect(page.locator('#ve-fw-3b-tuval')).toHaveAttribute('data-durum', 'hazir', { timeout: 30000 });
+  // Gergi dosya okununca ALT MONTAJ olarak bulundu (5.2): rol üst düğümde, panelde yazılı
+  await expect(page.locator('#ve-fw-3b-yan [data-ve-otomatik]')).toContainText('OTOMATİK GERGİ');
+  await expect(page.locator('#ve-fw-3b-yan')).toContainText('Rol verilenler 1');
   const adlar = await page.evaluate(() => veFeadWizStp().sonuc.parcalar.map((p) => p.ad));
   const i = adlar.indexOf('KASNAK');
   const n = await page.evaluate((j) => veFeadWiz3bIsabetNoktasi(j), i);

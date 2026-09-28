@@ -1600,15 +1600,27 @@ function veFeadWizStpBayt(bayt, ad){
   }
   return veFeadWizStpOku(m.metin, ad, m.kap);
 }
-// DOM'suz çekirdek: metin → kart durumu. Roller BOŞ açılır: hiçbir parça
-// adından ya da biçiminden rol almaz.
+// DOM'suz çekirdek: metin → kart durumu. Roller BOŞ açılır — TEK istisna
+// GERGİ (kullanıcı sorusu 2026-09-28: "modeli attığımız zaman otomatik gergi
+// otomatik olarak bulunabilir mi?"): rol vermeden bulunan TEK aday, ad · kod ·
+// katalogdan biri de doğruluyorsa rolünü ÖNCEDEN alır ve bu yazılır
+// (`s.otomatik`); doğrulanmayan aday yalnız önerilir. Kullanıcı kaldırır ya da
+// başka parçaya verir — seçimi kazanır.
 function veFeadWizStpOku(metin, ad, kap){
   var sonuc = (typeof veFeadStpOku === 'function') ? veFeadStpOku(metin)
     : { ok: false, hatalar: ['FEAD tanıyıcısı (js/fead-step.js) yüklenmemiş.'], agac: [], parcalar: [] };
   var s = { dosya: ad || 'STEP', kap: kap || 'duz', durum: sonuc.ok ? 'hazir' : 'hata',
             sonuc: sonuc, ayna: false, nodeId: _fwNodeId, coz: null,
-            roller: (sonuc.agac || []).map(function(){ return null; }) };
+            roller: (sonuc.agac || []).map(function(){ return null; }), oneri: null, otomatik: null };
   if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosya okunamadı.';
+  else if(typeof veFeadStpOner === 'function'){
+    s.oneri = veFeadStpOner(sonuc);
+    var g = s.oneri.gergi;
+    if(g && g.uyusan.length){
+      s.roller[g.dugum] = 'fead-tensioner';
+      s.otomatik = { dugum: g.dugum, tip: 'fead-tensioner', sebep: _fwOneriSebep(g) };
+    }
+  }
   _fwStp = s;
   veFeadWizRender();
   // Akışın ikinci adımı 3B'de seçmek (kullanıcı kararı, 2026-09-26): dosya
@@ -1642,6 +1654,12 @@ function veFeadWizStpRol(i, tip){
   var s = _fwStp;
   if(!s || s.durum !== 'hazir' || !(i >= 0 && i < s.roller.length)) return false;
   var a = s.sonuc.agac;
+  // OTOMATİK GERGİ SÖNER: kullanıcı o düğüme dokunduysa ya da gergiyi başka
+  // bir parçaya verdiyse seçimi kazanır (ikinci gergi rolü hesabı durdururdu).
+  if(s.otomatik && (s.otomatik.dugum === i || tip === s.otomatik.tip)){
+    if(s.otomatik.dugum !== i) s.roller[s.otomatik.dugum] = null;
+    s.otomatik = null;
+  }
   if(tip){
     for(var e = a[i].ebeveyn; e >= 0; e = a[e].ebeveyn) s.roller[e] = null;
     (function sil(d){ a[d].cocuklar.forEach(function(c){ s.roller[c] = null; sil(c); }); })(i);
@@ -1651,6 +1669,31 @@ function veFeadWizStpRol(i, tip){
   veFeadWizRender();
   return true;
 }
+// Doğrulanmamış öneriyi kullanıcı tek tıkla kabul eder (otomatik sayılmaz).
+function veFeadWizStpOneriUygula(){
+  var s = _fwStp, g = s && s.oneri && s.oneri.gergi;
+  if(!g) return false;
+  return veFeadWizStpRol(g.dugum, 'fead-tensioner');
+}
+// Önerinin gerekçesi — kart ve 3B aynı metni yazar.
+function _fwOneriSebep(g){
+  var ne = { ad: 'ad', kod: 'kod ' + (g.kod || ''), katalog: 'katalog' };
+  return 'kol ' + _fwFmt(g.kol, 1) + ' mm · Ø' + _fwFmt(g.od, 0) + (g.tur === 'duz' ? ' düz' : ' kanallı')
+    + (g.uyusan && g.uyusan.length ? ' · uyuşan: ' + g.uyusan.map(function(k){ return ne[k]; }).join(' + ') : '');
+}
+// Kartın ve 3B'nin öneri satırı: otomatik atama ya da doğrulanmamış aday.
+function _fwStpOneriHTML(s){
+  var g = s && s.oneri && s.oneri.gergi, ag = s && s.sonuc && s.sonuc.agac;
+  if(!g || !ag) return '';
+  if(s.otomatik)
+    return '<div class="ve-fw-seeded ve-fw-oto" data-ve-otomatik="1">' + veIkon('check') + ' <b>Gergi otomatik bulundu</b> — '
+      + _fwEsc(ag[s.otomatik.dugum].ad) + ' <em>· ' + _fwEsc(s.otomatik.sebep) + '</em></div>';
+  if(s.roller.indexOf('fead-tensioner') >= 0) return '';
+  return '<div class="ve-fw-seeded ve-fw-oto" data-ve-oneri="1">' + veIkon('lightbulb') + ' <b>Gergi olabilir</b> — '
+    + _fwEsc(ag[g.dugum].ad) + ' <em>· ' + _fwEsc(_fwOneriSebep(g)) + '</em> '
+    + '<button type="button" class="ve-fw-mini" onclick="veFeadWizStpOneriUygula()">Gergi yap</button></div>';
+}
+
 function veFeadWizStpAyna(ayna){
   if(!_fwStp || _fwStp.durum !== 'hazir') return false;
   _fwStp.ayna = !!ayna;
@@ -1834,6 +1877,8 @@ function _fwStpKartHTML(){
               so.parcalar.length + ' parça', veSayi(sure, 2) + ' sn'].filter(Boolean).join(' · '))
     + '</em></div>';
 
+  h += _fwStpOneriHTML(s);
+
   // ── PARÇA AĞACI ─────────────────────────────────────────────────────────
   var coz = s.coz, iki = (coz && coz.ok && typeof veFeadStp2B === 'function') ? veFeadStp2B(coz, _fwStpSecim(s)) : null;
   var birimKasnak = {}, kol = {};
@@ -1874,7 +1919,9 @@ function _fwStpKartHTML(){
       + sec.map(function(o){
           return '<option value="' + o[0] + '"' + (o[0] === rol ? ' selected' : '') + '>'
             + _fwEsc(o[1]) + '</option>'; }).join('')
-      + '</select></td>'
+      + '</select>' + (s.otomatik && s.otomatik.dugum === d.i
+          ? ' <span class="ve-fw-oto-rozet" title="' + _fwEsc(s.otomatik.sebep) + '">otomatik</span>' : '')
+      + '</td>'
       + '<td>' + _fwEsc(tanim) + '</td>'
       + '<td class="ve-fw-num">' + xs + '</td><td class="ve-fw-num">' + ys + '</td></tr>';
   });
@@ -4124,7 +4171,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizRender: veFeadWizRender, veFeadWizStepHTML: veFeadWizStepHTML,
     veFeadWizNavHTML: veFeadWizNavHTML, veFeadWizFootHTML: veFeadWizFootHTML,
     veFeadWizLiveHTML: veFeadWizLiveHTML, veFeadWizReset: veFeadWizReset,
-    veFeadWizStpRolTipleri: veFeadWizStpRolTipleri,
+    veFeadWizStpRolTipleri: veFeadWizStpRolTipleri, veFeadWizStpOneriUygula: veFeadWizStpOneriUygula,
     getFeadWizardPropertiesHTML: getFeadWizardPropertiesHTML,
     _fwSet: _fwSet, _fwSetRender: _fwSetRender, _fwGet: _fwGet,
     // STEP'ten başla (kural 34)
@@ -4139,6 +4186,6 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizStp: veFeadWizStp,
     // 3B görüntüleyicinin paneli (js/cp-fead-3b.js) bunları kullanıyor
     _fwEsc: _fwEsc, _fwFmt: _fwFmt, _fwStpRolAd: _fwStpRolAd, _fwStpRolDenetim: _fwStpRolDenetim,
-    _fwStpSecim: _fwStpSecim, _fwStpKayisTanim: _fwStpKayisTanim, veFeadWizKey: veFeadWizKey
+    _fwStpSecim: _fwStpSecim, _fwStpKayisTanim: _fwStpKayisTanim, _fwStpOneriHTML: _fwStpOneriHTML, veFeadWizKey: veFeadWizKey
   };
 }

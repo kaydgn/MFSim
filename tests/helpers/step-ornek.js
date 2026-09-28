@@ -115,4 +115,109 @@ function gergiAltMontaj() {
   return yz.metin();
 }
 
-module.exports = { gergiAltMontaj, feadStep, AG, AG_REF, gergiParcasi, ag00686Step, D, X };
+// ── TUZAK MONTAJLAR — gergi önerisinin (veFeadStpOner) kuralları ──────────
+// Her biri kuralların BİRİ kapanınca yanlış bir gergi işaretletir; bütün
+// kurallar açıkken aday çıkmaz (tests/unit/fead-step-oner.test.js).
+const halka = (r0, r1, s0, s1) => [
+  { tip: 'dogru', s0, r0: r1, s1, r1 }, { tip: 'dogru', s0, r0, s1, r1: r0 },
+  { tip: 'dogru', s0, r0, s1: s0, r1 }, { tip: 'dogru', s0: s1, r0, s1, r1 }];
+const TUZAK = {
+  // aksesuar: gövdesi kasnağıyla eşeksenli (r 60), gövdede kasnağa paralel bir kulak deliği 110 mm'de
+  alternatorKulakR22: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 6 }) }] },
+    { id: 'L', ad: 'PART-003', x: 200, y: 60, xDunya: [0, -1, 0], geometri: [
+      { profil: Y.kanalliProfil({ od: 56, n: 6 }) },
+      { profil: [{ tip: 'dogru', s0: 30, r0: 60, s1: 110, r1: 60 }, { tip: 'dogru', s0: 30, r0: 12, s1: 30, r1: 60 }] },
+      { profil: halka(5, 22, 40, 60).concat(halka(5, 22, 90, 105)), yerel: [110, 0, 0] }] }]),
+  alternatorKulakR12: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 6 }) }] },
+    { id: 'L', ad: 'PART-003', x: 200, y: 60, xDunya: [0, -1, 0], geometri: [
+      { profil: Y.kanalliProfil({ od: 56, n: 6 }) },
+      { profil: halka(5, 12, 40, 60).concat(halka(5, 12, 90, 105)), yerel: [110, 0, 0] }] }]),
+  ciftAvaraFarkli: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+    { id: 'A', ad: 'PART-004', x: 260, y: 160, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }] },
+    { id: 'D', ad: 'PART-005', x: 150, y: 20, xDunya: [0, -1, 0], geometri: [
+      { profil: Y.duzProfil({ od: 75 }) }, { profil: Y.kanalliProfil({ od: 70, n: 8 }), yerel: [110, 0, 0] }] }]),
+  // krank: cıvata dairesi — 6 eş delik 45 mm'de (disk içinde), her biri göbek ölçüsünde (r 20, 8 yüz)
+  krankCivataDairesi: () => {
+    const delik = [];
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      delik.push({ profil: Y.pivotProfil({ yuzSayisi: 8, s0: 20, s1: 60 }), yerel: [45 * Math.cos(a), 45 * Math.sin(a), 0] });
+    }
+    return feadStep([
+      { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }].concat(delik) },
+      { id: 'A', ad: 'PART-004', x: 260, y: 160, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }] }]);
+  },
+  // R1: kasnak diskinin İÇİNDE tek göbek (eş değil, göbek ölçüsünde) — krank
+  diskIciGobek: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) },
+      { profil: Y.pivotProfil({ yuzSayisi: 8, s0: 20, s1: 60 }), yerel: [45, 0, 0] }] },
+    { id: 'A', ad: 'PART-004', x: 260, y: 160, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }] }]),
+  // R3: disk DIŞINDA üç EŞ göbek (bağlantı flanşı) — aksesuar
+  disaridaEsGobek: () => {
+    const g = [0, 1, 2].map((i) => ({ profil: Y.pivotProfil({ yuzSayisi: 8, s0: 20, s1: 60 }),
+      yerel: [100 * Math.cos(i * 2 * Math.PI / 3), 100 * Math.sin(i * 2 * Math.PI / 3), 0] }));
+    return feadStep([
+      { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+      { id: 'A', ad: 'PART-004', x: 260, y: 160, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }].concat(g) }]);
+  },
+  // RP: İKİNCİ kayışın gergisi — kayış düzleminin 60 mm gerisinde
+  ikinciKayisGergisi: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+    { id: 'A', ad: 'PART-004', x: 260, y: 160, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }] },
+    { id: 'T', ad: 'PART-006', x: 120, y: 60, xDunya: [0, -1, 0], geometri: [
+      { profil: Y.duzProfil({ od: 75 }), yerel: [0, 0, -60] },
+      { profil: Y.pivotProfil({ yuzSayisi: 9, s0: -40, s1: 20 }), yerel: [90, 0, -60] }] }]),
+  // R4: kulak 300 mm'de — kol aralığının dışında
+  uzakKulak: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 6 }) }] },
+    { id: 'L', ad: 'PART-003', x: 200, y: 60, xDunya: [0, -1, 0], geometri: [
+      { profil: Y.duzProfil({ od: 75 }) },
+      { profil: Y.pivotProfil({ yuzSayisi: 9, s0: 20, s1: 60 }), yerel: [300, 0, 0] }] }]),
+  // R5: avara braketinin göbeği BAŞKA bir birimin kasnağıyla eşeksenli
+  esEksenBraket: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+    { id: 'W', ad: 'PART-007', x: 120, y: 200, geometri: [{ profil: Y.kanalliProfil({ od: 110, n: 8 }) }] },
+    { id: 'B', ad: 'PART-008', x: 120, y: 90, xDunya: [0, 0, 1], geometri: [
+      { profil: Y.duzProfil({ od: 75 }) },
+      { profil: Y.pivotProfil({ yuzSayisi: 9, s0: 20, s1: 60 }), yerel: [110, 0, 0] }] }]),
+  kaburgaliGergiKol56: () => feadStep([
+    { id: 'K', ad: 'PART-001', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 6 }) }] },
+    { id: 'T', ad: 'PART-002', x: 150, y: 120, xDunya: [0, -1, 0], geometri: [
+      { profil: Y.kanalliProfil({ od: 70, n: 6 }) },
+      { profil: Y.pivotProfil({ yuzSayisi: 12, s0: 20, s1: 60 }), yerel: [56, 0, 0] }] }]),
+  ikiIzliDamper: () => feadStep([
+    { id: 'K', ad: 'KRANK DAMPER', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }, { profil: Y.kanalliProfil({ od: 172, n: 6 }), yerel: [0, 0, -40] }] },
+    { id: 'A', ad: 'KLİMA KOMPRESÖRÜ', x: 250, y: 200, geometri: [{ profil: Y.kanalliProfil({ od: 120, n: 8 }) }] },
+    { id: 'I', ad: 'AVARA', x: 150, y: 20, geometri: [{ profil: Y.duzProfil({ od: 75 }) }] }]),
+  kaburgaliAvara: () => feadStep([
+    { id: 'K', ad: 'KRANK KASNAK', x: 0, y: 0, geometri: [{ profil: Y.kanalliProfil({ od: 150, n: 8 }) }] },
+    { id: 'I', ad: 'AVARA KABURGALI', x: 140, y: 110, geometri: [{ profil: Y.kanalliProfil({ od: 70, n: 8 }) }] }]),
+};
+function tuzak(ad) { return TUZAK[ad](); }
+
+// Gergi PARÇASI bir ara montajın içinde (ÖN BLOK › gergi + avara): bayrak
+// en küçük birime — parçaya — gider, ara montaja değil.
+function gergiIcIceMontaj() {
+  const yz = new Y.StepYaz();
+  const kok = yz.urun('ROOT', 'MONTAJ');
+  const blok = yz.urun('BLOK', 'ÖN BLOK');
+  const grg = yz.urun('G1', 'OTOMATİK GERGİ');
+  const avr = yz.urun('A1', 'AVARA');
+  const krk = yz.urun('K1', 'KRANK');
+  yz.govde(grg, Y.profilYuzleri(yz, Y.eksen(), Y.duzProfil({ od: 75 }))
+    .concat(Y.profilYuzleri(yz, Y.eksen([90, 0, 0]), Y.pivotProfil({ yuzSayisi: 9 }))));
+  yz.govde(avr, Y.profilYuzleri(yz, Y.eksen(), Y.duzProfil({ od: 70 })));
+  yz.govde(krk, Y.profilYuzleri(yz, Y.eksen(), Y.kanalliProfil({ od: 150, n: 8 })));
+  [grg, avr, krk].forEach((u) => yz.temsil(u));
+  const t1 = yz.tak(blok, grg, 'G1.1', [0, 0, 0]), t2 = yz.tak(blok, avr, 'A1.1', [0, 160, 0]);
+  yz.temsil(blok);
+  const t3 = yz.tak(kok, blok, 'BLOK.1', [0, 120, 0]), t4 = yz.tak(kok, krk, 'K1.1', [0, -150, 0]);
+  yz.temsil(kok);
+  [t1, t2, t3, t4].forEach((t) => yz.bagla(t));
+  return yz.metin();
+}
+
+module.exports = { gergiAltMontaj, feadStep, AG, AG_REF, gergiParcasi, ag00686Step, D, X, tuzak, TUZAK, gergiIcIceMontaj };

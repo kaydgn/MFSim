@@ -8688,6 +8688,12 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-tbl td:first-child{ display:flex; align-items:center; gap:6px; }
 .ve-fw-3b-tbl .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
 .ve-fw-3b-kayis{ margin:0; display:flex; align-items:center; gap:6px; font-size:var(--fs-tiny); }
+/* OTOMATİK BULUNAN GERGİ (5.2): satır ve rozet — seçilen değil BULUNAN rol,
+   ayırt edilsin. Öneri satırının düğmesi metin taşır (kare mini düğme değil). */
+.ve-fw-oto{ flex-wrap:wrap; }
+.ve-fw-oto .ve-fw-mini{ width:auto; padding:0 8px; }
+.ve-fw-oto-rozet{ display:inline-block; margin-left:4px; padding:0 5px; border-radius:var(--radius-sm);
+  font-size:var(--fs-micro); color:var(--ink-accent); background:var(--accent-tint-10); vertical-align:middle; }
 /* 3B AÇIKKEN PENCERE GENİŞLER (kullanıcı isteği 2026-09-28). Sihirbazın
    1180 px'i 320 px'lik panelden sonra tuvale ~860 px bırakıyordu; kaplamanın
    payı daralır, pencere ekranı doldurur. Kapanınca sınıf düşer
