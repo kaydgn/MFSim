@@ -848,6 +848,29 @@ olurdu.
     • CAD seçili ama ölçü yoksa katalog + uyarı; sessiz yedek yok.
     Kapı: `fead-hesap-capi.test.js`.
 
+40. **PROFİL GEOMETRİSİ PROJE TABLOSUNDA — çekirdeğin BELT_DB'si EKSİK**
+    (2026-09-28, ölçüm). Çekirdeğin kataloğunda GATES'in yalnız PK'sı var;
+    15 profil×marka bileşiminin DÖRDÜ (GATES + PH/PJ/PL/PM) dışarıda kalıyor
+    ve GATES panelin VARSAYILAN markası — kullanıcının yalnız PROFİLİ
+    değiştirmesi yetiyor. Kural 39'dan önce `makeSystem` hata fırlatıyordu;
+    39'dan sonra `veFeadKordOfset` `kaynak:'katalog'` deyip **h_b/h_r = NaN**
+    dönüyordu: çökmeden beter, çünkü panel "katalog" yazarken sayı yoktu.
+    • Eksik satır **çekirdeğe YAZILMAZ** (dışarıdan geldi, birebir durur).
+      Katalog projenin veri katmanında: `js/fead-belts.js` ·
+      `VE_FEAD_BELT_GEOM` (5 profil × 3 üretici).
+    • `veFeadKordOfset` çekirdek bilmiyorsa proje tablosuna düşer ve
+      `projeTablosu` bayrağını açar; köprü o bayrağı görünce çifti çekirdeğe
+      AÇIKÇA geçirir. Çekirdek bileşimi TANIYORSA hiçbir şey değişmez —
+      kalibre sabiti (`cordStiffnessNPerRib`) orada kalır, KOPYALANMAZ.
+    • Eşleme (proje satırı → çekirdeğin alan adları) tek yerde:
+      `veFeadBeltProjeProps`. İki kopya, birinde rib kütlesi unutulunca
+      açıklık frekanslarını sessizce düşürürdü.
+    • Her satır **kaynak damgası** taşır (`uretici` / `defter` / `iso`) ve
+      panel onu yazar: ISO nominaline düşülmüş bir h_b ile üreticinin kendi
+      h_b'si aynı hücrede aynı görünür, aynı şey değildir (kural 8).
+      Gates h_b/h_r'yi PJ/PL/PM için yayımlamıyor; PH'yi hiç üretmiyor.
+    Kapı: `fead-belt-geom.test.js`.
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.

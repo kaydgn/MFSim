@@ -250,6 +250,20 @@ function veFeadBoyCizgileri(Lb, profile, brand){
 // ÇÖZÜLMÜŞ KAYIŞ (`sys.belt`) etkin çifti kendisi taşır (`kord` + `hb` · `hr`)
 // — rapor ve özet çözümü okur, düğümü değil.
 var VE_FEAD_HESAP_CAP = ['katalog', 'cad', 'db'];
+// Proje kayış tablosundaki satırı ÇEKİRDEĞİN alan adlarına çevirir.
+// İki yerden de çağrılır (`veFeadKordOfset` ve köprünün kayış kurulumu), bu
+// yüzden eşleme TEK yerde: iki kopya, birinde bir alan unutulunca sessizce
+// düşerdi (rib kütlesi düşerse açıklık frekansları hesaplanamaz).
+// Çekirdeğin BELT_DB'si bu bileşimi biliyorsa bu fonksiyon HİÇ çağrılmaz.
+function veFeadBeltProjeProps(profile, brand){
+  if(typeof veFeadBeltGeom !== 'function') return null;
+  var g = veFeadBeltGeom(profile || 'PK', brand || 'GATES');
+  if(!g) return null;
+  return { hb: g.hb, hr: g.hr, ribPitch: g.ribAdim, thickness: g.kalinlik,
+           minPulleyDia: g.minKasnak, maxSpeedMs: g.maksHiz,
+           massPerRibKgM: g.ribKutle, _not: g.not, _damga: g.kaynak };
+}
+
 function veFeadKordOfset(b){
   b = b || {};
   var out = { hb: NaN, hr: NaN, kaynak: 'katalog', hrKaynak: 'katalog', katalog: null, uyari: null };
@@ -258,6 +272,27 @@ function veFeadKordOfset(b){
     try { kat = FEADCore.beltProps({ profile: b.profile || 'PK', brand: b.brand || 'GATES' }); }
     catch(e){ kat = null; }
   }
+  // ── ÇEKİRDEĞİN BELT_DB'sinde OLMAYAN PROFİL+MARKA → PROJE TABLOSU ────────
+  // Çekirdeğin kataloğunda GATES'in yalnız PK'sı var. Yukarıdaki try/catch
+  // 15 profil×marka bileşiminin DÖRDÜNDE (GATES + PH/PJ/PL/PM) `kat`'ı null
+  // bırakıyor ve bu fonksiyon `kaynak: 'katalog'` deyip **hb/hr = NaN**
+  // dönüyordu — GATES panelin VARSAYILAN markası, yani kullanıcının yalnız
+  // PROFİLİ değiştirmesi yetiyordu. ÖLÇÜLDÜ: panel "Kaynak: katalog" yazıp
+  // NaN basıyor, model çözülemiyor. Bu modülün belgelenmiş sessiz sınıfı.
+  //
+  // Eksik satırlar çekirdeğe YAZILMAZ (dışarıdan geldi, birebir durur);
+  // katalog projenin kendi veri katmanında büyüdü (`js/fead-belts.js`).
+  // Çekirdek bileşimi TANIYORSA buraya hiç gelinmez — kalibre sabiti
+  // (`cordStiffnessNPerRib`) orada kalır, kopyalanmaz.
+  var _projeTablo = kat ? null : veFeadBeltProjeProps(b.profile, b.brand);
+  if(_projeTablo){
+    kat = _projeTablo;
+    out.katalogNot = _projeTablo._not;   // değerin NEREDEN geldiği panelde yazar
+    out.katalogDamga = _projeTablo._damga;
+  }
+  // Köprü bunu görünce hb/hr'yi çekirdeğe AÇIKÇA geçirir: çekirdek bu bileşimi
+  // bilmediği için kendi BELT_DB'sinden çözemez.
+  out.projeTablosu = !!_projeTablo;
   if(kat) out.katalog = { hb: kat.hb, hr: kat.hr };
   if((b.kord === 'cad' || b.kord === 'db') && Number.isFinite(b.hb) && Number.isFinite(b.hr)){
     out.hb = b.hb; out.hr = b.hr; out.kaynak = b.kord;
@@ -3891,9 +3926,17 @@ function veFeadBuildSystem(nodeList, opt){
   var _ko = veFeadKordOfset(bd);
   out.kord = _ko;
   if(_ko.uyari) out.warnings.push(_ko.uyari);
-  if(_ko.kaynak !== 'katalog' && Number.isFinite(_ko.hb) && Number.isFinite(_ko.hr)){
+  // `_ko.projeTablosu`: profil+marka çekirdeğin BELT_DB'sinde yok, değer
+  // projenin kendi tablosundan geldi — katalog kipinde bile çifti açıkça
+  // vermek ZORUNLU, yoksa `makeSystem` içindeki `beltProps` fırlatır.
+  if((_ko.kaynak !== 'katalog' || _ko.projeTablosu)
+     && Number.isFinite(_ko.hb) && Number.isFinite(_ko.hr)){
     var _kat = null;
     try { _kat = FEADCore.beltProps({ profile: cfgBelt.profile, brand: cfgBelt.brand }); } catch(e){ _kat = null; }
+    // Çekirdek bilmiyorsa ALTA konacak satır da proje tablosundan gelir —
+    // yoksa kaburga adımı, kalınlık, en küçük çap ve RİB KÜTLESİ düşerdi
+    // (kütle düşünce açıklık frekansları hesaplanamaz).
+    if(!_kat) _kat = veFeadBeltProjeProps(cfgBelt.profile, cfgBelt.brand);
     cfgBelt = Object.assign({}, _kat || {}, cfgBelt,
       { hb: _ko.hb, hr: _ko.hr, kord: _ko.kaynak, kordHr: _ko.hrKaynak });
   }
@@ -5093,6 +5136,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadDefaultBeltTol: veFeadDefaultBeltTol, veFeadBeltMassOf: veFeadBeltMassOf,
     veFeadBoyCizgileri: veFeadBoyCizgileri,
     veFeadKordOfset: veFeadKordOfset, VE_FEAD_HESAP_CAP: VE_FEAD_HESAP_CAP,
+    veFeadBeltProjeProps: veFeadBeltProjeProps,
     veFeadCordStiffness: veFeadCordStiffness,
     // Paylaşılan saf yardımcılar. Tarayıcıda global oldukları için cp-fead.js,
     // connections.js ve cp-fead.js doğrudan çağırıyor;
