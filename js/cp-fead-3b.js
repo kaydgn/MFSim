@@ -329,6 +329,9 @@ function veFeadWiz3bPanelHTML(s, secili){
     h += '</div>';
   }
   h += '</section>';
+  // ── SEÇİLİ KASNAĞIN KESİTİ (hesaptan sonra; seçim bir birimin içindeyse o birim) ──
+  var kKi = _fw3bSeciliKasnak(s, secili);
+  if(kKi >= 0 && typeof _fwStpKasnakKesitHTML === 'function') h += _fwStpKasnakKesitHTML(s, kKi);
   // ── ROL VERİLENLER ──
   var atanan = so.agac.filter(function(d){ return !!s.roller[d.i]; });
   h += '<section class="ve-fw-3b-bolum"><h4>Rol verilenler <span class="ve-fw-dim">' + atanan.length + '</span></h4>';
@@ -367,14 +370,19 @@ function veFeadWiz3bPanelHTML(s, secili){
     h += '<div class="ve-fw-spinbox">'
       + '<button type="button" class="ve-fw-spin' + (s.ayna ? '' : ' ve-fw-spin-on') + '" onclick="veFeadWizStpAyna(false)">Önden</button>'
       + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '" onclick="veFeadWizStpAyna(true)">Arkadan</button></div>'
-      + '<table class="ve-fw-tbl ve-fw-3b-tbl"><thead><tr><th>Kasnak</th><th>Ø [mm]</th><th>X</th><th>Y</th></tr></thead><tbody>';
+      + '<table class="ve-fw-tbl ve-fw-3b-tbl"><thead><tr><th>Kasnak</th><th>Ø [mm]</th><th>Hesap Ø</th><th>X</th><th>Y</th></tr></thead><tbody>';
     coz.kasnaklar.forEach(function(k, i){
       h += '<tr data-ve-3b-kasnak="' + i + '"><td>' + renk(k.tip) + _fwEsc(_fwStpRolAd(k.tip))
         + (kol[i] !== undefined ? ' <span class="ve-fw-dim">· kol ' + _fwFmt(kol[i], 1) + '</span>' : '') + '</td>'
-        + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].x, 1)
+        + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num" data-ve-3b-hesapcap="' + i + '">'
+        + (typeof _fwStpHesapCapi === 'function' ? _fwFmt(_fwStpHesapCapi(s, k), 1) : '—')
+        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].x, 1)
         + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].y, 1) + '</td></tr>';
     });
     h += '</tbody></table>';
+    // Hesap çapı kayış için TEK seçim (kullanıcı kararı): bütün kasnaklara birlikte
+    if(typeof _fwStpHesapCapHTML === 'function')
+      h += '<div class="ve-fw-3b-hesapcap"><span class="ve-fw-dim">Hesap çapı</span>' + _fwStpHesapCapHTML(s) + '</div>';
     if(coz.kayis)
       h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <b>' + _fwEsc(_fwStpRolAd('fead-belt'))
         + '</b> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
@@ -382,6 +390,19 @@ function veFeadWiz3bPanelHTML(s, secili){
       + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button></div>';
   }
   return h + '</section>';
+}
+// Seçili düğümün kasnağı: düğüm ya da en yakın rollü atası bir birimse o
+// birimin kasnağı (alt montajın parçasına tıklanınca da birimin kesiti).
+function _fw3bSeciliKasnak(s, secili){
+  var coz = s && s.coz, so = s && s.sonuc;
+  if(!coz || !coz.ok || secili < 0 || !so) return -1;
+  for(var d = secili; d >= 0; d = so.agac[d].ebeveyn){
+    for(var j = 0; j < coz.birimler.length; j++){
+      var b = coz.birimler[j];
+      if(b.dugum === d) return (b.kasnak === undefined || b.kasnak === null) ? -1 : b.kasnak;
+    }
+  }
+  return -1;
 }
 // Hesap kartın işlevidir; başarılıysa seçim kalkar — seçim öteki parçaları
 // soldururdu ve sonuç (halkalar) bütün kasnaklarda okunur olmalı
@@ -665,6 +686,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWiz3bParcalar: veFeadWiz3bParcalar,
     veFeadWiz3bRolJeton: veFeadWiz3bRolJeton,
     veFeadWiz3bPanelHTML: veFeadWiz3bPanelHTML,
+    _fw3bSeciliKasnak: _fw3bSeciliKasnak,
     veFeadWiz3bTazele: veFeadWiz3bTazele
   };
 }

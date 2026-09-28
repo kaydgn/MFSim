@@ -825,6 +825,16 @@ function _gfSec3(){
     + 'Otomatik rolü kaldırabilir ya da gergiyi başka bir parçaya verebilirsiniz — seçiminiz kazanır. '
     + 'Gergi alt montaj değil de dağınık parçalar hâlinde gelirse ya da dönme ekseni kasnağın içinde '
     + 'kalan doğrusal bir gergiyse bulunmaz; rolü siz verirsiniz.');
+  h += _gfNot('Kaburgalı kasnağın kesiti ve hesap çapı',
+      'Hesaptan sonra 3B’de bir kasnağa tıklayın: kesiti açılır. Ölçülen değerler dosyadan gelir '
+    + '(kanal adımı ve profil, kaburga tepesi d<sub>b</sub>, kanal tabanı ve derinliği), h · h<sub>b</sub> · '
+    + 'h<sub>r</sub> seçili markanın kataloğundan; kord çapı d<sub>w</sub> = d<sub>b</sub> + 2·h<sub>b</sub> ve kayış '
+    + 'sırtı bunlardan türetilir. Kayışa rol verdiyseniz programın okuduğu <strong>kayış eskizi</strong> '
+    + 'de listededir: her yayın yarıçapı ile kasnağın dış çapı arasındaki fark CAD’in kullandığı '
+    + 'h<sub>b</sub> (sırttan dolanan kasnakta h<sub>r</sub>). <strong>Hesap çapı</strong> düğmeleri '
+    + 'hesabın hangi çizgide kurulacağını seçer (§8.6); STEP’ten kurulan modelde varsayılan eskizin '
+    + 'çizgisidir, eskiz yoksa marka kataloğu. Seçim kayış için tektir, bütün kasnaklara birlikte '
+    + 'uygulanır; Kayış adımındaki <em>CAD’deki kayış</em> kartı eskizin boyunu modelin korduyla karşılaştırır.');
   h += _gfNot('Künye dosyadaki gergiyi sessizce değiştirmez',
       'Künye seçmek gerginin parça alanlarını (kol boyu · kasnak çapı · parça kodu) katalogdan '
     + 'yazar. Seçtiğiniz künye STEP’teki parçadan farklıysa gergi adımı farkı adıyla gösterir; '
