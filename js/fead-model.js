@@ -210,6 +210,27 @@ function veFeadDefaultBeltTol(effLengthMm){
     ? VE_FEAD_DEFAULTS.beltTolShortMm : VE_FEAD_DEFAULTS.beltTolLongMm;
 }
 
+// ── KAYIŞ BOYU İKİ ÇİZGİDE — NUMARA d_b'DE (kullanıcı kararı 2026-09-28) ─────
+// Kayış numarası (8PK1410'daki 1410) L_b'dir: kanallı kasnağın dış çapı d_b
+// çizgisindeki boy — ISO 9981 efektif boyu, `belt.effLength`in kendisi,
+// çekirdeğin `LeffMm`i. ContiTech tablosu da onu "Effective length L_b" diye
+// verir (alt simge b = d_b). d_w = d_b + 2·h_b kayışın çalışma (kord) çizgisi;
+// CAD eskizi çoğunlukla onu ölçer. Kapalı çevrimde fark yerleşimden bağımsız
+// 2π·h_b (çekirdeğin özdeşliği, fead-core.js §4): PK/ContiTech 9,42 mm, PK/Gates
+// 7,54 mm. İki boy da yazılır, numara d_b'den okunur — d_w'yi numara saymak
+// kolu sessizce başka bir açıya oturtur (kullanıcının düzeninde 12°, 126 N).
+function veFeadBoyCizgileri(Lb, profile, brand){
+  var out = { db: NaN, dw: NaN, hb: NaN, hr: NaN, fark: NaN };
+  if(typeof FEADCore === 'undefined' || !FEADCore.beltProps) return out;
+  var bp;
+  try { bp = FEADCore.beltProps({ profile: profile || 'PK', brand: brand || 'GATES' }); }
+  catch(e){ return out; }
+  out.hb = bp.hb; out.hr = bp.hr; out.fark = 2 * Math.PI * bp.hb;
+  var L = _feadNum(Lb, NaN);
+  if(Number.isFinite(L) && L > 0){ out.db = L; out.dw = L + out.fark; }
+  return out;
+}
+
 // "Alan boş mu" — `0` BOŞ DEĞİLDİR. Bütün varsayılan kapıları bundan geçer.
 function _feadBlank(v){ return v === undefined || v === null || v === ''; }
 
@@ -4974,6 +4995,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_DEFAULT_DIA: VE_FEAD_DEFAULT_DIA, VE_FEAD_ERROR_MAP: VE_FEAD_ERROR_MAP,
     VE_FEAD_DEFAULTS: VE_FEAD_DEFAULTS, veFeadDefaultInertia: veFeadDefaultInertia,
     veFeadDefaultBeltTol: veFeadDefaultBeltTol, veFeadBeltMassOf: veFeadBeltMassOf,
+    veFeadBoyCizgileri: veFeadBoyCizgileri,
     veFeadCordStiffness: veFeadCordStiffness,
     // Paylaşılan saf yardımcılar. Tarayıcıda global oldukları için cp-fead.js,
     // connections.js ve cp-fead.js doğrudan çağırıyor;
