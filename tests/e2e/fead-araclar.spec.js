@@ -308,3 +308,88 @@ test('KANVAS: pencerenin düğmesi kartı sıranın sağına ekler; tek geri-al 
   expect((await kartlar()).map((k) => k.id).sort()).toEqual(once.map((k) => k.id).sort());
   expect(hatalar).toEqual([]);
 });
+
+// ── NOT ARAÇLARI (2026-09-28) — sütunun "Araçlar" kategorisinin yeri ────────
+// Kullanıcı: *"Not araçlarını da FEAD araçları penceresine ekleyelim."* Node'da
+// HİÇ koşmayan halkalar: gerçek HTML5 sürükle-bırak (jsdom DataTransfer
+// üretmez), pencerenin üstüne bırakmanın REDDİ (`dropEffect` kabın iznini
+// eziyor mu), tıkla kurulan notun gerçekten GÖRÜNMESİ (kartların arkasında ya
+// da pencerenin altında değil), Ctrl+Z ve Delete'in yalnız notu alması.
+test('NOT ARAÇLARI: tık kartları çevreler/üstüne yazar, sürükleme bırakılan yere, pencereye bırakılmaz', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await bootApp(page);
+  await feadAc(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.filter((n) => n.type === 'fead-layout').length === 2,
+    null, { timeout: 20000 });
+  await page.waitForTimeout(900);
+  const oge = (v) => govde(page).locator(`[data-bol="not"] [data-ey="not"][data-v="${v}"]`);
+  await expect(oge('frame')).toHaveText('Çerçeve');
+  await expect(oge('text')).toHaveText('Yazı');
+  // Son not: kutusu, etiketi, kartların ve pencerenin kutusu.
+  const son = () => page.evaluate(() => {
+    const r = (el) => { const q = el.getBoundingClientRect(); return { x: q.left, y: q.top, r: q.right, b: q.bottom }; };
+    const a = annotations[annotations.length - 1];
+    const el = document.getElementById(a.id);
+    const lbl = el.querySelector('.ve-annotation-label, .ve-annotation-content');
+    const kartlar = [...document.querySelectorAll('#ve-canvas .ve-node')].map(r);
+    const pen = r(document.getElementById('ve-fead-araclar')), kap = r(document.getElementById('ve-canvas-wrapper'));
+    const ust = (p, q) => p.x < q.r && q.x < p.r && p.y < q.b && q.y < p.b;
+    const ic = (p, q) => p.x >= q.x && p.r <= q.r && p.y >= q.y && p.b <= q.b;
+    const k = r(el), e = r(lbl);
+    return { n: annotations.length, tip: a.type, secili: selectedAnnotations.indexOf(a) >= 0,
+      secKart: selectedNodes.length, kapta: ic(e, kap), kartAlti: kartlar.some((q) => ust(e, q)),
+      pencereAlti: ust(e, pen), cevreler: kartlar.every((q) => ic(q, k)), kutu: k };
+  });
+
+  // ── 1) TIK: çerçeve iki kartı ÇEVRELER, etiketi görünür, seçim yalnız onda ──
+  await oge('frame').click();
+  await page.waitForTimeout(250);
+  expect(await son()).toMatchObject({ n: 1, tip: 'frame', secili: true, secKart: 0, kapta: true,
+    kartAlti: false, pencereAlti: false, cevreler: true });
+  // ── 2) TIK: yazı kartların üstünde, görünür ──
+  await oge('text').click();
+  await page.waitForTimeout(250);
+  expect(await son()).toMatchObject({ n: 2, tip: 'text', secili: true, kapta: true, kartAlti: false, pencereAlti: false });
+
+  // ── 3) SÜRÜKLE: yazı → kartların altındaki boşluk, bırakılan noktaya ──
+  const hedef = await page.evaluate(() => {
+    const ks = [...document.querySelectorAll('#ve-canvas .ve-node')].map((e) => e.getBoundingClientRect());
+    const wr = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
+    return { x: Math.min(...ks.map((k) => k.left)) + 60, y: Math.min(Math.max(...ks.map((k) => k.bottom)) + 40, wr.bottom - 20) };
+  });
+  const surukle = async (v, x, y) => {
+    const bb = await oge(v).boundingBox();
+    await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(x - 30, y - 30, { steps: 6 });
+    await page.mouse.move(x, y, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+  };
+  await surukle('text', hedef.x, hedef.y);
+  const s3 = await son();
+  expect(s3).toMatchObject({ n: 3, tip: 'text' });
+  expect(Math.abs(s3.kutu.x - hedef.x)).toBeLessThanOrEqual(2);
+  expect(Math.abs(s3.kutu.y - hedef.y)).toBeLessThanOrEqual(2);
+  // ── 4) PENCEREYE BIRAKMA reddedilir (altında görünmez bir not kurulmaz) ──
+  const pb = await govde(page).locator('[data-bol="model"]').boundingBox();
+  await surukle('frame', pb.x + 80, pb.y + 20);
+  expect((await son()).n).toBe(3);
+
+  // ── 5) Ctrl+Z: sürüklenen yazı TEK adımda geri; Delete yalnız notu siler ──
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(400);
+  expect((await son()).n).toBe(2);
+  await oge('text').click();
+  await page.waitForTimeout(250);
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => ({ kart: window.nodes.filter((n) => n.type === 'fead-layout').length, not: annotations.length })))
+    .toEqual({ kart: 2, not: 2 });
+  expect(hatalar).toEqual([]);
+});

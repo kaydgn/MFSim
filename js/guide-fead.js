@@ -364,9 +364,10 @@ function _gfSahneAraclar(){
   }, true);
   if(!html) return '';
   return veGuideScene(html,
-    '<b>FEAD araçları</b> penceresi, dört bölüm: <b>Model</b> (künye · Sihirbaz · ＋ Kanvas), '
+    '<b>FEAD araçları</b> penceresi, beş bölüm: <b>Model</b> (künye · Sihirbaz · ＋ Kanvas), '
     + '<b>Çözüm</b> (durum · Hesapla · Ayarlar · özet kartları · uygunluk), <b>Rapor</b> '
-    + '(tür · İndir · Künye) ve <b>Yön</b> (CW | CCW · gergi tarafı hükmü). Tuvalin sol '
+    + '(tür · İndir · Künye), <b>Yön</b> (CW | CCW · gergi tarafı hükmü) ve <b>Not</b> '
+    + '(Çerçeve · Yazı — tuvale sürüklenir ya da tıklanır). Tuvalin sol '
     + 'üstündeki yuvada durur; başlığından taşınır, çift tıkla dar bir şeride katlanır.',
     (typeof VE_FEAD_ARAC_EN === 'number' ? VE_FEAD_ARAC_EN : 236) + 26);
 }
@@ -568,8 +569,9 @@ function _gfSec2(){
       + 'künyesi, kayış, çözücü) buradan girilir.', 'Bölüm 6–9'],
     ['<strong>FEAD araçları</strong>', 'Tuvalin sol üstündeki pencere: modeli kurmak '
       + '(<strong>Sihirbaz</strong>), yeni bir çizim açmak (<strong>＋ Kanvas</strong>), çözmek '
-      + '(<strong>Hesapla</strong> · <strong>Ayarlar</strong>), raporu indirmek ve çevrimin '
-      + '<strong>yönünü</strong> çevirmek. Tuvalde bunların kutusu '
+      + '(<strong>Hesapla</strong> · <strong>Ayarlar</strong>), raporu indirmek, çevrimin '
+      + '<strong>yönünü</strong> çevirmek ve tuvale <strong>not</strong> koymak (gruplama '
+      + 'çerçevesi · yazı etiketi). Tuvalde bunların kutusu '
       + '<strong>yoktur</strong> — tuvalde yalnız Kayış Yolu kartları durur; kasnaklar da, '
       + 'kayış da, araçlar da modelde düğüm olarak yaşar.', 'Bölüm 2, 5.2, 10 ve 12'],
     ['Rapor', 'Tek dosyalık, çevrimdışı açılan HTML belge. İki tür: Detaylı ve Özet.',
@@ -733,7 +735,11 @@ function _gfSec3(){
       + 'eklenir'],
     ['<strong>Araçlar</strong>', 'Kutusu yok: tuvalin sol üstündeki <strong>FEAD araçları</strong> '
       + 'penceresi', 'Sihirbaz · Hesapla · Ayarlar (Çözücü) · Rapor · Yön. Modelle birlikte '
-      + 'gelir, silinmez']
+      + 'gelir, silinmez'],
+    ['<strong>Not</strong>', 'FEAD araçları penceresinin <strong>Not</strong> bölümü: '
+      + '<strong>Çerçeve</strong> · <strong>Yazı</strong>', 'Tuvale sürükleyin — bıraktığınız '
+      + 'yere kurulur; ya da tıklayın — çerçeve kartları çevreler, yazı kartların üstüne '
+      + 'oturur. Metni çift tıkla düzenlenir']
   ], ['Ne', 'Nereden', 'İçindekiler']);
   h += _gfNot('Kasnağı nereye bırakacağınız sırasını söyler',
       'Listeden sürüklediğiniz kasnağı çizimde bir <strong>açıklığın</strong> (iki kasnak '

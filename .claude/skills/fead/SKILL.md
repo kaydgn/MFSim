@@ -829,7 +829,7 @@ olurdu.
     .noPalette`), kapsamın tek noktası sınıfı yazar (`veSyncPaletsizKapsam` ←
     `veSyncSidebarScope`, `.ve-main.ve-paletsiz`), CSS sütunu VE açma rayını
     gizler; index.html'de FEAD kapsamlı kategori YOK (görünmez, ölü olurdu).
-    Sütunun FEAD'deki üç işinin yeri:
+    Sütunun FEAD'deki dört işinin yeri:
     • **KASNAK → paftanın "＋ Kasnak ekle" LİSTESİ** (`veFeadTableAddHTML`):
       satıra TIK `veFeadTableAdd` (gerginin önüne, koordinatsız); satırı
       SÜRÜKLEMEK paletin bırakma kancalarına gider (`veFeadPaletUstunde` ·
@@ -846,17 +846,29 @@ olurdu.
     • **YENİ KANVAS → FEAD araçları penceresinin "Kanvas"ı**
       (`veFeadKanvasEkle`): yer kuraldan — sıranın sağı, en üstteki kartla
       aynı hiza (kural 22); tek geri-al adımı; kadraj sığdırılır.
-    • **Not araçları (gruplama çerçevesi · yazı etiketi) FEAD'de eklenemez** —
-      sütunla gitti; kayıtlı notlar çizilir, düzenlenir, silinir.
+    • **NOT ARAÇLARI → FEAD araçları penceresinin "Not" bölümü** (kullanıcı:
+      *"Not araçlarını da FEAD araçları penceresine ekleyelim"*). Açıklama
+      modülüne (js/annotations.js) DOKUNULMAZ: sürükleme onun taşıyıcısını
+      (`annotation-type`) yazar ve kabın `drop`ına düşer, tık onun kurucusunu
+      çağırır (`veFeadNotEkle` → `createAnnotation`, tek geri-al adımı).
+      Not kartların ARKASINDA durduğu için tık GÖRÜNÜR yere kurar: çerçeve
+      kutulu kartların HEPSİNİ çevreler, yazı onların üstüne (çerçeve
+      etiketine ve başka yazıya binmez — `veFeadNotYeri`); görünmüyorsa
+      kamera en az kayar (`veFeadNotKaydir`). Hedef SEÇİM DEĞİL: örnek
+      kurucusu son kartı seçili bırakıyor (ölçüldü). Seçim yalnız yeni notta
+      kalır — Delete seçili kartı da silerdi. Pencere BIRAKMA HEDEFİ DEĞİL
+      (`dropEffect = 'none'`, yalnız not sürüklemesinde): altına kurulan not
+      pencerenin arkasında görünmez kalırdı.
     • **KAPSAM SIĞDIRMADAN ÖNCE** (`veFeadOpenEditor`): tuval FEAD'e girerken
       220 px genişliyor; senkron sığdırmadan sonra koşsaydı kadraj dar tuvalle
       kurulur, içerik sola kayık kalırdı. Kullanıcının daralt tercihi
       (`mf-sidebar-collapsed`) YAZILMAZ — kapsamın kuralı bir tercih değil.
     Kapılar: `kabuk-sutun.spec.js` → *"PALETSİZ KAPSAM"* ·
-    `fead-araclar.spec.js` → *"SÜTUNSUZ AÇILIŞ"* + *"KANVAS"* ·
+    `fead-araclar.spec.js` → *"SÜTUNSUZ AÇILIŞ"* + *"KANVAS"* + *"NOT ARAÇLARI"* ·
     `fead-cizim-masasi.spec.js` → *"LİSTEDEN KAYIŞA BIRAK"* ·
     `fead-table.test.js` → *"EKLEYİCİ BİR LİSTE"* · `fead-araclar.test.js` →
-    *"PALETSİZ"* + *"YENİ KANVAS"* · `arac-performans.test.js` → *"PALETSİZ KAPSAM"*.
+    *"PALETSİZ"* + *"YENİ KANVAS"* + *"NOT ARAÇLARI"* · `arac-performans.test.js` →
+    *"PALETSİZ KAPSAM"*.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

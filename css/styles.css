@@ -10160,6 +10160,10 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-fead-arac-btn[aria-disabled="true"]{
   background:var(--bg-tertiary); border-color:var(--border-color); color:var(--text-muted); cursor:not-allowed;
 }
+/* Not araçları: tuvale SÜRÜKLENİR (tık da kurar) — imleç tutmayı söyler, iki
+   araç satırı eşit paylaşır. */
+.ve-fead-arac-btn.tasinir{ flex:1; justify-content:center; cursor:grab; user-select:none; -webkit-user-select:none; }
+.ve-fead-arac-btn.tasinir:active{ cursor:grabbing; }
 .ve-fead-arac-btn:focus-visible,.ve-fead-arac-bag:focus-visible,
 .ve-fead-arac-seg button:focus-visible,.ve-fead-arac-ray-btn:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 /* Bağlantı: dinlenmede ZEMİNSİZ metin (düğme dolu, bağlantı boş — kural 14). */
