@@ -1018,7 +1018,10 @@ describe('gergi parça kodu (tenPart) — pim künyesinin anahtarı', () => {
     const st = wiz.veFeadWizState();
     wiz.veFeadWizTenLib('AG0868-8PK');
     expect(st.ten.tenPart).toBe('E9843');
-    wiz.veFeadWizTenLib('AG00976-1715');               // bu kayıtta part YOK
+    // Bu kayıtta part YOK (PDF'i arşivde değil). 1715 revizyonu kodunu kendi
+    // PDF'inden aldı — bu kapıyı artık o sınayamaz.
+    expect(TENS.veFeadTensionerOf('AG00976-1705').part).toBeUndefined();
+    wiz.veFeadWizTenLib('AG00976-1705');
     expect(st.ten.tenPart).toBeUndefined();
     const t = wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-tensioner');
     expect(t.data.tenPart).toBeUndefined();

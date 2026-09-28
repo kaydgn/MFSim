@@ -566,14 +566,24 @@ describe('tasarım gerginliği YAY DENGESİNDEN türetilir', () => {
 //   AG0868 ×3   `SD7H15-AC.cmp`            → Sanden 7H15   (katalogda tek kayıt)
 //   AG00810     `AG810-250Amp-ALT.cmp`     → Prestolite 250A (tek kayıt)
 //   AG00894     `TM31.cmp` · `SD7H15.cmp`  → Valeo TM31 · Sanden 7H15
+//   AG00902 ×2  `Valeo - TM21 - 7_9kW_A_C.cmp` → Valeo TM21 (tek kayıt)
 //   AG00976     örneğin adı "Alternatör (155 A)" → Prestolite 155A (iki kayıt,
 //               ikisi de aynı üç sınırı taşıyor: sayı belirli, parça numarası değil)
 //
+// AG00902 BİR DÖNEM "YAZILMAYANLAR" LİSTESİNDEYDİ — "`7_9kW_A_C.cmp`, GÜÇ
+// yazıyor, model değil" diye. ÖLÇÜLDÜ ve tutmadı: hücre beş ayrı çizim
+// çağrısı (`Valeo` · `-` · `TM21` · `-` · `7_9kW_A_C.cmp`, koordinatlar aynı
+// satırda) ve satır okuyucu yalnız sonuncusunu görüyordu. Drive Notes da
+// "Valeo TM21 AC ø127 Drive" diyor.
+//
 // YAZILMAYANLAR DA BİR SONUÇTUR ve sebepleri ölçüldü:
 //   AG00686 ×2  rapor yalnız `A_C.cmp` diyor — model adı yok
-//   AG00902 ×2  `7_9kW_A_C.cmp` — GÜÇ yazıyor, model değil
-//   AG00879     `220Amp` — katalogda 220 A kaydı yok
-//   AG00976 klima  tasarım adı `TM32` — katalogda TM32 yok (TM21 ve TM31 var)
+//   AG00879     `ALT - 24V - 220Amp.cmp` — ad gelir ("220 A"), katalogda 220 A
+//               kaydı yok; klima `A_C - QP - 21HD.cmp` — `QP` model mi klasör mü
+//               belirsiz, ada YAZILMADI (not'ta)
+//   AG00976 klima  tasarım adı `TM32` — katalogda TM32 yok (TM21 ve TM31 var);
+//               ada da YAZILMADI: tasarım adı bir aksesuar hücresi değil ve
+//               240×180 kartta şemayı %16 küçültüyordu (not'ta)
 //   BMC_FEAD_2026  tedarikçi sayfası aksesuarı genel adla anıyor
 //
 // KAPI SAYIYI KATALOĞA BAĞLIYOR: örnekte yazan her sınır, o modelin katalog
@@ -650,7 +660,68 @@ describe('örnek aksesuar sınırları KATALOĞA bağlı', () => {
       });
     });
     expect(bad).toEqual([]);
-    expect(sayilan).toBeGreaterThanOrEqual(18);        // 6 aksesuar × 3 sınır
+    expect(sayilan).toBeGreaterThanOrEqual(24);        // 8 aksesuar × 3 sınır
+  });
+
+  // İLERİ YÖN — "gelebilen GELİR". Yukarıdaki kapılar yazılmış bir sınırın
+  // doğru olduğunu ölçüyor, YAZILMAMIŞ bir sınırın eksik olduğunu değil.
+  // Kullanıcı isteği (2026-09-28): *"örnek seçtiğim zaman gelebilenlerin
+  // otomatik gelmesini istiyorum."* Adı kataloğa çözülen ve kataloğun bütün
+  // kayıtlarının üzerinde ANLAŞTIĞI bir sınırı taşımayan aksesuar, gelebilecek
+  // bir sayıyı getirmemiş demektir — AG00902'nin TM21'i tam böyleydi.
+  test('adı kataloğa çözülen HER aksesuar üç sınırı da TAŞIYOR', () => {
+    const eksik = [];
+    aksesuarlar().forEach((x) => {
+      const kay = modelKayitlari(x.ad);
+      if (!kay) return;
+      SINIR.forEach((f) => {
+        const v = [...new Set(kay.map((r) => r[f]))];
+        if (v.length === 1 && v[0] > 0 && !(x.d[f] > 0))
+          eksik.push(`${x.key} "${x.ad}" ${f} = ${v[0]} gelebilirdi`);
+      });
+    });
+    expect(eksik).toEqual([]);
+  });
+
+  // ADLAR RAPORA BAĞLI: örneğin parantezindeki model uydurulamaz — o örneğin
+  // kendi PDF'inde yazılı olmak zorunda. PDF örneğin kendi verisinden bulunur
+  // (rapor numarası + kayış tipi: `AG00902_8PK1275HD_…`), ayrı bir eşleme
+  // tablosu tutulmaz. Karşılaştırma harf-rakam çekirdeğiyle: raporun yazımı
+  // ("SD7H15", "250Amp", "A_C - QP - 21HD.cmp") ile kataloğun yazımı ("Sanden
+  // 7H15", "250 A") aynı parçayı söyler; baştaki MARKA sözcüğü düşer, çünkü
+  // raporlar markayı her zaman yazmıyor.
+  test('adın parantezindeki model örneğin KENDİ raporunda yazılı', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const { gatesPdfText } = require('../helpers/gates-pdf.js');
+    const DIR = path.join(__dirname, '../../docs/gates-reports/pdf');
+    const pdfler = fs.readdirSync(DIR).filter((f) => f.endsWith('.pdf'));
+    const kod = (ad) => {
+      const m = /\(([^)]+)\)\s*$/.exec(ad || '');
+      if (!m) return null;
+      const s = m[1].trim().split(/\s+/);
+      if (s.length > 1 && /^[A-Za-zÇĞİÖŞÜçğıöşü]+$/.test(s[0]) && /\d/.test(s.slice(1).join('')))
+        s.shift();                                            // marka düşer
+      return cekirdek(s.join(''));
+    };
+    const bad = [];
+    let bakilan = 0;
+    Object.keys(M.VE_FEAD_EXAMPLES).forEach((key) => {
+      const ex = M.VE_FEAD_EXAMPLES[key];
+      const no = key.split('_')[0];
+      const pdf = pdfler.find((f) => f.startsWith(no + '_' + ex.belt.beltType + '_'));
+      (ex.pulleys || []).forEach((p) => {
+        if (p.type !== 'fead-ac' && p.type !== 'fead-alternator') return;
+        const k = kod(p.name);
+        if (!k) return;
+        if (!pdf) { bad.push(`${key} "${p.name}": kaynağı arşivde yok`); return; }
+        bakilan++;
+        if (cekirdek(gatesPdfText(path.join(DIR, pdf))).indexOf(k) < 0)
+          bad.push(`${key} "${p.name}": ${k} raporda geçmiyor (${pdf})`);
+      });
+    });
+    expect(bad).toEqual([]);
+    expect(bakilan).toBe(10);   // 3·SD7H15 · 250 A · TM31 · SD7H15 · 2·TM21 · 155 A · 220 A
   });
 
   test('modeli BİLİNMEYEN aksesuara sınır yazılmamış', () => {

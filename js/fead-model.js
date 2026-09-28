@@ -878,7 +878,7 @@ function veFeadWorkingPoint(sys, mode, nominalRelDeg){
 // "hemen hemen tüm otomatik gergilerin teknik resmi bu"), ama yarıçap ve
 // ofset parçaya özgüdür ve UYDURULMAZ: kodu olmayan ya da çizimi olmayan
 // künyede `ok:false` döner ve sebebi yazılır. Bu, kütüphanenin kendi kuralı
-// (doğrulanamayan dört AG00976 kaydı `part` taşımıyor).
+// (doğrulanamayan üç AG00976 kaydı `part` taşımıyor).
 //
 // GEÇERLİLİK SINIRI SONUCUN İÇİNDE: dönen kayıt kaynağını (`src`) taşıyor.
 function veFeadPinPlan(td, armAbsDeg){
@@ -1963,7 +1963,9 @@ var VE_FEAD_EXAMPLES = {
         + 'Corrected-IDR1, 05.06.2025) birebir modeli. Aynı 6 kasnaklı düzen, '
         + 'ama gergi PİVOTU, kayış toleransı (±6 mm) ve aşınma payı (%0,60) '
         + 'raporda var, tedarikçiye giden sayfada yok. Raporun sonuç '
-        + 'sayfalarını geri üretir.',
+        + 'sayfalarını geri üretir. Raporun notu: Cummins motor · gergi E9843 · '
+        + 'avara E9839 (iki avaradan hangisi olduğu yazmıyor) · tasarım adında '
+        + 'klima TM32.',
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK1715HD', ribs:8,
              // Bkz. yukarıdaki "EFEKTİF BOY" notu: rapor başlığı 1715 diyor,
              // kendi REBL sütunu 1714.6 istiyor.
@@ -2021,6 +2023,12 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:162, x:0,        y:0,      contact:'grooved', driver:true, inertia:0.064 } },
       { key:'IDR1', type:'fead-idler',       name:'Avara 1',
         data:{ od:75,  x:130.10,   y:139.90, contact:'back',    inertia:0.00087 } },
+      // AD MODELSİZ KALIR. Raporun tasarım adı "…155Amp - ALT - AC -
+      // TM32_Secondary_Drive…" klimanın TM32 olduğunu ima ediyor, ama bu bir
+      // aksesuar hücresi değil bir TASARIM ADI (alıntı PDF'te Accessory Data
+      // sayfası yok) ve katalogda TM32 kaydı da yok — ad hiçbir sayı getirmezdi.
+      // Bedeli ise ölçüldü: 240×180 kartta şema %16 küçülüyordu
+      // (fead-katman.test.js). Bilgi örneğin NOTUNDA duruyor.
       { key:'A_C',  type:'fead-ac',          name:'Klima Kompresörü',
         data:{ od:152, x:184.20,   y:314.50, contact:'grooved', inertia:0.031 } },
       { key:'IDR2', type:'fead-idler',       name:'Avara 2',
@@ -2050,6 +2058,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:-161.97, cenY:91.29, armLen:90.0,
                armMeanDeg:-11.9992,
                preload:8.60, kArm:0.480, meanLoad:22.07,
+               tenLib:'AG00976-1715', tenLibVer:'1.0.0', tenPart:'E9843',
                // Gates E9843 — çekirdeğin kendi ölçülmüş gergi künyesi
                // (CALIBRATION.tensionerArmInertiaKgM2.measured.E9843).
                // Burulma modeline J = armInertia + pulleyMass·a² olarak girer.
@@ -2098,7 +2107,9 @@ var VE_FEAD_EXAMPLES = {
     note: 'Cummins ikincil ALT&AC tahriki, 5 kasnak (FAN · Avara · Klima · '
         + 'Alternatör · Gergi). Gates 8PK1392HD, gergi T38665 (kol 56 mm). '
         + 'Farklı araç, farklı gergi ve farklı çaplarla modelin '
-        + 'evrenselliğini sınar; raporun sonuç sayfalarını geri üretir.',
+        + 'evrenselliğini sınar; raporun sonuç sayfalarını geri üretir. '
+        + 'Raporun bileşen dosyaları: alternatör 24 V · 220 A, klima '
+        + '"A_C - QP - 21HD".',
     // Başlık ve REBL(Mean) burada aynı fikirde: 1392.
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK1392HD', ribs:8,
              effLength:1392, tolerance:5, wearPct:0.007 },
@@ -2147,9 +2158,18 @@ var VE_FEAD_EXAMPLES = {
                inertia:0.1500 } },
       { key:'IDR', type:'fead-idler',       name:'Avara',
         data:{ od:74.00,  x:140.00, y:-45.00, contact:'back', inertia:0.0001 } },
+      // ALTERNATÖR MODELİ RAPORUN BİLEŞEN DOSYASINDAN (Accessory Data → File
+      // Name): `ALT - 24V - 220Amp.cmp`. Kardeşleri gibi yazılır — "(250 A)"
+      // AG00810'da, "(155 A)" AG00976'da. Aksesuar kataloğunda 220 A kaydı YOK:
+      // ad gelir, devir sınırı GELMEZ (sınır yalnız kataloğun o model için
+      // söylediği sayı olabilir).
+      //
+      // KLİMANIN hücresi `A_C - QP - 21HD.cmp` — ama `QP`'nin model mi klasör
+      // mü olduğu raporda belirsiz, katalogda da karşılığı yok. Belirsiz bir
+      // kodu ada yazmak kullanıcıya bir parça iddiası okutur; not'ta duruyor.
       { key:'A_C', type:'fead-ac',          name:'Klima Kompresörü',
         data:{ od:127.00, x:265.00, y:-40.00, contact:'grooved', inertia:0.0060 } },
-      { key:'ALT', type:'fead-alternator',  name:'Alternatör',
+      { key:'ALT', type:'fead-alternator',  name:'Alternatör (220 A)',
         data:{ od:58.80,  x:320.00, y:200.00, contact:'grooved', inertia:0.0085 } },
       { key:'TEN', type:'fead-tensioner',   name:'Otomatik Gergi (T38665)',
         // Merkez = "Layout Data"nın TEN satırı (143,40 / 52,55), yani diğer
@@ -2168,6 +2188,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:143.40, cenY:52.55, armLen:56.0,
                armMeanDeg:225.0,
                preload:20.05, kArm:0.409, meanLoad:31.14,
+               tenLib:'AG00879', tenLibVer:'1.0.0', tenPart:'T38665',
                // Raporun 11. sayfası: kasnak 0.0006 · kol 0.0060 · kütle 0.50.
                inertia:0.0006, armInertia:0.0060, pulleyMass:0.50,
                // "Tensioner Geometry" tablosunun Load sütunu: mekanik stop.
@@ -2234,6 +2255,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:121.28, cenY:68.38, armLen:90,
                armMeanDeg:215,
                preload:8.46, kArm:0.505, meanLoad:16.07,
+               tenLib:'AG0868-4PK', tenLibVer:'1.0.0', tenPart:'E9843',
                inertia:0.0009, armInertia:0.0009, pulleyMass:0.8,
                loadStopRelDeg:24.1 } }
     ],
@@ -2274,6 +2296,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:124.57, cenY:63.97, armLen:90,
                armMeanDeg:218.5,
                preload:8.65, kArm:0.495, meanLoad:19.04,
+               tenLib:'AG0868-6PK', tenLibVer:'1.0.0', tenPart:'E9843',
                inertia:0.0009, armInertia:0.0009, pulleyMass:0.8,
                loadStopRelDeg:32.6 } }
     ],
@@ -2314,6 +2337,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:126.06, cenY:62.15, armLen:90,
                armMeanDeg:220,
                preload:8.56, kArm:0.501, meanLoad:22.57,
+               tenLib:'AG0868-8PK', tenLibVer:'1.0.0', tenPart:'E9843',
                inertia:0.0009, armInertia:0.0009, pulleyMass:0.8,
                loadStopRelDeg:48.4 } }
     ],
@@ -2356,6 +2380,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:-217.41, cenY:34.81, armLen:90,
                armMeanDeg:18,
                preload:11.561, kArm:0.483, meanLoad:29.48,
+               tenLib:'AG00810', tenLibVer:'1.0.0', tenPart:'T38519',
                inertia:0.0004, armInertia:0.004, pulleyMass:0.8,
                loadStopRelDeg:66.5 } }
     ],
@@ -2391,6 +2416,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:-156.85, cenY:186.97, armLen:90,
                armMeanDeg:75.1,
                preload:8.59, kArm:0.482, meanLoad:24.54,
+               tenLib:'AG00686', tenLibVer:'1.0.0', tenPart:'T38624',
                inertia:0.0076, armInertia:0.0076, pulleyMass:0.5,
                loadStopRelDeg:62.4 } }
     ],
@@ -2426,6 +2452,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:-149.27, cenY:184.59, armLen:90,
                armMeanDeg:70,
                preload:8.86, kArm:0.476, meanLoad:22.2,
+               tenLib:'AG00686-1520', tenLibVer:'1.0.0', tenPart:'T38624',
                inertia:0.0076, armInertia:0.0076, pulleyMass:0.5,
                loadStopRelDeg:54.5 } }
     ],
@@ -2450,13 +2477,32 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:146, x:0, y:0, contact:'grooved', driver:true } },
       { key:'IDR', type:'fead-idler', name:"Avara",
         data:{ od:75, x:190, y:80, contact:'back' } },
-      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
-        data:{ od:127, x:284.5, y:297.7, contact:'grooved' } },
+      // MODEL RAPORUN KENDİSİNDE YAZILI — İKİ YERDE. Accessory Data tablosunun
+      // File Name hücresi `Valeo - TM21 - 7_9kW_A_C.cmp`, Drive Notes da
+      // "Valeo TM21 AC ø127 Drive". Bir dönem burada "rapor yalnız
+      // `7_9kW_A_C.cmp` diyor, model yok" yazıyordu: satır okuyucu hücrenin
+      // yalnız SON parçasını görüyordu (hücre beş ayrı çizim çağrısı).
+      // Katalogda tek Valeo TM21 kaydı var (57RS321633), yani üç sınır da
+      // belirli. `accLib` yine YAZILMAZ — bkz. AG0868 kayıtlarındaki not.
+      // AD KISA: "Klima (TM21)". Bu düzende klimanın adı kol konumu
+      // künyesinin hemen yanına düşüyor ve tam ad adayların hepsini
+      // kapatıyordu — ölçüldü (fead-card-design.test.js → "ad, KÜNYE ve ALT
+      // NOT üstüne düşmez", tam adlar kipinde künyeyle çakışma):
+      //   "Klima Kompresörü (Valeo TM21)" 10 · "Klima Kompresörü (TM21)" 3 ·
+      //   "Klima Komp. (TM21)" 1 · "Klima (TM21)" 0 · eski "Klima Kompresörü" 0
+      // Yerleştiriciye "sığmayan ad kısalsın" kuralı eklemek denendi ve
+      // REDDEDİLDİ: tam adlar kipindeki karelerin %45'inde adı kısaltıyordu —
+      // kullanıcının "Adı kısalt"ı KAPATARAK istediği şeyi sessizce ezmek.
+      // Katalog kuyruğu ("TM21") yine tek kayda çözülüyor.
+      { key:'A_C', type:'fead-ac', name:"Klima (TM21)",
+        data:{ od:127, x:284.5, y:297.7, contact:'grooved',
+               optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
         data:{ od:75, contact:'back',
                cenX:99.37, cenY:171.37, armLen:90,
                armMeanDeg:260,
                preload:9.13, kArm:0.48, meanLoad:22.15,
+               tenLib:'AG00902-1275', tenLibVer:'1.0.0', tenPart:'E9843',
                loadStopRelDeg:45.2 } }
     ],
     route: ['CRK', 'IDR', 'A_C', 'TEN']
@@ -2480,13 +2526,17 @@ var VE_FEAD_EXAMPLES = {
         data:{ od:159, x:0, y:0, contact:'grooved', driver:true } },
       { key:'IDR', type:'fead-idler', name:"Avara",
         data:{ od:75, x:219.2, y:78.5, contact:'back' } },
-      { key:'A_C', type:'fead-ac', name:"Klima Kompresörü",
-        data:{ od:137, x:284.5, y:297.7, contact:'grooved' } },
+      // `Valeo - TM21 - 7_9kW_A_C.cmp` + "Secondary Valeo TM21 AC Drive" —
+      // 1275'teki notun ve kısa adın gerekçesi burada da aynı.
+      { key:'A_C', type:'fead-ac', name:"Klima (TM21)",
+        data:{ od:137, x:284.5, y:297.7, contact:'grooved',
+               optimumRpm:1000, maxContRpm:3000, maxPeakRpm:6000 } },
       { key:'TEN', type:'fead-tensioner', name:"Otomatik Gergi (E9843)",
         data:{ od:75, contact:'back',
                cenX:89.56, cenY:182.04, armLen:90,
                armMeanDeg:265,
                preload:9.31, kArm:0.476, meanLoad:22.21,
+               tenLib:'AG00902-1300', tenLibVer:'1.0.0', tenPart:'E9843',
                loadStopRelDeg:57.4 } }
     ],
     route: ['CRK', 'IDR', 'A_C', 'TEN']
@@ -2498,6 +2548,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1738HD", ribs:8,
              effLength:1738.7, tolerance:6, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Silindir sayısı titreşim sayfasından değil (PDF alıntı, o sayfa
+             // yok) raporun kendi notundan: "AG00894 BMC 6 Cyln.".
+             cylinders:6,
              lengthOffsetMm:0.9,
              duty:[
                { rpm:519, dcPct:26.6, degC:90, kwByKey:{ IDR1:0.01, TM31:1.4, IDR2:0.01, SD7H15:0.9, TEN:0.01 } },
@@ -2533,6 +2586,7 @@ var VE_FEAD_EXAMPLES = {
                cenX:-174.47, cenY:86.93, armLen:90,
                armMeanDeg:353,
                preload:8.93, kArm:0.475, meanLoad:23,
+               tenLib:'AG00894', tenLibVer:'1.0.0', tenPart:'E9843',
                loadStopRelDeg:60.7 } }
     ],
     route: ['CRK', 'IDR1', 'TM31', 'IDR2', 'SD7H15', 'TEN']

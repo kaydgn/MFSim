@@ -53,6 +53,32 @@ pip3 install --quiet pymupdf     # kuruluyor (ölçüldü)
 **Sayfa haritasını aşağıdaki tabloya yaz.** İndeksin asıl değeri bu: doğru
 raporun doğru sayfası, on iki sayfa açmadan bulunur.
 
+**TUZAK — bir tablo hücresi birden çok çizim çağrısı olabilir.** Accessory Data
+tablosunun File Name hücresi `Valeo - TM21 - 7_9kW_A_C.cmp` beş ayrı çağrı
+(`Valeo` · `-` · `TM21` · `-` · `7_9kW_A_C.cmp`, aynı y). Satır tabanlı okuma
+yalnız sonuncusunu "değer" sanıyordu ve AG00902'nin klimasının modeli bir dönem
+"raporda yok" diye kaydedildi. Hücreyi koordinatla (satır = y) topla.
+
+## Bileşen kimlikleri — rapor NE söylüyor (2026-09-28)
+
+Motor modeli hiçbir raporda bir ALAN değil (yalnız `# of Cylinders` + krank
+ataleti; "Cummins" serbest metinde). Aksesuar modeli üç yerde, alan değil
+kullanıcının yazdığı metin olarak: Design adı · kasnak adı · File Name hücresi.
+
+| Rapor | Aksesuar (rapordan) | Gergi · avara | Örneğe gelen |
+|-------|---------------------|---------------|--------------|
+| AG00686 ×2 | `A_C.cmp` — model yok | T38624 | künye |
+| AG00810 | `AG810-250Amp-ALT.cmp` | T38519 | künye · 250 A adı + sınırlar |
+| AG00879 | `ALT - 24V - 220Amp.cmp` · `A_C - QP - 21HD.cmp` | T38665 | künye · 220 A adı (katalogda yok, sınır yok) |
+| AG00894 | `TM31.cmp` · `SD7H15.cmp` · not: "6 Cyln." | E9843 | künye · iki model + sınırlar · silindir |
+| AG00902 ×2 | `Valeo - TM21 - 7_9kW_A_C.cmp` | E9843 | künye · TM21 adı + sınırlar |
+| AG00976 | tasarım adı "155Amp - ALT - AC - TM32" | E9843 · avara **E9839** | künye · 155 A adı + sınırlar |
+| AG0868 ×3 | `SD7H15-AC.cmp` | E9843 | künye · 7H15 adı + sınırlar |
+
+Kapılar: `tests/unit/fead-ornek-kunye.test.js` (künye) ve
+`tests/unit/fead-example.test.js` → *"örnek aksesuar sınırları KATALOĞA bağlı"*
+(model adı raporda yazılı, sınır kataloğun sayısı, gelebilen sınır gelmiş).
+
 ## Rapordan çıkan sayı NEREYE gider
 
 | Ne | Nereye | Neden |
