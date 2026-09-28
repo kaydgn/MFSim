@@ -1025,7 +1025,7 @@ function _gfSec5(){
   h += '<h3>5.3 Modelin kurulu olduğunu doğrulamak</h3>';
   h += '<p>İki yerde aynı denetim yazılıdır ve ikisi de aynı çözümden gelir:</p>';
   h += _gfAlanTablo('Kapanış denetimi', [
-    ['Kayış Yolu kartı — sağ üst rozet', '✓/✗ Σsarım · kasnak sayısı · L (efektif boy)',
+    ['Kayış Yolu kartı — sağ üst rozet', '✓/✗ Σsarım · kasnak sayısı · L (efektif boy) · kord',
       'Σsarım <strong>360,0°</strong> olmak zorunda; ✗ ise sebebini yazar (“Kayış yolu '
       + 'KAPANMIYOR”, “Kayış kasnağın İÇİNDEN geçiyor”)'],
     ['Pencerelerin sağ sütunu', '<em>Çevrim kapalı</em> kapısı · Σ',
@@ -1347,6 +1347,30 @@ function _gfSec8(){
     + 'üretmek, olmayan bir seçimi varsaymak olurdu. Kayışı seçtikten sonra anahtarı '
     + '<strong>Açık</strong>a alın; panel neyin kapalı olduğunu her zaman listeleyerek '
     + 'yazar.</p>';
+  h += '<h3>8.5 Kayış numarası hangi çizgide — d<sub>b</sub> ve d<sub>w</sub></h3>';
+  h += '<p>Kayış numarası (8PK<strong>1410</strong>’daki 1410) kanallı kasnağın dış çapındaki '
+    + '<strong>d<sub>b</sub></strong> çizgisinde ölçülen boydur: ISO 9981’in efektif boyu, '
+    + 'ContiTech tablosunun <em>L<sub>b</sub></em>’si. Kayışın kordu bu çizginin '
+    + '<em>h<sub>b</sub></em> dışında, <strong>d<sub>w</sub> = d<sub>b</sub> + 2·h<sub>b</sub></strong> '
+    + 'çizgisinde durur ve CAD eskizi çoğunlukla onu ölçer. Kapalı bir çevrimde iki boyun farkı '
+    + 'yerleşimden bağımsız olarak <strong>2π·h<sub>b</sub></strong>’dir: PK ContiTech '
+    + '(h<sub>b</sub> = 1,5 mm) için 9,42 mm, PK Gates (1,2 mm) için 7,54 mm.</p>';
+  h += _gfSahneKart2('getFeadBeltPropertiesHTML', 'Boy çizgileri',
+    'Kayış Özellikleri → <b>Boy</b> sekmesi. Kesit ölçeklidir ve profilin kendi sabitlerinden '
+    + 'çizilir; altındaki iki satır aynı kayışın numarasını ve kord boyunu yazar.');
+  h += _gfAlanTablo('İki boy nerede okunur', [
+    ['Kayış Özellikleri → Boy → <em>Boy çizgileri</em>', 'Kesit figürü · Kayış numarası · Kord boyu',
+      'Numara çözüme yazılan boy: sabit kipte girilen, kilitli kipte türetilen'],
+    ['Kayış Özellikleri → sağ sütun', 'Kayış numarası · Kord boyu · Boy kaynağı', 'Aynı okuma'],
+    ['Kayış Yolu kartı — sağ üst rozet', 'L … mm · kord … mm', 'Çizilen kol konumunun geometrisi'],
+    ['Rapor §8.2', 'Efektif boy (d<sub>b</sub>) · Kord boyu (d<sub>w</sub>) · kesit figürü',
+      'Numara d<sub>b</sub>’de kalır; kord yalnız karşılığıdır']
+  ], ['Nerede', 'Ne yazar', 'Not']);
+  h += _gfNot('CAD’deki boy numara değildir',
+      'Eskizin kord çizgisinde ölçtüğü boy numara sayılırsa kayış 2π·h<sub>b</sub> uzun seçilir ve '
+    + 'gergi kolu başka bir açıya oturur. Kayış Tablosu’ndaki <em>Efektif Çap</em> sütunu da '
+    + 'kasnağın <strong>d<sub>w</sub></strong> çapıdır (defterin adı, OD + 2·h<sub>b</sub>); '
+    + '<em>efektif boy</em> ise d<sub>b</sub> çizgisindedir — adları benzer, çizgileri farklı.');
   return h;
 }
 
@@ -1593,8 +1617,9 @@ function _gfSec11(){
     ['Üst künye', 'Çizilen konumun adı · kol açısı · gerginlik. <strong>Kasnak künye '
       + 'tablosu kartta değildir</strong> — ad · Ø · sarım · devir · güç sütunlarını '
       + 'Kayış Tablosu yazıyor, aynı sayıyı iki yüzeyde tutmamak için kalktı'],
-    ['<strong>Sağ üst rozet</strong>', '<strong>✓/✗ Σsarım · kasnak sayısı · efektif boy</strong> '
-      + '— Σsarım 360,0° olmak zorundadır; değilse sebebi yazılır'],
+    ['<strong>Sağ üst rozet</strong>', '<strong>✓/✗ Σsarım · kasnak sayısı · efektif boy · kord</strong> '
+      + '— Σsarım 360,0° olmak zorundadır; değilse sebebi yazılır. Efektif boy kayış '
+      + 'numarasının çizgisi (d<sub>b</sub>), kord CAD eskizininki (d<sub>w</sub>) — §8.5'],
     ['Yüzen çubuk', 'Gergi kol konumu · devir · titreşim · <em>Katmanlar</em> · <em>Tablo</em>'],
     ['Göbekteki numara', 'Tablo açıkken kasnağın tablodaki satır numarası']
   ], ['İşaret', 'Ne söylüyor']);

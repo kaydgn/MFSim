@@ -709,6 +709,26 @@ olurdu.
     `fead-duty.test.js` → *"sıcaklık kaynağından"*, `cp-fead-report.test.js` →
     *"katılmamıştır hükmü geri gelmez"*.
 
+37. **KAYIŞ NUMARASI d_b ÇİZGİSİNDE, d_w YANINDA** (2026-09-28, kullanıcı
+    kararı). 8PK1410'daki 1410 kanallı kasnağın dış çapındaki boydur (ISO 9981
+    efektif boyu, ContiTech L_b, çekirdeğin `LeffMm`'i); CAD eskizi çoğunlukla
+    kordu (d_w = d_b + 2·h_b, `LpitchMm`) ölçer. Gerekçe: d_w'yi numara saymak
+    kayışı 2π·h_b uzun seçtirir ve kolu sessizce başka açıya oturtur.
+    • **Dönüşüm TEK yerde**: `veFeadBoyCizgileri` (köprü) — fark h_b'den, yani
+      MARKADAN (PK Gates 7,54 · ContiTech 9,42 mm). Her yüzey (Boy sekmesinin
+      kesit figürü `veFeadKesitSVG` · sağ sütun · rozet · sihirbaz bandı · rapor
+      §8.2 · Sonuç Özeti) numarayı d_b'de yazar, kordu yanına bu dönüşümle.
+    • **Okuma TEK kaynak**: `veFeadBoyOkuma` — çözüm varsa köprünün çözüme
+      yazdığı boy, yoksa sabit kipte girilen; serbestte model yoksa '—'.
+      Kilit (`veFeadBeltModeLocked`) "Boy kaynağı"nda da sayılır.
+    • **`.ve-fp-l` etiketinde sembol yok**: etiket büyük harfe çeviren bir flex
+      kutusu — `d<sub>b</sub>` "D B", π Π olur. Semboller figürde ve açıklamada.
+    • Paftanın **"Efektif Çap"** sütunu d_w'dir (defterin adı, OD + 2·h_b);
+      "efektif boy" d_b'de. Ad kalır (defterle birebir), ayrım kılavuz §8.5'te.
+    Kapı: `fead-boy-cizgisi.test.js` (dönüşüm çekirdeğin geometrisiyle aynı ·
+    çözüme yazılan boy L_eff − ofset · figür ölçekli · kart = sütun · öteki
+    yüzeyler) + `fead-table.test.js` → *"ON sütun"* (rozet modelin sayılarını).
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.
