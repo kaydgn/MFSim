@@ -1097,9 +1097,16 @@ function veFeadWizLiveHTML(b){
   }
   if(b.ok){
     h += '<span class="ve-fw-pill ve-fw-pill-ok">' + veIkon('check') + ' model çözülüyor</span>';
-    if(Number.isFinite(b.beltLengthMm))
-      h += '<span class="ve-fw-pill">L<sub>eff</sub> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
-         + (b.beltLengthDerived ? ' <em>çıktı</em>' : '') + '</span>';
+    // KAYIŞ NUMARASI d_b ÇİZGİSİNDE, kord (d_w) yanında — CAD eskizi kordu
+    // ölçer (kullanıcı kararı 2026-09-28). Dönüşüm köprüden.
+    if(Number.isFinite(b.beltLengthMm)){
+      var _bc = (typeof veFeadBoyCizgileri === 'function' && b.sys && b.sys.belt)
+        ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt.profile, b.sys.belt.brand) : null;
+      h += '<span class="ve-fw-pill">L<sub>b</sub> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
+         + (b.beltLengthDerived ? ' <em>çıktı</em>' : '')
+         + ((_bc && Number.isFinite(_bc.dw)) ? ' <em>· d<sub>w</sub> ' + _fwFmt(_bc.dw, 1) + '</em>' : '')
+         + '</span>';
+    }
     if(Number.isFinite(b.springTensionN))
       h += '<span class="ve-fw-pill">T <b>' + _fwFmt(b.springTensionN, 1) + ' N</b></span>';
     // ŞERİT KULLANICININ YAZDIĞI SAYIYI GÖSTERİR. Bir dönem mutlak açı
@@ -2352,6 +2359,13 @@ function _fwReadHTML(etHtml, deg, ikon){
   return '<div class="ve-fw-read"><span>' + etHtml + '</span><b>' + (ikon ? veIkon(ikon) + ' ' : '')
     + _fwEsc(deg) + '</b></div>';
 }
+// Türetilen boyun KORD karşılığı (d_w = d_b + 2·h_b çizgisi; CAD eskizi bunu
+// ölçer). Sayı köprüden; profil kaydı tanınmıyorsa satır hiç yazılmaz.
+function _fwKordRead(b){
+  var x = (typeof veFeadBoyCizgileri === 'function' && b && b.sys && b.sys.belt)
+    ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt.profile, b.sys.belt.brand) : null;
+  return (x && Number.isFinite(x.dw)) ? _fwRead('Kord boyu (CAD çizgisi)', _fwFmt(x.dw, 1) + ' mm') : '';
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 //  KOL AÇISI SEÇİCİ — küçük koordinat düzlemi
@@ -2924,7 +2938,8 @@ function _fwStepKayis(b){
       '<div class="ve-fw-reads">'
     + _fwRead('Boy kipi', 'SERBEST (kilitli)')
     + ((b && b.ok && Number.isFinite(b.beltLengthMm))
-        ? _fwRead('Gereken boy (çıktı)', _fwFmt(b.beltLengthMm, 1) + ' mm') : '')
+        ? _fwRead('Gereken boy (çıktı)', _fwFmt(b.beltLengthMm, 1) + ' mm')
+          + _fwKordRead(b) : '')
     + _fwRead('Kayış tipine bağlı çıktılar', 'KAPALI')
     + _fwRead('Üretilmeyenler',
         (typeof VE_FEAD_BELT_DATA_OFF !== 'undefined' ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))

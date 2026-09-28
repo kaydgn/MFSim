@@ -293,6 +293,13 @@ function _fsrKVT(rows, dar){
   }).join('') + '</table>';
 }
 
+// Numaranın kord (d_w) karşılığı — köprüden; kayıt tanınmıyorsa boş.
+function _fsrKord(b){
+  var x = (typeof veFeadBoyCizgileri === 'function' && b)
+    ? veFeadBoyCizgileri(b.effLength, b.profile, b.brand) : null;
+  return (x && Number.isFinite(x.dw)) ? ' · kord ' + _frFs(x.dw, 1) : '';
+}
+
 // Etiket/değer künyesi (Belt Data, Tensioner Data kalıbı)
 function _fsrKV(baslik, rows, vurgu){
   var h = '<div class="kvblk"><div class="kvt' + (vurgu ? ' hl' : '') + '">' + baslik + '</div>';
@@ -348,7 +355,9 @@ function _fsrSheet1(R, node){
   var kayisSat = [
     ['Profil / marka', _frEsc(kayisAd)],
     ['Kaburga sayısı', _frF(b.ribs, 0)],
-    ['Efektif boy (ISO 9981)', _frFs(b.effLength, 1) + ' mm'],
+    // KORD BOYU AYNI SATIRDA (kullanıcı kararı 2026-09-28): numara d_b'de, CAD
+    // eskizinin kordu (d_w) yanında. Ayrı satır sayfa 1'i taşırırdı.
+    ['Efektif boy (ISO 9981)', _frFs(b.effLength, 1) + ' mm' + _fsrKord(b)],
     ['Boy toleransı', b.tolerance ? '± ' + _frFs(b.tolerance, 2) + ' mm' : '—'],
     ['Uzama + aşınma payı', _frPct(_frNum(b.wearPct) * 100, 2)]
   ];

@@ -2403,6 +2403,15 @@ function veFeadPinNote(pin){
 // ════════════════════════════════════════════════════════════════════════════
 //  KAYIŞ ÖZELLİKLERİ PANELİ (iç topolojide tek kopya)
 // ════════════════════════════════════════════════════════════════════════════
+// Marka seçicisinin listesi ve görünen adı TEK yerde — Boy çizgileri kartının
+// açıklaması da adı buradan okur (anahtarı değil: "CONTITECH" değil "ContiTech").
+var VE_FEAD_KAYIS_MARKALAR = [['GATES','Gates'],['OPTIBELT','Optibelt'],['CONTITECH','ContiTech']];
+function veFeadKayisMarkaAdi(k){
+  var key = String(k || 'GATES').toUpperCase();
+  for(var i = 0; i < VE_FEAD_KAYIS_MARKALAR.length; i++)
+    if(VE_FEAD_KAYIS_MARKALAR[i][0] === key) return VE_FEAD_KAYIS_MARKALAR[i][1];
+  return String(k || '');
+}
 function getFeadBeltPropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '';
@@ -2418,10 +2427,9 @@ function getFeadBeltPropertiesHTML(node){
   // Profil + marka, çekirdeğin BELT_DB'sindeki hb/hr'yi seçer — kasnak
   // yarıçapları buradan türetildiği için künyenin en belirleyici iki alanı bu.
   var profiller = [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']];
-  var markalar = [['GATES','Gates'],['OPTIBELT','Optibelt'],['CONTITECH','ContiTech']];
   html += _feadCard('Profil ve marka', 'h_b / h_r buradan gelir', 'var(--accent-warning)',
       _feadSelect(node, 'Profil', 'profile', profiller, 'PK')
-    + _feadSelect(node, 'Marka', 'brand', markalar, 'GATES', veFeadBeltDbHint(node)));
+    + _feadSelect(node, 'Marka', 'brand', VE_FEAD_KAYIS_MARKALAR, 'GATES', veFeadBeltDbHint(node)));
 
   // ── BOY KİPİ ───────────────────────────────────────────────────────────
   // Kol açısı ile kayış boyu TEK serbestlik derecesini paylaşıyor; hangisinin
@@ -2472,9 +2480,11 @@ function getFeadBeltPropertiesHTML(node){
       ], 2)
     + (serbest ? veFeadDerivedLengthHTML(node) : '')
     + _feadHint('<b>Efektif boy</b> ISO 9981 boyudur — katalog adındaki sayının ta kendisi '
-        + '(8PK<b>1715</b> → 1.715 mm). <b>Aşınma payı</b> ORAN olarak girilir '
+        + '(8PK<b>1715</b> → 1.715 mm), kasnağın dış çapında (<b>d<sub>b</sub></b>) ölçülür. '
+        + '<b>Aşınma payı</b> ORAN olarak girilir '
         + '(0,007 = %0,70). Konum tablosu bu üç sayıdan kurulur: Replace = L+tol+aşınma·L, '
         + 'Max = L+tol, Mean = L, Min = L−tol.'));
+  html += veFeadBoyCizgileriHTML(node);
 
   // ── KAYIŞ TİPİNE BAĞLI ÇIKTILAR ANAHTARI ────────────────────────────────
   var _bdm = (typeof veFeadBeltDataMode === 'function')
@@ -2540,41 +2550,216 @@ function getFeadBeltPropertiesHTML(node){
 }
 
 // Kayış sağ sütununun satırları — DEĞERİ OLAN alan tek kaynaktan okunur
-// (`veFeadBeltMode`, `veFeadBeltSpec`), panel ikinci bir profil tablosu
+// (`veFeadBeltMode`, `veFeadBoyOkuma`), panel ikinci bir profil tablosu
 // TUTMAZ. Çözülemeyen alan '—' kalır; sıfır yazmak olmayan bir kayış iddia
 // etmek olurdu (kural 10).
 function veFeadBeltSideRows(node){
   var d = node.data || {};
-  var kip = (typeof veFeadBeltMode === 'function') ? veFeadBeltMode(d) : 'fixed';
-  var serbest = (kip === 'free');
   var prof = d.profile || '—';
   var kanal = Number.isFinite(_feadNum(d.ribs, NaN)) ? String(_feadNum(d.ribs, NaN)) : '—';
 
-  // Boy İKİ SAYIDIR ve karıştırılmaları sessizdir: `LpitchMm` kayışın PITCH
-  // çevresi (katalog boyu bu), `LeffMm` efektif boy. Kayış Tablosu ikisini de
-  // basıyor, sağ sütun da ikisini ayrı satırda yazar — tek "kayış boyu" satırı
-  // hangisini gösterdiğini söylemezdi.
-  var Lp = '—', Le = '—';
-  try {
-    var B = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null;
-    var T = (B && typeof veFeadTableRows === 'function') ? veFeadTableRows(B) : null;
-    if(T && Number.isFinite(T.LpitchMm)) Lp = _feadFmt(T.LpitchMm, 1) + ' mm';
-    if(T && Number.isFinite(T.LeffMm))   Le = _feadFmt(T.LeffMm, 1) + ' mm';
-  } catch(e){ Lp = '—'; Le = '—'; }
-  // Çözüm yokken kullanıcının GİRDİĞİ katalog boyu yine gösterilir — pencere
-  // kendi girdisini boş göstermemeli (Kayış Tablosu'nun aynı kuralı).
-  if(Lp === '—' && Number.isFinite(_feadNum(d.lengthMm, NaN)))
-    Lp = _feadFmt(_feadNum(d.lengthMm, NaN), 1) + ' mm';
+  // BOY İKİ ÇİZGİDE (kullanıcı kararı 2026-09-28). Numara d_b çizgisinde, kord
+  // boyu d_w'de; ikisi Boy sekmesindeki kartla AYNI okumadan. Burada bir dönem
+  // "PITCH çevresi katalog boyu bu" yazıyordu — tersi: katalog numarası çekirdeğin
+  // L_eff'i (d_b), pitch/kord çevresi ondan 2π·h_b uzun.
+  var x = veFeadBoyOkuma(node);
+  var q = x.supheli ? ' ?' : '';
+  var mm = function(v){ return Number.isFinite(v) ? _feadFmt(v, 1) + ' mm' + q : '—'; };
 
   return {
     satirlar: [
       ['Profil', prof],
       ['Kanal sayısı', kanal],
-      ['Pitch boyu', Lp],
-      ['Efektif boy', Le],
-      ['Boy kaynağı', serbest ? 'tasarımdan hesaplanır' : 'katalogdan seçilir']
+      // Etikette SEMBOL YOK: `.ve-fp-l` büyük harfe çeviren bir flex kutusu —
+      // "d<sub>b</sub>" "D B" olur, π Π'ye döner. Semboller Boy sekmesinin
+      // figüründe ve açıklamasında.
+      ['Kayış numarası', mm(x.db)],
+      ['Kord boyu', mm(x.dw)],
+      // KİLİT DE SAYILIR: gergi varken kip alanı 'fixed' yazsa bile boy çıktıdır —
+      // Boy sekmesi "SERBEST (kilitli)" derken sütun "katalogdan" diyordu.
+      ['Boy kaynağı', x.serbest ? 'tasarımdan hesaplanır' : 'katalogdan seçilir']
     ]
   };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KAYIŞ BOYU İKİ ÇİZGİDE — OKUMA · KESİT FİGÜRÜ · KART
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı kararı (2026-09-28): kayış numarası (8PK1410'daki 1410) d_b
+// çizgisinde — kanallı kasnağın dış çapında — okunur ve raporlanır; CAD
+// eskizinin ölçtüğü d_w = d_b + 2·h_b (kord) boyu yanında yazılır. Sayılar
+// köprüden (`veFeadBoyCizgileri`); burada yalnız dizilir.
+
+// OKUMA TEK KAYNAK — Boy sekmesinin kartı ve sağ sütun bunu çağırır. Numara:
+// çözüm varsa köprünün çözüme yazdığı boy (sabit kipte girilen, serbest/kilitli
+// kipte türetilen); çözüm yoksa sabit kipte girilen boy, serbestte YOK.
+function veFeadBoyOkuma(node, b){
+  var d = (node && node.data) || {};
+  var kilit = (typeof veFeadBeltModeLocked === 'function') && veFeadBeltModeLocked();
+  var kip = (typeof veFeadBeltMode === 'function') ? veFeadBeltMode(d) : 'fixed';
+  var serbest = kilit || kip === 'free';
+  if(b === undefined){
+    try { b = (typeof veFeadBuildFromCanvas === 'function') ? veFeadBuildFromCanvas() : null; }
+    catch(e){ b = null; }
+  }
+  var L = NaN, supheli = false;
+  if(b && b.ok && Number.isFinite(b.beltLengthMm)){
+    L = b.beltLengthMm;
+    // Serbest kipin boyu kol nominaldeyken anlamlı (veFeadDerivedLengthHTML'in
+    // kuralı): oturamadıysa sayı yine yazılır ama '?' taşır.
+    var wp = b.workPoint || {};
+    supheli = serbest && !!(wp.nominalFallback || wp.atLimit);
+  } else if(!serbest){
+    L = _feadNum(d.effLength != null ? d.effLength : d.length, NaN);
+  }
+  var x = (typeof veFeadBoyCizgileri === 'function')
+    ? veFeadBoyCizgileri(L, d.profile, d.brand)
+    : { db: NaN, dw: NaN, hb: NaN, hr: NaN, fark: NaN };
+  x.supheli = supheli;
+  x.serbest = serbest;
+  return x;
+}
+
+// ── KESİT FİGÜRÜ (`veFeadKesitSVG`) ────────────────────────────────────────
+//
+// Kanallı kasnağa oturmuş kayışın enine kesiti, ÖLÇEKLİ: sırt, kord (d_w) ve
+// kasnak dış çapı (d_b) çizgileri profilin kendi sabitlerinden — çekirdeğin
+// BELT_DB'si (h_r · h_b · kalınlık · kanal aralığı). Diş biçimi şematik: 40°
+// kanal, kayışın dişi kasnağın dış çapına oturuyor, tepelerde boşluk.
+//
+// TEK ÜRETİCİ: rapor da bunu çağırır (`opt.print` basım paletine geçer) —
+// `veFeadBandSVG`'nin kalıbı. Sayı yok; sayılar yanındaki satırlarda.
+function veFeadKesitSVG(profile, brand, opt){
+  opt = opt || {};
+  if(typeof FEADCore === 'undefined' || !FEADCore.beltProps) return '';
+  var bp;
+  try { bp = FEADCore.beltProps({ profile: profile || 'PK', brand: brand || 'GATES' }); }
+  catch(e){ return ''; }
+  var e = bp.ribPitch, hr = bp.hr, hb = bp.hb, t = bp.thickness;
+  if(!(e > 0 && hr > 0 && hb > 0 && t > hr + hb)) return '';
+
+  var pr = !!opt.print;
+  var C = pr ? { kay:'#c8781e', kord:'#7a4a12', kas:'#5a6270', db:'#24425f',
+                 dw:'#1b1e24', mut:'#5a6270' }
+             : { kay:'var(--accent-warning)', kord:'var(--ink-warning)',
+                 kas:'var(--text-secondary)', db:'var(--accent-primary)',
+                 dw:'var(--text-primary)', mut:'var(--text-muted)' };
+  var W = 300, H = 128, SOL = 30, SAG = 76, UST = 8, ALT = 8;
+  var n = 3, tan20 = Math.tan(20 * Math.PI / 180);
+
+  // mm ölçüleri (y aşağı, sırt 0'da)
+  var yc = hr, yb = hr + hb, yt = t;
+  var tas = 0.3 * e;                          // kasnak kayışın iki yanına taşar
+  var rim = 0.4 * t;                          // kasnak göbeğinin görünen payı
+  var eW = W - SOL - SAG, eH = H - UST - ALT;
+  var sx = eW / (n * e + 2 * tas);
+  // Boşluklar PİKSEL cinsinden seçilir (her profilde görünsün), mm'ye çevrilir.
+  var s0 = Math.min(sx, eH / (yt + rim + 3 / sx));
+  var gV = 2.2 / s0, gT = 3 / s0;             // diş dibi · diş tepesi boşluğu
+  var yv = yb - gV, yg = yt + gT, yp = yg + rim;
+  var s = Math.min(sx, eH / yp);
+  var ox = SOL + (eW - (n * e + 2 * tas) * s) / 2 + tas * s;
+  var oy = UST + (eH - yp * s) / 2;
+  var f = function(v){ return String(Math.round(v * 10) / 10); };
+  var X = function(v){ return f(ox + v * s); };
+  var Y = function(v){ return f(oy + v * s); };
+
+  // Diş yarı genişliği derinlikle: w(y) = wt + (yt − y)·tan20
+  var wt = Math.max(0.08 * e, 0.46 * e - (yt - yv) * tan20);
+  var w = function(y){ return wt + (yt - y) * tan20; };
+
+  // KASNAK: dış çap (sırt düzlükleri) d_b'de, kanal yanakları kayışın dişine yaslı.
+  var x0 = -tas, x1 = n * e + tas;
+  var kas = 'M' + X(x0) + ' ' + Y(yb);
+  for(var i = 0; i < n; i++){
+    var xc = (i + 0.5) * e;
+    kas += ' L' + X(xc - w(yb)) + ' ' + Y(yb) + ' L' + X(xc - w(yg)) + ' ' + Y(yg)
+         + ' L' + X(xc + w(yg)) + ' ' + Y(yg) + ' L' + X(xc + w(yb)) + ' ' + Y(yb);
+  }
+  kas += ' L' + X(x1) + ' ' + Y(yb) + ' L' + X(x1) + ' ' + Y(yp)
+       + ' L' + X(x0) + ' ' + Y(yp) + ' Z';
+
+  // KAYIŞ: sırt → sağ kenar → dişler (sağdan sola) → sol kenar.
+  var kay = 'M' + X(0) + ' ' + Y(0) + ' L' + X(n * e) + ' ' + Y(0) + ' L' + X(n * e) + ' ' + Y(yv);
+  for(var j = n - 1; j >= 0; j--){
+    var xj = (j + 0.5) * e;
+    kay += ' L' + X(xj + w(yv)) + ' ' + Y(yv) + ' L' + X(xj + wt) + ' ' + Y(yt)
+         + ' L' + X(xj - wt) + ' ' + Y(yt) + ' L' + X(xj - w(yv)) + ' ' + Y(yv);
+  }
+  kay += ' L' + X(0) + ' ' + Y(yv) + ' Z';
+
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img"'
+    + ' aria-label="Kayış kesiti: kasnak dış çapı d_b ve kord çizgisi d_w"'
+    + ' style="display:block; width:100%; max-width:' + (opt.maxW || W) + 'px; height:auto;'
+    + (pr ? '' : ' margin:2px auto 8px;') + '">';
+  svg += '<path data-ve="kesit-kasnak" d="' + kas + '" fill="' + C.kas + '" fill-opacity="0.16"'
+       + ' stroke="' + C.kas + '" stroke-width="1" stroke-linejoin="round"/>';
+  svg += '<path data-ve="kesit-kayis" d="' + kay + '" fill="' + C.kay + '" fill-opacity="0.26"'
+       + ' stroke="' + C.kay + '" stroke-width="1.2" stroke-linejoin="round"/>';
+  // KORD: çizginin üstünde küçük daireler (her dişe üç)
+  var rk = Math.min(0.28 * hr, 0.28 * hb, e / 10) * s;
+  for(var k = 0; k < 3 * n; k++)
+    svg += '<circle data-ve="kesit-kord" cx="' + X((k + 0.5) * e / 3) + '" cy="' + Y(yc)
+         + '" r="' + f(Math.max(1.2, rk)) + '" fill="' + C.kord + '"/>';
+
+  // ÇİZGİLER — sol uçtan etiket şeridine kadar
+  var cizgi = function(ad, y, renk, dash){
+    return '<line data-ve="' + ad + '" x1="' + f(SOL - 4) + '" y1="' + Y(y) + '" x2="'
+      + f(W - SAG + 6) + '" y2="' + Y(y) + '" stroke="' + renk + '" stroke-width="1.2"'
+      + ' stroke-dasharray="' + dash + '"/>';
+  };
+  svg += cizgi('kesit-dw', yc, C.dw, '2 2') + cizgi('kesit-db', yb, C.db, '6 3');
+  var etiket = function(y, renk, alt, ek){
+    return '<text x="' + f(W - SAG + 10) + '" y="' + f(oy + y * s + 3.5) + '" font-size="11"'
+      + ' font-weight="600" fill="' + renk + '">d<tspan font-size="8" dy="2">' + alt
+      + '</tspan><tspan font-size="10" font-weight="400" dy="-2" fill="' + C.mut + '"> · '
+      + ek + '</tspan></text>';
+  };
+  svg += etiket(yc, C.dw, 'w', 'kord') + etiket(yb, C.db, 'b', 'numara');
+
+  // ÖLÇÜLER — solda: sırt → kord (h_r), kord → d_b (h_b)
+  var xd = SOL - 10;
+  var olcu = function(ya, yz, alt){
+    var a = oy + ya * s, z = oy + yz * s, o = (a + z) / 2;
+    return '<line x1="' + f(xd) + '" y1="' + f(a + 1) + '" x2="' + f(xd) + '" y2="' + f(z - 1) + '"'
+      + ' stroke="' + C.mut + '" stroke-width="1"/>'
+      + '<path d="M' + f(xd - 2.5) + ' ' + f(a + 4) + ' L' + f(xd) + ' ' + f(a + 1) + ' L'
+      + f(xd + 2.5) + ' ' + f(a + 4) + ' M' + f(xd - 2.5) + ' ' + f(z - 4) + ' L' + f(xd)
+      + ' ' + f(z - 1) + ' L' + f(xd + 2.5) + ' ' + f(z - 4) + '" fill="none" stroke="' + C.mut
+      + '" stroke-width="1"/>'
+      + '<text x="' + f(xd - 4) + '" y="' + f(o + 3.5) + '" text-anchor="end" font-size="10"'
+      + ' fill="' + C.mut + '">h<tspan font-size="8" dy="2">' + alt + '</tspan></text>';
+  };
+  svg += '<line x1="' + f(xd - 3) + '" y1="' + Y(0) + '" x2="' + X(0) + '" y2="' + Y(0) + '"'
+       + ' stroke="' + C.mut + '" stroke-width="0.8"/>';
+  svg += olcu(0, yc, 'r') + olcu(yc, yb, 'b');
+  return svg + '</svg>';
+}
+
+// ── BOY ÇİZGİLERİ KARTI (Boy sekmesi) ───────────────────────────────────────
+// Satır etiketleri SEMBOLSÜZ (sağ sütunla aynı sebep); d_b / d_w eşlemesini
+// figür ve açıklama taşır — ikisi de büyük harfe çevrilmiyor.
+function veFeadBoyCizgileriHTML(node){
+  var d = (node && node.data) || {};
+  var x = veFeadBoyOkuma(node);
+  var q = x.supheli ? ' ?' : '';
+  var mm = function(v, dec){ return Number.isFinite(v) ? _feadFmt(v, dec) + ' mm' : '—'; };
+  var fark = Number.isFinite(x.fark)
+    ? ' = <b>' + _feadEsc(mm(x.fark, 2)) + '</b> (h<sub>b</sub> = ' + _feadEsc(mm(x.hb, 2))
+      + ', ' + _feadEsc(veFeadKayisMarkaAdi(d.brand)) + ' ' + _feadEsc(String(d.profile || 'PK')) + ')'
+    : '';
+  return _feadCard('Boy çizgileri', 'numara d<sub>b</sub> çizgisinde', 'var(--accent-primary)',
+      veFeadKesitSVG(d.profile, d.brand)
+    + '<div class="ve-fp-grid" style="--fp-k:2;">'
+    + _feadRO('Kayış numarası', (Number.isFinite(x.db) ? mm(x.db, 1) + q : '—'), '',
+              x.supheli ? 'danger' : 'warning')
+    + _feadRO('Kord boyu', (Number.isFinite(x.dw) ? mm(x.dw, 1) + q : '—'))
+    + '</div>'
+    + _feadHint('Kayış numarası <b>d<sub>b</sub></b> çizgisindeki boydur (8PK<b>1410</b> → '
+      + '1.410 mm). CAD eskizi çoğunlukla kordu (<b>d<sub>w</sub></b>) ölçer; aynı kayış '
+      + 'orada 2π·h<sub>b</sub>' + fark + ' uzun okunur. O boy numara sayılırsa kayış o kadar '
+      + 'uzun seçilir ve kol başka bir açıya oturur.'));
 }
 
 // ─── KATALOG KARTI ──────────────────────────────────────────────────────────
@@ -3260,7 +3445,12 @@ function veFeadYolDurumu(build, mode){
       if(build.sys.pulleys[i].contact === 'back') bk += w; else sg += w;
     });
     var inv = (sg - bk) * 180 / Math.PI;
-    d.sol = build.order.length + ' kasnak · L ' + _feadFmt(g.LeffMm, 1) + ' mm';
+    // BOY İKİ ÇİZGİDE (kullanıcı kararı 2026-09-28): L kayış numarasının çizgisi
+    // (d_b, çekirdeğin L_eff'i), kord CAD eskizinin çizgisi (d_w, L_pitch).
+    // Her sayı KENDİ birimiyle: "L … mm" okuması (e2e ve kullanıcının gözü)
+    // araya kord girince bozulmasın.
+    d.sol = build.order.length + ' kasnak · L ' + _feadFmt(g.LeffMm, 1)
+      + ' mm · kord ' + _feadFmt(g.LpitchMm, 1) + ' mm';
     // ÇEVRİM İKİ YÖNE DE GEZİLEBİLİR: aynalanmış düzende işaretli sarım −360°
     // çıkar ve çekirdek onu da kabul ediyor (|Σ| − 360). Yön künyede yazılır.
     d.sag = 'Σsarım ' + _feadFmt(inv, 1) + '°' + (inv < 0 ? ' (ters yön)' : '');
@@ -8479,6 +8669,9 @@ if (typeof module !== 'undefined' && module.exports) {
 
 
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
+    veFeadBoyOkuma: veFeadBoyOkuma,
+    veFeadKesitSVG: veFeadKesitSVG,
+    veFeadBoyCizgileriHTML: veFeadBoyCizgileriHTML,
     veFeadBeltCatalogCard: veFeadBeltCatalogCard,
     veFeadPickBelt: veFeadPickBelt,
     veFeadApplyLayoutCard: veFeadApplyLayoutCard,

@@ -822,8 +822,15 @@ function _frBeltTable(R){
   // çelişirdi. Kaynak, kipten TÜRETİLİYOR.
   var _bd = R.build || {};
   var _boyTurev = true;   // kayış boyu HER ZAMAN bir sonuç
-  h += tr('Efektif boy L<sub>eff</sub>', _frFs(b.effLength, 1), 'mm',
+  h += tr('Efektif boy L<sub>eff</sub> — kayış numarası (d<sub>b</sub> çizgisi)', _frFs(b.effLength, 1), 'mm',
           _boyTurev ? '<b>türev</b> — çözülen kol açısından (§' + VE_FR_SEC_BELTLEN + ')' : 'girdi');
+  // KORD BOYU (kullanıcı kararı 2026-09-28): CAD eskizi kordu (d_w) ölçer; aynı
+  // kayış orada 2π·h_b uzun. Numara d_b'de kalır, bu satır yalnız karşılığıdır.
+  var _bc = (typeof veFeadBoyCizgileri === 'function')
+    ? veFeadBoyCizgileri(b.effLength, b.profile, b.brand) : null;
+  if(_bc && Number.isFinite(_bc.dw))
+    h += tr('Kord boyu (d<sub>w</sub> çizgisi — CAD eskizi)', _frFs(_bc.dw, 1), 'mm',
+            '<b>türev</b> — L<sub>eff</sub> + 2π·h<sub>b</sub> (' + _frFs(_bc.fark, 2) + ' mm)');
   h += tr('Boy toleransı ±', _frFs(b.tolerance, 1), 'mm', 'girdi');
   // BİRİM TUZAĞI: wearPct çekirdekte ORAN (0,007), tedarikçi sayfasında YÜZDE
   // (%0,70). Ham basılsaydı raporda "%0,007" görünür ve okuyan kişi payı
@@ -839,6 +846,14 @@ function _frBeltTable(R){
     h += tr('Azami kayış hızı', _frFs(bp.maxSpeedMs, 0), 'm/s', 'profil sınırı');
   }
   h += '</table>';
+  // KESİT FİGÜRÜ — pencerenin Boy sekmesindekiyle TEK üretici (basım paleti).
+  var kes = '';
+  try { if(typeof veFeadKesitSVG === 'function') kes = veFeadKesitSVG(b.profile, b.brand, { print: true, maxW: 420 }); }
+  catch(e){ kes = ''; }
+  if(kes) h += '<figure>' + kes + '<figcaption><b>Şekil ' + _frFig() + ' —</b> Kayış kesiti, ölçekli '
+    + '(profil sabitleri yukarıdaki tablodan). Kayış numarası kasnağın dış çapındaki <b>d<sub>b</sub></b> '
+    + 'çizgisinde ölçülür; kord çizgisi <b>d<sub>w</sub></b> ondan h<sub>b</sub> dışarıdadır ve kapalı '
+    + 'çevrimde boy farkı yerleşimden bağımsız olarak 2π·h<sub>b</sub>’dir.</figcaption></figure>';
   return h;
 }
 
@@ -1458,7 +1473,7 @@ function _frOperatingPoint(R){
   h += gr('<b>Gövdenin montaj konumu</b>',
           _frFs(t.pivot && t.pivot[0], 2) + ' / ' + _frFs(t.pivot && t.pivot[1], 2), 'mm',
           '<b>türev</b> — (4.7): c − a·(cos θ<sub>kol</sub>, sin θ<sub>kol</sub>)');
-  h += gr('<b>Kayış efektif boyu L<sub>eff</sub></b>', '<b>' + _frFs(b.beltLengthMm, 1) + '</b>', 'mm',
+  h += gr('<b>Kayış efektif boyu L<sub>eff</sub></b> (numara, d<sub>b</sub>)', '<b>' + _frFs(b.beltLengthMm, 1) + '</b>', 'mm',
           '<b>türev</b> — kol nominal yay yükünde iken gereken boy');
   h += gr('Kol açısı θ (göreli / mutlak)', _frFs(A.meanRelDeg, 2) + ' / ' + _frFs(A.meanAbsDeg, 2), '°',
           '<b>türev</b> — (4.6): kol nominal yay yüküne oturur');
