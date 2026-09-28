@@ -69,13 +69,19 @@ olurdu.
    → *"kayış çizimde tıklanır"*, `cp-fead.test.js` → *"açılışın kayışı
    devralınır"* + *"FEAD editörü açılışı"*, `fead-cizim-masasi.spec.js` →
    *"KAYIŞA TIKLA"*.
+   **ARAÇLARIN DA KUTUSU YOK** (2026-09-28, kural 38): Çözücü · Rapor ·
+   Sihirbaz aynı kalıpla kutusuz, silinmez, tek kopya; eylemleri FEAD araçları
+   penceresinde. Tuvalde kutu kuran TEK FEAD tipi Kayış Yolu kartı. Kapı:
+   `cp-fead.test.js` → *"kanvasta yalnız Kayış Yolu"*.
 5. **BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı
    isteği). `veFeadOpenEditor` KAYITSIZ bir alt topoloji kurduğunda
    (`_yeniTopoloji` bayrağı) `veFeadWizOpenAny()` çağrılır; kurulmuş bir modele
    dönerken ve `_silent` geri-girişte AÇILMAZ — her girişte kapatılması gereken
    bir pencere karşılamayı engele çevirirdi. Açılış yüzeyi yine kurulur:
-   sihirbaz + BOŞ Kayış Yolu kartı (2026-09-23; önce Kayış Tablosu kartıydı),
-   boş hâli iki yolu söyler ("Sihirbazla kur" · "Tabloyu aç"). **Örnek ve
+   BOŞ Kayış Yolu kartı (2026-09-23; önce Kayış Tablosu kartıydı) + kutusuz
+   araç düğümleri (kayış · çözücü · rapor · sihirbaz — `VE_FEAD_ARAC_TIPLERI`);
+   kartın boş hâli iki yolu söyler ("Sihirbazla kur" · "Tabloyu aç"), sihirbaz
+   FEAD araçları penceresinden de açılır. **Örnek ve
    sihirbaz o kartı geometri kartı olarak DEVRALIR ve yuvasını alır** —
    devralmasalar kanvasta üç çizim olurdu (ölçüldü). Kapılar:
    `cp-fead.test.js` → *"YEDEK YERLEŞİM"*, `fead-wizard.test.js` → *"BOŞ
@@ -84,15 +90,17 @@ olurdu.
    1. adımında zaten vardı. Örnek KURUCUSU (`veFeadLoadExample`) duruyor.
    Kapılar: `cp-fead.test.js` → *"FEAD editörü açılışı"* ve *"Başlangıç ve
    Örnekler bileşeni kaldırıldı"*, `fead-sihirbaz-tablo.spec.js`.
-6. **"Otomatik Düzenle" artık yalnız ARAÇ KARTLARINI dizer** — dizilecek kasnak
-   yok. Kanvaslar sağda tek sıra, künyeler solda.
-   **Dikey adım KUTUYU DEĞİL, kutu+ADI sayar** (`veFeadArrangeByCoords` →
-   `adPayi`): ad kutunun ALTINDA duruyor, adım onu saymayınca araç kartlarında
-   adın altında 2 px kalıyor ve komşunun dekorasyonu (seçim tutamağı ~5 px
-   dışarı taşar, kayış kipi rozeti üst kenara oturur) adın üstüne biniyordu.
-   Ölçü sınır çerçevesiyle AYNI kaynaktan (`veMeasureNodeLabel` +
-   `veNodeLabelOverflow`); ölçülemezse pay 0 ve davranış birebir eski hâli.
-   Kapı: `cp-fead.test.js` → *"ad KUTUNUN ALTINDA duruyor"*.
+6. **"Otomatik Düzenle" yalnız KUTUSU OLAN kartları dizer** — bugün yalnız
+   Kayış Yolu kartları (kasnak, kayış ve araçların kutusu yok): tek sıra, yan
+   yana; sığdırma FEAD araçları penceresinin sağından başlar (kural 38).
+   Sol şeridin kuralı GENEL olarak duruyor (kutulu bir künye gelirse oraya):
+   **dikey adım KUTUYU DEĞİL, kutu+ADI sayar** (`veFeadArrangeByCoords` →
+   `adPayi`) — ad kutunun ALTINDA duruyor, adım onu saymayınca adın altında
+   2 px kalıyor ve komşunun dekorasyonu adın üstüne biniyordu. Ölçü sınır
+   çerçevesiyle AYNI kaynaktan (`veMeasureNodeLabel` + `veNodeLabelOverflow`);
+   ölçülemezse pay 0 ve davranış birebir eski hâli. Kapı: `cp-fead.test.js` →
+   *"ad KUTUNUN ALTINDA duruyor"* (sentetik künye tipiyle) + *"ARAÇ
+   DÜĞÜMLERİ DİZİLMEZ"*.
    **YERLEŞİM: kanvaslar YAN YANA** (kullanıcı isteği, 2026-09-14: *"Alt alta
    hiç estetik durmuyor"*) ve kurucuların YEDEK sırası da aynı şekli kurar
    (`veFeadFallbackSlots` — tek kaynak). Yedek yol Node'da
@@ -412,7 +420,10 @@ olurdu.
     on ikisinde de `inputs:0, outputs:0`). Kasnak K/S rozeti de aynı sınıftan:
     kutu kalkınca `getElementById` hep null döndü, kod erişilemez hâlde kaldı.
     Kapı: `cp-fead.test.js` → *"BAĞLANTI satırı yok"* + *"HİÇBİRİNDE port
-    yok"* + *"KASNAK rozet almaz"*.
+    yok"* + *"KASNAK rozet almaz"*. Araç kutuları (2026-09-28, kural 38):
+    toast'lar, pencere metinleri ve kılavuz "Çözücü → ▶ Hesapla" / "kutusuna
+    çift tıklayın" / "Dönüş Yönü kartı" demeye devam ediyordu — kapı
+    `fead-araclar.test.js` → *"kaldırılan kutuların DİLİ"*.
 
 27. **ÇEKİRDEĞİN KUSURU KÖPRÜDE KAPATILIR — VE BÜTÜN ÇAĞRI YERLERİNDE.**
     `peakEstimate` atalet adımına `driveRatio`yu İKİ KEZ uyguluyor (`alpha`da
@@ -465,8 +476,9 @@ olurdu.
     YOK** (kullanıcı kararı, aynı gün: *"tepede böyle özet bir açıklamaya gerek
     yok"* — çipleri pencerenin kendisinde zaten yazılı olanı tekrar ediyordu);
     Kayış Yolu (Şema · Geometri), Rapor
-    (Tür · Künye), Dönüş Yönü (Yön · Etkisi), Sihirbaz (Taslak · Adımlar) ve
-    kökteki modül kartı (İçerik · Model) da bu kabukta. Pencerenin tek EYLEMİ
+    (Tür · Künye), Sihirbaz (Taslak · Adımlar) ve
+    kökteki modül kartı (İçerik · Model) da bu kabukta (Dönüş Yönü penceresi
+    2026-09-28'de kalktı — FEAD araçları penceresinin Yön bölümü, kural 38). Pencerenin tek EYLEMİ
     sağ sütunda. **Modül kartı modelini ALT TOPOLOJİDEN kurar** — kökte
     `veFeadBuildFromCanvas` boş modeli çözerdi. "Her pencere" bir LİSTE değil
     KURAL olarak kapılı: `tests/unit/fead-pencere-ailesi.test.js` tipleri
@@ -776,6 +788,39 @@ olurdu.
     çözüme yazılan boy L_eff − ofset · figür ölçekli · kart = sütun · öteki
     yüzeyler) + `fead-table.test.js` → *"ON sütun"* (rozet modelin sayılarını).
 
+38. **ARAÇLAR PENCEREDE, TOPOLOJİDE DEĞİL** (2026-09-28, kullanıcı kararı —
+    tasarım tezgâhı IV · A: *"A'yı çok beğendim. Onu yapalım."*). Sihirbaz ·
+    Hesapla · Ayarlar (Çözücü) · Rapor · Yön, tuval kabının sol üstündeki
+    **FEAD araçları** penceresinde (`js/cp-fead-araclar.js`). Çözücü, Rapor ve
+    Sihirbaz kutusuz düğüm olarak yaşar (veri taşırlar); Dönüş Yönü düğümü
+    hiçbir şey taşımıyordu ve kalktı (şema 9 göçü `veFeadMigrateSpinOff`).
+    • **PENCERE AYAR TUTMAZ**: Hesapla çözücünün çevrimini, İndir raporun
+      türünü okur; durum `veFeadResultState`, çip `veFeadResChipHTML`, kartlar
+      `veFeadSignals.summary`, uygunluk `_feadSideGates` — aynı soruya iki
+      yüzey aynı cevabı verir (kural 16 · 33).
+    • **DÜĞÜMLER GARANTİ** (`veFeadAraclarGaranti`): açılış yüzeyi kurar, eski
+      kayıtta eksik olan açılışta geri-al TABANINA eklenir; silinmez
+      (`noDelete`), tek kopya. Paletten eklemenin yolu yok — garanti olmasa
+      Hesapla "Çözücü yok" deyip kalırdı.
+    • **YER VE KATLILIK MODELDE DEĞİL** (tarayıcıda, `mfsim.fead.araclar`):
+      kaydedilmez, geri-al yığınına yazılmaz.
+    • **YUVADAKİ PENCERE TUVALİ ÖRTTÜĞÜNÜ SÖYLER** (`data-ve-ortu="sol"`) ve
+      sığdırma o genişliği düşer (`veTuvalSolOrtu`) — söylemeseydi açılış
+      kadrajında kart pencerenin altında kalırdı. Serbest pencere söylemez.
+    • **YALNIZ FEAD KAPSAMINDA**; kapsamın tek noktası `veSyncSidebarScope`.
+      Gizleme `hidden` + `.ve-fead-arac[hidden]{display:none}` — sınıfın
+      `display:flex`'i tarayıcının `[hidden]` kuralını ezer ve pencere ana
+      topolojide görünür kalırdı (jsdom'da görünmez; kapı `fead-araclar.spec.js`
+      → *"KAPSAM"*).
+    • **TAZELEME ÜÇ NOKTADAN**: `veFeadRefreshLayoutCards` (her saveState) ·
+      `veFeadSolve` · `_feadForgetResults`. Yön değişince gergi tarafı hükmü
+      DÜŞER — bayat sonucun hükmü başka bir yönün hükmüdür.
+    • **PASİF DÜĞME SEBEBİNİ SÖYLER**: Hesapla ve İndir `aria-disabled`
+      (`disabled` değil) ve eylemleri sebebi yazar; çözüm hatasının sebebi
+      Çözüm bölümünde. Yön ipucu DÜZLEMİ yazar (`veFeadSpinLabel(s).uzun`).
+    Kapılar: `fead-araclar.test.js` · `fead-spin.test.js` → *"Yön yüzeyi"* ·
+    `fit-view.test.js` → *"SOL ÖRTÜ"* · `tests/e2e/fead-araclar.spec.js`.
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.
@@ -788,7 +833,7 @@ Değiştireceğin alanın dosyasını **oku**; hepsini birden okuma.
 |---|---|
 | `references/uc-katman-ve-cekirdek.md` | Üç katman kuralı · doğrulama kapısı ve eşikleri · burulma modeli ve iki sessiz girdisi · üç yapısal kural |
 | `references/kayis-kipi-ve-katalog.md` | Kayış boyu kipleri · nominal kol açısı · kenetlenen kol · hoşgörülü geometri · `js/fead-belts.js` kataloğu ve iki kümesi |
-| `references/kanvas-ve-kart.md` | Kanvas = kayış düzlemi · Konum Bağı · **Dönüş Yönü (`fead-spin`)** · port kenarı/yön oku/şeritler · `veFeadArrangeByCoords` · Kayış Yolu kartı · animasyon · yön gülü |
+| `references/kanvas-ve-kart.md` | Kanvas = kayış düzlemi · Konum Bağı · **Dönüş Yönü** (bileşen kalktı — kuralları FEAD araçları penceresinin Yön bölümünde) · port kenarı/yön oku/şeritler · `veFeadArrangeByCoords` · Kayış Yolu kartı · animasyon · yön gülü |
 | `references/raporlar.md` | Ayrıntılı ve özet HTML rapor · §8 alt bölümleri · şekil çizicileri · kozmetik ve denetim turları · tepe zinciri çevrim kapanışı · kayma eşiği |
 | `references/cozum-ornekler-ve-ankraj.md` | **Gergi tanımı (TEK KOORDİNAT — önce bunu oku)** · duty tablosu ve `js/fead-duty.js` çevrim kütüphanesi · gergi künye kütüphanesi (`js/fead-tensioners.js`) · ankrajın türetilmesi · Başlangıç Sihirbazı · örnekler |
 | `references/testler.md` | FEAD test dosyalarının kapsamı |

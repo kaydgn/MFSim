@@ -487,9 +487,9 @@ test('PAFTA: arka plan kaydından sonra tablo yerinde; ana topolojide tablo yok'
 // ═══════════════════════════════════════════════════════════════════════════
 // Kullanıcı bildirimi (2026-09-09): *"CTRL Z komutunu kullandığımda tablo
 // siliniyor."* Ölçüldü (düzeltmeden önce): örnek yığına ONÜÇ adım yazıyordu
-// ve Ctrl+Z modeli düğüm düğüm söküyordu. Açılış yüzeyi artık sihirbaz + BOŞ
-// Kayış Yolu kartı ve örnek o kartı DEVRALIYOR — geri alınınca kart boş
-// hâline döner, kaybolmaz.
+// ve Ctrl+Z modeli düğüm düğüm söküyordu. Açılış yüzeyi artık BOŞ Kayış Yolu
+// kartı + kutusuz araç düğümleri ve örnek o kartı DEVRALIYOR — geri alınınca
+// kart boş hâline döner, kaybolmaz.
 test('CTRL+Z: örnek TEK adımda geri alınır, açılış kartı SİLİNMEZ', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
@@ -534,7 +534,9 @@ test('CTRL+Z: örnek TEK adımda geri alınır, açılış kartı SİLİNMEZ', a
 
   await geriAl(5);                                  // taban: daha fazlası bir şey silmez
   const taban = await durum();
-  expect(taban.dugum).toBe(3);                      // kayış (kutusuz) + sihirbaz + kanvas
+  // kanvas + kutusuz dört araç düğümü: kayış · çözücü · rapor · sihirbaz
+  // (2026-09-28 — araçlar FEAD araçları penceresinde; açılışın parçası).
+  expect(taban.dugum).toBe(5);
   expect(taban.kayis).toBe(1);
 
   await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });

@@ -269,6 +269,15 @@ birlikte tutuyor.
 
 ##### DÖNÜŞ YÖNÜ — `fead-spin` "Dönüş Yönü" (2026-08-28)
 
+> **BİLEŞEN KALKTI (2026-09-28, tasarım A — SKILL kural 38).** Yön ve gergi
+> tarafı hükmü **FEAD araçları penceresinin Yön bölümünde**
+> (`js/cp-fead-araclar.js`): iki durumlu anahtar (CW | CCW, ipucu düzlemi
+> yazar) + hüküm satırı. Aşağıdaki kurallar o yüzeyde AYNEN geçerli — durum
+> yok, yön ROTADAN, renk hüküm ekseni (seçim vurgu tonu), çözümden sonra
+> tazeleme; kutu, rozet ve `veFeadApplySpinBadge` satırları tarihçe. Kayıtlı
+> düğüm şema 9 göçüyle silinir (`veFeadMigrateSpinOff`). Kapılar:
+> `fead-spin.test.js` → *"Yön yüzeyi"* + *"Dönüş Yönü bileşeni KALKTI"*.
+
 Kullanıcı sorusu: *"kayışın dönüş yönü neye göre belirleniyor? Bu dönüş yönünü
 de CW veya CCW olacak şekilde ayarlayacak bir bileşen kuralım yine bir önceki
 gibi. Buna göre de matematiği ayarlayalım (eğer değişiyorsa)."*
@@ -387,10 +396,10 @@ Ters yerleşimde kayma hükmü artık **verilmiyor** ve bu yazılı.
 
 | Ne | Karar | Nerede |
 |----|-------|--------|
-| Ad / tip | **Dönüş Yönü** · `fead-spin` · 54×48 · 0/0 · `maxInstances:1` | `components.js` |
-| Durum | **YOK** — yön kabloların kendisinde | `veFeadReverseRoute` |
-| Okuma | **TEK NOKTA** `veFeadCurrentSpin` (rozet + panel) | `cp-fead.js` |
-| Rozet | `↺ CCW` ↔ `↻ CW` — **glif durumu, RENK hükmü taşır** | `veFeadApplySpinBadge` |
+| Ad / tip | ~~**Dönüş Yönü** · `fead-spin` · 54×48~~ — KALKTI (2026-09-28): FEAD araçları penceresinin **Yön** bölümü | `cp-fead-araclar.js` |
+| Durum | **YOK** — yön kayış sırasının kendisinde | `veFeadReverseRoute` · `veFeadToggleSpin` |
+| Okuma | **TEK NOKTA** `veFeadCurrentSpin` (pencere · sihirbaz) | `cp-fead.js` |
+| Gösterim | anahtar (CW \| CCW) **durumu**, altındaki satır **hükmü** taşır (rozet döneminde: glif durum, renk hüküm) | `veFeadAraclarGovdeHTML` |
 
 Düğüme `data.dir` gibi bir alan koymak ikinci bir gerçek kaynağı yaratırdı ve
 **üç yerden ısırırdı**:

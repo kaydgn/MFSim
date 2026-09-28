@@ -168,11 +168,15 @@ for (const [modul, M] of Object.entries(MODULLER)) {
       return [...new Set(nodes.map((n) => n.type))]; })()`);
     expect(tipler.length).toBeGreaterThan(8);          // tarama gerçekten bir şey açtı
     // SİHİRBAZ TİPLERİ KURULMAZ (kurulunca kendi modalını açıyor), ama FEAD'in
-    // sihirbaz düğümü açılış yüzeyinde ZATEN var ve ölçülüyor. Dönüş Yönü
-    // (`fead-spin`) bir dönem taramanın DIŞINDAYDI; Krank Kasnağı kabuğuna
-    // geçince içeri alındı. İkisinin de gerçekten ölçüldüğü burada tutulur —
-    // kurulamayan bir tip sessizce taramadan düşerdi.
-    if (modul === 'fead-analysis') expect(tipler).toEqual(expect.arrayContaining(['fead-spin', 'fead-wizard']));
+    // sihirbaz düğümü açılış yüzeyinde ZATEN var ve ölçülüyor. Araç düğümleri
+    // (çözücü · rapor · sihirbaz) 2026-09-28'den beri KUTUSUZ ama pencereleri
+    // yaşıyor (FEAD araçları penceresinden açılır) — üçünün de gerçekten
+    // ölçüldüğü burada tutulur: kurulamayan bir tip sessizce taramadan düşerdi.
+    // Dönüş Yönü (`fead-spin`) tipi aynı gün KALKTI.
+    if (modul === 'fead-analysis') {
+      expect(tipler).toEqual(expect.arrayContaining(['fead-solver', 'fead-report', 'fead-wizard']));
+      expect(tipler).not.toContain('fead-spin');
+    }
 
     const olcum = [];
     for (const tip of tipler) {

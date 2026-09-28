@@ -84,6 +84,15 @@ Object.keys(RB).forEach((k) => { global[k] = RB[k]; });
   st.textContent = io_read(r);
   document.head.appendChild(st);
 });
+// FEAD araçları penceresi — §2'nin sahnesi. Çip ve özet kartları sonuç
+// sekmesinin üreticilerinden (tek kaynak); yüklenmezse sahne çipsiz ve
+// kartsız çizilir, yani penceresinin gerçek hâlini göstermez.
+const SG = require('../../js/fead-signals.js');
+global.veFeadSignals = SG;
+const RS = require('../../js/cp-fead-results.js');
+Object.keys(RS).forEach((k) => { if (global[k] === undefined) global[k] = RS[k]; });
+const AR = require('../../js/cp-fead-araclar.js');
+Object.keys(AR).forEach((k) => { if (global[k] === undefined) global[k] = AR[k]; });
 const GF = require('../../js/guide-fead.js');
 Object.keys(GF).forEach((k) => { global[k] = GF[k]; });
 // Sihirbaz adım listesi KAYNAKTAN okunur — kılavuzun adım tablosu ona karşı
@@ -571,7 +580,9 @@ describe('sahneler programın kendi bileşeni', () => {
       'kayış kataloğu': 'gereken boya en yakınlar',
       'çözücü paneli': 'Algılanan model',
       'rapor paneli': 'Detaylı raporu',
-      'dönüş yönü': 'Kayış Dönüş Yönü'
+      // Dönüş Yönü penceresi 2026-09-28'de kalktı; yön FEAD araçları
+      // penceresinin bölümü. İşaret bölümün kendisi — başlık metni değil.
+      'FEAD araçları penceresi': 'data-bol="yon"'
     };
     const eksik = Object.keys(gerek)
       .filter((k) => !sahneler.some((f) => f.indexOf(gerek[k]) >= 0));

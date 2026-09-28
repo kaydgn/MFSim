@@ -62,14 +62,14 @@ async function openFead(page) {
 }
 
 test.describe('FEAD Başlangıç Sihirbazı', () => {
-  test('boş topoloji İKİ açılış yüzeyiyle geliyor ve sihirbaz açılıyor', async ({ page }) => {
+  test('boş topoloji açılış yüzeyiyle geliyor ve sihirbaz açılıyor', async ({ page }) => {
     const hatalar = [];
     page.on('pageerror', (e) => hatalar.push(String(e)));
     await bootApp(page);
     await openFead(page);
 
-    // AÇILIŞ YÜZEYİ: sihirbaz + BOŞ Kayış Yolu kartı (Çizim Masası,
-    // 2026-09-23 — tablo kanvastan indi, kartın düğmesiyle açılan pencere).
+    // AÇILIŞ YÜZEYİ: BOŞ Kayış Yolu kartı (Çizim Masası, 2026-09-23 — tablo
+    // kanvastan indi) + kutusuz araç düğümleri (sihirbaz dâhil, 2026-09-28).
     // "Başlangıç ve Örnekler" (`fead-example`) 2026-09-09'da KALDIRILDI —
     // sunduğu iki şey (sihirbaz düğmesi + örnek listesi) sihirbazın 1.
     // adımında zaten vardı. Bu spec o gün sessizce öldü: hâlâ o tipin
@@ -81,16 +81,16 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(tipler).not.toContain('fead-table');
     expect(tipler).not.toContain('fead-example');
 
-    // ÇİFT TIK sihirbazı açar (alt-sistem kartlarındaki el alışkanlığı).
-    // BOŞ TOPOLOJİ ZATEN SİHİRBAZLA KARŞILIYOR (2026-09-09), yani pencere açık
-    // ve `dblclick`i yutuyor — bu satır o gün 30 sn zaman aşımına düşmeye
-    // başladı. Ölçülmek istenen şey karşılama değil ÇİFT TIK, o yüzden pencere
-    // önce kapatılıyor: kullanıcı da karşılamayı kapatıp düğüme çift tıklar.
+    // FEAD ARAÇLARI PENCERESİNİN SİHİRBAZ DÜĞMESİ açar. Sihirbazın kutusu
+    // 2026-09-28'de kalktı (tasarım A): düğüm modelde ama elemanı yok, yani
+    // çift tıklanacak bir şey de yok. Pencere önce kapatılıyor: ölçülmek
+    // istenen şey karşılama değil YENİDEN AÇMA yolu.
     const id = await page.evaluate(() =>
       window.nodes.find((n) => n.type === 'fead-wizard').id);
+    expect(await page.evaluate((i) => !!document.getElementById(i), id)).toBe(false);
     await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(true); });
     await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
-    await page.dblclick('#' + id);
+    await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="sihirbaz"]');
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
 
     // Adımlar rayda duruyor (Kayış Yolu adımı 2026-09-04'te kalktı: altı).

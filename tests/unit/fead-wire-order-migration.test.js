@@ -353,3 +353,46 @@ describe('şema 7 — kayıtlı Kayış Tablosu kartı silinir', () => {
     expect(st.nodes.map((n) => n.id)).toContain('tbl-1');
   });
 });
+
+// ── ŞEMA 9 (2026-09-28): DÖNÜŞ YÖNÜ BİLEŞENİ KALKTI ────────────────────────
+// Araçlar FEAD araçları penceresine geçti (tasarım A); yön pencerenin Yön
+// bölümünde. Kayıtlı `fead-spin` düğümü veri TAŞIMIYORDU (yön kayış
+// sırasından türer) — silinmeseydi tanımsız tipli bir düğüm olarak (adı,
+// paneli olmadan) modelde kalırdı. Kapı state.js'in KANCASINI ölçüyor: göçün
+// kendisi fead-spin.test.js'te, burada "sürüm 9'dan eski her kayıt ondan
+// geçiyor mu".
+describe('şema 9 — kayıtlı Dönüş Yönü düğümü silinir', () => {
+  const eski = () => ({
+    schemaVersion: 8,
+    nodes: [{ id: 'lay-1', type: 'fead-layout', x: 100, y: 60, width: 440, height: 500, data: {} },
+            { id: 'spin-1', type: 'fead-spin', x: 20, y: 20, data: {} },
+            { id: 'p1', type: 'fead-crank', data: { od: 160, x: 0, y: 0, beltIndex: 1 } }],
+    connections: [{ id: 'c1', from: 'spin-1', to: 'lay-1' }, { id: 'c2', from: 'lay-1', to: 'p1' }]
+  });
+
+  test('yön düğümü ve teli silinir; geri kalan AYNEN durur, yön DEĞİŞMEZ', () => {
+    const st = eski();
+    veApplyLegacyMigrations(st);
+    expect(st.nodes.map((n) => n.id)).toEqual(['lay-1', 'p1']);
+    expect(st.connections.map((c) => c.id)).toEqual(['c2']);
+    expect(st.nodes[1].data).toEqual({ od: 160, x: 0, y: 0, beltIndex: 1 });
+    expect(st.schemaVersion).toBe(VE_SCHEMA_VERSION);
+    expect(VE_SCHEMA_VERSION).toBeGreaterThanOrEqual(9);
+  });
+
+  test('GÖMÜLÜ alt topoloji de geçer; ikinci geçiş bir şey yapmaz', () => {
+    const st = { schemaVersion: 8, nodes: [{ id: 'mod', type: 'fead-analysis',
+      data: { subTopology: eski() } }], connections: [] };
+    veApplyLegacyMigrations(st);
+    const sub = st.nodes[0].data.subTopology;
+    expect(sub.nodes.map((n) => n.type)).not.toContain('fead-spin');
+    expect(sub.schemaVersion).toBe(VE_SCHEMA_VERSION);
+    expect(M.veFeadMigrateSpinOff(sub)).toBe(0);
+  });
+
+  test('DAMGASI güncel olan kayda dokunulmaz — kademeli kapı', () => {
+    const st = Object.assign(eski(), { schemaVersion: VE_SCHEMA_VERSION });
+    veApplyLegacyMigrations(st);
+    expect(st.nodes.map((n) => n.id)).toContain('spin-1');
+  });
+});

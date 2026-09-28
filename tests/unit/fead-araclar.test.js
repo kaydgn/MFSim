@@ -1,0 +1,497 @@
+/**
+ * fead-araclar.test.js — FEAD ARAÇLARI PENCERESİ (js/cp-fead-araclar.js)
+ *
+ * Kullanıcı kararı (2026-09-28, tasarım tezgâhı IV · A): *"A güzel. A'yı çok
+ * beğendim. Onu yapalım."* Sihirbaz, Çözücü, Rapor ve Dönüş Yönü topolojide
+ * kutu olmaktan çıktı; eylemleri tuvalin sol üstündeki yüzen pencerede.
+ *
+ * Kapıların sorduğu şey: pencere modülün KENDİ çağrılarına mı gidiyor, kendi
+ * ayarını tutuyor mu (tutmamalı), durumu tek kaynaktan mı okuyor, yeri ve
+ * katlılığı modele sızıyor mu (sızmamalı), kapsam dışında görünüyor mu
+ * (görünmemeli). Yön bölümünün kapıları fead-spin.test.js'te ("Yön yüzeyi");
+ * gerçek fare (taşıma, yuva, sığdırma) → tests/e2e/fead-araclar.spec.js.
+ */
+const fs = require('fs');
+const path = require('path');
+const KOK = path.join(__dirname, '../..');
+const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
+
+const stubs = stubGlobals();
+document.body.innerHTML = '<div id="ve-canvas-wrapper"><div id="ve-canvas"></div></div>';
+global.nodes = [];
+global.connections = [];
+eval(loadSource('components.js'));
+// components.js'teki yüklem GLOBAL'e yazılır: cp-fead.js require ile
+// yükleniyor ve çıplak adları global'de arıyor.
+global.veIsCanvasHidden = veIsCanvasHidden;
+global.componentDefs = componentDefs;
+eval(loadSource('fead-belts.js'));
+const F = require('../../js/fead-core.js');
+const M = require('../../js/fead-model.js');
+global.FEADCore = F;
+Object.keys(M).forEach((k) => { global[k] = M[k]; });
+const fead = require('../../js/cp-fead.js');
+Object.keys(fead).forEach((k) => { if (global[k] === undefined) global[k] = fead[k]; });
+// Özet kartları ve çip SONUÇ sekmesinin üreticilerinden — tek kaynak.
+global.veFeadSignals = require('../../js/fead-signals.js');
+const RS = require('../../js/cp-fead-results.js');
+Object.keys(RS).forEach((k) => { if (global[k] === undefined) global[k] = RS[k]; });
+const RP = require('../../js/cp-fead-report.js');
+Object.keys(RP).forEach((k) => { if (global[k] === undefined) global[k] = RP[k]; });
+const AR = require('../../js/cp-fead-araclar.js');
+
+beforeEach(() => {
+  resetStubs(stubs);
+  global.nodes = [];
+  global.connections = [];
+  global.veFeadResults = null;
+  try { localStorage.clear(); } catch (e) { /* jsdom */ }
+  AR._feadAracSifirla();
+  document.body.innerHTML = '<div id="ve-canvas-wrapper"><div id="ve-canvas"></div></div>';
+});
+
+// Örnek modeli (araçlarıyla) tuvale kur — fead-spin.test.js'teki kurucunun aynısı.
+function kur(key) {
+  const pack = M.veFeadExampleNodes(key || 'AG00976_GATES_2025');
+  const ns = pack.nodes.map((n) => {
+    const d = componentDefs[n.type] || {};
+    return { id: n.id, type: n.type, customName: n.customName || null, def: d,
+             x: 0, y: 0, width: d.defaultWidth || 65, height: d.defaultHeight || 60,
+             data: JSON.parse(JSON.stringify(n.data || {})) };
+  });
+  ns.push({ id: 'ex-wiz', type: 'fead-wizard', def: componentDefs['fead-wizard'], data: {} });
+  global.nodes = ns;
+  global.connections = [];
+  return ns;
+}
+const tip = (t) => global.nodes.find((n) => n.type === t);
+const govde = () => {
+  const d = document.createElement('div');
+  d.innerHTML = AR.veFeadAraclarGovdeHTML(AR.veFeadAraclarDurum());
+  return d;
+};
+// Çıplak adla çağrılan global'i bir casusla değiştir, sonra geri koy.
+function casus(ad, fn) {
+  const eski = global[ad];
+  const c = jest.fn(fn || (() => true));
+  global[ad] = c;
+  return { c, geri: () => { global[ad] = eski; } };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('bileşen sözleşmesi — araçlar KUTUSUZ, pencere onlara BAĞLANIR', () => {
+  test('çözücü · rapor · sihirbaz: kutusuz, silinmez, tek kopya; Dönüş Yönü tipi yok', () => {
+    ['fead-solver', 'fead-report', 'fead-wizard'].forEach((t) => {
+      const d = componentDefs[t];
+      expect({ t, kutusuz: d.noCanvasBox, sebep: /FEAD araçları/.test(d.noDelete || '') })
+        .toEqual({ t, kutusuz: true, sebep: true });
+      expect({ t, tek: d.maxInstances }).toEqual({ t, tek: 1 });
+    });
+    expect(componentDefs['fead-spin']).toBeUndefined();
+    // Liste TEK KAYNAK: açılış yüzeyi de eski kaydın tamamlanması da buradan.
+    expect(fead.VE_FEAD_ARAC_TIPLERI).toEqual(['fead-belt', 'fead-solver', 'fead-report', 'fead-wizard']);
+  });
+
+  test('palette FEAD araçları kategorisinde YALNIZ Kayış Yolu kaldı', () => {
+    const idx = oku('index.html');
+    const i0 = idx.indexOf('data-type="fead-layout"');
+    expect(i0).toBeGreaterThan(0);
+    ['fead-solver', 'fead-report', 'fead-wizard', 'fead-spin', 'fead-belt'].forEach((t) => {
+      expect({ t, palette: idx.includes('data-type="' + t + '"') }).toEqual({ t, palette: false });
+    });
+  });
+
+  test('betik yükleniyor — okuduğu üreticilerden SONRA', () => {
+    const idx = oku('index.html');
+    const i = idx.indexOf('src="js/cp-fead-araclar.js"');
+    expect(i).toBeGreaterThan(0);
+    ['js/cp-fead.js', 'js/cp-fead-report.js', 'js/cp-fead-results.js'].forEach((f) => {
+      expect({ f, once: idx.indexOf('src="' + f + '"') < i }).toEqual({ f, once: true });
+    });
+  });
+
+  test('garanti yalnız EKSİĞİ kurar; ikinci çağrı hiçbir şey kurmaz', () => {
+    let k = 0;
+    global.createNode = (t) => {
+      const n = { id: 'g' + ++k, type: t, def: componentDefs[t], data: {} };
+      global.nodes.push(n);
+      return n;
+    };
+    global.clearSelection = jest.fn();
+    try {
+      global.nodes = [{ id: 'r0', type: 'fead-report', data: { reportKind: 'summary' } }];
+      const yeni = fead.veFeadAraclarGaranti();
+      expect(yeni.map((n) => n.type)).toEqual(['fead-belt', 'fead-solver', 'fead-wizard']);
+      // Var olana DOKUNULMADI.
+      expect(tip('fead-report').data).toEqual({ reportKind: 'summary' });
+      // Kurulan araç seçili KALMAZ — panel bir aracın penceresiyle açılmasın.
+      expect(global.clearSelection).toHaveBeenCalled();
+      expect(fead.veFeadAraclarGaranti()).toEqual([]);
+      expect(global.nodes).toHaveLength(4);
+    } finally { delete global.createNode; delete global.clearSelection; }
+  });
+
+  // KURAL 26: kaldırılan yapının DİLİ de kalkar. Kutular giderken toast'lar,
+  // pencere metinleri ve kılavuz hâlâ "Çözücü → ▶ Hesapla", "kutusuna çift
+  // tıklayın", "Dönüş Yönü kartı" diyordu — tıklanacak bir kutu yokken.
+  test('kaldırılan kutuların DİLİ de kalktı (kural 26)', () => {
+    const dosyalar = ['js/cp-fead.js', 'js/cp-fead-report.js', 'js/cp-fead-results.js',
+      'js/cp-fead-wizard.js', 'js/fead-model.js', 'js/guide-fead.js', 'js/results.js'];
+    const kalip = [/Çözücü → ▶/, /Önce Çözücü/, /(Çözücü|Rapor|Sihirbaz[ıi]?)<\/strong> (kutusuna|kartına) çift tıkla/,
+      /(Çözücü|Rapor) kutusuna çift/, /Dönüş Yönü kart/, /Rapor bileşeni/, /Düğüme <b>çift tıklamak/];
+    const sapan = [];
+    dosyalar.forEach((f) => {
+      const s = oku(f);
+      kalip.forEach((re) => { if (re.test(s)) sapan.push(f + ' ← ' + re); });
+    });
+    expect(sapan).toEqual([]);
+  });
+
+  test('kapsam kancası TEK noktada — veSyncSidebarScope', () => {
+    const src = oku('js/components.js');
+    const i = src.indexOf('function veSyncSidebarScope');
+    const son = src.indexOf('\nfunction ', i + 10);
+    expect(src.slice(i, son)).toContain('veFeadAraclarKapsam(scope)');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('durum — pencere hesaplamaz, modülün çağrılarından okur', () => {
+  test('boş topoloji: Hesapla PASİF ve sebebini söylüyor; Sihirbaz birincil', () => {
+    global.nodes = ['fead-belt', 'fead-solver', 'fead-report', 'fead-wizard']
+      .map((t, i) => ({ id: 'b' + i, type: t, def: componentDefs[t], data: {} }));
+    const d = AR.veFeadAraclarDurum();
+    expect(d.hazir).toBe(false);
+    expect(d.neden).toMatch(/Henüz kasnak yok/);
+    const g = govde();
+    const h = g.querySelector('[data-bol="cozum"] [data-ey="hesapla"]');
+    // `disabled` DEĞİL: devre dışı düğme ipucunu göstermez, sebep okunamazdı.
+    expect(h.getAttribute('aria-disabled')).toBe('true');
+    expect(h.hasAttribute('disabled')).toBe(false);
+    expect(h.getAttribute('title')).toBe(d.neden);
+    expect(g.querySelector('[data-bol="model"] [data-ey="sihirbaz"]').classList.contains('birincil')).toBe(true);
+    expect(g.querySelector('[data-ey="indir"]').getAttribute('aria-disabled')).toBe('true');
+    // Sonuç yok → özet kartı da, gergi hükmü de YOK (uydurulmaz).
+    expect(g.querySelector('.ve-fead-arac-kpi')).toBeNull();
+    expect(g.querySelector('.ve-fead-arac-huk')).toBeNull();
+  });
+
+  test('örnekte Hesapla ETKİN; çözünce çip Güncel ve dört özet kartı — Sonuçlar’ın özetinden', () => {
+    kur();
+    let d = AR.veFeadAraclarDurum();
+    expect(d.hazir).toBe(true);
+    expect(d.kasnak).toBe(6);
+    expect(govde().querySelector('[data-ey="hesapla"]').hasAttribute('aria-disabled')).toBe(false);
+    fead.veFeadSolve(tip('fead-solver').id);
+    d = AR.veFeadAraclarDurum();
+    expect(d.durum.k).toBe('guncel');
+    const g = govde();
+    // ÇİP TEK ÜRETİCİDEN — Sonuçlar sekmesiyle aynı cümle.
+    expect(g.querySelector('[data-bol="cozum"] h4 .ve-fr-chip').outerHTML)
+      .toBe(RS.veFeadResChipHTML(d.durum));
+    // KARTLAR SONUÇLAR'IN ÖZETİNDEN, pencerenin sırasıyla — değer birebir.
+    const ozet = global.veFeadSignals.summary(global.veFeadResults);
+    const kartlar = [...g.querySelectorAll('.ve-fead-arac-kpi > div')];
+    expect(kartlar).toHaveLength(AR.VE_FEAD_ARAC_KPI.length);
+    AR.VE_FEAD_ARAC_KPI.forEach((k, i) => {
+      const s = ozet.find((x) => x.k === k);
+      expect({ k, ad: kartlar[i].querySelector('span').textContent })
+        .toEqual({ k, ad: s.ad });
+      expect(kartlar[i].querySelector('b').textContent).toContain(String(s.deger));
+    });
+    expect(g.querySelector('[data-ey="indir"]').hasAttribute('aria-disabled')).toBe(false);
+  });
+
+  test('model değişince BAYAT — sayı gizlenmez, soluk durur; gergi hükmü DÜŞER', () => {
+    kur();
+    fead.veFeadSolve(tip('fead-solver').id);
+    expect(govde().querySelector('.ve-fead-arac-huk')).not.toBeNull();
+    const alt = global.nodes.find((n) => n.type === 'fead-alternator');
+    alt.data.od = Number(alt.data.od) + 3;
+    const d = AR.veFeadAraclarDurum();
+    expect(d.durum.k).toBe('bayat');
+    const g = govde();
+    expect(g.querySelector('.ve-fead-arac-kpi').classList.contains('bayat')).toBe(true);
+    expect(g.querySelectorAll('.ve-fead-arac-kpi > div')).toHaveLength(4);
+    // Bayat sonucun hükmü başka bir modelin hükmü olabilir — gösterilmez.
+    expect(g.querySelector('[data-bol="yon"] .ve-fead-arac-huk')).toBeNull();
+  });
+
+  test('çözüm hatasının SEBEBİ pencerede — yalnız toast’ta kalmaz', () => {
+    kur();
+    global.veFeadResults = { ok: false, error: 'Kayış kasnağın İÇİNDEN geçiyor.',
+                             solvedNodeId: tip('fead-solver').id };
+    const d = AR.veFeadAraclarDurum();
+    expect(d.durum.k).toBe('hata');
+    const h = govde().querySelector('[data-bol="cozum"] .ve-fead-arac-huk[data-d="no"]');
+    expect(h).not.toBeNull();
+    expect(h.textContent).toContain('Kayış kasnağın İÇİNDEN geçiyor.');
+  });
+
+  test('uygunluk: çözücü penceresinin sağ sütunuyla AYNI üretici (kural 16)', () => {
+    kur();
+    const d = AR.veFeadAraclarDurum();
+    const bek = fead._feadSideGates(d.build, fead.veFeadTableRows(d.build));
+    expect(govde().querySelector('.ve-fead-arac-kapi').innerHTML)
+      .toBe((() => { const x = document.createElement('div'); x.innerHTML = bek; return x.innerHTML; })());
+  });
+
+  test('rapor türü raporun ALANINDAN okunur — pencere tutmaz', () => {
+    kur();
+    tip('fead-report').data.reportKind = 'summary';
+    const g = govde();
+    expect(g.querySelector('[data-ey="tur"][data-v="summary"]').getAttribute('aria-checked')).toBe('true');
+    expect(g.querySelector('[data-ey="tur"][data-v="detailed"]').getAttribute('aria-checked')).toBe('false');
+    delete tip('fead-report').data.reportKind;           // alan yoksa Detaylı
+    expect(govde().querySelector('[data-ey="tur"][data-v="detailed"]').getAttribute('aria-checked')).toBe('true');
+  });
+
+  test('künye bağlantıları: kayış künyesi ve raporun Künye’si pencere AÇAR', () => {
+    kur();
+    const g = govde();
+    const kayis = g.querySelector('[data-bol="model"] [data-ey="kayis"]');
+    expect(kayis).not.toBeNull();
+    expect(kayis.textContent).toContain(tip('fead-belt').data.beltType || 'PK');
+    // Rapor kutusu kalktı: belgenin antetine akan alanlara giden TEK yol.
+    expect(g.querySelector('[data-bol="rapor"] [data-ey="rapor"]')).not.toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('eylemler — hepsi modülün var olan çağrılarına gider', () => {
+  test('Hesapla: hazırsa veFeadSolve(çözücü), değilse SEBEP ve çağrı YOK', () => {
+    kur();
+    const s = casus('veFeadSolve');
+    try {
+      expect(AR.veFeadAracEylem('hesapla')).toBe(true);
+      expect(s.c).toHaveBeenCalledWith(tip('fead-solver').id);
+      s.c.mockClear();
+      global.nodes = global.nodes.filter((n) => !(componentDefs[n.type] || {}).isFeadPulley);
+      expect(AR.veFeadAracEylem('hesapla')).toBe(false);
+      expect(s.c).not.toHaveBeenCalled();
+      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/kasnak/), 'warning');
+    } finally { s.geri(); }
+  });
+
+  test('Ayarlar → çözücünün, Künye → raporun penceresi; kayış → Kayış Özellikleri', () => {
+    kur();
+    const t = casus('veFeadTableOpen');
+    const k = casus('veFeadKayisAc');
+    try {
+      expect(AR.veFeadAracEylem('ayarlar')).toBe(true);
+      expect(t.c).toHaveBeenLastCalledWith(tip('fead-solver').id);
+      expect(AR.veFeadAracEylem('rapor')).toBe(true);
+      expect(t.c).toHaveBeenLastCalledWith(tip('fead-report').id);
+      expect(AR.veFeadAracEylem('kayis')).toBe(true);
+      expect(k.c).toHaveBeenCalled();
+    } finally { t.geri(); k.geri(); }
+  });
+
+  test('Sihirbaz → düğümün kendisi; düğüm yoksa veFeadWizOpenAny', () => {
+    kur();
+    const w = casus('veFeadWizOpen');
+    const a = casus('veFeadWizOpenAny');
+    try {
+      expect(AR.veFeadAracEylem('sihirbaz')).toBe(true);
+      expect(w.c).toHaveBeenCalledWith(tip('fead-wizard').id);
+      global.nodes = global.nodes.filter((n) => n.type !== 'fead-wizard');
+      AR.veFeadAracEylem('sihirbaz');
+      expect(a.c).toHaveBeenCalled();
+    } finally { w.geri(); a.geri(); }
+  });
+
+  test('rapor türü: ALANA yazar + tek geri-al adımı; aynı seçim hiçbir şey yazmaz', () => {
+    kur();
+    expect(AR.veFeadAracEylem('tur', 'detailed')).toBe(false);     // alan yok = Detaylı
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    expect(AR.veFeadAracEylem('tur', 'summary')).toBe(true);
+    expect(tip('fead-report').data.reportKind).toBe('summary');
+    expect(stubs.saveState).toHaveBeenCalledTimes(1);
+    expect(AR.veFeadAracEylem('tur', 'bozuk')).toBe(false);
+  });
+
+  test('İndir: sonuç yoksa SEBEP; varsa raporun kendi üreticisi', () => {
+    kur();
+    const r = casus('veFeadGenerateReport');
+    try {
+      expect(AR.veFeadAracEylem('indir')).toBe(false);
+      expect(r.c).not.toHaveBeenCalled();
+      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/önce modeli hesaplayın/), 'warning');
+      global.veFeadResults = { ok: true, solvedNodeId: tip('fead-solver').id };
+      expect(AR.veFeadAracEylem('indir')).toBe(true);
+      expect(r.c).toHaveBeenCalledWith(tip('fead-report').id);
+    } finally { r.geri(); }
+  });
+
+  test('bilinmeyen eylem hiçbir şey yapmaz', () => {
+    kur();
+    expect(AR.veFeadAracEylem('yok-boyle')).toBe(false);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('görünüm durumu MODELDE DEĞİL — tarayıcıda', () => {
+  test('katla: localStorage’a yazar, geri-al yığınına YAZMAZ, modele sızmaz', () => {
+    kur();
+    const once = JSON.stringify(global.nodes);
+    expect(AR.veFeadAraclarKatla()).toBe(true);
+    expect(JSON.parse(localStorage.getItem(AR.VE_FEAD_ARAC_ANAHTAR)).katli).toBe(true);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    expect(JSON.stringify(global.nodes)).toBe(once);
+    expect(AR.veFeadAraclarKatla()).toBe(false);
+  });
+
+  test('bozuk kayıt varsayılana düşer: yuvada, açık', () => {
+    localStorage.setItem(AR.VE_FEAD_ARAC_ANAHTAR, '{bozuk');
+    expect(AR.veFeadAraclarYer()).toEqual({ yuva: true, x: AR.VE_FEAD_ARAC_YUVA.x,
+                                            y: AR.VE_FEAD_ARAC_YUVA.y, katli: false });
+  });
+
+  test('depolama patlarsa pencere çalışmaya devam eder — yalnız oturumda kalır', () => {
+    const al = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('engelli'); });
+    const yaz = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('engelli'); });
+    try {
+      expect(AR.veFeadAraclarYer().yuva).toBe(true);
+      expect(() => AR.veFeadAraclarKatla()).not.toThrow();
+      expect(AR.veFeadAraclarYer().katli).toBe(true);
+    } finally { al.mockRestore(); yaz.mockRestore(); }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('DOM — kapsam, yuva, olay, tazeleme', () => {
+  const el = () => document.getElementById('ve-fead-araclar');
+
+  test('yalnız FEAD kapsamında görünür; dışarıda tazelenmez', () => {
+    kur();
+    expect(AR.veFeadAraclarKapsam('fead-analysis')).toBe(true);
+    expect(el().hidden).toBe(false);
+    expect(el().querySelector('.ve-settings-header')).not.toBeNull();   // pencere ailesi
+    expect(AR.veFeadAraclarKapsam('arac-performans')).toBe(false);
+    expect(el().hidden).toBe(true);
+    expect(AR.veFeadAraclarTazele()).toBe(false);
+    expect(AR.veFeadAraclarKapsam(null)).toBe(false);
+  });
+
+  test('YUVADAKİ pencere tuvali örttüğünü SÖYLER; serbest pencere söylemez', () => {
+    kur();
+    AR.veFeadAraclarKapsam('fead-analysis');
+    expect(el().getAttribute('data-ve-ortu')).toBe('sol');
+    expect(el().getAttribute('data-yuva')).toBe('1');
+    document.body.innerHTML = '<div id="ve-canvas-wrapper"><div id="ve-canvas"></div></div>';
+    AR._feadAracSifirla();
+    localStorage.setItem(AR.VE_FEAD_ARAC_ANAHTAR, JSON.stringify({ yuva: false, x: 400, y: 90 }));
+    AR.veFeadAraclarKapsam('fead-analysis');
+    expect(el().hasAttribute('data-ve-ortu')).toBe(false);
+    expect(el().getAttribute('data-yuva')).toBe('0');
+    expect([el().style.left, el().style.top]).toEqual(['400px', '90px']);
+  });
+
+  test('katlı pencere şeridini gösterir ve yuvadaysa örtüsünü korur', () => {
+    kur();
+    AR.veFeadAraclarKapsam('fead-analysis');
+    AR.veFeadAraclarKatla();
+    expect(el().classList.contains('katli')).toBe(true);
+    expect(el().getAttribute('data-ve-ortu')).toBe('sol');
+    const k = el().querySelector('.ve-fead-arac-katla');
+    expect(k.getAttribute('aria-expanded')).toBe('false');
+    // Şerit ikinci bir eylem kümesi DEĞİL — aynı eylem anahtarları.
+    expect([...el().querySelectorAll('.ve-fead-arac-ray [data-ey]')].map((b) => b.getAttribute('data-ey')))
+      .toEqual(['hesapla', 'indir', 'yon', 'sihirbaz']);
+  });
+
+  test('tuvale olay SIZDIRMAZ — tık, basma, tekerlek, çift tık', () => {
+    kur();
+    AR.veFeadAraclarKapsam('fead-analysis');
+    const kap = document.getElementById('ve-canvas-wrapper');
+    const duyulan = [];
+    ['mousedown', 'pointerdown', 'dblclick', 'contextmenu', 'wheel', 'click'].forEach((t) => {
+      kap.addEventListener(t, () => duyulan.push(t));
+      el().querySelector('.ve-fead-arac-govde').dispatchEvent(new Event(t, { bubbles: true }));
+    });
+    expect(duyulan).toEqual([]);
+  });
+
+  test('PASİF düğme eylemi çağırmaz — Hesapla ve İndir sebebini söyler', () => {
+    global.nodes = ['fead-belt', 'fead-solver', 'fead-report', 'fead-wizard']
+      .map((t, i) => ({ id: 'b' + i, type: t, def: componentDefs[t], data: {} }));
+    AR.veFeadAraclarKapsam('fead-analysis');
+    const t = casus('veFeadToggleSpin');
+    try {
+      el().querySelector('.ve-fead-arac-govde [data-ey="yon"]').click();   // yön yok → pasif
+      expect(t.c).not.toHaveBeenCalled();
+      el().querySelector('.ve-fead-arac-govde [data-ey="hesapla"]').click();
+      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/kasnak/), 'warning');
+    } finally { t.geri(); }
+  });
+
+  test('tazeleme ODAĞI eylem anahtarıyla geri verir', () => {
+    kur();
+    AR.veFeadAraclarKapsam('fead-analysis');
+    el().querySelector('.ve-fead-arac-govde [data-ey="ayarlar"]').focus();
+    const eski = document.activeElement;
+    expect(AR.veFeadAraclarTazele()).toBe(true);
+    expect(document.activeElement).not.toBe(eski);                     // yeniden kuruldu…
+    expect(document.activeElement.getAttribute('data-ey')).toBe('ayarlar');  // …odak yerinde
+  });
+
+  test('tazeleme ÜÇ noktadan: kart tazelemesi · çözüm · sonucu unutma', () => {
+    const src = oku('js/cp-fead.js');
+    const govdesi = (ad) => {
+      const i = src.indexOf('function ' + ad + '(');
+      expect({ ad, var: i >= 0 }).toEqual({ ad, var: true });
+      return src.slice(i, src.indexOf('\n}\n', i));
+    };
+    ['veFeadRefreshLayoutCards', 'veFeadSolve', '_feadForgetResults'].forEach((ad) => {
+      expect({ ad, tazeler: govdesi(ad).includes('veFeadAraclarTazele()') }).toEqual({ ad, tazeler: true });
+    });
+    // Sonucu unutmak pencereyi GERÇEKTEN boşaltıyor (çağrı değil sonuç).
+    kur();
+    AR.veFeadAraclarKapsam('fead-analysis');
+    global.veFeadAraclarTazele = AR.veFeadAraclarTazele;
+    try {
+      fead.veFeadSolve(tip('fead-solver').id);
+      expect(el().querySelector('.ve-fead-arac-kpi')).not.toBeNull();
+      fead._feadForgetResults();
+      expect(el().querySelector('.ve-fead-arac-kpi')).toBeNull();
+    } finally { delete global.veFeadAraclarTazele; }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('görünüm CSS’te — ölçü sabitleri birebir', () => {
+  const CSS = oku('css/styles.css');
+  const kural = (sec) => {
+    const kac = sec.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = CSS.match(new RegExp('(?:^|\\n)' + kac + '\\{([^}]*)\\}'));
+    return m ? m[1] : '';
+  };
+
+  test('pencerenin eni JS’teki sabitle AYNI (kılavuz sahnesi onu okuyor)', () => {
+    expect(kural('.ve-fead-arac')).toMatch(new RegExp('width:' + AR.VE_FEAD_ARAC_EN + 'px'));
+  });
+
+  test('satır içi RENK yazılmıyor — durum kuralları jetondan', () => {
+    const src = oku('js/cp-fead-araclar.js');
+    expect(src).not.toMatch(/style="[^"]*(color|background)/);
+    // Birincil eylem çözücü penceresindeki Hesapla ile AYNI aile.
+    expect(kural('.ve-fead-arac-btn.birincil')).toMatch(/--accent-warning/);
+    expect(kural('.ve-fead-arac-kpi.bayat > div')).toMatch(/opacity/);
+    expect(kural('.ve-fead-arac-yuva.yakin')).toMatch(/opacity:1/);
+  });
+
+  // `hidden` NİTELİĞİ TEK BAŞINA GİZLEMEZ: `.ve-fead-arac{display:flex}`
+  // tarayıcının [hidden] kuralını eziyor ve kapsam dışındaki pencere ana
+  // topolojide görünür kalıyordu. jsdom CSS uygulamadığı için yukarıdaki
+  // kapsam testi niteliği görüp geçiyordu; gerçek tarayıcı kapısı
+  // fead-araclar.spec.js → "KAPSAM".
+  test('hidden nitelikli pencere CSS’te de gizli — display kuralı onu ezmiyor', () => {
+    expect(kural('.ve-fead-arac[hidden]')).toMatch(/display:\s*none/);
+  });
+
+  test('kılavuz sahnesi pencereyi AKIŞTA çizer (tuvalde mutlak)', () => {
+    expect(kural('.ve-fead-arac')).toMatch(/position:absolute/);
+    expect(kural('.ve-fead-arac.ve-fead-arac-sahne')).toMatch(/position:relative/);
+  });
+});

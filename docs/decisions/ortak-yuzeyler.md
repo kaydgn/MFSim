@@ -2,6 +2,28 @@
 
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 
+### Tuvali örten yüzey kendini işaretler (`data-ve-ortu`, 2026-09-28)
+
+**Hüküm:** tuval kabının içinde, tuvalin soluna yapışık duran bir yüzey
+(ilk kullanıcısı FEAD araçları penceresi, `js/cp-fead-araclar.js`)
+`data-ve-ortu="sol"` taşır; `veFitViewToContent` o genişliği görünür alandan
+düşer (`veTuvalSolOrtu`) ve içerik örtünün sağındaki alanda ortalanır —
+örtünün yanında pay dar (pencerenin kendisi bir kenar), karşı kenarda eski
+pay. Gizli, ölçüsüz ya da kabın yarısından geniş bir "örtü" sayılmaz;
+örtü yokken davranış birebir eski.
+
+**Gerekçe:** pencere tuvalin ÜSTÜNDE yüzüyor ve kamera onu bilmiyordu — açılış
+sığdırması kartı pencerenin altına ortalardı. Yüzeyin kendini beyan etmesi,
+sığdırmanın yüzeyleri tanıması yerine seçildi: ikinci bir örten yüzey
+geldiğinde `ui-core.js`'e modüle özgü dal yazılmaz.
+
+**Serbest bırakılan pencere işaret TAŞIMAZ:** yeri kullanıcının; kadraj onu
+düşmek için içeriği kaydırmaz.
+
+Kapı: `tests/unit/fit-view.test.js` → *"SOL ÖRTÜ"* (mekanizma, sentetik örtü)
++ `tests/e2e/fead-araclar.spec.js` → *"YUVADA"* (gerçek pencere: sığdırmadan
+sonra hiçbir kart pencerenin altında değil).
+
 ### Kart İÇİNDEKİ kaydırılabilir yüzey tekerleği önce alır (`veWheelInnerPane`)
 
 `js/ui-core.js`'teki kanvas tekerlek dinleyicisi kayıtsız `preventDefault()`

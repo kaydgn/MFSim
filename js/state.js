@@ -40,7 +40,11 @@ var MAX_UNDO_STEPS = 50;
 // GENİŞ. Dokunulmamış ölçüdeki geometri kartı genişler, sağındaki kart fark
 // kadar kayar (veFeadMigratePafta); göç olmasaydı her eski proje tabloyu dar
 // kartta, yatay kaydırmayla açardı.
-var VE_SCHEMA_VERSION = 8;
+//
+// SÜRÜM 9 (2026-09-28): FEAD ARAÇLARI PENCEREDE. Dönüş Yönü bileşeni kalktı —
+// yön pencerenin Yön bölümünde; kayıtlı `fead-spin` düğümleri silinir
+// (veFeadMigrateSpinOff), veri taşımıyorlardı.
+var VE_SCHEMA_VERSION = 9;
 
 // ── TOPLU KURULUM: BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI ───────────────
 //
@@ -246,6 +250,8 @@ function veApplyLegacyMigrations(state) {
   // TABLO KARTA GİRDİ: tablolu kart genişler (komşusu kayar). Kart ekleyen
   // 5. adımdan SONRA — o adımın koyduğu işletme kartı da kaydırılanlar arasında.
   if(v < 8 && typeof veFeadMigratePafta === 'function') veFeadMigratePafta(state);
+  // ARAÇLAR PENCEREDE: Dönüş Yönü düğümü silinir (veri taşımıyordu).
+  if(v < 9 && typeof veFeadMigrateSpinOff === 'function') veFeadMigrateSpinOff(state);
   // GÖMÜLÜ ALT TOPOLOJİLER de aynı kapıdan geçer ve DAMGALANIR: FEAD kanvası
   // `fead-analysis` düğümünün data.subTopology'sinde yaşıyor; editör açılınca
   // veLoadTabState → restoreState onu ikinci kez bu kapıdan geçirir ve damga

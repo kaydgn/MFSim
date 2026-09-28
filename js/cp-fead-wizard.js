@@ -346,7 +346,7 @@ function veFeadWizRouteMove(key, delta){
   return true;
 }
 // Sırayı çevirmek = dönüş yönünü çevirmek. Ayrı bir "yön" alanı YOK; yön
-// sıranın kendisinden türüyor (fead-spin bileşeninin kuralının aynısı).
+// sıranın kendisinden türüyor (FEAD araçları penceresinin Yön bölümüyle aynı kural).
 function veFeadWizRouteReverse(){
   if(!_fwState) return;
   var r = veFeadWizRoute(_fwState);
@@ -362,7 +362,7 @@ function veFeadWizRouteReverse(){
 // eklememiz gerekiyor. Dönüş yönünü seçtikten sonra matematik ve topoloji buna
 // göre belirlensin."*
 //
-// `fead-spin` bileşeninin kuralının BİREBİR aynısı: yön bir AYAR değil, rota
+// FEAD araçları penceresinin Yön bölümüyle BİREBİR aynı kural: yön bir AYAR değil, rota
 // sırasının sonucudur (`FEADCore.loopSense` kasnak merkezlerinin ayakkabı-bağı
 // işaretli alanına bakar). Duruma bir `dir` alanı koymak İKİNCİ bir gerçek
 // kaynak yaratırdı ve üç yerden ısırırdı: 3. adımın sıra listesi yalan söyler,
@@ -2112,7 +2112,7 @@ function _fwStepKasnak(b){
   // ── DÖNÜŞ YÖNÜ ───────────────────────────────────────────────────────────
   // Kasnaklar tablosunun hemen altında, çünkü yön kasnak MERKEZLERİNİN
   // sırasından okunuyor ve kullanıcı koordinatları burada giriyor.
-  h += _fwCard('Dönüş Yönü', 'var(--accent-warning)',
+  h += _fwCard('Dönüş yönü', 'var(--accent-warning)',
       veFeadWizSpinHTML(b)
     );
   return h;
@@ -4101,8 +4101,8 @@ function getFeadWizardPropertiesHTML(node){
     : _feadCard('Kayıtlı taslak', 'bu düğümde', 'var(--text-muted)',
         _feadHint('Henüz taslak yok. Sihirbazı açıp boş başlayabilir ya da hazır bir '
           + 'örnekten doldurabilirsiniz.'));
-  taslak += _feadHint('Düğüme <b>çift tıklamak</b> da sihirbazı açar. Kurulumdan sonra '
-    + 'taslak bu düğümde kalır — geri dönüp bir sayıyı düzeltebilirsiniz.');
+  taslak += _feadHint('Sihirbaz <b>FEAD araçları</b> penceresinden açılır. Kurulumdan sonra '
+    + 'taslak modelde kalır — geri dönüp bir sayıyı düzeltebilirsiniz.');
 
   var adimlar = _feadCard('Adımlar', VE_FW_STEPS.length + ' adım', 'var(--accent-primary)',
       '<ol class="ve-fp-liste">' + VE_FW_STEPS.map(function(s){

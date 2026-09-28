@@ -230,6 +230,10 @@ var VE_GUIDE_SCENE_SEL = [
   '.ve-fead-yuz',      // çizimin üstünde yüzen denetim çubuğu
   '.ve-fead-hit',      // çizimin isabet halkaları (Çizim Masası) — baskıda görünmez
   '.ve-fead-not',      // panel açıklama satırı
+  '.ve-fead-arac',     // FEAD araçları penceresi (2026-09-28 — araç kutularının yerine)
+  '.ve-settings-header', // (pencere ailesinin başlığı — araç penceresi onu taşıyor)
+  '.ve-fr-chip',       // sonuç durumu çipi (araç penceresinin Çözüm bölümü)
+  '.ve-durum',         // durum ikonu (gergi tarafı hükmü)
   '.ve-rb-btn',        // şerit düğmesi
   '.ve-rb-group-items',// düğmenin sarmalı (yerleşim)
   '.ve-rb-ico',
@@ -274,7 +278,12 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--warning-tint-8': 'rgba(200,120,30,.08)', '--warning-tint-15': 'rgba(200,120,30,.15)',
   '--danger-tint-8': 'rgba(168,50,31,.08)',   // baskı kırmızısı #a8321f — çevrim tablosunun sil düğmesi
   '--danger-tint-15': 'rgba(168,50,31,.15)',  // Dönüş Yönü hükmü (gergi gergin tarafta)
-  '--dur-fast': '0s', '--shadow-lg': 'none', '--focus-ring': 'transparent',
+  '--dur-fast': '0s', '--shadow-lg': 'none', '--shadow-xl': 'none', '--focus-ring': 'transparent',
+  // FEAD araçları penceresi (2026-09-28): pencere köşesi ve pencere ailesinin
+  // başlık bandı — baskı ölçeğinde (köşe --radius-md'nin bir üstü; bant
+  // ekrandaki ölçü, zemin baskı paletinin iki tonu).
+  '--radius-lg': '4px', '--bant-h': '26px',
+  '--bant-zemin': 'linear-gradient(180deg,#f2efe8,#fbfaf7)',
   '--shadow-color': 'transparent',
   '--ribbon-strip-h': 'auto', '--ribbon-expanded-h': 'auto'
 };

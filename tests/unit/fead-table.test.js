@@ -1168,8 +1168,10 @@ describe('PAFTA — tablo kartın katmanı', () => {
     const st3 = { nodes: [{ id: 'a', type: 'fead-layout', x: 0, y: 0, width: 420, height: 340, data: {} }] };
     expect(fead.veFeadMigratePafta(st3)).toBe(1);
     expect([st3.nodes[0].width, st3.nodes[0].height]).toEqual([VE_FEAD_PAFTA_W, VE_FEAD_LAYOUT_H]);
-    // Kapı state.js'te: sürüm 8'den eski her dosya bu adımdan geçer.
-    expect(loadSource('state.js')).toMatch(/var VE_SCHEMA_VERSION = 8;/);
+    // Kapı state.js'te: sürüm 8'den eski her dosya bu adımdan geçer (sürüm
+    // sonraki göçlerle büyür — 9: FEAD araçları penceresi).
+    expect(Number((loadSource('state.js').match(/var VE_SCHEMA_VERSION = (\d+);/) || [])[1]))
+      .toBeGreaterThanOrEqual(8);
     expect(loadSource('state.js')).toMatch(/if\(v < 8 && typeof veFeadMigratePafta === 'function'\) veFeadMigratePafta\(state\);/);
     document.body.innerHTML = '';
   });

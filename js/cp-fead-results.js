@@ -100,7 +100,7 @@ function _feadResStaleNote(st) {
   if(!st) return '';
   if(st.k === 'bayat')
     return '<div class="ve-fr-note" data-d="warn"><b>Bu sonuç eski modele ait.</b> Model çözümden sonra '
-      + 'değişti; sayılar artık tuvaldeki modeli anlatmıyor. FEAD alt topolojisinde Çözücü → '
+      + 'değişti; sayılar artık tuvaldeki modeli anlatmıyor. FEAD alt topolojisinde FEAD araçları → '
       + '<b>' + veIkon('play') + ' Hesapla</b> ile yeniden çözün.</div>';
   if(st.k === 'kayip')
     return '<div class="ve-fr-note" data-d="off">Bu sonucun modeli artık projede yok (FEAD kartı '
@@ -216,7 +216,7 @@ function veFeadResPreset(k) {
 // ── SONUÇLAR'DA AÇ — çözücü penceresinden ──────────────────────────────────
 function veFeadOpenResults() {
   if(!_feadResSets().length) {
-    if(typeof showToast === 'function') showToast('Önce Çözücü → ▶ Hesapla ile modeli çözün.', 'warning');
+    if(typeof showToast === 'function') showToast('Önce FEAD araçları → Hesapla ile modeli çözün.', 'warning');
     return false;
   }
   // Müfettiş penceresi topoloji sayfasının yüzü; açık kalırsa Sonuçlar'da
@@ -240,7 +240,7 @@ function veFeadResSummaryOpen() {
   var R = _feadResR();
   if(!overlay) return false;
   if(!R || !R.ok) {
-    if(typeof showToast === 'function') showToast('FEAD sonucu yok — önce Çözücü ile çözün.', 'warning');
+    if(typeof showToast === 'function') showToast('FEAD sonucu yok — önce FEAD araçları → Hesapla ile çözün.', 'warning');
     return false;
   }
   var bant = (typeof veRepHeadHTML === 'function') ? veRepHeadHTML({

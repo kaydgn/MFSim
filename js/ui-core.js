@@ -44,13 +44,6 @@ function veAttachNodeDrag(nodeEl, node) {
       veFeadOpenEditor(node.id);
       return;
     }
-    // BAŞLANGIÇ SİHİRBAZI — alt topoloji açmıyor ama aynı el alışkanlığını
-    // kullanıyor: kutuya çift tık, iş yapan yüzeyi açar. Tek tık paneli
-    // gösteriyor ve oradaki düğme de aynı yere gidiyor.
-    if(node.type === 'fead-wizard' && typeof veFeadWizOpen === 'function') {
-      veFeadWizOpen(node.id);
-      return;
-    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {
@@ -177,6 +170,22 @@ function updateCanvasTransform() {
 // kullanılır. Node koordinatlarına DOKUNMAZ — yalnız kamerayı (canvasOffset/
 // canvasZoom) ayarlar. maxZoom=1: küçük topolojilerde yakınlaştırmaz, sadece ortalar.
 // opts.only : yalnız bu yüklemi sağlayan düğümler sığdırılır (varsayılan: hepsi)
+// TUVALİ ÖRTEN YÜZEY KENDİNİ İŞARETLER (`data-ve-ortu="sol"`): tuvalin soluna
+// YAPIŞIK duran bir pencere (FEAD araçları, js/cp-fead-araclar.js) kanvasın o
+// şeridini kapatıyor. Sığdırma o genişliği görünür alandan düşer; düşmeseydi
+// açılış kadrajında kart pencerenin ALTINDA kalırdı. Ölçü `offset*` ile —
+// yüzey kabın çocuğu ve kamera dönüşümü taşımıyor. Görünmeyen ya da kabın
+// yarısından geniş bir "örtü" sayılmaz (tuvalin tamamını yemesin).
+function veTuvalSolOrtu(wrapper) {
+  if(!wrapper || typeof wrapper.querySelectorAll !== 'function') return 0;
+  var sol = 0;
+  Array.prototype.forEach.call(wrapper.querySelectorAll('[data-ve-ortu="sol"]'), function(el) {
+    if(el.hidden || !el.offsetWidth || !el.offsetHeight) return;
+    sol = Math.max(sol, (el.offsetLeft || 0) + el.offsetWidth);
+  });
+  return (sol > 0 && sol <= wrapper.clientWidth * 0.5) ? sol : 0;
+}
+
 function veFitViewToContent(opts) {
   opts = opts || {};
   if(typeof nodes === 'undefined' || !nodes || nodes.length === 0) return;
@@ -185,6 +194,7 @@ function veFitViewToContent(opts) {
   veKabiEsitle();   // kayık kapla kurulan kamera bir kare sonra ötelenirdi
   var W = wrapper.clientWidth, H = wrapper.clientHeight;
   if(W < 20 || H < 20) return;
+  var sol = veTuvalSolOrtu(wrapper);
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   nodes.forEach(function(n) {
     if(typeof veIsCanvasHidden === 'function' && veIsCanvasHidden(n)) return;
@@ -199,13 +209,17 @@ function veFitViewToContent(opts) {
   var bw = Math.max(1, maxX - minX), bh = Math.max(1, maxY - minY);
   var ccx = (minX + maxX) / 2, ccy = (minY + maxY) / 2;
   var margin = (opts.margin != null) ? opts.margin : 90;   // içerik çevresi boşluk (px)
-  var fitZoom = Math.min((W - margin * 2) / bw, (H - margin * 2) / bh);
+  // Örtünün yanında pay DAR: pencerenin kendisi zaten bir kenar. Örtü yoksa
+  // iki kenar da eski payı alır ve davranış BİREBİR eskisi.
+  var solPay = sol > 0 ? Math.min(margin, 36) : margin;
+  var Wg = W - sol;                                          // görünür genişlik
+  var fitZoom = Math.min((Wg - margin - solPay) / bw, (H - margin * 2) / bh);
   var zoom = Math.max(0.2, Math.min(opts.maxZoom || 1, fitZoom));
   // #ve-canvas top/left -3000 + transform-origin center → wrapper (0,0)'a göre:
   //   ekran(cx) = (cx - 3000) * zoom + offset  ⇒  içerik merkezi ekran merkezine.
   var CANVAS_OFFSET = 3000;
   canvasZoom = zoom;
-  canvasOffset.x = W / 2 - (ccx - CANVAS_OFFSET) * zoom;
+  canvasOffset.x = sol + solPay + (Wg - margin - solPay) / 2 - (ccx - CANVAS_OFFSET) * zoom;
   canvasOffset.y = H / 2 - (ccy - CANVAS_OFFSET) * zoom;
   updateCanvasTransform();
 }

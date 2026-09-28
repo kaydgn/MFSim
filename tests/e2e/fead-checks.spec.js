@@ -72,9 +72,11 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   expect(lib.kapi).toBe(true);
 
   // ── 2) ÇÖZÜCÜ PANELİ: MOTOR KATALOĞU GERÇEK SEÇİMLE ────────────────────
+  // Çözücünün kutusu yok (2026-09-28): penceresi FEAD araçları penceresinin
+  // "Ayarlar" bağlantısından açılır — kullanıcının yolu da bu.
   const solverId = await page.evaluate(() =>
     window.nodes.find((n) => n.type === 'fead-solver').id);
-  await page.dblclick('#' + solverId);
+  await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="ayarlar"]');
   await page.waitForTimeout(400);
 
   const motorSec = page.locator('select[onchange*="veFeadApplyEngineLib"]');
@@ -257,10 +259,10 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   // açık modal tıklamayı yakalıyor, `dblclick` 30 sn bekleyip düşüyordu.
   // Kapı gece E2E setinde olduğu için CI'da görünmedi. Artık İKİ YOL da
   // kapılı: pencere kendiliğinden açıldıysa öyle devam edilir, açılmadıysa
-  // düğüme çift tıklanır — ikisinde de sonuç aynı görünür pencere.
-  const wizId = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-wizard').id);
+  // FEAD araçları penceresinin Sihirbaz düğmesine basılır (sihirbazın kutusu
+  // 2026-09-28'de kalktı) — ikisinde de sonuç aynı görünür pencere.
   const overlay = page.locator('#ve-feadwiz-overlay');
-  if (!(await overlay.isVisible())) await page.dblclick('#' + wizId);
+  if (!(await overlay.isVisible())) await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="sihirbaz"]');
   await expect(overlay).toBeVisible();
 
   // Örnekten doldur — kapıların üstünde koşacağı gerçek bir düzen.
