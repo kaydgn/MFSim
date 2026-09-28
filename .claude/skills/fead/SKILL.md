@@ -821,6 +821,23 @@ olurdu.
     Kapılar: `fead-araclar.test.js` · `fead-spin.test.js` → *"Yön yüzeyi"* ·
     `fit-view.test.js` → *"SOL ÖRTÜ"* · `tests/e2e/fead-araclar.spec.js`.
 
+39. **HESAP ÇAPI: KORD ÇİZGİSİNİN h_b / h_r'Sİ TEK ALANDAN** (2026-09-28,
+    kullanıcı: *"kullanıcı kayışın kalınlığını da hesaba katıp 150 mm çap ile
+    hesap yapmak isteyebilir"*). Kasnağın `od`'si d_b'dir ve girdi kalır;
+    çekirdek zaten kord çizgisinde kurar (kaburgalı OD/2 + h_b, sırt OD/2 +
+    h_r). Seçilen şey çiftin KAYNAĞI, kayışın tek alanında (`hesapCap`):
+    `katalog` (boş, marka) · `cad` (`hbCad` · `hrCad`, eskizden) · `db`
+    (h_b = h_r = 0). Kayış için TEK seçim — kord çizgisi tek; kasnak başına
+    seçim hız oranını sessizce karıştırırdı. `od`'ye 150 yazmak ÇİFT SAYAR
+    (çekirdek 153 kurar) — hesap çapı `od`'ye yazılmaz.
+    • **Tek kaynak**: `veFeadKordOfset` (köprü); `veFeadBoyCizgileri`,
+      pencere, rapor, özet, sihirbaz kayışın KENDİSİNİ verir (profil/marka
+      değil). Katalogda kayış nesnesine dokunulmaz (eski modeller bayt bayt).
+    • **Çekirdeğin tuzağı** (kural 30): `beltProps` hb + hr birlikte gelince
+      kataloğu birleştirmez — köprü kataloğu ALTA koyar.
+    • CAD seçili ama ölçü yoksa katalog + uyarı; sessiz yedek yok.
+    Kapı: `fead-hesap-capi.test.js`.
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.
