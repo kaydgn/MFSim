@@ -77,7 +77,9 @@ function ag00686Step(opt = {}) {
     { id: 'KLIMA-1', ad: 'KLİMA KOMPRESÖRÜ-Ø127-8PK', x: AG.ac.x, y: AG.ac.y, ters: true, donus: 2.3, rrTers: true,
       geometri: [{ profil: Y.kanalliProfil({ od: AG.ac.od, n: 8, omuz: 141, tepeBol: true, kenarYanak: true, tepeR: 0.25 }) }] },
     gergiParcasi('OTOMATİK GERGİ-T38624', AG.ten, AG.piv, { pivotYuz: 9 }),
-    { id: 'KAYIS', ad: 'KAYIŞ - 8PK1475', x: 0, y: 0, geometri: [{ profil: Y.duzProfil({ od: 170, w: 29 }) }] },
+    // Kayış katısı kullanıcının dosyasındaki gibi kanalsız bir bant; genişliği
+    // kanal × adım (8 × 3,56) — tanıyıcı kanal sayısını buradan da sağlar.
+    { id: 'KAYIS', ad: 'KAYIŞ - 8PK1475', x: 0, y: 0, geometri: [{ profil: Y.duzProfil({ od: 170, w: opt.kayisW || 28.48 }) }] },
   ], opt);
 }
 

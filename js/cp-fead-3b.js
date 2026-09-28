@@ -27,7 +27,9 @@ var _fw3b = null;
 var VE_FW_3B_ROL_RENK = {
   'fead-crank': '--accent-primary', 'fead-tensioner': '--accent-warning', 'fead-idler': '--seri-1',
   'fead-alternator': '--seri-2', 'fead-ac': '--seri-3', 'fead-waterpump': '--seri-4',
-  'fead-ps': '--accent-success', 'fead-aircomp': '--accent-danger', 'fead-fan': '--ink-accent'
+  'fead-ps': '--accent-success', 'fead-aircomp': '--accent-danger', 'fead-fan': '--ink-accent',
+  // Kayış koyu: gerçekteki rengi, ve kasnak rollerinin hiçbiriyle karışmıyor
+  'fead-belt': '--text-primary'
 };
 // Görüntüleyicinin iş bütçesi: bir karede en çok bu kadar üçgenleme (ms)
 var VE_FW_3B_BUTCE = 24;
@@ -63,6 +65,7 @@ function veFeadWiz3bAc(){
   if(!ov) return false;
   if(_fw3b) veFeadWiz3bKapat();
   ov.style.display = 'flex';
+  _fw3bGenis(true);
   // Başlık pencere ailesinin ortak bileşeni: kaplama sihirbazın başlığını da
   // örttüğü için pencerenin başlığı artık bu (bant, yazı, 22 px çizgi kapat).
   ov.innerHTML = '<div class="ve-settings-header ve-fw-3b-bas">'
@@ -123,6 +126,7 @@ function veFeadWiz3bKapat(){
   if(typeof document !== 'undefined'){
     var ov = document.getElementById('ve-fw-3b');
     if(ov){ ov.style.display = 'none'; ov.innerHTML = ''; }
+    _fw3bGenis(false);
   }
   if(!V) return;
   if(V.kuyrukZaman) clearTimeout(V.kuyrukZaman);
@@ -134,6 +138,15 @@ function veFeadWiz3bKapat(){
     if(o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(function(m){ m.dispose(); });
   });
   if(V.renderer){ V.renderer.dispose(); if(V.renderer.forceContextLoss) try { V.renderer.forceContextLoss(); } catch(e4){} }
+}
+
+// 3B AÇIKKEN PENCERE GENİŞLER (kullanıcı isteği 2026-09-28: "daha geniş bir
+// pencere açılsın. Daha profesyonel durur"). Sınıf sihirbazın kaplamasında;
+// ölçü CSS'te (`.ve-fw-3b-genis`). Kapanınca sihirbaz eski ölçüsüne döner.
+function _fw3bGenis(acik){
+  if(typeof document === 'undefined') return;
+  var o = document.getElementById('ve-feadwiz-overlay');
+  if(o && o.classList) o.classList.toggle('ve-fw-3b-genis', !!acik);
 }
 
 // Sihirbaz her çizildiğinde (veFeadWizRender) — rol, hesap, bakış, aktarım
@@ -279,7 +292,7 @@ function _fw3bPanel(){
 // Saf: durum + seçili düğüm → panel HTML'i (testli)
 function veFeadWiz3bPanelHTML(s, secili){
   var so = s.sonuc, h = '';
-  var tipler = VE_FW_PULLEY_TYPES.concat(['fead-tensioner']);
+  var tipler = veFeadWizStpRolTipleri();
   var renk = function(tip){ return '<span class="ve-fw-3b-renk" style="--renk:var(' + veFeadWiz3bRolJeton(tip) + ')"></span>'; };
   // ── SEÇİLİ ──
   h += '<section class="ve-fw-3b-bolum"><h4>Seçili</h4>';
@@ -357,8 +370,11 @@ function veFeadWiz3bPanelHTML(s, secili){
         + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].x, 1)
         + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].y, 1) + '</td></tr>';
     });
-    h += '</tbody></table>'
-      + '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'
+    h += '</tbody></table>';
+    if(coz.kayis)
+      h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <b>' + _fwEsc(_fwStpRolAd('fead-belt'))
+        + '</b> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
+    h += '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'
       + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button></div>';
   }
   return h + '</section>';

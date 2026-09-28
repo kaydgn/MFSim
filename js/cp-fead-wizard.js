@@ -1530,10 +1530,24 @@ function veFeadWizStp(){ return _fwStp; }
 // TEK OLABİLEN ROLLER: model tek sürücü ve tek gergi taşır. İkisinden birinin
 // iki düğüme verilmesi hesabı DURDURUR — ikinci gergi ötekinin üstüne, ikinci
 // krank sürücüsüz bir krank olarak sessizce girerdi.
-var VE_FW_STP_TEKIL = ['fead-crank', 'fead-tensioner'];
+var VE_FW_STP_TEKIL = ['fead-crank', 'fead-tensioner', 'fead-belt'];
 
+// Kayış rolünün adı KISA: bileşenin adı ("Kayış Özellikleri") bir pencere adı.
+var VE_FW_STP_KAYIS_AD = 'Kayış';
 function _fwStpRolAd(tip){
-  return tip === 'fead-tensioner' ? _fwTenAd() : _fwDefName(tip);
+  return tip === 'fead-tensioner' ? _fwTenAd() : (tip === 'fead-belt' ? VE_FW_STP_KAYIS_AD : _fwDefName(tip));
+}
+// Rol seçeneklerinin TEK listesi: kartın seçicisi ve 3B'nin düğmeleri buradan.
+function veFeadWizStpRolTipleri(){
+  return VE_FW_PULLEY_TYPES.concat(['fead-tensioner', 'fead-belt']);
+}
+// Kayış biriminin tablo/panel okuması: kod · kanal (kaynağıyla) · genişlik
+function _fwStpKayisTanim(k){
+  if(!k) return 'kayış okunamadı';
+  var p = [k.kod || 'kod yok'];
+  if(k.kanal) p.push(k.kanal + ' kanal' + (k.kanalKaynak === 'genislik' ? ' (genişlikten)' : ''));
+  if(Number.isFinite(k.genislik)) p.push(_fwFmt(k.genislik, 2) + ' mm');
+  return p.join(' · ');
 }
 // Satır olarak basılan düğümler. Kök, altında düğüm varsa basılmaz: bütün
 // montaj bir kasnak olamaz.
@@ -1712,6 +1726,13 @@ function veFeadWizStpAktar(){
   var ten = kayit.pulleys.filter(function(p){ return p.type === 'fead-tensioner'; })[0];
   st.stepKaynak = { dosya: s.dosya, kasnak: kayit.pulleys.length, ayna: !!s.ayna,
     gergi: ten ? { od: ten.data.od, armLen: ten.data.armLen, tenPart: ten.data.tenPart || '' } : null };
+  // KAYIŞ YALNIZ ROLÜ VERİLDİYSE: profil, kanal ve kod boş durumun kayışına
+  // yazılır (marka dosyada yok, varsayılan kalır); CAD'deki numara yalnız iz —
+  // gergi varken boy bir çıktı, karşılaştırması Kayış adımında.
+  if(kayit.belt){
+    st.belt = Object.assign(veFeadWizDefault().belt, kayit.belt);
+    st.stepKaynak.kayis = kayit.kayisCad;
+  }
   _fwState = st;
   _fwStep = 0;
   s.aktarim = _fwStpImza(s);
@@ -1821,8 +1842,7 @@ function _fwStpKartHTML(){
     coz.gergiler.forEach(function(g){ kol[g.kasnak] = g.kolBoy; });
   }
   var sec = [['', '—']]
-    .concat(VE_FW_PULLEY_TYPES.map(function(t){ return [t, _fwDefName(t)]; }))
-    .concat([['fead-tensioner', _fwTenAd()]]);
+    .concat(veFeadWizStpRolTipleri().map(function(t){ return [t, _fwStpRolAd(t)]; }));
   var satirlar = _fwStpSatirlar(s), taban = satirlar.length ? satirlar[0].derinlik : 0;
   var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-stp"><thead><tr>'
     + '<th>Parça</th><th>Rol</th><th>Kasnak</th><th>X [mm]</th><th>Y [mm]</th></tr></thead><tbody>';
@@ -1833,6 +1853,10 @@ function _fwStpKartHTML(){
     for(var e = d.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var tanim = '—', xs = '—', ys = '—', sinif = '';
     if(ata >= 0){ tanim = veIkon('corner-down-right') + ' ' + _fwStpRolAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
+    else if(rol === 'fead-belt' && coz){
+      tanim = _fwStpKayisTanim(coz.kayis);
+      if(!coz.kayis || !coz.kayis.kod) sinif = ' ve-fw-stp-warn';
+    }
     else if(rol && coz){
       var ki = birimKasnak[d.i];
       if(ki >= 0){
@@ -1865,7 +1889,8 @@ function _fwStpKartHTML(){
     + (coz ? 'Yeniden hesapla' : 'Çap ve merkezleri hesapla') + '</button>'
     + '<span class="ve-fw-dim">' + (coz
         ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak' + (coz.duzlem ? ' · düzlem sapması '
-            + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : _fwSorunIkon('err') + ' kasnak bulunamadı')
+            + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '')
+            + (coz.kayis && coz.kayis.kod ? ' · kayış ' + _fwEsc(coz.kayis.kod) : '') : _fwSorunIkon('err') + ' kasnak bulunamadı')
         : 'hesaplanmadı') + '</span></div>';
 
   if(coz && coz.ok){
@@ -2945,7 +2970,37 @@ function _fwStepKayis(b){
         (typeof VE_FEAD_BELT_DATA_OFF !== 'undefined' ? VE_FEAD_BELT_DATA_OFF : []).join(' · '))
     + '</div>'
     );
+  h += _fwCadKayisHTML(st, b);
   return h;
+}
+
+// ── CAD'DEKİ KAYIŞ (STEP'ten, kayış rolü verildiyse) ────────────────────────
+// Kullanıcı isteği (2026-09-28): kayış 3B'de seçilir. Numara bir GİRDİ değil
+// (gergi varken boy çıktı); kart o kayışın bu düzende ne yapacağını yazar:
+// numara ile gereken boyun farkı ve kolun oturduğu yer (veFeadBeltFit — katalog
+// kartının kullandığı aynı değerlendirme).
+function _fwCadKayisHTML(st, b){
+  var c = st && st.stepKaynak && st.stepKaynak.kayis;
+  if(!c) return '';
+  var r = _fwRead('Kod', c.kod || '—');
+  if(c.kanal) r += _fwRead('Kanal', c.kanal + (c.kanalKaynak === 'genislik' ? ' (genişlikten)' : ''));
+  var f = null;
+  if(b && b.ok && b.sys && Number.isFinite(c.boy) && Number.isFinite(b.beltLengthMm)){
+    var fark = c.boy - b.beltLengthMm;
+    r += _fwRead('Numara − gereken', (fark < 0 ? '−' : '+') + _fwFmt(Math.abs(fark), 1) + ' mm');
+    f = (typeof veFeadBeltFit === 'function') ? veFeadBeltFit(b.sys, c.boy) : null;
+    if(f && f.ok && f.fits){
+      var d = f.relDeg - b.relDeg;
+      r += _fwRead('Bu kayışla kol', (Math.abs(d) < 0.05 ? 'nominalde'
+          : 'nominalden ' + _fwFmt(Math.abs(d), 1) + '° ' + (d < 0 ? 'serbest uca doğru' : 'yük stopuna doğru'))
+        + (Number.isFinite(f.tensionN) ? ' · T ' + _fwFmt(f.tensionN, 0) + ' N' : ''));
+    } else if(f && f.ok && f.atLimit){
+      r += _fwRead('Bu kayışla kol', 'sığmıyor — ' + (f.atLimit.side === 'free'
+          ? 'kayış uzun, kol serbest ucuna dayanır' : 'kayış kısa, kol yük stopuna dayanır'));
+    }
+  }
+  return _fwCard('CAD\'deki kayış', (f && f.ok && !f.fits) ? 'var(--accent-danger)' : 'var(--text-muted)',
+    '<div class="ve-fw-reads" data-ve="cad-kayis">' + r + '</div>');
 }
 
 // ── AKSESUAR GÜCÜ NEREDEN GELİYOR ──────────────────────────────────────────
@@ -4069,6 +4124,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizRender: veFeadWizRender, veFeadWizStepHTML: veFeadWizStepHTML,
     veFeadWizNavHTML: veFeadWizNavHTML, veFeadWizFootHTML: veFeadWizFootHTML,
     veFeadWizLiveHTML: veFeadWizLiveHTML, veFeadWizReset: veFeadWizReset,
+    veFeadWizStpRolTipleri: veFeadWizStpRolTipleri,
     getFeadWizardPropertiesHTML: getFeadWizardPropertiesHTML,
     _fwSet: _fwSet, _fwSetRender: _fwSetRender, _fwGet: _fwGet,
     // STEP'ten başla (kural 34)
@@ -4083,6 +4139,6 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizStp: veFeadWizStp,
     // 3B görüntüleyicinin paneli (js/cp-fead-3b.js) bunları kullanıyor
     _fwEsc: _fwEsc, _fwFmt: _fwFmt, _fwStpRolAd: _fwStpRolAd, _fwStpRolDenetim: _fwStpRolDenetim,
-    _fwStpSecim: _fwStpSecim, veFeadWizKey: veFeadWizKey
+    _fwStpSecim: _fwStpSecim, _fwStpKayisTanim: _fwStpKayisTanim, veFeadWizKey: veFeadWizKey
   };
 }
