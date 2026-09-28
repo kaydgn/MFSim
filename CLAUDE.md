@@ -230,8 +230,10 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   Sonuçlar: Veri Gezgini · araç çubuğu · rapor bandı) ölçüyü ve zemini TEK
   jetondan alır: `--bant-h` + `--bant-zemin`. Bandın başlığı altındaki
   sütunun sol kenarından başlar. Tuvalin kendi çerçevesi yok (çukur emekli):
-  sınırı komşusunun çizgisidir. Kapı: `kabuk-bant.test.js` +
-  `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"*.
+  sınırı komşusunun çizgisidir. Ray kendi sütunu: palet ile arasında TEK
+  çizgi, bant satırı rayın başında köşe hücresiyle sürer. Kapı:
+  `kabuk-bant.test.js` + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* ·
+  *"RAY ÇERÇEVELİ"*.
 - **BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI.** `createNode` her düğümde
   `saveState()` çağırıyor; ONİKİ düğüm kuran bir kurucu (modül örneği,
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile

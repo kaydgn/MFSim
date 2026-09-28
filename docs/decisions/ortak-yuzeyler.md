@@ -492,6 +492,9 @@ kapısı bir RENK yüzünden düştü. Izgara artık çizimde en çok tekrar ede
 
 ## Atölye kabuğu — tek sütun ve alt durum şeridi (2026-09-22)
 
+> **Ray ↔ palet yarısı 2026-09-28'de emekli** — bkz. *"Ray kendi sütunu"*
+> (aşağıda). Durum şeridi yarısı aynen geçerli.
+
 **Hüküm.** Ray ile palet TEK sütun okunur: aynı zemin, aralarında dikey çizgi
 yok, sütunun sağ kenarında tek çizgi. Durum okumaları tuvalin ALTINDA, kendi
 şeridinde.
@@ -536,6 +539,23 @@ bu kararın kendisi oldu.
 koşamaz (jsdom `getBoundingClientRect`i sıfır döndürür, kenarlık rengini
 kaskaddan hesaplamaz). İki yönde düşmesi ölçüldü: ray kenarı geri konunca
 tek-sütun halkası, durum bandın içine dönünce yerleşim halkaları.
+
+## Ray kendi sütunu — çizgi ve köşe hücresi (2026-09-28)
+
+**Hüküm.** Ray ile palet arasında TEK dikey çizgi (rayın sağ kenarı; paletin
+sol kenarı yok), iki sayfada da. Kabuğun üst bandı rayın başında bir **köşe
+hücresiyle** sürer (`.ve-nav-rail::before`, `--bant-h` + `--bant-zemin`):
+bandın alt çizgisi ekranın sol kenarından tuvale kadar tek çizgidir ve rayın
+öğeleri o çizginin altında başlar.
+
+**Gerekçe.** Kullanıcı (rayla "Bileşenler" sütununun ekran görüntüsüyle):
+*"arası garip duruyor, bir çerçevesi yok."* Çizgi tuval sayfasında saydamdı:
+"Bileşenler" bandı rayın kenarında havada başlıyor, rayın aktif öğesi
+(y 38–87) bant satırına (32–58) biniyordu. Sayfa bayrağı (`ve-sayfa-tuval`)
+yalnız bu kural içindi ve onunla kalktı.
+
+**Kapı:** `kabuk-bant.test.js` → *"RAY KENDİ SÜTUNU"* + `kabuk-sutun.spec.js` →
+*"RAY ÇERÇEVELİ"* ve *"Sonuçlar sayfasında da aynı çerçeve"*.
 
 ## Kabuk TEK ÇİZGİ — üst bant tek jeton, tuval kenara yapışık (2026-09-23)
 
