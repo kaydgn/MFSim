@@ -76,7 +76,7 @@ test('FEAD kartı: geçiş ekranı görünüyor ve modülün İÇİNE giriliyor'
   expect(son.derinlik).toBe(1);
   // Açılış yüzeyi kuruldu (boş FEAD topolojisi sihirbazla karşılar): BOŞ
   // Kayış Yolu kartı (Çizim Masası, 2026-09-23) + kutusuz araç düğümleri —
-  // kayış (FEAD kuralı 4, 2026-09-26), çözücü · rapor · sihirbaz (kural 37,
+  // kayış (FEAD kuralı 4, 2026-09-26), çözücü · rapor · sihirbaz (kural 38,
   // 2026-09-28; eylemleri FEAD araçları penceresinde).
   expect(son.tipler).toEqual(['fead-belt', 'fead-layout', 'fead-report', 'fead-solver', 'fead-wizard']);
   expect(son.araclar).toBe(true);

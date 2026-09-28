@@ -269,7 +269,10 @@ describe('künye etiketi — parça numarasıyla', () => {
       expect(et.indexOf(r.part || '?')).toBe(0);
       expect(et).toContain('kol ' + r.armLen + ' mm');
     });
-    expect(DB.filter((r) => !r.part).length).toBe(4);      // AG00976 · kodsuz
+    // Kodsuz kalan: PDF'i arşivde OLMAYAN üç AG00976 revizyonu. 1715 kodunu
+    // kendi PDF'inin Drive Notes'undan aldı (gates-archive.test.js).
+    expect(DB.filter((r) => !r.part).map((r) => r.key).sort())
+      .toEqual(['AG00976-1655', 'AG00976-1668', 'AG00976-1705']);
   });
 
   test('parça sayısı kayıt sayısından AZ — asıl anlatılan bu', () => {

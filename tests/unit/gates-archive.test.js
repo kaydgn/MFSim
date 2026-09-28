@@ -215,7 +215,8 @@ describe('Gates arşivi — belge bütünlüğü', () => {
 describe('gergi künye kütüphanesi — arşive karşı', () => {
   const TL = require('../../js/fead-tensioners.js');
   // Kütüphane anahtarı → arşiv dosyası. AG00976'nın üçü arşivde YOK; 1715
-  // revizyonunun PDF'i var (2026-09-08) ama künye kapısı yalnız on rapora bakıyor.
+  // revizyonunun PDF'i var (2026-09-08) ve etiket kalıbı farklı olduğu için
+  // kendi testinde (`ARSIV_YENI`, aşağıda).
   const ARSIV = {
     'AG00879':      STATIK['AG00879'],
     'AG00894':      STATIK['AG00894'],
@@ -229,6 +230,9 @@ describe('gergi künye kütüphanesi — arşive karşı', () => {
     'AG00810':      STATIK['AG00810'],
   };
   const geo = (key) => sayfa(ARSIV[key], 'Geometric Analysis, Sheet 1 of 2');
+  // Künye kapısının on raporundan SONRA arşive giren PDF'ler — kendi testleri
+  // var (etiket kalıbı farklı), ama "PDF'i var mı" sorusu ikisine birden sorulur.
+  const ARSIV_YENI = { 'AG00976-1715': 'AG00976_8PK1715HD_Ten-250-110_2025-06-05.pdf' };
 
   test('kol · yay oranı · çalışma momenti: on kayıt raporuyla birebir', () => {
     const bad = [];
@@ -348,10 +352,43 @@ describe('gergi künye kütüphanesi — arşive karşı', () => {
     expect(Array.from(kod).sort()).toEqual(['E9843', 'T38519', 'T38624', 'T38665']);
   });
 
-  // DOĞRULANAMAYAN KOD YAZILMAZ: AG00976'nın PDF'i arşivde yok.
+  // DOĞRULANAMAYAN KOD YAZILMAZ: AG00976'nın üç revizyonunun PDF'i arşivde yok.
   test('arşivde PDF\'i olmayan kayıt parça kodu TAŞIMAZ', () => {
-    TL.veFeadTensionerList().filter((r) => !ARSIV[r.key])
-      .forEach((r) => expect(r.part).toBeUndefined());
+    const pdfli = (key) => !!ARSIV[key] || !!ARSIV_YENI[key];
+    const kodsuz = TL.veFeadTensionerList().filter((r) => !pdfli(r.key));
+    expect(kodsuz.map((r) => r.key).sort())
+      .toEqual(['AG00976-1655', 'AG00976-1668', 'AG00976-1705']);
+    kodsuz.forEach((r) => expect(r.part).toBeUndefined());
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════
+  //  AG00976-1715 — PDF'İ 2026-09-08'DEN BERİ ARŞİVDE, KÜNYESİ KODSUZDU
+  // ═════════════════════════════════════════════════════════════════════════
+  //
+  // Künye kapısı yalnız on rapora bakıyordu (`ARSIV`) ve 1715 revizyonu
+  // "PDF'i yok" sınıfında kaldı — kodu hiç yazılmadı. Oysa raporun kendi
+  // Drive Notes'u *"Ten. E9843 (22Nm); IDR E9839"* diyor. Kodsuz künye,
+  // örnekten kurulan modelde pim satırını *"parça kodu yok"* bıraktırıyordu.
+  //
+  // AYRI TEST, çünkü bu rapor Gates'in daha yeni sürümünden: etiketler birimsiz
+  // (`Arm Length`, `Spring Rate`, `Spring Mean Load`) ve on raporun kalıbıyla
+  // (`Arm Length mm`) okunmuyor — ölçüldü, `numberAfter` null dönüyor.
+  test('AG00976-1715 künyesi kendi PDF\'ine karşı — kod · kol · yay · çap', () => {
+    const r = TL.veFeadTensionerOf('AG00976-1715');
+    const g = sayfa(ARSIV_YENI['AG00976-1715'], 'Geometric Analysis, Sheet 1 of 2');
+    expect(g).toMatch(/Ten\.\s*E9843\s*\(22\s*Nm\)/);
+    expect(r.part).toBe('E9843');
+    expect(numberAfter(g, 'Arm Length')).toBeCloseTo(r.armLen, 2);
+    expect(numberAfter(g, 'Spring Rate')).toBeCloseTo(r.rateNm, 4);
+    expect(numberAfter(g, 'Spring Mean Load')).toBeCloseTo(r.meanNm, 3);
+    expect(numberAfter(g, '# of Ribs / Cord Material')).toBe(r.ribs);
+    // Çap: Flat sütununda dış çap, Pitch sütununda od + 2·h_r (PK/GATES 1,1).
+    const L = g.split('\n').map((x) => x.trim());
+    const iF = L.indexOf('Flat'), iP = L.indexOf('Pitch'), iE = L.indexOf('Effective');
+    const say = (a) => a.filter((x) => /^-?\d+\.\d+$/.test(x)).map(Number);
+    const flat = say(L.slice(iF + 1, iP)), pitch = say(L.slice(iP + 1, iE > iP ? iE : iP + 40));
+    expect(flat.some((x) => Math.abs(x - r.od) < 0.005)).toBe(true);
+    expect(pitch.some((x) => Math.abs(x - (r.od + 2.2)) < 0.005)).toBe(true);
   });
 
   // Drive Notes BAĞIL AÇIYI da yazıyor ve künyeden hesaplanan (mean−pre)/rate

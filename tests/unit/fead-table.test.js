@@ -603,8 +603,8 @@ describe('Dönüş Yönü — defterdeki gibi GİRDİ, ama tek alan üstünden',
 
 // ── SÜTUN LİSTESİ ─────────────────────────────────────────────────────────
 // KAYIŞ BOYU TABLODA YOK. Satıra değil çevrime ait (defterde K5:K10
-// birleştirilmiş) ve kartın rozeti boyu zaten yazıyor ("L … mm"); Gates'in
-// Layout Data tablosunda da yok.
+// birleştirilmiş) ve kartın rozeti boyu zaten yazıyor ("L … mm · kord … mm" —
+// numaranın d_b çizgisi ve CAD'in d_w'si); Gates'in Layout Data tablosunda da yok.
 describe('sütun listesi', () => {
   test('ON sütun — sonuncusu silme, kayış boyu listede yok', () => {
     expect(fead.VE_FEAD_TABLE_COLS).toHaveLength(10);
@@ -613,10 +613,12 @@ describe('sütun listesi', () => {
     // SIRA DEFTERİN SIRASI (bölgeler basımda gruplar, listeyi değil).
     expect(fead.VE_FEAD_TABLE_COLS.map((c) => c.k))
       .toEqual(['no', 'ad', 'x', 'y', 'eff', 'od', 'yon', 'sar', 'span', 'sil']);
-    // Boy kartın rozetinde, modelin kendi sayısıyla.
+    // Boy kartın rozetinde, modelin kendi sayılarıyla: L d_b'de (L_eff), kord
+    // d_w'de (L_pitch) — ikisi de çekirdeğin çıktısı, sunum dönüştürmüyor.
     const { build } = kurOrnek();
     const T = fead.veFeadTableRows(build);
-    expect(fead.veFeadLayoutCardStrip(build, 'mean')).toContain('L ' + veSayi(T.LeffMm, 1) + ' mm');
+    expect(fead.veFeadLayoutCardStrip(build, 'mean'))
+      .toContain('L ' + veSayi(T.LeffMm, 1) + ' mm · kord ' + veSayi(T.LpitchMm, 1) + ' mm');
   });
 });
 

@@ -88,6 +88,10 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
     return { sihirbaz: olc(document.querySelector('.ve-fw-modal > .ve-settings-header')), uc: olc(document.querySelector('.ve-fw-3b-bas')) };
   });
   expect(bas.uc).toEqual(bas.sihirbaz);
+  // GENİŞ PENCERE (kullanıcı isteği 2026-09-28): 3B açıkken sihirbaz ekranı
+  // doldurur — 1366'da 1.180 → 1.342 px; kapanınca eski ölçüsüne döner (aşağıda).
+  const genislik = () => page.evaluate(() => Math.round(document.querySelector('.ve-fw-modal').getBoundingClientRect().width));
+  expect(await genislik()).toBeGreaterThanOrEqual(1366 - 30);
   // SIĞDIRMA montajın KENDİ noktalarıyla: eksene hizalı kutunun köşeleriyle
   // sığdırmak eğik bakışta modeli küçültüyordu (kullanıcının dosyasında tuvalin
   // %29'u). Ölçülen: örneklenmiş köşelerin izdüşümünün yarı genişliği (NDC) —
@@ -159,12 +163,13 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   await expect(yan.locator('.ve-fw-3b-rol[aria-pressed="true"]')).toHaveText('Rol yok');
   await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-crank"]').click();
   await expect(yan.locator('.ve-fw-3b-rol[aria-pressed="true"]')).toContainText('Krank Kasnağı');
-  for (const [re, tip] of [[/AVARA/, 'fead-idler'], [/KL[İI]MA/, 'fead-ac'], [/GERG[İI]/, 'fead-tensioner']]) {
+  // KAYIŞ DA 3B'DE SEÇİLİR (kullanıcı isteği 2026-09-28)
+  for (const [re, tip] of [[/AVARA/, 'fead-idler'], [/KL[İI]MA/, 'fead-ac'], [/GERG[İI]/, 'fead-tensioner'], [/KAYI/, 'fead-belt']]) {
     const p = await tikla(re);
     await page.mouse.click(p.n.x, p.n.y);
     await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="' + tip + '"]').click();
   }
-  await expect(yan).toContainText('Rol verilenler 4');
+  await expect(yan).toContainText('Rol verilenler 5');
   // Boşluğa tıklamak seçimi kaldırır (tuvalin sol üst köşesi)
   const tuv = await page.locator('#ve-fw-3b-tuval').boundingBox();
   await page.mouse.click(tuv.x + 12, tuv.y + 12);
@@ -182,6 +187,8 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   const capler = await yan.locator('tr[data-ve-3b-kasnak] td:nth-child(2)').allInnerTexts();
   expect(capler.map((t) => +t.replace(',', '.')).sort((a, b) => a - b)).toEqual([75, 75, 127, 160]);
   await expect(page.locator('#ve-fw-3b-onden')).toBeEnabled();
+  // Kayış kasnak sayılmadı; kodu, kanalı ve genişliği panelde
+  await expect(yan.locator('[data-ve-3b-kayis]')).toContainText('8PK1475 · 8 kanal · 28,48 mm');
 
   // ÖNDEN BAK: 3B, 2B çizimle AYNI eksenlerde. AG00686'da klima krankın
   // solunda ve üstünde (x −224, y 448); arkadan bakınca sağda kalır.
@@ -216,6 +223,7 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   await page.keyboard.press('Escape');
   await expect(page.locator('#ve-fw-3b')).toBeHidden();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
+  expect(await genislik()).toBeLessThanOrEqual(1180);        // sihirbaz eski ölçüsünde
   await expect(page.locator('.ve-fw-stp-svg [data-ve-stp-kasnak]')).toHaveCount(4);
   await expect(page.locator('.ve-fw-stp-svg .ve-fw-stp-kol')).toHaveCount(1);
   await expect(adSatiri('KRANK')).toContainText('8 × PK');
@@ -245,7 +253,8 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   expect(st.tipler).toEqual(['fead-ac', 'fead-crank', 'fead-idler']);
   expect(st.ten.tenPart).toBe('T38624');
   expect(st.ten.armLen).toBe(90);
-  expect(st.belt).toEqual({ profile: 'PK', brand: 'GATES', ribs: 8 });   // kayışa dokunulmadı
+  // Kayış rolü verildi: profil · kanal · kod dosyadan, marka varsayılan; numara girdi değil
+  expect(st.belt).toEqual({ profile: 'PK', brand: 'GATES', ribs: 8, beltType: '8PK1475' });
   expect(st.sira).toBe('agac');
 
   // ── 5) KASNAKLAR: sıra uyarısı ve onayı ─────────────────────────────────
@@ -265,6 +274,10 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
     return { ok: r.ok, spin: r.spin, n: r.order.length };
   });
   expect(b).toEqual({ ok: true, spin: -1, n: 4 });
+  // KAYIŞ adımı: CAD'deki kayış bu düzende ne yapar
+  await page.locator('.ve-fw-steps li').nth(3).click();
+  await expect(page.locator('[data-ve="cad-kayis"]')).toContainText('8PK1475');
+  await expect(page.locator('[data-ve="cad-kayis"]')).toContainText('Bu kayışla kol');
 
   // ── 7) MODELİ KUR ───────────────────────────────────────────────────────
   await page.locator('.ve-fw-steps li').nth(5).click();

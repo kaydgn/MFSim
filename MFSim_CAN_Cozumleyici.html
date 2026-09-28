@@ -1612,7 +1612,7 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
 }
 
 /* ===== SAYFA RAYI (activity bar) ===== */
-/* Krom ailesinden: arka planı şerit şeridiyle aynı (--bg-tertiary). Aktif öğe
+/* Krom ailesinden: arka planı üstteki şeritle aynı (--bg-secondary). Aktif öğe
    çalışma alanının rengine (--bg-primary) boyanır ve ekranın sol kenarına
    oturan bir aksan çubuğu alır — "buradan o alana açılıyorum" böyle okunur.
    Gerekçe ve konum kararı: index.html "SAYFA RAYI" yorumu. */
@@ -1626,9 +1626,24 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   flex-direction:column;
   align-items:stretch;
   gap:2px;
-  padding:6px 4px;
+  padding:0 4px 6px;
   background:var(--bg-secondary);
   border-right:1px solid var(--border-color);
+}
+/* KÖŞE HÜCRESİ — bant satırı rayın başında da sürer. Kabuğun üst bandı
+   (--bant-h) paletin, sekmelerin ve müfettişin başında duruyor; rayın başı
+   boştu ve "Bileşenler" bandı rayın kenarında havada başlıyordu (kullanıcı,
+   2026-09-28: "arası garip duruyor, bir çerçevesi yok"). Köşe hücresiyle
+   bandın alt çizgisi ekranın sol kenarından tuvale kadar TEK çizgi; rayın
+   öğeleri o çizginin ALTINDA başlar (aktif öğe artık bant satırına binmiyor).
+   Rayın kendi dolgusunu (4 px) iki yandan geri alır: hücre dikey çizgiye
+   kadar uzanır. Kapı: kabuk-sutun.spec.js → "RAY ÇERÇEVELİ". */
+.ve-nav-rail::before{
+  content:""; flex:none;
+  min-height:var(--bant-h); box-sizing:border-box;
+  margin:0 -4px 4px;
+  background:var(--bant-zemin);
+  border-bottom:1px solid var(--border-color);
 }
 /* Karşılama ekranındayken (modül seçilmemiş) ray gizlenir — sınıfı sidebar ile
    aynı yer yönetir: js/components.js › veObserveModuleOverlay(). Ray .ve-main'in
@@ -1730,22 +1745,17 @@ body.ve-no-module #ve-ribbon{ display:none; }
 /* Dar ekranda etiketler düşer, ikonlar kalır: 64px'lik ray 1000px'in altında
    tuvalden görünür pay alır. İkon + title yeterli — hedef boyutu küçülmez. */
 @media (max-width: 1000px){
-  .ve-nav-rail{ width:40px; padding:6px 4px; }
+  .ve-nav-rail{ width:40px; padding:0 4px 6px; }
   .ve-nav-label{ display:none; }
   .ve-nav-item{ padding:8px 2px; }
   .ve-nav-item.active::before{ left:-4px; }
 }
 
-/* RAY + PALET TEK SÜTUN (Atölye). İkisi ayrı ebeveynde duruyor ve bu YAPISAL:
-   ray `.ve-main`'in DIŞINDA, çünkü Sonuçlar'a geçince panel de tuval de
-   değişir, ray yerinde kalır. Yani birleştirme bir DOM taşıması olamaz —
-   yüzeyle yapılır: ikisi aynı zemine gelir ve aradaki dikey çizgi kalkar,
-   sütunun sağ kenarında TEK çizgi (paletin) durur.
-   Çizgi yalnız TUVAL sayfasında kalkar: Sonuçlar'da palet gizleniyor ve o tek
-   çizgi onunla birlikte gidiyor, ray kendi kenarını geri alır. Bayrağı
-   js/tabs.js koyuyor — satır içi `display` dizesine bakan bir seçici
-   (`[style*="none"]`) tarayıcının serileştirmesine bağlı olurdu. */
-html.ve-sayfa-tuval .ve-nav-rail{ border-right-color:transparent; }
+/* RAY KENDİ SÜTUNU — palet ile arasında TEK çizgi, iki sayfada da. Atölye
+   turunda (2026-09-22) ikisi tek sütun okunsun diye çizgi tuval sayfasında
+   kaldırılmıştı; paletin bandı rayın kenarında çerçevesiz kalıyordu ve
+   kullanıcı çerçeveyi geri istedi (2026-09-28). Çizgi rayın (sağ kenar),
+   paletin sol kenarı YOK — sınır tek çizgi. */
 
 .ve-main{
   flex:1;
@@ -8677,6 +8687,13 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-tbl{ width:100%; font-size:var(--fs-tiny); }
 .ve-fw-3b-tbl td:first-child{ display:flex; align-items:center; gap:6px; }
 .ve-fw-3b-tbl .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
+.ve-fw-3b-kayis{ margin:0; display:flex; align-items:center; gap:6px; font-size:var(--fs-tiny); }
+/* 3B AÇIKKEN PENCERE GENİŞLER (kullanıcı isteği 2026-09-28). Sihirbazın
+   1180 px'i 320 px'lik panelden sonra tuvale ~860 px bırakıyordu; kaplamanın
+   payı daralır, pencere ekranı doldurur. Kapanınca sınıf düşer
+   (js/cp-fead-3b.js → _fw3bGenis). */
+.ve-settings-overlay.ve-fw-3b-genis{ padding:12px; }
+.ve-fw-3b-genis .ve-fw-modal{ max-width:1840px; height:calc(100vh - 24px); }
 @container vefw3b (max-width: 760px){
   .ve-fw-3b-govde{ grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(220px, 1fr) minmax(0, 42%); }
   .ve-fw-3b-yan{ border-left:0; border-top:1px solid var(--border-color); }

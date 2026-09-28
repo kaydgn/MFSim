@@ -269,7 +269,7 @@ birlikte tutuyor.
 
 ##### DÖNÜŞ YÖNÜ — `fead-spin` "Dönüş Yönü" (2026-08-28)
 
-> **BİLEŞEN KALKTI (2026-09-28, tasarım A — SKILL kural 37).** Yön ve gergi
+> **BİLEŞEN KALKTI (2026-09-28, tasarım A — SKILL kural 38).** Yön ve gergi
 > tarafı hükmü **FEAD araçları penceresinin Yön bölümünde**
 > (`js/cp-fead-araclar.js`): iki durumlu anahtar (CW | CCW, ipucu düzlemi
 > yazar) + hüküm satırı. Aşağıdaki kurallar o yüzeyde AYNEN geçerli — durum

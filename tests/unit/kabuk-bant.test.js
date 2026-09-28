@@ -35,11 +35,11 @@ function kural(secici) {
   return m ? m[1].replace(/\s+/g, ' ') : null;
 }
 
-// Kabuğun ÜST BANTLARI — soldan sağa: Topoloji (kenar çubuğu başlığı ·
-// sekme bandı · müfettiş başlığı) ve Sonuçlar (Veri Gezgini · araç çubuğu ·
-// rapor bandı).
-const BANTLAR = ['.ve-sidebar-header', '.ve-doc-dock', '.ve-properties-header',
-  '.ve-results-head', '.ve-trace-toolbar', '.ve-rep-head'];
+// Kabuğun ÜST BANTLARI — soldan sağa: rayın köşe hücresi, Topoloji (kenar
+// çubuğu başlığı · sekme bandı · müfettiş başlığı) ve Sonuçlar (Veri Gezgini ·
+// araç çubuğu · rapor bandı).
+const BANTLAR = ['.ve-nav-rail::before', '.ve-sidebar-header', '.ve-doc-dock',
+  '.ve-properties-header', '.ve-results-head', '.ve-trace-toolbar', '.ve-rep-head'];
 
 describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
   test('jetonlar TEK yerde tanımlı; eski ad HİÇBİR kaynakta kalmadı', () => {
@@ -188,5 +188,31 @@ describe('ŞERİT BANDI İNCE — 32 px, gövde aynı boyda', () => {
     // Gövde = açık yükseklik − bant. Yalnız bant küçülseydi gövde sessizce
     // büyürdü (gruplar 94 px'e göre dizili).
     expect(jeton('ribbon-expanded-h') - jeton('ribbon-strip-h')).toBe(94);
+  });
+});
+
+// RAY KENDİ SÜTUNU (2026-09-28). Kullanıcı: rayla "Bileşenler" sütununun
+// "arası garip duruyor, bir çerçevesi yok." Atölye turunda aradaki çizgi tuval
+// sayfasında saydam yapılmıştı (`html.ve-sayfa-tuval .ve-nav-rail`) ve paletin
+// bandı rayın kenarında havada başlıyordu. Çizimin kendisi:
+// kabuk-sutun.spec.js → "RAY ÇERÇEVELİ".
+describe('RAY KENDİ SÜTUNU — palet ile arasında TEK çizgi', () => {
+  test('rayın sağ kenarında çizgi var ve hiçbir kural onu kaldırmıyor', () => {
+    expect(kural('.ve-nav-rail')).toMatch(/border-right:\s*1px solid var\(--border-color\)/);
+    // Seçici hangi önekle yazılırsa yazılsın (sayfa bayrağı, medya sorgusu).
+    expect(CSS).not.toMatch(/\.ve-nav-rail\s*\{[^}]*border-right(?:-color|-width)?:\s*(?:transparent|none|0)\b/);
+    // Çizgi TEK: paletin sol kenarı yok.
+    expect(kural('.ve-sidebar')).not.toMatch(/border-left:/);
+  });
+
+  test('köşe hücresi bandın kendisi ve rayın başına yapışık', () => {
+    const k = kural('.ve-nav-rail::before');
+    expect(k).toMatch(/content:\s*""/);
+    expect(k).toMatch(/border-bottom:\s*1px solid var\(--border-color\)/);
+    // Rayın ÜST dolgusu yok (hücre şeridin çizgisine yapışır); yan dolguyu
+    // hücre geri alır ki dikey çizgiye kadar uzansın.
+    const pay = kural('.ve-nav-rail').match(/padding:\s*0 (\d+)px \d+px;/);
+    expect(pay).not.toBeNull();
+    expect(k).toMatch(new RegExp('margin:\\s*0 -' + pay[1] + 'px'));
   });
 });

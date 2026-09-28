@@ -69,7 +69,7 @@ olurdu.
    → *"kayış çizimde tıklanır"*, `cp-fead.test.js` → *"açılışın kayışı
    devralınır"* + *"FEAD editörü açılışı"*, `fead-cizim-masasi.spec.js` →
    *"KAYIŞA TIKLA"*.
-   **ARAÇLARIN DA KUTUSU YOK** (2026-09-28, kural 37): Çözücü · Rapor ·
+   **ARAÇLARIN DA KUTUSU YOK** (2026-09-28, kural 38): Çözücü · Rapor ·
    Sihirbaz aynı kalıpla kutusuz, silinmez, tek kopya; eylemleri FEAD araçları
    penceresinde. Tuvalde kutu kuran TEK FEAD tipi Kayış Yolu kartı. Kapı:
    `cp-fead.test.js` → *"kanvasta yalnız Kayış Yolu"*.
@@ -92,7 +92,7 @@ olurdu.
    Örnekler bileşeni kaldırıldı"*, `fead-sihirbaz-tablo.spec.js`.
 6. **"Otomatik Düzenle" yalnız KUTUSU OLAN kartları dizer** — bugün yalnız
    Kayış Yolu kartları (kasnak, kayış ve araçların kutusu yok): tek sıra, yan
-   yana; sığdırma FEAD araçları penceresinin sağından başlar (kural 37).
+   yana; sığdırma FEAD araçları penceresinin sağından başlar (kural 38).
    Sol şeridin kuralı GENEL olarak duruyor (kutulu bir künye gelirse oraya):
    **dikey adım KUTUYU DEĞİL, kutu+ADI sayar** (`veFeadArrangeByCoords` →
    `adPayi`) — ad kutunun ALTINDA duruyor, adım onu saymayınca adın altında
@@ -317,16 +317,31 @@ olurdu.
     çevrilir (`veFeadMigrateRunToLayout`); çevrilmeseydi tanımsız tipli bir
     düğüm olarak kalırlardı. Ayrıntı ve kapı listesi
     `references/kanvas-ve-kart.md` → *"İKİ KANVAS, TEK TİP"*.
-19. **ÖRNEĞE SAYI YAZMAK İÇİN KAYNAĞIN ONU SÖYLEMESİ GEREKİR.** Aksesuar devir
-    sınırları on iki örneğin altısına yazıldı ve altısı da raporun KENDİ
-    bileşen dosyasından çözüldü (`SD7H15-AC.cmp` · `AG810-250Amp-ALT.cmp` ·
-    `TM31.cmp`); kalan altısında rapor modeli söylemiyor (`A_C.cmp`,
-    `7_9kW_A_C.cmp`, katalogda olmayan `220Amp` ve `TM32`) ve **sınır
-    yazılmadı**. Aksesuarın adı kataloğun yazımını kullanır ("Sanden 7H15",
-    raporun `SD7H15`'i değil) — bağ o zaman gizli bir eşleme tablosu olmadan
-    makineyle denetlenebiliyor. `accLib` YAZILMAZ: künye uygulamak raporun
-    ölçülmüş kW eğrisini ezer, ve aynı modelin iki kaydı varken birini seçmek
-    doğrulanamayan bir parça numarası iddiasıdır.
+19. **ÖRNEĞE SAYI YAZMAK İÇİN KAYNAĞIN ONU SÖYLEMESİ GEREKİR — söylüyorsa
+    GELİR.** Aksesuar devir sınırları on iki örneğin sekizine yazıldı, hepsi
+    raporun KENDİ bileşen dosyasından (`SD7H15-AC.cmp` · `AG810-250Amp-ALT.cmp`
+    · `TM31.cmp` · `Valeo - TM21 - 7_9kW_A_C.cmp`); kalanlarda rapor modeli
+    söylemiyor (`A_C.cmp`) ya da model katalogda yok (`220Amp`, `TM32`) ve
+    **sınır yazılmadı**. Kapı İKİ YÖNLÜ: yazılan sınır kataloğun o model için
+    söylediği sayı olmak zorunda, VE adı kataloğa çözülüp sınırı taşımayan
+    aksesuar da kırmızı (AG00902'nin TM21'i böyle kaçmıştı — hücre beş ayrı
+    çizim çağrısıydı, satır okuyucu yalnız `7_9kW_A_C.cmp`'yi görüyordu).
+    Adın parantezindeki model örneğin KENDİ PDF'inde yazılı olmak zorunda
+    (uydurulamaz). Ad kataloğun yazımını kullanır ("Sanden 7H15", raporun
+    `SD7H15`'i değil) — bağ gizli bir eşleme tablosu olmadan makineyle
+    denetlenebiliyor. **Ad çizime sığmalı**: AG00902'de "Klima (TM21)" — daha
+    uzun her yazım küçük kartta kol konumu künyesinin üstüne düşüyordu;
+    yerleştiriciye "sığmayan ad kısalsın" eklemek REDDEDİLDİ (tam adlar
+    kipindeki karelerin %45'inde kullanıcının "Adı kısalt"ı kapatma kararını
+    eziyordu). `accLib` YAZILMAZ: künye uygulamak raporun ölçülmüş kW eğrisini
+    ezer, ve rapor model söyler, BMC parça numarası söylemez.
+    **GERGİ KÜNYESİ ÖRNEKLE GELİR** (`tenLib` · `tenLibVer` · `tenPart`, on bir
+    Gates örneği): bağ bir seçim değil — on dört künyeden TAM OLARAK BİRİ
+    sıfır sapma veriyor (`veFeadTensionerDrift`, parça + montaj) ve o, örneğin
+    kendi raporunun künyesi. Bağ olmadan sihirbaz künyeyi "elle gir" gösteriyor
+    ve pim satırı on iki örneğin on ikisinde "parça kodu yok" diyordu. BMC
+    tedarikçi sayfası bağ TAŞIMAZ (künyenin kaynağı değil). Kapı:
+    `fead-ornek-kunye.test.js`.
     **Motorun governed devri HİÇBİR örneğe yazılmaz** — arşivdeki on bir
     raporun hiçbirinde yok ve BMC sayfasının krank çapı (197,32) motor
     kataloğunda tam eşleşmiyor; en yakın dört kayıt governed'da ayrışıyor
@@ -405,7 +420,7 @@ olurdu.
     on ikisinde de `inputs:0, outputs:0`). Kasnak K/S rozeti de aynı sınıftan:
     kutu kalkınca `getElementById` hep null döndü, kod erişilemez hâlde kaldı.
     Kapı: `cp-fead.test.js` → *"BAĞLANTI satırı yok"* + *"HİÇBİRİNDE port
-    yok"* + *"KASNAK rozet almaz"*. Araç kutuları (2026-09-28, kural 37):
+    yok"* + *"KASNAK rozet almaz"*. Araç kutuları (2026-09-28, kural 38):
     toast'lar, pencere metinleri ve kılavuz "Çözücü → ▶ Hesapla" / "kutusuna
     çift tıklayın" / "Dönüş Yönü kartı" demeye devam ediyordu — kapı
     `fead-araclar.test.js` → *"kaldırılan kutuların DİLİ"*.
@@ -463,7 +478,7 @@ olurdu.
     Kayış Yolu (Şema · Geometri), Rapor
     (Tür · Künye), Sihirbaz (Taslak · Adımlar) ve
     kökteki modül kartı (İçerik · Model) da bu kabukta (Dönüş Yönü penceresi
-    2026-09-28'de kalktı — FEAD araçları penceresinin Yön bölümü, kural 37). Pencerenin tek EYLEMİ
+    2026-09-28'de kalktı — FEAD araçları penceresinin Yön bölümü, kural 38). Pencerenin tek EYLEMİ
     sağ sütunda. **Modül kartı modelini ALT TOPOLOJİDEN kurar** — kökte
     `veFeadBuildFromCanvas` boş modeli çözerdi. "Her pencere" bir LİSTE değil
     KURAL olarak kapılı: `tests/unit/fead-pencere-ailesi.test.js` tipleri
@@ -590,9 +605,19 @@ olurdu.
       ayna modeli yine çözer, yalnız krankın dönüş yönünü çevirir.
     • **Birim dosyanın bağlamından**, tahmin edilmez; MAPPED_ITEM montajı
       desteklenmez ve uyarıyla söylenir.
-    • **Kayışa dokunulmaz** (kullanıcı kararı): sıra ağaç sırasıdır ve
-      `siraKaynagi: 'agac'` ile işaretlidir; kayış parçası rol almadıkça
-      analiz edilmez.
+    • **Kayış YALNIZ rolü verilirse** (2026-09-28, kullanıcı: *"3B
+      görüntüleyicide kayışı da seçelim"*): `fead-belt` birimi kasnak DEĞİL —
+      yüzleri kasnak diye hiç incelenmez (kayışın yayları kasnak eksenleriyle
+      eşeksenli silindirler, aday üretirdi). Kod adın İÇİNDEN kesilir ve
+      `veFeadBeltParseCode`'a verilir (ikinci ayrıştırıcı yok; klimanın
+      "8PK-24V"si kod değil; iki farklı kod → hiçbiri). Genişlik yan
+      düzlemlerden, kanal genişlikten sağlanır (8 × 3,56 = 28,48; pay 0,2 mm),
+      ayrışma sebebiyle yazılır. Aktarım profil · kanal · kodu yazar, marka
+      varsayılan kalır; **numara GİRDİ değil** (gergi varken boy çıktı) —
+      `stepKaynak.kayis` izinde, Kayış adımının *CAD'deki kayış* kartı onu
+      `veFeadBeltFit` ile değerlendirir (numara − gereken · kolun yeri, yönüyle).
+      Rol verilmezse kayışa dokunulmaz; sıra ağaç sırasıdır
+      (`siraKaynagi: 'agac'`).
     • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
       TEK ise yazılır (kural 19'un gerekçesi). Kayıt µm'ye (açı 0,0001°)
       yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
@@ -639,6 +664,10 @@ olurdu.
       bakış yönüne paraleldir ve resim keyfi bir açıyla döner.
     • Başlık PENCERE AİLESİNİN (`.ve-settings-header` + 22 px çizgi kapat,
       ikon `mf-ico-box`): kaplama sihirbazın kendi başlığını da örtüyor.
+    • **Açıkken pencere GENİŞLER** (2026-09-28, kullanıcı: *"daha geniş bir
+      pencere açılsın"*): kaplamaya `.ve-fw-3b-genis` (`_fw3bGenis`), sihirbaz
+      1.180 px → ekranın tamamı (en çok 1.840); kapanınca eski ölçüsüne döner.
+      Rol düğmeleri kartın seçicisiyle TEK listeden (`veFeadWizStpRolTipleri`).
     • **Tek Esc tek katman**: Esc önce 3B'yi kapatır; sihirbaz kapanınca WebGL
       bağlamı bırakılır. Üçgenler kartta saklanır (`_fwStp.ag`), üçgenleme
       kare kare (24 ms bütçe) — dosyanızda 1,5 sn, tek seferde arayüz donardı.
@@ -668,13 +697,15 @@ olurdu.
     (span %0,5 · sarım 0,2°) ve *"ROL KULLANICININ"* (seçilmemiş kasnak,
     iki izli damper, kaburgalı avara); `tests/unit/fead-wizard-step.test.js`
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
-    · sıra · künye · .stpZ) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
+    · sıra · künye · .stpZ) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
+    kayış birimi · genişlik · aktarım · tek kayış · CAD'deki kayış kartı · tek
+    rol listesi) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
     renk · panel · otomatik açılış · Esc · tazeleme kancası) +
     `tests/unit/step-ucgen.test.js` (kaplama TAM · alan · hacim ve yön · su
     geçirmezlik · baştaki Delaunay · ölçülmüş kusurlar) +
     `tests/e2e/fead-step.spec.js` (gerçek File · UYGULAMANIN KENDİ karesi
     çiziyor · başlık ailenin · sığdırma montajın kendi noktalarıyla · 3B'de
-    tıklayıp rol · alt montaj · halkalar · önden/arkadan yön
+    tıklayıp rol · kayış rolü · geniş pencere · alt montaj · halkalar · önden/arkadan yön
     ve XY düzleminde yukarı · hesap seçimi kaldırır · Esc · kart altından
     değişince 3B kapanır · bırakma · Modeli Kur).
 
@@ -721,7 +752,27 @@ olurdu.
     `fead-duty.test.js` → *"sıcaklık kaynağından"*, `cp-fead-report.test.js` →
     *"katılmamıştır hükmü geri gelmez"*.
 
-37. **ARAÇLAR PENCEREDE, TOPOLOJİDE DEĞİL** (2026-09-28, kullanıcı kararı —
+37. **KAYIŞ NUMARASI d_b ÇİZGİSİNDE, d_w YANINDA** (2026-09-28, kullanıcı
+    kararı). 8PK1410'daki 1410 kanallı kasnağın dış çapındaki boydur (ISO 9981
+    efektif boyu, ContiTech L_b, çekirdeğin `LeffMm`'i); CAD eskizi çoğunlukla
+    kordu (d_w = d_b + 2·h_b, `LpitchMm`) ölçer. Gerekçe: d_w'yi numara saymak
+    kayışı 2π·h_b uzun seçtirir ve kolu sessizce başka açıya oturtur.
+    • **Dönüşüm TEK yerde**: `veFeadBoyCizgileri` (köprü) — fark h_b'den, yani
+      MARKADAN (PK Gates 7,54 · ContiTech 9,42 mm). Her yüzey (Boy sekmesinin
+      kesit figürü `veFeadKesitSVG` · sağ sütun · rozet · sihirbaz bandı · rapor
+      §8.2 · Sonuç Özeti) numarayı d_b'de yazar, kordu yanına bu dönüşümle.
+    • **Okuma TEK kaynak**: `veFeadBoyOkuma` — çözüm varsa köprünün çözüme
+      yazdığı boy, yoksa sabit kipte girilen; serbestte model yoksa '—'.
+      Kilit (`veFeadBeltModeLocked`) "Boy kaynağı"nda da sayılır.
+    • **`.ve-fp-l` etiketinde sembol yok**: etiket büyük harfe çeviren bir flex
+      kutusu — `d<sub>b</sub>` "D B", π Π olur. Semboller figürde ve açıklamada.
+    • Paftanın **"Efektif Çap"** sütunu d_w'dir (defterin adı, OD + 2·h_b);
+      "efektif boy" d_b'de. Ad kalır (defterle birebir), ayrım kılavuz §8.5'te.
+    Kapı: `fead-boy-cizgisi.test.js` (dönüşüm çekirdeğin geometrisiyle aynı ·
+    çözüme yazılan boy L_eff − ofset · figür ölçekli · kart = sütun · öteki
+    yüzeyler) + `fead-table.test.js` → *"ON sütun"* (rozet modelin sayılarını).
+
+38. **ARAÇLAR PENCEREDE, TOPOLOJİDE DEĞİL** (2026-09-28, kullanıcı kararı —
     tasarım tezgâhı IV · A: *"A'yı çok beğendim. Onu yapalım."*). Sihirbaz ·
     Hesapla · Ayarlar (Çözücü) · Rapor · Yön, tuval kabının sol üstündeki
     **FEAD araçları** penceresinde (`js/cp-fead-araclar.js`). Çözücü, Rapor ve

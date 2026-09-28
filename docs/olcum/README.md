@@ -1,7 +1,13 @@
 # Ölçüm defteri — `boyut.csv`
 
-Teslim edilen tek dosyanın (`MFSim_Code.html`) boyut geçmişi. **Boyut nöbeti
-rutini yazar, elle düzenlenmez** — elle yazılan defter sessizce bayatlar.
+Teslim edilen tek dosyanın (`MFSim_Code.html`) boyut geçmişi. **Satırı,
+dosyayı kullanıcıya gönderen oturum yazar** — gönderim sırası zaten build alıp
+boyutu ölçüyor, satır oradan bedavaya gelir.
+
+Eskiden bunu günlük bir rutin yazıyordu; rutin 2026-09-28'de kaldırıldı (haftalık
+limiti tüketiyordu) ve **18 günde deftere tek satır düşürememişti** — çıktısını
+merge edilmeyen bir dala itiyordu. Defterin değeri ölçümde değil, ölçümün
+MERGE EDİLMİŞ olmasında.
 
 ## Neden var
 
