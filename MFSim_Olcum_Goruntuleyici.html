@@ -10221,6 +10221,10 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   box-shadow:var(--shadow-lg); overflow:hidden;
   font-size:var(--fs-body); line-height:1.4;
 }
+/* `display:flex` tarayıcının [hidden]{display:none} kuralını YENER: kapsam
+   dışında `hidden` taşıyan pencere ana topolojide görünür kalıyordu
+   (tests/e2e/fead-araclar.spec.js → "KAPSAM" yakaladı; jsdom CSS uygulamaz). */
+.ve-fead-arac[hidden]{ display:none; }
 .ve-fead-arac.surukle{ box-shadow:var(--shadow-xl); opacity:.97; }
 .ve-fead-arac-bas{ cursor:grab; user-select:none; -webkit-user-select:none; flex:none; }
 .ve-fead-arac-bas:active{ cursor:grabbing; }

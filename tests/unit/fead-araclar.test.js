@@ -481,6 +481,15 @@ describe('görünüm CSS’te — ölçü sabitleri birebir', () => {
     expect(kural('.ve-fead-arac-yuva.yakin')).toMatch(/opacity:1/);
   });
 
+  // `hidden` NİTELİĞİ TEK BAŞINA GİZLEMEZ: `.ve-fead-arac{display:flex}`
+  // tarayıcının [hidden] kuralını eziyor ve kapsam dışındaki pencere ana
+  // topolojide görünür kalıyordu. jsdom CSS uygulamadığı için yukarıdaki
+  // kapsam testi niteliği görüp geçiyordu; gerçek tarayıcı kapısı
+  // fead-araclar.spec.js → "KAPSAM".
+  test('hidden nitelikli pencere CSS’te de gizli — display kuralı onu ezmiyor', () => {
+    expect(kural('.ve-fead-arac[hidden]')).toMatch(/display:\s*none/);
+  });
+
   test('kılavuz sahnesi pencereyi AKIŞTA çizer (tuvalde mutlak)', () => {
     expect(kural('.ve-fead-arac')).toMatch(/position:absolute/);
     expect(kural('.ve-fead-arac.ve-fead-arac-sahne')).toMatch(/position:relative/);

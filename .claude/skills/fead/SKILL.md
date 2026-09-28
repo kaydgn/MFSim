@@ -792,6 +792,10 @@ olurdu.
       sığdırma o genişliği düşer (`veTuvalSolOrtu`) — söylemeseydi açılış
       kadrajında kart pencerenin altında kalırdı. Serbest pencere söylemez.
     • **YALNIZ FEAD KAPSAMINDA**; kapsamın tek noktası `veSyncSidebarScope`.
+      Gizleme `hidden` + `.ve-fead-arac[hidden]{display:none}` — sınıfın
+      `display:flex`'i tarayıcının `[hidden]` kuralını ezer ve pencere ana
+      topolojide görünür kalırdı (jsdom'da görünmez; kapı `fead-araclar.spec.js`
+      → *"KAPSAM"*).
     • **TAZELEME ÜÇ NOKTADAN**: `veFeadRefreshLayoutCards` (her saveState) ·
       `veFeadSolve` · `_feadForgetResults`. Yön değişince gergi tarafı hükmü
       DÜŞER — bayat sonucun hükmü başka bir yönün hükmüdür.
