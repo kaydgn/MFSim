@@ -265,27 +265,32 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
       const xs = veImpXSeries(slot._dataSource);
       const seri = slot.sensors.map((s) => veGetSensorData(s.id, s.signal));
       const tr = [...document.querySelectorAll('#ve-table-body-0 tr')];
+      // Tablo Türkçe yazar (karar 7·C): binlik NOKTA, ondalık virgül, eksi '−'.
+      // Föy sütun başına TEK hane yazar (js/sonuc-tablo.js), yani pay hücrenin
+      // kendi hanesinin yarısıdır.
+      const oku = (m) => parseFloat(m.replace(/\u2212/g, '-').replace(/\./g, '').replace(',', '.'));
+      const yakin = (m, ham) => Math.abs(oku(m) - ham) <= 0.5 * Math.pow(10, -((m.split(',')[1] || '').length)) + 1e-9;
       const uyusmaz = [];
       [0, 1, 2, 17, 99, 199].forEach((i) => {
         if (i >= tr.length) return;
         const td = [...tr[i].querySelectorAll('td')].map((e) => e.innerText.trim());
-        if (td[0] !== String(i + 1)) uyusmaz.push(`satır ${i}: sıra no ${td[0]}`);
-        // Tablo Türkçe yazar (karar 7·C: "0,020"): hücre programın okuyucusuyla okunur
-        if (Math.abs(veSayiOku(td[1]) - xs[i]) > 1e-6) uyusmaz.push(`satır ${i}: X ${td[1]} ≠ ${xs[i]}`);
+        if (!yakin(td[0], xs[i])) uyusmaz.push(`satır ${i}: X ${td[0]} ≠ ${xs[i]}`);
         seri.forEach((d, k) => {
-          const bek = veFormatTooltipVal(d ? d[i] : null);
-          if (td[2 + k] !== bek) uyusmaz.push(`satır ${i} sütun ${k}: ${td[2 + k]} ≠ ${bek}`);
+          const ham = d ? d[i] : null;
+          const hucre = td[1 + k];
+          const ok = (typeof ham === 'number') ? yakin(hucre, ham) : hucre === (ham == null ? '—' : String(ham));
+          if (!ok) uyusmaz.push(`satır ${i} sütun ${k}: ${hucre} ≠ ${ham}`);
         });
       });
-      const son3 = tr.slice(-3).map((t) => t.querySelector('td').innerText.trim());
-      return { satir: tr.length, uyusmaz, son3, ornek: xs.length };
+      const ozet = [...document.querySelectorAll('#ve-table-0 tfoot tr.ve-foy-ozet th')].map((t) => t.innerText.trim());
+      return { satir: tr.length, uyusmaz, ozet, ornek: xs.length };
     });
 
-    // 200 örnek → 200 veri satırı + MİN/MAKS/ORT
+    // 200 örnek → 200 veri satırı; özet gövdede DEĞİL, tfoot'ta (yapışık)
     expect(r.ornek).toBe(200);
-    expect(r.satir).toBe(203);
+    expect(r.satir).toBe(200);
     expect(r.uyusmaz).toEqual([]);
-    expect(r.son3).toEqual(['MİN', 'ORT', 'MAKS']);   // görüntüleyiciyle aynı
+    expect(r.ozet).toEqual(['En düşük', 'Ortalama', 'En yüksek']);   // görüntüleyiciyle aynı
   });
 
   test('Tablo X ekseni değiştirilince O EKSENİ gösterir', async ({ page }) => {
@@ -309,12 +314,16 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     const r = await page.evaluate(() => {
       const slot = veResultSlots[0];
       const hiz = veGetSensorData(slot.sensors[1].id, slot.sensors[1].signal);
-      const bas = [...document.querySelectorAll('#ve-table-0 th')].map((e) => e.innerText.trim());
+      // Föy: X sütunu İLK sütun; adı ile birimi ayrı satırda (js/sonuc-tablo.js)
+      const th = document.querySelector('#ve-table-0 thead th');
+      const bas = th.querySelector('.ve-foy-sad').innerText.trim() + ' ' +
+                  th.querySelector('.ve-foy-birim').innerText.trim();
+      const oku = (m) => parseFloat(m.replace(/\u2212/g, '-').replace(/\./g, '').replace(',', '.'));   // Türkçe yazım (karar 7·C)
       const x = [...document.querySelectorAll('#ve-table-body-0 tr')].slice(0, 3)
-        .map((t) => veSayiOku(t.querySelectorAll('td')[1].innerText));   // Türkçe yazım (karar 7·C)
-      return { baslik: bas[1], x, ham: hiz.slice(0, 3) };
+        .map((t) => oku(t.querySelectorAll('td')[0].innerText.trim()));
+      return { baslik: bas, x, ham: hiz.slice(0, 3) };
     });
-    expect(r.baslik).toBe('VehSpeed [km/h]');
+    expect(r.baslik).toBe('VehSpeed (km/h)');
     r.x.forEach((v, i) => expect(Math.abs(v - r.ham[i])).toBeLessThan(1e-3));
   });
 

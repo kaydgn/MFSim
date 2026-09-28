@@ -44,6 +44,7 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 | `js/measure-import-ui.js` | **birebir kopya** |
 | `js/signal-tree.js` | **birebir kopya** |
 | `js/measure-dropzone.js` | **birebir kopya** (sürükle-bırak, MFSim ile ortak) |
+| `js/sonuc-tablo.js` | **birebir kopya** (Tablo kipi — föy, Kopyala, CSV) |
 | `js/trace-view.js` | kopya + **iki yerel fark** (aşağıda) |
 | `js/theme.js` | yalnızca burada — iki tema, işletim sistemini izler |
 | `js/board.js` | yalnızca burada — pano katmanı |
@@ -54,7 +55,7 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 
 ## MFSim'den düzeltme taşıma
 
-Tek komut — dokuz dosyanın hepsini `js/`'ten alır, `trace-view.js`'in iki yerel
+Tek komut — on dosyanın hepsini `js/`'ten alır, `trace-view.js`'in iki yerel
 farkını yeniden uygular:
 
 ```bash

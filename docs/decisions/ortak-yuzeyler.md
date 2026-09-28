@@ -203,6 +203,29 @@ güvensiz tarafa kayması, indirilen belgenin A4'e basmaması, bir panelin kendi
 bandını kurması.
 
 
+### Sonuçlar tablosu föydür (kullanıcı seçimi 2026-09-28, tasarım tuvali "C · Föy")
+
+**Hüküm.** Tablo kipini `js/sonuc-tablo.js` yazar — MFSim ile Ölçüm
+Görüntüleyici'nin TEK üreticisi (görüntüleyicide birebir kopya); veri çözümü
+her programın kendi `veFoyModel`inde. Föy: kâğıt (TXT sayfasının yüzeyi),
+başlık + künye, kalın üst/alt ve ince ara çizgi, dikey çizgi ve zebra yok,
+dört satırda bir nefes payı. Sayı mürekkep renginde, sinyal rengi yalnız
+başlıktaki noktada. Sütun başına TEK ondalık: büyüklükten; daha az hanede tamsa
+kırpılır, daha çok hanede tamsa yalnız en az üç farklı değerde uzar. Seyreltme
+not satırında söylenir. Başlık ile özet + not yapışık. Tablo kipinde araç
+çubuğu iz araçlarını değil Kopyala ve CSV'yi taşır; ikisi de TÜM örnekleri
+alır — pano sekmeli ve virgüllü (Türkçe Excel noktalı ondalığı binlik okur),
+CSV `;` ayraçlı ve noktalı (7·C). Yorum şeridi grafik kabının dışında: tablo
+kipinde de görünür.
+
+**Gerekçe.** Renkli sayılar okunmuyordu (1,62–3,47:1); tablo bölmeye
+yayılıyordu (tek sinyalde devir ile değer arası 784 px); aynı tablo için iki
+çakışan CSS bloğu ve seçicisiz bir parça vardı; CSV'nin düğmesi yoktu.
+
+**Kapı.** `tests/unit/sonuc-tablo.test.js` + `tests/e2e/sonuc-tablo.spec.js`
+(eski `main`'de üçü de düşüyor) + `source-hygiene.test.js` → *"CSS: seçicisiz
+kopuk bildirim yok"*.
+
 ## Artifact önizlemesi KALDIRILDI (2026-08-25)
 
 Bir dönem tek dosya claude.ai'ın Artifact sayfası olarak yayınlanıyordu
