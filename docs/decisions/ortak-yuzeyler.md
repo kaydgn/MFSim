@@ -1940,3 +1940,21 @@ yazısı) 251 noktalı ondalık, 4 gruplanmamış sayı, 258 sondaki yüzde → 
 (CAN yazıcısından binlik silinince 34 durum düşüyor), CAN kaynağında
 işaretsiz yazım yok + `can-cozumleyici.spec.js` → ekran taraması (MFSim'in
 ölçütüyle, `tests/helpers/sayi-olcu.js`).
+
+## Sonuçlar panosu: modül kanalının adı bölünmez, işaret etiketi çizginin yanında (2026-09-28)
+
+**Hüküm 1.** `veTrLaneTitle` " — "yi `::`'ye yalnız BİLEŞEN sinyalinde çevirir;
+modül kanalının (kaynak tablosu `veResSourceOf` tanıyor: Takoz · FEAD) adı bir
+bütündür. Ad birimiyle bitiyorsa birim ikinci kez yazılmaz. Ad bloğunun üst
+sınırı 160 → 172 px.
+**Gerekçe.** FEAD Campbell lejantının 11 satırının 11'i bozuktu: 8'i
+"1. mertebe::dönme", 3'ü dar blokta önek düşünce "202,9 Hz [Hz]" (hangi modun
+çizgisi olduğu kayboluyordu); 6 satırda birim iki kez.
+**Hüküm 2.** Dik işaret etiketi çizginin YANINA yazılır (`veTrMarkLabelX`):
+varsayılan solu, sola sığmayan sağa geçer.
+**Gerekçe.** Etiket `gx − 2`'ye ortalanıyordu: FEAD'in altı hazır diyagramında
+22 etiketin 22'si kendi çizgisiyle kesiliyor, 4'ü Y ekseninin sayılarının
+üstüne, 1'i çizim alanının dışına taşıyordu.
+**Kapı.** `trace-view.test.js` → *"modül kanalı"*, *"veTrMarkLabelX"* (çizici
+sahte ctx'le); `fead-sonuclar.spec.js` → *"sunum 1920×952 / 1366×768"*.
+

@@ -730,6 +730,24 @@ var veFeadSignals = (function() {
     return out.filter(function(p) { return p.lanes.length; });
   }
 
+  // Aksesuar devir sınırının kısa notu: ihlal varsa ilki (+kalan sayısı),
+  // yoksa en dar pay. Kasnak KODUYLA — kartta ad sığmaz, künye sayfada.
+  function _hizNot(rows, P) {
+    var kod = function(r) { return (P[r.i] && P[r.i].name === r.ad) ? P[r.i].code : r.ad; };
+    var ihlal = [];
+    rows.forEach(function(r) {
+      (r.noktalar || []).forEach(function(q) { if(!q.ok) ihlal.push({ r: r, q: q }); });
+    });
+    if(ihlal.length) {
+      var h = ihlal[0];
+      return kod(h.r) + ' ' + _tr(h.q.accRpm, 0) + ' > ' + _tr(h.q.limit, 0) + ' d/dk (' + h.q.ad + ')'
+        + (ihlal.length > 1 ? ' · +' + (ihlal.length - 1) : '');
+    }
+    var dar = null;
+    rows.forEach(function(r) { if(r.kritik && (!dar || r.kritik.payPct < dar.kritik.payPct)) dar = r; });
+    return dar ? 'en dar pay ' + kod(dar) + ' · %' + _tr(dar.kritik.payPct, 1) + ' (' + dar.kritik.ad + ')' : '';
+  }
+
   // ── ÖZET — pencerenin ilk ekranı ve çözücü penceresinin Sonuç sekmesi ─────
   //
   // TEK üretici: Sonuçlar sekmesinin kartları ile çözücü penceresinin özeti
@@ -836,6 +854,10 @@ var veFeadSignals = (function() {
         var not = c.note || '';
         if(!not && p[0] === 'centerDistance' && c.worst)
           not = 'en yakın çift ' + c.worst.cift + ' · pay %' + _tr(c.worst.payPct, 1);
+        // Devir sınırının hükmü KANITIYLA: satırlar vardı ama kart yalnız
+        // "Uygun" / "Uygun değil" yazıyordu — AG00976'da %4,9'luk pay da,
+        // AG00902'de sınırı aşan klima da görünmüyordu.
+        if(!not && p[0] === 'speedLimit' && c.rows && c.rows.length) not = _hizNot(c.rows, P);
         out.push({ k: 'kapi-' + p[0], ad: p[1], deger: deger, birim: '', durum: durum, not: not });
       });
     }
