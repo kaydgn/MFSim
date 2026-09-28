@@ -24,7 +24,7 @@
  *     kalırsa, yeni gerginin pimi ESKİ parçanın çizimiyle hesaplanır. Aynı
  *     sınıf: sayı çıkar, uyarı çıkmaz.
  *   • UYDURMA — çizimi olmayan parçaya sayı yazmak. Kütüphanenin kendi
- *     kuralı (doğrulanamayan dört AG00976 kaydı `part` taşımıyor) burada da
+ *     kuralı (doğrulanamayan üç AG00976 kaydı `part` taşımıyor) burada da
  *     geçerli: `ok:false` + sebep.
  */
 const M = require('../../js/fead-model.js');
@@ -131,7 +131,9 @@ describe('pim künyesi UYDURULMUYOR', () => {
 
   test('parça kodu OLMAYAN künyede plan ok:false ve sebebi yazılı', () => {
     const td = {};
-    T.veFeadTensionerApply(td, T.veFeadTensionerOf('AG00976-1715'));
+    // AG00976-1705: PDF'i arşivde yok, kodu doğrulanamadı. (1715 revizyonu
+    // kodunu kendi PDF'inden aldı ve artık bu kapıyı sınayamaz.)
+    T.veFeadTensionerApply(td, T.veFeadTensionerOf('AG00976-1705'));
     expect(td.tenPart).toBeUndefined();               // doğrulanamayan kod YOK
     const p = M.veFeadPinPlan(td, 344);
     expect(p.ok).toBe(false);
@@ -173,7 +175,10 @@ describe('parça kodu KOPYA olarak gider, kodsuz künyede SİLİNİR', () => {
   test('ÜSTÜNE kodsuz künye uygulanınca eski kod SİLİNİYOR', () => {
     const td = {};
     T.veFeadTensionerApply(td, T.veFeadTensionerOf('AG0868-8PK'));
-    T.veFeadTensionerApply(td, T.veFeadTensionerOf('AG00976-1715'));
+    // KODSUZ KAYIT: AG00976-1705 (PDF'i arşivde yok). 1715 revizyonu kodunu
+    // 2026-09-28'de kendi PDF'inden aldı ve artık bu kapıyı SINAYAMAZ.
+    expect(T.veFeadTensionerOf('AG00976-1705').part).toBeUndefined();
+    T.veFeadTensionerApply(td, T.veFeadTensionerOf('AG00976-1705'));
     expect(td.tenPart).toBeUndefined();
     expect(M.veFeadPinPlan(td, 344).ok).toBe(false);
   });

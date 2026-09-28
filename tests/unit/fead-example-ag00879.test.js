@@ -83,7 +83,8 @@ describe('örnek kayıt defteri: AG00879 kurulabilir', () => {
   test('kasnak sırası raporun Layout Data sırası', () => {
     const { build } = kur();
     expect(build.order.map((p) => p.customName)).toEqual([
-      'Sürücü Kasnak (FAN)', 'Avara', 'Klima Kompresörü', 'Alternatör',
+      // "(220 A)" raporun bileşen dosyasından: `ALT - 24V - 220Amp.cmp`.
+      'Sürücü Kasnak (FAN)', 'Avara', 'Klima Kompresörü', 'Alternatör (220 A)',
       'Otomatik Gergi (T38665)',
     ]);
   });

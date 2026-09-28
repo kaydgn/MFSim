@@ -22,9 +22,15 @@
 // > `Tensioner T38624; CW; 24.6Nm` · `Tensioner Gates T38665; 31Nm` ·
 // > `E9843, 22Nm@27°, CCW@115/260` · `T38519 (29.5Nm): CCW@-303/7`.
 // > Kodlar artık `part` alanında ve `tests/unit/gates-archive.test.js`
-// > her birini kaynağına karşı denetliyor. Arşivde PDF'i olmayan dört
-// > AG00976 kaydı `part` TAŞIMIYOR — doğrulanamayan bir kod yazmak, tam da
-// > kaçınılmak istenen şey olurdu.
+// > her birini kaynağına karşı denetliyor. Arşivde PDF'i olmayan ÜÇ
+// > AG00976 kaydı (1705 · 1668 · 1655) `part` TAŞIMIYOR — doğrulanamayan bir
+// > kod yazmak, tam da kaçınılmak istenen şey olurdu.
+// >
+// > AG00976-1715 kodunu 2026-09-28'de ALDI: PDF'i 2026-09-08'den beri
+// > arşivde, ama künye kapısı yalnız on rapora bakıyordu ve kod yazılmamıştı.
+// > Raporun kendi Drive Notes'u *"Ten. E9843 (22Nm); IDR E9839"* diyor
+// > (kapı: gates-archive.test.js → *"AG00976-1715 künyesi kendi PDF'ine
+// > karşı"*).
 //
 // Aynı alan bir şey daha ele verdi: Drive Notes BAĞIL AÇIYI da yazıyor
 // (`E9843/16Nm@15°` · `/19Nm@21°` · `/22.5Nm@28°`) ve bunlar künyeden
@@ -90,7 +96,7 @@ var VE_FEAD_TEN_LIB_SOURCE  = 'Gates ABDS raporları (14 sistem), '
 //            dolayısıyla olanaklı açı bandını) sessizce kaydırırdı.
 // ribs     : künyenin ölçüldüğü kayış genişliği (meanNm bunun için geçerli)
 var VE_FEAD_TENSIONER_DB = [
-  { key:'AG00976-1715', src:'AG00976 · 8PK1715HD · Ten@-250/110',
+  { key:'AG00976-1715', part:'E9843', src:'AG00976 · 8PK1715HD · Ten@-250/110',
     armLen:90, preloadNm:8.60, rateNm:0.480, meanNm:22.07, od:75.0, contact:'back',
     loadStopRelDeg:60.4, inertia:null, ribs:8, note:'E9843 (montaj çizimi: 28° FreeArm–Mean)' },
   { key:'AG00976-1705', src:'AG00976 · 1705 mm · Ten@-250/110',
@@ -293,7 +299,7 @@ function veFeadTensionerList(){
 // birer — ve kayıtları ayıran şey parça değil MONTAJ ayarı (yay çalışma
 // momenti). Parça numarasını öne almak bunu tek bakışta gösteriyor.
 //
-// Parça numarası olmayan dört AG00976 kaydı `?` ile işaretli: kodu
+// Parça numarası olmayan üç AG00976 kaydı `?` ile işaretli: kodu
 // doğrulanamadı (rapor arşivde yok) ve uydurulmuş bir kod yazmak, tam da
 // kaçınılmak istenen şey olurdu.
 function veFeadTenLabel(rec){
@@ -359,7 +365,7 @@ function veFeadTensionerApply(td, rec){
   // PARÇA KODU DA KOPYALANIR — ve YOKSA SİLİNİR. Kod, pim künyesinin (ve
   // ileride başka parça verisinin) anahtarıdır; kayıtta yoksa geride bırakmak
   // bir sonraki künyenin pimini ÖNCEKİ parçanın çizimiyle hesaplatırdı.
-  // Doğrulanamayan dört AG00976 kaydı bilerek kodsuz; silme o boşluğu korur.
+  // Doğrulanamayan üç AG00976 kaydı bilerek kodsuz; silme o boşluğu korur.
   if(rec.part) td.tenPart = rec.part; else delete td.tenPart;
   td.tenLib    = rec.key;
   td.tenLibVer = VE_FEAD_TEN_LIB_VERSION;

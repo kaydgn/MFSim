@@ -118,6 +118,18 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   await page.waitForTimeout(250);
   // Künye seçicisi ARTIK YALNIZ BURADA — satırdan kalktı.
   expect(await page.locator('select[onchange*="veFeadWizTenLib"]').count()).toBe(1);
+  // ÖRNEK KÜNYESİYLE GELİR (2026-09-28, kullanıcı: *"örnek seçtiğim zaman
+  // gelebilenlerin otomatik gelmesini istiyorum"*): AG00976'nın gergisi kendi
+  // raporunun künyesi, seçici onu SEÇİLİ ve alanları kilitli gösteriyor.
+  const tohum = await page.evaluate(() => ({
+    secili: document.querySelector('select[onchange*="veFeadWizTenLib"]').value,
+    kilit: document.querySelectorAll('.ve-fw-lock').length
+  }));
+  expect(tohum.secili).toBe('AG00976-1715');
+  expect(tohum.kilit).toBeGreaterThan(4);
+  // "Künye yokken kilit 0" ölçüsü için önce elle gire geçilir.
+  await page.selectOption('select[onchange*="veFeadWizTenLib"]', '');
+  await page.waitForTimeout(350);
   const acik = await page.evaluate(() => ({
     ro: [...document.querySelectorAll('.ve-fw-inp')].filter(e => e.readOnly).length,
     kilit: document.querySelectorAll('.ve-fw-lock').length

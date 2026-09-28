@@ -19,6 +19,12 @@
  * Çıktı doğrudan `js/fead-model.js`'e yapıştırılmak üzere biçimlendirilir.
  * DOĞRULAMA betiğin işi değil: `tests/unit/fead-examples-gates.test.js`
  * üretilen her örneği fixture'a karşı UÇTAN UCA koşturuyor.
+ *
+ * ÜRETİMDEN SONRA ELLE EKLENEN ALANLAR — üzerine yapıştırmadan önce bak:
+ * aksesuar model adları ve devir sınırları (FEAD kural 19), gergi künyesi
+ * bağı (`tenLib` · `tenLibVer` · `tenPart`) ve rapor notundan gelen alanlar
+ * (AG00894 `cylinders`). Betik bunları ÜRETMİYOR; kaybolurlarsa
+ * `fead-example.test.js` ve `fead-ornek-kunye.test.js` kırmızıya döner.
  */
 const path = require('path');
 const V = require(path.join(__dirname, '..', 'tests', 'fixtures', 'fead-validation.js'));

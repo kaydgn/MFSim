@@ -309,16 +309,31 @@ olurdu.
     çevrilir (`veFeadMigrateRunToLayout`); çevrilmeseydi tanımsız tipli bir
     düğüm olarak kalırlardı. Ayrıntı ve kapı listesi
     `references/kanvas-ve-kart.md` → *"İKİ KANVAS, TEK TİP"*.
-19. **ÖRNEĞE SAYI YAZMAK İÇİN KAYNAĞIN ONU SÖYLEMESİ GEREKİR.** Aksesuar devir
-    sınırları on iki örneğin altısına yazıldı ve altısı da raporun KENDİ
-    bileşen dosyasından çözüldü (`SD7H15-AC.cmp` · `AG810-250Amp-ALT.cmp` ·
-    `TM31.cmp`); kalan altısında rapor modeli söylemiyor (`A_C.cmp`,
-    `7_9kW_A_C.cmp`, katalogda olmayan `220Amp` ve `TM32`) ve **sınır
-    yazılmadı**. Aksesuarın adı kataloğun yazımını kullanır ("Sanden 7H15",
-    raporun `SD7H15`'i değil) — bağ o zaman gizli bir eşleme tablosu olmadan
-    makineyle denetlenebiliyor. `accLib` YAZILMAZ: künye uygulamak raporun
-    ölçülmüş kW eğrisini ezer, ve aynı modelin iki kaydı varken birini seçmek
-    doğrulanamayan bir parça numarası iddiasıdır.
+19. **ÖRNEĞE SAYI YAZMAK İÇİN KAYNAĞIN ONU SÖYLEMESİ GEREKİR — söylüyorsa
+    GELİR.** Aksesuar devir sınırları on iki örneğin sekizine yazıldı, hepsi
+    raporun KENDİ bileşen dosyasından (`SD7H15-AC.cmp` · `AG810-250Amp-ALT.cmp`
+    · `TM31.cmp` · `Valeo - TM21 - 7_9kW_A_C.cmp`); kalanlarda rapor modeli
+    söylemiyor (`A_C.cmp`) ya da model katalogda yok (`220Amp`, `TM32`) ve
+    **sınır yazılmadı**. Kapı İKİ YÖNLÜ: yazılan sınır kataloğun o model için
+    söylediği sayı olmak zorunda, VE adı kataloğa çözülüp sınırı taşımayan
+    aksesuar da kırmızı (AG00902'nin TM21'i böyle kaçmıştı — hücre beş ayrı
+    çizim çağrısıydı, satır okuyucu yalnız `7_9kW_A_C.cmp`'yi görüyordu).
+    Adın parantezindeki model örneğin KENDİ PDF'inde yazılı olmak zorunda
+    (uydurulamaz). Ad kataloğun yazımını kullanır ("Sanden 7H15", raporun
+    `SD7H15`'i değil) — bağ gizli bir eşleme tablosu olmadan makineyle
+    denetlenebiliyor. **Ad çizime sığmalı**: AG00902'de "Klima (TM21)" — daha
+    uzun her yazım küçük kartta kol konumu künyesinin üstüne düşüyordu;
+    yerleştiriciye "sığmayan ad kısalsın" eklemek REDDEDİLDİ (tam adlar
+    kipindeki karelerin %45'inde kullanıcının "Adı kısalt"ı kapatma kararını
+    eziyordu). `accLib` YAZILMAZ: künye uygulamak raporun ölçülmüş kW eğrisini
+    ezer, ve rapor model söyler, BMC parça numarası söylemez.
+    **GERGİ KÜNYESİ ÖRNEKLE GELİR** (`tenLib` · `tenLibVer` · `tenPart`, on bir
+    Gates örneği): bağ bir seçim değil — on dört künyeden TAM OLARAK BİRİ
+    sıfır sapma veriyor (`veFeadTensionerDrift`, parça + montaj) ve o, örneğin
+    kendi raporunun künyesi. Bağ olmadan sihirbaz künyeyi "elle gir" gösteriyor
+    ve pim satırı on iki örneğin on ikisinde "parça kodu yok" diyordu. BMC
+    tedarikçi sayfası bağ TAŞIMAZ (künyenin kaynağı değil). Kapı:
+    `fead-ornek-kunye.test.js`.
     **Motorun governed devri HİÇBİR örneğe yazılmaz** — arşivdeki on bir
     raporun hiçbirinde yok ve BMC sayfasının krank çapı (197,32) motor
     kataloğunda tam eşleşmiyor; en yakın dört kayıt governed'da ayrışıyor
