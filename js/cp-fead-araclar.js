@@ -188,6 +188,12 @@ function veFeadAraclarGovdeHTML(d){
     + '</div><div class="ve-fead-arac-sat">'
     + _feadAracDugme('sihirbaz', 'wand', 'Sihirbaz', d.kasnak ? 've-fead-arac-btn' : 've-fead-arac-btn birincil',
         ' title="Başlangıç Sihirbazı — modeli adım adım kurar"')
+    + '<span class="bos"></span>'
+    // YENİ KANVAS — FEAD'de "Bileşenler" sütunu yok (components.js →
+    // noPalette); sütunun Kayış Yolu satırının yeri burası. Kasnak ise
+    // kartın Kayış Tablosu'ndan eklenir ("＋ Kasnak ekle").
+    + _feadAracDugme('kanvas', 'plus', 'Kanvas', 've-fead-arac-bag',
+        ' title="Yeni Kayış Yolu kanvası — kartların sağına eklenir"')
     + '</div></section>';
 
   // ÇÖZÜM — durum çipi, Hesapla, Ayarlar, özet kartları, uygunluk
@@ -303,6 +309,9 @@ function veFeadAracEylem(ad, v){
   if(ad === 'sihirbaz'){
     if(d.sihirbazId && typeof veFeadWizOpen === 'function') return !!veFeadWizOpen(d.sihirbazId);
     return !!(typeof veFeadWizOpenAny === 'function' && veFeadWizOpenAny());
+  }
+  if(ad === 'kanvas'){
+    return !!(typeof veFeadKanvasEkle === 'function' && veFeadKanvasEkle());
   }
   if(ad === 'tur'){
     var r = _feadAracDugum('fead-report');

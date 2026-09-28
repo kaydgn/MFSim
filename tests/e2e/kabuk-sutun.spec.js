@@ -48,6 +48,25 @@ async function modulAc(page) {
   await page.waitForTimeout(1200);
 }
 
+// PALETİ OLAN BİR MODÜLÜN İÇİ. FEAD'in "Bileşenler" sütunu yok (2026-09-28,
+// componentDefs['fead-analysis'].noPalette) — sütunu ölçen kapılar Araç
+// Performans'ın iç topolojisinde koşar (açılışı bir örnek kartı kurar; müfettiş
+// başlığı için seçilecek bir düğüm de o).
+async function paletliAc(page) {
+  await page.goto('file://' + BUILD);
+  await page.fill('#mfsim-login-password', 'mfsim2024');
+  await page.press('#mfsim-login-password', 'Enter');
+  await page.waitForFunction(() => Array.isArray(window.nodes), null, { timeout: 90000 });
+  await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
+  await page.click('.ve-module-card[data-module="arac-performans"]');
+  await page.waitForTimeout(1200);
+  await page.evaluate(() => {
+    const n = window.nodes.find((x) => x.type === 'arac-performans');
+    if (n) veAracOpenEditor(n.id);
+  });
+  await page.waitForTimeout(1200);
+}
+
 const olc = () => {
   const g = (s) => {
     const e = document.querySelector(s);
@@ -101,7 +120,7 @@ const rayCerceve = () => {
 };
 
 test('RAY ÇERÇEVELİ — palet ile arasında TEK çizgi, bant satırı rayda da sürüyor', async ({ page }) => {
-  await modulAc(page);
+  await paletliAc(page);
   const r = await page.evaluate(rayCerceve);
   expect(r.bitisik).toBe(true);
   // aradaki çizgi VAR ve TEK: rayın sağ kenarı, paletin sol kenarı yok
@@ -128,6 +147,56 @@ test('Sonuçlar sayfasında da aynı çerçeve — çizgi ve köşe hücresi yer
   expect(r.komsuSolKalinlik).toBe(0);
   expect(r.koseAlt).toBe(r.bantAlt);          // "Veri Gezgini" bandıyla tek çizgi
   expect(r.aktifUst).toBeGreaterThanOrEqual(r.koseAlt);
+});
+
+// ── PALETSİZ KAPSAM (2026-09-28) ───────────────────────────────────────────
+// Kullanıcı kararı: *"FEAD modülünde bu 'Bileşenler' sütununu kaldıralım,
+// zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar' üzerinden
+// ekleyebiliyoruz."* Modül beyan ediyor (componentDefs.noPalette), kapsamın
+// tek noktası `.ve-main`e sınıfı yazıyor, CSS sütunu VE açma rayını gizliyor.
+// Node'da ölçülemeyen üç şey: tuvalin gerçekten rayın yanından başlaması
+// (aradaki boşluk yok, çizgi tek), kullanıcı sütunu DARALTMIŞ olsa bile açma
+// rayının FEAD'de çıkmaması (tercih modelinde değil ama rayı o çiziyor), ve
+// köke dönünce sütunun geri gelip tuvalin tam o kadar daralması.
+test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yanından başlar', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await modulAc(page);
+  const olcP = () => page.evaluate(() => {
+    const ray = document.querySelector('#ve-nav-rail').getBoundingClientRect();
+    const kose = getComputedStyle(document.querySelector('#ve-nav-rail'), '::before');
+    const dock = document.getElementById('ve-doc-dock').getBoundingClientRect();
+    const w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
+    const alan = document.querySelector('.ve-canvas-area');
+    return {
+      paletsiz: document.querySelector('.ve-main').classList.contains('ve-paletsiz'),
+      sutun: document.getElementById('ve-sidebar').offsetWidth,
+      acmaRayi: document.getElementById('ve-sidebar-reveal').offsetWidth,
+      rayR: Math.round(ray.right), dockX: Math.round(dock.left), tuvalX: Math.round(w.left),
+      tuvalW: Math.round(w.width), alanSol: parseFloat(getComputedStyle(alan).borderLeftWidth) || 0,
+      koseAlt: Math.round(ray.top + parseFloat(kose.height)), dockAlt: Math.round(dock.bottom),
+    };
+  });
+  const f = await olcP();
+  expect(f.paletsiz).toBe(true);
+  expect([f.sutun, f.acmaRayi]).toEqual([0, 0]);
+  // Tuval ve sekme bandı rayın HEMEN yanında; aralarında tek çizgi (rayın).
+  expect(f.dockX).toBe(f.rayR);
+  expect(f.tuvalX).toBe(f.rayR);
+  expect(f.alanSol).toBe(0);
+  expect(f.koseAlt).toBe(f.dockAlt);            // bant satırı rayda da sürüyor
+  // Sütun DARALTILMIŞ olsa bile (kullanıcının tercihi) açma rayı FEAD'de çıkmaz.
+  await page.evaluate(() => veToggleSidebar(true));
+  await page.waitForTimeout(450);
+  expect(await page.evaluate(() => document.getElementById('ve-sidebar-reveal').offsetWidth)).toBe(0);
+  await page.evaluate(() => veToggleSidebar(false));
+  await page.waitForTimeout(450);
+  // Köke dönünce sütun GERİ gelir; tuval tam onun genişliği kadar daralır.
+  await page.evaluate(() => veFeadCloseEditor());
+  await page.waitForTimeout(600);
+  const k = await olcP();
+  expect(k.paletsiz).toBe(false);
+  expect(k.sutun).toBeGreaterThan(100);
+  expect(f.tuvalW - k.tuvalW).toBe(k.sutun);
 });
 
 test('durum şeridi TUVALİN ALTINDA ve tuval genişliğinde', async ({ page }) => {
@@ -187,12 +256,11 @@ test('şerit katlaması tuvali ölçülebilir biçimde oynatıyor', async ({ pag
 // tests/unit/kabuk-bant.test.js.
 test('KABUK TEK ÇİZGİ — üç başlık aynı bantta, tuval komşularına yapışık', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
-  await modulAc(page);
-  // Sihirbaz boş topolojiyi karşılıyor; kapatıp açılış yüzeyinin bir kartının
-  // penceresini sütunda açıyoruz (müfettiş başlığı ancak açıkken var).
+  await paletliAc(page);
+  // Açılış yüzeyinin kartının penceresini açıyoruz (müfettiş başlığı ancak
+  // açıkken var).
   await page.evaluate(() => {
-    if (typeof veFeadWizClose === 'function') veFeadWizClose(false);
-    const n = nodes.find((x) => x.type === 'fead-layout') || nodes[0];
+    const n = nodes[0];
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
   });
   await page.waitForTimeout(600);
@@ -269,14 +337,13 @@ async function segoeSatiri(page) {
 
 test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
-  await modulAc(page);
+  await paletliAc(page);
   const segoe = await segoeSatiri(page);
   // Taklit gerçekten devrede: 12 px'lik satır Segoe'nunki (16), Inter'inki (15) değil.
   expect(segoe.kural).toBeGreaterThan(0);
   expect(Math.round(segoe.satir12)).toBe(16);
   await page.evaluate(() => {
-    if (typeof veFeadWizClose === 'function') veFeadWizClose(false);
-    const n = nodes.find((x) => x.type === 'fead-layout') || nodes[0];
+    const n = nodes[0];
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
   });
   await page.waitForTimeout(600);
@@ -312,7 +379,7 @@ test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async
 // müfettiş başlığı 1233'te, içeriği 1231'de. Kimlik satırı da iç kimliği
 // basıyordu ("ID: comp-4") — kullanıcıya bir şey demeyen, hiçbir yerde
 // aranamayan bir dize. Yerine TİP: "Sürücü Kasnak (FAN)" bir Fan Kavraması.
-test('başlıklar içeriğin kenarında; kimlik satırı iç kimliği değil TİPİ söylüyor', async ({ page }) => {
+test('müfettiş başlığı içeriğin kenarında; kimlik satırı iç kimliği değil TİPİ söylüyor', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await modulAc(page);
   await page.evaluate(() => {
@@ -321,13 +388,6 @@ test('başlıklar içeriğin kenarında; kimlik satırı iç kimliği değil Tİ
   });
   await page.waitForTimeout(1500);
   const r = await page.evaluate(async () => {
-    const sol = (el) => { const g = document.createRange(); g.selectNodeContents(el); return g.getBoundingClientRect().left; };
-    const kat = [...document.querySelectorAll('.ve-sidebar-content .ve-category')].find((c) => c.offsetParent);
-    const kenar = {
-      bas: document.querySelector('.ve-sidebar-header .mf-ico').getBoundingClientRect().left,
-      kategori: sol(kat.querySelector('.ve-category-title')),
-      oge: kat.querySelector('.ve-component svg').getBoundingClientRect().left,
-    };
     const ac = async (n) => {
       clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
       await new Promise((z) => setTimeout(z, 500));
@@ -342,12 +402,12 @@ test('başlıklar içeriğin kenarında; kimlik satırı iç kimliği değil Tİ
       return o;
     };
     const surucu = nodes.find((x) => x.data && x.data.driver);
-    return { kenar, surucu: await ac(surucu), tipAdi: componentDefs[surucu.type].name,
+    return { surucu: await ac(surucu), tipAdi: componentDefs[surucu.type].name,
              cozucu: await ac(nodes.find((x) => x.type === 'fead-solver')) };
   });
-  // Kenar çubuğu: başlığın simgesi = kategori başlığı = öğe simgesi (eski: 76 · 81 · 81).
-  expect(Math.abs(r.kenar.bas - r.kenar.kategori)).toBeLessThanOrEqual(1);
-  expect(Math.abs(r.kenar.bas - r.kenar.oge)).toBeLessThanOrEqual(1);
+  // (Kenar çubuğunun kenar kapısı — başlık simgesi = kategori başlığı = öğe
+  // simgesi — paletli modülde, aşağıdaki "palet: kategori başlığı" testinde:
+  // FEAD'in sütunu yok.)
   // Müfettiş: başlığın simgesi içeriğin sol kenarında (eski: 1233 ↔ 1231).
   expect(Math.abs(r.surucu.bas - r.surucu.icerik)).toBeLessThanOrEqual(0.5);
   // Adlandırılmış bileşen tipini söylüyor; iç kimlik HİÇBİR yerde basılmıyor.
@@ -401,11 +461,24 @@ test('karşılama ekranında durum şeridi GÖRÜNMÜYOR', async ({ page }) => {
 // oturuyordu (kutu 72,5 · başlık 76 · ikon 82 px); (2) her öğe dolu zeminli,
 // kenarlıklı bir kutuydu — FEAD paletinde on dokuz kutu üst üste.
 test('palet: kategori başlığı İKONUN kenarında, öğe dinlenmede zeminsiz', async ({ page }) => {
-  await modulAc(page);
-  await page.mouse.move(1500, 900);           // fare hiçbir öğenin üstünde değil
+  await paletliAc(page);
+  // Fare hiçbir öğenin üstünde değil — nokta PENCERENİN İÇİNDE, boş tuvalde.
+  // Eskiden (1500, 900)'e taşınıyordu: 1280×720 pencerenin dışı, hareket hiç
+  // gönderilmiyor ve imleç modül kartına tıklanan yerde kalıyordu. Araç
+  // Performans'ta o nokta "Motor" satırının üstüne düşüyor (hover zemini
+  // ölçülüyordu); FEAD'de şans eseri boştu. Hover'dan çıkış bir GEÇİŞ
+  // (`transition: background`): ölçüm onun bitmesini bekler, yoksa zemin
+  // sönmenin ortasında (rgba …, 0,49) yakalanır.
+  await page.mouse.move(1100, 520);
+  await page.waitForTimeout(400);
   const r = await page.evaluate(() => {
     const kaymis = [], dolu = [];
     let olculen = 0;
+    // Bandın simgesi de aynı kenarda (eski: 76 · 81 · 81) — ilk görünür kategori.
+    const bas = document.querySelector('.ve-sidebar-header .mf-ico').getBoundingClientRect().left;
+    const ilk = [...document.querySelectorAll('#ve-sidebar .ve-category')].find((c) => c.offsetParent);
+    const rg0 = document.createRange(); rg0.selectNodeContents(ilk.querySelector('.ve-category-title'));
+    const basKayma = rg0.getBoundingClientRect().left - bas;
     document.querySelectorAll('#ve-sidebar .ve-category').forEach((kat) => {
       const bas = kat.querySelector('.ve-category-title');
       const oge = [...kat.querySelectorAll('.ve-component')].filter((o) => o.getBoundingClientRect().height > 0);
@@ -422,11 +495,12 @@ test('palet: kategori başlığı İKONUN kenarında, öğe dinlenmede zeminsiz'
         if (!/,\s*0\s*\)$/.test(z) && z !== 'transparent') dolu.push(o.textContent.trim() + ' ' + z);
       });
     });
-    return { kaymis, dolu, olculen };
+    return { kaymis, dolu, olculen, basKayma };
   });
-  expect(r.olculen).toBeGreaterThanOrEqual(2);  // FEAD Kasnakları + Araçları + Araçlar
+  expect(r.olculen).toBeGreaterThanOrEqual(2);  // Araç Performans kategorileri + Araçlar
   expect(r.kaymis).toEqual([]);
   expect(r.dolu).toEqual([]);
+  expect(Math.abs(r.basKayma)).toBeLessThanOrEqual(1);
 });
 
 // ── PALETTE AD KESİLMİYOR ──────────────────────────────────────────────────
@@ -434,7 +508,7 @@ test('palet: kategori başlığı İKONUN kenarında, öğe dinlenmede zeminsiz'
 // "Motor-Şanzıman Eşleştirme" 220 px'lik kenar çubuğunda 156 px isterken
 // 153 px alıyordu (ölçüldü). Ad artık iki satıra kadar sarıyor. Ölçü her iki
 // yönde: yatayda taşma YOK ve iki satır sınırı yüzünden dikeyde de kesilmiyor.
-test('palet: hiçbir bileşen adı kesilmiyor — üç modülün içinde', async ({ page }) => {
+test('palet: hiçbir bileşen adı kesilmiyor — paletli iki modülde; FEAD\'de sütun YOK', async ({ page }) => {
   await page.goto('file://' + BUILD);
   await page.fill('#mfsim-login-password', 'mfsim2024');
   await page.press('#mfsim-login-password', 'Enter');
@@ -457,8 +531,10 @@ test('palet: hiçbir bileşen adı kesilmiyor — üç modülün içinde', async
     const r = await kesikler();
     sonuc[mod] = { ad: r.length, kesik: r.filter((x) => x.yatay || x.dikey).map((x) => x.t) };
   }
-  // Tarama boşa koşmasın: üç modülün paletinde ad var.
-  Object.entries(sonuc).forEach(([m, s]) => expect([m, s.ad > 4]).toEqual([m, true]));
+  // Tarama boşa koşmasın: iki paletli modülde ad var; FEAD'de sütun hiç yok
+  // (2026-09-28 — kasnak kartın listesinden, kanvas FEAD araçları penceresinden).
+  expect([sonuc['arac-performans'].ad > 4, sonuc['mount-analysis'].ad > 4]).toEqual([true, true]);
+  expect(sonuc['fead-analysis'].ad).toBe(0);
   expect(Object.fromEntries(Object.entries(sonuc).map(([m, s]) => [m, s.kesik])))
     .toEqual({ 'arac-performans': [], 'mount-analysis': [], 'fead-analysis': [] });
 });

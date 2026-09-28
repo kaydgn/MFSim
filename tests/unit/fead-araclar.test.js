@@ -92,13 +92,22 @@ describe('bileşen sözleşmesi — araçlar KUTUSUZ, pencere onlara BAĞLANIR',
     expect(fead.VE_FEAD_ARAC_TIPLERI).toEqual(['fead-belt', 'fead-solver', 'fead-report', 'fead-wizard']);
   });
 
-  test('palette FEAD araçları kategorisinde YALNIZ Kayış Yolu kaldı', () => {
+  // PALETSİZ (2026-09-28, kullanıcı kararı: *"FEAD modülünde bu 'Bileşenler'
+  // sütununu kaldıralım, zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar'
+  // üzerinden ekleyebiliyoruz."*). Modül beyan ediyor; index.html'de FEAD
+  // kapsamlı kategori yok — konsa görünmez, ölü olurdu. Sütunun iki FEAD
+  // satırının karşılığı tuvalde: kasnak kartın listesi, Kayış Yolu pencerenin
+  // Kanvas'ı (aşağıda). Kökteki MODÜL satırı duruyor (kökün paleti var).
+  test('PALETSİZ — modül beyan ediyor; index.html\'de FEAD kategorisi ve FEAD tipi yok', () => {
+    expect(componentDefs['fead-analysis'].noPalette).toBe(true);
     const idx = oku('index.html');
-    const i0 = idx.indexOf('data-type="fead-layout"');
-    expect(i0).toBeGreaterThan(0);
-    ['fead-solver', 'fead-report', 'fead-wizard', 'fead-spin', 'fead-belt'].forEach((t) => {
+    expect(idx).not.toMatch(/data-ve-scope="fead-analysis"/);
+    const tipler = Object.keys(componentDefs).filter((t) => /^fead-/.test(t) && t !== 'fead-analysis');
+    expect(tipler.length).toBeGreaterThan(10);
+    tipler.forEach((t) => {
       expect({ t, palette: idx.includes('data-type="' + t + '"') }).toEqual({ t, palette: false });
     });
+    expect(idx).toMatch(/data-type="fead-analysis"/);
   });
 
   test('betik yükleniyor — okuduğu üreticilerden SONRA', () => {
@@ -145,6 +154,44 @@ describe('bileşen sözleşmesi — araçlar KUTUSUZ, pencere onlara BAĞLANIR',
       kalip.forEach((re) => { if (re.test(s)) sapan.push(f + ' ← ' + re); });
     });
     expect(sapan).toEqual([]);
+  });
+
+  // KURAL 26 · 39: kaldırılan SÜTUNUN dili de kalkar. Sütun giderken kılavuz
+  // altı yerde "paletten sürükleyin / sol paletin FEAD kasnakları kategorisi"
+  // diyordu ve köprünün hata metni "Sol paletten bir Gergi ekleyin" diyordu —
+  // FEAD'de sütun yokken.
+  test('kaldırılan SÜTUNUN dili de kalktı (kural 26 · 39)', () => {
+    const sapan = [];
+    if (/palet/i.test(oku('js/guide-fead.js'))) sapan.push('guide-fead.js ← palet');
+    ['js/fead-model.js', 'js/cp-fead-araclar.js', 'js/cp-fead-wizard.js'].forEach((f) => {
+      if (/[Ss]ol palet|[Pp]aletten (ekle|sürük|bırak)/.test(oku(f))) sapan.push(f + ' ← sol palet');
+    });
+    expect(sapan).toEqual([]);
+    // Gergisiz modelin hatası YENİ yolu söylüyor — iki kullanım tek sabitten.
+    const ns = M.veFeadExampleNodes('AG00976_GATES_2025').nodes
+      .filter((n) => !(componentDefs[n.type] || {}).isFeadTensioner)
+      .map((n) => Object.assign({ def: componentDefs[n.type] || {} }, JSON.parse(JSON.stringify(n))));
+    const hata = M.veFeadBuildSystem(ns).errors.join(' ');
+    expect(hata).toMatch(/Gergi yok/);
+    expect(hata).toMatch(/＋ Kasnak ekle/);
+    expect(hata).not.toMatch(/palet/i);
+  });
+
+  // KAPSAM SIĞDIRMADAN ÖNCE (kural 39): FEAD'e girerken "Bileşenler" sütunu
+  // kalkıyor ve tuval 220 px genişliyor. Senkron sığdırmadan sonra koşsaydı
+  // kadraj dar tuvalle kurulur, içerik sola kayık kalırdı. Ölçüm gerçek
+  // tarayıcıda (fead-araclar.spec.js → "SÜTUNSUZ AÇILIŞ"); bu, sıranın kapısı.
+  test('KAPSAM SIĞDIRMADAN ÖNCE — veFeadOpenEditor önce kabuğu eşitler', () => {
+    const src = oku('js/cp-fead.js');
+    const i = src.indexOf('function veFeadOpenEditor');
+    const govde = src.slice(i, src.indexOf('\nfunction ', i + 10));
+    const esitle = govde.indexOf('veSyncSidebarScope();');
+    const sigdir = govde.indexOf('veFitViewToContent();');
+    expect(esitle).toBeGreaterThan(0);
+    expect(sigdir).toBeGreaterThan(0);
+    expect(esitle).toBeLessThan(sigdir);
+    // ve sığdırmadan SONRA ikinci bir eşitleme yok (o da kadrajı kaydırırdı).
+    expect(govde.indexOf('veSyncSidebarScope()', sigdir)).toBe(-1);
   });
 
   test('kapsam kancası TEK noktada — veSyncSidebarScope', () => {
@@ -327,6 +374,63 @@ describe('eylemler — hepsi modülün var olan çağrılarına gider', () => {
     kur();
     expect(AR.veFeadAracEylem('yok-boyle')).toBe(false);
     expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+
+  // KANVAS — "Bileşenler" sütununun Kayış Yolu satırının yeri (2026-09-28).
+  test('Kanvas: Model bölümünde bir düğme ve modülün kurucusuna gider', () => {
+    kur();
+    const b = govde().querySelector('[data-bol="model"] [data-ey="kanvas"]');
+    expect(b).toBeTruthy();
+    expect(b.getAttribute('title')).toMatch(/Kayış Yolu kanvası/);
+    const k = casus('veFeadKanvasEkle', () => ({ id: 'yeni' }));
+    try {
+      expect(AR.veFeadAracEylem('kanvas')).toBe(true);
+      expect(k.c).toHaveBeenCalledTimes(1);
+    } finally { k.geri(); }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// YENİ KANVAS — veFeadKanvasEkle (cp-fead.js). Sütun kartı farenin bıraktığı
+// yere koyuyordu; düğmenin faresi yok, yer KURALDAN: sıranın sağı, en üstteki
+// kartla aynı hiza (kural 22 — kanvaslar tek sıra). Bir eylem = bir geri-al adımı.
+describe('YENİ KANVAS — sıranın sağına, tek geri-al adımı', () => {
+  const kart = (id, x, y, w) => ({ id, type: 'fead-layout', def: componentDefs['fead-layout'], x, y, width: w, height: 500, data: {} });
+  function kurucu() {
+    const kurulan = [];
+    global.createNode = jest.fn((t, x, y) => {
+      const n = { id: 'y' + kurulan.length, type: t, def: componentDefs[t], x, y, width: 440, height: 500, data: {} };
+      kurulan.push(n); global.nodes.push(n); return n;
+    });
+    return kurulan;
+  }
+
+  test('sıranın SAĞINA, en üstteki kartla aynı hizaya; toplu kurulum + kadraj', () => {
+    kurucu();
+    const batch = casus('veStateBatch', (fn) => fn());
+    const fit = casus('veFitViewToContent');
+    try {
+      global.nodes = [kart('a', 3000, 2800, 640), kart('b', 3664, 2760, 440),
+        // kutusuz kasnak yer hesabına GİRMEZ (konumu mm, kanvas değil)
+        { id: 'k', type: 'fead-crank', def: componentDefs['fead-crank'], data: { x: 9000, y: 0 } }];
+      const n = fead.veFeadKanvasEkle();
+      expect(n.type).toBe('fead-layout');
+      expect(global.createNode).toHaveBeenCalledWith('fead-layout', 3664 + 440 + 24, 2760);
+      expect(batch.c).toHaveBeenCalledTimes(1);
+      expect(fit.c).toHaveBeenCalledTimes(1);
+      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/Kayış Yolu kanvası eklendi/), 'success');
+    } finally { batch.geri(); fit.geri(); delete global.createNode; }
+  });
+
+  test('hiç kart yoksa açılış yüzeyinin YUVASI (aynı kaynak: veFeadFallbackSlots)', () => {
+    kurucu();
+    const taban = casus('veArrangeModuleBase', () => ({ x: 2500, y: 2600 }));
+    try {
+      global.nodes = [];
+      fead.veFeadKanvasEkle();
+      const yuva = fead.veFeadFallbackSlots(['fead-layout'])[0];
+      expect(global.createNode).toHaveBeenCalledWith('fead-layout', 2500 + yuva.lx, 2600 + yuva.ly);
+    } finally { taban.geri(); delete global.createNode; }
   });
 });
 

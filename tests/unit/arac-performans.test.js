@@ -238,6 +238,35 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
     global.veFeadStack.length = 0;
   });
 
+  // PALETSİZ KAPSAM KENDİNİ BEYAN EDER (2026-09-28, kullanıcı kararı: FEAD'de
+  // "Bileşenler" sütunu yok). Beyan `componentDefs[scope].noPalette`; sınıf
+  // `.ve-main`e yazılır ve CSS sütunu da açma rayını da gizler (kapı:
+  // kabuk-sutun.spec.js → "PALETSİZ KAPSAM"). Kullanıcının daralt/aç tercihi
+  // (`mf-sidebar-collapsed`) YAZILMAZ — kapsamın kuralı bir tercih değil.
+  test('PALETSİZ KAPSAM: yalnız beyan eden modülde .ve-main ve-paletsiz alır; tercih yazılmaz', () => {
+    setupSidebar();
+    document.body.insertAdjacentHTML('beforeend', '<div class="ve-main"></div>');
+    const main = document.querySelector('.ve-main');
+    // Kullanıcı sütunu DARALTMIŞ: kapsam bu tercihi ne açar ne kapar.
+    try { localStorage.setItem('mf-sidebar-collapsed', '1'); } catch (e) { /* jsdom */ }
+    expect(componentDefs['fead-analysis'].noPalette).toBe(true);
+    ['arac-performans', 'mount-analysis'].forEach((t) => expect({ t, beyan: !!componentDefs[t].noPalette }).toEqual({ t, beyan: false }));
+    global.veFeadStack = [{ nodeId: 'comp-9', parentState: {} }];
+    veSyncSidebarScope();
+    expect(main.classList.contains('ve-paletsiz')).toBe(true);
+    global.veFeadStack.length = 0;
+    veSyncSidebarScope();                                   // köke dönüş
+    expect(main.classList.contains('ve-paletsiz')).toBe(false);
+    veAracStack.push({ nodeId: 'comp-1', parentState: {} });
+    veSyncSidebarScope();                                   // paletli modül
+    expect(main.classList.contains('ve-paletsiz')).toBe(false);
+    veAracStack.length = 0;
+    expect(localStorage.getItem('mf-sidebar-collapsed')).toBe('1');
+    // Sınıfı CSS iki öğeye birden uygular: sütun + açma rayı.
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-main\.ve-paletsiz \.ve-sidebar,\s*\.ve-main\.ve-paletsiz \.ve-sidebar-reveal\{\s*display:none !important;/);
+  });
+
   test('veSyncSidebarScope: boş stack → top, Araç Performans stack dolu → arac-performans', () => {
     setupSidebar();
     veAracStack.length = 0;

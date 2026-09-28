@@ -226,3 +226,85 @@ test('KAPSAM: ana topolojide pencere YOK, FEAD’e dönünce geri gelir', async 
   await expect(pencere(page)).toBeVisible();
   expect(hatalar).toEqual([]);
 });
+
+// ── SÜTUNSUZ AÇILIŞ (2026-09-28) ─────────────────────────────────────────────
+// FEAD'de "Bileşenler" sütunu yok (components.js → noPalette) ve tuval FEAD'e
+// girerken 220 px GENİŞLİYOR. Kayıtlı bir modele dönüşte kadraj sütun
+// kalktıktan SONRA kurulmalı: kapsam senkronu sığdırmadan sonra koşsaydı
+// kadraj dar tuvalle kurulur, sütun kalkınca içerik sola kayık kalırdı
+// (cp-fead.js → veFeadOpenEditor). Ölçü: kartların ortası ile görünür alanın
+// (pencerenin sağı) ortası arasındaki fark, ilk girişle yeniden girişte AYNI.
+test('SÜTUNSUZ AÇILIŞ: kayıtlı modele dönüşte kadraj sütunsuz tuvale kurulur', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1920, height: 952 });
+  await bootApp(page);
+  await feadAc(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.filter((n) => n.type === 'fead-layout').length === 2,
+    null, { timeout: 20000 });
+  await page.waitForTimeout(900);
+  const merkez = () => page.evaluate(() => {
+    const wr = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
+    const pen = document.getElementById('ve-fead-araclar');
+    const ortu = pen && pen.getAttribute('data-ve-ortu') === 'sol' ? pen.getBoundingClientRect().right - wr.left : 0;
+    let l = Infinity, r = -Infinity;
+    document.querySelectorAll('#ve-canvas .ve-node').forEach((e) => {
+      const b = e.getBoundingClientRect(); l = Math.min(l, b.left); r = Math.max(r, b.right);
+    });
+    return { dx: (l + r) / 2 - (wr.left + ortu + (wr.width - ortu) / 2),
+             sutun: document.getElementById('ve-sidebar').offsetWidth, tuvalX: Math.round(wr.left) };
+  });
+  const ilk = await merkez();
+  expect(ilk.sutun).toBe(0);
+  await page.evaluate(() => veFeadCloseEditor());
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => document.getElementById('ve-sidebar').offsetWidth)).toBeGreaterThan(100);
+  await page.evaluate(() => veFeadOpenEditor(window.nodes.find((n) => n.type === 'fead-analysis').id));
+  await page.waitForTimeout(900);
+  const yeni = await merkez();
+  expect(yeni.sutun).toBe(0);
+  expect(yeni.tuvalX).toBe(ilk.tuvalX);
+  expect(Math.abs(yeni.dx - ilk.dx)).toBeLessThanOrEqual(2);
+  expect(hatalar).toEqual([]);
+});
+
+// ── KANVAS (2026-09-28) — sütunun Kayış Yolu satırının yeri ─────────────────
+// Sütun kartı farenin bıraktığı yere koyuyordu; düğmenin faresi yok, yer
+// KURALDAN: sıranın sağı, en üstteki kartla aynı hiza. Gerçek tık, gerçek
+// Ctrl+Z (tek adım), ve yeni kart görünür alanda (kadraj sığdırıldı).
+test('KANVAS: pencerenin düğmesi kartı sıranın sağına ekler; tek geri-al adımı', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1920, height: 952 });
+  await bootApp(page);
+  await feadAc(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForFunction(() => window.nodes.filter((n) => n.type === 'fead-layout').length === 2,
+    null, { timeout: 20000 });
+  await page.waitForTimeout(900);
+  const kartlar = () => page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout')
+    .map((n) => ({ id: n.id, x: n.x, y: n.y, w: n.width })));
+  const once = await kartlar();
+  await govde(page).locator('[data-bol="model"] [data-ey="kanvas"]').click();
+  await page.waitForTimeout(600);
+  const sonra = await kartlar();
+  expect(sonra).toHaveLength(3);
+  const yeni = sonra.find((k) => !once.some((o) => o.id === k.id));
+  expect(yeni.x).toBe(Math.max(...once.map((o) => o.x + o.w)) + 24);
+  expect(yeni.y).toBe(Math.min(...once.map((o) => o.y)));
+  // Görünür alanda ve pencerenin altında değil.
+  const o = await olc(page);
+  expect(o.cakisma).toBe(0);
+  const kutu = await page.evaluate((id) => {
+    const b = document.getElementById(id).getBoundingClientRect(); return { r: b.right, b: b.bottom };
+  }, yeni.id);
+  expect(kutu.r).toBeLessThanOrEqual(o.kap.r + 1);
+  expect(kutu.b).toBeLessThanOrEqual(o.kap.b + 1);
+  // Tek adım: Ctrl+Z yeni kartı bütünüyle geri alıyor.
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(400);
+  expect((await kartlar()).map((k) => k.id).sort()).toEqual(once.map((k) => k.id).sort());
+  expect(hatalar).toEqual([]);
+});

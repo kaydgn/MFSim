@@ -509,8 +509,9 @@ olurdu.
     kararı: *"Çizim Masası çok güzel"*). Kayış Yolu kartının çizimi giriş
     yüzeyi: tıklamak kasnağın penceresini açar, sürüklemek KONUM GİRDİSİNİ
     yazar (gergide avara merkezi `cenX/cenY` — montaj konumu ondan türer),
-    ok 1 mm / Shift 10 mm, Delete siler; paletten kayışın ÜSTÜNE bırakılan
-    kasnak iki komşunun ARASINA girer. Kurallar:
+    ok 1 mm / Shift 10 mm, Delete siler; paftanın "＋ Kasnak ekle" listesinden
+    kayışın ÜSTÜNE sürüklenen kasnak iki komşunun ARASINA girer (kural 39 —
+    FEAD'de sütun yok). Kurallar:
     • **Çizim kendi geometrisini hesaplamaz** — ters köprü çizicinin bastığı
       `data-fead-xf`ten; sürükleme boyunca ölçek DONAR (kasnak imleçten
       kaçmasın).
@@ -820,6 +821,42 @@ olurdu.
       Çözüm bölümünde. Yön ipucu DÜZLEMİ yazar (`veFeadSpinLabel(s).uzun`).
     Kapılar: `fead-araclar.test.js` · `fead-spin.test.js` → *"Yön yüzeyi"* ·
     `fit-view.test.js` → *"SOL ÖRTÜ"* · `tests/e2e/fead-araclar.spec.js`.
+
+39. **"BİLEŞENLER" SÜTUNU YOK — EKLEME TUVALDE** (2026-09-28, kullanıcı
+    kararı: *"FEAD modülünde bu 'Bileşenler' sütununu kaldıralım, zaten
+    ekleyeceğimiz bileşenlerin hepsini 'kanvaslar' üzerinden
+    ekleyebiliyoruz."*). Modül beyan eder (`componentDefs['fead-analysis']
+    .noPalette`), kapsamın tek noktası sınıfı yazar (`veSyncPaletsizKapsam` ←
+    `veSyncSidebarScope`, `.ve-main.ve-paletsiz`), CSS sütunu VE açma rayını
+    gizler; index.html'de FEAD kapsamlı kategori YOK (görünmez, ölü olurdu).
+    Sütunun FEAD'deki üç işinin yeri:
+    • **KASNAK → paftanın "＋ Kasnak ekle" LİSTESİ** (`veFeadTableAddHTML`):
+      satıra TIK `veFeadTableAdd` (gerginin önüne, koordinatsız); satırı
+      SÜRÜKLEMEK paletin bırakma kancalarına gider (`veFeadPaletUstunde` ·
+      `veFeadPaletBirak` — ikinci bırakma yolu yazılmadı; bir `<select>`
+      sürüklenemediği için liste). Gergi açıklığa girmez: satırı sürüklenmez.
+      Liste YUKARI açılır (pafta kartın dibinde), sürüklemede solar ve
+      tıklamayı geçirir (örttüğü kayış da hedef); açıklık modelde değil
+      (`VE_FEAD_EK_ACIK`, kural 15'in gerekçesi).
+    • **SÜRÜKLEME SONU LİSTE KABININ `ondragend`inde, belgede değil**
+      (`veFeadEkBitti`): başarılı eklemede pafta yeniden kurulur ve kaynak
+      satır DOM'dan sökülür; `dragend` BELGEYE ulaşmaz ama sökülen alt
+      ağaçtaki kaba ulaşır (ölçüldü). Belgeye bağlanan bir temizlik onu
+      kaçırır — liste açık çizilir, tip globalde (`vePaletSuruklenen`) kalırdı.
+    • **YENİ KANVAS → FEAD araçları penceresinin "Kanvas"ı**
+      (`veFeadKanvasEkle`): yer kuraldan — sıranın sağı, en üstteki kartla
+      aynı hiza (kural 22); tek geri-al adımı; kadraj sığdırılır.
+    • **Not araçları (gruplama çerçevesi · yazı etiketi) FEAD'de eklenemez** —
+      sütunla gitti; kayıtlı notlar çizilir, düzenlenir, silinir.
+    • **KAPSAM SIĞDIRMADAN ÖNCE** (`veFeadOpenEditor`): tuval FEAD'e girerken
+      220 px genişliyor; senkron sığdırmadan sonra koşsaydı kadraj dar tuvalle
+      kurulur, içerik sola kayık kalırdı. Kullanıcının daralt tercihi
+      (`mf-sidebar-collapsed`) YAZILMAZ — kapsamın kuralı bir tercih değil.
+    Kapılar: `kabuk-sutun.spec.js` → *"PALETSİZ KAPSAM"* ·
+    `fead-araclar.spec.js` → *"SÜTUNSUZ AÇILIŞ"* + *"KANVAS"* ·
+    `fead-cizim-masasi.spec.js` → *"LİSTEDEN KAYIŞA BIRAK"* ·
+    `fead-table.test.js` → *"EKLEYİCİ BİR LİSTE"* · `fead-araclar.test.js` →
+    *"PALETSİZ"* + *"YENİ KANVAS"* · `arac-performans.test.js` → *"PALETSİZ KAPSAM"*.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

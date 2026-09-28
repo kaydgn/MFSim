@@ -415,6 +415,45 @@ function veFeadPopulateStarter(){
   return created;
 }
 
+// ── YENİ KAYIŞ YOLU KANVASI — "Bileşenler" sütununun FEAD araçları satırı ──
+//
+// Sütun FEAD'de yok (2026-09-28, components.js → noPalette); yeni kanvasın
+// yolu FEAD araçları penceresinin "Kanvas" düğmesi. Sütun kartı fare nereye
+// bıraktıysa oraya koyuyordu; düğmenin faresi yok, yer kuraldan: SIRANIN
+// SAĞI, en üstteki kartla aynı hizada (kural 22 — kanvaslar tek sıra, yan
+// yana). Hiç kart yoksa açılış yüzeyinin yuvası. Kart yeni kurulan HER
+// kanvas gibi varsayılan ön ayarla gelir; ölçü tablosunu izler
+// (veFeadKartTabloOlcu). Bir eylem = bir geri-al adımı (veStateBatch).
+// Kadraj bütün kartları alacak şekilde sığdırılır — yeni kart görünüşün
+// dışına düşebilirdi.
+function veFeadKanvasEkle(){
+  if(typeof createNode !== 'function' || typeof nodes === 'undefined' || !nodes) return null;
+  var kartlar = nodes.filter(function(n){ return !!_feadDefOf(n).isFeadLayout; });
+  var x, y;
+  if(kartlar.length){
+    var sag = -Infinity, ust = Infinity;
+    kartlar.forEach(function(n){
+      var b = veFeadNodeBox(n);
+      sag = Math.max(sag, (Number(n.x) || 0) + b.w);
+      ust = Math.min(ust, Number(n.y) || 0);
+    });
+    x = sag + 24; y = ust;
+  } else {
+    var yuva = veFeadFallbackSlots(['fead-layout']);
+    var base = (typeof veArrangeModuleBase === 'function') ? veArrangeModuleBase(yuva) : { x: 3000, y: 3000 };
+    x = base.x + ((yuva[0] && yuva[0].lx) || 0); y = base.y + ((yuva[0] && yuva[0].ly) || 0);
+  }
+  var yeni = null;
+  var kur = function(){ yeni = createNode('fead-layout', x, y); };
+  if(typeof veStateBatch === 'function') veStateBatch(kur); else kur();
+  if(!yeni) return null;
+  if(typeof updateAllConnections === 'function') updateAllConnections();
+  if(typeof veFitViewToContent === 'function') veFitViewToContent();
+  if(typeof showToast === 'function')
+    showToast('Kayış Yolu kanvası eklendi — Katmanlar\'dan görünümünü seçin', 'success');
+  return yeni;
+}
+
 // _silent: autosave gibi arka-plan işlemleri köke çöküp (veSaveActiveTabState)
 // kullanıcıyı bulunduğu iç topolojiye geri getirirken true geçer; bu görünmez
 // geri-girişte toast/animasyon tetiklenmez (breadcrumb ve sidebar yine güncellenir).
@@ -464,15 +503,18 @@ function veFeadOpenEditor(nodeId, _silent){
   }
   veFeadRefreshBadges();
 
-  // FEAD ARAÇLARI PENCERESİ SIĞDIRMADAN ÖNCE görünür: yuvadaki pencere tuvalin
-  // solunu örtüyor ve sığdırma o genişliği ölçerek düşüyor (ui-core.js →
-  // veFitViewToContent). Kapsam senkronu aşağıda, sığdırmadan SONRA koşuyor;
-  // beklenseydi açılış kadrajında kart pencerenin altında kalırdı.
-  if(typeof veFeadAraclarKapsam === 'function') veFeadAraclarKapsam('fead-analysis');
+  // KABUK SIĞDIRMADAN ÖNCE YERİNE OTURUR. Kapsam senkronu tuvalin ölçüsünü
+  // değiştiren iki şeyi birden yapıyor: FEAD ARAÇLARI PENCERESİ yuvada tuvalin
+  // solunu örtüyor (sığdırma o genişliği düşer — ui-core.js →
+  // veFitViewToContent) ve "Bileşenler" sütunu FEAD'de YOK (components.js →
+  // veSyncPaletsizKapsam), yani tuval 220 px genişliyor. Senkron sığdırmadan
+  // SONRA koşsaydı kadraj dar tuvalle kurulur, sütun kalkınca içerik sola kayık
+  // kalırdı (kapı: fead-araclar.spec.js → "SÜTUNSUZ AÇILIŞ").
+  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
+  else if(typeof veFeadAraclarKapsam === 'function') veFeadAraclarKapsam('fead-analysis');
   if(!_silent && typeof veFitViewToContent === 'function') veFitViewToContent();
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veFeadUpdateBreadcrumb();
-  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
   if(!_silent && typeof showToast === 'function') showToast('FEAD — İç Topoloji', 'info');
 
@@ -6318,7 +6360,7 @@ function veFeadTableCardHTML(node, opt){
           + ' altına iner. Sıra sürücüyle başladığına göre gergi SON SATIR olmalı.">'
           + veIkon('x') + ' Gergi sonda değil · ' + (to.index + 1) + '/' + to.count + '</span>';
       }())
-    + veFeadTableAddHTML()
+    + veFeadTableAddHTML(node && node.id)
     + '</div>';
 
   // ── TABLO ───────────────────────────────────────────────────────────────
@@ -6448,16 +6490,10 @@ function veFeadTableSet(nodeId, key, raw){
 }
 
 // ── KASNAK EKLE — TİP LİSTESİ componentDefs'TEN ───────────────────────────
-// Kutular kalkınca paletten sürüklemek hâlâ çalışıyor (kutusuz düğüm kuruluyor
-// ve satır beliriyor) ama kanvasta hiçbir şey görünmediği için o yol artık
-// SESSİZ. Tablonun kendi ekleyicisi o boşluğu kapatıyor: seçilen tip kayış
-// sırasının SONUNA ekleniyor ve paneli açılıyor.
+// Kasnağın kanvasta kutusu yok; eklemenin yüzeyi tablonun kendi ekleyicisi
+// (aşağıda — tık sıraya, sürükleme kayışın üstüne). Liste componentDefs'ten
+// türer, ikinci bir tip listesi tutulmaz; sembol de tipin kendi sembolü.
 //
-// Liste componentDefs'ten türer, ikinci bir tip listesi tutulmaz.
-//
-// KARTIN ALTINDA duruyor, künyenin sağ ucunda değil: eklenen kasnak sıranın
-// SONUNA düşüyor, yani eylemin sonucu tam olarak listenin bittiği yerde
-// beliriyor. Künyede dururken bir kayış künyesi alanı gibi okunuyordu.
 // Modeldeki otomatik gergi düğümü (yoksa null). Tek yerden okunuyor ki
 // "gergi hangisi" sorusu iki ayrı yanıt üretmesin.
 function _feadTensionerOf(list){
@@ -6467,24 +6503,146 @@ function _feadTensionerOf(list){
   return null;
 }
 
-function veFeadTableAddHTML(){
+// ── EKLEYİCİ BİR LİSTE: TIKLA → SIRAYA, SÜRÜKLE → KAYIŞIN ÜSTÜNE ──────────
+//
+// FEAD'in iç topolojisinde "Bileşenler" sütunu YOK (2026-09-28, kullanıcı:
+// *"zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar' üzerinden
+// ekleyebiliyoruz"* — components.js → noPalette). Sütunun KARTTA karşılığı
+// olmayan tek işi kasnağı çizimde kayışın ÜSTÜNE bırakmaktı (Çizim Masası:
+// iki komşunun arasına, bırakılan noktaya). Bir `<select>` sürüklenemez;
+// ekleyici bu yüzden satırları SÜRÜKLENEBİLİR bir liste oldu ve sütunun
+// kasnak kategorisi buraya taşındı. İki yol, iki sonuç:
+//   • TIK  → `veFeadTableAdd`: gerginin önüne, koordinatsız (eski davranış).
+//   • SÜRÜKLE → paletin bırakma kancaları (`veFeadPaletUstunde` ·
+//     `veFeadPaletBirak`, ui-core.js): açıklığa, bırakılan noktaya; çizimin
+//     dışına bırakılırsa tıkla aynı yol. İkinci bir bırakma yolu YAZILMADI.
+// Gergi açıklığa girmez (veFeadAradanAday) — satırı SÜRÜKLENMEZ, yalnız tıklanır.
+//
+// LİSTE YUKARI AÇILIR, sürükleme başlayınca SOLAR ve tıklamayı geçirir: pafta
+// kartın dibinde, aşağı açılan liste kartın dışına taşardı; yukarıda ise
+// bırakma hedefinin (kayışın) bir kısmını örter — solup geçirgen olunca
+// altındaki kayış da hedef olur.
+//
+// AÇIKLIK MODELDE DEĞİL (`VE_FEAD_EK_ACIK`, kural 15'in `VE_FEAD_KAT_ACIK`
+// gerekçesi): görünüm durumu, kaydedilmez, geri-al yığınına yazılmaz; pafta
+// yeniden kurulunca açık kalır. Açıp kapamak kartı KURMAZ — sınıf eşitlenir.
+var VE_FEAD_EK_ACIK = null;
+
+function veFeadTableAddHTML(kartId){
   if(typeof componentDefs === 'undefined') return '';
-  var opt = '<option value="">＋ Kasnak ekle…</option>';
   // MODELDE ZATEN GERGİ VARSA LİSTEDE GÖRÜNMEZ. Çekirdek birden fazla gergiyi
   // de reddediyor; liste onu sunmaya devam ederse kullanıcı modeli ikinci bir
-  // yönden çözülemez hâle getirebiliyordu. Seçenek KALDIRILIYOR, `disabled`
+  // yönden çözülemez hâle getirebiliyordu. Satır KALDIRILIYOR, pasif
   // basılmıyor: gri bir satır "neden kapalı?" diye sorduruyor, oysa cevap
-  // zaten listede görünen gergi satırı.
+  // zaten tabloda görünen gergi satırı.
   var _tenVar = (typeof nodes !== 'undefined') && !!_feadTensionerOf(nodes);
+  var ogeler = '';
   Object.keys(componentDefs).forEach(function(t){
-    if(!componentDefs[t] || !componentDefs[t].isFeadPulley) return;
-    if(_tenVar && componentDefs[t].isFeadTensioner) return;
-    opt += '<option value="' + t + '">' + _feadEsc(componentDefs[t].name) + '</option>';
+    var d = componentDefs[t];
+    if(!d || !d.isFeadPulley) return;
+    if(_tenVar && d.isFeadTensioner) return;
+    var surukle = !d.isFeadTensioner;
+    ogeler += '<div class="ve-fead-ek-oge" role="menuitem" tabindex="0" data-fead-ekle="' + t + '"'
+      + (surukle ? ' draggable="true"' : '')
+      + ' title="' + _feadEsc(d.name) + ' — tıkla: sıranın sonuna (gerginin önüne) ekle'
+      + (surukle ? '; sürükle: çizimde kayışın üstüne bırak, iki kasnağın arasına girer'
+                 : '; gergi açıklığa bırakılmaz') + '">'
+      + '<span class="ik" aria-hidden="true">' + (d.svg || '') + '</span>'
+      + '<span class="ad">' + _feadEsc(d.name) + '</span></div>';
   });
-  return '<select class="ve-fead-tbl-add" data-ve="add-pulley"'
-    + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();"'
-    + ' onchange="veFeadTableAdd(this.value); this.selectedIndex=0;"'
-    + ' title="Kayış sırasının sonuna kasnak ekle">' + opt + '</select>';
+  var id = _feadEsc(kartId || '');
+  var acik = !!kartId && VE_FEAD_EK_ACIK === kartId;
+  return '<div class="ve-fead-ek' + (acik ? ' is-acik' : '') + '" data-ve="add-pulley" data-ve-kart="' + id + '"'
+    + ' onmousedown="event.stopPropagation();" ondblclick="event.stopPropagation();">'
+    + '<button type="button" class="ve-fead-ek-dugme" aria-haspopup="menu"'
+    + ' aria-expanded="' + (acik ? 'true' : 'false') + '"'
+    + ' onclick="veFeadEkToggle(\'' + id + '\')"'
+    + ' title="Kasnak ekle — tıkla: sıranın sonuna; sürükle: çizimde kayışın üstüne">'
+    + veIkon('plus') + '<span>Kasnak ekle</span></button>'
+    + '<div class="ve-fead-ek-liste" role="menu" aria-label="Kasnak tipleri"'
+    + ' onclick="veFeadEkTik(event)" onkeydown="veFeadEkTus(event)"'
+    + ' ondragstart="veFeadEkSurukle(event)" ondragend="veFeadEkBitti()">'
+    + ogeler + '</div></div>';
+}
+
+// Listeyi aç / kapat — `ac` verilmezse çevirir. Kart kurulmaz, sınıf eşitlenir.
+function veFeadEkToggle(kartId, ac){
+  var hedef = (typeof ac === 'boolean') ? (ac ? (kartId || null) : null)
+            : (VE_FEAD_EK_ACIK === kartId ? null : (kartId || null));
+  VE_FEAD_EK_ACIK = hedef;
+  _feadEkEsitle();
+  return VE_FEAD_EK_ACIK;
+}
+function _feadEkEsitle(){
+  if(typeof document === 'undefined') return;
+  var el = document.querySelectorAll('.ve-fead-ek');
+  for(var i = 0; i < el.length; i++){
+    var acik = !!VE_FEAD_EK_ACIK && el[i].getAttribute('data-ve-kart') === VE_FEAD_EK_ACIK;
+    el[i].classList.toggle('is-acik', acik);
+    if(!acik) el[i].classList.remove('suruklenir');
+    var b = el[i].querySelector('.ve-fead-ek-dugme');
+    if(b) b.setAttribute('aria-expanded', acik ? 'true' : 'false');
+  }
+}
+function _feadEkOgesi(e){
+  var t = e && e.target;
+  return (t && t.closest) ? t.closest('[data-fead-ekle]') : null;
+}
+// TIK: sıranın sonuna (gerginin önüne) — tablonun ekleyicisinin kendisi.
+function veFeadEkTik(e){
+  var o = _feadEkOgesi(e);
+  if(!o) return false;
+  veFeadEkToggle(null, false);
+  return veFeadTableAdd(o.getAttribute('data-fead-ekle'));
+}
+// Klavye: Enter / Boşluk satırı tıklar (satır bir `div` — sürüklenebilmesi için).
+function veFeadEkTus(e){
+  if(!e || (e.key !== 'Enter' && e.key !== ' ')) return false;
+  var o = _feadEkOgesi(e);
+  if(!o) return false;
+  if(e.preventDefault) e.preventDefault();
+  return veFeadEkTik(e);
+}
+// SÜRÜKLE: paletin sözleşmesiyle aynı taşıyıcı — `component-type` + sürüklenen
+// tipin globali (`vePaletSuruklenen`, ui-core.js: dragover'da `getData` boş
+// döner, açıklığı göstermek için tipi o anda bilmek gerekiyor).
+function veFeadEkSurukle(e){
+  var o = _feadEkOgesi(e);
+  if(!o || !e.dataTransfer) return false;
+  var t = o.getAttribute('data-fead-ekle');
+  e.dataTransfer.setData('component-type', t);
+  e.dataTransfer.effectAllowed = 'copy';
+  if(typeof window !== 'undefined') window.vePaletSuruklenen = t;
+  // Solma BİR SONRAKİ TURDA: sürükleme görüntüsü olay anındaki çizimden
+  // alınıyor, aynı anda solan satır görüntüsünü de soluk verirdi.
+  var kap = o.closest ? o.closest('.ve-fead-ek') : null;
+  if(kap) setTimeout(function(){ kap.classList.add('suruklenir'); }, 0);
+  return true;
+}
+// SÜRÜKLEME SONU LİSTE KABININ `ondragend`inde — belgede DEĞİL. Başarılı
+// eklemede pafta yeniden kurulur ve kaynak satır DOM'dan sökülür; `dragend`
+// belgeye ULAŞMAZ ama sökülen alt ağaçtaki bu kaba ulaşır (ölçüldü: satır
+// bağlı=false → kap, belge hiç). Belgeye bağlanan bir temizlik onu kaçırırdı.
+function veFeadEkBitti(){
+  if(typeof window !== 'undefined') window.vePaletSuruklenen = null;
+  veFeadPaletBitti();
+  veFeadEkToggle(null, false);
+}
+// Dışarı tıklamak ve Esc listeyi kapatır (menünün olağan davranışı).
+function _feadEkDisari(e){
+  if(!VE_FEAD_EK_ACIK) return;
+  var t = e && e.target;
+  if(t && t.closest && t.closest('.ve-fead-ek[data-ve-kart="' + VE_FEAD_EK_ACIK + '"]')) return;
+  veFeadEkToggle(null, false);
+}
+function _feadEkEsc(e){
+  if(!VE_FEAD_EK_ACIK || !e || e.key !== 'Escape') return;
+  veFeadEkToggle(null, false);
+  if(e.stopPropagation) e.stopPropagation();
+}
+if(typeof document !== 'undefined' && document.addEventListener){
+  document.addEventListener('mousedown', _feadEkDisari, true);
+  document.addEventListener('keydown', _feadEkEsc, true);
 }
 
 function veFeadTableAdd(type){
@@ -8636,6 +8794,10 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadTableAdd: veFeadTableAdd,
     _feadScrollRowIntoView: _feadScrollRowIntoView, veFeadTableDelete: veFeadTableDelete,
     veFeadTableAddHTML: veFeadTableAddHTML,
+    veFeadEkToggle: veFeadEkToggle, veFeadEkTik: veFeadEkTik, veFeadEkTus: veFeadEkTus,
+    veFeadEkSurukle: veFeadEkSurukle, veFeadEkBitti: veFeadEkBitti,
+    veFeadEkAcik: function(){ return VE_FEAD_EK_ACIK; },
+    veFeadKanvasEkle: veFeadKanvasEkle,
     veFeadTableOpen: veFeadTableOpen,
     veFeadMarkSelectedRow: veFeadMarkSelectedRow,
     veFeadYolDurumu: veFeadYolDurumu, veFeadCizimBas: veFeadCizimBas,

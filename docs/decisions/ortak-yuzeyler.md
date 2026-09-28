@@ -2,6 +2,37 @@
 
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 
+### Paletsiz kapsam kendini beyan eder (`componentDefs.noPalette`, 2026-09-28)
+
+**Hüküm:** bir modül `componentDefs[tip].noPalette` beyan ederse iç
+topolojisinde "Bileşenler" sütunu ve daraltılmışken beliren açma rayı
+ÇİZİLMEZ; tuval o genişliği alır. Sınıfı (`.ve-main.ve-paletsiz`) kapsamın tek
+noktası yazar (`veSyncSidebarScope` → `veSyncPaletsizKapsam`, js/components.js);
+modül aç/kapa, sekme ve proje yükleme hepsi oradan geçer. İlk kullanıcısı FEAD
+(kullanıcı kararı: *"zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar'
+üzerinden ekleyebiliyoruz"*) — ekleme yollarının yeri FEAD skill'inde, kural 39.
+
+**Gerekçe:** sütun her kapsamda aynı kabuktu ve içeriğini kapsamdan
+süzüyordu; eklemesi tuvalde yapılan bir modülde süzülecek bir şey kalmayınca
+sütun boş bir kutu olurdu. Beyan, `ui-core.js`'e / kabuğa modüle özgü dal
+yazmak yerine seçildi — ikinci bir paletsiz modül yalnız bir alan ekler.
+
+**Kullanıcının daralt tercihi YAZILMAZ** (`mf-sidebar-collapsed`): bu bir
+tercih değil kapsamın kuralı; öteki modüle dönünce sütun bırakıldığı hâlde
+gelir. **Kapsam SIĞDIRMADAN ÖNCE eşitlenir**: sütun kalkınca tuval genişliyor
+(1920'de 1636 → 1856 px); açıcı kapsamı sığdırmadan sonra eşitleseydi kadraj
+dar tuvalle kurulur, içerik kayık kalırdı. `resize` olayı GÖNDERİLMEZ — tuvale
+bağlı yüzeyler kabı `ResizeObserver` ile izliyor, olay ise Sonuçlar'ın bütün
+grafiklerini boşuna yeniden çizerdi.
+
+Kapı: `tests/e2e/kabuk-sutun.spec.js` → *"PALETSİZ KAPSAM"* (sütun ve açma
+rayı yok — sütun daraltılmışken bile; tuval rayın yanından başlıyor; köke
+dönünce sütun geri geliyor ve tuval tam onun kadar daralıyor) +
+`tests/unit/arac-performans.test.js` → *"PALETSİZ KAPSAM"* (yalnız beyan eden
+modülde sınıf, tercih yazılmıyor, CSS iki öğeyi birden gizliyor) +
+`tests/e2e/fead-araclar.spec.js` → *"SÜTUNSUZ AÇILIŞ"*. Sütunu ölçen kabuk
+kapıları paleti olan bir modülün (Araç Performans) iç topolojisinde koşar.
+
 ### Tuvali örten yüzey kendini işaretler (`data-ve-ortu`, 2026-09-28)
 
 **Hüküm:** tuval kabının içinde, tuvalin soluna yapışık duran bir yüzey

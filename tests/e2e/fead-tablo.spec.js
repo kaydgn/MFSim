@@ -46,6 +46,14 @@ async function bootApp(page) {
 }
 
 // Örneği kur: tablo geometri kartında KENDİLİĞİNDEN açık (ön ayarın tablosu).
+// "＋ Kasnak ekle" bir LİSTE (2026-09-28 — FEAD'de "Bileşenler" sütunu yok,
+// satır çizime de sürüklenebiliyor): düğme listeyi açar, satıra tık kasnağı
+// sıranın sonuna (gerginin önüne) ekler ve listeyi kapatır.
+async function kasnakEkle(tablo, tip) {
+  await tablo.locator('.ve-fead-ek-dugme').click();
+  await tablo.locator('.ve-fead-ek.is-acik [data-fead-ekle="' + tip + '"]').click();
+}
+
 async function ornek(page, key) {
   await bootApp(page);
   await feadAc(page);
@@ -185,7 +193,7 @@ test('PAFTA: kartın altında — yazılır, Sekme/Enter, sıra, yön, sil/ekle,
   const silSonra = await page.evaluate(() => veFeadBeltOrder(window.nodes).map((n) => n.customName));
   expect(silSonra).toHaveLength(silOnce.length - 1);
   expect(silSonra).not.toContain(silOnce[3]);
-  await tablo.locator('select[data-ve="add-pulley"]').selectOption('fead-waterpump');
+  await kasnakEkle(tablo, 'fead-waterpump');
   await page.waitForTimeout(300);
   const ek = await page.evaluate(() => veFeadBeltOrder(window.nodes).map((n) => n.type));
   expect(ek[ek.length - 1]).toBe('fead-tensioner');               // GERGİ SONDA
@@ -430,7 +438,7 @@ test('PAFTA: hücreye basmak kartı taşımıyor, tekerlek listeyi kaydırıyor,
   // ── 2) TEKERLEK: liste taşıyorsa LİSTEYİ kaydırır, kanvası hiç ────────
   // Tablonun tavanı kartın %55'i: altı satır sığıyor, on iki satır taşıyor.
   for (let i = 0; i < 6; i++) {
-    await tablo.locator('select[data-ve="add-pulley"]').selectOption('fead-idler');
+    await kasnakEkle(tablo, 'fead-idler');
     await page.waitForTimeout(250);
   }
   const kay = tablo.locator('.ve-fead-pf-kay');
@@ -451,7 +459,7 @@ test('PAFTA: hücreye basmak kartı taşımıyor, tekerlek listeyi kaydırıyor,
   const idler = () => page.evaluate(() =>
     window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).map((n) => n.id));
   const once = await idler();
-  await tablo.locator('select[data-ve="add-pulley"]').selectOption('fead-ps');
+  await kasnakEkle(tablo, 'fead-ps');
   await page.waitForTimeout(350);
   const yeni = (await idler()).find((x) => !once.includes(x));
   expect(await tablo.evaluate((k, id) => {

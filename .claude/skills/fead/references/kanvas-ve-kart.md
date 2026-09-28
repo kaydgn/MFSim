@@ -19,8 +19,8 @@ girilebiliyordu.
 |---|---|---|
 | X/Y yalnız tablodan | çizimde sürükle (0,1 mm ızgara) · ok 1 mm / Shift 10 mm | `veFeadCizimBas` · `veFeadKasnakKaydir` · `veFeadCizimTus` |
 | Panel yalnız tablodaki addan | çizimdeki kasnağa TIKLA ya da tablodaki ad | `veFeadCizimBas` (hareketsiz bırakma = tık) |
-| Kasnak ekle: tablonun seçicisi (konumsuz, gerginin önüne) | paletten kayışın ÜSTÜNE bırak → iki komşunun arasına, bırakılan noktaya | `veFeadPaletBirak` · `veFeadAciklikSec` · `veFeadAradanEkle` |
-| Paletten kanvasa bırakma SESSİZ | çizim dışına bırakılan kasnak tabloya eklenir; hiçbir kartta tablo açık değilse geometri kartınınki açılır | `veFeadPaletBirak` · `_feadTabloGoster` |
+| Kasnak ekle: tablonun seçicisi (konumsuz, gerginin önüne) | tablonun LİSTESİNDEN kayışın ÜSTÜNE sürükle → iki komşunun arasına, bırakılan noktaya (2026-09-28'e kadar kaynak "Bileşenler" sütunuydu; FEAD'de sütun yok — SKILL.md kural 39) | `veFeadTableAddHTML` · `veFeadPaletBirak` · `veFeadAciklikSec` · `veFeadAradanEkle` |
+| Kanvasa bırakma SESSİZ | çizim dışına bırakılan kasnak tabloya eklenir; hiçbir kartta tablo açık değilse geometri kartınınki açılır | `veFeadPaletBirak` · `_feadTabloGoster` |
 | `fead-table` kanvas kartı | Kayış Yolu kartının Paftası (çizimin altında, kartla ölçeklenir; tablolu kart 640 px) | `veFeadTabloAcik` · `veFeadTabloToggle` · `veFeadKartTabloOlcu` |
 | Açılış yüzeyi: sihirbaz + tablo | sihirbaz + BOŞ Kayış Yolu kartı (örnek/sihirbaz onu DEVRALIR) | `veFeadPopulateStarter` · `veFeadLoadExample` · `veFeadWizCreate` |
 | Yerleşim: tablo üstte, kanvaslar altta | kanvaslar tek sıra, künyeler solda | `veFeadArrangeByCoords` · `veFeadFallbackSlots` |
@@ -67,7 +67,7 @@ vardı ve panelinin kendi metni bunu söylüyordu. Örnek KURUCUSU
 o ve testlerin kanonik model kurucusu.
 | Kutuyu sürükleyerek koordinat girme | Tablonun X/Y hücreleri |
 | Kutuyu seçip silme | Satırın ✕ düğmesi |
-| Paletten sürükleyip kanvasta görme | Tablonun "＋ Kasnak ekle" seçicisi (palet de çalışır, ama artık sessiz) |
+| Paletten sürükleyip kanvasta görme | Tablonun "＋ Kasnak ekle" listesi — tık ya da çizime sürükle (FEAD'de "Bileşenler" sütunu yok, 2026-09-28) |
 | `fead-coordlink` (Konum Bağı) | — bağlanacak konum kalmadı |
 | Kanvas ↔ mm köprüsünün tamamı | — koordinatın tek kaynağı `data.x/y` |
 
