@@ -718,6 +718,13 @@ function veFeadWizNodes(st){
     if(Number.isFinite(v)) bd[a] = v;
   });
   if(b.beltType) bd.beltType = b.beltType;
+  // HESAP ÇAPI VE CAD ESKİZİNİN ÖLÇÜSÜ DE TAŞINIR (kural 20). Taşınmasaydı
+  // sihirbazda "CAD eskizi" seçilir, kurulan model sessizce katalogla çözülürdü.
+  if(b.hesapCap === 'cad' || b.hesapCap === 'db') bd.hesapCap = b.hesapCap;
+  ['hbCad', 'hrCad'].forEach(function(a){
+    var v = _fwNum(b[a], NaN);
+    if(Number.isFinite(v)) bd[a] = v;
+  });
   // KAYIŞ TİPİNE BAĞLI ÇIKTILAR HER ZAMAN KAPALI (kullanıcı kararı,
   // 2026-08-31): *"programda SADECE VE SADECE kayış boyunu çıktı olarak
   // verecek… kayış sabit kalarak program hesap yapmayacak."* Sihirbaz artık
@@ -1101,7 +1108,7 @@ function veFeadWizLiveHTML(b){
     // ölçer (kullanıcı kararı 2026-09-28). Dönüşüm köprüden.
     if(Number.isFinite(b.beltLengthMm)){
       var _bc = (typeof veFeadBoyCizgileri === 'function' && b.sys && b.sys.belt)
-        ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt.profile, b.sys.belt.brand) : null;
+        ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt) : null;
       h += '<span class="ve-fw-pill">L<sub>b</sub> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
          + (b.beltLengthDerived ? ' <em>çıktı</em>' : '')
          + ((_bc && Number.isFinite(_bc.dw)) ? ' <em>· d<sub>w</sub> ' + _fwFmt(_bc.dw, 1) + '</em>' : '')
@@ -2435,7 +2442,7 @@ function _fwReadHTML(etHtml, deg, ikon){
 // ölçer). Sayı köprüden; profil kaydı tanınmıyorsa satır hiç yazılmaz.
 function _fwKordRead(b){
   var x = (typeof veFeadBoyCizgileri === 'function' && b && b.sys && b.sys.belt)
-    ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt.profile, b.sys.belt.brand) : null;
+    ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt) : null;
   return (x && Number.isFinite(x.dw)) ? _fwRead('Kord boyu (CAD çizgisi)', _fwFmt(x.dw, 1) + ' mm') : '';
 }
 
@@ -2983,6 +2990,10 @@ function _fwStepKayis(b){
                _fwField('Marka', _fwSelHTML('belt.brand',
                  [['GATES','Gates'],['OPTIBELT','Optibelt'],['CONTITECH','ContiTech']], bl.brand || 'GATES')),
                _fwField('Kanal (kaburga) sayısı', _fwInp('belt.ribs', { ph: '8', step: '1' }))], 3)
+    // HESAP ÇAPI — kayış penceresinin seçicisiyle TEK listeden (kural 24).
+    + ((typeof veFeadHesapCapSecenekleri === 'function')
+        ? _fwGrid([_fwField('Hesap çapı', _fwSelHTML('belt.hesapCap',
+            veFeadHesapCapSecenekleri(bl), bl.hesapCap || 'katalog'))], 1) : '')
     );
 
   // ── ÜÇ KART KALDIRILDI (kullanıcı isteği, 2026-08-31) ────────────────────

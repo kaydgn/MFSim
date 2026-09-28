@@ -1404,6 +1404,28 @@ function _gfSec8(){
     + 'gergi kolu başka bir açıya oturur. Kayış Tablosu’ndaki <em>Efektif Çap</em> sütunu da '
     + 'kasnağın <strong>d<sub>w</sub></strong> çapıdır (defterin adı, OD + 2·h<sub>b</sub>); '
     + '<em>efektif boy</em> ise d<sub>b</sub> çizgisindedir — adları benzer, çizgileri farklı.');
+
+  h += '<h3>8.6 Hesap çapı — kayış yolu hangi çizgide kurulur</h3>';
+  h += '<p>Kasnağa girilen çap <strong>d<sub>b</sub></strong>’dir: kaburgalı kasnakta kaburga '
+    + 'tepesi (dış çap). Program kayış yolunu, hız oranlarını ve kuvvetleri bu çapta değil, '
+    + 'kayışın <strong>kord çizgisinde</strong> kurar: kaburgalı kasnakta d<sub>b</sub> + 2·h<sub>b</sub>, '
+    + 'sırttan dolanan kasnakta dış çap + 2·h<sub>r</sub>. Krank Ø147 ise hesap Ø150,0 ile yapılır '
+    + '(ContiTech, h<sub>b</sub> = 1,5) — Gates kataloğuyla Ø149,4.</p>';
+  h += '<p><strong>Hesap çapı</strong> seçimi h<sub>b</sub> ile h<sub>r</sub>’nin nereden geldiğini '
+    + 'belirler. Kayışın kord çizgisi tek olduğu için seçim de <strong>kayış için tektir</strong>: '
+    + 'bütün kasnaklara birlikte uygulanır.</p>';
+  h += _gfAlanTablo('Hesap çapı seçenekleri', [
+    ['Kord (d<sub>w</sub>) · marka kataloğu', 'Seçilen markanın h<sub>b</sub> / h<sub>r</sub>’si',
+      'Varsayılan; örnekler ve elle kurulan modeller'],
+    ['Kord (d<sub>w</sub>) · CAD eskizi', 'STEP dosyasındaki kayış eskizinden ölçülen h<sub>b</sub> / h<sub>r</sub>',
+      'Yalnız eskiz okunduysa sunulur; model CAD’le aynı çizgide kurulur'],
+    ['Kasnak dış çapı (d<sub>b</sub>)', 'h<sub>b</sub> = h<sub>r</sub> = 0',
+      'Kayış kalınlığı yok sayılır; kord boyu numarayla aynı çıkar']
+  ], ['Seçenek', 'Kord ofseti', 'Ne zaman']);
+  h += _gfNot('Nerede seçilir',
+      'Kayış Özellikleri → <b>Profil</b> sekmesi → <em>Hesap çapı</em>; sihirbazda Kayış adımı. '
+    + 'Seçilen çift aynı sekmenin ipucunda katalogla yan yana yazılır. Rapor §8.2 hesap çapını ve '
+    + 'h<sub>b</sub> / h<sub>r</sub>’nin kaynağını basar; kesit figüründe hesabın çizgisi dolu ve kalındır.');
   return h;
 }
 
