@@ -5700,22 +5700,13 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
     html += '</div>';
   } else {
-    html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
-    html += '<table id="ve-table-' + slotIdx + '" class="ve-result-table">';
-    html += '<thead><tr>';
-    html += '<th>#</th>';
-    html += '<th>' + escapeHTML(slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</th>';
-    sensors.forEach(function(s, i) {
-      html += '<th style="color:' + veSlotSignalColor(slot, i) + '; border-bottom:3px solid ' + veSlotSignalColor(slot, i) + ';">' + escapeHTML(s.name) + (s.unit ? ' [' + escapeHTML(s.unit) + ']' : '') + '</th>';
-    });
-    html += '</tr></thead>';
-    html += '<tbody id="ve-table-body-' + slotIdx + '">';
-    // Yer tutucu: aşağıdaki veri kapısı açıksa hemen üzerine yazılır. Metin
-    // "simülasyon" demeyi yalnız gerçekten simülasyon beklenirken hak eder —
-    // içe aktarılmış bir ölçümün başında bu cümle yanlış yönlendiriyordu.
-    html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">' +
-            'Veri bekleniyor' + '</td></tr>';
-    html += '</tbody></table></div>';
+    // FÖY (js/sonuc-tablo.js): kâğıt, başlık ve tablo veri gelince BİRLİKTE
+    // kurulur — başlık da veriden türüyor (birim ayrı satırda, sütunun tek
+    // ondalığı). Yer tutucu: aşağıdaki veri kapısı açıksa hemen üzerine
+    // yazılır. Metin "simülasyon" demez — içe aktarılmış bir ölçümün başında
+    // o cümle yanlış yönlendiriyordu.
+    html += '<div class="ve-foy-zemin" id="ve-foy-' + slotIdx + '">' +
+            '<div class="ve-foy-bos">Veri bekleniyor</div></div>';
   }
 
   html += '</div>';

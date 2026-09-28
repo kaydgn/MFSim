@@ -445,34 +445,30 @@ function veFormatAxisVal(v, dec) {
   return veSayi(v, dec);
 }
 
-// ═══════ TABLO RENDERLAMA ═══════
+// ═══════ TABLO — FÖY (js/sonuc-tablo.js) ═══════
+//
+// Föyü YAZAN ortak üreticidir (Ölçüm Görüntüleyici aynı dosyayı paylaşır).
+// Burada yalnız MFSim'in VERİ ÇÖZÜMÜ var: X dizisi hangi kaynaktan, sütunların
+// verisi, başlık ve künye.
 
-function veRenderTable(slotIdx) {
-  var slot = veResultSlots[slotIdx];
-  if(!slot || !slot.sensors || slot.sensors.length === 0) return;
-  
-  var tbody = document.getElementById('ve-table-body-' + slotIdx);
-  if(!tbody) return;
-  
-  // X ekseni verisini belirle
+// Panonun X dizisi. Sıra eski tablo çizicisinin aynısı: seçilmiş eksen →
+// içe aktarılan ölçümün kendi zamanı → segment sürüşü → simülasyon zamanı;
+// çapraz sekme sensörü daha uzun bir zaman dizisi getirirse o.
+function veTabloXSerisi(slot) {
   var r = window.veSimResults;
   var timeArr = null;
   var slotDataSource = slot._dataSource || null;
   var xAxisDS = (slot.xAxis && slot.xAxis._dataSource) ? slot.xAxis._dataSource : slotDataSource;
 
-  // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
+  // Özel X ekseni desteği (sanal sensör, modül kanalı ya da fiziksel sensör)
   if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
     if(slot.xAxis.id.charAt(0) === '~') {
       var xParts = slot.xAxis.id.substring(1).split(':');
-      var xCompType = xParts[0];
-      var xSignal = xParts.slice(1).join(':');
-      timeArr = veGetSensorData('~' + xCompType, xSignal, xAxisDS);
+      timeArr = veGetSensorData('~' + xParts[0], xParts.slice(1).join(':'), xAxisDS);
     } else {
       var xColonIdx = slot.xAxis.id.indexOf(':');
       if(xColonIdx > 0) {
-        var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
-        var xSigId = slot.xAxis.id.substring(xColonIdx + 1);
-        timeArr = veGetSensorData(xSensorId, xSigId);
+        timeArr = veGetSensorData(slot.xAxis.id.substring(0, xColonIdx), slot.xAxis.id.substring(xColonIdx + 1));
       }
     }
   }
@@ -493,99 +489,65 @@ function veRenderTable(slotIdx) {
 
   slot.sensors.forEach(function(s) {
     if(s.id.charAt(0) === '@') {
-      var parts = s.id.substring(1).split(':');
-      var tIdx = parseInt(parts[0]);
-      var tab = veTabs[tIdx];
+      var tab = veTabs[parseInt(s.id.substring(1).split(':')[0])];
       var tr = (tab && tab.state && tab.state.simResults) ? tab.state.simResults : null;
-      if(tr && tr.time && (!timeArr || tr.time.length > timeArr.length)) {
-        timeArr = tr.time;
-      }
+      if(tr && tr.time && (!timeArr || tr.time.length > timeArr.length)) timeArr = tr.time;
     }
   });
+  return timeArr;
+}
 
-  if(!timeArr || timeArr.length === 0) return;
-
-  var datasets = [];
-  slot.sensors.forEach(function(s) {
-    var sDS = s._dataSource || slotDataSource;
-    var data = veGetSensorData(s.id, s.signal, sDS);
-    datasets.push(data); // null olabilir
-  });
-  
-  // X ekseni içe aktarılan bir ölçümden gelebilir: metin ya da boşluk
-  // içerebilir, toFixed doğrudan çağrılamaz.
-  var veTblX = function(v) {
-    return (typeof v === 'number' && isFinite(v)) ? veSayi(v, 3) : (v == null ? '—' : String(v));
-  };
-
-  var n = timeArr.length;
-  var maxRows = 200;
-  var step = Math.max(1, Math.floor(n / maxRows));
-  
-  var rows = [];
-  var rowNum = 0;
-  for(var i = 0; i < n; i += step) {
-    rowNum++;
-    var row = '<tr><td>' + rowNum + '</td>';
-    row += '<td style="font-weight:600;">' + veTblX(timeArr[i]) + '</td>';
-    datasets.forEach(function(ds, di) {
-      var val = (ds && i < ds.length) ? ds[i] : 0;
-      row += '<td style="color:' + veSlotSignalColor(slot, di) + ';">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';
-    });
-    row += '</tr>';
-    rows.push(row);
+// Föyün başlığı ve künyesi: pano HANGİ kaynağın verisini gösteriyor? Pano tek
+// X ekseninde çalıştığı için ilk sinyalin kaynağı hepsininkidir.
+function _veFoyKunye(slot) {
+  var id = String((slot.sensors[0] || {}).id || '');
+  var src = (typeof veResSourceOf === 'function') ? veResSourceOf(id) : null;
+  if(src) {
+    var L = src.lib();
+    var ds = L ? L.setOf(veResSets(src), id) : null;
+    return { baslik: (ds && ds.name) || src.ad, kaynak: src.ad };
   }
-  
-  if((n - 1) % step !== 0 && n > 1) {
-    rowNum++;
-    var row = '<tr style="border-top:2px solid var(--border-color);"><td>' + rowNum + '</td>';
-    row += '<td style="font-weight:700;">' + veTblX(timeArr[n - 1]) + '</td>';
-    datasets.forEach(function(ds, di) {
-      var val = (ds && n - 1 < ds.length) ? ds[n - 1] : 0;
-      row += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';
-    });
-    row += '</tr>';
-    rows.push(row);
+  if(id.charAt(0) === '#' && typeof veImpFind === 'function') {
+    var d = veImpFind(veImpIdOf(id));
+    var ad = (d && d.name) || 'İçe aktarılan ölçüm';
+    return { baslik: ad, kaynak: 'İçe aktarılan ölçüm' + (d && d.fileName && d.fileName !== ad ? ' · ' + d.fileName : '') };
   }
-  
-  // MIN / MAX / ORT
-  var sumRow = function(label, borderTop, fn) {
-    var r2 = '<tr style="background:var(--bg-tertiary);' + (borderTop ? ' border-top:2px solid var(--accent-primary);' : '') + '"><td colspan="2" style="font-weight:700; color:var(--text-muted);">' + label + '</td>';
-    datasets.forEach(function(ds, di) {
-      var v = fn(ds);
-      r2 += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' +
-            (v === null ? '—' : veFormatTooltipVal(v)) + '</td>';
-    });
-    return r2 + '</tr>';
+  var sekme = null;
+  veSolverTabDefs.forEach(function(t) { if(t.id === veActiveSolverTabId) sekme = t; });
+  var proje = (typeof veProjeAdi === 'function') ? veProjeAdi() : '';
+  return { baslik: sekme ? sekme.name : 'Simülasyon sonucu',
+           kaynak: 'Araç Performans' + (proje ? ' · ' + proje : '') };
+}
+
+// Föy modeli (js/sonuc-tablo.js'teki sözleşme). Gösterilecek veri yoksa null.
+// Kopyala ve CSV de bunu okur: ekranın gösterdiği sütunlar, TÜM örnekleriyle.
+function veFoyModel(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.sensors || slot.sensors.length === 0) return null;
+  var x = veTabloXSerisi(slot);
+  if(!x || x.length === 0) return null;
+  var ds = slot._dataSource || null;
+  var ax = slot.xAxis || { name: 'Zaman [s]', unit: 's' };
+  var k = _veFoyKunye(slot);
+  return {
+    baslik: k.baslik,
+    kaynak: k.kaynak,
+    x: { ad: ax.name || 'Zaman', birim: ax.unit || '', veri: x },
+    // Verisi olmayan sensörde veri NULL gelir (veGetSensorData "yanlış veri
+    // döndürmektense null" ilkesini uyguluyor): föy o sütunu '—' ile yazar.
+    sutunlar: slot.sensors.map(function(s, i) {
+      return { ad: s.name, birim: s.unit || '', renk: veSlotSignalColor(slot, i),
+               veri: veGetSensorData(s.id, s.signal, s._dataSource || ds) };
+    })
   };
-  // Verisi olmayan sensörde ds NULL gelir (veGetSensorData "yanlış veri
-  // döndürmektense null" ilkesini uyguluyor) ve sayısal olmayan kanallar da
-  // var (vites modu '1C'/'2L' gibi metin). Korumasız ds.length / toplama
-  // TypeError ile tabloyu tamamen boş bırakıyordu.
-  var numOf = function(ds) {
-    if(!ds || !ds.length) return null;
-    var out = [];
-    for(var j = 0; j < ds.length; j++) { var v = Number(ds[j]); if(isFinite(v)) out.push(v); }
-    return out.length ? out : null;
-  };
-  // ETİKET ve SIRA görüntüleyicinin tablosuyla aynı (viewer/js/board.js).
-  // MFSim'de 'MIN' / 'MAX' yazıyordu ve satır 'MIN, MAX, ORT' diye
-  // sıralanıyordu: hem dil karışıktı (yanındaki etiket 'ORT') hem de sıra
-  // okunuşu bozuyordu. Doğal okuma en az → ortalama → en çok.
-  rows.push(sumRow('MİN', true, function(ds) {
-    var a = numOf(ds); if(!a) return null;
-    var m = Infinity; for(var j = 0; j < a.length; j++) if(a[j] < m) m = a[j]; return m;
-  }));
-  rows.push(sumRow('ORT', false, function(ds) {
-    var a = numOf(ds); if(!a) return null;
-    var t = 0; for(var j = 0; j < a.length; j++) t += a[j]; return t / a.length;
-  }));
-  rows.push(sumRow('MAKS', false, function(ds) {
-    var a = numOf(ds); if(!a) return null;
-    var m = -Infinity; for(var j = 0; j < a.length; j++) if(a[j] > m) m = a[j]; return m;
-  }));
-  
-  tbody.innerHTML = rows.join('');
+}
+
+function veRenderTable(slotIdx) {
+  var kap = document.getElementById('ve-foy-' + slotIdx);
+  if(!kap) return;
+  var m = veFoyModel(slotIdx);
+  if(!m) return;   // "Veri bekleniyor" yerinde kalır
+  kap.innerHTML = veFoyHTML(m, slotIdx);
 }
 
 function veExportResults() {
@@ -3439,76 +3401,6 @@ function veClearAllResults() {
   if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
 
   showToast('Tüm sonuçlar temizlendi', 'success');
-}
-
-function veExportResultsCSV() {
-  var r = window.veSimResults;
-  if(!r || !r.time || r.time.length === 0) {
-    showToast('Dışa aktarılacak sonuç yok — önce simülasyon çalıştırın', 'warning');
-    return;
-  }
-  
-  // Tüm slotlardaki sensörleri topla
-  var allSensors = [];
-  var allData = [];
-  
-  for(var si = 0; si < 4; si++) {
-    var slot = veResultSlots[si];
-    if(!slot || !slot.sensors || slot.sensors.length === 0) continue;
-    slot.sensors.forEach(function(s) {
-      var data = veGetSensorData(s.id, s.signal);
-      if(!data || data.length === 0) return; // Verisi olmayan sensörü atla
-      allSensors.push(s.name + (s.unit ? ' [' + s.unit + ']' : ''));
-      allData.push(data);
-    });
-  }
-  
-  if(allSensors.length === 0) {
-    // Varsayılan: hız, devir, tork
-    allSensors = ['Hız [km/h]', 'Devir [rpm]', 'Motor Torku [Nm]'];
-    allData = [r.speed || [], r.rpm || [], r.engineTorque || []];
-  }
-  
-  // CSV oluştur
-  var csv = 'Zaman [s],' + allSensors.join(',') + '\n';
-  
-  var n = r.time.length;
-  var step = Math.max(1, Math.floor(n / 500)); // max 500 satır
-  
-  // Sayısal olmayan kanallar (vites modu '1C'/'2L') ve eksik veri: toFixed
-  // korumasız çağrılınca dışa aktarma TypeError ile tamamen düşüyordu.
-  var csvCell = function(ds, idx) {
-    var v = (ds && idx < ds.length) ? ds[idx] : null;
-    if(v === null || v === undefined) return '';
-    var num = Number(v);
-    if(isFinite(num)) return num.toFixed(4);   // makine: CSV hücresi (noktalı ondalık, virgül ayraç)
-    return '"' + String(v).replace(/"/g, '""') + '"';
-  };
-
-  for(var i = 0; i < n; i += step) {
-    var row = r.time[i].toFixed(4);   // makine: CSV hücresi
-    allData.forEach(function(ds) { row += ',' + csvCell(ds, i); });
-    csv += row + '\n';
-  }
-  // Son satır
-  if((n - 1) % step !== 0) {
-    var row = r.time[n - 1].toFixed(4);   // makine: CSV hücresi
-    allData.forEach(function(ds) { row += ',' + csvCell(ds, n - 1); });
-    csv += row + '\n';
-  }
-  
-  // İndir
-  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'motorfren_sonuc_' + new Date().toISOString().slice(0, 10) + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  
-  showToast('CSV dosyası indirildi (' + allSensors.length + ' kanal, ~' + Math.ceil(n / step) + ' satır)', 'success');
 }
 
 // Pencere boyut degisikliginde grafikleri yeniden ciz

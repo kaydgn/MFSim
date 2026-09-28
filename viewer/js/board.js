@@ -477,38 +477,22 @@ function veRenderSlot(slotIdx) {
     return;
   }
 
-  var html = '<div class="ve-slot-assigned">';
-  html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
-  html += '<table id="ve-table-' + slotIdx + '" class="ve-result-table">';
-  html += '<thead><tr>';
-  html += '<th>#</th>';
-  html += '<th>' + escapeHTML(slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</th>';
-  sensors.forEach(function(s, i) {
-    var c = veSlotSignalColor(slot, i);
-    html += '<th style="color:' + c + '; border-bottom:3px solid ' + c + ';">' +
-            escapeHTML(s.name) + (s.unit ? ' [' + escapeHTML(s.unit) + ']' : '') + '</th>';
-  });
-  html += '</tr></thead>';
-  html += '<tbody id="ve-table-body-' + slotIdx + '">';
-  html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">Ölçüm verisi bekleniyor</td></tr>';
-  html += '</tbody></table></div>';
-  html += '</div>';
-  body.innerHTML = html;
+  // FÖY (js/sonuc-tablo.js — MFSim ile BİREBİR aynı üretici): kâğıt, başlık ve
+  // tablo veri gelince birlikte kurulur.
+  body.innerHTML = '<div class="ve-slot-assigned"><div class="ve-foy-zemin" id="ve-foy-' + slotIdx + '">' +
+    '<div class="ve-foy-bos">Ölçüm verisi bekleniyor</div></div></div>';
 
   if(typeof veImpAny === 'function' && veImpAny()) veRenderTable(slotIdx);
 }
 
-// js/graphics.js:409'dan uyarlama. Sim/çapraz-sekme zaman dizisi arayışı
-// düştü: X ekseni ya panonun seçtiği sütun ya da ölçümün kendi zaman dizisi.
-function veRenderTable(slotIdx) {
+// Föy modeli (js/sonuc-tablo.js'teki sözleşme). MFSim'deki eşinden (js/graphics.js)
+// farkı yalnız VERİ KAYNAĞI: burada tek kaynak içe aktarılan ölçüm. Sim/çapraz
+// sekme zaman dizisi arayışı yok: X ekseni ya panonun seçtiği sütun ya da
+// ölçümün kendi zaman dizisi. Gösterilecek veri yoksa null.
+function veFoyModel(slotIdx) {
   var slot = veResultSlots[slotIdx];
-  if(!slot || !slot.sensors || slot.sensors.length === 0) return;
-
-  var tbody = document.getElementById('ve-table-body-' + slotIdx);
-  if(!tbody) return;
-
+  if(!slot || !slot.sensors || slot.sensors.length === 0) return null;
   var ds = slot._dataSource || null;
-  var xds = (slot.xAxis && slot.xAxis._dataSource) ? slot.xAxis._dataSource : ds;
   var timeArr = null;
 
   // Kullanıcı X eksenini başka bir sütuna çevirmiş olabilir.
@@ -519,82 +503,28 @@ function veRenderTable(slotIdx) {
   if(!timeArr && ds && String(ds).indexOf('import:') === 0 && typeof veImpXSeries === 'function') {
     timeArr = veImpXSeries(ds);
   }
-  if(!timeArr || timeArr.length === 0) return;
+  if(!timeArr || timeArr.length === 0) return null;
 
-  var datasets = slot.sensors.map(function(s) { return veGetSensorData(s.id, s.signal); });
-
-  // X değeri içe aktarılan bir ölçümden gelir: metin ya da boşluk içerebilir,
-  // toFixed doğrudan çağrılamaz.
-  var fmtX = function(v) {
-    return (typeof v === 'number' && isFinite(v)) ? veSayi(v, 3) : (v == null ? '—' : String(v));
+  var olcum = (ds && typeof veImpFind === 'function') ? veImpFind(veImpIdOf(ds)) : null;
+  var ad = (olcum && olcum.name) || 'Ölçüm';
+  var ax = slot.xAxis || { name: 'Zaman [s]', unit: 's' };
+  return {
+    baslik: ad,
+    kaynak: 'İçe aktarılan ölçüm' + (olcum && olcum.fileName && olcum.fileName !== ad ? ' · ' + olcum.fileName : ''),
+    x: { ad: ax.name || 'Zaman', birim: ax.unit || '', veri: timeArr },
+    sutunlar: slot.sensors.map(function(s, i) {
+      return { ad: s.name, birim: s.unit || '', renk: veSlotSignalColor(slot, i),
+               veri: veGetSensorData(s.id, s.signal) };
+    })
   };
-  // Kanal metin olabilir (vites modu '1C'/'2L'); veFormatTooltipVal sayı bekler.
-  var fmtY = function(v) {
-    if(v === null || v === undefined) return '—';
-    if(typeof v === 'number') return isFinite(v) ? veFormatTooltipVal(v) : '—';
-    return escapeHTML(String(v));
-  };
+}
 
-  var n = timeArr.length;
-  var maxRows = 200;
-  var step = Math.max(1, Math.floor(n / maxRows));
-
-  var rows = [];
-  var rowNum = 0;
-  for(var i = 0; i < n; i += step) {
-    rowNum++;
-    var row = '<tr><td>' + rowNum + '</td>';
-    row += '<td style="font-weight:600;">' + fmtX(timeArr[i]) + '</td>';
-    datasets.forEach(function(d, di) {
-      row += '<td style="color:' + veSlotSignalColor(slot, di) + ';">' +
-             (d ? fmtY(i < d.length ? d[i] : null) : '—') + '</td>';
-    });
-    rows.push(row + '</tr>');
-  }
-
-  // Son satır her zaman gösterilir: adımlama onu atlarsa tablonun sonu
-  // ölçümün sonu sanılırdı.
-  if((n - 1) % step !== 0 && n > 1) {
-    rowNum++;
-    var last = '<tr style="border-top:2px solid var(--border-color);"><td>' + rowNum + '</td>';
-    last += '<td style="font-weight:700;">' + fmtX(timeArr[n - 1]) + '</td>';
-    datasets.forEach(function(d, di) {
-      last += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' +
-              (d ? fmtY(d[n - 1]) : '—') + '</td>';
-    });
-    rows.push(last + '</tr>');
-  }
-
-  // MIN / ORT / MAKS — yalnızca sayısal kanallarda anlamlı.
-  var numOf = function(d) {
-    if(!d) return null;
-    var out = [];
-    for(var i2 = 0; i2 < d.length; i2++) {
-      var v = d[i2];
-      if(typeof v === 'number' && isFinite(v)) out.push(v);
-    }
-    return out.length ? out : null;
-  };
-  var sumRow = function(label, borderTop, fn) {
-    var r = '<tr style="background:var(--bg-tertiary);' +
-            (borderTop ? ' border-top:2px solid var(--accent-primary);' : '') +
-            '"><td colspan="2" style="font-weight:700; color:var(--text-muted);">' + label + '</td>';
-    datasets.forEach(function(d, di) {
-      var nums = numOf(d);
-      var v = nums ? fn(nums) : null;
-      r += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' +
-           (v === null ? '—' : veFormatTooltipVal(v)) + '</td>';
-    });
-    return r + '</tr>';
-  };
-  rows.push(sumRow('MİN', true, function(a) { return Math.min.apply(null, a); }));
-  rows.push(sumRow('ORT', false, function(a) {
-    var s = 0; for(var i3 = 0; i3 < a.length; i3++) s += a[i3];
-    return s / a.length;
-  }));
-  rows.push(sumRow('MAKS', false, function(a) { return Math.max.apply(null, a); }));
-
-  tbody.innerHTML = rows.join('');
+function veRenderTable(slotIdx) {
+  var kap = document.getElementById('ve-foy-' + slotIdx);
+  if(!kap) return;
+  var m = veFoyModel(slotIdx);
+  if(!m) return;   // "Ölçüm verisi bekleniyor" yerinde kalır
+  kap.innerHTML = veFoyHTML(m, slotIdx);
 }
 
 // ── X ekseni seçici ───────────────────────────────────────────────────────

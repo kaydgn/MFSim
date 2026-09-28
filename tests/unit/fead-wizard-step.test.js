@@ -176,11 +176,16 @@ describe('STEP kartı: okuma rol ÖNERMEZ, hesap bir DÜĞMEDİR', () => {
   // Kullanıcı (2026-09-26): *"parçaları manuel olarak seçeceğiz, ardından bir
   // buton gibi bir şeye tıkladığımızda otomatik olarak çaplar, merkez
   // koordinatlar falan hesaplanacak ve … bir kanvas çizilecek."*
-  test('okuma rol önermez, hesaplamaz; rol verilene kadar hesap düğmesi kapalı', () => {
+  // OKUMA YALNIZ DOĞRULANMIŞ GERGİYİ ÖNERİR (kullanıcı sorusu 2026-09-28; ayrıntısı
+  // fead-step-oner.test.js) ve HESAPLAMAZ; öteki roller yine kullanıcının.
+  test('okuma yalnız doğrulanmış gergiye rol verir, hesaplamaz; rol yokken hesap düğmesi kapalı', () => {
     const s = oku();
     expect(s.durum).toBe('hazir');
-    expect(s.roller.every((r) => r === null)).toBe(true);
+    expect(s.roller.filter(Boolean)).toEqual(['fead-tensioner']);
+    expect(s.roller[dugum(/GERG/)]).toBe('fead-tensioner');
     expect(s.coz).toBeNull();
+    wiz.veFeadWizStpRol(dugum(/GERG/), '');                    // kullanıcı kaldırır
+    expect(s.roller.every((r) => r === null)).toBe(true);
     let h = wiz._fwStpKartHTML();
     expect(h).toMatch(/id="ve-fw-stp-hesapla"[^>]*disabled/);
     expect(h).not.toContain('id="ve-fw-stp-aktar"');
@@ -505,15 +510,16 @@ describe('STEP ↔ KÜNYE: künye CAD\'deki gergiyi sessizce değiştirmez', () 
 
 // ═════════════════════════════════════════════════════════════════════════
 describe('kart yüzeyi (sunum)', () => {
-  test('1. adımda STEP kartı: bırakma alanı, ağaç satırları rolsüz, açıklama yüzeyi YOK', () => {
+  test('1. adımda STEP kartı: bırakma alanı, ağaç satırları rolsüz (gergi otomatik), açıklama yüzeyi YOK', () => {
     oku();
     let h = wiz.veFeadWizStepHTML(0, wiz.veFeadWizBuild());
     expect(h).toContain('data-ve-dropzone="step"');
     expect(h).toContain('accept=".stp,.step,.stpz,.p21"');
     expect((h.match(/data-ve-stp="\d+"/g) || []).length).toBe(5);          // kök basılmaz
     expect(h).toMatch(/KAYIŞ - 8PK1475/);                                  // kayış da bir parça
-    // hepsi rolsüz — sayım KARTIN içinde (adımın örnek listesinde "Boş başla" da value="")
-    expect((wiz._fwStpKartHTML().match(/<option value="" selected>/g) || []).length).toBe(5);
+    // gergi dışında hepsi rolsüz — sayım KARTIN içinde (adımın örnek listesinde "Boş başla" da value="")
+    expect((wiz._fwStpKartHTML().match(/<option value="" selected>/g) || []).length).toBe(4);
+    expect(wiz._fwStpKartHTML()).toMatch(/<option value="fead-tensioner" selected>/);
     expect(h).not.toContain('ve-fw-hint');
     expect(h.indexOf("STEP'ten başla")).toBeLessThan(h.indexOf('Örnekten doldur'));
     rolVer(); wiz.veFeadWizStpHesapla();

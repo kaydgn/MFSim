@@ -1067,3 +1067,47 @@ describe('hover rengini ailesinden alır', () => {
     expect(uyumsuz).toEqual([]);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CSS: HER BİLDİRİM BİR KURALIN İÇİNDE — seçicisiz kopuk parça yok
+//
+// Ölçülen (2026-09-28): styles.css'te `.ve-result-table tbody tr:hover{…}`
+// kuralının ardında SEÇİCİSİZ bir gövde parçası duruyordu
+//   font-weight:700; color:var(--text-heading); }
+// Tarayıcı böyle bir parçayı hata vermeden bir sonraki kuralın seçicisine
+// yapıştırır ve O kuralı da düşürür: `.ve-result-card-unit` hiç uygulanmıyordu.
+// Tarayıcının hatası görünmediği için tek kapı kaynağın kendisi. Parça,
+// Sonuçlar tablosu föye geçerken ölü sınıflarıyla birlikte kaldırıldı.
+describe('CSS: seçicisiz kopuk bildirim yok', () => {
+  // Üst düzeyde (derinlik 0) ';' yalnız @import/@charset/@layer bildiriminde
+  // olabilir; '}' derinlik 0'da hiç olamaz. Yorum ve dizgeler önce elenir.
+  function kopuk(src) {
+    const s = src
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+      .replace(/"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/g, (m) => m.replace(/[^\n]/g, ' '));
+    const hata = [];
+    let d = 0, satir = 1, bas = '';
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (c === '\n') satir++;
+      if (c === '{') { d++; bas = ''; continue; }
+      if (c === '}') { if (d === 0) hata.push(satir + ': derinlik 0\'da }'); else d--; bas = ''; continue; }
+      if (d === 0) {
+        if (c === ';') { if (!/^\s*@/.test(bas)) hata.push(satir + ': seçicisiz bildirim'); bas = ''; }
+        else bas += c;
+      }
+    }
+    if (d !== 0) hata.push('dosya sonu: ' + d + ' kural kapanmadı');
+    return hata;
+  }
+
+  test('kapı kopuk parçayı GÖRÜR (eski styles.css\'in parçası)', () => {
+    const eski = '.a tbody tr:hover{background:red!important;}\n  font-weight:700;\n  color:var(--x);\n}\n.b{margin:0}\n';
+    expect(kopuk(eski)).toEqual(['2: seçicisiz bildirim', '3: seçicisiz bildirim', "4: derinlik 0'da }"]);
+    expect(kopuk('@import url("x.css");\n.a{b:c}\n@media (min-width:1px){.a{b:c}}\n')).toEqual([]);
+  });
+
+  test.each(fs.readdirSync(CSS_DIR).filter((f) => f.endsWith('.css')))('css/%s', (f) => {
+    expect(kopuk(fs.readFileSync(path.join(CSS_DIR, f), 'utf8'))).toEqual([]);
+  });
+});

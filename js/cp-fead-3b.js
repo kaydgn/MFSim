@@ -294,6 +294,9 @@ function veFeadWiz3bPanelHTML(s, secili){
   var so = s.sonuc, h = '';
   var tipler = veFeadWizStpRolTipleri();
   var renk = function(tip){ return '<span class="ve-fw-3b-renk" style="--renk:var(' + veFeadWiz3bRolJeton(tip) + ')"></span>'; };
+  // ── ÖNERİ (gergi otomatik bulunduysa ya da aday varsa) ──
+  var on = (typeof _fwStpOneriHTML === 'function') ? _fwStpOneriHTML(s) : '';
+  if(on) h += '<section class="ve-fw-3b-bolum">' + on + '</section>';
   // ── SEÇİLİ ──
   h += '<section class="ve-fw-3b-bolum"><h4>Seçili</h4>';
   if(secili < 0){
@@ -335,7 +338,8 @@ function veFeadWiz3bPanelHTML(s, secili){
     atanan.forEach(function(d){
       h += '<li' + (d.i === secili ? ' class="on"' : '') + '>' + renk(s.roller[d.i])
         + '<button type="button" class="ve-fw-3b-yolb" onclick="veFeadWiz3bSec(' + d.i + ')" title="' + _fwEsc(d.ornek || d.id || '') + '">'
-        + _fwEsc(d.ad) + '</button><span class="ve-fw-dim">' + _fwEsc(_fwStpRolAd(s.roller[d.i])) + '</span>'
+        + _fwEsc(d.ad) + '</button><span class="ve-fw-dim">' + _fwEsc(_fwStpRolAd(s.roller[d.i]))
+        + (s.otomatik && s.otomatik.dugum === d.i ? ' · otomatik' : '') + '</span>'
         + '<button type="button" class="ve-fw-mini" title="Rolü kaldır" onclick="veFeadWizStpRol(' + d.i + ', \'\')">' + veIkon('x') + '</button></li>';
     });
     h += '</ul>';

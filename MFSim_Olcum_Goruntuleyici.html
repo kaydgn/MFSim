@@ -6239,26 +6239,79 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
    değer rozetleri canvas'a çiziliyor — DOM düğümü yok, dolayısıyla stil de
    yok (bkz. veTrDrawOverlay). */
 
-/* Result table */
-.ve-result-table{
-  width:100%;border-collapse:collapse;font-size:var(--fs-body);
-  
+/* ═══ SONUÇ TABLOSU — FÖY (js/sonuc-tablo.js · kullanıcı seçimi 2026-09-28) ═══
+   Tablo kipi bir rapor sayfası gibi durur: kâğıt yüzeyi TXT önizlemesinin A4
+   sayfasıyla aynı (.ve-rep-page); üstte kalın, başlığın altında ince çizgi;
+   dikey çizgi ve zebra YOK (ortak tablo kuralı), satırlar dörderli öbeklenir.
+   Sayılar MÜREKKEP renginde, sinyalin rengi adın yanındaki noktada: eski
+   tabloda sayılar sinyal rengiyle yazılıyordu ve açık zeminde karşıtlık
+   1,62–3,47:1 ölçüldü (metin eşiği 4,5). Burada AYNI tablo için birbirini
+   ezen iki kural bloğu ve seçicisi kopmuş bir parça duruyordu.
+   Başlık satırı ile özet + not YAPIŞIK: uzun tabloda en düşük / ortalama /
+   en yüksek sona kaydırmadan görünür. Yapışık alt satırların `bottom` payı
+   satır boylarından TÜRER — boy değişirse pay da değişir (--foy-*). Yapışma
+   kabın İÇ PAYININ içinde olur: pay ofsetten düşülmezse kayan satırlar
+   başlığın üstünden ve notun altından 20/28 px sızıyordu (ölçüldü); dört
+   alt satır arasında da 2 px boşluk kalıyordu (her satır çizgisiyle 24 px).
+   Kapı: tests/unit/sonuc-tablo.test.js + tests/e2e/sonuc-tablo.spec.js. */
+.ve-foy-zemin{
+  --foy-pay-ust:20px;
+  --foy-pay-alt:28px;
+  flex:1;min-height:0;overflow:auto;box-sizing:border-box;
+  padding:var(--foy-pay-ust) 24px var(--foy-pay-alt);background:var(--bg-primary);
 }
-.ve-result-table thead{position:sticky;top:0;z-index:2;}
-.ve-result-table th{
-  padding:6px 10px;text-align:right;font-weight:600;font-size:var(--fs-body);
-  background:var(--bg-secondary);border-bottom:2px solid var(--border-color);
-  color:var(--text-heading);white-space:nowrap;
+.ve-foy-bos{padding:28px 0;text-align:center;font-size:var(--fs-body);color:var(--text-muted);}
+.ve-foy{
+  width:max-content;margin:0 auto;box-sizing:border-box;
+  padding:20px 28px 14px;
+  background:var(--bg-secondary);border:1px solid var(--border-color);
+  border-radius:var(--radius-xs);box-shadow:0 2px 16px var(--shadow-color);
 }
-.ve-result-table th:first-child{text-align:center;width:40px;color:var(--text-muted);}
-.ve-result-table td{
-  padding:4px 10px;text-align:right;border-bottom:1px solid rgba(128,128,128,0.08);
-  transition:background 0.08s;
+.ve-foy-baslik{display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin-bottom:10px;}
+.ve-foy-ad{font-size:var(--fs-md);font-weight:600;color:var(--text-heading);}
+.ve-foy-kaynak{font-size:var(--fs-tiny);color:var(--text-muted);}
+.ve-foy-tablo{
+  --foy-satir:24px;   /* gövde ve özet satırı */
+  --foy-not:24px;     /* not satırı: 8 px pay + 16 px satır */
+  /* separate: yapışık hücrenin çizgisi hücreyle birlikte yürür (collapse'ta
+     çizgi tabloda kalıyor, hücre kayıyordu) */
+  border-collapse:separate;border-spacing:0;
+  font-size:var(--fs-md);font-variant-numeric:tabular-nums;color:var(--text-primary);
 }
-.ve-result-table tbody tr:hover td{background:var(--accent-tint-6);}
-.ve-result-table tbody tr:nth-child(even) td{background:rgba(128,128,128,0.02);}
-.ve-result-table tbody tr:hover td{background:var(--accent-tint-8) !important;}
-.ve-result-table td:first-child{text-align:center;color:var(--text-muted);font-size:var(--fs-tiny);}
+.ve-foy-tablo th,.ve-foy-tablo td{padding:0 12px;text-align:right;white-space:nowrap;}
+.ve-foy-tablo thead th{
+  position:sticky;top:calc(-1 * var(--foy-pay-ust));z-index:2;background:var(--bg-secondary);
+  vertical-align:bottom;min-width:64px;padding-top:8px;padding-bottom:7px;
+  border-top:2px solid var(--text-primary);border-bottom:1px solid var(--text-muted);
+}
+.ve-foy-sad{
+  display:block;max-width:14em;margin-left:auto;
+  font-size:var(--fs-body);font-weight:600;line-height:15px;color:var(--text-heading);
+  white-space:normal;text-wrap:balance;
+}
+.ve-foy-birim{display:block;margin-top:2px;font-size:var(--fs-tiny);line-height:13px;font-weight:400;color:var(--text-muted);}
+.ve-foy-nokta{display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;vertical-align:1px;}
+.ve-foy-tablo tbody td{height:var(--foy-satir);line-height:16px;}
+.ve-foy-tablo tbody td:first-child{font-weight:600;}
+.ve-foy-tablo tbody tr:first-child td{padding-top:3px;}
+.ve-foy-tablo tbody tr:last-child td{padding-bottom:3px;}
+/* Dörderli öbek: saydam üst kenar kâğıdı gösterir — fare vurgusu boşluğa taşmaz */
+.ve-foy-tablo tbody tr.ve-foy-grup td{border-top:7px solid transparent;}
+.ve-foy-tablo tbody tr:hover td{background:var(--accent-tint-6);}
+.ve-foy-tablo tfoot th,.ve-foy-tablo tfoot td{
+  position:sticky;z-index:2;background:var(--bg-secondary);
+  height:var(--foy-satir);line-height:16px;
+}
+.ve-foy-tablo tfoot th{font-size:var(--fs-body);font-weight:400;font-style:italic;color:var(--text-muted);}
+.ve-foy-tablo .ve-foy-ozet-1 > *{bottom:calc(var(--foy-not) + 2 * var(--foy-satir) - var(--foy-pay-alt));border-top:1px solid var(--text-muted);}
+.ve-foy-tablo .ve-foy-ozet-2 > *{bottom:calc(var(--foy-not) + var(--foy-satir) - var(--foy-pay-alt));}
+.ve-foy-tablo .ve-foy-ozet-3 > *{bottom:calc(var(--foy-not) - var(--foy-pay-alt));border-bottom:2px solid var(--text-primary);}
+.ve-foy-tablo .ve-foy-not td{
+  bottom:calc(-1 * var(--foy-pay-alt));height:auto;padding-top:8px;text-align:left;white-space:normal;
+  font-size:var(--fs-tiny);color:var(--text-muted);
+}
+/* Kopyala'nın yedek yolu (execCommand) için görünmez metin alanı */
+.ve-foy-pano{position:fixed;left:-9999px;top:0;opacity:0;}
 /* Panel add button */
 /* .ve-add-panel-btn kaldırıldı: eklenecek panel kalmadı. */
 
@@ -6765,40 +6818,6 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   margin:0;padding:0;
   font-family:var(--rep-mono);
 }
-/* Profesyonel sonuç tablosu */
-.ve-result-table{width:100%;font-size:var(--fs-md);border-collapse:collapse;font-variant-numeric:tabular-nums;}
-.ve-result-table thead tr{background:var(--bg-tertiary);position:sticky;top:0;z-index:1;}
-.ve-result-table th{padding:7px 10px;border:1px solid var(--border-color);font-weight:700;color:var(--text-heading);text-align:center;letter-spacing:-0.01em;}
-.ve-result-table td{padding:5px 10px;border:1px solid var(--border-color);font-weight:500;}
-.ve-result-table tbody tr:nth-child(even){background:var(--bg-secondary);}
-.ve-result-table tbody tr:nth-child(odd){background:var(--bg-primary);}
-.ve-result-table tbody tr:hover{background:var(--accent-tint-6)!important;}
-  font-weight:700;
-  color:var(--text-heading);
-}
-.ve-result-card-unit{
-  font-size:var(--fs-body);
-  color:var(--text-secondary);
-  margin-top:2px;
-}
-.ve-results-charts{
-  display:flex;
-  flex-direction:column;
-  gap:16px;
-}
-.ve-results-chart-card{
-  background:var(--bg-secondary);
-  border:1px solid var(--border-color);
-  border-radius:var(--radius-md);
-  padding:16px;
-}
-.ve-results-chart-title{
-  font-size:var(--fs-lg);
-  font-weight:600;
-  color:var(--text-heading);
-  margin-bottom:12px;
-}
-
 /* ===== SONUÇ AÇILIŞ ANİMASYONU =====
    Sonuçlar sekmesine geçildiğinde içerik yumuşakça belirir (fade + yukarı
    kayma); yuvalar satır satır hafif kademeyle gelir. Plotly'ye dokunmaz —
@@ -8688,6 +8707,12 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-tbl td:first-child{ display:flex; align-items:center; gap:6px; }
 .ve-fw-3b-tbl .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
 .ve-fw-3b-kayis{ margin:0; display:flex; align-items:center; gap:6px; font-size:var(--fs-tiny); }
+/* OTOMATİK BULUNAN GERGİ (5.2): satır ve rozet — seçilen değil BULUNAN rol,
+   ayırt edilsin. Öneri satırının düğmesi metin taşır (kare mini düğme değil). */
+.ve-fw-oto{ flex-wrap:wrap; }
+.ve-fw-oto .ve-fw-mini{ width:auto; padding:0 8px; }
+.ve-fw-oto-rozet{ display:inline-block; margin-left:4px; padding:0 5px; border-radius:var(--radius-sm);
+  font-size:var(--fs-micro); color:var(--ink-accent); background:var(--accent-tint-10); vertical-align:middle; }
 /* 3B AÇIKKEN PENCERE GENİŞLER (kullanıcı isteği 2026-09-28). Sihirbazın
    1180 px'i 320 px'lik panelden sonra tuvale ~860 px bırakıyordu; kaplamanın
    payı daralır, pencere ekranı doldurur. Kapanınca sınıf düşer
@@ -13426,6 +13451,362 @@ if(typeof module !== 'undefined' && module.exports) {
 
 </script>
 <script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// SONUÇ TABLOSU (FÖY) — Sonuçlar penceresinin "Tablo" kipi
+//
+// Kullanıcı seçimi (2026-09-28, tasarım tuvalindeki "C · Föy"): tablo bir rapor
+// sayfası gibi durur — kâğıt, başlık, kalın üst/alt çizgi, ince ara çizgi,
+// dört satırda bir nefes payı. Sayılar MÜREKKEP renginde; sinyalin rengi yalnız
+// adının yanındaki noktada. Önceki tablonun ölçülen kusurları ve kapıları:
+// docs/decisions/ortak-yuzeyler.md → "Sonuçlar tablosu föydür".
+//
+// TEK ÜRETİCİ. MFSim (js/graphics.js → veRenderTable) ve Ölçüm Görüntüleyici
+// (viewer/js/board.js) bu dosyayı BİREBİR paylaşır (viewer/sync.js). Veri
+// ÇÖZÜMÜ burada YOK: her program kendi kaynağından bir MODEL kurar
+// (veFoyModel), bu dosya onu yazar, panoya kopyalar ve CSV'ye döker.
+//
+//   model = { baslik, kaynak,
+//             x:        { ad, birim, veri: [] },
+//             sutunlar: [{ ad, birim, renk, veri: [] | null }] }
+//
+// Saf yardımcılar (ondalık, seyreltme, özet, metin dökümü) Jest'te doğrudan
+// test edilir: tests/unit/sonuc-tablo.test.js.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Ekranda en çok bu kadar satır (DOM bedeli). Uzun seri seyreltilir ve bu
+// SÖYLENİR (föyün not satırı); Kopyala ve CSV her zaman TÜM örnekleri alır.
+var VE_FOY_AZAMI = 200;
+
+function _veFoyKac(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Hücre değeri sayı mı? Sayıysa sayının kendisi, değilse null. İçe aktarılan
+// ölçüm sayıyı metin olarak da taşıyabilir ("12"); vites kipi '1C' metindir.
+function _veFoySayi(v) {
+  if(typeof v === 'number') return isFinite(v) ? v : null;
+  if(typeof v === 'string' && /^\s*[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?\s*$/i.test(v)) return Number(v);
+  return null;
+}
+
+// Gösterilecek satırlar: her k. örnek ve SON örnek (seyreltme sonu atlarsa
+// tablonun sonu serinin sonu sanılırdı). Dönüş: { idx: [...], adim: k }.
+function veFoySeyrelt(n, azami) {
+  azami = azami || VE_FOY_AZAMI;
+  var adim = Math.max(1, Math.floor(n / azami));
+  var idx = [];
+  for(var i = 0; i < n; i += adim) idx.push(i);
+  if(n > 0 && idx[idx.length - 1] !== n - 1) idx.push(n - 1);
+  return { idx: idx, adim: adim };
+}
+
+// Sayı bu ondalık hanede TAM mı? (ölçüm dosyasının 812,25'i iki hane taşır)
+// Pay kayan noktanın kendi hatası kadardır (|s|·1e-12): göreli 1e-7 payı
+// 1.380,838'i "dört hanede tam" sayıyordu — ölçüldü, tablo 1.380,8378 yazdı.
+function _veFoyTam(v, d) {
+  var s = v * Math.pow(10, d);
+  return Math.abs(s - Math.round(s)) <= 1e-9 + Math.abs(s) * 1e-12;
+}
+
+// SÜTUNUN ondalık sayısı — bütün sütun için TEK sayı, virgüller alt alta gelir.
+// Eskiden hane DEĞER BAŞINA seçiliyordu (99,50 ile 100,2 alt alta düşer) ve X
+// sütunu her zaman üç hane yazıyordu (880,000).
+//   • sayı yok (metin kanalı, veri yok) → null
+//   • BÜYÜKLÜKTEN: ≥10.000 → 0 · ≥100 → 1 · ≥1 → 2 · ≥0,01 → 3,
+//     daha küçük sütun → -1 (değer başına, üstel yazım)
+//   • sütunun hepsi daha az hanede TAM ise KIRPILIR (tam sayı → 0; 2,7 → 1)
+//   • daha çok hanede tamsa UZAR — ama yalnız en az üç FARKLI değer varsa:
+//     ölçüm dosyasının kendi hassasiyeti (812,25) korunur, sabit bir sütunun
+//     rastlantısal ikili kesri (543,875) komşusundan farklı yazılmaz (ölçüldü)
+// `gosterilen` verilirse (X sütunu) ekranda ARDIŞIK iki satır aynı yazılamaz:
+// hane, ayrışana dek artar (en çok 6).
+function veFoyOndalik(veri, gosterilen) {
+  var say = [], i, s;
+  for(i = 0; veri && i < veri.length; i++) {
+    s = _veFoySayi(veri[i]);
+    if(s !== null) say.push(s);
+  }
+  if(!say.length) return null;
+  var m = 0, farkli = [];
+  for(i = 0; i < say.length; i++) {
+    if(Math.abs(say[i]) > m) m = Math.abs(say[i]);
+    if(farkli.length < 3 && farkli.indexOf(say[i]) < 0) farkli.push(say[i]);
+  }
+  var buyukluk = m >= 10000 ? 0 : m >= 100 ? 1 : m >= 1 ? 2 : m >= 0.01 ? 3 : -1;
+  var tam = -1, k, hepsi;
+  for(k = 0; k <= 4 && tam < 0; k++) {
+    hepsi = true;
+    for(i = 0; i < say.length; i++) if(!_veFoyTam(say[i], k)) { hepsi = false; break; }
+    if(hepsi) tam = k;
+  }
+  var d = buyukluk;
+  if(tam >= 0 && (buyukluk < 0 || tam <= buyukluk || farkli.length >= 3)) d = tam;
+  if(gosterilen && d >= 0) {
+    while(d < 6 && _veFoyCakisir(veri, gosterilen, d)) d++;
+  }
+  return d;
+}
+
+// Ekranda alt alta duran iki FARKLI değer bu hanede aynı mı yazılıyor?
+function _veFoyCakisir(veri, idx, d) {
+  var onceki = null, a;
+  for(var j = 0; j < idx.length; j++) {
+    a = _veFoySayi(veri[idx[j]]);
+    if(a === null) { onceki = null; continue; }
+    if(onceki !== null && a !== onceki && a.toFixed(d) === onceki.toFixed(d)) return true;   // makine: karşılaştırma, ekrana gitmez
+    onceki = a;
+  }
+  return false;
+}
+
+// Sütun özeti — yalnız SAYISAL değerlerden; sayı yoksa null (metin kanalı
+// '1C'/'2L' özet satırında '—' yazar, tablo patlamaz).
+function veFoyOzet(veri) {
+  var n = 0, top = 0, mn = Infinity, mx = -Infinity, s;
+  for(var i = 0; veri && i < veri.length; i++) {
+    s = _veFoySayi(veri[i]);
+    if(s === null) continue;
+    n++; top += s;
+    if(s < mn) mn = s;
+    if(s > mx) mx = s;
+  }
+  return n ? { min: mn, ort: top / n, maks: mx, n: n } : null;
+}
+
+// Tek hücrenin metni. d: sütunun ondalığı (veFoyOndalik); -1 → değer başına.
+function veFoyHucre(v, d) {
+  var s = _veFoySayi(v);
+  if(s === null) {
+    return (v === null || v === undefined || v === '' || typeof v === 'number') ? '—' : _veFoyKac(String(v));
+  }
+  if(d === null || d === undefined || d < 0) {
+    return (typeof veFormatTooltipVal === 'function') ? veFormatTooltipVal(s) : veSayi(s);
+  }
+  return veSayi(s, d, { eksi: '−' });
+}
+
+// "Motor devri [d/dk]" + "d/dk" → "Motor devri": birim föyde kendi satırında.
+function veFoyAd(ad, birim) {
+  var a = String(ad == null ? '' : ad);
+  if(birim) a = a.split(' [' + birim + ']').join('');
+  return a.trim();
+}
+
+// Föyün not satırı: kaç satır gösteriliyor ve seyreltme var mı. Eskiden
+// seyreltme SESSİZDİ — "#" sütunu 1, 2, 3 diye saydığı için 5.001 örnekli bir
+// seride her 25. örneğin gösterildiği hiçbir yerde görünmüyordu.
+function veFoyNot(n, sey) {
+  if(!sey || sey.adim <= 1) return 'Satır: ' + veSayi(n, 0) + ' · tamamı';
+  return 'Satır: ' + veSayi(sey.idx.length, 0) + ' / ' + veSayi(n, 0) +
+         ' · her ' + veSayi(sey.adim, 0) + '. örnek gösteriliyor — Kopyala ve CSV tamamını alır';
+}
+
+// Sinyal rengi VERİDİR (kullanıcı seçebiliyor): yalnız renk sözdizimi geçer.
+function _veFoyRenk(r) {
+  r = String(r == null ? '' : r).trim();
+  return /^#[0-9a-f]{3,8}$/i.test(r) || /^(rgb|rgba|hsl|hsla)\([0-9.,%\s]+\)$/i.test(r) ? r : '';
+}
+
+function _veFoyTh(ad, birim, renk) {
+  var h = '<th scope="col"><span class="ve-foy-sad">';
+  var c = _veFoyRenk(renk);
+  if(c) h += '<span class="ve-foy-nokta" style="background:' + c + '"></span>';
+  // "·" önceki sözcüğe bağlanır: kırılma ondan SONRA olur ("FAN → AVA1 ·" /
+  // "gerginlik") — önce olunca ikinci satır "· gerginlik" diye başlıyordu.
+  h += _veFoyKac(veFoyAd(ad, birim)).replace(/ · /g, '\u00a0· ') + '</span>';
+  if(birim) h += '<span class="ve-foy-birim">(' + _veFoyKac(birim) + ')</span>';
+  return h + '</th>';
+}
+
+// Föyün tamamı: kâğıt, başlık ve tablo. Kimlikler eski yüzeyle AYNI
+// (#ve-table-N · #ve-table-body-N) — e2e kapıları ve dış çağrılar onları okur.
+function veFoyHTML(model, slotIdx) {
+  model = model || {};
+  var id = (slotIdx == null) ? 0 : slotIdx;
+  var x = model.x || { ad: '', birim: '', veri: [] };
+  var xv = x.veri || [];
+  var n = xv.length;
+  var sey = veFoySeyrelt(n);
+  var xd = veFoyOndalik(xv, sey.idx);
+  var kol = (model.sutunlar || []).map(function(s) {
+    return { s: s, d: veFoyOndalik(s.veri), oz: veFoyOzet(s.veri) };
+  });
+
+  var h = '<div class="ve-foy">';
+  h += '<div class="ve-foy-baslik"><span class="ve-foy-ad">' + _veFoyKac(model.baslik || 'Sonuç tablosu') + '</span>';
+  if(model.kaynak) h += '<span class="ve-foy-kaynak">' + _veFoyKac(model.kaynak) + '</span>';
+  h += '</div>';
+
+  h += '<table class="ve-foy-tablo" id="ve-table-' + id + '">';
+  h += '<thead><tr>' + _veFoyTh(x.ad, x.birim, null);
+  kol.forEach(function(k) { h += _veFoyTh(k.s.ad, k.s.birim, k.s.renk); });
+  h += '</tr></thead>';
+
+  h += '<tbody id="ve-table-body-' + id + '">';
+  sey.idx.forEach(function(i, r) {
+    // Dört satırda bir nefes payı: çizgisiz tabloda göz satırı böyle izler
+    h += (r > 0 && r % 4 === 0) ? '<tr class="ve-foy-grup">' : '<tr>';
+    h += '<td>' + veFoyHucre(xv[i], xd) + '</td>';
+    kol.forEach(function(k) {
+      h += '<td>' + veFoyHucre((k.s.veri && i < k.s.veri.length) ? k.s.veri[i] : null, k.d) + '</td>';
+    });
+    h += '</tr>';
+  });
+  h += '</tbody>';
+
+  // Özet ve not YAPIŞIK (CSS): uzun tabloda sona kaydırmadan görünür.
+  h += '<tfoot>';
+  [['En düşük', 'min'], ['Ortalama', 'ort'], ['En yüksek', 'maks']].forEach(function(o, j) {
+    h += '<tr class="ve-foy-ozet ve-foy-ozet-' + (j + 1) + '"><th scope="row">' + o[0] + '</th>';
+    kol.forEach(function(k) {
+      // Tam sayı sütununun ortalaması tam sayı değildir (vites 3,5): bir hane
+      var d = (o[1] === 'ort' && k.d === 0) ? 1 : k.d;
+      h += '<td>' + (k.oz ? veFoyHucre(k.oz[o[1]], d) : '—') + '</td>';
+    });
+    h += '</tr>';
+  });
+  h += '<tr class="ve-foy-not"><td colspan="' + (kol.length + 1) + '">' + _veFoyKac(veFoyNot(n, sey)) + '</td></tr>';
+  h += '</tfoot></table></div>';
+  return h;
+}
+
+// Metin dökümü — TÜM örnekler (seyreltme yalnız ekranın).
+//   'pano': sekme ayraçlı, ondalık VİRGÜL, grupsuz — Türkçe Excel'e yapıştırılır.
+//           Noktalı "1380.8" Türkçe Excel'de BİNLİK okunur: sessiz bin kat hata.
+//   'csv' : ';' ayraçlı, ondalık NOKTA — makine biçimi (karar 7·C).
+function veFoyMetin(model, kip) {
+  var csv = (kip === 'csv');
+  var ayrac = csv ? ';' : '\t';
+  function metin(t) {
+    t = String(t);
+    if(csv) return /[";\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    return t.replace(/[\t\r\n]+/g, ' ');
+  }
+  function hucre(v) {
+    var s = _veFoySayi(v);
+    if(s !== null) {
+      var m = String(+s.toPrecision(12));   // makine: dışa aktarma — tam hassasiyet, kayan nokta artığı atılır
+      return csv ? m : m.replace('.', ',');
+    }
+    return (v === null || v === undefined || typeof v === 'number') ? '' : metin(v);
+  }
+  function baslik(ad, birim) {
+    var a = veFoyAd(ad, birim);
+    return metin(birim ? a + ' [' + birim + ']' : a);
+  }
+  var x = (model && model.x) || { veri: [] };
+  var xv = x.veri || [];
+  var sut = (model && model.sutunlar) || [];
+  var satir = [[baslik(x.ad, x.birim)].concat(sut.map(function(s) { return baslik(s.ad, s.birim); })).join(ayrac)];
+  for(var i = 0; i < xv.length; i++) {
+    var r = [hucre(xv[i])];
+    for(var k = 0; k < sut.length; k++) {
+      r.push(hucre((sut[k].veri && i < sut[k].veri.length) ? sut[k].veri[i] : null));
+    }
+    satir.push(r.join(ayrac));
+  }
+  return satir.join('\r\n') + '\r\n';
+}
+
+// Dosya adı başlıktan: Türkçe harf ASCII'ye iner (dosya sistemi, e-posta eki).
+function veFoyDosyaAdi(model, simdi) {
+  var tr = { 'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I',
+             'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U' };
+  var ad = String((model && model.baslik) || 'Tablo')
+    .replace(/[çÇğĞıİöÖşŞüÜ]/g, function(c) { return tr[c]; })
+    .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'Tablo';
+  var t = simdi || new Date();
+  var p = function(v) { return String(v).padStart(2, '0'); };
+  return 'MFSim_Tablo_' + ad + '_' + t.getFullYear() + p(t.getMonth() + 1) + p(t.getDate()) +
+         '_' + p(t.getHours()) + p(t.getMinutes()) + '.csv';
+}
+
+// ── Araç çubuğunun iki eylemi (js/trace-view.js → Tablo kipi) ────────────────
+
+function _veFoySimdiki() {
+  var slot = (typeof VE_BOARD !== 'undefined') ? VE_BOARD : 0;
+  return (typeof veFoyModel === 'function') ? veFoyModel(slot) : null;
+}
+
+function _veFoyUyar(m) {
+  if(typeof showToast === 'function') showToast(m, 'warning');
+}
+
+// file:// üzerinde navigator.clipboard çoğu tarayıcıda YOK (güvenli bağlam
+// değil — js/cp-komuta.js'teki ölçüm). Yedek yol: gizli metin alanı + copy.
+function _veFoyEskiPano(metin) {
+  var ok = false;
+  try {
+    var ta = document.createElement('textarea');
+    ta.className = 've-foy-pano';
+    ta.setAttribute('readonly', '');
+    ta.value = metin;
+    document.body.appendChild(ta);
+    ta.select();
+    ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch(e) { ok = false; }
+  return ok;
+}
+
+function veFoyKopyala() {
+  var m = _veFoySimdiki();
+  if(!m) { _veFoyUyar('Kopyalanacak tablo yok — önce Veri Gezgini\'nden sinyal seçin.'); return; }
+  var metin = veFoyMetin(m, 'pano');
+  var n = m.x.veri.length;
+  var bildir = function(ok) {
+    if(!ok) { _veFoyUyar('Pano bu tarayıcıda kullanılamadı — tabloyu CSV ile indirin.'); return; }
+    if(typeof showToast === 'function') {
+      showToast(veSayi(n, 0) + ' satır panoya kopyalandı — Excel\'e yapıştırabilirsiniz.', 'success');
+    }
+  };
+  try {
+    if(typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(metin).then(function() { bildir(true); },
+        function() { bildir(_veFoyEskiPano(metin)); });
+      return;
+    }
+  } catch(e) {}
+  bildir(_veFoyEskiPano(metin));
+}
+
+function veFoyCsvIndir() {
+  var m = _veFoySimdiki();
+  if(!m) { _veFoyUyar('Dışa aktarılacak tablo yok — önce Veri Gezgini\'nden sinyal seçin.'); return; }
+  // BOM: Excel UTF-8'i ancak onunla tanır (başlıkta →, ·, ü var)
+  var blob = new Blob(['﻿' + veFoyMetin(m, 'csv')], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = veFoyDosyaAdi(m);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
+  if(typeof showToast === 'function') {
+    showToast('CSV indirildi — ' + veSayi(m.x.veri.length, 0) + ' satır, ' + m.sutunlar.length + ' sinyal.', 'success');
+  }
+}
+
+// Jest: saf yardımcılar doğrudan test edilebilsin
+if(typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    VE_FOY_AZAMI: VE_FOY_AZAMI,
+    veFoySeyrelt: veFoySeyrelt,
+    veFoyOndalik: veFoyOndalik,
+    veFoyOzet: veFoyOzet,
+    veFoyHucre: veFoyHucre,
+    veFoyAd: veFoyAd,
+    veFoyNot: veFoyNot,
+    veFoyHTML: veFoyHTML,
+    veFoyMetin: veFoyMetin,
+    veFoyDosyaAdi: veFoyDosyaAdi
+  };
+}
+
+</script>
+<script>
 // ═══════════════════════════════════════════════════════════════════════════
 // PANO KATMANI — ölçüm görüntüleyicisinin taşıyıcı zemini
 // ═══════════════════════════════════════════════════════════════════════════
@@ -13905,38 +14286,22 @@ function veRenderSlot(slotIdx) {
     return;
   }
 
-  var html = '<div class="ve-slot-assigned">';
-  html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
-  html += '<table id="ve-table-' + slotIdx + '" class="ve-result-table">';
-  html += '<thead><tr>';
-  html += '<th>#</th>';
-  html += '<th>' + escapeHTML(slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</th>';
-  sensors.forEach(function(s, i) {
-    var c = veSlotSignalColor(slot, i);
-    html += '<th style="color:' + c + '; border-bottom:3px solid ' + c + ';">' +
-            escapeHTML(s.name) + (s.unit ? ' [' + escapeHTML(s.unit) + ']' : '') + '</th>';
-  });
-  html += '</tr></thead>';
-  html += '<tbody id="ve-table-body-' + slotIdx + '">';
-  html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">Ölçüm verisi bekleniyor</td></tr>';
-  html += '</tbody></table></div>';
-  html += '</div>';
-  body.innerHTML = html;
+  // FÖY (js/sonuc-tablo.js — MFSim ile BİREBİR aynı üretici): kâğıt, başlık ve
+  // tablo veri gelince birlikte kurulur.
+  body.innerHTML = '<div class="ve-slot-assigned"><div class="ve-foy-zemin" id="ve-foy-' + slotIdx + '">' +
+    '<div class="ve-foy-bos">Ölçüm verisi bekleniyor</div></div></div>';
 
   if(typeof veImpAny === 'function' && veImpAny()) veRenderTable(slotIdx);
 }
 
-// js/graphics.js:409'dan uyarlama. Sim/çapraz-sekme zaman dizisi arayışı
-// düştü: X ekseni ya panonun seçtiği sütun ya da ölçümün kendi zaman dizisi.
-function veRenderTable(slotIdx) {
+// Föy modeli (js/sonuc-tablo.js'teki sözleşme). MFSim'deki eşinden (js/graphics.js)
+// farkı yalnız VERİ KAYNAĞI: burada tek kaynak içe aktarılan ölçüm. Sim/çapraz
+// sekme zaman dizisi arayışı yok: X ekseni ya panonun seçtiği sütun ya da
+// ölçümün kendi zaman dizisi. Gösterilecek veri yoksa null.
+function veFoyModel(slotIdx) {
   var slot = veResultSlots[slotIdx];
-  if(!slot || !slot.sensors || slot.sensors.length === 0) return;
-
-  var tbody = document.getElementById('ve-table-body-' + slotIdx);
-  if(!tbody) return;
-
+  if(!slot || !slot.sensors || slot.sensors.length === 0) return null;
   var ds = slot._dataSource || null;
-  var xds = (slot.xAxis && slot.xAxis._dataSource) ? slot.xAxis._dataSource : ds;
   var timeArr = null;
 
   // Kullanıcı X eksenini başka bir sütuna çevirmiş olabilir.
@@ -13947,82 +14312,28 @@ function veRenderTable(slotIdx) {
   if(!timeArr && ds && String(ds).indexOf('import:') === 0 && typeof veImpXSeries === 'function') {
     timeArr = veImpXSeries(ds);
   }
-  if(!timeArr || timeArr.length === 0) return;
+  if(!timeArr || timeArr.length === 0) return null;
 
-  var datasets = slot.sensors.map(function(s) { return veGetSensorData(s.id, s.signal); });
-
-  // X değeri içe aktarılan bir ölçümden gelir: metin ya da boşluk içerebilir,
-  // toFixed doğrudan çağrılamaz.
-  var fmtX = function(v) {
-    return (typeof v === 'number' && isFinite(v)) ? veSayi(v, 3) : (v == null ? '—' : String(v));
+  var olcum = (ds && typeof veImpFind === 'function') ? veImpFind(veImpIdOf(ds)) : null;
+  var ad = (olcum && olcum.name) || 'Ölçüm';
+  var ax = slot.xAxis || { name: 'Zaman [s]', unit: 's' };
+  return {
+    baslik: ad,
+    kaynak: 'İçe aktarılan ölçüm' + (olcum && olcum.fileName && olcum.fileName !== ad ? ' · ' + olcum.fileName : ''),
+    x: { ad: ax.name || 'Zaman', birim: ax.unit || '', veri: timeArr },
+    sutunlar: slot.sensors.map(function(s, i) {
+      return { ad: s.name, birim: s.unit || '', renk: veSlotSignalColor(slot, i),
+               veri: veGetSensorData(s.id, s.signal) };
+    })
   };
-  // Kanal metin olabilir (vites modu '1C'/'2L'); veFormatTooltipVal sayı bekler.
-  var fmtY = function(v) {
-    if(v === null || v === undefined) return '—';
-    if(typeof v === 'number') return isFinite(v) ? veFormatTooltipVal(v) : '—';
-    return escapeHTML(String(v));
-  };
+}
 
-  var n = timeArr.length;
-  var maxRows = 200;
-  var step = Math.max(1, Math.floor(n / maxRows));
-
-  var rows = [];
-  var rowNum = 0;
-  for(var i = 0; i < n; i += step) {
-    rowNum++;
-    var row = '<tr><td>' + rowNum + '</td>';
-    row += '<td style="font-weight:600;">' + fmtX(timeArr[i]) + '</td>';
-    datasets.forEach(function(d, di) {
-      row += '<td style="color:' + veSlotSignalColor(slot, di) + ';">' +
-             (d ? fmtY(i < d.length ? d[i] : null) : '—') + '</td>';
-    });
-    rows.push(row + '</tr>');
-  }
-
-  // Son satır her zaman gösterilir: adımlama onu atlarsa tablonun sonu
-  // ölçümün sonu sanılırdı.
-  if((n - 1) % step !== 0 && n > 1) {
-    rowNum++;
-    var last = '<tr style="border-top:2px solid var(--border-color);"><td>' + rowNum + '</td>';
-    last += '<td style="font-weight:700;">' + fmtX(timeArr[n - 1]) + '</td>';
-    datasets.forEach(function(d, di) {
-      last += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' +
-              (d ? fmtY(d[n - 1]) : '—') + '</td>';
-    });
-    rows.push(last + '</tr>');
-  }
-
-  // MIN / ORT / MAKS — yalnızca sayısal kanallarda anlamlı.
-  var numOf = function(d) {
-    if(!d) return null;
-    var out = [];
-    for(var i2 = 0; i2 < d.length; i2++) {
-      var v = d[i2];
-      if(typeof v === 'number' && isFinite(v)) out.push(v);
-    }
-    return out.length ? out : null;
-  };
-  var sumRow = function(label, borderTop, fn) {
-    var r = '<tr style="background:var(--bg-tertiary);' +
-            (borderTop ? ' border-top:2px solid var(--accent-primary);' : '') +
-            '"><td colspan="2" style="font-weight:700; color:var(--text-muted);">' + label + '</td>';
-    datasets.forEach(function(d, di) {
-      var nums = numOf(d);
-      var v = nums ? fn(nums) : null;
-      r += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' +
-           (v === null ? '—' : veFormatTooltipVal(v)) + '</td>';
-    });
-    return r + '</tr>';
-  };
-  rows.push(sumRow('MİN', true, function(a) { return Math.min.apply(null, a); }));
-  rows.push(sumRow('ORT', false, function(a) {
-    var s = 0; for(var i3 = 0; i3 < a.length; i3++) s += a[i3];
-    return s / a.length;
-  }));
-  rows.push(sumRow('MAKS', false, function(a) { return Math.max.apply(null, a); }));
-
-  tbody.innerHTML = rows.join('');
+function veRenderTable(slotIdx) {
+  var kap = document.getElementById('ve-foy-' + slotIdx);
+  if(!kap) return;
+  var m = veFoyModel(slotIdx);
+  if(!m) return;   // "Ölçüm verisi bekleniyor" yerinde kalır
+  kap.innerHTML = veFoyHTML(m, slotIdx);
 }
 
 // ── X ekseni seçici ───────────────────────────────────────────────────────
@@ -16594,6 +16905,31 @@ function veTrRenderToolbar() {
        '<span class="mf-ico mf-ico-chevron-down ve-trace-caret" aria-hidden="true"></span></button>';
   h += '</div>';
 
+  h += (mode === 'table') ? veTrTabloAraclari(n) : veTrIzAraclari(slot, n, zoomed);
+
+  h += '<span class="ve-trace-spacer"></span>';
+
+  h += '<div class="ve-trace-seg" role="group" aria-label="Görünüm">';
+  // VIEWER FARKI (MFSim'de üçüncü kip '3B' de var): 3B dağılım Three.js
+  // gerektiriyor ve tek dosyalık görüntüleyiciye ~600 KB ekliyordu. Ölçüm
+  // okumanın çekirdeğinde değil — kip listeden çıkarıldı, kodu duruyor.
+  [['line', 'İz'], ['table', 'Tablo']].forEach(function(m) {
+    h += '<button type="button" data-act="mode" data-mode="' + m[0] + '"' +
+         ' aria-pressed="' + (mode === m[0] ? 'true' : 'false') + '">' + m[1] + '</button>';
+  });
+  h += '</div>';
+
+  h += '<button type="button" class="ve-trace-btn danger" data-act="clear"' +
+       (n ? '' : ' disabled') + ' title="Tüm şeritleri kaldır">Temizle</button>';
+
+  el.innerHTML = h;
+}
+
+// İz (ve 3B) kipinin araçları: log eksenleri, yakınlaştırma, referans imleci,
+// şerit ayır/birleştir. Tablo kipinde hiçbiri bir şey yapmıyordu.
+function veTrIzAraclari(slot, n, zoomed) {
+  var h = '';
+
   // Log/lineer anahtarı — yalnız veri buna elverişliyse (tüm x > 0) görünür.
   // Frekans yanıtı gibi çok dekatlı eğrilerde lineer eksen okunmaz olur;
   // düğme kapalıyken de görünüp kilitli durmaz, hiç çizilmez: kullanabildiği
@@ -16645,22 +16981,22 @@ function veTrRenderToolbar() {
        (n > 1 ? '' : ' disabled') +
        ' title="Hangi şeritlerin tek diyagramda birleşeceğini seç — her sinyal kendi Y ekseninde kalır">Birleştir</button>';
 
-  h += '<span class="ve-trace-spacer"></span>';
+  return h;
+}
 
-  h += '<div class="ve-trace-seg" role="group" aria-label="Görünüm">';
-  // VIEWER FARKI (MFSim'de üçüncü kip '3B' de var): 3B dağılım Three.js
-  // gerektiriyor ve tek dosyalık görüntüleyiciye ~600 KB ekliyordu. Ölçüm
-  // okumanın çekirdeğinde değil — kip listeden çıkarıldı, kodu duruyor.
-  [['line', 'İz'], ['table', 'Tablo']].forEach(function(m) {
-    h += '<button type="button" data-act="mode" data-mode="' + m[0] + '"' +
-         ' aria-pressed="' + (mode === m[0] ? 'true' : 'false') + '">' + m[1] + '</button>';
-  });
-  h += '</div>';
-
-  h += '<button type="button" class="ve-trace-btn danger" data-act="clear"' +
-       (n ? '' : ' disabled') + ' title="Tüm şeritleri kaldır">Temizle</button>';
-
-  el.innerHTML = h;
+// TABLO kipinin araçları (js/sonuc-tablo.js): tablonun kendi iki eylemi.
+// İkisi de TÜM örnekleri alır — ekran uzun seriyi seyreltir, dışa aktarma değil.
+// İkon sınıfla yazılır, veIkon ile değil: bu dosya görüntüleyicide de koşuyor
+// ve orada js/ikon.js yok.
+function veTrTabloAraclari(n) {
+  var h = '<span class="ve-trace-sep"></span>';
+  h += '<button type="button" class="ve-trace-btn" data-act="tablo-kopyala"' + (n ? '' : ' disabled') +
+       ' title="Tablonun tüm örneklerini panoya kopyala — Excel\'e yapıştırılır">' +
+       '<span class="mf-ico mf-ico-clipboard" aria-hidden="true"></span>Kopyala</button>';
+  h += '<button type="button" class="ve-trace-btn" data-act="tablo-csv"' + (n ? '' : ' disabled') +
+       ' title="Tablonun tüm örneklerini CSV dosyası olarak indir">' +
+       '<span class="mf-ico mf-ico-download" aria-hidden="true"></span>CSV</button>';
+  return h;
 }
 
 // ── Eylemler ─────────────────────────────────────────────────────────────────
@@ -17522,11 +17858,14 @@ function veTrShellHTML() {
   h += '</div>';
   h += '<canvas class="ve-trace-axis" id="ve-trace-axis"></canvas>';
   h += '<div class="ve-trace-status" id="ve-trace-status"></div>';
-  h += '<div class="ve-trace-note" id="ve-trace-note"></div>';
   h += '</div>';
 
   // Tablo / 3B görünümü — veRenderSlot(0) buraya çizer
   h += '<div class="ve-trace-alt" id="ve-rslot-body-0" style="display:none;"></div>';
+  // Yorum şeridi grafik kabının DIŞINDA: Tablo ve 3B kipinde kap gizleniyor
+  // ve şerit onunla birlikte kayboluyordu (ölçüldü: FEAD yorumu tablo kipinde
+  // yoktu) — oysa veTrApplyMode tam da bunun için şeridi kipten bağımsız çizer.
+  h += '<div class="ve-trace-note" id="ve-trace-note"></div>';
   h += '</div>';
 
   h += '</div>';
@@ -17575,6 +17914,8 @@ function veTrBindToolbar() {
     else if(act === 'split-all') veTrSplitAll();
     else if(act === 'merge-all') veTrShowMergePicker(e);
     else if(act === 'clear') veTrClear();
+    else if(act === 'tablo-kopyala') { if(typeof veFoyKopyala === 'function') veFoyKopyala(); }
+    else if(act === 'tablo-csv') { if(typeof veFoyCsvIndir === 'function') veFoyCsvIndir(); }
     else if(act === 'mode') veTrSetMode(b.getAttribute('data-mode'));
   });
 }
@@ -17744,7 +18085,9 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrLaneGrabRect: veTrLaneGrabRect,
     veTrHitLane: veTrHitLane,
     veTrHitResize: veTrHitResize,
-    veTrBindPopupDismiss: veTrBindPopupDismiss
+    veTrBindPopupDismiss: veTrBindPopupDismiss,
+    veTrShellHTML: veTrShellHTML,
+    veTrTabloAraclari: veTrTabloAraclari
   };
 }
 

@@ -31,7 +31,12 @@
 // YALNIZ o düğümün parçalarında aranır (`veFeadStpCoz`). Ad hiçbir şeye
 // karar vermez (başka bir dosyada "ALT" başka bir şey olabilir) ve rol
 // geometriden tahmin edilmez ("en büyük kanallı kasnak kranktır" sessizce
-// yanlış bir sürücü seçerdi). Rol YÜZEYİ SEÇMEZ: düzlemdeki bir kanal
+// yanlış bir sürücü seçerdi). TEK İSTİSNA GERGİ (2026-09-28, kullanıcı: "modeli
+// attığımız zaman otomatik gergi otomatik olarak bulunabilir mi?"): imzası
+// kasnaklardan ayrışır (avara + ona paralel, disk dışında, göbekli bir pivot),
+// `veFeadStpOner` onu rol vermeden arar; sihirbaz rolü yalnız TEK aday varsa ve
+// ad · kod · katalogdan biri de doğruluyorsa önceden verir ve bunu yazar.
+// Rol YÜZEYİ SEÇMEZ: düzlemdeki bir kanal
 // bölgesi kasnağı kaburgalı yapar (kaburgalı avara da vardır), yoksa kayışı
 // taşıyan düz yüzey alınır. Rol, modelde parçanın NE olduğunu söyler:
 // sürücü, gergi ve gerginin pivotu.
@@ -696,6 +701,142 @@ function veFeadStpKayit(cozum, secim){
   return kayit;
 }
 
+// ── 7 · GERGİ ÖNERİSİ — rol vermeden (kullanıcı sorusu, 2026-09-28) ──────────
+// *"Modeli attığımız zaman otomatik gergi otomatik olarak bulunabilir mi?"*
+// Ölçüldü: rol vermeden bütün birimleri (parça ve alt montaj; kök değil)
+// tarayan bu imza kullanıcının dosyasında 5 parçadan YALNIZ gergiyi işaretledi.
+//
+// İMZA — bir birimde:
+//   (P) AVARA: kayış düzleminde oturan kasnak yüzeyi (kanal bölgesi ya da
+//       ≥ Ø40 düz yüzey) ve ekseninde ondan çok büyük bir gövde YOK (R8:
+//       aksesuarın gövdesi kasnağıyla eşeksenli);
+//   (Q) PİVOT: P'ye paralel ikinci eksen, kol aralığında (R4), kasnak
+//       diskinin DIŞINDA (R1), bir göbek taşıyor — r ≥ 20 mm, ≥ 8 yüz (R2),
+//       cıvata dairesindeki EŞ deliklerden biri değil (R3), başka bir birimin
+//       kasnağıyla eşeksenli değil (R5) ve kendisi kayış düzleminde bir kasnak
+//       değil (R6: çift avara braketi).
+// Kuralların her biri bir sınama montajında TEK BAŞINA yük taşıyor
+// (tests/unit/fead-step-oner.test.js). Bayrak en KÜÇÜK birime gider: alt
+// montaj, çocuğu zaten işaretliyse işaretlenmez.
+//
+// ÖNERİ BİR KARAR DEĞİL: `gergi` yalnız TEK aday varsa dolar ve ad ya da
+// katalog da gergi diyorsa `uyusan` taşır; sihirbaz rolü yalnız o zaman
+// önceden verir, bunu yazar, kullanıcı kaldırır (kural 34).
+var VE_FEAD_STP_ONER = { duzOdMin: 40, disOran: 0.85, gobekR: 20, gobekYuz: 8, esEksen: 0.5 };
+var _FST_GERGI_AD = /GERG[İI]|TENSION|SPANNER|SPANNROLLE|TENDEUR/;
+function _fstImza(g){
+  var r = g.yuzler.map(function(f){
+    return f.tip === 'TOROIDAL_SURFACE' ? 'T' + (Math.round(f.R * 100) / 100) + '/' + (Math.round(f.rk * 100) / 100)
+      : f.tip.charAt(0) + (f.r != null ? Math.round(f.r * 100) / 100 : '?') + (f.yariAci != null ? '@' + Math.round(f.yariAci * 10) / 10 : '');
+  });
+  var tek = {}; r.forEach(function(x){ tek[x] = 1; });
+  return Object.keys(tek).sort().join(' ');
+}
+function _fstOnerKume(yuzler){
+  var K = VE_FEAD_STP_ONER;
+  return _fstEksenler(yuzler).map(function(g, gi){
+    var pr = _fstProfil(yuzler, g), rMax = -Infinity;
+    pr.forEach(function(r){ if(r.tip !== 'PLANE' && r.rMax > rMax) rMax = r.rMax; });
+    g.yuzler.forEach(function(f){ if(f.tip === 'CYLINDRICAL_SURFACE' && f.r > rMax) rMax = f.r; });
+    var Z = _fstKanallar(pr).filter(function(z){ return !!z.profil; }), D = _fstDuz(pr), k = null;
+    if(Z.length) k = { tur: 'kanalli', od: Z[0].od, genislik: Z[0].n * Z[0].adim, merkez: _fstTopla(g.o, _fstCarp(g.d, Z[0].s)) };
+    else if(D && D.od >= K.duzOdMin && D.od >= K.disOran * 2 * rMax)
+      k = { tur: 'duz', od: D.od, genislik: D.genislik, merkez: _fstTopla(g.o, _fstCarp(g.d, D.s)) };
+    return { gi: gi, o: g.o, d: g.d, n: g.yuzler.length, rMax: rMax, imza: _fstImza(g), kasnak: k };
+  });
+}
+function veFeadStpOner(sonuc, opt){
+  opt = opt || {};
+  var K = VE_FEAD_STP_ONER, T = VE_FEAD_STP_TOL, t0 = Date.now();
+  var out = { adaylar: [], gergi: null, ms: 0 };
+  if(!sonuc || !sonuc.ok) return out;
+  var kapali = {}; (opt.kapali || []).forEach(function(r){ kapali[r] = 1; });
+  var acik = function(r){ return !kapali[r]; };
+  var cosE = Math.cos(K.esEksen * Math.PI / 180);
+  // BİRİMLER: kök dışındaki her düğüm
+  var B = [];
+  sonuc.agac.forEach(function(d){
+    if(d.ebeveyn < 0 && d.cocuklar.length) return;
+    var yuzler = [];
+    d.parcalar.forEach(function(pi){ (sonuc._yuz[pi] || []).forEach(function(f){ yuzler.push(f); }); });
+    if(!yuzler.length) return;
+    var G = _fstOnerKume(yuzler);
+    B.push({ dugum: d.i, ad: d.ad, altMontaj: d.cocuklar.length > 0, parcalar: d.parcalar.slice(), G: G,
+             kasnaklar: G.filter(function(g){ return !!g.kasnak; }) });
+  });
+  // KAYIŞ DÜZLEMİ rolsüz: her YAPRAK parça bir oy (veFeadStpCoz'un oturma kuralı)
+  var yap = B.filter(function(b){ return !b.altMontaj; }), tum = [];
+  yap.forEach(function(b){ b.kasnaklar.forEach(function(g){ tum.push({ b: b, g: g }); }); });
+  if(!tum.length){ out.ms = Date.now() - t0; return out; }
+  var kanalliVar = tum.some(function(a){ return a.g.kasnak.tur === 'kanalli'; });
+  var n = _fstYonCogunluk(tum.filter(function(a){ return !kanalliVar || a.g.kasnak.tur === 'kanalli'; }).map(function(a){ return a.g.d; }));
+  var paralel = function(g){ return _fstAciDer(g.d, n) <= T.duzlemAci; };
+  var kay = function(g, p){ return Math.abs(_fstNokta(g.kasnak.merkez, n) - p); };
+  var oturur = function(g, p){ return !!g.kasnak && paralel(g) && (g.kasnak.tur === 'kanalli' ? kay(g, p) <= 2 : kay(g, p) <= g.kasnak.genislik / 2 + 2); };
+  var enIyi = null;
+  tum.forEach(function(ref){
+    if(!paralel(ref.g) || (kanalliVar && ref.g.kasnak.tur !== 'kanalli')) return;
+    var p = _fstNokta(ref.g.kasnak.merkez, n), say = 0, ks = 0;
+    yap.forEach(function(b){
+      var ot = b.kasnaklar.filter(function(g){ return oturur(g, p); });
+      if(ot.length) say++;
+      if(ot.some(function(g){ return g.kasnak.tur === 'kanalli'; })) ks++;
+    });
+    if(!enIyi || say * 1000 + ks > enIyi.puan) enIyi = { p: p, puan: say * 1000 + ks };
+  });
+  var p0 = enIyi ? enIyi.p : 0;
+  var ayrik = function(a, b){ return !a.parcalar.some(function(q){ return b.parcalar.indexOf(q) >= 0; }); };
+  B.forEach(function(b){
+    b.gecen = [];
+    b.kasnaklar.forEach(function(P){
+      if(acik('RP') && enIyi && !oturur(P, p0)) return;
+      if(acik('R8') && P.kasnak.od < K.disOran * 2 * P.rMax) return;
+      b.G.forEach(function(Q){
+        if(Q === P || Math.abs(_fstNokta(Q.d, P.d)) < cosE) return;
+        var L = _fstDogruMesafe(Q.o, P.o, P.d);
+        if(L < 1e-3) return;
+        if(acik('R4') && (L < T.pivotMin || L > T.pivotMaks)) return;
+        if(acik('R1') && L <= P.kasnak.od / 2) return;
+        if(acik('R2') && (!(Q.rMax >= K.gobekR) || Q.n < K.gobekYuz)) return;
+        if(acik('R3') && b.G.some(function(X){ return X !== Q && X !== P && Math.abs(_fstNokta(X.d, Q.d)) >= cosE && X.imza === Q.imza; })) return;
+        if(acik('R5') && B.some(function(x){ return ayrik(x, b) && x.kasnaklar.some(function(g){
+          return Math.abs(_fstNokta(g.d, Q.d)) >= cosE && _fstDogruMesafe(Q.o, g.o, g.d) <= K.esEksen; }); })) return;
+        if(acik('R6') && enIyi && oturur(Q, p0)) return;
+        b.gecen.push({ P: P, Q: Q, kol: L });
+      });
+    });
+    // avara başına tek pivot: en çok yüz (_fstPivot'un kuralı)
+    b.gecen.sort(function(x, y){ return y.Q.n - x.Q.n; });
+  });
+  var bayrak = B.filter(function(b){ return b.gecen.length > 0; });
+  bayrak = bayrak.filter(function(b){
+    return !(b.altMontaj && bayrak.some(function(x){ return x !== b && x.parcalar.every(function(q){ return b.parcalar.indexOf(q) >= 0; }); }));
+  });
+  var katalog = opt.gergiKatalog || (typeof VE_FEAD_TENSIONER_DB !== 'undefined' ? VE_FEAD_TENSIONER_DB : []);
+  out.adaylar = bayrak.map(function(b){
+    var c = b.gecen[0], ad = _fstKatla(b.ad);
+    var metin = _fstKatla([b.ad].concat(b.parcalar.map(function(pi){ var q = sonuc.parcalar[pi]; return q.ad + ' ' + (q.id || ''); })).join(' '));
+    var kodlar = {}, geo = [];
+    katalog.forEach(function(r){
+      if(r.part && metin.indexOf(_fstKatla(r.part).trim()) >= 0) kodlar[r.part] = 1;
+      if(Math.abs(r.armLen - c.kol) <= 1 && Math.abs(r.od - c.P.kasnak.od) <= 1.5) geo.push(r.key);
+    });
+    var kk = Object.keys(kodlar);
+    return { dugum: b.dugum, ad: b.ad, kol: c.kol, od: c.P.kasnak.od, tur: c.P.kasnak.tur, pivotYuz: c.Q.n,
+             adDiyor: _FST_GERGI_AD.test(ad), kod: kk.length === 1 ? kk[0] : null, katalogGeo: geo };
+  });
+  if(out.adaylar.length === 1){
+    var g = out.adaylar[0];
+    g.uyusan = [];
+    if(g.adDiyor) g.uyusan.push('ad');
+    if(g.kod) g.uyusan.push('kod');
+    if(g.katalogGeo.length) g.uyusan.push('katalog');
+    out.gergi = g;
+  }
+  out.ms = Date.now() - t0;
+  return out;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_FEAD_STP_SURUM: VE_FEAD_STP_SURUM,
@@ -705,6 +846,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadStpCoz: veFeadStpCoz,
     veFeadStp2B: veFeadStp2B,
     veFeadStpKayit: veFeadStpKayit,
-    veFeadStpKayisKodu: veFeadStpKayisKodu
+    veFeadStpKayisKodu: veFeadStpKayisKodu,
+    veFeadStpOner: veFeadStpOner,
+    VE_FEAD_STP_ONER: VE_FEAD_STP_ONER
   };
 }

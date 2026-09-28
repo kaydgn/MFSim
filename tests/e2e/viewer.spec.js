@@ -230,7 +230,7 @@ test.describe('Ölçüm Görüntüleyici — tek dosya', () => {
     expect(st.xLen).toBe(300);
   });
 
-  test('Tablo kipi değerleri ve MİN/ORT/MAKS satırlarını gösterir', async ({ page }) => {
+  test('Tablo kipi değerleri ve özet satırlarını (en düşük / ortalama / en yüksek) gösterir', async ({ page }) => {
     await openViewer(page);
     await importFixture(page, canoeXlsx());
     await page.click('#ve-import-apply');
@@ -240,11 +240,15 @@ test.describe('Ölçüm Görüntüleyici — tek dosya', () => {
     const table = page.locator('#ve-table-0');
     await expect(table).toBeVisible();
     await expect(table).toContainText('EngSpeed');
-    await expect(table).toContainText('MİN');
-    await expect(table).toContainText('MAKS');
+    await expect(table.locator('tfoot')).toContainText('En düşük');
+    await expect(table.locator('tfoot')).toContainText('En yüksek');
     // Metin kanalı ('1C'/'2L') sayısal biçimlendirmeye girip tabloyu
-    // patlatmamalı — MİN/MAKS orada '—' olur, tablo yine dolu kalır.
+    // patlatmamalı — özet orada '—' olur, tablo yine dolu kalır.
     await expect(table.locator('tbody tr')).not.toHaveCount(0);
+    // MFSim'le AYNI föy ve AYNI araçlar (js/sonuc-tablo.js birebir kopya)
+    await expect(page.locator('.ve-foy .ve-foy-tablo')).toHaveCount(1);
+    await expect(page.locator('#ve-trace-toolbar [data-act="tablo-kopyala"]')).toHaveCount(1);
+    await expect(page.locator('#ve-trace-toolbar [data-act="tablo-csv"]')).toHaveCount(1);
   });
 
   test('3B kipi görüntüleyicide yok (Three.js gerektiriyordu)', async ({ page }) => {
