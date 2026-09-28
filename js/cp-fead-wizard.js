@@ -718,6 +718,13 @@ function veFeadWizNodes(st){
     if(Number.isFinite(v)) bd[a] = v;
   });
   if(b.beltType) bd.beltType = b.beltType;
+  // HESAP ÇAPI VE CAD ESKİZİNİN ÖLÇÜSÜ DE TAŞINIR (kural 20). Taşınmasaydı
+  // sihirbazda "CAD eskizi" seçilir, kurulan model sessizce katalogla çözülürdü.
+  if(b.hesapCap === 'cad' || b.hesapCap === 'db') bd.hesapCap = b.hesapCap;
+  ['hbCad', 'hrCad'].forEach(function(a){
+    var v = _fwNum(b[a], NaN);
+    if(Number.isFinite(v)) bd[a] = v;
+  });
   // KAYIŞ TİPİNE BAĞLI ÇIKTILAR HER ZAMAN KAPALI (kullanıcı kararı,
   // 2026-08-31): *"programda SADECE VE SADECE kayış boyunu çıktı olarak
   // verecek… kayış sabit kalarak program hesap yapmayacak."* Sihirbaz artık
@@ -1101,7 +1108,7 @@ function veFeadWizLiveHTML(b){
     // ölçer (kullanıcı kararı 2026-09-28). Dönüşüm köprüden.
     if(Number.isFinite(b.beltLengthMm)){
       var _bc = (typeof veFeadBoyCizgileri === 'function' && b.sys && b.sys.belt)
-        ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt.profile, b.sys.belt.brand) : null;
+        ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt) : null;
       h += '<span class="ve-fw-pill">L<sub>b</sub> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
          + (b.beltLengthDerived ? ' <em>çıktı</em>' : '')
          + ((_bc && Number.isFinite(_bc.dw)) ? ' <em>· d<sub>w</sub> ' + _fwFmt(_bc.dw, 1) + '</em>' : '')
@@ -1549,6 +1556,114 @@ function _fwStpKayisTanim(k){
   if(Number.isFinite(k.genislik)) p.push(_fwFmt(k.genislik, 2) + ' mm');
   return p.join(' · ');
 }
+// ── HESAP ÇAPI (kullanıcı kararları 2026-09-28: kayış için TEK seçim; STEP'te
+// varsayılan CAD eskizinin d_w'si) ─────────────────────────────────────────
+// Aktarımdan ÖNCE seçim STEP oturumunda (`s.hesapCap`), aktarımdan SONRA
+// sihirbazın kayışında (`st.belt.hesapCap`) — tek okuyucu, tek yazıcı; iki
+// yüzey (kart · 3B) ikisini de buradan okur ve yazar.
+function _fwStpEskiz(s){ return (s && s.coz && s.coz.kayis && s.coz.kayis.eskiz) || null; }
+function _fwStpHesapCap(s){
+  var st = _fwState;
+  if(s && s.aktarim && st && st.stepKaynak && st.belt) return st.belt.hesapCap || 'katalog';
+  if(s && s.hesapCap) return s.hesapCap;
+  var es = _fwStpEskiz(s);
+  return (es && es.hb !== null) ? 'cad' : 'katalog';
+}
+function veFeadWizStpHesapCap(v){
+  var s = _fwStp;
+  if(!s || ['katalog', 'cad', 'db'].indexOf(v) < 0) return false;
+  var es = _fwStpEskiz(s);
+  if(v === 'cad' && !(es && es.hb !== null)) return false;
+  s.hesapCap = v;
+  if(s.aktarim && _fwState && _fwState.stepKaynak && _fwState.belt) _fwState.belt.hesapCap = v;
+  veFeadWizRender();
+  return true;
+}
+// Köprünün okuduğu biçimde kayış (veFeadKordOfset): profil STEP'ten, marka
+// sihirbazın kayışından, CAD ofsetleri eskizden.
+function _fwStpKord(s){
+  var st = _fwState || {}, bl = st.belt || {}, es = _fwStpEskiz(s), prof = null;
+  if(s && s.coz){
+    if(s.coz.kayis && s.coz.kayis.profil) prof = s.coz.kayis.profil;
+    else s.coz.kasnaklar.forEach(function(k){ if(!prof && k.tur === 'kanalli' && k.profil) prof = k.profil; });
+  }
+  var o = { profile: prof || bl.profile || 'PK', brand: bl.brand || 'GATES', hesapCap: _fwStpHesapCap(s) };
+  if(es && es.hb !== null) o.hbCad = es.hb;
+  if(es && es.hr !== null) o.hrCad = es.hr;
+  return o;
+}
+// Kasnağın hesaptaki çapı: kaburgalı d_b + 2·h_b, sırttan dolanan OD + 2·h_r.
+function _fwStpHesapCapi(s, k, mod){
+  if(!k || typeof veFeadKordOfset !== 'function') return NaN;
+  var b = _fwStpKord(s);
+  if(mod) b.hesapCap = mod;
+  var ko = veFeadKordOfset(b);
+  return k.od + 2 * (k.tur === 'kanalli' ? ko.hb : ko.hr);
+}
+// Seçici — kart, 3B paneli ve kasnağın bölümü AYNI üreticiden; seçenekler
+// kayış penceresinin listesinden (`veFeadHesapCapSecenekleri`, kural 24).
+// `k` verilirse düğmeler o kasnağın hesap çaplarını taşır (147 mi 150 mi).
+function _fwStpHesapCapHTML(s, k){
+  if(typeof veFeadHesapCapSecenekleri !== 'function' || typeof veFeadKordOfset !== 'function') return '';
+  var bl = _fwStpKord(s), cur = _fwStpHesapCap(s);
+  var marka = (typeof veFeadKayisMarkaAdi === 'function') ? veFeadKayisMarkaAdi(bl.brand) : bl.brand;
+  var h = '<div class="ve-fw-spinbox" role="group" aria-label="Hesap çapı" data-ve-hesapcap-grup="1">';
+  veFeadHesapCapSecenekleri(bl).forEach(function(o){
+    var et = o[0] === 'db' ? 'd<sub>b</sub>' : 'd<sub>w</sub> · ' + (o[0] === 'cad' ? 'CAD' : _fwEsc(marka));
+    if(k) et += ' <b>' + _fwFmt(_fwStpHesapCapi(s, k, o[0]), 2) + '</b>';
+    h += '<button type="button" class="ve-fw-spin' + (o[0] === cur ? ' ve-fw-spin-on' : '') + '"'
+      + ' data-ve-hesapcap="' + o[0] + '" aria-pressed="' + (o[0] === cur ? 'true' : 'false') + '"'
+      + ' title="' + _fwEsc(o[1]) + '" onclick="veFeadWizStpHesapCap(\'' + o[0] + '\')">' + et + '</button>';
+  });
+  return h + '</div>';
+}
+// KASNAĞIN KESİTİ (kullanıcı isteği 2026-09-28: kaburgalı kasnak seçilince
+// kesitin değerleri kendiliğinden). Ölçülen (STEP) · katalog (marka) ·
+// türetilen (d_w, sırt) · CAD eskizi · hesaptaki çap; figür kayış penceresinin
+// kesitiyle TEK üretici (`veFeadKesitSVG`), hesap çizgisi işaretli.
+function _fwStpKasnakKesitHTML(s, ki){
+  var k = s && s.coz && s.coz.kasnaklar[ki];
+  if(!k) return '';
+  var bl = _fwStpKord(s), ko = veFeadKordOfset(bl), kat = ko.katalog || {}, es = _fwStpEskiz(s);
+  var bp = null;
+  try { bp = FEADCore.beltProps({ profile: bl.profile, brand: bl.brand }); } catch(e){ bp = null; }
+  var marka = (typeof veFeadKayisMarkaAdi === 'function') ? veFeadKayisMarkaAdi(bl.brand) : bl.brand;
+  var kanalli = k.tur === 'kanalli';
+  var ofs = function(o){ return kanalli ? o.hb : o.hr; };
+  var r = function(et, deger, not, veri){
+    return '<tr' + (veri ? ' data-ve-kesit="' + veri + '"' : '') + '><td>' + et + '</td><td class="ve-fw-num">' + deger
+      + '</td><td class="ve-fw-dim">' + (not || '') + '</td></tr>';
+  };
+  var h = '<section class="ve-fw-3b-bolum" data-ve-3b-kesit="' + ki + '"><h4>' + (kanalli ? 'Kaburgalı kasnak' : 'Düz kasnak')
+    + ' <span class="ve-fw-dim">' + (kanalli ? _fwEsc((k.profil || '?') + ' · ' + k.kanal + ' kanal') : 'kayış sırtta') + '</span></h4>';
+  if(kanalli && typeof veFeadKesitSVG === 'function') h += veFeadKesitSVG(bl.profile, bl.brand, { kord: ko, maxW: 300 });
+  h += '<table class="ve-fw-tbl ve-fw-kesit-tbl"><tbody>';
+  if(kanalli){
+    h += r('Kanal adımı s', _fwFmt(k.adim, 3), bp ? 'katalog ' + _fwFmt(bp.ribPitch, 2) : '', 'adim');
+    h += r('Kaburga tepesi d<sub>b</sub>', _fwFmt(k.od, 2), 'ölçülen', 'db');
+    if(Number.isFinite(k.tabanCap))
+      h += r('Kanal tabanı', _fwFmt(k.tabanCap, 2), 'derinlik ' + _fwFmt((k.od - k.tabanCap) / 2, 2), 'taban');
+    if(bp){
+      h += r('Kayış yüksekliği h', _fwFmt(bp.thickness, 1), _fwEsc(marka) + ' kataloğu', 'h');
+      h += r('h<sub>b</sub> · h<sub>r</sub>', _fwFmt(kat.hb, 2) + ' · ' + _fwFmt(kat.hr, 2), _fwEsc(marka) + ' kataloğu', 'katalog');
+    }
+    if(Number.isFinite(kat.hb)) h += r('Kord d<sub>w</sub>', _fwFmt(k.od + 2 * kat.hb, 2), _fwEsc(marka) + ' kataloğu', 'dw-katalog');
+  } else {
+    h += r('Dış çap', _fwFmt(k.od, 2), 'ölçülen', 'od');
+    if(Number.isFinite(kat.hr)) h += r('Kord (OD + 2·h<sub>r</sub>)', _fwFmt(k.od + 2 * kat.hr, 2), _fwEsc(marka) + ' kataloğu · h<sub>r</sub> ' + _fwFmt(kat.hr, 2), 'dw-katalog');
+  }
+  var esOf = es ? (kanalli ? es.hb : es.hr) : null;
+  if(esOf !== null && esOf !== undefined)
+    h += r(kanalli ? 'Kord d<sub>w</sub>' : 'Kord (OD + 2·h<sub>r</sub>)', _fwFmt(k.od + 2 * esOf, 2),
+      'CAD · ' + (kanalli ? 'h<sub>b</sub> ' : 'h<sub>r</sub> ') + _fwFmt(esOf, 2), 'dw-cad');
+  if(kanalli && bp && Number.isFinite(ko.hb))
+    h += r('Kayış sırtı', _fwFmt(k.od + 2 * (ko.hb + ko.hr), 2), 'd<sub>w</sub> + 2·h<sub>r</sub>', 'sirt');
+  h += '<tr class="ve-fw-kesit-hesap" data-ve-kesit="hesap"><td><b>Hesap çapı</b></td><td class="ve-fw-num"><b>'
+    + _fwFmt(k.od + 2 * ofs(ko), 2) + '</b></td><td class="ve-fw-dim">'
+    + _fwEsc(ko.kaynak === 'db' ? 'kayış kalınlığı yok' : ko.kaynak === 'cad' ? 'CAD eskizi' : marka + ' kataloğu') + '</td></tr>';
+  h += '</tbody></table>';
+  return h + _fwStpHesapCapHTML(s, k) + '</section>';
+}
 // Satır olarak basılan düğümler. Kök, altında düğüm varsa basılmaz: bütün
 // montaj bir kasnak olamaz.
 function _fwStpSatirlar(s){
@@ -1558,7 +1673,7 @@ function _fwStpSatirlar(s){
 function _fwStpSecim(s){
   var m = -1;
   if(s.coz) s.coz.kasnaklar.forEach(function(k, i){ if(m < 0 && k.tip === 'fead-crank') m = i; });
-  return { ayna: !!s.ayna, merkez: m >= 0 ? m : undefined };
+  return { ayna: !!s.ayna, merkez: m >= 0 ? m : undefined, hesapCap: _fwStpHesapCap(s) };
 }
 function _fwStpImza(s){ return JSON.stringify({ r: s.roller, a: !!s.ayna }); }
 
@@ -1907,7 +2022,9 @@ function _fwStpKartHTML(){
       if(ki >= 0){
         var k = coz.kasnaklar[ki];
         tanim = 'Ø' + _fwFmt(k.od, 1) + ' · ' + (k.tur === 'kanalli' ? k.kanal + ' × ' + (k.profil || '?') : 'düz')
-          + (kol[ki] !== undefined ? ' · kol ' + _fwFmt(kol[ki], 1) : '');
+          + (kol[ki] !== undefined ? ' · kol ' + _fwFmt(kol[ki], 1) : '')
+          // hesabın kurulduğu çap (hesap çapı seçimine göre) — 147 mi 150 mi
+          + ' · hesap Ø' + _fwFmt(_fwStpHesapCapi(s, k), 1);
         if(iki){ xs = _fwFmt(iki.kasnaklar[ki].x, 1); ys = _fwFmt(iki.kasnaklar[ki].y, 1); }
       } else { tanim = 'kasnak bulunamadı'; sinif = ' ve-fw-stp-warn'; }
     }
@@ -1952,6 +2069,7 @@ function _fwStpKartHTML(){
       + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '"'
         + ' title="Arkadan: x ekseni aynalanır; krankın dönüş yönü de ters okunur."'
         + ' onclick="veFeadWizStpAyna(true)">Arkadan</button></div>');
+    h += _fwField('Hesap çapı', _fwStpHesapCapHTML(s));
     h += '<div class="ve-fw-stp-cizim">' + _fwStpCizimSVG(s) + '</div>';
 
     // ── AKTAR ─────────────────────────────────────────────────────────────
@@ -2435,7 +2553,7 @@ function _fwReadHTML(etHtml, deg, ikon){
 // ölçer). Sayı köprüden; profil kaydı tanınmıyorsa satır hiç yazılmaz.
 function _fwKordRead(b){
   var x = (typeof veFeadBoyCizgileri === 'function' && b && b.sys && b.sys.belt)
-    ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt.profile, b.sys.belt.brand) : null;
+    ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt) : null;
   return (x && Number.isFinite(x.dw)) ? _fwRead('Kord boyu (CAD çizgisi)', _fwFmt(x.dw, 1) + ' mm') : '';
 }
 
@@ -2983,6 +3101,10 @@ function _fwStepKayis(b){
                _fwField('Marka', _fwSelHTML('belt.brand',
                  [['GATES','Gates'],['OPTIBELT','Optibelt'],['CONTITECH','ContiTech']], bl.brand || 'GATES')),
                _fwField('Kanal (kaburga) sayısı', _fwInp('belt.ribs', { ph: '8', step: '1' }))], 3)
+    // HESAP ÇAPI — kayış penceresinin seçicisiyle TEK listeden (kural 24).
+    + ((typeof veFeadHesapCapSecenekleri === 'function')
+        ? _fwGrid([_fwField('Hesap çapı', _fwSelHTML('belt.hesapCap',
+            veFeadHesapCapSecenekleri(bl), bl.hesapCap || 'katalog'))], 1) : '')
     );
 
   // ── ÜÇ KART KALDIRILDI (kullanıcı isteği, 2026-08-31) ────────────────────
@@ -3044,6 +3166,18 @@ function _fwCadKayisHTML(st, b){
     } else if(f && f.ok && f.atLimit){
       r += _fwRead('Bu kayışla kol', 'sığmıyor — ' + (f.atLimit.side === 'free'
           ? 'kayış uzun, kol serbest ucuna dayanır' : 'kayış kısa, kol yük stopuna dayanır'));
+    }
+  }
+  // ESKİZ: CAD'in çizdiği kord çizgisi ve modelin kordu — hesap çapı CAD
+  // eskiziyse ve kol CAD'deki konumdaysa ikisi aynı boyu okur.
+  var es = c.eskiz;
+  if(es){
+    r += _fwRead('Eskiz', (es.ad || 'kayış eskizi') + ' · ' + es.yay + ' yay'
+      + (es.hb !== null ? ' · h_b ' + _fwFmt(es.hb, 2) : '') + (es.hr !== null ? ' · h_r ' + _fwFmt(es.hr, 2) : ''));
+    var tm = (b && b.ok && typeof veFeadTableRows === 'function') ? veFeadTableRows(b) : null;
+    if(tm && Number.isFinite(tm.LpitchMm) && Number.isFinite(es.L)){
+      var fk = es.L - tm.LpitchMm;
+      r += _fwRead('Eskiz kordu − model kordu', (fk < 0 ? '−' : '+') + _fwFmt(Math.abs(fk), 1) + ' mm');
     }
   }
   return _fwCard('CAD\'deki kayış', (f && f.ok && !f.fits) ? 'var(--accent-danger)' : 'var(--text-muted)',
@@ -4186,6 +4320,9 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizStp: veFeadWizStp,
     // 3B görüntüleyicinin paneli (js/cp-fead-3b.js) bunları kullanıyor
     _fwEsc: _fwEsc, _fwFmt: _fwFmt, _fwStpRolAd: _fwStpRolAd, _fwStpRolDenetim: _fwStpRolDenetim,
-    _fwStpSecim: _fwStpSecim, _fwStpKayisTanim: _fwStpKayisTanim, _fwStpOneriHTML: _fwStpOneriHTML, veFeadWizKey: veFeadWizKey
+    _fwStpSecim: _fwStpSecim, _fwStpKayisTanim: _fwStpKayisTanim, _fwStpOneriHTML: _fwStpOneriHTML,
+    _fwStpHesapCap: _fwStpHesapCap, veFeadWizStpHesapCap: veFeadWizStpHesapCap, _fwStpHesapCapi: _fwStpHesapCapi,
+    _fwStpHesapCapHTML: _fwStpHesapCapHTML, _fwStpKasnakKesitHTML: _fwStpKasnakKesitHTML, _fwStpKord: _fwStpKord,
+    _fwCadKayisHTML: _fwCadKayisHTML, veFeadWizKey: veFeadWizKey
   };
 }

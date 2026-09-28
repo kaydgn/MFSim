@@ -556,6 +556,75 @@ function veStepP21Yuz(model, yuzId, M, birim){
   return out;
 }
 
+// ── 8b · EĞRİ (geometrik kümedeki eskiz) ─────────────────────────────────
+// COMPOSITE_CURVE (ya da tek TRIMMED_CURVE) → doğru ve çember yayları, dünya
+// koordinatında, mm. Okuyucu ANLAM YÜKLEMEZ: hangi eskizin kayış olduğunu
+// tanıyıcı söyler. Kırpma yalnız KARTEZYEN noktayla okunur (CATIA'nın
+// yazdığı .CARTESIAN. tercihi); parametreyle kırpılmış parça `destek: false`.
+//   { ad, parcalar: [{ tip, p1, p2, L, (çember) c, n, r, aci }], L, kapali, destek }
+function veStepP21Egri(model, id, M, birim){
+  var k = birim && birim.mm > 0 ? birim.mm : NaN;
+  var out = { ad: '', parcalar: [], L: 0, kapali: false, destek: k > 0 };
+  if(!(k > 0)) return out;
+  var t = veStepP21Tip(model, id), segler = [];
+  if(t === 'COMPOSITE_CURVE'){
+    var a = veStepP21Varlik(model, id).a;
+    out.ad = (a[0] && a[0].s) || '';
+    _stpRefler(a[1]).forEach(function(sid){
+      var sg = veStepP21Varlik(model, sid).a;               // (geçiş, aynı yön, ana eğri)
+      segler.push({ ayni: !(sg[1] && sg[1].e === 'F'), egri: sg[2] && sg[2].ref });
+    });
+  } else if(t === 'TRIMMED_CURVE') segler.push({ ayni: true, egri: id });
+  else { out.destek = false; return out; }
+  segler.forEach(function(s){
+    var p = _stpKirpik(model, s.egri, M, k);
+    if(!s.ayni && p.p1){ var q = p.p1; p.p1 = p.p2; p.p2 = q; if(p.yon) p.yon = -p.yon; }
+    out.parcalar.push(p);
+    if(Number.isFinite(p.L)) out.L += p.L; else out.destek = false;
+  });
+  var P = out.parcalar;
+  if(P.length && P[0].p1 && P[P.length - 1].p2){
+    var d = _stpCikar(P[P.length - 1].p2, P[0].p1);
+    out.kapali = Math.sqrt(_stpNokta(d, d)) <= 1e-3;
+  }
+  return out;
+}
+// TRIMMED_CURVE(ad, taban, kırpma1, kırpma2, yön_uyumu, tercih)
+function _stpKirpik(model, id, M, k){
+  var tt = id ? veStepP21Tip(model, id) : '';
+  if(tt !== 'TRIMMED_CURVE') return { tip: tt || '?', L: NaN };
+  var a = veStepP21Varlik(model, id).a;
+  var taban = a[1] && a[1].ref, bt = taban ? veStepP21Tip(model, taban) : '';
+  var nk = function(liste){
+    var r = _stpRefler(liste).filter(function(x){ return veStepP21Tip(model, x) === 'CARTESIAN_POINT'; })[0];
+    if(!r) return null;
+    var v = veStepP21Varlik(model, r).a[1];
+    return veStepP21NoktaUygula(M, [v[0] * k, v[1] * k, (v.length > 2 ? v[2] : 0) * k]);
+  };
+  var p1 = nk(a[2]), p2 = nk(a[3]);
+  if(!p1 || !p2) return { tip: bt, L: NaN };
+  var uyum = !(a[4] && a[4].e === 'F');
+  if(bt === 'LINE'){
+    var d = _stpCikar(p2, p1);
+    return { tip: 'LINE', p1: p1, p2: p2, L: Math.sqrt(_stpNokta(d, d)) };
+  }
+  if(bt === 'CIRCLE'){
+    var ca = veStepP21Varlik(model, taban).a;              // CIRCLE(ad, yerleşim, yarıçap)
+    var f = veStepP21Cerceve(model, ca[1].ref, k);
+    var c = veStepP21NoktaUygula(M, f.o), n = _stpBirimVek(veStepP21YonUygula(M, f.z)), r = ca[2] * k;
+    // Tabanın yönüyle (n etrafında saat tersine) p1 → p2; yön uyuşmuyorsa
+    // eğri p1'den p2'ye TERS yönde gider — süpürülen açı p2 → p1'in yayı.
+    var yay = function(u, v){
+      var A = _stpCikar(u, c), B = _stpCikar(v, c);
+      var th = Math.atan2(_stpNokta(_stpVektorel(A, B), n), _stpNokta(A, B));
+      return th <= 1e-12 ? th + 2 * Math.PI : th;
+    };
+    var aci = uyum ? yay(p1, p2) : yay(p2, p1);
+    return { tip: 'CIRCLE', p1: p1, p2: p2, c: c, n: n, r: r, aci: aci, yon: uyum ? 1 : -1, L: aci * r };
+  }
+  return { tip: bt, L: NaN };
+}
+
 function _stpKenarCemberi(model, kenarId, M, k){
   var e = veStepP21Varlik(model, kenarId);
   if(!e || e.t !== 'EDGE_CURVE') return null;
@@ -684,6 +753,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veStepP21Bilesik: veStepP21Bilesik,
     veStepP21Ters: veStepP21Ters,
     veStepP21NoktaUygula: veStepP21NoktaUygula,
+    veStepP21Egri: veStepP21Egri,
     veStepP21YonUygula: veStepP21YonUygula,
     veStepP21Montaj: veStepP21Montaj,
     veStepP21Yuz: veStepP21Yuz,

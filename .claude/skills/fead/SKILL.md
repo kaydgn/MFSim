@@ -640,6 +640,16 @@ olurdu.
       `veFeadBeltFit` ile değerlendirir (numara − gereken · kolun yeri, yönüyle).
       Rol verilmezse kayışa dokunulmaz; sıra ağaç sırasıdır
       (`siraKaynagi: 'agac'`).
+    • **KAYIŞ ESKİZİ HESAP ÇAPINI VERİR** (2026-09-28, kural 39): kayış
+      biriminin kapalı eğrisi (`veStepP21Egri` — okuyucu anlam yüklemez) yay
+      yay kasnaklarla eşlenir; yay yarıçapı − OD/2 kaburgalıda h_b, sırtta
+      h_r (kullanıcının dosyasında dördü de 1,500). Tutarsızsa (> 0,01 mm)
+      yazılmaz. Kayıt `hbCad` · `hrCad`'yi yazar, seçim varsayılanı CAD
+      (kullanıcı kararı); seçim aktarımdan önce STEP oturumunda, sonra
+      sihirbazın kayışında — tek okuyucu `_fwStpHesapCap`. Hesaptan sonra 3B'de
+      seçilen kasnağın KESİTİ (ölçülen · katalog · CAD · hesap) ve seçici.
+      **Kanal tabanı yanakların uçlarına değen yüz** — iç alın/delik değil
+      (klimada 6,00 okunuyordu, gerçeği Ø130,10).
     • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
       TEK ise yazılır (kural 19'un gerekçesi). Kayıt µm'ye (açı 0,0001°)
       yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
@@ -721,7 +731,7 @@ olurdu.
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
     · sıra · künye · .stpZ) + `tests/unit/fead-step-oner.test.js` (gergi
     imzası · sekiz kuralın tuzak montajları · en küçük birim · iki aday ·
-    otomatik atama ve sönmesi) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
+    otomatik atama ve sönmesi) + `tests/unit/fead-step-eskiz.test.js` (eskiz okuma · h_b/h_r · kanal tabanı · varsayılan CAD · kesit · seçici) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
     kayış birimi · genişlik · aktarım · tek kayış · CAD'deki kayış kartı · tek
     rol listesi) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
     renk · panel · otomatik açılış · Esc · tazeleme kancası) +
@@ -828,6 +838,46 @@ olurdu.
       Çözüm bölümünde. Yön ipucu DÜZLEMİ yazar (`veFeadSpinLabel(s).uzun`).
     Kapılar: `fead-araclar.test.js` · `fead-spin.test.js` → *"Yön yüzeyi"* ·
     `fit-view.test.js` → *"SOL ÖRTÜ"* · `tests/e2e/fead-araclar.spec.js`.
+
+39. **HESAP ÇAPI: KORD ÇİZGİSİNİN h_b / h_r'Sİ TEK ALANDAN** (2026-09-28,
+    kullanıcı: *"kullanıcı kayışın kalınlığını da hesaba katıp 150 mm çap ile
+    hesap yapmak isteyebilir"*). Kasnağın `od`'si d_b'dir ve girdi kalır;
+    çekirdek zaten kord çizgisinde kurar (kaburgalı OD/2 + h_b, sırt OD/2 +
+    h_r). Seçilen şey çiftin KAYNAĞI, kayışın tek alanında (`hesapCap`):
+    `katalog` (boş, marka) · `cad` (`hbCad` · `hrCad`, eskizden) · `db`
+    (h_b = h_r = 0). Kayış için TEK seçim — kord çizgisi tek; kasnak başına
+    seçim hız oranını sessizce karıştırırdı. `od`'ye 150 yazmak ÇİFT SAYAR
+    (çekirdek 153 kurar) — hesap çapı `od`'ye yazılmaz.
+    • **Tek kaynak**: `veFeadKordOfset` (köprü); `veFeadBoyCizgileri`,
+      pencere, rapor, özet, sihirbaz kayışın KENDİSİNİ verir (profil/marka
+      değil). Katalogda kayış nesnesine dokunulmaz (eski modeller bayt bayt).
+    • **Çekirdeğin tuzağı** (kural 30): `beltProps` hb + hr birlikte gelince
+      kataloğu birleştirmez — köprü kataloğu ALTA koyar.
+    • CAD seçili ama ölçü yoksa katalog + uyarı; sessiz yedek yok.
+    Kapı: `fead-hesap-capi.test.js`.
+
+40. **PROFİL GEOMETRİSİ PROJE TABLOSUNDA — çekirdeğin BELT_DB'si EKSİK**
+    (2026-09-28, ölçüm). Çekirdeğin kataloğunda GATES'in yalnız PK'sı var;
+    15 profil×marka bileşiminin DÖRDÜ (GATES + PH/PJ/PL/PM) dışarıda kalıyor
+    ve GATES panelin VARSAYILAN markası — kullanıcının yalnız PROFİLİ
+    değiştirmesi yetiyor. Kural 39'dan önce `makeSystem` hata fırlatıyordu;
+    39'dan sonra `veFeadKordOfset` `kaynak:'katalog'` deyip **h_b/h_r = NaN**
+    dönüyordu: çökmeden beter, çünkü panel "katalog" yazarken sayı yoktu.
+    • Eksik satır **çekirdeğe YAZILMAZ** (dışarıdan geldi, birebir durur).
+      Katalog projenin veri katmanında: `js/fead-belts.js` ·
+      `VE_FEAD_BELT_GEOM` (5 profil × 3 üretici).
+    • `veFeadKordOfset` çekirdek bilmiyorsa proje tablosuna düşer ve
+      `projeTablosu` bayrağını açar; köprü o bayrağı görünce çifti çekirdeğe
+      AÇIKÇA geçirir. Çekirdek bileşimi TANIYORSA hiçbir şey değişmez —
+      kalibre sabiti (`cordStiffnessNPerRib`) orada kalır, KOPYALANMAZ.
+    • Eşleme (proje satırı → çekirdeğin alan adları) tek yerde:
+      `veFeadBeltProjeProps`. İki kopya, birinde rib kütlesi unutulunca
+      açıklık frekanslarını sessizce düşürürdü.
+    • Her satır **kaynak damgası** taşır (`uretici` / `defter` / `iso`) ve
+      panel onu yazar: ISO nominaline düşülmüş bir h_b ile üreticinin kendi
+      h_b'si aynı hücrede aynı görünür, aynı şey değildir (kural 8).
+      Gates h_b/h_r'yi PJ/PL/PM için yayımlamıyor; PH'yi hiç üretmiyor.
+    Kapı: `fead-belt-geom.test.js`.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

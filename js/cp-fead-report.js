@@ -826,19 +826,38 @@ function _frBeltTable(R){
           _boyTurev ? '<b>türev</b> — çözülen kol açısından (§' + VE_FR_SEC_BELTLEN + ')' : 'girdi');
   // KORD BOYU (kullanıcı kararı 2026-09-28): CAD eskizi kordu (d_w) ölçer; aynı
   // kayış orada 2π·h_b uzun. Numara d_b'de kalır, bu satır yalnız karşılığıdır.
+  // Çözülmüş kayış verilir: fark HESAP ÇAPININ h_b'sinden (CAD eskizi · d_b).
   var _bc = (typeof veFeadBoyCizgileri === 'function')
-    ? veFeadBoyCizgileri(b.effLength, b.profile, b.brand) : null;
+    ? veFeadBoyCizgileri(b.effLength, b) : null;
+  var _ko = (typeof veFeadKordOfset === 'function') ? veFeadKordOfset(b) : null;
   if(_bc && Number.isFinite(_bc.dw))
     h += tr('Kord boyu (d<sub>w</sub> çizgisi — CAD eskizi)', _frFs(_bc.dw, 1), 'mm',
             '<b>türev</b> — L<sub>eff</sub> + 2π·h<sub>b</sub> (' + _frFs(_bc.fark, 2) + ' mm)');
+  // HESAP ÇAPI (kullanıcı kararı 2026-09-28): kayış yolunun kurulduğu çizgi ve
+  // h_b / h_r'nin kaynağı. Katalogdaysa eski belge — satır yine yazılır, çünkü
+  // "hangi çapla hesaplandı" sorusunun cevabı her belgede aranır.
+  if(_ko){
+    var _kn = _ko.kaynak === 'cad' ? 'CAD kayış eskizinden ölçüldü'
+            : _ko.kaynak === 'db' ? 'kayış kalınlığı yok sayıldı' : 'marka kataloğu';
+    h += tr('Hesap çapı', _ko.kaynak === 'db' ? 'd<sub>b</sub> (kasnak dış çapı)' : 'd<sub>w</sub> (kord)', '—',
+            'girdi — ' + _kn);
+  }
   h += tr('Boy toleransı ±', _frFs(b.tolerance, 1), 'mm', 'girdi');
   // BİRİM TUZAĞI: wearPct çekirdekte ORAN (0,007), tedarikçi sayfasında YÜZDE
   // (%0,70). Ham basılsaydı raporda "%0,007" görünür ve okuyan kişi payı
   // yüz kat küçük sanırdı. Testi var.
   h += tr('Uzama + aşınma payı', _frPct(_frNum(b.wearPct) * 100, 2), 'boy oranı', 'girdi (oran olarak saklanır)');
   if(bp){
-    h += tr('Kaburgalı yüz kord ofseti h<sub>b</sub>', _frFs(bp.hb, 2), 'mm', 'profil sabiti');
-    h += tr('Sırt kord ofseti h<sub>r</sub>', _frFs(bp.hr, 2), 'mm', 'profil sabiti');
+    // Kaynak sütunu SEÇİMİ söyler: CAD eskizi ya da "yok sayıldı" seçiliyken
+    // "profil sabiti" yazmak, hesaba girmeyen bir sayıyı kaynak gösterirdi.
+    var _src = function(k, katDeger){
+      if(k === 'cad') return 'CAD kayış eskizinden ölçüldü (katalog ' + _frFs(katDeger, 2) + ')';
+      if(k === 'db') return 'yok sayıldı — hesap d<sub>b</sub> çizgisinde (katalog ' + _frFs(katDeger, 2) + ')';
+      return 'profil sabiti';
+    };
+    var _kt = (_ko && _ko.katalog) || {};
+    h += tr('Kaburgalı yüz kord ofseti h<sub>b</sub>', _frFs(bp.hb, 2), 'mm', _src(_ko && _ko.kaynak, _kt.hb));
+    h += tr('Sırt kord ofseti h<sub>r</sub>', _frFs(bp.hr, 2), 'mm', _src(_ko && _ko.hrKaynak, _kt.hr));
     h += tr('Kaburga adımı', _frFs(bp.ribPitch, 2), 'mm', 'profil sabiti');
     h += tr('Kayış kalınlığı', _frFs(bp.thickness, 2), 'mm', 'profil sabiti');
     h += tr('Birim uzunluk kütlesi m′', _frFs(_frNum(bp.massPerRibKgM) * _frNum(b.ribs), 4), 'kg/m', 'profil sabiti × kaburga');
@@ -848,12 +867,13 @@ function _frBeltTable(R){
   h += '</table>';
   // KESİT FİGÜRÜ — pencerenin Boy sekmesindekiyle TEK üretici (basım paleti).
   var kes = '';
-  try { if(typeof veFeadKesitSVG === 'function') kes = veFeadKesitSVG(b.profile, b.brand, { print: true, maxW: 420 }); }
+  try { if(typeof veFeadKesitSVG === 'function') kes = veFeadKesitSVG(b.profile, b.brand, { print: true, maxW: 420, kord: _ko }); }
   catch(e){ kes = ''; }
   if(kes) h += '<figure>' + kes + '<figcaption><b>Şekil ' + _frFig() + ' —</b> Kayış kesiti, ölçekli '
     + '(profil sabitleri yukarıdaki tablodan). Kayış numarası kasnağın dış çapındaki <b>d<sub>b</sub></b> '
     + 'çizgisinde ölçülür; kord çizgisi <b>d<sub>w</sub></b> ondan h<sub>b</sub> dışarıdadır ve kapalı '
-    + 'çevrimde boy farkı yerleşimden bağımsız olarak 2π·h<sub>b</sub>’dir.</figcaption></figure>';
+    + 'çevrimde boy farkı yerleşimden bağımsız olarak 2π·h<sub>b</sub>’dir. Kayış yolunun kurulduğu '
+    + 'hesap çizgisi dolu ve kalın çizilmiştir.</figcaption></figure>';
   return h;
 }
 
