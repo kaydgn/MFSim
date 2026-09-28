@@ -8514,6 +8514,13 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-tbl{ width:100%; font-size:var(--fs-tiny); }
 .ve-fw-3b-tbl td:first-child{ display:flex; align-items:center; gap:6px; }
 .ve-fw-3b-tbl .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
+.ve-fw-3b-kayis{ margin:0; display:flex; align-items:center; gap:6px; font-size:var(--fs-tiny); }
+/* 3B AÇIKKEN PENCERE GENİŞLER (kullanıcı isteği 2026-09-28). Sihirbazın
+   1180 px'i 320 px'lik panelden sonra tuvale ~860 px bırakıyordu; kaplamanın
+   payı daralır, pencere ekranı doldurur. Kapanınca sınıf düşer
+   (js/cp-fead-3b.js → _fw3bGenis). */
+.ve-settings-overlay.ve-fw-3b-genis{ padding:12px; }
+.ve-fw-3b-genis .ve-fw-modal{ max-width:1840px; height:calc(100vh - 24px); }
 @container vefw3b (max-width: 760px){
   .ve-fw-3b-govde{ grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(220px, 1fr) minmax(0, 42%); }
   .ve-fw-3b-yan{ border-left:0; border-top:1px solid var(--border-color); }

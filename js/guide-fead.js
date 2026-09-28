@@ -746,15 +746,18 @@ function _gfSec3(){
       + 'taşıyan bir dosyada okunacak yüzey yoktur.',
     'Sihirbazın <strong>1 · Başlangıç</strong> adımında <strong>STEP dosyası seç…</strong> '
       + 'düğmesine basın ya da dosyayı kartın üstüne bırakın.',
-    'Dosya okununca <strong>3B görüntüleyici</strong> açılır ve montajın tamamını gösterir; '
-      + '<strong>hiçbir parça rol almamıştır</strong>. Sol tuşla döndürün, sağ tuş ya da '
+    'Dosya okununca <strong>3B görüntüleyici</strong> ekranı dolduran bir pencerede açılır ve '
+      + 'montajın tamamını gösterir; <strong>hiçbir parça rol almamıştır</strong>. Sol tuşla döndürün, sağ tuş ya da '
       + 'Shift ile kaydırın, tekerlekle yaklaşın; <strong>Sığdır</strong> montajı yeniden '
       + 'ortalar.',
     'Kayışa giren her parçaya <strong>tıklayın</strong> ve sağdaki panelden rolünü verin '
       + '(krank, klima, avara, gergi …). Rol verilen parça rolünün rengini alır. Gergi bir '
       + 'alt montajsa panelin <strong>yolunda</strong> (MONTAJ › GERGİ › KASNAK) üst '
       + 'düğüme tıklayıp rolü montaja verin: alt montajın bütün parçaları tek birim olur. '
-      + 'Rol vermediğiniz parça incelenmez. Model tek krank ve tek gergi taşır.',
+      + 'Rol vermediğiniz parça incelenmez. Model tek krank, tek gergi ve tek kayış taşır.',
+    'Kayış parçasına da tıklayıp <strong>Kayış</strong> rolünü verebilirsiniz. Kayış kasnak '
+      + 'sayılmaz: kodu adından (<code>8PK1410</code> → PK · 8 kanal · 1.410), genişliği '
+      + 'yanlarından okunur ve kanal sayısı genişlikle sağlanır (8 × 3,56 = 28,48 mm).',
     '<strong>Çap ve merkezleri hesapla</strong>’ya basın: kasnakların üstünde ölçülen dış '
       + 'çapta birer <strong>halka</strong> belirir, gerginin montaj konumu ve kolu çizilir, panelde '
       + 'çap ve merkezlerin tablosu gelir. Rolü değiştirirseniz sonuç silinir; yeniden '
@@ -774,11 +777,14 @@ function _gfSec3(){
     + 'denklemlerinden ölçülür.');
   h += _gfAlanTablo('STEP dosyasından ne okunur', [
     ['Kasnak dış çapı', '<strong>Kaburga tepesi</strong> — omuz ya da flanş değil', 'okunur'],
-    ['Kanal sayısı · profil', 'Kanal adımından (PK = 3,56 mm …)', 'okunur; kayışa yazılmaz'],
+    ['Kanal sayısı · profil', 'Kanal adımından (PK = 3,56 mm …)', 'okunur; kayışa kayış rolüyle yazılır'],
     ['Kasnak merkezi', 'Kayış düzleminde X · Y, krank orijinde', 'okunur'],
     ['Gergi', 'Avara merkezi · kol boyu · kol açısı · parça kodu', 'okunur'],
     ['Yay künyesi', 'Ön yük · katsayı · çalışma momenti', '<strong>okunmaz</strong> — 3. adımda seçilir'],
-    ['Kayış', 'Profil · kanal · boy', '<strong>okunmaz</strong> — elle girilir'],
+    ['Kayış', 'Kod (8PK1410) · kanal (genişlikten sağlanır)',
+      '<strong>Kayış</strong> rolü verilirse okunur; rol yoksa elle girilir'],
+    ['Kayış numarası', 'Koddaki boy (1410)', 'Girdi <strong>değil</strong> — 4 · Kayış adımında '
+      + '<em>CAD’deki kayış</em> kartı gereken boyla karşılaştırır ve kolun nereye oturduğunu yazar'],
     ['Kayış sırası', 'Kayışın hangi kasnaktan hangisine geçtiği',
       '<strong>okunmaz</strong> — ağaç sırası gelir']
   ], ['Ne', 'Nasıl', 'Durum']);

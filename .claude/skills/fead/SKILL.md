@@ -593,9 +593,19 @@ olurdu.
       ayna modeli yine çözer, yalnız krankın dönüş yönünü çevirir.
     • **Birim dosyanın bağlamından**, tahmin edilmez; MAPPED_ITEM montajı
       desteklenmez ve uyarıyla söylenir.
-    • **Kayışa dokunulmaz** (kullanıcı kararı): sıra ağaç sırasıdır ve
-      `siraKaynagi: 'agac'` ile işaretlidir; kayış parçası rol almadıkça
-      analiz edilmez.
+    • **Kayış YALNIZ rolü verilirse** (2026-09-28, kullanıcı: *"3B
+      görüntüleyicide kayışı da seçelim"*): `fead-belt` birimi kasnak DEĞİL —
+      yüzleri kasnak diye hiç incelenmez (kayışın yayları kasnak eksenleriyle
+      eşeksenli silindirler, aday üretirdi). Kod adın İÇİNDEN kesilir ve
+      `veFeadBeltParseCode`'a verilir (ikinci ayrıştırıcı yok; klimanın
+      "8PK-24V"si kod değil; iki farklı kod → hiçbiri). Genişlik yan
+      düzlemlerden, kanal genişlikten sağlanır (8 × 3,56 = 28,48; pay 0,2 mm),
+      ayrışma sebebiyle yazılır. Aktarım profil · kanal · kodu yazar, marka
+      varsayılan kalır; **numara GİRDİ değil** (gergi varken boy çıktı) —
+      `stepKaynak.kayis` izinde, Kayış adımının *CAD'deki kayış* kartı onu
+      `veFeadBeltFit` ile değerlendirir (numara − gereken · kolun yeri, yönüyle).
+      Rol verilmezse kayışa dokunulmaz; sıra ağaç sırasıdır
+      (`siraKaynagi: 'agac'`).
     • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
       TEK ise yazılır (kural 19'un gerekçesi). Kayıt µm'ye (açı 0,0001°)
       yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
@@ -642,6 +652,10 @@ olurdu.
       bakış yönüne paraleldir ve resim keyfi bir açıyla döner.
     • Başlık PENCERE AİLESİNİN (`.ve-settings-header` + 22 px çizgi kapat,
       ikon `mf-ico-box`): kaplama sihirbazın kendi başlığını da örtüyor.
+    • **Açıkken pencere GENİŞLER** (2026-09-28, kullanıcı: *"daha geniş bir
+      pencere açılsın"*): kaplamaya `.ve-fw-3b-genis` (`_fw3bGenis`), sihirbaz
+      1.180 px → ekranın tamamı (en çok 1.840); kapanınca eski ölçüsüne döner.
+      Rol düğmeleri kartın seçicisiyle TEK listeden (`veFeadWizStpRolTipleri`).
     • **Tek Esc tek katman**: Esc önce 3B'yi kapatır; sihirbaz kapanınca WebGL
       bağlamı bırakılır. Üçgenler kartta saklanır (`_fwStp.ag`), üçgenleme
       kare kare (24 ms bütçe) — dosyanızda 1,5 sn, tek seferde arayüz donardı.
@@ -671,13 +685,15 @@ olurdu.
     (span %0,5 · sarım 0,2°) ve *"ROL KULLANICININ"* (seçilmemiş kasnak,
     iki izli damper, kaburgalı avara); `tests/unit/fead-wizard-step.test.js`
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
-    · sıra · künye · .stpZ) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
+    · sıra · künye · .stpZ) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
+    kayış birimi · genişlik · aktarım · tek kayış · CAD'deki kayış kartı · tek
+    rol listesi) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
     renk · panel · otomatik açılış · Esc · tazeleme kancası) +
     `tests/unit/step-ucgen.test.js` (kaplama TAM · alan · hacim ve yön · su
     geçirmezlik · baştaki Delaunay · ölçülmüş kusurlar) +
     `tests/e2e/fead-step.spec.js` (gerçek File · UYGULAMANIN KENDİ karesi
     çiziyor · başlık ailenin · sığdırma montajın kendi noktalarıyla · 3B'de
-    tıklayıp rol · alt montaj · halkalar · önden/arkadan yön
+    tıklayıp rol · kayış rolü · geniş pencere · alt montaj · halkalar · önden/arkadan yön
     ve XY düzleminde yukarı · hesap seçimi kaldırır · Esc · kart altından
     değişince 3B kapanır · bırakma · Modeli Kur).
 

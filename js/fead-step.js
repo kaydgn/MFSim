@@ -43,9 +43,13 @@
 // edilir. Orijin düzlemin üstündeyse varsayım yapılamaz ve bu `bakis.kaynak`
 // alanında yazılı döner — arayüz her iki durumda da onay ister.
 //
-// ── KAYIŞA DOKUNULMAZ ───────────────────────────────────────────────────
-// Kullanıcı kararı: kayış elle doldurulur. Sıra ağaç sırasıdır (sürücü başta,
-// gergi sonda) ve `siraKaynagi: 'agac'` olarak işaretlenir.
+// ── KAYIŞ YALNIZ ROLÜ VERİLİRSE ─────────────────────────────────────────
+// Kullanıcı kararı (2026-09-26): kayış elle doldurulur; 2026-09-28'de: *"3B
+// görüntüleyicide kayışı da seçelim."* Kayış rolü ('fead-belt') verilen birim
+// kasnak sayılmaz: kodu adından (8PK1410 → profil · kanal · numara), genişliği
+// yan düzlemlerinden ölçülür ve kanal sayısı genişlikten sağlanır. Rol
+// verilmezse kayışa yine DOKUNULMAZ. Sıra ağaç sırasıdır (sürücü başta, gergi
+// sonda) ve `siraKaynagi: 'agac'` olarak işaretlenir.
 // ============================================================================
 
 var VE_FEAD_STP_SURUM = '2.0.0';
@@ -62,7 +66,8 @@ var VE_FEAD_STP_TOL = {
   eksenMesafe: 0.01,                // aynı eksen: doğrular arası (mm)
   duzlemAci: 1.0,                   // ortak düzleme paralel sayılma (derece)
   duzGenislik: 5, duzYaricap: 10,   // düz kasnak yüzeyi: en az genişlik ve yarıçap (mm)
-  pivotMin: 15, pivotMaks: 250      // gergi kolu aralığı (mm)
+  pivotMin: 15, pivotMaks: 250,     // gergi kolu aralığı (mm)
+  kayisGenislikPay: 0.2             // kayış genişliği = kanal × adım (mm)
 };
 
 // Türkçe harf katlama: gerginin parça kodunu katalogda aramak için (ad bir
@@ -225,6 +230,43 @@ function _fstDuz(profil){
   return { od: 2 * rk, s: (enIyi.s0 + enIyi.s1) / 2, genislik: enIyi.s1 - enIyi.s0 };
 }
 
+// ── 4b · KAYIŞ ─────────────────────────────────────────────────────────────
+// Kod adın İÇİNDEN kesilir: ayrıştırıcı (js/fead-belts.js veFeadBeltParseCode)
+// yalnız kodun kendisini kabul eder, açıklama bütün hâliyle ("KAYIS - 8PK1410")
+// null döner. İkinci bir ayrıştırıcı yazılmaz. İki FARKLI kod bulunursa hiçbiri
+// seçilmez: hangisinin kayış olduğu belli değil.
+var _FST_KAYIS_KOD = /\d{1,2}\s?P[HJKLM]\s?-?\s?\d{3,5}(?:[.,]\d)?|\d{3,5}(?:[.,]\d)?\s?P[HJKLM]\s?-?\s?\d{1,2}|P[HJKLM]\s?-?\s?\d{3,5}/g;
+function _fstKodAyristirici(){
+  if(typeof veFeadBeltParseCode === 'function') return veFeadBeltParseCode;
+  if(typeof require === 'function'){ try { return require('./fead-belts.js').veFeadBeltParseCode; } catch(e){} }
+  return null;
+}
+function veFeadStpKayisKodu(metinler){
+  var ayir = _fstKodAyristirici();
+  if(!ayir) return null;
+  var bulunan = {}, ilk = null;
+  (metinler || []).forEach(function(m){
+    var t = String(m == null ? '' : m).toUpperCase();
+    (t.match(_FST_KAYIS_KOD) || []).forEach(function(k){
+      var c = ayir(k);
+      if(!c || !(c.lengthMm > 0)) return;
+      var anah = (c.ribs || '') + c.profile + c.lengthMm;
+      if(!bulunan[anah]){ bulunan[anah] = 1; if(!ilk) ilk = { kod: k.replace(/\s+/g, ''), profile: c.profile, ribs: c.ribs, lengthMm: c.lengthMm }; }
+    });
+  });
+  return Object.keys(bulunan).length === 1 ? ilk : null;
+}
+// Kayışın genişliği: normali kayış eksenine paralel düzlemlerin (yanların)
+// eksen boyunca en uç iki konumu. Kanallı modellenmiş kayışta da iç düzlemler
+// aradadır, uçlar yine yanlardır.
+function _fstKayisYanlari(yuzler, n){
+  var cosT = Math.cos(VE_FEAD_STP_TOL.duzlemAci * Math.PI / 180), s = [];
+  yuzler.forEach(function(f){ if(f.tip === 'PLANE' && f.z && Math.abs(_fstNokta(f.z, n)) >= cosT) s.push(_fstNokta(f.o, n)); });
+  if(s.length < 2) return null;
+  var a = Math.min.apply(null, s), b = Math.max.apply(null, s);
+  return b - a > 0.5 ? { genislik: b - a, orta: (a + b) / 2 } : null;
+}
+
 // ── 5 · OKUMA: ağaç ve yüzler (analiz YOK) ───────────────────────────────
 // Döner (asla fırlatmaz):
 //   { ok, hatalar[], uyarilar[], baslik, sureMs,
@@ -335,6 +377,9 @@ function veFeadStpCoz(sonuc, roller){
   // ── ADAYLAR: birimin eksen kümelerinde kanal bölgeleri ve düz yüzeyler ──
   var tum = [];
   out.birimler.forEach(function(b){
+    // Kayış kasnak DEĞİL: yüzleri hiç incelenmez, adayı olmadığı için aşağıdaki
+    // seçimden de boş çıkar (kendi çözümü _fstKayisCoz'da)
+    if(b.tip === 'fead-belt') return;
     var yuzler = [];
     b.parcalar.forEach(function(pi){ yuzler = yuzler.concat(sonuc._yuz[pi] || []); });
     _fstEksenler(yuzler).forEach(function(g, gi){
@@ -427,6 +472,10 @@ function veFeadStpCoz(sonuc, roller){
     if(g) out.gergiler.push(g);
   });
 
+  // ── KAYIŞ (rolü verildiyse): kod · genişlik · kanal sayısı ──────────────
+  var kb = out.birimler.filter(function(b){ return b.tip === 'fead-belt'; });
+  if(kb.length) out.kayis = _fstKayisCoz(kb[0], sonuc, n, p0, out.kasnaklar);
+
   // ── BAKIŞ YÖNÜ ─────────────────────────────────────────────────────────
   var orijinTaraf = -p0;                       // orijinin düzleme göre eksenel konumu
   if(Math.abs(orijinTaraf) > 1) out.bakis = { d: _fstCarp(n, orijinTaraf > 0 ? 1 : -1), kaynak: 'orijin' };
@@ -448,8 +497,55 @@ function veFeadStpCoz(sonuc, roller){
   });
   if(out.bakis.kaynak === 'varsayilan')
     out.uyarilar.push('Bakış yönü dosyadan çıkarılamadı (modelin orijini kayış düzleminde). Önden bakışı onaylayın.');
+  if(out.kayis) out.kayis.uyarilar.forEach(function(m){ out.uyarilar.push(m); });
   out.ok = out.kasnaklar.length > 0;
   return out;
+}
+
+// Kayış birimi: kod adından, genişlik yan düzlemlerden, kanal sayısı ikisinden.
+// Döner: { birim, dugum, ad, kod, profil, kanal, kanalKaynak, boy, genislik,
+//          kanalGenislikten, duzlemKacik, uyarilar[] }
+function _fstKayisCoz(b, sonuc, n, p0, kasnaklar){
+  var T = VE_FEAD_STP_TOL;
+  var k = { birim: b.i, dugum: b.dugum, ad: b.ad, kod: null, profil: null, kanal: null, kanalKaynak: null,
+            boy: null, genislik: null, kanalGenislikten: null, duzlemKacik: null, uyarilar: [] };
+  var c = veFeadStpKayisKodu([b.ad].concat(b.kimlikler || []));
+  if(c){ k.kod = c.kod; k.profil = c.profile; k.boy = c.lengthMm; if(c.ribs){ k.kanal = c.ribs; k.kanalKaynak = 'kod'; } }
+  // Profil kod yoksa kanallı kasnaklardan (çoğunluk)
+  if(!k.profil){
+    var say = {};
+    kasnaklar.forEach(function(q){ if(q.tur === 'kanalli' && q.profil) say[q.profil] = (say[q.profil] || 0) + 1; });
+    var enCok = Object.keys(say).sort(function(x, y){ return say[y] - say[x]; })[0];
+    if(enCok) k.profil = enCok;
+  }
+  var yuzler = [];
+  b.parcalar.forEach(function(pi){ yuzler = yuzler.concat(sonuc._yuz[pi] || []); });
+  var yan = _fstKayisYanlari(yuzler, n);
+  if(yan){
+    k.genislik = yan.genislik;
+    k.duzlemKacik = yan.orta - p0;
+    var adim = null;
+    VE_FEAD_STP_PROFILLER.forEach(function(p){ if(p.ad === k.profil) adim = p.adim; });
+    if(adim){
+      var nk = Math.round(yan.genislik / adim);
+      if(nk >= 1 && Math.abs(yan.genislik - nk * adim) <= T.kayisGenislikPay) k.kanalGenislikten = nk;
+    }
+  }
+  var ad = '"' + b.ad + '"';
+  if(!c) k.uyarilar.push(ad + ': adında kayış kodu (ör. 8PK1410) bulunamadı; numara ve kanal sayısını elle girin.');
+  if(k.kanalGenislikten && !k.kanal){ k.kanal = k.kanalGenislikten; k.kanalKaynak = 'genislik'; }
+  else if(k.kanalGenislikten && k.kanal !== k.kanalGenislikten)
+    k.uyarilar.push(ad + ': kodda ' + k.kanal + ' kanal, genişlik (' + veSayi(k.genislik, 2) + ' mm) '
+      + k.kanalGenislikten + ' kanal diyor.');
+  else if(k.genislik && !k.kanalGenislikten && k.profil)
+    k.uyarilar.push(ad + ': genişlik ' + veSayi(k.genislik, 2) + ' mm, ' + k.profil + ' kanal adımının katı değil.');
+  if(k.duzlemKacik !== null && Math.abs(k.duzlemKacik) > 2)
+    k.uyarilar.push(ad + ' kasnakların ortak düzleminden ' + veSayi(k.duzlemKacik, 2) + ' mm kaçık.');
+  var prof = {};
+  kasnaklar.forEach(function(q){ if(q.tur === 'kanalli' && q.profil) prof[q.profil] = 1; });
+  if(c && Object.keys(prof).length && !prof[c.profile])
+    k.uyarilar.push(ad + ' ' + c.profile + ' profilli; kanallı kasnaklar ' + Object.keys(prof).join(', ') + '.');
+  return k;
 }
 
 // Eksen yönlerinin çoğunluğu (±1°): kanonik işaretle
@@ -578,12 +674,26 @@ function veFeadStpKayit(cozum, secim){
   if(gergiKey) route.push(gergiKey);
   uyarilar.push('Kayış sırası dosyadan okunmadı; ağaç sırasıyla dizildi. Sırayı Kasnaklar adımında verin.');
   var bas = cozum.baslik || {};
-  return {
+  var kayit = {
     name: secim.ad || (bas.dosya ? bas.dosya.replace(/^.*[\\\/]/, '').replace(/\.[^.]*$/, '') : 'STEP'),
     pulleys: pulleys, route: route, siraKaynagi: 'agac',
     bakis: { ayna: !!secim.ayna, kaynak: cozum.bakis.kaynak },
     uyarilar: uyarilar
   };
+  // KAYIŞ YALNIZ ROLÜ VERİLDİYSE: profil ve kanal sayısı modele girer, kod
+  // künyeye. Numara (1410) bir GİRDİ olarak yazılmaz — gergi varken boy çıktı;
+  // CAD'deki kayış karşılaştırma için `cad` altında taşınır.
+  var ky = cozum.kayis;
+  if(ky){
+    var belt = {};
+    if(ky.profil) belt.profile = ky.profil;
+    if(ky.kanal) belt.ribs = ky.kanal;
+    if(ky.kod) belt.beltType = ky.kod;
+    kayit.belt = belt;
+    kayit.kayisCad = { kod: ky.kod, boy: ky.boy, kanal: ky.kanal, kanalKaynak: ky.kanalKaynak,
+                       genislik: ky.genislik === null ? null : _fstYuv(ky.genislik, MM), ad: _fstAd(ky.ad) };
+  }
+  return kayit;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -594,6 +704,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadStpOku: veFeadStpOku,
     veFeadStpCoz: veFeadStpCoz,
     veFeadStp2B: veFeadStp2B,
-    veFeadStpKayit: veFeadStpKayit
+    veFeadStpKayit: veFeadStpKayit,
+    veFeadStpKayisKodu: veFeadStpKayisKodu
   };
 }

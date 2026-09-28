@@ -110,7 +110,9 @@ describe('PANEL kartın durumunu okur', () => {
     document.body.insertAdjacentHTML('beforeend', '<div id="panel">' + G.veFeadWiz3bPanelHTML(s, k) + '</div>');
     const p = document.getElementById('panel');
     const roller = [...p.querySelectorAll('[data-ve-3b-rol]')];
-    expect(roller).toHaveLength(wiz.VE_FW_PULLEY_TYPES.length + 2);
+    // Düğmeler kartın seçicisiyle TEK listeden (kasnak tipleri + gergi + kayış) + "Rol yok"
+    expect(roller).toHaveLength(wiz.veFeadWizStpRolTipleri().length + 1);
+    expect(roller.map((b) => b.getAttribute('data-ve-3b-rol'))).toEqual(expect.arrayContaining(['fead-tensioner', 'fead-belt']));
     expect(roller.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.getAttribute('data-ve-3b-rol'))).toEqual(['fead-crank']);
     // Yol: kök bütün montaj — rol verilmez, tıklanmaz
     expect(p.querySelector('button[data-ve-3b-yol="0"]')).toBeNull();

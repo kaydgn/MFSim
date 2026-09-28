@@ -9,8 +9,9 @@
  * Kapıların kilitlediği şeyler, her biri sessiz bir sınıfa karşı:
  *   · GİDİŞ-DÖNÜŞ (kural 20): kayıttaki her alan düğümde birebir — bir yöne
  *     eklenip ötekine eklenmeyen alan, sihirbazdan kurulan modelde sessizce yok olur
- *   · KAYIŞA DOKUNULMAZ (kullanıcı kararı): STEP kaydı kayış taşımıyor; eskiden
- *     `ex.belt || {}` profili ve kanal sayısını SİLERDİ
+ *   · KAYIŞ ROLÜ VERİLMEDİKÇE KAYIŞA DOKUNULMAZ (kullanıcı kararı): STEP kaydı
+ *     kayış taşımıyor; eskiden `ex.belt || {}` profili ve kanal sayısını SİLERDİ.
+ *     Rol verilince aktarılanlar: tests/unit/fead-step-kayis.test.js
  *   · TEK KRANK, TEK GERGİ: ikinci gergi ötekinin üstüne yazılırdı
  *   · SIRA BİR VARSAYIM: dosya kayışın sırasını taşımıyor; uyarı kullanıcı sırayı
  *     değiştirene ya da onaylayana kadar Kasnaklar adımında
