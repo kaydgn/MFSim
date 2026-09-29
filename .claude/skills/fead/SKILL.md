@@ -1122,7 +1122,41 @@ olurdu.
       nitelenir. Kapı: `fead-panel-gramer.spec.js` → *"c₂ tablosu … AYNI
       çiziliyor"* (ölçülen: pencerede "10–16" iki satır, düğme 16 px dar).
 
-49. **A3 SONUÇ PANOSU — ÜÇÜNCÜ BELGE, HESAPLAMAZ** (2026-09-29, kullanıcı
+49. **KAYMA GATES'İN KOŞULUNDA, SÜRTÜNMEYİ KULLANICI SEÇER** (2026-09-29,
+    kullanıcı: *"Bir Gates raporları üzerinden ilerliyoruz fakat bu değerin
+    seçimini yine kullanıcıya bırakmamız gerekiyor … Gates kalibrasyonu en
+    büyük verimiz şu anda"*). Gates'in kayma grafikleri sayıya çevrildi
+    (`docs/gates-reports/kayma/`) ve iki ayrışma köprüde kapandı.
+    • **Tanım kapasite**: SF = T_gevşek·(e^(μφ) − 1)/(T_gergin − T_gevşek) —
+      sınırda oran tanımıyla aynı hüküm, üstünde torkla doğrusal. Oran tanımı
+      avarada 1,05 basıp tehlike gibi görünüyordu (Gates 33,7).
+    • **Koşul en kötüsü**: her çevrim devrinde {+ivme, 0, −yavaşlama} (atalet
+      J·α/r, bir kez) × her aksesuar tepe gücünün %10/%100'ü × avara ve gergide
+      0,01 kW (`veFeadKaymaDevir`). Zincir çekirdeğin `spanTensions`iyle birebir;
+      satır kritik koşulu taşır (`kritik`). Tepe güç: kendi eğrisi → katalog →
+      çevrim yükü (son hâl ve eksik ivme `limits`te yazılı). c₂ BÜTÜN talebi
+      (güç, atalet, sürtünme) çarpar; eşik satırlardan (`kaymaEsik`).
+    • **Yük taşıma ROLDEN** (`yukTasir`, `veFeadSlipYukTasir`): Gates koşulunda
+      avaranın oranı 1,01'i aşıyor (AG00976'da altı kasnağın beşi "yük taşıyan"
+      çıkıyordu). Çevrimde gücü yazılı avara yük taşır ve söylenir — gerilme
+      tablosunun gördüğü yük kaymadan sessizce düşmez (AG00902).
+    • **Sürtünme seçimi** (`VE_FEAD_SURTUNME`, depo `surtunme` + elle üç sayı,
+      TEK yazıcı `veFeadSurtunmeSet`, TEK üretici `veFeadSurtunmeHTML` — kayışın
+      Tasarım sekmesi ve sihirbazın Kayış adımı). **Gates kalibrasyonu
+      varsayılan**: oluklu μ 0,92 + küçük kasnak kaybı ℓ = 7 mm
+      (φ_etkin = φ − 2ℓ/r, YALNIZ oluklu — sırta uygulanınca küçük sarımlı
+      avara Gates'le çelişiyor), sırt μ 0,60. **Literatür** çekirdeğin
+      `CALIBRATION`ından okunur (kopya yok); Ø57–61 alternatörde ×1,4'ten
+      iyimser — rapor yazar. Seçim çözümde donar (`R.surtunme`).
+    • **Gates örnekleri raporun ivmesini taşır** (kural 19): on bir raporun
+      on biri s1'de "Accel. RPM/s" yazıyor (1000; AG00976 1100) — dokuzunda
+      eksikti ve kayma atalet talebini hiç görmüyordu.
+    Kapı: `fead-kayma-gates.test.js` (zincir birebir · tanım · koşul · AG00810
+    tepe 2.530 N · rol · eşik ↔ SF = 1 · Gates'in 11 raporu: oluklu ×0,85–1,20,
+    sırt ×0,70–1,05 · seçim · yüzeyler · örneğin ivmesi PDF'ten) +
+    `fead-panel-gramer.spec.js` → *"sürtünme seçicisi … AYNI çiziliyor"*.
+
+50. **A3 SONUÇ PANOSU — ÜÇÜNCÜ BELGE, HESAPLAMAZ** (2026-09-29, kullanıcı
     kararı — tasarım tuvali "FEAD A3 rapor tasarımları" · B · Pano: *"Düz
     'B · Pano' güzel gibi. Varyasyonlarına gerek yok."*). `js/cp-fead-pano.js`,
     tür anahtarı `pano`; tür listesi TEK (`VE_FEAD_REPORT_KINDS`: Rapor
@@ -1130,8 +1164,12 @@ olurdu.
     listeye bağlı). Tek yatay A3 sayfa: yedi gösterge · kayış yolu · kasnak,
     açıklık, çevrim ve tepe yük tabloları · üç grafik · uygunluk kapıları.
     • **Sayı çözümden, üretici ortak**: sayı biçimi, kayma (c₂ tasarım yükü,
-      kural 48), grafikler (`veFeadFigureRaw`), tepe yük (`_fsrPeak`, KALİBRE
-      DEĞİL), kapılar `R.checks` — yeniden hesaplanmaz. Sayfanın kendi işi
+      kural 48; yük taşıma ROLDEN `_frSlipYuk`, SF yazımı `_frSfYaz`,
+      sürtünme çözümün dondurduğu `R.surtunme` — ad ve üç sayı Kayış
+      verileri'nde, kural 49), grafikler (`veFeadFigureRaw`), tepe yük
+      (`_fsrPeak`, KALİBRE DEĞİL), kapılar `R.checks` — yeniden
+      hesaplanmaz. Oran eşiği Gates koşulunda gergiyi "yük taşıyan"
+      sayıp çevrimin en düşüğü diye basardı (AG00686: 5,37). Sayfanın kendi işi
       İNDİRGEMEDİR (en büyük / en küçük, nerede); veri modeli
       (`veFeadPanoVeri`) ham sayı taşır, HTML yalnız biçimler. Kayış eğilme
       frekansı köprüde (`veFeadEgilmeFrekansi`).

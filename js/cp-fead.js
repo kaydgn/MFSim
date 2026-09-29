@@ -2562,6 +2562,61 @@ function veFeadServisTabloHTML(sd, cagri){
   return h + '</div>';
 }
 
+// ── SÜRTÜNME VARSAYIMI — TEK ÜRETİCİ (kural 49) ─────────────────────────────
+// Kayış penceresinin Tasarım sekmesi ve sihirbazın Kayış adımı AYNI seçiciyi
+// basar; seçenek bir düğmedir, tıklaması yüzeyin KENDİ yazıcısına gider
+// (`cagri(anahtar)`; alan için `cagri('elle', alan)` → `this.value` taşır).
+// Değerler ve kaynak köprüden (`VE_FEAD_SURTUNME` · `veFeadSurtunme`); ön
+// ayarda alanlar salt okunur, Elle'de girilir. Kaynağı 'i'de (kural 43).
+function veFeadSurtunmeHTML(sd, cagri){
+  if(typeof VE_FEAD_SURTUNME === 'undefined' || typeof veFeadSurtunme !== 'function') return '';
+  var s = veFeadSurtunme(sd), elle = (s.anahtar === 'elle');
+  var h = '<div class="ve-fead-mu" data-ve="surtunme" data-secim="' + s.anahtar + '">'
+    + '<div class="ve-fead-mu-sec" role="group" aria-label="Sürtünme varsayımı">';
+  VE_FEAD_SURTUNME.secenek.forEach(function(o){
+    h += '<button type="button" class="ve-fead-mu-b" data-ve-mu="' + o.k + '"'
+      + ' aria-pressed="' + (o.k === s.anahtar ? 'true' : 'false') + '"'
+      + ' onclick="' + cagri(o.k) + '">' + _feadEsc(o.ad) + '</button>';
+  });
+  h += '</div>';
+  var alan = function(key, etiket, deger, birim, ond){
+    var yazi = veSayi(deger, ond);
+    if(!elle) return _feadRO(etiket, yazi, birim);
+    return '<label class="ve-fp-f"><span class="ve-fp-l">' + etiket
+      + (birim ? ' <u>' + birim + '</u>' : '') + '</span>'
+      + '<input class="ve-fp-inp" type="text" inputmode="decimal" data-ve-mu-alan="' + key + '"'
+      + ' value="' + _feadEsc(String(deger)) + '"'
+      + ' onchange="' + cagri('elle', key) + '"></label>';
+  };
+  h += '<div class="ve-fp-grid" style="--fp-k:3;">'
+    + alan('muOluk', 'Oluklu μ', s.muOluk, '', 2)
+    + alan('muSirt', 'Sırt μ', s.muSirt, '', 2)
+    + alan('kucukKasnakMm', 'Küçük kasnak kaybı', s.kayipMm, 'mm', s.kayipMm % 1 ? 1 : 0)
+    + '</div>';
+  // DURUM SATIRI — hangi varsayım hesaba giriyor (kural 45: durum söyler).
+  h += '<div class="ve-fead-mu-durum"' + (s.uyari ? ' data-uyari="1"' : '') + '>'
+    + '<span><b>' + _feadEsc(s.ad) + '</b>' + (s.secildi ? '' : ' · varsayılan')
+    + (s.uyari ? ' · ' + _feadEsc(s.uyari) : '') + '</span>'
+    + _feadIBtn(s.kaynak) + '</div>';
+  return h + '</div>';
+}
+
+// Kayış penceresinin sürtünme yazıcısı — veri DEPODA (kural 42), c₂'nin kalıbı.
+// Aralık dışı elle değer yazılmaz ve söylenir.
+function veFeadSurtunmeSec(nodeId, anahtar, alan, deger){
+  if(typeof nodes === 'undefined' || typeof veFeadSurtunmeSet !== 'function') return;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node) return;
+  if(!node.data) node.data = {};
+  var d = null;
+  if(alan){ d = {}; d[alan] = deger; }
+  var ok = veFeadSurtunmeSet(node.data, anahtar, d);
+  if(!ok && alan && typeof showToast === 'function')
+    showToast('Değer yazılmadı: μ 0,05–3, küçük kasnak kaybı 0–20 mm aralığında olmalı.', 'warning');
+  if(typeof saveState === 'function') saveState();
+  _feadPencereTazele(node);
+}
+
 // Kayış penceresinin yazıcısı — veri DEPODA (kural 42); açık pencere tazelenir.
 function veFeadServisSec(nodeId, anahtar){
   if(typeof nodes === 'undefined' || typeof veFeadServisSet !== 'function') return;
@@ -2686,6 +2741,12 @@ function getFeadBeltPropertiesHTML(node){
       + _feadCard('Servis faktörü c₂', '', 'var(--accent-primary)',
           veFeadServisTabloHTML(depo.data, function(k){
             return 'veFeadServisSec(\'' + depo.id + '\',\'' + k + '\')'; }))
+      // SÜRTÜNME (kullanıcı kararı 2026-09-29, kural 49): kayma emniyetine
+      // giren μ ve küçük kasnak kaybı; varsayılan Gates kalibrasyonu.
+      + _feadCard('Sürtünme katsayısı μ', '', 'var(--accent-primary)',
+          veFeadSurtunmeHTML(depo.data, function(k, a){
+            return 'veFeadSurtunmeSec(\'' + depo.id + '\',\'' + k + '\''
+              + (a ? ',\'' + a + '\',this.value' : '') + ')'; }))
     : _feadDepoYok();
 
   var sekmeler = [{ k:'pro', ad:'Profil',   govde: _pro },
@@ -9054,10 +9115,9 @@ function veFeadResultCard(R, node){
 //
 // Hükmün kendisi kaldı, tablosu Sonuçlar'a taşındı. En düşük SF YALNIZ YÜK
 // TAŞIYAN kasnaklardan (gerginlik oranı ≥ VE_FEAD_SLIP_LOADED_RATIO) —
-// raporun `_frMinSF`'i ve özet kartlarıyla AYNI küme. Oran ≈ 1 olan bir
-// avarada SF bir marj değil o sarım açısının KAPASİTESİDİR; tabloyu eskiden
-// bu ayrım olmadan tarıyorduk. Hiç yük taşıyan yoksa hüküm YOK — avaranın
-// kapasitesi bir marj değildir (bir dönem bütün kasnaklara düşülüyordu).
+// raporun `_frMinSF`'i ve özet kartlarıyla AYNI küme. Avara ve gergi güç
+// çekmez, payları hükme girmez; tabloyu eskiden bu ayrım olmadan tarıyorduk.
+// Hiç yük taşıyan yoksa hüküm YOK (bir dönem bütün kasnaklara düşülüyordu).
 //
 // Metinlerin geçmişi: bir dönem "tasarım gerginliğini yükseltin" diyordu;
 // tasarım gerginliği 2026-08-25'te GİRDİ OLMAKTAN ÇIKTI (yay dengesinden
@@ -9071,7 +9131,10 @@ function veFeadResultVerdicts(R){
   var esik = (typeof VE_FEAD_SLIP_LOADED_RATIO === 'number') ? VE_FEAD_SLIP_LOADED_RATIO : 1.01;
   var yuklu = {};
   A.duty.forEach(function(d){
-    (d.slip || []).forEach(function(x, i){ if(_feadNum(x.tensionRatio, 0) >= esik) yuklu[i] = true; });
+    (d.slip || []).forEach(function(x, i){
+      if((typeof veFeadSlipYukTasir === 'function') ? veFeadSlipYukTasir(x)
+         : _feadNum(x.tensionRatio, 0) >= esik) yuklu[i] = true;
+    });
   });
   var enKucukSF = Infinity, enKucukRpm = null;
   A.duty.forEach(function(d){
@@ -9283,6 +9346,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,
     getFeadBeltPropertiesHTML: getFeadBeltPropertiesHTML,
     veFeadServisTabloHTML: veFeadServisTabloHTML, veFeadServisSec: veFeadServisSec,
+    veFeadSurtunmeHTML: veFeadSurtunmeHTML, veFeadSurtunmeSec: veFeadSurtunmeSec,
     getFeadLayoutPropertiesHTML: getFeadLayoutPropertiesHTML,
     getFeadSolverPropertiesHTML: getFeadSolverPropertiesHTML,
   };

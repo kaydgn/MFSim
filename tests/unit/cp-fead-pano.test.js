@@ -55,6 +55,7 @@ function coz(anahtar, ayar) {
   if (b0) b0.data.beltDataMode = ayar.kayisVeri || 'full';
   const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
   if (ayar.servis) M.veFeadServisSet(solv.data, ayar.servis);
+  if (ayar.surtunme) M.veFeadSurtunmeSet(solv.data, ayar.surtunme, ayar.surtunmeDeger);
   const build = veFeadBuildSystem(ns);
   const R = veFeadAnalyze(build, {
     rows: veFeadDutyRows(solv), cylinders: Number(solv.data.cylinders) || 6,
@@ -95,17 +96,20 @@ describe('veri modeli — çözümden BAĞIMSIZ yeniden kurulum', () => {
     });
   });
 
-  test('kasnak satırı: en düşük SF kasnağın ADIYLA eşlenir, yük taşıma oranın eşiğinden', () => {
+  test('kasnak satırı: en düşük SF kasnağın ADIYLA eşlenir, yük taşıma satırın ROLÜNDEN (kural 49)', () => {
     V.kas.forEach((k) => {
-      const satir = duty().flatMap((d) => d.slip.filter((s) => s.name === k.ad).map((s) => ({ v: s.SF, rpm: d.engineRpm, r: s.tensionRatio })));
+      const satir = duty().flatMap((d) => d.slip.filter((s) => s.name === k.ad).map((s) => ({ v: s.SF, rpm: d.engineRpm, y: s.yukTasir })));
       expect(satir.length).toBe(duty().length);
       const e = enKucuk(satir);
       expect(k.sfMin).toBe(e.v);
       expect(k.sfRpm).toBe(e.rpm);
-      expect(k.yuklu).toBe(satir.some((s) => s.r >= RP.VE_FR_SLIP_LOADED_RATIO));
+      expect(k.yuklu).toBe(satir.some((s) => s.y === true));
     });
-    // AG00976: FAN · KK · ALT yük taşır, avaralar ve gergi taşımaz.
+    // AG00976: FAN · KK · ALT yük taşır, avaralar ve gergi taşımaz. Gates
+    // koşulunda oran eşiği (1,01) altısının beşini "yük taşıyan" sayıyordu.
     expect(V.kas.filter((k) => k.yuklu).map((k) => k.kod)).toEqual(['FAN', 'KK', 'ALT']);
+    const oranla = V.kas.filter((k) => duty().some((d) => d.slip.some((s) => s.name === k.ad && s.tensionRatio >= 1.01)));
+    expect(oranla.length).toBeGreaterThan(3);
   });
 
   test('n maks: çevrimin en yüksek devrinde aksesuar devri (çekirdeğin hız oranı)', () => {
@@ -164,7 +168,7 @@ describe('veri modeli — çözümden BAĞIMSIZ yeniden kurulum', () => {
       const d = duty()[q];
       expect(row.P).toBe(d.perPulley[c].powerKw);
       expect(row.Fu).toBeCloseTo(d.perPulley[c].exitTensionN - d.perPulley[c].entryTensionN, 9);
-      const yuklu = d.slip.filter((s) => s.tensionRatio >= RP.VE_FR_SLIP_LOADED_RATIO).map((s) => s.SF);
+      const yuklu = d.slip.filter((s) => s.yukTasir === true).map((s) => s.SF);
       expect(row.sf).toBe(Math.min(...yuklu));
     });
     // Aksesuar sütunları yük taşıyan aksesuarlar — avaralar (≈ 0 kW) düşer.
@@ -223,6 +227,53 @@ describe('servis faktörü c₂ (kural 48) — satırlar tasarım yükünde, c�
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+describe('kayma Gates koşulunda, sürtünme ÇÖZÜMÜN seçimi (kural 49)', () => {
+  const kv = (h) => {
+    const m = /<td class="l e">Sürtünme μ: ([^<]*)<\/td><td class="v">([^<]*)<\/td>/.exec(h);
+    return m ? [m[1], m[2]] : null;
+  };
+
+  test('varsayılan Gates kalibrasyonu: ad ve üç sayı basılır', () => {
+    expect(R.surtunme.anahtar).toBe('gates');
+    expect(V.surtunme).toBe(R.surtunme);
+    expect(kv(DOC)).toEqual(['Gates kalibrasyonu', 'oluklu 0,92 · sırt 0,60 · ℓ 7 mm']);
+  });
+
+  test('Literatür seçilirse sayılar çekirdeğin kalibrasyonundan, kayıp yazılmaz', () => {
+    const RL = coz('AG00976_GATES_2025', { surtunme: 'literatur' });
+    const cal = F.CALIBRATION;
+    expect(RL.surtunme.anahtar).toBe('literatur');
+    const h = PN.veFeadPanoHTML(RL, NODE);
+    expect(kv(h)).toEqual(['Literatür', 'oluklu ' + RP._frFs(cal.muEffGrooved.value, 2)
+      + ' · sırt ' + RP._frFs(cal.muBackside.value, 2)]);
+    // Seçim sayıyı değiştiriyor — pano çözümün satırlarını basıyor.
+    const VL = PN.veFeadPanoVeri(RL, NODE);
+    expect(VL.kpi.sf).toBe(RP._frMinSF(RL));
+    expect(VL.kpi.sf).not.toBe(V.kpi.sf);
+  });
+
+  test('Elle: kullanıcının üç sayısı, kayıp ondalığıyla', () => {
+    const RE = coz('AG00976_GATES_2025', { surtunme: 'elle', surtunmeDeger: { muOluk: 0.85, muSirt: 0.5, kucukKasnakMm: 12.5 } });
+    expect(kv(PN.veFeadPanoHTML(RE, NODE))).toEqual(['Elle', 'oluklu 0,85 · sırt 0,50 · ℓ 12,5 mm']);
+  });
+
+  test('çözümden sonra değişen seçim belgeye SIZMAZ (dondurulan R.surtunme)', () => {
+    const R2 = Object.assign({}, R, { build: Object.assign({}, R.build,
+      { solver: { data: Object.assign({}, R.build.solver.data, { surtunme: 'literatur' }) } }) });
+    expect(kv(PN.veFeadPanoHTML(R2, NODE))[0]).toBe('Gates kalibrasyonu');
+  });
+
+  test('SF ayrıntılı raporun yazımıyla: avaranın yüzlük payı ondalıksız', () => {
+    const Rk = coz('AG00879_GATES_2023');
+    const Vk = PN.veFeadPanoVeri(Rk, NODE);
+    const h = PN.veFeadPanoHTML(Rk, NODE);
+    const hucre = [...h.matchAll(/<td class="sf">(?:<span class="no">)?([^<]*)/g)].map((m) => m[1]);
+    expect(hucre).toEqual(Vk.kas.map((k) => RP._frSfYaz(k.sfMin)));
+    expect(hucre.some((x) => /^\d{3}$/.test(x))).toBe(true);              // AVA: 369
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe('belge', () => {
   test('tek sayfa, yatay A3, taşan yarım piksel yok', () => {
     expect((DOC.match(/<section class="pn/g) || []).length).toBe(1);
@@ -234,7 +285,7 @@ describe('belge', () => {
   });
 
   test('göstergeler Türkçe sayı yazar', () => {
-    ['1.714,6', '543,9', '4,50', '2.552', '2.372', '0,85', '28,06°', 'kord 1.722,1']
+    ['1.714,6', '543,9', '4,78', '2.552', '2.372', '0,85', '28,06°', 'kord 1.722,1']
       .forEach((s) => expect(DOC).toContain(s));
     expect(DOC).not.toMatch(/NaN|undefined|Infinity/);
   });
@@ -331,8 +382,9 @@ describe('sayfa bütçesi — sütunlar gövdeye sığar', () => {
 
   test('sol sütun: çizim kutusu kalan yeri alır', () => {
     const O = PN._fpnOlcu(V);
-    // iki künye tablosu (8 + 4 satır) ve çöken kenarlıklarının yarım pikselleri
-    expect(O.cizimH).toBe(Math.floor(O.govde - 3 * P.BASLIK - 2 * P.BLOK - 12 * P.SATIR - 2 * P.TABLO_ALT));
+    // iki künye tablosu (9 + 4 satır) ve çöken kenarlıklarının yarım pikselleri
+    expect(O.cizimH).toBe(Math.floor(O.govde - 3 * P.BASLIK - 2 * P.BLOK - 13 * P.SATIR - 2 * P.TABLO_ALT));
+    expect((DOC.match(/<table class="kv">[\s\S]*?<\/table>/g) || []).map((t) => (t.match(/<tr>/g) || []).length)).toEqual([9, 4]);
   });
 
   test('bütün örnekler tek sayfaya basılır, sayı eksiksiz', () => {
@@ -344,6 +396,15 @@ describe('sayfa bütçesi — sütunlar gövdeye sığar', () => {
       expect({ k, tasma: PN._fpnOlcu(Vk).tasma }).toEqual({ k, tasma: false });
       const h = PN.veFeadPanoHTML(Rk, NODE);
       expect({ k, bozuk: /NaN|undefined|Infinity/.test(h) }).toEqual({ k, bozuk: false });
+      // Yük taşıma satırın ROLÜNDEN — oran eşiği AG00686'da gergiyi (SF 5,37)
+      // yük taşıyan sayar ve çevrimin en düşüğü olarak basardı.
+      const d = Rk.analysis.duty;
+      Vk.kas.forEach((q) => expect({ k, kod: q.kod, y: q.yuklu })
+        .toEqual({ k, kod: q.kod, y: d.some((r) => r.slip.some((s) => s.name === q.ad && s.yukTasir === true)) }));
+      Vk.cev.forEach((c, i) => {
+        const y = d[i].slip.filter((s) => s.yukTasir === true).map((s) => s.SF);
+        expect({ k, rpm: c.rpm, sf: c.sf }).toEqual({ k, rpm: c.rpm, sf: y.length ? Math.min(...y) : NaN });
+      });
     });
   });
 });

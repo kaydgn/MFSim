@@ -10,7 +10,9 @@
 // HESAP YOK. Her sayı ÇÖZÜMDEN (R) okunur ve üreticisi öteki iki belgeyle
 // ORTAKTIR — iki belge aynı sayıyı farklı basamaz:
 //   sayı biçimi  _frF · _frFs · _frPct · _frEsc · _frNum   (cp-fead-report.js)
-//   kayma        _frSlipStats · _frServis — satırlar TASARIM yükünde (kural 48)
+//   kayma        _frSlipStats · _frSlipYuk · _frSfYaz · _frKaymaKosul — satırlar
+//                Gates koşulunda ve TASARIM yükünde, yük taşıma ROLDEN, sürtünme
+//                çözümün dondurduğu seçim (kural 48–49)
 //   grafikler    _frTensionFigure · _frFreqFigure · _frSlipFigure (veFeadFigureRaw)
 //   tepe yük     _fsrPeak (cp-fead-summary.js) — KALİBRE DEĞİL damgasıyla
 //   kapılar      R.checks — çözüm anında yazıldı, burada yeniden hesaplanmaz
@@ -82,7 +84,6 @@ function veFeadPanoVeri(R, node){
   // çıkış − giriş gerilmesi (FEADCore.spanTensions). İkincil tahrikte fan.
   var crk = (sys._crkIdx != null && sys._crkIdx >= 0) ? sys._crkIdx : 0;
   var ten = (sys._tenIdx != null) ? sys._tenIdx : -1;
-  var esk = (typeof VE_FR_SLIP_LOADED_RATIO === 'number') ? VE_FR_SLIP_LOADED_RATIO : 1.01;
   var sv = _frServis(R);
   var kayisVeri = (R.beltDataMode || 'full') !== 'none';
 
@@ -111,7 +112,9 @@ function veFeadPanoVeri(R, node){
     }
   }
 
-  // Kayma satırları ADLA eşlenir (özet raporun kuralı, _frSlipStats).
+  // Kayma satırları ADLA eşlenir (özet raporun kuralı, _frSlipStats); yük
+  // taşıyıp taşımadığı satırın ROLÜNDEN (`_frSlipYuk`, kural 49) — oran eşiği
+  // Gates koşulunda avaraları da "yük taşıyan" sayıyordu.
   var adSira = {};
   sys.pulleys.forEach(function(p, i){ adSira[p.name] = i; });
 
@@ -143,7 +146,7 @@ function veFeadPanoVeri(R, node){
       if(i === undefined) return;
       var sf = _frNum(s.SF);
       if(Number.isFinite(sf) && !(sf >= kas[i].sfMin)){ kas[i].sfMin = sf; kas[i].sfRpm = _frNum(d.engineRpm); }
-      if(_frNum(s.tensionRatio) >= esk) kas[i].yuklu = true;
+      if(_frSlipYuk(s)) kas[i].yuklu = true;
     });
   });
 
@@ -187,7 +190,7 @@ function veFeadPanoVeri(R, node){
     var sfm = NaN, om = NaN;
     (d.slip || []).forEach(function(s){
       var v = _frNum(s.SF);
-      if(_frNum(s.tensionRatio) >= esk && Number.isFinite(v) && !(v >= sfm)) sfm = v;
+      if(_frSlipYuk(s) && Number.isFinite(v) && !(v >= sfm)) sfm = v;
     });
     var fa = _frNum(d.firingHz);
     (d.frequencies || []).forEach(function(fr){
@@ -264,6 +267,9 @@ function veFeadPanoVeri(R, node){
     n: n, kod: kod, kas: kas, acik: acik, cev: cev, aks: aks.map(function(k){ return kod[k]; }),
     kayisVeri: kayisVeri, gerilme: gerilme, nMax: nMax,
     servis: sv,
+    // Sürtünme: çözümün dondurduğu seçim (`R.surtunme`), ayrıntılı raporun
+    // okuyucusundan — seçim sonradan değişse de belge çözümünkini basar.
+    surtunme: _frKaymaKosul(R).s,
     kpi: {
       Lb: boy ? _frNum(boy.db) : _frNum(sys.belt && sys.belt.effLength),
       Lw: boy ? _frNum(boy.dw) : NaN,
@@ -364,8 +370,8 @@ function _fpnOlcu(V){
   var ham = Math.floor((G - sabit) / Math.max(1, satirN));
   var sat = Math.max(P.SATIR_EN_AZ, Math.min(P.SATIR, ham));
   var tasma = (sabit + satirN * sat) > G;
-  // Sol sütun: çizim kutusu kalan yeri alır (iki künye tablosu 8 + 4 satır).
-  var solSabit = 3 * P.BASLIK + 2 * P.BLOK + (8 + 4) * P.SATIR + 2 * P.TABLO_ALT;
+  // Sol sütun: çizim kutusu kalan yeri alır (iki künye tablosu 9 + 4 satır).
+  var solSabit = 3 * P.BASLIK + 2 * P.BLOK + (9 + 4) * P.SATIR + 2 * P.TABLO_ALT;
   var cizimH = Math.floor(G - solSabit);
   return { govde: G, sat: sat, tasma: tasma, cizimW: P.SUTUN[0], cizimH: cizimH };
 }
@@ -423,7 +429,7 @@ function _fpnKpiler(V){
   h += _fpnKpi('n', 'Tasarım gerginliği', _frFs(K.Td, 1) + '<small>N</small>',
     'yay dengesi · kol ' + _frFs(K.rel, 2) + '°');
   var sfDurum = Number.isFinite(K.sf) ? (K.sf >= 1 ? 'ok' : 'no') : 'wait';
-  h += _fpnKpi(sfDurum, 'Kayma emniyeti (min)', Number.isFinite(K.sf) ? _frFs(K.sf, 2) : '—',
+  h += _fpnKpi(sfDurum, 'Kayma emniyeti (min)', Number.isFinite(K.sf) ? _frSfYaz(K.sf) : '—',
     (Number.isFinite(K.sf) ? _frEsc(K.sfKod) + ' @' + _frF(K.sfRpm, 0) + ' d/d<br>' : '')
     + 'istenen ≥ 1 · ' + (sv.secili ? 'c₂ = ' + _frEsc(sv.yaz) : 'c₂ seçilmedi'));
   h += _fpnKpi(K.b10Pencere === false ? 'warn' : 'n', 'B10 ömrü',
@@ -457,10 +463,22 @@ function _fpnKayisVerileri(V){
     ['Kayış hızı v · eğilme ' + _fpnSub('f', 'B') + ' @' + _frF(k.nTepe, 0), _frFs(k.v, 2) + ' m/s · ' + _frFs(k.fB, 1) + ' Hz'],
     ['İletilen güç P (maks)', P ? _frFs(P.P, 2) + ' kW @' + _frF(P.rpm, 0) : '—'],
     ['Etkin çekme ' + _fpnSub('F', 'u') + ' (maks)', Fu ? _frF(Fu.Fu, 0) + ' N @' + _frF(Fu.rpm, 0) : '—'],
-    ['Kayma eşiği (ankraj) · pay', k.esik ? _frFs(k.esik.T, 1) + ' N · ' + _frFs(k.esik.pay, 2) + '×' : '—']
+    ['Kayma eşiği (ankraj) · pay', k.esik ? _frFs(k.esik.T, 1) + ' N · ' + _frFs(k.esik.pay, 2) + '×' : '—'],
+    ['Sürtünme μ: ' + _frEsc(V.surtunme ? V.surtunme.ad : '—'), _fpnSurtunmeYaz(V.surtunme)]
   ];
-  return '<table class="kv">' + _fpnCol([290, 210]) + sat.map(function(r){
+  // Değer sütunu 240 (içi 232 px): Elle'nin en uzun hâli "oluklu 2,95 ·
+  // sırt 2,95 · ℓ 19,5 mm" 224,4 px; etiketin en uzunu "Sürtünme μ: Gates
+  // kalibrasyonu" 215,3 px, sütunu 252 (ölçüldü; 230'luk sütunda Elle kesiliyordu).
+  return '<table class="kv">' + _fpnCol([260, 240]) + sat.map(function(r){
     return '<tr><td class="l e">' + r[0] + '</td><td class="v">' + r[1] + '</td></tr>'; }).join('') + '</table>';
+}
+
+// Sürtünme seçiminin sayıları, arayüzün adlarıyla (Oluklu μ · Sırt μ ·
+// küçük kasnak kaybı — ayrıntılı raporun ℓ'si, 5.7a); kayıp yoksa yazılmaz.
+function _fpnSurtunmeYaz(s){
+  if(!s) return '—';
+  return 'oluklu ' + _frFs(s.muOluk, 2) + ' · sırt ' + _frFs(s.muSirt, 2)
+    + (s.kayipMm > 0 ? ' · ℓ ' + _frF(s.kayipMm, 1) + ' mm' : '');
 }
 
 function _fpnGergi(V){
@@ -486,7 +504,7 @@ function _fpnKasnaklar(V){
     h += '<tr' + (k.yuklu ? '' : ' class="idle"') + '>' + _fpnTd('<b>' + _frEsc(k.kod) + '</b>', 'l')
       + _fpnTd(_frFs(k.beta, 2)) + _fpnTd(_frFs(k.oran, 3)) + _fpnTd(_frF(k.nMax, 0)) + _fpnTd(_frFs(k.pMax, 2))
       + _fpnTd(_frF(k.flStat, 0)) + _fpnTd(_frF(k.flDin, 0)) + _fpnTd(_frF(k.flDinYon, 0))
-      + _fpnTd((!k.yuklu || !(k.sfMin < 1)) ? _frFs(k.sfMin, 2) : '<span class="no">' + _frFs(k.sfMin, 2) + '</span>', 'sf')
+      + _fpnTd((!k.yuklu || !(k.sfMin < 1)) ? _frSfYaz(k.sfMin) : '<span class="no">' + _frSfYaz(k.sfMin) + '</span>', 'sf')
       + _fpnTd(_frFs(k.omurPay, 1)) + '</tr>';
   });
   return h + '</table>';
@@ -525,7 +543,7 @@ function _fpnCevrim(V){
     h += '<tr>' + _fpnTd(_frF(c.rpm, 0)) + _fpnTd(_frFs(c.dc, 1))
       + (aks.length ? c.kw.map(function(x){ return _fpnTd(_frFs(x, 2)); }).join('') : '')
       + _fpnTd(_frFs(c.P, 2)) + (vVar ? _fpnTd(_frFs(c.v, 2)) : '') + _fpnTd(_frF(c.Fu, 0))
-      + _fpnTd(c.sf < 1 ? '<span class="no">' + _frFs(c.sf, 2) + '</span>' : _frFs(c.sf, 2))
+      + _fpnTd(c.sf < 1 ? '<span class="no">' + _frSfYaz(c.sf) + '</span>' : _frSfYaz(c.sf))
       + _fpnTd(c.oran < 1 ? '<span class="no">' + _frFs(c.oran, 2) + '</span>' : _frFs(c.oran, 2)) + '</tr>';
   });
   return h + '</table>';
@@ -618,7 +636,8 @@ function _fpnSayfa(R, V){
     + '<div>' + _fpnH2('Gerginlik kontrol eğrisi', 'kol açısı → T') + kutu(ger, gerH) + '</div>'
     + '<div>' + _fpnH2('Doğal frekans haritası', 'açıklık ' + _fpnSub('f', '1') + ' · ateşleme katları')
     + (frekVar ? kutu(frk, kalan - gerH) : '<p class="not">Kayış verisi kapalı — açıklık frekansı üretilmedi.</p>') + '</div>'
-    + '<div>' + _fpnH2('Kayma emniyeti', sv.secili ? 'tasarım yükü · c₂ = ' + _frEsc(sv.yaz) : 'soluk: yük taşımaz')
+    + '<div>' + _fpnH2('Kayma emniyeti', 'en kötü koşul · '
+        + (sv.secili ? 'tasarım yükü · c₂ = ' + _frEsc(sv.yaz) : 'soluk: yük taşımaz'))
     + kutu(kay, kayH) + '</div>'
     + '<div>' + _fpnH2('Uygunluk kapıları') + _fpnKapiListe(V) + '</div>'
     + '</div>';
@@ -693,7 +712,9 @@ function _fpnCss(){
     '.pn .dmg{display:inline-block;font-size:var(--f-govde);font-weight:600;letter-spacing:.04em;color:var(--warn);',
     '  border:1px solid var(--warn);padding:0 5px;line-height:17px;margin-left:8px;text-transform:uppercase}',
     '.pn table{border-collapse:collapse;width:100%;table-layout:fixed}',
-    '.pn th,.pn td{padding:0 4px;text-align:right;white-space:nowrap;overflow:hidden}',
+    // Kesilen sayı sessizce YANLIŞ okunur ("30.900" → "30.9"); üç nokta
+    // kesildiğini söyler. Örneklerde hiç kesilmiyor — kapı tarayıcıda ölçer.
+    '.pn th,.pn td{padding:0 4px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.pn td{height:var(--sat);line-height:1.15;border-bottom:1px solid var(--soft)}',
     '.pn th{height:' + P.TH + 'px;font-weight:600;line-height:1.1;vertical-align:bottom;padding-bottom:3px;border-bottom:1px solid var(--rule)}',
     '.pn th i{display:block;font-style:normal;font-weight:400;color:var(--dim)}',

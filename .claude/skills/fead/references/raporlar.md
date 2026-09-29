@@ -3,7 +3,7 @@
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 >
 > Üçüncü belge **A3 sonuç panosu** (`js/cp-fead-pano.js`, tür `pano`) —
-> kuralları SKILL.md kural 49'da; bu dosyadaki ortak kurallar (tek çizici,
+> kuralları SKILL.md kural 50'de; bu dosyadaki ortak kurallar (tek çizici,
 > palet jetonları, KALİBRE DEĞİL damgası, sayı biçimi) ona da uygulanır.
 
 #### Çevrimdışı HTML rapor (`js/cp-fead-report.js`)

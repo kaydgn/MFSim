@@ -251,8 +251,8 @@ var veFeadBrief = (function() {
           + n(e.loX, 0) + ' d/dk\'da. ' + (e.lo < 1 ? '**SF 1\'in altında: kayış' + tas + ' o devirde kayar.**'
             : 'SF 1\'in üstünde:' + tas + ' kayma yok.'));
       }
-      p.push('Yalnız YÜK TAŞIYAN kasnaklar çizilir: gerginlik oranı ≈ 1 olan avarada SF bir marj değil, '
-        + 'o sarım açısının kapasitesidir.');
+      p.push('Yalnız YÜK TAŞIYAN kasnaklar çizilir: avara ve gergi güç çekmez, payları hükme girmez. '
+        + 'Her devirdeki sayı o devirde ivme ve yük kombinasyonlarının en kötüsüdür.');
       say(sA); soylendi.sfmin = true;
     } else if(sA.length) {
       var sl = sA.map(function(c) {

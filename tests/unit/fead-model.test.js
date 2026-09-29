@@ -1090,14 +1090,26 @@ describe('veFeadSlipThreshold — kayma eşiği', () => {
     expect(son.nerede.rpm).toBe(A.engineRpm);               // aynı devir
   });
 
-  test('ÇIPA: AG00976 eşiği 80,94 N · FAN @ 1000 d/d · tasarım gerginliğinin 6,72 katı', () => {
+  // GATES KOŞULUNDA (2026-09-29, kural 49): eşik bütün ivme ve yük
+  // kombinasyonlarının en büyüğü. Kararlı çevrim satırlarında 80,94 N @ 1000
+  // d/d idi; belirleyici koşul yavaşlamada, iki aksesuar %10'da — aksesuar
+  // ataleti kayışı sürerken. Gates'in s1 grafiğinde basılı çizgi 157,65 N.
+  test('ÇIPA: AG00976 eşiği 188,88 N · FAN @ 2750 d/d yavaşlamada · tasarım gerginliğinin 2,88 katı', () => {
     const { build, duty } = kurAG();
     const A = veFeadSlipThreshold(build, duty);
-    expect(A.tensionN).toBeCloseTo(80.942, 2);
-    expect(A.engineRpm).toBe(1000);
+    expect(A.tensionN).toBeCloseTo(188.885, 2);
+    expect(A.engineRpm).toBe(2750);
     expect(A.pulley).toMatch(/FAN/);
+    expect(A.kritik.ivme).toBe(-1100);
+    expect(Object.values(A.kritik.yuk)).toEqual([10, 10]);
     expect(A.designTensionN).toBeCloseTo(543.85, 1);
-    expect(A.margin).toBeCloseTo(6.722, 2);
+    expect(A.margin).toBeCloseTo(2.879, 2);
+    // Eski yol (kararlı satırlar, `kaymaEsik`siz) hâlâ kendi sayısını verir —
+    // ve Gates koşulunun eşiği ondan BÜYÜK: koşul kümesi daha sıkı.
+    const kararli = duty.map((d) => { const c = Object.assign({}, d); delete c.kaymaEsik; return c; });
+    const K = veFeadSlipThreshold(build, kararli);
+    expect(K.engineRpm).toBe(1000);
+    expect(A.tensionN).toBeGreaterThan(K.tensionN * 2);
   });
 
   test('BÜTÜN devir satırlarının EN BÜYÜĞÜ — ilk satır ya da en küçüğü değil', () => {
@@ -1150,14 +1162,23 @@ describe('veFeadSlipThreshold — kayma eşiği', () => {
     expect(D[(alt - 1 + n) % n]).toBeGreaterThan(D[alt]);    // girişi GERGİN
 
     // Yalnız ALT yük taşısın; kalanları filtreye takılacak şekilde 1'e indir.
+    // Satırın kendi eşiği (`kaymaEsik`, Gates koşulu) silinir ki kararlı
+    // açıklık gerginliklerinden kuran yol sınansın — o yolun formülü bu.
     const tek = JSON.parse(JSON.stringify(d));
-    tek.slip.forEach((s2, i) => { if (i !== alt) s2.tensionRatio = 1.0; });
+    delete tek.kaymaEsik;
+    tek.slip.forEach((s2, i) => { if (i !== alt) { s2.tensionRatio = 1.0; s2.yukTasir = false; } });
     const A = veFeadSlipThreshold(build, [tek]);
     expect(A).toBeTruthy();
     expect(A.index).toBe(alt);
-    expect(A.tensionN).toBeCloseTo(39.524, 2);
-    // "çıkış her zaman gergin" varsayımı burada −480,98 verir → pozitiflik
-    // koşuluna takılıp null döner.
+    // Beklenen kök satırın KENDİ kapasitesinden (μ seçiminden bağımsız):
+    // giriş gergin → T₀* = (Δ_giriş − kap·Δ_çıkış)/(kap − 1).
+    const kap = tek.slip[alt].capstanCapacity;
+    const Dg = D[(alt - 1 + n) % n], Dc = D[alt];
+    expect(A.tensionN).toBeCloseTo((Dg - kap * Dc) / (kap - 1), 9);
+    expect(A.tensionN).toBeGreaterThan(0);
+    // "çıkış her zaman gergin" varsayımı burada EKSİ verir → pozitiflik
+    // koşuluna takılıp null dönerdi.
+    expect((Dc - kap * Dg) / (kap - 1)).toBeLessThan(0);
   });
 
   test('eşik TEK KAYNAKTAN: rapor oranı KÖPRÜDEN okuyor (kendi kopyası yok)', () => {

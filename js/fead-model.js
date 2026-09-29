@@ -377,9 +377,10 @@ var VE_FEAD_YONTEMLER = [
   { k: 'hub', ad: 'Kasnak yükleri', fn: 'FEADCore.hubloads',
     yontem: 'İki açıklık kuvvetinin vektör toplamı',
     girdi: '—' },
-  { k: 'kay', ad: 'Kayma emniyeti', fn: 'FEADCore.slipSafety',
-    yontem: 'Euler–Eytelwein: SF = e^(μφ) / (T gergin / T gevşek)',
-    girdi: 'Kasnaklar (temas tarafı)' },
+  { k: 'kay', ad: 'Kayma emniyeti', fn: 'veFeadKaymaDevir',
+    yontem: 'Euler–Eytelwein kapasitesi SF = T gevşek·(e^(μφ) − 1) / (T gergin − T gevşek); '
+      + 'her devirde ±ivme × %10/%100 tepe yük × avara sürtünmesinin en kötüsü',
+    girdi: 'Kasnaklar (temas tarafı) · kayış (sürtünme) · sürücü (ivme)' },
   { k: 'frk', ad: 'Açıklık frekansları', fn: 'veFeadSpanFreqRows',
     yontem: 'Eksenel hareketli tel f₁ = (c² − v²) / (2Lc); c² = T/m′ + v²',
     girdi: 'Kayış (malzeme)' },
@@ -2577,6 +2578,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"4PK1013HD", ribs:4,
              effLength:1013.4, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              cylinders:6,
              crankInertia:0.5,
              lengthOffsetMm:0.8,
@@ -2618,6 +2622,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"6PK1018HD", ribs:6,
              effLength:1018, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              cylinders:6,
              crankInertia:0.5,
              lengthOffsetMm:0,
@@ -2659,6 +2666,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1020HD", ribs:8,
              effLength:1020, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              cylinders:6,
              crankInertia:0.5,
              lengthOffsetMm:-0.3,
@@ -2700,6 +2710,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"10PK1215HD", ribs:10,
              effLength:1214.3, tolerance:5, wearPct:0.006 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              cylinders:6,
              crankInertia:0.7,
              lengthOffsetMm:1.6,
@@ -2743,6 +2756,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1475HD", ribs:8,
              effLength:1475, tolerance:6, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              cylinders:6,
              crankInertia:0.15,
              lengthOffsetMm:3.5,
@@ -2779,6 +2795,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1520HD", ribs:8,
              effLength:1519.6, tolerance:6, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              cylinders:6,
              crankInertia:0.15,
              lengthOffsetMm:2.1,
@@ -2815,6 +2834,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1275HD", ribs:8,
              effLength:1274.7, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              lengthOffsetMm:0.7,
              duty:[
                { rpm:700, dcPct:35, degC:70, kwByKey:{ IDR:0.8, A_C:1.7, TEN:0.01 } },
@@ -2864,6 +2886,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1300HD", ribs:8,
              effLength:1301.8, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              lengthOffsetMm:1.7,
              duty:[
                { rpm:700, dcPct:35, degC:70, kwByKey:{ IDR:0.8, A_C:1.7, TEN:0.01 } },
@@ -2898,6 +2923,9 @@ var VE_FEAD_EXAMPLES = {
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1738HD", ribs:8,
              effLength:1738.7, tolerance:6, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
+             // Kayma sayfası "Engine Acceleration / Deceleration RPM/s": 1000 / 1000
+             // (s1 "Accel. RPM/s" aynı). Kayma koşulu ve tepe tablosu bunu okur (kural 49).
+             accelRpmS:1000, decelRpmS:1000,
              // Silindir sayısı titreşim sayfasından değil (PDF alıntı, o sayfa
              // yok) raporun kendi notundan: "AG00894 BMC 6 Cyln.".
              cylinders:6,
@@ -5372,14 +5400,372 @@ function veFeadTasarimGerginlik(spanN, tenIdx, c2){
   return spanN.map(function(T){ return T0 + k * (T - T0); });
 }
 
-// Bir kasnağın YÜK TAŞIYIP taşımadığının ölçütü. Gerginlik oranı ≈ 1 olan bir
-// kasnakta (avara, gergi) SF bir MARJ değil, o sarım açısının KAPASİTESİDİR;
-// ne hükme girer ne de bir kayma eşiği üretir. Ölçüt köprü katmanında çünkü
-// fiziksel bir soru ve iki yüzey birden kullanıyor: kayma hükmü (sunum) ve
+// Bir kasnağın YÜK TAŞIYIP taşımadığının ölçütü. Avara ve gergide talep yalnız
+// atalet ve yatak sürtünmesidir, gerginlik oranı ≈ 1 kalır; SF'leri bir pay
+// olarak basılır ama hükme girmez ve kayma eşiği üretmez (kural 46). Ölçüt
+// köprü katmanında çünkü iki yüzey birden kullanıyor: kayma hükmü (sunum) ve
 // kayma eşiği (aşağıdaki hesap). İki yerde iki sayı tutmak sessizce ayrışırdı;
 // sunum katmanındaki VE_FR_SLIP_LOADED_RATIO buradan okur ve bir kapı ikisinin
 // eşit kaldığını tutar.
 var VE_FEAD_SLIP_LOADED_RATIO = 1.01;
+
+// Kayma satırının YÜK TAŞIYIP taşımadığı — TEK ölçüt (kural 46 · 49). Gates
+// koşulunda avara da atalet talebi görür ve kritik koşulda oranı 1,01'i
+// aşabilir (ölçüldü, AG00976: altı kasnağın beşi "yük taşıyan" çıkıyordu);
+// satır bu yüzden ROLÜ taşır (`yukTasir`: sürücü, aksesuar, çevrimde gücü
+// yazılı avara). Rolü taşımayan eski ya da elle kurulmuş satırda oran eşiği.
+function veFeadSlipYukTasir(s){
+  if(!s) return false;
+  if(typeof s.yukTasir === 'boolean') return s.yukTasir;
+  return _feadNum(s.tensionRatio, 0) >= VE_FEAD_SLIP_LOADED_RATIO;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SÜRTÜNME VARSAYIMI — kullanıcı seçer (kullanıcı kararı 2026-09-29)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı: *"Bir Gates raporları üzerinden ilerliyoruz fakat bu değerin
+// seçimini yine kullanıcıya bırakmamız gerekiyor … Gates kalibrasyonu en büyük
+// verimiz şu anda."* μ bir malzeme sabiti değil, Euler–Eytelwein'e giren ETKİN
+// sürtünmedir (kama etkisi, kayışın bükülmesi ve "kayma" sayılan eşik içinde);
+// kaynaklar ayrı sayı verir. Seçim çözücü düğümünde (depo, kural 42), TEK
+// yazıcıyla (`veFeadSurtunmeSet`) ve çözüm anında dondurulur (`R.surtunme`).
+//
+//   gates     — 11 Gates raporunun kayma eğrileri (docs/gates-reports/kayma):
+//               kapasite tanımında ve Gates'in koşulunda (±ivme × %10/%100
+//               tepe yük × avara sürtünmesi) oluklu kasnakta μ ile küçük
+//               kasnak kaybı BİRLİKTE uyduruldu, sırt μ ayrı. Kayıp olmadan
+//               Ø57–61 alternatörlerde pay Gates'ten 1,5–1,8 kat iyimserdi.
+//   literatur — çekirdeğin kaynaklı sabitleri (kayıp yok).
+//   elle      — kullanıcının üç sayısı; seçildiği anda o an geçerli olanlarla
+//               tohumlanır.
+//
+// KÜÇÜK KASNAK KAYBI: kayış kasnağa girerken ve çıkarken bükülmeye direnir;
+// temas her uçta sabit bir uzunluk kadar kısalır, açı olarak
+// φ_etkin = φ − 2ℓ/r. Yalnız OLUKLU temasa uygulanır — aynı kayıp sırt
+// kasnaklarına uygulanınca küçük sarımlı avaralar Gates'in sırt eğrileriyle
+// çelişiyor (temas hiç kalmıyordu). Mekanizma doğrulanmadı; Ø61–120 arasında
+// Gates verisi yok.
+//
+// Çekirdek birebir durur: μ ve etkin sarım köprünün kayma hesabına girer
+// (`veFeadKaymaDevir`); `CALIBRATION` sabitleri "Literatür" seçeneğinin kaynağı.
+var VE_FEAD_SURTUNME = {
+  varsayilan: 'gates',
+  secenek: [
+    { k: 'gates', ad: 'Gates kalibrasyonu', muOluk: 0.92, muSirt: 0.60, kayipMm: 7,
+      kaynak: 'Gates raporlarının kayma eğrilerinden: 11 rapor, 45 kasnak, 1.722 nokta '
+        + '(docs/gates-reports/kayma). Oluklu μ ile küçük kasnak kaybı birlikte uyduruldu; '
+        + 'kayıp yalnız oluklu temasta ve Ø57–61 ile Ø120–178 kasnaklarda sınandı.' },
+    { k: 'literatur', ad: 'Literatür', muOluk: 0.90, muSirt: 0.35, kayipMm: 0,
+      kaynak: 'Oluklu: ham μ 0,31 ⁄ sin 20° (Gerbert ve Hansson 1990; Lotfy 1996; Kubas 2019). '
+        + 'Sırt: Dayco US 8,192,315 (%10 kaymada 0,36–0,42). Küçük kasnak kaybı yok.' },
+    { k: 'elle', ad: 'Elle', muOluk: null, muSirt: null, kayipMm: null,
+      kaynak: 'Kullanıcının girdiği değerler.' }
+  ],
+  // Elle girişin kabul aralığı — dışı yazılmaz (sessizce kırpılmaz da).
+  sinir: { mu: [0.05, 3], kayipMm: [0, 20] },
+  // Küçük kasnak kaybının Gates'e karşı SINANDIĞI pitch çapları [mm]: üç
+  // alternatör (57,4–61,2) ve on beş büyük oluklu kasnak (120,4–178,4).
+  sinandiMm: [[57, 62], [120, 179]]
+};
+
+function _feadSurtunmeSecenek(k){
+  var L = VE_FEAD_SURTUNME.secenek;
+  for(var i = 0; i < L.length; i++) if(L[i].k === k) return L[i];
+  return null;
+}
+
+// ETKİN SÜRTÜNME ve KAYNAĞI — pencere, sihirbaz, çözüm ve raporlar AYNI cevabı
+// okur. Seçim yoksa varsayılan (Gates kalibrasyonu). Elle kipte eksik alan
+// Gates değerine düşer ve söylenir.
+function veFeadSurtunme(sd){
+  sd = sd || {};
+  var uyari = null;
+  var sec = sd.surtunme ? _feadSurtunmeSecenek(sd.surtunme) : null;
+  if(sd.surtunme && !sec)
+    uyari = 'Tanınmayan sürtünme seçimi ("' + sd.surtunme + '") — Gates kalibrasyonu kullanıldı.';
+  if(!sec) sec = _feadSurtunmeSecenek(VE_FEAD_SURTUNME.varsayilan);
+  var out = { anahtar: sec.k, ad: sec.ad, muOluk: sec.muOluk, muSirt: sec.muSirt,
+              kayipMm: sec.kayipMm, kaynak: sec.kaynak, secildi: !!(sd.surtunme && !uyari),
+              uyari: uyari };
+  // LİTERATÜR ÇEKİRDEĞİN KALİBRASYONUDUR — sayılar oradan okunur; tablodaki
+  // 0,90 · 0,35 yalnız çekirdek yüklenmemişken (yükleme sırası kalkanı).
+  if(sec.k === 'literatur' && typeof FEADCore !== 'undefined' && FEADCore && FEADCore.CALIBRATION){
+    var C = FEADCore.CALIBRATION;
+    out.muOluk = _feadNum(C.muEffGrooved && C.muEffGrooved.value, sec.muOluk);
+    out.muSirt = _feadNum(C.muBackside && C.muBackside.value, sec.muSirt);
+  }
+  if(sec.k === 'elle'){
+    var g = _feadSurtunmeSecenek('gates'), eksik = [];
+    var al = function(alan, ad, varsay){
+      var v = _feadNum(sd[alan], NaN);
+      if(Number.isFinite(v)) return v;
+      eksik.push(ad);
+      return varsay;
+    };
+    out.muOluk = al('muOluk', 'oluklu μ', g.muOluk);
+    out.muSirt = al('muSirt', 'sırt μ', g.muSirt);
+    out.kayipMm = al('kucukKasnakMm', 'küçük kasnak kaybı', g.kayipMm);
+    if(eksik.length)
+      out.uyari = 'Elle sürtünmede ' + eksik.join(', ') + ' girilmedi — Gates kalibrasyonunun değeri kullanıldı.';
+  }
+  return out;
+}
+
+// TEK YAZICI — kayış penceresi ve sihirbaz buradan yazar (kural 24). Ön ayar
+// seçmek elle alanları SİLER; "Elle"ye geçmek alanları o an geçerli değerlerle
+// tohumlar (kullanıcı bir ön ayardan başlar). `deger` yalnız elle kipte:
+// { muOluk, muSirt, kucukKasnakMm } — aralık dışı değer YAZILMAZ, false döner.
+function veFeadSurtunmeSet(sd, anahtar, deger){
+  if(!sd) return false;
+  var sec = _feadSurtunmeSecenek(anahtar);
+  if(!sec) return false;
+  if(sec.k !== 'elle'){
+    sd.surtunme = sec.k;
+    delete sd.muOluk; delete sd.muSirt; delete sd.kucukKasnakMm;
+    return true;
+  }
+  if(sd.surtunme !== 'elle'){
+    var simdi = veFeadSurtunme(sd);
+    sd.muOluk = simdi.muOluk; sd.muSirt = simdi.muSirt; sd.kucukKasnakMm = simdi.kayipMm;
+  }
+  sd.surtunme = 'elle';
+  var ok = true, S = VE_FEAD_SURTUNME.sinir;
+  Object.keys(deger || {}).forEach(function(a){
+    var sinir = (a === 'kucukKasnakMm') ? S.kayipMm : S.mu;
+    if(a !== 'muOluk' && a !== 'muSirt' && a !== 'kucukKasnakMm'){ ok = false; return; }
+    var v = _feadNum(deger[a], NaN);
+    if(!Number.isFinite(v) || v < sinir[0] || v > sinir[1]){ ok = false; return; }
+    sd[a] = v;
+  });
+  return ok;
+}
+
+// Kısa yazım — bütün yüzeyler aynı biçimi basar: "μ 0,92 ⁄ 0,60 · kayıp 7 mm".
+function veFeadSurtunmeYaz(s){
+  if(!s) return '—';
+  var mu = function(v){ return veSayi(v, 2); };
+  return 'μ oluklu ' + mu(s.muOluk) + ' · sırt ' + mu(s.muSirt)
+    + (s.kayipMm > 0 ? ' · küçük kasnak kaybı ' + veSayi(s.kayipMm, s.kayipMm % 1 ? 1 : 0) + ' mm' : '');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  KAYMA EMNİYETİ — GATES'İN KOŞULUNDA, KAPASİTE TANIMIYLA (2026-09-29)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Gates raporlarının "Belt Slip / Tension Analysis" sayfası sayıya çevrildi
+// (docs/gates-reports/kayma) ve MFSim'in hesabından iki yerde ayrıştığı
+// ölçüldü; ikisi de burada kapandı.
+//
+// 1) TANIM — kasnağın taşıyabileceği etkin gerginliğin istenene bölümü:
+//        SF = T_gevşek·(e^(μφ) − 1) ⁄ (T_gergin − T_gevşek) = (e^(μφ) − 1) ⁄ (oran − 1)
+//    Eskiden oran tanımı (e^(μφ) ⁄ oran) basılıyordu. İkisi SINIRDA 1 verir, yani
+//    kayma hükmü aynı; ama oran tanımı payı torkla doğrusal okumuyor ve avarada
+//    1,05 gibi bir sayı basıp tehlike gibi görünüyordu (Gates aynı avaraya 33,7
+//    diyor). Gates'in eğrilerine uzaklık oran tanımında ×18,94, bu tanımda ×2,11.
+//
+// 2) YÜK DURUMU — her devirde en kötüsü aranır:
+//        ivme {+ivmelenme, 0, −yavaşlama} (aksesuar ataletiyle J·α ⁄ r)
+//      × her aksesuar tepe gücünün %10'u ya da %100'ü
+//      × avara ve gergide 0,01 kW yatak sürtünmesi (Gates'in yük tabloları).
+//    Eskiden yalnız çevrim satırı, kararlı durumda bakılıyordu; ivmelenmede
+//    alternatör ataletinin talebi hiç görülmüyordu. Kurgunun bağımsız sağlaması:
+//    AG00810 tepe gerginliği 2.527,4 N, Gates 2.530 N.
+//
+// ZİNCİR çekirdeğin `spanTensions`i ile BİREBİR aynı kurulur (gergide ankrajlı,
+// sürücü çevrimi kapatır); ivmesiz, sürtünmesiz ve %100 yükte kararlı çözümün
+// açıklık gerginliklerini verir — bir kapı bunu tutar. Atalet ham kasnak
+// ataletidir ve ivme bir kez uygulanır (çekirdeğin `peakEstimate`indeki çift
+// `driveRatio` burada yok, kural 27); gerginin kendi kasnağı da sürücünün
+// toplamına girer, yani gerginin kendi SF'si de bir talep görür.
+//
+// TEPE GÜÇ: aksesuarın kendi eğrisi → katalog → çevrimin kayıtlı yükü (son
+// ikisi yoksa). Çevrim yükü bir tepe değil; o durumda sınır sonuçta yazılır.
+//
+// TASARIM YÜKÜ (c₂, kural 48): bütün farklar c₂ ile çarpılır — afin özdeşlik
+// (`veFeadTasarimGerginlik`) aynen; eşik de c₂ katı.
+var VE_FEAD_KAYMA_SURUKLEME_KW = 0.01;
+var VE_FEAD_KAYMA_YUK_YUZDE = [10, 100];
+
+// Kasnağın HAM ataleti — `veFeadPeakInertias`in sırası (düğüm alanı → çözülmüş
+// kasnak), ama sürücü eşdeğerine ve 1/driveRatio ölçeğine çevrilmeden.
+function _feadKasnakJ(build, i){
+  var p = build.sys.pulleys[i];
+  var J = _feadNum(build.order && build.order[i] && build.order[i].data
+                   && build.order[i].data.inertia, NaN);
+  if(!(J > 0)) J = (p && p.inertiaKgM2) || 0;
+  return J;
+}
+
+// Aksesuarın bu MOTOR devrindeki tepe gücü ve kaynağı.
+function _feadTepeKw(build, i, engineRpm){
+  var node = build.order[i];
+  var k = veFeadAutoKw(build.sys, i, node, engineRpm);
+  if(Number.isFinite(k))
+    return { kw: Math.max(0, k), kaynak: veFeadPowerCurve(node).length ? 'egri' : 'katalog' };
+  k = veFeadKwAt(build, i, node, engineRpm);
+  if(Number.isFinite(k)) return { kw: Math.max(0, k), kaynak: 'cevrim' };
+  return { kw: 0, kaynak: null };
+}
+
+// Kayma hesabının devirden bağımsız bağlamı: etkin sarım, kapasite, atalet,
+// oran, sürtünme yükü ve ivme kümesi. `opts` ivmeyi taşır; yoksa modelin alanı.
+function veFeadKaymaBaglam(build, opts, surtunme){
+  if(!build || !build.ok || typeof FEADCore === 'undefined') return null;
+  opts = opts || {};
+  var sys = build.sys, n = sys._n, c = sys._crkIdx;
+  var s = surtunme || veFeadSurtunme(build.solver && build.solver.data);
+  var geom = FEADCore.tensionerState(sys, FEADCore.meanRel(sys)).geom;
+  var K = { n: n, kap: [], phiEt: [], J: [], oran: [], suruk: [], yukIdx: [], ivme: [],
+            surtunme: s, T0: _feadNum(sys.designTensionN, NaN) };
+  for(var i = 0; i < n; i++){
+    var p = sys.pulleys[i], nd = build.order[i], def = _feadDefOf(nd);
+    var oluk = geom.pulleys[i].contact === 'grooved';
+    var phi = geom.wraps[i];
+    var pe = oluk ? Math.max(0, phi - 2 * s.kayipMm / p.rPitch) : phi;
+    K.oluk = K.oluk || [];
+    K.oluk[i] = oluk;
+    K.phiEt[i] = pe;
+    K.kap[i] = Math.exp((oluk ? s.muOluk : s.muSirt) * pe);
+    K.J[i] = _feadKasnakJ(build, i);
+    K.oran[i] = FEADCore.speedRatio(sys, i);
+    K.suruk[i] = (i !== c && (def.isFeadIdler || def.isFeadTensioner)) ? VE_FEAD_KAYMA_SURUKLEME_KW : 0;
+    if(i !== c && _feadYukTasir(nd)) K.yukIdx.push(i);
+    // AVARAYA YAZILMIŞ GÜÇ DÜŞÜRÜLMEZ: çevrim bir avara ya da gergiye kW
+    // yazıyorsa gerilme tablosu onu kullanıyor; kayma sessizce yalnız
+    // sürtünmeyle koşsaydı aynı çözümün iki tablosu iki ayrı yük görürdü
+    // (AG00902: Gates'in çevrim tablosu IDR'ye 0,8–4 kW yazıyor, kendi kayma
+    // analizi yalnız sürtünme). Kayıtlı yük katılır ve sonuçta söylenir.
+    // Yalnız SÜRTÜNMEDEN BÜYÜK kayıt sayılır — Gates tabloları gergiye 0,01 kW
+    // yazıyor, o zaten sürtünmenin kendisi.
+    if(K.suruk[i] > 0 && veFeadDutyRows(build.solver).some(function(r){
+         return _feadKayitliKw(r, nd) && _feadNum(r.kw[nd.id], 0) > K.suruk[i] * 1.0001; }))
+      (K.kayitliIdx = K.kayitliIdx || []).push(i);
+  }
+  K.kayitliIdx = K.kayitliIdx || [];
+  var sd = (build.solver && build.solver.data) || {};
+  var acc = _feadNum(opts.accelRpmS, NaN), dec = _feadNum(opts.decelRpmS, NaN);
+  if(!(acc > 0)) acc = _feadNum(sd.accelRpmS, NaN);
+  if(!(dec > 0)) dec = _feadNum(sd.decelRpmS, NaN);
+  K.ivmelenme = (acc > 0) ? acc : null;
+  K.yavaslama = (dec > 0) ? dec : null;
+  if(K.ivmelenme) K.ivme.push(K.ivmelenme);
+  K.ivme.push(0);
+  if(K.yavaslama) K.ivme.push(-K.yavaslama);
+  return K;
+}
+
+// Bir motor devrinde kasnak başına EN KÖTÜ kayma satırı ve kayma eşiği.
+// Satırın alanları eski satırla aynı (`SF` · `tensionRatio` · `capstanCapacity`)
+// ve kritik koşulu taşır: `kritik = { ivme [d/dk/s], yuk: { ad: %10|%100 } }`.
+function veFeadKaymaDevir(build, K, engineRpm, c2){
+  if(!build || !K) return null;
+  var sys = build.sys, n = K.n, c = sys._crkIdx, t = sys._tenIdx;
+  var v = FEADCore.beltSpeed(sys, engineRpm);
+  if(!(v > 0) || !Number.isFinite(K.T0)) return null;
+  var k2 = (c2 > 0) ? c2 : 1;
+  var tepe = K.yukIdx.map(function(i){ return _feadTepeKw(build, i, engineRpm).kw; });
+  // Avaranın talebi: sürtünme ya da çevrime yazılmış güç — büyüğü.
+  var suruk = K.suruk.slice();
+  K.kayitliIdx.forEach(function(i){
+    var kw = veFeadKwAt(build, i, build.order[i], engineRpm);
+    if(Number.isFinite(kw) && kw > suruk[i]) suruk[i] = kw;
+  });
+  var m = K.yukIdx.length, kombi = 1 << m;
+  var en = [], esik = null, dT = new Array(n), T = new Array(n), i, j, b;
+  K.ivme.forEach(function(a){
+    for(b = 0; b < kombi; b++){
+      var yuk = {};
+      for(i = 0; i < n; i++){
+        if(i === c){ dT[i] = 0; continue; }
+        var P = suruk[i];
+        j = K.yukIdx.indexOf(i);
+        if(j >= 0){
+          var y = ((b >> j) & 1) ? VE_FEAD_KAYMA_YUK_YUZDE[1] : VE_FEAD_KAYMA_YUK_YUZDE[0];
+          P = tepe[j] * y / 100;
+          yuk[sys.pulleys[i].name] = y;
+        }
+        var alfa = a * K.oran[i] * 2 * Math.PI / 60;
+        dT[i] = k2 * (P * 1000 / v + K.J[i] * alfa / (sys.pulleys[i].rPitch / 1000));
+      }
+      dT[c] = 0;
+      for(i = 0; i < n; i++) if(i !== c) dT[c] += dT[i];
+      T[t] = K.T0;
+      for(var q = 1; q < n; q++){
+        var kk = (t + q) % n, pr = (kk - 1 + n) % n;
+        T[kk] = T[pr] + (kk === c ? +1 : -1) * dT[kk];
+      }
+      for(i = 0; i < n; i++){
+        var yuk_i = (i === c) || K.yukIdx.indexOf(i) >= 0 || K.kayitliIdx.indexOf(i) >= 0;
+        var Tin = T[(i - 1 + n) % n], Tout = T[i];
+        var Tx = Math.max(Tin, Tout), Tn = Math.min(Tin, Tout);
+        var oran = (Tn > 0) ? Tx / Tn : Infinity;
+        var sf = !(Tn > 0) ? 0 : ((Tx - Tn) <= 1e-12 * Tx ? Infinity : Tn * (K.kap[i] - 1) / (Tx - Tn));
+        if(!en[i] || sf < en[i].SF)
+          en[i] = { name: sys.pulleys[i].name, SF: sf, tensionRatio: oran, yukTasir: yuk_i,
+                    capstanCapacity: K.kap[i], phiEtkinDeg: K.phiEt[i] * 180 / Math.PI,
+                    TgerginN: Tx, TgevsekN: Tn,
+                    kritik: { ivme: a, yuk: Object.assign({}, yuk) } };
+        // KAYMA EŞİĞİ — T = T₀ + Δ; sınırda (T₀* + Δmaks)/(T₀* + Δmin) = kapasite.
+        // Yük taşımayan kasnak eşik üretmez (rol, `veFeadSlipYukTasir`).
+        if(yuk_i && K.kap[i] > 1 && Number.isFinite(oran) && Tx > Tn){
+          var th = ((Tx - K.T0) - K.kap[i] * (Tn - K.T0)) / (K.kap[i] - 1);
+          if(Number.isFinite(th) && (!esik || th > esik.tensionN))
+            esik = { tensionN: th, engineRpm: engineRpm, pulley: sys.pulleys[i].name, index: i,
+                     kritik: { ivme: a, yuk: Object.assign({}, yuk) } };
+        }
+      }
+    }
+  });
+  return { slip: en, esik: esik };
+}
+
+// GEÇERLİLİK SINIRLARI SONUCUN İÇİNDE (kural 10): eksik ivme, tepe eğrisi
+// olmayan aksesuar, küçük kasnak kaybının sınanmadığı çap.
+function _feadKaymaSinirlari(build, K, out){
+  if(!K.ivmelenme && !K.yavaslama)
+    out.limits.push('Kayma emniyeti: ivmelenme ve yavaşlama girilmedi — aksesuar '
+      + 'ataletinin talebi kaymaya katılmadı.');
+  else if(!K.ivmelenme || !K.yavaslama)
+    out.limits.push('Kayma emniyeti: ' + (K.ivmelenme ? 'yavaşlama' : 'ivmelenme')
+      + ' girilmedi — o yöndeki atalet talebi kaymaya katılmadı.');
+  var cev = ((out.kaymaKosul && out.kaymaKosul.yuk) || [])
+    .filter(function(y){ return y.kaynak === 'cevrim'; })
+    .map(function(y){ return y.name; });
+  if(cev.length)
+    out.limits.push('Kayma emniyeti: ' + cev.join(', ') + ' için tepe güç eğrisi yok — '
+      + 'çevrimin kayıtlı yükü %100 sayıldı.');
+  if(K.kayitliIdx.length)
+    out.limits.push('Kayma emniyeti: ' + K.kayitliIdx.map(function(i){ return build.sys.pulleys[i].name; }).join(', ')
+      + ' güç çekmeyen bir kasnak ama çevrimde gücü yazılı — gerilme tablosuyla aynı yük kaymaya '
+      + 'da katıldı (Gates\'in kayma analizi avarayı yalnız yatak sürtünmesiyle alır).');
+  var s = K.surtunme;
+  if(s && s.kayipMm > 0){
+    var B = VE_FEAD_SURTUNME.sinandiMm, dis = [];
+    build.sys.pulleys.forEach(function(p, i){
+      if(!K.oluk[i]) return;
+      var d = 2 * p.rPitch;
+      if(!B.some(function(r){ return d >= r[0] && d <= r[1]; }))
+        dis.push(p.name + ' (Ø' + veSayi(d, 1) + ')');
+    });
+    if(dis.length)
+      out.limits.push('Küçük kasnak kaybı (' + veSayi(s.kayipMm, s.kayipMm % 1 ? 1 : 0)
+        + ' mm) Gates\'e karşı yalnız Ø' + B.map(function(r){ return r[0] + '–' + r[1]; }).join(' ve Ø')
+        + ' oluklu kasnaklarda sınandı; ' + dis.join(', ') + ' bu aralıkların dışında.');
+  }
+}
+
+// Kayma koşulunun ÖZETİ — yüzeyler koşulu bunu okuyarak yazar (kural 10).
+function _feadKaymaKosulOzet(build, K, rpm){
+  return {
+    tanim: 'kapasite',
+    ivmelenme: K.ivmelenme, yavaslama: K.yavaslama,
+    suruklemeKw: VE_FEAD_KAYMA_SURUKLEME_KW, yukYuzde: VE_FEAD_KAYMA_YUK_YUZDE.slice(),
+    yuk: K.yukIdx.map(function(i){
+      return { name: build.sys.pulleys[i].name, kaynak: _feadTepeKw(build, i, rpm).kaynak };
+    })
+  };
+}
 
 // ─── KAYMA EŞİĞİ — "ne kadar aşağı inebilirim" ──────────────────────────────
 //
@@ -5400,9 +5786,9 @@ var VE_FEAD_SLIP_LOADED_RATIO = 1.01;
 // ÖLÇÜLDÜ, AG00976'da yük taşımayanların kökleri −856,6 … +5,6 N aralığında,
 // yani belirleyici olan 80,95 N'ın çok altında — filtre bu sistemde SAYIYI
 // DEĞİŞTİRMİYOR. Filtrenin işi hükmü hizada tutmak: kayma hükmünü raporun
-// kendisi yük taşıyanların en düşüğünden veriyor (`_frMinSF`), çünkü oran ≈ 1
-// olan bir avarada SF bir MARJ değil o sarım açısının KAPASİTESİDİR. Eşiği
-// başka bir kümeden almak, aynı belgede iki farklı kayma ölçütü olurdu.
+// kendisi yük taşıyanların en düşüğünden veriyor (`_frMinSF`), çünkü avara ve
+// gergi güç çekmez. Eşiği başka bir kümeden almak, aynı belgede iki farklı
+// kayma ölçütü olurdu.
 //
 // ÖLÇÜLDÜ (AG00976): iki bağımsız yol — kapalı form ve iki-bölme — on iki devrin
 // on ikisinde de aynı sayıyı veriyor (|Δ| ≤ 1,4e−14 N). Eşik 80,95 N @ 1000 d/d,
@@ -5417,12 +5803,30 @@ var VE_FEAD_SLIP_LOADED_RATIO = 1.01;
 // katına çıkar ve eşik de tam c₂ katıdır — hükümle aynı ölçüt (SF ≥ 1 tasarım
 // yükünde ⇔ ankraj ≥ eşik). `slip` satırları zaten tasarım yükünde
 // (`veFeadAnalyze`); kapasite yükten bağımsız. c₂ verilmezse 1.
+//
+// GATES KOŞULU (2026-09-29): çözüm satırları eşiği kendi koşul kümesinden
+// taşır (`kaymaEsik`, `veFeadKaymaDevir` — bütün ivme ve yük kombinasyonları);
+// eşik onların en büyüğüdür. Taşımayan satır (elle kurulmuş dizi) eski yoldan
+// — kararlı açıklık gerginliklerinden — hesaplanır.
 function veFeadSlipThreshold(build, duty, c2){
   var sys = build && build.sys;
   if(!sys || !Array.isArray(duty) || !duty.length) return null;
   var n = sys.pulleys.length;
   var k = (c2 > 0) ? c2 : 1;
   var en = null;
+  if(duty.some(function(d){ return d && d.kaymaEsik !== undefined; })){
+    duty.forEach(function(d){
+      var e = d && d.kaymaEsik;
+      if(e && Number.isFinite(e.tensionN) && (!en || e.tensionN > en.tensionN))
+        en = { tensionN: e.tensionN, engineRpm: e.engineRpm, pulley: e.pulley,
+               index: e.index, kritik: e.kritik };
+    });
+    if(!en || !(en.tensionN > 0)) return null;
+    en.c2 = k;
+    en.designTensionN = _feadNum(sys.designTensionN, NaN);
+    en.margin = (en.designTensionN > 0) ? en.designTensionN / en.tensionN : NaN;
+    return en;
+  }
   duty.forEach(function(d){
     var per = d && d.perPulley, slip = d && d.slip;
     if(!per || !slip || per.length !== n || slip.length !== n) return;
@@ -5431,10 +5835,9 @@ function veFeadSlipThreshold(build, duty, c2){
     var D = per.map(function(p){ return k * (_feadNum(p.exitTensionN, NaN) - T0); });
     if(D.some(function(v){ return !Number.isFinite(v); })) return;
     for(var i = 0; i < n; i++){
-      var oran = _feadNum(slip[i].tensionRatio, NaN);
       var cap  = _feadNum(slip[i].capstanCapacity, NaN);
       // YÜK TAŞIMAYAN kasnak eşik üretemez (bkz. yukarıdaki gerekçe).
-      if(!(oran > VE_FEAD_SLIP_LOADED_RATIO) || !(cap > 1)) continue;
+      if(!veFeadSlipYukTasir(slip[i]) || !(cap > 1)) continue;
       var din = D[(i - 1 + n) % n], dout = D[i];
       var mx = Math.max(din, dout), mn = Math.min(din, dout);
       var t = (mx - cap * mn) / (cap - 1);
@@ -5514,27 +5917,38 @@ function veFeadAnalyze(build, opts){
       out.warnings.push('Açıklık frekansları merkezkaç payıyla yeniden '
         + 'kurulamadı: ' + veFeadTranslateError(e && e.message));
     }
-    // ── KAYMA TASARIM YÜKÜNDE — servis faktörü c₂ (kural 48) ─────────────
-    // Çözümün `slip` satırları TASARIM yükünde (P_B = c₂·P) yeniden kurulur;
-    // gerçek yükteki satırlar `slipIsletme`de kalır. Hükmü okuyan her yüzey
+    // ── KAYMA: GATES KOŞULU · KAPASİTE TANIMI · SEÇİLEN SÜRTÜNME ─────────
+    // Çözümün `slip` satırları her çevrim devrinde Gates'in koşul kümesinin EN
+    // KÖTÜSÜDÜR (`veFeadKaymaDevir`) ve TASARIM yükündedir (P_B = c₂·P, kural
+    // 48); gerçek yükteki satırlar `slipIsletme`de. Hükmü okuyan her yüzey
     // (panel · raporlar · Sonuçlar · kılavuz) aynı satırları okur, eşiği 1'dir.
-    // c₂ ÇÖZÜM ANINDA dondurulur (`servis`): sonradan değiştirilen seçim bayat
-    // bir sonucun hükmüne sızmasın (kural 33'ün gerekçesi).
-    out.servis = veFeadServisFaktoru(build.solver && build.solver.data);
+    // c₂ ve sürtünme ÇÖZÜM ANINDA dondurulur (`servis` · `surtunme`): sonradan
+    // değiştirilen seçim bayat bir sonucun hükmüne sızmasın (kural 33).
+    // Çekirdeğin oran tanımlı satırları hiçbir yüzeye ULAŞMAZ: hesap kurulamazsa
+    // satır boşaltılır — iki tanımın sayısı aynı sütunda karışmasın.
+    var _sd = (build.solver && build.solver.data) || {};
+    out.servis = veFeadServisFaktoru(_sd);
     if(out.servis.uyari) out.warnings.push(out.servis.uyari);
+    out.surtunme = veFeadSurtunme(_sd);
+    if(out.surtunme.uyari) out.warnings.push(out.surtunme.uyari);
     try {
-      var _c2 = out.servis.deger, _geomS = null;
-      (out.analysis.duty || []).forEach(function(d){
-        if(!d || !Array.isArray(d.perPulley) || !Array.isArray(d.slip)) return;
-        d.slipIsletme = d.slip;
-        if(_c2 === 1) return;
-        if(!_geomS) _geomS = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys)).geom;
-        d.slip = FEADCore.slipSafety(_geomS, veFeadTasarimGerginlik(
-          d.perPulley.map(function(p){ return p.exitTensionN; }), build.sys._tenIdx, _c2));
+      var _c2 = out.servis.deger;
+      var _K = veFeadKaymaBaglam(build, opts, out.surtunme);
+      var _rows = (out.analysis.duty || []).filter(function(d){ return d && Array.isArray(d.perPulley); });
+      _rows.forEach(function(d){
+        var r = veFeadKaymaDevir(build, _K, d.engineRpm, _c2);
+        var r1 = (_c2 === 1) ? r : veFeadKaymaDevir(build, _K, d.engineRpm, 1);
+        d.slip = (r && r.slip) || [];
+        d.slipIsletme = (r1 && r1.slip) || [];
+        d.kaymaEsik = (r && r.esik) || null;
       });
+      if(_K && _rows.length){
+        out.kaymaKosul = _feadKaymaKosulOzet(build, _K, _rows[0].engineRpm);
+        _feadKaymaSinirlari(build, _K, out);
+      }
     } catch(e){
-      out.warnings.push('Kayma emniyeti tasarım yükünde kurulamadı: '
-        + veFeadTranslateError(e && e.message));
+      (out.analysis.duty || []).forEach(function(d){ if(d){ d.slip = []; d.slipIsletme = []; } });
+      out.warnings.push('Kayma emniyeti kurulamadı: ' + veFeadTranslateError(e && e.message));
     }
     out.ok = true;
   } catch(e){
@@ -5882,11 +6296,16 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadSpanFreqRows: veFeadSpanFreqRows,
     veFeadTorsionalNorm: veFeadTorsionalNorm,
     VE_FEAD_TORS_REL_FLOOR: VE_FEAD_TORS_REL_FLOOR,
-    veFeadSlipThreshold: veFeadSlipThreshold,
+    veFeadSlipThreshold: veFeadSlipThreshold, veFeadSlipYukTasir: veFeadSlipYukTasir,
     VE_FEAD_SLIP_LOADED_RATIO: VE_FEAD_SLIP_LOADED_RATIO,
     VE_FEAD_SERVIS: VE_FEAD_SERVIS, veFeadServisHucre: veFeadServisHucre,
     veFeadServisFaktoru: veFeadServisFaktoru, veFeadServisSet: veFeadServisSet,
     veFeadTasarimGerginlik: veFeadTasarimGerginlik, veFeadServisYaz: veFeadServisYaz,
+    VE_FEAD_SURTUNME: VE_FEAD_SURTUNME, veFeadSurtunme: veFeadSurtunme,
+    veFeadSurtunmeSet: veFeadSurtunmeSet, veFeadSurtunmeYaz: veFeadSurtunmeYaz,
+    veFeadKaymaBaglam: veFeadKaymaBaglam, veFeadKaymaDevir: veFeadKaymaDevir,
+    VE_FEAD_KAYMA_SURUKLEME_KW: VE_FEAD_KAYMA_SURUKLEME_KW,
+    VE_FEAD_KAYMA_YUK_YUZDE: VE_FEAD_KAYMA_YUK_YUZDE,
     VE_FEAD_LIFE_FATIGUE_MODEL: VE_FEAD_LIFE_FATIGUE_MODEL,
     VE_FEAD_PRESET_LIB: VE_FEAD_PRESET_LIB,
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,
