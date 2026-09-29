@@ -691,15 +691,16 @@ function _fsrSheet6(R, node){
   // VURGU HÜKÜMLE ÇELİŞEMEZ. İlk sürüm SF < servis faktörü olan her hücreyi
   // kırmızı kalın basıyordu; AG00976'da bu, gerginlik oranı 1,00 olan üç
   // sütunun (avara ×2 + gergi) OTUZ ALTI hücresini birden kırmızıya boyuyordu.
-  // Ama sayfanın kendi hükmü *"yük taşımayanlarda o sayı bir marj değil,
-  // KAPASİTEDİR"* diyor — yani vurgu, metnin tam tersini bağırıyordu.
+  // Ama sayfanın kendi hükmü yük taşımayanları hükümden ayırıyor — yani vurgu,
+  // metnin tam tersini bağırıyordu.
   // Kırmızı artık yalnız hükmü verebilen kümede; ötekiler soluk basılıyor ve
   // başlıklarında bunu YAZIYOR. Sayı gizlenmiyor, sınıfı işaretleniyor.
   var esik = (typeof VE_FR_SLIP_LOADED_RATIO === 'number') ? VE_FR_SLIP_LOADED_RATIO : 1.01;
   var yukTasir = (sys.pulleys || []).map(function(){ return false; });
   duty.forEach(function(d){
     (d.slip || []).forEach(function(x, i){
-      if(_frNum(x.tensionRatio) >= esik) yukTasir[i] = true;
+      if((typeof veFeadSlipYukTasir === 'function') ? veFeadSlipYukTasir(x)
+         : _frNum(x.tensionRatio) >= esik) yukTasir[i] = true;
     });
   });
   var mrows = duty.map(function(d){
@@ -721,7 +722,8 @@ function _fsrSheet6(R, node){
     hukum = '<b>Hüküm:</b> yük taşıyan kasnakların en düşük emniyet faktörü <b>'
       + _frFs(st.loadedMin, 2) + '</b>' + (st.loadedName ? ' (' + _frEsc(_fsrKisaAd(sys, st.loadedName)) + ')' : '')
       + ', istenen ≥ 1' + (ok ? ' ✓' : ' ✗')
-      + '. Yük taşımayan kasnaklarda gerginlik oranı ≈ 1; değer marj değil kapasitedir.';
+      + '. Avara ve gergi güç çekmez; payları hükme girmez. Her devirdeki sayı o devirde ivme ve '
+      + 'yük kombinasyonlarının en kötüsüdür.';
   }
   h += _fsrBlk('Kayma emniyet faktörü'
       + (sv.secili ? ' <span class="kvi">tasarım yükü · c₂ = ' + sv.yaz + '</span>' : ''),

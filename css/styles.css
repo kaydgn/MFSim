@@ -9259,6 +9259,36 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fead-c2-kaldir:hover{ background:var(--bg-tertiary); color:var(--text-primary); }
 .ve-fead-c2-kaldir:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 
+/* ── SÜRTÜNME VARSAYIMI (kural 49) ─────────────────────────────────────────
+   Kayış penceresinin Tasarım sekmesi ve sihirbazın Kayış adımı AYNI seçiciyi
+   basar (`veFeadSurtunmeHTML`). Seçenek bir DÜĞME, seçili olan projenin
+   basılı düğme kuralıyla (c₂ hücresiyle aynı dil); değerler panelin alan
+   ızgarasında — ön ayarda salt okunur, Elle'de girilir. Üç eşit sütun 316
+   px'lik denetim sütununa da sığar. */
+.ve-fead-mu{ min-width:0; }
+.ve-fead-mu-sec{
+  display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:2px; margin-bottom:7px;
+}
+.ve-fead-mu-b{
+  min-width:0; padding:5px 4px; margin:0; cursor:pointer;
+  border:1px solid var(--border-color); border-radius:var(--radius-xs);
+  background:var(--bg-input); color:var(--text-primary);
+  font-family:inherit; font-size:var(--fs-tiny); line-height:1.2;
+  overflow-wrap:anywhere;
+}
+.ve-fead-mu-b:hover{ background:var(--bg-tertiary); border-color:var(--border-hover); }
+.ve-fead-mu-b:focus-visible{ outline:none; box-shadow:var(--focus-ring); position:relative; z-index:1; }
+.ve-fead-mu-b[aria-pressed="true"]{
+  background:var(--accent-primary); border-color:var(--accent-primary);
+  color:var(--on-accent); font-weight:700;
+}
+.ve-fead-mu-durum{
+  display:flex; align-items:center; flex-wrap:wrap; gap:4px 6px; margin-top:7px;
+  font-size:var(--fs-tiny); color:var(--text-secondary);
+}
+.ve-fead-mu-durum b{ color:var(--text-heading); }
+.ve-fead-mu-durum[data-uyari]{ color:var(--ink-warning); }
+
 /* ── SEKMELER + SABİT SAĞ SÜTUN (seçilen tasarım: B + C) ─────────────────
    Sekme panelin UZUNLUĞUNU çözüyor, sağ sütun sekmenin ALDIĞI BAĞLAMI geri
    veriyor: solda ne düzenlenirse düzenlensin sağda "bunun sonucu ne" duruyor.

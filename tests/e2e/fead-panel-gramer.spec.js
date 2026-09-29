@@ -287,3 +287,73 @@ test('c₂ tablosu kayış penceresinde ve sihirbazda AYNI çiziliyor', async ({
   expect(sihirbaz.bosluk).toBeLessThanOrEqual(1);
   expect(pencere.imza).toEqual(sihirbaz.imza);
 });
+
+// SÜRTÜNME SEÇİCİSİ İKİ YÜZEYDE AYNI ÇİZİLİR (kural 49) — c₂ tablosunun
+// kalıbı: tek üretici (`veFeadSurtunmeHTML`), iki kap. Ölçü: seçenek düğmesi
+// ve alanların hesaplanan biçimi iki yüzeyde aynı; üç seçenek tek satırda ve
+// hiçbiri taşmıyor; pencerede Elle'ye geçmek üç alanı girilebilir yapıyor ve
+// seçimi DEPOYA yazıyor.
+test('sürtünme seçicisi kayış penceresinde ve sihirbazda AYNI çiziliyor; Elle depoya yazar', async ({ page }) => {
+  page.on('dialog', (d) => d.accept());
+  await kasnakPaneliAc(page);
+  await page.evaluate(() => {
+    window.__muOlc = (kok) => {
+      const k = kok && kok.querySelector('[data-ve="surtunme"]');
+      if (!k || !k.offsetWidth) return null;
+      const B = ['paddingLeft', 'paddingRight', 'paddingTop', 'fontSize', 'fontWeight', 'borderTopWidth', 'borderRadius', 'backgroundColor', 'color'];
+      const imza = {};
+      const ekle = (ad, sec, alan) => k.querySelectorAll(sec).forEach((e) => {
+        const c = getComputedStyle(e);
+        (imza[ad] = imza[ad] || new Set()).add(alan.map((x) => c[x]).join(' '));
+      });
+      ekle('düğme', '.ve-fead-mu-b[aria-pressed="false"]', B);
+      ekle('basılı', '.ve-fead-mu-b[aria-pressed="true"]', B);
+      ekle('alan', '.ve-fp-inp', ['fontSize', 'paddingLeft', 'backgroundColor', 'textAlign']);
+      const out = {}; Object.keys(imza).forEach((x) => { out[x] = [...imza[x]]; });
+      const d = [...k.querySelectorAll('.ve-fead-mu-b')];
+      return {
+        imza: out,
+        dugme: d.length,
+        tekSatir: new Set(d.map((e) => Math.round(e.getBoundingClientRect().top))).size === 1,
+        tasan: d.filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent),
+        salt: k.querySelectorAll('.ve-fp-inp[readonly]').length,
+      };
+    };
+  });
+  const pencere = await page.evaluate(async () => {
+    veFeadKayisAc();
+    await new Promise((r) => setTimeout(r, 400));
+    veFeadPanelTab(nodes.find((n) => n.type === 'fead-belt').id, 'tas');
+    await new Promise((r) => setTimeout(r, 150));
+    return window.__muOlc(document.querySelector('#ve-properties-overlay'));
+  });
+  // Elle — gerçek tık; alanlar girilebilir olur, seçim depoya yazılır.
+  await page.locator('#ve-properties-overlay .ve-fead-mu-b[data-ve-mu="elle"]').click();
+  await page.waitForTimeout(250);
+  const elle = await page.evaluate(() => {
+    const k = document.querySelector('#ve-properties-overlay [data-ve="surtunme"]');
+    const depo = veFeadIsletmeDeposu(nodes);
+    return { secim: depo.data.surtunme, alan: k.querySelectorAll('input[inputmode="decimal"]:not([readonly])').length,
+             basili: k.querySelector('.ve-fead-mu-b[aria-pressed="true"]').dataset.veMu };
+  });
+  const sihirbaz = await page.evaluate(async () => {
+    veTogglePropertiesPanel(false);
+    await new Promise((r) => setTimeout(r, 300));
+    const wz = nodes.find((n) => n.type === 'fead-wizard');
+    veFeadWizOpen(wz ? wz.id : null);
+    veFeadWizSeed('AG00976_GATES_2025');
+    veFeadWizGoto(VE_FW_STEPS.findIndex((s) => s.key === 'kayis'));
+    await new Promise((r) => setTimeout(r, 500));
+    return window.__muOlc(document.querySelector('#ve-feadwiz-overlay'));
+  });
+  expect(pencere && pencere.dugme).toBe(3);
+  expect(sihirbaz && sihirbaz.dugme).toBe(3);
+  expect(pencere.salt).toBe(3);
+  expect(sihirbaz.salt).toBe(3);
+  expect(pencere.tekSatir).toBe(true);
+  expect(sihirbaz.tekSatir).toBe(true);
+  expect(pencere.tasan).toEqual([]);
+  expect(sihirbaz.tasan).toEqual([]);
+  expect(pencere.imza).toEqual(sihirbaz.imza);
+  expect(elle).toEqual({ secim: 'elle', alan: 3, basili: 'elle' });
+});

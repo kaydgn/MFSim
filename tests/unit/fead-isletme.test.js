@@ -298,7 +298,8 @@ describe('kayma emniyeti yüksüz kasnaktan HÜKÜM VERMEZ', () => {
   const yuksuz = () => {
     kur(null, true);
     const R = fead.veFeadSolve(sv().id);
-    R.analysis.duty.forEach((d) => (d.slip || []).forEach((s) => { s.tensionRatio = 1.001; }));
+    // Yük taşımayan model: satırın ROLÜ (`yukTasir`, kural 49) ve oranı birlikte.
+    R.analysis.duty.forEach((d) => (d.slip || []).forEach((s) => { s.tensionRatio = 1.001; s.yukTasir = false; }));
     return R;
   };
   test('özet kartı "wait" ve sayısız, rapor ölçütü "—", pencere hükmü YOK', () => {

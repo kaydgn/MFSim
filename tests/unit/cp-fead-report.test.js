@@ -167,23 +167,32 @@ describe('§8.12 — sürtünme katsayısının künyesi', () => {
     return HTML8.slice(i, j > i ? j : i + 6000);
   };
 
-  test('İKİ DEĞER DE SAYIYLA basılıyor', () => {
+  // Varsayılan seçim Gates kalibrasyonu (kural 49): üç sayı da basılı.
+  test('SEÇİLEN SÜRTÜNMENİN SAYILARI basılıyor — adı, iki μ ve küçük kasnak kaybı', () => {
     const p = s812();
-    expect(p).toMatch(/μ<sub>kaburgalı<\/sub> = 0,9/);
-    expect(p).toMatch(/μ<sub>sırt<\/sub> = 0,35/);
+    expect(R8.surtunme.anahtar).toBe('gates');
+    expect(p).toMatch(/Kullanılan sürtünme: <b>Gates kalibrasyonu<\/b>/);
+    expect(p).toMatch(/μ<sub>kaburgalı<\/sub> = 0,92/);
+    expect(p).toMatch(/μ<sub>sırt<\/sub> = 0,60/);
+    expect(p).toMatch(/ℓ = 7 mm/);
   });
 
-  // DEĞER ÇEKİRDEKTEN OKUNUYOR — ikinci bir kopya YOK. Rapora elle yazılan
-  // bir '0,90' bir sonraki kalibrasyonda sessizce bayatlardı; bu kapı tam
-  // olarak o kopyayı yakalar (sabiti geçici olarak değiştirip HTML'e bakıyor).
-  test('değer CALIBRATION\'dan geliyor, rapora KOPYALANMAMIŞ', () => {
+  // DEĞER ÇÖZÜMDEN OKUNUYOR — ikinci bir kopya YOK. Rapor çözümün dondurduğu
+  // seçimi (`R.surtunme`) basar; "Literatür" seçeneğinin sayıları ise
+  // çekirdeğin kalibrasyonundan (sabiti değiştirip ikisine de bakıyor).
+  test('değer çözümden ve CALIBRATION\'dan geliyor, rapora KOPYALANMAMIŞ', () => {
+    const R2 = Object.assign({}, R8, { surtunme: { anahtar: 'elle', ad: 'Elle', muOluk: 0.77, muSirt: 0.41, kayipMm: 3 } });
+    const p = RP._frSection8(R2, NODE);
+    expect(p).toMatch(/μ<sub>kaburgalı<\/sub> = 0,77/);
+    expect(p).toMatch(/μ<sub>sırt<\/sub> = 0,41/);
+    expect(p).toMatch(/ℓ = 3 mm/);
+    expect(p).not.toMatch(/μ<sub>kaburgalı<\/sub> = 0,92/);
     const g0 = F.CALIBRATION.muEffGrooved.value;
     try {
       F.CALIBRATION.muEffGrooved.value = 0.77;
-      const p = RP._frSection8(R8, NODE);
-      expect(p).toMatch(/μ<sub>kaburgalı<\/sub> = 0,77/);
-      expect(p).not.toMatch(/μ<sub>kaburgalı<\/sub> = 0,9/);
+      expect(M.veFeadSurtunme({ surtunme: 'literatur' }).muOluk).toBe(0.77);
     } finally { F.CALIBRATION.muEffGrooved.value = g0; }
+    expect(M.veFeadSurtunme({ surtunme: 'literatur' }).muOluk).toBe(g0);
   });
 
   test('KÖKEN ve SINIR yazılı — üç kaynak, kalibre edilmemiş taraf, iki çekince', () => {
@@ -192,8 +201,13 @@ describe('§8.12 — sürtünme katsayısının künyesi', () => {
     expect(p).toMatch(/Gerbert/);
     expect(p).toMatch(/Tabatabaei/);
     expect(p).toMatch(/Kubas/);
-    // Sınır 1 — sırt değeri kalibre DEĞİL ve bu saklanmıyor.
-    expect(p).toMatch(/kalibre edilmemiştir/);
+    // Sınır 1 — seçimin KÖKENİ yazılı (varsayılan Gates kalibrasyonu: sayısallaştırılan
+    // eğriler ve sınandığı çaplar); Literatür seçilince onun kökeni ve bilinen iyimserliği.
+    expect(p).toMatch(/1\.722 nokta/);
+    expect(p).toMatch(/Ø57–62 ve Ø120–179/);
+    const lit = RP._frSection8(Object.assign({}, R8, { surtunme: M.veFeadSurtunme({ surtunme: 'literatur' }) }), NODE);
+    expect(lit).toMatch(/muhafazakârdır/);
+    expect(lit).toMatch(/1,5–1,8\s+kat iyimser/);
     // Sınır 2 — e^(μφ) bir TAM KAYMA eşiği, "hiç kayma yok" değil.
     expect(p).toMatch(/tam kayma/);
     // Sınır 3 — merkezkaç: oran ZATEN etkin gerginlikten (kural 28); yazılı
@@ -914,7 +928,7 @@ describe('§8.7 — tasarım gerginliğinin kuruluşu (tek kanal)', () => {
   test('neden sorulmadığı — sessiz kayma sınıfı belgede anlatılıyor', () => {
     expect(HTML8).toContain('Neden ayrıca sorulmuyor');
     expect(HTML8).toMatch(/çelişebilir/);
-    expect(HTML8).toMatch(/ancak kısmen gösterir/i);
+    expect(HTML8).toMatch(/kayma payını da aynı ölçüde yanlış gösterirdi/i);
     // Değiştirilecek şeyin KÜNYE olduğu söyleniyor, bir alan değil
     expect(HTML8).toMatch(/gergi <b>künyesidir<\/b>/);
   });
@@ -1447,16 +1461,18 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     // SF'nin DEĞİŞMEYECEĞİNİ söylüyor. Yani önerilen çare etkisizdi.
     // Sayılar GERÇEK yükte (`slipIsletme`); Gates örneği c₂ taşımadığı için
     // tasarım satırları (`slip`) onlarla aynı (kural 48).
+    // Kapasite tanımında (kural 49) avaranın payı büyük: sınıflama ROLDEN.
     const d0 = RA.analysis.duty[0];
-    const yuklu = d0.slipIsletme.filter((s) => s.tensionRatio >= 1.01);
-    const bos = d0.slipIsletme.filter((s) => s.tensionRatio < 1.01);
+    const yuklu = d0.slipIsletme.filter((s) => M.veFeadSlipYukTasir(s));
+    const bos = d0.slipIsletme.filter((s) => !M.veFeadSlipYukTasir(s));
     expect(yuklu.length).toBe(3);
     expect(bos.length).toBe(3);
     expect(Math.min.apply(null, yuklu.map((s) => s.SF))).toBeGreaterThan(4);
-    expect(Math.max.apply(null, bos.map((s) => s.SF))).toBeLessThan(1.5);
+    expect(Math.min.apply(null, bos.map((s) => s.SF))).toBeGreaterThan(
+      Math.min.apply(null, yuklu.map((s) => s.SF)) * 3);
 
     expect(H8).toMatch(/En kritik YÜK TAŞIYAN kasnak/);
-    expect(H8).toMatch(/Yük taşımayan kasnaklarda SF bir MARJ değil/);
+    expect(H8).toMatch(/Yük taşımayan kasnaklar hükme girmez/);
     // Yük taşımayanlar GİZLENMİYOR: tabloda da, açıklamada da adları geçiyor.
     expect(H8).toMatch(/Otomatik Gergi \(E9843\)/);
     // Etkisiz öğüt kalkmış olmalı.
@@ -1464,11 +1480,15 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     // ETİKET DEĞİL SAYI: hükmü veren değer gerçekten yük taşıyanların en
     // düşüğü olmalı. (Yalnız başlığa bakan bir kapı, _frMinSF'i global en
     // düşüğe geri çeviren bir mutasyonu YEŞİL geçiriyordu — ölçüldü.)
+    // Kapasite tanımında avaranın payı zaten büyük; kapı ISIRSIN diye avaralar
+    // kopyada 0,9'a indirilir — hüküm yine yük taşıyanlardan gelmeli.
     const yukluMin = Math.min.apply(null, RA.analysis.duty.flatMap(
-      (d) => d.slip.filter((s) => s.tensionRatio >= 1.01).map((s) => s.SF)));
-    const globalMin = Math.min.apply(null, RA.analysis.duty.flatMap(
-      (d) => d.slip.map((s) => s.SF)));
-    expect(yukluMin).toBeGreaterThan(globalMin * 2);          // iki küme ayrı
+      (d) => d.slip.filter((s) => M.veFeadSlipYukTasir(s)).map((s) => s.SF)));
+    const RB = Object.assign({}, RA, { analysis: Object.assign({}, RA.analysis, {
+      duty: RA.analysis.duty.map((d) => Object.assign({}, d, {
+        slip: d.slip.map((x) => (M.veFeadSlipYukTasir(x) ? x : Object.assign({}, x, { SF: 0.9 }))) })) }) });
+    expect(RP._frMinSF(RB)).toBeCloseTo(yukluMin, 12);
+    expect(yukluMin).toBeGreaterThan(0.9 * 2);                // iki küme ayrı
     const yaz = (x) => x.toFixed(2).replace('.', ',');
     expect(HU).toMatch(new RegExp(yaz(yukluMin)));
     expect(HU).toMatch(/yük taşıyan kasnaklarda en düşük/);
@@ -1554,7 +1574,7 @@ describe('gerginlik grafiği · kayma eşiği çizgisi', () => {
     expect(fig).toContain('KAYMA EŞİĞİ (' + Math.round(A.tensionN) + ' N)');
     // Belirleyici kasnak ve devir künyede ADIYLA yazıyor.
     expect(fig).toContain(A.pulley);
-    expect(fig).toContain(String(A.engineRpm) + ' d/d');
+    expect(fig).toContain(String(A.engineRpm).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' d/d');
   });
 
   test('eşik çizgisi doğru YÜKSEKLİKTE — grafiğin kendi y ölçeğinde', () => {
