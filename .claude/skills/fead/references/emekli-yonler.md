@@ -127,3 +127,19 @@ Aynı turda "Başlangıç ve Örnekler" (`fead-example`, 2026-09-09'da kalkmış
 bu dosyaya taşındı: sunduğu sihirbaz düğmesi ve örnek listesi sihirbazın 1.
 adımındaydı; örnek KURUCUSU (`veFeadLoadExample`) duruyor.
 
+## SİHİRBAZ BİR FÖY (2026-09-29 → 2026-09-29)
+
+**Hüküm:** adım gövdesi bir sayfaydı — `_fwCard` numaralı BÖLÜM basıyordu
+("2.1 …", kutu ve renk şeridi yok), tek satırlık başlık + antet (sistem ·
+kaynak · sayfa), noktalı alt çizgili alanlar, dipte yapışık SONUÇ satırı;
+Kasnaklar adımında 10 sütunlu tablonun yanında 380 px'lik şekil
+(`_fwKasnakSekilHTML`), gergi tablonun satırıydı (`_fwTenRow`).
+
+**Neden emekli:** kullanıcı kararı (2026-09-29, föy birleştikten sonra:
+*"Bu tasarımı beğenmedim, başka tasarıma geçeceğiz. Yeni tasarımımız 'F çizim
+masası' olacak."*). Ölçüldü (1440×900, AG00976): çizim 6 adımın 3'ünde; en
+büyüğü Kasnaklar'da 380×300 (114 bin px²) ve en küçük yazısı 7 px; Motor ve
+çevrim gövdesi 687 px taşıyordu (3 tablo, 36 girdi). Föyün süren dört kuralı
+(adım numarası metne yazılmaz · kurulum listesi kurulumdan · K işareti · damga
+rayla aynı) kural 47'de.
+

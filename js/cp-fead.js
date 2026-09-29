@@ -4552,7 +4552,15 @@ function veFeadLayoutSVG(build, W, H, opts){
   var ROSE = 0;
   var spanX = Math.max(1, maxX-minX), spanY = Math.max(1, maxY-minY);
   var s, offX, offY;
+  // KENAR PAYI ÇAĞIRANDAN (sihirbazın çizim masası, 2026-09-29): eksen
+  // çentikleri ve yazıları çizimin DIŞINDA yer ister; pay her ölçeklemeye
+  // eklenir ki etiket ve gül payları da onu hesaba katsın. Verilmezse 0 —
+  // davranış birebir eski.
+  var _kp = opts.kenarPay || {};
+  var kpL = Math.max(0, +_kp.sol || 0), kpR = Math.max(0, +_kp.sag || 0),
+      kpU = Math.max(0, +_kp.ust || 0), kpD = Math.max(0, +_kp.alt || 0);
   function olcekle(padL, padR, padU, padD){
+    padL += kpL; padR += kpR; padU += kpU; padD += kpD;
     var eW = W - padL - padR - ROSE, eH = H - padU - padD;
     s = Math.min(eW/spanX, eH/spanY);
     offX = padL + (eW - spanX*s)/2; offY = padU + (eH - spanY*s)/2;
@@ -4762,14 +4770,19 @@ function veFeadLayoutSVG(build, W, H, opts){
     // Metin ÇİZİLDİĞİ yerden türer (aşağıda `data-ve="pos-label"` ve
     // `data-ve="rib-legend"`), ikinci bir dize yazılmaz: künye biçimi
     // değişirse engel de onunla değişsin.
-    if(sel.primary){
+    //
+    // `kunye: false` İKİSİNİ DE ÇİZDİRMEZ — çizimi kendi künyesi ve lejantı
+    // olan bir yüzeye koyan çağıran için (sihirbazın çizim masası: sonuç çipi
+    // ve lejant aynı köşelerde duruyor, altında kalan yazı okunmazdı).
+    if(sel.primary && opts.kunye !== false){
       var _kMetin = sel.primary.label + '  ·  kol ' + veSayi(_feadR(sel.primary.relDeg)) + '°'
         + (Number.isFinite(sel.primary.tensionN)
             ? '  ·  ' + veSayi(sel.primary.tensionN, 0) + ' N' : '');
       kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_kMetin, 8.5), y0: 12 - 8, y1: 12 + 2 });
     }
     var _lMetin = 'dişli kenar = kayışın kaburgalı yüzü';
-    kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_lMetin, 7), y0: H - ALT - 5 - 7, y1: H - ALT - 5 + 2 });
+    if(opts.kunye !== false)
+      kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_lMetin, 7), y0: H - ALT - 5 - 7, y1: H - ALT - 5 + 2 });
     // YÜZEN ÇUBUĞUN ALANI DA SERT ENGEL (yalnız kanvas kartı — `altPay`).
     // Çubuğun altına düşen yazı görünmüyordu: ölçüldü (12 örnek × 2 kart),
     // krank kasnağının ADI 6 kartta, sarım açısı 2 kartta; alt not HER kartta,
@@ -5177,7 +5190,8 @@ function veFeadLayoutSVG(build, W, H, opts){
   svg += '<path data-ve="rib" d="' + _feadTeethPath(walk, geom.sense, stepMm, toothMm, 0, T, vibDef) + '" fill="none"'
       + ' stroke="var(--accent-warning)" stroke-width="1" stroke-linecap="round" opacity="0.9">'
       + '<title>Kayışın kaburgalı yüzü — dişler bu yüzün baktığı tarafı gösterir</title></path>';
-  svg += '<text data-ve="rib-legend" x="' + f(pad - 6) + '" y="' + f(H - ALT - 5) + '" font-size="7"'
+  if(opts.kunye !== false)
+    svg += '<text data-ve="rib-legend" x="' + f(pad - 6) + '" y="' + f(H - ALT - 5) + '" font-size="7"'
       + ' fill="var(--text-muted)"' + (ALT ? ' paint-order="stroke" stroke="var(--bg-input)" stroke-width="2.4" stroke-linejoin="round"' : '')
       + '>dişli kenar = kayışın kaburgalı yüzü</text>';
 
@@ -5288,6 +5302,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   // SEÇİLİ KONUMUN KÜNYESİ — sol üstte. "Hangi konumu görüyorum" sorusu şemanın
   // kendi içinde cevaplanmalı; kip seçicisi kartın altında, çizimin dışında.
   if(sel.primary){
+    if(opts.kunye !== false)
     svg += '<text data-ve="pos-label" x="' + f(pad - 6) + '" y="12" font-size="8.5"'
         + ' fill="var(--accent-warning)">' + _feadEsc(sel.primary.label)
         + '  ·  kol ' + veSayi(f(sel.primary.relDeg)) + '°'
@@ -5433,6 +5448,17 @@ function veFeadLayoutSVG(build, W, H, opts){
         + '" fill="none" stroke="var(--text-muted)" stroke-width="0.9"/>'
         + '<path d="M' + f(cx) + ' ' + f(cy - r*0.6) + ' l' + f(ay*2.6) + ' 2.4 l' + f(-ay*3.4) + ' 1.1 Z" fill="var(--text-muted)"/>';
     svg += '</g>';
+  }
+  // EK KATMAN ÇAĞIRANDAN — aynı dönüşümle, en üstte (sihirbazın çizim masası:
+  // eksenler, seçili kasnağın izdüşümü, isabet halkaları). Katman geometri
+  // HESAPLAMAZ: çekirdeğin geometrisini ve bu çizimin ölçeğini alır, yalnız
+  // onları ekrana taşır (üç katman kuralı). Patlarsa çizim yine döner.
+  if(typeof opts.ek === 'function'){
+    try {
+      svg += opts.ek({ tx: tx, ty: ty, s: s, ox: offX, oy: offY, mx: minX, my: maxY,
+                       W: W, H: H, f: f, geom: geom, ps: ps, order: build.order,
+                       sys: build.sys, hayalet: hayalet }) || '';
+    } catch(e){ /* katman çizimi bozmaz */ }
   }
   return svg + '</svg>';
 }

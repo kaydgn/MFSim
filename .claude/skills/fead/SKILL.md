@@ -1053,23 +1053,45 @@ olurdu.
     Kapılar: `fead-isletme.test.js` · `fead-transient.test.js` → *"VARSAYILAN
     YOK"* · `fead-wizard.test.js` → *"ray gerçekten yanıyor"*.
 
-47. **SİHİRBAZ BİR FÖYDÜR** (2026-09-29, kullanıcı kararı — tasarım tuvali
-    "Adım içerikleri" · E: *"E föy olacak"*; adımlı ray aynen kaldı). Kart
-    kutusu yok: `_fwCard` numaralı BÖLÜM basar ("2.1 …"; numara yalnız adım
-    gövdesinde — `_fwBolumAdim`), renk şeridi yok (8 renk hiçbir durum
-    anlatmıyordu). Başlık tek satır + antet (sistem · kaynak · sayfa, durumun
-    kendisinden); noktalı alt çizgi düzenlenebilir alan, K künyeden gelen
-    (`_fwKun`); SONUÇ satırı föyün dibinde ve yapışık, damganın sayısı VE
-    RENGİ rayla tek kaynaktan (`veFeadWizStepState`) — kayış yolu çözülüp
-    adımda eksik kalınca (kural 46) damga kırmızı; modelin hükmü
-    `data-model`de, e2e onu okur. Kasnaklar adımında canlı şekil
-    (`_fwKasnakSekilHTML`, göbek numarası = tablo sırası). **Adım numarası
-    metne elle yazılmaz** (`_fwAdimNo(anahtar)` — ölçüldü: "7. adımdaki iki
-    kapı", adım sayısı 6) ve kurulacaklar listesi kurulumun KENDİSİNDEN
-    (`_fwKurulumOzet` — "… + tablo + rapor" üç gün bayat kaldı). Açıklama
-    yüzeyi yasağı sürüyor (`_fwCard` üç argümanlı, başlıkta `<em>` yok).
-    Kapılar: `fead-sihirbaz-foy.test.js` · `fead-wizard.test.js` ·
-    `fead-wizard.spec.js` (başlık ≤ 24 px) · `fead-wizard-tablo.spec.js`.
+47. **SİHİRBAZ BİR ÇİZİM MASASIDIR** (2026-09-29, kullanıcı kararı — tasarım
+    tuvali "Adım içerikleri" · F: *"Yeni tasarımımız 'F çizim masası' olacak"*;
+    föy (E) aynı gün emekli, adımlı ray aynen kaldı). Gövde iki sütun: solda
+    MASA (adımın konusu ölçekli çizimde; sol üstte sonuç çipi, sağ üstte
+    araçlar, sol altta lejant), sağda 316 px DENETİM SÜTUNU (özette masanın
+    üstünde yüzen 288 px panel). Gövde kaymaz, sütun kayar. Ölçüldü (1440×900,
+    AG00976): çizim 6 adımın 3'ünden 6'sına; Kasnaklar çizimi 114 → 446 bin px²;
+    çizimdeki en küçük yazı 7 → 9,4 px; Motor ve çevrim gövdesinin 687 px'lik
+    taşması → 0 (tablo pencerede).
+    • **ÇİZİM TEK KAYNAK**: kayış yolu `veFeadLayoutSVG` (`inline`,
+      `kunye:false` — çipi ve lejantı olan yüzeyde çizicinin künyesi ve alt
+      notu çizilmez, kanvas kartında durur); masanın katmanı çizicinin
+      dönüşümünü okur (`ek(T)` kancası), geometri kurmaz. Gergi konumları
+      `veFeadPositionRows`, göbek yükü `FEADCore.tensionerState`; grafiklerin
+      sayısı uygunluk kapısının kaynaklarından (`_fwKwEff` · `accessoryRpm` ·
+      `veFeadAccLimits`); özetteki kesikli çizgi `veFeadChecks`'in ihlal satırı.
+    • **ÖLÇEK k = 1,35** (`VE_FW_MASA_K` ↔ CSS `--masa-k`): çizim 1/k kurulur,
+      k kat büyür; masa katmanının yazısı CSS'te k'ya bölünür. Grafik adımı 1:1.
+    • **KASNAKLAR**: liste (sıra · ad · Ø · sarım) + seçili kasnağın editörü;
+      gerginin editörü kasnaklarınkiyle BİREBİR (Tip tek seçenekli; Sürücü ve
+      Sil kapalı, sebebi ipucunda). Masada seç, sürükle (0,1 mm), ok tuşu
+      (Shift 1 mm), yakınlaş (×1,4, tavan 6). **Koparan konum yazılmaz**
+      (`_fwKasnakTasi`). Zemin ızgarası mm eksenine hizalı (`_fwEksenSVG`).
+    • **Çevrim tablosu PENCEREDE** (`#ve-fw-cevrim`; kW hücresi yerinde
+      tazelenir, girdi kutusu yeniden kurulmaz). İç pencerelerde Esc tek
+      katman; sihirbazın kapanışı iç pencereleri kapatır.
+    • **GRAFİK ETİKETİ ÇİZGİYİ KESMEZ** (yay doğrusu, `_fwYayGrafikHTML`):
+      etiket adaylarından doğruyu, y eksenini ve önceki etiketleri kesmeyen
+      ilkine konur. Sabit ofset 180 durumun 180'inde kesiyordu — doğru eğimli,
+      ofset etiketin bir ucunda yetmiyor. Kapı: `fead-sihirbaz-masa.test.js`
+      + `fead-wizard-tur3.spec.js` → *"YAY DOĞRUSU"* (gerçek yazı kutusu).
+    • Föyden süren kurallar: adım numarası metne elle yazılmaz
+      (`_fwAdimNo(anahtar)` — ölçüldü: "7. adımdaki iki kapı", adım sayısı 6);
+      kurulacaklar listesi kurulumun KENDİSİNDEN (`_fwKurulumOzet`); K künyeden
+      gelen alan (`_fwKun`); damganın sayısı VE RENGİ rayla tek kaynaktan
+      (`veFeadWizStepState`; modelin hükmü `data-model`de); açıklama yüzeyi
+      yasağı (yönerge yalnız `title`da, lejant bir anahtar).
+    Kapılar: `fead-sihirbaz-masa.test.js` · `fead-wizard.test.js` ·
+    `fead-wizard-catalog.test.js` · e2e `fead-wizard*.spec.js`.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

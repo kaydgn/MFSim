@@ -1,5 +1,10 @@
 /**
- * fead-wizard-tablo.spec.js — KASNAK TABLOSU SIĞAR (gerçek tarayıcı)
+ * fead-wizard-tablo.spec.js — KASNAKLAR SÜTUNU SIĞAR (gerçek tarayıcı)
+ *
+ * ÇİZİM MASASI (kullanıcı kararı 2026-09-29): 10 sütunlu kasnak tablosu yerine
+ * denetim sütununda LİSTE (sıra · ad · Ø · sarım) + seçili kasnağın editörü.
+ * Kural aynı: yatay kaydırma yok, sayı sütunları ad sütunundan dar. Aşağıdaki
+ * ölçüm tablo döneminin kaydıdır.
  *
  * Kullanıcı bildirimi (2026-09-02): *"kasnakları tablo halinde girdiğimiz
  * yerin tablosu böyle yana kaydırmalı olmuş… Bazı sütunlar çok geniş olmuş.
@@ -37,18 +42,26 @@ async function kasnakAdimi(page, genislik) {
     veFeadWizGoto(1);                        // 0-tabanlı: "2. Kasnaklar"
   });
   return page.evaluate(() => {
-    const tbl = [...document.querySelectorAll('#ve-feadwiz-overlay .ve-fw-tbl')]
-      .find((t) => /Sürücü/.test(t.querySelector('thead').textContent));
-    const wrap = tbl.closest('.ve-fw-tblwrap');
-    const ths = [...tbl.querySelectorAll('thead th')];
+    const yan = document.getElementById('ve-fw-yan');
+    const body = document.getElementById('ve-fw-body');
+    const liste = document.getElementById('ve-fw-kl-liste');
+    const satir = [...liste.querySelectorAll('.ve-fw-kl')];
+    const r = (e) => e.getBoundingClientRect();
+    const ilk = satir[0];
     return {
-      kapsayici: Math.round(wrap.clientWidth),
-      tablo: Math.round(tbl.getBoundingClientRect().width),
-      tasma: wrap.scrollWidth - wrap.clientWidth,
-      satir: tbl.querySelectorAll('tbody tr').length,
-      // nowrap + sabit genişlik: sığmayan başlık SESSİZCE kırpılırdı.
-      kirpik: ths.filter((th) => th.scrollWidth > th.clientWidth + 1).map((th) => th.textContent.trim()),
-      sutun: ths.map((th) => ({ ad: th.textContent.trim() || '(ops)', px: Math.round(th.getBoundingClientRect().width) }))
+      kapsayici: Math.round(liste.clientWidth),
+      tasma: yan.scrollWidth - yan.clientWidth,
+      govde: body.scrollWidth - body.clientWidth,
+      satir: satir.length,
+      // Satırın hiçbir hücresi listenin sağından taşmıyor.
+      disari: satir.filter((b) => [...b.children].some((c) => r(c).right > r(liste).right + 0.5)).length,
+      // Sayı hücreleri SIĞIYOR (ad kısalır, sayı kesilmez).
+      kirpik: satir.flatMap((b) => [...b.querySelectorAll('.ve-fw-kl-n')])
+        .filter((c) => c.scrollWidth > c.clientWidth + 1).map((c) => c.textContent),
+      ad: Math.round(r(ilk.querySelector('.ve-fw-kl-ad')).width),
+      sayi: [...ilk.querySelectorAll('.ve-fw-kl-n')].map((c) => Math.round(r(c).width)),
+      masa: Math.round(r(document.getElementById('ve-fw-masa')).width),
+      yan: Math.round(r(yan).width)
     };
   });
 }
@@ -56,20 +69,20 @@ async function kasnakAdimi(page, genislik) {
 // Üç genişlik: kullanıcının resmindeki (1280), modalın tavana dayandığı
 // (1600 — kapsayıcı büyümez, modal max-width 1180) ve dar bir dizüstü (1100).
 for (const w of [1280, 1600, 1100]) {
-  test(w + 'px görünümde tablo SIĞIYOR — yatay kaydırma yok', async ({ page }) => {
+  test(w + 'px görünümde kasnak listesi SIĞIYOR — yatay kaydırma yok', async ({ page }) => {
     const r = await kasnakAdimi(page, w);
     console.log(w + 'px → ' + JSON.stringify(r));
 
-    expect(r.satir).toBeGreaterThan(1);            // kasnaklar + gergi satırı
-    expect(r.tasma).toBe(0);                       // ASIL KAPI
-    expect(r.tablo).toBeLessThanOrEqual(r.kapsayici);
-    expect(r.kirpik).toEqual([]);                  // hiçbir başlık kesilmiyor
-    // Sayı sütunları metin sütunlarından DAR olmalı — eski kusur tam da
-    // hepsinin eşitlenmesiydi.
-    const px = (ad) => r.sutun.find((s) => s.ad === ad).px;
-    expect(px('X [mm]')).toBeLessThan(px('Ad'));
-    expect(px('Y [mm]')).toBeLessThan(px('Tip'));
-    expect(px('Sürücü')).toBeLessThan(px('Ø OD [mm]'));
+    expect(r.satir).toBe(6);                       // 5 kasnak + gergi (AG00976: 6 kasnak, gergi dâhil)
+    expect(r.tasma).toBe(0);                       // ASIL KAPI — sütun yatay kaymaz
+    expect(r.govde).toBe(0);
+    expect(r.disari).toBe(0);
+    expect(r.kirpik).toEqual([]);                  // hiçbir sayı kesilmiyor
+    // Sayı sütunları ad sütunundan DAR — eski kusur tam da hepsinin
+    // eşitlenmesiydi.
+    r.sayi.forEach((px) => expect(px).toBeLessThan(r.ad));
+    // Çizim adımın ana yüzeyi: masa sütundan geniş.
+    expect(r.masa).toBeGreaterThan(r.yan);
   });
 }
 
@@ -359,7 +372,12 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
       if (ara !== null) break;
     }
     const kart = [...body.querySelectorAll('.ve-fw-card')].find((c) => /Motor künyesi/.test(c.textContent));
-    const tb = [...body.querySelectorAll('.ve-fw-tbl')].find((t) => /Devir \[RPM\]/.test(t.textContent));
+    // Çevrim tablosu PENCEREDE (çizim masası, 2026-09-29): sayfada tablo yok.
+    const sayfadaTablo = body.querySelectorAll('.ve-fw-tbl').length;
+    veFeadWizCevrimAc();
+    const tb = [...document.querySelectorAll('#ve-fw-cevrim .ve-fw-tbl')].find((t) => /Devir \[RPM\]/.test(t.textContent));
+    const dutyBaslik = tb ? [...tb.querySelectorAll('thead th')].map((x) => x.textContent.trim()) : null;
+    veFeadWizCevrimKapat();
     veFeadWizEngOpen();
     const ov = document.getElementById('ve-fw-eng');
     const p = { acik: ov.style.display !== 'none', girdi: ov.querySelectorAll('input').length,
@@ -369,7 +387,7 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
       izgaraArasi: ara,
       kartGirdi: kart ? kart.querySelectorAll('input').length : -1,
       dugme: kart ? /Künye alanlarını düzenle/.test(kart.textContent) : false,
-      dutyBaslik: tb ? [...tb.querySelectorAll('thead th')].map((x) => x.textContent.trim()) : null,
+      dutyBaslik, sayfadaTablo,
       sicaklik: /Motor odası sıcaklığı/.test(body.textContent),
       pencere: p
     };
@@ -385,7 +403,9 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
   // girdi kutuları, yani listenin sayfaya BASILDIĞINI de ölçüyor.
   expect(r.pencere.girdi).toBe(9);                    // hepsi pencerede
   expect(r.pencere.noLoad).toBe(0);                   // ve sorulmuyor
+  expect(r.dutyBaslik).not.toBe(null);               // tablo pencerede
   expect(r.dutyBaslik).not.toContain('°C');           // sütun kalktı
+  expect(r.sayfadaTablo).toBe(0);
   expect(r.sicaklik).toBe(true);                      // tek alan üstte
 });
 
