@@ -225,8 +225,13 @@ test('YAY DOĞRUSU: etiketler doğruyu ve y eksenini kesmez, üst üste binmez �
         const q = t.getBBox(); return { t: t.textContent, x: q.x, y: q.y, w: q.width, h: q.height };
       });
       const out = [];
-      // Çizim alanındaki etiketler (eksen yazıları x eksenin altında / y ekseninin solunda).
-      kut.filter((k) => k.x + k.w > x1 && k.y + k.h < Math.max(y1, y2) + 16).forEach((k) => {
+      // Çizim alanındaki etiketler: x ekseninin ÜSTÜNDE başlayan (eksen yazıları altında,
+      // y ekseninin yazıları solunda). Eşik eksenin kendisi — doğruya bağlı bir eşik
+      // ön yükü farklı künyede "ön yük" etiketini denetimin dışına düşürüyordu.
+      const eksenY = +svg.querySelector('.ve-fw-yay-eksen line').getAttribute('y1');
+      const ic = kut.filter((k) => k.x + k.w > x1 && k.y < eksenY);
+      if (ic.length < 3) out.push('çizim alanında ' + ic.length + ' etiket');
+      ic.forEach((k) => {
         const alt = dy(k.x), ust = dy(k.x + k.w);
         if (!(alt < k.y || ust > k.y + k.h)) out.push('doğru ⟂ ' + k.t);
         if (k.x < x1) out.push('y ekseni ⟂ ' + k.t);
