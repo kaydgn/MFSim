@@ -1073,9 +1073,34 @@ olurdu.
       k kat büyür; masa katmanının yazısı CSS'te k'ya bölünür. Grafik adımı 1:1.
     • **KASNAKLAR**: liste (sıra · ad · Ø · sarım) + seçili kasnağın editörü;
       gerginin editörü kasnaklarınkiyle BİREBİR (Tip tek seçenekli; Sürücü ve
-      Sil kapalı, sebebi ipucunda). Masada seç, sürükle (0,1 mm), ok tuşu
-      (Shift 1 mm), yakınlaş (×1,4, tavan 6). **Koparan konum yazılmaz**
-      (`_fwKasnakTasi`). Zemin ızgarası mm eksenine hizalı (`_fwEksenSVG`).
+      Sil kapalı, sebebi ipucunda). **Ekle · dönüş yönü · STEP sırasının onayı
+      sıranın KENDİ kartında** — "Sıra ve yön" bloğu ve ayrı "Kayış yönünü
+      çevir" düğmesi yok (2026-09-29, kullanıcı: *"Alt tarafı kaldıralım"*).
+    • **MASA BİR GÖRÜNTÜLEYİCİ** (2026-09-29, kullanıcı: *"Yakınlaştırma-
+      uzaklaştırma sağa sola pan … Tutup hareket etmeyi de kaldıralım"*):
+      tıkla seç, sürükle kaydır (kasnağın üstünden başlasa da), tekerlek
+      İMLEÇTEKİ noktaya yakınlaşır (×0,5–12), ok tuşu kaydırır; kasnak masada
+      TAŞINMAZ, konum editörde. Görünüm TEK katmandan (`_fwLayout`: ekran =
+      z·taban + t; taban çizicinin kendi dönüşümü) ve adım başına; ızgara her
+      adımda mm'ye hizalı (`_fwIzgaraKur`). Pencere geniş (100vw−48, tavan
+      1760 px; 100vh−48) — ray ve sütun aynı, büyüyen masa.
+    • **TAHRİK KİPİ TEK ÇÖZÜCÜDEN** (`_fwOranKipi`): arayüz, düğüm, örnek
+      tohumu ve kayıtlı taslak aynı cevabı verir; elle oran (`driveRatio`)
+      sihirbaza TAŞINMAZ (Gates örneğinin `direct`+1'i "krank doğrudan"
+      olur). Çap eksikken oran ÇÖZÜLMEZ ve "—" yazılır; okumalar canlı yamada
+      (`#ve-fw-tahrik-oku`). Ölçülen hata: model 0,8685 ile çözerken kart
+      "1,0000 · elle girildi" diyordu.
+    • **5. ADIM: TAHRİK ZİNCİRİ + DEVİR PENCERELERİ** — zincirde halkanın
+      çarpanı `FEADCore.speedRatio`; pencerelerde TEK eksen motor devri,
+      aksesuar sınırı motor devrine çevrilir (sınır / oran), renk yalnız
+      DURUM (seri paleti durum renkleriyle çakışıyordu; güç çubuğu mürekkep
+      tonunda), kritik nokta ve notu uygunluk kapısından (`veFeadChecks`).
+      Etiketler seyreltilir (`_fwSeyrek`, büyük değer önce). **Hiçbir sınır
+      sessizce düşmez**: sürekli sınır tabanın `VE_FW_PENCERE_PAY` (1,4)
+      katı içindeyse eksen onu kapsar; eksende kalmayan sınır çizimin
+      sağındaki OLUKTA yazılır ("anlık 6.000 / motorda 4.072"). Çizimin
+      yazıları oluğa taşmaz — sağda yer yoksa sola geçer. Ölçülen hata
+      (teslimden önce): 12 örnekteki 18 sınırın 11'i görünmüyordu.
     • **Çevrim tablosu PENCEREDE** (`#ve-fw-cevrim`; kW hücresi yerinde
       tazelenir, girdi kutusu yeniden kurulmaz). İç pencerelerde Esc tek
       katman; sihirbazın kapanışı iç pencereleri kapatır.
@@ -1091,7 +1116,10 @@ olurdu.
       (`veFeadWizStepState`; modelin hükmü `data-model`de); açıklama yüzeyi
       yasağı (yönerge yalnız `title`da, lejant bir anahtar).
     Kapılar: `fead-sihirbaz-masa.test.js` · `fead-wizard.test.js` ·
-    `fead-wizard-catalog.test.js` · e2e `fead-wizard*.spec.js`.
+    `fead-wizard-catalog.test.js` · e2e `fead-wizard*.spec.js` ·
+    `fead-sihirbaz-masa.spec.js` (pencere eni · gerçek fareyle gezinme ·
+    tahrik oranı yazarken · STEP onayı tek satır · diyagramlarda yazı
+    çakışması, bütün örnekler × iki ekran).
 
 48. **SERVİS FAKTÖRÜ BİR YÜK KATSAYISIDIR, EŞİK DEĞİL** (2026-09-29, kullanıcı:
     *"kullanıcı tablodaki değerlerin birini seçecek. Matematiksel hesap ona

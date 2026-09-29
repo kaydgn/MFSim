@@ -409,16 +409,17 @@ function veFeadWizSpinHTML(b){
       + ' onclick="veFeadWizSpinSet(' + v + ')" title="' + _fwEsc(et.uzun) + '">'
       + _fwSpinHTML(v) + '</button>';
   }
-  return '<div class="ve-fw-spinbox">'
+  // Durumun cümlesi grubun İPUCUNDA (sihirbazda açıklama yüzeyi yok): yön
+  // sıradan türer; okunamıyorsa neden okunamadığı.
+  return '<div class="ve-fw-spinbox" role="group" aria-label="Dönüş yönü" title="' + (sp
+        ? 'Dönüş yönü sıradan türer; seçim serpantin sırasını ters yürütür.'
+        : 'Yön henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.') + '">'
     // İPUCU METNİ DE TEK ÜRETİCİDEN. Düzlem adı burada İKİNCİ KEZ yazılsaydı,
     // ayna bayrağı değişince bu iki düğme sessizce eskirdi — tam olarak bir
     // kez olan şey (metin koşulsuz "önden bakışta" diyordu).
     + dugme(1)
     + dugme(-1)
-    + '<span class="ve-fw-dim">' + (sp
-        ? 'Sıradan türedi; seçim serpantin sırasını ters yürütür.'
-        : 'Henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.')
-      + '</span></div>';
+    + '</div>';
 }
 
 // ── ÇALIŞMA ÇEVRİMİ ────────────────────────────────────────────────────────
@@ -574,7 +575,7 @@ function veFeadWizSeed(key){
   _fwState = st;
   _fwStep = 0;
   // Yeni model: masanın seçimi ve yakınlığı eskisine aitti.
-  _fwSec = null; _fwZoom = 1;
+  _fwSec = null; _fwGor = {};
   veFeadWizRender();
   return true;
 }
@@ -627,7 +628,7 @@ function _fwSeedKayit(ex){
     .filter(function(k){ return !!k; }));
   if(ex.belt) st.belt = JSON.parse(JSON.stringify(ex.belt));
   if(ex.solver){
-    st.solver = JSON.parse(JSON.stringify(ex.solver));
+    st.solver = _fwOranDuzelt(JSON.parse(JSON.stringify(ex.solver)));
     // Duty kW'ı örnekte KASNAK ANAHTARIYLA yazılı; sihirbaz da anahtarla tutuyor
     // (kimliğe çeviri tek yerde: veFeadWizNodes). Çeviri burada yapılsaydı
     // sihirbaz durumu düğüm kurma ayrıntısına bağlanırdı.
@@ -641,6 +642,31 @@ function _fwSeedKayit(ex){
   }
   st.temizle = false;
   return st;
+}
+
+// ── TAHRİK DÜZENİ: TEK ÇÖZÜCÜ, GİZLİ ELLE ORAN YOK ───────────────────────────
+// Kullanıcı bildirimi (2026-09-29): *"Oraya ne tıklarsak tıklayalım, ne değer
+// girersek girelim, tahrik oranı hep 1 olarak çıkıyor."* Ölçüldü (AG00686,
+// gerçek klavye): örneğin kaydı `ratioMode:'direct', driveRatio:1` taşıyor ve
+// sihirbaz durumuna olduğu gibi kopyalanıyordu. Arayüz bilinmeyen kipi "krank
+// doğrudan" gösteriyor, düğüm eşlemesi "ara kademe" yazıyordu; ara kademe
+// seçilip çap eksik kalınca köprü sihirbazın HİÇ sormadığı `driveRatio` 1'e
+// düşüp "elle girildi" diyordu. Kip artık TEK yerden çözülür: arayüz, düğüm,
+// örnek tohumu ve kayıtlı taslak aynı cevabı verir. Elle oranı 1 olan kayıt
+// (Gates raporları FAN kasnağını referans devir alıyor) "krank doğrudan";
+// başka bir elle oran ara kademeye düşer ve çaplar sorulur — oran uydurulmaz.
+function _fwOranKipi(s){
+  var m = s && s.ratioMode;
+  if(m === 'unity' || m === 'crankDirect' || m === 'derive') return m;
+  var r = _fwNum(s && s.driveRatio, NaN);
+  return (m === 'direct' && Math.abs(r - 1) < 1e-9) ? 'crankDirect' : 'derive';
+}
+// Durumu yerinde düzeltir: kip çözülmüş hâliyle yazılır, elle oran silinir.
+function _fwOranDuzelt(s){
+  if(!s) return s;
+  s.ratioMode = _fwOranKipi(s);
+  delete s.driveRatio;
+  return s;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -754,12 +780,13 @@ function veFeadWizNodes(st){
   // `derive` (gerçek ara kademe, çaplardan türe). Elle oran (`direct`) hâlâ
   // YOK ve eski taslaklardan taşınmıyor: `derive`a düşer, çünkü elle yazılmış
   // bir oran spesifikasyon §2.3'ün en ciddi bulgusuydu.
-  var _kip = (s.ratioMode === 'unity' || s.ratioMode === 'crankDirect') ? s.ratioMode : 'derive';
+  var _kip = _fwOranKipi(s);
   var sd = { ratioMode: _kip };
   // Dört motor devri (`idleRpm` … `overspeedRpm`) ÖLÜ ALAN DEĞİL: ikisi
   // uygunluk kapılarını besliyor (js/fead-checks.js). Taşınmazsa sihirbazda
   // hüküm veren kapılar kurulan modelde "değerlendirilemedi" derdi.
-  ['driveRatio', 'crankOD', 'fanOD', 'cylinders', 'serviceFact', 'crankInertia',
+  // `driveRatio` TAŞINMAZ: sihirbaz elle oran sormuyor (yukarıda `_fwOranKipi`).
+  ['crankOD', 'fanOD', 'cylinders', 'serviceFact', 'crankInertia',
    'accelRpmS', 'decelRpmS', 'lengthOffsetMm',
    'idleRpm', 'governedRpm', 'noLoadGovernedRpm', 'overspeedRpm'].forEach(function(a){
     var v = _fwNum(s[a], NaN);
@@ -890,7 +917,7 @@ function veFeadWizIssues(b, step){
   }
   var st = _fwState;
   if(st && st.siraKaynagi === 'agac' && (step === undefined || step === 1))
-    out.push({ tur: 'warn', m: VE_FW_SIRA_AGAC });
+    out.push({ tur: 'warn', m: VE_FW_SIRA_AGAC, yerinde: true });   // onayı liste kartında
   // STEP ↔ KÜNYE: künye gerginin parça alanlarını YAZAR (kol · çap · parça
   // kodu; kural 17). CAD'deki gergi başka bir parçaysa dosyadan gelen sayılar
   // sessizce katalogunkilerle değişirdi — fark yalnız künye seçiliyken
@@ -931,6 +958,7 @@ function veFeadWizOpen(nodeId){
     ? nodes.filter(function(n){ return n.id === nodeId; })[0] : null;
   var kayit = node && node.data && node.data.wiz;
   _fwState = kayit ? JSON.parse(JSON.stringify(kayit)) : veFeadWizDefault();
+  if(_fwState.solver) _fwOranDuzelt(_fwState.solver);
   // Anahtar üreteci kayıttaki en büyük anahtarın üstünden devam etmeli; yoksa
   // yeni satır eski bir satırla AYNI anahtarı alır ve duty kW'ı ona sızar.
   (_fwState.pulleys || []).forEach(function(p){
@@ -938,7 +966,7 @@ function veFeadWizOpen(nodeId){
     if(Number.isFinite(n) && n > _fwSeq) _fwSeq = n;
   });
   _fwStep = 0;
-  _fwSec = null; _fwZoom = 1; _fwGergiGor = 'yakin'; _fwSurukle = null;
+  _fwSec = null; _fwGor = {}; _fwGergiGor = 'yakin'; _fwKaydir = null;
   ov.style.display = 'flex';
   document.addEventListener('keydown', veFeadWizKey);
   veFeadWizRender();
@@ -1059,6 +1087,9 @@ function veFeadWizLive(){
   if(nav) nav.innerHTML = veFeadWizNavHTML(b);
   var f = document.getElementById('ve-fw-foot-state');
   if(f) f.innerHTML = veFeadWizFootStateHTML(b);
+  // Tahrik okumaları: çap yazılırken oran ve kaynağı tazele (alanlar dışında).
+  var to = document.getElementById('ve-fw-tahrik-oku');
+  if(to) to.innerHTML = _fwTahrikOkuHTML(_fwState);
   var kur = document.getElementById('ve-fw-create');
   if(kur){
     var hazir = !!(b && b.ok) && veFeadWizCanCreate().ok;
@@ -1267,7 +1298,12 @@ function veFeadWizStepState(b, step){
 }
 
 function veFeadWizIssueHTML(b, step){
-  var list = veFeadWizIssues(b, step);
+  var tum = veFeadWizIssues(b, step);
+  // YERİNDE GÖSTERİLEN uyarı (STEP sırasının onayı liste kartında) burada
+  // ikinci kez basılmaz; rayın rozetini yine sayar. Kalan yoksa kutu da yok —
+  // "eksik girdi yok" yanında bekleyen bir onayla çelişirdi.
+  var list = tum.filter(function(it){ return !it.yerinde; });
+  if(!list.length && tum.length) return '';
   if(!list.length)
     return '<div class="ve-fw-issues ve-fw-issues-ok">' + veIkon('check') + ' Bu adımda eksik girdi yok.</div>';
   var h = '<div class="ve-fw-issues">';
@@ -1420,10 +1456,10 @@ function veFeadWizStepHTML(step, b){
 // oturumluk; sihirbazın kaydına (`node.data.wiz`) yazılmaz.
 var _fwMasa = { w: 640, h: 600 };  // masanın son ölçüsü (px); jsdom'da bu kalır
 var _fwSec = null;                 // Kasnaklar adımında seçili satır ('__ten__' = gergi)
-var _fwZoom = 1;                   // Kasnaklar çiziminin yakınlığı (1 = sığdır)
+var _fwGor = {};                   // masa görünümü, ADIM BAŞINA: { z, tx, ty } (1,0,0 = sığdır)
 var _fwGergiGor = 'yakin';         // Gergi adımının çizimi: 'yakin' | 'yol'
 var _fwMasaXf = null;              // son kasnak çiziminin mm↔px dönüşümü
-var _fwSurukle = null;             // sürükleme süreci (masada)
+var _fwKaydir = null;              // masada kaydırma süreci (fare basılıyken)
 var _fwMasaRO = null;              // masanın ölçü gözlemcisi
 var _fwMasaIzgara = null;          // zemin ızgarası eksenle hizalıysa { b, k, x, y } (px)
 
@@ -1441,6 +1477,85 @@ var VE_FW_MASA_PAY = { ust: 48, alt: 44 };
 // Eksen payı (çizim birimi): sol kenarda Y yazıları, altta X yazıları.
 var VE_FW_EKSEN = { sol: 34, alt: 22 };
 
+// ── GÖRÜNÜM: YAKINLIK + KAYDIRMA ──────────────────────────────────────────
+// Kullanıcı isteği (2026-09-29): *"ortadaki kanvas hareket etmiyor.
+// Yakınlaştırma-uzaklaştırma sağa sola pan yapma gibi özellikler gelsin …
+// Tutup hareket etmeyi de kaldıralım."* Masa bir GÖRÜNTÜLEYİCİDİR: fare
+// tekerleği imlecin altındaki noktaya yakınlaşır, sürüklemek kaydırır,
+// kasnağa TIKLAMAK onu seçer; kasnak masada taşınmaz (koordinat editörde).
+//
+// Çizim yine TEK çiziciden (`veFeadLayoutSVG`). Görünüm çizicinin kendi
+// dönüşümünün (sığdırma ya da adımın `xfSabit`i) ÜSTÜNE biner:
+// ekran = z · taban + t (çizim biriminde). Taban dönüşüm çizicinin ek
+// katmanından OKUNUR — ikinci bir sığdırma hesabı yazılmaz — ve model
+// değişmedikçe önbellekte kalır (kaydırmanın her karesi tek çizim).
+// Görünüm oturumluk ve ADIM BAŞINA; modele yazılmaz.
+var VE_FW_GOR_Z = [0.5, 12];       // yakınlık aralığı (1 = sığdır)
+var _fwTaban = null;               // son taban dönüşüm { b, anahtar, T }
+function _fwGorAnahtar(k){
+  k = k || _fwMasaAdim(_fwStep);
+  return k === 'gergi' ? 'gergi-' + _fwGergiGor : k;   // iki görünüm, iki kadraj
+}
+function _fwGorunum(k){
+  var a = _fwGorAnahtar(k);
+  return _fwGor[a] || (_fwGor[a] = { z: 1, tx: 0, ty: 0 });
+}
+function _fwLayout(b, W, H, opts){
+  var k = _fwMasaAdim(_fwStep), g = _fwGorunum(k), ekAsil = opts.ek;
+  var sar = function(o){
+    return Object.assign({}, o, { ek: function(T){
+      _fwMasaXf = { s: T.s, ox: T.ox, oy: T.oy, mx: T.mx, my: T.my };
+      var h = ekAsil ? ekAsil(T) : '';
+      if(!_fwMasaIzgara){
+        var mmX = function(px){ return T.mx + (px - T.ox) / T.s; };
+        var mmY = function(py){ return T.my - (py - T.oy) / T.s; };
+        _fwIzgaraKur(T, mmX(0), mmX(T.W), mmY(T.H), mmY(0));
+      }
+      return h;
+    } });
+  };
+  if(g.z === 1 && !g.tx && !g.ty) return veFeadLayoutSVG(b, W, H, sar(opts));
+  var anahtar = _fwGorAnahtar(k) + '|' + W + '|' + H;
+  var T0 = (_fwTaban && _fwTaban.b === b && _fwTaban.anahtar === anahtar) ? _fwTaban.T : null;
+  if(!T0){
+    veFeadLayoutSVG(b, W, H, Object.assign({}, opts, { ek: function(T){
+      T0 = { s: T.s, ox: T.ox, oy: T.oy, mx: T.mx, my: T.my }; return '';
+    } }));
+    if(!T0) return veFeadLayoutSVG(b, W, H, sar(opts));
+    _fwTaban = { b: b, anahtar: anahtar, T: T0 };
+  }
+  var xf = { s: T0.s * g.z, ox: g.z * T0.ox + g.tx, oy: g.z * T0.oy + g.ty, mx: T0.mx, my: T0.my };
+  return veFeadLayoutSVG(b, W, H, sar(Object.assign({}, opts, { xfSabit: xf })));
+}
+// STEP çizimi başka bir çizici: aynı görünüm CSS dönüşümüyle (px = birim · k).
+function _fwStpDonusum(){
+  var g = _fwGorunum('kaynak'), K = VE_FW_MASA_K;
+  if(g.z === 1 && !g.tx && !g.ty) return '';
+  return 'transform-origin:0 0;transform:translate(' + (g.tx * K).toFixed(2) + 'px,'   // makine: CSS dönüşümü
+    + (g.ty * K).toFixed(2) + 'px) scale(' + g.z.toFixed(4) + ')';                  // makine: CSS dönüşümü
+}
+// Yakınlık, çizim biriminde bir ODAK noktası (qx, qy) yerinde kalacak biçimde:
+// ekran q = z·p + t sabit → t₂ = q − (z₂/z)·(q − t).
+function _fwGorZoom(f, qx, qy){
+  var g = _fwGorunum();
+  var z2 = Math.min(VE_FW_GOR_Z[1], Math.max(VE_FW_GOR_Z[0], g.z * f));
+  if(Math.abs(z2 - g.z) < 1e-9) return;
+  var r = z2 / g.z;
+  g.tx = qx - r * (qx - g.tx); g.ty = qy - r * (qy - g.ty); g.z = z2;
+  _fwMasaYenile();
+}
+// Ekran px / çizim birimi (masada k; STEP'te de k — dönüşüm öyle kurulu).
+function _fwMasaOlcek(){
+  if(typeof document === 'undefined') return _fwMasaKat || 1;
+  var svg = document.querySelector('#ve-fw-masa-cizim > svg');
+  var vb = svg && svg.viewBox && svg.viewBox.baseVal;
+  if(svg && vb && vb.width){
+    var r = svg.getBoundingClientRect();
+    if(r.width > 0) return r.width / vb.width;
+  }
+  return _fwMasaKat || 1;
+}
+
 function _fwMasaAdim(step){ return (VE_FW_STEPS[step] || VE_FW_STEPS[0]).key; }
 
 function _fwMasaBos(metin){
@@ -1455,13 +1570,16 @@ function _fwMasaHTML(step, b){
   var ciz = _fwMasaCizim(step, b, _fwMasa.w, _fwMasa.h);
   var h = '<div class="ve-fw-masa" id="ve-fw-masa" data-adim="' + k + '"'
     + (k === 'cevrim' ? ' data-tur="grafik"' : '')
-    + (k === 'kasnak' ? ' tabindex="0" onpointerdown="veFeadWizMasaBas(event)"' : '')
+    + (k !== 'cevrim' ? ' tabindex="0" data-gezin="1" onpointerdown="veFeadWizMasaBas(event)"'
+        + ' onwheel="veFeadWizMasaTeker(event)"' : '')
     + ' style="' + _fwMasaIzgaraStil() + '"'
     + ' aria-label="' + _fwEsc(VE_FW_STEPS[step].ad) + ' — çizim">';
   h += '<div class="ve-fw-masa-cizim" id="ve-fw-masa-cizim">' + ciz + '</div>';
   h += '<div class="ve-fw-masa-ust" id="ve-fw-live">' + veFeadWizLiveHTML(b) + '</div>';
   var arac = _fwMasaAracHTML(k);
   if(arac) h += '<div class="ve-fw-masa-arac">' + arac + '</div>';
+  if(k !== 'cevrim') h += '<div class="ve-fw-masa-gezin" role="group" aria-label="Görünüm">'
+    + _fwMasaGezinHTML(k) + '</div>';
   h += '<div class="ve-fw-masa-alt" id="ve-fw-masa-lejant">' + _fwMasaLejantHTML(k, b) + '</div>';
   return h + '</div>';
 }
@@ -1486,15 +1604,19 @@ function _fwMasaCizim(step, b, W, H){
 }
 
 // Sağ üst araçlar — adımın kendi görünüm denetimleri.
+// GEZİNME YIĞINI — masanın sağ kenarında, dikey ortada: yakınlaş · uzaklaş ·
+// sığdır. Köşeler dolu (sol üst çip, sağ üst adımın düğmeleri, sol alt
+// lejant, sağ alt yön gülü); kenar ortası hiçbirine değmiyor.
+function _fwMasaGezinHTML(k){
+  var g = _fwGorunum(k), sigmis = (g.z === 1 && !g.tx && !g.ty);
+  return '<button type="button" class="ve-fw-masa-btn" aria-label="Yakınlaş" title="Yakınlaş"'
+      + (g.z >= VE_FW_GOR_Z[1] - 1e-9 ? ' disabled' : '') + ' onclick="veFeadWizZoom(1)">' + veIkon('zoom-in') + '</button>'
+    + '<button type="button" class="ve-fw-masa-btn" aria-label="Uzaklaş" title="Uzaklaş"'
+      + (g.z <= VE_FW_GOR_Z[0] + 1e-9 ? ' disabled' : '') + ' onclick="veFeadWizZoom(-1)">' + veIkon('zoom-out') + '</button>'
+    + '<button type="button" class="ve-fw-masa-btn" aria-label="Sığdır" title="Sığdır"'
+      + (sigmis ? ' disabled' : '') + ' onclick="veFeadWizZoom(0)">' + veIkon('maximize') + '</button>';
+}
 function _fwMasaAracHTML(k){
-  if(k === 'kasnak'){
-    return '<button type="button" class="ve-fw-masa-btn" aria-label="Yakınlaş" title="Yakınlaş"'
-        + ' onclick="veFeadWizZoom(1)">' + veIkon('zoom-in') + '</button>'
-      + '<button type="button" class="ve-fw-masa-btn" aria-label="Uzaklaş" title="Uzaklaş"'
-        + (_fwZoom > 1 ? '' : ' disabled') + ' onclick="veFeadWizZoom(-1)">' + veIkon('zoom-out') + '</button>'
-      + '<button type="button" class="ve-fw-masa-btn ve-fw-masa-btn-yazi"'
-        + (_fwZoom > 1 ? '' : ' disabled') + ' onclick="veFeadWizZoom(0)">Sığdır</button>';
-  }
   if(k === 'gergi'){
     function dg(v, ad){
       return '<button type="button" class="ve-fw-masa-btn ve-fw-masa-btn-yazi"'
@@ -1517,13 +1639,9 @@ function _fwLejCizgi(tur){ return '<i class="ve-fw-lj-c" data-tur="' + tur + '">
 function _fwMasaLejantHTML(k, b){
   var ok = !!(b && b.ok);
   if(k === 'kasnak'){
-    var h = ok ? _fwLejSatir(_fwLejCizgi('duz'), 'kaburgalı')
+    return ok ? _fwLejSatir(_fwLejCizgi('duz'), 'kaburgalı')
       + _fwLejSatir(_fwLejCizgi('kesik'), 'sırttan')
       + _fwLejSatir(_fwLejCizgi('kayis'), 'kayış · dişli kenar kaburgalı yüz') : '';
-    if(_fwSurukle && _fwSurukle.red)
-      h += '<span class="ve-fw-lj ve-fw-lj-red">' + veIkon('alert-triangle')
-        + '<span>Bu konumda kayış kapanmıyor — son geçerli konum korundu.</span></span>';
-    return h;
   }
   if(k === 'gergi') return _fwGergiLejant(b);
   if(k === 'ozet' || k === 'kayis') return _fwOzetLejant(b, k);
@@ -1561,6 +1679,8 @@ function _fwMasaYenile(b){
   if(lj) lj.innerHTML = _fwMasaLejantHTML(_fwMasaAdim(_fwStep), b);
   var ar = document.querySelector('#ve-fw-masa .ve-fw-masa-arac');
   if(ar) ar.innerHTML = _fwMasaAracHTML(_fwMasaAdim(_fwStep));
+  var gz = document.querySelector('#ve-fw-masa .ve-fw-masa-gezin');
+  if(gz) gz.innerHTML = _fwMasaGezinHTML(_fwMasaAdim(_fwStep));
   if(typeof veFeadAnimEnsure === 'function' && typeof setTimeout === 'function')
     setTimeout(veFeadAnimEnsure, 0);
 }
@@ -1604,6 +1724,17 @@ function _fwMasaIzgaraStil(){
 }
 // Sol ve alt kenarda mm eksenleri — çizimin kendi dönüşümüyle (T). Adım İKİ
 // eksende AYNI: çizim eş ölçekli (1 mm = T.s px) ve ızgara kare kalmalı.
+// Izgara EKRAN px'inde (çizim masaya k kat büyüyerek oturuyor); adım görünen
+// mm aralığından ve İKİ eksende aynı. Eksenli adım çentiklerini aynı adımla
+// çizer; eksensiz adımda (gergi · kayış · özet · başlangıç) ızgara yine mm'ye
+// hizalı, yani görünümle (yakınlık · kaydırma) birlikte kayar.
+function _fwIzgaraKur(T, x0, x1, y0, y1){
+  var ax = _fwGuzelAdim(Math.max(x1 - x0, y1 - y0));
+  var K = _fwMasaKat, ib = ax * T.s * K, ik = ib / 5 >= 6 ? ib / 5 : (ib / 2 >= 6 ? ib / 2 : ib);
+  var r2 = function(v){ return Math.round(v * 100) / 100; };
+  _fwMasaIzgara = { b: r2(ib), k: r2(ik), x: r2(_fwMod(T.tx(0) * K, ib)), y: r2(_fwMod(T.ty(0) * K, ib)) };
+  return ax;
+}
 function _fwEksenSVG(T){
   var W = T.W, H = T.H, f = T.f;
   // Y ekseni çipin ALTINDAN başlar (çip sol üstte yüzüyor, altında kalan
@@ -1615,11 +1746,7 @@ function _fwEksenSVG(T){
   var h = '<g data-ve="eksen" class="ve-fw-eksen">'
     + '<line x1="' + f(xA) + '" y1="' + f(yU) + '" x2="' + f(xA) + '" y2="' + f(yA) + '"/>'
     + '<line x1="' + f(xA) + '" y1="' + f(yA) + '" x2="' + f(W - 6) + '" y2="' + f(yA) + '"/>';
-  var ax = _fwGuzelAdim(Math.max(x1 - x0, y1 - y0)), ay = ax;
-  // Izgara EKRAN px'inde (çizim masaya k kat büyüyerek oturuyor).
-  var K = _fwMasaKat, ib = ax * T.s * K, ik = ib / 5 >= 6 ? ib / 5 : (ib / 2 >= 6 ? ib / 2 : ib);
-  var r2 = function(v){ return Math.round(v * 100) / 100; };
-  _fwMasaIzgara = { b: r2(ib), k: r2(ik), x: r2(_fwMod(T.tx(0) * K, ib)), y: r2(_fwMod(T.ty(0) * K, ib)) };
+  var ax = _fwIzgaraKur(T, x0, x1, y0, y1), ay = ax;
   var yazi = '';
   for(var v = Math.ceil(x0 / ax) * ax; v <= x1; v += ax){
     var px = T.tx(v);
@@ -1825,7 +1952,7 @@ function veFeadWizReset(){
   _fwState = veFeadWizDefault();
   _fwState.seededFrom = '';          // "Boş başla" da bir SEÇİMDİR
   _fwStep = 0;
-  _fwSec = null; _fwZoom = 1;
+  _fwSec = null; _fwGor = {};
   veFeadWizRender();
 }
 
@@ -2546,30 +2673,6 @@ function _fwKasnakXY(key){
   var px = _fwNum(p.x, NaN), py = _fwNum(p.y, NaN);
   return (Number.isFinite(px) && Number.isFinite(py)) ? [px, py] : null;
 }
-function _fwKasnakXYYaz(key, x, y){
-  var st = _fwState;
-  if(key === '__ten__'){
-    if(!st.ten) st.ten = {};
-    st.ten.cenX = x; st.ten.cenY = y;
-    return;
-  }
-  var p = st.pulleys.filter(function(q){ return q.key === key; })[0];
-  if(p){ p.x = x; p.y = y; }
-}
-// Konumu dener: çözülüyorsa yazar ve true; kayışı koparıyorsa eski değeri
-// geri koyar ve false (koparan konum yazılmaz).
-function _fwKasnakTasi(key, x, y){
-  var eski = _fwKasnakXY(key);
-  if(!eski) return false;
-  x = Math.round(x * 10) / 10; y = Math.round(y * 10) / 10;
-  _fwKasnakXYYaz(key, x, y);
-  var b = veFeadWizBuild();
-  if(b && b.ok) return true;
-  _fwKasnakXYYaz(key, eski[0], eski[1]);
-  veFeadWizBuild();
-  return false;
-}
-
 function _fwKasnakOpt(xf, ek){
   return { inline: true, kunye: false, posMode: 'mean', compass: false, pivot: true, arrows: true,
            siraNo: true, nameLabels: false, wrapLabels: false, frame: false,
@@ -2582,26 +2685,8 @@ function _fwKasnakOpt(xf, ek){
 function _fwKasnakMasa(b, W, H){
   if(!(b && b.ok) || typeof veFeadLayoutSVG !== 'function')
     return _fwMasaBos('Kayış yolu henüz çözülmedi.');
-  var xf = (_fwSurukle && _fwSurukle.xf) || null;
-  // YAKINLIK = sığdırılmış dönüşümün ölçeği × z, seçili kasnak (yoksa masanın
-  // ortası) yerinde kalacak biçimde. Taban dönüşüm çizicinin KENDİSİNDEN
-  // alınır (ek katman onu görür) — ikinci bir sığdırma hesabı yazılmaz.
-  if(!xf && _fwZoom > 1){
-    var taban = null;
-    veFeadLayoutSVG(b, W, H, _fwKasnakOpt(null, function(T){ taban = T; return ''; }));
-    if(taban){
-      var cx = W / 2, cy = H / 2, k = _fwSecIndex(taban.order);
-      if(k >= 0 && taban.ps[k]){ cx = taban.tx(taban.ps[k].c[0]); cy = taban.ty(taban.ps[k].c[1]); }
-      var xm = taban.mx + (cx - taban.ox) / taban.s, ym = taban.my - (cy - taban.oy) / taban.s;
-      var s2 = taban.s * _fwZoom;
-      xf = { s: s2, ox: cx - (xm - taban.mx) * s2, oy: cy - (taban.my - ym) * s2,
-             mx: taban.mx, my: taban.my };
-    }
-  }
-  var svg = veFeadLayoutSVG(b, W, H, _fwKasnakOpt(xf, function(T){
-    _fwMasaXf = { s: T.s, ox: T.ox, oy: T.oy, mx: T.mx, my: T.my };
-    return _fwKasnakKatman(T);
-  }));
+  // Yakınlık ve kaydırma görünüm katmanında (`_fwLayout`), bütün adımlarla ortak.
+  var svg = _fwLayout(b, W, H, _fwKasnakOpt(null, function(T){ return _fwKasnakKatman(T); }));
   return svg || _fwMasaBos('Kayış yolu henüz çözülmedi.');
 }
 function _fwSecIndex(order){
@@ -2637,92 +2722,102 @@ function _fwKasnakKatman(T){
     if(!key) return;
     h += '<circle class="ve-fw-hit" data-fw-k="' + _fwEsc(key) + '" cx="' + f(T.tx(o.q.c[0]))
       + '" cy="' + f(T.ty(o.q.c[1])) + '" r="' + f(Math.max(o.q.rPitch * s + 3, 11)) + '" fill="transparent">'
-      + '<title>' + _fwEsc((T.geom.names && T.geom.names[o.i]) || '') + ' — sürükle: taşı · ok tuşu: 0,1 mm</title></circle>';
+      + '<title>' + _fwEsc((T.geom.names && T.geom.names[o.i]) || '') + '</title></circle>';
   });
   return h + '</g>';
 }
 
-// ── MASADA FARE ────────────────────────────────────────────────────────────
+// ── MASADA FARE: KAYDIR · YAKINLAŞ · SEÇ ───────────────────────────────────
+// Sürüklemek görünümü kaydırır (kasnağın üstünden başlasa da — kasnak masada
+// TAŞINMAZ); oynamadan bırakılan basış bir TIKTIR ve Kasnaklar adımında
+// altındaki kasnağı seçer. Eşik 4 px: el titremesi tıkı kaydırmaya çevirmez.
 function veFeadWizMasaBas(e){
-  if(_fwMasaAdim(_fwStep) !== 'kasnak' || !e || e.button > 0) return;
-  var t = e.target && e.target.closest ? e.target.closest('[data-fw-k]') : null;
-  if(!t) return;
-  var key = t.getAttribute('data-fw-k');
+  var k = _fwMasaAdim(_fwStep);
+  if(k === 'cevrim' || !e || e.button > 0 || typeof document === 'undefined') return;
+  var t = e.target;
+  if(t && t.closest && t.closest('button, a, input, select, textarea, .ve-fw-masa-gezin, .ve-fw-masa-arac, .ve-fw-cip')) return;
   if(e.preventDefault) e.preventDefault();
   var masa = document.getElementById('ve-fw-masa');
   if(masa && masa.focus) masa.focus({ preventScroll: true });
-  var svg = document.querySelector('#ve-fw-masa-cizim svg');
-  var vb = svg && svg.viewBox && svg.viewBox.baseVal;
-  var r = svg ? svg.getBoundingClientRect() : null;
-  var olc = (r && vb && vb.width) ? r.width / vb.width : 1;
-  var degisti = (_fwSec !== key);
-  _fwSec = key;
-  _fwSurukle = { key: key, x0: e.clientX, y0: e.clientY, olc: olc, xf: _fwMasaXf,
-                 bas: _fwKasnakXY(key), oynadi: false, red: false, bekle: null };
-  document.addEventListener('pointermove', veFeadWizMasaSurukle);
+  var g = _fwGorunum(k), hit = (t && t.closest) ? t.closest('[data-fw-k]') : null;
+  _fwKaydir = { x0: e.clientX, y0: e.clientY, tx0: g.tx, ty0: g.ty, olc: _fwMasaOlcek(),
+                oynadi: false, key: hit ? hit.getAttribute('data-fw-k') : null, kare: null };
+  document.addEventListener('pointermove', veFeadWizMasaKaydir);
   document.addEventListener('pointerup', veFeadWizMasaBirak);
-  if(degisti){
-    // Seçim değişti: liste ve editör o kasnağa geçer (tam çizim; odak masada).
-    veFeadWizRender();
+}
+function veFeadWizMasaKaydir(e){
+  var d = _fwKaydir;
+  if(!d || !e) return;
+  var px = e.clientX - d.x0, py = e.clientY - d.y0;
+  if(!d.oynadi && Math.sqrt(px * px + py * py) < 4) return;          // tık eşiği
+  if(!d.oynadi){
+    d.oynadi = true;
+    var m = document.getElementById('ve-fw-masa');
+    if(m && m.classList) m.classList.add('kayiyor');
+  }
+  var g = _fwGorunum();
+  g.tx = d.tx0 + px / d.olc; g.ty = d.ty0 + py / d.olc;
+  if(d.kare) return;
+  var zaman = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : setTimeout;
+  d.kare = zaman(function(){ d.kare = null; if(_fwKaydir === d) _fwMasaYenile(); });
+}
+function veFeadWizMasaBirak(){
+  document.removeEventListener('pointermove', veFeadWizMasaKaydir);
+  document.removeEventListener('pointerup', veFeadWizMasaBirak);
+  var d = _fwKaydir;
+  _fwKaydir = null;
+  var m = document.getElementById('ve-fw-masa');
+  if(m && m.classList) m.classList.remove('kayiyor');
+  if(!d) return;
+  if(d.oynadi){ _fwMasaYenile(); return; }
+  if(d.key && _fwMasaAdim(_fwStep) === 'kasnak' && d.key !== _fwSec){
+    veFeadWizSec(d.key);
     var m2 = document.getElementById('ve-fw-masa');
     if(m2 && m2.focus) m2.focus({ preventScroll: true });
   }
 }
-function veFeadWizMasaSurukle(e){
-  var d = _fwSurukle;
-  if(!d || !d.xf || !d.bas) return;
-  var px = e.clientX - d.x0, py = e.clientY - d.y0;
-  if(!d.oynadi && Math.sqrt(px * px + py * py) < 3) return;        // tık eşiği
-  d.oynadi = true;
-  d.bekle = [d.bas[0] + px / (d.olc * d.xf.s), d.bas[1] - py / (d.olc * d.xf.s)];
-  if(d.kare) return;
-  var zaman = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : setTimeout;
-  d.kare = zaman(function(){
-    d.kare = null;
-    if(!d.bekle || _fwSurukle !== d) return;
-    var ok = _fwKasnakTasi(d.key, d.bekle[0], d.bekle[1]);
-    d.red = !ok;
-    _fwMasaYenile(_fwBuild);
-    var el = document.getElementById('ve-fw-live');
-    if(el) el.innerHTML = veFeadWizLiveHTML(_fwBuild);
-  });
-}
-function veFeadWizMasaBirak(){
-  document.removeEventListener('pointermove', veFeadWizMasaSurukle);
-  document.removeEventListener('pointerup', veFeadWizMasaBirak);
-  var d = _fwSurukle;
-  _fwSurukle = null;
-  if(d && d.oynadi){
-    // Bırakınca TAM çizim: editörün X/Y alanları ve liste yeni değeri gösterir.
-    veFeadWizRender();
-    var m = document.getElementById('ve-fw-masa');
-    if(m && m.focus) m.focus({ preventScroll: true });
-  }
-}
-// Ok tuşu: seçili kasnağı 0,1 mm (Shift: 1 mm) oynatır. Koparan adım yazılmaz.
-function _fwMasaTus(e){
-  if(!e || e.altKey || !/^Arrow(Up|Down|Left|Right)$/.test(e.key)) return false;
-  if(typeof document === 'undefined' || _fwMasaAdim(_fwStep) !== 'kasnak' || !_fwSec) return false;
-  var a = document.activeElement;
-  if(!a || a.id !== 've-fw-masa') return false;
-  var xy = _fwKasnakXY(_fwSec);
-  if(!xy) return false;
+// Tekerlek İMLECİN ALTINDAKİ noktaya yakınlaşır (harita gibi).
+function veFeadWizMasaTeker(e){
+  if(!e || _fwMasaAdim(_fwStep) === 'cevrim' || typeof document === 'undefined') return;
+  var el = document.getElementById('ve-fw-masa-cizim');
+  if(!el) return;
   if(e.preventDefault) e.preventDefault();
-  var adim = e.shiftKey ? 1 : 0.1;
-  var dx = e.key === 'ArrowLeft' ? -adim : e.key === 'ArrowRight' ? adim : 0;
-  var dy = e.key === 'ArrowDown' ? -adim : e.key === 'ArrowUp' ? adim : 0;
-  var ok = _fwKasnakTasi(_fwSec, xy[0] + dx, xy[1] + dy);
-  _fwSurukle = ok ? null : { red: true };
-  veFeadWizRender();
-  _fwSurukle = null;
-  var m = document.getElementById('ve-fw-masa');
-  if(m && m.focus) m.focus({ preventScroll: true });
+  var r = el.getBoundingClientRect(), olc = _fwMasaOlcek();
+  var d = (e.deltaY || 0) * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+  var f = Math.min(2, Math.max(0.5, Math.exp(-d * 0.0015)));
+  _fwGorZoom(f, (e.clientX - r.left) / olc, (e.clientY - r.top) / olc);
+}
+// Klavye (odak masadayken): ok tuşu kaydırır (Shift ile dört kat), + / −
+// yakınlaşır, 0 sığdırır. Ok tuşu artık KASNAK OYNATMAZ.
+function _fwMasaTus(e){
+  if(!e || e.altKey || e.ctrlKey || e.metaKey || typeof document === 'undefined') return false;
+  var a = document.activeElement;
+  if(!a || a.id !== 've-fw-masa' || _fwMasaAdim(_fwStep) === 'cevrim') return false;
+  if(/^Arrow(Up|Down|Left|Right)$/.test(e.key)){
+    var adim = (e.shiftKey ? 160 : 40) / _fwMasaOlcek(), g = _fwGorunum();
+    if(e.key === 'ArrowLeft') g.tx += adim;
+    if(e.key === 'ArrowRight') g.tx -= adim;
+    if(e.key === 'ArrowUp') g.ty += adim;
+    if(e.key === 'ArrowDown') g.ty -= adim;
+    if(e.preventDefault) e.preventDefault();
+    _fwMasaYenile();
+    return true;
+  }
+  var z = (e.key === '+' || e.key === '=') ? 1 : e.key === '-' ? -1 : e.key === '0' ? 0 : null;
+  if(z === null) return false;
+  if(e.preventDefault) e.preventDefault();
+  veFeadWizZoom(z);
   return true;
 }
+// Düğmeler: yakınlık masanın ORTASINA göre (×1,4); 0 = sığdır.
 function veFeadWizZoom(yon){
-  _fwZoom = yon > 0 ? Math.min(6, _fwZoom * 1.4) : yon < 0 ? Math.max(1, _fwZoom / 1.4) : 1;
-  if(_fwZoom < 1.05) _fwZoom = 1;
-  _fwMasaYenile();
+  if(!yon){
+    _fwGor[_fwGorAnahtar()] = { z: 1, tx: 0, ty: 0 };
+    _fwMasaYenile();
+    return;
+  }
+  var K = VE_FW_MASA_K;
+  _fwGorZoom(yon > 0 ? 1.4 : 1 / 1.4, _fwMasa.w / K / 2, _fwMasa.h / K / 2);
 }
 function veFeadWizSec(key){
   _fwSec = key;
@@ -2928,34 +3023,34 @@ function _fwStepKasnak(b){
       + 'raporlarıyla satır satır karşılaştırılabilirlik.</span></p>';
   }
 
-  var liste = '<div class="ve-fw-kl-bas"><span>kayış sırasıyla · ' + sira.length + '</span>'
-    + '<span>Ø · sarım</span></div>'
-    + '<div class="ve-fw-kl-liste" id="ve-fw-kl-liste" role="listbox" aria-label="Kasnaklar — kayış sırasıyla">'
-    + _fwKasnakListeHTML(b, sira, byKey) + '</div>' + _hkm;
-  var h = _fwCard('Kasnaklar — kayış sırasıyla', 'var(--accent-primary)', liste);
-  var ed = _fwKasnakEditorHTML(b, sira, byKey);
-  if(ed) h += _fwCard('Seçili kasnak', 'var(--accent-primary)', ed);
-
-  // EKLE · YÖN — tek blokta. Ekleme bir açılır liste (tipler componentDefs'ten).
+  // "SIRA VE YÖN" BLOĞU KALKTI (kullanıcı isteği 2026-09-29: *"Aşağıdaki
+  // 'Sıra ve yön' kısmına ne gerek var? … Bu onaylama olayını 'Kasnaklar —
+  // kayış sırasıyla' kısmına taşıyacağız. Alt tarafı kaldıralım."*). Sıranın
+  // ne yaptığı — ekleme, dönüş yönü, STEP'ten gelen sıranın onayı — sıranın
+  // KENDİ kartında. "Kayış yönünü çevir" düğmesi de kalktı: CCW/CW seçicisiyle
+  // aynı işlemi (sırayı ters yürütmek) yapıyordu, iki düğme tek kararı soruyordu.
   var ekle = '<select class="ve-fw-inp ve-fw-ekle" aria-label="Kasnak ekle"'
     + ' onchange="if(this.value){veFeadWizKasnakEkle(this.value);}">'
     + '<option value="">＋ Kasnak ekle…</option>'
     + VE_FW_PULLEY_TYPES.map(function(t){
         return '<option value="' + t + '">' + _fwEsc(_fwDefName(t)) + '</option>'; }).join('')
     + '</select>';
-  h += _fwCard('Sıra ve yön', 'var(--accent-warning)',
-      ekle
-    + '<div class="ve-fw-rowbtns">'
-      + '<button type="button" class="ve-fw-btn" onclick="veFeadWizRouteReverse()">'
-      + veIkon('arrow-left-right') + ' Kayış yönünü çevir</button>'
-      + (st.siraKaynagi === 'agac'
-          ? '<button type="button" id="ve-fw-sira-onay" class="ve-fw-btn" onclick="veFeadWizSiraOnay()"'
-            + ' title="Sıra STEP ağacından geldi. Kayış yolunu doğruladıysanız onaylayın.">'
-            + veIkon('check') + ' Sıra doğru</button>'
-          : '')
-    + '</div>'
-    + veFeadWizSpinHTML(b)
-    );
+  // STEP'TEN GELEN SIRA BİR VARSAYIM (kural 34): onayı listenin başında, bir
+  // DURUM satırı olarak (açıklaması düğmenin ipucunda).
+  var onay = st.siraKaynagi === 'agac'
+    ? '<div class="ve-fw-kl-onay" data-ve="sira-onay">' + veIkon('alert-triangle')
+      + '<span class="ve-fw-kl-onay-y">Sıra STEP ağacından geldi</span>'
+      + '<button type="button" id="ve-fw-sira-onay" class="ve-fw-btn" onclick="veFeadWizSiraOnay()"'
+      + ' title="' + _fwEsc(VE_FW_SIRA_AGAC) + '">' + veIkon('check') + ' Sıra doğru</button></div>'
+    : '';
+  var liste = '<div class="ve-fw-kl-arac">' + ekle + veFeadWizSpinHTML(b) + '</div>' + onay
+    + '<div class="ve-fw-kl-bas"><span>kayış sırasıyla · ' + sira.length + '</span>'
+    + '<span>Ø · sarım</span></div>'
+    + '<div class="ve-fw-kl-liste" id="ve-fw-kl-liste" role="listbox" aria-label="Kasnaklar — kayış sırasıyla">'
+    + _fwKasnakListeHTML(b, sira, byKey) + '</div>' + _hkm;
+  var h = _fwCard('Kasnaklar — kayış sırasıyla', 'var(--accent-primary)', liste);
+  var ed = _fwKasnakEditorHTML(b, sira, byKey);
+  if(ed) h += _fwCard('Seçili kasnak', 'var(--accent-primary)', ed);
   return h;
 }
 // Ekleme: yeni kasnak SEÇİLİ doğar — editörü hemen onun alanlarını gösterir.
@@ -2977,9 +3072,9 @@ function veFeadWizKasnakEkle(type){
 function _fwKaynakMasa(b, W, H){
   var s = _fwStp;
   if(s && s.durum === 'hazir' && s.coz && s.coz.ok && typeof _fwStpCizimSVG === 'function')
-    return '<div class="ve-fw-masa-stp">' + _fwStpCizimSVG(s) + '</div>';
+    return '<div class="ve-fw-masa-stp" style="' + _fwStpDonusum() + '">' + _fwStpCizimSVG(s) + '</div>';
   if(b && b.ok && typeof veFeadLayoutSVG === 'function'){
-    var svg = veFeadLayoutSVG(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: true, pivot: true,
+    var svg = _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: true, pivot: true,
       arrows: true, frame: false, nodeId: 've-fw-example', animate: { dispMmS: 260 },
       kenarPay: { ust: _fwPx(VE_FW_MASA_PAY.ust) } });
     if(svg) return svg;
@@ -3013,7 +3108,7 @@ function _fwGergiMasa(b, W, H){
   if(!(b && b.ok) || typeof veFeadLayoutSVG !== 'function')
     return _fwMasaBos('Kayış yolu henüz çözülmedi.');
   if(_fwGergiGor === 'yol'){
-    return veFeadLayoutSVG(b, W, H, { inline: true, kunye: false, posMode: 'all', compass: true, pivot: true,
+    return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'all', compass: true, pivot: true,
       arrows: true, frame: false, kenarPay: { ust: _fwPx(VE_FW_MASA_PAY.ust) } })
       || _fwMasaBos('Kayış yolu henüz çözülmedi.');
   }
@@ -3034,7 +3129,7 @@ function _fwGergiMasa(b, W, H){
   var xf = { s: s, mx: x0, my: y1,
              ox: m + ((W - 2 * m) - (x1 - x0) * s) / 2,
              oy: UST + ((H - UST - ALT) - (y1 - y0) * s) / 2 };
-  return veFeadLayoutSVG(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: false, pivot: true,
+  return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: false, pivot: true,
     arrows: false, nameLabels: true, shortNames: true, wrapLabels: false, frame: false,
     xfSabit: xf, ek: function(T){ return _fwGergiKatman(T, v); } })
     || _fwMasaBos('Kayış yolu henüz çözülmedi.');
@@ -3191,7 +3286,7 @@ function _fwYayGrafikHTML(t, b){
 function _fwKayisMasa(b, W, H){
   if(!(b && b.ok) || typeof veFeadLayoutSVG !== 'function')
     return _fwMasaBos('Kayış yolu henüz çözülmedi.');
-  return veFeadLayoutSVG(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: false, pivot: false,
+  return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: false, pivot: false,
     arrows: true, nameLabels: true, shortNames: true, wrapLabels: false, frame: false,
     kenarPay: { ust: _fwPx(VE_FW_MASA_PAY.ust), alt: _fwPx(VE_FW_MASA_PAY.alt) },
     ek: function(T){ return _fwAciklikKatman(T); } }) || _fwMasaBos('Kayış yolu henüz çözülmedi.');
@@ -3237,7 +3332,7 @@ function _fwOzetMasa(b, W, H){
   var genis = W * _fwMasaKat > 760;
   var pay = { ust: _fwPx(VE_FW_MASA_PAY.ust), alt: _fwPx(VE_FW_MASA_PAY.alt) };
   if(genis) pay.sag = _fwPx(VE_FW_OZET_PANEL + 24);
-  return veFeadLayoutSVG(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: true, pivot: true,
+  return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: true, pivot: true,
     arrows: true, nameLabels: true, wrapLabels: true, frame: false,
     kenarPay: pay,
     ek: function(T){ return _fwAciklikKatman(T) + _fwMerkezKatman(T, R); } })
@@ -3289,91 +3384,336 @@ function _fwOzetLejant(b, k){
 // maks. anlık). Güç `_fwKwEff`ten (tablonun okuduğu sayı), devir
 // `FEADCore.accessoryRpm`den ve sınırlar `veFeadAccLimits`ten — uygunluk
 // kapısının kullandığı aynı üç kaynak.
-var VE_FW_SERI = ['var(--seri-1)', 'var(--seri-3)', 'var(--seri-4)', 'var(--seri-2)'];
+// ── 5 · MOTOR VE ÇEVRİM — ÇİZİM MASASI ─────────────────────────────────────
+// Kullanıcı bildirimi (2026-09-29): *"ortadaki iki kocaman diyagram çok
+// gereksiz olmuş. Buraya başka diyagramlar ekleyerek anlatımı güçlendirelim."*
+// Eski iki grafik (çevrim çubukları + tek aksesuarın devir doğrusu) adımın
+// sorusunu cevaplamıyordu: motor devri kayışa NASIL geçiyor ve her aksesuar
+// çevrimde KENDİ penceresinin neresinde. Masa iki diyagram:
+//   1 · TAHRİK ZİNCİRİ — krank → (ara kademe) → FEAD sürücüsü → aksesuarlar;
+//       her halkada çap ve motor devrine oran (`FEADCore.speedRatio`). Oran
+//       çözülmediyse zincir orada KOPUK çizilir ve sebebini söyler.
+//   2 · DEVİR PENCERELERİ — TEK eksen, motor devri (ikinci ölçek yok): motor
+//       satırında rölanti · governed · overspeed ve çevrimin noktaları (zaman
+//       payıyla); her aksesuar satırında katalog sınırının motor devrine
+//       çevrilmiş hâli (sınır / oran — `accessoryRpm` doğrusal, kapının aynı
+//       karşılaştırması) ve aynı noktalar; son satırda toplam FEAD gücü.
+//       Hüküm uygunluk kapısından okunur (`veFeadChecks`), yeniden hesaplanmaz.
+// Renk yalnız DURUM taşır (sürekli / anlık sınırın üstü); satırlar adlarıyla
+// ayrılır — seri paletinin kırmızısı ve yeşili durum renkleriyle çakışıyordu.
+function _fwCevrimVeri(b){
+  var st = _fwState, s = st.solver || {};
+  var rs = b && (b.sys || b.ratioSys);
+  var v = { s: s, rs: rs, kip: _fwOranKipi(s), dr: _fwTahrik(st), acc: [], duty: [], not: '',
+            motor: { idle: _fwNum(s.idleRpm, NaN), gov: _fwNum(s.governedRpm, NaN), over: _fwNum(s.overspeedRpm, NaN) } };
+  (s.duty || []).forEach(function(r, i){
+    var rpm = _fwNum(r.rpm, NaN);
+    if(rpm > 0) v.duty.push({ i: i, rpm: rpm, pay: _fwNum(r.dcPct, 0) });
+  });
+  var sur = (st.pulleys || []).filter(function(p){ return p.driver; })[0] || null;
+  v.surucu = sur ? { ad: sur.name || _fwDefName(sur.type), od: _fwNum(sur.od, NaN) } : null;
+  if(!rs || typeof FEADCore === 'undefined' || typeof FEADCore.speedRatio !== 'function') return v;
+  var R = _fwOzetKapilar(b), satir = {};
+  ((R && R.speedLimit && R.speedLimit.rows) || []).forEach(function(r){ satir[r.i] = r; });
+  v.not = (R && R.speedLimit && R.speedLimit.note) || '';
+  var crk = (rs._crkIdx != null) ? rs._crkIdx : -1;
+  var ti = (b.sys && b.sys._tenIdx != null) ? b.sys._tenIdx : -1;
+  (rs.pulleys || []).forEach(function(q, i){
+    if(i === crk || i === ti) return;
+    var node = b.order && b.order[i];
+    var d = (node && typeof componentDefs !== 'undefined' && componentDefs[node.type]) || {};
+    if(d.isFeadIdler || d.isFeadTensioner) return;
+    var oran;
+    try { oran = FEADCore.speedRatio(rs, i); } catch(e){ oran = NaN; }
+    if(!(oran > 0)) return;
+    var key = node && _fwKeyOf(node.id);
+    var p = key ? (st.pulleys || []).filter(function(x){ return x.key === key; })[0] : null;
+    var lim = (typeof veFeadAccLimits === 'function') ? veFeadAccLimits(node) : null;
+    v.acc.push({ i: i, p: p, ad: _fwDugumAdi(node, b.sys && b.sys.pulleys && b.sys.pulleys[i]),
+                 od: p ? _fwNum(p.od, NaN) : NaN, oran: oran, lim: lim, kapi: satir[i] || null });
+  });
+  return v;
+}
 function _fwCevrimMasa(b, W, H){
   // Grafik kutusunun iç eni: 12 px iç pay + 1 px kenar, iki yanda (CSS
   // `.ve-fw-graf` ile birebir) — SVG kutuya ölçeklenmeden oturur.
-  var Wi = Math.max(220, W - 26), yarim = Math.max(160, Math.floor((H - 10) / 2));
-  return '<div class="ve-fw-graf">' + _fwCevrimGrafik(b, Wi, yarim) + '</div>'
-    + '<div class="ve-fw-graf">' + _fwDevirGrafik(b, Wi, H - yarim - 10) + '</div>';
+  var Wi = Math.max(260, W - 26), v = _fwCevrimVeri(b);
+  var z = _fwZincirSVG(v, Wi);
+  var kalan = Math.max(220, H - z.h - 58 - 10 - 44);
+  return '<div class="ve-fw-graf" data-ve="tahrik-zinciri">' + z.bas + z.svg + '</div>'
+    + '<div class="ve-fw-graf" data-ve="devir-pencere">' + _fwPencereSVG(v, Wi, kalan) + '</div>';
 }
-function _fwYukler(){
-  var st = _fwState;
-  return (st.pulleys || []).filter(function(p){
-    var d = (typeof componentDefs !== 'undefined' && componentDefs[p.type]) || {};
-    return !p.driver && !d.isFeadIdler && !d.isFeadTensioner;
-  });
-}
-function _fwGrafEksen(x0, x1, y0, y1, xv, yv, xAd, yAd, sagEksen){
-  var h = '<g class="ve-fw-gr-izgara">';
-  yv.forEach(function(t){ h += '<line x1="' + x0 + '" y1="' + t.y + '" x2="' + x1 + '" y2="' + t.y + '"/>'; });
-  h += '</g><g class="ve-fw-gr-eksen"><line x1="' + x0 + '" y1="' + y0 + '" x2="' + x1 + '" y2="' + y0 + '"/>'
-    + '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x0 + '" y2="' + y0 + '"/>'
-    + (sagEksen ? '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y0 + '"/>' : '') + '</g>'
-    + '<g class="ve-fw-gr-yazi">';
-  xv.forEach(function(t){ h += '<text x="' + t.x + '" y="' + (y0 + 14) + '" text-anchor="middle">' + t.m + '</text>'; });
-  yv.forEach(function(t){ h += '<text x="' + (x0 - 5) + '" y="' + (t.y + 3) + '" text-anchor="end">' + t.m + '</text>'; });
-  (sagEksen || []).forEach(function(t){ h += '<text x="' + (x1 + 5) + '" y="' + (t.y + 3) + '">' + t.m + '</text>'; });
-  h += '<text x="' + x1 + '" y="' + (y0 + 28) + '" text-anchor="end">' + xAd + '</text>'
-    + (yAd ? '<text x="' + (x0 + 6) + '" y="' + (y1 + 11) + '">' + yAd + '</text>' : '');
-  return h + '</g>';
-}
-function _fwCevrimGrafik(b, W, H){
-  var st = _fwState, s = st.solver || {}, duty = (s.duty || []).filter(function(r){ return _fwNum(r.rpm, NaN) > 0; });
-  var bas = '<header class="ve-fw-gr-bas"><b>Çalışma çevrimi</b><span>' + duty.length + ' nokta · Σ %'
-    + veSayi(duty.reduce(function(a, r){ return a + _fwNum(r.dcPct, 0); }, 0), 1) + '</span>';
-  if(!duty.length) return bas + '</header>' + _fwMasaBos('Çevrim tablosu boş.');
-  var yuk = _fwYukler(), seri = [];
-  yuk.forEach(function(p){
-    var kw = duty.map(function(r){
-      var i = (s.duty || []).indexOf(r), e = _fwKwEff(b, st, i, p);
-      return (e && e.kw !== null && Number.isFinite(e.kw)) ? e.kw : null;
-    });
-    if(kw.some(function(v){ return v !== null; })) seri.push({ p: p, kw: kw });
-  });
-  seri.forEach(function(sr, i){
-    sr.renk = VE_FW_SERI[i % VE_FW_SERI.length];
-    bas += '<span class="ve-fw-gr-lj"><i style="border-top-color:' + sr.renk + '"></i>'
-      + _fwEsc(sr.p.name || _fwDefName(sr.p.type)) + ' kW</span>';
-  });
-  bas += '<span class="ve-fw-gr-lj"><i class="ve-fw-gr-lj-cubuk"></i>zaman payı</span></header>';
-  var GH = H - 40, x0 = 46, x1 = W - (seri.length ? 44 : 14), y0 = GH - 34, y1 = 14;
-  var rpm = duty.map(function(r){ return _fwNum(r.rpm, 0); });
-  var rMin = Math.min.apply(null, rpm), rMax = Math.max.apply(null, rpm);
-  var ad = _fwGuzelAdim(Math.max(1, rMax - rMin) * 1.2);
-  var a0 = Math.floor((rMin - ad * 0.5) / ad) * ad, a1 = Math.ceil((rMax + ad * 0.5) / ad) * ad;
-  if(a0 < 0) a0 = 0;
-  var sx = function(v){ return x0 + (x1 - x0) * (v - a0) / Math.max(1, a1 - a0); };
-  var pMax = Math.max.apply(null, duty.map(function(r){ return _fwNum(r.dcPct, 0); }));
-  var pTop = Math.max(10, Math.ceil(pMax / 10) * 10);
-  var kMax = 0;
-  seri.forEach(function(sr){ sr.kw.forEach(function(v){ if(v !== null && v > kMax) kMax = v; }); });
-  var kTop = Math.max(2, Math.ceil(kMax / 2) * 2);
-  var sy = function(p){ return y0 - (y0 - y1) * p / pTop; };
-  var sk = function(k){ return y0 - (y0 - y1) * k / kTop; };
-  var r1 = function(n){ return Math.round(n * 10) / 10; };
-  var xv = [], yv = [], kv = [];
-  for(var v = a0; v <= a1 + 1e-9; v += ad) xv.push({ x: r1(sx(v)), m: veSayi(v, 0) });
-  for(var q = 0; q <= 3; q++){
-    yv.push({ y: r1(sy(pTop * q / 3)), m: '%' + veSayi(pTop * q / 3, 0) });
-    kv.push({ y: r1(sk(kTop * q / 3)), m: veSayi(kTop * q / 3, 1) + (q === 3 ? ' kW' : '') });
+// ── TAHRİK ZİNCİRİ ──────────────────────────────────────────────────────────
+// Şema, ölçek değil: daireler çaplarıyla ORANTILI (en büyüğü 26 px), konum
+// ise sıra. Halka başına üç okuma: ad · çap · motor devrine oran.
+function _fwZincirSVG(v, W){
+  var n = Math.max(1, v.acc.length), H = Math.max(150, 58 + n * 36);
+  var r1 = function(x){ return Math.round(x * 10) / 10; };
+  var s = v.s, kip = v.kip, dr = v.dr, cOD = _fwNum(s.crankOD, NaN), fOD = _fwNum(s.fanOD, NaN);
+  var sOD = v.surucu ? v.surucu.od : NaN;
+  var caplar = [cOD, fOD, sOD].concat(v.acc.map(function(a){ return a.od; })).filter(function(x){ return x > 0; });
+  var dMax = caplar.length ? Math.max.apply(null, caplar) : 100;
+  var yar = function(d){ return (d > 0) ? Math.max(8, 26 * d / dMax) : 13; };
+  var yC = H / 2, h = '', yazi = '';
+  var halka = function(x, d, rol, ad, alt1, alt2){
+    var r = yar(d);
+    h += '<circle class="ve-fw-zn-k" data-rol="' + rol + '"' + (d > 0 ? '' : ' data-bos="1"')
+      + ' cx="' + r1(x) + '" cy="' + r1(yC) + '" r="' + r1(r) + '"/>'
+      + '<circle class="ve-fw-zn-gobek" cx="' + r1(x) + '" cy="' + r1(yC) + '" r="2"/>';
+    yazi += '<text class="ve-fw-zn-ad" x="' + r1(x) + '" y="' + r1(yC - r - 8) + '" text-anchor="middle">' + _fwEsc(ad) + '</text>'
+      + '<text class="ve-fw-zn-alt" x="' + r1(x) + '" y="' + r1(yC + r + 15) + '" text-anchor="middle">' + alt1 + '</text>'
+      + (alt2 ? '<text class="ve-fw-zn-oran" x="' + r1(x) + '" y="' + r1(yC + r + 29) + '" text-anchor="middle">' + alt2 + '</text>' : '');
+    return r;
+  };
+  var cap = function(d){ return (d > 0) ? 'Ø ' + veSayi(d, d % 1 ? 2 : 0) : 'Ø —'; };
+  var carp = function(x){ return (x > 0) ? '× ' + veSayi(x, 4) : '× —'; };
+  var cozuk = dr && dr.ok, oran = cozuk ? dr.ratio : NaN;
+  var xM = 96, xS;
+  if(kip === 'crankDirect'){
+    xS = xM;
+    halka(xM, sOD > 0 ? sOD : cOD, 'surucu', 'Krank = FEAD sürücüsü', cap(sOD > 0 ? sOD : cOD), carp(1));
+  } else {
+    var rM = halka(xM, cOD, 'motor', 'Motor · krank', cap(cOD), carp(1));
+    if(kip === 'derive'){
+      var xK = xM + 124, rK = yar(fOD);
+      var kopuk = !cozuk;
+      h += '<line class="ve-fw-zn-kayis' + (kopuk ? ' kopuk' : '') + '" x1="' + r1(xM) + '" y1="' + r1(yC - rM) + '" x2="' + r1(xK) + '" y2="' + r1(yC - rK) + '"/>'
+        + '<line class="ve-fw-zn-kayis' + (kopuk ? ' kopuk' : '') + '" x1="' + r1(xM) + '" y1="' + r1(yC + rM) + '" x2="' + r1(xK) + '" y2="' + r1(yC + rK) + '"/>';
+      yazi += '<text class="' + (kopuk ? 've-fw-zn-uyari' : 've-fw-zn-alt') + '" x="' + r1((xM + xK) / 2) + '" y="' + r1(yC - Math.max(rM, rK) - 24) + '" text-anchor="middle">'
+        + (kopuk ? 'oran çözülmedi — çap eksik' : 'ara kademe ' + veSayi(cOD, 2) + ' / ' + veSayi(fOD, 2)) + '</text>';
+      halka(xK, fOD, 'kademe', 'Kademe', cap(fOD), cozuk ? carp(oran) : '× —');
+      xS = xK + 110;
+      h += '<line class="ve-fw-zn-mil" x1="' + r1(xK) + '" y1="' + r1(yC) + '" x2="' + r1(xS) + '" y2="' + r1(yC) + '"/>';
+      yazi += '<text class="ve-fw-zn-alt" x="' + r1((xK + xS) / 2) + '" y="' + r1(yC - 6) + '" text-anchor="middle">aynı mil</text>';
+    } else {
+      xS = xM + 130;
+      h += '<line class="ve-fw-zn-mil" x1="' + r1(xM) + '" y1="' + r1(yC) + '" x2="' + r1(xS) + '" y2="' + r1(yC) + '"/>';
+      yazi += '<text class="ve-fw-zn-alt" x="' + r1((xM + xS) / 2) + '" y="' + r1(yC - 6) + '" text-anchor="middle">aynı mil · 1:1</text>';
+    }
+    halka(xS, sOD, 'surucu', v.surucu ? v.surucu.ad : 'FEAD sürücüsü', cap(sOD), cozuk ? carp(oran) : '× —');
   }
-  var svg = '<svg class="ve-fw-gr" viewBox="0 0 ' + W + ' ' + GH + '" role="img"'
-    + ' aria-label="Çalışma çevrimi: devre göre zaman payı ve aksesuar gücü">'
-    + _fwGrafEksen(x0, x1, y0, y1, xv, yv, 'motor devri · RPM', '', seri.length ? kv : null);
-  var gen = Math.max(4, Math.min(14, (x1 - x0) / (duty.length * 2.2)));
-  svg += '<g class="ve-fw-gr-cubuk" data-ve="cevrim-cubuk">';
-  duty.forEach(function(r){
-    var X = sx(_fwNum(r.rpm, 0)), Y = sy(_fwNum(r.dcPct, 0));
-    svg += '<rect x="' + r1(X - gen / 2) + '" y="' + r1(Y) + '" width="' + r1(gen) + '" height="' + r1(y0 - Y) + '"/>';
+  // Aksesuarlar: sürücünün kayışı, satır satır.
+  var xA = Math.min(W - 250, Math.max(xS + 150, W * 0.52)), rS = yar(sOD > 0 ? sOD : cOD);
+  if(!v.acc.length){
+    yazi += '<text class="ve-fw-zn-alt" x="' + r1(xA) + '" y="' + r1(yC + 4) + '">aksesuar yok</text>';
+  }
+  v.acc.forEach(function(a, k){
+    var y = (n === 1) ? yC : 30 + (H - 60) * k / (n - 1), r = yar(a.od);
+    h += '<line class="ve-fw-zn-kayis" x1="' + r1(xS + rS) + '" y1="' + r1(yC) + '" x2="' + r1(xA - r) + '" y2="' + r1(y) + '"/>'
+      + '<circle class="ve-fw-zn-k" data-rol="yuk" cx="' + r1(xA) + '" cy="' + r1(y) + '" r="' + r1(r) + '"/>'
+      + '<circle class="ve-fw-zn-gobek" cx="' + r1(xA) + '" cy="' + r1(y) + '" r="2"/>';
+    // Oran motor devrine göre; tahrik oranı çözülmediyse SÜRÜCÜYE göre ve öyle yazılır.
+    var o = cozuk ? a.oran : a.oran / ((v.rs && v.rs.driveRatio) || 1);
+    yazi += '<text class="ve-fw-zn-ad" x="' + r1(xA + r + 8) + '" y="' + r1(y - 1) + '">' + _fwEsc(a.ad) + '</text>'
+      + '<text class="ve-fw-zn-alt" x="' + r1(xA + r + 8) + '" y="' + r1(y + 12) + '">' + cap(a.od) + ' · '
+      + '<tspan class="ve-fw-zn-oran">' + carp(o) + '</tspan>' + (cozuk ? '' : ' sürücüye göre') + '</text>';
   });
-  svg += '</g>';
-  seri.forEach(function(sr){
-    var pts = [];
-    duty.forEach(function(r, i){ if(sr.kw[i] !== null) pts.push(r1(sx(_fwNum(r.rpm, 0))) + ',' + r1(sk(sr.kw[i]))); });
-    svg += '<polyline class="ve-fw-gr-cizgi" data-ve="cevrim-kw" style="stroke:' + sr.renk + '" points="' + pts.join(' ') + '"/>';
+  var bas = '<header class="ve-fw-gr-bas"><b>Tahrik zinciri</b><span>motor devrine oran · çaplar mm</span></header>';
+  return { h: H, bas: bas, svg: '<svg class="ve-fw-gr ve-fw-zn" viewBox="0 0 ' + W + ' ' + H + '" role="img"'
+    + ' aria-label="Tahrik zinciri: krank, FEAD sürücüsü ve aksesuarların motor devrine oranı">'
+    + h + '<g class="ve-fw-zn-yazi">' + yazi + '</g></svg>' };
+}
+// Etiket SEYRELTME: sıralama değere göre (büyük önce), yazı genişliğinden
+// yakın olan atlanır — "her noktaya sayı" okunmaz bir yığın olurdu (ölçüldü:
+// AG00976'da 6 güç etiketi birbirine biniyordu). Atlanan değer noktanın
+// ipucunda durur.
+function _fwSeyrek(ogeler){
+  var yer = [];
+  ogeler.slice().sort(function(a, c){ return c.deger - a.deger; }).forEach(function(e){
+    var w = e.metin.length * 6 + 8;
+    if(yer.every(function(q){ return Math.abs(q.x - e.x) >= (w + q.w) / 2; })){ e.w = w; yer.push(e); }
   });
-  return bas + svg + '</svg>';
+  return yer;
+}
+// ── DEVİR PENCERELERİ ───────────────────────────────────────────────────────
+// Sürekli sınırın ekseni genişletebileceği en uzak yer: tabanın (çevrim ·
+// rölanti · governed · overspeed) 1,4 katı — 12 örnekteki bütün sürekli sınırlar
+// (en uzağı 1,38) eksene girer. Daha uzağı çevrim noktalarını
+// sola ezerdi; o sınır satırın sağ ucunda yazılır.
+var VE_FW_PENCERE_PAY = 1.4;
+// Pencere yazısının harf başına eni (px, üst sınır): mikro yazıda ölçülen en
+// geniş uzun etiket 5,09 — yerleşim çakışmayı bu tahminle önler.
+var VE_FW_HARF = 5.6;
+function _fwPencereSVG(v, W, Hmax){
+  var bas = '<header class="ve-fw-gr-bas"><b>Devir pencereleri</b><span>tek eksen: motor devri</span>'
+    + '<span class="ve-fw-gr-lj"><i class="ve-fw-md-lj" data-tur="surekli"></i>sürekli sınırın üstü</span>'
+    + '<span class="ve-fw-gr-lj"><i class="ve-fw-md-lj" data-tur="anlik"></i>anlık sınırın üstü</span>'
+    + '<span class="ve-fw-gr-lj"><i class="ve-fw-md-lj" data-tur="nokta"></i>çevrim noktası</span></header>';
+  if(!v.duty.length) return bas + _fwMasaBos('Çevrim tablosu boş.');
+  var m = v.motor, r1 = function(x){ return Math.round(x * 10) / 10; };
+  var ucl = v.duty.map(function(d){ return d.rpm; }).concat([m.idle, m.gov, m.over].filter(function(x){ return x > 0; }));
+  // SÜREKLİ SINIR YAKINSA EKSEN ONU KAPSAR (motor devrinde tabanın en çok
+  // VE_FW_PENCERE_PAY katı): pay bir yazı değil bir aralık olarak görünsün.
+  // Daha uzak sınır ekseni ezerdi — satırın sağ ucunda yazılır (aşağıda).
+  var taban = Math.max.apply(null, ucl);
+  v.acc.forEach(function(a){
+    var c = a.lim && a.lim.maxCont && a.lim.maxCont.rpm;
+    if(c > 0 && a.oran > 0 && c / a.oran <= taban * VE_FW_PENCERE_PAY) ucl.push(c / a.oran);
+  });
+  var ust = Math.max.apply(null, ucl);
+  var ad = _fwGuzelAdim(ust * 1.08);
+  var xMax = Math.ceil(ust * 1.06 / ad) * ad;
+  // EKSENİN ÖTESİ BİR OLUK: eksende kalmayan sınır, çizim alanının SAĞINDA
+  // ayrılmış sütunda iki satır yazılır (hangi sınır · motorun hangi devrinde).
+  // Çizimin içinde yazılsaydı sağ kenara yakın kritik nokta ve sürekli sınır
+  // yazılarıyla yarışıyordu (ölçüldü: 12 örneğin 6'sında çakışma).
+  var oluk = v.acc.map(function(a){
+    var L = a.lim || {};
+    var d = [[L.maxCont && L.maxCont.rpm, 'sürekli'], [L.maxPeak && L.maxPeak.rpm, 'anlık']].filter(function(q){
+      return q[0] > 0 && a.oran > 0 && q[0] / a.oran >= xMax; });
+    return d.length ? {
+      s1: d.map(function(q){ return q[1] + ' ' + veSayi(q[0], 0); }).join(' · '),
+      s2: 'motorda ' + d.map(function(q){ return veSayi(q[0] / a.oran, 0); }).join(' · ') } : null;
+  });
+  var olukW = 0;
+  oluk.forEach(function(u){ if(u) olukW = Math.max(olukW, Math.max(u.s1.length, u.s2.length) * VE_FW_HARF + 16); });
+  // Güç satırı: her yükün her noktada gücü okunuyorsa (kapının kaynağı `_fwKwEff`).
+  var st = _fwState, b = _fwBuild, guc = null, gucEksik = [];
+  if(v.acc.length){
+    guc = v.duty.map(function(d){
+      var t = 0, tam = true;
+      v.acc.forEach(function(a){
+        var e = a.p ? _fwKwEff(b, st, d.i, a.p) : null;
+        if(e && e.kw !== null && Number.isFinite(e.kw)) t += e.kw;
+        else { tam = false; if(gucEksik.indexOf(a.ad) < 0) gucEksik.push(a.ad); }
+      });
+      return tam ? t : null;
+    });
+  }
+  var LW = 156, x0 = LW, x1 = W - 14 - olukW, UST = 30, ALT = 30;
+  var satirSay = 1 + v.acc.length + (guc ? 1 : 0);
+  var rh = Math.max(40, Math.min(66, (Hmax - UST - ALT) / satirSay));
+  var H = UST + ALT + rh * satirSay;
+  var sx = function(x){ return x0 + (x1 - x0) * x / xMax; };
+  var svg = '', yazi = '', y = UST;
+  // Kılavuzlar: motorun devir sınırları bütün satırları keser.
+  var kil = [['idle', 'rölanti'], ['gov', 'governed'], ['over', 'overspeed']], sonX = -1e9, kat = 0;
+  kil.forEach(function(k){
+    var x = m[k[0]];
+    if(!(x > 0)) return;
+    var X = sx(x);
+    kat = (X - sonX < 90) ? 1 - kat : 0; sonX = X;
+    svg += '<line class="ve-fw-md-kil" data-ve="motor-sinir" x1="' + r1(X) + '" y1="' + (UST - 4) + '" x2="' + r1(X) + '" y2="' + r1(H - ALT) + '"/>';
+    yazi += '<text class="ve-fw-md-kil-y" x="' + r1(X) + '" y="' + (kat ? 22 : 11) + '" text-anchor="middle">'
+      + k[1] + ' ' + veSayi(x, 0) + '</text>';
+  });
+  var pMax = Math.max.apply(null, v.duty.map(function(d){ return d.pay; }).concat([1]));
+  var satir = function(ad, alt, altSinif){
+    var ym = y + rh / 2;
+    yazi += '<text class="ve-fw-md-ad" x="0" y="' + r1(ym - 2) + '">' + _fwEsc(ad) + '</text>'
+      + (alt ? '<text class="' + (altSinif || 've-fw-md-alt') + '" x="0" y="' + r1(ym + 12) + '">' + alt + '</text>' : '');
+    svg += '<line class="ve-fw-md-iz" x1="' + x0 + '" y1="' + r1(ym) + '" x2="' + x1 + '" y2="' + r1(ym) + '"/>';
+    return ym;
+  };
+  var bolge = function(ym, a0, a1, tur){
+    if(!(a0 < xMax)) return;
+    var X0 = sx(Math.max(0, a0)), X1 = sx(Math.min(xMax, a1));
+    svg += '<rect class="ve-fw-md-bolge" data-tur="' + tur + '" x="' + r1(X0) + '" y="' + r1(ym - rh * 0.3) + '" width="'
+      + r1(Math.max(0, X1 - X0)) + '" height="' + r1(rh * 0.6) + '"/>';
+  };
+  // 1 · MOTOR — çevrimin noktaları zaman payıyla (nokta alanı ∝ pay).
+  var ym = satir('Motor · krank', '× 1', null);
+  if(m.gov > 0) bolge(ym, m.gov, m.over > 0 ? m.over : xMax, 'surekli');
+  if(m.over > 0) bolge(ym, m.over, xMax, 'anlik');
+  v.duty.forEach(function(d){
+    var X = sx(d.rpm), r = 3 + 5 * Math.sqrt(Math.max(0, d.pay) / pMax);
+    svg += '<circle class="ve-fw-md-nokta" data-ve="cevrim-nokta" data-durum="ok" cx="' + r1(X) + '" cy="' + r1(ym) + '" r="' + r1(r) + '">'
+      + '<title>' + veSayi(d.rpm, 0) + ' RPM · zamanın %' + veSayi(d.pay, 1) + '</title></circle>';
+  });
+  _fwSeyrek(v.duty.map(function(d){ return { x: sx(d.rpm), deger: d.pay, metin: '%' + veSayi(d.pay, 0) }; }))
+    .forEach(function(e){
+      yazi += '<text class="ve-fw-md-pay" x="' + r1(e.x) + '" y="' + r1(ym - 11) + '" text-anchor="middle">' + e.metin + '</text>';
+    });
+  y += rh;
+  // 2 · AKSESUARLAR — sınır motor devrine çevrilir (sınır / oran).
+  v.acc.forEach(function(a, ai){
+    var L = a.lim, cont = L && L.maxCont && L.maxCont.rpm, peak = L && L.maxPeak && L.maxPeak.rpm;
+    var opt = L && L.optimum && L.optimum.rpm, kp = a.kapi, alt, sinif = 've-fw-md-alt';
+    var oranYaz = '× ' + veSayi(a.oran, 3);
+    if(kp && kp.kritik){
+      alt = oranYaz + ' · ' + (kp.ok ? 'pay %' + veSayi(kp.kritik.payPct, 1) : 'aşıyor %' + veSayi(-kp.kritik.payPct, 1));
+      sinif = kp.ok ? 've-fw-md-alt' : 've-fw-md-alt ve-fw-md-alt-err';
+    } else alt = oranYaz + ' · ' + ((cont > 0 || peak > 0) ? 'değerlendirilemedi' : 'sınır yok');
+    var ym2 = satir(a.ad, alt, sinif);
+    if(cont > 0) bolge(ym2, cont / a.oran, peak > 0 ? peak / a.oran : xMax, 'surekli');
+    if(peak > 0) bolge(ym2, peak / a.oran, xMax, 'anlik');
+    // EKSENİN DIŞINDAKİ SINIR SESSİZCE DÜŞMEZ (ölçüldü: 18 sınırın 11'i ne
+    // çizgi ne yazı olarak görünüyordu): oluğa yazılır, eksenin ucuna işaret.
+    // Eksen içindeki sınırın yazısı üst çizgide, kritik noktanınki altta.
+    var ySinir = r1(ym2 - rh * 0.3 + 9), yAlt = r1(ym2 + rh * 0.3 + 10);
+    [[cont, 'sürekli', 've-fw-md-sinir-y'], [peak, 'anlık', 've-fw-md-sinir-y ve-fw-md-sinir-anlik']].forEach(function(q){
+      if(!(q[0] > 0) || q[0] / a.oran >= xMax) return;
+      var X = sx(q[0] / a.oran);
+      svg += '<line class="ve-fw-md-sinir" data-ve="devir-sinir" x1="' + r1(X) + '" y1="' + r1(ym2 - rh * 0.3) + '" x2="' + r1(X) + '" y2="' + r1(ym2 + rh * 0.3) + '"/>';
+      var et = q[1] + ' ' + veSayi(q[0], 0), sagda = X + 3 + et.length * VE_FW_HARF <= x1;
+      yazi += '<text class="' + q[2] + '" x="' + r1(sagda ? X + 3 : X - 3) + '" y="' + ySinir + '"'
+        + (sagda ? '' : ' text-anchor="end"') + '>' + et + '</text>';
+    });
+    var u = oluk[ai];
+    if(u){
+      svg += '<path class="ve-fw-md-uc" data-ve="devir-sinir-disari" d="M' + r1(x1 + 3) + ' ' + r1(ym2 - 4) + 'L' + r1(x1 + 9) + ' '
+        + r1(ym2) + 'L' + r1(x1 + 3) + ' ' + r1(ym2 + 4) + 'Z"/>';
+      yazi += '<text class="ve-fw-md-uc-y" data-ve="sinir-disari" x="' + r1(x1 + 14) + '" y="' + r1(ym2 - 2) + '">'
+        + '<tspan>' + u.s1 + '</tspan><tspan x="' + r1(x1 + 14) + '" dy="11">' + u.s2 + '</tspan></text>';
+    }
+    if(opt > 0 && sx(opt / a.oran) < x1){
+      var Xo = sx(opt / a.oran);
+      svg += '<line class="ve-fw-md-opt" data-ve="devir-sinir" x1="' + r1(Xo) + '" y1="' + r1(ym2 + rh * 0.12) + '" x2="' + r1(Xo) + '" y2="' + r1(ym2 + rh * 0.3) + '">'
+        + '<title>optimum ' + veSayi(opt, 0) + ' RPM</title></line>';
+    }
+    v.duty.forEach(function(d){
+      var acc = d.rpm * a.oran;
+      var durum = (peak > 0 && acc > peak) ? 'err' : (cont > 0 && acc > cont) ? 'warn' : 'ok';
+      svg += '<circle class="ve-fw-md-nokta" data-ve="aksesuar-nokta" data-durum="' + durum + '" cx="' + r1(sx(d.rpm)) + '" cy="' + r1(ym2) + '" r="3.5">'
+        + '<title>' + veSayi(d.rpm, 0) + ' RPM → ' + _fwEsc(a.ad) + ' ' + veSayi(acc, 0) + ' RPM</title></circle>';
+    });
+    // Kapının kritik noktası (çevrim tepesi · governed · overspeed) — kapının sayısı.
+    if(kp && kp.kritik && kp.kritik.motorRpm > 0 && sx(kp.kritik.motorRpm) <= x1){
+      var Xk = sx(kp.kritik.motorRpm);
+      svg += '<circle class="ve-fw-md-kritik" data-ve="kritik" data-durum="' + (kp.ok ? 'ok' : 'err') + '" cx="' + r1(Xk) + '" cy="' + r1(ym2) + '" r="6"/>';
+      // Sağda yer yoksa (oluk ayrı sütun) halkanın soluna; solda da yoksa sağa.
+      var metin = kp.kritik.ad + ' ' + veSayi(kp.kritik.accRpm, 0) + ' / ' + veSayi(kp.kritik.limit, 0);
+      var en = metin.length * VE_FW_HARF;
+      var sag = Xk + 10 + en <= x1 || Xk - 10 - en < x0;
+      yazi += '<text class="ve-fw-md-kritik-y" data-ve="kritik-y" x="' + r1(sag ? Xk + 10 : Xk - 10) + '" y="' + yAlt + '"'
+        + (sag ? '' : ' text-anchor="end"') + '>' + metin + '</text>';
+    }
+    y += rh;
+  });
+  // 3 · GÜÇ — toplam FEAD yükü her çevrim noktasında (kW).
+  if(guc){
+    var ym3 = y + rh / 2, tam = guc.every(function(g){ return g !== null; });
+    var gMax = Math.max.apply(null, guc.filter(function(g){ return g !== null; }).concat([0.001]));
+    yazi += '<text class="ve-fw-md-ad" x="0" y="' + r1(ym3 - 2) + '">FEAD gücü</text>'
+      + '<text class="ve-fw-md-alt" x="0" y="' + r1(ym3 + 12) + '">kW · aksesuarların toplamı</text>';
+    var tab = y + rh - 6, tavan = rh - 22;
+    svg += '<line class="ve-fw-md-iz" x1="' + x0 + '" y1="' + r1(tab) + '" x2="' + x1 + '" y2="' + r1(tab) + '"/>';
+    if(tam){
+      var cub = v.duty.map(function(d, k){
+        var X = sx(d.rpm), hh = Math.max(1, tavan * guc[k] / gMax);
+        svg += '<rect class="ve-fw-md-guc" data-ve="guc-cubuk" x="' + r1(X - 4) + '" y="' + r1(tab - hh) + '" width="8" height="' + r1(hh) + '" rx="1.5">'
+          + '<title>' + veSayi(d.rpm, 0) + ' RPM · ' + veSayi(guc[k], 2) + ' kW</title></rect>';
+        return { x: X, deger: guc[k], metin: veSayi(guc[k], 1), y: tab - hh - 4 };
+      });
+      _fwSeyrek(cub).forEach(function(e){
+        yazi += '<text class="ve-fw-md-guc-y" x="' + r1(e.x) + '" y="' + r1(e.y) + '" text-anchor="middle">' + e.metin + '</text>';
+      });
+    } else {
+      yazi += '<text class="ve-fw-md-uyari" x="' + x0 + '" y="' + r1(ym3 + 4) + '">güç yok: ' + _fwEsc(gucEksik.join(' · ')) + '</text>';
+    }
+    y += rh;
+  }
+  // Eksen: motor devri.
+  var eks = '<line class="ve-fw-md-eksen" x1="' + x0 + '" y1="' + r1(H - ALT) + '" x2="' + x1 + '" y2="' + r1(H - ALT) + '"/>';
+  for(var t = 0; t <= xMax + 1e-9; t += ad){
+    eks += '<line class="ve-fw-md-eksen" x1="' + r1(sx(t)) + '" y1="' + r1(H - ALT) + '" x2="' + r1(sx(t)) + '" y2="' + r1(H - ALT + 4) + '"/>';
+    yazi += '<text class="ve-fw-md-tik" x="' + r1(sx(t)) + '" y="' + r1(H - ALT + 16) + '" text-anchor="middle">' + veSayi(t, 0) + '</text>';
+  }
+  yazi += '<text class="ve-fw-md-tik" x="' + x1 + '" y="' + r1(H - 2) + '" text-anchor="end">motor devri · RPM</text>';
+  var not = v.not ? '<p class="ve-fw-gr-not" data-ve="pencere-not">' + _fwEsc(v.not) + '</p>' : '';
+  return bas + '<svg class="ve-fw-gr ve-fw-md" viewBox="0 0 ' + W + ' ' + r1(H) + '" role="img"'
+    + ' aria-label="Devir pencereleri: motor devri ekseninde çevrim noktaları ve aksesuar sınırları">'
+    + svg + eks + '<g class="ve-fw-md-yazi">' + yazi + '</g></svg>' + not;
 }
 // Model düğümünün ADI — sihirbazın kendi satırından (`wz-<anahtar>`), yoksa
 // düğümün adı, o da yoksa çekirdeğin kasnak adı. Grafik ve lejant aynı adı
@@ -3385,78 +3725,6 @@ function _fwDugumAdi(node, q){
   var p = key ? (_fwState.pulleys || []).filter(function(x){ return x.key === key; })[0] : null;
   if(p) return p.name || _fwDefName(p.type);
   return (node && node.customName) || (q && q.name) || '';
-}
-function _fwDevirGrafik(b, W, H){
-  var st = _fwState, s = st.solver || {};
-  var bas = '<header class="ve-fw-gr-bas"><b>Aksesuar devri ve katalog sınırları</b>';
-  var rs = b && (b.sys || b.ratioSys);
-  if(!rs || typeof FEADCore === 'undefined' || typeof FEADCore.accessoryRpm !== 'function')
-    return bas + '</header>' + _fwMasaBos('Tahrik oranı henüz kurulamadı.');
-  var duty = (s.duty || []).map(function(r){ return _fwNum(r.rpm, NaN); }).filter(function(v){ return v > 0; });
-  var gov = _fwNum(s.governedRpm, NaN), over = _fwNum(s.overspeedRpm, NaN), idle = _fwNum(s.idleRpm, NaN);
-  var uc = duty.concat([gov, over, idle].filter(function(v){ return v > 0; }));
-  if(!uc.length) return bas + '</header>' + _fwMasaBos('Devir noktası yok.');
-  var rMax = Math.max.apply(null, uc);
-  var crk = (rs._crkIdx != null) ? rs._crkIdx : -1, ti = (b.sys && b.sys._tenIdx != null) ? b.sys._tenIdx : -1;
-  var seri = [], yMax = 0;
-  (rs.pulleys || []).forEach(function(q, i){
-    if(i === crk || i === ti) return;
-    var node = b.order && b.order[i], d = node && node.type && (typeof componentDefs !== 'undefined') ? componentDefs[node.type] || {} : {};
-    if(d.isFeadIdler) return;
-    var oran;
-    try { oran = FEADCore.accessoryRpm(rs, i, 1000) / 1000; } catch(e){ oran = NaN; }
-    if(!Number.isFinite(oran)) return;
-    var lim = (typeof veFeadAccLimits === 'function') ? veFeadAccLimits(node) : null;
-    var sr = { ad: _fwDugumAdi(node, b.sys.pulleys[i]), oran: oran, lim: lim };
-    seri.push(sr);
-    yMax = Math.max(yMax, oran * rMax);
-    if(lim){ ['optimum', 'maxCont', 'maxPeak'].forEach(function(k){
-      var v = lim[k] && lim[k].rpm; if(v > 0) yMax = Math.max(yMax, v); }); }
-  });
-  if(!seri.length) return bas + '</header>' + _fwMasaBos('Aksesuar yok.');
-  seri.forEach(function(sr, i){
-    sr.renk = VE_FW_SERI[i % VE_FW_SERI.length];
-    bas += '<span class="ve-fw-gr-lj"><i style="border-top-color:' + sr.renk + '"></i>'
-      + _fwEsc(sr.ad) + ' × ' + veSayi(sr.oran, 3) + '</span>';
-  });
-  if(!(gov > 0)) bas += '<span class="ve-fw-gr-not">governed devri yok</span>';
-  bas += '</header>';
-  var GH = H - 40, x0 = 56, x1 = W - 14, y0 = GH - 34, y1 = 14;
-  var ad = _fwGuzelAdim(rMax * 1.1), a1 = Math.ceil(rMax * 1.08 / ad) * ad;
-  var yad = _fwGuzelAdim(yMax * 1.1), yTop = Math.ceil(yMax * 1.1 / yad) * yad;
-  var r1 = function(n){ return Math.round(n * 10) / 10; };
-  var sx = function(v){ return x0 + (x1 - x0) * v / a1; };
-  var sy = function(v){ return y0 - (y0 - y1) * v / yTop; };
-  var xv = [], yv = [];
-  for(var v = 0; v <= a1 + 1e-9; v += ad) xv.push({ x: r1(sx(v)), m: veSayi(v, 0) });
-  for(var w = 0; w <= yTop + 1e-9; w += yad) yv.push({ y: r1(sy(w)), m: veSayi(w, 0) });
-  var svg = '<svg class="ve-fw-gr" viewBox="0 0 ' + W + ' ' + GH + '" role="img"'
-    + ' aria-label="Aksesuar devri, katalog sınırlarıyla">'
-    + _fwGrafEksen(x0, x1, y0, y1, xv, yv, 'motor devri · RPM', 'aksesuar RPM', null);
-  var dMax = duty.length ? Math.max.apply(null, duty) : NaN;
-  seri.forEach(function(sr){
-    var lim = sr.lim;
-    if(lim){
-      [['optimum', 'optimum', 've-fw-gr-sinir-opt'], ['maxCont', 'maks. sürekli', 've-fw-gr-sinir-cont'],
-       ['maxPeak', 'maks. anlık', 've-fw-gr-sinir-peak']].forEach(function(k){
-        var v = lim[k[0]] && lim[k[0]].rpm;
-        if(!(v > 0)) return;
-        svg += '<line class="' + k[2] + '" data-ve="devir-sinir" x1="' + x0 + '" y1="' + r1(sy(v)) + '" x2="' + x1 + '" y2="' + r1(sy(v)) + '"/>'
-          + '<text class="' + k[2] + '-y" x="' + (x0 + 6) + '" y="' + r1(sy(v) - 4) + '">'
-          + _fwEsc(sr.ad) + ' · ' + k[1] + ' ' + veSayi(v, 0) + '</text>';
-      });
-    }
-    svg += '<line class="ve-fw-gr-cizgi" style="stroke:' + sr.renk + '" x1="' + r1(sx(0)) + '" y1="' + r1(sy(0))
-      + '" x2="' + r1(sx(a1)) + '" y2="' + r1(sy(sr.oran * a1)) + '"/>';
-    if(dMax > 0){
-      var tepe = sr.oran * dMax, cont = lim && lim.maxCont && lim.maxCont.rpm;
-      svg += '<circle class="ve-fw-gr-tepe" style="fill:' + sr.renk + '" cx="' + r1(sx(dMax)) + '" cy="' + r1(sy(tepe)) + '" r="4.5"/>';
-      if(cont > 0)
-        svg += '<text class="ve-fw-gr-tepe-y" x="' + r1(sx(dMax) - 8) + '" y="' + r1(sy(tepe) - 8) + '" text-anchor="end">'
-          + 'tepe ' + veSayi(tepe, 0) + ' · pay %' + veSayi((cont - tepe) / cont * 100, 1) + '</text>';
-    }
-  });
-  return bas + svg + '</svg>';
 }
 
 // (Kayış Yolu adımı KALDIRILDI — yeteneği Kasnaklar tablosuna taşındı;
@@ -4607,9 +4875,42 @@ function veFeadWizEngRender(){
 }
 
 // ── 6 · MOTOR VE ÇALIŞMA ÇEVRİMİ ───────────────────────────────────────────
+// ── FEAD'İ NE TAHRİK EDİYOR ─────────────────────────────────────────────────
+// Kullanıcı tarifi (2026-09-04) üç düzen ayırıyor; ikisi oran 1 veriyor ve
+// aralarındaki fark ÇAPTA, oranda değil. Sürücü kasnağın çapı ZATEN Kasnaklar
+// tablosunda (sürücü satırı) — buraya ikinci kez sorulmuyor; sorulan şey
+// yalnız KRANK ile o kasnak arasındaki ilişki. Oran KURULACAK modelin çözücü
+// düğümünden (`veFeadWizNodes`): ekranın söylediği ile çözülen aynı sayı.
+function _fwTahrik(st){
+  var sd = null;
+  if(st) veFeadWizNodes(st).nodes.forEach(function(n){ if(n.type === 'fead-solver') sd = n.data; });
+  return (typeof veFeadDriveRatio === 'function') ? veFeadDriveRatio(sd || {}) : { ratio: 1, ok: false, mode: 'derive' };
+}
+function _fwTahrikOkuHTML(st){
+  st = st || _fwState || {};
+  var s = st.solver || {}, dr = _fwTahrik(st), kip = _fwOranKipi(s);
+  var src = null;
+  (st.pulleys || []).forEach(function(p){ if(p.driver) src = _fwNum(p.od, null); });
+  var c = _fwNum(s.crankOD, NaN), f = _fwNum(s.fanOD, NaN);
+  // TEK ÇAP: oran ÇÖZÜLMEZ (işletme hesabı onu bekler, kural 46) ve bunu
+  // adıyla söyler — yalnız kademe VARKEN; yokken uyarı olmayan alanı gösterirdi.
+  var yarim = kip === 'derive' && (c > 0) !== (f > 0);
+  return '<div class="ve-fw-reads">'
+      + _fwRead('FEAD\'i tahrik eden çap (Kasnaklar tablosundan)',
+          src === null ? '— (sürücü kasnak seçilmedi)' : _fwFmt(src, 2) + ' mm')
+    + '</div>'
+    + '<div class="ve-fw-reads">'
+      + _fwRead('Tahrik oranı', dr.ok ? _fwFmt(dr.ratio, 4) : '—')
+      + _fwRead('Kaynak', veFeadDriveModeLabel(dr.mode, dr.ok))
+    + '</div>'
+    + (yarim
+        ? '<div class="ve-fw-issue ve-fw-issue-warn">! <b>Yalnız bir çap girildi.</b> '
+          + 'Oran iki çaptan türüyor ve biri boşken çözülmüyor. İkincisini de girin, '
+          + 'ya da ara kademe yoksa üstteki seçimi değiştirin.</div>'
+        : '');
+}
 function _fwStepCevrim(b){
   var st = _fwState, s = st.solver || {};
-  var dr = (typeof veFeadDriveRatio === 'function') ? veFeadDriveRatio(s) : { ratio: 1 };
 
   // ── ORAN ELLE GİRİLEMEZ; KADEMENİN VARLIĞI BİR SEÇİM ────────────────────
   // Kullanıcı isteği (2026-09-01): *"'Motor ve çevrim' kısmında oran sadece
@@ -4630,18 +4931,7 @@ function _fwStepCevrim(b){
   // TEK ÇAP GİRİLİRSE oran yine 1 kalır ve bu SESSİZ olurdu — o yüzden
   // aşağıda adıyla uyarılıyor (ama yalnız kademe VARKEN; kademe yokken
   // uyarı kullanıcıyı olmayan bir alana yönlendirirdi).
-  var _kademe = (s.ratioMode === 'unity' || s.ratioMode === 'crankDirect' || s.ratioMode === 'derive')
-              ? s.ratioMode : 'crankDirect';
-  var _cOD = _fwNum(s.crankOD, NaN), _fOD = _fwNum(s.fanOD, NaN);
-  var _yarim = _kademe === 'derive'
-    && (Number.isFinite(_cOD) && _cOD > 0) !== (Number.isFinite(_fOD) && _fOD > 0);
-  // ── FEAD'İ NE TAHRİK EDİYOR ─────────────────────────────────────────────
-  // Kullanıcı tarifi (2026-09-04) üç düzen ayırıyor; ikisi oran 1 veriyor ve
-  // aralarındaki fark ÇAPTA, oranda değil. Sürücü kasnağın çapı ZATEN
-  // Kasnaklar tablosunda (sürücü satırı) — buraya ikinci kez sorulmuyor;
-  // sorulan şey yalnız KRANK ile o kasnak arasındaki ilişki.
-  var _srcOD = null;
-  (st.pulleys || []).forEach(function(p){ if(p.driver) _srcOD = _fwNum(p.od, null); });
+  var _kademe = _fwOranKipi(s);
   var h = _fwCard('Tahrik', 'var(--accent-warning)',
       // LİSTE TEK KAYNAKTAN (`VE_FEAD_DRIVE_MODES`, fead-model.js): Çözücü
       // paneli aynı soruyu soruyor ve ikinci bir kopya tutulduğunda iki yüzey
@@ -4655,20 +4945,9 @@ function _fwStepCevrim(b){
             ? _fwGrid([_fwField('Krank kasnağı Ø [mm] — motor verisi',
                 _fwInp('solver.crankOD', { ph: '197.32' }))], 1)
             : ''))
-    + '<div class="ve-fw-reads">'
-      + _fwRead('FEAD\'i tahrik eden çap (Kasnaklar tablosundan)',
-          _srcOD === null ? '— (sürücü kasnak seçilmedi)' : _fwFmt(_srcOD, 2) + ' mm')
-    + '</div>'
-    + '<div class="ve-fw-reads">'
-      + _fwRead('Tahrik oranı', _fwFmt(dr.ratio, 4))
-      + _fwRead('Kaynak', veFeadDriveModeLabel(dr.mode, dr.ok))
-    + '</div>'
-    + (_yarim
-        ? '<div class="ve-fw-issue ve-fw-issue-warn">! <b>Yalnız bir çap girildi.</b> '
-          + 'Oran iki çaptan türüyor; biri boşken <b>1:1</b> alınır ve bu, girdiğiniz '
-          + 'çapın hiç kullanılmadığı anlamına gelir. İkincisini de girin, ya da ara '
-          + 'kademe gerçekten yoksa üstteki seçimi değiştirin.</div>'
-        : '')
+    // Okumalar CANLI yamanın hedefi (`veFeadWizLive`): çap yazılırken oran,
+    // kaynak ve yarım-çap uyarısı yerinde tazelenir, alanın odağı korunur.
+    + '<div id="ve-fw-tahrik-oku">' + _fwTahrikOkuHTML(st) + '</div>'
     );
 
   // ── MOTOR KÜNYESİ: ON ALAN SAYFADAN KALKTI ──────────────────────────────
@@ -5390,14 +5669,19 @@ if(typeof module !== 'undefined' && module.exports){
     // ÇİZİM MASASI (tasarım tuvali · F)
     _fwMasaHTML: _fwMasaHTML, _fwMasaCizim: _fwMasaCizim, _fwMasaLejantHTML: _fwMasaLejantHTML,
     _fwMasaYenile: _fwMasaYenile, _fwEksenSVG: _fwEksenSVG, _fwGuzelAdim: _fwGuzelAdim,
-    _fwKasnakMasa: _fwKasnakMasa, _fwKasnakXY: _fwKasnakXY, _fwKasnakTasi: _fwKasnakTasi,
+    _fwKasnakMasa: _fwKasnakMasa, _fwKasnakXY: _fwKasnakXY,
+    veFeadWizMasaBas: veFeadWizMasaBas, veFeadWizMasaKaydir: veFeadWizMasaKaydir,
+    veFeadWizMasaBirak: veFeadWizMasaBirak, veFeadWizMasaTeker: veFeadWizMasaTeker,
+    _fwLayout: _fwLayout, _fwGorunum: _fwGorunum, _fwGorZoom: _fwGorZoom, VE_FW_GOR_Z: VE_FW_GOR_Z,
     _fwKasnakListeHTML: _fwKasnakListeHTML, _fwKasnakEditorHTML: _fwKasnakEditorHTML,
     _fwSarimlar: _fwSarimlar, _fwMasaTus: _fwMasaTus, veFeadWizSec: veFeadWizSec,
     veFeadWizZoom: veFeadWizZoom, veFeadWizGergiGor: veFeadWizGergiGor,
     veFeadWizKasnakEkle: veFeadWizKasnakEkle, veFeadWizTemas: veFeadWizTemas,
     veFeadWizTenTemas: veFeadWizTenTemas, veFeadWizMasaBas: veFeadWizMasaBas,
     _fwGergiVeri: _fwGergiVeri, _fwGergiMasa: _fwGergiMasa, _fwYayGrafikHTML: _fwYayGrafikHTML,
-    _fwCevrimMasa: _fwCevrimMasa, _fwCevrimGrafik: _fwCevrimGrafik, _fwDevirGrafik: _fwDevirGrafik,
+    _fwOranKipi: _fwOranKipi, _fwOranDuzelt: _fwOranDuzelt, _fwTahrik: _fwTahrik, _fwTahrikOkuHTML: _fwTahrikOkuHTML,
+    _fwCevrimMasa: _fwCevrimMasa, _fwCevrimVeri: _fwCevrimVeri, _fwZincirSVG: _fwZincirSVG, _fwPencereSVG: _fwPencereSVG,
+    VE_FW_HARF: VE_FW_HARF, VE_FW_PENCERE_PAY: VE_FW_PENCERE_PAY,
     _fwOzetMasa: _fwOzetMasa, _fwMerkezKatman: _fwMerkezKatman, _fwOzetKapilar: _fwOzetKapilar,
     _fwKayisMasa: _fwKayisMasa, _fwKaynakMasa: _fwKaynakMasa,
     veFeadWizCevrimAc: veFeadWizCevrimAc, veFeadWizCevrimKapat: veFeadWizCevrimKapat,
@@ -5406,11 +5690,11 @@ if(typeof module !== 'undefined' && module.exports){
     _fwMasaDurum: function(y){
       if(y){
         if('sec' in y) _fwSec = y.sec;
-        if('zoom' in y) _fwZoom = y.zoom;
+        if('gor' in y) _fwGor[_fwGorAnahtar()] = Object.assign({ z: 1, tx: 0, ty: 0 }, y.gor || {});
         if('gergi' in y) _fwGergiGor = y.gergi;
         if('masa' in y) _fwMasa = y.masa;
       }
-      return { sec: _fwSec, zoom: _fwZoom, gergi: _fwGergiGor, masa: _fwMasa, xf: _fwMasaXf,
+      return { sec: _fwSec, gor: Object.assign({}, _fwGorunum()), gergi: _fwGergiGor, masa: _fwMasa, xf: _fwMasaXf,
                kat: _fwMasaKat, izgara: _fwMasaIzgara };
     },
     veFeadWizEngineLib: veFeadWizEngineLib, veFeadWizAccLib: veFeadWizAccLib,
@@ -5475,6 +5759,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizStpDrop: veFeadWizStpDrop, veFeadWizStpSurukle: veFeadWizStpSurukle,
     veFeadWizStpHesapla: veFeadWizStpHesapla, _fwStpCizimSVG: _fwStpCizimSVG,
     veFeadWizSiraOnay: veFeadWizSiraOnay, VE_FW_SIRA_AGAC: VE_FW_SIRA_AGAC,
+    veFeadWizIssueHTML: veFeadWizIssueHTML,
     veFeadWizStp: veFeadWizStp,
     // 3B görüntüleyicinin paneli (js/cp-fead-3b.js) bunları kullanıyor
     _fwEsc: _fwEsc, _fwFmt: _fwFmt, _fwStpRolAd: _fwStpRolAd, _fwStpRolDenetim: _fwStpRolDenetim,

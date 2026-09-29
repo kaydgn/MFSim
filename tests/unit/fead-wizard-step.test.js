@@ -459,6 +459,19 @@ describe('kayış sırası bir VARSAYIM — Kasnaklar adımı söyler', () => {
     expect(sayi()).toBe(1);
     expect(wiz.veFeadWizStepState(wiz.veFeadWizBuild(), 1).durum).toBe('warn');
     expect(wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild())).toContain('id="ve-fw-sira-onay"');
+    // ONAY SIRANIN KARTINDA (kullanıcı isteği 2026-09-29); alttaki uyarı
+    // kutusu aynı cümleyi İKİNCİ KEZ basmaz ama rayın rozeti onu sayar.
+    const d = document.createElement('div');
+    d.innerHTML = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
+    const kart = [...d.querySelectorAll('.ve-fw-card')].find((c) =>
+      c.querySelector('.ve-fw-card-h').textContent.trim() === 'Kasnaklar — kayış sırasıyla');
+    expect(kart.querySelector('#ve-fw-sira-onay')).not.toBeNull();
+    // Metin DOM'dan okunur: uyarı tırnak taşıyor ve HTML'de kaçışlanıyor —
+    // ham dizeyle arayan kapı basılmış uyarıyı hiç göremiyordu (mutasyonla ölçüldü).
+    const kutu = document.createElement('div');
+    kutu.innerHTML = wiz.veFeadWizIssueHTML(wiz.veFeadWizBuild(), 1);
+    expect(kutu.textContent).not.toContain(wiz.VE_FW_SIRA_AGAC);
+    expect(wiz.veFeadWizIssues(wiz.veFeadWizBuild(), 1).some((x) => x.m === wiz.VE_FW_SIRA_AGAC)).toBe(true);
     expect(wiz.veFeadWizSiraOnay()).toBe(true);
     expect(sayi()).toBe(0);
     expect(wiz.veFeadWizStepState(wiz.veFeadWizBuild(), 1).durum).toBe('ok');

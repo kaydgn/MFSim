@@ -169,7 +169,7 @@ describe('SONUÇ ÇİPİ — masanın sol üstünde, damga rayla aynı', () => {
 });
 
 // ═══════════════════════════════════════════════════ KASNAKLAR MASASI ══
-describe('KASNAKLAR MASASI — çiziciden, eksenli, seçilir ve taşınır', () => {
+describe('KASNAKLAR MASASI — çiziciden, eksenli; tıkla seç, sürükle kaydır', () => {
   test('göbek numaraları listenin numaralarıyla BİREBİR', () => {
     const st = ornek();
     const d = adimDOM(1);
@@ -207,10 +207,15 @@ describe('KASNAKLAR MASASI — çiziciden, eksenli, seçilir ve taşınır', () 
   });
 
   test('çizici tek kaynak: veFeadLayoutSVG — masa kendi geometrisini kurmaz', () => {
+    // Görünüm katmanı (`_fwLayout`) çiziciyi çağırır, geometri kurmaz.
+    const k0 = WIZ_SRC.slice(WIZ_SRC.indexOf('function _fwLayout('));
+    const katman = k0.slice(0, k0.indexOf('\n}\n'));
+    expect(katman).toContain('veFeadLayoutSVG(');
+    expect(katman).not.toMatch(/FEADCore\.(geometryAt|solve)/);
     ['_fwKasnakMasa', '_fwGergiMasa', '_fwKayisMasa', '_fwOzetMasa', '_fwKaynakMasa'].forEach((ad) => {
       const g = WIZ_SRC.slice(WIZ_SRC.indexOf('function ' + ad + '('));
       const govde = g.slice(0, g.indexOf('\n}\n'));
-      expect(govde).toContain('veFeadLayoutSVG(');
+      expect(govde).toContain('_fwLayout(');
       // Geometri çekirdeğe SORULMAZ — çizicinin dönüşümü (T) okunur.
       expect(govde).not.toMatch(/FEADCore\.(geometryAt|solve)/);
     });
@@ -227,61 +232,118 @@ describe('KASNAKLAR MASASI — çiziciden, eksenli, seçilir ve taşınır', () 
     expect(d.querySelector('#ve-fw-ed').getAttribute('data-fw-k')).toBe(alt.key);
   });
 
-  test('taşıma 0,1 mm\'ye yuvarlanır ve modele yazılır', () => {
+  // MASA BİR GÖRÜNTÜLEYİCİ (kullanıcı isteği 2026-09-29): *"Yakınlaştırma-
+  // uzaklaştırma sağa sola pan yapma gibi özellikler gelsin … Tutup hareket
+  // etmeyi de kaldıralım."* Sürüklemek görünümü kaydırır — kasnağın ÜSTÜNDEN
+  // başlasa da; koordinat yalnız editörde değişir.
+  const olay = (x, y, hedef) => ({ button: 0, clientX: x, clientY: y, target: hedef, preventDefault() {} });
+  test('SÜRÜKLEMEK KAYDIRIR, kasnak TAŞINMAZ — kasnağın üstünden başlasa da', () => {
     const st = ornek();
-    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
-    const x0 = Number(alt.x), y0 = Number(alt.y);
-    expect(wiz._fwKasnakTasi(alt.key, x0 + 3.1234, y0 - 2.0567)).toBe(true);
-    expect(alt.x).toBeCloseTo(Math.round((x0 + 3.1234) * 10) / 10, 9);
-    expect(alt.y).toBeCloseTo(Math.round((y0 - 2.0567) * 10) / 10, 9);
-    expect(wiz.veFeadWizBuild().ok).toBe(true);
+    wiz.veFeadWizGoto(1);
+    const once = st.pulleys.map((p) => [p.x, p.y]);
+    const ten0 = [st.ten.cenX, st.ten.cenY];
+    const hit = document.querySelector('#ve-fw-masa .ve-fw-hit');
+    wiz.veFeadWizMasaBas(olay(100, 100, hit));
+    wiz.veFeadWizMasaKaydir(olay(160, 130));
+    wiz.veFeadWizMasaBirak();
+    expect(st.pulleys.map((p) => [p.x, p.y])).toEqual(once);
+    expect([st.ten.cenX, st.ten.cenY]).toEqual(ten0);
+    const g = wiz._fwMasaDurum().gor, k = KAT();
+    expect(g.z).toBe(1);
+    expect(g.tx).toBeCloseTo(60 / k, 9);            // ekran px / ölçek = çizim birimi
+    expect(g.ty).toBeCloseTo(30 / k, 9);
+    expect(WIZ_SRC).not.toMatch(/function _fwKasnakTasi\b/);   // taşıma yolu YOK
   });
 
-  // Çizim masası kuralı (kanvastaki Çizim Masası'nın aynısı): kayışı koparan
-  // adım YAZILMAZ — model çözülemeyen bir konumda bırakılmaz, eski konum kalır.
-  test('KOPARAN KONUM YAZILMAZ — eski konum korunur, model çözülür kalır', () => {
+  test('oynamadan bırakılan basış bir TIK: altındaki kasnağı seçer, görünüm oynamaz', () => {
     const st = ornek();
+    wiz.veFeadWizGoto(1);
     const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
-    const x0 = alt.x, y0 = alt.y;
-    // Gerginin avara merkezinin tam üstü: çekirdek bu yolu çözemez.
-    expect(wiz._fwKasnakTasi(alt.key, Number(st.ten.cenX), Number(st.ten.cenY))).toBe(false);
-    expect(alt.x).toBe(x0);
-    expect(alt.y).toBe(y0);
-    expect(wiz.veFeadWizBuild().ok).toBe(true);
+    const hit = document.querySelector('#ve-fw-masa .ve-fw-hit[data-fw-k="' + alt.key + '"]');
+    wiz.veFeadWizMasaBas(olay(200, 200, hit));
+    wiz.veFeadWizMasaKaydir(olay(202, 201));        // eşiğin altında: el titremesi
+    wiz.veFeadWizMasaBirak();
+    expect(wiz._fwMasaDurum().sec).toBe(alt.key);
+    expect(wiz._fwMasaDurum().gor).toEqual({ z: 1, tx: 0, ty: 0 });
+    expect(document.querySelector('#ve-fw-ed').getAttribute('data-fw-k')).toBe(alt.key);
   });
 
-  test('ok tuşu YALNIZ masa odaktayken: 0,1 mm, Shift ile 1 mm; y yukarı artı', () => {
+  test('ok tuşu masayı KAYDIRIR (kasnağı oynatmaz); yalnız masa odaktayken', () => {
     const st = ornek();
     wiz.veFeadWizGoto(1);
     const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
     wiz.veFeadWizSec(alt.key);
-    const x0 = Number(alt.x), y0 = Number(alt.y);
-    // Odak masada değil → tuş sihirbazın değil (alanın imleci).
-    expect(wiz._fwMasaTus({ key: 'ArrowRight', preventDefault() {} })).toBe(false);
-    expect(Number(alt.x)).toBe(x0);
-    const masa = document.getElementById('ve-fw-masa');
-    masa.focus();
-    expect(wiz._fwMasaTus({ key: 'ArrowRight', preventDefault() {} })).toBe(true);
-    expect(Number(alt.x)).toBeCloseTo(x0 + 0.1, 9);
+    const x0 = alt.x, y0 = alt.y;
+    expect(wiz._fwMasaTus({ key: 'ArrowRight', preventDefault() {} })).toBe(false);  // odak alanda
     document.getElementById('ve-fw-masa').focus();
-    expect(wiz._fwMasaTus({ key: 'ArrowUp', shiftKey: true, preventDefault() {} })).toBe(true);
-    expect(Number(alt.y)).toBeCloseTo(y0 + 1, 9);
+    expect(wiz._fwMasaTus({ key: 'ArrowRight', preventDefault() {} })).toBe(true);
+    expect(wiz._fwMasaDurum().gor.tx).toBeCloseTo(-40 / KAT(), 9);
+    expect([alt.x, alt.y]).toEqual([x0, y0]);
+    document.getElementById('ve-fw-masa').focus();
+    expect(wiz._fwMasaTus({ key: '+', preventDefault() {} })).toBe(true);
+    expect(wiz._fwMasaDurum().gor.z).toBeCloseTo(1.4, 9);
     // Alt+ok sihirbazın adım gezinmesi — masa almaz.
     expect(wiz._fwMasaTus({ key: 'ArrowLeft', altKey: true, preventDefault() {} })).toBe(false);
   });
 
-  test('yakınlık: ×1,4 adım, tavan 6, "Sığdır" 1 — ölçek gerçekten büyür', () => {
+  test('yakınlık: ×1,4 adım, aralık 0,5–12, "Sığdır" 1 — ölçek gerçekten büyür', () => {
     ornek();
     wiz.veFeadWizGoto(1);
     const s0 = wiz._fwMasaDurum().xf.s;
     wiz.veFeadWizZoom(1);
-    expect(wiz._fwMasaDurum().zoom).toBeCloseTo(1.4, 9);
+    expect(wiz._fwMasaDurum().gor.z).toBeCloseTo(1.4, 9);
     expect(wiz._fwMasaDurum().xf.s / s0).toBeCloseTo(1.4, 6);
-    for (let i = 0; i < 10; i++) wiz.veFeadWizZoom(1);
-    expect(wiz._fwMasaDurum().zoom).toBe(6);
+    for (let i = 0; i < 12; i++) wiz.veFeadWizZoom(1);
+    expect(wiz._fwMasaDurum().gor.z).toBe(wiz.VE_FW_GOR_Z[1]);
+    for (let i = 0; i < 20; i++) wiz.veFeadWizZoom(-1);
+    expect(wiz._fwMasaDurum().gor.z).toBe(wiz.VE_FW_GOR_Z[0]);
     wiz.veFeadWizZoom(0);
-    expect(wiz._fwMasaDurum().zoom).toBe(1);
+    expect(wiz._fwMasaDurum().gor).toEqual({ z: 1, tx: 0, ty: 0 });
     expect(wiz._fwMasaDurum().xf.s).toBeCloseTo(s0, 9);
+  });
+
+  // Tekerlek imlecin ALTINDAKİ mm noktasını yerinde tutar (harita gibi):
+  // yakınlaşmadan önce ve sonra aynı ekran noktası aynı mm'yi göstermeli.
+  test('tekerlek İMLECİN ALTINDAKİ noktaya yakınlaşır', () => {
+    ornek();
+    wiz.veFeadWizGoto(1);
+    const cz = document.getElementById('ve-fw-masa-cizim');
+    cz.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 700, right: 800, bottom: 700 });
+    const px = 300, py = 220, k = KAT();
+    const mm = () => { const x = wiz._fwMasaDurum().xf; return [x.mx + (px / k - x.ox) / x.s, x.my - (py / k - x.oy) / x.s]; };
+    const a = mm();
+    wiz.veFeadWizMasaTeker({ deltaY: -300, deltaMode: 0, clientX: px, clientY: py, preventDefault() {} });
+    expect(wiz._fwMasaDurum().gor.z).toBeGreaterThan(1.4);
+    const b = mm();
+    expect(b[0]).toBeCloseTo(a[0], 6);
+    expect(b[1]).toBeCloseTo(a[1], 6);
+  });
+
+  // GÖRÜNÜM TEK KATMANDAN: beş çizim adımının hepsinde aynı ölçek çarpanı —
+  // biri katmanı atlasaydı o adımda düğme bir şey yapmaz, sessizce.
+  test('GÖRÜNÜM bütün çizim adımlarında — ölçek ×2, ızgara mm\'ye hizalı', () => {
+    [[0, null], [1, null], [2, 'yakin'], [2, 'yol'], [3, null], [5, null]].forEach(([adim, gg]) => {
+      ornek();
+      wiz.veFeadWizGoto(adim);
+      wiz._fwMasaDurum({ gergi: gg || 'yakin' });
+      wiz._fwMasaDurum({ gor: { z: 1, tx: 0, ty: 0 } });
+      wiz._fwMasaCizim(adim, wiz.veFeadWizBuild(), 800, 700);
+      const s0 = wiz._fwMasaDurum().xf.s;
+      wiz._fwMasaDurum({ gor: { z: 2, tx: 12, ty: -7 } });
+      wiz._fwMasaCizim(adim, wiz.veFeadWizBuild(), 800, 700);
+      const d = wiz._fwMasaDurum();
+      expect([adim, gg, d.xf.s / s0]).toEqual([adim, gg, expect.any(Number)]);
+      expect(d.xf.s / s0).toBeCloseTo(2, 6);
+      expect(d.izgara).not.toBeNull();                // eksensiz adımda da ızgara çizimle kayar
+      wiz._fwMasaDurum({ gor: { z: 1, tx: 0, ty: 0 } });
+    });
+    wiz._fwMasaDurum({ gergi: 'yakin' });
+    ['_fwKasnakMasa', '_fwGergiMasa', '_fwKayisMasa', '_fwOzetMasa', '_fwKaynakMasa'].forEach((ad) => {
+      const g = WIZ_SRC.slice(WIZ_SRC.indexOf('function ' + ad + '('));
+      const govde = g.slice(0, g.indexOf('\n}\n'));
+      expect([ad, /veFeadLayoutSVG\(/.test(govde)]).toEqual([ad, false]);   // çizici YALNIZ katmandan
+      expect(govde).toContain('_fwLayout(');
+    });
   });
 
   // IZGARA EKSENLE HİZALI: zemin çizgisi çentiklerin ARASINDAN geçseydi mm
@@ -409,26 +471,52 @@ describe('GERGİ MASASI — konumlar ve göbek yükü çekirdekten', () => {
 });
 
 // ═════════════════════════════════════════════════════ ÇEVRİM MASASI ══
-describe('MOTOR VE ÇEVRİM MASASI — grafiklerin sayıları kapının kaynaklarından', () => {
-  test('çubuk = devir noktası; kW çizgisi = gücü okunan aksesuar', () => {
-    const st = ornek();
+describe('MOTOR VE ÇEVRİM MASASI — tahrik zinciri + devir pencereleri, sayılar kapıdan', () => {
+  // Kullanıcı bildirimi (2026-09-29): *"ortadaki iki kocaman diyagram çok
+  // gereksiz olmuş. Buraya başka diyagramlar ekleyerek anlatımı güçlendirelim."*
+  const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
+  const rsOf = (b) => b.sys || b.ratioSys;
+  const yuk = (b) => {                            // yük taşıyan aksesuarların indisleri
+    const rs = rsOf(b), out = [];
+    rs.pulleys.forEach((q, i) => {
+      if (i === rs._crkIdx || i === (b.sys && b.sys._tenIdx)) return;
+      const def = componentDefs[b.order[i].type] || {};
+      if (def.isFeadIdler || def.isFeadTensioner) return;
+      out.push(i);
+    });
+    return out;
+  };
+
+  test('ZİNCİR: halkanın çarpanı çekirdeğin speedRatio\'su, sürücününki tahrik oranı', () => {
+    kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     const b = wiz.veFeadWizBuild();
-    const h = wiz._fwMasaCizim(4, b, 700, 640);
-    const d = document.createElement('div'); d.innerHTML = h;
-    const nokta = st.solver.duty.filter((r) => Number(r.rpm) > 0).length;
-    expect(d.querySelectorAll('[data-ve="cevrim-cubuk"] rect').length).toBe(nokta);
-    const guclu = st.pulleys.filter((p) => {
-      const def = componentDefs[p.type] || {};
-      if (p.driver || def.isFeadIdler || def.isFeadTensioner) return false;
-      return st.solver.duty.some((r, i) => { const e = wiz._fwKwEff(b, st, i, p); return e && e.kw !== null; });
-    }).length;
-    expect(d.querySelectorAll('[data-ve="cevrim-kw"]').length).toBe(guclu);
+    const d = dom(wiz._fwMasaCizim(4, b, 800, 700));
+    const z = d.querySelector('[data-ve="tahrik-zinciri"]');
+    expect(z).not.toBeNull();
+    const oranlar = [...z.querySelectorAll('.ve-fw-zn-oran')].map((t) => t.textContent);
+    expect(oranlar).toContain('× ' + veSayi(b.drive.ratio, 4));         // 197,32 / 179,62
+    yuk(b).forEach((i) => expect(oranlar).toContain('× ' + veSayi(F.speedRatio(rsOf(b), i), 4)));
+    expect(z.textContent).toContain('ara kademe ' + veSayi(197.32, 2) + ' / ' + veSayi(179.62, 2));
   });
 
-  test('sınır çizgileri veFeadAccLimits\'ten; tepe noktası kapının "çevrim tepesi"', () => {
+  test('ZİNCİR KOPUK: oran çözülmediyse söyler, aksesuar oranı SÜRÜCÜYE göre', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00686_1475_GATES_2023');
+    const s = wiz.veFeadWizState().solver;
+    s.ratioMode = 'derive'; s.crankOD = '156'; delete s.fanOD;
+    const d = dom(wiz._fwMasaCizim(4, wiz.veFeadWizBuild(), 800, 700));
+    expect(d.querySelectorAll('.ve-fw-zn-kayis.kopuk').length).toBe(2);
+    expect(d.textContent).toContain('oran çözülmedi — çap eksik');
+    expect(d.textContent).toContain('sürücüye göre');
+  });
+
+  test('PENCERELER: her satırda her çevrim noktası; sınır motor devrine çevrilmiş', () => {
     const st = ornek();
     const b = wiz.veFeadWizBuild();
-    const d = document.createElement('div'); d.innerHTML = wiz._fwMasaCizim(4, b, 700, 640);
+    const d = dom(wiz._fwMasaCizim(4, b, 800, 700));
+    const nokta = st.solver.duty.filter((r) => Number(r.rpm) > 0).length;
+    expect(d.querySelectorAll('[data-ve="cevrim-nokta"]').length).toBe(nokta);
+    expect(d.querySelectorAll('[data-ve="aksesuar-nokta"]').length).toBe(nokta * yuk(b).length);
+    // Bilinen her sınır (sürekli · anlık · optimum) bir işaret — ya da eksenin ötesinde.
     let bilinen = 0;
     st.pulleys.forEach((p) => {
       const def = componentDefs[p.type] || {};
@@ -437,23 +525,139 @@ describe('MOTOR VE ÇEVRİM MASASI — grafiklerin sayıları kapının kaynakla
       ['optimum', 'maxCont', 'maxPeak'].forEach((k) => { if (L[k].rpm > 0) bilinen++; });
     });
     expect(bilinen).toBeGreaterThan(0);
-    expect(d.querySelectorAll('[data-ve="devir-sinir"]').length).toBe(bilinen);
-    // Tepe: uygunluk kapısının "çevrim tepesi" noktasıyla AYNI sayı.
-    const s = st.solver;
-    const R = veFeadChecks(b, veFeadCheckOpt(s, s.duty));
-    const tepe = [];
-    R.speedLimit.rows.forEach((r) => r.noktalar.forEach((q) => {
-      if (q.ad === 'çevrim tepesi') tepe.push('tepe ' + veSayi(q.accRpm, 0));
-    }));
-    expect(tepe.length).toBeGreaterThan(0);
-    const yazi = [...d.querySelectorAll('.ve-fw-gr-tepe-y')].map((t) => t.textContent).join(' | ');
-    tepe.forEach((t) => expect(yazi).toContain(t));
+    expect(d.querySelectorAll('[data-ve="devir-sinir"]').length).toBeLessThanOrEqual(bilinen);
+    expect(d.querySelectorAll('[data-ve="devir-sinir"]').length).toBeGreaterThan(0);
   });
 
-  test('governed yoksa grafik bunu SÖYLER', () => {
+  // Ölçülen kusur (2026-09-29, teslimden önce): 12 örnekteki 18 aksesuar
+  // sınırının 11'i eksenin ötesinde kaldığı için pencerede ne çizgi ne yazı
+  // olarak görünüyordu — üstteki kapı yalnız "≤ bilinen" dediği için geçiyordu.
+  test('EKSEN DIŞI SINIR SESSİZCE DÜŞMEZ — her sınır eksende ya da sağ uçta; sürekli sınır eksende', () => {
+    let eksenTop = 0, ucTop = 0;
+    M.veFeadExampleKeysAll().forEach((k) => {
+      kabuk(); wiz.veFeadWizSeed(k);
+      const b = wiz.veFeadWizBuild();
+      const v = wiz._fwCevrimVeri(b);
+      const g = dom(wiz._fwMasaCizim(4, b, 800, 700)).querySelector('[data-ve="devir-pencere"]');
+      if (!g || !v.duty.length) return;
+      let bekle = 0, surekli = 0;
+      v.acc.forEach((a) => {
+        const L = a.lim || {};
+        if (L.maxCont && L.maxCont.rpm > 0) { bekle++; surekli++; }
+        if (L.maxPeak && L.maxPeak.rpm > 0) bekle++;
+      });
+      const eksen = g.querySelectorAll('text.ve-fw-md-sinir-y').length;
+      // Oluk: ilk satır sınırlar ("anlık 6.000"), ikinci satır motor devri.
+      const uc = [...g.querySelectorAll('[data-ve="sinir-disari"]')].reduce((t, e) => {
+        const [s1, s2] = [...e.querySelectorAll('tspan')].map((x) => x.textContent);
+        expect(s2).toMatch(/^motorda /);
+        return t + s1.split(' · ').length;
+      }, 0);
+      expect({ k, gorunen: eksen + uc }).toEqual({ k, gorunen: bekle });
+      // Bugünkü örneklerde bütün sürekli sınırlar tabanın VE_FW_PENCERE_PAY
+      // katı içinde (en uzağı 1,38): pay bir yazı değil bir ARALIK.
+      expect(g.querySelectorAll('line.ve-fw-md-sinir').length).toBeGreaterThanOrEqual(surekli);
+      eksenTop += eksen; ucTop += uc;
+    });
+    expect(eksenTop).toBeGreaterThan(0);               // iki yol da gerçekten koştu
+    expect(ucTop).toBeGreaterThan(0);
+  });
+
+  // Oluk AYRI bir sütun: çizimdeki yazılar (sınır · kritik) oraya taşmaz, sağda
+  // yer yoksa çizginin/halkanın soluna geçer. Tarayıcının çakışma taraması bunu
+  // görmüyor — oluğa uzanan kritik yazısı oluğun yazısının ALTINDA kalıyor
+  // (ölçüldü: yazıyı hep sağa zorlayan değişiklik o kapıdan geçti).
+  test('ÇİZİMİN YAZISI ÇİZİM ALANINDA — kritik ve sınır yazısı oluğa/sol sütuna taşmaz', () => {
+    let sola = 0;
+    M.veFeadExampleKeysAll().forEach((k) => {
+      kabuk(); wiz.veFeadWizSeed(k);
+      const g = dom(wiz._fwMasaCizim(4, wiz.veFeadWizBuild(), 800, 700)).querySelector('[data-ve="devir-pencere"]');
+      const eksen = g && g.querySelector('line.ve-fw-md-eksen');
+      if (!eksen) return;
+      const x0 = +eksen.getAttribute('x1'), x1 = +eksen.getAttribute('x2');
+      g.querySelectorAll('[data-ve="kritik-y"], text.ve-fw-md-sinir-y').forEach((t) => {
+        const x = +t.getAttribute('x'), en = t.textContent.length * wiz.VE_FW_HARF;
+        const sol = t.getAttribute('text-anchor') === 'end';
+        if (sol) sola++;
+        const [a, b] = sol ? [x - en, x] : [x, x + en];
+        expect({ k, t: t.textContent, tasar: a < x0 - 0.5 || b > x1 + 0.5 }).toEqual({ k, t: t.textContent, tasar: false });
+      });
+    });
+    expect(sola).toBeGreaterThan(0);                   // sola geçiş yolu gerçekten koştu
+  });
+
+  test('KRİTİK NOKTA kapının satırı — sayı ve hüküm yeniden hesaplanmaz', () => {
     const st = ornek();
-    delete st.solver.governedRpm;
-    expect(wiz._fwMasaCizim(4, wiz.veFeadWizBuild(), 700, 640)).toContain('governed devri yok');
+    const b = wiz.veFeadWizBuild();
+    const d = dom(wiz._fwMasaCizim(4, b, 800, 700));
+    const R = veFeadChecks(b, veFeadCheckOpt(st.solver, st.solver.duty));
+    expect(R.speedLimit.rows.length).toBeGreaterThan(0);
+    const yazi = [...d.querySelectorAll('[data-ve="kritik-y"]')].map((t) => t.textContent);
+    R.speedLimit.rows.forEach((r) => {
+      const k = r.kritik;
+      expect(yazi).toContain(k.ad + ' ' + veSayi(k.accRpm, 0) + ' / ' + veSayi(k.limit, 0));
+      expect(d.textContent).toContain('pay %' + veSayi(k.payPct, 1));
+    });
+  });
+
+  // Nokta rengi = kapının karşılaştırması (accRpm > sürekli → uyarı, > anlık → hata).
+  test('NOKTA DURUMU kapıyla aynı karşılaştırma — sınırı düşürünce aşan noktalar işaretlenir', () => {
+    const st = ornek();
+    const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
+    alt.maxContRpm = 4000; alt.maxPeakRpm = 5000;
+    const b = wiz.veFeadWizBuild();
+    const d = dom(wiz._fwMasaCizim(4, b, 800, 700));
+    const i = b.order.findIndex((n) => n.id === 'wz-' + alt.key);
+    const oran = F.speedRatio(rsOf(b), i);
+    const bekle = st.solver.duty.filter((r) => Number(r.rpm) > 0).map((r) => {
+      const acc = Number(r.rpm) * oran;
+      return acc > 5000 ? 'err' : acc > 4000 ? 'warn' : 'ok';
+    });
+    const noktalar = [...d.querySelectorAll('[data-ve="aksesuar-nokta"]')]
+      .filter((c) => c.querySelector('title').textContent.includes(alt.name || 'Alternatör'));
+    expect(noktalar.map((c) => c.getAttribute('data-durum'))).toEqual(bekle);
+    expect(bekle).toContain('err');
+    expect(d.querySelector('.ve-fw-md-alt-err').textContent).toMatch(/aşıyor %/);
+  });
+
+  test('GÜÇ SATIRI: çubuk = her noktada aksesuarların _fwKwEff toplamı', () => {
+    const st = ornek();
+    const b = wiz.veFeadWizBuild();
+    const d = dom(wiz._fwMasaCizim(4, b, 800, 700));
+    const cub = [...d.querySelectorAll('[data-ve="guc-cubuk"]')];
+    const duty = st.solver.duty.map((r, i) => ({ r, i })).filter((x) => Number(x.r.rpm) > 0);
+    expect(cub.length).toBe(duty.length);
+    const loads = st.pulleys.filter((p) => {
+      const def = componentDefs[p.type] || {};
+      return !(p.driver || def.isFeadIdler || def.isFeadTensioner);
+    });
+    duty.forEach((x, k) => {
+      const t = loads.reduce((a, p) => a + wiz._fwKwEff(b, st, x.i, p).kw, 0);
+      expect(cub[k].querySelector('title').textContent).toContain(veSayi(t, 2) + ' kW');
+    });
+  });
+
+  test('governed/overspeed yoksa pencere kapının NOTUNU söyler', () => {
+    const st = ornek();
+    delete st.solver.governedRpm; delete st.solver.overspeedRpm;
+    const b = wiz.veFeadWizBuild();
+    const R = veFeadChecks(b, veFeadCheckOpt(st.solver, st.solver.duty));
+    const d = dom(wiz._fwMasaCizim(4, b, 800, 700));
+    if (R.speedLimit.note) expect(d.querySelector('[data-ve="pencere-not"]').textContent).toBe(R.speedLimit.note);
+    expect(d.querySelectorAll('[data-ve="motor-sinir"]').length)
+      .toBe(['idleRpm', 'governedRpm', 'overspeedRpm'].filter((k) => Number(st.solver[k]) > 0).length);
+  });
+
+  test('TEK EKSEN: iki diyagramda da ikinci bir değer ekseni yok; renk yalnız durum', () => {
+    const d = dom((ornek(), wiz._fwMasaCizim(4, wiz.veFeadWizBuild(), 800, 700)));
+    expect(d.querySelectorAll('svg').length).toBe(2);
+    // Seri paleti (kimlik rengi) kullanılmıyor — durum renkleriyle çakışıyordu.
+    expect(d.innerHTML).not.toMatch(/--seri-\d/);
+    expect(WIZ_SRC).not.toMatch(/VE_FW_SERI/);
+    // Güç bir büyüklük: vurgu ya da durum tonu taşımaz (vurgu tonu açık temada
+    // "anlık sınırın üstü" bölgesinin pembesine düşüyordu).
+    expect(kural('.ve-fw-md-guc')).toMatch(/fill:/);
+    expect(kural('.ve-fw-md-guc')).not.toMatch(/--accent-/);
   });
 
   test('grafik adımı 1:1 — öteki masalar k kat', () => {

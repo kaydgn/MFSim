@@ -1672,8 +1672,9 @@ describe('dönüş yönü — Kasnaklar adımında seçilir', () => {
       say += (wiz.veFeadWizStepHTML(i, b).match(/veFeadWizSpinSet/g) || []).length;
     // İki düğme (CCW + CW), TEK kartta.
     expect(say).toBe(2);
-    // Sıra çevirme düğmesi de aynı kartta — sıra artık orada düzenleniyor.
-    expect(wiz.veFeadWizStepHTML(1, b)).toContain('veFeadWizRouteReverse()');
+    // Yön seçicisi SIRANIN KARTINDA; ayrı "Kayış yönünü çevir" düğmesi YOK
+    // (CCW/CW ile aynı işlemi yapıyordu — kullanıcı isteği 2026-09-29).
+    expect(wiz.veFeadWizStepHTML(1, b)).not.toContain('veFeadWizRouteReverse()');
     expect(wiz.veFeadWizStepHTML(1, b)).toMatch(/CCW|CW/);
     expect(kontrol).toContain('ve-fw-spin-on');
   });
@@ -2608,15 +2609,27 @@ describe('tahrik oranı — elle girilemez', () => {
     expect(h).toContain(String(src.od));
   });
 
-  test('kurulan model kipi taşıyor — elle oran ise DÜŞÜRÜLÜYOR', () => {
+  // KİP TEK ÇÖZÜCÜDEN (`_fwOranKipi`): arayüz bilinmeyen kipi "krank
+  // doğrudan" gösterirken düğüm "ara kademe" yazıyordu ve elle oran düğüme
+  // taşınıyordu — ara kademe seçilip çap eksik kalınca köprü o gizli 1'e
+  // düşüp "elle girildi" diyordu (kullanıcı bildirimi 2026-09-29).
+  test('kurulan model kipi taşıyor — elle oran TAŞINMAZ, kip tek çözücüden', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const st = wiz.veFeadWizState();
-    st.solver.ratioMode = 'direct';                 // eski taslak
-    expect(wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-solver')
-      .data.ratioMode).toBe('derive');
+    const sd = () => wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-solver').data;
+    st.solver.ratioMode = 'direct'; st.solver.driveRatio = 1;   // eski taslak / örnek kaydı
+    expect(sd().ratioMode).toBe('crankDirect');
+    expect(sd().driveRatio).toBeUndefined();
+    st.solver.driveRatio = 1.3;                                  // başka bir elle oran
+    expect(sd().ratioMode).toBe('derive');
+    expect(sd().driveRatio).toBeUndefined();
     st.solver.ratioMode = 'unity';
-    expect(wiz.veFeadWizNodes(st).nodes.find((n) => n.type === 'fead-solver')
-      .data.ratioMode).toBe('unity');
+    expect(sd().ratioMode).toBe('unity');
+    // Arayüzün seçtiği düzen düğümünkiyle AYNI.
+    st.solver.ratioMode = 'direct'; st.solver.driveRatio = 1;
+    const d = document.createElement('div');
+    d.innerHTML = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
+    expect(d.querySelector('select[onchange*="solver.ratioMode"]').value).toBe(sd().ratioMode);
   });
 
   test('iki çap da boşken oran 1 — ve çözüm BOZULMUYOR', () => {
@@ -2626,13 +2639,71 @@ describe('tahrik oranı — elle girilemez', () => {
     expect(b.drive.ratio).toBeCloseTo(1, 9);
   });
 
-  test('TEK çap girilirse SESSİZ kalmıyor', () => {
+  test('TEK çap girilirse SESSİZ kalmıyor — oran ÇÖZÜLMEZ, 1 uydurulmaz', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     wiz.veFeadWizState().solver.ratioMode = 'derive';   // uyarı yalnız bu düzende anlamlı
     wiz.veFeadWizState().solver.crankOD = 197.32;       // fanOD boş
     const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
     expect(h).toMatch(/Yalnız bir çap girildi/);
-    expect(wiz.veFeadWizBuild().drive.ratio).toBeCloseTo(1, 9);
+    const dr = wiz.veFeadWizBuild().drive;
+    expect(dr.ok).toBe(false);                          // eskiden gizli driveRatio 1 → "elle girildi"
+    const ok = document.createElement('div'); ok.innerHTML = wiz._fwTahrikOkuHTML(wiz.veFeadWizState());
+    const oran = [...ok.querySelectorAll('.ve-fw-read')].find((r) => /^Tahrik oranı/.test(r.textContent.trim()));
+    expect(oran.querySelector('b').textContent.trim()).toBe('—');
+    expect(ok.textContent).toMatch(/çözülemedi — çap eksik/);
+  });
+
+  test('ÖRNEK TOHUMU elle oran taşımaz — on iki örneğin oranı birebir korunur', () => {
+    const ex = M.VE_FEAD_EXAMPLES;
+    const keys = Object.keys(ex);
+    expect(keys.length).toBeGreaterThanOrEqual(12);
+    keys.forEach((k) => {
+      kabuk(); wiz.veFeadWizSeed(k);
+      const s = wiz.veFeadWizState().solver;
+      expect([k, ['crankDirect', 'unity', 'derive'].includes(s.ratioMode)]).toEqual([k, true]);
+      expect([k, s.driveRatio]).toEqual([k, undefined]);
+      const once = M.veFeadDriveRatio(ex[k].solver);      // örneğin KENDİ modelinin oranı
+      const dr = wiz._fwTahrik(wiz.veFeadWizState());
+      expect([k, dr.ok]).toEqual([k, true]);
+      expect(dr.ratio).toBeCloseTo(once.ratio, 12);
+    });
+  });
+
+  test('KAYITLI TASLAK açılırken düzeltilir — elle oran 1,3 ne 1,3 ne 1 olur', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    const taslak = JSON.parse(JSON.stringify(wiz.veFeadWizState()));
+    taslak.solver.ratioMode = 'direct'; taslak.solver.driveRatio = 1.3;
+    global.nodes = [{ id: 'wz1', type: 'fead-wizard', data: { wiz: taslak } }];
+    wiz.veFeadWizOpen('wz1');
+    const s = wiz.veFeadWizState().solver;
+    expect(s.ratioMode).toBe('derive');
+    expect(s.driveRatio).toBeUndefined();
+    expect(wiz._fwTahrik(wiz.veFeadWizState()).ok).toBe(false);   // çaplar sorulur
+    wiz.veFeadWizClose(false);
+    global.nodes = [];
+  });
+
+  // Kullanıcı bildirimi (2026-09-29): *"ne değer girersek girelim, tahrik
+  // oranı hep 1 olarak çıkıyor"*. Ölçüldü (gerçek klavye, AG00686): iki çap
+  // yazıldığında model 0,8685 ile çözüyordu, kart "1,0000 · elle girildi"
+  // diyordu — canlı yama Tahrik okumalarını hiç tazelemiyordu.
+  test('CANLI YAMA oranı yazar — adım değişmesini beklemez', () => {
+    kabuk(); wiz.veFeadWizSeed('AG00686_1475_GATES_2023');
+    wiz.veFeadWizGoto(4);
+    wiz._fwSetRender('solver.ratioMode', 'derive');
+    const oku = () => {
+      const r = [...document.querySelectorAll('#ve-fw-tahrik-oku .ve-fw-read')]
+        .find((x) => /^Tahrik oranı/.test(x.textContent.trim()));
+      return r.querySelector('b').textContent.trim();
+    };
+    expect(oku()).toBe('—');
+    wiz._fwSet('solver.crankOD', '156');
+    wiz.veFeadWizLive();
+    expect(document.getElementById('ve-fw-tahrik-oku').textContent).toMatch(/Yalnız bir çap girildi/);
+    wiz._fwSet('solver.fanOD', '179.62');
+    wiz.veFeadWizLive();
+    expect(oku()).toBe(veSayi(156 / 179.62, 4));
+    expect(wiz.veFeadWizBuild().drive.ratio).toBeCloseTo(156 / 179.62, 12);
   });
 
   // "Kademe yok" seçiliyken yarım çap uyarısı ÇIKMAMALI: orada çap zaten
@@ -3301,12 +3372,21 @@ describe('adım listesi ve taşınan yetenek', () => {
                            'Kayış', 'Motor ve çevrim', 'Özet ve kurulum']);
   });
 
-  test('SIRA DÜZENLEME Kasnaklar kartında — ok, hüküm ve yön çevirme', () => {
+  // "SIRA VE YÖN" BLOĞU YOK (kullanıcı isteği 2026-09-29): ekleme, dönüş
+  // yönü ve STEP sırasının onayı sıranın KENDİ kartında.
+  test('SIRA DÜZENLEME Kasnaklar kartında — ok, hüküm, ekle ve yön; ayrı blok YOK', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     wiz.veFeadWizSec('__ten__');                             // gergi seçili
     const h = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
     expect(h).toContain('Kasnaklar — kayış sırasıyla');
-    expect(h).toContain('veFeadWizRouteReverse()');
+    const d = document.createElement('div'); d.innerHTML = h;
+    const basliklar = [...d.querySelectorAll('.ve-fw-card-h')].map((e) => e.textContent.trim());
+    expect(basliklar).not.toContain('Sıra ve yön');
+    const kart = [...d.querySelectorAll('.ve-fw-card')].find((c) =>
+      c.querySelector('.ve-fw-card-h').textContent.trim() === 'Kasnaklar — kayış sırasıyla');
+    expect(kart.querySelector('select.ve-fw-ekle')).not.toBeNull();
+    expect(kart.querySelectorAll('button[onclick*="veFeadWizSpinSet"]').length).toBe(2);
+    expect(h).not.toContain('veFeadWizRouteReverse()');
     expect(h).toContain("veFeadWizPulleyMove('__ten__'");   // gergi de taşınabiliyor
     expect(h).toMatch(/Gergi krankın/);                      // hüküm sıranın yanında
   });

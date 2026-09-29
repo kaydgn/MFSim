@@ -710,11 +710,12 @@ function _gfSec3(){
     ['1 · Başlangıç', 'Sistem adı · <strong>STEP dosyasından</strong> ya da <strong>'
       + _ornekMetin + '</strong> doldurma', 'Bölüm 3.3 ve 3.5'],
     ['2 · Kasnaklar', 'Tip · çap · koordinat · temas tarafı · sürücü · '
-      + '<strong>kayış sırası</strong> — kasnak çizimde seçilir, sürüklenir (0,1 mm) ve ok '
-      + 'tuşuyla oynatılır', 'Bölüm 4, 5 ve 6'],
+      + '<strong>kayış sırası</strong> — kasnak çizimde tıklanarak seçilir, konumu editörde '
+      + 'yazılır; çizim sürükleyerek kaydırılır, tekerlekle yakınlaştırılır', 'Bölüm 4, 5 ve 6'],
     ['3 · Otomatik Gergi', 'Avara merkezi · kol boyu · kol açısı · yay künyesi', 'Bölüm 7'],
     ['4 · Kayış', 'Profil · kanal sayısı · katalog sonuçları', 'Bölüm 8'],
-    ['5 · Motor ve çevrim', 'Tahrik oranı · motor künyesi · çalışma çevrimi (tablo '
+    ['5 · Motor ve çevrim', 'Tahrik oranı · motor künyesi · çalışma çevrimi — çizimde '
+      + '<strong>tahrik zinciri</strong> ve <strong>devir pencereleri</strong> (tablo '
       + '“Çevrim tablosunu aç” penceresinde)', 'Bölüm 9'],
     ['6 · Özet ve kurulum', 'Canlı çözüm · kayış yolu şeması · modeli kur', 'Bölüm 10 ve 11']
   ], ['Adım', 'Ne sorar', 'Ayrıntısı']);

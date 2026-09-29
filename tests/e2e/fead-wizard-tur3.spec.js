@@ -138,15 +138,19 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   }));
   await page.evaluate(() => veFeadWizGoto(1));
   await page.waitForTimeout(300);
+  // "Kayış yönünü çevir" düğmesi KALKTI (2026-09-29): CCW/CW seçicisiyle aynı
+  // işlemi yapıyordu; seçici sıranın kendi kartında.
   const yol = await page.evaluate(() => ({
     cevir: !!document.querySelector('button[onclick*="veFeadWizRouteReverse"]'),
+    kartta: !!document.querySelector('#ve-fw-yan .ve-fw-kl-arac .ve-fw-spinbox'),
     seritYon: (document.querySelector('.ve-fw-live') || {}).innerText || ''
   }));
   const s3 = await spinOku();
   console.log('YOL', JSON.stringify(yol), JSON.stringify(s3));
   expect(s3.adet).toBe(2);                  // CCW + CW
   expect(s3.acik).toBe(1);                  // biri BASILI — yön okunuyor
-  expect(yol.cevir).toBe(true);
+  expect(yol.cevir).toBe(false);
+  expect(yol.kartta).toBe(true);
   expect(yol.seritYon).toMatch(/CCW|CW/);   // yön okuması KAYBOLMADI
 
   // AYNI KONTROL 2. ADIMDA DA, BİREBİR: tek üretici kuralının kapısı.
