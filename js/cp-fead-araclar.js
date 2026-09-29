@@ -39,7 +39,7 @@
 //    tekerlek kadrajı değiştirmesin).
 //  • NOT ARAÇLARI BURADA (kullanıcı, 2026-09-28: *"Not araçlarını da FEAD
 //    araçları penceresine ekleyelim"*): FEAD'de "Bileşenler" sütunu yok (kural
-//    39), sütunun "Araçlar" kategorisi — gruplama çerçevesi · yazı etiketi —
+//    40), sütunun "Araçlar" kategorisi — gruplama çerçevesi · yazı etiketi —
 //    buraya geldi. Açıklama modülü (js/annotations.js) DEĞİŞMEDİ: sürükleme
 //    onun taşıyıcısını (`annotation-type`) yazar ve kabın `drop` dinleyicisine
 //    düşer, tık onun kurucusunu (`createAnnotation`) çağırır — ikinci bir

@@ -510,7 +510,7 @@ olurdu.
     yüzeyi: tıklamak kasnağın penceresini açar, sürüklemek KONUM GİRDİSİNİ
     yazar (gergide avara merkezi `cenX/cenY` — montaj konumu ondan türer),
     ok 1 mm / Shift 10 mm, Delete siler; paftanın "＋ Kasnak ekle" listesinden
-    kayışın ÜSTÜNE sürüklenen kasnak iki komşunun ARASINA girer (kural 39 —
+    kayışın ÜSTÜNE sürüklenen kasnak iki komşunun ARASINA girer (kural 40 —
     FEAD'de sütun yok). Kurallar:
     • **Çizim kendi geometrisini hesaplamaz** — ters köprü çizicinin bastığı
       `data-fead-xf`ten; sürükleme boyunca ölçek DONAR (kasnak imleçten
@@ -633,6 +633,16 @@ olurdu.
       `veFeadBeltFit` ile değerlendirir (numara − gereken · kolun yeri, yönüyle).
       Rol verilmezse kayışa dokunulmaz; sıra ağaç sırasıdır
       (`siraKaynagi: 'agac'`).
+    • **KAYIŞ ESKİZİ HESAP ÇAPINI VERİR** (2026-09-28, kural 39): kayış
+      biriminin kapalı eğrisi (`veStepP21Egri` — okuyucu anlam yüklemez) yay
+      yay kasnaklarla eşlenir; yay yarıçapı − OD/2 kaburgalıda h_b, sırtta
+      h_r (kullanıcının dosyasında dördü de 1,500). Tutarsızsa (> 0,01 mm)
+      yazılmaz. Kayıt `hbCad` · `hrCad`'yi yazar, seçim varsayılanı CAD
+      (kullanıcı kararı); seçim aktarımdan önce STEP oturumunda, sonra
+      sihirbazın kayışında — tek okuyucu `_fwStpHesapCap`. Hesaptan sonra 3B'de
+      seçilen kasnağın KESİTİ (ölçülen · katalog · CAD · hesap) ve seçici.
+      **Kanal tabanı yanakların uçlarına değen yüz** — iç alın/delik değil
+      (klimada 6,00 okunuyordu, gerçeği Ø130,10).
     • Gerginin yay verisi STEP'te yok; `tenPart` yalnız parça kodu katalogda
       TEK ise yazılır (kural 19'un gerekçesi). Kayıt µm'ye (açı 0,0001°)
       yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
@@ -714,7 +724,7 @@ olurdu.
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
     · sıra · künye · .stpZ) + `tests/unit/fead-step-oner.test.js` (gergi
     imzası · sekiz kuralın tuzak montajları · en küçük birim · iki aday ·
-    otomatik atama ve sönmesi) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
+    otomatik atama ve sönmesi) + `tests/unit/fead-step-eskiz.test.js` (eskiz okuma · h_b/h_r · kanal tabanı · varsayılan CAD · kesit · seçici) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
     kayış birimi · genişlik · aktarım · tek kayış · CAD'deki kayış kartı · tek
     rol listesi) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
     renk · panel · otomatik açılış · Esc · tazeleme kancası) +
@@ -822,7 +832,24 @@ olurdu.
     Kapılar: `fead-araclar.test.js` · `fead-spin.test.js` → *"Yön yüzeyi"* ·
     `fit-view.test.js` → *"SOL ÖRTÜ"* · `tests/e2e/fead-araclar.spec.js`.
 
-39. **"BİLEŞENLER" SÜTUNU YOK — EKLEME TUVALDE** (2026-09-28, kullanıcı
+39. **HESAP ÇAPI: KORD ÇİZGİSİNİN h_b / h_r'Sİ TEK ALANDAN** (2026-09-28,
+    kullanıcı: *"kullanıcı kayışın kalınlığını da hesaba katıp 150 mm çap ile
+    hesap yapmak isteyebilir"*). Kasnağın `od`'si d_b'dir ve girdi kalır;
+    çekirdek zaten kord çizgisinde kurar (kaburgalı OD/2 + h_b, sırt OD/2 +
+    h_r). Seçilen şey çiftin KAYNAĞI, kayışın tek alanında (`hesapCap`):
+    `katalog` (boş, marka) · `cad` (`hbCad` · `hrCad`, eskizden) · `db`
+    (h_b = h_r = 0). Kayış için TEK seçim — kord çizgisi tek; kasnak başına
+    seçim hız oranını sessizce karıştırırdı. `od`'ye 150 yazmak ÇİFT SAYAR
+    (çekirdek 153 kurar) — hesap çapı `od`'ye yazılmaz.
+    • **Tek kaynak**: `veFeadKordOfset` (köprü); `veFeadBoyCizgileri`,
+      pencere, rapor, özet, sihirbaz kayışın KENDİSİNİ verir (profil/marka
+      değil). Katalogda kayış nesnesine dokunulmaz (eski modeller bayt bayt).
+    • **Çekirdeğin tuzağı** (kural 30): `beltProps` hb + hr birlikte gelince
+      kataloğu birleştirmez — köprü kataloğu ALTA koyar.
+    • CAD seçili ama ölçü yoksa katalog + uyarı; sessiz yedek yok.
+    Kapı: `fead-hesap-capi.test.js`.
+
+40. **"BİLEŞENLER" SÜTUNU YOK — EKLEME TUVALDE** (2026-09-28, kullanıcı
     kararı: *"FEAD modülünde bu 'Bileşenler' sütununu kaldıralım, zaten
     ekleyeceğimiz bileşenlerin hepsini 'kanvaslar' üzerinden
     ekleyebiliyoruz."*). Modül beyan eder (`componentDefs['fead-analysis']

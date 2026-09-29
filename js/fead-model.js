@@ -219,15 +219,71 @@ function veFeadDefaultBeltTol(effLengthMm){
 // 2π·h_b (çekirdeğin özdeşliği, fead-core.js §4): PK/ContiTech 9,42 mm, PK/Gates
 // 7,54 mm. İki boy da yazılır, numara d_b'den okunur — d_w'yi numara saymak
 // kolu sessizce başka bir açıya oturtur (kullanıcının düzeninde 12°, 126 N).
+//
+// İkinci argüman KAYIŞIN KENDİSİ olabilir (düğüm verisi ya da çözülmüş
+// `sys.belt`): o zaman fark HESAP ÇAPININ h_b'sinden (`veFeadKordOfset`) —
+// CAD eskizi seçiliyse eskizin h_b'si, kayış kalınlığı yok sayılıyorsa 0.
+// Eski imza (profil, marka) katalog h_b'sini okur.
 function veFeadBoyCizgileri(Lb, profile, brand){
-  var out = { db: NaN, dw: NaN, hb: NaN, hr: NaN, fark: NaN };
-  if(typeof FEADCore === 'undefined' || !FEADCore.beltProps) return out;
-  var bp;
-  try { bp = FEADCore.beltProps({ profile: profile || 'PK', brand: brand || 'GATES' }); }
-  catch(e){ return out; }
-  out.hb = bp.hb; out.hr = bp.hr; out.fark = 2 * Math.PI * bp.hb;
+  var out = { db: NaN, dw: NaN, hb: NaN, hr: NaN, fark: NaN, kaynak: 'katalog' };
+  var ko = (profile && typeof profile === 'object')
+    ? veFeadKordOfset(profile)
+    : veFeadKordOfset({ profile: profile, brand: brand });
+  if(!Number.isFinite(ko.hb)) return out;
+  out.hb = ko.hb; out.hr = ko.hr; out.kaynak = ko.kaynak; out.fark = 2 * Math.PI * ko.hb;
   var L = _feadNum(Lb, NaN);
   if(Number.isFinite(L) && L > 0){ out.db = L; out.dw = L + out.fark; }
+  return out;
+}
+
+// ── HESAP ÇAPI: KAYIŞIN KORD ÇİZGİSİ NEREDE (kullanıcı kararı 2026-09-28) ──
+// Kasnağın çapı `od` (d_b, kaburga tepesi) GİRDİDİR; kayış yolu, hız oranı ve
+// kuvvetler KORD çizgisinde kurulur (kaburgalı OD + 2·h_b, sırt OD + 2·h_r —
+// çekirdeğin `radiiFromOD`'u). h_b / h_r'nin KAYNAĞI kayışın TEK alanında,
+// çünkü kayışın kord çizgisi tek (kullanıcı kararı: "kayış için tek seçim"):
+//   'katalog' (boş) : markanın kataloğu (çekirdeğin BELT_DB'si) — eski davranış
+//   'cad'           : CAD kayış eskizinden ölçülen (`hbCad` · `hrCad`)
+//   'db'            : kayış kalınlığı yok sayılır, h_b = h_r = 0 — hesap d_b'de
+// Kullanıcının örneği: krank Ø147 → d_w 150,0 (CAD, h_b 1,5) · 149,4 (Gates
+// kataloğu, h_b 1,2) · 147,0 (d_b).
+//
+// ÇÖZÜLMÜŞ KAYIŞ (`sys.belt`) etkin çifti kendisi taşır (`kord` + `hb` · `hr`)
+// — rapor ve özet çözümü okur, düğümü değil.
+var VE_FEAD_HESAP_CAP = ['katalog', 'cad', 'db'];
+function veFeadKordOfset(b){
+  b = b || {};
+  var out = { hb: NaN, hr: NaN, kaynak: 'katalog', hrKaynak: 'katalog', katalog: null, uyari: null };
+  var kat = null;
+  if(typeof FEADCore !== 'undefined' && FEADCore.beltProps){
+    try { kat = FEADCore.beltProps({ profile: b.profile || 'PK', brand: b.brand || 'GATES' }); }
+    catch(e){ kat = null; }
+  }
+  if(kat) out.katalog = { hb: kat.hb, hr: kat.hr };
+  if((b.kord === 'cad' || b.kord === 'db') && Number.isFinite(b.hb) && Number.isFinite(b.hr)){
+    out.hb = b.hb; out.hr = b.hr; out.kaynak = b.kord;
+    out.hrKaynak = b.kordHr || b.kord;
+    return out;
+  }
+  if(b.hesapCap === 'db'){
+    out.hb = 0; out.hr = 0; out.kaynak = out.hrKaynak = 'db';
+    return out;
+  }
+  if(b.hesapCap === 'cad'){
+    var hb = _feadNum(b.hbCad, NaN), hr = _feadNum(b.hrCad, NaN);
+    if(Number.isFinite(hb) && hb >= 0){
+      out.hb = hb; out.kaynak = 'cad';
+      // Eskizde sırttan dolanan kasnak yoksa h_r ölçülemez: katalogdan, ve
+      // bu kaynağıyla birlikte söylenir.
+      if(Number.isFinite(hr) && hr >= 0){ out.hr = hr; out.hrKaynak = 'cad'; }
+      else if(kat) out.hr = kat.hr;
+      if(Number.isFinite(out.hr)) return out;
+    }
+    // CAD seçili ama ölçü yok: katalog, ve uyarıyla — sessiz bir yedek
+    // kullanıcıya CAD çizgisinde hesaplandığını sandırırdı.
+    out.uyari = 'Hesap çapı "CAD eskizi" seçili ama eskizden ölçülmüş h_b yok; marka kataloğu kullanıldı.';
+    out.kaynak = 'katalog'; out.hrKaynak = 'katalog';
+  }
+  if(kat){ out.hb = kat.hb; out.hr = kat.hr; }
   return out;
 }
 
@@ -3832,6 +3888,23 @@ function veFeadBuildSystem(nodeList, opt){
     }
   }
 
+  // ── HESAP ÇAPI (kord çizgisinin h_b / h_r'si) ─────────────────────────────
+  // Katalogdaysa kayış nesnesine HİÇ dokunulmaz — eski modeller bayt bayt aynı
+  // sayıyı çözer. CAD eskizi ya da d_b seçiliyse çift çekirdeğe AÇIKÇA verilir.
+  // ÇEKİRDEĞİN TUZAĞI (kural 30): `beltProps` hb ile hr BİRLİKTE verilince
+  // kataloğu hiç birleştirmez, kayış nesnesini olduğu gibi döner — kaburga
+  // adımı, kalınlık, en küçük çap, kütle, kord rijitliği sessizce düşerdi.
+  // Katalog ALTA konur, köprünün yazdığı alanlar üstte kalır.
+  var _ko = veFeadKordOfset(bd);
+  out.kord = _ko;
+  if(_ko.uyari) out.warnings.push(_ko.uyari);
+  if(_ko.kaynak !== 'katalog' && Number.isFinite(_ko.hb) && Number.isFinite(_ko.hr)){
+    var _kat = null;
+    try { _kat = FEADCore.beltProps({ profile: cfgBelt.profile, brand: cfgBelt.brand }); } catch(e){ _kat = null; }
+    cfgBelt = Object.assign({}, _kat || {}, cfgBelt,
+      { hb: _ko.hb, hr: _ko.hr, kord: _ko.kaynak, kordHr: _ko.hrKaynak });
+  }
+
   // ── Gergi ──
   // TEK KOORDİNAT: AVARA MERKEZİ (`cenX/cenY`), diğer bütün kasnaklarla aynı
   // sütundan. Gövdenin montaj konumu bir girdi DEĞİL, bu noktadan ve kolun
@@ -5026,6 +5099,7 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_DEFAULTS: VE_FEAD_DEFAULTS, veFeadDefaultInertia: veFeadDefaultInertia,
     veFeadDefaultBeltTol: veFeadDefaultBeltTol, veFeadBeltMassOf: veFeadBeltMassOf,
     veFeadBoyCizgileri: veFeadBoyCizgileri,
+    veFeadKordOfset: veFeadKordOfset, VE_FEAD_HESAP_CAP: VE_FEAD_HESAP_CAP,
     veFeadCordStiffness: veFeadCordStiffness,
     // Paylaşılan saf yardımcılar. Tarayıcıda global oldukları için cp-fead.js,
     // connections.js ve cp-fead.js doğrudan çağırıyor;

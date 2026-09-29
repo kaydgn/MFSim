@@ -191,6 +191,27 @@ class StepYaz {
     return oge;
   }
 
+  // Eskiz (geometrik küme) — kullanıcının dosyasındaki kalıp: GEOMETRIC_SET →
+  // COMPOSITE_CURVE → COMPOSITE_CURVE_SEGMENT → TRIMMED_CURVE (.CARTESIAN.).
+  // parcalar (yerel, mm): {tip:'LINE', p1, p2} | {tip:'CIRCLE', c, n, x, r, p1, p2, yon:+1|-1}
+  // `yon` −1: kırpılmış eğri tabanın (n etrafında saat tersine) TERSİNE gider.
+  eskiz(u, ad, parcalar) {
+    const seg = parcalar.map((p) => {
+      const taban = p.tip === 'LINE' ? this._cizgi(p.p1, p.p2)
+        : this.ekle("CIRCLE('generated circle',#" + this.cerceve(p.c, p.n, p.x) + ',' + f(this.L(p.r)) + ')');
+      // `ters`: parça eğrinin tersine yazılır (kırpma uçları ve yön takas) ve
+      // segmentin same_sense'i .F. — okuyucu onu geri çevirmek zorunda
+      const a1 = p.ters ? p.p2 : p.p1, a2 = p.ters ? p.p1 : p.p2;
+      const yon = p.tip === 'CIRCLE' ? (p.ters ? -p.yon : p.yon) : 1;
+      const tc = this.ekle("TRIMMED_CURVE('',#" + taban + ',(#' + this.nokta(a1) + '),(#' + this.nokta(a2) + '),'
+        + (yon < 0 ? '.F.' : '.T.') + ',.CARTESIAN.)');
+      return this.ekle('COMPOSITE_CURVE_SEGMENT(.CONTINUOUS.,' + (p.ters ? '.F.' : '.T.') + ',#' + tc + ')');
+    });
+    const cc = this.ekle("COMPOSITE_CURVE('" + X2(ad) + "',(" + seg.map((x) => '#' + x).join(',') + '),.U.)');
+    u.ogeler.push(this.ekle("GEOMETRIC_SET('NONE',(#" + cc + '))'));
+    return cc;
+  }
+
   metin() {
     return ['ISO-10303-21;', 'HEADER;',
       "FILE_DESCRIPTION(('MFSim test STEP'),'2;1');",
@@ -218,7 +239,9 @@ function eksen(merkez = [0, 0, 0], z = [0, 0, 1], x = [1, 0, 0]) {
 //   omuz      : kanalın iki yanındaki omuzun çapı (od'den BÜYÜK — tuzak)
 //   tepeBol   : kaburga tepesi torunu tepe noktasından ikiye böl (klima gibi)
 //   kenarYanak: bir uçta omuza çıkan tek bir 70° yanak (kanal DEĞİL — tuzak)
-function kanalliProfil({ od, n, adim = 3.56, omuz = null, tepeBol = false, kenarYanak = false, tepeR: tepeR0 = 0.35 }) {
+//   icDuzlem  : ilk kanalın tabanı hizasında göbekte bir alın + delik (klimanın
+//               tuzağı: eksenel olarak kanal penceresine düşen iç yüzler)
+function kanalliProfil({ od, n, adim = 3.56, omuz = null, tepeBol = false, kenarYanak = false, tepeR: tepeR0 = 0.35, icDuzlem = false }) {
   // Kanal ölçüleri PK'nın (3,56) ölçüleridir ve adımla ölçeklenir; yanak
   // açısı ölçekten bağımsız 70° kalır (derinlik = boy · tan 70°).
   const k = adim / 3.56;
@@ -265,6 +288,12 @@ function kanalliProfil({ od, n, adim = 3.56, omuz = null, tepeBol = false, kenar
   }
   // göbek: delik ve alın
   P.push({ tip: 'dogru', s0: S(-8), r0: 12, s1: S(son + 8), r1: 12 });
+  if (icDuzlem) {
+    const sk = S(adim / 2);                                   // ilk kanalın tabanı
+    P.push({ tip: 'dogru', s0: sk, r0: 3, s1: sk, r1: 16.4 });       // alın (düzlem halka)
+    P.push({ tip: 'dogru', s0: sk, r0: 18.5, s1: sk, r1: 27.5 });
+    P.push({ tip: 'dogru', s0: sk - 0.05, r0: 3.5, s1: sk + 0.05, r1: 3.5 });   // kısa delik silindiri
+  }
   return P.filter((p) => !(Math.abs(p.s1 - p.s0) < 1e-12 && Math.abs(p.r1 - p.r0) < 1e-12));
 }
 

@@ -2346,7 +2346,12 @@ function getFeadBeltPropertiesHTML(node){
   var profiller = [['PK','PK'],['PJ','PJ'],['PH','PH'],['PL','PL'],['PM','PM']];
   html += _feadCard('Profil ve marka', 'h_b / h_r buradan gelir', 'var(--accent-warning)',
       _feadSelect(node, 'Profil', 'profile', profiller, 'PK')
-    + _feadSelect(node, 'Marka', 'brand', VE_FEAD_KAYIS_MARKALAR, 'GATES', veFeadBeltDbHint(node)));
+    + _feadSelect(node, 'Marka', 'brand', VE_FEAD_KAYIS_MARKALAR, 'GATES')
+    // HESAP ÇAPI (kullanıcı kararı 2026-09-28): kayış yolu hangi çizgide
+    // kurulur — kayış için TEK seçim. CAD seçeneği yalnız eskizden ölçülmüş
+    // bir h_b varken sunulur.
+    + _feadSelect(node, 'Hesap çapı', 'hesapCap', veFeadHesapCapSecenekleri(node.data),
+        'katalog', veFeadBeltDbHint(node)));
 
   // ── BOY KİPİ ───────────────────────────────────────────────────────────
   // Kol açısı ile kayış boyu TEK serbestlik derecesini paylaşıyor; hangisinin
@@ -2492,6 +2497,10 @@ function veFeadBeltSideRows(node){
       // figüründe ve açıklamasında.
       ['Kayış numarası', mm(x.db)],
       ['Kord boyu', mm(x.dw)],
+      // Hesabın hangi çizgide kurulduğu (kullanıcı kararı 2026-09-28): kord
+      // çizgisi tek, seçim kayışın tek alanında (`hesapCap`).
+      ['Hesap çapı', x.kaynak === 'db' ? 'Kasnak dış çapı (d_b)'
+        : 'Kord (d_w) · ' + (x.kaynak === 'cad' ? 'CAD eskizi' : 'katalog')],
       // KİLİT DE SAYILIR: gergi varken kip alanı 'fixed' yazsa bile boy çıktıdır —
       // Boy sekmesi "SERBEST (kilitli)" derken sütun "katalogdan" diyordu.
       ['Boy kaynağı', x.serbest ? 'tasarımdan hesaplanır' : 'katalogdan seçilir']
@@ -2530,9 +2539,10 @@ function veFeadBoyOkuma(node, b){
   } else if(!serbest){
     L = _feadNum(d.effLength != null ? d.effLength : d.length, NaN);
   }
+  // Kayışın KENDİSİ verilir: fark hesap çapının h_b'sinden (CAD eskizi · d_b).
   var x = (typeof veFeadBoyCizgileri === 'function')
-    ? veFeadBoyCizgileri(L, d.profile, d.brand)
-    : { db: NaN, dw: NaN, hb: NaN, hr: NaN, fark: NaN };
+    ? veFeadBoyCizgileri(L, d)
+    : { db: NaN, dw: NaN, hb: NaN, hr: NaN, fark: NaN, kaynak: 'katalog' };
   x.supheli = supheli;
   x.serbest = serbest;
   return x;
@@ -2547,6 +2557,12 @@ function veFeadBoyOkuma(node, b){
 //
 // TEK ÜRETİCİ: rapor da bunu çağırır (`opt.print` basım paletine geçer) —
 // `veFeadBandSVG`'nin kalıbı. Sayı yok; sayılar yanındaki satırlarda.
+//
+// HESAP ÇİZGİSİ (`opt.kord` = `veFeadKordOfset`): hesabın kurulduğu çizgi dolu
+// ve kalın çizilir, etiketi "hesap" taşır (`data-ve-hesap`). CAD eskizi
+// seçiliyse kord ve sırt eskizin h_b / h_r'siyle konur (ölçek korunur);
+// d_b seçiliyse kayış yine katalog kesitiyle durur — fiziksel kayış aynı,
+// değişen hesabın çizgisi.
 function veFeadKesitSVG(profile, brand, opt){
   opt = opt || {};
   if(typeof FEADCore === 'undefined' || !FEADCore.beltProps) return '';
@@ -2554,6 +2570,9 @@ function veFeadKesitSVG(profile, brand, opt){
   try { bp = FEADCore.beltProps({ profile: profile || 'PK', brand: brand || 'GATES' }); }
   catch(e){ return ''; }
   var e = bp.ribPitch, hr = bp.hr, hb = bp.hb, t = bp.thickness;
+  var ko = opt.kord || null;
+  if(ko && ko.kaynak === 'cad' && ko.hb > 0 && ko.hr > 0 && ko.hb + ko.hr < t){ hb = ko.hb; hr = ko.hr; }
+  var hesapDb = !!(ko && ko.kaynak === 'db');
   if(!(e > 0 && hr > 0 && hb > 0 && t > hr + hb)) return '';
 
   var pr = !!opt.print;
@@ -2562,7 +2581,9 @@ function veFeadKesitSVG(profile, brand, opt){
              : { kay:'var(--accent-warning)', kord:'var(--ink-warning)',
                  kas:'var(--text-secondary)', db:'var(--accent-primary)',
                  dw:'var(--text-primary)', mut:'var(--text-muted)' };
-  var W = 300, H = 128, SOL = 30, SAG = 76, UST = 8, ALT = 8;
+  // Hesap çizgisi işaretlenecekse etiket şeridi "· hesap" kadar geniş.
+  var hesapDw = !!ko && !hesapDb;
+  var W = ko ? 334 : 300, H = 128, SOL = 30, SAG = ko ? 110 : 76, UST = 8, ALT = 8;
   var n = 3, tan20 = Math.tan(20 * Math.PI / 180);
 
   // mm ölçüleri (y aşağı, sırt 0'da)
@@ -2620,20 +2641,22 @@ function veFeadKesitSVG(profile, brand, opt){
     svg += '<circle data-ve="kesit-kord" cx="' + X((k + 0.5) * e / 3) + '" cy="' + Y(yc)
          + '" r="' + f(Math.max(1.2, rk)) + '" fill="' + C.kord + '"/>';
 
-  // ÇİZGİLER — sol uçtan etiket şeridine kadar
-  var cizgi = function(ad, y, renk, dash){
-    return '<line data-ve="' + ad + '" x1="' + f(SOL - 4) + '" y1="' + Y(y) + '" x2="'
-      + f(W - SAG + 6) + '" y2="' + Y(y) + '" stroke="' + renk + '" stroke-width="1.2"'
-      + ' stroke-dasharray="' + dash + '"/>';
+  // ÇİZGİLER — sol uçtan etiket şeridine kadar. Hesabın çizgisi dolu ve kalın.
+  var cizgi = function(ad, y, renk, dash, hesap){
+    return '<line data-ve="' + ad + '"' + (hesap ? ' data-ve-hesap="1"' : '') + ' x1="' + f(SOL - 4)
+      + '" y1="' + Y(y) + '" x2="' + f(W - SAG + 6) + '" y2="' + Y(y) + '" stroke="' + renk + '"'
+      + ' stroke-width="' + (hesap ? '2' : '1.2') + '"'
+      + (hesap ? '' : ' stroke-dasharray="' + dash + '"') + '/>';
   };
-  svg += cizgi('kesit-dw', yc, C.dw, '2 2') + cizgi('kesit-db', yb, C.db, '6 3');
+  svg += cizgi('kesit-dw', yc, C.dw, '2 2', hesapDw) + cizgi('kesit-db', yb, C.db, '6 3', hesapDb);
   var etiket = function(y, renk, alt, ek){
     return '<text x="' + f(W - SAG + 10) + '" y="' + f(oy + y * s + 3.5) + '" font-size="11"'
       + ' font-weight="600" fill="' + renk + '">d<tspan font-size="8" dy="2">' + alt
       + '</tspan><tspan font-size="10" font-weight="400" dy="-2" fill="' + C.mut + '"> · '
       + ek + '</tspan></text>';
   };
-  svg += etiket(yc, C.dw, 'w', 'kord') + etiket(yb, C.db, 'b', 'numara');
+  svg += etiket(yc, C.dw, 'w', 'kord' + (hesapDw ? ' · hesap' : ''))
+       + etiket(yb, C.db, 'b', 'numara' + (hesapDb ? ' · hesap' : ''));
 
   // ÖLÇÜLER — solda: sırt → kord (h_r), kord → d_b (h_b)
   var xd = SOL - 10;
@@ -2660,23 +2683,36 @@ function veFeadKesitSVG(profile, brand, opt){
 function veFeadBoyCizgileriHTML(node){
   var d = (node && node.data) || {};
   var x = veFeadBoyOkuma(node);
+  var ko = (typeof veFeadKordOfset === 'function') ? veFeadKordOfset(d) : null;
   var q = x.supheli ? ' ?' : '';
   var mm = function(v, dec){ return Number.isFinite(v) ? _feadFmt(v, dec) + ' mm' : '—'; };
-  var fark = Number.isFinite(x.fark)
+  var fark = (Number.isFinite(x.fark) && x.kaynak !== 'db')
     ? ' = <b>' + _feadEsc(mm(x.fark, 2)) + '</b> (h<sub>b</sub> = ' + _feadEsc(mm(x.hb, 2))
-      + ', ' + _feadEsc(veFeadKayisMarkaAdi(d.brand)) + ' ' + _feadEsc(String(d.profile || 'PK')) + ')'
+      + ', ' + _feadEsc(veFeadKordKaynakAdi(ko, d)) + ')'
     : '';
   return _feadCard('Boy çizgileri', 'numara d<sub>b</sub> çizgisinde', 'var(--accent-primary)',
-      veFeadKesitSVG(d.profile, d.brand)
+      veFeadKesitSVG(d.profile, d.brand, { kord: ko })
     + '<div class="ve-fp-grid" style="--fp-k:2;">'
     + _feadRO('Kayış numarası', (Number.isFinite(x.db) ? mm(x.db, 1) + q : '—'), '',
               x.supheli ? 'danger' : 'warning')
     + _feadRO('Kord boyu', (Number.isFinite(x.dw) ? mm(x.dw, 1) + q : '—'))
     + '</div>'
     + _feadHint('Kayış numarası <b>d<sub>b</sub></b> çizgisindeki boydur (8PK<b>1410</b> → '
-      + '1.410 mm). CAD eskizi çoğunlukla kordu (<b>d<sub>w</sub></b>) ölçer; aynı kayış '
-      + 'orada 2π·h<sub>b</sub>' + fark + ' uzun okunur. O boy numara sayılırsa kayış o kadar '
-      + 'uzun seçilir ve kol başka bir açıya oturur.'));
+      + '1.410 mm). ' + (x.kaynak === 'db'
+        ? 'Hesap çapı <b>d<sub>b</sub></b>: kayış kalınlığı yok sayılıyor, kayış yolu kasnak '
+          + 'çaplarında kuruluyor — kord boyu numarayla aynı.'
+        : 'CAD eskizi çoğunlukla kordu (<b>d<sub>w</sub></b>) ölçer; aynı kayış '
+          + 'orada 2π·h<sub>b</sub>' + fark + ' uzun okunur. O boy numara sayılırsa kayış o kadar '
+          + 'uzun seçilir ve kol başka bir açıya oturur.')));
+}
+
+// Hesap çapının kaynağı, insan diliyle — panelin, sağ sütunun, kartın ve
+// sihirbazın ORTAK adı (rapor kendi cümlesini kurar).
+function veFeadKordKaynakAdi(ko, d){
+  d = d || {};
+  if(ko && ko.kaynak === 'cad') return 'CAD eskizi';
+  if(ko && ko.kaynak === 'db') return 'kayış kalınlığı yok';
+  return veFeadKayisMarkaAdi(d.brand) + ' ' + String(d.profile || 'PK') + ' kataloğu';
 }
 
 // ─── KATALOG KARTI ──────────────────────────────────────────────────────────
@@ -2839,12 +2875,35 @@ function veFeadBeltDbHint(node){
   if(typeof FEADCore === 'undefined') return '';
   try {
     var bp = FEADCore.beltProps({ profile: (node.data.profile || 'PK'), brand: (node.data.brand || 'GATES') });
-    return 'Katalog: h<sub>b</sub> = ' + veSayi(bp.hb) + ' mm · h<sub>r</sub> = ' + veSayi(bp.hr) + ' mm · '
+    var h = 'Katalog: h<sub>b</sub> = ' + veSayi(bp.hb) + ' mm · h<sub>r</sub> = ' + veSayi(bp.hr) + ' mm · '
       + 'kaburga adımı ' + veSayi(bp.ribPitch) + ' mm · min. kasnak çapı ' + veSayi(bp.minPulleyDia) + ' mm · '
       + 'maks. hız ' + veSayi(bp.maxSpeedMs) + ' m/s.';
+    // Hesap katalogdan başka bir çiftle kuruluyorsa ikisi yan yana: kullanıcı
+    // hangi h_b'nin kayış yoluna girdiğini buradan okur.
+    var ko = (typeof veFeadKordOfset === 'function') ? veFeadKordOfset(node.data) : null;
+    if(ko && ko.kaynak !== 'katalog')
+      h += ' <b>Hesapta</b>: h<sub>b</sub> = ' + veSayi(ko.hb, 2) + ' mm · h<sub>r</sub> = '
+        + veSayi(ko.hr, 2) + ' mm (' + _feadEsc(veFeadKordKaynakAdi(ko, node.data))
+        + (ko.kaynak === 'cad' && ko.hrKaynak !== 'cad' ? '; h<sub>r</sub> katalogdan' : '') + ').';
+    if(ko && ko.uyari) h += ' <span style="color:var(--ink-warning);">' + _feadEsc(ko.uyari) + '</span>';
+    return h;
   } catch(e){
     return '<span style="color:var(--ink-danger);">' + _feadEsc(veFeadTranslateError(e && e.message)) + '</span>';
   }
+}
+
+// Hesap çapı seçenekleri — kayış penceresinin ve sihirbazın ORTAK listesi
+// (kural 24). Sayılar etiketin içinde: kullanıcı 147 mı 150 mi seçtiğini görür.
+function veFeadHesapCapSecenekleri(d){
+  d = d || {};
+  var kat = null;
+  try { kat = FEADCore.beltProps({ profile: d.profile || 'PK', brand: d.brand || 'GATES' }); } catch(e){ kat = null; }
+  var out = [['katalog', 'Kord (d_w) · ' + veFeadKayisMarkaAdi(d.brand) + ' kataloğu'
+    + (kat ? ' · h_b ' + veSayi(kat.hb, 2) : '')]];
+  var hbCad = _feadNum(d.hbCad, NaN);
+  if(Number.isFinite(hbCad)) out.push(['cad', 'Kord (d_w) · CAD eskizi · h_b ' + veSayi(hbCad, 2)]);
+  out.push(['db', 'Kasnak dış çapı (d_b) · kayış kalınlığı yok']);
+  return out;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8745,6 +8804,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadBoyOkuma: veFeadBoyOkuma,
     veFeadKesitSVG: veFeadKesitSVG,
     veFeadBoyCizgileriHTML: veFeadBoyCizgileriHTML,
+    veFeadKordKaynakAdi: veFeadKordKaynakAdi, veFeadHesapCapSecenekleri: veFeadHesapCapSecenekleri,
+    veFeadKayisMarkaAdi: veFeadKayisMarkaAdi, VE_FEAD_KAYIS_MARKALAR: VE_FEAD_KAYIS_MARKALAR,
     veFeadBeltCatalogCard: veFeadBeltCatalogCard,
     veFeadPickBelt: veFeadPickBelt,
     veFeadApplyLayoutCard: veFeadApplyLayoutCard,

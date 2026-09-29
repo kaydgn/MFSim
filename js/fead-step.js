@@ -175,8 +175,14 @@ function _fstKanallar(profil){
   for(var i = 0; i + 1 < yanak.length; i++){
     var a = yanak[i], b = yanak[i + 1];
     if(a.rB < a.rA && b.rB > b.rA && b.s0 - a.s1 >= -1e-6 && b.s0 - a.s1 <= 3){
-      var taban = Math.min(a.rB, b.rA);
-      profil.forEach(function(r){ if(r.s0 >= a.s1 - 1e-6 && r.s1 <= b.s0 + 1e-6 && r.rMin < taban) taban = r.rMin; });
+      // KANAL TABANI YANAKLARIN UÇLARINA DEĞEN YÜZDÜR (tor ya da silindir).
+      // Pencereye eksenel olarak düşen iç yüzler — göbek alnı, cıvata deliği —
+      // yanağa değmez ve taban değildir: klimada tabanı 6,00 mm okutuyordu
+      // (gerçeği Ø130,10).
+      var uc = Math.min(a.rB, b.rA), taban = uc;
+      profil.forEach(function(r){
+        if(r.s0 >= a.s1 - 1e-6 && r.s1 <= b.s0 + 1e-6 && r.rMax >= uc - 0.01 && r.rMin < taban) taban = r.rMin;
+      });
       V.push({ s: (a.s1 + b.s0) / 2, taban: taban });
     }
   }
@@ -332,7 +338,7 @@ function veFeadStpOku(metin){
     var pi = out.parcalar.length;
     out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: yuzler.length });
     out._yuz.push(yuzler);
-    out._geo.push({ yuzler: yuzler.length ? p.yuzler : [], M: p.M, birim: p.birim });
+    out._geo.push({ yuzler: yuzler.length ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [] });
     for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
   });
   out.sureMs.yuz = Date.now() - t2;
@@ -550,7 +556,76 @@ function _fstKayisCoz(b, sonuc, n, p0, kasnaklar){
   kasnaklar.forEach(function(q){ if(q.tur === 'kanalli' && q.profil) prof[q.profil] = 1; });
   if(c && Object.keys(prof).length && !prof[c.profile])
     k.uyarilar.push(ad + ' ' + c.profile + ' profilli; kanallı kasnaklar ' + Object.keys(prof).join(', ') + '.');
+  k.eskiz = _fstKayisEskiz(b, sonuc, n, kasnaklar);
+  if(k.eskiz) k.eskiz.uyarilar.forEach(function(m){ k.uyarilar.push(m); });
   return k;
+}
+
+// ── KAYIŞ ESKİZİ → h_b / h_r (kullanıcı kararı 2026-09-28: STEP'ten kurulan
+// modelde varsayılan hesap çapı CAD eskizinin d_w'si). Eskiz kayışın çalışma
+// çizgisidir; her yayı bir kasnakla eşmerkezli ve yarıçapı ile kasnağın dış
+// çapının yarısı arasındaki fark o kasnaktaki KORD OFSETİDİR — kaburgalı
+// kasnakta h_b, sırttan dolanan (düz) kasnakta h_r. Kullanıcının dosyasında
+// dört yayın dördü de 1,500: ContiTech PK'nın tablosu (Gates 1,2 / 1,1).
+// Eskiz SEÇİLİR: kayış biriminin kapalı eğrilerinden kasnaklarla en çok yayı
+// eşleşen. Ofsetler kasnaklar arasında tutarlı değilse (yayılım > 0,01 mm) o
+// ofset YAZILMAZ ve sebebiyle söylenir — ortalaması kimsenin çizmediği bir çizgi.
+var VE_FEAD_STP_ESKIZ = { merkezPay: 0.5, yayilim: 0.01 };
+function _fstP21(){
+  if(typeof veStepP21Egri === 'function') return { veStepP21Egri: veStepP21Egri };
+  if(typeof require === 'function'){ try { return require('./step-p21.js'); } catch(e){ return null; } }
+  return null;
+}
+function _fstKayisEskiz(b, sonuc, n, kasnaklar){
+  var P = _fstP21(), T = VE_FEAD_STP_ESKIZ;
+  if(!P || !P.veStepP21Egri || !sonuc._model || !n) return null;
+  var cosT = Math.cos(VE_FEAD_STP_TOL.duzlemAci * Math.PI / 180), enIyi = null;
+  b.parcalar.forEach(function(pi){
+    var g = sonuc._geo && sonuc._geo[pi];
+    ((g && g.egriler) || []).forEach(function(id){
+      var e;
+      try { e = P.veStepP21Egri(sonuc._model, id, g.M, g.birim); } catch(x){ return; }
+      if(!e || !e.destek || !e.kapali) return;
+      var yaylar = [];
+      e.parcalar.forEach(function(q){
+        if(q.tip !== 'CIRCLE' || Math.abs(_fstNokta(q.n, n)) < cosT) return;
+        var enK = -1, enD = Infinity;
+        kasnaklar.forEach(function(k, ki){
+          var d = _fstCikar(q.c, k.merkez);
+          var L = _fstBoy(_fstCikar(d, _fstCarp(n, _fstNokta(d, n))));   // düzlem içinde
+          if(L < enD){ enD = L; enK = ki; }
+        });
+        if(enK < 0 || enD > T.merkezPay) return;
+        var k = kasnaklar[enK];
+        yaylar.push({ kasnak: enK, ad: k.ad, tur: k.tur, R: q.r, ofset: q.r - k.od / 2, aci: q.aci * 180 / Math.PI });
+      });
+      if(yaylar.length >= 2 && (!enIyi || yaylar.length > enIyi.yaylar.length)) enIyi = { e: e, yaylar: yaylar };
+    });
+  });
+  if(!enIyi) return null;
+  var out = { ad: enIyi.e.ad, L: enIyi.e.L, yaylar: enIyi.yaylar, hb: null, hr: null,
+              hbYayilim: null, hrYayilim: null, uyarilar: [] };
+  var ozet = function(tur){
+    var v = enIyi.yaylar.filter(function(y){ return y.tur === tur; }).map(function(y){ return y.ofset; });
+    if(!v.length) return null;
+    return { ort: v.reduce(function(t, x){ return t + x; }, 0) / v.length,
+             yayilim: Math.max.apply(null, v) - Math.min.apply(null, v) };
+  };
+  var ad = '"' + (out.ad || 'Kayış eskizi') + '"';
+  [['kanalli', 'hb', 'kaburgalı', 'h_b'], ['duz', 'hr', 'sırttan dolanan', 'h_r']].forEach(function(t){
+    var o = ozet(t[0]);
+    if(!o) return;
+    out[t[1] + 'Yayilim'] = o.yayilim;
+    if(o.yayilim <= T.yayilim && o.ort >= 0) out[t[1]] = o.ort;
+    else out.uyarilar.push(ad + ': ' + t[2] + ' kasnaklarda yay − dış çap farkı tutarsız (yayılım '
+      + veSayi(o.yayilim, 3) + ' mm); ' + t[3] + ' eskizden alınmadı.');
+  });
+  var eslesen = {};
+  enIyi.yaylar.forEach(function(y){ eslesen[y.kasnak] = 1; });
+  kasnaklar.forEach(function(k, ki){
+    if(!eslesen[ki]) out.uyarilar.push(ad + ' "' + k.ad + '" kasnağından geçmiyor.');
+  });
+  return out;
 }
 
 // Eksen yönlerinin çoğunluğu (±1°): kanonik işaretle
@@ -694,9 +769,23 @@ function veFeadStpKayit(cozum, secim){
     if(ky.profil) belt.profile = ky.profil;
     if(ky.kanal) belt.ribs = ky.kanal;
     if(ky.kod) belt.beltType = ky.kod;
+    // HESAP ÇAPI: eskizden ölçülen kord ofsetleri modele girer ve varsayılan
+    // seçim CAD'dir (kullanıcı kararı) — kullanıcı sihirbazda başkasını
+    // seçtiyse (`secim.hesapCap`) o kazanır.
+    var es = ky.eskiz;
+    if(es && es.hb !== null){
+      belt.hbCad = _fstYuv(es.hb, MM);
+      if(es.hr !== null) belt.hrCad = _fstYuv(es.hr, MM);
+    }
+    // Katalog alan YAZMAZ (boş = katalog, köprünün varsayılanı).
+    var hc = secim.hesapCap;
+    if(hc === 'db') belt.hesapCap = 'db';
+    else if(hc !== 'katalog' && belt.hbCad !== undefined) belt.hesapCap = 'cad';
     kayit.belt = belt;
     kayit.kayisCad = { kod: ky.kod, boy: ky.boy, kanal: ky.kanal, kanalKaynak: ky.kanalKaynak,
                        genislik: ky.genislik === null ? null : _fstYuv(ky.genislik, MM), ad: _fstAd(ky.ad) };
+    if(es) kayit.kayisCad.eskiz = { ad: es.ad, L: _fstYuv(es.L, MM), hb: es.hb === null ? null : _fstYuv(es.hb, MM),
+                                   hr: es.hr === null ? null : _fstYuv(es.hr, MM), yay: es.yaylar.length };
   }
   return kayit;
 }
@@ -841,6 +930,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_FEAD_STP_SURUM: VE_FEAD_STP_SURUM,
     VE_FEAD_STP_PROFILLER: VE_FEAD_STP_PROFILLER,
+    VE_FEAD_STP_ESKIZ: VE_FEAD_STP_ESKIZ,
     VE_FEAD_STP_TOL: VE_FEAD_STP_TOL,
     veFeadStpOku: veFeadStpOku,
     veFeadStpCoz: veFeadStpCoz,

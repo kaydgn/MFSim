@@ -8543,6 +8543,12 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-tbl td:first-child{ display:flex; align-items:center; gap:6px; }
 .ve-fw-3b-tbl .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
 .ve-fw-3b-kayis{ margin:0; display:flex; align-items:center; gap:6px; font-size:var(--fs-tiny); }
+/* HESAP ÇAPI (2026-09-28): kasnağın kesiti ve seçici. Hesabın kurulduğu
+   satır ayrılır; seçici kayış için TEK — bütün kasnaklara birlikte. */
+.ve-fw-3b-hesapcap{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0; }
+.ve-fw-kesit-tbl td:nth-child(2){ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ve-fw-kesit-tbl td:nth-child(3){ font-size:var(--fs-micro); }
+.ve-fw-kesit-hesap td{ border-top:1px solid var(--border-hover); color:var(--text-heading); }
 /* OTOMATİK BULUNAN GERGİ (5.2): satır ve rozet — seçilen değil BULUNAN rol,
    ayırt edilsin. Öneri satırının düğmesi metin taşır (kare mini düğme değil). */
 .ve-fw-oto{ flex-wrap:wrap; }

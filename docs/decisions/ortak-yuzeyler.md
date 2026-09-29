@@ -10,7 +10,7 @@ topolojisinde "Bileşenler" sütunu ve daraltılmışken beliren açma rayı
 noktası yazar (`veSyncSidebarScope` → `veSyncPaletsizKapsam`, js/components.js);
 modül aç/kapa, sekme ve proje yükleme hepsi oradan geçer. İlk kullanıcısı FEAD
 (kullanıcı kararı: *"zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar'
-üzerinden ekleyebiliyoruz"*) — ekleme yollarının yeri FEAD skill'inde, kural 39.
+üzerinden ekleyebiliyoruz"*) — ekleme yollarının yeri FEAD skill'inde, kural 40.
 
 **Gerekçe:** sütun her kapsamda aynı kabuktu ve içeriğini kapsamdan
 süzüyordu; eklemesi tuvalde yapılan bir modülde süzülecek bir şey kalmayınca

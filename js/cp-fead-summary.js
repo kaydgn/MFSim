@@ -295,8 +295,9 @@ function _fsrKVT(rows, dar){
 
 // Numaranın kord (d_w) karşılığı — köprüden; kayıt tanınmıyorsa boş.
 function _fsrKord(b){
+  // Kayışın kendisi verilir: fark hesap çapının h_b'sinden (CAD eskizi · d_b).
   var x = (typeof veFeadBoyCizgileri === 'function' && b)
-    ? veFeadBoyCizgileri(b.effLength, b.profile, b.brand) : null;
+    ? veFeadBoyCizgileri(b.effLength, b) : null;
   return (x && Number.isFinite(x.dw)) ? ' · kord ' + _frFs(x.dw, 1) : '';
 }
 
