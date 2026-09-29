@@ -656,20 +656,24 @@ describe('sahneler programın kendi bileşeni', () => {
   });
 
   test('kasnak paneli sahnesi AKSESUAR kasnağını gösteriyor', () => {
-    // Sürücü kasnak seçilseydi "Katalog Modeli" ve "Devir Sınırları" kartları
-    // hiç çizilmezdi ve altyazı olmayan bir şeyi anlatırdı (kart-adı kapısında
-    // ölçülmüş sınıf).
+    // Sürücü kasnak seçilseydi "Katalog Modeli" kartı hiç çizilmezdi ve
+    // "Devir sınırları" MOTORUN sınırlarını gösterirdi — altyazı olmayan bir
+    // şeyi anlatırdı (kart-adı kapısında ölçülmüş sınıf).
     // PANEL ARTIK KART KART SAHNELENİYOR (baskı için: bütün panel A4'ten uzun,
     // 1122 px ölçüldü). İki kart iki ayrı şekil — kapı ikisini de arar.
     const temas = sahneler.filter((x) => x.indexOf('Temas tarafı') >= 0)[0] || '';
     expect(temas).not.toBe('');
-    const f = sahneler.filter((x) => x.indexOf('Devir sınırları') >= 0)[0] || '';
+    const f = sahneler.filter((x) => x.indexOf('Devir sınırları') >= 0
+      && x.indexOf('optimumRpm') >= 0)[0] || '';
     expect(f).not.toBe('');
-    // AYIRT EDİCİ: aksesuar künye seçicisi YALNIZ `VE_FEAD_ACC_TYPE`'ta karşılığı
-    // olan tiplerde çizilir (alternatör · klima). "Katalog Modeli" bu işi
-    // GÖRMÜYOR — sürücü kasnakla ölçüldü, o kart orada da çıkıyor ve mutasyon
-    // kapıdan geçiyordu.
-    expect(f).toContain('BMC künyesi');
+    // AYIRT EDİCİ (2026-09-28): sürücüde de bir "Devir sınırları" var artık —
+    // motorun rölanti/governed/overspeed'i. Aksesuarınki optimum/sürekli/anlık
+    // sorar; sürücününkü ASLA. Model seçicisi de yalnız aksesuarda ve BMC
+    // künyesi (`bmc:`) yalnız `VE_FEAD_ACC_TYPE`'ta karşılığı olan tiplerde.
+    expect(f).not.toContain('governedRpm');
+    // Sahne olay işleyicilerini söküyor (guide-kit.js) — seçici kimliğiyle aranır.
+    const m = sahneler.filter((x) => x.indexOf('ve-fead-accModel-') >= 0)[0] || '';
+    expect(m).toContain('value="bmc:');
     const tipler = Object.keys(VE_FEAD_ACC_TYPE);
     expect(tipler.length).toBeGreaterThan(0);
     // Sahnedeki düğüm gerçekten o tiplerden birine ait olmalı.

@@ -8,7 +8,9 @@
  * Birim testler kütüphaneyi ve iki köprüyü Node'da doğruluyor. Buradaki soru
  * başka: YÜZEY ayakta mı? Node'da HİÇ koşmayan halkalar — modal kabuğunun
  * gerçekten açılması, açılır pencereden GERÇEK seçim (`selectOption`),
- * panelin `showNodeProperties` ile kurulması ve tablonun DOM'a basılması.
+ * SÜRÜCÜ KASNAĞIN penceresinin `showNodeProperties` ile kurulması ve
+ * "Çevrim" sekmesindeki tablonun DOM'a basılması (2026-09-28'e kadar
+ * Çözücü'nün panelindeydi).
  *
  * Panel tarafı ayrıca önemli: kusur sihirbazda bildirildi ama asıl modelin
  * yaşadığı yerde de vardı ve orası yalnız tarayıcıda kuruluyor.
@@ -68,26 +70,36 @@ test('çalışma çevrimi otomatik gelir — sihirbaz ve panel', async ({ page }
   console.log('SİHİRBAZ(kW okuma) ' + JSON.stringify(kwHam));
   expect(kwHam.filter((x) => x && x !== '—').length).toBeGreaterThan(0);
 
-  // ── PANEL ───────────────────────────────────────────────────────────────
+  // ── PANEL — SÜRÜCÜ KASNAĞIN PENCERESİ ──────────────────────────────────
+  // Çevrim 2026-09-28'de Çözücü'den sürücü kasnağın "Çevrim" sekmesine
+  // taşındı; veri çözücü düğümünde (işletme deposu) kalıyor. Tohum pencere
+  // KURULURKEN atılır — boş modelde ilk kasnak sürücü yapılıp penceresi
+  // açılınca tablo dolu gelmeli.
   await page.evaluate(() => veFeadWizClose(false));
   await page.waitForTimeout(300);
-  await page.evaluate(() => {
-    // Çözücü düğümü kanvasta yoksa kur — panelin kendi yolu ölçülecek.
-    let s = window.nodes.find((x) => x.type === 'fead-solver');
-    if (!s) s = createNode('fead-solver', 300, 500);
-    showNodeProperties(s);
+  const drvId = await page.evaluate(() => {
+    const k = createNode('fead-crank', 300, 500);
+    k.data.driver = true;
+    clearSelection(); addToSelection(k); veTogglePropertiesPanel(true);
+    return k.id;
   });
   await page.waitForTimeout(600);
-  const p1 = await page.evaluate(() => {
+  await page.click('.ve-fp-tab[data-k="cev"]');
+  const p1 = await page.evaluate((id) => {
     const s = window.nodes.find((x) => x.type === 'fead-solver');
-    const panel = document.querySelector('.ve-properties') || document.body;
+    const panel = document.getElementById('ve-fp-panes-' + id) || document.body;
+    const pn = panel.querySelector('[data-k="cev"]');
     return { satir: s ? s.data.duty.length : -1, lib: s ? s.data.dutyLib : null,
-             secici: !!panel.querySelector('select[onchange*="veFeadDutyLib"]'),
+             secici: !!(pn && pn.querySelector('select[onchange*="veFeadDutyLib"]')),
+             gorunur: !!(pn && pn.offsetParent),
+             tablo: pn ? pn.querySelectorAll('input[onchange*="veFeadDutySet"][onchange*=",\'rpm\',"]').length : 0,
              bosMesaj: panel.textContent.includes('Henüz devir noktası yok') };
-  });
+  }, drvId);
   console.log('PANEL ' + JSON.stringify(p1));
   expect(p1.satir).toBeGreaterThan(0);
+  expect(p1.tablo).toBe(p1.satir);
   expect(p1.secici).toBe(true);
+  expect(p1.gorunur).toBe(true);
   expect(p1.bosMesaj).toBe(false);
 
   console.log('KONSOL ' + JSON.stringify(hatalar));

@@ -16,7 +16,9 @@
  *
  * Kurallar (cp-fead.js → veFeadSekmeDurumlari):
  *   ok · eksik (boşluğun bir SONUCU var) · bos (isteğe bağlı) · yok (hiçbir
- *   hesap okumuyor — sürücünün devir sınırı ve güç eğrisi)
+ *   hesap okumuyor)
+ * Sürücünün dört sekmesi (motor · devir · eğri · çevrim) 2026-09-28'den beri
+ * DEPODAN okur (`veFeadIsletmeDeposu` — çözücü düğümü).
  */
 const fs = require('fs');
 const path = require('path');
@@ -169,12 +171,82 @@ describe('DEVİR SINIRLARI — sayım KAPININ gördüğüyle aynı', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('SÜRÜCÜ — iki sekme hiçbir hesaba girmiyor', () => {
-  test('açık işaretli sürücü: devir sınırı ve güç eğrisi "kullanılmaz"', () => {
+describe('SÜRÜCÜ — motor ve çevrim DEPODAN (2026-09-28)', () => {
+  // Kullanıcı kararı: motor künyesi, FEAD tahriki ve çalışma çevrimi Çözücü'den
+  // sürücü kasnağın penceresine taşındı; devir sınırları ve güç eğrisi
+  // sürücüde artık ÖLÜ değil — motorun sınırları ve tam yük eğrisi, motor
+  // seçicisiyle AYNI sekmede (şerit dar müfettişte tek satır kalsın diye).
+  test('açık işaretli sürücü: dört sekme; ikisi depodan', () => {
     ornek();
     const D = durum('ex-FAN');
-    expect(D.dev).toEqual({ d: 'yok', yazi: 'kullanılmaz' });
-    expect(D.egr).toEqual({ d: 'yok', yazi: 'kullanılmaz' });
+    expect(Object.keys(D).sort()).toEqual(['cev', 'geo', 'mot', 'rol']);
+    expect(D.mot).toEqual(expect.objectContaining({ d: 'eksik', yazi: '0/3 devir' }));  // oran 1 (eski kayıt)
+    expect(D.cev).toEqual({ d: 'ok', yazi: '12 satır' });
+  });
+
+  test('ANLAŞMA — devir sınırları eksik ⇔ kapı "governed bilinmiyor", senaryo rölantiyi varsayıyor', () => {
+    ornek();
+    const b = kopru();
+    const K = veFeadChecks(b, veFeadCheckOpt(b.solver.data, veFeadDutyRows(b.solver)));
+    expect(K.ratioWindow.durum).toBe('wait');
+    expect(durum('ex-FAN').mot.neden).toMatch(/Governed girilmedi/);
+    Object.assign(dugum('ex-solver').data, { governedRpm: 2100, overspeedRpm: 2600, idleRpm: 700 });
+    expect(durum('ex-FAN').mot).toEqual({ d: 'ok', yazi: 'tamam' });
+    const b2 = kopru();
+    expect(veFeadChecks(b2, veFeadCheckOpt(b2.solver.data, veFeadDutyRows(b2.solver))).ratioWindow.durum)
+      .not.toBe('wait');
+  });
+
+  test('MOTOR SEÇİMİ sınırları getirir — Motor sekmesi "katalogdan"', () => {
+    ornek();
+    const key = veFeadEngineList().filter((e) => veFeadEngineOf(e.key).curve.length >= 2)[0].key;
+    veFeadEngineApply(dugum('ex-solver').data, key);
+    expect(durum('ex-FAN').mot).toEqual({ d: 'ok', yazi: 'katalogdan' });
+  });
+
+  // "Doldur" İLK BOŞ alana gitseydi Motor sekmesinde İSTEĞE BAĞLI servis
+  // faktörüne giderdi; durum eksiğin kendi alanını taşır.
+  test('Doldur eksiğin KENDİ alanına gider — isteğe bağlı boş alana değil', () => {
+    ornek();
+    delete dugum('ex-solver').data.serviceFact;
+    const D = durum('ex-FAN');
+    expect(D.mot.hedef).toBe('ve-fead-idleRpm-ex-solver');
+    dugum('ex-solver').data.idleRpm = 700;
+    expect(durum('ex-FAN').mot.hedef).toBe('ve-fead-governedRpm-ex-solver');
+    Object.assign(dugum('ex-solver').data, { governedRpm: 2100, overspeedRpm: 2600, ratioMode: 'derive' });
+    ['crankOD', 'fanOD', 'driveRatio'].forEach((k) => delete dugum('ex-solver').data[k]);
+    expect(durum('ex-FAN').mot).toEqual(expect.objectContaining({ d: 'eksik', yazi: 'oran yok',
+      hedef: 've-fead-crankOD-ex-solver' }));
+    document.body.innerHTML = getFeadPulleyPropertiesHTML(dugum('ex-FAN'));
+    const btn = document.querySelector('#ve-fp-eksik-ex-FAN button');
+    expect(btn.getAttribute('onclick')).toContain("'ve-fead-crankOD-ex-solver'");
+    dugum('ex-solver').data.crankOD = 197.32;
+    delete dugum('ex-solver').data.idleRpm;
+    document.body.innerHTML = getFeadPulleyPropertiesHTML(dugum('ex-FAN'));
+    expect(veFeadEksikGit('ex-FAN', 'mot', 've-fead-fanOD-ex-solver')).toBe(true);
+    expect(document.activeElement.id).toBe('ve-fead-fanOD-ex-solver');
+    expect(veFeadEksikGit('ex-FAN', 'mot', 've-fead-idleRpm-ex-solver')).toBe(true);
+    expect(document.activeElement.id).toBe('ve-fead-idleRpm-ex-solver');
+  });
+
+  test('ANLAŞMA — ara kademe çapsız: Motor eksik ⇔ köprünün oranı çözülmemiş (1 alınıyor)', () => {
+    ornek();
+    // Örnek eski kaydın `driveRatio: 1`ini taşıyor ve köprü çapsız ara
+    // kademede ona düşüyor; yeni bir modelde o alan yok.
+    Object.assign(dugum('ex-solver').data, { ratioMode: 'derive' });
+    ['crankOD', 'fanOD', 'driveRatio'].forEach((k) => delete dugum('ex-solver').data[k]);
+    expect(kopru().drive.ok).toBe(false);
+    const D = durum('ex-FAN').mot;
+    expect(D.d).toBe('eksik');
+    expect(D.neden).toMatch(/oran 1 alınıyor/);
+  });
+
+  test('ANLAŞMA — boş çevrim: Çevrim eksik ⇔ köprü "çalışma çevrimi boş" diyor', () => {
+    ornek();
+    dugum('ex-solver').data.duty = [];
+    expect(durum('ex-FAN').cev.d).toBe('eksik');
+    const res = veFeadAnalyze(kopru(), { rows: [] });
+    expect(res.warnings.join(' ')).toMatch(/Çalışma çevrimi boş/);
   });
 
   test('işaret yokken KÖPRÜNÜN seçtiği sürücü — yalnız data.driver\'a bakmak yetmez', () => {
@@ -183,33 +255,40 @@ describe('SÜRÜCÜ — iki sekme hiçbir hesaba girmiyor', () => {
     const b = kopru();
     const i = b.order.findIndex((n) => n.id === 'ex-FAN');
     expect(b.sys.pulleys[i].crank).toBe(true);                 // köprü onu sürücü sayıyor
-    expect(durum('ex-FAN').dev.d).toBe('yok');                 // sekme de
+    expect(durum('ex-FAN').mot).toBeTruthy();                  // sekme de
   });
 
-  test('sürücülük ROL: işaret başka kasnağa geçince sekmeler geri gelir', () => {
+  test('sürücülük ROL: işaret başka kasnağa geçince motor sekmeleri onunla gider, veri kaybolmaz', () => {
     ornek();
+    const satir = dugum('ex-solver').data.duty.length;
     delete dugum('ex-FAN').data.driver;
     dugum('ex-ALT').data.driver = true;
-    expect(durum('ex-FAN').dev.d).not.toBe('yok');
-    expect(durum('ex-ALT').dev.d).toBe('yok');
+    expect(durum('ex-FAN').mot).toBeUndefined();
+    expect(durum('ex-FAN').dev.d).not.toBe('yok');             // aksesuar sınırları geri geldi
+    expect(durum('ex-ALT').dev).toBeUndefined();               // sürücüde ayrı sekme yok
+    expect(durum('ex-ALT').cev).toEqual({ d: 'ok', yazi: satir + ' satır' });
   });
 
-  test('sürücünün iki sekmesi ALAN SORMAZ (kural 25) — sebebini yazar', () => {
+  test('sürücünün sekmeleri ALAN SORAR ve DEPOYA yazar — pencere kimliğine değil', () => {
     ornek();
     const kap = document.createElement('div');
     kap.innerHTML = getFeadPulleyPropertiesHTML(dugum('ex-FAN'));
-    ['dev', 'egr'].forEach((k) => {
-      const pn = kap.querySelector('[id^="ve-fp-panes-"] > [data-k="' + k + '"]');
-      expect(pn.querySelectorAll('input, select, textarea').length).toBe(0);
-      expect(pn.textContent).toMatch(/hiçbir hesaba girmiyor/);
+    const pane = (k) => kap.querySelector('[id^="ve-fp-panes-"] > [data-k="' + k + '"]');
+    ['idleRpm', 'governedRpm', 'overspeedRpm'].forEach((k) => {
+      const inp = pane('mot').querySelector('#ve-fead-' + k + '-ex-solver');
+      expect(inp).toBeTruthy();
+      expect(inp.getAttribute('onchange')).toContain("veFeadSet('ex-solver','" + k + "'");
     });
-    // Aksesuarda aynı sekmeler alanlarını soruyor.
-    kap.innerHTML = getFeadPulleyPropertiesHTML(dugum('ex-A_C'));
-    expect(kap.querySelector('[id^="ve-fp-panes-"] > [data-k="dev"]')
-      .querySelectorAll('input').length).toBeGreaterThanOrEqual(3);
+    expect(pane('mot').querySelector('select[onchange*="veFeadApplyEngineLib"]')).toBeTruthy();
+    expect(pane('mot').querySelector('#ve-fead-ratioMode-ex-solver')).toBeTruthy();
+    expect(pane('cev').querySelector('input[onchange*="veFeadDutySet(\'ex-solver\'"]')).toBeTruthy();
+    // Krank mili ataleti Rol'de, depodan, değeriyle.
+    const J = pane('rol').querySelector('[data-ve-varsayilan="krank"]');
+    expect(J.querySelector('input').value).toBe('0.7');
+    expect(J.getAttribute('data-kaynak')).toBe('elle');
   });
 
-  test('avarada iki sekme HİÇ açılmaz; durum listesi de onları taşımaz', () => {
+  test('avarada motor da aksesuar sekmeleri de HİÇ açılmaz', () => {
     ornek();
     const D = durum('ex-IDR1');
     expect(Object.keys(D).sort()).toEqual(['geo', 'rol']);
@@ -251,16 +330,20 @@ describe('GÜÇ EĞRİSİ — sessiz sıfır yakalanıyor', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('ÇÖZÜCÜ — dört sekmenin dördü de bir sonuca bağlı', () => {
-  test('örnekte motor devirleri yok: Girdiler eksik, kapı da "governed bilinmiyor" diyor', () => {
+describe('ÇÖZÜCÜ — yalnız yöntem, model ve sonuç; GİRDİ SORMAZ', () => {
+  test('üç sekme ve hiçbirinde girdi alanı yok', () => {
     ornek();
-    const D = durum('ex-solver');
-    expect(D.gir).toEqual(expect.objectContaining({ d: 'eksik', yazi: '0/2 girildi' }));
-    const b = kopru();
-    const K = veFeadChecks(b, veFeadCheckOpt(b.solver.data, veFeadDutyRows(b.solver)));
-    expect(K.ratioWindow.durum).toBe('wait');
-    Object.assign(dugum('ex-solver').data, { governedRpm: 2100, overspeedRpm: 2600 });
-    expect(durum('ex-solver').gir.d).toBe('ok');
+    expect(Object.keys(durum('ex-solver')).sort()).toEqual(['mod', 'son', 'yon']);
+    const kap = document.createElement('div');
+    kap.innerHTML = getFeadSolverPropertiesHTML(dugum('ex-solver'));
+    const gov = kap.querySelector('[id^="ve-fp-panes-"]');
+    expect([...gov.children].map((p) => p.getAttribute('data-k'))).toEqual(['yon', 'mod', 'son']);
+    expect(gov.querySelectorAll('input:not([readonly]), select, textarea').length).toBe(0);
+  });
+
+  test('Yöntemler sekmesi köprünün listesini sayar', () => {
+    ornek();
+    expect(durum('ex-solver').yon).toEqual({ d: 'ok', yazi: VE_FEAD_YONTEMLER.length + ' aşama' });
   });
 
   test('Model köprünün hükmü; çözülemezse sebebi köprünün İLK hatası', () => {
@@ -270,13 +353,6 @@ describe('ÇÖZÜCÜ — dört sekmenin dördü de bir sonuca bağlı', () => {
     const D = durum('ex-solver').mod;
     expect(D.d).toBe('eksik');
     expect(D.neden).toBe(kopru().errors[0]);
-  });
-
-  test('Çevrim satır sayısı (rozetin yerini aldı); boş çevrim eksik', () => {
-    ornek();
-    expect(durum('ex-solver').cev).toEqual({ d: 'ok', yazi: '12 satır' });
-    dugum('ex-solver').data.duty = [];
-    expect(durum('ex-solver').cev.d).toBe('eksik');
   });
 
   test('Sonuç: hesap yok → isteğe bağlı değil "hesaplanmadı"; hata → eksik', () => {
@@ -335,11 +411,11 @@ describe('ŞERİT VE BANT — pencerede', () => {
 
   test('ROZET KALKTI (kural 26): ne şeritte ne kaynakta', () => {
     ornek();
-    const kap = ciz(getFeadSolverPropertiesHTML(dugum('ex-solver')));
+    const kap = ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN')));
     expect(kap.querySelectorAll('.ve-fp-tab b').length).toBe(0);
     expect(SRC).not.toMatch(/s\.rozet|rozetD/);
     expect(CSS).not.toMatch(/\.ve-fp-tab b\b/);
-    // Satır sayısı durum satırında.
+    // Satır sayısı durum satırında — çevrim artık sürücünün penceresinde.
     expect(kap.querySelector('.ve-fp-tab[data-k="cev"] .ve-fp-tab-d').textContent).toBe('12 satır');
   });
 });

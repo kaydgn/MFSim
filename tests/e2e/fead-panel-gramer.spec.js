@@ -143,25 +143,41 @@ test('etiket, denetiminin yaslandığı KENARA yaslanıyor', async ({ page }) =>
 // Ölçülen şey oran değil KIRPILMANIN KENDİSİ.
 test('açılır listenin metni kırpılmıyor', async ({ page }) => {
   await kasnakPaneliAc(page);
-  const kirpik = await page.evaluate(() => {
+  // HER SEKME GEZİLİR, YALNIZ GÖRÜNEN LİSTE ÖLÇÜLÜR: gizli sekmedeki listenin
+  // genişliği 0 ve "alan −41" diye kırpık SAYILIYORDU (ölçüldü: sürücünün
+  // Motor ve Çevrim sekmeleri 2026-09-28'de gelince üç sahte bulgu). Açılış
+  // sekmesini ölçmek de yetmezdi — yeni sekmelerin listeleri hiç ölçülmezdi.
+  const r = await page.evaluate(async () => {
     const out = [];
-    document.querySelectorAll('.ve-fp-sel').forEach((s) => {
-      // seçili seçeneğin metnini ölç: kabın içine sığıyor mu
-      const ol = document.createElement('span');
-      const cs = getComputedStyle(s);
-      ol.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;'
-        + 'font:' + cs.font;
-      ol.textContent = s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : '';
-      document.body.appendChild(ol);
-      const gerek = ol.getBoundingClientRect().width;
-      ol.remove();
-      const alan = s.getBoundingClientRect().width
-        - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 18; // ok payı
-      if (gerek > alan) out.push(`"${ol.textContent}" gerek ${Math.round(gerek)} / alan ${Math.round(alan)}`);
-    });
-    return out;
+    let olculen = 0;
+    const kap = document.querySelector('#ve-properties-overlay .ve-fp-tabs[id^="ve-fp-tabs-"]');
+    const id = kap.id.slice('ve-fp-tabs-'.length);
+    const sekmeler = [...kap.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'));
+    for (const k of sekmeler) {
+      veFeadPanelTab(id, k);
+      await new Promise((ok) => setTimeout(ok, 60));
+      document.querySelectorAll('#ve-properties-overlay .ve-fp-sel').forEach((s) => {
+        if (!s.offsetWidth) return;
+        olculen++;
+        // seçili seçeneğin metnini ölç: kabın içine sığıyor mu
+        const ol = document.createElement('span');
+        const cs = getComputedStyle(s);
+        ol.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;'
+          + 'font:' + cs.font;
+        ol.textContent = s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : '';
+        document.body.appendChild(ol);
+        const gerek = ol.getBoundingClientRect().width;
+        ol.remove();
+        const alan = s.getBoundingClientRect().width
+          - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 18; // ok payı
+        if (gerek > alan) out.push(`${k}: "${ol.textContent}" gerek ${Math.round(gerek)} / alan ${Math.round(alan)}`);
+      });
+    }
+    return { out, olculen, sekme: sekmeler.length };
   });
-  expect(kirpik).toEqual([]);
+  expect(r.sekme).toBe(4);                        // sürücü: Geometri · Rol · Motor · Çevrim
+  expect(r.olculen).toBeGreaterThanOrEqual(4);    // temas · motor · düzen · çevrim kaydı
+  expect(r.out).toEqual([]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -202,37 +218,7 @@ test('TEK SOL KENAR — bütün sekmelerde etiket denetiminin sol kenarında ba�
   expect(r.out).toEqual([]);
 });
 
-test('küçük resim: pencerenin kasnağı VURGULU, adlar ne birbirine ne KAYIŞA biniyor', async ({ page }) => {
-  await kasnakPaneliAc(page);
-  const r = await page.evaluate(() => {
-    const th = document.querySelector('#ve-properties-overlay .ve-fp-thumb svg');
-    const kayis = [...th.querySelectorAll('path[data-ve="belt"], path[data-ve="rib"]')];
-    const adlar = [...th.querySelectorAll('text[data-ve="name"]')];
-    const kayista = [], ust = [];
-    adlar.forEach((t) => {
-      // İnce çizgiyi kaçırmamak için SIK örnek: birim başına iki nokta.
-      const bb = t.getBBox(), nx = Math.max(8, Math.ceil(bb.width * 2));
-      let vur = false;
-      for (let i = 1; i < nx && !vur; i++) for (let j = 1; j < 5 && !vur; j++) {
-        const pt = th.createSVGPoint();
-        pt.x = bb.x + bb.width * i / nx; pt.y = bb.y + bb.height * j / 5;
-        if (kayis.some((k) => k.isPointInStroke(pt))) vur = true;
-      }
-      if (vur) kayista.push(t.textContent);
-    });
-    const kutu = adlar.map((t) => t.getBoundingClientRect());
-    for (let i = 0; i < kutu.length; i++) for (let j = i + 1; j < kutu.length; j++) {
-      const a = kutu[i], b = kutu[j];
-      if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1
-       && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) ust.push(adlar[i].textContent + ' × ' + adlar[j].textContent);
-    }
-    return { ad: adlar.length, kayista, ust,
-      vurgu: th.querySelectorAll('[data-ve="pulley-hl"]').length,
-      kalin: adlar.filter((t) => getComputedStyle(t).fontWeight === '700').map((t) => t.textContent) };
-  });
-  expect(r.ad).toBeGreaterThanOrEqual(5);
-  expect(r.vurgu).toBe(1);
-  expect(r.kalin.length).toBe(1);
-  expect(r.ust).toEqual([]);
-  expect(r.kayista).toEqual([]);
-});
+// "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği:
+// *"her bileşende bulunan 'Kayış Yolundaki Yeri' kısmını da kaldıralım"*).
+// Onu ölçen halka (vurgu · ad çakışması · kayışa binme) konusuz kaldı;
+// yokluğunun kapısı fead-pencere-ailesi.test.js.

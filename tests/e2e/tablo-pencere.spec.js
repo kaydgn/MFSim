@@ -86,10 +86,13 @@ test('sütunda YATAY KAYDIRMA YOK — AP motor-şanzıman eşleştirme', async (
 
 test('çalışma çevrimi: kart → küçük pencere → hücre modeli yazar → satır eklenir → TEK ESC', async ({ page }) => {
   const hatalar = await modulAc(page, 'fead-analysis', FEAD);
-  const id = await page.evaluate(() => {
-    const n = nodes.find((x) => x.type === 'fead-solver');
+  // Çevrim 2026-09-28'den beri SÜRÜCÜ KASNAĞIN penceresinde; veri çözücü
+  // düğümünde (işletme deposu) — model yazımı oradan okunur.
+  const { id, depo } = await page.evaluate(() => {
+    const b = veFeadBuildFromCanvas();
+    const n = b.order[b.sys._crkIdx];
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
-    return n.id;
+    return { id: n.id, depo: nodes.find((x) => x.type === 'fead-solver').id };
   });
   await page.waitForTimeout(700);
   await page.evaluate((i) => veFeadPanelTab(i, 'cev'), id);
@@ -129,14 +132,14 @@ test('çalışma çevrimi: kart → küçük pencere → hücre modeli yazar →
   const hucre = page.locator('.ve-tablo-pencere tbody tr').first().locator('input').nth(2);
   await hucre.fill('97');
   await hucre.press('Tab');
-  expect(await page.evaluate((i) => Number(nodes.find((x) => x.id === i).data.duty[0].degC), id)).toBe(97);
+  expect(await page.evaluate((i) => Number(nodes.find((x) => x.id === i).data.duty[0].degC), depo)).toBe(97);
 
   // 4) Satır pencereden eklenir ve pencere AÇIK kalır (panel yeniden çizilir).
   await page.click('.ve-tablo-pencere .ve-fp-dugme');
   await page.waitForTimeout(400);
   const ekle = await page.evaluate((i) => ({ acik: !!document.querySelector('.ve-tablo-pencere'),
     satir: document.querySelectorAll('.ve-tablo-pencere tbody tr').length,
-    model: nodes.find((x) => x.id === i).data.duty.length }), id);
+    model: nodes.find((x) => x.id === i).data.duty.length }), depo);
   expect(ekle.acik).toBe(true);
   expect(ekle.satir).toBe(pen.satir + 1);
   expect(ekle.model).toBe(pen.satir + 1);

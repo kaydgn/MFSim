@@ -150,25 +150,23 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
     expect(serit).toEqual([]);
   });
 
-  // KÜÇÜK RESİM YALNIZ KASNAK PENCERESİNDE (kullanıcı, 2026-09-23: "gerekli
-  // gereksiz her yere 'Kayış Yolundaki Yeri' eklemişsin — Sonuç'ta buna ne
-  // ihtiyaç var?"). Bölümün sorusu "BU kasnak nerede"; kasnağı olmayan
-  // pencerede vurgulanacak yer yok. KURAL, liste değil: beklenen tipten okunur
-  // (`isFeadPulley` — gergi de bir kasnak), yeni bir tip kendiliğinden girer.
-  test('"Kayış Yolundaki yeri" YALNIZ kasnak penceresinde — kural tipten', () => {
+  // KÜÇÜK RESİM önce kasnak penceresine indirildi (kullanıcı, 2026-09-23:
+  // "gerekli gereksiz her yere 'Kayış Yolundaki Yeri' eklemişsin"), sonra
+  // 2026-09-28'de KASNAK PENCERESİNDEN DE KALKTI (kullanıcı: *"her bileşende
+  // bulunan 'Kayış Yolundaki Yeri' kısmını da kaldıralım. Bunlara gerek
+  // yok."*). Kural tipten okunuyor: HİÇBİR FEAD penceresinde yok — yeni bir
+  // tip kendiliğinden girer.
+  test('"Kayış Yolundaki yeri" HİÇBİR pencerede yok — kural tipten', () => {
     kur('AG00976_GATES_2025');
     const yanlis = [];
     let kasnakli = 0;
     TIPLER.forEach((t) => {
-      const beklenen = !!componentDefs[t].isFeadPulley;
+      if (componentDefs[t].isFeadPulley) kasnakli++;
       const d = pencere(t);
-      const var_ = !!d.querySelector('.ve-fp-side .ve-fp-thumb');
+      const var_ = !!d.querySelector('.ve-fp-thumb');
       const baslik = [...d.querySelectorAll('.ve-fp-sect b')]
-        .some((b) => /Kayış Yolundaki yeri/.test(b.textContent));
-      if (beklenen) kasnakli++;
-      if (var_ !== beklenen || baslik !== beklenen) {
-        yanlis.push(t + ': ' + (beklenen ? 'olmalı, yok' : 'olmamalı, var'));
-      }
+        .some((b) => /Kayış Yolundaki yeri/i.test(b.textContent));
+      if (var_ || baslik) yanlis.push(t);
     });
     // BOŞA ÇALIŞMIYOR: kasnak tipleri gerçekten ölçülüyor (9 tip).
     expect(kasnakli).toBeGreaterThanOrEqual(9);
