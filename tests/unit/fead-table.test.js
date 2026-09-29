@@ -377,8 +377,8 @@ describe('pafta HTML\'i', () => {
   test('EKLEYİCİ başlık şeridinde — boş tablo onu gösteriyor', () => {
     kurOrnek();
     const k = dom(paftaHTML());
-    expect(k.querySelector('.ve-fead-pf-bas .ve-fead-tbl-add')).toBeTruthy();
-    expect(k.querySelectorAll('.ve-fead-tbl-add')).toHaveLength(1);
+    expect(k.querySelector('.ve-fead-pf-bas .ve-fead-ek[data-ve="add-pulley"]')).toBeTruthy();
+    expect(k.querySelectorAll('[data-ve="add-pulley"]')).toHaveLength(1);
     // Boş tablonun tavsiyesi o yeri gösteriyor ("aşağıdaki" artık bayat olurdu).
     global.nodes = []; global.connections = [];
     const b = paftaHTML();
@@ -532,9 +532,9 @@ describe('Dönüş Yönü — defterdeki gibi GİRDİ, ama tek alan üstünden',
       expect(b.querySelector('svg.ok')).toBeTruthy();
     });
     expect(k.textContent).not.toMatch(/↻|↺|⟳|⟲/);
-    // Satırlarda <select> YOK — geriye yalnız ekleyicininki.
-    expect(k.querySelectorAll('select')).toHaveLength(1);
-    expect(k.querySelector('select').classList.contains('ve-fead-tbl-add')).toBe(true);
+    // Paftada <select> HİÇ YOK: satırlarda yön bir düğme, ekleyici de 2026-09-28'den
+    // beri sürüklenebilir satırlı bir liste (bir <select> sürüklenemez).
+    expect(k.querySelectorAll('select')).toHaveLength(0);
   });
 
   test('YÖN ↔ TEMAS TARAFI birebir: çevirinin çekirdeğin kuralıyla tutarlılığı', () => {
@@ -632,16 +632,16 @@ describe('sütun listesi', () => {
 describe('satır ekle / sil — kutu olmayınca tek yol', () => {
   test('ekleyici tip listesi componentDefs\'ten türer, ikinci liste yok', () => {
     kurOrnek();
-    const h = fead.veFeadTableAddHTML();
+    const h = fead.veFeadTableAddHTML('k1');
     const tipler = Object.keys(componentDefs).filter((t) => componentDefs[t].isFeadPulley);
     expect(tipler.length).toBeGreaterThan(5);
     // GERGİ HARİÇ: örnekte zaten bir tane var ve çekirdek ikincisini kabul
     // etmiyor (aşağıdaki kapı). Listenin geri kalanı componentDefs'ten türer.
     tipler.filter((t) => !componentDefs[t].isFeadTensioner)
-      .forEach((t) => expect(h).toContain('value="' + t + '"'));
+      .forEach((t) => expect(h).toContain('data-fead-ekle="' + t + '"'));
     // Kasnak OLMAYAN bir tip listeye sızmamalı.
-    expect(h).not.toContain('value="fead-belt"');
-    expect(h).not.toContain('value="fead-layout"');
+    expect(h).not.toContain('data-fead-ekle="fead-belt"');
+    expect(h).not.toContain('data-fead-ekle="fead-layout"');
   });
 
   // GERGİ TEKİLDİR VE HER İKİ YÜZEYDE ÖYLE DAVRANIR (2026-09-22).
@@ -651,7 +651,7 @@ describe('satır ekle / sil — kutu olmayınca tek yol', () => {
     expect(ten).toBeTruthy();
 
     // (1) Modelde gergi varken liste onu SUNMUYOR.
-    expect(fead.veFeadTableAddHTML()).not.toContain('value="fead-tensioner"');
+    expect(fead.veFeadTableAddHTML('k1')).not.toContain('data-fead-ekle="fead-tensioner"');
 
     // (2) Liste atlansa bile İŞLEV reddediyor — kapı iki katmanlı.
     global.createNode = () => { throw new Error('çağrılmamalıydı'); };
@@ -751,6 +751,142 @@ describe('satır ekle / sil — kutu olmayınca tek yol', () => {
     expect(pasif[0].closest('tr').classList.contains('ten')).toBe(true);
     expect(pasif[0].getAttribute('title')).toMatch(/gergi silinemez/i);
     del.forEach((b) => expect(b.getAttribute('onmousedown')).toBe('event.stopPropagation();'));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EKLEYİCİ BİR LİSTE — TIK SIRAYA, SÜRÜKLEME KAYIŞIN ÜSTÜNE (2026-09-28)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı kararı: *"FEAD modülünde bu 'Bileşenler' sütununu kaldıralım,
+// zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar' üzerinden
+// ekleyebiliyoruz."* Sütunun kartta karşılığı OLMAYAN tek işi kasnağı çizimde
+// kayışın üstüne bırakmaktı — bir `<select>` sürüklenemez. Ekleyici bu yüzden
+// sürüklenebilir satırlı bir liste oldu. Kapıların sorduğu: iki yol da
+// modülün var olan yollarına mı gidiyor (tık → veFeadTableAdd, sürükleme →
+// paletin bırakma kancaları), açıklık modele sızıyor mu, bırakma sürüklemeyi
+// temizliyor mu. Gerçek fare → fead-cizim-masasi.spec.js ("LİSTEDEN KAYIŞA").
+describe('EKLEYİCİ BİR LİSTE — tık sıraya, sürükleme kayışın üstüne', () => {
+  const liste = (id) => dom(fead.veFeadTableAddHTML(id || 'k1'));
+  afterEach(() => { fead.veFeadEkToggle(null, false); delete global.window.vePaletSuruklenen; });
+
+  test('satırlar sürüklenebilir, GERGİ yalnız tıklanır (açıklığa girmez)', () => {
+    kurOrnek();
+    // Gergisiz model: gergi listede görünür ama sürüklenemez.
+    global.nodes = global.nodes.filter((n) => !componentDefs[n.type].isFeadTensioner);
+    const k = liste();
+    const ogeler = [...k.querySelectorAll('[data-fead-ekle]')];
+    const tipler = Object.keys(componentDefs).filter((t) => componentDefs[t].isFeadPulley);
+    expect(ogeler.map((o) => o.getAttribute('data-fead-ekle'))).toEqual(tipler);
+    ogeler.forEach((o) => {
+      const t = o.getAttribute('data-fead-ekle');
+      const gergi = !!componentDefs[t].isFeadTensioner;
+      expect({ t, suruklenir: o.getAttribute('draggable') === 'true' }).toEqual({ t, suruklenir: !gergi });
+      // Klavyeyle erişilir ve ne yaptığını söyler.
+      expect(o.getAttribute('tabindex')).toBe('0');
+      expect(o.getAttribute('title')).toMatch(gergi ? /tıkla.*gergi açıklığa bırakılmaz/ : /tıkla.*sürükle.*kayışın üstüne/);
+      // Sembol TİPİN KENDİ sembolü — ikinci bir sembol kopyası yok. (Karşılaştırma
+      // aynı ayrıştırıcıdan: serileştirici `<circle/>`ı `<circle></circle>` yazar.)
+      const ref = document.createElement('span'); ref.innerHTML = componentDefs[t].svg;
+      expect(o.querySelector('.ik').innerHTML).toBe(ref.innerHTML);
+    });
+    // Liste kapalı başlar; düğme menüyü söyler.
+    const kap = k.querySelector('.ve-fead-ek');
+    expect(kap.classList.contains('is-acik')).toBe(false);
+    expect(kap.querySelector('.ve-fead-ek-dugme').getAttribute('aria-expanded')).toBe('false');
+    expect(kap.getAttribute('onmousedown')).toBe('event.stopPropagation();');
+  });
+
+  test('AÇIKLIK MODELDE DEĞİL: aç/kapa saveState yazmaz, kart kurmaz; pafta yeniden kurulunca açık kalır', () => {
+    kurOrnek();
+    document.body.innerHTML = fead.veFeadTableAddHTML('k1') + fead.veFeadTableAddHTML('k2');
+    stubs.saveState.mockClear();
+    expect(fead.veFeadEkToggle('k1')).toBe('k1');
+    const [a, b] = document.querySelectorAll('.ve-fead-ek');
+    expect([a.classList.contains('is-acik'), b.classList.contains('is-acik')]).toEqual([true, false]);
+    expect(a.querySelector('.ve-fead-ek-dugme').getAttribute('aria-expanded')).toBe('true');
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    // Kart yeniden kurulursa açık hâl korunur (VE_FEAD_KAT_ACIK'ın gerekçesi).
+    expect(dom(fead.veFeadTableAddHTML('k1')).querySelector('.ve-fead-ek').classList.contains('is-acik')).toBe(true);
+    expect(dom(fead.veFeadTableAddHTML('k2')).querySelector('.ve-fead-ek').classList.contains('is-acik')).toBe(false);
+    // Öteki kartın listesi açılınca birincisi kapanır; aynısına ikinci tık kapatır.
+    fead.veFeadEkToggle('k2');
+    expect([a.classList.contains('is-acik'), b.classList.contains('is-acik')]).toEqual([false, true]);
+    expect(fead.veFeadEkToggle('k2')).toBe(null);
+    expect(b.classList.contains('is-acik')).toBe(false);
+  });
+
+  test('dışarı tıklamak ve Esc listeyi kapatır; listenin içine tıklamak kapatmaz', () => {
+    kurOrnek();
+    document.body.innerHTML = '<div id="dis"></div>' + fead.veFeadTableAddHTML('k1');
+    fead.veFeadEkToggle('k1');
+    const oge = document.querySelector('[data-fead-ekle]');
+    oge.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(fead.veFeadEkAcik()).toBe('k1');
+    document.getElementById('dis').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(fead.veFeadEkAcik()).toBe(null);
+    fead.veFeadEkToggle('k1');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(fead.veFeadEkAcik()).toBe(null);
+  });
+
+  test('TIK tablonun ekleyicisine gider (gerginin önüne) ve listeyi kapatır; Enter aynısı', () => {
+    kurOrnek();
+    const eklenen = [];
+    global.createNode = (t) => { const n = { id: 'y' + eklenen.length, type: t, def: componentDefs[t], data: {} }; eklenen.push(n); global.nodes.push(n); return n; };
+    try {
+      document.body.innerHTML = fead.veFeadTableAddHTML('k1');
+      fead.veFeadEkToggle('k1');
+      const oge = document.querySelector('[data-fead-ekle="fead-waterpump"]');
+      expect(fead.veFeadEkTik({ target: oge })).toBe(true);
+      expect(eklenen.map((n) => n.type)).toEqual(['fead-waterpump']);
+      const ten = global.nodes.find((n) => componentDefs[n.type].isFeadTensioner);
+      expect(eklenen[0].data.beltIndex).toBe(ten.data.beltIndex - 0.5);   // gerginin ÖNÜNE
+      expect(fead.veFeadEkAcik()).toBe(null);
+      // Klavye: Enter satırı tıklar, başka tuş hiçbir şey yapmaz.
+      document.body.innerHTML = fead.veFeadTableAddHTML('k1');
+      const avara = document.querySelector('[data-fead-ekle="fead-idler"]');
+      expect(fead.veFeadEkTus({ key: 'a', target: avara })).toBe(false);
+      expect(fead.veFeadEkTus({ key: 'Enter', target: avara, preventDefault() {} })).toBe(true);
+      expect(eklenen.map((n) => n.type)).toEqual(['fead-waterpump', 'fead-idler']);
+      // Listenin boş bir yerine tık hiçbir şey eklemez.
+      expect(fead.veFeadEkTik({ target: document.querySelector('.ve-fead-ek-liste') })).toBe(false);
+    } finally { delete global.createNode; }
+  });
+
+  test('SÜRÜKLE paletin sözleşmesini taşır: component-type + sürüklenen tip globali', () => {
+    kurOrnek();
+    document.body.innerHTML = fead.veFeadTableAddHTML('k1');
+    fead.veFeadEkToggle('k1');
+    const oge = document.querySelector('[data-fead-ekle="fead-alternator"]');
+    const veri = {};
+    const dt = { setData: (k, v) => { veri[k] = v; }, effectAllowed: '' };
+    expect(fead.veFeadEkSurukle({ target: oge, dataTransfer: dt })).toBe(true);
+    expect(veri).toEqual({ 'component-type': 'fead-alternator' });
+    expect(dt.effectAllowed).toBe('copy');
+    expect(global.window.vePaletSuruklenen).toBe('fead-alternator');
+    // Sürükleme BİTİNCE (dragend) global boşalır, iz silinir, liste kapanır.
+    fead.veFeadEkBitti();
+    expect(global.window.vePaletSuruklenen).toBe(null);
+    expect(fead.veFeadEkAcik()).toBe(null);
+  });
+
+  // SÜRÜKLEME SONU KABIN `ondragend`inde (ölçüldü, gerçek tarayıcı): başarılı
+  // eklemede pafta yeniden kurulur ve kaynak satır DOM'dan sökülür — `dragend`
+  // belgeye ULAŞMAZ, sökülen alt ağaçtaki liste kabına ulaşır. Temizlik
+  // belgeye bağlansaydı hiç koşmaz, liste açık çizilir ve tip globalde kalırdı.
+  // Davranışın kendisi fead-cizim-masasi.spec.js → "LİSTEDEN KAYIŞA BIRAK".
+  test('sürükleme sonu LİSTE KABININ dinleyicisinde — satırın atası, belge değil', () => {
+    kurOrnek();
+    const k = liste();
+    const kap = k.querySelector('.ve-fead-ek-liste');
+    expect(kap.getAttribute('ondragend')).toBe('veFeadEkBitti()');
+    expect(kap.getAttribute('ondragstart')).toBe('veFeadEkSurukle(event)');
+    // Her satır bu kabın içinde: sökülen alt ağaçta olay kaba kadar yürür.
+    k.querySelectorAll('[data-fead-ekle]').forEach((o) => expect(o.closest('.ve-fead-ek-liste')).toBe(kap));
+    // Belgeye bağlı bir dragend temizliği YOK (onu hiç duymazdı).
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../../js/cp-fead.js'), 'utf8');
+    expect(src).not.toMatch(/document\.addEventListener\('dragend'/);
   });
 });
 

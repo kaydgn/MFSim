@@ -219,8 +219,9 @@ function veGuideDocHTML(o){
 
 // Sahnenin çizilmesi için gereken kural önekleri — TEK LİSTE.
 var VE_GUIDE_SCENE_SEL = [
-  '.ve-fead-tbl',      // Kayış Tablosu'nun denetimleri (alan · ad düğmesi · ekleyici · oklar)
+  '.ve-fead-tbl',      // Kayış Tablosu'nun denetimleri (alan · ad düğmesi · oklar)
   '.ve-fead-pf',       // Kayış Tablosu = PAFTA (başlık şeridi · tablo · satır · numara)
+  '.ve-fead-ek',       // paftanın kasnak ekleyicisi (liste — FEAD'de sütun yok, 2026-09-28)
   '.ve-fead-pafta',    // (paftanın kabı — kartın altındaki bölge)
   '.ve-fead-layout',   // Kayış Yolu kartının kabuğu (çubuk bandının jetonu)
   '.ve-fp-',           // FEAD pencerelerinin ortak dili

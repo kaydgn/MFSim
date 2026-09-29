@@ -3623,6 +3623,13 @@ function veFeadUniqueNames(order){
 // adlı). Kullanıcıya NE YAPACAĞINI söyleyen karşılığı burada. Eşleşmeyen mesaj
 // OLDUĞU GİBİ geçer — sessizce yutulmaz, çünkü bilinmeyen bir hatayı gizlemek
 // yanlış bir çeviriden kötüdür.
+//
+// GERGİ YOK — tavsiye kullanıcının YAPABİLECEĞİ şeyi söyler. Eskiden gergiyi
+// "Bileşenler" sütunundan eklemeyi söylüyordu; FEAD'in iç topolojisinde o
+// sütun yok (2026-09-28, components.js → noPalette) ve gergi Kayış
+// Tablosu'nun ekleyicisinden gelir. Metin iki yerde kullanılıyor (çekirdek hatasının
+// çevirisi + köprünün kendi denetimi); tek sabit, iki kopya ayrışmasın.
+var VE_FEAD_GERGI_YOK = 'İç topolojide Gergi yok. Kayış Tablosu\'ndaki "＋ Kasnak ekle"den bir Gergi ekleyin.';
 var VE_FEAD_ERROR_MAP = [
   [/isaretli sarim toplami/i,
    'Kayış yolu kapanmıyor. İki olası neden: bağlantı sırası kayışın gidiş yönünde değil, '
@@ -3634,7 +3641,7 @@ var VE_FEAD_ERROR_MAP = [
   [/en az 3 kasnak gerekli/i, 'En az 3 kasnak gerekli (sürücü + aksesuar + gergi).'],
   [/crank:true kasnak tanimlanmali/i, 'Sürücü kasnak seçilmedi. Bir kasnağın panelinden "Sürücü" işaretleyin.'],
   [/birden fazla crank:true/i, 'Birden fazla sürücü kasnak işaretli; yalnız biri olabilir.'],
-  [/tensioner:true kasnak tanimlanmali/i, 'İç topolojide Gergi yok. Sol paletten bir Gergi ekleyin.'],
+  [/tensioner:true kasnak tanimlanmali/i, VE_FEAD_GERGI_YOK],
   [/birden fazla tensioner:true/i, 'Birden fazla Gergi var; çekirdek tek gergi destekliyor.'],
   [/tensioner blogu gerekli/i, 'Gergi verisi eksik.'],
   [/tensioner\.(\w+) gerekli/i, 'Gergi panelinde eksik alan: $1'],
@@ -3726,7 +3733,7 @@ function veFeadBuildSystem(nodeList, opt){
   out.names = un.names; out.byName = un.byName;
 
   var tensNodes = order.filter(function(n){ return !!_feadDefOf(n).isFeadTensioner; });
-  if(!tensNodes.length) out.errors.push('İç topolojide Gergi yok. Sol paletten bir Gergi ekleyin.');
+  if(!tensNodes.length) out.errors.push(VE_FEAD_GERGI_YOK);
   if(tensNodes.length > 1) out.errors.push('Birden fazla Gergi var; çekirdek tek gergi destekliyor.');
 
   var driver = veFeadResolveDriver(order);

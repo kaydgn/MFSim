@@ -201,7 +201,9 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   // YÖN: açılır liste değil METİN DÜĞMESİ (altı satır, altısında da).
   await expect(kart.locator('select[data-ve="spin"]')).toHaveCount(0);
   await expect(kart.locator('button.ve-fead-pf-yon[data-ve="spin"]')).toHaveCount(6);
-  await expect(kart.locator('select[data-ve="add-pulley"]')).toHaveCount(1);
+  // EKLEYİCİ bir liste (satırı çizime sürüklenebilir — FEAD'de sütun yok).
+  await expect(kart.locator('.ve-fead-ek[data-ve="add-pulley"]')).toHaveCount(1);
+  await expect(kart.locator('select')).toHaveCount(0);
   // KAYIŞ BOYU ROZETTE: boy satıra değil ÇEVRİME ait — tabloda ne birleşik
   // hücre ne künye satırı var; kartın sağ üst rozeti taşıyor.
   await expect(kart.locator('td[rowspan]')).toHaveCount(0);

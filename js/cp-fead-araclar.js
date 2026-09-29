@@ -37,6 +37,14 @@
 //  • FARE PENCEREDE KALIR: tuvalin sürükleme/seçme/yakınlaştırma dinleyicileri
 //    kap üzerinde; pencere onlara olay SIZDIRMAZ (tık tuvali kaydırmasın,
 //    tekerlek kadrajı değiştirmesin).
+//  • NOT ARAÇLARI BURADA (kullanıcı, 2026-09-28: *"Not araçlarını da FEAD
+//    araçları penceresine ekleyelim"*): FEAD'de "Bileşenler" sütunu yok (kural
+//    41), sütunun "Araçlar" kategorisi — gruplama çerçevesi · yazı etiketi —
+//    buraya geldi. Açıklama modülü (js/annotations.js) DEĞİŞMEDİ: sürükleme
+//    onun taşıyıcısını (`annotation-type`) yazar ve kabın `drop` dinleyicisine
+//    düşer, tık onun kurucusunu (`createAnnotation`) çağırır — ikinci bir
+//    açıklama yolu yok. Pencere bırakma hedefi DEĞİL: altına kurulan not
+//    pencerenin arkasında görünmez kalırdı.
 // Görünüm CSS'te (`css/styles.css` → `.ve-fead-arac*`); başlık pencere
 // ailesinin (`.ve-settings-header`, kök CLAUDE.md → "PENCERE AİLESİ TEK").
 
@@ -50,6 +58,18 @@ var VE_FEAD_ARAC_YAPIS = 64;
 var VE_FEAD_ARAC_EN = 236;
 // Özet kartlarının sırası — Sonuçlar'ın listesinden seçilir, kopyalanmaz.
 var VE_FEAD_ARAC_KPI = ['kayma', 'taraf', 'ankraj', 'burulma'];
+// Not araçları — tip annotations.js'in (`createAnnotation(tip, …)`) tipi.
+var VE_FEAD_ARAC_NOT = [
+  { tip: 'frame', ikon: 'square-dashed', ad: 'Çerçeve', uzun: 'Gruplama çerçevesi',
+    tik: 'kartları çevreler' },
+  { tip: 'text', ikon: 'type', ad: 'Yazı', uzun: 'Yazı etiketi',
+    tik: 'kartların üstüne' }
+];
+// Tıkla kurulan notun kartlara uzaklığı (kanvas px) ve kamera kaydırmada
+// görünümün kenarından bırakılan pay (ekran px).
+var VE_FEAD_NOT_PAY = 28;
+var VE_FEAD_NOT_ARALIK = 12;
+var VE_FEAD_NOT_KENAR = 16;
 
 var _feadAracYer = null;          // { yuva, x, y, katli } — oturum + tarayıcı
 var _feadAracKapsam = false;      // FEAD kapsamında mıyız
@@ -188,6 +208,12 @@ function veFeadAraclarGovdeHTML(d){
     + '</div><div class="ve-fead-arac-sat">'
     + _feadAracDugme('sihirbaz', 'wand', 'Sihirbaz', d.kasnak ? 've-fead-arac-btn' : 've-fead-arac-btn birincil',
         ' title="Başlangıç Sihirbazı — modeli adım adım kurar"')
+    + '<span class="bos"></span>'
+    // YENİ KANVAS — FEAD'de "Bileşenler" sütunu yok (components.js →
+    // noPalette); sütunun Kayış Yolu satırının yeri burası. Kasnak ise
+    // kartın Kayış Tablosu'ndan eklenir ("＋ Kasnak ekle").
+    + _feadAracDugme('kanvas', 'plus', 'Kanvas', 've-fead-arac-bag',
+        ' title="Yeni Kayış Yolu kanvası — kartların sağına eklenir"')
     + '</div></section>';
 
   // ÇÖZÜM — durum çipi, Hesapla, Ayarlar, özet kartları, uygunluk
@@ -256,6 +282,18 @@ function veFeadAraclarGovdeHTML(d){
     h += '<p class="ve-fead-arac-not">Yön Kayış Tablosu\'nun sırasından türer; gergi tarafı hükmü için hesaplayın.</p>';
   }
   h += '</section>';
+
+  // NOT — gruplama çerçevesi + yazı etiketi. Öğe bir `div`: sürüklenebilsin
+  // diye (kasnak listesinin gerekçesi, cp-fead.js → veFeadTableAddHTML);
+  // klavyede Enter/Boşluk tıklar (veFeadAraclarKur).
+  h += '<section class="ve-fead-arac-bol" data-bol="not"><h4>Not</h4><div class="ve-fead-arac-sat">'
+    + VE_FEAD_ARAC_NOT.map(function(n){
+        return '<div class="ve-fead-arac-btn tasinir" role="button" tabindex="0" draggable="true"'
+          + ' data-ey="not" data-v="' + n.tip + '"'
+          + ' title="' + _feadAracEsc(n.uzun + ' — sürükle: tuvalde bıraktığın yere; tıkla: ' + n.tik) + '">'
+          + _feadAracIkon(n.ikon) + '<span>' + n.ad + '</span></div>';
+      }).join('')
+    + '</div></section>';
   return h;
 }
 
@@ -304,6 +342,12 @@ function veFeadAracEylem(ad, v){
     if(d.sihirbazId && typeof veFeadWizOpen === 'function') return !!veFeadWizOpen(d.sihirbazId);
     return !!(typeof veFeadWizOpenAny === 'function' && veFeadWizOpenAny());
   }
+  if(ad === 'kanvas'){
+    return !!(typeof veFeadKanvasEkle === 'function' && veFeadKanvasEkle());
+  }
+  if(ad === 'not'){
+    return !!veFeadNotEkle(v);
+  }
   if(ad === 'tur'){
     var r = _feadAracDugum('fead-report');
     if(!r || (v !== 'summary' && v !== 'detailed')) return false;
@@ -330,6 +374,111 @@ function veFeadAracEylem(ad, v){
   }
   if(ad === 'katla'){ veFeadAraclarKatla(); return true; }
   return false;
+}
+
+// ── NOT ARAÇLARI — tıkla kurulan notun YERİ ────────────────────────────────
+// Not kartların ÖNÜNDE değil ARKASINDA durur (annotations.js: bağlantı
+// katmanının hemen ardına kurulur) ve FEAD tuvalini büyük ölçüde kartlar
+// kaplar — görünümün ortasına kurulan not kartın arkasında GÖRÜNMEZ kalırdı.
+// Yer bu yüzden kartlardan türer: çerçeve kartları ÇEVRELER (gruplamanın
+// kendisi), yazı onların üstüne, sol kenara oturur. Hedef kutulu kartların
+// HEPSİ — seçim DEĞİL: örnek kurucusu son kurduğu kartı seçili bırakıyor
+// (ölçüldü), yani seçime bakan kural kullanıcının seçmediği bir kartı
+// çerçevelerdi.
+//
+// SAF. kutu — kartların sınır kutusu (`veBoundaryBox(liste, 0, ölçer)`:
+// {x, y, w, h}, adlar dâhil) ya da null; mevcut — `annotations`; merkez —
+// görünür alanın ortası (kanvas px, kart yoksa yedek). Döner {x, y, width, height}.
+function veFeadNotYeri(tip, kutu, mevcut, merkez){
+  mevcut = mevcut || [];
+  merkez = merkez || { x: 3000, y: 3000 };
+  var i, a;
+  if(tip === 'frame'){
+    if(!kutu) return { x: merkez.x - 125, y: merkez.y - 75, width: 250, height: 150 };
+    var p = VE_FEAD_NOT_PAY;
+    var r = { x: kutu.x - p, y: kutu.y - p, width: kutu.w + 2 * p, height: kutu.h + 2 * p };
+    // AYNI kartları çevreleyen çerçeve zaten varsa İÇ İÇE: ikinci çerçeve
+    // birincinin 16 px dışına — üst üste binen iki çerçeve tek görünürdü.
+    var ayni = function(){
+      return mevcut.some(function(m){
+        return m && m.type === 'frame' && Math.abs(m.x - r.x) < 2 && Math.abs(m.y - r.y) < 2
+          && Math.abs((m.width || 0) - r.width) < 2 && Math.abs((m.height || 0) - r.height) < 2;
+      });
+    };
+    for(i = 0; i < 50 && ayni(); i++){ r.x -= 16; r.y -= 16; r.width += 32; r.height += 32; }
+    return r;
+  }
+  var w = 120, h = 30;
+  if(!kutu) return { x: merkez.x - w / 2, y: merkez.y - h / 2, width: w, height: h };
+  var x = kutu.x, y = kutu.y - h - VE_FEAD_NOT_ARALIK;
+  // Yazının ALTINDA kalması gerekenler: çerçevenin üst kenarı (etiketi onun
+  // üstüne biner, css top:-9px) ve başka bir yazı. Çakışırsa yazı onların
+  // üstüne çıkar — her yeni başlık bir öncekinin üstüne dizilir.
+  for(i = 0; i < 50; i++){
+    var engel = null;
+    for(var k = 0; k < mevcut.length && !engel; k++){
+      a = mevcut[k];
+      if(!a || !isFinite(a.x) || !isFinite(a.y)) continue;
+      var y1 = a.type === 'frame' ? a.y - 12 : a.y;
+      var y2 = a.type === 'frame' ? a.y + 12 : a.y + (a.height || h);
+      var x2 = a.x + (a.width || w);
+      if(x < x2 && x + w > a.x && y < y2 && y + h > y1) engel = y1;
+    }
+    if(engel === null) break;
+    y = engel - h - VE_FEAD_NOT_ARALIK;
+  }
+  return { x: x, y: y, width: w, height: h };
+}
+
+// SAF: yeni notun görünmesi için kameranın KAYMASI (ekran px). Not zaten
+// görünüyorsa {0,0} — kamera OYNAMAZ. Görünümden büyükse sol üst köşesi
+// (etiketi) görünür kılınır. gor — {sol (örtü), w, h}; kanvas px → ekran:
+// (x − 3000)·zoom + ofset (#ve-canvas −3000 ofsetli, ui-core.js).
+function veFeadNotKaydir(r, zoom, ofs, gor){
+  var z = (isFinite(zoom) && zoom > 0) ? zoom : 1;
+  var sx = (r.x - 3000) * z + ofs.x, sy = (r.y - 3000) * z + ofs.y;
+  var sw = r.width * z, sh = r.height * z, e = VE_FEAD_NOT_KENAR;
+  var x0 = (gor.sol || 0) + e, x1 = gor.w - e, y0 = e, y1 = gor.h - e;
+  var dx = 0, dy = 0;
+  if(sx + sw > x1) dx = x1 - (sx + sw);
+  if(sx + dx < x0) dx = x0 - sx;
+  if(sy + sh > y1) dy = y1 - (sy + sh);
+  if(sy + dy < y0) dy = y0 - sy;
+  return { dx: dx, dy: dy };
+}
+
+// TIK: notu kurar, SEÇER ve görünür kılar. Seçim yalnız yeni notta kalır —
+// Delete ona gitmeli; seçili kalan bir kart da onunla birlikte silinirdi.
+// Kurulum annotations.js'in kurucusundan: TEK saveState = TEK geri-al adımı.
+function veFeadNotEkle(tip){
+  if(tip !== 'frame' && tip !== 'text') return null;
+  if(typeof createAnnotation !== 'function') return null;
+  // Kutusuz düğümleri (kasnak, kayış, araçlar) sınır kutusu kendisi ayıklıyor.
+  var kutu = (typeof veBoundaryBox === 'function' && typeof nodes !== 'undefined')
+    ? veBoundaryBox(nodes, 0, (typeof veMeasureNodeLabel === 'function') ? veMeasureNodeLabel : null) : null;
+  var kap = _feadAracKap();
+  var W = kap ? kap.clientWidth : 0, H = kap ? kap.clientHeight : 0;
+  var sol = (kap && typeof veTuvalSolOrtu === 'function') ? veTuvalSolOrtu(kap) : 0;
+  var z = (typeof canvasZoom !== 'undefined' && canvasZoom > 0) ? canvasZoom : 1;
+  var o = (typeof canvasOffset !== 'undefined' && canvasOffset) ? canvasOffset : { x: 0, y: 0 };
+  var merkez = { x: (sol + (W - sol) / 2 - o.x) / z + 3000, y: (H / 2 - o.y) / z + 3000 };
+  var r = veFeadNotYeri(tip, kutu, (typeof annotations !== 'undefined') ? annotations : [], merkez);
+  var a = createAnnotation(tip, r.x, r.y, tip === 'frame' ? { width: r.width, height: r.height } : undefined);
+  if(!a) return null;
+  if(typeof clearSelection === 'function') clearSelection();
+  if(typeof clearAnnotationSelection === 'function') clearAnnotationSelection();
+  if(typeof selectAnnotation === 'function') selectAnnotation(a);
+  if(W > 0 && H > 0 && typeof canvasOffset !== 'undefined'){
+    var k = veFeadNotKaydir(r, z, o, { sol: sol, w: W, h: H });
+    if(k.dx || k.dy){
+      canvasOffset.x += k.dx; canvasOffset.y += k.dy;
+      if(typeof updateCanvasTransform === 'function') updateCanvasTransform();
+    }
+  }
+  if(typeof showToast === 'function')
+    showToast((tip === 'frame' ? 'Gruplama çerçevesi' : 'Yazı etiketi')
+      + ' eklendi — metni çift tıklayarak düzenleyin.', 'success');
+  return a;
 }
 
 // ── DOM — kurma, yerleştirme, tazeleme ─────────────────────────────────────
@@ -388,6 +537,33 @@ function veFeadAraclarKur(){
     // eylemin kendisiyle örtüşüyordu: onu kaldıran mutasyon hiçbir testte
     // görünmedi (ölçüldü), yani ölü koddu.
     veFeadAracEylem(b.getAttribute('data-ey'), b.getAttribute('data-v'));
+  });
+  // Klavye: `div` düğmeler (not araçları — sürüklenebilsinler diye `div`)
+  // Enter / Boşluk ile tıklanır.
+  el.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    var b = e.target && e.target.closest && e.target.closest('[data-ey][role="button"]');
+    if(!b) return;
+    e.preventDefault();
+    veFeadAracEylem(b.getAttribute('data-ey'), b.getAttribute('data-v'));
+  });
+  // NOT SÜRÜKLEME: annotations.js'in taşıyıcısı (`annotation-type`); bırakmayı
+  // kabın `drop` dinleyicisi (annotations.js) karşılar. Pencerenin gövdesi her
+  // tazelemede yeniden kuruluyor — dinleyici öğede değil pencerede.
+  el.addEventListener('dragstart', function(e){
+    var b = e.target && e.target.closest && e.target.closest('[data-ey="not"]');
+    if(!b || !e.dataTransfer) return;
+    e.dataTransfer.setData('annotation-type', b.getAttribute('data-v'));
+    e.dataTransfer.effectAllowed = 'copy';
+  });
+  // PENCERE BIRAKMA HEDEFİ DEĞİL: kabın `dragover`ı her yerde bırakmaya izin
+  // veriyor (ui-core.js) ve pencere onun çocuğu — altına kurulan not
+  // pencerenin arkasında görünmez kalırdı. `dropEffect = 'none'` kabın izni
+  // verilse bile bırakmayı reddeder; olay yine kabarır (belge dinleyicileri
+  // körleşmez).
+  el.addEventListener('dragover', function(e){
+    var ty = e.dataTransfer && e.dataTransfer.types;
+    if(ty && Array.prototype.indexOf.call(ty, 'annotation-type') >= 0) e.dataTransfer.dropEffect = 'none';
   });
   _feadAracSurukleBagla(el);
   kap.appendChild(el);
@@ -514,6 +690,8 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadAraclarKatla: veFeadAraclarKatla, veFeadAraclarYer: veFeadAraclarYer,
     VE_FEAD_ARAC_YUVA: VE_FEAD_ARAC_YUVA, VE_FEAD_ARAC_YAPIS: VE_FEAD_ARAC_YAPIS, VE_FEAD_ARAC_EN: VE_FEAD_ARAC_EN,
     VE_FEAD_ARAC_ANAHTAR: VE_FEAD_ARAC_ANAHTAR, VE_FEAD_ARAC_KPI: VE_FEAD_ARAC_KPI,
+    VE_FEAD_ARAC_NOT: VE_FEAD_ARAC_NOT, VE_FEAD_NOT_PAY: VE_FEAD_NOT_PAY,
+    veFeadNotYeri: veFeadNotYeri, veFeadNotKaydir: veFeadNotKaydir, veFeadNotEkle: veFeadNotEkle,
     _feadAracSifirla: function(){ _feadAracYer = null; _feadAracKapsam = false; }
   };
 }

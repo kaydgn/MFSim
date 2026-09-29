@@ -1599,6 +1599,15 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-main.ve-no-module .ve-sidebar-reveal{
   display:none !important;
 }
+/* PALETSİZ KAPSAM — modül `componentDefs.noPalette` beyan ediyorsa İÇ
+   topolojisinde "Bileşenler" sütunu da açma rayı da yok; tuval o genişliği
+   alır. Sınıfı kapsamın tek noktası yazar (js/components.js ›
+   veSyncPaletsizKapsam). İlk kullanıcısı FEAD (2026-09-28): ekleme kartın
+   içinden. Kapı: kabuk-sutun.spec.js → "PALETSİZ KAPSAM". */
+.ve-main.ve-paletsiz .ve-sidebar,
+.ve-main.ve-paletsiz .ve-sidebar-reveal{
+  display:none !important;
+}
 
 .ve-sidebar{
   width:220px;
@@ -9575,7 +9584,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-fead-pf-kip:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-fead-pf-hukum{ text-transform:none; letter-spacing:0; color:var(--ink-danger); }
 .ve-fead-pf-hukum > b{ font-weight:700; }
-.ve-fead-pf-bas > .ve-fead-tbl-add{ margin-left:auto; }
+.ve-fead-pf-bas > .ve-fead-ek{ margin-left:auto; }
 
 /* Liste kendi içinde kayar (kartın %55'i tavan); dar kartta yatayda da — sütun
    sessizce kaybolmaktansa görünür bir kaydırma çubuğu. */
@@ -9734,16 +9743,48 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 }
 .ve-fead-pf-bos b{ color:var(--text-secondary); }
 
-/* EKLEYİCİ — başlık şeridinin sağ ucunda; eklenen kasnak gerginin önüne düşer. */
-.ve-fead-tbl-add{
-  height:20px; box-sizing:border-box; padding:0 4px; cursor:pointer;
+/* EKLEYİCİ — başlık şeridinin sağ ucunda bir LİSTE (js/cp-fead.js →
+   veFeadTableAddHTML). FEAD'de "Bileşenler" sütunu yok: satıra TIK kasnağı
+   gerginin önüne ekler, satırı SÜRÜKLEMEK çizimde kayışın üstüne bırakır.
+   Liste YUKARI açılır (pafta kartın dibinde; aşağı açılan liste kartın dışına
+   taşardı) ve sürükleme başlayınca solup tıklamayı GEÇİRİR — örttüğü kayış
+   da bırakma hedefi olur. Açıklık `is-acik` sınıfında (JS eşitler). */
+.ve-fead-ek{
+  position:relative; flex:0 0 auto;
+  text-transform:none; letter-spacing:0;
+}
+.ve-fead-ek-dugme{
+  display:inline-flex; align-items:center; gap:4px;
+  height:20px; box-sizing:border-box; padding:0 6px; cursor:pointer;
   background:var(--bg-input); color:var(--text-primary);
   border:1px solid var(--border-color); border-radius:var(--radius-sm);
   font:inherit; font-size:var(--fs-micro); font-weight:600;
-  text-transform:none; letter-spacing:0;
 }
-.ve-fead-tbl-add:hover{ border-color:var(--accent-primary); color:var(--ink-accent); }
-.ve-fead-tbl-add:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fead-ek-dugme:hover{ border-color:var(--accent-primary); color:var(--ink-accent); }
+.ve-fead-ek-dugme:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fead-ek.is-acik > .ve-fead-ek-dugme{
+  background:var(--accent-tint-15); border-color:var(--accent-primary); color:var(--ink-accent);
+}
+.ve-fead-ek-liste{
+  display:none; position:absolute; right:0; bottom:calc(100% + 4px); z-index:6;
+  flex-direction:column; min-width:190px; padding:3px 0;
+  background:var(--bg-secondary); border:1px solid var(--border-hover);
+  border-radius:var(--radius-md); box-shadow:0 6px 22px var(--shadow-color);
+  white-space:nowrap;
+}
+.ve-fead-ek.is-acik > .ve-fead-ek-liste{ display:flex; }
+.ve-fead-ek.suruklenir > .ve-fead-ek-liste{ opacity:.25; pointer-events:none; }
+.ve-fead-ek-oge{
+  display:flex; align-items:center; gap:8px; padding:3px 10px; cursor:pointer;
+  font-size:var(--fs-micro); color:var(--text-primary); user-select:none;
+}
+.ve-fead-ek-oge[draggable="true"]{ cursor:grab; }
+.ve-fead-ek-oge:hover{ background:var(--accent-tint-10); }
+.ve-fead-ek-oge:focus-visible{
+  outline:none; background:var(--accent-tint-15); box-shadow:inset 0 0 0 1px var(--accent-primary);
+}
+.ve-fead-ek-oge > .ik{ flex:none; display:flex; width:16px; height:16px; }
+.ve-fead-ek-oge > .ik svg{ display:block; width:16px; height:16px; }
 
 /* ÇİZİMDEKİ BALON — satırın numarası kasnağın göbeğinde (tablo açıkken). */
 [data-ve="sira-no"].is-hov > circle, [data-ve="sira-no"].is-sel > circle{ stroke-width:2; }
@@ -10129,6 +10170,10 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-fead-arac-btn[aria-disabled="true"]{
   background:var(--bg-tertiary); border-color:var(--border-color); color:var(--text-muted); cursor:not-allowed;
 }
+/* Not araçları: tuvale SÜRÜKLENİR (tık da kurar) — imleç tutmayı söyler, iki
+   araç satırı eşit paylaşır. */
+.ve-fead-arac-btn.tasinir{ flex:1; justify-content:center; cursor:grab; user-select:none; -webkit-user-select:none; }
+.ve-fead-arac-btn.tasinir:active{ cursor:grabbing; }
 .ve-fead-arac-btn:focus-visible,.ve-fead-arac-bag:focus-visible,
 .ve-fead-arac-seg button:focus-visible,.ve-fead-arac-ray-btn:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 /* Bağlantı: dinlenmede ZEMİNSİZ metin (düğme dolu, bağlantı boş — kural 14). */
