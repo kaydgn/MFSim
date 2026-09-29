@@ -341,7 +341,8 @@ function veFeadResSummaryHTML(R) {
       + _feadResN(Number(ref.dcPct), 1) + ')', _feadResTbl(head, P.map(function(p) {
         var q = (ref.perPulley || [])[p.i] || {}, hb = (ref.hubloads || [])[p.i] || {},
             sl = (ref.slip || [])[p.i] || {};
-        var yuk = Number(sl.tensionRatio) >= loadedThr;
+        var yuk = (typeof veFeadSlipYukTasir === 'function') ? veFeadSlipYukTasir(sl)
+          : Number(sl.tensionRatio) >= loadedThr;
         var nn = Number(q.accessoryRpm), kw = Number(q.powerKw);
         var satir = ['<b>' + _feadResEsc(p.code) + '</b>', _feadResN(q.exitTensionN, 0), _feadResN(hb.FN, 0),
           _feadResN(hb.dirDeg, 1), yuk ? _feadResN(sl.SF, 2) : '<span class="ve-fr-mute">yüksüz</span>',
@@ -365,7 +366,10 @@ function veFeadResSummaryHTML(R) {
     h += _feadResSec('Çıkış gerginlikleri', 'çevrim satırı başına [N] — kasnağın ÇIKIŞ açıklığı',
       _feadResTbl(mh, rows.map(function(d) {
         var m = Infinity;
-        (d.slip || []).forEach(function(s) { if(Number(s.tensionRatio) >= loadedThr) m = Math.min(m, s.SF); });
+        (d.slip || []).forEach(function(s) {
+          if((typeof veFeadSlipYukTasir === 'function') ? veFeadSlipYukTasir(s)
+             : Number(s.tensionRatio) >= loadedThr) m = Math.min(m, s.SF);
+        });
         var cls = (!ters && isFinite(m) && m < 1) ? 'is-no' : '';
         var c = [_feadResN(d.engineRpm, 0), _feadResN(Number(d.dcPct), 1), _feadResN(d.vMs, 2)];
         (d.perPulley || []).forEach(function(q) { c.push(_feadResN(q.exitTensionN, 0)); });

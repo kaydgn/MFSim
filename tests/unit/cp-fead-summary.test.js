@@ -70,7 +70,7 @@ function coz(anahtar, fatModel) {
 function bosAlta(R0) {
   return Object.assign({}, R0, { analysis: Object.assign({}, R0.analysis, {
     duty: R0.analysis.duty.map((d) => Object.assign({}, d, {
-      slip: d.slip.map((x) => (x.tensionRatio < 1.01 ? Object.assign({}, x, { SF: 0.9 }) : x)) })) }) });
+      slip: d.slip.map((x) => (!M.veFeadSlipYukTasir(x) ? Object.assign({}, x, { SF: 0.9 }) : x)) })) }) });
 }
 const NODE = { id: 'rep1', type: 'fead-report', data: { docNo: 'X-1', revision: 'A' } };
 
@@ -699,7 +699,7 @@ describe('kozmetik — okunabilirlik kararları', () => {
     expect(st.idle.every((x) => x.SF < 1)).toBe(true);
     const kirmizi = (blok.match(/class="bad"/g) || []).length;
     expect(kirmizi).toBe(0);                              // yük taşıyanların hepsi geçiyor
-    expect(blok).toMatch(/marj değil kapasitedir/);
+    expect(blok).toMatch(/payları hükme girmez/);
   });
 });
 

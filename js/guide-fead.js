@@ -1546,6 +1546,36 @@ function _gfSec8(){
     + 'c<sub>2</sub> = 1’dir — tasarım yükü gerçek yüktür — ve pencere bunu <em>Seçilmedi</em> '
     + 'diye yazar. Eski projelerden gelen, tablodan seçilmemiş bir sayı “kayıtlı değer” olarak '
     + 'kullanılır.');
+
+  h += '<h3>8.8 Sürtünme katsayısı μ — kaymanın varsayımı</h3>';
+  h += '<p>Aynı sekmede (sihirbazda kayış adımında) kayma emniyetine giren <strong>sürtünme</strong> '
+    + 'seçilir. μ bir malzeme sabiti değil, Euler–Eytelwein bağıntısına giren <em>etkin</em> '
+    + 'sürtünmedir; kaynaklar ayrı sayı verir. Varsayılan <strong>Gates kalibrasyonu</strong>dur; '
+    + '<em>Elle</em> seçilince alanlar o an geçerli değerlerle dolar ve değiştirilebilir.</p>';
+  if(typeof VE_FEAD_SURTUNME !== 'undefined'){
+    h += _gfTablo('Sürtünme seçenekleri', ['Seçenek', 'Oluklu μ', 'Sırt μ', 'Küçük kasnak kaybı', 'Kaynak'],
+      VE_FEAD_SURTUNME.secenek.map(function(o){
+        var bos = (o.k === 'elle');
+        var v = (!bos && typeof veFeadSurtunme === 'function') ? veFeadSurtunme({ surtunme: o.k }) : o;
+        return ['<strong>' + _gfE(o.ad) + '</strong>',
+          bos ? '—' : _gfF(v.muOluk, 2), bos ? '—' : _gfF(v.muSirt, 2),
+          bos ? '—' : (v.kayipMm > 0 ? _gfF(v.kayipMm, 0) + ' mm' : 'yok'), _gfE(o.kaynak)];
+      }), ['l', '', '', '', 'l']);
+  }
+  h += _gfNot('Kayma nasıl aranır',
+      'Emniyet faktörü kasnağın taşıyabileceği etkin gerginliğin istenene bölümüdür: '
+    + 'SF = T<sub>gevşek</sub>·(e<sup>μφ</sup> − 1) ⁄ (T<sub>gergin</sub> − T<sub>gevşek</sub>). '
+    + '1 kayma eşiğidir, üstünde torkla doğrusal okunur: 2, kasnağın istenenin iki katı torku '
+    + 'iletebileceğini söyler. Her devirde <strong>en kötü koşul</strong> aranır: ivmelenme, sabit '
+    + 'devir ve yavaşlama (aksesuar ataletiyle), her aksesuar tepe gücünün %10’u ya da %100’ü, avara '
+    + 've gergide 0,01 kW yatak sürtünmesi. Tepe güç aksesuarın kendi eğrisinden ya da katalogdan '
+    + 'gelir; ikisi de yoksa çevrimin kayıtlı yükü %100 sayılır ve rapor bunu yazar. İvme ve '
+    + 'yavaşlama sürücünün Motor sekmesindedir; girilmezse atalet talebi kaymaya katılmaz.');
+  h += _gfNot('Küçük kasnak kaybı',
+      'Kayış kasnağa girerken ve çıkarken bükülmeye direnir; temas her uçta ℓ kadar kısalır: '
+    + 'φ<sub>etkin</sub> = φ − 2ℓ ⁄ r<sub>p</sub>. Yalnız oluklu temasa uygulanır. Kayıp olmadan '
+    + 'Gates’in Ø57–61 alternatörlerinde pay 1,5–1,8 kat iyimser çıkıyordu. Ø61–120 arasında Gates '
+    + 'verisi yok; kasnak o aralıktaysa rapor bunu yazar.');
   return h;
 }
 
@@ -1946,16 +1976,13 @@ function _gfSec11(){
     + 'kasnakların en küçüğünü basar; sayılar servis faktörü c<sub>2</sub> ile tasarım '
     + 'yükündedir (§8.7). Bu sayı 1’in altına düştüğünde önce <strong>hangi kasnak</strong> '
     + 'olduğuna bakın.</p>';
-  h += _gfUyari('Oran ≈ 1 iken emniyet faktörü bir marj değildir',
-      'Avara ve gergi kasnakları kayıştan <strong>güç çekmez</strong>: giriş ve çıkış '
-    + 'gerilmeleri neredeyse eşittir, yani gerginlik oranı 1’e çok yakındır. Orada emniyet '
-    + 'faktörü bir <em>marj</em> değil, o sarım açısının <strong>kapasitesidir</strong> — '
-    + 'taşıyabileceği azami oran. Servis faktörü c<sub>2</sub> ise talebi büyütür (tasarım '
-    + 'yükü); talep yokken hiçbir şeyi değiştirmez.<br><br>'
-    + 'Yük taşıyan kasnaklarda oran belirgin biçimde 1’in üstündedir ve emniyet faktörleri '
-    + 'çoğunlukla iki mertebe yüksektir. <strong>Rapor hükmünü yalnız yük taşıyanların en '
-    + 'küçüğünden verir</strong>; panel tablosu ise ham en küçüğü gösterir. Bölüm 14’te bu '
-    + 'ayrımın sayısal karşılığı var.');
+  h += _gfUyari('Avara ve gerginin payı hükme girmez',
+      'Avara ve gergi kasnakları kayıştan <strong>güç çekmez</strong>: talepleri yalnız atalet ve '
+    + 'yatak sürtünmesidir, gerginlik oranı 1’e çok yakındır ve emniyet faktörleri çoğunlukla '
+    + 'güç ileten kasnaklarınkinden bir mertebe büyüktür. Sayı bir paydır ama tasarımın '
+    + 'sorusunu cevaplamaz. <strong>Rapor hükmünü yalnız yük taşıyanların en küçüğünden '
+    + 'verir</strong>; panel tablosu ise ham en küçüğü gösterir. Bölüm 14’te bu ayrımın sayısal '
+    + 'karşılığı var.');
   return h;
 }
 
@@ -2366,7 +2393,7 @@ function _gfSec14(){
       ];
     });
     h += _gfTablo('Çıkış gerilmeleri, hubload ve kayma emniyeti — ' + d0.engineRpm + ' rpm',
-      ['Kasnak', 'Gerilme [N]', 'Rapor', 'Hubload [N]', 'Rapor', 'Gerginlik oranı', 'SF'],
+      ['Kasnak', 'Gerilme [N]', 'Rapor', 'Hubload [N]', 'Rapor', 'Oran (en kötü koşul)', 'SF'],
       ssat, ['l', '', '', '', '', '', '']);
 
     // Kayma emniyeti hükmü — YÜK TAŞIYAN ayrımıyla. Bu, kılavuzun §11.4'te
@@ -2376,7 +2403,8 @@ function _gfSec14(){
     var yuklu = [], hepsi = [];
     d0.slip.forEach(function(s, i){
       hepsi.push({ ad: isim[i], SF: s.SF, oran: s.tensionRatio });
-      if(s.tensionRatio > esik) yuklu.push({ ad: isim[i], SF: s.SF, oran: s.tensionRatio });
+      if((typeof veFeadSlipYukTasir === 'function') ? veFeadSlipYukTasir(s) : s.tensionRatio > esik)
+        yuklu.push({ ad: isim[i], SF: s.SF, oran: s.tensionRatio });
     });
     function enKucuk(liste){
       var b0 = null;
@@ -2394,8 +2422,7 @@ function _gfSec14(){
             ? 'Ham en küçük emniyet faktörü <strong>' + _gfFs(gEn.SF, 2) + '</strong> ve '
               + '<strong>' + _gfE(gEn.ad) + '</strong> kasnağına ait. Ama o kasnağın '
               + 'gerginlik oranı <strong>' + _gfFs(gEn.oran, 4) + '</strong>, yani ~1: kayıştan '
-              + 'güç çekmiyor, dolayısıyla oradaki sayı bir marj değil o sarım açısının '
-              + '<strong>kapasitesidir</strong>.<br><br>'
+              + 'güç çekmiyor, talebi yalnız atalet ve yatak sürtünmesi; hükme girmez.<br><br>'
             : '')
         + 'Yük taşıyan kasnakların en küçüğü <strong>' + _gfFs(yEn.SF, 2) + '</strong> '
         + '(<strong>' + _gfE(yEn.ad) + '</strong>, oran ' + _gfFs(yEn.oran, 4) + ') ve' + c2G
