@@ -1076,11 +1076,22 @@ describe('Kayış Yolu kanvas kartı', () => {
     expect(rz[1]).toContain('Σsarım');
   });
 
-  test('boş topolojide patlamaz, KIRMIZI rozetle çıkar', () => {
+  // KASNAĞI OLMAYAN MODEL ARIZA DEĞİL BAŞLANGIÇTIR (2026-09-29): boş kartın
+  // ilk okuması kırmızı "Kayış yolu kapanmadı" rozetiydi — henüz hiçbir şey
+  // girmemiş kullanıcıya bir hata. Boş hâl ne yapılacağını zaten söylüyor.
+  test('boş topolojide patlamaz ve ROZET ÇİZMEZ — boş hâl kendini söylüyor', () => {
     global.nodes = []; global.connections = [];
     const lay = kasnak('fead-layout', {});
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(typeof html).toBe('string');
+    expect(html).not.toContain('ve-fead-kan-durum');
+    expect(html).toContain('Kayış yolunda henüz kasnak yok');
+  });
+
+  test('kasnağı olup ÇÖZÜLEMEYEN model KIRMIZI rozetle çıkar', () => {
+    const { lay, ten } = kurCozulur();
+    delete ten.data.cenX;                    // avara merkezi eksik → çözülemez
+    const html = fead.veFeadLayoutCardHTML(lay);
     expect(html).toMatch(/class="ve-fead-kan-durum no"/);
     expect(html).toMatch(ROZET_NO);
     // KÖTÜ HÂL TAM CÜMLE: sebebi rozetin İÇİNDE yazıyor, yalnız `title`da değil.
@@ -2893,13 +2904,14 @@ describe('kurucular TEK geri-al adımı bırakıyor', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR
+//  BOŞ BİR FEAD TOPOLOJİSİNİ BAŞLANGIÇ SAYFASI KARŞILAR
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Kullanıcı isteği (2026-09-09): *"FEAD modülünü ana topoloji kısmından
-// açtığım zaman, direkt karşıma 'Başlangıç Sihirbazı' bileşeninin gelmesini
-// istiyorum."* Eskiden karşılayan şey BOŞ bir Kayış Tablosuydu: doldurulacak
-// hiçbir satırı yok, ne yapılacağını da söylemiyordu.
+// Kullanıcı kararı (2026-09-29): *"FEAD modülünü açınca sihirbaz anında
+// karşımızda beliriyor. Bunun böyle olmasını istemiyorum."* → tasarım tuvali
+// "İlk açılış" · B. 2026-09-09'dan beri taze topoloji sihirbazla açılıyordu;
+// ölçülen kusur, ekranın %77'sini kaplayan pencerenin ilk karede HATA
+// göstermesiydi. Sayfanın kendisi tests/unit/fead-baslangic.test.js'te.
 describe('FEAD editörü açılışı', () => {
   const kabuk = () => {
     document.body.innerHTML = '<div id="ve-canvas"></div>';
@@ -2926,22 +2938,23 @@ describe('FEAD editörü açılışı', () => {
      'veFeadWizOpen', 'createNode'].forEach((k) => { delete global[k]; });
   };
 
-  test('KAYITSIZ topolojiye girince sihirbaz AÇILIR', () => {
+  test('KAYITSIZ topolojiye girince sihirbaz AÇILMAZ — açılış yalnız araçları kurar', () => {
     const iz = kabuk();
     global.nodes = [{ id: 'fa1', type: 'fead-analysis', data: {} }];
     fead.veFeadOpenEditor('fa1');
     sok();
     expect(iz.yuklenen).toEqual(['boş']);
-    expect(iz.wiz).toBe(1);
-    // Açılış yüzeyi de kuruldu: sihirbazı kapatan kullanıcı boş bir kanvasa
-    // düşmesin — bu bir kapı değil bir karşılama. Karşılayan kart artık BOŞ
-    // bir Kayış Yolu (Çizim Masası, 2026-09-23): kendi boş hâlini çiziyor ve
-    // iki yolu da gösteriyor ("Sihirbazla kur" · "Tabloyu aç").
+    expect(iz.wiz).toBe(0);
+    // Araç düğümleri kuruldu (sihirbaz dâhil — başlangıç sayfasının "Sihirbazla
+    // kur" kapısı ve FEAD araçları penceresi ona bağlanır), Kayış Yolu kartı
+    // KURULMADI: başlangıç sayfası "kasnak yok VE kart yok" iken görünür.
     expect(global.nodes.filter((n) => n.type === 'fead-wizard').length).toBe(1);
-    expect(global.nodes.filter((n) => n.type === 'fead-layout').length).toBe(1);
-    // Ve açılan sihirbaz KANVASTAKİ düğümün kendisi — ikinci bir kopya
-    // kurulmuyor (düğüm kullanıcının yarım bıraktığı formu taşıyor).
-    expect(iz.wizId).toBe(global.nodes.filter((n) => n.type === 'fead-wizard')[0].id);
+    expect(global.nodes.filter((n) => n.type === 'fead-layout').length).toBe(0);
+    // Ve kaynakta sihirbazı açan çağrı yok: veFeadOpenEditor'ün gövdesi
+    // veFeadWizOpenAny'i ÇAĞIRMIYOR (karşılamanın sahibi sayfa).
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../../js/cp-fead.js'), 'utf8');
+    const govde = src.slice(src.indexOf('function veFeadOpenEditor('), src.indexOf('function veFeadCloseEditor('));
+    expect(govde).not.toMatch(/veFeadWizOpenAny\(\)/);
   });
 
   test('KURULMUŞ bir modele dönerken sihirbaz AÇILMAZ', () => {

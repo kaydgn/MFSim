@@ -62,34 +62,38 @@ async function openFead(page) {
 }
 
 test.describe('FEAD Başlangıç Sihirbazı', () => {
-  test('boş topoloji açılış yüzeyiyle geliyor ve sihirbaz açılıyor', async ({ page }) => {
+  test('boş topolojiyi başlangıç sayfası karşılıyor; sihirbaz kapıdan ve araçlar penceresinden açılıyor', async ({ page }) => {
     const hatalar = [];
     page.on('pageerror', (e) => hatalar.push(String(e)));
     await bootApp(page);
     await openFead(page);
 
-    // AÇILIŞ YÜZEYİ: BOŞ Kayış Yolu kartı (Çizim Masası, 2026-09-23 — tablo
-    // kanvastan indi) + kutusuz araç düğümleri (sihirbaz dâhil, 2026-09-28).
-    // "Başlangıç ve Örnekler" (`fead-example`) 2026-09-09'da KALDIRILDI —
-    // sunduğu iki şey (sihirbaz düğmesi + örnek listesi) sihirbazın 1.
-    // adımında zaten vardı. Bu spec o gün sessizce öldü: hâlâ o tipin
-    // VARLIĞINI bekliyordu. Kapı artık ters yönde duruyor, yani bileşen geri
-    // gelirse burada görünür.
+    // AÇILIŞ YÜZEYİ: yalnız kutusuz araç düğümleri (sihirbaz dâhil,
+    // 2026-09-28). Kayış Yolu kartı YOK — boş topolojiyi BAŞLANGIÇ SAYFASI
+    // karşılıyor ve sihirbaz kendiliğinden AÇILMIYOR (2026-09-29, FEAD kural 5).
+    // "Başlangıç ve Örnekler" (`fead-example`) 2026-09-09'da KALDIRILDI; bu
+    // spec o gün sessizce öldü (tipin VARLIĞINI bekliyordu) — kapı artık ters
+    // yönde duruyor, yani bileşen geri gelirse burada görünür.
     const tipler = await page.evaluate(() => window.nodes.map((n) => n.type));
     expect(tipler).toContain('fead-wizard');
-    expect(tipler).toContain('fead-layout');
+    expect(tipler).not.toContain('fead-layout');
     expect(tipler).not.toContain('fead-table');
     expect(tipler).not.toContain('fead-example');
+    await expect(page.locator('#ve-fead-baslangic')).toBeVisible();
+    await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
 
-    // FEAD ARAÇLARI PENCERESİNİN SİHİRBAZ DÜĞMESİ açar. Sihirbazın kutusu
-    // 2026-09-28'de kalktı (tasarım A): düğüm modelde ama elemanı yok, yani
-    // çift tıklanacak bir şey de yok. Pencere önce kapatılıyor: ölçülmek
-    // istenen şey karşılama değil YENİDEN AÇMA yolu.
+    // Sihirbazın kutusu 2026-09-28'de kalktı (tasarım A): düğüm modelde ama
+    // elemanı yok, yani çift tıklanacak bir şey de yok. İKİ açma yolu:
+    // başlangıç sayfasının kapısı, model kurulunca FEAD araçları penceresi.
     const id = await page.evaluate(() =>
       window.nodes.find((n) => n.type === 'fead-wizard').id);
     expect(await page.evaluate((i) => !!document.getElementById(i), id)).toBe(false);
+    await page.click('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]');
+    await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
     await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(true); });
     await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
+    await page.click('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]');
+    await expect(page.locator('#ve-fead-araclar')).toBeVisible();
     await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="sihirbaz"]');
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
 

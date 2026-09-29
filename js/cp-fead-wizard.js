@@ -95,7 +95,7 @@ function _fwDefName(type){
 // GERGİNİN SİHİRBAZDAKİ ADI TEK YERDE.
 //
 // Palet adı "Gergi" (`componentDefs['fead-tensioner'].name`) ama sihirbaz baştan
-// beri "Otomatik Gergi" diyor: 4. adımın başlığı, kayış yolu listesi ve
+// beri "Otomatik Gergi" diyor: gergi adımının başlığı, kayış yolu listesi ve
 // kurulan düğümün `customName` yedeği üçü de o. Kullanıcı satırda da onu
 // istedi (2026-08-31): *"orada normal 'Otomatik Gergi' yazacak."*
 //
@@ -239,7 +239,7 @@ function veFeadWizPulleyType(key, type){
 // koordinatları oraya el ile girelim… Bu girdiler sihirbazın 'Otomatik Gergi'
 // sayfasına gitsin."*
 //
-// İki yüzey (Kasnaklar tablosundaki gergi satırı ve 4. adımın koordinat kartı)
+// İki yüzey (Kasnaklar tablosundaki gergi satırı ve gergi adımının koordinat kartı)
 // AYNI alanı yazmak ZORUNDA — ikinci bir durum kopyası tutulsaydı biri
 // ötekini sessizce eskitirdi (bu modülün tekrar eden kuralı: "panel ile kart
 // AYNI alanı okur").
@@ -251,9 +251,9 @@ function veFeadWizPulleyType(key, type){
 // Buraya montaj konumu yazmanın ölçülmüş bedeli 14 Gates sisteminde gerginlikte
 // medyan +%1526 (en kötü +%4518) — ve 14/14 sistem YİNE ÇÖZÜLÜYOR, 5'inde
 // hiçbir uyarı çıkmıyor. Satır bu yüzden hangi noktayı istediğini ADIYLA
-// yazıyor, ve 4. adım türeyen montaj konumunu okutuyor.
+// yazıyor, ve gergi adımı türeyen montaj konumunu okutuyor.
 //
-// ALAN ADI BURADA TEK YERDE: satır da 4. adımın koordinat kartı da buradan
+// ALAN ADI BURADA TEK YERDE: satır da gergi adımının koordinat kartı da buradan
 // okuyor. (Bir dönem bir de `veFeadWizTenCoordLabel` vardı; satırdaki amber
 // çip kullanıcı isteğiyle kalkınca onu okuyan tek yüzey de kalktı ve ölü
 // export olarak kalmasın diye silindi. Uyarı kaybolmadı: alanların `title`
@@ -692,7 +692,7 @@ function veFeadWizNodes(st){
   });
   // TEK KOORDİNAT: avara merkezi. Kol çalışma açısı da bir GİRDİ ve zorunlu —
   // yazılmazsa köprü modeli çözmez ve sebebini adıyla yazar (kullanıcı onu
-  // 4. adımda görür).
+  // gergi adımında görür).
   if(Number.isFinite(_fwNum(t.cenX, NaN))) td.cenX = _fwNum(t.cenX, NaN);
   if(Number.isFinite(_fwNum(t.cenY, NaN))) td.cenY = _fwNum(t.cenY, NaN);
   if(Number.isFinite(_fwNum(t.armMeanDeg, NaN))) td.armMeanDeg = _fwNum(t.armMeanDeg, NaN);
@@ -1008,6 +1008,10 @@ function veFeadWizLive(){
   if(el) el.innerHTML = veFeadWizLiveHTML(b);
   var uy = document.getElementById('ve-fw-issue');
   if(uy) uy.innerHTML = veFeadWizIssueHTML(b, _fwStep);
+  // KASNAKLAR ADIMININ ŞEKLİ de canlı: yazılan koordinat şekilde görünsün.
+  // Form alanlarının DIŞINDA — odağa dokunmaz.
+  var sk = document.getElementById('ve-fw-sekil');
+  if(sk) sk.innerHTML = _fwKasnakSekilHTML(b);
   var nav = document.getElementById('ve-fw-nav');
   if(nav) nav.innerHTML = veFeadWizNavHTML(b);
   var f = document.getElementById('ve-fw-foot-state');
@@ -1038,10 +1042,32 @@ function veFeadWizLive(){
 // çıkar, yüzeyi doldurmaz); modelin durumuyla ilgili bir şey söylenecekse
 // `ve-fw-issue` kutusu kullanılır — o bir açıklama değil, canlı doğrulama
 // çıktısıdır.
+//
+// FÖY (kullanıcı kararı 2026-09-29, tasarım tuvali "Adım içerikleri" · E):
+// kart bir KUTU değil, föyün NUMARALI BÖLÜMÜ — "2.1 Kayış sırası". Kutunun
+// başlık bandı ve sol renk şeridi kalktı: ölçüldü, altı adımda 25 kart aynı
+// bandı taşıyordu ve şeritteki 8 renk hiçbir DURUM anlatmıyordu (durum rayda).
+// Numara bir açıklama değil bir ETİKET (adım numarası gibi); yalnız adım
+// gövdesi basılırken verilir (`_fwBolumAdim`) — gövde dışında kurulan bir kart
+// (motor künyesi penceresi) numarasız kalır, yanlış numara almaz. `accent`
+// parametresi imzada KALIR (34 çağrı yeri) ama çizilmez: renk kanalı durum
+// taşımıyordu.
+var _fwBolumAdim = 0, _fwBolumNo = 0;
 function _fwCard(baslik, accent, inner){
-  return '<section class="ve-fw-card" style="--fw-accent:' + (accent || 'var(--accent-primary)') + ';">'
-    + '<header class="ve-fw-card-h"><span>' + _fwEsc(baslik) + '</span></header>'
+  var no = _fwBolumAdim ? (_fwBolumAdim + '.' + (++_fwBolumNo)) : '';
+  return '<section class="ve-fw-card">'
+    + '<header class="ve-fw-card-h">' + (no ? '<i class="ve-fw-bno">' + no + '</i>' : '')
+    + '<span>' + _fwEsc(baslik) + '</span></header>'
     + '<div class="ve-fw-card-b">' + inner + '</div></section>';
+}
+
+// ADIM NUMARASI ADINDAN — metne elle yazılmış bir numara adım eklenince/
+// kalkınca sessizce bayatlar (ölçüldü 2026-09-29: sihirbaz "7. adımdaki iki
+// kapı" ve "4. adımda okunur" diyordu; adım sayısı 6, gövde noktası 3.
+// adımda). Metin adımı ANAHTARIYLA anar.
+function _fwAdimNo(key){
+  for(var i = 0; i < VE_FW_STEPS.length; i++) if(VE_FW_STEPS[i].key === key) return i + 1;
+  return 0;
 }
 
 // Alan üreteci. `oninput` YALNIZ durumu yazar ve canlı şeridi gecikmeli
@@ -1067,12 +1093,22 @@ function _fwInp(path, opts){
   // okunur ve içindeki SAYI kaybolur gibi görünür; readonly sayıyı okunur
   // bırakır, yalnız yazmayı reddeder. Kullanıcının istediği tam olarak bu:
   // *"değerler değiştirilmemeli"* — gizlenmeli değil.
-  return '<input type="text"' + (opts.text ? '' : ' inputmode="decimal"')
+  return _fwKun('<input type="text"' + (opts.text ? '' : ' inputmode="decimal"')
     + ' class="ve-fw-inp' + (opts.kilit ? ' ve-fw-lock' : '') + '"'
     + ' value="' + _fwEsc(v === undefined || v === null ? '' : v) + '"'
     + ' placeholder="' + _fwEsc(opts.ph || '') + '"'
     + (opts.kilit ? ' readonly title="' + _fwEsc(opts.kilitNot || '') + '"' : '')
-    + ' oninput="_fwSet(\'' + path + '\', this.value)">';
+    + ' oninput="_fwSet(\'' + path + '\', this.value)">', opts.kilit, opts.kilitNot);
+}
+// KÜNYEDEN GELEN ALAN "K" İŞARETİ TAŞIR — föyün dili (2026-09-29): noktalı alt
+// çizgi DÜZENLENEBİLİR, çizgisiz ve K'li alan künyenin verisi (kütüphaneden
+// seçili, `readonly`/`disabled`). Sebep `title`da: sihirbazda açıklama yüzeyi
+// yok (kullanıcı kararı 2026-09-02). Sarmalayıcı alanla işareti tek satırda
+// tutar — alan `.ve-fw-field`in sütununda ya da tablo hücresinde durur.
+function _fwKun(html, kilit, not){
+  if(!kilit) return html;
+  return '<span class="ve-fw-kun-kap">' + html + '<sup class="ve-fw-kun" title="'
+    + _fwEsc(not || VE_FW_TEN_LOCK_NOTE) + '">K</sup></span>';
 }
 function _fwSelHTML(path, secenekler, cur, opts){
   opts = opts || {};
@@ -1083,7 +1119,7 @@ function _fwSelHTML(path, secenekler, cur, opts){
     h += '<option value="' + _fwEsc(o[0]) + '"' + (String(o[0]) === String(cur) ? ' selected' : '')
        + '>' + _fwEsc(o[1]) + '</option>';
   });
-  return h + '</select>';
+  return _fwKun(h + '</select>', opts.kilit, opts.kilitNot);
 }
 function _fwField(label, control, not){
   return '<label class="ve-fw-field"><span class="ve-fw-lbl">' + _fwEsc(label) + '</span>'
@@ -1097,13 +1133,16 @@ function _fwGrid(alanlar, kol){
 // Sihirbazın en değerli yüzeyi: kullanıcı daha "İleri" demeden modelin
 // çözülüp çözülmediğini görüyor. Sayı UYDURULMUYOR — çözüm yoksa sebep yazılı.
 function veFeadWizLiveHTML(b){
-  var h = '<div class="ve-fw-live">';
+  // FÖYÜN SONUÇ SATIRI (2026-09-29, tasarım tuvali · E): sayılar yazı gibi
+  // dizilir, kutu yok; durum SAĞ UÇTA bir DAMGA. Damga modelin hükmünü ve bu
+  // adımın eksik/uyarı sayısını birlikte söyler — rayın rozetiyle aynı
+  // kaynaktan (veFeadWizStepState), ikinci bir sayaç yok.
+  var h = '<div class="ve-fw-live"><span class="ve-fw-live-ad">Sonuç</span>';
   if(!b){
     h += '<span class="ve-fw-pill ve-fw-pill-dim">çözüm yok</span>';
     return h + '</div>';
   }
   if(b.ok){
-    h += '<span class="ve-fw-pill ve-fw-pill-ok">' + veIkon('check') + ' model çözülüyor</span>';
     // KAYIŞ NUMARASI d_b ÇİZGİSİNDE, kord (d_w) yanında — CAD eskizi kordu
     // ölçer (kullanıcı kararı 2026-09-28). Dönüşüm köprüden.
     if(Number.isFinite(b.beltLengthMm)){
@@ -1127,9 +1166,13 @@ function veFeadWizLiveHTML(b){
                  ? veFeadArmShownDeg(b.armAbsDeg) : b.armAbsDeg, 2) + '°</b></span>';
     if(b.spin)
       h += '<span class="ve-fw-pill">' + _fwSpinHTML(b.spin) + '</span>';
+    var d = veFeadWizStepState(b, _fwStep);
+    h += '<span class="ve-fw-pill ve-fw-pill-ok">' + veIkon('check') + ' Çözülüyor · '
+      + (d.err ? d.err + ' eksik' : d.warn ? d.warn + ' uyarı' : 'eksik girdi yok') + '</span>';
   } else {
-    h += '<span class="ve-fw-pill ve-fw-pill-err">' + veIkon('x') + ' çözülemiyor</span>';
     h += '<span class="ve-fw-pill ve-fw-pill-dim">' + _fwEsc((b.errors || [])[0] || '') + '</span>';
+    h += '<span class="ve-fw-pill ve-fw-pill-err">' + veIkon('x') + ' Çözülemiyor · '
+      + (b.errors || []).length + ' eksik</span>';
   }
   return h + '</div>';
 }
@@ -1271,19 +1314,58 @@ function veFeadWizFootHTML(b){
 // ════════════════════════════════════════════════════════════════════════════
 function veFeadWizStepHTML(step, b){
   var s = VE_FW_STEPS[step] || VE_FW_STEPS[0];
-  var h = '<div class="ve-fw-head"><h2>' + (step + 1) + '. ' + _fwEsc(s.ad) + '</h2>'
-        + '<p>' + _fwEsc(s.ipucu) + '</p></div>';
-  h += '<div id="ve-fw-live">' + veFeadWizLiveHTML(b) + '</div>';
-  if(step === 0) h += _fwStepKaynak(b);
-  else if(step === 1) h += _fwStepKasnak(b);
-  else if(step === 2) h += _fwStepGergi(b);
-  else if(step === 3) h += _fwStepKayis(b);
-  else if(step === 4) h += _fwStepCevrim(b);
-  else h += _fwStepOzet(b);
+  // FÖYÜN BAŞI TEK SATIR (kullanıcı bildirimi 2026-09-26: *"header kısmı boyuna
+  // çok büyük"* — adım başlığı 24 px'i aşmaz, kapı fead-wizard.spec.js):
+  // numara · ad · ipucu aynı taban çizgisinde, antet (sistem · kaynak · sayfa)
+  // sağda, altında föyün kalın çizgisi.
+  var h = '<header class="ve-fw-foy-bas"><div class="ve-fw-head">'
+        + '<span class="ve-fw-head-no">' + (step + 1) + '</span>'
+        + '<h2>' + _fwEsc(s.ad) + '</h2>'
+        + '<p>' + _fwEsc(s.ipucu) + '</p></div>'
+        + _fwAntetHTML(step) + '</header>';
+  _fwBolumAdim = step + 1; _fwBolumNo = 0;
+  try {
+    if(step === 0) h += _fwStepKaynak(b);
+    else if(step === 1) h += _fwStepKasnak(b);
+    else if(step === 2) h += _fwStepGergi(b);
+    else if(step === 3) h += _fwStepKayis(b);
+    else if(step === 4) h += _fwStepCevrim(b);
+    else h += _fwStepOzet(b);
+  } finally { _fwBolumAdim = 0; _fwBolumNo = 0; }
   // Uyarı kutusu KENDİ KABINDA: canlı yama onu form alanlarına dokunmadan
   // tazeleyebilsin diye kararlı bir id gerekiyor.
   if(step !== VE_FW_STEPS.length - 1) h += '<div id="ve-fw-issue">' + veFeadWizIssueHTML(b, step) + '</div>';
+  // SONUÇ SATIRI FÖYÜN DİBİNDE ve kaydırmada YAPIŞIK (CSS sticky): sayılar
+  // (boy · gerginlik · kol · yön) ve damga her yerden okunur. Kap aynı id —
+  // canlı yama (veFeadWizLive) onu form alanlarına dokunmadan tazeler.
+  h += '<div id="ve-fw-live">' + veFeadWizLiveHTML(b) + '</div>';
   return h;
+}
+
+// ANTET — föyün künyesi: hangi sistem, nereden geldi, kaçıncı sayfa. Değerler
+// durumun KENDİSİNDEN (sistem adı · tohumun kaynağı); uydurulan bir alan yok.
+// Kaynak üç türlü: Gates örneği (rapor kodu), STEP dosyası (iz), elle.
+function _fwAntetHTML(step){
+  var st = _fwState || {};
+  // Örnek adı "sistem — kaynak" biçiminde ("BMC Otomotif FEAD 5 — Gates
+  // AG00976 raporu"); kaynak yanındaki hücrede, sistem hücresi yalnız sistemi
+  // yazar.
+  var sistem = String(st.ad || '—').split(' — ')[0];
+  var kaynak = 'elle';
+  var ex = (st.seededFrom && typeof veFeadExampleOf === 'function') ? veFeadExampleOf(st.seededFrom) : null;
+  if(ex){
+    var kod = /\b(AG\d+)\b/.exec(ex.name || '');
+    kaynak = kod ? 'Gates ' + kod[1] : (ex.name || String(st.seededFrom));
+  } else if(st.stepKaynak){
+    kaynak = 'STEP' + (st.stepKaynak.dosya ? ' · ' + st.stepKaynak.dosya : '');
+  }
+  function hucre(ad, deger){
+    return '<span class="ve-fw-antet-h"><i>' + ad + '</i><b title="' + _fwEsc(deger) + '">'
+      + _fwEsc(deger) + '</b></span>';
+  }
+  return '<div class="ve-fw-antet" aria-label="Föy künyesi">'
+    + hucre('Sistem', sistem) + hucre('Kaynak', kaynak)
+    + hucre('Sayfa', (step + 1) + ' / ' + VE_FW_STEPS.length) + '</div>';
 }
 
 // ── 1 · BAŞLANGIÇ ──────────────────────────────────────────────────────────
@@ -1436,7 +1518,7 @@ function _fwStepKaynak(b){
     });
     ih += '</dl>';
 
-    // ŞEMA ÇİZİCİ TEK KAYNAK (`veFeadLayoutSVG`) — 7. adımın kullandığının
+    // ŞEMA ÇİZİCİ TEK KAYNAK (`veFeadLayoutSVG`) — özet adımının kullandığının
     // aynısı. Sunum kendi geometrisini HESAPLAMAZ; çözüm yoksa şema da yok
     // ve sebebi zaten uyarı kutusunda yazılı.
     if(b && b.ok && typeof veFeadLayoutSVG === 'function'){
@@ -2107,9 +2189,7 @@ function _fwStepKasnak(b){
          + '+ ' + _fwEsc(_fwDefName(t)) + '</button>';
   });
 
-  var h = _fwCard('Kasnak ekle', 'var(--accent-primary)',
-      '<div class="ve-fw-chips">' + ekle + '</div>'
-    );
+  var h = '';
 
   // KASNAK YOKKEN DE TABLO ÇİZİLİR: gergi satırı her zaman orada ve kullanıcı
   // onu oradan tanıyor. Erken dönüş, "gergiyi 4. adımda tanımlayacaksınız"
@@ -2150,7 +2230,8 @@ function _fwStepKasnak(b){
     if(!p) return;
     var tipler = VE_FW_PULLEY_TYPES.map(function(x){ return [x, _fwDefName(x)]; });
     t += '<tr>'
-      + '<td class="ve-fw-c"><input type="radio" name="ve-fw-driver"' + (p.driver ? ' checked' : '')
+      + '<td class="ve-fw-c"><span class="ve-fw-sira">' + (i + 1) + '</span>'
+        + '<input type="radio" name="ve-fw-driver" title="Sürücü"' + (p.driver ? ' checked' : '')
         + ' onchange="veFeadWizDriver(\'' + p.key + '\')"></td>'
       + '<td><select class="ve-fw-inp" onchange="veFeadWizPulleyType(\'' + p.key + '\', this.value)">'
       + tipler.map(function(o){
@@ -2227,13 +2308,34 @@ function _fwStepKasnak(b){
       + '</div>'
     );
 
-  // ── DÖNÜŞ YÖNÜ ───────────────────────────────────────────────────────────
-  // Kasnaklar tablosunun hemen altında, çünkü yön kasnak MERKEZLERİNİN
-  // sırasından okunuyor ve kullanıcı koordinatları burada giriyor.
-  h += _fwCard('Dönüş yönü', 'var(--accent-warning)',
-      veFeadWizSpinHTML(b)
-    );
+  // ── KASNAK EKLE · DÖNÜŞ YÖNÜ │ ŞEKİL ─────────────────────────────────────
+  // FÖY (2026-09-29, tasarım tuvali · E): tablonun altında iki sütun — solda
+  // ekleme ve yön, sağda kayış yolunun ŞEKLİ. Ölçülen boşluk: geometrinin
+  // girildiği bu adımda (48 girdi) hiç çizim yoktu; kullanıcı yazdığı
+  // koordinatın ne çizdiğini ancak 6. adımda görüyordu. Şekil çiziciden
+  // (veFeadLayoutSVG, tek kaynak) ve canlı yamayla tazelenir (veFeadWizLive).
+  // Yön kasnak MERKEZLERİNİN sırasından okunuyor ve koordinatlar burada.
+  var sol = _fwCard('Kasnak ekle', 'var(--accent-primary)',
+      '<div class="ve-fw-chips">' + ekle + '</div>')
+    + _fwCard('Dönüş yönü', 'var(--accent-warning)', veFeadWizSpinHTML(b));
+  h += '<div class="ve-fw-foy-iki"><div class="ve-fw-foy-sol">' + sol + '</div>'
+    + '<figure class="ve-fw-sekil" id="ve-fw-sekil">' + _fwKasnakSekilHTML(b) + '</figure></div>';
   return h;
+}
+
+// ŞEKİL: kayış yolu gerçek oranda, göbekte TABLONUN sıra numarası (Pafta'nın
+// dili — `siraNo`). Ad ve sarım açısı yok: numara tabloyla eşler, adlar
+// tabloda. Çözüm yoksa şekil yok ve bunu söyler (sayı uydurulmaz).
+function _fwKasnakSekilHTML(b){
+  var svg = null;
+  if(b && b.ok && typeof veFeadLayoutSVG === 'function'){
+    try {
+      svg = veFeadLayoutSVG(b, 380, 300, { posMode: 'mean', compass: false, pivot: true,
+        arrows: true, siraNo: true, nameLabels: false, wrapLabels: false, frame: false });
+    } catch(e){ svg = null; }
+  }
+  return (svg || '<div class="ve-fw-sekil-bos">Kayış yolu henüz çözülmedi.</div>')
+    + '<figcaption><b>Şekil ' + _fwAdimNo('kasnak') + '.1</b> · kayış yolu · göbekteki numara tablodaki sıra</figcaption>';
 }
 
 // ── GERGİ SATIRI — silinemez, eklenemez, HER MODELDE VAR ──────────────────
@@ -2257,7 +2359,7 @@ function _fwTenRow(st, ix, n){
   }
   var t = st.ten || {};
   var kx = veFeadWizTenCoordKeys(st);
-  // Künye seçiliyse parça alanları burada da kilitli — 4. adımla AYNI okuyucu
+  // Künye seçiliyse parça alanları burada da kilitli — gergi adımıyla AYNI okuyucu
   // (iki yüzey aynı kaydı yazıyor, biri kilitli öbürü açık olamaz).
   var kilit = veFeadWizTenLocked(st);
 
@@ -2280,33 +2382,33 @@ function _fwTenRow(st, ix, n){
 
   var mnt = 'Gergide de X/Y kasnağın MERKEZİDİR (kolun çalışma konumunda), '
     + 'diğer beş satırla aynı şey. Gövdenin montaj noktası bir girdi değil, '
-    + 'ondan ve kol açısından türeyen bir sonuçtur — 4. adımda okunur. '
+    + 'ondan ve kol açısından türeyen bir sonuçtur — ' + _fwAdimNo('gergi') + '. adımda okunur. '
     + 'Karıştırmanın ölçülmüş bedeli gerginlikte medyan +%1526 ve model yine '
     + 'çözülür.';
 
   return '<tr class="ve-fw-tr-ten">'
-    + '<td class="ve-fw-c"><input type="radio" disabled'
+    + '<td class="ve-fw-c"><span class="ve-fw-sira">' + (ix + 1) + '</span><input type="radio" disabled'
       + ' title="Gergi sürücü olamaz — sürücülük bir roldür ve çekirdek onu ayrı sayar."></td>'
     + '<td>' + tipSec + '</td>'
     + '<td><input type="text" class="ve-fw-inp" value="' + _fwEsc(t.name || '')
       + '" placeholder="' + _fwEsc(_fwTenAd()) + '"'
       + ' oninput="veFeadWizTenSet(\'name\', this.value)"></td>'
-    + '<td><input type="text" inputmode="decimal" class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
+    + '<td>' + _fwKun('<input type="text" inputmode="decimal" class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
       + ' value="' + _fwEsc(t.od === undefined ? '' : t.od) + '" placeholder="75"'
       + (kilit ? ' readonly title="' + _fwEsc(VE_FW_TEN_LOCK_NOTE) + '"' : '')
-      + ' oninput="veFeadWizTenSet(\'od\', this.value)"></td>'
+      + ' oninput="veFeadWizTenSet(\'od\', this.value)">', kilit) + '</td>'
     + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" title="' + _fwEsc(mnt) + '"'
       + ' value="' + _fwEsc(t[kx[0]] === undefined ? '' : t[kx[0]]) + '"'
       + ' placeholder="-161.97" oninput="veFeadWizTenSet(\'' + kx[0] + '\', this.value)"></td>'
     + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" title="' + _fwEsc(mnt) + '"'
       + ' value="' + _fwEsc(t[kx[1]] === undefined ? '' : t[kx[1]]) + '"'
       + ' placeholder="91.29" oninput="veFeadWizTenSet(\'' + kx[1] + '\', this.value)"></td>'
-    + '<td><select class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
+    + '<td>' + _fwKun('<select class="ve-fw-inp' + (kilit ? ' ve-fw-lock' : '') + '"'
       + (kilit ? ' disabled title="' + _fwEsc(VE_FW_TEN_LOCK_NOTE) + '"' : '')
       + ' onchange="veFeadWizTenSet(\'contact\', this.value)">'
       + '<option value="back"' + (t.contact !== 'grooved' ? ' selected' : '') + '>Sırttan</option>'
       + '<option value="grooved"' + (t.contact === 'grooved' ? ' selected' : '') + '>Kaburgalı</option>'
-      + '</select></td>'
+      + '</select>', kilit) + '</td>'
     + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" value="'
       + _fwEsc(t.inertia === undefined ? '' : t.inertia)
       + '" placeholder="—" oninput="veFeadWizTenSet(\'inertia\', this.value)"></td>'
@@ -2400,7 +2502,7 @@ function _fwStepGergi(b){
   // "BU KÜNYEDEN ÇIKANLAR" KARTI KALDIRILDI (kullanıcı isteği, 2026-08-31):
   // *"'Bu künyeden çıkanlar' kısmına gerek yok. Zaten raporda bunları
   // okuyacağız."* Yay kurulması, gereken kayış boyu ve tasarım gerginliği hem
-  // 7. adımın özet künyelerinde hem raporun §8'inde duruyor. Montaj konumu
+  // özet adımının künyelerinde hem raporun §8'inde duruyor. Montaj konumu
   // orada YOK ve bir okuma değil bir ÇIKTI: girdiyi doğru alana yazıp
   // yazmadığınızı denetleyen tek sayı odur (bkz. kılavuz §7.1).
   var _piv = (typeof veFeadTensionerPivot === 'function')
@@ -3040,7 +3142,7 @@ function veFeadWizAngOk(){
   if(!Number.isFinite(d)) return false;
   if(!_fwState.ten) _fwState.ten = {};
   _fwState.ten.armMeanDeg = Math.round(veFeadArmFromShown(d) * 10000) / 10000;
-  // Arkadaki sihirbaz tazelenir (şerit, uyarılar, 4. adımın alanı); pencere
+  // Arkadaki sihirbaz tazelenir (şerit, uyarılar, gergi adımının alanı); pencere
   // `VE_FW_ANG` null OLMADIĞI için açık kalır.
   veFeadWizRender();
   veFeadWizAngRender();
@@ -3784,11 +3886,11 @@ function _fwAccLimitCard(st, yuk){
     + '</tbody></table></div>';
 
   // SESSİZ "wait" KAPISI: sınırı olmayan aksesuar kapıda hüküm ALMAZ ve bu
-  // "geçti" demek DEĞİL. Kullanıcı 7. adımda "değerlendirilemedi" görmeden
+  // "geçti" demek DEĞİL. Kullanıcı özet adımında "değerlendirilemedi" görmeden
   // önce burada sebebini görmeli.
   if(eksik)
-    h += '<div class="ve-fw-issue ve-fw-issue-warn">! <b>' + eksik + ' aksesuarın</b> devir '
-       + 'sınırı yok; 7. adımdaki iki kapı onlar için <b>değerlendirilemedi</b> der ve '
+    h += '<div class="ve-fw-issue ve-fw-issue-warn">' + _fwSorunIkon('warn') + ' <b>' + eksik + ' aksesuarın</b> devir '
+       + 'sınırı yok; ' + _fwAdimNo('ozet') + '. adımdaki iki kapı onlar için <b>değerlendirilemedi</b> der ve '
        + '<b>uygun sayılmaz</b>. Künye seçin ya da sınırları elle girin.</div>';
 
   return _fwCard('Aksesuar devir sınırları',
@@ -3797,7 +3899,7 @@ function _fwAccLimitCard(st, yuk){
     );
 }
 
-// ── 7 · ÖZET VE KURULUM ────────────────────────────────────────────────────
+// ── 6 · ÖZET VE KURULUM ────────────────────────────────────────────────────
 function _fwStepOzet(b){
   var st = _fwState;
   var h = '';
@@ -3807,7 +3909,7 @@ function _fwStepOzet(b){
     ['Durum', b && b.ok ? 'çözülüyor' : 'çözülemiyor', b && b.ok ? 'ok' : 'err', b && b.ok ? 'check' : 'x'],
     ['Kasnak', String((b && b.order ? b.order.length : st.pulleys.length + 1)), ''],
     // KOL AÇISI KUTUSU KALDIRILDI (kullanıcı isteği, 2026-08-31). Sayı
-    // kaybolmuyor: kol çalışma açısı 4. adımın kendi ALANINDA duruyor (artık
+    // kaybolmuyor: kol çalışma açısı gergi adımının kendi ALANINDA duruyor (artık
     // bir girdi), türeyen montaj konumu da onun altında. Özette yeri yoktu:
     // çözülmemiş modelde etiket başka bir büyüklüğe (göreli dönme) düşüyordu,
     // yani tek ad altında iki farklı sayı — bu modülün defalarca düzelttiği
@@ -3860,8 +3962,7 @@ function _fwStepOzet(b){
   // ── KURULUM KAPISI ───────────────────────────────────────────────────────
   var kur = veFeadWizCanCreate();
   var kh2 = '<div class="ve-fw-reads">'
-    + _fwRead('Kurulacak bileşen', String(veFeadWizNodes(st).nodes.length)
-        + ' (kasnaklar + gergi + kayış + çözücü + kayış yolu + tablo + rapor)')
+    + _fwRead('Kurulacak bileşen', _fwKurulumOzet(veFeadWizNodes(st).nodes))
     + _fwRead('Kayış sırası', String(veFeadWizRoute(st).length) + ' kasnak')
     + '</div>';
   if(kur.varOlan > 0){
@@ -3973,6 +4074,27 @@ function _fwChecksCard(b){
       + h + '</div>');
 }
 
+// KURULACAKLAR LİSTESİ KURULUMUN KENDİSİNDEN (veFeadWizNodes) — elle yazılmış
+// liste bayatladı: 2026-09-23'te tablo kanvas bileşeni olmaktan çıktı, metin
+// 29'una kadar "… + tablo + rapor" saymaya devam etti. Adlar bileşen adları
+// (`componentDefs.name`), kasnaklar gergi dâhil tek sayıda, aynı tipten
+// birden fazlası sayısıyla ("2 Kayış Yolu").
+function _fwKurulumOzet(liste){
+  liste = liste || [];
+  var kasnak = 0, sira = [], say = {};
+  liste.forEach(function(n){
+    var d = (typeof componentDefs !== 'undefined' && componentDefs[n.type]) || {};
+    if(d.isFeadPulley){ kasnak++; return; }
+    var ad = d.name || n.type;
+    if(!say[ad]){ say[ad] = 0; sira.push(ad); }
+    say[ad]++;
+  });
+  var parca = [];
+  if(kasnak) parca.push(kasnak + ' kasnak (gergi dâhil)');
+  sira.forEach(function(ad){ parca.push((say[ad] > 1 ? say[ad] + ' ' : '') + ad); });
+  return liste.length + ' — ' + parca.join(' · ');
+}
+
 // Kurulum kapısı — sebebiyle birlikte.
 function veFeadWizCanCreate(){
   var out = { ok: true, sebep: '', varOlan: 0 };
@@ -3997,7 +4119,7 @@ function veFeadWizCanCreate(){
   if(_eksik.length){
     out.ok = false;
     out.sebep = 'Otomatik gerginin ' + _eksik.join(' ve ') + ' girilmedi. '
-      + '3. adımda ("Otomatik Gergi") ya katalogdan bir künye seçin ya da '
+      + _fwAdimNo('gergi') + '. adımda ("Otomatik Gergi") ya katalogdan bir künye seçin ya da '
       + 'değerleri elle girin — gergisiz ya da eksik gergiyle model çözülmez.';
   }
   return out;
@@ -4256,6 +4378,8 @@ function getFeadWizardPropertiesHTML(node){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     VE_FW_STEPS: VE_FW_STEPS, VE_FW_PULLEY_TYPES: VE_FW_PULLEY_TYPES,
+    _fwAdimNo: _fwAdimNo, _fwKurulumOzet: _fwKurulumOzet, _fwAntetHTML: _fwAntetHTML,
+    _fwKasnakSekilHTML: _fwKasnakSekilHTML, _fwKun: _fwKun, veFeadWizLive: veFeadWizLive,
     veFeadWizEngineLib: veFeadWizEngineLib, veFeadWizAccLib: veFeadWizAccLib,
     _fwEngineLibRow: _fwEngineLibRow, _fwAccLimitCard: _fwAccLimitCard,
     _fwChecksCard: _fwChecksCard,

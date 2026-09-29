@@ -571,11 +571,26 @@ function veFeadAraclarKur(){
   return el;
 }
 
+// BAŞLANGIÇ SAYFASI AÇIKKEN PENCERE GİZLİ (js/cp-fead-baslangic.js): sayfa
+// tuvali örter ve aynı kapıları (Sihirbaz · boş kanvas) kendisi gösterir; iki
+// yüzey aynı anda "buradan başla" demesin. Sayfanın görünürlüğü MODELDEN
+// türer (kasnak yok ve Kayış Yolu kartı yok) ve tek sorulduğu yer burası —
+// kapsam değişimi de tazeleme de buradan geçer, yani sayfa her saveState'te,
+// geri yüklemede ve sonuç unutulunca kendini modele göre açar/kapar.
+function _feadAracBaslangic(){
+  var acik = (typeof veFeadBaslangicTazele === 'function')
+    ? !!veFeadBaslangicTazele(_feadAracKapsam) : false;
+  var el = _feadAracEl();
+  if(el) el.hidden = !_feadAracKapsam || acik;
+  return acik;
+}
+
 // Tazeleme: gövde ve şerit yeniden kurulur, ODAK KORUNUR (düğmenin eylem
 // anahtarıyla) — klavyeyle Hesapla'ya basan kullanıcının odağı düşmesin.
 function veFeadAraclarTazele(){
   var el = _feadAracEl();
   if(!el || !_feadAracKapsam) return false;
+  _feadAracBaslangic();
   var d;
   try { d = veFeadAraclarDurum(); } catch(e){ return false; }
   var odak = (typeof document !== 'undefined' && document.activeElement && el.contains(document.activeElement))
@@ -597,7 +612,7 @@ function veFeadAraclarTazele(){
 function veFeadAraclarKapsam(scope){
   _feadAracKapsam = (scope === 'fead-analysis');
   var el = _feadAracEl();
-  if(!_feadAracKapsam){ if(el) el.hidden = true; return false; }
+  if(!_feadAracKapsam){ if(el) el.hidden = true; _feadAracBaslangic(); return false; }
   el = el || veFeadAraclarKur();
   if(!el) return false;
   el.hidden = false;

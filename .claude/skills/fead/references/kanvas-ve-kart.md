@@ -49,25 +49,13 @@ ve `veFeadSet` hepsi düğüm kimliğinden çalışıyor); değişen tek şey ku
 | Kasnak kutusu, adı, rozetleri | Kayış Tablosu satırı (ada tıkla → panel) |
 | Kayış Özellikleri kutusu ve kip rozeti (2026-09-26) | çizimdeki kayış (tık → Kayış Özellikleri) · paftanın künyesi + SERBEST/SABİT anahtarı |
 
-**BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı isteği:
-*"FEAD modülünü ana topoloji kısmından açtığım zaman, direkt karşıma 'Başlangıç
-Sihirbazı' bileşeninin gelmesini istiyorum."*). Eskiden karşılayan şey BOŞ bir
-Kayış Tablosuydu: doldurulacak hiçbir satırı yok, ne yapılacağını da
-söylemiyordu.
-
-Yalnız KAYITSIZ topolojide (`veFeadOpenEditor`'ün `_yeniTopoloji` bayrağı) ve
-`_silent` olmayan girişte. Kurulmuş bir modele dönerken açılsaydı karşılama bir
-ENGELE dönerdi — her girişte kapatılacak bir pencere. Açılış yüzeyi yine
-kurulur (sihirbaz + Kayış Tablosu): kapatan kullanıcı boş bir kanvasa düşmesin.
-
-**"Başlangıç ve Örnekler" (`fead-example`) KALDIRILDI** aynı turda — sunduğu
-iki şey (sihirbaz düğmesi + örnek açılır listesi) sihirbazın 1. adımında zaten
-vardı ve panelinin kendi metni bunu söylüyordu. Örnek KURUCUSU
-(`veFeadLoadExample`) duruyor: sihirbazın "Modeli Kur"u ile aynı işi yapan yol
-o ve testlerin kanonik model kurucusu.
 | Kutuyu sürükleyerek koordinat girme | Tablonun X/Y hücreleri |
 | Kutuyu seçip silme | Satırın ✕ düğmesi |
 | Paletten sürükleyip kanvasta görme | Tablonun "＋ Kasnak ekle" listesi — tık ya da çizime sürükle (FEAD'de "Bileşenler" sütunu yok, 2026-09-28) |
+
+**BOŞ TOPOLOJİYİ BAŞLANGIÇ SAYFASI KARŞILAR** — kural 5 (SKILL.md). Sihirbazın
+kendiliğinden açıldığı yön (2026-09-09 → 09-29) ve "Başlangıç ve Örnekler"
+bileşeni emekli: `references/emekli-yonler.md`.
 | `fead-coordlink` (Konum Bağı) | — bağlanacak konum kalmadı |
 | Kanvas ↔ mm köprüsünün tamamı | — koordinatın tek kaynağı `data.x/y` |
 

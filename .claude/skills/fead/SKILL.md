@@ -73,23 +73,31 @@ olurdu.
    Sihirbaz aynı kalıpla kutusuz, silinmez, tek kopya; eylemleri FEAD araçları
    penceresinde. Tuvalde kutu kuran TEK FEAD tipi Kayış Yolu kartı. Kapı:
    `cp-fead.test.js` → *"kanvasta yalnız Kayış Yolu"*.
-5. **BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR** (2026-09-09, kullanıcı
-   isteği). `veFeadOpenEditor` KAYITSIZ bir alt topoloji kurduğunda
-   (`_yeniTopoloji` bayrağı) `veFeadWizOpenAny()` çağrılır; kurulmuş bir modele
-   dönerken ve `_silent` geri-girişte AÇILMAZ — her girişte kapatılması gereken
-   bir pencere karşılamayı engele çevirirdi. Açılış yüzeyi yine kurulur:
-   BOŞ Kayış Yolu kartı (2026-09-23; önce Kayış Tablosu kartıydı) + kutusuz
-   araç düğümleri (kayış · çözücü · rapor · sihirbaz — `VE_FEAD_ARAC_TIPLERI`);
-   kartın boş hâli iki yolu söyler ("Sihirbazla kur" · "Tabloyu aç"), sihirbaz
-   FEAD araçları penceresinden de açılır. **Örnek ve
-   sihirbaz o kartı geometri kartı olarak DEVRALIR ve yuvasını alır** —
-   devralmasalar kanvasta üç çizim olurdu (ölçüldü). Kapılar:
-   `cp-fead.test.js` → *"YEDEK YERLEŞİM"*, `fead-wizard.test.js` → *"BOŞ
-   KAYIŞ YOLU varken"*. **"Başlangıç ve Örnekler" (`fead-example`)
-   KALDIRILDI**: sunduğu iki şey (sihirbaz düğmesi + örnek listesi) sihirbazın
-   1. adımında zaten vardı. Örnek KURUCUSU (`veFeadLoadExample`) duruyor.
-   Kapılar: `cp-fead.test.js` → *"FEAD editörü açılışı"* ve *"Başlangıç ve
-   Örnekler bileşeni kaldırıldı"*, `fead-sihirbaz-tablo.spec.js`.
+5. **BOŞ BİR FEAD TOPOLOJİSİNİ BAŞLANGIÇ SAYFASI KARŞILAR** (2026-09-29,
+   kullanıcı kararı — tasarım tuvali "İlk açılış" · B: *"İlk açılış B
+   başlangıç sayfası olacak"*). 2026-09-09'dan beri sihirbaz kendiliğinden
+   açılıyordu; ölçüldü: ekranın %77'si, ilk karede "7 eksik/çelişkili girdi".
+   Sayfa (`js/cp-fead-baslangic.js`) tuvali örter: üç kapı (Sihirbazla kur ·
+   STEP'ten başla · Boş çizim masası) + Gates raporlarının kayış yolları.
+   • **Görünürlük MODELDEN türer, bayrak yok**: kasnak yok VE Kayış Yolu kartı
+     yok → sayfa (`veFeadBaslangicGerekli`). Kapı modeli kurar, sayfa çekilir;
+     Ctrl+Z geri alırsa geri gelir. Açılış yüzeyi bu yüzden kart KURMAZ,
+     yalnız kutusuz araç düğümleri (`VE_FEAD_ARAC_TIPLERI`).
+   • **Kapılar modülün çağrıları**, sayfa düğüm kurmaz: `veFeadWizOpenAny` ·
+     1. adımın dosya seçicisi (AYNI tıklamada) · `veFeadKanvasEkle({bos:true})`
+     · `veFeadLoadExample`. Küçük resim çiziciden (`veFeadLayoutSVG`), liste
+     sihirbazınki (`veFeadExampleKeys`).
+   • **Sayfa açıkken FEAD araçları penceresi gizli** (`_feadAracBaslangic`:
+     kapsam ve tazeleme tek soru yeri); dönüş düğmesi (z 60) sayfanın üstünde.
+   • Kurulum kanvasta boş kart bulursa (Boş çizim masası) onu geometri kartı
+     olarak DEVRALIR ve yuvasını alır — devralmasa üç çizim olurdu (ölçüldü).
+   • Kasnağı olmayan kartta durum rozeti ÇİZİLMEZ: arıza değil başlangıç.
+   "Başlangıç ve Örnekler" (`fead-example`) 2026-09-09'da KALDIRILDI; örnek
+   KURUCUSU (`veFeadLoadExample`) duruyor. Kapılar: `fead-baslangic.test.js` +
+   `tests/e2e/fead-baslangic.spec.js`, `cp-fead.test.js` → *"FEAD editörü
+   açılışı"* · *"Başlangıç ve Örnekler bileşeni kaldırıldı"*,
+   `fead-wizard.test.js` → *"BOŞ KAYIŞ YOLU varken"*,
+   `fead-sihirbaz-tablo.spec.js`.
 6. **"Otomatik Düzenle" yalnız KUTUSU OLAN kartları dizer** — bugün yalnız
    Kayış Yolu kartları (kasnak, kayış ve araçların kutusu yok): tek sıra, yan
    yana; sığdırma FEAD araçları penceresinin sağından başlar (kural 38).
@@ -927,6 +935,22 @@ olurdu.
     `fead-table.test.js` → *"EKLEYİCİ BİR LİSTE"* · `fead-araclar.test.js` →
     *"PALETSİZ"* + *"YENİ KANVAS"* + *"NOT ARAÇLARI"* · `arac-performans.test.js` →
     *"PALETSİZ KAPSAM"*.
+
+46. **SİHİRBAZ BİR FÖYDÜR** (2026-09-29, kullanıcı kararı — tasarım tuvali
+    "Adım içerikleri" · E: *"E föy olacak"*; adımlı ray aynen kaldı). Kart
+    kutusu yok: `_fwCard` numaralı BÖLÜM basar ("2.1 …"; numara yalnız adım
+    gövdesinde — `_fwBolumAdim`), renk şeridi yok (8 renk hiçbir durum
+    anlatmıyordu). Başlık tek satır + antet (sistem · kaynak · sayfa, durumun
+    kendisinden); noktalı alt çizgi düzenlenebilir alan, K künyeden gelen
+    (`_fwKun`); SONUÇ satırı föyün dibinde ve yapışık, damganın sayısı rayla
+    tek kaynaktan (`veFeadWizStepState`). Kasnaklar adımında canlı şekil
+    (`_fwKasnakSekilHTML`, göbek numarası = tablo sırası). **Adım numarası
+    metne elle yazılmaz** (`_fwAdimNo(anahtar)` — ölçüldü: "7. adımdaki iki
+    kapı", adım sayısı 6) ve kurulacaklar listesi kurulumun KENDİSİNDEN
+    (`_fwKurulumOzet` — "… + tablo + rapor" üç gün bayat kaldı). Açıklama
+    yüzeyi yasağı sürüyor (`_fwCard` üç argümanlı, başlıkta `<em>` yok).
+    Kapılar: `fead-sihirbaz-foy.test.js` · `fead-wizard.test.js` ·
+    `fead-wizard.spec.js` (başlık ≤ 24 px) · `fead-wizard-tablo.spec.js`.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

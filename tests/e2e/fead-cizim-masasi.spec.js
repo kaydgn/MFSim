@@ -18,7 +18,7 @@
 const { test, expect } = require('@playwright/test');
 test.setTimeout(180000);
 
-async function ornek(page) {
+async function ornek(page, secenek) {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
@@ -34,7 +34,13 @@ async function ornek(page) {
   }, null, { timeout: 90000 });
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForTimeout(400);
-  await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); });
+  // `bosKart`: önce başlangıç sayfasının "Boş çizim masası" — kart kasnaklardan
+  // ÖNCE kurulur ve örnek onu DEVRALIR (geri yüklemenin kartı yarım modelle
+  // kurduğu sıra; CTRL+Z kapısının ön koşulu).
+  if (secenek && secenek.bosKart) {
+    await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+    await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
+  }
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
   await page.waitForFunction(() => window.nodes.filter((n) => n.type === 'fead-layout').length === 2,
     null, { timeout: 20000 });
@@ -165,11 +171,12 @@ test('TIKLA: pencere açılır, kasnak iki çizimde de işaretli; GERGİDE avara
 test('CTRL+Z: çizim kartı boşalmaz, geri-al üst üste de geri alır', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
-  await ornek(page);
+  await ornek(page, { bosKart: true });
   const kartlar = () => page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout')
     .map((n) => (document.querySelector('#' + n.id + ' .ve-fead-kan-bos') ? 'BOŞ' : 'çizim')));
   const odaksiz = () => page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
-  // Ön koşul: açılış kartı yeniden kullanıldığı için kart kasnaklardan ÖNCE.
+  // Ön koşul: "Boş çizim masası"nın kartı yeniden kullanıldığı için kart
+  // kasnaklardan ÖNCE (açılış 2026-09-29'dan beri kart kurmuyor).
   expect(await page.evaluate(() => window.nodes.findIndex((n) => n.type === 'fead-layout')
     < window.nodes.findIndex((n) => (componentDefs[n.type] || {}).isFeadPulley))).toBe(true);
 

@@ -365,24 +365,26 @@ function veFeadArrangeByCoords(opts){
   return true;
 }
 
-// AÇILIŞ YÜZEYİ: BOŞ bir Kayış Yolu kartı + kutusuz araç düğümleri (kayış ·
-// Çözücü · Rapor · Sihirbaz). Tuvalde görünen tek şey kart; araçların eylemi
-// FEAD araçları penceresinde (js/cp-fead-araclar.js), sihirbaz da taze
-// topolojide kendiliğinden açılır (veFeadOpenEditor). Örnek sihirbazın 1.
-// adımında — "Başlangıç ve Örnekler" bileşeni 2026-09-09'da kalktı.
+// AÇILIŞ YÜZEYİ: YALNIZ kutusuz araç düğümleri (kayış · Çözücü · Rapor ·
+// Sihirbaz). Tuvalde KART YOK — boş topolojiyi BAŞLANGIÇ SAYFASI karşılar
+// (js/cp-fead-baslangic.js, kullanıcı kararı 2026-09-29: *"İlk açılış B
+// başlangıç sayfası olacak"*). Sayfa modelden türer: kasnak ve Kayış Yolu
+// kartı yokken görünür, kullanıcı bir kapı seçip modeli kurunca çekilir. Kart
+// burada kurulsaydı sayfa ile kartın boş hâli aynı işi iki kez yapardı; "Boş
+// çizim masası" kapısı kartı `veFeadKanvasEkle` ile kurar. Örnek ve sihirbaz
+// kanvaslarını kendileri kurar (açılışta devralınacak kart yok).
 function veFeadPopulateStarter(){
   // BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI (bkz. js/state.js → veStateBatch).
-  // Bu kurucu ONİKİ düğüm kuruyor ve `createNode` her birinde `saveState()`
-  // çağırıyor: sarılmazsa Ctrl+Z modeli düğüm düğüm SÖKER (ölçüldü — 12.
-  // basışta Kayış Tablosu boşalıyor, 13.'te kart tamamen gidiyordu).
-  // Yığın zaten toplu kurulumdaysa (sihirbaz açılış yüzeyini çağırıyor)
-  // ikinci kez sarılmaz — sayaç iç içe geçmeyi taşıyor.
+  // Bu kurucu dört araç düğümü kuruyor ve `createNode` her birinde
+  // `saveState()` çağırıyor: sarılmazsa Ctrl+Z açılışı düğüm düğüm söker.
+  // Yığın zaten toplu kurulumdaysa ikinci kez sarılmaz — sayaç iç içe
+  // geçmeyi taşıyor.
   if(typeof veStateBatch === 'function' && typeof veStateBatchActive === 'function'
      && !veStateBatchActive()){
     var _r = veStateBatch(function(){ return veFeadPopulateStarter(); });
     // AÇILIŞ DURUMU YIĞININ TABANI (bkz. state.js → veStateResetBaseline).
-    // Bir adım olarak dursaydı Ctrl+Z kullanıcıyı boş bir kanvasa düşürürdü:
-    // ne tablo, ne sihirbaz, ne örnek — geri dönüşün tek yolu Ctrl+Y.
+    // Bir adım olarak dursaydı Ctrl+Z kullanıcıyı araçsız bir topolojiye
+    // düşürürdü: ne kayış, ne sihirbaz — geri dönüşün tek yolu Ctrl+Y.
     // Burada güvenli, çünkü bu yol yalnız KAYITSIZ bir alt topolojiye girerken
     // koşuyor (veFeadOpenEditor → veLoadTabState({state:null})) ve yığın o anda
     // zaten boş.
@@ -390,27 +392,10 @@ function veFeadPopulateStarter(){
     return _r;
   }
   if(typeof createNode !== 'function') return [];
-  // AÇILIŞ KARTI: BOŞ BİR KAYIŞ YOLU KARTI (Çizim Masası, 2026-09-23). Kart
-  // boşken kendi boş hâlini çizer ("Sihirbazla kur" · "Tabloyu aç");
-  // sihirbazın "Modeli Kur"u onu geometri kartı olarak YENİDEN KULLANIR
-  // (tip + ön ayar eşleşmesi). Yerleşim ortak yuvadan.
-  var tipler = ['fead-layout'];
-  var yuva = veFeadFallbackSlots(tipler);
-  var base = (typeof veArrangeModuleBase === 'function')
-    ? veArrangeModuleBase(yuva)
-    : { x:3000, y:3000 };
-  // ARAÇ DÜĞÜMLERİ İLK KURULANLAR (kayış 2026-09-26, Çözücü · Rapor ·
-  // Sihirbaz 2026-09-28): kutuları yok, yuvaları yok; kanvasta görünmezler ama
-  // modelin parçasıdırlar ve FEAD araçları penceresi onlara bağlanır (bkz.
-  // veFeadAraclarGaranti). Önce kurulurlar ki seçim — createNode her düğümü
-  // seçili bırakıyor — eskisi gibi açılışın kartında kalsın.
+  // ARAÇ DÜĞÜMLERİ (kayış 2026-09-26, Çözücü · Rapor · Sihirbaz 2026-09-28):
+  // kutuları yok, yuvaları yok; kanvasta görünmezler ama modelin parçasıdırlar
+  // ve FEAD araçları penceresi onlara bağlanır (bkz. veFeadAraclarGaranti).
   var created = veFeadAraclarGaranti();
-  tipler.forEach(function(tip, k){
-    var slot = yuva[k] || { lx: k * 150, ly: 20 };
-    var before = (typeof nodes !== 'undefined') ? nodes.length : 0;
-    createNode(tip, base.x + slot.lx, base.y + slot.ly);
-    if(typeof nodes !== 'undefined' && nodes.length > before) created.push(nodes[nodes.length-1]);
-  });
   if(typeof updateAllConnections === 'function') updateAllConnections();
   return created;
 }
@@ -426,7 +411,11 @@ function veFeadPopulateStarter(){
 // (veFeadKartTabloOlcu). Bir eylem = bir geri-al adımı (veStateBatch).
 // Kadraj bütün kartları alacak şekilde sığdırılır — yeni kart görünüşün
 // dışına düşebilirdi.
-function veFeadKanvasEkle(){
+// `opt.bos`: başlangıç sayfasının "Boş çizim masası" kapısı (js/cp-fead-
+// baslangic.js). Kart aynı kart; bildirim ilk kartın işini söyler — "görünümünü
+// seçin" ikinci bir kanvasın cümlesi.
+function veFeadKanvasEkle(opt){
+  opt = opt || {};
   if(typeof createNode !== 'function' || typeof nodes === 'undefined' || !nodes) return null;
   var kartlar = nodes.filter(function(n){ return !!_feadDefOf(n).isFeadLayout; });
   var x, y;
@@ -450,7 +439,8 @@ function veFeadKanvasEkle(){
   if(typeof updateAllConnections === 'function') updateAllConnections();
   if(typeof veFitViewToContent === 'function') veFitViewToContent();
   if(typeof showToast === 'function')
-    showToast('Kayış Yolu kanvası eklendi — Katmanlar\'dan görünümünü seçin', 'success');
+    showToast(opt.bos ? 'Boş Kayış Yolu kartı kuruldu — kasnakları Kayış Tablosu\'ndan ekleyin'
+                      : 'Kayış Yolu kanvası eklendi — Katmanlar\'dan görünümünü seçin', 'success');
   return yeni;
 }
 
@@ -518,27 +508,19 @@ function veFeadOpenEditor(nodeId, _silent){
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
   if(!_silent && typeof showToast === 'function') showToast('FEAD — İç Topoloji', 'info');
 
-  // ── BOŞ BİR FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILAR ─────────────────────────
+  // ── BOŞ BİR FEAD TOPOLOJİSİNİ BAŞLANGIÇ SAYFASI KARŞILAR ────────────────
   //
-  // Kullanıcı isteği (2026-09-09): *"FEAD modülünü ana topoloji kısmından
-  // açtığım zaman, direkt karşıma 'Başlangıç Sihirbazı' bileşeninin gelmesini
-  // istiyorum."* Eskiden karşılayan şey BOŞ bir Kayış Tablosuydu: doldurulacak
-  // hiçbir satırı yok, ne yapılacağını da söylemiyordu.
+  // Kullanıcı kararı (2026-09-29): *"FEAD modülünü açınca sihirbaz anında
+  // karşımızda beliriyor. Bunun böyle olmasını istemiyorum."* → tasarım tuvali
+  // "İlk açılış" · B. Sihirbaz burada artık AÇILMAZ; ölçülen kusur, ekranın
+  // %77'sini kaplayıp arkayı %62 karartan bir pencerenin ilk karede HATA
+  // göstermesiydi ("7 eksik/çelişkili girdi").
   //
-  // YALNIZ TAZE TOPOLOJİDE. `_yeniTopoloji` bayrağı yukarıdaki `else` dalından
-  // geliyor — kurulmuş bir modele geri dönerken sihirbazın açılması, kullanıcıyı
-  // her girişte kapatması gereken bir pencereyle karşılamak olurdu. Aynı sebeple
-  // `_silent` (autosave'in görünmez geri-girişi) de dışarıda: orada kullanıcı
-  // FEAD'e girmiyor bile.
-  //
-  // Kapatan için model YİNE KURULABİLİR: FEAD araçları penceresinin Sihirbaz
-  // düğmesi ve boş kartın "Sihirbazla kur"u aynı pencereyi açıyor, Kayış
-  // Tablosu'nun kendi ekleyicisi de çalışıyor — bu bir kapı değil bir
-  // karşılama.
-  if(_yeniTopoloji && !_silent && typeof veFeadWizOpenAny === 'function'){
-    try { veFeadWizOpenAny(); }
-    catch(e){ /* sihirbaz açılamazsa iç topoloji yine açık kalır */ }
-  }
+  // Sayfa burada ÇAĞRILMAZ: kapsam senkronu (yukarıda, veSyncSidebarScope →
+  // veFeadAraclarKapsam) onu modele göre açar — kasnak ve Kayış Yolu kartı
+  // yoksa sayfa, varsa kart. Kurulmuş bir modele dönerken de, autosave'in
+  // görünmez geri-girişinde de aynı kural geçerli; ayrı bir bayrak yok
+  // (js/cp-fead-baslangic.js).
 }
 
 // _silent: köke çökerken (veFeadCollapseToRoot → kaydet/sekme değiştir öncesi)
@@ -6077,6 +6059,13 @@ function _feadAnimLabel(kin, fallback, vib, scn){
 // bir kayış çevriminin geometrik ZORUNLULUĞU o; tutmuyorsa şema kendi içinde
 // tutarlı görünse bile yol yanlış çözülmüş demektir.
 function veFeadLayoutCardStrip(build, mode){
+  // KASNAĞI OLMAYAN MODEL ARIZA DEĞİL BAŞLANGIÇTIR — rozet ÇİZİLMEZ. Kartın
+  // boş hâli ne yapılacağını zaten söylüyor ("Kayış yolunda henüz kasnak
+  // yok"); yanına kırmızı "Kayış yolu kapanmadı" koymak, henüz hiçbir şey
+  // girmemiş kullanıcıya bir hata göstermekti (ölçüldü, 2026-09-29 tasarım
+  // tuvali: boş kartın ilk okuması kırmızı rozetti). Ölçüt kartın boş hâliyle
+  // AYNI: `build.order` boş. Kasnağı olup kapanmayan model kırmızı kalır.
+  if(!(build && build.order && build.order.length) && !(VE_FEAD_SURUKLE && VE_FEAD_SURUKLE.red)) return '';
   // Hüküm TEK YERDEN (veFeadYolDurumu): sürükleme kapısı da aynısını soruyor.
   var yd = veFeadYolDurumu(build, mode);
   var ok = yd.ok, sol = yd.sol, sag = yd.sag;
@@ -6457,9 +6446,12 @@ function veFeadTableCardHTML(node, opt){
 
   if(!T.rows.length){
     // BAYAT TAVSİYE DEĞİL. Burada bir zamanlar "sol paletten ekleyin" yazıyordu
-    // ve o yol kutular kalktığından beri SESSİZ. Bugünkü iki yol yazılı.
+    // ve o yol kutular kalktığından beri SESSİZ. Bugünkü yol yazılı.
+    // DURUM TEKRARLANMAZ: "henüz kasnak yok" hemen üstteki çizimin boş hâlinde
+    // yazılı (2026-09-29'da iki satır aynı cümleyi alt alta basıyordu); tablo
+    // yalnız KENDİ işini söyler.
     h += '<tbody><tr class="ve-fead-pf-bos"><td colspan="' + cols.length + '">'
-      + '<b>Kayış yolunda henüz kasnak yok.</b> Yukarıdaki <b>＋ Kasnak ekle</b> ile başlayın'
+      + '<b>Tablo boş.</b> Yukarıdaki <b>＋ Kasnak ekle</b> ile ilk satırı açın'
       + ' — eklenen kasnak otomatik gerginin önüne düşer.</td></tr></tbody></table></div>';
     return h;
   }

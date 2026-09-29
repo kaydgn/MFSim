@@ -33,35 +33,36 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
 
-  // FEAD alt topolojisi — açılışta BOŞ Kayış Yolu kartı + kutusuz araç
-  // düğümleri gelir, VE SİHİRBAZ AÇILIR (tablo 2026-09-26'dan beri kartın
-  // kendi katmanı; araçlar 2026-09-28'den beri FEAD araçları penceresinde).
+  // FEAD alt topolojisi — açılışta YALNIZ kutusuz araç düğümleri kurulur ve
+  // BOŞ TOPOLOJİYİ BAŞLANGIÇ SAYFASI KARŞILAR (kullanıcı kararı 2026-09-29:
+  // *"FEAD modülünü açınca sihirbaz anında karşımızda beliriyor. Bunun böyle
+  // olmasını istemiyorum."*). Ölçülen kusur: sihirbaz ekranın %77'sini
+  // kaplıyor, ilk karede "7 eksik/çelişkili girdi" diyordu.
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-wizard'),
     null, { timeout: 20000 });
-
-  // ── BOŞ TOPOLOJİ SİHİRBAZLA KARŞILIYOR ─────────────────────────────────
-  // Kullanıcı isteği (2026-09-09): *"FEAD modülünü ana topoloji kısmından
-  // açtığım zaman, direkt karşıma 'Başlangıç Sihirbazı' bileşeninin gelmesini
-  // istiyorum."* Eskiden karşılayan şey BOŞ bir Kayış Tablosuydu.
-  await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
-  // Kapatınca iç topoloji ayakta kalıyor — bu bir karşılama, kapı değil.
-  await page.evaluate(() => veFeadWizClose(false));
-  await page.waitForTimeout(200);
+  await expect(page.locator('#ve-fead-baslangic')).toBeVisible();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
+  await expect(page.locator('#ve-fead-araclar')).toBeHidden();
   const acilis = await page.evaluate(() => window.nodes.map((n) => n.type).sort());
-  // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı (kullanıcı: *"Gerek yok"*)
-  // — sunduğu liste sihirbazın 1. adımında zaten vardı. KAYIŞ açılışta KURULUR
-  // ama KUTUSUZ (2026-09-26): çizimde tıklanır, kanvasta kutusu yok. ÇÖZÜCÜ ·
-  // RAPOR · SİHİRBAZ da (2026-09-28): eylemleri FEAD araçları penceresinde.
-  expect(acilis).toEqual(['fead-belt', 'fead-layout', 'fead-report', 'fead-solver', 'fead-wizard']);
+  // KAYIŞ açılışta KURULUR ama KUTUSUZ (2026-09-26); ÇÖZÜCÜ · RAPOR · SİHİRBAZ
+  // da (2026-09-28). Kayış Yolu kartı YOK: sayfa "kasnak yok VE kart yok"
+  // iken görünür (2026-09-29).
+  expect(acilis).toEqual(['fead-belt', 'fead-report', 'fead-solver', 'fead-wizard']);
+
+  // "Boş çizim masası" — sayfa çekilir, boş kart ve araçlar penceresi gelir.
+  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
+  await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => !veIsCanvasHidden(n)).map((n) => n.type).sort()))
     .toEqual(['fead-layout']);
   await expect(page.locator('#ve-fead-araclar')).toBeVisible();
-  // Boş kart kendi boş hâlini söylüyor ve iki yolu da gösteriyor.
+  // Boş kart kendi boş hâlini söylüyor ve KIRMIZI ROZET TAŞIMIYOR —
+  // kasnağı olmayan model arıza değil başlangıçtır.
   expect(await page.evaluate(() =>
     (document.querySelector('.ve-fead-kan-bos') || {}).textContent || '')).toMatch(/henüz kasnak yok/);
+  await expect(page.locator('.ve-fead-kan-durum')).toHaveCount(0);
   const bosId = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-layout').id);
   expect(await page.evaluate(() =>
     window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length)).toBe(0);
@@ -120,7 +121,7 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   expect(durum.kasnak).toBe(6);              // BİLEŞENLER DE GELİYOR
   expect(durum.tablo).toBe(0);               // tablo bir kanvas düğümü DEĞİL
   expect(durum.sema).toBe(2);                // İKİ kanvas, tek tip (geometri + işletme)
-  // ÜÇÜNCÜ ÇİZİM YOK: açılışın boş kartı geometri kartı olarak DEVRALINDI.
+  // ÜÇÜNCÜ ÇİZİM YOK: "Boş çizim masası"nın kartı geometri kartı olarak DEVRALINDI.
   expect(await page.evaluate((id) => window.nodes.some((n) => n.id === id), bosId)).toBe(true);
   expect(durum.kayis).toBe(1);
   expect(durum.cozucu).toBe(1);

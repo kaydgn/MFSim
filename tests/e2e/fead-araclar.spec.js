@@ -33,12 +33,17 @@ async function bootApp(page) {
   }, null, { timeout: 90000 });
 }
 
-// FEAD'e gir, karşılama sihirbazını KAPAT (kullanıcı da öyle yapar).
+// FEAD'e gir: boş topolojiyi BAŞLANGIÇ SAYFASI karşılar (2026-09-29) ve pencere
+// o sürede gizli. Kullanıcı "Boş çizim masası" kapısına basar — boş Kayış
+// Yolu kartı kurulur, sayfa çekilir, pencere gelir.
 async function feadAc(page) {
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
-  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
-  await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); });
+  await expect(page.locator('#ve-fead-baslangic')).toBeVisible();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
+  await expect(page.locator('#ve-fead-araclar')).toBeHidden();
+  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
+  await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
 }
 
 const pencere = (page) => page.locator('#ve-fead-araclar');

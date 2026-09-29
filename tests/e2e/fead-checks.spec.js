@@ -254,15 +254,12 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   await page.waitForFunction(() => Array.isArray(window.nodes) && window.nodes.length > 0,
     null, { timeout: 20000 });
 
-  // BOŞ FEAD TOPOLOJİSİ SİHİRBAZLA KARŞILIYOR (2026-09-09) — pencere ZATEN
-  // açık. Bu spec eskiden düğüme çift tıklıyordu ve o gün sessizce kırıldı:
-  // açık modal tıklamayı yakalıyor, `dblclick` 30 sn bekleyip düşüyordu.
-  // Kapı gece E2E setinde olduğu için CI'da görünmedi. Artık İKİ YOL da
-  // kapılı: pencere kendiliğinden açıldıysa öyle devam edilir, açılmadıysa
-  // FEAD araçları penceresinin Sihirbaz düğmesine basılır (sihirbazın kutusu
-  // 2026-09-28'de kalktı) — ikisinde de sonuç aynı görünür pencere.
+  // BOŞ FEAD TOPOLOJİSİNİ BAŞLANGIÇ SAYFASI KARŞILAR (2026-09-29, FEAD kural
+  // 5): sihirbazı sayfanın "Sihirbazla kur" kapısı açar. (Bu spec iki kez
+  // sessizce kırıldı — önce çift tık açık modala çarptı, sonra araçlar
+  // penceresi sayfa açıkken gizli olduğu için tık hiç bir şeye varmadı.)
   const overlay = page.locator('#ve-feadwiz-overlay');
-  if (!(await overlay.isVisible())) await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="sihirbaz"]');
+  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(overlay).toBeVisible();
 
   // Örnekten doldur — kapıların üstünde koşacağı gerçek bir düzen.

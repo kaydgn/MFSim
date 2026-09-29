@@ -33,11 +33,10 @@ test('çalışma çevrimi otomatik gelir — sihirbaz ve panel', async ({ page }
   await page.waitForTimeout(500);
 
   // ── SİHİRBAZ ────────────────────────────────────────────────────────────
-  // BOŞ TOPOLOJİ SİHİRBAZLA KARŞILIYOR (2026-09-09): pencere zaten açık ve
-  // `dblclick`i yutuyor — bu spec o gün sessizce öldü, 180 sn zaman aşımı.
-  // Kapalıysa FEAD araçları penceresinin Sihirbaz'ı açar (kutusu yok, 2026-09-28).
-  if (!(await page.locator('#ve-feadwiz-overlay').isVisible()))
-    await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="sihirbaz"]');
+  // BOŞ TOPOLOJİYİ BAŞLANGIÇ SAYFASI KARŞILAR (2026-09-29, FEAD kural 5):
+  // sihirbazı sayfanın "Sihirbazla kur" kapısı açar. (2026-09-09 → 29 pencere
+  // kendiliğinden açılıyordu; bu spec o dönemde de bir kez sessizce öldü.)
+  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
   await page.evaluate(() => veFeadWizGoto(4));
   await page.waitForTimeout(600);
