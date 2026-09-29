@@ -883,6 +883,18 @@ function _gfSec3(){
     + 'hesabın hangi çizgide kurulacağını seçer (§8.6); STEP’ten kurulan modelde varsayılan eskizin '
     + 'çizgisidir, eskiz yoksa marka kataloğu. Seçim kayış için tektir, bütün kasnaklara birlikte '
     + 'uygulanır; Kayış adımındaki <em>CAD’deki kayış</em> kartı eskizin boyunu modelin korduyla karşılaştırır.');
+  h += _gfNot('Kayışın kesiti ve hesap çapı',
+      '3B’de kayışa tıklayın (hesaptan sonra hesap bölümündeki <strong>Kayış</strong> satırı da '
+    + 'seçer): sağ sütunda kayışın <strong>kesit şekli</strong> açılır — solda kayış tek başına '
+    + '(kaburga adımı s, kayış yüksekliği h), sağda kasnağa oturmuş (sırt yüksekliği h<sub>r</sub>, '
+    + 'çizgi farkı h<sub>b</sub>; kord çizgisi d<sub>w</sub> ve kasnak dış çapı d<sub>b</sub>). Şeklin '
+    + 'sayıları çizilen kayışındır: marka kataloğu, CAD seçiliyse eskizin h<sub>b</sub> / h<sub>r</sub>’si. '
+    + 'Altındaki <strong>Hesap çapı</strong> tablosunda sütun bir seçenek, satır bir kasnaktır: her '
+    + 'kasnağın üç hesap çapı yan yana okunur, sütun başlığına basmak seçer ve şekildeki hesap '
+    + 'çizgisi seçimi izler. En altta seçili markanın beş profil için <strong>karakteristik '
+    + 'ölçüleri</strong> (ContiTech kataloğunun Tablo 1’i gibi; kayışın profili vurgulu, değerin '
+    + 'kaynağı son satırda). Şekil hesaptan önce de açılır — profil kayışın adındaki koddan; kasnak '
+    + 'çapları ve CAD eskizi seçeneği hesaptan sonra gelir.');
   h += _gfNot('Künye dosyadaki gergiyi sessizce değiştirmez',
       'Künye seçmek gerginin parça alanlarını (kol boyu · kasnak çapı · parça kodu) katalogdan '
     + 'yazar. Seçtiğiniz künye STEP’teki parçadan farklıysa gergi adımı farkı adıyla gösterir; '
@@ -1489,7 +1501,8 @@ function _gfSec8(){
       'Kayış kalınlığı yok sayılır; kord boyu numarayla aynı çıkar']
   ], ['Seçenek', 'Kord ofseti', 'Ne zaman']);
   h += _gfNot('Nerede seçilir',
-      'Kayış Özellikleri → <b>Profil</b> sekmesi → <em>Hesap çapı</em>; sihirbazda Kayış adımı. '
+      'Kayış Özellikleri → <b>Profil</b> sekmesi → <em>Hesap çapı</em>; sihirbazda Kayış adımı; '
+    + 'STEP’ten kurarken 3B görüntüleyicide kayışa tıklayınca kesit şekliyle birlikte (§3.5). '
     + 'Seçilen çift aynı sekmenin ipucunda katalogla yan yana yazılır. Rapor §8.2 hesap çapını ve '
     + 'h<sub>b</sub> / h<sub>r</sub>’nin kaynağını basar; kesit figüründe hesabın çizgisi dolu ve kalındır.');
   return h;

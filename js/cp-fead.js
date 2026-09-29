@@ -2729,12 +2729,54 @@ function veFeadBoyOkuma(node, b){
 // seçiliyse kord ve sırt eskizin h_b / h_r'siyle konur (ölçek korunur);
 // d_b seçiliyse kayış yine katalog kesitiyle durur — fiziksel kayış aynı,
 // değişen hesabın çizgisi.
+// Kesitin sayıları: çekirdek bileşimi tanıyorsa onun BELT_DB'si, tanımıyorsa
+// proje tablosu (kural 40) — GATES + PJ/PL/PM'de figür hiç çizilmiyordu.
+// Çekirdeğin bildiği on bir bileşimde iki kaynak birebir aynı
+// (`fead-belt-geom.test.js`), yani o bileşimlerde çıktı değişmez.
+function _feadKesitGeom(profile, brand){
+  var bp = null;
+  if(typeof FEADCore !== 'undefined' && FEADCore.beltProps){
+    try { bp = FEADCore.beltProps({ profile: profile || 'PK', brand: brand || 'GATES' }); }
+    catch(e){ bp = null; }
+  }
+  if(!bp && typeof veFeadBeltProjeProps === 'function') bp = veFeadBeltProjeProps(profile, brand);
+  return bp;
+}
+
+// Kesitin DİŞİ — iki figürün (kasnaktaki kesit · Şekil 1) ORTAK yolları; iki
+// ayrı diş çizilseydi aynı kayış iki figürde iki biçimde görünürdü.
+// y aşağı, sırt 0'da: kayışın kök çizgisi yv, diş tepesi t, kasnağın dış çapı
+// yb, kanal tabanı yg, göbeğin dibi yp. Yarı genişlik derinlikle:
+// w(y) = wt + (t − y)·tan20 (40° kanal). X · Y mm → çizim birimi.
+function _feadKesitYollar(n, e, t, yb, yv, yg, yp, tas, X, Y){
+  var tan20 = Math.tan(20 * Math.PI / 180);
+  var wt = Math.max(0.08 * e, 0.46 * e - (t - yv) * tan20);
+  var w = function(y){ return wt + (t - y) * tan20; };
+  // KASNAK: dış çap (sırt düzlükleri) d_b'de, kanal yanakları kayışın dişine yaslı.
+  var x0 = -tas, x1 = n * e + tas;
+  var kas = 'M' + X(x0) + ' ' + Y(yb);
+  for(var i = 0; i < n; i++){
+    var xc = (i + 0.5) * e;
+    kas += ' L' + X(xc - w(yb)) + ' ' + Y(yb) + ' L' + X(xc - w(yg)) + ' ' + Y(yg)
+         + ' L' + X(xc + w(yg)) + ' ' + Y(yg) + ' L' + X(xc + w(yb)) + ' ' + Y(yb);
+  }
+  kas += ' L' + X(x1) + ' ' + Y(yb) + ' L' + X(x1) + ' ' + Y(yp)
+       + ' L' + X(x0) + ' ' + Y(yp) + ' Z';
+  // KAYIŞ: sırt → sağ kenar → dişler (sağdan sola) → sol kenar.
+  var kay = 'M' + X(0) + ' ' + Y(0) + ' L' + X(n * e) + ' ' + Y(0) + ' L' + X(n * e) + ' ' + Y(yv);
+  for(var j = n - 1; j >= 0; j--){
+    var xj = (j + 0.5) * e;
+    kay += ' L' + X(xj + w(yv)) + ' ' + Y(yv) + ' L' + X(xj + wt) + ' ' + Y(t)
+         + ' L' + X(xj - wt) + ' ' + Y(t) + ' L' + X(xj - w(yv)) + ' ' + Y(yv);
+  }
+  kay += ' L' + X(0) + ' ' + Y(yv) + ' Z';
+  return { kas: kas, kay: kay, wt: wt };
+}
+
 function veFeadKesitSVG(profile, brand, opt){
   opt = opt || {};
-  if(typeof FEADCore === 'undefined' || !FEADCore.beltProps) return '';
-  var bp;
-  try { bp = FEADCore.beltProps({ profile: profile || 'PK', brand: brand || 'GATES' }); }
-  catch(e){ return ''; }
+  var bp = _feadKesitGeom(profile, brand);
+  if(!bp) return '';
   var e = bp.ribPitch, hr = bp.hr, hb = bp.hb, t = bp.thickness;
   var ko = opt.kord || null;
   if(ko && ko.kaynak === 'cad' && ko.hb > 0 && ko.hr > 0 && ko.hb + ko.hr < t){ hb = ko.hb; hr = ko.hr; }
@@ -2750,7 +2792,7 @@ function veFeadKesitSVG(profile, brand, opt){
   // Hesap çizgisi işaretlenecekse etiket şeridi "· hesap" kadar geniş.
   var hesapDw = !!ko && !hesapDb;
   var W = ko ? 334 : 300, H = 128, SOL = 30, SAG = ko ? 110 : 76, UST = 8, ALT = 8;
-  var n = 3, tan20 = Math.tan(20 * Math.PI / 180);
+  var n = 3;
 
   // mm ölçüleri (y aşağı, sırt 0'da)
   var yc = hr, yb = hr + hb, yt = t;
@@ -2769,29 +2811,9 @@ function veFeadKesitSVG(profile, brand, opt){
   var X = function(v){ return f(ox + v * s); };
   var Y = function(v){ return f(oy + v * s); };
 
-  // Diş yarı genişliği derinlikle: w(y) = wt + (yt − y)·tan20
-  var wt = Math.max(0.08 * e, 0.46 * e - (yt - yv) * tan20);
-  var w = function(y){ return wt + (yt - y) * tan20; };
-
-  // KASNAK: dış çap (sırt düzlükleri) d_b'de, kanal yanakları kayışın dişine yaslı.
-  var x0 = -tas, x1 = n * e + tas;
-  var kas = 'M' + X(x0) + ' ' + Y(yb);
-  for(var i = 0; i < n; i++){
-    var xc = (i + 0.5) * e;
-    kas += ' L' + X(xc - w(yb)) + ' ' + Y(yb) + ' L' + X(xc - w(yg)) + ' ' + Y(yg)
-         + ' L' + X(xc + w(yg)) + ' ' + Y(yg) + ' L' + X(xc + w(yb)) + ' ' + Y(yb);
-  }
-  kas += ' L' + X(x1) + ' ' + Y(yb) + ' L' + X(x1) + ' ' + Y(yp)
-       + ' L' + X(x0) + ' ' + Y(yp) + ' Z';
-
-  // KAYIŞ: sırt → sağ kenar → dişler (sağdan sola) → sol kenar.
-  var kay = 'M' + X(0) + ' ' + Y(0) + ' L' + X(n * e) + ' ' + Y(0) + ' L' + X(n * e) + ' ' + Y(yv);
-  for(var j = n - 1; j >= 0; j--){
-    var xj = (j + 0.5) * e;
-    kay += ' L' + X(xj + w(yv)) + ' ' + Y(yv) + ' L' + X(xj + wt) + ' ' + Y(yt)
-         + ' L' + X(xj - wt) + ' ' + Y(yt) + ' L' + X(xj - w(yv)) + ' ' + Y(yv);
-  }
-  kay += ' L' + X(0) + ' ' + Y(yv) + ' Z';
+  // Kasnak ve kayış yolları — Şekil 1 ile ORTAK diş
+  var yol = _feadKesitYollar(n, e, yt, yb, yv, yg, yp, tas, X, Y);
+  var kas = yol.kas, kay = yol.kay;
 
   var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img"'
     + ' aria-label="Kayış kesiti: kasnak dış çapı d_b ve kord çizgisi d_w"'
@@ -2841,6 +2863,181 @@ function veFeadKesitSVG(profile, brand, opt){
        + ' stroke="' + C.mut + '" stroke-width="0.8"/>';
   svg += olcu(0, yc, 'r') + olcu(yc, yb, 'b');
   return svg + '</svg>';
+}
+
+// ── ŞEKİL 1 · KAYIŞ KESİTİ (`veFeadKayisSekilSVG`) ──────────────────────────
+// Kullanıcı isteği (2026-09-29): ContiTech'in "Belt section" şekli 3B
+// görüntüleyicinin sağ sütununda, hesap çapı orada seçilir. Şekli PROGRAM
+// çizer, resim gömülmez: resmin tablosu tek markanın sayıları — Gates seçili
+// bir modelin yanında durursa hesaptaki h_b'yle çelişirdi (sessiz sınıf).
+// İki görünüş, AYNI ölçek:
+//   solda kayış tek başına — kaburga adımı s, kayış yüksekliği h
+//   sağda kasnağa oturmuş (kasnak taralı) — h_r, h_b; d_w ve d_b çizgileri
+// Sayılar ÇİZİLEN kayışın (`g`: marka tablosu ya da CAD eskizi); hesabın
+// çizgisi dolu ve kalın (`data-ve-hesap`) — kasnaktaki kesitin kuralı. Diş
+// `_feadKesitYollar`'dan: iki figür aynı dişi çizer.
+var _feadSekilNo = 0;
+function veFeadKayisSekilSVG(g, opt){
+  opt = opt || {};
+  g = g || {};
+  var e = g.e, t = g.t, hb = g.hb, hr = g.hr;
+  if(!(e > 0 && hr > 0 && hb > 0 && t > hr + hb)) return '';
+  var C = { kay:'var(--accent-warning)', kord:'var(--ink-warning)', kas:'var(--text-secondary)',
+            db:'var(--accent-primary)', dw:'var(--text-primary)', mut:'var(--text-muted)' };
+  var hesap = (opt.hesap === 'db' || opt.hesap === 'dw') ? opt.hesap : null;
+  // İki diş: s'yi göstermeye yeter; üçüncü diş 416 px'lik sütunda ölçeği
+  // %30 küçültüyordu (PK'da kayış 47 px yüksekliğe iniyordu).
+  var n = 2, tas = 0.3 * e, rim = 0.4 * t;
+  // Yatay bölgeler (çizim birimi): h etiketi · sol görünüş · h_r / h_b
+  // etiketleri · sağ görünüş · d etiketleri. W sütunun içeriğiyle bire bir.
+  // zA "h 16,50"yi (PM) kesmeden taşır; zC "d_w · hesap"ı.
+  var W = 416, UST = 6, ALT = 4, zA = 52, zB = 58, zC = 64;
+  var s = (W - zA - zB - zC) / (2 * n * e + 2 * tas);
+  var gV = 2.2 / s, gT = 3 / s;            // boşluklar pikselden (kasnaktaki kesit gibi)
+  var yc = hr, yb = hr + hb, yv = yb - gV, yg = t + gT, yp = yg + rim;
+  var sCiz = 8, sYaz = 11;                 // s ölçüsü: diş tepesinin altında çizgi · yazı
+  var H = Math.ceil(UST + Math.max(yp * s, t * s + sCiz + sYaz + 3) + ALT);
+  var f = function(v){ return String(Math.round(v * 10) / 10); };
+  var oxL = zA, oxR = zA + n * e * s + zB + tas * s;
+  var XL = function(v){ return f(oxL + v * s); };
+  var XR = function(v){ return f(oxR + v * s); };
+  var Y = function(v){ return f(UST + v * s); };
+  var yolL = _feadKesitYollar(n, e, t, yb, yv, yg, yp, tas, XL, Y);
+  var yolR = _feadKesitYollar(n, e, t, yb, yv, yg, yp, tas, XR, Y);
+  var tarama = 've-sekil-tarama-' + (++_feadSekilNo);
+  var sayi = function(v){ return _feadEsc(_feadFmt(v, 2)); };
+  // Sembol + alt simge + değer: "h_r 1,10". Değerin dy'si alt simgeyi geri alır.
+  var sembol = function(ana, alt, deger, boy){
+    return ana + (alt ? '<tspan font-size="' + (boy - 2) + '" dy="2">' + alt + '</tspan>' : '')
+      + '<tspan dy="' + (alt ? -2 : 0) + '" font-weight="600" fill="' + C.dw + '"> ' + deger + '</tspan>';
+  };
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" data-ve="kayis-sekil"'
+    + ' aria-label="Kayış kesiti: solda kayış (s, h), sağda kasnakta (h_r, h_b, d_w, d_b)"'
+    + ' style="display:block; width:100%; height:auto;">'
+    + '<defs><pattern id="' + tarama + '" patternUnits="userSpaceOnUse" width="4" height="4"'
+    + ' patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="' + C.kas
+    + '" stroke-width="1" stroke-opacity="0.6"/></pattern></defs>';
+  // SAĞ GÖRÜNÜŞ: kasnak (açık zemin + tarama), üstünde kayış
+  svg += '<path d="' + yolR.kas + '" fill="' + C.kas + '" fill-opacity="0.08"/>'
+       + '<path data-ve="sekil-kasnak" d="' + yolR.kas + '" fill="url(#' + tarama + ')" stroke="' + C.kas
+       + '" stroke-width="1" stroke-linejoin="round"/>';
+  var kayis = function(d, ad){
+    return '<path data-ve="' + ad + '" d="' + d + '" fill="' + C.kay + '" fill-opacity="0.26" stroke="'
+      + C.kay + '" stroke-width="1.2" stroke-linejoin="round"/>';
+  };
+  svg += kayis(yolL.kay, 'sekil-kayis') + kayis(yolR.kay, 'sekil-kayis-kasnakta');
+  // KORD: iki görünüşte de, dişe üç
+  var rk = f(Math.max(1.2, Math.min(0.28 * hr, 0.28 * hb, e / 10) * s));
+  for(var k = 0; k < 3 * n; k++){
+    var xk = (k + 0.5) * e / 3;
+    svg += '<circle data-ve="sekil-kord" cx="' + XL(xk) + '" cy="' + Y(yc) + '" r="' + rk + '" fill="' + C.kord + '"/>'
+         + '<circle data-ve="sekil-kord" cx="' + XR(xk) + '" cy="' + Y(yc) + '" r="' + rk + '" fill="' + C.kord + '"/>';
+  }
+  var ok = function(x, a, z){          // dikey ölçü çizgisi, iki ucunda ok
+    return '<line x1="' + f(x) + '" y1="' + f(a + 1) + '" x2="' + f(x) + '" y2="' + f(z - 1) + '" stroke="' + C.mut
+      + '" stroke-width="1"/><path d="M' + f(x - 2.5) + ' ' + f(a + 4) + ' L' + f(x) + ' ' + f(a + 1) + ' L'
+      + f(x + 2.5) + ' ' + f(a + 4) + ' M' + f(x - 2.5) + ' ' + f(z - 4) + ' L' + f(x) + ' ' + f(z - 1)
+      + ' L' + f(x + 2.5) + ' ' + f(z - 4) + '" fill="none" stroke="' + C.mut + '" stroke-width="1"/>';
+  };
+  var uzanti = function(x1, y, x2){
+    return '<line x1="' + f(x1) + '" y1="' + f(y) + '" x2="' + f(x2) + '" y2="' + f(y) + '" stroke="' + C.mut
+      + '" stroke-width="0.8"/>';
+  };
+  var yazi = function(veri, x, y, anc, icerik){
+    return '<text data-ve-olcu="' + veri + '" x="' + f(x) + '" y="' + f(y + 3.5) + '"'
+      + (anc ? ' text-anchor="' + anc + '"' : '') + ' font-size="10" fill="' + C.mut + '">' + icerik + '</text>';
+  };
+  // Yakın iki yazı en az `aralik` ayrılır (ince h_b / h_r'de üst üste binerdi)
+  var ayir = function(a, b, aralik){
+    if(b - a >= aralik) return [a, b];
+    var m = (a + b) / 2;
+    return [m - aralik / 2, m + aralik / 2];
+  };
+  // SOL: kayış yüksekliği h (solda) ve kaburga adımı s (diş tepelerinin altında)
+  var xh = zA - 10, y0 = UST, yt = UST + t * s;
+  svg += uzanti(xh - 3, y0, oxL) + uzanti(xh - 3, yt, oxL + (0.5 * e - yolL.wt) * s)
+       + ok(xh, y0, yt) + yazi('h', xh - 4, (y0 + yt) / 2, 'end', sembol('h', '', sayi(t), 10));
+  var xs1 = oxL + 0.5 * e * s, xs2 = oxL + 1.5 * e * s, ys = yt + sCiz;
+  svg += '<line x1="' + f(xs1) + '" y1="' + f(yt + 2) + '" x2="' + f(xs1) + '" y2="' + f(ys + 3) + '" stroke="' + C.mut + '" stroke-width="0.8"/>'
+       + '<line x1="' + f(xs2) + '" y1="' + f(yt + 2) + '" x2="' + f(xs2) + '" y2="' + f(ys + 3) + '" stroke="' + C.mut + '" stroke-width="0.8"/>'
+       + '<line x1="' + f(xs1 + 1) + '" y1="' + f(ys) + '" x2="' + f(xs2 - 1) + '" y2="' + f(ys) + '" stroke="' + C.mut + '" stroke-width="1"/>'
+       + '<path d="M' + f(xs1 + 4) + ' ' + f(ys - 2.5) + ' L' + f(xs1 + 1) + ' ' + f(ys) + ' L' + f(xs1 + 4) + ' ' + f(ys + 2.5)
+       + ' M' + f(xs2 - 4) + ' ' + f(ys - 2.5) + ' L' + f(xs2 - 1) + ' ' + f(ys) + ' L' + f(xs2 - 4) + ' ' + f(ys + 2.5)
+       + '" fill="none" stroke="' + C.mut + '" stroke-width="1"/>'
+       + yazi('s', (xs1 + xs2) / 2, ys + sYaz - 3.5, 'middle', sembol('s', '', sayi(e), 10));
+  // SAĞ: h_r (sırt → kord) ve h_b (kord → d_b), kasnağın solunda
+  var xr = oxR - tas * s - 10, yC = UST + yc * s, yB = UST + yb * s;
+  svg += uzanti(xr - 3, y0, oxR) + ok(xr, y0, yC) + ok(xr, yC, yB);
+  var ey = ayir((y0 + yC) / 2, (yC + yB) / 2, 11);
+  svg += yazi('hr', xr - 5, ey[0], 'end', sembol('h', 'r', sayi(hr), 10))
+       + yazi('hb', xr - 5, ey[1], 'end', sembol('h', 'b', sayi(hb), 10));
+  // ÇİZGİLER: d_w (kord) ve d_b (kasnak dış çapı), ölçü okundan etiket şeridine.
+  // Hesabın çizgisi dolu ve kalın; ötekisi kesikli.
+  var cizgi = function(ad, y, renk, dash, h){
+    return '<line data-ve="' + ad + '"' + (h ? ' data-ve-hesap="1"' : '') + ' x1="' + f(xr - 4) + '" y1="' + f(y)
+      + '" x2="' + f(W - zC + 6) + '" y2="' + f(y) + '" stroke="' + renk + '" stroke-width="' + (h ? '2' : '1.2') + '"'
+      + (h ? '' : ' stroke-dasharray="' + dash + '"') + '/>';
+  };
+  svg += cizgi('sekil-dw', yC, C.dw, '2 2', hesap === 'dw') + cizgi('sekil-db', yB, C.db, '6 3', hesap === 'db');
+  var ly = ayir(yC, yB, 11);
+  var etiket = function(veri, y, renk, alt, h){
+    return '<text data-ve-cizgi="' + veri + '" x="' + f(W - zC + 10) + '" y="' + f(y + 4) + '" font-size="11"'
+      + ' font-weight="600" fill="' + renk + '">d<tspan font-size="8" dy="2">' + alt + '</tspan>'
+      + (h ? '<tspan dy="-2" font-size="10" font-weight="400" fill="' + C.mut + '"> · hesap</tspan>' : '') + '</text>';
+  };
+  svg += etiket('dw', ly[0], C.dw, 'w', hesap === 'dw') + etiket('db', ly[1], C.db, 'b', hesap === 'db');
+  return svg + '</svg>';
+}
+
+// ── KARAKTERİSTİK ÖLÇÜLER (`veFeadKayisOlcuHTML`) ────────────────────────────
+// ContiTech Tablo 1'in karşılığı: bir markanın beş profili, `veFeadBeltGeom`
+// (kural 40'ın tablosu — çekirdeğin bildiği bileşimlerde onunla BİREBİR). Dar
+// sütuna sığsın diye sütun PROFİL; kayışın profili vurgulu. Kaynak damgası son
+// satırda: damgasız bir sayı ölçülmüş bir sayıdan ayırt edilemez (kural 40).
+// L_b ARALIĞI YOK: kataloğun boy verisi markaya göre değil (stok listesi tek
+// üreticinin) — marka başlığının altında yanlış künye olurdu.
+var VE_FEAD_KAYIS_OLCU = [
+  // [veri, etiket (HTML), alan, ondalık, birim]
+  ['s', 'Kaburga adımı s', 'ribAdim', 2, 'mm'],
+  ['h', 'Kayış yüksekliği h', 'kalinlik', 2, 'mm'],
+  ['hb', 'Çizgi farkı h<sub>b</sub>', 'hb', 2, 'mm'],
+  ['hr', 'Sırt yüksekliği h<sub>r</sub>', 'hr', 2, 'mm'],
+  ['dbmin', 'En küçük kasnak d<sub>b</sub>', 'minKasnak', 0, 'mm'],
+  ['v', 'En yüksek hız', 'maksHiz', 0, 'm/s'],
+  ['kutle', 'Kaburga kütlesi', 'ribKutle', 3, 'kg/m']
+];
+// Damganın kısa adı — hücreye sığan; uzun cümlesi `title`da (VE_FEAD_BELT_GEOM_NOTE)
+var VE_FEAD_KAYIS_KAYNAK_KISA = { uretici: 'üretici', defter: 'defter', iso: 'ISO', uzlasma: 'ortak' };
+function veFeadKayisOlcuHTML(brand, profile){
+  if(typeof veFeadBeltGeom !== 'function' || typeof VE_FEAD_BELT_PROFILES === 'undefined') return '';
+  var prof = String(profile || '').toUpperCase();
+  var sut = VE_FEAD_BELT_PROFILES.map(function(p){ return { p: p, g: veFeadBeltGeom(p, brand) }; });
+  var marka = (sut[0].g && sut[0].g.marka) || 'GATES';
+  var on = function(c){ return c.p === prof ? ' class="on"' : ''; };
+  var h = '<table class="ve-fw-tbl ve-kayis-olcu" data-ve-kayis-olcu="' + _feadEsc(marka) + '"><thead><tr><th></th>';
+  sut.forEach(function(c){ h += '<th' + on(c) + ' data-ve-profil="' + c.p + '">' + c.p + '</th>'; });
+  h += '</tr></thead><tbody>';
+  VE_FEAD_KAYIS_OLCU.forEach(function(r){
+    // Satırın ondalığı TEK: 0,0144 dördüncü basamağı isterse bütün satır ister
+    var dec = r[3];
+    sut.forEach(function(c){
+      var v = c.g && c.g[r[2]];
+      while(Number.isFinite(v) && dec < 4 && Math.abs(Math.round(v * Math.pow(10, dec)) - v * Math.pow(10, dec)) > 1e-6) dec++;
+    });
+    h += '<tr data-ve-olcu="' + r[0] + '"><td>' + r[1] + ' <span class="ve-fw-dim">' + r[4] + '</span></td>';
+    sut.forEach(function(c){
+      var v = c.g && c.g[r[2]];
+      h += '<td' + on(c) + '>' + (Number.isFinite(v) ? _feadEsc(_feadFmt(v, dec)) : '—') + '</td>';
+    });
+    h += '</tr>';
+  });
+  h += '<tr data-ve-olcu="kaynak"><td>Kaynak</td>';
+  sut.forEach(function(c){
+    var g = c.g || {};
+    var kisa = g.uretilmiyor ? 'üretmiyor' : (VE_FEAD_KAYIS_KAYNAK_KISA[g.kaynak] || '—');
+    h += '<td' + on(c) + ' title="' + _feadEsc(g.not || '') + '">' + _feadEsc(kisa) + '</td>';
+  });
+  return h + '</tr></tbody></table>';
 }
 
 // ── BOY ÇİZGİLERİ KARTI (Boy sekmesi) ───────────────────────────────────────
@@ -8890,7 +9087,8 @@ if (typeof module !== 'undefined' && module.exports) {
 
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
     veFeadBoyOkuma: veFeadBoyOkuma,
-    veFeadKesitSVG: veFeadKesitSVG,
+    veFeadKesitSVG: veFeadKesitSVG, veFeadKayisSekilSVG: veFeadKayisSekilSVG,
+    veFeadKayisOlcuHTML: veFeadKayisOlcuHTML, VE_FEAD_KAYIS_OLCU: VE_FEAD_KAYIS_OLCU,
     veFeadBoyCizgileriHTML: veFeadBoyCizgileriHTML,
     veFeadKordKaynakAdi: veFeadKordKaynakAdi, veFeadHesapCapSecenekleri: veFeadHesapCapSecenekleri,
     veFeadKayisMarkaAdi: veFeadKayisMarkaAdi, VE_FEAD_KAYIS_MARKALAR: VE_FEAD_KAYIS_MARKALAR,
