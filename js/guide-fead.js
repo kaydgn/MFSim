@@ -1175,7 +1175,7 @@ function _gfSec6(){
       'Öncelik sırası <em>çevrimdeki kW › kendi eğrisi › katalog</em>. Elle yazılmış bir kW '
     + 'seçilen modeli o satırda sessizce ezerdi; bu yüzden eğri getiren bir seçim, '
     + '<strong>o aksesuarın</strong> çevrim hücrelerini temizler ve kaç hücre olduğunu söyler. '
-    + 'Sonradan kW yazarsanız Model kartı ve Güç eğrisi sekmesi bunu satır sayısıyla uyarır.');
+    + 'Sonradan kW yazarsanız Katalog modeli kartı ve Güç eğrisi sekmesi bunu satır sayısıyla uyarır.');
   h += _gfSahneModel();
   h += _gfSahneKasnakPaneli();
   h += '<h3>6.2 Devir sınırları — uygunluk kapısının girdisi</h3>';

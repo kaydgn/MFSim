@@ -2507,13 +2507,15 @@ function veFeadPinRows(pin, satir){
                'var(--accent-warning)');
 }
 
+// KAYNAK 'i'DE (kural 43): parça çiziminin alıntısı satırı iki yüz karaktere
+// uzatıyordu — satırın okuması ofsetin kendisi, dayanağı ipucunda.
 function veFeadPinNote(pin){
   if(!pin) return '';
   if(!pin.ok)
     return _feadHint('<b>Konum pimi:</b> ' + _feadEsc(pin.reason));
   return _feadHint('<b>Pim açısı = kol açısı ' + (pin.offsetDeg < 0 ? '−' : '+') + ' '
-    + _feadFmt(Math.abs(pin.offsetDeg), 2) + '°</b> (' + _feadEsc(pin.part) + ' · '
-    + _feadEsc(pin.src) + ').');
+    + _feadFmt(Math.abs(pin.offsetDeg), 2) + '°</b> '
+    + _feadIBtn('Kaynak: ' + (pin.part || '') + ' · ' + (pin.src || ''), 'kaynak'));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
