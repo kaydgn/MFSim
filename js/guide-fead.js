@@ -697,8 +697,10 @@ function _gfSec3(){
   h += _gfAdimlar([
     'Başlangıç sayfasında <strong>Sihirbazla kur</strong>’a basın; model kurulduktan sonra '
       + 'sihirbaz <strong>FEAD araçları</strong> penceresindeki <strong>Sihirbaz</strong>’dan açılır.',
-    'Adımları sırayla doldurun. Her adımın rozeti o adımda kalan eksik/uyarı sayısını '
-      + 'gösterir, yani nereye dönmeniz gerektiğini okursunuz.',
+    'Adımları sırayla doldurun. Her adımın solunda o adımın <strong>çizimi</strong> durur '
+      + '(kasnaklar, gerginin kolu, kayış, çevrim grafikleri), sağında girdileri; çizimin sol '
+      + 'üstündeki sonuç çipi modelin canlı hükmünü yazar. Her adımın rozeti o adımda kalan '
+      + 'eksik/uyarı sayısını gösterir, yani nereye dönmeniz gerektiğini okursunuz.',
     'Son adımda canlı çözümü ve kayış yolu şemasını görün, sonra <strong>modeli kurun</strong> '
       + '— sihirbaz kasnakları ve künyeleri iç topolojiye bir anda yazar. Kasnaklar '
       + '<strong>Kayış Yolu çiziminde</strong> belirir; tuvalde boş bir kart varsa (boş çizim '
@@ -708,17 +710,19 @@ function _gfSec3(){
     ['1 · Başlangıç', 'Sistem adı · <strong>STEP dosyasından</strong> ya da <strong>'
       + _ornekMetin + '</strong> doldurma', 'Bölüm 3.3 ve 3.5'],
     ['2 · Kasnaklar', 'Tip · çap · koordinat · temas tarafı · sürücü · '
-      + '<strong>kayış sırası</strong> (↑ ↓)', 'Bölüm 4, 5 ve 6'],
+      + '<strong>kayış sırası</strong> — kasnak çizimde seçilir, sürüklenir (0,1 mm) ve ok '
+      + 'tuşuyla oynatılır', 'Bölüm 4, 5 ve 6'],
     ['3 · Otomatik Gergi', 'Avara merkezi · kol boyu · kol açısı · yay künyesi', 'Bölüm 7'],
     ['4 · Kayış', 'Profil · kanal sayısı · katalog sonuçları', 'Bölüm 8'],
-    ['5 · Motor ve çevrim', 'Tahrik oranı · motor künyesi · çalışma çevrimi', 'Bölüm 9'],
+    ['5 · Motor ve çevrim', 'Tahrik oranı · motor künyesi · çalışma çevrimi (tablo '
+      + '“Çevrim tablosunu aç” penceresinde)', 'Bölüm 9'],
     ['6 · Özet ve kurulum', 'Canlı çözüm · kayış yolu şeması · modeli kur', 'Bölüm 10 ve 11']
   ], ['Adım', 'Ne sorar', 'Ayrıntısı']);
   h += _gfNot('Ayrı bir “Kayış Yolu” adımı yok',
       'Bir dönem vardı ve serpantin sırasını orada diziyordunuz. Sıra artık '
-    + '<strong>Kasnaklar tablosunun kendisi</strong> olduğu için ayrı bir adım aynı bilgiyi '
-    + 'ikinci kez sormak olurdu; adım kaldırıldı, yeteneği (↑ ↓ ile satır taşıma) kasnak '
-    + 'tablosuna taşındı. Programdaki Kayış Tablosu da aynı işi aynı biçimde yapar.');
+    + '<strong>Kasnaklar listesinin kendisi</strong> olduğu için ayrı bir adım aynı bilgiyi '
+    + 'ikinci kez sormak olurdu; adım kaldırıldı, yeteneği (seçili kasnağı sırada öne ya da '
+    + 'arkaya almak) Kasnaklar adımına taşındı. Programdaki Kayış Tablosu da aynı işi yapar.');
   h += _gfNot('Sihirbaz ayrı bir model kurmaz',
       'Sorduğu her alan panellerdeki alanların ta kendisidir ve doğrulamayı da aynı çözücü '
     + 'yapar. Yani sihirbazda gördüğünüz uyarı, panelde göreceğinizin aynısıdır — kurulduktan '

@@ -1754,7 +1754,7 @@ ikisinin altından **sessiz birer kusur** çıktı.
 
 | # | İstek | Ne yapıldı |
 |---|-------|------------|
-| 1 | *"'Kasnaklar' kısmında otomatik gergi eklenmiyor/çıkarılmıyor… koordinatları oraya el ile girelim, bu sayfadan gerginin tipini seçelim"* | Gergi 2. adımda **sanal satır** olarak duruyor (`_fwTenRow`) |
+| 1 | *"'Kasnaklar' kısmında otomatik gergi eklenmiyor/çıkarılmıyor… koordinatları oraya el ile girelim, bu sayfadan gerginin tipini seçelim"* | Gergi 2. adımda **sanal satır** olarak duruyor (`_fwTenRow`; 2026-09-29'dan beri listenin satırı + editörü, kural 47) |
 | 2 | *"Otomatik gergi tiplerinde Gates raporları yazıyor… sadece kol uzunluğu ve çalışma momenti yazsın"* | `veFeadTenLabel` — **tek üretici**, panel de onu kullanıyor |
 | 3 | *"Sihirbaz içinde 'Katalog Önerisi' kısmı var. Onu kaldıralım."* | Blok kalktı, yerine Kayış Özellikleri paneline yönlendiren tek satır |
 | 4 | *"Kullanıcı alternatör ve klima kompresörü tipini tıpkı bileşenindeki gibi açılır pencere ile seçecek… El ile değer girmeyeceğiz."* | **Aksesuar Modelleri** kartı + duty kW hücreleri **salt okuma** |

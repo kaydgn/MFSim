@@ -179,35 +179,37 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
     expect(A.veFeadAccLimits(p).maxCont).toEqual({ rpm: 7500, kaynak: 'elle' });
   });
 
-  test('kart: künye OKUNUR (seçim yukarıda), sınır alanları hepsinde', () => {
-    // İKİNCİ SEÇİCİ KALKTI (kullanıcı, 2026-09-01): aynı aksesuarın modeli iki
-    // ayrı kartta seçilebiliyordu. Seçim artık YALNIZ "Aksesuar Modelleri"
-    // kartında; burası onun okuması.
+  // SINIR SATIRI MODELİN ALTINDA (çizim masası, 2026-09-29): "Aksesuarlar"
+  // bloğunda aksesuar başına tek satır — model seçicisi, üç sınır alanı ve
+  // etkin sınırın OKUMASI. İkinci seçici YOK (kullanıcı, 2026-09-01: aynı
+  // aksesuarın modeli iki ayrı kartta seçilebiliyordu).
+  const sinirlar = (h) => { const d = document.createElement('div'); d.innerHTML = h;
+    return [...d.querySelectorAll('.ve-fw-acc-sinir')]; };
+  const kart = () => wiz._fwAccCard(wiz.veFeadWizState(), wiz.veFeadWizBuild(),
+    wiz.veFeadWizState().pulleys.filter((p) => !p.driver));
+  test('satır: künye OKUNUR (seçim yukarıda), sınır alanları hepsinde', () => {
     bmcKur();
-    const yuk = wiz.veFeadWizState().pulleys.filter((p) => !p.driver);
-    const h = wiz._fwAccLimitCard(wiz.veFeadWizState(), yuk);
+    const h = kart();
     expect(h).not.toContain('veFeadWizAccLib');
-    expect(h).not.toContain('<select');
+    sinirlar(h).forEach((s) => expect(s.querySelector('select')).toBe(null));
     expect(h).toContain('maxContRpm');
     // Avara kasnak yük taşımaz — satırı olmamalı.
     expect(h).not.toMatch(/Avara/);
-    // Seçim yapılınca künye BURADA görünüyor.
+    // Seçim yapılınca künye BURADA (satırın okumasında) görünüyor.
     const alt = wiz.veFeadWizState().pulleys.find((p) => p.type === 'fead-alternator');
     const k = A.veFeadAccList('fead-alternator')[0].key;
     wiz.veFeadWizAccModel(alt.key, 'bmc:' + k);
-    expect(wiz._fwAccLimitCard(wiz.veFeadWizState(),
-      wiz.veFeadWizState().pulleys.filter((p) => !p.driver))).toContain(k);
+    const not = sinirlar(kart()).map((s) => s.textContent).join(' ');
+    expect(not).toContain(k);
     // Defterde OLMAYAN bir tipte sınır alanı yine var.
     wiz.veFeadWizPulleyAdd('fead-waterpump');
-    const yuk2 = wiz.veFeadWizState().pulleys.filter((p) => !p.driver);
-    const h2 = wiz._fwAccLimitCard(wiz.veFeadWizState(), yuk2);
+    const h2 = kart();
     expect((h2.match(/maxContRpm/g) || []).length).toBeGreaterThan(2);
   });
 
-  test('sınırı olmayan aksesuar kartta ADIYLA uyarılıyor', () => {
+  test('sınırı olmayan aksesuar blokta ADIYLA uyarılıyor', () => {
     bmcKur();
-    const yuk = wiz.veFeadWizState().pulleys.filter((p) => !p.driver);
-    const h = wiz._fwAccLimitCard(wiz.veFeadWizState(), yuk);
+    const h = kart();
     expect(h).toContain('değerlendirilemedi');
     expect(h).toContain('uygun sayılmaz');
   });
@@ -397,9 +399,9 @@ describe('Yüzey', () => {
     expect(CSS).toContain('.ve-fw-gate-h{');
   });
 
-  test('6. adım motor kataloğunu ve sınır kartını çağırıyor', () => {
+  test('5. adım motor kataloğunu ve sınır satırını çağırıyor', () => {
     expect(WIZ_SRC).toContain('_fwEngineLibRow(s)');
-    expect(WIZ_SRC).toContain('_fwAccLimitCard(st, yuk)');
+    expect(WIZ_SRC).toContain('_fwAccSinirHTML(p)');
   });
 
   test('7. adım kapı kartını çağırıyor', () => {

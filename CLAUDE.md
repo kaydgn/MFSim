@@ -37,7 +37,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   tutuyor ve eksik satır oraya YAZILMAZ — köprü buradan besler.
 - `js/cp-fead-wizard.js` — FEAD **Başlangıç Sihirbazı** (adımlı modal; adımlar `VE_FW_STEPS`). Kendi
   modelini KURMAZ: durum → `veFeadWizNodes` → köprünün düğüm biçimi; önizleme de
-  kurulum da aynı listeden geçer. Adım içerikleri bir **föy** (FEAD kural 47).
+  kurulum da aynı listeden geçer. Adım içerikleri bir **çizim masası** (FEAD kural 47).
 - `js/cp-fead-baslangic.js` — FEAD **başlangıç sayfası**: boş topolojinin
   karşılaması (üç kapı + Gates raporları), sihirbaz kendiliğinden AÇILMAZ.
   Görünürlük modelden türer (kasnak yok ve kart yok); kurallar FEAD skill'inde (kural 5).

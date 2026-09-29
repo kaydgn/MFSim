@@ -56,28 +56,34 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   await page.evaluate(() => veFeadWizGoto(1));
   await page.waitForTimeout(250);
 
+  // ÇİZİM MASASI (2026-09-29): tablo satırı yerine listenin satırı + seçili
+  // satırın EDİTÖRÜ. Gerginin editörü kasnaklarınkiyle AYNI ızgarada.
+  const hizalar = () => page.evaluate(() =>
+    [...document.querySelectorAll('#ve-fw-ed .ve-fw-ed-alan')].map((a) =>
+      Math.round(a.lastElementChild.getBoundingClientRect().left)));
+  const ilkKey = await page.evaluate(() =>
+    document.querySelector('#ve-fw-kl-liste .ve-fw-kl').getAttribute('data-fw-k'));
+  await page.locator('#ve-fw-kl-liste .ve-fw-kl[data-fw-k="' + ilkKey + '"]').click();
+  const kasnakHiza = await hizalar();
+  await page.locator('#ve-fw-kl-liste .ve-fw-kl[data-fw-k="__ten__"]').click();
+  const gergiHiza = await hizalar();
   const satir = await page.evaluate(() => {
-    const tr = document.querySelector('tr.ve-fw-tr-ten');
-    const tip = tr.children[1];
+    const ed = document.querySelector('#ve-fw-ed[data-fw-k="__ten__"]');
+    const tipAlan = [...ed.querySelectorAll('.ve-fw-ed-alan')].find((a) => /^Tip/.test(a.textContent));
+    const tip = tipAlan.querySelector('select');
     return {
-      // TİP hücresi ÜÇÜNCÜ turda tek seçenekli bir <select> oldu: diğer beş
-      // satırda da orada bir açılır liste var ve hücrenin hizasını o belirler.
-      ad: (tip.querySelector('select option') || {}).textContent,
-      // Künye seçicisi ÜÇÜNCÜ turda satırdan 4. adıma taşındı (kullanıcı
-      // isteği: *"Otomatik gergi tipini 'otomatik gergi' kısmında seçeriz"*).
+      // TİP tek seçenekli bir <select>: kasnakların editöründe de orada bir
+      // açılır liste var ve alanın hizasını o belirler.
+      ad: (tip.querySelector('option') || {}).textContent,
+      // Künye seçicisi 3. adımda (kullanıcı isteği: *"Otomatik gergi tipini
+      // 'otomatik gergi' kısmında seçeriz"*).
       kunye: (tip.querySelectorAll('option').length > 1),
-      gorunen: tip.innerText.trim().split('\n')[0],
-      surucu: tr.querySelector('input[type=radio]').disabled,
-      sil: tr.querySelector('button.ve-fw-x').disabled,
-      // sütun hizası: başlık ile hücre aynı x'te mi
-      hiza: (() => {
-        const tbl = tr.closest('table');
-        const th = [...tbl.querySelectorAll('thead th')].map(e => Math.round(e.getBoundingClientRect().left));
-        const td = [...tr.children].map(e => Math.round(e.getBoundingClientRect().left));
-        return th.length === td.length && th.every((x, i) => Math.abs(x - td[i]) <= 1);
-      })()
+      gorunen: tip.options[tip.selectedIndex].textContent.trim(),
+      surucu: ed.querySelector('input[type=radio]').disabled,
+      sil: ed.querySelector('button.ve-fw-btn-sil').disabled,
     };
   });
+  satir.hiza = gergiHiza.length === kasnakHiza.length && gergiHiza.every((x, i) => Math.abs(x - kasnakHiza[i]) <= 1);
   console.log('SATIR', JSON.stringify(satir));
   expect(satir.ad).toBe('Otomatik Gergi');
   expect(satir.kunye).toBe(false);
@@ -189,20 +195,22 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
   expect(kayis.boy).toBe(true);
   expect(kayis.kapali).toBe(true);
 
-  // ── 6. ADIM: aksesuar modeli → kW hücreleri ──────────────────────────
+  // ── 5. ADIM: aksesuar modeli → kW hücreleri (tablo PENCEREDE) ────────
   await page.evaluate(() => veFeadWizGoto(4));
   await page.waitForTimeout(300);
   const oku = () => page.evaluate(() => {
-    const tbl = [...document.querySelectorAll('.ve-fw-tbl')].pop();
+    const tbl = document.querySelector('#ve-fw-cevrim .ve-fw-tbl');
     const th = [...tbl.querySelectorAll('thead th')].map(e => Math.round(e.getBoundingClientRect().left));
     const tr = tbl.querySelector('tbody tr');
     const td = [...tr.children].map(e => Math.round(e.getBoundingClientRect().left));
     return { hiza: th.length === td.length && th.every((x, i) => Math.abs(x - td[i]) <= 1),
              sutun: th.length,
              kw: [...tr.querySelectorAll('td.ve-fw-ro')].map(e => e.textContent.trim()),
-             kaynak: [...document.querySelectorAll('.ve-fw-tbl')][0].innerText };
+             kaynak: [...document.querySelectorAll('#ve-fw-yan .ve-fw-acc')].map((a) => a.innerText).join(' | ') };
   });
+  await page.locator('#ve-fw-cevrim-ac').click();
   const k0 = await oku();
+  await page.keyboard.press('Escape');
   console.log('ÇEVRİM0 hiza', k0.hiza, 'sütun', k0.sutun, 'kW', JSON.stringify(k0.kw));
   expect(k0.hiza).toBe(true);
 
@@ -214,6 +222,7 @@ test('tur2 — gergi satırı · yön · kilit · kayış · kW', async ({ page 
     [...e.options].map((o) => o.value).find((v) => v.indexOf('ap:') === 0));
   await accSec.selectOption(apVal);
   await page.waitForTimeout(400);
+  await page.locator('#ve-fw-cevrim-ac').click();
   const k1 = await oku();
   console.log('ÇEVRİM1 kW', JSON.stringify(k1.kw));
   expect(k1.kw.join('|')).not.toBe(k0.kw.join('|'));

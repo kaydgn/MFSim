@@ -63,10 +63,15 @@ test('çalışma çevrimi otomatik gelir — sihirbaz ve panel', async ({ page }
   expect(w2).toEqual([700, 1200, 2000, 3000]);
 
   // Örnek + aksesuar modeli → kW otomatik
+  // Çevrim tablosu PENCEREDE (çizim masası, 2026-09-29) — sayfanın düğmesiyle açılır.
   await page.evaluate(() => { veFeadWizSeed('AG00976_GATES_2025'); veFeadWizGoto(4); });
   await page.waitForTimeout(600);
+  await page.locator('#ve-fw-cevrim-ac').click();
+  await expect(page.locator('#ve-fw-cevrim')).toBeVisible();
   const kwHam = await page.evaluate(() =>
-    [...document.querySelectorAll('#ve-fw-body td.ve-fw-ro')].slice(0, 8).map((t) => t.textContent.trim()));
+    [...document.querySelectorAll('#ve-fw-cevrim td.ve-fw-ro')].slice(0, 8).map((t) => t.textContent.trim()));
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#ve-fw-cevrim')).toBeHidden();
   console.log('SİHİRBAZ(kW okuma) ' + JSON.stringify(kwHam));
   expect(kwHam.filter((x) => x && x !== '—').length).toBeGreaterThan(0);
 

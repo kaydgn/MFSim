@@ -47,83 +47,83 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   await page.evaluate(() => veFeadWizGoto(1));
   await page.waitForTimeout(300);
 
-  // ── 1 · GERGİ SATIRI DİĞERLERİYLE AYNI ─────────────────────────────────
-  const satir = await page.evaluate(() => {
-    const tbl = document.querySelector('.ve-fw-tbl');
-    const ilk = tbl.querySelector('tbody tr');
-    const ten = tbl.querySelector('tr.ve-fw-tr-ten');
-    const x = (tr) => [...tr.children].map(e => Math.round(e.getBoundingClientRect().left));
-    const bicim = (tr) => [...tr.children].map(td => {
-      const c = td.querySelector('input,select,span'); return c ? c.tagName : '-'; });
+  // ── 1 · GERGİ EDİTÖRÜ KASNAKLARINKİYLE AYNI ────────────────────────────
+  // ÇİZİM MASASI (2026-09-29): tablo satırı yerine seçili satırın EDİTÖRÜ.
+  // Ölçülen şeyler aynı: hiza, satır boyu, denetim biçimi, zemin.
+  const sec = (k) => page.locator('#ve-fw-kl-liste .ve-fw-kl[data-fw-k="' + k + '"]').click();
+  const sira = () => page.evaluate(() =>
+    [...document.querySelectorAll('#ve-fw-kl-liste .ve-fw-kl')].map((b) => b.getAttribute('data-fw-k')));
+  const edOlc = () => page.evaluate(() => {
+    const al = [...document.querySelectorAll('#ve-fw-ed .ve-fw-ed-alan')];
     return {
-      hiza: x(ten).every((v, i) => Math.abs(v - x(ilk)[i]) <= 1),
-      dhFark: Math.abs(Math.round(ten.getBoundingClientRect().height - ilk.getBoundingClientRect().height)),
-      bicimAyni: JSON.stringify(bicim(ten)) === JSON.stringify(bicim(ilk)),
-      zemin: getComputedStyle(ten.children[3]).backgroundColor
-             === getComputedStyle(ilk.children[3]).backgroundColor,
+      x: al.map((a) => Math.round(a.lastElementChild.getBoundingClientRect().left)),
+      h: al.map((a) => Math.round(a.getBoundingClientRect().height)),
+      bicim: al.map((a) => { const c = a.querySelector('input,select,.ve-fw-seg'); return c ? c.tagName : '-'; }),
+      zemin: al.map((a) => getComputedStyle(a).backgroundColor)
+    };
+  });
+  const s0 = await sira();
+  await sec(s0[0]);
+  const ilk = await edOlc();
+  await sec('__ten__');
+  const ten = await edOlc();
+  const satir = {
+    hiza: ten.x.length === ilk.x.length && ten.x.every((v, i) => Math.abs(v - ilk.x[i]) <= 1),
+    dhFark: Math.max(...ten.h.map((v, i) => Math.abs(v - ilk.h[i]))),
+    bicimAyni: JSON.stringify(ten.bicim) === JSON.stringify(ilk.bicim),
+    zemin: JSON.stringify(ten.zemin) === JSON.stringify(ilk.zemin),
+    ...(await page.evaluate(() => ({
       // AÇIKLAMA YÜZEYİ YOK (kullanıcı isteği, 2026-09-02).
       hint: document.querySelectorAll('.ve-fw-hint').length,
       gozKirpma: [...document.querySelectorAll('.ve-fw-card-h em')].length
-    };
-  });
+    })))
+  };
   console.log('SATIR', JSON.stringify(satir));
   expect(satir.hiza).toBe(true);
   expect(satir.dhFark).toBeLessThanOrEqual(2);
   expect(satir.bicimAyni).toBe(true);
+  expect(satir.zemin).toBe(true);
   expect(satir.hint).toBe(0);
   expect(satir.gozKirpma).toBe(0);
 
   // ── 2 · SATIR TAŞIMA — GERÇEK TIK ──────────────────────────────────────
   //
-  // ÖLÇÜLEN ŞEY BİR KOMŞULUK: ↑ satırı KAYIŞ SIRASINDA bir yukarı alır, yani
-  // TAM ÜSTÜNDEKİ satırla yer değiştirir. Eski kapı bu komşuluğu iki KASNAK
-  // arasında varsayıyordu ve gergi satırını listeden düşürüyordu — oysa gergi
-  // varsayılan olarak krankın hemen ARDINDA (2026-09-08) ve 2. kasnağın tam
-  // üstünde duran şey o. Sonuç: ↑ gergiyi bir aşağı itiyor, iki kasnağın
-  // sırası hiç değişmiyor, test "taşıma çalışmıyor" diyordu. Çalışıyordu;
-  // yanlış olan beklentiydi.
-  //
-  // Düğme de EYLEMİNDEN seçiliyor, ipucu metninden değil: başlık "Yukarı
-  // taşı" iken "Kayış sırasında yukarı" oldu ve seçici hiçbir şey bulamaz
-  // hâle geldi (30 sn zaman aşımı). İpucu kozmetiktir, `onclick` davranışın
-  // kendisi.
-  const satirlar = () => page.evaluate(() =>
-    [...document.querySelectorAll('.ve-fw-tbl tbody tr')].map(tr => {
-      const i = tr.children[2] && tr.children[2].querySelector('input');
-      const sel = tr.children[1] && tr.children[1].querySelector('select');
-      return i ? (i.value || i.placeholder)
-               : (sel ? sel.value : (tr.children[1] || {}).innerText || '').trim();
-    }));
-  const a0 = await satirlar();
-  const yukari = (n) => page.locator('.ve-fw-tbl tbody tr').nth(n - 1)
-    .locator('button[onclick*="PulleyMove"][onclick*=",-1)"]');
-  await yukari(3).click();                 // 3. SATIR — üstündekiyle takas
+  // ÖLÇÜLEN ŞEY BİR KOMŞULUK: "Sırada öne" satırı KAYIŞ SIRASINDA bir yukarı
+  // alır, yani TAM ÜSTÜNDEKİ satırla yer değiştirir. Düğme EYLEMİNDEN
+  // seçiliyor, yazısından değil (yazı kozmetik, `onclick` davranışın kendisi).
+  // Oklar SEÇİLİ satırın editöründe.
+  const a0 = await sira();
+  const yukari = async (n) => { await sec(a0[n - 1]);
+    return page.locator('#ve-fw-ed button[onclick*="PulleyMove"][onclick*=",-1)"]'); };
+  await (await yukari(3)).click();         // 3. SATIR — üstündekiyle takas
   await page.waitForTimeout(300);
-  const a1 = await satirlar();
+  const a1 = await sira();
   console.log('TAŞIMA', JSON.stringify(a0), '→', JSON.stringify(a1));
   expect(a1.length).toBe(a0.length);
   expect(a1[1]).toBe(a0[2]);               // komşuluk: 3 ↔ 2
   expect(a1[2]).toBe(a0[1]);
   expect(a1[0]).toBe(a0[0]);               // krank yerinde
   expect(a1.slice(3)).toEqual(a0.slice(3));// gerisi kıpırdamadı
-  // İlk satırın ↑ düğmesi kapalı — sürücü kasnak kayış sırasının başıdır.
-  expect(await yukari(1).isDisabled()).toBe(true);
+  // İlk satırın "Sırada öne"si kapalı — sürücü kasnak kayış sırasının başıdır.
+  expect(await (await yukari(1)).isDisabled()).toBe(true);
 
   // ── 3 · VİRGÜL — GERÇEK KLAVYE ─────────────────────────────────────────
-  // Satır hücreleri: radyo · tip · ad · OD · X · Y · temas · J · ops
-  // → o satırın `input`ları: radyo(0) ad(1) OD(2) X(3) Y(4) J(5)
-  const xAlan = page.locator('.ve-fw-tbl tbody tr:nth-child(1) input').nth(3);
+  // Sürücünün editöründeki Merkez X alanı.
+  const surucu = a1[0];
+  await sec(surucu);
+  const xAlan = page.locator('#ve-fw-ed input[aria-label="Merkez X"]');
   await xAlan.fill('');
   await xAlan.type('123,45');
   await page.waitForTimeout(250);
-  const virgul = await page.evaluate(() => {
+  const virgul = await page.evaluate((k) => {
     const st = veFeadWizState();
     const pack = veFeadWizNodes(st);
-    const alan = [...document.querySelectorAll('.ve-fw-tbl tbody tr:nth-child(1) input')][3];
+    const alan = document.querySelector('#ve-fw-ed input[aria-label="Merkez X"]');
     return { alanTipi: alan.type,
              gorunen: Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').get.call(alan),
-             durum: st.pulleys[0].x, modele: pack.nodes[0].data.x };
-  });
+             durum: st.pulleys.find((p) => p.key === k).x,
+             modele: pack.nodes.find((n) => n.id === 'wz-' + k).data.x };
+  }, surucu);
   console.log('VİRGÜL', JSON.stringify(virgul));
   expect(virgul.alanTipi).toBe('text');            // number OLSAYDI virgül yutulurdu
   expect(virgul.gorunen).toBe('123,45');           // alan virgülü GÖRDÜ ve gösteriyor

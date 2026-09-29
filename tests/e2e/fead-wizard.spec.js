@@ -138,9 +138,9 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
     await ornekKur(page);
 
-    // 2. adım: kasnaklar
+    // 2. adım: kasnaklar — LİSTE + seçili kasnağın EDİTÖRÜ (çizim masası)
     await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
-    const satir = page.locator('#ve-fw-body .ve-fw-tbl tbody tr');
+    const satir = page.locator('#ve-fw-kl-liste .ve-fw-kl');
     expect(await satir.count()).toBeGreaterThan(3);
 
     // Alternatörün X'ini elle değiştir.
@@ -154,8 +154,9 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     // SATIR DA GERGİYİ DIŞLIYOR: gergi satırı aynı tbody'de ve kendi
     // yazıcılarını kullanıyor (`veFeadWizTenSet`), yani `.nth(1)` ona düşünce
     // aranan alan o satırda HİÇ yok ve tık 30 sn bekliyordu.
-    const kasnakSatir = page.locator('#ve-fw-body .ve-fw-tbl tbody tr:not(.ve-fw-tr-ten)');
-    const hucre = kasnakSatir.nth(1).locator('input[oninput*="\'x\',this.value"]');
+    // Liste: gergi dışındaki ikinci satır seçilir; editör onun alanlarını basar.
+    await page.locator('#ve-fw-kl-liste .ve-fw-kl:not([data-fw-k="__ten__"])').nth(1).click();
+    const hucre = page.locator('#ve-fw-ed input[oninput*="\'x\',this.value"]');
     await expect(hucre).toHaveCount(1);
     // HANGİ KASNAĞA YAZDIĞIMIZI SATIRIN KENDİSİ SÖYLESİN: tablo `pulleys`
     // dizisi sırasıyla değil KAYIŞ SIRASIYLA çiziliyor, yani satır indisi ile
@@ -185,15 +186,16 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await ornekKur(page);
     await page.locator('#ve-fw-nav .ve-fw-step').nth(5).click();   // Özet ve Kurulum
 
-    // Şema gerçekten SVG olarak var ve kasnak çemberleri çizili.
-    const svg = page.locator('#ve-fw-body .ve-fw-fig svg');
+    // Şema gerçekten SVG olarak MASADA ve kasnak çemberleri çizili.
+    const svg = page.locator('#ve-fw-masa svg');
     await expect(svg).toBeVisible();
     const kasnak = await page.evaluate(() =>
-      document.querySelectorAll('#ve-fw-body .ve-fw-fig svg [data-ve="pulley"]').length);
+      document.querySelectorAll('#ve-fw-masa svg [data-ve="pulley"]').length);
     expect(kasnak).toBeGreaterThanOrEqual(6);
 
-    // Özet kartlarında sayılar var, "undefined" yok.
-    const kartlar = await page.locator('#ve-fw-body .ve-fw-stat').allTextContents();
+    // Yüzen panelin "Sonuç" okumalarında sayılar var, "undefined" yok.
+    const kartlar = await page.locator('#ve-fw-yan [data-ve-fw-sonuc]').allTextContents();
+    expect(kartlar.join(' ')).toMatch(/mm/);
     expect(kartlar.join(' ')).not.toContain('undefined');
     await expect(page.locator('#ve-fw-create')).toBeEnabled();
   });
@@ -256,23 +258,27 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(hatalar).toEqual([]);
   });
 
-  test('gergi satırı Kasnaklar tablosunda — silinemez ve odak DÜŞMÜYOR', async ({ page }) => {
-    // Mevcut odak kapısı bir KASNAK satırını ölçüyor; gergi satırı ayrı bir
-    // kod yolu (veFeadWizTenSet) ve tam yeniden çizim tetiklerse orada odak
-    // düşerdi — bu regresyon kasnak satırından GÖRÜNMEZ.
+  test('gergi Kasnaklar listesinde — editörü silinemez ve odak DÜŞMÜYOR', async ({ page }) => {
+    // Mevcut odak kapısı bir KASNAĞI ölçüyor; gergi ayrı bir kod yolu
+    // (veFeadWizTenSet) ve tam yeniden çizim tetiklerse orada odak düşerdi —
+    // bu regresyon kasnaktan GÖRÜNMEZ. Çizim masası (2026-09-29): tablo satırı
+    // yerine listenin satırı + seçili satırın editörü.
     await bootApp(page);
     await openFead(page);
     await page.evaluate(() => veFeadWizOpen(window.nodes.find((x) => x.type === 'fead-wizard').id));
     await ornekKur(page);
     await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
 
-    const ten = page.locator('#ve-fw-body tr.ve-fw-tr-ten');
+    const ten = page.locator('#ve-fw-kl-liste .ve-fw-kl[data-fw-k="__ten__"]');
     await expect(ten).toHaveCount(1);
-    await expect(ten.locator('button.ve-fw-x')).toBeDisabled();
-    await expect(ten.locator('input[type="radio"]')).toBeDisabled();
+    await ten.click();
+    const ed = page.locator('#ve-fw-ed[data-fw-k="__ten__"]');
+    await expect(ed).toHaveCount(1);
+    await expect(ed.locator('button.ve-fw-btn-sil')).toBeDisabled();
+    await expect(ed.locator('input[type="radio"]')).toBeDisabled();
 
-    // X hücresine gerçek klavyeyle yaz — değer modele işlemeli, odak kalmalı.
-    const x = ten.locator('input[inputmode="decimal"]').nth(1);
+    // Merkez X'e gerçek klavyeyle yaz — değer modele işlemeli, odak kalmalı.
+    const x = ed.locator('input[oninput*="veFeadWizTenSet(\'cenX\'"]');
     await x.click();
     await x.fill('-168.4');
     await page.waitForTimeout(450);
@@ -310,30 +316,35 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await ornekKur(page);
     await page.locator('#ve-fw-nav .ve-fw-step').nth(1).click();
 
+    // Liste Gates tablo sırasında; oklar SEÇİLİ satırın editöründe.
     const satirlar = () => page.evaluate(() =>
-      Array.from(document.querySelectorAll('.ve-fw-tbl-kasnak tbody tr')).map((tr) =>
-        tr.classList.contains('ve-fw-tr-ten') ? '__ten__'
-          : (tr.querySelector('input[type="text"]') || {}).value || '?'));
+      Array.from(document.querySelectorAll('#ve-fw-kl-liste .ve-fw-kl')).map((b) => b.getAttribute('data-fw-k')));
+    const sec = (k) => page.locator('#ve-fw-kl-liste .ve-fw-kl[data-fw-k="' + k + '"]').click();
+    const ok = (y) => page.locator('#ve-fw-ed .ve-fw-ed-ops button').nth(y ? 0 : 1);
 
     const once = await satirlar();
     expect(once[once.length - 1]).toBe('__ten__');        // GERGİ SON SATIR
 
     // İKİ UÇ KİLİTLİ ve kilit sessiz değil — `disabled` basılıyor.
-    const tr = page.locator('.ve-fw-tbl-kasnak tbody tr');
-    await expect(tr.nth(0).locator('.ve-fw-mini').nth(0)).toBeDisabled();
-    await expect(tr.nth(0).locator('.ve-fw-mini').nth(1)).toBeDisabled();
-    await expect(tr.last().locator('.ve-fw-mini').nth(0)).toBeDisabled();
-    await expect(tr.last().locator('.ve-fw-mini').nth(1)).toBeDisabled();
+    await sec(once[0]);
+    await expect(ok(true)).toBeDisabled();
+    await expect(ok(false)).toBeDisabled();
+    await sec('__ten__');
+    await expect(ok(true)).toBeDisabled();
+    await expect(ok(false)).toBeDisabled();
 
-    // 2. satırın ↓'sine GERÇEK tıkla: o satır BİR AŞAĞI inmeli.
+    // 2. satırın "Arkaya"sına GERÇEK tıkla: o satır BİR AŞAĞI inmeli.
     const tasinan = once[1];
-    await tr.nth(1).locator('.ve-fw-mini').nth(1).click();
+    await sec(tasinan);
+    await ok(false).click();
     await page.waitForTimeout(350);
     const sonra = await satirlar();
     expect(sonra[2]).toBe(tasinan);                        // AŞAĞI indi
     expect(sonra[1]).toBe(once[2]);                        // komşu yukarı çıktı
     expect(sonra[0]).toBe(once[0]);                        // sürücü yerinde
     expect(sonra[sonra.length - 1]).toBe('__ten__');       // gergi hâlâ sonda
+    // Seçim taşınan satırda kaldı — editör onun.
+    await expect(page.locator('#ve-fw-ed')).toHaveAttribute('data-fw-k', tasinan);
   });
 
   test('aksesuar modeli açılır pencereden seçilir, kW elle GİRİLMEZ', async ({ page }) => {
@@ -344,7 +355,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     await ornekKur(page, 'AG00976_GATES_2025');
     await page.locator('#ve-fw-nav .ve-fw-step').nth(4).click();   // Motor ve Çevrim
 
-    await expect(page.locator('#ve-fw-body')).toContainText('Aksesuar modelleri');
+    await expect(page.locator('#ve-fw-body')).toContainText('Aksesuarlar');
     // Duty tablosunda kW artık GİRDİ değil
     const kwInput = await page.evaluate(() =>
       document.querySelectorAll('#ve-fw-body [oninput*="veFeadWizDutyKw"]').length);
@@ -362,7 +373,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     expect(once.kayit).toBeGreaterThan(0);
 
     // Alternatör modelini seç → kayıtlı kW temizlenir, katalog devreye girer
-    const altSec = page.locator('#ve-fw-body tr', { hasText: 'Alternatör' })
+    const altSec = page.locator('#ve-fw-body .ve-fw-acc', { hasText: 'Alternatör' })
       .locator('select[onchange*="veFeadWizAccModel"]').first();
     // Araç Performans kataloğundan bir kayıt seç (`ap:` ön ekli) — `accPreset`
     // yolunu ölçmek için; BMC kayıtları `accLib` + eğri yazıyor, o ayrı kapıda.
@@ -451,7 +462,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
   // altında başlığı tekrarlayan 54 px'lik marka bloğu, iki satırlık adım
   // başlığı 39 px, alt çubuk 41 px — ilk adım bandın 63 px altından başlıyordu.
   // Hesaplanmış yükseklik Node'da yok; birim kapısı yalnız CSS metnine bakar.
-  test('ÜST BÖLGE İNCE: başlık ve alt çubuk tam bant, marka yok, adım başlığı tek satır', async ({ page }) => {
+  test('ÜST BÖLGE İNCE: başlık ve alt çubuk tam bant, marka yok, gövdede adım başlığı yok', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 952 });
     await bootApp(page);
     await openFead(page);
@@ -461,7 +472,9 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       const ov = document.getElementById('ve-feadwiz-overlay');
       const r = (s) => { const e = ov.querySelector(s); return e ? e.getBoundingClientRect() : null; };
       const bant = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h'));
-      const bas = r('.ve-settings-header'), h2 = r('.ve-fw-head h2'), p = r('.ve-fw-head p');
+      // ÇİZİM MASASI (2026-09-29): gövdede adım başlığı YOK — adın tek yeri
+      // ray; masa bandın hemen altından başlar.
+      const bas = r('.ve-settings-header'), masa = r('#ve-fw-masa');
       // Öteki dört pencere AYNI sınıfı paylaşıyor: sihirbaza özel bir başlık
       // üçüncü bir pencere dili olurdu.
       const oteki = ['ve-status-overlay', 've-komuta-overlay', 've-import-overlay', 've-settings-overlay'].map((id) => {
@@ -475,7 +488,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
         footBtn: [...ov.querySelectorAll('#ve-fw-foot button')].map((b) => b.getBoundingClientRect().height),
         bant, bas: bas.height, basAlt: bas.bottom, foot: r('#ve-fw-foot').height,
         marka: !!ov.querySelector('.ve-fw-brand'), ilkAdim: r('.ve-fw-step').top,
-        adimBas: r('.ve-fw-head').height, h2Alt: h2.bottom, pAlt: p.bottom, oteki,
+        adimBas: !!ov.querySelector('#ve-fw-body .ve-fw-head, #ve-fw-body h2'), masaUst: masa.top, oteki,
       };
     });
     // Jetonun DEĞERİ değil jetonun kendisi: bant bir kez daha incelirse
@@ -489,8 +502,8 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     m.footBtn.forEach((h) => expect(h).toBe(m.kapat));
     expect(m.marka).toBe(false);                                  // eskiden 54 px
     expect(m.ilkAdim - m.basAlt).toBeLessThanOrEqual(10);         // eskiden 63
-    expect(m.adimBas).toBeLessThanOrEqual(24);                    // eskiden 39 (iki satır)
-    expect(Math.abs(m.h2Alt - m.pAlt)).toBeLessThanOrEqual(4);    // aynı taban çizgisi (eskiden 19)
+    expect(m.adimBas).toBe(false);                                // eskiden 39 px, föyde 24
+    expect(m.masaUst - m.basAlt).toBeLessThanOrEqual(14);         // yalnız gövdenin iç payı
     m.oteki.forEach((h) => expect(h).toBe(m.bant));               // eskiden dördü de 39
   });
 
