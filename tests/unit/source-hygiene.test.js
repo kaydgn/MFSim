@@ -568,7 +568,7 @@ describe('tanımsız jetona başvuru yok', () => {
   const BELGE_URETEN = new Set([
     'cp-mount-report.js', 'cp-fead-report.js', 'mount-report-template.js',
     'mount-report-assets.js', 'guide-kit.js', 'guide-fead.js', 'results.js',
-    'cp-fead-summary.js',
+    'cp-fead-summary.js', 'cp-fead-pano.js',
   ]);
 
   test('jeton kümesi okunabildi (regex kayması erken yakalansın)', () => {

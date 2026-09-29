@@ -58,6 +58,15 @@ var VE_FEAD_ARAC_YAPIS = 64;
 var VE_FEAD_ARAC_EN = 236;
 // Özet kartlarının sırası — Sonuçlar'ın listesinden seçilir, kopyalanmaz.
 var VE_FEAD_ARAC_KPI = ['kayma', 'taraf', 'ankraj', 'burulma'];
+// Rapor türü anahtarının SIRASI. Adlar ve geçerli türler raporun listesinden
+// (VE_FEAD_REPORT_KINDS, js/cp-fead-report.js) — burada yalnız sıra durur.
+var VE_FEAD_ARAC_TUR = ['summary', 'detailed', 'pano'];
+function _feadAracTurler(){
+  var liste = (typeof VE_FEAD_REPORT_KINDS !== 'undefined' && VE_FEAD_REPORT_KINDS) || [];
+  return VE_FEAD_ARAC_TUR.map(function(k){
+    return liste.filter(function(t){ return t.key === k; })[0];
+  }).filter(Boolean);
+}
 // Not araçları — tip annotations.js'in (`createAnnotation(tip, …)`) tipi.
 var VE_FEAD_ARAC_NOT = [
   { tip: 'frame', ikon: 'square-dashed', ad: 'Çerçeve', uzun: 'Gruplama çerçevesi',
@@ -262,19 +271,25 @@ function veFeadAraclarGovdeHTML(d){
   }
   h += '</section>';
 
-  // RAPOR — tür + İndir
+  // RAPOR — tür + İndir. Türler raporun TEK listesinden (VE_FEAD_REPORT_KINDS,
+  // `kisa` adıyla); anahtarın sırası `VE_FEAD_ARAC_TUR` — Özet başta, çünkü
+  // pencere onu eskiden de ilk sırada gösteriyordu. Üç düğme 236 px'lik
+  // pencerede İndir'le aynı satıra sığmıyor: anahtar kendi satırında,
+  // İndir alt satırda Künye'nin yanında.
   var tur = d.raporTur;
   h += '<section class="ve-fead-arac-bol" data-bol="rapor"><h4>Rapor</h4><div class="ve-fead-arac-sat">'
     + '<span class="ve-fead-arac-seg" role="radiogroup" aria-label="Rapor türü">'
-    + '<button type="button" role="radio" aria-checked="' + (tur === 'summary') + '" data-ey="tur" data-v="summary">Özet</button>'
-    + '<button type="button" role="radio" aria-checked="' + (tur !== 'summary') + '" data-ey="tur" data-v="detailed">Detaylı</button>'
-    + '</span><span class="bos"></span>'
-    + _feadAracDugme('indir', 'download', 'İndir', 've-fead-arac-btn',
-        d.sonucVar ? ' title="Raporu oluştur ve indir"' : ' aria-disabled="true" title="Rapor çözümden üretilir — önce modeli hesaplayın."')
-    + '</div>'
+    + _feadAracTurler().map(function(t){
+        return '<button type="button" role="radio" aria-checked="' + (tur === t.key) + '" data-ey="tur" data-v="' + t.key + '"'
+          + ' title="' + _feadAracEsc(t.ad) + '">' + _feadAracEsc(t.kisa || t.ad) + '</button>';
+      }).join('')
+    + '</span></div>'
     // KÜNYE BAĞLANTISI ŞART: rapor kutusu kalktı; belgenin antetine akan
     // alanlar (Rapor penceresi → Künye) başka hiçbir yoldan açılmıyor.
     + '<div class="ve-fead-arac-sat ve-fead-arac-alt">'
+    + _feadAracDugme('indir', 'download', 'İndir', 've-fead-arac-btn',
+        d.sonucVar ? ' title="Raporu oluştur ve indir"' : ' aria-disabled="true" title="Rapor çözümden üretilir — önce modeli hesaplayın."')
+    + '<span class="bos"></span>'
     + _feadAracDugme('rapor', 'edit', 'Künye', 've-fead-arac-bag',
         ' title="Rapor penceresi — tür ve belge künyesi"')
     + '</div></section>';
@@ -367,7 +382,8 @@ function veFeadAracEylem(ad, v){
   }
   if(ad === 'tur'){
     var r = _feadAracDugum('fead-report');
-    if(!r || (v !== 'summary' && v !== 'detailed')) return false;
+    var gecerli = _feadAracTurler().some(function(t){ return t.key === v; });
+    if(!r || !gecerli) return false;
     if(!r.data) r.data = {};
     if(r.data.reportKind === v || (!r.data.reportKind && v === 'detailed')) return false;
     r.data.reportKind = v;
@@ -722,6 +738,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadAraclarKatla: veFeadAraclarKatla, veFeadAraclarYer: veFeadAraclarYer,
     VE_FEAD_ARAC_YUVA: VE_FEAD_ARAC_YUVA, VE_FEAD_ARAC_YAPIS: VE_FEAD_ARAC_YAPIS, VE_FEAD_ARAC_EN: VE_FEAD_ARAC_EN,
     VE_FEAD_ARAC_ANAHTAR: VE_FEAD_ARAC_ANAHTAR, VE_FEAD_ARAC_KPI: VE_FEAD_ARAC_KPI,
+    VE_FEAD_ARAC_TUR: VE_FEAD_ARAC_TUR,
     VE_FEAD_ARAC_NOT: VE_FEAD_ARAC_NOT, VE_FEAD_NOT_PAY: VE_FEAD_NOT_PAY,
     veFeadNotYeri: veFeadNotYeri, veFeadNotKaydir: veFeadNotKaydir, veFeadNotEkle: veFeadNotEkle,
     _feadAracSifirla: function(){ _feadAracYer = null; _feadAracKapsam = false; }
