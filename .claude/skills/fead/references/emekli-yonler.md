@@ -143,3 +143,26 @@ büyüğü Kasnaklar'da 380×300 (114 bin px²) ve en küçük yazısı 7 px; Mo
 (adım numarası metne yazılmaz · kurulum listesi kurulumdan · K işareti · damga
 rayla aynı) kural 47'de.
 
+
+## SİHİRBAZ MASASINDA KASNAK TAŞIMA · "SIRA VE YÖN" BLOĞU · 5. ADIMIN İKİ GRAFİĞİ (2026-09-29)
+
+Kullanıcı: *"Şu anda kasnağı tutunca hareket ediyor falan. Tutup hareket etmeyi
+de kaldıralım."* · *"Aşağıdaki 'Sıra ve yön' kısmına ne gerek var?"* ·
+*"ortadaki iki kocaman diyagram çok gereksiz olmuş."*
+
+- **Masada sürükle-taşı ve ok-tuşu-taşı** (`_fwKasnakTasi`, 0,1 mm, koparan
+  konum yazılmaz): masa bir görüntüleyici oldu — sürüklemek KAYDIRIR, tık
+  seçer; konum yalnız editörde. Ana tuvalin Çizim Masası (kural 32) bundan
+  etkilenmez, orada kasnak hâlâ taşınır.
+- **"Sıra ve yön" bloğu** (ekle listesi · "Kayış yönünü çevir" · CCW/CW ·
+  STEP "Sıra doğru"): ekleme, yön ve onay sıranın kendi kartına taşındı;
+  "Kayış yönünü çevir" CCW/CW ile AYNI işlemdi (sırayı ters yürütmek) ve kalktı.
+- **Çevrim grafiği** (zaman payı çubukları + aksesuar kW çizgileri, iki y
+  ekseni) ve **aksesuar devir grafiği** (tek aksesuarın devir doğrusu +
+  sınır çizgileri): yerlerine tahrik zinciri ve tek eksenli devir
+  pencereleri. İki y ekseni bir anti-desendi; devir doğrusu, orandan başka
+  bir şey söylemeyen düz bir çizgiydi. **Eski grafiğin doğru yaptığı ve
+  korunan şey**: y eksenini sınırlara göre açtığı için bütün sınırlar
+  görünürdü. Yeni pencerenin ilk hâli bunu kaybetmişti (18 sınırın 11'i
+  eksenin ötesinde, görünmez); sürekli sınırı kapsayan eksen + sağdaki oluk
+  onu geri verdi — kapı `fead-sihirbaz-masa.test.js` → *"EKSEN DIŞI SINIR"*.

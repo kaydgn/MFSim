@@ -67,7 +67,7 @@ async function kasnakAdimi(page, genislik) {
 }
 
 // Üç genişlik: kullanıcının resmindeki (1280), modalın tavana dayandığı
-// (1600 — kapsayıcı büyümez, modal max-width 1180) ve dar bir dizüstü (1100).
+// (1600 — modal max-width 1760, masa büyür, sütun aynı) ve dar bir dizüstü (1100).
 for (const w of [1280, 1600, 1100]) {
   test(w + 'px görünümde kasnak listesi SIĞIYOR — yatay kaydırma yok', async ({ page }) => {
     const r = await kasnakAdimi(page, w);

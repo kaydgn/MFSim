@@ -8187,7 +8187,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    çip/lejant payı 12) — JS'teki genişlik hesabı onlarla birebir.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.ve-fw-modal{ max-width:1180px; height:94vh; max-height:none; position:relative; }
+.ve-fw-modal{ max-width:1760px; height:calc(100vh - 48px); max-height:none; position:relative; }
 
 .ve-fw-shell{ flex:1; display:grid; grid-template-columns:238px 1fr; min-height:0; }
 
@@ -8300,6 +8300,16 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   background-position:var(--izg-x, 0px) var(--izg-y, 0px);
 }
 .ve-fw-masa:focus-visible{ box-shadow:var(--focus-ring); }
+/* GEZİNME: masa bir görüntüleyici — sürüklemek kaydırır, tekerlek yakınlaşır
+   (`veFeadWizMasaBas` · `veFeadWizMasaTeker`). Dokunmatikte tarayıcının kendi
+   kaydırması masayı kaçırmasın diye `touch-action:none`. */
+.ve-fw-masa[data-gezin]{ cursor:grab; touch-action:none; }
+.ve-fw-masa[data-gezin].kayiyor, .ve-fw-masa[data-gezin].kayiyor .ve-fw-hit{ cursor:grabbing; }
+.ve-fw-masa-gezin{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3;
+  display:flex; flex-direction:column; gap:4px;
+}
+.ve-fw-masa-duzen[data-adim="ozet"] .ve-fw-masa-gezin{ right:316px; }
 .ve-fw-masa-cizim{ position:absolute; inset:0; }
 .ve-fw-masa-cizim > svg{ display:block; width:100%; height:100%; }
 .ve-fw-masa-stp{ position:absolute; inset:0; padding:28px 16px 16px; }
@@ -8365,8 +8375,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 /* Kasnaklar: eksenler kenarda — lejant X ekseninin ÜSTÜNDE, Y ekseninin
    SAĞINDA (payı `_fwKasnakOpt` bırakıyor; eksen payı js VE_FW_EKSEN 34 · 22). */
 .ve-fw-masa[data-adim="kasnak"] .ve-fw-masa-alt{ left:calc(34px * var(--masa-k, 1)); bottom:calc(22px * var(--masa-k, 1)); }
-/* Çip, sağ üstteki araçların altına girmesin. */
-.ve-fw-masa[data-adim="kasnak"] .ve-fw-masa-ust{ right:132px; }
+/* Çip, sağ üstteki araçların altına girmesin (gerginin iki görünüm düğmesi). */
 .ve-fw-masa[data-adim="gergi"] .ve-fw-masa-ust{ right:190px; }
 .ve-fw-lj{ display:inline-flex; align-items:center; gap:5px; }
 .ve-fw-lj-c{ flex:none; display:inline-block; width:16px; height:0; border-top:1.6px solid var(--text-secondary); }
@@ -8379,7 +8388,6 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-fw-lj-sarim, .ve-fw-lj-aciklik{ font-weight:700; font-size:var(--fs-micro); }
 .ve-fw-lj-sarim{ color:var(--ink-accent); }
 .ve-fw-lj-aciklik{ color:var(--text-primary); }
-.ve-fw-lj-red{ color:var(--ink-danger); font-weight:600; }
 
 /* ── DENETİM SÜTUNU ─────────────────────────────────────────────────────
    Bloklar (`_fwCard`) ayrı nesneler: ikincil zemin, ince kenar, 7 px
@@ -8418,6 +8426,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   }
   .ve-fw-masa-duzen[data-adim="ozet"] > .ve-fw-yan{ position:static; width:auto; max-height:none; box-shadow:none; }
   .ve-fw-masa-duzen[data-adim="ozet"] .ve-fw-masa-ust{ right:12px; }
+  .ve-fw-masa-duzen[data-adim="ozet"] .ve-fw-masa-gezin{ right:12px; }
 }
 
 /* ── ALANLAR ──────────────────────────────────────────────────────────── */
@@ -8557,6 +8566,21 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 /* ── KASNAKLAR: LİSTE + SEÇİLİ KASNAK ─────────────────────────────────────
    Liste kayış sırasında; satır no · ad (+ rol) · Ø · sarım. Seçili satır
    dolu numara ve tint zemin — çizimdeki hale ile aynı kasnak. */
+/* ARAÇ SATIRI: ekle (liste, kalan eni alır) + dönüş yönü (CCW/CW). Sıranın
+   ne yaptığı sıranın kendi kartında — "Sıra ve yön" bloğu kalktı. */
+.ve-fw-kl-arac{ display:flex; align-items:center; gap:8px; }
+.ve-fw-kl-arac > .ve-fw-ekle{ flex:1 1 auto; min-width:0; }
+.ve-fw-kl-arac > .ve-fw-spinbox{ flex:none; flex-wrap:nowrap; }
+/* STEP'ten gelen sıra: onay bir DURUM satırı, listenin başında. */
+.ve-fw-kl-onay{
+  display:flex; align-items:center; gap:6px; padding:5px 6px 5px 8px;
+  border-left:2px solid var(--accent-warning); background:var(--bg-tertiary);
+  border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-warning);
+}
+/* Metin kendi sınıfıyla: `> span` ikonun span'ini de yakalıyordu — ikon 84 px'e
+   şişip metni 84 px'e sıkıştırıyor, satır üç satıra kırılıyordu (ölçüldü). */
+.ve-fw-kl-onay-y{ flex:1; min-width:0; font-weight:600; }
+.ve-fw-kl-onay > button{ flex:none; }
 .ve-fw-kl-bas{ display:flex; align-items:baseline; gap:8px; padding:0 2px 2px; font-size:var(--fs-micro); color:var(--text-muted); }
 .ve-fw-kl-bas b{ flex:1; }
 .ve-fw-kl-liste{ display:flex; flex-direction:column; gap:1px; }
@@ -8619,7 +8643,7 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-secim-iz{ stroke:var(--accent-primary); stroke-width:1; stroke-dasharray:3 3; opacity:.8; }
 .ve-fw-secim-uc{ fill:var(--accent-primary); }
 .ve-fw-secim text{ fill:var(--ink-accent); font-size:calc(var(--fs-tiny) / var(--masa-k, 1)); font-weight:700; font-variant-numeric:tabular-nums; }
-.ve-fw-hit{ cursor:move; }
+.ve-fw-hit{ cursor:pointer; }
 .ve-fw-masa[data-adim="kasnak"] .ve-fw-hit:hover{ stroke:var(--accent-primary); stroke-width:1; stroke-dasharray:2 3; }
 /* Gergiye yakın çizim */
 .ve-fw-g-sinir{ stroke:var(--text-muted); stroke-width:1.2; stroke-dasharray:4 4; }
@@ -8657,6 +8681,10 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
   padding:10px 12px 4px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md);
 }
 .ve-fw-graf > .ve-fw-masa-bos{ position:static; flex:1; }
+/* Zincir kendi boyunda; pencereler kalan boyu alır. */
+.ve-fw-graf[data-ve="tahrik-zinciri"]{ flex:none; }
+.ve-fw-graf[data-ve="devir-pencere"]{ flex:0 1 auto; }
+.ve-fw-graf > .ve-fw-gr-not{ margin:2px 0 0; font-size:var(--fs-micro); }
 .ve-fw-gr-bas{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; font-size:var(--fs-tiny); color:var(--text-muted); }
 .ve-fw-gr-bas b{ font-size:var(--fs-md); font-weight:700; color:var(--text-heading); }
 .ve-fw-gr-lj{ display:inline-flex; align-items:center; gap:5px; color:var(--text-secondary); }
@@ -8671,6 +8699,54 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-gr-cizgi{ fill:none; stroke-width:2; stroke-linejoin:round; }
 .ve-fw-gr-tepe{ stroke:var(--bg-input); stroke-width:1.5; }
 .ve-fw-gr-tepe-y{ fill:var(--text-primary); font-size:var(--fs-micro); font-weight:600; font-variant-numeric:tabular-nums; }
+/* TAHRİK ZİNCİRİ (5. adım): şema — halkalar çaplarıyla orantılı, kayış
+   masadaki kayışın rengi, mil nötr. Kopuk halka (oran çözülmedi) kesikli ve
+   uyarı mürekkebiyle yazılır. */
+.ve-fw-zn-k{ fill:var(--bg-input); stroke:var(--text-secondary); stroke-width:1.6; }
+.ve-fw-zn-k[data-rol="surucu"]{ stroke:var(--accent-primary); stroke-width:2.2; }
+.ve-fw-zn-k[data-bos]{ stroke-dasharray:3 3; }
+.ve-fw-zn-gobek{ fill:var(--text-secondary); }
+.ve-fw-zn-kayis{ stroke:var(--accent-warning); stroke-width:1.6; }
+.ve-fw-zn-kayis.kopuk{ stroke:var(--accent-danger); stroke-dasharray:5 4; }
+.ve-fw-zn-mil{ stroke:var(--text-muted); stroke-width:4; stroke-linecap:round; opacity:.55; }
+.ve-fw-zn-yazi text{ font-size:var(--fs-micro); fill:var(--text-muted); font-variant-numeric:tabular-nums; }
+.ve-fw-zn-yazi .ve-fw-zn-ad{ font-size:var(--fs-tiny); font-weight:600; fill:var(--text-heading); }
+.ve-fw-zn-yazi .ve-fw-zn-oran{ font-weight:700; fill:var(--text-primary); }
+.ve-fw-zn-yazi .ve-fw-zn-uyari{ font-weight:600; fill:var(--ink-danger); }
+/* DEVİR PENCERELERİ: tek eksen (motor devri); renk yalnız DURUM — sürekli
+   sınırın üstü uyarı, anlık sınırın üstü tehlike; noktalar mürekkep. */
+.ve-fw-md-iz{ stroke:var(--border-color); stroke-width:1; }
+.ve-fw-md-bolge[data-tur="surekli"]{ fill:color-mix(in srgb, var(--accent-warning) 18%, transparent); }
+.ve-fw-md-bolge[data-tur="anlik"]{ fill:color-mix(in srgb, var(--accent-danger) 20%, transparent); }
+.ve-fw-md-kil{ stroke:var(--text-muted); stroke-width:1; stroke-dasharray:3 4; }
+.ve-fw-md-sinir{ stroke:var(--accent-warning); stroke-width:1.4; }
+.ve-fw-md-opt{ stroke:var(--accent-success); stroke-width:1.6; }
+.ve-fw-md-nokta{ fill:var(--text-secondary); stroke:var(--bg-input); stroke-width:1.5; }
+.ve-fw-md-nokta[data-durum="warn"]{ fill:var(--accent-warning); }
+.ve-fw-md-nokta[data-durum="err"]{ fill:var(--accent-danger); }
+.ve-fw-md-kritik{ fill:none; stroke:var(--text-primary); stroke-width:1.4; }
+.ve-fw-md-kritik[data-durum="err"]{ stroke:var(--accent-danger); }
+/* Güç bir BÜYÜKLÜK, durum değil: mürekkep tonunda. Vurgu tonu açık temada
+   "anlık sınırın üstü" bölgesiyle aynı pembeye düşüyordu (durum renkleri
+   yalnız sınır bölgelerinin). */
+.ve-fw-md-guc{ fill:color-mix(in srgb, var(--text-secondary) 26%, transparent); stroke:var(--text-secondary); stroke-width:1; }
+.ve-fw-md-eksen{ stroke:var(--text-muted); stroke-width:1; }
+.ve-fw-md-yazi text{ font-size:var(--fs-micro); fill:var(--text-muted); font-variant-numeric:tabular-nums; }
+.ve-fw-md-yazi .ve-fw-md-ad{ font-size:var(--fs-tiny); font-weight:600; fill:var(--text-heading); }
+.ve-fw-md-yazi .ve-fw-md-alt-err{ fill:var(--ink-danger); font-weight:600; }
+.ve-fw-md-yazi .ve-fw-md-sinir-y{ fill:var(--ink-warning); }
+.ve-fw-md-yazi .ve-fw-md-sinir-anlik{ fill:var(--ink-danger); }
+/* Eksenin dışındaki sınır: çizim alanının sağındaki olukta soluk yazı +
+   eksenin ucunda işaret (js/cp-fead-wizard.js → _fwPencereSVG). */
+.ve-fw-md-uc{ fill:var(--text-muted); }
+.ve-fw-md-yazi .ve-fw-md-uc-y{ fill:var(--text-muted); }
+.ve-fw-md-yazi .ve-fw-md-kritik-y{ fill:var(--text-primary); font-weight:600; }
+.ve-fw-md-yazi .ve-fw-md-pay, .ve-fw-md-yazi .ve-fw-md-guc-y{ fill:var(--text-secondary); font-weight:600; }
+.ve-fw-md-yazi .ve-fw-md-uyari{ fill:var(--ink-warning); font-weight:600; }
+.ve-fw-gr-lj i.ve-fw-md-lj{ display:inline-block; width:12px; height:9px; border:0; border-radius:var(--radius-xs); }
+.ve-fw-md-lj[data-tur="surekli"]{ background:color-mix(in srgb, var(--accent-warning) 30%, transparent); }
+.ve-fw-md-lj[data-tur="anlik"]{ background:color-mix(in srgb, var(--accent-danger) 30%, transparent); }
+.ve-fw-gr-lj i.ve-fw-md-lj[data-tur="nokta"]{ width:8px; height:8px; border-radius:50%; background:var(--text-secondary); }
 .ve-fw-gr-sinir-opt{ stroke:var(--accent-success); stroke-width:1; stroke-dasharray:4 4; }
 .ve-fw-gr-sinir-cont{ stroke:var(--accent-warning); stroke-width:1.2; stroke-dasharray:6 3; }
 .ve-fw-gr-sinir-peak{ stroke:var(--accent-danger); stroke-width:1.2; stroke-dasharray:2 3; }
@@ -8997,9 +9073,10 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-oto .ve-fw-mini{ width:auto; padding:0 8px; }
 .ve-fw-oto-rozet{ display:inline-block; margin-left:4px; padding:0 5px; border-radius:var(--radius-sm);
   font-size:var(--fs-micro); color:var(--ink-accent); background:var(--accent-tint-10); vertical-align:middle; }
-/* 3B AÇIKKEN PENCERE GENİŞLER (kullanıcı isteği 2026-09-28). Sihirbazın
-   1180 px'i 320 px'lik panelden sonra tuvale ~860 px bırakıyordu; kaplamanın
-   payı daralır, pencere ekranı doldurur. Kapanınca sınıf düşer
+/* 3B AÇIKKEN PENCERE GENİŞLER (kullanıcı isteği 2026-09-28). O gün sihirbazın
+   1180 px'i 320 px'lik panelden sonra tuvale ~860 px bırakıyordu; 2026-09-29'dan
+   beri sihirbaz kendisi 1760 px'e kadar açılıyor ve sınıf kalan payı alır
+   (kaplama 24 → 12 px, boy −48 → −24 px). Kapanınca sınıf düşer
    (js/cp-fead-3b.js → _fw3bGenis). */
 .ve-settings-overlay.ve-fw-3b-genis{ padding:12px; }
 .ve-fw-3b-genis .ve-fw-modal{ max-width:1840px; height:calc(100vh - 24px); }

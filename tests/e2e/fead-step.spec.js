@@ -57,6 +57,10 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1366, height: 768 });
   await feadAc(page);
+  // Sihirbazın 3B'siz ölçüsü: kapanınca dönülecek ölçü BU (sabit sayı değil —
+  // pencere 2026-09-29'da genişledi ve sabit 1.180 kapıyı yanlış yere çiviledi).
+  const genislik = () => page.evaluate(() => Math.round(document.querySelector('.ve-fw-modal').getBoundingClientRect().width));
+  const normal = await genislik();
 
   // ── 1) DOSYA SEÇ (gerçek File nesnesi, gzip) → 3B görüntüleyici AÇILIR ──
   const kart = page.locator('.ve-fw-stp');
@@ -93,9 +97,10 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   });
   expect(bas.uc).toEqual(bas.sihirbaz);
   // GENİŞ PENCERE (kullanıcı isteği 2026-09-28): 3B açıkken sihirbaz ekranı
-  // doldurur — 1366'da 1.180 → 1.342 px; kapanınca eski ölçüsüne döner (aşağıda).
-  const genislik = () => page.evaluate(() => Math.round(document.querySelector('.ve-fw-modal').getBoundingClientRect().width));
+  // doldurur — 1366'da 1.342 px (3B'siz 1.318); kapanınca eski ölçüsüne döner (aşağıda).
   expect(await genislik()).toBeGreaterThanOrEqual(1366 - 30);
+  expect(await genislik()).toBeGreaterThan(normal);
+  await expect(page.locator('#ve-feadwiz-overlay')).toHaveClass(/ve-fw-3b-genis/);
   // SIĞDIRMA montajın KENDİ noktalarıyla: eksene hizalı kutunun köşeleriyle
   // sığdırmak eğik bakışta modeli küçültüyordu (kullanıcının dosyasında tuvalin
   // %29'u). Ölçülen: örneklenmiş köşelerin izdüşümünün yarı genişliği (NDC) —
@@ -227,7 +232,8 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   await page.keyboard.press('Escape');
   await expect(page.locator('#ve-fw-3b')).toBeHidden();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
-  expect(await genislik()).toBeLessThanOrEqual(1180);        // sihirbaz eski ölçüsünde
+  expect(await genislik()).toBe(normal);                      // sihirbaz eski ölçüsünde
+  await expect(page.locator('#ve-feadwiz-overlay')).not.toHaveClass(/ve-fw-3b-genis/);
   await expect(page.locator('.ve-fw-stp-svg [data-ve-stp-kasnak]')).toHaveCount(4);
   await expect(page.locator('.ve-fw-stp-svg .ve-fw-stp-kol')).toHaveCount(1);
   await expect(adSatiri('KRANK')).toContainText('8 × PK');
@@ -262,12 +268,18 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   expect(st.sira).toBe('agac');
 
   // ── 5) KASNAKLAR: sıra uyarısı ve onayı ─────────────────────────────────
+  // Onay "Kasnaklar — kayış sırasıyla" kartının İÇİNDE (kullanıcı isteği
+  // 2026-09-29: alttaki "Sıra ve yön" / sorun kutusundaki ikinci kopya kalktı).
+  // Adım rayı yine uyarır: sorun listede, yalnız kutuda basılmıyor.
+  const kutuMetni = () => page.evaluate(() => (document.getElementById('ve-fw-issue') || {}).textContent || '');
   await page.locator('.ve-fw-steps li').nth(1).click();
-  await expect(page.locator('#ve-fw-issue')).toContainText('STEP ağacından');
+  await expect(page.locator('.ve-fw-kl-onay')).toContainText('STEP ağacından');
+  expect(await kutuMetni()).not.toContain('STEP ağacından');
   await expect(page.locator('.ve-fw-steps li').nth(1)).toHaveClass(/ve-fw-st-(warn|err)/);
   await page.locator('#ve-fw-sira-onay').click();
-  await expect(page.locator('#ve-fw-issue')).not.toContainText('STEP ağacından');
+  await expect(page.locator('.ve-fw-kl-onay')).toHaveCount(0);
   await expect(page.locator('#ve-fw-sira-onay')).toHaveCount(0);
+  expect(await kutuMetni()).not.toContain('STEP ağacından');
 
   // ── 6) GERGİ: künye seç → model çözülür ─────────────────────────────────
   await page.locator('.ve-fw-steps li').nth(2).click();
