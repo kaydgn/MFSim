@@ -452,12 +452,16 @@ describe('içerik yönlendirici', () => {
     expect(DOC).toContain('Buraya montaj konumu yazılmaz');
   });
 
-  test('Başlangıç Sihirbazı açılış yolu olarak anlatılıyor', () => {
+  test('Başlangıç Sihirbazı açılış yolu, BAŞLANGIÇ SAYFASI karşılama olarak anlatılıyor', () => {
     expect(DOC).toContain('Başlangıç Sihirbazı');
     expect(DOC).toContain('Sihirbaz adımları');
-    // Boş modül SİHİRBAZLA karşılıyor (2026-09-09); kılavuz bunu yazmazsa
-    // kullanıcı kendiliğinden açılan pencereyi bir hata sanar.
-    expect(DOC).toMatch(/Sihirbaz(ı)? ile karşılar/);
+    // Boş modülü BAŞLANGIÇ SAYFASI karşılıyor (2026-09-29, kullanıcı kararı;
+    // 2026-09-09 → 29 sihirbaz kendiliğinden açılıyordu). Kılavuz eski yolu
+    // anlatmaya devam ederse kullanıcı gelmeyen pencereyi arar.
+    expect(DOC).toMatch(/başlangıç sayfasıyla karşılar/);
+    expect(DOC).toContain('sihirbaz kendiliğinden açılmaz');
+    expect(DOC).not.toMatch(/Sihirbaz(ı)? ile karşılar/);
+    expect(DOC).not.toMatch(/sihirbaz zaten açıktır/);
   });
 
   // ÖRNEK SAYISI SİHİRBAZIN LİSTESİNDEN — kılavuza elle yazılmaz. Sayılan,

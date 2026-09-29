@@ -71,16 +71,18 @@ test('FEAD kartı: geçiş ekranı görünüyor ve modülün İÇİNE giriliyor'
     sihirbaz: getComputedStyle(document.getElementById('ve-feadwiz-overlay')).display,
     kaplamaYok: getComputedStyle(document.getElementById('mfsim-module-loading')).display,
     araclar: (() => { const e = document.getElementById('ve-fead-araclar'); return !!e && !e.hidden; })(),
+    sayfa: (() => { const e = document.getElementById('ve-fead-baslangic'); return !!e && !e.hidden; })(),
   }));
   // ASIL KAPI: tıklama modülün İÇİNE kadar götürdü.
   expect(son.derinlik).toBe(1);
-  // Açılış yüzeyi kuruldu (boş FEAD topolojisi sihirbazla karşılar): BOŞ
-  // Kayış Yolu kartı (Çizim Masası, 2026-09-23) + kutusuz araç düğümleri —
-  // kayış (FEAD kuralı 4, 2026-09-26), çözücü · rapor · sihirbaz (kural 38,
-  // 2026-09-28; eylemleri FEAD araçları penceresinde).
-  expect(son.tipler).toEqual(['fead-belt', 'fead-layout', 'fead-report', 'fead-solver', 'fead-wizard']);
-  expect(son.araclar).toBe(true);
-  expect(son.sihirbaz).toBe('flex');
+  // Açılış yüzeyi kuruldu: yalnız kutusuz araç düğümleri — kayış (FEAD
+  // kuralı 4, 2026-09-26), çözücü · rapor · sihirbaz (kural 38). Kart YOK:
+  // boş topolojiyi BAŞLANGIÇ SAYFASI karşılar (kural 5, 2026-09-29) —
+  // sihirbaz kendiliğinden açılmaz, araçlar penceresi sayfanın ardında gizli.
+  expect(son.tipler).toEqual(['fead-belt', 'fead-report', 'fead-solver', 'fead-wizard']);
+  expect(son.sayfa).toBe(true);
+  expect(son.araclar).toBe(false);
+  expect(son.sihirbaz).toBe('none');
   expect(son.kaplamaYok).toBe('none');
   expect(hata).toEqual([]);
 });

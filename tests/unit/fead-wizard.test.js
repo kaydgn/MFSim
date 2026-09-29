@@ -149,7 +149,7 @@ describe('bileşen sözleşmesi', () => {
     });
   });
 
-  test('başlangıçta TEK açılış yüzeyi + kutusuz kayış ve araç düğümleri kurulur', () => {
+  test('başlangıçta YALNIZ kutusuz araç düğümleri kurulur — tuvalde kart YOK', () => {
     document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-canvas-wrapper"></div>';
     global.nodes = []; global.connections = [];
     let k = 0;
@@ -161,24 +161,18 @@ describe('bileşen sözleşmesi', () => {
     };
     const out = fead.veFeadPopulateStarter();
     delete global.createNode;
-    // BOŞ KAYIŞ YOLU (Çizim Masası, 2026-09-23): kasnakların giriş yüzeyi
-    // artık ÇİZİM; boş hâlinde iki yolu gösteriyor ("Sihirbazla kur" ·
-    // "Tabloyu aç"). Eskiden burada Kayış Tablosu kartı duruyordu — tablo
-    // artık kanvas bileşeni değil, kartın açtığı pencere.
-    // "Başlangıç ve Örnekler" 2026-09-09'da kaldırıldı — sunduğu liste
-    // sihirbazın 1. adımında zaten vardı ve FEAD'e girince sihirbaz açılıyor.
-    // KAYIŞ DÜĞÜMÜ DE (2026-09-26): kutusu ve palet satırı kalktı, onu
-    // kurabilecek tek yol açılış — onsuz model kurulamıyor. Kanvasta görünmez.
-    // ARAÇLAR DA (2026-09-28): çözücü, rapor ve sihirbaz kutusuz; eylemleri
-    // FEAD araçları penceresinde. Pencere onları KURMAZ, bağlanır — kuran açılış.
+    // KAYIŞ + ARAÇLAR (2026-09-26 · 09-28): kutusuz, palette yok; onları kuran
+    // tek yol açılış. FEAD araçları penceresi onları KURMAZ, bağlanır.
+    // BOŞ KAYIŞ YOLU KARTI ARTIK KURULMAZ (2026-09-29, kullanıcı kararı —
+    // tasarım tuvali "İlk açılış" · B): boş topolojiyi başlangıç sayfası
+    // karşılıyor (js/cp-fead-baslangic.js) ve sayfa "kasnak yok VE kart yok"
+    // iken görünür. Kart kurulsaydı sayfa hiç açılmazdı.
     expect(out.map((n) => n.type).sort())
-      .toEqual(['fead-belt', 'fead-layout', 'fead-report', 'fead-solver', 'fead-wizard']);
-    ['fead-belt', 'fead-report', 'fead-solver', 'fead-wizard'].forEach((t) => {
-      expect({ t, gizli: veIsCanvasHidden(out.find((n) => n.type === t)) }).toEqual({ t, gizli: true });
+      .toEqual(['fead-belt', 'fead-report', 'fead-solver', 'fead-wizard']);
+    out.forEach((n) => {
+      expect({ t: n.type, gizli: veIsCanvasHidden(n) }).toEqual({ t: n.type, gizli: true });
     });
-    // Tuvalde görünen TEK yüzey boş Kayış Yolu kartı.
-    const gorunen = out.filter((n) => !veIsCanvasHidden(n));
-    expect(gorunen.map((n) => n.type)).toEqual(['fead-layout']);
+    expect(global.nodes.filter((n) => n.type === 'fead-layout')).toHaveLength(0);
   });
 });
 
@@ -528,9 +522,10 @@ describe('kurulum kapısı ve kurulum', () => {
     expect(global.nodes.find((n) => n.id === geo.id).data.posMode).toBe('min');
   });
 
-  // ── AÇILIŞ YÜZEYİ ZATEN BİR KANVAS KOYMUŞ OLUYOR ────────────────────────
-  // veFeadPopulateStarter alt topoloji açılışında BOŞ bir Kayış Yolu kartı
-  // kuruyor (Çizim Masası, 2026-09-23). "Modeli Kur" onu geometri kartı
+  // ── KANVASTA ZATEN BOŞ BİR KART VAR ────────────────────────────────────
+  // Başlangıç sayfasının "Boş çizim masası" kapısı (2026-09-29) — ya da FEAD
+  // araçları penceresinin "Kanvas"ı — BOŞ bir Kayış Yolu kartı kurar; açılış
+  // yüzeyi eskiden aynısını kendisi kuruyordu. "Modeli Kur" onu geometri kartı
   // olarak DEVRALMALI: devralmazsa kanvasta ÜÇ çizim olur — ikisi aynı donuk
   // şema (ölçüldü, gerçek tarayıcı, örnek kurucusunda). Bir dönem aynı kapı
   // Kayış Tablosu içindi (maxInstances:1 — ikincisi reddedilip uyarı
@@ -2300,7 +2295,10 @@ describe('gergi satırı — biçim diğerleriyle aynı, hüküm üst kartta', (
     const h = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
     const ilk = h.slice(h.indexOf('<tbody>'), h.indexOf('</tr>', h.indexOf('<tbody>')));
     const ten = h.slice(h.indexOf('ve-fw-tr-ten'), h.indexOf('</tr>', h.indexOf('ve-fw-tr-ten')));
+    // Künye işaretinin SARMALAYICISI (föy, 2026-09-29) bir denetim değil:
+    // kilitli hücreye "K" iliştirir, hücrenin denetimi aynı kalır.
     const bicim = (r) => [...r.matchAll(/<(input|select|span)\b[^>]*>/g)]
+      .filter((m) => !/ve-fw-kun-kap/.test(m[0]))
       .map((m) => m[1] + (/type="([^"]+)"/.exec(m[0]) || [, ''])[1]);
     // Aynı sırada aynı tür kontroller: radyo · select · metin · 4 sayı · select…
     expect(bicim(ten)).toEqual(bicim(ilk));

@@ -109,3 +109,21 @@ kapanıyor, arka plan kaydının gidiş-dönüşünde kapanmıyordu. Kanvasla
 bandıydı. Ölçülen bedeli (AG00810, 1920×952): tuvalden 266 px (870 → 604),
 kasnak ↔ satır mesafesi 659–785 px. Pafta'da tuval 870 px'te kalıyor, mesafe
 302–405 px.
+
+## SİHİRBAZ KENDİLİĞİNDEN AÇILIR (2026-09-09 → 2026-09-29)
+
+**Hüküm:** kayıtsız bir FEAD topolojisine girilince `veFeadOpenEditor`
+`veFeadWizOpenAny()`i çağırıyordu (`_yeniTopoloji` bayrağı; kurulmuş modele
+dönüşte ve `_silent` girişte açılmıyordu). Açılış yüzeyi boş bir Kayış Yolu
+kartı da kuruyordu; sihirbaz ve örnek onu geometri kartı olarak devralıyordu.
+
+**Neden emekli:** kullanıcı kararı (2026-09-29: *"FEAD modülünü açınca
+sihirbaz anında karşımızda beliriyor. Bunun böyle olmasını istemiyorum."*).
+Ölçüldü (1440×900): pencere ekranın %77'sini kaplayıp arkayı %62 karartıyor
+ve ilk karede hata gösteriyordu ("7 eksik/çelişkili girdi"); kapatınca boş
+kart kırmızı "Kayış yolu kapanmadı" rozetiyle kalıyordu. Yerine başlangıç
+sayfası geldi (kural 5); açılış kart kurmuyor, "Boş çizim masası" kuruyor.
+Aynı turda "Başlangıç ve Örnekler" (`fead-example`, 2026-09-09'da kalkmıştı)
+bu dosyaya taşındı: sunduğu sihirbaz düğmesi ve örnek listesi sihirbazın 1.
+adımındaydı; örnek KURUCUSU (`veFeadLoadExample`) duruyor.
+

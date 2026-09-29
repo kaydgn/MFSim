@@ -46,7 +46,9 @@ async function feadAc(page) {
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
-  // Boş FEAD topolojisi sihirbazla karşılar (FEAD kural 5)
+  // Boş FEAD topolojisini BAŞLANGIÇ SAYFASI karşılar (FEAD kural 5, 2026-09-29):
+  // "Sihirbazla kur" kapısı sihirbazı 1. adımda — STEP kartıyla — açar.
+  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible({ timeout: 20000 });
 }
 
@@ -270,7 +272,7 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   // ── 6) GERGİ: künye seç → model çözülür ─────────────────────────────────
   await page.locator('.ve-fw-steps li').nth(2).click();
   await page.locator('.ve-fw-card select').first().selectOption('AG00686');
-  await expect(page.locator('.ve-fw-pill-ok')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#ve-fw-live .ve-fw-damga[data-model="ok"]')).toBeVisible({ timeout: 10000 });
   const b = await page.evaluate(() => {
     const r = veFeadWizBuild();
     return { ok: r.ok, spin: r.spin, n: r.order.length };

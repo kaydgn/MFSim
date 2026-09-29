@@ -495,10 +495,10 @@ test('PAFTA: arka plan kaydından sonra tablo yerinde; ana topolojide tablo yok'
 // ═══════════════════════════════════════════════════════════════════════════
 // Kullanıcı bildirimi (2026-09-09): *"CTRL Z komutunu kullandığımda tablo
 // siliniyor."* Ölçüldü (düzeltmeden önce): örnek yığına ONÜÇ adım yazıyordu
-// ve Ctrl+Z modeli düğüm düğüm söküyordu. Açılış yüzeyi artık BOŞ Kayış Yolu
-// kartı + kutusuz araç düğümleri ve örnek o kartı DEVRALIYOR — geri alınınca
-// kart boş hâline döner, kaybolmaz.
-test('CTRL+Z: örnek TEK adımda geri alınır, açılış kartı SİLİNMEZ', async ({ page }) => {
+// ve Ctrl+Z modeli düğüm düğüm söküyordu. Açılış yüzeyi yalnız kutusuz araç
+// düğümleri (2026-09-29'dan beri kart yok — başlangıç sayfası): geri alınınca
+// model TEK adımda gider, kayış kalır ve başlangıç sayfası geri gelir.
+test('CTRL+Z: örnek TEK adımda geri alınır, kayış SİLİNMEZ, başlangıç sayfası geri gelir', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
@@ -512,14 +512,15 @@ test('CTRL+Z: örnek TEK adımda geri alınır, açılış kartı SİLİNMEZ', a
     dugum: window.nodes.length,
     kasnak: window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length,
     kanvas: window.nodes.filter((n) => n.type === 'fead-layout').length,
-    bos: /henüz kasnak yok/.test((document.querySelector('.ve-fead-kanvas') || {}).textContent || ''),
+    sayfa: !!(document.getElementById('ve-fead-baslangic') && !document.getElementById('ve-fead-baslangic').hidden),
     satir: document.querySelectorAll('.ve-fead-pafta tr[data-ve-node]').length,
     kayis: window.nodes.filter((n) => n.type === 'fead-belt').length,
     undo: (window.undoStack || []).length }));
 
   const yuklu = await durum();
   expect(yuklu.kasnak).toBe(6);
-  expect(yuklu.kanvas).toBe(2);                     // ÜÇ DEĞİL — boş kart devralındı
+  expect(yuklu.kanvas).toBe(2);
+  expect(yuklu.sayfa).toBe(false);
   expect(yuklu.satir).toBe(6);
   expect(yuklu.undo).toBe(2);                       // taban + örnek
 
@@ -533,18 +534,18 @@ test('CTRL+Z: örnek TEK adımda geri alınır, açılış kartı SİLİNMEZ', a
   await geriAl(1);
   const sonra = await durum();
   expect(sonra.kasnak).toBe(0);                     // yarım sökülmüş model YOK
-  expect(sonra.kanvas).toBe(1);                     // açılış kartı DURUYOR
-  expect(sonra.bos).toBe(true);                     // ve boş hâlini söylüyor
-  expect(sonra.satir).toBe(0);                      // tablosu da boş
+  expect(sonra.kanvas).toBe(0);                     // örneğin iki kartı da gitti
+  expect(sonra.sayfa).toBe(true);                   // ve başlangıç sayfası geri geldi
+  expect(sonra.satir).toBe(0);
   // KAYIŞ AÇILIŞIN PARÇASI (2026-09-26): kutusu yok ve silinemiyor, yani
   // geri-al onu götürseydi kullanıcının geri kurabileceği bir yol kalmazdı.
   expect(sonra.kayis).toBe(1);
 
   await geriAl(5);                                  // taban: daha fazlası bir şey silmez
   const taban = await durum();
-  // kanvas + kutusuz dört araç düğümü: kayış · çözücü · rapor · sihirbaz
-  // (2026-09-28 — araçlar FEAD araçları penceresinde; açılışın parçası).
-  expect(taban.dugum).toBe(5);
+  // kutusuz dört araç düğümü: kayış · çözücü · rapor · sihirbaz (2026-09-28 —
+  // araçlar FEAD araçları penceresinde; açılışın parçası). Kart yok (2026-09-29).
+  expect(taban.dugum).toBe(4);
   expect(taban.kayis).toBe(1);
 
   await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });

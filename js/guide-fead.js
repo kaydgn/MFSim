@@ -675,31 +675,34 @@ function _gfSec3(){
     'İç topolojiden çıkmak için aynı çipi ya da çerçevenin alt kenarındaki çıkış düğmesini '
       + 'kullanın. Çıkarken modeliniz alt-sistem kutusunun içine kaydedilir.'
   ]);
-  h += '<p><strong>Boş bir FEAD modülü sizi Başlangıç Sihirbazı ile karşılar</strong> — '
-    + 'pencere kendiliğinden açılır. Kapatırsanız tuvalde boş bir <strong>Kayış Yolu</strong> '
-    + 'kartı kalır — çiziminde <em>Sihirbazla kur</em> düğmesi, altında boş Kayış Tablosu ve '
-    + 'onun <em>＋ Kasnak ekle</em> listesi durur — ve sol üstte <strong>FEAD araçları</strong> '
-    + 'penceresi (sihirbazı yeniden açmak için <strong>Sihirbaz</strong>). Hangi yolu seçerseniz '
-    + 'seçin kasnaklar sonunda <strong>o kartta</strong> görünür. Buradan üç yol ayrılır.</p>';
-  h += _gfNot('Sihirbaz yalnız İLK girişte açılır',
-      'Kurulmuş bir modele geri döndüğünüzde pencere <strong>açılmaz</strong>; her girişte '
-    + 'kapatılması gereken bir karşılama, karşılama olmaktan çıkıp engele dönerdi. '
-    + 'İstediğiniz zaman <strong>FEAD araçları</strong> penceresindeki <strong>Sihirbaz</strong> '
-    + 'düğmesiyle açabilirsiniz.');
+  h += '<p><strong>Boş bir FEAD modülü sizi bir başlangıç sayfasıyla karşılar</strong> — '
+    + 'sihirbaz kendiliğinden açılmaz. Sayfada üç kapı vardır (<em>Sihirbazla kur</em> · '
+    + '<em>STEP’ten başla</em> · <em>Boş çizim masası</em>) ve altında Gates raporlarının kayış '
+    + 'yolları; birine basınca model kurulur ve sayfa çekilir. Boş çizim masası tuvale boş bir '
+    + '<strong>Kayış Yolu</strong> kartı koyar — çiziminde <em>Sihirbazla kur</em> düğmesi, altında '
+    + 'boş Kayış Tablosu ve onun <em>＋ Kasnak ekle</em> listesi durur. Model kurulunca sol üstte '
+    + '<strong>FEAD araçları</strong> penceresi belirir (sihirbazı yeniden açmak için '
+    + '<strong>Sihirbaz</strong>). Hangi yolu seçerseniz seçin kasnaklar sonunda '
+    + '<strong>Kayış Yolu kartında</strong> görünür. Buradan üç yol ayrılır.</p>';
+  h += _gfNot('Sayfa yalnız BOŞ topolojide görünür',
+      'Kasnağı ya da Kayış Yolu kartı olan bir modele döndüğünüzde sayfa <strong>gelmez</strong>; '
+    + 'kurulumu Ctrl+Z ile geri alırsanız geri gelir. Sihirbazı istediğiniz zaman '
+    + '<strong>FEAD araçları</strong> penceresindeki <strong>Sihirbaz</strong> düğmesiyle '
+    + 'açabilirsiniz.');
 
   h += '<h3>3.2 Yol A — Başlangıç Sihirbazı <span class="chip">önerilen</span></h3>';
   h += '<p>Sihirbaz, bir modeli kurmak için gereken bütün girdileri <strong>doğru sırayla</strong> '
     + 'sorar ve her adımda modeli canlı doğrular. Boş bir iç topolojide “önce ne koyayım” '
     + 'sorusunu ortadan kaldırır.</p>';
   h += _gfAdimlar([
-    'Modüle ilk girişte sihirbaz zaten açıktır; kapattıysanız <strong>FEAD araçları</strong> '
-      + 'penceresinde <strong>Sihirbaz</strong>’a basın.',
+    'Başlangıç sayfasında <strong>Sihirbazla kur</strong>’a basın; model kurulduktan sonra '
+      + 'sihirbaz <strong>FEAD araçları</strong> penceresindeki <strong>Sihirbaz</strong>’dan açılır.',
     'Adımları sırayla doldurun. Her adımın rozeti o adımda kalan eksik/uyarı sayısını '
       + 'gösterir, yani nereye dönmeniz gerektiğini okursunuz.',
     'Son adımda canlı çözümü ve kayış yolu şemasını görün, sonra <strong>modeli kurun</strong> '
       + '— sihirbaz kasnakları ve künyeleri iç topolojiye bir anda yazar. Kasnaklar '
-      + '<strong>Kayış Yolu çiziminde</strong> belirir; sihirbaz açılışta gelen boş kartı '
-      + 'geometri kartı olarak kullanır, üçüncü bir çizim kurmaz.'
+      + '<strong>Kayış Yolu çiziminde</strong> belirir; tuvalde boş bir kart varsa (boş çizim '
+      + 'masası) sihirbaz onu geometri kartı olarak kullanır, üçüncü bir çizim kurmaz.'
   ]);
   h += _gfAlanTablo('Sihirbaz adımları ↔ bu kılavuzun bölümleri', [
     ['1 · Başlangıç', 'Sistem adı · <strong>STEP dosyasından</strong> ya da <strong>'
