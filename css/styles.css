@@ -8890,6 +8890,40 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fp-chk:hover{ border-color:var(--border-hover); color:var(--text-primary); }
 .ve-fp-chk input{ width:14px; height:14px; flex:none; cursor:pointer; accent-color:var(--accent-primary); }
 
+/* ── KAYNAKLI VARSAYILAN: DEĞER + 'i' ─────────────────────────────────────
+   Kullanıcı isteği (2026-09-28): *"Atalet değerleri … silik olarak görünüyor
+   fakat hesaba katılıyor mu belli olmuyor. Düz direkt default değer yazsın ve
+   yanında ufak bir 'i' butonu ile … kalibrasyon kaynağını belirtsin."*
+   Değer alanın KENDİSİ (yer tutucu değil); 'i' onun yanında, dar kapta da
+   kaymaz. Etiket büyük harfe çeviriyor — 'i' o kutunun DIŞINDA durur. */
+.ve-fp-deger{ display:flex; align-items:center; gap:5px; min-width:0; }
+.ve-fp-deger .ve-fp-inp{ flex:1 1 auto; }
+.ve-fp-i{
+  flex:none; width:20px; height:20px; padding:0; border:none; border-radius:var(--radius-xs);
+  display:inline-flex; align-items:center; justify-content:center;
+  background:none; color:var(--text-muted); font-size:var(--fs-body); line-height:1;
+  cursor:help;
+}
+.ve-fp-i .mf-ico{ vertical-align:0; }
+.ve-fp-i:hover, .ve-fp-i:focus-visible{
+  color:var(--ink-accent); background:var(--bg-tertiary); outline:none; box-shadow:var(--focus-ring);
+}
+/* Değer hesaba GİRMİYORSA (arşivde varsayılan yok, girilen değer geçersiz)
+   ikon uyarı tonunda — ipucunu açmadan fark edilsin. */
+.ve-fp-i[data-kaynak="yok"]{ color:var(--ink-warning); }
+/* İPUCU BELGENİN GÖVDESİNDE, `position:fixed` — pencerenin kaydırma kabı onu
+   kırpmasın. Konumu JS ölçer (veri), görünümü burada. Sınıf `.ve-fp-`
+   ailesinden DEĞİL: pencerenin parçası değil, gövdenin — kılavuzun sahne
+   CSS'ine de girmesin. */
+.ve-ipucu{
+  position:fixed; z-index:calc(var(--z-modal) + 1); max-width:280px;
+  padding:6px 9px; border-radius:var(--radius-sm);
+  background:var(--bg-secondary); color:var(--text-primary);
+  border:1px solid var(--border-color); box-shadow:var(--shadow-lg);
+  font-size:var(--fs-micro); line-height:1.45; pointer-events:none;
+}
+.ve-ipucu[hidden]{ display:none; }
+
 /* ── SEKMELER + SABİT SAĞ SÜTUN (seçilen tasarım: B + C) ─────────────────
    Sekme panelin UZUNLUĞUNU çözüyor, sağ sütun sekmenin ALDIĞI BAĞLAMI geri
    veriyor: solda ne düzenlenirse düzenlensin sağda "bunun sonucu ne" duruyor.
@@ -9211,14 +9245,8 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fp-gate[data-d="no"] i  { background:var(--accent-danger); }
 .ve-fp-gate span{ margin-left:auto; font-size:var(--fs-micro); color:var(--text-muted); }
 
-/* TEK ÇERÇEVE: kap çiziyor, SVG değil (`frame:false`). Eskiden kabın gri
-   kutusunun içinde SVG'nin kendi beyaz, yuvarlak kutusu duruyordu. */
-.ve-fp-thumb{
-  border:1px solid var(--border-color); border-radius:var(--radius-sm);
-  background:var(--bg-input); padding:4px; margin:0 0 14px;
-}
-.ve-fp-thumb svg{ display:block; width:100%; height:auto; }
-.ve-fp-thumb-bos{ padding:16px 8px; text-align:center; font-size:var(--fs-micro); color:var(--text-muted); }
+/* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
+   kuralları onunla birlikte gitti (kural 26). */
 
 
 /* ══ KAYIŞ YOLU KARTI — BANT YOK, DENETİM ÇİZİMİN ÜSTÜNDE YÜZER ══════════

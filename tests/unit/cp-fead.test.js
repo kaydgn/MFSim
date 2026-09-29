@@ -860,15 +860,24 @@ describe('çözücü paneli: birinci kademe ve motor künyesi', () => {
   //
   // İki alt-kapı: (1) canlı alanlar ölü ilan EDİLMİYOR, (2) sayısal etki
   // gerçekten var — ikincisi `fead-example.test.js`'te, burada yalnız metin.
-  test('motor künyesi kartı alanları ölü İLAN ETMİYOR', () => {
+  // MOTOR KARTI SÜRÜCÜNÜN PENCERESİNDE (2026-09-28). Krank mili ataleti
+  // Rol sekmesine geçti ve DEĞERİYLE yazılı (kaynağı 'i'de); kartın
+  // açıklama paragrafı kullanıcı isteğiyle kalktı — kalan kapı kural 25'in
+  // ikinci yarısı: canlı bir alan hiçbir metinde "hesaba katmaz" diye
+  // ilan edilmiyor.
+  test('motor kartı alanları ölü İLAN ETMİYOR; krank ataleti sürücünün Rol sekmesinde', () => {
     const html = fead.veFeadEngineCard(kasnak('fead-solver', {}));
-    expect(html).toMatch(/veFeadSet\('[^']+','cylinders'/);
-    expect(html).toMatch(/veFeadSet\('[^']+','crankInertia'/);
-    expect(html).toMatch(/veFeadSet\('[^']+','serviceFact'/);
+    ['cylinders', 'serviceFact', 'accelRpmS', 'decelRpmS'].forEach((k) =>
+      expect(html).toMatch(new RegExp("veFeadSet\\('[^']+','" + k + "'")));
     expect(html).not.toMatch(/hesaba katmaz/);
-    // Üçünün de nereye girdiği YAZILI.
-    expect(html).toMatch(/burulma modelinin/);
-    expect(html).toMatch(/tepe yük/i);
+    const pack = M.veFeadExampleNodes('BMC_FEAD_2026');
+    pack.nodes.forEach((x) => { x.def = componentDefs[x.type]; });
+    global.nodes = pack.nodes;
+    global.connections = pack.connections;
+    const drv = pack.nodes.find((x) => x.data && x.data.driver);
+    const h = fead.getFeadPulleyPropertiesHTML(drv);
+    expect(h).toMatch(/veFeadVarsayilanSet\('ex-solver','crankInertia'/);
+    expect(h).not.toMatch(/hesaba katmaz/);
   });
 
   // ── "NO LOAD GOVERNED" ALANI KALDIRILDI — 0 TÜKETİCİ ────────────────────
@@ -877,7 +886,8 @@ describe('çözücü paneli: birinci kademe ve motor künyesi', () => {
   // kendi doktrininde bunu zaten yazıyordu: sessizce alan açıp "girdim, hesaba
   // girdi" izlenimi vermek hiç sormamaktan kötüdür.
   test('NO LOAD GOVERNED sorulmuyor; besleyen üç devir soruluyor', () => {
-    const html = fead.veFeadEngineCard(kasnak('fead-solver', {}));
+    const sv = kasnak('fead-solver', {});
+    const html = fead.veFeadEngineCard(sv) + fead.veFeadEngineSpeedCard(sv);
     expect(html).not.toMatch(/noLoadGovernedRpm/);
     ['idleRpm', 'governedRpm', 'overspeedRpm'].forEach((k) => {
       expect({ k, var: new RegExp("veFeadSet\\('[^']+','" + k + "'").test(html) })
@@ -2700,13 +2710,20 @@ describe('durum şeridi — aynalanmış çevrim', () => {
 // bir sayı zinciri ankrajlar, bütün gerilmeler kayar ve kayma emniyeti bir ORAN
 // olduğu için tablodan anlaşılmaz.
 describe('Çözücü paneli tasarım gerginliği SORMUYOR', () => {
-  test('panelde designTensionN alanı yok', () => {
-    const node = { id: 'sv', type: 'fead-solver', def: componentDefs['fead-solver'], data: {} };
-    const html = fead.getFeadSolverPropertiesHTML(node);
-    expect(html).not.toMatch(/designTensionN/);
-    expect(html).not.toMatch(/Tasarım gerginliği \[N\]/);
-    // yerine nereden geldiği YAZILI olmalı
-    expect(html).toMatch(/Tasarım gerginliği sorulmaz/);
+  // "TASARIM" kartı kayışın penceresine taşındı (2026-09-28) ve açıklaması
+  // kalktı; değerin NEREDEN geldiği Algılanan model tablosunda ("türetildi"),
+  // aşağıdaki test onu tutuyor.
+  test('ne Çözücü ne kayış penceresi designTensionN soruyor', () => {
+    const pack = M.veFeadExampleNodes('BMC_FEAD_2026');
+    pack.nodes.forEach((x) => { x.def = componentDefs[x.type]; });
+    global.nodes = pack.nodes;
+    global.connections = pack.connections;
+    const sv = pack.nodes.find((x) => x.type === 'fead-solver');
+    const belt = pack.nodes.find((x) => x.type === 'fead-belt');
+    [fead.getFeadSolverPropertiesHTML(sv), fead.getFeadBeltPropertiesHTML(belt)].forEach((html) => {
+      expect(html).not.toMatch(/designTensionN/);
+      expect(html).not.toMatch(/Tasarım gerginliği \[N\]/);
+    });
   });
 
   test('Algılanan model tablosu TÜRETİLEN değeri gösteriyor', () => {
@@ -2791,9 +2808,12 @@ describe('çözücü paneli — çalışma çevrimi', () => {
     expect(d.duty.find((r) => r.rpm === 800).kw).toEqual({});      // uydurulmadı
   });
 
-  test('panelde ÇEVRİM SEÇİCİ basılıyor ve yüklü kaydı gösteriyor', () => {
+  // ÇEVRİM KARTI SÜRÜCÜNÜN PENCERESİNDE (2026-09-28); tohumu depo erişicisi
+  // (`_feadDepo`) atıyor — pencere kurulurken, eylem yolunda değil.
+  test('çevrim kartında ÇEVRİM SEÇİCİ basılıyor ve yüklü kaydı gösteriyor', () => {
     global.nodes = [cozucu()];
-    const h = fead.getFeadSolverPropertiesHTML(global.nodes[0]);
+    fead._feadDepo();
+    const h = fead.veFeadDutyEditor(global.nodes[0], veFeadBuildFromCanvas());
     expect(h).toContain('Çevrim kaydı');
     expect(h).toContain('veFeadDutyLib(');
     const rec = veFeadDutyOf(VE_FEAD_DUTY_DEFAULT);
@@ -2805,7 +2825,7 @@ describe('çözücü paneli — çalışma çevrimi', () => {
   test('elle düzenlenmiş tablo seçicide ÖZEL diyor', () => {
     global.nodes = [cozucu({ duty: [{ rpm: 1234, dcPct: 100, degC: 90, kw: {} }],
                              dutySeeded: true })];
-    const h = fead.getFeadSolverPropertiesHTML(global.nodes[0]);
+    const h = fead.veFeadDutyEditor(global.nodes[0], veFeadBuildFromCanvas());
     expect(h).toContain('özel (elle düzenlendi)');
   });
 });

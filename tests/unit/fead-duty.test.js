@@ -208,13 +208,9 @@ describe('bağlanma', () => {
     expect(etiket('js/fead-duty.js')).toBeLessThan(etiket('js/cp-fead-wizard.js'));
   });
 
-  test('panel çevrimi PANEL KURULURKEN tohumluyor, eylem yolunda değil', () => {
-    // Tohum yalnız `_feadSolverNode`'a bağlansaydı tablo İLK açılışta yine boş
-    // görünür, ancak bir düğmeye basıldıktan sonra dolardı.
-    const govde = PANEL_SRC.slice(PANEL_SRC.indexOf('function getFeadSolverPropertiesHTML'),
-                                  PANEL_SRC.indexOf('function getFeadSolverPropertiesHTML') + 900);
-    expect(govde).toContain('veFeadDutySeed(node)');
-  });
+  // "Çevrim pencere kurulurken tohumlanır" kapısı 2026-09-28'de sürücü
+  // kasnağın penceresine taşındı ve DAVRANIŞ olarak ölçülüyor:
+  // tests/unit/fead-surucu-pencere.test.js → "TOHUM".
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

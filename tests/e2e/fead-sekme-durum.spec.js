@@ -99,21 +99,47 @@ test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "tamam
   expect(hatalar).toEqual([]);
 });
 
-test('sürücüde iki sekme "kullanılmaz" ve alan sormuyor', async ({ page }) => {
+// SÜRÜCÜ MOTORU TAŞIR (2026-09-28): motor, devir sınırları, tam yük eğrisi ve
+// çalışma çevrimi Çözücü'den sürücü kasnağın penceresine geldi; veri çözücü
+// düğümünde (işletme deposu). Node'da koşmayan halka: GERÇEK klavyeyle
+// yazılan sayının pencerenin düğümüne değil DEPOYA gitmesi ve sürücünün
+// şeridinin panel kurulmadan tazelenmesi.
+test('sürücüde dört sekme; devir sınırları klavyeyle DEPOYA yazılır — panel kurulmadan', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await ornekYukle(page);
   const id = await pencereAc(page, 'fead-fan');
   await page.waitForSelector('#ve-fp-tabs-' + id);
-  const r = await page.evaluate((i) => {
-    const kap = document.getElementById('ve-fp-tabs-' + i);
-    const gov = document.getElementById('ve-fp-panes-' + i);
-    return ['dev', 'egr'].map((k) => ({
-      k,
-      yazi: kap.querySelector('.ve-fp-tab[data-k="' + k + '"] .ve-fp-tab-d').textContent,
-      alan: gov.querySelector('[data-k="' + k + '"]').querySelectorAll('input, select').length,
-    }));
-  }, id);
-  expect(r).toEqual([{ k: 'dev', yazi: 'kullanılmaz', alan: 0 }, { k: 'egr', yazi: 'kullanılmaz', alan: 0 }]);
+  const serit = (i) => page.evaluate((x) =>
+    [...document.querySelectorAll('#ve-fp-tabs-' + x + ' .ve-fp-tab')].map((b) =>
+      b.getAttribute('data-k') + ':' + b.querySelector('.ve-fp-tab-d').textContent), i);
+  expect(await serit(id)).toEqual(['geo:tamam', 'rol:tamam', 'mot:0/3 devir', 'cev:12 satır']);
+
+  const sv = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-solver').id);
+  // "Doldur" rölantiye gider — Motor sekmesinin ilk boş alanına (servis
+  // faktörü, isteğe bağlı) değil.
+  await page.click('#ve-fp-eksik-' + id + ' button');
+  expect(await page.evaluate(() => document.activeElement && document.activeElement.id))
+    .toBe('ve-fead-idleRpm-' + sv);
+  const K = ['idleRpm', 'governedRpm', 'overspeedRpm'];
+  await page.evaluate(([s, k]) => k.forEach((a) => {
+    document.getElementById('ve-fead-' + a + '-' + s).dataset.iz = '1'; }), [sv, K]);
+  await page.keyboard.type('700'); await page.keyboard.press('Tab');
+  await page.keyboard.type('2100'); await page.keyboard.press('Tab');
+  await page.keyboard.type('2900'); await page.keyboard.press('Tab');
+
+  const sonra = await page.evaluate(([s, i, k]) => {
+    const d = window.nodes.find((n) => n.id === s).data;
+    const drv = window.nodes.find((n) => n.id === i).data;
+    return { depo: k.map((a) => String(d[a])), kasnak: k.filter((a) => a in drv),
+             iz: k.map((a) => (document.getElementById('ve-fead-' + a + '-' + s) || { dataset: {} }).dataset.iz || '') };
+  }, [sv, id, K]);
+  expect(sonra.depo).toEqual(['700', '2100', '2900']);           // depoya yazıldı
+  expect(sonra.kasnak).toEqual([]);                               // kasnağa DEĞİL
+  expect(sonra.iz).toEqual(['1', '1', '1']);                      // panel KURULMADI
+  expect((await serit(id))[2]).toBe('mot:tamam');
+  expect(hatalar).toEqual([]);
 });
 
 test('şerit dar müfettişte TEK SATIR, taşmıyor; durum yazısı iki temada okunur', async ({ page }) => {
@@ -139,7 +165,10 @@ test('şerit dar müfettişte TEK SATIR, taşmıyor; durum yazısı iki temada o
   });
   for (const tema of ['acik', 'koyu']) {
     await page.evaluate((t) => changeTheme(t), tema);
-    for (const tip of ['fead-ac', 'fead-tensioner', 'fead-belt', 'fead-solver']) {
+    // fead-fan: AG00976'nın SÜRÜCÜSÜ. Motor, devir sınırları ve güç eğrisi
+    // AYNI sekmede: ayrı sekmelerle şerit burada iki satıra kırılıyordu
+    // (ölçüldü: altı sekme 458 px, şeridin içi 345 px).
+    for (const tip of ['fead-ac', 'fead-tensioner', 'fead-belt', 'fead-solver', 'fead-fan']) {
       await pencereAc(page, tip);
       await page.waitForTimeout(250);
       const m = await olc();

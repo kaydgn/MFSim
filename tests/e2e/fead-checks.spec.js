@@ -6,8 +6,9 @@
  *
  *   • motor kataloğunun açılır listesinin DOM'a basılması ve GERÇEK bir
  *     `selectOption` ile künyenin düğüme yazılması,
- *   • aksesuar künyesinin kasnak panelinde seçilmesi ve devir sınırı
- *     alanlarının dolması,
+ *   • motorun SÜRÜCÜ KASNAĞIN penceresinde, aksesuar modelinin kasnağın
+ *     Rol sekmesindeki TEK seçicide seçilmesi ve devir sınırı alanlarının
+ *     dolması,
  *   • Uygunluk Kapıları kartının çözüm ÖNCESİNDE çizilmesi (kapılar yerleşim
  *     ve künye verisiyle çözülüyor, çalışma çevrimi gerekmiyor),
  *   • çözümden sonra kapıların `veFeadResults.checks`e yazılması ve raporun
@@ -71,18 +72,32 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   expect(lib.ac).toBe(4);
   expect(lib.kapi).toBe(true);
 
-  // ── 2) ÇÖZÜCÜ PANELİ: MOTOR KATALOĞU GERÇEK SEÇİMLE ────────────────────
-  // Çözücünün kutusu yok (2026-09-28): penceresi FEAD araçları penceresinin
-  // "Ayarlar" bağlantısından açılır — kullanıcının yolu da bu.
+  // ── 2) SÜRÜCÜ KASNAĞIN PENCERESİ: MOTOR KATALOĞU GERÇEK SEÇİMLE ───────
+  // Motor künyesi 2026-09-28'de Çözücü'den SÜRÜCÜ KASNAĞIN Motor sekmesine
+  // taşındı (kullanıcı kararı); veri yine çözücü düğümünde durur — işletme
+  // deposu. Çözücü'nün penceresi ("Ayarlar") artık yalnız yöntem · model ·
+  // sonuç: orada motor seçicisi YOK.
   const solverId = await page.evaluate(() =>
     window.nodes.find((n) => n.type === 'fead-solver').id);
   await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="ayarlar"]');
   await page.waitForTimeout(400);
+  await expect(page.locator('.ve-fp-tab[data-k="yon"]')).toHaveCount(1);
+  await expect(page.locator('select[onchange*="veFeadApplyEngineLib"]')).toHaveCount(0);
 
+  const drvId = await page.evaluate(() => {
+    const b = veFeadBuildFromCanvas();
+    return b.order[b.sys._crkIdx].id;
+  });
+  await page.evaluate((id) => showNodeProperties(window.nodes.find((x) => x.id === id)), drvId);
+  await page.waitForTimeout(300);
+  await page.click('.ve-fp-tab[data-k="mot"]');
   const motorSec = page.locator('select[onchange*="veFeadApplyEngineLib"]');
   await expect(motorSec).toHaveCount(1);
+  await expect(motorSec).toBeVisible();
   await motorSec.selectOption('57RS303234');
   await page.waitForTimeout(400);
+  // Seçim sürücünün penceresini yeniden kurar — kullanıcı Çözücü'ye atılmaz.
+  expect(await page.evaluate(() => window._veLastPropNodeId)).toBe(drvId);
 
   const sd = await page.evaluate((id) => {
     const n = window.nodes.find((x) => x.id === id);
@@ -105,15 +120,15 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   }, altId);
   await page.waitForTimeout(300);
 
-  // KATALOG LİSTESİ "DEVİR SINIRLARI" SEKMESİNDE. Kasnak penceresi 2026-09-21'de
-  // kategori sekmelerine bölündü ve bu halka o günden beri gizli bir sekmedeki
-  // listeye `selectOption` deneyip 3 dk bekleyerek düşüyordu (main'de de
-  // kırmızıydı — 2026-09-23 ölçüldü). Kullanıcının yolu: sekmeye bas, sonra seç.
-  await page.click('.ve-fp-tab[data-k="dev"]');
-  const accSec = page.locator('select[onchange*="veFeadApplyAccLib"]');
+  // MODEL SEÇİCİSİ TEK VE "ROL" SEKMESİNDE (2026-09-28): BMC künyesi ile Araç
+  // Performans modeli tek listede, değer ön ekli (`bmc:` · `ap:`). Gizli
+  // sekmedeki listeye `selectOption` 3 dk bekleyip düşer (2026-09-23'te
+  // ölçüldü) — kullanıcının yolu: sekmeye bas, sonra seç.
+  await page.click('.ve-fp-tab[data-k="rol"]');
+  const accSec = page.locator('select[onchange*="veFeadApplyAccModel"]');
   await expect(accSec).toHaveCount(1);
   await expect(accSec).toBeVisible();
-  await accSec.selectOption('57RS309348');
+  await accSec.selectOption('bmc:57RS309348');
   await page.waitForTimeout(400);
 
   const ad = await page.evaluate((id) => {
@@ -130,7 +145,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   // Klima kompresörüne de künye ver — ikinci kapı iki aksesuar bekliyor.
   const acId = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-ac').id);
   await page.evaluate((id) => {
-    veFeadApplyAccLib(id, '57RS322530');
+    veFeadApplyAccModel(id, 'bmc:57RS322530');
   }, acId);
   await page.waitForTimeout(300);
 

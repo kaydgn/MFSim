@@ -26,8 +26,9 @@
 //   Yani "fizikten türetilmiş" görünen ama on kat yanlış bir rampa — bu
 //   modülün belgelenmiş sessiz hata sınıfının ta kendisi.
 //
-//   Bunun yerine rampa MFSim'in ZATEN SORDUĞU alandan geliyor: Çözücü
-//   panelindeki "İvmelenme / Yavaşlama [RPM/s]". Aynı alanı `peakEstimate`
+//   Bunun yerine rampa MFSim'in ZATEN SORDUĞU alandan geliyor: sürücü
+//   kasnağın Motor sekmesindeki (2026-09-28'e kadar Çözücü panelindeki)
+//   "İvmelenme / Yavaşlama [RPM/s]". Aynı alanı `peakEstimate`
 //   de kullanıyor, yani animasyon ile tepe yük tablosu AYNI sayıyı anlatıyor.
 //
 // TÜRETİLEN ise rampanın ŞEKLİ: motor kataloğunda eğri varsa
@@ -130,7 +131,8 @@ function veFeadScnInputs(build){
     ? _feadNum : function(v, d){ var x = parseFloat(v); return Number.isFinite(x) ? x : d; };
 
   var idle = num(sd.idleRpm, NaN);
-  if(!(idle > 0)) idle = VE_FEAD_SCN_IDLE_DEF;
+  var idleVar = !(idle > 0);
+  if(idleVar) idle = VE_FEAD_SCN_IDLE_DEF;
 
   // Tepe devir: çalışma çevriminin en yükseği > regülatör devri > varsayılan.
   var peak = 0;
@@ -158,7 +160,7 @@ function veFeadScnInputs(build){
     idleRpm: idle, peakRpm: peak, crankRpm: VE_FEAD_SCN_CRANK_RPM,
     accelRpmS: acc, decelRpmS: dec, cylinders: cyl, curve: curve,
     kaynak: { peak: peakSrc, accelVarsayilan: accVar, decelVarsayilan: decVar,
-              egri: !!curve }
+              idleVarsayilan: idleVar, egri: !!curve }
   };
 }
 

@@ -407,7 +407,9 @@ olurdu.
     ya da rapor satırı yoktu; katalogda duruyor, künye onu modele yazmaya
     devam ediyor, ama SORULMUYOR. Aynı kuralın tersi de geçerli: bir notun
     canlı bir alanı "hesaba katmaz" diye ilan etmesi de yasak — krank ataleti
-    burulma modelini, ivme/yavaşlama tepe yük tablosunu besliyor. Kapı:
+    burulma modelini, ivme/yavaşlama tepe yük tablosunu besliyor. Sürücünün
+    devir sınırları ve güç eğrisi bu yüzden 2026-09-28'de "kullanılmaz"
+    olmaktan çıktı: motorun sınırları ve tam yük eğrisi (kural 41). Kapı:
     `cp-fead.test.js` → *"NO LOAD GOVERNED sorulmuyor"* + *"alanları ölü İLAN
     ETMİYOR"*, `fead-wizard.test.js` → *"no load governed SORULMUYOR"*.
     Tarama: panelin sorduğu 53 alandan tüketicisi olmayan tek alan buydu.
@@ -493,17 +495,13 @@ olurdu.
     tablo + kendi düğmeleri): sütuna sığmazsa yerinde özet kartı kalır ve
     "Tabloyu aç" onu küçük bir pencereye TAŞIR (`js/tablo-pencere.js`) —
     sütunda yatay kaydırma YOK (2026-09-23; önce 785–1162 / 359 px).
-    **Küçük resmin sorusu "bu kasnak nerede"** ve bu yüzden YALNIZ KASNAK
-    PENCERESİNDE durur (`componentDefs.isFeadPulley` — gergi dâhil; kullanıcı:
-    *"gerekli gereksiz her yere eklemişsin — Sonuç'ta buna ne ihtiyaç var?"*):
-    pencerenin kasnağı vurgulu
-    (`highlightId`), adlar kısa, sarım açısı yok, ad yerleşimi `nameSmart`
-    (yay + disk engeli, 16 açı × 2 uzaklık, en az örtüşen geri düşüş).
-    `nameSmart` KANVAS KARTINA VE RAPORA DOKUNMAZ — onların yerleşimi
-    `fead-card-design.test.js`te ayrıca kapılı. Kapılar: `fead-panel-dili.test.js`
-    → *"PENCERE DÜZENİ"* ve *"BİRİMİNDE"*, `fead-panel-gramer.spec.js`,
-    `tablo-pencere.spec.js`; özet şeridinin YOKLUĞU ve küçük resmin YERİ
-    `fead-pencere-ailesi.test.js`te, tipten okunan kural olarak.
+    **"Kayış yolundaki yeri" küçük resmi YOK** — önce kasnak penceresine
+    indirildi (2026-09-23), sonra oradan da kalktı (2026-09-28, kullanıcı:
+    *"Bunlara gerek yok"*); kasnağın yeri Kayış Yolu kartında ve paftada.
+    Kapılar: `fead-panel-dili.test.js` → *"PENCERE DÜZENİ"* ve *"BİRİMİNDE"*,
+    `fead-panel-gramer.spec.js`, `tablo-pencere.spec.js`; özet şeridinin ve
+    küçük resmin YOKLUĞU `fead-pencere-ailesi.test.js`te, tipten okunan kural
+    olarak.
 
 32. **KASNAK ÇİZİMDE SEÇİLİR, TAŞINIR VE EKLENİR** (2026-09-23, kullanıcı
     kararı: *"Çizim Masası çok güzel"*). Kayış Yolu kartının çizimi giriş
@@ -744,9 +742,11 @@ olurdu.
     • **Yüklemler köprünün**: `veFeadHasOD` · `veFeadAccLimits` (katalogtan
       gelen sınır DOLU sayılır) · `veFeadResolveDriver` (işaretsiz krank da
       sürücü) · `veFeadBeltModeLocked` · `veFeadResultState`.
-    • **Sürücüde devir sınırı ve güç eğrisi `yok` ve ALAN SORMAZ** (kural 25):
-      iki kapı da sürücüyü atlar, sürücünün gücü toplamdan çıkar. Sekme kalır —
-      sürücülük bir ROL, işaret geçince geri gelir.
+    • **Sürücünün sekmeleri DEPODAN okur** (kural 41): Motor (tahrik oranı ·
+      governed · overspeed · rölanti) ve Çevrim. Aksesuarın iki sekmesi
+      (devir sınırları · güç eğrisi) sürücüde YOK — sürücülük bir ROL, işaret
+      geçince geri gelir. Birleşik sekmede "Doldur" eksiğin KENDİ alanına
+      gider (`durum.hedef`), ilk boş alana değil.
     • **Güç eğrisi sessiz sıfırı yakalar**: eğri de katalog da yokken boş kW
       hücresine köprü 0 yazıyor (`veFeadDutyToCore`).
     • **Durum YERİNDE tazelenir** (`veFeadSekmeTazele`, `saveState`ten): sayı
@@ -755,8 +755,8 @@ olurdu.
       zorunlu alanı gerçek modelde tek tek boşaltıp köprünün sözü ile sekmenin
       hükmünü BİRLİKTE ölçer — biri olup öteki olmazsa kırmızı.
     Kapılar: `fead-sekme-durum.test.js` + `tests/e2e/fead-sekme-durum.spec.js`
-    (gerçek klavye → `onchange` → kayıt kancası; dar müfettişte tek satır;
-    iki temada kontrast).
+    (gerçek klavye → `onchange` → kayıt kancası, sürücüde DEPOYA; dar
+    müfettişte sürücü dâhil tek satır; iki temada kontrast).
 
 36. **KAYNAKLI VARSAYILAN KÖPRÜDE, ÇEKİRDEK BİREBİR** (2026-09-26, literatür
     turu). Çekirdeğin kaynaksız ya da tek markaya bağlı sabiti köprüde
@@ -764,7 +764,8 @@ olurdu.
     • **Gates PK birim kütlesi** boş alanda 0,018 (`VE_FEAD_DEFAULTS.beltMassPerRib`,
       Gates 508C el kitabı; çekirdeğin 0,0144'ü hiçbir kaynakta yok). Değer her
       zaman geçer, künye yalnız TÜKETİLDİĞİNDE (kayış verisi açıkken) deftere
-      yazılır; panelin yer tutucusu aynı fonksiyonu okur (`veFeadBeltMassOf`).
+      yazılır; pencere aynı sayıyı alanın DEĞERİ olarak yazar (kural 42,
+      `veFeadKayisKutlesi` → `veFeadBeltMassOf`).
     • **Kord rijitliği** PK'nın öteki markalarına Gates'in ETKİN değeriyle
       geçer ve sınır `limits`te yazılır (`veFeadCordStiffness`, üç çağrı yeri
       `veFeadTorsionalOpt`'tan); PK dışında sayı uydurulmaz.
@@ -870,6 +871,67 @@ olurdu.
       h_b'si aynı hücrede aynı görünür, aynı şey değildir (kural 8).
       Gates h_b/h_r'yi PJ/PL/PM için yayımlamıyor; PH'yi hiç üretmiyor.
     Kapı: `fead-belt-geom.test.js`.
+
+41. **İŞLETME VERİSİ SÜRÜCÜNÜN PENCERESİNDE, DEPOSU ÇÖZÜCÜ** (2026-09-28,
+    kullanıcı: *"Krank kasnağı üzerinden sistemi tahrik edecek motoru
+    seçelim … 'Çözücü' kısmında ben sadece sayısal yöntemler ve çözüm
+    yaklaşımları görmek istiyorum"*).
+    • **Sürücü kasnağın penceresi: Geometri · Rol · Motor · Çevrim.** Motor
+      sekmesi motor kataloğunu, devir sınırlarını, güç eğrisini (tam yük +
+      FEAD'in payı) ve FEAD tahrikini BİRLİKTE taşır — seçimin getirdiği
+      seçicinin altında görünür; ayrı sekmelerle şerit 380 px'lik müfettişte
+      iki satıra kırılıyordu (458 / 345 px). Pencere SÜRÜCÜNÜN
+      (`veFeadResolveDriver`), krank tipininki değil — ikincil tahrikte fan.
+    • **Veri depoda** (`veFeadIsletmeDeposu` = çözücü düğümü: garanti, tek,
+      silinmez): sürücülük ROL — işaret geçince ya da kasnak silinince motor
+      ve çevrim kalır. Eylemler AÇIK pencereyi kurar (`_feadPencereTazele`),
+      yazılan düğümünkini değil — motor seçen kullanıcı Çözücü'ye atılmaz.
+      Çevrim tohumu pencere kurulurken (`_feadDepo`).
+    • **Kayış penceresinin Tasarım sekmesi** boy ofseti + yorulma modeli (depoda).
+    • **Çözücü girdi SORMAZ**: Yöntemler (`VE_FEAD_YONTEMLER` — her satır bir
+      ÇAĞRIYA bağlı; kodda karşılığı kalmayan yöntem listede yaşayamaz) ·
+      Model · Sonuç. Yöntem seçimleri bu temelin üstüne kurulur.
+    Kapılar: `fead-surucu-pencere.test.js` → *"TOHUM" · "DEPO" · "MOTOR" ·
+    "YÖNTEMLER"*, `fead-sekme-durum.test.js` + `.spec.js`, `fead-checks.spec.js`,
+    `fead-duty.spec.js`, `tablo-pencere.spec.js`.
+
+42. **KAYNAKLI VARSAYILAN DEĞERİYLE YAZILIR, KAYNAĞI 'i'DE** (2026-09-28,
+    kullanıcı: *"silik olarak görünüyor fakat hesaba katılıyor mu belli
+    olmuyor. Düz direkt default değer yazsın ve yanında ufak bir 'i'"*).
+    • Pencere ve köprü AYNI fonksiyonu okur, dönüş `{deger, kaynak, alan,
+      ipucu}`: `veFeadKasnakAtalet` · `veFeadGergiAtalet` · `veFeadBoyOfseti` ·
+      `veFeadKayisKutlesi` · `veFeadKayisToleransi` · `veFeadAsinmaPayi`.
+      Boş alanın varsayılanı YER TUTUCU DEĞİL, alanın DEĞERİ; yazınca `elle`,
+      silince varsayılan değer geri gelir (`veFeadVarsayilanSet` yerinde).
+    • **Sürücüde krank mili ataleti kasnağınkinden ÖNCE** — rapor 0,064
+      basarken model 0,70 ile çözüyordu (BMC, AG00976).
+    • **Tolerans basamağı KULLANILAN boydan** (serbest kipte çözülen) —
+      soluk '6', kısa kayışta köprünün kullandığı 5'i gizliyordu.
+    • İpucu metni ÖRNEKLEMDEN (`VE_FEAD_ORNEKLEM`, Gates PDF okumasıyla
+      birebir). Kutu belgenin gövdesinde (kaydırma kabı kırpmasın), düğmesinden
+      uzun yaşamaz, ESC önce onu kapatır (tek tuş, tek katman). İkon
+      `veIkon('info')`.
+    Kapılar: `fead-surucu-pencere.test.js` → *"ATALET"* (12 örnek · 52 kasnak)
+    + *"İPUCU"*, `fead-defaults.test.js` → *"'i' ipucunun örneklemi"*.
+
+43. **AKSESUAR MODELİ TEK SEÇİCİ, SEÇİM ÇEVRİME ULAŞIR** (2026-09-28,
+    kullanıcı: *"aksesuarları seçtiğimde bile değerleri sanki gelmiyor … bayat
+    gibi"*). BMC künyesi ve Araç Performans modeli Rol sekmesinde TEK listede
+    (`veFeadAccModelOpts`, `bmc:` / `ap:` ön ekli) ve TEK yazıcıda
+    (`veFeadAccModelSet` — sihirbazla aynı, kural 24). Eğri getiren seçim o
+    aksesuarın çevrim kW'larını siler — öncelik `çevrim kW > kendi eğri >
+    katalog` olduğu için silinmeseydi seçim sonuca ULAŞMIYORDU (AG00976
+    alternatör 3,61 … 4,02 kW sabit). Başka kataloğa geçiş künyenin yazdığını
+    temizler. Kapı: `fead-surucu-pencere.test.js` → *"MODEL"*.
+
+44. **PENCERE AÇIKLAMA TAŞIMAZ, DURUM SÖYLER** (2026-09-28, kullanıcı:
+    *"bileşen pencerelerinin içeriği birer felaket … gereksiz açıklamalar var.
+    Hepsini kaldıralım"*). Pencerede kalan not bir DURUMdur: uyarı (sapma,
+    bant dışı, eksik), bir hükmün cümlesi ya da okumanın anahtarı (◆ gibi).
+    "Bu alan şuna girer / neden böyle" açıklaması KILAVUZDADIR
+    (`js/guide-fead.js`); aynı sayıyı ikinci kez söyleyen not da açıklamadır
+    (ölçüldü: 12 örneğin pencerelerinde 590 not → 135). Kapı: kural 26'nın
+    kapıları + `fead-pencere-ailesi.test.js`.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

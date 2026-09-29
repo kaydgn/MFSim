@@ -235,9 +235,31 @@ function _gfSahneKasnakPaneli(){
 
 function _gfSahneDevirSinir(){
   return _gfSahneKart2('getFeadPulleyPropertiesHTML', 'Devir sınırları',
-    'Yalnız <b>aksesuar</b> kasnaklarında çizilir (alternatör · klima · hava '
-    + 'kompresörü); sürücü ya da avara kasnağında bu kart yoktur. Üç sınır da boşsa '
-    + 'uygunluk kapısı o kasnak için <b>hüküm veremez</b>.');
+    'Aksesuar kasnağının devir sınırları — değerleri <b>Model</b> seçiminden gelir, elle '
+    + 'girilen değer onların önüne geçer. Üç sınır da boşsa uygunluk kapısı o kasnak için '
+    + '<b>hüküm veremez</b>. Sürücüde aynı sekme motorun sınırlarını taşır, avarada yoktur.');
+}
+
+// AKSESUARIN MODEL SEÇİCİSİ — iki katalog, tek liste (sihirbazla aynı).
+function _gfSahneModel(){
+  return _gfSahneKart2('getFeadPulleyPropertiesHTML', 'Katalog modeli',
+    'Aksesuarın <b>tek</b> model seçicisi: BMC künyeleri ve Araç Performans kataloğu aynı '
+    + 'listede. Altındaki iki satır seçimin neyi getirdiğini okur; çevrimde bu aksesuar için '
+    + 'elle yazılmış kW varsa sayısıyla uyarır — o satırlarda eğri kullanılmaz.');
+}
+
+// SÜRÜCÜ KASNAĞIN PENCERESİNDEN tek kart. Sürücü KÖPRÜNÜN seçtiği kasnak
+// (`veFeadResolveDriver`) — örnekte fan kasnağı: ikincil tahrikte FEAD'i o
+// çeviriyor. Tip aramak ("fead-crank") örnekte hiçbir şey bulmazdı.
+function _gfSahneSurucuKart(baslik, altyazi){
+  var html = _gfSahneHTML(function(O){
+    if(typeof getFeadPulleyPropertiesHTML !== 'function' || typeof veFeadResolveDriver !== 'function')
+      return '';
+    var drv = (O.build && O.build.order) ? veFeadResolveDriver(O.build.order) : null;
+    if(!drv) return '';
+    return (typeof veGuideCard === 'function') ? veGuideCard(getFeadPulleyPropertiesHTML(drv), baslik) : '';
+  });
+  return html ? veGuideScene(html, altyazi) : '';
 }
 
 // Tuval kartları — ikisi de AYNI çiziciden (`veFeadLayoutCardHTML`), tipe
@@ -415,16 +437,29 @@ function _gfSahneKayisKatalog(){
 
 function _gfSahneAlgilanan(){
   return _gfSahneKart2('getFeadSolverPropertiesHTML', 'Algılanan model',
-    'Çözücünün ilk kartı modelin tamam olup olmadığını satır satır yazar. '
+    'Çözücünün <b>Model</b> sekmesi modelin tamam olup olmadığını satır satır yazar. '
     + '<b>▶ Hesapla</b> ancak burada sarı satır kalmadığında ve en az bir devir '
     + 'noktası girildiğinde etkinleşir.');
 }
 
+function _gfSahneYontem(){
+  return _gfSahneKart2('getFeadSolverPropertiesHTML', 'Çözüm zinciri',
+    'Çözücünün <b>Yöntemler</b> sekmesi: çözümün aşamaları, her birinin sayısal yöntemi '
+    + 've girdisinin düzenlendiği pencere. Her satır programdaki bir çağrıya bağlıdır.');
+}
+
+function _gfSahneMotor(){
+  return _gfSahneSurucuKart('Motor',
+    'Sürücü kasnağın <b>Motor</b> sekmesi: BMC motor kataloğu, silindir sayısı, servis '
+    + 'faktörü, ivmelenme ve yavaşlama; altında seçilen motorun devir sınırları, güç eğrisi '
+    + 've FEAD tahriki. Motor seçimi sınırları ve — varsa — ara kademenin çaplarını da yazar.');
+}
+
 function _gfSahneCevrim(){
-  return _gfSahneKart2('getFeadSolverPropertiesHTML', 'Çalışma çevrimi',
-    'Çalışma çevrimi tablosu: her satır bir devir noktası, sütunlar da aksesuarlar. '
-    + 'Üstteki <b>Çevrim kaydı</b> seçicisi yedi ölçülmüş çevrimden birini bir anda '
-    + 'doldurur.');
+  return _gfSahneSurucuKart('Çalışma çevrimi',
+    'Sürücü kasnağın <b>Çevrim</b> sekmesi: her satır bir devir noktası, sütunlar da '
+    + 'aksesuarlar. Üstteki <b>Çevrim kaydı</b> seçicisi yedi ölçülmüş çevrimden birini bir '
+    + 'anda doldurur.');
 }
 
 function _gfSahneRapor(){
@@ -488,7 +523,7 @@ var VE_GUIDE_FEAD_SECTIONS = [
   ['g6',  '6',    'Kasnak künyelerini girmek'],
   ['g7',  '7',    'Otomatik gergiyi tanımlamak'],
   ['g8',  '8',    'Kayış künyesi ve katalog'],
-  ['g9',  '9',    'Çalışma çevrimi ve motor künyesi'],
+  ['g9',  '9',    'Sürücü kasnak: motor, tahrik ve çalışma çevrimi'],
   ['g10', '10',   'Modeli çözmek'],
   ['g11', '11',   'Sonuçları okumak'],
   ['g12', '12',   'Rapor üretmek'],
@@ -1095,9 +1130,12 @@ function _gfSec6(){
       + 'aynısı; orijin sürücü kasnaktır ve işareti sayfadaki gibi yazılır'],
     ['Sürücü kasnak', 'Tek kasnakta işaretlenir', 'Kayışı hangi kasnağın döndürdüğü. Bir '
       + '<strong>roldür</strong>, tip değil: ikincil tahrikte fan kasnağı da sürücü olabilir.'],
-    ['Atalet J', 'kg·m²', 'Tepe yük ve burulma titreşimi hesabına girer'],
-    ['Katalog modeli', 'Alternatör / klima / hava kompresörü için hazır devir → kW eğrisi',
-      'Araç Performans modülüyle ortak katalog'],
+    ['Atalet', 'kg·m², <strong>değeriyle yazılı</strong>', 'Tepe yük ve burulma titreşimi hesabına '
+      + 'girer. Boşken arşivin medyanı alanın <em>değeri</em> olarak görünür; yanındaki '
+      + '<strong>i</strong> kaynağını söyler. Sürücüde alan <strong>krank milinin</strong> ataletidir'],
+    ['Model', 'Alternatör / klima / hava kompresörü — <strong>tek seçici</strong>',
+      'BMC künyeleri (devir sınırı + eğri) ve Araç Performans kataloğu (eğri) aynı listede; '
+      + 'sihirbazın seçicisiyle aynı'],
     ['Güç eğrisi', 'Aksesuar devri → kW tablosu', 'Bilgi sayfasındaki grafiğin altındaki '
       + 'tablo. Girilirse <strong>katalog modelinin önüne geçer</strong>.']
   ]);
@@ -1117,11 +1155,17 @@ function _gfSec6(){
   h += _gfAlanTablo('Aksesuar gücünün iki kaynağı', [
     ['Güç eğrisi', 'Kasnak panelinde, aksesuar devri → kW tablosu',
       'Bilgi sayfası her aksesuar için kendi ölçülmüş eğrisini veriyorsa'],
-    ['Çalışma çevrimi hücresi', 'Çözücü panelinde, devir satırı × kasnak sütunu',
+    ['Çalışma çevrimi hücresi', 'Sürücü kasnağın Çevrim sekmesinde, devir satırı × kasnak sütunu',
       'Tedarikçi raporu güçleri doğrudan devir noktası başına veriyorsa'],
-    ['Katalog modeli', 'Kasnak panelinde hazır eğri seçimi',
+    ['Model', 'Kasnak panelinin Rol sekmesinde, hazır model seçimi',
       'Elinizde ölçülmüş eğri yoksa; boş bırakılan kW hücreleri buradan dolar']
   ], ['Kaynak', 'Nerede', 'Ne zaman']);
+  h += _gfNot('Model seçmek o aksesuarın çevrim kW’larını siler',
+      'Öncelik sırası <em>çevrimdeki kW › kendi eğrisi › katalog</em>. Elle yazılmış bir kW '
+    + 'seçilen modeli o satırda sessizce ezerdi; bu yüzden eğri getiren bir seçim, '
+    + '<strong>o aksesuarın</strong> çevrim hücrelerini temizler ve kaç hücre olduğunu söyler. '
+    + 'Sonradan kW yazarsanız Model kartı ve Güç eğrisi sekmesi bunu satır sayısıyla uyarır.');
+  h += _gfSahneModel();
   h += _gfSahneKasnakPaneli();
   h += '<h3>6.2 Devir sınırları — uygunluk kapısının girdisi</h3>';
   h += _gfSahneDevirSinir();
@@ -1130,11 +1174,9 @@ function _gfSec6(){
     + '<strong>girdisidir</strong>: onlar boşsa kapı hüküm veremez ve o kasnak '
     + '<strong>“değerlendirilemedi”</strong> sayılır — uygun sayılmaz.</p>';
   h += _gfAlanTablo('Devir sınırları kartı', [
-    ['BMC künyesi', 'Hazır aksesuar kaydı seçimi',
-      'On alternatör ve dört klima kompresörü künyesi. Seçim üç sınırı — ve varsa devir/kW '
-      + 'eğrisini — bir anda yazar'],
     ['Optimum [d/dk]', 'Aksesuarın çalışmasının istendiği devir',
-      'Katalogdan gelir; elle girilen değer katalogun önüne geçer'],
+      '<strong>Model</strong> seçiminden gelir (on alternatör ve dört klima künyesi); elle '
+      + 'girilen değer katalogun önüne geçer'],
     ['Maks. sürekli [d/dk]', 'Sürekli aşılmaması gereken devir',
       'Optimum ile bu değerin arası <strong>çalışma bandıdır</strong>: motor '
       + '<em>governed</em> devrindeyken aksesuar bu banda düşmüyorsa panel '
@@ -1441,10 +1483,17 @@ function _gfSec8(){
 
 function _gfSec9(){
   var h = _gfH2(8);
-  h += '<p><strong>FEAD araçları</strong> penceresinin <em>Çözüm</em> bölümündeki <strong>Ayarlar</strong> '
-    + 'bağlantısına basın: <strong>Çözücü</strong> penceresi açılır. Modelin geri kalanı burada '
-    + 'toplanır.</p>';
-  h += _gfSahneAlgilanan();
+  h += '<p><strong>Sürücü kasnağın</strong> penceresini açın — çoğunlukla krank kasnağı; '
+    + 'ikincil tahrikte FEAD’i çeviren fan kasnağı. Çizimde kasnağa ya da Kayış Tablosu’nda '
+    + 'sürücü satırının adına tıklayın. Sürücüde <em>Geometri</em> ve <em>Rol</em>’ün yanında '
+    + 'iki sekme daha vardır: <strong>Motor</strong> (motor, devir sınırları, güç eğrisi, FEAD '
+    + 'tahriki) ve <strong>Çevrim</strong>. <strong>Çözücü</strong> penceresi yalnız yöntemleri, '
+    + 'modeli ve sonucu gösterir (Bölüm 10).</p>';
+  h += _gfNot('Veri kasnakta değil, modelde saklanır',
+      'Sürücülük bir <strong>roldür</strong>: işareti başka bir kasnağa verirseniz bu iki sekme o '
+    + 'kasnağın penceresine geçer. Motor ve çevrim kasnağa bağlı saklanmaz — sürücü kasnağı '
+    + 'silmek ya da değiştirmek çalışma çevrimini <strong>kaybettirmez</strong>.');
+  h += _gfSahneMotor();
   h += '<h3>9.1 FEAD tahriki — krank ile sürücü kasnak arasındaki oran</h3>';
   h += '<p>FEAD kayışının sürücü kasnağı krank milinde olmak zorunda değildir: yaygın bir '
     + 'düzende krank ayrı bir kademeyle fan kasnağını döndürür, FEAD kayışı da onun üzerinden '
@@ -1467,8 +1516,8 @@ function _gfSec9(){
   h += _gfNot('Elle oran girme yolu kaldırıldı',
       'Oran artık yalnız <strong>çaplardan</strong> türer. Elle yazılan oran, '
     + 'spesifikasyon incelemesinin en ciddi bulgusuydu: hesap sayfasındaki elle yazılmış '
-    + 'hız oranları bütün gerilmeleri <strong>%17</strong> düşürüyordu. Sihirbazdan '
-    + '2026-09-01’de kalkmıştı, Çözücü panelinde kalmıştı; artık ikisinde de yok. '
+    + 'hız oranları bütün gerilmeleri <strong>%17</strong> düşürüyordu. Hiçbir yüzey artık '
+    + 'elle oran sormaz. '
     + 'Elinizde o kipte kurulmuş <em>eski bir model</em> varsa panel onu bir kez daha '
     + 'gösterir ve “ESKİ KAYIT” diye işaretler — düzeni değiştirdiğinizde satır bir daha '
     + 'görünmez.');
@@ -1487,13 +1536,15 @@ function _gfSec9(){
     + 'kaymış, kayış hızı 17,5 yerine 25,0 m/s çıkmıştı. Hata sessizdi çünkü çaplar '
     + 'geçerli sayılardı; yanlış olan <em>düzendi</em>. İlk iki seçenek tam bunun için var: '
     + 'düzeni ilan ediyorsunuz, sayı üretmiyorsunuz.');
-  h += '<h3>9.2 Motor künyesi</h3>';
-  h += '<p>Kartın en üstünde <strong>BMC motor kataloğu</strong> seçicisi durur: '
+  h += '<h3>9.2 Motor ve devir sınırları</h3>';
+  h += '<p><em>Motor</em> sekmesinin en üstünde <strong>BMC motor kataloğu</strong> seçicisi durur: '
     + '<strong>yirmi dört motor</strong>, BMC’nin kendi FEAD hesap defterinin '
     + '<em>Motor bilgileri</em> sayfasından. Bir kayıt seçmek <strong>silindir sayısını, '
     + 'devir sınırlarını ve birinci kademe çaplarını</strong> yazar; kasnak koordinatlarına ve '
-    + 'kayışa <strong>dokunmaz</strong>.</p>';
-  h += _gfAlanTablo('Sorulan üç devir sınırı', [
+    + 'kayışa <strong>dokunmaz</strong>. Devir sınırları ve güç eğrisi seçicinin hemen altındadır — '
+    + 'seçimin getirdiği şey aynı sekmede görünür. Aksesuarlarda <em>Devir sınırları</em> ve '
+    + '<em>Güç eğrisi</em> ayrı sekmelerdir ve aksesuarın kendisininkini taşır.</p>';
+  h += _gfAlanTablo('Sürücünün üç devir sınırı', [
     ['Rölanti', 'Motorun boştaki devri',
       'Çalışma çevriminin alt ucu; geçici rejim senaryosunun başlangıcı'],
     ['Governed', 'Yük altındaki azami devir',
@@ -1501,28 +1552,37 @@ function _gfSec9(){
     ['Overspeed', 'Anlık aşım devri',
       'Aksesuar <strong>anlık maksimum</strong> kapısı bu devirde ölçülür']
   ], ['Sınır', 'Nedir', 'Nereye girer']);
-  h += _gfNot('“No load governed” artık sorulmuyor',
+  h += _gfNot('“No load governed” sorulmuyor',
       'Katalogda duruyor ve künye seçilince modele yazılıyor — ama onu <em>okuyan</em> '
-    + 'hiçbir hesap, uygunluk kapısı ya da rapor satırı yoktu. Girdi olarak durduğu sürece '
-    + '“girdim, hesaba girdi” izlenimi veriyordu; alan hem Çözücü panelinden hem '
-    + 'sihirbazdan kaldırıldı.');
+    + 'hiçbir hesap, uygunluk kapısı ya da rapor satırı yok. Sorulsaydı hesaba giriyormuş '
+    + 'izlenimi verirdi; ne pencere ne sihirbaz soruyor.');
   h += _gfNot('Katalogdan sapmak serbest — ama sessiz değil',
       'Seçimden sonra bir alanı elle değiştirirseniz kart bunu <strong>yazar</strong>: '
     + '“Katalogdan sapıldı: …”. Bu bir hata değildir — kayıt varyanta göre değişebilir — ama '
     + 'bir <strong>yazım hatası da tam burada görünür</strong>. Alanlar kayıtla birebirse '
     + 'kart onu da söyler.');
-  h += _gfAlanTablo('Motor künyesi kartı — kalan alanlar', [
+  h += _gfAlanTablo('Motor sekmesi — kalan alanlar', [
     ['Silindir sayısı', 'Adet', 'Ateşleme frekansını verir (dört zamanlıda '
       + 'f = devir/60 × silindir/2); açıklık rezonans kontrolünde kullanılır'],
     ['Servis faktörü', 'Boyutsuz, tipik 1,3', 'Kayma emniyetinin istenen alt sınırı; sonuç '
-      + 'tablosunda hüküm verir'],
-    ['Krank ataleti', 'kg·m²', 'Burulma titreşimi modeline girer — kasnağın değil '
-      + '<strong>krank milinin</strong> ataleti'],
-    ['İvmelenme', 'RPM/s', 'Tepe yük taramasına girer'],
+      + 'tablosunda hüküm verir. Boşsa hüküm konmaz'],
+    ['İvmelenme', 'RPM/s', 'Tepe yük taramasına ve senaryo rampasına girer'],
     ['Yavaşlama', 'RPM/s', 'Aynı taramanın diğer dalı']
   ]);
-  h += '<h3>9.3 Çalışma çevrimi tablosu</h3>';
-  h += '<p>Tablonun üstünde bir <strong>Çevrim kaydı</strong> seçicisi vardır: '
+  h += _gfNot('Krank mili ataleti',
+      'Burulma titreşimi modelinin krank serbestliği kasnağın değil <strong>krank milinin</strong> '
+    + 'ataletini ister. Sürücünün <em>Rol</em> sekmesindeki atalet alanı budur ve değeriyle '
+    + 'yazılıdır: boşken Gates arşivinin medyanı (0,50 kg·m²), yanındaki <strong>i</strong> '
+    + 'kaynağını söyler.');
+  h += '<h3>9.3 Güç eğrisi — motorun tam yük eğrisi</h3>';
+  h += '<p>Motor sekmesindeki <em>Güç eğrisi</em> kartı seçilen motorun <strong>tam yük tork ve güç '
+    + 'eğrisini</strong> katalogdan, salt okunur gösterir. Aynı eğri geçici rejim senaryosunun '
+    + 'rampa şeklini verir. Altındaki tablo çalışma çevriminin her satırında aksesuarların '
+    + 'toplam gücünü motorun o devirdeki tam yük gücüyle kıyaslar — FEAD’in motor gücündeki '
+    + '<strong>payı</strong>. Pay %100’ü aşarsa kart bunu kırmızıyla yazar: çevrimdeki kW '
+    + 'değerleri ya da motor seçimi tutarsızdır.</p>';
+  h += '<h3>9.4 Çalışma çevrimi tablosu</h3>';
+  h += '<p>Sürücünün <em>Çevrim</em> sekmesi. Tablonun üstünde bir <strong>Çevrim kaydı</strong> seçicisi vardır: '
     + '<strong>yedi ölçülmüş çalışma çevrimi</strong> — altısı Gates arşivinden, biri BMC '
     + 'tedarikçi sayfasından. Bir kayıt seçmek devir · %zaman · sıcaklık satırlarını bir anda '
     + 'doldurur; sihirbazdaki kart da <strong>aynı kütüphaneyi</strong> kullanır, yani orada '
@@ -1545,7 +1605,7 @@ function _gfSec9(){
     'Satıra <strong>devir</strong>, o devirde geçirilen <strong>%zaman</strong> ve kayış '
       + '<strong>sıcaklığını</strong> yazın.',
     'Aksesuar sütunlarına o devirdeki <strong>kW</strong> değerlerini girin. Boş bıraktığınız '
-      + 'hücre, o aksesuarda katalog modeli seçiliyse eğriden dolar; seçili değilse 0 sayılır.',
+      + 'hücre, o aksesuarda model ya da güç eğrisi varsa eğriden dolar; yoksa 0 sayılır.',
     'Bütün devir noktalarını girdikten sonra <strong>%zaman toplamının 100</strong> olduğunu '
       + 'doğrulayın.'
   ]);
@@ -1569,8 +1629,14 @@ function _gfSec10(){
     + 'gergi panelindeki avara hareketi okuması ve gergi konum tablosu çalışma çevrimi '
     + 'gerektirmez — '
     + 'geometriden ve yay dengesinden gelirler.</p>';
+  h += '<p><strong>FEAD araçları</strong> penceresinin <em>Çözüm</em> bölümündeki <strong>Ayarlar</strong> '
+    + 'bağlantısı <strong>Çözücü</strong> penceresini açar. Pencere girdi sormaz; üç sekmesi '
+    + 'vardır: <strong>Yöntemler</strong> (çözümün aşamaları ve sayısal yöntemleri), '
+    + '<strong>Model</strong> (çözücünün modeli nasıl okuduğu) ve <strong>Sonuç</strong>.</p>';
+  h += _gfSahneYontem();
+  h += _gfSahneAlgilanan();
   h += _gfAdimlar([
-    'Çözücü penceresinde (FEAD araçları → <strong>Ayarlar</strong>) <strong>Algılanan '
+    'Çözücü penceresinin <strong>Model</strong> sekmesinde <strong>Algılanan '
       + 'model</strong> tablosuna bakın: kasnak sayısı, sürücü, '
       + 'gergi, kayış künyesi, temas tarafı dağılımı, tahrik oranı, türetilen tasarım '
       + 'gerginliği ve “Geometri: çözüldü” satırı.',
@@ -1709,7 +1775,7 @@ function _gfSec11(){
   h += _gfUyari('Devir geçmişi DAYATILIR, simüle edilmez',
       'Senaryo bir motor dinamiği çözümü <strong>değildir</strong>: MFSim’in FEAD modelinde '
     + 'volan ataleti yoktur (modeldeki krank ataleti burulma modelinin girdisidir). Devir '
-    + 'eğrisi <strong>dayatılır</strong> — rampanın dikliği Çözücü panelindeki '
+    + 'eğrisi <strong>dayatılır</strong> — rampanın dikliği sürücü kasnağın Motor sekmesindeki '
     + '<em>İvmelenme</em> / <em>Yavaşlama</em> alanlarınızdan, şekli motorun tork eğrisinden '
     + 'gelir. Gerginlik, hubload ve çırpınma o dayatılmış devirde <strong>gerçekten</strong> '
     + 'hesaplanır; devrin kendisi bir girdidir, bir sonuç değil.');
@@ -1738,16 +1804,18 @@ function _gfSec11(){
       + 'kapatılan çıktıların listesi', 'Hayır'],
     ['Kayış Yolu paneli', 'Geometri tablosu: kasnak · temas · çıkış açıklığı · sarım · hız '
       + 'oranı; altında efektif boy, pitch boyu ve Σ sarım', 'Hayır'],
-    ['Çözücü paneli — üst', 'Algılanan model · <strong>Gergi konum tablosu</strong> (altı '
+    ['Çözücü — Model sekmesi', 'Algılanan model · <strong>Gergi konum tablosu</strong> (altı '
       + 'konum × kol açısı, gerginlik, hubload, yön, β, sarım) · '
       + '<strong>Uygunluk kapıları</strong> · uyarılar', 'Hayır'],
-    ['Çözücü paneli — alt', 'Çıkış gerilmeleri ve min. kayma emniyeti hükmü · hubload · '
+    ['Çözücü — Sonuç sekmesi', 'Çıkış gerilmeleri ve min. kayma emniyeti hükmü · hubload · '
       + 'burulma titreşimi · kaburga yorulma dağılımı · B10 ömür · geçerlilik sınırları',
       '<strong>Evet</strong>'],
+    ['Sürücü kasnak — Güç eğrisi', 'Motorun tam yük eğrisi · çevrimde FEAD’in motor gücündeki payı',
+      'Hayır'],
     ['Rapor kutusu', 'Detaylı ya da Özet HTML belge', '<strong>Evet</strong>']
   ], ['Panel', 'Ne okunur', 'Hesapla gerekir mi']);
   h += '<h3>11.4 Uygunluk kapıları — üç hüküm</h3>';
-  h += '<p>Çözücü panelindeki <strong>Uygunluk kapıları</strong> kartı, BMC’nin kendi FEAD '
+  h += '<p>Çözücünün <em>Model</em> sekmesindeki <strong>Uygunluk kapıları</strong> kartı, BMC’nin kendi FEAD '
     + 'hesap defterinden gelen üç kuralı model üzerinde ölçer. Kart <strong>çözüm '
     + 'gerektirmez</strong>: geometri ve künyeler tamamsa hüküm oradadır.</p>';
   h += _gfTablo('Üç kapı',
@@ -2167,7 +2235,7 @@ function _gfSec14(){
     h += _gfNot('İki farklı uzunluk — karıştırmayın',
         'Kayışın <strong>kendi efektif boyu</strong> ' + _gfFs(b.beltLengthMm, 2) + ' mm; '
       + 'kayışın bu güzergâhta kat ettiği <strong>efektif tahrik boyu</strong> ise '
-      + _gfFs(geom.LeffMm, 1) + ' mm. Aradaki fark Çözücü panelindeki <em>boy ofsetidir</em> '
+      + _gfFs(geom.LeffMm, 1) + ' mm. Aradaki fark kayış penceresinin Tasarım sekmesindeki <em>boy ofsetidir</em> '
       + '(bu örnekte ' + _gfF(O.cozucu.data.lengthOffsetMm, 2) + ' mm). Rapor ikisini ayrı '
       + 'adlandırır; antette yan yana durdukları için bir dönem aynı sayının iki kez basıldığı '
       + 'sanılıyordu.<br><br>'
@@ -2305,7 +2373,8 @@ function _gfEkA(){
   h += '<p>Bir alanı nerede bulacağınızı hatırlamak için. Panel adları programdaki '
     + 'başlıklarla birebir aynıdır.</p>';
   h += '<p>Kasnak ve gergi panelleri <strong>Kayış Tablosu’ndaki ada tıklanarak</strong> '
-    + 'açılır; Kayış Özellikleri çizimdeki <strong>kayışa tıklanarak</strong>; Çözücü ve Rapor '
+    + 'açılır (motor, tahrik ve çevrim <strong>sürücü</strong> kasnağın penceresinde); Kayış '
+    + 'Özellikleri çizimdeki <strong>kayışa tıklanarak</strong>; Çözücü ve Rapor '
     + 'pencereleri <strong>FEAD araçları</strong> penceresinden (<em>Ayarlar</em> · '
     + '<em>Künye</em>).</p>';
   h += _gfTablo('Alan → panel eşlemesi',
@@ -2321,8 +2390,8 @@ function _gfEkA(){
         'Türeyen sütunlar; Σsarım Kayış Yolu kartının rozetinde'],
       ['Temas tarafı (ayrıntı) ve kasnak geometrisi', 'Kasnak',
         'Temas tarafı · Kasnak geometrisi'],
-      ['Sürücü kasnak seçimi', 'Kasnak', 'Rol'],
-      ['Aksesuar güç eğrisi', 'Kasnak', 'Katalog modeli · Güç eğrisi'],
+      ['Sürücü kasnak seçimi · atalet', 'Kasnak', 'Rol'],
+      ['<strong>Aksesuar modeli</strong> ve güç eğrisi', 'Kasnak', 'Katalog modeli · Güç eğrisi'],
       ['<strong>Aksesuar devir sınırları (optimum · sürekli · anlık)</strong>', 'Kasnak',
         'Devir sınırları'],
       ['Gergi avarasının merkezi', 'Gergi', 'Avara kasnağının merkezi'],
@@ -2339,12 +2408,15 @@ function _gfEkA(){
       ['<strong>Kaburga başına kütle</strong>', 'Kayış Özellikleri', 'Malzeme'],
       ['Kayış tipine bağlı çıktılar anahtarı', 'Kayış Özellikleri',
         'Kayış tipine bağlı çıktılar'],
-      ['FEAD tahrik düzeni / krank ve kademe çapı', 'Çözücü', 'FEAD tahriki'],
-      ['Silindir sayısı, servis faktörü, krank ataleti, <strong>motor kataloğu</strong>',
-        'Çözücü', 'Motor künyesi'],
+      ['FEAD tahrik düzeni / krank ve kademe çapı', 'Kasnak', 'FEAD tahriki'],
+      ['Silindir sayısı, servis faktörü, ivme, <strong>motor kataloğu</strong>',
+        'Kasnak', 'Motor'],
+      ['Motorun rölanti · governed · overspeed devri', 'Kasnak', 'Devir sınırları'],
+      ['<strong>Motorun tam yük eğrisi</strong> ve FEAD’in payı', 'Kasnak', 'Güç eğrisi'],
       ['Devir, %zaman, sıcaklık, aksesuar kW, <strong>çevrim kaydı</strong>',
-        'Çözücü', 'Çalışma çevrimi'],
-      ['Yorulma modeli ve boy ofseti', 'Çözücü', 'Tasarım'],
+        'Kasnak', 'Çalışma çevrimi'],
+      ['Yorulma modeli ve boy ofseti', 'Kayış Özellikleri', 'Tasarım'],
+      ['<strong>Çözümün aşamaları ve sayısal yöntemleri</strong>', 'Çözücü', 'Çözüm zinciri'],
       ['Türeyen tasarım gerginliği', 'Çözücü', 'Algılanan model'],
       ['Gergi kol konumları (altı konum)', 'Çözücü', 'Gergi konum tablosu'],
       ['<strong>Merkez mesafesi · çevrim oranı · devir sınırı hükmü</strong>', 'Çözücü',

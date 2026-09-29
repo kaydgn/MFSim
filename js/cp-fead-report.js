@@ -2473,8 +2473,8 @@ function _frTorsionalSection(R){
     // Hesaplanamadıysa SEBEBİ yazılır; boş bölüm "yok" sanılır.
     h += '<div class="note warn"><span class="t">Hesaplanamadı</span>'
        + 'Burulma modeli her kasnağın atalet momentini, gergi kolunun ataletini ve gergi kasnağının '
-       + 'kütlesini ister. Bunlardan biri eksikse model kurulamaz — eksik olan alan Çözücü panelindeki '
-       + 'uyarı satırında yazılıdır. Tedarikçi raporunun "System Vibration Analysis" sayfası bu '
+       + 'kütlesini ister. Bunlardan biri eksikse model kurulamaz — eksik olan alan Çözücü penceresinin '
+       + 'Model sekmesindeki uyarılarda yazılıdır. Tedarikçi raporunun "System Vibration Analysis" sayfası bu '
        + 'değerleri listeler.</div>';
     return h;
   }

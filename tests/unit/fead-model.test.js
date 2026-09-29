@@ -794,16 +794,30 @@ describe('burulma modeli köprüsü', () => {
     expect(build.sys.tensioner.pulleyMassKg).toBeCloseTo(0.80, 12);
   });
 
-  test('KRANK ATALETİ Çözücü panelinden burulma modeline geçiyor', () => {
+  test('KRANK MİLİ ATALETİ burulma modeline geçiyor — MODELİN İÇİNDEN, seçenek gerekmeden', () => {
     // Bu alan burulma modeli gelene kadar ÖLÜ GİRDİYDİ: panelde soruluyor,
     // hiçbir yere gitmiyordu. Şimdi krank serbestliğinin ataleti oluyor.
-    const { build, rows, solv } = bmc();
+    //
+    // 2026-09-28: köprü sürücü kasnağa krank MİLİ ataletini yazıyor
+    // (`veFeadKasnakAtalet`) — penceredeki değer, rapordaki sütun ve burulma
+    // modeli TEK sayı. `crankInertia` seçeneği artık ikinci bir yol değil,
+    // aynı cevabı veriyor. Alanın CANLI olduğunu kanıtlayan şey: depodan
+    // silinince sürücü kasnağın kendi alanına (0,064) düşüp frekansın
+    // kayması.
+    const { build, rows, solv, nodes } = bmc();
     expect(_feadNum(solv.data.crankInertia, 0)).toBeCloseTo(0.70, 12);
+    const i = build.sys._crkIdx;
+    expect(build.sys.pulleys[i].inertiaKgM2).toBeCloseTo(0.70, 12);
 
     const ile = veFeadAnalyze(build, { rows, crankInertia: 0.70 });
-    const siz = veFeadAnalyze(build, { rows });          // krank kasnağı 0.064
+    const yalniz = veFeadAnalyze(build, { rows });
     expect(ile.torsional).toBeTruthy();
-    expect(siz.torsional).toBeTruthy();
+    expect(yalniz.torsional.firstElasticHz).toBeCloseTo(ile.torsional.firstElasticHz, 9);
+
+    delete solv.data.crankInertia;
+    const b2 = veFeadBuildSystem(nodes);
+    expect(b2.sys.pulleys[i].inertiaKgM2).toBeCloseTo(0.064, 12);     // eski kaydın kasnak alanı
+    const siz = veFeadAnalyze(b2, { rows });
     // Ayrışmak ZORUNDA — aynı çıkarsa alan yine bağlanmamış demektir.
     expect(ile.torsional.firstElasticHz)
       .not.toBeCloseTo(siz.torsional.firstElasticHz, 1);
