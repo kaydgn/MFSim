@@ -99,6 +99,26 @@ const olc = async (browser, html) => {
       if (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)
         out.kesik.push(el.tagName + ' "' + el.textContent.slice(0, 30) + '" ' + el.scrollWidth + '/' + el.clientWidth + ' ' + el.scrollHeight + '/' + el.clientHeight);
     });
+    // HÜCRE PAYI — yazının GERÇEK genişliği içerik kutusundan en az 1 px dar.
+    // scrollWidth tam sayıya yuvarlanıyor ve 1 px payla 0,84 px'lik taşmayı
+    // görmüyordu; hücrenin üç nokta kuralı o taşmayı "156,…" diye BASIYORDU
+    // (ölçüldü: 11 örnekte 36 hücre — β'da 25, "Ömür" başlığında 11).
+    // Başlığın birim satırı (<i>, blok) ayrı satırdır, ayrı ölçülür.
+    document.querySelectorAll('.pn td, .pn th').forEach((el) => {
+      const cs = getComputedStyle(el);
+      const ic = el.getBoundingClientRect().width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+        - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+      const birim = el.querySelector(':scope > i');
+      const rg = document.createRange();
+      let en = 0;
+      if (birim && el.firstChild !== birim) {
+        rg.setStartBefore(el.firstChild); rg.setEndBefore(birim);
+        const r2 = document.createRange(); r2.selectNodeContents(birim);
+        en = Math.max(rg.getBoundingClientRect().width, r2.getBoundingClientRect().width);
+      } else { rg.selectNodeContents(el); en = rg.getBoundingClientRect().width; }
+      if (en > ic - 1)
+        out.kesik.push(el.tagName + ' "' + el.textContent.slice(0, 30) + '" yazı ' + en.toFixed(2) + ' / kutu ' + ic.toFixed(2));
+    });
     const w = document.createTreeWalker(pn, NodeFilter.SHOW_TEXT);
     let n;
     while ((n = w.nextNode())) {
