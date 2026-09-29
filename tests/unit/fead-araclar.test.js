@@ -178,7 +178,7 @@ describe('bileşen sözleşmesi — araçlar KUTUSUZ, pencere onlara BAĞLANIR',
     expect(hata).not.toMatch(/palet/i);
   });
 
-  // KAPSAM SIĞDIRMADAN ÖNCE (kural 40): FEAD'e girerken "Bileşenler" sütunu
+  // KAPSAM SIĞDIRMADAN ÖNCE (kural 41): FEAD'e girerken "Bileşenler" sütunu
   // kalkıyor ve tuval 220 px genişliyor. Senkron sığdırmadan sonra koşsaydı
   // kadraj dar tuvalle kurulur, içerik sola kayık kalırdı. Ölçüm gerçek
   // tarayıcıda (fead-araclar.spec.js → "SÜTUNSUZ AÇILIŞ"); bu, sıranın kapısı.

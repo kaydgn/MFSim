@@ -510,7 +510,7 @@ olurdu.
     yüzeyi: tıklamak kasnağın penceresini açar, sürüklemek KONUM GİRDİSİNİ
     yazar (gergide avara merkezi `cenX/cenY` — montaj konumu ondan türer),
     ok 1 mm / Shift 10 mm, Delete siler; paftanın "＋ Kasnak ekle" listesinden
-    kayışın ÜSTÜNE sürüklenen kasnak iki komşunun ARASINA girer (kural 40 —
+    kayışın ÜSTÜNE sürüklenen kasnak iki komşunun ARASINA girer (kural 41 —
     FEAD'de sütun yok). Kurallar:
     • **Çizim kendi geometrisini hesaplamaz** — ters köprü çizicinin bastığı
       `data-fead-xf`ten; sürükleme boyunca ölçek DONAR (kasnak imleçten
@@ -566,10 +566,18 @@ olurdu.
       yazılıyordu, zarfa bağlı sahip ise bölünen ön ayarda cümleyi hiç
       yazmıyordu, ve tek kasnaklı kayma şeridi zarfın değerini o kasnağın
       adıyla basıyordu (yanlış sayı, sessiz).
+    • **Şerit yorumunun başlığı ŞERİDİ adlandırır**: kanalların çoğunluğunun
+      grubu ("Kayma emniyeti — 4 kanal"), yoksa küme. Küme adı iki şeritte
+      aynıydı (Hubload'un iki şeridi de "Çalışma çevrimi — 6 kanal").
+    • **Hüküm kanıtıyla**: devir sınırı kartı en dar payı ya da ihlali yazar,
+      Sonuç Özeti satırlarını basar (çözücü penceresinin kapı kartıyla aynı
+      `R.checks`). Kart yalnız "Uygun" diyordu — AG00976'da pay %4,9.
     Kapılar: `fead-sonuclar.test.js` (dört kusurun üçü + okuma sözleşmesi +
-    "yorum TEKRAR ETMEZ": 11 örnek × iki kayış kipi × Ayır/ön ayar düzeni),
+    "yorum TEKRAR ETMEZ": 11 örnek × iki kayış kipi × Ayır/ön ayar düzeni ·
+    SUNUM: sayı öbeği, devir sınırı kanıtı, şerit başlığı),
     `fead-sonuclar-sekme.test.js` (kablolama + "Sonuçları Temizle"),
-    `tests/e2e/fead-sonuclar.spec.js` (sayfa boyu kart, gerçek çizim).
+    `tests/e2e/fead-sonuclar.spec.js` (sayfa boyu kart, gerçek çizim; 1.920 ve
+    1.366'da kırpılan/bölünen yazı, bozuk lejant, bitişik hücre).
 
 34. **STEP'TEN KASNAK GEOMETRİSİ — OKUYUCU ANLAM YÜKLEMEZ, TANIYICI MODEL
     KURMAZ** (2026-09-26, kullanıcı isteği: CATIA/3DEXPERIENCE montajından
@@ -849,7 +857,30 @@ olurdu.
     • CAD seçili ama ölçü yoksa katalog + uyarı; sessiz yedek yok.
     Kapı: `fead-hesap-capi.test.js`.
 
-40. **"BİLEŞENLER" SÜTUNU YOK — EKLEME TUVALDE** (2026-09-28, kullanıcı
+40. **PROFİL GEOMETRİSİ PROJE TABLOSUNDA — çekirdeğin BELT_DB'si EKSİK**
+    (2026-09-28, ölçüm). Çekirdeğin kataloğunda GATES'in yalnız PK'sı var;
+    15 profil×marka bileşiminin DÖRDÜ (GATES + PH/PJ/PL/PM) dışarıda kalıyor
+    ve GATES panelin VARSAYILAN markası — kullanıcının yalnız PROFİLİ
+    değiştirmesi yetiyor. Kural 39'dan önce `makeSystem` hata fırlatıyordu;
+    39'dan sonra `veFeadKordOfset` `kaynak:'katalog'` deyip **h_b/h_r = NaN**
+    dönüyordu: çökmeden beter, çünkü panel "katalog" yazarken sayı yoktu.
+    • Eksik satır **çekirdeğe YAZILMAZ** (dışarıdan geldi, birebir durur).
+      Katalog projenin veri katmanında: `js/fead-belts.js` ·
+      `VE_FEAD_BELT_GEOM` (5 profil × 3 üretici).
+    • `veFeadKordOfset` çekirdek bilmiyorsa proje tablosuna düşer ve
+      `projeTablosu` bayrağını açar; köprü o bayrağı görünce çifti çekirdeğe
+      AÇIKÇA geçirir. Çekirdek bileşimi TANIYORSA hiçbir şey değişmez —
+      kalibre sabiti (`cordStiffnessNPerRib`) orada kalır, KOPYALANMAZ.
+    • Eşleme (proje satırı → çekirdeğin alan adları) tek yerde:
+      `veFeadBeltProjeProps`. İki kopya, birinde rib kütlesi unutulunca
+      açıklık frekanslarını sessizce düşürürdü.
+    • Her satır **kaynak damgası** taşır (`uretici` / `defter` / `iso`) ve
+      panel onu yazar: ISO nominaline düşülmüş bir h_b ile üreticinin kendi
+      h_b'si aynı hücrede aynı görünür, aynı şey değildir (kural 8).
+      Gates h_b/h_r'yi PJ/PL/PM için yayımlamıyor; PH'yi hiç üretmiyor.
+    Kapı: `fead-belt-geom.test.js`.
+
+41. **"BİLEŞENLER" SÜTUNU YOK — EKLEME TUVALDE** (2026-09-28, kullanıcı
     kararı: *"FEAD modülünde bu 'Bileşenler' sütununu kaldıralım, zaten
     ekleyeceğimiz bileşenlerin hepsini 'kanvaslar' üzerinden
     ekleyebiliyoruz."*). Modül beyan eder (`componentDefs['fead-analysis']

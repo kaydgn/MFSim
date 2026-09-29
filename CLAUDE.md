@@ -32,6 +32,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `js/fead-belts.js` — FEAD kayış kataloğu (5 profil, 244 stok boy + otomotiv
   ızgarası). DOM'suz saf veri; ISO 9982 / DIN 7867, üretici kataloglarından çıkarıldı.
+  Ayrıca **profil geometri tablosu** (`VE_FEAD_BELT_GEOM`, 5 profil × 3 üretici,
+  h_b/h_r + kaynak damgası): çekirdeğin `BELT_DB`'si GATES'in yalnız PK'sını
+  tutuyor ve eksik satır oraya YAZILMAZ — köprü buradan besler.
 - `js/cp-fead-wizard.js` — FEAD **Başlangıç Sihirbazı** (adımlı modal; adımlar `VE_FW_STEPS`). Kendi
   modelini KURMAZ: durum → `veFeadWizNodes` → köprünün düğüm biçimi; önizleme de
   kurulum da aynı listeden geçer.
@@ -594,7 +597,7 @@ FEAD satırları modül skill'ine taşındı
 | Dosya | Test Edilen Modül | Kapsam |
 |-------|-------------------|--------|
 | `tests/unit/signal-tree.test.js` | `js/signal-tree.js` | Arama katlaması, üç-durumlu grup, istatistik, mini eğri, kanal toplama |
-| `tests/unit/trace-view.test.js` | `js/trace-view.js` | Şerit uzlaştırma, ayrık/metin kanal tespiti, Y aralığı, şerit yerleşimi, tutamak isabeti, logaritmik X ve Y ekseni, **birleşik şeritte sinyal başına Y ekseni**, açılır pencere kapatıcısının GECİKMESİZ bağlanması |
+| `tests/unit/trace-view.test.js` | `js/trace-view.js` | Şerit uzlaştırma, ayrık/metin kanal tespiti, Y aralığı, şerit yerleşimi, tutamak isabeti, logaritmik X ve Y ekseni, **birleşik şeritte sinyal başına Y ekseni**, açılır pencere kapatıcısının GECİKMESİZ bağlanması, **modül kanalının adı bölünmez** (eski: Campbell lejantının 11/11 satırı), **işaret etiketi çizginin yanında** (eski: 22/22 etiket çizgiyle kesik) |
 | `tests/unit/measure-core.test.js` | `js/measure-core.js` | Örnek kilitleme, pencerenin tek X ekseni kuralı |
 | `tests/unit/numerics.test.js` | `js/numerics.js` | PCHIP spline, RK45 solver, enerji dengesi |
 | `tests/unit/mount-signals.test.js` | `js/mount-signals.js` | Takoz kanalları: FRF ızgarası, Campbell mertebe/mod çizgileri, F(δ) yasası, ivme süpürmesi, kanal kimliği, diyagram yorumu |

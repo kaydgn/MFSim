@@ -585,3 +585,82 @@ describe('sunum — Sonuç Özeti ve başlangıç kartı (duman testi + taşına
     expect(h).not.toMatch(/undefined|NaN/);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SUNUM KUSURLARI (2026-09-28) — gerçek tarayıcıda 1.920 × 952'de ölçüldü;
+//  yerleşime bağlı olanların (karo kırpması, lejant) kapısı fead-sonuclar.spec.js
+// ════════════════════════════════════════════════════════════════════════════
+describe('SUNUM · KPI notunda sayı birimiyle, aralık ucuyla tek parça', () => {
+  // Kart dar, not sarıyor; tarayıcı "(44–" | "138 Hz)" diye bölüyordu. Kural:
+  // bölünebilecek her sayı öbeği `.ve-fr-nw` içinde — dışarıda kalan düz metinde
+  // boşluklu/tireli sayı öbeği YOK.
+  const BOLUNUR = /\d[\d.,]*\s(?:Hz|N|mm|d\/dk|kW|Nm|saat|A)(?![\p{L}\d])|\d\s?–\s?[−-]?\d|[≥≤±]\s\d/u;
+  test.each(ORNEKLER)('%s', (key) => {
+    const { R } = coz(key);
+    const kap = document.createElement('div');
+    kap.innerHTML = RS.veFeadResKpiHTML(R);
+    const notlar = [...kap.querySelectorAll('.ve-fr-kpi-not')];
+    expect(notlar.length).toBeGreaterThan(0);
+    notlar.forEach((el) => {
+      const disarda = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('¦');
+      expect({ not: el.textContent, bolunur: BOLUNUR.test(disarda) })
+        .toEqual({ not: el.textContent, bolunur: false });
+    });
+  });
+  test('öbek kaçışlanmış kalır — not metni HTML olarak yorumlanmaz', () => {
+    const { R } = coz();
+    const h = RS.veFeadResKpiHTML(Object.assign({}, R, { checks: Object.assign({}, R.checks,
+      { ratioWindow: Object.assign({}, R.checks.ratioWindow, { note: '<b>x</b> 44–138 Hz' }) }) }));
+    expect(h).toContain('&lt;b&gt;x&lt;/b&gt;');
+    expect(h).not.toContain('<b>x</b>');
+  });
+});
+
+describe('SUNUM · aksesuar devir sınırının hükmü KANITIYLA', () => {
+  // Kart yalnız "Uygun" / "Uygun değil" yazıyordu: AG00976'da %4,9'luk pay da,
+  // AG00902'de sınırı aşan klima da görünmüyordu; Sonuç Özeti'nde satır yoktu.
+  const hizKpi = (R) => S.summary(R).find((k) => k.k === 'kapi-speedLimit');
+  test.each(ORNEKLER)('%s', (key) => {
+    const { R } = coz(key);
+    const s = R.checks && R.checks.speedLimit;
+    if (!s || !s.rows.length) return;               // satır yoksa kapının kendi notu var
+    const k = hizKpi(R);
+    expect(k.not).toBeTruthy();
+    if (s.durum === 'no') expect(k.not).toMatch(/ > .* d\/dk/);
+    else expect(k.not).toMatch(/^en dar pay .* · %/);
+    // Özet penceresinde aynı satırlar: nokta başına bir satır
+    const kap = document.createElement('div');
+    kap.innerHTML = RS.veFeadResSummaryHTML(R);
+    const kapi = [...kap.querySelectorAll('.ve-fr-gate')]
+      .find((g) => /Aksesuar devir sınırı/.test(g.querySelector('.ve-fr-gate-h b').textContent));
+    const nokta = s.rows.reduce((a, r) => a + r.noktalar.length, 0);
+    expect(kapi.querySelectorAll('tbody tr').length).toBe(nokta);
+    expect(kapi.querySelectorAll('tbody tr.is-no').length)
+      .toBe(s.rows.reduce((a, r) => a + r.noktalar.filter((q) => !q.ok).length, 0));
+  });
+  test('ölçülen iki örnek: dar pay ve ihlal KARTTA okunuyor', () => {
+    expect(hizKpi(coz('AG00976_GATES_2025').R).not).toMatch(/^en dar pay ALT · %4,9 \(çevrim tepesi\)$/);
+    expect(hizKpi(coz('AG00902_1275_GATES_2023').R).not).toMatch(/3\.440 > 3\.000 d\/dk \(çevrim tepesi\)/);
+  });
+});
+
+describe('SUNUM · şerit yorumunun başlığı ŞERİDİ adlandırır', () => {
+  // Çok kanallı her şerit kümenin adını taşıyordu: Hubload'un iki şeridi de
+  // "Çalışma çevrimi — 6 kanal" (ölçüldü: üç hazır diyagramda 7 başlık).
+  test.each(ORNEKLER)('%s', (key) => {
+    const { R } = coz(key);
+    S.presets(R.signals).forEach((p) => {
+      const ds = R.signals.find((d) => d.sensorId === p.sensorId);
+      const basliklar = p.lanes.map((L) => B.forLane(ds, R, L).title);
+      expect({ hazir: p.k, tekrar: new Set(basliklar).size !== basliklar.length })
+        .toEqual({ hazir: p.k, tekrar: false });
+      if (!(ds.groups && ds.groups.length > 1) || ds.key === 'campbell') return;
+      p.lanes.forEach((L, i) => {
+        const g = ds.groups.filter((gr) => L.every((id) => gr.ids.indexOf(id) >= 0));
+        if (L.length > 1 && g.length === 1)
+          expect({ hazir: p.k, serit: i, baslik: basliklar[i] })
+            .toEqual({ hazir: p.k, serit: i, baslik: g[0].ad + ' — ' + L.length + ' kanal' });
+      });
+    });
+  });
+});

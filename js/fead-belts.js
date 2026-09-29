@@ -121,6 +121,140 @@ var VE_FEAD_BELT_RIBS = {
 
 var VE_FEAD_BELT_PROFILES = ['PH', 'PJ', 'PK', 'PL', 'PM'];
 
+// ────────────────────────────────────────────────────────────────────────────
+//  PROFİL GEOMETRİSİ — beş profil × üç üretici
+// ────────────────────────────────────────────────────────────────────────────
+// NEDEN BURADA: bu tablo `js/fead-core.js` içindeki `BELT_DB`'de de var, ama
+// ORASI EKSİK: GATES'in yalnız PK'sı yazılı. Çekirdek dışarıdan geldiği ve
+// BİREBİR durduğu için (bkz. üç katman kuralı) eksik satırlar oraya
+// YAZILMAZ — katalog projenin kendi veri katmanında büyür. Köprü
+// (`js/fead-model.js`) buradan okuduğu hb/hr'yi çekirdeğe AÇIKÇA geçirir ve
+// çekirdeğin kendi `beltProps` kaçış kapısı (`hb`+`hr` doluysa BELT_DB'ye hiç
+// bakma) devreye girer.
+//
+// ── ÖLÇÜLEN HATA ───────────────────────────────────────────────────────────
+// Bu tablo eklenmeden önce 15 profil×marka bileşiminin DÖRDÜ hata fırlatıyordu
+// (GATES + PH/PJ/PL/PM) ve GATES panelin VARSAYILAN markası: kullanıcı yalnız
+// profili değiştirdiğinde model çözülemiyordu. Kapısı
+// `tests/unit/fead-belt-geom.test.js`.
+//
+// ── hb BİR YARIÇAP PAYIDIR, ÇAP DEĞİL ──────────────────────────────────────
+// Optibelt kendi el kitabında formülü yazıyor: **dw = db + 2·hb**. ContiTech
+// aynı şeyi Fig.1'de çiziyor (db → dw). Çekirdeğin `rPitch = OD/2 + hb`
+// formülü bununla aynı. Defterin `F = G + 2*hb` sütunu da öyle. Üç kaynak
+// aynı yöne bakıyor; bu satır o yüzden yazılı — tersi sessizce yanlış bir
+// merkez mesafesi üretirdi.
+//
+// ── KAYNAK DAMGASI ZORUNLU ─────────────────────────────────────────────────
+// `kaynak` alanı değerin NEREDEN geldiğini söyler ve panelde görünür:
+//   'uretici' → üreticinin kendi kataloğundan, birebir
+//   'defter'  → BMC defteri + Gates rapor arşiviyle doğrulanmış (yalnız PK/GATES)
+//   'iso'     → üretici yayımlamıyor; ISO 9982:1998 §3.4 nominali
+//   'uzlasma' → üretici yayımlamıyor; diğer iki üreticinin AYNI yazdığı değer
+// Damgasız bir sayı, ölçülmüş bir sayıdan ayırt edilemezdi. Bu modülün hata
+// sınıfı sessiz olduğu için ayrım kuraldır, incelik değil.
+//
+// ── GATES PH ÜRETMİYOR ─────────────────────────────────────────────────────
+// Gates'in kendi Micro-V broşürü: "Micro-V belts are available in PJ, PK, PL
+// and PM cross-sections." PH satırı yine de DOLU — çünkü katalog bir KISIT
+// değil bir ÖNERİ (kural 11): kullanıcı PH kasnakla Gates kayış denemek
+// isterse program çalışır, `uretilmiyor` bayrağı panelde yazar.
+var VE_FEAD_BELT_GEOM_SOURCE =
+  'Optibelt Technical Manual "Ribbed Belt Drives" · ContiTech CONTI-V MULTIRIB ' +
+  'Tablo 1 · Gates Micro-V broşürü · ISO 9982:1998 (§3.4 be, Tablo 1 e, Tablo 2 de min)';
+
+// ribAdim/kalinlik/minKasnak/maksHiz [mm, mm, mm, m/s] · hb/hr [mm] · ribKutle [kg/m]
+var VE_FEAD_BELT_GEOM = {
+  PH: {
+    // ribAdim ve minKasnak üç kaynakta da aynı (ISO 9982 Tablo 1 + Tablo 2).
+    // hb'de de üç kaynak aynı fikirde: ISO 0,8 · Optibelt 0,80 · ContiTech 0,8.
+    OPTIBELT:  { hb: 0.80, hr: 1.0, ribAdim: 1.60, kalinlik: 2.50, minKasnak: 13,
+                 maksHiz: 60, ribKutle: 0.005, kaynak: 'uretici' },
+    CONTITECH: { hb: 0.80, hr: 1.0, ribAdim: 1.60, kalinlik: 2.70, minKasnak: 13,
+                 maksHiz: 60, ribKutle: 0.005, kaynak: 'uretici' },
+    GATES:     { hb: 0.80, hr: 1.0, ribAdim: 1.60, kalinlik: null, minKasnak: 13,
+                 maksHiz: 60, ribKutle: 0.005, kaynak: 'iso', uretilmiyor: true }
+  },
+  PJ: {
+    OPTIBELT:  { hb: 1.25, hr: 1.1, ribAdim: 2.34, kalinlik: 3.30, minKasnak: 20,
+                 maksHiz: 60, ribKutle: 0.009, kaynak: 'uretici' },
+    CONTITECH: { hb: 1.20, hr: 1.1, ribAdim: 2.34, kalinlik: 3.80, minKasnak: 20,
+                 maksHiz: 60, ribKutle: 0.009, kaynak: 'uretici' },
+    // Gates ribAdim/kalinlik'i kendi ENDÜSTRİYEL broşüründe yazıyor (2,34 / 3,5);
+    // hb ve hr'yi YAYIMLAMIYOR. hb = ISO 9982 nominali, hr = diğer iki üreticinin
+    // ortak değeri. (Gates'in otomotiv hattı PK; PJ/PL/PM endüstriyel.)
+    GATES:     { hb: 1.20, hr: 1.1, ribAdim: 2.34, kalinlik: 3.50, minKasnak: 20,
+                 maksHiz: 60, ribKutle: 0.009, kaynak: 'iso' }
+  },
+  PK: {
+    OPTIBELT:  { hb: 1.60, hr: 1.1, ribAdim: 3.56, kalinlik: 4.60, minKasnak: 45,
+                 maksHiz: 50, ribKutle: 0.021, kaynak: 'uretici' },
+    CONTITECH: { hb: 1.50, hr: 1.5, ribAdim: 3.56, kalinlik: 5.00, minKasnak: 45,
+                 maksHiz: 50, ribKutle: 0.021, kaynak: 'uretici' },
+    // TEK ÖLÇÜLMÜŞ GATES SATIRI. hb/hr BMC defterinden, ve `docs/gates-reports/`
+    // altındaki 17 Gates raporuyla dolaylı doğrulanıyor (çekirdeğin doğrulama
+    // kapısı bu profille koşuyor). ISO nominali burada 2,0 der — üç üreticinin
+    // hiçbiri öyle demiyor; PK, ISO 9982'nin kendi notunda "otomotiv için
+    // ISO 9981'e bak" dediği profil. Bu yüzden ISO'ya DÜŞÜLMEZ.
+    // KALINLIK 4,6 — çekirdekle AYNI SAYI olsun diye. Gates'in ENDÜSTRİYEL
+    // Micro-V broşürü PK için 4,45 basıyor; fark yapı farkı (endüstriyel ×
+    // otomotiv), düzeltme değil. Kalınlık hiçbir hesaba girmiyor (yalnız
+    // raporda bir satır), bu yüzden iki sayı tutmanın karşılığı yok ve
+    // ayrışma kapısı istisnasız kalıyor.
+    GATES:     { hb: 1.20, hr: 1.1, ribAdim: 3.56, kalinlik: 4.60, minKasnak: 45,
+                 maksHiz: 50, ribKutle: 0.0144, kaynak: 'defter' }
+  },
+  PL: {
+    // ContiTech PL'i iki yapıda veriyor: tam profil 9,0 mm / 0,040 kg/m ve
+    // KIRPIK profil 7,5 mm / 0,037. Defter kırpık olanı almış; buradaki de o,
+    // çünkü değişen sayı defterin doğruladığı sayı.
+    OPTIBELT:  { hb: 3.50, hr: 1.5, ribAdim: 4.70, kalinlik: 7.00, minKasnak: 75,
+                 maksHiz: 40, ribKutle: 0.037, kaynak: 'uretici' },
+    CONTITECH: { hb: 3.00, hr: 1.5, ribAdim: 4.70, kalinlik: 7.50, minKasnak: 75,
+                 maksHiz: 40, ribKutle: 0.037, kaynak: 'uretici' },
+    GATES:     { hb: 3.00, hr: 1.5, ribAdim: 4.70, kalinlik: 9.50, minKasnak: 75,
+                 maksHiz: 40, ribKutle: 0.037, kaynak: 'iso' }
+  },
+  PM: {
+    OPTIBELT:  { hb: 5.00, hr: 2.0, ribAdim: 9.40, kalinlik: 13.00, minKasnak: 180,
+                 maksHiz: 30, ribKutle: 0.120, kaynak: 'uretici' },
+    CONTITECH: { hb: 4.00, hr: 2.0, ribAdim: 9.40, kalinlik: 14.50, minKasnak: 180,
+                 maksHiz: 35, ribKutle: 0.120, kaynak: 'uretici' },
+    GATES:     { hb: 4.00, hr: 2.0, ribAdim: 9.40, kalinlik: 16.50, minKasnak: 180,
+                 maksHiz: 35, ribKutle: 0.120, kaynak: 'iso' }
+  }
+};
+
+var VE_FEAD_BELT_BRANDS = ['GATES', 'OPTIBELT', 'CONTITECH'];
+
+// Damganın kullanıcıya görünen karşılığı — TEK ÜRETİCİ. Panel, sihirbaz ve
+// rapor aynı metni buradan okur; üç ayrı yerde yazılsaydı biri eskirdi.
+var VE_FEAD_BELT_GEOM_NOTE = {
+  uretici: 'üreticinin kendi kataloğundan',
+  defter:  'BMC defteri + Gates rapor arşivi',
+  iso:     'üretici yayımlamıyor — ISO 9982 nominali',
+  uzlasma: 'üretici yayımlamıyor — diğer üreticilerin ortak değeri'
+};
+
+function veFeadBeltBrandOf(b){
+  var s = String(b == null ? '' : b).trim().toUpperCase();
+  return (VE_FEAD_BELT_BRANDS.indexOf(s) >= 0) ? s : null;
+}
+
+// Profil+marka → geometri KOPYASI (ya da null). Kopya, çünkü çağıranın
+// nesneyi yerinde değiştirmesi bütün oturumu sessizce bozardı — stok
+// listesindeki kuralın aynısı.
+function veFeadBeltGeom(profile, brand){
+  var p = veFeadBeltProfileOf(profile);
+  var b = veFeadBeltBrandOf(brand) || 'GATES';
+  if(!p || !VE_FEAD_BELT_GEOM[p] || !VE_FEAD_BELT_GEOM[p][b]) return null;
+  var g = VE_FEAD_BELT_GEOM[p][b], out = {};
+  for(var k in g) if(Object.prototype.hasOwnProperty.call(g, k)) out[k] = g[k];
+  out.profil = p; out.marka = b;
+  out.not = VE_FEAD_BELT_GEOM_NOTE[g.kaynak] || '';
+  return out;
+}
+
 function _feadBeltNum(v){
   var n = (typeof v === 'string') ? Number(v.trim().replace(',', '.')) : Number(v);
   return Number.isFinite(n) ? n : NaN;
@@ -233,6 +367,12 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_BELT_GRID: VE_FEAD_BELT_GRID,
     VE_FEAD_BELT_RIBS: VE_FEAD_BELT_RIBS,
     VE_FEAD_BELT_PROFILES: VE_FEAD_BELT_PROFILES,
+    VE_FEAD_BELT_GEOM: VE_FEAD_BELT_GEOM,
+    VE_FEAD_BELT_GEOM_SOURCE: VE_FEAD_BELT_GEOM_SOURCE,
+    VE_FEAD_BELT_GEOM_NOTE: VE_FEAD_BELT_GEOM_NOTE,
+    VE_FEAD_BELT_BRANDS: VE_FEAD_BELT_BRANDS,
+    veFeadBeltBrandOf: veFeadBeltBrandOf,
+    veFeadBeltGeom: veFeadBeltGeom,
     veFeadBeltProfileOf: veFeadBeltProfileOf,
     veFeadBeltStock: veFeadBeltStock,
     veFeadBeltGrid: veFeadBeltGrid,

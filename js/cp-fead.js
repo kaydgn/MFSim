@@ -2874,10 +2874,28 @@ function veFeadDerivedLengthHTML(node){
 function veFeadBeltDbHint(node){
   if(typeof FEADCore === 'undefined') return '';
   try {
-    var bp = FEADCore.beltProps({ profile: (node.data.profile || 'PK'), brand: (node.data.brand || 'GATES') });
+    // KATALOG SATIRI PROJE TABLOSUNDAN (`js/fead-belts.js`), çekirdekten
+    // DEĞİL: çekirdeğin BELT_DB'sinde GATES'in yalnız PK'sı var ve GATES bu
+    // panelin VARSAYILAN markası — `beltProps` doğrudan çağrıldığında
+    // kullanıcı profili PJ yapar yapmaz bu satır kırmızı bir hataya dönüyordu.
+    // Proje tablosu eksiksiz ve çekirdeğin sahip olduğu 11 satırla birebir
+    // aynı olduğu test ediliyor (`tests/unit/fead-belt-geom.test.js`).
+    var bp = (typeof veFeadBeltGeom === 'function')
+      ? veFeadBeltGeom(node.data.profile || 'PK', node.data.brand || 'GATES') : null;
+    if(bp) bp = { hb: bp.hb, hr: bp.hr, ribPitch: bp.ribAdim, minPulleyDia: bp.minKasnak,
+                  maxSpeedMs: bp.maksHiz, not: bp.not, damga: bp.kaynak,
+                  uretilmiyor: bp.uretilmiyor };
+    else bp = FEADCore.beltProps({ profile: (node.data.profile || 'PK'), brand: (node.data.brand || 'GATES') });
     var h = 'Katalog: h<sub>b</sub> = ' + veSayi(bp.hb) + ' mm · h<sub>r</sub> = ' + veSayi(bp.hr) + ' mm · '
       + 'kaburga adımı ' + veSayi(bp.ribPitch) + ' mm · min. kasnak çapı ' + veSayi(bp.minPulleyDia) + ' mm · '
       + 'maks. hız ' + veSayi(bp.maxSpeedMs) + ' m/s.';
+    // DEĞERİN KAYNAĞI SAYININ YANINDA (kural 8): üreticinin kendi kataloğundan
+    // gelen bir h_b ile ISO nominaline düşülmüş bir h_b aynı hücrede aynı
+    // görünür ama aynı şey değildir.
+    if(bp.damga && bp.damga !== 'uretici')
+      h += ' <b>Kaynak:</b> ' + _feadEsc(bp.not) + '.';
+    if(bp.uretilmiyor)
+      h += ' <b>Not:</b> Bu üretici bu profili üretmiyor; ölçü ISO 9982 nominalinden.';
     // Hesap katalogdan başka bir çiftle kuruluyorsa ikisi yan yana: kullanıcı
     // hangi h_b'nin kayış yoluna girdiğini buradan okur.
     var ko = (typeof veFeadKordOfset === 'function') ? veFeadKordOfset(node.data) : null;
@@ -2896,8 +2914,16 @@ function veFeadBeltDbHint(node){
 // (kural 24). Sayılar etiketin içinde: kullanıcı 147 mı 150 mi seçtiğini görür.
 function veFeadHesapCapSecenekleri(d){
   d = d || {};
+  // KATALOG h_b'si TEK KAYNAKTAN (`veFeadKordOfset`), doğrudan `beltProps`'tan
+  // DEĞİL: çekirdeğin BELT_DB'si GATES'in yalnız PK'sını tutuyor, o yüzden
+  // doğrudan çağrı GATES + PH/PJ/PL/PM'de `null` dönüp etiketten h_b'yi
+  // sessizce düşürüyordu. Tek kaynak proje tablosuna düşüyor ve değeri veriyor.
+  // Bu fonksiyonu panel de sihirbaz da paylaşıyor (kural 24).
   var kat = null;
-  try { kat = FEADCore.beltProps({ profile: d.profile || 'PK', brand: d.brand || 'GATES' }); } catch(e){ kat = null; }
+  if(typeof veFeadKordOfset === 'function'){
+    var _k = veFeadKordOfset({ profile: d.profile || 'PK', brand: d.brand || 'GATES' });
+    if(_k && Number.isFinite(_k.hb)) kat = { hb: _k.hb };
+  }
   var out = [['katalog', 'Kord (d_w) · ' + veFeadKayisMarkaAdi(d.brand) + ' kataloğu'
     + (kat ? ' · h_b ' + veSayi(kat.hb, 2) : '')]];
   var hbCad = _feadNum(d.hbCad, NaN);

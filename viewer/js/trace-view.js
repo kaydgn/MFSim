@@ -61,7 +61,8 @@ var VE_TR = {
   GUTTER_MAX: 132,
   AXIS_GAP: 13,       // birleşik şeritte iki Y ekseni sütunu arası
   AXIS_COL_W: 46,     // ek her eksenin oluk üst sınırına kattığı pay
-  NAME_MAX_W: 160,    // eksen adı bloğunun üst sınırı (uzun ad kırpılır)
+  NAME_MAX_W: 172,    // eksen adı bloğunun üst sınırı (uzun ad kırpılır) — 160'ta
+                      // FEAD'in "12. mertebe — 4× ateşleme [Hz]"ı (156 px) kırpılıyordu
   NAME_GAP: 10,       // ad bloğu ile sayı sütunları arası
   NAME_LINE_H: 14,    // ad satır yüksekliği
   NAME_DOT: 7,        // ad satırındaki renk kutucuğu
@@ -319,11 +320,27 @@ function veTrLaneRects(heights, top, avail, gap, minH) {
 
 // Şeridin CANoe tarzı başlığı: "Bileşen::Sinyal [birim]".
 // Uygulamadaki ad "Motor — Motor Devri" biçiminde; ayraç '::' yapılır.
+//
+// MODÜL KANALININ ADI BÖLÜNMEZ (Takoz · FEAD). Orada bileşen öneki yok; " — "
+// adın KENDİ parçası ("Burulma modu 4 — 202,9 Hz"). Bölününce lejant
+// "1. mertebe::dönme" yazıyordu, dar blokta önek düşünce de "202,9 Hz [Hz]"
+// kalıyordu — hangi modun çizgisi olduğu kayboluyordu (ölçüldü: Campbell'in
+// 11 satırının 11'i). Kaynak tablosu (results.js) yoksa — görüntüleyici —
+// davranış eskisi.
+//
+// Ad birimiyle bitiyorsa birim ikinci kez yazılmaz: "12,9 Hz [Hz]" değil.
 function veTrLaneTitle(sensor) {
   if(!sensor) return '';
-  var n = String(sensor.name == null ? '' : sensor.name).replace(/\s+—\s+/, '::');
+  var n = String(sensor.name == null ? '' : sensor.name);
+  if(!veTrModKanal(sensor)) n = n.replace(/\s+—\s+/, '::');
   var u = sensor.unit ? String(sensor.unit) : '';
+  if(u && n.length > u.length + 1 && n.slice(-(u.length + 1)) === ' ' + u) return n;
   return u ? (n + ' [' + u + ']') : n;
+}
+
+// Kanal bir modül veri kümesinin mi (bileşen sinyali değil)?
+function veTrModKanal(sensor) {
+  return !!(sensor && typeof veResSourceOf === 'function' && veResSourceOf(sensor.id));
 }
 
 // ── Saf çekirdek: örnekleme ──────────────────────────────────────────────────
@@ -1868,6 +1885,21 @@ function veTrMarks() {
   return (ds && ds.brief && ds.brief.marks) ? ds.brief.marks : [];
 }
 
+// Dik işaret etiketinin yeri — ÇİZGİNİN YANINDA, üstünde değil. Dönüş:
+// yazının dikey orta çizgisinin x'i (`textBaseline:'middle'` ile çizilir).
+// Dik yazının yatay kapladığı yer yazının BOYUDUR (h).
+//
+// Eskiden etiket `gx − 2`'ye ortalanıyordu: yazı kendi çizgisinin ÜSTÜNE
+// biniyor, çizgi harfleri boydan boya kesiyordu (ölçüldü: 22 etiketin 22'si).
+// Aynı kural çizim alanının sol kenarındaki işareti (FEAD'de çevrimin ilk
+// devri, kolun serbest konumu) oluğa, Y ekseninin sayılarının üstüne itiyordu.
+// Varsayılan çizginin SOLU; sola sığmayan etiket sağa geçer.
+function veTrMarkLabelX(gx, geo, h) {
+  var ARA = 3;
+  var sol = gx - ARA - h / 2;
+  return (sol - h / 2 >= geo.plotX + 1) ? sol : gx + ARA + h / 2;
+}
+
 function veTrDrawMarks(ctx, geo, lanes) {
   var marks = veTrMarks();
   if(!marks.length || !geo.rects.length) return;
@@ -1879,6 +1911,7 @@ function veTrDrawMarks(ctx, geo, lanes) {
   ctx.save();
   ctx.font = veThemeFont('micro');
   ctx.textBaseline = 'middle';
+  var fsMark = (typeof veThemeFs === 'function') ? veThemeFs('micro') : 10;
 
   // ── Dikey (x) işaretler: tüm şeritleri boydan boya keser ──
   // Etiketler dik yazılır. Yatay yazılsalardı 6 rijit gövde modu birbirinin
@@ -1905,7 +1938,7 @@ function veTrDrawMarks(ctx, geo, lanes) {
     if(clash) return;
     placed.push(gx);
     ctx.save();
-    ctx.translate(gx - 2, top + 3);
+    ctx.translate(veTrMarkLabelX(gx, geo, fsMark), top + 3);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = veTrMarkColor(m.kind, 0.95);
@@ -3528,6 +3561,8 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrLaneRects: veTrLaneRects,
     veTrLaneTitle: veTrLaneTitle,
     veTrFitTitle: veTrFitTitle,
+    veTrMarkLabelX: veTrMarkLabelX,
+    veTrDrawMarks: veTrDrawMarks,
     veTrSnapIndex: veTrSnapIndex,
     veTrNoteHTML: veTrNoteHTML,
     veTrXLogOk: veTrXLogOk,

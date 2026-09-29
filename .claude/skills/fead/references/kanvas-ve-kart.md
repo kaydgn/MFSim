@@ -19,7 +19,7 @@ girilebiliyordu.
 |---|---|---|
 | X/Y yalnız tablodan | çizimde sürükle (0,1 mm ızgara) · ok 1 mm / Shift 10 mm | `veFeadCizimBas` · `veFeadKasnakKaydir` · `veFeadCizimTus` |
 | Panel yalnız tablodaki addan | çizimdeki kasnağa TIKLA ya da tablodaki ad | `veFeadCizimBas` (hareketsiz bırakma = tık) |
-| Kasnak ekle: tablonun seçicisi (konumsuz, gerginin önüne) | tablonun LİSTESİNDEN kayışın ÜSTÜNE sürükle → iki komşunun arasına, bırakılan noktaya (2026-09-28'e kadar kaynak "Bileşenler" sütunuydu; FEAD'de sütun yok — SKILL.md kural 40) | `veFeadTableAddHTML` · `veFeadPaletBirak` · `veFeadAciklikSec` · `veFeadAradanEkle` |
+| Kasnak ekle: tablonun seçicisi (konumsuz, gerginin önüne) | tablonun LİSTESİNDEN kayışın ÜSTÜNE sürükle → iki komşunun arasına, bırakılan noktaya (2026-09-28'e kadar kaynak "Bileşenler" sütunuydu; FEAD'de sütun yok — SKILL.md kural 41) | `veFeadTableAddHTML` · `veFeadPaletBirak` · `veFeadAciklikSec` · `veFeadAradanEkle` |
 | Kanvasa bırakma SESSİZ | çizim dışına bırakılan kasnak tabloya eklenir; hiçbir kartta tablo açık değilse geometri kartınınki açılır | `veFeadPaletBirak` · `_feadTabloGoster` |
 | `fead-table` kanvas kartı | Kayış Yolu kartının Paftası (çizimin altında, kartla ölçeklenir; tablolu kart 640 px) | `veFeadTabloAcik` · `veFeadTabloToggle` · `veFeadKartTabloOlcu` |
 | Açılış yüzeyi: sihirbaz + tablo | sihirbaz + BOŞ Kayış Yolu kartı (örnek/sihirbaz onu DEVRALIR) | `veFeadPopulateStarter` · `veFeadLoadExample` · `veFeadWizCreate` |
