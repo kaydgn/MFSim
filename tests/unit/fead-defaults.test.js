@@ -85,6 +85,33 @@ function kur(key, yama) {
 }
 const alan = (build, re) => (build.defaults || []).filter((d) => re.test(d.field));
 
+// Rapor rolü → MFSim bileşen tipi
+const ROL = { IDR: 'fead-idler', A_C: 'fead-ac', ALT: 'fead-alternator',
+              TEN: 'fead-tensioner' };
+/** Titreşim sayfalarından atalet ve kütle örneklemi — PDF'lerin okuması. */
+function titresimOrneklemi() {
+  const topla = {};
+  const kol = [], kutle = [], krank = [];
+  RAPORLAR.forEach((k) => {
+    const v = vibrationOf(k);
+    Object.keys(v.accessoryInertia).forEach((ad) => {
+      const t = ROL[ad]; if (!t) return;
+      (topla[t] = topla[t] || []).push(v.accessoryInertia[ad]);
+    });
+    kol.push(v.armInertiaKgM2);
+    kutle.push(v.pulleyMassKg);
+    krank.push(v.crankInertiaKgM2);
+  });
+  return { topla, kol, kutle, krank };
+}
+/** Ölçülmüş boy ofsetleri — doğrulama kayıtları + AG00879 örneği. */
+function boyOfsetleri() {
+  const off = tumSistemler().map((d) => d.lengthOffsetMm).filter((x) => x != null);
+  // AG00879 örneği fixture'da taşımıyor; örnek tanımının kendisinden gelir.
+  off.push(M.veFeadExampleOf('AG00879_GATES_2023').solver.lengthOffsetMm);
+  return off;
+}
+
 /* ══════════════ ① SAYILAR KAYNAĞINDAN ═══════════════════════════════════ */
 
 describe('varsayılanlar arşivle uyuşuyor', () => {
@@ -128,9 +155,7 @@ describe('varsayılanlar arşivle uyuşuyor', () => {
   });
 
   test('boy ofseti: ölçülen değerlerin ortalaması ve bandın içinde', () => {
-    const off = tumSistemler().map((d) => d.lengthOffsetMm).filter((x) => x != null);
-    // AG00879 örneği fixture'da taşımıyor; örnek tanımının kendisinden gelir.
-    off.push(M.veFeadExampleOf('AG00879_GATES_2023').solver.lengthOffsetMm);
+    const off = boyOfsetleri();
     expect(off.length).toBe(5);
     const ort = off.reduce((a, b) => a + b, 0) / off.length;
     expect(D.lengthOffsetMm).toBeCloseTo(ort, 1);
@@ -139,21 +164,7 @@ describe('varsayılanlar arşivle uyuşuyor', () => {
   });
 
   test('atalet varsayılanları: Gates titreşim sayfalarının MEDYANI', () => {
-    // Rapor rolü → MFSim bileşen tipi
-    const ROL = { IDR: 'fead-idler', A_C: 'fead-ac', ALT: 'fead-alternator',
-                  TEN: 'fead-tensioner' };
-    const topla = {};
-    const kol = [], kutle = [], krank = [];
-    RAPORLAR.forEach((k) => {
-      const v = vibrationOf(k);
-      Object.keys(v.accessoryInertia).forEach((ad) => {
-        const t = ROL[ad]; if (!t) return;
-        (topla[t] = topla[t] || []).push(v.accessoryInertia[ad]);
-      });
-      kol.push(v.armInertiaKgM2);
-      kutle.push(v.pulleyMassKg);
-      krank.push(v.crankInertiaKgM2);
-    });
+    const { topla, kol, kutle, krank } = titresimOrneklemi();
     Object.keys(ROL).forEach((ad) => {
       const t = ROL[ad];
       expect(topla[t] && topla[t].length).toBeGreaterThan(1);
@@ -162,6 +173,25 @@ describe('varsayılanlar arşivle uyuşuyor', () => {
     expect(D.tenArmInertiaKgM2).toBeCloseTo(medyan(kol), 6);
     expect(D.tenPulleyMassKg).toBeCloseTo(medyan(kutle), 6);
     expect(D.crankInertiaKgM2).toBeCloseTo(medyan(krank), 6);
+  });
+
+  // 'i' İPUCUNUN ÖRNEKLEMİ ELLE YAZILMIŞ BİR "n=6" DEĞİL: pencerenin 'i'si ve
+  // raporun varsayılan defteri sayıyı ve aralığı `VE_FEAD_ORNEKLEM`den basıyor
+  // (`veFeadVarsayilanKaynagi`). Dizi arşivin okumasıyla birebir olmalı —
+  // yoksa ipucu varsayılanın dayanmadığı bir kanıtı anlatır, sessizce.
+  test("'i' ipucunun örneklemi arşivin okumasıyla BİREBİR", () => {
+    const O = M.VE_FEAD_ORNEKLEM;
+    const sirali = (a) => a.slice().sort((x, y) => x - y);
+    const { topla, kol, kutle, krank } = titresimOrneklemi();
+    Object.keys(ROL).forEach((ad) =>
+      expect({ t: ROL[ad], o: sirali(O[ROL[ad]]) }).toEqual({ t: ROL[ad], o: sirali(topla[ROL[ad]]) }));
+    expect(sirali(O.krank)).toEqual(sirali(krank));
+    expect(sirali(O.gergiKol)).toEqual(sirali(kol));
+    expect(sirali(O.gergiKutle)).toEqual(sirali(kutle));
+    expect(sirali(O.boyOfseti)).toEqual(sirali(boyOfsetleri()));
+    // Örneklemi olan her anahtarın varsayılanı var ve tersi.
+    expect(Object.keys(O).sort()).toEqual(['boyOfseti', 'fead-ac', 'fead-alternator', 'fead-idler',
+      'fead-tensioner', 'gergiKol', 'gergiKutle', 'krank']);
   });
 
   // ÖLÇÜLMEMİŞ TİPE VARSAYILAN UYDURULMUYOR. Su pompası, direksiyon pompası ve

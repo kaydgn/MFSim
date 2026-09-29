@@ -13,7 +13,7 @@
  *
  * Tek kaynak köprüde: `build.isletme` (js/fead-model.js → veFeadIsletmeEksik).
  * Çözüm, FEAD araçları penceresi, çözücü paneli, kanvas kartı, senaryo ve
- * sihirbaz AYNI hükmü okur. Kural: FEAD skill'i, kural 42.
+ * sihirbaz AYNI hükmü okur. Kural: FEAD skill'i, kural 46.
  */
 const wiz = require('../../js/cp-fead-wizard.js');
 const fead = require('../../js/cp-fead.js');
@@ -152,11 +152,41 @@ describe('üç yüzey AYNI hükmü verir — çözüm · pencere · panel', () =
     kur();
     const d = AR.veFeadAraclarDurum();
     expect(d.hazir).toBe(false);
-    expect(d.neden).toBe('Motor künyesi eksik: rölanti devri · governed devri — Ayarlar\'dan tamamlayın.');
+    expect(d.neden).toBe('Motor künyesi eksik: rölanti devri · governed devri — sürücü kasnağın “Motor” sekmesinden tamamlayın.');
     const h = AR.veFeadAraclarGovdeHTML(d);
     expect(h).toMatch(/data-ey="hesapla" aria-disabled="true"/);
     motorTamamla(sv().data);
     expect(AR.veFeadAraclarDurum().hazir).toBe(true);
+  });
+
+  test('sebep eksiğin YERİNİ söyler — adı geçen sekme o pencerede VAR', () => {
+    // Sekme adı pencerenin kendi şeridinden okunur: metin var olmayan bir yeri
+    // gösterirse düşer (motor verisi sürücüye taşınınca "Ayarlar'dan
+    // tamamlayın" boşluğu gösteriyordu; "Çevrim" aksesuarda değil sürücüde).
+    const sekmeAdlari = (n) => {
+      const k = document.createElement('div');
+      k.innerHTML = fead.getFeadPulleyPropertiesHTML(n);
+      return [...k.querySelectorAll('.ve-fp-tab-ad')].map((x) => x.textContent);
+    };
+    kur();
+    const surucu = global.nodes.find((n) => n.data && n.data.driver);
+    const pencereOf = { 'aksesuarın': tip('fead-alternator'), 'sürücü kasnağın': surucu };
+    // Her tırnaklı sekme SAHİBİYLE yazılır ve o pencerede bulunur.
+    const denetle = (s) => {
+      const y = [...s.matchAll(/(aksesuarın|sürücü kasnağın) “([^”]+)”/g)];
+      expect(y.length).toBeGreaterThan(0);
+      expect(y.length).toBe((s.match(/“[^”]+”/g) || []).length);
+      y.forEach(([, sahip, ad]) => expect(sekmeAdlari(pencereOf[sahip])).toContain(ad));
+    };
+    let d = AR.veFeadAraclarDurum();
+    expect(d.neden).toMatch(/^Motor künyesi eksik/);
+    denetle(d.neden);
+    // Aksesuar gücü: model aksesuarın Rol sekmesinde, kW sürücünün Çevrim'inde.
+    motorTamamla(sv().data);
+    (sv().data.duty || []).forEach((r) => { r.kw = {}; });
+    d = AR.veFeadAraclarDurum();
+    expect(d.neden).toMatch(/^Aksesuar gücü yok/);
+    denetle(d.neden);
   });
 
   test('çözücü paneli: Hesapla disabled ve notu AYNI metin', () => {
@@ -219,8 +249,10 @@ describe('sessiz varsayılanlar kalktı', () => {
     // Boşken varsayılanla koşan alan o varsayılanı yazar (çekirdeğin 1100'ü).
     expect(Number(ph.accelRpmS)).toBe(TR.VE_FEAD_SCN_ACCEL_DEF);
     expect(Number(ph.decelRpmS)).toBe(TR.VE_FEAD_SCN_ACCEL_DEF);
-    // Panel AYNI kuralı taşır.
-    const kartH = fead.veFeadEngineCard({ id: 'sv', type: 'fead-solver', data: {} });
+    // Panel AYNI kuralı taşır — sürücünün Motor sekmesi: künye kartı
+    // (silindir) + devir sınırları kartı (rölanti · governed).
+    const depo = { id: 'sv', type: 'fead-solver', data: {} };
+    const kartH = fead.veFeadEngineCard(depo) + fead.veFeadEngineSpeedCard(depo);
     expect((kartH.match(/placeholder="zorunlu"/g) || []).length).toBe(3);
     expect(kartH).not.toMatch(/placeholder="(6|700|2100|2900|0\.70|1000)"/);
   });

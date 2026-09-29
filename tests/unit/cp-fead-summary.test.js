@@ -975,8 +975,12 @@ describe('FEAD özet · tepe zincirinde çevrim kapanışı', () => {
       if (i === sys._crkIdx) krank = v;
       else if (i !== sys._tenIdx) aksesuar += v;
     });
-    // Ham hâlde krank adımı aksesuar toplamının yarısından bile küçük.
-    expect(krank).toBeLessThan(aksesuar * 0.5);
+    // Ham hâlde çevrim AÇIK — hangi atalet yazılırsa yazılsın. Sürücü kasnağın
+    // kendi ataletiyle (0,064) krank adımı aksesuar toplamının yarısından
+    // küçüktü; krank MİLİ ataletiyle (0,70 — 2026-09-28'den beri sürücüde bu
+    // yazılı, `veFeadKasnakAtalet`) dört katından büyük. Kayış krankı
+    // hızlandırmaz; eşdeğer atalet iki yanlış yönü de kapatıyor.
+    expect(Math.abs(krank - aksesuar)).toBeGreaterThan(aksesuar * 0.5);
   });
 
   // SÖZLÜK BÜTÜN KASNAKLARI TAŞIR — eskiden yalnız krankı ezerdi.

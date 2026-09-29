@@ -214,7 +214,6 @@ describe('panel yüzeyi', () => {
     expect(h).toMatch(/data-ve="band-curve"/);
     expect(h).toMatch(/data-ve="band-user"/);
     expect((h.match(/data-ve="band-block"/g) || []).length).toBeGreaterThan(3);
-    expect(h).toMatch(/Bu bir öneri değildir/);
     expect(h).not.toMatch(/NaN|undefined/);
   });
 

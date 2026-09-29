@@ -52,7 +52,7 @@ async function bootApp(page) {
     return !s || s.style.display === 'none';
   }, null, { timeout: 60000 });
   // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
-  // yapılmaz (FEAD kural 42) — katalog kaydının devir sınırları yazılır.
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
   await motorluOrnekler(page);
 }
 

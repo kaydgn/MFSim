@@ -198,7 +198,7 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri, indirile
 test('FEAD: ayrıntılı rapor ve özet Türkçe sayı yazıyor', async ({ page, browser }) => {
   await modulAc(page, 'fead-analysis', "if (typeof veFeadWizClose === 'function') veFeadWizClose(false);");
   // Gates örneği motorun devirlerini taşımıyor; işletme hesabı onlarsız
-  // yapılmaz (FEAD kural 42) — katalog kaydının devir sınırları yazılır.
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
   await motorluOrnekler(page);
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
   await page.waitForTimeout(2500);

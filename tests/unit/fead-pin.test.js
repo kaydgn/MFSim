@@ -263,7 +263,10 @@ describe('panel yüzeyi', () => {
     expect(h).toMatch(SATIR('Konum pimi · AÇI \\(imalat\\)'));
     expect(h).toMatch(/31,00 mm/);
     expect(h).toContain(veSayi(build.pin.angleDeg, 2));
-    expect(h).toMatch(/parça sabiti/);
+    // OFSET bir OKUMA olarak kaldı (açıklama paragrafı 2026-09-28'de kalktı):
+    // pim açısı = kol açısı ± parçanın sabit ofseti.
+    expect(h).toMatch(/Pim açısı = kol açısı [−+] /);
+    expect(h).toContain(veSayi(Math.abs(build.pin.offsetDeg), 2) + '°');
     expect(h).not.toMatch(/undefined|NaN/);
   });
 
@@ -271,7 +274,7 @@ describe('panel yüzeyi', () => {
     const { ten } = kanvasKur({ part: '' });
     const h = fead.veFeadArmReadout(ten);
     expect(h).toMatch(SATIR('Konum pimi'));       // satır DÜŞMÜYOR
-    expect(h).toMatch(/uydurulmaz/i);             // sebep de yazılı
+    expect(h).toMatch(/<b>Konum pimi:<\/b> \S/);  // sebep de yazılı (köprünün `pin.reason`ı)
     expect(h).not.toMatch(/31\.00 mm/);           // ama sayı UYDURULMUYOR
   });
 

@@ -718,7 +718,7 @@ describe('adım eşlemesi ve yüzeyler', () => {
 
       kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
       // ÖRNEK TEK BAŞINA "DOLU" DEĞİL: Gates raporu motorun devir sınırlarını
-      // basmıyor ve işletme hesabı onlarsız yapılmaz (FEAD kural 42) — Motor ve
+      // basmıyor ve işletme hesabı onlarsız yapılmaz (FEAD kural 46) — Motor ve
       // çevrim adımı (5.) KIRMIZI, geri kalanı yeşil.
       const ornek = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
       expect(ornek).toMatch(/class="ve-fw-step ve-fw-st-err[^"]*" onclick="veFeadWizGoto\(4\)"/);
@@ -1949,8 +1949,12 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
     const h = getFeadPulleyPropertiesHTML(an);
     expect(h).toContain('Katalog modeli');
     const kart = h.slice(h.indexOf('Katalog modeli'));
-    expect(kart.slice(0, kart.indexOf('</select>')))
-      .toContain('value="tepas_350a" selected');
+    // TEK SEÇİCİ, sihirbazla AYNI değer uzayı (`ap:` · `bmc:` ön ekli —
+    // köprünün `veFeadAccModelOpts`u, kural 24).
+    const secici = kart.slice(0, kart.indexOf('</select>'));
+    expect(secici).toContain('value="ap:tepas_350a" selected');
+    const panelde = (secici.match(/value="([^"]+)"/g) || []).map((x) => x.slice(7, -1)).filter(Boolean);
+    expect(panelde).toEqual(wiz.veFeadWizAccModelOpts('fead-alternator').map((o) => o[0]));
   });
 
   test('kasnak · gergi · kayış · çözücü alanlarının hepsi taşınıyor', () => {

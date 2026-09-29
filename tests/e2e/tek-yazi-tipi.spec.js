@@ -244,7 +244,7 @@ test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü göm�
   await page.waitForSelector('#mfsim-module-loading', { state: 'hidden', timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(800);
   // Gates örneği motorun devirlerini taşımıyor; işletme hesabı onlarsız
-  // yapılmaz (FEAD kural 42) — katalog kaydının devir sınırları yazılır.
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
   await motorluOrnekler(page);
   await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); veFeadLoadExample('AG00976_GATES_2025'); });
   await page.waitForTimeout(2500);

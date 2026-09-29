@@ -3,7 +3,7 @@
  *
  * Birim testlerdeki `tests/helpers/fead-motor.js`in tarayıcı karşılığı. Gates
  * örnekleri motorun devir sınırlarını TAŞIMAZ (raporlarında yok) ve işletme
- * hesabı onlarsız yapılmaz (FEAD kural 42): örneği ÇÖZEN bir spec, kullanıcının
+ * hesabı onlarsız yapılmaz (FEAD kural 46): örneği ÇÖZEN bir spec, kullanıcının
  * yapacağı adımı yapar — motor kataloğundan bir kaydın DEVİR SINIRLARINI yazar.
  * Kademe çapları YAZILMAZ (BMC örneğinin oranı değişirdi), dolu alan EZİLMEZ.
  *

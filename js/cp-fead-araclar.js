@@ -119,6 +119,17 @@ function _feadAracKasnakSay(){
   }).length;
 }
 
+// İŞLETME EKSİĞİNİN YERİ — ilk eksik grubun girildiği pencere: motor künyesi
+// ve tahrik sürücü kasnağın "Motor" sekmesinde, çevrim "Çevrim" sekmesinde
+// (kural 42), aksesuar modeli aksesuarın "Rol" sekmesinde (kural 44).
+function _feadAracIsletmeYeri(isl){
+  var g = ((isl && isl.eksik) || [])[0];
+  var grup = g ? g.grup : '';
+  if(grup === 'aksesuar') return ' — aksesuarın “Rol” sekmesinden model seçin ya da sürücü kasnağın “Çevrim” sekmesine kW girin.';
+  if(grup === 'cevrim')   return ' — sürücü kasnağın “Çevrim” sekmesinden en az bir satır girin.';
+  return ' — sürücü kasnağın “Motor” sekmesinden tamamlayın.';
+}
+
 // Pencerenin okuduğu her şey tek nesnede. Hesaplanan hiçbir şey burada
 // ÜRETİLMEZ: hüküm, çip, kartlar ve kapılar modülün kendi çağrılarından.
 function veFeadAraclarDurum(){
@@ -142,8 +153,8 @@ function veFeadAraclarDurum(){
   var neden = !solver ? 'Çözücü yok.'
     : !modelOk ? (kasnak ? 'Model eksik — kasnak konumlarını tamamlayın.'
                          : 'Henüz kasnak yok — modeli sihirbazla kurun.')
-    : !(satir > 0) ? 'Çalışma çevrimi boş — Ayarlar\'dan en az bir satır girin.'
-    : !islOk ? veFeadIsletmeMetni(isl) + ' — Ayarlar\'dan tamamlayın.'
+    : !(satir > 0) ? 'Çalışma çevrimi boş — sürücü kasnağın “Çevrim” sekmesinden en az bir satır girin.'
+    : !islOk ? veFeadIsletmeMetni(isl) + _feadAracIsletmeYeri(isl)
     : '';
   // Özet kartları yalnız bu modelin sonucu varken (BAYAT sonuç da gösterilir —
   // sayı gizlenmez, çip bayatlığını yanında söyler; kural 10).
@@ -230,7 +241,7 @@ function veFeadAraclarGovdeHTML(d){
         d.hazir ? ' title="Modeli çalışma çevrimiyle çöz"' : ' aria-disabled="true" title="' + _feadAracEsc(d.neden) + '"')
     + '<span class="bos"></span>'
     + _feadAracDugme('ayarlar', 'sliders', 'Ayarlar', 've-fead-arac-bag',
-        ' title="Çözücü penceresi — çevrim, motor, tahrik, tasarım"')
+        ' title="Çözücü penceresi — yöntemler, model ve sonuç"')
     + '</div>';
   if(!d.hazir && d.neden) h += '<p class="ve-fead-arac-not">' + _feadAracEsc(d.neden) + '</p>';
   if(d.hata) h += '<p class="ve-fead-arac-huk" data-d="no">' + (typeof veDurumIkon === 'function' ? veDurumIkon('err') : '')

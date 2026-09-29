@@ -26,8 +26,9 @@
 //   Yani "fizikten türetilmiş" görünen ama on kat yanlış bir rampa — bu
 //   modülün belgelenmiş sessiz hata sınıfının ta kendisi.
 //
-//   Bunun yerine rampa MFSim'in ZATEN SORDUĞU alandan geliyor: Çözücü
-//   panelindeki "İvmelenme / Yavaşlama [RPM/s]". Aynı alanı `peakEstimate`
+//   Bunun yerine rampa MFSim'in ZATEN SORDUĞU alandan geliyor: sürücü
+//   kasnağın Motor sekmesindeki (2026-09-28'e kadar Çözücü panelindeki)
+//   "İvmelenme / Yavaşlama [RPM/s]". Aynı alanı `peakEstimate`
 //   de kullanıyor, yani animasyon ile tepe yük tablosu AYNI sayıyı anlatıyor.
 //
 // TÜRETİLEN ise rampanın ŞEKLİ: motor kataloğunda eğri varsa
