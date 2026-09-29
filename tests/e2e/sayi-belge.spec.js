@@ -195,7 +195,7 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri, indirile
   expect(tex).toEqual([]);
 });
 
-test('FEAD: ayrıntılı rapor ve özet Türkçe sayı yazıyor', async ({ page, browser }) => {
+test('FEAD: ayrıntılı rapor, özet ve A3 pano Türkçe sayı yazıyor', async ({ page, browser }) => {
   await modulAc(page, 'fead-analysis', "if (typeof veFeadWizClose === 'function') veFeadWizClose(false);");
   // Gates örneği motorun devirlerini taşımıyor; işletme hesabı onlarsız
   // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
@@ -206,10 +206,13 @@ test('FEAD: ayrıntılı rapor ve özet Türkçe sayı yazıyor', async ({ page,
   await page.waitForFunction(() => window.veFeadResults && window.veFeadResults.ok, null, { timeout: 60000 });
   const h = await page.evaluate(() => new Promise((ok) => _frEnsureAssets(() => {
     const n = nodes.find((x) => x.type === 'fead-report') || null;
-    ok({ rapor: _frBuildReportHTML(window.veFeadResults, n), ozet: veFeadSummaryHTML(window.veFeadResults, n) });
+    ok({ rapor: _frBuildReportHTML(window.veFeadResults, n), ozet: veFeadSummaryHTML(window.veFeadResults, n),
+         pano: veFeadPanoHTML(window.veFeadResults, n) });
   })));
   const rapor = await belgeMetni(browser, h.rapor), ozet = await belgeMetni(browser, h.ozet);
-  const r = olc({ 'FEAD raporu': rapor.metin, 'FEAD özeti': ozet.metin });
+  const pano = await belgeMetni(browser, h.pano);
+  expect(pano.metin.length).toBeGreaterThan(2000);          // A3 pano gerçekten üretildi
+  const r = olc({ 'FEAD raporu': rapor.metin, 'FEAD özeti': ozet.metin, 'FEAD A3 panosu': pano.metin });
   console.log('FEAD taranan', r.taranan, 'karakter · ad olarak kalan', JSON.stringify(r.adlar));
   expect(r.taranan).toBeGreaterThan(60000);
   expect(rapor.tex.length).toBeGreaterThan(2000);

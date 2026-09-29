@@ -253,7 +253,7 @@ test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü göm�
   const belge = await page.evaluate(() => new Promise((res) => {
     _frEnsureAssets(() => {
       const R = _frResults(); const node = _frFindReportNode();
-      res({ ozet: veFeadSummaryHTML(R, node), rapor: _frBuildReportHTML(R, node) });
+      res({ ozet: veFeadSummaryHTML(R, node), rapor: _frBuildReportHTML(R, node), pano: veFeadPanoHTML(R, node) });
     });
   }));
   for (const [ad, html] of Object.entries(belge)) {
@@ -285,7 +285,8 @@ test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü göm�
       return { aile, n, yuklu: Math.max(...g) - Math.min(...g) <= 0.01 };
     });
     await p.close();
-    expect(m.n, ad + ': taranan öğe').toBeGreaterThan(500);
+    // A3 pano tek sayfa — öteki iki belgenin onda biri kadar yazı taşır.
+    expect(m.n, ad + ': taranan öğe').toBeGreaterThan(ad === 'pano' ? 250 : 500);
     expect(Object.keys(m.aile), ad).toEqual([GOMULU]);
     expect(m.yuklu, ad + ': Inter belgenin İÇİNDE yüklü (uygulama olmadan)').toBe(true);
   }

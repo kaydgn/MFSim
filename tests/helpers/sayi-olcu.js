@@ -37,7 +37,9 @@ const AD = [
   ['kaynak yılı', /[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?: ve ark\.| & [A-ZÇĞİÖŞÜ][a-zçğıöşü]+)? \(?(?:19|20)\d\d\b|\d+\(\d+\), (?:19|20)\d\d/],
   ['bölüm no', /§/],
   // Denklem ve bölüm NUMARASI ondalık değil: "(4.4)", "Bölüm 8.18", başlık "9.1 Dinamik rijitlik".
-  ['denklem / bölüm no', /\(\d+\.\d+\)|Bölüm \d|Denklem|Tablo \d|Şekil \d|(?:^|\s)\d+\.\d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]{3,}/],
+  // Alt denklem harf ekiyle yazılır: "(5.7a)", parantez içinde sürebilir "(5.7a, yalnız …)".
+  // Ek a–d ile sınırlı: bitişik birim ("(0.5s)", "(2.5m, …)") yine noktalı ondalıktır.
+  ['denklem / bölüm no', /\(\d+\.\d+[a-d]?\)|\(\d+\.\d+[a-d],|Bölüm \d|Denklem|Tablo \d|Şekil \d|(?:^|\s)\d+\.\d+ [A-ZÇĞİÖŞÜ][a-zçğıöşü]{3,}/],
 ];
 
 // Eşleşmenin 14 karakter öncesine ve 10 karakter sonrasına bakılır: sınıf

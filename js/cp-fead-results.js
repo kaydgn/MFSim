@@ -146,6 +146,9 @@ function veFeadResTreeReportHTML() {
     h += '<button type="button" class="ve-fr-tree-link" onclick="veFeadGenerateReport(null,\'summary\')"'
        + ' title="Tedarikçi sonuç sayfalarının düzeni — indirilir">'
        + '<span class="mf-ico mf-ico-file-text"></span>FEAD özet rapor (HTML)</button>';
+    h += '<button type="button" class="ve-fr-tree-link" onclick="veFeadGenerateReport(null,\'pano\')"'
+       + ' title="Tek yatay A3 sayfa, basılabilir — indirilir">'
+       + '<span class="mf-ico mf-ico-file-text"></span>FEAD A3 sonuç panosu (HTML)</button>';
   }
   return h + '</div>';
 }
@@ -261,6 +264,8 @@ function veFeadResSummaryOpen() {
         title: 'Teori + türetme + bu modelin çözümü (HTML)' },
       { onclick: "veFeadGenerateReport(null,'summary')", icon: 'download', label: 'Özet rapor',
         title: 'Tedarikçi sonuç sayfalarının düzeni (HTML)' },
+      { onclick: "veFeadGenerateReport(null,'pano')", icon: 'download', label: 'A3 pano',
+        title: 'Tek yatay A3 sayfa, basılabilir (HTML)' },
       { onclick: 'veCloseDetailedReport()', icon: 'x', label: 'Kapat', danger: true }
     ]
   }) : '';

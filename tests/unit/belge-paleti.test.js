@@ -56,6 +56,7 @@ const KAYNAKLAR = [
   'tools/report-assets/theory-source.html',
   'tools/report-assets/fead-theory-source.html',
   'js/cp-fead-summary.js',
+  'js/cp-fead-pano.js',     // A3 sonuç panosu — özet raporun mürekkebi
   'js/results.js',          // Sonuçlar'ın TASARIMLI rapor kabuğu — dördüncü palet
 ];
 

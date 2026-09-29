@@ -89,20 +89,33 @@ function _frH2(idx){
 }
 
 // ═══════════════════ BİLEŞEN PANELİ ═════════════════════════════════════════
-// RAPOR TÜRÜ. İki belge AYNI çözümden üretilir, farkı OKUYUCUSU:
+// RAPOR TÜRÜ. Üç belge AYNI çözümden üretilir, farkı OKUYUCUSU:
 //   detailed  teoriyi anlatır (§1-10 + Ek A) — nasıl hesaplandığını gösterir
 //   summary   yalnız sonuç sayfaları — tedarikçi çıktısının beş sayfası
+//   pano      tek yatay A3 sayfa — çözümden sonra bakılan değerler bir bakışta
+//             (js/cp-fead-pano.js; kullanıcı kararı 2026-09-29, "B · Pano")
 // Varsayılan `detailed`: alanı olmayan eski projeler bugüne kadarki
-// davranışlarını birebir korusun.
+// davranışlarını birebir korusun; tanınmayan tür de ona düşer.
+// `kisa` FEAD araçları penceresinin tür anahtarında, `dosya`/`ek` indirilen
+// dosyanın adında. Liste TEK KAYNAK: Rapor penceresi, araçlar penceresi ve
+// indirme yolu buradan okur; Sonuçlar sekmesinin bağlantıları tür başına bir
+// tane ve kapı her türün orada da durduğunu ölçer (cp-fead-pano.test.js).
 var VE_FEAD_REPORT_KINDS = [
-  { key: 'detailed', ad: 'Detaylı rapor',
+  { key: 'detailed', ad: 'Detaylı rapor', kisa: 'Detaylı', dosya: 'MFSim_FEAD_Raporu', ek: '',
     aciklama: 'Teori + türetme + bu modelin çözümü. Akademik biçim, KaTeX matematik.' },
-  { key: 'summary',  ad: 'Özet rapor',
-    aciklama: 'Beş sonuç sayfası: özet, geometri, gergi zarfı, kayma, hubload.' }
+  { key: 'summary',  ad: 'Özet rapor', kisa: 'Özet', dosya: 'MFSim_FEAD_Ozet', ek: '_Ozet',
+    aciklama: 'Beş sonuç sayfası: özet, geometri, gergi zarfı, kayma, hubload.' },
+  { key: 'pano',     ad: 'A3 sonuç panosu', kisa: 'A3', dosya: 'MFSim_FEAD_A3_Pano', ek: '_A3',
+    aciklama: 'Tek yatay A3 sayfa: göstergeler, kayış yolu, tablolar, grafikler, uygunluk.' }
 ];
+function _frKindOf(key){
+  for(var i = 0; i < VE_FEAD_REPORT_KINDS.length; i++)
+    if(VE_FEAD_REPORT_KINDS[i].key === key) return VE_FEAD_REPORT_KINDS[i];
+  return null;
+}
 function veFeadReportKind(node){
   var k = node && node.data && node.data.reportKind;
-  return (k === 'summary') ? 'summary' : 'detailed';
+  return _frKindOf(k) ? k : 'detailed';
 }
 
 // ── RAPOR PENCERESİ — KRANK KASNAĞI AİLESİNDE ──────────────────────────────
@@ -127,7 +140,7 @@ function getFeadReportPropertiesHTML(node){
   var R = _frResults();
   var solved = !!(R && R.ok);
   var kind = veFeadReportKind(node);
-  var kAd = (kind === 'summary') ? 'Özet raporu' : 'Detaylı raporu';
+  var kAd = { summary: 'Özet raporu', pano: 'A3 panoyu' }[kind] || 'Detaylı raporu';
 
   var durum = solved
     ? '<div class="ve-fp-durum" data-d="ok"><b>Model çözüldü</b> — '
@@ -248,7 +261,7 @@ function _frFindReportNode(nodeId){
 function veFeadGenerateReport(nodeId, turSec){
   var node = _frFindReportNode(nodeId);
   var R = _frResults();
-  var kind = (turSec === 'summary' || turSec === 'detailed') ? turSec : veFeadReportKind(node);
+  var kind = _frKindOf(turSec) ? turSec : veFeadReportKind(node);
   // ÇÖZÜLMEMİŞ MODELDE İNDİRME YOK. Boş/yarım bir belge indirmek, kullanıcıya
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
@@ -274,15 +287,17 @@ function veFeadGenerateReport(nodeId, turSec){
     }
     var html;
     try {
-      html = (kind === 'summary') ? veFeadSummaryHTML(R, node) : _frBuildReportHTML(R, node);
+      html = (kind === 'summary') ? veFeadSummaryHTML(R, node)
+           : (kind === 'pano') ? veFeadPanoHTML(R, node)
+           : _frBuildReportHTML(R, node);
     } catch(e){
       _frStatus('Rapor üretilemedi: ' + (e && e.message ? e.message : e), 'var(--ink-danger)');
       if(typeof showToast === 'function') showToast('Rapor üretilemedi.', 'error');
       return;
     }
-    var ad = (kind === 'summary') ? 'MFSim_FEAD_Ozet' : 'MFSim_FEAD_Raporu';
-    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_')
-      + (kind === 'summary' ? '_Ozet' : '');
+    var tur = _frKindOf(kind);
+    var ad = tur.dosya;
+    if(node && node.data && node.data.docNo) ad = String(node.data.docNo).replace(/[^\w.-]+/g, '_') + tur.ek;
     _frDownload(html, ad + '_' + _frDateStamp() + '.html');
     _frStatus('Rapor indirildi (' + veSayi(html.length / 1024, 0) + ' KB).', 'var(--ink-success)');
     if(typeof showToast === 'function') showToast('FEAD raporu indirildi.', 'success');
@@ -2758,6 +2773,7 @@ function _frChart(opt){
     var xv = tX ? tX[i] : x0 + (x1 - x0) * i / nX, X = sx(xv);
     g += '<line x1="' + X.toFixed(1) + '" y1="' + pad.t + '" x2="' + X.toFixed(1) + '" y2="' + (H - pad.b)   // makine: SVG koordinatı
        + '" stroke="#e6e1d8" stroke-width="1"/>';
+    if(i % _FR_XADIM) continue;          // ızgara her bölmede, yazı her _FR_XADIM'de bir
     g += '<text x="' + X.toFixed(1) + '" y="' + (H - pad.b + 15) + '" text-anchor="middle" font-size="11" fill="#5a6270">'   // makine: SVG koordinatı
        + _frF(xv, opt.xDec == null ? 0 : opt.xDec) + '</text>';
   }
@@ -2787,14 +2803,21 @@ function _frFigWrap(svg, caption){
   return '<figure>' + svg + '</svg><figcaption><b>Şekil ' + _frFig() + ' —</b> ' + caption + '</figcaption></figure>';
 }
 var _FR_RAW = false;
+// X ekseni yazısının sıklığı: her bölme yazılır (1) ya da her k'da bir.
+// Izgara çizgileri her bölmede kalır. Dar kutuda (A3 panonun 461 px'lik
+// sütunu) 250'lik adımın dokuz yazısı birbirine biniyordu; adımı büyütmek
+// ekseni 500…3000'e açıp çizim alanının dörtte birini boş bırakırdı.
+var _FR_XADIM = 1;
 // Aynı figür işlevini KÜÇÜK ölçüde ve numarasız çalıştırır. Sayaçlara
 // dokunmaz: özet rapor ayrıntılı raporun şekil numaralandırmasını kaydırmamalı.
-function veFeadFigureRaw(fn, R, W, H, extra){
-  var oW = _FR_W, oH = _FR_H, oR = _FR_RAW;
+// `ayar` (isteğe bağlı): { xEtiketAdim } — verilmezse çıktı birebir eskisi.
+function veFeadFigureRaw(fn, R, W, H, extra, ayar){
+  var oW = _FR_W, oH = _FR_H, oR = _FR_RAW, oX = _FR_XADIM;
   _FR_W = W; _FR_H = H; _FR_RAW = true;
+  _FR_XADIM = (ayar && ayar.xEtiketAdim > 1) ? Math.floor(ayar.xEtiketAdim) : 1;
   try { return fn(R, extra); }
   catch(e){ return ''; }
-  finally { _FR_W = oW; _FR_H = oH; _FR_RAW = oR; }
+  finally { _FR_W = oW; _FR_H = oH; _FR_RAW = oR; _FR_XADIM = oX; }
 }
 
 // Gergi kolu taraması — Belt Tension Control ve Take-up grafiklerinin ortak verisi.
@@ -3389,6 +3412,7 @@ if(typeof module !== 'undefined' && module.exports){
     VE_FR_SEC_BELTLEN: VE_FR_SEC_BELTLEN,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
     _frSlipStats: _frSlipStats, _frMinSF: _frMinSF, _frServis: _frServis,
+    _frSlipYuk: _frSlipYuk, _frSfYaz: _frSfYaz, _frKaymaKosul: _frKaymaKosul, _frKritikYaz: _frKritikYaz,
     _frNiceStep: _frNiceStep, _frNiceAxis: _frNiceAxis,
     VE_FR_SLIP_LOADED_RATIO: VE_FR_SLIP_LOADED_RATIO,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS

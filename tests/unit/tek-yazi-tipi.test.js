@@ -210,7 +210,7 @@ describe('CSS — tek aile kuralı', () => {
 // BELGE ÜRETİCİLERİ bu kapının dışında ve sebebi yazılı: indirilen/basılan
 // belgeler (raporlar, kılavuz, TXT rapor sayfası, bağımsız SVG dışa aktarma)
 // arayüzün CSS'i olmadan açılır, yüzlerini kendileri gömer.
-const BELGE = ['cp-fead-summary.js', 'cp-fead-report.js', 'cp-mount-report.js', 'mount-report-assets.js',
+const BELGE = ['cp-fead-summary.js', 'cp-fead-pano.js', 'cp-fead-report.js', 'cp-mount-report.js', 'mount-report-assets.js',
   'guide-kit.js', 'guide-fead.js', 'results.js', 'export-topology.js', 'theme.js'];
 const JS_DIR = path.join(ROOT, 'js');
 const JS = fs.readdirSync(JS_DIR).filter((f) => f.endsWith('.js'))
@@ -303,7 +303,7 @@ describe('belgeler de tek yüz — raporlar, özet, kılavuz', () => {
     expect(paket).not.toMatch(/fontsCss/);                 // eskiden ~390 KB base64
     const kopru = JS.filter(({ src }) => /veThemeFontFaceCss\(\)/.test(src)).map(({ f }) => f);
     expect(kopru).toEqual(expect.arrayContaining(
-      ['cp-fead-report.js', 'cp-fead-summary.js', 'cp-mount-report.js', 'guide-kit.js', 'results.js']));
+      ['cp-fead-report.js', 'cp-fead-summary.js', 'cp-fead-pano.js', 'cp-mount-report.js', 'guide-kit.js', 'results.js']));
     // Hiçbir üretici paketin kaldırılan alanını okumuyor (okusaydı sessizce
     // `undefined` gömerdi — belge yazı tipsiz açılırdı).
     expect(JS.filter(({ src }) => /\bA\.fontsCss|MNT_REPORT_ASSETS\.fontsCss/.test(src)).map(({ f }) => f)).toEqual([]);

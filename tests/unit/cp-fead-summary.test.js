@@ -465,10 +465,13 @@ describe('gerginlik grafiği ölçeği — Load ölçeğe GİRMEZ', () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('rapor türü seçimi', () => {
-  test('iki tür sunuluyor ve varsayılan DETAYLI', () => {
-    expect(RP.VE_FEAD_REPORT_KINDS.map((k) => k.key)).toEqual(['detailed', 'summary']);
+  test('üç tür sunuluyor ve varsayılan DETAYLI', () => {
+    expect(RP.VE_FEAD_REPORT_KINDS.map((k) => k.key)).toEqual(['detailed', 'summary', 'pano']);
     expect(RP.veFeadReportKind({ data: {} })).toBe('detailed');
     expect(RP.veFeadReportKind({ data: { reportKind: 'summary' } })).toBe('summary');
+    expect(RP.veFeadReportKind({ data: { reportKind: 'pano' } })).toBe('pano');
+    // Tanınmayan tür (bozuk kayıt) varsayılana düşer — boş belge üretilmez.
+    expect(RP.veFeadReportKind({ data: { reportKind: 'bozuk' } })).toBe('detailed');
     // Eski projelerde alan YOK — bugüne kadarki davranış korunmalı.
     expect(RP.veFeadReportKind({})).toBe('detailed');
   });
@@ -486,8 +489,10 @@ describe('rapor türü seçimi', () => {
     global.veFeadResults = R;
     const d = RP.getFeadReportPropertiesHTML({ id: 'n1', type: 'fead-report', data: {} });
     const s = RP.getFeadReportPropertiesHTML({ id: 'n1', type: 'fead-report', data: { reportKind: 'summary' } });
+    const p = RP.getFeadReportPropertiesHTML({ id: 'n1', type: 'fead-report', data: { reportKind: 'pano' } });
     expect(d).toContain('Detaylı raporu Oluştur');
     expect(s).toContain('Özet raporu Oluştur');
+    expect(p).toContain('A3 panoyu Oluştur');
     delete global.veFeadResults;
   });
 });

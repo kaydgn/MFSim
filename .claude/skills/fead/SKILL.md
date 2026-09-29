@@ -1184,6 +1184,40 @@ olurdu.
     sırt ×0,70–1,05 · seçim · yüzeyler · örneğin ivmesi PDF'ten) +
     `fead-panel-gramer.spec.js` → *"sürtünme seçicisi … AYNI çiziliyor"*.
 
+50. **A3 SONUÇ PANOSU — ÜÇÜNCÜ BELGE, HESAPLAMAZ** (2026-09-29, kullanıcı
+    kararı — tasarım tuvali "FEAD A3 rapor tasarımları" · B · Pano: *"Düz
+    'B · Pano' güzel gibi. Varyasyonlarına gerek yok."*). `js/cp-fead-pano.js`,
+    tür anahtarı `pano`; tür listesi TEK (`VE_FEAD_REPORT_KINDS`: Rapor
+    penceresi · FEAD araçları · indirme adı; Sonuçlar'ın bağlantıları kapıyla
+    listeye bağlı). Tek yatay A3 sayfa: yedi gösterge · kayış yolu · kasnak,
+    açıklık, çevrim ve tepe yük tabloları · üç grafik · uygunluk kapıları.
+    • **Sayı çözümden, üretici ortak**: sayı biçimi, kayma (c₂ tasarım yükü,
+      kural 48; yük taşıma ROLDEN `_frSlipYuk`, SF yazımı `_frSfYaz`,
+      sürtünme çözümün dondurduğu `R.surtunme` — ad ve üç sayı Kayış
+      verileri'nde, kural 49), grafikler (`veFeadFigureRaw`), tepe yük
+      (`_fsrPeak`, KALİBRE DEĞİL), kapılar `R.checks` — yeniden
+      hesaplanmaz. Oran eşiği Gates koşulunda gergiyi "yük taşıyan"
+      sayıp çevrimin en düşüğü diye basardı (AG00686: 5,37). Sayfanın kendi işi
+      İNDİRGEMEDİR (en büyük / en küçük, nerede); veri modeli
+      (`veFeadPanoVeri`) ham sayı taşır, HTML yalnız biçimler. Kayış eğilme
+      frekansı köprüde (`veFeadEgilmeFrekansi`).
+    • **10 pt taban**: gövde 13,333 px; SVG yazısı kutunun HESAPLANAN
+      ölçeğiyle tabana yükseltilir (`_fpnTaban`). Çizim kutunun 1/k ölçüsünde
+      kurulur, k = taban / çizicinin 9 birimlik adı (kartın kuralı, kural 21).
+      Tek istisna alt indis.
+    • **Sayfa bütçesi JS'te, CSS'le birebir** (`VE_FEAD_PANO` · `_fpnOlcu`),
+      çöken kenarlığın tablo başına 0,5 px'i dâhil. Orta sütunun satırı
+      21 → 17 px daralır (10 pt × 1,15 + çizgi = 16,33 px); sığmayan model
+      KIRPILMAZ, sayfa uzar (ikinci A3). Sayfa 1.122 px: 297 mm = 1.122,5 px,
+      1.123 ikinci, boş bir sayfa açar.
+    • Grafiğin x yazı sıklığı (`veFeadFigureRaw(…, { xEtiketAdim })`) ayarsız
+      çağrıda BİREBİR eskisi ve her çağrıda geri yüklenir — sızarsa ayrıntılı
+      raporun doğrudan çizilen şekli seyrelir.
+    Kapılar: `tests/unit/cp-fead-pano.test.js` + `tests/e2e/fead-pano.spec.js`
+    (bütün örnekler: sütun · kesik · punto · çizimde binen yazı · PDF tek
+    sayfa · kullanıcının indirme yolu); `tek-yazi-tipi.spec.js` ve
+    `sayi-belge.spec.js` belgeyi de tarar.
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.
