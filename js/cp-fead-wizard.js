@@ -3262,44 +3262,23 @@ var VE_FW_KW_SRC = { kayit: 'kayıtlı ölçüm', egri: 'kendi eğrisi',
 // `ap:<anahtar>`. Ön ek şart, çünkü iki katalog aynı aksesuar için ayrı anahtar
 // uzayları kullanıyor (BMC parça numarası ↔ AP model kodu) ve çıplak bir
 // anahtar hangi kataloğa gideceğini söylemiyordu.
-function veFeadWizAccModelOpts(type){
-  var out = [];
-  if(typeof veFeadAccList === 'function' && typeof VE_FEAD_ACC_TYPE !== 'undefined'
-     && VE_FEAD_ACC_TYPE[type])
-    veFeadAccList(type).forEach(function(r){ out.push(['bmc:' + r.key, r.label]); });
-  var lib = (typeof veFeadPresetLib === 'function') ? veFeadPresetLib(type) : null;
-  if(lib) Object.keys(lib).forEach(function(k){
-    out.push(['ap:' + k, (lib[k].name || k)]); });
-  return out;
-}
+// LİSTE VE YAZICI KÖPRÜDE (`veFeadAccModelOpts` · `veFeadAccModelOf` ·
+// `veFeadAccModelSet`, fead-model.js): kasnak penceresi de AYNI seçiciyi
+// sunuyor (kural 24) — iki yüzeyin iki kuralı olsaydı biri sessizce
+// eskirdi. Bir dönem öyleydi: sihirbaz seçimde çevrim kW'larını
+// temizliyordu, pencere temizlemiyordu ve pencereden seçilen model
+// sonuçlara hiç ulaşmıyordu (2026-09-28, ölçüldü).
+function veFeadWizAccModelOpts(type){ return veFeadAccModelOpts(type); }
 // Bir kasnağın SEÇİLİ model değeri — hangi katalogdan geldiğiyle birlikte.
-function veFeadWizAccModelOf(p){
-  if(!p) return '';
-  if(p.accLib) return 'bmc:' + p.accLib;
-  if(p.accPreset) return 'ap:' + p.accPreset;
-  return '';
-}
-// TEK YAZICI. İki katalog aynı alanları yazamaz: BMC kaydı `accLib` + eğri +
-// devir sınırları, AP kaydı yalnız `accPreset`. Seçim değişince ÖTEKİ katalogun
-// izi TEMİZLENİYOR — bırakılsaydı `_fwKwEff` önceliği (eğri > katalog) yüzünden
-// kullanıcı AP modelini seçer, güç eski BMC eğrisinden gelirdi.
+function veFeadWizAccModelOf(p){ return veFeadAccModelOf(p); }
+// TEK YAZICI — köprünün. Başka kataloğa geçiş künyenin yazdığını temizler,
+// eğri getiren seçim o aksesuarın çevrim kW'larını siler.
 function veFeadWizAccModel(key, val){
   if(!_fwState) return;
   var p = _fwState.pulleys.filter(function(x){ return x.key === key; })[0];
   if(!p) return;
-  var v = String(val == null ? '' : val);
-  if(v.indexOf('bmc:') === 0){
-    delete p.accPreset;
-    veFeadWizAccLib(key, v.slice(4));
-    return;
-  }
-  // BAŞKA KATALOĞA GEÇİŞ ya da SEÇİMİ KALDIRMA: künyenin yazdığı eğri ve devir
-  // sınırları temizleniyor (`veFeadAccClearWritten` — kullanıcının elle
-  // değiştirdiği alana DOKUNMAZ). Bırakılsaydı güç önceliği gereği eski
-  // künyenin eğrisi yeni seçimi sessizce ezerdi.
-  if(typeof veFeadAccClearWritten === 'function') veFeadAccClearWritten({ data: p });
-  else if(typeof veFeadAccUnlink === 'function') veFeadAccUnlink({ data: p });
-  veFeadWizAccPreset(key, v.indexOf('ap:') === 0 ? v.slice(3) : '');
+  veFeadAccModelSet(p.type, p, val, (_fwState.solver || {}).duty, key);
+  veFeadWizRender();
 }
 
 function veFeadWizAccPreset(key, presetKey){

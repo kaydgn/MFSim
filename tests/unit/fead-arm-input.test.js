@@ -547,11 +547,10 @@ describe('kayış tipine bağlı çıktılar', () => {
     const h = fead.getFeadBeltPropertiesHTML(belt);
     expect(h).toMatch(/Kayış tipine bağlı çıktılar/);
     expect(h).toMatch(/id="ve-fead-beltDataMode-/);
-    expect(h).toMatch(/B10 kayış ömrü/);
-    expect(h).toMatch(/Profil .* yine soruluyor/);
+    expect(h).toMatch(/Üretilmiyor: B10 kayış ömrü/);
     // açıkken metin değişiyor
     belt.data.beltDataMode = 'full';
     const h2 = fead.getFeadBeltPropertiesHTML(belt);
-    expect(h2).not.toMatch(/üretilmiyor/);
+    expect(h2).not.toMatch(/üretilmiyor/i);
   });
 });

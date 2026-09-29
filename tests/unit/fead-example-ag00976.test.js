@@ -325,15 +325,20 @@ describe('MODELİN SINIRLARI raporla karşılaştırıldığında AÇIKÇA duruy
     // AG00686 x2 + AG0868 ailesi). Yani bu, kalibre edilmemiş bir sisteme karşı
     // BAĞIMSIZ bir ölçüm ve modelin kendi ilan ettiği ±%8 bandına düşüyor.
     //
-    // İKİ SESSİZ GİRDİ burada da ısırıyor: krank MİLİ ataleti geçilmezse
-    // frekans %30 yukarı kayar. Test ikisini de koşturup farkı belgeliyor.
+    // İKİ SESSİZ GİRDİ burada da ısırıyor: krank MİLİ ataleti yoksa (sürücü
+    // kasnağın kendi 0,064'ü kalır) frekans %30 yukarı kayar. Test ikisini de
+    // koşturup farkı belgeliyor. 2026-09-28'den beri alan MODELİN içinden
+    // geçiyor (`veFeadKasnakAtalet`) — seçenek ikinci bir yol değil.
     const { pack, build } = kur();
     const rows = veFeadDutyRows(solverOf(pack));
     const ile = veFeadAnalyze(build, { rows, cylinders: 6, crankInertia: 0.70 });
     expect(ile.torsional).toBeTruthy();
     expect(pctErr(ile.torsional.firstElasticHz, G.NF)).toBeLessThan(8);
+    expect(veFeadAnalyze(build, { rows, cylinders: 6 }).torsional.firstElasticHz)
+      .toBeCloseTo(ile.torsional.firstElasticHz, 9);
 
-    const siz = veFeadAnalyze(build, { rows, cylinders: 6 });
+    const { build: b2 } = kur((nodes) => { delete nodes.find((n) => n.type === 'fead-solver').data.crankInertia; });
+    const siz = veFeadAnalyze(b2, { rows, cylinders: 6 });
     expect(siz.torsional.firstElasticHz).toBeGreaterThan(ile.torsional.firstElasticHz * 1.2);
   });
 

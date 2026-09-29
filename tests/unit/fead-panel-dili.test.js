@@ -54,6 +54,10 @@ const EN = require('../../js/fead-engines.js');
 Object.keys(EN).forEach((k) => { if (global[k] === undefined) global[k] = EN[k]; });
 const CH = require('../../js/fead-checks.js');
 Object.keys(CH).forEach((k) => { if (global[k] === undefined) global[k] = CH[k]; });
+// Aksesuar künyesi de: TEK model seçicisinin listesi (`veFeadAccModelOpts`)
+// yüklenmezse boş döner ve kart hiç çizilmez.
+const AC = require('../../js/fead-accessories.js');
+Object.keys(AC).forEach((k) => { if (global[k] === undefined) global[k] = AC[k]; });
 const fead = require('../../js/cp-fead.js');
 Object.keys(fead).forEach((k) => { if (global[k] === undefined) global[k] = fead[k]; });
 
@@ -135,13 +139,20 @@ describe('ALAN SATIRI — etiket SOLDA, değer SAĞDA (P2 · P3)', () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('SEKMELER — panelin uzunluğunu çözüyor', () => {
-  test('kasnakta dört sekme, AVARADA iki', () => {
+  test('SÜRÜCÜDE dört sekme (Motor · Çevrim), aksesuarda dört, AVARADA iki', () => {
+    // Sürücü motoru taşır (2026-09-28): Motor (motor · devir sınırları · güç
+    // eğrisi · FEAD tahriki) ve Çevrim — Çözücü'den geldiler.
     const k = ciz(getFeadPulleyPropertiesHTML(kasnak()));
     expect([...k.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')))
+      .toEqual(['geo', 'rol', 'mot', 'cev']);
+    const ac = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'c1', type: 'fead-ac',
+      data: { od: 120, x: 0, y: 0 } })));
+    expect([...ac.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')))
       .toEqual(['geo', 'rol', 'dev', 'egr']);
     // Avara kayıştan güç ÇEKMEZ: devir sınırı da güç eğrisi de ona sorulmuyor
     // (kural 25 — sorulan her alanın bir tüketicisi olmak zorunda).
-    const a = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'a1', type: 'fead-idler' })));
+    const a = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'a1', type: 'fead-idler',
+      data: { od: 75, x: 0, y: 0 } })));
     expect([...a.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')))
       .toEqual(['geo', 'rol']);
   });
@@ -191,16 +202,19 @@ describe('SEKMELER — panelin uzunluğunu çözüyor', () => {
   test('ama durum bir yerde DURUYOR — panel yeniden kurulunca aynı sekme', () => {
     // Hiçbir yerde durmasaydı panel her seçim değişiminde ilk sekmeye dönerdi.
     document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak());
-    fead.veFeadPanelTab('k1', 'dev');
+    fead.veFeadPanelTab('k1', 'cev');
     const kap = ciz(getFeadPulleyPropertiesHTML(kasnak()));
-    expect(kap.querySelector('.ve-fp-tab[aria-selected="true"]').getAttribute('data-k')).toBe('dev');
+    expect(kap.querySelector('.ve-fp-tab[aria-selected="true"]').getAttribute('data-k')).toBe('cev');
   });
 
   test('tanınmayan/geçersiz sekme İLK sekmeye düşer', () => {
-    // Avarada 'egr' yok: kayıtlı sekme o tipte geçersizse panel boş açılmamalı.
+    // Avarada 'cev' yok: kayıtlı sekme o tipte geçersizse panel boş açılmamalı.
+    // (Sürücü işaretli kasnak rolü taşır — avara bile olsa motor sekmelerini
+    // alır; bu yüzden ikinci çizim SÜRÜCÜ OLMAYAN bir avara.)
     document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak({ id: 'a2', type: 'fead-crank' }));
-    fead.veFeadPanelTab('a2', 'egr');
-    const a = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'a2', type: 'fead-idler' })));
+    fead.veFeadPanelTab('a2', 'cev');
+    const a = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'a2', type: 'fead-idler',
+      data: { od: 75, x: 0, y: 0 } })));
     expect(a.querySelector('.ve-fp-tab[aria-selected="true"]').getAttribute('data-k')).toBe('geo');
   });
 });
@@ -255,12 +269,10 @@ describe('SAĞ SÜTUN — sekmeden BAĞIMSIZ (tasarımın iddiası)', () => {
     } finally { global.veFeadChecks = eski; }
   });
 
-  test('çözüm yokken sağ sütun SESSİZCE BOŞ değil — sebebini yazıyor', () => {
+  test('çözüm yokken sağ sütun SESSİZCE BOŞ değil', () => {
     const kap = ciz(getFeadPulleyPropertiesHTML(kasnak()));
-    const bos = kap.querySelector('.ve-fp-thumb-bos');
-    expect(bos).toBeTruthy();
-    expect(bos.textContent).toMatch(/çözülemedi/i);
-    // Türetilenler de '—' gösteriyor, boş kalmıyor.
+    // Kapılar "değerlendirilemedi" diyor, Türetilenler '—' gösteriyor.
+    expect(kap.querySelector('.ve-fp-side .ve-fp-gate[data-d="wait"]')).toBeTruthy();
     const ro = [...kap.querySelectorAll('.ve-fp-side .ve-fp-inp[readonly]')];
     expect(ro.length).toBeGreaterThanOrEqual(4);
     expect(ro.every((i) => i.getAttribute('value') !== '')).toBe(true);
@@ -382,8 +394,15 @@ describe('KAPSAM — yalnız kasnak değil, BÜTÜN FEAD panelleri', () => {
     // Gergi künyesi ve BMC motor kataloğu kendi `display:flex` satırlarını
     // kuruyordu: `flex:1` etiket bütün boşluğu yiyip seçiciyi sağ uca
     // fırlatıyor, etiket ise üç satıra sarıyordu ("BMC / motor / kataloğu").
-    [['gergi', 'Ölçülmüş künye'], ['cozucu', 'BMC motor kataloğu']].forEach(([ad, etiket]) => {
-      const kap = ciz(panel[ad]());
+    // Motor kataloğu 2026-09-28'den beri sürücünün Motor sekmesinde; aksesuarın
+    // TEK model seçicisi de aynı satırda.
+    const secPanel = {
+      gergi: panel.gergi,
+      motor: () => fead.veFeadEngineCard({ id: 's1', type: 'fead-solver', data: {} }),
+      model: () => fead.veFeadAccModelCard({ id: 'c1', type: 'fead-alternator', data: {} }),
+    };
+    [['gergi', 'Ölçülmüş künye'], ['motor', 'BMC motor kataloğu'], ['model', 'Model']].forEach(([ad, etiket]) => {
+      const kap = ciz(secPanel[ad]());
       const l = [...kap.querySelectorAll('.ve-fp-l')]
         .filter((x) => x.textContent === etiket)[0];
       expect(l).toBeTruthy();                                    // ortak etiket sınıfı
@@ -467,65 +486,34 @@ describe('PENCERE DÜZENİ — notlar, türetilenler, küçük resim', () => {
     expect(izg.querySelectorAll('.ve-fp-f').length).toBe(4);
   });
 
-  test('küçük resim pencerenin KASNAĞINI vurguluyor — tek kasnak, adı kalın, açı yok', () => {
-    const dugumler = ornekKur('AG00976_GATES_2025');
-    const hedef = dugumler.filter((x) => x.id === 'ex-ALT')[0];
-    const th = ciz(getFeadPulleyPropertiesHTML(hedef)).querySelector('.ve-fp-thumb');
-    const vurgu = th.querySelectorAll('[data-ve="pulley-hl"]');
-    expect(vurgu.length).toBe(1);
-    // Vurgu DOĞRU kasnakta: zeminin merkezi, adı kalın yazılan kasnağın çemberi.
-    const kalin = [...th.querySelectorAll('text[data-ve="name"]')]
-      .filter((t) => t.getAttribute('font-weight') === '700');
-    expect(kalin.length).toBe(1);
-    expect(kalin[0].textContent).toBe(veFeadShortName(hedef.customName));
-    const hl = vurgu[0];
-    const cember = [...th.querySelectorAll('circle[data-ve="pulley"]')]
-      .filter((c) => c.getAttribute('cx') === hl.getAttribute('cx')
-                  && c.getAttribute('cy') === hl.getAttribute('cy'))[0];
-    expect(cember).toBeTruthy();
-    expect(cember.getAttribute('stroke-width')).toBe('3');
-    // Sarım açıları küçük resimde YOK — pencerenin açısı "Türetilenler"de.
-    expect(th.querySelectorAll('text[data-ve="wrap"]').length).toBe(0);
-    // Çerçeveyi kap çiziyor: SVG'nin kendi kenarlığı yok (çift çerçeve).
-    expect(th.querySelector('svg').getAttribute('style')).not.toMatch(/border/);
-    // Kasnak OLMAYAN pencerede (çözücü) küçük resim HİÇ YOK — vurgulanacak
-    // bir kasnak yok ve resim o pencerenin sorusuna bir şey katmıyor
-    // (kullanıcı, 2026-09-23). Bütün tipler için kural: fead-pencere-ailesi.
-    const coz = dugumler.filter((x) => x.type === 'fead-solver')[0];
-    expect(ciz(getFeadSolverPropertiesHTML(coz)).querySelector('.ve-fp-thumb')).toBeNull();
-  });
-
-  test('küçük resimde adlar birbirine BİNMİYOR — bütün örnekler × bütün kasnaklar', () => {
-    // Kutu, yerleştiricinin kendi genişlik kuralıyla (9 px × 0,6 em; kalın
-    // ad %10 geniş) yeniden kurulur. Eski küçük resim AG00879'da her
-    // pencerede "Sürücü Kasnak (FAN)" ile "Otomatik Gergi (T38665)"u üst
-    // üste basıyordu.
-    let cizim = 0, ad = 0, cakisma = 0;
+  // "KAYIŞ YOLUNDAKİ YERİ" KALKTI (2026-09-28, kullanıcı isteği: *"her
+  // bileşende bulunan 'Kayış Yolundaki Yeri' kısmını da kaldıralım"*). KURAL,
+  // liste değil: bütün örneklerin bütün kasnak pencerelerinde ve araç
+  // pencerelerinde küçük resim yok; yalnız ona hizmet eden yerleşim
+  // seçenekleri (`nameSmart` · `highlightId`) de kaynaktan gitti (kural 26).
+  test('hiçbir pencerede küçük resim yok — bütün örnekler × bütün kasnaklar', () => {
+    let pencere = 0;
     Object.keys(M.VE_FEAD_EXAMPLES).forEach((anahtar) => {
       let dugumler;
       try { dugumler = ornekKur(anahtar); } catch (e) { return; }
-      dugumler.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadPulley)
-        .forEach((n) => {
-          const th = ciz(getFeadPulleyPropertiesHTML(n)).querySelector('.ve-fp-thumb svg');
-          if (!th) return;
-          cizim++;
-          const kutu = [...th.querySelectorAll('text[data-ve="name"]')].map((t) => {
-            const x = +t.getAttribute('x'), y = +t.getAttribute('y');
-            const w = t.textContent.length * 9 * 0.6 * (t.getAttribute('font-weight') === '700' ? 1.1 : 1);
-            const an = t.getAttribute('text-anchor');
-            const x0 = an === 'start' ? x : an === 'end' ? x - w : x - w / 2;
-            return { x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
-          });
-          ad += kutu.length;
-          for (let i = 0; i < kutu.length; i++) for (let j = i + 1; j < kutu.length; j++) {
-            const a = kutu[i], b = kutu[j];
-            if (a.x1 > b.x0 + 0.5 && b.x1 > a.x0 + 0.5 && a.y1 > b.y0 + 0.5 && b.y1 > a.y0 + 0.5) cakisma++;
-          }
-        });
+      dugumler.forEach((n) => {
+        const d = componentDefs[n.type] || {};
+        const html = d.isFeadTensioner ? getFeadTensionerPropertiesHTML(n)
+          : d.isFeadPulley ? getFeadPulleyPropertiesHTML(n)
+          : d.isFeadSolver ? getFeadSolverPropertiesHTML(n)
+          : d.isFeadBelt ? getFeadBeltPropertiesHTML(n) : null;
+        if (html === null) return;
+        pencere++;
+        const kap = ciz(html);
+        expect(kap.querySelector('.ve-fp-thumb')).toBeNull();
+        expect(kap.querySelector('[data-ve="pulley-hl"]')).toBeNull();
+        expect(kap.textContent).not.toMatch(/Kayış Yolundaki yeri/i);
+      });
     });
-    expect(cizim).toBeGreaterThan(40);          // süpürme gerçekten ölçüyor
-    expect(ad).toBeGreaterThan(200);
-    expect(cakisma).toBe(0);
+    expect(pencere).toBeGreaterThan(60);           // süpürme gerçekten ölçüyor
+    expect(SRC).not.toMatch(/_feadSideThumb|opts\.nameSmart|opts\.highlightId/);
+    expect(fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8'))
+      .not.toMatch(/\.ve-fp-thumb/);
   });
 });
 
@@ -553,6 +541,7 @@ describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
     const d = ornek();
     const paneller = [
       getFeadSolverPropertiesHTML(d.filter((n) => n.type === 'fead-solver')[0]),
+      getFeadPulleyPropertiesHTML(d.filter((n) => n.data && n.data.driver)[0]),
       getFeadPulleyPropertiesHTML(d.filter((n) => n.type === 'fead-ac')[0]),
     ];
     let tablo = 0;
@@ -562,7 +551,7 @@ describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
         expect(t.closest('[data-ve-tablo]')).toBeTruthy();
       });
     });
-    expect(tablo).toBe(2);                 // çevrim + güç eğrisi
+    expect(tablo).toBe(3);                 // yöntemler + çevrim (sürücü) + güç eğrisi
   });
 
   test('çevrim birimi: satır EKLEYEN düğme ve %zaman uyarısı birimin içinde, özet sayıları doğru', () => {
@@ -570,7 +559,8 @@ describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
     const coz = d.filter((n) => n.type === 'fead-solver')[0];
     // %zaman toplamı 100'den saptırılır: uyarı pencerede de görünmeli.
     coz.data.duty[0].dcPct = Number(coz.data.duty[0].dcPct) + 7;
-    const kap = ciz(getFeadSolverPropertiesHTML(coz));
+    // Çevrim SÜRÜCÜNÜN penceresinde; birimin kimliği DEPONUNKİ (veri orada).
+    const kap = ciz(getFeadPulleyPropertiesHTML(d.filter((n) => n.data && n.data.driver)[0]));
     const birim = kap.querySelector('[data-ve-tablo^="fead-duty:"]');
     expect(birim).toBeTruthy();
     expect(birim.getAttribute('data-ve-tablo')).toBe('fead-duty:' + coz.id);
@@ -592,7 +582,7 @@ describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
   test('tablo düğmeleri sınıftan — satır içi stil DURUM ifade edemez', () => {
     const d = ornek();
     let dugme = 0;
-    [getFeadSolverPropertiesHTML(d.filter((n) => n.type === 'fead-solver')[0]),
+    [getFeadPulleyPropertiesHTML(d.filter((n) => n.data && n.data.driver)[0]),
      getFeadPulleyPropertiesHTML(d.filter((n) => n.type === 'fead-ac')[0])].forEach((html) => {
       ciz(html).querySelectorAll('[data-ve-tablo] button').forEach((b) => {
         dugme++;
