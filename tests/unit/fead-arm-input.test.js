@@ -445,7 +445,6 @@ describe('rapor — kayış boyu ÇIKTI, montaj konumu TÜREV', () => {
       rows: veFeadDutyRows(solv), cylinders: 6, fatigueModel: 'PK-2_2p-MT3',
     });
     R.build = build; R.pulleyNames = build.names;
-    R.serviceFact = (solv && solv.data && Number(solv.data.serviceFact)) || 0;
     return RP._frSection8(R, { id: 'rep1', type: 'fead-report', data: {} });
   }
 
@@ -527,13 +526,12 @@ describe('kayış tipine bağlı çıktılar', () => {
     // BELGENİN KENDİSİNDEN okunuyor, üreteciden değil: kutuyu doğrudan çağıran
     // bir test, onu §8'den düşüren mutasyonu GEÇİRİYORDU.
     R.pulleyNames = R.build && R.build.names;
-    R.serviceFact = 1.3;
     const h = RP._frSection8(R, { id: 'rep1', type: 'fead-report', data: {} });
     expect(h).toMatch(/YER ALMIYOR/);
     expect(h).toMatch(/B10 kayış ömrü/);
     expect(h).toMatch(/kapatılamaz/);
     // açıkken kutu HİÇ basılmıyor (yanlış alarm yok)
-    const a = coz(true, 'full'); a.R.pulleyNames = a.build.names; a.R.serviceFact = 1.3;
+    const a = coz(true, 'full'); a.R.pulleyNames = a.build.names;
     expect(RP._frSection8(a.R, { id: 'r2', type: 'fead-report', data: {} }))
       .not.toMatch(/YER ALMIYOR/);
     expect(RP._frBeltDataBox(a.R)).toBe('');

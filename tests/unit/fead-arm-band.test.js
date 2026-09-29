@@ -317,7 +317,7 @@ describe('rapor yüzeyi', () => {
     const solv = ns.filter((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver)[0];
     const R = veFeadAnalyze(build, { rows: veFeadDutyRows(solv), cylinders: 6,
       fatigueModel: 'PK-2_2p-MT3' });
-    R.build = build; R.pulleyNames = build.names; R.serviceFact = 1.3;
+    R.build = build; R.pulleyNames = build.names;
     return RP._frSection8(R, { id: 'rep1', type: 'fead-report', data: {} });
   }
 

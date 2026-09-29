@@ -84,6 +84,16 @@ function coz(key, bd) {
   global.veFeadResults = window.veFeadResults;
   return { R, sv };
 }
+// c₂ SEÇİLİ ÇÖZÜM — Gates örnekleri servis faktörü taşımaz (kural 48); seçili
+// hâlin yüzeyleri için hücre depoya açıkça yazılır.
+function cozSecili(hucre) {
+  kur();
+  const sv = global.nodes.find((n) => n.type === 'fead-solver');
+  M.veFeadServisSet(sv.data, hucre);
+  const R = fead.veFeadSolve(sv.id);
+  global.veFeadResults = window.veFeadResults;
+  return { R, sv };
+}
 const kume = (R, k) => R.signals.find((d) => d.key === k);
 const kanal = (ds, id) => ds.channels.find((c) => c.id === id);
 const ORNEKLER = M.veFeadExampleKeys();
@@ -371,9 +381,9 @@ describe('özet kartları — hüküm yalnız modelin kendi ölçütü olan yerd
   // yükünde kuruldu, kart hükmü SF ≥ 1'den verir ve c₂'yi künyesinde yazar.
   // Eskiden 5,0 "istenince" 1'in üstündeki SF sarıya dönüyordu.
   test('servis faktörü kartın künyesinde; hüküm SF ≥ 1 (satırlar tasarım yükünde)', () => {
-    const { R } = coz();
+    const { R } = cozSecili('agir.normal.16');
     const k = S.summary(R).find((x) => x.k === 'kayma');
-    expect(R.servis.deger).toBe(1.3);                      // örnek c₂ taşıyor
+    expect(R.servis.deger).toBe(1.3);
     expect(k.not).toMatch(/tasarım yükü c₂ = 1,3/);
     expect(k.durum).toBe('ok');
     R.servis = { deger: 1, kaynak: 'yok', etiket: 'seçilmedi' };
@@ -418,7 +428,7 @@ describe('diyagram yorumu — sayı modelden, genel geçer metin yok', () => {
     });
   });
   test('kayma şeridi en düşük SF\'yi ve servis faktörü hükmünü modelin sayısıyla yazar', () => {
-    const { R } = coz();
+    const { R } = cozSecili('agir.normal.16');
     const ds = kume(R, 'cevrim');
     const br = B.forLane(ds, R, ['sfmin']);
     const st = rapor._frSlipStats(R);

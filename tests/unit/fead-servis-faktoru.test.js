@@ -254,6 +254,26 @@ describe('GİDİŞ-DÖNÜŞ — sihirbaz ↔ düğüm', () => {
     expect(M.veFeadServisFaktoru(depo.data)).toMatchObject({ deger: 1.1, kaynak: 'tablo' });
   });
 
+  // KAYNAKSIZ c₂ ÖRNEKTE DE YOK (kullanıcı kararı 2026-09-29): Gates raporları
+  // servis faktörü uygulamıyor ve yazmıyor. AG00976 kaydı bir 1,3 taşıyordu;
+  // c₂ bir yük katsayısı olunca örneğin kayma sayılarını raporun gerçek
+  // yükünden uzaklaştırıyordu (föy 880 d/dk: 4,58 → 3,88). BMC'ninki kaynaklı:
+  // tedarikçi sayfası 1,3 yazıyor ve not bunu söylüyor.
+  test('ÖRNEKLER c₂\'yi KAYNAĞINDAN taşır — Gates kaydı taşımaz, BMC notuyla taşır', () => {
+    const anahtar = M.veFeadExampleKeysAll();
+    const gates = anahtar.filter((k) => /_GATES_/.test(k));
+    expect(gates.length).toBeGreaterThanOrEqual(10);             // boşa çalışmıyor
+    gates.forEach((k) => {
+      const s = M.veFeadExampleOf(k).solver || {};
+      expect([k, s.serviceFact, s.servisHucre]).toEqual([k, undefined, undefined]);
+    });
+    const bmc = M.veFeadExampleOf('BMC_FEAD_2026');
+    expect(bmc.solver.serviceFact).toBe(1.3);
+    expect(bmc.note).toMatch(/servis faktörü 1\.3/);
+    anahtar.filter((k) => !/_GATES_/.test(k) && k !== 'BMC_FEAD_2026')
+      .forEach((k) => expect([k, (M.veFeadExampleOf(k).solver || {}).serviceFact]).toEqual([k, undefined]));
+  });
+
   test('BOŞ SİHİRBAZ c₂ YAZMAZ — eski varsayılan 1,3\'ün kaynağı yoktu', () => {
     const s = wiz.veFeadWizDefault().solver;
     expect(s.serviceFact).toBeUndefined();
