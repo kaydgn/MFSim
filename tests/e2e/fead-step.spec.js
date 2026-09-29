@@ -445,11 +445,115 @@ test('KESİT: eskizli dosyada krank seçilince kesit; hesap çapı düğmesi bü
   await expect(yan.locator('[data-ve-3b-kesit] [data-ve-kesit="hesap"]')).toContainText('160,00');
   await yan.locator('[data-ve-3b-kesit] [data-ve-hesapcap="cad"]').click();
   expect((await sutun()).sort()).toEqual(['130,0', '163,0', '78,0', '78,0'].sort());
-  // panel yatay kaymıyor (kesit tablosu 320 px'e sığıyor)
+  // panel yatay kaymıyor (kesit tablosu sütuna sığıyor)
   expect(await yan.evaluate((e) => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(1);
   // aktarım: seçim ve ölçüler sihirbazın kayışına
   await page.locator('#ve-fw-3b-aktar').click();
   await expect(page.locator('#ve-fw-3b')).toBeHidden();
   expect(await page.evaluate(() => veFeadWizState().belt)).toMatchObject({ hbCad: 1.5, hrCad: 1.5, hesapCap: 'cad' });
+  expect(hatalar).toEqual([]);
+});
+
+// ── KAYIŞ SEÇİLİNCE: KESİT ŞEKLİ, HESAP ÇAPI, ÖLÇÜLER (7) ──────────────────────
+// Kullanıcı isteği (2026-09-29): ContiTech'in kayış kesiti şekli ve tablosu 3B
+// görüntüleyicinin sağında; kullanıcı hesap çapını KAYIŞI SEÇTİKTEN SONRA oradan
+// seçer. Sütun 320 → 440 px ("çok dar olmuş"). Node'da HİÇ koşmayan halkalar:
+// 3B'de kayışa gerçek tıklama, matris başlığına gerçek tıklama, seçili sütunun
+// CSS'ten gelen zemini, gerçek yazı tipiyle şeklin yazılarının kesilmemesi.
+test('KAYIŞ SEÇİLİNCE: kesit şekli + hesap çapı matrisi + ölçüler; seçim oradan, sütun 440 px', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await feadAc(page);
+  await page.locator('.ve-fw-stp-file').setInputFiles({
+    name: 'AG00686.stpZ', mimeType: 'application/octet-stream', buffer: stpZ(O.ag00686Step({ eskiz: { hb: 1.5, hr: 1.5 } })),
+  });
+  await expect(page.locator('#ve-fw-3b-tuval')).toHaveAttribute('data-durum', 'hazir', { timeout: 30000 });
+  await page.evaluate(() => {
+    const s = veFeadWizStp();
+    s.sonuc.agac.forEach((d, i) => {
+      const t = /KRANK/.test(d.ad) ? 'fead-crank' : /KL[İI]MA/.test(d.ad) ? 'fead-ac' : /AVARA/.test(d.ad) ? 'fead-idler' : /KAYI/.test(d.ad) ? 'fead-belt' : null;
+      if (t) veFeadWizStpRol(i, t);
+    });
+  });
+  const yan = page.locator('#ve-fw-3b-yan');
+  // SÜTUN 440 px; 1.366'da tuvale yine ≥ 880 px kalır
+  const kutu = () => page.evaluate(() => ({
+    yan: Math.round(document.getElementById('ve-fw-3b-yan').getBoundingClientRect().width),
+    tuval: Math.round(document.getElementById('ve-fw-3b-tuval').getBoundingClientRect().width) }));
+  expect(await kutu()).toMatchObject({ yan: 440 });
+  expect((await kutu()).tuval).toBeGreaterThanOrEqual(880);
+
+  // HESAPTAN ÖNCE: 3B'de kayışa GERÇEK tıklama → bölüm açılır
+  const i = await page.evaluate(() => { const s = veFeadWizStp(); return s.sonuc.parcalar.findIndex((p) => /KAYI/.test(p.ad)); });
+  const n = await page.evaluate((j) => veFeadWiz3bIsabetNoktasi(j), i);
+  expect(n).not.toBeNull();
+  await page.mouse.click(n.x, n.y);
+  const bolum = yan.locator('[data-ve-3b-kayis-kesit]');
+  await expect(bolum).toBeVisible();
+  const sekil = bolum.locator('svg[data-ve="kayis-sekil"]');
+  const sb = await sekil.boundingBox();
+  expect(sb.width).toBeGreaterThanOrEqual(400);            // sütunun içeriği kadar geniş
+  expect(sb.height).toBeGreaterThanOrEqual(90);            // PK'da kayış görünür boyda
+  const matris = yan.locator('[data-ve-hesapcap-matris]');
+  await expect(matris.locator('thead [data-ve-hesapcap]')).toHaveCount(2);   // CAD eskizi hesapta okunur
+  await expect(matris.locator('tr[data-ve-hc="bekliyor"]')).toBeVisible();
+  await expect(yan.locator('[data-ve-kayis-olcu] thead th.on')).toHaveText('PK');
+
+  // HESAPLA → kayış satırındaki bağlantı kayışı yeniden seçer
+  await page.locator('#ve-fw-3b-hesapla').click();
+  await expect(bolum).toHaveCount(0);                      // hesap seçimi kaldırır (halkalar)
+  await yan.locator('[data-ve-3b-kayis] button').click();
+  await expect(bolum).toBeVisible();
+  await expect(matris.locator('thead [data-ve-hesapcap]')).toHaveCount(3);
+  await expect(matris.locator('[aria-pressed="true"]')).toHaveAttribute('data-ve-hesapcap', 'cad');
+  await expect(matris.locator('tr[data-ve-hc-kasnak]')).toHaveCount(4);
+  await expect(sekil.locator('[data-ve="sekil-dw"]')).toHaveAttribute('data-ve-hesap', '1');
+  // seçili sütun CSS'ten ayrışıyor (gerçek hesaplanmış zemin)
+  const zemin = await matris.locator('tr[data-ve-hc-kasnak="0"] td').evaluateAll((l) => l.map((td) => getComputedStyle(td).backgroundColor));
+  expect(zemin[2]).not.toBe(zemin[1]);
+  // GERÇEK tıklama: d_b → basılılık, şeklin hesap çizgisi ve HESAP tablosunun
+  // "Hesap Ø" sütunu birlikte (tek alan)
+  const hesapO = () => yan.locator('[data-ve-3b-hesapcap]').allTextContents();
+  expect((await hesapO()).sort()).toEqual(['130,0', '163,0', '78,0', '78,0'].sort());
+  await matris.locator('thead [data-ve-hesapcap="db"]').click();
+  await expect(matris.locator('[aria-pressed="true"]')).toHaveAttribute('data-ve-hesapcap', 'db');
+  await expect(sekil.locator('[data-ve="sekil-db"]')).toHaveAttribute('data-ve-hesap', '1');
+  await expect(sekil.locator('[data-ve-hesap]')).toHaveCount(1);
+  expect((await hesapO()).sort()).toEqual(['127,0', '160,0', '75,0', '75,0'].sort());
+
+  // SIĞMA: panel yatay kaymıyor, tablolar kendi kabına sığıyor
+  expect(await yan.evaluate((e) => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(1);
+  const tasan = await yan.locator('table').evaluateAll((l) => l.filter((t) => t.scrollWidth > t.clientWidth + 1).map((t) => t.className));
+  expect(tasan).toEqual([]);
+  // ŞEKLİN YAZILARI KESİLMİYOR — gerçek yazı tipiyle, 14 bileşimin hepsinde
+  // (ölçüldü: 44 px'lik sol bölgede PM'nin "h 14,50"si tamamen kesiliyordu)
+  const kesilen = await page.evaluate(() => {
+    const kap = document.createElement('div');
+    kap.style.cssText = 'position:fixed;left:0;top:0;width:416px;';
+    document.body.appendChild(kap);
+    const out = [];
+    VE_FEAD_BELT_PROFILES.forEach((p) => VE_FEAD_BELT_BRANDS.forEach((b) => {
+      const g = veFeadBeltGeom(p, b);
+      if (!g.kalinlik) return;
+      ['dw', 'db'].forEach((h) => {
+        kap.innerHTML = veFeadKayisSekilSVG({ e: g.ribAdim, t: g.kalinlik, hb: g.hb, hr: g.hr }, { hesap: h });
+        const s = kap.querySelector('svg').getBoundingClientRect();
+        kap.querySelectorAll('text').forEach((t) => {
+          const r = t.getBoundingClientRect();
+          if (r.left < s.left - 0.5 || r.right > s.right + 0.5 || r.top < s.top - 0.5 || r.bottom > s.bottom + 0.5)
+            out.push(p + b + ' ' + h + ' ' + t.textContent);
+        });
+      });
+    }));
+    kap.remove();
+    return out;
+  });
+  expect(kesilen).toEqual([]);
+
+  // aktarım: kayışın bölümünde seçilen (d_b) sihirbazın kayışına
+  await page.locator('#ve-fw-3b-aktar').click();
+  await expect(page.locator('#ve-fw-3b')).toBeHidden();
+  expect(await page.evaluate(() => veFeadWizState().belt)).toMatchObject({ hbCad: 1.5, hrCad: 1.5, hesapCap: 'db' });
   expect(hatalar).toEqual([]);
 });

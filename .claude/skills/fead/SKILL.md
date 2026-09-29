@@ -707,6 +707,22 @@ olurdu.
       pencere açılsın"*): kaplamaya `.ve-fw-3b-genis` (`_fw3bGenis`), sihirbaz
       1.180 px → ekranın tamamı (en çok 1.840); kapanınca eski ölçüsüne döner.
       Rol düğmeleri kartın seçicisiyle TEK listeden (`veFeadWizStpRolTipleri`).
+      Sağ sütun 440 px (2026-09-29, kullanıcı: 320 px *"çok dar olmuş"*).
+    • **KAYIŞ SEÇİLİNCE KESİT ŞEKLİ VE HESAP ÇAPI** (2026-09-29, kullanıcı:
+      *"bu resimi 3B görsel okuyucu penceresine sağ tarafa yerleştireceksin …
+      hangi çapı kullanacağını buradan kayışı seçtikten sonra seçecek"* —
+      ContiTech'in Şekil 1 + Tablo 1'i). Seçim kayış biriminin içindeyse
+      (`_fw3bSeciliKayis`, en yakın rollü ata) üç bölüm: Şekil 1
+      (`veFeadKayisSekilSVG` — solda kayış s · h, sağda kasnakta h_r · h_b ·
+      d_w · d_b; sayılar çizilen kayışın, hesap çizgisi seçimle) · hesap çapı
+      MATRİSİ (sütun seçenek, satır kasnak; başlık düğmesi TEK yazıcı
+      `veFeadWizStpHesapCap`) · markanın beş profilli ölçü tablosu
+      (`veFeadKayisOlcuHTML` ← `veFeadBeltGeom`, kaynak damgası son satırda).
+      **Resim gömülmez, program çizer**: resmin tablosu tek markanın sayıları —
+      Gates seçili modelin yanında hesaptaki h_b'yle çelişirdi. L_b aralığı yok
+      (boy verisi markaya göre değil). Hesaptan önce de açılır; profil
+      kayışın ADINDAKİ koddan (`_fwStpKayisBirim` — tanıyıcının ayrıştırıcısı).
+      Hesaptan sonra hesap bölümündeki Kayış satırı da kayışı seçer.
     • **Tek Esc tek katman**: Esc önce 3B'yi kapatır; sihirbaz kapanınca WebGL
       bağlamı bırakılır. Üçgenler kartta saklanır (`_fwStp.ag`), üçgenleme
       kare kare (24 ms bütçe) — dosyanızda 1,5 sn, tek seferde arayüz donardı.
@@ -738,7 +754,7 @@ olurdu.
     (rolsüz açılış · hesap düğmesi · ata/torun · çizim · gidiş-dönüş · kayış
     · sıra · künye · .stpZ) + `tests/unit/fead-step-oner.test.js` (gergi
     imzası · sekiz kuralın tuzak montajları · en küçük birim · iki aday ·
-    otomatik atama ve sönmesi) + `tests/unit/fead-step-eskiz.test.js` (eskiz okuma · h_b/h_r · kanal tabanı · varsayılan CAD · kesit · seçici) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
+    otomatik atama ve sönmesi) + `tests/unit/fead-step-eskiz.test.js` (eskiz okuma · h_b/h_r · kanal tabanı · varsayılan CAD · kesit · seçici) + `tests/unit/fead-kayis-sekil.test.js` (Şekil 1'in oranları · ölçü tablosu ↔ veri · matris · kayışın bölümü) + `tests/unit/fead-step-kayis.test.js` (kod kesme ·
     kayış birimi · genişlik · aktarım · tek kayış · CAD'deki kayış kartı · tek
     rol listesi) + `tests/unit/fead-3b.test.js` (birim · tek rol ·
     renk · panel · otomatik açılış · Esc · tazeleme kancası) +
@@ -887,7 +903,10 @@ olurdu.
       panel onu yazar: ISO nominaline düşülmüş bir h_b ile üreticinin kendi
       h_b'si aynı hücrede aynı görünür, aynı şey değildir (kural 8).
       Gates h_b/h_r'yi PJ/PL/PM için yayımlamıyor; PH'yi hiç üretmiyor.
-    Kapı: `fead-belt-geom.test.js`.
+    • Kasnaktaki kesit figürü de (`veFeadKesitSVG` → `_feadKesitGeom`) proje
+      tablosuna düşer — GATES + PJ/PL/PM'de figür hiç çizilmiyordu; çekirdeğin
+      bildiği on bir bileşimde çıktı bayt bayt aynı (110 çıktı ölçüldü).
+    Kapı: `fead-belt-geom.test.js` + `fead-kayis-sekil.test.js`.
 
 41. **"BİLEŞENLER" SÜTUNU YOK — EKLEME TUVALDE** (2026-09-28, kullanıcı
     kararı: *"FEAD modülünde bu 'Bileşenler' sütununu kaldıralım, zaten

@@ -332,6 +332,9 @@ function veFeadWiz3bPanelHTML(s, secili){
   // ── SEÇİLİ KASNAĞIN KESİTİ (hesaptan sonra; seçim bir birimin içindeyse o birim) ──
   var kKi = _fw3bSeciliKasnak(s, secili);
   if(kKi >= 0 && typeof _fwStpKasnakKesitHTML === 'function') h += _fwStpKasnakKesitHTML(s, kKi);
+  // ── SEÇİLİ KAYIŞIN BÖLÜMÜ (kesit şekli · hesap çapı · karakteristik ölçüler);
+  // hesaptan ÖNCE de — şekil ve tablo katalogdan, kasnak çapları hesaptan ──
+  if(_fw3bSeciliKayis(s, secili) >= 0 && typeof _fwStpKayisKesitHTML === 'function') h += _fwStpKayisKesitHTML(s);
   // ── ROL VERİLENLER ──
   var atanan = so.agac.filter(function(d){ return !!s.roller[d.i]; });
   h += '<section class="ve-fw-3b-bolum"><h4>Rol verilenler <span class="ve-fw-dim">' + atanan.length + '</span></h4>';
@@ -383,9 +386,11 @@ function veFeadWiz3bPanelHTML(s, secili){
     // Hesap çapı kayış için TEK seçim (kullanıcı kararı): bütün kasnaklara birlikte
     if(typeof _fwStpHesapCapHTML === 'function')
       h += '<div class="ve-fw-3b-hesapcap"><span class="ve-fw-dim">Hesap çapı</span>' + _fwStpHesapCapHTML(s) + '</div>';
+    // Kayışın adı bir bağlantı: seçer, kesiti ve hesap çapı matrisi açılır
     if(coz.kayis)
-      h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <b>' + _fwEsc(_fwStpRolAd('fead-belt'))
-        + '</b> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
+      h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <button type="button" class="ve-fw-3b-yolb"'
+        + ' onclick="veFeadWiz3bSec(' + coz.kayis.dugum + ')">' + _fwEsc(_fwStpRolAd('fead-belt'))
+        + '</button> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
     h += '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'
       + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button></div>';
   }
@@ -402,6 +407,14 @@ function _fw3bSeciliKasnak(s, secili){
       if(b.dugum === d) return (b.kasnak === undefined || b.kasnak === null) ? -1 : b.kasnak;
     }
   }
+  return -1;
+}
+// Seçili düğüm kayışın biriminde mi: düğüm ya da atası kayış rolünde. Bir
+// yolda TEK rol olduğu için ilk rastlanan kesin cevaptır; hesap gerekmez.
+function _fw3bSeciliKayis(s, secili){
+  var so = s && s.sonuc;
+  if(!so || !(secili >= 0)) return -1;
+  for(var d = secili; d >= 0; d = so.agac[d].ebeveyn) if(s.roller[d] === 'fead-belt') return d;
   return -1;
 }
 // Hesap kartın işlevidir; başarılıysa seçim kalkar — seçim öteki parçaları
@@ -687,6 +700,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWiz3bRolJeton: veFeadWiz3bRolJeton,
     veFeadWiz3bPanelHTML: veFeadWiz3bPanelHTML,
     _fw3bSeciliKasnak: _fw3bSeciliKasnak,
+    _fw3bSeciliKayis: _fw3bSeciliKayis,
     veFeadWiz3bTazele: veFeadWiz3bTazele
   };
 }

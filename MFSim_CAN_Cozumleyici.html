@@ -8775,7 +8775,10 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-bas .ve-fw-dim{ min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:400; }
 /* Bandın metinli düğmeleri: mini düğmenin görünüşü, genişliği metinden */
 .ve-fw-3b-bas .ve-fw-3b-metin{ width:auto; height:22px; padding:0 8px; white-space:nowrap; }
-.ve-fw-3b-govde{ flex:1; min-height:0; display:grid; grid-template-columns:minmax(0, 1fr) 320px; }
+/* Sağ sütun 440 px (kullanıcı isteği 2026-09-29: 320 px "çok dar"): kayışın
+   kesit şekli, hesap çapı matrisi ve beş profillik ölçü tablosu yatay
+   kaydırmasız sığar; 1.366 px ekranda tuvale ~900 px kalır. */
+.ve-fw-3b-govde{ flex:1; min-height:0; display:grid; grid-template-columns:minmax(0, 1fr) 440px; }
 .ve-fw-3b-tuval{ position:relative; min-width:0; min-height:0; overflow:hidden;
   background:var(--bg-secondary); cursor:grab; touch-action:none; }
 .ve-fw-3b-tuval.surukle{ cursor:grabbing; }
@@ -8825,6 +8828,23 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-kesit-tbl td:nth-child(2){ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-fw-kesit-tbl td:nth-child(3){ font-size:var(--fs-micro); }
 .ve-fw-kesit-hesap td{ border-top:1px solid var(--border-hover); color:var(--text-heading); }
+/* KAYIŞIN BÖLÜMÜ (7, kullanıcı isteği 2026-09-29): kayış seçilince kesit
+   şekli, hesap çapı matrisi ve markanın karakteristik ölçüleri. Seçili sütun
+   (hesabın seçeneği · kayışın profili) jetonun tonuyla ayrılır; seçici başlık
+   düğmesi dinlenmede DOLU (basılır), seçiliyken ters renk — .ve-fw-spin'in dili. */
+.ve-fw-hc-tbl th{ padding:0 2px 4px; }
+.ve-fw-hc-tbl td, .ve-kayis-olcu td, .ve-kayis-olcu th{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ve-fw-hc-tbl td:first-child, .ve-kayis-olcu td:first-child{ text-align:left; white-space:normal; }
+.ve-fw-hc-tbl .on, .ve-kayis-olcu .on{ background:var(--accent-tint-8); color:var(--text-heading); }
+.ve-fw-hc-tbl th.on, .ve-kayis-olcu th.on{ background:var(--accent-tint-10); }
+.ve-fw-hc-tbl tr:hover td.on, .ve-kayis-olcu tr:hover td.on{ background:var(--accent-tint-10); }
+.ve-fw-hc-sec{ width:100%; padding:4px 6px; font:inherit; font-weight:600; white-space:nowrap; cursor:pointer;
+  color:var(--text-secondary); background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); }
+.ve-fw-hc-sec:hover{ background:var(--bg-tertiary); border-color:var(--border-hover); }
+.ve-fw-hc-sec[aria-pressed="true"]{ background:var(--text-primary); border-color:var(--text-primary); color:var(--bg-input); }
+.ve-fw-hc-sec:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-kayis-olcu th{ font-weight:600; }
+.ve-kayis-olcu td.on{ font-weight:600; }
 /* OTOMATİK BULUNAN GERGİ (5.2): satır ve rozet — seçilen değil BULUNAN rol,
    ayırt edilsin. Öneri satırının düğmesi metin taşır (kare mini düğme değil). */
 .ve-fw-oto{ flex-wrap:wrap; }
@@ -8837,7 +8857,7 @@ span.ve-fw-ro{ display:inline-block; }
    (js/cp-fead-3b.js → _fw3bGenis). */
 .ve-settings-overlay.ve-fw-3b-genis{ padding:12px; }
 .ve-fw-3b-genis .ve-fw-modal{ max-width:1840px; height:calc(100vh - 24px); }
-@container vefw3b (max-width: 760px){
+@container vefw3b (max-width: 900px){
   .ve-fw-3b-govde{ grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(220px, 1fr) minmax(0, 42%); }
   .ve-fw-3b-yan{ border-left:0; border-top:1px solid var(--border-color); }
 }
