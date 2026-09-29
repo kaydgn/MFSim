@@ -1182,6 +1182,10 @@ olurdu.
       21 → 17 px daralır (10 pt × 1,15 + çizgi = 16,33 px); sığmayan model
       KIRPILMAZ, sayfa uzar (ikinci A3). Sayfa 1.122 px: 297 mm = 1.122,5 px,
       1.123 ikinci, boş bir sayfa açar.
+    • **Hücre yazısından en az 1 px geniş**: tablo hücresi üç nokta taşır
+      (kesilen sayı sessizce yanlış okunmasın), yani sınırda duran hücre
+      "156,…" basar. Kapı yazının GERÇEK genişliğini ölçer — scrollWidth
+      tam sayıya yuvarlanıyor ve 0,84 px'lik taşmayı görmüyordu.
     • Grafiğin x yazı sıklığı (`veFeadFigureRaw(…, { xEtiketAdim })`) ayarsız
       çağrıda BİREBİR eskisi ve her çağrıda geri yüklenir — sızarsa ayrıntılı
       raporun doğrudan çizilen şekli seyrelir.

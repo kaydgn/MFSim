@@ -467,8 +467,8 @@ function _fpnKayisVerileri(V){
     ['Sürtünme μ: ' + _frEsc(V.surtunme ? V.surtunme.ad : '—'), _fpnSurtunmeYaz(V.surtunme)]
   ];
   // Değer sütunu 240 (içi 232 px): Elle'nin en uzun hâli "oluklu 2,95 ·
-  // sırt 2,95 · ℓ 19,5 mm" 224,4 px; etiketin en uzunu "Sürtünme μ: Gates
-  // kalibrasyonu" 215,3 px, sütunu 252 (ölçüldü; 230'luk sütunda Elle kesiliyordu).
+  // sırt 2,95 · ℓ 19,5 mm" belgenin gömülü Inter'iyle 215,1 px; etiketin en
+  // uzunu "Sürtünme μ: Gates kalibrasyonu" 201,2 px, sütunu 252 (ölçüldü).
   return '<table class="kv">' + _fpnCol([260, 240]) + sat.map(function(r){
     return '<tr><td class="l e">' + r[0] + '</td><td class="v">' + r[1] + '</td></tr>'; }).join('') + '</table>';
 }
@@ -496,9 +496,9 @@ function _fpnGergi(V){
 }
 
 function _fpnKasnaklar(V){
-  var h = '<table>' + _fpnCol([50, 54, 48, 58, 56, 56, 56, 38, 48, 42]);
-  h += '<tr>' + _fpnTh('Kod', '', 'l') + _fpnTh('β', '[°]') + _fpnTh('i', '[–]') + _fpnTh('n maks', '[d/d]')
-    + _fpnTh('P maks', '[kW]') + _fpnTh(_fpnSub('F', 'L,stat'), '[N]') + _fpnTh(_fpnSub('F', 'L,din'), '[N]')
+  var h = '<table>' + _fpnCol([50, 58, 50, 56, 50, 52, 52, 38, 48, 52]);
+  h += '<tr>' + _fpnTh('Kod', '', 'l') + _fpnTh('β', '[°]') + _fpnTh('i', '[–]') + _fpnTh(_fpnSub('n', 'maks'), '[d/d]')
+    + _fpnTh(_fpnSub('P', 'maks'), '[kW]') + _fpnTh(_fpnSub('F', 'L,stat'), '[N]') + _fpnTh(_fpnSub('F', 'L,din'), '[N]')
     + _fpnTh('Yön', '[°]') + _fpnTh('SF', 'min') + _fpnTh('Ömür', '[%]') + '</tr>';
   V.kas.forEach(function(k){
     h += '<tr' + (k.yuklu ? '' : ' class="idle"') + '>' + _fpnTd('<b>' + _frEsc(k.kod) + '</b>', 'l')
