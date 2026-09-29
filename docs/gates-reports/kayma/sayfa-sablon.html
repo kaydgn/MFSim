@@ -1,0 +1,549 @@
+<title>FEAD Kaymama Koşulu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=STIX+Two+Text:ital,wght@0,400;1,400&display=swap">
+<style>
+/* Yerleşim: teknik resim paftası — antet, üç fark, sonra ölçüm defteri (MFSim · Gates ·
+   sürtünme · eğriler · tablo), literatür ve kararlar; tek sütun, grafikler kendi kabında. */
+:root {
+  --paper: #eef2f3;
+  --sheet: #fafcfc;
+  --ink: #1a2830;
+  --ink-2: #4b5c66;
+  --rule: #c5d0d5;
+  --accent: #1d5a8c;
+  --ok: #1d7757;
+  --warn: #9c5d0c;
+  --bad: #a83b2b;
+  --tint: rgba(29, 90, 140, 0.07);
+  --grid: #e1e7ea;
+  --axis: #9aabb3;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --band: rgba(29, 90, 140, 0.12);
+  --f-disp: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-math: "STIX Two Text", "Cambria Math", "Times New Roman", serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f161a; --sheet: #151f25; --ink: #dce5e9; --ink-2: #9aacb6; --rule: #2b3a42;
+    --accent: #7db0de; --ok: #5cc49c; --warn: #e2a452; --bad: #ee7e6b;
+    --tint: rgba(125, 176, 222, 0.09); --grid: #22313a; --axis: #51646f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --band: rgba(125, 176, 222, 0.16);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f161a; --sheet: #151f25; --ink: #dce5e9; --ink-2: #9aacb6; --rule: #2b3a42;
+  --accent: #7db0de; --ok: #5cc49c; --warn: #e2a452; --bad: #ee7e6b;
+  --tint: rgba(125, 176, 222, 0.09); --grid: #22313a; --axis: #51646f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --band: rgba(125, 176, 222, 0.16);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-inline: 16px; padding-block: 24px 56px;
+}
+.wrap { max-width: 1100px; margin-inline: auto; display: flex; flex-direction: column; gap: 38px; }
+h1, h2, h3 { font-family: var(--f-disp); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h2 { font-size: 26px; display: flex; align-items: baseline; gap: 12px; }
+h2 .no { color: var(--accent); font-size: 18px; letter-spacing: 0.08em; }
+h3 { font-size: 19px; }
+p { margin: 0; max-width: 74ch; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--f-mono); font-size: 0.85em; }
+section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lead { color: var(--ink-2); max-width: 80ch; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── ANTET ─────────────────────────────────────────────── */
+.antet { border: 1.5px solid var(--ink); background: var(--sheet); display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+.antet .ad { padding: 18px 20px; border-right: 1px solid var(--ink); display: flex; flex-direction: column; gap: 8px; }
+.antet .ad h1 { font-size: 46px; line-height: 1; }
+.antet .ad .alt { color: var(--ink-2); max-width: 60ch; }
+.antet dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); }
+.antet dt, .antet dd { margin: 0; padding: 7px 12px; border-bottom: 1px solid var(--rule); }
+.antet dt { font-family: var(--f-disp); text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; color: var(--ink-2); border-right: 1px solid var(--rule); }
+.antet dd { overflow-wrap: anywhere; }
+.antet dl > :nth-last-child(-n+2) { border-bottom: 0; }
+@media (max-width: 720px) {
+  .antet { grid-template-columns: 1fr; }
+  .antet .ad { border-right: 0; border-bottom: 1px solid var(--ink); }
+  .antet .ad h1 { font-size: 38px; }
+}
+
+/* ── ÜÇ FARK ───────────────────────────────────────────── */
+.fark { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; counter-reset: f; }
+@media (max-width: 900px) { .fark { grid-template-columns: 1fr; } }
+.fark li { counter-increment: f; background: var(--sheet); border: 1px solid var(--rule); border-top: 3px solid var(--accent); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.fark li::before { content: "Fark " counter(f); font-family: var(--f-disp); text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; color: var(--accent); }
+.fark h3 { font-size: 21px; }
+.fark .say { font-family: var(--f-mono); font-size: 13px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 8px; }
+
+/* ── DENKLEM ───────────────────────────────────────────── */
+.eq { font-family: var(--f-math); font-size: 17px; line-height: 1.7; background: var(--tint); border-left: 2px solid var(--accent); padding: 6px 12px; overflow-x: auto; white-space: nowrap; }
+.eq .c { font-family: var(--f-body); font-size: 13px; color: var(--ink-2); margin-left: 12px; }
+.ikili { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 860px) { .ikili { grid-template-columns: 1fr; } }
+.kutu { background: var(--sheet); border: 1px solid var(--rule); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.kutu h3 { font-size: 18px; }
+.kutu.vurgu { border: 1.5px solid var(--accent); }
+
+/* ── TABLOLAR ──────────────────────────────────────────── */
+.tablo { overflow-x: auto; background: var(--sheet); border: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--f-disp); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.k { font-family: var(--f-mono); font-size: 12.5px; white-space: nowrap; }
+td.not { color: var(--ink-2); font-size: 13px; min-width: 14em; }
+.dl { margin: 0; display: grid; grid-template-columns: minmax(8em, 13em) minmax(0, 1fr); background: var(--sheet); border: 1px solid var(--rule); }
+.dl dt, .dl dd { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.dl dt { font-family: var(--f-disp); text-transform: uppercase; letter-spacing: 0.06em; font-size: 13px; color: var(--ink-2); border-right: 1px solid var(--rule); }
+.dl > :nth-last-child(-n+2) { border-bottom: 0; }
+.dl .kod { display: block; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+@media (max-width: 640px) { .dl { grid-template-columns: 1fr; } .dl dt { border-right: 0; border-bottom: 0; padding-bottom: 0; } }
+
+.durum { font-family: var(--f-disp); font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 7px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+.durum.iyi { color: var(--ok); } .durum.orta { color: var(--warn); } .durum.kotu { color: var(--bad); }
+.suzgec { display: flex; flex-wrap: wrap; gap: 8px; }
+.suzgec button { font: inherit; font-size: 14px; background: var(--sheet); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; padding: 4px 11px; cursor: pointer; }
+.suzgec button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.suzgec button:hover { border-color: var(--ink-2); }
+
+/* ── GRAFİKLER ─────────────────────────────────────────── */
+.grafik { background: var(--sheet); border: 1px solid var(--rule); padding: 12px 14px; position: relative; min-width: 0; }
+.grafik svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grafik text, .panel text { font-family: var(--f-body); fill: var(--ink-2); }
+.grafik .baslik, .panel .baslik { font-family: var(--f-disp); font-size: 15px; fill: var(--ink); letter-spacing: 0.02em; }
+.grafik .izgara, .panel .izgara { stroke: var(--grid); stroke-width: 1; }
+.grafik .eksen, .panel .eksen { stroke: var(--axis); stroke-width: 1; }
+.grafik .esik, .panel .esik { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.panel svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tn { text-transform: none; letter-spacing: 0; }
+.l-g { stroke: var(--s1); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.l-r { stroke: var(--s2); stroke-width: 2; fill: none; stroke-dasharray: 6 4; stroke-linejoin: round; }
+.d-n { fill: var(--s3); stroke: var(--sheet); stroke-width: 2; }
+.imlec { stroke: var(--ink-2); stroke-width: 1; }
+.anahtar { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--ink-2); }
+.anahtar span { display: inline-flex; align-items: center; gap: 7px; }
+.anahtar svg { width: 26px; height: 10px; flex: none; }
+.paneller { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.panel { background: var(--sheet); border: 1px solid var(--rule); padding: 8px 8px 4px; position: relative; min-width: 0; }
+.panel:focus-visible { outline: 2px solid var(--accent); }
+.ipucu { position: absolute; pointer-events: none; background: var(--ink); color: var(--sheet); font-size: 12.5px; line-height: 1.35; padding: 7px 9px; border-radius: 4px; min-width: 150px; z-index: 5; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); }
+.ipucu b { font-variant-numeric: tabular-nums; font-size: 13.5px; }
+.ipucu .sat { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.ipucu .anah { width: 14px; height: 0; border-top: 2px solid; flex: none; }
+.ipucu .bas { font-family: var(--f-disp); letter-spacing: 0.04em; margin-bottom: 3px; opacity: 0.85; }
+.dp-dot { fill: var(--ink); }
+.dp-dot.bos { fill: var(--sheet); stroke: var(--ink-2); stroke-width: 1.5; }
+.dp-dot.on { fill: var(--accent); }
+.dp-bant { fill: var(--band); }
+.dp-med { stroke: var(--accent); stroke-width: 2; }
+.dp-mf { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.dp-row { font-family: var(--f-disp); font-size: 13px; letter-spacing: 0.04em; fill: var(--ink); }
+
+/* ── LİTERATÜR / KARARLAR ──────────────────────────────── */
+.kaynaklar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 860px) { .kaynaklar { grid-template-columns: 1fr; } }
+.kaynaklar article { background: var(--sheet); border: 1px solid var(--rule); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.kaynaklar .src { font-size: 13px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 8px; }
+.kararlar { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; counter-reset: k; }
+.kararlar li { counter-increment: k; background: var(--sheet); border: 1px solid var(--rule); padding: 14px 16px; display: grid; grid-template-columns: 3.2em minmax(0, 1fr) auto; gap: 6px 14px; align-items: start; }
+.kararlar li::before { content: "K" counter(k); font-family: var(--f-disp); font-size: 24px; color: var(--accent); line-height: 1; }
+.kararlar .govde { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kararlar .oneri { font-family: var(--f-disp); font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 9px; border: 1.5px solid var(--accent); color: var(--accent); border-radius: 3px; white-space: nowrap; }
+.kararlar .oneri.soru { border-color: var(--warn); color: var(--warn); }
+@media (max-width: 640px) { .kararlar li { grid-template-columns: 2.6em minmax(0, 1fr); } .kararlar .oneri { grid-column: 2; justify-self: start; } }
+.acik { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--rule); }
+.acik li { padding: 10px 14px; border-bottom: 1px solid var(--rule); display: grid; grid-template-columns: minmax(8em, 12em) minmax(0, 1fr); gap: 4px 14px; }
+.acik li:last-child { border-bottom: 0; }
+.acik b { font-family: var(--f-disp); font-weight: 600; font-size: 16px; letter-spacing: 0.02em; }
+@media (max-width: 640px) { .acik li { grid-template-columns: 1fr; } }
+.not { color: var(--ink-2); font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="antet">
+  <div class="ad">
+    <h1>Kaymama Koşulu</h1>
+    <p class="alt">MFSim'in kaymama koşulu, Gates'in on bir raporundaki kayma emniyeti eğrileriyle ilk kez sayı sayı karşılaştırıldı. İki hesap SF = 1 sınırında aynı hükmü veriyor; sınırın üstündeki sayılar üç ayrı yerde ayrışıyor.</p>
+  </div>
+  <dl>
+    <dt>Kapsam</dt><dd>@@S.rapor@@ Gates raporu · @@S.kasnak@@ kasnak · @@S.nokta@@ devir noktası</dd>
+    <dt>Yöntem</dt><dd>Gates grafikleri sayıya çevrildi; Gates'in koşulu MFSim geometrisiyle yeniden kuruldu</dd>
+    <dt>Tarih</dt><dd>29.09.2026</dd>
+    <dt>Durum</dt><dd>İnceleme — kodda değişiklik yok</dd>
+  </dl>
+</header>
+
+<section aria-labelledby="h-ozet">
+  <h2 id="h-ozet">Üç fark</h2>
+  <ol class="fark">
+    <li>
+      <h3>Emniyet katsayısının tanımı</h3>
+      <p>MFSim gerginlik <i>oranına</i> bakıyor. Gates, kasnağın taşıyabileceği etkin gerginliği istenene bölüyor. İki tanım kayma sınırında 1 verir, uzaklaştıkça ayrışır. Avara ve gergide MFSim @@S.f.bosBugun@@ basıyor, Gates @@S.f.bosGates@@.</p>
+      <div class="say">oran tanımı Gates'ten ×@@T.bugunMu.oran.kat@@ uzak · kapasite tanımı ×@@T.bugunMu.gevsek.kat@@</div>
+    </li>
+    <li>
+      <h3>Kaymanın arandığı yük durumu</h3>
+      <p>Gates her devirde ±1000 RPM/s ivmeyi aksesuar ataletiyle birlikte ve her aksesuarı %10 / %100 yükte tarıyor. MFSim yalnız çevrim satırlarına, kararlı durumda bakıyor. AG00902'de MFSim'in "kayıyor" hükmü bu farktan geliyor.</p>
+      <div class="say">yeniden kurulan tepe gerginlik @@V.model@@ N · Gates @@V.gates@@ N (AG00810)</div>
+    </li>
+    <li>
+      <h3>Sürtünme katsayıları</h3>
+      <p>Gates'in eğrilerini veren μ, oluklu kasnakta MFSim'inkiyle hemen aynı. Sırt kasnaklarında belirgin olarak yüksek. Ø57 alternatörlerde ise düşük çıkıyor.</p>
+      <div class="say">oluklu @@S.muOluk.med@@ (MFSim 0,90) · sırt @@S.muSirt.med@@ (MFSim 0,35) · alternatör @@S.muAlt.med@@</div>
+    </li>
+  </ol>
+</section>
+
+<section aria-labelledby="h-1">
+  <h2 id="h-1"><span class="no">1</span>MFSim bugün nasıl hesaplıyor</h2>
+  <div class="eq">SF = e<sup>μφ</sup> ⁄ (T<sub>gergin</sub> ⁄ T<sub>gevşek</sub>)<span class="c">φ sarım açısı · μ etkin sürtünme · hüküm SF ≥ 1</span></div>
+  <dl class="dl">
+    <dt>Formül</dt><dd>Euler–Eytelwein oranı. Dışarıdan gelen çekirdekte duruyor; çekirdek birebir korunuyor.<span class="kod">js/fead-core.js · slipSafety</span></dd>
+    <dt><span class="tn">μ</span> oluklu</dt><dd>0,90 — kama dâhil etkin değer. Literatürdeki ölçümlerle tutarlı (ham μ 0,31 ⁄ sin 20° = 0,906).<span class="kod">CALIBRATION.muEffGrooved</span></dd>
+    <dt><span class="tn">μ</span> sırt</dt><dd>0,35 — kalibre edilmemiş. Notun gerekçesi "sırt kasnaklarında oran ≈ 1, etkisi ihmal edilebilir"; sırttan yük taşıyan kasnakta bu gerekçe düşüyor.<span class="kod">CALIBRATION.muBackside</span></dd>
+    <dt>Gerginlik</dt><dd>Gergide ankrajlı zincir; her kasnakta ΔT = P ⁄ v. Zincir T − m′v² formunda, yani oran merkezkaçtan arındırılmış hâliyle kuruluyor (kural 28).</dd>
+    <dt>Yük durumu</dt><dd>Çevrim tablosunun satırları, kararlı durumda. İvme ve aksesuar ataleti kaymaya girmiyor; tepe gerginlik zinciri var ama yalnız tepe gerginlik ve göbek yükü için kullanılıyor.</dd>
+    <dt>Hüküm</dt><dd>Yük taşıyan kasnaklarda (oran ≥ 1,01) SF ≥ 1, tasarım yükünde (c₂). Yük taşımayan kasnağın sayısı bir pay değil "kapasite" diye basılıyor.</dd>
+    <dt>Eşik</dt><dd>Kaymamak için gereken en düşük gergi ankrajı T₀* [N].<span class="kod">js/fead-model.js · veFeadSlipThreshold</span></dd>
+  </dl>
+</section>
+
+<section aria-labelledby="h-2">
+  <h2 id="h-2"><span class="no">2</span>Gates nasıl hesaplıyor (ölçüldü)</h2>
+  <p class="lead">Her Gates raporunda bir "Belt Slip / Tension Analysis" bölümü var. Girdileri tasarım gerginliği, ±1000 RPM/s motor ivmesi, aksesuar ataletleri ve aksesuarların tepe güç eğrileri. Çıktıları kasnak başına en kritik koşulun tablosu ("Belt Slip Sensitivity") ve devir boyunca kasnak başına kayma emniyeti grafiği (log ölçek, eşik 1). Bu grafikler raster gömülü olduğu için bugüne kadar kullanılmıyordu; on bir raporun hepsi sayıya çevrildi.</p>
+  <div class="ikili">
+    <div class="kutu">
+      <h3>Yeniden kurulan koşul</h3>
+      <p>MFSim'in sarım açıları, yarıçapları ve hız oranlarıyla, Gates'in girdileri kullanılarak:</p>
+      <ul>
+        <li>devir taraması (raporun en düşük–en yüksek devri, 50 d/dk adım)</li>
+        <li>ivme {+A, 0, −A}; atalet kuvveti J·α ⁄ r</li>
+        <li>her aksesuar %10 ve %100 tepe yükte</li>
+        <li>avara ve gergide 0,01 kW sürtünme (Gates'in yük tablolarındaki değer)</li>
+        <li>kasnak başına bütün kombinasyonların en küçüğü</li>
+      </ul>
+    </div>
+    <div class="kutu vurgu">
+      <h3>Bağımsız doğrulama</h3>
+      <p>Aynı kurgu, sürtünmeden bağımsız bir sayıyı da veriyor: AG00810'un tepe gerginliği. 600 d/dk ve +1000 RPM/s'de yeniden kurulan zincir <b class="num">@@V.model@@ N</b>, Gates'in tablosu <b class="num">@@V.gates@@ N</b>. İvmesiz değer @@V.ivmesiz@@ N; aradaki fark alternatörün ataletinden geliyor.</p>
+    </div>
+  </div>
+  <div class="tablo">
+    <table>
+      <thead><tr><th>Tanım</th><th>Formül</th><th class="n">Gates'e uzaklık · bugünkü <span class="tn">μ</span></th><th class="n">· Gates'in <span class="tn">μ</span>'sü</th></tr></thead>
+      <tbody>
+        <tr><td>Oran <span class="durum orta">MFSim bugün</span></td><td class="k">e^(μφ) ⁄ (T₁ ⁄ T₂)</td><td class="n">×@@T.bugunMu.oran.kat@@</td><td class="n">×@@T.gatesMu.oran.kat@@</td></tr>
+        <tr><td>Kapasite, gevşek taraf <span class="durum iyi">Gates</span></td><td class="k">T₂·(e^(μφ) − 1) ⁄ (T₁ − T₂)</td><td class="n">×@@T.bugunMu.gevsek.kat@@</td><td class="n">×@@T.gatesMu.gevsek.kat@@</td></tr>
+        <tr><td>Kapasite, gergin taraf</td><td class="k">T₁·(1 − e^(−μφ)) ⁄ (T₁ − T₂)</td><td class="n">×@@T.bugunMu.gergin.kat@@</td><td class="n">×@@T.gatesMu.gergin.kat@@</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="not">Uzaklık: modelin Gates'e oranının logaritmik karesel ortalaması (@@S.nokta@@ nokta). T₁ gergin, T₂ gevşek açıklık. Kapasite tanımında kalan ×@@T.gatesMu.gevsek.kat@@ büyük ölçüde işaretli kuşkulu verilerden geliyor. Kuşkusuz @@S.temiz@@ kasnağın @@S.icinde10@@'ünde yeniden kurulan en küçük SF Gates'in %10 içinde; dışında kalanların üçü alternatör.</p>
+  <div class="eq">SF<sub>Gates</sub> = T<sub>gevşek</sub> · (e<sup>μφ</sup> − 1) ⁄ (T<sub>gergin</sub> − T<sub>gevşek</sub>)<span class="c">sınırda iki tanım da 1 · üstünde SF<sub>kapasite</sub> &gt; SF<sub>oran</sub></span></div>
+</section>
+
+<section aria-labelledby="h-3">
+  <h2 id="h-3"><span class="no">3</span>Gates'in eğrilerini veren sürtünme katsayısı</h2>
+  <p class="lead">Her kasnak için kapasite tanımında Gates'in eğrisini veren μ çözüldü (devir boyunca ortanca). Bant, kuşkusuz kasnakların aralığı; kalın çizgi ortancası; kesikli çizgi MFSim'in bugün kullandığı değer. İçi boş noktalar kuşkulu veri.</p>
+  <div class="grafik" id="g-mu" role="img" aria-label="Kasnak başına Gates'i veren sürtünme katsayısı"></div>
+  <p class="not">Oluklu kasnaklarda @@S.muOluk.n@@ kasnak @@S.f.muOluk@@ (ortanca @@S.muOluk.med@@); sırt kasnaklarında @@S.muSirt.n@@ kasnak @@S.f.muSirt@@ (ortanca @@S.muSirt.med@@); alternatörler @@S.f.muAlt@@. Oran tanımıyla aynı oluklu kasnaklar 0,77–1,48 arasına dağılıyor; o tanımla tutarlı bir μ yok.</p>
+</section>
+
+<section aria-labelledby="h-4">
+  <h2 id="h-4"><span class="no">4</span>İki rapor, kasnak kasnak</h2>
+  <p class="lead">Gates'in ölçülen eğrisi, aynı koşulda yeniden kurulan kapasite eğrisi (μ @@S.f.muG@@ oluklu, @@S.f.muB@@ sırt) ve MFSim'in bugün çevrim devirlerinde bastığı değer. Dikey eksen logaritmik; kesikli kırmızı çizgi kayma sınırı.</p>
+  <div class="anahtar" aria-hidden="true">
+    <span><svg viewBox="0 0 26 10"><line x1="1" y1="5" x2="25" y2="5" class="l-g"/></svg>Gates (ölçülen)</span>
+    <span><svg viewBox="0 0 26 10"><line x1="1" y1="5" x2="25" y2="5" class="l-r"/></svg>Yeniden kurulan (kapasite)</span>
+    <span><svg viewBox="0 0 26 10"><circle cx="13" cy="5" r="4" class="d-n"/></svg>MFSim bugün (oran, çevrim)</span>
+  </div>
+  <div id="g-panel"></div>
+</section>
+
+<section aria-labelledby="h-5">
+  <h2 id="h-5"><span class="no">5</span>Bütün kasnaklar</h2>
+  <p class="lead">Devir aralığındaki en küçük SF. Son sütun yeniden kurulanın Gates'e oranı; 1'e yakınlık kurgunun Gates'le aynı hesabı yaptığını gösterir.</p>
+  <div class="suzgec" role="group" aria-label="Tablo süzgeci">
+    <button type="button" id="sz-hepsi" data-s="hepsi" aria-pressed="true">Tümü</button>
+    <button type="button" id="sz-yuklu" data-s="yuklu" aria-pressed="false">Yük taşıyan</button>
+    <button type="button" id="sz-bos" data-s="bos" aria-pressed="false">Avara ve gergi</button>
+    <button type="button" id="sz-temiz" data-s="temiz" aria-pressed="false">Kuşkulu veri hariç</button>
+  </div>
+  <div class="tablo">
+    <table>
+      <thead><tr><th>Rapor</th><th>Kasnak</th><th>Temas</th><th class="n">Sarım</th><th class="n">Gates</th><th class="n">MFSim bugün</th><th class="n">Yeniden kurulan</th><th class="n">Yeniden ⁄ Gates</th><th>Not</th></tr></thead>
+      <tbody id="t-govde"></tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="h-6">
+  <h2 id="h-6"><span class="no">6</span>Literatür</h2>
+  <div class="kaynaklar">
+    <article>
+      <h3>Kaymama şartı ve merkezkaç</h3>
+      <p>Euler–Eytelwein: T₁ ⁄ T₂ ≤ e<sup>μφ</sup>. Merkezkaçlı hâli (T₁ − m′v²) ⁄ (T₂ − m′v²) ≤ e<sup>μφ</sup>; Türk ders notları bunu 10 m/s üstünde dikkate alır. Otomatik gergi açıklıklarda T − m′v²'yi sabit tutar, yani MFSim'in zinciri zaten bu formda ve terim bir kez daha düşülmemeli.</p>
+      <p class="src"><a href="https://web.itu.edu.tr/temizv/Sunular/Kayis%20kasnak.pdf">İTÜ, Temiz — Makina Elemanları II</a> · <a href="https://ocuvalci.ktu.edu.tr/dosyalar/dersler/MM-304_mak_el-2_kay%C4%B1%C5%9F_kasnak_zin%C3%A7ir.pdf">KTÜ, Çuvalcı — MM-304</a> · <a href="https://www.tec-science.com/mechanical-power-transmission/belt-drive/bearing-force/">tec-science</a></p>
+    </article>
+    <article>
+      <h3>Oluklu yüzde sürtünme</h3>
+      <p>Kama etkisi μ′ = μ ⁄ sin(β⁄2) = 2,92·μ (PK, β = 40°). Ölçülen ham μ 0,31–0,32 → μ′ 0,91–0,94. On üreticinin 5PK kayışı 0,49–2,49 arasında ölçülmüş; SAE J2432 etkin μ 0,4–2,1, otomotiv için tercih 0,7–1,5, ıslakta alt uç. Gates'in 0,877'si bu bandın alt yarısında.</p>
+      <p class="src">Lotfy 1996 (Leeds, doktora) · <a href="https://www.nature.com/articles/s41598-026-41982-6">Kubas 2026, Sci. Rep.</a> · <a href="https://patents.google.com/patent/US9157503B2/en">Dayco US9157503B2</a></p>
+    </article>
+    <article>
+      <h3>Sırt yüzünde sürtünme</h3>
+      <p>Düz kasnakta kama yok. SAE J2432 ölçümü (kuru, tozlu): tepe 0,41–0,51, %10 kaymada 0,36–0,42. MFSim'in 0,35'i bu ölçümün alt ucu; Gates'in eğrileri 0,57–0,63 ima ediyor.</p>
+      <p class="src"><a href="https://patents.google.com/patent/US8192315B2/en">Dayco US8192315B2</a></p>
+    </article>
+    <article>
+      <h3>Emniyet katsayısının tanımları</h3>
+      <p>Oran, kapasite (gevşek ya da gergin taraf sabit), ortalama gerginlik, gerekli gerginlik ve sarım kullanımı: hepsi kayma sınırında 1'e eşit, uzaklaştıkça ayrışır. Yalnız kapasite formu torkla doğrusaldır. "SF = 2, tork iki katına çıkabilir" demek yalnız onda doğrudur.</p>
+      <p class="src">Shigley 10. baskı, bölüm 17 · Gerbert 1996, J. Mech. Des. 118:432</p>
+    </article>
+    <article>
+      <h3>Katalog tasarım değerleri</h3>
+      <p>Gates ve ContiTech'in gerginlik formüllerindeki sabitler 180°'de T₁ ⁄ T₂ ≈ 4–5'e, yani μ′ ≈ 0,44–0,51'e karşılık gelir. Bu, ölçülen değerin yarısıdır: pay μ'nün içine gömülüdür. Optibelt payı güçte tutar: tasarım gücü P<sub>B</sub> = c₂·P.</p>
+      <p class="src"><a href="https://www.optibelt.com/fileadmin/pdf/kataloge/Optibelt-TH-ribbed-belt-drives.pdf">Optibelt ribbed belt el kitabı</a> · <a href="http://www.powerparts.it/contitech_pdf/CONTITECH_multirib.pdf">ContiTech Multirib</a></p>
+    </article>
+    <article>
+      <h3>Geçici rejim ve sürünme</h3>
+      <p>Tahrikteki en büyük atalet alternatördedir; yavaşlamada alternatör kayışı sürer, OAP/OAD bu yüzden vardır. Rölantide ateşleme titreşiminin ivmesi 1000 RPM/s'nin yaklaşık 14 katıdır ve yarı-statik modelle yakalanmaz. e<sup>μφ</sup> toplam kayma sınırıdır; sürünme her yükte vardır (%0,2–1,2).</p>
+      <p class="src"><a href="https://www.schaeffler.com/remotemedien/media/_shared_media/08_media_library/01_publications/schaeffler_2/symposia_1/downloads_11/Schaeffler_Kolloquium_2010_19_en.pdf">Schaeffler Kolloquium 2010</a> · <a href="https://web.bogazici.edu.tr/sonmezfa/Speed%20losses%20in%20V-ribbed%20belt%20drives.pdf">Balta, Sönmez, Cengiz 2015</a></p>
+    </article>
+  </div>
+</section>
+
+<section aria-labelledby="h-7">
+  <h2 id="h-7"><span class="no">7</span>Açıklanamayanlar</h2>
+  <ul class="acik">
+    <li><b>AG00902 (iki revizyon)</b><span>Gates'in kayma grafiği kendi ortalama gerginlik tablosuyla (700 d/dk'da CRK 950 ⁄ 488 N, A_C 802 ⁄ 490 N; MFSim'le aynı) tek bir μ ile tutmuyor. Krank μ 0,55, klima μ 1,15 istiyor.</span></li>
+    <li><b>AG00894</b><span>İki klimanın eğrisi aynı yeşil, iki avaranınki aynı turuncu. Eşleştirmenin iki yönü de tutarlı değil (TM31 ×0,36 ⁄ SD7H15 ×2,27; takaslı ×1,47 ⁄ ×0,55).</span></li>
+    <li><b>AG00976</b><span>Kayma bölümünün ilk yüzü alıntıda yok. Avara ataletleri ve tepe güç eğrileri bilinmiyor; atalet örnekten (0,00087 kg·m²), yük çevrim tablosundan alındı.</span></li>
+    <li><b>AG00686</b><span>Gergi kasnağının ataleti olarak kolun ataleti (0,0076 kg·m²) girilmiş; o kasnakta μ 1,13 çıkıyor.</span></li>
+    <li><b>Alternatör</b><span>Ø57 kasnakların üçünde de μ ≈ 0,74. Yeniden kurulan SF Gates'ten @@S.f.altKat@@ yüksek. Talep tarafında değil kapasite tarafında: aynı yükü taşıyan krankta μ normal. Küçük kasnakta eğilme rijitliğinin sarımı kısaltması bir aday; Gates'in kuralı bilinmiyor.</span></li>
+    <li><b>BMC hesap defteri</b><span>"Kuvvet Hesabı" sayfasında kendi kaymama koşulu varsa formülünü görmek gerekiyor. Depodaki çıkarımda yalnız merkez mesafesi, çevrim oranı ve devir sınırı var.</span></li>
+  </ul>
+</section>
+
+<section aria-labelledby="h-8">
+  <h2 id="h-8"><span class="no">8</span>Karar önerileri</h2>
+  <p class="lead">Hiçbiri henüz uygulanmadı. Çekirdek dokunulmaz olduğu için hepsi köprüde kurulabilir; c₂ de öyle yapıldı. Çekirdeğin kayma fonksiyonu μ'yü seçenek olarak alıyor.</p>
+  <ol class="kararlar">
+    <li><div class="govde"><h3>Emniyet katsayısını kapasite tanımına geçir</h3><p>Sayı Gates'inkiyle aynı olur ve torkla doğrusal okunur. Hüküm eşiği 1 değişmez, çünkü iki tanım sınırda eşit. Avara ve gerginin sayısı bir pay olur; "yük taşımaz, bu kapasitedir" istisnası kalkar. c₂ ile uyumludur: gevşek taraf sabitken SF, c₂'ye bölünmüş olur.</p></div><span class="oneri">Öneri: evet</span></li>
+    <li><div class="govde"><h3>Kaymayı Gates'in koşulunda ara</h3><p>Devir taraması × ±ivme (atalet dâhil) × %10 ⁄ %100 yük × avara ve gergi sürtünmesi. Kasnak başına en kritik koşulu ve gereken gerginlik ya da sarım artışını yaz; çevrim satırlarındaki SF bilgi olarak kalır. Aksesuarın tepe güç eğrisi bugün girilmiyor; girilmezse çevrim yükü kullanılır ve bu söylenir.</p></div><span class="oneri">Öneri: evet</span></li>
+    <li><div class="govde"><h3>Sırt sürtünmesi 0,35 → 0,60</h3><p>Gates'in on bir sırt kasnağı @@S.f.muSirt@@ ima ediyor. Literatürün %10 kayma ölçümü 0,36–0,42 ile daha düşük. Seçenek: Gates'le aynı sayıyı üretmek (0,60) ya da muhafazakâr kalıp farkı belgeye yazmak (0,35).</p></div><span class="oneri soru">Karar sizde</span></li>
+    <li><div class="govde"><h3>Oluklu sürtünme 0,90 → 0,88</h3><p>Fark 200° sarımda kapasitede yaklaşık %7. Gates'le birebirlik isteniyorsa 0,88; literatüre dayanan 0,90 da savunulabilir.</p></div><span class="oneri soru">Karar sizde</span></li>
+    <li><div class="govde"><h3>Küçük kasnak için şimdilik kural koyma</h3><p>Üç nokta, üçü de aynı tip alternatör kasnağı. Kural kurmak için farklı çaplarda veri gerekiyor. O zamana kadar Ø60 altındaki kasnaklarda raporda uyarı yazılabilir.</p></div><span class="oneri">Öneri: beklet</span></li>
+    <li><div class="govde"><h3>AG00902'deki IDR ne?</h3><p>Gates'in çevrim tablosu ona 0,8–4 kW yazıyor, kendi kayma analizi 0 kullanıyor. Güç çeken bir aksesuarsa MFSim'in "kayıyor" hükmü doğru olabilir; avaraysa örnekteki yük düzeltilmeli.</p></div><span class="oneri soru">Soru</span></li>
+  </ol>
+</section>
+
+<section aria-labelledby="h-y">
+  <h2 id="h-y">Yöntem ve veri</h2>
+  <dl class="dl">
+    <dt>Sayısallaştırma</dt><dd>Grafikler PDF'ten doğal çözünürlükte çıkarıldı (v9.40 ve sonrası 800×550 PNG; eski sürümler 150 dpi JPEG şeritleri; AG00879'un sayfa ağacında görünmeyen sayfası nesne numarasından). Eksenler çerçeve, eşik çizgisi ve çentiklerden kalibre edildi; log ölçeğin on-kat adımı uzun çentiklerden, devir ölçeği çentik aralığından. On bir grafiğin hepsinde çerçeve ⁄ çentik aralığı 6,64–6,70 (beklenen 6,67).</dd>
+    <dt>Gözle okunan</dt><dd>Yalnız x ekseninin sağ ucu (2000 · 2200 · 2300 · 2600 · 2850 · 3000 · 3200 d/dk) ve tepe yük grafiğinin ilk etiketiyle adımı. AG00686-1520'de yük güç değil tork (N·m) olarak verilmiş.</dd>
+    <dt>Girdiler</dt><dd>Tasarım gerginliği, ivme, aksesuar ataletleri ve kritik koşullar raporların metin katmanından. Geometri MFSim örneklerinden (Gates geometrisine karşı zaten doğrulanmış).</dd>
+    <dt>Sınırlar</dt><dd>Yarı-statik; gergi kolu dinamiği ve ateşleme titreşimi yok. Kritik koşul tablosuyla eşleşme zayıf (avaralarda ±ivme neredeyse eşit sonuç veriyor). AG00976'nın tepe yükleri çevrim tablosundan.</dd>
+  </dl>
+</section>
+
+</div>
+
+<script>
+const VERI = /*@@VERI@@*/null;
+const tr = (x, d) => (x == null || !isFinite(x)) ? '—' : x.toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const sfY = (x) => (x == null || !isFinite(x)) ? '—' : tr(x, x < 10 ? 2 : x < 100 ? 1 : 0);
+const NS = 'http://www.w3.org/2000/svg';
+function el(ad, at, ebeveyn) { const e = document.createElementNS(NS, ad); for (const k in at) e.setAttribute(k, at[k]); if (ebeveyn) ebeveyn.appendChild(e); return e; }
+function yazi(ebeveyn, x, y, metin, at) { const t = el('text', Object.assign({ x, y }, at || {}), ebeveyn); t.textContent = metin; return t; }
+const ROL = { surucu: 'sürücü', aksesuar: 'aksesuar', alternator: 'alternatör', avara: 'avara ⁄ gergi' };
+const TEMAS = { grooved: 'oluklu', back: 'sırt' };
+
+// ── 3) μ nokta grafiği ────────────────────────────────────────────────────
+(function () {
+  const kap = document.getElementById('g-mu');
+  const W = 760, H = 250, L = 214, R = 16, T = 28, B = 34;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}` }, kap);
+  const xmin = 0.3, xmax = 1.6, x = (v) => L + (v - xmin) / (xmax - xmin) * (W - L - R);
+  const satirlar = [
+    { ad: 'Oluklu · sürücü ve aksesuar', f: (m) => m.t === 'grooved' && m.rol !== 'alternator', mf: 0.90 },
+    { ad: 'Oluklu · alternatör (Ø57)', f: (m) => m.rol === 'alternator', mf: 0.90 },
+    { ad: 'Sırt · avara ve gergi', f: (m) => m.t === 'back', mf: 0.35 },
+  ];
+  const bh = (H - T - B) / satirlar.length;
+  for (let v = 0.4; v <= 1.6001; v += 0.2) {
+    el('line', { x1: x(v), x2: x(v), y1: T - 6, y2: H - B, class: 'izgara' }, svg);
+    yazi(svg, x(v), H - B + 18, tr(v, 1), { 'text-anchor': 'middle', 'font-size': 12 });
+  }
+  yazi(svg, (L + W - R) / 2, H - 2, 'μ (etkin)', { 'text-anchor': 'middle', 'font-size': 12 });
+  const ipucu = document.createElement('div'); ipucu.className = 'ipucu'; ipucu.hidden = true; kap.appendChild(ipucu);
+  satirlar.forEach((s, i) => {
+    const y0 = T + i * bh, ym = y0 + bh / 2;
+    el('line', { x1: L, x2: W - R, y1: y0 + bh, y2: y0 + bh, class: 'izgara' }, svg);
+    yazi(svg, 0, ym + 4, s.ad, { class: 'dp-row' });
+    const hepsi = VERI.mu.filter((m) => m.mu != null && s.f(m));
+    const temiz = hepsi.filter((m) => !m.b).map((m) => m.mu).sort((a, b) => a - b);
+    if (temiz.length) {
+      el('rect', { x: x(temiz[0]) - 3, y: y0 + 8, width: x(temiz[temiz.length - 1]) - x(temiz[0]) + 6, height: bh - 16, class: 'dp-bant' }, svg);
+      const med = temiz[Math.floor(temiz.length / 2)];
+      el('line', { x1: x(med), x2: x(med), y1: y0 + 6, y2: y0 + bh - 6, class: 'dp-med' }, svg);
+    }
+    el('line', { x1: x(s.mf), x2: x(s.mf), y1: y0 + 4, y2: y0 + bh - 4, class: 'dp-mf' }, svg);
+    if (i === 0 || i === 2) yazi(svg, x(s.mf) + (i === 2 ? 5 : 5), y0 + 13, 'MFSim ' + tr(s.mf, 2), { 'font-size': 11.5 });
+    // arı kovanı: sıralı yerleştir, yatayda çakışan noktayı bir kat yukarı/aşağı it
+    const yer = [], ad = 10, kat = [0, 1, -1, 2, -2, 3, -3];
+    hepsi.slice().sort((a, b) => a.mu - b.mu).forEach((m) => {
+      const px = x(Math.min(m.mu, xmax));
+      let k = kat.find((q) => !yer.some((o) => o.k === q && Math.abs(o.px - px) < ad)); if (k == null) k = kat[kat.length - 1];
+      yer.push({ m, px, k });
+    });
+    const kmax = Math.max(1, ...yer.map((o) => Math.abs(o.k))), aralik = Math.min(ad, (bh - 18) / (2 * kmax));
+    yer.forEach((o) => { o.m._y = ym + o.k * aralik; });
+    hepsi.forEach((m) => {
+      const jy = m._y;
+      const c = el('circle', { cx: x(Math.min(m.mu, xmax)), cy: jy, r: 4.5, class: 'dp-dot' + (m.b ? ' bos' : ''), tabindex: 0 }, svg);
+      const hedef = el('circle', { cx: x(Math.min(m.mu, xmax)), cy: jy, r: 11, fill: 'transparent' }, svg);
+      const goster = () => {
+        c.classList.add('on');
+        ipucu.replaceChildren();
+        const b = document.createElement('div'); b.className = 'bas'; b.textContent = m.a + ' · ' + m.k; ipucu.appendChild(b);
+        const v = document.createElement('div'); v.innerHTML = '<b></b>'; v.firstChild.textContent = 'μ ' + tr(m.mu, 3); ipucu.appendChild(v);
+        const d = document.createElement('div'); d.textContent = TEMAS[m.t] + ' · sarım ' + tr(m.s, 1) + '° · Ø ' + tr(m.d, 1) + ' mm'; ipucu.appendChild(d);
+        if (m.b) { const n = document.createElement('div'); n.textContent = m.b; ipucu.appendChild(n); }
+        ipucu.hidden = false;
+        const kr = kap.getBoundingClientRect(), sr = svg.getBoundingClientRect(), sc = sr.width / W;
+        let px = sr.left - kr.left + x(Math.min(m.mu, xmax)) * sc + 12, py = sr.top - kr.top + jy * sc - 10;
+        if (px + ipucu.offsetWidth > kr.width - 4) px = px - ipucu.offsetWidth - 24;
+        ipucu.style.left = px + 'px'; ipucu.style.top = py + 'px';
+      };
+      const gizle = () => { c.classList.remove('on'); ipucu.hidden = true; };
+      [c, hedef].forEach((e) => { e.addEventListener('pointerenter', goster); e.addEventListener('pointerleave', gizle); });
+      c.addEventListener('focus', goster); c.addEventListener('blur', gizle);
+    });
+  });
+})();
+
+// ── 4) küçük paneller ─────────────────────────────────────────────────────
+(function () {
+  const kok = document.getElementById('g-panel');
+  VERI.grafik.forEach((g) => {
+    const h = document.createElement('h3'); h.textContent = g.a; h.style.margin = '6px 0 8px'; kok.appendChild(h);
+    const izg = document.createElement('div'); izg.className = 'paneller'; kok.appendChild(izg);
+    g.k.forEach((k) => panel(izg, g, k));
+  });
+  function panel(kap, g, k) {
+    const W = 330, H = 200, L = 40, R = 10, T = 26, B = 28;
+    const kutu = document.createElement('div'); kutu.className = 'panel'; kutu.tabIndex = 0;
+    kutu.setAttribute('aria-label', g.a + ' ' + k.k + ' kayma emniyeti grafiği; ok tuşlarıyla devir seçin');
+    kap.appendChild(kutu);
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}` }, kutu);
+    const x0 = g.x[0], x1 = g.x[g.x.length - 1];
+    const x = (v) => L + (v - x0) / (x1 - x0) * (W - L - R);
+    const tum = [].concat(k.g, k.r, k.n.map((p) => p[1])).filter((v) => v != null && v > 0 && isFinite(v));
+    let lo = Math.min(0.7, Math.min(...tum) / 1.3), hi = Math.max(...tum) * 1.5;
+    const llo = Math.floor(Math.log10(lo) * 2) / 2, lhi = Math.ceil(Math.log10(hi) * 2) / 2;
+    const y = (v) => T + (lhi - Math.log10(v)) / (lhi - llo) * (H - T - B);
+    yazi(svg, 0, 15, k.k + ' · ' + TEMAS[k.t] + (k.s != null ? ' · ' + tr(k.s, 0) + '°' : ''), { class: 'baslik' });
+    for (let e = Math.ceil(llo); e <= Math.floor(lhi); e++) {
+      const v = Math.pow(10, e);
+      el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'izgara' }, svg);
+      yazi(svg, L - 6, y(v) + 4, v >= 1 ? tr(v, 0) : tr(v, 1), { 'text-anchor': 'end', 'font-size': 11 });
+    }
+    el('line', { x1: L, x2: W - R, y1: y(1), y2: y(1), class: 'esik' }, svg);
+    el('line', { x1: L, x2: W - R, y1: H - B, y2: H - B, class: 'eksen' }, svg);
+    const adim = (x1 - x0) > 1500 ? 500 : 250;
+    for (let r = Math.ceil(x0 / adim) * adim; r <= x1; r += adim) {
+      el('line', { x1: x(r), x2: x(r), y1: H - B, y2: H - B + 4, class: 'eksen' }, svg);
+      yazi(svg, x(r), H - B + 16, tr(r, 0), { 'text-anchor': 'middle', 'font-size': 11 });
+    }
+    const yol = (dizi) => { let d = '', ac = false; dizi.forEach((v, i) => { if (v == null || !(v > 0) || !isFinite(v)) { ac = false; return; } d += (ac ? 'L' : 'M') + x(g.x[i]).toFixed(1) + ',' + y(Math.min(v, Math.pow(10, lhi))).toFixed(1); ac = true; }); return d; };
+    el('path', { d: yol(k.g), class: 'l-g' }, svg);
+    el('path', { d: yol(k.r), class: 'l-r' }, svg);
+    k.n.forEach((p) => { if (p[0] >= x0 - 1 && p[0] <= x1 + 1 && p[1] > 0) el('circle', { cx: x(p[0]), cy: y(p[1]), r: 4, class: 'd-n' }, svg); });
+    const imlec = el('line', { x1: 0, x2: 0, y1: T, y2: H - B, class: 'imlec', visibility: 'hidden' }, svg);
+    const hedef = el('rect', { x: L, y: T, width: W - L - R, height: H - T - B, fill: 'transparent' }, svg);
+    const ipucu = document.createElement('div'); ipucu.className = 'ipucu'; ipucu.hidden = true; kutu.appendChild(ipucu);
+    let secili = Math.floor(g.x.length / 2);
+    const goster = (i) => {
+      secili = Math.max(0, Math.min(g.x.length - 1, i));
+      const rpm = g.x[secili];
+      imlec.setAttribute('x1', x(rpm)); imlec.setAttribute('x2', x(rpm)); imlec.setAttribute('visibility', 'visible');
+      ipucu.replaceChildren();
+      const bas = document.createElement('div'); bas.className = 'bas'; bas.textContent = tr(rpm, 0) + ' d/dk'; ipucu.appendChild(bas);
+      const satir = (renk, deger, ad, nokta) => {
+        const s = document.createElement('div'); s.className = 'sat';
+        const a = document.createElement('span'); a.className = 'anah'; a.style.borderTopColor = renk; if (nokta) a.style.borderTopStyle = 'dotted';
+        const b = document.createElement('b'); b.textContent = sfY(deger);
+        const t = document.createElement('span'); t.textContent = ad;
+        s.append(a, b, t); ipucu.appendChild(s);
+      };
+      const cs = getComputedStyle(document.documentElement);
+      satir(cs.getPropertyValue('--s1'), k.g[secili], 'Gates');
+      satir(cs.getPropertyValue('--s2'), k.r[secili], 'yeniden kurulan');
+      const yakin = k.n.find((p) => Math.abs(p[0] - rpm) <= 50);
+      if (yakin) satir(cs.getPropertyValue('--s3'), yakin[1], 'MFSim bugün (' + tr(yakin[0], 0) + ')', true);
+      ipucu.hidden = false;
+      const kr = kutu.getBoundingClientRect(), sr = svg.getBoundingClientRect(), sc = sr.width / W;
+      let px = sr.left - kr.left + x(rpm) * sc + 10;
+      if (px + ipucu.offsetWidth > kr.width - 4) px = sr.left - kr.left + x(rpm) * sc - ipucu.offsetWidth - 10;
+      ipucu.style.left = Math.max(2, px) + 'px'; ipucu.style.top = (sr.top - kr.top + T * sc) + 'px';
+    };
+    const gizle = () => { imlec.setAttribute('visibility', 'hidden'); ipucu.hidden = true; };
+    hedef.addEventListener('pointermove', (ev) => {
+      const sr = svg.getBoundingClientRect(), vx = (ev.clientX - sr.left) / sr.width * W;
+      const rpm = x0 + (vx - L) / (W - L - R) * (x1 - x0);
+      let en = 0; g.x.forEach((r, i) => { if (Math.abs(r - rpm) < Math.abs(g.x[en] - rpm)) en = i; });
+      goster(en);
+    });
+    hedef.addEventListener('pointerleave', gizle);
+    kutu.addEventListener('focus', () => goster(secili));
+    kutu.addEventListener('blur', gizle);
+    kutu.addEventListener('keydown', (ev) => {
+      if (ev.key === 'ArrowRight') { goster(secili + 1); ev.preventDefault(); }
+      if (ev.key === 'ArrowLeft') { goster(secili - 1); ev.preventDefault(); }
+    });
+  }
+})();
+
+// ── 5) tablo ──────────────────────────────────────────────────────────────
+(function () {
+  const govde = document.getElementById('t-govde');
+  function ciz(suz) {
+    govde.replaceChildren();
+    VERI.tablo.filter((t) => suz === 'hepsi' || (suz === 'yuklu' && t.y) || (suz === 'bos' && !t.y) || (suz === 'temiz' && !t.b))
+      .forEach((t) => {
+        const tr_ = document.createElement('tr');
+        const hucre = (metin, sinif) => { const td = document.createElement('td'); if (sinif) td.className = sinif; td.textContent = metin; tr_.appendChild(td); return td; };
+        hucre(t.a); hucre(t.k, 'k'); hucre(TEMAS[t.t] + (t.y ? '' : ' · boşta'));
+        hucre(tr(t.s, 1) + '°', 'n'); hucre(sfY(t.g), 'n'); hucre(sfY(t.n), 'n'); hucre(sfY(t.r), 'n');
+        const o = t.r / t.g, td = hucre('', 'n');
+        const s = document.createElement('span'); s.textContent = '×' + tr(o, 2);
+        if (!t.b && Math.abs(o - 1) <= 0.10) { s.className = 'durum iyi'; }
+        td.appendChild(s);
+        hucre(t.b || '', 'not');
+        govde.appendChild(tr_);
+      });
+  }
+  document.querySelectorAll('.suzgec button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.suzgec button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    ciz(b.dataset.s);
+  }));
+  ciz('hepsi');
+})();
+</script>

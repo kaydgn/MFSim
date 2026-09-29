@@ -459,6 +459,14 @@ TEN 4/4 · 3/4 · 2/4 · 1/4  →  ΔT = 0.0e+0 · ΔH = 0.0e+0 · L_eff birebir
 Yani "gergi en sonda" bir **yazım konvansiyonu**, hesap gereği değil. Değeri
 tedarikçi tablolarıyla satır satır karşılaştırılabilirlik.
 
+## Kayma grafikleri sayıya çevrildi → `kayma/` (2026-09-29)
+
+Raporların *Belt Slip / Tension Analysis* grafikleri raster gömülü: metin
+katmanında sayıları yok. `kayma/` onları sayıya çeviriyor (11 rapor · 45
+kasnak) ve Gates'in kayma koşulunu köprüyle yeniden kuruyor. Bir ölçüm
+aracıdır, kapı değil. Künyesi ve kuşkulu verinin işaretleri o klasörün
+README'sinde.
+
 ## Yeni rapor eklerken
 
 1. PDF'i `pdf/` altına, ad kuralına uyarak koy.
