@@ -222,3 +222,68 @@ test('TEK SOL KENAR — bütün sekmelerde etiket denetiminin sol kenarında ba�
 // *"her bileşende bulunan 'Kayış Yolundaki Yeri' kısmını da kaldıralım"*).
 // Onu ölçen halka (vurgu · ad çakışması · kayışa binme) konusuz kaldı;
 // yokluğunun kapısı fead-pencere-ailesi.test.js.
+
+// SERVİS FAKTÖRÜ c₂ TABLOSU İKİ YÜZEYDE AYNI ÇİZİLİYOR (2026-09-29, kural 48).
+// Kayış penceresi (Tasarım) ile sihirbazın Kayış adımı aynı üreticiyi basıyor
+// (`veFeadServisTabloHTML`), ama pencerenin genel tablo kuralları tabloya da
+// giriyordu: `.ve-properties-content th, td { padding:5px 8px !important }` ile
+// daha özgül `table th` (zemin, sola yaslama, sağ kenarlık). Ölçülen hâl:
+// pencerede 44 px'lik sütunda saat başlığına 28 px kalıyor ve "10–16" iki
+// satıra kırılıyordu, başlıklar gri ve sola yaslıydı, hücre düğmesi 16 px
+// daralıyordu; sihirbazda hiçbiri yoktu. Ölçü: aynı öğe sınıfının hesaplanan
+// biçimi iki yüzeyde aynı, başlık tek satır, düğme hücreyi dolduruyor.
+test('c₂ tablosu kayış penceresinde ve sihirbazda AYNI çiziliyor', async ({ page }) => {
+  page.on('dialog', (d) => d.accept());
+  await kasnakPaneliAc(page);
+  await page.evaluate(() => {
+    window.__c2Olc = (kok) => {
+      const t = kok && kok.querySelector('[data-ve="servis-tablo"] table');
+      if (!t || !t.offsetWidth) return null;
+      const TH = ['paddingLeft', 'paddingRight', 'backgroundColor', 'textAlign', 'fontWeight', 'borderRightWidth', 'textTransform'];
+      const TD = ['paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom'];
+      const imza = {};
+      const ekle = (ad, sec, alan) => t.querySelectorAll(sec).forEach((e) => {
+        const c = getComputedStyle(e);
+        (imza[ad] = imza[ad] || new Set()).add(alan.map((k) => c[k]).join(' '));
+      });
+      ekle('köşe', 'th.ve-fead-c2-kose', TH);
+      ekle('grup', 'th.ve-fead-c2-grup', TH);
+      ekle('saat', 'th.ve-fead-c2-saat', TH);
+      ekle('yük', 'tbody th', TH);
+      ekle('hücre', 'td', TD);
+      const satir = (e) => { const rg = document.createRange(); rg.selectNodeContents(e);
+        return new Set([...rg.getClientRects()].filter((x) => x.width > 1).map((x) => Math.round(x.top))).size; };
+      const out = {}; Object.keys(imza).forEach((k) => { out[k] = [...imza[k]]; });
+      return {
+        imza: out,
+        kirik: [...t.querySelectorAll('th.ve-fead-c2-saat')].filter((e) => satir(e) > 1).map((e) => e.textContent),
+        bosluk: Math.max(...[...t.querySelectorAll('td')].map((td) => td.clientWidth - td.querySelector('button').offsetWidth)),
+        hucre: t.querySelectorAll('td button').length,
+      };
+    };
+  });
+  const pencere = await page.evaluate(async () => {
+    veFeadKayisAc();
+    await new Promise((r) => setTimeout(r, 400));
+    veFeadPanelTab(nodes.find((n) => n.type === 'fead-belt').id, 'tas');
+    await new Promise((r) => setTimeout(r, 150));
+    return window.__c2Olc(document.querySelector('#ve-properties-overlay'));
+  });
+  const sihirbaz = await page.evaluate(async () => {
+    veTogglePropertiesPanel(false);
+    await new Promise((r) => setTimeout(r, 300));
+    const wz = nodes.find((n) => n.type === 'fead-wizard');
+    veFeadWizOpen(wz ? wz.id : null);
+    veFeadWizSeed('AG00976_GATES_2025');
+    veFeadWizGoto(VE_FW_STEPS.findIndex((s) => s.key === 'kayis'));
+    await new Promise((r) => setTimeout(r, 500));
+    return window.__c2Olc(document.querySelector('#ve-feadwiz-overlay'));
+  });
+  expect(pencere && pencere.hucre).toBe(24);
+  expect(sihirbaz && sihirbaz.hucre).toBe(24);
+  expect(pencere.kirik).toEqual([]);
+  expect(sihirbaz.kirik).toEqual([]);
+  expect(pencere.bosluk).toBeLessThanOrEqual(1);
+  expect(sihirbaz.bosluk).toBeLessThanOrEqual(1);
+  expect(pencere.imza).toEqual(sihirbaz.imza);
+});

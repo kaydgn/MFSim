@@ -356,7 +356,9 @@ function veFeadResSummaryHTML(R) {
   var rows = ((A.duty) || []).slice().sort(function(a, b) { return a.engineRpm - b.engineRpm; });
   if(rows.length) {
     var ten = R.tensionerSide, ters = !!(ten && ten.ok === false);
-    var sfIst = Number(R.serviceFact);
+    // SF sütunu TASARIM yükünde (P_B = c₂·P, kural 48): eşik 1.
+    var svT = R.servis || null;
+    var c2Sec = !!(svT && svT.kaynak && svT.kaynak !== 'yok');
     var mh = [{ t: 'Devir' }, { t: '%' }, { t: 'Kayış [m/s]' }];
     P.forEach(function(p) { mh.push({ t: _feadResEsc(p.code) }); });
     mh.push({ t: 'En düşük SF' });
@@ -364,15 +366,16 @@ function veFeadResSummaryHTML(R) {
       _feadResTbl(mh, rows.map(function(d) {
         var m = Infinity;
         (d.slip || []).forEach(function(s) { if(Number(s.tensionRatio) >= loadedThr) m = Math.min(m, s.SF); });
-        var cls = (!ters && isFinite(m)) ? (m < 1 ? 'is-no' : ((sfIst > 0 && m < sfIst) ? 'is-warn' : '')) : '';
+        var cls = (!ters && isFinite(m) && m < 1) ? 'is-no' : '';
         var c = [_feadResN(d.engineRpm, 0), _feadResN(Number(d.dcPct), 1), _feadResN(d.vMs, 2)];
         (d.perPulley || []).forEach(function(q) { c.push(_feadResN(q.exitTensionN, 0)); });
         c.push(ters ? '—' : _feadResN(m, 2));
         return { c: c, cls: cls };
       })) + (ters ? '<div class="ve-fr-note" data-d="no">Gergi kayışın <b>gergin tarafında</b>: kayma '
         + 'emniyeti hüküm vermez. Çare kayış dönüş yönünü çevirmek ya da gergiyi sürücünün önüne almaktır.</div>'
-        : (sfIst > 0 ? '<div class="ve-fr-mute ve-fr-alt">Servis faktörü ' + _feadResN(sfIst, 2)
-          + ' — altında kalan satır sarı, SF &lt; 1 kırmızı.</div>' : '')));
+        : (c2Sec ? '<div class="ve-fr-mute ve-fr-alt">SF tasarım yükünde · c₂ = '
+          + ((typeof veFeadServisYaz === 'function') ? veFeadServisYaz(svT.deger) : _feadResN(svT.deger, 2))
+          + ' — SF &lt; 1 kırmızı.</div>' : '')));
     var hh = [{ t: 'Devir' }];
     P.forEach(function(p) { hh.push({ t: _feadResEsc(p.code) }); });
     h += _feadResSec('Hubload', 'büyüklük [N] / yön [°] — +x\'ten saat yönünün tersine',

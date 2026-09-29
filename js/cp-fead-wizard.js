@@ -143,7 +143,9 @@ function veFeadWizDefault(){
     // SİLİNDİR SAYISI YAZILI GELMİYOR (2026-09-29): 6 hiçbir motorun sayısı
     // değildi ve boş sihirbazdan kurulan her model 6 silindirli bir motorun
     // ateşleme frekansıyla çözülüyordu. Motor künyesi seçilir ya da girilir.
-    solver: { ratioMode: 'derive', serviceFact: 1.3,
+    // SERVİS FAKTÖRÜ DE YAZILI GELMİYOR (2026-09-29, kural 48): 1,3'ün kaynağı
+    // yoktu; c₂ Kayış adımındaki yük katsayısı tablosundan seçilir.
+    solver: { ratioMode: 'derive',
               dutyLib: (typeof VE_FEAD_DUTY_DEFAULT !== 'undefined') ? VE_FEAD_DUTY_DEFAULT : '',
               duty: (typeof veFeadDutyRowsOf === 'function')
                 ? veFeadDutyRowsOf(VE_FEAD_DUTY_DEFAULT) : [] },
@@ -764,6 +766,10 @@ function veFeadWizNodes(st){
     if(Number.isFinite(v)) sd[a] = v;
   });
   if(s.fatigueModel) sd.fatigueModel = s.fatigueModel;
+  // SERVİS FAKTÖRÜNÜN HÜCRESİ DE TAŞINIR (kural 20 · 48): yalnız sayı taşınsaydı
+  // kurulan modelde değer doğru olur ama tablo hangi hücrenin seçildiğini
+  // gösteremezdi ("kayıtlı değer — tablodan seçilmedi").
+  if(s.servisHucre) sd.servisHucre = String(s.servisHucre);
   // Motor kaydının izi — `dutyLib`/`tenLib` ile aynı gerekçe: hangi künyeden
   // gelindiği tek yerde yazılı olsun ki panel "katalogdan sapıldı" diyebilsin.
   if(s.engineLib){ sd.engineLib = s.engineLib; if(s.engineLibVer) sd.engineLibVer = s.engineLibVer; }
@@ -4251,8 +4257,23 @@ function _fwStepKayis(b){
       + '</b></div>'
     + '</div>'
     );
+  // SERVİS FAKTÖRÜ c₂ — kayış penceresinin Tasarım sekmesiyle AYNI üretici ve
+  // aynı köprü yazıcısı (kural 24 · 48); değer durumun çözücü alanına yazılır,
+  // kurulumda depoya taşınır (`veFeadWizNodes`).
+  if(typeof veFeadServisTabloHTML === 'function')
+    h += _fwCard('Servis faktörü c₂', 'var(--accent-primary)',
+      veFeadServisTabloHTML(st.solver || {}, function(k){ return 'veFeadWizServisSec(\'' + k + '\')'; }));
   h += _fwCadKayisHTML(st, b);
   return h;
+}
+
+// Sihirbazın c₂ yazıcısı — kayış penceresininkiyle aynı köprü fonksiyonu.
+function veFeadWizServisSec(anahtar){
+  if(!_fwState || typeof veFeadServisSet !== 'function') return;
+  if(!_fwState.solver) _fwState.solver = {};
+  veFeadServisSet(_fwState.solver, anahtar);
+  if(typeof veFeadWizLiveSoon === 'function') veFeadWizLiveSoon();
+  veFeadWizRender();
 }
 
 // ── CAD'DEKİ KAYIŞ (STEP'ten, kayış rolü verildiyse) ────────────────────────
@@ -4497,7 +4518,11 @@ function _sicaklikAlani(duty){
 // `kat: true` → motor kataloğunun YAZDIĞI alan (`veFeadEngineApply`).
 // `kat: false` → katalogda KARŞILIĞI OLMAYAN alan; motordan gelemez, elle
 // girilir. Ayrımı gizlemek, kullanıcının "motoru seçtim, hepsi doldu" diye
-// düşünüp boş bir servis faktörüyle devam etmesi demekti.
+// düşünüp boş bir krank ataletiyle devam etmesi demekti.
+//
+// SERVİS FAKTÖRÜ BU LİSTEDE YOK (2026-09-29, kural 48): yük katsayısı c₂
+// tablosu olarak Kayış adımında — serbest sayı alanı tablonun dışında bir değer
+// yazdırıyordu.
 //
 // "NO LOAD GOVERNED" BU LİSTEDE YOK — sorulmaz. Sayıyı OKUYAN hiçbir hesap,
 // uygunluk kapısı ya da rapor satırı yok (aranan yerler: fead-model · fead-core
@@ -4516,7 +4541,6 @@ var VE_FW_ENG_FIELDS = [
   { yol: 'solver.idleRpm',           ad: 'Rölanti',              br: 'RPM',    ph: 'zorunlu', kat: true  },
   { yol: 'solver.governedRpm',       ad: 'Governed',             br: 'RPM',    ph: 'zorunlu', kat: true  },
   { yol: 'solver.overspeedRpm',      ad: 'Overspeed',            br: 'RPM',    ph: '—',    kat: true  },
-  { yol: 'solver.serviceFact',       ad: 'Servis faktörü',       br: '—',      ph: '1.3',  kat: false },
   { yol: 'solver.crankInertia',      ad: 'Krank mili ataleti',   br: 'kg·m²',  ph: 'arşiv 0,50', kat: false },
   { yol: 'solver.accelRpmS',         ad: 'İvmelenme',            br: 'RPM/s',  ph: '1100', kat: false },
   { yol: 'solver.decelRpmS',         ad: 'Yavaşlama',            br: 'RPM/s',  ph: '1100', kat: false },
@@ -5394,6 +5418,7 @@ if(typeof module !== 'undefined' && module.exports){
     _fwChecksCard: _fwChecksCard,
     veFeadWizDefault: veFeadWizDefault, veFeadWizState: veFeadWizState,
     veFeadWizNodes: veFeadWizNodes, veFeadWizRoute: veFeadWizRoute,
+    veFeadWizServisSec: veFeadWizServisSec, _fwStepKayis: _fwStepKayis,
     veFeadWizBuild: veFeadWizBuild, veFeadWizSeed: veFeadWizSeed,
     _fwTeX: _fwTeX, veFeadWizTeXPaint: veFeadWizTeXPaint,
     veFeadWizEngOpen: veFeadWizEngOpen, veFeadWizEngClose: veFeadWizEngClose,

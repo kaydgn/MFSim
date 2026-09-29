@@ -2513,6 +2513,66 @@ function veFeadKayisMarkaAdi(k){
     if(VE_FEAD_KAYIS_MARKALAR[i][0] === key) return VE_FEAD_KAYIS_MARKALAR[i][1];
   return String(k || '');
 }
+// ── SERVİS FAKTÖRÜ c₂ TABLOSU — TEK ÜRETİCİ (kural 48) ──────────────────────
+// Kayış penceresinin Tasarım sekmesi ve sihirbazın Kayış adımı AYNI tabloyu
+// basar; hücre bir düğmedir ve tıklaması yüzeyin KENDİ yazıcısına gider
+// (`cagri(anahtar)` → onclick metni). Değer ve etiket köprünün tablosundan
+// (`VE_FEAD_SERVIS`); ikinci bir sayı listesi burada TUTULMAZ.
+// Satır başlığının `title`ı o yük sınıfının makine örnekleri, grup başlığınınki
+// sürücü tanımı — seçimin ölçütü. Açıklaması kılavuzda (kural 45).
+function veFeadServisTabloHTML(sd, cagri){
+  if(typeof VE_FEAD_SERVIS === 'undefined' || typeof veFeadServisFaktoru !== 'function') return '';
+  var T = VE_FEAD_SERVIS, sv = veFeadServisFaktoru(sd);
+  var h = '<div class="ve-fead-c2" data-ve="servis-tablo">'
+    + '<table class="ve-fead-c2-t"><thead><tr>'
+    + '<th rowspan="2" class="ve-fead-c2-kose"><span>Yük</span><span>sa/gün</span></th>';
+  T.surucu.forEach(function(s){
+    h += '<th colspan="3" class="ve-fead-c2-grup" title="' + _feadEsc(s.tanim) + '">'
+      + _feadEsc(s.ad) + '<small>' + _feadEsc(s.alt) + '</small></th>';
+  });
+  h += '</tr><tr>';
+  T.surucu.forEach(function(){
+    T.saat.forEach(function(q){ h += '<th class="ve-fead-c2-saat">' + _feadEsc(q.ad) + '</th>'; });
+  });
+  h += '</tr></thead><tbody>';
+  T.yuk.forEach(function(y){
+    h += '<tr><th scope="row" title="' + _feadEsc(y.ornek) + '">' + _feadEsc(y.ad) + '</th>';
+    T.surucu.forEach(function(s){
+      T.saat.forEach(function(q, i){
+        var k = y.k + '.' + s.k + '.' + q.k, on = (sv.anahtar === k);
+        h += '<td><button type="button" class="ve-fead-c2-h" data-ve-c2="' + k + '"'
+          + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+          + ' title="' + _feadEsc(y.ad + ' iş · ' + s.ad.toLowerCase() + ' · ' + q.ad + ' sa/gün') + '"'
+          + ' onclick="' + cagri(k) + '">' + veSayi(y.deger[s.k][i], 1) + '</button></td>';
+      });
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  // DURUM SATIRI — hangi c₂ hesaba giriyor ve nereden (kural 45: durum söyler).
+  h += '<div class="ve-fead-c2-durum" data-kaynak="' + sv.kaynak + '">'
+    + (sv.kaynak === 'yok'
+        ? '<span>Seçilmedi · kayma gerçek yükte (c₂ = 1)</span>'
+        : '<span><b>c₂ = ' + veFeadServisYaz(sv.deger) + '</b> · ' + _feadEsc(sv.etiket) + '</span>')
+    + _feadIBtn(T.kaynak + ' İçten yanmalı motor 600 d/dk üstündeyse normal kalkış grubundadır.')
+    + (sv.kaynak !== 'yok'
+        ? '<button type="button" class="ve-fead-c2-kaldir" onclick="' + cagri('') + '">Seçimi kaldır</button>'
+        : '')
+    + '</div>';
+  return h + '</div>';
+}
+
+// Kayış penceresinin yazıcısı — veri DEPODA (kural 42); açık pencere tazelenir.
+function veFeadServisSec(nodeId, anahtar){
+  if(typeof nodes === 'undefined' || typeof veFeadServisSet !== 'function') return;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node) return;
+  if(!node.data) node.data = {};
+  veFeadServisSet(node.data, anahtar);
+  if(typeof saveState === 'function') saveState();
+  _feadPencereTazele(node);
+}
+
 function getFeadBeltPropertiesHTML(node){
   if(!node.data) node.data = {};
   var html = '';
@@ -2621,6 +2681,11 @@ function getFeadBeltPropertiesHTML(node){
       + _feadSelect(depo, 'Yorulma modeli', 'fatigueModel',
           [['PK-2_2p-MT3', 'PK-2_2p-MT3 (doğrulanmış, 8 sistem)'],
            ['PK-2_2a-MT3', 'PK-2_2a-MT3 (tek sistem — doğrulanmamış)']], 'PK-2_2p-MT3'))
+      // SERVİS FAKTÖRÜ c₂ (kullanıcı kararı 2026-09-29, kural 48): tablodan
+      // seçilir, kayma emniyeti bu tasarım yükünde hesaplanır.
+      + _feadCard('Servis faktörü c₂', '', 'var(--accent-primary)',
+          veFeadServisTabloHTML(depo.data, function(k){
+            return 'veFeadServisSec(\'' + depo.id + '\',\'' + k + '\')'; }))
     : _feadDepoYok();
 
   var sekmeler = [{ k:'pro', ad:'Profil',   govde: _pro },
@@ -8141,19 +8206,19 @@ function veFeadDriveCard(node){
 // altında (`veFeadEngineSpeedCard` · `veFeadEngineCurveCard`); krank mili
 // ataleti Rol sekmesinde — hepsi DEPODA (`veFeadIsletmeDeposu`).
 // Her alanın bir tüketicisi var (kural 25): silindir → ateşleme frekansı,
-// servis faktörü → kayma hükmünün alt sınırı, ivmelenme/yavaşlama → tepe yük
-// tablosu ve senaryo rampası. "No load governed" SORULMUYOR (tüketicisi yok).
-// YER TUTUCU VARSAYILANIN KENDİSİ: silindir boşken 6, ivme boşken 1100
-// koşuyor; servis faktörü boşken hüküm konmuyor — yer tutucusu yok.
+// ivmelenme/yavaşlama → tepe yük tablosu ve senaryo rampası.
+// "No load governed" SORULMUYOR (tüketicisi yok). SERVİS FAKTÖRÜ BURADA DEĞİL: yük
+// katsayısı tablosu olarak kayışın Tasarım sekmesinde (kural 48) — serbest
+// sayı alanı tablonun dışında bir değer yazdırıyordu.
+// YER TUTUCU VARSAYILANIN KENDİSİ: ivme boşken 1100 koşuyor.
 function veFeadEngineCard(node){
   return _feadCard('Motor', 'BMC motor kataloğu', 'var(--text-secondary)',
       veFeadEngineLibRow(node)
     + _feadGrid(node, [
         // SİLİNDİR ZORUNLU (kural 46): yer tutucu bir sayı yazmaz — '6' boş
         // alanda gerçekten kullanılıyordu ve girilmiş değer sanılıyordu.
-        { key:'cylinders',   label:'Silindir sayısı [—]', ph:'zorunlu', step:'1' },
-        { key:'serviceFact', label:'Servis faktörü [—]',  ph:'', step:'0.01' }
-      ], 2)
+        { key:'cylinders',   label:'Silindir sayısı [—]', ph:'zorunlu', step:'1' }
+      ], 1)
     + _feadGrid(node, [
         { key:'accelRpmS',    label:'İvmelenme [RPM/s]',     ph:'1100', step:'10' },
         { key:'decelRpmS',    label:'Yavaşlama [RPM/s]',     ph:'1100', step:'10' }
@@ -8847,11 +8912,9 @@ function veFeadSolve(nodeId){
   // bir alan raporun girdi tablosuna sızar ve belge kendi sayılarıyla
   // çelişirdi. Rapor ÇÖZÜLEN modeli anlatır.
   res.build = build;
-  // SERVİS FAKTÖRÜ sonuca TAŞINIR: kayma emniyetinin istenen alt sınırı bu.
-  // Eskiden tabloda 1.3 SABİT yazıyordu — sayfadaki değerle aynı olması
-  // tesadüftü; farklı bir servis faktörü giren kullanıcı yine 1.3'e göre
-  // renklenmiş bir tablo görüyordu.
-  res.serviceFact = _feadNum(node && node.data && node.data.serviceFact, 0);
+  // SERVİS FAKTÖRÜ SONUCUN İÇİNDE (`res.servis`, kural 48): köprü onu çözüm
+  // anında dondurup kayma satırlarını tasarım yükünde kuruyor. Burada ikinci
+  // bir kopya yazılmaz — eskiden `res.serviceFact` bir EŞİKTİ (SF ≥ c₂).
   // UYGUNLUK KAPILARI ÇÖZÜM ANINDA HESAPLANIR VE SONUCA TAŞINIR. Rapor onları
   // yeniden hesaplasaydı, çözümden sonra değiştirilen bir devir sınırı belgeye
   // sızar ve rapor kendi modelinden başka bir şeyi denetlerdi — `res.build`'in
@@ -9002,7 +9065,9 @@ function veFeadResultCard(R, node){
 // GERGİN tarafına düşüyor ve açıklıklar ankrajın altına iniyor.
 function veFeadResultVerdicts(R){
   var A = R.analysis || { duty: [] };
-  var SF_ist = _feadNum(R.serviceFact, 0);
+  // Kayma satırları TASARIM yükünde (P_B = c₂·P, kural 48) — hükmün eşiği 1.
+  var sv = R.servis || { deger: 1, kaynak: 'yok' };
+  var c2Y = (typeof veFeadServisYaz === 'function') ? veFeadServisYaz(sv.deger) : String(sv.deger);
   var esik = (typeof VE_FEAD_SLIP_LOADED_RATIO === 'number') ? VE_FEAD_SLIP_LOADED_RATIO : 1.01;
   var yuklu = {};
   A.duty.forEach(function(d){
@@ -9018,12 +9083,13 @@ function veFeadResultVerdicts(R){
   var h = '';
   var yon = R.tensionerSide || null;
   var tersYerlesim = !!(yon && yon.ok === false);
-  // SERVİS FAKTÖRÜ HÜKMÜ — Motor Künyesi kartındaki söz burada karşılanıyor.
-  // Girilmemişse hüküm satırı HİÇ çıkmaz: uydurma bir eşik gösterilmez.
-  if(!tersYerlesim && SF_ist > 0 && Number.isFinite(enKucukSF)){
-    var gecti = enKucukSF >= SF_ist;
+  // SERVİS FAKTÖRÜ HÜKMÜ — kayışın Tasarım sekmesindeki c₂ burada karşılanıyor:
+  // en düşük SF tasarım yükünde, eşik 1. Seçilmemişse (c₂ = 1) satır çıkmaz;
+  // SF < 1 aşağıda ayrıca söylenir.
+  if(!tersYerlesim && sv.kaynak !== 'yok' && Number.isFinite(enKucukSF)){
+    var gecti = enKucukSF >= 1;
     h += '<div class="ve-fr-hukum" data-d="' + (gecti ? 'ok' : 'no') + '">'
-      + '<span>Servis faktörü ' + _feadFmt(SF_ist, 2) + ' &nbsp;·&nbsp; en kötü nokta ' + veSayi(enKucukRpm, 0) + ' rpm</span>'
+      + '<span>Servis faktörü c₂ = ' + c2Y + ' (tasarım yükü) &nbsp;·&nbsp; en kötü nokta ' + veSayi(enKucukRpm, 0) + ' rpm</span>'
       + '<b>min SF = ' + _feadFmt(enKucukSF, 2) + ' ' + (gecti ? veDurumIkon('ok') + ' GEÇTİ' : veDurumIkon('err') + ' KALDI') + '</b></div>';
   }
   var neg = A.duty.some(function(d){ return d.warnings && d.warnings.length; });
@@ -9041,7 +9107,8 @@ function veFeadResultVerdicts(R){
       + '<b>Bu çözümde kayma emniyet faktörü hüküm vermez.</b>');
   } else {
     if(kayma) h += _feadHint('<b style="color:var(--ink-danger);">Kayma emniyet faktörü 1\'in altına '
-      + 'iniyor</b> — kayış o devirde kaymaya başlar. Sarım açısını artırın (avara ekleyin ya da '
+      + 'iniyor</b>' + (sv.deger > 1 ? ' (tasarım yükünde, c₂ = ' + c2Y + ')' : '')
+      + ' — kayış o devirde kaymaya başlar. Sarım açısını artırın (avara ekleyin ya da '
       + 'kasnak konumlarını değiştirin); gergi künyesi daha yüksek yay momenti veriyorsa o da '
       + 'ankrajı yükseltir.');
     if(neg) h += _feadHint('<b style="color:var(--ink-warning);">Bir açıklıkta negatif gerilme</b> — '
@@ -9215,6 +9282,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,
     getFeadBeltPropertiesHTML: getFeadBeltPropertiesHTML,
+    veFeadServisTabloHTML: veFeadServisTabloHTML, veFeadServisSec: veFeadServisSec,
     getFeadLayoutPropertiesHTML: getFeadLayoutPropertiesHTML,
     getFeadSolverPropertiesHTML: getFeadSolverPropertiesHTML,
   };

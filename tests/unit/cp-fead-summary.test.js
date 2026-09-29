@@ -1205,7 +1205,7 @@ describe('FEAD özet · kayma eşiği, kayış kimliği, yay momenti', () => {
   const govde = (h) => (String(h).split('<body>')[1] || '');
 
   test('eşik çizgisi gerginlik grafiğinde ve SAYISI köprünün verdiği sayı', () => {
-    const A = veFeadSlipThreshold(R.build, R.analysis.duty);
+    const A = veFeadSlipThreshold(R.build, R.analysis.duty, R.servis && R.servis.deger);
     expect(A).toBeTruthy();
     // Grafikte TEK bir eşik çizgisi var (iki kez çizilirse ikisi de yanlış yerde
     // olabilir ve fark edilmez).
@@ -1224,7 +1224,7 @@ describe('FEAD özet · kayma eşiği, kayış kimliği, yay momenti', () => {
   });
 
   test('eşik hükmü YÜK TAŞIYAN kasnağı adlandırıyor (kayma hükmüyle aynı küme)', () => {
-    const A = veFeadSlipThreshold(R.build, R.analysis.duty);
+    const A = veFeadSlipThreshold(R.build, R.analysis.duty, R.servis && R.servis.deger);
     const i = R.build.names.indexOf(A.pulley);
     expect(i).toBeGreaterThanOrEqual(0);
     // O kasnak gerçekten yük taşıyor: bütün devirlerde oranı eşiğin üstünde.

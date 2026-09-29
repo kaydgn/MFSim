@@ -319,7 +319,8 @@ function _fsrSheet1(R, node){
   var A = R.analysis || {}, life = R.life || {}, duty = R.duty || [];
   var dcTop = 0; duty.forEach(function(r){ dcTop += _frNum(r.dcPct) || 0; });
   var st = (typeof _frSlipStats === 'function') ? _frSlipStats(R) : null;
-  var sf = _frNum(R.serviceFact);
+  // Kayma satırları TASARIM yükünde (c₂, kural 48); hükmün eşiği 1.
+  var sv = _frServis(R);
   var kod = _fsrCodes(sys);
 
   var h = _fsrH1('Genel bakış', 'Sistem künyesi, yerleşim ve kritik sonuçlar');
@@ -394,11 +395,11 @@ function _fsrSheet1(R, node){
   // — kritik sonuçlar: okuyucunun ilk bakışta görmesi gereken beş sayı
   var sig = _fsrSignedWrap(R);
   var kapali = Number.isFinite(sig) && Math.abs(Math.abs(sig) - 360) <= 0.05;
-  var sfOK = !(Number.isFinite(sf) && sf > 0) || (st && Number.isFinite(st.loadedMin) && st.loadedMin >= sf);
+  var sfOK = !(st && Number.isFinite(st.loadedMin)) || st.loadedMin >= 1;
   var kart = [
     ['Tasarım gerginliği', _frF(sys && sys.designTensionN, 0) + ' N', 'yay dengesinden türetildi'],
     ['En düşük kayma emniyeti', st && Number.isFinite(st.loadedMin) ? _frFs(st.loadedMin, 2) : '—',
-      (Number.isFinite(sf) && sf > 0 ? 'istenen ≥ ' + _frF(sf, 2) : 'yük taşıyan kasnaklarda'), sfOK ? 'ok' : 'no'],
+      (sv.secili ? 'tasarım yükü c₂ = ' + sv.yaz + ' · istenen ≥ 1' : 'yük taşıyan kasnaklarda · istenen ≥ 1'), sfOK ? 'ok' : 'no'],
     // MANŞETTE MODELİN EN İYİ KESTİRİMİ DURUR. Ham B10 çap penceresi dışında
     // sistematik olarak düşük (0,55×) ve bunu modelin kendisi söylüyor;
     // manşette ham değeri basmak, okuyucuya modelin kendi düzeltmesini
@@ -588,14 +589,15 @@ function _fsrSheet3(R, node){
   // KAYMA EŞİĞİ KÜNYEDE de yazılı: figür `veFeadFigureRaw` ile numarasız
   // basıldığı için ayrıntılı raporun kendi künyesi buraya gelmiyor.
   var esikT = (typeof veFeadSlipThreshold === 'function')
-    ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null;
+    ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || [], R.servis && R.servis.deger) : null;
   h += '<div class="col">' + _fsrBlk('Gerginliğin kol açısına bağımlılığı',
     _fsrFig(typeof _frTensionFigure === 'function' ? _frTensionFigure : null, R, 390, 520),
     'Kalın eğri hesaplanan gerginlik, kesikli eğriler ±%10 bandı. Dikey çizgiler altı kol '
     + 'konumu.'
     + (esikT ? ' Kırmızı kesikli doğru kayma eşiği (' + _frF(esikT.tensionN, 0)
                + ' N): yük taşıyan kasnakların emniyet faktörünün 1\'e düştüğü ankraj '
-               + 'gerginliği (' + _frEsc(_fsrKisaAd(sys, esikT.pulley) || esikT.pulley)
+               + 'gerginliği' + (_frServis(R).secili ? ', tasarım yükünde (c₂ = ' + _frServis(R).yaz + ')' : '')
+               + ' (' + _frEsc(_fsrKisaAd(sys, esikT.pulley) || esikT.pulley)
                + ' @ ' + _frF(esikT.engineRpm, 0) + ' d/d). Tasarım gerginliği bunun '
                + _frFs(esikT.margin, 2) + ' katıdır.' : '')) + '</div>';
   h += '<div class="col">' + _fsrBlk('Kayış take-up eğrisi',
@@ -683,7 +685,7 @@ function _fsrSheet6(R, node){
   var duty = (R.analysis && R.analysis.duty) || [], sys = R.build && R.build.sys;
   var h = _fsrH1('Dayanım ve titreşim', 'Kayma emniyeti, yorulma, ömür ve burulma');
   if(!duty.length) return h + '<div class="nofig">Çalışma çevrimi tanımlı değil.</div>';
-  var kod = _fsrCodes(sys), sf = _frNum(R.serviceFact);
+  var kod = _fsrCodes(sys), sv = _frServis(R);
   var b2 = (sys && sys.belt) || {};
 
   // VURGU HÜKÜMLE ÇELİŞEMEZ. İlk sürüm SF < servis faktörü olan her hücreyi
@@ -705,7 +707,7 @@ function _fsrSheet6(R, node){
     (d.slip || []).forEach(function(x, i){
       var v = _frNum(x.SF);
       if(!yukTasir[i]) return c.push('<span class="pas">' + _frFs(v, 2) + '</span>');
-      var kotu = Number.isFinite(sf) && sf > 0 && Number.isFinite(v) && v < sf;
+      var kotu = Number.isFinite(v) && v < 1;
       c.push(kotu ? '<b class="bad">' + _frFs(v, 2) + '</b>' : _frFs(v, 2));
     });
     return c;
@@ -715,14 +717,14 @@ function _fsrSheet6(R, node){
   var st = (typeof _frSlipStats === 'function') ? _frSlipStats(R) : null;
   var hukum = '';
   if(st && Number.isFinite(st.loadedMin)){
-    var ok = !(Number.isFinite(sf) && sf > 0) || st.loadedMin >= sf;
+    var ok = st.loadedMin >= 1;
     hukum = '<b>Hüküm:</b> yük taşıyan kasnakların en düşük emniyet faktörü <b>'
       + _frFs(st.loadedMin, 2) + '</b>' + (st.loadedName ? ' (' + _frEsc(_fsrKisaAd(sys, st.loadedName)) + ')' : '')
-      + (Number.isFinite(sf) && sf > 0 ? ', istenen ≥ ' + _frF(sf, 2) : '') + (ok ? ' ✓' : ' ✗')
+      + ', istenen ≥ 1' + (ok ? ' ✓' : ' ✗')
       + '. Yük taşımayan kasnaklarda gerginlik oranı ≈ 1; değer marj değil kapasitedir.';
   }
   h += _fsrBlk('Kayma emniyet faktörü'
-      + (Number.isFinite(sf) && sf > 0 ? ' <span class="kvi">servis faktörü ' + _frF(sf, 2) + '</span>' : ''),
+      + (sv.secili ? ' <span class="kvi">tasarım yükü · c₂ = ' + sv.yaz + '</span>' : ''),
     _fsrT(slipHead, mrows, { ilkSol: true }), hukum);
   void 0;
 
@@ -752,7 +754,7 @@ function _fsrSheet6(R, node){
   // 345 px'lik sütuna 0,885 ölçekle otursun ve puntolar 10,6 px'te kalsın —
   // sütun genişliği seçilseydi ölçek 1 kalır, yazı gövdeden büyük görünürdü.
   h += '<div class="col">' + _fsrBlk('Kayma emniyeti — Kasnak başına en düşük',
-    _fsrFig(typeof _frSlipFigure === 'function' ? _frSlipFigure : null, R, 390, 200, sf),
+    _fsrFig(typeof _frSlipFigure === 'function' ? _frSlipFigure : null, R, 390, 200, 1),
     'Çubuk boyu: kasnak başına en düşük emniyet faktörü. Soluk çubuk yük taşımayan '
     + 'kasnaktır.') + '</div>';
   h += '</div>';

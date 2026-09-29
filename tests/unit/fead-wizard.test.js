@@ -2686,14 +2686,17 @@ describe('motor künyesi PENCEREDE — sayfa sadeleşti', () => {
     expect((h.match(/class="ve-fw-kutu"/g) || []).length).toBe(3);
   });
 
-  test('DOKUZ ALANIN HEPSİ pencerede ve tek listeden', () => {
+  // SEKİZ ALAN: servis faktörü 2026-09-29'da motor künyesinden çıktı, yük
+  // katsayısı tablosu olarak Kayış adımında (kural 48).
+  test('SEKİZ ALANIN HEPSİ pencerede ve tek listeden; servis faktörü burada yok', () => {
     kabuk(); wiz.veFeadWizSeed('BMC_FEAD_2026');
     const p = wiz.veFeadWizEngHTML();
-    expect(wiz.VE_FW_ENG_FIELDS.length).toBe(9);
+    expect(wiz.VE_FW_ENG_FIELDS.length).toBe(8);
     wiz.VE_FW_ENG_FIELDS.forEach((f) => {
       expect(p).toContain("'" + f.yol + "'");
       expect(p).toContain(f.ad);
     });
+    expect(p).not.toMatch(/serviceFact/);
   });
 
   // ── "NO LOAD GOVERNED" SORULMUYOR — 0 TÜKETİCİ ──────────────────────────

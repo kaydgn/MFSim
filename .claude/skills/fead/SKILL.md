@@ -1093,6 +1093,32 @@ olurdu.
     Kapılar: `fead-sihirbaz-masa.test.js` · `fead-wizard.test.js` ·
     `fead-wizard-catalog.test.js` · e2e `fead-wizard*.spec.js`.
 
+48. **SERVİS FAKTÖRÜ BİR YÜK KATSAYISIDIR, EŞİK DEĞİL** (2026-09-29, kullanıcı:
+    *"kullanıcı tablodaki değerlerin birini seçecek. Matematiksel hesap ona
+    göre güncellenecek"*). c₂ ContiTech / ISO-DIN yük katsayısı tablosundan
+    (`VE_FEAD_SERVIS`, 4 yük sınıfı × 2 sürücü × 3 günlük süre) seçilir —
+    kayışın Tasarım sekmesinde ve sihirbazın Kayış adımında, TEK üreticiyle
+    (`veFeadServisTabloHTML`) ve TEK yazıcıyla (`veFeadServisSet`); veri
+    depoda (`servisHucre` + `serviceFact`). Serbest sayı alanı yok.
+    • **Kayma tasarım yükünde**: P_B = c₂·P, zincir afin
+      (T_B = T₀ + c₂(T − T₀), `veFeadTasarimGerginlik`); çözümün `slip`
+      satırları tasarım yükünde, gerçek yükteki `slipIsletme`; hüküm SF ≥ 1;
+      kayma eşiği tam c₂ katı. Gerilme, hubload, ömür ve frekans GERÇEK yükte
+      (Gates karşılaştırması bozulmasın). Eskiden alan orana konan bir eşikti
+      (SF ≥ c₂) — yük katsayısını orana koymak başka bir ölçüttür.
+    • **c₂ çözümde dondurulur** (`R.servis`); bütün yüzeyler oradan okur.
+      Seçilmemişse c₂ = 1 ve "Seçilmedi" yazılır — varsayılan uydurulmaz
+      (sihirbazın kaynaksız 1,3'ü kalktı); hücresiz kayıtlı sayı "kayıtlı
+      değer" (BMC örneğinin kaynağı 1,3 der), 1'in altı 1'e çekilir.
+    • **Araç motoru normal kalkış grubunda** (içten yanmalı > 600 d/dk);
+      ekran görüntüsündeki "n up to 600 rpm" ilk grupta çeviri hatası.
+    Kapı: `fead-servis-faktoru.test.js` — bağımsız yol (yükler × c₂, c₂'siz
+    çözüm) tasarım satırlarını birebir veriyor; sekiz mutasyonun sekizi kırmızı.
+    • **Tablo iki yüzeyde AYNI çizilir**: pencerenin genel `th, td` dolgusu
+      `!important` — istisna da öyle ve kapsamı bu tablo; başlık kuralı kabıyla
+      nitelenir. Kapı: `fead-panel-gramer.spec.js` → *"c₂ tablosu … AYNI
+      çiziliyor"* (ölçülen: pencerede "10–16" iki satır, düğme 16 px dar).
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.
