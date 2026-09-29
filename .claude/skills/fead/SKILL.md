@@ -565,10 +565,18 @@ olurdu.
       yazılıyordu, zarfa bağlı sahip ise bölünen ön ayarda cümleyi hiç
       yazmıyordu, ve tek kasnaklı kayma şeridi zarfın değerini o kasnağın
       adıyla basıyordu (yanlış sayı, sessiz).
+    • **Şerit yorumunun başlığı ŞERİDİ adlandırır**: kanalların çoğunluğunun
+      grubu ("Kayma emniyeti — 4 kanal"), yoksa küme. Küme adı iki şeritte
+      aynıydı (Hubload'un iki şeridi de "Çalışma çevrimi — 6 kanal").
+    • **Hüküm kanıtıyla**: devir sınırı kartı en dar payı ya da ihlali yazar,
+      Sonuç Özeti satırlarını basar (çözücü penceresinin kapı kartıyla aynı
+      `R.checks`). Kart yalnız "Uygun" diyordu — AG00976'da pay %4,9.
     Kapılar: `fead-sonuclar.test.js` (dört kusurun üçü + okuma sözleşmesi +
-    "yorum TEKRAR ETMEZ": 11 örnek × iki kayış kipi × Ayır/ön ayar düzeni),
+    "yorum TEKRAR ETMEZ": 11 örnek × iki kayış kipi × Ayır/ön ayar düzeni ·
+    SUNUM: sayı öbeği, devir sınırı kanıtı, şerit başlığı),
     `fead-sonuclar-sekme.test.js` (kablolama + "Sonuçları Temizle"),
-    `tests/e2e/fead-sonuclar.spec.js` (sayfa boyu kart, gerçek çizim).
+    `tests/e2e/fead-sonuclar.spec.js` (sayfa boyu kart, gerçek çizim; 1.920 ve
+    1.366'da kırpılan/bölünen yazı, bozuk lejant, bitişik hücre).
 
 34. **STEP'TEN KASNAK GEOMETRİSİ — OKUYUCU ANLAM YÜKLEMEZ, TANIYICI MODEL
     KURMAZ** (2026-09-26, kullanıcı isteği: CATIA/3DEXPERIENCE montajından
