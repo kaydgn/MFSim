@@ -337,7 +337,9 @@ describe('bulgu 4·5·6 — mevcut korumalar yerinde duruyor', () => {
   test('köprü çekirdeğe ÇIPLAK SAYI olarak mu geçmiyor', () => {
     const src = require('fs').readFileSync(
       require('path').join(__dirname, '../../js/fead-model.js'), 'utf8');
-    const cagri = /FEADCore\.analyze\(([\s\S]*?)\n    \}\);/.exec(src);
+    // Asıl ÇAĞRI (yorumdaki "FEADCore.analyze()" değil): eşleşme bir yorumdan
+    // başlarsa aradaki her kod bloğunu yutar ve kapı yanlış yerde bakar.
+    const cagri = /out\.analysis = FEADCore\.analyze\(([\s\S]*?)\n    \}\);/.exec(src);
     expect(cagri).toBeTruthy();
     expect(/\bmu\s*:/.test(cagri[1])).toBe(false);
   });

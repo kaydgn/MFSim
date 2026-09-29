@@ -451,12 +451,18 @@ $$ \big|\mathbf{F}_{\text{hub}}\big| = 2\,T\,\sin\!\left(\frac{\varphi}{2}\right
 $$ \frac{T_{\text{gergin}}}{T_{\text{boş}}} \;\le\; e^{\mu\varphi} $$
 <span class="tag">(5.6)</span>
 </div>
-<p>Kayma emniyet faktörü, kapasitenin fiili orana bölümüdür:</p>
+<p>Kayma emniyet faktörü, kasnağın taşıyabileceği etkin gerginliğin istenene bölümüdür (gevşek taraf sabit):</p>
 <div class="eqno">
-$$ \mathrm{SF} = \frac{e^{\mu\varphi}}{T_{\text{gergin}}/T_{\text{boş}}} $$
+$$ \mathrm{SF} = \frac{T_{\text{boş}}\,\big(e^{\mu\varphi} - 1\big)}{T_{\text{gergin}} - T_{\text{boş}}} $$
 <span class="tag">(5.7)</span>
 </div>
-<p>\( \mathrm{SF} = 1 \) kayma eşiğidir. Tasarım payı yüke konur: <strong>servis faktörü</strong> \( c_2 \) (yük katsayısı — tahrik edilen makinenin yük sınıfı, sürücünün kalkış karakteri ve günlük çalışma süresinden, 1,0 … 1,8) aksesuar güçlerini tasarım gücüne çevirir, \( P_B = c_2\,P \). Gerilme zinciri gergide ankrajlı olduğu için tasarım yükündeki açıklık gerginlikleri \( T_{B,k} = T_0 + c_2\,(T_k - T_0) \) olur (\( T_0 \) gerginin çıkış gerginliği); SF bu gerginliklerle hesaplanır ve \( \mathrm{SF} \ge 1 \) istenir. Kaburgalı temasta \( \mu \) kanal geometrisiyle etkin biçimde büyür; sırttan temasta ise düz yüzeyin sürtünmesi geçerlidir ve belirgin biçimde düşüktür — bu yüzden avara ve gergi kasnaklarındaki emniyet payı daha dardır.</p>
+<p>\( \mathrm{SF} = 1 \) kayma eşiğidir ve (5.6) ile aynı sınırdır; üstünde SF torkla doğrusal okunur: \( \mathrm{SF} = 2 \), kasnağın iletebileceği torkun istenenin iki katı olduğunu söyler. Kayma her devirde <strong>en kötü koşulda</strong> aranır: motor ivmesi \( \{+\dot n,\ 0,\ -\dot n\} \) aksesuar atalet torkuyla (5.8), her aksesuar tepe gücünün %10'u ya da %100'ü ve avara ile gergide 0,01 kW yatak sürtünmesi. Tasarım payı yüke konur: <strong>servis faktörü</strong> \( c_2 \) (yük katsayısı — tahrik edilen makinenin yük sınıfı, sürücünün kalkış karakteri ve günlük çalışma süresinden, 1,0 … 1,8) bütün gerginlik farklarını \( c_2 \) katına çıkarır; gerilme zinciri gergide ankrajlı olduğu için tasarım yükündeki açıklık gerginlikleri \( T_{B,k} = T_0 + c_2\,(T_k - T_0) \) olur (\( T_0 \) gerginin çıkış gerginliği) ve \( \mathrm{SF} \ge 1 \) istenir.</p>
+<p>\( \mu \) bir malzeme sabiti değil, (5.6)'ya giren <strong>etkin</strong> sürtünmedir: kaburgalı temasta kanal geometrisi onu büyütür, sırttan temasta düz yüzeyin sürtünmesi geçerlidir. Küçük kasnakta kayış giriş ve çıkışta bükülmeye direnir ve temas her uçta \( \ell \) kadar kısalır:</p>
+<div class="eqno">
+$$ \varphi_{\text{etkin}} = \varphi - \frac{2\,\ell}{r_p} \qquad (\text{yalnız kaburgalı temas}) $$
+<span class="tag">(5.7a)</span>
+</div>
+<p>\( \mu \) ve \( \ell \) kullanıcı tarafından seçilir; hesaba giren değerler ve kaynakları Bölüm 8.12'de yazılıdır.</p>
 
 <h3>5.4 Tepe yükler</h3>
 <p>Yukarıdaki denge <em>ortalama</em> çalışmayı anlatır. Motorun hızlanma ve yavaşlamasında aksesuarların atalet momentleri ek tork üretir:</p>

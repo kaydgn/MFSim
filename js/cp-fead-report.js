@@ -748,10 +748,10 @@ function _frSignedWrap(R){
 // KAYMA EMNİYETİ İKİ AYRI SORUYU CEVAPLIYOR ve tek bir "en düşük SF" ikisini
 // birbirine karıştırıyordu.
 //
-// SF = capstan kapasitesi / fiili gerginlik oranı. Yük ÇEKMEYEN bir kasnakta
-// (avara, gergi) fiili oran ~1,00'dir; SF o zaman kapasitenin ta kendisi olur —
-// yani bir MARJ değil, o sarım açısının taşıyabileceği azami orandır. Servis
-// faktörü ise TALEBİN üzerine konan bir marjdır; talep yokken anlamsızdır.
+// SF = taşınabilen etkin gerginlik / istenen (kapasite tanımı, 2026-09-29).
+// Yük ÇEKMEYEN bir kasnakta (avara, gergi) talep yalnız atalet ve yatak
+// sürtünmesidir; SF'si bir pay olarak basılır ama hükme girmez. Oran
+// tanımı döneminde bu kasnaklar 1,05 gibi tehlike görünen sayılar basıyordu.
 //
 // ÖLÇÜLDÜ (AG00976, 880 d/d): yük taşıyan üç kasnakta oran 1,348–2,538 ve
 // SF 4,58–16,73; yük taşımayan üçünde oran 1,0010–1,0024 ve SF 1,232–1,479.
@@ -771,6 +771,11 @@ function _frSignedWrap(R){
 var VE_FR_SLIP_LOADED_RATIO = (typeof VE_FEAD_SLIP_LOADED_RATIO === 'number')
   ? VE_FEAD_SLIP_LOADED_RATIO : 1.01;   // bu oranın altı "yük taşımıyor" sayılır
 
+// Satırın rolü köprüden (`veFeadSlipYukTasir`); köprü yoksa oran eşiği.
+function _frSlipYuk(s){
+  if(typeof veFeadSlipYukTasir === 'function') return veFeadSlipYukTasir(s);
+  return _frNum(s && s.tensionRatio) >= VE_FR_SLIP_LOADED_RATIO;
+}
 // `alan` hangi satırlar: 'slip' (varsayılan — TASARIM yükü, kural 48) ya da
 // 'slipIsletme' (gerçek yük; c₂ = 1'de ikisi aynı dizi).
 function _frSlipStats(R, alan){
@@ -783,12 +788,15 @@ function _frSlipStats(R, alan){
       var v = _frNum(s.SF), r = _frNum(s.tensionRatio);
       if(!Number.isFinite(v)) return;
       if(v < m){ m = v; out.minName = s.name; out.minRpm = d.engineRpm; out.minRatio = r; }
-      if(Number.isFinite(r) && r >= VE_FR_SLIP_LOADED_RATIO){
+      if(_frSlipYuk(s)){
         out.anyLoaded = true;
-        if(v < lm){ lm = v; out.loadedName = s.name; out.loadedRpm = d.engineRpm; }
+        if(v < lm){ lm = v; out.loadedName = s.name; out.loadedRpm = d.engineRpm;
+                    out.loadedKritik = s.kritik || null; }
       } else if(!gorulen[s.name]){
-        gorulen[s.name] = 1;
-        out.idle.push({ name: s.name, SF: v, ratio: r, cap: _frNum(s.capstanCapacity) });
+        gorulen[s.name] = { name: s.name, SF: v, ratio: r, cap: _frNum(s.capstanCapacity) };
+        out.idle.push(gorulen[s.name]);
+      } else if(v < gorulen[s.name].SF){
+        gorulen[s.name].SF = v; gorulen[s.name].ratio = r;
       }
     });
   });
@@ -798,8 +806,53 @@ function _frSlipStats(R, alan){
 }
 // Hükmü veren sayı: yük taşıyan kasnakların en düşüğü. Hiç yük taşıyan kasnak
 // yoksa hüküm YOK (NaN → ölçüt 'wait'). Eskiden global en düşüğe düşülüyordu:
-// gücü sıfır bir modelde avaranın KAPASİTESİ emniyet diye basılıyordu — bu
-// fonksiyonun yukarıdaki gerekçesinin reddettiği okumanın ta kendisi.
+// gücü sıfır bir modelde avaranın payı güç ileten kasnağınki gibi okunuyordu —
+// bu fonksiyonun yukarıdaki gerekçesinin reddettiği okumanın ta kendisi.
+// KAYMA KOŞULU VE SÜRTÜNME — çözümün dondurduğu (`R.kaymaKosul`, `R.surtunme`).
+function _frKaymaKosul(R){
+  var k = (R && R.kaymaKosul) || {};
+  var s = (R && R.surtunme)
+    || ((typeof veFeadSurtunme === 'function') ? veFeadSurtunme({}) : { ad: '—', muOluk: NaN, muSirt: NaN, kayipMm: 0, kaynak: '' });
+  var iv = [];
+  if(k.ivmelenme) iv.push('+' + _frF(k.ivmelenme, 0));
+  iv.push('0');
+  if(k.yavaslama) iv.push('−' + _frF(k.yavaslama, 0));
+  return { ivme: '{' + iv.join(' · ') + '} d/d/s', s: s,
+           suruk: (k.suruklemeKw > 0) ? k.suruklemeKw : 0.01, yuk: k.yuk || [] };
+}
+// Kritik koşulun yazımı: "ivmelenmede (+1.000 d/d/s), Klima %100".
+function _frKritikYaz(k){
+  if(!k) return '';
+  var a = _frNum(k.ivme);
+  var yon = a > 0 ? 'ivmelenmede (+' + _frF(a, 0) + ' d/d/s)'
+          : a < 0 ? 'yavaşlamada (−' + _frF(-a, 0) + ' d/d/s)' : 'sabit devirde';
+  var y = Object.keys(k.yuk || {}).map(function(n){ return _frEsc(n) + ' %' + k.yuk[n]; }).join(', ');
+  return yon + (y ? ', ' + y : '');
+}
+// SF'nin yazımı — kapasite tanımında avara payları 100'ü aşabiliyor; ondalık
+// sayısı büyüklükle azalır (10'un altı 2, 100'ün altı 1).
+function _frSfYaz(v){
+  var x = _frNum(v);
+  if(!Number.isFinite(x)) return x === Infinity ? '∞' : '—';
+  return _frFs(x, x < 10 ? 2 : x < 100 ? 1 : 0);
+}
+// Sürtünme seçiminin kökeni — seçime göre (kural 49).
+function _frSurtunmeKokeni(s){
+  if(s && s.anahtar === 'gates')
+    return 'Kullanılan <b>Gates kalibrasyonu</b>: arşivdeki 11 Gates raporunun kayma emniyeti '
+      + 'grafikleri sayıya çevrildi (45 kasnak, 1.722 nokta) ve aynı koşulla yeniden kuruldu; '
+      + 'kaburgalı μ ile küçük kasnak kaybı birlikte, sırt μ ayrı uyduruldu (sağlama: AG00810 tepe '
+      + 'gerginliği 2.527,4 N, Gates 2.530 N). Kaburgalı değer kama düzeltmesiyle ham μ ≈ 0,31\'e '
+      + 'karşılık gelir, yani literatürle tutarlıdır; kayıp yalnız Ø57–62 ve Ø120–179 kaburgalı '
+      + 'kasnaklarda sınandı. Sırt değeri literatürün ölçümünden yüksektir — Gates kendi kayışının '
+      + 'sırtı için bu değeri kullanıyor. ';
+  if(s && s.anahtar === 'literatur')
+    return 'Kullanılan <b>Literatür</b> değerleri: kaburgalı 0,90 üç ölçümün de <b>altında</b> kaldığı '
+      + 'için emniyetli taraftadır; sırt 0,35 patent ölçümünün hafifçe altında, yani muhafazakârdır. '
+      + 'Küçük kasnak kaybı yoktur — Gates\'in Ø57–61 alternatörlerinde bu değerlerle pay 1,5–1,8 '
+      + 'kat iyimser çıkıyor. ';
+  return 'Kullanılan değerler <b>elle</b> girildi; kaynakları belgede yok. ';
+}
 function _frMinSF(R){
   var st = _frSlipStats(R);
   return st.anyLoaded ? st.loadedMin : NaN;
@@ -1840,8 +1893,8 @@ function _frDesignTensionBlock(R){
      + 'Bu değer bir tasarım tercihi değil, kurulan gerginin <em>sonucudur</em>. Ayrıca girdi olarak '
      + 'istemek aynı bilgiyi ikinci kez ve <b>çelişebilir</b> biçimde sormak olurdu: çeliştiğinde '
      + 'zincir girilen değerle ankrajlanır, bütün açıklık gerilmeleri ve hubloadlar farkı kadar '
-     + 'kayar ve hiçbir hata çıkmazdı. Kayma emniyeti bir <em>oran</em> olduğundan (5.6) bu kaymayı '
-     + 'ancak kısmen gösterir — yük çekmeyen kasnaklarda gerginlik oranı 1\'dir ve SF hiç değişmez. '
+     + 'kayar ve hiçbir hata çıkmazdı. Kayma emniyeti (5.7) gevşek taraf gerginliğiyle büyüdüğü için '
+     + 'yanlış bir ankraj kayma payını da aynı ölçüde yanlış gösterirdi. '
      + 'Farklı bir gerginlik isteniyorsa değiştirilecek şey gergi <b>künyesidir</b> (yay ön yükü, '
      + 'yay oranı, kol boyu), bir sayı alanı değil. '
      + 'Tedarikçi sayfasında basılı bir tasarım gerginliği varsa yukarıdaki değerle karşılaştırınız: '
@@ -2216,9 +2269,13 @@ function _frSlipSection(R){
   // "servis faktörünün üstünde" diyordu — SF 0,85'te bile (ölçüldü, AG00902).
   var sv = _frServis(R), esik = 1;
   var h = '<h3>8.12 Kayma emniyeti</h3>';
+  var kk = _frKaymaKosul(R);
   h += '<p>Kayışın kasnak üzerinde kaymadan taşıyabileceği gerginlik oranı capstan bağıntısıyla '
-     + 'sınırlıdır (5.6). Emniyet faktörü, kapasitenin fiili orana bölümüdür (5.7); '
-     + '\\( \\mathrm{SF}=1 \\) kayma eşiğidir. '
+     + 'sınırlıdır (5.6). Emniyet faktörü, kasnağın taşıyabileceği etkin gerginliğin istenene '
+     + 'bölümüdür (5.7); \\( \\mathrm{SF}=1 \\) kayma eşiğidir ve üstünde torkla doğrusal okunur. '
+     + 'Her devir satırı o devirdeki <b>en kötü koşuldur</b>: motor ivmesi ' + kk.ivme
+     + ' (aksesuar ataletiyle), her aksesuar tepe gücünün %10\'u ya da %100\'ü ve avara ile '
+     + 'gergide ' + _frF(kk.suruk, 2) + ' kW yatak sürtünmesi. '
      + (sv.secili
          ? 'Tablo <b>tasarım yükündedir</b>: aksesuar güçleri servis faktörü <b>c₂ = ' + sv.yaz
            + '</b> ile çarpılır (' + _frEsc(sv.etiket) + ') ve gerilme zinciri aynı ankrajla yeniden '
@@ -2226,7 +2283,7 @@ function _frSlipSection(R){
          : 'Servis faktörü c₂ seçilmedi: tablo gerçek yüktedir (c₂ = 1).')
      + '</p>';
   var st = _frSlipStats(R);
-  h += '<table><caption>Tablo ' + _frTbl() + ' — Kayma emniyet faktörü (her devir noktası × kasnak)</caption>';
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Kayma emniyet faktörü (her devir noktasında en kötü koşul × kasnak)</caption>';
   h += '<tr><th>Motor devri</th>';
   ((duty[0] && duty[0].slip) || []).forEach(function(s){ h += '<th>' + _frEsc(s.name) + '</th>'; });
   h += '<th>En düşük</th></tr>';
@@ -2248,7 +2305,8 @@ function _frSlipSection(R){
     var yer = sv.secili ? 'tasarım yükünde (c₂ = ' + sv.yaz + ')' : 'gerçek yükte (c₂ seçilmedi)';
     var isl = sv.secili ? _frSlipStats(R, 'slipIsletme') : null;
     h += '<div class="note ' + (ok ? 'check' : 'warn') + '"><span class="t">En kritik YÜK TAŞIYAN kasnak</span>'
-       + '<b>' + _frEsc(st.loadedName) + '</b>, ' + _frF(st.loadedRpm, 0) + ' d/d — SF = <b>'
+       + '<b>' + _frEsc(st.loadedName) + '</b>, ' + _frF(st.loadedRpm, 0) + ' d/d'
+       + (st.loadedKritik ? ' (' + _frKritikYaz(st.loadedKritik) + ')' : '') + ' — SF = <b>'
        + _frFs(st.loadedMin, 2) + '</b>. '
        + (ok ? 'Kayma yok: ' + yer + ' SF ≥ 1.'
              : 'Kayış ' + yer + ' KAYIYOR: sarım açısını artırın ya da gergi künyesini '
@@ -2260,14 +2318,12 @@ function _frSlipSection(R){
   // YÜK TAŞIMAYAN KASNAKLAR AYRI YAZILIR — gizlenmez, ama hükme girmez.
   if(st.idle.length){
     var ib = st.idle.map(function(q){
-      return _frEsc(q.name) + ' (oran ' + _frFs(q.ratio, 4) + ' · kapasite ' + _frFs(q.cap, 2) + ')';
+      return _frEsc(q.name) + ' (SF ' + _frSfYaz(q.SF) + ')';
     }).join(' · ');
-    h += '<div class="note"><span class="t">Yük taşımayan kasnaklarda SF bir MARJ değil, KAPASİTEDİR</span>'
-       + 'Aşağıdaki kasnaklarda gerginlik oranı 1,00\'e eşit sayılacak kadar yakındır, yani kayışın '
-       + 'kayması için bir talep yoktur; SF sayısı o sarım açısının taşıyabileceği azami orandır. '
-       + '<b>Bu kasnaklarda tasarım gerginliğini yükseltmek SF\'yi DEĞİŞTİRMEZ</b> — gergin ve boş '
-       + 'taraf birlikte yükselir, oran 1\'de kalır (§8.7). Tek etkili değişken sarım açısıdır. '
-       + 'Bu yüzden yukarıdaki hüküm yalnız yük taşıyan kasnaklara dayanır: ' + ib + '.</div>';
+    h += '<div class="note"><span class="t">Yük taşımayan kasnaklar hükme girmez</span>'
+       + 'Avara ve gergide talep yalnız atalet ve yatak sürtünmesidir; gerginlik oranı 1\'e çok '
+       + 'yakındır ve payları güç ileten kasnaklarınkinden çoğunlukla bir mertebe büyüktür. '
+       + 'Hüküm yalnız yük taşıyan kasnaklara dayanır. En düşük payları: ' + ib + '.</div>';
   }
   // SAYININ KENDİSİ BASILIR, "çekirdeğin sabitidir" denmez.
   //
@@ -2276,16 +2332,18 @@ function _frSlipSection(R){
   // '0.90' ya da '0.35' kullanıcıya basılan hiçbir metinde geçmiyordu). Modül
   // kuralı 10 bunun tersini söylüyor: geçerlilik sınırı sonucun İÇİNDE taşınır.
   //
-  // DEĞER ÇEKİRDEKTEN OKUNUR, ikinci bir kopya tutulmaz — rapora elle yazılan
-  // bir '0,90' bir sonraki kalibrasyonda sessizce bayatlardı.
-  var _cal = (_frCore() && _frCore().CALIBRATION) || {};
-  var _muG = _cal.muEffGrooved && _cal.muEffGrooved.value;
-  var _muB = _cal.muBackside && _cal.muBackside.value;
+  // DEĞER ÇÖZÜMDEN OKUNUR (`R.surtunme`, kural 49): kullanıcının seçtiği
+  // varsayım çözüm anında donduruldu; rapora elle yazılan bir '0,90' ikinci bir
+  // kopya olur ve seçim değişince sessizce bayatlardı.
+  var sUs = kk.s;
   h += '<p style="font-size:13px;color:#5a6270;">Kaburgalı temasta etkin sürtünme kanal '
      + 'geometrisiyle büyür; sırttan temas eden avara ve gergi kasnaklarında düz yüzey '
-     + 'sürtünmesi geçerlidir ve emniyet payı dardır. Kullanılan değerler: '
-     + '<b>μ<sub>kaburgalı</sub> = ' + _frF(_muG, 2) + '</b> · '
-     + '<b>μ<sub>sırt</sub> = ' + _frF(_muB, 2) + '</b>.</p>';
+     + 'sürtünmesi geçerlidir. Kullanılan sürtünme: <b>' + _frEsc(sUs.ad) + '</b> — '
+     + '<b>μ<sub>kaburgalı</sub> = ' + _frFs(sUs.muOluk, 2) + '</b> · '
+     + '<b>μ<sub>sırt</sub> = ' + _frFs(sUs.muSirt, 2) + '</b>'
+     + (sUs.kayipMm > 0 ? ' · küçük kasnak kaybı <b>ℓ = ' + _frF(sUs.kayipMm, sUs.kayipMm % 1 ? 1 : 0)
+          + ' mm</b> (5.7a, yalnız kaburgalı temas)' : '')
+     + '.</p>';
   // KÖKENİ VE SINIRI YANINDA. İkisi AYNI kuvvette değil ve bu yazılmalı.
   //
   // MERKEZKAÇ CÜMLESİ DÜZELTİLDİ (2026-09-26, literatür turu). Not eskiden
@@ -2299,16 +2357,13 @@ function _frSlipSection(R){
      + '<b>Sürtünme katsayılarının kökeni ve geçerlilik sınırı.</b> '
      + 'μ<sub>kaburgalı</sub> bir <i>etkin</i> (düz-kayış eşdeğeri) katsayıdır: '
      + 'Euler–Eytelwein bağıntısına doğrudan girer, ayrıca kama düzeltmesi '
-     + 'uygulanmaz. Değer üç bağımsız kaynakla tutarlıdır — Gerbert &amp; Hansson '
+     + 'uygulanmaz. Literatürün üç bağımsız ölçümü — Gerbert &amp; Hansson '
      + '(1990) ham μ 0,31 → 0,31/sin20° = 0,906; Tabatabaei Lotfy (Leeds, 1996, '
-     + '§5.3.3) ölçümü 0,934; Kubas (Arch. Automot. Eng. 84(2), 2019, Tab. 1) '
-     + 'kaburga başına eşleştirilmiş yükte 0,97 — ve üçünün de <b>altında</b> '
-     + 'kaldığı için emniyetli taraftadır. '
-     + 'μ<sub>sırt</sub> <b>kalibre edilmemiştir</b>. Bulunabilen tek birincil '
-     + 'ölçüm bir patentte: Dayco US 8,192,315 B2 (SAE J2432 test odası, kuru, '
-     + 'düz sırt kasnağı) geleneksel sırtlarda %10 kaymada 0,36–0,42 ölçüyor. '
-     + 'Kullanılan değer bunun hafifçe altında, yani muhafazakârdır; düz kasnakta '
-     + 'gerilme oranı ≈1 olduğu için SF üzerindeki etkisi zaten küçüktür. '
+     + '§5.3.3) 0,934; Kubas (Arch. Automot. Eng. 84(2), 2019, Tab. 1) '
+     + 'kaburga başına eşleştirilmiş yükte 0,97. μ<sub>sırt</sub> için bulunabilen '
+     + 'tek birincil ölçüm bir patentte: Dayco US 8,192,315 B2 (SAE J2432 test odası, '
+     + 'kuru, düz sırt kasnağı) geleneksel sırtlarda %10 kaymada 0,36–0,42. '
+     + _frSurtunmeKokeni(sUs)
      + '<b>Bağıntının sınırı:</b> e<sup>μφ</sup> bir <i>tam kayma</i> (gross slip) '
      + 'eşiğidir, "hiç kayma yok" eşiği değil — sürünme (creep) her yük düzeyinde '
      + 'vardır (ölçülen hız kaybı %0,2–1,2; Balta ve ark. 2015). '
@@ -2863,17 +2918,16 @@ function _frSlipFigure(R, esik){
     return m;
   });
   // YÜK TAŞIYAN ↔ TAŞIMAYAN AYRIMI GRAFİKTE DE GEÇERLİ. Kırmızı çubuk
-  // "eşiğin altında kaldı" demek; ama gerginlik oranı 1,00 olan bir kasnakta
-  // (avara, gergi) o sayı bir MARJ değil o sarım açısının KAPASİTESİDİR ve
-  // tasarım gerginliğini yükseltmek onu değiştirmez. Ayrım yapılmayınca
-  // grafik, aynı sayfadaki hükmün TERSİNİ söylüyordu (ölçüldü: AG00976'da
-  // üç kasnak kırmızı, oysa hükmü veren 4,51 ile FAN).
+  // "eşiğin altında kaldı" demek ve hüküm yalnız yük taşıyanlardan veriliyor;
+  // ayrım yapılmayınca grafik, aynı sayfadaki hükmün TERSİNİ söylüyordu
+  // (ölçüldü, oran tanımı döneminde: AG00976'da üç avara kırmızı, oysa hükmü
+  // veren 4,51 ile FAN).
   var esk = (typeof VE_FR_SLIP_LOADED_RATIO === 'number') ? VE_FR_SLIP_LOADED_RATIO : 1.01;
   var yukTasir = isim.map(function(n){
     var t = false;
     duty.forEach(function(d){
       (d.slip || []).forEach(function(x){
-        if(x.name === n && _frNum(x.tensionRatio) >= esk) t = true;
+        if(x.name === n && _frSlipYuk(x)) t = true;
       });
     });
     return t;
@@ -2888,7 +2942,14 @@ function _frSlipFigure(R, esik){
     for(var i = 0; i < ps.length; i++) if(ps[i].name === n) return kodF[i];
     return n;
   });
-  var maxV = Math.max.apply(null, mins.concat([Number.isFinite(esik) ? esik * 1.4 : 2]));
+  // LOGARİTMİK ÖLÇEK (Gates'in kayma grafiği gibi): kapasite tanımında avara
+  // payları 100'ü aşabiliyor; doğrusal ölçek güç ileten kasnakların çubuğunu
+  // birkaç piksele ezerdi. Taban eşiğin yarısı ya da en küçüğün altı.
+  var sonlu = mins.filter(function(v){ return Number.isFinite(v) && v > 0; });
+  var vMin = Math.min.apply(null, sonlu.concat([Number.isFinite(esik) && esik > 0 ? esik * 0.5 : 0.5]).map(function(v){ return v * 0.8; }));
+  var vMax = Math.max.apply(null, sonlu.concat([Number.isFinite(esik) ? esik * 2 : 2]).map(function(v){ return v * 1.15; }));
+  var lg = function(v){ return Math.log(Math.max(v, vMin)) / Math.LN10; };
+  var olc = function(v){ return (lg(v) - lg(vMin)) / (lg(vMax) - lg(vMin)); };
   // Boy çubuk SAYISINDAN türüyor (sabit bir H anlamsız olurdu); RAW kipte
   // satır aralığı daralıyor — özet raporda şekil küçük basılıyor.
   var W = _FR_W, satir = (_FR_RAW ? 19 : 30), H = 26 + isim.length * satir + 30;
@@ -2900,18 +2961,18 @@ function _frSlipFigure(R, esik){
   etAd.forEach(function(t){ enSol = Math.max(enSol, _frTxtW(t, 12)); });
   var L = Math.min(190, Math.ceil(enSol) + 16);
   var enGenis = 0;
-  mins.forEach(function(v){ enGenis = Math.max(enGenis, _frTxtW(_frFs(v, 2), 11.5)); });
+  mins.forEach(function(v){ enGenis = Math.max(enGenis, _frTxtW(_frSfYaz(v), 11.5)); });
   var R2 = Math.max(30, Math.ceil(enGenis) + 10);
   // ALT ŞERİT KUTUYA SIĞMAK ZORUNDA. Uzun hâli 780 birimlik kutuda sığıyor,
   // 390 birimlik (yarım sütun) kutuda viewBox'ı 209 px aşıyordu — ÖLÇÜLDÜ.
   // Sığmayan ikinci cümle DÜŞER; aynı bilgi bloğun kendi notunda zaten var.
-  var uzunAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği · soluk çubuk = yük taşımayan kasnak (kapasite)';
-  var kisaAlt = 'çubuk boyu = SF · SF = 1 kayma eşiği';
+  var uzunAlt = 'çubuk boyu = SF (logaritmik) · SF = 1 kayma eşiği · soluk çubuk = yük taşımayan kasnak';
+  var kisaAlt = 'çubuk boyu = SF (logaritmik) · SF = 1 kayma eşiği';
   var altYazi = (L + _frTxtW(uzunAlt, 11) <= W - 4) ? uzunAlt : kisaAlt;
   var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Kayma emniyet faktörü">';
   isim.forEach(function(n, i){
     var y = 24 + i * satir;
-    var w = (mins[i] / maxV) * (W - L - R2);
+    var w = Number.isFinite(mins[i]) ? olc(mins[i]) * (W - L - R2) : (W - L - R2);
     var kotu = yukTasir[i] && Number.isFinite(esik) && mins[i] < esik;
     var dolgu = kotu ? '#a8321f' : (yukTasir[i] ? '#96441f' : '#9aa3ad');
     g += '<text x="' + (L - 8) + '" y="' + (y + 13) + '" text-anchor="end" font-size="12" fill="'
@@ -2919,10 +2980,10 @@ function _frSlipFigure(R, esik){
     g += '<rect data-ve="sf-bar" x="' + L + '" y="' + y + '" width="' + Math.max(1, w).toFixed(1) + '" height="18" '   // makine: SVG koordinatı
        + 'fill="' + dolgu + '" opacity="' + (yukTasir[i] ? '0.82' : '0.55') + '"/>';
     var etX = Math.min(L + w + 6, W - R2 + 4);
-    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">' + _frFs(mins[i], 2) + '</text>';   // makine: SVG koordinatı
+    g += '<text x="' + etX.toFixed(1) + '" y="' + (y + 13) + '" font-size="11.5" fill="#26241f">' + _frSfYaz(mins[i]) + '</text>';   // makine: SVG koordinatı
   });
   if(Number.isFinite(esik) && esik > 0){
-    var X = L + (esik / maxV) * (W - L - R2);
+    var X = L + olc(esik) * (W - L - R2);
     g += '<line data-ve="sf-limit" x1="' + X.toFixed(1) + '" y1="14" x2="' + X.toFixed(1) + '" y2="' + (24 + isim.length * satir)   // makine: SVG koordinatı
        + '" stroke="#a8321f" stroke-width="1.8" stroke-dasharray="5 4"/>';
     // Etiket ÇİZGİNİN ÜSTÜNDE: alt şeride yazılınca "SF = 1 kayma eşiği"
@@ -2933,8 +2994,8 @@ function _frSlipFigure(R, esik){
        + _frF(esik, 2) + (_sv.secili ? ' · c₂ = ' + _sv.yaz : '') + '</text>';
   }
   g += '<text x="' + L + '" y="' + (H - 12) + '" font-size="11" fill="#5a6270">' + _frEsc(altYazi) + '</text>';
-  return _frFigWrap(g, 'Kasnak başına EN DÜŞÜK kayma emniyet faktörü (tüm devir noktaları üzerinden'
-    + (_frServis(R).secili ? ', tasarım yükünde' : '') + '). '
+  return _frFigWrap(g, 'Kasnak başına EN DÜŞÜK kayma emniyet faktörü (tüm devir noktaları ve '
+    + 'koşullar üzerinden' + (_frServis(R).secili ? ', tasarım yükünde' : '') + '; logaritmik ölçek). '
     + 'Kesikli kırmızı çizgi SF = 1 kayma sınırıdır; altında kalan çubuk kırmızı basılır.');
 }
 
@@ -3159,9 +3220,8 @@ function _frCompliance(R){
   // 2 — kayma emniyeti
   var minSF = _frMinSF(R), svU = _frServis(R);
   // Kriter YÜK TAŞIYAN kasnakların en düşüğüne dayanır (_frMinSF). Global en
-  // düşük alınsaydı, yük çekmeyen bir avaranın capstan KAPASİTESİ bir MARJ gibi
-  // okunur ve "tasarım onaylanmamalıdır" hükmü, kayması fiziksel olarak mümkün
-  // olmayan bir kasnaktan gelirdi (§8.12'de ölçümüyle yazılı).
+  // düşük alınsaydı hüküm, güç iletmeyen bir avaranın payından gelebilirdi
+  // (§8.12'de yazılı).
   var slipSt = _frSlipStats(R);
   // TASARIM YÜKÜNDE (kural 48): servis faktörü satırların içinde, eşik 1.
   ekle('Kayma emniyeti — yük taşıyan kasnaklarda en düşük',

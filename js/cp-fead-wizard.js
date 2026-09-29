@@ -770,6 +770,13 @@ function veFeadWizNodes(st){
   // kurulan modelde değer doğru olur ama tablo hangi hücrenin seçildiğini
   // gösteremezdi ("kayıtlı değer — tablodan seçilmedi").
   if(s.servisHucre) sd.servisHucre = String(s.servisHucre);
+  // SÜRTÜNME SEÇİMİ DE TAŞINIR (kural 20 · 49): seçim ve elle üç sayı. Seçim
+  // yoksa alan yazılmaz — varsayılan (Gates kalibrasyonu) köprüde çözülür.
+  if(s.surtunme) sd.surtunme = String(s.surtunme);
+  ['muOluk', 'muSirt', 'kucukKasnakMm'].forEach(function(a){
+    var v = _fwNum(s[a], NaN);
+    if(s.surtunme === 'elle' && Number.isFinite(v)) sd[a] = v;
+  });
   // Motor kaydının izi — `dutyLib`/`tenLib` ile aynı gerekçe: hangi künyeden
   // gelindiği tek yerde yazılı olsun ki panel "katalogdan sapıldı" diyebilsin.
   if(s.engineLib){ sd.engineLib = s.engineLib; if(s.engineLibVer) sd.engineLibVer = s.engineLibVer; }
@@ -4263,8 +4270,27 @@ function _fwStepKayis(b){
   if(typeof veFeadServisTabloHTML === 'function')
     h += _fwCard('Servis faktörü c₂', 'var(--accent-primary)',
       veFeadServisTabloHTML(st.solver || {}, function(k){ return 'veFeadWizServisSec(\'' + k + '\')'; }));
+  // SÜRTÜNME — kayış penceresiyle AYNI üretici ve aynı köprü yazıcısı (kural
+  // 24 · 49); değer durumun çözücü alanında, kurulumda depoya taşınır.
+  if(typeof veFeadSurtunmeHTML === 'function')
+    h += _fwCard('Sürtünme katsayısı μ', 'var(--accent-primary)',
+      veFeadSurtunmeHTML(st.solver || {}, function(k, a){
+        return 'veFeadWizSurtunmeSec(\'' + k + '\'' + (a ? ',\'' + a + '\',this.value' : '') + ')'; }));
   h += _fwCadKayisHTML(st, b);
   return h;
+}
+
+// Sihirbazın sürtünme yazıcısı — kayış penceresininkiyle aynı köprü fonksiyonu.
+function veFeadWizSurtunmeSec(anahtar, alan, deger){
+  if(!_fwState || typeof veFeadSurtunmeSet !== 'function') return;
+  if(!_fwState.solver) _fwState.solver = {};
+  var d = null;
+  if(alan){ d = {}; d[alan] = deger; }
+  var ok = veFeadSurtunmeSet(_fwState.solver, anahtar, d);
+  if(!ok && alan && typeof showToast === 'function')
+    showToast('Değer yazılmadı: μ 0,05–3, küçük kasnak kaybı 0–20 mm aralığında olmalı.', 'warning');
+  if(typeof veFeadWizLiveSoon === 'function') veFeadWizLiveSoon();
+  veFeadWizRender();
 }
 
 // Sihirbazın c₂ yazıcısı — kayış penceresininkiyle aynı köprü fonksiyonu.
@@ -5419,6 +5445,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizDefault: veFeadWizDefault, veFeadWizState: veFeadWizState,
     veFeadWizNodes: veFeadWizNodes, veFeadWizRoute: veFeadWizRoute,
     veFeadWizServisSec: veFeadWizServisSec, _fwStepKayis: _fwStepKayis,
+    veFeadWizSurtunmeSec: veFeadWizSurtunmeSec,
     veFeadWizBuild: veFeadWizBuild, veFeadWizSeed: veFeadWizSeed,
     _fwTeX: _fwTeX, veFeadWizTeXPaint: veFeadWizTeXPaint,
     veFeadWizEngOpen: veFeadWizEngOpen, veFeadWizEngClose: veFeadWizEngClose,

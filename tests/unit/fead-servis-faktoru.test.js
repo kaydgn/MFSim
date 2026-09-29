@@ -289,15 +289,32 @@ describe('HESAP — kayma tasarım yükünde, gerisi gerçek yükte', () => {
     R.analysis.duty.forEach((d) => expect(d.slip).toBe(d.slipIsletme));
   });
 
-  // BAĞIMSIZ YOL — afin cebir KULLANILMADAN: yükleri c₂ ile çarpıp c₂'siz çöz.
-  test('tasarım satırları = yükleri c₂ katına çıkarılmış modelin satırları', () => {
+  // BAĞIMSIZ YOL — afin cebir KULLANILMADAN: TALEBİN her parçasını (çevrim
+  // kW'ı = tepe yük · atalet · avara sürtünmesi) c₂ ile çarpıp c₂'siz çöz.
+  // Gates koşulunda (kural 49) talep yalnız güç değil; üçü birden çarpılmazsa
+  // iki yol ayrışır.
+  test('tasarım satırları = talebi c₂ katına çıkarılmış modelin satırları', () => {
     const c2 = 1.6;
     const a = coz('AG00976_GATES_2025', (sd) => { temizle(sd); M.veFeadServisSet(sd, 'agir.yuksek.24'); }).R;
-    const b = coz('AG00976_GATES_2025', temizle, c2).R;
     expect(a.servis.deger).toBe(c2);
-    expect(a.analysis.duty.length).toBe(b.analysis.duty.length);
-    a.analysis.duty.forEach((d, j) => {
-      const e = b.analysis.duty[j];
+    // b: çözücünün çevrim kW'ları c₂ katı (tepe yük onlardan — AG00976'da eğri yok)
+    const pack = M.veFeadExampleNodes('AG00976_GATES_2025');
+    const ns = pack.nodes.map((n) => ({ id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)) }));
+    const sv = ns.find((n) => componentDefs[n.type] && componentDefs[n.type].isFeadSolver);
+    temizle(sv.data);
+    // Düğümün çevrim satırı kW'ı düğüm KİMLİĞİYLE taşır (`kw`).
+    const olcekli = (sv.data.duty || []).reduce((t, r) => t + Object.keys(r.kw || {}).length, 0);
+    expect(olcekli).toBeGreaterThan(0);
+    (sv.data.duty || []).forEach((r) => Object.keys(r.kw || {}).forEach((k) => { r.kw[k] = Number(r.kw[k]) * c2; }));
+    global.nodes = ns;
+    const bb = M.veFeadBuildSystem(ns);
+    const K = M.veFeadKaymaBaglam(bb, {}, a.surtunme);
+    K.J = K.J.map((j) => j * c2);
+    K.suruk = K.suruk.map((x) => x * c2);
+    expect(a.analysis.duty.length).toBeGreaterThan(5);
+    a.analysis.duty.forEach((d) => {
+      const e = M.veFeadKaymaDevir(bb, K, d.engineRpm, 1);
       d.slip.forEach((s, i) => {
         expect(s.tensionRatio).toBeCloseTo(e.slip[i].tensionRatio, 9);
         expect(s.SF).toBeCloseTo(e.slip[i].SF, 9);
@@ -323,8 +340,12 @@ describe('HESAP — kayma tasarım yükünde, gerisi gerçek yükte', () => {
 
   test('kayma eşiği tam c₂ katı, pay 1/c₂', () => {
     const { R } = coz('AG00976_GATES_2025', (sd) => { temizle(sd); M.veFeadServisSet(sd, 'agir.normal.16'); });
-    const t1 = M.veFeadSlipThreshold(R.build, R.analysis.duty);
     const tB = M.veFeadSlipThreshold(R.build, R.analysis.duty, R.servis.deger);
+    // Gerçek yükteki eşik: aynı koşul kümesi c₂ = 1 ile.
+    const K = M.veFeadKaymaBaglam(R.build, {}, R.surtunme);
+    const gercek = R.analysis.duty.map((d) => Object.assign({}, d,
+      { kaymaEsik: M.veFeadKaymaDevir(R.build, K, d.engineRpm, 1).esik }));
+    const t1 = M.veFeadSlipThreshold(R.build, gercek);
     expect(tB.tensionN / t1.tensionN).toBeCloseTo(1.3, 12);
     expect(tB.margin * 1.3).toBeCloseTo(t1.margin, 12);
     expect(tB.pulley).toBe(t1.pulley);

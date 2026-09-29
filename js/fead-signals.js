@@ -154,13 +154,14 @@ var veFeadSignals = (function() {
   }
 
   // Yük taşıyan kasnak: herhangi bir çevrim satırında gerginlik oranı eşiğin
-  // üstünde. Oran ≈ 1 olan kasnakta SF bir MARJ değil kapasitedir — raporun
+  // üstünde. Avara ve gergi güç çekmez, payları hükme girmez — raporun
   // `_frSlipStats` kuralı, aynı eşik (köprünün VE_FEAD_SLIP_LOADED_RATIO'su).
   function _loadedSet(rows) {
     var thr = _loadedRatio(), out = {};
     rows.forEach(function(d) {
       (d.slip || []).forEach(function(s, i) {
-        if(_num(s.tensionRatio) >= thr) out[i] = true;
+        if((typeof veFeadSlipYukTasir === 'function') ? veFeadSlipYukTasir(s)
+           : _num(s.tensionRatio) >= thr) out[i] = true;
       });
     });
     return out;
@@ -770,8 +771,8 @@ var veFeadSignals = (function() {
 
     // 1) Kayma
     // YALNIZ YÜK TAŞIYAN KASNAKLAR. "Hiç yük taşıyan yoksa bütün kasnaklar"
-    // yedeği vardı ve gücü sıfır bir modelde avaranın capstan KAPASİTESİNİ
-    // emniyet diye basıyordu (ölçüldü: gergiden 1,24). Yük yoksa hüküm de yok.
+    // yedeği vardı ve gücü sıfır bir modelde avaranın sayısını emniyet diye
+    // basıyordu (ölçüldü: gergiden 1,24). Yük yoksa hüküm de yok.
     var m = { v: Infinity, rpm: NaN, i: -1 };
     rows.forEach(function(d) {
       (d.slip || []).forEach(function(s, i) {
