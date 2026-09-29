@@ -19,6 +19,7 @@
  * tablo (FAN → AVA1 · gerginlik, 880 d/dk'da 1.380,8 N).
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 const fs = require('fs');
 
 test.setTimeout(180000);
@@ -39,6 +40,9 @@ async function feadTablo(page, kume, kanallar) {
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 120000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 42) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForTimeout(300);
   await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); });

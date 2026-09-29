@@ -80,8 +80,11 @@ var VE_FEAD_SCN_VERSION = '1.0.0';
 var VE_FEAD_SCN_CRANK_RPM = 250;
 // Çözücüde ivme girilmemişse çekirdeğin kendi varsayılanı kullanılır.
 var VE_FEAD_SCN_ACCEL_DEF = 1100;
-var VE_FEAD_SCN_IDLE_DEF  = 700;
-var VE_FEAD_SCN_PEAK_DEF  = 2500;
+// RÖLANTİ VE TEPE DEVRİN VARSAYILANI YOK (2026-09-29). Eskiden 700 ve 2500
+// d/dk'ya düşüyordu ve senaryo motorun künyesi hiç girilmemiş bir modelde de
+// oynuyordu; tepe varsayılana düştüğünde bunu söyleyen `peakSrc` hiçbir yerde
+// basılmıyordu. Motor künyesi işletme hesabının girdisidir (fead-model.js →
+// veFeadIsletmeEksik) — eksikken senaryo KURULMAZ.
 // Zaman ızgarası: yük yalnız sayı taşır, animatör bunun üstünde doğrusal
 // aradeğerliyor. 12 örnek/s düzgün bir rampa için fazlasıyla yeter.
 var VE_FEAD_SCN_HZ = 12;
@@ -130,22 +133,21 @@ function veFeadScnInputs(build){
     ? _feadNum : function(v, d){ var x = parseFloat(v); return Number.isFinite(x) ? x : d; };
 
   var idle = num(sd.idleRpm, NaN);
-  if(!(idle > 0)) idle = VE_FEAD_SCN_IDLE_DEF;
 
-  // Tepe devir: çalışma çevriminin en yükseği > regülatör devri > varsayılan.
+  // Tepe devir: çalışma çevriminin en yükseği > regülatör devri. Varsayılan
+  // YOK — ikisi de rölantinin üstünde değilse senaryo kurulmaz.
   var peak = 0;
   if(typeof veFeadDutyRows === 'function')
     veFeadDutyRows(build && build.solver).forEach(function(r){ if(r.rpm > peak) peak = r.rpm; });
   var peakSrc = 'çalışma çevrimi';
   if(!(peak > idle)){ peak = num(sd.governedRpm, NaN); peakSrc = 'regülatör devri'; }
-  if(!(peak > idle)){ peak = VE_FEAD_SCN_PEAK_DEF; peakSrc = 'varsayılan'; }
 
   var acc = num(sd.accelRpmS, NaN); var accVar = !(acc > 0);
   if(accVar) acc = VE_FEAD_SCN_ACCEL_DEF;
   var dec = num(sd.decelRpmS, NaN); var decVar = !(dec > 0);
   if(decVar) dec = acc;
 
-  var cyl = num(sd.cylinders, 6); if(!(cyl > 0)) cyl = 6;
+  var cyl = num(sd.cylinders, NaN);
 
   // Tork eğrisi YALNIZ katalogtan gelen motorda var; elle kurulan motorda
   // yok ve rampa doğrusal olur. Uydurulmuyor, yazılıyor.
@@ -154,7 +156,13 @@ function veFeadScnInputs(build){
     var e = veFeadEngineOf(sd.engineLib);
     if(e && Array.isArray(e.curve) && e.curve.length >= 2) curve = e.curve;
   }
+  // Eksik motor verisi SONUCUN İÇİNDE: kurucu senaryoyu kurmaz, kart sebebini yazar.
+  var eksik = [];
+  if(!(cyl > 0))  eksik.push('silindir sayısı');
+  if(!(idle > 0)) eksik.push('rölanti devri');
+  if(!(peak > idle)) eksik.push('tepe devir (çevrim ya da governed, rölantinin üstünde)');
   return {
+    eksik: eksik,
     idleRpm: idle, peakRpm: peak, crankRpm: VE_FEAD_SCN_CRANK_RPM,
     accelRpmS: acc, decelRpmS: dec, cylinders: cyl, curve: curve,
     kaynak: { peak: peakSrc, accelVarsayilan: accVar, decelVarsayilan: decVar,
@@ -175,8 +183,12 @@ function veFeadScnLoadsAt(build, rpm, idleRpm){
   var olcek = alt ? (u * u) : 1;
   build.order.forEach(function(n, i){
     if(build.sys.pulleys[i] && build.sys.pulleys[i].crank) return;   // sürücü hesaplanır
-    var kw = (typeof veFeadAutoKw === 'function')
-      ? veFeadAutoKw(build.sys, i, n, ref) : null;
+    // KARARLI ÇÖZÜMÜN KAYNAK SIRASI (veFeadKwAt): kayıtlı ölçüm → eğri →
+    // katalog. Eskiden yalnız eğri/katalog okunuyordu ve gücü kayıtlı ölçümde
+    // yazılı Gates örnekleri senaryoda 0 kW koşuyordu. Kaynağı hiç olmayan
+    // aksesuar hazırlık kapısında durur; burada 0 yalnız avara/gergidir.
+    var kw = (typeof veFeadKwAt === 'function')
+      ? veFeadKwAt(build, i, n, ref) : null;
     loads[build.names[i]] = (kw === null || !Number.isFinite(kw)) ? 0 : kw * olcek;
   });
   return loads;
@@ -204,8 +216,14 @@ function veFeadScnInertias(build){
 // (JSON) giriyor ve animatör kare başına çekirdeğe HİÇ dokunmuyor.
 function veFeadScenarioBuild(build, opts){
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  // İŞLETME HESABININ KAPISI (fead-model.js → build.isletme): motor künyesi,
+  // tahrik oranı ya da aksesuar gücü eksikken senaryo KURULMAZ. Sebebi
+  // çağıran yüzey aynı kaynaktan yazar (veFeadIsletmeMetni) — burada ikinci
+  // bir metin üretmek iki yüzeyin ayrışması olurdu.
+  if(build.isletme && !build.isletme.ok) return null;
   var o = opts || {};
   var inp = veFeadScnInputs(build);
+  if(inp.eksik.length) return null;
   var sys = build.sys, notlar = [];
 
   // Geometri: açıklık boyları ve kayış birim kütlesi frekans için gerekli.
@@ -450,8 +468,6 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_SCN_VERSION: VE_FEAD_SCN_VERSION,
     VE_FEAD_SCN_CRANK_RPM: VE_FEAD_SCN_CRANK_RPM,
     VE_FEAD_SCN_ACCEL_DEF: VE_FEAD_SCN_ACCEL_DEF,
-    VE_FEAD_SCN_IDLE_DEF: VE_FEAD_SCN_IDLE_DEF,
-    VE_FEAD_SCN_PEAK_DEF: VE_FEAD_SCN_PEAK_DEF,
     VE_FEAD_SCN_HZ: VE_FEAD_SCN_HZ,
     VE_FEAD_SCN_GRID_N: VE_FEAD_SCN_GRID_N,
     VE_FEAD_SCN_MIN_RPM: VE_FEAD_SCN_MIN_RPM,

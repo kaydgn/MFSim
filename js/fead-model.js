@@ -1391,8 +1391,14 @@ function veFeadAnimRpmChoices(build){
 // DEVİR YOKSA null döner: gerilme hız ve güç olmadan TANIMSIZ. Uydurulmuş bir
 // renk, bu modülün sessiz hata sınıfının ta kendisi olurdu; kart o hâlde
 // kayışı temel amberiyle çiziyor.
+// İŞLETME GİRDİSİ EKSİKSE HARİTA YOK (veFeadIsletmeEksik). Gerilme o devirdeki
+// aksesuar yüküyle kuruluyor; yükü tanımsız bir aksesuar çekirdeğe 0 kW
+// gidiyordu ve kart açıklıkların hepsine montaj gerginliğini ("544 N")
+// basıyordu — sonuç gibi görünen bir varsayım. Kart haritasız çizer ve eksiği
+// yazar; çırpma da bu haritadan geçtiği için kendiliğinden kapanır.
 function veFeadSpanTensionMap(build, relDeg, engineRpm){
   if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  if(build.isletme && !build.isletme.ok) return null;
   var rpm = _feadNum(engineRpm, NaN);
   if(!(rpm > 0)) return null;
   try {
@@ -1684,8 +1690,10 @@ function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg, zeta){
     if(!T) return null;
     fr = veFeadSpanFreqRows(sys, st.geom, T.spanN,
                             { engineRpm: rpm, modes: VE_FEAD_VIB_MODES });
-    cyl = _feadNum(build.solver && build.solver.data && build.solver.data.cylinders, 6);
-    if(!(cyl > 0)) cyl = 6;
+    // Silindir sayısı yoksa ateşleme frekansı yok — 6 varsaymak uydurma bir
+    // motorun bandını çizmekti (hazırlık kapısı zaten haritayı kesiyor).
+    cyl = _feadNum(build.solver && build.solver.data && build.solver.data.cylinders, NaN);
+    if(!(cyl > 0)) return null;
     fFire = FEADCore.firingFrequencyHz(rpm, cyl, 4);
   } catch(e){ return null; }
 
@@ -1883,7 +1891,12 @@ function veFeadDriveRatio(sd){
   if(Number.isFinite(r) && r > 0){ out.ratio = r; out.ok = true; }
   return out;
 }
-function veFeadDriveModeLabel(mode){
+// `ok === false` → ÇÖZÜLEMEDİ. Oran çözülemeyince köprü 1'e düşüyor ve kipi
+// `direct` yazıyor; etiket bir dönem o kipi okuyup "elle girildi" diyordu —
+// sihirbazın varsayılan modelinde (ara kademe, çap yok) kullanıcı hiçbir şey
+// girmemişken (ölçüldü). Panel doğruyu yazıyordu; iki yüzey artık aynı yerden.
+function veFeadDriveModeLabel(mode, ok){
+  if(ok === false) return 'çözülemedi — çap eksik';
   return mode === 'crankDirect' ? 'krank kasnağı doğrudan sürücü (1:1)'
        : mode === 'unity' ? 'kranka bağlı ayrı sürücü kasnak (1:1)'
        : mode === 'derive' ? 'ara kademe — çaplardan türetildi'
@@ -3685,7 +3698,17 @@ function veFeadTranslateError(msg){
 //   { ok, sys, order, names, byName, errors[], warnings[], cfg }
 // ok=false ise errors[] doludur ve sys null'dur. HİÇBİR DURUMDA istisna
 // fırlatmaz — panel yarım kurulmuş bir topolojide de çizilebilmeli.
+// İŞLETME HAZIRLIĞI HER YOLDA SONUCA YAZILIR (`build.isletme`, bkz.
+// veFeadIsletmeDurumu). Kurucunun on iki erken dönüşü var; hazırlık o
+// dönüşlerin her birine ayrı ayrı eklenseydi biri unutulurdu — sarmalayıcı
+// tek noktada yazar ve geometri çözülmese de motor/aksesuar eksiği söylenir.
 function veFeadBuildSystem(nodeList, opt){
+  var out = _feadBuildSystem(nodeList, opt);
+  out.isletme = veFeadIsletmeDurumu(nodeList, out);
+  return out;
+}
+
+function _feadBuildSystem(nodeList, opt){
   // DİZİ ARGÜMAN KAPISI. İkinci parametre 2026-09-09'a kadar kablo listesiydi;
   // güncellenmemiş tek bir çağrı `connList`i `opt` sanıp SESSİZCE koşardı
   // (opt'un okunan alanları dizide yok → hepsi undefined, çözüm yine çıkar).
@@ -4437,6 +4460,139 @@ function veFeadDutyToCore(build, rows){
   });
 }
 
+// Bir aksesuarın herhangi bir MOTOR devrindeki gücü [kW] — kararlı çözümün
+// kaynak sırasıyla: kayıtlı ölçüm → kendi eğrisi → katalog; hiçbiri yoksa null.
+// Kayıtlı ölçüm yalnız çevrimin devirlerinde var; arası DOĞRUSAL, uçların
+// dışı SABİT (veFeadInterpKw'nin kuralı — uzatmak eksi güç üretebilirdi).
+//
+// SENARYO BUNU OKUR. Eskiden yalnız eğri/katalog okuyordu ve Gates örneklerinin
+// gücü YALNIZ kayıtlı ölçümde yazılı — senaryo o örnekleri 0 kW ile koşuyordu
+// (ölçüldü, AG00976 @ 880 d/dk: senaryo 0 kW, kararlı çözüm 6,34 kW). Çevrimin
+// devirlerinde iki yol artık aynı sayıyı verir.
+function veFeadKwAt(build, idx, node, engineRpm){
+  if(!build || !node) return null;
+  var pts = [];
+  veFeadDutyRows(build.solver).forEach(function(r){
+    if(r.rpm > 0 && _feadKayitliKw(r, node)) pts.push({ rpm: r.rpm, kw: _feadNum(r.kw[node.id], 0) });
+  });
+  if(pts.length){
+    pts.sort(function(a, b){ return a.rpm - b.rpm; });
+    var k = veFeadInterpKw(pts, _feadNum(engineRpm, NaN));
+    return Number.isFinite(k) ? k : null;
+  }
+  return veFeadAutoKw(build.sys, idx, node, engineRpm);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  İŞLETME HESABININ GİRDİSİ TAMAM MI — TEK KAYNAK
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı bildirimi (2026-09-29): *"program motor ve aksesuar seçmeden hesap
+// yapıyor … başlangıç sihirbazına bir örnek açtığımız zaman motor künyesi ve
+// diğer aksesuarların değerlerini girmesem bile program hesap yapıyor … Bu bir
+// hata."* ÖLÇÜLDÜ: motorun devir sınırları boşken Hesapla açıktı ve on özet
+// kartı basılıyordu; aksesuar gücü silinince kart sekiz açıklıkta da "544 N"
+// yazıyor, kayma emniyeti GERGİ kasnağından (1,24) veriliyordu.
+//
+// İKİ SINIF SONUÇ, İKİ AYRI KAPI:
+//   · GEOMETRİ ve gergi statiği (kayış boyu, sarım, açıklık, kol, montaj
+//     gerginliği) motordan ve aksesuardan BAĞIMSIZDIR — her zaman çözülür.
+//   · İŞLETME (çevrim boyunca gerilme, hubload, kayma, ömür, burulma, senaryo)
+//     aşağıdaki dört girdiden türer. Biri eksikken üretilen sayı bir sonuç
+//     değil bir varsayımdır — eskiden sessizce koşuyordu (silindir 6, rölanti
+//     700, oran 1, aksesuar 0 kW).
+//
+// Dört girdi:
+//   motor    — silindir sayısı (ateşleme frekansı), rölanti ve governed devri
+//              (motorun çalışma aralığı). Overspeed İSTENMEZ: yalnız devir
+//              sınırı denetimine girer, o denetim onsuz 'wait' verir.
+//   oran     — tahrik oranı çözülüyor (ara kademede iki çap da var).
+//   aksesuar — YÜK TAŞIYAN her kasnağın (sürücü, avara, gergi dışı) her devir
+//              satırında bir güç kaynağı var: kayıtlı ölçüm, kendi eğrisi ya da
+//              katalog modeli. Kaynağı olmayan satır çekirdeğe 0 kW gidiyordu.
+//   cevrim   — en az bir devir noktası.
+// Geometri eksikliği BURADA DEĞİL (`build.ok` / `build.errors` onun yeri).
+function _feadYukTasir(n){
+  var d = _feadDefOf(n);
+  return !!d.isFeadPulley && !d.isFeadIdler && !d.isFeadTensioner;
+}
+// Güç kaynağının VARLIĞI — `veFeadAutoKw`nin sırasıyla aynı (kendi eğrisi →
+// katalog). Devir gerekmez: kaynağı olan aksesuar her devirde bir sayı verir.
+function _feadGucKaynagi(n){
+  if(veFeadPowerCurve(n).length) return 'egri';
+  var pre = veFeadPresetOf(n);
+  return (pre && pre.curve) ? 'katalog' : null;
+}
+function _feadKayitliKw(r, n){
+  var v = r && r.kw ? r.kw[n.id] : undefined;
+  return !(v === undefined || v === null || v === '') && Number.isFinite(_feadNum(v, NaN));
+}
+// SAF. sd — çözücü verisi; order — kayış sırasındaki kasnak düğümleri;
+// driverId — sürücü kasnağın kimliği; rows — veFeadDutyRows çıktısı.
+// Döner: { ok, eksik: [{ grup, alan, ad }] } — `ad` kullanıcının okuyacağı ad.
+function veFeadIsletmeEksik(sd, order, driverId, rows){
+  sd = sd || {};
+  var eksik = [];
+  var cyl = _feadNum(sd.cylinders, NaN), idle = _feadNum(sd.idleRpm, NaN),
+      gov = _feadNum(sd.governedRpm, NaN);
+  if(!(cyl > 0))  eksik.push({ grup: 'motor', alan: 'cylinders',   ad: 'silindir sayısı' });
+  if(!(idle > 0)) eksik.push({ grup: 'motor', alan: 'idleRpm',     ad: 'rölanti devri' });
+  if(!(gov > 0))  eksik.push({ grup: 'motor', alan: 'governedRpm', ad: 'governed devri' });
+  else if(idle > 0 && !(gov > idle))
+    eksik.push({ grup: 'motor', alan: 'governedRpm', ad: 'governed devri (rölantiden büyük olmalı)' });
+
+  var dr = veFeadDriveRatio(sd);
+  if(!dr.ok)
+    eksik.push({ grup: 'oran', alan: 'ratioMode',
+                 ad: 'tahrik oranı (ara kademede krank ve kademe kasnağı çapı)' });
+
+  var satir = (rows || []).filter(function(r){ return r && r.rpm > 0; });
+  if(!satir.length)
+    eksik.push({ grup: 'cevrim', alan: 'duty', ad: 'çalışma çevriminde devir noktası' });
+
+  (order || []).forEach(function(n){
+    if(!n || n.id === driverId || !_feadYukTasir(n)) return;
+    if(_feadGucKaynagi(n)) return;
+    var bos = satir.filter(function(r){ return !_feadKayitliKw(r, n); });
+    if(!bos.length) return;
+    var ad = _feadNodeName(n);
+    // Birim yazılmaz: metin hem panelde (d/dk) hem sihirbazda (RPM) basılıyor.
+    if(bos.length < satir.length)
+      ad += ' (' + bos.map(function(r){ return veSayi(r.rpm, 0); }).join('; ') + ' devrinde)';
+    eksik.push({ grup: 'aksesuar', alan: n.id, ad: ad });
+  });
+  return { ok: !eksik.length, eksik: eksik };
+}
+// Kurucunun sarmalayıcısı çağırır: girdileri düğüm listesinden toplar. Sıra,
+// kurucu onu çıkardıysa ondan (kayış sırası), çıkaramadıysa listenin kendisi.
+function veFeadIsletmeDurumu(nodeList, build){
+  var all = nodeList || [];
+  var solver = null;
+  all.forEach(function(n){ if(n && _feadDefOf(n).isFeadSolver && !solver) solver = n; });
+  var order = (build && build.order && build.order.length) ? build.order
+    : all.filter(function(n){ return n && _feadDefOf(n).isFeadPulley; });
+  var drv = (typeof veFeadResolveDriver === 'function') ? veFeadResolveDriver(order) : null;
+  return veFeadIsletmeEksik(solver && solver.data, order, drv && drv.id, veFeadDutyRows(solver));
+}
+// Eksik listesinin METNİ — pencere, panel, kart ve bildirim AYNI cümleyi yazar.
+// `kisa` → tek grup (ilk eksik); aksi hâlde bütün gruplar.
+var VE_FEAD_ISLETME_GRUP = [
+  ['motor',    'Motor künyesi eksik'],
+  ['oran',     'Tahrik oranı çözülemedi'],
+  ['aksesuar', 'Aksesuar gücü yok'],
+  ['cevrim',   'Çalışma çevrimi boş']
+];
+function veFeadIsletmeMetni(isletme, kisa){
+  if(!isletme || isletme.ok) return '';
+  var parca = [];
+  VE_FEAD_ISLETME_GRUP.forEach(function(g){
+    var ad = (isletme.eksik || []).filter(function(e){ return e.grup === g[0]; })
+      .map(function(e){ return e.ad; });
+    if(ad.length) parca.push(g[1] + ': ' + ad.join(' · '));
+  });
+  if(!parca.length) return '';
+  return kisa ? parca[0] : parca.join('. ');
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  ÇÖZÜM
 // ════════════════════════════════════════════════════════════════════════════
@@ -4804,6 +4960,19 @@ function veFeadAnalyze(build, opts){
     out.error = (build && build.errors && build.errors[0]) || 'Model çözülemedi.';
     return out;
   }
+  // SİLİNDİR SAYISI YOKSA ÇÖZÜM YOK. Çekirdeğin kendi varsayılanı 6
+  // (`cylinders = 6`, dokunulmaz) ve köprü eksik değeri 6'ya çeviriyordu:
+  // ateşleme frekansı, burulma bandı ve Campbell çizgisi uydurulmuş bir motorla
+  // basılıyordu. Değer köprüden geçmezse çekirdek yine 6 alırdı — tek yol
+  // çözüme hiç girmemek.
+  // Değer seçenekten, yoksa modelin kendi alanından (çözücü düğümü — panelin
+  // geçtiği alanın ta kendisi). İkisi de boşsa çözüm YOK.
+  var cyl = _feadNum(opts.cylinders, NaN);
+  if(!(cyl > 0)) cyl = _feadNum(build.solver && build.solver.data && build.solver.data.cylinders, NaN);
+  if(!(cyl > 0)){
+    out.error = 'Motor künyesi eksik: silindir sayısı girilmedi.';
+    return out;
+  }
   var duty = veFeadDutyToCore(build, opts.rows || []);
   out.duty = duty;
 
@@ -4820,7 +4989,7 @@ function veFeadAnalyze(build, opts){
   try {
     out.analysis = FEADCore.analyze(build.sys, {
       duty: duty,
-      cylinders: opts.cylinders > 0 ? opts.cylinders : 6,
+      cylinders: cyl,
       modes: 1,
       // analyze() burulmayı da hesaplayabiliyor ama SEÇENEKSİZ — krank ataleti
       // geçilemediği için kasnak ataletiyle koşar ve aşağıdaki asıl hesaptan
@@ -5211,6 +5380,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadAtLimitText: veFeadAtLimitText, veFeadViolationText: veFeadViolationText,
     VE_FEAD_TENSION_TOL: VE_FEAD_TENSION_TOL,
     veFeadDriveRatio: veFeadDriveRatio, veFeadDriveModeLabel: veFeadDriveModeLabel,
+    veFeadIsletmeEksik: veFeadIsletmeEksik, veFeadIsletmeDurumu: veFeadIsletmeDurumu,
+    veFeadIsletmeMetni: veFeadIsletmeMetni, VE_FEAD_ISLETME_GRUP: VE_FEAD_ISLETME_GRUP,
+    veFeadKwAt: veFeadKwAt,
     VE_FEAD_DRIVE_MODES: VE_FEAD_DRIVE_MODES, veFeadDriveModeOf: veFeadDriveModeOf,
     VE_FEAD_POSITIONS: VE_FEAD_POSITIONS, VE_FEAD_POS_TOL_DEG: VE_FEAD_POS_TOL_DEG,
     veFeadPositionRows: veFeadPositionRows, veFeadPosMode: veFeadPosMode,

@@ -140,7 +140,10 @@ function veFeadWizDefault(){
     // kip "elle girildi" oluyor ve "Algılanan Model" satırı ✓ gösteriyordu —
     // girilen çapın hiç kullanılmadığı hâlde. Alan olmayınca aynı durum
     // ok:false veriyor ve satır ✗ ile uyarıyor.
-    solver: { ratioMode: 'derive', cylinders: 6, serviceFact: 1.3,
+    // SİLİNDİR SAYISI YAZILI GELMİYOR (2026-09-29): 6 hiçbir motorun sayısı
+    // değildi ve boş sihirbazdan kurulan her model 6 silindirli bir motorun
+    // ateşleme frekansıyla çözülüyordu. Motor künyesi seçilir ya da girilir.
+    solver: { ratioMode: 'derive', serviceFact: 1.3,
               dutyLib: (typeof VE_FEAD_DUTY_DEFAULT !== 'undefined') ? VE_FEAD_DUTY_DEFAULT : '',
               duty: (typeof veFeadDutyRowsOf === 'function')
                 ? veFeadDutyRowsOf(VE_FEAD_DUTY_DEFAULT) : [] },
@@ -865,6 +868,18 @@ function veFeadWizIssues(b, step){
   // STEP'TEN GELEN SIRA BİR VARSAYIM (kural 34) — model o sırayla çözülebilir
   // ve yine de yanlış olabilir; sıra elle değişene ya da onaylanana kadar
   // Kasnaklar adımı uyarı taşır.
+  // İŞLETME HESABININ GİRDİSİ — köprünün TEK kaynağı (`b.isletme`). Motor ve
+  // çevrim adımına ait (motor künyesi, tahrik oranı, aksesuar modeli ve
+  // çevrim hepsi orada). Model bunlarsız da KURULUR — kayış yolu çözülüyor —
+  // ama gerilme, kayma, ömür ve senaryo hesaplanmaz; adım bu yüzden kırmızı.
+  if(b.isletme && !b.isletme.ok && (step === undefined || step === 4)
+     && typeof VE_FEAD_ISLETME_GRUP !== 'undefined'){
+    VE_FEAD_ISLETME_GRUP.forEach(function(g){
+      var ad = (b.isletme.eksik || []).filter(function(e){ return e.grup === g[0]; })
+        .map(function(e){ return e.ad; });
+      if(ad.length) out.push({ tur: 'err', m: g[1] + ': ' + ad.join(' · ') + '.' });
+    });
+  }
   var st = _fwState;
   if(st && st.siraKaynagi === 'agac' && (step === undefined || step === 1))
     out.push({ tur: 'warn', m: VE_FW_SIRA_AGAC });
@@ -1136,6 +1151,20 @@ function veFeadWizLiveHTML(b){
 function veFeadWizFootStateHTML(b){
   var eksik = b ? (b.errors || []).length : 0;
   if(!b) return '<span class="ve-fw-dim">model henüz kurulmadı</span>';
+  // "KURULMAYA HAZIR" YALNIZ İŞLETME GİRDİSİ DE TAMSA. Kayış yolu çözülen
+  // ama motoru/aksesuar gücü eksik bir model KURULABİLİR (geometri sonucu
+  // gerçek) — yine de "hazır" demek, eksik künyeyle hesap yapılacağı
+  // izlenimini veriyordu (kullanıcı bildirimi, 2026-09-29).
+  if(b.ok && b.isletme && !b.isletme.ok && typeof VE_FEAD_ISLETME_GRUP !== 'undefined'){
+    var gr = [];
+    VE_FEAD_ISLETME_GRUP.forEach(function(g){
+      if((b.isletme.eksik || []).some(function(e){ return e.grup === g[0]; }))
+        gr.push(g[1].charAt(0).toLowerCase() + g[1].slice(1));
+    });
+    return '<span class="ve-fw-warn" title="' + _fwEsc(veFeadIsletmeMetni(b.isletme)) + '">'
+      + veIkon('alert-triangle') + ' kayış yolu çözülüyor — işletme hesabı bekliyor: '
+      + _fwEsc(gr.join(' · ')) + '</span>';
+  }
   if(b.ok) return '<span class="ve-fw-ok">' + veIkon('check') + ' model çözülüyor — kurulmaya hazır</span>';
   return '<span class="ve-fw-err">' + eksik + ' eksik/çelişkili girdi</span>';
 }
@@ -3224,7 +3253,8 @@ function _fwKwEff(b, st, rowIdx, p){
   //
   // İKİ AYRI "değer yok" DURUMU, TEK ETİKETE KATILMAZ:
   //   · oran bile kurulamıyor (çap ya da sürücü yok) → HESAPLANAMAZ.
-  //   · oran kurulu ama katalog modeli/eğri yok → gerçekten 0 kW koşar.
+  //   · oran kurulu ama katalog modeli/eğri yok → güç YOK; işletme hesabı
+  //     onsuz yapılmaz (fead-model.js → veFeadIsletmeEksik).
   // İkisi bir dönem ikisi de 'yok' diyordu: yarım modelde kart bütün
   // aksesuarları "güç yok" diye uyarıyordu, oysa eksik olan güç değil MODELDİ.
   var rs = b && (b.sys || b.ratioSys);
@@ -3414,14 +3444,20 @@ function _sicaklikAlani(duty){
 // izlenimi veriyordu. Aynı kaldırma Çözücü panelinde de yapıldı — iki yüzey
 // aynı künyeyi sorar.
 var VE_FW_ENG_FIELDS = [
-  { yol: 'solver.cylinders',         ad: 'Silindir sayısı',      br: '—',      ph: '6',    kat: true  },
-  { yol: 'solver.idleRpm',           ad: 'Rölanti',              br: 'RPM',    ph: '700',  kat: true  },
-  { yol: 'solver.governedRpm',       ad: 'Governed',             br: 'RPM',    ph: '2100', kat: true  },
-  { yol: 'solver.overspeedRpm',      ad: 'Overspeed',            br: 'RPM',    ph: '2900', kat: true  },
+  // YER TUTUCU BOŞ ALANIN NE YAPTIĞINI SÖYLER (2026-09-29). Eskiden bir
+  // örnek sayı taşıyordu (6 · 700 · 2100 · 0,70 · 1000) ve ilk ikisi boş
+  // alanda GERÇEKTEN kullanılıyordu — kullanıcı yer tutucuyu girilmiş değer
+  // sanıyordu. İşletme hesabının girdisi 'zorunlu'; boşken varsayılanla koşan
+  // alan o varsayılanı yazar (ivme 1100 RPM/s — çekirdeğin kendi değeri;
+  // krank ataleti Gates arşivinin medyanı, künyeye yazılarak).
+  { yol: 'solver.cylinders',         ad: 'Silindir sayısı',      br: '—',      ph: 'zorunlu', kat: true  },
+  { yol: 'solver.idleRpm',           ad: 'Rölanti',              br: 'RPM',    ph: 'zorunlu', kat: true  },
+  { yol: 'solver.governedRpm',       ad: 'Governed',             br: 'RPM',    ph: 'zorunlu', kat: true  },
+  { yol: 'solver.overspeedRpm',      ad: 'Overspeed',            br: 'RPM',    ph: '—',    kat: true  },
   { yol: 'solver.serviceFact',       ad: 'Servis faktörü',       br: '—',      ph: '1.3',  kat: false },
-  { yol: 'solver.crankInertia',      ad: 'Krank mili ataleti',   br: 'kg·m²',  ph: '0.70', kat: false },
-  { yol: 'solver.accelRpmS',         ad: 'İvmelenme',            br: 'RPM/s',  ph: '1000', kat: false },
-  { yol: 'solver.decelRpmS',         ad: 'Yavaşlama',            br: 'RPM/s',  ph: '1000', kat: false },
+  { yol: 'solver.crankInertia',      ad: 'Krank mili ataleti',   br: 'kg·m²',  ph: 'arşiv 0,50', kat: false },
+  { yol: 'solver.accelRpmS',         ad: 'İvmelenme',            br: 'RPM/s',  ph: '1100', kat: false },
+  { yol: 'solver.decelRpmS',         ad: 'Yavaşlama',            br: 'RPM/s',  ph: '1100', kat: false },
   { yol: 'solver.lengthOffsetMm',    ad: 'Boy ofseti',           br: 'mm',     ph: '0',    kat: false }
 ];
 
@@ -3534,7 +3570,7 @@ function _fwStepCevrim(b){
     + '</div>'
     + '<div class="ve-fw-reads">'
       + _fwRead('Tahrik oranı', _fwFmt(dr.ratio, 4))
-      + _fwRead('Kaynak', veFeadDriveModeLabel(dr.mode))
+      + _fwRead('Kaynak', veFeadDriveModeLabel(dr.mode, dr.ok))
     + '</div>'
     + (_yarim
         ? '<div class="ve-fw-issue ve-fw-issue-warn">! <b>Yalnız bir çap girildi.</b> '
@@ -3713,15 +3749,15 @@ function _fwAccCard(st, b, yuk){
     + (satir || '<tr><td colspan="3" class="ve-fw-ro">Henüz aksesuar yok.</td></tr>')
     + '</tbody></table></div>';
 
-  // SESSİZ SIFIR KAPISI: gücü hiçbir yerden gelmeyen bir aksesuar 0 kW ile
-  // koşar ve model YİNE çözülür — bütün açıklık gerilmeleri tasarım
-  // gerginliğine düzleşir, uyarı çıkmaz. Bu modülün ölçülmüş hata sınıfı,
-  // o yüzden sihirbaz onu ADIYLA söylüyor.
+  // GÜÇ KAYNAĞI OLMAYAN AKSESUAR ADIYLA söylenir. Eskiden 0 kW ile koşuyordu
+  // ve model yine çözülüyordu — bütün açıklık gerilmeleri tasarım gerginliğine
+  // düzleşiyordu. Artık işletme hesabı onsuz YAPILMAZ (fead-model.js →
+  // veFeadIsletmeEksik); kart sebebi ve çareyi yazar.
   if(eksik.length)
-    h += '<div class="ve-fw-issue ve-fw-issue-warn">! Şu aksesuarların gücü hiçbir '
-      + 'kaynaktan gelmiyor ve <b>0 kW</b> ile koşacak: <b>' + _fwEsc(eksik.join(', '))
-      + '</b>. Model yine çözülür ama açıklık gerilmeleri tasarım gerginliğine '
-      + 'düzleşir — bir model seçin.</div>';
+    h += '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Şu aksesuarların '
+      + 'gücü hiçbir kaynaktan gelmiyor: <b>' + _fwEsc(eksik.join(', ')) + '</b>. İşletme hesabı '
+      + '(gerilme, kayma, ömür) bunlarsız yapılmaz — bir model seçin ya da çevrim kaydında '
+      + 'gücü kayıtlı bir ölçüm kullanın.</div>';
 
   return _fwCard('Aksesuar modelleri', 'var(--accent-success)', h
     );
@@ -4140,8 +4176,9 @@ function veFeadWizCreate(){
 
   // DUTY kW KİMLİK GÖÇÜ — döngü BİTTİKTEN sonra (çözücü düğümü de aynı
   // döngüde kuruluyor, harita ancak burada tamamlanıyor). Atlanırsa hiçbir
-  // aksesuar eşleşmez ve hepsi 0 kW ile koşar: çözüm yine üretilir, yalnız
-  // bütün gerilmeler tasarım gerginliğine düzleşir.
+  // aksesuar eşleşmez: eskiden hepsi 0 kW ile koşar, gerilmeler tasarım
+  // gerginliğine düzleşirdi; bugün işletme kapısı "gücü yok" diye durdurur
+  // (FEAD kural 42).
   if(typeof veFeadRemapDutyKw === 'function')
     kuruldu.forEach(function(n){
       if(n.data && Array.isArray(n.data.duty)) veFeadRemapDutyKw(n.data.duty, idMap);

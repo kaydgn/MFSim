@@ -59,6 +59,9 @@ global.veFeadDutyMatch = veFeadDutyMatch;
 // testte de öyle kurulur (cp-fead.js bu adları çağırıyor).
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
+// ÖRNEKLER MOTORLU: bu dosya örnekleri ÇÖZÜYOR ve Gates örnekleri motorun devir
+// sınırlarını taşımıyor — işletme hesabı onlarsız yapılmaz (tests/helpers/fead-motor.js).
+require('../helpers/fead-motor').motorluOrnekler(M);
 
 beforeEach(() => {
   resetStubs(stubs);
@@ -919,15 +922,26 @@ describe('güç eğrisi kartı', () => {
 
 describe('servis faktörü sonuç HÜKMÜNDE — tablo Sonuçlar\'a taşındı, hüküm pencerede kaldı', () => {
   // Sahte bir sonuç nesnesi: gerçek çözüm bu dosyanın işi değil (fead-example
-  // orada), burada test edilen şey EŞİĞİN NEREDEN GELDİĞİ.
-  const sahteR = (sf, minSF) => ({
+  // orada), burada test edilen şey EŞİĞİN NEREDEN GELDİĞİ. İki kasnak da YÜK
+  // TAŞIYOR (gerginlik oranı eşiğin üstünde) — hüküm yalnız onlardan verilir.
+  const sahteR = (sf, minSF, oran) => ({
     serviceFact: sf, pulleyNames: ['A', 'B'],
     analysis: { duty: [{
       engineRpm: 2000, dcPct: 50, vMs: 12, firingHz: 100,
       perPulley: [{ exitTensionN: 600 }, { exitTensionN: 500 }],
       hubloads: [{ FN: 1200, dirDeg: 90 }, { FN: 900, dirDeg: 180 }],
-      slip: [{ SF: minSF }, { SF: minSF + 1 }], warnings: []
+      slip: [{ SF: minSF, tensionRatio: oran || 1.8 }, { SF: minSF + 1, tensionRatio: oran || 1.5 }],
+      warnings: []
     }] }
+  });
+
+  // YÜK TAŞIYAN KASNAK YOKSA HÜKÜM YOK. Eskiden "hiç yük taşıyan yoksa bütün
+  // kasnaklar" yedeği vardı: gücü sıfır bir modelde avaranın capstan
+  // KAPASİTESİ emniyet diye okunuyor ve GEÇTİ/KALDI basılıyordu (ölçüldü:
+  // gergi kasnağından 1,24).
+  test('yük taşıyan kasnak yoksa (oran ≈ 1) GEÇTİ/KALDI YOK — kapasite marj değildir', () => {
+    const html = fead.veFeadResultVerdicts(sahteR(1.3, 1.15, 1.001));
+    expect(html).not.toMatch(/KALDI|GEÇTİ/);
   });
 
   test('min SF servis faktörünün üstündeyse GEÇTİ', () => {

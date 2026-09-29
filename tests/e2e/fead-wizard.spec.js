@@ -24,6 +24,7 @@
  *     artık ÜRETİCİDEN yapılıyor (`veFeadWizSeed`), yeni spec'lerin yolu.
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 
 // ÖRNEK SEÇİMİ ÜRETİCİDEN, konumdan DEĞİL. Anahtar verilmezse listenin ilki —
 // kaldırılan kart düğmelerinin `.first()` davranışının birebir karşılığı.
@@ -50,6 +51,9 @@ async function bootApp(page) {
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 60000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 42) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
 }
 
 async function openFead(page) {

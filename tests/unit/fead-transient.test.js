@@ -395,13 +395,35 @@ describe('animasyon yükü attribute\'tan sağ çıkar', () => {
 });
 
 describe('girdiler MFSim\'in ZATEN sorduğu alanlardan', () => {
-  test('tepe devir çalışma çevriminden, yoksa regülatörden, yoksa varsayılan', () => {
+  // VARSAYILAN YOK (2026-09-29). Tepe devir 2500'e, rölanti 700'e, silindir
+  // 6'ya düşüyordu ve senaryo motor künyesi girilmemiş bir modelde de
+  // oynuyordu. Eksik girdi sonucun içinde (`eksik`) ve senaryo KURULMAZ.
+  test('tepe devir çalışma çevriminden, yoksa regülatörden — yoksa senaryo YOK', () => {
     const b1 = kur();
     b1.solver.data.duty = [{ rpm: 1800, dcPct: 50 }, { rpm: 2400, dcPct: 50 }];
     expect(TR.veFeadScnInputs(b1).peakRpm).toBe(2400);
     expect(TR.veFeadScnInputs(kur()).peakRpm).toBe(2600);         // regülatör
-    expect(TR.veFeadScnInputs(kur({ governedRpm: 0 })).peakRpm)
-      .toBe(TR.VE_FEAD_SCN_PEAK_DEF);
+    expect(TR.veFeadScnInputs(kur()).eksik).toEqual([]);
+    const yok = TR.veFeadScnInputs(kur({ governedRpm: 0 }));
+    expect(yok.eksik.join(' ')).toMatch(/tepe devir/);
+    expect(TR.veFeadScenarioBuild(kur({ governedRpm: 0 }), {})).toBeNull();
+    expect(TR.VE_FEAD_SCN_PEAK_DEF).toBeUndefined();
+    expect(TR.VE_FEAD_SCN_IDLE_DEF).toBeUndefined();
+  });
+
+  test('rölanti ya da silindir yoksa senaryo YOK — 700 ve 6 varsayılmaz', () => {
+    expect(TR.veFeadScnInputs(kur({ idleRpm: '' })).eksik).toContain('rölanti devri');
+    expect(TR.veFeadScenarioBuild(kur({ idleRpm: '' }), {})).toBeNull();
+    expect(TR.veFeadScnInputs(kur({ cylinders: '' })).eksik).toContain('silindir sayısı');
+    expect(TR.veFeadScenarioBuild(kur({ cylinders: '' }), {})).toBeNull();
+  });
+
+  test('köprünün hazırlık hükmü eksik diyorsa senaryo KURULMAZ', () => {
+    const b = kur();
+    b.isletme = { ok: false, eksik: [{ grup: 'aksesuar', alan: 'x', ad: 'Klima' }] };
+    expect(TR.veFeadScenarioBuild(b, {})).toBeNull();
+    b.isletme = { ok: true, eksik: [] };
+    expect(TR.veFeadScenarioBuild(b, {})).not.toBeNull();
   });
 
   test('silindir sayısı ateşleme frekansını sürüyor', () => {

@@ -4885,6 +4885,19 @@ function veFeadLayoutSVG(build, W, H, opts){
       + veSayi(tmap.min, 0) + ' N</text>'
       + '<text data-ve="tension-legend" x="' + f(LX + LB) + '" y="' + f(H - ALT - 22) + '" text-anchor="end" font-size="7"'
       + ' fill="var(--text-muted)"' + _hale + '>' + veSayi(tmap.max, 0) + ' N</text>';
+  } else if(opts.isletmeEksik && opts.isletmeEksik.metin){
+    // HARİTA YOKSA SEBEBİ LEJANTIN YERİNDE. İşletme girdisi eksikken (motor
+    // künyesi · tahrik oranı · aksesuar gücü) gerilme hesaplanmıyor; kart
+    // sessizce amber kalsaydı kullanıcı devri seçip hiçbir şey olmadığını
+    // görürdü. İlk eksik grup yazılır, tamamı ipucunda (rozetin kuralı).
+    var _ie = opts.isletmeEksik, _ieK = String(_ie.kisa || _ie.metin);
+    if(_ieK.length > 64) _ieK = _ieK.slice(0, 63) + '…';
+    var _hl = ' paint-order="stroke" stroke="var(--bg-input)" stroke-width="2.4" stroke-linejoin="round"';
+    svg += '<g data-ve="isletme-eksik"><title>' + _feadEsc(_ie.metin) + '</title>'
+      + '<text x="' + f(pad - 6) + '" y="' + f(H - ALT - 30) + '" font-size="7" font-weight="600"'
+      + ' fill="var(--ink-warning)"' + _hl + '>' + _feadEsc(_ie.baslik) + '</text>'
+      + '<text x="' + f(pad - 6) + '" y="' + f(H - ALT - 20) + '" font-size="7"'
+      + ' fill="var(--text-muted)"' + _hl + '>' + _feadEsc(_ieK) + '</text></g>';
   }
   svg += '<path data-ve="rib" d="' + _feadTeethPath(walk, geom.sense, stepMm, toothMm, 0, T, vibDef) + '" fill="none"'
       + ' stroke="var(--accent-warning)" stroke-width="1" stroke-linecap="round" opacity="0.9">'
@@ -5313,12 +5326,22 @@ function veFeadLayoutCardHTML(node){
   // değişimi görünmezdi — senaryoda görünmesi gereken TAM OLARAK O).
   var scn = null;
   var kin = null, secim = null;
+  // İŞLETME GİRDİSİ EKSİKSE (build.isletme) harita ve senaryo kurulmaz; kart
+  // eksiği lejantın yerinde yazar. Yalnız kullanıcı bir devir ya da senaryo
+  // SEÇTİYSE — 'Durgun' kartta gerilme zaten istenmiyor.
+  var rpmIstek = rpmSel;
+  var islEksik = (build && build.ok && build.isletme && !build.isletme.ok
+                  && typeof veFeadIsletmeMetni === 'function') ? build.isletme : null;
+  // TAHRİK ORANI ÇÖZÜLMEDİYSE HİÇBİR HIZ YOK: köprü oranı 1'e düşürüyor ve
+  // kayış hızı, kasnak devirleri, burulma modları o sahte oranla çıkardı.
+  // Kart o hâlde dönmez; eksik lejantın yerinde yazılı.
+  var oranYok = !!(islEksik && (islEksik.eksik || []).some(function(e){ return e.grup === 'oran'; }));
   if(rpmSel === 'scn'){
     if(typeof veFeadScenarioBuild === 'function')
       scn = veFeadScenarioBuild(build, { relDeg: vibRel });
     if(scn) kin = veFeadAnimKinematics(build, scn.peak, scn.peak);
     if(!scn) rpmSel = 'off';                        // kurulamadıysa sessizce akmasın
-  } else if(rpmSel !== 'off'){
+  } else if(rpmSel !== 'off' && !oranYok){
     kin = veFeadAnimKinematics(build, rpmSel);
     veFeadAnimRpmChoices(build).forEach(function(c){ if(c.rpm === rpmSel) secim = c; });
   }
@@ -5337,7 +5360,7 @@ function veFeadLayoutCardHTML(node){
   var vibZeta = veFeadVibZetaOf(node);
   var vibOpts = { crankInertia: _feadNum(build.solver && build.solver.data
                                          && build.solver.data.crankInertia, 0) };
-  var vibModes = (vibSel === 'off') ? null : veFeadVibModeList(build, vibOpts);
+  var vibModes = (vibSel === 'off' || oranYok) ? null : veFeadVibModeList(build, vibOpts);
   var vib = null;
   if(vibSel === 'span' && scn && kin){
     // SENARYODA ÇIRPMA CANLIDIR: frekans ve genlik kare başına senaryonun o
@@ -5347,7 +5370,7 @@ function veFeadLayoutCardHTML(node){
     if(vib) vib.live = 1;
   } else if(vibSel === 'span' && kin){
     vib = veFeadVibSpanPayload(build, rpmSel, kin.slow, vibGain, vibRel, vibZeta);
-  } else if(vibSel !== 'off' && vibSel !== 'span'){
+  } else if(vibSel !== 'off' && vibSel !== 'span' && !oranYok){
     vib = veFeadVibModePayload(build, parseInt(vibSel.slice(5), 10) || 0, vibGain, vibOpts, vibRel);
   }
 
@@ -5406,6 +5429,11 @@ function veFeadLayoutCardHTML(node){
                               // tablosu açık kartta (kasnak ↔ satır bağı).
                               siraNo: tabloVar,
                               tension: tenMap,
+                              isletmeEksik: (islEksik && rpmIstek !== 'off') ? {
+                                baslik: rpmIstek === 'scn' ? 'motor çevrimi senaryosu kurulmadı'
+                                                           : 'açıklık gerilmesi hesaplanmadı',
+                                kisa: veFeadIsletmeMetni(islEksik, true),
+                                metin: veFeadIsletmeMetni(islEksik) } : null,
                               // YÜZEN ÇUBUK YÖN GÜLÜNÜ ÖRTMESİN (ölçüldü). Tablo
                               // açıkken çubuk çizimin üstünde değil: pay yok.
                               altPay: tabloVar ? 0 : VE_FEAD_YUZ_ALT / yk,
@@ -7618,12 +7646,16 @@ function getFeadSolverPropertiesHTML(node){
   // ve `:disabled`ı ifade edemiyordu, yani kapalı düğme de açık düğme de
   // fareye AYNI tepkiyi veriyordu (kural 14).
   var satirSay = veFeadDutyRows(node).length;
-  var hazir = build.ok && satirSay > 0;
+  // İşletme girdisi (motor künyesi · tahrik oranı · aksesuar gücü) köprünün
+  // tek kaynağından — FEAD araçları penceresiyle AYNI hüküm ve aynı cümle.
+  var islOk = !(build.isletme && !build.isletme.ok);
+  var hazir = build.ok && satirSay > 0 && islOk;
   var dugme = '<button type="button" class="ve-fp-solve"' + (hazir ? '' : ' disabled')
     + ' onclick="veFeadSolve(\'' + node.id + '\')">' + veIkon('play') + ' Hesapla</button>'
     + (hazir ? '' : '<div class="ve-fp-solve-not">'
         + (!build.ok ? 'Model eksik — kasnak konumlarını tamamlayın.'
-                     : 'Çalışma çevrimi boş — en az bir satır girin.') + '</div>');
+           : !(satirSay > 0) ? 'Çalışma çevrimi boş — en az bir satır girin.'
+           : _feadEsc(veFeadIsletmeMetni(build.isletme)) + '.') + '</div>');
 
   var sekmeler = [{ k:'gir', ad:'Girdiler', govde: _gir },
                   { k:'mod', ad:'Model',    govde: _mod },
@@ -7826,7 +7858,7 @@ function veFeadDriveCard(node){
   // ORAN ÇÖZÜLEMEDİYSE KİP ADI YAZILMAZ. Köprü çap eksikken 'direct'e düşüyor
   // ve etiketi "elle girildi" — panelde elle girilecek bir alan yokken bu
   // cümle kullanıcıyı olmayan bir kutuya yönlendiriyordu.
-  var etiket = dr.ok ? veFeadDriveModeLabel(dr.mode) : 'çözülemedi — çap eksik';
+  var etiket = veFeadDriveModeLabel(dr.mode, dr.ok);
   var deg = '<div style="font-size:var(--fs-micro); line-height:1.5; padding:7px 9px; margin-bottom:9px; '
     + 'background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); '
     + 'display:flex; justify-content:space-between; gap:8px;">'
@@ -7867,27 +7899,33 @@ function veFeadEngineCard(node){
   return _feadCard('Motor künyesi', 'sayfadaki Engine Info', 'var(--text-secondary)',
       veFeadEngineLibRow(node)
     + _feadGrid(node, [
-        { key:'cylinders',   label:'Silindir sayısı [—]', ph:'6', step:'1' },
+        // YER TUTUCU BOŞ ALANIN NE YAPTIĞINI SÖYLER — sihirbazın
+        // VE_FW_ENG_FIELDS'ıyla aynı kural (örnek sayı değil).
+        { key:'cylinders',   label:'Silindir sayısı [—]', ph:'zorunlu', step:'1' },
         { key:'serviceFact', label:'Servis faktörü [—]',  ph:'1.3', step:'0.01' }
       ], 2)
     + _feadGrid(node, [
-        { key:'idleRpm',      label:'Rölanti [d/dk]',   ph:'700',  step:'10' },
-        { key:'governedRpm',  label:'Governed [d/dk]',  ph:'2100', step:'10' },
-        { key:'overspeedRpm', label:'Overspeed [d/dk]', ph:'2900', step:'10' }
+        { key:'idleRpm',      label:'Rölanti [d/dk]',   ph:'zorunlu', step:'10' },
+        { key:'governedRpm',  label:'Governed [d/dk]',  ph:'zorunlu', step:'10' },
+        { key:'overspeedRpm', label:'Overspeed [d/dk]', ph:'—',       step:'10' }
       ], 3)
     + _feadGrid(node, [
-        { key:'crankInertia', label:'Krank ataleti [kg·m²]', ph:'0.70', step:'0.01' },
-        { key:'accelRpmS',    label:'İvmelenme [RPM/s]',     ph:'1000', step:'10' },
-        { key:'decelRpmS',    label:'Yavaşlama [RPM/s]',     ph:'1000', step:'10' }
+        { key:'crankInertia', label:'Krank ataleti [kg·m²]', ph:'arşiv 0,50', step:'0.01' },
+        { key:'accelRpmS',    label:'İvmelenme [RPM/s]',     ph:'1100', step:'10' },
+        { key:'decelRpmS',    label:'Yavaşlama [RPM/s]',     ph:'1100', step:'10' }
       ], 3)
-    + _feadHint('<b>Silindir sayısı</b> ateşleme frekansını verir (f = devir/60 × silindir/2, '
-        + 'dört zamanlı) ve span rezonans kontrolünde kullanılır. <b>Servis faktörü</b> kayma '
-        + 'emniyeti için istenen alt sınır olarak sonuç sekmesinde karşılaştırılır. '
-        + '<b>Governed</b> ve <b>Overspeed</b> aksesuar devir penceresi ve devir sınırı '
-        + 'kapılarını besler, <b>Rölanti</b> geçici rejim senaryosunu. <b>Krank ataleti</b> '
-        + 'burulma modelinin sürücü atalet terimidir — boş bırakılırsa birinci mod belirgin '
-        + 'biçimde YÜKSEK çıkar. <b>İvmelenme</b> ve <b>yavaşlama</b> tepe yük / hubload '
-        + 'tablosuna girer.'));
+    + _feadHint('<b>Silindir sayısı, rölanti ve governed ZORUNLUDUR</b> — işletme hesabı '
+        + '(gerilme, kayma, ömür, senaryo) onlarsız yapılmaz. <b>Silindir sayısı</b> ateşleme '
+        + 'frekansını verir (f = devir/60 × silindir/2, dört zamanlı) ve span rezonans '
+        + 'kontrolünde kullanılır. <b>Servis faktörü</b> kayma emniyeti için istenen alt sınır '
+        + 'olarak sonuç sekmesinde karşılaştırılır. <b>Governed</b> ve <b>Overspeed</b> aksesuar '
+        + 'devir penceresi ve devir sınırı kapılarını besler (overspeed boşsa devir sınırı '
+        + 'kapısı değerlendirilmez), <b>Rölanti</b> geçici rejim senaryosunu. <b>Krank '
+        + 'ataleti</b> burulma modelinin sürücü atalet terimidir — boş bırakılırsa sürücü '
+        + 'kasnağın kendi ataleti, o da yoksa Gates arşivinin medyanı (0,50 kg·m²) alınır ve '
+        + 'künyeye yazılır; kasnağın kendi ataleti kullanılırsa birinci mod belirgin biçimde '
+        + 'YÜKSEK çıkar. <b>İvmelenme</b> ve <b>yavaşlama</b> tepe yük / hubload tablosuna '
+        + 'girer; boşsa 1.100 RPM/s alınır.'));
 }
 
 // ── MOTOR KATALOĞU SATIRI ───────────────────────────────────────────────────
@@ -7945,7 +7983,8 @@ function veFeadApplyEngineLib(nodeId, key){
 // SÜRÜCÜ SÜTUNU YOK — gücü diğerlerinin toplamı olarak çekirdek hesaplar;
 // elle girilirse çevrim kapanmaz ve çekirdek reddeder.
 // Boş bırakılan aksesuar hücresi: katalog seçiliyse oradan doldurulur (devir
-// kasnak ÇAPLARINDAN gelir, elle oran girilmez), yoksa 0 sayılır.
+// kasnak ÇAPLARINDAN gelir, elle oran girilmez); yoksa aksesuarın gücü YOK ve
+// işletme hesabı yapılmaz (fead-model.js → veFeadIsletmeEksik — eskiden 0 kW).
 function veFeadDutyEditor(node, build){
   var rows = veFeadDutyRows(node);
   // AKSESUAR SÜTUNLARI ORAN SİSTEMİNDEN DE ÇIKAR. Kapı `build.ok` iken yarım
@@ -8055,7 +8094,8 @@ function veFeadDutyEditor(node, build){
     dSec + h
     + _feadHint('Boş bırakılan kW hücresi: aksesuarda katalog modeli seçiliyse o eğriden '
         + 'doldurulur (aksesuar devri kasnak <b>pitch çaplarından</b> hesaplanır, elle oran '
-        + 'girilmez), seçili değilse 0 sayılır.'));
+        + 'girilmez). Seçili değilse o aksesuarın gücü <b>yoktur</b>: sıfır sayılmaz, '
+        + '<b>Hesapla</b> pasif kalır ve eksik adıyla yazılır.'));
 }
 
 // Modelin çekirdeğe göre durumu — sayarken TİPE değil ROLE bakılır.
@@ -8098,7 +8138,7 @@ function veFeadModelTable(build){
   }
   if(build.drive)
     h += satir('Tahrik oranı', _feadFmt(build.drive.ratio, 4)
-      + ' (' + veFeadDriveModeLabel(build.drive.mode) + ')', build.drive.ok);
+      + ' (' + veFeadDriveModeLabel(build.drive.mode, build.drive.ok) + ')', build.drive.ok);
 
   // TÜRETİLEN TASARIM GERGİNLİĞİ. Panelde artık alan yok; kullanıcının hesabın
   // hangi ankrajla kurulduğunu okuyacağı tek yer burası. Görünmezse "gerginlik
@@ -8376,8 +8416,9 @@ function veFeadLoadExample(key){
   // DUTY kW SÖZLÜĞÜ KİMLİK GÖÇÜNDEN GEÇMEK ZORUNDA. Yukarıdaki döngü her düğümü
   // YENİ bir kimlikle kuruyor (createNode kendi kimliğini üretir) ama data'yı
   // birebir kopyalıyor; kW sözlüğü ise düğüm kimliğiyle anahtarlı. Göç
-  // yapılmazsa hiçbir aksesuar eşleşmez ve hepsi 0 kW ile koşar — çözüm yine
-  // üretilir, yalnız bütün gerginlikler tasarım gerginliğine düzleşir. Göç
+  // yapılmazsa hiçbir aksesuar eşleşmez: eskiden hepsi 0 kW ile koşar ve
+  // gerginlikler tasarım gerginliğine düzleşirdi; bugün işletme kapısı onları
+  // "gücü yok" diye durdurur (FEAD kural 42) — örnek yine ÇÖZÜLEMEZ. Göç
   // ancak idMap TAMAMLANDIKTAN sonra yapılabilir (çözücü düğümü de aynı
   // döngüde kuruluyor), bu yüzden döngünün İÇİNDE değil, burada.
   kuruldu.forEach(function(n){
@@ -8549,9 +8590,19 @@ function veFeadSolve(nodeId){
     if(node) _feadRedraw(node);
     return null;
   }
+  // İŞLETME GİRDİSİ EKSİKSE HESAP KOŞULMAZ (fead-model.js → build.isletme).
+  // Eskiden koşuyordu: silindir 6'ya, eksik aksesuar gücü 0 kW'a düşüyordu ve
+  // on özet kartı sonuç gibi basılıyordu. Geometri kartta zaten çözülü;
+  // işletme hesabının eksiği bildirimde, pencerede ve panelde AYNI metinle.
+  if(build.isletme && !build.isletme.ok){
+    if(typeof showToast === 'function')
+      showToast('Hesaplanmadı — ' + veFeadIsletmeMetni(build.isletme), 'warning');
+    if(node) _feadRedraw(node);
+    return null;
+  }
   var res = veFeadAnalyze(build, {
     rows: veFeadDutyRows(node),
-    cylinders: _feadNum(node && node.data && node.data.cylinders, 6),
+    cylinders: _feadNum(node && node.data && node.data.cylinders, NaN),
     // Burulma modelinin krank serbestliği kasnağın değil KRANK MİLİNİN ataletini
     // ister; panel bu sayıyı zaten soruyor (bkz. veFeadTorsionalOpt).
     crankInertia: _feadNum(node && node.data && node.data.crankInertia, 0),
@@ -8716,7 +8767,8 @@ function veFeadResultCard(R, node){
 // TAŞIYAN kasnaklardan (gerginlik oranı ≥ VE_FEAD_SLIP_LOADED_RATIO) —
 // raporun `_frMinSF`'i ve özet kartlarıyla AYNI küme. Oran ≈ 1 olan bir
 // avarada SF bir marj değil o sarım açısının KAPASİTESİDİR; tabloyu eskiden
-// bu ayrım olmadan tarıyorduk. Hiç yük taşıyan yoksa bütün kasnaklar.
+// bu ayrım olmadan tarıyorduk. Hiç yük taşıyan yoksa hüküm YOK — avaranın
+// kapasitesi bir marj değildir (bir dönem bütün kasnaklara düşülüyordu).
 //
 // Metinlerin geçmişi: bir dönem "tasarım gerginliğini yükseltin" diyordu;
 // tasarım gerginliği 2026-08-25'te GİRDİ OLMAKTAN ÇIKTI (yay dengesinden
@@ -8730,11 +8782,10 @@ function veFeadResultVerdicts(R){
   A.duty.forEach(function(d){
     (d.slip || []).forEach(function(x, i){ if(_feadNum(x.tensionRatio, 0) >= esik) yuklu[i] = true; });
   });
-  var herhangi = Object.keys(yuklu).length > 0;
   var enKucukSF = Infinity, enKucukRpm = null;
   A.duty.forEach(function(d){
     (d.slip || []).forEach(function(x, i){
-      if(herhangi && !yuklu[i]) return;
+      if(!yuklu[i]) return;
       if(x.SF < enKucukSF){ enKucukSF = x.SF; enKucukRpm = d.engineRpm; }
     });
   });

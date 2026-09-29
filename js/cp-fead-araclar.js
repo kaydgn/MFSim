@@ -135,10 +135,16 @@ function veFeadAraclarDurum(){
   var R = st && st.R;
   var kasnak = _feadAracKasnakSay();
   var modelOk = !!(build && build.ok);
+  // İŞLETME GİRDİSİ (motor künyesi · tahrik oranı · aksesuar gücü) köprünün
+  // TEK kaynağından: pencere, bildirim ve çözücü paneli aynı cümleyi yazar.
+  var isl = build && build.isletme;
+  var islOk = !(isl && !isl.ok);
   var neden = !solver ? 'Çözücü yok.'
     : !modelOk ? (kasnak ? 'Model eksik — kasnak konumlarını tamamlayın.'
                          : 'Henüz kasnak yok — modeli sihirbazla kurun.')
-    : (satir > 0 ? '' : 'Çalışma çevrimi boş — Ayarlar\'dan en az bir satır girin.');
+    : !(satir > 0) ? 'Çalışma çevrimi boş — Ayarlar\'dan en az bir satır girin.'
+    : !islOk ? veFeadIsletmeMetni(isl) + ' — Ayarlar\'dan tamamlayın.'
+    : '';
   // Özet kartları yalnız bu modelin sonucu varken (BAYAT sonuç da gösterilir —
   // sayı gizlenmez, çip bayatlığını yanında söyler; kural 10).
   var kpi = [];
@@ -163,7 +169,7 @@ function veFeadAraclarDurum(){
     solverId: solver ? solver.id : null, raporId: rapor ? rapor.id : null,
     sihirbazId: sih ? sih.id : null, kayisId: kayis ? kayis.id : null,
     kasnak: kasnak, modelOk: modelOk, satir: satir,
-    hazir: !!(solver && modelOk && satir > 0), neden: neden,
+    hazir: !!(solver && modelOk && satir > 0 && islOk), neden: neden,
     durum: st || { k: 'yok' }, kpi: kpi,
     raporTur: (rapor && typeof veFeadReportKind === 'function') ? veFeadReportKind(rapor) : 'detailed',
     sonucVar: !!(R && R.ok),

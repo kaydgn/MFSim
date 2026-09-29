@@ -767,19 +767,24 @@ var veFeadSignals = (function() {
     var ters = !!(ten && ten.ok === false);
 
     // 1) Kayma
+    // YALNIZ YÜK TAŞIYAN KASNAKLAR. "Hiç yük taşıyan yoksa bütün kasnaklar"
+    // yedeği vardı ve gücü sıfır bir modelde avaranın capstan KAPASİTESİNİ
+    // emniyet diye basıyordu (ölçüldü: gergiden 1,24). Yük yoksa hüküm de yok.
     var m = { v: Infinity, rpm: NaN, i: -1 };
     rows.forEach(function(d) {
       (d.slip || []).forEach(function(s, i) {
-        var yuk = Object.keys(loaded).length ? loaded[i] : true;
         var v = _num(s.SF);
-        if(yuk && v < m.v) { m.v = v; m.rpm = _num(d.engineRpm); m.i = i; }
+        if(loaded[i] && v < m.v) { m.v = v; m.rpm = _num(d.engineRpm); m.i = i; }
       });
     });
     var sfIst = _num(R.serviceFact);
     if(ters) {
       out.push({ k: 'kayma', ad: 'Kayma emniyeti', deger: '—', birim: '', durum: 'no',
                  not: 'Gergi kayışın GERGİN tarafında — kayma emniyeti hüküm vermez' });
-    } else if(isFinite(m.v)) {
+    } else if(!isFinite(m.v)) {
+      out.push({ k: 'kayma', ad: 'Kayma emniyeti', deger: '—', birim: '', durum: 'wait',
+                 not: 'Yük taşıyan kasnak yok — aksesuar gücü girilmeden hüküm verilmez' });
+    } else {
       var d1 = m.v < 1 ? 'no' : ((sfIst > 0 && m.v < sfIst) ? 'warn' : 'ok');
       // Birim YOK: SF boyutsuz bir oran; kartta "×" başıboş bir harf gibi okunuyordu.
       out.push({ k: 'kayma', ad: 'Kayma emniyeti (en düşük)', deger: _tr(m.v, 2), birim: '', durum: d1,

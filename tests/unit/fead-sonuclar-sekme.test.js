@@ -47,6 +47,9 @@ global.veAccInterpCurve = veAccInterpCurve;
 });
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
+// ÖRNEKLER MOTORLU: bu dosya örnekleri ÇÖZÜYOR ve Gates örnekleri motorun devir
+// sınırlarını taşımıyor — işletme hesabı onlarsız yapılmaz (tests/helpers/fead-motor.js).
+require('../helpers/fead-motor').motorluOrnekler(M);
 Object.keys(TR).forEach((k) => { global[k] = TR[k]; });
 global.veFeadBrief = require('../../js/fead-brief.js');
 global.veFeadSignals = require('../../js/fead-signals.js');

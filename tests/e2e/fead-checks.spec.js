@@ -17,6 +17,7 @@
  * birim testinden geçer, tarayıcıda sessizce boş kart bırakırdı.
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 test.setTimeout(180000);
 
 async function bootApp(page) {
@@ -32,6 +33,9 @@ async function bootApp(page) {
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 42) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
 }
 
 async function openFeadWithExample(page) {

@@ -194,6 +194,13 @@ function veFeadCheckRatioWindow(build, opt){
 //     motor governed                     → maksimum SÜREKLİ
 //     motor overspeed                    → maksimum ANLIK     (geçici aşım)
 // Bilinmeyen devir noktası atlanır; hiçbiri bilinmiyorsa satır 'wait' olur.
+//
+// EKSİK NOKTA "UYGUN" SAYILMAZ (2026-09-29). Aksesuarın bir sınırı var ama o
+// sınırın karşılaştırılacağı motor devri girilmemişse (sürekli ↔ governed,
+// anlık ↔ overspeed) hüküm 'wait'tir. Eskiden bilinen tek nokta — çoğu zaman
+// çevrim tepesi — geçince kapı "uygun" diyordu: motor künyesi boş bir örnekte
+// ölçüldü, oysa en sıkı iki nokta hiç denetlenmemişti. Bilinen bir İHLAL yine
+// 'no'dur: eksik veri bir ihlali örtmez.
 function veFeadCheckSpeedLimit(build, opt){
   opt = opt || {};
   var out = { ok: null, durum: 'wait', rows: [], note: '' };
@@ -234,6 +241,9 @@ function veFeadCheckSpeedLimit(build, opt){
       noktalar.push({ ad: 'overspeed', motorRpm: over, accRpm: vOver,
                       limit: peak, limitAd: 'anlık', ok: vOver <= peak });
     if(!noktalar.length) continue;
+    var eksik = [];
+    if(cont > 0 && !Number.isFinite(vGov))  eksik.push('governed');
+    if(peak > 0 && !Number.isFinite(vOver)) eksik.push('overspeed');
 
     var kritik = null;
     noktalar.forEach(function(p){
@@ -244,15 +254,22 @@ function veFeadCheckSpeedLimit(build, opt){
       i: i, ad: _fcName(build, i), key: lim.key, model: lim.ad,
       maxContRpm: cont, maxPeakRpm: peak, noktalar: noktalar,
       kritik: kritik, ok: noktalar.every(function(p){ return p.ok; }),
-      payPct: kritik.payPct
+      payPct: kritik.payPct, eksik: eksik
     });
   }
   if(!out.rows.length){
     out.note = 'Devir sınırı bilinen aksesuar ya da karşılaştırılacak motor devri yok.';
     return out;
   }
-  out.ok = out.rows.every(function(r){ return r.ok; });
-  out.durum = out.ok ? 'ok' : 'no';
+  var ihlal = out.rows.some(function(r){ return !r.ok; });
+  var eksikAd = {};
+  out.rows.forEach(function(r){ r.eksik.forEach(function(e){ eksikAd[e] = 1; }); });
+  var eksikler = Object.keys(eksikAd);
+  if(ihlal){ out.ok = false; out.durum = 'no'; }
+  else if(eksikler.length){
+    out.ok = null; out.durum = 'wait';
+    out.note = 'Motorun ' + eksikler.join(' ve ') + ' devri girilmedi — o noktadaki sınır denetlenmedi.';
+  } else { out.ok = true; out.durum = 'ok'; }
   return out;
 }
 
