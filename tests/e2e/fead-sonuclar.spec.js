@@ -16,6 +16,7 @@
  *     örterdi — ölçüldü: 1600 px ekranda 380 px).
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 test.setTimeout(180000);
 
 async function feadCoz(page, boy) {
@@ -34,6 +35,9 @@ async function feadCoz(page, boy) {
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 120000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   await page.waitForTimeout(300);
   await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); });

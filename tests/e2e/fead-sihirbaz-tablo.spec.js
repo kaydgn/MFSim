@@ -16,6 +16,7 @@
  * uyarı basıyordu).
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 test.setTimeout(180000);
 
 test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', async ({ page }) => {
@@ -32,6 +33,9 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
 
   // FEAD alt topolojisi — açılışta BOŞ Kayış Yolu kartı + kutusuz araç
   // düğümleri gelir, VE SİHİRBAZ AÇILIR (tablo 2026-09-26'dan beri kartın

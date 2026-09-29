@@ -1554,14 +1554,26 @@ function _gfSec9(){
     + 'devir sınırlarını ve birinci kademe çaplarını</strong> yazar; kasnak koordinatlarına ve '
     + 'kayışa <strong>dokunmaz</strong>. Devir sınırları ve güç eğrisi seçicinin hemen altındadır — '
     + 'seçimin getirdiği şey aynı sekmede görünür. Aksesuarlarda <em>Devir sınırları</em> ve '
-    + '<em>Güç eğrisi</em> ayrı sekmelerdir ve aksesuarın kendisininkini taşır.</p>';
+    + '<em>Güç eğrisi</em> ayrı sekmelerdir ve aksesuarın kendisininkini taşır. Tahrik düzenini '
+    + 'açıkça seçtiyseniz (örneğin doğrudan tahrik) motor kaydı onu <strong>ezmez</strong>.</p>';
+  h += _gfUyari('Silindir sayısı, rölanti ve governed ZORUNLUDUR',
+      'İşletme hesabı — çevrim boyunca gerilme, hubload, kayma emniyeti, ömür, geçici rejim '
+    + 'senaryosu — bu üç alan olmadan <strong>yapılmaz</strong>: <strong>Hesapla</strong> pasif '
+    + 'kalır ve pencere eksiği adıyla yazar. Program bir dönem boş alanı 6 silindire, 700 '
+    + 'rölantiye düşürüp sonuç basıyordu; o sayılar hiçbir motorun değildi. Kayış yolu, sarım, '
+    + 'kayış boyu ve gergi statiği motordan bağımsızdır ve her zaman çözülür. Gates örnekleri '
+    + 'motorun devir sınırlarını taşımaz (raporlarında yok) — örnekle başladıysanız motoru '
+    + 'katalogdan seçin ya da alanları girin. Bu kılavuzun sahnelerindeki örnekte devir '
+    + 'sınırları katalogdaki <strong>ISL8.9E3 375</strong> kaydından alındı.');
   h += _gfAlanTablo('Sürücünün üç devir sınırı', [
     ['Rölanti', 'Motorun boştaki devri',
-      'Çalışma çevriminin alt ucu; geçici rejim senaryosunun başlangıcı'],
+      'Çalışma çevriminin alt ucu; geçici rejim senaryosunun başlangıcı. <strong>Zorunlu</strong>'],
     ['Governed', 'Yük altındaki azami devir',
-      'Aksesuar <strong>çevrim oranı penceresi</strong> kapısı bu devirde ölçülür (Bölüm 11.5)'],
+      'Aksesuar <strong>çevrim oranı penceresi</strong> kapısı bu devirde ölçülür (Bölüm 11.5). '
+      + '<strong>Zorunlu</strong>'],
     ['Overspeed', 'Anlık aşım devri',
-      'Aksesuar <strong>anlık maksimum</strong> kapısı bu devirde ölçülür']
+      'Aksesuar <strong>anlık maksimum</strong> kapısı bu devirde ölçülür; boşsa o kapı '
+      + '“değerlendirilemedi” der, “uygun” demez']
   ], ['Sınır', 'Nedir', 'Nereye girer']);
   h += _gfNot('“No load governed” sorulmuyor',
       'Katalogda duruyor ve künye seçilince modele yazılıyor — ama onu <em>okuyan</em> '
@@ -1616,7 +1628,9 @@ function _gfSec9(){
     'Satıra <strong>devir</strong>, o devirde geçirilen <strong>%zaman</strong> ve kayış '
       + '<strong>sıcaklığını</strong> yazın.',
     'Aksesuar sütunlarına o devirdeki <strong>kW</strong> değerlerini girin. Boş bıraktığınız '
-      + 'hücre, o aksesuarda model ya da güç eğrisi varsa eğriden dolar; yoksa 0 sayılır.',
+      + 'hücre, o aksesuarda model ya da güç eğrisi varsa eğriden dolar; yoksa '
+      + '<strong>Hesapla pasif kalır</strong> ve pencere o aksesuarı adıyla yazar — gücü '
+      + 'bilinmeyen bir aksesuar sıfır kW sayılmaz.',
     'Bütün devir noktalarını girdikten sonra <strong>%zaman toplamının 100</strong> olduğunu '
       + 'doğrulayın.'
   ]);
@@ -1653,8 +1667,9 @@ function _gfSec10(){
       + 'gerginliği ve “Geometri: çözüldü” satırı.',
     'Bir satır sarı ise o eksiği giderin. “Geometri: çözülemedi” yazıyorsa altındaki sebep '
       + 'kutusunu okuyun.',
-    'Model tamamsa ve en az bir devir noktası girdiyseniz FEAD araçları penceresindeki '
-      + '<strong>Hesapla</strong> etkinleşir; pasifken üstüne gelince sebebini yazar. Basın '
+    'Model tamamsa, en az bir devir noktası, <strong>motor künyesi</strong> (silindir · '
+      + 'rölanti · governed) ve <strong>her aksesuarın gücü</strong> girildiyse FEAD araçları '
+      + 'penceresindeki <strong>Hesapla</strong> etkinleşir; pasifken altında sebebi yazar. Basın '
       + '(Çözücü penceresinin sağ sütunundaki düğme de aynı işi yapar).',
     'Çözüm bölümünün durumu <strong>Güncel</strong> olur ve dört özet kartı belirir: kayma '
       + 'emniyeti, gergi tarafı, ankraj ve burulma. Bir hata varsa sebep aynı yerde yazılır.'
@@ -1663,6 +1678,15 @@ function _gfSec10(){
     ['Model veya çevrim eksik', 'Geometri çözülmedi ya da hiç devir noktası yok',
       'Algılanan model tablosundaki sarı satırı giderin; çalışma çevrimine en az bir satır '
       + 'ekleyin'],
+    ['Motor künyesi eksik', 'Silindir sayısı, rölanti ya da governed girilmedi',
+      'Sürücü kasnağın <em>Motor</em> sekmesinde motoru katalogdan seçin ya da alanları elle '
+      + 'girin (Bölüm 9.2)'],
+    ['Aksesuar gücü yok', 'Bir aksesuarın ne kayıtlı kW’ı ne kendi eğrisi ne katalog modeli var',
+      'Aksesuarın <em>Rol</em> sekmesinden model seçin ya da <em>Çevrim</em> tablosuna o '
+      + 'devirlerdeki kW’ı girin'],
+    ['Tahrik oranı çözülemedi', 'Ara kademe seçili ama iki çaptan biri eksik',
+      'Sürücünün <em>Motor</em> sekmesinde krank ve kademe kasnağı çapını girin ya da doğru '
+      + 'tahrik düzenini seçin'],
     ['Kasnak sayısı yetersiz', 'Kayış Tablosu’nda üçten az satır var',
       'Tablonun <strong>＋ Kasnak ekle</strong> listesinden eksikleri ekleyin'],
     ['Sürücü kasnak yok', 'Hiçbir kasnakta sürücü rolü işaretli değil',
@@ -1968,6 +1992,7 @@ function _gfSec13(){
 // dönünce o zarf çöktü (bkz. fead-model.js "MONTAJ ZARFI KALKTI") — kol
 // çalışma açısı artık kol boyu ve yay künyesiyle aynı sınıftan, gerginin
 // montaj verisinden okunan bir GİRDİ. Silmek modeli çözülemez yapardı.
+var VE_GF_MOTOR = '57RS303252';   // ISL8.9E3 375 — 700 · 2100 · 2900 RPM
 function _gfOrnekCoz(){
   if(typeof veFeadExampleNodes !== 'function' || typeof veFeadBuildSystem !== 'function'
      || typeof componentDefs === 'undefined')
@@ -1986,6 +2011,18 @@ function _gfOrnekCoz(){
   });
   if(!gergi || !kayis || !cozucu) return null;
 
+  // MOTOR KÜNYESİ KATALOGDAN — yalnız DEVİR SINIRLARI. Gates raporu motorun
+  // rölanti/governed/overspeed devrini basmıyor ve işletme hesabı onlarsız
+  // yapılmaz (fead-model.js → veFeadIsletmeEksik); sahneler çözülmüş hâli
+  // göstersin diye kullanıcının yapacağı adım yapılıyor ve 9.2 bunu SÖYLÜYOR.
+  // Kademe çapları YAZILMAZ: örneğin doğrudan tahrikini değiştirirdi. Gates'le
+  // karşılaştırılan sayıların hiçbiri (çevrim devirlerindeki gerilme, hubload,
+  // boy) bu devirlere bağlı değil.
+  var _m = (typeof veFeadEngineOf === 'function') ? veFeadEngineOf(VE_GF_MOTOR) : null;
+  if(_m) ['idleRpm', 'governedRpm', 'overspeedRpm'].forEach(function(k){
+    if(!(Number(cozucu.data[k]) > 0) && _m[k] != null) cozucu.data[k] = _m[k];
+  });
+
   delete kayis.data.effLength;
 
   var build;
@@ -1996,7 +2033,7 @@ function _gfOrnekCoz(){
   try {
     R = veFeadAnalyze(build, {
       rows: veFeadDutyRows(cozucu),
-      cylinders: Number(cozucu.data.cylinders) || 6,
+      cylinders: Number(cozucu.data.cylinders),
       crankInertia: Number(cozucu.data.crankInertia) || 0,
       fatigueModel: cozucu.data.fatigueModel || 'PK-2_2p-MT3',
       accelRpmS: Number(cozucu.data.accelRpmS),

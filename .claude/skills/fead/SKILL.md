@@ -990,6 +990,42 @@ olurdu.
     (ölçüldü: 12 örneğin pencerelerinde 590 not → 135). Kapı: kural 26'nın
     kapıları + `fead-pencere-ailesi.test.js`.
 
+46. **İŞLETME HESABI MOTOR VE AKSESUAR OLMADAN YAPILMAZ** (2026-09-29,
+    kullanıcı bildirimi: *"program motor ve aksesuar seçmeden hesap yapıyor …
+    Bu bir hata."*). İki sınıf sonuç: GEOMETRİ ve gergi statiği her zaman
+    çözülür; İŞLETME (gerilme, hubload, kayma, ömür, senaryo) dört girdiden
+    türer ve biri eksikken hesap KOŞMAZ — üretilen sayı bir varsayım olurdu.
+    • **TEK KAYNAK köprüde:** `build.isletme = {ok, eksik:[{grup, alan, ad}]}`,
+      `veFeadBuildSystem` sarmalayıcısı HER dönüş yolunda yazar
+      (`veFeadIsletmeEksik`). Gruplar: **motor** (silindir · rölanti · governed
+      > rölanti; overspeed İSTENMEZ — devir sınırı kapısı onsuz `'wait'`),
+      **oran** (tahrik oranı çözülüyor), **aksesuar** (yük taşıyan her kasnağın
+      her devirde bir güç kaynağı: kayıtlı kW → kendi eğrisi → katalog),
+      **çevrim** (≥1 devir). Metin tek üreticiden (`veFeadIsletmeMetni`).
+    • Okuyanlar aynı hükmü verir: `veFeadSolve` koşmaz ve bildirir; FEAD
+      araçları penceresi (sebep + eksiğin sekmesi) ile çözücü paneli
+      Hesapla'yı pasifler; sürücünün Motor çipi ve aksesuarın güç çipi
+      "işletme hesabı yapılmaz" der (kural 42'nin penceresi);
+      kart haritasız çizer, eksik lejantın yerinde (`data-ve="isletme-eksik"`),
+      oran çözülmediyse dönmez; senaryo `null`; sihirbazın 5. adımı kırmızı ve
+      alt bilgi "işletme hesabı bekliyor" — model yine KURULABİLİR.
+    • **VARSAYILAN UYDURULMAZ:** silindir 6 · rölanti 700 · tepe 2500 kalktı.
+      `veFeadAnalyze` silindiri seçenekten, yoksa modelin alanından okur; boşsa
+      hata. Zorunlu alanın yer tutucusu `zorunlu` der — kural 43'ün "varsayılan
+      değeriyle yazılır"ı yalnız GERÇEKTEN varsayılanı olan alan içindir.
+    • Senaryonun yükü kararlı çözümün kaynak sırasından (`veFeadKwAt`).
+      Kayma hükmü YALNIZ yük taşıyan kasnaktan — "hiç yoksa bütün kasnaklar"
+      yedeği üç yerde kalktı (özet · `_frMinSF` · pencere hükmü).
+    • Motor kataloğu ETKİN sabit oranı ezmez (`veFeadEngineApply` kipin adına
+      değil `veFeadDriveRatio`'ya bakar) — motor seçmek zorunlu, oran kaymamalı.
+    • Örneğe motor sayısı YAZILMAZ (kural 19 — Gates raporlarında yok). Örneği
+      çözen test katalog kaydının yalnız DEVİR SINIRLARINI yardımcıyla yazar
+      (`tests/helpers/fead-motor.js`); kılavuzun sahnesi de öyle ve 9.2 söyler.
+    • Krank mili ataleti bu kuralın DIŞINDA: arşiv medyanı belgelenmiş
+      varsayılan (kılavuz 9.4, künyeye yazılır).
+    Kapılar: `fead-isletme.test.js` · `fead-transient.test.js` → *"VARSAYILAN
+    YOK"* · `fead-wizard.test.js` → *"ray gerçekten yanıyor"*.
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.

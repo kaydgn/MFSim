@@ -63,6 +63,9 @@ global.componentDefs = componentDefs;
 eval(loadSource('fead-belts.js'));
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
+// ÖRNEKLER MOTORLU: bu dosya örnekleri ÇÖZÜYOR ve Gates örnekleri motorun devir
+// sınırlarını taşımıyor — işletme hesabı onlarsız yapılmaz (tests/helpers/fead-motor.js).
+require('../helpers/fead-motor').motorluOrnekler(M);
 Object.keys(fead).forEach((k) => { if (global[k] === undefined) global[k] = fead[k]; });
 
 function _pivotFromArm(td) {

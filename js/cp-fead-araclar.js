@@ -119,6 +119,17 @@ function _feadAracKasnakSay(){
   }).length;
 }
 
+// İŞLETME EKSİĞİNİN YERİ — ilk eksik grubun girildiği pencere: motor künyesi
+// ve tahrik sürücü kasnağın "Motor" sekmesinde, çevrim "Çevrim" sekmesinde
+// (kural 42), aksesuar modeli aksesuarın "Rol" sekmesinde (kural 44).
+function _feadAracIsletmeYeri(isl){
+  var g = ((isl && isl.eksik) || [])[0];
+  var grup = g ? g.grup : '';
+  if(grup === 'aksesuar') return ' — aksesuarın “Rol” sekmesinden model seçin ya da sürücü kasnağın “Çevrim” sekmesine kW girin.';
+  if(grup === 'cevrim')   return ' — sürücü kasnağın “Çevrim” sekmesinden en az bir satır girin.';
+  return ' — sürücü kasnağın “Motor” sekmesinden tamamlayın.';
+}
+
 // Pencerenin okuduğu her şey tek nesnede. Hesaplanan hiçbir şey burada
 // ÜRETİLMEZ: hüküm, çip, kartlar ve kapılar modülün kendi çağrılarından.
 function veFeadAraclarDurum(){
@@ -135,10 +146,16 @@ function veFeadAraclarDurum(){
   var R = st && st.R;
   var kasnak = _feadAracKasnakSay();
   var modelOk = !!(build && build.ok);
+  // İŞLETME GİRDİSİ (motor künyesi · tahrik oranı · aksesuar gücü) köprünün
+  // TEK kaynağından: pencere, bildirim ve çözücü paneli aynı cümleyi yazar.
+  var isl = build && build.isletme;
+  var islOk = !(isl && !isl.ok);
   var neden = !solver ? 'Çözücü yok.'
     : !modelOk ? (kasnak ? 'Model eksik — kasnak konumlarını tamamlayın.'
                          : 'Henüz kasnak yok — modeli sihirbazla kurun.')
-    : (satir > 0 ? '' : 'Çalışma çevrimi boş — sürücü kasnağın “Çevrim” sekmesinden en az bir satır girin.');
+    : !(satir > 0) ? 'Çalışma çevrimi boş — sürücü kasnağın “Çevrim” sekmesinden en az bir satır girin.'
+    : !islOk ? veFeadIsletmeMetni(isl) + _feadAracIsletmeYeri(isl)
+    : '';
   // Özet kartları yalnız bu modelin sonucu varken (BAYAT sonuç da gösterilir —
   // sayı gizlenmez, çip bayatlığını yanında söyler; kural 10).
   var kpi = [];
@@ -163,7 +180,7 @@ function veFeadAraclarDurum(){
     solverId: solver ? solver.id : null, raporId: rapor ? rapor.id : null,
     sihirbazId: sih ? sih.id : null, kayisId: kayis ? kayis.id : null,
     kasnak: kasnak, modelOk: modelOk, satir: satir,
-    hazir: !!(solver && modelOk && satir > 0), neden: neden,
+    hazir: !!(solver && modelOk && satir > 0 && islOk), neden: neden,
     durum: st || { k: 'yok' }, kpi: kpi,
     raporTur: (rapor && typeof veFeadReportKind === 'function') ? veFeadReportKind(rapor) : 'detailed',
     sonucVar: !!(R && R.ok),

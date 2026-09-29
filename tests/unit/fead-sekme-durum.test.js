@@ -229,7 +229,7 @@ describe('SÜRÜCÜ — motor ve çevrim DEPODAN (2026-09-28)', () => {
     expect(document.activeElement.id).toBe('ve-fead-idleRpm-ex-solver');
   });
 
-  test('ANLAŞMA — ara kademe çapsız: Motor eksik ⇔ köprünün oranı çözülmemiş (1 alınıyor)', () => {
+  test('ANLAŞMA — ara kademe çapsız: Motor eksik ⇔ köprünün oranı çözülmemiş (işletme hesabı yapılmaz)', () => {
     ornek();
     // Örnek eski kaydın `driveRatio: 1`ini taşıyor ve köprü çapsız ara
     // kademede ona düşüyor; yeni bir modelde o alan yok.
@@ -238,7 +238,11 @@ describe('SÜRÜCÜ — motor ve çevrim DEPODAN (2026-09-28)', () => {
     expect(kopru().drive.ok).toBe(false);
     const D = durum('ex-FAN').mot;
     expect(D.d).toBe('eksik');
-    expect(D.neden).toMatch(/oran 1 alınıyor/);
+    // Oran 1 VARSAYILMAZ (FEAD kural 46): köprünün hazırlık listesi oranı
+    // eksik sayar ve sekme aynı sebebi söyler.
+    expect(kopru().isletme.eksik.map((e) => e.grup)).toContain('oran');
+    expect(D.neden).toMatch(/FEAD tahriki çözülemedi.*işletme hesabı yapılmaz/);
+    expect(D.neden).not.toMatch(/oran 1 alınıyor/);
   });
 
   test('ANLAŞMA — boş çevrim: Çevrim eksik ⇔ köprü "çalışma çevrimi boş" diyor', () => {

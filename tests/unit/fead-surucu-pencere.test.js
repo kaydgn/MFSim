@@ -479,8 +479,10 @@ describe('MOTOR — sürücüde seçilir; devir sınırları ve eğri motordan',
       expect(Number(depo().data[k])).toBe(v);
       expect(Number(sekme(kap, 'mot').querySelector('#ve-fead-' + k + '-ex-solver').value)).toBe(v);
     });
-    // Senaryo rölantiyi artık motordan alıyor, varsaymıyor.
-    expect(veFeadScnInputs(kopru()).kaynak.idleVarsayilan).toBe(false);
+    // Senaryo rölantiyi motordan alıyor; varsayılanı YOK (FEAD kural 46).
+    const g = veFeadScnInputs(kopru());
+    expect(g.idleRpm).toBe(e.idleRpm);
+    expect(g.eksik).not.toContain('rölanti devri');
   });
 
   test('Güç eğrisi kartı motorun tam yük eğrisi — nokta sayısı ve değerleri katalogdan', () => {

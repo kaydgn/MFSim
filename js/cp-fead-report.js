@@ -792,11 +792,12 @@ function _frSlipStats(R){
   return out;
 }
 // Hükmü veren sayı: yük taşıyan kasnakların en düşüğü. Hiç yük taşıyan kasnak
-// yoksa (bütün güçler sıfır) global en düşüğe düşülür — orada da bir hüküm
-// vermek gerekiyor ve tek elde olan o.
+// yoksa hüküm YOK (NaN → ölçüt 'wait'). Eskiden global en düşüğe düşülüyordu:
+// gücü sıfır bir modelde avaranın KAPASİTESİ emniyet diye basılıyordu — bu
+// fonksiyonun yukarıdaki gerekçesinin reddettiği okumanın ta kendisi.
 function _frMinSF(R){
   var st = _frSlipStats(R);
-  return st.anyLoaded ? st.loadedMin : st.min;
+  return st.anyLoaded ? st.loadedMin : NaN;
 }
 function _frDutySum(R){
   var t = 0;
@@ -3291,7 +3292,7 @@ if(typeof module !== 'undefined' && module.exports){
     _frBandBlock: _frBandBlock,
     VE_FR_SEC_BELTLEN: VE_FR_SEC_BELTLEN,
     _frF: _frF, _frFs: _frFs, _frPct: _frPct, _frEsc: _frEsc, _frNum: _frNum,
-    _frSlipStats: _frSlipStats,
+    _frSlipStats: _frSlipStats, _frMinSF: _frMinSF,
     _frNiceStep: _frNiceStep, _frNiceAxis: _frNiceAxis,
     VE_FR_SLIP_LOADED_RATIO: VE_FR_SLIP_LOADED_RATIO,
     VE_FEAD_REP_SECTIONS: VE_FEAD_REP_SECTIONS

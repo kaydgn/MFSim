@@ -341,9 +341,27 @@ function veFeadEngineApply(sd, key){
   });
   // Birinci kademe: iki çap da varsa oran türetilebilir; yoksa kip
   // DEĞİŞTİRİLMEZ (tek kademeli sistemde oran 1'dir ve çap sormak anlamsız).
+  //
+  // ETKİN SABİT ORAN EZİLMEZ (2026-09-29). Karar kipin ADINA değil ETKİN
+  // orana bakar (`veFeadDriveRatio`): oran çaplardan türemiyorsa — doğrudan,
+  // kranka bağlı ya da bir sayı olarak (Gates örnekleri `direct` · 1; sihirbaz
+  // onu `derive` kipine çevirip sayıyı taşıyor) — çaplar motor verisi olarak
+  // yazılır ama oran DEĞİŞMEZ. Motor künyesi zorunlu olunca örneği tamamlamak
+  // için motor seçen kullanıcı, kataloğun kademe çaplarıyla bütün devirleri
+  // sessizce kaydırırdı (ölçüldü, sihirbazdan kurulan AG00976: 1 → 1,1008;
+  // 57RS303234'te 1,215 → %21,5). Oran çözülmemişse ya da zaten çaplardan
+  // türüyorsa katalog çapları geçerli olur (katalog bir ÖNERİ, sapma yazılır).
+  var once = (typeof veFeadDriveRatio === 'function') ? veFeadDriveRatio(sd) : null;
+  var sabit = once ? !!(once.ok && once.mode !== 'derive')
+    : (sd.ratioMode === 'direct' || sd.ratioMode === 'unity' || sd.ratioMode === 'crankDirect');
   if(e.crankOD != null) sd.crankOD = e.crankOD;
   if(e.fanDriveOD != null) sd.fanOD = e.fanDriveOD;
-  if(e.crankOD != null && e.fanDriveOD != null) sd.ratioMode = 'derive';
+  if(e.crankOD != null && e.fanDriveOD != null){
+    if(!sabit) sd.ratioMode = 'derive';
+    // Sayı olarak taşınan oran artık ÇAPLA birlikte duruyor: kip `direct`e
+    // çekilmezse `derive` iki çapı görüp oranı onlardan türetirdi.
+    else if(sd.ratioMode !== 'unity' && sd.ratioMode !== 'crankDirect') sd.ratioMode = 'direct';
+  }
   return sd;
 }
 

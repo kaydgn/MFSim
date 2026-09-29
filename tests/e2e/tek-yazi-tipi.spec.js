@@ -26,6 +26,7 @@
  * build.js'ten geçiyor.
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 const path = require('path');
 const fs = require('fs');
 
@@ -242,6 +243,9 @@ test('BELGE de tek yüz — indirilen FEAD raporları arayüzün yüzünü göm�
   await page.click('.ve-module-card[data-module="fead-analysis"]');
   await page.waitForSelector('#mfsim-module-loading', { state: 'hidden', timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(800);
+  // Gates örneği motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
   await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(false); veFeadLoadExample('AG00976_GATES_2025'); });
   await page.waitForTimeout(2500);
   await page.evaluate(() => { const s = nodes.find((n) => n.type === 'fead-solver'); veFeadSolve(s.id); });
