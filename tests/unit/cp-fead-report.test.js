@@ -55,7 +55,6 @@ function coz(opts) {
   });
   R.build = build;
   R.pulleyNames = build.names;
-  R.serviceFact = (solv && solv.data && Number(solv.data.serviceFact)) || 0;
   return R;
 }
 const NODE = { id: 'rep1', type: 'fead-report', data: {} };
@@ -1373,7 +1372,6 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     });
     R.build = build;
     R.pulleyNames = build.names;
-    R.serviceFact = Number(solv.data.serviceFact) || 0;
     return R;
   }
   let RA, H8, HU, HA;
@@ -1447,9 +1445,8 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     // Global en düşük (1,23) hükmü veriyordu ve çaresi "tasarım gerginliğini
     // yükseltin" diye yazılıyordu — oysa raporun kendi §8.7'si o kasnaklarda
     // SF'nin DEĞİŞMEYECEĞİNİ söylüyor. Yani önerilen çare etkisizdi.
-    // Yukarıdaki sayılar GERÇEK yükte ölçüldü; örnek c₂ = 1,3 taşıdığı için
-    // `slip` artık tasarım yükünde (kural 48) — ölçüm `slipIsletme`den okunur.
-    // Hükmün kendisi aşağıda tasarım satırlarından (`slip`) sınanıyor.
+    // Sayılar GERÇEK yükte (`slipIsletme`); Gates örneği c₂ taşımadığı için
+    // tasarım satırları (`slip`) onlarla aynı (kural 48).
     const d0 = RA.analysis.duty[0];
     const yuklu = d0.slipIsletme.filter((s) => s.tensionRatio >= 1.01);
     const bos = d0.slipIsletme.filter((s) => s.tensionRatio < 1.01);
@@ -1475,10 +1472,8 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     const yaz = (x) => x.toFixed(2).replace('.', ',');
     expect(HU).toMatch(new RegExp(yaz(yukluMin)));
     expect(HU).toMatch(/yük taşıyan kasnaklarda en düşük/);
-    // Hüküm servis faktörünü GEÇMELİ: global en düşük alınsaydı ✗ olurdu ve
-    // "tasarım onaylanmamalıdır" hükmü kayması imkânsız bir kasnaktan gelirdi.
-    expect(yukluMin).toBeGreaterThanOrEqual(RA.serviceFact);
-    expect(globalMin).toBeLessThan(RA.serviceFact);
+    // Hüküm eşiği 1 (kural 48); yük taşıyanların en düşüğü onu geçiyor.
+    expect(yukluMin).toBeGreaterThanOrEqual(1);
     expect(H8).toMatch(new RegExp('yük taşıyan kasnaklarda\\)[\\s\\S]{0,60}' + yaz(yukluMin)));
   });
 

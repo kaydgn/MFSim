@@ -60,8 +60,17 @@ function coz(anahtar, fatModel) {
     decelRpmS: (solv && solv.data && Number(solv.data.decelRpmS)) || undefined
   });
   R.build = build; R.pulleyNames = build.names;
-  R.serviceFact = (solv && solv.data && Number(solv.data.serviceFact)) || 0;
   return R;
+}
+// YÜK TAŞIMAYANLAR EŞİĞİN ALTINDA — "kırmızı yalnız hükmü verebilen kasnakta"
+// kapılarının ısırması için. Hüküm eşiği 1 (kural 48) ve AG00976'da yük
+// taşımayanların SF'si 1,23–1,48: gerçek sayılarla kural ihlal edilse bile
+// kırmızı çıkmazdı. Kopya yalnız o kasnakların SF'sini 0,9'a indirir; oranları
+// (< 1,01) yerinde kalır, yani hâlâ yük taşımıyorlar.
+function bosAlta(R0) {
+  return Object.assign({}, R0, { analysis: Object.assign({}, R0.analysis, {
+    duty: R0.analysis.duty.map((d) => Object.assign({}, d, {
+      slip: d.slip.map((x) => (x.tensionRatio < 1.01 ? Object.assign({}, x, { SF: 0.9 }) : x)) })) }) });
 }
 const NODE = { id: 'rep1', type: 'fead-report', data: { docNo: 'X-1', revision: 'A' } };
 
@@ -677,16 +686,17 @@ describe('kozmetik — okunabilirlik kararları', () => {
   // birden kırmızıya boyuyordu. Ama sayfanın kendi hükmü "yük taşımayanlarda
   // o sayı bir marj değil KAPASİTEDİR" diyor — vurgu metnin tersini bağırdı.
   test('kırmızı yalnız hükmü VEREBİLEN kasnakta', () => {
-    const s5 = SU._fsrSheet6(R, NODE);
+    const Ra = bosAlta(R);
+    const s5 = SU._fsrSheet6(Ra, NODE);
     const blok = s5.slice(s5.indexOf('Kayma emniyet faktörü'), s5.indexOf('Kaburga Yorulma'));
     expect(blok).toContain('yük taşımaz');
     expect(blok).toContain('class="pas"');
-    const st = RP._frSlipStats(R);
+    const st = RP._frSlipStats(Ra);
     expect(st.idle.length).toBeGreaterThan(0);            // AG00976'da üç tane
-    // KAPININ ISIRDIĞI YER: yük taşımayanların en az biri servis faktörünün
-    // ALTINDA (gergi: 1,23 < 1,30). Eski kural onu kırmızı basıyordu — yani
-    // hükmü veremeyecek bir sayı belgeye "başarısız" diye giriyordu.
-    expect(st.idle.some((x) => x.SF < R.serviceFact)).toBe(true);
+    // KAPININ ISIRDIĞI YER: yük taşımayanlar eşiğin (1) ALTINDA. Eski kural
+    // onları kırmızı basıyordu — yani hükmü veremeyecek bir sayı belgeye
+    // "başarısız" diye giriyordu.
+    expect(st.idle.every((x) => x.SF < 1)).toBe(true);
     const kirmizi = (blok.match(/class="bad"/g) || []).length;
     expect(kirmizi).toBe(0);                              // yük taşıyanların hepsi geçiyor
     expect(blok).toMatch(/marj değil kapasitedir/);
@@ -742,7 +752,7 @@ describe('şekiller — ortak çizici kapıları', () => {
   // Sağ pay 30 px'te SABİTTİ: "14,95" gibi bir etiket viewBox'ı 10 px aşıp
   // kırpılıyordu (ölçüldü, özet rapor sayfa 5).
   test('kayma grafiğinde değer etiketi viewBox içinde', () => {
-    const svg = RP.veFeadFigureRaw(RP._frSlipFigure, R, 780, 215, R.serviceFact);
+    const svg = RP.veFeadFigureRaw(RP._frSlipFigure, R, 780, 215, 1);
     const o = svgOl(svg);
     const et = [...svg.matchAll(/<text x="([\d.]+)"[^>]*font-size="11\.5"[^>]*>([^<]+)</g)];
     expect(et.length).toBeGreaterThanOrEqual(4);
@@ -753,10 +763,11 @@ describe('şekiller — ortak çizici kapıları', () => {
   // Gerginlik oranı ~1,00 olan kasnakta SF bir marj değil KAPASİTEDİR;
   // kırmızı basmak "başarısız" demek olur ve sayfanın kendi hükmüyle çelişir.
   test('kayma grafiğinde kırmızı yalnız yük TAŞIYAN kasnakta', () => {
-    const svg = RP.veFeadFigureRaw(RP._frSlipFigure, R, 780, 215, R.serviceFact);
-    const st = RP._frSlipStats(R);
+    const Ra = bosAlta(R);
+    const svg = RP.veFeadFigureRaw(RP._frSlipFigure, Ra, 780, 215, 1);
+    const st = RP._frSlipStats(Ra);
     expect(st.idle.length).toBeGreaterThan(0);
-    expect(st.idle.some((x) => x.SF < R.serviceFact)).toBe(true);   // kapı ısırıyor
+    expect(st.idle.every((x) => x.SF < 1)).toBe(true);   // kapı ısırıyor
     const cubuk = [...svg.matchAll(/data-ve="sf-bar"[^>]*fill="(#[0-9a-f]{6})"/g)].map((m) => m[1]);
     expect(cubuk.length).toBe(R.build.sys.pulleys.length);
     // yük taşımayan sayısı kadar SOLUK çubuk, ve hiç kırmızı YOK

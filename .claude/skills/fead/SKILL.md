@@ -1110,6 +1110,9 @@ olurdu.
       Seçilmemişse c₂ = 1 ve "Seçilmedi" yazılır — varsayılan uydurulmaz
       (sihirbazın kaynaksız 1,3'ü kalktı); hücresiz kayıtlı sayı "kayıtlı
       değer" (BMC örneğinin kaynağı 1,3 der), 1'in altı 1'e çekilir.
+      **Örnek c₂'yi yalnız kaynağından taşır**: Gates raporları servis faktörü
+      uygulamıyor, Gates kaydı c₂ taşımaz (AG00976'nın kaynaksız 1,3'ü föyü
+      4,58 → 3,88 kaydırıyordu). Kapı: *"ÖRNEKLER c₂'yi KAYNAĞINDAN taşır"*.
     • **Araç motoru normal kalkış grubunda** (içten yanmalı > 600 d/dk);
       ekran görüntüsündeki "n up to 600 rpm" ilk grupta çeviri hatası.
     Kapı: `fead-servis-faktoru.test.js` — bağımsız yol (yükler × c₂, c₂'siz

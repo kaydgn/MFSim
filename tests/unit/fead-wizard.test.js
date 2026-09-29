@@ -2025,7 +2025,8 @@ describe('sihirbaz girdisi → topoloji bileşeni', () => {
     const sol = nodes.find((n) => n.type === 'fead-solver');
     expect(sol.data.duty.length).toBe(12);
     expect(sol.data.cylinders).toBe(6);
-    expect(sol.data.serviceFact).toBeCloseTo(1.3, 6);
+    // Gates örneği servis faktörü taşımaz (kural 48) — sihirbaz da uydurmaz.
+    expect(sol.data.serviceFact).toBeUndefined();
     // kW SÖZLÜĞÜ KANVAS KİMLİĞİNE GÖÇTÜ — `wz-` kalıntısı SESSİZ 0 kW demekti.
     Object.keys(sol.data.duty[0].kw).forEach((k) => {
       expect(k).not.toMatch(/^wz-/);

@@ -1049,11 +1049,9 @@ describe('veFeadSlipThreshold — kayma eşiği', () => {
 
   test('KAPALI FORM ↔ çekirdeği baştan koşturan iki-bölme AYNI sayıyı veriyor', () => {
     const { build, duty, solv, pack, R } = kurAG();
-    // ÖRNEK SERVİS FAKTÖRÜ TAŞIYOR (c₂ = 1,3, kural 48): bağımsız yol
-    // (`veFeadAnalyze`) kayma satırlarını TASARIM yükünde kuruyor, dolayısıyla
-    // kapalı form da aynı c₂ ile çağrılır. İki yolun buluşması hem afin tasarım
-    // gerginliğini hem eşiğin c₂ ölçeklemesini aynı anda sınıyor.
-    expect(R.servis.deger).toBe(1.3);
+    // GATES ÖRNEĞİ c₂ TAŞIMAZ (kural 48): tasarım yükü gerçek yük. Eşiğin c₂
+    // ölçeklemesinin kapısı fead-servis-faktoru.test.js → "eşik tam c₂ katı".
+    expect(R.servis).toMatchObject({ deger: 1, kaynak: 'yok' });
     const A = veFeadSlipThreshold(build, duty, R.servis.deger);
     expect(A).toBeTruthy();
 

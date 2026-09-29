@@ -2323,8 +2323,12 @@ var VE_FEAD_EXAMPLES = {
              // Yalnız FREKANS tablosunu etkiliyor: B10 (1403,032) ve tasarım
              // gerginliği (544,0497) her iki değerde de BİREBİR aynı.
              massPerRibKgM:0.0196 },
+    // SERVİS FAKTÖRÜ YOK (2026-09-29, kural 48): Gates raporu servis faktörü
+    // uygulamıyor ve yazmıyor; kayıttaki 1,3'ün kaynağı yoktu ve c₂ bir yük
+    // katsayısı olunca örneğin kayma sayılarını raporun gerçek yükünden
+    // uzaklaştırıyordu. Kullanıcı isterse Tasarım sekmesinden seçer.
     solver:{ ratioMode:'direct', driveRatio:1,
-             cylinders:6, serviceFact:1.3, crankInertia:0.70,
+             cylinders:6, crankInertia:0.70,
              // "Peak Tension & Hubload" sayfasındaki Accel. RPM/s sütunu.
              accelRpmS:1100, decelRpmS:1100,
              // EDL − REBL: raporun iki uzunluk sütunu arasındaki sabit fark.

@@ -204,11 +204,10 @@ describe('SÜRÜCÜ — motor ve çevrim DEPODAN (2026-09-28)', () => {
     expect(durum('ex-FAN').mot).toEqual({ d: 'ok', yazi: 'katalogdan' });
   });
 
-  // "Doldur" İLK BOŞ alana gitseydi Motor sekmesinde İSTEĞE BAĞLI servis
-  // faktörüne giderdi; durum eksiğin kendi alanını taşır.
+  // "Doldur" İLK BOŞ alana gitseydi iki eksik aynı anda boşken (aşağıda fanOD
+  // ile idleRpm) yanlış olanına giderdi; durum eksiğin kendi alanını taşır.
   test('Doldur eksiğin KENDİ alanına gider — isteğe bağlı boş alana değil', () => {
     ornek();
-    delete dugum('ex-solver').data.serviceFact;
     const D = durum('ex-FAN');
     expect(D.mot.hedef).toBe('ve-fead-idleRpm-ex-solver');
     dugum('ex-solver').data.idleRpm = 700;
