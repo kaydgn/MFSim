@@ -490,14 +490,24 @@ describe('uygunluk hükmü', () => {
     expect(h).toContain('değerlendirilemedi');
   });
 
-  test('servis faktörü hükümde kullanılıyor (sabit 1,3 değil)', () => {
+  // SERVİS FAKTÖRÜ SATIRLARIN İÇİNDE (kural 48): ölçüt her durumda SF ≥ 1,
+  // c₂ tasarım yükünü büyütür. Uç bir kayıtlı değer (9,9) yükü o kadar büyütür
+  // ki kayış kayar; c₂ seçimi kaldırılınca aynı model geçer.
+  test('servis faktörü hükümde kullanılıyor — yükün içinde, eşik 1', () => {
     const R = coz({ mutate: (ns) => {
       const s = ns.filter((n) => n.type === 'fead-solver')[0];
-      s.data.serviceFact = 9.9;                    // ulaşılamaz eşik
+      s.data.serviceFact = 9.9; delete s.data.servisHucre;
     } });
     const h = RP._frCompliance(R);
-    expect(h).toContain('SF ≥ 9,9');
+    expect(h).toContain('SF ≥ 1 (tasarım yükü, c₂ = 9,9)');
     expect(h).toContain('✗ Kontrol');
+    const R1 = coz({ mutate: (ns) => {
+      const s = ns.filter((n) => n.type === 'fead-solver')[0];
+      delete s.data.serviceFact; delete s.data.servisHucre;
+    } });
+    const h1 = RP._frCompliance(R1);
+    expect(h1).toContain('SF ≥ 1 (c₂ seçilmedi)');
+    expect(h1).not.toMatch(/Kayma emniyeti[^✓✗]*✗ Kontrol/);
   });
 });
 
@@ -1437,9 +1447,12 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     // Global en düşük (1,23) hükmü veriyordu ve çaresi "tasarım gerginliğini
     // yükseltin" diye yazılıyordu — oysa raporun kendi §8.7'si o kasnaklarda
     // SF'nin DEĞİŞMEYECEĞİNİ söylüyor. Yani önerilen çare etkisizdi.
+    // Yukarıdaki sayılar GERÇEK yükte ölçüldü; örnek c₂ = 1,3 taşıdığı için
+    // `slip` artık tasarım yükünde (kural 48) — ölçüm `slipIsletme`den okunur.
+    // Hükmün kendisi aşağıda tasarım satırlarından (`slip`) sınanıyor.
     const d0 = RA.analysis.duty[0];
-    const yuklu = d0.slip.filter((s) => s.tensionRatio >= 1.01);
-    const bos = d0.slip.filter((s) => s.tensionRatio < 1.01);
+    const yuklu = d0.slipIsletme.filter((s) => s.tensionRatio >= 1.01);
+    const bos = d0.slipIsletme.filter((s) => s.tensionRatio < 1.01);
     expect(yuklu.length).toBe(3);
     expect(bos.length).toBe(3);
     expect(Math.min.apply(null, yuklu.map((s) => s.SF))).toBeGreaterThan(4);
@@ -1538,7 +1551,7 @@ describe('§8.7 montaj konumu ve avara hareketi', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 describe('gerginlik grafiği · kayma eşiği çizgisi', () => {
   test('BMC: eşik çizgisi ve künyesi köprünün sayısını taşıyor', () => {
-    const A = veFeadSlipThreshold(R8.build, R8.analysis.duty);
+    const A = veFeadSlipThreshold(R8.build, R8.analysis.duty, R8.servis && R8.servis.deger);
     expect(A).toBeTruthy();
     const fig = RP._frTensionFigure(R8);
     expect((fig.match(/data-ve="slip-threshold"/g) || []).length).toBe(1);
@@ -1553,7 +1566,7 @@ describe('gerginlik grafiği · kayma eşiği çizgisi', () => {
     // Sayıyı künyeye doğru yazıp çizgiyi yanlış yere koymak SESSİZ bir kusur:
     // belge tutarlı görünür, grafik yalan söyler. Kapı, çizginin y'sini
     // grafiğin ekseninden BAĞIMSIZ olarak yeniden çözüyor.
-    const A = veFeadSlipThreshold(R8.build, R8.analysis.duty);
+    const A = veFeadSlipThreshold(R8.build, R8.analysis.duty, R8.servis && R8.servis.deger);
     const fig = RP._frTensionFigure(R8);
     const g = fig.match(/data-ve="slip-threshold"[\s\S]*?<\/g>/);
     expect(g).toBeTruthy();
@@ -1594,7 +1607,7 @@ describe('gerginlik grafiği · kayma eşiği çizgisi', () => {
 
   test('AG00976: eşik Gates\'in bastığı 157,65 N DEĞİL (kopyalanmıyor)', () => {
     const RA = coz();
-    const A = veFeadSlipThreshold(RA.build, RA.analysis.duty);
+    const A = veFeadSlipThreshold(RA.build, RA.analysis.duty, RA.servis && RA.servis.deger);
     // Gates s1 grafiğinde 157,65 N yazıyor ama KENDİ kayma sayfası (s6/12)
     // 66,6 N ima ediyor — aynı raporun iki sayfası 2,37 kat ayrışıyor. Model
     // kendi zincirinden türetiyor; basılı sayı kopyalanmıyor.

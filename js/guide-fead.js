@@ -1509,6 +1509,42 @@ function _gfSec8(){
     + 'STEP’ten kurarken 3B görüntüleyicide kayışa tıklayınca kesit şekliyle birlikte (§3.5). '
     + 'Seçilen çift aynı sekmenin ipucunda katalogla yan yana yazılır. Rapor §8.2 hesap çapını ve '
     + 'h<sub>b</sub> / h<sub>r</sub>’nin kaynağını basar; kesit figüründe hesabın çizgisi dolu ve kalındır.');
+
+  h += '<h3>8.7 Servis faktörü c<sub>2</sub> — kayma tasarım yükünde</h3>';
+  h += '<p>Kayış Özellikleri → <b>Tasarım</b> sekmesinde (sihirbazda Kayış adımında) yük katsayısı '
+    + 'tablosundan bir hücre seçilir. Seçilen <strong>c<sub>2</sub></strong> aksesuar güçlerini '
+    + '<strong>tasarım gücüne</strong> çevirir: P<sub>B</sub> = c<sub>2</sub>·P. Gerilme zinciri gergide '
+    + 'ankrajlı olduğu için tasarım yükündeki açıklık gerginlikleri '
+    + 'T<sub>B</sub> = T<sub>0</sub> + c<sub>2</sub>·(T − T<sub>0</sub>) olur (T<sub>0</sub> gerginin '
+    + 'çıkış gerginliği). Kayma emniyeti bu gerginliklerle hesaplanır ve hüküm '
+    + '<strong>SF ≥ 1</strong>’dir.</p>';
+  if(typeof VE_FEAD_SERVIS !== 'undefined'){
+    var _T = VE_FEAD_SERVIS, _bas = ['Yük sınıfı'], _hiz = ['l'];
+    _T.surucu.forEach(function(sr){
+      _T.saat.forEach(function(q){ _bas.push(sr.ad + ' · ' + q.ad + ' sa'); _hiz.push(''); });
+    });
+    h += _gfTablo('Yük katsayısı c₂ — satır tahrik edilen makine, sütun sürücü ve günlük çalışma',
+      _bas, _T.yuk.map(function(y){
+        var r = ['<strong>' + _gfE(y.ad) + '</strong> — ' + _gfE(y.ornek)];
+        _T.surucu.forEach(function(sr){
+          y.deger[sr.k].forEach(function(v){ r.push(_gfF(v, 1)); });
+        });
+        return r;
+      }), _hiz);
+  }
+  h += _gfNot('Araç motoru hangi sütun grubunda',
+      'ISO/DIN V-kayış hesabında <strong>600 d/dk üstünde</strong> çalışan içten yanmalı motor ve '
+    + 'türbin <em>normal kalkış</em> grubundadır; 600 d/dk ve altındaki <em>yüksek kalkış</em> '
+    + 'grubunda. Tablo ContiTech tasarım programının c<sub>2</sub> tablosudur; programın '
+    + 'İngilizce ekranında iki grup da <em>n up to 600 rpm</em> yazıyor — birincisindeki çeviri hatası.');
+  h += _gfNot('Neye girer, neye girmez',
+      'c<sub>2</sub> yalnız <strong>kaymayı</strong> sınar. Gerilme, hubload, ömür ve açıklık '
+    + 'frekansları gerçek yükte kalır: kayışın gerçekte gördüğü sayılardır ve tedarikçi '
+    + 'raporlarıyla satır satır karşılaştırılır. Kayma eşiği (N cinsinden en düşük ankraj) '
+    + 'tasarım yükündedir, yani tam c<sub>2</sub> katıdır. Seçim yapılmazsa '
+    + 'c<sub>2</sub> = 1’dir — tasarım yükü gerçek yüktür — ve pencere bunu <em>Seçilmedi</em> '
+    + 'diye yazar. Eski projelerden gelen, tablodan seçilmemiş bir sayı “kayıtlı değer” olarak '
+    + 'kullanılır.');
   return h;
 }
 
@@ -1607,8 +1643,6 @@ function _gfSec9(){
   h += _gfAlanTablo('Motor sekmesi — kalan alanlar', [
     ['Silindir sayısı', 'Adet', 'Ateşleme frekansını verir (dört zamanlıda '
       + 'f = devir/60 × silindir/2); açıklık rezonans kontrolünde kullanılır'],
-    ['Servis faktörü', 'Boyutsuz, tipik 1,3', 'Kayma emniyetinin istenen alt sınırı; sonuç '
-      + 'tablosunda hüküm verir. Boşsa hüküm konmaz'],
     ['İvmelenme', 'RPM/s', 'Tepe yük taramasına ve senaryo rampasına girer'],
     ['Yavaşlama', 'RPM/s', 'Aynı taramanın diğer dalı']
   ]);
@@ -1908,14 +1942,15 @@ function _gfSec11(){
     + 'sayılarıyla çelişirdi.');
   h += '<h3>11.5 Kayma emniyetini doğru okumak</h3>';
   h += '<p>Çıkış gerilmeleri tablosunun son sütunu <strong>Min SF</strong>’dir ve bütün '
-    + 'kasnakların en küçüğünü basar. Bu sayı servis faktörünün altına düştüğünde önce '
-    + '<strong>hangi kasnak</strong> olduğuna bakın.</p>';
+    + 'kasnakların en küçüğünü basar; sayılar servis faktörü c<sub>2</sub> ile tasarım '
+    + 'yükündedir (§8.7). Bu sayı 1’in altına düştüğünde önce <strong>hangi kasnak</strong> '
+    + 'olduğuna bakın.</p>';
   h += _gfUyari('Oran ≈ 1 iken emniyet faktörü bir marj değildir',
       'Avara ve gergi kasnakları kayıştan <strong>güç çekmez</strong>: giriş ve çıkış '
     + 'gerilmeleri neredeyse eşittir, yani gerginlik oranı 1’e çok yakındır. Orada emniyet '
     + 'faktörü bir <em>marj</em> değil, o sarım açısının <strong>kapasitesidir</strong> — '
-    + 'taşıyabileceği azami oran. Servis faktörü ise talebin üzerine konan bir marjdır; talep '
-    + 'yokken anlamsızdır.<br><br>'
+    + 'taşıyabileceği azami oran. Servis faktörü c<sub>2</sub> ise talebi büyütür (tasarım '
+    + 'yükü); talep yokken hiçbir şeyi değiştirmez.<br><br>'
     + 'Yük taşıyan kasnaklarda oran belirgin biçimde 1’in üstündedir ve emniyet faktörleri '
     + 'çoğunlukla iki mertebe yüksektir. <strong>Rapor hükmünü yalnız yük taşıyanların en '
     + 'küçüğünden verir</strong>; panel tablosu ise ham en küçüğü gösterir. Bölüm 14’te bu '
@@ -2348,20 +2383,23 @@ function _gfSec14(){
       return b0;
     }
     var gEn = enKucuk(hepsi), yEn = enKucuk(yuklu);
-    var sfIst = Number(O.cozucu.data.serviceFact) || 0;
+    // Satırlar TASARIM yükünde (servis faktörü c₂, kural 48): hüküm SF ≥ 1.
+    var svG = (R && R.servis) || { deger: 1, kaynak: 'yok' };
+    var c2G = (svG.kaynak !== 'yok' && typeof veFeadServisYaz === 'function')
+      ? ' tasarım yükünde (c<sub>2</sub> = ' + veFeadServisYaz(svG.deger) + ')' : '';
     if(gEn && yEn){
-      h += _gfUyari('Aynı tablodan iki farklı hüküm çıkar',
-          'Ham en küçük emniyet faktörü <strong>' + _gfFs(gEn.SF, 2) + '</strong> ve '
-        + '<strong>' + _gfE(gEn.ad) + '</strong> kasnağına ait; servis faktörü '
-        + _gfFs(sfIst, 2) + ' ile karşılaştırılırsa '
-        + (gEn.SF >= sfIst ? 'geçer' : '<strong>kalır</strong>') + '. Ama o kasnağın '
-        + 'gerginlik oranı <strong>' + _gfFs(gEn.oran, 4) + '</strong>, yani ~1: kayıştan '
-        + 'güç çekmiyor, dolayısıyla oradaki sayı bir marj değil o sarım açısının '
-        + '<strong>kapasitesidir</strong>.<br><br>'
+      h += _gfUyari('Tablonun en küçük sayısı hükmü vermez',
+          (gEn.ad !== yEn.ad
+            ? 'Ham en küçük emniyet faktörü <strong>' + _gfFs(gEn.SF, 2) + '</strong> ve '
+              + '<strong>' + _gfE(gEn.ad) + '</strong> kasnağına ait. Ama o kasnağın '
+              + 'gerginlik oranı <strong>' + _gfFs(gEn.oran, 4) + '</strong>, yani ~1: kayıştan '
+              + 'güç çekmiyor, dolayısıyla oradaki sayı bir marj değil o sarım açısının '
+              + '<strong>kapasitesidir</strong>.<br><br>'
+            : '')
         + 'Yük taşıyan kasnakların en küçüğü <strong>' + _gfFs(yEn.SF, 2) + '</strong> '
-        + '(<strong>' + _gfE(yEn.ad) + '</strong>, oran ' + _gfFs(yEn.oran, 4) + ') ve '
-        + 'servis faktörünü <strong>' + (yEn.SF >= sfIst ? 'karşılıyor' : 'karşılamıyor')
-        + '</strong>. Rapor hükmünü bu ikinci sayıdan verir. Panelde ilk sütuna değil, '
+        + '(<strong>' + _gfE(yEn.ad) + '</strong>, oran ' + _gfFs(yEn.oran, 4) + ') ve' + c2G
+        + ' SF ≥ 1 şartını <strong>' + (yEn.SF >= 1 ? 'karşılıyor' : 'karşılamıyor')
+        + '</strong>. Rapor hükmünü bu sayıdan verir. Panelde ilk sütuna değil, '
         + '<strong>gerginlik oranına</strong> bakma alışkanlığı edinin.');
     }
 
@@ -2477,13 +2515,14 @@ function _gfEkA(){
       ['Kayış tipine bağlı çıktılar anahtarı', 'Kayış Özellikleri',
         'Kayış tipine bağlı çıktılar'],
       ['FEAD tahrik düzeni / krank ve kademe çapı', 'Kasnak', 'FEAD tahriki'],
-      ['Silindir sayısı, servis faktörü, ivme, <strong>motor kataloğu</strong>',
+      ['Silindir sayısı, ivme, <strong>motor kataloğu</strong>',
         'Kasnak', 'Motor'],
       ['Motorun rölanti · governed · overspeed devri', 'Kasnak', 'Devir sınırları'],
       ['<strong>Motorun tam yük eğrisi</strong> ve FEAD’in payı', 'Kasnak', 'Güç eğrisi'],
       ['Devir, %zaman, sıcaklık, aksesuar kW, <strong>çevrim kaydı</strong>',
         'Kasnak', 'Çalışma çevrimi'],
       ['Yorulma modeli ve boy ofseti', 'Kayış Özellikleri', 'Tasarım'],
+      ['<strong>Servis faktörü c<sub>2</sub></strong> (yük katsayısı tablosu)', 'Kayış Özellikleri', 'Tasarım'],
       ['<strong>Çözümün aşamaları ve sayısal yöntemleri</strong>', 'Çözücü', 'Çözüm zinciri'],
       ['Türeyen tasarım gerginliği', 'Çözücü', 'Algılanan model'],
       ['Gergi kol konumları (altı konum)', 'Çözücü', 'Gergi konum tablosu'],

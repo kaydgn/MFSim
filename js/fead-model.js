@@ -5218,6 +5218,145 @@ function veFeadPeakInertias(build){
   return out;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  SERVİS FAKTÖRÜ c₂ — YÜK KATSAYISI (kullanıcı kararı 2026-09-29)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği: *"bu servis faktörünü kullanıcının seçimine sunacağız …
+// kullanıcı tablodaki değerlerin birini seçecek. Matematiksel hesap ona göre
+// güncellenecek."* Tablo endüstriyel kayış hesabının yük katsayısıdır
+// (ContiTech c₂; ISO/DIN V-kayış hesabının sürücü ve yük sınıfları): aksesuar
+// gücünü TASARIM GÜCÜNE çevirir, P_B = c₂·P. BMC'nin kendi hesap defteri de
+// böyle kullanıyor ("gücü servis faktörüyle çarpılıp çevresel kuvvete
+// çevriliyor", Kuvvet Hesabı · c₂ = 1,3).
+//
+// NEREYE GİRER — YALNIZ KAYMAYA. Kayma emniyeti tasarım yükünde hesaplanır ve
+// hüküm SF ≥ 1'dir. Gerilme, hubload, ömür ve frekans GERÇEK yükte kalır:
+// onlar kayışın gerçekte gördüğü sayılar ve Gates tablolarıyla satır satır
+// karşılaştırılıyor (Gates bir servis faktörü uygulamıyor). Bir dönem bu alan
+// yalnız bir EŞİKTİ (SF ≥ servis faktörü); yük katsayısını orana eşik yapmak
+// başka bir ölçüttür — tablo o anlamda yazılmadı.
+//
+// TASARIM GERGİNLİĞİ AFİN: zincir gergide ankrajlı ve her adım P/v (çekirdeğin
+// `spanTensions`i), yani bütün yükler c₂ ile çarpılınca
+//     T_B,k = T₀ + c₂·(T_k − T₀)          (T₀ = gerginin çıkış gerginliği)
+// Yaklaşım değil, zincirin kendisi — ikinci bir çekirdek çağrısı gerekmez.
+//
+// SEÇİLMEMİŞSE c₂ = 1: tasarım yükü gerçek yüktür, hüküm SF ≥ 1 — alanın boş
+// olduğu eski davranışın aynısı. Varsayılan UYDURULMAZ (kural 46); yüzeyler
+// "seçilmedi" diye yazar.
+//
+// SÜRÜCÜ SINIFI: ISO/DIN hesabında içten yanmalı motor ve türbin 600 d/dk
+// ÜSTÜNDEYSE normal kalkış grubundadır, 600 ve altındaysa yüksek kalkış
+// grubunda (MITCalc V-kayış belgesi). Kullanıcının ekran görüntüsünde iki grup
+// da "n up to 600 rpm" yazıyor — birincisindeki çeviri hatası. Araç motoru
+// birinci grupta.
+var VE_FEAD_SERVIS = {
+  surucu: [
+    { k: 'normal', ad: 'Normal kalkış', alt: 'motor > 600 d/dk',
+      tanim: 'Normal kalkış momentli sürücüler (anma momentinin 2 katına kadar): '
+        + 'yardımcı fazlı senkron motorlar; doğrudan, yıldız-üçgen ya da bilezikli '
+        + 'yolvericiyle çalışan üç fazlı motorlar; şönt DC motorlar; 600 d/dk üstü '
+        + 'içten yanmalı motorlar ve türbinler.' },
+    { k: 'yuksek', ad: 'Yüksek kalkış', alt: 'motor ≤ 600 d/dk',
+      tanim: 'Yüksek kalkış momentli sürücüler (anma momentinin 2 katından fazla): '
+        + 'yüksek kalkış momentli tek fazlı motorlar; seri ve kompund bağlı DC '
+        + 'motorlar; 600 d/dk ve altı içten yanmalı motorlar ve türbinler.' }
+  ],
+  saat: [
+    { k: '10', ad: '≤ 10' },
+    { k: '16', ad: '10–16' },
+    { k: '24', ad: '> 16' }
+  ],
+  // deger: { sürücü grubu: [≤ 10 sa, 10–16 sa, > 16 sa] }
+  yuk: [
+    { k: 'hafif', ad: 'Hafif',
+      ornek: 'Ev makineleri (mutfak aletleri, çamaşır ve kurutma makineleri) · döner '
+        + 'pompa ve kompresörler · hafif yük bant konveyörleri · 7,5 kW\'a kadar fan ve pompalar',
+      deger: { normal: [1.0, 1.1, 1.2], yuksek: [1.1, 1.2, 1.3] } },
+    { k: 'orta', ad: 'Orta',
+      ornek: 'Sac kesme makineleri · presler · ağır yük zincirli ve bantlı konveyörler · '
+        + 'titreşimli elekler · jeneratörler ve uyartım makineleri · yoğurma makineleri · '
+        + 'takım tezgâhları (torna, taşlama) · çamaşır ve baskı makineleri · 7,5 kW üstü fan ve pompalar',
+      deger: { normal: [1.1, 1.2, 1.3], yuksek: [1.2, 1.3, 1.4] } },
+    { k: 'agir', ad: 'Ağır',
+      ornek: 'Öğütme tesisleri · pistonlu kompresörler · ağır ve değişken yüklü konveyörler '
+        + '(helezon, paletli, kovalı ve küreli elevatörler) · asansörler · briket presleri · '
+        + 'tekstil ve kâğıt makineleri · pistonlu pompalar · tarama pompaları · çerçeve '
+        + 'testereler · kırıcılar',
+      deger: { normal: [1.2, 1.3, 1.4], yuksek: [1.4, 1.5, 1.6] } },
+    { k: 'cokAgir', ad: 'Çok ağır',
+      ornek: 'Yüksek zorlanmalı öğütme tesisleri · taş kırıcılar · kalenderler · '
+        + 'karıştırıcılar · vinçler ve krenler · kovalı ekskavatörler',
+      deger: { normal: [1.3, 1.4, 1.5], yuksek: [1.5, 1.6, 1.8] } }
+  ],
+  kaynak: 'ContiTech kayış tasarım programının yük katsayısı c₂ tablosu (kullanıcının '
+    + 'ekran görüntüsü, 2026-09-29); sürücü sınıfları ISO/DIN V-kayış hesabıyla aynı.'
+};
+
+// Hücre anahtarı 'yük.sürücü.saat' (ör. 'agir.normal.16'). Tanınmayan anahtar
+// null döner — yarım bir anahtar bir değer UYDURMAZ.
+function veFeadServisHucre(anahtar){
+  var p = String(anahtar || '').split('.');
+  if(p.length !== 3) return null;
+  var T = VE_FEAD_SERVIS, y = null, s = null, hi = -1, i;
+  for(i = 0; i < T.yuk.length; i++) if(T.yuk[i].k === p[0]) y = T.yuk[i];
+  for(i = 0; i < T.surucu.length; i++) if(T.surucu[i].k === p[1]) s = T.surucu[i];
+  for(i = 0; i < T.saat.length; i++) if(T.saat[i].k === p[2]) hi = i;
+  if(!y || !s || hi < 0) return null;
+  var d = y.deger[s.k] && y.deger[s.k][hi];
+  if(!(d > 0)) return null;
+  return { anahtar: y.k + '.' + s.k + '.' + T.saat[hi].k, yuk: y, surucu: s,
+           saat: T.saat[hi], deger: d,
+           etiket: y.ad + ' iş · ' + s.ad.toLowerCase() + ' · ' + T.saat[hi].ad + ' sa/gün' };
+}
+
+// ETKİN c₂ ve KAYNAĞI — pencere, sihirbaz, çözüm ve raporlar AYNI cevabı okur.
+//   'tablo' : seçilmiş hücre — değer TABLODAN (saklanan sayı değil)
+//   'kayit' : hücresiz kayıtlı sayı (eski proje, kaynağı yalnız sayıyı veren örnek)
+//   'yok'   : seçilmedi — c₂ = 1, tasarım yükü gerçek yük
+// 1'in altındaki kayıtlı sayı 1'e çekilir ve söylenir: yük katsayısı yükü
+// AZALTAMAZ, azaltsaydı kayma hükmü fiziksel sınırdan gevşek olurdu.
+function veFeadServisFaktoru(sd){
+  sd = sd || {};
+  var h = veFeadServisHucre(sd.servisHucre);
+  if(h) return { deger: h.deger, kaynak: 'tablo', anahtar: h.anahtar, hucre: h, etiket: h.etiket, uyari: null };
+  var v = _feadNum(sd.serviceFact, NaN);
+  if(v >= 1) return { deger: v, kaynak: 'kayit', anahtar: null, hucre: null,
+                      etiket: 'kayıtlı değer — tablodan seçilmedi', uyari: null };
+  if(v > 0) return { deger: 1, kaynak: 'kayit', anahtar: null, hucre: null,
+                     etiket: 'kayıtlı değer 1\'in altında — 1 alındı',
+                     uyari: 'Kayıtlı servis faktörü (' + veSayi(v, 2) + ') 1\'in altında; '
+                       + 'yük katsayısı yükü azaltamaz, c₂ = 1 alındı.' };
+  return { deger: 1, kaynak: 'yok', anahtar: null, hucre: null, etiket: 'seçilmedi', uyari: null };
+}
+
+// TEK YAZICI — kayış penceresi ve sihirbaz buradan yazar (kural 24). Hücre ile
+// sayı BİRLİKTE yazılır; geçersiz anahtar seçimi SİLER.
+function veFeadServisSet(sd, anahtar){
+  if(!sd) return false;
+  var h = veFeadServisHucre(anahtar);
+  if(!h){ delete sd.servisHucre; delete sd.serviceFact; return true; }
+  sd.servisHucre = h.anahtar;
+  sd.serviceFact = h.deger;
+  return true;
+}
+
+// c₂'nin YAZIMI — bütün yüzeyler aynı biçimi basar: tablo değeri tek ondalık
+// ("1,3"), kayıtlı değer en çok iki ("1,25"), sondaki sıfır yazılmaz.
+function veFeadServisYaz(c2){
+  var v = _feadNum(c2, NaN);
+  if(!Number.isFinite(v)) return '—';
+  var s = veSayi(v, 2);
+  return (s.indexOf(',') >= 0) ? s.replace(/0+$/, '').replace(/,$/, '') : s;
+}
+
+// Tasarım yükündeki açıklık gerginlikleri (yukarıdaki afin özdeşlik).
+function veFeadTasarimGerginlik(spanN, tenIdx, c2){
+  var T0 = spanN[tenIdx], k = (c2 > 0) ? c2 : 1;
+  return spanN.map(function(T){ return T0 + k * (T - T0); });
+}
+
 // Bir kasnağın YÜK TAŞIYIP taşımadığının ölçütü. Gerginlik oranı ≈ 1 olan bir
 // kasnakta (avara, gergi) SF bir MARJ değil, o sarım açısının KAPASİTESİDİR;
 // ne hükme girer ne de bir kayma eşiği üretir. Ölçüt köprü katmanında çünkü
@@ -5258,17 +5397,23 @@ var VE_FEAD_SLIP_LOADED_RATIO = 1.01;
 // ama Gates'in KENDİ kayma sayfasındaki (s6/12) FAN eğrisinden türeyen değer
 // 66,6 N — aynı raporun iki sayfası arasında 2,37 kat fark var. MFSim'in 80,95
 // N'ı Gates'in kayma verisine +%21,5 uzakta; basılı çizgiye 2 kat.
-function veFeadSlipThreshold(build, duty){
+//
+// TASARIM YÜKÜNDE (servis faktörü c₂): farklar yükle doğrusal, yani Δ'lar c₂
+// katına çıkar ve eşik de tam c₂ katıdır — hükümle aynı ölçüt (SF ≥ 1 tasarım
+// yükünde ⇔ ankraj ≥ eşik). `slip` satırları zaten tasarım yükünde
+// (`veFeadAnalyze`); kapasite yükten bağımsız. c₂ verilmezse 1.
+function veFeadSlipThreshold(build, duty, c2){
   var sys = build && build.sys;
   if(!sys || !Array.isArray(duty) || !duty.length) return null;
   var n = sys.pulleys.length;
+  var k = (c2 > 0) ? c2 : 1;
   var en = null;
   duty.forEach(function(d){
     var per = d && d.perPulley, slip = d && d.slip;
     if(!per || !slip || per.length !== n || slip.length !== n) return;
     var T0 = _feadNum(per[sys._tenIdx] && per[sys._tenIdx].exitTensionN, NaN);
     if(!Number.isFinite(T0)) return;
-    var D = per.map(function(p){ return _feadNum(p.exitTensionN, NaN) - T0; });
+    var D = per.map(function(p){ return k * (_feadNum(p.exitTensionN, NaN) - T0); });
     if(D.some(function(v){ return !Number.isFinite(v); })) return;
     for(var i = 0; i < n; i++){
       var oran = _feadNum(slip[i].tensionRatio, NaN);
@@ -5285,6 +5430,7 @@ function veFeadSlipThreshold(build, duty){
     }
   });
   if(!en || !(en.tensionN > 0)) return null;
+  en.c2 = k;
   en.designTensionN = _feadNum(sys.designTensionN, NaN);
   en.margin = (en.designTensionN > 0) ? en.designTensionN / en.tensionN : NaN;
   return en;
@@ -5352,6 +5498,28 @@ function veFeadAnalyze(build, opts){
     } catch(e){
       out.warnings.push('Açıklık frekansları merkezkaç payıyla yeniden '
         + 'kurulamadı: ' + veFeadTranslateError(e && e.message));
+    }
+    // ── KAYMA TASARIM YÜKÜNDE — servis faktörü c₂ (kural 48) ─────────────
+    // Çözümün `slip` satırları TASARIM yükünde (P_B = c₂·P) yeniden kurulur;
+    // gerçek yükteki satırlar `slipIsletme`de kalır. Hükmü okuyan her yüzey
+    // (panel · raporlar · Sonuçlar · kılavuz) aynı satırları okur, eşiği 1'dir.
+    // c₂ ÇÖZÜM ANINDA dondurulur (`servis`): sonradan değiştirilen seçim bayat
+    // bir sonucun hükmüne sızmasın (kural 33'ün gerekçesi).
+    out.servis = veFeadServisFaktoru(build.solver && build.solver.data);
+    if(out.servis.uyari) out.warnings.push(out.servis.uyari);
+    try {
+      var _c2 = out.servis.deger, _geomS = null;
+      (out.analysis.duty || []).forEach(function(d){
+        if(!d || !Array.isArray(d.perPulley) || !Array.isArray(d.slip)) return;
+        d.slipIsletme = d.slip;
+        if(_c2 === 1) return;
+        if(!_geomS) _geomS = FEADCore.tensionerState(build.sys, FEADCore.meanRel(build.sys)).geom;
+        d.slip = FEADCore.slipSafety(_geomS, veFeadTasarimGerginlik(
+          d.perPulley.map(function(p){ return p.exitTensionN; }), build.sys._tenIdx, _c2));
+      });
+    } catch(e){
+      out.warnings.push('Kayma emniyeti tasarım yükünde kurulamadı: '
+        + veFeadTranslateError(e && e.message));
     }
     out.ok = true;
   } catch(e){
@@ -5700,6 +5868,9 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_TORS_REL_FLOOR: VE_FEAD_TORS_REL_FLOOR,
     veFeadSlipThreshold: veFeadSlipThreshold,
     VE_FEAD_SLIP_LOADED_RATIO: VE_FEAD_SLIP_LOADED_RATIO,
+    VE_FEAD_SERVIS: VE_FEAD_SERVIS, veFeadServisHucre: veFeadServisHucre,
+    veFeadServisFaktoru: veFeadServisFaktoru, veFeadServisSet: veFeadServisSet,
+    veFeadTasarimGerginlik: veFeadTasarimGerginlik, veFeadServisYaz: veFeadServisYaz,
     VE_FEAD_LIFE_FATIGUE_MODEL: VE_FEAD_LIFE_FATIGUE_MODEL,
     VE_FEAD_PRESET_LIB: VE_FEAD_PRESET_LIB,
     veFeadBuildSystem: veFeadBuildSystem, veFeadBuildFromCanvas: veFeadBuildFromCanvas,

@@ -9368,6 +9368,74 @@ span.ve-fw-ro{ display:inline-block; }
 }
 .ve-ipucu[hidden]{ display:none; }
 
+/* ── SERVİS FAKTÖRÜ c₂ TABLOSU (kural 48) ──────────────────────────────────
+   Kayış penceresinin Tasarım sekmesi ve sihirbazın Kayış adımı AYNI tabloyu
+   basar (`veFeadServisTabloHTML`). Hücre bir DÜĞME; seçili hücre projenin
+   basılı düğme kuralıyla (`aria-pressed` → vurgu zemini). Sütunlar SABİT
+   yerleşimde eşit: 1 + 6 sütun sihirbazın 316 px'lik denetim sütununa da
+   sığar — yatay kaydırma yok (ortak kural). */
+.ve-fead-c2{ min-width:0; }
+.ve-fead-c2-t{
+  width:100%; border-collapse:separate; border-spacing:2px; table-layout:fixed;
+  font-variant-numeric:tabular-nums;
+}
+/* Kabıyla NİTELENDİ: pencerenin genel `.ve-properties-content table th`
+   kuralı (zemin, sola yaslama, sağ kenarlık) daha özgüldü ve başlığı yalnız
+   pencerede gri, sola yaslı çiziyordu — sihirbazda değil. */
+.ve-fead-c2 .ve-fead-c2-t th{
+  font-size:var(--fs-micro); font-weight:600; color:var(--text-muted);
+  letter-spacing:var(--tracking-wide); text-transform:uppercase;
+  text-align:center; padding:1px 0 3px; line-height:1.25;
+  overflow-wrap:anywhere; background:none; border-right:0;
+}
+/* Pencerenin genel `th, td { padding:5px 8px !important }` kuralı 44 px'lik
+   sütunda saat başlığına 28 px bırakıp "10–16"yı iki satıra kırıyor, hücre
+   düğmesini 16 px daraltıyordu (ölçüldü). Genel kural `!important` olduğu
+   için istisna da öyle yazılmak ZORUNDA (emsal `td.egm-sec`); kapsamı bu
+   tablo. Kapı: fead-panel-gramer.spec.js → "c₂ tablosu … AYNI çiziliyor". */
+.ve-properties-content .ve-fead-c2-t th{ padding:1px 0 3px !important; }
+.ve-properties-content .ve-fead-c2-t td{ padding:0 !important; }
+.ve-fead-c2-t th small{
+  display:block; font-weight:400; text-transform:none; letter-spacing:0;
+  color:var(--text-muted);
+}
+.ve-fead-c2-grup{ border-bottom:1px solid var(--border-color); cursor:help; }
+.ve-fead-c2-t th.ve-fead-c2-kose{ width:22%; vertical-align:bottom; text-align:left; }
+.ve-fead-c2-kose span{ display:block; }
+.ve-fead-c2-kose span + span{ text-transform:none; letter-spacing:0; font-weight:400; }
+.ve-fead-c2-t th.ve-fead-c2-saat{ text-transform:none; letter-spacing:0; }
+.ve-fead-c2 .ve-fead-c2-t tbody th{
+  text-align:left; text-transform:none; letter-spacing:0;
+  font-size:var(--fs-tiny); color:var(--text-secondary); cursor:help;
+}
+.ve-fead-c2-t td{ padding:0; }
+.ve-fead-c2-h{
+  width:100%; padding:4px 0; margin:0; cursor:pointer;
+  border:1px solid var(--border-color); border-radius:var(--radius-xs);
+  background:var(--bg-input); color:var(--text-primary);
+  font-family:inherit; font-size:var(--fs-tiny); line-height:1.2;
+}
+.ve-fead-c2-h:hover{ background:var(--bg-tertiary); border-color:var(--border-hover); }
+.ve-fead-c2-h:focus-visible{ outline:none; box-shadow:var(--focus-ring); position:relative; z-index:1; }
+.ve-fead-c2-h[aria-pressed="true"]{
+  background:var(--accent-primary); border-color:var(--accent-primary);
+  color:var(--on-accent); font-weight:700;
+}
+.ve-fead-c2-durum{
+  display:flex; align-items:center; flex-wrap:wrap; gap:4px 6px; margin-top:7px;
+  font-size:var(--fs-tiny); color:var(--text-secondary);
+}
+.ve-fead-c2-durum b{ color:var(--text-heading); }
+.ve-fead-c2-durum[data-kaynak="yok"]{ color:var(--ink-warning); }
+.ve-fead-c2-kaldir{
+  margin-left:auto; padding:2px 6px; cursor:pointer;
+  border:1px solid var(--border-color); border-radius:var(--radius-xs);
+  background:none; color:var(--text-secondary);
+  font-family:inherit; font-size:var(--fs-micro);
+}
+.ve-fead-c2-kaldir:hover{ background:var(--bg-tertiary); color:var(--text-primary); }
+.ve-fead-c2-kaldir:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
 /* ── SEKMELER + SABİT SAĞ SÜTUN (seçilen tasarım: B + C) ─────────────────
    Sekme panelin UZUNLUĞUNU çözüyor, sağ sütun sekmenin ALDIĞI BAĞLAMI geri
    veriyor: solda ne düzenlenirse düzenlensin sağda "bunun sonucu ne" duruyor.

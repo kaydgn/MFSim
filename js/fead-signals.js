@@ -321,9 +321,11 @@ var veFeadSignals = (function() {
       channels: chans, groups: groups,
       meta: { n: rows.length, dc: rows.map(function(d) { return _num(d.dcPct); }),
               loaded: Object.keys(loaded).map(Number), ters: ters, beltOn: on, tenKey: _tenKey(P),
-              serviceFact: _num(R.serviceFact),
+              // Kayma satırları TASARIM yükünde (kural 48): yorum c₂'yi söyler.
+              c2: (R.servis && R.servis.deger > 0) ? R.servis.deger : 1,
+              c2Secili: !!(R.servis && R.servis.kaynak && R.servis.kaynak !== 'yok'),
               slipThreshold: (typeof veFeadSlipThreshold === 'function' && R.build)
-                ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null }
+                ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || [], R.servis && R.servis.deger) : null }
     };
   }
 
@@ -505,7 +507,7 @@ var veFeadSignals = (function() {
                          hub: _num(p.hubloadN) };
               }),
               slipThreshold: (typeof veFeadSlipThreshold === 'function')
-                ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || []) : null }
+                ? veFeadSlipThreshold(R.build, (R.analysis && R.analysis.duty) || [], R.servis && R.servis.deger) : null }
     };
   }
 
@@ -777,7 +779,11 @@ var veFeadSignals = (function() {
         if(loaded[i] && v < m.v) { m.v = v; m.rpm = _num(d.engineRpm); m.i = i; }
       });
     });
-    var sfIst = _num(R.serviceFact);
+    // SATIRLAR TASARIM YÜKÜNDE (P_B = c₂·P, kural 48): eşik 1, c₂ künyede.
+    var svR = R.servis || null;
+    var c2Not = (svR && svR.kaynak && svR.kaynak !== 'yok')
+      ? ' · tasarım yükü c₂ = ' + ((typeof veFeadServisYaz === 'function') ? veFeadServisYaz(svR.deger) : _tr(svR.deger, 2))
+      : '';
     if(ters) {
       out.push({ k: 'kayma', ad: 'Kayma emniyeti', deger: '—', birim: '', durum: 'no',
                  not: 'Gergi kayışın GERGİN tarafında — kayma emniyeti hüküm vermez' });
@@ -785,16 +791,15 @@ var veFeadSignals = (function() {
       out.push({ k: 'kayma', ad: 'Kayma emniyeti', deger: '—', birim: '', durum: 'wait',
                  not: 'Yük taşıyan kasnak yok — aksesuar gücü girilmeden hüküm verilmez' });
     } else {
-      var d1 = m.v < 1 ? 'no' : ((sfIst > 0 && m.v < sfIst) ? 'warn' : 'ok');
+      var d1 = m.v < 1 ? 'no' : 'ok';
       // Birim YOK: SF boyutsuz bir oran; kartta "×" başıboş bir harf gibi okunuyordu.
       out.push({ k: 'kayma', ad: 'Kayma emniyeti (en düşük)', deger: _tr(m.v, 2), birim: '', durum: d1,
-                 not: (P[m.i] ? P[m.i].code : '') + ' · ' + _tr(m.rpm, 0) + ' d/dk'
-                   + (sfIst > 0 ? ' · istenen ≥ ' + _tr(sfIst, 2) : '') });
+                 not: (P[m.i] ? P[m.i].code : '') + ' · ' + _tr(m.rpm, 0) + ' d/dk' + c2Not });
     }
 
     // 2) Kayma eşiği — hüküm değil bilgi
     var thr = (typeof veFeadSlipThreshold === 'function' && R.build)
-      ? veFeadSlipThreshold(R.build, A.duty || []) : null;
+      ? veFeadSlipThreshold(R.build, A.duty || [], R.servis && R.servis.deger) : null;
     if(thr && !ters) {
       var ti = -1;
       P.forEach(function(p) { if(p.name === thr.pulley) ti = p.i; });

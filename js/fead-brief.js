@@ -32,6 +32,10 @@ var veFeadBrief = (function() {
     if(!isFinite(v)) return '—';
     return veSayi(v, dec == null ? 1 : dec, { eksi: '−' });
   }
+  // c₂'nin yazımı köprünün tek biçiminden (`veFeadServisYaz`, kural 48).
+  function _c2Yaz(v) {
+    return (typeof veFeadServisYaz === 'function') ? veFeadServisYaz(v) : n(v, 2);
+  }
   function _chan(ds, id) {
     for(var i = 0; i < ds.channels.length; i++) if(ds.channels[i].id === id) return ds.channels[i];
     return null;
@@ -119,10 +123,10 @@ var veFeadBrief = (function() {
         var e = _ext(sf.data, x);
         if(e.ok) M.push({ axis: 'x', value: e.loX, kind: e.lo < 1 ? 'warn' : 'event',
                           label: 'en düşük SF ' + n(e.lo, 2) });
-        M.push({ axis: 'y', value: 1, unit: '×', kind: 'limit', label: 'kayma sınırı SF = 1' });
-        if(m.serviceFact > 0)
-          M.push({ axis: 'y', value: m.serviceFact, unit: '×', kind: 'stop',
-                   label: 'istenen SF ' + n(m.serviceFact, 2) });
+        // SERVİS FAKTÖRÜ ÇİZGİ DEĞİL (kural 48): kanallar c₂·P tasarım yükünde,
+        // sınır her durumda SF = 1 — c₂ onun etiketinde.
+        M.push({ axis: 'y', value: 1, unit: '×', kind: 'limit',
+                 label: 'kayma sınırı SF = 1' + (m.c2Secili ? ' · c₂ = ' + _c2Yaz(m.c2) : '') });
       }
       if(m.slipThreshold && m.slipThreshold.tensionN > 0)
         M.push({ axis: 'y', value: m.slipThreshold.tensionN, unit: 'N', kind: 'limit',
@@ -241,12 +245,11 @@ var veFeadBrief = (function() {
       var e = _ext(_chan(ds, 'sfmin').data, x);
       if(e.ok) {
         var enK = uc(ds.channels.filter(function(c) { return _endsWith(c.id, '.sf'); }), false);
-        p.push('En düşük kayma emniyeti **' + n(e.lo, 2) + '** — ' + (enK ? enK.ad + ' kasnağında, ' : '')
-          + n(e.loX, 0) + ' d/dk\'da. ' + (e.lo < 1 ? '**SF 1\'in altında: kayış o devirde kayar.**'
-            : 'SF 1\'in üstünde: kayma yok.'));
-        if(m.serviceFact > 0)
-          p.push('İstenen servis faktörü **' + n(m.serviceFact, 2) + '** — en kötü nokta **'
-            + (e.lo >= m.serviceFact ? 'GEÇTİ' : 'KALDI') + '**.');
+        var tas = m.c2Secili ? ' tasarım yükünde (c₂ = ' + _c2Yaz(m.c2) + ')' : '';
+        p.push('En düşük kayma emniyeti' + (m.c2Secili ? ' (tasarım yükü, c₂ = ' + _c2Yaz(m.c2) + ')' : '')
+          + ' **' + n(e.lo, 2) + '** — ' + (enK ? enK.ad + ' kasnağında, ' : '')
+          + n(e.loX, 0) + ' d/dk\'da. ' + (e.lo < 1 ? '**SF 1\'in altında: kayış' + tas + ' o devirde kayar.**'
+            : 'SF 1\'in üstünde:' + tas + ' kayma yok.'));
       }
       p.push('Yalnız YÜK TAŞIYAN kasnaklar çizilir: gerginlik oranı ≈ 1 olan avarada SF bir marj değil, '
         + 'o sarım açısının kapasitesidir.');

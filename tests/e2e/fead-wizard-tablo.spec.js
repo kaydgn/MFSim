@@ -381,7 +381,8 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
     veFeadWizEngOpen();
     const ov = document.getElementById('ve-fw-eng');
     const p = { acik: ov.style.display !== 'none', girdi: ov.querySelectorAll('input').length,
-                noLoad: ov.querySelectorAll('input[oninput*="noLoadGovernedRpm"]').length };
+                noLoad: ov.querySelectorAll('input[oninput*="noLoadGovernedRpm"]').length,
+                servis: ov.querySelectorAll('input[oninput*="serviceFact"]').length };
     veFeadWizEngClose();
     return {
       izgaraArasi: ara,
@@ -397,12 +398,15 @@ test('motor künyesi sayfadan pencereye taşındı, satır aralığı açıldı'
   expect(r.kartGirdi).toBe(0);                        // ESKİDEN 10 girdi
   expect(r.dugme).toBe(true);
   expect(r.pencere.acik).toBe(true);
-  // DOKUZ ALAN — "no load governed" 2026-09-15'te KALKTI (0 tüketici: değerini
-  // okuyan hiçbir hesap, uygunluk kapısı ya da rapor satırı yoktu). Birim
-  // kapısı `VE_FW_ENG_FIELDS.length`'i sayıyor; buradaki sayı DOM'daki gerçek
-  // girdi kutuları, yani listenin sayfaya BASILDIĞINI de ölçüyor.
-  expect(r.pencere.girdi).toBe(9);                    // hepsi pencerede
+  // SEKİZ ALAN — "no load governed" 2026-09-15'te KALKTI (0 tüketici: değerini
+  // okuyan hiçbir hesap, uygunluk kapısı ya da rapor satırı yoktu); servis
+  // faktörü 2026-09-29'da serbest sayı alanı olmaktan çıktı ve Kayış adımındaki
+  // yük katsayısı c₂ tablosuna taşındı (kural 48). Birim kapısı
+  // `VE_FW_ENG_FIELDS.length`'i sayıyor; buradaki sayı DOM'daki gerçek girdi
+  // kutuları, yani listenin sayfaya BASILDIĞINI de ölçüyor.
+  expect(r.pencere.girdi).toBe(8);                    // hepsi pencerede
   expect(r.pencere.noLoad).toBe(0);                   // ve sorulmuyor
+  expect(r.pencere.servis).toBe(0);                   // c₂ tablodan seçilir
   expect(r.dutyBaslik).not.toBe(null);               // tablo pencerede
   expect(r.dutyBaslik).not.toContain('°C');           // sütun kalktı
   expect(r.sayfadaTablo).toBe(0);

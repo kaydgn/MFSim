@@ -367,12 +367,17 @@ describe('özet kartları — hüküm yalnız modelin kendi ölçütü olan yerd
       'kapi-centerDistance': 'warn', 'kapi-ratioWindow': 'no', 'kapi-speedLimit': 'ok'
     });
   });
-  test('servis faktörü eşiği KULLANICININ: 5,0 istenince kayma kartı "warn"', () => {
+  // SERVİS FAKTÖRÜ ORANA KONAN BİR EŞİK DEĞİL (kural 48): satırlar c₂·P tasarım
+  // yükünde kuruldu, kart hükmü SF ≥ 1'den verir ve c₂'yi künyesinde yazar.
+  // Eskiden 5,0 "istenince" 1'in üstündeki SF sarıya dönüyordu.
+  test('servis faktörü kartın künyesinde; hüküm SF ≥ 1 (satırlar tasarım yükünde)', () => {
     const { R } = coz();
-    R.serviceFact = 5.0;
-    expect(S.summary(R).find((k) => k.k === 'kayma').durum).toBe('warn');
-    R.serviceFact = 0;
-    expect(S.summary(R).find((k) => k.k === 'kayma').not).not.toMatch(/istenen/);
+    const k = S.summary(R).find((x) => x.k === 'kayma');
+    expect(R.servis.deger).toBe(1.3);                      // örnek c₂ taşıyor
+    expect(k.not).toMatch(/tasarım yükü c₂ = 1,3/);
+    expect(k.durum).toBe('ok');
+    R.servis = { deger: 1, kaynak: 'yok', etiket: 'seçilmedi' };
+    expect(S.summary(R).find((x) => x.k === 'kayma').not).not.toMatch(/c₂|istenen/);
   });
   test('gergi GERGİN taraftaysa kayma kartı hüküm vermez, SF kanalı kurulmaz', () => {
     kur();
@@ -418,7 +423,11 @@ describe('diyagram yorumu — sayı modelden, genel geçer metin yok', () => {
     const br = B.forLane(ds, R, ['sfmin']);
     const st = rapor._frSlipStats(R);
     expect(br.paras.join(' ')).toContain('**' + st.loadedMin.toFixed(2).replace('.', ',') + '**');
-    expect(br.paras.join(' ')).toMatch(/GEÇTİ/);
+    // Hüküm tasarım yükünde ve c₂'yi SÖYLÜYOR (kural 48) — ayrı bir "istenen
+    // servis faktörü" cümlesi yok, çünkü c₂ bir eşik değil.
+    expect(br.paras.join(' ')).toMatch(/tasarım yükü, c₂ = 1,3/);
+    expect(br.paras.join(' ')).toMatch(/tasarım yükünde \(c₂ = 1,3\) kayma yok/);
+    expect(br.paras.join(' ')).not.toMatch(/İstenen servis faktörü/);
     // "Ayır" sonrası zarf şeridi yalnız: en kötü kasnağın adı yine KÜMEDEN
     // bulunur (şeritte kasnak kanalı yok diye ad düşmez).
     const enKotu = ds.channels.filter((c) => /\.sf$/.test(c.id))
