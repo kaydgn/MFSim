@@ -297,6 +297,20 @@ describe('durum — pencere hesaplamaz, modülün çağrılarından okur', () =>
     expect(govde().querySelector('[data-ey="tur"][data-v="detailed"]').getAttribute('aria-checked')).toBe('true');
   });
 
+  test('tür anahtarı raporun TEK listesinden: her türe bir düğme, sıra VE_FEAD_ARAC_TUR', () => {
+    kur();
+    const v = [...govde().querySelectorAll('[data-ey="tur"]')].map((b) => b.getAttribute('data-v'));
+    expect(v).toEqual(AR.VE_FEAD_ARAC_TUR);
+    // Listede olmayan tür düğme almaz, listedeki her tür anahtarda var
+    expect([...v].sort()).toEqual(RP.VE_FEAD_REPORT_KINDS.map((k) => k.key).sort());
+    // A3: kısa adıyla basılır, uzun adı ipucunda
+    const a3 = govde().querySelector('[data-ey="tur"][data-v="pano"]');
+    expect(a3.textContent).toBe('A3');
+    expect(a3.getAttribute('title')).toBe('A3 sonuç panosu');
+    // İndir anahtarın satırında DEĞİL (236 px'e üç tür + İndir sığmıyor)
+    expect(govde().querySelector('.ve-fead-arac-alt [data-ey="indir"]')).not.toBeNull();
+  });
+
   test('künye bağlantıları: kayış künyesi ve raporun Künye’si pencere AÇAR', () => {
     kur();
     const g = govde();
@@ -359,6 +373,8 @@ describe('eylemler — hepsi modülün var olan çağrılarına gider', () => {
     expect(tip('fead-report').data.reportKind).toBe('summary');
     expect(stubs.saveState).toHaveBeenCalledTimes(1);
     expect(AR.veFeadAracEylem('tur', 'bozuk')).toBe(false);
+    expect(AR.veFeadAracEylem('tur', 'pano')).toBe(true);
+    expect(tip('fead-report').data.reportKind).toBe('pano');
   });
 
   test('İndir: sonuç yoksa SEBEP; varsa raporun kendi üreticisi', () => {

@@ -1964,22 +1964,26 @@ function _gfSec12(){
     + 'üretilir. Rapor çözülmüş modelden üretilir; model çözülmemişse <strong>İndir</strong> '
     + 'pasiftir ve üstüne gelince sebebini yazar.</p>';
   h += _gfAdimlar([
-    'Rapor türünü seçin: <strong>Özet</strong> ya da <strong>Detaylı</strong>.',
+    'Rapor türünü seçin: <strong>Özet</strong>, <strong>Detaylı</strong> ya da <strong>A3</strong>.',
     'Bölümün <strong>Künye</strong> bağlantısı Rapor penceresini açar; <strong>Doküman '
       + 'künyesi</strong> alanlarını doldurun: hazırlayan, doküman no, revizyon, tasarım '
       + 'notları. Bunlar antete ve belgenin sonundaki notlar bölümüne akar.',
     '<strong>İndir</strong>’e basın (<strong>Rapor</strong> penceresindeki <strong>Raporu oluştur ve '
       + 'indir</strong> düğmesi de aynı işi yapar). İlk üretimde yazı tipleri ve formül '
       + 'dizgisi (~1 MB) bir kez yüklenir.',
-    'İnen dosya tek parçadır ve çevrimdışı açılır; yazdırırsanız A4’e sığar.'
+    'İnen dosya tek parçadır ve çevrimdışı açılır. Özet ve Detaylı A4’e, A3 sonuç panosu '
+      + 'tek bir yatay A3 sayfaya basılır (yazdırırken ölçek %100).'
   ]);
   h += _gfSahneRapor();
-  h += _gfAlanTablo('İki rapor türü', [
+  h += _gfAlanTablo('Üç rapor türü', [
     ['Detaylı', 'Teori bölümleri 1–7 ve 9–10 · Ek A · çözümün sayısal bölümü (18 alt bölüm) · '
       + 'uygunluk hükmü', 'Yöntemi de belgelemek, hesabı denetletmek'],
     ['Özet', 'Tedarikçi çıktısının biçiminde altı sayfa: Genel bakış · Geometri · Gergi '
       + 'çalışma zarfı · Çalışma çevrimi ve torklar · Gerginlik ve Hubload · Dayanım ve '
-      + 'titreşim', 'Sonuçları paylaşmak, tedarikçi raporuyla yan yana koymak']
+      + 'titreşim', 'Sonuçları paylaşmak, tedarikçi raporuyla yan yana koymak'],
+    ['A3', 'Tek yatay A3 sayfa: yedi gösterge · kayış yolu · kasnak, açıklık, çevrim ve tepe '
+      + 'yük tabloları · gerginlik, frekans ve kayma grafikleri · uygunluk kapıları. Gövde '
+      + 'yazısı 10 pt', 'Çözümü tek bakışta görmek, basıp masada incelemek']
   ], ['Tür', 'İçerik', 'Ne zaman']);
   h += _gfNot('Rapor çözülen modeli anlatır',
       'Belge, <strong>Hesapla</strong>’ya bastığınız andaki modeli anlatır. Çözümden sonra bir '

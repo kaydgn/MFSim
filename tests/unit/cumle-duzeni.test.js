@@ -31,9 +31,9 @@ const ASAMA1 = ['index.html', 'viewer/index.html', 'js/ribbon.js', 'js/command-p
   'js/cp-komuta.js', 'js/guide-kit.js', 'js/kimlik.js', 'js/cp-programlar.js', 'js/tablo-pencere.js',
   'js/solver-pro.js', 'js/trace-view.js', 'js/measure-import-ui.js', 'js/signal-tree.js',
   'viewer/js/board.js', 'js/deploy-status.js', 'js/topology.js', 'js/ui-core.js', 'js/components.js'];
-// Aşama 2: bileşen panelleri. Rapor üreticileri (cp-*-report, cp-fead-summary)
-// aşama 3'te — indirilen belgeye yazıyorlar.
-const RAPOR = /^cp-(fead-report|fead-summary|mount-report)\.js$/;
+// Aşama 2: bileşen panelleri. Rapor üreticileri (cp-*-report, cp-fead-summary,
+// cp-fead-pano) aşama 3'te — indirilen belgeye yazıyorlar.
+const RAPOR = /^cp-(fead-report|fead-summary|fead-pano|mount-report)\.js$/;
 const ASAMA2 = fs.readdirSync(path.join(KOK, 'js'))
   .filter((f) => /^cp-.*\.js$/.test(f) && !RAPOR.test(f))
   .concat(['component-extras.js', 'map.js', 'solver.js', 'guide-fead.js', 'guide-arac.js', 'guide-mount.js'])
@@ -142,7 +142,7 @@ function kucukYuzey(dosyalar) {
 }
 
 const ASAMA3 = ['js/results.js', 'js/sensors.js', 'js/graphics.js',
-  'js/cp-fead-report.js', 'js/cp-fead-summary.js', 'js/cp-mount-report.js'];
+  'js/cp-fead-report.js', 'js/cp-fead-summary.js', 'js/cp-fead-pano.js', 'js/cp-mount-report.js'];
 
 describe.each([['aşama 1 — kabuk', ASAMA1, 400], ['aşama 2 — bileşen panelleri', ASAMA2, 300],
   ['aşama 3 — Sonuçlar ve raporlar', ASAMA3, 300]])('%s', (ad, dosyalar, enAz) => {

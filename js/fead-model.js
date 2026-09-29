@@ -446,6 +446,17 @@ function veFeadBoyCizgileri(Lb, profile, brand){
   return out;
 }
 
+// ── KAYIŞ EĞİLME FREKANSI f_B = v · z / L_b ─────────────────────────────────
+// Kayışın bir noktasının saniyede kaç kasnağın üzerinden geçtiği (ContiTech
+// CONTI-V MULTIRIB çıktısındaki f_B; ISO 9981'in L_b'si). z kasnak sayısıdır —
+// sırttan temas eden avara da kayışı büker, ayrık sayılmaz. Birim s⁻¹ = Hz.
+// Eksik ya da sıfır girdi NaN döner (0 yazmak olmayan bir hız iddia ederdi).
+function veFeadEgilmeFrekansi(vMs, z, LbMm){
+  var v = _feadNum(vMs, NaN), n = _feadNum(z, NaN), L = _feadNum(LbMm, NaN);
+  if(!(v > 0) || !(n > 0) || !(L > 0)) return NaN;
+  return v * n / (L / 1000);
+}
+
 // ── HESAP ÇAPI: KAYIŞIN KORD ÇİZGİSİ NEREDE (kullanıcı kararı 2026-09-28) ──
 // Kasnağın çapı `od` (d_b, kaburga tepesi) GİRDİDİR; kayış yolu, hız oranı ve
 // kuvvetler KORD çizgisinde kurulur (kaburgalı OD + 2·h_b, sırt OD + 2·h_r —
@@ -5831,6 +5842,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadMotorEgrisi: veFeadMotorEgrisi, veFeadMotorPayi: veFeadMotorPayi,
     veFeadDefaultBeltTol: veFeadDefaultBeltTol, veFeadBeltMassOf: veFeadBeltMassOf,
     veFeadBoyCizgileri: veFeadBoyCizgileri,
+    veFeadEgilmeFrekansi: veFeadEgilmeFrekansi,
     veFeadKordOfset: veFeadKordOfset, VE_FEAD_HESAP_CAP: VE_FEAD_HESAP_CAP,
     veFeadBeltProjeProps: veFeadBeltProjeProps,
     veFeadCordStiffness: veFeadCordStiffness,
