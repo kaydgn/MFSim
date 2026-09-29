@@ -27,6 +27,8 @@ describe('yazım taraması', () => {
     ['© 2026 BMC Otomotiv', 'telif yılı'],
     ['ayrıntısı §8.18 bölümünde', 'bölüm no'],
     ['yay dengesinden (4.4) zaten belirlidir', 'denklem / bölüm no'],
+    ['etkin sarım (5.7a) kadar kısalır', 'denklem / bölüm no'],
+    ['kayıp ℓ = 7 mm (5.7a, yalnız kaburgalı temas)', 'denklem / bölüm no'],
     ['ayrıntısı Bölüm 9.2 içinde', 'denklem / bölüm no'],
     ['9.1 Dinamik rijitlik', 'bölüm başlığı'],
     ['bkz. 9.1 Dinamik rijitlik bölümü', 'denklem / bölüm no'],
@@ -43,6 +45,10 @@ describe('yazım taraması', () => {
     expect(O.tara('önceki paragraf.\n8.10 Mod şekilleri\nmetin').sorun).toEqual([]);
     expect(O.tara('önceki paragraf. 8.10 Mod şekilleri').sorun.map((x) => x.sayi)).toEqual(['8.10']);
     expect(O.tara('yıl 2016 değil: 2016 rpm').sorun.map((x) => x.sayi)).toEqual(['2016', '2016']);
+  });
+  test('alt denklem eki yalnız NUMARAYI affeder: bitişik birimli ve birimli ondalık yakalanır', () => {
+    expect(O.tara('süre (0.5s) · boy (2.5m, ölçü)').sorun.map((x) => x.sayi)).toEqual(['0.5', '2.5']);
+    expect(O.tara('boşluk (5.7 mm) kaldı').sorun.map((x) => x.sayi)).toEqual(['5.7']);
   });
   test('bölüm başlığı kalıbı birimi affetmez: "2.5 Nm" yine noktalı ondalık', () => {
     expect(O.tara('tork 2.5 Nm').sorun.map((x) => x.sayi)).toEqual(['2.5']);
