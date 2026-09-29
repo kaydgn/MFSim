@@ -46,6 +46,9 @@ global.veAccInterpCurve = veAccInterpCurve;
 });
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
+// ÖRNEKLER MOTORLU: bu dosya örnekleri ÇÖZÜYOR ve Gates örnekleri motorun devir
+// sınırlarını taşımıyor — işletme hesabı onlarsız yapılmaz (tests/helpers/fead-motor.js).
+require('../helpers/fead-motor').motorluOrnekler(M);
 Object.keys(TR).forEach((k) => { global[k] = TR[k]; });
 const B = require('../../js/fead-brief.js');
 const S = require('../../js/fead-signals.js');
@@ -354,10 +357,14 @@ describe('özet kartları — hüküm yalnız modelin kendi ölçütü olan yerd
     const { R } = coz();
     const d = {};
     S.summary(R).forEach((k) => { d[k.k] = k.durum; });
+    // Çevrim oranı penceresi governed devirde bakar. Gates raporu governed
+    // basmıyor; motor künyesi testin yardımcısından (tests/helpers/fead-motor.js
+    // — katalog kaydı, governed 2100) geldiği için pencere DEĞERLENDİRİLİYOR ve
+    // modelin cevabı 'no'. Künyesiz örnekte Hesapla hiç açılmaz.
     expect(d).toEqual({
       kayma: 'ok', esik: 'info', taraf: 'ok', ankraj: 'info', boy: 'info',
       burulma: 'warn', omur: 'off',
-      'kapi-centerDistance': 'warn', 'kapi-ratioWindow': 'wait', 'kapi-speedLimit': 'ok'
+      'kapi-centerDistance': 'warn', 'kapi-ratioWindow': 'no', 'kapi-speedLimit': 'ok'
     });
   });
   test('servis faktörü eşiği KULLANICININ: 5,0 istenince kayma kartı "warn"', () => {

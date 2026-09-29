@@ -24,6 +24,7 @@
  *     artık ÜRETİCİDEN yapılıyor (`veFeadWizSeed`), yeni spec'lerin yolu.
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 
 // ÖRNEK SEÇİMİ ÜRETİCİDEN, konumdan DEĞİL. Anahtar verilmezse listenin ilki —
 // kaldırılan kart düğmelerinin `.first()` davranışının birebir karşılığı.
@@ -50,6 +51,9 @@ async function bootApp(page) {
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 60000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
 }
 
 async function openFead(page) {
@@ -114,7 +118,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
 
     // "Örnekten doldur" kartındaki ilk düğme
     await ornekKur(page);
-    await expect(page.locator('#ve-fw-live .ve-fw-pill-ok')).toBeVisible();
+    await expect(page.locator('#ve-fw-live .ve-fw-damga[data-model="ok"]')).toBeVisible();
 
     const pills = await page.locator('#ve-fw-live .ve-fw-pill').allTextContents();
     const metin = pills.join(' | ');
@@ -171,7 +175,7 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       (veFeadWizState().pulleys.find((p) => p.key === k) || {}).x, pKey);
     expect(String(x)).toBe('-300');
     // Model hâlâ çözülüyor ve kayış boyu DEĞİŞTİ (konum fiziksel).
-    await expect(page.locator('#ve-fw-live .ve-fw-pill-ok')).toBeVisible();
+    await expect(page.locator('#ve-fw-live .ve-fw-damga[data-model="ok"]')).toBeVisible();
   });
 
   test('özet adımı: kayış yolu ŞEMASI çiziliyor, kur düğmesi etkin', async ({ page }) => {

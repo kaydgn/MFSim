@@ -32,6 +32,7 @@
  * Node'da koşamaz: belgeler gerçek bir çözümden üretiliyor.
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 const path = require('path');
 const fs = require('fs');
 const { tara, kutuIhlal, tabloIhlal, texTara } = require('../helpers/sayi-olcu.js');
@@ -195,7 +196,12 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri, indirile
 });
 
 test('FEAD: ayrıntılı rapor ve özet Türkçe sayı yazıyor', async ({ page, browser }) => {
-  await modulAc(page, 'fead-analysis', "if (typeof veFeadWizClose === 'function') veFeadWizClose(false); veFeadLoadExample('AG00976_GATES_2025');");
+  await modulAc(page, 'fead-analysis', "if (typeof veFeadWizClose === 'function') veFeadWizClose(false);");
+  // Gates örneği motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
+  await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
+  await page.waitForTimeout(2500);
   await page.evaluate(() => { const s = nodes.find((x) => x.type === 'fead-solver'); if (s) veFeadSolve(s.id); });
   await page.waitForFunction(() => window.veFeadResults && window.veFeadResults.ok, null, { timeout: 60000 });
   const h = await page.evaluate(() => new Promise((ok) => _frEnsureAssets(() => {

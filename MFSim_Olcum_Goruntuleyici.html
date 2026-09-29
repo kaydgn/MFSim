@@ -8322,11 +8322,13 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-fw-pill{ display:inline-flex; align-items:center; gap:5px; color:var(--text-secondary); }
 .ve-fw-pill b{ color:var(--text-heading); font-weight:700; }
 .ve-fw-pill em{ font-style:normal; color:var(--ink-warning); font-size:var(--fs-micro); }
-.ve-fw-pill-ok, .ve-fw-pill-err{
+/* Damganın üç rengi rayın üç durumuyla aynı jetonlardan (.ve-fw-st-*). */
+.ve-fw-pill-ok, .ve-fw-pill-warn, .ve-fw-pill-err{
   margin-left:auto; padding:2px 8px; border:1.5px solid; border-radius:var(--radius-xs);
   font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide); text-transform:uppercase;
 }
 .ve-fw-pill-ok{ border-color:var(--accent-success); color:var(--ink-success); }
+.ve-fw-pill-warn{ border-color:var(--accent-warning); color:var(--ink-warning); }
 .ve-fw-pill-err{ border-color:var(--accent-danger); color:var(--ink-danger); }
 .ve-fw-pill-dim{ flex:1 1 200px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); }
 

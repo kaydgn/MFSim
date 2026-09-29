@@ -272,7 +272,7 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   // ── 6) GERGİ: künye seç → model çözülür ─────────────────────────────────
   await page.locator('.ve-fw-steps li').nth(2).click();
   await page.locator('.ve-fw-card select').first().selectOption('AG00686');
-  await expect(page.locator('.ve-fw-pill-ok')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#ve-fw-live .ve-fw-damga[data-model="ok"]')).toBeVisible({ timeout: 10000 });
   const b = await page.evaluate(() => {
     const r = veFeadWizBuild();
     return { ok: r.ok, spin: r.spin, n: r.order.length };

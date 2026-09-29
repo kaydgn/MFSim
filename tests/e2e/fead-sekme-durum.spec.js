@@ -13,9 +13,10 @@
  *   • Durum yazısının bant zemini üstünde İKİ TEMADA da okunur olması.
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 test.setTimeout(180000);
 
-async function bootApp(page) {
+async function bootApp(page, motor = true) {
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
   await page.waitForFunction(() =>
@@ -28,6 +29,10 @@ async function bootApp(page) {
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
+  // Devirleri KULLANICININ yazdığını ölçen test yardımcıyı atlar.
+  if (motor) await motorluOrnekler(page);
 }
 
 async function ornekYukle(page) {
@@ -107,7 +112,7 @@ test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "tamam
 test('sürücüde dört sekme; devir sınırları klavyeyle DEPOYA yazılır — panel kurulmadan', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
-  await bootApp(page);
+  await bootApp(page, false);                                     // motorsuz örnek
   await ornekYukle(page);
   const id = await pencereAc(page, 'fead-fan');
   await page.waitForSelector('#ve-fp-tabs-' + id);

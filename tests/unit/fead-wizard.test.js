@@ -63,6 +63,7 @@ const ENGLIB = require('../../js/fead-engines.js');
 Object.keys(ENGLIB).forEach((k) => { global[k] = ENGLIB[k]; });
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
+const { motorTamamla } = require('../helpers/fead-motor');
 Object.keys(fead).forEach((k) => { if (global[k] === undefined) global[k] = fead[k]; });
 Object.keys(wiz).forEach((k) => { global[k] = wiz[k]; });
 
@@ -711,6 +712,14 @@ describe('adım eşlemesi ve yüzeyler', () => {
       expect(bos).toContain('ve-fw-st-err');
 
       kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+      // ÖRNEK TEK BAŞINA "DOLU" DEĞİL: Gates raporu motorun devir sınırlarını
+      // basmıyor ve işletme hesabı onlarsız yapılmaz (FEAD kural 46) — Motor ve
+      // çevrim adımı (5.) KIRMIZI, geri kalanı yeşil.
+      const ornek = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
+      expect(ornek).toMatch(/class="ve-fw-step ve-fw-st-err[^"]*" onclick="veFeadWizGoto\(4\)"/);
+      expect((ornek.match(/ve-fw-st-err/g) || []).length).toBe(1);
+      // Kullanıcının yapacağı adım: motor künyesi (katalog kaydının devirleri).
+      motorTamamla(wiz.veFeadWizState().solver);
       const dolu = wiz.veFeadWizNavHTML(wiz.veFeadWizBuild());
       expect(dolu).toContain('ve-fw-st-ok');
       expect(dolu).not.toContain('ve-fw-st-err');

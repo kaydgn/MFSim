@@ -38,6 +38,9 @@ global.veIsCanvasHidden = veIsCanvasHidden;
 global.componentDefs = componentDefs;
 global.FEADCore = F;
 Object.keys(M).forEach((k) => { global[k] = M[k]; });
+// ÖRNEKLER MOTORLU: bu dosya örnekleri ÇÖZÜYOR ve Gates örnekleri motorun devir
+// sınırlarını taşımıyor — işletme hesabı onlarsız yapılmaz (tests/helpers/fead-motor.js).
+require('../helpers/fead-motor').motorluOrnekler(M);
 const CP = require('../../js/cp-fead.js');
 Object.keys(CP).forEach((k) => { if (global[k] === undefined) global[k] = CP[k]; });
 

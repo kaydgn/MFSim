@@ -245,17 +245,39 @@ describe('SONUÇ SATIRI — föyün dibinde, damga rayla aynı sayı', () => {
     }
   });
 
-  test('damga: çözülen modelde adımın eksik/uyarı sayısı (veFeadWizStepState)', () => {
+  // RENK DE RAYIN (2026-09-29): kayış yolu çözülüp bir adımda eksik kalabiliyor
+  // (işletme girdisi, kural 46 — örnekte motor devir sınırları yok, 5. adım
+  // kırmızı). Damga o adımda yeşil "Çözülüyor" basarsa rayla çelişir.
+  test('damga: çözülen modelde rayın DURUMU ve adımın eksik/uyarı sayısı (veFeadWizStepState)', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     const b = wiz.veFeadWizBuild();
+    expect(b.ok).toBe(true);
+    const durumlar = [];
     for (let i = 0; i < ADIM; i++) {
       wiz.veFeadWizGoto(i);
       const d = document.createElement('div');
       d.innerHTML = wiz.veFeadWizLiveHTML(b);
       const s = wiz.veFeadWizStepState(b, i);
-      const damga = d.querySelector('.ve-fw-pill-ok').textContent;
-      expect(damga).toContain(s.warn ? s.warn + ' uyarı' : 'eksik girdi yok');
+      const damga = d.querySelector('.ve-fw-damga');
+      expect(damga.dataset.model).toBe('ok');
+      expect(damga.dataset.durum).toBe(s.durum);
+      expect(damga.classList.contains('ve-fw-pill-' + s.durum)).toBe(true);
+      expect(damga.textContent).toContain(s.err ? s.err + ' eksik' : s.warn ? s.warn + ' uyarı' : 'eksik girdi yok');
+      durumlar.push(s.durum);
     }
+    // Kapı boşa koşmasın: örnekte hem temiz hem eksikli adım var.
+    expect(durumlar).toContain('ok');
+    expect(durumlar).toContain('err');
+  });
+
+  test('damganın üç rengi CSS\'te, rayın jetonlarından', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    // Sınıfın kendi kuralı (ortak kuralın son seçicisi de `{` ile bitiyor — hepsi toplanır).
+    const renk = (sinif) => [...css.matchAll(new RegExp('\\.' + sinif + '\\{([^}]*)\\}', 'g'))]
+      .map((m) => m[1]).join(' ');
+    expect(renk('ve-fw-pill-ok')).toContain('--accent-success');
+    expect(renk('ve-fw-pill-warn')).toContain('--accent-warning');
+    expect(renk('ve-fw-pill-err')).toContain('--accent-danger');
   });
 
   test('çözülemeyen modelde damga eksik SAYISINI yazar, sebep yanında', () => {
@@ -264,6 +286,7 @@ describe('SONUÇ SATIRI — föyün dibinde, damga rayla aynı sayı', () => {
     const d = document.createElement('div');
     d.innerHTML = wiz.veFeadWizLiveHTML(b);
     expect(d.querySelector('.ve-fw-pill-err').textContent).toContain(b.errors.length + ' eksik');
+    expect(d.querySelector('.ve-fw-damga').dataset.model).toBe('no');
     expect(d.querySelector('.ve-fw-pill-dim').textContent).toBe(b.errors[0]);
   });
 

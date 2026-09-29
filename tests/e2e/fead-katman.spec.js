@@ -14,6 +14,7 @@
  *     teke indi, geometri ↔ işletme ayrımı bir ön ayar oldu).
  */
 const { test, expect } = require('@playwright/test');
+const { motorluOrnekler } = require('./helpers/fead-motor');
 // Katmanlar düğmesi. "Tablo" düğmesi (Kayış Tablosu'nu kartın içinde açıp
 // kapar) aynı görünüm sınıfını paylaşıyor; sınıfla aranan düğme İKİ öğe
 // buluyordu ve bu dosya 2026-09-23'ten beri kırmızıydı (fead-kanvas.spec.js
@@ -34,6 +35,9 @@ async function bootApp(page) {
     const s = document.getElementById('mfsim-loading-screen');
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
+  // Gates örnekleri motorun devirlerini taşımıyor; işletme hesabı onlarsız
+  // yapılmaz (FEAD kural 46) — katalog kaydının devir sınırları yazılır.
+  await motorluOrnekler(page);
 }
 
 async function feadOrnek(page) {
