@@ -80,6 +80,24 @@ var veFeadBrief = (function() {
     chans.forEach(function(c) { if(!soylendi[c.id]) p.push(_aralik(c, x)); });
   }
 
+  // Şerit yorumunun BAŞLIĞI ŞERİDİ ADLANDIRIR. Eskiden çok kanallı her şerit
+  // kümenin adını taşıyordu: "Gerginlik ve kayma"nın iki şeridi "Çalışma
+  // çevrimi — 6 kanal" / "— 4 kanal", Hubload'unkiler İKİSİ DE "Çalışma
+  // çevrimi — 6 kanal" (ölçüldü: üç hazır diyagramda 7 başlık). Kanalların
+  // çoğunluğu (yarıdan fazlası) tek bir gruptaysa o grubun adı; değilse küme.
+  function _seritBaslik(ds, chans) {
+    if(chans.length === 1) return chans[0].name;
+    var gl = ds.groups || [], say = {}, en = null;
+    chans.forEach(function(c) {
+      for(var i = 0; i < gl.length; i++) {
+        if(gl[i].ids.indexOf(c.id) >= 0) { say[i] = (say[i] || 0) + 1; break; }
+      }
+    });
+    Object.keys(say).forEach(function(k) { if(en === null || say[k] > say[en]) en = k; });
+    var ad = (gl.length > 1 && en !== null && say[en] * 2 > chans.length) ? gl[en].ad : ds.name;
+    return ad + ' — ' + chans.length + ' kanal';
+  }
+
   var LEADS = {
     cevrim:   'Çalışma çevriminin çözülmüş devir noktaları: gerginlik, hubload, kayma emniyeti ve aksesuar yükü.',
     campbell: 'Motor uyarma mertebeleri ile FEAD doğal frekanslarının devir düzlemindeki kesişimi.',
@@ -356,8 +374,7 @@ var veFeadBrief = (function() {
       }
     }
     _kalan(chans, soylendi, x, p);
-    var title = chans.length === 1 ? chans[0].name : (ds.name + ' — ' + chans.length + ' kanal');
-    return { title: title, paras: p };
+    return { title: _seritBaslik(ds, chans), paras: p };
   }
 
   // ŞERİT İÇERİĞİNE GÖRE: tam Campbell (mertebe + yatay çizgi) bandı ve
@@ -632,7 +649,7 @@ var veFeadBrief = (function() {
       if(m.fOff) not('frek');
     }
     _kalan(chans, soylendi, x, p);
-    var title = chans.length === 1 ? chans[0].name : (ds.name + ' — ' + chans.length + ' kanal');
+    var title = _seritBaslik(ds, chans);
     return { title: title, paras: p };
   }
 

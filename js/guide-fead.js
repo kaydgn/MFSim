@@ -386,9 +386,10 @@ function _gfSahneAraclar(){
   }, true);
   if(!html) return '';
   return veGuideScene(html,
-    '<b>FEAD araçları</b> penceresi, dört bölüm: <b>Model</b> (künye · Sihirbaz), '
+    '<b>FEAD araçları</b> penceresi, beş bölüm: <b>Model</b> (künye · Sihirbaz · ＋ Kanvas), '
     + '<b>Çözüm</b> (durum · Hesapla · Ayarlar · özet kartları · uygunluk), <b>Rapor</b> '
-    + '(tür · İndir · Künye) ve <b>Yön</b> (CW | CCW · gergi tarafı hükmü). Tuvalin sol '
+    + '(tür · İndir · Künye), <b>Yön</b> (CW | CCW · gergi tarafı hükmü) ve <b>Not</b> '
+    + '(Çerçeve · Yazı — tuvale sürüklenir ya da tıklanır). Tuvalin sol '
     + 'üstündeki yuvada durur; başlığından taşınır, çift tıkla dar bir şeride katlanır.',
     (typeof VE_FEAD_ARAC_EN === 'number' ? VE_FEAD_ARAC_EN : 236) + 26);
 }
@@ -585,8 +586,9 @@ function _gfSec2(){
   h += _gfAlanTablo('Beş çalışma yüzeyi ve sorumlulukları', [
     ['<strong>Kayış Yolu çizimi</strong>', 'Kasnakların <strong>giriş yüzeyi</strong> '
       + '(Çizim Masası): kasnağa <strong>tıklayınca</strong> penceresi açılır, '
-      + '<strong>sürükleyince</strong> konumu değişir, paletten <strong>kayışın üstüne</strong> '
-      + 'bırakılan kasnak iki komşusunun arasına girer. Girdi değiştikçe <strong>canlı</strong> '
+      + '<strong>sürükleyince</strong> konumu değişir, Kayış Tablosu’nun <strong>＋ Kasnak ekle</strong> '
+      + 'listesinden <strong>kayışın üstüne</strong> sürüklenen kasnak iki komşusunun arasına girer. '
+      + 'Girdi değiştikçe <strong>canlı</strong> '
       + 'yeniden çizilir ve modelin tutarlı olup olmadığını panel açmadan gösterir.',
       'Bölüm 4 ve 11.1'],
     ['<strong>Kayış Tablosu</strong>', '<strong>Kesin sayının</strong> yüzeyi: Kayış Yolu '
@@ -601,8 +603,10 @@ function _gfSec2(){
       + 'özellik pencereleri. Tablonun taşımadığı her şey (temas tarafı, güç eğrisi, gergi '
       + 'künyesi, kayış, çözücü) buradan girilir.', 'Bölüm 6–9'],
     ['<strong>FEAD araçları</strong>', 'Tuvalin sol üstündeki pencere: modeli kurmak '
-      + '(<strong>Sihirbaz</strong>), çözmek (<strong>Hesapla</strong> · <strong>Ayarlar</strong>), '
-      + 'raporu indirmek ve çevrimin <strong>yönünü</strong> çevirmek. Tuvalde bunların kutusu '
+      + '(<strong>Sihirbaz</strong>), yeni bir çizim açmak (<strong>＋ Kanvas</strong>), çözmek '
+      + '(<strong>Hesapla</strong> · <strong>Ayarlar</strong>), raporu indirmek, çevrimin '
+      + '<strong>yönünü</strong> çevirmek ve tuvale <strong>not</strong> koymak (gruplama '
+      + 'çerçevesi · yazı etiketi). Tuvalde bunların kutusu '
       + '<strong>yoktur</strong> — tuvalde yalnız Kayış Yolu kartları durur; kasnaklar da, '
       + 'kayış da, araçlar da modelde düğüm olarak yaşar.', 'Bölüm 2, 5.2, 10 ve 12'],
     ['Rapor', 'Tek dosyalık, çevrimdışı açılan HTML belge. İki tür: Detaylı ve Özet.',
@@ -663,10 +667,11 @@ function _gfSec3(){
   var _ornekMetin = _ornekSay ? _ornekSay + ' hazır örnekten' : 'hazır örneklerden';
   h += '<h3>3.1 Modülü açmak</h3>';
   h += _gfAdimlar([
-    'Karşılama ekranında <strong>FEAD</strong> kartına tıklayın. Ana tuvale tek bir '
-      + 'alt-sistem kutusu düşer.',
-    'O kutuya <strong>çift tıklayın</strong>. Modülün iç topolojisi açılır; sol paletteki '
-      + 'bileşen listesi FEAD bileşenlerine döner ve üstte bir gezinme çipi belirir.',
+    'Karşılama ekranında <strong>FEAD</strong> kartına tıklayın. Kısa bir yükleme ekranından '
+      + 'sonra doğrudan modülün iç topolojisine girersiniz; ana tuvalde de bir alt-sistem kutusu '
+      + 'durur ve ona <strong>çift tıklamak</strong> aynı yere götürür.',
+    'İç topolojide sol taraftaki <em>Bileşenler</em> sütunu <strong>yoktur</strong> — eklemenin '
+      + 'hepsi tuvalde (bkz. 3.4) — ve üstte bir gezinme çipi belirir.',
     'İç topolojiden çıkmak için aynı çipi ya da çerçevenin alt kenarındaki çıkış düğmesini '
       + 'kullanın. Çıkarken modeliniz alt-sistem kutusunun içine kaydedilir.'
   ]);
@@ -748,26 +753,31 @@ function _gfSec3(){
     + 'bir başlangıç için önce Kayış Tablosu’ndaki satırları ✕ ile boşaltın (ya da '
     + 'çizimde kasnağa tıklayıp <em>Delete</em>).');
   h += '<h3>3.4 Yol C — sıfırdan elle kurmak</h3>';
-  h += '<p>İki ayrı ekleme yüzeyi var ve <strong>hangisini kullanacağınız eklediğiniz şeye '
+  h += '<p>FEAD’de <em>Bileşenler</em> sütunu yoktur; eklemenin hepsi <strong>tuvalde</strong>. '
+    + 'İki ekleme yüzeyi var ve <strong>hangisini kullanacağınız eklediğiniz şeye '
     + 'bağlı</strong>:</p>';
   h += _gfAlanTablo('Ne nereden eklenir', [
-    ['<strong>Kasnaklar</strong>', 'Sol paletin <em>FEAD kasnakları</em> kategorisinden '
-      + 'çizimde <strong>kayışın üstüne</strong> sürükleyin; ya da Kayış Tablosu’nun başlığındaki '
-      + '<strong>＋ Kasnak ekle</strong> listesi',
+    ['<strong>Kasnaklar</strong>', 'Kayış Tablosu’nun başlığındaki <strong>＋ Kasnak ekle</strong> '
+      + 'listesi: satırı çizimde <strong>kayışın üstüne</strong> sürükleyin ya da satıra tıklayın',
       'Krank Kasnağı · Alternatör · Klima Kompresörü · Su Pompası · Direksiyon Pompası · '
       + 'Hava Kompresörü · Fan Kavraması · Avara Kasnak · Gergi'],
     ['<strong>Kayış</strong>', 'Kutusu yok: Kayış Yolu çiziminde <strong>kayışa tıklayın</strong> '
       + '(ya da Kayış Tablosu başlığındaki kayış künyesine)',
       'Kayış Özellikleri penceresi — profil · marka · boy · katalog. Modelde tek kayış '
       + 'vardır; FEAD’e girince kendiliğinden kurulur ve silinmez'],
-    ['<strong>İkinci bir çizim</strong>', 'Sol palet, <em>FEAD araçları</em> kategorisi',
-      'Kayış Yolu — aynı modelin başka katmanlarla ikinci resmi'],
+    ['<strong>İkinci bir çizim</strong>', 'FEAD araçları penceresinin <strong>＋ Kanvas</strong> '
+      + 'düğmesi', 'Kayış Yolu — aynı modelin başka katmanlarla ikinci resmi; kartların sağına '
+      + 'eklenir'],
     ['<strong>Araçlar</strong>', 'Kutusu yok: tuvalin sol üstündeki <strong>FEAD araçları</strong> '
       + 'penceresi', 'Sihirbaz · Hesapla · Ayarlar (Çözücü) · Rapor · Yön. Modelle birlikte '
-      + 'gelir, silinmez']
+      + 'gelir, silinmez'],
+    ['<strong>Not</strong>', 'FEAD araçları penceresinin <strong>Not</strong> bölümü: '
+      + '<strong>Çerçeve</strong> · <strong>Yazı</strong>', 'Tuvale sürükleyin — bıraktığınız '
+      + 'yere kurulur; ya da tıklayın — çerçeve kartları çevreler, yazı kartların üstüne '
+      + 'oturur. Metni çift tıkla düzenlenir']
   ], ['Ne', 'Nereden', 'İçindekiler']);
   h += _gfNot('Kasnağı nereye bırakacağınız sırasını söyler',
-      'Paletten sürüklediğiniz kasnağı çizimde bir <strong>açıklığın</strong> (iki kasnak '
+      'Listeden sürüklediğiniz kasnağı çizimde bir <strong>açıklığın</strong> (iki kasnak '
     + 'arasındaki düz kayış) üstüne getirin: hedef açıklık vurgulanır ve kasnağın varsayılan '
     + 'çapında bir hayalet imleci izler. Bıraktığınızda kasnak <strong>o iki kasnağın '
     + 'arasına</strong> girer, merkezi bıraktığınız noktadır. Avara kasnak halkanın '
@@ -894,10 +904,10 @@ function _gfSec4(){
     + 'göreceğiniz yer Kayış Yolu <strong>çizimidir</strong>: seçmek, taşımak ve eklemek '
     + 'orada; kesin sayılar Kayış Tablosu’nda.');
   h += _gfAdimlar([
-    'Kasnağı ekleyin: paletten sürükleyip çizimde <strong>kayışın üstüne</strong> bırakın '
-      + '(iki komşusunun arasına girer) ya da tablonun başlığındaki <strong>＋ Kasnak ekle</strong> '
-      + 'listesinden bir tip seçin — o yol kasnağı otomatik gerginin <strong>önüne</strong> '
-      + 'ekler ve satırı görüş alanına alır.',
+    'Kasnağı ekleyin: tablonun başlığındaki <strong>＋ Kasnak ekle</strong> listesini açın; bir '
+      + 'satırı çizimde <strong>kayışın üstüne</strong> sürükleyip bırakın (iki komşusunun '
+      + 'arasına girer) ya da satıra tıklayın — tık kasnağı otomatik gerginin '
+      + '<strong>önüne</strong> ekler ve satırı görüş alanına alır.',
     'Konumu verin: kasnağı çizimde <strong>sürükleyerek</strong> kabaca, tablonun '
       + '<strong>X</strong>, <strong>Y</strong> ve <strong>D</strong> alanlarına yazarak '
       + 'kesin olarak. Alana tıklayıp yazmanız yeter; çıkınca model güncellenir, çizim de '
@@ -925,8 +935,9 @@ function _gfSec4(){
       'Adım tamdır — girilmiş hassasiyet yuvarlanmaz'],
     ['<strong>Delete</strong>', 'Seçili kasnak silinir, sıra kapanır',
       'Otomatik gergi silinmez'],
-    ['<strong>Kayışın üstüne bırakmak</strong>', 'Paletten sürüklenen kasnak o açıklığın iki '
-      + 'kasnağının arasına girer', 'Gergi ile sürücü arası kapalıdır'],
+    ['<strong>Kayışın üstüne bırakmak</strong>', '<strong>＋ Kasnak ekle</strong> listesinden '
+      + 'sürüklenen kasnak o açıklığın iki kasnağının arasına girer', 'Gergi ile sürücü arası '
+      + 'kapalıdır; gergi yalnız tıklanarak eklenir'],
     ['<strong>Tablo</strong> düğmesi', 'Kartın altındaki Kayış Tablosu’nu açar / kapatır',
       'Satırın üstüne gelmek kasnağı iki çizimde de yakar; kasnağın üstüne gelmek satırını']
   ], ['Eylem', 'Sonuç', 'Not']);
@@ -1013,8 +1024,8 @@ function _gfSec4(){
 
   h += '<h3>4.4 Kasnak eklemek, silmek, adlandırmak</h3>';
   h += _gfAlanTablo('Üç işlem', [
-    ['Eklemek', 'Paletten çizimde <strong>kayışın üstüne</strong> bırakın ya da '
-      + '<strong>＋ Kasnak ekle</strong> listesinden tip seçin',
+    ['Eklemek', '<strong>＋ Kasnak ekle</strong> listesinden bir satırı çizimde '
+      + '<strong>kayışın üstüne</strong> sürükleyin ya da satıra tıklayın',
       'Çizimde bırakılan açıklığa, listeden eklenen otomatik gerginin önüne düşer; '
       + 'sırayı sonra ↑ ↓ ile taşırsınız'],
     ['Silmek', 'Satırın en sağındaki <strong>✕</strong> ya da çizimde seçip <em>Delete</em>',

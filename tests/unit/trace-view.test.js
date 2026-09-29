@@ -332,6 +332,95 @@ describe('veTrLaneTitle — CANoe tarzı şerit başlığı', () => {
   test('boş girdi patlamaz', () => {
     expect(veTrLaneTitle(null)).toBe('');
   });
+
+  // MODÜL KANALININ ADI BÖLÜNMEZ. Takoz · FEAD kanallarında bileşen öneki
+  // yok ve " — " adın kendi parçası; bölününce FEAD Campbell lejantının 11
+  // satırının 11'i bozuluyordu ("1. mertebe::dönme", dar blokta önek düşüp
+  // "202,9 Hz [Hz]" — hangi modun çizgisi olduğu kayboluyordu).
+  describe('modül kanalı (kaynak tablosu tanıyor)', () => {
+    const MOD = ['~fead-campbell', '~mnt-frf'];
+    beforeEach(() => { global.veResSourceOf = (id) => (MOD.indexOf(id) >= 0 ? { tab: 'x' } : null); });
+    afterEach(() => { delete global.veResSourceOf; });
+
+    test("modül kanalında ' — ' adın parçası kalır, '::' yazılmaz", () => {
+      expect(veTrLaneTitle({ id: '~fead-campbell', name: '12. mertebe — 4× ateşleme', unit: 'Hz' }))
+        .toBe('12. mertebe — 4× ateşleme [Hz]');
+      expect(veTrLaneTitle({ id: '~mnt-frf', name: 'İletilebilirlik T — X', unit: '×' }))
+        .toBe('İletilebilirlik T — X [×]');
+    });
+
+    test('dar blokta modül kanalının KİMLİĞİ düşmez (önek diye bir şey yok)', () => {
+      const ctx = { measureText: (t) => ({ width: t.length }) };
+      const t = veTrLaneTitle({ id: '~fead-campbell', name: 'Burulma modu 4 — 202,9 Hz', unit: 'Hz' });
+      expect(veTrFitTitle(ctx, t, 16).startsWith('Burulma modu')).toBe(true);
+    });
+
+    test('bileşen sinyali kaynak tablosu varken de bölünür', () => {
+      expect(veTrLaneTitle({ id: 'n12', name: 'Motor — Devir', unit: 'rpm' })).toBe('Motor::Devir [rpm]');
+    });
+  });
+
+  test('ad birimiyle bitiyorsa birim ikinci kez yazılmaz', () => {
+    expect(veTrLaneTitle({ name: 'Burulma modu 1 · 12,9 Hz', unit: 'Hz' })).toBe('Burulma modu 1 · 12,9 Hz');
+    // Yalnız KELİME olarak biten birim: "…Hz" sonekli bir ad bir birim değildir.
+    expect(veTrLaneTitle({ name: 'Frekans kHz', unit: 'Hz' })).toBe('Frekans kHz [Hz]');
+    expect(veTrLaneTitle({ name: 'Hz', unit: 'Hz' })).toBe('Hz [Hz]');
+  });
+});
+
+// İŞARET ETİKETİ ÇİZGİNİN YANINDA. Eskiden `gx − 2`'ye ortalanıyordu: dik yazı
+// kendi çizgisinin üstüne biniyor (FEAD'in altı hazır diyagramında 22 etiketin
+// 22'si) ve çizim alanının sol kenarındaki işaretin etiketi Y ekseninin
+// sayılarının üstüne, oluğa taşıyordu (4 etiket).
+describe('veTrMarkLabelX — dik işaret etiketi çizgiyi kesmez, oluğa taşmaz', () => {
+  const H = 10;                                   // yazının boyu (dik yazıda yatay yer)
+  const geo = { plotX: 100, plotW: 400, xMin: 0, xMax: 100, xLog: false, rects: [{ y: 10, h: 100 }] };
+  const kutu = (x) => ({ sol: x - H / 2, sag: x + H / 2 });
+  const cizgi = (gx) => Math.round(gx) + 0.5;
+
+  test.each([100, 104, 110, 300, 499, 500])('gx = %d: kutu çizgiyi kesmiyor ve çizim alanında', (gx) => {
+    const k = kutu(T.veTrMarkLabelX(gx, geo, H));
+    expect(k.sol < cizgi(gx) && k.sag > cizgi(gx)).toBe(false);
+    expect(k.sol).toBeGreaterThanOrEqual(geo.plotX);
+    expect(k.sag).toBeLessThanOrEqual(geo.plotX + geo.plotW);
+  });
+
+  test('varsayılan çizginin SOLU; yalnız sola sığmayan sağa geçer', () => {
+    expect(T.veTrMarkLabelX(300, geo, H)).toBeLessThan(300);
+    expect(T.veTrMarkLabelX(100, geo, H)).toBeGreaterThan(100);
+  });
+
+  test('çizici bu yeri KULLANIYOR (sahte ctx ile)', () => {
+    const cagri = [];
+    let son = null;
+    const ctx = {
+      save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, rotate() {},
+      setLineDash() {}, fill() {}, arc() {}, fillRect() {}, strokeRect() {},
+      translate(x) { son = x; },
+      fillText(t) { cagri.push({ t, x: son }); },
+      measureText: (t) => ({ width: String(t).length * 6 })
+    };
+    const marks = [{ axis: 'x', value: 0, label: 'kenar' }, { axis: 'x', value: 50, label: 'orta' }];
+    const ds = { brief: { marks } };
+    const sahte = {
+      veThemeFont: () => '10px sans-serif', veThemeFs: () => H, veResultSlots: [{ sensors: [] }],
+      veResultSources: [{ lib: () => ({ setOfSlot: () => ds }), R: () => null }], veResSets: () => [ds]
+    };
+    const onceki = {};
+    Object.keys(sahte).forEach((k) => { onceki[k] = [k in global, global[k]]; global[k] = sahte[k]; });
+    try {
+      T.veTrDrawMarks(ctx, geo, [{ axes: [], sigs: [] }]);
+    } finally {
+      Object.keys(onceki).forEach((k) => { if(onceki[k][0]) global[k] = onceki[k][1]; else delete global[k]; });
+    }
+    expect(cagri.map((c) => c.t)).toEqual(['kenar', 'orta']);
+    cagri.forEach((c, i) => {
+      const gx = T.veTrXPos(geo, marks[i].value);
+      const k = kutu(c.x);
+      expect(k.sol < cizgi(gx) && k.sag > cizgi(gx)).toBe(false);
+      expect(k.sol).toBeGreaterThanOrEqual(geo.plotX);
+    });
+  });
 });
 
 describe('veTrFitTitle — dar şeritte önce bileşen öneki düşer', () => {

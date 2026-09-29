@@ -18,10 +18,10 @@
 const { test, expect } = require('@playwright/test');
 test.setTimeout(180000);
 
-async function feadCoz(page) {
+async function feadCoz(page, boy) {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(e.message));
-  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.setViewportSize(boy || { width: 1600, height: 1000 });
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
   await page.waitForFunction(() =>
@@ -136,3 +136,86 @@ test('hazır diyagram GERÇEKTEN çizer; özet penceresi açılır ve kapanır',
   await expect(ov).toBeHidden();
   expect(hatalar).toEqual([]);
 });
+
+// SUNUM KUSURLARI (2026-09-28) — kullanıcının ekranı (1.920 × 952) ve dar ekran.
+// Hepsi YERLEŞİME bağlı, jsdom ölçemez; ölçülen önceki sayılar yanlarında.
+for (const boy of [{ width: 1920, height: 952 }, { width: 1366, height: 768 }]) {
+  test(`sunum ${boy.width}×${boy.height}: kırpılan yazı, bölünen sayı, bozuk lejant, bitişik hücre YOK`, async ({ page }) => {
+    const { hatalar } = await feadCoz(page, boy);
+    await page.evaluate(() => veFeadOpenResults());
+    await page.waitForTimeout(600);
+    const kart = await page.evaluate(() => {
+      const kok = document.querySelector('.ve-fr-start');
+      const kesik = [];
+      kok.querySelectorAll('*').forEach((el) => {
+        if (getComputedStyle(el).textOverflow === 'ellipsis' && el.scrollWidth > el.clientWidth + 0.5)
+          kesik.push(el.textContent.trim());
+      });
+      // Satır sonunda bölünen sayı öbeği: öbeğin kutuları İKİ satıra düşüyor mu
+      const RX = /\d[\d.,]*(?:–\d[\d.,]*)?\s?(?:Hz|N|mm|d\/dk|kW|Nm|saat|°)(?![\p{L}])|\d[\d.,]*–\d[\d.,]*/gu;
+      const kirik = [];
+      kok.querySelectorAll('.ve-fr-kpi-not').forEach((el) => {
+        const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let metin = '', dugum = [];
+        while (w.nextNode()) { dugum.push([w.currentNode, metin.length]); metin += w.currentNode.textContent; }
+        let m;
+        while ((m = RX.exec(metin))) {
+          const rg = document.createRange();
+          const bul = (i) => { let d = dugum[0]; dugum.forEach((x) => { if (x[1] <= i) d = x; }); return [d[0], i - d[1]]; };
+          const a = bul(m.index), b = bul(m.index + m[0].length - 1);
+          rg.setStart(a[0], a[1]); rg.setEnd(b[0], b[1] + 1);
+          const ust = new Set([...rg.getClientRects()].map((q) => Math.round(q.top)));
+          if (ust.size > 1) kirik.push(m[0]);
+        }
+      });
+      return { kesik, kirik };
+    });
+    // önce: 1.920'de 2 kırpık karo ("…en düşük kay…"), 1 bölünmüş öbek ("44–" | "138 Hz")
+    expect(kart).toEqual({ kesik: [], kirik: [] });
+
+    // Lejant: modül kanalının adı bölünmez ('::' yok), kırpılmaz, birim tekrarlanmaz
+    const hazir = await page.evaluate(() => veFeadSignals.presets(window.veFeadResults.signals).map((x) => x.k));
+    for (const k of hazir) {
+      await page.evaluate((k) => veFeadResPreset(k), k);
+      await page.waitForTimeout(300);
+      const bozuk = await page.evaluate(() => {
+        const geo = veTrState.geo, out = [];
+        const c = document.createElement('canvas').getContext('2d');
+        c.font = veThemeFont('micro', 600);
+        geo.lanes.forEach((lane) => {
+          if (!(lane._nameW > 0)) return;
+          veTrNameRows(lane).forEach((r) => {
+            const gor = veTrFitTitle(c, r.text, lane._nameW - VE_TR.NAME_DOT - VE_TR.NAME_DOT_GAP);
+            if (gor !== r.text || /::/.test(gor) || /\s(\S+) \[\1\]$/.test(gor)) out.push(gor);
+          });
+        });
+        return out;
+      });
+      // önce (Campbell): 11 satırın 11'i — "1. mertebe::dönme", "202,9 Hz [Hz]"
+      expect({ hazir: k, bozuk }).toEqual({ hazir: k, bozuk: [] });
+    }
+
+    // Sonuç Özeti: sağa yaslı sayıyı izleyen sola yaslı metin en az 20 px açıkta
+    await page.evaluate(() => veFeadResSummaryOpen());
+    await page.waitForTimeout(400);
+    const bitisik = await page.evaluate(() => {
+      const out = [];
+      document.querySelectorAll('.ve-fr-doc table').forEach((t) => {
+        const r = t.tBodies[0] && t.tBodies[0].rows[0];
+        if (!r) return;
+        for (let i = 0; i + 1 < r.cells.length; i++) {
+          const a = r.cells[i], b = r.cells[i + 1];
+          if (getComputedStyle(a).textAlign !== 'right' || getComputedStyle(b).textAlign !== 'left') continue;
+          const ra = document.createRange(); ra.selectNodeContents(a);
+          const rb = document.createRange(); rb.selectNodeContents(b);
+          const bosluk = rb.getBoundingClientRect().left - ra.getBoundingClientRect().right;
+          if (bosluk < 20) out.push(t.tHead.rows[0].cells[i].textContent + ' → ' + Math.round(bosluk) + ' px');
+        }
+      });
+      return out;
+    });
+    // önce: "Tepe gerginlik [N] → Durum" ve "f [Hz] → Baskın" 12 px
+    expect(bitisik).toEqual([]);
+    expect(hatalar).toEqual([]);
+  });
+}

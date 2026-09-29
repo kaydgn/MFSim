@@ -2,6 +2,37 @@
 
 > Kök `CLAUDE.md`'den taşındı. Metin birebir korunmuştur.
 
+### Paletsiz kapsam kendini beyan eder (`componentDefs.noPalette`, 2026-09-28)
+
+**Hüküm:** bir modül `componentDefs[tip].noPalette` beyan ederse iç
+topolojisinde "Bileşenler" sütunu ve daraltılmışken beliren açma rayı
+ÇİZİLMEZ; tuval o genişliği alır. Sınıfı (`.ve-main.ve-paletsiz`) kapsamın tek
+noktası yazar (`veSyncSidebarScope` → `veSyncPaletsizKapsam`, js/components.js);
+modül aç/kapa, sekme ve proje yükleme hepsi oradan geçer. İlk kullanıcısı FEAD
+(kullanıcı kararı: *"zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar'
+üzerinden ekleyebiliyoruz"*) — ekleme yollarının yeri FEAD skill'inde, kural 41.
+
+**Gerekçe:** sütun her kapsamda aynı kabuktu ve içeriğini kapsamdan
+süzüyordu; eklemesi tuvalde yapılan bir modülde süzülecek bir şey kalmayınca
+sütun boş bir kutu olurdu. Beyan, `ui-core.js`'e / kabuğa modüle özgü dal
+yazmak yerine seçildi — ikinci bir paletsiz modül yalnız bir alan ekler.
+
+**Kullanıcının daralt tercihi YAZILMAZ** (`mf-sidebar-collapsed`): bu bir
+tercih değil kapsamın kuralı; öteki modüle dönünce sütun bırakıldığı hâlde
+gelir. **Kapsam SIĞDIRMADAN ÖNCE eşitlenir**: sütun kalkınca tuval genişliyor
+(1920'de 1636 → 1856 px); açıcı kapsamı sığdırmadan sonra eşitleseydi kadraj
+dar tuvalle kurulur, içerik kayık kalırdı. `resize` olayı GÖNDERİLMEZ — tuvale
+bağlı yüzeyler kabı `ResizeObserver` ile izliyor, olay ise Sonuçlar'ın bütün
+grafiklerini boşuna yeniden çizerdi.
+
+Kapı: `tests/e2e/kabuk-sutun.spec.js` → *"PALETSİZ KAPSAM"* (sütun ve açma
+rayı yok — sütun daraltılmışken bile; tuval rayın yanından başlıyor; köke
+dönünce sütun geri geliyor ve tuval tam onun kadar daralıyor) +
+`tests/unit/arac-performans.test.js` → *"PALETSİZ KAPSAM"* (yalnız beyan eden
+modülde sınıf, tercih yazılmıyor, CSS iki öğeyi birden gizliyor) +
+`tests/e2e/fead-araclar.spec.js` → *"SÜTUNSUZ AÇILIŞ"*. Sütunu ölçen kabuk
+kapıları paleti olan bir modülün (Araç Performans) iç topolojisinde koşar.
+
 ### Tuvali örten yüzey kendini işaretler (`data-ve-ortu`, 2026-09-28)
 
 **Hüküm:** tuval kabının içinde, tuvalin soluna yapışık duran bir yüzey
@@ -1940,3 +1971,21 @@ yazısı) 251 noktalı ondalık, 4 gruplanmamış sayı, 258 sondaki yüzde → 
 (CAN yazıcısından binlik silinince 34 durum düşüyor), CAN kaynağında
 işaretsiz yazım yok + `can-cozumleyici.spec.js` → ekran taraması (MFSim'in
 ölçütüyle, `tests/helpers/sayi-olcu.js`).
+
+## Sonuçlar panosu: modül kanalının adı bölünmez, işaret etiketi çizginin yanında (2026-09-28)
+
+**Hüküm 1.** `veTrLaneTitle` " — "yi `::`'ye yalnız BİLEŞEN sinyalinde çevirir;
+modül kanalının (kaynak tablosu `veResSourceOf` tanıyor: Takoz · FEAD) adı bir
+bütündür. Ad birimiyle bitiyorsa birim ikinci kez yazılmaz. Ad bloğunun üst
+sınırı 160 → 172 px.
+**Gerekçe.** FEAD Campbell lejantının 11 satırının 11'i bozuktu: 8'i
+"1. mertebe::dönme", 3'ü dar blokta önek düşünce "202,9 Hz [Hz]" (hangi modun
+çizgisi olduğu kayboluyordu); 6 satırda birim iki kez.
+**Hüküm 2.** Dik işaret etiketi çizginin YANINA yazılır (`veTrMarkLabelX`):
+varsayılan solu, sola sığmayan sağa geçer.
+**Gerekçe.** Etiket `gx − 2`'ye ortalanıyordu: FEAD'in altı hazır diyagramında
+22 etiketin 22'si kendi çizgisiyle kesiliyor, 4'ü Y ekseninin sayılarının
+üstüne, 1'i çizim alanının dışına taşıyordu.
+**Kapı.** `trace-view.test.js` → *"modül kanalı"*, *"veTrMarkLabelX"* (çizici
+sahte ctx'le); `fead-sonuclar.spec.js` → *"sunum 1920×952 / 1366×768"*.
+

@@ -274,14 +274,17 @@ test('İKİ KART, İKİ AYRI RESİM — kişiselleştirmenin kendisi', async ({ 
   expect(yolSonra.a).toBe(yolOnce.a);            // birinci kart DEĞİŞMEDİ
 
   // ── ÜÇÜNCÜ KANVAS: aynı tip, üçüncü bir ön ayar seçimi ─────────────────
-  // Tip teke indiği için "çalışma noktası eklemek" ayrı bir palet kutusu değil
-  // artık: kanvas eklenir, ön ayarı seçilir. Kapı bunun GERÇEKTEN çalıştığını
-  // ölçüyor — paletten kurulan yeni kart da ön ayar düğmesini taşımalı.
-  const r2 = await page.evaluate(() => {
-    const n = createNode('fead-layout', 3900, 3500);
-    return n ? n.id : null;
-  });
+  // Tip teke indiği için "çalışma noktası eklemek" ayrı bir bileşen değil:
+  // kanvas eklenir, ön ayarı seçilir. FEAD'de "Bileşenler" sütunu yok
+  // (2026-09-28); yeni kanvas FEAD araçları penceresinin Kanvas düğmesinden
+  // — GERÇEK tık. O yoldan kurulan kart da ön ayar düğmesini taşımalı.
+  const onceki = await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout').map((n) => n.id));
+  await page.locator('#ve-fead-araclar [data-ey="kanvas"]').click();
   await page.waitForTimeout(500);
+  const r2 = await page.evaluate((o) => {
+    const n = window.nodes.find((x) => x.type === 'fead-layout' && !o.includes(x.id));
+    return n ? n.id : null;
+  }, onceki);
   expect(r2).toBeTruthy();
   expect(await page.evaluate(() => window.nodes.filter((n) => n.type === 'fead-layout').length)).toBe(4);
   await expect(page.locator('#' + r2 + ' ' + KAT)).toHaveCount(1);

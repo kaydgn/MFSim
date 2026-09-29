@@ -90,9 +90,20 @@ function veFeadResKpiHTML(R) {
       + '<span class="ve-fr-kpi-ad">' + _feadResEsc(k.ad) + '</span>'
       + '<span class="ve-fr-kpi-v"><b>' + _feadResEsc(k.deger) + '</b>'
       + (k.birim ? '<i>' + _feadResEsc(k.birim) + '</i>' : '') + '</span>'
-      + (k.not ? '<span class="ve-fr-kpi-not">' + _feadResEsc(k.not) + '</span>' : '')
+      + (k.not ? '<span class="ve-fr-kpi-not">' + _feadResBolunmez(k.not) + '</span>' : '')
       + '</div>';
   }).join('') + '</div>';
+}
+
+// SAYI BİRİMİNDEN, ARALIK UCUNDAN AYRILMAZ. KPI notu dar kartta sarıyor ve
+// tarayıcı "(44–" | "138 Hz)" diye bölüyordu (1.920 ve 1.366 px'te ölçüldü).
+// Dönüş KAÇIŞLANMIŞ HTML: bölünebilecek sayı öbeği (boşluk, tire ya da eksi
+// taşıyan) tek parça `.ve-fr-nw` olur; görünüm CSS'te.
+var _FEAD_RES_OBEK = /(?:[≥≤±]\s?)?%?[−-]?\d[\d.,]*(?:\s?[–-]\s?[−-]?\d[\d.,]*)?(?:\s(?:d\/dk\/s|d\/dk|m\/s|Hz|kW|Nm|mm|saat|N|A)|°)?(?![\p{L}\d])/gu;
+function _feadResBolunmez(s) {
+  return _feadResEsc(s).replace(_FEAD_RES_OBEK, function(m) {
+    return /[\s–\-−]/.test(m) ? '<span class="ve-fr-nw">' + m + '</span>' : m;
+  });
 }
 
 // Bayat sonucun uyarısı — sebebi ve çaresiyle.
@@ -503,7 +514,10 @@ function veFeadResSummaryHTML(R) {
       kh += '<div class="ve-fr-gate" data-d="' + d + '"><div class="ve-fr-gate-h"><b>' + _feadResEsc(ad) + '</b>'
          + '<span class="ve-fr-chip" data-d="' + d + '">' + (d === 'ok' ? 'Uygun' : (d === 'warn' ? 'Sınırda'
            : (d === 'no' ? 'Uygun değil' : 'Değerlendirilemedi'))) + '</span></div>';
-      if(c.rows && c.rows.length && satirF) kh += _feadResTbl(bas, c.rows.map(satirF));
+      // satirF bir satır ya da satır LİSTESİ döndürebilir (bir aksesuarın
+      // birden çok karşılaştırma noktası var).
+      if(c.rows && c.rows.length && satirF)
+        kh += _feadResTbl(bas, c.rows.reduce(function(a, r) { return a.concat(satirF(r)); }, []));
       if(c.note) kh += '<div class="ve-fr-mute ve-fr-alt">' + _feadResEsc(c.note) + '</div>';
       kh += '</div>';
     };
@@ -512,7 +526,19 @@ function veFeadResSummaryHTML(R) {
         _feadResN(r.hi, 1), _feadResN(r.payPct, 1)] };
     }, [{ t: 'Çift', l: 1 }, { t: 'Alt [mm]' }, { t: 'Mesafe [mm]' }, { t: 'Üst [mm]' }, { t: 'Pay [%]' }]);
     gate(K.ratioWindow, 'Çevrim oranı penceresi', null, null);
-    gate(K.speedLimit, 'Aksesuar devir sınırı', null, null);
+    // Satırları çözücü penceresinin kapı kartındakiyle AYNI (R.checks); eskiden
+    // burada yalnız çip vardı — "Uygun"un %4,9'luk payı görünmüyordu.
+    gate(K.speedLimit, 'Aksesuar devir sınırı', function(r) {
+      var kod = (P[r.i] && P[r.i].name === r.ad) ? P[r.i].code : '';
+      return (r.noktalar || []).map(function(q, k) {
+        return { cls: q.ok ? '' : 'is-no', c: [
+          k === 0 ? (kod ? '<b>' + _feadResEsc(kod) + '</b> ' : '') + _feadResEsc(r.ad) : '',
+          _feadResEsc(q.ad), _feadResN(q.motorRpm, 0), _feadResN(q.accRpm, 0),
+          _feadResN(q.limit, 0) + ' <span class="ve-fr-mute">' + _feadResEsc(q.limitAd) + '</span>',
+          _feadResN(q.payPct, 1)] };
+      });
+    }, [{ t: 'Aksesuar', l: 1 }, { t: 'Nokta', l: 1 }, { t: 'Motor [d/dk]' }, { t: 'Aksesuar [d/dk]' },
+        { t: 'Sınır [d/dk]' }, { t: 'Pay [%]' }]);
     h += _feadResSec('Uygunluk kapıları', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂) · oran penceresi · devir sınırı', kh);
   }
 

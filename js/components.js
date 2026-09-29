@@ -228,6 +228,7 @@ function veSyncSidebarScope() {
   if(typeof veFeadStack !== 'undefined' && veFeadStack.length) scope = 'fead-analysis';
   veSidebarScope = scope;
   veShowAllSidebarComponents();
+  veSyncPaletsizKapsam(scope);
   // ŞERİT DE KAPSAMI GÖRMELİ. Şeritte kapsama bağlı öğeler var — bugün
   // "Bu Modülün Kılavuzu" (js/guide-kit.js `veGuideCurrentId`, kapsamı buradan
   // okuyor). Kapsam değişince şerit yeniden çizilmezse o düğüm bir sonraki
@@ -240,6 +241,33 @@ function veSyncSidebarScope() {
   // FEAD alt topolojisinde görünür. Modül aç/kapa bu fonksiyondan geçen TEK
   // nokta — yukarıdaki şeridin gerekçesinin aynısı.
   if(typeof veFeadAraclarKapsam === 'function') veFeadAraclarKapsam(scope);
+}
+
+// PALETSİZ KAPSAM KENDİNİ BEYAN EDER (`componentDefs[scope].noPalette`).
+// Kullanıcı kararı (2026-09-28): *"FEAD modülünde bu 'Bileşenler' sütununu
+// kaldıralım, zaten ekleyeceğimiz bileşenlerin hepsini 'kanvaslar' üzerinden
+// ekleyebiliyoruz."* Beyan eden modülün İÇ topolojisinde "Bileşenler" sütunu
+// ve kapalıyken beliren açma rayı ÇİZİLMEZ; tuval o genişliği alır. Kapsam
+// değişiminin tek noktası burası — modül aç/kapa, sekme, proje yükleme hepsi
+// buradan geçer.
+//
+// Kullanıcının daralt/aç tercihi (`mf-sidebar-collapsed`) YAZILMAZ: bu bir
+// tercih değil kapsamın kuralı; öteki modüle dönünce sütun kullanıcının
+// bıraktığı hâlde gelir. Sınıf `.ve-main`e yazılır (`.ve-no-module` gibi) ve
+// CSS iki öğeyi birden gizler. `resize` olayı GÖNDERİLMEZ: tuvale bağlı
+// yüzeyler kabı `ResizeObserver` ile izliyor (minimap), olay ise Sonuçlar'ın
+// bütün grafiklerini boşuna yeniden çizerdi.
+//
+// Sütun sığdırmadan ÖNCE kalkmalı: kalkınca tuval genişler ve önceki
+// genişlikle kurulmuş kadraj kayar — modülün açıcısı kapsamı sığdırmadan önce
+// eşitler (cp-fead.js → veFeadOpenEditor).
+function veSyncPaletsizKapsam(scope) {
+  if(typeof document === 'undefined') return false;
+  var def = (scope && scope !== 'top' && typeof componentDefs !== 'undefined') ? componentDefs[scope] : null;
+  var paletsiz = !!(def && def.noPalette);
+  var main = document.querySelector('.ve-main');
+  if(main) main.classList.toggle('ve-paletsiz', paletsiz);
+  return paletsiz;
 }
 
 // ÜST BANDIN MODÜL ADI — kaynağı `veSidebarScope`, yani modül aç/kapa'nın
@@ -572,7 +600,14 @@ var componentDefs = {
     // (js/components.js › _veModuleEnterFn). Diğer iki modül beyan etmiyor,
     // dolayısıyla onlarda eski yol birebir duruyor.
     moduleEnter: 'veFeadOpenEditor',
-    moduleSubtitle: 'Kayış-kasnak analizi'
+    moduleSubtitle: 'Kayış-kasnak analizi',
+    // İÇ TOPOLOJİDE "BİLEŞENLER" SÜTUNU YOK (2026-09-28, kullanıcı kararı —
+    // veSyncPaletsizKapsam). Eklemenin üç yolu da tuvalde: kasnak Kayış
+    // Tablosu'nun "＋ Kasnak ekle" listesinden (tık: gerginin önüne; sürükle:
+    // çizimde kayışın üstüne), yeni Kayış Yolu kanvası FEAD araçları
+    // penceresinden, model sihirbazdan. Kayış, Çözücü, Rapor ve Sihirbaz
+    // garanti düğümler — eklenmezler.
+    noPalette: true
   },
   // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
   // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un

@@ -3,8 +3,9 @@
  *
  * Kullanıcı kararı (2026-09-23): *"Çizim Masası çok güzel."* Kayış Yolu
  * kartının çizimi giriş yüzeyi: kasnağa tıklamak penceresini açar,
- * sürüklemek konumunu yazar, ok tuşu 1 mm kaydırır, paletten kayışın üstüne
- * bırakılan kasnak iki komşunun arasına girer.
+ * sürüklemek konumunu yazar, ok tuşu 1 mm kaydırır, Kayış Tablosu'nun
+ * ekleyici listesinden kayışın üstüne sürüklenen kasnak iki komşunun arasına
+ * girer (FEAD'de "Bileşenler" sütunu yok — 2026-09-28).
  *
  * NODE'DA HİÇ KOŞMAYAN HALKALAR — bu dosyanın varlık sebebi:
  *   • gerçek fare zinciri (mousedown → mousemove → mouseup) ve kanvasın
@@ -198,10 +199,16 @@ test('CTRL+Z: çizim kartı boşalmaz, geri-al üst üste de geri alır', async 
   expect(hatalar).toEqual([]);
 });
 
-// Paletten HTML5 sürükle-bırak: kaynak öğe → çizimde bir nokta.
+// Kartın ekleyici LİSTESİNDEN HTML5 sürükle-bırak: satır → çizimde bir nokta.
+// FEAD'de "Bileşenler" sütunu yok (2026-09-28); sürükleme kaynağı geometri
+// kartının paftasındaki "＋ Kasnak ekle" listesi. Liste her sürüklemenin
+// sonunda kapanır — her seferinde açılır.
 async function birak(page, tip, hedef, olcIz) {
-  const src = page.locator('.ve-component[data-type="' + tip + '"]').first();
-  await src.scrollIntoViewIfNeeded();
+  const kartId = await page.evaluate(() =>
+    window.nodes.find((x) => x.type === 'fead-layout' && !(x.data || {}).katOn).id);
+  if (!(await page.locator('#' + kartId + ' .ve-fead-ek.is-acik').count()))
+    await page.locator('#' + kartId + ' .ve-fead-ek-dugme').click();
+  const src = page.locator('#' + kartId + ' .ve-fead-ek.is-acik [data-fead-ekle="' + tip + '"]');
   const bb = await src.boundingBox();
   await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
   await page.mouse.down();
@@ -233,7 +240,7 @@ const aciklik = (page, i) => page.evaluate((k) => {
            sol: b.order[k].id, sag: b.order[(k + 1) % b.order.length].id };
 }, i);
 
-test('PALETTEN BIRAK: açıklığa girer, kapalı açıklık ve boşluk REDDEDİLİR', async ({ page }) => {
+test('LİSTEDEN KAYIŞA BIRAK: açıklığa girer, kapalı açıklık ve boşluk REDDEDİLİR', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await ornek(page);
@@ -251,6 +258,12 @@ test('PALETTEN BIRAK: açıklığa girer, kapalı açıklık ve boşluk REDDEDİ
   expect(sonra.indexOf(a.sag)).toBe(sonra.indexOf(yeni) + 1);
   expect(sonra[sonra.length - 1]).toBe(once[once.length - 1]);   // gergi SONDA
   expect(await page.evaluate(() => veFeadYolDurumu(veFeadBuildFromCanvas(), 'mean').ok)).toBe(true);
+  // SÜRÜKLEME TEMİZ BİTTİ: kaynak satır, pafta yeniden kurulunca DOM'dan
+  // söküldü; `dragend` belgeye değil sökülen liste kabına ulaşıyor (ölçüldü) ve
+  // temizlik orada — liste kapalı, tip globali boş.
+  expect(await page.evaluate(() => ({ sur: window.vePaletSuruklenen,
+    acik: document.querySelectorAll('.ve-fead-ek.is-acik').length })))
+    .toEqual({ sur: null, acik: 0 });
   // TEK ADIM: Ctrl+Z eklenen kasnağı bütünüyle geri alıyor.
   await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); veTogglePropertiesPanel(false); });
   await page.keyboard.press('Control+z');

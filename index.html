@@ -740,97 +740,15 @@
               </svg> <span class="ve-comp-label">PTO Toplam</span></div>
           </div>
 
-          <!-- ═══ FEAD (motorun ön uç kayış-kasnak sistemi) ═══
-               Yalnız 'fead-analysis' modülünün İÇ topolojisinde görünür.
-               Semboller tek renk (currentColor) paletteki dil gereği; tuvale
-               düşen renkli sürümleri js/components.js componentDefs'tedir. -->
-          <div class="ve-category" data-ve-scope="fead-analysis">
-            <div class="ve-category-title">FEAD kasnakları</div>
-            <div class="ve-component" draggable="true" data-type="fead-crank" title="Krank Kasnağı — kayışı döndüren tahrik kaynağı (torsiyonel damperli). Kayış yolu bunun ÇIKIŞINDAN başlar, GİRİŞİNE döner.">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="50" cy="50" r="27" fill="none" stroke="currentColor" stroke-width="3.5" stroke-dasharray="6 5" opacity="0.6"/>
-                <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="4"/>
-                <circle cx="50" cy="50" r="5" fill="currentColor"/>
-              </svg> <span class="ve-comp-label">Krank Kasnağı</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-alternator" title="Alternatör — kayıştan güç çeken aksesuar kasnağı">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="22" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="22" cy="50" r="4" fill="currentColor"/>
-                <circle cx="64" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="6"/>
-                <path d="M66.6 32.4 L55 53.2 L62.7 53.2 L59.5 64.1 L71.7 46.2 L64 46.2 Z" fill="currentColor"/>
-              </svg> <span class="ve-comp-label">Alternatör</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-ac" title="Klima Kompresörü — kayıştan güç çeken aksesuar kasnağı">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="22" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="22" cy="50" r="4" fill="currentColor"/>
-                <circle cx="64" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="6"/>
-                <g stroke="currentColor" stroke-width="4.5" stroke-linecap="round"><line x1="64" y1="32" x2="64" y2="68"/><line x1="48.4" y1="41" x2="79.6" y2="59"/><line x1="79.6" y1="41" x2="48.4" y2="59"/></g>
-              </svg> <span class="ve-comp-label">Klima Kompresörü</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-waterpump" title="Su Pompası — kayıştan tahrikli soğutma suyu pompası">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="22" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="22" cy="50" r="4" fill="currentColor"/>
-                <circle cx="63" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="6"/>
-                <g stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.75"><line x1="70" y1="50" x2="80" y2="50"/><line x1="66.5" y1="56.1" x2="71.5" y2="64.7"/><line x1="59.5" y1="56.1" x2="54.5" y2="64.7"/><line x1="56" y1="50" x2="46" y2="50"/><line x1="59.5" y1="43.9" x2="54.5" y2="35.3"/><line x1="66.5" y1="43.9" x2="71.5" y2="35.3"/></g>
-                <circle cx="63" cy="50" r="5" fill="currentColor"/>
-              </svg> <span class="ve-comp-label">Su Pompası</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-ps" title="Direksiyon Pompası — hidrolik direksiyon pompası kasnağı">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="22" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="22" cy="50" r="4" fill="currentColor"/>
-                <circle cx="64" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="64" cy="50" r="14" fill="none" stroke="currentColor" stroke-width="4" opacity="0.75"/>
-                <g stroke="currentColor" stroke-width="3.5" stroke-linecap="round" opacity="0.75"><line x1="64" y1="45.5" x2="64" y2="36"/><line x1="60.2" y1="52.5" x2="52" y2="57"/><line x1="67.8" y1="52.5" x2="76" y2="57"/></g>
-                <circle cx="64" cy="50" r="4.5" fill="currentColor"/>
-              </svg> <span class="ve-comp-label">Direksiyon Pompası</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-aircomp" title="Hava Kompresörü — kayıştan tahrikli hava kompresörü">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="19" cy="52" r="13" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="19" cy="52" r="3.6" fill="currentColor"/>
-                <rect x="38" y="30" width="46" height="46" rx="7" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="58" cy="53" r="12" fill="none" stroke="currentColor" stroke-width="4" opacity="0.75"/>
-                <rect x="52" y="14" width="14" height="16" rx="2" fill="currentColor" opacity="0.6"/>
-              </svg> <span class="ve-comp-label">Hava Kompresörü</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-fan" title="Fan Kavraması — viskoz kavramalı soğutma fanı">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="6 5" opacity="0.6"/>
-                <g fill="currentColor">
-                  <path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z"/>
-                  <path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(90 50 50)"/>
-                  <path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(180 50 50)"/>
-                  <path d="M50 50 C50 32 40 20 27 26 C33 40 41 47 50 50 Z" transform="rotate(270 50 50)"/>
-                </g>
-                <circle cx="50" cy="50" r="9" fill="none" stroke="currentColor" stroke-width="4"/>
-              </svg> <span class="ve-comp-label">Fan Kavraması</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-idler" title="Avara Kasnak — yük çekmez; kayış yolunu yönlendirir, sarım açısını artırır">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="50" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.5"/>
-                <circle cx="50" cy="50" r="13" fill="none" stroke="currentColor" stroke-width="4"/>
-                <circle cx="50" cy="50" r="4" fill="currentColor"/>
-              </svg> <span class="ve-comp-label">Avara Kasnak</span></div>
-            <div class="ve-component" draggable="true" data-type="fead-tensioner" title="Gergi — pivotlu kol ucundaki kasnak; yay momentiyle kayış gerginliğini sabit tutar">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <line x1="64" y1="36" x2="24" y2="76" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
-                <circle cx="24" cy="76" r="8" fill="none" stroke="currentColor" stroke-width="4"/>
-                <circle cx="64" cy="36" r="21" fill="none" stroke="currentColor" stroke-width="6"/>
-                <circle cx="64" cy="36" r="6" fill="currentColor"/>
-                <path d="M41 89 A 44 44 0 0 0 73 79" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-                <polygon points="72,72 84,79 71,85" fill="currentColor" opacity="0.7"/>
-              </svg> <span class="ve-comp-label">Gergi</span></div>
-          </div>
-
-          <div class="ve-category" data-ve-scope="fead-analysis">
-            <div class="ve-category-title">FEAD araçları</div>
-            <div class="ve-component" draggable="true" data-type="fead-layout" title="Kayış Yolu kanvası — kasnak konum + çap verisinden ölçekli serpantin şeması. Kart üzerindeki Katmanlar düğmesinden geometri ya da işletme (gerilme haritası · animasyon · titreşim) görünümüne alınır; istediğiniz kadar kanvas açabilirsiniz.">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <path d="M25.9 49.3 L65.2 24.4 A9 9 0 0 1 79 31.5 L81 65.6 A7 7 0 0 1 71.9 72.7 L29.6 76.3 A15 15 0 0 1 25.9 49.3 Z" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round"/>
-                <circle cx="34" cy="62" r="15" fill="none" stroke="currentColor" stroke-width="3" opacity="0.6"/>
-                <circle cx="70" cy="32" r="9" fill="none" stroke="currentColor" stroke-width="3" opacity="0.6"/>
-                <circle cx="74" cy="66" r="7" fill="none" stroke="currentColor" stroke-width="3" opacity="0.6"/>
-              </svg> <span class="ve-comp-label">Kayış Yolu</span></div>
-          </div>
+          <!-- ═══ FEAD — "BİLEŞENLER" SÜTUNU YOK (2026-09-28) ═══
+               Modül `componentDefs['fead-analysis'].noPalette` beyan ediyor:
+               iç topolojisinde bu sütun ÇİZİLMEZ (js/components.js ›
+               veSyncPaletsizKapsam). Kasnak Kayış Tablosu'nun "＋ Kasnak ekle"
+               listesinden (tık: sıraya · sürükle: çizimde kayışın üstüne), yeni
+               Kayış Yolu kanvası ve aşağıdaki "Araçlar" kategorisinin not
+               araçları FEAD araçları penceresinden eklenir. Buraya
+               fead-analysis kapsamlı kategori KONMAZ — görünmez, ölü olur
+               (kapı: fead-araclar.test.js › "PALETSİZ"). -->
 
 
           <div class="ve-category ve-category-tools" data-always-visible="true">

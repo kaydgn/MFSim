@@ -338,15 +338,18 @@ describe('kayış çizimde tıklanır', () => {
     expect(core).toMatch(/if\(!\(componentDefs\[node\.type\] \|\| \{\}\)\.noDelete\)\s*\n\s*html \+= '<button class="ve-prop-del"/);
   });
 
-  test('paletten kayış BIRAKILAMAZ — satırı yok (tek kopya zaten açılışta)', () => {
+  test('kayış paletten BIRAKILAMAZ — FEAD\'in paleti hiç yok (tek kopya zaten açılışta)', () => {
     // Satır geri gelirse bırakılan ikinci kayış `maxInstances` duvarına
-    // çarpar: palette duran bir öğe her denemede yalnız "en fazla 1 tane"
-    // derdi. Kasnak satırları DURUYOR — çizime bırakılarak ekleniyorlar.
+    // çarpardı: palette duran bir öğe her denemede yalnız "en fazla 1 tane"
+    // derdi. 2026-09-28'den beri FEAD'in "Bileşenler" sütunu da yok
+    // (components.js → noPalette); kasnaklar kartın ekleyici LİSTESİNDEN —
+    // tık ya da çizime sürükle (fead-table.test.js → "EKLEYİCİ BİR LİSTE").
     const fs = require('fs');
     const path = require('path');
     const idx = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
     expect(idx).not.toMatch(/data-type="fead-belt"/);
-    expect(idx).toMatch(/data-type="fead-crank"/);
+    expect(idx).not.toMatch(/data-type="fead-crank"/);
+    expect(componentDefs['fead-analysis'].noPalette).toBe(true);
   });
 });
 
