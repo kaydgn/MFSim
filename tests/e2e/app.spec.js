@@ -156,7 +156,7 @@ test.describe('Bileşen ekleme', () => {
     // AÇILIŞ YÜZEYİ SAYILMAZ, BEKLENİR. Burada bir zamanlar `nodes.length === 16`
     // yazıyordu ve o sayı modülün açılışta bir örnek zinciri kurduğu dönemden
     // kalmaydı: `veAracPopulateStarter` bugün TEK düğüm kuruyor (`ap-example`
-    // — örnek kartı, FEAD'in sihirbazla karşılamasının karşılığı). Test o gün
+    // — örnek kartı, FEAD'in başlangıç sayfasının karşılığı). Test o gün
     // kırmızıya döndü ve öyle kaldı; ölçtüğü şey (içeride bileşen eklenebiliyor
     // mu) ise hiç koşmaz oldu.
     //
