@@ -31,6 +31,11 @@ var VE_FW_3B_ROL_RENK = {
   // Kayış koyu: gerçekteki rengi, ve kasnak rollerinin hiçbiriyle karışmıyor
   'fead-belt': '--text-primary'
 };
+// Alttaki dizide ÇİP olan roller, kullanım sırasıyla; kalanı "Diğer" listesinde
+var VE_FW_3B_CIP = ['fead-crank', 'fead-tensioner', 'fead-idler', 'fead-alternator', 'fead-ac', 'fead-waterpump', 'fead-belt'];
+// Sığdırmanın dizi için ayırdığı en az pay (px): seçim yapılınca dizi rol
+// sırasıyla büyür, montaj onun altında kalmasın
+var VE_FW_3B_ALT_PAY = 124;
 // Görüntüleyicinin iş bütçesi: bir karede en çok bu kadar üçgenleme (ms)
 var VE_FW_3B_BUTCE = 24;
 
@@ -103,11 +108,19 @@ function veFeadWiz3bAc(){
     + '<button type="button" class="ve-fw-mini ve-fw-3b-metin" onclick="veFeadWiz3bSigdir()" title="Bütün montajı sığdır">Sığdır</button>'
     + '<button type="button" class="ve-settings-close" onclick="veFeadWiz3bKapat()" title="Kapat (Esc)" aria-label="Kapat">'
       + '<span class="mf-ico mf-ico-x"></span></button>'
+    // GÖVDE "TUVAL ÖNDE" (kullanıcı kararı 2026-09-30, tasarım tuvali B): tuval
+    // pencerenin tamamı; sağda yüzen kart (kasnaklar · kayış · roller), altta
+    // yüzen dizi (seçilinin rolleri + hesapla/aktar), kasnakların yanında
+    // çap etiketleri. Kart ve dizi TUVALİN ÜSTÜNDE — sığdırma onların
+    // örttüğü yeri düşer (_fw3bSerbest).
     + '</div><div class="ve-fw-3b-govde">'
     + '<div class="ve-fw-3b-tuval" id="ve-fw-3b-tuval" data-durum="kuruluyor">'
+      + '<svg class="ve-fw-3b-etiket-cizgi" id="ve-fw-3b-etiket-cizgi" aria-hidden="true"></svg>'
+      + '<div class="ve-fw-3b-etiketler" id="ve-fw-3b-etiket"></div>'
       + '<div class="ve-fw-3b-ilerleme" id="ve-fw-3b-ilerleme"></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-fw-3b-ipucu" hidden></div></div>'
-    + '<div class="ve-fw-3b-yan" id="ve-fw-3b-yan"></div></div>';
+    + '<aside class="ve-fw-3b-yan" id="ve-fw-3b-yan" aria-label="Kasnaklar ve kayış"></aside>'
+    + '<div class="ve-fw-3b-alt" id="ve-fw-3b-alt"></div></div>';
   var kap = document.getElementById('ve-fw-3b-tuval');
   var V = { kap: kap, s: s, meshler: [], cizgiler: [], sokucu: [], secili: -1, fare: -1, cizIstek: 0,
             kutu: null, elle: false, sonucGrubu: null, kuyruk: null };
@@ -318,29 +331,52 @@ function _fw3bPanel(){
   var yan = typeof document !== 'undefined' && document.getElementById('ve-fw-3b-yan');
   if(!V || !yan) return;
   yan.innerHTML = veFeadWiz3bPanelHTML(V.s, V.secili);
+  var alt = document.getElementById('ve-fw-3b-alt');
+  if(alt) alt.innerHTML = veFeadWiz3bAltHTML(V.s, V.secili);
   var od = document.getElementById('ve-fw-3b-onden');
   if(od) od.disabled = !(V.s.coz && V.s.coz.ok);
 }
-// Saf: durum + seçili düğüm → panel HTML'i (testli)
+// Saf: durum + seçili düğüm → sağdaki yüzen KART (testli). Sıra: kasnaklar
+// (sonuç) · öneri · seçili yol · kasnağın kesiti · kayışın bölümü (hep) ·
+// rol verilenler. Roller ve hesap düğmesi alttaki dizide (veFeadWiz3bAltHTML).
 function veFeadWiz3bPanelHTML(s, secili){
   var so = s.sonuc, h = '';
-  var tipler = veFeadWizStpRolTipleri();
   var renk = function(tip){ return '<span class="ve-fw-3b-renk" style="--renk:var(' + veFeadWiz3bRolJeton(tip) + ')"></span>'; };
-  // ── HESAP ÇUBUĞU (tepede, yapışık) — kullanıcı isteği 2026-09-30: "hepsinin
-  // çapını tek bir butona tıklayarak". Düğme rollü BÜTÜN birimleri birlikte
-  // çözer ve kaydırmada kaybolmaz; ilk hesaptan sonra rol değişikliği sonucu
-  // kendisi yeniler (veFeadWizStpRol), düğmeye her kasnakta dönülmez.
   var coz = s.coz, rolEngel = typeof _fwStpRolDenetim === 'function' ? _fwStpRolDenetim(s) : [];
-  var rollu = s.roller.filter(function(r){ return !!r && r !== 'fead-belt'; }).length;
-  h += '<section class="ve-fw-3b-bolum ve-fw-3b-hesapbar" data-ve-3b-hesapbar="1"><div class="ve-fw-rowbtns">'
-    + '<button type="button" class="ve-fw-btn" id="ve-fw-3b-hesapla"' + (rolEngel.length ? ' disabled' : '')
-    + ' onclick="veFeadWiz3bHesapla()">' + (coz ? 'Yeniden hesapla' : 'Tüm kasnakları hesapla') + '</button>';
-  if(coz && coz.ok)
-    h += '<button type="button" class="ve-fw-btn" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'
-      + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button>';
-  h += '</div><p class="ve-fw-dim" data-ve-3b-hesap-durum="1">' + (coz ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak hesaplandı'
-      + (coz.duzlem ? ' · düzlem sapması ' + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : veIkon('x') + ' kasnak bulunamadı')
-      : (rollu ? rollu + ' rollü birim · hesaplanmadı' : 'Parçalara rol verin, sonra hepsini birlikte hesaplayın')) + '</p>';
+  // ── KASNAKLAR (tasarım B'nin kartı): hesaptan sonra çap · hesap çapı · konum ──
+  h += '<section class="ve-fw-3b-bolum" data-ve-3b-sonuc="1"><div class="ve-fw-3b-kbas"><h4>Kasnaklar</h4>'
+    + '<span class="ve-fw-3b-hdurum" data-ve-3b-hesap-durum="1" data-ok="' + (coz ? (coz.ok ? '1' : '0') : '') + '">'
+    + (coz ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak hesaplandı' : veIkon('x') + ' kasnak bulunamadı')
+      : 'hesaplanmadı') + '</span></div>';
+  if(coz && coz.ok){
+    // Çizimin kendisi 3B'nin önden görünümü; kartta onun SAYILARI
+    var iki = veFeadStp2B(coz, _fwStpSecim(s)), kol = {};
+    coz.gergiler.forEach(function(g){ kol[g.kasnak] = g.kolBoy; });
+    var seciliK = _fw3bSeciliKasnak(s, secili);
+    h += '<table class="ve-fw-tbl ve-fw-3b-tbl"><thead><tr><th>Kasnak</th><th>Ø</th><th>Hesap Ø</th><th>X</th><th>Y</th></tr></thead><tbody>';
+    coz.kasnaklar.forEach(function(k, i){
+      h += '<tr data-ve-3b-kasnak="' + i + '"' + (i === seciliK ? ' class="on"' : '') + '><td>' + renk(k.tip) + _fwEsc(_fwStpRolAd(k.tip))
+        + (kol[i] !== undefined ? ' <span class="ve-fw-dim">· kol ' + _fwFmt(kol[i], 1) + '</span>' : '') + '</td>'
+        + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num ve-fw-3b-hc" data-ve-3b-hesapcap="' + i + '">'
+        + (typeof _fwStpHesapCapi === 'function' ? _fwFmt(_fwStpHesapCapi(s, k), 1) : '—')
+        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].x, 1)
+        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].y, 1) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    if(coz.duzlem) h += '<p class="ve-fw-dim">Düzlem sapması ' + _fwFmt(coz.duzlem.yayilim, 3) + ' mm</p>';
+    // Kayışın adı bir bağlantı: seçer
+    if(coz.kayis)
+      h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <button type="button" class="ve-fw-3b-yolb"'
+        + ' onclick="veFeadWiz3bSec(' + coz.kayis.dugum + ')">' + _fwEsc(_fwStpRolAd('fead-belt'))
+        + '</button> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
+    h += '<div class="ve-fw-spinbox">'
+      + '<button type="button" class="ve-fw-spin' + (s.ayna ? '' : ' ve-fw-spin-on') + '" onclick="veFeadWizStpAyna(false)">Önden</button>'
+      + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '" onclick="veFeadWizStpAyna(true)">Arkadan</button></div>';
+  } else {
+    var rollu = s.roller.filter(function(r){ return !!r && r !== 'fead-belt'; }).length;
+    h += '<p class="ve-fw-dim">' + (rollu ? rollu + ' rollü birim — alttan "Tüm kasnakları hesapla"'
+      : 'Modelde bir parçaya tıklayın, alttaki diziden rolünü verin') + '</p>';
+  }
   var sorun = rolEngel.filter(function(m){ return m !== 'Hiçbir parçaya rol verilmedi.'; })
     .concat(coz ? coz.hatalar.concat(coz.uyarilar) : []);
   if(sorun.length){
@@ -352,14 +388,11 @@ function veFeadWiz3bPanelHTML(s, secili){
   // ── ÖNERİ (gergi otomatik bulunduysa ya da aday varsa) ──
   var on = (typeof _fwStpOneriHTML === 'function') ? _fwStpOneriHTML(s) : '';
   if(on) h += '<section class="ve-fw-3b-bolum">' + on + '</section>';
-  // ── SEÇİLİ ──
-  h += '<section class="ve-fw-3b-bolum"><h4>Seçili</h4>';
-  if(secili < 0){
-    h += '<p class="ve-fw-dim">Modelde bir parçaya tıklayın.</p>';
-  } else {
+  // ── SEÇİLİ: yol (alt montaja rol yoldan verilir) ──
+  if(secili >= 0){
     var yol = veFeadWiz3bYol(s, secili), kok = so.agac[yol[0]];
     var kokGizli = kok.ebeveyn < 0 && kok.cocuklar.length && yol.length > 1;
-    h += '<div class="ve-fw-3b-yol">';
+    h += '<section class="ve-fw-3b-bolum" data-ve-3b-secili="1"><h4>Seçili</h4><div class="ve-fw-3b-yol">';
     yol.forEach(function(d, k){
       if(k === 0 && kokGizli){ h += '<span class="ve-fw-dim" title="Bütün montaja rol verilmez">' + _fwEsc(so.agac[d].ad) + '</span>'; }
       else if(d === secili) h += '<b data-ve-3b-yol="' + d + '">' + _fwEsc(so.agac[d].ad) + '</b>';
@@ -372,53 +405,12 @@ function veFeadWiz3bPanelHTML(s, secili){
     for(var e = so.agac[secili].ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var n = so.agac[secili].parcalar.length;
     h += '<p class="ve-fw-dim">' + n + ' parça' + (ata >= 0 ? ' · ' + _fwEsc(so.agac[ata].ad) + ' biriminin içinde ('
-      + _fwEsc(_fwStpRolAd(s.roller[ata])) + ') — rol verirseniz birimin rolü kalkar' : '') + '</p>';
-    var rol = s.roller[secili] || '';
-    h += '<div class="ve-fw-3b-roller" role="group" aria-label="Rol">'
-      + '<button type="button" class="ve-fw-3b-rol" data-ve-3b-rol="" aria-pressed="' + (rol ? 'false' : 'true')
-        + '" onclick="veFeadWiz3bRol(\'\')">Rol yok</button>';
-    tipler.forEach(function(t){
-      h += '<button type="button" class="ve-fw-3b-rol" data-ve-3b-rol="' + t + '" aria-pressed="' + (rol === t ? 'true' : 'false')
-        + '" onclick="veFeadWiz3bRol(\'' + t + '\')">' + renk(t) + _fwEsc(_fwStpRolAd(t)) + '</button>';
-    });
-    h += '</div>';
+      + _fwEsc(_fwStpRolAd(s.roller[ata])) + ') — rol verirseniz birimin rolü kalkar' : '') + '</p></section>';
   }
-  h += '</section>';
   // ── SEÇİLİ KASNAĞIN KESİTİ (hesaptan sonra; seçim bir birimin içindeyse o birim) ──
   var kKi = _fw3bSeciliKasnak(s, secili);
   if(kKi >= 0 && typeof _fwStpKasnakKesitHTML === 'function') h += _fwStpKasnakKesitHTML(s, kKi);
-  // ── SONUÇ (hesaptan sonra) ──
-  if(coz && coz.ok){
-    // Çizimin kendisi 3B'nin önden görünümü; panelde onun SAYILARI (kartın
-    // 2B çizimi panelde okunmayacak kadar küçülüyordu)
-    var iki = veFeadStp2B(coz, _fwStpSecim(s)), kol = {};
-    coz.gergiler.forEach(function(g){ kol[g.kasnak] = g.kolBoy; });
-    h += '<section class="ve-fw-3b-bolum" data-ve-3b-sonuc="1"><h4>Sonuç</h4><div class="ve-fw-spinbox">'
-      + '<button type="button" class="ve-fw-spin' + (s.ayna ? '' : ' ve-fw-spin-on') + '" onclick="veFeadWizStpAyna(false)">Önden</button>'
-      + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '" onclick="veFeadWizStpAyna(true)">Arkadan</button></div>'
-      + '<table class="ve-fw-tbl ve-fw-3b-tbl"><thead><tr><th>Kasnak</th><th>Ø [mm]</th><th>Hesap Ø</th><th>X</th><th>Y</th></tr></thead><tbody>';
-    coz.kasnaklar.forEach(function(k, i){
-      h += '<tr data-ve-3b-kasnak="' + i + '"><td>' + renk(k.tip) + _fwEsc(_fwStpRolAd(k.tip))
-        + (kol[i] !== undefined ? ' <span class="ve-fw-dim">· kol ' + _fwFmt(kol[i], 1) + '</span>' : '') + '</td>'
-        + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num" data-ve-3b-hesapcap="' + i + '">'
-        + (typeof _fwStpHesapCapi === 'function' ? _fwFmt(_fwStpHesapCapi(s, k), 1) : '—')
-        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].x, 1)
-        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].y, 1) + '</td></tr>';
-    });
-    h += '</tbody></table>';
-    // Hesap çapının seçicisi burada YOK (kullanıcı isteği 2026-09-30): seçim
-    // kayış kesitinin matrisinde yapılıyor, ikinci satır tekrardı.
-    // Kayışın adı bir bağlantı: seçer
-    if(coz.kayis)
-      h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <button type="button" class="ve-fw-3b-yolb"'
-        + ' onclick="veFeadWiz3bSec(' + coz.kayis.dugum + ')">' + _fwEsc(_fwStpRolAd('fead-belt'))
-        + '</button> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
-    h += '</section>';
-  }
-  // ── KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR (kullanıcı isteği 2026-09-30: "kayış görselinin
-  // hep görünmesini istiyorum"): kesit şekli · hesap çapı matrisi · ölçüler.
-  // Şekil ve tablo katalogdan, kasnak çapları hesaptan; kayış rolü yoksa
-  // profil kasnaktan ya da sihirbazın kayışından.
+  // ── KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR (2026-09-30): kesit · hesap çapı matrisi · ölçüler ──
   if(typeof _fwStpKayisKesitHTML === 'function') h += _fwStpKayisKesitHTML(s);
   // ── ROL VERİLENLER ──
   var atanan = so.agac.filter(function(d){ return !!s.roller[d.i]; });
@@ -435,8 +427,46 @@ function veFeadWiz3bPanelHTML(s, secili){
     });
     h += '</ul>';
   }
-  h += '</section>';
-  return h;
+  return h + '</section>';
+}
+// Saf: alttaki YÜZEN DİZİ (testli). Üst sıra seçilinin adı ve ROL ÇİPLERİ
+// (seçim yoksa yönerge); alt sıra TEK hesap düğmesi (bütün kasnaklar) ve
+// hesaptan sonra aktarım. Düğmeler kartın işlevleri (tek yol).
+function veFeadWiz3bAltHTML(s, secili){
+  var so = s.sonuc, h = '<div class="ve-fw-3b-dizi" data-ve-3b-roller="1">';
+  if(secili >= 0){
+    var rol = s.roller[secili] || '';
+    // Seçilinin adı kartın "Seçili" bölümünde; dizi yalnız rolleri taşır
+    h += '<div class="ve-fw-3b-roller" role="group" aria-label="Rol — ' + _fwEsc(so.agac[secili].ad) + '">';
+    // Sık roller çip, kalanı "Diğer" listesi — tek satıra sığsın (11 çip
+    // 960 px'lik serbest alanda iki satıra kırılıp montajı örtüyordu).
+    // Liste yine TEK kaynaktan (veFeadWizStpRolTipleri): bölme yalnız sunum.
+    var tum = veFeadWizStpRolTipleri(), cip = VE_FW_3B_CIP.filter(function(t){ return tum.indexOf(t) >= 0; });
+    var diger = tum.filter(function(t){ return cip.indexOf(t) < 0; });
+    cip.forEach(function(t){
+      h += '<button type="button" class="ve-fw-3b-rol" data-ve-3b-rol="' + t + '" aria-pressed="' + (rol === t ? 'true' : 'false')
+        + '" onclick="veFeadWiz3bRol(\'' + t + '\')"><span class="ve-fw-3b-renk" style="--renk:var(' + veFeadWiz3bRolJeton(t) + ')"></span>'
+        + _fwEsc(_fwStpRolAd(t)) + '</button>';
+    });
+    if(diger.length){
+      var dSec = diger.indexOf(rol) >= 0;
+      h += '<select class="ve-fw-3b-rol ve-fw-3b-diger" data-ve-3b-diger="1" aria-label="Diğer roller"' + (dSec ? ' aria-pressed="true"' : '')
+        + ' onchange="veFeadWiz3bRol(this.value === \'-\' ? \'\' : this.value)"><option value="" disabled' + (dSec ? '' : ' selected') + '>Diğer…</option>'
+        + diger.map(function(t){ return '<option value="' + t + '" data-ve-3b-rol="' + t + '"' + (rol === t ? ' selected' : '') + '>' + _fwEsc(_fwStpRolAd(t)) + '</option>'; }).join('')
+        + '<option value="-" data-ve-3b-rol=""' + (rol ? '' : ' disabled') + '>Rolü kaldır</option></select>';
+    }
+    h += '</div>';
+  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Rol vermek için modelde bir parçaya tıklayın</span>';
+  h += '</div>';
+  // ── TEK DÜĞME (2026-09-30): rollü bütün birimler birlikte ──
+  var coz = s.coz, rolEngel = typeof _fwStpRolDenetim === 'function' ? _fwStpRolDenetim(s) : [];
+  h += '<div class="ve-fw-3b-eylem" data-ve-3b-hesapbar="1">'
+    + '<button type="button" class="ve-fw-3b-hap" id="ve-fw-3b-hesapla"' + (rolEngel.length ? ' disabled' : '')
+    + ' onclick="veFeadWiz3bHesapla()">' + veIkon('play') + ' ' + (coz ? 'Yeniden hesapla' : 'Tüm kasnakları hesapla') + '</button>';
+  if(coz && coz.ok)
+    h += '<button type="button" class="ve-fw-3b-hap ve-fw-3b-hap-vurgu" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'
+      + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + ' ' + veIkon('arrow-right') + '</button>';
+  return h + '</div>';
 }
 // Seçili düğümün kasnağı: düğüm ya da en yakın rollü atası bir birimse o
 // birimin kasnağı (alt montajın parçasına tıklanınca da birimin kesiti).
@@ -564,6 +594,17 @@ function _fw3bOrnekNoktalar(){
   });
   return out;
 }
+// Kartın ve alttaki dizinin ÖRTTÜĞÜ şerit (px): sığdırma montajı geri kalan
+// serbest alana oturtur. Ölçülemeyen (gizli, pencereden geniş) örtü sayılmaz.
+function _fw3bSerbest(){
+  var V = _fw3b, out = { sag: 0, alt: 0 };
+  if(!V || typeof document === 'undefined') return out;
+  var r = V.kap.getBoundingClientRect(), yan = document.getElementById('ve-fw-3b-yan'), alt = document.getElementById('ve-fw-3b-alt');
+  if(yan && yan.offsetWidth){ var y = yan.getBoundingClientRect(); var sg = r.right - y.left; if(sg > 0 && sg < r.width * 0.5) out.sag = sg; }
+  if(alt && alt.offsetHeight){ var a = alt.getBoundingClientRect(); var ak = Math.max(VE_FW_3B_ALT_PAY, r.bottom - a.top); if(ak < r.height * 0.4) out.alt = ak; }
+  return out;
+}
+function veFeadWiz3bSerbest(){ return _fw3bSerbest(); }
 function _fw3bSigdir(kutu, noktalar){
   var V = _fw3b;
   if(!V || !V.camera || !kutu) return;
@@ -584,10 +625,12 @@ function _fw3bSigdir(kutu, noktalar){
       if(p.x < x0) x0 = p.x; if(p.x > x1) x1 = p.x; if(p.y < y0) y0 = p.y; if(p.y > y1) y1 = p.y;
     });
     if(!isFinite(x0)) break;
-    // İzdüşümün ortasını hedefe al (ekran düzleminde kaydır), sonra ölçekle
-    var h = V.kap.clientHeight || 1, w = V.kap.clientWidth || 1;
-    _fw3bKaydir(-(x0 + x1) / 2 * w / 2, (y0 + y1) / 2 * h / 2);
-    var en = Math.max((x1 - x0) / 2, (y1 - y0) / 2);
+    // İzdüşümün ortasını SERBEST alanın ortasına al (kart sağda, dizi altta
+    // örter), sonra serbest alana göre ölçekle
+    var h = V.kap.clientHeight || 1, w = V.kap.clientWidth || 1, F = _fw3bSerbest();
+    var ax = (w - F.sag) / w, ay = (h - F.alt) / h, cx = -F.sag / w, cy = F.alt / h;
+    _fw3bKaydir(-((x0 + x1) / 2 - cx) * w / 2, ((y0 + y1) / 2 - cy) * h / 2);
+    var en = Math.max((x1 - x0) / 2 / ax, (y1 - y0) / 2 / ay);
     if(!(en > 0)) break;
     V.ctrl.r *= Math.max(0.5, Math.min(2, en / VE_FW_3B_ACILIS.doluluk));
   }
@@ -613,17 +656,22 @@ function veFeadWiz3bOnden(){
     kutu.expandByPoint(new THREE.Vector3(k.merkez[0] - r, k.merkez[1] - r, k.merkez[2] - r));
     kutu.expandByPoint(new THREE.Vector3(k.merkez[0] + r, k.merkez[1] + r, k.merkez[2] + r));
   });
-  var m = kutu.getCenter(new THREE.Vector3()), R = kutu.getSize(new THREE.Vector3()).length() / 2;
   // Yörünge takımı 2B'nin eksenleri: konum = hedef − d·r (θ = φ = 0) — sonraki
-  // sürükleme düzlemin yukarısı etrafında döner, resim sıçramaz
-  V.ctrl.hedef.copy(m);
-  V.ctrl.r = R / Math.sin(V.camera.fov * Math.PI / 360) * 1.02;
+  // sürükleme düzlemin yukarısı etrafında döner, resim sıçramaz. Sığdırma
+  // kasnakların halkalarıyla, serbest alana (kartın ve dizinin dışı).
   V.ctrl.eks = _fw3bEksKur(iki.d, iki.yukari);
   V.ctrl.theta = 0; V.ctrl.phi = 0;
   V.yukari = null;
   V.elle = true;
-  _fw3bKamera();
-  _fw3bCiz();
+  var pts = [];
+  V.s.coz.kasnaklar.forEach(function(k){
+    var e = V.ctrl.eks, r = k.od / 2;
+    for(var i = 0; i < 24; i++){
+      var a = i * Math.PI / 12;
+      pts.push(new THREE.Vector3(k.merkez[0], k.merkez[1], k.merkez[2]).addScaledVector(e.y, r * Math.cos(a)).addScaledVector(e.z, r * Math.sin(a)));
+    }
+  });
+  _fw3bSigdir(kutu, pts);
   return true;
 }
 
@@ -723,7 +771,40 @@ function _fw3bCiz(){
     V.cizIstek = 0;
     if(_fw3b !== V) return;
     V.renderer.render(V.scene, V.camera);
+    _fw3bEtiketle();
   });
+}
+// ÇAP ETİKETLERİ (tasarım B): hesaptan sonra her kasnağın yanında rolü, dış
+// çapı ve hesap çapı; kılavuz çizgisi halkanın kenarından. Konum her karede
+// kameranın izdüşümünden — sayı kartın tablosuyla aynı kaynaktan (çözüm).
+// Etiket montajın merkezinden DIŞARI doğru açılır (iç tarafta kasnaklar var).
+function _fw3bEtiketle(){
+  var V = _fw3b, kat = document.getElementById('ve-fw-3b-etiket'), cz = document.getElementById('ve-fw-3b-etiket-cizgi');
+  if(!V || !kat || !cz) return;
+  var coz = V.s.coz;
+  if(!coz || !coz.ok || !V.grup.visible){ kat.innerHTML = ''; cz.innerHTML = ''; return; }
+  var w = V.kap.clientWidth || 1, h = V.kap.clientHeight || 1;
+  V.camera.updateMatrixWorld();
+  var sag = new THREE.Vector3().setFromMatrixColumn(V.camera.matrixWorld, 0);
+  var ekran = function(v){ var p = v.clone().project(V.camera); return { x: (p.x + 1) / 2 * w, y: (1 - p.y) / 2 * h, z: p.z }; };
+  var K = coz.kasnaklar.map(function(k){
+    var m = new THREE.Vector3(k.merkez[0], k.merkez[1], k.merkez[2]), c = ekran(m);
+    var e = ekran(m.clone().addScaledVector(sag, k.od / 2));
+    return { k: k, x: c.x, y: c.y, r: Math.hypot(e.x - c.x, e.y - c.y), on: c.z < 1 };
+  });
+  var ox = 0; K.forEach(function(q){ ox += q.x / K.length; });
+  var hs = '', cs = '';
+  K.forEach(function(q, i){
+    if(!q.on) return;
+    var sagda = q.x >= ox, yx = sagda ? 1 : -1;
+    var kx = q.x + yx * q.r * 0.94, ky = q.y - q.r * 0.34, lx = q.x + yx * (q.r + 26), ly = q.y - q.r * 0.34 - 10;
+    cs += '<line x1="' + kx.toFixed(1) + '" y1="' + ky.toFixed(1) + '" x2="' + lx.toFixed(1) + '" y2="' + ly.toFixed(1) + '"/>'   // makine: SVG yol verisi
+      + '<circle cx="' + kx.toFixed(1) + '" cy="' + ky.toFixed(1) + '" r="2.5"/>';   // makine: SVG yol verisi
+    var hc = typeof _fwStpHesapCapi === 'function' ? _fwStpHesapCapi(V.s, q.k) : NaN;
+    hs += '<div class="ve-fw-3b-etk' + (sagda ? '' : ' sol') + '" data-ve-3b-etiket="' + i + '" style="left:' + lx.toFixed(1) + 'px;top:' + ly.toFixed(1) + 'px">'   // makine: CSS konumu
+      + '<b>' + _fwEsc(_fwStpRolAd(q.k.tip)) + '</b><span>Ø' + _fwFmt(q.k.od, 1) + ' · hesap ' + _fwFmt(hc, 1) + '</span></div>';
+  });
+  cz.innerHTML = cs; kat.innerHTML = hs;
 }
 
 // ── 9 · TEST KANCASI ──────────────────────────────────────────────────────
@@ -748,6 +829,7 @@ function veFeadWiz3bDurum(){
   var V = _fw3b;
   if(!V) return null;
   return { durum: V.kap.getAttribute('data-durum'), parca: V.meshler.filter(Boolean).length,
+    etiket: document.querySelectorAll('#ve-fw-3b-etiket [data-ve-3b-etiket]').length,
     halka: V.sonucGrubu ? V.sonucGrubu.userData.halka : 0, secili: V.secili, fare: V.fare };
 }
 
@@ -759,8 +841,10 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWiz3bParcalar: veFeadWiz3bParcalar,
     veFeadWiz3bRolJeton: veFeadWiz3bRolJeton,
     VE_FW_3B_ACILIS: VE_FW_3B_ACILIS,
+    VE_FW_3B_CIP: VE_FW_3B_CIP,
     veFeadWiz3bAcilisEksen: veFeadWiz3bAcilisEksen,
     veFeadWiz3bPanelHTML: veFeadWiz3bPanelHTML,
+    veFeadWiz3bAltHTML: veFeadWiz3bAltHTML,
     _fw3bSeciliKasnak: _fw3bSeciliKasnak,
     _fw3bSeciliKayis: _fw3bSeciliKayis,
     veFeadWiz3bTazele: veFeadWiz3bTazele
