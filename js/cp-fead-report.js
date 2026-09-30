@@ -195,13 +195,17 @@ function _frDocFields(node){
   var ic = '<div class="ve-fp-grid" style="--fp-k:1;">' + inp('author', 'Hazırlayan', 'A. Kol') + '</div>'
     + '<div class="ve-fp-grid" style="--fp-k:2;">'
     + inp('docNo', 'Doküman no', 'FEAD-2026-001') + inp('revision', 'Revizyon', 'A') + '</div>'
+    // KONTROL · ONAY — A3 panonun başlık bloğu (imza satırları). Boşsa panoda
+    // "—" basılır: kâğıtta elle doldurulacak alan.
+    + '<div class="ve-fp-grid" style="--fp-k:2;">'
+    + inp('checker', 'Kontrol eden', 'B. Kontrol') + inp('approver', 'Onaylayan', 'C. Onay') + '</div>'
     + '<div class="ve-fp-grid" style="--fp-k:1;"><label class="ve-fp-f">'
     + '<span class="ve-fp-l">Tasarım notları (her satır bir not)</span>'
     + '<textarea class="ve-fp-inp ve-fp-inp--text ve-fp-inp--alan" rows="3"'
     + ' oninput="veFeadSet(\'' + node.id + '\',\'notes\',this.value)"'
     + ' placeholder="2026-08-18 | Gergi montaj konumu 5 mm sola alındı">'
     + _frEsc(d.notes == null ? '' : d.notes) + '</textarea></label></div>';
-  return _feadCard('Doküman künyesi', 'antete ve §8.18\'e akar', 'var(--accent-warning)', ic);
+  return _feadCard('Doküman künyesi', 'antete, A3 panoya ve §8.19\'a akar', 'var(--accent-warning)', ic);
 }
 
 // ═══════════════════ TALEP-ÜZERİNE VARLIK YÜKLEME ═══════════════════════════
@@ -2610,6 +2614,39 @@ function _frFreqSection(R){
 // Çekirdeğe torsionalModel() girdikten sonra o cümle YANLIŞ hâle geldi — rapor
 // tedarikçiye giden belge olduğu için orada kalan bir yanlış, panelde kalandan
 // daha pahalı. Bölüm, sayıyı da geçerlilik sınırını da birlikte taşıyor.
+// ── MERTEBE KESİŞMELERİ — §8.18 ile A3 panonun ORTAK üreticisi ──────────────
+// Mertebe kümesi TAKOZ MODÜLÜNÜN kümesidir (mount-signals.js `_campOrders`,
+// AMC raporundan): 1 · ateşleme · 2×ateşleme · 4×ateşleme. İkinci bir küme
+// uydurmak, iki modülün aynı motoru başka mertebelerle anlatması olurdu.
+// o. mertebe f frekansına 60·f/o devrinde ulaşır; çevrimin devir bandında
+// kalanlar devir sırasıyla döner. Burulma çözülmediyse ya da ateşleme
+// frekansı yoksa null; bant tek devirse `bant: false`.
+function _frBurulmaKesisim(R){
+  var T = R && R.torsional;
+  var duty = (R && R.analysis && R.analysis.duty) || [];
+  var d0 = duty[0] || null;
+  if(!T || !Number.isFinite(T.firstElasticHz)) return null;
+  if(!(d0 && d0.firingHz > 0 && d0.engineRpm > 0)) return null;
+  var atesMert = d0.firingHz * 60 / d0.engineRpm;         // 6 sil. 4 zamanlı → 3
+  var mertebe = [1, atesMert, 2 * atesMert, 4 * atesMert].filter(function(o, i, a){
+    return o > 0 && a.indexOf(o) === i;
+  }).sort(function(a, b){ return a - b; });
+  var rLo = Infinity, rHi = -Infinity;
+  duty.forEach(function(d){ var v = _frNum(d.engineRpm);
+    if(Number.isFinite(v)){ if(v < rLo) rLo = v; if(v > rHi) rHi = v; } });
+  var bant = Number.isFinite(rLo) && rHi > rLo;
+  var satir = [];
+  if(bant) (T.elasticHz || []).forEach(function(f, i){
+    mertebe.forEach(function(o){
+      var rp = 60 * f / o;                                  // o. mertebe f'e bu devirde ulaşır
+      if(rp >= rLo && rp <= rHi)
+        satir.push({ mod: i + 1, f: f, o: o, rpm: rp });
+    });
+  });
+  satir.sort(function(a, b){ return a.rpm - b.rpm; });
+  return { atesMert: atesMert, mertebe: mertebe, rLo: rLo, rHi: rHi, bant: bant, satir: satir };
+}
+
 function _frTorsionalSection(R){
   var T = R && R.torsional;
   var h = '<h3>8.18 Sistem burulma titreşimi</h3>';
@@ -2648,48 +2685,29 @@ function _frTorsionalSection(R){
   // frekanslı modları çalışma bandının DIŞINA atıyor: BMC'nin 12 Hz'lik gergi
   // kolu modunda ateşleme mertebesi 240 d/dk'ya denk geliyor, yani rölantinin
   // altına — bölüm "örtüşme yok" diye okunuyordu. Oysa 1. mertebe (devir/60)
-  // aynı modu 720 d/dk'da, tam rölantide kesiyor.
-  // Mertebe kümesi TAKOZ MODÜLÜNÜN kümesidir (mount-signals.js `_campOrders`,
-  // AMC raporundan): 1 · ateşleme · 2×ateşleme · 4×ateşleme. İkinci bir küme
-  // uydurmak, iki modülün aynı motoru başka mertebelerle anlatması olurdu.
-  if(d0 && d0.firingHz > 0 && d0.engineRpm > 0){
-    var atesMert = d0.firingHz * 60 / d0.engineRpm;         // 6 sil. 4 zamanlı → 3
-    var mertebe = [1, atesMert, 2 * atesMert, 4 * atesMert].filter(function(o, i, a){
-      return o > 0 && a.indexOf(o) === i;
-    }).sort(function(a, b){ return a - b; });
-    var dRpm = (R.analysis && R.analysis.duty) || [];
-    var rLo = Infinity, rHi = -Infinity;
-    dRpm.forEach(function(d){ var v = _frNum(d.engineRpm);
-      if(Number.isFinite(v)){ if(v < rLo) rLo = v; if(v > rHi) rHi = v; } });
-    if(Number.isFinite(rLo) && rHi > rLo){
-      var satir = [];
-      (T.elasticHz || []).forEach(function(f, i){
-        mertebe.forEach(function(o){
-          var rp = 60 * f / o;                              // o. mertebe f'e bu devirde ulaşır
-          if(rp >= rLo && rp <= rHi)
-            satir.push({ mod: i + 1, f: f, o: o, rpm: rp });
-        });
+  // aynı modu 720 d/dk'da, tam rölantide kesiyor. Kesişmeler A3 panoyla ORTAK
+  // üreticiden (`_frBurulmaKesisim`).
+  var K = _frBurulmaKesisim(R);
+  if(K && K.bant){
+    h += '<table><caption>Tablo ' + _frTbl() + ' — Mertebe kesişmeleri (çalışma devir bandı '
+       + _frFs(K.rLo, 0) + ' – ' + _frFs(K.rHi, 0) + ' d/dk)</caption>';
+    h += '<tr><th>Mod</th><th>Frekans</th><th>Mertebe</th><th>Kesişme devri</th></tr>';
+    if(K.satir.length){
+      K.satir.forEach(function(x){
+        h += '<tr><td class="l">' + x.mod + '. elastik</td><td>' + _frFs(x.f, 1) + '</td>'
+          + '<td>' + _frFs(x.o, 1).replace(',0', '') + '. mertebe'
+          + (Math.abs(x.o - K.atesMert) < 1e-9 ? ' (ateşleme)' : '') + '</td>'
+          + '<td>' + _frFs(x.rpm, 0) + '</td></tr>';
       });
-      h += '<table><caption>Tablo ' + _frTbl() + ' — Mertebe kesişmeleri (çalışma devir bandı '
-         + _frFs(rLo, 0) + ' – ' + _frFs(rHi, 0) + ' d/dk)</caption>';
-      h += '<tr><th>Mod</th><th>Frekans</th><th>Mertebe</th><th>Kesişme devri</th></tr>';
-      if(satir.length){
-        satir.sort(function(a, b){ return a.rpm - b.rpm; }).forEach(function(x){
-          h += '<tr><td class="l">' + x.mod + '. elastik</td><td>' + _frFs(x.f, 1) + '</td>'
-            + '<td>' + _frFs(x.o, 1).replace(',0', '') + '. mertebe'
-            + (Math.abs(x.o - atesMert) < 1e-9 ? ' (ateşleme)' : '') + '</td>'
-            + '<td>' + _frFs(x.rpm, 0) + '</td></tr>';
-        });
-      } else {
-        h += '<tr><td colspan="4" class="l">Bu mertebelerin hiçbiri çalışma bandında '
-          + 'hiçbir modu kesmiyor.</td></tr>';
-      }
-      h += '</table>';
-      h += '<p>Mertebe <i>o</i>, <i>f</i> frekansına <i>60·f/o</i> devrinde ulaşır. Kümede '
-        + 'ateşlemenin yanında <b>1. mertebe</b> (krank devri) da var: düşük frekanslı modları '
-        + 'ateşleme mertebesi çalışma bandının altında keser, oysa aynı modu 1. mertebe bandın '
-        + '<b>içinde</b> keser. Küme Takoz modülüyle aynıdır.</p>';
+    } else {
+      h += '<tr><td colspan="4" class="l">Bu mertebelerin hiçbiri çalışma bandında '
+        + 'hiçbir modu kesmiyor.</td></tr>';
     }
+    h += '</table>';
+    h += '<p>Mertebe <i>o</i>, <i>f</i> frekansına <i>60·f/o</i> devrinde ulaşır. Kümede '
+      + 'ateşlemenin yanında <b>1. mertebe</b> (krank devri) da var: düşük frekanslı modları '
+      + 'ateşleme mertebesi çalışma bandının altında keser, oysa aynı modu 1. mertebe bandın '
+      + '<b>içinde</b> keser. Küme Takoz modülüyle aynıdır.</p>';
   }
 
   // Ateşleme bandıyla örtüşme — hüküm değil, gözlem.
@@ -3199,50 +3217,74 @@ function _frFreqFigure(R){
 // %1,8 kala duruyordu ve bu ancak payla görülüyor.
 function _frCheckRows(R, ekle){
   var K = R && R.checks;
+  var kod = _frKodlar(R);
   if(!K){
-    ekle('Kasnak merkez mesafesi (§ BMC defteri)', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)', '—', 'wait');
-    ekle('Aksesuar çevrim oranı penceresi', 'governed devirde optimum bandında', '—', 'wait');
-    ekle('Aksesuar devir sınırı', 'sürekli ve anlık maksimumun altında', '—', 'wait');
+    ekle('Kasnak merkez mesafesi (§ BMC defteri)', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)', '—', 'wait',
+         'Kasnak merkez mesafesi', 'çözümde kapı yok');
+    ekle('Aksesuar çevrim oranı penceresi', 'governed devirde optimum bandında', '—', 'wait',
+         'Çevrim oranı penceresi', 'çözümde kapı yok');
+    ekle('Aksesuar devir sınırı', 'sürekli ve anlık maksimumun altında', '—', 'wait',
+         'Aksesuar devir sınırı', 'çözümde kapı yok');
     return;
   }
 
   // 11 — kasnak merkez mesafesi
   var c = K.centerDistance || {};
-  var cBulgu;
+  var cBulgu, cKisa;
   if(!c.rows || !c.rows.length) cBulgu = _frEsc(c.note || 'değerlendirilemedi');
   else if(c.ok) cBulgu = c.rows.length + ' çiftin hepsi aralıkta; en dar pay '
       + '%' + _frF(c.worst.payPct, 1) + ' (' + _frEsc(c.worst.cift) + ')';
   else cBulgu = c.rows.filter(function(r){ return !r.ok; })
       .map(function(r){ return _frEsc(r.cift) + ' a=' + _frF(r.a, 1)
         + ' ∉ [' + _frF(r.lo, 1) + ', ' + _frF(r.hi, 1) + ']'; }).join('; ');
+  // KISA YAZIM (A3 pano): en kritik çift, kodlarla — ihlal varsa ihlal.
+  var w = c.worst;
+  if(!w) cKisa = 'geometri çözülmedi';
+  else {
+    var cift = _frEsc((kod[w.i] || w.adI) + '–' + (kod[w.j] || w.adJ));
+    cKisa = w.ok ? cift + ' en dar pay ' + _frPct(w.payPct, 1)
+      : cift + ' ' + _frF(w.a, 1) + (w.a > w.hi ? ' > ' + _frF(w.hi, 1) : ' < ' + _frF(w.lo, 1));
+  }
   ekle('Kasnak merkez mesafesi', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂), pitch çapıyla',
-       cBulgu, c.durum || 'wait');
+       cBulgu, c.durum || 'wait', 'Kasnak merkez mesafesi', cKisa);
 
   // 12 — çevrim oranı penceresi
-  var w = K.ratioWindow || {};
-  var wBulgu;
-  if(!w.rows || !w.rows.length) wBulgu = _frEsc(w.note || 'değerlendirilemedi');
-  else if(w.ok) wBulgu = w.rows.map(function(r){
+  var wn = K.ratioWindow || {};
+  var wBulgu, wKisa;
+  if(!wn.rows || !wn.rows.length) wBulgu = _frEsc(wn.note || 'değerlendirilemedi');
+  else if(wn.ok) wBulgu = wn.rows.map(function(r){
       return _frEsc(r.ad) + ' ' + _frF(r.accRpm, 0) + ' d/dk ∈ ['
         + _frF(r.optimumRpm, 0) + ', ' + _frF(r.maxContRpm, 0) + ']'; }).join('; ');
-  else wBulgu = w.rows.filter(function(r){ return !r.ok; })
+  else wBulgu = wn.rows.filter(function(r){ return !r.ok; })
       .map(function(r){ return _frEsc(r.ad) + ': ' + _frEsc(r.metin)
         + ' (' + _frF(r.accRpm, 0) + ' d/dk)'; }).join('; ');
+  // Kısa yazım: önce ihlal, yoksa en dar pay.
+  var rr = null;
+  (wn.rows || []).forEach(function(r){
+    if(!rr || (!r.ok && rr.ok) || (r.ok === rr.ok && r.payPct < rr.payPct)) rr = r;
+  });
+  if(!rr) wKisa = (_frNum(wn.governedRpm) > 0) ? 'pencere bilinen aksesuar yok' : 'governed girilmedi';
+  else {
+    var kd = _frEsc(kod[rr.i] || rr.ad);
+    wKisa = rr.verdict === 'kucult' ? kd + ' ' + _frF(rr.accRpm, 0) + ' < ' + _frF(rr.optimumRpm, 0) + ' d/d'
+      : rr.verdict === 'buyut' ? kd + ' ' + _frF(rr.accRpm, 0) + ' > ' + _frF(rr.maxContRpm, 0) + ' d/d'
+      : kd + ' ' + _frF(rr.accRpm, 0) + ' d/d bantta';
+  }
   ekle('Aksesuar çevrim oranı penceresi',
-       (w.governedRpm > 0 ? 'governed ' + _frF(w.governedRpm, 0) + ' d/dk\'da optimum bandında'
-                          : 'governed devirde optimum bandında'),
-       wBulgu, w.durum || 'wait');
+       (wn.governedRpm > 0 ? 'governed ' + _frF(wn.governedRpm, 0) + ' d/dk\'da optimum bandında'
+                           : 'governed devirde optimum bandında'),
+       wBulgu, wn.durum || 'wait', 'Çevrim oranı penceresi', wKisa);
 
   // 13 — devir sınırı
-  var s = K.speedLimit || {};
-  var sBulgu;
-  if(!s.rows || !s.rows.length) sBulgu = _frEsc(s.note || 'değerlendirilemedi');
-  else if(s.ok) sBulgu = s.rows.map(function(r){
+  var sl = K.speedLimit || {};
+  var sBulgu, sKisa;
+  if(!sl.rows || !sl.rows.length) sBulgu = _frEsc(sl.note || 'değerlendirilemedi');
+  else if(sl.ok) sBulgu = sl.rows.map(function(r){
       return _frEsc(r.ad) + ' en dar pay %' + _frF(r.kritik.payPct, 1) + ' ('
         + _frEsc(r.kritik.ad) + ')'; }).join('; ');
   else {
     var ihlal = [];
-    s.rows.forEach(function(r){
+    sl.rows.forEach(function(r){
       r.noktalar.forEach(function(p){
         if(!p.ok) ihlal.push(_frEsc(r.ad) + ' @' + _frEsc(p.ad) + ': '
           + _frF(p.accRpm, 0) + ' > ' + _frF(p.limit, 0) + ' d/dk (' + _frEsc(p.limitAd) + ')');
@@ -3250,36 +3292,58 @@ function _frCheckRows(R, ekle){
     });
     sBulgu = ihlal.join('; ');
   }
+  // Kısa yazım: en az paylı satırın kritik noktası — pay ve iki devir.
+  var slr = null;
+  (sl.rows || []).forEach(function(r){ if(!slr || r.payPct < slr.payPct) slr = r; });
+  if(!slr || !slr.kritik) sKisa = 'sınırı bilinen aksesuar yok';
+  else {
+    var pk = slr.kritik, ka = _frEsc(kod[slr.i] || slr.ad);
+    sKisa = (sl.durum === 'wait' && slr.eksik && slr.eksik.length) ? ka + ': sınır eksik'
+      : pk.ok ? ka + ' ' + _frPct(pk.payPct, 1) + ' pay (' + _frF(pk.accRpm, 0) + ' / ' + _frF(pk.limit, 0) + ')'
+      : ka + ' ' + _frF(pk.accRpm, 0) + ' > ' + _frF(pk.limit, 0) + ' d/d';
+  }
   ekle('Aksesuar devir sınırı', 'çevrim tepesi ve governed ≤ sürekli · overspeed ≤ anlık',
-       sBulgu, s.durum || 'wait');
+       sBulgu, sl.durum || 'wait', 'Aksesuar devir sınırı', sKisa);
+}
+
+// Kasnak KODLARI (köprünün kuralı, veFeadPulleyCodes) — kısa yazımlar ve A3
+// pano kasnakları adıyla değil koduyla anar; kod ↔ ad künyesi aynı sayfada.
+function _frKodlar(R){
+  var sys = R && R.build && R.build.sys;
+  if(!sys || !sys.pulleys) return [];
+  if(typeof veFeadPulleyCodes === 'function'){
+    try { return veFeadPulleyCodes(sys) || []; } catch(e){ /* adlara düş */ }
+  }
+  return sys.pulleys.map(function(p){ return p.name; });
 }
 
 // ═══════════════════ UYGUNLUK HÜKMÜ ════════════════════════════════════════
 // Rapor bir sonuç listesi değil, bir HÜKÜM belgesidir: her kriter için hedef,
 // bulgu ve karar aynı satırda durur. "bekliyor" hâli, veri olmadığı için
 // değerlendirilemeyen kriteri gizlemek yerine AÇIKÇA yazar.
-function _frCompliance(R){
+// SATIRLAR TEK ÜRETİCİDE (`_frUygunlukSatirlari`) — ayrıntılı rapor ve A3
+// pano AYNI hükmü basar. Satır: { kriter, hedef, bulgu, durum, kisa,
+// kisaBulgu } — `kisa…` A3 panonun dar sütununa yazılan biçim (kasnak kodu,
+// tek satır); sayıları uzun biçimdekilerle aynı kaynaktan.
+function _frUygunlukSatirlari(R){
   var C = _frCore(), sys = R.build && R.build.sys, A = R.analysis || {};
   var bp = null;
   try { bp = (C && C.beltProps && sys) ? C.beltProps(sys.belt) : null; } catch(e){}
+  var kod = _frKodlar(R);
+  var adKod = {};
+  ((sys && sys.pulleys) || []).forEach(function(p, i){ adKod[p.name] = kod[i] || p.name; });
   var satirlar = [];
-  function ekle(kriter, hedef, bulgu, durum){ satirlar.push([kriter, hedef, bulgu, durum]); }
-  // DÖRT DURUM: 'warn' 2026-09-01'de eklendi ve bir incelik değil. Kasnak
-  // merkez mesafesi kuralı İKİ KASNAKLI V-kayış tahrikleri için yazılmıştır;
-  // serpantinde ihlali "tasarım onaylanmamalı" demek olmaz ama sessiz de
-  // geçilmemeli. 'warn' genel hükmü kırmıyor, satırı işaretliyor.
-  function rozet(d){
-    if(d === 'ok')   return '<span class="ok">✓ Uygun</span>';
-    if(d === 'warn') return '<b style="color:#8a5a10;">⚠ Sınırda</b>';
-    if(d === 'wait') return '<span style="color:#5a6270;">— değerlendirilemedi</span>';
-    return '<b style="color:#a8321f;">✗ Kontrol</b>';
+  function ekle(kriter, hedef, bulgu, durum, kisa, kisaBulgu){
+    satirlar.push({ kriter: kriter, hedef: hedef, bulgu: bulgu, durum: durum,
+                    kisa: kisa || kriter, kisaBulgu: kisaBulgu == null ? bulgu : kisaBulgu });
   }
 
   // 1 — kapalı çevrim
   var sig = _frSignedWrap(R);
   ekle('Kapalı çevrim değişmezi', '|Σ işaretli sarım| = 360° ± 0,05',
        _frFs(sig, 2) + '°',
-       Number.isFinite(sig) ? (Math.abs(Math.abs(sig) - 360) <= 0.05 ? 'ok' : 'no') : 'wait');
+       Number.isFinite(sig) ? (Math.abs(Math.abs(sig) - 360) <= 0.05 ? 'ok' : 'no') : 'wait',
+       'Kapalı çevrim (Σ sarım)');
 
   // 2 — kayma emniyeti
   var minSF = _frMinSF(R), svU = _frServis(R);
@@ -3294,32 +3358,47 @@ function _frCompliance(R){
          ? (_frFs(minSF, 2) + (slipSt.anyLoaded && slipSt.loadedName
               ? ' (' + _frEsc(slipSt.loadedName) + ')' : ''))
          : '—',
-       !Number.isFinite(minSF) ? 'wait' : (minSF >= 1 ? 'ok' : 'no'));
+       !Number.isFinite(minSF) ? 'wait' : (minSF >= 1 ? 'ok' : 'no'),
+       'Kayma emniyeti (yük taşıyan)',
+       Number.isFinite(minSF)
+         ? 'SF ' + _frSfYaz(minSF) + ' · ' + _frEsc(adKod[slipSt.loadedName] || slipSt.loadedName)
+           + ' @' + _frF(slipSt.loadedRpm, 0)
+         : 'yük taşıyan kasnak yok');
 
   // 3 — en küçük kasnak çapı
   if(sys && bp && Number.isFinite(_frNum(bp.minPulleyDia))){
     var enKucuk = Infinity, adi = '';
     sys.pulleys.forEach(function(p){ var d = _frNum(p.od); if(d < enKucuk){ enKucuk = d; adi = p.name; } });
+    var capOk = enKucuk >= _frNum(bp.minPulleyDia);
     ekle('En küçük kasnak çapı', '≥ ' + _frF(bp.minPulleyDia, 0) + ' mm (profil sınırı)',
          _frF(enKucuk, 1) + ' mm (' + _frEsc(adi) + ')',
-         enKucuk >= _frNum(bp.minPulleyDia) ? 'ok' : 'no');
+         capOk ? 'ok' : 'no', 'En küçük kasnak çapı',
+         'Ø' + _frF(enKucuk, 1) + ' ' + _frEsc(adKod[adi] || adi) + (capOk ? ' ≥ ' : ' < ') + _frF(bp.minPulleyDia, 0));
   } else ekle('En küçük kasnak çapı', 'profil sınırı', '—', 'wait');
 
   // 4 — kayış hızı
   var vMax = 0;
   ((A.duty) || []).forEach(function(d){ var v = _frNum(d.vMs); if(v > vMax) vMax = v; });
-  if(bp && Number.isFinite(_frNum(bp.maxSpeedMs)) && vMax > 0)
+  if(bp && Number.isFinite(_frNum(bp.maxSpeedMs)) && vMax > 0){
+    var hizOk = vMax <= _frNum(bp.maxSpeedMs);
     ekle('Azami kayış hızı', '≤ ' + _frF(bp.maxSpeedMs, 0) + ' m/s',
-         _frFs(vMax, 1) + ' m/s', vMax <= _frNum(bp.maxSpeedMs) ? 'ok' : 'no');
+         _frFs(vMax, 1) + ' m/s', hizOk ? 'ok' : 'no', 'Azami kayış hızı',
+         _frFs(vMax, 1) + (hizOk ? ' ≤ ' : ' > ') + _frF(bp.maxSpeedMs, 0) + ' m/s');
+  }
   else ekle('Azami kayış hızı', 'profil sınırı', '—', 'wait');
 
   // 5 — gergi çalışma aralığı
   var rel = _frNum(A.meanRelDeg), relMax = NaN;
   try { if(C && C.feasibleRelMax && sys) relMax = C.feasibleRelMax(sys); } catch(e){}
+  var kolOk = Number.isFinite(rel) && Number.isFinite(relMax) && rel >= 0 && rel <= relMax;
   ekle('Gergi kolu çalışma aralığı',
        Number.isFinite(relMax) ? ('0° ≤ θ ≤ ' + _frF(relMax, 1) + '°') : 'çözüm aralığı içinde',
        Number.isFinite(rel) ? (_frFs(rel, 1) + '°') : '—',
-       (Number.isFinite(rel) && Number.isFinite(relMax)) ? ((rel >= 0 && rel <= relMax) ? 'ok' : 'no') : 'wait');
+       (Number.isFinite(rel) && Number.isFinite(relMax)) ? (kolOk ? 'ok' : 'no') : 'wait',
+       'Gergi kolu çalışma aralığı',
+       !Number.isFinite(rel) ? '—'
+         : 'θ ' + _frFs(rel, 1) + '°' + (Number.isFinite(relMax)
+             ? (kolOk ? ' ∈ ' : ' ∉ ') + '[0; ' + _frF(relMax, 1) + ']' : ''));
 
   // 6 — ankraj türetilebildi mi
   //
@@ -3332,12 +3411,15 @@ function _frCompliance(R){
   // ve köprü bunu uyarı olarak taşır.
   var uy = ((R.build && R.build.warnings) || []).filter(function(w){ return /gerginli/i.test(w); });
   var ankraj = _frNum(R.build && R.build.sys && R.build.sys.designTensionN);
+  var ankOk = Number.isFinite(ankraj) && ankraj > 0;
   ekle('Tasarım gerginliği ankrajı (§8.7)', 'yay dengesinden türetilebilmeli',
        uy.length ? _frEsc(uy[0])
-                 : (Number.isFinite(ankraj) && ankraj > 0
+                 : (ankOk
                      ? ('türetildi: ' + _frF(ankraj, 0) + ' N')
                      : 'türetilemedi'),
-       uy.length ? 'no' : ((Number.isFinite(ankraj) && ankraj > 0) ? 'ok' : 'no'));
+       uy.length ? 'no' : (ankOk ? 'ok' : 'no'),
+       'Tasarım gerginliği ankrajı',
+       uy.length ? 'yay dengesi kurulamadı' : (ankOk ? 'yay dengesi: ' + _frF(ankraj, 0) + ' N' : 'türetilemedi'));
 
   // 7 — gövdenin montaj konumu türetilebildi mi
   //
@@ -3353,7 +3435,9 @@ function _frCompliance(R){
          'avara merkezi + kol boyu + kol açısı',
          _pOk ? (_frF(_piv[0], 2) + ' / ' + _frF(_piv[1], 2) + ' mm')
               : 'türetilemedi — üç girdiden biri eksik',
-         _pOk ? 'ok' : 'no');
+         _pOk ? 'ok' : 'no',
+         'Gergi gövdesi montaj konumu',
+         _pOk ? 'pivot (' + _frF(_piv[0], 0) + '; ' + _frF(_piv[1], 0) + ')' : 'türetilemedi');
   }
 
   // 8 — span gerginliği pozitif
@@ -3362,30 +3446,63 @@ function _frCompliance(R){
     (d.perPulley || []).forEach(function(q){ if(_frNum(q.exitTensionN) <= 0) negatif = true; });
   });
   ekle('Açıklık gerginliği', 'her açıklıkta T > 0',
-       negatif ? 'negatif/sıfır gerginlik var' : 'tüm açıklıklarda pozitif', negatif ? 'no' : 'ok');
+       negatif ? 'negatif/sıfır gerginlik var' : 'tüm açıklıklarda pozitif', negatif ? 'no' : 'ok',
+       'Açıklık gerginliği > 0', negatif ? 'negatif/sıfır açıklık var' : 'bütün açıklıklarda');
 
   // 9 — B10 geçerlilik penceresi
   var L = R.life;
-  if(L) ekle('B10 çap geçerlilik penceresi', 'tüm çaplar kalibrasyon aralığında',
-             L.inValidRange ? 'aralık içinde' : ('aralık dışında: ' + _frEsc((L.outOfRange || []).join(', '))),
-             L.inValidRange ? 'ok' : 'no');
-  else ekle('B10 çap geçerlilik penceresi', 'kalibrasyon aralığı', '—', 'wait');
+  if(L){
+    // Kısa yazım: pencere dışındaki ilk kasnak, KODUYLA ve çözülmüş çapıyla
+    // (çekirdeğin satırı adı ve çapı noktalı ondalıkla yazıyor).
+    var pen = (C && C.FATIGUE && C.FATIGUE.validDiameterMm) || null;
+    var disi = [];
+    ((sys && sys.pulleys) || []).forEach(function(p, i){
+      (L.outOfRange || []).forEach(function(x){
+        if(String(x).indexOf(p.name + ' (d=') === 0) disi.push({ kod: kod[i] || p.name, d: 2 * _frNum(p.rEff) });
+      });
+    });
+    var bKisa = L.inValidRange ? 'bütün çaplar içinde'
+      : disi.length ? _frEsc(disi[0].kod) + ' Ø' + _frF(disi[0].d, 1) + ' ∉ '
+          + (pen ? _frF(pen[0], 1) + '–' + _frF(pen[1], 1) : 'pencere')
+          + (disi.length > 1 ? ' +' + (disi.length - 1) : '')
+      : 'pencere dışında';
+    ekle('B10 çap geçerlilik penceresi', 'tüm çaplar kalibrasyon aralığında',
+         L.inValidRange ? 'aralık içinde' : ('aralık dışında: ' + _frEsc((L.outOfRange || []).join(', '))),
+         L.inValidRange ? 'ok' : 'no', 'B10 çap penceresi', bKisa);
+  }
+  else ekle('B10 çap geçerlilik penceresi', 'kalibrasyon aralığı', '—', 'wait', 'B10 çap penceresi');
 
   // 10 — çalışma çevrimi kapsamı
   var dc = _frDutySum(R);
   ekle('Çalışma çevrimi kapsamı', 'Σ süre payı ≈ %100',
-       _frPct(dc, 1), (dc >= 95 && dc <= 105) ? 'ok' : (dc > 0 ? 'no' : 'wait'));
+       _frPct(dc, 1), (dc >= 95 && dc <= 105) ? 'ok' : (dc > 0 ? 'no' : 'wait'),
+       'Çalışma çevrimi kapsamı', 'Σ ' + _frPct(dc, 1));
 
   // 11–13 — BMC HESAP DEFTERİNDEN GELEN ÜÇ KAPI
   // Kapılar çözüm anında hesaplanıp `R.checks`'e yazılıyor (js/cp-fead.js
   // veFeadSolve); rapor onları yeniden hesaplamaz. Eski bir sonuç nesnesinde
   // alan olmayabilir — o zaman üç satır da 'wait' olur, hata değil.
   _frCheckRows(R, ekle);
+  return satirlar;
+}
 
-  var nOK = satirlar.filter(function(s){ return s[3] === 'ok'; }).length;
-  var nNo = satirlar.filter(function(s){ return s[3] === 'no'; }).length;
-  var nWa = satirlar.filter(function(s){ return s[3] === 'warn'; }).length;
-  var nW  = satirlar.filter(function(s){ return s[3] === 'wait'; }).length;
+function _frCompliance(R){
+  var satirlar = _frUygunlukSatirlari(R);
+  // DÖRT DURUM: 'warn' 2026-09-01'de eklendi ve bir incelik değil. Kasnak
+  // merkez mesafesi kuralı İKİ KASNAKLI V-kayış tahrikleri için yazılmıştır;
+  // serpantinde ihlali "tasarım onaylanmamalı" demek olmaz ama sessiz de
+  // geçilmemeli. 'warn' genel hükmü kırmıyor, satırı işaretliyor.
+  function rozet(d){
+    if(d === 'ok')   return '<span class="ok">✓ Uygun</span>';
+    if(d === 'warn') return '<b style="color:#8a5a10;">⚠ Sınırda</b>';
+    if(d === 'wait') return '<span style="color:#5a6270;">— değerlendirilemedi</span>';
+    return '<b style="color:#a8321f;">✗ Kontrol</b>';
+  }
+
+  var nOK = satirlar.filter(function(s){ return s.durum === 'ok'; }).length;
+  var nNo = satirlar.filter(function(s){ return s.durum === 'no'; }).length;
+  var nWa = satirlar.filter(function(s){ return s.durum === 'warn'; }).length;
+  var nW  = satirlar.filter(function(s){ return s.durum === 'wait'; }).length;
 
   var h = _frH2(1);
   h += '<p>Aşağıdaki kriterler, bu modelin çözümünden doğrudan okunur. "Değerlendirilemedi" satırları '
@@ -3393,9 +3510,9 @@ function _frCompliance(R){
   h += '<table><caption>Tablo ' + _frTbl() + ' — FEAD sistem uygunluk hükmü</caption>';
   h += '<tr><th>#</th><th>Kriter</th><th>Hedef</th><th>Bulgu</th><th>Sonuç</th></tr>';
   satirlar.forEach(function(s, i){
-    h += '<tr><td class="c">' + (i + 1) + '</td><td class="l">' + s[0] + '</td>'
-      + '<td class="l">' + s[1] + '</td><td class="l">' + s[2] + '</td>'
-      + '<td class="c">' + rozet(s[3]) + '</td></tr>';
+    h += '<tr><td class="c">' + (i + 1) + '</td><td class="l">' + s.kriter + '</td>'
+      + '<td class="l">' + s.hedef + '</td><td class="l">' + s.bulgu + '</td>'
+      + '<td class="c">' + rozet(s.durum) + '</td></tr>';
   });
   h += '</table>';
   // GENEL HÜKMÜ YALNIZ 'no' KIRAR. 'warn' (bugün yalnız merkez mesafesi
@@ -3434,6 +3551,8 @@ if(typeof module !== 'undefined' && module.exports){
     _frSection8: _frSection8, _frBeltDataBox: _frBeltDataBox,
     _frDefaultsBox: _frDefaultsBox,
     _frCompliance: _frCompliance, _frCheckRows: _frCheckRows,
+    _frTorsionalSection: _frTorsionalSection, _frBurulmaKesisim: _frBurulmaKesisim,
+    _frUygunlukSatirlari: _frUygunlukSatirlari, _frKodlar: _frKodlar, _frPosLabels: _frPosLabels,
     _frAntet: _frAntet,
     _frEnsureAssets: _frEnsureAssets,
     _frConceptFigure: _frConceptFigure,
