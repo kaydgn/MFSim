@@ -8820,11 +8820,13 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-bas .ve-fw-dim{ min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:400; }
 /* Bandın metinli düğmeleri: mini düğmenin görünüşü, genişliği metinden */
 .ve-fw-3b-bas .ve-fw-3b-metin{ width:auto; height:22px; padding:0 8px; white-space:nowrap; }
-/* Sağ sütun 440 px (kullanıcı isteği 2026-09-29: 320 px "çok dar"): kayışın
-   kesit şekli, hesap çapı matrisi ve beş profillik ölçü tablosu yatay
-   kaydırmasız sığar; 1.366 px ekranda tuvale ~900 px kalır. */
-.ve-fw-3b-govde{ flex:1; min-height:0; display:grid; grid-template-columns:minmax(0, 1fr) 440px; }
-.ve-fw-3b-tuval{ position:relative; min-width:0; min-height:0; overflow:hidden;
+/* GÖVDE "TUVAL ÖNDE" (kullanıcı kararı 2026-09-30, tasarım tuvali B): tuval
+   gövdenin TAMAMI; kart sağda, dizi altta, ikisi de tuvalin ÜSTÜNDE yüzer.
+   Sığdırma örttükleri yeri düşer (js/cp-fead-3b.js → _fw3bSerbest). Kart
+   420 px: kayışın kesit şekli, hesap çapı matrisi ve beş profillik ölçü
+   tablosu yatay kaydırmasız sığar. */
+.ve-fw-3b-govde{ flex:1; min-height:0; position:relative; overflow:hidden; --fw3b-kart:420px; }
+.ve-fw-3b-tuval{ position:absolute; inset:0; overflow:hidden;
   background:var(--bg-secondary); cursor:grab; touch-action:none; }
 .ve-fw-3b-tuval.surukle{ cursor:grabbing; }
 .ve-fw-3b-tuval canvas{ display:block; width:100%; height:100%; }
@@ -8835,15 +8837,49 @@ span.ve-fw-ro{ display:inline-block; }
   font-size:var(--fs-tiny); color:var(--text-primary); background:var(--bg-primary);
   border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 2px 8px var(--shadow-color); }
 .ve-fw-3b-yok{ margin:24px; color:var(--text-secondary); }
-.ve-fw-3b-yan{ min-height:0; overflow:auto; padding:10px 12px; display:flex; flex-direction:column; gap:14px;
-  border-left:1px solid var(--border-color); background:var(--bg-primary); }
+.ve-fw-3b-yan{ position:absolute; top:12px; right:12px; width:var(--fw3b-kart); max-height:calc(100% - 24px);
+  box-sizing:border-box; overflow:auto; padding:14px 14px 12px; display:flex; flex-direction:column; gap:14px;
+  background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-xl);
+  box-shadow:0 1px 2px var(--shadow-color), 0 10px 30px var(--shadow-color); }
+.ve-fw-3b-kbas{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.ve-fw-3b-kbas h4{ margin:0; }
+.ve-fw-3b-hdurum{ font-size:var(--fs-tiny); color:var(--text-secondary); display:inline-flex; align-items:center; gap:4px; }
+.ve-fw-3b-hdurum[data-ok="1"]{ color:var(--ink-success); }
+.ve-fw-3b-hdurum[data-ok="0"]{ color:var(--ink-danger); }
+.ve-fw-3b-tbl tr.on td{ background:var(--accent-tint-8); }
+.ve-fw-3b-tbl .ve-fw-3b-hc{ font-weight:600; color:var(--text-heading); }
+/* ALTTAKİ DİZİ: seçilinin adı + rol çipleri (üstte), tek hesap düğmesi ve
+   aktarım (altta). Serbest alanın ortasında — kartın altına girmez. Kabın
+   kendisi tıklamayı GEÇİRİR (arkadaki montaj seçilebilsin), çocukları almaz. */
+.ve-fw-3b-alt{ position:absolute; left:16px; right:calc(var(--fw3b-kart) + 28px); bottom:16px;
+  display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none; }
+.ve-fw-3b-alt > *{ pointer-events:auto; }
+.ve-fw-3b-dizi{ display:flex; flex-direction:column; align-items:center; gap:6px; max-width:100%;
+  box-sizing:border-box; padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color);
+  border-radius:var(--radius-pill); box-shadow:0 1px 2px var(--shadow-color), 0 10px 30px var(--shadow-color); }
+.ve-fw-3b-dizi-ad{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-tiny); color:var(--text-secondary); }
+.ve-fw-3b-eylem{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.ve-fw-3b-hap{ height:44px; padding:0 22px; display:inline-flex; align-items:center; gap:8px; border:0; border-radius:var(--radius-pill);
+  font:inherit; font-size:var(--fs-body); font-weight:600; cursor:pointer; white-space:nowrap;
+  color:var(--bg-primary); background:var(--text-primary); box-shadow:0 6px 20px var(--shadow-color); }
+.ve-fw-3b-hap:hover{ background:var(--text-heading); }
+.ve-fw-3b-hap-vurgu:hover{ background:var(--ink-accent); }
+.ve-fw-3b-hap:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-fw-3b-hap[disabled], .ve-fw-3b-hap[disabled]:hover{ opacity:.45; cursor:not-allowed; background:var(--text-primary); }
+.ve-fw-3b-hap-vurgu{ color:var(--on-accent); background:var(--accent-primary); }
+/* ÇAP ETİKETLERİ: kasnağın yanında, kılavuz çizgisiyle — tıklamayı geçirir */
+.ve-fw-3b-etiket-cizgi{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+.ve-fw-3b-etiket-cizgi line{ stroke:var(--text-muted); stroke-width:1; }
+.ve-fw-3b-etiket-cizgi circle{ fill:var(--text-muted); }
+.ve-fw-3b-etiketler{ position:absolute; inset:0; pointer-events:none; }
+.ve-fw-3b-etk{ position:absolute; transform:translate(6px, -50%); display:flex; flex-direction:column; gap:1px; white-space:nowrap;
+  padding:3px 7px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--bg-secondary) 82%, transparent); }
+.ve-fw-3b-etk.sol{ transform:translate(calc(-100% - 6px), -50%); text-align:right; }
+.ve-fw-3b-etk b{ font-size:var(--fs-tiny); font-weight:600; color:var(--text-primary); }
+.ve-fw-3b-etk span{ font-size:var(--fs-micro); color:var(--text-secondary); font-variant-numeric:tabular-nums; }
 .ve-fw-3b-bolum h4{ margin:0 0 6px; font-size:var(--fs-tiny); font-weight:600; letter-spacing:.04em;
   text-transform:uppercase; color:var(--text-secondary); }
 .ve-fw-3b-bolum > * + *{ margin-top:6px; }
-/* HESAP ÇUBUĞU (2026-09-30): tek düğme bütün kasnakları çözer ve kaydırmada
-   sütunun tepesinde kalır — sütunun dolgusunu örterek (üst −10, yan −12). */
-.ve-fw-3b-hesapbar{ position:sticky; top:-10px; z-index:1; margin:-10px -12px 0; padding:10px 12px 8px;
-  background:var(--bg-primary); border-bottom:1px solid var(--border-color); }
 .ve-fw-3b-yol{ display:flex; flex-wrap:wrap; align-items:center; gap:2px 5px; font-size:var(--fs-body); }
 .ve-fw-3b-yol b{ color:var(--text-primary); }
 /* Yol ve liste düğmeleri BAĞLANTI gibi: dinlenmede boş, fare altında altı çizili */
@@ -8851,11 +8887,13 @@ span.ve-fw-ro{ display:inline-block; }
   text-align:left; overflow-wrap:anywhere; }
 .ve-fw-3b-yolb:hover{ text-decoration:underline; }
 .ve-fw-3b-yolb:focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-sm); }
-.ve-fw-3b-roller{ display:grid; grid-template-columns:1fr 1fr; gap:4px; }
-.ve-fw-3b-rol{ display:flex; align-items:center; gap:6px; min-width:0; padding:4px 7px;
-  font:inherit; font-size:var(--fs-tiny); color:var(--text-primary); text-align:left; cursor:pointer;
-  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); }
+.ve-fw-3b-roller{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px; }
+.ve-fw-3b-rol{ display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 10px; white-space:nowrap;
+  font:inherit; font-size:var(--fs-tiny); color:var(--text-primary); cursor:pointer;
+  background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-pill); }
 .ve-fw-3b-rol:hover{ border-color:var(--border-hover); }
+/* "Diğer" listesi çiple aynı biçim; oku ortak liste kuralından (denetim dili) */
+select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fw-3b-rol[aria-pressed="true"]{ border-color:var(--accent-primary); background:var(--accent-tint-10);
   box-shadow:inset 0 0 0 1px var(--accent-primary); }
 .ve-fw-3b-rol:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
@@ -8906,9 +8944,11 @@ span.ve-fw-ro{ display:inline-block; }
    (js/cp-fead-3b.js → _fw3bGenis). */
 .ve-settings-overlay.ve-fw-3b-genis{ padding:12px; }
 .ve-fw-3b-genis .ve-fw-modal{ max-width:1840px; height:calc(100vh - 24px); }
+/* Dar pencerede kart daralır ve üst yarıda kalır, dizi tam genişlik */
 @container vefw3b (max-width: 900px){
-  .ve-fw-3b-govde{ grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(220px, 1fr) minmax(0, 42%); }
-  .ve-fw-3b-yan{ border-left:0; border-top:1px solid var(--border-color); }
+  .ve-fw-3b-govde{ --fw3b-kart:min(360px, calc(100% - 24px)); }
+  .ve-fw-3b-yan{ max-height:48%; }
+  .ve-fw-3b-alt{ right:16px; }
 }
 
 

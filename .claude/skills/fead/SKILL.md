@@ -719,10 +719,20 @@ olurdu.
       pencere açılsın"*): kaplamaya `.ve-fw-3b-genis` (`_fw3bGenis`), sihirbaz
       1.180 px → ekranın tamamı (en çok 1.840); kapanınca eski ölçüsüne döner.
       Rol düğmeleri kartın seçicisiyle TEK listeden (`veFeadWizStpRolTipleri`).
-      Sağ sütun 440 px (2026-09-29, kullanıcı: 320 px *"çok dar olmuş"*).
-    • **Panelin tepesinde HESAP ÇUBUĞU** (yapışık: hesapla · aktar · durum) ve
-      sonuç tablosunun altında hesap çapı seçicisi YOK — seçim kayış
-      kesitinin matrisinde (2026-09-30). Kapı: `fead-3b.test.js` → *"TEK DÜĞME"*.
+      Kart 420 px (2026-09-29'da sütun 320 → 440: *"çok dar olmuş"*; B'de
+      yüzen kart).
+    • **DÜZEN "TUVAL ÖNDE"** (2026-09-30, kullanıcı kararı — tasarım tuvali
+      B): tuval gövdenin tamamı; sağda yüzen KART (kasnaklar tablosu ilk ·
+      öneri · seçili yol · kesit · kayışın bölümü · rol verilenler), altta
+      yüzen DİZİ (rol çipleri + TEK hesap düğmesi + aktarım), hesaptan sonra
+      kasnakların yanında çap ETİKETLERİ (izdüşümden, her karede). Sık roller
+      çip (`VE_FW_3B_CIP`), kalanı "Diğer" listesi — ikisinin birleşimi kartın
+      TEK listesi. Sığdırma kartın ve dizinin ÖRTTÜĞÜ yeri düşer
+      (`_fw3bSerbest`, dizi için en az `VE_FW_3B_ALT_PAY`) — düşmezse montaj
+      kartın altında kalırdı. Ortak başlık bandı (pencere ailesi) kalır.
+      Sonuç tablosunun altında hesap çapı seçicisi YOK — seçim kayış
+      kesitinin matrisinde. Kapı: `fead-3b.test.js` → *"TEK DÜĞME"* · *"PANEL"*,
+      `fead-step.spec.js` (örtü ölçümü · etiket · serbest alanda çizim).
     • **KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR** (2026-09-30, kullanıcı: *"kayış görselinin
       hep görünmesini istiyorum"*; önce yalnız kayış seçilince) — rolü yoksa
       profil kasnaktan ya da sihirbazın kayışından ve bunu söyler. Kapı:
