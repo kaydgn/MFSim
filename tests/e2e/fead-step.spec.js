@@ -104,7 +104,8 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   // SIĞDIRMA montajın KENDİ noktalarıyla: eksene hizalı kutunun köşeleriyle
   // sığdırmak eğik bakışta modeli küçültüyordu (kullanıcının dosyasında tuvalin
   // %29'u). Ölçülen: örneklenmiş köşelerin izdüşümünün yarı genişliği (NDC) —
-  // bu dosyada noktalarla 0,85, kutuyla 0,77; eşik ikisinin ortasında.
+  // hedef 0,80 (VE_FW_3B_ACILIS.doluluk, 2026-09-30: 0,85 "çok yakın"); kutuyla
+  // sığdırılsaydı ~0,72. Eşik ikisinin arasında.
   const doluluk = () => page.evaluate(() => {
     const V = _fw3b;
     V.camera.updateMatrixWorld();
@@ -119,8 +120,20 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
     return Math.max((x1 - x0) / 2, (y1 - y0) / 2);
   });
   let dol = await doluluk();
-  expect(dol).toBeGreaterThan(0.81);
-  expect(dol).toBeLessThan(1);
+  expect(dol).toBeGreaterThan(0.76);
+  expect(dol).toBeLessThan(0.84);
+  // AÇILIŞ BAKIŞI kayış düzleminden (2026-09-30): kamera düzlemin ÖNÜNDE
+  // (hesabın bakış kuralı), üç çeyrek açıyla; düzlemin yukarısı ekranda yukarı.
+  const bakis = await page.evaluate(() => {
+    const V = _fw3b, e = veFeadWiz3bAcilisEksen(veFeadWizStp());
+    V.camera.updateMatrixWorld();
+    const ileri = new THREE.Vector3(); V.camera.getWorldDirection(ileri);
+    const yuk = new THREE.Vector3().setFromMatrixColumn(V.camera.matrixWorld, 1);
+    return { on: ileri.dot(new THREE.Vector3(...e.d)), yukari: yuk.dot(new THREE.Vector3(...e.yukari)) };
+  });
+  expect(bakis.on).toBeGreaterThan(0.75);                 // önden, ~33° eğik
+  expect(bakis.on).toBeLessThan(0.95);                    // dümdüz önden değil (üç çeyrek)
+  expect(bakis.yukari).toBeGreaterThan(0.85);
   // "Sığdır" düğmesi de aynı noktalarla: tekerlekle uzaklaş → sığdır
   const tuv0 = await page.locator('#ve-fw-3b-tuval').boundingBox();
   await page.mouse.move(tuv0.x + tuv0.width / 2, tuv0.y + tuv0.height / 2);
@@ -128,7 +141,7 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   await expect.poll(doluluk).toBeLessThan(0.6);
   await page.locator('.ve-fw-3b-bas button', { hasText: 'Sığdır' }).click();
   dol = await doluluk();
-  expect(dol).toBeGreaterThan(0.81);
+  expect(dol).toBeGreaterThan(0.76);
   // Tuval gerçekten ÇİZİLDİ — UYGULAMANIN KENDİ karesinde: ortada zemin
   // renginden farklı pikseller. Tampon kareden sonra silinir, yani pikseller
   // uygulamanın render çağrısının hemen ardından okunur. Test sahneyi kendisi
@@ -218,12 +231,19 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   expect(e.klima.x).toBeGreaterThan(e.krank.x);
   await yan.locator('.ve-fw-spin', { hasText: 'Önden' }).click();
 
-  // Rol değişince sonuç düşer — halkalar gider, yeniden hesaplanır
+  // Hesaptan sonra rol değişince sonuç KENDİSİ yenilenir (2026-09-30: her
+  // kasnakta düğmeye dönmek zahmetliydi) — halkalar kalır, tablo yeni rolü taşır
   const klima = await tikla(/KL[İI]MA/);
   await page.mouse.click(klima.n.x, klima.n.y);
   await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-alternator"]').click();
-  expect((await page.evaluate(() => veFeadWiz3bDurum())).halka).toBe(0);
+  expect((await page.evaluate(() => veFeadWiz3bDurum())).halka).toBe(4);
+  expect(await page.evaluate(() => veFeadWizStp().coz.kasnaklar.map((k) => k.tip))).toContain('fead-alternator');
   await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-ac"]').click();
+  // Tek düğme panelin tepesinde, sütun kaydırılınca da görünür (yapışık)
+  await yan.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  const dugme = await page.locator('#ve-fw-3b-hesapla').boundingBox(), yk = await yan.boundingBox();
+  expect(dugme.y).toBeGreaterThanOrEqual(yk.y - 1);
+  expect(dugme.y + dugme.height).toBeLessThanOrEqual(yk.y + 80);
   await page.locator('#ve-fw-3b-hesapla').click();
   // Hesap seçimi kaldırır: seçim öteki kasnakları soldururdu, halkalar hepsinde okunmalı
   expect(await page.evaluate(() => veFeadWiz3bDurum())).toMatchObject({ halka: 4, secili: -1 });
@@ -472,7 +492,7 @@ test('KESİT: eskizli dosyada krank seçilince kesit; hesap çapı düğmesi bü
 // seçer. Sütun 320 → 440 px ("çok dar olmuş"). Node'da HİÇ koşmayan halkalar:
 // 3B'de kayışa gerçek tıklama, matris başlığına gerçek tıklama, seçili sütunun
 // CSS'ten gelen zemini, gerçek yazı tipiyle şeklin yazılarının kesilmemesi.
-test('KAYIŞ SEÇİLİNCE: kesit şekli + hesap çapı matrisi + ölçüler; seçim oradan, sütun 440 px', async ({ page }) => {
+test('KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR: kesit şekli + hesap çapı matrisi + ölçüler; seçim oradan, sütun 440 px', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -496,12 +516,15 @@ test('KAYIŞ SEÇİLİNCE: kesit şekli + hesap çapı matrisi + ölçüler; se�
   expect(await kutu()).toMatchObject({ yan: 440 });
   expect((await kutu()).tuval).toBeGreaterThanOrEqual(880);
 
-  // HESAPTAN ÖNCE: 3B'de kayışa GERÇEK tıklama → bölüm açılır
+  // HEP GÖRÜNÜR (2026-09-30): seçim yokken de bölüm yerinde; 3B'de kayışa
+  // GERÇEK tıklama onu kapatmaz ya da çoğaltmaz
+  const bolum = yan.locator('[data-ve-3b-kayis-kesit]');
+  await expect(bolum).toBeVisible();
   const i = await page.evaluate(() => { const s = veFeadWizStp(); return s.sonuc.parcalar.findIndex((p) => /KAYI/.test(p.ad)); });
   const n = await page.evaluate((j) => veFeadWiz3bIsabetNoktasi(j), i);
   expect(n).not.toBeNull();
   await page.mouse.click(n.x, n.y);
-  const bolum = yan.locator('[data-ve-3b-kayis-kesit]');
+  await expect(bolum).toHaveCount(1);
   await expect(bolum).toBeVisible();
   const sekil = bolum.locator('svg[data-ve="kayis-sekil"]');
   const sb = await sekil.boundingBox();
@@ -512,9 +535,13 @@ test('KAYIŞ SEÇİLİNCE: kesit şekli + hesap çapı matrisi + ölçüler; se�
   await expect(matris.locator('tr[data-ve-hc="bekliyor"]')).toBeVisible();
   await expect(yan.locator('[data-ve-kayis-olcu] thead th.on')).toHaveText('PK');
 
-  // HESAPLA → kayış satırındaki bağlantı kayışı yeniden seçer
+  // HESAPLA: seçim kalkar (halkalar) ama bölüm KALIR
   await page.locator('#ve-fw-3b-hesapla').click();
-  await expect(bolum).toHaveCount(0);                      // hesap seçimi kaldırır (halkalar)
+  expect((await page.evaluate(() => veFeadWiz3bDurum())).secili).toBe(-1);
+  await expect(bolum).toBeVisible();
+  // Alttaki ikinci "Hesap çapı" seçicisi YOK — seçim kayış kesitinin matrisinde
+  await expect(yan.locator('.ve-fw-3b-hesapcap')).toHaveCount(0);
+  await expect(yan.locator('[data-ve-3b-sonuc] [data-ve-hesapcap-grup]')).toHaveCount(0);
   await yan.locator('[data-ve-3b-kayis] button').click();
   await expect(bolum).toBeVisible();
   await expect(matris.locator('thead [data-ve-hesapcap]')).toHaveCount(3);

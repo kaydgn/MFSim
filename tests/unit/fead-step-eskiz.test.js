@@ -241,9 +241,13 @@ describe('SİHİRBAZ — seçim tek, varsayılan CAD, kesit kendiliğinden', () 
     const d = document.createElement('div'); d.innerHTML = h;
     expect(d.querySelector('[data-ve-3b-kesit]')).not.toBeNull();
     expect([...d.querySelectorAll('[data-ve-3b-hesapcap]')].map((td) => td.textContent).sort()).toEqual(['130,0', '163,0', '78,0', '78,0'].sort());
-    // seçici iki yerde (kesit + hesap bölümü) ve ikisi de aynı işlevi çağırır
+    // seçici YALNIZ kasnağın kesitinde; sonuç tablosunun altındaki ikinci
+    // "Hesap çapı" satırı kalktı (2026-09-30 — seçim kayış kesitinin matrisinde)
     const gruplar = d.querySelectorAll('[data-ve-hesapcap-grup]');
-    expect(gruplar.length).toBe(2);
+    expect(gruplar.length).toBe(1);
+    expect(gruplar[0].closest('[data-ve-3b-kesit]')).not.toBeNull();
+    expect(d.querySelector('.ve-fw-3b-hesapcap')).toBeNull();
+    expect(d.querySelectorAll('[data-ve-hesapcap-matris]').length).toBe(1);
     [...gruplar].forEach((g) => [...g.querySelectorAll('button')].forEach((b) =>
       expect(b.getAttribute('onclick')).toMatch(/^veFeadWizStpHesapCap\('(katalog|cad|db)'\)$/)));
     // rolsüz parça seçiliyse kesit yok

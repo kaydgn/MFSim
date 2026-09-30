@@ -1978,8 +1978,9 @@ function veFeadWizReset(){
 // `veFeadStpKayit` → `_fwSeedKayit` (örnek tohumunun AYNI yolu). Kart
 // geometri HESAPLAMAZ; tanıyıcının sayılarını okur ve çizer.
 //
-// HESAP BİR DÜĞMEDİR: rol değişince önceki sonuç DÜŞER (bayat sayı ekranda
-// kalmasın); bakış değişince düşmez (analiz değil, yalnız izdüşüm).
+// HESAP BİR DÜĞMEDİR: ilk hesabı düğme yapar; sonrasında rol değişince sonuç
+// yeni rollerle YENİDEN çözülür (bayat sayı kalmaz, düğmeye her kasnakta
+// dönülmez — 2026-09-30); bakış değişince çözülmez (yalnız izdüşüm).
 //
 // OTURUMLUK, KAYDEDİLMEZ: `_fwStp` okumanın çıktısını tutar ama
 // `node.data.wiz`e YAZILMAZ — dosya bir KAYNAK, ürünü sihirbaz durumu.
@@ -2185,8 +2186,10 @@ function _fwStpHesapCapMatrisHTML(s){
 // hesabın çizgisi işaretli) · hesap çapı matrisi (seçici) · markanın
 // karakteristik ölçüleri (kayışın profili vurgulu).
 function _fwStpKayisKesitHTML(s){
+  // Kayış rolü olmasa da çizilir (3B'de bölüm hep görünür, 2026-09-30):
+  // profil kasnaktan ya da sihirbazın kayışından (_fwStpKord)
   var kb = _fwStpKayisBirim(s);
-  if(!kb || typeof veFeadKordOfset !== 'function') return '';
+  if(!s || !s.sonuc || typeof veFeadKordOfset !== 'function') return '';
   var bl = _fwStpKord(s), ko = veFeadKordOfset(bl), marka = _fwStpMarkaAdi(bl);
   var g = (typeof veFeadBeltGeom === 'function') ? veFeadBeltGeom(bl.profile, bl.brand) : null;
   var sekil = '';
@@ -2195,9 +2198,10 @@ function _fwStpKayisKesitHTML(s){
     if(ko.kaynak === 'cad' && ko.hb > 0 && ko.hr > 0 && ko.hb + ko.hr < g.kalinlik){ c.hb = ko.hb; c.hr = ko.hr; }
     sekil = veFeadKayisSekilSVG(c, { hesap: ko.kaynak === 'db' ? 'db' : 'dw' });
   }
-  return '<section class="ve-fw-3b-bolum" data-ve-3b-kayis-kesit="' + kb.dugum + '"><h4>Kayış kesiti <span class="ve-fw-dim">'
+  return '<section class="ve-fw-3b-bolum" data-ve-3b-kayis-kesit="' + (kb ? kb.dugum : '') + '"><h4>Kayış kesiti <span class="ve-fw-dim">'
       + _fwEsc(bl.profile + ' · ' + (ko.kaynak === 'cad' ? 'CAD eskizi' : marka)) + '</span></h4>' + sekil
-      + '<p class="ve-fw-dim" data-ve-3b-kayis-tanim="1">' + _fwEsc(_fwStpKayisTanim(kb)) + '</p></section>'
+      + '<p class="ve-fw-dim" data-ve-3b-kayis-tanim="1">' + _fwEsc(kb ? _fwStpKayisTanim(kb) : 'Kayışa rol verilmedi — profil '
+        + bl.profile) + '</p></section>'
     + '<section class="ve-fw-3b-bolum" data-ve-3b-hesapcap-bolum="1"><h4>Hesap çapı</h4>'
       + _fwStpHesapCapMatrisHTML(s) + '</section>'
     + '<section class="ve-fw-3b-bolum" data-ve-3b-kayis-olcu="1"><h4>Karakteristik ölçüler <span class="ve-fw-dim">'
@@ -2320,7 +2324,12 @@ function veFeadWizStpRol(i, tip){
     (function sil(d){ a[d].cocuklar.forEach(function(c){ s.roller[c] = null; sil(c); }); })(i);
   }
   s.roller[i] = tip || null;
+  // İLK HESAPTAN SONRA SONUÇ ROLLERİ İZLER (kullanıcı isteği 2026-09-30: her
+  // kasnakta "hesapla"ya dönmek zahmetliydi). Bayat sayı yine kalmaz: sonuç
+  // yeni rollerle yeniden çözülür; rol kapısı geçilmezse düşer.
+  var vardi = !!s.coz;
   s.coz = null;
+  if(vardi && !_fwStpRolDenetim(s).length) s.coz = veFeadStpCoz(s.sonuc, s.roller);
   veFeadWizRender();
   return true;
 }
