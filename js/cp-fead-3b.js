@@ -55,6 +55,34 @@ function veFeadWiz3bParcalar(s, dugum){
 }
 function veFeadWiz3bRolJeton(tip){ return VE_FW_3B_ROL_RENK[tip] || '--text-muted'; }
 
+// AÇILIŞ BAKIŞI (kullanıcı isteği 2026-09-30: "garip bir açıdan geliyor …
+// açıldığında güzel bir şekilde dursun"). Kamera montajın dünya eksenlerinden
+// değil KAYIŞ DÜZLEMİNDEN kurulur: önden (motorun karşısından, hesabın bakış
+// kuralı), düzlemin yukarısı ekranın yukarısı (veFeadStp2B'nin kuralı), üç
+// çeyrek açıyla. Düzlem hesaptan önce tanıyıcının rolsüz önerisinden
+// (`s.oneri.duzlem`), hesaptan sonra çözümden. Doluluk: montajın ekrandaki
+// yarı genişliği (NDC).
+var VE_FW_3B_ACILIS = { theta: 0.5, phi: 0.32, doluluk: 0.8 };
+function _fw3bVek(a, b){ return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function _fw3bBirim(a){ var l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+// Saf: durum → { d: bakış yönü, yukari } ya da null (düzlem bilinmiyor)
+function veFeadWiz3bAcilisEksen(s){
+  var coz = s && s.coz && s.coz.ok ? s.coz : null, dz = coz ? coz.duzlem : (s && s.oneri && s.oneri.duzlem);
+  if(!dz || !dz.n) return null;
+  var n = _fw3bBirim(dz.n), d;
+  if(coz && coz.bakis) d = coz.bakis.d.slice();
+  else {
+    // veFeadStpCoz'un bakış kuralı: orijin (motor) düzlemin arkasında
+    var p0 = dz.konum || 0;
+    d = Math.abs(p0) > 1 ? n.map(function(x){ return x * (p0 < 0 ? 1 : -1); }) : n.slice();
+  }
+  if(s.ayna) d = d.map(function(x){ return -x; });
+  var nk = function(a){ return a[0] * n[0] + a[1] * n[1] + a[2] * n[2]; };
+  var y = Math.abs(n[2]) < 0.95 ? [0, 0, 1] : (Math.abs(n[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0]);
+  var t = nk(y);
+  return { d: _fw3bBirim(d), yukari: _fw3bBirim([y[0] - n[0] * t, y[1] - n[1] * t, y[2] - n[2] * t]) };
+}
+
 // ── 2 · AÇ / KAPAT ────────────────────────────────────────────────────────
 function veFeadWiz3bAcik(){ return !!_fw3b; }
 function veFeadWiz3bAc(){
@@ -106,8 +134,11 @@ function veFeadWiz3bAc(){
   V.isik = new THREE.DirectionalLight(0xffffff, 0.75);
   V.scene.add(V.isik); V.scene.add(V.isik.target);
   V.grup = new THREE.Group();
+  // Montaj KURULURKEN görünmez: parça parça gelen ağı ilk parçaya sığdırmak
+  // açılışta modeli ekrana yapıştırıyordu; kamera bitince bir kez kurulur.
+  V.grup.visible = false;
   V.scene.add(V.grup);
-  V.ctrl = { theta: -Math.PI * 0.6, phi: Math.PI / 5, r: 1000, hedef: new THREE.Vector3() };
+  V.ctrl = { theta: -Math.PI * 0.6, phi: Math.PI / 5, r: 1000, hedef: new THREE.Vector3(), eks: _fw3bDunyaEks() };
   V.ray = new THREE.Raycaster();
   _fw3b = V;
   _fw3bDinle(V);
@@ -198,7 +229,9 @@ function _fw3bAgKur(){
     V.kuyruk = null;
     if(il) il.textContent = '';
     V.kap.setAttribute('data-durum', 'hazir');
-    if(!V.elle) _fw3bSigdir(V.kutu, _fw3bOrnekNoktalar());
+    _fw3bAcilisBakis();
+    V.grup.visible = true;
+    _fw3bSigdir(V.kutu, _fw3bOrnekNoktalar());
     _fw3bSonucKur();
     _fw3bCiz();
   }
@@ -226,7 +259,6 @@ function _fw3bParcaEkle(i, a){
   if(isFinite(k[0])){
     if(!V.kutu) V.kutu = new THREE.Box3(new THREE.Vector3(k[0], k[1], k[2]), new THREE.Vector3(k[3], k[4], k[5]));
     else V.kutu.union(new THREE.Box3(new THREE.Vector3(k[0], k[1], k[2]), new THREE.Vector3(k[3], k[4], k[5])));
-    if(!V.elle && !V.ilkSigdir){ V.ilkSigdir = true; _fw3bSigdir(V.kutu); }
   }
   _fw3bRenkle(i);
   _fw3bCiz();
@@ -294,6 +326,29 @@ function veFeadWiz3bPanelHTML(s, secili){
   var so = s.sonuc, h = '';
   var tipler = veFeadWizStpRolTipleri();
   var renk = function(tip){ return '<span class="ve-fw-3b-renk" style="--renk:var(' + veFeadWiz3bRolJeton(tip) + ')"></span>'; };
+  // ── HESAP ÇUBUĞU (tepede, yapışık) — kullanıcı isteği 2026-09-30: "hepsinin
+  // çapını tek bir butona tıklayarak". Düğme rollü BÜTÜN birimleri birlikte
+  // çözer ve kaydırmada kaybolmaz; ilk hesaptan sonra rol değişikliği sonucu
+  // kendisi yeniler (veFeadWizStpRol), düğmeye her kasnakta dönülmez.
+  var coz = s.coz, rolEngel = typeof _fwStpRolDenetim === 'function' ? _fwStpRolDenetim(s) : [];
+  var rollu = s.roller.filter(function(r){ return !!r && r !== 'fead-belt'; }).length;
+  h += '<section class="ve-fw-3b-bolum ve-fw-3b-hesapbar" data-ve-3b-hesapbar="1"><div class="ve-fw-rowbtns">'
+    + '<button type="button" class="ve-fw-btn" id="ve-fw-3b-hesapla"' + (rolEngel.length ? ' disabled' : '')
+    + ' onclick="veFeadWiz3bHesapla()">' + (coz ? 'Yeniden hesapla' : 'Tüm kasnakları hesapla') + '</button>';
+  if(coz && coz.ok)
+    h += '<button type="button" class="ve-fw-btn" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'
+      + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button>';
+  h += '</div><p class="ve-fw-dim" data-ve-3b-hesap-durum="1">' + (coz ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak hesaplandı'
+      + (coz.duzlem ? ' · düzlem sapması ' + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : veIkon('x') + ' kasnak bulunamadı')
+      : (rollu ? rollu + ' rollü birim · hesaplanmadı' : 'Parçalara rol verin, sonra hepsini birlikte hesaplayın')) + '</p>';
+  var sorun = rolEngel.filter(function(m){ return m !== 'Hiçbir parçaya rol verilmedi.'; })
+    .concat(coz ? coz.hatalar.concat(coz.uyarilar) : []);
+  if(sorun.length){
+    h += '<div class="ve-fw-issues">';
+    sorun.forEach(function(m){ h += '<div class="ve-fw-issue ve-fw-issue-warn">! ' + _fwEsc(m) + '</div>'; });
+    h += '</div>';
+  }
+  h += '</section>';
   // ── ÖNERİ (gergi otomatik bulunduysa ya da aday varsa) ──
   var on = (typeof _fwStpOneriHTML === 'function') ? _fwStpOneriHTML(s) : '';
   if(on) h += '<section class="ve-fw-3b-bolum">' + on + '</section>';
@@ -332,9 +387,39 @@ function veFeadWiz3bPanelHTML(s, secili){
   // ── SEÇİLİ KASNAĞIN KESİTİ (hesaptan sonra; seçim bir birimin içindeyse o birim) ──
   var kKi = _fw3bSeciliKasnak(s, secili);
   if(kKi >= 0 && typeof _fwStpKasnakKesitHTML === 'function') h += _fwStpKasnakKesitHTML(s, kKi);
-  // ── SEÇİLİ KAYIŞIN BÖLÜMÜ (kesit şekli · hesap çapı · karakteristik ölçüler);
-  // hesaptan ÖNCE de — şekil ve tablo katalogdan, kasnak çapları hesaptan ──
-  if(_fw3bSeciliKayis(s, secili) >= 0 && typeof _fwStpKayisKesitHTML === 'function') h += _fwStpKayisKesitHTML(s);
+  // ── SONUÇ (hesaptan sonra) ──
+  if(coz && coz.ok){
+    // Çizimin kendisi 3B'nin önden görünümü; panelde onun SAYILARI (kartın
+    // 2B çizimi panelde okunmayacak kadar küçülüyordu)
+    var iki = veFeadStp2B(coz, _fwStpSecim(s)), kol = {};
+    coz.gergiler.forEach(function(g){ kol[g.kasnak] = g.kolBoy; });
+    h += '<section class="ve-fw-3b-bolum" data-ve-3b-sonuc="1"><h4>Sonuç</h4><div class="ve-fw-spinbox">'
+      + '<button type="button" class="ve-fw-spin' + (s.ayna ? '' : ' ve-fw-spin-on') + '" onclick="veFeadWizStpAyna(false)">Önden</button>'
+      + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '" onclick="veFeadWizStpAyna(true)">Arkadan</button></div>'
+      + '<table class="ve-fw-tbl ve-fw-3b-tbl"><thead><tr><th>Kasnak</th><th>Ø [mm]</th><th>Hesap Ø</th><th>X</th><th>Y</th></tr></thead><tbody>';
+    coz.kasnaklar.forEach(function(k, i){
+      h += '<tr data-ve-3b-kasnak="' + i + '"><td>' + renk(k.tip) + _fwEsc(_fwStpRolAd(k.tip))
+        + (kol[i] !== undefined ? ' <span class="ve-fw-dim">· kol ' + _fwFmt(kol[i], 1) + '</span>' : '') + '</td>'
+        + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num" data-ve-3b-hesapcap="' + i + '">'
+        + (typeof _fwStpHesapCapi === 'function' ? _fwFmt(_fwStpHesapCapi(s, k), 1) : '—')
+        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].x, 1)
+        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].y, 1) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    // Hesap çapının seçicisi burada YOK (kullanıcı isteği 2026-09-30): seçim
+    // kayış kesitinin matrisinde yapılıyor, ikinci satır tekrardı.
+    // Kayışın adı bir bağlantı: seçer
+    if(coz.kayis)
+      h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <button type="button" class="ve-fw-3b-yolb"'
+        + ' onclick="veFeadWiz3bSec(' + coz.kayis.dugum + ')">' + _fwEsc(_fwStpRolAd('fead-belt'))
+        + '</button> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
+    h += '</section>';
+  }
+  // ── KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR (kullanıcı isteği 2026-09-30: "kayış görselinin
+  // hep görünmesini istiyorum"): kesit şekli · hesap çapı matrisi · ölçüler.
+  // Şekil ve tablo katalogdan, kasnak çapları hesaptan; kayış rolü yoksa
+  // profil kasnaktan ya da sihirbazın kayışından.
+  if(typeof _fwStpKayisKesitHTML === 'function') h += _fwStpKayisKesitHTML(s);
   // ── ROL VERİLENLER ──
   var atanan = so.agac.filter(function(d){ return !!s.roller[d.i]; });
   h += '<section class="ve-fw-3b-bolum"><h4>Rol verilenler <span class="ve-fw-dim">' + atanan.length + '</span></h4>';
@@ -351,50 +436,7 @@ function veFeadWiz3bPanelHTML(s, secili){
     h += '</ul>';
   }
   h += '</section>';
-  // ── HESAP ──
-  var coz = s.coz, rolEngel = typeof _fwStpRolDenetim === 'function' ? _fwStpRolDenetim(s) : [];
-  h += '<section class="ve-fw-3b-bolum"><h4>Hesap</h4><div class="ve-fw-rowbtns">'
-    + '<button type="button" class="ve-fw-btn" id="ve-fw-3b-hesapla"' + (rolEngel.length ? ' disabled' : '')
-    + ' onclick="veFeadWiz3bHesapla()">' + (coz ? 'Yeniden hesapla' : 'Çap ve merkezleri hesapla') + '</button></div>'
-    + '<p class="ve-fw-dim">' + (coz ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak' + (coz.duzlem ? ' · düzlem sapması '
-      + _fwFmt(coz.duzlem.yayilim, 3) + ' mm' : '') : veIkon('x') + ' kasnak bulunamadı') : 'hesaplanmadı') + '</p>';
-  var sorun = rolEngel.filter(function(m){ return m !== 'Hiçbir parçaya rol verilmedi.'; })
-    .concat(coz ? coz.hatalar.concat(coz.uyarilar) : []);
-  if(sorun.length){
-    h += '<div class="ve-fw-issues">';
-    sorun.forEach(function(m){ h += '<div class="ve-fw-issue ve-fw-issue-warn">! ' + _fwEsc(m) + '</div>'; });
-    h += '</div>';
-  }
-  if(coz && coz.ok){
-    // Çizimin kendisi 3B'nin önden görünümü; panelde onun SAYILARI (kartın
-    // 2B çizimi 320 px'lik panelde okunmayacak kadar küçülüyordu)
-    var iki = veFeadStp2B(coz, _fwStpSecim(s)), kol = {};
-    coz.gergiler.forEach(function(g){ kol[g.kasnak] = g.kolBoy; });
-    h += '<div class="ve-fw-spinbox">'
-      + '<button type="button" class="ve-fw-spin' + (s.ayna ? '' : ' ve-fw-spin-on') + '" onclick="veFeadWizStpAyna(false)">Önden</button>'
-      + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '" onclick="veFeadWizStpAyna(true)">Arkadan</button></div>'
-      + '<table class="ve-fw-tbl ve-fw-3b-tbl"><thead><tr><th>Kasnak</th><th>Ø [mm]</th><th>Hesap Ø</th><th>X</th><th>Y</th></tr></thead><tbody>';
-    coz.kasnaklar.forEach(function(k, i){
-      h += '<tr data-ve-3b-kasnak="' + i + '"><td>' + renk(k.tip) + _fwEsc(_fwStpRolAd(k.tip))
-        + (kol[i] !== undefined ? ' <span class="ve-fw-dim">· kol ' + _fwFmt(kol[i], 1) + '</span>' : '') + '</td>'
-        + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num" data-ve-3b-hesapcap="' + i + '">'
-        + (typeof _fwStpHesapCapi === 'function' ? _fwFmt(_fwStpHesapCapi(s, k), 1) : '—')
-        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].x, 1)
-        + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].y, 1) + '</td></tr>';
-    });
-    h += '</tbody></table>';
-    // Hesap çapı kayış için TEK seçim (kullanıcı kararı): bütün kasnaklara birlikte
-    if(typeof _fwStpHesapCapHTML === 'function')
-      h += '<div class="ve-fw-3b-hesapcap"><span class="ve-fw-dim">Hesap çapı</span>' + _fwStpHesapCapHTML(s) + '</div>';
-    // Kayışın adı bir bağlantı: seçer, kesiti ve hesap çapı matrisi açılır
-    if(coz.kayis)
-      h += '<p class="ve-fw-3b-kayis" data-ve-3b-kayis="1">' + renk('fead-belt') + ' <button type="button" class="ve-fw-3b-yolb"'
-        + ' onclick="veFeadWiz3bSec(' + coz.kayis.dugum + ')">' + _fwEsc(_fwStpRolAd('fead-belt'))
-        + '</button> ' + _fwEsc(_fwStpKayisTanim(coz.kayis)) + '</p>';
-    h += '<div class="ve-fw-rowbtns"><button type="button" class="ve-fw-btn" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'
-      + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button></div>';
-  }
-  return h + '</section>';
+  return h;
 }
 // Seçili düğümün kasnağı: düğüm ya da en yakın rollü atası bir birimse o
 // birimin kasnağı (alt montajın parçasına tıklanınca da birimin kesiti).
@@ -480,10 +522,28 @@ function _fw3bSonucKur(){
 }
 
 // ── 7 · KAMERA ────────────────────────────────────────────────────────────
+// Yörünge bir EKSEN TAKIMINDA (eks.x · eks.y · eks.z = yörüngenin yukarısı):
+// dünya takımında açılış bakışı kayış düzlemine göre kurulamazdı ve ilk
+// sürüklemede resim dünya Z'sine sıçrardı.
+function _fw3bDunyaEks(){ return { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) }; }
+function _fw3bEksKur(d, yukari){
+  var z = new THREE.Vector3(yukari[0], yukari[1], yukari[2]).normalize();
+  var x = new THREE.Vector3(-d[0], -d[1], -d[2]).normalize();
+  return { x: x, y: new THREE.Vector3().crossVectors(z, x).normalize(), z: z };
+}
+function _fw3bAcilisBakis(){
+  var V = _fw3b, e = veFeadWiz3bAcilisEksen(V.s);
+  if(!e) return false;
+  V.ctrl.eks = _fw3bEksKur(e.d, e.yukari);
+  V.ctrl.theta = VE_FW_3B_ACILIS.theta; V.ctrl.phi = VE_FW_3B_ACILIS.phi;
+  V.yukari = null;
+  return true;
+}
 function _fw3bKamera(){
-  var V = _fw3b, c = V.ctrl, cp = Math.cos(c.phi);
-  V.camera.position.set(c.hedef.x + c.r * cp * Math.cos(c.theta), c.hedef.y + c.r * cp * Math.sin(c.theta), c.hedef.z + c.r * Math.sin(c.phi));
-  if(V.yukari) V.camera.up.copy(V.yukari); else V.camera.up.set(0, 0, 1);
+  var V = _fw3b, c = V.ctrl, e = c.eks, cp = Math.cos(c.phi);
+  V.camera.position.copy(c.hedef).addScaledVector(e.x, c.r * cp * Math.cos(c.theta))
+    .addScaledVector(e.y, c.r * cp * Math.sin(c.theta)).addScaledVector(e.z, c.r * Math.sin(c.phi));
+  V.camera.up.copy(V.yukari || e.z);
   V.camera.lookAt(c.hedef);
   V.isik.position.copy(V.camera.position);
   V.isik.target.position.copy(c.hedef);
@@ -529,7 +589,7 @@ function _fw3bSigdir(kutu, noktalar){
     _fw3bKaydir(-(x0 + x1) / 2 * w / 2, (y0 + y1) / 2 * h / 2);
     var en = Math.max((x1 - x0) / 2, (y1 - y0) / 2);
     if(!(en > 0)) break;
-    V.ctrl.r *= Math.max(0.5, Math.min(2, en / 0.85));
+    V.ctrl.r *= Math.max(0.5, Math.min(2, en / VE_FW_3B_ACILIS.doluluk));
   }
   _fw3bKamera();
   _fw3bCiz();
@@ -554,13 +614,13 @@ function veFeadWiz3bOnden(){
     kutu.expandByPoint(new THREE.Vector3(k.merkez[0] + r, k.merkez[1] + r, k.merkez[2] + r));
   });
   var m = kutu.getCenter(new THREE.Vector3()), R = kutu.getSize(new THREE.Vector3()).length() / 2;
-  var d = new THREE.Vector3(iki.d[0], iki.d[1], iki.d[2]).normalize();
-  // Küresel kontrol: konum = hedef − d·r → theta/phi d'nin tersinden
+  // Yörünge takımı 2B'nin eksenleri: konum = hedef − d·r (θ = φ = 0) — sonraki
+  // sürükleme düzlemin yukarısı etrafında döner, resim sıçramaz
   V.ctrl.hedef.copy(m);
   V.ctrl.r = R / Math.sin(V.camera.fov * Math.PI / 360) * 1.02;
-  V.ctrl.theta = Math.atan2(-d.y, -d.x);
-  V.ctrl.phi = Math.asin(Math.max(-1, Math.min(1, -d.z)));
-  V.yukari = new THREE.Vector3(iki.yukari[0], iki.yukari[1], iki.yukari[2]);
+  V.ctrl.eks = _fw3bEksKur(iki.d, iki.yukari);
+  V.ctrl.theta = 0; V.ctrl.phi = 0;
+  V.yukari = null;
   V.elle = true;
   _fw3bKamera();
   _fw3bCiz();
@@ -616,7 +676,7 @@ function _fw3bKaydir(dx, dy){
 }
 function _fw3bIsabet(cx, cy){
   var V = _fw3b;
-  if(!V || !V.camera) return -1;
+  if(!V || !V.camera || !V.grup.visible) return -1;
   var r = V.renderer.domElement.getBoundingClientRect();
   var nd = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   V.ray.setFromCamera(nd, V.camera);
@@ -698,6 +758,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWiz3bYol: veFeadWiz3bYol,
     veFeadWiz3bParcalar: veFeadWiz3bParcalar,
     veFeadWiz3bRolJeton: veFeadWiz3bRolJeton,
+    VE_FW_3B_ACILIS: VE_FW_3B_ACILIS,
+    veFeadWiz3bAcilisEksen: veFeadWiz3bAcilisEksen,
     veFeadWiz3bPanelHTML: veFeadWiz3bPanelHTML,
     _fw3bSeciliKasnak: _fw3bSeciliKasnak,
     _fw3bSeciliKayis: _fw3bSeciliKayis,

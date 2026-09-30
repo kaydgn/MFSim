@@ -196,3 +196,67 @@ describe('OKUYUCU → ÜÇGENLEYİCİ', () => {
     expect(r.kutu[3]).toBeGreaterThan(-250);
   });
 });
+
+describe('AÇILIŞ BAKIŞI kayış düzleminden (2026-09-30: "garip bir açıdan geliyor")', () => {
+  const nokta = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  test('rolsüz okuma düzlemi bilir; bakış düzleme dik, yukarı düzlemde; hesaptan sonra çözümün bakışıyla aynı', () => {
+    const s = oku();
+    expect(s.oneri.duzlem && s.oneri.duzlem.n).toBeTruthy();
+    const e = G.veFeadWiz3bAcilisEksen(s);
+    expect(Math.abs(Math.abs(nokta(e.d, s.oneri.duzlem.n)) - 1)).toBeLessThan(1e-9);
+    expect(Math.abs(nokta(e.yukari, e.d))).toBeLessThan(1e-9);
+    expect(Math.hypot(...e.yukari)).toBeCloseTo(1, 12);
+    // hesaptan önceki bakış, hesabın bakışıyla (motor arkada) ve 2B çiziminin eksenleriyle AYNI
+    [[/GERG/, 'fead-tensioner'], [/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'], [/AVARA/, 'fead-idler']]
+      .forEach(([re, t]) => wiz.veFeadWizStpRol(dugum(s, re), t));
+    wiz.veFeadWizStpHesapla();
+    const iki = S.veFeadStp2B(s.coz, {});
+    expect(nokta(e.d, iki.d)).toBeCloseTo(1, 6);
+    expect(nokta(e.yukari, iki.yukari)).toBeCloseTo(1, 6);
+    // arkadan bakış yönü çevirir
+    wiz.veFeadWizStpAyna(true);
+    expect(nokta(G.veFeadWiz3bAcilisEksen(s).d, iki.d)).toBeCloseTo(-1, 6);
+  });
+  test('düzlem bilinmiyorsa null (kamera eski varsayılanında kalır)', () => {
+    expect(G.veFeadWiz3bAcilisEksen({ oneri: { duzlem: null }, coz: null })).toBeNull();
+    expect(G.veFeadWiz3bAcilisEksen({})).toBeNull();
+  });
+  test('kaynak: model kurulurken GİZLİ, açılış bakışı kurulumun SONUNDA bir kez; ilk parçaya sığdırma yok', () => {
+    const src = fs.readFileSync(path.join(__dirname, '../../js/cp-fead-3b.js'), 'utf8');
+    expect(src).toMatch(/V\.grup\.visible = false;/);
+    expect(src).toMatch(/_fw3bAcilisBakis\(\);\s*V\.grup\.visible = true;\s*_fw3bSigdir\(V\.kutu, _fw3bOrnekNoktalar\(\)\);/);
+    expect(src).not.toMatch(/ilkSigdir/);
+  });
+});
+
+describe('TEK DÜĞME bütün kasnakları hesaplar (2026-09-30)', () => {
+  test('hesap çubuğu panelin İLK bölümü, her seçimde; aktarım hesaptan sonra onun yanında', () => {
+    const s = oku();
+    [-1, dugum(s, /KRANK/), dugum(s, /GERG/)].forEach((sec) => {
+      const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, sec);
+      const ilk = d.querySelector('section');
+      expect(ilk.hasAttribute('data-ve-3b-hesapbar')).toBe(true);
+      expect(ilk.querySelector('#ve-fw-3b-hesapla')).not.toBeNull();
+      expect(d.querySelectorAll('#ve-fw-3b-hesapla')).toHaveLength(1);
+    });
+    [[/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'], [/AVARA/, 'fead-idler']].forEach(([re, t]) => wiz.veFeadWizStpRol(dugum(s, re), t));
+    wiz.veFeadWizStpHesapla();
+    const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, -1);
+    expect(d.querySelector('[data-ve-3b-hesapbar] #ve-fw-3b-aktar')).not.toBeNull();
+    expect(d.querySelector('[data-ve-3b-hesap-durum]').textContent).toMatch(/4 kasnak hesaplandı/);
+  });
+  test('hesaptan sonra bir kasnağa daha rol: düğmeye basmadan tablo yeni kasnağı taşır', () => {
+    const s = oku();
+    [[/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac']].forEach(([re, t]) => wiz.veFeadWizStpRol(dugum(s, re), t));
+    wiz.veFeadWizStpHesapla();
+    expect(s.coz.kasnaklar).toHaveLength(3);                     // + otomatik gergi
+    wiz.veFeadWizStpRol(dugum(s, /AVARA/), 'fead-idler');
+    const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, -1);
+    expect(d.querySelectorAll('tr[data-ve-3b-kasnak]')).toHaveLength(4);
+  });
+  test('CSS: çubuk yapışık; kaldırılan "Hesap çapı" satırının kuralı da yok', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-fw-3b-hesapbar\{[^}]*position:sticky/);
+    expect(css).not.toMatch(/\.ve-fw-3b-hesapcap\{/);
+  });
+});

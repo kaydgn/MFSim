@@ -249,16 +249,26 @@ describe('HESAP ÇAPI MATRİSİ — sütun seçenek, satır kasnak', () => {
   });
 });
 
-describe('3B PANELİ — bölüm kayış seçilince', () => {
+describe('3B PANELİ — kayışın bölümü HEP görünür', () => {
   const panel = (s, secili) => dom(G.veFeadWiz3bPanelHTML(s, secili));
-  test('kayış seçili: şekil + matris + ölçü tablosu; kasnak seçili ya da seçim yoksa bölüm yok', () => {
+  // Kullanıcı (2026-09-30): "kayış görselinin hep görünmesini istiyorum" —
+  // bölüm yalnız kayış seçilince açılıyordu.
+  const BOLUM = ['[data-ve-3b-kayis-kesit]', '[data-ve-3b-hesapcap-bolum] [data-ve-hesapcap-matris]',
+    '[data-ve-3b-kayis-olcu] [data-ve-kayis-olcu]', 'svg[data-ve="kayis-sekil"]'];
+  test('kayış seçili, kasnak seçili ya da seçim yok: şekil + matris + ölçü tablosu her üçünde', () => {
     const s = hazirla(ESKIZ);
-    const d = panel(s, dugum(/KAYI/));
-    ['[data-ve-3b-kayis-kesit]', '[data-ve-3b-hesapcap-bolum] [data-ve-hesapcap-matris]', '[data-ve-3b-kayis-olcu] [data-ve-kayis-olcu]',
-      'svg[data-ve="kayis-sekil"]'].forEach((sec) => expect([sec, !!d.querySelector(sec)]).toEqual([sec, true]));
-    expect(d.querySelector('[data-ve-3b-kesit]')).toBeNull();          // kasnağın kesiti değil
-    expect(panel(s, dugum(/KRANK/)).querySelector('[data-ve-3b-kayis-kesit]')).toBeNull();
-    expect(panel(s, -1).querySelector('[data-ve-3b-kayis-kesit]')).toBeNull();
+    [dugum(/KAYI/), dugum(/KRANK/), -1].forEach((sec) => {
+      const d = panel(s, sec);
+      BOLUM.forEach((q) => expect([sec, q, d.querySelectorAll(q).length]).toEqual([sec, q, 1]));
+    });
+    expect(panel(s, dugum(/KAYI/)).querySelector('[data-ve-3b-kesit]')).toBeNull();   // kasnağın kesiti değil
+  });
+  test('kayışa rol verilmemişken de bölüm çizilir ve bunu söyler', () => {
+    const s = hazirla(ESKIZ);
+    wiz.veFeadWizStpRol(dugum(/KAYI/), '');
+    const d = panel(s, -1);
+    BOLUM.forEach((q) => expect([q, !!d.querySelector(q)]).toEqual([q, true]));
+    expect(d.querySelector('[data-ve-3b-kayis-tanim]').textContent).toMatch(/Kayışa rol verilmedi/);
   });
   test('birimin İÇİNDEKİ parça da kayışın bölümünü açar (en yakın rollü ata)', () => {
     const s = { sonuc: { agac: [{ ebeveyn: -1 }, { ebeveyn: 0 }, { ebeveyn: 1 }, { ebeveyn: 0 }] },

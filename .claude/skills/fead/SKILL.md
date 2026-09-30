@@ -667,8 +667,11 @@ olurdu.
     • Tanıyıcının çıktısı OTURUMLUK (`_fwStp`), `node.data.wiz`e yazılmaz;
       durumda yalnız iz kalır (`stepKaynak`, `siraKaynagi`).
     • Satırlar ağacın düğümleri, **rolsüz açılır**; rol verilince ata ve
-      torunların rolü düşer. **Hesap bir DÜĞMEDİR**: rol değişince sonuç
-      DÜŞER (bayat sayı kalmasın), bakış değişince düşmez (yalnız izdüşüm).
+      torunların rolü düşer. **Hesap bir DÜĞMEDİR ve bütün kasnakları
+      birlikte çözer**; ilk hesaptan sonra rol değişince sonuç YENİDEN
+      çözülür (2026-09-30, kullanıcı: her kasnakta düğmeye dönmek
+      zahmetliydi) — rol kapısı geçilmezse düşer, bayat sayı kalmaz; bakış
+      değişince çözülmez (yalnız izdüşüm). Kapı: `fead-wizard-step.test.js`.
       Sonuç kayış düzleminin çizimiyle gelir: kasnaklar dış çapıyla, gergi
       kolu ve pivotu; kayış yolu ÇİZİLMEZ (sıra dosyada yok, yol çekirdeğin
       işi); renk CSS jetonlarından.
@@ -684,6 +687,15 @@ olurdu.
     **3B görüntüleyici** (`js/cp-fead-3b.js`, sihirbazın içinde `#ve-fw-3b`;
     kullanıcı akışı: *"3B görüntüleyicide parçaları manuel olarak seçeceğiz,
     ardından bir butona tıklayınca çaplar, merkezler hesaplanacak"*):
+    • **AÇILIŞ BAKIŞI KAYIŞ DÜZLEMİNDEN** (2026-09-30, kullanıcı: *"garip bir
+      açıdan geliyor"* — dünya eksenli bakış düzleme 75,5° idi): düzlem
+      hesaptan önce `veFeadStpOner`'ın rolsüz çıktısından (`oneri.duzlem`),
+      sonra çözümden; önden (hesabın bakış kuralı), yukarı 2B'nin kuralı, üç
+      çeyrek (`VE_FW_3B_ACILIS`). Yörünge bu EKSEN TAKIMINDA döner
+      (`ctrl.eks`) — sürükleme resmi dünya Z'sine sıçratmaz. Model kurulurken
+      GİZLİ, kamera kurulum bitince bir kez (ilk parçaya sığdırma modeli
+      ekrana yapıştırıyordu). Kapı: `fead-3b.test.js` → *"AÇILIŞ BAKIŞI"*,
+      `fead-step.spec.js`.
     • Dosya okununca AÇILIR (THREE yoksa açılmaz, kartın tablosu kalır). Durum
       kartla ORTAK (`veFeadWizStp()`); tazeleme `veFeadWizRender`ın sonundan —
       rol, hesap, bakış, aktarım hep oradan geçer. Rol düğmesi kartın işlevidir
@@ -708,11 +720,17 @@ olurdu.
       1.180 px → ekranın tamamı (en çok 1.840); kapanınca eski ölçüsüne döner.
       Rol düğmeleri kartın seçicisiyle TEK listeden (`veFeadWizStpRolTipleri`).
       Sağ sütun 440 px (2026-09-29, kullanıcı: 320 px *"çok dar olmuş"*).
-    • **KAYIŞ SEÇİLİNCE KESİT ŞEKLİ VE HESAP ÇAPI** (2026-09-29, kullanıcı:
+    • **Panelin tepesinde HESAP ÇUBUĞU** (yapışık: hesapla · aktar · durum) ve
+      sonuç tablosunun altında hesap çapı seçicisi YOK — seçim kayış
+      kesitinin matrisinde (2026-09-30). Kapı: `fead-3b.test.js` → *"TEK DÜĞME"*.
+    • **KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR** (2026-09-30, kullanıcı: *"kayış görselinin
+      hep görünmesini istiyorum"*; önce yalnız kayış seçilince) — rolü yoksa
+      profil kasnaktan ya da sihirbazın kayışından ve bunu söyler. Kapı:
+      `fead-kayis-sekil.test.js` → *"HEP görünür"*.
+    • **KESİT ŞEKLİ VE HESAP ÇAPI** (2026-09-29, kullanıcı:
       *"bu resimi 3B görsel okuyucu penceresine sağ tarafa yerleştireceksin …
       hangi çapı kullanacağını buradan kayışı seçtikten sonra seçecek"* —
-      ContiTech'in Şekil 1 + Tablo 1'i). Seçim kayış biriminin içindeyse
-      (`_fw3bSeciliKayis`, en yakın rollü ata) üç bölüm: Şekil 1
+      ContiTech'in Şekil 1 + Tablo 1'i). Üç bölüm: Şekil 1
       (`veFeadKayisSekilSVG` — solda kayış s · h, sağda kasnakta h_r · h_b ·
       d_w · d_b; sayılar çizilen kayışın, hesap çizgisi seçimle) · hesap çapı
       MATRİSİ (sütun seçenek, satır kasnak; başlık düğmesi TEK yazıcı

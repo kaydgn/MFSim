@@ -9017,6 +9017,10 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-bolum h4{ margin:0 0 6px; font-size:var(--fs-tiny); font-weight:600; letter-spacing:.04em;
   text-transform:uppercase; color:var(--text-secondary); }
 .ve-fw-3b-bolum > * + *{ margin-top:6px; }
+/* HESAP ÇUBUĞU (2026-09-30): tek düğme bütün kasnakları çözer ve kaydırmada
+   sütunun tepesinde kalır — sütunun dolgusunu örterek (üst −10, yan −12). */
+.ve-fw-3b-hesapbar{ position:sticky; top:-10px; z-index:1; margin:-10px -12px 0; padding:10px 12px 8px;
+  background:var(--bg-primary); border-bottom:1px solid var(--border-color); }
 .ve-fw-3b-yol{ display:flex; flex-wrap:wrap; align-items:center; gap:2px 5px; font-size:var(--fs-body); }
 .ve-fw-3b-yol b{ color:var(--text-primary); }
 /* Yol ve liste düğmeleri BAĞLANTI gibi: dinlenmede boş, fare altında altı çizili */
@@ -9046,7 +9050,6 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-kayis{ margin:0; display:flex; align-items:center; gap:6px; font-size:var(--fs-tiny); }
 /* HESAP ÇAPI (2026-09-28): kasnağın kesiti ve seçici. Hesabın kurulduğu
    satır ayrılır; seçici kayış için TEK — bütün kasnaklara birlikte. */
-.ve-fw-3b-hesapcap{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0; }
 .ve-fw-kesit-tbl td:nth-child(2){ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-fw-kesit-tbl td:nth-child(3){ font-size:var(--fs-micro); }
 .ve-fw-kesit-hesap td{ border-top:1px solid var(--border-hover); color:var(--text-heading); }

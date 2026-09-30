@@ -874,7 +874,10 @@ function veFeadStpOner(sonuc, opt){
     if(!enIyi || say * 1000 + ks > enIyi.puan) enIyi = { p: p, puan: say * 1000 + ks };
   });
   var p0 = enIyi ? enIyi.p : 0;
-  var ayrik = function(a, b){ return !a.parcalar.some(function(q){ return b.parcalar.indexOf(q) >= 0; }); };
+  // Rolsüz düzlem çıktıda: 3B görüntüleyicinin AÇILIŞ bakışı bundan kurulur
+  // (hesaptan önce kasnak rolü yok, düzlem yalnız burada biliniyor).
+  out.duzlem = { n: n, konum: p0 };
+  var ayrik =function(a, b){ return !a.parcalar.some(function(q){ return b.parcalar.indexOf(q) >= 0; }); };
   B.forEach(function(b){
     b.gecen = [];
     b.kasnaklar.forEach(function(P){

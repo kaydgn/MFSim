@@ -198,13 +198,23 @@ describe('STEP kartı: okuma rol ÖNERMEZ, hesap bir DÜĞMEDİR', () => {
     expect(wiz.veFeadWizStpAktar()).toBeNull();
   });
 
-  test('hesap yalnız rollü düğümler; rol değişince sonuç DÜŞER, bakış değişince düşmez', () => {
+  // Kullanıcı (2026-09-30): her kasnakta "hesapla"ya dönmek zahmetli — ilk
+  // hesaptan sonra sonuç rolleri İZLER (bayat sayı yine kalmaz).
+  test('hesap yalnız rollü düğümler; ilk hesaptan sonra rol değişince sonuç YENİDEN çözülür, bakış değişince çözülmez', () => {
     const c = hazirla();
     expect(c.ok).toBe(true);
     expect(c.kasnaklar.map((k) => k.tip)).toEqual(['fead-crank', 'fead-idler', 'fead-ac', 'fead-tensioner']);
     wiz.veFeadWizStpAyna(true);
     expect(wiz.veFeadWizStp().coz).toBe(c);
     wiz.veFeadWizStpRol(dugum(/KL[İI]MA/), 'fead-alternator');
+    const c2 = wiz.veFeadWizStp().coz;
+    expect(c2).not.toBe(c);                                     // yeni çözüm, eskisi değil
+    expect(c2.kasnaklar.map((k) => k.tip)).toEqual(['fead-crank', 'fead-idler', 'fead-alternator', 'fead-tensioner']);
+    // rol kapısı geçilmezse (iki krank) sonuç DÜŞER — bayat sayı kalmaz
+    wiz.veFeadWizStpRol(dugum(/AVARA/), 'fead-crank');
+    expect(wiz.veFeadWizStp().coz).toBeNull();
+    // düşmüş sonuç kendiliğinden geri gelmez: sonraki hesap yine düğmenin
+    wiz.veFeadWizStpRol(dugum(/AVARA/), 'fead-idler');
     expect(wiz.veFeadWizStp().coz).toBeNull();
   });
 
