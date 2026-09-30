@@ -466,7 +466,8 @@ function _gfSahneCevrim(){
 function _gfSahneRapor(){
   return _gfSahnePanel('getFeadReportPropertiesHTML',
     'Rapor paneli, iki kategori: <b>Tür</b> (burada açık — hangi belge indirilecek) ve '
-    + '<b>Künye</b> (antete ve belgenin sonundaki notlara akan dört alan). Sağ sütun '
+    + '<b>Künye</b> (antete, A3 panonun başlık bloğuna ve belgenin sonundaki notlara akan '
+    + 'altı alan). Sağ sütun '
     + 'kasnak panellerininkiyle aynı; rapor <b>çözülmüş</b> modelden üretilir, model '
     + 'çözülmemişse düğme pasiftir ve sebebi yazılır.', true);
 }
@@ -2010,8 +2011,9 @@ function _gfSec12(){
   h += _gfAdimlar([
     'Rapor türünü seçin: <strong>Özet</strong>, <strong>Detaylı</strong> ya da <strong>A3</strong>.',
     'Bölümün <strong>Künye</strong> bağlantısı Rapor penceresini açar; <strong>Doküman '
-      + 'künyesi</strong> alanlarını doldurun: hazırlayan, doküman no, revizyon, tasarım '
-      + 'notları. Bunlar antete ve belgenin sonundaki notlar bölümüne akar.',
+      + 'künyesi</strong> alanlarını doldurun: hazırlayan, doküman no, revizyon, kontrol eden, '
+      + 'onaylayan, tasarım notları. Bunlar antete ve belgenin sonundaki notlar bölümüne akar; '
+      + 'kontrol eden ve onaylayan A3 panonun başlık bloğunda (boşsa kâğıtta elle doldurulur).',
     '<strong>İndir</strong>’e basın (<strong>Rapor</strong> penceresindeki <strong>Raporu oluştur ve '
       + 'indir</strong> düğmesi de aynı işi yapar). İlk üretimde yazı tipleri ve formül '
       + 'dizgisi (~1 MB) bir kez yüklenir.',
@@ -2025,9 +2027,12 @@ function _gfSec12(){
     ['Özet', 'Tedarikçi çıktısının biçiminde altı sayfa: Genel bakış · Geometri · Gergi '
       + 'çalışma zarfı · Çalışma çevrimi ve torklar · Gerginlik ve Hubload · Dayanım ve '
       + 'titreşim', 'Sonuçları paylaşmak, tedarikçi raporuyla yan yana koymak'],
-    ['A3', 'Tek yatay A3 sayfa: yedi gösterge · kayış yolu · kasnak, açıklık, çevrim ve tepe '
-      + 'yük tabloları · gerginlik, frekans ve kayma grafikleri · uygunluk kapıları. Gövde '
-      + 'yazısı 10 pt', 'Çözümü tek bakışta görmek, basıp masada incelemek']
+    ['A3', 'Tek yatay A3 sayfa, dört sütun: dokuz gösterge · kayış yolu ve hubload çizimleri · '
+      + 'kasnak yerleşimi, açıklık, kayış, kasnak, çalışma çevrimi (yorulma katkısıyla) ve gergi '
+      + 'tabloları · açıklık gerginliği ve kayma emniyeti ısı haritaları · gergi kolu zarfı · '
+      + 'gerginlik, motor çevrimi ve frekans grafikleri · burulma modları · uygunluk · tasarım '
+      + 'notları. Gövde yazısı 8 pt; küçük modelde bloklar komşu sütuna kayar, sayfa boş kalmaz',
+      'Çözümü tek bakışta görmek, basıp masada incelemek']
   ], ['Tür', 'İçerik', 'Ne zaman']);
   h += _gfNot('Rapor çözülen modeli anlatır',
       'Belge, <strong>Hesapla</strong>’ya bastığınız andaki modeli anlatır. Çözümden sonra bir '

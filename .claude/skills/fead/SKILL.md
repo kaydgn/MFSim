@@ -1203,42 +1203,55 @@ olurdu.
     `fead-panel-gramer.spec.js` → *"sürtünme seçicisi … AYNI çiziliyor"*.
 
 50. **A3 SONUÇ PANOSU — ÜÇÜNCÜ BELGE, HESAPLAMAZ** (2026-09-29, kullanıcı
-    kararı — tasarım tuvali "FEAD A3 rapor tasarımları" · B · Pano: *"Düz
-    'B · Pano' güzel gibi. Varyasyonlarına gerek yok."*). `js/cp-fead-pano.js`,
-    tür anahtarı `pano`; tür listesi TEK (`VE_FEAD_REPORT_KINDS`: Rapor
-    penceresi · FEAD araçları · indirme adı; Sonuçlar'ın bağlantıları kapıyla
-    listeye bağlı). Tek yatay A3 sayfa: yedi gösterge · kayış yolu · kasnak,
-    açıklık, çevrim ve tepe yük tabloları · üç grafik · uygunluk kapıları.
+    kararı — tasarım tuvali "FEAD A3 rapor tasarımları" · B · Pano; baskıdan
+    sonra 2026-09-30 aynı tuvalde **E · Dolu pano — 8 pt**: *"yazı tipi biraz
+    büyük olmuş ve raporda boş kalan yerler olmuş"* → *"E · Dolu pano — 8 pt
+    bu güzel"*). `js/cp-fead-pano.js`, tür anahtarı `pano`; tür listesi TEK
+    (`VE_FEAD_REPORT_KINDS`: Rapor penceresi · FEAD araçları · indirme adı;
+    Sonuçlar'ın bağlantıları kapıyla listeye bağlı). Tek yatay A3 sayfa, dört
+    sütun, dokuz gösterge, on yedi blok.
     • **Sayı çözümden, üretici ortak**: sayı biçimi, kayma (c₂ tasarım yükü,
       kural 48; yük taşıma ROLDEN `_frSlipYuk`, SF yazımı `_frSfYaz`,
-      sürtünme çözümün dondurduğu `R.surtunme` — ad ve üç sayı Kayış
-      verileri'nde, kural 49), grafikler (`veFeadFigureRaw`), tepe yük
-      (`_fsrPeak`, KALİBRE DEĞİL), kapılar `R.checks` — yeniden
-      hesaplanmaz. Oran eşiği Gates koşulunda gergiyi "yük taşıyan"
-      sayıp çevrimin en düşüğü diye basardı (AG00686: 5,37). Sayfanın kendi işi
-      İNDİRGEMEDİR (en büyük / en küçük, nerede); veri modeli
-      (`veFeadPanoVeri`) ham sayı taşır, HTML yalnız biçimler. Kayış eğilme
-      frekansı köprüde (`veFeadEgilmeFrekansi`).
-    • **10 pt taban**: gövde 13,333 px; SVG yazısı kutunun HESAPLANAN
-      ölçeğiyle tabana yükseltilir (`_fpnTaban`). Çizim kutunun 1/k ölçüsünde
-      kurulur, k = taban / çizicinin 9 birimlik adı (kartın kuralı, kural 21).
-      Tek istisna alt indis.
-    • **Sayfa bütçesi JS'te, CSS'le birebir** (`VE_FEAD_PANO` · `_fpnOlcu`),
-      çöken kenarlığın tablo başına 0,5 px'i dâhil. Orta sütunun satırı
-      21 → 17 px daralır (10 pt × 1,15 + çizgi = 16,33 px); sığmayan model
-      KIRPILMAZ, sayfa uzar (ikinci A3). Sayfa 1.122 px: 297 mm = 1.122,5 px,
-      1.123 ikinci, boş bir sayfa açar.
-    • **Hücre yazısından en az 1 px geniş**: tablo hücresi üç nokta taşır
-      (kesilen sayı sessizce yanlış okunmasın), yani sınırda duran hücre
-      "156,…" basar. Kapı yazının GERÇEK genişliğini ölçer — scrollWidth
-      tam sayıya yuvarlanıyor ve 0,84 px'lik taşmayı görmüyordu.
+      sürtünme çözümün dondurduğu `R.surtunme`, kural 49), uygunluk
+      ayrıntılı raporun satırları (`_frUygunlukSatirlari` — `kisa` ·
+      `kisaBulgu` panonun yazımı, kasnak koduyla), mertebe kesişmeleri §8.18
+      ile ortak (`_frBurulmaKesisim`), kol zarfı §8.8'in konumları, grafikler
+      (`veFeadFigureRaw`), tepe yük (`_fsrPeak`, KALİBRE DEĞİL), kapılar
+      `R.checks`. **Mil torku ve motor çevrimi `R.signals`'tan OKUNUR**
+      (çözüm anında kurulan veri kümeleri, kural 33) — yeniden kurulmaz.
+      Tasarım notları yapısal alanlardan (çekirdeğin sınır cümlesi noktalı
+      ondalık yazıyor); sığmayan not SAYISIYLA söylenir. Sayfanın kendi işi
+      İNDİRGEMEDİR; veri modeli (`veFeadPanoVeri`) ham sayı taşır.
+    • **8 pt taban, 7 pt yalnız üç yerde** (birim satırı · blok alt başlığı ·
+      damga); SVG yazısı kutunun HESAPLANAN ölçeğiyle tabana yükseltilir
+      (`_fpnTaban`). Çizim kutunun 1/k ölçüsünde kurulur, k = taban / 9
+      (kasnak adı). **Kayış yolu çiziminde sarım açısı YOK** (β kasnak
+      tablosunda): çizici onu 8 birimle yerleştiriyor, 8 pt'ye büyüyen yazı
+      komşusuna biniyordu (11 örneğin 4'ünde 5 çakışma).
+    • **Dizilim ölçümden** (`_fpnDizilim`): bloklar okuma sırasıyla dört
+      sütuna BİTİŞİK bölünür, ceza = sütun boşluğunun karesi + ev sütunundan
+      uzaklık + esnek kutunun tercihten sapması. Esnek bloklar (iki çizim ·
+      üç grafik) sütunun artanını alır; çevrim tablolarının satırı 14–20 px
+      (tercih 16). Küçük modelde blok komşu sütuna kayar — sabit dizilişte
+      AG00686'nın ikinci sütunu 99 px boştu. Sığmayan model KIRPILMAZ, sayfa
+      uzar (`tasma`, sayfa künyesi "1 / 2"). Sayfa 1.122 px (297 mm =
+      1.122,5 px; 1.123 ikinci, boş bir sayfa açar).
+    • **Sütun eni İÇERİKTEN** (`_fpnSutunlar`): gömülü Inter'in ölçülmüş
+      karakter genişlikleri (`_FPN_EM`, kalın ek `_FPN_KALIN`, alt indis
+      0,72 em, %3 pay) + dolgu + 1 px; sığmazsa `dus` önceliği en büyük grup
+      düşer (çevrim tablosunda önce T_maks — ısı haritasının satır tepesi —
+      sonra aksesuar sütunları BİRLİKTE; toplam güç kalır).
+    • **Hücre yazısından en az 1 px geniş**: hücre üç nokta taşır (kesilen
+      sayı sessizce yanlış okunmasın); kapı yazının GERÇEK genişliğini ölçer.
     • Grafiğin x yazı sıklığı (`veFeadFigureRaw(…, { xEtiketAdim })`) ayarsız
-      çağrıda BİREBİR eskisi ve her çağrıda geri yüklenir — sızarsa ayrıntılı
-      raporun doğrudan çizilen şekli seyrelir.
+      çağrıda BİREBİR eskisi ve her çağrıda geri yüklenir.
+    • Künyenin **Kontrol eden · Onaylayan** alanlarının tüketicisi panonun
+      başlık bloğu; boşsa "—" (kâğıtta elle).
     Kapılar: `tests/unit/cp-fead-pano.test.js` + `tests/e2e/fead-pano.spec.js`
-    (bütün örnekler: sütun · kesik · punto · çizimde binen yazı · PDF tek
-    sayfa · kullanıcının indirme yolu); `tek-yazi-tipi.spec.js` ve
-    `sayi-belge.spec.js` belgeyi de tarar.
+    (bütün örnekler: sütun taşması · sütun boşluğu ≤ 45 px · kesik ·
+    gösterge kutusu · punto · iki çizimde binen yazı · PDF tek sayfa ·
+    kullanıcının indirme yolu); `tek-yazi-tipi.spec.js` ve `sayi-belge.spec.js`
+    belgeyi de tarar.
 
 51. **DERS NOTUNDAN DÖRT BAĞINTI — üçü GÖSTERİLİR, biri ÖNERİR** (2026-09-30,
     kullanıcı: *"hemen alınabilecekleri alalım"* — V. Temiz, İTÜ Makina

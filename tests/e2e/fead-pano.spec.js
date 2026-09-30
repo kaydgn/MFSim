@@ -5,13 +5,16 @@
  * BÜTÇESİNİ ölçer; bütçenin gerçekten tuttuğunu yalnız tarayıcı söyler —
  * jsdom yerleşim yapmaz, yazı ölçmez, sayfa basmaz. Burada ölçülen:
  *
- *   · sayfa 1.587 × 1.122 px ve üç sütunun içeriği kendi kutusunda
+ *   · sayfa 1.587 × 1.122 px ve dört sütunun içeriği kendi kutusunda
  *     (sütun taşması sessizdir: `overflow:hidden` sayfa onu keser)
- *   · hiçbir hücre / başlık / gösterge yazısı kesilmiyor
- *   · gövde yazısı 10 pt tabanında — SVG yazısı ekrandaki ölçeğiyle; tek
- *     istisna alt indis
- *   · kayış yolu çiziminde iki yazı üst üste binmiyor (taban yazıyı
- *     büyütüyor; yerleştirici kendi boyuyla yerleştirmişti)
+ *   · hiçbir sütun 45 px'ten fazla BOŞ kalmıyor (kullanıcı bildirimi,
+ *     2026-09-30: "raporda boş kalan yerler olmuş")
+ *   · hiçbir hücre / başlık / gösterge yazısı kesilmiyor, gösterge kutusu
+ *     taşmıyor
+ *   · gövde yazısı 8 pt, birim satırı · alt başlık · damga 7 pt tabanında —
+ *     SVG yazısı ekrandaki ölçeğiyle; tek istisna alt indis
+ *   · iki çizimde (kayış yolu · hubload) iki yazı üst üste binmiyor (taban
+ *     yazıyı büyütüyor; yerleştirici kendi boyuyla yerleştirmişti)
  *   · PDF baskısı TEK sayfa ve yatay A3 (297 mm = 1.122,5 px: 1.123 px'lik
  *     sayfa ikinci, boş bir sayfa açardı)
  *   · kullanıcının yolu: FEAD araçları → A3 → Hesapla → İndir; ölçülen
@@ -66,6 +69,9 @@ const pano = async (page, anahtar, zorla) => page.evaluate(([k, z]) => {
   R.build = build; R.pulleyNames = build.names; R.solvedAt = Date.now();
   R.checkOpt = veFeadCheckOpt(sd, veFeadDutyRows(solv));
   R.checks = veFeadChecks(build, R.checkOpt);
+  // Sonuçlar panosunun veri kümeleri çözüm anında yazılır (veFeadSolve) —
+  // pano mil torkunu ve motor çevrimini onlardan OKUR.
+  R.signals = veFeadSignals.build(R);
   if (z) {
     const d = R.analysis.duty, ek = [];
     for (let i = 0; ek.length + d.length < z; i++) ek.push(Object.assign({}, d[i % d.length], { engineRpm: d[i % d.length].engineRpm + 1 }));
@@ -81,23 +87,35 @@ const olc = async (browser, html) => {
   await p.setContent(html, { waitUntil: 'load' });
   const r = await p.evaluate(async () => {
     await document.fonts.ready;
-    const TABAN = 13.333 - 0.01;
+    const TABAN = 32 / 3 - 0.01, IKINCIL = 28 / 3 - 0.01;     // 8 pt · 7 pt
     const pn = document.querySelector('.pn');
     const pr = pn.getBoundingClientRect();
-    const out = { sayfa: [pr.width, pr.height], tasan: [], kesik: [], kucuk: [], binen: [], yazi: 0 };
+    const out = { sayfa: [pr.width, pr.height], tasan: [], kesik: [], kucuk: [], binen: [], bos: [], yazi: 0 };
     const icAlt = pr.bottom - 40 + 0.5;
     document.querySelectorAll('.pn .sut').forEach((s, i) => {
       const sr = s.getBoundingClientRect();
+      let alt = sr.top;
       [...s.querySelectorAll('*')].forEach((c) => {
         if (c.closest('svg')) return;
         const cr = c.getBoundingClientRect();
+        if (cr.height) alt = Math.max(alt, cr.bottom);
         if (cr.height && (cr.bottom > sr.bottom + 0.5 || cr.bottom > icAlt))
           out.tasan.push('sütun ' + i + ' ' + c.tagName + ' "' + (c.textContent || '').slice(0, 24) + '" ' + Math.round(cr.bottom) + ' > ' + Math.round(Math.min(sr.bottom, icAlt)));
       });
+      out.bos.push(Math.min(sr.bottom, icAlt) - alt);
     });
-    document.querySelectorAll('.pn td, .pn th, .pn h2, .pn .kpi .k, .pn .kpi b, .pn .kpi .s, .pn .kp span, .pn .not, .pn .ust b, .pn .ust .kn span').forEach((el) => {
+    document.querySelectorAll('.pn td, .pn th, .pn h2, .pn h2 small, .pn .kpi .k, .pn .kpi b, .pn .kpi .s, .pn .not, .pn .notlar li, .pn .ust b, .pn .ust span').forEach((el) => {
       if (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)
         out.kesik.push(el.tagName + ' "' + el.textContent.slice(0, 30) + '" ' + el.scrollWidth + '/' + el.clientWidth + ' ' + el.scrollHeight + '/' + el.clientHeight);
+    });
+    // Gösterge kutusu: satırları büzülmez (flex:none), taşan satır kutunun
+    // altından çıkar — kutu `overflow:hidden` onu sessizce keserdi.
+    document.querySelectorAll('.pn .kpi').forEach((k) => {
+      const kr = k.getBoundingClientRect();
+      [...k.children].forEach((c) => {
+        const cr = c.getBoundingClientRect();
+        if (cr.bottom > kr.bottom - 1 + 0.5) out.kesik.push('gösterge "' + k.textContent.slice(0, 30) + '" ' + cr.bottom.toFixed(1) + ' > ' + (kr.bottom - 1).toFixed(1));
+      });
     });
     // HÜCRE PAYI — yazının GERÇEK genişliği içerik kutusundan en az 1 px dar.
     // scrollWidth tam sayıya yuvarlanıyor ve 1 px payla 0,84 px'lik taşmayı
@@ -130,18 +148,22 @@ const olc = async (browser, html) => {
       let px;
       if (t) { const m = t.getScreenCTM(); px = parseFloat(getComputedStyle(el).fontSize) * Math.hypot(m.a, m.b); }
       else px = parseFloat(getComputedStyle(el).fontSize);
-      if (px < TABAN) out.kucuk.push((t ? 'svg' : 'html') + ' ' + px.toFixed(2) + ' "' + n.textContent.trim().slice(0, 20) + '"');
+      // 7 pt yalnız üç yerde: tablo başlığının birim satırı, blok alt başlığı, damga
+      const ikincil = !t && !!el.closest('th i, h2 small, .dmg');
+      if (px < (ikincil ? IKINCIL : TABAN)) out.kucuk.push((t ? 'svg' : 'html') + ' ' + px.toFixed(2) + ' "' + n.textContent.trim().slice(0, 20) + '"');
     }
-    // Kayış yolu: iki yazının kutusu (hâle hariç, gerçek glif kutusu) kesişiyor mu
-    const yazilar = [...document.querySelectorAll('.pn .cizim text')]
-      .filter((t) => t.textContent.trim() && !t.closest('title'))
-      .map((t) => { const b = t.getBoundingClientRect(); return { s: t.textContent.trim(), b }; });
-    for (let i = 0; i < yazilar.length; i++) for (let j = i + 1; j < yazilar.length; j++) {
-      const a = yazilar[i].b, b = yazilar[j].b;
-      const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-      const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-      if (ox > 1 && oy > 1) out.binen.push(yazilar[i].s + ' ↔ ' + yazilar[j].s + ' (' + ox.toFixed(1) + '×' + oy.toFixed(1) + ')');
-    }
+    // İki çizim (kayış yolu · hubload): iki yazının kutusu kesişiyor mu
+    document.querySelectorAll('.pn .cizim').forEach((cz, ci) => {
+      const yazilar = [...cz.querySelectorAll('text')]
+        .filter((t) => t.textContent.trim() && !t.closest('title'))
+        .map((t) => { const b = t.getBoundingClientRect(); return { s: t.textContent.trim(), b }; });
+      for (let i = 0; i < yazilar.length; i++) for (let j = i + 1; j < yazilar.length; j++) {
+        const a = yazilar[i].b, b = yazilar[j].b;
+        const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (ox > 1 && oy > 1) out.binen.push('çizim ' + ci + ': ' + yazilar[i].s + ' ↔ ' + yazilar[j].s + ' (' + ox.toFixed(1) + '×' + oy.toFixed(1) + ')');
+      }
+    });
     return out;
   });
   // BASKI: tek sayfa, yatay A3 (1.190,55 × 841,89 pt)
@@ -152,7 +174,7 @@ const olc = async (browser, html) => {
   return r;
 };
 
-test('A3 pano — bütün örneklerde sayfa, sütun, kesik yazı, 10 pt tabanı, çizimde binen yazı ve tek sayfa baskı', async ({ page, browser }) => {
+test('A3 pano — bütün örneklerde sayfa, sütun, boş yer, kesik yazı, 8 pt tabanı, çizimde binen yazı ve tek sayfa baskı', async ({ page, browser }) => {
   await ac(page);
   const anahtarlar = await page.evaluate(() => veFeadExampleKeys());
   expect(anahtarlar.length).toBeGreaterThanOrEqual(11);
@@ -169,19 +191,20 @@ test('A3 pano — bütün örneklerde sayfa, sütun, kesik yazı, 10 pt tabanı,
       bulgu.push(k + ' · kâğıt ' + r.medya.join(' × ') + ' pt');
     r.tasan.forEach((x) => bulgu.push(k + ' · taşan · ' + x));
     r.kesik.forEach((x) => bulgu.push(k + ' · kesik · ' + x));
-    r.kucuk.forEach((x) => bulgu.push(k + ' · 10 pt altı · ' + x));
+    r.kucuk.forEach((x) => bulgu.push(k + ' · taban altı · ' + x));
     r.binen.forEach((x) => bulgu.push(k + ' · binen · ' + x));
+    r.bos.forEach((b, i) => { if (b > 45) bulgu.push(k + ' · sütun ' + i + ' boş ' + b.toFixed(1) + ' px'); });
   }
   console.log('ölçülen yazı', yazi, '· bulgu', bulgu.length);
   expect(yazi).toBeGreaterThan(3000);                 // tarama boşa çalışmıyor
   expect(bulgu).toEqual([]);
 });
 
-test('A3 pano — sayfa bütçesinin en sıkı hâli: 6 kasnak × 17 devir tek sayfada; sığmayan KIRPILMAZ', async ({ page, browser }) => {
+test('A3 pano — sayfa bütçesinin en sıkı hâli: 6 kasnak × 14 devir tek sayfada; sığmayan KIRPILMAZ', async ({ page, browser }) => {
   await ac(page);
-  // En sıkı sığan hâl: satır tabanı (17 px), taşma yok, tek sayfa.
-  const html = await pano(page, 'AG00976_GATES_2025', 17);
-  expect(html).toContain('--sat:17px');
+  // En sıkı sığan hâl: çevrim satırı tabanda (14 px), taşma yok, tek sayfa.
+  const html = await pano(page, 'AG00976_GATES_2025', 14);
+  expect(html).toContain('--uzun:14px');
   expect(html).not.toContain('class="pn tasma"');
   const r = await olc(browser, html);
   expect(r.pdfSayfa).toBe(1);

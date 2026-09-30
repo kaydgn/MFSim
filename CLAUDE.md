@@ -74,8 +74,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Özeti). **Pano OKUR, hesaplamaz** — kümeler çözüm anında `R.signals`'a
   yazılır; kural ve kapıları FEAD skill'inde (kural 33).
 - `js/cp-fead-pano.js` — FEAD'in üçüncü rapor türü, **A3 sonuç panosu**: tek
-  yatay A3 sayfa, gövde 10 pt, basılabilir. **Hesaplamaz** — sayılar çözümden,
-  üreticiler öteki iki belgeyle ortak; kuralları FEAD skill'inde (kural 50).
+  yatay A3 sayfa, dört sütun, gövde 8 pt, basılabilir. **Hesaplamaz** — sayılar
+  çözümden, üreticiler öteki iki belgeyle ortak; kuralları FEAD skill'inde (kural 50).
 - `js/step-p21.js` + `js/fead-step.js` — **STEP'ten kasnak geometrisi**
   (CATIA/3DEXPERIENCE montajı). DOM'suz; okuyucu anlam yüklemez, tanıyıcı
   model KURMAZ ve **rolü kullanıcı verir** — analiz yalnız rol verilen
