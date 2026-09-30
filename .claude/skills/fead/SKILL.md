@@ -1222,6 +1222,32 @@ olurdu.
     sayfa · kullanıcının indirme yolu); `tek-yazi-tipi.spec.js` ve
     `sayi-belge.spec.js` belgeyi de tarar.
 
+51. **DERS NOTUNDAN DÖRT BAĞINTI — üçü GÖSTERİLİR, biri ÖNERİR** (2026-09-30,
+    kullanıcı: *"hemen alınabilecekleri alalım"* — V. Temiz, İTÜ Makina
+    Elemanları II, "Kayış-Kasnak Mekanizmaları"). Hiçbiri gerilme zincirine,
+    kaymaya ya da c₂'nin değerine girmez.
+    • **Hizalama payı kasnağa GİREN açıklıkta** (s.51; Gates "Belt Entry
+      Angle"): `veFeadHizalamaPayi` geometriyi gidiş sırasıyla kurup çekirdeğe
+      verir, pay çözümde durur (`R.hizalama`), Sonuç Özeti okur. Çekirdek
+      listeyi gidiş sırasında sanıyor; tablo sırasıyla sorulunca "giriş"
+      fiziksel çıkıştı (AG0868'de CRK 0,89 mm, Gates 4,11). `kFlat` (0,70)
+      AÇIK AYRIŞMA: Gates'in sonuç açısı ψ = 1,2°'de 0,80–0,91°.
+    • **Kord kuvveti = T_etkin + m′v²** (s.25–28, s.37): `veFeadKordSatiri`
+      TEK yazım — açıklık frekansı ve sürünme aynı gerçek gerginliği okur;
+      hubload · kayma · güç etkin gerginlikte kalır (kural 28).
+    • **Sürünme** (s.34): kasnak yüzeyi GİRİŞ açıklığının hızıyla döner
+      (`perPulley[i].exitTensionN` fiziksel giriştir, kural 7). EA ölçülmüş
+      ARALIK (18–43 kN/kaburga, yalnız PK) → sonuç bant; çekirdeğin 11 kN'u
+      burulmaya uydurulmuş, KULLANILMAZ. Aksesuar devri ve devir sınırı
+      kapısı kinematik kalır (muhafazakâr). İkisi de kayış verisine bağlı
+      (`VE_FEAD_BELT_DATA_OFF`).
+    • **c₂ sürücü grubu silindirden ÖNERİLİR** (s.65): 4 ve daha fazla
+      silindir normal, azı yüksek kalkış; tablo ContiTech'te kalır (ders
+      notuyla tek fark Hafif · normal · ≤ 10 sa). Çelişkide tablo uyarır ve
+      önerilen hücreyi AYNI yazıcıyla sunar, çözüm uyarısına yazar.
+    Kapı: `fead-ders-notu.test.js` (Gates'in 4. sayfası PDF'ten okunur;
+    sekiz mutasyonun sekizi kırmızı).
+
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
 kuralların hepsi oradan çıktı.

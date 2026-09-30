@@ -897,7 +897,9 @@ var VE_FEAD_BELT_DATA_OFF = [
   'B10 kayış ömrü',
   'Kaburga yorulma dağılımı',
   'Açıklık doğal frekansları ve çırpınma hükmü',
-  'Kol konum tablosunun tolerans/aşınma zarfı'
+  'Kol konum tablosunun tolerans/aşınma zarfı',
+  'Kord kuvveti (etkin gerginlik + m′v²)',
+  'Sürünme ile gerçek aksesuar devri'
 ];
 
 // KAYIŞ KİPİ ZARF KİPİNDE KİLİTLİ. Gergi 'envelope' kipindeyken kayış boyu
@@ -1883,15 +1885,102 @@ function _feadVibSpanMag(fSpan, fFire, zeta){
 function veFeadSpanFreqRows(sys, geom, spanN, opt){
   var o = opt || {};
   if(typeof FEADCore === 'undefined') return [];
+  var k = veFeadKordSatiri(sys, spanN, o.engineRpm);
+  var rows = FEADCore.spanFrequencies(sys, geom, k.kordN, o);
+  rows.forEach(function(r, i){ r.TN = spanN[i]; r.TcN = (spanN[i] > 0) ? k.TcN : 0; r.kordN = k.kordN[i]; });
+  return rows;
+}
+
+// ─── MERKEZKAÇ PAYI VE KORD KUVVETİ — TEK YAZIM ─────────────────────────────
+// Açıklık frekansı, kord kuvveti ve sürünme AYNI gerçek gerginliği okur:
+// kord kuvveti = T_etkin + m′v² (yukarıdaki gerekçe; ders notu s.25–28
+// σ_s = ρV², s.37 σ₁ = F₁/A). Gevşek açıklığa (T ≤ 0) pay eklenmez.
+function veFeadMerkezkacN(sys, engineRpm){
+  if(typeof FEADCore === 'undefined' || !sys) return 0;
   var mp = NaN, v = 0;
   try { mp = FEADCore.massPerM(sys); } catch(e){ mp = NaN; }
-  var rpm = _feadNum(o.engineRpm, NaN);
+  var rpm = _feadNum(engineRpm, NaN);
   if(rpm > 0){ try { v = FEADCore.beltSpeed(sys, rpm); } catch(e){ v = 0; } }
-  var Tc = (mp > 0 && v > 0) ? mp * v * v : 0;
-  var gercek = spanN.map(function(T){ return (T > 0) ? T + Tc : T; });
-  var rows = FEADCore.spanFrequencies(sys, geom, gercek, o);
-  rows.forEach(function(r, i){ r.TN = spanN[i]; r.TcN = (spanN[i] > 0) ? Tc : 0; });
-  return rows;
+  return (mp > 0 && v > 0) ? mp * v * v : 0;
+}
+function veFeadKordSatiri(sys, spanN, engineRpm){
+  var Tc = veFeadMerkezkacN(sys, engineRpm);
+  return { TcN: Tc, kordN: spanN.map(function(T){ return (T > 0) ? T + Tc : T; }) };
+}
+
+// ─── KORD KUVVETİ: ÇEVRİMİN EN BÜYÜĞÜ ───────────────────────────────────────
+// Zincir etkin gerginlik taşıdığı için (kural 28) hiçbir yüzey kordun gerçek
+// kuvvetini göstermiyordu; m′v² yalnız Sonuçlar'ın `tc` kanalındaydı. Bu sayı
+// hubload'a, kaymaya ve güce GİRMEZ — onlar T_etkin ile tutarlı; gösterilir.
+// Satır başına en gergin açıklık (sürücüye giren) ve çevrimin tepesi.
+// Kapı: fead-ders-notu.test.js → "KORD KUVVETİ".
+function veFeadKordKuvveti(sys, duty){
+  var satir = [], en = null;
+  (duty || []).forEach(function(d){
+    var per = d && d.perPulley;
+    if(!Array.isArray(per) || !per.length) return;
+    var spanN = per.map(function(p){ return _feadNum(p.exitTensionN, NaN); });
+    if(spanN.some(function(T){ return !Number.isFinite(T); })) return;
+    var k = veFeadKordSatiri(sys, spanN, d.engineRpm);
+    var ix = 0;
+    k.kordN.forEach(function(T, i){ if(T > k.kordN[ix]) ix = i; });
+    var s = { engineRpm: _feadNum(d.engineRpm, NaN), index: ix, span: sys.pulleys[ix].name,
+              etkinN: spanN[ix], TcN: k.TcN, kordN: k.kordN[ix] };
+    satir.push(s);
+    if(!en || s.kordN > en.kordN) en = s;
+  });
+  return en ? { enBuyuk: en, satir: satir } : null;
+}
+
+// ─── ELASTİK KAYMA (SÜRÜNME): AKSESUARIN GERÇEK DEVRİ ───────────────────────
+// Kasnak yüzeyi, kayışın kasnağa GİRDİĞİ yerdeki hızla döner (ders notu s.34);
+// kayışın hızı gerinmesiyle, gerinme kord kuvvetiyle orantılı. Sürücünün
+// girişi en gergin açıklık olduğu için her kasnak kinematik devrinin ALTINDA
+// döner:   n_gerçek / n = (1 + K_giriş,i / EA) / (1 + K_giriş,sürücü / EA)
+// Liste gidişin tersi (kural 7): `perPulley[i].exitTensionN` i'nin fiziksel
+// GİRİŞ açıklığıdır. Kayıp güç ≈ Σ P_i·ψ_i.
+// EA ÖLÇÜLMÜŞ ARALIKTIR, sonuç bir BANT: 18–43 kN/kaburga (Čepon 2011,
+// Michon 2006, Shangguan 2013), yalnız PK'da ölçüldü — başka profilde sayı
+// uydurulmaz. Çekirdeğin 11 kN/kaburgası Gates'in 1. burulma moduna uydurulmuş
+// ETKİN bir değer (kural 36), burada KULLANILMAZ. Zincire, kaymaya, güce ve
+// devir sınırı kapısına GİRMEZ (kapı kinematik devirle muhafazakâr kalır).
+// Gevşek açıklıklı satır (T ≤ 0) atlanır: kayış kasnaktan ayrılmıştır.
+// Kapı: fead-ders-notu.test.js → "SÜRÜNME".
+var VE_FEAD_EA_KABURGA = { minN: 18000, maxN: 43000,
+  kaynak: 'Čepon 2011 · Michon 2006 · Shangguan 2013 (PK, ölçülen)' };
+function veFeadSurunme(sys, duty){
+  if(!sys || !sys.belt || String(sys.belt.profile || 'PK').toUpperCase() !== 'PK') return null;
+  var ribs = _feadNum(sys.belt.ribs, NaN);
+  if(!(ribs > 0)) return null;
+  var EA = [VE_FEAD_EA_KABURGA.maxN * ribs, VE_FEAD_EA_KABURGA.minN * ribs];   // [az kayıp, çok kayıp]
+  var s = sys._crkIdx;
+  var yuk = {};
+  (duty || []).forEach(function(d){
+    ((d && d.slip) || []).forEach(function(q, i){ if(veFeadSlipYukTasir(q)) yuk[i] = true; });
+  });
+  var satir = [], en = null;
+  (duty || []).forEach(function(d){
+    var per = d && d.perPulley;
+    if(!Array.isArray(per) || !per.length) return;
+    var spanN = per.map(function(p){ return _feadNum(p.exitTensionN, NaN); });
+    if(spanN.some(function(T){ return !(T > 0); })) return;
+    var K = veFeadKordSatiri(sys, spanN, d.engineRpm).kordN;
+    var kw = [0, 0], kasnak = [];
+    per.forEach(function(p, i){
+      if(i === s) return;
+      var pct = EA.map(function(ea){ return 100 * (1 - (1 + K[i] / ea) / (1 + K[s] / ea)); });
+      var P = _feadNum(p.powerKw, 0);
+      kw[0] += P * pct[0] / 100; kw[1] += P * pct[1] / 100;
+      var r = { index: i, ad: sys.pulleys[i].name, devirN: _feadNum(p.accessoryRpm, NaN), kayipPct: pct };
+      kasnak.push(r);
+      if(yuk[i] && (!en || pct[1] > en.kayipPct[1]))
+        en = { index: i, ad: r.ad, engineRpm: _feadNum(d.engineRpm, NaN), kayipPct: pct };
+    });
+    satir.push({ engineRpm: _feadNum(d.engineRpm, NaN), kasnak: kasnak, kayipKw: kw });
+  });
+  if(!satir.length) return null;
+  return { eaKaburgaN: [VE_FEAD_EA_KABURGA.maxN, VE_FEAD_EA_KABURGA.minN], kaynak: VE_FEAD_EA_KABURGA.kaynak,
+           satir: satir, enBuyuk: en };
 }
 
 function veFeadVibSpanPayload(build, engineRpm, slow, gain, relDeg, zeta){
@@ -5374,6 +5463,28 @@ function veFeadServisFaktoru(sd){
   return { deger: 1, kaynak: 'yok', anahtar: null, hucre: null, etiket: 'seçilmedi', uyari: null };
 }
 
+// SİLİNDİR ÖLÇÜTÜ — ÖNERİ, SEÇİM DEĞİL. Ders notunun c₂ tablosu (V. Temiz,
+// İTÜ Makina Elemanları II, "Kayış-Kasnak Mekanizmaları" s.65) sürücüyü
+// 600 d/dk ile değil SİLİNDİR SAYISIYLA ayırır: 4 ve daha fazla silindirli
+// içten yanmalı motor normal kalkış, 4'ten azı yüksek kalkış grubunda.
+// ContiTech'in 600 d/dk ölçütü araç motorunu hep normal gruba koyar; üç
+// silindirde iki kaynak ayrışır. Tablo ContiTech'te kalır (kural 48);
+// silindir sayısı zorunlu girdi (kural 46), grubu ÖNERİLİR ve seçili hücre
+// öneriyle çelişirse aynı yük ve sürenin önerilen hücresi söylenir.
+// Kapı: fead-ders-notu.test.js → "c₂ GRUBU".
+function veFeadServisOneri(sd){
+  sd = sd || {};
+  var cyl = _feadNum(sd.cylinders, NaN);
+  if(!(cyl > 0)) return null;
+  var k = (cyl >= 4) ? 'normal' : 'yuksek';
+  var grup = VE_FEAD_SERVIS.surucu.filter(function(s){ return s.k === k; })[0];
+  var sv = veFeadServisFaktoru(sd), celiski = null;
+  if(sv.hucre && sv.hucre.surucu.k !== k)
+    celiski = veFeadServisHucre(sv.hucre.yuk.k + '.' + k + '.' + sv.hucre.saat.k);
+  return { k: k, grup: grup, silindir: cyl, secili: sv.hucre || null, celiski: celiski,
+           gerekce: (cyl >= 4) ? '4 ve daha fazla silindir' : '4\'ten az silindir' };
+}
+
 // TEK YAZICI — kayış penceresi ve sihirbaz buradan yazar (kural 24). Hücre ile
 // sayı BİRLİKTE yazılır; geçersiz anahtar seçimi SİLER.
 function veFeadServisSet(sd, anahtar){
@@ -5854,6 +5965,40 @@ function veFeadSlipThreshold(build, duty, c2){
   return en;
 }
 
+// ─── HİZALAMA PAYI: KASNAĞA GİREN AÇIKLIKTAN ────────────────────────────────
+//
+// Çekirdeğin `alignmentAllowance`ı listeyi kayışın GİDİŞ sırasında sanıyor:
+// giriş açıklığı `spans[i−1]`, önceki düz kasnak `pulleys[i−1]`. Köprünün
+// listesi ise Gates tablo sırası = gidişin TERSİ (kural 7); tablo sırasıyla
+// çağrılınca "giriş" fiziksel ÇIKIŞ açıklığı, "önceki" fiziksel SONRAKİ kasnak
+// oluyordu. Pay kayışın kasnağa GİRDİĞİ kolda tanımlı (Gates "Belt Entry
+// Angle"; ders notu s.51: kayış kasnağa kendi orta düzleminde girer).
+// Geometri gidiş sırasıyla yeniden kurulur (`veFeadRouteFlip` — sarım ve
+// boylar cebirsel olarak aynı, yalnız açıklıkların yönü çevrilir); formül ve
+// sabitler çekirdekte kalır.
+//
+// Gates'in "Adjacent Grooved Pulleys" çiftleri (altı raporun 4. sayfası)
+// kayışın gidiş yönünde yazılı ve eşleşme ancak bu sırayla tutuyor; düz
+// kasnak girmeyen çiftte izin Gates'le birebir (AG0868: 4,114 ↔ 4,11 mm).
+// Kapı: fead-ders-notu.test.js → "HİZALAMA".
+// `psi`: düz kasnak açısal kaçıklığı (ad → °); MFSim sormuyor, yüzeyler 0 geçer.
+function veFeadHizalamaPayi(sys, opt){
+  var o = opt || {};
+  if(typeof FEADCore === 'undefined' || !sys || !FEADCore.alignmentAllowance) return null;
+  var rel = (o.rel != null) ? o.rel : FEADCore.meanRel(sys);
+  var g = FEADCore.tensionerState(sys, rel).geom;
+  var gidis = FEADCore.solveGeometry(veFeadRouteFlip(g.pulleys), sys._geomOpt || {});
+  var n = gidis.pulleys.length;
+  var lim = FEADCore.CALIBRATION.fleetingLimitDeg.value;
+  return FEADCore.alignmentAllowance(gidis, { flatMisalignDeg: o.psi || {}, fleetingLimitDeg: lim }).map(function(a){
+    var i = gidis.indexOf(a.groovedPulley);
+    var onceki = gidis.pulleys[(i - 1 + n) % n];
+    return { kasnak: a.groovedPulley, onceki: onceki.name, oncekiDuz: onceki.contact === 'back',
+             acikMm: gidis.entrySpanLen(i), izinMm: a.axialOffsetAllowMm, limDeg: lim,
+             psiDeg: a.flatMisalignDeg, girisDeg: a.resultingFleetingDeg };
+  });
+}
+
 function veFeadAnalyze(build, opts){
   opts = opts || {};
   var out = { ok: false, error: null, analysis: null, fatigue: null, life: null,
@@ -5929,6 +6074,13 @@ function veFeadAnalyze(build, opts){
     var _sd = (build.solver && build.solver.data) || {};
     out.servis = veFeadServisFaktoru(_sd);
     if(out.servis.uyari) out.warnings.push(out.servis.uyari);
+    // Öneri çözümün KULLANDIĞI silindirle (seçenek önce, yoksa model alanı).
+    var _on = veFeadServisOneri(Object.assign({}, _sd, { cylinders: cyl }));
+    if(_on && _on.celiski)
+      out.warnings.push('Servis faktörü: ' + veSayi(_on.silindir, 0) + ' silindirli motor silindir '
+        + 'ölçütüyle (' + _on.gerekce + ') ' + _on.grup.ad.toLowerCase() + ' grubunda; seçili hücre '
+        + _on.secili.surucu.ad.toLowerCase() + '. Aynı yük ve sürede c₂ ' + veFeadServisYaz(_on.celiski.deger)
+        + ' (hesapta ' + veFeadServisYaz(out.servis.deger) + ').');
     out.surtunme = veFeadSurtunme(_sd);
     if(out.surtunme.uyari) out.warnings.push(out.surtunme.uyari);
     try {
@@ -5977,6 +6129,13 @@ function veFeadAnalyze(build, opts){
     out.warnings.push('Burulma modeli: ' + veFeadTranslateError(e && e.message));
   }
 
+  // Hizalama payı çözümde durur: pano OKUR (kural 33), yeniden kurmaz.
+  try { out.hizalama = veFeadHizalamaPayi(build.sys); }
+  catch(e){
+    out.hizalama = null;
+    out.warnings.push('Hizalama payı: ' + veFeadTranslateError(e && e.message));
+  }
+
   // ── KAYIŞ TİPİNE BAĞLI ÇIKTILAR KAPALI MI? ───────────────────────────────
   // Kapatılan şey hesap değil VERİNİN VARLIĞI: kayış henüz seçilmemişse
   // katalog sabitleriyle üretilen sayı bir varsayımdır. Sessizce atlamıyoruz —
@@ -5990,6 +6149,18 @@ function veFeadAnalyze(build, opts){
     // içinden çıkarılıyor ki rapor "0 Hz" gibi bir sayı basmasın.
     if(out.analysis && Array.isArray(out.analysis.duty))
       out.analysis.duty.forEach(function(d){ delete d.frequencies; });
+  } else if(out.analysis && Array.isArray(out.analysis.duty)){
+    // Kord kuvveti birim kütleden (m′v²), sürünme kayışın EA'sından: ikisi de
+    // kayış tipine bağlı çıktı. Hesaba girmezler, gösterilirler.
+    try { out.kord = veFeadKordKuvveti(build.sys, out.analysis.duty); }
+    catch(e){ out.warnings.push('Kord kuvveti: ' + veFeadTranslateError(e && e.message)); }
+    try { out.surunme = veFeadSurunme(build.sys, out.analysis.duty); }
+    catch(e){ out.warnings.push('Sürünme: ' + veFeadTranslateError(e && e.message)); }
+    if(out.surunme)
+      out.limits.push('Sürünme bir bant olarak verilir: kayış kord rijitliği (EA) ölçülen aralıktan, '
+        + veSayi(VE_FEAD_EA_KABURGA.minN / 1000, 0) + '–' + veSayi(VE_FEAD_EA_KABURGA.maxN / 1000, 0)
+        + ' kN/kaburga (' + VE_FEAD_EA_KABURGA.kaynak + '). Aksesuar devri, kayma ve devir sınırı '
+        + 'kapısı kinematik devirle hesaplanır.');
   }
   // ── GERGİ TARAFI HÜKMÜ + ÇEKİRDEK UYARILARININ YÜKSELTİLMESİ ────────────
   //
@@ -6289,6 +6460,10 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPresetOf: veFeadPresetOf, veFeadAutoKw: veFeadAutoKw,
     veFeadRatioSys: veFeadRatioSys,
     veFeadDutyToCore: veFeadDutyToCore, veFeadAnalyze: veFeadAnalyze,
+    veFeadHizalamaPayi: veFeadHizalamaPayi, veFeadServisOneri: veFeadServisOneri,
+    veFeadMerkezkacN: veFeadMerkezkacN, veFeadKordSatiri: veFeadKordSatiri,
+    veFeadKordKuvveti: veFeadKordKuvveti, veFeadSurunme: veFeadSurunme,
+    VE_FEAD_EA_KABURGA: VE_FEAD_EA_KABURGA,
     veFeadBeltDataOn: veFeadBeltDataOn, veFeadModelSig: veFeadModelSig,
     veFeadArmSweep: veFeadArmSweep, _feadCanon: _feadCanon, _feadHash: _feadHash,
     veFeadDutyDegC: veFeadDutyDegC, veFeadTorsionalOpt: veFeadTorsionalOpt,

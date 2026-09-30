@@ -1451,15 +1451,12 @@ function _gfSec8(){
     + 'rezonansı ve çırpınma hükmü sizin için önemliyse ölçülmüş değeri elle girin.');
   h += '<h3>8.4 Kayış tipine bağlı çıktılar anahtarı</h3>';
   h += '<p>Aynı panelde bir anahtar daha vardır ve varsayılan olarak '
-    + '<strong>kapalıdır</strong>. Kapalıyken şu dört çıktı <strong>üretilmez</strong>:</p>';
-  h += '<ul>'
-    + '<li>B10 kayış ömrü</li>'
-    + '<li>Kaburga yorulma dağılımı</li>'
-    + '<li>Açıklık doğal frekansları ve çırpınma hükmü</li>'
-    + '<li>Kol konum tablosunun tolerans / aşınma zarfı</li>'
-    + '</ul>';
-  h += '<p>Dördü de kayış katalogundan gelen sabitlere dayanır (efektif boy, birim kütle, '
-    + 'yorulma sabitleri, tolerans ve aşınma payı). Kayış henüz seçilmemişken bu sayıları '
+    + '<strong>kapalıdır</strong>. Kapalıyken şu çıktılar <strong>üretilmez</strong>:</p>';
+  // Liste köprünün kendisinden: çözümün `beltDataOff`u ile aynı satırlar.
+  h += '<ul>' + ((typeof VE_FEAD_BELT_DATA_OFF !== 'undefined') ? VE_FEAD_BELT_DATA_OFF : [])
+    .map(function(ad){ return '<li>' + _gfE(ad) + '</li>'; }).join('') + '</ul>';
+  h += '<p>Hepsi kayış katalogundan gelen sabitlere dayanır (efektif boy, birim kütle, kord '
+    + 'rijitliği, yorulma sabitleri, tolerans ve aşınma payı). Kayış henüz seçilmemişken bu sayıları '
     + 'üretmek, olmayan bir seçimi varsaymak olurdu. Kayışı seçtikten sonra anahtarı '
     + '<strong>Açık</strong>a alın; panel neyin kapalı olduğunu her zaman listeleyerek '
     + 'yazar.</p>';
@@ -1983,6 +1980,25 @@ function _gfSec11(){
     + 'sorusunu cevaplamaz. <strong>Rapor hükmünü yalnız yük taşıyanların en küçüğünden '
     + 'verir</strong>; panel tablosu ise ham en küçüğü gösterir. Bölüm 14’te bu ayrımın sayısal '
     + 'karşılığı var.');
+  h += '<h3>11.6 Kord kuvveti, sürünme ve hizalama payı</h3>';
+  h += '<p>Üçü de hesaba girmeyen, <strong>gösterilen</strong> sonuçlardır. Gerginlik tabloları '
+    + 'modelin her yerindeki <em>etkin</em> gerginliği basar (T − m′v²); hubload, kayma ve güç '
+    + 'onunla tutarlıdır. <strong>Kord kuvveti</strong> buna merkezkaç payını ekler ve kayışın '
+    + 'kordunun gerçekten taşıdığı kuvvettir; özet kartı çevrimin en büyüğünü, rapor §8.17 '
+    + 'açıklık başına aralığını yazar.</p>';
+  h += '<p><strong>Sürünme</strong> (elastik kayma): kasnak yüzeyi, kayışın ona girdiği açıklığın '
+    + 'hızıyla döner ve kayış gerildikçe uzar. Sürücüye giren açıklık en gergin olduğu için her '
+    + 'aksesuar kinematik devrinin biraz altında döner; en çok, gevşek taraftan beslenen kasnak. '
+    + 'Kord rijitliği (EA) yalnız ölçülmüş bir aralık olarak bilindiği için sonuç bir banttır ve '
+    + 'yalnız PK kayışta verilir. Aksesuar devri, kayma ve devir sınırı kapısı kinematik devirle '
+    + 'kalır.</p>';
+  h += '<p><strong>Hizalama payı</strong> (Sonuç Özeti): kaburgalı kasnağa kayışın gidiş yönünde '
+    + '<em>giren</em> açıklıkta izin verilen eksenel kaçıklık. Önceki kasnak düzse onun açısal '
+    + 'kaçıklığı payı daraltır; program bu açıyı sormadığı için 0 alınır ve sayı bir üst sınırdır.</p>';
+  h += _gfNot('İkisi de kayış verisine bağlı',
+      'Kord kuvveti birim kütleden, sürünme kord rijitliğinden gelir; kayış tipine bağlı çıktılar '
+    + 'anahtarı kapalıyken üretilmezler (§8.4). Hizalama payı yalnız geometriden gelir, her '
+    + 'çözümde vardır.');
   return h;
 }
 

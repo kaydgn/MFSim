@@ -33,6 +33,7 @@ describe('yazım taraması', () => {
     ['9.1 Dinamik rijitlik', 'bölüm başlığı'],
     ['bkz. 9.1 Dinamik rijitlik bölümü', 'denklem / bölüm no'],
     ['— Kong 2016, Beikmann 1996 verisi', 'kaynak yılı'],
+    ['EA (Čepon 2011 · Michon 2006 · Shangguan 2013)', 'kaynak yılı'],
     ['Arch. Automot. Eng. 55(2), 2019, Tab. 3', 'kaynak yılı'],
     ['TARİH 27 Eylül 2026', 'tarih'],
     ['Q = 9549 · P ⁄ n', 'formül sabiti'],

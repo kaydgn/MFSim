@@ -853,6 +853,23 @@ var veFeadSignals = (function() {
                  not: 'çevrim yüzdeleri girilmedi' });
     }
 
+    // 7b) Kord kuvveti ve sürünme — kayış verisine bağlı, hüküm değil bilgi.
+    // Çözümün sayıları (`R.kord` · `R.surunme`, köprü); açıklık kasnağa
+    // GİREN açıklıktır ("FAN girişi").
+    var K = R.kord && R.kord.enBuyuk;
+    if(beltOn(R) && K)
+      out.push({ k: 'kord', ad: 'Kord kuvveti (en büyük)', deger: _tr(K.kordN, 0), birim: 'N', durum: 'info',
+                 not: (P[K.index] ? P[K.index].code : K.span) + ' girişi · ' + _tr(K.engineRpm, 0)
+                   + ' d/dk · m′v² ' + _tr(K.TcN, 1) + ' N' });
+    var Su = R.surunme && R.surunme.enBuyuk;
+    if(beltOn(R) && Su) {
+      var ea = R.surunme.eaKaburgaN || [];
+      out.push({ k: 'surunme', ad: 'Sürünme (en büyük)', durum: 'info', birim: '',
+                 deger: '%' + _tr(Su.kayipPct[0], 2) + '–' + _tr(Su.kayipPct[1], 2),
+                 not: (P[Su.index] ? P[Su.index].code : Su.ad) + ' · ' + _tr(Su.engineRpm, 0) + ' d/dk · EA '
+                   + _tr(ea[1] / 1000, 0) + '–' + _tr(ea[0] / 1000, 0) + ' kN/kaburga' });
+    }
+
     // 8) Uygunluk kapıları — kapıların KENDİ durumu
     var C = R.checks;
     if(C) {

@@ -494,9 +494,11 @@ describe('kayış tipine bağlı çıktılar', () => {
   test('SESSİZ DEĞİL: kapatılanlar adıyla listeleniyor', () => {
     const { R } = coz(true);
     expect(Array.isArray(R.beltDataOff)).toBe(true);
-    expect(R.beltDataOff.length).toBe(4);
+    expect(R.beltDataOff.length).toBe(6);
     expect(R.beltDataOff.join(' ')).toMatch(/B10/);
     expect(R.beltDataOff.join(' ')).toMatch(/frekans/i);
+    expect(R.beltDataOff.join(' ')).toMatch(/Kord kuvveti/);   // m′v² birim kütleden
+    expect(R.beltDataOff.join(' ')).toMatch(/Sürünme/);        // EA kayıştan
   });
 
   test('AÇIKKEN hepsi geri geliyor — kapatma gerçekten bir fark', () => {
