@@ -5,3 +5,4 @@ tarih,sha,ham_bayt,gzip_bayt,assets_vendor_bayt,not
 2026-09-29,78f1a77,29161345,17357708,23231921,+152 KB kod (FEAD baslangic sayfasi + STEP kesit/eskiz + Sonuclar/pencere duzenleri #1049-#1056) - kare ve varlik degismedi
 2026-09-29,99657de,29273839,17391928,23231921,+112 KB kod (FEAD sihirbazi cizim masasi + 3B kayis kesiti + servis faktoru c2 #1058-#1060) - kare ve varlik degismedi
 2026-09-30,3418ff7,29405166,17433699,23231921,+131 KB kod (FEAD A3 sonuc panosu + sihirbaz genis masa + kayma Gates kosulu #1062-#1068) - kare ve varlik degismedi
+2026-09-30,6877ead,29458699,17451664,23231921,+53 KB kod (FEAD 3B goruntuleyici tuval onde + A3 dolu pano #1070-#1072) - kare ve varlik degismedi
