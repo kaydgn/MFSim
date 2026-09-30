@@ -2272,7 +2272,37 @@ function _frTensionTables(R){
   h += matris('Aksesuar devri [d/d]', function(d, i){ return (d.perPulley[i] || {}).accessoryRpm; }, 0);
   h += '<p style="font-size:13px;color:#5a6270;">Hubload büyüklüğü ve yönü (5.4)\'ten gelir; yön kayış '
      + 'düzleminde +X\'ten saat yönünün tersine ölçülür. Yatak seçimi ve braket tasarımı bu yöne bağlıdır.</p>';
+  h += _frSurunme(R);
   return h;
+}
+
+// §8.11 sonu — SÜRÜNME (elastik kayma). Aksesuar devri matrisi kinematik;
+// kasnak yüzeyi kayışın ona GİRDİĞİ açıklığın hızıyla döner. Sayılar
+// çözümden (`R.surunme`, köprü veFeadSurunme); hesaba girmez, bant yazılır.
+function _frSurunme(R){
+  var su = R && R.surunme;
+  if(!su || !su.satir || !su.satir.length) return '';
+  var ea = su.eaKaburgaN || [];
+  var kasnak = su.satir[0].kasnak;
+  var h = '<p>Aksesuar devri matrisi <b>kinematiktir</b> (motor devri × hız oranı). Kasnak yüzeyi, '
+     + 'kayışın o kasnağa <b>girdiği</b> açıklığın hızıyla döner ve kayış gerildikçe uzar; sürücüye giren '
+     + 'açıklık en gergin olduğu için her kasnak kinematik devrinin biraz altında döner (elastik kayma, '
+     + 'sürünme): \\( n_{\\text{gerçek}}/n = (1 + K_{\\text{giriş}}/EA)/(1 + K_{\\text{sürücü}}/EA) \\), '
+     + 'K kord kuvveti (§8.17). Kord rijitliği EA ölçülmüş aralıktan alınır, '
+     + _frF(ea[1] / 1000, 0) + '–' + _frF(ea[0] / 1000, 0) + ' kN/kaburga (' + _frEsc(su.kaynak)
+     + '); sonuç bu yüzden bir banttır. Gerilme, kayma ve devir sınırı kapısı kinematik devirle '
+     + 'hesaplanır.</p>';
+  h += '<table><caption>Tablo ' + _frTbl() + ' — Sürünmeyle devir kaybı [%] (EA ' + _frF(ea[0] / 1000, 0)
+     + ' … ' + _frF(ea[1] / 1000, 0) + ' kN/kaburga)</caption>';
+  h += '<tr><th>Motor devri</th>';
+  kasnak.forEach(function(k){ h += '<th>' + _frEsc(k.ad) + '</th>'; });
+  h += '<th>Kayıp güç [W]</th></tr>';
+  su.satir.forEach(function(s){
+    h += '<tr><td>' + _frF(s.engineRpm, 0) + '</td>';
+    s.kasnak.forEach(function(k){ h += '<td>' + _frFs(k.kayipPct[0], 2) + '–' + _frFs(k.kayipPct[1], 2) + '</td>'; });
+    h += '<td>' + _frFs(1000 * s.kayipKw[0], 1) + '–' + _frFs(1000 * s.kayipKw[1], 1) + '</td></tr>';
+  });
+  return h + '</table>';
 }
 
 // 8.12 — kayma emniyeti
@@ -2534,23 +2564,34 @@ function _frFreqSection(R){
      + 'frekansıyla (7.3) karşılaştırılır. İkisi yakınsa o açıklık çırpınır (flutter). Aşağıdaki tablo '
      + 'çalışma çevrimi boyunca görülen aralığı verir; devir-devir seyir grafikte.</p>';
   h += '<table><caption>Tablo ' + _frTbl() + ' — Açıklık frekans aralıkları (çalışma çevrimi boyunca)</caption>';
-  h += '<tr><th>Açıklık</th><th>Boy</th><th>Gerginlik (en az–en çok)</th><th>f<sub>1</sub> (en az–en çok)</th><th>Çırpınma</th></tr>';
+  h += '<tr><th>Açıklık</th><th>Boy</th><th>Gerginlik (en az–en çok)</th><th>Kord kuvveti (en az–en çok)</th>'
+     + '<th>f<sub>1</sub> (en az–en çok)</th><th>Çırpınma</th></tr>';
   spans.forEach(function(sp, i){
     var L = NaN, Tlo = Infinity, Thi = -Infinity, flo = Infinity, fhi = -Infinity, flut = false;
+    var Klo = Infinity, Khi = -Infinity;
     duty.forEach(function(d){
       var s = (d.frequencies || [])[i]; if(!s) return;
       L = _frNum(s.LMm);
       var T = _frNum(s.TN); if(T < Tlo) Tlo = T; if(T > Thi) Thi = T;
+      var K = _frNum(s.kordN); if(K < Klo) Klo = K; if(K > Khi) Khi = K;
       var f = (s.fHz && s.fHz.length) ? _frNum(s.fHz[0]) : NaN;
       if(Number.isFinite(f)){ if(f < flo) flo = f; if(f > fhi) fhi = f; }
       if(s.flutter) flut = true;
     });
     h += '<tr><td class="l">' + _frEsc(sp) + '</td><td>' + _frFs(L, 1) + '</td>'
       + '<td>' + _frF(Tlo, 0) + ' – ' + _frF(Thi, 0) + '</td>'
+      + '<td>' + _frF(Klo, 0) + ' – ' + _frF(Khi, 0) + '</td>'
       + '<td>' + _frFs(flo, 1) + ' – ' + _frFs(fhi, 1) + '</td>'
       + '<td class="c">' + (flut ? '<b style="color:#a8321f;">var</b>' : '<span class="ok">✓ yok</span>') + '</td></tr>';
   });
   h += '</table>';
+  // KORD KUVVETİ (köprü: veFeadKordKuvveti) — zincir etkin gerginlik taşır.
+  var kk = R.kord && R.kord.enBuyuk;
+  h += '<p>Gerginlik sütunu modelin her yerindeki <b>etkin</b> gerginliktir (T − m′v²; hubload, kayma '
+     + 've güç onunla tutarlıdır). Kord kuvveti buna merkezkaç payını ekler, frekans (7.2) onunla '
+     + 'hesaplanır' + (kk ? '; çevrimin en büyüğü <b>' + _frF(kk.kordN, 0) + ' N</b> ('
+       + _frEsc(kk.span) + ' girişi, ' + _frF(kk.engineRpm, 0) + ' d/d, m′v² ' + _frFs(kk.TcN, 1) + ' N)' : '')
+     + '.</p>';
   var fLo = _frNum(duty[0].firingHz), fHi = _frNum(duty[duty.length - 1].firingHz);
   h += '<p>Ateşleme frekansı çalışma çevrimi boyunca <b>' + _frFs(fLo, 1) + ' – ' + _frFs(fHi, 1)
      + ' Hz</b> aralığındadır (7.3).</p>';

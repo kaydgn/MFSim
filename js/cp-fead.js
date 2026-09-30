@@ -2554,11 +2554,26 @@ function veFeadServisTabloHTML(sd, cagri){
     + (sv.kaynak === 'yok'
         ? '<span>Seçilmedi · kayma gerçek yükte (c₂ = 1)</span>'
         : '<span><b>c₂ = ' + veFeadServisYaz(sv.deger) + '</b> · ' + _feadEsc(sv.etiket) + '</span>')
-    + _feadIBtn(T.kaynak + ' İçten yanmalı motor 600 d/dk üstündeyse normal kalkış grubundadır.')
+    + _feadIBtn(T.kaynak + ' İçten yanmalı motor 600 d/dk üstündeyse normal kalkış grubundadır. '
+        + 'Silindir önerisi: V. Temiz, İTÜ Makina Elemanları II ders notu s.65 — 4 ve daha fazla '
+        + 'silindirli motor normal, 4\'ten azı yüksek kalkış grubunda.')
     + (sv.kaynak !== 'yok'
         ? '<button type="button" class="ve-fead-c2-kaldir" onclick="' + cagri('') + '">Seçimi kaldır</button>'
         : '')
     + '</div>';
+  // SİLİNDİR ÖNERİSİ (köprü: veFeadServisOneri) — seçim yokken grubu söyler,
+  // seçili hücre çelişirse uyarır ve önerilen hücreyi AYNI yazıcıyla sunar.
+  var on = (typeof veFeadServisOneri === 'function') ? veFeadServisOneri(sd) : null;
+  if(on && (on.celiski || sv.kaynak === 'yok'))
+    h += '<div class="ve-fead-c2-durum" data-ve="servis-oneri"' + (on.celiski ? ' data-uyari="1"' : '') + '>'
+      + '<span>' + veSayi(on.silindir, 0) + ' silindir: <b>' + _feadEsc(on.grup.ad.toLowerCase()) + '</b> grubu ('
+      + _feadEsc(on.gerekce) + ')' + (on.celiski ? ' — seçili hücre ' + _feadEsc(on.secili.surucu.ad.toLowerCase()) : '')
+      + '</span>'
+      + (on.celiski
+          ? '<button type="button" class="ve-fead-c2-kaldir" onclick="'
+            + cagri(on.celiski.anahtar) + '">Önerilen hücre (c₂ ' + veFeadServisYaz(on.celiski.deger) + ')</button>'
+          : '')
+      + '</div>';
   return h + '</div>';
 }
 

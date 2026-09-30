@@ -33,8 +33,9 @@ const AD = [
   ['formül sabiti', new RegExp('× 9550|× 9549|9549 ?[·,]|[*/×] ?' + SABIT + '(?![\\d.,])|(?<![\\d.,])' + SABIT + ' ?[*/×]')],
   ['standart / kayış adı', /ISO|DIN|SAE|\dPK/],
   ['tarih', /20\d\d-\d\d|\d\d\.\d\d\.20\d\d|(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık) (?:19|20)\d\d/],
-  // Kaynakça yılı: "Kong 2016", "Gerbert & Hansson (1987)", "Balta ve ark. 2015", "Eng. 55(2), 2019"
-  ['kaynak yılı', /[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?: ve ark\.| & [A-ZÇĞİÖŞÜ][a-zçğıöşü]+)? \(?(?:19|20)\d\d\b|\d+\(\d+\), (?:19|20)\d\d/],
+  // Kaynakça yılı: "Kong 2016", "Gerbert & Hansson (1987)", "Balta ve ark. 2015", "Eng. 55(2), 2019",
+  // "Čepon 2011" (yazar adında Slav aksanı: Č Š Ž)
+  ['kaynak yılı', /[A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+(?: ve ark\.| & [A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+)? \(?(?:19|20)\d\d\b|\d+\(\d+\), (?:19|20)\d\d/],
   ['bölüm no', /§/],
   // Denklem ve bölüm NUMARASI ondalık değil: "(4.4)", "Bölüm 8.18", başlık "9.1 Dinamik rijitlik".
   // Alt denklem harf ekiyle yazılır: "(5.7a)", parantez içinde sürebilir "(5.7a, yalnız …)".

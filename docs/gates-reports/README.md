@@ -255,13 +255,15 @@ değeri yok"*. Tam raporun 6. sayfası (12 sayfalıkta 7.) tam o tablo ve
 sekiz eder. AG0868'in üçü ayrıca **kontrollü bir deney** — aynı kasnaklar, aynı
 duty, aynı sıcaklık; değişen yalnız kaburga ve gerginlik.
 
-**2 · `Pulley Alignment Sensitivity`** — tam raporun 4. sayfası, modelde hiç
-yok. `CLAUDE.md`: *"`alignmentAllowance` VAR ama düz kasnakların açısal
-kaçıklığını (ψ) GİRDİ olarak istiyor ve MFSim o alanı sormuyor."* Rapor ψ'yi
-veriyor (AG00686: fleeting 0.90° · IDR 0.33° · TEN 1.20° · izin verilen eksenel
-offset 3.93 / 1.49 mm).
+**2 · `Pulley Alignment Sensitivity`** — tam raporun 4. sayfası (AG00686 ×2 ·
+AG00810 · AG0868 ×3). Rapor ψ'yi veriyor (AG00686: fleeting 0.90° · IDR 0.33° ·
+TEN 1.20° · izin verilen eksenel offset 3.93 / 1.49 mm). **Kısmen kapı oldu
+(2026-09-30, FEAD kural 51):** çiftlerin yönü ("A_C->CRK" = kayışın gidişi) ve
+düz kasnaksız çiftin izni `fead-ders-notu.test.js`'te PDF'ten okunuyor. Açık
+kalan: ψ girdisi sorulmuyor (Sonuçlar 0 geçiyor) ve çekirdeğin sabit `kFlat`ı
+Gates'in geometriye bağlı sonuç açısını (ψ = 1,2°'de 0,80–0,91°) vermiyor.
 
-İkisi de henüz yapılmadı; arşivin gerekçesi olarak burada duruyor.
+Birincisi henüz yapılmadı; arşivin gerekçesi olarak burada duruyor.
 
 ## ARŞİVDE OLMAYAN BİR KAYNAK — E9843 parça çizimi
 

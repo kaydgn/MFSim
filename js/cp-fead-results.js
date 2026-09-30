@@ -499,21 +499,22 @@ function veFeadResSummaryHTML(R) {
       + 'Doğrulama kümesinde tepe değeri yok — sayı bir mertebe göstergesidir.</div>', 'warn');
   }
 
-  // 7) Hizalama payı — çekirdek hesaplıyordu, hiçbir yüzey göstermiyordu
-  var C = (typeof FEADCore !== 'undefined') ? FEADCore : null;
-  var al = null;
-  if(C && C.alignmentAllowance && sys) {
-    try { al = C.alignmentAllowance(C.tensionerState(sys, C.meanRel(sys)).geom); } catch(e) { al = null; }
-  }
+  // 7) Hizalama payı — ÇÖZÜMDEN (`R.hizalama`, köprü: kasnağa GİREN açıklık).
+  // Burada çekirdeğe tablo sırasıyla sorulduğunda "giriş" fiziksel çıkış
+  // açıklığı oluyordu (bkz. veFeadHizalamaPayi).
+  var al = R.hizalama;
   if(al && al.length) {
     var kodu = function(nm) { for(var i = 0; i < P.length; i++) if(P[i].name === nm) return P[i].code; return nm; };
-    h += _feadResSec('Hizalama payı', 'KALİBRE EDİLMEDİ — kaburgalı kasnağa giriş açıklığında izin verilen eksenel kaçıklık',
-      _feadResTbl([{ t: 'Kaburgalı kasnak', l: 1 }, { t: 'Önceki düz kasnak', l: 1 }, { t: 'İzin [mm]' }],
+    h += _feadResSec('Hizalama payı', 'KALİBRE EDİLMEDİ — kaburgalı kasnağa giren açıklıkta izin verilen eksenel kaçıklık',
+      _feadResTbl([{ t: 'Kaburgalı kasnak', l: 1 }, { t: 'Önceki kasnak', l: 1 }, { t: 'Giren açıklık [mm]' },
+                   { t: 'İzin [mm]' }],
         al.map(function(a) {
-          return { c: ['<b>' + _feadResEsc(kodu(a.groovedPulley)) + '</b>',
-            a.flatBefore ? _feadResEsc(kodu(a.flatBefore)) : '—', _feadResN(a.axialOffsetAllowMm, 2)] };
-        })) + '<div class="ve-fr-mute ve-fr-alt">Kayışın kasnağa giriş (fleeting) açısı sınırından; düz '
-      + 'kasnak açısal kaçıklığı girilmediği için 0 alındı. Sertifikasyon için değil.</div>', 'warn');
+          return { c: ['<b>' + _feadResEsc(kodu(a.kasnak)) + '</b>',
+            _feadResEsc(kodu(a.onceki)) + (a.oncekiDuz ? ' · düz' : ''),
+            _feadResN(a.acikMm, 1), _feadResN(a.izinMm, 2)] };
+        })) + '<div class="ve-fr-mute ve-fr-alt">Kayışın gidiş yönünde, ' + _feadResN(al[0].limDeg, 2)
+      + '° giriş açısı sınırından; düz kasnak açısal kaçıklığı girilmediği için 0 alındı. '
+      + 'Sertifikasyon için değil.</div>', 'warn');
   }
 
   // 8) Uygunluk kapıları — kapıların KENDİ durumu ve satırları

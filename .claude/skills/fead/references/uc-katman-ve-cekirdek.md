@@ -124,7 +124,7 @@ da Gates'ten OKUNMUŞ sayıların hükmü:
 |---|---|---|---|
 | μ kaburgalı · sırt | 0,90 · 0,35 | Gerbert 1990, Lotfy 1996, Kubas 2019 · Dayco US 8,192,315 | kaynaklı |
 | Kayış giriş açısı sınırı | 0,90° | Bando US 7,899,651 ("genelde 0,5–1,0°") | aralıkta |
-| `kFlat` | 0,70 | yok; Bando geometrisi ≈ (L₁+L₂)/L₃ | desteklenmiyor, kalibre değil |
+| `kFlat` | 0,70 | yok; Bando geometrisi ≈ (L₁+L₂)/L₃; Gates'in sonuç açısı / ψ altı raporda 0,67–0,81 (geometriye bağlı) | desteklenmiyor, kalibre değil — açık ayrışma (kural 51) |
 | Kavis payı | 0 | Beikmann/Zhang/Kong: `EA/l_i` (Litens 0,5 kullanıyor) | kaynaklı |
 | Yorulma çap üssü m | 5,6 | Gates US 3,956,929: %14 çap → 2× ömür ⇒ 5,29 | mertebe |
 | ΔT½ | 23 °C | Gates (V-kayış): ortamda ~20 °C, içte 10 °C | mertebe; tek 70 °C raporu (AG00902-1275) seçtiriyor |

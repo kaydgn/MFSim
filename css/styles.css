@@ -9326,7 +9326,8 @@ span.ve-fw-ro{ display:inline-block; }
   font-size:var(--fs-tiny); color:var(--text-secondary);
 }
 .ve-fead-c2-durum b{ color:var(--text-heading); }
-.ve-fead-c2-durum[data-kaynak="yok"]{ color:var(--ink-warning); }
+.ve-fead-c2-durum[data-kaynak="yok"],
+.ve-fead-c2-durum[data-uyari]{ color:var(--ink-warning); }
 .ve-fead-c2-kaldir{
   margin-left:auto; padding:2px 6px; cursor:pointer;
   border:1px solid var(--border-color); border-radius:var(--radius-xs);
