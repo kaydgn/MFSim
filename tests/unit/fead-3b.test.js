@@ -106,17 +106,28 @@ describe('RENK TEK KAYNAKTAN', () => {
 
 describe('PANEL kartın durumunu okur', () => {
   const ROL = [[/GERG/, 'fead-tensioner'], [/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'], [/AVARA/, 'fead-idler']];
-  test('seçili düğümün rol düğmeleri (her tip + "Rol yok"), basılı olan rolü; kök düğüm düğme değil', () => {
+  test('alttaki dizi: her rol TEK listeden (sık roller çip, kalanı "Diğer" + "Rolü kaldır"), basılı olan rolü; kök düğüm düğme değil', () => {
     const s = oku();
     const k = dugum(s, /KRANK/);
     wiz.veFeadWizStpRol(k, 'fead-crank');
-    document.body.insertAdjacentHTML('beforeend', '<div id="panel">' + G.veFeadWiz3bPanelHTML(s, k) + '</div>');
-    const p = document.getElementById('panel');
-    const roller = [...p.querySelectorAll('[data-ve-3b-rol]')];
-    // Düğmeler kartın seçicisiyle TEK listeden (kasnak tipleri + gergi + kayış) + "Rol yok"
-    expect(roller).toHaveLength(wiz.veFeadWizStpRolTipleri().length + 1);
-    expect(roller.map((b) => b.getAttribute('data-ve-3b-rol'))).toEqual(expect.arrayContaining(['fead-tensioner', 'fead-belt']));
-    expect(roller.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.getAttribute('data-ve-3b-rol'))).toEqual(['fead-crank']);
+    document.body.insertAdjacentHTML('beforeend', '<div id="panel">' + G.veFeadWiz3bPanelHTML(s, k) + '</div><div id="alt">' + G.veFeadWiz3bAltHTML(s, k) + '</div>');
+    const p = document.getElementById('panel'), a = document.getElementById('alt');
+    const cip = [...a.querySelectorAll('button[data-ve-3b-rol]')].map((b) => b.getAttribute('data-ve-3b-rol'));
+    const diger = [...a.querySelectorAll('select[data-ve-3b-diger] option[data-ve-3b-rol]')].map((o) => o.getAttribute('data-ve-3b-rol'));
+    // Hiçbir rol düşmüyor ve hiçbiri iki yerde değil: çip ∪ Diğer = kartın listesi (+ kaldır)
+    expect([...cip, ...diger].filter(Boolean).sort()).toEqual(wiz.veFeadWizStpRolTipleri().slice().sort());
+    expect(diger).toContain('');                                    // "Rolü kaldır"
+    expect(cip).toEqual(G.VE_FW_3B_CIP);                            // sık roller, kullanım sırasıyla
+    expect([...a.querySelectorAll('button[aria-pressed="true"]')].map((b) => b.getAttribute('data-ve-3b-rol'))).toEqual(['fead-crank']);
+    // "Diğer"deki rol seçiliyse liste onu gösterir
+    wiz.veFeadWizStpRol(k, 'fead-fan');
+    const a2 = document.createElement('div'); a2.innerHTML = G.veFeadWiz3bAltHTML(s, k);
+    expect(a2.querySelector('select[data-ve-3b-diger]').getAttribute('aria-pressed')).toBe('true');
+    expect(a2.querySelector('option[selected]').getAttribute('data-ve-3b-rol')).toBe('fead-fan');
+    expect(p.querySelector('[data-ve-3b-rol]')).toBeNull();          // kartta rol düğmesi YOK
+    // Seçim yokken dizi yönerge taşır, rol yok
+    const a3 = document.createElement('div'); a3.innerHTML = G.veFeadWiz3bAltHTML(s, -1);
+    expect(a3.querySelector('[data-ve-3b-rol]')).toBeNull();
     // Yol: kök bütün montaj — rol verilmez, tıklanmaz
     expect(p.querySelector('button[data-ve-3b-yol="0"]')).toBeNull();
     expect(p.querySelector('b[data-ve-3b-yol="' + k + '"]')).not.toBeNull();
@@ -130,10 +141,10 @@ describe('PANEL kartın durumunu okur', () => {
     const satir = [...p.querySelectorAll('tr[data-ve-3b-kasnak]')];
     expect(satir).toHaveLength(4);
     expect(satir.map((r) => +r.children[1].textContent.replace(',', '.')).sort((a, b) => a - b)).toEqual([75, 75, 127, 160]);
-    expect(p.querySelector('#ve-fw-3b-aktar')).not.toBeNull();
+    expect(G.veFeadWiz3bAltHTML(s, -1)).toContain('id="ve-fw-3b-aktar"');
     // İki krank: kartın rol kapısı → düğme kapalı
     wiz.veFeadWizStpRol(dugum(s, /AVARA/), 'fead-crank');
-    const h = G.veFeadWiz3bPanelHTML(s, -1);
+    const h = G.veFeadWiz3bAltHTML(s, -1);
     expect(h).toMatch(/id="ve-fw-3b-hesapla" disabled/);
   });
 });
@@ -230,18 +241,17 @@ describe('AÇILIŞ BAKIŞI kayış düzleminden (2026-09-30: "garip bir açıdan
 });
 
 describe('TEK DÜĞME bütün kasnakları hesaplar (2026-09-30)', () => {
-  test('hesap çubuğu panelin İLK bölümü, her seçimde; aktarım hesaptan sonra onun yanında', () => {
+  test('tek hesap düğmesi alttaki dizide, her seçimde tek kopya; kartın İLK bölümü kasnaklar; aktarım hesaptan sonra düğmenin yanında', () => {
     const s = oku();
     [-1, dugum(s, /KRANK/), dugum(s, /GERG/)].forEach((sec) => {
-      const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, sec);
-      const ilk = d.querySelector('section');
-      expect(ilk.hasAttribute('data-ve-3b-hesapbar')).toBe(true);
-      expect(ilk.querySelector('#ve-fw-3b-hesapla')).not.toBeNull();
+      const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, sec) + G.veFeadWiz3bAltHTML(s, sec);
       expect(d.querySelectorAll('#ve-fw-3b-hesapla')).toHaveLength(1);
+      expect(d.querySelector('[data-ve-3b-hesapbar] #ve-fw-3b-hesapla')).not.toBeNull();
+      expect(d.querySelector('section').hasAttribute('data-ve-3b-sonuc')).toBe(true);
     });
     [[/KRANK/, 'fead-crank'], [/KL[İI]MA/, 'fead-ac'], [/AVARA/, 'fead-idler']].forEach(([re, t]) => wiz.veFeadWizStpRol(dugum(s, re), t));
     wiz.veFeadWizStpHesapla();
-    const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, -1);
+    const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, -1) + G.veFeadWiz3bAltHTML(s, -1);
     expect(d.querySelector('[data-ve-3b-hesapbar] #ve-fw-3b-aktar')).not.toBeNull();
     expect(d.querySelector('[data-ve-3b-hesap-durum]').textContent).toMatch(/4 kasnak hesaplandı/);
   });
@@ -254,9 +264,17 @@ describe('TEK DÜĞME bütün kasnakları hesaplar (2026-09-30)', () => {
     const d = document.createElement('div'); d.innerHTML = G.veFeadWiz3bPanelHTML(s, -1);
     expect(d.querySelectorAll('tr[data-ve-3b-kasnak]')).toHaveLength(4);
   });
-  test('CSS: çubuk yapışık; kaldırılan "Hesap çapı" satırının kuralı da yok', () => {
+  // TASARIM B · TUVAL ÖNDE (kullanıcı kararı 2026-09-30): tuval gövdenin
+  // tamamı, kart ve dizi onun ÜSTÜNDE yüzer; dizinin kabı tıklamayı geçirir.
+  test('CSS: tuval tam gövde, kart ve dizi yüzer; dizinin kabı tıklamayı geçirir; eski "Hesap çapı" satırı yok', () => {
     const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
-    expect(css).toMatch(/\.ve-fw-3b-hesapbar\{[^}]*position:sticky/);
+    const kural = (sec) => (css.match(new RegExp('\\n' + sec.replace(/[.[\]]/g, '\\$&') + '\\{([^}]*)\\}')) || [])[1] || '';
+    expect(kural('.ve-fw-3b-tuval')).toMatch(/position:absolute; inset:0/);
+    expect(kural('.ve-fw-3b-yan')).toMatch(/position:absolute/);
+    expect(kural('.ve-fw-3b-alt')).toMatch(/position:absolute/);
+    expect(kural('.ve-fw-3b-alt')).toMatch(/pointer-events:none/);
+    expect(css).toMatch(/\.ve-fw-3b-alt > \*\{ pointer-events:auto; \}/);
+    expect(kural('.ve-fw-3b-govde')).not.toMatch(/grid/);
     expect(css).not.toMatch(/\.ve-fw-3b-hesapcap\{/);
   });
 });

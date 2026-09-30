@@ -105,7 +105,9 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   // sığdırmak eğik bakışta modeli küçültüyordu (kullanıcının dosyasında tuvalin
   // %29'u). Ölçülen: örneklenmiş köşelerin izdüşümünün yarı genişliği (NDC) —
   // hedef 0,80 (VE_FW_3B_ACILIS.doluluk, 2026-09-30: 0,85 "çok yakın"); kutuyla
-  // sığdırılsaydı ~0,72. Eşik ikisinin arasında.
+  // sığdırılsaydı ~0,72. Eşik ikisinin arasında. TASARIM B'de (2026-09-30) kart
+  // ve dizi tuvalin ÜSTÜNDE: doluluk onların örtmediği SERBEST alana göre, ve
+  // montaj ne kartın ne dizinin altına girer.
   const doluluk = () => page.evaluate(() => {
     const V = _fw3b;
     V.camera.updateMatrixWorld();
@@ -117,9 +119,16 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
         x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
       }
     });
-    return Math.max((x1 - x0) / 2, (y1 - y0) / 2);
+    const F = veFeadWiz3bSerbest(), w = V.kap.clientWidth, h = V.kap.clientHeight;
+    const ax = (w - F.sag) / w, ay = (h - F.alt) / h;
+    window.__ortu = { sag: x1 <= 1 - 2 * F.sag / w + 0.02, alt: y0 >= -1 + 2 * F.alt / h - 0.02, F };
+    return Math.max((x1 - x0) / 2 / ax, (y1 - y0) / 2 / ay);
   });
   let dol = await doluluk();
+  // montaj kartın ve dizinin örttüğü yere girmiyor; örtüler gerçekten ölçüldü
+  expect(await page.evaluate(() => window.__ortu)).toMatchObject({ sag: true, alt: true });
+  expect(await page.evaluate(() => window.__ortu.F.sag)).toBeGreaterThan(400);
+  expect(await page.evaluate(() => window.__ortu.F.alt)).toBeGreaterThanOrEqual(124);
   expect(dol).toBeGreaterThan(0.76);
   expect(dol).toBeLessThan(0.84);
   // AÇILIŞ BAKIŞI kayış düzleminden (2026-09-30): kamera düzlemin ÖNÜNDE
@@ -155,7 +164,9 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
       r.render = asil; clearTimeout(sure);
       const gl = r.getContext(), w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
       const px = new Uint8Array(4 * 41 * 41);
-      gl.readPixels(Math.floor(w / 2) - 20, Math.floor(h / 2) - 20, 41, 41, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      // SERBEST alanın ortası (tasarım B: kart sağda, dizi altta örter; montaj oraya sığdırılır)
+      const F = veFeadWiz3bSerbest(), k = w / _fw3b.kap.clientWidth;
+      gl.readPixels(Math.floor((w - F.sag * k) / 2) - 20, Math.floor((h + F.alt * k) / 2) - 20, 41, 41, gl.RGBA, gl.UNSIGNED_BYTE, px);
       const z = sahne.background; let farkli = 0;
       for (let i = 0; i < px.length; i += 4) {
         if (Math.abs(px[i] - z.r * 255) + Math.abs(px[i + 1] - z.g * 255) + Math.abs(px[i + 2] - z.b * 255) > 30) farkli++;
@@ -182,20 +193,23 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   await page.mouse.click(krank.n.x, krank.n.y);
   const yan = page.locator('#ve-fw-3b-yan');
   await expect(yan.locator('.ve-fw-3b-yol b')).toContainText('KRANK');
-  await expect(yan.locator('.ve-fw-3b-rol[aria-pressed="true"]')).toHaveText('Rol yok');
-  await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-crank"]').click();
-  await expect(yan.locator('.ve-fw-3b-rol[aria-pressed="true"]')).toContainText('Krank Kasnağı');
+  // Roller alttaki dizide (tasarım B); seçilen parçanın rolü yok → basılı çip yok
+  await expect(page.locator('#ve-fw-3b-alt button.ve-fw-3b-rol[aria-pressed="true"]')).toHaveCount(0);
+  await expect(yan.locator('[data-ve-3b-rol]')).toHaveCount(0);
+  await page.locator('#ve-fw-3b-alt .ve-fw-3b-rol[data-ve-3b-rol="fead-crank"]').click();
+  await expect(page.locator('#ve-fw-3b-alt .ve-fw-3b-rol[aria-pressed="true"]')).toContainText('Krank Kasnağı');
   // KAYIŞ DA 3B'DE SEÇİLİR (kullanıcı isteği 2026-09-28)
   for (const [re, tip] of [[/AVARA/, 'fead-idler'], [/KL[İI]MA/, 'fead-ac'], [/GERG[İI]/, 'fead-tensioner'], [/KAYI/, 'fead-belt']]) {
     const p = await tikla(re);
     await page.mouse.click(p.n.x, p.n.y);
-    await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="' + tip + '"]').click();
+    await page.locator('#ve-fw-3b-alt .ve-fw-3b-rol[data-ve-3b-rol="' + tip + '"]').click();
   }
   await expect(yan).toContainText('Rol verilenler 5');
   // Boşluğa tıklamak seçimi kaldırır (tuvalin sol üst köşesi)
   const tuv = await page.locator('#ve-fw-3b-tuval').boundingBox();
   await page.mouse.click(tuv.x + 12, tuv.y + 12);
-  await expect(yan).toContainText('Modelde bir parçaya tıklayın');
+  await expect(page.locator('#ve-fw-3b-alt')).toContainText('modelde bir parçaya tıklayın');   // yönerge dizide (tasarım B)
+  await expect(yan.locator('[data-ve-3b-secili]')).toHaveCount(0);
   // Rol KARTLA ORTAK: kartın ağacında aynı roller
   const adSatiri = (ad) => satir.filter({ has: page.locator('td:first-child', { hasText: new RegExp(ad) }) });
   await expect(adSatiri('KRANK').locator('select')).toHaveValue('fead-crank');
@@ -204,8 +218,12 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   // ── 3) HESAPLA (3B'de): dört halka, gergi kolu, sayı tablosu ─────────────
   await page.locator('#ve-fw-3b-hesapla').click();
   await expect(yan).toContainText('4 kasnak');
-  await expect(yan.locator('.ve-fw-dim .mf-ico-check').first()).toBeVisible();   // onay çizgi ikon (karar 10·B)
+  await expect(yan.locator('[data-ve-3b-hesap-durum] .mf-ico-check').first()).toBeVisible();   // onay çizgi ikon (karar 10·B)
   expect((await page.evaluate(() => veFeadWiz3bDurum())).halka).toBe(4);
+  // ÇAP ETİKETLERİ (tasarım B): her kasnağın yanında, sayısı kartın tablosuyla aynı
+  expect((await page.evaluate(() => veFeadWiz3bDurum())).etiket).toBe(4);
+  const etk = await page.locator('#ve-fw-3b-etiket [data-ve-3b-etiket]').allInnerTexts();
+  expect(etk.join(' | ')).toMatch(/Krank[\s\S]*Ø160,0 · hesap 162,4/);
   const capler = await yan.locator('tr[data-ve-3b-kasnak] td:nth-child(2)').allInnerTexts();
   expect(capler.map((t) => +t.replace(',', '.')).sort((a, b) => a - b)).toEqual([75, 75, 127, 160]);
   await expect(page.locator('#ve-fw-3b-onden')).toBeEnabled();
@@ -235,15 +253,16 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   // kasnakta düğmeye dönmek zahmetliydi) — halkalar kalır, tablo yeni rolü taşır
   const klima = await tikla(/KL[İI]MA/);
   await page.mouse.click(klima.n.x, klima.n.y);
-  await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-alternator"]').click();
+  await page.locator('#ve-fw-3b-alt .ve-fw-3b-rol[data-ve-3b-rol="fead-alternator"]').click();
   expect((await page.evaluate(() => veFeadWiz3bDurum())).halka).toBe(4);
   expect(await page.evaluate(() => veFeadWizStp().coz.kasnaklar.map((k) => k.tip))).toContain('fead-alternator');
-  await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-ac"]').click();
-  // Tek düğme panelin tepesinde, sütun kaydırılınca da görünür (yapışık)
+  await page.locator('#ve-fw-3b-alt .ve-fw-3b-rol[data-ve-3b-rol="fead-ac"]').click();
+  // Tek düğme alttaki dizide: kart kaydırılsa da yerinde, kartın altında değil
   await yan.evaluate((el) => { el.scrollTop = el.scrollHeight; });
-  const dugme = await page.locator('#ve-fw-3b-hesapla').boundingBox(), yk = await yan.boundingBox();
-  expect(dugme.y).toBeGreaterThanOrEqual(yk.y - 1);
-  expect(dugme.y + dugme.height).toBeLessThanOrEqual(yk.y + 80);
+  const dugme = await page.locator('#ve-fw-3b-alt #ve-fw-3b-hesapla').boundingBox(), yk = await yan.boundingBox();
+  expect(dugme.x + dugme.width).toBeLessThan(yk.x);
+  const tuvK = await page.locator('#ve-fw-3b-tuval').boundingBox();
+  expect(dugme.y + dugme.height).toBeLessThanOrEqual(tuvK.y + tuvK.height);
   await page.locator('#ve-fw-3b-hesapla').click();
   // Hesap seçimi kaldırır: seçim öteki kasnakları soldururdu, halkalar hepsinde okunmalı
   expect(await page.evaluate(() => veFeadWiz3bDurum())).toMatchObject({ halka: 4, secili: -1 });
@@ -351,7 +370,7 @@ test('ALT MONTAJA rol: parçaya tıkla → yolda üst düğüme çık → rol b�
   await yan.locator('.ve-fw-3b-yol button', { hasText: 'OTOMATİK GERGİ' }).click();
   await expect(yan.locator('.ve-fw-3b-yol b')).toHaveText('OTOMATİK GERGİ');
   await expect(yan).toContainText('2 parça');
-  await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-tensioner"]').click();
+  await page.locator('#ve-fw-3b-alt .ve-fw-3b-rol[data-ve-3b-rol="fead-tensioner"]').click();
   // Kol parçasının birimi de gergi: fare altında birimin adı yazılır
   const kol = await page.evaluate((j) => veFeadWiz3bIsabetNoktasi(j), adlar.indexOf('KOL'));
   await page.mouse.move(kol.x, kol.y);
@@ -374,7 +393,7 @@ test('ALT MONTAJA rol: parçaya tıkla → yolda üst düğüme çık → rol b�
   const krk = await page.evaluate((j) => veFeadWiz3bIsabetNoktasi(j), adlar.indexOf('KRANK'));
   expect(krk).not.toBeNull();
   await page.mouse.click(krk.x, krk.y);
-  await yan.locator('.ve-fw-3b-rol[data-ve-3b-rol="fead-crank"]').click();
+  await page.locator('#ve-fw-3b-alt .ve-fw-3b-rol[data-ve-3b-rol="fead-crank"]').click();
   await page.locator('#ve-fw-3b-hesapla').click();
   await expect(yan).toContainText('2 kasnak');
   expect((await page.evaluate(() => veFeadWiz3bDurum())).halka).toBe(2);
@@ -492,7 +511,7 @@ test('KESİT: eskizli dosyada krank seçilince kesit; hesap çapı düğmesi bü
 // seçer. Sütun 320 → 440 px ("çok dar olmuş"). Node'da HİÇ koşmayan halkalar:
 // 3B'de kayışa gerçek tıklama, matris başlığına gerçek tıklama, seçili sütunun
 // CSS'ten gelen zemini, gerçek yazı tipiyle şeklin yazılarının kesilmemesi.
-test('KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR: kesit şekli + hesap çapı matrisi + ölçüler; seçim oradan, sütun 440 px', async ({ page }) => {
+test('KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR: kesit şekli + hesap çapı matrisi + ölçüler; seçim oradan, kart 420 px', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -509,12 +528,12 @@ test('KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR: kesit şekli + hesap çapı matrisi + �
     });
   });
   const yan = page.locator('#ve-fw-3b-yan');
-  // SÜTUN 440 px; 1.366'da tuvale yine ≥ 880 px kalır
+  // KART 420 px ve tuvalin ÜSTÜNDE yüzer (tasarım B): tuval gövdenin tamamı
   const kutu = () => page.evaluate(() => ({
     yan: Math.round(document.getElementById('ve-fw-3b-yan').getBoundingClientRect().width),
     tuval: Math.round(document.getElementById('ve-fw-3b-tuval').getBoundingClientRect().width) }));
-  expect(await kutu()).toMatchObject({ yan: 440 });
-  expect((await kutu()).tuval).toBeGreaterThanOrEqual(880);
+  expect(await kutu()).toMatchObject({ yan: 420 });
+  expect((await kutu()).tuval).toBeGreaterThanOrEqual(1300);
 
   // HEP GÖRÜNÜR (2026-09-30): seçim yokken de bölüm yerinde; 3B'de kayışa
   // GERÇEK tıklama onu kapatmaz ya da çoğaltmaz
@@ -528,7 +547,7 @@ test('KAYIŞIN BÖLÜMÜ HEP GÖRÜNÜR: kesit şekli + hesap çapı matrisi + �
   await expect(bolum).toBeVisible();
   const sekil = bolum.locator('svg[data-ve="kayis-sekil"]');
   const sb = await sekil.boundingBox();
-  expect(sb.width).toBeGreaterThanOrEqual(400);            // sütunun içeriği kadar geniş
+  expect(sb.width).toBeGreaterThanOrEqual(360);            // kartın içeriği kadar geniş
   expect(sb.height).toBeGreaterThanOrEqual(90);            // PK'da kayış görünür boyda
   const matris = yan.locator('[data-ve-hesapcap-matris]');
   await expect(matris.locator('thead [data-ve-hesapcap]')).toHaveCount(2);   // CAD eskizi hesapta okunur
