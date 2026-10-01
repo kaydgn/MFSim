@@ -1081,12 +1081,18 @@ describe('Kayış Yolu kanvas kartı', () => {
     expect(html).toMatch(/KAPANMIYOR|İÇİNDEN geçiyor/);   // ve sebebi YAZILI
   });
 
-  test('çözülemeyen modelde SEBEP yazılır — boş kutu değil', () => {
+  // SÖZLEŞME DEĞİŞTİ (kullanıcı, 2026-10-01: *"En azından sembolik bir çizim
+  // olsun, eksikler yine belirtilsin"*): çözülemeyen model artık "Şema
+  // çizilemiyor" kutusu değil, girdilerin SEMBOLİK çizimi + sol üstte eksik
+  // şeridi. Kayış yolu yine UYDURULMAZ. Ayrıntı: fead-sembolik.test.js.
+  test('çözülemeyen modelde SEBEP yazılır — ve girdiler sembolik çizilir', () => {
     const { lay, ten } = kurCozulur();
     delete ten.data.cenX;                    // avara merkezi eksik
     const html = fead.veFeadLayoutCardHTML(lay);
-    expect(html).toMatch(/Şema çizilemiyor/);
+    expect(html).toMatch(/class="ve-fead-kan-bos sembolik"/);
     expect(html).toMatch(/avarasının merkez koordinatı/i);
+    expect(html).toContain('data-sembolik="1"');
+    expect(html).not.toMatch(/Şema çizilemiyor/);
     expect(html).not.toMatch(/data-ve="belt"/);
   });
 
