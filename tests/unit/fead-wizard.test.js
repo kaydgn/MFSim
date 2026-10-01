@@ -3605,22 +3605,28 @@ describe('gerginin sayıları: tohum BOŞ, kapı KURULUMDA', () => {
     expect(ten.data.contact).toBe('back');
   });
 
-  test('KURULUM KAPISI eksik alanı ADIYLA söylüyor ve kurulumu reddediyor', () => {
+  // KAPI 2026-10-01'DE NOTA DÖNDÜ (kullanıcı: *"sistemi kurmuyor … En azından
+  // sembolik bir çizim olsun, eksikler yine belirtilsin"*). Gerginin eksiği
+  // kurulumu REDDETMEZ; adıyla ve NEREDE girileceğiyle yazılır, kurulan
+  // modelin kartı sembolik çizer. Ayrıntı: fead-sembolik.test.js.
+  test('KURULUM KAPISI gerginin eksiğini ADIYLA söylüyor — kurulumu reddetmiyor', () => {
     kabuk();
     wiz.veFeadWizReset();
+    wiz.veFeadWizKasnakEkle('fead-alternator');
     const st = wiz.veFeadWizState();
     const k0 = wiz.veFeadWizCanCreate();
-    expect(k0.ok).toBe(false);
-    expect(k0.sebep).toMatch(/kasnak çapı/);
-    expect(k0.sebep).toMatch(/kol boyu/);
-    expect(k0.sebep).toMatch(/3\. adım/);         // NEREDE girileceği yazılı
+    expect(k0.ok).toBe(true);
+    expect(k0.not).toMatch(/kasnak çapı/);
+    expect(k0.not).toMatch(/kol boyu/);
+    expect(k0.not).toMatch(/3\. adım/);           // NEREDE girileceği yazılı
 
     st.ten.od = 75;
-    expect(wiz.veFeadWizCanCreate().sebep).not.toMatch(/kasnak çapı/);
-    expect(wiz.veFeadWizCanCreate().sebep).toMatch(/kol boyu/);
+    expect(wiz.veFeadWizCanCreate().not).not.toMatch(/kasnak çapı/);
+    expect(wiz.veFeadWizCanCreate().not).toMatch(/kol boyu/);
 
     st.ten.armLen = 90;
     expect(wiz.veFeadWizCanCreate().ok).toBe(true);
+    expect(wiz.veFeadWizCanCreate().not).toBeUndefined();
   });
 
   // ÖRNEK YOLU BOZULMUYOR: tohum boşaldı ama örnek/künye yolu sayıları

@@ -8385,6 +8385,9 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-fw-lj-c[data-tur="sinir"]{ border-top:1.4px dashed var(--text-muted); }
 .ve-fw-lj-c[data-tur="gobek"]{ border-top:2px solid var(--accent-danger); }
 .ve-fw-lj-c[data-tur="merkez"]{ border-top:1.6px dashed var(--accent-danger); }
+/* Sembolik çizimin anahtarı (çözülmeyen model): sıra ince kesikli, çapsız kasnak noktalı. */
+.ve-fw-lj-c[data-tur="sira"]{ border-top:1.2px dashed var(--text-muted); }
+.ve-fw-lj-c[data-tur="nokta"]{ border-top-style:dotted; }
 .ve-fw-lj-sarim, .ve-fw-lj-aciklik{ font-weight:700; font-size:var(--fs-micro); }
 .ve-fw-lj-sarim{ color:var(--ink-accent); }
 .ve-fw-lj-aciklik{ color:var(--text-primary); }
@@ -9970,6 +9973,22 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   font-size:var(--fs-micro); line-height:1.5; color:var(--text-muted);
 }
 .ve-fead-kan-bos > b{ font-size:var(--fs-tiny); font-weight:700; color:var(--ink-danger); }
+/* ÇÖZÜLMEYEN MODELİN SEMBOLİK ÇİZİMİ VARKEN eksik ŞERİDİ sol üstte, en çok
+   iki satır; çizim onun bandının altından başlar (JS: VE_FEAD_SEM_UST =
+   6 + --fead-sem-h + 6). Sağ üst rozete yer bırakır. */
+.ve-fead-layout-card{ --fead-sem-h:44px; }
+.ve-fead-kanvas > .ciz{ position:relative; }
+.ve-fead-kan-bos.sembolik{
+  position:absolute; top:6px; left:8px; z-index:4; display:block;
+  box-sizing:border-box; max-width:calc(100% - 176px); max-height:var(--fead-sem-h, 44px);
+  padding:5px 9px; overflow:hidden; text-align:left;
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-fead-kan-bos.sembolik > span{
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.ve-fead-kan-bos.sembolik b{ font-size:inherit; color:var(--text-heading); }
+.ve-fead-kan-bos.sembolik .ek{ font-style:normal; white-space:nowrap; opacity:.8; }
 .ve-fead-kan-bos.ilk > b{ color:var(--text-heading); font-size:var(--fs-md); }
 .ve-fead-kan-bos > .ek{ opacity:.8; }
 .ve-fead-kan-bos > .eylem{ display:flex; gap:6px; margin-top:6px; }
@@ -9996,7 +10015,8 @@ body.ve-fead-surukleniyor, body.ve-fead-surukleniyor *{ cursor:grabbing !importa
 }
 [data-ve="pulley-hov"].is-hov, [data-ve="pulley-hov"].is-sel{ opacity:1; }
 [data-ve="pulley-hov"].is-sel{ stroke:var(--accent-primary); stroke-width:1.3; stroke-dasharray:3 2.5; }
-circle[data-ve="pulley"].is-hov, circle[data-ve="pulley"].is-sel{ stroke-width:3; }
+circle[data-ve="pulley"].is-hov, circle[data-ve="pulley"].is-sel,
+circle[data-ve="sem-kasnak"].is-hov, circle[data-ve="sem-kasnak"].is-sel{ stroke-width:3; }
 /* KAYIŞ DA TIKLANIR (2026-09-26): görünmez isabet yolu + hale. Hale kayışın
    kendi renginde, altında; kayışın kendisi kalınlaşır. */
 .ve-fead-hit-kayis{ cursor:pointer; }

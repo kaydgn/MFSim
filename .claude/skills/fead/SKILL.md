@@ -539,6 +539,9 @@ olurdu.
       (`fill="transparent"` · `fill="none" opacity="0"`) — kılavuz kartı
       CSS'siz gömüyor, nitelik olmasa her kasnağın arkasına siyah disk
       çizilirdi (kılavuzun sahne kapısı yakaladı).
+    • **Çözülmeyen modelde de** (sembolik çizim, kural 52): aynı isabet
+      halkası ve `data-fead-xf`; konumu olmayan kasnak şeritten çizime
+      sürüklenince bırakıldığı mm'yi alır.
     Kapılar: `tests/unit/fead-cizim-masasi.test.js` +
     `tests/e2e/fead-cizim-masasi.spec.js`.
 
@@ -1129,6 +1132,13 @@ olurdu.
       sağındaki OLUKTA yazılır ("anlık 6.000 / motorda 4.072"). Çizimin
       yazıları oluğa taşmaz — sağda yer yoksa sola geçer. Ölçülen hata
       (teslimden önce): 12 örnekteki 18 sınırın 11'i görünmüyordu.
+    • **SIĞDIRMA NEFESİ** (2026-10-01, kullanıcı: *"çizim çok büyük ve
+      içinde geliyor. Onu biraz uzaklaştıralım"*): her çizim adımının
+      kenar payına masanın kısa kenarının %8'i eklenir (`VE_FW_MASA_NEFES` ·
+      `_fwNefes`) — kasnaklar yakınlaştırma düğmelerinin, çipin ve lejantın
+      altına girmez. X ekseninin ilk yazısı köşedeki "mm"ye değecekse
+      çizilmez (çentik kalır). Kapı: `fead-sembolik.test.js` → *"SIĞDIRMA
+      NEFESİ"* · *"EKSEN BİRİMİ"* + `fead-sembolik.spec.js` → *"MASA NEFESİ"*.
     • **Çevrim tablosu PENCEREDE** (`#ve-fw-cevrim`; kW hücresi yerinde
       tazelenir, girdi kutusu yeniden kurulmaz). İç pencerelerde Esc tek
       katman; sihirbazın kapanışı iç pencereleri kapatır.
@@ -1288,6 +1298,36 @@ olurdu.
       önerilen hücreyi AYNI yazıcıyla sunar, çözüm uyarısına yazar.
     Kapı: `fead-ders-notu.test.js` (Gates'in 4. sayfası PDF'ten okunur;
     sekiz mutasyonun sekizi kırmızı).
+
+52. **ÇÖZÜLMEYEN MODEL ÇİZİLİR — SEMBOLİK, VE KURULUR** (2026-10-01,
+    kullanıcı: *"3B model kullanarak tanımladıktan sonra … sistemi kurmuyor.
+    Kanvasta çizim göstermiyor … En azından sembolik bir çizim olsun,
+    eksikler yine belirtilsin"*). Ölçüldü: STEP'ten gelen ve yalnız yay
+    verisi eksik modelde sihirbazın dört çizim adımı cümle basıyordu,
+    "Modeli kur" kapalıydı, kart "Şema çizilemiyor" diyordu.
+    • **Yalnız GİRDİLER çizilir** (`veFeadLayoutSVG` + `sembolik:true` →
+      `_feadSembolikSVG`): kasnak girdi konumunda ve dış çapıyla (çapsızsa
+      noktalı, önizleme çapı), sıra merkezden merkeze kesikli çizgi, gergi
+      kolu köprünün montaj noktasına. Kayış yolu UYDURULMAZ ve çekirdeğe hiç
+      gidilmez (üç katman). Seçeneği vermeyen çağıran (rapor, dışa aktarma)
+      için sözleşme aynı: `null`.
+    • **Konumu girilmemiş kasnak "konum yok" rafında**, ekran ölçüsünde ve
+      zeminli (zeminsiz hâlde eksenli masada koordinatta duruyormuş gibi
+      okunuyordu) — yeri uydurulmaz, ek katmana konumsuz gider. Yalnız gergi
+      varsa çizim yok (sihirbazın gergisi hep listede).
+    • **Kartta eksik ŞERİDİ sol üstte, en çok iki satır** (ilk eksik +
+      "+N eksik daha", tamamı ipucunda); çizim şeridin bandının altından
+      başlar (`VE_FEAD_SEM_UST` = 6 + `--fead-sem-h` + 6). Ortada yüzen kutu
+      kasnakları örtüyordu. Rozet durumu söylemeye devam eder.
+    • **Anahtar çizileni adlandırır** (`veFeadSembolikOzet` — çizimle aynı
+      sayım).
+    • **"Modeli kur" çözüm İSTEMEZ**; kapı yalnız yapısal (kanvasta kasnak
+      var · hiç kasnak yok). Gerginin çapı/kol boyu eksikliği engel değil,
+      adıyla NOT; Kurulum kartı ne olacağını kurmadan önce, bildirim
+      kurduktan sonra söyler. 2026-09-22 kapısının gerekçesi (eksik ancak
+      kurulumdan sonra görülürdü) sembolik kartla ortadan kalktı.
+    Kapılar: `tests/unit/fead-sembolik.test.js` +
+    `tests/e2e/fead-sembolik.spec.js`.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı

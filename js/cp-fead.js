@@ -3769,6 +3769,12 @@ var VE_FEAD_ROSE_HALF = 27;   // gülün merkezden dışa taşan yarı-genişli�
 // Değer = çubuğun alt boşluğu (6) + çubuk yüksekliği (40). CSS'te karşılığı
 // `--fead-kat-alt` (styles.css) — orası panelin, burası gülün hizası.
 var VE_FEAD_YUZ_ALT = 46;
+// SEMBOLİK ÇİZİMİN ŞERİDİ (çözülmeyen model): eksiğin cümlesi çizimin
+// ÜSTÜNDE, sol üstte, en çok iki satır — boyu CSS'te `--fead-sem-h`, burada
+// aynı sayı. Çizim o bandın altından başlar (üstte 6 px + şerit + 6 px
+// nefes); ortada yüzen kutu kasnakları ve sıra çizgisini örtüyordu (ölçüldü).
+var VE_FEAD_SEM_H = 44;
+var VE_FEAD_SEM_UST = 6 + VE_FEAD_SEM_H + 6;
 // ÇUBUĞUN BANDI (Pafta): tablo açık kartta çubuk kartın EN ALTINDA, tablonun
 // altında durur (tezgâhtaki düzen: çizim → tablo → çubuk). Çizim çubuğun
 // arkasına uzanmaz; bant = çubuk payı (46) + 4 px nefes. CSS'te karşılığı
@@ -4103,8 +4109,12 @@ function veFeadCizimBas(evt, kartId, kasnakId){
   if(typeof addToSelection === 'function') addToSelection(node);
   var svg = _feadKartSvg(kartId), xf = _feadCizimXf(svg), k0 = _feadKasnakKoord(node);
   var p0 = svg ? _feadSvgPoint(svg, evt) : null;
-  var suruklenir = !!(xf && p0 && Number.isFinite(k0.x) && Number.isFinite(k0.y));
+  var suruklenir = !!(xf && p0);
   var m0 = suruklenir ? _feadCizimMm(xf, p0) : null;
+  // KONUMU OLMAYAN KASNAK (sembolik çizimin "konum yok" şeridi) çizime
+  // sürüklenerek konum alır: başlangıcı imlecin altındaki noktadır, yani
+  // bırakıldığı yer yazılır. Hareketsiz tık yine yalnız penceresini açar.
+  if(suruklenir && !(Number.isFinite(k0.x) && Number.isFinite(k0.y))){ k0.x = m0[0]; k0.y = m0[1]; }
   var xfler = {};
   var bastaGecerli = false;
   if(suruklenir){
@@ -4600,7 +4610,10 @@ function veFeadLayoutSVG(build, W, H, opts){
   var wantCompass = (opts.compass !== false);
   var wantPivot   = (opts.pivot   !== false);
   var wantArrows  = (opts.arrows  !== false);
-  if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined') return null;
+  // ÇÖZÜLMEYEN MODEL: çağıran isterse (`sembolik` — sihirbaz masası, kanvas
+  // kartı) girdilerin sembolik çizimi; istemezse (rapor, pano) eskisi gibi null.
+  if(!build || !build.ok || !build.sys || typeof FEADCore === 'undefined')
+    return opts.sembolik ? _feadSembolikSVG(build, W, H, opts) : null;
 
   // HANGİ KOL KONUMU / KONUMLARI. Gergi kolu yay dengesinde duruyor; kayış
   // uzayıp kısaldıkça (tolerans + aşınma) kol dönüyor ve kayış yolu her konumda
@@ -4634,7 +4647,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   if(!geom){                                     // konum tablosu kurulamadıysa
     geom = geomAt(FEADCore.meanRel ? FEADCore.meanRel(build.sys) : 0);
   }
-  if(!geom) return null;
+  if(!geom) return opts.sembolik ? _feadSembolikSVG(build, W, H, opts) : null;
 
   // Hayalet konumların geometrisi (yalnız 'TÜMÜ' kipinde dolu).
   var hayalet = [];
@@ -5605,6 +5618,329 @@ function veFeadLayoutSVG(build, W, H, opts){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  SEMBOLİK ÇİZİM — KAYIŞ YOLU ÇÖZÜLMEDİĞİNDE GİRDİLER ÇİZİLİR
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı bildirimi (2026-10-01): *"3B modelde ve manuel olarak kasnak
+// tanımlamaya başladığım zaman … kayış ve otomatik gerginin detayları
+// tanımlanmadığı için, sistemi kurmuyor. Kanvasta çizim göstermiyor … En
+// azından sembolik bir çizim olsun, eksikler yine belirtilsin."* Ölçüldü:
+// STEP'ten gelen modelde kasnakların konumu ve çapı, gerginin avara merkezi
+// ve kolu belliyken yalnız yay verisi eksik diye sihirbazın dört çizim adımı
+// ve kanvas kartı çizim yerine tek bir cümle basıyordu.
+//
+// Kayış yolu çekirdeğin işidir ve çözülmeyen modelde ÇİZİLMEZ. Bu çizim
+// yalnız kullanıcının GİRDİLERİNİ çizer — köprünün topladığı sırayla ve
+// değerlerle (`build.order` · `build.cfg.pulleys` · gerginin `build.center`
+// ve `build.pivot`), geometri hesaplamadan (üç katman kuralı):
+//   • kasnak girdi konumunda, dış çapıyla; çap girilmemişse köprünün önizleme
+//     çapıyla (`veFeadRadius`) ve NOKTALI çemberle;
+//   • sıra merkezden merkeze ince kesikli çizgi — kayışın yolu DEĞİL (yol
+//     teğetlerdir ve onları çekirdek kurar), sıranın kendisi;
+//   • konumu girilmemiş kasnak çizimin altındaki "konum yok" şeridinde, ekran
+//     ölçüsünde: varlığı görünür ama yeri UYDURULMAZ (mm çerçevesine girmez,
+//     dönüşüm nesnesinde konumu yok);
+//   • gergi: avara merkezi, kol ve montaj noktası (kol boyu ve açısı varsa).
+// Dönüşüm çizicininkiyle aynı sözleşmede (`kenarPay` · `xfSabit` · `ek(T)`):
+// sihirbaz masasının eksen, seçim ve tıkla-seç katmanları değişmeden çalışır.
+// Eksiklerin METNİ ve çizimin ADI çizimin içinde değil, yüzeyin kendi durum
+// yerinde (sihirbazın çipi, rayı ve anahtarı; kartın eksik şeridi) — çizimin
+// içindeki bir not seçim izdüşümünün üstüne biniyordu. Şeridin başlığı
+// "çözülmedi" demiyor: kartın sağ üst rozeti ("Kayış yolu kapanmadı") söylüyor.
+var VE_FEAD_SEMBOLIK_BASLIK = 'Sembolik çizim';
+// GİRDİLER TEK YERDE toplanır: çizim ve sihirbazın anahtarı (lejant) aynı
+// sayımı okur — anahtar çizilmeyen bir çizgiyi adlandırmasın.
+function _feadSembolikGirdi(build){
+  var order = (build && build.order) || [];
+  var cfgP = (build && build.cfg && build.cfg.pulleys) || [];
+  var ps = [], yerli = [], bekleyen = [], ti = -1;
+  order.forEach(function(n, i){
+    var def = _feadDefOf(n), cp = cfgP[i] || {}, d = n.data || {}, c = null;
+    if(def.isFeadTensioner){
+      ti = i;
+      var gx = _feadNum(d.cenX, NaN), gy = _feadNum(d.cenY, NaN);
+      c = build.center || ((Number.isFinite(gx) && Number.isFinite(gy)) ? [gx, gy] : null);
+    } else {
+      var x = Number.isFinite(cp.x) ? cp.x : _feadNum(d.x, NaN);
+      var y = Number.isFinite(cp.y) ? cp.y : _feadNum(d.y, NaN);
+      if(Number.isFinite(x) && Number.isFinite(y)) c = [x, y];
+    }
+    // Gergi sürücü OLAMAZ: köprü sürücüsüz listede ilk kasnağı krank sayıyor
+    // ve yalnız gergi kalınca o, gerginin kendisi oluyordu.
+    ps.push({ c: c, rPitch: veFeadRadius(n), capVar: veFeadHasOD(n),
+              contact: cp.contact || veFeadContactOf(n),
+              surucu: !def.isFeadTensioner && !!(cp.crank || d.driver), gergi: !!def.isFeadTensioner });
+    (c ? yerli : bekleyen).push(i);
+  });
+  return { order: order, ps: ps, yerli: yerli, bekleyen: bekleyen, ti: ti };
+}
+// Sembolik çizimin ÖZETİ — ne çizildiğinin sayımı (sihirbazın anahtarı).
+function veFeadSembolikOzet(build){
+  var G = _feadSembolikGirdi(build);
+  var oz = { kasnak: G.ps.length, yerli: G.yerli.length, bekleyen: G.bekleyen.length,
+             capsiz: 0, sirt: 0, sira: G.yerli.length > 1 };
+  G.yerli.forEach(function(k){
+    var p = G.ps[k];
+    if(!p.capVar) oz.capsiz++;
+    else if(p.contact === 'back') oz.sirt++;
+  });
+  return oz;
+}
+function _feadSembolikSVG(build, W, H, opts){
+  opts = opts || {};
+  var G = _feadSembolikGirdi(build), order = G.order;
+  // Yalnız gergi varsa çizilecek bir kayış düzeni yok (sihirbazın gergisi
+  // her zaman listede): yüzey kendi "henüz kasnak yok" cümlesini basar.
+  if(!order.length || G.ps.every(function(p){ return p.gergi; })) return null;
+  W = W || 320; H = H || 240;
+  var ps = G.ps, yerli = G.yerli, bekleyen = G.bekleyen, ti = G.ti;
+  var adOf = function(k){
+    var a = (build.names && build.names[k]) || _feadNodeName(order[k]);
+    return opts.shortNames ? veFeadShortName(a) : a;
+  };
+  var adVar = (opts.nameLabels !== false);
+  var pv = (ti >= 0 && ps[ti].c && build.pivot) ? build.pivot : null;
+  // DÜZENLENEBİLİR ÇİZİM (kanvas kartı — Çizim Masası, kural 32): çözülen
+  // çizimin kartta taşıdığı üç şey burada da var — mm dönüşümü
+  // (`data-fead-xf`, sürükleme fareyi buradan mm'ye çevirir), kasnak başına
+  // işaret zemini (`data-fead-k`, seçim CSS sınıfıyla) ve isabet halkası.
+  // Eksik veri en çok bu hâlde girilir: kasnağa tıklayıp penceresini açmak
+  // ya da yerini sürüklemek çözülmüş modele bırakılamazdı.
+  var _duzen = !!(opts.edit && opts.inline && opts.nodeId);
+  function isaret(k){
+    var id = (_duzen && order[k]) ? order[k].id : '';
+    if(!id) return '';
+    var c = (id === opts.selId ? ' is-sel' : '') + (id === opts.hovId ? ' is-hov' : '');
+    return ' data-fead-k="' + _feadEsc(id) + '"' + (c ? ' class="' + c.trim() + '"' : '');
+  }
+
+  // ── ÖLÇEK: çizicinin kuralı (kenar payı + 18 pay), şerit varsa altı ona ──
+  var _kp = opts.kenarPay || {};
+  // `sembolikUst`: yüzeyin bu çizimin üstüne koyduğu şerit (kartın eksik
+  // cümlesi) — çözülen çizimde o şerit yok, payı da yok.
+  var kpL = Math.max(0, +_kp.sol || 0), kpR = Math.max(0, +_kp.sag || 0),
+      kpU = Math.max(0, +_kp.ust || 0) + Math.max(0, +opts.sembolikUst || 0),
+      kpD = Math.max(0, +_kp.alt || 0) + Math.max(0, +opts.altPay || 0);
+  var pad = 18, BR = 12;                               // şerit dairesi (ekran)
+  var SERIT = bekleyen.length ? (2 * BR + 30) : 0;     // daire + numara + ad + başlık
+  var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  yerli.forEach(function(i){
+    var p = ps[i];
+    minX = Math.min(minX, p.c[0] - p.rPitch); maxX = Math.max(maxX, p.c[0] + p.rPitch);
+    minY = Math.min(minY, p.c[1] - p.rPitch); maxY = Math.max(maxY, p.c[1] + p.rPitch);
+  });
+  if(pv){
+    minX = Math.min(minX, pv[0]); maxX = Math.max(maxX, pv[0]);
+    minY = Math.min(minY, pv[1]); maxY = Math.max(maxY, pv[1]);
+  }
+  // Hiç konum yoksa çerçeve orijin çevresinde 400 mm — eksen yine okunur.
+  if(!yerli.length){ minX = -200; maxX = 200; minY = -200; maxY = 200; }
+  var spanX = Math.max(1, maxX - minX), spanY = Math.max(1, maxY - minY);
+  // Ad çemberin ÜSTÜNDE: üst pay ad yüksekliği kadar (çizicinin ad payının özü).
+  var adPay = adVar ? 12 : 0;
+  var eL = pad + kpL, eR = pad + kpR, eU = pad + kpU + adPay, eD = pad + kpD + SERIT;
+  var eW = Math.max(20, W - eL - eR), eH = Math.max(20, H - eU - eD);
+  var s = Math.min(eW / spanX, eH / spanY);
+  var offX = eL + (eW - spanX * s) / 2, offY = eU + (eH - spanY * s) / 2;
+  var _xs = opts.xfSabit;
+  if(_xs && _xs.s > 0){ s = _xs.s; offX = _xs.ox; offY = _xs.oy; minX = _xs.mx; maxY = _xs.my; }
+  var T = _feadXform(s, offX, offY, minX, maxY), tx = T.tx, ty = T.ty, f = _feadR;
+
+  var editAttr = _duzen
+    ? ' data-fead-xf="' + [s, offX, offY, minX, maxY].map(function(v){
+        return Math.round(v * 1e6) / 1e6; }).join(' ') + '"'
+    : '';
+  var svg = '<svg data-sembolik="1"' + editAttr + ' viewBox="0 0 ' + W + ' ' + H + '"'
+    + (opts.inline ? ' preserveAspectRatio="xMidYMid meet" style="display:block; width:100%; height:100%;"'
+                   : ' width="100%" style="display:block; width:100%; height:auto;"')
+    + ' role="img" aria-label="Sembolik kayış düzeni — kayış yolu çözülmedi">';
+
+  // SIRA — merkezden merkeze, yalnız konumu olanlar; hepsi yerindeyse kapalı.
+  if(yerli.length > 1){
+    var nokta = yerli.map(function(i){ return f(tx(ps[i].c[0])) + ',' + f(ty(ps[i].c[1])); });
+    var kapali = !bekleyen.length && yerli.length > 2;
+    svg += '<' + (kapali ? 'polygon' : 'polyline') + ' data-ve="sem-sira" points="' + nokta.join(' ')
+      + '" fill="none" stroke="var(--text-muted)" stroke-width="1.1" stroke-dasharray="5 4"'
+      + ' stroke-linejoin="round" opacity="0.85"><title>Kayış sırası (sembolik — kayış yolu çözülmedi)</title></'
+      + (kapali ? 'polygon' : 'polyline') + '>';
+  }
+  // GERGİ KOLU — avara merkezinden montaj noktasına, çizicinin okuyla.
+  if(pv){
+    var tp = ps[ti];
+    svg += veFeadArmArrowSVG([tx(tp.c[0]), ty(tp.c[1])], [tx(pv[0]), ty(pv[1])],
+                             { f: f, kalinlik: 2.2, ucBoy: 8, ucGen: 3.4 });
+    var PX = tx(pv[0]), PY = ty(pv[1]), a = 6;
+    svg += '<g data-ve="pivot" stroke="var(--accent-success)" stroke-width="1.8">'
+        + '<line x1="' + f(PX - a) + '" y1="' + f(PY) + '" x2="' + f(PX + a) + '" y2="' + f(PY) + '"/>'
+        + '<line x1="' + f(PX) + '" y1="' + f(PY - a) + '" x2="' + f(PX) + '" y2="' + f(PY + a) + '"/></g>';
+  }
+  // KASNAKLAR — rol rengi çizicinin dilinde (sürücü · gergi · öteki).
+  function renk(p){
+    return p.surucu ? 'var(--accent-primary)' : (p.gergi ? 'var(--accent-success)' : 'var(--text-secondary)');
+  }
+  function numara(X, Y, p, k, ia){
+    var nb = p.surucu ? { f: 'var(--accent-primary)', s: 'var(--accent-primary)', t: 'var(--on-accent)' }
+      : p.gergi ? { f: 'var(--bg-input)', s: 'var(--accent-success)', t: 'var(--ink-success)' }
+      : { f: 'var(--bg-input)', s: 'var(--text-secondary)', t: 'var(--text-primary)' };
+    return '<g data-ve="sira-no" pointer-events="none"' + (ia || '') + '><circle cx="' + f(X) + '" cy="' + f(Y)
+      + '" r="6.6" fill="' + nb.f + '" stroke="' + nb.s + '" stroke-width="1.1"/>'
+      + '<text x="' + f(X) + '" y="' + f(Y + 2.9) + '" text-anchor="middle" font-size="8"'
+      + ' font-weight="700" fill="' + nb.t + '">' + (k + 1) + '</text></g>';
+  }
+  // İşaret zemini (seçim · fare altı) — çözülen çizimin `pulley-hov`u, aynı CSS.
+  function zemin(X, Y, R, ia){
+    return ia ? '<circle data-ve="pulley-hov" cx="' + f(X) + '" cy="' + f(Y) + '" r="' + f(R + 4)
+      + '" fill="none" opacity="0"' + ia + '/>' : '';
+  }
+  // AD YERİ — çemberin dışında; kümenin merkezinden DIŞA bakan yan önce
+  // (sıra çizgisi kümenin içinden geçiyor), başka bir ada, bir çembere ya da
+  // çizimin kenarına (üstte eksik şeridi, altta "konum yok") çarpan aday
+  // atlanır. Çözülen çizimin yerleştiricisinin özü: kayış açıklığı yok,
+  // engel çemberler ve adlar. Hep üstte duran ad kartta komşu avaranın
+  // çemberine biniyordu (ölçüldü, STEP örneği).
+  var _ad = {};
+  if(adVar && yerli.length){
+    var _cx = 0, _cy = 0;
+    var _cem = yerli.map(function(k){
+      var X = tx(ps[k].c[0]), Y = ty(ps[k].c[1]);
+      _cx += X; _cy += Y;
+      return { X: X, Y: Y, R: Math.max(2, ps[k].rPitch * s) };
+    });
+    _cx /= yerli.length; _cy /= yerli.length;
+    var _sinir = { x0: kpL + 2, x1: W - kpR - 2, y0: kpU + 2, y1: H - kpD - SERIT - 2 };
+    var _kutular = [];
+    yerli.forEach(function(k, j){
+      var o = _cem[j], w = adOf(k).length * 5.3, h = 10;
+      var ux = o.X - _cx, uy = o.Y - _cy, ul = Math.sqrt(ux * ux + uy * uy);
+      if(ul < 1){ ux = 0; uy = -1; } else { ux /= ul; uy /= ul; }
+      var aday = {
+        ust: { x: o.X, y: o.Y - o.R - 5, an: 'middle' },
+        alt: { x: o.X, y: o.Y + o.R + 12, an: 'middle' },
+        sag: { x: o.X + o.R + 5, y: o.Y + 3, an: 'start' },
+        sol: { x: o.X - o.R - 5, y: o.Y + 3, an: 'end' }
+      };
+      var sira = Math.abs(uy) >= Math.abs(ux)
+        ? (uy < 0 ? ['ust', 'sag', 'sol', 'alt'] : ['alt', 'sag', 'sol', 'ust'])
+        : (ux > 0 ? ['sag', 'ust', 'alt', 'sol'] : ['sol', 'ust', 'alt', 'sag']);
+      function kutu(a){
+        var x0 = a.an === 'middle' ? a.x - w / 2 : (a.an === 'start' ? a.x : a.x - w);
+        return { x0: x0, x1: x0 + w, y0: a.y - h + 2, y1: a.y + 2 };
+      }
+      function carpar(b){
+        if(b.x0 < _sinir.x0 || b.x1 > _sinir.x1 || b.y0 < _sinir.y0 || b.y1 > _sinir.y1) return true;
+        if(_kutular.some(function(q){ return !(b.x1 <= q.x0 || b.x0 >= q.x1 || b.y1 <= q.y0 || b.y0 >= q.y1); }))
+          return true;
+        return _cem.some(function(c){
+          var nx = Math.max(b.x0, Math.min(c.X, b.x1)), ny = Math.max(b.y0, Math.min(c.Y, b.y1));
+          return (c.X - nx) * (c.X - nx) + (c.Y - ny) * (c.Y - ny) < c.R * c.R;
+        });
+      }
+      var sec = null;
+      for(var i = 0; i < sira.length && !sec; i++) if(!carpar(kutu(aday[sira[i]]))) sec = aday[sira[i]];
+      sec = sec || aday[sira[0]];
+      _kutular.push(kutu(sec));
+      _ad[k] = sec;
+    });
+  }
+  var hedefler = [];                                   // isabet halkaları (düzenlenebilir çizim)
+  yerli.forEach(function(k){
+    var p = ps[k], X = tx(p.c[0]), Y = ty(p.c[1]), R = Math.max(2, p.rPitch * s), col = renk(p);
+    var ia = isaret(k);
+    // Çap girilmemişse noktalı (önizleme çapı), sırttan temas kesikli (çizicinin dili).
+    var cizgi = !p.capVar ? ' stroke-dasharray="1.5 3"' : (p.contact === 'back' ? ' stroke-dasharray="4 3"' : '');
+    svg += zemin(X, Y, R, ia);
+    svg += '<circle data-ve="sem-kasnak" cx="' + f(X) + '" cy="' + f(Y) + '" r="' + f(R) + '" fill="none"'
+      + ' stroke="' + col + '" stroke-width="2"' + cizgi + ' data-pi="' + k + '"'
+      + (p.capVar ? '' : ' data-cap="yok"') + ia + '><title>' + _feadEsc(adOf(k))
+      + (p.capVar ? '' : ' — çap girilmedi, önizleme çapı') + '</title></circle>';
+    if(opts.siraNo) svg += numara(X, Y, p, k, ia);
+    else svg += '<circle cx="' + f(X) + '" cy="' + f(Y) + '" r="2.2" fill="' + col + '"/>';
+    if(adVar){
+      var et = _ad[k] || { x: X, y: Y - R - 5, an: 'middle' };
+      svg += '<text data-ve="sem-ad" x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an + '"'
+        + ' font-size="9" fill="var(--text-primary)" paint-order="stroke" stroke="var(--bg-input)"'
+        + ' stroke-width="2.4" stroke-linejoin="round">' + _feadEsc(adOf(k)) + '</text>';
+    }
+    hedefler.push({ k: k, X: X, Y: Y, r: Math.max(R + 3, 11), R: p.rPitch * s, yok: false });
+  });
+  // KONUM YOK ŞERİDİ — ekran ölçüsünde, çizimin altında; görünüm kaydırması onu oynatmaz.
+  var yB = H - kpD - pad - BR - 14;
+  if(bekleyen.length){
+    // Yazının yarı eni (8 birimlik yazı ≈ 4,6 birim/harf): ilk kasnak adı
+    // rafın soluna taşmasın, adım son kasnağı sağ kenarın içinde tutsun.
+    var _yari = bekleyen.map(function(k){ return Math.max(BR, veFeadShortName(adOf(k)).length * 4.6 / 2); });
+    var x0 = eL + _yari[0] + 2;
+    var adim = Math.max(2 * BR + 8, Math.min(86, (W - eR - _yari[_yari.length - 1] - x0)
+                                               / Math.max(1, bekleyen.length - 1)));
+    // Düzenlenebilir çizimde şerit ne yapılacağını da söyler: kasnak çizime
+    // sürüklenerek konum alır (veFeadCizimBas).
+    var _bas = _duzen ? 'konum yok — çizime sürükle' : 'konum yok';
+    // RAF ZEMİNİ: şerit mm çerçevesinin parçası DEĞİL — zeminsiz hâlde
+    // eksenli masada şeritteki kasnak bir koordinatta duruyormuş gibi
+    // okunuyordu. Zemin ızgarayı ve ekseni örter; ölçü yazılardan.
+    var _rSag = eL + _bas.length * 4.4;
+    bekleyen.forEach(function(k, j){ _rSag = Math.max(_rSag, x0 + j * adim + _yari[j]); });
+    svg += '<g data-ve="sem-bekleyen"><rect data-ve="sem-raf" x="' + f(eL - 8) + '" y="' + f(yB - BR - 19)
+      + '" width="' + f(_rSag + 16 - eL) + '" height="' + f(2 * BR + 35) + '" rx="6"'
+      + ' fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>'
+      + '<text x="' + f(eL) + '" y="' + f(yB - BR - 8) + '" font-size="8"'
+      + ' fill="var(--text-muted)">' + _bas + '</text>';
+    bekleyen.forEach(function(k, j){
+      var p = ps[k], X = x0 + j * adim, ia = isaret(k);
+      svg += zemin(X, yB, BR, ia)
+        + '<circle data-ve="sem-kasnak" data-yok="1" cx="' + f(X) + '" cy="' + f(yB) + '" r="' + BR + '" fill="none"'
+        + ' stroke="var(--text-muted)" stroke-width="1.4" stroke-dasharray="3 3" data-pi="' + k + '"' + ia + '>'
+        + '<title>' + _feadEsc(adOf(k)) + ' — konumu girilmedi</title></circle>'
+        + numara(X, yB, p, k, ia)
+        + '<text x="' + f(X) + '" y="' + f(yB + BR + 11) + '" text-anchor="middle" font-size="8"'
+        + ' fill="var(--text-muted)">' + _feadEsc(veFeadShortName(adOf(k))) + '</text>';
+      hedefler.push({ k: k, X: X, Y: yB, r: BR + 3, R: 0, yok: true });
+    });
+    svg += '</g>';
+  }
+  if(_duzen){
+    // SÜRÜKLEME KÜNYESİ — konum GİRDİSİ (gergide avara merkezi); açıklık boyu
+    // yok, çünkü açıklıkları çekirdek kurar ve model çözülmüyor.
+    var _sk = -1;
+    if(opts.surukleK) order.forEach(function(n, k){ if(n && n.id === opts.surukleK) _sk = k; });
+    if(_sk >= 0 && ps[_sk].c){
+      var _kk = _feadKasnakKoord(order[_sk]);
+      var _SX = tx(ps[_sk].c[0]), _SY = ty(ps[_sk].c[1]), _SR = ps[_sk].rPitch * s;
+      var _sagda = (_SX + _SR + 8 + 96) < W;
+      svg += '<text data-ve="drag-readout" x="' + f(_sagda ? _SX + _SR + 8 : _SX - _SR - 8)
+          + '" y="' + f(Math.max(12, _SY - _SR * 0.6)) + '" text-anchor="' + (_sagda ? 'start' : 'end')
+          + '" font-size="9.5">X ' + _feadFmt(_kk.x, 1) + ' · Y ' + _feadFmt(_kk.y, 1) + ' mm</text>';
+    }
+    // İSABET HALKALARI EN ÜSTTE ve BÜYÜKTEN KÜÇÜĞE (çözülen çizimin kuralı).
+    // Konumu olmayan kasnağın halkası şeritte: tık penceresini açar, çizime
+    // sürüklemek ona imlecin altındaki konumu verir (veFeadCizimBas).
+    hedefler.sort(function(a, b){ return b.R - a.R; });
+    var kid = _feadEsc(opts.nodeId);
+    svg += '<g data-ve="hit">';
+    hedefler.forEach(function(o){
+      var n = order[o.k], hid = _feadEsc(n.id);
+      svg += '<circle class="ve-fead-hit" data-fead-k="' + hid + '"' + (o.yok ? ' data-yok="1"' : '')
+        + ' cx="' + f(o.X) + '" cy="' + f(o.Y) + '" r="' + f(o.r) + '" fill="transparent"'
+        + ' onmousedown="veFeadCizimBas(event,\'' + kid + '\',\'' + hid + '\')"'
+        + ' onmouseenter="veFeadCizimUzerinde(\'' + hid + '\')" onmouseleave="veFeadCizimUzerinde(null)">'
+        + '<title>' + _feadEsc(_feadNodeName(n)) + (o.yok
+          ? ' — konumu girilmedi · çizime sürükle: konum ver · tıkla: penceresini aç'
+          : ' — sürükle: taşı · tıkla: penceresini aç') + '</title></circle>';
+    });
+    svg += '</g>';
+  }
+  // EK KATMAN — çizicinin sözleşmesi; konumu olmayan kasnağın `c`si yok.
+  if(typeof opts.ek === 'function'){
+    try {
+      var psT = ps.map(function(p, k){ return { c: bekleyen.indexOf(k) >= 0 ? null : p.c, rPitch: p.rPitch }; });
+      svg += opts.ek({ tx: tx, ty: ty, s: s, ox: offX, oy: offY, mx: minX, my: maxY, W: W, H: H, f: f,
+                       geom: { pulleys: psT, names: order.map(function(n, k){ return adOf(k); }), spans: null },
+                       ps: psT, order: order, sys: null, hayalet: [], sembolik: true }) || '';
+    } catch(e){ /* katman çizimi bozmaz */ }
+  }
+  return svg + '</svg>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  KANVAS KARTI: CANLI KAYIŞ YOLU ŞEMASI
 // ════════════════════════════════════════════════════════════════════════════
 // Kayış Yolu düğümü tuvalin üstünde ÇİZİM olarak durur — panel açmak gerekmez.
@@ -5865,6 +6201,9 @@ function veFeadLayoutCardHTML(node){
                               // tablosu açık kartta (kasnak ↔ satır bağı).
                               siraNo: tabloVar,
                               tension: tenMap,
+                              // ÇÖZÜLMEYEN MODEL de çizilir: girdilerin sembolik
+                              // çizimi (kullanıcı, 2026-10-01); gerekçe kutusu üstte.
+                              sembolik: true, sembolikUst: VE_FEAD_SEM_UST / yk,
                               isletmeEksik: (islEksik && rpmIstek !== 'off') ? {
                                 baslik: rpmIstek === 'scn' ? 'motor çevrimi senaryosu kurulmadı'
                                                            : 'açıklık gerilmesi hesaplanmadı',
@@ -5884,9 +6223,20 @@ function veFeadLayoutCardHTML(node){
   // buna göre yerleşiyor. `ve-fead-kanvas` olmadan hepsi kart kutusuna göre
   // konumlanır ve kart başlığının altına kayar.
   var h = '<div class="ve-fead-kanvas' + (tabloVar ? ' pafta-var' : '') + '"><div class="ciz">';
-  if(svg){
-    h += svg;
-  } else {
+  // SEMBOLİK ÇİZİM (çözülmeyen model): çizim + sol üstte EKSİK ŞERİDİ —
+  // ilk eksik iki satırda, tamamı ipucunda. Eylem düğmesi yok: kasnaklar
+  // çizimde tıklanır/sürüklenir, tablo ve sihirbaz kendi düğmelerinde.
+  var _sem = !!(svg && svg.indexOf('data-sembolik="1"') >= 0);
+  if(svg) h += svg;
+  if(_sem){
+    var _hata = (build && build.errors) || [];
+    var _ilk = _hata.length ? _hata[0] : ((build && build.geomError) || 'Kayış yolu henüz kurulamadı.');
+    h += '<div class="ve-fead-kan-bos sembolik" title="' + _feadEsc(_hata.join('\n') || _ilk) + '">'
+      + '<span><b>' + VE_FEAD_SEMBOLIK_BASLIK + '</b> · ' + _feadEsc(_ilk)
+      + (_hata.length > 1 ? ' <i class="ek">+' + (_hata.length - 1) + ' eksik daha</i>' : '')
+      + '</span></div>';
+  }
+  if(!svg){
     // ÇÖZÜLEMEDİ — kartın en değerli hâli bu. Sessiz boş bir kutu yerine
     // EKSİĞİN KENDİSİ yazılıyor; kullanıcı neyi düzeltmesi gerektiğini
     // panel açmadan okuyor.
@@ -9288,12 +9638,15 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_ROSE_W: VE_FEAD_ROSE_W, VE_FEAD_ROSE_HALF: VE_FEAD_ROSE_HALF,
     VE_FEAD_ANIM_ATTR: VE_FEAD_ANIM_ATTR,
     VE_FEAD_SPOKE_N: VE_FEAD_SPOKE_N, VE_FEAD_SPOKE_MIN_PX: VE_FEAD_SPOKE_MIN_PX,
-    veFeadLayoutCardHTML: veFeadLayoutCardHTML,
+    veFeadLayoutCardHTML: veFeadLayoutCardHTML, veFeadYaziK: veFeadYaziK,
     veFeadLayoutCardStrip: veFeadLayoutCardStrip,
     veFeadRefreshLayoutCards: veFeadRefreshLayoutCards,
     VE_FEAD_CARD_CLASS: VE_FEAD_CARD_CLASS,
     VE_FEAD_PAFTA_CLASS: VE_FEAD_PAFTA_CLASS, VE_FEAD_PF: VE_FEAD_PF,
     VE_FEAD_YUZ_UST: VE_FEAD_YUZ_UST,
+    VE_FEAD_SEM_H: VE_FEAD_SEM_H, VE_FEAD_SEM_UST: VE_FEAD_SEM_UST,
+    VE_FEAD_SEMBOLIK_BASLIK: VE_FEAD_SEMBOLIK_BASLIK,
+    veFeadSembolikOzet: veFeadSembolikOzet,
     veFeadTabloAcik: veFeadTabloAcik, veFeadTabloToggle: veFeadTabloToggle,
     veFeadTabloDugmeHTML: veFeadTabloDugmeHTML,
     veFeadPaftaH: veFeadPaftaH, veFeadKartVarsayilanW: veFeadKartVarsayilanW,
