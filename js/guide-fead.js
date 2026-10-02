@@ -857,11 +857,15 @@ function _gfSec3(){
       '<strong>Kayış</strong> rolü verilirse okunur; rol yoksa elle girilir'],
     ['Kayış numarası', 'Koddaki boy (1410)', 'Girdi <strong>değil</strong> — 4 · Kayış adımında '
       + '<em>CAD’deki kayış</em> kartı gereken boyla karşılaştırır ve kolun nereye oturduğunu yazar'],
-    ['Kayış sırası', 'Kayışın hangi kasnaktan hangisine geçtiği',
-      '<strong>okunmaz</strong> — ağaç sırası gelir']
+    ['Kayış sırası', 'Kayışın eskizinden: her yayı bir kasnağa eşlenir, krank başta, gergi '
+      + 'gevşek tarafta (tablonun sonunda)',
+      '<strong>Kayış</strong> rolü verilirse okunur; rol yoksa ağaç sırası gelir']
   ], ['Ne', 'Nasıl', 'Durum']);
-  h += _gfUyari('Kayış sırası dosyada yok',
-      'STEP montajı kasnakları taşır, kayışın sırasını taşımaz. Sihirbaz ürün ağacının sırasını '
+  h += _gfUyari('Kayış sırası kayışın eskizinden okunur',
+      'Ürün ağacı kasnakların kayışta hangi sırayla dolandığını bilmez; kayışın eskizi bilir. '
+    + '3B’de kayışa da <strong>Kayış</strong> rolünü verin: sıra eskizin yaylarından okunur ve '
+    + 'aktarmadan önce 3B tablosunda, etiketlerde ve kartın çiziminde numaralı görünür. Kayışın '
+    + 'rolü yoksa ya da eskizi her kasnaktan bir kez geçmiyorsa sihirbaz ürün ağacının sırasını '
     + 'kullanır ve <strong>2 · Kasnaklar</strong> adımını uyarıyla işaretler: kayış yolunu '
     + 'şemada kontrol edin, gerekirse ↑ ↓ ile düzeltin ya da <strong>✓ Sıra doğru</strong> ile '
     + 'onaylayın.');

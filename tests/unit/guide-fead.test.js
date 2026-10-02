@@ -486,7 +486,10 @@ describe('içerik yönlendirici', () => {
       'öteki parçalar rolsüzdür', 'Tek istisna: gergi', 'Gergi olabilir', '3B görüntüleyici', 'Önden bak', '3B’de seç']
       .forEach((x) => expect(DOC).toContain(x));
     expect(DOC).not.toMatch(/Öneri parçanın ADINDAN/);          // kasnaklar için ad önerisi kalktı
-    expect(DOC).toMatch(/Kayış sırası dosyada yok/);
+    // SIRA KAYIŞIN ESKİZİNDEN (2026-10-02): "dosyada yok" artık doğru değil —
+    // kayışa rol verilince okunuyor; rol yoksa ağaç sırası (varsayım).
+    expect(DOC).toMatch(/Kayış sırası kayışın eskizinden okunur/);
+    expect(DOC).not.toMatch(/Kayış sırası dosyada yok/);
   });
 
   // AÇILIŞ KARTLARI PROGRAMDAN OKUNUR — kılavuza sayı yazılmaz.

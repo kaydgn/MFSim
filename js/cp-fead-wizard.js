@@ -907,9 +907,10 @@ function veFeadWizIssues(b, step){
   (b.warnings || []).forEach(function(m){
     if(step === undefined || veFeadWizStepOf(m) === step) out.push({ tur: 'warn', m: m });
   });
-  // STEP'TEN GELEN SIRA BİR VARSAYIM (kural 34) — model o sırayla çözülebilir
+  // STEP'TEN GELEN SIRA kayışın eskizinden okunamadıysa BİR VARSAYIM (kural
+  // 34: ağaç sırası ya da yönü belirsiz çevrim) — model o sırayla çözülebilir
   // ve yine de yanlış olabilir; sıra elle değişene ya da onaylanana kadar
-  // Kasnaklar adımı uyarı taşır.
+  // Kasnaklar adımı uyarı taşır (aşağıda, `_fwSiraUyari`).
   // İŞLETME HESABININ GİRDİSİ — köprünün TEK kaynağı (`b.isletme`). Motor ve
   // çevrim adımına ait (motor künyesi, tahrik oranı, aksesuar modeli ve
   // çevrim hepsi orada). Model bunlarsız da KURULUR — kayış yolu çözülüyor —
@@ -922,9 +923,9 @@ function veFeadWizIssues(b, step){
       if(ad.length) out.push({ tur: 'err', m: g[1] + ': ' + ad.join(' · ') + '.' });
     });
   }
-  var st = _fwState;
-  if(st && st.siraKaynagi === 'agac' && (step === undefined || step === 1))
-    out.push({ tur: 'warn', m: VE_FW_SIRA_AGAC, yerinde: true });   // onayı liste kartında
+  var st = _fwState, siraU = _fwSiraUyari(st);
+  if(siraU && (step === undefined || step === 1))
+    out.push({ tur: 'warn', m: siraU, yerinde: true });   // onayı liste kartında
   // STEP ↔ KÜNYE: künye gerginin parça alanlarını YAZAR (kol · çap · parça
   // kodu; kural 17). CAD'deki gergi başka bir parçaysa dosyadan gelen sayılar
   // sessizce katalogunkilerle değişirdi — fark yalnız künye seçiliyken
@@ -2052,6 +2053,36 @@ function _fwStpKayisTanim(k){
 // sihirbazın kayışında (`st.belt.hesapCap`) — tek okuyucu, tek yazıcı; iki
 // yüzey (kart · 3B) ikisini de buradan okur ve yazar.
 function _fwStpEskiz(s){ return (s && s.coz && s.coz.kayis && s.coz.kayis.eskiz) || null; }
+// ── AKTARILACAK SIRA AKTARIMDAN ÖNCE GÖRÜNÜR (2026-10-02) ──────────────────
+// Kullanıcı 3B'de kasnakları sırayla seçip aktardı; sıranın yanlış geldiğini
+// ancak topolojide gördü. Sıra KAYDIN KENDİSİNDEN (`veFeadStpKayit` — aktarım
+// aynı çağrıyı yapıyor): 3B tablosu, 3B etiketleri ve kartın çizimi aynı
+// numarayı basar; ikinci bir sıra hesabı bu yüzeyleri aktarımdan ayırırdı.
+// Döner: { no: { tanıyıcı indisi: 1…n }, kaynak: 'kayis' | 'kayis-yon' | 'agac',
+//          sebep } ya da null (hesap yok).
+// ÖNBELLEK ÇÖZÜMÜN KENDİSİNE bağlı: 3B'nin etiketleri her karede çiziliyor ve
+// sıra yalnız çözüm değişince değişir (rol değişince çözüm yeniden kuruluyor;
+// bakış yalnız koordinatı çevirir, sırayı değil).
+var _fwStpSiraOn = { coz: null, deger: null };
+function veFeadWizStpSira(s){
+  s = s || _fwStp;
+  if(!s || !s.coz || !s.coz.ok || typeof veFeadStpKayit !== 'function') return null;
+  if(_fwStpSiraOn.coz === s.coz) return _fwStpSiraOn.deger;
+  var k = veFeadStpKayit(s.coz, _fwStpSecim(s)), no = {}, pos = {};
+  k.route.forEach(function(key, j){ pos[key] = j + 1; });
+  k.pulleys.forEach(function(p){ if(pos[p.key]) no[p.stpI] = pos[p.key]; });
+  var sebep = (k.uyarilar || []).filter(function(m){ return /^Kayış sırası/.test(m); })[0] || '';
+  _fwStpSiraOn = { coz: s.coz, deger: { no: no, kaynak: k.siraKaynagi, sebep: sebep } };
+  return _fwStpSiraOn.deger;
+}
+// Kısa durum metni (3B kartı) — uzunu `sebep`te, ipucunda.
+function _fwStpSiraDurum(sr, s){
+  if(!sr) return '';
+  return sr.kaynak === 'kayis' ? 'Sıra kayışın eskizinden'
+    : sr.kaynak === 'kayis-yon' ? 'Sıra eskizden, yön belirsiz'
+    : (s && s.coz && s.coz.kayis) ? 'Sıra ağaçtan — kayışın eskizi okunamadı'
+    : 'Sıra ağaçtan — kayışa rol verin';
+}
 function _fwStpHesapCap(s){
   var st = _fwState;
   if(s && s.aktarim && st && st.stepKaynak && st.belt) return st.belt.hesapCap || 'katalog';
@@ -2460,10 +2491,12 @@ function veFeadWizStpAktar(){
   var kayit = veFeadStpKayit(s.coz, _fwStpSecim(s));
   var st = _fwSeedKayit(kayit);
   st.ad = kayit.name;
-  // SIRA BİR VARSAYIMDIR (kural 34): dosya kayışın hangi kasnaktan hangisine
-  // geçtiğini taşımıyor. Kullanıcı sırayı elle değiştirene ya da onaylayana
-  // kadar Kasnaklar adımı uyarı taşır (veFeadWizIssues).
-  st.siraKaynagi = 'agac';
+  // SIRANIN KAYNAĞI KAYITTAN (kural 34): kayışa rol verildiyse ve eskizi her
+  // kasnaktan bir kez geçiyorsa sıra dosyada YAZILI ('kayis'); değilse ağaç
+  // sırası bir VARSAYIM ('agac') — ya da çevrim yazılı ama yön belirsiz
+  // ('kayis-yon'). Varsayım, kullanıcı sırayı elle değiştirene ya da onaylayana
+  // kadar Kasnaklar adımında uyarı taşır (veFeadWizIssues).
+  st.siraKaynagi = kayit.siraKaynagi || 'agac';
   var ten = kayit.pulleys.filter(function(p){ return p.type === 'fead-tensioner'; })[0];
   st.stepKaynak = { dosya: s.dosya, kasnak: kayit.pulleys.length, ayna: !!s.ayna,
     gergi: ten ? { od: ten.data.od, armLen: ten.data.armLen, tenPart: ten.data.tenPart || '' } : null };
@@ -2488,19 +2521,30 @@ function veFeadWizSiraOnay(){
   veFeadWizRender();
   return true;
 }
-var VE_FW_SIRA_AGAC = 'Kayış sırası STEP ağacından geldi — dosya kayışın kasnak sırasını '
-  + 'taşımıyor. ↑ ↓ ile düzeltin; doğruysa "Sıra doğru" ile onaylayın.';
+var VE_FW_SIRA_AGAC = 'Kayış sırası STEP ağacından geldi — kayışın eskizinden okunmadı '
+  + '(kayışa rol verilmedi ya da eskizi her kasnaktan geçmiyor). Kayışa 3B\'de rol verip yeniden '
+  + 'aktarın ya da ↑ ↓ ile düzeltin; doğruysa "Sıra doğru" ile onaylayın.';
+// Çevrim eskizden okundu ama YÖN belirsiz (gergi krankın komşusu değil ya da
+// gergi yok): hangi yöne dönüldüğü dosyada yazmaz.
+var VE_FW_SIRA_YON = 'Kayış sırası kayışın eskizinden okundu ama dönüş yönü belirsiz '
+  + '(gergi yok ya da krankın komşusu değil). CW/CCW ile yönü seçin; doğruysa "Sıra doğru" ile onaylayın.';
+function _fwSiraUyari(st){
+  return !st ? null : st.siraKaynagi === 'agac' ? VE_FW_SIRA_AGAC
+    : st.siraKaynagi === 'kayis-yon' ? VE_FW_SIRA_YON : null;
+}
 
 // ── KAYIŞ DÜZLEMİ ÇİZİMİ ───────────────────────────────────────────────────
 // Hesaptan hemen sonra: kasnaklar dış çaplarıyla, merkezleri tanıyıcının
 // izdüşümünden (`veFeadStp2B`) — sunum koordinat hesaplamaz, çizer. Kayış
-// yolu ÇİZİLMEZ: sıra dosyada yok ve yol çekirdeğin işi (sihirbaz onu
-// çözülmüş modelden çizer). Renk CSS'ten (tema jetonları), yazı sayfanın
+// yolu ÇİZİLMEZ: yol çekirdeğin işi (sihirbaz onu çözülmüş modelden çizer);
+// adın önünde aktarılacak SIRA. Renk CSS'ten (tema jetonları), yazı sayfanın
 // ailesinden; SVG koordinatında y aşağı olduğu için y ters çevrilir ve yazı
 // aynalanmasın diye dönüşüm KULLANILMAZ.
 function _fwStpCizimSVG(s){
   if(!s || !s.coz || !s.coz.ok || typeof veFeadStp2B !== 'function') return '';
   var iki = veFeadStp2B(s.coz, _fwStpSecim(s));
+  // AKTARILACAK SIRA adın önünde (3B'nin etiketleriyle aynı yazım)
+  var sr = veFeadWizStpSira(s), no = (sr && sr.no) || {};
   var K = s.coz.kasnaklar.map(function(k, i){
     return { k: k, x: iki.kasnaklar[i].x, y: -iki.kasnaklar[i].y, r: k.od / 2 };
   });
@@ -2525,6 +2569,7 @@ function _fwStpCizimSVG(s){
       + '<circle cx="' + f(q.x) + '" cy="' + f(q.y) + '" r="' + f(q.r) + '"/>'
       + '<circle class="m" cx="' + f(q.x) + '" cy="' + f(q.y) + '" r="' + f(fs * 0.22) + '"/>'
       + '<text x="' + f(q.x) + '" y="' + f(q.y - q.r - fs * 0.5) + '" font-size="' + f(fs) + '" text-anchor="middle">'
+      + (no[q.k.i] ? '<tspan class="no" data-ve-stp-sira="' + no[q.k.i] + '">' + no[q.k.i] + ' · </tspan>' : '')
       + _fwEsc(_fwStpRolAd(q.k.tip)) + '</text>'
       + '<text class="d" x="' + f(q.x) + '" y="' + f(q.y + fs * 1.4) + '" font-size="' + f(fs) + '" text-anchor="middle">Ø'
       + _fwFmt(q.k.od, 1) + '</text></g>';
@@ -2587,6 +2632,8 @@ function _fwStpKartHTML(){
   var sec = [['', '—']]
     .concat(veFeadWizStpRolTipleri().map(function(t){ return [t, _fwStpRolAd(t)]; }));
   var satirlar = _fwStpSatirlar(s), taban = satirlar.length ? satirlar[0].derinlik : 0;
+  // AKTARILACAK SIRA kasnağın hücresinin başında (3B ile aynı rozet, aynı kaynak)
+  var sr = coz && coz.ok ? veFeadWizStpSira(s) : null, siraNo = (sr && sr.no) || {};
   var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-stp"><thead><tr>'
     // Birim başlığın ALT satırında (`th em`): sütun 316–380 px'lik denetim
     // sütununda 39 px ve "X [mm]" oraya sığmıyordu (ölçüldü: tablo 6 px taşıyor).
@@ -2596,8 +2643,11 @@ function _fwStpKartHTML(){
     // Rollü bir atanın içindeki düğüm: o birimin parçası
     var ata = -1;
     for(var e = d.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
-    var tanim = '—', xs = '—', ys = '—', sinif = '';
-    if(ata >= 0){ tanim = veIkon('corner-down-right') + ' ' + _fwStpRolAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
+    // `tanim` DÜZ METİN, `onEk` HTML (ikon · sıra rozeti): hücre ikisinden
+    // kurulur. Eskiden ikon metne eklenip birlikte kaçışlanıyordu — rollü bir
+    // alt montajın parçalarında ikon yerine ham `<span class=…>` basılıyordu.
+    var tanim = '—', onEk = '', xs = '—', ys = '—', sinif = '';
+    if(ata >= 0){ onEk = veIkon('corner-down-right') + ' '; tanim = _fwStpRolAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
     else if(rol === 'fead-belt' && coz){
       tanim = _fwStpKayisTanim(coz.kayis);
       if(!coz.kayis || !coz.kayis.kod) sinif = ' ve-fw-stp-warn';
@@ -2606,6 +2656,8 @@ function _fwStpKartHTML(){
       var ki = birimKasnak[d.i];
       if(ki >= 0){
         var k = coz.kasnaklar[ki];
+        if(siraNo[ki]) onEk = '<span class="ve-fw-kl-no ve-fw-stp-no" data-ve-stp-sira="' + siraNo[ki] + '"'
+          + ' title="Aktarılacak kayış sırası">' + siraNo[ki] + '</span>';
         tanim = 'Ø' + _fwFmt(k.od, 1) + ' · ' + (k.tur === 'kanalli' ? k.kanal + ' × ' + (k.profil || '?') : 'düz')
           + (kol[ki] !== undefined ? ' · kol ' + _fwFmt(kol[ki], 1) : '')
           // hesabın kurulduğu çap (hesap çapı seçimine göre) — 147 mi 150 mi
@@ -2624,7 +2676,7 @@ function _fwStpKartHTML(){
       + '</select>' + (s.otomatik && s.otomatik.dugum === d.i
           ? ' <span class="ve-fw-oto-rozet" title="' + _fwEsc(s.otomatik.sebep) + '">otomatik</span>' : '')
       + '</td>'
-      + '<td>' + _fwEsc(tanim) + '</td>'
+      + '<td>' + onEk + _fwEsc(tanim) + '</td>'
       + '<td class="ve-fw-num">' + xs + '</td><td class="ve-fw-num">' + ys + '</td></tr>';
   });
   h += t + '</tbody></table></div>';
@@ -3090,13 +3142,20 @@ function _fwStepKasnak(b){
     + VE_FW_PULLEY_TYPES.map(function(t){
         return '<option value="' + t + '">' + _fwEsc(_fwDefName(t)) + '</option>'; }).join('')
     + '</select>';
-  // STEP'TEN GELEN SIRA BİR VARSAYIM (kural 34): onayı listenin başında, bir
-  // DURUM satırı olarak (açıklaması düğmenin ipucunda).
-  var onay = st.siraKaynagi === 'agac'
-    ? '<div class="ve-fw-kl-onay" data-ve="sira-onay">' + veIkon('alert-triangle')
-      + '<span class="ve-fw-kl-onay-y">Sıra STEP ağacından geldi</span>'
+  // STEP'TEN GELEN SIRANIN KAYNAĞI (kural 34) listenin başında, bir DURUM
+  // satırı olarak (açıklaması ipucunda): varsayımsa onay düğmesiyle; kayışın
+  // eskizinden okunduysa onaysız — sıra dosyada yazılı.
+  var siraU = _fwSiraUyari(st);
+  var onay = siraU
+    ? '<div class="ve-fw-kl-onay" data-ve="sira-onay" data-kaynak="' + st.siraKaynagi + '">' + veIkon('alert-triangle')
+      + '<span class="ve-fw-kl-onay-y">' + (st.siraKaynagi === 'agac' ? 'Sıra STEP ağacından geldi'
+                                                                      : 'Sıra eskizden, yön belirsiz') + '</span>'
       + '<button type="button" id="ve-fw-sira-onay" class="ve-fw-btn" onclick="veFeadWizSiraOnay()"'
-      + ' title="' + _fwEsc(VE_FW_SIRA_AGAC) + '">' + veIkon('check') + ' Sıra doğru</button></div>'
+      + ' title="' + _fwEsc(siraU) + '">' + veIkon('check') + ' Sıra doğru</button></div>'
+    : st.siraKaynagi === 'kayis'
+    ? '<div class="ve-fw-kl-onay" data-ve="sira-onay" data-kaynak="kayis"'
+      + ' title="Sıra STEP dosyasındaki kayışın eskizinden: her yay bir kasnağa eşlendi. Yön gergiden — gevşek tarafta, tablonun sonunda.">'
+      + veIkon('check') + '<span class="ve-fw-kl-onay-y">Sıra kayışın eskizinden okundu</span></div>'
     : '';
   var liste = '<div class="ve-fw-kl-arac">' + ekle + veFeadWizSpinHTML(b) + '</div>' + onay
     + '<div class="ve-fw-kl-bas"><span>kayış sırasıyla · ' + sira.length + '</span>'
@@ -5601,7 +5660,7 @@ function veFeadWizCreate(){
   // `pack.nodes`in tiplerinden türüyor (kanvaslar sağda, künyeler solda).
   // Sayaçla indekslemek, zaten duran bir araç atlandığında sonrakilere BAŞKA
   // tipin yuvasını verirdi — çözücü kutusu bir kanvasın yerine düşerdi.
-  var kuruldu = [], idMap = {};
+  var kuruldu = [], idMap = {}, hedef = {};
   pack.nodes.forEach(function(src, _i){
     var kuyruk = araclar[_fwAracAnahtar(src)];
     var mevcut = (kuyruk && kuyruk.length) ? kuyruk.shift() : null;   // ikinci kez eşleşmesin
@@ -5618,7 +5677,7 @@ function veFeadWizCreate(){
       mevcut.y = Math.round(base.y + _ys.ly);
       var _mel = (typeof document !== 'undefined') ? document.getElementById(mevcut.id) : null;
       if(_mel){ _mel.style.left = mevcut.x + 'px'; _mel.style.top = mevcut.y + 'px'; }
-      idMap[src.id] = mevcut.id;
+      idMap[src.id] = mevcut.id; hedef[src.id] = mevcut;
       kuruldu.push(mevcut);
       return;
     }
@@ -5638,8 +5697,21 @@ function veFeadWizCreate(){
       var lbl = el && el.querySelector('.ve-node-label');
       if(lbl) lbl.textContent = src.customName;
     }
-    idMap[src.id] = yeni.id;
+    idMap[src.id] = yeni.id; hedef[src.id] = yeni;
     kuruldu.push(yeni);
+  });
+
+  // KAYIŞ SIRASI DÖNGÜDEN SONRA BİR KEZ DAHA YAZILIR (2026-10-02, kullanıcı
+  // bildirimi: *"topolojiye aktarırken, 1-2 kasnağın sırasını yanlış
+  // aktarıyor"*). Gerçek `createNode` her düğümde kartları tazeliyor ve
+  // tazeleme sırayı YARIM modelde 1..N'e oturtuyor (`veFeadBuildSystem` →
+  // `veFeadNormalizeBeltOrder`: boşluk kapanır, eşitlikte dizi sırası).
+  // Kasnaklar sihirbazın DİZİSİNDE kuruluyor, sıra ise rotada; ikisi
+  // ayrışınca (STEP'in ağacı · ↑ ↓ ile elle sıra · CW/CCW) kurulan model
+  // dizinin sırasını alıyordu — sihirbaz doğru sırayı gösterirken.
+  pack.nodes.forEach(function(src){
+    var n = hedef[src.id], bi = src.data && src.data.beltIndex;
+    if(n && Number.isFinite(bi)){ if(!n.data) n.data = {}; n.data.beltIndex = bi; }
   });
 
   // DUTY kW KİMLİK GÖÇÜ — döngü BİTTİKTEN sonra (çözücü düğümü de aynı
@@ -5851,6 +5923,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizNavHTML: veFeadWizNavHTML, veFeadWizFootHTML: veFeadWizFootHTML,
     veFeadWizLiveHTML: veFeadWizLiveHTML, veFeadWizReset: veFeadWizReset,
     veFeadWizStpRolTipleri: veFeadWizStpRolTipleri, veFeadWizStpOneriUygula: veFeadWizStpOneriUygula,
+    veFeadWizStpSira: veFeadWizStpSira, _fwStpSiraDurum: _fwStpSiraDurum,
     getFeadWizardPropertiesHTML: getFeadWizardPropertiesHTML,
     _fwSet: _fwSet, _fwSetRender: _fwSetRender, _fwGet: _fwGet,
     // STEP'ten başla (kural 34)
@@ -5861,7 +5934,7 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadWizStpDenetim: veFeadWizStpDenetim, veFeadWizStpAktar: veFeadWizStpAktar,
     veFeadWizStpDrop: veFeadWizStpDrop, veFeadWizStpSurukle: veFeadWizStpSurukle,
     veFeadWizStpHesapla: veFeadWizStpHesapla, _fwStpCizimSVG: _fwStpCizimSVG,
-    veFeadWizSiraOnay: veFeadWizSiraOnay, VE_FW_SIRA_AGAC: VE_FW_SIRA_AGAC,
+    veFeadWizSiraOnay: veFeadWizSiraOnay, VE_FW_SIRA_AGAC: VE_FW_SIRA_AGAC, VE_FW_SIRA_YON: VE_FW_SIRA_YON,
     veFeadWizIssueHTML: veFeadWizIssueHTML,
     veFeadWizStp: veFeadWizStp,
     // 3B görüntüleyicinin paneli (js/cp-fead-3b.js) bunları kullanıyor

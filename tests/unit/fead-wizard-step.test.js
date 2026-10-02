@@ -13,8 +13,9 @@
  *     kayış taşımıyor; eskiden `ex.belt || {}` profili ve kanal sayısını SİLERDİ.
  *     Rol verilince aktarılanlar: tests/unit/fead-step-kayis.test.js
  *   · TEK KRANK, TEK GERGİ: ikinci gergi ötekinin üstüne yazılırdı
- *   · SIRA BİR VARSAYIM: dosya kayışın sırasını taşımıyor; uyarı kullanıcı sırayı
- *     değiştirene ya da onaylayana kadar Kasnaklar adımında
+ *   · ESKİZSİZ SIRA BİR VARSAYIM: kayışa rol verilmemiş ya da eskizi yoksa sıra
+ *     ağaçtan gelir; uyarı kullanıcı sırayı değiştirene ya da onaylayana kadar
+ *     Kasnaklar adımında. Eskizden okunan sıra: tests/unit/fead-step-sira.test.js
  *   · STEP ↔ KÜNYE: künye gerginin parça alanlarını yazar; CAD'deki parça başka
  *     ise fark adıyla söylenir
  * En değerli kapı: Gates AG00686 düzeni STEP dosyası olarak sihirbazdan geçiyor
@@ -460,7 +461,7 @@ describe('KAYIŞ DÜZLEMİ ÇİZİMİ — hesaptan hemen sonra', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════
-describe('kayış sırası bir VARSAYIM — Kasnaklar adımı söyler', () => {
+describe('eskizsiz kayış sırası bir VARSAYIM — Kasnaklar adımı söyler', () => {
   const sayi = () => wiz.veFeadWizIssues(wiz.veFeadWizBuild(), 1)
     .filter((x) => x.m === wiz.VE_FW_SIRA_AGAC).length;
 

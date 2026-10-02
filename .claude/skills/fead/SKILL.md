@@ -649,7 +649,21 @@ olurdu.
       `stepKaynak.kayis` izinde, Kayış adımının *CAD'deki kayış* kartı onu
       `veFeadBeltFit` ile değerlendirir (numara − gereken · kolun yeri, yönüyle).
       Rol verilmezse kayışa dokunulmaz; sıra ağaç sırasıdır
-      (`siraKaynagi: 'agac'`).
+      (`siraKaynagi: 'agac'`) ve uyarı sebebini söyler.
+    • **KAYIŞ SIRASI KAYIŞIN ESKİZİNDEN** (2026-10-02, kullanıcı: *"kasnakları
+      sırayla modelledikten sonra … 1-2 kasnağın sırasını yanlış
+      aktarıyor"*): montaj ağacı kayışın sırası değil ve rol verme sırası
+      hiçbir yere yazılmıyordu. Eskizin yayları kasnaklara eşlenir
+      (`veFeadStpEskizSirasi`: bölünmüş sarım tek geçiş, sürücüye döndürülür);
+      eskizin yönü CAD'de keyfi, **yön gergiden** — tablonun sonunda,
+      krankın komşusu (arşivin 11 düzeninin 11'i). Eşitlikte (gergi yok ya
+      da krankın karşısında) sıra eskizin yönünde ve `kayis-yon` uyarılı;
+      eskiz bir kasnaktan geçmiyor ya da birinden iki kez geçiyorsa ağaç
+      sırası, sebebiyle. **Numara aktarmadan ÖNCE görünür** (3B tablosu ve
+      etiketleri, kartın çizimi ve ağacı) ve kaydın KENDİSİNDEN gelir
+      (`veFeadWizStpSira` → `veFeadStpKayit`, çözüm nesnesine önbellekli —
+      ikinci bir sıra hesabı yüzeyleri aktarımdan ayırırdı). Kapılar:
+      `fead-step-sira.test.js` + `tests/e2e/fead-step-sira.spec.js`.
     • **KAYIŞ ESKİZİ HESAP ÇAPINI VERİR** (2026-09-28, kural 39): kayış
       biriminin kapalı eğrisi (`veStepP21Egri` — okuyucu anlam yüklemez) yay
       yay kasnaklarla eşlenir; yay yarıçapı − OD/2 kaburgalıda h_b, sırtta
@@ -676,12 +690,14 @@ olurdu.
       zahmetliydi) — rol kapısı geçilmezse düşer, bayat sayı kalmaz; bakış
       değişince çözülmez (yalnız izdüşüm). Kapı: `fead-wizard-step.test.js`.
       Sonuç kayış düzleminin çizimiyle gelir: kasnaklar dış çapıyla, gergi
-      kolu ve pivotu; kayış yolu ÇİZİLMEZ (sıra dosyada yok, yol çekirdeğin
-      işi); renk CSS jetonlarından.
+      kolu ve pivotu, adın önünde aktarılacak sıra; kayış yolu ÇİZİLMEZ (yol
+      çekirdeğin işi); renk CSS jetonlarından.
     • **Tek krank, tek gergi** aktarımı DURDURUR; orijin KULLANICININ seçtiği
       krank. Kayış ve çözücü boş durumdan (`ex.belt || {}` kanalı silerdi).
-    • **Sıra bir varsayım**: aktarımdan sonra Kasnaklar adımı uyarı taşır;
-      ↑ ↓, yön çevirme ya da "✓ Sıra doğru" kaldırır.
+    • **Eskizden okunamayan sıra bir varsayım** (`agac` · `kayis-yon`):
+      aktarımdan sonra Kasnaklar adımı uyarı taşır; ↑ ↓, yön çevirme ya da
+      "✓ Sıra doğru" kaldırır. Eskizden okunan sıra (`kayis`) onay istemez —
+      listenin başındaki durum satırı kaynağını söyler.
     • **Künye CAD'deki gergiyi sessizce değiştiremez**: künye seçiliyken
       parça kodu / kol / çap STEP'ten farklıysa gergi adımı adıyla söyler;
       elle yazılan değer kullanıcının kararı (uyarı yok).
@@ -1328,6 +1344,18 @@ olurdu.
       kurulumdan sonra görülürdü) sembolik kartla ortadan kalktı.
     Kapılar: `tests/unit/fead-sembolik.test.js` +
     `tests/e2e/fead-sembolik.spec.js`.
+53. **"MODELİ KUR" SİHİRBAZIN SIRASINI KURAR — İNDİS DÖNGÜDEN SONRA YAZILIR**
+    (2026-10-02, kullanıcı: *"topolojiye aktarırken, 1-2 kasnağın sırasını
+    yanlış aktarıyor"*). Gerçek `createNode` her düğümde kartları tazeliyor
+    ve tazeleme sırayı YARIM modelde 1..N'e oturtuyor (`veFeadBuildSystem`
+    → `veFeadNormalizeBeltOrder`: boşluk kapanır, eşitlikte dizi sırası);
+    kasnaklar sihirbazın DİZİSİNDE kurulduğu için ↑ ↓, CW/CCW ve STEP'in
+    ağacı kurulan modelde kayboluyordu. `veFeadWizCreate` paketin
+    `beltIndex`ini döngüden SONRA bir kez daha yazar. Sahte `createNode`
+    gerçeğin tazelemesini taklit etmek ZORUNDA — tazelemesiz sahte bu
+    halkayı hiç koşturmuyordu. Kapılar: `fead-step-sira.test.js` →
+    *"Modeli kur: kurulan sıra sihirbazın gösterdiği sıra"* +
+    `fead-step-sira.spec.js`.
 
 **Bağımsız denetim aracı:** `npm run fead:denetim` (`tools/fead-denetim`) —
 Gates'e hiç bakmadan koşan analitik + değişmezlik ölçümleri. 27–30 numaralı
