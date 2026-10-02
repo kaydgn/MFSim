@@ -353,9 +353,19 @@ function veFeadWiz3bPanelHTML(s, secili){
     var iki = veFeadStp2B(coz, _fwStpSecim(s)), kol = {};
     coz.gergiler.forEach(function(g){ kol[g.kasnak] = g.kolBoy; });
     var seciliK = _fw3bSeciliKasnak(s, secili);
+    // SATIRLAR AKTARILACAK SIRAYLA (2026-10-02, kullanıcı: *"kasnakları
+    // sırayla modelledikten sonra … 1-2 kasnağın sırasını yanlış aktarıyor"*):
+    // numara ve sıra kaydın kendisinden (veFeadWizStpSira), kaynağı tablonun
+    // altında — aktarmadan önce görülür. Aktarılmayan kasnak (ikinci gergi) sonda, numarasız.
+    var sr = typeof veFeadWizStpSira === 'function' ? veFeadWizStpSira(s) : null, no = (sr && sr.no) || {};
+    var dizi = coz.kasnaklar.map(function(k, i){ return i; })
+      .sort(function(a, b){ return (no[a] || 1e9) - (no[b] || 1e9) || a - b; });
     h += '<table class="ve-fw-tbl ve-fw-3b-tbl"><thead><tr><th>Kasnak</th><th>Ø</th><th>Hesap Ø</th><th>X</th><th>Y</th></tr></thead><tbody>';
-    coz.kasnaklar.forEach(function(k, i){
-      h += '<tr data-ve-3b-kasnak="' + i + '"' + (i === seciliK ? ' class="on"' : '') + '><td>' + renk(k.tip) + _fwEsc(_fwStpRolAd(k.tip))
+    dizi.forEach(function(i){
+      var k = coz.kasnaklar[i];
+      h += '<tr data-ve-3b-kasnak="' + i + '"' + (i === seciliK ? ' class="on"' : '') + '><td>'
+        + (no[i] ? '<span class="ve-fw-kl-no" data-ve-3b-sira="' + no[i] + '">' + no[i] + '</span>' : '')
+        + renk(k.tip) + _fwEsc(_fwStpRolAd(k.tip))
         + (kol[i] !== undefined ? ' <span class="ve-fw-dim">· kol ' + _fwFmt(kol[i], 1) + '</span>' : '') + '</td>'
         + '<td class="ve-fw-num">' + _fwFmt(k.od, 1) + '</td><td class="ve-fw-num ve-fw-3b-hc" data-ve-3b-hesapcap="' + i + '">'
         + (typeof _fwStpHesapCapi === 'function' ? _fwFmt(_fwStpHesapCapi(s, k), 1) : '—')
@@ -363,6 +373,9 @@ function veFeadWiz3bPanelHTML(s, secili){
         + '</td><td class="ve-fw-num">' + _fwFmt(iki.kasnaklar[i].y, 1) + '</td></tr>';
     });
     h += '</tbody></table>';
+    if(sr) h += '<p class="ve-fw-3b-sira" data-ve-3b-sira-kaynak="' + sr.kaynak + '"'
+      + (sr.sebep ? ' title="' + _fwEsc(sr.sebep) + '"' : '') + '>'
+      + veIkon(sr.kaynak === 'kayis' ? 'check' : 'alert-triangle') + ' ' + _fwEsc(_fwStpSiraDurum(sr, s)) + '</p>';
     if(coz.duzlem) h += '<p class="ve-fw-dim">Düzlem sapması ' + _fwFmt(coz.duzlem.yayilim, 3) + ' mm</p>';
     // Kayışın adı bir bağlantı: seçer
     if(coz.kayis)
@@ -787,6 +800,8 @@ function _fw3bEtiketle(){
   V.camera.updateMatrixWorld();
   var sag = new THREE.Vector3().setFromMatrixColumn(V.camera.matrixWorld, 0);
   var ekran = function(v){ var p = v.clone().project(V.camera); return { x: (p.x + 1) / 2 * w, y: (1 - p.y) / 2 * h, z: p.z }; };
+  // Etiket aktarılacak sırayı da taşır (tablonun numarası, aynı kaynaktan)
+  var sr = typeof veFeadWizStpSira === 'function' ? veFeadWizStpSira(V.s) : null, no = (sr && sr.no) || {};
   var K = coz.kasnaklar.map(function(k){
     var m = new THREE.Vector3(k.merkez[0], k.merkez[1], k.merkez[2]), c = ekran(m);
     var e = ekran(m.clone().addScaledVector(sag, k.od / 2));
@@ -802,7 +817,7 @@ function _fw3bEtiketle(){
       + '<circle cx="' + kx.toFixed(1) + '" cy="' + ky.toFixed(1) + '" r="2.5"/>';   // makine: SVG yol verisi
     var hc = typeof _fwStpHesapCapi === 'function' ? _fwStpHesapCapi(V.s, q.k) : NaN;
     hs += '<div class="ve-fw-3b-etk' + (sagda ? '' : ' sol') + '" data-ve-3b-etiket="' + i + '" style="left:' + lx.toFixed(1) + 'px;top:' + ly.toFixed(1) + 'px">'   // makine: CSS konumu
-      + '<b>' + _fwEsc(_fwStpRolAd(q.k.tip)) + '</b><span>Ø' + _fwFmt(q.k.od, 1) + ' · hesap ' + _fwFmt(hc, 1) + '</span></div>';
+      + '<b>' + (no[i] ? no[i] + ' · ' : '') + _fwEsc(_fwStpRolAd(q.k.tip)) + '</b><span>Ø' + _fwFmt(q.k.od, 1) + ' · hesap ' + _fwFmt(hc, 1) + '</span></div>';
   });
   cz.innerHTML = cs; kat.innerHTML = hs;
 }

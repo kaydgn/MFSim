@@ -5,7 +5,9 @@
  * STEP dosyasına yerleştirir (yazıcı: ./step-yaz.js). Üç test yüzeyi AYNI
  * dosyayı kullanıyor — tanıyıcı (tests/unit/fead-step.test.js), sihirbazın
  * aktarımı (tests/unit/fead-wizard-step.test.js) ve gerçek tarayıcı
- * (tests/e2e/fead-step.spec.js) — yani üçü aynı düzeni ölçüyor.
+ * (tests/e2e/fead-step.spec.js) — yani üçü aynı düzeni ölçüyor. Kayış
+ * sırasının kapıları (fead-step-sira.test.js + .spec.js) arşivin her
+ * düzenini `duzenStep` · `ornekDuzen` ile, istenen ağaç sırasında yazar.
  *
  * Dünya: kayış düzlemi X = duzlem; 2B (x, y) → dünya (Y = Yc − x, Z = Zc + y).
  * Orijin (0,0,0) düzlemin +X tarafında → "motor arkada" → önden bakış +X.
@@ -127,6 +129,90 @@ function agEskiz({ hb = 1.5, hr = 1.5, ofset = {}, kaydir = {}, sonTers = false,
   if (sonTers) parcalar[parcalar.length - 1].ters = true;   // son parça ters yazılır (same_sense .F.)
   if (acik) parcalar.pop();                                  // açık eğri: son doğru yok
   return { ad: 'Sketch.2', parcalar, L: g.LpitchMm, geom: g };
+}
+
+// ── HERHANGİ BİR DÜZEN, İSTENEN AĞAÇ SIRASIYLA (2026-10-02) ───────────────
+// Kullanıcı bildirimi: *"kasnakları sırayla modelledikten sonra … 1-2
+// kasnağın sırasını yanlış aktarıyor"* — montaj AĞACININ sırası kayışın
+// sırası değildir. `duzen` Gates TABLO sırasında ({ id, ad, rol, od, x, y,
+// contact, ten: pivot {x, y} }), `agac` parçaların ağaçtaki sırası (adlar;
+// 'KAYIS' kayış parçası). Kayış eskizi çekirdeğin geometrisinden, `agEskiz`in
+// kuralıyla (yay, doğru, yay…). opt.eskizTers: eğri ters yönde yazılır;
+// opt.eskizKaydir: eğri k. yaydan başlar; opt.eskizYok: kayışta eskiz yok;
+// opt.yayBol: o adlı kasnağın sarımı İKİ yaya bölünür (CAD bunu yapabiliyor);
+// opt.eskizHaric: eskiz o adlı kasnağı atlar (parça montajda durur — bayat eskiz).
+function duzenStep(duzen, agac, opt = {}) {
+  const F = require('../../js/fead-core.js');
+  const hb = 1.5, hr = 1.5;
+  const K = duzen.filter((k) => k.ad !== opt.eskizHaric).map((k) => ({ name: k.ad, c: [k.x, k.y], od: k.od, contact: k.contact,
+    rPitch: k.od / 2 + (k.contact === 'grooved' ? hb : hr) })).map((k) => Object.assign(k, { rEff: k.rPitch }));
+  const g = F.solveGeometry(K);
+  const n = K.length;
+  // 2B: c merkezli çemberde p'den q'ya saat yönünün TERSİNE açı, (0, 2π]
+  const ccw = (c, p, q) => {
+    const t = Math.atan2((p[0] - c[0]) * (q[1] - c[1]) - (p[1] - c[1]) * (q[0] - c[0]),
+      (p[0] - c[0]) * (q[0] - c[0]) + (p[1] - c[1]) * (q[1] - c[1]));
+    return t <= 1e-12 ? t + 2 * Math.PI : t;
+  };
+  // Yayın `aci`sı İŞARETSİZ sarım açısıdır: feadStep iki uç arasındaki iki
+  // yaydan açısı tutanı seçer, yani ters yazılan yay için uçları değiştirmek yeter.
+  let parcalar = [];
+  for (let i = 0; i < n; i++) {
+    const gir = g.spans[(i - 1 + n) % n].Pj, cik = g.spans[i].Pi, c = K[i].c, al = Math.abs(g.wraps[i]);
+    if (opt.yayBol === K[i].name) {
+      const s = Math.abs(ccw(c, gir, cik) - al) < 1e-6 ? 1 : -1;     // 2B gidiş yönü
+      const am = Math.atan2(gir[1] - c[1], gir[0] - c[0]) + s * al / 2;
+      const orta = [c[0] + K[i].rPitch * Math.cos(am), c[1] + K[i].rPitch * Math.sin(am)];
+      parcalar.push({ tip: 'CIRCLE', c, r: K[i].rPitch, a: gir, b: orta, aci: al / 2 });
+      parcalar.push({ tip: 'CIRCLE', c, r: K[i].rPitch, a: orta, b: cik, aci: al / 2 });
+    } else parcalar.push({ tip: 'CIRCLE', c, r: K[i].rPitch, a: gir, b: cik, aci: al });
+    parcalar.push({ tip: 'LINE', a: g.spans[i].Pi, b: g.spans[i].Pj });
+  }
+  if (opt.eskizTers) parcalar = parcalar.slice().reverse().map((q) => Object.assign({}, q, { a: q.b, b: q.a }));
+  if (opt.eskizKaydir) {
+    let k = 0, yay = 0;
+    while (k < parcalar.length && !(parcalar[k].tip === 'CIRCLE' && yay++ === opt.eskizKaydir)) k++;
+    parcalar = parcalar.slice(k).concat(parcalar.slice(0, k));
+  }
+  const parca = (k) => {
+    if (k.ten) {
+      const dx = k.ten.x - k.x, dy = k.ten.y - k.y, L = Math.hypot(dx, dy);
+      return { id: k.id, ad: k.ad, x: k.x, y: k.y, xDunya: [0, -dx / L, dy / L], geometri: [
+        { profil: k.contact === 'grooved' ? Y.kanalliProfil({ od: k.od, n: 8 }) : Y.duzProfil({ od: k.od }) },
+        { profil: Y.pivotProfil({ yuzSayisi: 9, s0: 20, s1: 80 }), yerel: [L, 0, 0] }] };
+    }
+    return { id: k.id, ad: k.ad, x: k.x, y: k.y, ters: k.contact === 'back',
+      geometri: [{ profil: k.contact === 'grooved' ? Y.kanalliProfil({ od: k.od, n: 8 }) : Y.duzProfil({ od: k.od }) }] };
+  };
+  const byAd = {};
+  duzen.forEach((k) => { byAd[k.ad] = k; });
+  const krank = duzen[0];
+  return feadStep(agac.map((ad) => (ad === 'KAYIS'
+    ? { id: 'KAYIS', ad: opt.kayisAd || 'KAYIŞ - 8PK1500', x: krank.x, y: krank.y,
+        geometri: [{ profil: Y.duzProfil({ od: krank.od + 8, w: 28.48 }) }],
+        eskiz: opt.eskizYok ? null : { ad: 'Sketch.2', parcalar } }
+    : parca(byAd[ad]))), opt);
+}
+
+// Arşivin bir örneği → `duzenStep`in düzeni (Gates TABLO sırası). Sürücü
+// krank rolünü alır; ad tekil ve büyük harf (rolü test adla verir).
+function ornekDuzen(key) {
+  const M = require('../../js/fead-model.js');
+  const ks = M.veFeadExampleNodes(key).nodes.filter((n) => n.data && Number.isFinite(n.data.beltIndex))
+    .sort((a, b) => a.data.beltIndex - b.data.beltIndex);
+  const say = {};
+  return ks.map((n, i) => {
+    const d = n.data, ten = n.type === 'fead-tensioner';
+    let ad = String(n.customName || n.type).toLocaleUpperCase('tr').replace(/[()]/g, '').trim();
+    say[ad] = (say[ad] || 0) + 1;
+    if (say[ad] > 1) ad += ' ' + say[ad];
+    const k = { id: 'P' + (i + 1), ad, rol: d.driver ? 'fead-crank' : n.type, od: d.od, contact: d.contact || 'grooved' };
+    if (ten) {
+      const a = d.armMeanDeg * D;
+      Object.assign(k, { x: d.cenX, y: d.cenY, ten: { x: d.cenX - d.armLen * Math.cos(a), y: d.cenY - d.armLen * Math.sin(a) } });
+    } else Object.assign(k, { x: d.x, y: d.y });
+    return k;
+  });
 }
 
 // Gates raporunun AG00686 sonuçları (gergi Mean konumu, rel 33,1°) — köprü
@@ -266,4 +352,5 @@ function gergiIcIceMontaj() {
   return yz.metin();
 }
 
-module.exports = { gergiAltMontaj, feadStep, AG, AG_REF, gergiParcasi, ag00686Step, agEskiz, D, X, tuzak, TUZAK, gergiIcIceMontaj };
+module.exports = { gergiAltMontaj, feadStep, AG, AG_REF, gergiParcasi, ag00686Step, agEskiz, D, X, tuzak, TUZAK, gergiIcIceMontaj,
+  duzenStep, ornekDuzen };

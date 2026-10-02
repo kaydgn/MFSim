@@ -53,8 +53,17 @@
 // görüntüleyicide kayışı da seçelim."* Kayış rolü ('fead-belt') verilen birim
 // kasnak sayılmaz: kodu adından (8PK1410 → profil · kanal · numara), genişliği
 // yan düzlemlerinden ölçülür ve kanal sayısı genişlikten sağlanır. Rol
-// verilmezse kayışa yine DOKUNULMAZ. Sıra ağaç sırasıdır (sürücü başta, gergi
-// sonda) ve `siraKaynagi: 'agac'` olarak işaretlenir.
+// verilmezse kayışa yine DOKUNULMAZ.
+//
+// ── KAYIŞ SIRASI ESKİZDEN, YOKSA AĞAÇTAN ────────────────────────────────
+// Kullanıcı bildirimi (2026-10-02): *"3D görselleştirici ile kasnakları
+// sırayla modelledikten sonra, topolojiye aktarırken, 1-2 kasnağın sırasını
+// yanlış aktarıyor."* Sıra montaj AĞACINDAN kuruluyordu ve ağaç kayışın
+// sırasını bilmez. Kayış rolü verildiyse kapalı eskizinin yayları eğri boyunca
+// SIRALI okunur ve her yay bir kasnağa eşlenir — sıra dosyada YAZILI
+// (`siraKaynagi: 'kayis'`, `veFeadStpEskizSirasi`). Eskiz yoksa ya da her
+// kasnaktan bir kez geçmiyorsa ağaç sırası (sürücü başta, gergi sonda) ve
+// `siraKaynagi: 'agac'` — bir varsayım, uyarılı.
 // ============================================================================
 
 var VE_FEAD_STP_SURUM = '2.0.0';
@@ -702,10 +711,47 @@ function veFeadStp2B(sonuc, opt){
 // sessizce yazılırdı — aktarılmaz ve söylenir.
 function _fstYuv(x, k){ return Math.round(x * k) / k + 0; }
 
+// ── KAYIŞ SIRASI ESKİZDEN ────────────────────────────────────────────────
+// SAF. `yaylar` eskizin yayları EĞRİ BOYUNCA sıralı ({ kasnak } — tanıyıcının
+// kasnak indisi), `kume` sıraya girecek kasnakların indisleri, `srcI`
+// sürücünün, `grgI` gerginin indisi (yoksa −1). Döner:
+//   { sira, yon }        sira = Gates TABLO sırası (sürücü ilk), yon:
+//                        'gergi' — yön gerginin yerinden (aşağıda),
+//                        'eskiz' — yön belirsiz, eğrinin yazıldığı yön
+//   { sira: null, eksik, cift }   eskiz her kasnaktan TAM bir kez geçmiyor
+// Bir kasnağın ardışık yayları (CAD sarımı ikiye bölebilir, kapalı eğri
+// sarımın ortasından başlayabilir) tek geçiştir. Eskizin YÖNÜ CAD'de keyfidir,
+// dosyadan okunmaz: tablo krankla başlar ve gergi GEVŞEK taraftadır — krankın
+// çıkışı, tablonun sonu (arşivin 11 düzeninin 11'inde gergi sonda). İki yönden
+// gergiyi sona daha yakın koyan alınır; eşitse (gergi krankın tam karşısında
+// ya da gergi yok) yön belirsizdir ve söylenir.
+function veFeadStpEskizSirasi(yaylar, kume, srcI, grgI){
+  var var_ = {};
+  (kume || []).forEach(function(i){ var_[i] = 1; });
+  var c = [];
+  (yaylar || []).forEach(function(y){
+    if(var_[y.kasnak] && c[c.length - 1] !== y.kasnak) c.push(y.kasnak);
+  });
+  while(c.length > 1 && c[0] === c[c.length - 1]) c.pop();
+  var gor = {}, cift = [];
+  c.forEach(function(i){ if(gor[i] && cift.indexOf(i) < 0) cift.push(i); gor[i] = 1; });
+  var eksik = (kume || []).filter(function(i){ return !gor[i]; });
+  if(cift.length || eksik.length || !(srcI >= 0) || !gor[srcI]) return { sira: null, eksik: eksik, cift: cift };
+  var k = c.indexOf(srcI);
+  var ileri = c.slice(k).concat(c.slice(0, k));
+  var geri = [ileri[0]].concat(ileri.slice(1).reverse());
+  if(ileri.length <= 2) return { sira: ileri, yon: 'gergi' };
+  var ti = grgI >= 0 ? ileri.indexOf(grgI) : -1, tg = grgI >= 0 ? geri.indexOf(grgI) : -1;
+  if(ti > tg) return { sira: ileri, yon: 'gergi' };
+  if(tg > ti) return { sira: geri, yon: 'gergi' };
+  return { sira: ileri, yon: 'eskiz' };
+}
+
 function veFeadStpKayit(cozum, secim){
   secim = secim || {};
   var iki = veFeadStp2B(cozum, { ayna: !!secim.ayna, merkez: secim.merkez });
   var uyarilar = [], pulleys = [], gergiKey = null, surucu = null;
+  var kume = [], srcI = -1, grgI = -1;              // sıraya girenlerin tanıyıcı indisleri
   var katalog = secim.gergiKatalog || (typeof VE_FEAD_TENSIONER_DB !== 'undefined' ? VE_FEAD_TENSIONER_DB : []);
   var MM = 1000, DER = 10000;
   cozum.kasnaklar.forEach(function(k, i){
@@ -737,33 +783,53 @@ function veFeadStpKayit(cozum, secim){
       katalog.forEach(function(r){ if(r.part && metin.indexOf(_fstKatla(r.part).trim()) >= 0) kodlar[r.part] = 1; });
       var kk = Object.keys(kodlar);
       if(kk.length === 1) data.tenPart = kk[0];
-      gergiKey = key;
+      gergiKey = key; grgI = i;
     } else {
       data.x = _fstYuv(xy.x, MM); data.y = _fstYuv(xy.y, MM);
-      if(tip === 'fead-crank' && !surucu){ data.driver = true; surucu = key; }
+      if(tip === 'fead-crank' && !surucu){ data.driver = true; surucu = key; srcI = i; }
       if(k.tur === 'duz' && tip !== 'fead-idler')
         uyarilar.push('"' + ad + '" düz yüzeyli ama rolü ' + tip + '; temas tarafı sırt (back) yazıldı, kontrol edin.');
     }
-    pulleys.push({ key: key, type: tip, name: ad, data: data });
+    // `stpI`: tanıyıcının kasnak indisi — 3B'nin ve kartın aktarılacak sırayı
+    // aktarımdan ÖNCE göstermesi için (veFeadWizStpSira); modele girmez.
+    pulleys.push({ key: key, type: tip, name: ad, data: data, stpI: i });
+    kume.push(i);
   });
   if(!surucu) uyarilar.push('Sürücü (krank) kasnağı seçilmedi.');
   if(!gergiKey) uyarilar.push('Gergi seçilmedi.');
-  var route = [];
-  if(surucu) route.push(surucu);
-  pulleys.forEach(function(p){ if(p.key !== surucu && p.key !== gergiKey) route.push(p.key); });
-  if(gergiKey) route.push(gergiKey);
-  uyarilar.push('Kayış sırası dosyadan okunmadı; ağaç sırasıyla dizildi. Sırayı Kasnaklar adımında verin.');
+  // ── SIRA: kayışın eskizinden (dosyada yazılı), yoksa ağaçtan (varsayım) ──
+  var ky = cozum.kayis, es = ky && ky.eskiz;
+  var ss = es ? veFeadStpEskizSirasi(es.yaylar, kume, srcI, grgI) : null;
+  var route = [], siraKaynagi = 'agac', anahtar = function(i){ return 'S' + (i + 1); };
+  if(ss && ss.sira){
+    route = ss.sira.map(anahtar);
+    siraKaynagi = ss.yon === 'gergi' ? 'kayis' : 'kayis-yon';
+    if(siraKaynagi === 'kayis-yon')
+      uyarilar.push('Kayış sırası "' + (es.ad || _fstAd(ky.ad)) + '" eskizinden okundu; dönüş yönü belirsiz ('
+        + (gergiKey ? 'gergi krankın komşusu değil' : 'gergi seçilmedi') + '). Yönü Kasnaklar adımında seçin.');
+  } else {
+    if(surucu) route.push(surucu);
+    pulleys.forEach(function(p){ if(p.key !== surucu && p.key !== gergiKey) route.push(p.key); });
+    if(gergiKey) route.push(gergiKey);
+    // SEBEBİYLE: kullanıcı sırayı dosyadan nasıl alacağını buradan öğrenir.
+    var adlar = function(ix){ return ix.map(function(i){ return '"' + _fstAd(cozum.kasnaklar[i].ad) + '"'; }).join(', '); };
+    var sebep = !ky ? 'kayışa rol verilmedi'
+      : !es ? '"' + _fstAd(ky.ad) + '" kapalı bir eskiz taşımıyor'
+      : (ss && ss.cift && ss.cift.length) ? 'eskiz ' + adlar(ss.cift) + ' kasnağından birden çok kez geçiyor'
+      : (ss && ss.eksik && ss.eksik.length) ? 'eskiz ' + adlar(ss.eksik) + ' kasnağından geçmiyor'
+      : 'sürücü seçilmedi';
+    uyarilar.push('Kayış sırası dosyadan okunmadı (' + sebep + '); ağaç sırasıyla dizildi. Sırayı Kasnaklar adımında verin.');
+  }
   var bas = cozum.baslik || {};
   var kayit = {
     name: secim.ad || (bas.dosya ? bas.dosya.replace(/^.*[\\\/]/, '').replace(/\.[^.]*$/, '') : 'STEP'),
-    pulleys: pulleys, route: route, siraKaynagi: 'agac',
+    pulleys: pulleys, route: route, siraKaynagi: siraKaynagi,
     bakis: { ayna: !!secim.ayna, kaynak: cozum.bakis.kaynak },
     uyarilar: uyarilar
   };
   // KAYIŞ YALNIZ ROLÜ VERİLDİYSE: profil ve kanal sayısı modele girer, kod
   // künyeye. Numara (1410) bir GİRDİ olarak yazılmaz — gergi varken boy çıktı;
   // CAD'deki kayış karşılaştırma için `cad` altında taşınır.
-  var ky = cozum.kayis;
   if(ky){
     var belt = {};
     if(ky.profil) belt.profile = ky.profil;
@@ -939,6 +1005,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadStpCoz: veFeadStpCoz,
     veFeadStp2B: veFeadStp2B,
     veFeadStpKayit: veFeadStpKayit,
+    veFeadStpEskizSirasi: veFeadStpEskizSirasi,
     veFeadStpKayisKodu: veFeadStpKayisKodu,
     veFeadStpOner: veFeadStpOner,
     VE_FEAD_STP_ONER: VE_FEAD_STP_ONER

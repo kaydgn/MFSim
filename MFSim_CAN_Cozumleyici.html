@@ -8583,6 +8583,8 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 /* Metin kendi sınıfıyla: `> span` ikonun span'ini de yakalıyordu — ikon 84 px'e
    şişip metni 84 px'e sıkıştırıyor, satır üç satıra kırılıyordu (ölçüldü). */
 .ve-fw-kl-onay-y{ flex:1; min-width:0; font-weight:600; }
+/* Sıra dosyadan OKUNDU (kayış eskizi): varsayım değil, durum — onay yok. */
+.ve-fw-kl-onay[data-kaynak="kayis"]{ border-left-color:var(--accent-success); color:var(--ink-success); }
 .ve-fw-kl-onay > button{ flex:none; }
 .ve-fw-kl-bas{ display:flex; align-items:baseline; gap:8px; padding:0 2px 2px; font-size:var(--fs-micro); color:var(--text-muted); }
 .ve-fw-kl-bas b{ flex:1; }
@@ -8968,6 +8970,8 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-tbl-stp .ve-fw-num{ text-align:right; font-variant-numeric:tabular-nums; }
 .ve-fw-tbl-stp tr.ve-fw-stp-off td{ color:var(--text-muted); }
 .ve-fw-tbl-stp tr.ve-fw-stp-warn td:nth-child(3){ color:var(--ink-warning); }
+/* Aktarılacak sıranın rozeti hücrenin metniyle aynı satırda (listenin rozeti) */
+.ve-fw-tbl-stp .ve-fw-stp-no{ display:inline-flex; width:16px; height:16px; margin-right:4px; vertical-align:-3px; }
 /* Ağaç girintisi VERİDEN (`--stp-d` = düğümün derinliği), görünüm burada. */
 .ve-fw-tbl-stp td:first-child{ padding-left:calc(4px + var(--stp-d, 0) * 14px); }
 /* KAYIŞ DÜZLEMİ ÇİZİMİ — hesaptan hemen sonra, MASADA; kasnaklar dış
@@ -8982,6 +8986,7 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-stp-kasnak circle.m{ fill:var(--text-primary); stroke:none; }
 .ve-fw-stp-kasnak text{ fill:var(--text-primary); font-variant-numeric:tabular-nums; }
 .ve-fw-stp-kasnak text.d{ fill:var(--text-secondary); }
+.ve-fw-stp-kasnak tspan.no{ font-weight:700; }
 .ve-fw-stp-kol{ stroke:var(--accent-warning); stroke-width:2; }
 .ve-fw-stp-pivot{ fill:var(--bg-secondary); stroke:var(--accent-warning); stroke-width:1.5; }
 
@@ -9028,6 +9033,10 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-hdurum[data-ok="0"]{ color:var(--ink-danger); }
 .ve-fw-3b-tbl tr.on td{ background:var(--accent-tint-8); }
 .ve-fw-3b-tbl .ve-fw-3b-hc{ font-weight:600; color:var(--text-heading); }
+/* Aktarılacak sıranın KAYNAĞI tablonun altında: dosyadan okunduysa onay
+   rengi, ağaç sırasıysa (varsayım) uyarı rengi — sebebi ipucunda. */
+.ve-fw-3b-sira{ display:flex; align-items:center; gap:5px; margin:4px 0 0; font-size:var(--fs-micro); color:var(--ink-warning); }
+.ve-fw-3b-sira[data-ve-3b-sira-kaynak="kayis"]{ color:var(--ink-success); }
 /* ALTTAKİ DİZİ: seçilinin adı + rol çipleri (üstte), tek hesap düğmesi ve
    aktarım (altta). Serbest alanın ortasında — kartın altına girmez. Kabın
    kendisi tıklamayı GEÇİRİR (arkadaki montaj seçilebilsin), çocukları almaz. */
