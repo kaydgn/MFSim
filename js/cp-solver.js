@@ -17,7 +17,7 @@ function getSolverPropertiesHTML(node) {
   // Başlık
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-md); font-weight:700; color:var(--text-heading);">Çözücü ayarları</div>';
-  html += '<span style="font-size:var(--fs-micro); font-weight:600; color:#2e7d32; background:#2e7d3218; padding:2px 7px; border-radius:var(--radius-sm); border:1px solid #2e7d3230; letter-spacing:0.03em; text-transform:uppercase;">MFSim</span>';
+  html += '<span style="font-size:var(--fs-micro); font-weight:600; color:#2e7d32; background:#2e7d3218; padding:2px 7px; border-radius:var(--radius-sm); border:1px solid #2e7d3230; letter-spacing:0.03em; text-transform:uppercase;" lang="en">MFSim</span>';   // Türkçe yerelde "MFSİM" yazılıyordu
   html += '</div>';
 
   // İKİ SÜTUN: SOL = çözüm kümesi + yöntem/tolerans (girdi), SAĞ = referans + zincir + hesapla

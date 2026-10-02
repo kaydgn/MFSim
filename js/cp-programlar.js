@@ -113,6 +113,12 @@ function _vpaEsc(s) {
     .replace(/"/g, '&quot;');
 }
 
+// Küme başlığı büyük harf yazılıyor; Türkçe yerelde "MFSim" "MFSİM",
+// "Artifact" "ARTİFACT" oluyordu (Tur 5). Özel ad kendi dilinde büyür.
+function _vpaOzelAd(h) {
+  return String(h).replace(/\b(MFSim|Artifact)\b/g, '<span lang="en">$1</span>');
+}
+
 // `boyut` YALNIZ donmuş dosyalarda var: üretilen üç ürünün boyutu her build'de
 // değişir, kayda yazılsa ilk build'de bayatlardı (programlar/README.md).
 function veProgramlarBoyut(n) {
@@ -253,7 +259,7 @@ function _vpaCiz() {
     yazildi += uyan.length;
     h += '<div style="margin:12px 0 6px;">'
       + '<div style="font-size:var(--fs-micro); font-weight:700; letter-spacing:.06em; '
-      + 'text-transform:uppercase; color:var(--text-primary);">' + _vpaEsc(k.baslik)
+      + 'text-transform:uppercase; color:var(--text-primary);">' + _vpaOzelAd(_vpaEsc(k.baslik))
       + ' <span style="font-weight:400; color:var(--text-muted);">(' + uyan.length + ')</span></div>'
       + '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">'
       + _vpaEsc(k.not) + '</div></div>';

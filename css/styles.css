@@ -9245,7 +9245,13 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   text-decoration:none; color:var(--text-muted);
   font-size:var(--fs-micro); flex:none;
   opacity:.75;
+  /* BİRİM BÜYÜK HARFE DÖNMEZ: "[Nm]" "[NM]" (nanometre gibi), "[d/dk]"
+     "[D/DK]" okunuyordu. Etiket büyük harf, birimi kendi yazımında. */
+  text-transform:none; letter-spacing:normal;
 }
+/* Etiketteki Yunan harfi (μ, θ): büyük harfi başka bir harftir — "Μ" Latin M
+   gibi okunur. `_feadEtiket` sarar. */
+.ve-fp-l .ve-fp-sym{ font-style:normal; text-transform:none; letter-spacing:normal; }
 .ve-fp-inp, .ve-fp-sel{
   width:100%; min-width:0; outline:none; box-sizing:border-box;
   /* Kenarlık artık alanın KENDİSİNDE: ızgara zemini kalkınca alanın sınırını

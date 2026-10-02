@@ -627,11 +627,27 @@ function _feadGrid(node, cells, cols){
   return '<div class="ve-fp-grid" style="--fp-k:' + k + ';">'
     + cells.map(function(c){ return _feadAlan(node, c); }).join('') + '</div>';
 }
+// ETİKET BÜYÜK HARFE DÖNER, BİRİM VE SİMGE DÖNMEZ. `.ve-fp-l` büyük harf
+// yazıyor ve içindeki her harfi çeviriyordu: "[d/dk]" → "[D/DK]", "[Nm]" →
+// "[NM]", "[kg·m²]" → "[KG·M²]", "Oluklu μ" → "OLUKLU Μ" (Yunan büyük mü,
+// Latin M gibi okunur). Sondaki köşeli parantezli birim `<u>`'ya, Yunan harfi
+// `.ve-fp-sym`'e alınır; ikisinin büyük harfi CSS'te kapalı. Etiket içindeki
+// biçim etiketlerine dokunulmaz. Kapı: `fead-panel-dili.test.js` → "BÜYÜK HARF".
+function _feadEtiket(s){
+  s = String(s == null ? '' : s);
+  var m = /^([\s\S]*?)\s*(\[[^\]<>]+\])\s*$/.exec(s);
+  var gov = m ? m[1] : s;
+  gov = gov.split(/(<[^>]*>)/).map(function(p){
+    return p.charAt(0) === '<' ? p : p.replace(/[µͰ-Ͽ]/g, '<i class="ve-fp-sym">$&</i>');
+  }).join('');
+  return gov + (m ? ' <u>' + m[2] + '</u>' : '');
+}
+
 // Izgaranın TEK hücresi — başka hücrelerle (atalet alanı) aynı ızgaraya
 // girebilsin diye ayrı.
 function _feadAlan(node, c){
   var v = (node.data && node.data[c.key] !== undefined && node.data[c.key] !== null) ? node.data[c.key] : '';
-  return '<label class="ve-fp-f"><span class="ve-fp-l">' + c.label + '</span>'
+  return '<label class="ve-fp-f"><span class="ve-fp-l">' + _feadEtiket(c.label) + '</span>'
     + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="ve-fead-' + c.key + '-' + node.id + '"'
     + ' value="' + _feadEsc(v) + '" step="' + (c.step || 'any') + '"'
     + (c.ph ? ' placeholder="' + _feadEsc(c.ph) + '"' : '')
@@ -645,7 +661,7 @@ function _feadAlan(node, c){
 // `css/styles.css`'te `[data-ton]` kuralından gelir. Satır içine renk yazmak
 // on temada tek bir sabit `#` değeri dondurmak olurdu (kural 14).
 function _feadRO(label, deger, unit, ton){
-  return '<label class="ve-fp-f"><span class="ve-fp-l">' + label
+  return '<label class="ve-fp-f"><span class="ve-fp-l">' + _feadEtiket(label)
     + (unit ? ' <u>' + unit + '</u>' : '') + '</span>'
     + '<input class="ve-fp-inp' + (ton ? ' ve-fp-inp--ton" data-ton="' + _feadEsc(ton) : '')
     + '" value="' + _feadEsc(deger) + '" readonly tabindex="-1"></label>';
@@ -655,7 +671,7 @@ function _feadRO(label, deger, unit, ton){
 function _feadText(node, title, key, ph){
   var v = (node.data && node.data[key] != null) ? node.data[key] : '';
   return '<div class="ve-fp-grid" style="--fp-k:1;">'
-    + '<label class="ve-fp-f"><span class="ve-fp-l">' + title + '</span>'
+    + '<label class="ve-fp-f"><span class="ve-fp-l">' + _feadEtiket(title) + '</span>'
     + '<input class="ve-fp-inp ve-fp-inp--text" type="text" id="ve-fead-' + key + '-' + node.id + '"'
     + ' value="' + _feadEsc(v) + '" placeholder="' + _feadEsc(ph || '') + '"'
     + ' onchange="veFeadSet(\'' + node.id + '\',\'' + key + '\',this.value)"></label></div>';
@@ -684,7 +700,7 @@ function _feadPending(text){
 function _feadSelect(node, title, key, options, def, hint){
   var cur = (node.data && node.data[key] != null && node.data[key] !== '') ? String(node.data[key]) : String(def);
   var h = '<div class="ve-fp-grid" style="--fp-k:1;">'
-    + '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">' + title + '</span>'
+    + '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">' + _feadEtiket(title) + '</span>'
     + '<select class="ve-fp-sel" id="ve-fead-' + key + '-' + node.id + '"'
     + ' onchange="veFeadSetChoice(\'' + node.id + '\',\'' + key + '\',this.value)">';
   options.forEach(function(o){
@@ -869,7 +885,7 @@ function _feadVarsayilanAlanHTML(pencere, tur, etiket, birim){
   // `<label>` DEĞİL: içinde iki etiketlenebilir öğe (girdi + düğme)
   // bulunamaz. Etiket `for` ile girdiye bağlı.
   return '<div class="ve-fp-f" data-ve-varsayilan="' + tur + '" data-kaynak="' + a.kaynak + '">'
-    + '<label class="ve-fp-l" for="' + id + '">' + etiket + (birim ? ' <u>[' + birim + ']</u>' : '') + '</label>'
+    + '<label class="ve-fp-l" for="' + id + '">' + _feadEtiket(etiket) + (birim ? ' <u>[' + birim + ']</u>' : '') + '</label>'
     + '<span class="ve-fp-deger">'
     + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="' + id + '"'
     + ' value="' + _feadEsc(val) + '" step="0.0001"'
@@ -2597,7 +2613,7 @@ function veFeadSurtunmeHTML(sd, cagri){
   var alan = function(key, etiket, deger, birim, ond){
     var yazi = veSayi(deger, ond);
     if(!elle) return _feadRO(etiket, yazi, birim);
-    return '<label class="ve-fp-f"><span class="ve-fp-l">' + etiket
+    return '<label class="ve-fp-f"><span class="ve-fp-l">' + _feadEtiket(etiket)
       + (birim ? ' <u>' + birim + '</u>' : '') + '</span>'
       + '<input class="ve-fp-inp" type="text" inputmode="decimal" data-ve-mu-alan="' + key + '"'
       + ' value="' + _feadEsc(String(deger)) + '"'
@@ -2606,7 +2622,7 @@ function veFeadSurtunmeHTML(sd, cagri){
   h += '<div class="ve-fp-grid" style="--fp-k:3;">'
     + alan('muOluk', 'Oluklu μ', s.muOluk, '', 2)
     + alan('muSirt', 'Sırt μ', s.muSirt, '', 2)
-    + alan('kucukKasnakMm', 'Küçük kasnak kaybı', s.kayipMm, 'mm', s.kayipMm % 1 ? 1 : 0)
+    + alan('kucukKasnakMm', 'Küçük kasnak kaybı', s.kayipMm, '[mm]', s.kayipMm % 1 ? 1 : 0)
     + '</div>';
   // DURUM SATIRI — hangi varsayım hesaba giriyor (kural 45: durum söyler).
   h += '<div class="ve-fead-mu-durum"' + (s.uyari ? ' data-uyari="1"' : '') + '>'
@@ -9768,7 +9784,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     // Rapor penceresi (cp-fead-report.js) kasnak ailesinin BÖLÜM kalıbını
     // ondan alır — ikinci bir kart üreticisi yazmak iki dilin ayrışmasıydı.
-    _feadCard: _feadCard, _feadRO: _feadRO, _feadHint: _feadHint,
+    _feadCard: _feadCard, _feadRO: _feadRO, _feadHint: _feadHint, _feadEtiket: _feadEtiket,
     VE_FEAD_STARTER_LAYOUT: VE_FEAD_STARTER_LAYOUT,
     veFeadBeltPathD: veFeadBeltPathD, veFeadArmArrowSVG: veFeadArmArrowSVG,
     veFeadLayoutSVG: veFeadLayoutSVG,

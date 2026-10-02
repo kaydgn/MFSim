@@ -593,3 +593,83 @@ describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
     expect(dugme).toBeGreaterThanOrEqual(4);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BÜYÜK HARF — BİRİM VE SİMGE KENDİ YAZIMINDA (Tur 5, 2026-10-02)
+//
+// `.ve-fp-l` etiketi büyük harf yazıyor ve İÇİNDEKİ HER HARFİ çeviriyordu:
+// "[Nm]" → "[NM]" (nanometre gibi), "[d/dk]" → "[D/DK]", "[kg·m²]" →
+// "[KG·M²]", "Oluklu μ" → "OLUKLU Μ" (Yunan büyük mü — Latin M gibi okunur).
+// Ölçüldü (gerçek tarayıcı, örnek yüklü): 18 etiket birimini, sürtünme
+// kartının iki etiketi simgesini bozuyordu. Birim etiketin düz metnindeydi —
+// CSS onu ayıramazdı. Kural ÜRETİCİDE (`_feadEtiket`) ve CSS'te birlikte.
+// Gerçek tarayıcıdaki ölçü `tests/e2e/buyuk-harf.spec.js`.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('BÜYÜK HARF — birim ve simge kendi yazımında', () => {
+  const ornekKur = (anahtar) => {
+    const pack = veFeadExampleNodes(anahtar);
+    global.nodes = pack.nodes.map((n) => ({
+      id: n.id, type: n.type, def: componentDefs[n.type],
+      customName: n.customName, data: JSON.parse(JSON.stringify(n.data)) }));
+    global.connections = [];
+    return global.nodes;
+  };
+  // Etiketin KENDİ metni: birim (`u`) ve simge (`.ve-fp-sym`) dışarıda.
+  const ozMetin = (l) => {
+    const k = l.cloneNode(true);
+    k.querySelectorAll('u, .ve-fp-sym').forEach((e) => e.remove());
+    return k.textContent;
+  };
+
+  test('üretici: sondaki birim <u>, Yunan harfi .ve-fp-sym — gerisi aynen', () => {
+    expect(_feadEtiket('Optimum [d/dk]')).toBe('Optimum <u>[d/dk]</u>');
+    expect(_feadEtiket('Ön yük — Pre-Load [Nm]')).toBe('Ön yük — Pre-Load <u>[Nm]</u>');
+    expect(_feadEtiket('Oluklu μ')).toBe('Oluklu <i class="ve-fp-sym">μ</i>');
+    expect(_feadEtiket('Kol ataleti')).toBe('Kol ataleti');
+    // Biçim etiketinin içine girmez, köşeli parantez ORTADA ise birim sayılmaz.
+    expect(_feadEtiket('θ<sub>kol</sub> açı [°]'))
+      .toBe('<i class="ve-fp-sym">θ</i><sub>kol</sub> açı <u>[°]</u>');
+    expect(_feadEtiket('[a] ile b')).toBe('[a] ile b');
+  });
+
+  test('bütün örnekler × bütün FEAD pencereleri: etiketin kendi metninde birim ve Yunan harfi YOK', () => {
+    let etiket = 0, birim = 0;
+    const kacak = [];
+    Object.keys(M.VE_FEAD_EXAMPLES).forEach((anahtar) => {
+      let dugumler;
+      try { dugumler = ornekKur(anahtar); } catch (e) { return; }
+      dugumler.forEach((n) => {
+        const d = componentDefs[n.type] || {};
+        const html = d.isFeadTensioner ? getFeadTensionerPropertiesHTML(n)
+          : d.isFeadPulley ? getFeadPulleyPropertiesHTML(n)
+          : d.isFeadSolver ? getFeadSolverPropertiesHTML(n)
+          : d.isFeadBelt ? getFeadBeltPropertiesHTML(n) : null;
+        if (html === null) return;
+        const kap = ciz(html);
+        kap.querySelectorAll('.ve-fp-l').forEach((l) => {
+          etiket++;
+          birim += l.querySelectorAll('u').length;
+          const t = ozMetin(l);
+          if (/\[|[µͰ-Ͽ]/.test(t)) kacak.push(n.type + ': ' + t.trim());
+        });
+      });
+    });
+    expect([...new Set(kacak)]).toEqual([]);
+    expect(etiket).toBeGreaterThan(500);       // süpürme gerçekten ölçüyor
+    expect(birim).toBeGreaterThan(100);
+  });
+
+  test('sürtünme kartının μ etiketleri simgeyi ayırıyor (sihirbaz da bu kartı basar)', () => {
+    const kap = ciz(veFeadSurtunmeHTML({}, () => 'void 0'));
+    const sym = [...kap.querySelectorAll('.ve-fp-l .ve-fp-sym')].map((e) => e.textContent);
+    expect(sym).toEqual(['μ', 'μ']);
+    kap.querySelectorAll('.ve-fp-l').forEach((l) => { expect(ozMetin(l)).not.toMatch(/[\u0370-\u03FF]/); });
+  });
+
+  test('CSS: birim ve simge büyük harfe DÖNMEZ', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf(sec + '{'); expect(i).toBeGreaterThan(0); return css.slice(i, css.indexOf('}', i)); };
+    expect(kural('.ve-fp-l u')).toMatch(/text-transform:\s*none/);
+    expect(kural('.ve-fp-l .ve-fp-sym')).toMatch(/text-transform:\s*none/);
+  });
+});
