@@ -622,7 +622,7 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
       html += veAgacOk(false);
       html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
-      html += '<span class="icon"><span class="mf-ico mf-ico-clipboard"></span></span><span style="font-weight:600; color:var(--accent-primary);">Detaylı rapor</span></span>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-clipboard"></span></span><span style="font-weight:600; color:var(--ink-accent);">Detaylı rapor</span></span>';
       html += '</div>';
       html += '<div class="ve-tree-children">';
       // Girdi Özeti group
@@ -662,7 +662,7 @@ function veUpdateResultsTree() {
       // Tam Gaz Hızlanma Raporu (TXT)
       html += '<div style="margin-top:2px;">';
       html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam gaz hızlanma TXT rapor önizleme">';
-      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Tam gaz hızlanma raporu (TXT)</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--ink-accent);">Tam gaz hızlanma raporu (TXT)</span></div>';
       html += '</div>';
       // Detay Matematik Hesapları (TXT) — hata avı / matematik doğrulama
       // Transfer kutusu (2+ kademe) varsa Yüksek/Düşük ayrı iz; yoksa tek iz.
@@ -695,7 +695,7 @@ function veUpdateResultsTree() {
         html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Topoloji raporu (TXT)</span></div>';
       }
       html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-yavaşlama TXT rapor önizleme">';
-      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-yavaşlama raporu (TXT)</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--ink-accent);">Hızlanma-yavaşlama raporu (TXT)</span></div>';
       html += '</div>';
     }
 
@@ -708,7 +708,7 @@ function veUpdateResultsTree() {
         html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Topoloji raporu (TXT)</span></div>';
       }
       html += '<div class="ve-tree-row" onclick="veRenderObstacleCrossingTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Engel atlama TXT rapor önizleme">';
-      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Engel atlama raporu (TXT)</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--ink-accent);">Engel atlama raporu (TXT)</span></div>';
       html += '</div>';
     }
   }
@@ -737,7 +737,7 @@ function veMntTreeReportHTML() {
   h += '<div class="ve-tree-row" onclick="veMntGenerateReport(null)" style="cursor:pointer; display:flex; align-items:center; gap:4px;" ' +
        'title="Takoz çökme-titreşim raporunu üret ve indir — modal frekanslar, KED, yük durumları ve uygunluk tabloları">';
   h += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span>' +
-       '<span style="font-weight:600; color:var(--accent-primary);">Takoz Çökme-Titreşim raporu (HTML)</span></div>';
+       '<span style="font-weight:600; color:var(--ink-accent);">Takoz Çökme-Titreşim raporu (HTML)</span></div>';
   h += '</div>';
   return h;
 }
@@ -1001,7 +1001,7 @@ function veRenderDetailedReport(filter) {
     motorDetailHTML += '<div id="dr-engine-crossV" class="dr-chart-crossV"></div>';
     motorDetailHTML += '<div id="dr-engine-crossH" class="dr-chart-crossH"></div>';
     motorDetailHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır  │  Çift Tık — Sıfırla</div>';
-    motorDetailHTML += '<span id="dr-engine-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEngineResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
+    motorDetailHTML += '<span id="dr-engine-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--ink-accent); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEngineResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     motorDetailHTML += '</div>';
   } else {
     motorDetailHTML = '<span style="color:var(--text-muted); font-style:italic;">Motor tork eğrisi verisi bulunamadı</span>';
@@ -1155,8 +1155,8 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Governed devir</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(_gov, 0) + ' rpm</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pompa düşümü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(_pDrop) + ' N·m</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Türbin limiti</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + veSayi(_tRating, 0) + ' N·m</td></tr>';
-    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş güç limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + veSayi(_rPowerAtGov, 0) + ' / ' + veSayi(_rGbLimits.grossInputPower) + ' kW ' + (_rc9ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
-    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş tork limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + veSayi(_rTorqueAtGov, 0) + ' / ' + veSayi(_rGbLimits.grossInputTorque) + ' N·m ' + (_rc10ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
+    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş güç limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--ink-danger)') + '; font-size:var(--fs-md);">' + veSayi(_rPowerAtGov, 0) + ' / ' + veSayi(_rGbLimits.grossInputPower) + ' kW ' + (_rc9ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
+    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş tork limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--ink-danger)') + '; font-size:var(--fs-md);">' + veSayi(_rTorqueAtGov, 0) + ' / ' + veSayi(_rGbLimits.grossInputTorque) + ' N·m ' + (_rc10ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
@@ -1175,13 +1175,13 @@ function veRenderDetailedReport(filter) {
       var stI = veIkon(r.status==='recommended' ? 'check'
         : (r.status==='caution' || r.status==='not-recommended') ? 'alert-triangle' : 'x');
       var stT = r.status==='recommended'?'Önerilen':r.status==='caution'?'Dikkat':r.status==='not-recommended'?'Önerilmez':'Uyumsuz';
-      var stC = r.status==='recommended'?'var(--accent-success)':r.status==='caution'?'var(--accent-warning)':r.status==='not-recommended'?'var(--accent-warning)':'var(--accent-danger)';
+      var stC = r.status==='recommended'?'var(--ink-success)':r.status==='caution'?'var(--ink-warning)':r.status==='not-recommended'?'var(--ink-warning)':'var(--ink-danger)';
       var td = function(v,c,al){return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:'+(al||'center')+'; color:'+(c||'var(--text-primary)')+';">'+v+'</td>';};
       ecmHTML += '<tr>';
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); white-space:nowrap;"><span style="font-weight:600; color:'+stC+'; font-size:var(--fs-tiny);">'+stI+' '+stT+'</span></td>';
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">'+r.name+'</td>';
-      ecmHTML += td(veSayi(r.stallTau, 2), null, 'right') + td(veSayi(r.stallSpeed, 0), null, 'right') + td(veSayi(r.minSpeed, 0), r.c5ok?'var(--text-primary)':'var(--accent-danger)', 'right');
-      ecmHTML += td(veSayi(r.tTurbineStall, 0), r.c7ok?'var(--text-primary)':'var(--accent-danger)', 'right') + td(veSayi(r.srGov, 3), r.c8ok?'var(--text-primary)':'var(--accent-warning)', 'right');
+      ecmHTML += td(veSayi(r.stallTau, 2), null, 'right') + td(veSayi(r.stallSpeed, 0), null, 'right') + td(veSayi(r.minSpeed, 0), r.c5ok?'var(--text-primary)':'var(--ink-danger)', 'right');
+      ecmHTML += td(veSayi(r.tTurbineStall, 0), r.c7ok?'var(--text-primary)':'var(--ink-danger)', 'right') + td(veSayi(r.srGov, 3), r.c8ok?'var(--text-primary)':'var(--ink-warning)', 'right');
       ecmHTML += td(r.c5ok ? veDurumIkon('ok') : veDurumIkon('err')) + td(r.c7ok ? veDurumIkon('ok') : veDurumIkon('err'))
                + td(r.c8ok ? veDurumIkon('ok') : veDurumIkon('warn'));
       ecmHTML += '</tr>';
@@ -1201,7 +1201,7 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '<div id="dr-ecm-chart-wrap" style="margin-top:14px; position:relative; max-width:800px; margin:0 auto; height:450px; border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-secondary); cursor:crosshair;">';
     ecmHTML += '<canvas id="dr-ecm-chart" style="width:100%; height:100%; display:block;"></canvas>';
     ecmHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ tık + sürükle — Kaydır</div>';
-    ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEcmResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
+    ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--ink-accent); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEcmResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     ecmHTML += '</div>';
   } else {
     ecmHTML = '<span style="color:var(--text-muted); font-style:italic;">Motor-TC eşleştirme verisi bulunamadı</span>';
@@ -2041,9 +2041,9 @@ function _drChartMouseMove(e) {
     });
     if(nearest && nearDist <= _DR_SNAP_DIST) {
       snapOk = true;
-      html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Eğim kabiliyeti</div>';
-      html += '<div>Hız: <b style="color:#60a5fa;">' + veSayi(nearest.x, 1) + '</b> km/h</div>';
-      html += '<div>Eğim: <b style="color:#60a5fa;">%' + veSayi(nearest.y, 1) + '</b></div>';
+      html = '<div style="font-weight:600; color:var(--text-heading); margin-bottom:3px;">Eğim kabiliyeti</div>';
+      html += '<div>Hız: <b style="color:var(--seri-1);">' + veSayi(nearest.x, 1) + '</b> km/h</div>';
+      html += '<div>Eğim: <b style="color:var(--seri-1);">%' + veSayi(nearest.y, 1) + '</b></div>';
       if(nearest.label) html += '<div style="border-top:1px solid rgba(255,255,255,0.15); margin-top:3px; padding-top:3px;">' + nearest.label + '</div>';
     }
   } else if(d.type === 'accel') {
@@ -2068,10 +2068,10 @@ function _drChartMouseMove(e) {
       var tVal = null, dValI = null;
       for(var ti = 0; ti < d.tp.length; ti++) { if(Math.abs(d.tp[ti].x - snapSpeed) < 0.01) { tVal = d.tp[ti].y; break; } }
       for(var di = 0; di < d.dp.length; di++) { if(Math.abs(d.dp[di].x - snapSpeed) < 0.01) { dValI = d.dp[di].y; break; } }
-      html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Hızlanma</div>';
-      html += '<div>Hız: <b style="color:#60a5fa;">' + veSayi(snapSpeed, 1) + '</b> km/h</div>';
-      if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + veSayi(tVal, 2) + '</b> s</div>';
-      if(dValI !== null) html += '<div>Mesafe: <b style="color:#8f3636;">' + veSayi(Math.round(dValI), 0) + '</b> m</div>';
+      html = '<div style="font-weight:600; color:var(--text-heading); margin-bottom:3px;">Hızlanma</div>';
+      html += '<div>Hız: <b style="color:var(--seri-1);">' + veSayi(snapSpeed, 1) + '</b> km/h</div>';
+      if(tVal !== null) html += '<div>Süre: <b style="color:var(--seri-1);">' + veSayi(tVal, 2) + '</b> s</div>';
+      if(dValI !== null) html += '<div>Mesafe: <b style="color:var(--seri-2);">' + veSayi(Math.round(dValI), 0) + '</b> m</div>';
     }
   } else if(d.type === 'distGrade') {
     // Hangi segmentte olduğunu bul
@@ -2082,11 +2082,11 @@ function _drChartMouseMove(e) {
       if(mx >= spx1 && mx <= spx2) {
         snapOk = true;
         var segLabel = veSayi(dps[si].xStart, 0) + ' — ' + veSayi(dps[si].xEnd, 0) + ' m';
-        html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
-        html += '<div>Mesafe: <b style="color:#60a5fa;">' + segLabel + '</b></div>';
-        html += '<div>Uzunluk: <b style="color:#60a5fa;">' + veSayi(dps[si].mesafe, 0) + '</b> m</div>';
+        html = '<div style="font-weight:600; color:var(--text-heading); margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
+        html += '<div>Mesafe: <b style="color:var(--seri-1);">' + segLabel + '</b></div>';
+        html += '<div>Uzunluk: <b style="color:var(--seri-1);">' + veSayi(dps[si].mesafe, 0) + '</b> m</div>';
         html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + veSayi(dps[si].grade, 1) + '</b></div>';
-        html += '<div>Δh: <b style="color:#60a5fa;">' + veSayi(dps[si].deltaH, 1) + '</b> m</div>';
+        html += '<div>Δh: <b style="color:var(--seri-1);">' + veSayi(dps[si].deltaH, 1) + '</b> m</div>';
         break;
       }
     }
@@ -2105,9 +2105,9 @@ function _drChartMouseMove(e) {
         }
       }
       var aptDistLabel = veSayi(aptXVal, 0) + ' m';
-      html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Rakım profili</div>';
-      html += '<div>Mesafe: <b style="color:#60a5fa;">' + aptDistLabel + '</b></div>';
-      html += '<div>Rakım: <b style="color:#b39ddb;">' + veSayi(aptElev, 1) + '</b> m</div>';
+      html = '<div style="font-weight:600; color:var(--text-heading); margin-bottom:3px;">Rakım profili</div>';
+      html += '<div>Mesafe: <b style="color:var(--seri-1);">' + aptDistLabel + '</b></div>';
+      html += '<div>Rakım: <b style="color:var(--seri-3);">' + veSayi(aptElev, 1) + '</b> m</div>';
     }
   }
 
@@ -2252,10 +2252,14 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   var validPwr = points.filter(function(p) { return p.grossPwr >= 0; });
   var validTrk = points.filter(function(p) { return p.grossTrk >= 0; });
   
-  drawLine(validPwr, getR, function(p){return p.grossPwr;}, pwrMin, pwrMax, '#3b82f6', []);
-  drawLine(validPwr, getR, function(p){return p.netPwr;}, pwrMin, pwrMax, '#3b82f6', [6,3]);
-  drawLine(validTrk, getR, function(p){return p.grossTrk;}, trkMin, trkMax, '#ef4444', []);
-  drawLine(validTrk, getR, function(p){return p.netTrk;}, trkMin, trkMax, '#ef4444', [6,3]);
+  // Eğri, kendi ekseninin etiketiyle AYNI jetondan (güç sol = --seri-1, tork
+  // sağ = --seri-2): eksen yazısı jetondan, eğri sabit #3b82f6/#ef4444'ten
+  // boyanıyordu — iki ayrı mavi, iki ayrı kırmızı.
+  var _cPwr = veThemeRgba('--seri-1', 1, '#2f6a9e'), _cTrk = veThemeRgba('--seri-2', 1, '#9a3b3b');
+  drawLine(validPwr, getR, function(p){return p.grossPwr;}, pwrMin, pwrMax, _cPwr, []);
+  drawLine(validPwr, getR, function(p){return p.netPwr;}, pwrMin, pwrMax, _cPwr, [6,3]);
+  drawLine(validTrk, getR, function(p){return p.grossTrk;}, trkMin, trkMax, _cTrk, []);
+  drawLine(validTrk, getR, function(p){return p.netTrk;}, trkMin, trkMax, _cTrk, [6,3]);
   
   // Restore from clip
   ctx.restore();
@@ -2299,8 +2303,8 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   
   // Legend
   var lx = margin.left + 14, ly = margin.top + 12;
-  [{color:'#3b82f6',dash:false,label:'Brüt güç (kW)'},{color:'#3b82f6',dash:true,label:'Net güç (kW)'},
-   {color:'#ef4444',dash:false,label:'Brüt tork (N·m)'},{color:'#ef4444',dash:true,label:'Net tork (N·m)'}
+  [{color:_cPwr,dash:false,label:'Brüt güç (kW)'},{color:_cPwr,dash:true,label:'Net güç (kW)'},
+   {color:_cTrk,dash:false,label:'Brüt tork (N·m)'},{color:_cTrk,dash:true,label:'Net tork (N·m)'}
   ].forEach(function(it, i) {
     var y = ly + i * 17;
     ctx.strokeStyle = it.color; ctx.lineWidth = 2.5; ctx.setLineDash(it.dash ? [6,3] : []);
@@ -2381,12 +2385,12 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
         if(dtN < bestPxDist) { bestPxDist = dtN; nearest = p; }
       });
       if(tip && nearest && bestPxDist <= _DR_SNAP_DIST) {
-        var html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Motor eğrisi</div>';
-        html += '<div>Devir: <b style="color:#60a5fa;">' + veSayi(nearest.rpm) + '</b> rpm</div>';
-        html += '<div style="color:#93c5fd;">Brüt güç: <b>' + veSayi(nearest.grossPwr, 1) + '</b> kW</div>';
-        html += '<div style="color:#93c5fd;">Net güç: <b>' + veSayi(nearest.netPwr, 1) + '</b> kW</div>';
-        html += '<div style="color:#fca5a5;">Brüt tork: <b>' + veSayi(nearest.grossTrk, 0) + '</b> N·m</div>';
-        html += '<div style="color:#fca5a5;">Net tork: <b>' + veSayi(nearest.netTrk, 0) + '</b> N·m</div>';
+        var html = '<div style="font-weight:600; color:var(--text-heading); margin-bottom:3px;">Motor eğrisi</div>';
+        html += '<div>Devir: <b style="color:var(--seri-1);">' + veSayi(nearest.rpm) + '</b> rpm</div>';
+        html += '<div style="color:var(--seri-1);">Brüt güç: <b>' + veSayi(nearest.grossPwr, 1) + '</b> kW</div>';
+        html += '<div style="color:var(--seri-1);">Net güç: <b>' + veSayi(nearest.netPwr, 1) + '</b> kW</div>';
+        html += '<div style="color:var(--seri-2);">Brüt tork: <b>' + veSayi(nearest.grossTrk, 0) + '</b> N·m</div>';
+        html += '<div style="color:var(--seri-2);">Net tork: <b>' + veSayi(nearest.netTrk, 0) + '</b> N·m</div>';
         tip.innerHTML = html;
         tip.classList.add('visible');
         var tw = tip.offsetWidth || 200;
@@ -4668,8 +4672,8 @@ function _ftBuildTable(steps) {
   for(var i = 0; i < steps.length; i++) {
     var s = steps[i];
     var borderTop = '';
-    var dpColor = s.dp < 0 ? 'color:var(--accent-danger);' : '';
-    var grColor = s.netGrade < 0 ? 'color:var(--accent-danger);' : '';
+    var dpColor = s.dp < 0 ? 'color:var(--ink-danger);' : '';
+    var grColor = s.netGrade < 0 ? 'color:var(--ink-danger);' : '';
     
     html += '<tr style="' + borderTop + '">';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:500; color:var(--text-primary);">' + s.gear + '</td>';
@@ -4681,7 +4685,7 @@ function _ftBuildTable(steps) {
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(s.wheelPower, 1) + '</td>';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; ' + grColor + '">' + veSayi(s.netGrade, 2) + '</td>';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:right; color:var(--text-primary);">' + veSayi(s.heatRejection, 2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--accent-primary); font-style:italic; font-size:var(--fs-tiny); white-space:nowrap;">' + (s.matchPoint || '') + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--ink-accent); font-style:italic; font-size:var(--fs-tiny); white-space:nowrap;">' + (s.matchPoint || '') + '</td>';
     html += '</tr>';
     prevGear = s.gear;
   }
@@ -4988,10 +4992,10 @@ function _ftUpshiftMouseMove(e) {
   }
 
   if(tooltip && best && bestPxDist <= _DR_SNAP_DIST) {
-    var ttHTML = '<span style="color:#fff; font-weight:600;">' + best.gear + '</span> — ' + veSayi(best.speed, 1) + ' km/h<br>';
-    ttHTML += '<span style="color:#7db3e8;">Motor:</span> ' + veSayi(Math.round(best.engineRPM), 0) + ' rpm<br>';
-    ttHTML += '<span style="color:#e88e8e;">Eğim:</span> %' + veSayi(best.netGrade, 2) + '<br>';
-    ttHTML += '<span style="color:#ccc;">TE:</span> ' + veSayi(best.te, 2) + ' kN  <span style="color:#ccc;">DP:</span> ' + veSayi(best.dp, 2) + ' kN';
+    var ttHTML = '<span style="color:var(--text-heading); font-weight:600;">' + best.gear + '</span> — ' + veSayi(best.speed, 1) + ' km/h<br>';
+    ttHTML += '<span style="color:var(--seri-1);">Motor:</span> ' + veSayi(Math.round(best.engineRPM), 0) + ' rpm<br>';
+    ttHTML += '<span style="color:var(--seri-2);">Eğim:</span> %' + veSayi(best.netGrade, 2) + '<br>';
+    ttHTML += '<span style="color:var(--text-muted);">TE:</span> ' + veSayi(best.te, 2) + ' kN  <span style="color:var(--text-muted);">DP:</span> ' + veSayi(best.dp, 2) + ' kN';
     tooltip.innerHTML = ttHTML;
     tooltip.classList.add('visible');
     var tx = mx + 14, ty = my - 10;

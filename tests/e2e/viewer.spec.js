@@ -912,3 +912,29 @@ test.describe('Açılır pencereler ESC ile kapanır', () => {
     await expect(page.locator('#ve-trace-merge-pop')).toHaveCount(0);
   });
 });
+
+// EKRANDAKİ YAZI OKUNUR (WCAG AA) — ölçüt MFSim'in yüzey taramasıyla aynı
+// (tests/helpers/kontrast-olcu.js). Görüntüleyici `css/`'i MFSim'le paylaşıyor:
+// Veri Gezgini'nde işaretsiz sinyal adı %62 opaklıkta 4,36:1, birimi 3,21:1;
+// içe aktarma sihirbazının "metin" etiketi ham vurguyla 4,19:1 kalıyordu.
+test('yazılar zemine karşı AA: boş durum, içe aktarma sihirbazı, şeritler, tablo', async ({ page }) => {
+  const { kontrastKur, kontrastOzet } = require('../helpers/kontrast-olcu.js');
+  await openViewer(page);
+  await kontrastKur(page);
+  const kotu = [];
+  // Geçiş (opacity .12 s) bitmeden ölçülmesin: yeni etkinleşen düğme yarı saydam yakalanıyordu.
+  const olc = async (yer) => {
+    await page.waitForTimeout(250);
+    (await page.evaluate(() => window.__kontrast('body'))).kotu.forEach((x) => kotu.push(Object.assign({ yer }, x)));
+  };
+  await olc('boş');
+  await importFixture(page, canoeXlsx(300));
+  await olc('sihirbaz');
+  await page.click('#ve-import-apply');
+  await page.waitForFunction(() => veResultSlots[0].sensors.length > 0, null, { timeout: 15000 });
+  await page.waitForTimeout(600);
+  await olc('şeritler');
+  await page.evaluate(() => veTrSetMode('table')); await page.waitForTimeout(500);
+  await olc('tablo');
+  expect(kontrastOzet(kotu)).toEqual([]);
+});

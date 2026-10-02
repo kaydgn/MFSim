@@ -17,7 +17,7 @@ function getSolverPropertiesHTML(node) {
   // Başlık
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-md); font-weight:700; color:var(--text-heading);">Çözücü ayarları</div>';
-  html += '<span style="font-size:var(--fs-micro); font-weight:600; color:#2e7d32; background:#2e7d3218; padding:2px 7px; border-radius:var(--radius-sm); border:1px solid #2e7d3230; letter-spacing:0.03em; text-transform:uppercase;" lang="en">MFSim</span>';   // Türkçe yerelde "MFSİM" yazılıyordu
+  html += '<span style="font-size:var(--fs-micro); font-weight:600; color:var(--ink-success); background:color-mix(in srgb, var(--accent-success) 10%, transparent); padding:2px 7px; border-radius:var(--radius-sm); border:1px solid color-mix(in srgb, var(--accent-success) 28%, transparent); letter-spacing:0.03em; text-transform:uppercase;" lang="en">MFSim</span>';   // Türkçe yerelde "MFSİM" yazılıyordu; renk temadan (sabit #2e7d32 4,28:1)
   html += '</div>';
 
   // İKİ SÜTUN: SOL = çözüm kümesi + yöntem/tolerans (girdi), SAĞ = referans + zincir + hesapla
@@ -157,18 +157,18 @@ function getSolverPropertiesHTML(node) {
     html += '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:3px;">';
     chain.forEach(function(n, i) {
       if(i > 0) html += '<span style="color:var(--text-muted); font-size:var(--fs-micro);">' + veIkon('arrow-right') + '</span>';
-      html += '<span style="color:var(--accent-primary); font-weight:500; background:var(--bg-tertiary); padding:1px 6px; border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:var(--fs-micro);">' + escapeHTML(n.customName || n.def.name) + '</span>';
+      html += '<span style="color:var(--ink-accent); font-weight:500; background:var(--bg-tertiary); padding:1px 6px; border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:var(--fs-micro);">' + escapeHTML(n.customName || n.def.name) + '</span>';
     });
     html += '</div>';
   } else {
-    html += '<span style="color:var(--accent-warning); font-size:var(--fs-micro);">Bağlantılardan zincir oluşturulamadı. Bileşenleri bağlayın.</span>';
+    html += '<span style="color:var(--ink-warning); font-size:var(--fs-micro);">Bağlantılardan zincir oluşturulamadı. Bileşenleri bağlayın.</span>';
   }
   
   html += '</div></div>';
   
   // ===== HESAPLA BUTONU =====
   html += '<div style="margin-top:14px;">';
-  html += '<button onclick="veSolverRunProfessional()" style="width:100%; padding:8px 12px; font-size:var(--fs-body); font-weight:600; background:linear-gradient(135deg, color-mix(in srgb, var(--accent-success) 65%, #000), color-mix(in srgb, var(--accent-success) 82%, #000)); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(27,94,32,0.25); transition:all 0.15s; letter-spacing:0.03em;" onmouseenter="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(27,94,32,0.35)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(27,94,32,0.25)\'">';
+  html += '<button onclick="veSolverRunProfessional()" style="width:100%; padding:8px 12px; font-size:var(--fs-body); font-weight:600; background:linear-gradient(135deg, color-mix(in srgb, var(--accent-success) 60%, #000), color-mix(in srgb, var(--accent-success) 72%, #000)); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(27,94,32,0.25); transition:all 0.15s; letter-spacing:0.03em;" onmouseenter="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(27,94,32,0.35)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(27,94,32,0.25)\'">';
   html += veIkon('play') + ' Hesapla';
   html += '</button>';
   html += '</div>';
@@ -341,13 +341,13 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   if (pk !== activeProfileKey && activeProfileKey !== selectedKey) {
-    html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:4px;">' + veIkon('star') + ' Canvas\'taki şanzıman profili: ' + (VE_FT_SHIFT_PROFILES[activeProfileKey] ? VE_FT_SHIFT_PROFILES[activeProfileKey].name : activeProfileKey) + '</div>';
+    html += '<div style="font-size:var(--fs-micro); color:var(--ink-warning); margin-top:4px;">' + veIkon('star') + ' Canvas\'taki şanzıman profili: ' + (VE_FT_SHIFT_PROFILES[activeProfileKey] ? VE_FT_SHIFT_PROFILES[activeProfileKey].name : activeProfileKey) + '</div>';
   }
   html += '</div>';
 
   // Governed RPM yoksa uyarı
   if (governed <= 0) {
-    html += '<div style="background:var(--accent-danger); color:white; border-radius:var(--radius-md); padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor Governed RPM tanımlı değil. Eşik hesaplamaları yapılamaz.</div>';
+    html += '<div style="background:var(--accent-danger); color:var(--on-danger); border-radius:var(--radius-md); padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor Governed RPM tanımlı değil. Eşik hesaplamaları yapılamaz.</div>';
     html += '</div>';
     return html;
   }
@@ -383,10 +383,10 @@ function getGearShiftPropertiesHTML(node) {
     thr1C2C = veSayi(ratio1C2C * shiftRefRPM, 0);
   }
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">1C → 2C</td>';
+  html += '<td style="font-weight:600; color:var(--ink-accent);">1C → 2C</td>';
   html += '<td><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model1C2C + '</span></td>';
   html += '<td style=" font-size:var(--fs-tiny);">' + formula1C2C + '</td>';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">' + thr1C2C + '</td>';
+  html += '<td style="font-weight:600; color:var(--ink-accent);">' + thr1C2C + '</td>';
   html += '</tr>';
 
   // 2C→2L
@@ -421,10 +421,10 @@ function getGearShiftPropertiesHTML(node) {
     thr2C2L = '—';
   }
   html += '<tr>';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">2C → 2L</td>';
+  html += '<td style="font-weight:600; color:var(--ink-accent);">2C → 2L</td>';
   html += '<td><span style="background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + model2C2L + '</span></td>';
   html += '<td style=" font-size:var(--fs-tiny);">' + formula2C2L + '</td>';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">' + thr2C2L + '</td>';
+  html += '<td style="font-weight:600; color:var(--ink-accent);">' + thr2C2L + '</td>';
   html += '</tr>';
 
   html += '</tbody></table>';
@@ -483,13 +483,13 @@ function getGearShiftPropertiesHTML(node) {
       var shiftLabel = luKey.replace(/(\d+L)(\d+L)/, '$1 → $2');
 
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
-      html += '<td style="font-weight:600; color:var(--accent-primary);">' + shiftLabel + '</td>';
+      html += '<td style="font-weight:600; color:var(--ink-accent);">' + shiftLabel + '</td>';
       html += '<td><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + modelType + '</span></td>';
       html += '<td>' + aVal + '</td>';
       html += '<td>' + bVal + '</td>';
       html += '<td style=" color:var(--text-muted);">' + capVal + '</td>';
       html += '<td>' + (typeof iGear === 'number' ? veSayi(iGear, 3) : iGear) + '</td>';
-      html += '<td style="font-weight:600; color:var(--accent-success);">' + veSayi(threshold, 0) + '</td>';
+      html += '<td style="font-weight:600; color:var(--ink-success);">' + veSayi(threshold, 0) + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table></div>';
@@ -560,13 +560,13 @@ function getGearShiftPropertiesHTML(node) {
       var dsLabel = dsKey.replace(/(\d+)to(\d+)/, '$1 → $2');
 
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
-      html += '<td style="font-weight:600; color:var(--accent-danger);">' + dsLabel + '</td>';
+      html += '<td style="font-weight:600; color:var(--ink-danger);">' + dsLabel + '</td>';
       html += '<td><span style="background:var(--bg-secondary); padding:1px 5px; border-radius:var(--radius-xs); font-size:var(--fs-micro);">' + dsModelType + '</span></td>';
       html += '<td>' + dsAVal + '</td>';
       html += '<td>' + dsBVal + '</td>';
       html += '<td style=" color:var(--text-muted);">' + dsCapVal + '</td>';
-      html += '<td style="font-weight:600; color:var(--accent-danger);">' + veSayi(dsThr, 0) + '</td>';
-      html += '<td style="font-weight:500; color:var(--accent-warning);">' + hysteresis + '</td>';
+      html += '<td style="font-weight:600; color:var(--ink-danger);">' + veSayi(dsThr, 0) + '</td>';
+      html += '<td style="font-weight:500; color:var(--ink-warning);">' + hysteresis + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table></div>';
@@ -582,7 +582,7 @@ function getGearShiftPropertiesHTML(node) {
   var mathStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); margin-bottom:6px;';
 
   html += '<div style="' + mathStyle + '">';
-  html += '<span style="color:var(--accent-primary); font-weight:600;">Lineer model:</span><br>';
+  html += '<span style="color:var(--ink-accent); font-weight:600;">Lineer model:</span><br>';
   html += '  N<sub>out</sub> = a × ESL + b<br>';
   html += '  a ≈ 1/i<sub>gear</sub> (eğim, vites oranının tersi)<br>';
   html += '  b = zamanlama ofseti (+ erken, − geç)<br>';
@@ -590,13 +590,13 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   html += '<div style="' + mathStyle + '">';
-  html += '<span style="color:var(--accent-warning); font-weight:600;">minCap koruması:</span><br>';
+  html += '<span style="color:var(--ink-warning); font-weight:600;">minCap koruması:</span><br>';
   html += '  thr = max(a × ESL + b, minCap)<br>';
   html += '  Düşük ESL\'de formül çok düşük çıkarsa minCap devreye girer';
   html += '</div>';
 
   html += '<div style="' + mathStyle + '">';
-  html += '<span style="color:var(--accent-danger); font-weight:600;">Parçalı lineer (piecewise):</span><br>';
+  html += '<span style="color:var(--ink-danger); font-weight:600;">Parçalı lineer (piecewise):</span><br>';
   html += '  ESL ≤ breakpoint → a<sub>low</sub> × ESL + b<sub>low</sub><br>';
   html += '  ESL &gt; breakpoint → a<sub>high</sub> × ESL + b<sub>high</sub>';
   html += '</div>';
@@ -623,31 +623,31 @@ function getGearShiftPropertiesHTML(node) {
   html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, i_gear, current_gear, mode</span>\n';
   html += '<span style="color:var(--text-muted);">ESL = ' + veSayi(shiftRefRPM) + ' rpm (Shift Referans)</span>\n\n';
 
-  html += '<span style="color:var(--accent-warning); font-weight:600;">── CONVERTER MODU ──</span>\n\n';
-  html += '<span style="color:var(--accent-primary);">1C → 2C (F1 → F2, converter):</span>\n';
+  html += '<span style="color:var(--ink-warning); font-weight:600;">── CONVERTER MODU ──</span>\n\n';
+  html += '<span style="color:var(--ink-accent);">1C → 2C (F1 → F2, converter):</span>\n';
   html += '  N_out = N_engine × SR / i_F1\n';
   html += '  Koşul: N_out ≥ ' + thr1C2C + ' rpm\n\n';
-  html += '<span style="color:var(--accent-primary);">2C → 2L (lockup kilitleme):</span>\n';
+  html += '<span style="color:var(--ink-accent);">2C → 2L (lockup kilitleme):</span>\n';
   html += '  N_out = N_engine × SR / i_F2\n';
   html += '  Koşul: N_out ≥ ' + thr2C2L + ' rpm\n\n';
 
-  html += '<span style="color:var(--accent-warning); font-weight:600;">── LOCKUP MODU ──</span>\n\n';
-  html += '<span style="color:var(--accent-primary);">Upshift (2L → 3L → ... → 6L):</span>\n';
+  html += '<span style="color:var(--ink-warning); font-weight:600;">── LOCKUP MODU ──</span>\n\n';
+  html += '<span style="color:var(--ink-accent);">Upshift (2L → 3L → ... → 6L):</span>\n';
   html += '  N_out = N_engine / i_gear  (SR = 1,0)\n';
   html += '  Koşul: N_out ≥ a × ESL + b\n';
   html += '  Shift sonrası: N_eng_yeni = N_eng × (i_eski / i_yeni)\n\n';
 
   if (dsThresholds) {
-    html += '<span style="color:var(--accent-danger);">Downshift (6 → 5 → ... → 2 → 1C):</span>\n';
+    html += '<span style="color:var(--ink-danger);">Downshift (6 → 5 → ... → 2 → 1C):</span>\n';
     html += '  N_out = N_engine / i_gear\n';
     html += '  Koşul: N_out &lt; downshift eşiği\n';
     html += '  2L → 1C: Converter moduna geri dön\n\n';
   }
 
-  html += '<span style="color:var(--accent-warning); font-weight:600;">── SHIFT SIRASI ──</span>\n\n';
-  html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>';
+  html += '<span style="color:var(--ink-warning); font-weight:600;">── SHIFT SIRASI ──</span>\n\n';
+  html += '<span style="color:var(--ink-accent); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>';
   if (dsThresholds) {
-    html += '\n<span style="color:var(--accent-danger); font-weight:600;">6L → 5L → 4L → 3L → 2L → 1C</span> (yavaşlama)';
+    html += '\n<span style="color:var(--ink-danger); font-weight:600;">6L → 5L → 4L → 3L → 2L → 1C</span> (yavaşlama)';
   }
   html += '</div>';
 

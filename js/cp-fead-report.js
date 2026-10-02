@@ -270,7 +270,7 @@ function veFeadGenerateReport(nodeId, turSec){
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
   if(!R || !R.ok){
-    _frStatus('Rapor üretilemedi: model çözülmemiş. Önce FEAD araçları → Hesapla.', 'var(--accent-warning)');
+    _frStatus('Rapor üretilemedi: model çözülmemiş. Önce FEAD araçları → Hesapla.', 'var(--ink-warning)');
     if(typeof showToast === 'function') showToast('Önce FEAD araçları penceresinden Hesapla ile modeli çözün.', 'warning');
     return null;
   }

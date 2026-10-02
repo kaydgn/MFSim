@@ -698,7 +698,7 @@ function veShowTabMenu(e, idx) {
       return;
     }
     var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--fs-body);cursor:pointer;color:' + (item.danger ? 'var(--accent-danger)' : 'var(--text-primary)') + ';transition:background 0.12s;';
+    el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--fs-body);cursor:pointer;color:' + (item.danger ? 'var(--ink-danger)' : 'var(--text-primary)') + ';transition:background 0.12s;';
     el.innerHTML = '<span class="mf-ico mf-ico-' + item.icon + '"></span><span>' + item.label + '</span>';
     el.onmouseover = function() { this.style.background = item.danger ? 'color-mix(in srgb, var(--accent-danger) 15%, transparent)' : 'var(--bg-tertiary)'; };
     el.onmouseout = function() { this.style.background = 'transparent'; };

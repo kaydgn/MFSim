@@ -986,7 +986,7 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   html += '<div style="font-size:var(--fs-body);color:var(--text-secondary);margin-bottom:8px;">' + axisInfo + '</div>';
   html += '<div style="font-size:var(--fs-body);line-height:1.5;color:var(--text-primary);border-top:1px solid var(--border-color);padding-top:10px;">' + d.significance + '</div>';
   if(d.note) {
-    html += '<div style="font-size:var(--fs-body);color:var(--accent-warning);margin-top:8px;padding:6px 8px;background:color-mix(in srgb, var(--accent-warning) 8%, transparent);border-radius:var(--radius-sm);">' + veIkon('alert-triangle') + ' ' + d.note + '</div>';
+    html += '<div style="font-size:var(--fs-body);color:var(--ink-warning);margin-top:8px;padding:6px 8px;background:color-mix(in srgb, var(--accent-warning) 8%, transparent);border-radius:var(--radius-sm);">' + veIkon('alert-triangle') + ' ' + d.note + '</div>';
   }
   html += '</div></div>';
   ov.innerHTML = html;

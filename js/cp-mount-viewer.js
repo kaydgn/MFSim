@@ -385,7 +385,7 @@ function veMountViewerUpdate(){
     box.position.copy(_mntW(x,y,z));
     var kInfo='';
     if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:var(--text-muted);">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
-    box.userData={ info:'<b style="color:var(--accent-success);">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
+    box.userData={ info:'<b style="color:var(--ink-success);">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
       +'<br><span style="color:var(--text-muted);">Konum (mm):</span> '+veSayi(x, 1)+' · '+veSayi(y, 1)+' · '+veSayi(z, 1)+kInfo };
     V.group.add(box);
     if(hasCG){
@@ -404,7 +404,7 @@ function veMountViewerUpdate(){
     var s=new THREE.Mesh(new THREE.SphereGeometry(r,18,18),
       _mntViewerMarkerMat('--accent-warning', '#f59e0b', 20));
     s.position.copy(_mntW(x,y,z));
-    s.userData={ info:'<b style="color:var(--accent-warning);">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
+    s.userData={ info:'<b style="color:var(--ink-warning);">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
       +'<br><span style="color:var(--text-muted);">Kütle:</span> '+(m>0?veSayi(m, 1)+' kg':'—')
       +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+veSayi(x, 1)+' · '+veSayi(y, 1)+' · '+veSayi(z, 1) };
     V.group.add(s);
@@ -415,7 +415,7 @@ function veMountViewerUpdate(){
     var cgm=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
       _mntViewerMarkerMat('--accent-danger', '#ef4444', 80));
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
-    cgm.userData={ info:'<b style="color:var(--accent-danger);">Birleşik ağırlık merkezi</b>'
+    cgm.userData={ info:'<b style="color:var(--ink-danger);">Birleşik ağırlık merkezi</b>'
       +'<br><span style="color:var(--text-muted);">Toplam kütle:</span> '+veSayi(mSum, 1)+' kg'
       +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+veSayi(cg[0], 1)+' · '+veSayi(cg[1], 1)+' · '+veSayi(cg[2], 1) };
     V.group.add(cgm);

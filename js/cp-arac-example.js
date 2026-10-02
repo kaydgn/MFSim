@@ -288,13 +288,13 @@ function getApExamplePropertiesHTML(node){
 
   left += '<div style="margin-bottom:12px;">';
   left += '<div style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); line-height:1.25;">' + _apEsc(ex.vehicle) + '</div>';
-  if(ex.subtitle) left += '<div style="font-size:var(--fs-tiny); color:var(--accent-primary); font-weight:600; margin-top:2px;">' + _apEsc(ex.subtitle) + '</div>';
+  if(ex.subtitle) left += '<div style="font-size:var(--fs-tiny); color:var(--ink-accent); font-weight:600; margin-top:2px;">' + _apEsc(ex.subtitle) + '</div>';
   if(ex.description) left += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5; margin-top:7px;">' + _apEsc(ex.description) + '</div>';
   left += '</div>';
 
   if(ex.warning){
     left += '<div style="padding:8px 10px; margin-bottom:12px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-warning);">'
-         +  '<b style="color:var(--accent-warning);">Dikkat.</b> ' + _apEsc(ex.warning) + '</div>';
+         +  '<b style="color:var(--ink-warning);">Dikkat.</b> ' + _apEsc(ex.warning) + '</div>';
   }
 
   var specs = ex.specs || [];
@@ -308,7 +308,7 @@ function getApExamplePropertiesHTML(node){
     left += '</table>';
   }
 
-  left += '<button onclick="veApLoadExample(\'' + nid + '\')" style="width:100%; padding:11px 14px; font-size:var(--fs-md); font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">' + veIkon('play') + ' Örneği aktar</button>';
+  left += '<button onclick="veApLoadExample(\'' + nid + '\')" style="width:100%; padding:11px 14px; font-size:var(--fs-md); font-weight:700; background:var(--accent-warning); color:var(--on-warning); border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">' + veIkon('play') + ' Örneği aktar</button>';
   left += '<button onclick="veApExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">' + veIkon('download') + ' İç topolojiyi JSON dışa aktar</button>';
 
   var right = '';

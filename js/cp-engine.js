@@ -198,14 +198,17 @@ function getEnginePropertiesHTML(node) {
     sheetHtml += '<colgroup><col class="c-n"><col class="c-a"><col class="c-b"><col class="c-c">' +
                  '<col class="c-d"><col class="c-e"><col class="c-f"><col class="c-x"></colgroup>';
     sheetHtml += '<thead><tr><th class="n"> </th>';
-    [ {t:'A devir',   u:'rpm', c:'var(--text-secondary)'},
-      {t:'B brüt T',  u:'Nm',  c:'var(--text-secondary)'},
-      {t:'C brüt P',  u:'kW',  c:'var(--text-secondary)'},
+    // SÜTUNUN KİMLİĞİ ALTINDAKİ ÇİZGİDE, yazı nötr (föy kuralı: renk yazıda
+    // değil işarette). Seri rengi METİN olarak başlık zemininde 2,26–2,94:1
+    // kalıyordu; çizgi grafikteki eğrinin rengini taşır.
+    [ {t:'A devir',   u:'rpm'},
+      {t:'B brüt T',  u:'Nm'},
+      {t:'C brüt P',  u:'kW'},
       {t:'D kayıp ƒ', u:'kW',  c:'var(--accent-warning)'},
-      {t:'E net T ƒ', u:'Nm',  c:VE_ENG_C.seri1},
-      {t:'F net P ƒ', u:'kW',  c:VE_ENG_C.seri2}
+      {t:'E net T ƒ', u:'Nm',  c:'var(--seri-1)'},
+      {t:'F net P ƒ', u:'kW',  c:'var(--seri-2)'}
     ].forEach(function(c) {
-      sheetHtml += '<th style="color:' + c.c + ';">' + c.t +
+      sheetHtml += '<th style="color:var(--text-secondary);' + (c.c ? ' box-shadow:inset 0 -2px 0 ' + c.c + ';' : '') + '">' + c.t +
                    '<div style="font-weight:400; font-size:var(--fs-micro); color:var(--text-muted);">' + c.u + '</div></th>';
     });
     sheetHtml += '<th></th></tr></thead><tbody id="ve-motor-table-' + node.id + '">';
@@ -257,8 +260,8 @@ function getEnginePropertiesHTML(node) {
   chartHtml += '<div class="sw-pkg-body">';
   chartHtml += '<canvas id="ve-motor-chart-' + node.id + '" style="width:100%; height:200px; background:var(--bg-input);"></canvas>';
   chartHtml += '<div style="display:flex; justify-content:center; gap:16px; margin-top:6px; font-size:var(--fs-micro);">';
-  chartHtml += '<span style="color:#4aa3ff;"><span class="ve-lejant-nokta"></span>Tork [Nm]</span>';
-  chartHtml += '<span style="color:#ff6b6b;"><span class="ve-lejant-nokta"></span>Güç [kW]</span>';
+  chartHtml += '<span><span class="ve-lejant-nokta" style="color:var(--seri-1);"></span>Tork [Nm]</span>';
+  chartHtml += '<span><span class="ve-lejant-nokta" style="color:var(--seri-2);"></span>Güç [kW]</span>';
   chartHtml += '</div>';
   // Etkileşim ipucu GERÇEK METİN olarak (canvas bitmap'indeki ipucu seçilemez,
   // çevrilemez ve ekran okuyucuya görünmez) — bkz. js/panel-chart.js
@@ -336,7 +339,7 @@ function getEnginePropertiesHTML(node) {
     accHtml += '<tr class="top">';
     accHtml += '<td class="lbl">Toplam</td>';
     accHtml += '<td id="ve-acc-total-std-' + node.id + '" style="color:var(--text-muted);">' + veSayi(totalStd, 1) + '</td>';
-    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="color:var(--accent-warning);">' + veSayi(totalUser, 1) + '</td>';
+    accHtml += '<td id="ve-acc-total-user-' + node.id + '" style="color:var(--ink-warning);">' + veSayi(totalUser, 1) + '</td>';
     accHtml += '</tr>';
     accHtml += '</tbody></table>';
     // "Kayıpları Uygula" doğrulama sütununa taşındı — sonucu orada okunuyor.
@@ -349,7 +352,7 @@ function getEnginePropertiesHTML(node) {
     // Governed devirdeki toplam aksesuar kaybı (eğrili/manuel/legacy — tek kaynak).
     var lossAtGoverned = veCalcAccLossAtRPM(accData, initGoverned, initGoverned);
     netHtml += '<div class="sw-section-title" style="display:flex; justify-content:space-between;">Doğrulama' +
-               '<span id="ve-net-badge-' + node.id + '" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--accent-warning);">−' +
+               '<span id="ve-net-badge-' + node.id + '" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-warning);">−' +
                veSayi(lossAtGoverned, 1) + ' kW @ ' + veSayi(initGoverned, 0) + '</span></div>';
 
     netHtml += '<div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:4px;">';
@@ -357,8 +360,8 @@ function getEnginePropertiesHTML(node) {
     netHtml += '</div>';
     netHtml += '<div style="display:flex; gap:10px; justify-content:center; font-size:var(--fs-micro); color:var(--text-muted);">';
     netHtml += '<span>┅ brüt</span>';
-    netHtml += '<span style="color:' + VE_ENG_C.seri1 + ';"><span class="ve-lejant-nokta"></span>net tork [Nm]</span>';
-    netHtml += '<span style="color:' + VE_ENG_C.seri2 + ';"><span class="ve-lejant-nokta"></span>net güç [kW]</span>';
+    netHtml += '<span><span class="ve-lejant-nokta" style="color:var(--seri-1);"></span>net tork [Nm]</span>';
+    netHtml += '<span><span class="ve-lejant-nokta" style="color:var(--seri-2);"></span>net güç [kW]</span>';
     netHtml += '</div>';
     // Etkileşim ipucu GERÇEK METİN olarak (bkz. js/panel-chart.js)
     netHtml += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45;">' +
@@ -446,10 +449,10 @@ function getEnginePropertiesHTML(node) {
                 (peakSum ? veSayi(peakSum.grossPower, 1) : '—') + '</span> kW');
     headHtml += '<span style="color:var(--text-muted);">−</span>';   // metin: denklemin işlemi (brüt − aksesuar = net)
     headHtml += _fig('Aksesuar', '<span id="ve-eng-m-loss2-' + node.id + '">' +
-                (peakSum ? veSayi(peakSum.loss, 1) : '—') + '</span> kW', 'var(--accent-warning)');
+                (peakSum ? veSayi(peakSum.loss, 1) : '—') + '</span> kW', 'var(--ink-warning)');
     headHtml += '<span style="color:var(--text-muted);">=</span>';
     headHtml += _fig('Net tepe', '<span id="ve-eng-m-np2-' + node.id + '">' +
-                (peakSum ? veSayi(peakSum.netPower, 1) : '—') + '</span> kW', VE_ENG_C.seri2);
+                (peakSum ? veSayi(peakSum.netPower, 1) : '—') + '</span> kW', 'var(--text-heading)');
     headHtml += '<span style="color:var(--text-muted);">@ <span id="ve-eng-m-rpm2-' + node.id + '">' +
                 (peakSum ? veSayi(peakSum.rpm, 0) : '—') + '</span> rpm</span>';
     headHtml += '</div>';
@@ -2018,15 +2021,17 @@ function veEngSheetRowHTML(nodeId, idx, rpm, torque, power, accData, governed) {
     return '<td class="in"><input type="text" inputmode="decimal" value="' + v(val) +
            '" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
   };
-  var fCell = function(color, val) {
-    return '<td class="f" style="color:' + color + ';">' + (hasRpm ? val : '—') + '</td>';
+  // Türetilen (ƒ) hücre: sayı mürekkepte, ikincil tonda — rengi sütun
+  // başlığının çizgisi taşır. Seri rengiyle yazılan sayı 2,77–2,94:1'di.
+  var fCell = function(val) {
+    return '<td class="f" style="color:var(--text-secondary);">' + (hasRpm ? val : '—') + '</td>';
   };
   var h = '<tr>';
   h += '<td class="n">' + idx + '</td>';
   h += inCell(rpm) + inCell(torque) + inCell(power);
-  h += fCell('var(--accent-warning)', veSayi(loss, 1));
-  h += fCell(VE_ENG_C.seri1, veSayi(netT, 1));
-  h += fCell(VE_ENG_C.seri2, veSayi(netP, 1));
+  h += fCell(veSayi(loss, 1));
+  h += fCell(veSayi(netT, 1));
+  h += fCell(veSayi(netP, 1));
   h += '<td style="text-align:center;"><button class="ve-row-del" onclick="removeVEMotorRow(this, \'' +
        nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   return h + '</tr>';
@@ -2538,13 +2543,20 @@ function onVEFTSpecChange(nodeId) {
 // Grafik paleti — iki motor grafiği AYNI iki büyüklüğü çiziyor (tork/güç) ama
 // biri mavi+kırmızı, öteki yeşil+somon kullanıyordu. Tek palet: tork = seri-1,
 // güç = seri-2. EKSEN ve ETİKET renkleri nötr; renk YALNIZ eğride.
+// Renkler TEMADAN, çizim anında (tuval `var()` çözemez → `veThemeRgba`).
+// Sabit palet açık temada okunmuyordu: eksen sayıları #8b949e beyaz zeminde
+// 2,9:1, tork/güç yazıları 2,3–2,9:1; lejant (HTML) ile eğri de iki ayrı
+// paletten boyanıyordu. Yedek değerler açık temanın jetonları.
+function _veEngRenk(jeton, alfa, yedek) {
+  return (typeof veThemeRgba === 'function') ? veThemeRgba(jeton, alfa, yedek) : yedek;
+}
 var VE_ENG_C = {
-  seri1:  '#5b95fb',   // tork
-  seri2:  '#e0725f',   // güç
-  eksen:  '#5a6472',   // eksen çizgisi (nötr)
-  etiket: '#8b949e',   // eksen sayıları (nötr)
-  izgara: '#2a3140',   // ızgara
-  governed: '#d97706'  // governed devri kılavuz çizgisi (amber)
+  get seri1()    { return _veEngRenk('--seri-1', 1, '#2f6a9e'); },         // tork
+  get seri2()    { return _veEngRenk('--seri-2', 1, '#9a3b3b'); },         // güç
+  get eksen()    { return _veEngRenk('--border-hover', 1, '#aca598'); },   // eksen çizgisi (nötr)
+  get etiket()   { return _veEngRenk('--text-muted', 1, '#676055'); },     // eksen sayıları (nötr)
+  get brut()     { return _veEngRenk('--text-muted', 0.55, 'rgba(103,96,85,0.55)'); },  // brüt eğri (kesik)
+  get governed() { return _veEngRenk('--ink-warning', 1, '#6d5310'); }     // governed devri kılavuzu
 };
 
 // Net tepe gücün okunduğu devirdeki brüt/kayıp/net üçlüsü. Özet şeridinin
@@ -3035,8 +3047,8 @@ function updateVENetChart(nodeId) {
   
   // Brüt eğriler: NÖTR kesik çizgi. Renk yalnız net serilerde kalsın —
   // brüt/net aynı paletle çizilince hangisinin çözücüye girdiği okunmuyordu.
-  drawLine(grossTorque, yScaleT, 'rgba(117,132,157,0.55)', 1.2, [4,3]);
-  drawLine(grossPower, yScaleP, 'rgba(117,132,157,0.55)', 1.2, [4,3]);
+  drawLine(grossTorque, yScaleT, VE_ENG_C.brut, 1.2, [4,3]);
+  drawLine(grossPower, yScaleP, VE_ENG_C.brut, 1.2, [4,3]);
 
   // Net eğriler (düz çizgi, parlak)
   drawLine(netTorque, yScaleT, VE_ENG_C.seri1, 1.5);
@@ -3072,17 +3084,19 @@ function updateVENetChart(nodeId) {
         var gT = vePcInterpY(grossTorque, rpm), nT = vePcInterpY(netTorque, rpm);
         var gP = vePcInterpY(grossPower, rpm),  nP = vePcInterpY(netPower, rpm);
         if(nT === null && nP === null) return null;
+        // Brüt satırı SOLUK ama okunur: opaklık değil soluk metin jetonu
+        // (opacity .65 soluk jetonu 3:1'in altına indiriyordu).
         var line = function(label, color, val, unit, dim) {
-          return '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;' + (dim ? ' opacity:0.65;' : '') + '">' +
+          return '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;' + (dim ? ' color:var(--text-muted);' : '') + '">' +
                  '<span style="width:14px;height:3px;background:' + color + ';border-radius:1px;"></span>' +
-                 '<span style="color:' + color + '; font-weight:600; min-width:58px;">' + label + '</span>' +
+                 '<span style="color:' + (dim ? 'var(--text-muted)' : color) + '; font-weight:600; min-width:58px;">' + label + '</span>' +
                  '<span>' + val + ' ' + unit + '</span></div>';
         };
         var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px;' +
                 ' padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + veSayi(rpm, 0) + ' rpm</div>';
-        if(gT !== null) h += line('Brüt tork', VE_ENG_C.etiket, veSayi(gT, 0), 'N·m', true);
+        if(gT !== null) h += line('Brüt tork', VE_ENG_C.brut,   veSayi(gT, 0), 'N·m', true);
         if(nT !== null) h += line('Net tork',  VE_ENG_C.seri1,  veSayi(nT, 0), 'N·m');
-        if(gP !== null) h += line('Brüt güç',  VE_ENG_C.etiket, veSayi(gP, 1), 'kW', true);
+        if(gP !== null) h += line('Brüt güç',  VE_ENG_C.brut,   veSayi(gP, 1), 'kW', true);
         if(nP !== null) h += line('Net güç',   VE_ENG_C.seri2,  veSayi(nP, 1), 'kW');
         return h;
       }
@@ -3131,7 +3145,7 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
         torqueCoeffs
       );
       
-      html += '<b style="color:#4aa3ff;">Tork [Nm]</b> (' + torqueCoeffs.length + '. derece)';
+      html += '<b style="color:var(--seri-1);">Tork [Nm]</b> (' + torqueCoeffs.length + '. derece)';
       html += ' <span style="color:var(--text-muted);">R²=' + veSayi(torqueR2, 4) + '</span><br>';
       html += '<span style="font-size:var(--fs-tiny);">T(n) = ' + formatVEPolynomial(torqueCoeffs) + '</span>';
     }
@@ -3151,7 +3165,7 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
           powerCoeffs
         );
         
-        html += '<br><b style="color:#ff6b6b;">Güç [kW]</b> (' + powerCoeffs.length + '. derece)';
+        html += '<br><b style="color:var(--seri-2);">Güç [kW]</b> (' + powerCoeffs.length + '. derece)';
         html += ' <span style="color:var(--text-muted);">R²=' + veSayi(powerR2, 4) + '</span><br>';
         html += '<span style="font-size:var(--fs-tiny);">P(n) = ' + formatVEPolynomial(powerCoeffs) + '</span>';
       }

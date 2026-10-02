@@ -142,7 +142,7 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
     '</div>' +
     '<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">' +
       '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;font-size:var(--fs-lg);">İptal</button>' +
-      '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--fs-lg);font-weight:600;">Kaydet</button>' +
+      '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary);color:var(--on-accent);border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--fs-lg);font-weight:600;">Kaydet</button>' +
     '</div>';
 
   overlay.appendChild(modal);

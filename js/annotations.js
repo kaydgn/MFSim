@@ -299,7 +299,7 @@ function showAnnotationContextMenu(e, annot) {
   }
 
   items += '<div class="ve-menu-divider"></div>';
-  items += '<div class="ve-menu-item" data-action="delete" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-trash"></span> Sil</div>';
+  items += '<div class="ve-menu-item" data-action="delete" style="color:var(--ink-danger);"><span class="mf-ico mf-ico-trash"></span> Sil</div>';
 
   menu.innerHTML = items;
   document.body.appendChild(menu);

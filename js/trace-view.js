@@ -2427,7 +2427,7 @@ function veTrIzAraclari(slot, n, zoomed) {
     var logOn = veTrXLogOn(slot, _xArr);
     h += '<button type="button" class="ve-trace-btn" data-act="xlog"' +
          ' aria-pressed="' + (logOn ? 'true' : 'false') + '"' +
-         (logOn ? ' style="color:var(--accent-primary);border-color:var(--accent-primary);"' : '') +
+         (logOn ? ' style="color:var(--ink-accent);border-color:var(--accent-primary);"' : '') +
          ' title="' + (logOn
             ? 'Logaritmik X ekseni açık — lineer eksene geç'
             : 'X eksenini logaritmik yap (geniş frekans aralığı okunur hâle gelir)') +
@@ -2441,7 +2441,7 @@ function veTrIzAraclari(slot, n, zoomed) {
     var yOn = !!slot.yLog;
     h += '<button type="button" class="ve-trace-btn" data-act="ylog"' +
          ' aria-pressed="' + (yOn ? 'true' : 'false') + '"' +
-         (yOn ? ' style="color:var(--accent-primary);border-color:var(--accent-primary);"' : '') +
+         (yOn ? ' style="color:var(--ink-accent);border-color:var(--accent-primary);"' : '') +
          ' title="' + (yOn
             ? 'Logaritmik Y ekseni açık — lineer eksene geç'
             : 'Y eksenini logaritmik yap (küçük değerler de okunur hâle gelir)') +

@@ -67,7 +67,7 @@ function veSolverRunProfessional() {
   var header = document.createElement('div');
   header.className = 've-settings-header';
   header.innerHTML = '<span><span class="mf-ico mf-ico-play"></span> Çözücü</span>' +
-    '<button id="ve-solver-log-dl" type="button" title="Çözüm LOG\'unu indir" style="display:none;height:22px;box-sizing:border-box;margin-right:4px;padding:0 8px;font-size:var(--fs-tiny);font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-download"></span> LOG</button>' +
+    '<button id="ve-solver-log-dl" type="button" title="Çözüm LOG\'unu indir" style="display:none;height:22px;box-sizing:border-box;margin-right:4px;padding:0 8px;font-size:var(--fs-tiny);font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--ink-accent)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-download"></span> LOG</button>' +
     '<button id="ve-solver-modal-close" class="ve-settings-close" type="button" title="Kapat" aria-label="Kapat" style="display:none;" onclick="document.getElementById(\'ve-solver-modal-overlay\').remove()"><span class="mf-ico mf-ico-x"></span></button>';
   modal.appendChild(header);
   
@@ -76,7 +76,7 @@ function veSolverRunProfessional() {
   progressWrap.style.cssText = 'padding:8px 14px 6px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);';
   progressWrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">' +
     '<span id="ve-sp-phase" style="font-size:var(--fs-body);font-weight:600;color:var(--text-heading);letter-spacing:0.02em;">Başlatılıyor...</span>' +
-    '<span id="ve-sp-percent" style="font-size:var(--fs-body);font-weight:700;color:var(--accent-primary);">0%</span>' +
+    '<span id="ve-sp-percent" style="font-size:var(--fs-body);font-weight:700;color:var(--ink-accent);">0%</span>' +
   '</div>' +
   '<div style="width:100%;height:3px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;">' +
     '<div id="ve-sp-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#1b6a2a,#35a050);transition:width 0.3s ease;"></div>' +
@@ -131,17 +131,21 @@ function veSolverRunProfessional() {
     if(phase) phaseEl.textContent = phase;
   }
   
+  // Satır renkleri TEMADAN, metin sürümleriyle (--ink-*): sabit #c88a20 ve
+  // #2e9e44 günlüğün zemininde (--bg-tertiary) 2,27 ve 2,65:1 kalıyordu.
+  // Bilgi satırı bir alt başlık: mavi yerine en koyu düz metin — hiyerarşi
+  // başlık (vurgu) › bilgi › gövde › soluk.
   function log(text, type) {
     var ts = veSayi(((performance.now() - startTime) / 1000), 2);
     var prefix = '[' + ts + 's] ';
     var color = 'var(--text-secondary)';
-    if(type === 'ok') color = '#2e9e44';
-    else if(type === 'warn') { color = '#c88a20'; warnings.push(text); }
-    else if(type === 'warn-ozet') color = '#c88a20';  // özet satırı: uyarı rengi, SAYILMAZ
-    else if(type === 'err') { color = '#d04040'; errors.push(text); }
-    else if(type === 'fatal') color = '#d04040';  // Kırmızı ama errors'a ekleme
-    else if(type === 'head') color = 'var(--accent-primary)';
-    else if(type === 'info') color = '#4a8fc0';
+    if(type === 'ok') color = 'var(--ink-success)';
+    else if(type === 'warn') { color = 'var(--ink-warning)'; warnings.push(text); }
+    else if(type === 'warn-ozet') color = 'var(--ink-warning)';  // özet satırı: uyarı rengi, SAYILMAZ
+    else if(type === 'err') { color = 'var(--ink-danger)'; errors.push(text); }
+    else if(type === 'fatal') color = 'var(--ink-danger)';  // Kırmızı ama errors'a ekleme
+    else if(type === 'head') color = 'var(--ink-accent)';
+    else if(type === 'info') color = 'var(--text-primary)';
     else if(type === 'dim') color = 'var(--text-muted)';
     
     var line = document.createElement('div');

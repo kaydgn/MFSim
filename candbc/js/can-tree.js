@@ -98,7 +98,7 @@ function cdbRefreshTree() {
             cdbHighlight(msg.name, msgHit ? q : '') +
             '<span style="color:var(--text-muted);font-weight:400;font-family:var(--font-mono);">' +
             cdbEsc(cdbFmtId(msg.id, msg.extended)) + '</span>';
-    if (msg.multiplexed) html += '<span style="color:var(--accent-warning);font-size:var(--fs-micro);" title="Çoklanmış mesaj">MUX</span>';
+    if (msg.multiplexed) html += '<span style="color:var(--ink-warning);font-size:var(--fs-micro);" title="Çoklanmış mesaj">MUX</span>';
     html += '</span>';
     html += '<span class="vsig-badge' + (sel ? ' on' : '') + '">' + sel + '/' + msg.signals.length + '</span>';
     html += '<span class="vsig-badge" title="Kayıttaki kare sayısı"' +
@@ -120,7 +120,7 @@ function cdbRefreshTree() {
               (on ? ' style="background:' + cdbSigColor(sk) + '"' : '') + '></span>';
       html += '<span class="vsig-name">' + cdbHighlight(sig.name, q) + '</span>';
       html += '<span class="vsig-unit">' + cdbEsc(sig.unit || '') + '</span>';
-      html += '<span class="vsig-unit" style="opacity:.55;">' + sig.length + 'b' +
+      html += '<span class="vsig-unit">' + sig.length + 'b' +
               (sig.littleEndian ? '' : ' M') + '</span>';
       html += '</div>';
     }

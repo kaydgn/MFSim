@@ -171,6 +171,36 @@ describe('aksan METİN olarak ham kullanılmıyor', () => {
     expect(kural('.ve-xaxis-dropdown-item.active')).toMatch(/--ink-accent/);
   });
 
+  // JS'in ürettiği HTML'de satır içi `color:` HER ZAMAN bir yazının (ya da
+  // yazı gibi duran ikonun) rengidir — zemin/kenar `background`/`border`
+  // olarak ayrı yazılır. ÖLÇÜLEN (Tur 5, 2026-10-02): 138 satır içi
+  // `color:var(--accent-*)`; açık temada birincil vurgu --bg-tertiary'de
+  // 4,16:1, uyarı vurgusu 3,86:1 kalıyordu (çözücünün zincir adları, şanzıman
+  // eşikleri, motor ızgarasının başlığı, takoz uyarısı). Ekran taraması
+  // (tests/e2e/kontrast.spec.js) görünen yüzeyleri ölçer; bu kapı açılmamış
+  // pencereyi, ipucunu, hata satırını da tutar. Yorum satırı sayılmaz.
+  test('JS üretimi HTML\'de metin rengi --ink-*: satır içi color:var(--accent-*) yok', () => {
+    const KOK = path.join(__dirname, '../..');
+    const dosyalar = [];
+    ['js', 'viewer/js', 'candbc/js'].forEach((d) => {
+      fs.readdirSync(path.join(KOK, d)).filter((f) => /\.js$/.test(f) && f !== 'fead-core.js')
+        .forEach((f) => dosyalar.push(d + '/' + f));
+    });
+    const METIN = /(?<![-\w])color\s*:\s*var\(--accent-(primary|success|warning|danger)\)/;
+    const ATAMA = /\.color\s*=\s*\\?['"]var\(--accent-(primary|success|warning|danger)\)/;
+    // `color:' + (koşul ? 'var(--accent-…)' : …) + '` — rengi koşul seçiyor
+    const KOSUL = /color:\s*'\s*\+\s*\((?:[^()]|\([^()]*\))*var\(--accent-(primary|success|warning|danger)\)/;
+    const bulunan = [];
+    dosyalar.forEach((d) => {
+      fs.readFileSync(path.join(KOK, d), 'utf8').split('\n').forEach((satir, i) => {
+        if (/^\s*(\/\/|\*)/.test(satir)) return;
+        if (METIN.test(satir) || ATAMA.test(satir) || KOSUL.test(satir)) bulunan.push(`${d}:${i + 1}`);
+      });
+    });
+    expect(dosyalar.length).toBeGreaterThan(100);       // tarama gerçekten tarıyor
+    expect(bulunan).toEqual([]);
+  });
+
   test('sabit yeşil tint temayı izliyor', () => {
     // .ve-xaxis-dropdown-item.active zemini rgba(45,138,90,.10) idi: on altı
     // temanın on beşinde aksanla ilgisi olmayan bir yeşil sızıyordu.

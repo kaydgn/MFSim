@@ -96,7 +96,7 @@ function runECMatchingAnalysis(nodeId) {
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
 
   if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-danger);">' + veIkon('alert-triangle') + ' Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     return;
   }
   
@@ -142,11 +142,11 @@ function runECMatchingAnalysis(nodeId) {
     var c9c10html = '';
     if(gbLimits.grossInputPower !== null || gbLimits.grossInputTorque !== null) {
       c9c10html += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">';
-      c9c10html += '<span>Governed güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + veSayi(powerAtGov, 0) + ' kW</b>';
-      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c9ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputPower, 0) + ' kW ' + (c9ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
+      c9c10html += '<span>Governed güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--ink-danger)') + ';">' + veSayi(powerAtGov, 0) + ' kW</b>';
+      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c9ok ? 'var(--text-muted)' : 'var(--ink-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputPower, 0) + ' kW ' + (c9ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
       c9c10html += '</span>';
-      c9c10html += '<span>Governed tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + veSayi(torqueAtGov, 0) + ' Nm</b>';
-      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c10ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputTorque, 0) + ' Nm ' + (c10ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
+      c9c10html += '<span>Governed tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--ink-danger)') + ';">' + veSayi(torqueAtGov, 0) + ' Nm</b>';
+      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c10ok ? 'var(--text-muted)' : 'var(--ink-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputTorque, 0) + ' Nm ' + (c10ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
       c9c10html += '</span>';
       c9c10html += '</div>';
     }
@@ -332,7 +332,7 @@ function runECMatchingAnalysis(nodeId) {
     // C9/C10 uyarı bandı (şanzıman seviyesi kontroller)
     if(!c9ok || !c10ok) {
       h += '<div style="margin-bottom:8px; padding:8px 10px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm);">';
-      h += '<div style="font-size:var(--fs-body); font-weight:700; color:var(--accent-danger);">' + veIkon('x') + ' Şanzıman giriş limiti aşılıyor</div>';
+      h += '<div style="font-size:var(--fs-body); font-weight:700; color:var(--ink-danger);">' + veIkon('x') + ' Şanzıman giriş limiti aşılıyor</div>';
       h += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); margin-top:2px;">';
       if(!c9ok) h += 'C9: Motor gücü (' + veSayi(powerAtGov, 0) + ' kW) > Şanzıman giriş güç limiti (' + veSayi(gbLimits.grossInputPower, 0) + ' kW)<br>';
       if(!c10ok) h += 'C10: Motor torku (' + veSayi(torqueAtGov, 0) + ' Nm) > Şanzıman giriş tork limiti (' + veSayi(gbLimits.grossInputTorque, 0) + ' Nm)';
@@ -365,7 +365,7 @@ function runECMatchingAnalysis(nodeId) {
       : ((_tcNodeForSel && _tcNodeForSel.data && _tcNodeForSel.data.tcPresetKey) || '');
 
     results.forEach(function(r, idx) {
-      var bgColor = r.status === 'recommended' ? 'rgba(22,163,74,0.06)' :
+      var bgColor = r.status === 'recommended' ? 'color-mix(in srgb, var(--accent-success) 6%, transparent)' :
                     r.status === 'caution' ? 'color-mix(in srgb, var(--accent-warning) 6%, transparent)' :
                     r.status === 'not-recommended' ? 'color-mix(in srgb, var(--accent-warning) 8%, transparent)' :
                     'color-mix(in srgb, var(--accent-danger) 6%, transparent)';
@@ -377,10 +377,10 @@ function runECMatchingAnalysis(nodeId) {
                        r.status === 'caution' ? 'Dikkat' :
                        r.status === 'not-recommended' ? 'Önerilmez' :
                        'Uyumsuz';
-      var statusColor = r.status === 'recommended' ? 'var(--accent-success)' :
-                        r.status === 'caution' ? 'var(--accent-warning)' :
-                        r.status === 'not-recommended' ? 'var(--accent-warning)' :
-                        'var(--accent-danger)';
+      var statusColor = r.status === 'recommended' ? 'var(--ink-success)' :
+                        r.status === 'caution' ? 'var(--ink-warning)' :
+                        r.status === 'not-recommended' ? 'var(--ink-warning)' :
+                        'var(--ink-danger)';
       var isSelected = r.key === _selectedTCKey;
       var borderLeft = isSelected ? '3px solid var(--accent-success)' : 'none';
       
@@ -390,13 +390,13 @@ function runECMatchingAnalysis(nodeId) {
       // dil). Eskiden yalnız ince bir sol kenar çizgisi vardı — tablo zaten
       // renkli olduğu için görünmüyordu.
       h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name
-         + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-success); color:#fff; padding:0 4px; border-radius:var(--radius-sm);" title="Bu konvertör Tork Konvertörü bileşenine yüklü">' + veIkon('check') + '</span>' : '')
+         + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-success); color:var(--on-success); padding:0 4px; border-radius:var(--radius-sm);" title="Bu konvertör Tork Konvertörü bileşenine yüklü">' + veIkon('check') + '</span>' : '')
          + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + veSayi(r.stallTau, 2) + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + veSayi(r.stallSpeed, 0) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c5ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + veSayi(r.minSpeed, 0) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c7ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + veSayi(r.tTurbineStall, 0) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c8ok ? 'var(--text-primary)' : 'var(--accent-warning)') + ';">' + veSayi(r.srGov, 3) + '</td>';
+      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c5ok ? 'var(--text-primary)' : 'var(--ink-danger)') + ';">' + veSayi(r.minSpeed, 0) + '</td>';
+      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c7ok ? 'var(--text-primary)' : 'var(--ink-danger); font-weight:700') + ';">' + veSayi(r.tTurbineStall, 0) + '</td>';
+      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c8ok ? 'var(--text-primary)' : 'var(--ink-warning)') + ';">' + veSayi(r.srGov, 3) + '</td>';
       h += '<td style="border:1px solid var(--border-color);">' + (r.c5ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td>';
       h += '<td style="border:1px solid var(--border-color);">' + (r.c7ok ? veDurumIkon('ok') : veDurumIkon('err')) + '</td>';
       h += '<td style="border:1px solid var(--border-color);">' + (r.c8ok ? veDurumIkon('ok') : veDurumIkon('warn')) + '</td>';
@@ -416,12 +416,12 @@ function runECMatchingAnalysis(nodeId) {
     // Önerilen konvertör özeti
     if(results.length > 0 && results[0].status === 'recommended') {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-success);">';
-      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-success);"><span class="mf-ico mf-ico-trophy"></span> Önerilen: ' + results[0].name + '</span></div>';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-success);"><span class="mf-ico mf-ico-trophy"></span> Önerilen: ' + results[0].name + '</span></div>';
       h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">Stall: ' + veSayi(results[0].stallSpeed, 0) + ' rpm | SR@Gov: ' + veSayi(results[0].srGov, 3) + ' | T_turb: ' + veSayi(results[0].tTurbineStall, 0) + ' N·m</div></div>';
       h += '</div>';
     } else if(results.length > 0) {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-warning);">';
-      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-warning);">' + veIkon('alert-triangle') + ' Tam uyumlu konvertör bulunamadı</span></div>';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Tam uyumlu konvertör bulunamadı</span></div>';
       h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + veSayi(results[0].srGov, 3) + '). Lockup modunda çalışacağından performans kabul edilebilir olabilir.</div></div>';
       h += '</div>';
     }
@@ -828,14 +828,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Bağlı motoru bul
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-danger);">' + veIkon('alert-triangle') + ' Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
   if(torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-warning);">' + veIkon('alert-triangle') + ' Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
@@ -951,7 +951,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + veSayi(powerAtGov, 0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
     h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + veSayi(torqueAtGov, 0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color);">';
-    h += '<span style="color:var(--accent-success);">Önerilen</span>: ≥%15 marj | <span style="color:var(--accent-warning);">Dikkat</span>: %5–15 marj | <span style="color:#f97316;">Sıkı</span>: &lt;%5 marj | <span style="color:var(--accent-danger);">Uyumsuz</span>: Limit aşılıyor';
+    h += '<span style="color:var(--ink-success);">Önerilen</span>: ≥%15 marj | <span style="color:var(--ink-warning);">Dikkat</span>: %5–15 marj | <span style="color:var(--ink-warning);">Sıkı</span>: &lt;%5 marj | <span style="color:var(--ink-danger);">Uyumsuz</span>: Limit aşılıyor';
     h += '</div></div></div></div>';
 
     // Tablo
@@ -983,7 +983,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '</tr></thead><tbody>';
 
     results.forEach(function(r) {
-      var bgColor = r.status === 'recommended' ? 'rgba(22,163,74,0.06)' :
+      var bgColor = r.status === 'recommended' ? 'color-mix(in srgb, var(--accent-success) 6%, transparent)' :
                     r.status === 'caution' ? 'color-mix(in srgb, var(--accent-warning) 6%, transparent)' :
                     r.status === 'tight' ? 'rgba(249,115,22,0.06)' :
                     r.status === 'unacceptable' ? 'color-mix(in srgb, var(--accent-danger) 6%, transparent)' :
@@ -996,10 +996,6 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
                        r.status === 'caution' ? 'Dikkat' :
                        r.status === 'tight' ? 'Sıkı' :
                        r.status === 'unacceptable' ? 'Uyumsuz' : 'Veri yok';
-      var statusColor = r.status === 'recommended' ? 'var(--accent-success)' :
-                        r.status === 'caution' ? 'var(--accent-warning)' :
-                        r.status === 'tight' ? '#f97316' :
-                        r.status === 'unacceptable' ? 'var(--accent-danger)' : 'var(--text-muted)';
       var isSelected = r.key === selectedGB;
       var borderLeft = isSelected ? '3px solid var(--accent-primary)' : 'none';
       var calMark = (r.calibrated ? ' ✦' : '') + (r.downshiftCalibrated ? ' ✧' : '') + (r.partialData ? ' ★' : '');   // metin: kalibrasyon işareti — şanzıman listesinin SEÇENEK metnindekiyle aynı karakter (seçenek ikon taşıyamaz)
@@ -1008,10 +1004,10 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';" title="' + statusText + ': ' + r.name + '">';
       h += '<td style="border:1px solid var(--border-color);" title="' + statusText + '"><span style="font-size:var(--fs-tiny);">' + statusIcon + '</span></td>';
-      h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis;">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:white; padding:0 3px; border-radius:var(--radius-sm);">' + veIkon('check') + '</span>' : '') + '</td>';
+      h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis;">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:var(--on-accent); padding:0 3px; border-radius:var(--radius-sm);">' + veIkon('check') + '</span>' : '') + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.gearCount + '</td>';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? veSayi(r.grossInputPower) : '—') + '</td>';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? veSayi(r.grossInputTorque) : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--ink-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? veSayi(r.grossInputPower) : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--ink-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? veSayi(r.grossInputTorque) : '—') + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.netTurbineTorque !== null ? veSayi(r.netTurbineTorque) : '—') + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? veSayi(r.maxOutputSpeed) : '—') + '</td>';
       h += '<td style="border:1px solid var(--border-color); font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c9ok ? veDurumIkon('ok') : veDurumIkon('err'))) + '</td>';
@@ -1033,14 +1029,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     var recommended = results.filter(function(r) { return r.status === 'recommended'; });
     if(recommended.length > 0) {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-success);">';
-      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-success);"><span class="mf-ico mf-ico-trophy"></span> Önerilen Şanzımanlar (' + recommended.length + ')</span></div>';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-success);"><span class="mf-ico mf-ico-trophy"></span> Önerilen Şanzımanlar (' + recommended.length + ')</span></div>';
       h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">' + recommended.map(function(r) { return r.name; }).join(', ') + '</div></div>';
       h += '</div>';
     } else {
       var acceptable = results.filter(function(r) { return r.score > 0; });
       if(acceptable.length > 0) {
         h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-warning);">';
-        h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-warning);">' + veIkon('alert-triangle') + ' Tam uyumlu şanzıman bulunamadı</span></div>';
+        h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Tam uyumlu şanzıman bulunamadı</span></div>';
         h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenekler: ' + acceptable.map(function(r) { return r.name; }).join(', ') + '</div></div>';
         h += '</div>';
       }
@@ -1900,7 +1896,7 @@ function ecmChartMouseMove(e) {
   if(motorT > 0) {
     var intersections = items.filter(function(c) { return Math.abs(c.tStall - motorT) < motorT * 0.04; });
     if(intersections.length > 0) {
-      html += '<div style="margin-top:4px; padding-top:3px; border-top:1px solid var(--border-color); color:var(--accent-success); font-weight:600; font-size:var(--fs-tiny);">';
+      html += '<div style="margin-top:4px; padding-top:3px; border-top:1px solid var(--border-color); color:var(--ink-success); font-weight:600; font-size:var(--fs-tiny);">';
       html += veIkon('star') + ' Stall kesişim: ' + intersections.map(function(c) { return c.name; }).join(', ');
       html += '</div>';
     }

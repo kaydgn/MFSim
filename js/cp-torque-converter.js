@@ -42,7 +42,7 @@ function getTorqueConverterPropertiesHTML(node) {
     
     if(!_gbFamily) {
       // Şanzıman seçilmemiş → uyarı ve tüm konvertörleri göster
-      html += '<option value="" disabled style="color:var(--accent-warning);">Önce şanzıman seçiniz (aile filtreleme)</option>';
+      html += '<option value="" disabled style="color:var(--ink-warning);">Önce şanzıman seçiniz (aile filtreleme)</option>';
       ['1000_2000','3000','4000'].forEach(function(fam) {
         var famTCs = Object.keys(VE_FT_TC_PRESETS).filter(function(k) { return VE_FT_TC_PRESETS[k].family === fam; });
         if(famTCs.length === 0) return;
@@ -104,7 +104,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<th class="num">SR<br>[-]</th>';
     html += '<th class="num">K<sub>pump</sub><br>[rpm/√Nm]</th>';
     html += '<th class="num">τ<br>[-]</th>';
-    html += '<th class="num" style="color:var(--accent-primary);">η<br>[%]</th>';
+    html += '<th class="num" style="color:var(--ink-accent);">η<br>[%]</th>';
     html += '<th style="width:28px;"></th>';
     html += '</tr></thead>';
     html += '<tbody id="ve-tc-table-' + node.id + '">';
@@ -147,9 +147,12 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
-    html += '<span style="color:#4aa3ff;"><span class="ve-lejant-nokta"></span>τ Tork oranı</span>';
-    html += '<span style="color:#ff6b6b;"><span class="ve-lejant-nokta"></span>η Verim [%]</span>';
-    html += '<span style="color:var(--text-muted); opacity:0.5;">┆ Coupling (SR=0,88)</span>';
+    // LEJANT ÇİZGİNİN RENGİNİ TAŞIR — eğriler temadan (--seri-1/2) çiziliyor,
+    // lejant ise eski sabit paletten (#4aa3ff · #ff6b6b) boyanıyordu: renk
+    // tutmuyor ve yazı 2,5:1 kalıyordu. Yazı nötr, renk noktada.
+    html += '<span><span class="ve-lejant-nokta" style="color:var(--seri-1);"></span>τ Tork oranı</span>';
+    html += '<span><span class="ve-lejant-nokta" style="color:var(--seri-2);"></span>η Verim [%]</span>';
+    html += '<span>┆ Coupling (SR=0,88)</span>';
     html += '</div>';
     html += '</div></div>';
     
@@ -162,7 +165,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
-    html += '<span style="color:#a78bfa;"><span class="ve-lejant-nokta"></span>K<sub>pump</sub> [rpm/√Nm]</span>';
+    html += '<span><span class="ve-lejant-nokta" style="color:var(--seri-3);"></span>K<sub>pump</sub> [rpm/√Nm]</span>';
     html += '</div>';
     html += '</div></div>';
     
@@ -1055,8 +1058,8 @@ function drawVETCTauChart(nodeId, pts) {
         var tv = vePcInterpY(_tauPts, sr), ev = vePcInterpY(_etaPts, sr);
         if(tv === null && ev === null) return null;
         var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + veSayi(sr, 3) + '</div>';
-        if(tv !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#4aa3ff;border-radius:1px;"></span><span style="color:#4aa3ff; font-weight:600; min-width:26px;">&tau;</span><span>' + veSayi(tv, 3) + '</span></div>';
-        if(ev !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#ff6b6b;border-radius:1px;"></span><span style="color:#ff6b6b; font-weight:600; min-width:26px;">&eta;</span><span>' + veSayi(ev, 1) + ' %</span></div>';
+        if(tv !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:var(--seri-1);border-radius:1px;"></span><span style="color:var(--seri-1); font-weight:600; min-width:26px;">&tau;</span><span>' + veSayi(tv, 3) + '</span></div>';
+        if(ev !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:var(--seri-2);border-radius:1px;"></span><span style="color:var(--seri-2); font-weight:600; min-width:26px;">&eta;</span><span>' + veSayi(ev, 1) + ' %</span></div>';
         return h;
       }
     });
@@ -1147,7 +1150,7 @@ function drawVETCKpumpChart(nodeId, pts) {
         var kv = vePcInterpY(_kPts, sr);
         if(kv === null) return null;
         return '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + veSayi(sr, 3) + '</div>' +
-               '<div style="display:flex; gap:6px; align-items:center;"><span style="width:14px;height:3px;background:#a78bfa;border-radius:1px;"></span><span style="color:#a78bfa; font-weight:600;">K<sub>pump</sub></span><span>' + veSayi(kv, 2) + '</span></div>';
+               '<div style="display:flex; gap:6px; align-items:center;"><span style="width:14px;height:3px;background:var(--seri-3);border-radius:1px;"></span><span style="color:var(--seri-3); font-weight:600;">K<sub>pump</sub></span><span>' + veSayi(kv, 2) + '</span></div>';
       }
     });
     pcDrawHint(ctx, canvas, margin.left, margin.top, pw, true);
