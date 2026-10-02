@@ -360,6 +360,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   kaynak taraması görmez, ekran/belge/günlük taraması görür. CAN Çözümleyici
   `js/`'ten dosya almadığı için kendi yazıcısını taşır (`cdbSayi`); aynılık
   `can-sayi.test.js`'te ölçülür.
+- **BÜYÜK HARF DÖNÜŞÜMÜ BİRİMİ, SİMGEYİ, ÖZEL ADI ÇEVİRMEZ** (belge
+  `lang="tr"`): birim `<u>` ve Yunan harfi `.ve-fp-sym` içinde, CSS'te
+  `text-transform:none` (FEAD'de üretici `_feadEtiket`); İngilizce terim ve
+  ürün adı `lang="en"`. "[NM]", "OLUKLU Μ", "MFSİM", "SHİFT" yazılıyordu.
+  Kapı: `fead-panel-dili.test.js` → *"BÜYÜK HARF"* + `buyuk-harf.spec.js`.
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri

@@ -6,7 +6,8 @@ function getShiftControllerPropertiesHTML(node) {
   // Status bar — veri durumunu göster
   var hasData = !!(nodes.find(function(n) { return n.type === 'gearbox'; }) && nodes.find(function(n) { return n.type === 'engine'; }));
 
-  html += '<div class="sw-section-title">Shift Schedule (vites geçiş takvimi)</div>';
+  // İngilizce terim kendi dilinde büyür: Türkçe yerelde "SHİFT" yazılıyordu.
+  html += '<div class="sw-section-title"><span lang="en">Shift Schedule</span> (vites geçiş takvimi)</div>';
 
   html += '<div class="sw-pkg-desc">Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
   
@@ -218,7 +219,9 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Shift sırası görsel
-  html += '<div class="sw-section-title" style="margin-top:10px;">Shift Sırası — ' + profileName + ', full throttle (WOT):</div>';
+  // Profil adı İngilizce bir katalog adı ("Allison 3200 SP — S1 Performance"):
+  // Türkçe yerelde büyük harf "ALLİSON", "SHİFT" yazıyordu.
+  html += '<div class="sw-section-title" style="margin-top:10px;"><span lang="en">Shift</span> sırası — <span lang="en">' + profileName + ', full throttle (WOT)</span>:</div>';
   
   html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';

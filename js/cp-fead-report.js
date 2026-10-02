@@ -372,7 +372,8 @@ function _frAntet(R, node){
 
   var h = '<div class="antet">';
   h += '<div class="band">';
-  h += '<div class="eyebrow">MFSim · FEAD modülü · Otomatik rapor</div>';
+  // Üst satır büyük harf basılıyor; ürün adı kendi dilinde büyür ("MFSİM" değil).
+  h += '<div class="eyebrow"><span lang="en">MFSim</span> · FEAD modülü · Otomatik rapor</div>';
   h += '<h1>Aksesuar kayış tahrik sistemi (FEAD)</h1>';
   h += '<div class="sub">Geometri · Gerginlik ve Hubload · Kayma Emniyeti · Kaburga Yorulması ve B10 Ömrü</div>';
   h += '</div>';
