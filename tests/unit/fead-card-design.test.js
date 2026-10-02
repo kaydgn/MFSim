@@ -1002,7 +1002,9 @@ describe('ad çizimin İÇİNDE kalır', () => {
     });
     expect(ad).toBeGreaterThan(20);                  // kapı gerçekten ölçüyor
     expect(kirpik).toBeGreaterThan(0);               // kırpma GERÇEKTEN koşuyor
-    // Ölçülen en kötü örtme kırpma öncesi 1.346 px² idi.
+    // BU KAPININ KENDİ girdisinde ölçülüyor (çizicinin tahmini kutuları),
+    // tarayıcı süpürmesinin gerçek metin kutularıyla DEĞİL — iki sayı aynı
+    // şeyi ölçmez. Burada en kötü örtme kırpma öncesi 1.346 px² idi.
     // ÖLÇÜLDÜ, bu kapının kendi girdisinde: kırpma kalkınca en kötü örtme
     // 1.092 px² (iki ad tamamen üst üste), kırpmayla 459 px². Eşik ikisinin
     // arasında ve ikisine de uzak — 700 px² bir harf-buçuktan geniş, yani
