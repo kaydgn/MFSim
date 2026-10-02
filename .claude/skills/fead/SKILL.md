@@ -380,6 +380,43 @@ olurdu.
     yazılara da uygulandı (ölçülmüştü: 68 yazı çubuğun altında, görünmüyordu).
     Pay yalnız kartta; rapor ve küçük resim değişmez. Kapı:
     `fead-card-design.test.js` → *"yüzen çubuğun altında yazı yok"*.
+    **SAĞ ÜST DURUM ROZETİ DE AYNI KURALA GİRDİ** (`ustPay`, 2026-10-02 —
+    kullanıcı ekran görüntüsünde kırmızıyla çizdi: *"yazılar birbirine
+    girmiş"*). Rozet çizimin üstünde yüzen bir HTML katmanı; çizici onu ancak
+    SÖYLENİRSE bilir. Ayrılan kutu rozetin **kendi metninden** türüyor
+    (`veFeadRozetKutu`) ve metin tek üreticiden geliyor
+    (`_feadRozetGorunen`) — ikinci bir yerde kurulsaydı rozetin biçimi
+    değişince ayrılan yer sessizce eskirdi. Boy rozetin ÜST BOŞLUĞUNU da
+    sayar (`top:5px`), yoksa alt 5 px korumasız kalıyor. Karakter ilerlemesi
+    rozetin kendi yazısından ölçüldü (5,35 px / 10 punto): çizicinin `etW`
+    sözleşmesi (0,6 × punto) burada %13 fazla ayırıyor ve ayrılan köşe o kadar
+    büyüyor ki etiketin gidecek yeri kalmıyor, geri düşüş onu yine rozetin
+    altına koyuyordu. Ölçüldü (12 örnek × 24 kart): rozetin altında kalan
+    yazı **31 → 0**.
+    **KÜNYE ROZETLE ÇAKIŞIRSA SATIRI DEĞİŞİR, METNİ DEĞİL** (`KUN_Y`): sol üst
+    konum künyesi "hangi kol konumunu görüyorum" sorusunun tek cevabı,
+    kırpılamaz — sığmıyorsa blok rozetin altına iner. Engel kutusu ile çizim
+    aynı değişkenden okur.
+    **GERİ DÜŞÜŞ KÖTÜ YERE DÜŞERSE KURTARILIR, SONRA KIRPILIR.** "Kötü yer"
+    iki şey: çizimin DIŞI ve rozetin ALTI — ikisi de etiketi görünmez yapıyor.
+    Önce içeride kalan en az örtüşen aday aranır, olmazsa ad seçilen yerin
+    genişliğine kırpılır (tam ad `<title>`da, Kayış Tablosu'nun satırında ve
+    kasnağın panelinde). **Bir ad başka bir adı da ÖRTEMEZ**: örten ad 12
+    karakter tabanına kadar kırpılır. Ölçüldü (uzun katalog adları):
+    kanvas dışına taşan yazı **10 → 0**, en kötü ad örtmesi
+    **1.346 px² → 459 px²**; varsayılan adlarda hiçbir ad kırpılmıyor.
+    Akıllı geri düşüşü KOŞULSUZ açmak denendi ve 504 çizimlik süpürmede ad ile
+    açıyı bir kez çakıştırıyor; adlara toptan genişlik tavanı koymak da
+    denendi, 46 adı kırpıp örtüşmeyi 10'dan ancak 7'ye indiriyordu. İkisi de
+    reddedildi. Kapılar: `fead-card-design.test.js` → *"rozet çiziciye
+    SÖYLENİYOR"* + *"ad çizimin İÇİNDE kalır"*, `fead-kanvas.spec.js` →
+    *"ROZET: altında yazı kalmıyor"* (gerçek tarayıcı — rozet HTML, yazılar
+    SVG; ikisi ancak yerleşim hesaplanınca aynı düzleme gelir).
+    **VE O "0 ÇAKIŞMA" BEDAVA DEĞİLDİ**: süpürme yalnız çakışmayı sayıyordu,
+    kanvas dışına çıkan etiketi değil — aynı 504 çizimde **41 etiket çizimin
+    dışındaydı**. İçeri alınınca ad ile açı beş kez köşe değiyor (hepsi aynı
+    çift, en küçük kartta, **7,8 px²**), bu yüzden ölçüt artık SAYI değil
+    ALAN: bir sayıyı örtmek ile köşesine değmek aynı şey değil.
 22. **AÇILIŞ KADRAJI: büyük kartlar SÜTUN DEĞİL, tek sıra** — iki kanvas yan
     yana (`veFeadArrangeByCoords` → `sira`). Üst üste dizilen büyük kartlar
     dar-uzun bir blok üretiyor ve geniş görüşe sığdırma yükseklikten

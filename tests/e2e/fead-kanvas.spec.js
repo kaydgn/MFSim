@@ -255,3 +255,95 @@ test('ÇUBUK SEÇİCİLERİ: seçili metin hiçbir durumda kesilmiyor', async ({
     r.yuk.forEach((h) => expect(h).toBeLessThan(48));           // çubuk hâlâ TEK SATIR
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ROZETİN ALTINDA YAZI KALMAZ — kullanıcı bildirimi, 2026-10-02
+   ──────────────────────────────────────────────────────────────────────────
+   Kullanıcı ekran görüntüsünde kırmızıyla çizdi: *"üst üste yazılar var…
+   yazılar birbirine girmiş."* Durum rozeti çizimin ÜSTÜNDE yüzen bir HTML
+   katmanı ve çizici onu bilmiyordu — yüzen denetim çubuğu için kurulan kural
+   (`altPay`) öteki köşeye hiç uygulanmamıştı.
+
+   BU HALKA NODE'DA KOŞMAZ: rozet bir HTML katmanı, yazılar SVG içinde; ikisi
+   ancak gerçek yerleşim hesaplanınca aynı koordinat düzlemine gelir. Birim
+   kapısı (`fead-card-design.test.js`) çiziciye verilen payı ölçüyor, bu kapı
+   o payın GERÇEKTEN rozetin durduğu yere denk geldiğini.
+
+   ÖLÇÜLDÜ (12 örnek × 24 kart): rozetin altında kalan yazı 31 → 0.
+   ══════════════════════════════════════════════════════════════════════════ */
+test('ROZET: altında yazı kalmıyor ve kart dışına taşan yazı yok', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await feadOrnek(page);
+
+  // Kullanıcının modeli kasnakları KATALOG ADIYLA taşıyor; kusur orada
+  // doğdu, kapı da orada ölçüyor.
+  const ADLAR = {
+    'fead-fan': 'SURUCU KASNAK-Ø159 8PK',
+    'fead-idler': 'AVARA KASNAK-E9839A4F1540-A_Ø75x32,5',
+    'fead-ac': 'TM31 24V KLIMA KOMPRESORU 152-8PK',
+    'fead-alternator': 'KASNAK 8 PK Ø63.5',
+    'fead-tensioner': 'OTOMATIK GERGI-E9843A1F3200A',
+  };
+
+  const say = () => page.evaluate(() => {
+    const ort = (a, b) => !(a.right < b.left || a.left > b.right
+                         || a.bottom < b.top || a.top > b.bottom);
+    const out = { rozetAltinda: [], kartDisi: [], kart: 0 };
+    window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadLayout).forEach((n) => {
+      const el = document.getElementById(n.id);
+      const svg = el && el.querySelector('.ve-fead-kanvas > .ciz > svg');
+      if (!svg) return;
+      out.kart++;
+      const rz = el.querySelector('.ve-fead-kan-durum');
+      const kutu = el.querySelector('.ve-node-box').getBoundingClientRect();
+      const R = rz && rz.getBoundingClientRect();
+      svg.querySelectorAll('text[data-ve="name"],text[data-ve="wrap"],'
+        + 'text[data-ve="pos-label"],text[data-ve="anim-label"]').forEach((e) => {
+        const b = e.getBoundingClientRect();
+        const ad = e.getAttribute('data-ve') + ':' + e.textContent.slice(0, 22);
+        if (R && ort(b, R)) out.rozetAltinda.push(ad);
+        if (b.left < kutu.left - 1 || b.right > kutu.right + 1) out.kartDisi.push(ad);
+      });
+    });
+    return out;
+  });
+
+  // ── 1) VARSAYILAN ADLARLA ──────────────────────────────────────────────
+  const a = await say();
+  expect(a.kart).toBeGreaterThan(1);
+  expect([a.rozetAltinda, a.kartDisi]).toEqual([[], []]);
+
+  // ── 2) UZUN KATALOG ADLARIYLA — kusurun doğduğu hâl ────────────────────
+  await page.evaluate((ad) => {
+    window.nodes.forEach((n) => { if (ad[n.type]) n.customName = ad[n.type]; });
+    if (typeof veFeadRefreshCards === 'function') veFeadRefreshCards();
+  }, ADLAR);
+  await page.waitForTimeout(900);
+  const b = await say();
+  expect([b.rozetAltinda, b.kartDisi]).toEqual([[], []]);
+
+  // KAPI BOŞ DEĞİL: uzun adlar GERÇEKTEN çizilmiş olmalı — adlar hiç
+  // basılmasaydı iki liste de boş kalır ve kapı sahte yeşil olurdu.
+  const uzun = await page.evaluate(() => [...document.querySelectorAll(
+    '.ve-fead-kanvas svg text[data-ve="name"]')].filter((e) =>
+      (e.getAttribute('data-ad-tam') || e.textContent || '').indexOf('KASNAK') >= 0).length);
+  expect(uzun).toBeGreaterThan(4);
+
+  // KIRPILAN ADIN TAM HÂLİ KAYBOLMUYOR: `<title>` fare üstünde gösteriyor.
+  // `textContent` `<title>`I DA KATAR — görünen yazı yalnız son metin
+  // düğümü. (Ölçüldü: 36 karakterlik ad 47 karakter okunuyordu.)
+  const kirpik = await page.evaluate(() => [...document.querySelectorAll(
+    '.ve-fead-kanvas svg text[data-ad-tam]')].map((e) => ({
+      gorunen: (e.lastChild && e.lastChild.nodeValue) || '',
+      tam: e.getAttribute('data-ad-tam'),
+      baslik: (e.querySelector('title') || {}).textContent })));
+  kirpik.forEach((k) => {
+    expect(k.gorunen.endsWith('…')).toBe(true);
+    expect(k.baslik).toBe(k.tam);
+    expect(k.tam.length).toBeGreaterThan(k.gorunen.length);
+  });
+
+  expect(hatalar).toEqual([]);
+});

@@ -288,6 +288,18 @@ describe('ad, sarım açısının üstüne DÜŞMEZ', () => {
    İkinci satır tek başına yetmedi ve sebebi geri düşüştü: hiçbir aday temiz
    değilken ilk adaya dönmek, 3 px payla sıyıran bir adayı yazıyı tamamen
    örten bir adayla EŞİT sayıyordu. Ölçüt boole değil ALAN olunca kapandı.
+
+   ── VE O "0" BEDAVA DEĞİLDİ (2026-10-02) ──────────────────────────────────
+   Süpürme yalnız ÇAKIŞMAYI sayıyordu, KANVAS DIŞINA çıkan etiketi değil.
+   Ölçüldü: aynı 504 çizimde **41 etiket çizimin dışındaydı** — çakışmıyorlardı
+   çünkü görünmüyorlardı. Kullanıcı bunu uzun katalog adlarıyla bildirdi.
+   Etiketler içeri alınınca (bkz. `cp-fead.js` → "AD ÇİZİMDEN TAŞARSA"):
+
+     kanvas dışı        41 → 0
+     ad ↔ açı değmesi    0 → 5   (hepsi aynı çift, en küçük kartta, 7,8 px²)
+
+   Bu yüzden ikinci ölçüt artık SAYI değil ALAN: bir sayıyı örtmek ile
+   köşesine değmek aynı şey değil.
    ══════════════════════════════════════════════════════════════════════════ */
 describe('sarım açısı da KAÇAR — çivili değil', () => {
   const ORNEKLER = Object.keys(M.VE_FEAD_EXAMPLES);
@@ -295,7 +307,8 @@ describe('sarım açısı da KAÇAR — çivili değil', () => {
 
   // Bütün süpürmeyi tek yerde topla: üç kapı da aynı 420 çizimi okuyor.
   const supur = () => {
-    const out = { cakisma: 0, adKutu: 0, aciKutu: 0, capa: {}, cizim: 0 };
+    const out = { cakisma: 0, enBuyukOrtAlan: 0, disari: 0,
+                  adKutu: 0, aciKutu: 0, capa: {}, cizim: 0 };
     ORNEKLER.forEach((key) => {
       let pack;
       try { pack = veFeadExampleNodes(key); } catch (e) { return; }
@@ -330,7 +343,16 @@ describe('sarım açısı da KAÇAR — çivili değil', () => {
             const yer = !en ? '?' : (an !== 'middle') ? 'yan' : (y > en.y ? 'alt' : 'ust');
             out.capa[yer] = (out.capa[yer] || 0) + 1;
           });
-        adlar.forEach((a) => acilar.forEach((b) => { if (ortusur(a, b)) out.cakisma++; }));
+        adlar.forEach((a) => acilar.forEach((b) => {
+          if (!ortusur(a, b)) return;
+          out.cakisma++;
+          out.enBuyukOrtAlan = Math.max(out.enBuyukOrtAlan,
+            (Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0))
+            * (Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0)));
+        }));
+        // KANVAS DIŞI — asıl kayıp bu. Çakışan iki yazının ikisi de EKRANDA;
+        // dışarı çıkan yazı HİÇ yok.
+        adlar.concat(acilar).forEach((a) => { if (a.x0 < -1 || a.x1 > W + 1) out.disari++; });
       }));
     });
     return out;
@@ -343,8 +365,32 @@ describe('sarım açısı da KAÇAR — çivili değil', () => {
     expect(S.aciKutu).toBe(S.adKutu);          // her kasnakta hem ad hem açı
   });
 
-  test('HİÇBİR çizimde ad ile açı çakışmıyor', () => {
-    expect(S.cakisma).toBe(0);
+  // ── HİÇBİR ETİKET KANVASIN DIŞINA ÇIKMAZ ────────────────────────────────
+  //
+  // Bu kapı 2026-10-02'de AÇILDI ve açılır açılmaz kırmızıydı: aynı 504
+  // çizimde **41 etiket kanvasın dışındaydı**, yani hiç görünmüyordu. Eski
+  // "ad ↔ açı çakışması = 0" ölçümü bedava değilmiş — çakışmayan etiketlerin
+  // bir kısmı çizimin dışına kaçarak çakışmıyordu.
+  //
+  // Kullanıcı bildirimi (uzun katalog adları, ekran görüntüsü): "TM31 24V
+  // KLIMA KOMPRESORU 152-8PK" kartın sağından taşıyor, yarısı görünmüyor.
+  test('HİÇBİR etiket kanvasın DIŞINA çıkmıyor', () => {
+    expect(S.disari).toBe(0);
+  });
+
+  // ── AD İLE AÇI ÖRTÜŞMEZ — DEĞEN KÖŞE ÖRTMEK DEĞİL ───────────────────────
+  //
+  // Ölçüt BOOLE değil ALAN, çünkü iki şey aynı değil: bir sayıyı ÖRTMEK onu
+  // okunmaz yapar, köşesine 1 px değmek yapmaz. Yukarıdaki kapı (kanvas dışı)
+  // kapanınca dışarı kaçan etiketler içeri döndü ve beşi aynı yerde bir açının
+  // köşesine değdi — ÖLÇÜLDÜ: hepsi AG00810'un EN KÜÇÜK kartında (340×298),
+  // aynı etiket çifti, beş kol konumunda, **5,8 × 1,4 = 7,8 px²**.
+  //
+  // Eşik 12 px²: 8 puntoluk bir rakam ~48 px² yer kaplıyor, yani eşik bir
+  // rakamın dörtte birinin bile altında. Bir yazıyı gerçekten örten bir
+  // çakışma bu kapıyı kıramadan geçemez.
+  test('ad ile açı ÖRTÜŞMÜYOR — en kötü çakışma bir KÖŞE DEĞMESİ', () => {
+    expect(S.enBuyukOrtAlan).toBeLessThan(12);
   });
 
   test('aday listesi ÖLÜ DEĞİL — üç adaya da taşınıyor', () => {
@@ -761,5 +807,244 @@ describe('yüzen çubuğun altında yazı yok (kanvas kartı)', () => {
     const svg = fead.veFeadLayoutSVG(build, 440, 458, { nodeId: 'lay', posMode: 'mean' });
     const m = svg.match(/<text data-ve="rib-legend" x="[-\d.]+" y="([-\d.]+)"/);
     expect(+m[1]).toBeCloseTo(458 - 5, 6);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SAĞ ÜST ROZET DE ÇİZİMİN BİR PARÇASI
+   ──────────────────────────────────────────────────────────────────────────
+   Kullanıcı bildirimi (2026-10-02, ekran görüntüsünde kırmızıyla çizilerek):
+   *"üst üste yazılar var… yazılar birbirine girmiş."*
+
+   Durum rozeti çizimin ÜSTÜNDE yüzen bir HTML katmanı ve çizici onu
+   bilmiyordu — yüzen denetim çubuğu (`altPay`) için kurulan kural öteki köşeye
+   hiç uygulanmamıştı. ÖLÇÜLDÜ (gerçek tarayıcı, 12 örnek × 24 kart):
+
+     rozetin altında kalan yazı     31 → 0
+     kanvas dışına taşan yazı       10 → 0   (uzun katalog adlarıyla)
+
+   Rozetin yeri ve boyu CSS'te; çizici onu ancak SÖYLENİRSE bilebilir. Bu
+   yüzden kutu rozetin KENDİ metninden türüyor (`veFeadRozetKutu`) ve metin tek
+   üreticiden geliyor (`_feadRozetGorunen`) — ikinci bir yerde kurulsaydı
+   rozetin biçimi değiştiğinde ayrılan yer sessizce eskirdi.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('rozet çiziciye SÖYLENİYOR — sağ üst köşe ayrılıyor', () => {
+  test('METİN TEK ÜRETİCİDEN: rozetin bastığı ile kutunun saydığı aynı', () => {
+    const { build, layout } = kur();
+    const sinif = fead.veFeadLayoutCardStrip(build, 'mean');
+    const kutu = fead.veFeadRozetKutu(build, 'mean');
+    expect(kutu).toBeTruthy();
+    // Rozetin GÖRÜNEN metni (ikon hariç) kutunun saydığı karakter sayısını verir.
+    const gorunen = (sinif.match(/<span>([^<]*)<\/span>/) || [])[1] || '';
+    const ikincil = (sinif.match(/<i>([^<]*)<\/i>/) || [])[1] || '';
+    const n = (gorunen + (ikincil ? ' ' + ikincil : '')).length;
+    expect(n).toBeGreaterThan(10);
+    expect(kutu.w).toBeCloseTo(fead.VE_FEAD_ROZET_CEVRE + n * fead.VE_FEAD_ROZET_HARF, 6);
+    // BOY ÜST BOŞLUĞU DA SAYAR: rozet `top:5px`te duruyor, 0'dan başlayan bir
+    // şerit onun alt 5 px'ini korumasız bırakırdı (ölçüldü: AG0868, gergi adı).
+    expect(kutu.h).toBe(fead.VE_FEAD_ROZET_UST + fead.VE_FEAD_ROZET_H);
+    expect(layout).toBeTruthy();
+  });
+
+  test('KASNAKSIZ modelde rozet de kutu da YOK — ayrılan yer de yok', () => {
+    global.nodes = []; global.connections = [];
+    const bos = veFeadBuildSystem([]);
+    expect(fead.veFeadLayoutCardStrip(bos, 'mean')).toBe('');
+    expect(fead.veFeadRozetKutu(bos, 'mean')).toBeNull();
+  });
+
+  test('ROZETİN ALTINA ETİKET KONMUYOR — ayrılan köşe gerçekten engel', () => {
+    const { build } = kur();
+    const W = 440, H = 400;
+    // KUTU GERÇEĞİN KENDİSİ: rozetin kendi metninden türüyor. Uydurma geniş
+    // bir şerit (ör. kartın %68'i) kapıyı yanıltıcı biçimde zorlar — orada
+    // ETİKETİN GİDECEK YERİ KALMAZ ve geri düşüş engeli zaten dinlemez.
+    const roz = fead.veFeadRozetKutu(build, 'mean');
+    expect(roz.w).toBeLessThan(W * 0.75);
+    const kutuları = (svg) => [...svg.matchAll(
+      /<text data-ve="(name|wrap)" x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)" font-size="(\d+)"[^>]*>(?:<title>[^<]*<\/title>)?([^<]*)</g)]
+      .map((m) => {
+        const x = +m[2], y = +m[3], an = m[4], fs = +m[5], w = m[6].length * fs * 0.6;
+        const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
+        return { x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
+      });
+    const altinda = (ks) => ks.filter((a) =>
+      !(a.x1 <= W - roz.w || a.x0 >= W || a.y1 <= 0 || a.y0 >= roz.h)).length;
+
+    const paysiz = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode: 'mean' });
+    const payli  = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode: 'mean', ustPay: roz });
+    // Kapı BOŞ DEĞİL: pay verilmeyen çizimde o köşeye gerçekten etiket düşüyor.
+    expect(altinda(kutuları(paysiz))).toBeGreaterThan(0);
+    expect(altinda(kutuları(payli))).toBe(0);
+  });
+
+  test('KÜNYE ROZETİN ALTINA GİRMEZ — satırı değişir, METNİ DEĞİL', () => {
+    const { build } = kur();
+    const W = 440, H = 400;
+    const kunye = (svg) => (svg.match(
+      /<text data-ve="pos-label" x="[-\d.]+" y="([-\d.]+)"[^>]*>([^<]*)</) || []);
+    const dar = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode: 'mean' });
+    // Rozet dar: künye sığıyor, satırı değişmiyor.
+    const sigar = fead.veFeadLayoutSVG(build, W, H,
+      { nodeId: 'lay', posMode: 'mean', ustPay: { w: 40, h: 26 } });
+    // Rozet geniş: künye ALTINA iner.
+    const sigmaz = fead.veFeadLayoutSVG(build, W, H,
+      { nodeId: 'lay', posMode: 'mean', ustPay: { w: 330, h: 26 } });
+    expect(+kunye(dar)[1]).toBe(12);
+    expect(+kunye(sigar)[1]).toBe(12);
+    expect(+kunye(sigmaz)[1]).toBe(12 + 26 + 2);
+    // METİN KIRPILMIYOR: "hangi kol konumunu görüyorum" sorusunun tek cevabı.
+    expect(kunye(sigmaz)[2]).toBe(kunye(dar)[2]);
+    expect(kunye(sigmaz)[2]).toMatch(/kol/);
+  });
+
+  test('UYDURMA PAY YOK SAYILIR — çizimin üçte birinden büyük şerit engel olamaz', () => {
+    const { build } = kur();
+    const W = 440, H = 400;
+    const temel = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode: 'mean' });
+    [{ w: 430, h: 200 }, { w: 0, h: 26 }, { w: 300, h: 0 }, null].forEach((kotu) => {
+      expect(fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode: 'mean', ustPay: kotu }))
+        .toBe(temel);
+    });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AD ÇİZİMDEN TAŞARSA — İÇERİ ALINIR, OLMUYORSA KIRPILIR
+   ──────────────────────────────────────────────────────────────────────────
+   Kullanıcının modeli kasnakları katalog adıyla taşıyor ("TM31 24V KLIMA
+   KOMPRESORU 152-8PK" = 33 karakter, 182 px) ve işletme kartının çizim alanı
+   396 px. Dört adayın dördü de `icerde` denetimini düşürüyor, geri düşüş
+   `aday[0]`ı veriyor ve o da dışarıda: ad kartın sağından taşıyor.
+
+   Çare İKİ AŞAMALI ve sırası ölçümle seçildi (504 çizim):
+     · akıllı geri düşüşü KOŞULSUZ açmak → kanvas dışı 41 → 0, ama ad ile açı
+       beş kez köşe değiyor;
+     · adı peşinen kırpmak → varsayılan adlarda 23 ad sebepsiz kısalıyor.
+   Bu yüzden ikisi de yalnız `!icerde` dalında koşuyor: taşmayan çizimde
+   hiçbir şey değişmiyor.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('ad çizimin İÇİNDE kalır', () => {
+  // KULLANICININ KENDİ ADLARI: kasnaklar katalog koduyla adlandırılmış.
+  const KATALOG = 'TM31 24V KLIMA KOMPRESORU 152-8PK';
+  const uzunAdlar = () => {
+    global.nodes.forEach((n) => {
+      if (!(componentDefs[n.type] || {}).isFeadPulley) return;
+      n.customName = (n.type === 'fead-ac')
+        ? KATALOG + ' — GATES KATALOG KODU E9839A4F1540-A UZATILMIS' : KATALOG;
+    });
+    return veFeadBuildSystem(global.nodes);
+  };
+
+  test('ÇOK UZUN ad KIRPILIR ve tam hâli `<title>`da durur', () => {
+    kur();
+    const b2 = uzunAdlar();
+    const svg = fead.veFeadLayoutSVG(b2, 260, 220, { nodeId: 'lay', posMode: 'mean' });
+    // İSTEĞE BAĞLI GRUPLU TEK REGEX KURMA: `[^>]*?(…)?[^>]*>` kalıbında motor
+    // isteğe bağlı grubu atlamayı seçiyor ve `data-ad-tam` HİÇ yakalanmıyor
+    // (ölçüldü — kapı sessizce "kırpılan yok" diyordu). Parçalara bölmek
+    // belirsizliği ortadan kaldırıyor.
+    const adlar = svg.split('<text data-ve="name"').slice(1)
+      .map((p) => p.slice(0, p.indexOf('</text>')));
+    expect(adlar.length).toBeGreaterThan(0);
+    const kirpik = adlar.filter((p) => p.indexOf('data-ad-tam=') >= 0);
+    expect(kirpik.length).toBeGreaterThan(0);          // kapı boş değil
+    kirpik.forEach((p) => {
+      const tam = /data-ad-tam="([^"]*)"/.exec(p)[1];
+      const basl = /<title>([^<]*)<\/title>/.exec(p)[1];
+      const gorunen = p.slice(p.lastIndexOf('>') + 1);
+      expect(gorunen).toMatch(/…$/);                   // görünen: kırpılmış
+      expect(basl).toContain(KATALOG);                 // `<title>`: TAM ad
+      expect(tam).toContain(KATALOG);                  // ve makinece okunur
+      expect(basl).toBe(tam);
+      expect(gorunen.length).toBeLessThan(tam.length);
+    });
+  });
+
+  // ── BİR AD BAŞKA BİR ADI ÖRTMEZ ────────────────────────────────────────
+  //
+  // Adlar birbirinin SERT engeli, ama geri düşüş engel dinlemiyor: hiçbir
+  // aday temiz değilken iki uzun ad üst üste biniyor. ÖLÇÜLDÜ (gerçek
+  // tarayıcı, uzun katalog adları): 137×7, 155×9 ve 128×9 px'lik ÖRTMELER —
+  // iki ad birden okunmaz hâle geliyordu. Örten ad artık kırpılıyor.
+  //
+  // ÖLÇÜT ALAN, SAYI DEĞİL. Kırpmanın bir TABANI var (12 karakter) ve o
+  // taban kasıtlı: iki kasnak birbirine çok yakınsa kısaltmak örtüşmeyi
+  // bitirmiyor, yalnız bilgiyi de alıyor — kasnağın kimliği zaten göbekteki
+  // numarada ve Kayış Tablosu'nun satırında. Kapı bu yüzden "sıfır örtüşme"
+  // değil "örtüşme KÜÇÜLDÜ" diyor.
+  test('ÖRTEN ad kırpılıyor — en kötü örtüşme bir harften küçük kalıyor', () => {
+    kur();
+    const b2 = uzunAdlar();
+    let enKotu = 0, kirpik = 0, ad = 0;
+    [[396, 412], [440, 400], [340, 298]].forEach(([W, H]) => {
+      ['mean', 'free'].forEach((posMode) => {
+        const svg = fead.veFeadLayoutSVG(b2, W, H, { nodeId: 'lay', posMode });
+        const kutular = svg.split('<text data-ve="name"').slice(1).map((p) => {
+          const seg = p.slice(0, p.indexOf('</text>'));
+          const x = +/ x="([-\d.]+)"/.exec(seg)[1];
+          const y = +/ y="([-\d.]+)"/.exec(seg)[1];
+          const an = /text-anchor="(\w+)"/.exec(seg)[1];
+          const gorunen = seg.slice(seg.lastIndexOf('>') + 1);
+          const w = gorunen.length * 9 * 0.6 * 1.05;
+          if (seg.indexOf('data-ad-tam=') >= 0) kirpik++;
+          ad++;
+          const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
+          return { x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
+        });
+        kutular.forEach((a, i) => kutular.forEach((b, j) => {
+          if (j <= i) return;
+          const ow = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+          const oh = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+          if (ow > 0 && oh > 0) enKotu = Math.max(enKotu, ow * oh);
+        }));
+      });
+    });
+    expect(ad).toBeGreaterThan(20);                  // kapı gerçekten ölçüyor
+    expect(kirpik).toBeGreaterThan(0);               // kırpma GERÇEKTEN koşuyor
+    // Ölçülen en kötü örtme kırpma öncesi 1.346 px² idi.
+    // ÖLÇÜLDÜ, bu kapının kendi girdisinde: kırpma kalkınca en kötü örtme
+    // 1.092 px² (iki ad tamamen üst üste), kırpmayla 459 px². Eşik ikisinin
+    // arasında ve ikisine de uzak — 700 px² bir harf-buçuktan geniş, yani
+    // "biraz değdi" ile "üstüne bindi" arasını ayırıyor.
+    expect(enKotu).toBeLessThan(700);
+  });
+
+  // ── DAR KARTTA DA HİÇBİR AD DIŞARI ÇIKMAZ ──────────────────────────────
+  // 504 çizimlik süpürme kartın GERÇEK ölçülerinde koşuyor ve orada taşma
+  // zaten 0; bu kapı sınırı zorluyor çünkü taşmayı önleyen iki mekanizmanın
+  // biri (seçilen yerde kırpma) ancak hiçbir adayın içeride olmadığı dar
+  // kartta devreye giriyor. ÖLÇÜLDÜ: kırpma kaldırılınca 90 adın 61'i
+  // kanvasın dışına çıkıyor — yani mekanizma ölü değil, yalnız geniş kartta
+  // sırası gelmiyor.
+  test('DAR kartta da hiçbir ad kanvasın DIŞINA çıkmıyor', () => {
+    kur();
+    const b2 = uzunAdlar();
+    let disari = 0, toplam = 0;
+    [[200, 180], [240, 200], [260, 220], [300, 260], [340, 298]].forEach(([W, H]) => {
+      ['mean', 'free', 'all'].forEach((posMode) => {
+        const svg = fead.veFeadLayoutSVG(b2, W, H, { nodeId: 'lay', posMode });
+        svg.split('<text data-ve="name"').slice(1).forEach((p) => {
+          const seg = p.slice(0, p.indexOf('</text>'));
+          const x = +/ x="([-\d.]+)"/.exec(seg)[1];
+          const an = /text-anchor="(\w+)"/.exec(seg)[1];
+          const gorunen = seg.slice(seg.lastIndexOf('>') + 1);
+          const w = gorunen.length * 9 * 0.6 * 1.05;      // çizicinin kendi payı
+          const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
+          toplam++;
+          if (x0 < -1 || x0 + w > W + 1) disari++;
+        });
+      });
+    });
+    expect(toplam).toBeGreaterThan(60);                   // kapı gerçekten ölçüyor
+    expect(disari).toBe(0);
+  });
+
+  test('SIĞAN ad kırpılmaz ve `<title>` DA ALMAZ — boş ipucu açılmasın', () => {
+    const { build } = kur();
+    const svg = fead.veFeadLayoutSVG(build, 640, 500, { nodeId: 'lay', posMode: 'mean' });
+    expect(svg).not.toContain('data-ad-tam=');
+    expect(svg).not.toMatch(/<text data-ve="name"[^>]*><title>/);
+    expect(svg).not.toMatch(/<text data-ve="name"[^>]*>[^<]*…</);
   });
 });

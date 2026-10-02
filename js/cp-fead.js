@@ -4884,6 +4884,31 @@ function veFeadLayoutSVG(build, W, H, opts){
   // temiz değilse üste dönülür (etiket kaybolmaz, yalnız çakışır).
   var _etiket = [];
   var _aciEt = [];
+  // ADIN ÇİZİME SIĞAN HÂLİ (kırpılmış olabilir) — `_etiket` ile aynı kapsam:
+  // yerleştirici IIFE'nin içinde dolduruyor, çizim çok aşağıda okuyor.
+  var _adMetin = [];
+  // ── SAĞ ÜST ROZET DE SERT ENGEL ─────────────────────────────────────────
+  // Rozet çizimin ÜSTÜNDE yüzen bir HTML katmanı; çizici onu bilmiyordu ve
+  // altına düşen her yazı görünmez oluyordu. Ölçüldü (gerçek tarayıcı,
+  // AG00976, iki kart): geometri kartında "Klima Kompresörü" ADI 84 px,
+  // işletme kartında konum künyesi 58 px ve animasyon künyesi 83 px rozetin
+  // altındaydı. Yüzen çubuğun (`altPay`) kuralının aynısı, öteki köşede.
+  //
+  // SERT tierde: rozet "kayış yolu kapandı mı" sorusunun tek cevabı, altında
+  // kalan ad da hangi kasnağın hangisi olduğunu söyleyen yapısal bilgi —
+  // ikisini bir SAYIYI örtmekle aynı kefeye koymak yanlış olurdu.
+  //
+  // SINIR DENETİMİ `altPay`ınkiyle aynı biçimde: uydurma bir pay çizimin
+  // yarısını engele çevirip bütün etiketleri tek köşeye yığardı.
+  var ROZ = (opts.ustPay && Number(opts.ustPay.w) > 0
+             && Number(opts.ustPay.w) < W * 0.9
+             && Number(opts.ustPay.h) > 0 && Number(opts.ustPay.h) < H / 3)
+    ? { w: Number(opts.ustPay.w), h: Number(opts.ustPay.h) } : null;
+  // KÜNYE SATIRI — TEK DEĞİŞKEN. Varsayılan 12; rozetle çakışacaksa aşağıdaki
+  // engel kurulumunda rozetin altına iner. Engel kutusu da çizim de BUNDAN
+  // okuyor: iki yerde yazılsaydı engel künyenin gerçekte durduğu yeri
+  // göstermez ve adlar yine onun üstüne düşerdi.
+  var KUN_Y = 12;
   (function(){
     var T0 = _feadXform(s, offX, offY, minX, maxY);
     var segler = [];
@@ -4910,6 +4935,7 @@ function veFeadLayoutSVG(build, W, H, opts){
     // bağlamak, kullanıcı gülü şemanın ortasına sürüklediğinde etiketlerin
     // tam onun altına düşmesi demekti.
     var kutular = roseKutu ? [roseKutu] : [];
+    if(ROZ) kutular.push({ x0: W - ROZ.w, x1: W, y0: 0, y1: ROZ.h });
     // SOL ÜST KÜNYE VE ALT NOT DA ENGELDİR — gülle BİREBİR aynı gerekçe:
     // ikisi de çizimin İÇİNDE, sabit yerde duruyor, ama engel listesinde
     // yoktu; yerleştirici tam oraya bakıyordu. ÖLÇÜLDÜ (11 örnek × 7 kol
@@ -4932,7 +4958,14 @@ function veFeadLayoutSVG(build, W, H, opts){
       var _kMetin = sel.primary.label + '  ·  kol ' + veSayi(_feadR(sel.primary.relDeg)) + '°'
         + (Number.isFinite(sel.primary.tensionN)
             ? '  ·  ' + veSayi(sel.primary.tensionN, 0) + ' N' : '');
-      kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_kMetin, 8.5), y0: 12 - 8, y1: 12 + 2 });
+      // KÜNYE ROZETİN ALTINA GİRMEZ — SATIRI DEĞİŞİR, METNİ DEĞİL.
+      // Rozet sağ üstte yüzüyor (bkz. ROZ) ve künye sol üstte, ikisi AYNI
+      // satırda. Sığmayınca künye bloğu rozetin altına iner: kırpmak
+      // "hangi kol konumunu görüyorum" sorusunun cevabını yok ederdi, oysa
+      // sol üstte bir satır aşağısı bedava (çizim ortalı).
+      if(ROZ && pad - 6 + etW(_kMetin, 8.5) > W - ROZ.w - 4) KUN_Y = 12 + ROZ.h + 2;
+      kutular.push({ x0: pad - 6, x1: pad - 6 + etW(_kMetin, 8.5),
+                     y0: KUN_Y - 8, y1: KUN_Y + 2 });
     }
     var _lMetin = 'dişli kenar = kayışın kaburgalı yüzü';
     if(opts.kunye !== false)
@@ -5036,12 +5069,55 @@ function veFeadLayoutSVG(build, W, H, opts){
       return enIyi;
     }
 
+    // ── AD ÇİZİME SIĞMAK ZORUNDA ──────────────────────────────────────────
+    //
+    // ÖLÇÜLMÜŞ HATA (2026-10-02, kullanıcı bildirimi — uzun katalog adları):
+    // "TM31 24V KLIMA KOMPRESORU 152-8PK" 182 px çiziyor ve işletme kartının
+    // çizim alanı 396 px. Dört adayın DÖRDÜ de `icerde` denetimini düşürüyor,
+    // geri düşüş `aday[0]`ı veriyor ve o da dışarıda: ad kartın sağından
+    // TAŞIYOR, yarısı görünmüyor. Yerleştirici kusursuz çalışıyordu — sığmayan
+    // bir yazıya yer bulmak diye bir şey yok.
+    //
+    // Çare adı KISALTMAK, çizimi büyütmek değil: bir ad çizimin yarısını
+    // yiyince öteki beş adın yeri de kalmıyor. Kısaltma bilgi KAYBETMİYOR —
+    // tam ad hem `<title>`da (fare üstünde), hem Kayış Tablosu'nun satırında,
+    // hem de kasnağın kendi panelinde duruyor; çizimdeki rakam (siraNo) ikisini
+    // zaten bağlıyor.
+    //
+    // Bütçeye sığacak kadar kırp. `etW` karakter başına sabit ilerleme
+    // varsayıyor, o yüzden kırpma da karakter sayısından: oran tahminin
+    // kendisiyle tutarlı kalsın.
+    // ADIN ÖLÇÜSÜ `etW`DEN BİR PARMAK GENİŞ. `etW` karakter başına sabit
+    // ilerleme varsayıyor (0,6 × punto) ve BÜYÜK HARFLİ katalog adlarında
+    // altta kalıyor: ölçüldü, "AVARA KASNAK-E9839A4F1540-A_Ø75x32,5" gerçekte
+    // 198 px, tahmin 194,4 — oran 1,019. Aradaki fark çizimden 1 px taşan bir
+    // yazı olarak göründü. Pay yalnız ADLARA veriliyor; `etW`nin kendisini
+    // büyütmek onu kullanan bütün engelleri sebepsiz şişirirdi.
+    var AD_PAY = 1.05;
+    function adW(t){ return etW(t, 9) * AD_PAY; }
+    // Aynı çapada, yeni metinle kutuyu yeniden kur.
+    function adKutu(a, t){
+      var w = adW(t);
+      return { x: a.x, y: a.y, an: a.an, y0: a.y0, y1: a.y1,
+               x0: (a.an === 'start') ? a.x : (a.an === 'end') ? a.x - w : a.x - w/2,
+               x1: (a.an === 'start') ? a.x + w : (a.an === 'end') ? a.x : a.x + w/2 };
+    }
+    // Yerleşmiş AD kutuları — ötekiler (gül, künye, açı) bu listede yok:
+    // kırpma ölçütü yalnız "bir adı örtmek".
+    var adKutular = [];
+    function adKirp(ad, but){
+      var t = String(ad == null ? '' : ad);
+      if(!(but > 0) || adW(t) <= but) return t;
+      var n = Math.floor(but / Math.max(0.01, adW('n'))) - 1;
+      return (n >= 2) ? t.slice(0, n).replace(/[\s·_-]+$/, '') + '…' : t.slice(0, 1) + '…';
+    }
     // 1) ADLAR — sert engellere, sonra (mümkünse) yumuşaklara göre.
     //
     if(adVar)
       ps.forEach(function(p, k){
         var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
-        var w = etW(gorAd(k), 9);
+        _adMetin[k] = gorAd(k);
+        var w = adW(_adMetin[k]);
         var aday = [
           { x:X,        y:Y-R-4,      an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y-R-4-8,   y1:Y-R-4+2 },
           { x:X,        y:Y+R+11,     an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y+R+11-8,  y1:Y+R+11+2 },
@@ -5049,7 +5125,60 @@ function veFeadLayoutSVG(build, W, H, opts){
           { x:X-R-5,    y:Y+3,        an:'end',    x0:X-R-5-w, x1:X-R-5, y0:Y-5,       y1:Y+5 }
         ];
         var sec = yerlestir(aday, yumusak, false);
-        kutular.push(sec); _etiket[k] = sec;
+        // KÖTÜ YER İKİ ŞEY: çizimin dışı ve rozetin altı. İkisi de etiketi
+        // GÖRÜNMEZ yapıyor — biri kırpılarak, öteki örtülerek.
+        function kotuYer(a){
+          return !icerde(a)
+            || (ROZ && ortusur({ x0: W - ROZ.w, x1: W, y0: 0, y1: ROZ.h }, a));
+        }
+        // ── AD ÇİZİMDEN TAŞARSA — VE YALNIZ O ZAMAN ────────────────────────
+        //
+        // Hiçbir aday temiz değilken ad `aday[0]`a (üste ortalı) dönüyor ve o
+        // aday çizimin DIŞINDA olabiliyor: ölçüldü (uzun katalog adları, 12
+        // örnek × 24 kart) ON ad kartın dışına taşıyor, "TM31 24V KLIMA
+        // KOMPRESORU 152-8PK" sağdan 5 px çıkıp yarısı görünmüyordu.
+        //
+        // İKİ AŞAMALI VE SIRASI ÖNEMLİ:
+        //   1) Önce İÇERİDE kalan en az örtüşen aday aranır (akıllı geri
+        //      düşüş — sarım açısının 2026-09-14'ten beri yaptığı).
+        //   2) Hiçbir aday içeride değilse ad, seçilen yerin genişliğine
+        //      KIRPILIR; tam ad `<title>`da ve Kayış Tablosu'nun satırında.
+        //
+        // Bu sıra ölçülerek seçildi. Akıllı geri düşüşü KOŞULSUZ açmak 420
+        // çizimlik süpürmede ad ile sarım açısını bir kez çakıştırıyor
+        // (AG00810, free, 340×298 — 6×1 px); adı peşinen kırpmak ise
+        // varsayılan adlarda 23 adı sebepsiz kısaltıyor. Taşmayan çizimde
+        // hiçbir şey değişmiyor: ikisi de yalnız `!icerde` dalında koşuyor.
+        if(kotuYer(sec)){
+          var ic = yerlestir(aday, yumusak, true);
+          if(!kotuYer(ic)) sec = ic;
+        }
+        if(!icerde(sec)){
+          var yer = (sec.an === 'start') ? (W - ROSE - 1 - sec.x)
+                  : (sec.an === 'end')   ? (sec.x - 1)
+                  : 2 * Math.min(sec.x - 1, W - ROSE - 1 - sec.x);
+          _adMetin[k] = adKirp(_adMetin[k], yer);
+          sec = adKutu(sec, _adMetin[k]);
+        }
+        // ── BİR AD BAŞKA BİR ADI ÖRTEMEZ ──────────────────────────────────
+        //
+        // Adlar birbirinin SERT engeli (hangi adın hangi kasnağa ait olduğu
+        // yapısal bilgi), ama geri düşüş engel dinlemiyor: hiçbir aday temiz
+        // değilken iki uzun ad üst üste biniyor. ÖLÇÜLDÜ (uzun katalog
+        // adları): 137×7, 155×9, 128×9 px'lik örtmeler — iki ad birden
+        // okunmaz hâle geliyor.
+        //
+        // KIRPMA HEDEFLİ: yalnız ÖRTEN ad, yalnız örtme bitene kadar. Bütün
+        // adlara tavan koymak da denendi ve ölçüldü — %40 tavan 46 adı
+        // kırpıyor, örtüşmeyi ise 10'dan ancak 7'ye indiriyordu; kötü takas.
+        // Burada kırpılan ad sayısı örten adların sayısı kadar.
+        var guv = 0;
+        while(guv++ < 24 && _adMetin[k].length > VE_FEAD_AD_TABAN
+              && adKutular.some(function(b){ return ortAlan(b, sec) > VE_FEAD_AD_ORT; })){
+          _adMetin[k] = _adMetin[k].replace(/…$/, '').slice(0, -2).replace(/[\s·_-]+$/, '') + '…';
+          sec = adKutu(sec, _adMetin[k]);
+        }
+        kutular.push(sec); adKutular.push(sec); _etiket[k] = sec;
       });
 
     // 2) SARIM AÇILARI — adlar ARTIK YERLEŞMİŞ birer sert engel. Sıra tersine
@@ -5433,9 +5562,15 @@ function veFeadLayoutSVG(build, W, H, opts){
 
     if(adVar){
       var et = _etiket[k] || { x: X, y: Y - R - 4, an: 'middle' };
+      var _adTam = gorAd(k), _adGor = (_adMetin[k] == null) ? _adTam : _adMetin[k];
+      // KIRPILDIYSA TAM AD `<title>`DA. Kırpılmadıysa başlık YAZILMAZ: her
+      // ada aynı metni ikinci kez koymak, fare üstünde boş bir ipucu açardı.
       svg += '<text data-ve="name" x="' + f(et.x) + '" y="' + f(et.y) + '" text-anchor="' + et.an
           + '" font-size="9" fill="var(--text-muted)"'
-          + _katt + '>' + _feadEsc(gorAd(k)) + '</text>';
+          + (_adGor === _adTam ? '' : ' data-ad-tam="' + _feadEsc(_adTam) + '"')
+          + _katt + '>'
+          + (_adGor === _adTam ? '' : '<title>' + _feadEsc(_adTam) + '</title>')
+          + _feadEsc(_adGor) + '</text>';
     }
     // SARIM AÇISI ŞEMADA İKİNCİ KEZ YAZILIR. Kanvasta bunun karşılığı var:
     // orada tablo YOK, kart tek başına duruyor. Raporda aynı altı sayı bir
@@ -5457,7 +5592,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   // kendi içinde cevaplanmalı; kip seçicisi kartın altında, çizimin dışında.
   if(sel.primary){
     if(opts.kunye !== false)
-    svg += '<text data-ve="pos-label" x="' + f(pad - 6) + '" y="12" font-size="8.5"'
+    svg += '<text data-ve="pos-label" x="' + f(pad - 6) + '" y="' + f(KUN_Y) + '" font-size="8.5"'
         + ' fill="var(--accent-warning)">' + _feadEsc(sel.primary.label)
         + '  ·  kol ' + veSayi(f(sel.primary.relDeg)) + '°'
         + (Number.isFinite(sel.primary.tensionN) ? '  ·  ' + veSayi(sel.primary.tensionN, 0) + ' N' : '')
@@ -5465,17 +5600,17 @@ function veFeadLayoutSVG(build, W, H, opts){
     // ANİMASYON KÜNYESİ. Ağır çekim katsayısı GİZLENMEZ: ekranda gördüğü hız
     // gerçek hız değil, oranlar gerçek — bu ayrım yazılı olmazsa kullanıcı
     // ekrandan devir okumaya kalkar.
-    var y2 = 22;
+    var y2 = KUN_Y + 10;
     if(animPay && opts.animate && opts.animate.label){
       // İKİ SATIR OLABİLİR: kinematik künyesi + titreşim künyesi. SVG <text>
       // satır sonu tanımaz, o yüzden ayrı ayrı basılıyor; ikincisi titreşimin
       // sınırını taşıyor (ölçek göreli / KALİBRE DEĞİL) ve gizlenemez.
       opts.animate.label.split('\n').forEach(function(satir, si){
-        svg += '<text data-ve="anim-label" x="' + f(pad - 6) + '" y="' + (22 + si*9)
+        svg += '<text data-ve="anim-label" x="' + f(pad - 6) + '" y="' + f(KUN_Y + 10 + si*9)
             + '" font-size="7.5" fill="var(--text-'
             + (si ? 'muted' : 'secondary') + ')">' + _feadEsc(satir) + '</text>';
       });
-      y2 = 22 + opts.animate.label.split('\n').length * 9 + 1;
+      y2 = KUN_Y + 10 + opts.animate.label.split('\n').length * 9 + 1;
     }
     // SENARYO GÖSTERGESİ — animatörün kare başına yazdığı TEK canlı satır.
     // Donuk hâli senaryonun t=0 durumunu gösterir ki animasyon başlamadan da
@@ -6212,6 +6347,13 @@ function veFeadLayoutCardHTML(node){
                               // YÜZEN ÇUBUK YÖN GÜLÜNÜ ÖRTMESİN (ölçüldü). Tablo
                               // açıkken çubuk çizimin üstünde değil: pay yok.
                               altPay: tabloVar ? 0 : VE_FEAD_YUZ_ALT / yk,
+                              // SAĞ ÜST ROZET DE ÖRTMESİN — aynı gerekçe, öteki
+                              // köşe. Kutu rozetin KENDİ metninden türüyor
+                              // (`veFeadRozetKutu`), ikinci bir dizeden değil.
+                              ustPay: (function(){
+                                var r = veFeadRozetKutu(build, mode);
+                                return r ? { w: r.w / yk, h: r.h / yk } : null;
+                              })(),
                               vib: vib, scn: scn,
                               animate: kin ? { dispMmS: scn ? 0 : kin.dispMmS,
                                                slow: kin.slow,
@@ -6917,11 +7059,78 @@ function veFeadLayoutCardStrip(build, mode){
   // olarak dururdu.
   //
   // İKİ OKUMA DA KAYBOLMUYOR: `title` her hâlde tamamını taşıyor.
+  var g = _feadRozetGorunen(ok, sol, sag);
   return '<div class="ve-fead-kan-durum ' + (ok ? 'ok' : 'no') + '"'
     + ' title="' + _feadEsc(sol + (sag ? ' · ' + sag : '')) + '">'
     + '<b>' + veIkon(ok ? 'check' : 'x') + '</b>'
-    + '<span>' + _feadEsc(ok ? (sag || sol) : sol) + '</span>'
-    + (ok && sag ? '<i>' + _feadEsc(sol) + '</i>' : '') + '</div>';
+    + '<span>' + _feadEsc(g.bir) + '</span>'
+    + (g.iki ? '<i>' + _feadEsc(g.iki) + '</i>' : '') + '</div>';
+}
+
+// ── ROZETİN GÖRÜNEN METNİ — TEK ÜRETİCİ ───────────────────────────────────
+// İki okuyucusu var ve ikisi de AYNI dizeyi görmek zorunda: rozetin kendisi
+// (yukarıda) ve çizimin ona ayırdığı yer (`veFeadRozetKutu` → `ustPay`).
+// İkinci bir yerde kurulsaydı rozetin biçimi değiştiğinde ayrılan yer sessizce
+// eskir ve yazılar yine üst üste binerdi — bu kaçağın kendisi zaten öyle doğdu.
+function _feadRozetGorunen(ok, sol, sag){
+  return { bir: ok ? (sag || sol) : sol, iki: (ok && sag) ? sol : '' };
+}
+
+// ── ROZETİN ÇİZİM ÜSTÜNDE KAPLADIĞI KUTU (CSS px) ─────────────────────────
+//
+// ÖLÇÜLMÜŞ HATA (2026-10-02, kullanıcı bildirimi — ekran görüntüsünde kırmızı
+// ile çizilen yer): rozet çizimin üstünde YÜZEN bir HTML katmanı ve çizici onu
+// bilmiyordu. Sonuç iki ayrı çakışma, ikisi de gerçek tarayıcıda ölçüldü
+// (AG00976, iki kart):
+//   · sol üstteki konum künyesi rozetin altına 58 px giriyordu, animasyon
+//     künyesi 83 px — "hangi kol konumunu görüyorum" sorusunun tek cevabı
+//     okunmuyordu;
+//   · geometri kartında "Klima Kompresörü" ADI 84 px rozetin altındaydı.
+//
+// Kutu ÖLÇÜLEN değerlerden türüyor (gerçek tarayıcı): yazı 10 px, kenar payı
+// 7+7, ikonla arası 5, ikon ~12 px. Karakter ilerlemesi çizicinin kendi
+// `etW` sözleşmesiyle (0,6 × punto) tahmin ediliyor ve bu bilerek YUKARI
+// yuvarlıyor: ölçülen 54 karakterlik rozet 318 px, tahmin 355 px. Fazla
+// ayırmak bir etiketi gereksiz yere kaydırır; EKSİK ayırmak yazıyı okunmaz
+// yapar — ikisi aynı ağırlıkta değil.
+var VE_FEAD_ROZET_H = 21;                   // ölçüldü: 2+2 pay + 10 px satır
+var VE_FEAD_ROZET_CEVRE = 31;               // 7+7 kenar + 5 boşluk + ~12 ikon
+// Rozetin ÜST BOŞLUĞU da bandın parçası (`css`: `top:5px`). Ayrılan şerit
+// 0'dan başlayıp yalnız rozetin boyu kadar olsaydı, rozetin ALT 5 px'i
+// korumasız kalırdı — o bandın içine düşen bir ad "temiz" sayılıp yine
+// rozetin altında çizilirdi (ölçüldü: AG0868, gergi adı).
+var VE_FEAD_ROZET_UST = 5;
+// KARAKTER BAŞINA İLERLEME — ROZETİN KENDİ YAZISINDAN ÖLÇÜLDÜ (gerçek
+// tarayıcı): 54 karakterlik rozet 318 px, çevresi 31 px → (318−31)/54 = 5,31.
+// Çizicinin kendi `etW` sözleşmesi (0,6 × punto = 6,0) buraya uymuyor: o
+// 8–9 puntoluk SVG etiketleri için ve rozette %13 fazla ayırıyor — 440 px'lik
+// kartta ayrılan köşeyi %82'ye çıkarıyordu. Pay yine YUKARI yuvarlıyor
+// (5,35 > 5,31) ama AZ: fazla ayırmak da bedelsiz değil — 5,5'te ayrılan köşe
+// 640 px'lik kartta o kadar büyüyor ki etikete gidecek temiz yer kalmıyor ve
+// geri düşüş onu yine rozetin altına koyuyor (ölçüldü). Ayrılan yer gerçeğe ne
+// kadar yakınsa engel o kadar iş görüyor.
+var VE_FEAD_ROZET_HARF = 5.35;
+
+// BİR ADIN BAŞKA BİR ADLA ÖRTÜŞME TAVANI (px²). Altında kalan bir değme
+// okumayı bozmuyor; 9 puntoluk bir harf ~49 px² yer kaplıyor, yani eşik bir
+// harfin yarısının altında. Üstüne çıkan ÖRTEN ad kırpılıyor.
+var VE_FEAD_AD_ORT = 24;
+
+// KIRPMANIN TABANI (karakter). Altına inmek "örtülmediği için okunur" bir ad
+// değil, okunmayan iki ad üretir: iki kasnak birbirine çok yakınsa 7 harflik
+// iki etiket de çakışıyor (ölçüldü). Bu noktadan sonra adı daha da kısaltmak
+// örtüşmeyi bitirmiyor, yalnız bilgiyi de alıyor — kasnağın kimliği zaten
+// göbekteki numarada ve Kayış Tablosu'nun satırında.
+var VE_FEAD_AD_TABAN = 12;
+
+
+function veFeadRozetKutu(build, mode){
+  var yd = veFeadYolDurumu(build, mode);
+  if(!(build && build.order && build.order.length)) return null;
+  var g = _feadRozetGorunen(yd.ok, yd.sol, yd.sag);
+  var n = (g.bir + (g.iki ? ' ' + g.iki : '')).length;
+  return { w: VE_FEAD_ROZET_CEVRE + n * VE_FEAD_ROZET_HARF,
+           h: VE_FEAD_ROZET_UST + VE_FEAD_ROZET_H };
 }
 
 // Tuvaldeki BÜTÜN Kayış Yolu kartlarını tazele. Girdi değişince çağrılır
@@ -9640,6 +9849,9 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_FEAD_SPOKE_N: VE_FEAD_SPOKE_N, VE_FEAD_SPOKE_MIN_PX: VE_FEAD_SPOKE_MIN_PX,
     veFeadLayoutCardHTML: veFeadLayoutCardHTML, veFeadYaziK: veFeadYaziK,
     veFeadLayoutCardStrip: veFeadLayoutCardStrip,
+    veFeadRozetKutu: veFeadRozetKutu,
+    VE_FEAD_ROZET_H: VE_FEAD_ROZET_H, VE_FEAD_ROZET_UST: VE_FEAD_ROZET_UST,
+    VE_FEAD_ROZET_CEVRE: VE_FEAD_ROZET_CEVRE, VE_FEAD_ROZET_HARF: VE_FEAD_ROZET_HARF,
     veFeadRefreshLayoutCards: veFeadRefreshLayoutCards,
     VE_FEAD_CARD_CLASS: VE_FEAD_CARD_CLASS,
     VE_FEAD_PAFTA_CLASS: VE_FEAD_PAFTA_CLASS, VE_FEAD_PF: VE_FEAD_PF,
