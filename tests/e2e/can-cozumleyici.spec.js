@@ -164,3 +164,32 @@ test('tema düğmesi üç durumu dolaşır ve grafiği yeniden çizer', async ({
   expect([t0, t1, t2]).toEqual(expect.arrayContaining(['acik', 'koyu']));
   expect(t1).not.toBe(t2);
 });
+
+// EKRANDAKİ YAZI OKUNUR (WCAG AA) — ölçüt MFSim'in yüzey taramasıyla aynı
+// (tests/helpers/kontrast-olcu.js). Ölçülen: "MUX" etiketi ham vurguyla
+// 3,88:1, bit uzunluğu %55 opaklıkta 2,33:1, işaretsiz sinyal adı 4,36:1,
+// soluk bilgi satırı (`.cdb-dim`) %70 opaklıkta.
+test('yazılar zemine karşı AA: boş durum, örnek, kare listesi, istatistik, tanı', async ({ page }) => {
+  const { kontrastKur, kontrastOzet } = require('../helpers/kontrast-olcu.js');
+  await open(page);
+  await kontrastKur(page);
+  const kotu = [];
+  // Geçiş (opacity .12 s) bitmeden ölçülmesin: yeni etkinleşen düğme yarı saydam yakalanıyordu.
+  const olc = async (yer) => {
+    await page.waitForTimeout(250);
+    (await page.evaluate(() => window.__kontrast('body'))).kotu.forEach((x) => kotu.push(Object.assign({ yer }, x)));
+  };
+  await olc('boş');
+  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.waitForFunction(() => cdbState.store && cdbState.store.n > 0, null, { timeout: 20000 });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => { document.querySelectorAll('#cdb-tree .vsig-ghead').forEach((g) => { if (g.getAttribute('aria-expanded') !== 'true') g.click(); }); });
+  await page.waitForTimeout(300);
+  await olc('örnek');
+  for (const tab of ['frames', 'stats', 'diag']) {
+    await page.click(`#cdb-tabs button[data-tab="${tab}"]`);
+    await page.waitForTimeout(150);
+    await olc(tab);
+  }
+  expect(kontrastOzet(kotu)).toEqual([]);
+});

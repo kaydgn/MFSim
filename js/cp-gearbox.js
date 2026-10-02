@@ -72,7 +72,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-pkg-body">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading);">' + profileName + '</div>';
   if(shiftRefRPM !== governed) {
-    html += '<div style="font-size:var(--fs-micro); color:var(--accent-warning); margin-top:2px;">Shift Ref. RPM: ' + veSayi(shiftRefRPM) + ' (motor governed: ' + veSayi(governed) + ')</div>';
+    html += '<div style="font-size:var(--fs-micro); color:var(--ink-warning); margin-top:2px;">Shift Ref. RPM: ' + veSayi(shiftRefRPM) + ' (motor governed: ' + veSayi(governed) + ')</div>';
   }
   html += '</div></div>';
 
@@ -153,12 +153,12 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</tr></thead><tbody>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td style="font-weight:500;">1C→2C oran (N_out/N_gov)</td>';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">' + veSayi(shift1C2C_outRatio) + '</td>';
+  html += '<td style="font-weight:600; color:var(--ink-accent);">' + veSayi(shift1C2C_outRatio) + '</td>';
   html += '<td style="color:var(--text-muted);">N_out ≥ ' + veSayi(shift1C2C_outRatio) + ' × N_shift_ref → 1C→2C shift</td>';
   html += '</tr>';
   html += '<tr>';
   html += '<td style="font-weight:500;">2C→2L oran (N_out/N_gov)</td>';
-  html += '<td style="font-weight:600; color:var(--accent-primary);">' + veSayi(shift2C2L_outRatio) + '</td>';
+  html += '<td style="font-weight:600; color:var(--ink-accent);">' + veSayi(shift2C2L_outRatio) + '</td>';
   html += '<td style="color:var(--text-muted);">N_out ≥ ' + veSayi(shift2C2L_outRatio) + ' × N_shift_ref → lockup engage</td>';
   html += '</tr>';
   html += '</tbody></table>';
@@ -185,24 +185,24 @@ function getShiftControllerPropertiesHTML(node) {
   
   html += '<div style="' + codeStyle + '">';
   html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, V_vehicle, current_gear, mode</span>\n\n';
-  html += '<span style="color:var(--accent-warning);">=== BAŞLANGIÇ DURUMU ===</span>\n';
+  html += '<span style="color:var(--ink-warning);">=== BAŞLANGIÇ DURUMU ===</span>\n';
   html += '  gear = F1, mode = CONVERTER, V = 0\n\n';
-  html += '<span style="color:var(--accent-warning);">=== HER ZAMAN ADIMINDA ===</span>\n\n';
+  html += '<span style="color:var(--ink-warning);">=== HER ZAMAN ADIMINDA ===</span>\n\n';
   
-  html += '<span style="color:var(--accent-primary);">Adım 1: Converter modunda 1C → 2C upshift</span>\n';
+  html += '<span style="color:var(--ink-accent);">Adım 1: Converter modunda 1C → 2C upshift</span>\n';
   html += '  Eğer mode == CONVERTER VE gear == F1:\n';
   html += '    N_out = N_engine × SR / i_gear_F1\n';
   html += '    Eğer N_out >= ' + veSayi(shift1C2C_outRatio) + ' × N_shift_ref:\n';
   html += '      → gear = F2, mode = CONVERTER (2C)\n\n';
   
-  html += '<span style="color:var(--accent-primary);">Adım 2: Converter → Lockup geçişi (2C → 2L)</span>\n';
+  html += '<span style="color:var(--ink-accent);">Adım 2: Converter → Lockup geçişi (2C → 2L)</span>\n';
   html += '  Eğer mode == CONVERTER VE gear == F2:\n';
   html += '    N_out = N_engine × SR / i_gear_F2\n';
   html += '    Eğer N_out >= ' + veSayi(shift2C2L_outRatio) + ' × N_shift_ref:\n';
   html += '      → mode = LOCKUP (2L)\n';
   html += '      → N_engine = N_turbine (1:1 mekanik kilit)\n\n';
   
-  html += '<span style="color:var(--accent-primary);">Adım 3: Lockup modunda upshift (2L→3L→...→6L)</span>\n';
+  html += '<span style="color:var(--ink-accent);">Adım 3: Lockup modunda upshift (2L→3L→...→6L)</span>\n';
   html += '  Eğer mode == LOCKUP:\n';
   html += '    N_shift = N_shift_ref − ' + veSayi(lockupOffset) + '\n';
   html += '    Eğer N_engine >= N_shift:\n';
@@ -212,7 +212,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '      Eğer next_gear yoksa:\n';
   html += '        → Shift yapma (son vites, governed\'a yaklaş)\n\n';
   
-  html += '<span style="color:var(--accent-primary);">Adım 4: Shift sonrası devir düşüşü</span>\n';
+  html += '<span style="color:var(--ink-accent);">Adım 4: Shift sonrası devir düşüşü</span>\n';
   html += '  Shift gerçekleştiğinde:\n';
   html += '    N_engine_yeni = N_engine_eski × (i_eski / i_yeni)\n';
   html += '    Bu değer &lt; governed olmalı (kontrol)';
@@ -224,7 +224,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-section-title" style="margin-top:10px;"><span lang="en">Shift</span> sırası — <span lang="en">' + profileName + ', full throttle (WOT)</span>:</div>';
   
   html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
-  html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
+  html += '<span style="color:var(--ink-accent); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
   html += ' │                              └ Son vites, governed\'a kadar\n';
   html += ' │                     └ N_eng >= N_ref−' + veSayi(lockupOffset) + ' → 6L\n';
   html += ' │                └ N_eng >= N_ref−' + veSayi(lockupOffset) + ' → 5L\n';
@@ -462,7 +462,7 @@ function getGearboxPropertiesHTML(node) {
     });
     html += '</select>';
     html += '</div>';
-    html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
+    html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--ink-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--ink-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
     if(hasEGM) {
       html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
@@ -522,7 +522,7 @@ function getGearboxPropertiesHTML(node) {
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Shift Ref. RPM</th>';
     html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-shift-ref-' + node.id + '" value="' + shiftRefVal + '" placeholder="boş = motor governed" step="50" min="600" max="4000" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
-    html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><span style="color:var(--accent-primary);">ℹ</span> iSCAAN raporlarındaki "Shift Speed &amp; Strategy" değeri. Genellikle motor governed hızına eşittir. Farklıysa buraya girin.</td></tr>';
+    html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><span style="color:var(--ink-accent);">ℹ</span> iSCAAN raporlarındaki "Shift Speed &amp; Strategy" değeri. Genellikle motor governed hızına eşittir. Farklıysa buraya girin.</td></tr>';
     
     // Shift profili parametreleri (readonly)
     var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || {lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594};
@@ -610,7 +610,7 @@ function getGearboxPropertiesHTML(node) {
     // Downshift eşikleri (varsa göster)
     if(spData.downshiftThresholds) {
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
-      html += '<th colspan="2" class="lbl" style="background:var(--bg-tertiary); font-weight:500; color:var(--accent-warning); font-size:var(--fs-body);">Downshift eşikleri <span style="color:var(--text-muted); font-weight:400;">[N_out &lt; threshold → alt vites]</span></th>';
+      html += '<th colspan="2" class="lbl" style="background:var(--bg-tertiary); font-weight:500; color:var(--ink-warning); font-size:var(--fs-body);">Downshift eşikleri <span style="color:var(--text-muted); font-weight:400;">[N_out &lt; threshold → alt vites]</span></th>';
       html += '</tr>';
       // Sıralı gösterim: büyük vitesten küçüğe
       var dsKeys = Object.keys(spData.downshiftThresholds).sort(function(a, b) {
@@ -636,7 +636,7 @@ function getGearboxPropertiesHTML(node) {
           if(ds.capValue !== undefined) formula += ' (cap: ' + veSayi(ds.capValue) + '; ESL &lt; ' + veSayi(ds.capBelow) + ')';
         }
         html += '<tr style="border-bottom:1px solid var(--border-color);">';
-        html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--accent-warning); font-size:var(--fs-tiny);">' + label + '</th>';
+        html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--ink-warning); font-size:var(--fs-tiny);">' + label + '</th>';
         html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.3;">' + formula + '</td>';
         html += '</tr>';
       });
@@ -669,7 +669,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</tr>';
     
     if(autoGoverned) {
-      html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary);"><span style="color:var(--accent-success);">' + veIkon('check') + '</span> Motor bileşeninden otomatik alındı: ' + veSayi(autoGoverned) + ' rpm</td></tr>';
+      html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary);"><span style="color:var(--ink-success);">' + veIkon('check') + '</span> Motor bileşeninden otomatik alındı: ' + veSayi(autoGoverned) + ' rpm</td></tr>';
     }
     
     html += '</table>';
@@ -744,7 +744,7 @@ function getGearboxPropertiesHTML(node) {
   html += '<option value="__new__">+ Manuel giriş</option>';
   html += '</select>';
   html += '</div>';
-  html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
+  html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--ink-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--ink-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
   if(_hasEGM2) {
     html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
   }
@@ -858,7 +858,7 @@ function getVEFTGearRowHTML(nodeId, name, ratio, eff, lockup) {
   html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (ratio !== undefined && ratio !== '' ? ratio : '') + '" step="0.001" min="0" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
   html += '<td class="tight"><input type="text" inputmode="decimal" value="' + (eff !== undefined && eff !== '' ? eff : '') + '" step="0.01" min="0" max="100" onchange="onVEFTGearDataChange(\'' + nodeId + '\')"></td>';
   // Lockup: shift profilinden otomatik belirlenir, kullanıcı değiştiremez
-  var lockupLabel = lockup ? '<span style="color:var(--accent-success); font-weight:600;">L</span>' : '<span style="color:var(--text-muted);">C</span>';
+  var lockupLabel = lockup ? '<span style="color:var(--ink-success); font-weight:600;">L</span>' : '<span style="color:var(--text-muted);">C</span>';
   html += '<td class="tight" style="font-size:var(--fs-tiny);">' + lockupLabel + '<input type="hidden" value="' + (lockup ? 'true' : 'false') + '"></td>';
   html += '<td class="tight"><button class="ve-row-del" onclick="removeVEFTGearRow(this, \'' + nodeId + '\')" title="Satırı sil">' + veIkon('x') + '</button></td>';
   html += '</tr>';

@@ -323,9 +323,9 @@ function veRenderValidationCard(res) {
             '</span><span>' + escapeHTML(it.label) + (it.detail ? ' <span style="color:var(--text-muted);font-size:var(--fs-body);">(' + it.detail + ')</span>' : '') + '</span></div>';
   });
   if(res.allOk) {
-    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--accent-success);font-weight:600;">' + veIkon('check') + ' ' + res.mode + ' - hesaplamaya hazır</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--ink-success);font-weight:600;">' + veIkon('check') + ' ' + res.mode + ' - hesaplamaya hazır</div>';
   } else {
-    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--accent-danger);font-weight:600;">' + veIkon('x') + ' Eksikler var - hesaplama yapılamaz</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--ink-danger);font-weight:600;">' + veIkon('x') + ' Eksikler var - hesaplama yapılamaz</div>';
   }
   container.innerHTML = html;
 
@@ -459,8 +459,8 @@ function veSolverRunLegacy() {
         rhtml += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-top:2px;">' + (simResult.mode === 'partial' ? 'Kısmi analiz modu' : 'Tam analiz modu') + '</div></div>';
         
         rhtml += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">';
-        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Toplam süre</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--accent-primary);">' + veSayi(totalTime, 1) + ' s</div></div>';
-        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Çıktı noktası</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--accent-success);">' + simResult.time.length + '</div></div>';
+        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Toplam süre</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--ink-accent);">' + veSayi(totalTime, 1) + ' s</div></div>';
+        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Çıktı noktası</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--ink-success);">' + simResult.time.length + '</div></div>';
         
         if(simResult.mode === 'partial') {
           var maxRpm = Math.max.apply(null, simResult.rpm);
@@ -484,7 +484,7 @@ function veSolverRunLegacy() {
           
           if(ss.method === 'rk45') {
             rhtml += '<tr><td>İç adım sayısı:</td><td style="text-align:right; font-weight:600;">' + veSayi(ss.steps || 0, 0) + '</td></tr>';
-            rhtml += '<tr><td>Reddedilen adım:</td><td style="text-align:right; font-weight:600; color:' + (ss.rejected > 0 ? '#f59e0b' : 'var(--accent-success)') + ';">' + veSayi(ss.rejected || 0, 0) + '</td></tr>';
+            rhtml += '<tr><td>Reddedilen adım:</td><td style="text-align:right; font-weight:600; color:' + (ss.rejected > 0 ? 'var(--ink-warning)' : 'var(--ink-success)') + ';">' + veSayi(ss.rejected || 0, 0) + '</td></tr>';
             if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600;">' + veSayiUstel(ss.dtMin, 2) + ' → ' + veSayiUstel(ss.dtMax, 2) + ' s</td></tr>';
             if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600;">' + veSayiUstel(ss.maxError, 2) + '</td></tr>';
             if(ss.events && ss.events.length > 0) rhtml += '<tr><td>Algılanan olaylar:</td><td style="text-align:right; font-weight:600;">' + ss.events.length + '</td></tr>';
@@ -530,7 +530,7 @@ function veSolverRunLegacy() {
         progressFill.style.width = '100%';
         progressFill.style.background = 'var(--accent-danger)';
         progressText.textContent = 'HATA!';
-        resultEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--accent-danger);"><div style="font-size:var(--fs-h1); margin-bottom:8px;"><span style="color:var(--ink-danger);">' + veIkon('alert-circle') + '</span></div><div style="font-weight:600;">Hesaplama hatası</div><div style="font-size:var(--fs-body); margin-top:8px; color:var(--text-muted);">' + err.message + '</div></div>';
+        resultEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--ink-danger);"><div style="font-size:var(--fs-h1); margin-bottom:8px;"><span style="color:var(--ink-danger);">' + veIkon('alert-circle') + '</span></div><div style="font-weight:600;">Hesaplama hatası</div><div style="font-size:var(--fs-body); margin-top:8px; color:var(--text-muted);">' + err.message + '</div></div>';
         showToast('Hesaplama hatası: ' + err.message, 'error');
       }
     }, 200);

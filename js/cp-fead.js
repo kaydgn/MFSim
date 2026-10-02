@@ -2503,7 +2503,7 @@ function veFeadPinRows(pin, satir){
     return satir('Konum pimi', '— ' + (pin.part || 'künye yok'), 'var(--text-muted)');
   return satir('Konum pimi · yarıçap', _feadFmt(pin.rMm, 2) + ' mm')
        + satir('Konum pimi · AÇI (imalat)', _feadFmt(pin.angleDeg, 2) + '°',
-               'var(--accent-warning)');
+               'var(--ink-warning)');
 }
 
 // KAYNAK 'i'DE (kural 43): parça çiziminin alıntısı satırı iki yüz karaktere
@@ -3286,7 +3286,9 @@ function veFeadBeltCatalogCard(node, serbest){
       ? _feadFmt(f.tensionN, 0) + ' N' : '—';
     var sig = !(f.ok && f.fits);
     if(sig){ kol = '<span style="color:var(--ink-danger);">sığmıyor</span>'; }
-    return '<tr style="cursor:pointer;' + vur + (sig ? ' opacity:0.65;' : '') + '"'
+    // Sığmayan satır SOLUK JETONLA, opaklıkla değil: %65 opaklık soluk sayıyı
+    // 2,8:1'e, "sığmıyor"u 3,3:1'e indiriyordu (Tur 5).
+    return '<tr style="cursor:pointer;' + vur + (sig ? ' color:var(--text-muted);' : '') + '"'
       + ' onclick="veFeadPickBelt(\'' + node.id + '\',' + c.lengthMm + ')"'
       + ' title="Bu boyu seç (kip SABİT olur)">'
       + '<td style="padding:3px 5px; text-align:right; font-weight:700;">' + _feadFmt(c.lengthMm, 0) + '</td>'
@@ -9049,7 +9051,7 @@ function veFeadModelTable(build){
   function satir(ad, deger, ok){
     return '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">' + ad + '</td>'
       + '<td style="padding:5px 8px; border:1px solid var(--border-color); font-weight:600; color:'
-      + (ok ? 'var(--text-primary)' : 'var(--accent-warning)') + ';">' + deger + '</td></tr>';
+      + (ok ? 'var(--text-primary)' : 'var(--ink-warning)') + ';">' + deger + '</td></tr>';
   }
   var h = '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   h += satir('Kayış yolundaki kasnak', pulleys.length + ' adet', pulleys.length >= 3);

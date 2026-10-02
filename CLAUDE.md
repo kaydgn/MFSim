@@ -365,6 +365,14 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `text-transform:none` (FEAD'de üretici `_feadEtiket`); İngilizce terim ve
   ürün adı `lang="en"`. "[NM]", "OLUKLU Μ", "MFSİM", "SHİFT" yazılıyordu.
   Kapı: `fead-panel-dili.test.js` → *"BÜYÜK HARF"* + `buyuk-harf.spec.js`.
+- **EKRANDAKİ YAZI ZEMİNİNE KARŞI AA** (iki tema). Vurgu METİN olarak
+  `--ink-*`, vurgu ZEMİNİNDE `--on-*` (sabit beyaz koyu temada 3,18:1);
+  yazı opaklıkla soldurulmaz — soluk = `--text-muted`; seri rengi yazıda
+  değil işarette (nokta, çizgi). Palet testi bunları göremiyordu: açık temada
+  169, koyu temada 62 ayrı yazı AA altındaydı. Ölçüt tek yerde
+  (`tests/helpers/kontrast-olcu.js`). Kapı:
+  `kontrast.spec.js` + görüntüleyici/CAN taraması + `theme-contrast.test.js`
+  → *"satır içi color:var(--accent-*)"*.
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri

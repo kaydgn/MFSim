@@ -179,8 +179,9 @@ function _vpaSatir(p, i, varMi) {
   var alt = [];
   if(p.tarih) alt.push(_vpaEsc(p.tarih));
   if(boy) alt.push(_vpaEsc(boy));
-  alt.push('<span style=" opacity:.75;">'
-    + _vpaEsc(veProgramlarYolMetni(p)) + '</span>');
+  // Yol satırın EN SOLUK bilgisi ama okunur kalır: opaklık soluk jetonu
+  // zemine 3,21:1 indiriyordu. Ayrım ikincil puntodan ve sondaki yerinden.
+  alt.push('<span>' + _vpaEsc(veProgramlarYolMetni(p)) + '</span>');
 
   var h = '<div style="display:flex; align-items:center; gap:10px; padding:8px 10px; '
     + 'border:1px solid var(--border-color); background:var(--bg-primary);">';
@@ -197,7 +198,7 @@ function _vpaSatir(p, i, varMi) {
     + ' style="flex:none; padding:6px 12px; font-size:var(--fs-micro); font-weight:600; '
     + 'border:none; cursor:' + (varMi ? 'pointer' : 'not-allowed') + '; '
     + 'background:' + (varMi ? 'var(--accent-primary)' : 'var(--bg-tertiary)') + '; '
-    + 'color:' + (varMi ? '#fff' : 'var(--text-muted)') + ';">Aç</button>';
+    + 'color:' + (varMi ? 'var(--on-accent)' : 'var(--text-muted)') + ';">Aç</button>';
   return h + '</div>';
 }
 

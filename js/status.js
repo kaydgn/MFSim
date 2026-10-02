@@ -193,7 +193,7 @@ function _veStatusLoadCommits() {
       // hata satırından iyidir.
       if(gomulu.length) return;
       var el = document.getElementById('ve-status-commits');
-      if(el) el.innerHTML = '<div style="color:var(--accent-warning);font-size:var(--fs-body);padding:10px 0;">Güncellemeler alınamadı: ' + _veStatusEsc(e.message) + '</div>';
+      if(el) el.innerHTML = '<div style="color:var(--ink-warning);font-size:var(--fs-body);padding:10px 0;">Güncellemeler alınamadı: ' + _veStatusEsc(e.message) + '</div>';
     });
 }
 

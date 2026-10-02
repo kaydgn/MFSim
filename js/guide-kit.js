@@ -742,7 +742,7 @@ function _gkKart(k){
      + '<span style="font-size:var(--fs-micro); '
      + 'letter-spacing:.08em; text-transform:uppercase; padding:1px 6px; border-radius:var(--radius-xs); '
      + (hazir
-        ? 'background:rgba(16,185,129,.14); color:var(--accent-success);">HAZIR'
+        ? 'background:rgba(16,185,129,.14); color:var(--ink-success);">HAZIR'
         : 'background:var(--bg-tertiary); color:var(--text-muted);">HAZIRLANIYOR')
      + '</span></div>';
   h += '<div style="font-size:var(--fs-micro); line-height:1.5; color:var(--text-muted);">'
@@ -751,7 +751,7 @@ function _gkKart(k){
     h += '<div style="display:flex; gap:6px; margin-top:2px;">'
       + '<button type="button" onclick="veGuideOpen(\'' + _gkEsc(k.id) + '\')" '
       + 'style="flex:2; padding:7px 10px; font-size:var(--fs-micro); font-weight:600; '
-      + 'border:none; cursor:pointer; background:var(--accent-primary); color:#fff;">Aç</button>'
+      + 'border:none; cursor:pointer; background:var(--accent-primary); color:var(--on-accent);">Aç</button>'
       + '<button type="button" onclick="veGuideDownload(\'' + _gkEsc(k.id) + '\')" '
       + 'style="flex:1; padding:7px 10px; font-size:var(--fs-micro); font-weight:600; '
       + 'border:1px solid var(--border-color); cursor:pointer; background:var(--bg-tertiary); '
