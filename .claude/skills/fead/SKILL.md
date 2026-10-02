@@ -402,9 +402,17 @@ olurdu.
     Önce içeride kalan en az örtüşen aday aranır, olmazsa ad seçilen yerin
     genişliğine kırpılır (tam ad `<title>`da, Kayış Tablosu'nun satırında ve
     kasnağın panelinde). **Bir ad başka bir adı da ÖRTEMEZ**: örten ad 12
-    karakter tabanına kadar kırpılır. Ölçüldü (uzun katalog adları):
-    kanvas dışına taşan yazı **10 → 0**, en kötü ad örtmesi
-    **1.346 px² → 459 px²**; varsayılan adlarda hiçbir ad kırpılmıyor.
+    karakter tabanına kadar kırpılır. **İKİ AYRI ÖLÇÜ VAR, KARIŞTIRILMAZ.**
+    (a) Gerçek tarayıcı, 12 örnek × 24 kart, uzun katalog adları dayatılmış:
+    rozetin altında kalan yazı **31 → 0**, kanvas dışına taşan **10 → 0**,
+    kırpılan ad 0 → 10. Bedeli de ölçüldü ve gizlenmiyor: çakışma **5 → 9**,
+    çakışan toplam alan **1.066 → 3.333 px²** — çünkü eskiden o 41 etiket
+    GÖRÜNMÜYORDU ve görünmeyen yazı hiçbir şeyi örtmez. En büyük tek örtme
+    neredeyse yerinde (596 → 556 px²): bağlayan şey yerleştirme değil, iki
+    kasnağın okunur bir ad çifti için fazla yakın olması. Varsayılan adlarda
+    dört ölçüt de 0. (b) Birim kapısının KENDİ girdisinde (çizicinin tahmini
+    kutuları, kart ölçüleri listesi) kırpmanın payı ayrıca ölçülü: kırpma
+    kalkınca en kötü örtme 1.092 px², kırpmayla 459 px², eşik 700.
     Akıllı geri düşüşü KOŞULSUZ açmak denendi ve 504 çizimlik süpürmede ad ile
     açıyı bir kez çakıştırıyor; adlara toptan genişlik tavanı koymak da
     denendi, 46 adı kırpıp örtüşmeyi 10'dan ancak 7'ye indiriyordu. İkisi de
