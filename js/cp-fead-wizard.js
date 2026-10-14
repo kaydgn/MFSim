@@ -1233,7 +1233,9 @@ function veFeadWizLiveHTML(b){
     if(Number.isFinite(b.beltLengthMm)){
       var _bc = (typeof veFeadBoyCizgileri === 'function' && b.sys && b.sys.belt)
         ? veFeadBoyCizgileri(b.beltLengthMm, b.sys.belt) : null;
-      h += '<span class="ve-fw-pill">L<sub>b</sub> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
+      // Simge TEK esnek öğe: hap esnek kap, doğrudan çocuk `<sub>` alt simge
+      // konumunu kaybedip "L b" diye yan yana düşüyordu.
+      h += '<span class="ve-fw-pill"><span>L<sub>b</sub></span> <b>' + _fwFmt(b.beltLengthMm, 1) + ' mm</b>'
          + (b.beltLengthDerived ? ' <em>çıktı</em>' : '')
          + ((_bc && Number.isFinite(_bc.dw)) ? ' <em>· d<sub>w</sub> ' + _fwFmt(_bc.dw, 1) + '</em>' : '')
          + '</span>';
@@ -1253,7 +1255,9 @@ function veFeadWizLiveHTML(b){
   } else {
     h += '<span class="ve-fw-damga ve-fw-pill-err" data-model="no" data-durum="err">'
       + veIkon('x') + ' Çözülemiyor · ' + (b.errors || []).length + ' eksik</span>';
-    h += '<span class="ve-fw-pill ve-fw-pill-dim">' + _fwEsc((b.errors || [])[0] || '') + '</span>';
+    // Kısaltılan ilk hata tam hâliyle ipucunda (üç noktada kesilen cümle okunamıyordu).
+    h += '<span class="ve-fw-pill ve-fw-pill-dim" title="' + _fwEsc((b.errors || [])[0] || '') + '">'
+      + _fwEsc((b.errors || [])[0] || '') + '</span>';
   }
   return h + '</div>';
 }
@@ -2962,8 +2966,9 @@ function _fwKasnakListeHTML(b, sira, byKey){
     var rol = ten ? '<i class="ve-fw-kl-rol" data-rol="gergi">gergi</i>'
             : (p.driver ? '<i class="ve-fw-kl-rol" data-rol="surucu">sürücü</i>' : '');
     var on = (k === _fwSec);
+    // Dar sütunda ad üç noktayla kısalıyor ("Sürücü Kasnak (F…"): tam adı ipucunda.
     h += '<button type="button" class="ve-fw-kl' + (on ? ' on' : '') + '" role="option"'
-      + ' aria-selected="' + on + '" data-fw-k="' + _fwEsc(k) + '"'
+      + ' aria-selected="' + on + '" data-fw-k="' + _fwEsc(k) + '" title="' + _fwEsc(ad) + '"'
       + ' onclick="veFeadWizSec(\'' + _fwEsc(k) + '\')">'
       + '<span class="ve-fw-kl-no">' + (i + 1) + '</span>'
       + '<span class="ve-fw-kl-ad"><span>' + _fwEsc(ad) + '</span>' + rol + '</span>'
@@ -3027,7 +3032,7 @@ function _fwKasnakEditorHTML(b, sira, byKey){
   var gergiSonda = n > 1 && sira[n - 1] === '__ten__';
   var basla = function(ad, rol){
     return '<div class="ve-fw-ed-bas"><span class="ve-fw-kl-no ve-fw-kl-no-on">' + (i + 1) + '</span>'
-      + '<b>' + _fwEsc(ad) + '</b>' + rol + '</div>';
+      + '<b title="' + _fwEsc(ad) + '">' + _fwEsc(ad) + '</b>' + rol + '</div>';
   };
   function alan(et, kontrol){
     return '<label class="ve-fw-ed-alan"><span>' + et + '</span>' + kontrol + '</label>';
@@ -5417,9 +5422,19 @@ function _fwChecksCard(b){
     var sinif = !Number.isFinite(v) ? 've-fw-ro' : (v < 0 ? 've-fw-err' : (v < 10 ? 've-fw-warn' : ''));
     return '<span class="' + sinif + '">' + (Number.isFinite(v) ? '%' + _fwFmt(v, 1) : '—') + '</span>';
   }
-  function tablo(bas, govde){
-    return '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl"><thead><tr>' + bas
-      + '</tr></thead><tbody>' + govde + '</tbody></table></div>';
+  // DAR SÜTUNDA TABLO DEĞİL LİSTE: 234 px'lik denetim sütununda beş sütunlu
+  // tablo kendi kabında 44 px yatay kayıyor, "hüküm" başlığı "hük" diye
+  // kesiliyor, çift adları 3–5 satıra kırılıyordu (ölçüldü). Satır iki
+  // satırlık bir öğe: ad üstte, değerler altta — parça bölünmez, araları
+  // " · " (`.ve-fw-gate-p`). Satırların tamamı yine ayrıntıda.
+  function liste(ogeler){
+    return '<ul class="ve-fw-gate-l">' + ogeler.join('') + '</ul>';
+  }
+  function oge(ad, satirlar){
+    return '<li><b>' + ad + '</b>' + satirlar.map(function(parca){
+      return '<span>' + parca.filter(Boolean).map(function(x){
+        return '<span class="ve-fw-gate-p">' + x + '</span>'; }).join(' · ') + '</span>';
+    }).join('') + '</li>';
   }
   // KAPI BAŞINA TEK SATIR HÜKÜM (çizim masası, tasarım tuvali · F-6): ad ·
   // hüküm ve en kritik satır — çizimde kesikli olan çift, tepe devir ve payı.
@@ -5444,13 +5459,9 @@ function _fwChecksCard(b){
       + (cw.a > cw.hi ? 'üst sınır ' + _fwFmt(cw.hi, 1) : cw.a < cw.lo ? 'alt sınır ' + _fwFmt(cw.lo, 1)
          : 'pencere ' + _fwFmt(cw.lo, 1) + '–' + _fwFmt(cw.hi, 1)) + ' · pay ' + pay(cw.payPct);
   h += kapi('Kasnak merkez mesafesi', c.durum, cn, c.rows.length
-    ? tablo('<th>Çift</th><th>alt</th><th>a</th><th>üst</th><th>pay</th>',
-        c.rows.map(function(r){
-          return '<tr><td>' + _fwEsc(r.cift) + '</td>'
-            + '<td class="ve-fw-ro">' + _fwFmt(r.lo, 1) + '</td>'
-            + '<td class="ve-fw-ro">' + _fwFmt(r.a, 1) + '</td>'
-            + '<td class="ve-fw-ro">' + _fwFmt(r.hi, 1) + '</td>'
-            + '<td class="ve-fw-ro">' + pay(r.payPct) + '</td></tr>'; }).join('')) : '', c.rows.length);
+    ? liste(c.rows.map(function(r){
+        return oge(_fwEsc(r.cift), [['a = ' + _fwFmt(r.a, 1) + ' mm',
+          'pencere ' + _fwFmt(r.lo, 1) + '–' + _fwFmt(r.hi, 1), 'pay ' + pay(r.payPct)]]); })) : '', c.rows.length);
 
   // 2 — çevrim oranı penceresi
   var w = R.ratioWindow, wn = w.note ? _fwEsc(w.note) : '';
@@ -5460,14 +5471,10 @@ function _fwChecksCard(b){
       : _fwEsc('governed ' + _fwFmt(w.governedRpm, 0) + ' RPM · ' + w.rows.length + ' aksesuar pencerede');
   }
   h += kapi('Çevrim oranı penceresi', w.durum, wn, w.rows.length
-    ? tablo('<th>Aksesuar</th><th>optimum</th><th>devir</th><th>sürekli</th><th>hüküm</th>',
-        w.rows.map(function(r){
-          return '<tr><td>' + _fwEsc(r.ad) + '</td>'
-            + '<td class="ve-fw-ro">' + _fwFmt(r.optimumRpm, 0) + '</td>'
-            + '<td class="ve-fw-ro">' + _fwFmt(r.accRpm, 0) + '</td>'
-            + '<td class="ve-fw-ro">' + _fwFmt(r.maxContRpm, 0) + '</td>'
-            + '<td class="' + (r.ok ? 've-fw-ok' : 've-fw-err') + '">'
-            + _fwEsc(r.metin) + '</td></tr>'; }).join('')) : '', w.rows.length);
+    ? liste(w.rows.map(function(r){
+        return oge(_fwEsc(r.ad), [['devir ' + _fwFmt(r.accRpm, 0), 'optimum ' + _fwFmt(r.optimumRpm, 0),
+          'sürekli ' + _fwFmt(r.maxContRpm, 0)],
+          ['<span class="' + (r.ok ? 've-fw-ok' : 've-fw-err') + '">' + _fwEsc(r.metin) + '</span>']]); })) : '', w.rows.length);
 
   // 3 — aksesuar devir sınırı (sürekli ve anlık maksimum)
   var sp = R.speedLimit, sn = sp.note ? _fwEsc(sp.note) : '';
@@ -5478,18 +5485,11 @@ function _fwChecksCard(b){
     if(q) sn = (sn ? sn + ' · ' : '') + _fwEsc(kr.ad + ' ' + q.ad + ' ' + _fwFmt(q.accRpm, 0) + ' / '
       + _fwFmt(q.limit, 0) + ' RPM ' + q.limitAd) + ' · pay ' + pay(q.payPct);
   }
-  var g = '';
-  sp.rows.forEach(function(r){
-    r.noktalar.forEach(function(q2, k){
-      g += '<tr><td>' + (k === 0 ? _fwEsc(r.ad) : '') + '</td>'
-        + '<td>' + _fwEsc(q2.ad) + '</td>'
-        + '<td class="ve-fw-ro">' + _fwFmt(q2.accRpm, 0) + '</td>'
-        + '<td class="ve-fw-ro">' + _fwFmt(q2.limit, 0) + ' ' + _fwEsc(q2.limitAd) + '</td>'
-        + '<td class="ve-fw-ro">' + pay(q2.payPct) + '</td></tr>';
-    });
-  });
   h += kapi('Aksesuar devir sınırı', sp.durum, sn, sp.rows.length
-    ? tablo('<th>Aksesuar</th><th>nokta</th><th>devir</th><th>sınır</th><th>pay</th>', g) : '', sp.rows.length);
+    ? liste(sp.rows.map(function(r){
+        return oge(_fwEsc(r.ad), r.noktalar.map(function(q2){
+          return [_fwEsc(q2.ad) + ' ' + _fwFmt(q2.accRpm, 0) + ' / ' + _fwFmt(q2.limit, 0) + ' ' + _fwEsc(q2.limitAd),
+            'pay ' + pay(q2.payPct)]; })); })) : '', sp.rows.length);
 
   var d = [c.durum, w.durum, sp.durum];
   var renk = d.indexOf('no') >= 0 ? 'var(--accent-danger)'

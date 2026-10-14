@@ -541,10 +541,13 @@ olurdu.
     söyler** (`@container vepanel`, ≤ 640 px) — ekran sorgusu 380 px'lik
     müfettiş sütununda hiç tetiklenmiyordu ve düzenlenen sütuna 42 px
     kalıyordu. Dar kapta sekmeler üste, pencerenin EYLEMİ (`.ve-fp-solve`:
-    Hesapla · Raporu Oluştur) kaydırma alanının dibine yapışır. Kapı:
+    Hesapla · Raporu Oluştur) kaydırma alanının dibine yapışır — `bottom`
+    kabın dolgusu kadar EKSİ: yapışkan konum dolguya saygı gösterir, 0'da
+    düğmenin altında 10 px'lik şerit kalıp kayan yazı oradan görünüyordu
+    (`yerlesim.spec.js`). Kapı:
     `tests/e2e/mufettis-sigma.spec.js` (okunurluk: düzenlenen sütun · girdi ·
     etiket · başlık · yatay kaydırma, her sekme gezilerek) + `cp-fead-report.test.js`.
-    **Veri tablosu (çevrim · güç eğrisi) bir BİRİMDİR** (`data-ve-tablo`,
+    **Veri tablosu (çevrim · güç eğrisi · gergi konumu) bir BİRİMDİR** (`data-ve-tablo`,
     tablo + kendi düğmeleri): sütuna sığmazsa yerinde özet kartı kalır ve
     "Tabloyu aç" onu küçük bir pencereye TAŞIR (`js/tablo-pencere.js`) —
     sütunda yatay kaydırma YOK (2026-09-23; önce 785–1162 / 359 px).
@@ -1203,6 +1206,12 @@ olurdu.
     • **Çevrim tablosu PENCEREDE** (`#ve-fw-cevrim`; kW hücresi yerinde
       tazelenir, girdi kutusu yeniden kurulmaz). İç pencerelerde Esc tek
       katman; sihirbazın kapanışı iç pencereleri kapatır.
+    • **DENETİM SÜTUNUNDA TABLO YOK** (2026-10-14): kapıların ayrıntısı
+      LİSTE (`.ve-fw-gate-l` — satır başına ad, ölçü, pay); sütunun 234 px'lik
+      içinde tablo kendi kabında 44 px yatay kayıyordu. Hapın simgesi kendi
+      kutusunda (`<span>L<sub>b</sub></span>`): esnek kabın doğrudan çocuğu
+      `<sub>` alt simge olmaz, "L b" yan yana düşer. Kapı: `yerlesim.spec.js`
+      + `fead-wizard-catalog.test.js` + `fead-checks.spec.js`.
     • **GRAFİK ETİKETİ ÇİZGİYİ KESMEZ** (yay doğrusu, `_fwYayGrafikHTML`):
       etiket adaylarından doğruyu, y eksenini ve önceki etiketleri kesmeyen
       ilkine konur. Sabit ofset 180 durumun 180'inde kesiyordu — doğru eğimli,

@@ -143,10 +143,10 @@ function runECMatchingAnalysis(nodeId) {
     if(gbLimits.grossInputPower !== null || gbLimits.grossInputTorque !== null) {
       c9c10html += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">';
       c9c10html += '<span>Governed güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--ink-danger)') + ';">' + veSayi(powerAtGov, 0) + ' kW</b>';
-      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c9ok ? 'var(--text-muted)' : 'var(--ink-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputPower, 0) + ' kW ' + (c9ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
+      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:var(--fs-micro); white-space:nowrap; color:' + (c9ok ? 'var(--text-muted)' : 'var(--ink-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputPower, 0) + ' kW ' + (c9ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
       c9c10html += '</span>';
       c9c10html += '<span>Governed tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--ink-danger)') + ';">' + veSayi(torqueAtGov, 0) + ' Nm</b>';
-      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c10ok ? 'var(--text-muted)' : 'var(--ink-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputTorque, 0) + ' Nm ' + (c10ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
+      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:var(--fs-micro); white-space:nowrap; color:' + (c10ok ? 'var(--text-muted)' : 'var(--ink-danger)') + ';">(limit: ' + veSayi(gbLimits.grossInputTorque, 0) + ' Nm ' + (c10ok ? veDurumIkon('ok') : veDurumIkon('err')) + ')</span>';
       c9c10html += '</span>';
       c9c10html += '</div>';
     }
@@ -954,21 +954,19 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<span style="color:var(--ink-success);">Önerilen</span>: ≥%15 marj | <span style="color:var(--ink-warning);">Dikkat</span>: %5–15 marj | <span style="color:var(--ink-warning);">Sıkı</span>: &lt;%5 marj | <span style="color:var(--ink-danger);">Uyumsuz</span>: Limit aşılıyor';
     h += '</div></div></div></div>';
 
-    // Tablo
+    // Tablo — BİRİM (js/tablo-pencere.js): sütuna sığmazsa yerinde özet kartı
+    // kalır, tablo açılır pencerede tam genişlikte. Sabit düzende 380 px'lik
+    // sütunda "Şanzıman" ~30 px'e iniyordu: adlar "3…", "ZF|8-S…" kırpılıyor,
+    // ✦ ✧ işaretleri alt alta diziliyor, "C10" başlığı kesiliyordu (ölçüldü).
+    // Doğal genişlikte (`egm-tbl`, otomatik düzen, ad bölünmez) tablo kendini
+    // ölçtürür.
+    var oneriSay = results.filter(function(r) { return r.status === 'recommended'; }).length;
+    var seciliAd = (results.filter(function(r) { return r.key === selectedGB; })[0] || {}).name || '';
+    h += '<div class="ve-tablo" data-ve-tablo="egm:' + nodeId + '" data-ve-tablo-baslik="Şanzıman uyumluluk tablosu"'
+      + ' data-ve-tablo-ozet="' + results.length + ' şanzıman · ' + oneriSay + ' önerilen'
+      + (seciliAd ? ' · seçili: ' + seciliAd.replace(/^Allison\s*\|\s*/i, '').replace(/"/g, '&quot;') : '') + '">';
     h += '<div style="overflow-x:auto;">';
-    h += '<table class="ve-pnl-tbl" style="font-size:var(--fs-micro); table-layout:fixed;">';
-    h += '<colgroup>';
-    h += '<col style="width:28px;">';   // Durum (ikon)
-    h += '<col style="width:auto;">';   // Şanzıman
-    h += '<col style="width:32px;">';   // Vites
-    h += '<col style="width:38px;">';   // Güç
-    h += '<col style="width:40px;">';   // Tork
-    h += '<col style="width:40px;">';   // Türbin
-    h += '<col style="width:40px;">';   // Max Çkş
-    h += '<col style="width:24px;">';   // C9
-    h += '<col style="width:24px;">';   // C10
-    h += '<col style="width:34px;">';   // Seç
-    h += '</colgroup>';
+    h += '<table class="ve-pnl-tbl egm-tbl" style="font-size:var(--fs-micro);">';
     h += '<thead><tr style="background:var(--bg-tertiary);">';
     h += '<th style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); font-size:var(--fs-micro);" title="Durum">⊘</th>';
     h += '<th class="lbl" style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">Şanzıman</th>';
@@ -1004,7 +1002,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';" title="' + statusText + ': ' + r.name + '">';
       h += '<td style="border:1px solid var(--border-color);" title="' + statusText + '"><span style="font-size:var(--fs-tiny);">' + statusIcon + '</span></td>';
-      h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis;">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:var(--on-accent); padding:0 3px; border-radius:var(--radius-sm);">' + veIkon('check') + '</span>' : '') + '</td>';
+      h += '<td class="egm-ad" style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:var(--on-accent); padding:0 3px; border-radius:var(--radius-sm);">' + veIkon('check') + '</span>' : '') + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + r.gearCount + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--ink-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? veSayi(r.grossInputPower) : '—') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--ink-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? veSayi(r.grossInputTorque) : '—') + '</td>';
@@ -1023,7 +1021,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       h += '</tr>';
     });
 
-    h += '</tbody></table></div>';
+    h += '</tbody></table></div></div>';
 
     // Önerilen şanzıman özeti
     var recommended = results.filter(function(r) { return r.status === 'recommended'; });
@@ -1043,6 +1041,9 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     }
 
     resultsEl.innerHTML = h;
+    // Tablo birimi panel çizildikten SONRA geliyor (analiz ayrı koşuyor):
+    // kartı ve ölçümü kendisi ister — yoksa birim hiç katlanmaz.
+    if(typeof veTabloKatla === 'function') veTabloKatla(resultsEl);
   }
 }
 
@@ -1254,20 +1255,20 @@ function ecmExpandChart(nodeId) {
   
   // Footer — Legend
   var footer = document.createElement('div');
-  footer.style.cssText = 'display:flex; align-items:center; gap:14px; padding:7px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:var(--fs-tiny); color:var(--text-secondary);';
+  footer.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; padding:7px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:var(--fs-tiny); color:var(--text-secondary);';
   
   var tcKeys = veGetFamilyTCKeys();
   var tcColors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#a855f7'];
   var legendItems = '';
   tcKeys.forEach(function(key, i) {
     var c = tcColors[i % tcColors.length];
-    legendItems += '<span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:14px; height:3px; background:' + c + '; border-radius:1px; flex-shrink:0;"></span><span style="font-weight:600; color:var(--text-secondary);">' + VE_FT_TC_PRESETS[key].name + '</span></span>';
+    legendItems += '<span style="display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><span style="width:14px; height:3px; background:' + c + '; border-radius:1px; flex-shrink:0;"></span><span style="font-weight:600; color:var(--text-secondary);">' + VE_FT_TC_PRESETS[key].name + '</span></span>';
   });
-  footer.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:18px; height:3px; background:#f59e0b; border-radius:1px;"></span><span style="font-weight:700; color:var(--text-secondary);">Motor</span></span>' +
+  footer.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px; white-space:nowrap;"><span style="width:18px; height:3px; background:#f59e0b; border-radius:1px;"></span><span style="font-weight:700; color:var(--text-secondary);">Motor</span></span>' +
     '<span style="opacity:0.3;">│</span>' + legendItems +
     '<span style="opacity:0.3; margin-left:4px;">│</span>' +
-    '<span style="color:var(--text-muted); font-size:var(--fs-micro);">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0,80 SR &nbsp; ● Kesişim</span>' +
-    '<span style="margin-left:auto; display:flex; align-items:center; gap:10px;">' +
+    '<span style="color:var(--text-muted); font-size:var(--fs-micro); white-space:nowrap;">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0,80 SR &nbsp; ● Kesişim</span>' +
+    '<span style="margin-left:auto; display:flex; align-items:center; gap:10px; white-space:nowrap;">' +
     '<span id="ecm-zoom-indicator" style="display:none; color:var(--ink-accent); font-weight:600; font-size:var(--fs-tiny); cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
     '<span style="color:var(--text-muted); font-size:var(--fs-micro);">Scroll — Yakınlaştır &nbsp;│&nbsp; Sağ Tık + Sürükle — Kaydır</span>' +
     '<span style="color:var(--text-primary); font-weight:500;">ESC — Kapat</span></span>';

@@ -551,7 +551,10 @@ describe('FEAD veri tabloları açılır pencere BİRİMİNDE', () => {
         expect(t.closest('[data-ve-tablo]')).toBeTruthy();
       });
     });
-    expect(tablo).toBe(3);                 // yöntemler + çevrim (sürücü) + güç eğrisi
+    // yöntemler + gergi konumu (çözücü) + çevrim (sürücü) + güç eğrisi. Konum
+    // tablosu birimsiz çıplak bir <table>dı: bu tarama onu görmüyordu ve 380 px
+    // sütunda 6 px yatay kayıyordu (yerlesim.spec.js gördü).
+    expect(tablo).toBe(4);
   });
 
   test('çevrim birimi: satır EKLEYEN düğme ve %zaman uyarısı birimin içinde, özet sayıları doğru', () => {

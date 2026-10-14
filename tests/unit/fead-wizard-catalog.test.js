@@ -371,8 +371,10 @@ describe('Sihirbaz — 7. adımın uygunluk kapıları', () => {
     expect(h).toContain('Çevrim oranı penceresi');
     expect(h).toContain('Aksesuar devir sınırı');
     expect(h).toMatch(/data-ve-fw-checks-durum="[a-z]+\/[a-z]+\/[a-z]+"/);
-    // Üç kapı, üç tablo.
-    expect((h.match(/<table/g) || []).length).toBe(3);
+    // Üç kapı, üç ayrıntı listesi — dar denetim sütununda tablo değil liste
+    // (beş sütunlu tablo 234 px'te yatay kayıyordu).
+    expect((h.match(/class="ve-fw-gate-l"/g) || []).length).toBe(3);
+    expect(h).not.toContain('<table');
   });
 
   test('çözülemeyen modelde kart PATLAMIYOR, "değerlendirilemedi" diyor', () => {
