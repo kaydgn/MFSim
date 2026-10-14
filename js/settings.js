@@ -3,10 +3,11 @@
 // ============================================================================
 // Açılış: proje menüsündeki "Ayarlar" öğesinden. 5 bölüm:
 //   - Görünüm (Tema)        — top-right palet butonundan taşındı
-//   - Otomatik Kaydet       — periyodik localStorage yedeği
-//   - Klavye Kısayolları    — referans tablosu
-//   - Veri Yönetimi         — tercih sıfırlama, yedek silme, tam sıfırlama
-//   - Hakkında              — versiyon, lisans, bağımlılıklar
+//   - Otomatik kaydet       — periyodik localStorage yedeği
+//   - Klavye kısayolları    — "?" penceresiyle aynı liste (shortcuts-help.js)
+//   - Veri yönetimi         — tercih sıfırlama, yedek silme, tam sıfırlama
+//   - Hakkında              — sürüm künyesi, lisans, bağımlılıklar
+// Bölümün başlığı menünün adıdır (_veSettingsBaslik).
 // LocalStorage anahtarları (mf-* öneki):
 //   mf-theme, mf-sidebar-collapsed, mf-autosave-interval, mf-autosave-data,
 //   mf-autosave-ts
@@ -38,6 +39,18 @@ function _veSettingsEscHandler(e) {
   var t = e.target;
   if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   veCloseSettings();
+}
+
+// ─── Bölüm başlığı MENÜNÜN ADIDIR ──────────────────────────────────────────
+// Başlıklar ayrı yazılıyordu ve beş bölümün dördünde menüden farklıydı
+// ("Otomatik kaydet" → "Periyodik yedekleme", "Veri yönetimi" → "Yerel
+// depolama", "Hakkında" → "MFSim"). Ad TEK yerde, index.html'deki menüde;
+// başlık oradan okunur. Kapı: tests/unit/ayarlar-bolum.test.js.
+function _veSettingsBaslik(name) {
+  var b = (typeof document !== 'undefined')
+    ? document.querySelector('.ve-settings-nav-item[data-section="' + name + '"]') : null;
+  var ad = b ? b.textContent.replace(/\s+/g, ' ').trim() : name;
+  return '<h3 class="ve-settings-section-title">' + ad + '</h3>';
 }
 
 // ─── Bölüm değiştir + render ───────────────────────────────────────────────
@@ -79,7 +92,7 @@ function _veSettingsRenderAppearance() {
     { id: 'sistem', name: 'Sistem', swatch: ['#f0ede7', '#1a1815', '#a8502b'] }
   ];
 
-  var html = '<h3 class="ve-settings-section-title">Görünüm</h3>';
+  var html = _veSettingsBaslik('appearance');
 
   // ── KİMLİK ───────────────────────────────────────────────────────────
   // Üst bandın avatarı buradan besleniyor. Ad TARAYICIDA durur, projeye
@@ -195,8 +208,8 @@ function _veSettingsRenderAutosave() {
     var d = Math.floor(h / 24);
     return d + ' gün önce';
   }
-  var html = '<h3 class="ve-settings-section-title">Periyodik yedekleme</h3>';
-  html += '<p class="ve-settings-desc">Aktif projeyi belirli aralıklarla tarayıcı depolamasına otomatik kaydeder. Beklenmedik kapanmalarda son yedek "Geri yükle" ile açılabilir.</p>';
+  var html = _veSettingsBaslik('autosave');
+  html += '<p class="ve-settings-desc">Aktif projeyi belirli aralıklarla tarayıcı depolamasına yedekler. Beklenmedik bir kapanmadan sonra son yedek “Yedeği geri yükle” ile açılır.</p>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Sıklık</span><div class="ve-settings-radios">';
   var labels = { 0: 'Kapalı', 5: '5 dakika', 10: '10 dakika', 30: '30 dakika' };
   VE_SETTINGS_AUTOSAVE_INTERVALS.forEach(function(v) {
@@ -215,25 +228,14 @@ function _veSettingsRenderAutosave() {
 }
 
 // ─── KLAVYE KISAYOLLARI ────────────────────────────────────────────────────
+// Liste BURADA TUTULMAZ: "?" ile açılan pencerenin çizicisi
+// (shortcuts-help.js → veKisayolGruplariHTML). Bu bölüm kendi tablosunu
+// tutuyordu ve yanlıştı — "sol sürükle → tuvali kaydır" yazıyordu; sol
+// sürükleme seçim kutusu açar, kaydırma sağ tıkla (ui-core.js).
 function _veSettingsRenderShortcuts() {
-  var rows = [
-    ['Esc',                'Açık pencereyi/modali/seçimi kapat'],
-    ['Delete / Backspace', 'Seçili bileşeni/bağlantıyı sil'],
-    ['Ctrl + Z',           'Geri al'],
-    ['Ctrl + Y / Ctrl + Shift + Z', 'Yinele'],
-    ['Ctrl + C',           'Seçili bileşeni kopyala'],
-    ['Enter',              'Aktif girdiyi onayla / yeniden adlandırma kaydet'],
-    ['Mouse: Sol sürükle', 'Canvas alanını kaydır'],
-    ['Mouse: Tekerlek',    'Yakınlaştır / uzaklaştır'],
-    ['Mouse: Sürükle (bileşen)', 'Topolojiye bileşen ekle']
-  ];
-  var html = '<h3 class="ve-settings-section-title">Klavye & fare kısayolları</h3>';
-  html += '<p class="ve-settings-desc">Sıkça kullanılan kontroller.</p>';
-  html += '<table class="ve-settings-table"><tbody>';
-  rows.forEach(function(r) {
-    html += '<tr><td><kbd>' + r[0] + '</kbd></td><td>' + r[1] + '</td></tr>';
-  });
-  html += '</tbody></table>';
+  var html = _veSettingsBaslik('shortcuts');
+  html += '<p class="ve-settings-desc">Programın kısayolları — <kbd>?</kbd> ile açılan pencereyle aynı liste.</p>';
+  html += '<div class="ve-set-kisayol">' + (typeof veKisayolGruplariHTML === 'function' ? veKisayolGruplariHTML() : '') + '</div>';
   return html;
 }
 
@@ -262,7 +264,7 @@ function veSettingsResetPreferences() {
     for(var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
     keys.forEach(function(k) { if(!keep[k]) localStorage.removeItem(k); });
   } catch(e) {}
-  if(typeof showToast === 'function') showToast('Tercihler sıfırlandı, sayfa yenileniyor...', 'info');
+  if(typeof showToast === 'function') showToast('Tercihler sıfırlandı, sayfa yenileniyor…', 'info');
   setTimeout(function() { location.reload(); }, 600);
 }
 function veSettingsClearAutosave() {
@@ -287,7 +289,7 @@ function _veSettingsRenderData() {
   } catch(e) {}
   var hasBackup = false;
   try { hasBackup = !!localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
-  var html = '<h3 class="ve-settings-section-title">Yerel depolama</h3>';
+  var html = _veSettingsBaslik('data');
   html += '<p class="ve-settings-desc">Uygulama tüm tercih ve yedeklerini tarayıcının yerel depolamasında tutar.</p>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Toplam boyut</span><div class="ve-settings-value">' + _veSettingsFmtBytes(bytes) + ' (' + keys.length + ' anahtar)</div></div>';
   html += '<div class="ve-settings-btn-row" style="flex-direction:column; align-items:stretch; gap:8px; margin-top:14px;">';
@@ -301,23 +303,49 @@ function _veSettingsRenderData() {
 }
 
 // ─── HAKKINDA ──────────────────────────────────────────────────────────────
+// Buradaki her satır bir KAYNAKTAN okunur, elle yazılmaz — elle yazılanlar
+// sessizce yanlıştı: sürüm hiç yazılmayan bir globalden okunuyor ve HER kopyada
+// "dev" çıkıyordu; açıklama üç modülden yalnız birini sayıyordu; lisans ISC
+// yazıyordu (LICENSE MIT); Three.js "r0.149" (doğrusu r149 = 0.149.0).
+// Kapı: tests/unit/ayarlar-hakkinda.test.js — sürümler gömülü dosyalarla.
+var VE_SETTINGS_LISANS = 'MIT';
+var VE_SETTINGS_BAGIMLILIK = [
+  // [ad, sürüm, lisans] — sürüm, gömülen dosyanın kendi künyesiyle aynı
+  ['Three.js',     'r149 (0.149.0)', 'MIT'],
+  ['Plotly.js',    '2.35.2 (gl3d)',  'MIT'],
+  ['Leaflet',      '1.9.4',          'BSD-2-Clause'],
+  ['KaTeX',        '0.16.9',         'MIT'],   // js/mount-report-assets.js (rapor formülleri)
+  ['Feather · Lucide ikonları', 'seçki', 'MIT · ISC'],   // tools/ikonlar.json: "çizim dili Feather / Lucide"
+  ['Inter',        '5.0.18',         'SIL OFL 1.1']
+];
+// Gömülü sürüm künyesi (build.js → window.__MFSIM_BUILD): commit · PR · tarih.
+// Modüler index.html'de künye YOKTUR; o zaman bunu söyler, "dev" uydurmaz.
+function _veSettingsSurum() {
+  var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
+  if(!b || !b.shortSha) return 'künye yok — modüler kopya';
+  var t = b.shortSha + (b.prNumber ? ' · PR #' + b.prNumber : '');
+  var d = b.date ? new Date(b.date) : null;
+  if(d && !isNaN(d.getTime())) t += ' · ' + d.toLocaleDateString('tr-TR');   // makine: tarih — tr-TR yerel biçimi, sayı değil
+  return t;
+}
+// Modüller tip tanımlarından: yeni modül eklenince açıklama kendiliğinden büyür.
+function _veSettingsModuller() {
+  if(typeof componentDefs === 'undefined') return [];
+  return Object.keys(componentDefs).filter(function(k) { return componentDefs[k].isSubsystem; })
+    .map(function(k) { return componentDefs[k].name; });
+}
 function _veSettingsRenderAbout() {
-  var html = '<h3 class="ve-settings-section-title">MFSim</h3>';
-  html += '<p class="ve-settings-desc">Tarayıcı tabanlı Araç Performans simülasyon ortamı.</p>';
-  html += '<div class="ve-settings-row"><span class="ve-settings-label">Versiyon</span><div class="ve-settings-value">' + (window.__mfsimVersion || 'dev') + '</div></div>';
-  html += '<div class="ve-settings-row"><span class="ve-settings-label">Lisans</span><div class="ve-settings-value">ISC</div></div>';
+  var html = _veSettingsBaslik('about');
+  var mod = _veSettingsModuller();
+  html += '<p class="ve-settings-desc">MFSim — tarayıcıda çalışan mühendislik simülasyonu'
+    + (mod.length ? ': ' + mod.join(' · ') : '') + '.</p>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Sürüm</span><div class="ve-settings-value">' + _veSettingsSurum() + '</div></div>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Lisans</span><div class="ve-settings-value">' + VE_SETTINGS_LISANS + '</div></div>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Kaynak kod</span><div class="ve-settings-value"><a href="https://github.com/kaydgn/MFSim" target="_blank" rel="noopener">github.com/kaydgn/MFSim</a></div></div>';
   html += '<div class="ve-settings-subhead" style="margin-top:18px;">Açık kaynak bağımlılıklar</div>';
-  html += '<table class="ve-settings-table"><tbody>';
-  var deps = [
-    ['Three.js',          'r0.149',      'MIT'],
-    ['Plotly.js',         '2.35 (gl3d)', 'MIT'],
-    ['Leaflet',           '1.9.4',       'BSD-2'],
-    ['Lucide ikonlar',    '—',           'ISC'],
-    ['Inter font',        '5.0.18',      'SIL OFL 1.1']
-  ];
-  deps.forEach(function(d) {
-    html += '<tr><td>' + d[0] + '</td><td><small style="opacity:0.7;">' + d[1] + '</small></td><td><small style="opacity:0.7;">' + d[2] + '</small></td></tr>';
+  html += '<table class="ve-settings-table ve-set-bagimlilik"><tbody>';
+  VE_SETTINGS_BAGIMLILIK.forEach(function(d) {
+    html += '<tr><td>' + d[0] + '</td><td>' + d[1] + '</td><td>' + d[2] + '</td></tr>';
   });
   html += '</tbody></table>';
   return html;

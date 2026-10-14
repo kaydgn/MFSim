@@ -14,7 +14,7 @@ function getECMatchingPropertiesHTML(node) {
 
   // Motor algılama bilgisi
   html += '<div id="ecm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
-  html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">Motor bileşeni aranıyor...</div>';
+  html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">Motor bileşeni aranıyor…</div>';
   html += '</div>';
   
   // Şanzıman Türbin Torku Rating
@@ -722,7 +722,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   } else {
     ctx.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
     ctx.font = veThemeFont('micro');
-    ipucu = 'Ctrl + Scroll: yakınlaştır  ·  Sağ tık + sürükle: kaydır';
+    ipucu = 'Ctrl + tekerlek: yakınlaştır  ·  Sağ tık + sürükle: kaydır';
   }
   var ipY = mt + 11;
   if(ml + 6 + ctx.measureText(ipucu).width + 8 > lejantSol) ipY += veThemeFs('micro') + 4;
@@ -805,7 +805,7 @@ function getEngineGearboxMatchingHTML(node) {
 
   // Motor bağlantı durumu
   html += '<div id="egm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
-  html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">Motor bağlantısı kontrol ediliyor...</div>';
+  html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">Motor bağlantısı kontrol ediliyor…</div>';
   html += '</div>';
 
   // Analiz sonuç tablosu
@@ -1270,8 +1270,8 @@ function ecmExpandChart(nodeId) {
     '<span style="color:var(--text-muted); font-size:var(--fs-micro); white-space:nowrap;">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0,80 SR &nbsp; ● Kesişim</span>' +
     '<span style="margin-left:auto; display:flex; align-items:center; gap:10px; white-space:nowrap;">' +
     '<span id="ecm-zoom-indicator" style="display:none; color:var(--ink-accent); font-weight:600; font-size:var(--fs-tiny); cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
-    '<span style="color:var(--text-muted); font-size:var(--fs-micro);">Scroll — Yakınlaştır &nbsp;│&nbsp; Sağ Tık + Sürükle — Kaydır</span>' +
-    '<span style="color:var(--text-primary); font-weight:500;">ESC — Kapat</span></span>';
+    '<span style="color:var(--text-muted); font-size:var(--fs-micro);">Tekerlek: yakınlaştır &nbsp;·&nbsp; Sağ tık + sürükle: kaydır</span>' +
+    '<span style="color:var(--text-primary); font-weight:500;">Esc: kapat</span></span>';
   modal.appendChild(footer);
   
   overlay.appendChild(modal);

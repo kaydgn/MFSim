@@ -661,6 +661,16 @@
       min-width: 24px;
       text-align: center;
     }
+    /* Klavye kısayolları: "?" penceresinin satırları (tek çizici), sütun
+       genişliğine göre bir ya da iki sütun. */
+    .ve-set-kisayol {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 4px 28px;
+    }
+    .ve-set-kisayol .ve-help-label { font-size: var(--fs-body); }
+    /* Hakkında → bağımlılıklar: sürüm ve lisans soluk jetonla (opaklık değil). */
+    .ve-set-bagimlilik td + td { color: var(--text-muted); font-size: var(--fs-tiny); }
     .ve-settings-content a { color: var(--ink-accent); text-decoration: none; }
     .ve-settings-content a:hover { text-decoration: underline; }
 
@@ -3466,7 +3476,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   font-size:var(--fs-body); color:var(--text-muted);
 }
 .ve-help-foot span{ display:inline-flex; align-items:center; gap:6px; }
-.ve-help-brand{ font-weight:700; letter-spacing:.05em; color:var(--text-secondary); opacity:.8; }
+.ve-help-brand{ font-weight:700; letter-spacing:.05em; color:var(--text-muted); }
 @media (prefers-reduced-motion: reduce){ .ve-help-overlay, .ve-help-panel{ transition:none; } }
 
 /* ── Hizalama & dağıtma araçları (çoklu-seçim paneli) ───────────────────── */
@@ -5415,6 +5425,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
    hücre bölünmez — sığmayan tablo sütunda katlanır, pencerede tam açılır.
    Sabit düzende ad sütunu 30 px'e iniyor ve adlar "3…" diye kırpılıyordu. */
 .egm-tbl th, .egm-tbl td{ white-space:nowrap; }
+/* Ad sütunu başlığıyla aynı kenarda (başlık `lbl` sola yaslı, adlar ortadaydı). */
+.egm-tbl td.egm-ad{ text-align:left; }
 .ve-properties-content table input[type="number"],
 .ve-properties-content table input[type="text"],
 .ve-properties-content table select{
@@ -6920,10 +6932,17 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-status-commit.expanded .ve-status-commit-arrow { transform: rotate(90deg); }
 .ve-status-commit-sha {
   font-size:var(--fs-tiny);
-  opacity: 0.75;
+  color: var(--text-muted);
   width: 56px;
   flex-shrink: 0;
 }
+/* Birleşmenin PR numarası — konu satırı artık dal adı değil PR başlığı. */
+.ve-status-commit-pr {
+  font-size:var(--fs-tiny); font-weight:600; color:var(--ink-accent);
+  font-variant-numeric:tabular-nums; flex-shrink:0;
+}
+.ve-status-commit-login { color: var(--text-muted); }
+.ve-status-commit-tamsha { font-size:var(--fs-tiny); color: var(--text-secondary); }
 .ve-status-commit-msg {
   flex: 1;
   color: var(--text-primary);
@@ -6932,7 +6951,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   white-space: nowrap;
 }
 .ve-status-commit-when {
-  opacity: 0.65;
+  color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
 }

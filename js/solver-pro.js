@@ -75,7 +75,7 @@ function veSolverRunProfessional() {
   var progressWrap = document.createElement('div');
   progressWrap.style.cssText = 'padding:8px 14px 6px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);';
   progressWrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">' +
-    '<span id="ve-sp-phase" style="font-size:var(--fs-body);font-weight:600;color:var(--text-heading);letter-spacing:0.02em;">Başlatılıyor...</span>' +
+    '<span id="ve-sp-phase" style="font-size:var(--fs-body);font-weight:600;color:var(--text-heading);letter-spacing:0.02em;">Başlatılıyor…</span>' +
     '<span id="ve-sp-percent" style="font-size:var(--fs-body);font-weight:700;color:var(--ink-accent);">0%</span>' +
   '</div>' +
   '<div style="width:100%;height:3px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;">' +
@@ -182,7 +182,7 @@ function veSolverRunProfessional() {
     log('  ADIM 1/5 — TOPOLOJİ KONTROLÜ', 'head');
     log('═══════════════════════════════════════════', 'head');
     logSpacer();
-    log('Topoloji haritası okunuyor...');
+    log('Topoloji haritası okunuyor…');
     setTimeout(runNext, 180);
   });
   
@@ -692,7 +692,7 @@ function veSolverRunProfessional() {
       return;
     }
     
-    log('Entegrasyon motoru başlatılıyor...', 'dim');
+    log('Entegrasyon motoru başlatılıyor…', 'dim');
     setTimeout(runNext, 200);
   });
   
@@ -738,7 +738,7 @@ function veSolverRunProfessional() {
       }
     }
     } // end validation
-    log('Hesap başlıyor...');
+    log('Hesap başlıyor…');
     logSpacer();
     
     setTimeout(function() {
@@ -1117,11 +1117,11 @@ function veSolverRunProfessional() {
             targets.forEach(function(tgt) {
               for(var ai = 0; ai < sLen; ai++) {
                 if(sData[ai] >= tgt) {
-                  log('  0 → ' + tgt + ' km/h : ' + veSayi(r.time[ai], 2) + ' s  (' + veSayi(r.distance[ai], 0) + ' m)');
+                  log('  0 → ' + tgt + ' km/h: ' + veSayi(r.time[ai], 2) + ' s  (' + veSayi(r.distance[ai], 0) + ' m)');
                   break;
                 }
                 if(ai === sLen - 1) {
-                  log('  0 → ' + tgt + ' km/h : ulaşılamadı', 'warn');
+                  log('  0 → ' + tgt + ' km/h: ulaşılamadı', 'warn');
                 }
               }
             });

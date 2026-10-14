@@ -852,7 +852,7 @@ function veOpenCoastDownWizard(nodeId) {
   // Footer
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex; align-items:center; gap:10px; padding:6px 16px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:var(--fs-body); color:var(--text-muted);';
-  footer.innerHTML = '<span>g = 9,81 m/s² sabit</span><span style="opacity:0.3;">│</span><span>Coast-Down Crr & Cd analizi</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
+  footer.innerHTML = '<span>g = 9,81 m/s² sabit</span><span style="opacity:0.3;">│</span><span>Coast-Down Crr & Cd analizi</span><span style="margin-left:auto; color:var(--text-secondary);">Esc: kapat</span>';
   modal.appendChild(footer);
 
   overlay.appendChild(modal);
@@ -2296,7 +2296,7 @@ function veManualSegExpandProfile(nodeId) {
   // Footer
   var footer = document.createElement('div');
   footer.style.cssText = 'padding:6px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:var(--fs-micro); color:var(--text-muted); text-align:center;';
-  footer.textContent = 'ESC — Kapat';
+  footer.textContent = 'Ctrl + tekerlek: yakınlaştır  ·  Sağ tık + sürükle: kaydır  ·  Sol tık: sıfırla  ·  Esc: kapat';
   modal.appendChild(footer);
 
   overlay.appendChild(modal);

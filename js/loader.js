@@ -504,7 +504,7 @@
   }
 
   function finalize(total, stages) {
-    setProgress(total, total, 'Son hazırlıklar...');
+    setProgress(total, total, 'Son hazırlıklar…');
     paintBolum(stages, -1);
     // Moduller bitti — kuyruktaki DOMContentLoaded handler'larini calistir
     flushDomReady();
@@ -543,7 +543,7 @@
       return;
     }
 
-    setProgress(0, total, 'Modüller hazırlanıyor...');
+    setProgress(0, total, 'Modüller hazırlanıyor…');
     paintBolum(stages, 0);
 
     var idx = 0;
