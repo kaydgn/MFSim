@@ -33,7 +33,8 @@ describe('Motor paneli', () => {
     const html = cp.getMntMassPropertiesHTML(n);
     expect(html).toContain("'cylinders'");
     expect(html).toContain('Silindir sayısı');
-    expect(html).toContain('Rölanti [rpm]');
+    expect(html).toContain('<td>Rölanti</td>');
+    expect(html).toContain('[d/dk]');
   });
 
   test('ateşleme frekansı formülü panelde açıklanıyor (alan neden var)', () => {

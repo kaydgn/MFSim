@@ -9952,6 +9952,202 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fp-gate[data-d="no"] i  { background:var(--accent-danger); }
 .ve-fp-gate span{ margin-left:auto; font-size:var(--fs-micro); color:var(--text-muted); }
 
+/* ══ TAKOZ PENCERELERİ — FEAD'İN KABUĞU, FÖY VE KROKİ (2026-10-14) ═══════
+   Kullanıcı seçimi (tasarım tuvali): "Hepsi için B föy seçeneği" + C'nin
+   "Güç grubundaki yeri" krokisi. Kabuk, sekme, alan ve kapı dili `.ve-fp-*`
+   — üçüncü bir dil kurulmadı. Burada yalnız Takoz'un iki yeni parçası:
+   FÖY (eksen başına bir satır: girdi ve ondan türetilen yan yana) ve KROKİ.
+   Eski hâlde 8 kütle tipinin hepsi ve Takoz modal açılıyordu (altılı ızgarada
+   "550.03" 46 px'e sığmıyordu); görünüm satır içi `style=` dizelerindeydi ve
+   hiçbir Takoz alanında `:hover`/`:focus` yoktu. */
+
+/* FÖY — Kayış Tablosu'nun (Pafta) gramerinde: başlık mikro büyük harf,
+   türetilen sütun OYUK zeminde (`.cz`), ilkinin solunda tek kıl çizgi (`.ay`).
+   Sabit yerleşim: sütun oranı `<colgroup>`da VERİ olarak yazılır. */
+.ve-mnt-foy{
+  width:100%; table-layout:fixed; border-collapse:collapse; margin:0 0 10px;
+  font-size:var(--fs-tiny); font-variant-numeric:tabular-nums; color:var(--text-primary);
+}
+/* Pencerenin genel `th, td {padding:5px 8px !important}` ve `table th`
+   (zemin, sağ kenarlık, sola yaslama) kuralları föyü hesap sayfasına
+   çeviriyordu; genel kural `!important` olduğu için istisna da öyle yazılmak
+   ZORUNDA (emsal `td.egm-sec`, `.ve-fead-c2-t`). Kapsamı bu tablo. */
+.ve-properties-content .ve-mnt-foy th,
+.ve-properties-content .ve-mnt-foy td{ padding:3px 6px !important; }
+.ve-properties-content .ve-mnt-foy th{
+  font-size:var(--fs-micro); font-weight:600; letter-spacing:var(--tracking-wide);
+  text-transform:uppercase; color:var(--text-muted); text-align:right;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  background:none; border-right:0; border-bottom:1px solid var(--border-color);
+}
+/* Başlıktaki birim ve simge büyük harfe DÖNMEZ ("[N/mm]" "[N/MM]", "δ" "Δ"
+   olurdu — ortak yüzey kuralı, `.ve-fp-l u` ile aynı). */
+.ve-mnt-foy th u{ text-decoration:none; text-transform:none; letter-spacing:normal; }
+.ve-mnt-foy .ve-fp-sym{ font-style:normal; text-transform:none; letter-spacing:normal; }
+.ve-properties-content .ve-mnt-foy td{
+  text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  border-bottom:1px solid var(--border-light);
+}
+.ve-properties-content .ve-mnt-foy th:first-child,
+.ve-properties-content .ve-mnt-foy td:first-child,
+.ve-properties-content .ve-mnt-foy .sol{ text-align:left; }
+.ve-properties-content .ve-mnt-foy td:first-child{ color:var(--text-secondary); }
+/* GİRDİ HÜCRESİ — rakam başlığın altına oturur: hücre 1 + çerçeve 1 + iç
+   dolgu 4 = başlığın 6 px'i. Izgaranın `td:has(> input)` istisnası (3 px)
+   daha özgül olduğu için seçici bu tabloyla nitelendi. */
+.ve-properties-content table.ve-mnt-foy.ve-izgara td.gir{ padding:1px !important; }
+.ve-properties-content table.ve-mnt-foy td input[type="text"]{ padding:2px 4px; }
+.ve-properties-content .ve-mnt-foy td.cz,
+.ve-properties-content .ve-mnt-foy th.cz{ background:var(--bg-tertiary); color:var(--text-secondary); }
+.ve-properties-content .ve-mnt-foy .ay{ border-left:1px solid var(--border-color); }
+.ve-properties-content .ve-mnt-foy tr.top td{
+  border-top:1px solid var(--border-color); border-bottom:none;
+  font-weight:700; color:var(--text-heading);
+}
+.ve-properties-content .ve-mnt-foy td.sf,
+.ve-properties-content .ve-mnt-foy tr.top td.sf{ color:var(--text-muted); font-weight:400; }
+/* SIK föy: çok sütunlu tabloda iç dolgu yarıya iner (ilk sütunun sol kenarı hariç). */
+.ve-properties-content .ve-mnt-foy--sik th,
+.ve-properties-content .ve-mnt-foy--sik td{ padding-left:3px !important; padding-right:3px !important; }
+.ve-properties-content .ve-mnt-foy--sik th:first-child,
+.ve-properties-content .ve-mnt-foy--sik td:first-child{ padding-left:6px !important; }
+/* Sütun başı uzun ad taşıyorsa (parça adları) kırpılmaz, alt satıra iner. */
+.ve-properties-content .ve-mnt-foy--sar th{ white-space:normal; vertical-align:bottom; overflow-wrap:anywhere; }
+.ve-properties-content .ve-mnt-foy td.kr{ color:var(--ink-danger); font-weight:700; }
+/* ZORUNLU VE BOŞ — kutu girdiye değil HÜCREYE: veri ızgarasında girdi
+   dinlenmede kutusuz kalır (kullanıcı kararı 13·B). */
+.ve-properties-content .ve-mnt-foy td.zor{ background:var(--warning-tint-8); }
+.ve-mnt-foy td.zor input::placeholder,
+.ve-fp-inp.ve-mnt-zor::placeholder{ color:var(--ink-warning); opacity:1; }
+.ve-fp-inp.ve-mnt-zor{ border-color:var(--warning-tint-15); background:var(--warning-tint-8); }
+/* Durum bayrakları (çekme · durdurucu · ±10 mm) — tek renk dili: hüküm
+   kırmızı, sınırda kehribar. */
+.ve-properties-content .ve-mnt-foy td.bay{ text-align:left; padding-left:4px !important; }
+.ve-properties-content .ve-mnt-foy td.bay{ text-overflow:clip; }
+.ve-mnt-foy td.bay .mf-ico{ width:11px; height:11px; vertical-align:-1px; margin-right:1px; }
+.ve-mnt-b-ck, .ve-mnt-b-du{ color:var(--ink-danger); }
+.ve-mnt-b-bd{ color:var(--ink-warning); }
+.ve-mnt-lej{
+  display:flex; flex-wrap:wrap; gap:3px 12px; margin:-4px 0 14px;
+  font-size:var(--fs-micro); color:var(--text-muted);
+}
+.ve-mnt-lej span{ display:inline-flex; align-items:center; gap:4px; }
+.ve-mnt-lej .mf-ico{ width:11px; height:11px; }
+
+/* ATALET TENSÖRÜ — simetrik matris: üst üçgen yazılır, alt üçgen onun
+   AYNASI (kesikli, salt okunur). Altı alanlık sıra eskiden "çarpım" diye
+   ayrı bir satırdı ve hangi hücrenin hangisi olduğu okunmuyordu. */
+.ve-mnt-mtx{
+  display:grid; grid-template-columns:18px repeat(3, minmax(0, 1fr));
+  gap:4px; align-items:center; margin:0 0 10px; font-variant-numeric:tabular-nums;
+}
+.ve-mnt-mtx-h{
+  font-size:var(--fs-micro); letter-spacing:var(--tracking-wide);
+  color:var(--text-muted); text-align:center;
+}
+.ve-mnt-mtx-h.sol{ text-align:left; }
+/* Matris bir FORM satırı değil sayı ızgarası: rakam sütunda alt alta
+   karşılaştırılır ve sağa yaslıdır. Bu yüzden alan dilinin `.ve-fp-inp`'i
+   (tek sol kenar kuralı) değil, kendi sınıfı — görünüşü aynı jetonlardan. */
+.ve-mnt-mtx-g{
+  width:100%; min-width:0; box-sizing:border-box; outline:none;
+  border:1px solid var(--border-color); border-radius:var(--radius-xs);
+  background:var(--bg-input); color:var(--text-primary);
+  font-size:var(--fs-tiny); padding:4px 8px; text-align:right; font-variant-numeric:tabular-nums;
+}
+.ve-mnt-mtx-g:hover{ background:var(--bg-tertiary); }
+.ve-mnt-mtx-g:focus{ box-shadow:var(--focus-ring); position:relative; z-index:1; }
+.ve-mnt-mtx-g.ve-mnt-ayna,
+.ve-mnt-mtx-g.ve-mnt-ayna:hover{
+  background:transparent; border-style:dashed; border-color:var(--border-light); color:var(--text-muted);
+}
+.ve-mnt-mtx-g.ve-mnt-zor{ border-color:var(--warning-tint-15); background:var(--warning-tint-8); }
+.ve-mnt-mtx-g.ve-mnt-zor::placeholder{ color:var(--ink-warning); opacity:1; }
+
+/* DURUM SATIRI — bir seçimin ya da hesabın SONUCU (açıklama değil): kütüphane
+   eşleşmesi, katalog sapması, çözüm durumu. Tonu anlamdan. */
+.ve-mnt-not{
+  display:flex; align-items:flex-start; gap:7px; margin:-2px 0 12px; padding:7px 9px;
+  border-radius:var(--radius-md); font-size:var(--fs-tiny); line-height:1.45;
+  color:var(--text-primary); background:var(--bg-tertiary); border:1px solid var(--border-color);
+}
+.ve-mnt-not b{ color:var(--text-heading); }
+.ve-mnt-not > .mf-ico{ flex:none; margin-top:1px; color:var(--ink-accent); }
+.ve-mnt-not > span{ flex:1; min-width:0; }
+.ve-mnt-not[data-d="ok"]{ background:var(--success-tint-8); border-color:var(--success-tint-15); }
+.ve-mnt-not[data-d="ok"] > .mf-ico{ color:var(--ink-success); }
+.ve-mnt-not[data-d="warn"]{ background:var(--warning-tint-8); border-color:var(--warning-tint-15); }
+.ve-mnt-not[data-d="warn"] > .mf-ico{ color:var(--ink-warning); }
+.ve-mnt-not[data-d="no"]{ background:var(--danger-tint-8); border-color:var(--danger-tint-15); }
+.ve-mnt-not[data-d="no"] > .mf-ico{ color:var(--ink-danger); }
+.ve-mnt-not ul{ margin:4px 0 0 16px; padding:0; }
+/* Çözücünün ön denetimi Hesapla'nın altında (boşken yer kaplamaz). */
+.ve-mnt-sonuc > .ve-mnt-not{ margin:8px 0 0; }
+/* Kapı satırındaki kriter numarası (K1a…) — kuralın adı değil adresi. */
+.ve-mnt-kno{ font-size:var(--fs-micro); color:var(--text-muted); }
+.ve-fp-gate.ve-mnt-ic{ margin:-4px 0 12px; border-bottom:none; }
+
+/* HESAPLA İLERLEMESİ DÜĞMENİN İÇİNDE — tek sütunda düğme alta yapışık ve
+   her sekmede görünür; ilerleme kutusu ise içeriğin dibine düşüyor ve
+   kaydırmadan görünmüyordu. Oran `--ilerleme` ile VERİ olarak yazılır. */
+.ve-fp-solve[aria-busy="true"]{
+  cursor:progress;
+  background:linear-gradient(90deg, var(--ink-warning) var(--ilerleme, 0%), var(--accent-warning) var(--ilerleme, 0%));
+}
+
+/* ── GÜÇ GRUBUNDAKİ YERİ — KROKİ ──────────────────────────────────────────
+   Bileşenin modeldeki yeri: gövdeler (kütleyle büyüyen daire), takozlar
+   (kare), birleşik AM ve seçili bileşen. Koordinatı OKUR, çizmez: sayılar
+   çözücünün kullandığı AYNI birleştirmeden (combineMassProps). */
+.ve-mnt-kroki{
+  margin:0 0 12px; border:1px solid var(--border-color); border-radius:var(--radius-md);
+  background:var(--bg-primary); overflow:hidden;
+}
+.ve-mnt-kroki-bas{
+  display:flex; align-items:center; gap:6px; padding:4px 5px 4px 9px;
+  border-bottom:1px solid var(--border-color); background:var(--bg-secondary);
+}
+.ve-mnt-kroki-bas b{
+  font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide);
+  text-transform:uppercase; color:var(--text-secondary); white-space:nowrap;
+}
+.ve-mnt-seg{
+  margin-left:auto; display:flex; flex:none;
+  border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden;
+}
+.ve-mnt-seg button{
+  font:inherit; font-size:var(--fs-micro); padding:2px 8px; cursor:pointer; white-space:nowrap;
+  border:none; background:var(--bg-secondary); color:var(--text-secondary);
+}
+.ve-mnt-seg button + button{ border-left:1px solid var(--border-color); }
+.ve-mnt-seg button:hover{ background:var(--bg-tertiary); color:var(--text-heading); }
+.ve-mnt-seg button:focus-visible{ outline:none; box-shadow:var(--focus-ring); position:relative; }
+.ve-mnt-seg button[aria-pressed="true"]{ background:var(--accent-primary); color:var(--on-accent); font-weight:700; }
+/* Çizim kabın genişliğini alır; geniş pencerede yazı büyümesin diye tavanlı. */
+.ve-mnt-kroki > svg{ display:block; width:100%; max-width:480px; height:auto; margin:0 auto; }
+.ve-mnt-kroki-bos{ padding:14px 10px; font-size:var(--fs-tiny); color:var(--text-muted); text-align:center; }
+.ve-mk-gr{ stroke:var(--border-hover); stroke-width:1; stroke-dasharray:2 3; fill:none; }
+.ve-mk-ax{ stroke:var(--border-hover); stroke-width:1; fill:none; }
+.ve-mk-gv{ fill:color-mix(in srgb, var(--accent-warning) 40%, var(--bg-primary)); stroke:var(--accent-warning); stroke-width:1; }
+.ve-mk-tk{ fill:var(--accent-success); }
+.ve-mk-am{ fill:var(--bg-primary); stroke:var(--accent-danger); stroke-width:1.5; }
+.ve-mk-amx{ stroke:var(--accent-danger); stroke-width:1.2; }
+.ve-mk-sec{ fill:none; stroke:var(--accent-primary); stroke-width:2; }
+.ve-mk-kol{ stroke:var(--accent-primary); stroke-width:1; stroke-dasharray:3 2; fill:none; }
+.ve-mk-ok{ stroke:var(--accent-primary); stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+/* Çizimin yazıları ölçeğin en küçük basamağında (10 px görünüş birimi; dar
+   sütunda çizim 1:1, geniş pencerede tavanına kadar büyür). */
+.ve-mk-y{ fill:var(--text-secondary); font-size:var(--fs-micro); font-family:inherit; }
+.ve-mk-yh{ fill:var(--text-heading); font-size:var(--fs-micro); font-weight:700; font-family:inherit; }
+.ve-mk-ym{ fill:var(--text-muted); font-size:var(--fs-micro); font-family:inherit; letter-spacing:.04em; }
+.ve-mnt-kroki-lej{
+  display:flex; flex-wrap:wrap; gap:4px 10px; padding:4px 9px 5px;
+  border-top:1px solid var(--border-color); background:var(--bg-secondary);
+  font-size:var(--fs-micro); color:var(--text-muted);
+}
+.ve-mnt-kroki-lej span{ display:inline-flex; align-items:center; gap:4px; }
+.ve-mnt-kroki-lej svg{ width:10px; height:10px; flex:none; }
+
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
    kuralları onunla birlikte gitti (kural 26). */
 
