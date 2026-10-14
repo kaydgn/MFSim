@@ -1,0 +1,205 @@
+// ════════════════════════════════════════════════════════════════════════════
+//  TAKOZ BAŞLANGIÇ SAYFASI — boş bir güç grubu modelinin karşılaması
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Kullanıcı isteği (2026-10-14): *"FEAD modülünün başlangıç ekranı çok güzel,
+// aynı onun gibi bir ekran istiyorum. Takoz modülüne de 'Başlangıç Sihirbazı',
+// 'STEP dosyadan başlama' ve 'Boş kanvas' gibi özellikler kuracağız."*
+//
+// Önceki açılış iç topolojiye tek bir "Başlangıç ve Örnekler" bileşeni
+// koyuyordu; kullanıcı ne yapacağını o bileşene çift tıklayıp panelini açınca
+// öğreniyordu. Sayfa aynı soruyu tuvalin tamamında, kapılarla sorar.
+//
+// KURALLAR (FEAD kural 5'in aynısı — iki modül aynı sayfayı kurar):
+//  • GÖRÜNÜM VE DOM ORTAK KİTTEN (js/baslangic-sayfa.js · `.ve-bas*`). Bu
+//    dosyada kalan şey Takoz'un kendisi: görünürlük sorusu, kapıların
+//    eylemleri, örneklerin künyesi ve küçük resmi.
+//  • GÖRÜNÜRLÜK MODELDEN TÜRER, BAYRAK TUTULMAZ: Takoz topolojisinde
+//    kullanıcının seçtiği bir yol yoksa sayfa (`veMntBaslangicGerekli`). Kapı
+//    modeli kurar, sayfa kendiliğinden çekilir; Ctrl+Z kurulumu geri alırsa
+//    sayfa geri gelir. Bayrak olsaydı kaydedilmek zorunda kalırdı ve geri-al
+//    ile ayrışırdı.
+//  • KAPILAR MODÜLÜN ÇAĞRILARI, sayfa düğüm KURMAZ: Sihirbaz `veMntWizAc`,
+//    STEP sihirbazın 1. adımının dosya seçicisi (AYNI tıklamada), Boş kanvas
+//    `veMntKanvasBos`, örnek `veMntOrnekYukle`. İkinci bir kurucu, iki yolun
+//    sessizce ayrışması demekti.
+//  • KÜÇÜK RESİM 2D Görünüm'ün çizicisinden (`veMnt2DGorunusSVG`, sade kip),
+//    örneğin KENDİ modelinden — sunum kendi geometrisini kurmaz.
+//  • Paletten sayfanın üstüne bırakılan bileşen tuvale kurulur (kit
+//    sürükle-bırakı sızdırır) ve sayfa çekilir: dördüncü kapı.
+//  • Tazeleme iki noktadan: kapsam değişimi (`veSyncSidebarScope` →
+//    `veMntBaslangicKapsam`) ve düğüm kümesi değişimi (`updateNodeCount` →
+//    `veMntBaslangicTazele` — ekleme, silme, geri yükleme, sekme yükleme).
+
+var VE_MNT_BAS_ID = 've-mnt-baslangic';
+// Küçük resmin tuvali (kullanıcı birimi) — FEAD karosuyla aynı oran.
+var VE_MNT_BAS_RESIM = { w: 330, h: 150 };
+var _mntBasResimler = {};        // anahtar → SVG (örnekler durağan: oturumluk önbellek)
+var _mntBasKapsam = false;       // Takoz alt topolojisinde miyiz (veSyncSidebarScope yazar)
+
+// Kit global'de (index.html onu bu dosyadan ÖNCE yükler); Node'da modül.
+function _mntBasKit(){
+  if(typeof veBasSayfaHTML === 'function')
+    return { sayfa: veBasSayfaHTML, kur: veBasKur, tazele: veBasTazele, acik: veBasAcik };
+  if(typeof require === 'function'){
+    try {
+      var K = require('./baslangic-sayfa.js');
+      return { sayfa: K.veBasSayfaHTML, kur: K.veBasKur, tazele: K.veBasTazele, acik: K.veBasAcik };
+    } catch(e){ return null; }
+  }
+  return null;
+}
+function _mntBasTip(n){
+  return (typeof componentDefs !== 'undefined' && n && componentDefs[n.type]) || (n && n.def) || {};
+}
+
+// ── GÖRÜNÜRLÜK — SAF: yalnız modeli okur ───────────────────────────────────
+// Liste verilmezse canlı `nodes`. Herhangi bir düğüm kullanıcının bir yol
+// seçtiğini söyler — "Başlangıç ve Örnekler" (mnt-example) DIŞINDA: eski
+// açılış onu kendiliğinden kuruyordu (2026-10-14'e kadar), yani o tek düğümü
+// taşıyan kayıtlı bir topoloji aslında boştur.
+function veMntBaslangicGerekli(liste){
+  if(!liste) liste = (typeof nodes !== 'undefined' && nodes) ? nodes : [];
+  for(var i = 0; i < liste.length; i++){
+    if(!_mntBasTip(liste[i]).isMountExample) return false;
+  }
+  return true;
+}
+
+// ── ÖRNEKLER — "Başlangıç ve Örnekler" panelinin listesinin KENDİSİ ────────
+// Kayıt defteri `veMountCore.getMountExampleList`; ikinci bir liste tutulmaz.
+// Künye örneğin kaydından okunur: araç · toplam kütle · takoz sayısı · gövde adları.
+function veMntBaslangicOrnekler(){
+  var C = (typeof veMountCore !== 'undefined') ? veMountCore : null;
+  if(!C || typeof C.getMountExampleList !== 'function') return [];
+  var out = [];
+  C.getMountExampleList().forEach(function(ex){
+    var M = ex && ex.model;
+    if(!M || !M.components) return;
+    var kutle = 0;
+    M.components.forEach(function(c){ kutle += (Number(c.mass) || 0); });
+    out.push({
+      key: ex.id, ad: ex.name || ex.id, arac: ex.vehicle || ex.name || ex.id,
+      govde: M.components.length, takoz: (M.mounts || []).length, kutle: kutle,
+      govdeAdlari: M.components.map(function(c){ return c.name; })
+    });
+  });
+  return out;
+}
+
+// Örneğin modelinden 2D veri (2D Görünüm'ün biçimi: mm, birleşik CG kütle-ağırlıklı).
+function _mntBasVeri(M){
+  var comps = (M.components || []).map(function(c){
+    return { name: c.name, mass: Number(c.mass) || 0, x: c.cg[0], y: c.cg[1], z: c.cg[2] };
+  });
+  var mounts = (M.mounts || []).map(function(m){
+    return { name: m.name, x: m.pos[0], y: m.pos[1], z: m.pos[2] };
+  });
+  var ms = 0, sx = 0, sy = 0, sz = 0;
+  comps.forEach(function(c){ if(c.mass > 0){ ms += c.mass; sx += c.mass * c.x; sy += c.mass * c.y; sz += c.mass * c.z; } });
+  return { comps: comps, mounts: mounts, cg: ms > 0 ? { x: sx / ms, y: sy / ms, z: sz / ms, m: ms } : null };
+}
+
+// Örneğin ÜSTTEN görünüşü — çizici TEK KAYNAK (veMnt2DGorunusSVG). Çizilemezse
+// boş (karo yine basılır, künyesiyle; yükleme de yine çalışır).
+function veMntBaslangicResim(key){
+  if(Object.prototype.hasOwnProperty.call(_mntBasResimler, key)) return _mntBasResimler[key];
+  var svg = '';
+  try {
+    var ex = (typeof veMountCore !== 'undefined' && veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
+    if(ex && ex.model && typeof veMnt2DGorunusSVG === 'function')
+      svg = veMnt2DGorunusSVG(_mntBasVeri(ex.model), VE_MNT_BAS_RESIM.w, VE_MNT_BAS_RESIM.h,
+                              { gorunus: 'ust', sade: true }) || '';
+  } catch(e){ svg = ''; }
+  _mntBasResimler[key] = svg;
+  return svg;
+}
+
+// ── HTML — SAF: yalnız sabitlerden ve örnek kaydından ─────────────────────
+function veMntBaslangicHTML(){
+  // Sihirbazın adımları RAYIN KENDİ ADLARIYLA (ilk adım "Başlangıç" bu
+  // sayfanın ta kendisi, listede yok) — elle yazılmış bir liste adım
+  // eklenince/kalkınca sessizce bayatlardı (FEAD'de ölçülmüş sınıf).
+  var adimlar = (typeof VE_MW_STEPS !== 'undefined' && VE_MW_STEPS)
+    ? VE_MW_STEPS.slice(1).map(function(s){ return s.ad; }).join(' · ') : '';
+  var ornekler = veMntBaslangicOrnekler();
+  var K = _mntBasKit();
+  if(!K) return '';
+  var kg = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
+  return K.sayfa({
+    ust: 'Takoz Çökme-Titreşim · yeni güç grubu modeli',
+    baslik: 'Nereden başlayalım?',
+    alt: 'Güç grubu modeli henüz boş. Seçtiğin kapı modeli kurar ve bu sayfa çekilir — '
+      + 'sonra her şey tuvalde ve bileşen pencerelerinde değişir.',
+    kapilar: [
+      { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true, rozet: 'önerilen',
+        not: adimlar ? ('Adım adım: ' + adimlar + '.') : 'Modeli adım adım kurar.' },
+      { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla',
+        not: 'CATIA/3DEXPERIENCE montajını oku; gövde ve takoz rollerini 3B görüntüleyicide sen ver.' },
+      { ey: 'bos', ikon: 'grid', ad: 'Boş kanvas',
+        not: 'Analiz araçlarını kur; kütle gövdelerini ve takozları Bileşenler\'den sürükle.' }
+    ],
+    bolum: {
+      baslik: 'Örnek modellerden başla',
+      not: ornekler.length + ' örnek · modelin topolojisi birebir yüklenir, sonra her şey değiştirilebilir',
+      karolar: ornekler.map(function(o){
+        return { ey: 'ornek', v: o.key, baslik: o.ad, resim: veMntBaslangicResim(o.key),
+                 kod: o.arac, yil: kg(o.kutle) + ' kg', sag: o.takoz + ' takoz',
+                 alt: o.govdeAdlari.join(' · ') };
+      })
+    },
+    not: 'Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: '
+      + 'Sihirbaz, STEP ve örnekler Başlangıç ve Örnekler bileşeninin penceresinde.'
+  });
+}
+
+// ── EYLEMLER — hepsi modülün var olan çağrılarına gider ────────────────────
+function veMntBaslangicEylem(ad, v){
+  if(ad === 'sihirbaz')
+    return !!(typeof veMntWizAc === 'function' && veMntWizAc());
+  if(ad === 'step')
+    return !!(typeof veMntWizAcStep === 'function' && veMntWizAcStep());
+  if(ad === 'bos')
+    return !!(typeof veMntKanvasBos === 'function' && veMntKanvasBos().length);
+  if(ad === 'ornek'){
+    if(!v || typeof veMntOrnekYukle !== 'function') return false;
+    return !!veMntOrnekYukle(v);
+  }
+  return false;
+}
+
+// ── DOM — kurma ve görünürlük (kit) ────────────────────────────────────────
+function _mntBasSecenek(){
+  return { id: VE_MNT_BAS_ID, aria: 'Takoz başlangıç sayfası',
+           html: veMntBaslangicHTML, eylem: veMntBaslangicEylem };
+}
+
+// Kapsam: yalnız Takoz alt topolojisinde. Kapsamın tek noktası
+// veSyncSidebarScope (components.js) — modül aç/kapa, sekme, proje yükleme.
+function veMntBaslangicKapsam(scope){
+  _mntBasKapsam = (scope === 'mount-analysis');
+  return veMntBaslangicTazele();
+}
+
+// Döner: sayfa AÇIK mı. Kapsam dışında hiçbir şey kurulmaz.
+function veMntBaslangicTazele(){
+  var K = _mntBasKit();
+  if(!K) return false;
+  return K.tazele(_mntBasSecenek(), _mntBasKapsam && veMntBaslangicGerekli());
+}
+
+function veMntBaslangicAcik(){
+  var K = _mntBasKit();
+  return K ? K.acik(VE_MNT_BAS_ID) : false;
+}
+
+if(typeof module !== 'undefined' && module.exports){
+  module.exports = {
+    veMntBaslangicGerekli: veMntBaslangicGerekli, veMntBaslangicOrnekler: veMntBaslangicOrnekler,
+    veMntBaslangicResim: veMntBaslangicResim, veMntBaslangicHTML: veMntBaslangicHTML,
+    veMntBaslangicEylem: veMntBaslangicEylem, veMntBaslangicKapsam: veMntBaslangicKapsam,
+    veMntBaslangicTazele: veMntBaslangicTazele, veMntBaslangicAcik: veMntBaslangicAcik,
+    VE_MNT_BAS_ID: VE_MNT_BAS_ID, VE_MNT_BAS_RESIM: VE_MNT_BAS_RESIM,
+    _mntBasSifirla: function(){ _mntBasResimler = {}; _mntBasKapsam = false; }
+  };
+}

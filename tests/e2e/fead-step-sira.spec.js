@@ -40,7 +40,7 @@ async function feadAc(page) {
     return !s || s.style.display === 'none';
   }, null, { timeout: 90000 });
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible({ timeout: 20000 });
 }
 

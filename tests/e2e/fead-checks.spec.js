@@ -278,7 +278,7 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   // sessizce kırıldı — önce çift tık açık modala çarptı, sonra araçlar
   // penceresi sayfa açıkken gizli olduğu için tık hiç bir şeye varmadı.)
   const overlay = page.locator('#ve-feadwiz-overlay');
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(overlay).toBeVisible();
 
   // Örnekten doldur — kapıların üstünde koşacağı gerçek bir düzen.

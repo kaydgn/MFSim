@@ -48,7 +48,7 @@ async function feadAc(page) {
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
   // Boş FEAD topolojisini BAŞLANGIÇ SAYFASI karşılar (FEAD kural 5, 2026-09-29):
   // "Sihirbazla kur" kapısı sihirbazı 1. adımda — STEP kartıyla — açar.
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible({ timeout: 20000 });
 }
 

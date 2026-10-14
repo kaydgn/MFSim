@@ -143,10 +143,10 @@ describe('SAYFANIN HTML\'İ', () => {
 
   test('üç kapı ve rapor başına bir karo', () => {
     const d = kur();
-    expect([...d.querySelectorAll('.ve-fead-bas-kapi')].map((b) => b.getAttribute('data-ey')))
+    expect([...d.querySelectorAll('.ve-bas-kapi')].map((b) => b.getAttribute('data-ey')))
       .toEqual(['sihirbaz', 'step', 'bos']);
-    expect(d.querySelector('.ve-fead-bas-kapi.birincil').getAttribute('data-ey')).toBe('sihirbaz');
-    const karo = [...d.querySelectorAll('.ve-fead-bas-karo')];
+    expect(d.querySelector('.ve-bas-kapi.birincil').getAttribute('data-ey')).toBe('sihirbaz');
+    const karo = [...d.querySelectorAll('.ve-bas-karo')];
     expect(karo.map((b) => b.getAttribute('data-v')).sort()).toEqual(M.veFeadExampleKeys().slice().sort());
     karo.forEach((b) => expect(b.getAttribute('data-ey')).toBe('rapor'));
   });
@@ -161,7 +161,7 @@ describe('SAYFANIN HTML\'İ', () => {
 
   test('ikon ailesi tek: kapılar çizgi ikon taşır, sembol karakteri değil', () => {
     const d = kur();
-    d.querySelectorAll('.ve-fead-bas-kapi-ik').forEach((ik) => {
+    d.querySelectorAll('.ve-bas-kapi-ik').forEach((ik) => {
       expect(ik.querySelector('.mf-ico')).not.toBeNull();
     });
   });
@@ -213,7 +213,7 @@ describe('KAPILAR MODÜLÜN VAR OLAN ÇAĞRILARINA GİDER', () => {
     const c = casus('veFeadWizOpenAny');
     try {
       AR.veFeadAraclarKapsam('fead-analysis');
-      document.querySelector('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
+      document.querySelector('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
       expect(c.c).toHaveBeenCalledTimes(1);
     } finally { c.geri(); }
   });

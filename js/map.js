@@ -3128,5 +3128,8 @@ function updateNodeCount() {
   if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
   // Boş tuval ipucunu göster/gizle
   if(typeof veEmptyHintUpdate === 'function') veEmptyHintUpdate();
+  // Takoz başlangıç sayfası düğüm kümesinden türer (js/cp-mount-baslangic.js):
+  // ekleme, silme, geri yükleme ve sekme yükleme hep buradan geçer.
+  if(typeof veMntBaslangicTazele === 'function') veMntBaslangicTazele();
 }
 

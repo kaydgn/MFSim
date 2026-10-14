@@ -659,7 +659,7 @@
                 <rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="currentColor" stroke-width="6"/>
                 <polygon points="40,30 40,70 70,50" fill="currentColor"/>
               </svg> <span class="ve-comp-label">Çözücü</span></div>
-            <div class="ve-component" draggable="true" data-type="mnt-example" title="Örnek — hazır doğrulama analizini (Adams BMC TTAR 2031) topolojiye yükler; tutarlılık uyarıları gösterir">
+            <div class="ve-component" draggable="true" data-type="mnt-example" title="Başlangıç ve Örnekler — sihirbaz, STEP ve örnek modeller; modelin tutarlılık uyarılarını gösterir">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
                 <path d="M60 14 v14 h14" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
@@ -1122,6 +1122,7 @@
 <script type="text/x-mfsim-defer" src="js/panel-chart.js" data-mfsim-label="Panel grafiği etkileşim katmanı..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-core.js" data-mfsim-label="Bileşen panelleri..."></script>
 <script type="text/x-mfsim-defer" src="js/tablo-pencere.js" data-mfsim-label="Açılır tablo penceresi..."></script>
+<script type="text/x-mfsim-defer" src="js/baslangic-sayfa.js" data-mfsim-label="Modül başlangıç sayfası..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-engine.js" data-mfsim-stage="Araç Performans" data-mfsim-label="Motor modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-accessories.js" data-mfsim-label="Aksesuarlar (klima/alternatör/hava komp.)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-gearbox.js" data-mfsim-label="Vites kutusu modülü..."></script>
@@ -1135,6 +1136,8 @@
 <script type="text/x-mfsim-defer" src="js/cp-mount.js" data-mfsim-label="Takoz çökme-titreşim modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-viewer.js" data-mfsim-label="Takoz: 3D görüntüleyici..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-report.js" data-mfsim-label="Takoz: rapor üreteci..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-mount-baslangic.js" data-mfsim-label="Takoz: başlangıç sayfası..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-mount-wizard.js" data-mfsim-label="Takoz: başlangıç sihirbazı..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-belts.js" data-mfsim-stage="FEAD" data-mfsim-label="FEAD: kayış kataloğu..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-tensioners.js" data-mfsim-label="FEAD: gergi künye kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-duty.js" data-mfsim-label="FEAD: çalışma çevrimi kütüphanesi..."></script>
@@ -1149,9 +1152,11 @@
 <script type="text/x-mfsim-defer" src="js/step-p21.js" data-mfsim-label="STEP okuyucusu (ISO 10303-21)..."></script>
 <script type="text/x-mfsim-defer" src="js/fead-step.js" data-mfsim-label="FEAD: STEP'ten kasnak geometrisi..."></script>
 <script type="text/x-mfsim-defer" src="js/step-ucgen.js" data-mfsim-label="STEP yüzlerinin görüntü ağı..."></script>
+<script type="text/x-mfsim-defer" src="js/mount-step.js" data-mfsim-label="Takoz: STEP'ten gövde ve takoz..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead.js" data-mfsim-label="FEAD kayış-kasnak modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-wizard.js" data-mfsim-label="FEAD: başlangıç sihirbazı..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-3b.js" data-mfsim-label="FEAD: STEP'in 3B görüntüleyicisi..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-mount-3b.js" data-mfsim-label="Takoz: STEP'in 3B görüntüleyicisi..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-report.js" data-mfsim-label="FEAD: rapor üreteci..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-summary.js" data-mfsim-label="FEAD: özet rapor..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-pano.js" data-mfsim-label="FEAD: A3 sonuç panosu..."></script>
@@ -1317,6 +1322,26 @@
     <!-- STEP'İN 3B GÖRÜNTÜLEYİCİSİ (js/cp-fead-3b.js) — aynı gerekçe: sihirbazın
          içinde bir kaplama; sihirbaz kapanınca WebGL bağlamı da bırakılır. -->
     <div id="ve-fw-3b" class="ve-fw-3b" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- TAKOZ BAŞLANGIÇ SİHİRBAZI (js/cp-mount-wizard.js) — FEAD sihirbazının
+     KABUĞU (ve-fw-*): aynı ray, çizim masası, denetim sütunu ve alt çubuk.
+     Kimlikler ayrı (ve-mw-*) — iki sihirbaz aynı belgede durur. -->
+<div id="ve-mntwiz-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veMntWizKapat(true)">
+  <div class="ve-settings-modal ve-fw-modal" role="dialog" aria-labelledby="ve-mw-title">
+    <div class="ve-settings-header">
+      <span id="ve-mw-title"><span class="mf-ico mf-ico-wand"></span> Takoz Başlangıç Sihirbazı</span>
+      <button class="ve-settings-close" type="button" onclick="veMntWizKapat(true)" title="Kapat (Esc)" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>
+    </div>
+    <div class="ve-fw-shell">
+      <nav class="ve-fw-nav" id="ve-mw-nav"></nav>
+      <div class="ve-fw-body" id="ve-mw-body"></div>
+    </div>
+    <div class="ve-fw-foot" id="ve-mw-foot"></div>
+    <!-- STEP'İN 3B GÖRÜNTÜLEYİCİSİ (js/cp-mount-3b.js) — sihirbazın içinde bir
+         kaplama; sihirbaz kapanınca WebGL bağlamı da bırakılır. -->
+    <div id="ve-mw-3b" class="ve-fw-3b" style="display:none;"></div>
   </div>
 </div>
 
