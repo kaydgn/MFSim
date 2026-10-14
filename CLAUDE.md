@@ -423,6 +423,13 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   açan kod kararı AYNI karede ister (`veTabloOlcIcinde`). İki sütunlu pencere
   de ekrana değil PENCEREYE sorar (`@container vepanel`). Kapı:
   `tablo-pencere.test.js` + `tablo-pencere.spec.js` + `mufettis-sigma.spec.js`.
+- **EKRANDAKİ YAZI KUTUSUNA SIĞAR** (`tests/helpers/yerlesim-olcu.js`): yazı
+  kırpılmaz (üç noktayla kısaltılan tam metni `title`'da taşır), sözcük satır
+  sonunda bölünmez — kod/numara `white-space:nowrap` ("TC-/411"), kapanış
+  noktalaması satır başında yalnız kalmaz, kap yatayda kaymaz, esnek kapta
+  alt simge kendi kutusunda, alta yapışan öğe kabın dibine oturur (`bottom`
+  = −dolgu). Kapı: `yerlesim.spec.js` (kontrast kapısıyla AYNI tur,
+  `tests/e2e/helpers/yuzey-turu.js`) + `yerlesim-olcu.test.js`.
 - **SONUÇLAR PANOSUNA YAYIN YAPAN MODÜL KAYNAK TABLOSUNA GİRER**
   (`js/results.js` → `veResultSources`): sekme · kütüphane · yorum · sonuç
   globali · unutucu. `results.js` · `trace-view.js` · `graphics.js`'e modüle

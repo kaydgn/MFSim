@@ -9105,34 +9105,35 @@ function veFeadPositionTable(build){
 
   var ad = { FreeArm:'Serbest kol', Replace:'Değiştirme', MaxBelt:'Maks. kayış',
              Mean:'Ortalama', MinBelt:'Min. kayış', Load:'Load (mekanik stop)' };
-  var h = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse; border:1px solid var(--border-color);">'
-    + '<tr style="background:var(--bg-tertiary);">'
+  // TABLO BİRİMİ (js/tablo-pencere.js): yedi sütun 380 px'lik sütuna sığmıyor
+  // — 375 px'lik tablo içeriği 6 px yatay kaydırıyordu (ölçüldü). Sütunda
+  // özet kartı kalır, tablo açılır pencerede. Görünüm CSS'te (kural 14).
+  var h = '<div class="ve-tablo" data-ve-tablo="fead-konum:cozucu" data-ve-tablo-baslik="Gergi konum tablosu"'
+    + ' data-ve-tablo-ozet="' + rows.length + ' konum · kol dönmesi, gerginlik, göbek yükü, sarım">'
+    + '<div class="ve-fp-duty"><table class="ve-pnl-tbl ve-pnl-tbl--framed ve-pnl-tbl--tiny ve-fead-konum">'
     // "Kol [°]" üç büyüklükten HANGİSİ olduğunu söylemiyordu (burada GÖRELİ
     // dönme basılıyor — raporun §8.8'i aynı satırı "Kol açısı — göreli" diye
     // adlandırıyor). Tek ad, tek sayı.
-    + ['Konum','Kol dönmesi — göreli [°]','Gerginlik [N]','Hubload [N]','Yön [°]','β [°]','Sarım [°]'].map(function(t){
-        return '<th style="padding:4px 5px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-secondary);">'+t+'</th>';
-      }).join('') + '</tr>';
+    + '<thead><tr>' + ['Konum','Kol dönmesi — göreli [°]','Gerginlik [N]','Hubload [N]','Yön [°]','β [°]','Sarım [°]'].map(function(t){
+        return '<th>' + t + '</th>';
+      }).join('') + '</tr></thead><tbody>';
   rows.forEach(function(r){
     var isLoad = r.position === 'Load';
+    var sinif = isLoad ? ' class="is-stop"' : '';
     if(r.error){
-      h += '<tr><td style="padding:4px 5px; border:1px solid var(--border-color);">' + (ad[r.position] || r.position) + '</td>'
-        + '<td colspan="6" style="padding:4px 5px; border:1px solid var(--border-color); color:var(--ink-danger);">'
-        + _feadEsc(veFeadTranslateError(r.error)) + '</td></tr>';
+      h += '<tr' + sinif + '><td>' + (ad[r.position] || r.position) + '</td>'
+        + '<td colspan="6" class="ve-fead-konum-hata">' + _feadEsc(veFeadTranslateError(r.error)) + '</td></tr>';
       return;
     }
-    var sty = 'padding:4px 5px; border:1px solid var(--border-color); text-align:right;'
-      + (isLoad ? ' color:var(--text-muted);' : '');
-    h += '<tr><td style="padding:4px 5px; border:1px solid var(--border-color); color:'
-      + (isLoad ? 'var(--text-muted)' : 'var(--text-primary)') + ';">' + (ad[r.position] || r.position) + '</td>'
-      + '<td style="' + sty + '">' + _feadFmt(r.relDeg,1) + '</td>'
-      + '<td style="' + sty + '">' + _feadFmt(r.tensionN,0) + '</td>'
-      + '<td style="' + sty + '">' + _feadFmt(r.hubloadN,0) + '</td>'
-      + '<td style="' + sty + '">' + _feadFmt(r.hubDirDeg,1) + '</td>'
-      + '<td style="' + sty + '">' + _feadFmt(r.betaDeg,1) + '</td>'
-      + '<td style="' + sty + '">' + _feadFmt(r.wrapDeg,1) + '</td></tr>';
+    h += '<tr' + sinif + '><td>' + (ad[r.position] || r.position) + '</td>'
+      + '<td>' + _feadFmt(r.relDeg,1) + '</td>'
+      + '<td>' + _feadFmt(r.tensionN,0) + '</td>'
+      + '<td>' + _feadFmt(r.hubloadN,0) + '</td>'
+      + '<td>' + _feadFmt(r.hubDirDeg,1) + '</td>'
+      + '<td>' + _feadFmt(r.betaDeg,1) + '</td>'
+      + '<td>' + _feadFmt(r.wrapDeg,1) + '</td></tr>';
   });
-  h += '</table>';
+  h += '</tbody></table></div></div>';
 
   var mean = rows.filter(function(r){ return r.position === 'Mean'; })[0];
   var ek = mean && !mean.error

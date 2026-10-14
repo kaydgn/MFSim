@@ -307,7 +307,9 @@ describe('iki boy öteki yüzeylerde de — aynı dönüşümle', () => {
     const R = coz('CONTITECH');
     const b = R.build;
     const h = wiz.veFeadWizLiveHTML(b);
-    expect(h).toContain('L<sub>b</sub> <b>' + veSayi(b.beltLengthMm, 1) + ' mm</b>');
+    // Simge kendi kutusunda: hap esnek kap, doğrudan çocuk `<sub>` orada
+    // `vertical-align` almıyor ("L b" yan yana düşüyordu).
+    expect(h).toContain('<span>L<sub>b</sub></span> <b>' + veSayi(b.beltLengthMm, 1) + ' mm</b>');
     expect(h).toContain('d<sub>w</sub> ' + veSayi(b.beltLengthMm + 3 * Math.PI, 1));
     expect(h).not.toMatch(/L<sub>eff<\/sub>/);
   });
