@@ -159,7 +159,8 @@ function islevAraliklari(f, s, adlar, tablo, kati) {
   });
   return out;
 }
-// Konum belge gövdesinde mi (tarama dışı)?
+// Konum belge gövdesinde mi (tarama dışı)? Sabit renk kapısı da buradan sorar
+// (`theme-contrast.test.js`): belgenin sınırı tek yerde.
 function belgeMi(f, s, kati) {
   const icinde = (r, at) => r.some(([a, b]) => at >= a && at < b);
   if (BELGE_DOSYA[f]) {
@@ -221,7 +222,7 @@ function tara(ham, f, opt) {
 }
 
 module.exports = { sapmalar, tara, yorumsuzJs, yorumsuzHtml, yorumsuzCss, GLIF, OK, YALNIZ, BELGE, BELGE_DOSYA,
-  DUZ_METIN, METIN_ISARETI };
+  belgeMi, DUZ_METIN, METIN_ISARETI };
 
 if (require.main === module) {
   let n = 0;

@@ -2085,7 +2085,7 @@ function _drChartMouseMove(e) {
         html = '<div style="font-weight:600; color:var(--text-heading); margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
         html += '<div>Mesafe: <b style="color:var(--seri-1);">' + segLabel + '</b></div>';
         html += '<div>Uzunluk: <b style="color:var(--seri-1);">' + veSayi(dps[si].mesafe, 0) + '</b> m</div>';
-        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + veSayi(dps[si].grade, 1) + '</b></div>';
+        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? 'var(--ink-success)' : (dps[si].grade < -0.5 ? 'var(--ink-danger)' : 'var(--text-muted)')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + veSayi(dps[si].grade, 1) + '</b></div>';
         html += '<div>Δh: <b style="color:var(--seri-1);">' + veSayi(dps[si].deltaH, 1) + '</b> m</div>';
         break;
       }

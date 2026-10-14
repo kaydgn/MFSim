@@ -1015,7 +1015,7 @@ function getSensorWizardPropertiesHTML(node) {
     html += '<div class="sw-status-bar installed">';
     html += '<span class="sw-status-dot"></span>';
     html += '<span>Sensörler kurulu</span>';
-    html += '<span style="margin-left:auto;font-weight:400;font-size:var(--fs-micro);opacity:0.8;">' + installedPkgs.length + ' paket, ' + sCount + ' sensör</span>';
+    html += '<span style="margin-left:auto;font-weight:400;font-size:var(--fs-micro);">' + installedPkgs.length + ' paket, ' + sCount + ' sensör</span>';
     html += '</div>';
   } else {
     html += '<div class="sw-status-bar not-installed">';
@@ -1039,7 +1039,7 @@ function getSensorWizardPropertiesHTML(node) {
   topoItems.forEach(function(ti) {
     html += '<div class="sw-topo-item">';
     html += '<span class="sw-dot ' + (ti.v ? 'ok' : 'missing') + '"></span>';
-    html += '<span style="' + (ti.v ? '' : 'opacity:0.5;') + '">' + ti.k + '</span>';
+    html += '<span style="' + (ti.v ? '' : 'color:var(--text-muted);') + '">' + ti.k + '</span>';
     html += '</div>';
   });
   html += '</div>';
@@ -1092,14 +1092,16 @@ function getSensorWizardPropertiesHTML(node) {
     var disabled = !st.enabled;
     html += '<button class="sw-tab' + (isActive ? ' active' : '') + (disabled ? ' disabled' : '') + '"';
     if(disabled) {
-      html += ' title="Çözücü bileşeninden bu çözüm kümesini etkinleştirin"';
+      // aria-disabled, disabled DEĞİL: devre dışı düğme ipucunu göstermiyor ve
+      // ipucu kümenin nasıl açılacağını söyleyen TEK yer.
+      html += ' aria-disabled="true" title="Çözücü bileşeninden bu çözüm kümesini etkinleştirin"';
     } else {
       html += ' onclick="swSwitchTab(\'' + st.id + '\')"';
     }
     html += '>';
     html += st.icon + ' ' + st.name;
     if(disabled) {
-      html += '<span class="sw-tab-count" style="opacity:0.5;">kapalı</span>';
+      html += '<span class="sw-tab-count">kapalı</span>';
     } else {
       html += '<span class="sw-tab-count">' + (isInstalled ? st.installedCount : st.pkgCount) + '</span>';
     }
@@ -1168,7 +1170,7 @@ function getSensorWizardPropertiesHTML(node) {
           var matched = sensorStatuses[sIdx];
           html += '<div class="sw-sensor-row">';
           html += '<span class="sw-dot ' + (matched ? 'green' : (reqsMet ? 'gray' : 'red')) + '"></span>';
-          html += '<span style="' + (matched ? '' : 'opacity:0.6;') + '">' + sReq.label + '</span>';
+          html += '<span style="' + (matched ? '' : 'color:var(--text-muted);') + '">' + sReq.label + '</span>';
           html += '</div>';
         });
       } else if(pkg.dependsOn) {
@@ -1181,7 +1183,7 @@ function getSensorWizardPropertiesHTML(node) {
         var ready = pkgInstalled || ((pkgTotal === 0 && pkg.dependsOn) ? false : (pkgMatched === pkgTotal && pkgTotal > 0));
         html += '<div class="sw-diag-row">';
         html += '<span class="sw-dot ' + (ready ? 'green' : 'gray') + '"></span>';
-        html += '<span style="flex:1;' + (ready ? '' : 'opacity:0.6;') + '">' + d.name + '</span>';
+        html += '<span style="flex:1;' + (ready ? '' : 'color:var(--text-muted);') + '">' + d.name + '</span>';
         html += '<button class="sw-info-btn" onclick="event.stopPropagation();swShowDiagramInfo(\'' + pkg.id + '\',' + dIdx + ')" title="Diyagram bilgisi">i</button>';
         html += '</div>';
       });

@@ -1564,8 +1564,9 @@ function veMntDecorateConnections(svg){
     g.appendChild(rect);
     var t=document.createElementNS(NS,'text');
     t.setAttribute('x',fr.x1+11); t.setAttribute('y',fr.y1+16);
-    t.setAttribute('fill','var(--accent-primary)'); t.setAttribute('font-size','10.5');
-    t.setAttribute('opacity','0.72'); t.setAttribute('letter-spacing','1.5');
+    // Yazı vurgunun okunur sürümüyle, opaklıksız: %72 opaklıkta 2,9:1 kalıyordu.
+    t.setAttribute('fill','var(--ink-accent)'); t.setAttribute('font-size','10.5');
+    t.setAttribute('letter-spacing','1.5');
     t.textContent='ŞASİ'; g.appendChild(t);
   }
 

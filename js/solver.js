@@ -465,13 +465,13 @@ function veSolverRunLegacy() {
         if(simResult.mode === 'partial') {
           var maxRpm = Math.max.apply(null, simResult.rpm);
           var finalRpm = simResult.rpm[simResult.rpm.length - 1];
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Maks devir</div><div style="font-size:var(--fs-title); font-weight:700; color:#ef4444;">' + veSayi(maxRpm, 0) + ' rpm</div></div>';
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Son devir</div><div style="font-size:var(--fs-title); font-weight:700; color:#f59e0b;">' + veSayi(finalRpm, 0) + ' rpm</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Maks devir</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--ink-danger);">' + veSayi(maxRpm, 0) + ' rpm</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Son devir</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--ink-warning);">' + veSayi(finalRpm, 0) + ' rpm</div></div>';
         } else {
           var maxV = Math.max.apply(null, simResult.speed);
           var finalV = simResult.speed[simResult.speed.length - 1];
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Maks hız</div><div style="font-size:var(--fs-title); font-weight:700; color:#ef4444;">' + veSayi(maxV, 2) + ' km/h</div></div>';
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Son hız</div><div style="font-size:var(--fs-title); font-weight:700; color:#f59e0b;">' + veSayi(finalV, 2) + ' km/h</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Maks hız</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--ink-danger);">' + veSayi(maxV, 2) + ' km/h</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:var(--fs-tiny); color:var(--text-muted);">Son hız</div><div style="font-size:var(--fs-title); font-weight:700; color:var(--ink-warning);">' + veSayi(finalV, 2) + ' km/h</div></div>';
         }
         
         rhtml += '</div>';
@@ -488,7 +488,7 @@ function veSolverRunLegacy() {
             if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600;">' + veSayiUstel(ss.dtMin, 2) + ' → ' + veSayiUstel(ss.dtMax, 2) + ' s</td></tr>';
             if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600;">' + veSayiUstel(ss.maxError, 2) + '</td></tr>';
             if(ss.events && ss.events.length > 0) rhtml += '<tr><td>Algılanan olaylar:</td><td style="text-align:right; font-weight:600;">' + ss.events.length + '</td></tr>';
-            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:#ef4444;">' + veIkon('alert-triangle') + ' Sertlik uyarısı</td></tr><tr><td colspan="2" style="font-size:var(--fs-tiny); color:#ef4444;">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
+            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Sertlik uyarısı</td></tr><tr><td colspan="2" style="font-size:var(--fs-tiny); color:var(--ink-danger);">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
           }
           
           // Enerji dengesi (tüm yöntemler için)
