@@ -5588,6 +5588,10 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
    sütunda yatay kaydırma — ölçüldü). Genel kural `!important` olduğu için
    istisna da öyle yazılmak ZORUNDA; kapsamı tek hücre sınıfı. */
 .ve-properties-content td.egm-sec{ padding:2px !important; }
+/* Eşleştirme tablosu DOĞAL genişlikte (tablo birimi, js/tablo-pencere.js):
+   hücre bölünmez — sığmayan tablo sütunda katlanır, pencerede tam açılır.
+   Sabit düzende ad sütunu 30 px'e iniyor ve adlar "3…" diye kırpılıyordu. */
+.egm-tbl th, .egm-tbl td{ white-space:nowrap; }
 .ve-properties-content table input[type="number"],
 .ve-properties-content table input[type="text"],
 .ve-properties-content table select{
@@ -8375,6 +8379,8 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-fw-pill b{ color:var(--text-heading); font-weight:700; }
 .ve-fw-pill em{ font-style:normal; color:var(--ink-warning); font-size:var(--fs-micro); }
 .ve-fw-pill sub{ font-size:var(--fs-micro); }
+/* İkon taban çizgisine değil hapın ortasına: taban hizasında 2 px yukarıda duruyordu. */
+.ve-fw-pill > .mf-ico{ align-self:center; }
 .ve-fw-damga{ display:inline-flex; align-items:center; gap:4px; font-weight:700; white-space:nowrap; }
 /* Damganın üç rengi rayın üç durumuyla aynı jetonlardan (.ve-fw-st-*). */
 .ve-fw-pill-ok{ color:var(--ink-success); }
@@ -8834,6 +8840,14 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-gate-d > summary{ cursor:pointer; font-size:var(--fs-micro); color:var(--text-muted); }
 .ve-fw-gate-d > summary:hover{ color:var(--ink-accent); }
 .ve-fw-gate-d[open] > summary{ margin-bottom:4px; }
+/* Ayrıntı satırları LİSTE (dar sütunda tablo yatay kayıyordu): ad üstte,
+   değerler altta; parça bölünmez, satır parçalar arasında kırılır. */
+.ve-fw-gate-l{ list-style:none; margin:0; padding:0; font-size:var(--fs-tiny); }
+.ve-fw-gate-l > li{ display:flex; flex-direction:column; gap:1px; padding:4px 0; border-top:1px solid var(--border-light); }
+.ve-fw-gate-l > li:first-child{ border-top:0; padding-top:0; }
+.ve-fw-gate-l b{ font-weight:600; color:var(--text-heading); }
+.ve-fw-gate-l li > span{ color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+.ve-fw-gate-p{ white-space:nowrap; }
 .ve-fw-check{
   display:flex; align-items:flex-start; gap:8px; margin-top:9px; padding:3px 0 3px 9px;
   font-size:var(--fs-tiny); line-height:1.6; color:var(--text-secondary); cursor:pointer;
@@ -9569,7 +9583,9 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-properties-content .ve-fead-c2-t th{ padding:1px 0 3px !important; }
 .ve-properties-content .ve-fead-c2-t td{ padding:0 !important; }
 .ve-fead-c2-t th small{
-  display:block; font-weight:400; text-transform:none; letter-spacing:0;
+  /* `small` tarayıcıda "smaller": başlığın 10 px'i 8,3 px'e iniyordu (ölçek
+     tabanının altı). Ayrım kalınlık ve renkle; boy başlığınki. */
+  display:block; font-size:inherit; font-weight:400; text-transform:none; letter-spacing:0;
   color:var(--text-muted);
 }
 .ve-fead-c2-grup{ border-bottom:1px solid var(--border-color); cursor:help; }
@@ -9679,7 +9695,12 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   .ve-fp-side{ display:contents; }
   /* `display:contents` DOM ağacını değiştirmez: seçici hâlâ `.ve-fp-side >`
      (ilk hâli `.ve-fp-split >` yazıyordu ve hiç eşleşmiyordu — ölçüldü). */
-  .ve-fp-side > .ve-fp-solve{ position:sticky; bottom:0; z-index:1; box-shadow:0 -6px 14px -6px var(--shadow-color); }
+  /* Alt kenar kaydırma kabının (`.ve-properties-content`) DOLGUSU kadar
+     eksi: yapışkan konum kabın dolgulu kenarına oturur ve `bottom:0`da
+     düğmenin altında 10 px'lik bir şerit kalıyor, kayan içerik o şeritten
+     görünüyordu (kesik yazı satırı). Dolgu değişirse bu da değişir — kapı
+     ölçüyor: yerlesim.spec.js → "yapışkan". */
+  .ve-fp-side > .ve-fp-solve{ position:sticky; bottom:-10px; z-index:1; box-shadow:0 -6px 14px -6px var(--shadow-color); }
 }
 
 /* SEKME ŞERİDİ — DOLU BİR BANT, DURUMLU SEKMELER (2026-09-26, kullanıcı:
@@ -9848,6 +9869,13 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    Dokuz sütunlu veri ızgarası; dar kapta girdiler 14–37 px'e ezilmek yerine
    en küçük genişliklerinde durur ve TABLO yatay kayar — pencere değil. */
 .ve-fp-duty{ overflow-x:auto; margin:0 0 8px; }
+/* Gergi konum tablosu (Çözücü → Model): satır içi stil yerine sınıf (kural 14).
+   Sayılar sağa, ad sola; mekanik stop satırı soluk, hata hücresi tehlike rengi. */
+.ve-fead-konum th, .ve-fead-konum td{ white-space:nowrap; }
+.ve-fead-konum td{ text-align:right; font-variant-numeric:tabular-nums; }
+.ve-fead-konum th:first-child, .ve-fead-konum td:first-child{ text-align:left; }
+.ve-fead-konum tr.is-stop td{ color:var(--text-muted); }
+.ve-fead-konum td.ve-fead-konum-hata{ text-align:left; white-space:normal; color:var(--ink-danger); }
 .ve-fp-duty-tbl th{ font-weight:600; }
 /* VERİ TABLOSUNDA SAYI SAĞA YASLI, başlığı da onunla — sütun alt alta
    karşılaştırılır (3.61 / 3.78 / 3.83), ondalık hizası okunur. Alan
