@@ -37,6 +37,16 @@ function gitOut(cmd, cwd) {
   } catch { return ''; }
 }
 
+// Yalnız belgeye dokunan birleşme (boyut defterinin teslim satırı gibi)
+// programı değiştirmez; karşılamanın "son değişiklikler"i ve Program Durumu
+// onu saymaz. Ölçüldü (2026-10-14): karşılamadaki 10 kaydın 4'ü boyut
+// defteri satırıydı. Dosya listesi alınamazsa (sığ klon) kayıt KALIR —
+// bilinmeyeni atmak listeyi sessizce eksiltirdi.
+function yalnizBelge(csha, cwd) {
+  const dosyalar = gitOut('git diff --name-only ' + csha + '^1 ' + csha, cwd).split('\n').filter(Boolean);
+  return dosyalar.length > 0 && dosyalar.every((d) => /^docs\//.test(d));
+}
+
 // "Merge pull request #851 from …" → 851 ; değilse 0
 function prNumarasi(konu) {
   const m = /Merge pull request #(\d+)/.exec(konu || '');
@@ -101,6 +111,7 @@ function collect(opt) {
     const [csha, cmsg, cauthor, cdate, cbody] = p;
     const no = prNumarasi(cmsg);
     if (!no) continue;
+    if (yalnizBelge(csha, cwd)) continue;
     changes.push({
       sha: csha.slice(0, 7),
       prNumber: no,
@@ -133,4 +144,4 @@ function collect(opt) {
   };
 }
 
-module.exports = { collect, gitOut, prNumarasi, govdedenBaslik };
+module.exports = { collect, gitOut, prNumarasi, govdedenBaslik, yalnizBelge };

@@ -550,21 +550,24 @@ document.addEventListener('keydown', function(e) {
   // zaten aşağıda vardı; KAYDET'İNKİ YOKTU. Düğmeyi klavye yolu açmadan
   // kaldırmak, sık kullanılan bir eylemi yalnız palete mahkûm etmekti —
   // ölçüldü, `veSaveTopology` hiçbir tuşa bağlı değildi.
-  if(e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 's' || e.key === 'S')) {
+  // ⌘ de: kısayol penceresi Mac'te ⌘ yazıyor (shortcuts-help.js), dinleyici
+  // yalnız Ctrl'e bakınca yazılan kısayol çalışmıyordu.
+  var mod = e.ctrlKey || e.metaKey;
+  if(mod && !e.shiftKey && !e.altKey && (e.key === 's' || e.key === 'S')) {
     e.preventDefault();
     if(typeof veSaveTopology === 'function') veSaveTopology();
     return;
   }
 
   // Ctrl+Z - Undo
-  if(e.ctrlKey && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+  if(mod && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
     e.preventDefault();
     undo();
     return;
   }
   
   // Ctrl+Y veya Ctrl+Shift+Z - Redo
-  if((e.ctrlKey && (e.key === 'y' || e.key === 'Y')) || (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z'))) {
+  if((mod && (e.key === 'y' || e.key === 'Y')) || (mod && e.shiftKey && (e.key === 'z' || e.key === 'Z'))) {
     e.preventDefault();
     redo();
     return;

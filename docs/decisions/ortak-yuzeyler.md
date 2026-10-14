@@ -1989,3 +1989,39 @@ varsayılan solu, sola sığmayan sağa geçer.
 **Kapı.** `trace-view.test.js` → *"modül kanalı"*, *"veTrMarkLabelX"* (çizici
 sahte ctx'le); `fead-sonuclar.spec.js` → *"sunum 1920×952 / 1366×768"*.
 
+## Ekrandaki yazı kutusuna sığar (2026-10-14, doku turu 5 · C1)
+
+**Hüküm:** görünen yazı kırpılmaz, sözcük satır sonunda bölünmez, kap yatayda
+kaymaz; ölçüt `tests/helpers/yerlesim-olcu.js`te, tur kontrast kapısıyla
+ortak (`tests/e2e/helpers/yuzey-turu.js`).
+
+**Gerekçe:** `mufettis-sigma.spec.js` pencerenin SÜTUNA sığdığını ölçüyor;
+sığan bir pencerenin İÇİNDE yazı yine bozuluyordu ve hiçbir kapı görmüyordu.
+İki ayrı tur iki ayrı yüzey kümesi demekti — kontrast kapısı bir dönem
+paletin yalnız örnekteki tiplerini açıyordu (66 ölçüm görünmüyordu).
+
+**Kapı:** `yerlesim.spec.js` (eski kodda Araç Performans 17, FEAD 16 bulgu;
+yenide 0) + `yerlesim-olcu.test.js` (matematik).
+
+**Bilerek kapı dışında:** SVG çizimin yazısı (küçük · binen). Ölçülür ve
+`YERLESIM_DOKUM=<önek>` ile dökülür ama henüz HTML yazısıyla aynı kapıya
+girmez — çizicilerin kendi yerleşim kuralları ayrı bir tur.
+
+## Ayarlar ve Program Durumu bilgisini kaynağından okur (2026-10-14, doku turu 5 · D)
+
+**Hüküm:** Ayarlar → Hakkında'daki sürüm, açıklama, lisans ve bağımlılık
+sürümleri; bölüm başlıkları; kısayol listesi ve Program Durumu'nun konu
+satırı elle yazılmaz, kaynağından okunur.
+
+**Gerekçe:** elle yazılan dördü de sessizce yanlıştı — sürüm hiç yazılmayan
+bir globalden okunup her kopyada "dev" çıkıyordu, kısayol tablosu "sol
+sürükle → kaydır" diyordu (sol sürükleme seçim kutusu açar), lisans ISC
+yazıyordu (LICENSE MIT), Program Durumu dal adını basıyordu. Karşılamanın
+değişiklik listesindeki 10 kaydın 4'ü yalnız boyut defterine dokunan
+birleşmeydi: `tools/version-info.js` yalnız `docs/`a dokunan birleşmeyi
+saymaz (dosya listesi alınamazsa kayıt kalır).
+
+**Kapı:** `ayarlar-dogruluk.test.js` · `kisayol-tek-kaynak.test.js` ·
+`status-konu.test.js` · `version-embed.test.js` → *"yalnız belgeye dokunan
+birleşme"*.
+

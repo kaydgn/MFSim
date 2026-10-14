@@ -234,6 +234,8 @@ var VE_GUIDE_SCENE_SEL = [
   '.ve-fead-arac',     // FEAD araçları penceresi (2026-09-28 — araç kutularının yerine)
   '.ve-settings-header', // (pencere ailesinin başlığı — araç penceresi onu taşıyor)
   '.ve-fr-chip',       // sonuç durumu çipi (araç penceresinin Çözüm bölümü)
+  '.ve-fr-kpi',        // Sonuçlar sekmesinin özet kartları (js/cp-fead-results.js)
+  '.ve-fr-nw',         // (kartın bölünmeyen sayı öbeği)
   '.ve-durum',         // durum ikonu (gergi tarafı hükmü)
   '.ve-rb-btn',        // şerit düğmesi
   '.ve-rb-group-items',// düğmenin sarmalı (yerleşim)
@@ -259,6 +261,9 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--border-light': '#ddd7cb', '--border-hover': '#c6c0b4',
   '--font-mono': "'Inter',system-ui,sans-serif",   // tek yüz — belgede de (2026-09-23)
   '--fs-body': '11px', '--fs-md': '12px', '--fs-lg': '13px', '--fs-h2': '15px',
+  // Sonuçlar sekmesinin özet kartı bu ikisini istiyor (`.ve-fr-kpi`):
+  // ölçek BASKININ ölçeği, uygulamanın 1.5rem'i değil — sahne 11 px gövdede.
+  '--fs-h1': '17px', '--space-2': '8px',
   '--radius-xs': '2px', '--radius-md': '3px', '--radius-pill': '999px', '--tracking-wide': '.04em',
   '--ink-accent': '#24425f', '--ink-success': '#2e7d4f',
   '--ink-warning': '#c8781e', '--ink-danger': '#a8321f',

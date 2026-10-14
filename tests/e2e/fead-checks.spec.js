@@ -372,6 +372,7 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
       merkez: /Kasnak merkez mesafesi/.test(t),
       oran: /Çevrim oranı penceresi/.test(t),
       devir: /Aksesuar devir sınırı/.test(t),
+      liste: el.querySelectorAll('ul.ve-fw-gate-l').length,
       tablo: el.querySelectorAll('table').length,
       bos: /undefined|NaN/.test(t),
     };
@@ -380,7 +381,10 @@ test('sihirbaz — kataloglar, kapılar ve kurulan modele taşınma', async ({ p
   expect(kart.merkez).toBe(true);
   expect(kart.oran).toBe(true);
   expect(kart.devir).toBe(true);
-  expect(kart.tablo).toBe(3);
+  // Üç kapı, üç ayrıntı LİSTESİ: 234 px'lik denetim sütununda tablo kendi
+  // kabında 44 px yatay kayıyordu (yerlesim.spec.js).
+  expect(kart.liste).toBe(3);
+  expect(kart.tablo).toBe(0);
   expect(kart.bos).toBe(false);
   // Ölçülen hüküm: merkez mesafesi sınırda, oran uygun, devir sınırı kontrol
   // istiyor (çevrimin 2750 d/dk tepesi). Panel tarafıyla AYNI sonuç.

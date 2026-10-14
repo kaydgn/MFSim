@@ -581,7 +581,7 @@ function veShowRaporModal() {
     '</div>' +
     '<div style="padding:16px;">' +
       '<div style="text-align:center; margin-bottom:14px; padding:8px; background:linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%); border-radius:var(--radius-sm); border:1px solid var(--border-color);">' +
-        '<div style="font-size:var(--fs-lg); font-weight:700; color:#63b3ed; letter-spacing:2px;">BMC</div>' +
+        '<div style="font-size:var(--fs-lg); font-weight:700; color:#63b3ed; letter-spacing:2px;">BMC</div>' +   // sabit renk: kurum bandı koyu ve temayı izlemez
         // Bant SABİT koyu (kurum rengi, temayı izlemez): alt yazı da bandın
         // üstünde okunur sabit açık ton. --text-muted orada 2,44:1 kalıyordu.
         '<div style="font-size:var(--fs-tiny); color:rgba(255,255,255,0.78); margin-top:2px;">Güç Grubu Müdürlüğü — Görsel editör</div>' +

@@ -289,7 +289,9 @@ function getApExamplePropertiesHTML(node){
   left += '<div style="margin-bottom:12px;">';
   left += '<div style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); line-height:1.25;">' + _apEsc(ex.vehicle) + '</div>';
   if(ex.subtitle) left += '<div style="font-size:var(--fs-tiny); color:var(--ink-accent); font-weight:600; margin-top:2px;">' + _apEsc(ex.subtitle) + '</div>';
-  if(ex.description) left += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5; margin-top:7px;">' + _apEsc(ex.description) + '</div>';
+  // iSCAAN rapor numarası tirede bölünmez ("497-" bir satırda, "A380681-1." ötekinde).
+  if(ex.description) left += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5; margin-top:7px;">'
+    + _apEsc(ex.description).replace(/\b\d{3}-[A-Z]\d{6}-\d+\b/g, '<span style="white-space:nowrap;">$&</span>') + '</div>';
   left += '</div>';
 
   if(ex.warning){

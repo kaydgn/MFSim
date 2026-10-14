@@ -1000,7 +1000,7 @@ function veRenderDetailedReport(filter) {
     motorDetailHTML += '<div id="dr-engine-tooltip" class="dr-chart-tooltip"></div>';
     motorDetailHTML += '<div id="dr-engine-crossV" class="dr-chart-crossV"></div>';
     motorDetailHTML += '<div id="dr-engine-crossH" class="dr-chart-crossH"></div>';
-    motorDetailHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır  │  Çift Tık — Sıfırla</div>';
+    motorDetailHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Tekerlek: yakınlaştır  ·  Sağ tık + sürükle: kaydır  ·  Çift tık: sıfırla</div>';
     motorDetailHTML += '<span id="dr-engine-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--ink-accent); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEngineResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     motorDetailHTML += '</div>';
   } else {
@@ -1200,7 +1200,7 @@ function veRenderDetailedReport(filter) {
     // Chart alanı — interactive wrapper
     ecmHTML += '<div id="dr-ecm-chart-wrap" style="margin-top:14px; position:relative; max-width:800px; margin:0 auto; height:450px; border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-secondary); cursor:crosshair;">';
     ecmHTML += '<canvas id="dr-ecm-chart" style="width:100%; height:100%; display:block;"></canvas>';
-    ecmHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ tık + sürükle — Kaydır</div>';
+    ecmHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Tekerlek: yakınlaştır  ·  Sağ tık + sürükle: kaydır</div>';
     ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--ink-accent); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEcmResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     ecmHTML += '</div>';
   } else {
@@ -1609,7 +1609,7 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'right';
-    ctx.fillText('' + veSayi(zs, 1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
+    ctx.fillText(veSayi(zs, 1) + '×  ·  Tekerlek: yakınlaştır  ·  Sağ tık + sürükle: kaydır  ·  Çift tık: sıfırla', W - padR, padT - 8);
   }
   
   // Clip to plot area
@@ -1774,7 +1774,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'right';
-    ctx.fillText('' + veSayi(zs, 1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
+    ctx.fillText(veSayi(zs, 1) + '×  ·  Tekerlek: yakınlaştır  ·  Sağ tık + sürükle: kaydır  ·  Çift tık: sıfırla', W - padR, padT - 8);
   }
   
   // Grid
@@ -2085,7 +2085,7 @@ function _drChartMouseMove(e) {
         html = '<div style="font-weight:600; color:var(--text-heading); margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
         html += '<div>Mesafe: <b style="color:var(--seri-1);">' + segLabel + '</b></div>';
         html += '<div>Uzunluk: <b style="color:var(--seri-1);">' + veSayi(dps[si].mesafe, 0) + '</b> m</div>';
-        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + veSayi(dps[si].grade, 1) + '</b></div>';
+        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? 'var(--ink-success)' : (dps[si].grade < -0.5 ? 'var(--ink-danger)' : 'var(--text-muted)')) + ';">' + veIkon(dps[si].grade > 0 ? 'trending-down' : (dps[si].grade < 0 ? 'trending-up' : 'arrow-right')) + ' %' + veSayi(dps[si].grade, 1) + '</b></div>';
         html += '<div>Δh: <b style="color:var(--seri-1);">' + veSayi(dps[si].deltaH, 1) + '</b> m</div>';
         break;
       }
@@ -4861,7 +4861,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.font = veThemeFont('tiny', 600); ctx.textAlign = 'right';
-    ctx.fillText('\uD83D\uDD0D ' + veSayi(zs, 1) + '\u00d7  Scroll: Zoom \u2014 Sa\u011f T\u0131k+S\u00fcr\u00fckle: Kayd\u0131r \u2014 \u00c7ift T\u0131k: S\u0131f\u0131rla', W - padR, padT - 8);
+    ctx.fillText(veSayi(zs, 1) + '×  ·  Tekerlek: yakınlaştır  ·  Sağ tık + sürükle: kaydır  ·  Çift tık: sıfırla', W - padR, padT - 8);
   }
   
   // Clip to plot area

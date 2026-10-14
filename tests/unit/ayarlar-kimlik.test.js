@@ -43,9 +43,10 @@ describe('Kimlik bloğunun görünümü', () => {
   });
 
   test('Görünüm sayfasında iki büyük başlık üst üste yok; Kimlik ve Tema ara başlık', () => {
-    const bas = settings.slice(settings.indexOf("'<h3 class=\"ve-settings-section-title\">Görünüm</h3>'"));
+    // Bölüm başlığı menünün adından gelir (_veSettingsBaslik) — blokta TEK.
+    const bas = settings.slice(settings.indexOf('function _veSettingsRenderAppearance'));
     const blok = bas.slice(0, bas.indexOf('ve-settings-theme-grid'));
-    expect((blok.match(/ve-settings-section-title/g) || []).length).toBe(1);
+    expect((blok.match(/ve-settings-section-title|_veSettingsBaslik\(/g) || []).length).toBe(1);
     expect(blok).toMatch(/<h4 class="ve-settings-subhead">Kimlik<\/h4>/);
     expect(blok).toMatch(/<h4 class="ve-settings-subhead">Tema<\/h4>/);
   });

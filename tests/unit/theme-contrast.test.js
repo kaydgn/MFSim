@@ -201,6 +201,50 @@ describe('aksan METİN olarak ham kullanılmıyor', () => {
     expect(bulunan).toEqual([]);
   });
 
+  test('JS üretimi HTML\'de yazı rengi temadan: satır içi sabit #renk yok', () => {
+    // Sabit renk iki temanın birinde düşer: sensör başlığının #22c55e'si açık
+    // panel zemininde (#faf8f4) 2,15:1; çözücü kartının #ef4444'ü kendi
+    // --bg-tertiary zemininde 2,89:1.
+    // Muaf: indirilen belgenin gövdesi (kâğıt zemini sabit; sınırı ikon
+    // kapısıyla AYNI tablodan — `tools/ikon-dili.js` → BELGE · BELGE_DOSYA) ve
+    // `// sabit renk: <sebep>` taşıyan satır (Leaflet'in beyaz kutusu gibi
+    // zemini de sabit olan yüzey).
+    const { yorumsuzJs, belgeMi } = require('../../tools/ikon-dili.js');
+    const KOK = path.join(__dirname, '../..');
+    const dosyalar = [];
+    ['js', 'viewer/js', 'candbc/js'].forEach((d) => {
+      fs.readdirSync(path.join(KOK, d)).filter((f) => /\.js$/.test(f) && f !== 'fead-core.js')
+        .forEach((f) => dosyalar.push(d + '/' + f));
+    });
+    const HEX = '#[0-9a-fA-F]{3,6}\\b';
+    const DESEN = [
+      new RegExp('style=\\\\?"[^"]*?(?<![-\\w])color\\s*:\\s*' + HEX, 'g'),
+      new RegExp('\\.color\\s*=\\s*\\\\?[\'"]' + HEX, 'g'),
+      // `color:' + (koşul ? '#…' : …) + '` — rengi koşul seçiyor
+      new RegExp('color:\\s*\'\\s*\\+\\s*\\((?:[^()]|\\([^()]*\\))*\'' + HEX + '\'', 'g')
+    ];
+    const bulunan = [];
+    dosyalar.forEach((d) => {
+      const ham = fs.readFileSync(path.join(KOK, d), 'utf8');
+      const s = yorumsuzJs(ham);                         // yorum boşlukla; konumlar korunur
+      const belge = belgeMi(d, s, true);
+      const hamSatir = ham.split('\n');
+      let bas = 0;
+      s.split('\n').forEach((satir, i) => {
+        if (!/\/\/ sabit renk:/.test(hamSatir[i])) {
+          DESEN.forEach((re) => {
+            re.lastIndex = 0;
+            let m;
+            while ((m = re.exec(satir))) if (!belge(bas + m.index + m[0].length - 1)) bulunan.push(`${d}:${i + 1}`);
+          });
+        }
+        bas += satir.length + 1;
+      });
+    });
+    expect(dosyalar.length).toBeGreaterThan(100);
+    expect([...new Set(bulunan)]).toEqual([]);
+  });
+
   test('sabit yeşil tint temayı izliyor', () => {
     // .ve-xaxis-dropdown-item.active zemini rgba(45,138,90,.10) idi: on altı
     // temanın on beşinde aksanla ilgisi olmayan bir yeşil sızıyordu.
