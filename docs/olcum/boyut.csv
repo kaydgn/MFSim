@@ -9,3 +9,4 @@ tarih,sha,ham_bayt,gzip_bayt,assets_vendor_bayt,not
 2026-10-01,fad62e2,29486812,17460256,23231921,+28 KB kod (FEAD sembolik cizim + sihirbaz masasi uzaklasir #1074) - kare ve varlik degismedi
 2026-10-02,575ffa1,29498970,17463849,23231921,+12 KB kod (FEAD STEP kayis sirasi eskizden #1076) - kare ve varlik degismedi
 2026-10-14,e33110b,29518155,17472622,23231921,+19 KB kod (FEAD kanvas rozet/ad yerlesimi + buyuk harf + kontrast #1078-#1081) - kare ve varlik degismedi
+2026-10-14,fe4f181,29520079,17472716,23231921,+2 KB kod (#1082 kalan sabit renkli yazilar AA kontrast) - ayni gun ikinci teslim: e33110b gonderilirken paralel oturum #1082'yi birlestirdi
