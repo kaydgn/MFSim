@@ -30,7 +30,10 @@
 //    sayfanın ÜSTÜNDE kalır: alt topolojiden çıkmanın tek yolu o.
 //  • FARE SAYFADA KALIR: tuvalin sürükleme/seçme/yakınlaştırma dinleyicileri
 //    kap üzerinde; tekerlek sayfayı kaydırır, kadrajı değil.
-// Görünüm CSS'te (`css/styles.css` → `.ve-fead-bas*`).
+// GÖRÜNÜM VE DOM ORTAK KİTTEN (js/baslangic-sayfa.js · `css/styles.css` →
+// `.ve-bas*`): Takoz da aynı sayfayı kurar (js/cp-mount-baslangic.js,
+// 2026-10-14). Bu dosyada kalan şey FEAD'in kendisi: görünürlük sorusu,
+// kapıların eylemleri, raporların künyesi ve küçük resmi.
 
 var VE_FEAD_BAS_ID = 've-fead-baslangic';
 // Küçük resmin tuvali (kullanıcı birimi). Ad, açı ve gül ÇİZİLMEZ: 240 px'lik
@@ -38,12 +41,18 @@ var VE_FEAD_BAS_ID = 've-fead-baslangic';
 var VE_FEAD_BAS_RESIM = { w: 330, h: 150 };
 var _feadBasResimler = {};        // anahtar → SVG (örnekler durağan: oturumluk önbellek)
 
-function _feadBasEsc(s){
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
-    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
-  });
+// Kit global'de (index.html onu bu dosyadan ÖNCE yükler); Node'da modül.
+function _feadBasKit(){
+  if(typeof veBasSayfaHTML === 'function')
+    return { sayfa: veBasSayfaHTML, kur: veBasKur, tazele: veBasTazele, acik: veBasAcik };
+  if(typeof require === 'function'){
+    try {
+      var K = require('./baslangic-sayfa.js');
+      return { sayfa: K.veBasSayfaHTML, kur: K.veBasKur, tazele: K.veBasTazele, acik: K.veBasAcik };
+    } catch(e){ return null; }
+  }
+  return null;
 }
-function _feadBasIkon(ad){ return (typeof veIkon === 'function') ? veIkon(ad) : ''; }
 function _feadBasTip(n){
   return (typeof componentDefs !== 'undefined' && n && componentDefs[n.type]) || (n && n.def) || {};
 }
@@ -121,14 +130,7 @@ function veFeadBaslangicResim(key){
 }
 
 // ── HTML — SAF: yalnız sabitlerden ve örnek kaydından ─────────────────────
-function _feadBasKapi(ey, ikon, ad, not, birincil, rozet){
-  return '<button type="button" class="ve-fead-bas-kapi' + (birincil ? ' birincil' : '') + '" data-ey="' + ey + '">'
-    + '<span class="ve-fead-bas-kapi-ik">' + _feadBasIkon(ikon) + '</span>'
-    + '<span class="ve-fead-bas-kapi-t"><b>' + _feadBasEsc(ad)
-    + (rozet ? '<i>' + _feadBasEsc(rozet) + '</i>' : '') + '</b>'
-    + '<span>' + _feadBasEsc(not) + '</span></span></button>';
-}
-
+// Sayfanın İSKELETİ kitin (veBasSayfaHTML); buradaki iş içeriği söylemek.
 function veFeadBaslangicHTML(){
   // Sihirbazın adımları RAYIN KENDİ ADLARIYLA (ilk adım "Başlangıç" bu
   // sayfanın ta kendisi, listede yok) — elle yazılmış bir sayı ya da liste,
@@ -137,41 +139,33 @@ function veFeadBaslangicHTML(){
   var adimlar = (typeof VE_FW_STEPS !== 'undefined' && VE_FW_STEPS)
     ? VE_FW_STEPS.slice(1).map(function(s){ return s.ad; }).join(' · ') : '';
   var raporlar = veFeadBaslangicRaporlar();
-  var h = '<div class="ve-fead-bas-ic">'
-    + '<span class="ve-fead-bas-ust">FEAD · yeni kayış sistemi</span>'
-    + '<h1>Nereden başlayalım?</h1>'
-    + '<p class="ve-fead-bas-alt">Kayış yolu henüz boş. Seçtiğin kapı modeli kurar ve bu sayfa çekilir — '
-    + 'sonra her şey çizimde ve Kayış Tablosu\'nda değişir.</p>'
-    + '<div class="ve-fead-bas-kapilar">'
-    + _feadBasKapi('sihirbaz', 'wand', 'Sihirbazla kur',
-        adimlar ? ('Adım adım: ' + adimlar + '.') : 'Modeli adım adım kurar.', true, 'önerilen')
-    + _feadBasKapi('step', 'box', 'STEP\'ten başla',
-        'CATIA/3DEXPERIENCE montajını oku; kasnak rollerini 3B görüntüleyicide sen ver.')
-    + _feadBasKapi('bos', 'ruler', 'Boş çizim masası',
-        'Kayış Yolu kartını boş kur; kasnakları Kayış Tablosu\'ndan ekle.')
-    + '</div>';
-  if(raporlar.length){
-    h += '<div class="ve-fead-bas-baslik"><h2>Gates raporlarından başla</h2>'
-      + '<span>' + raporlar.length + ' rapor · raporun modeli birebir yüklenir, sonra her şey değiştirilebilir</span></div>'
-      + '<div class="ve-fead-bas-raporlar">'
-      + raporlar.map(function(r){
-          var svg = veFeadBaslangicResim(r.key);
-          return '<button type="button" class="ve-fead-bas-karo" data-ey="rapor" data-v="' + _feadBasEsc(r.key) + '"'
-            + ' title="' + _feadBasEsc(r.ad) + ' — yükle">'
-            + '<span class="ve-fead-bas-resim">' + (svg || '<i class="ve-fead-bas-resim-yok">çizilemedi</i>')
-            + '<em>Yükle</em></span>'
-            + '<span class="ve-fead-bas-kunye"><span class="ve-fead-bas-kunye-1"><b>' + _feadBasEsc(r.kod) + '</b>'
-            + (r.yil ? '<span>' + _feadBasEsc(r.yil) + '</span>' : '')
-            + '<i>' + r.kasnak + ' kasnak</i></span>'
-            + '<span class="ve-fead-bas-kunye-2">' + _feadBasEsc([r.kayis, r.sistem].filter(Boolean).join(' · ')) + '</span>'
-            + '</span></button>';
-        }).join('')
-      + '</div>';
-  }
-  h += '<p class="ve-fead-bas-not">Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: '
-    + 'Sihirbaz ve yeni kanvas FEAD araçları penceresinde, STEP ve raporlar sihirbazın ilk adımında.</p>'
-    + '</div>';
-  return h;
+  var K = _feadBasKit();
+  if(!K) return '';
+  return K.sayfa({
+    ust: 'FEAD · yeni kayış sistemi',
+    baslik: 'Nereden başlayalım?',
+    alt: 'Kayış yolu henüz boş. Seçtiğin kapı modeli kurar ve bu sayfa çekilir — '
+      + 'sonra her şey çizimde ve Kayış Tablosu\'nda değişir.',
+    kapilar: [
+      { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true, rozet: 'önerilen',
+        not: adimlar ? ('Adım adım: ' + adimlar + '.') : 'Modeli adım adım kurar.' },
+      { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla',
+        not: 'CATIA/3DEXPERIENCE montajını oku; kasnak rollerini 3B görüntüleyicide sen ver.' },
+      { ey: 'bos', ikon: 'ruler', ad: 'Boş çizim masası',
+        not: 'Kayış Yolu kartını boş kur; kasnakları Kayış Tablosu\'ndan ekle.' }
+    ],
+    bolum: {
+      baslik: 'Gates raporlarından başla',
+      not: raporlar.length + ' rapor · raporun modeli birebir yüklenir, sonra her şey değiştirilebilir',
+      karolar: raporlar.map(function(r){
+        return { ey: 'rapor', v: r.key, baslik: r.ad, resim: veFeadBaslangicResim(r.key),
+                 kod: r.kod, yil: r.yil, sag: r.kasnak + ' kasnak',
+                 alt: [r.kayis, r.sistem].filter(Boolean).join(' · ') };
+      })
+    },
+    not: 'Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: '
+      + 'Sihirbaz ve yeni kanvas FEAD araçları penceresinde, STEP ve raporlar sihirbazın ilk adımında.'
+  });
 }
 
 // ── EYLEMLER — hepsi modülün var olan çağrılarına gider ────────────────────
@@ -198,61 +192,28 @@ function veFeadBaslangicEylem(ad, v){
   return false;
 }
 
-// ── DOM — kurma ve görünürlük ──────────────────────────────────────────────
-function _feadBasKap(){
-  return (typeof document !== 'undefined') ? document.getElementById('ve-canvas-wrapper') : null;
-}
-function _feadBasEl(){
-  return (typeof document !== 'undefined') ? document.getElementById(VE_FEAD_BAS_ID) : null;
+// ── DOM — kurma ve görünürlük (kit) ────────────────────────────────────────
+function _feadBasSecenek(){
+  return { id: VE_FEAD_BAS_ID, aria: 'FEAD başlangıç sayfası',
+           html: veFeadBaslangicHTML, eylem: veFeadBaslangicEylem };
 }
 
 function veFeadBaslangicKur(){
-  var kap = _feadBasKap();
-  if(!kap) return null;
-  var el = _feadBasEl();
-  if(el) return el;
-  el = document.createElement('section');
-  el.id = VE_FEAD_BAS_ID;
-  el.className = 've-fead-bas';
-  el.setAttribute('role', 'region');
-  el.setAttribute('aria-label', 'FEAD başlangıç sayfası');
-  el.hidden = true;
-  el.innerHTML = veFeadBaslangicHTML();
-  // TUVALE OLAY SIZDIRMA: kabın dinleyicileri pan/seçim/yakınlaştırma yapıyor.
-  // Tekerlek pasif dinlenir — sayfa kendi kaydırmasını yapar, kadraj oynamaz.
-  ['mousedown', 'pointerdown', 'dblclick', 'contextmenu', 'wheel', 'click'].forEach(function(t){
-    el.addEventListener(t, function(e){ e.stopPropagation(); }, t === 'wheel' ? { passive: true } : false);
-  });
-  el.addEventListener('click', function(e){
-    var b = e.target && e.target.closest && e.target.closest('[data-ey]');
-    if(!b) return;
-    veFeadBaslangicEylem(b.getAttribute('data-ey'), b.getAttribute('data-v'));
-  });
-  kap.appendChild(el);
-  return el;
+  var K = _feadBasKit();
+  return K ? K.kur(_feadBasSecenek()) : null;
 }
 
 // Kapsamda mıyız sorusu çağıranın (FEAD araçları penceresi kapsamı tutuyor).
 // Döner: sayfa AÇIK mı. Kapsam dışında hiçbir şey kurulmaz.
 function veFeadBaslangicTazele(kapsamda){
-  var el = _feadBasEl();
-  var acik = !!kapsamda && veFeadBaslangicGerekli();
-  if(!acik){ if(el) el.hidden = true; return false; }
-  el = el || veFeadBaslangicKur();
-  if(!el) return false;
-  if(el.hidden){
-    // Her AÇILIŞTA yeniden basılır (tema, adım listesi ve örnek listesi
-    // o an neyse); açıkken yeniden basmak odağı ve kaydırmayı düşürürdü.
-    el.innerHTML = veFeadBaslangicHTML();
-    el.scrollTop = 0;
-    el.hidden = false;
-  }
-  return true;
+  var K = _feadBasKit();
+  if(!K) return false;
+  return K.tazele(_feadBasSecenek(), !!kapsamda && veFeadBaslangicGerekli());
 }
 
 function veFeadBaslangicAcik(){
-  var el = _feadBasEl();
-  return !!(el && !el.hidden);
+  var K = _feadBasKit();
+  return K ? K.acik(VE_FEAD_BAS_ID) : false;
 }
 
 if(typeof module !== 'undefined' && module.exports){

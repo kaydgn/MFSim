@@ -67,9 +67,9 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
     const bb = btn.getBoundingClientRect();
     const ust = document.elementFromPoint(bb.left + bb.width / 2, bb.top + bb.height / 2);
     return { kap, sayfa, donus: !!(ust && btn.contains(ust)),
-      kapi: document.querySelectorAll('#ve-fead-baslangic .ve-fead-bas-kapi').length,
-      karo: document.querySelectorAll('#ve-fead-baslangic .ve-fead-bas-karo').length,
-      cizim: document.querySelectorAll('#ve-fead-baslangic .ve-fead-bas-resim [data-ve="belt"]').length,
+      kapi: document.querySelectorAll('#ve-fead-baslangic .ve-bas-kapi').length,
+      karo: document.querySelectorAll('#ve-fead-baslangic .ve-bas-karo').length,
+      cizim: document.querySelectorAll('#ve-fead-baslangic .ve-bas-resim [data-ve="belt"]').length,
       ornek: veFeadExampleKeys().length };
   });
   // Sayfa tuvalin TAMAMINI örter (ölçü kabınki).
@@ -92,7 +92,7 @@ test('TEKERLEK sayfayı kaydırır, kadrajı oynatmaz', async ({ page }) => {
     tasma: document.getElementById('ve-fead-baslangic').scrollHeight
          - document.getElementById('ve-fead-baslangic').clientHeight }));
   expect(once.tasma).toBeGreaterThan(0);     // 768'de sayfa kaydırılabilir
-  const k = await page.locator('#ve-fead-baslangic .ve-fead-bas-karo').first().boundingBox();
+  const k = await page.locator('#ve-fead-baslangic .ve-bas-karo').first().boundingBox();
   await page.mouse.move(k.x + k.width / 2, k.y + k.height / 2);
   await page.mouse.wheel(0, 400);
   await page.waitForTimeout(300);
@@ -108,7 +108,7 @@ test('RAPOR KAROSU modeli kurar → sayfa çekilir, pencere gelir; Ctrl+Z → sa
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);
   await feadGir(page);
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-karo[data-v="AG00976_GATES_2025"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-karo[data-v="AG00976_GATES_2025"]').click();
   await page.waitForFunction(() =>
     window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length === 6, null, { timeout: 20000 });
   await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
@@ -126,7 +126,7 @@ test('RAPOR KAROSU modeli kurar → sayfa çekilir, pencere gelir; Ctrl+Z → sa
 test('BOŞ ÇİZİM MASASI → kasnaksız kart, rozetsiz; sayfa geri gelmez', async ({ page }) => {
   await bootApp(page);
   await feadGir(page);
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="bos"]').click();
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
   await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
   await expect(page.locator('#ve-fead-araclar')).toBeVisible();
@@ -145,7 +145,7 @@ test('BOŞ ÇİZİM MASASI → kasnaksız kart, rozetsiz; sayfa geri gelmez', as
 test('SİHİRBAZ kapısı sihirbazı açar; STEP kapısı dosya seçiciyi AYNI tıklamada açar', async ({ page }) => {
   await bootApp(page);
   await feadGir(page);
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
   await page.evaluate(() => veFeadWizClose(false));
   await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
@@ -153,7 +153,7 @@ test('SİHİRBAZ kapısı sihirbazı açar; STEP kapısı dosya seçiciyi AYNI t
   await expect(page.locator('#ve-fead-baslangic')).toBeVisible();
 
   const secici = page.waitForEvent('filechooser', { timeout: 5000 });
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="step"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="step"]').click();
   const fc = await secici;
   expect(fc.isMultiple()).toBe(false);
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();

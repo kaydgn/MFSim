@@ -197,6 +197,19 @@ async function apTuru(page, olc) {
 }
 
 async function takozTuru(page, olc) {
+  // Boş Takoz topolojisini başlangıç sayfası karşılar (FEAD'inkiyle aynı kit).
+  // Tur kök topolojide geziyor: sayfa için modüle girilir, ölçülür, çıkılır ve
+  // kart silinir — turun geri kalanı birebir eskisi.
+  await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
+  await page.waitForFunction(() => veMntBaslangicAcik(), null, { timeout: 15000 });
+  await page.waitForTimeout(400);   // modüle giriş geçişi (FEAD turuyla aynı bekleyiş)
+  await olc('#ve-canvas-wrapper', 'başlangıç');
+  await page.evaluate(() => {
+    veMntCloseEditor(true);
+    const m = nodes.find((x) => x.type === 'mount-analysis');
+    if (m) { clearSelection(); addToSelection(m); deleteSelectedNodes(); }
+  });
+  await page.waitForFunction(() => !nodes.some((x) => x.type === 'mount-analysis'), null, { timeout: 5000 });
   await page.evaluate(() => {
     let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
     ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);

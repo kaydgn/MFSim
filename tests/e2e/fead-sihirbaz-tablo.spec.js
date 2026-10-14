@@ -55,7 +55,7 @@ test('sihirbaz "Modeli Kur": kasnaklar + İKİ ÇİZİM, tel yok, uyarı yok', a
   expect(acilis).toEqual(['fead-belt', 'fead-report', 'fead-solver', 'fead-wizard']);
 
   // "Boş çizim masası" — sayfa çekilir, boş kart ve araçlar penceresi gelir.
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="bos"]').click();
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
   await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
   expect(await page.evaluate(() =>

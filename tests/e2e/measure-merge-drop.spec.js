@@ -120,21 +120,15 @@ test.describe('MFSim — Birleştir: seçerek, çok eksenli', () => {
     // Takoz modülünü kur → alt topolojisine gir → hazır örneği yükle → çöz.
     // Kullanıcının izlediği yolun aynısı; kestirme bir "sonucu enjekte et"
     // yolu seçilseydi test kendi kurgusunu doğrulamış olurdu.
+    // Takoz doğrudan girişi beyan ediyor (2026-10-14): modül kartı alt
+    // topolojiyi açar ve boş topolojiyi BAŞLANGIÇ SAYFASI karşılar — açılış
+    // artık düğüm kurmuyor; örnek, sayfanın karosundan yüklenir.
     await page.evaluate(() => {
       window.confirm = () => true;          // örnek yükleme onayı
       veStartModule('mount-analysis');
-      const n = (nodes || []).find((x) => x.type === 'mount-analysis');
-      if (!n) throw new Error('mount-analysis düğümü kurulamadı');
-      veMntOpenEditor(n.id);
     });
-    await page.waitForFunction(
-      () => (nodes || []).some((n) => (n.type || '').indexOf('mnt-') === 0),
-      null, { timeout: 30000 });
-
-    await page.evaluate(() => {
-      const starter = (nodes || []).find((n) => n.type === 'mnt-example');
-      if (starter) veMntLoadExample(starter.id);
-    });
+    await page.waitForSelector('#ve-mnt-baslangic:not([hidden])', { timeout: 30000 });
+    await page.click('#ve-mnt-baslangic .ve-bas-karo >> nth=0');
     await page.waitForFunction(
       () => (nodes || []).some((n) => n.type === 'mnt-solver'),
       null, { timeout: 30000 });

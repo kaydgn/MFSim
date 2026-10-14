@@ -241,6 +241,9 @@ function veSyncSidebarScope() {
   // FEAD alt topolojisinde görünür. Modül aç/kapa bu fonksiyondan geçen TEK
   // nokta — yukarıdaki şeridin gerekçesinin aynısı.
   if(typeof veFeadAraclarKapsam === 'function') veFeadAraclarKapsam(scope);
+  // TAKOZ BAŞLANGIÇ SAYFASI da kapsamı görmeli (js/cp-mount-baslangic.js):
+  // yalnız Takoz alt topolojisinde, model boşken açılır. Aynı gerekçe.
+  if(typeof veMntBaslangicKapsam === 'function') veMntBaslangicKapsam(scope);
 }
 
 // PALETSİZ KAPSAM KENDİNİ BEYAN EDER (`componentDefs[scope].noPalette`).
@@ -579,7 +582,13 @@ var componentDefs = {
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
-    isMountModule: true
+    isMountModule: true,
+    // DOĞRUDAN GİRİŞ (2026-10-14, kullanıcı: *"Aynı FEAD modülünün başlangıcı
+    // nasılsa, aynısını istiyorum"*): karşılama kartı modülün İÇİNE kadar
+    // götürür ve boş topolojiyi başlangıç sayfası karşılar
+    // (js/cp-mount-baslangic.js). Kayıt tipte — `_veModuleEnterFn`.
+    moduleEnter: 'veMntOpenEditor',
+    moduleSubtitle: 'Güç grubu takoz analizi'
   },
   // FEAD (Front End Accessory Drive) ALT-SİSTEM MODÜLÜ — motorun ön uç kayış-
   // kasnak sistemi. arac-performans / mount-analysis ile AYNI nested topoloji

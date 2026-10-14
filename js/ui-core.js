@@ -1136,13 +1136,18 @@ function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
   veCheckShiftControllerRequired();
 
   // Aksesuar bağlandıysa → Motor'un net-tork modelini güncelle
+  // Doğrulama YALNIZ motora aksesuar bağlandıysa: VE_ACC_PORT_MAP port ADINA
+  // bakıyor (input-0/1/2) ve o adlar her çok girişli düğümde var. Koşul dışarıda
+  // kaldığında Takoz'un destek bağlantıları (takoz → gövde input-N) Araç
+  // Performans'ın doğrulamasını koşturuyor ve Uyarılar panelini "Motor
+  // bileşeni eksik" diye açıyordu (2026-10-14, sihirbazın "Modeli kur"u).
   if(typeof VE_ACC_PORT_MAP !== 'undefined' && VE_ACC_PORT_MAP[toPort] && typeof veSyncEngineAccessories === 'function') {
     var _engN = nodes.find(function(n){ return n.id === toNodeId && n.type === 'engine'; });
     if(_engN) {
       veSyncEngineAccessories(_engN);
       if(typeof updateVENetChart === 'function') { try { updateVENetChart(_engN.id); } catch(e){} }
+      if(typeof veSolverValidate === 'function' && document.getElementById('ve-solver-validation')) { try { veSolverValidate(); } catch(e){} }
     }
-    if(typeof veSolverValidate === 'function' && document.getElementById('ve-solver-validation')) { try { veSolverValidate(); } catch(e){} }
   }
 }
 

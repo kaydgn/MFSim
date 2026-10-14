@@ -38,7 +38,7 @@ async function ornek(page, secenek) {
   // ÖNCE kurulur ve örnek onu DEVRALIR (geri yüklemenin kartı yarım modelle
   // kurduğu sıra; CTRL+Z kapısının ön koşulu).
   if (secenek && secenek.bosKart) {
-    await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+    await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="bos"]').click();
     await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
   }
   await page.evaluate(() => veFeadLoadExample('AG00976_GATES_2025'));
