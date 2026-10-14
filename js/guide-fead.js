@@ -502,16 +502,48 @@ function _gfSahneKatman(){
     + '<b>kart başına</b> saklanır, yani iki kanvas farklı görünümlerde durabilir.');
 }
 
+// SONUÇLAR SEKMESİNİN ÖZET KARTLARI — panonun KENDİ üreticisinden
+// (`veFeadResKpiHTML` → `veFeadSignals.summary`). Kartların sayısı ve adı
+// çözüme bağlı: ikinci bir liste tutmak, panoda olmayan bir kartı kılavuzda
+// göstermek demekti.
+function _gfSahneSonucKart(){
+  var html = _gfSahneHTML(function(){
+    if(typeof veFeadResKpiHTML !== 'function') return '';
+    var R = (typeof window !== 'undefined') ? window.veFeadResults : null;
+    return veFeadResKpiHTML(R);
+  }, true);
+  if(!html) return '';
+  return veGuideScene(html,
+    'Sonuçlar sayfasının FEAD sekmesindeki <b>özet kartları</b>, örnek model '
+    + 'çözülmüş hâlde. Sayılar çözümden okunur — pano hesaplamaz.');
+}
+
 function _gfSahneKapilar(){
   var html = _gfSahneHTML(function(O){
     if(typeof veFeadChecksCard !== 'function') return '';
     return veFeadChecksCard(O.cozucu, O.build);
   });
   if(!html) return '';
-  return veGuideScene(html,
-    'Uygunluk kapıları kartı, örnek model üzerinde <b>canlı ölçülmüş</b> hâlde. '
-    + 'Rozetler üç kuralın o modeldeki hükmünü taşıyor; “değerlendirilemedi” '
-    + 'satırları o kasnakta devir sınırı girilmediği için öyle.');
+  // ALTYAZI ŞEKİLDEN TÜRER. Sabit yazılmıştı ve şekil değişince bayatladı:
+  // sahne motorun devir sınırlarını yazmaya başlayınca (2026-09-29) hiçbir
+  // satır "değerlendirilemedi" demiyordu ama altyazı o satırları açıklamaya
+  // devam ediyordu. Şekil canlıysa onu anlatan cümle de canlı olmak zorunda.
+  var alt = 'Uygunluk kapıları kartı, örnek model üzerinde <b>canlı ölçülmüş</b> '
+    + 'hâlde. Rozetler üç kuralın o modeldeki hükmünü taşıyor.';
+  if(html.indexOf('değerlendirilemedi') >= 0)
+    alt += ' “Değerlendirilemedi” satırları o kasnakta devir sınırı girilmediği için öyle.';
+  // İki dal da SABİT metin: tırnağın içi bir ifade olsaydı alıntı kapısı onu
+  // programın metniyle karşılaştıramazdı.
+  var yon = ' bir <b>hükümdür</b> ve yönü söyler (Tablo’daki “Çevrim oranı '
+    + 'penceresi” satırı).';
+  if(html.indexOf('Kasnak çapı küçültülmeli') >= 0)
+    alt += ' Çevrim oranı satırındaki “Kasnak çapı küçültülmeli”' + yon;
+  else if(html.indexOf('Kasnak çapı büyütülmeli') >= 0)
+    alt += ' Çevrim oranı satırındaki “Kasnak çapı büyütülmeli”' + yon;
+  if(html.indexOf('sınırda') >= 0)
+    alt += ' Merkez mesafesindeki <b>sınırda</b> rozeti yalnız uyarıdır; negatif pay '
+      + 'çiftin alt sınırın altında kaldığını söyler.';
+  return veGuideScene(html, alt);
 }
 
 // ── BÖLÜM KİMLİKLERİ — içindekiler ve başlıklar TEK KAYNAKTAN ──────────────
@@ -582,9 +614,9 @@ function _gfSec1(){
 
 function _gfSec2(){
   var h = _gfH2(1);
-  h += '<p>FEAD modülünde <strong>beş çalışma yüzeyi</strong> vardır. Hangi bilginin nerede '
+  h += '<p>FEAD modülünde <strong>altı çalışma yüzeyi</strong> vardır. Hangi bilginin nerede '
     + 'durduğunu bilmek, kılavuzun geri kalanını takip etmeyi kolaylaştırır.</p>';
-  h += _gfAlanTablo('Beş çalışma yüzeyi ve sorumlulukları', [
+  h += _gfAlanTablo('Altı çalışma yüzeyi ve sorumlulukları', [
     ['<strong>Kayış Yolu çizimi</strong>', 'Kasnakların <strong>giriş yüzeyi</strong> '
       + '(Çizim Masası): kasnağa <strong>tıklayınca</strong> penceresi açılır, '
       + '<strong>sürükleyince</strong> konumu değişir, Kayış Tablosu’nun <strong>＋ Kasnak ekle</strong> '
@@ -610,10 +642,25 @@ function _gfSec2(){
       + 'çerçevesi · yazı etiketi). Tuvalde bunların kutusu '
       + '<strong>yoktur</strong> — tuvalde yalnız Kayış Yolu kartları durur; kasnaklar da, '
       + 'kayış da, araçlar da modelde düğüm olarak yaşar.', 'Bölüm 2, 5.2, 10 ve 12'],
-    ['Rapor', 'Tek dosyalık, çevrimdışı açılan HTML belge. İki tür: Detaylı ve Özet.',
-      'Bölüm 12']
+    ['<strong>Sonuçlar sayfası</strong>', 'Çözümün <strong>diyagram</strong> yüzeyi: kabuğun '
+      + '<em>Sonuçlar</em> sekmesindeki <strong>FEAD kayış tahriki</strong> sekmesi. Özet kartları, '
+      + 'dört veri kümesinin şerit diyagramları (çevrim · Campbell · gergi kolu · senaryo) ve '
+      + '<strong>Sonuç Özeti</strong> penceresinin tabloları. <strong>Hesaplamaz</strong> — '
+      + 'kümeler çözüm anında yazılır, pano onları okur.', 'Bölüm 11.7'],
+    ['Rapor', 'Tek dosyalık, çevrimdışı açılan HTML belge. <strong>Üç tür</strong>: Detaylı, Özet '
+      + 've tek yatay A3 sayfaya basılan <strong>sonuç panosu</strong>.', 'Bölüm 12']
   ], ['Yüzey', 'Ne taşır', 'Kılavuzda']);
   h += _gfSahneAraclar();
+  h += _gfNot('Sekmenin ADI eksiği söyler — panel panel aramayın',
+      'FEAD pencerelerinin sekme adları <strong>durum taşır</strong>: bir sekmede hesabın '
+    + 'okuduğu bir alan eksikse adı <em>işaretlenir</em> ve şeridin altında o eksiğin '
+    + '<strong>sonucu</strong> yazılır — köprünün verdiği hata, uygunluk kapısının '
+    + 'değerlendirilemeyişi — ve yanındaki <strong>Doldur</strong> bağlantısı sizi '
+    + 'doğrudan <em>o alana</em> götürür, sekmenin ilk boş alanına değil. '
+    + 'İşaret yalnız “boş” demiyor: boşluğun bir <strong>sonucu</strong> olduğunda eksik '
+    + 'sayılır; isteğe bağlı bir alan boş kalabilir, hiçbir hesabın okumadığı bir alan '
+    + 'ise hiç işaretlenmez. Böylece bir pencereyi açınca nereye bakacağınızı '
+    + '<strong>sekme şeridinden</strong> okursunuz.');
   h += _gfNot('Kasnakların kutusu neden yok',
       'Bir dönem kasnaklar da kanvasta kutuydu ve aralarına kayış teli çekiliyordu. Bugün '
     + 'değil: kasnak sırası bir <em>graf</em> değil bir <strong>liste</strong> ve o liste '
@@ -1697,7 +1744,7 @@ function _gfSec9(){
     + 'tedarikçi sayfasından. Bir kayıt seçmek devir · %zaman · sıcaklık satırlarını bir anda '
     + 'doldurur; sihirbazdaki kart da <strong>aynı kütüphaneyi</strong> kullanır, yani orada '
     + 'seçtiğiniz çevrimi burada da bulursunuz.</p>';
-  h += _gfUyari('Tek bir “standart” çevrim yoktur',
+  h += _gfUyari('Tek bir standart çevrim yoktur',
       'Arşivde <strong>altı ayrı desen</strong> ölçüldü ve aralarında gerçek farklar var: '
     + 'rölantide geçirilen zaman, tepe devrin ağırlığı, sıcaklık dağılımı. Kütüphane bir '
     + '“doğru cevap” sunmuyor, <strong>ölçülmüş alternatifler</strong> sunuyor. Elinizde '
@@ -1761,6 +1808,21 @@ function _gfSec10(){
     'Çözüm bölümünün durumu <strong>Güncel</strong> olur ve dört özet kartı belirir: kayma '
       + 'emniyeti, gergi tarafı, ankraj ve burulma. Bir hata varsa sebep aynı yerde yazılır.'
   ]);
+  h += _gfNot('Çözülmeyen model de ÇİZİLİR — sembolik olarak',
+      'Model henüz çözülemiyorsa (gergi yay verisi yok, bir çap eksik, kayış yolu kapanmıyor) '
+    + 'Kayış Yolu kartı <strong>boş kalmaz</strong>: yalnız <em>girdilerinizi</em> çizer — '
+    + 'kasnak girdiği konumda ve dış çapıyla, sıra merkezden merkeze <strong>kesikli</strong> '
+    + 'çizgiyle, gergi kolu montaj noktasına. Kayış yolunun kendisi '
+    + '<strong>uydurulmaz</strong>: teğet noktaları ve sarım yayları bir çözüm sonucudur, '
+    + 'çözüm yoksa çizilmez. Kartın sol üstündeki şerit eksiklerin ilkini ve kaç tane daha '
+    + 'olduğunu yazar; tamamı şeridin ipucunda. <strong>Konumu girilmemiş</strong> kasnak '
+    + 'çizimin altındaki “konum yok” rafında durur — yeri uydurulmazsa oraya konur, '
+    + 'çizimden tutup yerine sürükleyebilirsiniz.');
+  h += _gfNot('Sihirbazın “Modeli kur”u çözüm İSTEMEZ',
+      'Sihirbazdan modeli kurmak için çözümün başarılı olması gerekmez: kapı yalnız '
+    + '<strong>yapısaldır</strong> (kanvasta kasnak var mı). Gerginin eksik çapı ya da kol '
+    + 'boyu kurulumu engellemez, adıyla <em>not</em> edilir — modeli kurup eksiği kartın '
+    + 'üstünde görerek tamamlamak, sihirbazın içinde aramaktan kolaydır.');
   h += _gfAlanTablo('“Hesapla” pasifse', [
     ['Model veya çevrim eksik', 'Geometri çözülmedi ya da hiç devir noktası yok',
       'Algılanan model tablosundaki sarı satırı giderin; çalışma çevrimine en az bir satır '
@@ -1789,12 +1851,21 @@ function _gfSec10(){
       'Yerleşimi ya da kayış boyunu gözden geçirin']
   ], ['Belirti', 'Sebep', 'Ne yapmalı']);
 
-  h += '<h3>9.4 Girilmeyen alanlar — Gates arşivinden varsayılan</h3>';
+  h += '<h3>9.5 Girilmeyen alanlar — Gates arşivinden varsayılan</h3>';
   h += '<p>Bazı alanları elle girmek zordur: kasnak atalet momentleri, gergi kolunun '
-    + 'ataleti ve kasnak kütlesi, kayış boy toleransı, uzama+aşınma payı, gerginin mekanik '
-    + 'durdurucusu, kayış boyu ofseti. Bunlar <strong>boş bırakılırsa</strong> program '
-    + 'onları on dört tedarikçi raporundan çıkarılmış ölçümlerle doldurur ve '
-    + '<strong>hangilerini doldurduğunu yazar</strong>.</p>';
+    + 'ataleti ve kasnak kütlesi, kayış kaburga kütlesi, kayış boy toleransı, uzama+aşınma '
+    + 'payı, gerginin mekanik durdurucusu, kayış boyu ofseti. Bunlar <strong>boş '
+    + 'bırakılırsa</strong> program onları on dört tedarikçi raporundan çıkarılmış ölçümlerle '
+    + 'doldurur ve <strong>hangilerini doldurduğunu yazar</strong>.</p>';
+  h += _gfNot('Varsayılan alanın DEĞERİ olarak yazılıdır — yanında bir “i” durur',
+      'Bu alanlar <strong>boş görünmez</strong>: alanda varsayılan sayının kendisi yazılıdır '
+    + 've yanındaki <strong>i</strong> düğmesi kaynağını söyler: varsayılanın nereden '
+    + 'geldiğini yazar, ardından “<em>Alan boş kaldıkça hesaba bu değer girer.</em>” '
+    + 'Üstüne yazdığınızda ipucu “<em>Girilen değer — hesaba bu giriyor.</em>” olur; alanı '
+    + '<strong>boşaltırsanız varsayılan değer geri gelir</strong>. Bir dönem bu alanlar boş '
+    + 'bırakılıyordu ve soluk bir yer tutucu gösteriyordu: sayının hesaba katıldığı '
+    + 'okunamıyordu. Model <strong>yine de</strong> boş kalır — “girdim” ile “varsayıldı” '
+    + 'ayrımını artık alanın boşluğu değil <em>bu rozet</em> taşır.');
   h += _gfAlanTablo('Varsayılanın kaynağı', [
     ['Atalet momentleri', 'Aksesuar tipine göre medyan',
       'Gates “System Vibration Analysis” sayfası, yedi rapor. Avara · klima · alternatör · '
@@ -1816,13 +1887,15 @@ function _gfSec10(){
   h += _gfUyari('Varsayılan bu sistemin değeri DEĞİL',
       'Bunlar başka araçların raporlarından çıkarılmış <strong>medyanlardır</strong> ve bir '
     + 'mertebe göstergesidir. Elinizdeki tedarikçi raporunda karşılığı varsa onu girin — '
-    + 'varsayılan o anda devreden çıkar. Program varsayılanı <strong>modelinize yazmaz</strong>: '
-    + 'alan boş kalır, böylece “girdim” ile “varsayıldı” bir daha karışmaz. Hangi alanın '
-    + 'varsayıldığı Kayış Yolu · Çözücü · Kayış Özellikleri panellerinde ve ayrıntılı raporun '
-    + '§8 girişinde listelenir.');
+    + 'varsayılan o anda devreden çıkar. Program varsayılanı <strong>modelinize '
+    + 'yazmaz</strong> — alanın gösterdiği sayı modelin alanına kopyalanmaz, yani kaydı '
+    + 'açan bir sonraki sürüm bugünün varsayılanına çivilenmez. Hangi alanın varsayıldığı '
+    + 'alanın yanındaki <strong>i</strong> rozetinde, Kayış Yolu · Çözücü · Kayış '
+    + 'Özellikleri panellerinde ve ayrıntılı raporun §8 girişinde listelenir.');
   h += _gfNot('Sıfır girmek, boş bırakmak DEĞİLDİR',
       'Toleransa <strong>0</strong> yazmak “zarfı kapat” demektir ve geçerli bir seçimdir; '
-    + 'varsayılan onu ezmez. Varsayılan yalnız <em>hiç dokunulmamış</em> alana iner.');
+    + 'varsayılan onu ezmez ve ipucu “girilen değer” der. Varsayılan yalnız <em>hiç '
+    + 'dokunulmamış</em> alana iner — alanı silmek de o hâle döndürür.');
   h += _gfNot('Her tipin varsayılanı yok',
       'Su pompası, direksiyon pompası ve hava kompresörü arşivdeki yedi raporun hiçbirinde '
     + 'geçmiyor. Bu tiplerin ataleti <strong>uydurulmuyor</strong> — rotorun ataleti kasnak '
@@ -1833,9 +1906,9 @@ function _gfSec10(){
 
 function _gfSec11(){
   var h = _gfH2(10);
-  h += '<p>Sonuçların <strong>dört okuma yüzeyi</strong> vardır: Kayış Yolu şeması, Kayış '
-    + 'Tablosu, paneller ve rapor. Hangi sayının nerede durduğunu bilmek, panel panel '
-    + 'aramaktan hızlıdır.</p>';
+  h += '<p>Sonuçların <strong>beş okuma yüzeyi</strong> vardır: Kayış Yolu şeması, Kayış '
+    + 'Tablosu, paneller, <strong>Sonuçlar sayfasının FEAD sekmesi</strong> (11.7) ve rapor. '
+    + 'Hangi sayının nerede durduğunu bilmek, panel panel aramaktan hızlıdır.</p>';
   h += '<h3>11.1 Kanvas kartı — ne çizeceğine siz karar verirsiniz</h3>';
   h += '<p>Tuvaldeki ölçekli şema <strong>Kayış Yolu</strong> kartıdır. Tek bir bileşen '
     + 'tipi vardır; ne çizdiği kartın kendi <strong>Katmanlar</strong> panelinden '
@@ -1934,7 +2007,8 @@ function _gfSec11(){
       '<strong>Evet</strong>'],
     ['Sürücü kasnak — Güç eğrisi', 'Motorun tam yük eğrisi · çevrimde FEAD’in motor gücündeki payı',
       'Hayır'],
-    ['Rapor kutusu', 'Detaylı ya da Özet HTML belge', '<strong>Evet</strong>']
+    ['<strong>FEAD araçları</strong> — Rapor bölümü', 'Detaylı · Özet · A3 sonuç panosu '
+      + '(kutusu yok: pencerenin bölümü)', '<strong>Evet</strong>']
   ], ['Panel', 'Ne okunur', 'Hesapla gerekir mi']);
   h += '<h3>11.4 Uygunluk kapıları — üç hüküm</h3>';
   h += '<p>Çözücünün <em>Model</em> sekmesindeki <strong>Uygunluk kapıları</strong> kartı, BMC’nin kendi FEAD '
@@ -1949,7 +2023,10 @@ function _gfSec11(){
         '<strong>Uyarı</strong> — tasarımı reddetmez'],
       ['Çevrim oranı penceresi',
         'Motor <em>governed</em> devrindeyken her aksesuarın devri, kendi '
-        + '<em>optimum … maksimum sürekli</em> bandına düşüyor mu',
+        + '<em>optimum … maksimum sürekli</em> bandına düşüyor mu. Hüküm yönü de '
+        + 'söyler: aksesuar optimumun <strong>altında</strong> dönüyorsa '
+        + '“Kasnak çapı küçültülmeli” (küçük kasnak onu hızlandırır), sürekli '
+        + 'maksimumun <strong>üstünde</strong> dönüyorsa “Kasnak çapı büyütülmeli”',
         '<strong>Hüküm</strong>'],
       ['Aksesuar devir sınırı',
         'Çalışma çevriminin her noktasında aksesuar devri, sürekli ve anlık maksimumun '
@@ -2004,6 +2081,56 @@ function _gfSec11(){
       'Kord kuvveti birim kütleden, sürünme kord rijitliğinden gelir; kayış tipine bağlı çıktılar '
     + 'anahtarı kapalıyken üretilmezler (§8.4). Hizalama payı yalnız geometriden gelir, her '
     + 'çözümde vardır.');
+  h += '<h3>11.7 Sonuçlar sayfası — FEAD sekmesi</h3>';
+  h += '<p>Buraya kadar okuduğunuz yüzeyler <em>sayı</em> yüzeyleriydi. Sayının devirle, '
+    + 'kol açısıyla ya da zamanla nasıl değiştiğini görmek için kabuğun <strong>Sonuçlar</strong> '
+    + 'sayfasına, oradaki <strong>FEAD kayış tahriki</strong> sekmesine geçin — '
+    + 'FEAD araçları penceresinin Çözüm bölümündeki <strong>Sonuçlar’da aç</strong> bağlantısı '
+    + 'doğrudan oraya götürür. Sekme <strong>çözüm anında</strong> yazılan veri kümelerini '
+    + 'okur; kendi başına hiçbir şey hesaplamaz.</p>';
+  h += _gfSahneSonucKart();
+  h += '<p>Pano bir <strong>şerit diyagramı</strong> panosudur: sol sütundaki Veri Gezgini’nden '
+    + 'seçtiğiniz kanallar alt alta şeritler hâlinde çizilir. FEAD <strong>dört veri '
+    + 'kümesi</strong> yayınlar ve kümelerin ayrı olmasının sebebi panonun kuralıdır: '
+    + 'bir panoda <strong>tek X ekseni</strong> bulunur.</p>';
+  h += _gfAlanTablo('Dört veri kümesi', [
+    ['<strong>Çalışma çevrimi</strong>', 'Motor devri [d/dk]',
+      'Çevrimin her devrinde açıklık gerginlikleri, hubload, kayma emniyeti, aksesuar gücü, '
+      + 'mil torku ve kasnak devri'],
+    ['<strong>Campbell diyagramı</strong>', 'Motor devri [d/dk]',
+      'Uyarma mertebeleri × burulma modları × açıklık frekansları — kesişmeler rezonans '
+      + 'adaylarıdır'],
+    ['<strong>Gergi kolu taraması</strong>', 'Kol açısı (göreli) [°]',
+      'Kol boyunca gerginlik kontrol eğrisi, hubload–β ve yay momenti: kolun çalışma '
+      + 'zarfının tamamı'],
+    ['<strong>Motor çevrimi senaryosu</strong>', 'Zaman [s]',
+      'Marştan stopa devir, kayış hızı, devir ivmesi, açıklık gerginlikleri ve açıklık '
+      + 'frekansları — sabit devirde görünmeyen geçici rejim']
+  ], ['Küme', 'X ekseni', 'Ne taşır']);
+  h += _gfNot('Altı hazır ön ayar',
+      'Kanalları tek tek seçmek zorunda değilsiniz: sekmenin <strong>ön ayarları</strong> '
+    + 'sık sorulan altı soruyu kurar — <em>Gerginlik ve kayma</em>, <em>Hubload</em>, '
+    + '<em>Aksesuar yükü</em>, <em>Campbell diyagramı</em>, <em>Gergi kolu</em> ve '
+    + '<em>Motor çevrimi</em>. Her ön ayar kendi kümesinin kanallarını açar; '
+    + 'ön ayarı seçtikten sonra şeritleri ayırabilir, birleştirebilir ve '
+    + 'eksenleri logaritmik yapabilirsiniz.');
+  h += _gfNot('Şerit yorumu YALNIZ o şeridi anlatır',
+      'Her şeridin altında bir <strong>yorum</strong> paragrafı vardır ve başlığı şeridi '
+    + 'adlandırır: kanalların çoğunluğunun grubu, ardından kaç kanal olduğu. Kümenin '
+    + 'geneline dair bir cümle — ankraj, '
+    + 'kayma eşiği, kalibrasyon notu — <em>bir</em> sahip şeride düşer, her şeritte '
+    + 'tekrarlanmaz: aynı paragrafı kanal sayısı kadar okumak bilgi değil gürültüdür.');
+  h += _gfUyari('Bayat sonuç DAMGALANIR',
+      'Çözümden sonra modeli değiştirirseniz (bir çapı büyütmek yeter) sekme '
+    + '<strong>bayat</strong> damgası taşır ve neyin değiştiğini söyler. Damga çözücü '
+    + 'penceresi, Sonuçlar sekmesi ve rapor için <strong>tek</strong> çağrıdan gelir — '
+    + 'üçü aynı hükmü verir. Tabloların tamamı <strong>Sonuç Özeti</strong> penceresinde '
+    + '(sekmenin başındaki bağlantı); şeritteki <strong>Sonuçları temizle</strong> '
+    + 'FEAD kümelerini de siler.');
+  h += _gfNot('Kayış verisi kapalıysa küme de yoktur',
+      'Kayış Özellikleri’ndeki <em>kayış verisi</em> kapatıldığında açıklık frekansları, '
+    + 'senaryo ve kartın çırpınma okuması <strong>hiç üretilmez</strong> — eksik veriyle '
+    + 'çizilmiş bir rezonans diyagramı, olmayan bir diyagramdan kötüdür.');
   return h;
 }
 
@@ -2662,7 +2789,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _gfSahneGergiHareket: _gfSahneGergiHareket,
     _gfSahneKayisKunye: _gfSahneKayisKunye, _gfSahneKayisKatalog: _gfSahneKayisKatalog,
     _gfSahneAlgilanan: _gfSahneAlgilanan, _gfSahneCevrim: _gfSahneCevrim,
-    _gfSahneRapor: _gfSahneRapor,
+    _gfSahneRapor: _gfSahneRapor, _gfSahneSonucKart: _gfSahneSonucKart,
     _gfSahneAraclar: _gfSahneAraclar,
     veGuideFeadHTML: veGuideFeadHTML
   };

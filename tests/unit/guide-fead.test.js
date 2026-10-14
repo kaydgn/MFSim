@@ -89,6 +89,11 @@ Object.keys(RB).forEach((k) => { global[k] = RB[k]; });
 // kartsız çizilir, yani penceresinin gerçek hâlini göstermez.
 const SG = require('../../js/fead-signals.js');
 global.veFeadSignals = SG;
+// GEÇİCİ REJİM — Sonuçlar sekmesinin DÖRDÜNCÜ kümesi (senaryo) ondan kurulur.
+// Yüklenmezse sekme üç küme ve beş ön ayarla çizilir ve §11.7'nin kapısı
+// programın göstermediği bir eksikliği ölçerdi (programda `index.html` yükler).
+const TR = require('../../js/fead-transient.js');
+Object.keys(TR).forEach((k) => { if (global[k] === undefined) global[k] = TR[k]; });
 const RS = require('../../js/cp-fead-results.js');
 Object.keys(RS).forEach((k) => { if (global[k] === undefined) global[k] = RS[k]; });
 const AR = require('../../js/cp-fead-araclar.js');
@@ -1210,11 +1215,21 @@ describe('kılavuz ↔ program: kart adları', () => {
 // serbest — o küme aşağıda AÇIKÇA duruyor ve kendi öksüz kapısı var: küme
 // kullanılmayan satır taşıyamaz, yoksa sessizce bir çöplüğe dönüşür.
 describe('kılavuz ↔ program: TIRNAKLANAN metinler', () => {
+  // KAPSAM MODÜLÜN DOSYALARI — elle yazılmış kısa bir liste, kılavuz yeni bir
+  // yüzeyi anlatmaya başlayınca o yüzeyin metnini GÖREMEZ ve alıntı kapısı
+  // sessizce "kaynakta yok" der. Sonuçlar sekmesi, araçlar penceresi, A3 pano,
+  // başlangıç sayfası ve STEP tanıyıcısı bu yüzden listede.
   const PROG = ['cp-fead.js', 'fead-model.js', 'cp-fead-wizard.js', 'fead-checks.js',
     'cp-fead-report.js', 'fead-core.js', 'components.js', 'fead-belts.js',
     'fead-engines.js', 'fead-accessories.js', 'fead-duty.js', 'fead-tensioners.js',
-    'fead-transient.js']
-    .map((f) => io_read('js/' + f)).join('\n');
+    'fead-transient.js', 'fead-signals.js', 'fead-brief.js', 'cp-fead-results.js',
+    'cp-fead-araclar.js', 'cp-fead-pano.js', 'cp-fead-baslangic.js', 'cp-fead-summary.js',
+    'fead-step.js', 'cp-fead-3b.js']
+    .map((f) => io_read('js/' + f)).join('\n')
+    // YORUM PROGRAM METNİ DEĞİL: kaynak yorumuyla doğrulanan bir alıntı hiç
+    // doğrulanmamıştır (ölçüldü — "standart" yalnız bir yorumda geçiyor).
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n').map((l) => l.replace(/(^|[^:'"\\])\/\/.*$/, '$1')).join('\n');
 
   const duzelt = (s) => s
     .replace(/<[^>]+>/g, '')          // <strong> bir metin değil biçim
@@ -1230,12 +1245,23 @@ describe('kılavuz ↔ program: TIRNAKLANAN metinler', () => {
     'yön şu, temas tarafı bu',
     'Bu düzen için hangi kayışı ısmarlamalıyım?',
     'Elimdeki bu kayış bu düzene uyar mı?',
-    'standart',
     'doğru cevap',
     'hangi kaydı seçtim',
     'tablomda şu an ne var',
     'Boş görünmeyen ama denetlenmemiş',
-    "şu kadar alan elle girilmiş ve katalog değerinin yerine geçiyor"
+    "şu kadar alan elle girilmiş ve katalog değerinin yerine geçiyor",
+    // Bunların sekizi yorum SÖKÜLENE kadar kapıdan geçiyordu: aynı sözler
+    // kaynağın YORUMLARINDA var, arayüzünde yok. Kılavuzun kendi sesi —
+    // kullanıcının içinden geçen soru, deponun hüküm deyişleri, ve PROGRAMDA
+    // OLMAYAN bir alanın adı ("No load governed" sorulmuyor, kural 25).
+    'önce ne koyayım',
+    'katalogdan geldi',
+    'tek kaynak',
+    'makul ama yanlış',
+    'katalogda yok',
+    'No load governed',
+    'girdim',
+    'zarfı kapat'
   ].map(duzelt);
 
   // KAYNAK kılavuzun ÜRETİCİSİ, üretilen belge DEĞİL: alıntılar JS dizgesinde
@@ -1391,5 +1417,175 @@ describe('§14 Gates sütunu ↔ doğrulama fixture’ı', () => {
     expect(d0.engineRpm).toBe(880);
     expect(g.T880).toEqual(N.map((k) => d0.T[k]));
     expect(g.H880).toEqual(N.map((k) => d0.H[k]));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GÜNCELLİK — kılavuzun iddiası ↔ programın BUGÜNKÜ hâli
+//
+// Bu turun bulguları: FEAD modülü 2026-09-21'den bu yana beş yüzey kazandı
+// (Sonuçlar sekmesi · A3 pano · sembolik çizim · sekme durumu · varsayılanın
+// 'i' rozeti) ve kılavuz üçünü hiç anlatmıyordu, birini de TERSİNE anlatıyordu.
+// Kapılar LİSTE DEĞİL KURAL: ad ve sayı programın kendi kaynağından okunur,
+// yoksa kapı bir sonraki dönüşte kılavuzla birlikte bayatlar — 69. kapının
+// elle yazılmış "kalkti" listesi "Rapor kutusu"nu bu yüzden göremedi.
+describe('güncellik: kılavuz ↔ programın bugünkü yüzeyleri', () => {
+  test('KUTUSU OLMAYAN tip kılavuzda KUTU/KART diye anlatılmıyor', () => {
+    // `noCanvasBox` beyan eden tipin tuvalde kutusu yoktur (kural 4 · 38):
+    // "Rapor kutusu" diyen bir satır kullanıcıyı olmayan bir kutuyu aramaya
+    // gönderir. Tipler componentDefs'ten okunur, elle sayılmaz.
+    const ekler = ['kutusu', 'kutusuna', 'kutusundan', 'kartı', 'kartına', 'kartından'];
+    const bulgu = [];
+    Object.keys(componentDefs).forEach((k) => {
+      if (!/^fead-/.test(k) || !componentDefs[k].noCanvasBox) return;
+      const ad = componentDefs[k].name;
+      if (!ad) return;
+      ekler.forEach((ek) => {
+        if (new RegExp(ad + '\\s+' + ek).test(KENDI)) bulgu.push(ad + ' ' + ek);
+      });
+    });
+    expect(bulgu).toEqual([]);
+  });
+
+  test('bölüm numaraları TEK — aynı numara iki başlıkta yok', () => {
+    // Ölçülen kusur: §9'da İKİ TANE "9.4" vardı (çevrim tablosu + girilmeyen
+    // alanlar). İçindekilerden gidilince ikisinden biri hiç bulunamıyor.
+    // Numaranın TAMAMI: "7.2.1" "7.2" diye okunursa sahte tekrar çıkar.
+    const nolar = (KENDI.match(/<h3>\d+(?:\.\d+)+/g) || []).map((m) => m.slice(4));
+    const tekrar = nolar.filter((n, i) => nolar.indexOf(n) !== i);
+    expect(tekrar).toEqual([]);
+  });
+
+  test('§2 YÜZEY SAYISI tablonun satır sayısıyla aynı', () => {
+    // "beş çalışma yüzeyi" yazıp altı satır basmak, kılavuzun kendi içinde
+    // çelişmesidir — yüzey eklenince yazıyla rakam birlikte kaymak zorunda.
+    const SAYI = { 'üç': 3, 'dört': 4, 'beş': 5, 'altı': 6, 'yedi': 7, 'sekiz': 8 };
+    const m = KENDI.match(/FEAD modülünde <strong>(\S+) çalışma yüzeyi/);
+    expect(m).toBeTruthy();
+    const yazilan = SAYI[m[1]];
+    expect(yazilan).toBeGreaterThan(0);
+    // Tablo <tbody>'siz yazılıyor (`_gfAlanTablo`): başlık satırı da bir
+    // <tr>, o yüzden satır sayısı − 1.
+    const tbl = KENDI.slice(KENDI.indexOf(' çalışma yüzeyi ve sorumlulukları'));
+    const govde = tbl.slice(0, tbl.indexOf('</table>'));
+    expect((govde.match(/<tr>/g) || []).length - 1).toBe(yazilan);
+  });
+
+  test('VARSAYILAN alanın DEĞERİ — kılavuz programın yaptığını anlatıyor', () => {
+    // Kural 43: alan boş görünmez, varsayılan sayının KENDİSİ yazılıdır ve
+    // yanında 'i' durur. Kılavuz 2026-09-28'e kadar "alan boş kalır" diyordu;
+    // kullanıcı sayıyı görüp "bunu ben mi girdim" diye soruyordu. Önce
+    // PROGRAMIN bunu gerçekten yaptığını ölç, sonra kılavuzun söylediğini.
+    const SRC = io_read('js/cp-fead.js');
+    const f = SRC.slice(SRC.indexOf('function _feadVarsayilanAlanHTML'));
+    const govde = f.slice(0, f.indexOf('\n}'));
+    expect(govde).toContain('value="');          // DEĞER basılıyor
+    expect(govde).toContain('_feadIBtn(');       // yanında 'i'
+    expect(SRC).toContain('Alan boş kaldıkça hesaba bu değer girer.');
+    // Kılavuz: alanın boş kaldığını SÖYLEMİYOR, 'i' rozetini anlatıyor.
+    expect(KENDI).not.toContain('alan boş kalır');
+    expect(KENDI).toContain('boş görünmez');
+    expect(KENDI).toContain('Alan boş kaldıkça hesaba bu değer girer.');
+    expect(KENDI).toContain('boşaltırsanız varsayılan değer geri gelir');
+  });
+
+  test('SONUÇLAR SEKMESİ: dört küme ve ön ayarlar PROGRAMIN adlarıyla', () => {
+    // Kural 33. Adlar `veFeadSignals`in kendi çıktısından okunur: ikinci bir
+    // ad listesi tutmak, panoda olmayan bir kümeyi kılavuzda göstermekti.
+    const ad = _gfSahneHTML((O) => {
+      const R = (typeof window !== 'undefined') ? window.veFeadResults : null;
+      const sets = veFeadSignals.build(R) || [];
+      return JSON.stringify({
+        kume: sets.map((s) => s.name),
+        x: sets.map((s) => (s.x && s.x.name) || ''),
+        on: (veFeadSignals.presets(sets) || []).map((p) => p.ad)
+      });
+    }, true);
+    const O = JSON.parse(ad);
+    expect(O.kume.length).toBe(veFeadSignals.SET_KEYS.length);
+    O.kume.forEach((k) => expect(KENDI).toContain(k));
+    O.x.forEach((x) => { if (x) expect(KENDI).toContain(x); });
+    expect(O.on.length).toBeGreaterThan(3);
+    O.on.forEach((p) => expect(KENDI).toContain(p));
+    // Sayı da yazıyla tutarlı: "altı hazır ön ayar" diyen başlık altı tanesini
+    // sayan listeyle birlikte kayar.
+    const SAYI = { 'üç': 3, 'dört': 4, 'beş': 5, 'altı': 6, 'yedi': 7 };
+    // KOŞULSUZ: `if (m)` ile yazılmıştı, not başlığı `<span class="t">` içinde
+    // durduğu için eşleşme hiç tutmuyor ve kapı SESSİZCE atlanıyordu
+    // (mutasyon "Altı" → "Beş" yeşil kaldı — ölçüldü).
+    const m = KENDI.match(/<span class="t">(\S+) hazır ön ayar<\/span>/);
+    expect(m).toBeTruthy();
+    expect(SAYI[m[1].toLocaleLowerCase('tr')]).toBe(O.on.length);
+  });
+
+  test('SONUÇLAR SEKMESİNİN özet kartı sahnesi GERÇEKTEN çiziliyor', () => {
+    // Sahne boş dönerse kılavuzda hiç görünmez ve hata da vermez — sessiz.
+    const s = GF._gfSahneSonucKart();
+    expect(s).toContain('ve-fr-kpi');
+    expect(s).toContain('data-gk-sahne');
+    expect(DOC).toContain('ve-fr-kpi');
+    // Kartların sayısı çözümden: en az bir kart ve her kartın bir adı var.
+    expect((s.match(/class="ve-fr-kpi"/g) || []).length).toBeGreaterThan(1);
+  });
+
+  test('SEMBOLİK ÇİZİM ve "Modeli kur" kapısı kılavuzda yazılı', () => {
+    // Kural 52: çözülmeyen model boş kalmaz, girdiler sembolik çizilir ve
+    // "Modeli kur" çözüm istemez. İkisi de kullanıcının bildirdiği kusurdu.
+    expect(io_read('js/cp-fead.js')).toContain('_feadSembolikSVG');
+    expect(KENDI).toContain('sembolik');
+    expect(KENDI).toContain('konum yok');
+    expect(KENDI).toContain('çözüm İSTEMEZ');
+  });
+
+  test('SEKME ADI DURUM TAŞIR — kılavuz "Doldur"u programın adıyla anlatıyor', () => {
+    // Kural 35: eksik alanı sekme şeridi söyler ve "Doldur" o ALANA gider.
+    const SRC = io_read('js/cp-fead.js');
+    expect(SRC).toContain('veFeadSekmeDurumlari');
+    expect(SRC).toContain('Doldur');
+    expect(KENDI).toContain('Doldur');
+    expect(KENDI).toContain('sekmenin ilk boş alanına değil');
+  });
+
+  test('RAPOR TÜRÜ SAYISI raporun KENDİ listesinden', () => {
+    // Üçüncü tür (A3 pano) 2026-09-29'da geldi; §2 hâlâ "İki tür" diyordu.
+    const n = VE_FEAD_REPORT_KINDS.length;
+    const SAYI = { 'İki': 2, 'Üç': 3, 'Dört': 4 };
+    const m = KENDI.match(/<strong>(İki|Üç|Dört) tür<\/strong>/);
+    expect(m).toBeTruthy();
+    expect(SAYI[m[1]]).toBe(n);
+    VE_FEAD_REPORT_KINDS.forEach((k) => expect(KENDI).toContain(k.kisa));
+  });
+});
+
+describe('güncellik: şeklin altyazısı şeklin GÖSTERDİĞİNİ anlatır', () => {
+  // Ölçülen kusur (2026-10-14, baskı görüntüsüne BAKILARAK bulundu): Şekil 19'un
+  // altyazısı "“değerlendirilemedi” satırları…" diye açıklıyordu, ama şekilde
+  // tek bir değerlendirilemedi satırı YOKTU — sahne motor sınırlarını yazmaya
+  // başlayınca kapılar değerlendirildi, sabit altyazı kaldı. Kural: altyazı
+  // bir DURUMU anlatıyorsa o durum şekilde görünmek zorunda.
+  const DURUMLAR = ['değerlendirilemedi', 'Kasnak çapı küçültülmeli',
+    'Kasnak çapı büyütülmeli', 'sınırda'];
+  test('altyazının adını verdiği her durum ŞEKİLDE var', () => {
+    const yalan = [];
+    SEKILLER.forEach((f, i) => {
+      const cap = (f.match(/<figcaption>([\s\S]*?)<\/figcaption>/) || [])[1] || '';
+      const govde = f.split('<figcaption>')[0];
+      DURUMLAR.forEach((d) => {
+        if (cap.toLocaleLowerCase('tr').includes(d.toLocaleLowerCase('tr'))
+          && !govde.toLocaleLowerCase('tr').includes(d.toLocaleLowerCase('tr')))
+          yalan.push('şekil ' + (i + 1) + ': ' + d);
+      });
+    });
+    expect(yalan).toEqual([]);
+  });
+
+  test('§11.4 şeklin gösterdiği HÜKÜM metnini programın sözüyle açıklıyor', () => {
+    // Şekil "Kasnak çapı küçültülmeli" basıyor; okuyan neyi, hangi YÖNE
+    // değiştireceğini tablodan öğrenmeli. Metin programınkiyle birebir.
+    const SRC = io_read('js/fead-checks.js');
+    ['Kasnak çapı küçültülmeli', 'Kasnak çapı büyütülmeli'].forEach((h) => {
+      expect(SRC).toContain(h);
+      expect(KENDI).toContain(h);
+    });
   });
 });
