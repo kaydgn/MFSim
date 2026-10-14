@@ -8,7 +8,7 @@
 //
 // Buradaki kısayollar uygulamadaki gerçek dinleyicilerle eşleşir:
 //   ui-core.js  → Ctrl+C/V/A/D, Delete/Backspace, Esc
-//   state.js    → Ctrl+Z, Ctrl+Y / Ctrl+Shift+Z
+//   state.js    → Ctrl+S, Ctrl+Z, Ctrl+Y / Ctrl+Shift+Z
 //   command-palette.js → Ctrl/⌘+K
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -38,6 +38,7 @@ function _veHelpGroups() {
       { keys: ['Sağ tık', 'sürükle'], label: 'Görünümü kaydır (pan)' }
     ]},
     { title: 'Genel', items: [
+      { keys: [_VE_MOD, 'S'], label: 'Kaydet' },
       { keys: [_VE_MOD, 'K'], label: 'Komut paleti' },
       { keys: ['?'], label: 'Bu yardım penceresi' }
     ]}
@@ -48,13 +49,11 @@ function _veHelpEsc(s) {
   return ('' + (s == null ? '' : s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function _veHelpBuild() {
-  if(_veHelpBuilt) return;
-  var ov = document.createElement('div');
-  ov.className = 've-help-overlay';
-  ov.id = 've-help';
-  ov.setAttribute('hidden', '');
-
+// Grupların HTML'i — kısayol penceresi ve Ayarlar → Klavye kısayolları AYNI
+// çiziciden geçer. Ayarlar kendi listesini tutuyordu ve ayrışmıştı: "sol
+// sürükle → tuvali kaydır" yazıyordu; oysa sol sürükleme seçim kutusu açar,
+// kaydırma sağ tıkla (ui-core.js). Kapı: tests/unit/kisayol-tek-kaynak.test.js.
+function veKisayolGruplariHTML() {
   var body = '';
   _veHelpGroups().forEach(function(g) {
     body += '<div class="ve-help-group"><div class="ve-help-group-title">' + _veHelpEsc(g.title) + '</div>';
@@ -64,6 +63,17 @@ function _veHelpBuild() {
     });
     body += '</div>';
   });
+  return body;
+}
+
+function _veHelpBuild() {
+  if(_veHelpBuilt) return;
+  var ov = document.createElement('div');
+  ov.className = 've-help-overlay';
+  ov.id = 've-help';
+  ov.setAttribute('hidden', '');
+
+  var body = veKisayolGruplariHTML();
 
   ov.innerHTML =
     '<div class="ve-help-panel" role="dialog" aria-modal="true" aria-label="Klavye kısayolları">' +

@@ -49,7 +49,7 @@ function _veSolveOtherTopologies(options) {
         continue;
       }
 
-      if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' çözülüyor...', 'info');
+      if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' çözülüyor…', 'info');
 
       try {
         var _tempNodes = _otherTab.state.nodes.map(function(n) {
@@ -402,12 +402,12 @@ function veSolverRunLegacy() {
   
   progressEl.style.display = 'block';
   progressFill.style.width = '0%';
-  progressText.textContent = 'Başlatılıyor...';
+  progressText.textContent = 'Başlatılıyor…';
   resultEl.innerHTML = '';
   
   setTimeout(function() {
     progressFill.style.width = '15%';
-    progressText.textContent = 'Topoloji zinciri çıkarılıyor...';
+    progressText.textContent = 'Topoloji zinciri çıkarılıyor…';
     
     setTimeout(function() {
       try {

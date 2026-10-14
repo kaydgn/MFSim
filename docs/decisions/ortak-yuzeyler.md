@@ -2007,3 +2007,21 @@ yenide 0) + `yerlesim-olcu.test.js` (matematik).
 `YERLESIM_DOKUM=<önek>` ile dökülür ama henüz HTML yazısıyla aynı kapıya
 girmez — çizicilerin kendi yerleşim kuralları ayrı bir tur.
 
+## Ayarlar ve Program Durumu bilgisini kaynağından okur (2026-10-14, doku turu 5 · D)
+
+**Hüküm:** Ayarlar → Hakkında'daki sürüm, açıklama, lisans ve bağımlılık
+sürümleri; bölüm başlıkları; kısayol listesi ve Program Durumu'nun konu
+satırı elle yazılmaz, kaynağından okunur.
+
+**Gerekçe:** elle yazılan dördü de sessizce yanlıştı — sürüm hiç yazılmayan
+bir globalden okunup her kopyada "dev" çıkıyordu, kısayol tablosu "sol
+sürükle → kaydır" diyordu (sol sürükleme seçim kutusu açar), lisans ISC
+yazıyordu (LICENSE MIT), Program Durumu dal adını basıyordu. Karşılamanın
+değişiklik listesindeki 10 kaydın 4'ü yalnız boyut defterine dokunan
+birleşmeydi: `tools/version-info.js` yalnız `docs/`a dokunan birleşmeyi
+saymaz (dosya listesi alınamazsa kayıt kalır).
+
+**Kapı:** `ayarlar-dogruluk.test.js` · `kisayol-tek-kaynak.test.js` ·
+`status-konu.test.js` · `version-embed.test.js` → *"yalnız belgeye dokunan
+birleşme"*.
+

@@ -297,21 +297,17 @@ function pcAttach(canvas, opts) {
   return canvas._pcCtx;
 }
 
-// Kullanım ipucunu / zoom oranını plot ÜSTÜNE yazar. Plot dibi çoğu panelde
-// katın altında kaldığı için hiç okunmaz.
+// Yakınlaştırma DURUMUNU plot üstüne yazar ("2,0× — sol tık: sıfırla").
+// Kullanım ipucu tuvale YAZILMAZ: her grafiğin altında aynı bilgi HTML olarak
+// duruyor (PC_HINT_HTML) — ikisi birden yazılıyordu, tuvaldeki "Ctrl + Scroll"
+// yazısı ayrıca governed etiketinin ve segment adlarının üstüne biniyordu.
 function pcDrawHint(ctx2d, canvas, ml, mt, pw, isDark) {
-  if(!ctx2d) return;
+  if(!ctx2d || !pcIsZoomed(canvas)) return;
   var prevAlign = ctx2d.textAlign, prevFont = ctx2d.font, prevFill = ctx2d.fillStyle;
   ctx2d.textAlign = 'left';
-  if(pcIsZoomed(canvas)) {
-    ctx2d.fillStyle = veThemeRgba('--seri-1', 1);
-    ctx2d.font = veThemeFont('micro', 'bold');
-    ctx2d.fillText(veSayi(canvas._pcZoom.scale, 1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
-  } else {
-    ctx2d.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
-    ctx2d.font = veThemeFont('micro');
-    ctx2d.fillText('Ctrl + Scroll: yakınlaştır  ·  Sağ tık + sürükle: kaydır', ml + 6, mt + 11);
-  }
+  ctx2d.fillStyle = veThemeRgba('--seri-1', 1);
+  ctx2d.font = veThemeFont('micro', 'bold');
+  ctx2d.fillText(veSayi(canvas._pcZoom.scale, 1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
   ctx2d.textAlign = prevAlign; ctx2d.font = prevFont; ctx2d.fillStyle = prevFill;
 }
 

@@ -108,6 +108,38 @@ describe('tools/version-info.js — gerçek depo üzerinde', () => {
   });
 });
 
+describe('yalnız belgeye dokunan birleşme değişiklik sayılmaz', () => {
+  // Boyut defterinin teslim satırı (docs/olcum/boyut.csv) programı
+  // değiştirmez; karşılamadaki 10 kaydın 4'ü buydu (2026-10-14).
+  let depo;
+  const dosyaCommit = (yollar, mesaj) => {
+    [].concat(yollar).forEach((yol) => {
+      fs.mkdirSync(path.dirname(path.join(depo.dir, yol)), { recursive: true });
+      fs.writeFileSync(path.join(depo.dir, yol), String(Math.random()));
+    });
+    depo.g('git add -A');
+    execSync('git commit -q -F -', { cwd: depo.dir, input: mesaj, stdio: ['pipe', 'pipe', 'ignore'] });
+  };
+  beforeAll(() => {
+    depo = depoKur();
+    commit(depo.g, depo.dir, 'ilk commit');
+    dosyaCommit('js/a.js', 'Merge pull request #201 from kaydgn/ozellik\n\nGerçek değişiklik');
+    dosyaCommit('docs/olcum/boyut.csv', 'Merge pull request #202 from kaydgn/boyut\n\nBoyut defteri: teslim satırı');
+    dosyaCommit('docs/x.md', 'Merge pull request #203 from kaydgn/belge\n\nYalnız belge');
+    dosyaCommit(['css/b.css', 'docs/y.md'], 'Merge pull request #204 from kaydgn/stil\n\nStil + belge');
+  });
+  afterAll(() => { if (depo) fs.rmSync(depo.dir, { recursive: true, force: true }); });
+
+  test('docs/ dışına dokunmayan birleşmeler listede yok, ötekiler sırasıyla duruyor', () => {
+    const info = versionInfo.collect({ cwd: depo.dir, repo: 'kaydgn/MFSim', env: {} });
+    expect(info.changes.map((c) => c.prNumber)).toEqual([204, 201]);
+  });
+
+  test('dosya listesi alınamazsa (sığ klon, bilinmeyen sha) kayıt atılmaz', () => {
+    expect(versionInfo.yalnizBelge('0000000000000000000000000000000000000000', depo.dir)).toBe(false);
+  });
+});
+
 describe('ortam sözleşmesi — CI değişkenleri sessizce kazanmaz', () => {
   // CI'da GITHUB_SHA/GITHUB_REF_NAME/GITHUB_RUN_ID tanımlıdır. Bunlar
   // koşulsuz kazansaydı `cwd` başka bir dizini gösterdiğinde fonksiyon
