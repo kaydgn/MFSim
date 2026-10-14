@@ -35,7 +35,7 @@ function veExpandRoadMap(nodeId) {
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-map"></span> Güzergah Haritası' + badge + '</span>' +
-    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">' + veIkon('x') + '</button>';
+    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'var(--on-danger)\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">' + veIkon('x') + '</button>';
   modal.appendChild(header);
   
   // Toolbar
@@ -221,7 +221,7 @@ function veInitRoadMap(nodeId) {
     var div = L.DomUtil.create('div', 'leaflet-bar');
     div.style.background = 'white';
     div.style.padding = '0';
-    div.innerHTML = '<a href="#" title="Konum ara" style="display:block;width:30px;height:30px;line-height:30px;text-align:center;font-size:var(--fs-title);text-decoration:none;color:#333;"><span class="mf-ico mf-ico-search"></span></a>';
+    div.innerHTML = '<a href="#" title="Konum ara" style="display:block;width:30px;height:30px;line-height:30px;text-align:center;font-size:var(--fs-title);text-decoration:none;color:#333;"><span class="mf-ico mf-ico-search"></span></a>';   // sabit renk: Leaflet kontrolü beyaz zeminde, temayı izlemez
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.on(div.querySelector('a'), 'click', function(e) {
       L.DomEvent.stop(e);
@@ -362,7 +362,7 @@ function veSearchLocation(nodeId) {
   var searchDiv = document.createElement('div');
   searchDiv.id = 've-map-search-' + nodeId;
   searchDiv.style.cssText = 'position:absolute; top:8px; left:50px; right:50px; z-index:1000; display:flex; gap:3px;';
-  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:var(--fs-body); border:2px solid var(--accent-primary); border-radius:var(--radius-sm); outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#1976d2; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); white-space:nowrap;">Ara</button>';
+  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:var(--fs-body); border:2px solid var(--accent-primary); border-radius:var(--radius-sm); outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#1976d2; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); white-space:nowrap;">Ara</button>';   // sabit renk: Leaflet arama kutusu beyaz zeminde, temayı izlemez
   container.style.position = 'relative';
   container.appendChild(searchDiv);
   
@@ -1203,12 +1203,12 @@ function veCalcDistGradeProfile(nodeId) {
     return '<div style="position:relative; margin-bottom:8px;">' +
       '<canvas id="' + altCanvasId + '" style="width:100%; cursor:crosshair; border-radius:var(--radius-sm);"></canvas>' +
       '<div id="' + altCanvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
-      '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'altitude\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-maximize"></span></button>' +
+      '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'altitude\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'var(--on-accent)\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-maximize"></span></button>' +
       '</div>' +
       '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:5px 8px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:var(--fs-micro);">' +
-      '<span style="color:var(--text-muted);">Başlangıç:</span><span style="color:#b39ddb; font-weight:600;">' + veSayi(elevFirst, 0) + 'm</span>' +
+      '<span style="color:var(--text-muted);">Başlangıç:</span><span style="color:var(--seri-3); font-weight:600;">' + veSayi(elevFirst, 0) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">' + veIkon('arrow-right') + '</span>' +
-      '<span style="color:var(--text-muted);">Bitiş:</span><span style="color:#b39ddb; font-weight:600;">' + veSayi(elevLast, 0) + 'm</span>' +
+      '<span style="color:var(--text-muted);">Bitiş:</span><span style="color:var(--seri-3); font-weight:600;">' + veSayi(elevLast, 0) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
       '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--ink-warning); font-weight:700;">' + veSayi(elevFirst - elevLast, 1) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
@@ -1591,7 +1591,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
       if(nid) {
         var selEl = document.getElementById('ve-road-selection-grade-' + nid);
         if(selEl) {
-          selEl.innerHTML = '<span style="color:#ffeb3b; font-weight:700;">Seçim: %' + veSayi(selAvg, 2) + '</span>' +
+          selEl.innerHTML = '<span style="color:var(--ink-warning); font-weight:700;">Seçim: %' + veSayi(selAvg, 2) + '</span>' +
             '<span style="color:var(--text-muted); margin-left:6px;">(' + veSayi(selDist, 0) + ' m)</span>';
           selEl.style.fontStyle = 'normal';
         }
@@ -1801,7 +1801,7 @@ function _veWaypointShowOnMap(nodeId) {
     var marker = L.marker([wp.lat, wp.lng], {
       icon: L.divIcon({
         className: '',
-        html: '<div style="background:' + color + '; color:#000; width:18px; height:18px; border-radius:var(--radius-xs); text-align:center; line-height:18px; font-size:var(--fs-micro); font-weight:700; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.4);"><span class="mf-ico mf-ico-map-pin"></span></div>',
+        html: '<div style="background:' + color + '; color:#000; width:18px; height:18px; border-radius:var(--radius-xs); text-align:center; line-height:18px; font-size:var(--fs-micro); font-weight:700; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.4);"><span class="mf-ico mf-ico-map-pin"></span></div>',   // sabit renk: renkli işaret üstünde koyu rakam (işaretin rengi veri)
         iconSize: [18, 18], iconAnchor: [9, 18]
       })
     }).addTo(map);
@@ -2327,7 +2327,7 @@ function _veAltUpdateLineList(nodeId) {
     var l = lines[i];
     var egimIcon = veIkon(l.grade > 1 ? 'trending-down' : (l.grade < -1 ? 'trending-up' : 'arrow-right'));   // eğim yönü (karar 10·B)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:' + l.color + '; color:#000; font-size:var(--fs-micro); font-weight:700;">' + (i + 1) + '</span></td>';
+    html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:' + l.color + '; color:#000; font-size:var(--fs-micro); font-weight:700;">' + (i + 1) + '</span></td>';   // sabit renk: renkli nokta üstünde koyu rakam (rengi çizginin rengi)
     html += '<td style="padding:2px 4px; text-align:right; font-weight:600; color:' + l.color + ';">' + egimIcon + ' %' + veSayi(l.grade, 2) + '</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + veSayi(l.deltaH, 1) + 'm</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + veSayi(l.dist, 0) + 'm</td>';
@@ -2611,7 +2611,7 @@ function veExpandProfileChart(nodeId, chartType) {
     '</select></div>' +
     '<button onclick="veUpdateProfilesExpanded(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:color-mix(in srgb, var(--accent-success) 65%, #000); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">Güncelle</button>' +
     '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:var(--accent-primary); color:var(--on-accent); border:none; border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('arrow-left-right') + ' Yönü çevir</button>' +
-    '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">' + veIkon('x') + '</button></div>';
+    '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'var(--on-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">' + veIkon('x') + '</button></div>';
   modal.appendChild(header);
 
   // Chart container

@@ -3746,13 +3746,18 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .sw-tab:last-child{border-right:none;}
 .sw-tab:hover{background:var(--bg-tertiary);color:var(--text-primary);}
 .sw-tab.active{background:var(--accent-primary);color:var(--on-accent);font-weight:600;}
-.sw-tab.disabled{opacity:0.4;cursor:not-allowed;pointer-events:none;}
+/* Kapalı küme: işaretli (aria-disabled) ve fareyi ALIR — ipucu (kümeyi nasıl
+   açacağın) ancak öyle görünür; pointer-events:none onu hiç göstermiyordu. */
+.sw-tab.disabled{opacity:0.4;cursor:not-allowed;}
+.sw-tab.disabled:hover{background:var(--bg-secondary);color:var(--text-muted);}
+/* Sayaç beyaz örtüyle çiziliyordu: açık sekmede görünmez, etkin sekmede beyaz
+   yazı açılmış vurgunun üstünde 3,07:1. Etkin sekmede ters çip. */
 .sw-tab .sw-tab-count{
-  display:inline-block;min-width:14px;height:14px;line-height:14px;
+  display:inline-block;min-width:14px;height:14px;line-height:14px;padding:0 3px;
   font-size:var(--fs-micro);border-radius:var(--radius-pill);text-align:center;margin-left:3px;
-  background:rgba(255,255,255,0.2);
+  background:color-mix(in srgb, var(--text-muted) 14%, transparent);
 }
-.sw-tab.active .sw-tab-count{background:rgba(255,255,255,0.3);}
+.sw-tab.active .sw-tab-count{background:var(--bg-secondary);color:var(--ink-accent);}
 .sw-pkg-card{
   margin-bottom:4px;border:1px solid var(--border-color);
   border-radius:var(--radius-md);overflow:hidden;background:var(--bg-secondary);
@@ -3771,7 +3776,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .sw-pkg-badge.ok{background:var(--success-tint-8);color:var(--ink-success);}
 .sw-pkg-badge.partial{background:var(--warning-tint-8);color:var(--ink-warning);}
-.sw-pkg-badge.miss{background:color-mix(in srgb, var(--text-muted) 12%, transparent);color:var(--text-muted);}
+.sw-pkg-badge.miss{background:color-mix(in srgb, var(--text-muted) 12%, transparent);color:var(--text-secondary);}
 /* Yalnız-ikon düğmeler kendi yazı boyutunu bildirmiyordu; tarayıcı <button>
    varsayılanı olan 13,33px'i (0.8333em) devralıyorlardı — ölçeğin dışında bir
    değer. Görünen bir metin taşımadıkları için etkisi yoktu, ama düğmeye ileride
@@ -4871,6 +4876,12 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   height:min(58vh, 660px);
   min-height:320px;
 }
+/* Leaflet künyesi kendi sabit renkleriyle geliyor (%80 beyaz örtü, #0078A8
+   bağlantı): koyu temada örtü haritanın koyu zeminine karışıyor ve bağlantı
+   3,28:1 kalıyordu. Künye temanın zemini ve yazısıyla; seçici Leaflet'inkinden
+   özgül, yükleme sırasından bağımsız. */
+.leaflet-container .leaflet-control-attribution.leaflet-control{background:var(--bg-secondary);color:var(--text-muted);}
+.leaflet-container .leaflet-control-attribution.leaflet-control a{color:var(--ink-accent);}
 .ve-cp-grid{
   display:grid;
   grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);

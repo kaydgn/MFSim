@@ -368,11 +368,16 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
 - **EKRANDAKİ YAZI ZEMİNİNE KARŞI AA** (iki tema). Vurgu METİN olarak
   `--ink-*`, vurgu ZEMİNİNDE `--on-*` (sabit beyaz koyu temada 3,18:1);
   yazı opaklıkla soldurulmaz — soluk = `--text-muted`; seri rengi yazıda
-  değil işarette (nokta, çizgi). Palet testi bunları göremiyordu: açık temada
-  169, koyu temada 62 ayrı yazı AA altındaydı. Ölçüt tek yerde
-  (`tests/helpers/kontrast-olcu.js`). Kapı:
-  `kontrast.spec.js` + görüntüleyici/CAN taraması + `theme-contrast.test.js`
-  → *"satır içi color:var(--accent-*)"*.
+  değil işarette (nokta, çizgi); satır içi sabit `#renk` YAZILMAZ (muaf:
+  belge gövdesi — ikon kapısının `BELGE` tablosu — ve zemini de sabit yüzey,
+  `// sabit renk: <sebep>`). Soluk görünen kapalı denetim `aria-disabled`
+  taşır: ölçer onu atlar, yalnız sınıfla soldurulanı etkin sayar. Palet testi
+  bunları göremiyordu: açık temada 169, koyu temada 62 ayrı yazı AA
+  altındaydı. Ölçüt tek yerde (`tests/helpers/kontrast-olcu.js`); kapı
+  paletin TAMAMINI açar (örnekte olmayan tipler ve ikincil pencereler dâhil).
+  Kapı: `kontrast.spec.js` + görüntüleyici/CAN taraması +
+  `theme-contrast.test.js` → *"satır içi color:var(--accent-*)"* ·
+  *"satır içi sabit #renk"*.
 - **SAYI ALANI `type="number"` DEĞİL** (7·C'nin girdi yolu):
   `type="text" inputmode="decimal"`, değer kaynağa MAKİNE biçiminde yazılır.
   `js/sayi-alan.js` onu Türkçe gösterir ve `.value`'yu makine biçiminde geri

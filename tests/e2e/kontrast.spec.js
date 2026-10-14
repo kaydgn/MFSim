@@ -53,8 +53,8 @@ async function olc(page, kok, yer, liste) {
 
 // Modeldeki her bileşen tipinin penceresi, her sekmesiyle.
 const SEKME = '[role="tab"]:not(.ve-fp-tab), .ve-tab-btn, .ve-panel-tab, .ve-mnt-tab';
-async function pencereler(page, liste) {
-  const tipler = await page.evaluate(() =>
+async function pencereler(page, liste, yalniz) {
+  const tipler = yalniz || await page.evaluate(() =>
     [...new Set(nodes.filter((n) => !(componentDefs[n.type] || {}).isSubsystem).map((n) => n.type))]);
   let olculen = 0;
   for (const tip of tipler) {
@@ -88,6 +88,42 @@ async function pencereler(page, liste) {
     await page.waitForTimeout(120);
   }
   return { tip: tipler.length, olculen };
+}
+
+// PALETİN GERİ KALANI: örnek modelde olmayan her tipten bir düğüm kurulur ve
+// penceresi açılır. "Bütün pencereler" yalnız örneğin tiplerini açıyordu —
+// sensör sihirbazı, yavaşlama sihirbazı, yol, aksesuarlar hiç ölçülmedi ve
+// orada %40–60 opaklıkla soldurulmuş yazı 1,23–2,67:1 kaldı.
+async function paletiTamamla(page, modul) {
+  const yeni = await page.evaluate((m) => {
+    const tipler = [];
+    document.querySelectorAll('.ve-category').forEach((cat) => {
+      if ((cat.getAttribute('data-ve-scope') || 'arac-performans') !== m) return;
+      cat.querySelectorAll('.ve-component[data-type]').forEach((el) => tipler.push(el.getAttribute('data-type')));
+    });
+    // FEAD paletsiz (kasnaklar çizimden eklenir): tipleri tanımlarından
+    if (m === 'fead-analysis') Object.keys(componentDefs).forEach((t) => { if (componentDefs[t].isFeadPulley) tipler.push(t); });
+    const var_ = new Set(nodes.map((n) => n.type));
+    const yeni = [...new Set(tipler)].filter((t) => componentDefs[t] && !componentDefs[t].isSubsystem && !var_.has(t) && !/example$/.test(t));
+    yeni.forEach((t, i) => createNode(t, 200 + (i % 6) * 140, 900 + Math.floor(i / 6) * 120));
+    return yeni;
+  }, modul);
+  await page.waitForTimeout(1200);                    // kurulumun ertelenmiş işleri pencereyi kapatmasın
+  return yeni;
+}
+
+// İkincil pencere: aç, kökünü ölç, kapat. Kök ölçülemiyorsa pencere AÇILMAMIŞ
+// demektir (veri isteyen pencere yalnız bildirim basar) — sessiz geçmesin.
+// Geçişler bitmeden ölçülmez: yarı saydam an 1:1 okunur.
+async function ikincil(page, yer, ac, kok, liste, arg) {
+  await page.evaluate(ac, arg);
+  await page.waitForSelector(kok, { state: 'visible', timeout: 5000 });
+  await page.mouse.move(2, 2);                        // fare altı vurgusu ölçüme karışmasın
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 5000 }).catch(() => {});
+  const r = await olc(page, kok, yer, liste);
+  expect(`${yer}: ${r.olculen > 0}`).toBe(`${yer}: true`);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  return r.olculen;
 }
 
 // Sonuçlar: Veri Gezgini (işaretli + işaretsiz satır) ve pano.
@@ -125,6 +161,8 @@ for (const tema of ['acik', 'koyu']) {
     await page.evaluate(() => veCmdkOpen()); await page.waitForTimeout(400);
     await olc(page, '#ve-cmdk', 'komut paleti', kotu);
     await page.evaluate(() => veCmdkClose());
+    await ikincil(page, 'klavye kısayolları', () => veShortcutsHelpOpen(), '#ve-help', kotu);
+    await ikincil(page, 'ölçüm içe aktarma', () => veImpOpenModal(), '#ve-import-overlay', kotu);
     await page.evaluate(() => veOpenSettings()); await page.waitForTimeout(300);
     const bolumler = await page.evaluate(() => [...document.querySelectorAll('.ve-settings-nav-item')].map((b) => b.getAttribute('data-section')));
     expect(bolumler.length).toBeGreaterThanOrEqual(5);
@@ -160,6 +198,33 @@ for (const tema of ['acik', 'koyu']) {
       let n = 0;
       for (const c of document.querySelectorAll('#ve-results-tree .vsig-row .vsig-ck')) { if (n >= 4) break; c.click(); n++; }
     });
+    // Çözümden SONRA: bağlanmamış ek düğümler çözücüyü etkilemesin
+    await page.evaluate(() => veSubTabDegistir('arac-performans'));
+    const ek = await paletiTamamla(page, 'arac-performans');
+    expect(ek).toEqual(expect.arrayContaining(['sensor-wizard', 'coast-down', 'road', 'acc-alternator']));
+    expect((await pencereler(page, kotu, ek)).olculen).toBeGreaterThan(300);
+    let ik = 0;
+    ik += await ikincil(page, 'eşleştirme büyük diyagram', () => ecmExpandChart(nodes.find((n) => n.type === 'ec-matching').id),
+      '#ecm-chart-modal-overlay', kotu);
+    ik += await ikincil(page, 'yavaşlama sihirbazı', async () => {
+      veOpenCoastDownWizard(nodes.find((n) => n.type === 'coast-down').id);
+      await new Promise((r) => setTimeout(r, 400));
+      cdwLoadExample(); cdwComputeCrr();
+    }, '#ve-cd-wizard-overlay', kotu);
+    // Yol: elle segment girilince açılan tablo, özet ve büyük profil
+    const yol = await page.evaluate(() => {
+      const n = nodes.find((x) => x.type === 'road');
+      [['down', 6, 1000], ['up', 4, 800], ['flat', 0, 500]].forEach(([y, g, m]) => {
+        veManualSegAdd(n.id);
+        Object.assign(n.data.manualSegments[n.data.manualSegments.length - 1], { direction: y, gradePct: g, distance: m });
+      });
+      return n.id;
+    });
+    await pencereler(page, kotu, ['road']);
+    ik += await ikincil(page, 'yol profili büyük', (id) => veManualSegExpandProfile(id), '#ve-mseg-profile-overlay', kotu, yol);
+    ik += await ikincil(page, 'uyarılar paneli', () => veOpenWarningsPanel(), '#ve-warnings-panel', kotu);
+    await page.evaluate(() => veSetWarningsOpen(false));
+    expect(ik).toBeGreaterThan(100);
     expect(kontrastOzet(kotu)).toEqual([]);
   });
 
@@ -182,6 +247,10 @@ for (const tema of ['acik', 'koyu']) {
       let n = 0;
       for (const c of document.querySelectorAll('#ve-results-tree .vsig-row .vsig-ck')) { if (n >= 3) break; c.click(); n++; }
     });
+    await page.evaluate(() => veSubTabDegistir('arac-performans'));
+    const ek = await paletiTamamla(page, 'mount-analysis');
+    expect(ek.length).toBeGreaterThan(0);
+    await pencereler(page, kotu, ek);
     expect(kontrastOzet(kotu)).toEqual([]);
   });
 
@@ -228,6 +297,11 @@ for (const tema of ['acik', 'koyu']) {
     }
     await page.evaluate(() => veFeadResSummaryOpen()); await page.waitForTimeout(700);
     await olc(page, '#ve-report-overlay', 'sonuç özeti', kotu);
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => veSubTabDegistir('arac-performans'));
+    const ek = await paletiTamamla(page, 'fead-analysis');
+    expect(ek.length).toBeGreaterThan(0);
+    await pencereler(page, kotu, ek);
     expect(kontrastOzet(kotu)).toEqual([]);
   });
 }

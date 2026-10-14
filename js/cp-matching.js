@@ -1240,7 +1240,7 @@ function ecmExpandChart(nodeId) {
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-settings"></span> Motor Eğrisi × Konvertör Kapasiteleri — ' + engineName + '</span>' +
-    '<button onclick="ecmCloseChartModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">' + veIkon('x') + '</button>';
+    '<button onclick="ecmCloseChartModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'var(--on-danger)\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">' + veIkon('x') + '</button>';
   modal.appendChild(header);
   
   // Chart container
@@ -1261,14 +1261,14 @@ function ecmExpandChart(nodeId) {
   var legendItems = '';
   tcKeys.forEach(function(key, i) {
     var c = tcColors[i % tcColors.length];
-    legendItems += '<span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:14px; height:3px; background:' + c + '; border-radius:1px; flex-shrink:0;"></span><span style="font-weight:600; color:' + c + ';">' + VE_FT_TC_PRESETS[key].name + '</span></span>';
+    legendItems += '<span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:14px; height:3px; background:' + c + '; border-radius:1px; flex-shrink:0;"></span><span style="font-weight:600; color:var(--text-secondary);">' + VE_FT_TC_PRESETS[key].name + '</span></span>';
   });
-  footer.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:18px; height:3px; background:#f59e0b; border-radius:1px;"></span><span style="font-weight:700; color:#f59e0b;">Motor</span></span>' +
+  footer.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:18px; height:3px; background:#f59e0b; border-radius:1px;"></span><span style="font-weight:700; color:var(--text-secondary);">Motor</span></span>' +
     '<span style="opacity:0.3;">│</span>' + legendItems +
     '<span style="opacity:0.3; margin-left:4px;">│</span>' +
     '<span style="color:var(--text-muted); font-size:var(--fs-micro);">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0,80 SR &nbsp; ● Kesişim</span>' +
     '<span style="margin-left:auto; display:flex; align-items:center; gap:10px;">' +
-    '<span id="ecm-zoom-indicator" style="display:none; color:#60a5fa; font-weight:600; font-size:var(--fs-tiny); cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
+    '<span id="ecm-zoom-indicator" style="display:none; color:var(--ink-accent); font-weight:600; font-size:var(--fs-tiny); cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
     '<span style="color:var(--text-muted); font-size:var(--fs-micro);">Scroll — Yakınlaştır &nbsp;│&nbsp; Sağ Tık + Sürükle — Kaydır</span>' +
     '<span style="color:var(--text-primary); font-weight:500;">ESC — Kapat</span></span>';
   modal.appendChild(footer);
@@ -1869,7 +1869,7 @@ function ecmChartMouseMove(e) {
     var motorHL = nearestIsMotor ? 'background:color-mix(in srgb, var(--accent-warning) 12%, transparent); margin:0 -8px; padding:2px 8px; border-radius:var(--radius-sm);' : '';
     html += '<div style="display:flex; align-items:center; gap:6px; padding:2px 0; ' + motorHL + '">';
     html += '<span style="width:16px; height:3px; background:#f59e0b; border-radius:1px; flex-shrink:0;"></span>';
-    html += '<span style="color:#f59e0b; font-weight:600; min-width:65px;">Motor</span>';
+    html += '<span style="color:var(--text-secondary); font-weight:600; min-width:65px;">Motor</span>';
     html += '<span style="color:var(--text-primary); font-weight:600;">' + veSayi(motorT, 0) + ' N·m</span>';
     html += '</div>';
   }
