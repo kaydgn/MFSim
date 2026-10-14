@@ -58,7 +58,7 @@ function veExpandRoadMap(nodeId) {
   // Footer
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:var(--fs-micro); color:var(--text-muted);';
-  footer.innerHTML = '<span>Sol tık: Rota noktası ekle</span><span style="opacity:0.4;">│</span><span>Rota üzerine tık: referans noktası</span><span style="opacity:0.4;">│</span><span>Scroll: Zoom</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
+  footer.innerHTML = '<span>Sol tık: rota noktası ekle</span><span style="opacity:0.4;">│</span><span>Rota üzerine tık: referans noktası</span><span style="opacity:0.4;">│</span><span>Tekerlek: yakınlaştır</span><span style="margin-left:auto; color:var(--text-secondary);">Esc: kapat</span>';
   modal.appendChild(footer);
   
   // ── Sol ve sağ kenar resize tutamaçları ──
@@ -362,7 +362,7 @@ function veSearchLocation(nodeId) {
   var searchDiv = document.createElement('div');
   searchDiv.id = 've-map-search-' + nodeId;
   searchDiv.style.cssText = 'position:absolute; top:8px; left:50px; right:50px; z-index:1000; display:flex; gap:3px;';
-  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:var(--fs-body); border:2px solid var(--accent-primary); border-radius:var(--radius-sm); outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#1976d2; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); white-space:nowrap;">Ara</button>';   // sabit renk: Leaflet arama kutusu beyaz zeminde, temayı izlemez
+  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara…" style="flex:1; padding:6px 8px; font-size:var(--fs-body); border:2px solid var(--accent-primary); border-radius:var(--radius-sm); outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#1976d2; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); white-space:nowrap;">Ara</button>';   // sabit renk: Leaflet arama kutusu beyaz zeminde, temayı izlemez
   container.style.position = 'relative';
   container.appendChild(searchDiv);
   
@@ -471,7 +471,7 @@ function veCalcRouteAndProfiles(nodeId) {
   var coords = markers.map(function(m) { var ll = m.getLatLng(); return ll.lng + ',' + ll.lat; }).join(';');
   var url = 'https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson';
 
-  showToast('Rota hesaplanıyor...');
+  showToast('Rota hesaplanıyor…');
 
   fetch(url)
     .then(function(r) { return r.json(); })
@@ -493,7 +493,7 @@ function veCalcRouteAndProfiles(nodeId) {
       if(veRoadPolylines[nodeId]) { map.removeLayer(veRoadPolylines[nodeId]); veRoadPolylines[nodeId] = null; }
 
       var distKm = veSayi(route.distance / 1000, 2);
-      showToast('Rota bulundu: ' + distKm + ' km — Yükseklik verisi alınıyor...');
+      showToast('Rota bulundu: ' + distKm + ' km — Yükseklik verisi alınıyor…');
 
       // Sonuç kutusunu göster
       var resultDiv = document.getElementById('ve-road-route-result-' + nodeId);
@@ -525,7 +525,7 @@ function veCalcRouteOSRM(nodeId) {
   var coords = markers.map(function(m) { var ll = m.getLatLng(); return ll.lng + ',' + ll.lat; }).join(';');
   var url = 'https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson';
   
-  showToast('OSRM rota hesaplanıyor...');
+  showToast('OSRM rota hesaplanıyor…');
   
   fetch(url)
     .then(function(r) { return r.json(); })
@@ -780,12 +780,12 @@ function veFetchElevations(coords) {
   // Sonra seyrek elevation'ı tüm yoğun noktalara interpolasyonla yay.
   return tryOpenMeteo()
     .catch(function(e) {
-      console.warn('Open-Meteo başarısız, Open-Elevation deneniyor...', e.message);
+      console.warn('Open-Meteo başarısız, Open-Elevation deneniyor…', e.message);
       showToast('Open-Meteo yanıt vermedi, alternatif deneniyor…', 'warning');
       return tryOpenElevation();
     })
     .catch(function(e) {
-      console.warn('Open-Elevation başarısız, Open Topo Data deneniyor...', e.message);
+      console.warn('Open-Elevation başarısız, Open Topo Data deneniyor…', e.message);
       showToast('Alternatif API yanıt vermedi, son seçenek deneniyor…', 'warning');
       return tryOpenTopoData();
     })
@@ -1122,7 +1122,7 @@ function veUpdateProfiles(nodeId) {
     showToast('Önce haritadan rota hesaplayın', 'warning');
     return;
   }
-  showToast('Profil güncelleniyor...');
+  showToast('Profil güncelleniyor…');
   veCalcElevation(nodeId, function() {
     veCalcDistGradeProfile(nodeId);
     showToast('Profil güncellendi');
@@ -1135,7 +1135,7 @@ function veUpdateProfilesExpanded(nodeId) {
   if(!node || !node.data || !node.data.routeCoords || node.data.routeCoords.length < 2) {
     showToast('Rota verisi bulunamadı', 'warning'); return;
   }
-  showToast('Profil güncelleniyor...');
+  showToast('Profil güncelleniyor…');
   veCalcElevation(nodeId, function() {
     veCalcDistGradeProfile(nodeId);
     // Expanded canvas'ı yenile

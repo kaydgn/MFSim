@@ -141,7 +141,7 @@ function _veStatusRender() {
   // Son güncellemeler bölümü — GitHub commits API
   html += '<h3 class="ve-settings-section-title" style="margin-top:24px;">Son güncellemeler</h3>';
   html += '<p class="ve-settings-desc">main branch\'ine yapılan son commit\'ler.</p>';
-  html += '<div id="ve-status-commits"><div style="color:var(--text-muted);font-size:var(--fs-body);padding:10px 0;">Yükleniyor...</div></div>';
+  html += '<div id="ve-status-commits"><div style="color:var(--text-muted);font-size:var(--fs-body);padding:10px 0;">Yükleniyor…</div></div>';
 
   content.innerHTML = html;
   _veStatusLoadCommits();
@@ -197,6 +197,21 @@ function _veStatusLoadCommits() {
     });
 }
 
+// Birleşme commit'inin konusu "Merge pull request #1077 from kaydgn/claude/…"
+// — dal adı kullanıcıya bir şey söylemez; asıl başlık gövdenin ilk satırı
+// (PR başlığı). Liste o başlığı basıyordu ama ilk satırı, yani dal adını.
+// Döner: { konu, govde, pr } — pr yoksa null. Kapı: tests/unit/status-konu.test.js.
+function _veStatusKonu(mesaj) {
+  var satir = String(mesaj || '').split('\n');
+  var konu = satir[0] || '';
+  var govde = satir.slice(1).join('\n').trim();
+  var m = /^Merge pull request #(\d+) from \S+/.exec(konu);
+  if(!m) return { konu: konu, govde: govde, pr: null };
+  var g = govde.split('\n');
+  var baslik = (g[0] || '').trim();
+  return { konu: baslik || konu, govde: baslik ? g.slice(1).join('\n').trim() : govde, pr: Number(m[1]) };
+}
+
 function _veStatusRenderCommits(commits) {
       var el = document.getElementById('ve-status-commits');
       if(!el) return;
@@ -226,10 +241,9 @@ function _veStatusRenderCommits(commits) {
         html += '<div class="ve-settings-subhead" style="margin-top:14px;">' + groupLabels[key] + '</div>';
         html += '<ul class="ve-status-commit-list">';
         groups[key].forEach(function(c) {
-        var fullMsg = (c.commit && c.commit.message) || '';
-        var lines = fullMsg.split('\n');
-        var subject = lines[0];
-        var body = lines.slice(1).join('\n').trim();
+        var k = _veStatusKonu((c.commit && c.commit.message) || '');
+        var subject = k.konu;
+        var body = k.govde;
         var subjectShort = subject.length > 75 ? subject.slice(0, 75) + '…' : subject;
         var when = _veStatusFmtAgo(c.commit && c.commit.author && c.commit.author.date);
         var sha = (c.sha || '').slice(0, 7);
@@ -241,9 +255,11 @@ function _veStatusRenderCommits(commits) {
         var dateStr = date ? new Date(date).toLocaleString('tr-TR') : '';   // makine: tarih — tr-TR yerel biçimi, sayı değil
 
         html += '<li class="ve-status-commit" data-sha="' + fullSha + '">';
-        html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(\'' + fullSha + '\')">';
+        html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(\'' + fullSha + '\')"'
+          + ' title="' + _veStatusEsc(subject).replace(/"/g, '&quot;') + '">';   // konu satırda kısalabiliyor (75 karakter + CSS üç noktası)
         html += veIkon('chevron-right', 've-status-commit-arrow');
         html += '<code class="ve-status-commit-sha">' + sha + '</code>';
+        if(k.pr) html += '<span class="ve-status-commit-pr">#' + k.pr + '</span>';
         html += '<span class="ve-status-commit-msg">' + _veStatusEsc(subjectShort) + '</span>';
         html += '<small class="ve-status-commit-when">' + when + '</small>';
         html += '</div>';
@@ -253,10 +269,10 @@ function _veStatusRenderCommits(commits) {
         }
         html += '<div class="ve-status-commit-meta">';
         html += '<div><span class="ve-status-commit-meta-label">Yazar</span>' + _veStatusEsc(author);
-        if(authorLogin) html += ' <small style="opacity:0.7;">(@' + _veStatusEsc(authorLogin) + ')</small>';
+        if(authorLogin) html += ' <small class="ve-status-commit-login">(@' + _veStatusEsc(authorLogin) + ')</small>';
         html += '</div>';
         if(dateStr) html += '<div><span class="ve-status-commit-meta-label">Tarih</span>' + _veStatusEsc(dateStr) + '</div>';
-        html += '<div><span class="ve-status-commit-meta-label">Commit</span><code style="font-size:var(--fs-tiny);opacity:0.85;">' + _veStatusEsc(fullSha) + '</code></div>';
+        html += '<div><span class="ve-status-commit-meta-label">Commit</span><code class="ve-status-commit-tamsha">' + _veStatusEsc(fullSha) + '</code></div>';
         html += '</div>';
         html += '<div class="ve-status-commit-actions"><a href="' + url + '" target="_blank" rel="noopener" class="ve-settings-btn"><span class="mf-ico mf-ico-link"></span> GitHub\'da aç</a></div>';
         html += '</div>';

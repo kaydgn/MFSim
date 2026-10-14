@@ -430,6 +430,13 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   alt simge kendi kutusunda, alta yapışan öğe kabın dibine oturur (`bottom`
   = −dolgu). Kapı: `yerlesim.spec.js` (kontrast kapısıyla AYNI tur,
   `tests/e2e/helpers/yuzey-turu.js`) + `yerlesim-olcu.test.js`.
+- **ARAYÜZ METNİNİN YAZIMI TEK** (`tipografi.test.js`): üç nokta tek karakter
+  (…), etkileşim ipucu kısayol penceresinin dilinde ("Tekerlek: yakınlaştır ·
+  Sağ tık + sürükle: kaydır · Esc: kapat" — "Scroll/Zoom" yok), iki noktadan
+  önce boşluk yok. Kısayol listesi TEK: `shortcuts-help.js` →
+  `veKisayolGruplariHTML` (Ayarlar da onu basar) ve her satırın dinleyicisi
+  kapılı (`kisayol-tek-kaynak.test.js`). Ayarlar → Hakkında'daki her bilgi
+  kaynağından okunur, elle yazılmaz (`ayarlar-dogruluk.test.js`).
 - **SONUÇLAR PANOSUNA YAYIN YAPAN MODÜL KAYNAK TABLOSUNA GİRER**
   (`js/results.js` → `veResultSources`): sekme · kütüphane · yorum · sonuç
   globali · unutucu. `results.js` · `trace-view.js` · `graphics.js`'e modüle
