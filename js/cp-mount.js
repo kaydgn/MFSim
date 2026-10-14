@@ -1466,11 +1466,13 @@ function _mntPtoConflict(){
 // Referans değer tablosu — parça/grup SÜTUNDA, büyüklük SATIRDA. Eski yatay
 // biçimde grubun sekiz sütunu (m, X, Y, Z, Ixx, Iyy, Izz) 380 px'lik müfettiş
 // sütununa sığmıyordu; çevrilmiş biçimde sütun sayısı parça sayısı kadar.
+// Etiket sütunu %28 ("Ixx [kg·m²]" sığar); dört parçada (Pompa) dolgu da
+// sıklaşır — %36'lık etiketle 57 px'lik sütunda "1.271,20" 4 px kırpılıyordu.
 function _mntPtoRefTable(type){
   var ref=_MNT_PTO_REF[type]; if(!ref) return '';
-  var gen=Math.floor(64/ref.rows.length)+'%';
-  var h=_mntFoyAc([{ b:'Büyüklük', gen:'36%' }].concat(ref.rows.map(function(r){ return { b:_mntEsc(r[0]), gen:gen }; })),
-                  'ASR-SR-116 referans değerleri', 've-mnt-foy--sar');
+  var n=ref.rows.length, gen=Math.floor(72/n)+'%';
+  var h=_mntFoyAc([{ b:'Büyüklük', gen:'28%' }].concat(ref.rows.map(function(r){ return { b:_mntEsc(r[0]), gen:gen }; })),
+                  'ASR-SR-116 referans değerleri', 've-mnt-foy--sar'+(n>=4 ? ' ve-mnt-foy--sik' : ''));
   for(var i=1;i<ref.head.length;i++){
     h+='<tr><td>'+_mntEsc(ref.head[i])+(/^I/.test(ref.head[i]) ? ' [kg·m²]' : '')+'</td>';
     ref.rows.forEach(function(r){ h+='<td>'+_mntEsc(r[i])+'</td>'; });
