@@ -142,10 +142,12 @@ function veMntBaslangicHTML(){
     bolum: {
       baslik: 'Örnek modellerden başla',
       not: ornekler.length + ' örnek · modelin topolojisi birebir yüklenir, sonra her şey değiştirilebilir',
+      // Alt satır SIĞAN künye: gövde adlarının listesi karoda üç noktayla
+      // kesiliyordu (yerleşim kapısı, 3 karonun 3'ü) — adlar ipucunda.
       karolar: ornekler.map(function(o){
-        return { ey: 'ornek', v: o.key, baslik: o.ad, resim: veMntBaslangicResim(o.key),
-                 kod: o.arac, yil: kg(o.kutle) + ' kg', sag: o.takoz + ' takoz',
-                 alt: o.govdeAdlari.join(' · ') };
+        return { ey: 'ornek', v: o.key, baslik: o.ad + ' — ' + o.govdeAdlari.join(' · '),
+                 resim: veMntBaslangicResim(o.key), kod: o.arac, yil: kg(o.kutle) + ' kg',
+                 alt: o.govde + ' gövde · ' + o.takoz + ' takoz' };
       })
     },
     not: 'Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: '
