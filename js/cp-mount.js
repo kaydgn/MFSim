@@ -2577,11 +2577,17 @@ function veMntDecorateConnections(svg){
   g.style.pointerEvents='none';
 
   // ── Şasi çerçevesi: gövdelerin (cradle dahil) sınır kutusu + pay ──
+  // ADI DA SARAR (ana tuvalin sınır çerçevesiyle aynı ölçü: veMeasureNodeLabel +
+  // veNodeLabelOverflow). Yalnız kutuları sardığında kutudan geniş ad ("Ön Takoz
+  // Braketi") noktalı kenara değiyordu. Ölçülemezse pay 0 — davranış eskisi.
   var fr=null;
   if(bodiesN.length){
     var pad=26, x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
     bodiesN.forEach(function(n){ var w=n.width||50,h=n.height||46;
-      x1=Math.min(x1,n.x); y1=Math.min(y1,n.y); x2=Math.max(x2,n.x+w); y2=Math.max(y2,n.y+h); });
+      var o={ left:0, right:0, top:0, bottom:0 };
+      if(typeof veNodeLabelOverflow==='function' && typeof veMeasureNodeLabel==='function')
+        o=veNodeLabelOverflow((n.data&&n.data.labelPos)||'bottom', w, h, veMeasureNodeLabel(n));
+      x1=Math.min(x1,n.x-o.left); y1=Math.min(y1,n.y-o.top); x2=Math.max(x2,n.x+w+o.right); y2=Math.max(y2,n.y+h+o.bottom); });
     fr={x1:x1-pad, y1:y1-pad, x2:x2+pad, y2:y2+pad};
     var rect=document.createElementNS(NS,'rect');
     rect.setAttribute('x',fr.x1); rect.setAttribute('y',fr.y1);
@@ -2605,11 +2611,17 @@ function veMntDecorateConnections(svg){
   var spineB = bodiesN.filter(function(n){
       return n.type!=='mnt-bracket' && !(_mntDef(n)||{}).isMountCarried; })
     .sort(function(a,b){ return a.x - b.x; });
+  // Çizgi kutudan kutuya, KENARDAN kenara: merkezden çizildiğinde motorun,
+  // şanzımanın ve transferin kutusunun ve ikonunun üstünden geçiyordu.
+  // Kutular üst üste biniyorsa (kenarlar arasında boşluk yok) çizgi çizilmez.
   for(var i=0;i<spineB.length-1;i++){
     var a=spineB[i], b=spineB[i+1];
+    var ca={ x:a.x+(a.width||50)/2, y:a.y+(a.height||46)/2 }, cb={ x:b.x+(b.width||50)/2, y:b.y+(b.height||46)/2 };
+    var pa=_mntEdge(a, cb.x, cb.y), pb=_mntEdge(b, ca.x, ca.y);
+    if((pb.x-pa.x)*(cb.x-ca.x)+(pb.y-pa.y)*(cb.y-ca.y) <= 0) continue;
     var l=document.createElementNS(NS,'line');
-    l.setAttribute('x1',a.x+(a.width||50)/2); l.setAttribute('y1',a.y+(a.height||46)/2);
-    l.setAttribute('x2',b.x+(b.width||50)/2); l.setAttribute('y2',b.y+(b.height||46)/2);
+    l.setAttribute('x1',pa.x); l.setAttribute('y1',pa.y);
+    l.setAttribute('x2',pb.x); l.setAttribute('y2',pb.y);
     l.setAttribute('stroke','var(--text-secondary)'); l.setAttribute('stroke-width','3');
     l.setAttribute('stroke-linecap','round'); l.setAttribute('opacity','0.7'); g.appendChild(l);
   }

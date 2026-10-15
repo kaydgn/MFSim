@@ -247,7 +247,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   dört kenara da konabiliyor; ölçü DOM'dan `offsetWidth` ile alınır
   (`getBoundingClientRect` DEĞİL — kamera zoom'unu içine katar), önbellek şart
   (her sürükleme karesinde koşuyor), boşluk sabitleri `css/styles.css`'teki
-  margin'lerle aynı olmak zorunda.
+  margin'lerle aynı olmak zorunda. Takoz'un ŞASİ çerçevesi de aynı ölçüyle
+  sarar (`veMntDecorateConnections`); kapı `mount-topoloji.spec.js`.
 - **Sonuçlar penceresindeki TXT raporları A4 SAYFADIR** (794×1123 px), tek
   `<pre>`, sola yaslı. Font ölçüsü **CSS'te** sayfaya sığmaktan türer (JS'te px
   yazılmaz — indirilen HTML'de JS yok). Üst bandı `veRepHeadHTML` **tek
@@ -349,8 +350,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `BELGE_DOSYA`. Bilinmeyen ikon adı SESSİZCE dolu bir kare çizer.
   Görüntüleyiciyle paylaşılan dosyalar `veIkon` çağırmaz (orada yok). Durum
   işareti (onay/uyarı/ret) tek üreticiden: `veDurumIkon`. Kılavuz METNİ ve
-  `<option>` metni kapsam dışı. Kapı: `ikon-dili.test.js` — kılavuz metni
-  dışındaki HER ürün dosyası; yeni dosya kendiliğinden kapıya girer.
+  `<option>` metni kapsam dışı. Bileşen ikonu (`componentDefs.svg`) `<text>`
+  taşımaz — harf çizgiyle çizilir (Σ palette 4,5 px'ti). Kapı: `ikon-dili.test.js`
+  — kılavuz metni dışındaki HER ürün dosyası; yeni dosya kendiliğinden kapıya girer.
 - **TÜRKÇE SAYI YAZIMI** (kullanıcı kararı 7·C). Ekrana, tuvale, günlüğe ve
   belgeye giden sayı `veSayi` ile yazılır (`js/sayi.js`, yükleyiciden önce):
   ondalık virgül, binlik nokta — 1.716,2. Makine biçimi (sayı alanının değeri,
