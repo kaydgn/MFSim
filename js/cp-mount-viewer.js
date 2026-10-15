@@ -60,7 +60,10 @@ function _mntViewerMarkerMat(varName, fallback, shininess){
   });
 }
 
-function veMountViewerInit(canvasId, mode){
+// `opt.hafiza`: kamera hafızasının anahtarı (varsayılan kip). Tam ekran
+// kendi anahtarını taşır — sütunun dar tuvaline göre kurulmuş kamerayı
+// devralınca model geniş ekranın onda birinde kalıyordu.
+function veMountViewerInit(canvasId, mode, opt){
   if(typeof THREE === 'undefined') return;      // THREE yüklü değil → sessiz atla
   veMountViewerDispose();
   var canvas = document.getElementById(canvasId);
@@ -102,18 +105,20 @@ function veMountViewerInit(canvasId, mode){
     massScale:{min:0,max:1},
     ctrl:{ theta:-Math.PI*0.75, phi:Math.PI/3, radius:2800, target:new THREE.Vector3(0,0,0) },
     raf:null, disposed:false, ro:null, detach:[],
-    raycaster:new THREE.Raycaster(), mouse:new THREE.Vector2(), tooltip:null, dragging:false
+    raycaster:new THREE.Raycaster(), mouse:new THREE.Vector2(), tooltip:null, dragging:false,
+    hafiza:(opt && opt.hafiza) || _mode
   };
 
   // Önceki oturumun kamera açısı varsa geri yükle (bkz. _veMountViewerCam).
   // _framed=true → veMountViewerUpdate içerik gelince kamerayı yeniden
   // çerçevelemeye kalkmaz, kullanıcının bıraktığı açı korunur.
-  var _memo = _veMountViewerCam[_mode];
+  var _memo = _veMountViewerCam[_veMountViewer.hafiza];
   if(_memo){
     var _c = _veMountViewer.ctrl;
     _c.theta=_memo.theta; _c.phi=_memo.phi; _c.radius=_memo.radius;
     _c.target.set(_memo.tx, _memo.ty, _memo.tz);
     _veMountViewer._framed = true;
+    _veMountViewer._memoKimlik = _memo.kimlik;
   }
 
   // Sabit eksen üçlüsü (model modu). Koordinat modu ekseni kendi çizer.
@@ -175,7 +180,7 @@ function veMountViewerReset(){
   var V=_veMountViewer; if(!V) return;
   // Sıfırlama kamera hafızasını da siler — yoksa panel bir sonraki yeniden
   // çiziminde sıfırladığın açı yerine eski açıya dönerdi.
-  try { delete _veMountViewerCam[V.mode]; } catch(e){}
+  try { delete _veMountViewerCam[V.hafiza || V.mode]; } catch(e){}
   V.ctrl.theta=-Math.PI*0.75; V.ctrl.phi=Math.PI/3;
   V.ctrl.radius=(V.mode==='coordframe')?2600:2800;
   // Koordinat modu: dikey ekseni (+Z) çerçevelemek için hedefi biraz yukarı al.
@@ -337,6 +342,12 @@ function _mntViewerClearGroup(V){
   }
 }
 
+// Koordinat üçlüsü — 2D tam ekranla aynı yazım: "(582,5; 21,5; −422,8)".
+function _mntViewerUclu(x, y, z){
+  var f=function(v){ return veSayi(v, 1, { eksi:'−' }); };
+  return '('+f(x)+'; '+f(y)+'; '+f(z)+')';
+}
+
 function veMountViewerUpdate(){
   var V=_veMountViewer; if(!V) return;
 
@@ -384,9 +395,9 @@ function veMountViewerUpdate(){
       _mntViewerMarkerMat('--accent-success', '#22c55e', 30));
     box.position.copy(_mntW(x,y,z));
     var kInfo='';
-    if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:var(--text-muted);">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
+    if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:var(--text-muted);">Statik k (N/mm):</span> ('+_mntViewerN(mt.kxs,0)+'; '+_mntViewerN(mt.kys,0)+'; '+_mntViewerN(mt.kzs,0)+')';
     box.userData={ info:'<b style="color:var(--ink-success);">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
-      +'<br><span style="color:var(--text-muted);">Konum (mm):</span> '+veSayi(x, 1)+' · '+veSayi(y, 1)+' · '+veSayi(z, 1)+kInfo };
+      +'<br><span style="color:var(--text-muted);">Konum (mm):</span> '+_mntViewerUclu(x, y, z)+kInfo };
     V.group.add(box);
     if(hasCG){
       var g=new THREE.BufferGeometry().setFromPoints([_mntW(cg[0],cg[1],cg[2]), _mntW(x,y,z)]);
@@ -406,7 +417,7 @@ function veMountViewerUpdate(){
     s.position.copy(_mntW(x,y,z));
     s.userData={ info:'<b style="color:var(--ink-warning);">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
       +'<br><span style="color:var(--text-muted);">Kütle:</span> '+(m>0?veSayi(m, 1)+' kg':'—')
-      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+veSayi(x, 1)+' · '+veSayi(y, 1)+' · '+veSayi(z, 1) };
+      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+_mntViewerUclu(x, y, z) };
     V.group.add(s);
   });
 
@@ -417,11 +428,61 @@ function veMountViewerUpdate(){
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
     cgm.userData={ info:'<b style="color:var(--ink-danger);">Birleşik ağırlık merkezi</b>'
       +'<br><span style="color:var(--text-muted);">Toplam kütle:</span> '+veSayi(mSum, 1)+' kg'
-      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+veSayi(cg[0], 1)+' · '+veSayi(cg[1], 1)+' · '+veSayi(cg[2], 1) };
+      +'<br><span style="color:var(--text-muted);">CG (mm):</span> '+_mntViewerUclu(cg[0], cg[1], cg[2]) };
     V.group.add(cgm);
-    // Kamera hedefini birleşik CG'ye getir (ilk kurulumda)
-    if(!V._framed){ V.ctrl.target.copy(_mntW(cg[0],cg[1],cg[2])); _mntViewerUpdateCamera(); V._framed=true; }
   }
+  // İLK KURULUMDA KAMERA İÇERİĞE SIĞAR: içeriğin sınır küresi tuvalin dar
+  // açısına (yatay ya da düşey) oturur. Yarıçap sabit 2.800 mm'ydi — dar
+  // sütunda doğru, geniş tam ekranda model görüntünün onda biri.
+  // Hafızadaki kamera yalnız KENDİ modeline uygulanır (`_mntViewerKimlik`).
+  V.kimlik=_mntViewerKimlik(d);
+  if(V._memoKimlik!==undefined){ if(V._memoKimlik!==V.kimlik) V._framed=false; V._memoKimlik=undefined; }
+  if(!V._framed && V.group.children.length){ _mntViewerSigdir(V); V._framed=true; }
+}
+
+// KAMERA HAFIZASI MODELE AİTTİR: kimlik gövde ve takoz düğümlerinin
+// kimliklerinden. Değer düzenlemek kamerayı korur; başka bir örnek yüklemek
+// (düğümler yeniden kurulur) yeni çerçeve ister — yoksa Tulga'nın kamerası
+// Siper'e uygulanıyor, model tuvalden taşıyordu.
+function _mntViewerKimlik(d){
+  return ((d && d.components) || []).concat((d && d.mounts) || [])
+    .map(function(x){ return String(x && x.id); }).sort().join('|');
+}
+
+// Kamera: içeriğin GERÇEK noktalarına (geometri köşeleri) sığar — eksen
+// hizalı kutunun köşelerine değil: çapraz dizilmiş bir güç grubunda kutunun
+// köşeleri boşlukta kalır ve kutuya sığdırılan model görüntünün üçte birinde
+// kalıyor (ölçüldü, Tulga tam ekran: 540×341 px / 1.598×823). İçerik izdüşümde
+// ortalanır, geniş kenarı görüntünün %85'i; açı (theta/phi) korunur, kamera
+// içeriğin sınır küresinin dışında kalır.
+function _mntViewerSigdir(V){
+  var P=[], v=new THREE.Vector3();
+  V.group.updateMatrixWorld(true);
+  V.group.traverse(function(o){
+    var a=o.visible && o.geometry && o.geometry.attributes && o.geometry.attributes.position;
+    if(!a) return;
+    var adim=Math.max(1, Math.floor(a.count/64));
+    for(var i=0; i<a.count; i+=adim) P.push(v.fromBufferAttribute(a, i).applyMatrix4(o.matrixWorld).clone());
+  });
+  if(!P.length) return;
+  var kure=new THREE.Sphere().setFromPoints(P), R=Math.max(kure.radius, 50);
+  var fv=V.camera.fov*Math.PI/180, th=Math.tan(fv/2), en=Math.max(1e-3, V.camera.aspect);
+  V.ctrl.target.copy(kure.center); V.ctrl.radius=R/Math.sin(Math.min(fv, 2*Math.atan(th*en))/2);
+  var sag=new THREE.Vector3(), ust=new THREE.Vector3(), q=new THREE.Vector3();
+  for(var k=0; k<4; k++){
+    _mntViewerUpdateCamera(); V.camera.updateMatrixWorld();
+    var x0=Infinity, x1=-Infinity, y0=Infinity, y1=-Infinity;
+    P.forEach(function(p){ q.copy(p).project(V.camera);
+      x0=Math.min(x0, q.x); x1=Math.max(x1, q.x); y0=Math.min(y0, q.y); y1=Math.max(y1, q.y); });
+    var yari=Math.max(x1-x0, y1-y0)/2;
+    if(!(yari>0) || !isFinite(yari)) break;
+    // izdüşümün merkezi görüntünün merkezine: hedef kamera düzleminde kayar
+    var d=V.camera.position.distanceTo(V.ctrl.target);
+    sag.setFromMatrixColumn(V.camera.matrixWorld, 0); ust.setFromMatrixColumn(V.camera.matrixWorld, 1);
+    V.ctrl.target.addScaledVector(sag, (x0+x1)/2*d*th*en).addScaledVector(ust, (y0+y1)/2*d*th);
+    V.ctrl.radius=Math.max(V.ctrl.radius*yari/0.85, R*1.05);
+  }
+  _mntViewerUpdateCamera();
 }
 
 // ─── Koordinat Düzlemi (mnt-coordframe) — eksen + düzlem + yön etiketleri ─────
@@ -484,9 +545,9 @@ function veMountViewerDispose(){
   // Kamera açısını sakla (yalnız çerçevelenmiş bir görünüm anlamlıdır).
   if(V.mode && V.ctrl && V._framed){
     try {
-      _veMountViewerCam[V.mode] = {
+      _veMountViewerCam[V.hafiza || V.mode] = {
         theta:V.ctrl.theta, phi:V.ctrl.phi, radius:V.ctrl.radius,
-        tx:V.ctrl.target.x, ty:V.ctrl.target.y, tz:V.ctrl.target.z
+        tx:V.ctrl.target.x, ty:V.ctrl.target.y, tz:V.ctrl.target.z, kimlik:V.kimlik
       };
     } catch(e){}
   }
