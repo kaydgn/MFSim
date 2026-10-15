@@ -1419,7 +1419,10 @@ function _mwCipIcHTML(c){
     var enCok = Math.max.apply(null, c.statik.map(function(s){ return -s.d[2]; }));
     h += '<span class="ve-fw-pill">1 g çökme en çok <b>' + _mwFmt(enCok, 2) + ' mm</b></span>';
   }
-  if(c.ok && c.modlar.length) h += '<span class="ve-fw-pill">f<sub>1</sub> <b>' + _mwFmt(c.modlar[0].f, 2) + ' Hz</b></span>';
+  // Simge KENDİ kutusunda: hap esnek kap ve alt simgesi onun doğrudan
+  // çocuğu olunca "f 1" diye yan yana düşüyor (FEAD sihirbazının L_b hapıyla
+  // aynı kural — tests/helpers/yerlesim-olcu.js → "alt simge esnek kapta").
+  if(c.ok && c.modlar.length) h += '<span class="ve-fw-pill"><span>f<sub>1</sub></span> <b>' + _mwFmt(c.modlar[0].f, 2) + ' Hz</b></span>';
   return h;
 }
 function _mwMasaOlc(){

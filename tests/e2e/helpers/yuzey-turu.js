@@ -218,6 +218,15 @@ async function takozTuru(page, olc) {
   await page.waitForTimeout(800);
   await page.evaluate(async () => { const s = nodes.find((n) => n.type === 'mnt-solver'); await veMntSolverCompute(s.id); });
   await page.waitForFunction(() => typeof veMntSets === 'function' && veMntSets().length > 0, null, { timeout: 180000 });
+  // Sihirbaz: tuvaldeki modelle (Tulga) tohumlanır, her adım — FEAD turuyla
+  // aynı kalıp. Turda yoktu ve iki kapı da onu görmüyordu (C2: "f₁" hapı).
+  const adim = await page.evaluate(() => { veMntWizAc(); return VE_MW_STEPS.length; });
+  for (let i = 0; i < adim; i++) {
+    await page.evaluate((j) => veMntWizGoto(j), i);
+    await page.waitForTimeout(450);
+    await olc('#ve-mntwiz-overlay', 'sihirbaz/' + (i + 1));
+  }
+  await page.evaluate(() => veMntWizKapat(false));
   const p = await pencereler(page, olc);
   expect(p.olculen).toBeGreaterThan(300);
   await sonuclar(page, olc, 'sonuçlar', () => {
