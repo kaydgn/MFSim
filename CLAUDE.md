@@ -584,7 +584,7 @@ Kullanıcı bildirimi: *"bir PR ve merge için en az 30-40 dakika bekliyoruz."*
 |----|------|-----|
 | `npm run build` | **1 sn** | bedava, hiç kaçınma |
 | tek test dosyası | **3 sn** | |
-| `npm run test:takoz` | **11 sn** | 40 dosya / 1000 test (2026-10-15; pencere ve kılavuz testleri dâhil) |
+| `npm run test:takoz` | **11 sn** | 41 dosya / 1012 test (2026-10-15; pencere ve kılavuz testleri dâhil) |
 | `npm run test:fead` | **20 sn** | 30 dosya / 1432 test |
 | `npm run test:arac` | **46 sn** | |
 | `npm test` (tam) | **67 sn** | 168 dosya, 256 sn CPU |
