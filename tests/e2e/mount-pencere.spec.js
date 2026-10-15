@@ -160,7 +160,8 @@ test('3B tam ekran: model görüntüyü doldurur, içinde kalır; başka örnekt
   // Koordinat üçlüsü ipucunda da "(x; y; z)" — kural 7·C
   expect(a.bilgi.length).toBeGreaterThan(5);
   expect(a.bilgi.filter((t) => /\d · [−-]?\d/.test(t))).toEqual([]);
-  expect(a.bilgi.filter((t) => /\(mm\)/.test(t)).every((t) => /\([−\d.,]+; [−\d.,]+; [−\d.,]+\)/.test(t))).toBe(true);
+  // Her ipucu (takoz · gövde · birleşik AM) bir konum taşır ve o "(x; y; z)" yazılır
+  expect(a.bilgi.filter((t) => !/\([−\d.,]+; [−\d.,]+; [−\d.,]+\) mm/.test(t))).toEqual([]);
   // Kapanınca kamera hafızaya yazılır; Siper yüklenince o kamera Siper'e uygulanmaz
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   await page.evaluate(() => veTogglePropertiesPanel(false));

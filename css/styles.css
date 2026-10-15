@@ -10076,6 +10076,23 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-is[data-i="y"]{ background:var(--eksen-y); }
 .ve-mnt-is[data-i="z"]{ background:var(--eksen-z); }
 
+/* FARE İPUCU — 3B sahne ve 2D çizim aynı kutu. Satır içinde yalnız konum
+   (left/top/display) ve katman: tam ekran perdesi (satır içi 100045) jeton
+   sisteminin dışında, ipucu onun üstünde durmalı. Renk, zemin ve kenar burada.
+   Ad işaretin renginde ama METİN mürekkebiyle (--ink-*), etiket soluk. */
+.ve-mnt-hover-ip{
+  position:fixed; pointer-events:none; display:none; max-width:260px;
+  padding:7px 9px; font-size:var(--fs-tiny); line-height:1.5;
+  background:var(--bg-secondary); color:var(--text-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg);
+  font-variant-numeric:tabular-nums;
+}
+.ve-mnt-hover-ip--metin{ max-width:280px; padding:7px 10px; font-size:var(--fs-body); white-space:pre-line; }
+.ve-mnt-ip-et{ color:var(--text-muted); }
+.ve-mnt-ip-ad[data-t="takoz"]{ color:var(--ink-success); }
+.ve-mnt-ip-ad[data-t="govde"]{ color:var(--ink-warning); }
+.ve-mnt-ip-ad[data-t="am"]{ color:var(--ink-danger); }
+
 /* ETKİLEŞİM — kısayol penceresinin dilinde birer satır. */
 .ve-mnt-ipucu{ margin:0; padding:0; list-style:none; font-size:var(--fs-tiny); color:var(--text-secondary); }
 .ve-mnt-ipucu li{ padding:3px 0; border-bottom:1px solid var(--border-light); }

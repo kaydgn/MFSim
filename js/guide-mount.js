@@ -137,11 +137,13 @@ function _gmSec2(){
       + 'PTO · Pompa · PTO grubu', 'Hepsi aynı “Kütle ve atalet” sekmesini taşır; farkları '
       + 'ikinci sekmede'],
     ['<strong>Takoz</strong>', 'Konum ve üç eksenli rijitlik', 'En az 3, tipik olarak 3–4'],
-    ['<strong>Kütüphane</strong>', 'Hazır takoz künyeleri', 'Katalogdan seçip uygulamak için'],
+    ['<strong>Takoz Özellikleri</strong>', 'Takoz tiplerinin kataloğu: rijitlik, kuvvet–sehim '
+      + 'yasası, kapasite', 'Katalogdan seçip takoza uygulamak için'],
     ['<strong>Çözücü</strong>', 'Çözüm modu, sönüm, şok', 'Tuvalde bir tane'],
     ['<strong>Başlangıç ve Örnekler</strong>', 'Kayıtlı gerçek modeller', 'Bölüm 3'],
     ['<strong>3D Görüntüleyici · 2D Görünüm · Koordinat Düzlemi</strong>',
-      'Modeli gözle denetleme yüzeyleri', 'Hesaba girmez'],
+      'Modeli gözle denetleme yüzeyleri; 2D Görünüm işaretleri numarayla çizer, '
+      + 'adlarını ve koordinatlarını yan sütundaki föyde verir', 'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12']
   ], ['Bileşen', 'Ne', 'Not']);
   h += '<h3>2.2 Neyi siz verirsiniz, neyi program hesaplar</h3>';
@@ -322,16 +324,28 @@ function _gmSec6(){
 
 function _gmSec7(){
   var h = _gmH2(6);
-  h += '<h3>7.1 Kütüphane</h3>';
-  h += '<p><strong>Kütüphane</strong> bileşeni hazır takoz künyelerini taşır. Bir künye '
-    + 'seçip takoza uyguladığınızda rijitlikler ve kapasite dolar; <strong>konum '
-    + 'dolmaz</strong> — o motorun verisidir, parçanın değil.</p>';
+  h += '<h3>7.1 Takoz Özellikleri</h3>';
+  h += '<p><strong>Takoz Özellikleri</strong> bileşeni takoz tiplerinin kataloğunu taşır: '
+    + 'gömülü künyeler ve sizin eklediğiniz özel takozlar. Bir tip seçip takoza '
+    + 'uyguladığınızda rijitlikler ve kapasite dolar; <strong>konum dolmaz</strong> — o '
+    + 'motorun verisidir, parçanın değil.</p>';
+  h += _gmAlanTablo('Takoz Özellikleri penceresi', [
+    ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı, taşıma kapasitesi',
+      'Sekme <strong>rijitlik eksik</strong> der: boş ya da ≤ 0 değer var, çözücü bu tipi '
+      + 'taşıyan takozu reddeder. <strong>oran?</strong> der: oran eksenler arasında 1,5 '
+      + 'kattan fazla yayılıyor, eksenler takaslı girilmiş olabilir'],
+    ['Kuvvet–sehim', 'Seçilen eksenin grafiği (X · Y · Z) ve üç eksenin yasası',
+      'Gömülü takoz lineerdir; z-eğrisinin noktaları yalnız özel takozda girilir'],
+    ['Kullanım (yan sütun)', 'Bu tipi taşıyan takozlar',
+      'Tipinden sapan takozu <strong>n değer farklı</strong> diye gösterir (aşağıdaki not)']
+  ], ['Sekme', 'Ne taşır', 'Ne söyler']);
   h += _gmNot('Künye KOPYA olarak gider',
-      'Kütüphaneden uygulanan değerler takoz düğümüne <strong>kopyalanır</strong>. Katalog '
-    + 'sürümü bir gün güncellenip bir değer düzeltilse bile kaydedilmiş projeniz '
+      'Takoz Özellikleri’nden uygulanan değerler takoz düğümüne <strong>kopyalanır</strong>. '
+    + 'Katalog sürümü bir gün güncellenip bir değer düzeltilse bile kaydedilmiş projeniz '
     + '<strong>kendiliğinden değişmez</strong>; yalnız hangi künyeden geldiğinin izi kalır. '
-    + 'Bir katalog güncellemesinin kaydedilmiş bir analizi sessizce değiştirmesi, bu programın '
-    + 'en çok kaçındığı hata sınıfıdır.');
+    + 'Tipi sonradan değiştirirseniz takoz da eski değerinde kalır; pencerenin '
+    + '<strong>Kullanım</strong> bölümü onu gösterir. Bir katalog güncellemesinin kaydedilmiş '
+    + 'bir analizi sessizce değiştirmesi, bu programın en çok kaçındığı hata sınıfıdır.');
   h += '<h3>7.2 Nonlineer z-eğrisi</h3>';
   h += '<p>Elastomer takozlar büyük çökmede <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
     + 'doğru değil, yukarı bükülen bir eğridir. Takoza bir '
@@ -342,8 +356,8 @@ function _gmSec7(){
       'Küçük çökmelerde (statik ağırlık) doğru ve hızlı'],
     ['En az bir takozda eğri var', 'Newton iterasyonu — bütün model nonlineer çözülür',
       'Büyük çökme (3,5 g düşey gibi) için gerekli'],
-    ['Metal-metal durdurucu', 'Çözücüde ayrıca açılır',
-      'Takozun mekanik sınırına dayanmasını modeller']
+    ['Metal-metal durdurucu', 'Her zaman açık: her takozda düşeyde ±15 mm boşluk',
+      'Takozun mekanik sınırına dayanmasını modeller; boşluk ayarlanmaz, yanal durdurucu yok']
   ], ['Durum', 'Çözüm yolu', 'Ne zaman']);
   h += _gmUyari('Doğrusal model büyük çökmede İYİMSERDİR',
       'Eğri girilmemişse program takozu <strong>her çökmede aynı rijitlikte</strong> sayar. '
@@ -728,12 +742,12 @@ function _gmEkA(){
       ['Dinamik rijitlik', 'Takoz', 'Takoz ve yeri → Rijitlik'],
       ['Taşıma kapasitesi', 'Takoz', 'Takoz ve yeri → Kapasite'],
       ['Kuvvet–sehim eğrisi', 'Takoz', 'Takoz ve yeri → Kuvvet–sehim yasası'],
-      ['Hazır takoz künyeleri', 'Kütüphane', '—'],
-      ['Çözüm modu ve durdurucu', 'Çözücü', 'Ayarlar → Yöntem'],
+      ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', 'Rijitlik · Kuvvet–sehim'],
+      ['Çözüm modu', 'Çözücü', 'Ayarlar → Yöntem'],
       ['Sönüm oranı', 'Çözücü', 'Ayarlar → Yöntem'],
       ['Şok darbesi', 'Çözücü', 'Ayarlar → Şok darbesi'],
       ['Örnek modeller', 'Başlangıç ve Örnekler', '—'],
-      ['Doküman künyesi', 'Rapor', '—']
+      ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü', 'Rapor penceresi kaynağını gösterir']
     ], ['l', 'c', 'l']);
   return h;
 }
