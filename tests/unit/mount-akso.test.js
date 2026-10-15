@@ -106,6 +106,17 @@ describe('MODEL ÇEKİRDEKTEN — pencere hesaplamaz, okur', () => {
     expect(t.govde.filter((g) => !g.kutu).length).toBe(5);
   });
 
+  // Üç örnekte %5–10 arasında gövde yok: eşik başka bir sayıya kaysa örnekler
+  // bunu göremezdi. Bir braketin payı eşiğin iki yanına taşınır.
+  test('ana gövde eşiği tam %10: payı %7 olan gövde ana DEĞİL, %11 olan ana', () => {
+    yukle('tulga');
+    const braket = global.nodes.find((n) => n.type === 'mnt-bracket');
+    const digerleri = cp._mntAksoModel().govde.reduce((a, g) => a + g.m, 0) - Number(braket.data.mass);
+    const pay = (p) => { braket.data.mass = Math.round(p * digerleri / (1 - p) * 10) / 10; return cp._mntAksoModel().govde.find((g) => g.ad === 'Braket' && g.m === braket.data.mass); };
+    expect(pay(0.07).ana).toBe(false);
+    expect(pay(0.11).ana).toBe(true);
+  });
+
   test('asal eksenler birleşik I_G\'nin ÖZVEKTÖRÜ (artık ≈ 0); eşdeğer kutu aynı kütle ve ataleti verir', () => {
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -253,6 +264,20 @@ describe('YAZI — okunur, çakışmaz, çizgi altında', () => {
     const metinler = [...svg.matchAll(/<g class="ve-ak-cip[^"]*"[^>]*><rect[^>]*\/>((?:<text[^>]*>[^<]*<\/text>)+)<\/g>|<text class="([^"]*)"/g)];
     expect(metinler.length).toBeGreaterThan(10);
     metinler.forEach((x) => { if (x[2] !== undefined) expect(x[2]).toMatch(/ve-ak-(yz|cvy|cvad)/); });
+  });
+
+  // Alttan bakışta Z = 0 düzlemi göz ile gövdeler ARASINDA: gölge o düzlemin
+  // öbür yüzüne düşer (çizilmez), zemin camdan ve gövdelerin ÜSTÜNDE çizilir.
+  test('alttan bakış: gölge yok, zemin camdan ve gövdelerin üstünde; yukarıdan bakışta tersi', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel();
+    const ciz = (z) => AK.ciz(m, { W: 354, iz: 'dim', b: { x: -1, y: -1, z }, kat: { golge: true }, fs: FS }).svg;
+    const ust = ciz(1), alt = ciz(-1);
+    expect((ust.match(/class="ve-ak-gol"/g) || []).length).toBe(3);         // üç kutulu gövdenin izi
+    expect(ust).not.toMatch(/ve-ak-izg cam/);
+    expect(ust.indexOf('class="ve-ak-izg"')).toBeLessThan(ust.indexOf('ve-ak-hareket'));
+    expect(alt).not.toMatch(/class="ve-ak-gol"/);
+    expect(alt.indexOf('ve-ak-izg cam')).toBeGreaterThan(alt.indexOf('<!--hs-->'));
   });
 
   test('canlandırmanın karesi çizilenle AYNI sığdırmada: faz 0 karesi çizimin hareket katmanıdır', () => {
