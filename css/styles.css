@@ -6208,7 +6208,10 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   margin:0 4px;
 }
 .ve-tree-row:hover{background:var(--accent-tint-8);}
-.ve-tree-row .arrow{width:14px;display:inline-flex;align-items:center;justify-content:center;align-self:stretch;color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);}
+.ve-tree-row .arrow{width:14px;display:inline-flex;align-items:center;justify-content:center;align-self:stretch;color:var(--text-muted);flex-shrink:0;cursor:pointer;border-radius:var(--radius-xs);
+  /* düğme (odaklanabilir, adlı) — tarayıcının düğme görünümü sıfırlanır */
+  background:none;border:0;padding:0;margin:0;font:inherit;}
+.ve-tree-row .arrow:focus-visible{outline:2px solid var(--accent-primary);outline-offset:-1px;}
 /* Aç/kapa oku çizgi ikon (karar 10·B) — ▶/▼ yazı karakteri değil. */
 .ve-tree-row .arrow > .mf-ico{width:12px;height:12px;}
 /* Ok SÜTUNU, oku olmayan satırlarda da yer tutar. Yoksa "Detaylı Rapor"
@@ -6369,6 +6372,9 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   width:1px;background:var(--border-color);
 }
 .vsig-row:hover{background:var(--accent-tint-8);}
+/* Fare altında işaretsiz satırın soluk yazısı tülün üstünde AA'da kalmıyordu
+   (koyu tema 4,497:1) — yazı bir basamak koyulaşır. */
+.vsig-row:hover .vsig-name, .vsig-row:hover .vsig-unit{color:var(--text-secondary);}
 .vsig-row:focus-visible{outline:2px solid var(--accent-primary);outline-offset:-2px;}
 .vsig-row.on{color:var(--text-secondary);}
 /* Blok akış — flex DEĞİL: text-overflow:ellipsis yalnız blok kutuda çalışır,

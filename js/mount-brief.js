@@ -1067,11 +1067,14 @@ var veMntBrief = (function() {
         marks.push({ axis: 'x', value: m.f_Hz, kind: 'mode',
                      label: na(m.f_Hz) + ' Hz · ' + modeShort(m.label) });
       });
+      // Eşik DÜŞEY (T_2) eğriden: işaret şeritlerin hepsini dikine keser,
+      // yönü yazmazsa boyuna şeritte "10,2 Hz" okunuyordu — o şeridin kendi
+      // eşiği 15,7 Hz (şerit yorumu yönünü söylüyor, işaret söylemiyordu).
       var T = chan(ds, 'T_2');
       if(T) {
         var cross = lastCrossBelow(ds.x.data, T.data, 1);
         if(isFinite(cross)) marks.push({ axis: 'x', value: cross, kind: 'ref',
-          label: 'izolasyon başlangıcı ' + na(cross) + ' Hz' });
+          label: 'düşey izolasyon başlangıcı ' + na(cross) + ' Hz' });
       }
       var eng = engineFiring(R);
       if(eng) marks.push({ axis: 'x', value: eng.f, kind: 'event',
