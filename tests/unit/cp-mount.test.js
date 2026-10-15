@@ -785,7 +785,7 @@ describe('3D Görüntüleyici bileşeni', () => {
     const html = cp.getMntViewerPropertiesHTML(node);
     expect(html).toContain('ve-mnt-inline-viewer-canvas');
     expect(html).toContain('veMntViewerRefresh()');
-    expect(html).toContain('var(--bg-primary)');
+    expect(html).toContain('ve-mnt-sahne');            // kare sahne kabı (zemin CSS'te)
     // interaktif: katman aç/kapa + sıfırla + büyüt + boyutlandırma
     expect(html).toContain("veMountViewerToggle('grid')");
     expect(html).toContain('veMountViewerReset()');
@@ -802,11 +802,22 @@ describe('3D Görüntüleyici bileşeni', () => {
 
 describe('2D Görünüm bileşeni', () => {
   afterEach(() => { delete global.nodes; });
-  test('panel: diyagram kutusu + Yenile (tam ekran kaldırıldı)', () => {
+  // 2026-10-15'ten beri sütunda: her görünüş bir SEKME, çizim gerçek ölçekte
+  // ve işaretler NUMARALI (açılımı İşaretler föyünde). Yenile düğmesi yok —
+  // çizim açılışta ve sütun genişliği değişince kendini kurar. Adlı üç
+  // görünüş tam ekranda.
+  test('panel: üç görünüş sekmesi, numaralı çizim, İşaretler föyü, tam ekran', () => {
+    global.nodes = [
+      { id: 'a', type: 'mnt-motor', def: { isMountBody: true }, customName: 'Motor', data: { mass: 100, cgx: 0, cgy: 0, cgz: 100 } },
+      { id: 'm', type: 'mnt-mount', def: { isMount: true }, customName: 'Ön Takoz', data: { x: -50, y: 20, z: 30 } }
+    ];
     const html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} });
-    expect(html).toContain('ve-mnt-2dview-box');
-    expect(html).toContain('veMnt2DViewRefresh()');
-    expect(html).not.toContain('veMnt2DViewFullscreen');   // tam ekran kaldırıldı
+    expect((html.match(/data-mnt2d="(ust|yan|on)"/g) || []).length).toBe(3);
+    expect((html.match(/<svg class="ve-mnt2d-gorunus ve-mnt2d-fig"/g) || []).length).toBe(3);
+    expect(html).toMatch(/>T1<\/text>/);                 // takoz numarası çizimde
+    expect(html).toMatch(/<td>T1<\/td><td class="sol" title="Ön Takoz">Ön Takoz<\/td>/);   // açılımı föyde
+    expect(html).toContain('veMnt2DTamEkran()');
+    expect(html).not.toContain('veMnt2DViewRefresh()');
   });
   test('_mnt2DGather kütle-ağırlıklı birleşik CG hesaplar', () => {
     global.nodes = [
@@ -854,9 +865,10 @@ describe('Koordinat Düzlemi bileşeni', () => {
     const html = cp.getMntCoordFramePropertiesHTML(node);
     expect(html).toContain('ve-mnt-coord-canvas');
     expect(html).toContain("veMountViewerToggle('planes')");
-    expect(html).toContain('İleri–geri');   // X ekseni açıklaması
-    expect(html).toContain('Yanal');        // Y ekseni açıklaması
-    expect(html).toContain('Düşey');        // Z ekseni açıklaması
+    // Eksen föyü: yön + işaret (sahnedeki okun rengi CSS'te, --eksen-x/y/z)
+    expect(html).toMatch(/data-i="x"[\s\S]*araç arkası[\s\S]*>ön</);
+    expect(html).toMatch(/data-i="y"[\s\S]*>sağ<[\s\S]*>sol</);
+    expect(html).toMatch(/data-i="z"[\s\S]*>yukarı<[\s\S]*>aşağı</);
   });
 });
 
@@ -984,9 +996,11 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     expect(withCurve).not.toContain('veMntLibCurveSetPoint');   // burada düzenlenmez
   });
 
-  test('kütüphane paneli: özel takoz satırında ∿ eğri düğmesi', () => {
+  // Eğri düzenleyicisi aç/kapa düğmesinin arkasında değil: Kuvvet–sehim
+  // sekmesinde doğrudan — eğri yoksa tanımlama eylemi.
+  test('kütüphane paneli: eğrisiz özel takozda z-eğrisi tanımlama eylemi', () => {
     const html = cp.getMntLibraryPropertiesHTML(libNode());
-    expect(html).toContain("veMntLibCurveToggle('lib1','k1')");
+    expect(html).toContain("veMntLibCurveEnable('lib1','k1')");
   });
 
   // Smoke: seçili takozun kuvvet–sehim grafiği (SVG) patlamadan üretilir —
@@ -997,8 +1011,9 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];
     n.data._selKey = 'k1';
     const html = cp.getMntLibraryPropertiesHTML(n);
-    expect(html).toContain('Fz · eksenel');   // z ekseni grafik kartı
-    expect(html).toContain('Fx · radyal');    // x ekseni grafik kartı
+    // Sütunda TEK eksen grafiği (varsayılan z) + eksen seçici
+    expect(html).toContain('<i class="ve-fp-sym">F<sub>z</sub></i> · eksenel</b>');
+    expect(html).toContain("veMntLibEksen('lib1','x')");
     expect(html).toContain('<svg');
     expect(html).toContain('<polyline');   // statik + dinamik çizgiler
     expect(html).toContain('<circle');      // ölçüm noktaları (z-eğrisi)

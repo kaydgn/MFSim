@@ -94,10 +94,11 @@ describe('kural — ikon işi ile metin ayrılıyor', () => {
   ])('geçer (aşama 3): %s', (m) => expect(yakalar(m)).toEqual([]));
   test('belge üreticisi: dosyanın TAMAMI belge, yalnız adı yazılı işlev arayüz', () => {
     const f = 'js/cp-mount-report.js';
-    const s = "function getMntReportPropertiesHTML(n){ return '<b>✓</b>'; }\n"
-      + 'function veMntGenerateReport(){}\n'
+    // Rapor PENCERESİ 2026-10-15'te cp-mount.js'e taşındı; bu dosyanın
+    // arayüzü yalnız üretim bildirimi (veMntGenerateReport).
+    const s = "function veMntGenerateReport(n){ return '<b>✓</b>'; }\n"
       + "function _mntRepX(){ return '<b>✓</b>'; }";
-    expect(T.tara(s, f).map((x) => x.satir)).toEqual([1]);        // yalnız panel
+    expect(T.tara(s, f).map((x) => x.satir)).toEqual([1]);        // yalnız arayüz işlevi
     // Adı yazılı arayüz işlevi yoksa tarama PATLAR: yeniden adlandırma panelin
     // kapıdan sessizce çıkması olurdu.
     expect(() => T.tara("function x(){ return '<b>✓</b>'; }", f, { kati: true })).toThrow(/BELGE_DOSYA işlevi yok/);

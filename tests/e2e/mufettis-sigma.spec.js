@@ -188,10 +188,10 @@ for (const [modul, M] of Object.entries(MODULLER)) {
     // MODÜL KARTI KÖK TUVALDE — içeriden yapılan tarama ona hiç ulaşmıyor
     // (`isSubsystem` tipleri kurulmuyor). FEAD'inki Krank Kasnağı kabuğunda ve
     // modelini ALT TOPOLOJİDEN kuruyor; köke dönüp aynı işlevle ölçülür.
-    if (modul === 'fead-analysis') {
-      await page.evaluate(() => veFeadCloseEditor());
+    if (modul === 'fead-analysis' || modul === 'mount-analysis') {
+      await page.evaluate((m) => (m === 'fead-analysis' ? veFeadCloseEditor() : veMntCloseEditor()), modul);
       await page.waitForTimeout(600);
-      const kart = await page.evaluate(pencereOlc, 'fead-analysis');
+      const kart = await page.evaluate(pencereOlc, modul);
       expect(kart.sutun).toBe(true);
       olcum.push(kart);
     }
@@ -202,9 +202,14 @@ for (const [modul, M] of Object.entries(MODULLER)) {
     expect(tasan).toEqual([]);
     expect(okunmaz).toEqual([]);
     expect(listedeAmaSutunda).toEqual([]);
-    // BOŞLUK BEKÇİSİ: tarama sütunu GERÇEKTEN kullandı. Takoz'da 2026-10-14'ten
-    // beri kütle gövdeleri, Takoz ve Çözücü de sütunda (FEAD kabuğu + föy);
-    // modal kalanlar görüntüleyiciler ve Örnek (VE_SUTUNA_SIGMAYAN).
-    expect(olcum.filter((r) => r.sutun).length).toBeGreaterThanOrEqual(modul === 'mount-analysis' ? 10 : 3);
+    // BOŞLUK BEKÇİSİ: tarama sütunu GERÇEKTEN kullandı. Takoz'da 2026-10-15'ten
+    // beri HİÇBİR pencere modal değil (kullanıcı kararı: "eski tipte hiçbir
+    // bileşen kalmasın") — paletin her Takoz tipi ve kökteki modül kartı sütunda.
+    if (modul === 'mount-analysis') {
+      expect(olcum.filter((r) => !r.sutun).map((r) => r.tip)).toEqual([]);
+      expect(olcum.length).toBeGreaterThanOrEqual(17);
+    } else {
+      expect(olcum.filter((r) => r.sutun).length).toBeGreaterThanOrEqual(3);
+    }
   });
 }

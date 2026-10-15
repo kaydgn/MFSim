@@ -14,6 +14,11 @@ const core = require('../../js/mount-core.js');
 global.veMountCore = core;
 global.showToast = () => {};
 const rep = require('../../js/cp-mount-report.js');
+// Rapor PENCERESİ cp-mount.js'te (öteki Takoz pencereleriyle aynı kabuk);
+// raporun seçicilerini GLOBAL olarak çağırır.
+const cp = require('../../js/cp-mount.js');
+['_mntRepEngine', '_mntRepZeta', 'veMntUygunluk', 'veMntRaporOpts', '_mntRepCaseTr', '_mntRepIsolation']
+  .forEach((k) => { global[k] = rep[k]; });
 
 // ── Bilinen, çözülmüş bir model (R) kur (sample harness'in küçük hâli) ───────
 function buildR() {
@@ -94,16 +99,16 @@ describe('Sayısal biçimlendirme (Türkçe virgül + sondaki sıfır kırpma)',
 
 describe('Panel — Çözücü guard\'ı (çözülmemişse UYARIR)', () => {
   test('çözülmüş: "Rapor Oluştur" butonu etkin, uyarı yok', () => {
-    global._veMntLast = R;
-    const html = rep.getMntReportPropertiesHTML({ id: 'n1' });
+    global._veMntLast = R; cp._veMntLast = R;
+    const html = cp.getMntReportPropertiesHTML({ id: 'n1' });
     expect(html).toContain('veMntGenerateReport(\'n1\')');
     expect(html).toContain('Model çözüldü');
     expect(html).toContain('3 bileşen · 4 takoz');
     expect(html).not.toContain('disabled');
   });
   test('çözülmemiş: uyarı + devre dışı buton (rapor üretmez)', () => {
-    global._veMntLast = null;
-    const html = rep.getMntReportPropertiesHTML({ id: 'n1' });
+    global._veMntLast = null; cp._veMntLast = null;
+    const html = cp.getMntReportPropertiesHTML({ id: 'n1' });
     expect(html).toContain('Model çözülmedi');
     expect(html).toContain('Çözücü');
     expect(html).toContain('disabled');

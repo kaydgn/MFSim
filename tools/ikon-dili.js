@@ -92,7 +92,7 @@ const BELGE = {
 // yoksa tarama patlar — yeniden adlandırma panelin kapıdan sessizce
 // çıkması olurdu.
 const BELGE_DOSYA = {
-  'js/cp-mount-report.js': ['getMntReportPropertiesHTML', 'veMntGenerateReport'],
+  'js/cp-mount-report.js': ['veMntGenerateReport'],
   'js/cp-fead-report.js': ['getFeadReportPropertiesHTML', '_frKindPicker', '_frDocFields', '_frStatus',
     'veFeadGenerateReport'],
   'js/cp-fead-summary.js': [],

@@ -175,7 +175,7 @@ function _gmSec3(){
       + '<strong>Başlangıç ve Örnekler</strong> kutusu vardır.',
     'O kutuya çift tıklayın, listeden bir model seçin ve <strong>▶ Örneği aktar</strong> '
       + 'deyin — bütün kütleler, takozlar ve künyeler bir anda kurulur.',
-    'Panelin altındaki <strong>Tutarlılık uyarıları</strong> kutusuna bakın: model '
+    'Penceredeki <strong>Tutarlılık uyarıları</strong> bölümüne bakın: model '
       + 'çözülebilir durumda mı, eksik bir alan var mı?'
   ]);
   var liste = _gmOrnekListe();
@@ -474,7 +474,8 @@ function _gmSec12(){
     + 've uygunluk hükmü.</p>';
   h += _gmAdimlar([
     'Önce modeli <strong>çözün</strong> — rapor bir sonuç belgesidir ve çözümsüz üretilmez.',
-    'Rapor bileşenine çift tıklayın, doküman künyesini (hazırlayan, proje) doldurun.',
+    'Rapor bileşenine çift tıklayın: pencere çözümün güncel mi bayat mı olduğunu ve '
+      + '§8.8’in girdilerinin (rölanti devri, silindir sayısı, ζ) nereden geldiğini gösterir.',
     'Raporu üretip indirin. Dosya tek başına açılır; internet gerekmez.'
   ]);
   h += _gmUyari('Rapor çözümün fotoğrafıdır',

@@ -21,6 +21,8 @@ global.componentDefs = componentDefs;
 
 const cp = require('../../js/cp-mount.js');
 const rep = require('../../js/cp-mount-report.js');
+['_mntRepEngine', '_mntRepZeta', 'veMntUygunluk', 'veMntRaporOpts', '_mntRepCaseTr', '_mntRepIsolation']
+  .forEach((k) => { global[k] = rep[k]; });
 
 beforeEach(() => { resetStubs(stubs); global.nodes = []; global._veMntLast = null; });
 
@@ -126,10 +128,13 @@ describe('Rapor paneli — artık girdi değil, kaynak göstergesi', () => {
   test('değerleri ve nereden geldiğini gösterir, girdi alanı basmaz', () => {
     global._veMntLast = { zeta: 0.02, gather: { torque: { idleRpm: 600, cylinders: 6 }, components: [] },
                           mounts: [], error: null };
-    const html = rep.getMntReportPropertiesHTML({ id: 'r1', type: 'mnt-report', data: {} });
-    expect(html).toContain('Motor</b> bileşeni');
-    expect(html).toContain('Çözücü</b> bileşeni');
-    expect(html).toContain('30 Hz</b>');                      // f_ateş türetildi
+    cp._veMntLast = global._veMntLast;
+    const html = cp.getMntReportPropertiesHTML({ id: 'r1', type: 'mnt-report', data: {} });
+    // Föy: büyüklük · değer · KAYNAK — kaynak sütunu bileşenin adı
+    expect(html).toMatch(/Rölanti devri<\/td><td>600 d\/dk<\/td><td class="sol">Motor<\/td>/);
+    expect(html).toMatch(/Silindir sayısı<\/td><td>6<\/td><td class="sol">Motor<\/td>/);
+    expect(html).toMatch(/<td class="sol">Çözücü<\/td>/);
+    expect(html).toContain('30 Hz');                          // f_ateş türetildi
     expect(html).not.toContain("'idleRpm',this.value");       // girdi alanı kaldırıldı
     expect(html).not.toContain("'cylinders',this.value");
     expect(html).not.toContain("'zeta',this.value");
@@ -137,7 +142,8 @@ describe('Rapor paneli — artık girdi değil, kaynak göstergesi', () => {
 
   test('değer yoksa §8.8\'in atlanacağını açıkça söyler', () => {
     global._veMntLast = { zeta: 0.02, gather: { torque: {}, components: [] }, mounts: [], error: null };
-    const html = rep.getMntReportPropertiesHTML({ id: 'r1', type: 'mnt-report', data: {} });
+    cp._veMntLast = global._veMntLast;
+    const html = cp.getMntReportPropertiesHTML({ id: 'r1', type: 'mnt-report', data: {} });
     expect(html).toContain('girilmedi');
     expect(html).toContain('§8.8 atlanır');
   });
