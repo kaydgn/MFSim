@@ -318,7 +318,7 @@ function runECMatchingAnalysis(nodeId) {
     h += '<div class="sw-section-title">Konvertör uyumluluk tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.ecm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.ecm-info-tip\').style.display=\'none\'">';
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
-    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
+    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
     h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + veSayi(peakRPM, 0) + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
@@ -736,9 +736,9 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   if(wrap && !wrap.querySelector('#' + uid + '-tooltip')) {
     var ov = document.createElement('div');
     ov.innerHTML =
-      '<div id="' + uid + '-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 9px; font-size:var(--fs-tiny); color:var(--text-primary); line-height:1.45; box-shadow:0 4px 16px rgba(0,0,0,0.45); z-index:10; max-width:220px; white-space:nowrap;"></div>' +
-      '<div id="' + uid + '-crossv" style="position:absolute; top:0; width:1px; height:100%; background:rgba(255,255,255,0.14); pointer-events:none; display:none; z-index:5;"></div>' +
-      '<div id="' + uid + '-crossh" style="position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,0.14); pointer-events:none; display:none; z-index:5;"></div>';
+      '<div id="' + uid + '-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 9px; font-size:var(--fs-tiny); color:var(--text-primary); line-height:1.45; box-shadow:var(--shadow-lg); z-index:10; max-width:220px; white-space:nowrap;"></div>' +
+      '<div id="' + uid + '-crossv" style="position:absolute; top:0; width:1px; height:100%; background:var(--border-hover); pointer-events:none; display:none; z-index:5;"></div>' +
+      '<div id="' + uid + '-crossh" style="position:absolute; left:0; width:100%; height:1px; background:var(--border-hover); pointer-events:none; display:none; z-index:5;"></div>';
     while(ov.firstChild) wrap.appendChild(ov.firstChild);
   }
 
@@ -946,7 +946,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<div class="sw-section-title">Şanzıman uyumluluk tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.egm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.egm-info-tip\').style.display=\'none\'">';
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
-    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
+    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + veSayi(powerAtGov, 0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
     h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + veSayi(torqueAtGov, 0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
@@ -1248,9 +1248,9 @@ function ecmExpandChart(nodeId) {
   var chartBox = document.createElement('div');
   chartBox.style.cssText = 'flex:1; position:relative; min-height:0; padding:10px;';
   chartBox.innerHTML = '<canvas id="ecm-modal-canvas" style="width:100%; height:100%; display:block; border-radius:var(--radius-sm);"></canvas>' +
-    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary); border:1px solid var(--border-light); border-radius:var(--radius-sm); padding:8px 12px; font-size:var(--fs-tiny); color:var(--text-primary); line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
-    '<div id="ecm-modal-crosshair-v" style="position:absolute; top:0; width:1px; height:100%; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>' +
-    '<div id="ecm-modal-crosshair-h" style="position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>';
+    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary); border:1px solid var(--border-light); border-radius:var(--radius-sm); padding:8px 12px; font-size:var(--fs-tiny); color:var(--text-primary); line-height:1.5; box-shadow:var(--shadow-lg); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
+    '<div id="ecm-modal-crosshair-v" style="position:absolute; top:0; width:1px; height:100%; background:var(--border-hover); pointer-events:none; display:none; z-index:5;"></div>' +
+    '<div id="ecm-modal-crosshair-h" style="position:absolute; left:0; width:100%; height:1px; background:var(--border-hover); pointer-events:none; display:none; z-index:5;"></div>';
   modal.appendChild(chartBox);
   
   // Footer — Legend
@@ -1824,8 +1824,7 @@ function ecmChartMouseMove(e) {
 
   // Crosshairs — overlay elemanları CSS px uzayında konumlanır
   var cssX = mx / pos.sx, cssY = my / pos.sy;
-  if(crossV) { crossV.style.display = 'block'; crossV.style.left = cssX + 'px'; }
-  if(crossH) { crossH.style.display = 'block'; crossH.style.top = cssY + 'px'; }
+  var kay = pcArtiImlec(_els, canvas, data, pos, cssX, cssY);   // js/panel-chart.js
 
   var rpm = data.rpmFromX(mx);
   var cursorT = data.torqueFromY(my);
@@ -1882,7 +1881,7 @@ function ecmChartMouseMove(e) {
     if(shown >= 3) return;
     shown++;
     var isNearest = c === nearest && !nearestIsMotor;
-    var hl = isNearest ? 'background:rgba(255,255,255,0.04); margin:0 -8px; padding:2px 8px; border-radius:var(--radius-sm);' : '';
+    var hl = isNearest ? 'background:var(--accent-tint-8); margin:0 -8px; padding:2px 8px; border-radius:var(--radius-sm);' : '';
     html += '<div style="display:flex; align-items:center; gap:6px; padding:2px 0; ' + hl + '">';
     html += '<span style="width:16px; height:3px; background:' + c.color + '; border-radius:1px; flex-shrink:0;"></span>';
     html += '<span style="color:' + c.color + '; font-weight:600; min-width:65px;">' + c.name + '</span>';
@@ -1913,8 +1912,8 @@ function ecmChartMouseMove(e) {
     if(tx < 4) tx = 4;
     if(ty + th > rect.height - 10) ty = rect.height - th - 10;
     if(ty < 4) ty = 4;
-    tooltip.style.left = tx + 'px';
-    tooltip.style.top = ty + 'px';
+    tooltip.style.left = (kay.ox + tx) + 'px';
+    tooltip.style.top = (kay.oy + ty) + 'px';
   }
 }
 
