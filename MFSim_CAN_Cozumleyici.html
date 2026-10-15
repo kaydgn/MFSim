@@ -10284,7 +10284,9 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   margin:0 0 10px; padding:8px; background:var(--bg-primary);
   border:1px solid var(--border-color); border-radius:var(--radius-md);
 }
-.ve-mnt-ex-sema img, .ve-mnt-ex-sema svg{ display:block; width:100%; height:auto; }
+/* Yalnız ŞEMANIN kendisi kabın eninde: `.ve-mnt-ex-sema svg` İÇTEKİ ikon
+   svg'lerini de büyütüyordu (40 → 137 px; kartlar ikonların altında kaldı). */
+.ve-mnt-ex-sema > img, .ve-mnt-ex-sema > svg, .ve-mnt-ex-sema > div > svg{ display:block; width:100%; height:auto; }
 .ve-mnt-ex-sema figcaption{ margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; }
 
 /* TAKOZ ÖZELLİKLERİ — üstte seçici, altında seçili tipin kimliği (ad · tür

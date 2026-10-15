@@ -257,9 +257,10 @@ describe('aşama 3 — üreticiler', () => {
 });
 
 // BİLEŞEN İKONLARI ÇİZİMDİR (Tur 6, 2026-10-15): "PTO Toplam" ikonu Σ'yı, AP'nin
-// "Parametrik Analiz"i P'yi YAZI KARAKTERİ olarak taşıyordu — yazı tipinden
-// çizilen ikinci dil, ve 38 px'lik ikonda 8,4 px, palette 4,5 px. Harf artık
-// çizgiyle çiziliyor; kural bütün bileşen tanımlarına.
+// "Parametrik Analiz"i P'yi, paletteki "Transfer" T'yi YAZI KARAKTERİ olarak
+// taşıyordu — yazı tipinden çizilen ikinci dil, ve 38 px'lik ikonda 8,4 px,
+// palette 4,3 px. Harf artık çizgiyle çiziliyor; kural bütün bileşen
+// tanımlarına ve paletin kopyasına.
 describe('bileşen ikonları yazı karakteri taşımaz', () => {
   test('componentDefs → svg içinde <text> yok', () => {
     const kaynak = oku('js/components.js');
@@ -267,5 +268,13 @@ describe('bileşen ikonları yazı karakteri taşımaz', () => {
     expect(ikonlar.length).toBeGreaterThan(40);                  // tarama gerçekten ikon buluyor
     const yazili = ikonlar.filter((m) => /<text\b/.test(m[3])).map((m) => m[1] + ' (' + m[2] + ')');
     expect(yazili).toEqual([]);
+  });
+  // Paletin ikonları index.html'de AYRI bir kopya (tek renk, currentColor):
+  // düğümün ikonu düzeldiğinde paletteki Σ 18 px'lik ikonda 4,3 px kalıyordu.
+  test('palet (index.html) → bileşen ikonlarında <text> yok', () => {
+    const html = oku('index.html');
+    const palet = [...html.matchAll(/<div class="ve-component"[^>]*data-type="([^"]+)"[^>]*>\s*(<svg[\s\S]*?<\/svg>)/g)];
+    expect(palet.length).toBeGreaterThan(40);                    // tarama gerçekten paleti buluyor
+    expect(palet.filter((m) => /<text\b/.test(m[2])).map((m) => m[1])).toEqual([]);
   });
 });
