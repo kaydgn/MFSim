@@ -479,6 +479,8 @@
     .ve-settings-header > span {
       display: inline-flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
     }
+    /* Başlıkta ikincil bilgi (sayaç, alt başlık). */
+    .ve-settings-header small { font-size:var(--fs-tiny); font-weight:400; color:var(--text-muted); }
     .ve-settings-close {
       width: 22px; height: 22px;
       border: 1px solid transparent;
@@ -496,6 +498,11 @@
       color: var(--accent-danger);
     }
     .ve-settings-close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    /* Başlığın yanındaki denetimler — büyük pencereler (yavaşlama sihirbazı,
+       harita, profil) başlıkta "Örnek yükle", filtre gibi denetim taşıyor.
+       Ana kapat kuralının ARDINDA: testler o kuralı ilk eşleşmeden okuyor. */
+    .ve-settings-header > span + *:not(.ve-settings-close),
+    .ve-settings-header > :not(span) + .ve-settings-close { margin-left: 8px; }
     .ve-settings-body { flex: 1; display: flex; min-height: 0; }
     .ve-settings-nav {
       width: 200px;

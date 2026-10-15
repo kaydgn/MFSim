@@ -38,18 +38,21 @@ function showInfoPopup(infoKey) {
   
   var popup = document.createElement('div');
   popup.id = 've-info-popup';
-  popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:10005; max-width:400px; padding:20px;';
+  popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-xl); z-index:10005; max-width:400px; overflow:hidden;';
   
-  popup.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-    '<h3 style="margin:0; font-size:var(--fs-title); color:var(--text-heading);">' + info.title + '</h3>' +
+  // Pencere ailesinin başlığı (CLAUDE.md → PENCERE AİLESİ TEK): eskiden kendi
+  // 16 px başlığını ve bandsız dolgusunu çiziyordu.
+  popup.setAttribute('role', 'dialog');
+  popup.setAttribute('aria-label', info.title);
+  popup.innerHTML = '<div class="ve-settings-header"><span>' + veIkon('info') + ' ' + info.title + '</span>' +
     '<button class="ve-settings-close" type="button" onclick="closeInfoPopup()" title="Kapat" aria-label="Kapat">' + veIkon('x') + '</button>' +
     '</div>' +
-    '<p style="margin:0; font-size:var(--fs-lg); color:var(--text-secondary); line-height:1.5;">' + info.content + '</p>';
+    '<p style="margin:0; padding:14px 16px; font-size:var(--fs-lg); color:var(--text-secondary); line-height:1.5;">' + info.content + '</p>';
   
   // Arka plan overlay
   var overlay = document.createElement('div');
   overlay.id = 've-info-overlay';
-  overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10004;';
+  overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:var(--scrim); z-index:10004;';
   overlay.onclick = closeInfoPopup;
   
   document.body.appendChild(overlay);

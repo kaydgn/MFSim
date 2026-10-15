@@ -16,6 +16,17 @@ describe('_veStatusKonu', () => {
     expect(k).toEqual({ konu: 'Kalan sabit renkli yazılar AA\'ya bağlandı', govde: 'ayrıntı satırı', pr: 1082 });
   });
 
+  // Başlığı elle verilmiş birleşme (son 300 birleşmenin 16'sı): başlık konunun
+  // kendisinde; gövdenin ilk satırı onun tekrarıysa ikinci kez basılmaz.
+  test('"Merge pull request #N — başlık" biçimi: konu başlık, tekrar gövdede yok', () => {
+    expect(_veStatusKonu('Merge pull request #1076 — FEAD: STEP\'ten kayış sırası\n\nFEAD: STEP\'ten kayış sırası\n\nayrıntı'))
+      .toEqual({ konu: 'FEAD: STEP\'ten kayış sırası', govde: 'ayrıntı', pr: 1076 });
+    expect(_veStatusKonu('Merge pull request #1072 — FEAD A3 pano'))
+      .toEqual({ konu: 'FEAD A3 pano', govde: '', pr: 1072 });
+    // Gövde başka bir şey söylüyorsa olduğu gibi kalır.
+    expect(_veStatusKonu('Merge pull request #9 — Başlık\n\nbaşka satır').govde).toBe('başka satır');
+  });
+
   test('gövdesi boş birleşme: konu satırı kalır, numara yine ayrılır', () => {
     expect(_veStatusKonu('Merge pull request #7 from a/b')).toEqual({ konu: 'Merge pull request #7 from a/b', govde: '', pr: 7 });
   });

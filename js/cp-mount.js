@@ -4828,12 +4828,15 @@ function _mntMxTd(){ return 'padding:3px 5px; border:1px solid var(--border-colo
 function _mntFsOverlay(title, innerHTML, onMount, onClose){
   var old=document.getElementById('ve-mnt-fs'); if(old) old.remove();
   var ov=document.createElement('div'); ov.id='ve-mnt-fs';
-  ov.style.cssText='position:fixed; inset:0; z-index:100045; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center; padding:2vh 2vw;';
+  ov.style.cssText='position:fixed; inset:0; z-index:100045; background:var(--scrim); display:flex; align-items:center; justify-content:center; padding:2vh 2vw;';
   var box=document.createElement('div');
-  box.style.cssText='width:96vw; height:94vh; max-width:1600px; display:flex; flex-direction:column; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 24px 70px rgba(0,0,0,0.6); overflow:hidden;';
+  box.style.cssText='width:96vw; height:94vh; max-width:1600px; display:flex; flex-direction:column; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-xl); overflow:hidden;';
   function close(){ document.removeEventListener('keydown', onKey); try{ if(onClose) onClose(); }catch(e){} ov.remove(); }
   function onKey(e){ if(e.key==='Escape') close(); }
-  box.innerHTML='<div style="display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary); flex-shrink:0;"><span style="font-weight:700; font-size:var(--fs-title); color:var(--text-heading);">'+title+'</span><div style="flex:1;"></div><button id="ve-mnt-fs-x" title="Kapat (Esc)" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-h2); line-height:1;">' + veIkon('x') + '</button></div>'
+  // Pencere ailesinin başlığı (CLAUDE.md → PENCERE AİLESİ TEK); ikon, pencereyi
+  // açan "Tam Ekran" eyleminin ikonu. Eskiden kendi 700 kalınlıkta bandı vardı.
+  box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', title);
+  box.innerHTML='<div class="ve-settings-header"><span>' + veIkon('maximize') + ' ' + title + '</span><button id="ve-mnt-fs-x" class="ve-settings-close" type="button" title="Kapat (Esc)" aria-label="Kapat">' + veIkon('x') + '</button></div>'
     +'<div id="ve-mnt-fs-body" style="flex:1; min-height:0; position:relative; display:flex; flex-direction:column;">'+innerHTML+'</div>';
   ov.appendChild(box); document.body.appendChild(ov);
   ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
