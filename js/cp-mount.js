@@ -2228,21 +2228,6 @@ function _mntExampleDiagramSVG(model, tools){
   return s;
 }
 
-// Örnek görselini panele bas: inline SVG → doğrudan (tema uyumlu); data-URI ya da
-// göreli yol → <img>. fallback verilirse ve resim yüklenemezse (dosya henüz
-// eklenmemişse) kırık resim yerine yedek şema gösterilir. Boşsa çağıran taraf
-// otomatik şemaya düşer.
-function _mntExampleImageHTML(image, fallback){
-  var s=String(image==null?'':image).trim();
-  if(!s) return '';
-  if(/^<svg/i.test(s)) return s;
-  var fb=fallback||'';
-  var onerr=fb?' onerror="this.style.display=\'none\'; if(this.nextElementSibling) this.nextElementSibling.style.display=\'block\';"':'';
-  var h='<img src="'+_mntEsc(s)+'" alt="Topoloji şeması" loading="lazy" style="display:block; width:100%; height:auto;"'+onerr+'/>';
-  if(fb) h+='<div style="display:none;">'+fb+'</div>';
-  return h;
-}
-
 // Örneğin KÜNYESİ — araç adı, kısa etiket, açıklama ve künye föyü (örnek
 // kaydının `specs` satırları: büyüklük · değer).
 function _mntExampleDetailsHTML(ex){
@@ -2281,8 +2266,11 @@ function getMntExamplePropertiesHTML(node){
   var sel=node.data.exampleKey || (list[0]&&list[0].id) || 'siper';
   var ex=_mntExampleReg(sel);
   var nid=node.id;
-  var autoSvg=_mntExampleDiagramSVG(ex.model, ex.tools);
-  var diagram=ex.image ? _mntExampleImageHTML(ex.image, autoSvg) : autoSvg;
+  // Topolojinin resmi HER ZAMAN modelden çizilen şema (kullanıcı kararı
+  // S3·B, 2026-10-15): temaya uyar, tek dosyaya gömülü, ad fare üstünde. Ekran
+  // görüntüsü (PNG) koyu temada ~5 px yazı taşıyordu ve tek dosyada hiç
+  // yüklenmiyordu — kullanıcı onu hiç görmemişti.
+  var diagram=_mntExampleDiagramSVG(ex.model, ex.tools);
   var secim='<label class="ve-fp-f"><span class="ve-fp-l">Örnek model</span>'
     + '<select class="ve-fp-sel" id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)">'
     + list.map(function(e){ return '<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }).join('')
@@ -2607,6 +2595,13 @@ function veMntDecorateConnections(svg){
     t.setAttribute('fill','var(--ink-accent)'); t.setAttribute('font-size','10.5');
     t.setAttribute('letter-spacing','1.5');
     t.textContent='ŞASİ'; g.appendChild(t);
+    // İLK BOYAMA: örnek yüklenince çerçeve çizilir ve AYNI görevde kamera
+    // sığdırılır; Chromium o arada yerleşen SVG yazısını yeni dönüşümde
+    // boyamıyordu — etiket DOM'da, kutusu ölçülüyor, ekranda yok (üç örnekte,
+    // 1× ve 1,5×). Bir kare sonra yazı yeniden yerleşir. Kapı:
+    // mount-topoloji.spec.js → "ŞASİ etiketi boyanır".
+    if(typeof requestAnimationFrame==='function')
+      requestAnimationFrame(function(){ if(t.isConnected) t.textContent='ŞASİ'; });
   }
 
   // ── Aktarma hattı omurgası: ana gövdeler, x sırasına göre merkezden ──

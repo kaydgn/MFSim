@@ -1923,7 +1923,6 @@ var veMountCore = (function() {
   //     subtitle:'5 kütle · 6 takoz',   // başlık altı kısa etiket
   //     description:'Bir iki cümle açıklama.',
   //     specs:[['Etiket','Değer'], …],  // detay tablosu satırları
-  //     image:'<svg…>' | 'data:image/…' | '',  // boş → modelden otomatik şema
   //     // AŞAĞIDAKİLERDEN BİRİ:
   //     model:{ g, components:[…], mounts:[…], torque:{…}, loadCases:[…] }  // (a) programatik
   //     topology:'assets/examples/xxx.json'   // (b) JSON topoloji (varsa öncelikli)
@@ -1973,9 +1972,6 @@ var veMountCore = (function() {
         {type:'mnt-viewer',     name:'3D Görüntüleyici',   at:[200,450]},
         {type:'mnt-example',    name:'Örnek',              at:[730,450]}
       ],
-      // Kullanıcı ekran görüntüsünü assets/examples/siper.png olarak ekledi.
-      // Dosya yoksa panel otomatik şemaya düşer (kırık resim gösterilmez).
-      image: 'assets/examples/siper.png',
       // JSON topolojisi (model'den ÖNCELİKLİ): "Örneği Aktar" bu dosyayı iç
       // topolojiye birebir kurar. model aşağıda kalır (panel spec tablosu +
       // selfTest onu kullanır; JSON yüklenemezse programatik yola düşülür).
@@ -2012,10 +2008,6 @@ var veMountCore = (function() {
         {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[983,235]},
         {type:'mnt-example',    name:'Örnek',             at:[995,401]}
       ],
-      // Topoloji ekran görüntüsü. Dosya yoksa/yüklenemezse panel otomatik
-      // şemaya düşer (kırık resim gösterilmez) — model + tools o yedek için
-      // de duruyor.
-      image: 'assets/examples/tulga.png',
       topology: 'assets/examples/tulga_topoloji.json',
       model: TULGA_EXAMPLE
     },
@@ -2048,7 +2040,6 @@ var veMountCore = (function() {
         {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[925,490]},
         {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1036,490]}
       ],
-      image: 'assets/examples/asfat.png',
       topology: 'assets/examples/asfat_topoloji.json',
       model: ASFAT_EXAMPLE
     }

@@ -6,14 +6,16 @@
       "id": "comp-3",
       "type": "mnt-example",
       "x": 1242,
-      "y": 523,
+      "y": 163,
       "width": 56,
       "height": 56,
       "customName": "",
       "mirrored": false,
       "isMasterWheel": false,
       "isMasterDiff": false,
-      "data": {}
+      "data": {
+        "exampleKey": "tulga"
+      }
     },
     {
       "id": "comp-4",
@@ -267,7 +269,7 @@
       "id": "comp-17",
       "type": "mnt-2dview",
       "x": 1030,
-      "y": 356,
+      "y": 323,
       "width": 60,
       "height": 56,
       "customName": "",
@@ -342,7 +344,7 @@
     {
       "id": "comp-21",
       "type": "mnt-report",
-      "x": 1240,
+      "x": 1345,
       "y": 163,
       "width": 60,
       "height": 56,
@@ -371,7 +373,7 @@
       "id": "comp-25",
       "type": "mnt-viewer",
       "x": 1240,
-      "y": 356,
+      "y": 323,
       "width": 60,
       "height": 56,
       "customName": "",
@@ -384,7 +386,7 @@
       "id": "comp-26",
       "type": "mnt-coordframe",
       "x": 1135,
-      "y": 356,
+      "y": 323,
       "width": 60,
       "height": 56,
       "customName": "",
@@ -400,5 +402,29 @@
     "x": 2839.3503196952106,
     "y": 2881.4967211058097
   },
-  "canvasZoom": 0.9414317882700003
+  "canvasZoom": 0.9414317882700003,
+  "annotations": [
+    {
+      "id": "annot-1",
+      "type": "frame",
+      "x": 1000,
+      "y": 293,
+      "width": 330,
+      "height": 130,
+      "text": "Görselleştirici",
+      "color": "var(--text-muted)",
+      "fontSize": 11
+    },
+    {
+      "id": "annot-2",
+      "type": "frame",
+      "x": 1000,
+      "y": 131,
+      "width": 435,
+      "height": 134,
+      "text": "Araçlar",
+      "color": "var(--accent-primary)",
+      "fontSize": 11
+    }
+  ]
 }

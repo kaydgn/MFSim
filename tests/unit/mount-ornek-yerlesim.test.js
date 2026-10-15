@@ -51,8 +51,8 @@ describe('araç kartları: tipin ölçüsü, sıra ve sütun', () => {
     adim.forEach((d) => expect(yakin(d / p, Math.round(d / p), 0.01)).toBe(true));
   });
 
-  test('gruplama çerçevesi kartlarını en az 8 px payla sarar (ASFAT)', () => {
-    const j = oku('asfat');
+  test.each(ORNEKLER)('%s: gruplama çerçevesi kartlarını en az 8 px payla sarar', (ad) => {
+    const j = oku(ad);
     const kartlar = j.nodes.filter((n) => ARAC.includes(n.type));
     const cer = (j.annotations || []).filter((a) => a.type === 'frame');
     expect(cer.length).toBe(2);
@@ -63,5 +63,46 @@ describe('araç kartları: tipin ölçüsü, sıra ve sütun', () => {
       const pay = Math.min(n.x - f.x, f.x + f.width - n.x - n.width, n.y - f.y);
       expect(pay).toBeGreaterThanOrEqual(8);
     });
+  });
+});
+
+// Kullanıcı kararı S5·B (2026-10-15): çerçeveler YALNIZ ASFAT'taydı. Üç örnek
+// AYNI düzeni taşır: Araçlar (Takoz Özellikleri · Çözücü · Örnek · Rapor) ve
+// Görselleştirici (2D · Koordinat · 3D), ikisi de tek sıra. Tek sıra bir seçim
+// değil ölçü: "Başlangıç ve Örnekler" adı 123 px, "Takoz Özellikleri" 92 px —
+// 105 px adımda yan yana gelirlerse adlar 2,5 px üst üste biner.
+describe('üç örnekte iki çerçeve: Araçlar ve Görselleştirici (S5·B)', () => {
+  const GORSEL = ['mnt-2dview', 'mnt-coordframe', 'mnt-viewer'];
+  const icinde = (n, f) => n.x >= f.x && n.x + n.width <= f.x + f.width && n.y >= f.y && n.y + n.height <= f.y + f.height;
+  const kesisir = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  test.each(ORNEKLER)('%s: adlar, renkler ve üyeler', (ad) => {
+    const j = oku(ad);
+    const cer = (j.annotations || []).filter((a) => a.type === 'frame');
+    const bul = (t) => cer.find((f) => f.text === t);
+    const arac = bul('Araçlar'), gor = bul('Görselleştirici');
+    expect(arac && arac.color).toBe('var(--accent-primary)');
+    expect(gor && gor.color).toBe('var(--text-muted)');
+    const uye = (f) => j.nodes.filter((n) => icinde(n, f)).map((n) => n.type).sort();
+    expect(uye(gor)).toEqual(GORSEL.slice().sort());
+    expect(uye(arac)).toEqual(j.nodes.filter((n) => ARAC.includes(n.type) && !GORSEL.includes(n.type)).map((n) => n.type).sort());
+    expect(uye(arac)).toContain('mnt-example');
+    expect(kesisir(arac, gor)).toBe(false);
+    // gövde ve takozlar çerçevenin dışında
+    j.nodes.filter((n) => !ARAC.includes(n.type)).forEach((n) => {
+      expect(`${n.type} ${n.id}: ${kesisir(n, arac) || kesisir(n, gor)}`).toBe(`${n.type} ${n.id}: false`);
+    });
+  });
+  test.each(ORNEKLER)('%s: Örnek kartı kendi örneğini seçili tutar', (ad) => {
+    const ex = oku(ad).nodes.filter((n) => n.type === 'mnt-example');
+    expect(ex.length).toBe(1);
+    expect(ex[0].data.exampleKey).toBe(ad);
+  });
+  test('üç örnekte Görselleştirici aynı ölçüde; Araçlar sütun sayısıyla', () => {
+    const olc = ORNEKLER.map((ad) => {
+      const cer = oku(ad).annotations.filter((a) => a.type === 'frame');
+      const g = cer.find((f) => f.text === 'Görselleştirici'), a = cer.find((f) => f.text === 'Araçlar');
+      return [g.width, g.height, a.height, a.x - g.x, (a.width - 120) % 105];
+    });
+    olc.forEach((o) => expect(o).toEqual([330, 130, 134, 0, 0]));
   });
 });
