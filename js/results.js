@@ -442,7 +442,7 @@ function veUpdateResultsTree() {
 
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="padding-left:16px;">';
-    html += totalSensorCount > 0 ? veAgacOk(false) : '<span class="arrow" onclick="veToggleTree(this.parentElement)"></span>';
+    html += totalSensorCount > 0 ? veAgacOk(false) : '<span class="arrow" aria-hidden="true"></span>';
     html += '<span class="icon">' + tabIcon + '</span>';
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--ink-accent);' : '') + '">' + tabLabel + '</span>';
     // Sayaç artık sensör değil SİNYAL sayar: listede görünen satır sayısıyla
@@ -751,9 +751,11 @@ function veProjeAdi() {
 }
 
 // Ağaç satırının aç/kapa oku (karar 10·B): kapalıyken sağa, açıkken aşağı.
+// DÜĞME: adsız ve odaklanamayan bir <span> idi — klavyeyle açılamıyor,
+// ekran okuyucu ne olduğunu söyleyemiyordu.
 function veAgacOk(acik) {
-  return '<span class="arrow" onclick="veToggleTree(this.parentElement)">' +
-         veIkon(acik ? 'chevron-down' : 'chevron-right') + '</span>';
+  return '<button type="button" class="arrow" aria-label="Dalı aç/kapa" aria-expanded="' + (acik ? 'true' : 'false') + '"' +
+         ' onclick="veToggleTree(this.parentElement)">' + veIkon(acik ? 'chevron-down' : 'chevron-right') + '</button>';
 }
 
 // Görüntüleyicide (viewer/js/board.js) BİREBİR kopya — orada js/ikon.js yok,
@@ -762,8 +764,11 @@ function veToggleTree(el) {
   var children = el.nextElementSibling;
   if(!children || !children.classList.contains('ve-tree-children')) return;
   children.classList.toggle('open');
+  var acik = children.classList.contains('open');
   var ok = el.querySelector('.arrow > .mf-ico');
-  if(ok) ok.className = 'mf-ico mf-ico-' + (children.classList.contains('open') ? 'chevron-down' : 'chevron-right');
+  if(ok) ok.className = 'mf-ico mf-ico-' + (acik ? 'chevron-down' : 'chevron-right');
+  var bt = el.querySelector('.arrow');
+  if(bt && bt.hasAttribute('aria-expanded')) bt.setAttribute('aria-expanded', acik ? 'true' : 'false');
 }
 
 function veToggleGirdiOzeti(hdrEl) {

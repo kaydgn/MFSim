@@ -118,6 +118,15 @@ async function sonuclar(page, olc, yer, sinyalSec) {
     await page.waitForTimeout(900);
     await olc('#ve-results-browser', yer + ' · gezgin (seçili)');
     await olc('#ve-results-grid', yer + ' · pano');
+    // FARE ALTINDAKİ İŞARETSİZ SATIR: soluk yazı vurgu tülünün üstünde kalır —
+    // koyu temada 4,497:1'di (AA 4,5) ve durağan ölçüm onu görmüyordu.
+    const satir = page.locator('#ve-results-tree .vsig-row:not(.on)').first();
+    if (await satir.count()) {
+      await satir.hover();
+      await page.waitForTimeout(200);   // zemin geçişi (.1 s)
+      await olc('#ve-results-browser', yer + ' · gezgin (fare altı)');
+      await page.mouse.move(0, 0);
+    }
   }
 }
 

@@ -220,8 +220,11 @@ function veToggleTree(el) {
   var children = el.nextElementSibling;
   if(!children || !children.classList.contains('ve-tree-children')) return;
   children.classList.toggle('open');
+  var acik = children.classList.contains('open');
   var ok = el.querySelector('.arrow > .mf-ico');
-  if(ok) ok.className = 'mf-ico mf-ico-' + (children.classList.contains('open') ? 'chevron-down' : 'chevron-right');
+  if(ok) ok.className = 'mf-ico mf-ico-' + (acik ? 'chevron-down' : 'chevron-right');
+  var bt = el.querySelector('.arrow');
+  if(bt && bt.hasAttribute('aria-expanded')) bt.setAttribute('aria-expanded', acik ? 'true' : 'false');
 }
 
 function veFilterResultsTree(query) {
@@ -260,8 +263,8 @@ function veUpdateResultsTree() {
     html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' +
-            '<span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span></span>';
+    html += '<button type="button" class="arrow" aria-label="Dalı aç/kapa" aria-expanded="true" onclick="veToggleTree(this.parentElement)">' +
+            '<span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span></button>';
     html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
     html += '<span style="font-weight:600;">İçe aktarılan ölçümler</span>';
     html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' +
