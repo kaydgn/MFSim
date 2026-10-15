@@ -253,6 +253,16 @@ function _mntFindReportNode(){
   return null;
 }
 
+// Raporun YEDEK girdileri (eski projelerde rölanti, silindir ve ζ Rapor
+// düğümünde tutuluyordu). Rapor ile bileşen pencerelerinin Uygunluk bloğu AYNI
+// seçeneklerle sorar — biri yedeği görüp öbürü görmeseydi aynı çözüm için iki
+// ayrı hüküm basarlardı.
+function veMntRaporOpts(nodeId){
+  var node=(typeof nodes!=='undefined' && Array.isArray(nodes) && nodeId) ? nodes.find(function(n){return n.id===nodeId;}) : null;
+  if(!node) node=_mntFindReportNode();
+  return (node && node.data) ? { idleRpm:node.data.idleRpm, cylinders:node.data.cylinders, zeta:node.data.zeta } : {};
+}
+
 function veMntGenerateReport(nodeId){
   var st = (typeof document!=='undefined') ? document.getElementById('ve-mnt-report-status') : null;
   function setStatus(m,c){ if(st){ st.textContent=m; st.style.color=c||'var(--text-muted)'; } }
@@ -262,9 +272,7 @@ function veMntGenerateReport(nodeId){
     return;
   }
   var R=_veMntLast;
-  var node=(typeof nodes!=='undefined') ? nodes.find(function(n){return n.id===nodeId;}) : null;
-  if(!node) node=_mntFindReportNode();
-  var opts=(node && node.data) ? { idleRpm:node.data.idleRpm, cylinders:node.data.cylinders, zeta:node.data.zeta } : {};
+  var opts=veMntRaporOpts(nodeId);
   setStatus('Rapor hazırlanıyor…');
   if(typeof showToast==='function') showToast('Rapor hazırlanıyor…','info');
   _mntReportEnsureAssets(function(ok){
@@ -384,8 +392,8 @@ function _mntRepAntet(R){
   try { date=new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch(e){}
   // ── Çözüm Yöntemi — kapakta YANLIŞ BEYAN olmaz ──
   // Otorite sırası: kullanıcının niyeti (solveMode) + fiilen koşan yol (solvedNL)
-  // + ikisinin çeliştiği hâl (nlNoCurve). Metin Çözücü panelindeki etiketle
-  // (cp-mount.js veMntSolverCompute durum kutusu) BİLEREK aynı dili konuşur —
+  // + ikisinin çeliştiği hâl (nlNoCurve). Metin Çözücü penceresindeki etiketle
+  // (cp-mount.js _mntCozumModuEtiketi) BİLEREK aynı dili konuşur —
   // ekranda "Otomatik → Nonlineer (Newton)" yazarken kapakta "Lineer" yazması
   // kullanıcının iki ayrı yerde iki ayrı şey okuması demekti.
   //
@@ -1933,12 +1941,18 @@ function _mntRepConsistency(R){
 // ═══ "Motor Takozu Uygunluğu" — analizi şirket hedef kriterlerine göre denetler ═══
 //  1) PowerPack Roll modu < %50·f_ateş  2) Rölanti transmissibility < %50
 //  3) Vites başına takoz kuvvetleri kontrol  4) Maks tork·3,5g düşey·1g yanal·1g boyuna
-function _mntRepCompliance(R, opts){
+// ── UYGUNLUK — TEK HESAP, İKİ YÜZEY ─────────────────────────────────────────
+// Raporun uygunluk tablosu ile bileşen pencerelerinin "Uygunluk" bloğu AYNI
+// satırları okur. Pencere kendi kriterini yazsaydı bir eşik değiştiğinde iki
+// yüzey sessizce ayrı hüküm verirdi (FEAD'de ölçülmüş kusur: çözücü "uygun"
+// derken sütun "değerlendirilemedi" diyordu). Dönüş VERİDİR; `bulgu` raporun
+// HTML'idir (biçimi değişmedi), `kisa` pencerenin satır adıdır.
+// Dönüş: { modalYok:bool, satirlar:[{no, ad, kisa, hedef, st:'ok'|'no'|'wait', bulgu}],
+//          concern:[durum adı], anyNo, anyWait }
+function veMntUygunluk(R, opts){
   opts=opts||{};
-  var modes=R.modes||[];
-  var h='<h2 id="uygunluk"><span class="no">✓</span>Motor takozu uygunluğu</h2>';
-  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Modal bant ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (<strong>Motor</strong> bileşeninden girilir); mod ayrıklığı ve yaylandırılmamış kütle bandı kriterleri yalnız modal sonuca bakar.</p>';
-  if(!modes.length){ return h+'<div class="note warn"><span class="t">Değerlendirilemedi</span>Modal sonuç yok — çözüm üretilemedi.</div>'; }
+  var modes=(R && R.modes)||[];
+  if(!modes.length) return { modalYok:true, satirlar:[], concern:[], anyNo:false, anyWait:false };
   var _eng=_mntRepEngine(R, opts);        // TEK kaynak: Motor bileşeni
   var rpm=_eng.idleRpm, z=_eng.cylinders;
   var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
@@ -2017,19 +2031,32 @@ function _mntRepCompliance(R, opts){
   var c4={st:(c4Total>=4?'ok':'no'),
     bulgu:c4Total+'/4 koşul çözüldü — §8.10'+(haveTq?'':' (maks tork için tahrik kinematiği girin)')};
 
+  var satirlar=[['1', 'Modal bant — tüm modlar','Modal bant','&lt; %50 · f_ateş',c1],
+   ['1a','Modlar arası ayrıklık','Mod ayrıklığı','&gt; 0,5 Hz',c1a],
+   ['1b','Yaylandırılmamış kütle bandı','Yaylandırılmamış kütle bandı','8–10 Hz ile çakışmama',c1b],
+   ['2', 'Rölanti transmissibility','Rölanti iletilebilirliği','&lt; %50 (referans %10)',c2],
+   ['3', 'Vites başına takoz kuvvetleri','Vites kuvvetleri','kontrol',c3],
+   ['4', 'Maks tork · 3,5g düşey · 1g yanal · 1g boyuna','Tasarım yükleri','kontrol',c4]
+  ].map(function(r){ return { no:r[0], ad:r[1], kisa:r[2], hedef:r[3], st:r[4].st, bulgu:r[4].bulgu }; });
+  var sts=satirlar.map(function(s){ return s.st; });
+  return { modalYok:false, satirlar:satirlar, concern:concern,
+           anyNo:sts.indexOf('no')>=0, anyWait:sts.indexOf('wait')>=0 };
+}
+
+function _mntRepCompliance(R, opts){
+  opts=opts||{};
+  var modes=R.modes||[];
+  var h='<h2 id="uygunluk"><span class="no">✓</span>Motor takozu uygunluğu</h2>';
+  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Modal bant ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (<strong>Motor</strong> bileşeninden girilir); mod ayrıklığı ve yaylandırılmamış kütle bandı kriterleri yalnız modal sonuca bakar.</p>';
+  if(!modes.length){ return h+'<div class="note warn"><span class="t">Değerlendirilemedi</span>Modal sonuç yok — çözüm üretilemedi.</div>'; }
+  var U=veMntUygunluk(R, opts), concern=U.concern, anyNo=U.anyNo, anyWait=U.anyWait;
+
   function badge(st){ return st==='ok'?'<span class="ok">✓ Uygun</span>':(st==='wait'?'<span style="color:#5a6270;">— bekliyor</span>':'<span style="color:var(--warn);font-weight:600;">✗ kontrol</span>'); }
   h+='<table><caption>Tablo '+_rTbl()+' — Motor takozu hedef kriterleri uygunluk kontrolü</caption>';
   h+='<tr><th>#</th><th>Kriter</th><th>Hedef</th><th>Bulgu</th><th>Sonuç</th></tr>';
-  [['1', 'Modal bant — tüm modlar','&lt; %50 · f_ateş',c1],
-   ['1a','Modlar arası ayrıklık','&gt; 0,5 Hz',c1a],
-   ['1b','Yaylandırılmamış kütle bandı','8–10 Hz ile çakışmama',c1b],
-   ['2', 'Rölanti transmissibility','&lt; %50 (referans %10)',c2],
-   ['3', 'Vites başına takoz kuvvetleri','kontrol',c3],
-   ['4', 'Maks tork · 3,5g düşey · 1g yanal · 1g boyuna','kontrol',c4]
-  ].forEach(function(r){ h+='<tr><td class="c">'+r[0]+'</td><td class="l">'+r[1]+'</td><td class="l">'+r[2]+'</td><td class="l">'+r[3].bulgu+'</td><td class="c">'+badge(r[3].st)+'</td></tr>'; });
+  U.satirlar.forEach(function(r){ h+='<tr><td class="c">'+r.no+'</td><td class="l">'+r.ad+'</td><td class="l">'+r.hedef+'</td><td class="l">'+r.bulgu+'</td><td class="c">'+badge(r.st)+'</td></tr>'; });
   h+='</table>';
 
-  var sts=[c1.st,c1a.st,c1b.st,c2.st,c3.st,c4.st], anyNo=sts.indexOf('no')>=0, anyWait=sts.indexOf('wait')>=0;
   h+='<div class="note '+(anyNo?'warn':(anyWait?'':'check'))+'"><span class="t">Genel hüküm</span>';
   if(anyNo) h+='Bir veya daha fazla kriter <b>sağlanmıyor / kontrol gerektiriyor</b>; ilgili satırları ve §8 ayrıntısını inceleyin.';
   else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility için <b>Motor</b> bileşenine rölanti devri + silindir sayısı girin → tam değerlendirme.';
@@ -2052,6 +2079,8 @@ if(typeof module!=='undefined' && module.exports){
   module.exports = {
     getMntReportPropertiesHTML: getMntReportPropertiesHTML,
     veMntGenerateReport: veMntGenerateReport,
+    veMntUygunluk: veMntUygunluk,
+    veMntRaporOpts: veMntRaporOpts,
     _mntReportEnsureAssets: _mntReportEnsureAssets,
     _mntBuildReportHTML: _mntBuildReportHTML,
     _mntRepAntet: _mntRepAntet,

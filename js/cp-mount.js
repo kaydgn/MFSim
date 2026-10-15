@@ -698,24 +698,12 @@ function _mntEnsureMassData(node){
   if(node.data.pointMass===undefined) node.data.pointMass = !!_MNT_POINTMASS_DEFAULT[node.type];
   return node.data;
 }
-function _mntInp(node, key, ph, step){
-  var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
-  return '<input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
-}
-function _mntRow(label, sub, inner){
-  return '<tr style="border-bottom:1px solid var(--border-color);">'
-    + '<th style="padding:5px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:52%; font-weight:500; color:var(--text-secondary);">'+label+(sub?' <span style="color:var(--text-muted); font-weight:400;">'+sub+'</span>':'')+'</th>'
-    + '<td style="padding:3px 5px; background:var(--bg-tertiary);">'+inner+'</td></tr>';
-}
-// ─── Estetik girdi yardımcıları (kompakt, ince, hizalı) ──────────────────────
-// Ortak input stili — küçük, zarif, odakta vurgu.
+// ─── Takoz Özellikleri (kütüphane) panelinin girdi dili ─────────────────────
+// Kütüphane paneli bir GÖRÜNTÜLEYİCİ ve kendi tasarımını bekliyor (modal kalır
+// — docs/decisions/ortak-yuzeyler.md → "Müfettiş tuvalin YANINDADIR"); bu iki
+// yardımcı yalnız onun eğri düzenleyicisi içindir. Bileşen pencereleri
+// aşağıdaki `.ve-fp-*` dilini konuşur.
 var _MNT_INP='padding:4px 6px; font-size:var(--fs-body); height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; box-sizing:border-box;';
-// Bölüm başlığı (ince alt çizgi + opsiyonel birim).
-function _mntGrpTitle(title, unit){
-  return '<div style="font-size:var(--fs-tiny); font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px; margin:3px 0 9px;">'+title+(unit?' <span style="font-size:var(--fs-micro); font-weight:400; color:var(--text-muted);">'+unit+'</span>':'')+'</div>';
-}
-// Kart sarmalı — başlık + aksan çubuğu + içerik. Bölümleri görsel olarak gruplar
-// (estetik: yumuşak zemin, yuvarlak köşe, sol aksan).
 function _mntCard(title, unit, accent, inner){
   var head = title ? '<div style="display:flex; align-items:center; gap:7px; margin-bottom:9px;">'
     + '<span style="width:3px; height:12px; border-radius:2px; background:'+(accent||'var(--accent-primary)')+';"></span>'
@@ -724,54 +712,511 @@ function _mntCard(title, unit, accent, inner){
     + '</div>' : '';
   return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:11px 12px 6px; margin-bottom:9px;">'+head+inner+'</div>';
 }
-// Etiketli 3'lü inline grup (x/y/z yan yana). title boşsa üst başlık çizilmez
-// (kart başlığı kapsıyorsa). subLabel verilirse solda küçük bir alt-etiket olur.
-// phs (ops.): 3 elemanlı placeholder dizisi — kullanıcı beklenen mertebeyi görsün.
-function _mntTriple(node, title, unit, keys, subs, step, phs){
-  var h='<div style="margin-bottom:9px;">';
-  if(title){ h+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:5px;">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400; text-transform:none; letter-spacing:0;">'+unit+'</span>':'')+'</div>'; }
-  h+='<div style="display:flex; gap:5px;">';
-  for(var i=0;i<3;i++){
-    var key=keys[i];
-    var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
-    var ph=(phs&&phs[i]!=null)?' placeholder="'+_mntEsc(phs[i])+'"':'';
-    h+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
-      +'<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">'+subs[i]+'</span>'
-      +'<input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'"'+ph+' onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
-      +'</label>';
-  }
-  h+='</div></div>';
-  return h;
+
+// ════════════════════════════════════════════════════════════════════════════
+//  PENCERE DİLİ — FEAD'İN KABUĞU, TAKOZ'UN FÖYÜ (2026-10-14)
+// ════════════════════════════════════════════════════════════════════════════
+// Kullanıcı seçimi (tasarım tuvali, üç aday × üç pencere): "Hepsi için B föy
+// seçeneği" + C'nin "Güç grubundaki yeri" krokisi. Pencereler müfettiş
+// sütununda (sağda) açılır: dar kapta tek sütun, geniş modalde iki sütun.
+// Eskiden 8 kütle tipinin hepsi ve Takoz MODAL açılıyordu (altılı ızgarada
+// "550.03" 46 px'e sığmıyordu) ve görünüm satır içi `style=` dizelerindeydi.
+//
+// KABUK FEAD'İNKİYLE AYNI DOM SÖZLEŞMESİ: şerit `ve-fp-tabs-<id>`, gövdeler
+// `ve-fp-panes-<id>`, sekme `.ve-fp-tab[data-k]`. Sözleşme süs değil —
+// müfettiş, kontrast ve sayı taramaları sekmeleri bu kimliklerle geziyor
+// (gizli sekme ölçüye girmez); ayrı bir kimlik Takoz'un ilk sekme dışındaki
+// hiçbir alanını ölçtürmezdi. 'i' düğmesinin ipucu da ortak (`.ve-fp-i`,
+// belge düzeyinde dinlenir).
+//
+// PENCERE HESAPLAMAZ, OKUR: türetilen her sayı çözücünün yolundan gelir
+// (_mntGatherForSolver → _mntToSI → çekirdek). Boş alan pencerede de
+// çözücüde olduğu gibi 0'dır — ve bu yüzden SEKMENİN DURUMUNA yazılır.
+
+// Sekme durumu MODELDE DEĞİL (FEAD kural 15'in gerekçesi): kaydedilmez, geri-al
+// yığınına yazılmaz — ama pencere her seçimde yeniden kurulduğu için bir yerde
+// durmak zorunda, yoksa her açılış ilk sekmeye dönerdi.
+var VE_MNT_PENCERE_SEKME = {};
+
+// Türkçe sayı, gerçek eksi (−). Sayı değilse '—'.
+function _mntS(v, d){
+  return (typeof v==='number' && isFinite(v)) ? veSayi(v, d, { eksi:'−' }) : '—';
 }
-// Tek etiketli alan (etiket sol, dar input sağ).
-function _mntSingle(node, title, unit, key, ph, step){
-  var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
-  return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:9px;">'
-    +'<div style="flex:1; font-size:var(--fs-body); font-weight:600; color:var(--text-secondary);">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400;">'+unit+'</span>':'')+'</div>'
-    +'<input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:120px; min-width:0; '+_MNT_INP+'">'
-    +'</div>';
-  // `min-width:0` ŞART: esnek kutuda bir girdinin otomatik en küçük boyu
-  // kendi genişliğidir — 120 px'in altına hiç inmiyordu. 380 px'lik müfettiş
-  // sütununda satır 10,94 px taşıyor ve içeriğe YATAY KAYDIRMA çubuğu
-  // ekliyordu (ölçüldü).
+// Raporun HTML bulgusu → düz metin (pencerede `title`a gider).
+function _mntDuzMetin(html){
+  return String(html==null?'':html).replace(/<[^>]*>/g, '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ').trim();
 }
-// Etiketli hücre ızgarası (cells=[{key,label,step,ph}], cols sütun).
-function _mntGrid(node, cells, cols){
-  cols=cols||3;
-  var h='<div style="display:grid; grid-template-columns:repeat('+cols+',1fr); gap:7px 6px; margin-bottom:9px;">';
-  cells.forEach(function(c){
-    var v=(node.data[c.key]===undefined||node.data[c.key]===null)?'':node.data[c.key];
-    h+='<label style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
-      +'<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+c.label+'</span>'
-      +'<input type="text" inputmode="decimal" id="ve-mnt-'+c.key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(c.step||'any')+'"'+(c.ph?' placeholder="'+_mntEsc(c.ph)+'"':'')+' onchange="veMntSet(\''+node.id+'\',\''+c.key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
-      +'</label>';
+// Simge (Yunan harfi, alt indisli büyüklük) büyük harfe dönmesin — başlık
+// satırı `text-transform:uppercase` taşıyor ("δ" "Δ", "n_x" "N_X" olurdu).
+function _mntSym(s){ return '<i class="ve-fp-sym">'+s+'</i>'; }
+function _mntBos(v){ return v===undefined || v===null || String(v).trim()===''; }
+function _mntDugum(id){
+  if(typeof nodes==='undefined' || !Array.isArray(nodes)) return null;
+  for(var i=0;i<nodes.length;i++){ if(nodes[i] && nodes[i].id===id) return nodes[i]; }
+  return null;
+}
+// Yük durumunun penceredeki KISA adı — dar sütunda raporun uzun adı
+// ("Yanal bordür darbesi — sol (1,55g)") kırpılıyordu; tam adı `title`da.
+var _MNT_DURUM_KISA = {
+  'Static':'Statik', 'Max Bump':'Tümsek 3,5g', 'Braking':'Frenleme', 'Acceleration':'Hızlanma',
+  'Cornering Left':'Viraj sol', 'Cornering Right':'Viraj sağ',
+  'Brake in Turn L':'Fren + viraj sol', 'Brake in Turn R':'Fren + viraj sağ',
+  'Pothole Braking':'Çukur + fren', 'Kerb Strike L':'Bordür sol', 'Kerb Strike R':'Bordür sağ',
+  'Max Rebound':'Geri esneme', 'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork'
+};
+function _mntDurumAdi(name){ return (typeof _mntRepCaseTr==='function') ? _mntRepCaseTr(name) : String(name||''); }
+function _mntDurumKisa(name){ return _MNT_DURUM_KISA[name] || _mntDurumAdi(name); }
+// Takozun kısa adı (dar sütun): sondaki "Takoz" kelimesi atılır.
+function _mntTakozKisa(name){ return String(name||'takoz').replace(/\s*takoz\s*$/i, '').trim() || String(name||'takoz'); }
+
+// ── SEKME DURUMU — FEAD'in dört durumu (ok · eksik · bos · yok) ─────────────
+// `bant:false` renkli durumu banttan ayırır: bir BULGU (üç durumda çekme)
+// eksik bir girdi değildir; sekmede görünür, "Doldur" bandına girmez.
+function _mntDurum(d, yazi, neden, hedef, bant){
+  return { d:d, yazi:yazi, neden:neden||'', hedef:hedef||'', bant:(bant!==false) };
+}
+function _mntSekmeDurumHTML(D){
+  return '<span class="ve-fp-tab-d" data-d="'+D.d+'"><i aria-hidden="true"></i>'+_mntEsc(D.yazi)+'</span>';
+}
+// EKSİK BANDI — şeridin altında, yalnız eksik varken: sonucu ve oraya giden
+// bağlantı (FEAD'in bandıyla aynı biçim ve kimlik: `ve-fp-eksik-<id>`).
+function _mntEksikBandi(nodeId, sekmeler){
+  var eks=(sekmeler||[]).filter(function(s){ return s.durum && s.durum.d==='eksik' && s.durum.bant; });
+  if(!eks.length) return '';
+  return '<div class="ve-fp-eksik" role="status" id="ve-fp-eksik-'+nodeId+'">'
+    + eks.map(function(s){
+        return '<div class="ve-fp-eksik-s">'+veIkon('alert-triangle')
+          + '<span class="ve-fp-eksik-t"><b>'+_mntEsc(s.ad)+'</b> — '+_mntEsc(s.durum.neden)+'</span>'
+          + '<button type="button" onclick="veMntEksikGit(\''+nodeId+'\',\''+s.k+'\''
+          + (s.durum.hedef ? ',\''+_mntEsc(s.durum.hedef)+'\'' : '')+')">'
+          + (s.sonuc ? 'Aç' : 'Doldur')+' '+veIkon('arrow-right')+'</button></div>';
+      }).join('')
+    + '</div>';
+}
+
+function _mntSekmeOf(nodeId, keys){
+  var k=VE_MNT_PENCERE_SEKME[nodeId];
+  return (k && keys.indexOf(k)>=0) ? k : keys[0];
+}
+// SEKME DEĞİŞİNCE PENCERE KURULMAZ, yalnız `hidden` çevrilir: düzenlenen
+// alanın odağı ve sağ sütun (Uygunluk, Hesapla) yerinde kalır.
+function veMntPencereSekme(nodeId, key){
+  if(typeof document==='undefined') return false;
+  var kap=document.getElementById('ve-fp-tabs-'+nodeId);
+  var gov=document.getElementById('ve-fp-panes-'+nodeId);
+  if(!kap || !gov) return false;
+  VE_MNT_PENCERE_SEKME[nodeId]=key;
+  Array.prototype.forEach.call(kap.querySelectorAll('.ve-fp-tab'), function(b){
+    b.setAttribute('aria-selected', String(b.getAttribute('data-k')===key));
   });
-  h+='</div>';
-  return h;
+  Array.prototype.forEach.call(gov.children, function(p){ p.hidden=(p.getAttribute('data-k')!==key); });
+  if(typeof veTabloOlcIcinde==='function') veTabloOlcIcinde(gov);
+  return true;
 }
-// Kısa ipucu satırı (not kutusu değil — tek satır, sade).
-function _mntHint(text){
-  return '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:-3px 0 9px;">'+text+'</div>';
+// Bandın bağlantısı: sekmeyi açar ve eksiğin alanına — durum bir HEDEF
+// taşımıyorsa ilk BOŞ girdiye — odaklanır; boş girdi yoksa sekmenin kendisine.
+function veMntEksikGit(nodeId, k, hedefId){
+  if(!veMntPencereSekme(nodeId, k)) return false;
+  var gov=document.getElementById('ve-fp-panes-'+nodeId);
+  var pn=gov && gov.querySelector('[data-k="'+k+'"]');
+  var hedef=(hedefId && pn) ? pn.querySelector('[id="'+hedefId+'"]') : null;
+  if(!hedef && pn){
+    hedef=Array.prototype.filter.call(
+      pn.querySelectorAll('input[type="text"]:not([readonly]):not([disabled])'),
+      function(i){ return String(i.value).trim()===''; })[0] || null;
+  }
+  if(!hedef){
+    var kap=document.getElementById('ve-fp-tabs-'+nodeId);
+    hedef=kap && kap.querySelector('.ve-fp-tab[data-k="'+k+'"]');
+  }
+  if(hedef && hedef.focus){
+    hedef.focus();
+    if(hedef.scrollIntoView) hedef.scrollIntoView({ block:'nearest' });
+  }
+  return true;
+}
+
+// PENCERE KABUĞU TEK ÜRETİCİDEN — üç pencere tipi bunu kullanır.
+// `ust` sekmelerin ÜSTÜNDE durur (kroki: hangi sekmede olunursa olunsun yer
+// bağlamı); `yan` sağ sütun (Uygunluk, çözücüde Hesapla) — sekmeden bağımsız.
+function _mntPencereKabuk(node, sekmeler, yan, ust){
+  var aktif=_mntSekmeOf(node.id, sekmeler.map(function(s){ return s.k; }));
+  var h='<div class="sw-panel ve-fp ve-mnt-pencere" data-mnt-pencere="'+node.id+'">'
+    + '<div class="ve-fp-split"><div class="ve-fp-main">'+(ust||'')
+    + '<div class="ve-fp-tabs" role="tablist" id="ve-fp-tabs-'+node.id+'">';
+  sekmeler.forEach(function(s){
+    var D=s.durum||null;
+    h+='<button type="button" class="ve-fp-tab" role="tab" data-k="'+s.k+'"'
+      + (D ? ' data-d="'+D.d+'"' : '')
+      + ' aria-selected="'+(s.k===aktif?'true':'false')+'"'
+      + ' onclick="veMntPencereSekme(\''+node.id+'\',\''+s.k+'\')">'
+      + '<span class="ve-fp-tab-ad">'+_mntEsc(s.ad)+'</span>'
+      + (D ? _mntSekmeDurumHTML(D) : '')+'</button>';
+  });
+  h+='</div>'+_mntEksikBandi(node.id, sekmeler)+'<div id="ve-fp-panes-'+node.id+'">';
+  sekmeler.forEach(function(s){
+    h+='<div data-k="'+s.k+'" role="tabpanel"'+(s.k===aktif?'':' hidden')+'>'+s.govde+'</div>';
+  });
+  return h+'</div></div><div class="ve-fp-side">'+(yan||'')+'</div></div></div>';
+}
+
+// BÖLÜM — başlık çizgisi + içerik (FEAD'in `.ve-fp-sect`'i). `opt.id` +
+// `opt.tazele`: bölüm GİRDİ TAŞIMIYORSA bütünüyle yerinde tazelenir;
+// `opt.emId`: girdi taşıyan bölümün yalnız künyesi tazelenir.
+function _mntBolum(baslik, em, ic, opt){
+  opt=opt||{};
+  return '<section class="ve-fp-card"'+(opt.id?' id="'+opt.id+'"':'')+(opt.tazele?' data-tazele':'')+'>'
+    + '<div class="ve-fp-sect"><b>'+baslik+'</b>'
+    + ((em||opt.emId) ? '<em'+(opt.emId?' id="'+opt.emId+'" data-tazele':'')+'>'+(em||'')+'</em>' : '')
+    + '</div>'+ic+'</section>';
+}
+function _mntIzgara(k, ic){ return '<div class="ve-fp-grid" style="--fp-k:'+k+';">'+ic+'</div>'; }
+
+// ALAN — etiket üstte, girdi altta (FEAD alan dili). Kimlik ve setter her
+// yerde AYNI: `ve-mnt-<alan>-<düğüm>` · veMntSet. Değer MAKİNE biçiminde
+// yazılır; Türkçe gösteren sayi-alan.js'tir. `zorunlu`: boşken çözücü 0 alır
+// ya da modeli reddeder — alan bunu yer tutucusu ve tonuyla söyler.
+function _mntAlan(node, key, etiket, opt){
+  opt=opt||{};
+  var v=(node.data && node.data[key]!=null) ? node.data[key] : '';
+  var zor=!!opt.zorunlu, bos=_mntBos(v);
+  return '<label class="ve-fp-f"><span class="ve-fp-l">'+etiket+'</span>'
+    + '<input class="ve-fp-inp'+(zor&&bos?' ve-mnt-zor':'')+'" type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'"'
+    + ' value="'+_mntEsc(v)+'"'+(zor?' data-zorunlu':'')
+    + ((opt.ph||zor) ? ' placeholder="'+_mntEsc(opt.ph||'zorunlu')+'"' : '')
+    + ' onchange="'+(opt.setter||'veMntSet')+'(\''+node.id+'\',\''+key+'\',this.value)"></label>';
+}
+// OKUNUR DEĞER — düzenlenemez, girdiyle AYNI hizada; oyuk zemin `[readonly]`.
+function _mntOku(etiket, deger, opt){
+  opt=opt||{};
+  return '<label class="ve-fp-f"><span class="ve-fp-l">'+etiket+'</span>'
+    + '<input class="ve-fp-inp'+(opt.ton?' ve-fp-inp--ton" data-ton="'+opt.ton:'')+'" value="'+_mntEsc(deger)+'" readonly tabindex="-1"'
+    + (opt.id?' id="'+opt.id+'" data-tazele':'')+(opt.ipucu?' title="'+_mntEsc(opt.ipucu)+'"':'')+'></label>';
+}
+// VARSAYILANLI ALAN — değer alanın KENDİSİ, yer tutucu değil; yanında 'i'
+// kaynağını söyler (FEAD kural 43). Boşaltılınca varsayılan DEĞER olarak geri
+// gelir: hesaba giren sayı hep görünür. `degis` onchange ifadesidir.
+function _mntVarsayilanAlan(node, key, etiket, varsayilan, kaynak, degis){
+  var d=node.data||{}, elle=!_mntBos(d[key]);
+  var id='ve-mnt-'+key+'-'+node.id;
+  var t=elle ? 'Girilen değer — hesaba bu giriyor. Boşaltınca varsayılana ('+_mntS(varsayilan)+') döner.'
+             : 'Varsayılan — '+kaynak+'. Alan boş kaldıkça hesaba bu değer girer.';
+  return '<div class="ve-fp-f" data-mnt-vars="'+id+'" data-kaynak="'+(elle?'elle':'varsayilan')+'">'
+    + '<label class="ve-fp-l" for="'+id+'">'+etiket+'</label>'
+    + '<span class="ve-fp-deger"><input class="ve-fp-inp" type="text" inputmode="decimal" id="'+id+'"'
+    + ' value="'+_mntEsc(elle ? d[key] : String(varsayilan))+'" onchange="'+degis+'">'
+    + '<button type="button" class="ve-fp-i" data-kaynak="'+(elle?'elle':'varsayilan')+'"'
+    + ' data-ipucu="'+_mntEsc(t)+'" aria-label="'+_mntEsc(t)+'">'+veIkon('info')+'</button></span></div>';
+}
+// DURUM SATIRI — bir seçimin ya da hesabın SONUCU, açıklama değil.
+function _mntNot(ic, d, opt){
+  opt=opt||{};
+  var ik=opt.ikon || (d==='no' ? 'x' : d==='warn' ? 'alert-triangle' : d==='ok' ? 'check' : 'info');
+  return '<div class="ve-mnt-not"'+(d?' data-d="'+d+'"':'')+(opt.id?' id="'+opt.id+'" data-tazele':'')+'>'
+    + veIkon(ik)+'<span>'+ic+'</span></div>';
+}
+
+// ── FÖY TABLOSU — eksen başına bir satır: girdi ve ondan türetilen yan yana ─
+// `ve-izgara`: veri ızgarası kuralı (kullanıcı kararı 13·B) — girdi dinlenmede
+// kutusuz, fare üstünde ve yazarken kutulu. Sütun oranı `<colgroup>`da VERİ.
+function _mntFoyAc(sutunlar, aria, sinif){
+  var h='<table class="ve-mnt-foy ve-izgara'+(sinif?' '+sinif:'')+'"'+(aria?' aria-label="'+_mntEsc(aria)+'"':'')+'><colgroup>';
+  sutunlar.forEach(function(c){ h+='<col'+(c.gen?' style="width:'+c.gen+'"':'')+'>'; });
+  h+='</colgroup><thead><tr>';
+  sutunlar.forEach(function(c){
+    h+='<th'+(c.sinif?' class="'+c.sinif+'"':'')+(c.ipucu?' title="'+_mntEsc(c.ipucu)+'"':'')+'>'+c.b+'</th>';
+  });
+  return h+'</tr></thead><tbody>';
+}
+var _MNT_FOY_KAPA='</tbody></table>';
+function _mntFoyGir(node, key, aria, opt){
+  opt=opt||{};
+  var v=(node.data && node.data[key]!=null) ? node.data[key] : '';
+  var zor=!!opt.zorunlu, bos=_mntBos(v);
+  return '<td class="gir'+(zor&&bos?' zor':'')+'"><input type="text" inputmode="decimal" id="ve-mnt-'+key+'-'+node.id+'"'
+    + ' value="'+_mntEsc(v)+'"'+(zor?' data-zorunlu':'')
+    + ((opt.ph||zor) ? ' placeholder="'+_mntEsc(opt.ph||'zorunlu')+'"' : '')
+    + ' aria-label="'+_mntEsc(aria)+'" onchange="'+(opt.setter||'veMntSet')+'(\''+node.id+'\',\''+key+'\',this.value)"></td>';
+}
+// Türetilen hücre — oyuk zemin; kimlik verilirse yerinde tazelenir.
+function _mntFoyCoz(ic, opt){
+  opt=opt||{};
+  return '<td class="cz'+(opt.ay?' ay':'')+(opt.sinif?' '+opt.sinif:'')+'"'
+    + (opt.id?' id="'+opt.id+'" data-tazele':'')+(opt.ipucu?' title="'+_mntEsc(opt.ipucu)+'"':'')+'>'+ic+'</td>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CANLI MODEL — pencerenin türettiği sayılar (çözümden bağımsız)
+// ════════════════════════════════════════════════════════════════════════════
+// Kanvastaki modelin birleşik kütlesi ve ağırlık merkezi — çözücünün AYNI
+// birleştirmesi (çekirdek combineMassProps) ve AYNI boş alan kuralı (_mntToSI:
+// boş = 0). Pencere kendi AM'sini hesaplasaydı boş bir alan pencerede "—",
+// çözücüde 0 olurdu ve iki yüzey aynı model için iki ayrı AM söylerdi.
+function _mntCanliModel(){
+  var g=_mntGatherForSolver(null);
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  var si=(C && C.mmToM) ? _mntToSI(g, 9.81) : null;
+  var mp=(si && si.components.length && C.combineMassProps) ? C.combineMassProps(si.components) : null;
+  var mTop=0;
+  g.components.forEach(function(c){ mTop+=_mntNum(c.mass,0); });
+  return { g:g, si:si, mp:mp, mTop:mTop };
+}
+// Seçili bileşenin birleşik AM'ye göre konumu [mm] (boş = 0, çözücü gibi).
+function _mntAmFarki(p, M){
+  if(!M.mp) return null;
+  var d=[p[0]-M.mp.cg[0]*1000, p[1]-M.mp.cg[1]*1000, p[2]-M.mp.cg[2]*1000];
+  return { d:d, r:Math.sqrt(d[0]*d[0]+d[1]*d[1]+d[2]*d[2]) };
+}
+
+// ATALET TENSÖRÜ FİZİKSEL Mİ? Her çerçevede I_yy + I_zz − I_xx = 2∫x² dm ≥ 0
+// (üç eksen için) ve asal momentler ≥ 0. Çözücü fiziksel olmayan bir tensörü
+// de çözer — uyarmaz, modlar sessizce yanlış çıkar (bir köşegen hanesi
+// kayınca: 14,7 → 147). Asal momentler ve eşdeğer kutu çekirdekten
+// (principalInertia · equivalentBox — 3B görünümün kutusu da oradan).
+function _mntAtalet(d){
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  var I=[[_mntNum(d.Ixx),_mntNum(d.Ixy),_mntNum(d.Ixz)],
+         [_mntNum(d.Ixy),_mntNum(d.Iyy),_mntNum(d.Iyz)],
+         [_mntNum(d.Ixz),_mntNum(d.Iyz),_mntNum(d.Izz)]];
+  var bos=_mntBos(d.Ixx) && _mntBos(d.Iyy) && _mntBos(d.Izz);
+  var Ix=I[0][0], Iy=I[1][1], Iz=I[2][2];
+  var tol=1e-9*(Math.abs(Ix)+Math.abs(Iy)+Math.abs(Iz)+1e-12);
+  var ihlal='';
+  if(Iy+Iz-Ix < -tol) ihlal='Iyy + Izz < Ixx';
+  else if(Ix+Iz-Iy < -tol) ihlal='Ixx + Izz < Iyy';
+  else if(Ix+Iy-Iz < -tol) ihlal='Ixx + Iyy < Izz';
+  var asal=(C && C.principalInertia) ? C.principalInertia(I) : null;
+  if(!ihlal && asal && asal.values[0] < -tol) ihlal='negatif asal moment';
+  var kutu=(C && C.equivalentBox) ? C.equivalentBox(_mntNum(d.mass,0), I, false) : null;
+  return { I:I, bos:bos, ihlal:ihlal, asal:asal ? asal.values : null, kutu:kutu };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GÜÇ GRUBUNDAKİ YERİ — KROKİ (tasarım tuvali C'den, kullanıcı seçimi)
+// ════════════════════════════════════════════════════════════════════════════
+// Bileşenin modeldeki YERİ: gövdeler (kütleyle büyüyen daire), takozlar
+// (kare), birleşik AM ve bu bileşen. Koordinat OKUR, çizim kurmaz — konumlar
+// çözücünün okuduğu alanlardan, AM çekirdeğin combineMassProps'undan.
+// İki görünüş (üstten X–Y, yandan X–Z); ÖLÇEK ORTAK ve eksenler eşit: görünüş
+// değişince X konumları yerinde kalır, şekil bozulmaz.
+//
+// Görünüş seçimi modelde değil, pencere grubu başına: gövdede üstten (AM'nin
+// yanal dengesi), takozda yandan (düşey çökme oku).
+var VE_MNT_KROKI_GOR = { govde:'ust', takoz:'yan' };
+var _MNT_KROKI_W = 354;   // görünüş kutusunun genişliği (müfettiş sütununun içi)
+function _mntR1(v){ return Math.round(v*10)/10; }
+
+function _mntKrokiHTML(node, grup, M, T){
+  var gor=(VE_MNT_KROKI_GOR[grup]==='yan') ? 'yan' : 'ust';
+  var bas='<div class="ve-mnt-kroki-bas"><b>Güç grubundaki yeri</b>'
+    + '<div class="ve-mnt-seg" role="group" aria-label="Görünüş">'
+    + '<button type="button" aria-pressed="'+(gor==='ust')+'" onclick="veMntKrokiGor(\''+node.id+'\',\''+grup+'\',\'ust\')">Üstten X–Y</button>'
+    + '<button type="button" aria-pressed="'+(gor==='yan')+'" onclick="veMntKrokiGor(\''+node.id+'\',\''+grup+'\',\'yan\')">Yandan X–Z</button>'
+    + '</div></div>';
+  return '<div class="ve-mnt-kroki" id="ve-mnt-kroki-'+node.id+'" data-tazele>'+bas+_mntKrokiCizim(node, grup, gor, M, T)+'</div>';
+}
+
+function _mntKrokiCizim(node, grup, gor, M, T){
+  var mm=function(v){ return _mntNum(v,0); };
+  var gv=M.g.components.map(function(c){ return { id:c.id, ad:c.name, m:Math.max(0,_mntNum(c.mass,0)), p:[mm(c.cgx),mm(c.cgy),mm(c.cgz)] }; });
+  var tk=M.g.mounts.map(function(m){ return { id:m.id, ad:m.name, p:[mm(m.x),mm(m.y),mm(m.z)] }; });
+  if(!gv.length && !tk.length) return '<div class="ve-mnt-kroki-bos">Modelde gövde ya da takoz yok.</div>';
+  var am=M.mp ? [M.mp.cg[0]*1000, M.mp.cg[1]*1000, M.mp.cg[2]*1000] : null;
+  var sec=null;
+  gv.forEach(function(o){ if(o.id===node.id) sec=o; });
+  tk.forEach(function(o){ if(o.id===node.id) sec=o; });
+  var secTk=!!(sec && tk.indexOf(sec)>=0);
+
+  // ── Ortak ölçek (iki görünüş aynı X'i kullanır) ──
+  var W=_MNT_KROKI_W, PL=8, PR=304, IP=16, UST=16, ALT=12, HMAX=152;
+  var pts=gv.map(function(o){ return o.p; }).concat(tk.map(function(o){ return o.p; }));
+  if(am) pts.push(am);
+  var ara=function(i){ var a=Infinity, b=-Infinity; pts.forEach(function(p){ a=Math.min(a,p[i]); b=Math.max(b,p[i]); }); return [a,b]; };
+  var genis=function(r, en){ var s=r[1]-r[0]; if(s>=en) return r; var o=(r[0]+r[1])/2; return [o-en/2, o+en/2]; };
+  var rx=genis(ara(0),400), ry=genis(ara(1),300), rz=ara(2);
+  // Z = 0 çizgisi (yerden referans) aralığı ikiye katlamıyorsa çizimde kalır.
+  if(rz[0]>0 && rz[0]<=Math.max(400, rz[1]-rz[0])) rz=[0, rz[1]];
+  rz=genis(rz,300);
+  var ic=HMAX-UST-ALT-2*IP;
+  var s=Math.min((PR-PL-2*IP)/(rx[1]-rx[0]), ic/(ry[1]-ry[0]), ic/(rz[1]-rz[0]));
+  var xOff=PL+IP+((PR-PL-2*IP)-(rx[1]-rx[0])*s)/2;
+  var dik=(gor==='yan') ? rz : ry, ei=(gor==='yan') ? 2 : 1;
+  var H=Math.round(UST+ALT+2*IP+(dik[1]-dik[0])*s);
+  var X=function(v){ return xOff+(v-rx[0])*s; };
+  var Y=function(v){ return UST+IP+(dik[1]-v)*s; };
+  var P=function(p){ return [X(p[0]), Y(p[ei])]; };
+  var R=_mntR1;
+
+  var svg=[], kutu=[], ust=[];
+  var yazi=function(sinif, x, y, t, capa){
+    return '<text class="'+sinif+'" x="'+R(x)+'" y="'+R(y)+'"'+(capa&&capa!=='start'?' text-anchor="'+capa+'"':'')+'>'+_mntEsc(t)+'</text>';
+  };
+  // Yön yazıları ve eksen çizgileri
+  svg.push(yazi('ve-mk-ym', 6, 11, 'ÖN')); kutu.push([4,2,24,14]);
+  svg.push(yazi('ve-mk-ym', W-6, 11, 'ARKA', 'end')); kutu.push([W-38,2,W-4,14]);
+  if(gor==='ust'){
+    svg.push(yazi('ve-mk-ym', W-6, 24, 'sağ +Y', 'end')); kutu.push([W-44,15,W-4,27]);
+    svg.push(yazi('ve-mk-ym', W-6, H-5, 'sol −Y', 'end')); kutu.push([W-44,H-15,W-4,H-2]);
+    if(0>=ry[0] && 0<=ry[1]) svg.push('<line class="ve-mk-gr" x1="'+PL+'" y1="'+R(Y(0))+'" x2="'+PR+'" y2="'+R(Y(0))+'"/>');
+  } else if(0>=rz[0] && 0<=rz[1]){
+    var y0=Y(0);
+    svg.push('<line class="ve-mk-ax" x1="'+PL+'" y1="'+R(y0)+'" x2="'+PR+'" y2="'+R(y0)+'"/>');
+    svg.push(yazi('ve-mk-ym', PR+4, y0+3, 'Z = 0')); kutu.push([PR+2, y0-7, PR+38, y0+5]);
+  }
+  var yaricap=function(m){ return Math.min(20, 2.5+Math.sqrt(m)*0.45); };
+  // Kol: bu bileşenden birleşik AM'ye
+  var kol=null;
+  if(sec && am){
+    var a=P(sec.p), b=P(am);
+    svg.push('<line class="ve-mk-kol" x1="'+R(a[0])+'" y1="'+R(a[1])+'" x2="'+R(b[0])+'" y2="'+R(b[1])+'"/>');
+    kol=Math.sqrt(Math.pow(sec.p[0]-am[0],2)+Math.pow(sec.p[1]-am[1],2)+Math.pow(sec.p[2]-am[2],2));
+  }
+  // Gövdeler büyükten küçüğe (küçük olan üstte kalsın)
+  gv.slice().sort(function(p,q){ return q.m-p.m; }).forEach(function(o){
+    var c=P(o.p), r=yaricap(o.m);
+    svg.push('<circle class="ve-mk-gv" cx="'+R(c[0])+'" cy="'+R(c[1])+'" r="'+R(r)+'"/>');
+    kutu.push([c[0]-r, c[1]-r, c[0]+r, c[1]+r]);
+  });
+  tk.forEach(function(o){
+    var c=P(o.p);
+    svg.push('<rect class="ve-mk-tk" x="'+R(c[0]-3.5)+'" y="'+R(c[1]-3.5)+'" width="7" height="7"/>');
+    kutu.push([c[0]-4, c[1]-4, c[0]+4, c[1]+4]);
+  });
+  // Bu bileşen
+  var secR=0, sc=null;
+  if(sec){
+    sc=P(sec.p);
+    if(secTk){ secR=7; svg.push('<rect class="ve-mk-sec" x="'+R(sc[0]-7)+'" y="'+R(sc[1]-7)+'" width="14" height="14" rx="2"/>'); }
+    else { secR=yaricap(sec.m)+3.8; svg.push('<circle class="ve-mk-sec" cx="'+R(sc[0])+'" cy="'+R(sc[1])+'" r="'+R(secR)+'"/>'); }
+    kutu.push([sc[0]-secR, sc[1]-secR, sc[0]+secR, sc[1]+secR]);
+  }
+  // Birleşik AM
+  if(am){
+    var g=P(am);
+    svg.push('<circle class="ve-mk-am" cx="'+R(g[0])+'" cy="'+R(g[1])+'" r="4.5"/>'
+      + '<line class="ve-mk-amx" x1="'+R(g[0]-4.5)+'" y1="'+R(g[1])+'" x2="'+R(g[0]+4.5)+'" y2="'+R(g[1])+'"/>'
+      + '<line class="ve-mk-amx" x1="'+R(g[0])+'" y1="'+R(g[1]-4.5)+'" x2="'+R(g[0])+'" y2="'+R(g[1]+4.5)+'"/>');
+    kutu.push([g[0]-5, g[1]-5, g[0]+5, g[1]+5]);
+  }
+  // Takozun statik çökmesi — yandan görünüşte, ×10 (yalnız GÜNCEL çözümde:
+  // bayat bir çökme oku çizimde ölçüm gibi durur).
+  var okEtiket='';
+  if(secTk && gor==='yan' && T && T.durum==='guncel' && T.R){
+    var st=null;
+    (T.R.allCases||[]).forEach(function(rc){ if(rc.name==='Static' && rc.res) st=rc.res; });
+    var pm=st && st.perMount && st.perMount[T.j];
+    if(pm){
+      var dx=pm.delta[0]*1000, dz=pm.delta[2]*1000;
+      var ux=dx*10*s, uy=-dz*10*s, L=Math.sqrt(ux*ux+uy*uy);
+      if(L>=3){
+        var o0=[sc[0]+ux/L*(secR+1), sc[1]+uy/L*(secR+1)], o1=[o0[0]+ux, o0[1]+uy];
+        var hx=ux/L, hy=uy/L;
+        svg.push('<line class="ve-mk-ok" x1="'+R(o0[0])+'" y1="'+R(o0[1])+'" x2="'+R(o1[0])+'" y2="'+R(o1[1])+'"/>'
+          + '<polyline class="ve-mk-ok" points="'+R(o1[0]-hx*4-hy*3)+' '+R(o1[1]-hy*4+hx*3)+' '+R(o1[0])+' '+R(o1[1])+' '+R(o1[0]-hx*4+hy*3)+' '+R(o1[1]-hy*4-hx*3)+'"/>');
+        kutu.push([Math.min(o0[0],o1[0])-3, Math.min(o0[1],o1[1])-3, Math.max(o0[0],o1[0])+3, Math.max(o0[1],o1[1])+3]);
+        okEtiket='δz '+_mntS(dz,2)+' mm (×10)';
+      }
+    }
+  }
+  // ── Yazılar: önce bu bileşen, sonra ağır gövdeler; sığmayan yazılmaz ──
+  var sigar=function(b){
+    if(b[0]<1 || b[2]>W-1 || b[1]<1 || b[3]>H-1) return false;
+    for(var i=0;i<kutu.length;i++){ var k=kutu[i]; if(b[0]<k[2] && b[2]>k[0] && b[1]<k[3] && b[3]>k[1]) return false; }
+    return true;
+  };
+  var etiket=function(c, r, satirlar){
+    var en=0; satirlar.forEach(function(sa){ en=Math.max(en, sa[1].length*(sa[0]==='ve-mk-yh'?6.1:5.6)); });
+    var boy=satirlar.length*11;
+    var aday=[['middle', c[0], c[1]+r+3], ['middle', c[0], c[1]-r-3-boy],
+              ['start', c[0]+r+4, c[1]-boy/2], ['end', c[0]-r-4, c[1]-boy/2]];
+    for(var i=0;i<aday.length;i++){
+      var a=aday[i], x0=(a[0]==='middle') ? a[1]-en/2 : (a[0]==='end' ? a[1]-en : a[1]);
+      var bb=[x0, a[2], x0+en, a[2]+boy];
+      if(!sigar(bb)) continue;
+      kutu.push(bb);
+      satirlar.forEach(function(sa, j){ ust.push(yazi(sa[0], a[1], a[2]+9+j*11, sa[1], a[0])); });
+      return true;
+    }
+    return false;
+  };
+  var secYazildi=true;
+  if(sec){
+    var sat=[['ve-mk-yh', sec.ad], ['ve-mk-y', '('+_mntS(sec.p[0],0)+'; '+_mntS(sec.p[1],0)+'; '+_mntS(sec.p[2],0)+') mm']];
+    if(okEtiket) sat.push(['ve-mk-y', okEtiket]);
+    secYazildi=etiket(sc, secR, sat);
+  }
+  var mTop=gv.reduce(function(t,o){ return t+o.m; }, 0);
+  gv.slice().sort(function(p,q){ return q.m-p.m; }).forEach(function(o){
+    if(o===sec || !(mTop>0) || o.m < 0.05*mTop) return;
+    etiket(P(o.p), yaricap(o.m), [['ve-mk-y', o.ad]]);
+  });
+  var aria=(gor==='yan' ? 'Yandan görünüş' : 'Üstten görünüş')
+    + (sec ? ': '+sec.ad+(kol!=null ? ', birleşik ağırlık merkezine '+_mntS(kol,0)+' mm' : '') : '')
+    + (okEtiket ? ', statik '+okEtiket : '');
+  var cizim='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+_mntEsc(aria)+'">'+svg.join('')+ust.join('')+'</svg>';
+  var lej='<div class="ve-mnt-kroki-lej">'
+    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-gv" cx="5" cy="5" r="4"/></svg>gövde (kütleyle büyür)</span>'
+    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-mk-tk" x="1.5" y="1.5" width="7" height="7"/></svg>takoz</span>'
+    + (am ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-am" cx="5" cy="5" r="3.6"/></svg>birleşik AM</span>' : '')
+    + (sec ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-sec" cx="5" cy="5" r="3.8"/></svg>bu bileşen</span>' : '')
+    + (kol!=null ? '<span>kol '+_mntS(kol,0)+' mm</span>' : '')
+    // Bu bileşenin yazısı sığmadıysa kimliği lejanda — bilgi kaybolmaz.
+    + (sec && !secYazildi ? '<span>'+_mntEsc(sec.ad)+' ('+_mntS(sec.p[0],0)+'; '+_mntS(sec.p[1],0)+'; '+_mntS(sec.p[2],0)+') mm</span>' : '')
+    + (okEtiket && !secYazildi ? '<span>'+_mntEsc(okEtiket)+'</span>' : '')
+    + '</div>';
+  return cizim+lej;
+}
+
+// Görünüş düğmesi: yalnız krokiyi yeniden çizer; odak basılı düğmede kalır.
+function veMntKrokiGor(nodeId, grup, gor){
+  VE_MNT_KROKI_GOR[grup]=(gor==='yan') ? 'yan' : 'ust';
+  if(typeof document==='undefined') return false;
+  var el=document.getElementById('ve-mnt-kroki-'+nodeId), node=_mntDugum(nodeId);
+  if(!el || !node) return false;
+  el.outerHTML=_mntKrokiHTML(node, grup, _mntCanliModel(), (grup==='takoz') ? _mntTakozSonucu(nodeId) : null);
+  var yeni=document.getElementById('ve-mnt-kroki-'+nodeId);
+  var b=yeni && yeni.querySelector('.ve-mnt-seg button[aria-pressed="true"]');
+  if(b && b.focus) b.focus();
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  UYGUNLUK — RAPORUN SATIRLARI, PENCEREDE (tek hesap: veMntUygunluk)
+// ════════════════════════════════════════════════════════════════════════════
+// Pencere hüküm YAZMAZ, raporun tablosunu okur (cp-mount-report.js). Kendi
+// kriterini yazsaydı bir eşik değiştiğinde iki yüzey sessizce ayrı hüküm
+// verirdi — FEAD'de ölçülmüş kusur (kural 16).
+var _MNT_UYG_YAZI = { ok:'uygun', no:'kontrol', wait:'değerlendirilemedi' };
+function _mntKapiHTML(d, ad, no, sag, ipucu){
+  return '<div class="ve-fp-gate" data-d="'+d+'"'+(ipucu?' title="'+_mntEsc(ipucu)+'"':'')+'><i></i>'+_mntEsc(ad)
+    + (no ? ' <small class="ve-mnt-kno">'+no+'</small>' : '')+'<span>'+_mntEsc(sag)+'</span></div>';
+}
+function _mntBayatNot(){
+  return _mntNot('<b>Bayat.</b> Model hesaptan sonra değişti; satırlar eski modelin.', 'warn');
+}
+function _mntUygunlukHTML(nodeId, S){
+  S=S||veMntSonucDurumu();
+  var R=S.R, em, ic='';
+  if(!R){
+    em='hesaplanmadı';
+    ic=_mntKapiHTML('wait', 'Son çözüm yok', '', 'Çözücü → Hesapla', '');
+  } else {
+    em='son çözüm · '+(R.allCases||[]).length+' yük durumu'+(S.durum==='bayat' ? ' · bayat' : '');
+    if(S.durum==='bayat') ic+=_mntBayatNot();
+    if(typeof veMntUygunluk==='function'){
+      var U=veMntUygunluk(R, (typeof veMntRaporOpts==='function') ? veMntRaporOpts() : {});
+      if(U.modalYok) ic+=_mntKapiHTML('wait', 'Modal sonuç yok', '', 'değerlendirilemedi', '');
+      U.satirlar.forEach(function(r){
+        ic+=_mntKapiHTML(r.st, r.kisa, 'K'+r.no, _MNT_UYG_YAZI[r.st]||'', _mntDuzMetin(r.bulgu));
+      });
+    }
+    var ck=(R.allCases||[]).filter(function(rc){ return rc.res && rc.res.checks && rc.res.checks.tensionCount>0; });
+    ic+=_mntKapiHTML(ck.length ? 'no' : 'ok', 'Çekme (lift-off)', '', ck.length ? ck.length+' durum' : 'yok',
+      ck.map(function(rc){ return _mntDurumAdi(rc.name); }).join(' · '));
+  }
+  return _mntBolum('Uygunluk', em, ic, { id:'ve-mnt-uyg-'+nodeId, tazele:true });
 }
 
 // ─── Tipe özel kinematik bölümleri (tork yük durumları için) ─────────────────
@@ -854,8 +1299,8 @@ function _mntEnginePresetSelect(node){
   if(!P) return '';                      // katalog yüklü değil → seçiciyi hiç gösterme
   var keys=Object.keys(P); if(!keys.length) return '';
   var cur=node.data.enginePreset||'';
-  var h='<select onchange="veMntApplyEnginePreset(\''+node.id+'\',this.value)" style="width:100%; padding:5px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-  h+='<option value="">— Katalogdan motor seç ('+keys.length+' motor) —</option>';
+  var h='<select class="ve-fp-sel" id="ve-mnt-enginePreset-'+node.id+'" onchange="veMntApplyEnginePreset(\''+node.id+'\',this.value)">';
+  h+='<option value="">— elle gir —</option>';
   var used={};
   _MNT_ENG_FAMILIES.forEach(function(fam){
     var ks=keys.filter(function(k){
@@ -873,48 +1318,179 @@ function _mntEnginePresetSelect(node){
   return h;
 }
 
+// KATALOGTAN SAPMA — "elle" demek için değerin katalogtan FARKLI olması
+// gerekir (FEAD kural 17): yalnız "dolu mu" bakan bir tespit katalogun kendi
+// yazdığı alanları kullanıcıya mal ederdi. Dönüş: { ad, ayni:[], farkli:[] } | null.
+var _MNT_MOTOR_KATALOG = [['Te','tepe tork'], ['TeRpm','tepe tork devri'], ['Pmax','maks. güç'],
+                          ['PmaxRpm','maks. güç devri'], ['idleRpm','rölanti']];
+function _mntMotorSapma(node){
+  var key=node.data && node.data.enginePreset; if(!key) return null;
+  var v=_mntEnginePresetValues(key); if(!v) return null;
+  var P=_mntEnginePresets(), ad=(P && P[key] && P[key].name) || key;
+  var ayni=[], farkli=[];
+  _MNT_MOTOR_KATALOG.forEach(function(a){
+    if(v[a[0]]===undefined) return;
+    var x=_mntNum(node.data[a[0]], NaN);
+    if(Number.isFinite(x) && Math.abs(x-v[a[0]])<=1e-9*Math.max(1, Math.abs(v[a[0]]))) ayni.push(a[1]);
+    else farkli.push(a[1]);
+  });
+  return { ad:ad, ayni:ayni, farkli:farkli };
+}
+
+// İKİ GÖVDEDE AYNI TORK ALANI — çözücü İLK doluyu okur (düğüm sırası), öteki
+// sessizce yok sayılır. Bu gövdenin dolu alanlarından başkasınınkiyle
+// gölgelenenler: [{ alan, kaynak }].
+function _mntGolgelenen(node){
+  var K=_mntGatherTorqueKaynakli().kaynak, d=node.data||{}, out=[];
+  _MNT_TORK_ALANLARI.forEach(function(k){
+    if(!_mntBos(d[k]) && K[k] && K[k].id!==node.id) out.push({ alan:k, kaynak:K[k] });
+  });
+  return out;
+}
+function _mntGolgeDurumu(node){
+  var g=_mntGolgelenen(node);
+  if(!g.length) return null;
+  return _mntDurum('eksik', 'çakışma', g.length+' tork alanı başka bir gövdede de dolu ('
+    + g.map(function(x){ return x.alan; }).join(', ')+') — çözücü '+_mntNodeName(g[0].kaynak)+' gövdesinin değerini okuyor.');
+}
+
+// TORK ZİNCİRİ — çözücünün kurduğu AYNI tork yük durumlarından okunur
+// (_mntTorqueCases · _mntGearTorqueCases): mil torku T = Te·R_stall·i_vites·
+// i_transfer·φ. Ayrı bir çarpım yazılsaydı boş bir transfer oranı burada
+// "—", çözücüde 1 olurdu.
+function _mntTorkZinciri(){
+  var G=_mntGatherTorqueKaynakli(), t=G.t;
+  var fwd=null, rev=null;
+  _mntTorqueCases(t).forEach(function(c){
+    if(c.name==='Forward Torque') fwd=-c.T[0];
+    if(c.name==='Reverse Torque') rev=-c.T[0];
+  });
+  return { t:t, kaynak:G.kaynak, ileri:fwd, geri:rev };
+}
+function _mntZincirHTML(nodeId){
+  var Z=_mntTorkZinciri(), t=Z.t, K=Z.kaynak;
+  var kay=function(k){ return K[k] ? _mntEsc(_mntNodeName(K[k])) : '—'; };
+  var carp=function(k, d, varsayilan){
+    if(_mntBos(t[k])) return (varsayilan!=null) ? '× '+_mntS(varsayilan)+' · boş' : '—';
+    return '× '+_mntS(_mntNum(t[k]), d);
+  };
+  var h=_mntFoyAc([{ b:'Halka', gen:'38%' }, { b:'Kaynak', gen:'32%', sinif:'sol' }, { b:'Çarpan', gen:'30%', sinif:'cz ay' }], 'Tork zinciri');
+  h+='<tr><td>Motor torku</td><td class="sol">'+kay('Te')+'</td>'+_mntFoyCoz(_mntBos(t.Te) ? '—' : _mntS(_mntNum(t.Te),0)+' Nm', { ay:true })+'</tr>';
+  h+='<tr><td>Stall oranı</td><td class="sol">'+kay('Rstall')+'</td>'+_mntFoyCoz(carp('Rstall', 2), { ay:true })+'</tr>';
+  h+='<tr><td>1. vites</td><td class="sol">'+kay('g1')+'</td>'+_mntFoyCoz(carp('g1', 2), { ay:true })+'</tr>';
+  h+='<tr><td>Transfer oranı</td><td class="sol">'+kay('iTransfer')+'</td>'+_mntFoyCoz(carp('iTransfer', 3, 1), { ay:true })+'</tr>';
+  h+='<tr><td>Aks payı '+_mntSym('φ')+'</td><td class="sol">'+kay('phiFwd')+'</td>'+_mntFoyCoz(carp('phiFwd', null, 1), { ay:true })+'</tr>';
+  h+='<tr class="top"><td>Mil torku · ileri</td><td></td>'+_mntFoyCoz(Z.ileri!=null ? _mntS(Z.ileri,0)+' N·m' : '—', { ay:true })+'</tr>';
+  h+='<tr class="top"><td>Mil torku · geri</td><td class="sol sf">'+(_mntBos(t.gR) ? '' : 'geri vites × '+_mntS(_mntNum(t.gR),2))+'</td>'
+    + _mntFoyCoz(Z.geri!=null ? _mntS(Z.geri,0)+' N·m' : '—', { ay:true })+'</tr>';
+  return '<div id="ve-mnt-zincir-'+nodeId+'" data-tazele>'+h+_MNT_FOY_KAPA+'</div>';
+}
+
+// ATEŞLEME — f = (N/60)·(z/2); Kriter 1'in mod sınırı ½·f. Raporla AYNI bağıntı
+// (_mntRepIsolation) — burada çözümden bağımsız, girilen değerden.
+function _mntAtesleme(d){
+  var n=_mntNum(d.idleRpm, NaN), z=_mntNum(d.cylinders, NaN);
+  return (n>0 && z>0) ? (n/60)*(z/2) : NaN;
+}
+
+// MOTOR SEKMESİ — katalog · motor noktaları · tork zinciri · ateşleme.
 function _mntEngineSection(node){
-  var sel=_mntEnginePresetSelect(node);
-  var head='';
+  var d=node.data||{};
+  var sel=_mntEnginePresetSelect(node), P=_mntEnginePresets();
+  var h='';
   if(sel){
-    head = sel + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin:5px 0 10px;">'
-      + 'Seçilen motorun <b>tepe tork, maks güç ve rölanti devri</b> katalogdan otomatik dolar. '
-      + '<b>Kütle, ağırlık merkezi ve atalet tensörü</b> katalogda bulunmaz (araca özel CATIA verisi) — elle girilir, seçim onlara dokunmaz.</div>';
+    var sap=_mntMotorSapma(node), not;
+    if(!sap) not=_mntNot('<b>Katalogdan:</b> tepe tork · maks. güç · rölanti. Kütle, AM ve atalet elle girilir.', '');
+    else if(sap.farkli.length) not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.farkli.join(', ')+' katalogtan farklı (elle). Kütle, AM ve atalet elle girilir.', 'warn');
+    else not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.ayni.length+'/'+sap.ayni.length+' değer katalogla aynı. Kütle, AM ve atalet elle girilir.', 'ok');
+    h+=_mntBolum('Katalog', Object.keys(P).length+' motor',
+        _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Motor</span>'+sel+'</label>')
+      + '<div id="ve-mnt-motorkat-'+node.id+'" data-tazele>'+not+'</div>');
   }
-  return _mntCard('Motor · Tahrik','', 'var(--accent-danger)',
-      head
-    + _mntGrid(node, [
-        {key:'Te',        label:'Tepe tork [Nm]',  step:'1',   ph:'760'},
-        {key:'TeRpm',     label:'@ Devir [rpm]',   step:'1',   ph:'1500'},
-        {key:'Pmax',      label:'Maks güç [kW]',   step:'0.1', ph:'156.6'},
-        {key:'PmaxRpm',   label:'@ Devir [rpm]',   step:'1',   ph:'2300'},
-        {key:'idleRpm',   label:'Rölanti [rpm]',   step:'1',   ph:'800'},
-        {key:'cylinders', label:'Silindir sayısı', step:'1',   ph:'6'}
-      ], 3)
-    + _mntHint('Tork yük durumları <b>Tepe tork</b> değerinden türetilir. <b>Rölanti devri + silindir sayısı</b> raporun ateşleme frekansını verir: f<sub>ateş</sub> = (N/60)·(z/2) — Kriter 1 ve iletilebilirlik bunun üzerine kurulur. Silindir sayısı katalogda yoktur, elle girilir.'));
+  var f=_mntFoyAc([{ b:'Nokta', gen:'40%' }, { b:'Değer', gen:'30%' }, { b:'Devir <u>[d/dk]</u>', gen:'30%' }], 'Motor noktaları');
+  f+='<tr><td>Tepe tork [Nm]</td>'+_mntFoyGir(node, 'Te', 'Tepe tork', { ph:'760' })+_mntFoyGir(node, 'TeRpm', 'Tepe torkta devir', { ph:'1500' })+'</tr>';
+  f+='<tr><td>Maks. güç [kW]</td>'+_mntFoyGir(node, 'Pmax', 'Maks. güç', { ph:'156.6' })+_mntFoyGir(node, 'PmaxRpm', 'Maks. güçte devir', { ph:'2300' })+'</tr>';
+  f+='<tr><td>Rölanti</td><td class="sf">—</td>'+_mntFoyGir(node, 'idleRpm', 'Rölanti devri', { zorunlu:true })+'</tr>';
+  f+='<tr><td>Silindir sayısı</td>'+_mntFoyGir(node, 'cylinders', 'Silindir sayısı', { zorunlu:true })+'<td class="sf">—</td></tr>';
+  h+=_mntBolum('Motor noktaları', P ? 'katalogdan dolar' : '', f+_MNT_FOY_KAPA);
+  h+=_mntBolum('Tork zinciri', 'tork yük durumlarının kaynağı', _mntZincirHTML(node.id));
+  var fa=_mntAtesleme(d);
+  h+=_mntBolum('Ateşleme', 'f = (N/60)·(z/2)',
+      _mntIzgara(2,
+        _mntOku('Rölantide <u>[Hz]</u>', Number.isFinite(fa) ? _mntS(fa,1) : '— (silindir/rölanti yok)', { id:'ve-mnt-fate-'+node.id })
+      + _mntOku('Mod sınırı '+_mntSym('½·f')+' <u>[Hz]</u>', Number.isFinite(fa) ? _mntS(0.5*fa,1) : '—', { id:'ve-mnt-fsin-'+node.id })));
+  return h;
 }
+function _mntMotorDurumu(node){
+  var d=node.data||{};
+  if(_mntBos(d.cylinders) || !(_mntNum(d.cylinders,0)>0))
+    return _mntDurum('eksik', 'eksik', 'Silindir sayısı boş — ateşleme frekansı yok; Kriter 1 ve 2 değerlendirilemiyor.', 've-mnt-cylinders-'+node.id);
+  if(_mntBos(d.idleRpm) || !(_mntNum(d.idleRpm,0)>0))
+    return _mntDurum('eksik', 'eksik', 'Rölanti devri boş — ateşleme frekansı yok; Kriter 1 ve 2 değerlendirilemiyor.', 've-mnt-idleRpm-'+node.id);
+  if(_mntBos(d.Te) || !(_mntNum(d.Te,0)>0))
+    return _mntDurum('eksik', 'eksik', 'Tepe tork boş — tork yük durumları kurulmuyor; Kriter 3 ve 4 eksik kalır.', 've-mnt-Te-'+node.id);
+  var gol=_mntGolgeDurumu(node); if(gol) return gol;
+  var Z=_mntTorkZinciri();
+  if(Z.ileri==null) return _mntDurum('eksik', 'zincir', 'Tork zinciri eksik (stall oranı ya da 1. vites yok, Şanzıman penceresinde) — tork yük durumları kurulmuyor.');
+  return _mntDurum('ok', 'tamam');
+}
+
+// ŞANZIMAN SEKMESİ — vites oranları; her satırın mil torku çözücünün vites
+// başına durumlarından (_mntGearTorqueCases, Kriter 3).
+var _MNT_VITESLER = [['g1','1. vites'],['g2','2. vites'],['g3','3. vites'],['g4','4. vites'],
+                     ['g5','5. vites'],['g6','6. vites'],['gR','Geri']];
 function _mntGearboxSection(node){
-  return _mntCard('Şanzıman · Vites oranları','', 'var(--accent-danger)',
-      _mntGrid(node, [
-        {key:'g1', label:'1. Vites',    step:'0.01', ph:'3.10'},
-        {key:'g2', label:'2. Vites',    step:'0.01', ph:'1.81'},
-        {key:'g3', label:'3. Vites',    step:'0.01', ph:'1.41'},
-        {key:'g4', label:'4. Vites',    step:'0.01', ph:'1.00'},
-        {key:'g5', label:'5. Vites',    step:'0.01', ph:'0.71'},
-        {key:'g6', label:'6. Vites',    step:'0.01', ph:'0.61'},
-        {key:'gR', label:'Geri',        step:'0.01', ph:'-4.49'},
-        {key:'Rstall', label:'Stall oranı', step:'0.01', ph:'1.58'}
-      ], 4)
-    + _mntHint('İleri tork durumu <b>1. Vites</b> (en yüksek redüksiyon), geri tork <b>Geri</b> ile hesaplanır. Stall Oranı = konvertör tork çarpanı.'));
+  var Z=_mntTorkZinciri(), tmil={};
+  _mntGearTorqueCases(Z.t).forEach(function(c){
+    tmil[c.gearLabel==='Geri' ? 'gR' : 'g'+parseInt(c.gearLabel, 10)]=c.Tshaft;
+  });
+  var f=_mntFoyAc([{ b:'Vites', gen:'34%' }, { b:'Oran', gen:'30%' },
+                   { b:_mntSym('T<sub>mil</sub>')+' <u>[N·m]</u>', gen:'36%', sinif:'cz ay', ipucu:'Mil torku — çözücünün vites başına tork durumu (Kriter 3)' }], 'Vites oranları');
+  _MNT_VITESLER.forEach(function(v){
+    f+='<tr><td>'+v[1]+'</td>'+_mntFoyGir(node, v[0], v[1]+' oranı', v[0]==='g1' ? { zorunlu:true } : null)
+      + _mntFoyCoz(tmil[v[0]]!=null ? _mntS(tmil[v[0]],0) : '—', { ay:true, id:'ve-mnt-tmil-'+v[0]+'-'+node.id })+'</tr>';
+  });
+  var h=_mntBolum('Vites oranları', 'ileri tork: 1. vites · geri tork: geri', f+_MNT_FOY_KAPA);
+  h+=_mntBolum('Konvertör', '',
+      _mntIzgara(2, _mntAlan(node, 'Rstall', 'Stall oranı', { zorunlu:true })
+                  + _mntOku('İleri mil torku <u>[N·m]</u>', Z.ileri!=null ? _mntS(Z.ileri,0) : '—', { id:'ve-mnt-tileri-'+node.id })));
+  return h;
 }
+function _mntVitesDurumu(node){
+  var d=node.data||{};
+  if(_mntBos(d.g1) || _mntNum(d.g1,0)===0)
+    return _mntDurum('eksik', 'eksik', '1. vites boş — ileri tork durumu kurulmuyor.', 've-mnt-g1-'+node.id);
+  if(_mntBos(d.Rstall) || !(_mntNum(d.Rstall,0)>0))
+    return _mntDurum('eksik', 'eksik', 'Stall oranı boş — tork yük durumları kurulmuyor.', 've-mnt-Rstall-'+node.id);
+  var gol=_mntGolgeDurumu(node); if(gol) return gol;
+  var n=_MNT_VITESLER.filter(function(v){ return v[0]!=='gR' && !_mntBos(d[v[0]]) && _mntNum(d[v[0]],0)!==0; }).length;
+  if(_mntBos(d.gR) || _mntNum(d.gR,0)===0) return _mntDurum('bos', n+' vites · geri yok');
+  return _mntDurum('ok', n+' + geri');
+}
+
+// TRANSFER SEKMESİ — oran ve aks payı; boş oran çözücüde 1'dir (redüksiyonsuz)
+// ve bu yüzden zorunlu sayılır, aks payının 1'i ise gerçek bir varsayılan.
 function _mntTransferSection(node){
-  return _mntCard('Transfer Kutusu · Tahrik','', 'var(--accent-danger)',
-      _mntGrid(node, [
-        {key:'iTransfer', label:'Oran',      step:'0.001', ph:'3.428'},
-        {key:'phiFwd',    label:'Aks payı φ (ileri)', step:'0.001', ph:'1'},
-        {key:'phiRev',    label:'Aks payı φ (geri)',  step:'0.001', ph:'1'}
-      ], 3)
-    + _mntHint('Aks payı φ: takozlara ulaşan tork oranı (varsayılan 1 = tam tepki).'));
+  var Z=_mntTorkZinciri();
+  var h=_mntBolum('Oran ve aks payı', '',
+      _mntIzgara(1, _mntAlan(node, 'iTransfer', 'Transfer oranı', { zorunlu:true }))
+    + _mntIzgara(2,
+        _mntVarsayilanAlan(node, 'phiFwd', 'Aks payı '+_mntSym('φ')+' · ileri', 1,
+          'tam tepki: mil torkunun tamamı takozlara gelir', 'veMntSet(\''+node.id+'\',\'phiFwd\',this.value)')
+      + _mntVarsayilanAlan(node, 'phiRev', 'Aks payı '+_mntSym('φ')+' · geri', 1,
+          'tam tepki: mil torkunun tamamı takozlara gelir', 'veMntSet(\''+node.id+'\',\'phiRev\',this.value)')));
+  h+=_mntBolum('Mil torku', 'takozlara giden · tork yük durumları',
+      _mntIzgara(2,
+        _mntOku('İleri <u>[N·m]</u>', Z.ileri!=null ? _mntS(Z.ileri,0) : '—', { id:'ve-mnt-tfwd-'+node.id })
+      + _mntOku('Geri <u>[N·m]</u>', Z.geri!=null ? _mntS(Z.geri,0) : '—', { id:'ve-mnt-trev-'+node.id })));
+  return h;
+}
+function _mntTahrikDurumu(node){
+  var d=node.data||{};
+  if(_mntBos(d.iTransfer) || _mntNum(d.iTransfer,0)===0)
+    return _mntDurum('eksik', 'eksik', 'Transfer oranı boş — çözücü 1 alır (redüksiyonsuz); mil torku eksik çıkar.', 've-mnt-iTransfer-'+node.id);
+  var gol=_mntGolgeDurumu(node); if(gol) return gol;
+  return _mntDurum('ok', 'tamam');
 }
 
 // ─── PTO GRUBU (PTO · Pompa · PTO Toplam) ────────────────────────────────────
@@ -967,119 +1543,368 @@ function _mntPtoConflict(){
   return (groups.length && parts.length) ? { groups:groups, parts:parts } : null;
 }
 
-// Referans değer tablosu — katlanır (<details>), varsayılan kapalı: panel sade
-// kalsın, isteyen açsın.
+// Referans değer tablosu — parça/grup SÜTUNDA, büyüklük SATIRDA. Eski yatay
+// biçimde grubun sekiz sütunu (m, X, Y, Z, Ixx, Iyy, Izz) 380 px'lik müfettiş
+// sütununa sığmıyordu; çevrilmiş biçimde sütun sayısı parça sayısı kadar.
+// Etiket sütunu %28 ("Ixx [kg·m²]" sığar); dört parçada (Pompa) dolgu da
+// sıklaşır — %36'lık etiketle 57 px'lik sütunda "1.271,20" 4 px kırpılıyordu.
 function _mntPtoRefTable(type){
   var ref=_MNT_PTO_REF[type]; if(!ref) return '';
-  var th='padding:4px 7px; text-align:right; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border-color); white-space:nowrap;';
-  var td='padding:3px 7px; text-align:right; color:var(--text-primary); font-variant-numeric:tabular-nums; white-space:nowrap;';
-  var h='<details style="margin-top:2px;"><summary style="cursor:pointer; font-size:var(--fs-micro); color:var(--text-secondary); padding:2px 0; user-select:none;">ASR-SR-116 referans değerleri <span style="color:var(--text-muted);">(ASFAT 8x8 obüs)</span></summary>';
-  h+='<div style="overflow-x:auto; margin-top:6px;"><table class="ve-pnl-tbl" style="font-size:var(--fs-micro);"><thead><tr>';
-  ref.head.forEach(function(c,i){ h+='<th style="'+th+(i===0?' text-align:left; ':'')+';">'+_mntEsc(c)+'</th>'; });
-  h+='</tr></thead><tbody>';
-  ref.rows.forEach(function(r){
-    h+='<tr style="border-bottom:1px solid var(--border-color);">';
-    r.forEach(function(c,i){ h+='<td style="'+td+(i===0?' text-align:left; color:var(--text-secondary); ':'')+';">'+_mntEsc(c)+'</td>'; });
+  var n=ref.rows.length, gen=Math.floor(72/n)+'%';
+  var h=_mntFoyAc([{ b:'Büyüklük', gen:'28%' }].concat(ref.rows.map(function(r){ return { b:_mntEsc(r[0]), gen:gen }; })),
+                  'ASR-SR-116 referans değerleri', 've-mnt-foy--sar'+(n>=4 ? ' ve-mnt-foy--sik' : ''));
+  for(var i=1;i<ref.head.length;i++){
+    h+='<tr><td>'+_mntEsc(ref.head[i])+(/^I/.test(ref.head[i]) ? ' [kg·m²]' : '')+'</td>';
+    ref.rows.forEach(function(r){ h+='<td>'+_mntEsc(r[i])+'</td>'; });
     h+='</tr>';
+  }
+  return h+_MNT_FOY_KAPA;
+}
+
+// PTO SEKMESİ — giriş yolu (toplu/ayrıntılı), iki yolun ÇAKIŞMASI ve referans.
+function _mntPtoSection(node){
+  var grup=(node.type==='mnt-pto-group');
+  var yol=grup
+    ? _mntNot('<b>Toplu giriş</b> — tüm PTO grubu tek kalem: grup kütlesi, grup AM\'si ve grup atalet tensörü.', '')
+    : _mntNot('<b>Ayrıntılı giriş</b> — parça başına kütle ve AM; grubun ataleti parçaların yayılımından doğar.', '');
+  var cf=_mntPtoConflict();
+  var cak='<div id="ve-mnt-ptocak-'+node.id+'" data-tazele>'
+    + (cf ? _mntNot('<b>Kütle iki kez sayılıyor olabilir.</b> Topolojide hem PTO Toplam ('+cf.groups.length
+        + ') hem ayrı PTO/Pompa ('+cf.parts.length+') var — iki giriş yolu aynı kütleyi temsil eder; birini silin.', 'warn') : '')
+    + '</div>';
+  return _mntBolum('Giriş yolu', grup ? 'toplu' : 'ayrıntılı', yol+cak)
+    + _mntBolum('ASR-SR-116 referansı', 'ASFAT 8x8 obüs · global eksen · mertebe', _mntPtoRefTable(node.type));
+}
+function _mntPtoDurumu(node){
+  if(_mntPtoConflict()) return _mntDurum('eksik', 'çakışma',
+    'Kütle iki kez sayılıyor olabilir — hem PTO Toplam hem ayrı PTO/Pompa var; birini silin.');
+  return _mntDurum('ok', node.type==='mnt-pto-group' ? 'toplu' : 'ayrıntılı');
+}
+
+// ── KÜTLE VE ATALET SEKMESİ ─────────────────────────────────────────────────
+var _MNT_EKSEN = [['X','X · boyuna'], ['Y','Y · yanal'], ['Z','Z · düşey']];
+function _mntNoktaKutle(node){
+  return '<label class="ve-fp-chk"><input type="checkbox"'+(node.data.pointMass?' checked':'')
+    + ' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"><span>Nokta kütle (atalet = 0)</span></label>';
+}
+function _mntKutleSekme(node, M){
+  var d=node.data||{};
+  var ph=_MNT_PTO_PH[node.type] || null;      // tipe özel yer tutucu (PTO grubu)
+  var m=_mntNum(d.mass,0), pay=(M.mTop>0 && m>0) ? m/M.mTop : NaN;
+  var h=_mntBolum('Kütle', '[kg]', _mntIzgara(2,
+      _mntAlan(node, 'mass', 'Kütle <u>[kg]</u>', { zorunlu:true, ph:(ph ? ph.mass : '') })
+    + _mntOku('Toplamdaki payı', Number.isFinite(pay) ? '%'+_mntS(pay*100,1)+' · '+_mntS(M.mTop,1)+' kg içinde' : '—',
+              { id:'ve-mnt-pay-'+node.id })));
+  // Ağırlık merkezi — birleşik AM'ye göre konum (kol) yanında.
+  var p=[_mntNum(d.cgx,0), _mntNum(d.cgy,0), _mntNum(d.cgz,0)], F=_mntAmFarki(p, M);
+  var f=_mntFoyAc([{ b:'Eksen', gen:'34%' }, { b:'AM', gen:'33%' },
+                   { b:'Birleşik AM\'ye '+_mntSym('Δ'), gen:'33%', sinif:'cz ay', ipucu:'Bu gövdenin AM\'si eksi bütün modelin birleşik AM\'si' }], 'Ağırlık merkezi');
+  ['cgx','cgy','cgz'].forEach(function(k, i){
+    f+='<tr><td>'+_MNT_EKSEN[i][1]+'</td>'+_mntFoyGir(node, k, 'AM '+_MNT_EKSEN[i][0], { zorunlu:true, ph:(ph ? ph.cg[i] : '') })
+      + _mntFoyCoz(F ? _mntS(F.d[i],1) : '—', { ay:true, id:'ve-mnt-amd-'+i+'-'+node.id })+'</tr>';
   });
-  h+='</tbody></table></div>';
-  h+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin-top:6px;">Değerler global eksen takımına göredir. Atalet birimi kg·m². Değerler yalnız mertebe referansıdır.</div>';
-  h+='</details>';
+  f+='<tr class="top"><td>Uzaklık</td><td></td>'+_mntFoyCoz(F ? _mntS(F.r,1) : '—', { ay:true, id:'ve-mnt-amr-'+node.id })+'</tr>';
+  h+=_mntBolum('Ağırlık merkezi', '[mm] · global eksen', f+_MNT_FOY_KAPA);
+  // Atalet tensörü — simetrik: üst üçgen yazılır, alt üçgen onun aynası.
+  if(!d.pointMass){
+    var A=_mntAtalet(d), phI=(ph && ph.I) ? ph.I : null;
+    var gir=function(k, kosegen){
+      var v=(d[k]!=null) ? d[k] : '', bos=_mntBos(v), i=['Ixx','Iyy','Izz'].indexOf(k);
+      return '<input class="ve-mnt-mtx-g'+(kosegen&&bos?' ve-mnt-zor':'')+'" type="text" inputmode="decimal" id="ve-mnt-'+k+'-'+node.id+'"'
+        + ' value="'+_mntEsc(v)+'"'+(kosegen?' data-zorunlu':'')
+        + ' placeholder="'+_mntEsc(kosegen ? (phI ? phI[i] : 'zorunlu') : '0')+'"'
+        + ' aria-label="'+k+'" onchange="veMntSet(\''+node.id+'\',\''+k+'\',this.value)">';
+    };
+    var ayna=function(k, ad){
+      return '<input class="ve-mnt-mtx-g ve-mnt-ayna" value="'+_mntEsc(_mntS(_mntNum(d[k],0)))+'" readonly tabindex="-1"'
+        + ' id="ve-mnt-ayna-'+ad+'-'+node.id+'" data-tazele aria-label="'+ad+' = '+k+' (simetrik)">';
+    };
+    var mx='<div class="ve-mnt-mtx" role="group" aria-label="Atalet tensörü">'
+      + '<span></span><span class="ve-mnt-mtx-h">X</span><span class="ve-mnt-mtx-h">Y</span><span class="ve-mnt-mtx-h">Z</span>'
+      + '<span class="ve-mnt-mtx-h sol">X</span>'+gir('Ixx',true)+gir('Ixy')+gir('Ixz')
+      + '<span class="ve-mnt-mtx-h sol">Y</span>'+ayna('Ixy','Iyx')+gir('Iyy',true)+gir('Iyz')
+      + '<span class="ve-mnt-mtx-h sol">Z</span>'+ayna('Ixz','Izx')+ayna('Iyz','Izy')+gir('Izz',true)
+      + '</div>';
+    var asal=A.asal ? A.asal.map(function(v){ return _mntS(v,1); }).join(' · ') : '—';
+    var kutu=A.kutu ? A.kutu.map(function(v){ return _mntS(v*1000,0); }).join(' × ') : '—';
+    h+=_mntBolum('Atalet tensörü', '[kg·m²] · simetrik · AM\'de',
+        mx + _mntNoktaKutle(node)
+      + _mntIzgara(2,
+          _mntOku('Asal momentler', asal, { id:'ve-mnt-asal-'+node.id })
+        + _mntOku('Eşdeğer kutu <u>[mm]</u>', kutu, { id:'ve-mnt-kutu-'+node.id,
+            ipucu:'Aynı kütle ve ataletteki dolu dikdörtgen prizma, X × Y × Z — 3B görünümün kutusu' })));
+  } else {
+    h+=_mntBolum('Atalet', 'nokta kütle · I = 0', _mntNoktaKutle(node)
+      + _mntNot('Kütle ağırlık merkezinde toplanır; tensör sıfır alınır. Grubun ataleti gövdelerin AM yayılımından doğar.', ''));
+  }
   return h;
 }
-
-// PTO grubu bilgi şeridi (tam genişlik alt kart): giriş yolu + çakışma uyarısı
-// + referans tablosu.
-function _mntPtoSection(node){
-  var isGroup = (node.type==='mnt-pto-group');
-  var lead = isGroup
-    ? '<b style="color:var(--text-heading);">Toplu giriş.</b> Tüm PTO grubu (kuyruk mili + pompalar) tek kalemde tanımlanır: '
-      + 'grup kütlesi, grup ağırlık merkezi ve <b>grup atalet tensörü</b>.'
-    : '<b style="color:var(--text-heading);">Ayrıntılı giriş.</b> Her parça kendi kütle ve ağırlık merkeziyle ayrı tanımlanır. '
-      + 'Parça ataleti çoğu katalogda verilmez — <b>nokta kütle</b> bırakılırsa grubun ataleti, parçaların CG yayılımından '
-      + 'paralel-eksen teoremiyle çözücüde oluşur.';
-  var body = '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55; margin-bottom:8px;">'+lead+'</div>';
-
-  var cf=_mntPtoConflict();
-  if(cf){
-    body += '<div style="display:flex; gap:8px; padding:8px 10px; margin-bottom:8px; border:1px solid var(--accent-warning); '
-      + 'background:color-mix(in srgb, var(--accent-warning) 11%, transparent); border-radius:var(--radius-sm); '
-      + 'font-size:var(--fs-tiny); line-height:1.5; color:var(--text-secondary);">'
-      + veDurumIkon('warn')
-      + '<span><b style="color:var(--ink-warning);">Kütle iki kez sayılıyor olabilir.</b> Topolojide hem <b>PTO Toplam</b> ('
-      + cf.groups.length + ') hem de ayrı <b>PTO/Pompa</b> (' + cf.parts.length + ') bileşeni var. '
-      + 'İki giriş yolu aynı kütleyi temsil eder — birini seçip diğerini silin.</span></div>';
+function _mntKutleDurumu(node){
+  var d=node.data||{}, id=node.id;
+  if(_mntBos(d.mass)) return _mntDurum('eksik', 'eksik', 'Kütle boş — çözücü bu gövdeyi reddeder (kütle ≤ 0).', 've-mnt-mass-'+id);
+  if(!(_mntNum(d.mass,0)>0)) return _mntDurum('eksik', 'eksik', 'Kütle ≤ 0 — çözücü bu gövdeyi reddeder.', 've-mnt-mass-'+id);
+  var ax=['cgx','cgy','cgz'];
+  for(var i=0;i<3;i++){
+    if(_mntBos(d[ax[i]])) return _mntDurum('eksik', 'AM eksik', 'Ağırlık merkezinin '+_MNT_EKSEN[i][0]+' alanı boş — çözücü 0 alır.', 've-mnt-'+ax[i]+'-'+id);
   }
-  body += _mntPtoRefTable(node.type);
-  return _mntCard('PTO grubu · Giriş yolu','', 'var(--accent-success)', body);
+  if(!d.pointMass){
+    var A=_mntAtalet(d);
+    if(A.bos) return _mntDurum('eksik', 'atalet yok', 'Atalet tensörü boş — çözücü sıfır alır (nokta kütle gibi); nokta kütleyse işaretleyin.', 've-mnt-Ixx-'+id);
+    var dk=['Ixx','Iyy','Izz'];
+    for(var j=0;j<3;j++){
+      if(_mntBos(d[dk[j]])) return _mntDurum('eksik', 'atalet eksik', dk[j]+' boş — çözücü 0 alır.', 've-mnt-'+dk[j]+'-'+id);
+    }
+    if(A.ihlal) return _mntDurum('eksik', 'fiziksel değil', 'Atalet tensörü fiziksel değil ('+A.ihlal+') — modlar sessizce yanlış çıkar.', 've-mnt-Ixx-'+id);
+  }
+  return _mntDurum('ok', 'tamam');
 }
 
+// KÜTLE GÖVDESİ PENCERESİ — sekmeler: Kütle ve atalet + tipe özel ikinci sekme
+// (Motor ve tork · Vitesler · Tahrik · PTO grubu); sağda modelin uygunluğu,
+// üstte güç grubundaki yeri.
 function getMntMassPropertiesHTML(node){
   _mntEnsureMassData(node);
-  var d=node.data;
-  var ph=_MNT_PTO_PH[node.type] || null;      // tipe özel placeholder (PTO grubu)
-  // SOL (girdi): kütle + ağırlık merkezi + nokta-kütle anahtarı.
-  var massCard=_mntCard('Kütle & ağırlık merkezi','[kg · mm]','var(--accent-primary)',
-      _mntSingle(node,'Kütle','[kg]','mass',(ph?ph.mass:'ör: 1386.3'),'0.001')
-    + _mntTriple(node,'Ağırlık Merkezi (CG)','[mm]',['cgx','cgy','cgz'],['x','y','z'],'0.01',(ph?ph.cg:null)));
-  var toggle='<label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-tiny); color:var(--text-secondary); margin:0 2px 9px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
-  // SAĞ (çıktı/tanım): atalet tensörü — nokta kütlede yerine kısa bilgi kartı gelir
-  // (sağ sütun boş kalmasın, tüm gövde tiplerinde denge korunsun).
-  var ptFor = (node.type==='mnt-pto'||node.type==='mnt-pump')
-    ? 'PTO/pompa parçaları gibi ataleti katalogda verilmeyen gövdeler için uygundur; grubun ataleti parçaların CG yayılımından paralel-eksen teoremiyle zaten oluşur.'
-    : 'Şaft gibi ince/hafif gövdeler için uygundur.';
-  var rightCard = (!d.pointMass)
-    ? _mntCard('Atalet tensörü','[kg·m²]','var(--accent-warning)',
-          _mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001',(ph&&ph.I?ph.I:null))
-        + _mntTriple(node,'Çarpım','',['Ixy','Ixz','Iyz'],['Ixy','Ixz','Iyz'],'0.001'))
-    : _mntCard('Nokta kütle','I = 0','var(--accent-warning)',
-          '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">Atalet tensörü <b style="color:var(--text-heading);">sıfır</b> kabul edilir; kütle tümüyle ağırlık merkezinde toplanır. '+ptFor+'</div>');
-  var drive = node.type==='mnt-motor'  ? _mntEngineSection(node)
-            : node.type==='mnt-gearbox' ? _mntGearboxSection(node)
-            : node.type==='mnt-transfer'? _mntTransferSection(node)
-            : _MNT_PTO_REF[node.type]   ? _mntPtoSection(node) : '';
-  var html='<div class="sw-panel">';
-  html+='<div class="ve-cp-grid ve-cp-grid--cards">';
-  html+='<div class="ve-cp-col ve-cp-col--in">'+massCard+toggle+'</div>';
-  html+='<div class="ve-cp-col ve-cp-col--out">'+rightCard+'</div>';
-  html+='</div>';
-  if(drive) html+=drive;   // tork/tahrik veya PTO bilgi şeridi — tam genişlik alt şerit
-  html+='</div>';
-  return html;
+  var M=_mntCanliModel();
+  var sekmeler=[{ k:'kutle', ad:'Kütle ve atalet', govde:_mntKutleSekme(node, M), durum:_mntKutleDurumu(node) }];
+  if(node.type==='mnt-motor') sekmeler.push({ k:'motor', ad:'Motor ve tork', govde:_mntEngineSection(node), durum:_mntMotorDurumu(node) });
+  else if(node.type==='mnt-gearbox') sekmeler.push({ k:'vites', ad:'Vitesler', govde:_mntGearboxSection(node), durum:_mntVitesDurumu(node) });
+  else if(node.type==='mnt-transfer') sekmeler.push({ k:'tahrik', ad:'Tahrik', govde:_mntTransferSection(node), durum:_mntTahrikDurumu(node) });
+  else if(_MNT_PTO_REF[node.type]) sekmeler.push({ k:'pto', ad:'PTO grubu', govde:_mntPtoSection(node), durum:_mntPtoDurumu(node) });
+  return _mntPencereKabuk(node, sekmeler, _mntUygunlukHTML(node.id), _mntKrokiHTML(node, 'govde', M, null));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  TAKOZ PANELİ (konum + statik/dinamik rijitlik + kütüphane)
+//  TAKOZ PENCERESİ — Takoz ve yeri · Yük durumları
 // ════════════════════════════════════════════════════════════════════════════
+var _MNT_RIJ = [['kxs','kxd','X · boyuna','x'], ['kys','kyd','Y · yanal','y'], ['kzs','kzd','Z · düşey','z']];
+// Dinamik/statik oranının eksenler arası yayılımı — eksen TAKASININ izi.
+// Tulga'nın iki TK040 takozunda dinamik X ile Z takaslı girilmişti ve statik
+// çözüm onu hiç göstermiyordu (k_stat'a dokunmuyor); 27 katalog girdisinin en
+// kötüsü 1,117, takaslı hâl 4,701 (mount-example-library-match.test.js).
+var _MNT_ORAN_YAYILIM_SINIR = 1.5;
+function _mntOranYayilim(d){
+  var r=_MNT_RIJ.map(function(a){ var s=_mntNum(d[a[0]],NaN), k=_mntNum(d[a[1]],NaN); return (s>0 && k>0) ? k/s : NaN; });
+  if(r.some(function(x){ return !Number.isFinite(x); })) return null;
+  return { oranlar:r, yayilim:Math.max.apply(null, r)/Math.min.apply(null, r) };
+}
+
+// KÜTÜPHANE EŞLEŞMESİ — seçili girdiyle (yoksa altı değeri BİREBİR tutan tek
+// girdiyle) karşılaştırma: kaç değer aynı, hangileri elle değişmiş, girdinin
+// nonlineer yasası bu takozda var mı. Seçim yalnız bir başlangıçtır.
+var _MNT_RIJ_KUT = [['kxs','sx','kx stat.'], ['kys','sy','ky stat.'], ['kzs','sz','kz stat.'],
+                    ['kxd','dx','kx din.'], ['kyd','dy','ky din.'], ['kzd','dz','kz din.']];
+function _mntYasaVar(o){
+  return ['X','Y','Z'].some(function(A){
+    var f=o['fit'+A], c=o['curve'+A];
+    return (f && (f.form==='poly' || f.form==='asym')) || (Array.isArray(c) && c.length>=2);
+  });
+}
+function _mntKutuphaneEslesme(node){
+  var d=node.data||{}, map=veMntGetLibraryMap();
+  var esit=function(a, b){ var x=_mntNum(a,NaN), y=_mntNum(b,NaN);
+    return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x-y)<=1e-9*Math.max(1, Math.abs(y)); };
+  var say=function(e){ var ayni=0, farkli=[];
+    _MNT_RIJ_KUT.forEach(function(a){ if(esit(d[a[0]], e[a[1]])) ayni++; else farkli.push(a[2]); });
+    return { ayni:ayni, farkli:farkli }; };
+  var e=(d.libKey && map[d.libKey]) ? map[d.libKey] : null;
+  if(!e){
+    var tam=Object.keys(map).map(function(k){ return map[k]; }).filter(function(x){ return say(x).ayni===6; });
+    if(tam.length===1) e=tam[0];
+  }
+  if(!e) return null;
+  var s=say(e);
+  return { e:e, ayni:s.ayni, farkli:s.farkli, yasaKut:_mntYasaVar(e), yasaTk:_mntYasaVar(d) };
+}
+function _mntKutuphaneNotu(node){
+  var E=_mntKutuphaneEslesme(node), d=node.data||{};
+  if(!E) return _mntNot(d.libKey ? 'Seçili kütüphane girdisi artık yok — değerler elle.'
+                                 : 'Kütüphanede bu altı değerle bir takoz yok — değerler elle.', '');
+  var ad='<b>'+_mntEsc(E.e.name)+'</b>';
+  var yasa=(E.yasaKut && !E.yasaTk) ? ' · kütüphanedeki nonlineer yasası bu takozda yok' : '';
+  if(E.farkli.length) return _mntNot(ad+' ile '+E.ayni+'/6 değer aynı; '+E.farkli.join(', ')+' elle değiştirildi'+yasa+'.', 'warn');
+  return _mntNot(ad+' ile 6/6 değer aynı'+yasa+'.', '');
+}
+
+// Bu takozun son çözümdeki statik çökmesi [mm] ve yük payı [kg].
+function _mntTakozStatik(T){
+  if(!T || !T.R) return null;
+  var st=null;
+  (T.R.allCases||[]).forEach(function(rc){ if(rc.name==='Static' && rc.res) st=rc.res; });
+  var pm=st && st.perMount && st.perMount[T.j];
+  return pm ? pm.delta.map(function(v){ return v*1000; }) : null;
+}
+
+function _mntTakozYerSekme(node, M, T){
+  var d=node.data||{};
+  var lib=veMntGetLibraryList();
+  var B=lib.filter(function(e){ return e.builtin; }), Cu=lib.filter(function(e){ return !e.builtin; });
+  var opt=function(e){ return '<option value="'+_mntEsc(e.key)+'"'+(d.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
+  var sel='<select class="ve-fp-sel" id="ve-mnt-libKey-'+node.id+'" onchange="veMntApplyLib(\''+node.id+'\',this.value)">'
+    + '<option value="">— elle gir —</option>';
+  if(B.length) sel+='<optgroup label="Gömülü">'+B.map(opt).join('')+'</optgroup>';
+  if(Cu.length) sel+='<optgroup label="Özel (Takoz Özellikleri)">'+Cu.map(opt).join('')+'</optgroup>';
+  sel+='</select>';
+  var h=_mntBolum('Takoz tipi', B.length+' gömülü · '+Cu.length+' özel',
+      _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kütüphane</span>'+sel+'</label>')
+    + '<div id="ve-mnt-libnot-'+node.id+'" data-tazele>'+_mntKutuphaneNotu(node)+'</div>');
+  // Rijitlik — statik ve dinamik aynı satırda; oran türetilir.
+  var f=_mntFoyAc([{ b:'Eksen', gen:'31%' }, { b:'Statik', gen:'23%' }, { b:'Dinamik', gen:'23%' },
+                   { b:'Din./stat.', gen:'23%', sinif:'cz ay' }], 'Rijitlik');
+  _MNT_RIJ.forEach(function(r){
+    var s=_mntNum(d[r[0]],NaN), k=_mntNum(d[r[1]],NaN);
+    f+='<tr><td>'+r[2]+'</td>'+_mntFoyGir(node, r[0], 'Statik k'+r[3], { zorunlu:true })
+      + _mntFoyGir(node, r[1], 'Dinamik k'+r[3], { zorunlu:true })
+      + _mntFoyCoz((s>0 && k>0) ? _mntS(k/s,2) : '—', { ay:true, id:'ve-mnt-oran-'+r[3]+'-'+node.id })+'</tr>';
+  });
+  var O=_mntOranYayilim(d), sinir=_mntS(_MNT_ORAN_YAYILIM_SINIR,1);
+  var kapi='<div class="ve-fp-gate ve-mnt-ic" data-d="'+(O ? (O.yayilim>_MNT_ORAN_YAYILIM_SINIR ? 'warn' : 'ok') : 'wait')+'"'
+    + ' id="ve-mnt-oranyay-'+node.id+'" data-tazele title="'+_mntEsc(O
+        ? 'Din./stat. oranı eksenler arasında '+_mntS(O.yayilim,2)+' kat yayılıyor · sınır '+sinir+' (eksen takası bu sınırı aşar)'
+        : 'Altı rijitlik girilince ölçülür')+'">'
+    + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
+  h+=_mntBolum('Rijitlik', '[N/mm]', f+_MNT_FOY_KAPA+kapi);
+  h+='<div id="ve-mnt-yasa-'+node.id+'" data-tazele>'+_mntMountCurveNote(node)+'</div>';
+  // Konum — birleşik AM'ye göre yeri ve son çözümdeki statik çökmesi.
+  var P=[_mntNum(d.x,0), _mntNum(d.y,0), _mntNum(d.z,0)], F=_mntAmFarki(P, M);
+  var st=_mntTakozStatik(T), bayat=!!(T && T.durum==='bayat');
+  var f2=_mntFoyAc([{ b:'Eksen', gen:'15%' }, { b:'Konum', gen:'27%' },
+                    { b:'AM\'ye '+_mntSym('Δ'), gen:'27%', sinif:'cz ay', ipucu:'Takozun konumu eksi modelin birleşik AM\'si' },
+                    { b:'Statik çökme', gen:'31%', sinif:'cz', ipucu:'Statik yük durumunda bu takozun çökmesi — son çözüm' }], 'Konum');
+  ['x','y','z'].forEach(function(k, i){
+    f2+='<tr><td>'+_MNT_EKSEN[i][0]+'</td>'+_mntFoyGir(node, k, 'Konum '+_MNT_EKSEN[i][0], { zorunlu:true })
+      + _mntFoyCoz(F ? _mntS(F.d[i],1) : '—', { ay:true, id:'ve-mnt-tamd-'+i+'-'+node.id })
+      + _mntFoyCoz(st ? _mntS(st[i],2) : '—', { id:'ve-mnt-tstat-'+i+'-'+node.id, sinif:(bayat ? 'sf' : ''),
+          ipucu:(bayat ? 'Bayat — model hesaptan sonra değişti' : '') })+'</tr>';
+  });
+  h+=_mntBolum('Konum', '[mm] · global eksen', f2+_MNT_FOY_KAPA);
+  // Kapasite hesabın GİRDİSİ DEĞİL, sonucun ölçüldüğü sınır: çözücü onu görmez.
+  var dm=(T && T.R && T.R.damping) ? T.R.damping[T.j] : null;
+  var pay=(T && T.R && T.R.loadShares) ? T.R.loadShares[T.j] : (dm ? dm.mShare : null);
+  h+=_mntBolum('Kapasite', 'isteğe bağlı · hesaba girmez', _mntIzgara(2,
+      _mntAlan(node, 'maxLoad', 'Maks. eksenel yük <u>[kg]</u>', { ph:'katalogdan' })
+    + _mntOku('Statik yük <u>(1 g)</u>', (pay!=null && Number.isFinite(pay)) ? _mntS(pay,1)+' kg' : '—', { id:'ve-mnt-tpay-'+node.id })));
+  return h;
+}
+function _mntTakozYerDurumu(node){
+  var d=node.data||{}, id=node.id;
+  for(var i=0;i<_MNT_RIJ.length;i++){
+    var r=_MNT_RIJ[i];
+    if(!(_mntNum(d[r[0]],0)>0)) return _mntDurum('eksik', 'rijitlik eksik', 'Statik k'+r[3]+' boş ya da ≤ 0 — çözücü modeli reddeder.', 've-mnt-'+r[0]+'-'+id);
+    if(!(_mntNum(d[r[1]],0)>0)) return _mntDurum('eksik', 'rijitlik eksik', 'Dinamik k'+r[3]+' boş ya da ≤ 0 — çözücü modeli reddeder.', 've-mnt-'+r[1]+'-'+id);
+  }
+  var ax=['x','y','z'];
+  for(var j=0;j<3;j++){
+    if(_mntBos(d[ax[j]])) return _mntDurum('eksik', 'konum eksik', 'Konum '+_MNT_EKSEN[j][0]+' boş — çözücü 0 alır.', 've-mnt-'+ax[j]+'-'+id);
+  }
+  var O=_mntOranYayilim(d);
+  if(O && O.yayilim>_MNT_ORAN_YAYILIM_SINIR) return _mntDurum('eksik', 'oran?',
+    'Din./stat. oranı eksenler arasında '+_mntS(O.yayilim,2)+' kat yayılıyor (sınır '+_mntS(_MNT_ORAN_YAYILIM_SINIR,1)+') — eksen takası olabilir.', 've-mnt-kxd-'+id);
+  return _mntDurum('ok', 'tamam');
+}
+
+// Durum bayrakları — çekme (hüküm), metal-metal durdurucu (hüküm), ±10 mm
+// lineer bant aşımı (sınırda). Satırın `title`ı bayrakları yazıyla söyler.
+function _mntBayrakHTML(ck, du, bd){
+  var t=[], h='';
+  if(ck){ h+=veIkon('arrow-up', 've-mnt-b-ck'); t.push('çekme'); }
+  if(du){ h+=veIkon('square', 've-mnt-b-du'); t.push('metal-metal durdurucu'); }
+  if(bd){ h+=veIkon('trending-up', 've-mnt-b-bd'); t.push('±10 mm aşımı'); }
+  return '<td class="bay"'+(t.length ? ' title="'+_mntEsc(t.join(' · '))+'"' : '')+'>'+h+'</td>';
+}
+function _mntLejant(){
+  return '<div class="ve-mnt-lej"><span>'+veIkon('arrow-up', 've-mnt-b-ck')+'çekme</span>'
+    + '<span>'+veIkon('square', 've-mnt-b-du')+'metal-metal (±15 mm)</span>'
+    + '<span>'+veIkon('trending-up', 've-mnt-b-bd')+'±10 mm aşımı</span></div>';
+}
+function _mntTakozYukSekme(node, T){
+  var h;
+  if(!T.R){
+    h=_mntBolum('Çökme', 'bu takoz', _mntNot('Hesaplanmadı — Çözücü\'de <b>Hesapla</b>.', ''));
+  } else {
+    var R=T.R, j=T.j, bayat=(T.durum==='bayat');
+    var f=_mntFoyAc([{ b:'Durum', gen:'34%' }, { b:'X', gen:'16%' }, { b:'Y', gen:'16%' }, { b:'Z', gen:'16%' }, { b:'', gen:'18%' }],
+                    'Bu takozun çökmesi');
+    (R.allCases||[]).forEach(function(rc){
+      var ad='<td title="'+_mntEsc(_mntDurumAdi(rc.name))+'">'+_mntEsc(_mntDurumKisa(rc.name))+'</td>';
+      var pm=rc.res && rc.res.perMount && rc.res.perMount[j];
+      if(!pm){ f+='<tr>'+ad+'<td class="sf" colspan="4">çözülemedi</td></tr>'; return; }
+      var dl=pm.delta.map(function(v){ return v*1000; });
+      var hucre=function(i){ var kr=(Math.abs(dl[i])>10) || (i===2 && pm.tension) || (i===2 && pm.clamped);
+        return '<td'+(kr ? ' class="kr"' : '')+'>'+_mntS(dl[i],2)+'</td>'; };
+      f+='<tr>'+ad+hucre(0)+hucre(1)+hucre(2)+_mntBayrakHTML(pm.tension, pm.clamped, pm.overLinear)+'</tr>';
+    });
+    h=_mntBolum('Çökme', 'bu takoz · '+_mntSym('δ')+' [mm] · '+(R.allCases||[]).length+' durum'+(bayat ? ' · bayat' : ''),
+        (bayat ? _mntBayatNot() : '')+f+_MNT_FOY_KAPA+_mntLejant());
+    var dm=R.damping && R.damping[j];
+    var em=_mntSym('ζ')+' = '+_mntS(R.zeta,3)+((dm && dm.mShare>0) ? ' · yük payı '+_mntS(dm.mShare,1)+' kg' : '');
+    if(!dm) h+=_mntBolum('Sönüm', em, _mntNot('Statik durum çözülemedi — sönüm katsayısı türetilemedi.', 'warn'));
+    else {
+      var f3=_mntFoyAc([{ b:'Eksen', gen:'30%' }, { b:_mntSym('k')+' din. <u>[N/mm]</u>', gen:'35%' },
+                        { b:_mntSym('c')+' <u>[N·s/m]</u>', gen:'35%', sinif:'cz ay', ipucu:'c = 2ζ√(k_din · m_pay)' }], 'Sönüm');
+      ['X','Y','Z'].forEach(function(a, i){
+        f3+='<tr><td>'+a+'</td><td>'+_mntS((dm.kBasis && dm.kBasis[i]>0) ? dm.kBasis[i]/1000 : NaN, 0)+'</td>'
+          + _mntFoyCoz(_mntS(dm.c[i],1), { ay:true })+'</tr>';
+      });
+      h+=_mntBolum('Sönüm', em+(R.kBasisTangent ? ' · tanjant k' : ''), f3+_MNT_FOY_KAPA);
+    }
+  }
+  return '<div id="ve-mnt-yuk-'+node.id+'" data-tazele>'+h+'</div>';
+}
+function _mntTakozSay(T){
+  var ck=[], du=[], bd=[];
+  if(T && T.R){
+    (T.R.allCases||[]).forEach(function(rc){
+      var pm=rc.res && rc.res.perMount && rc.res.perMount[T.j]; if(!pm) return;
+      var ad=_mntDurumAdi(rc.name);
+      if(pm.tension) ck.push(ad); if(pm.clamped) du.push(ad); if(pm.overLinear) bd.push(ad);
+    });
+  }
+  return { ck:ck, du:du, bd:bd };
+}
+function _mntTakozYukDurumu(T){
+  if(!T.R) return _mntDurum('bos', 'hesaplanmadı');
+  if(T.durum==='bayat') return _mntDurum('eksik', 'bayat', 'Son hesap bayat — model hesaptan sonra değişti; Çözücü\'de yeniden hesaplayın.');
+  var n=_mntTakozSay(T);
+  if(n.ck.length) return _mntDurum('eksik', n.ck.length+' çekme', '', '', false);
+  if(n.du.length) return _mntDurum('eksik', n.du.length+' durdurucu', '', '', false);
+  return _mntDurum('ok', 'tamam');
+}
+// Bu takozun uygunluğu — son çözümün satırlarından (raporun §8.3'üyle AYNI
+// ölçüt: kapasite kullanımı = statik |f_z| / kapasite).
+function _mntTakozUygunlukHTML(node, T){
+  var em, ic='';
+  if(!T.R){
+    em='hesaplanmadı';
+    ic=_mntKapiHTML('wait', 'Son çözüm yok', '', 'Çözücü → Hesapla', '');
+  } else {
+    var n=_mntTakozSay(T), R=T.R, j=T.j;
+    em='bu takoz · son çözüm'+(T.durum==='bayat' ? ' · bayat' : '');
+    if(T.durum==='bayat') ic+=_mntBayatNot();
+    ic+=_mntKapiHTML(n.ck.length ? 'no' : 'ok', 'Çekme (lift-off)', '', n.ck.length ? n.ck.length+' durum' : 'yok', n.ck.join(' · '));
+    ic+=_mntKapiHTML(n.du.length ? 'warn' : 'ok', 'Metal-metal durdurucu (±15 mm)', '', n.du.length ? n.du.length+' durum' : 'yok', n.du.join(' · '));
+    ic+=_mntKapiHTML(n.bd.length ? 'warn' : 'ok', 'Lineer bant (±10 mm)', '', n.bd.length ? n.bd.length+' durum aşıyor' : 'içinde', n.bd.join(' · '));
+    var fc=R.mounts[j] && R.mounts[j].fCap, st=null;
+    (R.allCases||[]).forEach(function(rc){ if(rc.name==='Static' && rc.res) st=rc.res; });
+    var pm=st && st.perMount && st.perMount[j];
+    if(!(fc>0)) ic+=_mntKapiHTML('wait', 'Kapasite kullanımı', '', 'kapasite girilmedi', 'Maks. eksenel yük girilince statik yükün yüzdesi');
+    else if(!pm) ic+=_mntKapiHTML('wait', 'Kapasite kullanımı', '', 'değerlendirilemedi', 'Statik durum çözülemedi');
+    else {
+      var use=Math.abs(pm.f[2])/fc*100;
+      ic+=_mntKapiHTML(use>100 ? 'no' : 'ok', 'Kapasite kullanımı', '', '%'+_mntS(use,1),
+        'Statik düşey kuvvet '+_mntS(Math.abs(pm.f[2])/1000,2)+' kN / kapasite '+_mntS(fc/1000,2)+' kN');
+    }
+  }
+  return _mntBolum('Uygunluk', em, ic, { id:'ve-mnt-uyg-'+node.id, tazele:true });
+}
+
 function getMntMountPropertiesHTML(node){
   if(!node.data) node.data={};
-  var html='<div class="sw-panel">';
-  // Kütüphane (gömülü + "Takoz Özellikleri" ile eklenen kullanıcı takozları)
-  var _lib=veMntGetLibraryList();
-  var _libB=_lib.filter(function(e){ return e.builtin; });
-  var _libC=_lib.filter(function(e){ return !e.builtin; });
-  var sel='<select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="">— Kütüphaneden rijitlik yükle —</option>';
-  if(_libB.length){ sel+='<optgroup label="Gömülü">'; _libB.forEach(function(e){ sel+='<option value="'+_mntEsc(e.key)+'"'+(node.data.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }); sel+='</optgroup>'; }
-  if(_libC.length){ sel+='<optgroup label="Özel (Takoz Özellikleri)">'; _libC.forEach(function(e){ sel+='<option value="'+_mntEsc(e.key)+'"'+(node.data.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }); sel+='</optgroup>'; }
-  sel+='</select>';
-  // İki sütun: SOL = kaynak/konum (kütüphaneden yükle + nereye konumlanmış),
-  // SAĞ = rijitlik çifti (statik + dinamik, aynı 3-eksen biçimi → doğal eş).
-  var left  = _mntCard('Kütüphane','', 'var(--accent-success)', sel)
-            + _mntCard('Konum','[mm]','var(--accent-primary)', _mntTriple(node,'','',['x','y','z'],['x','y','z'],'0.01'));
-  var right = _mntCard('Statik rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxs','kys','kzs'],['kx','ky','kz'],'1'))
-            + _mntCard('Dinamik rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'))
-            // Kapasite hesabın GİRDİSİ DEĞİL, sonucun ölçüldüğü sınır: çözücü
-            // onu görmez. Boş bırakılabilir; o zaman % kullanım hiç raporlanmaz.
-            + _mntCard('Taşıma kapasitesi','[kg] · opsiyonel','var(--accent-success)',
-                _mntSingle(node,'Maks. eksenel yük','[kg]','maxLoad','katalogdan','1')
-              + _mntHint('Üretici kataloğunun verdiği en büyük statik basma yükü. Girilirse Rapor\'da <b>Yük (%)</b> sütunu ve F(δ) diyagramında kapasite çizgisi çıkar; girilmezse hiçbiri görünmez.'));
-  html+='<div class="ve-cp-grid ve-cp-grid--cards">';
-  html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
-  html+='<div class="ve-cp-col ve-cp-col--out">'+right+'</div>';
-  html+='</div>';
-  html+=_mntMountCurveNote(node);   // nonlineer eğri notu (varsa) — tam genişlik alt
-  html+='</div>';
-  return html;
+  var M=_mntCanliModel(), T=_mntTakozSonucu(node.id);
+  var sekmeler=[
+    { k:'yer', ad:'Takoz ve yeri', govde:_mntTakozYerSekme(node, M, T), durum:_mntTakozYerDurumu(node) },
+    { k:'yuk', ad:'Yük durumları', govde:_mntTakozYukSekme(node, T), durum:_mntTakozYukDurumu(T), sonuc:true }
+  ];
+  return _mntPencereKabuk(node, sekmeler, _mntTakozUygunlukHTML(node, T), _mntKrokiHTML(node, 'takoz', M, T));
 }
 
 // Takoz'a uygulanmış nonlineer yasa için SALT-OKUNUR bilgi notu. Yasa artık
@@ -1110,12 +1935,82 @@ function _mntMountCurveNote(node){
   var labels=axes.join(', ');
   var kaynak = (anyFit&&anyTab) ? 'analitik fit + ölçüm noktaları'
              : anyFit ? 'analitik fit' : 'ölçülmüş nokta tablosu';
-  var carrier=(axes.length===1) ? ('<b style="color:var(--text-heading);">nonlineer '+labels+'-yasası</b>')
-                                 : ('<b style="color:var(--text-heading);">'+labels+'</b> eksenlerinde <b style="color:var(--text-heading);">nonlineer yasa</b>');
-  var inner = '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5;">'
-    + 'Bu takoz '+carrier+' taşıyor ('+_mntEsc(kaynak)+') → çözücü onu Newton ile çözer. '
-    + 'Yasa <b>Takoz Özellikleri</b> bileşenindeki takoz tipinden gelir ve oradan düzenlenir.</div>';
-  return _mntCard('Kuvvet–sehim yasası ('+labels+')', kaynak+' · kütüphaneden','var(--accent-danger)', inner);
+  var carrier=(axes.length===1) ? ('<b>nonlineer '+labels+'-yasası</b>')
+                                 : ('<b>'+labels+'</b> eksenlerinde <b>nonlineer yasa</b>');
+  return _mntBolum('Kuvvet–sehim yasası ('+labels+')', _mntEsc(kaynak)+' · kütüphaneden',
+    _mntNot('Bu takoz '+carrier+' taşıyor ('+_mntEsc(kaynak)+') → çözücü onu Newton ile çözer. '
+      + 'Yasa <b>Takoz Özellikleri</b> bileşenindeki takoz tipinden gelir ve oradan düzenlenir.', ''));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  YERİNDE TAZELEME — pencere KURULMAZ
+// ════════════════════════════════════════════════════════════════════════════
+// Sayı alanları (veMntSet) pencereyi yeniden kurmuyor — kursaydı Sekme ile
+// geçilen bir sonraki alanın odağı düşerdi (bu deponun tekrar eden dersi,
+// FEAD kural 11/35). Ama türetilen değerler (pay, AM farkı, oran, kroki,
+// uygunluk, sekme durumu) o zaman bir düzenleme geride kalırdı: kütleyi
+// değiştiren kullanıcı eski payı okurdu. `saveState` "girdi değişti" olayının
+// tek kaynağı ve bunu oradan çağırır; çözüm bitince de çağrılır. Yalnız
+// `[data-tazele]` taşıyan öğelere, varsayılanlı alanlara, sekme durumlarına
+// ve banda dokunur — yazılan GİRDİLERE DOKUNMAZ.
+function _mntPencereHTML(node){
+  if(!node) return '';
+  if(node.type==='mnt-mount') return getMntMountPropertiesHTML(node);
+  if(node.type==='mnt-solver') return getMntSolverPropertiesHTML(node);
+  if((_mntDef(node)||{}).isMountBody || _MNT_POINTMASS_DEFAULT[node.type]!==undefined || _MNT_PTO_REF[node.type]
+     || /^mnt-(motor|gearbox|bracket|transfer)$/.test(node.type)) return getMntMassPropertiesHTML(node);
+  return '';
+}
+function veMntPencereTazele(){
+  if(typeof document==='undefined' || !document.querySelector) return 0;
+  var kok=document.querySelector('.ve-properties-content [data-mnt-pencere]');
+  if(!kok) return 0;
+  var node=_mntDugum(kok.getAttribute('data-mnt-pencere'));
+  if(!node) return 0;
+  var html=_mntPencereHTML(node); if(!html) return 0;
+  var tmp=document.createElement('div'); tmp.innerHTML=html;
+  var bul=function(id){ return tmp.querySelector('[id="'+id+'"]'); };
+  var n=0;
+  Array.prototype.forEach.call(kok.querySelectorAll('[data-tazele][id]'), function(el){
+    if(!el.isConnected) return;                       // dışındaki tazelenen öğeyle gitti
+    var yeni=bul(el.id);
+    if(yeni && el.outerHTML!==yeni.outerHTML){ el.outerHTML=yeni.outerHTML; n++; }
+  });
+  // Varsayılanlı alan: değer ve 'i' (odaktaki alana yazılmaz).
+  Array.prototype.forEach.call(kok.querySelectorAll('[data-mnt-vars]'), function(el){
+    var yeni=tmp.querySelector('[data-mnt-vars="'+el.getAttribute('data-mnt-vars')+'"]');
+    if(!yeni) return;
+    el.setAttribute('data-kaynak', yeni.getAttribute('data-kaynak'));
+    var a=el.querySelector('input'), b=yeni.querySelector('input');
+    if(a && b && a!==document.activeElement && String(a.value)!==String(b.getAttribute('value'))){ a.value=b.getAttribute('value'); n++; }
+    var ia=el.querySelector('.ve-fp-i'), ib=yeni.querySelector('.ve-fp-i');
+    if(ia && ib && ia.outerHTML!==ib.outerHTML) ia.outerHTML=ib.outerHTML;
+  });
+  // Zorunlu alanın tonu yazılan değeri izler.
+  Array.prototype.forEach.call(kok.querySelectorAll('input[data-zorunlu]'), function(i){
+    var bos=String(i.value).trim()==='';
+    var td=i.parentNode;
+    if(td && td.tagName==='TD') td.classList.toggle('zor', bos);
+    else i.classList.toggle('ve-mnt-zor', bos);
+  });
+  // Sekme durumları ve eksik bandı
+  var kap=document.getElementById('ve-fp-tabs-'+node.id), kapY=bul('ve-fp-tabs-'+node.id);
+  if(kap && kapY){
+    Array.prototype.forEach.call(kap.querySelectorAll('.ve-fp-tab'), function(b){
+      var y=kapY.querySelector('.ve-fp-tab[data-k="'+b.getAttribute('data-k')+'"]'); if(!y) return;
+      var yd=y.getAttribute('data-d');
+      if(yd) b.setAttribute('data-d', yd); else b.removeAttribute('data-d');
+      var e1=b.querySelector('.ve-fp-tab-d'), e2=y.querySelector('.ve-fp-tab-d');
+      if(e1 && e2){ if(e1.outerHTML!==e2.outerHTML){ e1.outerHTML=e2.outerHTML; n++; } }
+      else if(e2) b.insertAdjacentHTML('beforeend', e2.outerHTML);
+      else if(e1) e1.remove();
+    });
+    var bant=document.getElementById('ve-fp-eksik-'+node.id), bantY=bul('ve-fp-eksik-'+node.id);
+    if(bant && bantY){ if(bant.outerHTML!==bantY.outerHTML){ bant.outerHTML=bantY.outerHTML; n++; } }
+    else if(bant){ bant.remove(); n++; }
+    else if(bantY){ kap.insertAdjacentHTML('afterend', bantY.outerHTML); n++; }
+  }
+  return n;
 }
 
 // ─── Setters ─────────────────────────────────────────────────────────────────
@@ -1141,8 +2036,17 @@ function veMntSetCheck(nodeId, key, checked){
   if(typeof showNodeProperties==='function') showNodeProperties(node); // atalet alanlarını göster/gizle
 }
 function veMntApplyLib(nodeId, key){
-  if(!key) return;
-  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var node=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes.find(function(n){return n.id===nodeId;}) : null;
+  if(!node) return;
+  // "— elle gir —": yalnız kütüphane BAĞI kalkar, değerler yerinde kalır
+  // (kullanıcı katalogdan yükleyip elle rötuşlayabilsin — motor kataloğuyla aynı).
+  if(!key){
+    if(node.data && node.data.libKey!==undefined){
+      delete node.data.libKey;
+      if(typeof saveState==='function') saveState();
+    }
+    return;
+  }
   if(!node.data) node.data={};
   if(!_mntLibUygula(node.data, key)) return;
   if(typeof saveState==='function') saveState();
@@ -3178,30 +4082,41 @@ function _mntLibCurveEditor(node, e){
 // diyagramının ÇALIŞMA BANDI üst sınırı bunlardan gelir (js/mount-signals.js
 // _engineSpec). Motorun en yüksek devri bilinmezse band rölantinin katından
 // tahmin edilir ve kesişimlerin bant içinde mi dışında mı olduğu yanlış söylenir.
+var _MNT_TORK_ALANLARI=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate',
+                        'idleRpm','cylinders','TeRpm','PmaxRpm'];
+// Değerle birlikte KAYNAĞI da döner: pencerenin tork zinciri "bu çarpan hangi
+// bileşenden geldi" sorusunu çözücünün okuduğu AYNI taramadan cevaplar.
+// Ayrı bir tarama yazılsaydı iki gövdede aynı alan dolu olduğunda pencere
+// birini, çözücü ötekini okurdu (ilk dolu kazanır — düğüm sırası).
 // `liste` (ops.): düğüm listesi — verilmezse canlı `nodes`. Sihirbaz kendi
 // modelini KURMAZ: durumunu düğüm listesine çevirip (veMntWizNodes) AYNI
 // toplayıcıdan geçirir; önizleme ile kurulan model aynı yoldan okunur.
-function _mntGatherTorque(liste){
-  var keys=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate',
-            'idleRpm','cylinders','TeRpm','PmaxRpm'];
-  var t={};
-  (liste || (typeof nodes!=='undefined'?nodes:[])).forEach(function(n){
-    if(!(_mntDef(n)||{}).isMountBody) return;
+function _mntGatherTorqueKaynakli(liste){
+  var t={}, kaynak={};
+  (liste || (typeof nodes!=='undefined' && Array.isArray(nodes)?nodes:[])).forEach(function(n){
+    if(!n || !(_mntDef(n)||{}).isMountBody) return;
     var d=n.data||{};
-    keys.forEach(function(k){ if(t[k]===undefined && d[k]!==undefined && d[k]!==null && d[k]!=='') t[k]=d[k]; });
+    _MNT_TORK_ALANLARI.forEach(function(k){
+      if(t[k]===undefined && d[k]!==undefined && d[k]!==null && d[k]!==''){ t[k]=d[k]; kaynak[k]=n; }
+    });
   });
-  return t;
+  return { t:t, kaynak:kaynak };
 }
+function _mntGatherTorque(liste){ return _mntGatherTorqueKaynakli(liste).t; }
+// `id` düğüm kimliğidir ve SI'ya, oradan R.mounts'a taşınır: pencere takozun
+// sonucunu SIRAYLA değil KİMLİKLE bulur (sıra, silinen ya da sonradan eklenen
+// bir takozla kayar ve başka takozun çökmesi sessizce gösterilirdi).
 function _mntGatherForSolver(solver, liste){
   var masses=[], mounts=[];
-  (liste || (typeof nodes!=='undefined'?nodes:[])).forEach(function(n){
+  (liste || (typeof nodes!=='undefined' && Array.isArray(nodes)?nodes:[])).forEach(function(n){
+    if(!n) return;
     var def=_mntDef(n)||{};
     if(def.isMountBody){
       var d=n.data||{};
-      masses.push({ name:_mntNodeName(n), mass:d.mass, cgx:d.cgx, cgy:d.cgy, cgz:d.cgz, Ixx:d.Ixx, Iyy:d.Iyy, Izz:d.Izz, Ixy:d.Ixy, Ixz:d.Ixz, Iyz:d.Iyz, pointMass:!!d.pointMass });
+      masses.push({ id:n.id, name:_mntNodeName(n), mass:d.mass, cgx:d.cgx, cgy:d.cgy, cgz:d.cgz, Ixx:d.Ixx, Iyy:d.Iyy, Izz:d.Izz, Ixy:d.Ixy, Ixz:d.Ixz, Iyz:d.Iyz, pointMass:!!d.pointMass });
     } else if(def.isMount){
       var m=n.data||{};
-      mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
+      mounts.push({ id:n.id, name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
                     maxLoad:m.maxLoad,                                        // taşıma kapasitesi [kg] (opsiyonel, fiziğe girmez)
                     fitX:(m.fitX||null), fitY:(m.fitY||null), fitZ:(m.fitZ||null),   // opsiyonel analitik fit (x/y/z)
                     curveX:(Array.isArray(m.curveX)?m.curveX:null),                  // ya da nokta tablosu (x/y/z)
@@ -3267,13 +4182,13 @@ function _mntToSI(gather, g){
   return {
     g: g||9.81,
     components: gather.components.map(function(c){ return {
-      name:c.name||'kütle', mass:_mntNum(c.mass,0),
+      id:c.id, name:c.name||'kütle', mass:_mntNum(c.mass,0),
       cg:[C.mmToM(_mntNum(c.cgx)),C.mmToM(_mntNum(c.cgy)),C.mmToM(_mntNum(c.cgz))],
       I:[[_mntNum(c.Ixx),_mntNum(c.Ixy),_mntNum(c.Ixz)],[_mntNum(c.Ixy),_mntNum(c.Iyy),_mntNum(c.Iyz)],[_mntNum(c.Ixz),_mntNum(c.Iyz),_mntNum(c.Izz)]],
       pointMass:!!c.pointMass }; }),
     mounts: gather.mounts.map(function(m){
       var mnt={
-        name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
+        id:m.id, name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
         kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
         kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] };
       // Kapasite [kg] → SI'da KUVVET [N] olarak taşınır: raporlama katmanı bir
@@ -3324,60 +4239,283 @@ function _mntForgetResults(){
   if(typeof window!=='undefined') window.veMountResults=null;
 }
 
+// ── SONUÇ GÜNCELLİĞİ — MODELİN İMZASI ────────────────────────────────────────
+// Pencereler son çözümün sayılarını gösteriyor (takoz başına çökme, sönüm,
+// uygunluk). Model hesaptan sonra değiştiyse o sayılar BAŞKA bir modelin
+// cevabıdır; "güncel" görünmeleri sessiz bir yalandır. FEAD'in kural 33'ünün
+// karşılığı: çözüm anında modelin imzası R'ye yazılır, pencere şimdiki
+// modelinkiyle karşılaştırır.
+//
+// İmza çözücünün GİRDİSİDİR — SI'ya çevrilmiş model + çözücü ayarları: yazım
+// farkı ("124,96" ↔ "124.96" ↔ 124.96) imzayı değiştirmez, ad değiştirmez
+// (fiziğe girmez). Nokta kütlenin tensörü imzaya girmez (çözücü onu sıfırlar).
+// Tork alanlarının HEPSİ girer: vites oranları vites başına durumları,
+// silindir sayısı uygunluğu değiştirir — ikisi de hesaplanan sonucun parçası.
+function _mntImza(si, torque, sd){
+  var t=torque||{}, d=sd||{};
+  var v={
+    c:(si.components||[]).map(function(c){ return [c.id||'', c.mass, c.cg, c.pointMass?0:c.I, c.pointMass?1:0]; }),
+    m:(si.mounts||[]).map(function(m){ return [m.id||'', m.pos, m.kstat, m.kdyn, m.fCap||0, m.fits||0, m.curves||0]; }),
+    t:Object.keys(t).sort().map(function(k){ return [k, _mntNum(t[k], null)]; }),
+    s:[d.solveMode||'auto', _mntZetaOf({ data:d }), _mntNum(d.shockG, MNT_SHOCK_G), _mntNum(d.shockMs, MNT_SHOCK_MS)]
+  };
+  var s=JSON.stringify(v), h=5381;
+  for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;
+  return (h>>>0).toString(36)+'.'+s.length;
+}
+
+// Son çözümün ŞİMDİKİ modele göre durumu: 'yok' (çözüm yok ya da hata) ·
+// 'guncel' (imza tutuyor) · 'bayat' (model hesaptan sonra değişti ya da
+// çözücü bu topolojide yok). Dönüş: { durum, R }.
+function veMntSonucDurumu(){
+  var R=_veMntLast;
+  if(!R || R.error || !R.imza) return { durum:'yok', R:null };
+  var list=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : [];
+  var solver=null;
+  for(var i=0;i<list.length;i++){ if(list[i] && list[i].id===R.solverId){ solver=list[i]; break; } }
+  if(!solver || typeof veMountCore==='undefined') return { durum:'bayat', R:R };
+  var g=_mntGatherForSolver(solver);
+  var imza=_mntImza(_mntToSI(g, R.g||9.81), g.torque, solver.data);
+  return { durum:(imza===R.imza ? 'guncel' : 'bayat'), R:R };
+}
+
+// Takoz düğümünün son çözümdeki yeri — SIRAYLA değil KİMLİKLE.
+// Dönüş: { durum:'yok'|'guncel'|'bayat', R, j } (j: R.mounts indisi).
+function _mntTakozSonucu(nodeId, S){
+  S=S||veMntSonucDurumu();
+  if(!S.R) return { durum:'yok', R:null, j:-1 };
+  var ms=S.R.mounts||[];
+  for(var j=0;j<ms.length;j++){ if(ms[j] && ms[j].id===nodeId) return { durum:S.durum, R:S.R, j:j }; }
+  return { durum:'yok', R:null, j:-1 };              // bu takoz son çözümde yoktu
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÇÖZÜCÜ PENCERESİ — Yük durumları · Modlar · Ayarlar + Hesapla
+// ════════════════════════════════════════════════════════════════════════════
+// Pencere eskiden yalnız bir "Çözüldü" kutusu basıyor, ayrıntıyı Rapor'a
+// gönderiyordu. Artık son çözümün kendisini taşır (yük kitabı, vites başına
+// kuvvet, modlar) ve hepsi imzayla güncel/bayat işaretlidir. Yöntem seçimleri
+// "bir sonraki Hesapla'da" uygulanır — hesap düğmeye kilitli.
+
+// Çözüm modu etiketi — raporun kapağıyla (cp-mount-report.js _mntRepAntet)
+// aynı otorite sırası: kullanıcının niyeti + fiilen koşan yol.
+function _mntCozumModuEtiketi(R){
+  return R.solveMode==='linear' ? 'Lineer — eğriler yok sayıldı'
+    : R.solveMode==='nonlinear' ? (R.solvedNL ? 'Nonlineer (Newton)' : 'Nonlineer seçildi — eğri yok, lineer')
+    : (R.solvedNL ? 'Otomatik → Nonlineer (Newton)' : 'Otomatik → Lineer');
+}
+// ÖN DENETİM — çözücünün AYNI doğrulaması (çekirdek validateModel) şimdiki
+// model üzerinde: Hesapla'ya basmadan neyin reddedileceği görünür. Eski hâlde
+// liste ancak basıldıktan sonra, ilerleme kutusunun yerinde çıkıyordu.
+function _mntOnDenetim(node){
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  if(!C || !C.validateModel || !C.mmToM) return [];
+  var si=_mntToSI(_mntGatherForSolver(node), 9.81);
+  return C.validateModel(si.components, si.mounts);
+}
+function _mntOnDenetimHTML(node){
+  var p=_mntOnDenetim(node);
+  return '<div class="ve-mnt-sonuc" id="ve-mnt-results" data-tazele>'
+    + (p.length ? _mntNot('<b>Hesaplanamaz — '+p.length+' sorun.</b><ul>'
+        + p.map(function(x){ return '<li>'+_mntEsc(x)+'</li>'; }).join('')+'</ul>', 'no') : '')
+    + '</div>';
+}
+function _mntEgriYok(node){
+  var d=node.data||{};
+  if(d.solveMode!=='nonlinear') return false;
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  if(!C || !C.anyCurve || !C.mmToM) return false;
+  return !C.anyCurve(_mntToSI(_mntGatherForSolver(node), 9.81).mounts);
+}
+function _mntCozucuNotu(node, S){
+  var M=_mntCanliModel();
+  var R=(S.R && S.R.solverId===node.id) ? S.R : null;
+  return _mntS(M.mTop,1)+' kg · '+M.g.components.length+' kütle · '+M.g.mounts.length+' takoz · '
+    + (!R ? 'hesaplanmadı' : (S.durum==='bayat' ? 'son hesap bayat' : 'son hesap güncel · '+_mntCozumModuEtiketi(R)));
+}
+// Bir yük durumunda en büyük bileşke takoz kuvveti [kN] ve takozu.
+function _mntMaksKuvvet(res){
+  var en={ v:NaN, ad:'—' };
+  (res && res.perMount || []).forEach(function(pm){
+    var f=Math.sqrt(pm.f[0]*pm.f[0]+pm.f[1]*pm.f[1]+pm.f[2]*pm.f[2])/1000;
+    if(!(f<=en.v)){ en.v=f; en.ad=pm.name; }
+  });
+  return en;
+}
+
+function _mntCozucuDurumSekme(node, R, S){
+  var bayat=!!(R && S.durum==='bayat'), h='';
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  var satirlar;
+  if(R) satirlar=(R.allCases||[]).map(function(rc){ return { lc:rc.loadCase||{ name:rc.name }, rc:rc }; });
+  else satirlar=(C && C.mmToM) ? _mntToSI(_mntGatherForSolver(node), 9.81).loadCases.map(function(lc){ return { lc:lc, rc:null }; }) : [];
+  // Yedi sütun 380 px'lik sütuna ancak SIK dolguyla sığar (−1,55 ve −12,8
+  // kırpılıyordu); ilk sütunun sol kenarı başlıkla hizalı kalır.
+  var f=_mntFoyAc([{ b:'Durum', gen:'30%' }, { b:_mntSym('n<sub>x</sub>'), gen:'10%' }, { b:_mntSym('n<sub>y</sub>'), gen:'12%' },
+                   { b:_mntSym('n<sub>z</sub>'), gen:'10%' }, { b:_mntSym('T<sub>x</sub>'), gen:'12%', ipucu:'Tork [kN·m]' },
+                   { b:_mntSym('δz'), gen:'12%', sinif:'cz ay', ipucu:'En büyük düşey takoz çökmesi [mm]' },
+                   { b:'', gen:'14%' }], 'Yük kitabı', 've-mnt-foy--sik');
+  var sayi=function(v){ return '<td'+(v===0 ? ' class="sf"' : '')+'>'+_mntS(v)+'</td>'; };
+  var tork=0;
+  satirlar.forEach(function(sa){
+    var lc=sa.lc, n=lc.n||[0,0,0], T=lc.T||[0,0,0];
+    if(T[0]!==0) tork++;
+    f+='<tr><td title="'+_mntEsc(_mntDurumAdi(lc.name))+'">'+_mntEsc(_mntDurumKisa(lc.name))+'</td>'
+      + sayi(n[0])+sayi(n[1])+sayi(n[2])
+      + '<td'+(T[0]===0 ? ' class="sf"' : '')+'>'+(T[0]===0 ? '0' : _mntS(T[0]/1000,1))+'</td>';
+    var res=sa.rc && sa.rc.res;
+    if(!res){
+      f+=_mntFoyCoz('—', { ay:true, sinif:'sf', ipucu:(sa.rc ? 'Çözülemedi (K tekil)' : 'Hesaplanmadı') })+'<td class="bay"></td></tr>';
+      return;
+    }
+    var dz=NaN;
+    res.perMount.forEach(function(pm){ var v=pm.delta[2]*1000; if(!(Math.abs(v)<=Math.abs(dz))) dz=v; });
+    var ck=res.checks||{};
+    f+=_mntFoyCoz(_mntS(dz,1), { ay:true, sinif:((ck.tensionCount>0 || ck.clampCount>0) ? 'kr' : '') })
+      + _mntBayrakHTML(ck.tensionCount>0, ck.clampCount>0, ck.overLinearCount>0)+'</tr>';
+  });
+  var oto=satirlar.length-tork;
+  var em=R ? satirlar.length+' durum · '+_mntSym('n')+' [g] · '+_mntSym('T')+' [kN·m] · '+_mntSym('δ')+' [mm]'
+           : oto+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok');
+  h+=_mntBolum('Yük kitabı', em+(bayat ? ' · bayat' : ''), (bayat ? _mntBayatNot() : '')+f+_MNT_FOY_KAPA+(R ? _mntLejant() : ''));
+  if(R){
+    // Newton yakınsaması — en çok iterasyon yapan durum (+ artık izi).
+    if(R.solvedNL){
+      var en=0, enAd='', yak=0;
+      (R.allCases||[]).forEach(function(rc){
+        var c=rc.res && rc.res.checks; if(!c) return;
+        if(c.newtonIters>en){ en=c.newtonIters; enAd=rc.name; }
+        if(c.converged===false) yak++;
+      });
+      if(en>0){
+        var iz=(R._worstIter && R._worstIter.trace && R._worstIter.trace.length)
+          ? ' · artık ‖r‖ '+R._worstIter.trace.map(function(v){ return _mntSci(v); }).join(' → ')+' N' : '';
+        h+=_mntNot('<b>Newton–Raphson</b> · en çok '+en+' iterasyon ('+_mntEsc(_mntDurumKisa(enAd))+')'
+          + (yak ? ' · '+yak+' durumda yakınsamadı' : '')+_mntEsc(iz), yak ? 'warn' : '');
+      }
+    }
+    var gc=R.gearCases||[];
+    if(!gc.length){
+      h+=_mntBolum('Vites başına', 'Kriter 3', _mntNot('Tork girdisi yok — vites başına durum kurulmadı (Motor ve Şanzıman pencereleri).', ''));
+    } else {
+      var enV=-1;
+      gc.forEach(function(rc){ var m=_mntMaksKuvvet(rc.res); if(m.v>enV) enV=m.v; });
+      var g=_mntFoyAc([{ b:'Vites', gen:'13%' }, { b:'Oran', gen:'16%' }, { b:_mntSym('T<sub>mil</sub>')+' <u>[N·m]</u>', gen:'24%' },
+                       { b:_mntSym('F')+' maks <u>[kN]</u>', gen:'25%', sinif:'cz ay' }, { b:'Takoz', gen:'22%', sinif:'cz sol' }], 'Vites başına takoz kuvveti');
+      gc.forEach(function(rc){
+        var lc=rc.loadCase||{}, m=_mntMaksKuvvet(rc.res);
+        g+='<tr><td>'+_mntEsc(String(lc.gearLabel||rc.name).replace(/\s*Vites$/, ''))+'</td><td>'+_mntS(lc.ratio,2)+'</td>'
+          + '<td>'+_mntS(lc.Tshaft,0)+'</td>'
+          + _mntFoyCoz(rc.res ? _mntS(m.v,2) : '—', { ay:true, sinif:(rc.res && m.v===enV ? 'kr' : '') })
+          + _mntFoyCoz(rc.res ? _mntEsc(_mntTakozKisa(m.ad)) : 'çözülemedi', { sinif:'sol', ipucu:(rc.res ? m.ad : '') })+'</tr>';
+      });
+      h+=_mntBolum('Vites başına', 'Kriter 3 · bileşke takoz kuvveti', g+_MNT_FOY_KAPA);
+    }
+  }
+  return '<div id="ve-mnt-cdur-'+node.id+'" data-tazele>'+h+'</div>';
+}
+
+function _mntCozucuModSekme(node, R, S){
+  var h;
+  if(!R) h=_mntBolum('Modlar', '', _mntNot('Hesaplanmadı.', ''));
+  else {
+    var bayat=(S.durum==='bayat'), modes=R.modes||[];
+    var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+    var iso=(typeof _mntRepIsolation==='function') ? _mntRepIsolation(R, (typeof veMntRaporOpts==='function') ? veMntRaporOpts() : {}) : null;
+    var lim=(iso && Number.isFinite(iso.fFire)) ? 0.5*iso.fFire : NaN;
+    // Bant ve sınır ÖLÇÜMÜ raporun Kriter 1/1b'siyle AYNI çağrıdan (modePlacement).
+    var pl=(C && C.modePlacement) ? C.modePlacement(modes, { fLimit:(Number.isFinite(lim) ? lim : undefined) }) : null;
+    var no=function(lst){ return (lst||[]).map(function(m){ return m.no; }); };
+    var aks=no(pl && pl.inBand), asan=no(pl && pl.exceed);
+    var kisa=(typeof veMntBrief!=='undefined' && veMntBrief && veMntBrief.modeShort) ? veMntBrief.modeShort : function(l){ return l||'mod'; };
+    var f=_mntFoyAc([{ b:'#', gen:'10%' }, { b:_mntSym('f')+' <u>[Hz]</u>', gen:'18%' }, { b:'Biçim', gen:'50%', sinif:'sol' },
+                     { b:_mntSym('ζ<sub>mod</sub>'), gen:'22%', sinif:'cz ay', ipucu:'Mod başına sönüm oranı (takoz sönümünden)' }], 'Modlar');
+    modes.forEach(function(m, i){
+      var k=i+1, a=aks.indexOf(k)>=0, s=asan.indexOf(k)>=0;
+      var bicim=kisa(m.label)+(a ? ' · aks bandında' : '')+(s ? ' · ½·f üstünde' : '');
+      var zm=(R.modalDamping && R.modalDamping[i]) ? R.modalDamping[i].zeta : NaN;
+      f+='<tr><td>'+k+'</td><td'+((a || s || m.warning) ? ' class="kr"' : '')+'>'+_mntS(m.f_Hz,2)+'</td>'
+        + '<td class="sol" title="'+_mntEsc(bicim)+'">'+_mntEsc(bicim)+'</td>'+_mntFoyCoz(_mntS(zm,3), { ay:true })+'</tr>';
+    });
+    h=_mntBolum('Modlar', (R.solvedNL ? 'statik dengede tanjant rijitlikle' : 'dinamik rijitlikle')+(bayat ? ' · bayat' : ''),
+        (bayat ? _mntBayatNot() : '')+f+_MNT_FOY_KAPA
+      + _mntIzgara(2,
+          _mntOku('Düşey (bounce) <u>[Hz]</u>', (iso && iso.fBounce>0) ? _mntS(iso.fBounce,2)+' · SDOF' : '—')
+        + _mntOku('Mod sınırı '+_mntSym('½·f<sub>ateş</sub>')+' <u>[Hz]</u>', Number.isFinite(lim) ? _mntS(lim,2) : '— (silindir/rölanti yok)')));
+  }
+  return '<div id="ve-mnt-cmod-'+node.id+'" data-tazele>'+h+'</div>';
+}
+
+function _mntCozucuAyarSekme(node){
+  var d=node.data||{}, sm=d.solveMode||'auto';
+  var sel='<select class="ve-fp-sel" id="ve-mnt-solveMode-'+node.id+'" onchange="veMntSetSolveMode(\''+node.id+'\',this.value)">';
+  [['auto','Otomatik — eğri tanımlıysa nonlineer'],
+   ['nonlinear','Nonlineer — tanımlı eğrileri kullan (Newton)'],
+   ['linear','Lineer — eğrileri yok say (statik rijitlik)']
+  ].forEach(function(o){ sel+='<option value="'+o[0]+'"'+(sm===o[0]?' selected':'')+'>'+o[1]+'</option>'; });
+  sel+='</select>';
+  var h=_mntBolum('Yöntem', 'bir sonraki Hesapla\'da',
+      _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Çözüm modu</span>'+sel+'</label>')
+    + '<div id="ve-mnt-egriyok-'+node.id+'" data-tazele>'
+    + (_mntEgriYok(node) ? _mntNot('Nonlineer seçili ama hiçbir takozda eğri yok — lineer çözülür. Eğri <b>Takoz Özellikleri</b>\'nde tanımlanır.', 'warn') : '')
+    + '</div>'
+    + _mntIzgara(1, _mntVarsayilanAlan(node, 'zeta', 'Sönüm oranı '+_mntSym('ζ')+' · tüm montaj', _mntZetaDefault(),
+        'şirket kabulü; her takozun c = 2ζ√(k_din·m_pay) katsayısı bundan türer', 'veMntSetZeta(\''+node.id+'\',this.value)')));
+  h+=_mntBolum('Şok darbesi', 'yarım sinüs · Sonuçlar\'daki şok kanalları',
+      _mntIzgara(2,
+        _mntVarsayilanAlan(node, 'shockG', 'Tepe ivme <u>[g]</u>', MNT_SHOCK_G, 'AMC tedarikçi raporlarının darbesi',
+          'veMntSetShock(\''+node.id+'\',\'shockG\',this.value)')
+      + _mntVarsayilanAlan(node, 'shockMs', 'Süre <u>[ms]</u>', MNT_SHOCK_MS, 'AMC tedarikçi raporlarının darbesi',
+          'veMntSetShock(\''+node.id+'\',\'shockMs\',this.value)')));
+  return h;
+}
+
+function _mntCozucuDurumlari(node, R, S){
+  var out={}, d=node.data||{};
+  var p=_mntOnDenetim(node);
+  if(p.length) out.dur=_mntDurum('eksik', 'çözülemez', p[0]+(p.length>1 ? ' (+'+(p.length-1)+')' : '')+' — Hesapla bu modeli reddeder.');
+  else if(!R) out.dur=_mntDurum('bos', 'hesaplanmadı');
+  else if(S.durum==='bayat') out.dur=_mntDurum('eksik', 'bayat', 'Son hesap bayat — model hesaptan sonra değişti; yeniden hesaplayın.');
+  else {
+    var fail=0, nc=0;
+    (R.allCases||[]).forEach(function(rc){
+      if(!rc.res) fail++;
+      else if(rc.res.checks && (rc.res.checks.converged===false || rc.res.checks.stopConverged===false)) nc++;
+    });
+    if(fail) out.dur=_mntDurum('eksik', fail+' çözülemedi', fail+' yük durumu çözülemedi (K tekil — montaj bir eksende serbest olabilir).');
+    else if(nc) out.dur=_mntDurum('eksik', 'yakınsamadı', nc+' durumda çözücü yakınsamadı — o durumların sayıları güvenilmez.');
+    else out.dur=_mntDurum('ok', (R.allCases||[]).length+' + '+((R.gearCases||[]).length+(R.designCases||[]).length));
+  }
+  if(!R) out.mod=_mntDurum('bos', 'hesaplanmadı');
+  else if(S.durum==='bayat') out.mod=_mntDurum('eksik', 'bayat', '', '', false);
+  else {
+    var fz=(R.modes||[]).filter(function(m){ return m && m.warning; }).length;
+    out.mod=fz ? _mntDurum('eksik', 'serbest mod', fz+' modda f≈0 — montaj bir eksende serbest olabilir.')
+               : _mntDurum('ok', (R.modes||[]).length+' mod');
+  }
+  out.ayar=_mntEgriYok(node) ? _mntDurum('eksik', 'eğri yok', 'Nonlineer seçili ama hiçbir takozda eğri yok — lineer çözülür.')
+    : _mntDurum('ok', (!_mntBos(d.zeta) || !_mntBos(d.shockG) || !_mntBos(d.shockMs) || (d.solveMode && d.solveMode!=='auto')) ? 'elle' : 'varsayılan');
+  return out;
+}
+
 function getMntSolverPropertiesHTML(node){
   if(!node.data) node.data={};
   if(!node.data.matrixMode) node.data.matrixMode='delta';
   if(!node.data.solveMode) node.data.solveMode='auto';
-  var html='<div class="sw-panel">';
-  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-bottom:9px;">Tüm kütle ve takozlar otomatik algılanır; yük durumları otomatik uygulanır.</div>';
-  // ── Çözüm Modu: nonlineer eğrilerin kullanılıp kullanılmayacağını AÇIKÇA seç ──
-  var _sm=node.data.solveMode||'auto';
-  html+='<div style="margin-bottom:10px;">';
-  html+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Çözüm modu</div>';
-  html+='<select onchange="veMntSetSolveMode(\''+node.id+'\',this.value)" style="width:100%; padding:6px 8px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-  [['auto','Otomatik — eğri tanımlıysa nonlineer'],
-   ['nonlinear','Nonlineer — tanımlı eğrileri kullan (Newton)'],
-   ['linear','Lineer — eğrileri yok say (statik rijitlik)']
-  ].forEach(function(o){ html+='<option value="'+o[0]+'"'+(_sm===o[0]?' selected':'')+'>'+o[1]+'</option>'; });
-  html+='</select>';
-  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Nonlineer eğriler <b>Takoz Özellikleri</b>\'nde tanımlanır. Bu seçim yalnız ▶ Hesapla ile uygulanır.</div>';
-  html+='</div>';
-  // ── Sönüm oranı ζ: TÜM montaj için TEK değer (şirket kabulü) ──
-  // Takoz başına ayrı girilmez; her takozun c katsayısı bundan türetilir
-  // (çekirdek mountDamping: c = 2ζ√(k_dyn·m_pay)).
-  var _z = (node.data.zeta==null || node.data.zeta==='') ? '' : node.data.zeta;
-  var _zd = _mntZetaDefault();
-  html+='<div style="margin-bottom:10px;">';
-  html+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Sönüm oranı ζ <span style="font-weight:400; color:var(--text-muted);">— tüm takozlar için tek değer</span></div>';
-  html+='<input type="text" inputmode="decimal" min="0" max="1" step="0.001" value="'+_mntEsc(_z)+'" placeholder="'+_mntFmt(_zd,3)+'" '
-      + 'onchange="veMntSetZeta(\''+node.id+'\',this.value)" '
-      + 'style="width:100%; padding:6px 8px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
-  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Şirket kabulü olarak tüm montaja uygulanır (boş → '+_mntFmt(_zd,3)+'). Her takozun sönüm katsayısı <b>c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>)</b> ile buradan türetilir; ayrıca girilmez. Raporda tablo olarak çıkar.</div>';
-  html+='</div>';
-  // ── Şok darbesi: tepe ivme + süre ──
-  // Sonuçlar'daki geçici rejim analizinin girdisi. Varsayılan 3 g / 20 ms,
-  // tedarikçi raporlarının (AMC) kullandığı darbedir. Yalnız Sonuçlar'daki
-  // şok kanallarını etkiler; yük durumlarına ve modal çözüme DOKUNMAZ.
-  var _sg = (node.data.shockG==null || node.data.shockG==='') ? '' : node.data.shockG;
-  var _ss = (node.data.shockMs==null || node.data.shockMs==='') ? '' : node.data.shockMs;
-  html+='<div style="margin-bottom:10px;">';
-  html+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Şok darbesi <span style="font-weight:400; color:var(--text-muted);">— geçici rejim analizi</span></div>';
-  html+='<div style="display:flex; gap:6px;">';
-  html+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
-      + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">tepe ivme [g]</span>'
-      + '<input type="text" inputmode="decimal" min="0" step="0.1" value="'+_mntEsc(_sg)+'" placeholder="'+MNT_SHOCK_G+'" '
-      + 'onchange="veMntSetShock(\''+node.id+'\',\'shockG\',this.value)" style="width:100%; '+_MNT_INP+'"></label>';
-  html+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
-      + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">süre [ms]</span>'
-      + '<input type="text" inputmode="decimal" min="0" step="1" value="'+_mntEsc(_ss)+'" placeholder="'+MNT_SHOCK_MS+'" '
-      + 'onchange="veMntSetShock(\''+node.id+'\',\'shockMs\',this.value)" style="width:100%; '+_MNT_INP+'"></label>';
-  html+='</div>';
-  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Yarım sinüs darbe (şok deneylerinin standardı). Boş → <b>'+MNT_SHOCK_G+' g / '+MNT_SHOCK_MS+' ms</b>. Sonuçlar\'da <b>şok yanıtı</b> kanallarını üretir; yük durumlarına ve modal çözüme etkisi yoktur.</div>';
-  html+='</div>';
-  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:var(--fs-md); font-weight:700; background:var(--accent-primary); color:var(--on-accent); border:none; cursor:pointer; border-radius:var(--radius-sm);">' + veIkon('play') + ' Hesapla</button>';
-  html+='<div id="ve-mnt-results"></div>';
-  html+='</div>';
-  return html;
+  var S=veMntSonucDurumu();
+  var R=(S.R && S.R.solverId===node.id) ? S.R : null;   // başka çözücünün sonucu bu pencerenin değil
+  var D=_mntCozucuDurumlari(node, R, S);
+  var sekmeler=[
+    { k:'dur', ad:'Yük durumları', govde:_mntCozucuDurumSekme(node, R, S), durum:D.dur, sonuc:true },
+    { k:'mod', ad:'Modlar', govde:_mntCozucuModSekme(node, R, S), durum:D.mod, sonuc:true },
+    { k:'ayar', ad:'Ayarlar', govde:_mntCozucuAyarSekme(node), durum:D.ayar }
+  ];
+  var yan=_mntUygunlukHTML(node.id, S)
+    + '<button type="button" class="ve-fp-solve" id="ve-mnt-hesapla-'+node.id+'" onclick="veMntSolverCompute(\''+node.id+'\')">'
+    + veIkon('play')+' Hesapla</button>'
+    + '<div class="ve-fp-solve-not" id="ve-mnt-cnot-'+node.id+'" data-tazele>'+_mntEsc(_mntCozucuNotu(node, S))+'</div>'
+    + _mntOnDenetimHTML(node);
+  return _mntPencereKabuk(node, sekmeler, yan, '');
 }
 
 // Şok darbesi girdisi (tepe ivme [g] / süre [ms]). Boş/geçersiz → alan silinir
@@ -3507,7 +4645,10 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
                   ms:_mntNum((prep.solver.data||{}).shockMs, MNT_SHOCK_MS) },
           matrixMode:((prep.solver.data&&prep.solver.data.matrixMode)||'delta'), solveMode:prep.mode,
           solvedNL:prep.solvedNL, nlNoCurve:prep.nlNoCurve, solverId:prep.solver.id,
-          zeta:prep.zeta };
+          zeta:prep.zeta,
+          // Çözümün HANGİ modele ait olduğu (veMntSonucDurumu). Hazırlık
+          // anının girdisi: hesap sürerken yapılan düzenleme sonucu bayatlatır.
+          imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data) };
   // ── Takoz sönüm katsayıları — TEK ζ'den türetilir (çekirdek mountDamping).
   // Yük payı STATİK durumdan alınır; Static çözülemediyse damping null kalır
   // (yük payı bilinmeden c türetilemez — uydurma değer üretilmez).
@@ -3586,161 +4727,90 @@ function _mntCaseIterLabel(rc, prep){
   }
   return 'lineer'+((ck.clampCount>0)?(' · '+ck.clampCount+' durdurucu'):'');
 }
-// İlerleme çubuğu HTML'i (async çözüm sırasında #ve-mnt-results'a basılır).
-function _mntSolverProgressHTML(done, total, label, sub, prep){
-  var pct=Math.max(0, Math.min(100, Math.round(100*done/Math.max(1,total))));
-  var accent=prep.solvedNL ? 'var(--accent-danger)' : 'var(--accent-primary)';
-  var modeTxt=prep.solvedNL ? 'Nonlineer · Newton-Raphson' : 'Lineer';
-  var h='<div style="padding:11px 12px; border:1px solid var(--border-color); background:var(--bg-secondary); border-radius:var(--radius-md);">';
-  h+='<div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;">'
-    + '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);">Çözülüyor…</span>'
-    + '<span style="font-size:var(--fs-micro); color:var(--text-muted);">'+done+' / '+total+' · %'+pct+'</span></div>';
-  h+='<div style="height:8px; background:var(--bg-tertiary); border-radius:var(--radius-sm); overflow:hidden;">'
-    + '<div style="height:100%; width:'+pct+'%; background:'+accent+'; transition:width 0.12s linear;"></div></div>';
-  h+='<div style="margin-top:6px; font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; justify-content:space-between; gap:8px;">'
-    + '<span style="font-weight:600;">'+_mntEsc(label)+'</span>'
-    + '<span style="color:var(--text-muted);">'+_mntEsc(sub||'')+'</span></div>';
-  h+='<div style="margin-top:3px; font-size:var(--fs-micro); color:var(--text-muted);">'+modeTxt+' · '+(prep.mounts?prep.mounts.length:0)+' takoz</div>';
-  h+='</div>';
-  return h;
+// İLERLEME DÜĞMENİN İÇİNDE. Eskiden ayrı bir kutu #ve-mnt-results'a
+// basılıyordu; müfettiş sütununda Hesapla alta yapışık ve her sekmede
+// görünürken kutu içeriğin dibine düşüyor ve kaydırmadan görünmüyordu.
+// Oran `--ilerleme` ile VERİ olarak yazılır, görünüm CSS'te
+// (`.ve-fp-solve[aria-busy]`). total=0 düğmeyi bırakır.
+function _mntHesaplaIlerleme(btn, done, total, label){
+  if(!btn) return;
+  if(total>0){
+    var pct=Math.max(0, Math.min(100, Math.round(100*done/total)));
+    btn.setAttribute('aria-busy', 'true');
+    btn.style.setProperty('--ilerleme', pct+'%');
+    btn.innerHTML=veIkon('play')+' Çözülüyor · '+done+' / '+total;
+    if(label) btn.title=label;
+  } else {
+    btn.removeAttribute('aria-busy');
+    btn.style.removeProperty('--ilerleme');
+    btn.removeAttribute('title');
+    btn.innerHTML=veIkon('play')+' Hesapla';
+  }
 }
 
-// Çözücüyü çalıştır → #ve-mnt-results'a önce CANLI İLERLEME ÇUBUĞU, sonra KOMPAKT
-// DURUM bas. ASYNC: yük durumlarını adım adım çözüp ilerlemeyi (ve nonlineerde her
-// durumun Newton iterasyon sayısını) canlı gösterir. Ayrıntılı sonuç → Rapor.
-// Hesap yalnız bu fonksiyonla (▶ Hesapla) koşar.
+// Çözücüyü çalıştır. ASYNC: yük durumlarını adım adım çözüp ilerlemeyi (ve
+// nonlineerde her durumun Newton iterasyonunu) düğmede gösterir; bitince açık
+// pencere YERİNDE tazelenir — sekmeler, uygunluk, takozların çökmesi.
+// Hesap yalnız bu fonksiyonla (Hesapla) koşar.
 async function veMntSolverCompute(solverId){
-  var out=(typeof document!=='undefined') ? document.getElementById('ve-mnt-results') : null;
+  var btn=(typeof document!=='undefined' && document.getElementById) ? document.getElementById('ve-mnt-hesapla-'+solverId) : null;
+  if(btn && btn.getAttribute('aria-busy')==='true') return null;     // çift tık: koşan hesap sürer
   var prep=_mntPrepareSolve(solverId);
-  if(!prep){ if(out) out.innerHTML=''; return null; }
-  if(prep.error){ _mntForgetResults(); var Rerr={ error:prep.error, gather:prep.gather };
-    if(out) out.innerHTML=_mntSolverStatusHTML(Rerr); return Rerr; }
+  if(!prep){ veMntPencereTazele(); return null; }
+  if(prep.error){
+    _mntForgetResults(); veMntPencereTazele();
+    return { error:prep.error, gather:prep.gather };
+  }
   var total=prep.loadCases.length + prep.gearDefs.length + prep.designDefs.length + 1; // +modal
-  var done=0;
-  function step(label, sub){ done++; if(out) out.innerHTML=_mntSolverProgressHTML(done, total, label, sub, prep); }
+  var done=0, R=null;
+  function step(label, sub){ done++; _mntHesaplaIlerleme(btn, done, total, label+(sub ? ' · '+sub : '')); }
   var worst={ iters:0, name:'', trace:null };   // en çok iterasyon yapan durum (residual izi)
-  // 1) Ana yük durumları — nonlineerde her durumun Newton residual izini yakala
-  var allCases=[];
-  for(var i=0;i<prep.loadCases.length;i++){
-    var lc=prep.loadCases[i], trace=[];
-    var rc=prep.solveOne(lc, prep.solvedNL ? function(iter, res){ trace.push(res); } : null);
-    allCases.push(rc);
-    var it=(rc.res && rc.res.checks && rc.res.checks.newtonIters) || 0;
-    if(prep.solvedNL && it>worst.iters){ worst={ iters:it, name:lc.name, trace:trace.slice() }; }
-    step(lc.name, _mntCaseIterLabel(rc, prep));
-    await _mntYield();
+  try {
+    // 1) Ana yük durumları — nonlineerde her durumun Newton residual izini yakala
+    var allCases=[];
+    for(var i=0;i<prep.loadCases.length;i++){
+      var lc=prep.loadCases[i], trace=[];
+      var rc=prep.solveOne(lc, prep.solvedNL ? function(iter, res){ trace.push(res); } : null);
+      allCases.push(rc);
+      var it=(rc.res && rc.res.checks && rc.res.checks.newtonIters) || 0;
+      if(prep.solvedNL && it>worst.iters){ worst={ iters:it, name:lc.name, trace:trace.slice() }; }
+      step(lc.name, _mntCaseIterLabel(rc, prep));
+      await _mntYield();
+    }
+    // 2) Vites tork durumları (Kriter 3)
+    var gearCases=[];
+    for(var gi=0; gi<prep.gearDefs.length; gi++){
+      var glc=prep.gearDefs[gi], grc=prep.solveOne(glc);
+      gearCases.push(grc); step(glc.name, _mntCaseIterLabel(grc, prep)); await _mntYield();
+    }
+    // 3) Tasarım yük durumları (Kriter 4)
+    var designCases=[];
+    for(var di=0; di<prep.designDefs.length; di++){
+      var dlc=prep.designDefs[di], drc=prep.solveOne(dlc);
+      designCases.push(drc); step(dlc.name, _mntCaseIterLabel(drc, prep)); await _mntYield();
+    }
+    // 4) Modal analiz
+    var modes=prep.solveModes(allCases);
+    step('Modal analiz', prep.solvedNL ? 'tanjant rijitlik' : 'K_dyn'); await _mntYield();
+    R=_mntAssembleR(prep, allCases, modes, gearCases, designCases);
+    R._worstIter=worst;   // Newton yakınsama özeti için
+  } finally {
+    _mntHesaplaIlerleme(btn, 0, 0, null);
   }
-  // 2) Vites tork durumları (Kriter 3)
-  var gearCases=[];
-  for(var gi=0; gi<prep.gearDefs.length; gi++){
-    var glc=prep.gearDefs[gi], grc=prep.solveOne(glc);
-    gearCases.push(grc); step(glc.name, _mntCaseIterLabel(grc, prep)); await _mntYield();
-  }
-  // 3) Tasarım yük durumları (Kriter 4)
-  var designCases=[];
-  for(var di=0; di<prep.designDefs.length; di++){
-    var dlc=prep.designDefs[di], drc=prep.solveOne(dlc);
-    designCases.push(drc); step(dlc.name, _mntCaseIterLabel(drc, prep)); await _mntYield();
-  }
-  // 4) Modal analiz
-  var modes=prep.solveModes(allCases);
-  step('Modal analiz', prep.solvedNL ? 'tanjant rijitlik' : 'K_dyn'); await _mntYield();
-  var R=_mntAssembleR(prep, allCases, modes, gearCases, designCases);
-  R._worstIter=worst;   // profesyonel yakınsama özeti için
-  if(out) out.innerHTML=_mntSolverStatusHTML(R);
+  veMntPencereTazele();
   // Sonuçlar ağacını BURADAN TAZELEMEYİZ — bilerek.
   //
   // veUpdateResultsTree ilk işi olarak veSaveActiveTabStateKeepView'i çağırır;
   // o da veSaveActiveTabState → veMntCollapseToRoot zincirini işletir
-  // (js/topology.js:122). Yani "▶ Hesapla"ya basan kullanıcı ALT TOPOLOJİDEyken
-  // kanvas köke çökertilir, DOM yeniden kurulur ve az önce bu satırda basılan
-  // çözüm durumu ekrandan silinir. (KeepView sonradan geri getirir ama araya
-  // tam bir serileştir-yükle turu girer — bkz. tests/unit/topology-save-
+  // (js/topology.js:122). Yani "Hesapla"ya basan kullanıcı ALT TOPOLOJİDEyken
+  // kanvas köke çökertilir, DOM yeniden kurulur ve az önce tazelenen pencere
+  // ekrandan silinir. (KeepView sonradan geri getirir ama araya tam bir
+  // serileştir-yükle turu girer — bkz. tests/unit/topology-save-
   // reentrancy.test.js, aynı zincirin daha önce dosya bozduğu yer.)
   //
   // Tazelemeye gerek de yok: kullanıcı Sonuçlar sayfasına geçtiğinde
   // veEnterResults zaten sekmeleri ve ağacı kuruyor (js/tabs.js:56).
   return R;
-}
-
-// Kompakt çözüm durumu — büyük sonuç dökümü değil. Model çözüldüyse özet
-// (kütle/CG + kütle/takoz/durum/mod sayıları) + varsa mühendislik notları
-// (çekme, durdurucu, ±10 mm aşımı, modal f≈0, yakınsama). Ayrıntı → Rapor.
-function _mntSolverStatusHTML(R){
-  if(R.error){
-    return '<div style="padding:10px 12px; background:color-mix(in srgb, var(--accent-warning) 12%, transparent); border:1px solid var(--accent-warning); color:var(--ink-warning); font-size:var(--fs-body); line-height:1.5;"><b>Çözülemedi — eksik/geçersiz girdi:</b><ul style="margin:6px 0 0 16px; padding:0;">'
-      + R.error.map(function(p){return '<li>'+_mntEsc(p)+'</li>';}).join('')
-      + '</ul><div style="margin-top:6px; color:var(--text-muted);">İç topolojide Kütle ve Takoz bileşenleri bulunmalı ve geçerli değerler girilmelidir.</div></div>';
-  }
-  var mp=R.mp, cgmm=mp.cg.map(function(v){return v*1000;});
-  var nC=(R.gather && R.gather.components ? R.gather.components.length : 0);
-  var nM=(R.mounts||[]).length, nCase=(R.allCases||[]).length, nMode=(R.modes||[]).length;
-  // Durum-bazında uyarı toplulaştırması.
-  var failed=0, notConv=0, tension=0, clamp=0, overlin=0;
-  (R.allCases||[]).forEach(function(rc){
-    if(!rc.res){ failed++; return; }
-    var ck=rc.res.checks||{};
-    if(ck.converged===false || ck.stopConverged===false) notConv++;
-    if(ck.tensionCount>0) tension++;
-    if(ck.clampCount>0) clamp++;
-    if(ck.overLinearCount>0) overlin++;
-  });
-  var modalWarn=(R.modes||[]).filter(function(m){return m && m.warning;}).length;
-
-  var h='<div style="padding:9px 11px; border:1px solid var(--accent-success); background:color-mix(in srgb, var(--accent-success) 10%, transparent); border-radius:var(--radius-sm);">';
-  h+='<div style="display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; font-size:var(--fs-body); font-weight:700; color:var(--ink-success);"><span>' + veIkon('check') + ' Çözüldü</span>'
-    + '<span style="font-weight:400; color:var(--text-muted); font-size:var(--fs-micro);">'+nC+' kütle · '+nM+' takoz · '+nCase+' yük durumu · '+nMode+' mod</span></div>';
-  h+='<div style="margin-top:5px; font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">'
-    + 'Toplam kütle <b style="color:var(--text-primary);">'+_mntFmt(mp.m,1)+' kg</b> · '
-    + 'CG (<b style="color:var(--text-primary);">'+_mntFmt(cgmm[0],0)+'; '+_mntFmt(cgmm[1],0)+'; '+_mntFmt(cgmm[2],0)+'</b>) mm</div>';
-  var modeLbl = R.solveMode==='linear' ? 'Lineer — eğriler yok sayıldı'
-    : R.solveMode==='nonlinear' ? (R.solvedNL ? 'Nonlineer (Newton)' : 'Nonlineer seçildi — eğri yok, lineer')
-    : (R.solvedNL ? 'Otomatik → Nonlineer (Newton)' : 'Otomatik → Lineer');
-  h+='<div style="margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">Çözüm modu: <b style="color:'+(R.solvedNL?'var(--ink-danger)':'var(--text-secondary)')+';">'+_mntEsc(modeLbl)+'</b></div>';
-  if(Number.isFinite(R.zeta)){
-    var _dOk=(R.damping&&R.damping.length);
-    h+='<div style="margin-top:3px; font-size:var(--fs-micro); color:var(--text-muted);">Sönüm oranı: <b style="color:var(--text-secondary);">ζ = '+_mntFmt(R.zeta,3)+'</b>'
-      + (_dOk ? ' · '+R.damping.length+' takozun c katsayısı türetildi'
-              : ' <span style="color:var(--ink-warning);">· statik durum çözülemedi, c türetilemedi</span>')+'</div>';
-  }
-  h+='</div>';
-
-  var warns=[];
-  if(R.nlNoCurve) warns.push(['info', 'Nonlineer seçildi ama hiç eğri tanımlı değil → lineer çözüldü. Takoz Özellikleri\'nden z-eğrisi ekleyin.', 'var(--accent-warning)']);
-  if(failed)    warns.push(['x', failed+' yük durumu çözülemedi (K tekil)', 'var(--accent-danger)']);
-  if(notConv)   warns.push(['alert-triangle', notConv+' durumda çözücü yakınsamadı', 'var(--accent-danger)']);
-  if(tension)   warns.push(['arrow-up', tension+' durumda çekme / lift-off', 'var(--accent-warning)']);
-  if(clamp)     warns.push(['square', clamp+' durumda metal-metal durdurucu', 'var(--accent-warning)']);
-  if(overlin)   warns.push(['trending-up', overlin+' durumda ±10 mm lineer bandı aşıldı', 'var(--accent-warning)']);
-  if(modalWarn) warns.push(['activity', modalWarn+' modda f≈0 (serbest mod) uyarısı', 'var(--accent-warning)']);
-  if(warns.length){
-    h+='<div style="margin-top:8px; padding:8px 10px; border:1px solid var(--border-color); background:var(--bg-secondary); border-radius:var(--radius-sm); font-size:var(--fs-tiny); line-height:1.65; color:var(--text-secondary);">';
-    h+='<div style="font-weight:700; color:var(--text-heading); margin-bottom:2px; font-size:var(--fs-tiny);">Notlar</div>';
-    warns.forEach(function(w){ h+='<div><span style="display:inline-block; width:16px; color:'+w[2]+';">'+veIkon(w[0])+'</span>'+_mntEsc(w[1])+'</div>'; });
-    h+='</div>';
-  }
-
-  // ── Yakınsama özeti (yalnız nonlineer): en çok iterasyon + residual izi ──
-  if(R.solvedNL){
-    var maxIt=0, maxName='';
-    (R.allCases||[]).forEach(function(rc){
-      var it=rc.res && rc.res.checks && rc.res.checks.newtonIters;
-      if(it>maxIt){ maxIt=it; maxName=rc.name; }
-    });
-    if(maxIt>0){
-      h+='<div style="margin-top:8px; padding:8px 10px; border:1px solid var(--accent-danger); background:rgba(239,68,68,0.06); border-radius:var(--radius-sm); font-size:var(--fs-micro); line-height:1.6; color:var(--text-secondary);">';
-      h+='<div style="font-weight:700; color:var(--text-heading); font-size:var(--fs-tiny); margin-bottom:2px;">Yakınsama · Newton-Raphson</div>';
-      h+='En çok iterasyon: <b style="color:var(--text-primary);">'+maxIt+'</b> ('+_mntEsc(maxName)+' durumu).';
-      var tr=(R._worstIter && R._worstIter.trace && R._worstIter.trace.length) ? R._worstIter.trace : null;
-      if(tr){
-        h+='<div style="margin-top:3px;">Artık ‖r‖: <span style=" color:var(--text-primary);">'
-          + tr.map(function(v){ return _mntSci(v); }).join(' → ')+'</span> N</div>';
-      }
-      h+='</div>';
-    }
-  }
-  h+='<div style="margin-top:8px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45;">Çökme matrisi, mod şekilleri ve kriter değerlendirmesi <b>Rapor</b> bileşenindedir.</div>';
-  return h;
 }
 
 // ─── Render yardımcıları ─────────────────────────────────────────────────────
@@ -3798,6 +4868,39 @@ if(typeof module!=='undefined' && module.exports){
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
     _mntMountCurveNote: _mntMountCurveNote,
+    // Pencere dili (2026-10-14): imza, canlı model, kroki, durumlar, tazeleme
+    _mntImza: _mntImza,
+    veMntSonucDurumu: veMntSonucDurumu,
+    _mntTakozSonucu: _mntTakozSonucu,
+    _mntCanliModel: _mntCanliModel,
+    _mntAtalet: _mntAtalet,
+    _mntOranYayilim: _mntOranYayilim,
+    _MNT_ORAN_YAYILIM_SINIR: _MNT_ORAN_YAYILIM_SINIR,
+    _mntKutuphaneEslesme: _mntKutuphaneEslesme,
+    _mntGatherTorqueKaynakli: _mntGatherTorqueKaynakli,
+    _mntGolgelenen: _mntGolgelenen,
+    _mntMotorSapma: _mntMotorSapma,
+    _mntTorkZinciri: _mntTorkZinciri,
+    _mntKrokiHTML: _mntKrokiHTML,
+    VE_MNT_KROKI_GOR: VE_MNT_KROKI_GOR,
+    VE_MNT_PENCERE_SEKME: VE_MNT_PENCERE_SEKME,
+    veMntKrokiGor: veMntKrokiGor,
+    veMntPencereSekme: veMntPencereSekme,
+    veMntEksikGit: veMntEksikGit,
+    veMntPencereTazele: veMntPencereTazele,
+    _mntUygunlukHTML: _mntUygunlukHTML,
+    _mntTakozUygunlukHTML: _mntTakozUygunlukHTML,
+    _mntKutleDurumu: _mntKutleDurumu,
+    _mntMotorDurumu: _mntMotorDurumu,
+    _mntVitesDurumu: _mntVitesDurumu,
+    _mntTahrikDurumu: _mntTahrikDurumu,
+    _mntPtoDurumu: _mntPtoDurumu,
+    _mntTakozYerDurumu: _mntTakozYerDurumu,
+    _mntTakozYukDurumu: _mntTakozYukDurumu,
+    _mntCozucuDurumlari: _mntCozucuDurumlari,
+    _mntOnDenetim: _mntOnDenetim,
+    _mntCozumModuEtiketi: _mntCozumModuEtiketi,
+    _mntHesaplaIlerleme: _mntHesaplaIlerleme,
     getMntLibraryPropertiesHTML: getMntLibraryPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
     veMntSetSolveMode: veMntSetSolveMode,

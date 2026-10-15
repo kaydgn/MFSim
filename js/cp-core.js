@@ -155,15 +155,15 @@ function clearSelection() {
 // `mnt-2dview` ile `mnt-library` görüntüleyici oldukları için KALICI olarak
 // burada (bkz. docs/decisions/ortak-yuzeyler.md → "Müfettiş tuvalin YANINDADIR").
 var VE_SUTUNA_SIGMAYAN = ['engine', 'ec-matching', 'gear-shift', 'shift-controller', 'gearbox',
-  'acc-ac', 'acc-alternator', 'acc-aircomp', 'road', 'mnt-example', 'mnt-pto-group',
+  'acc-ac', 'acc-alternator', 'acc-aircomp', 'road', 'mnt-example',
   'mnt-2dview', 'mnt-library',
   // TAŞMAYAN AMA EZİLEN — okunurluk ölçüsü (girdi < 56 px) ekleyince çıktı:
-  // araç adı 40 px'lik kutuda, konvertör tablosunda 13 px, Takoz'un altılı
-  // ızgarasında "550.03" 46 px'e sığmıyor. Kendi kategori tasarımları gelene
-  // dek modal (kullanıcı sırası: önce FEAD).
-  'vehicle', 'torque-converter', 'transfer',
-  'mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount',
-  'mnt-shaft', 'mnt-pto', 'mnt-pump'];
+  // araç adı 40 px'lik kutuda, konvertör tablosunda 13 px. Kendi kategori
+  // tasarımları gelene dek modal (kullanıcı sırası: önce FEAD, sonra Takoz).
+  // Takoz'un sekiz kütle tipi ve Takoz 2026-10-14'te ÇIKTI: pencereleri FEAD
+  // kabuğu + föy diliyle yeniden kuruldu (altılı ızgaradaki "550.03" 46 px'e
+  // sığmıyordu; föyde eksen başına bir satır).
+  'vehicle', 'torque-converter', 'transfer'];
 
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
   // Aksesuarlar — iki sütun (model/oran | güç-çekişi grafiği)
@@ -171,6 +171,9 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
+  // Çözücü artık sekmeli bir pencere (yük kitabı · modlar · ayarlar) — FEAD
+  // çözücüsü gibi geniş; dar "eylem kartı" listesinden çıktı.
+  'mnt-solver',
   // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri.
   //
   // KASNAKLAR VE ÇÖZÜCÜ LİSTEDE DEĞİLDİ ve eksiklik bir karar değil bir
@@ -188,7 +191,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
 
 // Hafif paneller — içerik az (kısa metin / birkaç alan / tek eylem): geniş yerine
 // DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
-var VE_COMPACT_PANEL_TYPES = ['mnt-solver', 'mnt-report', 'mount-analysis',
+var VE_COMPACT_PANEL_TYPES = ['mnt-report', 'mount-analysis',
   'fead-analysis', 'fead-report',
   'fead-wizard',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];

@@ -32,9 +32,12 @@ const MODULLER = {
          + " ex.data = ex.data || {}; ex.data.exampleKey = 'isb340_tc411'; veApLoadExample(ex.id);",
     tip: (t) => !/^(mnt-|fead-)/.test(t),
   },
+  // Takoz pencereleri son çözümün tablolarını taşıyor (yük kitabı, takoz başına
+  // çökme, modlar) — ÇÖZÜMSÜZ ölçmek o tabloları hiç ölçmemek olurdu.
   'mount-analysis': {
     ornek: "let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);"
-         + " ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);",
+         + " ex.data = ex.data || {}; ex.data.exampleKey = 'tulga'; veMntLoadExample(ex.id);"
+         + " setTimeout(() => { const s = nodes.find((x) => x.type === 'mnt-solver'); if (s) veMntSolverCompute(s.id); }, 1200);",
     tip: (t) => /^mnt-/.test(t),
   },
   'fead-analysis': {
@@ -199,8 +202,9 @@ for (const [modul, M] of Object.entries(MODULLER)) {
     expect(tasan).toEqual([]);
     expect(okunmaz).toEqual([]);
     expect(listedeAmaSutunda).toEqual([]);
-    // BOŞLUK BEKÇİSİ: tarama sütunu GERÇEKTEN kullandı (Takoz'da bilerek yalnız 4
-    // pencere sütunda — gerisi kendi tasarımına kadar modal).
-    expect(olcum.filter((r) => r.sutun).length).toBeGreaterThanOrEqual(3);
+    // BOŞLUK BEKÇİSİ: tarama sütunu GERÇEKTEN kullandı. Takoz'da 2026-10-14'ten
+    // beri kütle gövdeleri, Takoz ve Çözücü de sütunda (FEAD kabuğu + föy);
+    // modal kalanlar görüntüleyiciler ve Örnek (VE_SUTUNA_SIGMAYAN).
+    expect(olcum.filter((r) => r.sutun).length).toBeGreaterThanOrEqual(modul === 'mount-analysis' ? 10 : 3);
   });
 }
