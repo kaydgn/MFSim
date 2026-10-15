@@ -71,7 +71,7 @@ var VE_GUIDE_MOUNT_SECTIONS = [
   ['m12', '12',   'Rapor üretmek'],
   ['m13', '13',   'Sık yapılan hatalar'],
   ['m14', '14',   'Sayısal örnek: BMC SİPER'],
-  ['mEk', 'Ek A', 'Alan → Panel hızlı başvurusu']
+  ['mEk', 'Ek A', 'Alan → pencere hızlı başvurusu']
 ];
 
 function _gmH2(i){
@@ -134,8 +134,8 @@ function _gmSec2(){
   h += '<h3>2.1 Bileşenler</h3>';
   h += _gmAlanTablo('İç topolojideki bileşenler', [
     ['<strong>Kütle gövdeleri</strong>', 'Motor · Şanzıman · Şaft · Braket · Transfer · '
-      + 'PTO · Pompa · PTO grubu', 'Hepsi aynı kütle/CG/atalet panelini taşır; farkları '
-      + 'tahrik şeridinde'],
+      + 'PTO · Pompa · PTO grubu', 'Hepsi aynı “Kütle ve atalet” sekmesini taşır; farkları '
+      + 'ikinci sekmede'],
     ['<strong>Takoz</strong>', 'Konum ve üç eksenli rijitlik', 'En az 3, tipik olarak 3–4'],
     ['<strong>Kütüphane</strong>', 'Hazır takoz künyeleri', 'Katalogdan seçip uygulamak için'],
     ['<strong>Çözücü</strong>', 'Çözüm modu, sönüm, şok', 'Tuvalde bir tane'],
@@ -208,28 +208,35 @@ function _gmSec3(){
 
 function _gmSec4(){
   var h = _gmH2(3);
-  h += '<p>Güç grubunun her parçası bir <strong>kütle gövdesi</strong> düğümüdür. Hepsi aynı '
-    + 'paneli taşır; tipe göre değişen tek şey alttaki tahrik şerididir (bölüm 5).</p>';
+  h += '<p>Güç grubunun her parçası bir <strong>kütle gövdesi</strong> düğümüdür. Penceresi '
+    + 'sağdaki sütunda açılır. Hepsinin ilk sekmesi aynıdır (<strong>Kütle ve atalet</strong>); '
+    + 'tipe göre değişen tek şey ikinci sekmedir (bölüm 5). Sekmelerin üstündeki '
+    + '<strong>Güç grubundaki yeri</strong> krokisi gövdeyi modelin geri kalanıyla, birleşik '
+    + 'ağırlık merkezine uzaklığıyla birlikte gösterir — üstten ya da yandan.</p>';
   h += _gmAdimlar([
     'Gövdeye çift tıklayın.',
-    '<strong>Kütle &amp; ağırlık merkezi</strong> kartına kütleyi (kg) ve CG’yi (mm, x/y/z) '
-      + 'yazın.',
-    'Gövde ince ya da hafifse <strong>Nokta kütle</strong> anahtarını açın — atalet tensörü '
+    '<strong>Kütle ve atalet</strong> sekmesinde kütleyi (kg) ve <strong>Ağırlık merkezi</strong> '
+      + 'föyüne CG’yi (mm, x/y/z) yazın — yanındaki sütun birleşik ağırlık merkezine farkı gösterir.',
+    'Gövde ince ya da hafifse <strong>Nokta kütle</strong> kutusunu işaretleyin — atalet tensörü '
       + 'sıfır kabul edilir.',
-    'Aksi hâlde sağdaki <strong>Atalet tensörü</strong> kartına köşegen (I<sub>xx</sub>, '
+    'Aksi hâlde <strong>Atalet tensörü</strong> matrisinin üst üçgenine köşegen (I<sub>xx</sub>, '
       + 'I<sub>yy</sub>, I<sub>zz</sub>) ve çarpım (I<sub>xy</sub>, I<sub>xz</sub>, '
-      + 'I<sub>yz</sub>) terimlerini kg·m² cinsinden girin.'
+      + 'I<sub>yz</sub>) terimlerini kg·m² cinsinden girin; alt üçgen simetriden kendiliğinden dolar.',
+    'Sekme adının altındaki durum satırını okuyun: boş bir alan çözücüde 0 demektir ve '
+      + 'sekme bunu <strong>eksik</strong> diye söyler.'
   ]);
-  h += _gmAlanTablo('Kütle gövdesi paneli — alanlar', [
+  h += _gmAlanTablo('Kütle gövdesi penceresi — alanlar', [
     ['Kütle [kg]', 'Parçanın kütlesi', 'CAD ölçümü ya da parça künyesi'],
-    ['Ağırlık Merkezi (CG) [mm]', 'x / y / z — <strong>modelin ortak çerçevesinde</strong>',
+    ['Ağırlık merkezi [mm]', 'x / y / z — <strong>modelin ortak çerçevesinde</strong>',
       'CAD ölçümü (CATIA <em>Measure Inertia</em> gibi)'],
     ['Nokta kütle', 'Atalet ihmal edilsin mi',
       'Şaft, PTO parçası gibi ince/hafif gövdeler için uygun'],
     ['Atalet köşegen [kg·m²]', 'I<sub>xx</sub> · I<sub>yy</sub> · I<sub>zz</sub>',
       'CAD ölçümü — <strong>parçanın KENDİ CG’sinde</strong>'],
     ['Atalet çarpım [kg·m²]', 'I<sub>xy</sub> · I<sub>xz</sub> · I<sub>yz</sub>',
-      'Simetrik gövdelerde çoğu sıfırdır']
+      'Simetrik gövdelerde çoğu sıfırdır'],
+    ['Asal momentler · eşdeğer kutu', 'Tensörden türetilir (salt okunur)',
+      'Tensör fiziksel değilse (ör. I<sub>yy</sub> + I<sub>zz</sub> &lt; I<sub>xx</sub>) sekme uyarır']
   ]);
   h += _gmUyari('Atalet PARÇANIN KENDİ CG’sinde girilir',
       'Program gövdeleri birleştirirken <strong>paralel-eksen teoremini</strong> kendisi '
@@ -238,7 +245,7 @@ function _gmSec4(){
     + 'atalet şişer. Belirtisi yalnız modal analizde görünür: dönme modları beklenenden '
     + '<strong>düşük</strong> çıkar. Çökme sonuçları etkilenmez — bu yüzden hata sessizdir.');
   h += _gmNot('Birimler: kg · mm · kg·m² · N/mm',
-      'Panel bu birimlerde çalışır ve çekirdeğe geçerken SI’ya çevirir. Atalet '
+      'Pencere bu birimlerde çalışır ve çekirdeğe geçerken SI’ya çevirir. Atalet '
     + '<strong>kg·m²</strong>’dir (kg·mm² değil): 10⁶ kat fark eder ve karıştırıldığında '
     + 'dönme modları anlamsız yerlere gider.');
   return h;
@@ -247,14 +254,18 @@ function _gmSec4(){
 function _gmSec5(){
   var h = _gmH2(4);
   h += '<p>Bazı kütle gövdeleri, kütlelerine ek olarak <strong>tork</strong> üretir ya da '
-    + 'iletir. Bu bilgiler panelin alt şeridinde, tipe göre değişen bir kartta durur.</p>';
-  h += _gmAlanTablo('Tahrik kartları', [
-    ['Motor · Tahrik', 'Motor torku ve stall oranı', 'Motor künyesi ve konvertör'],
-    ['Şanzıman · Vites oranları', 'Vites başına oran', 'Şanzıman künyesi'],
-    ['Transfer Kutusu · Tahrik', 'Transfer oranı', 'Transfer künyesi'],
-    ['PTO grubu · Giriş yolu', 'PTO/pompa kütlesinin nasıl verildiği',
+    + 'iletir. Bu bilgiler pencerenin ikinci sekmesindedir; sekme gövdenin tipine göre değişir.</p>';
+  h += _gmAlanTablo('Tipe özel sekmeler', [
+    ['Motor · Motor ve tork', 'Katalog, motor noktaları (tepe tork, maks. güç, rölanti, '
+      + 'silindir sayısı), tork zinciri, ateşleme frekansı', 'Motor künyesi'],
+    ['Şanzıman · Vitesler', 'Vites başına oran ve mil torku, stall oranı', 'Şanzıman künyesi ve konvertör'],
+    ['Transfer Kutusu · Tahrik', 'Transfer oranı, aks payı φ', 'Transfer künyesi'],
+    ['PTO grubu · PTO grubu', 'Giriş yolu ve ASR-SR-116 referansı',
       'Toplu ya da parça parça — <strong>ikisi birden değil</strong>']
-  ], ['Kart', 'Ne taşır', 'Nereden']);
+  ], ['Gövde · sekme', 'Ne taşır', 'Nereden']);
+  h += '<p>Motorun <strong>Tork zinciri</strong> föyü, mil torkunu oluşturan her çarpanın '
+    + 'hangi gövdeden okunduğunu yazar. Aynı alan iki gövdede birden doluysa çözücü ilkini '
+    + 'okur ve sekme bunu <strong>çakışma</strong> diye söyler.</p>';
   h += '<p>Tork bilgisi <strong>vites tork durumlarını</strong> üretir: program her vites '
     + 'için tepki torkunu hesaplar ve ayrı bir yük durumu olarak çözer (bölüm 8).</p>';
   h += _gmUyari('PTO kütlesi İKİ KEZ sayılabilir',
@@ -269,24 +280,26 @@ function _gmSec5(){
 function _gmSec6(){
   var h = _gmH2(5);
   h += '<p>Takoz, güç grubunu şasiye bağlayan üç eksenli bir yaydır. Her takoz kendi '
-    + 'konumunu ve üç eksende iki ayrı rijitliğini taşır.</p>';
+    + 'konumunu ve üç eksende iki ayrı rijitliğini taşır. Penceresinin iki sekmesi var: '
+    + '<strong>Takoz ve yeri</strong> (girdiler) ve <strong>Yük durumları</strong> (son '
+    + 'çözümde bu takozun her yük durumundaki çökmesi ve sönüm katsayıları).</p>';
   h += _gmAdimlar([
     'Takoza çift tıklayın.',
-    '<strong>Kütüphane</strong> kartından hazır bir takoz künyesi seçin — konum '
-      + 'HARİÇ bütün alanlar dolar (bölüm 7).',
-    '<strong>Konum</strong> kartına takozun x / y / z koordinatını yazın (mm, modelin '
+    '<strong>Takoz tipi</strong> listesinden hazır bir künye seçin — konum HARİÇ bütün '
+      + 'alanlar dolar (bölüm 7). Altındaki durum satırı değerlerin kaçının künyeyle aynı kaldığını söyler.',
+    '<strong>Konum</strong> föyüne takozun x / y / z koordinatını yazın (mm, modelin '
       + 'ortak çerçevesinde).',
-    'Künye kütüphanede yoksa <strong>Statik rijitlik</strong> ve <strong>Dinamik '
-      + 'Rijitlik</strong> kartlarına üç eksenin değerlerini elle girin (N/mm).',
-    'Elinizde varsa <strong>Taşıma kapasitesi</strong> alanına takozun azami eksenel yükünü '
-      + 'yazın — sonuçlarda kullanım yüzdesi olarak görünür.'
+    'Künye kütüphanede yoksa <strong>Rijitlik</strong> föyüne üç eksenin statik ve dinamik '
+      + 'değerlerini girin (N/mm); her satırın dinamik/statik oranı yanında türetilir.',
+    'Elinizde varsa <strong>Kapasite</strong> bölümüne takozun azami eksenel yükünü '
+      + 'yazın — uygunlukta kullanım yüzdesi olarak görünür.'
   ]);
-  h += _gmAlanTablo('Takoz paneli — alanlar', [
+  h += _gmAlanTablo('Takoz penceresi — alanlar', [
     ['Konum [mm]', 'x / y / z — takozun <strong>elastik merkezi</strong>',
       'Montaj resmi; kütle CG’leriyle <strong>aynı çerçevede</strong>'],
-    ['Statik rijitlik [N/mm]', 'k<sub>x</sub> · k<sub>y</sub> · k<sub>z</sub>',
+    ['Rijitlik · statik [N/mm]', 'k<sub>x</sub> · k<sub>y</sub> · k<sub>z</sub>',
       'Takoz kataloğu — <strong>yavaş yükleme</strong> değeri'],
-    ['Dinamik rijitlik [N/mm]', 'k<sub>x</sub> · k<sub>y</sub> · k<sub>z</sub>',
+    ['Rijitlik · dinamik [N/mm]', 'k<sub>x</sub> · k<sub>y</sub> · k<sub>z</sub>',
       'Aynı katalog — <strong>titreşim frekansındaki</strong> değer'],
     ['Maks. eksenel yük [kg]', 'Takozun taşıyabileceği azami yük',
       'Katalog; boş bırakılabilir, o zaman kullanım yüzdesi basılmaz']
@@ -296,13 +309,14 @@ function _gmSec6(){
     + 'tipik oran 1,4–1,8. Program ikisini ayrı ayrı kullanır: <strong>çökme</strong> statik '
     + 'rijitlikle, <strong>doğal frekanslar</strong> dinamik rijitlikle hesaplanır. İkisine '
     + 'aynı değeri yazarsanız model yine çözülür — ama ya çökme fazla küçük çıkar ya '
-    + 'frekanslar fazla düşük. <strong>Hata verilmez.</strong>');
+    + 'frekanslar fazla düşük. <strong>Hata verilmez.</strong> Pencere oranın eksenler '
+    + 'arasında 1,5 kattan fazla yayıldığını işaretler: eksenlerin takaslı girildiğinin izidir.');
   h += _gmNot('Üç takoz alt sınırdır, dört üst sınır DEĞİLDİR',
       'Rijit gövdeyi 6 serbestlik derecesinde kısıtlamak için en az üç takoz gerekir; daha '
     + 'azında rijitlik matrisi <strong>tekildir</strong> ve çözücü açıkça “singular” der. '
     + 'Dörtten fazla takoz ise <em>aşırı-kısıtlı</em> bir modeldir: çözülür, ama yük dağılımı '
     + 'takozların birbirine göre rijitliğine çok duyarlı hâle gelir. Tipik bir güç grubu 3–4 '
-    + 'takozla bağlanır ve panel bunun dışını uyarı olarak yazar.');
+    + 'takozla bağlanır ve model bunun dışını uyarı olarak yazar.');
   return h;
 }
 
@@ -320,7 +334,7 @@ function _gmSec7(){
     + 'en çok kaçındığı hata sınıfıdır.');
   h += '<h3>7.2 Nonlineer z-eğrisi</h3>';
   h += '<p>Elastomer takozlar büyük çökmede <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
-    + 'doğru değil, yukarı bükülen bir eğridir. Takoz paneline bir '
+    + 'doğru değil, yukarı bükülen bir eğridir. Takoza bir '
     + '<strong>kuvvet–sehim eğrisi</strong> girerseniz çözücü otomatik olarak nonlineer '
     + 'yola (Newton iterasyonu) geçer.</p>';
   h += _gmAlanTablo('Doğrusal ↔ nonlineer', [
@@ -367,26 +381,32 @@ function _gmSec8(){
 
 function _gmSec9(){
   var h = _gmH2(8);
-  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Panel dört karta ayrılır.</p>';
-  h += _gmAlanTablo('Çözücü paneli — kartlar', [
-    ['Çözüm modu', 'Doğrusal ya da nonlineer, metal-metal durdurucu açık/kapalı',
-      'Takozlarda eğri varsa nonlineer kendiliğinden seçilir'],
-    ['Sönüm oranı ζ', 'Modal sönüm oranı', 'Elastomerde tipik 0,05–0,15'],
-    ['Şok darbesi', 'Darbe genliği ve süresi', 'Geçici rejim analizi için'],
-    ['Takoz Özellikleri', 'Çözümün kullandığı künyelerin özeti', 'Salt okunur denetim']
-  ], ['Kart', 'Ne', 'Not']);
+  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencerenin üç sekmesi var; sağ '
+    + 'sütundaki <strong>Uygunluk</strong> bölümü ve <strong>Hesapla</strong> düğmesi her sekmede durur.</p>';
+  h += _gmAlanTablo('Çözücü penceresi — sekmeler', [
+    ['Yük durumları', 'Yük kitabı (n, T, en büyük düşey çökme) ve vites başına takoz kuvveti',
+      'Hesaplanmadıysa yalnız yük kitabının tanımı'],
+    ['Modlar', 'Rijit gövde modları, mod başına sönüm, düşey (bounce) frekansı',
+      'Aks bandındaki ya da sınırı aşan mod kırmızı'],
+    ['Ayarlar', 'Çözüm modu, sönüm oranı ζ, şok darbesi', 'Bir sonraki Hesapla’da uygulanır']
+  ], ['Sekme', 'Ne', 'Not']);
   h += _gmAdimlar([
-    'Çözüm modunu ve gerekiyorsa durdurucuyu ayarlayın.',
-    'Sönüm oranını girin — yalnız şok ve izolasyon hesabına girer, çökmeye girmez.',
-    '<strong>▶ Hesapla</strong> düğmesine basın.',
-    'Panelin altındaki durum şeridini okuyun: kaç kütle, kaç takoz, kaç yük durumu, kaç mod '
-      + 'çözüldü; toplam kütle ve ortak CG nerede çıktı.'
+    '<strong>Ayarlar</strong> sekmesinde çözüm modunu seçin; sönüm oranı ve şok darbesi '
+      + 'varsayılan değerleriyle durur (yanındaki <em>i</em> kaynağını söyler).',
+    'Sönüm oranı yalnız şok ve izolasyon hesabına girer, çökmeye girmez.',
+    '<strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin içinde akar.',
+    'Sekme durumlarını ve <strong>Uygunluk</strong> bölümünü okuyun; Hesapla’nın altındaki '
+      + 'satır toplam kütleyi, gövde ve takoz sayısını ve son hesabın güncel olup olmadığını söyler.'
   ]);
-  h += _gmUyari('Durum şeridindeki notlar bir HÜKÜMDÜR',
-      'Şerit yalnız “çözüldü” demez; <strong>çekme</strong> (bir takoz çekiye giriyor), '
-    + '<strong>durdurucu teması</strong>, <strong>doğrusal aralık aşımı</strong>, '
-    + '<strong>yakınsamama</strong> ve <strong>f ≈ 0 modu</strong> gibi mühendislik notlarını '
-    + 'da basar. Bunlar hata değildir — modelin size söylediği şeylerdir. Ayrıntısı raporda.');
+  h += _gmUyari('Yük kitabındaki işaretler bir HÜKÜMDÜR',
+      'Satırların sağındaki işaretler <strong>çekme</strong> (bir takoz çekiye giriyor), '
+    + '<strong>durdurucu teması</strong> ve <strong>doğrusal aralık aşımı</strong> der; '
+    + '<strong>yakınsamama</strong> ve <strong>f ≈ 0 modu</strong> sekmenin durumuna yazılır. '
+    + 'Bunlar hata değildir — modelin size söylediği şeylerdir. Ayrıntısı raporda.');
+  h += _gmNot('Sonuç BAYAT olabilir',
+      'Hesaptan sonra modelde bir alan değişirse pencereler son çözümü <strong>bayat</strong> '
+    + 'diye işaretler: sayılar eski modelindir. Adı değiştirmek sonucu bayatlatmaz — ad '
+    + 'fiziğe girmez. Yeniden <strong>Hesapla</strong>’ya basın.');
   return h;
 }
 
@@ -677,8 +697,8 @@ function _gmSec14(){
     'Listeden <strong>' + _gmE(ex.name) + '</strong> örneğini seçip '
       + '<strong>▶ Örneği aktar</strong> deyin.',
     'Tutarlılık uyarılarının boş olduğunu doğrulayın.',
-    'Çözücüde <strong>▶ Hesapla</strong>’ya basın ve durum şeridindeki toplam kütle ile '
-      + 'CG’yi yukarıdaki 14.2 tablosuyla karşılaştırın.',
+    'Çözücüde <strong>Hesapla</strong>’ya basın; bir kütle gövdesinin penceresinde toplam '
+      + 'kütleyi ve birleşik AM farkını yukarıdaki 14.2 tablosuyla karşılaştırın.',
     'Ayrıntı için <strong>Rapor</strong> bileşeninden çevrimdışı HTML raporu üretin.'
   ]);
   h += _gmOnay('Kılavuz ile program aynı sayıyı verir',
@@ -690,27 +710,27 @@ function _gmSec14(){
 
 function _gmEkA(){
   var h = _gmH2(14);
-  h += '<p>Bir alanı nerede bulacağınızı hatırlamak için. Panel adları programdaki '
+  h += '<p>Bir alanı nerede bulacağınızı hatırlamak için. Sekme ve bölüm adları programdaki '
     + 'başlıklarla birebir aynıdır.</p>';
-  h += _gmTablo('Alan → panel eşlemesi',
-    ['Aradığınız', 'Panel', 'Kart'],
+  h += _gmTablo('Alan → pencere eşlemesi',
+    ['Aradığınız', 'Pencere', 'Sekme → bölüm'],
     [
-      ['Kütle ve ağırlık merkezi', 'Kütle gövdesi', 'Kütle &amp; ağırlık merkezi'],
-      ['Atalet tensörü', 'Kütle gövdesi', 'Atalet tensörü'],
-      ['Nokta kütle anahtarı', 'Kütle gövdesi', 'Kütle &amp; ağırlık merkezi altı'],
-      ['Motor torku', 'Motor', 'Motor · Tahrik'],
-      ['Vites oranları', 'Şanzıman', 'Şanzıman · Vites oranları'],
-      ['Transfer oranı', 'Transfer Kutusu', 'Transfer Kutusu · Tahrik'],
-      ['PTO giriş yolu', 'PTO grubu', 'PTO grubu · Giriş yolu'],
-      ['Takoz konumu', 'Takoz', 'Konum'],
-      ['Statik rijitlik', 'Takoz', 'Statik rijitlik'],
-      ['Dinamik rijitlik', 'Takoz', 'Dinamik rijitlik'],
-      ['Taşıma kapasitesi', 'Takoz', 'Taşıma kapasitesi'],
-      ['Kuvvet–sehim eğrisi', 'Takoz', 'Kuvvet–Sehim Yasası'],
+      ['Kütle ve ağırlık merkezi', 'Kütle gövdesi', 'Kütle ve atalet → Kütle · Ağırlık merkezi'],
+      ['Atalet tensörü', 'Kütle gövdesi', 'Kütle ve atalet → Atalet tensörü'],
+      ['Nokta kütle anahtarı', 'Kütle gövdesi', 'Kütle ve atalet → Atalet tensörü'],
+      ['Motor torku', 'Motor', 'Motor ve tork → Motor noktaları'],
+      ['Vites oranları', 'Şanzıman', 'Vitesler → Vites oranları'],
+      ['Transfer oranı', 'Transfer Kutusu', 'Tahrik → Oran ve aks payı'],
+      ['PTO giriş yolu', 'PTO grubu', 'PTO grubu → Giriş yolu'],
+      ['Takoz konumu', 'Takoz', 'Takoz ve yeri → Konum'],
+      ['Statik rijitlik', 'Takoz', 'Takoz ve yeri → Rijitlik'],
+      ['Dinamik rijitlik', 'Takoz', 'Takoz ve yeri → Rijitlik'],
+      ['Taşıma kapasitesi', 'Takoz', 'Takoz ve yeri → Kapasite'],
+      ['Kuvvet–sehim eğrisi', 'Takoz', 'Takoz ve yeri → Kuvvet–sehim yasası'],
       ['Hazır takoz künyeleri', 'Kütüphane', '—'],
-      ['Çözüm modu ve durdurucu', 'Çözücü', 'Çözüm modu'],
-      ['Sönüm oranı', 'Çözücü', 'Sönüm oranı ζ'],
-      ['Şok darbesi', 'Çözücü', 'Şok darbesi'],
+      ['Çözüm modu ve durdurucu', 'Çözücü', 'Ayarlar → Yöntem'],
+      ['Sönüm oranı', 'Çözücü', 'Ayarlar → Yöntem'],
+      ['Şok darbesi', 'Çözücü', 'Ayarlar → Şok darbesi'],
       ['Örnek modeller', 'Başlangıç ve Örnekler', '—'],
       ['Doküman künyesi', 'Rapor', '—']
     ], ['l', 'c', 'l']);

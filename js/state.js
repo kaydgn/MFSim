@@ -153,6 +153,12 @@ function saveState() {
   try {
     if(typeof veFeadSekmeTazele === 'function') veFeadSekmeTazele();
   } catch(e) {}
+  // Açık TAKOZ penceresi de aynı olaydan: türetilen değerleri (toplam payı,
+  // AM farkı, oran, kroki, uygunluk, sekme durumu) yerinde tazeler, yazılan
+  // girdilere dokunmaz (bkz. veMntPencereTazele, js/cp-mount.js).
+  try {
+    if(typeof veMntPencereTazele === 'function') veMntPencereTazele();
+  } catch(e) {}
 }
 
 // YIĞINDAKİ DURUM BİR ANLIK GÖRÜNTÜDÜR — canlı modele BAĞLANMAZ.

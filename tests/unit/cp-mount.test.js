@@ -348,24 +348,28 @@ describe('Renk skalaları', () => {
   });
 });
 
-describe('Estetik paneller — yan yana alanlar', () => {
-  test('Kütle paneli CG/atalet alanlarını 3\'lü inline id ile üretir', () => {
+// Föy dili (2026-10-14, kullanıcı seçimi "B · Föy"): eksen başına bir satır,
+// girdi ile ondan türetilen yan yana. Alan kimlikleri ve setter'lar AYNI kaldı
+// (`ve-mnt-<alan>-<düğüm>` · veMntSet) — kaydedilmiş projeler ve kılavuz onlara bağlı.
+describe('Föy pencereleri — alan kimlikleri ve satır düzeni', () => {
+  test('Kütle penceresi: AM föyü + simetrik atalet matrisi, id\'ler yerinde', () => {
     const node = { id: 'n9', type: 'mnt-motor', def: { name: 'Motor (Kütle)' }, data: {} };
     const html = cp.getMntMassPropertiesHTML(node);
-    // CG x/y/z + atalet köşegen/çarpım hepsi id'li input
     ['cgx','cgy','cgz','Ixx','Iyy','Izz','Ixy','Ixz','Iyz','mass'].forEach(k =>
       expect(html).toContain('ve-mnt-' + k + '-n9'));
-    // Yan yana flex düzeni
-    expect(html).toContain('display:flex');
-    expect(html).toContain('Ağırlık Merkezi');
+    expect(html).toContain('class="ve-mnt-foy ve-izgara"');
+    expect(html).toContain('>Ağırlık merkezi<');
+    expect(html).toContain('class="ve-mnt-mtx"');
+    // alt üçgen üstün AYNASI — yazılmaz, ayrı id taşır
+    expect(html).toMatch(/ve-mnt-ayna[^>]*readonly/);
   });
-  test('Takoz paneli konum + statik/dinamik rijitliği yan yana id ile üretir', () => {
+  test('Takoz penceresi: rijitlik föyü statik + dinamik aynı satırda, id\'ler yerinde', () => {
     const node = { id: 'm9', type: 'mnt-mount', def: { name: 'Takoz' }, data: {} };
     const html = cp.getMntMountPropertiesHTML(node);
     ['x','y','z','kxs','kys','kzs','kxd','kyd','kzd'].forEach(k =>
       expect(html).toContain('ve-mnt-' + k + '-m9'));
-    expect(html).toContain('Statik rijitlik');
-    expect(html).toContain('Dinamik rijitlik');
+    expect(html).toContain('<b>Rijitlik</b>');
+    expect(html).toMatch(/<th>Statik<\/th><th>Dinamik<\/th>/);
   });
 });
 
@@ -861,7 +865,7 @@ describe('Kinematik girdiler + tork yük durumları', () => {
     const node = { id: 'mo1', type: 'mnt-motor', def: { name: 'Motor (Kütle)' }, data: {} };
     const html = cp.getMntMassPropertiesHTML(node);
     expect(html).toContain('ve-mnt-Te-mo1');
-    expect(html).toContain('Motor · Tahrik');
+    expect(html).toContain('>Motor ve tork<');
   });
   test('Şanzıman paneli vites oranları + stall içerir', () => {
     const node = { id: 'gb1', type: 'mnt-gearbox', def: { name: 'Şanzıman (Kütle)' }, data: {} };
@@ -873,7 +877,8 @@ describe('Kinematik girdiler + tork yük durumları', () => {
     const node = { id: 'tr1', type: 'mnt-transfer', def: { name: 'Transfer Kutusu' }, data: {} };
     const html = cp.getMntMassPropertiesHTML(node);
     expect(html).toContain('ve-mnt-iTransfer-tr1');
-    expect(html).toContain('Transfer Kutusu');
+    expect(html).toContain('>Tahrik<');
+    expect(html).toContain('Transfer oranı');
   });
   test('Şaft/Braket kinematik bölüm göstermez', () => {
     const shaft = cp.getMntMassPropertiesHTML({ id: 's1', type: 'mnt-shaft', def: {}, data: {} });
