@@ -217,6 +217,15 @@ async function takozTuru(page, olc) {
   await page.waitForFunction(() => veMntBaslangicAcik(), null, { timeout: 15000 });
   await page.waitForTimeout(400);   // modüle giriş geçişi (FEAD turuyla aynı bekleyiş)
   await olc('#ve-canvas-wrapper', 'başlangıç');
+  // BOŞ SİHİRBAZ (başlangıç sayfasının "Sihirbazla kur"u): masanın boş hâli
+  // turda yoktu — yönergesi koyu temada ızgara çizgisine karşı 4,23:1'di.
+  const bosAdim = await page.evaluate(() => { veMntWizAc(); return VE_MW_STEPS.length; });
+  for (let i = 0; i < bosAdim; i++) {
+    await page.evaluate((j) => veMntWizGoto(j), i);
+    await page.waitForTimeout(300);
+    await olc('#ve-mntwiz-overlay', 'sihirbaz (boş)/' + (i + 1));
+  }
+  await page.evaluate(() => veMntWizKapat(false));
   await page.evaluate(() => {
     veMntCloseEditor(true);
     const m = nodes.find((x) => x.type === 'mount-analysis');
