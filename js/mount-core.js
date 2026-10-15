@@ -935,10 +935,16 @@ var veMountCore = (function() {
         if(Math.abs(a[i][j])>mx){ mx=Math.abs(a[i][j]); p=i; q=j; }
       }
       if(mx < 1e-14) break;
+      // θ = ½·atan2(2a_pq, a_pp − a_qq) a_pq'yu R = [[c, −s], [s, c]] (p–q
+      // düzleminde) ile sıfırlar: (RᵀaR)_pq = a_pq·cos2θ − ½(a_pp − a_qq)·sin2θ.
+      // İşaret TERS yazılıydı (R_pq = +s): döndürme hedef terimi sıfırlamıyor,
+      // 100 tur sonunda köşegen özdeğer DEĞİLDİ — Tulga'nın I_G'sinde
+      // 118,7 / 202,2 / 286,5 (doğrusu 25,2 / 286,6 / 295,7); yalnız tek
+      // düzlemde 45°'lik döndürmede (eşit köşegen, cos2θ = 0) tesadüfen tutuyordu.
       const th = 0.5*Math.atan2(2*a[p][q], a[p][p]-a[q][q]);
       const c = Math.cos(th), s = Math.sin(th);
       const rot = [[1,0,0],[0,1,0],[0,0,1]];
-      rot[p][p]=c; rot[q][q]=c; rot[p][q]=s; rot[q][p]=-s;
+      rot[p][p]=c; rot[q][q]=c; rot[p][q]=-s; rot[q][p]=s;
       // a ← Rᵀ a R   ve   V ← V R
       const RtA = matMul(matT(rot), a);
       a = matMul(RtA, rot);
