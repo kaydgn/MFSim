@@ -80,3 +80,38 @@ for (const ornek of ['tulga', 'siper', 'asfat']) {
     expect.soft(r.kesen).toEqual([]);
   });
 }
+
+// ŞASİ ETİKETİ KENDİ KUTUSUNA BOYANIR (2026-10-15). Örnek yüklenince çerçeve
+// çiziliyor ve AYNI görevde kamera sığdırılıyordu; Chromium o arada yerleşen
+// SVG yazısını yeni dönüşümde boyamıyordu: etiket DOM'da, ölçer kutusunu
+// okuyor, ekranda yok (üç örnekte, 1× ve 1,5×). Sığdırma ayrı bir görevde
+// olunca boyanıyor. Yazı ölçeri bunu göremez — piksel sayılır.
+for (const dpr of [1, 1.5]) {
+  test.describe(`ŞASİ etiketi boyanır · ${dpr}×`, () => {
+    test.use({ deviceScaleFactor: dpr });
+    test('üç örnekte etiketin kutusunda yazı pikseli var', async ({ page }) => {
+      await bootApp(page);
+      await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('mount-analysis'); });
+      const bos = [];
+      for (const k of ['tulga', 'siper', 'asfat']) {
+        await page.evaluate((k) => veMntOrnekYukle(k), k);
+        await page.waitForFunction(() => document.querySelector('g.ve-mnt-chassis text'), null, { timeout: 20000 });
+        await page.waitForTimeout(600);
+        const kutu = await page.evaluate(() => {
+          const b = document.querySelector('g.ve-mnt-chassis text').getBoundingClientRect();
+          return { x: b.left, y: b.top, width: b.width, height: b.height };
+        });
+        const png = await page.screenshot({ clip: kutu });
+        const { PNG } = require('playwright-core/lib/utilsBundle');
+        const p = PNG.sync.read(png);
+        let n = 0;
+        for (let j = 0; j < p.data.length; j += 4) {
+          const r = p.data[j], g = p.data[j + 1], b = p.data[j + 2];
+          if (r - b > 40 && r > 100 && g < 150) n++;   // --ink-accent (açık tema)
+        }
+        if (n < 15 * dpr * dpr) bos.push(k + ': ' + n + ' piksel');
+      }
+      expect(bos).toEqual([]);
+    });
+  });
+}
