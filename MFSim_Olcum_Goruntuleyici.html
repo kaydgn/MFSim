@@ -8812,7 +8812,9 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
   paint-order:stroke; stroke:var(--bg-input); stroke-width:2.4px; stroke-linejoin:round; }
 .ve-fw-md-yazi .ve-fw-md-ad{ font-size:var(--fs-tiny); font-weight:600; fill:var(--text-heading); }
 .ve-fw-md-yazi .ve-fw-md-alt-err{ fill:var(--ink-danger); font-weight:600; }
-.ve-fw-md-yazi .ve-fw-md-sinir-y{ fill:var(--ink-warning); }
+/* Sınır yazısı renkli bölgenin İÇİNDE durur: zemin hâlesi orada açık bir kontur
+   olarak görünürdü; yazı kendi sınır çizgisinin yanında, ondan çizgi geçmez. */
+.ve-fw-md-yazi .ve-fw-md-sinir-y{ fill:var(--ink-warning); stroke:none; }
 .ve-fw-md-yazi .ve-fw-md-sinir-anlik{ fill:var(--ink-danger); }
 /* Eksenin dışındaki sınır: çizim alanının sağındaki olukta soluk yazı +
    eksenin ucunda işaret (js/cp-fead-wizard.js → _fwPencereSVG). */
