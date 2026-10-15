@@ -72,6 +72,51 @@ describe('principalInertia — asal atalet ayrıştırması', () => {
     expect(p.values[2]).toBeCloseTo(5, 9);
   });
 
+  // KAPI (2026-10-15): Jacobi döndürmesinin İŞARETİ ters yazılıydı. Döndürme
+  // hedef terimi sıfırlamıyor, 100 tur sonunda köşegen özdeğer değildi — iz
+  // korunduğu için toplam tutuyor, sayılar yanlış kalıyordu: Tulga'nın I_G'si
+  // 118,7 / 202,2 / 286,5 (doğrusu 25,2 / 286,6 / 295,7). Yukarıdaki test tek
+  // düzlemde 45° döndürüyor (eşit köşegen → cos2θ = 0) ve tesadüfen geçiyordu.
+  test('GENEL döndürülmüş tensör (üç eksenli döndürme) özgün köşegeni geri verir', () => {
+    const mul = (A, B) => A.map((r) => B[0].map((_, j) => r.reduce((a, v, k) => a + v * B[k][j], 0)));
+    const T = (A) => A[0].map((_, j) => A.map((r) => r[j]));
+    const rot = (ax, t) => {
+      const c = Math.cos(t), s = Math.sin(t);
+      return ax === 0 ? [[1, 0, 0], [0, c, -s], [0, s, c]] : ax === 1 ? [[c, 0, s], [0, 1, 0], [-s, 0, c]] : [[c, -s, 0], [s, c, 0], [0, 0, 1]];
+    };
+    const R = mul(mul(rot(0, 0.4), rot(1, -0.7)), rot(2, 1.1));
+    const p = core.principalInertia(mul(mul(R, [[5, 0, 0], [0, 1, 0], [0, 0, 3]]), T(R)));
+    expect(p.values[0]).toBeCloseTo(1, 9);
+    expect(p.values[1]).toBeCloseTo(3, 9);
+    expect(p.values[2]).toBeCloseTo(5, 9);
+  });
+
+  test('her asal eksen bir ÖZVEKTÖR: ‖I·e − λ·e‖ ≈ 0 (ASFAT ve Tulga I_G, sözde rastgele tensörler)', () => {
+    const tulga = [[41.22, -10.33, 61.96], [-10.33, 295.28, 2.71], [61.96, 2.71, 270.91]];
+    let tohum = 7;
+    const rnd = () => { tohum = (tohum * 16807) % 2147483647; return tohum / 2147483647 - 0.5; };
+    const rastgele = Array.from({ length: 20 }, () => {
+      const a = [[rnd(), rnd(), rnd()], [rnd(), rnd(), rnd()], [rnd(), rnd(), rnd()]];
+      return [0, 1, 2].map((i) => [0, 1, 2].map((j) => a[i][j] + a[j][i] + (i === j ? 3 : 0)));
+    });
+    const kotu = [];
+    [MP.I_G, tulga].concat(rastgele).forEach((I, n) => {
+      const p = core.principalInertia(I);
+      const olcek = Math.max(...p.values.map(Math.abs));
+      p.axes.forEach((e, i) => {
+        const Ie = I.map((r) => r[0] * e[0] + r[1] * e[1] + r[2] * e[2]);
+        const art = Math.hypot(...Ie.map((v, k) => v - p.values[i] * e[k]));
+        if (!(art < 1e-9 * olcek)) kotu.push(`${n}/${i}: ${art}`);
+      });
+    });
+    expect(kotu).toEqual([]);
+    // Tulga: bağımsız özdeğer çözümüyle (numpy.linalg.eigvalsh) aynı sayılar
+    const t = core.principalInertia(tulga).values;
+    expect(t[0]).toBeCloseTo(25.14985, 4);
+    expect(t[1]).toBeCloseTo(286.55692, 4);
+    expect(t[2]).toBeCloseTo(295.70323, 4);
+  });
+
   test('iz (trace) korunur — özdeğerlerin toplamı köşegenin toplamı', () => {
     const p = core.principalInertia(MP.I_G);
     const iz = MP.I_G[0][0] + MP.I_G[1][1] + MP.I_G[2][2];
