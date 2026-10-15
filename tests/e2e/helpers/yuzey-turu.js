@@ -263,6 +263,18 @@ async function takozTuru(page, olc) {
   const ek = await paletiTamamla(page, 'mount-analysis');
   expect(ek.length).toBeGreaterThan(0);
   await pencereler(page, olc, ek);
+  // ÖTEKİ İKİ ÖRNEĞİN TOPOLOJİSİ (yapışık ad): yalnız Tulga ölçülüyordu;
+  // ASFAT'ta "Motor — Cummins 57RS303308" ile "Şanzıman + Retarder — Allison
+  // 4700" üst üste biniyordu (−6 px).
+  for (const [k, imza] of [['siper', 'cradle'], ['asfat', '57RS']]) {
+    await page.evaluate((kk) => {
+      let ex = nodes.find((x) => x.type === 'mnt-example'); if (!ex) ex = createNode('mnt-example', 300, 200);
+      ex.data = ex.data || {}; ex.data.exampleKey = kk; veMntLoadExample(ex.id);
+    }, k);
+    await page.waitForFunction((im) => nodes.some((n) => (n.customName || '').indexOf(im) >= 0), imza, { timeout: 20000 });
+    await page.waitForTimeout(800);
+    await olc('#ve-canvas', 'topoloji · ' + k);
+  }
 }
 
 async function feadTuru(page, olc) {

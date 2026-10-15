@@ -255,3 +255,17 @@ describe('aşama 3 — üreticiler', () => {
     });
   });
 });
+
+// BİLEŞEN İKONLARI ÇİZİMDİR (Tur 6, 2026-10-15): "PTO Toplam" ikonu Σ'yı, AP'nin
+// "Parametrik Analiz"i P'yi YAZI KARAKTERİ olarak taşıyordu — yazı tipinden
+// çizilen ikinci dil, ve 38 px'lik ikonda 8,4 px, palette 4,5 px. Harf artık
+// çizgiyle çiziliyor; kural bütün bileşen tanımlarına.
+describe('bileşen ikonları yazı karakteri taşımaz', () => {
+  test('componentDefs → svg içinde <text> yok', () => {
+    const kaynak = oku('js/components.js');
+    const ikonlar = [...kaynak.matchAll(/'([a-z0-9-]+)': \{\s*\n\s*name: '([^']+)',\s*\n\s*svg: '([^\n]*)'/g)];
+    expect(ikonlar.length).toBeGreaterThan(40);                  // tarama gerçekten ikon buluyor
+    const yazili = ikonlar.filter((m) => /<text\b/.test(m[3])).map((m) => m[1] + ' (' + m[2] + ')');
+    expect(yazili).toEqual([]);
+  });
+});
