@@ -1018,11 +1018,14 @@ yazılsaydı ya sütun tuvali örterdi ya arada ölü şerit kalırdı.
 + müfettiş (380) tuvale 632 px bırakıyor. Altında modal davranış **birebir**
 durur — dar ekranda sütun bir kazanç değil kayıptır.
 
-**İki varyant modal kalır.** `--2dview` (1000 px) ve `--mntlib` (1040 px) birer
-**görüntüleyicidir**, müfettiş değil: ilki üç ölçekli diyagramı alt alta,
-ikincisi seçici + üç eksen grafiğini yan yana koyar. 380 px'lik bir sütunda
-ikisi de okunamaz olurdu. Ayrım `:has()` ile kuralın kendisinde — ikinci bir
-JS bayrağı iki yüzeyin sessizce ayrışması demekti.
+**Görüntüleyiciler de sütunda** (2026-10-15, kullanıcı kararı: *"eski tipte
+hiçbir bileşen kalmasın"*). 2D Görünüm (`--2dview`, 1000 px) ve Takoz
+Özellikleri (`--mntlib`, 1040 px) modal görüntüleyiciydi; ikisi de sütunda
+yeniden kuruldu: 2D her görünüşü bir SEKMEDE gerçek ölçekte çizer, işaretler
+NUMARA (açılımı yan sütunun föyünde; adlı üç görünüş tam ekranda), kütüphane
+tek eksen grafiği + eksen seçicisi. Sütunda tekerlek sütunu kaydırır,
+yakınlaştırma Ctrl + tekerlek. Takoz'un hiçbir tipi `VE_SUTUNA_SIGMAYAN`'da
+değil. Kapı: `mount-sutun.test.js` + `mufettis-sigma.spec.js`.
 
 **Alttan da geçerliydi** (2026-09-24 → 09-26): FEAD Kayış Tablosu çekmecesi
 tuvalin üstünde yüzmek yerine kanvas alanının bir SATIRIydı ve tuvali

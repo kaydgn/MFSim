@@ -155,17 +155,17 @@ function clearSelection() {
 // sütun, çalışan bir modalden kötüdür. Liste YALNIZ AŞAĞI İNER — bir pencere
 // sığacak biçimde yeniden kurulunca buradan çıkar ve
 // `tests/e2e/mufettis-sigma.spec.js` onu sütunda ölçer.
-// `mnt-2dview` ile `mnt-library` görüntüleyici oldukları için KALICI olarak
-// burada (bkz. docs/decisions/ortak-yuzeyler.md → "Müfettiş tuvalin YANINDADIR").
+// TAKOZ'UN HİÇBİR TİPİ BURADA DEĞİL (2026-10-15, kullanıcı kararı: "eski tipte
+// hiçbir bileşen kalmasın"): kütle gövdeleri, Takoz ve Çözücü 2026-10-14'te,
+// kalanlar (Örnek, 2D Görünüm, Takoz Özellikleri) ertesi gün çıktı. İki
+// görüntüleyici "KALICI modal" kaydıyla buradaydı; sütunda tek görünüş/tek
+// eksen düzeniyle yeniden kuruldular (docs/decisions/ortak-yuzeyler.md →
+// "Müfettiş tuvalin YANINDADIR"). Kapı: mount-sutun.test.js → *LİSTE*.
 var VE_SUTUNA_SIGMAYAN = ['engine', 'ec-matching', 'gear-shift', 'shift-controller', 'gearbox',
-  'acc-ac', 'acc-alternator', 'acc-aircomp', 'road', 'mnt-example',
-  'mnt-2dview', 'mnt-library',
+  'acc-ac', 'acc-alternator', 'acc-aircomp', 'road',
   // TAŞMAYAN AMA EZİLEN — okunurluk ölçüsü (girdi < 56 px) ekleyince çıktı:
   // araç adı 40 px'lik kutuda, konvertör tablosunda 13 px. Kendi kategori
   // tasarımları gelene dek modal (kullanıcı sırası: önce FEAD, sonra Takoz).
-  // Takoz'un sekiz kütle tipi ve Takoz 2026-10-14'te ÇIKTI: pencereleri FEAD
-  // kabuğu + föy diliyle yeniden kuruldu (altılı ızgaradaki "550.03" 46 px'e
-  // sığmıyordu; föyde eksen başına bir satır).
   'vehicle', 'torque-converter', 'transfer'];
 
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
@@ -173,7 +173,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'acc-ac', 'acc-alternator', 'acc-aircomp',
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
-  'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
+  'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview', 'mnt-report',
   // Çözücü artık sekmeli bir pencere (yük kitabı · modlar · ayarlar) — FEAD
   // çözücüsü gibi geniş; dar "eylem kartı" listesinden çıktı.
   'mnt-solver',
@@ -194,7 +194,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
 
 // Hafif paneller — içerik az (kısa metin / birkaç alan / tek eylem): geniş yerine
 // DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
-var VE_COMPACT_PANEL_TYPES = ['mnt-report', 'mount-analysis',
+var VE_COMPACT_PANEL_TYPES = ['mount-analysis',
   'fead-analysis', 'fead-report',
   'fead-wizard',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
@@ -341,14 +341,9 @@ function showNodeProperties(node) {
   
   
   content.innerHTML = html;
-  // 2D Görünüm paneli üç ölçekli diyagram gösterir → pencereyi geniş/uzun yap
-  // (diğer bileşenlerde varsayılan boyuta döner). Salt sunum, mantığa dokunmaz.
   var _propWin = document.getElementById('ve-properties');
-  if(_propWin) _propWin.classList.toggle('ve-properties--2dview', node.type === 'mnt-2dview');
   // Sütuna sığmayan pencere MODAL açılır (VE_SUTUNA_SIGMAYAN, ölçülmüş liste).
   if(_propWin) _propWin.classList.toggle('ve-properties--modal', VE_SUTUNA_SIGMAYAN.indexOf(node.type) >= 0);
-  // Takoz Özellikleri: iki sütun (seçici + detay) ve 3 eksen grafiği yan yana → geniş pencere.
-  if(_propWin) _propWin.classList.toggle('ve-properties--mntlib', node.type === 'mnt-library');
   // İçerik-yoğun paneller (VE_WIDE_PANEL_TYPES listesi): geniş pencere +
   // kompakt-sol kimlik + iki sütun düzeni. Liste dalga dalga büyür. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
