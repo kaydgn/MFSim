@@ -3343,8 +3343,22 @@ function _mnt2DFigure(o){
   // yazılardan SONRA: köşedeki eksen göstergesi (+X/+Y) ve not sol kenardaki
   // değer sütununa düşüyor; çarpan değer yazılmaz (çizgisi kalır). ──
   var gl=o.ox+o.plotL, gr=o.ox+o.FIG_W-o.plotR, degerler=[];
+  // YATAY ADIM YAZIDAN: her ızgara çizgisinin değeri yazılır. Sabit sekiz
+  // hedef dar çizimde (müfettiş sütunu, ~230 px'lik alan) 200 mm'lik adımla
+  // "1.000"leri 26 px aralığa diziyordu; sağ uçtakiler eksen adına çarpıp
+  // düşüyor, çizgisi değersiz kalıyordu. Hedef, en geniş değer + 8 px
+  // sığana dek azalır — geniş çizimde (alan ≳ 360 px) sekiz kalır.
+  function hTikler(){
+    for(var t=8; t>2; t--){
+      var tv=_mnt2DNiceTicks(o.hMin, o.hMax, t);
+      if(tv.length<2) return tv;
+      var gen=Math.max.apply(null, tv.map(function(v){ return String(_mnt2DTick(v)).length; }))*FS.deger*0.6;
+      if(Math.abs(o.px(tv[1])-o.px(tv[0]))>=gen+8) return tv;
+    }
+    return _mnt2DNiceTicks(o.hMin, o.hMax, 2);
+  }
   if(!sade && o.hMin!=null && o.hMax!=null){
-    _mnt2DNiceTicks(o.hMin, o.hMax, 8).forEach(function(tv){
+    hTikler().forEach(function(tv){
       var gx=o.px(tv); if(gx<gl-0.5 || gx>gr+0.5) return;
       svg+='<line x1="'+_mnt2DR(gx)+'" y1="'+_mnt2DR(o.plotTop)+'" x2="'+_mnt2DR(gx)+'" y2="'+_mnt2DR(plotBottom)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.4"/>';
       degerler.push([gx, plotBottom+FS.deger+4, _mnt2DTick(tv), 'middle']);
@@ -3396,7 +3410,9 @@ function _mnt2DFigure(o){
     if(o.axis.note) svg+=yaz(o.ox+o.plotL-30, plotBottom-2, o.axis.note, 'start', 'var(--text-muted)', FS.deger);
   } else if(!sade){
     // Yalın kipte eksen ADI uçlarda: yatayın sağ ucunda, düşeyin tepesinde.
-    svg+=yaz(gr, plotBottom+25, (o.axis.hLabel||'X')+' [mm]', 'end', 'var(--text-secondary)', FS.deger, true);
+    // Değer satırının 2 px altında: 25'te kutusu değerlerinkine 0,2 px
+    // yaklaşıyor ve altına düşen değer çarpışma sayılıp yazılmıyordu.
+    svg+=yaz(gr, plotBottom+27, (o.axis.hLabel||'X')+' [mm]', 'end', 'var(--text-secondary)', FS.deger, true);
     svg+=yaz(gl-5, o.plotTop-8, (o.axis.vLabel||'Y')+' [mm]', 'end', 'var(--text-secondary)', FS.deger, true);
   }
   var sabit=engel.slice();

@@ -254,6 +254,13 @@
       --seri-2: #9a3b3b;
       --seri-3: #6b4fa0;
       --seri-4: #2f6b45;
+      /* 3B SAHNENİN EKSEN OKLARI — cp-mount-viewer.js'te three.js sabit
+         renkleri (0xef4444 · 0x22c55e · 0x3b82f6); Koordinat penceresinin
+         föyündeki örnek işaret onları izler. İki temada aynı: sahnedeki ok
+         temayla değişmiyor. Aynılık kapısı: mount-sutun.test.js. */
+      --eksen-x: #ef4444;
+      --eksen-y: #22c55e;
+      --eksen-z: #3b82f6;
     }
 
     /* ── KOYU ────────────────────────────────────────────────────────────── */
@@ -288,6 +295,9 @@
       --seri-2: #e08585;
       --seri-3: #b39ddb;
       --seri-4: #6cbb87;
+      --eksen-x: #ef4444;
+      --eksen-y: #22c55e;
+      --eksen-z: #3b82f6;
     }
 
     /* ── ORTA KALINLIK WINDOWS'TA YARI KALIN (2026-09-26, kullanıcı kararı 5·B) ──
@@ -4863,19 +4873,8 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .ve-properties-overlay.visible .ve-properties{ transform:scale(1); }
 
-/* 2D Görünüm paneli — üç ölçekli diyagram (üstten/yandan/önden) alt alta
-   sığsın diye pencere hem geniş hem uzun. Diğer bileşenler varsayılan kalır. */
-.ve-properties.ve-properties--2dview{
-  max-width:1000px;
-  max-height:95vh;
-}
-/* Takoz Özellikleri paneli — üstte açılır takoz seçici, altında seçili takozun
-   detayı + 3 eksen kuvvet–sehim grafiği yan yana. Bu düzen için pencere geniş.
-   Diğer bileşenler varsayılan kalır. */
-.ve-properties.ve-properties--mntlib{
-  max-width:1040px;
-  max-height:92vh;
-}
+/* 2D Görünüm (1000 px) ve Takoz Özellikleri (1040 px) modal görüntüleyici
+   genişlikleri 2026-10-15'te KALKTI: iki pencere de sütunda (Takoz bloğu). */
 
 /* ══ ÖZELLİK PENCERESİ GENİŞ EKRANDA SÜTUNDUR, MODAL DEĞİL ══════════════
    Ölçülen kusur: bileşen özellikleri ekranın ORTASINDA, %60 karartmalı bir
@@ -4978,7 +4977,10 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 /* Satır göstergeleri — tetikleyici ve liste satırları aynı dili konuşur:
    nokta = girdi türü (özel / gömülü / değiştirilmiş / eğrili), kz = statik
    eksenel rijitlik, ∿ = nonlineer yasa taşıyor. */
-.mntlib-dot{ width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.mntlib-dot{ width:8px;height:8px;border-radius:50%;flex-shrink:0; background:var(--accent-success); }
+.mntlib-dot[data-t="egri"]{ background:var(--accent-danger); }
+.mntlib-dot[data-t="degisti"]{ background:var(--accent-warning); }
+.mntlib-dot[data-t="gomulu"]{ background:var(--accent-primary); }
 .mntlib-kz{
   font-size:var(--fs-micro);color:var(--text-muted);
   white-space:nowrap;
@@ -5323,11 +5325,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   gap:5px;margin-bottom:12px;
 }
-.mnt-vwr-actions{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:5px;margin-bottom:12px;
-}
-.mnt-vwr-actions .mnt-vwr-wide{ grid-column:1 / -1; }
 .mnt-vwr-toggle,.mnt-vwr-action{
   display:inline-flex;align-items:center;justify-content:center;gap:5px;
   width:100%;min-height:27px;padding:5px 7px;
@@ -5358,25 +5355,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .mnt-vwr-toggle.is-on::before{ background:var(--accent-primary); }
 .mnt-vwr-action .mf-ico{ font-size:var(--fs-body); }
-/* Gösterge: dikey liste — üç çip tek satıra sığmadığı için sarıp taşıyordu. */
-.mnt-vwr-legend{
-  display:flex;flex-direction:column;gap:5px;margin-bottom:12px;
-  padding:7px 9px;background:var(--bg-secondary);
-  border:1px solid var(--border-color);border-radius:var(--radius-sm);
-}
-.mnt-vwr-legend-row{
-  display:flex;align-items:baseline;gap:7px;min-width:0;
-  font-size:var(--fs-micro);line-height:1.35;
-}
-.mnt-vwr-dot{
-  width:9px;height:9px;border-radius:50%;flex-shrink:0;
-  align-self:center;
-}
-.mnt-vwr-legend-name{ color:var(--text-primary);font-weight:600;flex-shrink:0; }
-.mnt-vwr-legend-desc{
-  color:var(--text-muted);min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
 .mnt-vwr-hint{
   font-size:var(--fs-micro);color:var(--text-muted);
   line-height:1.55;margin-bottom:2px;
@@ -5462,23 +5440,23 @@ body > .mfsim-loading-logo-ico{ transition:none; }
    NOT: kompakt-sol kimlik satırı --2dview ve --mntlib panellerine de uygulanır
    (onlar kendi geniş boyutlarını korur; yalnız kimlik satırını paylaşır). */
 .ve-properties.ve-properties--compact{ max-width:560px; }
-:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-identity{
+.ve-properties--compact .ve-prop-identity{
   flex-direction:row; align-items:center; gap:11px;
   margin-bottom:10px; padding-bottom:9px;
   border-bottom:1px solid var(--border-color);
 }
-:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-identity .ve-prop-symbol{ min-height:0; margin:0; flex:0 0 auto; }
-:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-identity .ve-prop-symbol svg{ width:34px; height:34px; }
-:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-meta{ align-items:flex-start; }
-:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-name{ margin-bottom:1px; }
-:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-del{
+.ve-properties--compact .ve-prop-identity .ve-prop-symbol{ min-height:0; margin:0; flex:0 0 auto; }
+.ve-properties--compact .ve-prop-identity .ve-prop-symbol svg{ width:34px; height:34px; }
+.ve-properties--compact .ve-prop-meta{ align-items:flex-start; }
+.ve-properties--compact .ve-prop-name{ margin-bottom:1px; }
+.ve-properties--compact .ve-prop-del{
   position:static; margin-left:auto;
   width:24px; height:24px; border-radius:var(--radius-sm);
   background:transparent; color:var(--accent-danger);
   border:1px solid color-mix(in srgb, var(--accent-danger) 35%, transparent);
   opacity:1;
 }
-:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-del:hover{ background:var(--bg-input); }
+.ve-properties--compact .ve-prop-del:hover{ background:var(--bg-input); }
 /* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
    grabbing imleci sürükleme sırasında JS ile ayarlanır. */
 .ve-mnt2d-fig{ cursor:grab; }
@@ -10224,6 +10202,106 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 .ve-mnt-kroki-lej span{ display:inline-flex; align-items:center; gap:4px; }
 .ve-mnt-kroki-lej svg{ width:10px; height:10px; flex:none; }
+
+/* ── KALAN PENCERELER (2026-10-15) — TAKOZ'UN HİÇBİR PENCERESİ MODAL DEĞİL ──
+   Kullanıcı kararı: "Hepsini sütuna al … eski tipte hiçbir bileşen kalmasın."
+   Rapor, modül kartı, 3B, Koordinat, Örnek, Takoz Özellikleri ve 2D Görünüm
+   aynı kabukta (`.ve-fp-*`) ve föyde; burada yalnız yeni parçaları. */
+
+/* Föyde eksik değer ("girilmedi", "konum eksik") — kehribar. */
+.ve-properties-content .ve-mnt-foy td.eks{ color:var(--ink-warning); font-weight:600; }
+/* Eylemin altındaki not, eylemin sonucuyla tonlanır (rapor indi · hata).
+   Eskiden satır içi `style.color` yazılıyordu. */
+.ve-fp-solve-not[data-d="ok"]{ color:var(--ink-success); }
+.ve-fp-solve-not[data-d="warn"]{ color:var(--ink-warning); }
+.ve-fp-solve-not[data-d="no"]{ color:var(--ink-danger); }
+
+/* SAHNE (3B · Koordinat) — sütun genişliğinde KARE. Eskiden 58vh boyunda
+   dikine bir şeritti: 380 px'lik sütunda 354 × 540. */
+.ve-mnt-sahne{
+  position:relative; width:100%; aspect-ratio:1 / 1; max-height:60vh; margin:0 0 8px;
+  overflow:hidden; background:var(--bg-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-md);
+}
+.ve-mnt-sahne > canvas{ display:block; width:100%; height:100%; }
+/* Görüntüleyicinin eylemleri pencerenin eylem satırında, eşit genişlikte. */
+.ve-mnt-pencere .ve-fp-eylem > .mnt-vwr-action{ flex:1 1 0; width:auto; }
+.mnt-vwr-bar .mnt-vwr-hint{ margin:0 0 0 auto; }
+
+/* İŞARET ÖRNEĞİ — föy satırının başında, sahnedeki işaretin rengi. Metin değil
+   işaret: renk yazıya taşınmaz (kontrast kuralı). */
+.ve-mnt-is{
+  display:inline-block; width:9px; height:9px; margin-right:6px; vertical-align:-1px;
+  border-radius:50%; background:var(--text-muted);
+}
+.ve-mnt-is[data-i="takoz"]{ border-radius:var(--radius-xs); background:var(--accent-success); }
+.ve-mnt-is[data-i="govde"]{ background:var(--accent-warning); }
+.ve-mnt-is[data-i="am"]{ background:var(--accent-danger); }
+.ve-mnt-is[data-i="x"], .ve-mnt-is[data-i="y"], .ve-mnt-is[data-i="z"]{
+  width:12px; height:3px; border-radius:0; vertical-align:2px;
+}
+.ve-mnt-is[data-i="x"]{ background:var(--eksen-x); }
+.ve-mnt-is[data-i="y"]{ background:var(--eksen-y); }
+.ve-mnt-is[data-i="z"]{ background:var(--eksen-z); }
+
+/* ETKİLEŞİM — kısayol penceresinin dilinde birer satır. */
+.ve-mnt-ipucu{ margin:0; padding:0; list-style:none; font-size:var(--fs-tiny); color:var(--text-secondary); }
+.ve-mnt-ipucu li{ padding:3px 0; border-bottom:1px solid var(--border-light); }
+.ve-mnt-ipucu li:last-child{ border-bottom:none; }
+
+/* ÖRNEK — künyenin başı (araç adı, kısa etiket, açıklama) ve topoloji resmi. */
+.ve-mnt-ex-bas{ margin:2px 0 10px; }
+.ve-mnt-ex-bas b{ display:block; font-size:var(--fs-md); color:var(--text-heading); line-height:1.3; }
+.ve-mnt-ex-bas em{ display:block; font-style:normal; font-size:var(--fs-tiny); font-weight:600; color:var(--ink-accent); margin-top:2px; }
+.ve-mnt-ex-bas p{ margin:6px 0 0; font-size:var(--fs-tiny); line-height:1.5; color:var(--text-secondary); }
+.ve-mnt-ex-sema{
+  margin:0 0 10px; padding:8px; background:var(--bg-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-md);
+}
+.ve-mnt-ex-sema img, .ve-mnt-ex-sema svg{ display:block; width:100%; height:auto; }
+.ve-mnt-ex-sema figcaption{ margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; }
+
+/* TAKOZ ÖZELLİKLERİ — üstte seçici, altında seçili tipin kimliği (ad · tür
+   rozeti · eylem). Seçici sütunda tek satır: liste esner, "Yeni" sabit. */
+.ve-mnt-pencere .mntlib-bar{ margin-bottom:8px; flex-wrap:nowrap; }
+.ve-mnt-pencere .mntlib-picker{ flex:1 1 auto; min-width:0; }
+.ve-mnt-pencere .mntlib-add{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.ve-mnt-lib-kim{ display:flex; align-items:center; gap:6px; margin:0 0 10px; }
+.ve-mnt-lib-kim > .ve-fp-inp{ flex:1 1 auto; min-width:0; }
+.ve-mnt-lib-kim > .ve-fp-dugme{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.ve-mnt-rozet{
+  flex:none; padding:2px 7px; border:1px solid currentColor; border-radius:var(--radius-lg);
+  font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide); text-transform:uppercase;
+  color:var(--ink-success); white-space:nowrap;
+}
+.ve-mnt-rozet[data-t="gomulu"]{ color:var(--ink-accent); }
+.ve-mnt-rozet[data-t="degisti"]{ color:var(--ink-warning); }
+.ve-fp-dugme[aria-disabled="true"], .ve-fp-dugme[aria-disabled="true"]:hover{
+  color:var(--text-muted); background:var(--bg-tertiary); border-color:var(--border-color); cursor:default;
+}
+/* Grafik çerçevesinin başlığı (eksen · yasa) — krokinin başlığıyla aynı;
+   göstergenin örnek çizgisi 16 × 9 (krokinin 10 × 10 işaretinden geniş). */
+.ve-mnt-kroki-bas em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap; }
+.ve-mnt-kroki-bas .ve-fp-sym{ font-style:normal; text-transform:none; letter-spacing:normal; }
+/* 2D görünüşün yakınlaştırma düğmeleri şeritte (çizimin köşesinde değil). */
+.ve-mnt-2d .ve-mnt2d-zoomctl{ position:static; flex-direction:row; opacity:1; margin-left:auto; }
+.ve-mnt-2d .ve-mnt2d-zoomctl button{ width:22px; height:20px; }
+.ve-mnt-kroki-lej svg.ve-mnt-lej-cizgi{ width:16px; height:9px; }
+/* Eğri noktasını silen düğme — satırın sonunda, yalnız ikon. */
+.ve-mnt-sil{
+  display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0;
+  background:none; border:1px solid transparent; border-radius:var(--radius-sm); color:var(--ink-danger); cursor:pointer;
+}
+.ve-mnt-sil:hover{ border-color:var(--border-color); background:var(--bg-tertiary); }
+.ve-mnt-sil:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+
+/* 2D GÖRÜNÜM — görünüşün çizimi (kroki çerçevesinde) ve tam ekranın kabı. */
+.ve-mnt-2d{
+  margin:0 0 6px; border:1px solid var(--border-color); border-radius:var(--radius-md);
+  background:var(--bg-primary); overflow:hidden;
+}
+.ve-mnt-2d svg{ display:block; width:100%; height:auto; }
+.ve-mnt2d-fs{ flex:1; min-height:0; overflow:auto; padding:12px; }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
    kuralları onunla birlikte gitti (kural 26). */

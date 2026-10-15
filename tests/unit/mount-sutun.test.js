@@ -152,6 +152,25 @@ describe('2D GÖRÜNÜM — sütunda tek görünüş, gerçek ölçek, numaralı
     expect(binen).toEqual([]);
   });
 
+  // Değer çizgisiz kalmaz: dar çizimde sabit sekiz hedef 200 mm'lik adımla
+  // "1.000"leri 26 px aralığa diziyordu, sağ uçtakiler eksen adına çarpıp
+  // düşüyordu ("1.200" · "1.400" yazılmıyordu, çizgileri duruyordu).
+  test('her ızgara çizgisinin DEĞERİ yazılı — dar çizimde adım yazıya göre', () => {
+    tulga();
+    const P = cp._mnt2DPencereVeri();
+    const deger = /^[−-]?[\d.]+$/;
+    [338, 354].forEach((W) => ['ust', 'yan', 'on'].forEach((g) => {
+      const f = cp._mnt2DPencereSVG(P, g, W);
+      const yatay = [...f.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="[-\d.]+" y2="\2" stroke="var\(--border-color\)" stroke-width="0.5"/g)].length;
+      const dikey = [...f.matchAll(/<line x1="([-\d.]+)" y1="[-\d.]+" x2="\1" y2="[-\d.]+" stroke="var\(--border-color\)" stroke-width="0.5"/g)].length;
+      // değerler soluk yazıyla; işaret numaraları ikincil renkte
+      const sol = [...f.matchAll(/<text [^>]*text-anchor="end"[^>]*fill="var\(--text-muted\)"[^>]*>([^<]*)<\/text>/g)].filter((m) => deger.test(m[1])).length;
+      const alt = [...f.matchAll(/<text [^>]*text-anchor="middle"[^>]*fill="var\(--text-muted\)"[^>]*>([^<]*)<\/text>/g)].filter((m) => deger.test(m[1])).length;
+      expect(dikey).toBeGreaterThan(2);
+      expect(`${W}/${g}: ${sol}/${yatay} · ${alt}/${dikey}`).toBe(`${W}/${g}: ${yatay}/${yatay} · ${dikey}/${dikey}`);
+    }));
+  });
+
   test('çizimde ad YOK, numara var; her numaranın açılımı föyde (gövde 1…n, takoz T1…Tm, G)', () => {
     tulga();
     const P = cp._mnt2DPencereVeri();
