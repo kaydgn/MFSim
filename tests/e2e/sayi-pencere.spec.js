@@ -52,11 +52,11 @@ const MODULLER = {
 };
 
 // Ölçüt tek yerde: tests/helpers/sayi-olcu.js (belge taraması da onu kullanır).
-const { NOKTA, GRUPSUZ, BOSLUKLU, SONDA_YUZDE, sinifla } = require('../helpers/sayi-olcu.js');
-const KURALLAR = [['nokta', NOKTA], ['grupsuz', GRUPSUZ], ['boşluklu', BOSLUKLU], ['sonda %', SONDA_YUZDE]];
+const { NOKTA, GRUPSUZ, BOSLUKLU, SONDA_YUZDE, TIRE_EKSI, sinifla } = require('../helpers/sayi-olcu.js');
+const KURALLAR = [['nokta', NOKTA], ['grupsuz', GRUPSUZ], ['boşluklu', BOSLUKLU], ['sonda %', SONDA_YUZDE], ['tire eksi', TIRE_EKSI]];
 
 for (const [modul, M] of Object.entries(MODULLER)) {
-  test(`${modul}: pencerelerde noktalı ondalık, gruplanmamış sayı ve sondaki yüzde YOK (adlar hariç)`, async ({ page }) => {
+  test(`${modul}: pencerelerde noktalı ondalık, gruplanmamış sayı, sondaki yüzde ve tire eksi YOK (adlar hariç)`, async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1032 });
     await page.addInitScript(() => {
       const f = CanvasRenderingContext2D.prototype.fillText;

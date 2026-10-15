@@ -13254,13 +13254,14 @@ function cdbSayi(v, basamak) {
   if (neg && /^[0.]+$/.test(s)) neg = false;
   var p = s.split('.');
   var out = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (p.length > 1 ? ',' + p[1] : '');
-  return (neg ? '-' : '') + out;
+  return (neg ? '−' : '') + out;
 }
 
 function cdbSayiUstel(v, basamak) {
   var n = Number(v);
   if (!isFinite(n)) return '—';
-  return n.toExponential(basamak == null ? 2 : basamak).replace('.', ',');   // makine: yazıcının kendisi
+  var s = n.toExponential(basamak == null ? 2 : basamak).replace('.', ',');   // makine: yazıcının kendisi
+  return s.charAt(0) === '-' ? '−' + s.slice(1) : s;
 }
 
 // Sinyal değerinin okunur biçimi: VAL_ tablosu varsa METİN, yoksa çarpandan

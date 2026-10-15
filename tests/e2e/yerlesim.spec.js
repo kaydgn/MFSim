@@ -33,15 +33,24 @@
  * ölçüyor.
  * Dökmek için `YERLESIM_DOKUM=<önek>` — her tur `<önek>-<tur>.txt`ye yazar.
  *
+ * SAYI YAZIMI da aynı turda (2026-10-15, S4·B): her ölçüm noktasında ekrandaki
+ * yazı + SVG yazısı + `title` + tuvale çizilen yazı Türkçe sayı ölçütüyle
+ * taranır (tests/helpers/sayi-olcu.js — pencere ve belge taramasıyla aynı
+ * ölçüt). Pencere taraması sihirbazları, Sonuçlar'ı ve ikincil pencereleri
+ * görmüyordu: eski kodda tireli eksi turda 53 (AP 28 · FEAD 25), pencere
+ * taramasında 11. Gerçek eksi "%"den sonra satır kırabiliyor (UAX #14: tire
+ * HY, eksi PR sınıfı) — yerleşim ölçeri FEAD çözücüsünde "%|−2,9"u yakaladı.
+ *
  * Node'da koşamaz: jsdom yerleşim hesaplamaz.
  */
 const { test, expect } = require('@playwright/test');
 const { yerlesimKur, yerlesimOzet } = require('../helpers/yerlesim-olcu.js');
+const { tara } = require('../helpers/sayi-olcu.js');
 const T = require('./helpers/yuzey-turu');
 
 test.describe.configure({ timeout: 300000 });
 
-function olcucu(page, liste) {
+function olcucu(page, liste, sayilar) {
   return async (kok, yer) => {
     const r = await page.evaluate((k) => {
       const el = document.querySelector(k);
@@ -49,6 +58,19 @@ function olcucu(page, liste) {
       return window.__yerlesim(k);
     }, kok);
     yerlesimOzet(r, yer).forEach((x) => liste.push(x));
+    // Sayı yazımı: ölçülen kökün yazısı + bir önceki ölçümden beri tuvale çizilen yazı
+    const metin = await page.evaluate((k) => {
+      const el = document.querySelector(k), parca = [];
+      if (el) {
+        parca.push(el.innerText || '');
+        el.querySelectorAll('svg text').forEach((x) => parca.push(x.textContent));
+        el.querySelectorAll('[title]').forEach((x) => parca.push(x.getAttribute('title')));
+      }
+      parca.push((window.__sayiFill || []).join('\n'));
+      window.__sayiFill = [];
+      return parca.join('\n');
+    }, kok);
+    tara(metin).sorun.forEach((s) => sayilar.push(`${yer} · ${s.tur} "${s.sayi}" ⟨${s.bag}⟩`));
     return r;
   };
 }
@@ -70,13 +92,19 @@ const TURLAR = [
 ];
 
 for (const [ad, modul, tur] of TURLAR) {
-  test(`${ad}: yazı kutusuna sığıyor — kesik, kırık sözcük, yatay kaydırma, küçük yazı, yetim, yapışkan şerit, çizimde çakışma ve çizgi yok`, async ({ page }) => {
-    const liste = [];
-    const olc = olcucu(page, liste);
+  test(`${ad}: yazı kutusuna sığıyor — kesik, kırık sözcük, yatay kaydırma, küçük yazı, yetim, yapışkan şerit, çizimde çakışma ve çizgi yok; sayılar Türkçe`, async ({ page }) => {
+    const liste = [], sayilar = [];
+    const olc = olcucu(page, liste, sayilar);
+    await page.addInitScript(() => {
+      window.__sayiFill = [];
+      const f = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function (s) { window.__sayiFill.push(String(s)); return f.apply(this, arguments); };
+    });
     await T.bootApp(page, { modul, kur: yerlesimKur, w: 1920, h: 952,
       karsilama: ad === 'kabuk' ? () => olc('#ve-module-overlay', 'karşılama') : null });
     await tur(page, olc);
     if (process.env.YERLESIM_DOKUM) require('fs').writeFileSync(process.env.YERLESIM_DOKUM + '-' + ad.replace(/\s+/g, '_') + '.txt', liste.join('\n'));
+    expect.soft(sayilar).toEqual([]);   // ayrı liste: yerleşim düşse de sayı bulgusu basılır
     const muaf = MUAF.filter((m) => m.tur === ad);
     expect(liste.filter((x) => !muaf.some((m) => m.re.test(x)))).toEqual([]);
     muaf.forEach((m) => expect(`${m.neden.slice(0, 40)}: ${liste.some((x) => m.re.test(x))}`).toBe(`${m.neden.slice(0, 40)}: true`));

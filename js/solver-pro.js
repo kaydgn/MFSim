@@ -1404,15 +1404,15 @@ function veSolverRunProfessional() {
           log('│ KUVVETLER:', 'info');
           // F_grade fizik konvansiyonunda: pozitif = yokuşa direnç (frenleyici),
           // negatif = yokuş aşağı itici. Bu panel kuvvetleri "harekete etkisi"
-          // işaretiyle yazar (F_roll/F_aero hep '-'), yani eğimin etkisi −F_grade.
+          // işaretiyle yazar (F_roll/F_aero hep '−'), yani eğimin etkisi −F_grade.
           function _egimEtki(fg) {
             var etki = -fg;                       // harekete etkisi
-            return (etki >= 0 ? '+' : '-') + veSayi(Math.abs(etki), 0) + ' N  (' +
+            return (etki >= 0 ? '+' : '−') + veSayi(Math.abs(etki), 0) + ' N  (' +
                    (etki > 0 ? 'hızlandırıcı' : etki < 0 ? 'frenleyici' : 'etkisiz') + ')';
           }
           log('│   Eğim kuvveti    (F_grade) : ' + _egimEtki(Fg0));
-          log('│   Yuvarlanma dir. (F_roll)  : -' + veSayi(Math.abs(Fr0), 0) + ' N  (frenleme)');
-          log('│   Hava direnci    (F_aero)  : -' + veSayi(Math.abs(Fa0), 0) + ' N  (frenleme)');
+          log('│   Yuvarlanma dir. (F_roll)  : −' + veSayi(Math.abs(Fr0), 0) + ' N  (frenleme)');
+          log('│   Hava direnci    (F_aero)  : −' + veSayi(Math.abs(Fa0), 0) + ' N  (frenleme)');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + veSayi(topDirenc0, 0) + ' N');
           log('│   NET KUVVET               : ' + (Fn0 >= 0 ? '+' : '') + veSayi(Fn0, 0) + ' N' + (Fn0 > 10 ? '  → hızlanıyor' : (Fn0 < -10 ? '  → yavaşlıyor' : '  → dengede')));
@@ -1437,8 +1437,8 @@ function veSolverRunProfessional() {
           log('│');
           log('│ KUVVETLER:', 'info');
           log('│   Eğim kuvveti    (F_grade) : ' + _egimEtki(FgL));
-          log('│   Yuvarlanma dir. (F_roll)  : -' + veSayi(Math.abs(FrL), 0) + ' N');
-          log('│   Hava direnci    (F_aero)  : -' + veSayi(Math.abs(FaL), 0) + ' N');
+          log('│   Yuvarlanma dir. (F_roll)  : −' + veSayi(Math.abs(FrL), 0) + ' N');
+          log('│   Hava direnci    (F_aero)  : −' + veSayi(Math.abs(FaL), 0) + ' N');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + veSayi(topDirencL, 0) + ' N');
           log('│   NET KUVVET               : ' + (FnL >= 0 ? '+' : '') + veSayi(FnL, 0) + ' N' + (FnL > 10 ? '  → hızlanıyor' : (FnL < -10 ? '  → yavaşlıyor' : '  → dengede')));

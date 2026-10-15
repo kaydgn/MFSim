@@ -71,8 +71,8 @@ describe('veFormatAxisVal — aynı eksende basamak sayısı DEĞİŞMEZ', () =>
 
   test('negatif değerler de aynı basamakla yazılır', () => {
     const dec = veAxisDecimals(0.5);
-    expect(veFormatAxisVal(-1, dec)).toBe('-1,0');
-    expect(veFormatAxisVal(-0.5, dec)).toBe('-0,5');
+    expect(veFormatAxisVal(-1, dec)).toBe('−1,0');
+    expect(veFormatAxisVal(-0.5, dec)).toBe('−0,5');
   });
 
   test('10 binin üstünde tam sayı eksende k kısaltması korunur', () => {

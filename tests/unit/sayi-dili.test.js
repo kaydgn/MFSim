@@ -38,7 +38,7 @@ describe('veSayi — Türkçe yazım', () => {
     [999.5, 0, '1.000'],              // yuvarlama gruplamadan ÖNCE
     [1.09, 3, '1,090'],               // günlüğün "1.090"u: artık bin doksan diye okunmaz
     [1234567.891, 2, '1.234.567,89'],
-    [-12, 2, '-12,00'],
+    [-12, 2, '−12,00'],
     [0.5, undefined, '0,5'],
     [42, undefined, '42']
   ])('%p (%p hane) → %s', (v, n, beklenen) => expect(veSayi(v, n)).toBe(beklenen));
@@ -46,13 +46,14 @@ describe('veSayi — Türkçe yazım', () => {
   test('yuvarlanınca sıfıra inen eksi sayı işaretini bırakır ("-0,0" yok)', () => {
     expect(veSayi(-0.04, 1)).toBe('0,0');
     expect(veSayi(-0.0001, 0)).toBe('0');
-    expect(veSayi(-0.06, 1)).toBe('-0,1');
+    expect(veSayi(-0.06, 1)).toBe('−0,1');
   });
 
   test('sayı değilse tire; seçenekler: gruplamasız, belge eksisi, işaret', () => {
     [NaN, Infinity, null, undefined, '', 'abc'].forEach((v) => expect(veSayi(v, 1)).toBe('—'));
     expect(veSayi(1716.2, 1, { binlik: false })).toBe('1716,2');
     expect(veSayi(-3.5, 1, { eksi: '−' })).toBe('−3,5');
+    expect(veSayi(-3.5, 1, { eksi: '-' })).toBe('-3,5');   // düz metin tire isterse (S4·B)
     expect(veSayi(25, 0, { isaret: true })).toBe('+25');
     expect(veSayi(0, 0, { isaret: true })).toBe('0');
     expect(veSayi('12.5', 1)).toBe('12,5');            // sayı dizgesi okunur
@@ -60,7 +61,7 @@ describe('veSayi — Türkçe yazım', () => {
 
   test('üstel yazımda ondalık virgül; toFixed\'in üstele kaçtığı büyüklükte de', () => {
     expect(veSayiUstel(0.000123, 2)).toBe('1,23e-4');
-    expect(veSayiUstel(-4.5e-7, 1)).toBe('-4,5e-7');
+    expect(veSayiUstel(-4.5e-7, 1)).toBe('−4,5e-7');
     expect(veSayi(1e21, 0)).toBe('1,00e+21');
   });
 });

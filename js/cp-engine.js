@@ -3223,7 +3223,7 @@ function formatVEPolynomial(coeffs) {
     if(i === 0) {
       term = veSayi(c, 2);
     } else {
-      var sign = c >= 0 ? '+' : '-';
+      var sign = c >= 0 ? '+' : '−';
       var absC = Math.abs(c);
       if(absC < 0.001) {
         term = sign + veSayiUstel(absC, 2) + '·n';

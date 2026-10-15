@@ -11849,7 +11849,8 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
  */
 
 // v → "1.716,2". basamak: ondalık hane (verilmezse sayının kendisi, en çok 6).
-// opt.binlik (varsayılan true) · opt.eksi (varsayılan '-'; belgeler '−') ·
+// opt.binlik (varsayılan true) · opt.eksi (varsayılan '−' — gerçek eksi her
+// ekranda, kullanıcı kararı S4·B; tire isteyen düz metin '-' geçer) ·
 // opt.isaret (true → pozitifte de '+'). Sayı değilse '—'.
 function veSayi(v, basamak, opt) {
   opt = opt || {};
@@ -11864,7 +11865,7 @@ function veSayi(v, basamak, opt) {
   var p = s.split('.'), tam = p[0];
   if(opt.binlik !== false) tam = tam.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   var out = (p.length > 1) ? tam + ',' + p[1] : tam;
-  if(neg) return (opt.eksi || '-') + out;
+  if(neg) return (opt.eksi || '−') + out;
   return (opt.isaret && n > 0 ? '+' : '') + out;
 }
 
@@ -11873,7 +11874,7 @@ function veSayiUstel(v, basamak, opt) {
   var n = Number(v);
   if(!isFinite(n)) return '—';
   var s = n.toExponential(basamak == null ? 2 : basamak).replace('.', ',');   // makine: yazıcının kendisi
-  if(s.charAt(0) === '-' && opt && opt.eksi) s = opt.eksi + s.slice(1);
+  if(s.charAt(0) === '-') s = ((opt && opt.eksi) || '−') + s.slice(1);
   return s;
 }
 

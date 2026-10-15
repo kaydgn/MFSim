@@ -756,7 +756,7 @@ describe('gergi paneli TEK koordinat soruyor', () => {
   test('türeyen montaj konumu panelde BASILIYOR', () => {
     const html = fead.getFeadTensionerPropertiesHTML(tam());
     expect(html).toMatch(/montaj konumu \(türedi\)/);
-    expect(html).toMatch(/-250,00 \/ 110,00/);
+    expect(html).toMatch(/−250,00 \/ 110,00/);
     expect(html).not.toMatch(/undefined|NaN/);
   });
 
@@ -770,7 +770,7 @@ describe('gergi paneli TEK koordinat soruyor', () => {
     global.nodes = []; global.connections = [];
     const html = fead.getFeadTensionerPropertiesHTML(tam());
     expect(html).toMatch(/montaj konumu \(türedi\)/);
-    expect(html).toMatch(/-250,00 \/ 110,00/);
+    expect(html).toMatch(/−250,00 \/ 110,00/);
     // ve okuma KOL KÜNYESİ kartının içinde — onu belirleyen iki alanın yanında
     const i = html.indexOf('Kol künyesi');
     const j = html.indexOf('Yay künyesi');
@@ -1843,7 +1843,7 @@ describe('gergi DOĞRULAMA kartı — panel hiçbir şeyi karşılaştırmıyor'
     // görünmez (ölçülmüş bedeli gerginlikte medyan +%1526).
     const h = duz(fead.getFeadTensionerPropertiesHTML(kur()));
     expect(h).toContain('montaj konumu (türedi)');
-    expect(h).toContain('-250');
+    expect(h).toContain('−250');
   });
 });
 

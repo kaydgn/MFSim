@@ -3803,7 +3803,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += '  DURUM KODLARI\n';
       r += '  HIZLANDI  : Segment sonunda hiz artisi > 1 km/h\n';
       r += '  YAVASLADI : Segment sonunda hiz dususu > 1 km/h\n';
-      r += '  SABIT     : Hiz degisimi +/-1 km/h araliginda\n';
+      r += '  SABIT     : Hiz degisimi ±1 km/h araliginda\n';
       r += '  DURDU     : Arac durma noktasina geldi (< 1 km/h)\n\n\n';
     }
 
