@@ -2919,7 +2919,7 @@ describe('kol açısı seçici — koordinat düzlemi', () => {
     const svg = wiz.veFeadWizAngSVG(sc, 164);
     expect(svg).toContain('<svg');
     expect(svg).toContain('data-k=');            // ölçek künyesi — fare için
-    ['0°', '90°', '180°', '-90°'].forEach((e) => expect(svg).toContain('>' + e + '<'));
+    ['0°', '90°', '180°', '−90°'].forEach((e) => expect(svg).toContain('>' + e + '<'));
     expect(svg).toContain('164,0°');             // seçili açı yazılı
     // KOL YEŞİL OK (kullanıcı isteği, 2026-09-02): gövde + doldurulmuş uç.
     // İŞARETÇİYE bakıyor, nitelik SIRASINA değil: ok artık ortak üreticiden

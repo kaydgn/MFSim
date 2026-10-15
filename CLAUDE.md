@@ -366,6 +366,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `// makine: <sebep>` taşır. GİRDİ ALANINA GRUPLU SAYI YAZILMAZ
   (`{ binlik: false }`): okuyucu `veSayiOku` virgülsüz noktayı ondalık sayar
   (dişli oranı "1.000"), yani "1.800" 1,8 okunur — sessiz bin kat hata.
+  EKSİ GERÇEK EKSİ (−, kullanıcı kararı S4·B) — yazıcının varsayılanı; pano
+  ve CSV (makine biçimi) ile girdi alanı (klavyenin eksisi) tireli kalır,
+  okuyucu ikisini de okur.
   Görüntüleyici yazıcıyı birebir taşır. **Ekrandaki YAZI sayıya geri
   okunmaz** (`parseFloat(el.textContent)` "0,0065"i 0 okur): değer kendi
   niteliğinde taşınır. Koordinat üçlüsünde ve liste içinde ayraç `; ` —
@@ -375,7 +378,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   boşluk koyar ("12, 7") — yazıcı `_frTeX` · `_rTeX`. TXT raporda gruplu sayı
   hücreyi uzatır: dolgu yetmezse sütun kayar — hizası ölçülür. Kapı:
   `sayi-dili.test.js` + `sayi-pencere.spec.js` (ekran) + `sayi-belge.spec.js`
-  (belge, TeX, TXT hizası); ölçüt tek yerde, kendi testiyle:
+  (belge, TeX, TXT hizası) + `yerlesim.spec.js` (yüzey turunun her noktası);
+  ölçüt tek yerde, kendi testiyle:
   `tests/helpers/sayi-olcu.js`. Kaynak kapsamı `js/` ve `viewer/js/`'nin
   TAMAMI — yeni dosya kendiliğinden girer; tek istisna dışarıdan gelen
   `fead-core.js`. `toFixed` taşımayan çıplak birleştirmeyi (`cd + ' kW'`)

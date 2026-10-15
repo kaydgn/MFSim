@@ -16,6 +16,22 @@ describe('yazım taraması', () => {
     expect(turler('Verim : 97,0% · eşik 5 %')).toEqual(['sonda % 97,0%', 'sonda % 5 %']);
     expect(turler('Cd 0,750 · 1.100 Nm @ 1.400 rpm · %97,0 · 13.150 kg')).toEqual([]);
   });
+  test('tire eksi yakalanır; kod, tarih, aralık ve üs sayılmaz (S4·B)', () => {
+    const turler = (t) => O.tara(t).sorun.map((s) => s.tur + ' ' + s.sayi);
+    expect(turler('Konum (-12,5; 34; -7) mm · θ = -90°')).toEqual(['tire eksi -12,5', 'tire eksi -7', 'tire eksi -90']);
+    expect(turler('Konum (−12,5; 34; −7) mm · θ = −90° · Σ −4,49')).toEqual([]);
+    expect(turler('TC-411 · 2026-10 · 10-20 km/h · 1,2e-4 · K-1,5')).toEqual([]);
+  });
+  test('Gates rapor künyesi ad sayılır; künyesiz yıl ve boy yine yakalanır', () => {
+    const turler = (t) => O.tara(t).sorun.map((s) => s.tur + ' ' + s.sayi);
+    expect(turler('Yükle AG00902 2023 4 kasnak · Gates AG00902 raporu (1275) · (8PK1715HD, Ten@-250/110, IDR1)')).toEqual([]);
+    expect(turler('hız 2023 km · boy (1275) mm · konum @-250')).toEqual(['grupsuz 2023', 'grupsuz 1275', 'tire eksi -250']);
+  });
+  test('sondaki yüzde hücre sınırını aşmaz: sekme ve satır sonu komşu hücredir', () => {
+    const turler = (t) => O.tara(t).sorun.map((s) => s.tur + ' ' + s.sayi);
+    expect(turler('273,2\t%−2,9 · 95,6\n%3,1')).toEqual([]);
+    expect(turler('273,2 % · 95,6\u00a0% · 5%')).toEqual(['sonda % 273,2 %', 'sonda % 95,6\u00a0%', 'sonda % 5%']);
+  });
   test('üç haneli kesir sayılmaz — Türkçe binlikten ayırt edilemez', () => {
     expect(O.tara('1.090 · 2.800').sorun).toEqual([]);
   });

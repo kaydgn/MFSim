@@ -2425,7 +2425,7 @@ function veFeadBandSVG(band, W, H, opt){
   [-180, -90, 0, 90, 180].forEach(function(v){
     s += '<text x="' + X(v).toFixed(1) + '" y="' + (H - B + 12)   // makine: SVG koordinatı
       + '" text-anchor="middle" font-size="' + (pr ? 10 : 9) + '" fill="' + C.mut + '">'
-      + v + '</text>';
+      + veSayi(v, 0) + '</text>';
   });
   // KULLANILAMAYAN AÇILAR taralı
   var st = band.step;
@@ -8860,7 +8860,8 @@ function veFeadChecksCard(node, build){
     var renk = !Number.isFinite(p) ? 'var(--text-muted)'
              : p < 0  ? 'var(--ink-danger)'
              : p < 10 ? 'var(--ink-warning)' : 'var(--text-secondary)';
-    return '<span style="color:' + renk + ';">' + (Number.isFinite(p) ? '%' + _feadFmt(p, 1) : '—') + '</span>';
+    // nowrap: "%−2,9" — gerçek eksi (UAX #14 PR sınıfı) "%"den sonra satır kırmaya izin veriyor, tire vermiyordu
+    return '<span style="color:' + renk + '; white-space:nowrap;">' + (Number.isFinite(p) ? '%' + _feadFmt(p, 1) : '—') + '</span>';
   }
 
   // 1 — merkez mesafesi

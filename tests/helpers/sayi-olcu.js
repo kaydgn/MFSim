@@ -5,13 +5,17 @@
  * (tests/e2e/sayi-belge.spec.js) AYNI ölçütü kullanır; kural burada tek yerde.
  * Davranışı tests/unit/sayi-olcu.test.js tutar — ölçütün kendisi de düşebilmeli.
  *
- * Ölçülen dört yazım:
+ * Ölçülen beş yazım:
  *   NOKTA        noktalı ondalık: "0.5361" · "8.5". Üç haneli kesir ("1.090")
  *                Türkçe binlikle karışır, SAYILMAZ — onu kaynak tarayıcısı
  *                (tools/sayi-dili.js) toFixed'den yakalar.
  *   GRUPSUZ      binliği gruplanmamış 4+ haneli sayı: "2800 rpm"
  *   BOSLUKLU     boşlukla gruplanmış sayı: "13 150" (ISO yazımı; seçilmedi)
  *   SONDA_YUZDE  sayıdan SONRA yüzde: "97,0%" · "5 %" (Türkçe: %97,0)
+ *   TIRE_EKSI    eksi sayının önünde TİRE: "-12,5" (kullanıcı kararı S4·B —
+ *                her ekranda gerçek eksi "−12,5"). Tireden önce harf ya da
+ *                rakam varsa eksi değildir: kod "TC-411", tarih "2026-10",
+ *                aralık "10-20", üs "1,2e-4".
  *
  * AD OLAN SAYI KALIR: şanzıman modeli, parça no, ön ayar adı, standart,
  * formül sabiti (P × 9550 / n · T·ω/1000), tarih, telif yılı, bölüm no.
@@ -20,7 +24,10 @@
 const NOKTA = /(?<![\p{L}\d.,_\-])(?:0\.\d+|\d+\.\d{1,2}|\d+\.\d{4,})(?![\d.,])/gu;
 const GRUPSUZ = /(?<![\p{L}\d.,_\-])\d{4,}(?:[.,]\d+)?(?![\d\p{L}])/gu;
 const BOSLUKLU = /(?<![\p{L}\d.,])\d{1,3}(?: \d{3})+(?:[.,]\d+)?(?!\d)/gu;
-const SONDA_YUZDE = /(?<![\p{L}])\d+(?:[.,]\d+)?\s?%(?!\d)/gu;
+// Boşluk yalnız satır İÇİ: sekme ve satır sonu hücre sınırıdır — tabloda "273,2" ile
+// komşu hücrenin "%−2,9"u sondaki yüzde değil.
+const SONDA_YUZDE = /(?<![\p{L}])\d+(?:[.,]\d+)?[ \u00a0\u202f]?%(?!\d)/gu;
+const TIRE_EKSI = /(?<![\p{L}\d_\-−.,])-\d[\d.,]*/gu;
 
 const SABIT = '(?:1000|3600|9549|9550|50000|60000)';
 const AD = [
@@ -32,6 +39,9 @@ const AD = [
   ['araç adı', /BMC|\d\.\dT\b/],
   ['formül sabiti', new RegExp('× 9550|× 9549|9549 ?[·,]|[*/×] ?' + SABIT + '(?![\\d.,])|(?<![\\d.,])' + SABIT + ' ?[*/×]')],
   ['standart / kayış adı', /ISO|DIN|SAE|\dPK/],
+  // Gates rapor künyesi: rapor yılı ("AG00902 2023"), aynı numaranın boy varyantı
+  // ("AG00902 raporu (1275)") ve gergi konumu kodu ("Ten@-250/110", raporun dosya adı).
+  ['Gates rapor künyesi', /AG\d{4,6} (?:19|20)\d\d|raporu \(\d{4}\)|Ten@/],
   ['tarih', /20\d\d-\d\d|\d\d\.\d\d\.20\d\d|(?:Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık) (?:19|20)\d\d/],
   // Kaynakça yılı: "Kong 2016", "Gerbert & Hansson (1987)", "Balta ve ark. 2015", "Eng. 55(2), 2019",
   // "Čepon 2011" (yazar adında Slav aksanı: Č Š Ž)
@@ -56,7 +66,7 @@ function sinifla(sayi, bag) {
 // Sondaki yüzdede ad aranmaz (ad "%" ile bitmiyor).
 function tara(metin) {
   const sorun = [], adlar = {};
-  for (const [tur, re] of [['nokta', NOKTA], ['grupsuz', GRUPSUZ], ['boşluklu', BOSLUKLU], ['sonda %', SONDA_YUZDE]]) {
+  for (const [tur, re] of [['nokta', NOKTA], ['grupsuz', GRUPSUZ], ['boşluklu', BOSLUKLU], ['sonda %', SONDA_YUZDE], ['tire eksi', TIRE_EKSI]]) {
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(metin))) {
@@ -159,4 +169,4 @@ function texTara(tex) {
   return out;
 }
 
-module.exports = { NOKTA, GRUPSUZ, BOSLUKLU, SONDA_YUZDE, AD, sinifla, tara, kutuIhlal, tabloIhlal, TEX_NOKTA, TEX_VIRGUL, texTara };
+module.exports = { NOKTA, GRUPSUZ, BOSLUKLU, SONDA_YUZDE, TIRE_EKSI, AD, sinifla, tara, kutuIhlal, tabloIhlal, TEX_NOKTA, TEX_VIRGUL, texTara };
