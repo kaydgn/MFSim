@@ -171,3 +171,79 @@ test('3B tam ekran: model görüntüyü doldurur, içinde kalır; başka örnekt
   expect(b.icinde).toBe(true);
   expect(b.dolu).toBeGreaterThan(0.6);
 });
+
+// ── 2D GÖRÜNÜM · AKSONOMETRİK SEKME (2026-10-15, kullanıcı seçimi) ─────────
+// Node'daki kapı (mount-akso.test.js) çizicinin KUTU TAHMİNİYLE ölçüyor;
+// burada yazının gerçek kutusu, hâlesi ve çizgilerin gerçek sırası: üç örnek,
+// her katman, iki izdüşüm, alttan ve arkadan bakış, tam ekranda üç duvar.
+// Canlandırma kare üretiyor; çizim kabın genişliğinde 1:1 (yazı ölçek tabanında).
+const AKSO_SIFIR = () => Object.assign(VE_MNT_AKSO, { iz: 'dim', bx: -1, by: -1, bz: 1, direk: false, kuvvet: false,
+  cokme: false, mod: false, rijit: false, duvar: false, modI: 0, oynat: true });
+test('2D Görünüm · Aksonometrik: ilk sekme, katmanlar ve tam ekran — yerleşim temiz, mod canlanıyor', async ({ page }) => {
+  await bootApp(page);
+  const out = [];
+  for (const [k, imza] of ORNEK) {
+    await ornek(page, k, imza);
+    await page.evaluate(async () => { const s = nodes.find((n) => n.type === 'mnt-solver'); await veMntSolverCompute(s.id); });
+    await page.evaluate(AKSO_SIFIR);
+    await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-2dview'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
+    await page.waitForTimeout(700);
+    await page.evaluate(Y.KAYNAK);
+    const ilk = await page.evaluate(() => {
+      const t = document.querySelector('#ve-properties .ve-fp-tab[aria-selected="true"]');
+      const svg = document.querySelector('#ve-properties svg.ve-mnt2d-akso');
+      return { sekme: t && t.getAttribute('data-k'), vb: svg && svg.viewBox.baseVal.width, en: svg && svg.getBoundingClientRect().width,
+        kap: document.querySelector('.ve-mnt-akso-kap') && document.querySelector('.ve-mnt-akso-kap').id };
+    });
+    expect(ilk.sekme).toBe('akso');
+    expect(Math.abs(ilk.vb - ilk.en)).toBeLessThan(1.5);          // 1:1 — yazı küçülmez
+    const ayar = (a, b) => page.evaluate(([id, kk, vv]) => veMntAksoAyar(id, kk, vv), [ilk.kap, a, b]);
+    const olc = async (ad) => {
+      await page.waitForTimeout(250);
+      const r = await page.evaluate(() => window.__yerlesim('#ve-properties'));
+      Y.yerlesimOzet(r, k + ' · ' + ad).forEach((x) => out.push(x));
+    };
+    await olc('temel');
+    await ayar('kat', 'kuvvet'); await ayar('kat', 'cokme'); await olc('kuvvet + statik sehim');
+    await ayar('kat', 'cokme'); await ayar('kat', 'kuvvet');
+    await ayar('kat', 'rijit'); await olc('rijitlik'); await ayar('kat', 'rijit');
+    await ayar('kat', 'direk'); await olc('direk'); await ayar('kat', 'direk');
+    await ayar('iz', 'iso'); await ayar('bz', -1); await olc('izometrik alttan');
+    await ayar('iz', 'dim'); await ayar('bz', 1); await ayar('bx', 1); await ayar('by', 1); await olc('arkadan-sağdan');
+    await ayar('bx', -1); await ayar('by', -1);
+    // MOD: hareket eden katman her karede yeniden yazılır
+    await ayar('kat', 'mod'); await olc('mod');
+    const kare = () => page.evaluate(() => document.querySelector('#ve-properties svg.ve-mnt2d-akso .ve-ak-hareket').innerHTML);
+    const a1 = await kare(); await page.waitForTimeout(350); const a2 = await kare();
+    if (a1 === a2) out.push(k + ' · mod canlanmıyor');
+    await ayar('kat', 'mod');
+    // TAM EKRAN: üç duvar
+    await page.evaluate(() => veMnt2DTamEkran()); await page.waitForTimeout(1000);
+    await page.evaluate(() => veMntAksoAyar('ve-mnt-akso-fs', 'kat', 'duvar')); await page.waitForTimeout(400);
+    const tam = await page.evaluate(() => ({ yer: window.__yerlesim('#ve-mnt-fs'),
+      duvar: document.querySelectorAll('#ve-mnt-akso-fs .ve-ak-d-gol').length,
+      ad: [...document.querySelectorAll('#ve-mnt-akso-fs svg text')].map((t) => t.textContent) }));
+    Y.yerlesimOzet(tam.yer, k + ' · tam ekran üç duvar').forEach((x) => out.push(x));
+    if (!tam.duvar) out.push(k + ' · tam ekranda duvar gölgesi yok');
+    if (!tam.ad.some((t) => /^T1 /.test(t))) out.push(k + ' · tam ekranda takoz adı yok');
+    await page.evaluate(() => veMntAksoAyar('ve-mnt-akso-fs', 'kat', 'duvar'));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    await page.evaluate(() => veTogglePropertiesPanel(false));
+  }
+  expect(out).toEqual([]);
+});
+
+test('2D Görünüm · Aksonometrik: hareket azaltma açıkken mod durağan çizilir ve sebebi yazılır', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await bootApp(page);
+  await ornek(page, 'tulga', 'Ön Takoz Braketi');
+  await page.evaluate(async () => { const s = nodes.find((n) => n.type === 'mnt-solver'); await veMntSolverCompute(s.id); });
+  await page.evaluate(AKSO_SIFIR);
+  await page.evaluate(() => { VE_MNT_AKSO.mod = true; const n = nodes.find((x) => x.type === 'mnt-2dview'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
+  await page.waitForTimeout(800);
+  const kare = () => page.evaluate(() => document.querySelector('#ve-properties svg.ve-mnt2d-akso .ve-ak-hareket').innerHTML);
+  const a1 = await kare(); await page.waitForTimeout(400); const a2 = await kare();
+  expect(a2).toBe(a1);
+  expect(await page.evaluate(() => document.querySelector('#ve-properties .ve-mnt-ak-alt').textContent)).toContain('Hareket azaltma açık');
+  await page.evaluate(AKSO_SIFIR);
+});
