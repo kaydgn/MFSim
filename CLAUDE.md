@@ -581,7 +581,7 @@ Kullanıcı bildirimi: *"bir PR ve merge için en az 30-40 dakika bekliyoruz."*
 |----|------|-----|
 | `npm run build` | **1 sn** | bedava, hiç kaçınma |
 | tek test dosyası | **3 sn** | |
-| `npm run test:takoz` | **12 sn** | 40 dosya / 1000 test (2026-10-15; pencere ve kılavuz testleri dâhil) |
+| `npm run test:takoz` | **11 sn** | 40 dosya / 1000 test (2026-10-15; pencere ve kılavuz testleri dâhil) |
 | `npm run test:fead` | **20 sn** | 30 dosya / 1432 test |
 | `npm run test:arac` | **46 sn** | |
 | `npm test` (tam) | **67 sn** | 168 dosya, 256 sn CPU |
@@ -736,7 +736,7 @@ npm run test:watch          # ★ geliştirme döngüsü — kaydettikçe ilgili
 npm run test:changed        # git'te değişen dosyalarla ilgili testler (jest -o)
 npm run test:fead           # ★ FEAD modülü — 20 sn (tam testin yerine, DÖNGÜDE)
 npm run test:arac           # Araç Performans — 46 sn
-npm run test:takoz          # Takoz — 12 sn
+npm run test:takoz          # Takoz — 11 sn
 npm run hazir               # ★ build + tam test — COMMIT ÖNCESİ tek komut
 npm run test:urun           # CI'nın e2e-urun işinin kendisi (liste package.json'da)
 npm test                    # tüm birim testleri (sessiz) — 96 sn
