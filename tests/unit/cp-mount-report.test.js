@@ -182,7 +182,7 @@ describe('§8 zenginleştirmeleri', () => {
   test('§8.6 üç-eksen çökme detayı: her takoz için δx/δy/δz tablosu', () => {
     const h = rep._mntRepDeflectionDetail(R);
     expect(h).toContain('üç-eksen çökme detayı');
-    ['δ_x', 'δ_y', 'δ_z'].forEach(l => expect(h).toContain(l));
+    ['δ<sub>x</sub>', 'δ<sub>y</sub>', 'δ<sub>z</sub>'].forEach(l => expect(h).toContain(l));   // gerçek alt simge (Tur 6)
     // her takoz için bir tablo
     expect((h.match(/<table>/g) || []).length).toBe(R.mounts.length);
     R.mounts.forEach(m => expect(h).toContain(m.name));
@@ -191,7 +191,7 @@ describe('§8 zenginleştirmeleri', () => {
   });
   test('Mod şekli matrisi: 6 mod × 6 SD, ortalanmış veri-çubuğu', () => {
     const h = rep._mntRepModeMatrix(R.modes);
-    ['u_x', 'u_y', 'u_z', 'θ_x', 'θ_y', 'θ_z'].forEach(l => expect(h).toContain(l));
+    ['u<sub>x</sub>', 'u<sub>y</sub>', 'u<sub>z</sub>', 'θ<sub>x</sub>', 'θ<sub>y</sub>', 'θ<sub>z</sub>'].forEach(l => expect(h).toContain(l));
     expect(h).toContain('linear-gradient');            // ortalanmış çubuk (heatmap değil)
     expect(h).toContain('rgba(36,66,95,0.20)');
     expect(h).toContain('class="modeshape"');
@@ -238,7 +238,7 @@ describe('Motor takozu uygunluğu (hedef kontrolü)', () => {
      'transmissibility', 'Vites başına takoz kuvvetleri', 'Genel hüküm'].forEach(s =>
       expect(h).toContain(s));
     expect(h).not.toContain('bekliyor');     // idle var → frekans kriterleri beklemiyor
-    expect(h).toContain('f_ateş');           // ateşleme frekansı hesaplandı
+    expect(h).toContain('f<sub>ateş</sub>');  // ateşleme frekansı hesaplandı
   });
   test('Kriter 1 TÜM modları sınar — yalnız en yüksek modu değil', () => {
     // Regresyon: eskiden yalnız roll (en yüksek) modu bakılırdı; ortadaki bir mod
