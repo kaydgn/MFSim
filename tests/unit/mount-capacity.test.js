@@ -2,7 +2,7 @@
  * Takoz taşıma kapasitesi ve % kullanım
  * ─────────────────────────────────────
  * Kapasite (maxLoad) üretici kataloğundan gelen OPSİYONEL bir sınırdır ve
- * FİZİĞE GİRMEZ: çözücü onu görmez, rijitliği ve çökmeyi değiştirmez. Yalnız
+ * FİZİĞE GİRMEZ: çözücü onu görmez, rijitliği ve sehimi değiştirmez. Yalnız
  * "bu takoz taşıdığı yükün yüzde kaçında çalışıyor" sorusunu cevaplar.
  *
  * Burada test edilen iki şey var, ikisi de sessiz hata sınıfından:

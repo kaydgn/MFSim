@@ -352,7 +352,7 @@ describe('Renk skalaları', () => {
 // girdi ile ondan türetilen yan yana. Alan kimlikleri ve setter'lar AYNI kaldı
 // (`ve-mnt-<alan>-<düğüm>` · veMntSet) — kaydedilmiş projeler ve kılavuz onlara bağlı.
 describe('Föy pencereleri — alan kimlikleri ve satır düzeni', () => {
-  test('Kütle penceresi: AM föyü + simetrik atalet matrisi, id\'ler yerinde', () => {
+  test('Kütle penceresi: CG föyü + simetrik atalet matrisi, id\'ler yerinde', () => {
     const node = { id: 'n9', type: 'mnt-motor', def: { name: 'Motor (Kütle)' }, data: {} };
     const html = cp.getMntMassPropertiesHTML(node);
     ['cgx','cgy','cgz','Ixx','Iyy','Izz','Ixy','Ixz','Iyz','mass'].forEach(k =>
@@ -850,8 +850,8 @@ describe('2D Görünüm bileşeni', () => {
       mounts: [{ name: 'Ön Takoz', x: -50, y: 20, z: 30 }],
       cg: { x: -321.4, y: 4.9, z: 859.3, m: 1386.3 }
     });
-    expect(svg).toContain('Ağırlık merkezi');       // bileşen hover başlığı
-    expect(svg).toContain('Birleşik ağırlık merkezi'); // birleşik CG hover
+    expect(svg).toContain('CG  (');               // bileşen hover: CG (x; y; z) mm
+    expect(svg).toContain('Birleşik CG');          // birleşik CG hover
     expect(svg).toMatch(/1\.386,3 kg/);            // kütle bilgisi
   });
 });

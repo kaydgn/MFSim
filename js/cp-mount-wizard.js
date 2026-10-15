@@ -10,7 +10,7 @@
 //  • KENDİ MODELİNİ KURMAZ. Durum → `veMntWizNodes` → Takoz düğüm listesi;
 //    masadaki 2B görünüş, canlı çözüm ve "Modeli kur" AYNI listeden geçer.
 //    Canlı çözüm Çözücü'nün kendi yolu (`_mntPrepareFrom`, cp-mount.js):
-//    sihirbazın gösterdiği çökme, kurulan modelde Çözücü'nün bulacağı çökmenin
+//    sihirbazın gösterdiği sehim, kurulan modelde Çözücü'nün bulacağı sehimin
 //    ta kendisi olmalı — ikinci bir "önizleme çözücüsü" sessizce ayrışırdı.
 //  • GÖRÜNÜM FEAD SİHİRBAZININ KABUĞUNDAN (`.ve-fw-*`): aynı ray, masa, denetim
 //    sütunu ve alt çubuk; Takoz'a özgü birkaç kural `.ve-mw-*`. Kullanıcı
@@ -33,7 +33,7 @@ var VE_MW_STEPS = [
   { key:'govde',  ad:'Kütle gövdeleri', ipucu:'Motor · şanzıman · braket — kütle, ağırlık merkezi, atalet' },
   { key:'takoz',  ad:'Takozlar',        ipucu:'Konum · katalog · statik ve dinamik rijitlik' },
   { key:'tork',   ad:'Tork ve çalışma', ipucu:'Motor torku · vites oranları · rölanti ve silindir' },
-  { key:'ozet',   ad:'Özet ve kurulum', ipucu:'Canlı çözüm · çökme ve takoz yükleri · modeli kur' }
+  { key:'ozet',   ad:'Özet ve kurulum', ipucu:'Canlı çözüm · sehim ve takoz yükleri · modeli kur' }
 ];
 // Kütle gövdesi tipleri — Bileşenler'in "Takoz alt bileşenleri" ve "PTO
 // grubu" sırasıyla. Ad componentDefs'ten okunur.
@@ -1361,7 +1361,7 @@ function _mwStepOzet(c){
     + '</div>';
   var h = _mwCard('Kurulacaklar', kur);
   if(c.ok){
-    var tb = '<table class="ve-fw-tbl ve-mw-tbl"><thead><tr><th>Takoz</th><th>Çökme <em>mm</em></th><th>Yük <em>kg</em></th>'
+    var tb = '<table class="ve-fw-tbl ve-mw-tbl"><thead><tr><th>Takoz</th><th>Sehim <em>mm</em></th><th>Yük <em>kg</em></th>'
       + (c.statik.some(function(s){ return Number.isFinite(s.kapasite); }) ? '<th>Kap. <em>%</em></th>' : '') + '</tr></thead><tbody>';
     var kapVar = c.statik.some(function(s){ return Number.isFinite(s.kapasite); });
     c.statik.forEach(function(s){
@@ -1415,8 +1415,8 @@ function _mwMasaHTML(k, c){
   }
   var lejant = (tur === 'figur')
     ? '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-takoz"></i>Takoz</span>'
-      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-govde"></i>Gövde ağırlık merkezi</span>'
-      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-cg"></i>Birleşik ağırlık merkezi</span>'
+      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-govde"></i>Gövde CG</span>'
+      + '<span class="ve-fw-lj"><i class="ve-mw-lj ve-mw-lj-cg"></i>Birleşik CG</span>'
     : '';
   return '<div class="ve-fw-masa" id="ve-mw-masa" data-adim="' + k + '" data-tur="' + tur + '"'
     + (tur === 'figur' ? ' data-gezin="1" tabindex="0"' : '') + '>'
@@ -1444,7 +1444,7 @@ function _mwCipIcHTML(c){
   h += '<span class="ve-fw-pill">takoz <b>' + ((_mwState || {}).takozlar || []).length + '</b></span>';
   if(c.ok && c.statik.length){
     var enCok = Math.max.apply(null, c.statik.map(function(s){ return -s.d[2]; }));
-    h += '<span class="ve-fw-pill">1 g çökme en çok <b>' + _mwFmt(enCok, 2) + ' mm</b></span>';
+    h += '<span class="ve-fw-pill">1 g sehim en çok <b>' + _mwFmt(enCok, 2) + ' mm</b></span>';
   }
   // Simge KENDİ kutusunda: hap esnek kap ve alt simgesi onun doğrudan
   // çocuğu olunca "f 1" diye yan yana düşüyor (FEAD sihirbazının L_b hapıyla
@@ -1481,7 +1481,7 @@ function _mwFigurVeri(c){
   // kaydın kendisinden (veMntStpKayit), ikinci bir dönüşümden değil.
   if(k === 'kaynak' && _mwStpOnizleme() && typeof _mnt2DGather === 'function')
     return { veri:_mnt2DGather(veMntStpKayit(_mwStp.coz, _mwStp.kutle).liste), secili:null };
-  // Özet adımında takozun etiketi 1 g çökmesi: masa sayıyı yerinde söyler.
+  // Özet adımında takozun etiketi 1 g sehimi: masa sayıyı yerinde söyler.
   if(k === 'ozet' && c.ok){
     v = { comps:v.comps, cg:v.cg, mounts:v.mounts.map(function(m, i){
       var s = c.statik[i]; var e = {}; for(var k in m) e[k] = m[k];
@@ -1511,7 +1511,7 @@ function _mwMasaCiz(c){
   var f = _mwFigurVeri(c);
   var svg = (typeof veMnt2DGorunusSVG === 'function')
     ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGorunus, secili:f.secili, secim:true, pay:_mwMasaPay(o, k),
-        // Özette takozun etiketi 1 g çökmesini taşır (`_mwFigurVeri` → `etiket`);
+        // Özette takozun etiketi 1 g sehimini taşır (`_mwFigurVeri` → `etiket`);
         // çizicinin varsayılanı yalnız adı okuyor, sayı hiç görünmüyordu.
         takozEtiket:(k === 'ozet') ? function(m){ return m.etiket || m.name || 'Takoz'; } : null }) : '';
   if(!svg){

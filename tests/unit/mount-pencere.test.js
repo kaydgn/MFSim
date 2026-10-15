@@ -10,7 +10,7 @@
  *     yazım farkı ve ad değişikliği bayatlatmaz.
  *   · KİMLİKLE EŞLEME — takozun sonucu R.mounts'ta SIRAYLA değil KİMLİKLE bulunur.
  *   · TEK KAYNAK — pencerenin uygunluğu raporun satırları (veMntUygunluk),
- *     AM farkı çekirdeğin combineMassProps'u, mil torku çözücünün tork durumu.
+ *     CG farkı çekirdeğin combineMassProps'u, mil torku çözücünün tork durumu.
  *   · ÇÖZÜCÜNÜN BOŞ ALAN KURALI — boş alan pencerede de 0'dır ve sekme
  *     bunu "eksik" diye söyler.
  *   · YERİNDE TAZELEME — düzenleme pencereyi kurmaz; türetilen alanlar
@@ -108,7 +108,7 @@ describe('KİMLİKLE EŞLEME — takozun sonucu sırayla değil kimlikle', () =>
     expect(T.R.mounts[T.j].name).toBe('Ön Takoz');
   });
 
-  test('pencerenin statik çökme hücresi O takozun statik durumundan', () => {
+  test('pencerenin statik sehim hücresi O takozun statik durumundan', () => {
     tulga();
     const R = coz();
     const j = R.mounts.findIndex((m) => m.name === 'Ön Takoz');
@@ -154,7 +154,7 @@ describe('TEK KAYNAK — pencere raporun ve çekirdeğin sayısını okur', () =
     expect(html).not.toMatch(/Modal bant <small class="ve-mnt-kno">K1<\/small><span>değerlendirilemedi/);
   });
 
-  test('Birleşik AM\'ye Δ = gövde AM − çekirdeğin combineMassProps AM\'si (boş alan = 0, çözücü gibi)', () => {
+  test('Birleşik CG\'ye Δ = gövde CG − çekirdeğin combineMassProps CG\'si (boş alan = 0, çözücü gibi)', () => {
     tulga();
     const M = cp._mntCanliModel();
     const cg = core.combineMassProps(cp._mntToSI(cp._mntGatherForSolver(), 9.81).components).cg.map((v) => v * 1000);
@@ -165,7 +165,7 @@ describe('TEK KAYNAK — pencere raporun ve çekirdeğin sayısını okur', () =
     expect(dx).toBe('−457,5');
     // Boş Y: pencere de 0 alır ve sekme bunu söyler
     motor().data.cgy = '';
-    expect(cp._mntKutleDurumu(motor()).yazi).toBe('AM eksik');
+    expect(cp._mntKutleDurumu(motor()).yazi).toBe('CG eksik');
   });
 
   test('mil torku çözücünün ileri tork durumundan (T = −T_x) — ayrı çarpım yok', () => {
@@ -248,7 +248,7 @@ describe('SEKME DURUMU — boş alan çözücüde 0 ya da ret demek', () => {
 });
 
 describe('KROKİ — güç grubundaki yeri', () => {
-  test('seçili bileşen halkayla, birleşik AM ve kol uzunluğu lejantta', () => {
+  test('seçili bileşen halkayla, birleşik CG ve kol uzunluğu lejantta', () => {
     tulga();
     const M = cp._mntCanliModel();
     const h = cp._mntKrokiHTML(motor(), 'govde', M, null);
@@ -258,7 +258,7 @@ describe('KROKİ — güç grubundaki yeri', () => {
     expect(h).toContain('(125; 0; 550) mm');
   });
 
-  test('takozun çökme oku yalnız GÜNCEL çözümde ve yandan görünüşte', () => {
+  test('takozun sehim oku yalnız GÜNCEL çözümde ve yandan görünüşte', () => {
     tulga(); coz();
     cp.VE_MNT_KROKI_GOR.takoz = 'yan';
     const ciz = () => cp._mntKrokiHTML(onTakoz(), 'takoz', cp._mntCanliModel(), cp._mntTakozSonucu(onTakoz().id));
@@ -330,7 +330,7 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     stiller.forEach((st) => expect(st).toMatch(/^(--fp-k:\d+;|width:\d+%)$/));
   });
 
-  // Bileşenden birleşik AM'ye uzanan kol ve ızgara yazının altından geçiyordu
+  // Bileşenden birleşik CG'ye uzanan kol ve ızgara yazının altından geçiyordu
   // (gerçek tarayıcı: "Ön Takoz" ve konum yazısı kolun üstünde). Hâle zeminin
   // rengi: krokinin kabı --bg-primary.
   test('krokinin yazıları zeminin renginde hâle taşır', () => {

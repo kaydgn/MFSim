@@ -163,7 +163,7 @@ describe('Tarama ve savunma', () => {
     expect(sw.T.every((v) => Number.isFinite(v) && v > 0)).toBe(true);
   });
 
-  test('takoz yoksa null (çökme yok)', () => {
+  test('takoz yoksa null (sehim yok)', () => {
     expect(core.frequencyResponse([], MP.cg, M6, DAMP, {})).toBeNull();
     expect(core.frequencyResponse(null, MP.cg, M6, DAMP, {})).toBeNull();
   });

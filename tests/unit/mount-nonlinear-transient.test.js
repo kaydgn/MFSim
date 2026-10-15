@@ -7,7 +7,7 @@
  *  1. ŞOK ÇÖZÜMÜ LİNEERDİ. Statik çözücü nonlineer takoz yasasını Newton ile
  *     çözerken (solveCaseNL) geçici rejim sabit K_dyn ile tek doğrudan çözüm
  *     yapıyordu — Adams'ın her Δt'de koştuğu Newton–Raphson'ın karşılığı yoktu.
- *     Sertleşen takozda ölçülen fark 3,5 g'de %32 (lineer yol çökmeyi bu kadar
+ *     Sertleşen takozda ölçülen fark 3,5 g'de %32 (lineer yol sehimi bu kadar
  *     FAZLA gösteriyor) ve metal-metal durdurucu hiç devrede değildi.
  *
  *  2. RİJİTLİK TABANI ÜÇ AYRI YERDEN GELİYORDU. Modal analiz statik dengedeki
@@ -168,7 +168,7 @@ describe('YARI-STATİK KİLİT — Newton statik çözücüye inmek zorunda', ()
 
   test('LİNEER yol aynı limitte ŞAŞIYOR — kapının ölçtüğü fark', () => {
     // Aynı darbe, aynı takoz, tek fark eğrinin devrede olması. Sertleşen
-    // yasada lineer çözüm çökmeyi FAZLA gösterir; bu testin sayısı düşerse
+    // yasada lineer çözüm sehimi FAZLA gösterir; bu testin sayısı düşerse
     // Newton yolu sessizce devre dışı kalmış demektir.
     const A = 2, tau = 2;
     const L = mkMounts(false, false);

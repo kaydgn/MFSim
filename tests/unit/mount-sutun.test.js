@@ -14,7 +14,7 @@
  *   · 2D DAR ÇİZİM — sütun genişliğinde 1:1, yazı ölçek tabanında, çakışma
  *     yok; adlar çizimde NUMARA ve açılımı föyde.
  *   · TEK KAYNAK — eksen örnekleri 3B sahnenin renkleri; 2D'nin G'si
- *     çözücünün birleşik AM'si; kütüphanenin oran denetimi Takoz'unki.
+ *     çözücünün birleşik CG'si; kütüphanenin oran denetimi Takoz'unki.
  *   · DURUMLAR — kütüphane (sıfır rijitlik, eksen takası, kullanımdaki
  *     takozun tipten sapması), Rapor (kaynak, bayat çözüm), modül kartı
  *     (kayıtlı listenin imzası), Örnek (kanvastaki modelin denetimi).
@@ -185,7 +185,7 @@ describe('2D GÖRÜNÜM — sütunda tek görünüş, gerçek ölçek, numaralı
     P.M.g.mounts.forEach((m, i) => expect(html).toContain(`<td>T${i + 1}</td><td class="sol" title="${m.name}">`));
   });
 
-  test('çizim ÇÖZÜCÜNÜN modeli: G birleşik AM (combineMassProps), boş konum 0\'da ve föyde "boş"', () => {
+  test('çizim ÇÖZÜCÜNÜN modeli: G birleşik CG (combineMassProps), boş konum 0\'da ve föyde "boş"', () => {
     tulga();
     const motor = bul((n) => n.type === 'mnt-motor');
     motor.data.cgy = '';                                    // boş alan: çözücü 0 alır
@@ -305,7 +305,7 @@ describe('MODÜL KARTI — kayıtlı listenin modeli ve son çözümü', () => {
     return { id: 'kart', type: 'mount-analysis', data: { subTopology: { nodes: JSON.parse(JSON.stringify(TULGA.nodes)), connections: [{}, {}] } } };
   }
 
-  test('içerik ve AM kayıtlı listeden — canlı tuvalde başka model varken bile', () => {
+  test('içerik ve CG kayıtlı listeden — canlı tuvalde başka model varken bile', () => {
     tulga(); coz();
     const k = kart();
     // kökteyiz: alt topoloji canlı değil, tuvalde kartla birlikte başka bir gövde var

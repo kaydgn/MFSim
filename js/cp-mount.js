@@ -58,7 +58,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //
 // A26 satırları powerpack_mount_analysis_A26.html'den birebir port edilmiştir.
 // ASR-SR-116 satırları BMC "ASFAT 8x8 OBUS Takoz Seçimi" (04.08.2021) Tablo 9'dur;
-// o dokümanın Tablo 8 (çökme) ve Tablo 11 (sönüm) sonuçları bu değerlerle
+// o dokümanın Tablo 8 (sehim) ve Tablo 11 (sönüm) sonuçları bu değerlerle
 // yeniden üretilebilir — bkz. tests/unit/mount-library-sources.test.js.
 //
 // ANAHTARLAR DEĞİŞMEZ: kayıtlı projeler takozu node.data.libKey ile bağlar;
@@ -181,7 +181,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //   55 ShA · 1966 kg → hesap 7,707 Hz ↔ raporun modu 8,090 Hz   (%4,7)
 // Yani tablo, FEA'nın modal analizinde kullandığı rijitliktir.
 //
-// STATİK TARAFTA AÇIK UÇ: raporlanan "@1g çökme" doğrusal tahminin 1,26 / 1,18 /
+// STATİK TARAFTA AÇIK UÇ: raporlanan "@1g sehim" doğrusal tahminin 1,26 / 1,18 /
 // 1,10 katı (sırasıyla yukarıdaki üç durum). Oran SABİT DEĞİL — bir kısmı takoz
 // başına eğilme (raporlanan değer büyük olasılıkla maksimum), bir kısmı
 // nonlineerlik olabilir; ikisi ayrıştırılamıyor (konumlar yok). Bu yüzden
@@ -222,7 +222,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // yazar ("Max. Load 2.000 kg"), kullanıcı datasheet'ten okuduğu sayıyı çevirmek
 // zorunda kalmasın. Kuvvete tek bir yerde dönüşür: F_max = maxLoad · g [N].
 //
-// FİZİĞE GİRMEZ: çözücü bu alanı görmez, rijitliği ve çökmeyi değiştirmez.
+// FİZİĞE GİRMEZ: çözücü bu alanı görmez, rijitliği ve sehimi değiştirmez.
 // Yalnız RAPORLAMA sınırıdır — "bu takoz taşıdığı yükün yüzde kaçında
 // çalışıyor" sorusunu cevaplar (Rapor §8.3 Yük (%) sütunu, Sonuçlar'da F(δ)
 // kapasite çizgisi ve yorum cümleleri).
@@ -420,7 +420,7 @@ var _veMntBusy = false;
 // açmadan. FEAD'in modül kartıyla aynı kalıp: İçerik · Model sekmeleri, sağ
 // sütunda "Alt topolojiyi aç". Model sayıları alt topolojinin KAYITLI
 // listesinden, çözücünün AYNI toplayıcısıyla (_mntGatherForSolver(…, liste))
-// — açıkken okunacak AM ile aynısı; son çözümün durumu da o listenin imzası.
+// — açıkken okunacak CG ile aynısı; son çözümün durumu da o listenin imzası.
 function getMntModulePropertiesHTML(node){
   var sub = node && node.data && node.data.subTopology;
   var liste = (sub && Array.isArray(sub.nodes)) ? sub.nodes : [];
@@ -451,7 +451,7 @@ function getMntModulePropertiesHTML(node){
     model = _mntFoyAc([{ b:'Büyüklük', gen:'52%' }, { b:'Değer', gen:'48%' }], 'Modelin özeti')
       + '<tr><td>Toplam kütle</td><td>'+(g.components.length ? _mntS(mTop, 1)+' kg' : '—')+'</td></tr>'
       + ['X','Y','Z'].map(function(A, i){
-          return '<tr><td>Birleşik AM · '+A+'</td>'+_mntFoyCoz(mp ? _mntS(mp.cg[i]*1000, 1)+' mm' : '—')+'</tr>';
+          return '<tr><td>Birleşik CG · '+A+'</td>'+_mntFoyCoz(mp ? _mntS(mp.cg[i]*1000, 1)+' mm' : '—')+'</tr>';
         }).join('')
       + _MNT_FOY_KAPA;
     // Son çözüm BAŞKA bir Takoz kartının olabilir: çözücüsü bu listede
@@ -979,8 +979,8 @@ function _mntFoyCoz(ic, opt){
 // ════════════════════════════════════════════════════════════════════════════
 // Kanvastaki modelin birleşik kütlesi ve ağırlık merkezi — çözücünün AYNI
 // birleştirmesi (çekirdek combineMassProps) ve AYNI boş alan kuralı (_mntToSI:
-// boş = 0). Pencere kendi AM'sini hesaplasaydı boş bir alan pencerede "—",
-// çözücüde 0 olurdu ve iki yüzey aynı model için iki ayrı AM söylerdi.
+// boş = 0). Pencere kendi CG'sini hesaplasaydı boş bir alan pencerede "—",
+// çözücüde 0 olurdu ve iki yüzey aynı model için iki ayrı CG söylerdi.
 function _mntCanliModel(){
   var g=_mntGatherForSolver(null);
   var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
@@ -990,7 +990,7 @@ function _mntCanliModel(){
   g.components.forEach(function(c){ mTop+=_mntNum(c.mass,0); });
   return { g:g, si:si, mp:mp, mTop:mTop };
 }
-// Seçili bileşenin birleşik AM'ye göre konumu [mm] (boş = 0, çözücü gibi).
+// Seçili bileşenin birleşik CG'ye göre konumu [mm] (boş = 0, çözücü gibi).
 function _mntAmFarki(p, M){
   if(!M.mp) return null;
   var d=[p[0]-M.mp.cg[0]*1000, p[1]-M.mp.cg[1]*1000, p[2]-M.mp.cg[2]*1000];
@@ -1024,13 +1024,13 @@ function _mntAtalet(d){
 //  GÜÇ GRUBUNDAKİ YERİ — KROKİ (tasarım tuvali C'den, kullanıcı seçimi)
 // ════════════════════════════════════════════════════════════════════════════
 // Bileşenin modeldeki YERİ: gövdeler (kütleyle büyüyen daire), takozlar
-// (kare), birleşik AM ve bu bileşen. Koordinat OKUR, çizim kurmaz — konumlar
-// çözücünün okuduğu alanlardan, AM çekirdeğin combineMassProps'undan.
+// (kare), birleşik CG ve bu bileşen. Koordinat OKUR, çizim kurmaz — konumlar
+// çözücünün okuduğu alanlardan, CG çekirdeğin combineMassProps'undan.
 // İki görünüş (üstten X–Y, yandan X–Z); ÖLÇEK ORTAK ve eksenler eşit: görünüş
 // değişince X konumları yerinde kalır, şekil bozulmaz.
 //
-// Görünüş seçimi modelde değil, pencere grubu başına: gövdede üstten (AM'nin
-// yanal dengesi), takozda yandan (düşey çökme oku).
+// Görünüş seçimi modelde değil, pencere grubu başına: gövdede üstten (CG'nin
+// yanal dengesi), takozda yandan (düşey sehim oku).
 var VE_MNT_KROKI_GOR = { govde:'ust', takoz:'yan' };
 var _MNT_KROKI_W = 354;   // görünüş kutusunun genişliği (müfettiş sütununun içi)
 function _mntR1(v){ return Math.round(v*10)/10; }
@@ -1093,7 +1093,7 @@ function _mntKrokiCizim(node, grup, gor, M, T){
     svg.push(yazi('ve-mk-ym', PR+4, y0+3, 'Z = 0')); kutu.push([PR+2, y0-7, PR+38, y0+5]);
   }
   var yaricap=function(m){ return Math.min(20, 2.5+Math.sqrt(m)*0.45); };
-  // Kol: bu bileşenden birleşik AM'ye
+  // Kol: bu bileşenden birleşik CG'ye
   var kol=null;
   if(sec && am){
     var a=P(sec.p), b=P(am);
@@ -1119,7 +1119,7 @@ function _mntKrokiCizim(node, grup, gor, M, T){
     else { secR=yaricap(sec.m)+3.8; svg.push('<circle class="ve-mk-sec" cx="'+R(sc[0])+'" cy="'+R(sc[1])+'" r="'+R(secR)+'"/>'); }
     kutu.push([sc[0]-secR, sc[1]-secR, sc[0]+secR, sc[1]+secR]);
   }
-  // Birleşik AM
+  // Birleşik CG
   if(am){
     var g=P(am);
     svg.push('<circle class="ve-mk-am" cx="'+R(g[0])+'" cy="'+R(g[1])+'" r="4.5"/>'
@@ -1127,8 +1127,8 @@ function _mntKrokiCizim(node, grup, gor, M, T){
       + '<line class="ve-mk-amx" x1="'+R(g[0])+'" y1="'+R(g[1]-4.5)+'" x2="'+R(g[0])+'" y2="'+R(g[1]+4.5)+'"/>');
     kutu.push([g[0]-5, g[1]-5, g[0]+5, g[1]+5]);
   }
-  // Takozun statik çökmesi — yandan görünüşte, ×10 (yalnız GÜNCEL çözümde:
-  // bayat bir çökme oku çizimde ölçüm gibi durur).
+  // Takozun statik sehimi — yandan görünüşte, ×10 (yalnız GÜNCEL çözümde:
+  // bayat bir sehim oku çizimde ölçüm gibi durur).
   var okEtiket='';
   if(secTk && gor==='yan' && T && T.durum==='guncel' && T.R){
     var st=null;
@@ -1186,7 +1186,7 @@ function _mntKrokiCizim(node, grup, gor, M, T){
   var lej='<div class="ve-mnt-kroki-lej">'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-gv" cx="5" cy="5" r="4"/></svg>gövde (kütleyle büyür)</span>'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-mk-tk" x="1.5" y="1.5" width="7" height="7"/></svg>takoz</span>'
-    + (am ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-am" cx="5" cy="5" r="3.6"/></svg>birleşik AM</span>' : '')
+    + (am ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-am" cx="5" cy="5" r="3.6"/></svg>birleşik CG</span>' : '')
     + (sec ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-sec" cx="5" cy="5" r="3.8"/></svg>bu bileşen</span>' : '')
     + (kol!=null ? '<span>kol '+_mntS(kol,0)+' mm</span>' : '')
     // Bu bileşenin yazısı sığmadıysa kimliği lejanda — bilgi kaybolmaz.
@@ -1427,9 +1427,9 @@ function _mntEngineSection(node){
   var h='';
   if(sel){
     var sap=_mntMotorSapma(node), not;
-    if(!sap) not=_mntNot('<b>Katalogdan:</b> tepe tork · maks. güç · rölanti. Kütle, AM ve atalet elle girilir.', '');
-    else if(sap.farkli.length) not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.farkli.join(', ')+' katalogtan farklı (elle). Kütle, AM ve atalet elle girilir.', 'warn');
-    else not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.ayni.length+'/'+sap.ayni.length+' değer katalogla aynı. Kütle, AM ve atalet elle girilir.', 'ok');
+    if(!sap) not=_mntNot('<b>Katalogdan:</b> tepe tork · maks. güç · rölanti. Kütle, CG ve atalet elle girilir.', '');
+    else if(sap.farkli.length) not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.farkli.join(', ')+' katalogtan farklı (elle). Kütle, CG ve atalet elle girilir.', 'warn');
+    else not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.ayni.length+'/'+sap.ayni.length+' değer katalogla aynı. Kütle, CG ve atalet elle girilir.', 'ok');
     h+=_mntBolum('Katalog', Object.keys(P).length+' motor',
         _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Motor</span>'+sel+'</label>')
       + '<div id="ve-mnt-motorkat-'+node.id+'" data-tazele>'+not+'</div>');
@@ -1592,8 +1592,8 @@ function _mntPtoRefTable(type){
 function _mntPtoSection(node){
   var grup=(node.type==='mnt-pto-group');
   var yol=grup
-    ? _mntNot('<b>Toplu giriş</b> — tüm PTO grubu tek kalem: grup kütlesi, grup AM\'si ve grup atalet tensörü.', '')
-    : _mntNot('<b>Ayrıntılı giriş</b> — parça başına kütle ve AM; grubun ataleti parçaların yayılımından doğar.', '');
+    ? _mntNot('<b>Toplu giriş</b> — tüm PTO grubu tek kalem: grup kütlesi, grup CG\'si ve grup atalet tensörü.', '')
+    : _mntNot('<b>Ayrıntılı giriş</b> — parça başına kütle ve CG; grubun ataleti parçaların yayılımından doğar.', '');
   var cf=_mntPtoConflict();
   var cak='<div id="ve-mnt-ptocak-'+node.id+'" data-tazele>'
     + (cf ? _mntNot('<b>Kütle iki kez sayılıyor olabilir.</b> Topolojide hem PTO Toplam ('+cf.groups.length
@@ -1622,12 +1622,12 @@ function _mntKutleSekme(node, M){
       _mntAlan(node, 'mass', 'Kütle <u>[kg]</u>', { zorunlu:true, ph:(ph ? ph.mass : '') })
     + _mntOku('Toplamdaki payı', Number.isFinite(pay) ? '%'+_mntS(pay*100,1)+' · '+_mntS(M.mTop,1)+' kg içinde' : '—',
               { id:'ve-mnt-pay-'+node.id })));
-  // Ağırlık merkezi — birleşik AM'ye göre konum (kol) yanında.
+  // Ağırlık merkezi — birleşik CG'ye göre konum (kol) yanında.
   var p=[_mntNum(d.cgx,0), _mntNum(d.cgy,0), _mntNum(d.cgz,0)], F=_mntAmFarki(p, M);
-  var f=_mntFoyAc([{ b:'Eksen', gen:'34%' }, { b:'AM', gen:'33%' },
-                   { b:'Birleşik AM\'ye '+_mntSym('Δ'), gen:'33%', sinif:'cz ay', ipucu:'Bu gövdenin AM\'si eksi bütün modelin birleşik AM\'si' }], 'Ağırlık merkezi');
+  var f=_mntFoyAc([{ b:'Eksen', gen:'34%' }, { b:'CG', gen:'33%' },
+                   { b:'Birleşik CG\'ye '+_mntSym('Δ'), gen:'33%', sinif:'cz ay', ipucu:'Bu gövdenin CG\'si eksi bütün modelin birleşik CG\'si' }], 'Ağırlık merkezi');
   ['cgx','cgy','cgz'].forEach(function(k, i){
-    f+='<tr><td>'+_MNT_EKSEN[i][1]+'</td>'+_mntFoyGir(node, k, 'AM '+_MNT_EKSEN[i][0], { zorunlu:true, ph:(ph ? ph.cg[i] : '') })
+    f+='<tr><td>'+_MNT_EKSEN[i][1]+'</td>'+_mntFoyGir(node, k, 'CG '+_MNT_EKSEN[i][0], { zorunlu:true, ph:(ph ? ph.cg[i] : '') })
       + _mntFoyCoz(F ? _mntS(F.d[i],1) : '—', { ay:true, id:'ve-mnt-amd-'+i+'-'+node.id })+'</tr>';
   });
   f+='<tr class="top"><td>Uzaklık</td><td></td>'+_mntFoyCoz(F ? _mntS(F.r,1) : '—', { ay:true, id:'ve-mnt-amr-'+node.id })+'</tr>';
@@ -1654,7 +1654,7 @@ function _mntKutleSekme(node, M){
       + '</div>';
     var asal=A.asal ? A.asal.map(function(v){ return _mntS(v,1); }).join(' · ') : '—';
     var kutu=A.kutu ? A.kutu.map(function(v){ return _mntS(v*1000,0); }).join(' × ') : '—';
-    h+=_mntBolum('Atalet tensörü', '[kg·m²] · simetrik · AM\'de',
+    h+=_mntBolum('Atalet tensörü', '[kg·m²] · simetrik · CG\'de',
         mx + _mntNoktaKutle(node)
       + _mntIzgara(2,
           _mntOku('Asal momentler', asal, { id:'ve-mnt-asal-'+node.id })
@@ -1662,7 +1662,7 @@ function _mntKutleSekme(node, M){
             ipucu:'Aynı kütle ve ataletteki dolu dikdörtgen prizma, X × Y × Z — 3B görünümün kutusu' })));
   } else {
     h+=_mntBolum('Atalet', 'nokta kütle · I = 0', _mntNoktaKutle(node)
-      + _mntNot('Kütle ağırlık merkezinde toplanır; tensör sıfır alınır. Grubun ataleti gövdelerin AM yayılımından doğar.', ''));
+      + _mntNot('Kütle ağırlık merkezinde toplanır; tensör sıfır alınır. Grubun ataleti gövdelerin CG yayılımından doğar.', ''));
   }
   return h;
 }
@@ -1672,7 +1672,7 @@ function _mntKutleDurumu(node){
   if(!(_mntNum(d.mass,0)>0)) return _mntDurum('eksik', 'eksik', 'Kütle ≤ 0 — çözücü bu gövdeyi reddeder.', 've-mnt-mass-'+id);
   var ax=['cgx','cgy','cgz'];
   for(var i=0;i<3;i++){
-    if(_mntBos(d[ax[i]])) return _mntDurum('eksik', 'AM eksik', 'Ağırlık merkezinin '+_MNT_EKSEN[i][0]+' alanı boş — çözücü 0 alır.', 've-mnt-'+ax[i]+'-'+id);
+    if(_mntBos(d[ax[i]])) return _mntDurum('eksik', 'CG eksik', 'Ağırlık merkezinin '+_MNT_EKSEN[i][0]+' alanı boş — çözücü 0 alır.', 've-mnt-'+ax[i]+'-'+id);
   }
   if(!d.pointMass){
     var A=_mntAtalet(d);
@@ -1752,7 +1752,7 @@ function _mntKutuphaneNotu(node){
   return _mntNot(ad+' ile 6/6 değer aynı'+yasa+'.', '');
 }
 
-// Bu takozun son çözümdeki statik çökmesi [mm] ve yük payı [kg].
+// Bu takozun son çözümdeki statik sehimi [mm] ve yük payı [kg].
 function _mntTakozStatik(T){
   if(!T || !T.R) return null;
   var st=null;
@@ -1791,12 +1791,12 @@ function _mntTakozYerSekme(node, M, T){
     + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
   h+=_mntBolum('Rijitlik', '[N/mm]', f+_MNT_FOY_KAPA+kapi);
   h+='<div id="ve-mnt-yasa-'+node.id+'" data-tazele>'+_mntMountCurveNote(node)+'</div>';
-  // Konum — birleşik AM'ye göre yeri ve son çözümdeki statik çökmesi.
+  // Konum — birleşik CG'ye göre yeri ve son çözümdeki statik sehimi.
   var P=[_mntNum(d.x,0), _mntNum(d.y,0), _mntNum(d.z,0)], F=_mntAmFarki(P, M);
   var st=_mntTakozStatik(T), bayat=!!(T && T.durum==='bayat');
   var f2=_mntFoyAc([{ b:'Eksen', gen:'15%' }, { b:'Konum', gen:'27%' },
-                    { b:'AM\'ye '+_mntSym('Δ'), gen:'27%', sinif:'cz ay', ipucu:'Takozun konumu eksi modelin birleşik AM\'si' },
-                    { b:'Statik çökme', gen:'31%', sinif:'cz', ipucu:'Statik yük durumunda bu takozun çökmesi — son çözüm' }], 'Konum');
+                    { b:'CG\'ye '+_mntSym('Δ'), gen:'27%', sinif:'cz ay', ipucu:'Takozun konumu eksi modelin birleşik CG\'si' },
+                    { b:'Statik sehim', gen:'31%', sinif:'cz', ipucu:'Statik yük durumunda bu takozun sehimi — son çözüm' }], 'Konum');
   ['x','y','z'].forEach(function(k, i){
     f2+='<tr><td>'+_MNT_EKSEN[i][0]+'</td>'+_mntFoyGir(node, k, 'Konum '+_MNT_EKSEN[i][0], { zorunlu:true })
       + _mntFoyCoz(F ? _mntS(F.d[i],1) : '—', { ay:true, id:'ve-mnt-tamd-'+i+'-'+node.id })
@@ -1846,11 +1846,11 @@ function _mntLejant(){
 function _mntTakozYukSekme(node, T){
   var h;
   if(!T.R){
-    h=_mntBolum('Çökme', 'bu takoz', _mntNot('Hesaplanmadı — Çözücü\'de <b>Hesapla</b>.', ''));
+    h=_mntBolum('Sehim', 'bu takoz', _mntNot('Hesaplanmadı — Çözücü\'de <b>Hesapla</b>.', ''));
   } else {
     var R=T.R, j=T.j, bayat=(T.durum==='bayat');
     var f=_mntFoyAc([{ b:'Durum', gen:'34%' }, { b:'X', gen:'16%' }, { b:'Y', gen:'16%' }, { b:'Z', gen:'16%' }, { b:'', gen:'18%' }],
-                    'Bu takozun çökmesi');
+                    'Bu takozun sehimi');
     (R.allCases||[]).forEach(function(rc){
       var ad='<td title="'+_mntEsc(_mntDurumAdi(rc.name))+'">'+_mntEsc(_mntDurumKisa(rc.name))+'</td>';
       var pm=rc.res && rc.res.perMount && rc.res.perMount[j];
@@ -1860,7 +1860,7 @@ function _mntTakozYukSekme(node, T){
         return '<td'+(kr ? ' class="kr"' : '')+'>'+_mntS(dl[i],2)+'</td>'; };
       f+='<tr>'+ad+hucre(0)+hucre(1)+hucre(2)+_mntBayrakHTML(pm.tension, pm.clamped, pm.overLinear)+'</tr>';
     });
-    h=_mntBolum('Çökme', 'bu takoz · '+_mntSym('δ')+' [mm] · '+(R.allCases||[]).length+' durum'+(bayat ? ' · bayat' : ''),
+    h=_mntBolum('Sehim', 'bu takoz · '+_mntSym('δ')+' [mm] · '+(R.allCases||[]).length+' durum'+(bayat ? ' · bayat' : ''),
         (bayat ? _mntBayatNot() : '')+f+_MNT_FOY_KAPA+_mntLejant());
     var dm=R.damping && R.damping[j];
     var em=_mntSym('ζ')+' = '+_mntS(R.zeta,3)+((dm && dm.mShare>0) ? ' · yük payı '+_mntS(dm.mShare,1)+' kg' : '');
@@ -1974,7 +1974,7 @@ function _mntMountCurveNote(node){
 // ════════════════════════════════════════════════════════════════════════════
 // Sayı alanları (veMntSet) pencereyi yeniden kurmuyor — kursaydı Sekme ile
 // geçilen bir sonraki alanın odağı düşerdi (bu deponun tekrar eden dersi,
-// FEAD kural 11/35). Ama türetilen değerler (pay, AM farkı, oran, kroki,
+// FEAD kural 11/35). Ama türetilen değerler (pay, CG farkı, oran, kroki,
 // uygunluk, sekme durumu) o zaman bir düzenleme geride kalırdı: kütleyi
 // değiştiren kullanıcı eski payı okurdu. `saveState` "girdi değişti" olayının
 // tek kaynağı ve bunu oradan çağırır; çözüm bitince de çağrılır. Yalnız
@@ -2825,8 +2825,8 @@ function _mntVwrLegend(){
   }
   return _mntFoyAc([{ b:'İşaret', gen:'44%' }, { b:'Anlam', gen:'56%', sinif:'sol' }], 'Sahne göstergesi')
     + satir('takoz', 'Takoz', 'küp')
-    + satir('govde', 'Bileşen AM', 'küre · kütleyle büyür')
-    + satir('am', 'Birleşik AM', 'toplam ağırlık merkezi')
+    + satir('govde', 'Bileşen CG', 'küre · kütleyle büyür')
+    + satir('am', 'Birleşik CG', 'toplam ağırlık merkezi')
     + _MNT_FOY_KAPA;
 }
 // ETKİLEŞİM — kısayol penceresinin dilinde (tipografi kuralı).
@@ -2864,7 +2864,7 @@ function getMntViewerPropertiesHTML(node){
 // ════════════════════════════════════════════════════════════════════════════
 //  KOORDİNAT DÜZLEMİ — koordinat sistemini 3B göster (eksen + düzlem + yön)
 // ════════════════════════════════════════════════════════════════════════════
-// Eksenlerin YÖNÜ föyde: konum ve AM değerleri bu eksenlere göre girilir.
+// Eksenlerin YÖNÜ föyde: konum ve CG değerleri bu eksenlere göre girilir.
 // Örnek işaretin rengi 3B eksenin rengi (CSS `.ve-mnt-is[data-i="x|y|z"]`).
 function getMntCoordFramePropertiesHTML(node){
   if(!node.data) node.data={};
@@ -2886,7 +2886,7 @@ function getMntCoordFramePropertiesHTML(node){
     +   _mntVwrToggle('planes', 'Düzlem', 'Koordinat düzlemlerini gizle/göster')
     +   _mntVwrToggle('grid', 'Zemin', 'Zemin ızgarasını gizle/göster', false)
     + '</div>');
-  var yan=_mntBolum('Eksenler', 'konum ve AM bu yönlerde', foy)
+  var yan=_mntBolum('Eksenler', 'konum ve CG bu yönlerde', foy)
     + _mntBolum('Etkileşim', '', _mntVwrIpucu(['Sol tık + sürükle: döndür', 'Tekerlek: yakınlaştır']));
   return _mntPencereKabuk(node, [{ k:'sahne', ad:'Sahne', govde:govde }], yan, '');
 }
@@ -2909,9 +2909,9 @@ function veMntCoordFrameRefresh(){
 // AYNI çizici (veMnt2DGorunusSVG). Adlar çizimde NUMARA, açılımı yan sütunun
 // İşaretler föyünde (ad + koordinat): dar çizimde on üç ad ("Transfer Kutusu
 // (z=202)") ya üst üste biner ya da yazı küçülürdü.
-// Çizim ÇÖZÜCÜNÜN modelidir: birleşik AM onun birleştirmesinden
+// Çizim ÇÖZÜCÜNÜN modelidir: birleşik CG onun birleştirmesinden
 // (_mntCanliModel → combineMassProps) ve boş konum, çözücü gibi, 0'da çizilir —
-// föyde "boş" diye işaretlenir. Çizilmeseydi G onu yine sayardı: AM, çizimde
+// föyde "boş" diye işaretlenir. Çizilmeseydi G onu yine sayardı: CG, çizimde
 // olmayan bir gövdeye doğru kaymış görünürdü.
 // AKSONOMETRİK İLK SEKME (2026-10-15, kullanıcı seçimi — tasarım sayfası
 // "Aksonometrik 2B Görünüm"): çizici js/mount-akso.js. Düz görünüşlerin
@@ -3007,7 +3007,7 @@ function _mntAksoModel(P){
     if(kutu) kutu=kutu.map(function(v){ return v*1000; });
     var pay=mTop>0 ? Math.max(0, mass)/mTop : 0, ad=String(c.name||'Gövde');
     return { k:'g'+(i+1), no:String(i+1), ad:ad, m:mass, x:x, y:y, z:z, pay:pay, kutu:kutu, ana:false,
-      bilgi:[(i+1)+' · '+ad, 'Kütle '+_mntS(mass, 1)+' kg (%'+_mntS(pay*100, 1)+')', 'AM '+_mntAksoKoord(x, y, z)+' mm',
+      bilgi:[(i+1)+' · '+ad, 'Kütle '+_mntS(mass, 1)+' kg (%'+_mntS(pay*100, 1)+')', 'CG '+_mntAksoKoord(x, y, z)+' mm',
         kutu ? 'Eşdeğer kutu '+kutu.map(function(v){ return _mntS(v, 0); }).join(' × ')+' mm'
              : (c.pointMass ? 'Nokta kütle — kutu çizilmez' : 'Atalet kutu vermiyor — nokta çizilir')] };
   });
@@ -3025,12 +3025,12 @@ function _mntAksoModel(P){
     var x=_mntNum(t.x), y=_mntNum(t.y), z=_mntNum(t.z), ad=String(t.name||'Takoz');
     var ks=[_mntNum(t.kxs), _mntNum(t.kys), _mntNum(t.kzs)];
     var bilgi=['T'+(i+1)+' · '+ad, 'Konum '+_mntAksoKoord(x, y, z)+' mm', 'Statik rijitlik '+ks.map(function(v){ return _mntS(v, 0); }).join('; ')+' N/mm'];
-    if(pm && yuk!=null) bilgi.push('Statik yük '+_mntS(yuk, 1)+' kg · çökme '+_mntS(Math.abs(pm.delta[2]*1000), 2)+' mm');
+    if(pm && yuk!=null) bilgi.push('Statik yük '+_mntS(yuk, 1)+' kg · sehim '+_mntS(Math.abs(pm.delta[2]*1000), 2)+' mm');
     return { k:'T'+(i+1), no:'T'+(i+1), ad:ad, x:x, y:y, z:z, ks:ks, f:pm ? pm.f.slice() : null, yukKg:yuk, bilgi:bilgi };
   });
   var cg=P.veri.cg;
   var G=cg ? { x:cg.x, y:cg.y, z:cg.z, m:M.mTop,
-    bilgi:['Birleşik ağırlık merkezi', _mntAksoKoord(cg.x, cg.y, cg.z, 1)+' mm', 'Toplam kütle '+_mntS(M.mTop, 1)+' kg'] } : null;
+    bilgi:['Birleşik CG', _mntAksoKoord(cg.x, cg.y, cg.z, 1)+' mm', 'Toplam kütle '+_mntS(M.mTop, 1)+' kg'] } : null;
   var asal=null;
   if(M.mp && C && C.principalInertia && C.equivalentBox){
     var pr=C.principalInertia(M.mp.I_G);
@@ -3093,10 +3093,10 @@ function _mntAksoHTML(P, W, tam, kapId){
     + tg('kuvvet', 'Kuvvet', 'Serbest cisim: G\'de ağırlık, takozlarda statik tepki — aynı ölçekte', !kuvvetVar)
     + tg('mod', 'Mod', 'Rijit gövde modları canlandırılır', !modVar)
     + tg('rijit', 'Rijitlik', 'Takozda statik rijitlik kolu (X · Y · Z), G\'de asal eksenler ve eşdeğer kutu');
-  // Bağlama göre: kuvvet açıkken statik çökme, mod açıkken mod listesi.
+  // Bağlama göre: kuvvet açıkken statik sehim, mod açıkken mod listesi.
   var alt='';
   if(kat.kuvvet && m.q){
-    alt+='<div class="ve-mnt-ak-alt">'+tg('cokme', 'Statik çökme', 'Statik dengedeki yer değiştirme, büyütülmüş')
+    alt+='<div class="ve-mnt-ak-alt">'+tg('cokme', 'Statik sehim', 'Statik dengedeki yer değiştirme, büyütülmüş')
       + (kat.cokme ? '<span class="ve-mnt-ak-not">çizimde ×'+_mntS(r.cokmeN, 0)+' büyütülmüş</span>' : '')+'</div>';
   }
   if(md){
@@ -3121,7 +3121,7 @@ function _mntAksoHTML(P, W, tam, kapId){
   var lej='<div class="ve-mnt-kroki-lej ve-mnt-ak-lej">'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-g" d="M5 1 L9 3 L5 5 L1 3 Z"/><path class="ve-ak-lj-gy" d="M1 3 L5 5 L5 9 L1 7 Z"/><path class="ve-ak-lj-gx" d="M5 5 L9 3 L9 7 L5 9 Z"/></svg>gövde · eşdeğer kutu</span>'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-ak-lj-t" x="2" y="2" width="6" height="6" rx="1"/></svg>takoz · T</span>'
-    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-G" cx="5" cy="5" r="3.6"/></svg>G · birleşik AM</span>'
+    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-G" cx="5" cy="5" r="3.6"/></svg>G · birleşik CG</span>'
     + (m.govde.some(function(g){ return !g.kutu; }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-n" cx="5" cy="5" r="2"/></svg>nokta kütle</span>' : '')
     + (A.bz>0 && !kat.duvar ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-gol" d="M1 6 L5 4 L9 6 L5 8 Z"/></svg>Z = 0\'a düşen iz</span>' : '')
     + (kat.rijit ? '<span><svg class="ve-mnt-lej-cizgi" viewBox="0 0 16 9" aria-hidden="true"><line class="ve-ak-rj-x" x1="1" y1="4.5" x2="5" y2="4.5"/><line class="ve-ak-rj-y" x1="6" y1="4.5" x2="10" y2="4.5"/><line class="ve-ak-rj-z" x1="11" y1="4.5" x2="15" y2="4.5"/></svg>rijitlik X · Y · Z</span>' : '')
@@ -3227,7 +3227,7 @@ function _mnt2DIsaretFoy(P){
   };
   var h=_mntFoyAc([{ b:'No', gen:'12%' }, { b:'Ad', gen:'40%', sinif:'sol' }, { b:'X', gen:'16%' }, { b:'Y', gen:'16%' }, { b:'Z', gen:'16%' }],
                   'İşaretler', 've-mnt-foy--sik');
-  if(cg) h+='<tr class="top"><td>G</td><td class="sol">Birleşik AM</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
+  if(cg) h+='<tr class="top"><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
   M.g.components.forEach(function(c, i){ h+=sat(String(i+1), c.name, c.cgx, c.cgy, c.cgz); });
   M.g.mounts.forEach(function(m, i){ h+=sat('T'+(i+1), m.name, m.x, m.y, m.z); });
   h+=_MNT_FOY_KAPA;
@@ -3248,8 +3248,8 @@ function getMnt2DViewPropertiesHTML(node){
         + (bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>' : _mnt2DKutuIcHTML(P, g[0], _MNT_KROKI_W))+'</div>'
         + '<div class="ve-mnt-kroki-lej">'
         + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect x="1.5" y="1.5" width="7" height="7" rx="1" fill="none" stroke="var(--accent-success)" stroke-width="1.4"/></svg>takoz · T</span>'
-        + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="none" stroke="var(--accent-warning)" stroke-width="1.4"/></svg>gövde AM · kütleyle büyür</span>'
-        + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.4"/></svg>G · birleşik AM</span>'
+        + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="none" stroke="var(--accent-warning)" stroke-width="1.4"/></svg>gövde CG · kütleyle büyür</span>'
+        + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.4"/></svg>G · birleşik CG</span>'
         + '</div>' };
   });
   var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz'+(M.mTop>0 ? ' · '+_mntS(M.mTop,1)+' kg' : '');
@@ -3747,7 +3747,7 @@ function _mnt2DFigure(o){
   });
   // bileşen CG (içi boş daire, kütleye göre boyut)
   o.comps.forEach(function(c, ci){ var cv=(o.vKey==='y'?c.y:c.z), cx=o.px(hval(c)), cy=o.pyFn(cv), r=o.cr(c.mass);
-    var info=[c.name||'Bileşen', 'Ağırlık merkezi  ('+veSayi(_mnt2DR(c.x))+'; '+veSayi(_mnt2DR(c.y))+'; '+veSayi(_mnt2DR(c.z))+') mm'];
+    var info=[c.name||'Bileşen', 'CG  ('+veSayi(_mnt2DR(c.x))+'; '+veSayi(_mnt2DR(c.y))+'; '+veSayi(_mnt2DR(c.z))+') mm'];
     if(c.mass>0) info.push('Kütle  '+veSayi(c.mass, 1)+' kg');
     var sec=seciliMi('govde', ci), rR=sec ? r+5 : r;
     if(sec) svg+=halka(cx, cy, r+5);
@@ -3758,7 +3758,7 @@ function _mnt2DFigure(o){
   });
   // birleşik CG (jeodezik sembol)
   if(o.cg){ var gx=o.px(hval(o.cg)), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z);
-    var cgInfo=['Birleşik ağırlık merkezi', 'Konum  ('+veSayi(_mnt2DR(o.cg.x))+'; '+veSayi(_mnt2DR(o.cg.y))+'; '+veSayi(_mnt2DR(o.cg.z))+') mm'];
+    var cgInfo=['Birleşik CG', 'Konum  ('+veSayi(_mnt2DR(o.cg.x))+'; '+veSayi(_mnt2DR(o.cg.y))+'; '+veSayi(_mnt2DR(o.cg.z))+') mm'];
     if(o.cg.m>0) cgInfo.push('Toplam kütle  '+veSayi(o.cg.m, 1)+' kg');
     svg+='<g'+_mnt2DInfoAttr(cgInfo)+'>'+_mnt2DCGMark(gx,gy,10*iK,_MNT2D_C_CG);
     svg+='<circle cx="'+_mnt2DR(gx)+'" cy="'+_mnt2DR(gy)+'" r="'+_mnt2DR(12*iK)+'" fill="transparent"/></g>';
@@ -3921,15 +3921,15 @@ function _mnt2DViewSVG(data, en){
   var totMass=(data.cg&&data.cg.m)?data.cg.m:data.comps.reduce(function(s,c){ return s+(c.mass>0?c.mass:0); },0);
   var summary='<div class="ve-mnt2d-summary">'
     + '<span>Toplam kütle <b>'+fmt1(totMass)+' kg</b></span>'
-    + (data.cg?'<span>Birleşik AM <b>('+fmt1(data.cg.x)+'; '+fmt1(data.cg.y)+'; '+fmt1(data.cg.z)+') mm</b></span>':'')
+    + (data.cg?'<span>Birleşik CG <b>('+fmt1(data.cg.x)+'; '+fmt1(data.cg.y)+'; '+fmt1(data.cg.z)+') mm</b></span>':'')
     + '<span>Takoz <b>'+data.mounts.length+'</b></span>'
     + '<span>Gövde <b>'+data.comps.length+'</b></span>'
     + '</div>';
   function sw(inner){ return '<svg width="16" height="14" viewBox="0 0 16 14" style="vertical-align:-2px;">'+inner+'</svg>'; }
   var legend='<div class="ve-mnt2d-legend">'
     + '<span>'+sw('<rect x="3" y="2.5" width="10" height="9" rx="1.5" fill="none" stroke="'+_MNT2D_C_MOUNT+'" stroke-width="1.6"/>')+' Takoz</span>'
-    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="none" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.6"/>')+' Gövde AM <i>(kütleyle büyür)</i></span>'
-    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="var(--bg-primary)" stroke="'+_MNT2D_C_CG+'" stroke-width="1.6"/><path d="M8 7 L13 7 A5 5 0 0 1 8 12 Z" fill="'+_MNT2D_C_CG+'"/><path d="M8 7 L3 7 A5 5 0 0 1 8 2 Z" fill="'+_MNT2D_C_CG+'"/>')+' Birleşik AM</span>'
+    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="none" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.6"/>')+' Gövde CG <i>(kütleyle büyür)</i></span>'
+    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="var(--bg-primary)" stroke="'+_MNT2D_C_CG+'" stroke-width="1.6"/><path d="M8 7 L13 7 A5 5 0 0 1 8 12 Z" fill="'+_MNT2D_C_CG+'"/><path d="M8 7 L3 7 A5 5 0 0 1 8 2 Z" fill="'+_MNT2D_C_CG+'"/>')+' Birleşik CG</span>'
     + '</div>';
 
   var out=summary+legend+'<div class="ve-mnt2d-stack" style="display:flex; flex-direction:column; gap:14px; min-width:480px;">';
@@ -4636,7 +4636,7 @@ function _mntGatherTorqueKaynakli(liste){
 function _mntGatherTorque(liste){ return _mntGatherTorqueKaynakli(liste).t; }
 // `id` düğüm kimliğidir ve SI'ya, oradan R.mounts'a taşınır: pencere takozun
 // sonucunu SIRAYLA değil KİMLİKLE bulur (sıra, silinen ya da sonradan eklenen
-// bir takozla kayar ve başka takozun çökmesi sessizce gösterilirdi).
+// bir takozla kayar ve başka takozun sehimi sessizce gösterilirdi).
 function _mntGatherForSolver(solver, liste){
   var masses=[], mounts=[];
   (liste || (typeof nodes!=='undefined' && Array.isArray(nodes)?nodes:[])).forEach(function(n){
@@ -4771,7 +4771,7 @@ function _mntForgetResults(){
 }
 
 // ── SONUÇ GÜNCELLİĞİ — MODELİN İMZASI ────────────────────────────────────────
-// Pencereler son çözümün sayılarını gösteriyor (takoz başına çökme, sönüm,
+// Pencereler son çözümün sayılarını gösteriyor (takoz başına sehim, sönüm,
 // uygunluk). Model hesaptan sonra değiştiyse o sayılar BAŞKA bir modelin
 // cevabıdır; "güncel" görünmeleri sessiz bir yalandır. FEAD'in kural 33'ünün
 // karşılığı: çözüm anında modelin imzası R'ye yazılır, pencere şimdiki
@@ -4931,7 +4931,7 @@ function _mntCozucuDurumSekme(node, R, S){
   // kırpılıyordu); ilk sütunun sol kenarı başlıkla hizalı kalır.
   var f=_mntFoyAc([{ b:'Durum', gen:'30%' }, { b:_mntSym('n<sub>x</sub>'), gen:'10%' }, { b:_mntSym('n<sub>y</sub>'), gen:'12%' },
                    { b:_mntSym('n<sub>z</sub>'), gen:'10%' }, { b:_mntSym('T<sub>x</sub>'), gen:'12%', ipucu:'Tork [kN·m]' },
-                   { b:_mntSym('δz'), gen:'12%', sinif:'cz ay', ipucu:'En büyük düşey takoz çökmesi [mm]' },
+                   { b:_mntSym('δz'), gen:'12%', sinif:'cz ay', ipucu:'En büyük düşey takoz sehimi [mm]' },
                    { b:'', gen:'14%' }], 'Yük kitabı', 've-mnt-foy--sik');
   var sayi=function(v){ return '<td'+(v===0 ? ' class="sf"' : '')+'>'+_mntS(v)+'</td>'; };
   var tork=0;
@@ -5211,8 +5211,8 @@ function _mntPrepareSolve(solverId){
 // Toplanmış modelden çözüme hazırlık. `solver` Çözücü düğümüdür; sihirbazın
 // canlı önizlemesi çözücü KURMADAN çözer ve yerine `{data:{}}` verir — çözüm
 // modu ve ζ o zaman Çözücü'nün varsayılanları (auto · çekirdeğin ζ'sı). Ayrı
-// bir "önizleme çözücüsü" yazılmadı: sihirbazın gösterdiği çökme, kurulan
-// modelde Çözücü'nün bulacağı çökmenin TA KENDİSİ olmalı.
+// bir "önizleme çözücüsü" yazılmadı: sihirbazın gösterdiği sehim, kurulan
+// modelde Çözücü'nün bulacağı sehimin TA KENDİSİ olmalı.
 function _mntPrepareFrom(gather, solver){
   solver=solver||{data:{}};
   var C=veMountCore;
@@ -5394,7 +5394,7 @@ function _mntHesaplaIlerleme(btn, done, total, label){
 
 // Çözücüyü çalıştır. ASYNC: yük durumlarını adım adım çözüp ilerlemeyi (ve
 // nonlineerde her durumun Newton iterasyonunu) düğmede gösterir; bitince açık
-// pencere YERİNDE tazelenir — sekmeler, uygunluk, takozların çökmesi.
+// pencere YERİNDE tazelenir — sekmeler, uygunluk, takozların sehimi.
 // Hesap yalnız bu fonksiyonla (Hesapla) koşar.
 async function veMntSolverCompute(solverId){
   var btn=(typeof document!=='undefined' && document.getElementById) ? document.getElementById('ve-mnt-hesapla-'+solverId) : null;
@@ -5484,7 +5484,7 @@ function _mntFsOverlay(title, innerHTML, onMount, onClose){
 }
 // 2D GÖRÜNÜM TAM EKRAN — üç görünüş alt alta, ADLARIYLA (geniş çizim: etiket
 // yerleştiricisi tam adları çakıştırmadan dizer). Sütundaki pencere tek
-// görünüş ve numara taşır; ayrıntıya buradan bakılır. Birleşik AM pencereyle
+// görünüş ve numara taşır; ayrıntıya buradan bakılır. Birleşik CG pencereyle
 // aynı (çözücünün birleştirmesi).
 // Aksonometri üstte (üç duvar katmanı yalnız burada), düz görünüşler altında.
 function veMnt2DTamEkran(){

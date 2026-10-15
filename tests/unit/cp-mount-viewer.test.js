@@ -59,7 +59,7 @@ describe('cp-mount-viewer: işaret renkleri temaya uyar', () => {
     expect(mat.emissive.r + mat.emissive.g + mat.emissive.b).toBeGreaterThan(0);
   });
 
-  test('değişken tanımsızsa yedek renge düşer (çökme yok)', () => {
+  test('değişken tanımsızsa yedek renge düşer (sehim yok)', () => {
     setTheme({ '--bg-primary': '#0a0c10' });                   // accent tanımsız
     const mat = _mntViewerMarkerMat('--accent-warning', '#f59e0b', 20);
     expect(colorIs(mat.color, 'f59e0b')).toBe(true);
@@ -75,7 +75,7 @@ describe('cp-mount-viewer: işaret renkleri temaya uyar', () => {
 
 // FARE İPUCU PENCERELERİN DİLİNDE (2026-10-15): ipucu satır içi renkli
 // <span style="color:…"> kuruyordu, koordinatları "x · y · z" diye yazıyordu
-// (karar 7·C: "(x; y; z)") ve pencereler "AM" derken "CG" diyordu.
+// (karar 7·C: "(x; y; z)") ve pencerelerle aynı kısaltmayı (CG) taşır.
 describe('cp-mount-viewer: fare ipucu', () => {
   test('renk CSS sınıfından, koordinat "(x; y; z)", etiket soluk sınıfta', () => {
     const h = _mntViewerIpucu('takoz', 'Ön Takoz', [['Konum', _mntViewerUc(-196, 0, 180.25, 1) + ' mm']]);

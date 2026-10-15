@@ -176,7 +176,7 @@ describe('T7 — Modal, statik rijitlik çapraz kontrol (tol ±0.005 Hz)', () =>
 });
 
 describe('T8 — Regresyon / negatif testler', () => {
-  test('T8a — boş takoz tablosu: anlamlı hata, çökme yok', () => {
+  test('T8a — boş takoz tablosu: anlamlı hata, sehim yok', () => {
     const probs = core.validateModel(comps, []);
     expect(probs.some(p => p.includes('Takoz tablosu boş'))).toBe(true);
     const K0 = core.buildK([], mp.cg, false);
@@ -358,7 +358,7 @@ describe('makeAxisLaw — tek eksen kuvvet yasası (lineer / eğri)', () => {
     expect(law.tangent(0.5)).toBe(640000);
     expect(law.k0).toBe(640000);
   });
-  test('lineer: geçersiz k → 0 (çökme yerine sıfır kuvvet)', () => {
+  test('lineer: geçersiz k → 0 (sehim yerine sıfır kuvvet)', () => {
     expect(core.makeAxisLaw({ type: 'linear' }).force(1)).toBe(0);
     expect(core.makeAxisLaw(null).tangent(1)).toBe(0);
   });

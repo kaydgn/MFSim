@@ -22,7 +22,7 @@
 // +Y sağ, +Z yukarı (Koordinat Düzlemi'yle aynı).
 //
 // RENKLER ürünün işaret dilinden (2D, 3B ve krokiyle aynı anlam): takoz
-// yeşil (--accent-success), gövde AM'si kehribar (--accent-warning), G ve
+// yeşil (--accent-success), gövde CG'si kehribar (--accent-warning), G ve
 // G'ye ait her şey (asal eksen, eşdeğer kutu) kırmızı (--accent-danger),
 // rijitlik kolu eksenin rengi (--eksen-x/y/z). Görünüm CSS'te (`.ve-ak-*`).
 //
@@ -137,7 +137,7 @@ var veMntAkso = (function(){
     var a=Math.atan2(y2-y1, x2-x1); b=b||5;
     return cz(x1, y1, x2-Math.cos(a)*b*0.8, y2-Math.sin(a)*b*0.8, c)+okUcu(x2, y2, a, b, c+'-uc');
   }
-  // Birleşik AM — jeodezik işaret (2D görünüşlerin _mnt2DCGMark'ı).
+  // Birleşik CG — jeodezik işaret (2D görünüşlerin _mnt2DCGMark'ı).
   function amG(x, y, r){
     return '<circle cx="'+R(x)+'" cy="'+R(y)+'" r="'+r+'"/>'
       + '<path d="M'+R(x)+' '+R(y)+' L'+R(x+r)+' '+R(y)+' A'+r+' '+r+' 0 0 1 '+R(x)+' '+R(y+r)+' Z M'+R(x)+' '+R(y)+' L'+R(x-r)+' '+R(y)+' A'+r+' '+r+' 0 0 1 '+R(x)+' '+R(y-r)+' Z"/>';
@@ -596,7 +596,7 @@ var veMntAkso = (function(){
       if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true }, olc));
     }
     var katYazi='';
-    if(kat.cokme && cokmeN && !sade){ katYazi=yazi(W-8, 14, 'çökme ×'+sayi(cokmeN, 0), 've-ak-yz ve-ak-kat', FK, 'end', true); engel.push({ l:W-80, t:2, r:W-4, b:18 }); }
+    if(kat.cokme && cokmeN && !sade){ katYazi=yazi(W-8, 14, 'sehim ×'+sayi(cokmeN, 0), 've-ak-yz ve-ak-kat', FK, 'end', true); engel.push({ l:W-80, t:2, r:W-4, b:18 }); }
     // ── EKSEN ÜÇLÜSÜ (cetvel yokken): kutusu hesaplanıp çizimin içine oturur
     var triOk='', triYazi='';
     if(!sade && !o.ucluyok && !kat.cetvel){

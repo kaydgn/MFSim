@@ -154,7 +154,7 @@ function saveState() {
     if(typeof veFeadSekmeTazele === 'function') veFeadSekmeTazele();
   } catch(e) {}
   // Açık TAKOZ penceresi de aynı olaydan: türetilen değerleri (toplam payı,
-  // AM farkı, oran, kroki, uygunluk, sekme durumu) yerinde tazeler, yazılan
+  // CG farkı, oran, kroki, uygunluk, sekme durumu) yerinde tazeler, yazılan
   // girdilere dokunmaz (bkz. veMntPencereTazele, js/cp-mount.js).
   try {
     if(typeof veMntPencereTazele === 'function') veMntPencereTazele();

@@ -179,9 +179,9 @@ describe('§8 zenginleştirmeleri', () => {
      'Yanal bordür', 'İleri tork', 'Geri tork'].forEach(n => expect(h).toContain(n));
     expect(h).toContain('outline:2px solid var(--warn)'); // en az bir çekme hücresi — palet içi amber işaret
   });
-  test('§8.6 üç-eksen çökme detayı: her takoz için δx/δy/δz tablosu', () => {
+  test('§8.6 üç-eksen sehim detayı: her takoz için δx/δy/δz tablosu', () => {
     const h = rep._mntRepDeflectionDetail(R);
-    expect(h).toContain('üç-eksen çökme detayı');
+    expect(h).toContain('üç-eksen sehim detayı');
     ['δ<sub>x</sub>', 'δ<sub>y</sub>', 'δ<sub>z</sub>'].forEach(l => expect(h).toContain(l));   // gerçek alt simge (Tur 6)
     // her takoz için bir tablo
     expect((h.match(/<table>/g) || []).length).toBe(R.mounts.length);

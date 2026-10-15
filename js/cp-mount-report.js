@@ -24,7 +24,7 @@ function _rF(v, d){
   var n=Number(v); if(!Number.isFinite(n)) return '—';
   return veSayi(+n.toFixed(d==null?2:d), null, { eksi: '−' });   // makine: yuvarlama, yazan veSayi
 }
-// İşaretli (+/−, çökme için) Türkçe ondalık. Sıfır → işaretsiz "0".
+// İşaretli (+/−, sehim için) Türkçe ondalık. Sıfır → işaretsiz "0".
 function _rFs(v, d){
   var n=Number(v); if(!Number.isFinite(n)) return '—';
   var s=veSayi(+Math.abs(n).toFixed(d==null?2:d), null);   // makine: yuvarlama, yazan veSayi
@@ -427,8 +427,8 @@ function _mntRepAntet(R){
   + '<div class="antet">'
   + '  <div class="band">'
   + '    <div class="eyebrow">Analiz raporu · Güç Aktarma Organları Mühendisliği</div>'
-  + '    <h1>Güç grubu takoz sistemi: Çökme ve titreşim analizi</h1>'
-  + '    <div class="sub">Elastik mesnetler üzerindeki güç grubunun statik çökme ve rijit gövde titreşim analizi — projede tanımlı modelden otomatik üretilmiştir</div>'
+  + '    <h1>Güç grubu takoz sistemi: Sehim ve titreşim analizi</h1>'
+  + '    <div class="sub">Elastik mesnetler üzerindeki güç grubunun statik sehim ve rijit gövde titreşim analizi — projede tanımlı modelden otomatik üretilmiştir</div>'
   + '  </div>'
   + '  <div class="fields">'
   + '    <div class="f"><div class="k">Doküman türü</div><div class="v">Analiz raporu</div></div>'
@@ -502,7 +502,7 @@ function _mntRepSection8(R, opts){
   var C=_rMountCore();
   var geom=_mntRepGeom(R);
   var h='<h2 id="s8"><span class="no">8</span>Sayısal örnek: Bu modelin çözümü</h2>';
-  h+='<p>Bölüm 2–7\'deki yöntem, projede tanımlı güç grubuna uygulanır. Tüm kütle ve takozlar iç topolojiden otomatik toplanır; girdiler aşağıda listelenir, ardından kütle birleştirme, rijitlik, statik çökme, tork süperpozisyonu, tüm yük durumları ve modal analiz adımları bu modelin gerçek değerleriyle çözülür. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
+  h+='<p>Bölüm 2–7\'deki yöntem, projede tanımlı güç grubuna uygulanır. Tüm kütle ve takozlar iç topolojiden otomatik toplanır; girdiler aşağıda listelenir, ardından kütle birleştirme, rijitlik, statik sehim, tork süperpozisyonu, tüm yük durumları ve modal analiz adımları bu modelin gerçek değerleriyle çözülür. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
   h+=_mntRepNLNote(R);
   h+=_mntRepCritical(R);
   h+=_mntRepMassTable(geom);
@@ -528,17 +528,17 @@ function _mntRepSection8(R, opts){
   return h;
 }
 
-// §8.6 — Takoz bazında ÜÇ-EKSEN çökme detayı (her takoz için ayrı tablo).
+// §8.6 — Takoz bazında ÜÇ-EKSEN sehim detayı (her takoz için ayrı tablo).
 // δz özeti (§8.5) çoğu durumda yeterli değildir: viraj/bordür darbesinde yanal
 // (δy), fren/tork'ta boyuna (δx) sehim kritiktir. Her takoz için tüm yük
 // durumlarındaki δx/δy/δz burada verilir. Tek sayfaya sığmayabilir; tablolar
 // sayfalara yayılır (break-inside:avoid ile her tablo bütün kalır).
 function _mntRepDeflectionDetail(R){
   var mounts=R.mounts||[], cases=R.allCases||[];
-  var h='<h3>8.6 Adım 6 — Takoz bazında üç-eksen çökme detayı</h3>';
+  var h='<h3>8.6 Adım 6 — Takoz bazında üç-eksen sehim detayı</h3>';
   h+='<p>Her takoz için tüm yük durumlarındaki üç-eksen sehimi: δ<sub>x</sub> (boyuna), δ<sub>y</sub> (enine), δ<sub>z</sub> (düşey) [mm]. Düşey özetin (§8.5) ötesinde yanal ve boyuna sehimler de değerlendirilir — viraj / bordür darbesinde δ<sub>y</sub>, fren / tahrik torkunda δ<sub>x</sub> baskın olabilir. <b>Çekme</b> (δ<sub>z</sub> &gt; 0, lift-off) ve herhangi bir eksende <b>±10 mm aşımı</b> (lineer-dışı) işaretlidir.</p>';
   mounts.forEach(function(mnt, mi){
-    h+='<table><caption>Tablo '+_rTbl()+' — '+_rEsc(mnt.name||('Takoz '+(mi+1)))+': yük durumlarına göre çökme [mm]</caption>';
+    h+='<table><caption>Tablo '+_rTbl()+' — '+_rEsc(mnt.name||('Takoz '+(mi+1)))+': yük durumlarına göre sehim [mm]</caption>';
     h+='<tr><th>Yük durumu</th><th>δ<sub>x</sub></th><th>δ<sub>y</sub></th><th>δ<sub>z</sub></th><th>Durum</th></tr>';
     cases.forEach(function(rc){
       if(!rc.res){ h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td><td colspan="4" class="c">— (çözülemedi)</td></tr>'; return; }
@@ -826,9 +826,9 @@ function _mntRepStep2Stiffness(R, C){
   return h;
 }
 
-// §8.3 — statik çökme
+// §8.3 — statik sehim
 function _mntRepStep3Static(R, geom){
-  var h='<h3>8.3 Adım 3 — Statik çökme (yerçekimi)</h3>';
+  var h='<h3>8.3 Adım 3 — Statik sehim (yerçekimi)</h3>';
   var stat=_mntRepFindCase(R,'Static');
   if(!stat || !stat.res){ return h+'<p>Statik durum çözülemedi.</p>'; }
   var res=stat.res, m=R.mp.m;
@@ -871,7 +871,7 @@ function _mntRepStep3Static(R, geom){
   h+='</table>';
   h+='<p>Σf<sub>z</sub> değeri dış yükü (−mg) dengeler; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
   if(anyCap){
-    h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Bu bir DAYANIM hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve çökmeyi değiştirmez. Tedarikçi raporlarında aynı sütun “<span lang="en">Load (%)</span>” adıyla geçer ve tipik tasarım hedefi %25–50 bandıdır — çok düşük değer gereğinden sert/büyük takozu, %100\'e yaklaşan değer ömür riskini gösterir.</p>';
+    h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Bu bir DAYANIM hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve sehimi değiştirmez. Tedarikçi raporlarında aynı sütun “<span lang="en">Load (%)</span>” adıyla geçer ve tipik tasarım hedefi %25–50 bandıdır — çok düşük değer gereğinden sert/büyük takozu, %100\'e yaklaşan değer ömür riskini gösterir.</p>';
   }
   h+=_mntRepLoadBar(R);
   return h;
@@ -932,15 +932,15 @@ function _mntRepStep4Torque(R){
     });
     h+='</table>';
   }
-  h+='<p>Tork reaksiyonu bir yandaki takozları bastırırken (çökme artar) karşı yanı boşaltır; büyük torkta karşı taraf takozları çekmeye (lift-off) geçebilir. Süperpozisyonun geçerliliği, modelin lineer kabulüne (±10 mm bandı) bağlıdır.</p>';
+  h+='<p>Tork reaksiyonu bir yandaki takozları bastırırken (sehim artar) karşı yanı boşaltır; büyük torkta karşı taraf takozları çekmeye (lift-off) geçebilir. Süperpozisyonun geçerliliği, modelin lineer kabulüne (±10 mm bandı) bağlıdır.</p>';
   return h;
 }
 
-// §8.5 — TÜM yük durumları (çökme matrisi) ───────────────────────────────────
+// §8.5 — TÜM yük durumları (sehim matrisi) ───────────────────────────────────
 function _mntRepLoadCaseMatrix(R){
   var mounts=R.mounts||[];
-  var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey çökme δ<sub>z</sub>)</h3>';
-  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> çökme özeti. Her hücre takozun δ<sub>z</sub>\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>) ayrıntı için §8.6.</p>';
+  var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey sehim δ<sub>z</sub>)</h3>';
+  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> sehim özeti. Her hücre takozun δ<sub>z</sub>\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>) ayrıntı için §8.6.</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Yük durumu × takoz düşey sehim matrisi [mm]</caption>';
   h+='<tr><th>Yük durumu</th>';
   mounts.forEach(function(m){ h+='<th title="'+_rEsc(m.name)+'">'+_rEsc(_mntRepShort(m.name,8))+'</th>'; });
@@ -1968,7 +1968,7 @@ function _mntRepSoftening(R, opts){
       +'farklılaştırma bu taramanın kapsamı dışındadır.</div>';
   }
   h+='<p style="font-size:0.9em; color:#5a6270;">Tarama yalnız <b>frekans ve izolasyon</b> kriterlerini değerlendirir. '
-    +'Yumuşatma statik çökmeyi \\( 1/\\text{ölçek} \\) oranında büyütür: %50 yumuşatma statik çökmeyi ikiye katlar '
+    +'Yumuşatma statik sehimi \\( 1/\\text{ölçek} \\) oranında büyütür: %50 yumuşatma statik sehimi ikiye katlar '
     +'ve ±15 mm metal-metal durdurucuya yaklaştırır. Seçim kesinleşmeden §8.5, §8.6 ve §8.10 yeniden okunmalıdır.</p>';
   return h;
 }

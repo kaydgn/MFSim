@@ -179,10 +179,10 @@ describe('BİRİM VE DİL — aynı şey modülün her yerinde aynı sözle', ()
   });
 });
 
-describe('ÖZET MASASI — takozun 1 g çökmesi yerinde yazılı', () => {
+describe('ÖZET MASASI — takozun 1 g sehimi yerinde yazılı', () => {
   // `_mwFigurVeri` etiketi kuruyordu ("Sağ Ön Takoz · 7,12 mm"), çizicinin
   // varsayılanı yalnız adı okuyordu: özellik yazıldığı günden beri görünmüyordu.
-  test('masada her takozun etiketi adı + çökmesi, öteki adımlarda yalnız ad', () => {
+  test('masada her takozun etiketi adı + sehimi, öteki adımlarda yalnız ad', () => {
     const c = tulga();
     W.veMntWizGoto(OZET);
     const yazi = document.getElementById('ve-mw-masa-cizim').textContent;

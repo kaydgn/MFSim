@@ -5,7 +5,7 @@
  * değil, ÇİZİLECEK SAYILAR:
  *
  *   • FRF ızgarası Rapor §8.13 ile aynı bantta ve aynı çözünürlükte mi
- *   • kuvvet-deformasyon eğrisi çözücünün kullandığı YASADAN mı geliyor
+ *   • kuvvet-sehim eğrisi çözücünün kullandığı YASADAN mı geliyor
  *   • ivme süpürmesi a = 1 g'de Statik yük durumuyla BİREBİR örtüşüyor mu
  *   • bir veri kümesinin kanalları kendi X ekseniyle mi eşleşiyor
  *   • eksik girdide (sönüm yok / çözücü yok) uydurma eğri üretilmiyor mu
@@ -144,7 +144,7 @@ describe('frekans yanıtı (frf)', () => {
   });
 });
 
-describe('kuvvet-deformasyon (fdefl)', () => {
+describe('kuvvet-sehim (fdefl)', () => {
   const ds = setOf('fdefl');
 
   test('eksen ±15 mm — metal-metal durdurucu boşluğunu kapsar', () => {
@@ -195,35 +195,35 @@ describe('ivme süpürmesi (gz / gy / gx)', () => {
     expect(i1).toBeGreaterThan(0);
     const ref = solveOne(STATIC_LC).res;
     MOUNTS.forEach((mnt, k) => {
-      const d = mchan(gz, mnt, 'bileşke çökme').data[i1];
+      const d = mchan(gz, mnt, 'bileşke sehim').data[i1];
       const f = mchan(gz, mnt, 'bileşke kuvvet').data[i1];
       expect(d).toBeCloseTo(norm3(ref.perMount[k].delta) * 1000, 9);
       expect(f).toBeCloseTo(norm3(ref.perMount[k].f), 6);
     });
   });
 
-  test('sıfır ivmede yük yok — çökme sıfır', () => {
+  test('sıfır ivmede yük yok — sehim sıfır', () => {
     MOUNTS.forEach((mnt) => {
-      expect(mchan(gz, mnt, 'bileşke çökme').data[0]).toBeCloseTo(0, 9);
+      expect(mchan(gz, mnt, 'bileşke sehim').data[0]).toBeCloseTo(0, 9);
     });
-    expect(chan(gz, 'En büyük takoz çökmesi').data[0]).toBeCloseTo(0, 9);
+    expect(chan(gz, 'En büyük takoz sehimi').data[0]).toBeCloseTo(0, 9);
   });
 
-  test('lineer modelde çökme ivmeyle tekdüze artar', () => {
-    const d0 = mchan(gz, MOUNTS[0], 'bileşke çökme').data;
+  test('lineer modelde sehim ivmeyle tekdüze artar', () => {
+    const d0 = mchan(gz, MOUNTS[0], 'bileşke sehim').data;
     for (let i = 1; i < d0.length; i++) expect(d0[i]).toBeGreaterThan(d0[i - 1] - 1e-12);
   });
 
-  test('en büyük çökme kanalı gerçekten takozların maksimumu', () => {
-    const dmax = chan(gz, 'En büyük takoz çökmesi').data;
-    const per = MOUNTS.map((m) => mchan(gz, m, 'bileşke çökme').data);
+  test('en büyük sehim kanalı gerçekten takozların maksimumu', () => {
+    const dmax = chan(gz, 'En büyük takoz sehimi').data;
+    const per = MOUNTS.map((m) => mchan(gz, m, 'bileşke sehim').data);
     dmax.forEach((v, i) => expect(v).toBeCloseTo(Math.max(...per.map((p) => p[i])), 9));
   });
 
   test('yanal ve boyuna süpürmede düşey 1 g sabit — a = 0 Statik demektir', () => {
     const ref = solveOne(STATIC_LC).res;
     ['gy', 'gx'].forEach((key) => {
-      const d0 = mchan(setOf(key), MOUNTS[0], 'bileşke çökme').data[0];
+      const d0 = mchan(setOf(key), MOUNTS[0], 'bileşke sehim').data[0];
       expect(d0).toBeCloseTo(norm3(ref.perMount[0].delta) * 1000, 9);
     });
   });
@@ -390,7 +390,7 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     expect(text(br)).toContain('%');
   });
 
-  test('kuvvet-deformasyon: tek takoz çok eksen → yön farkı', () => {
+  test('kuvvet-sehim: tek takoz çok eksen → yön farkı', () => {
     const ds = setOf('fdefl');
     const ids = ds.channels.filter((c) => c.name.indexOf(MOUNTS[0].name) === 0).map((c) => c.id);
     const br = B.forLane(ds, R, ids);
@@ -399,19 +399,19 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     expect(text(br)).toMatch(/kat/);
   });
 
-  test('kuvvet-deformasyon: tek kanal → o eksenin sertliği ve çalışma noktası', () => {
+  test('kuvvet-sehim: tek kanal → o eksenin sertliği ve çalışma noktası', () => {
     const ds = setOf('fdefl');
     const id = ds.channels.find((c) => c.name === MOUNTS[0].name + ' · Z (düşey)').id;
     const t = text(B.forLane(ds, R, [id]));
     // kstat_z = 1800 N/mm; eğriden okunan eğim bunu vermeli (Türkçe yazım, karar 7·C)
     expect(t).toContain('1.800 N/mm');
-    // Statik çalışma noktası (çökme) yazılıyor mu — sayı taşıyan cümle
-    expect(t).toMatch(/Statik çökme \*\*[\d.,]+ mm\*\*/);
+    // Statik çalışma noktası (sehim) yazılıyor mu — sayı taşıyan cümle
+    expect(t).toMatch(/Statik sehim \*\*[\d.,]+ mm\*\*/);
   });
 
   test('süpürme: çok takoz → en çok ve en az yüklenen', () => {
     const ds = setOf('gz');
-    const ids = ds.channels.filter((c) => /bileşke çökme/.test(c.name)).map((c) => c.id);
+    const ids = ds.channels.filter((c) => /bileşke sehim/.test(c.name)).map((c) => c.id);
     const br = B.forLane(ds, R, ids);
     const t = text(br);
     expect(t).toContain('en çok yüklenen');
@@ -421,7 +421,7 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
 
   test('süpürme: dmax tek başına → en kötü takozun izi', () => {
     const t = text(lane('gz', ['dmax']));
-    expect(t).toContain('En büyük takoz çökmesi');
+    expect(t).toContain('En büyük takoz sehimi');
     expect(t).toMatch(/mm/);
   });
 
@@ -509,7 +509,7 @@ describe('kanal çözümleme ve X ekseni kuralı', () => {
     // Bir takoz silinip yeniden çözüldüğünde KALAN takozların kimlikleri
     // değişmemeli. Kimlik sıra numarasından türeseydi "d1" silmeden önce
     // "Ön Sağ", sonra "Sol Ön" olurdu: şerit etiketi eski takozu söylerken
-    // başka bir takozun çökmesi çizilirdi — makul ama yanlış.
+    // başka bir takozun sehimi çizilirdi — makul ama yanlış.
     const less = MOUNTS.filter((m) => m.name !== 'Ön Sol');
     const K2 = core.buildK(less, MP.cg, false);
     const stat2 = core.solveCase(K2, less, MP.cg, MP.m, G, STATIC_LC);
@@ -525,13 +525,13 @@ describe('kanal çözümleme ve X ekseni kuralı', () => {
       return ds.channels.find((c) => c.name === mnt.name + ' · ' + kind).id;
     };
     less.forEach((mnt) => {
-      expect(idOf(sets2, 'gz', mnt, 'bileşke çökme'))
-        .toBe(idOf(SETS, 'gz', mnt, 'bileşke çökme'));
+      expect(idOf(sets2, 'gz', mnt, 'bileşke sehim'))
+        .toBe(idOf(SETS, 'gz', mnt, 'bileşke sehim'));
       expect(idOf(sets2, 'fdefl', mnt, 'Z (düşey)'))
         .toBe(idOf(SETS, 'fdefl', mnt, 'Z (düşey)'));
     });
     // Silinen takozun kimliği ARTIK YOK — başka takoza devredilmedi
-    const goneId = idOf(SETS, 'gz', MOUNTS.find((m) => m.name === 'Ön Sol'), 'bileşke çökme');
+    const goneId = idOf(SETS, 'gz', MOUNTS.find((m) => m.name === 'Ön Sol'), 'bileşke sehim');
     expect(S.series(sets2, '~mnt-gz', goneId)).toBeNull();
   });
 

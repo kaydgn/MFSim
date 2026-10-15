@@ -8,8 +8,8 @@
 // buraya YALNIZCA gerçek sinyaller girer — yani X ekseni olan büyüklükler:
 //
 //   frf    X = frekans [Hz]   → iletilebilirlik T(f), izolasyon verimi
-//   fdefl  X = deformasyon [mm] → takoz kuvvet-deformasyon yasası F(δ)
-//   gz/gy/gx  X = ivme [g]    → takoz çökmesi ve kuvveti, ivme süpürmesi
+//   fdefl  X = sehim [mm] → takoz kuvvet-sehim yasası F(δ)
+//   gz/gy/gx  X = ivme [g]    → takoz sehimi ve kuvveti, ivme süpürmesi
 //   campbell X = motor devri [d/dk] → mertebe çizgileri × mod çizgileri
 //
 // Tek sayı (modal frekans, ζ, TRA açısı) ve matris (KED, 6×6 K/M) BURAYA
@@ -29,7 +29,7 @@ var veMntSignals = (function() {
   // FRF sınırları Rapor §8.13 ile AYNI (cp-mount-report.js _FRF_FMIN/_FRF_FMAX):
   // aynı büyüklüğün iki yerde farklı banttan okunması karşılaştırmayı bozardı.
   var FRF_FMIN = 0.1, FRF_FMAX = 100, FRF_NPTS = 240;
-  // Kuvvet-deformasyon: ±15 mm metal-metal durdurucu boşluğunu (STOP_GAP_M)
+  // Kuvvet-sehim: ±15 mm metal-metal durdurucu boşluğunu (STOP_GAP_M)
   // kapsar — kullanıcı çalışma noktasının durdurucuya ne kadar yakın olduğunu
   // eğri üzerinde görsün.
   var FD_LIM_MM = 15, FD_NPTS = 121;
@@ -96,7 +96,7 @@ var veMntSignals = (function() {
   // Kanal kimlikleri panoya ve projeye kaydediliyor. Sıra numarasından
   // türetilirlerse ("d0", "d1"…) kullanıcı bir takoz ekleyip/silip yeniden
   // çözdüğünde AYNI kimlik BAŞKA bir takoza bağlanır: şerit hâlâ "Ön Sağ"
-  // yazarken artık "Sol Arka"nın çökmesini çizer. Sayı makul, etiket yanlış —
+  // yazarken artık "Sol Arka"nın sehimini çizer. Sayı makul, etiket yanlış —
   // gözle yakalanmaz. Bu yüzden kimlik takozun ADINDAN türetilir.
   //
   // Ad da değişebilir; o durumda kanal kaybolur (şerit düşer), sessizce başka
@@ -202,7 +202,7 @@ var veMntSignals = (function() {
     };
   }
 
-  // ── 2) Kuvvet-deformasyon eğrisi ──────────────────────────────────────────
+  // ── 2) Kuvvet-sehim eğrisi ──────────────────────────────────────────
   //
   // Takozun statik yasası: nonlineer eğri/analitik fit tanımlıysa o, yoksa
   // lineer kstat. Aynı çözücünün kullandığı mountStaticLaws çağrılır — panoda
@@ -245,9 +245,9 @@ var veMntSignals = (function() {
     return {
       key: 'fdefl',
       sensorId: SENSOR_PREFIX + 'fdefl',
-      name: 'Kuvvet-deformasyon',
+      name: 'Kuvvet-sehim',
       icon: '<span class="mf-ico mf-ico-ruler"></span>',
-      x: { id: 'd', name: 'Deformasyon', unit: 'mm', data: x },
+      x: { id: 'd', name: 'Sehim', unit: 'mm', data: x },
       channels: chans
     };
   }
@@ -313,10 +313,10 @@ var veMntSignals = (function() {
     var chans = [], keys = _mountKeys(R.mounts);
     R.mounts.forEach(function(mnt, k) {
       var label = _mountLabel(mnt, k);
-      chans.push({ id: keys[k] + '.d', name: label + ' · bileşke çökme',  unit: 'mm', data: dPer[k] });
+      chans.push({ id: keys[k] + '.d', name: label + ' · bileşke sehim',  unit: 'mm', data: dPer[k] });
       chans.push({ id: keys[k] + '.f', name: label + ' · bileşke kuvvet', unit: 'N',  data: fPer[k] });
     });
-    chans.push({ id: 'dmax',  name: 'En büyük takoz çökmesi',        unit: 'mm',    data: dMax });
+    chans.push({ id: 'dmax',  name: 'En büyük takoz sehimi',        unit: 'mm',    data: dMax });
     chans.push({ id: 'ntens', name: 'Çekmedeki (lift-off) takoz',    unit: 'adet',  data: nTens });
     chans.push({ id: 'nclamp', name: 'Durdurucuya oturan takoz',     unit: 'adet',  data: nClamp });
 
@@ -508,12 +508,12 @@ var veMntSignals = (function() {
     }
     R.mounts.forEach(function(mnt, mi) {
       var label = _mountLabel(mnt, mi);
-      chans.push({ id: keys[mi] + '.d', name: label + ' · bileşke çökme',
+      chans.push({ id: keys[mi] + '.d', name: label + ' · bileşke sehim',
                    unit: 'mm', data: res.per[mi].d });
       chans.push({ id: keys[mi] + '.f', name: label + ' · bileşke kuvvet',
                    unit: 'N', data: res.per[mi].f });
     });
-    chans.push({ id: 'dmax', name: 'En büyük takoz çökmesi', unit: 'mm', data: res.dMax });
+    chans.push({ id: 'dmax', name: 'En büyük takoz sehimi', unit: 'mm', data: res.dMax });
 
     return {
       key: def.key,

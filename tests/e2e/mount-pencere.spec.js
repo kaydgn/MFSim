@@ -160,7 +160,7 @@ test('3B tam ekran: model görüntüyü doldurur, içinde kalır; başka örnekt
   // Koordinat üçlüsü ipucunda da "(x; y; z)" — kural 7·C
   expect(a.bilgi.length).toBeGreaterThan(5);
   expect(a.bilgi.filter((t) => /\d · [−-]?\d/.test(t))).toEqual([]);
-  // Her ipucu (takoz · gövde · birleşik AM) bir konum taşır ve o "(x; y; z)" yazılır
+  // Her ipucu (takoz · gövde · birleşik CG) bir konum taşır ve o "(x; y; z)" yazılır
   expect(a.bilgi.filter((t) => !/\([−\d.,]+; [−\d.,]+; [−\d.,]+\) mm/.test(t))).toEqual([]);
   // Kapanınca kamera hafızaya yazılır; Siper yüklenince o kamera Siper'e uygulanmaz
   await page.keyboard.press('Escape'); await page.waitForTimeout(400);
@@ -204,7 +204,7 @@ test('2D Görünüm · Aksonometrik: ilk sekme, katmanlar ve tam ekran — yerle
       Y.yerlesimOzet(r, k + ' · ' + ad).forEach((x) => out.push(x));
     };
     await olc('temel');
-    await ayar('kat', 'kuvvet'); await ayar('kat', 'cokme'); await olc('kuvvet + statik çökme');
+    await ayar('kat', 'kuvvet'); await ayar('kat', 'cokme'); await olc('kuvvet + statik sehim');
     await ayar('kat', 'cokme'); await ayar('kat', 'kuvvet');
     await ayar('kat', 'rijit'); await olc('rijitlik'); await ayar('kat', 'rijit');
     await ayar('kat', 'direk'); await olc('direk'); await ayar('kat', 'direk');

@@ -319,7 +319,7 @@ function veMntWiz3bPanelHTML(s, secili){
     };
     if(gs.length){
       h += '<table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-3b-tbl ve-mw-3b-tbl" data-ve-3b-govdeler="1"><thead><tr>'
-        + '<th>Gövde</th><th>Ağırlık merkezi<em>mm</em></th><th title="' + _mwEsc(VE_MW_STP_KUTLE_NOT) + '">Kütle<em>kg</em></th>'
+        + '<th>Gövde</th><th>CG<em>mm</em></th><th title="' + _mwEsc(VE_MW_STP_KUTLE_NOT) + '">Kütle<em>kg</em></th>'
         + '</tr></thead><tbody>';
       gs.forEach(function(b){
         var m = s.kutle[b.dugum];

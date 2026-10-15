@@ -127,10 +127,10 @@ describe('serbest salınım MODAL frekansta', () => {
   });
 });
 
-describe('takoz kuvvetleri ve çökmeler', () => {
+describe('takoz kuvvetleri ve sehimler', () => {
   const r = shock({});
 
-  test('her takoz için çökme ve kuvvet geçmişi, X ile aynı uzunlukta', () => {
+  test('her takoz için sehim ve kuvvet geçmişi, X ile aynı uzunlukta', () => {
     expect(r.per.length).toBe(MOUNTS.length);
     r.per.forEach((p) => {
       expect(p.d.length).toBe(r.t.length);
@@ -139,13 +139,13 @@ describe('takoz kuvvetleri ve çökmeler', () => {
     expect(r.dMax.length).toBe(r.t.length);
   });
 
-  test('en büyük çökme kanalı gerçekten takozların maksimumu', () => {
+  test('en büyük sehim kanalı gerçekten takozların maksimumu', () => {
     r.dMax.forEach((v, i) => {
       expect(v).toBeCloseTo(Math.max(...r.per.map((p) => p.d[i])), 9);
     });
   });
 
-  test('t = 0\'da sistem duruyor: çökme, kuvvet ve ivme sıfır', () => {
+  test('t = 0\'da sistem duruyor: sehim, kuvvet ve ivme sıfır', () => {
     expect(r.a[0]).toBeCloseTo(0, 12);
     r.q[0].forEach((v) => expect(v).toBeCloseTo(0, 12));
     r.per.forEach((p) => { expect(p.d[0]).toBeCloseTo(0, 12); expect(p.f[0]).toBeCloseTo(0, 12); });

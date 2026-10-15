@@ -12,7 +12,7 @@
  * Test neyi kilitliyor:
  *   • (A) katalog değerleri birebir + dx = sx × cdyn/cstat özdeşliği;
  *   • (B) değerlerinin dört raporun KENDİ sonuçlarını yeniden ürettiği
- *     (statik çökme + takoz kuvvetleri + 6 doğal frekans, her rapor için);
+ *     (statik sehim + takoz kuvvetleri + 6 doğal frekans, her rapor için);
  *   • oyuklu konilerin KASITLI radyal anizotropisi (sx ≠ sy) ve masif konilerin
  *     eksenel simetrisi (sx = sy);
  *   • iki tabanın BİRBİRİNE KARIŞMADIĞI ve farkın gerçek olduğu (nominal
@@ -276,20 +276,20 @@ describe('Kütle özellikleri raporun "Bodies" tablosuyla aynı', () => {
 });
 
 describe.each(REPORTS.map((R) => [R.id, R]))('%s', (_id, R) => {
-  test(`Static Results — düşey çökmeler (±${TOL.dz} mm)`, () => {
+  test(`Static Results — düşey sehimler (±${TOL.dz} mm)`, () => {
     const { stat } = solveReport(R);
     stat.perMount.forEach((pm, i) =>
       expect(Math.abs(pm.delta[2] * 1000 - R.dz[i])).toBeLessThanOrEqual(TOL.dz));
     expect(stat.checks.tensionCount).toBe(0);            // hepsi basıda
   });
 
-  test(`Static Results — boyuna çökmeler (±${TOL.dx} mm) → sx'i kilitler`, () => {
+  test(`Static Results — boyuna sehimler (±${TOL.dx} mm) → sx'i kilitler`, () => {
     const { stat } = solveReport(R);
     stat.perMount.forEach((pm, i) =>
       expect(Math.abs(pm.delta[0] * 1000 - R.dx[i])).toBeLessThanOrEqual(TOL.dx));
   });
 
-  test(`Static Results — yanal çökmeler (±${TOL.dy} mm) → sy'yi kilitler`, () => {
+  test(`Static Results — yanal sehimler (±${TOL.dy} mm) → sy'yi kilitler`, () => {
     const { stat } = solveReport(R);
     stat.perMount.forEach((pm, i) =>
       expect(Math.abs(pm.delta[1] * 1000 - R.dy[i])).toBeLessThanOrEqual(TOL.dy));
@@ -329,7 +329,7 @@ describe('Değerler yapılandırmalar arası TUTARLI — tesadüf değil', () =>
   });
 
   test('yanlış takoz tipi kullanılırsa sonuç BELİRGİN şekilde sapar (karışırsa fark edilir)', () => {
-    // 13948'de Cone 121 NP yerine NG kullan → arka takozların çökmesi çok değişmeli
+    // 13948'de Cone 121 NP yerine NG kullan → arka takozların sehimi çok değişmeli
     const R = REPORTS[0];
     const good = solveReport(R);
     const bad = solveReport({ ...R, mounts: [[K38, P1], [K38, P2], [KNG, P3], [KNG, P4]] });

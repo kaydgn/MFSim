@@ -89,3 +89,47 @@ describe('Takoz arayüz dosyalarında düz çift tırnakla sözcük yok', () => 
     expect(bul).toEqual([]);
   });
 });
+
+// Kullanıcı kararları S1·C ve S2·C (2026-10-15). Eski hâl: ağırlık merkezi üç
+// adla geçiyordu — pencereler ve 2D sütunu "AM" (46 yer), sihirbaz, 2D tam
+// ekran ve kılavuz "CG", sihirbaz masasının lejantı "ağırlık merkezi"; takozun
+// yer değiştirmesi (δ) pencerelerde ve raporda "çökme" (93 yer), kütüphane
+// grafiğinde ve raporun kuram bölümünde "sehim", Sonuçlar grubunda
+// "deformasyon" (9 yer). Modülün özel adı (Takoz Çökme-Titreşim) kalır.
+describe('Takoz terimleri tek: CG ve sehim (S1·C · S2·C)', () => {
+  const KAYNAK = fs.readdirSync(path.join(KOK, 'js'))
+    .filter((f) => /^(cp-mount|mount-).*\.js$|^guide-mount\.js$/.test(f))
+    .map((f) => 'js/' + f).concat(['tools/report-assets/theory-source.html']);
+  const tara = (re) => {
+    const bul = [];
+    KAYNAK.forEach((f) => fs.readFileSync(path.join(KOK, f), 'utf8').split('\n').forEach((l, i) => {
+      const temiz = l.replace(/Çökme[-–]Titreşim|çökme[-–]titreşim/g, '');
+      if (re.test(temiz)) bul.push(f + ':' + (i + 1));
+    }));
+    return bul;
+  };
+  const H = 'A-Za-zÇĞİÖŞÜçğıöşü';
+  test('kısaltma "AM" yok — ağırlık merkezi CG', () => {
+    expect(KAYNAK.length).toBeGreaterThan(10);
+    expect(tara(new RegExp('(^|[^' + H + '])AM([^' + H + ']|$)'))).toEqual([]);
+  });
+  test('δ "çökme" ya da "deformasyon" değil — sehim (modülün özel adı hariç)', () => {
+    expect(tara(new RegExp('(^|[^' + H + '])[Çç]ökme', 'u'))).toEqual([]);
+    expect(tara(/deformasyon/i)).toEqual([]);
+  });
+  test('kısa etiketler CG: sihirbaz masasının lejantı, STEP tablosu, 2D ipucu', () => {
+    const w = fs.readFileSync(path.join(KOK, 'js/cp-mount-wizard.js'), 'utf8');
+    expect(w).toContain('</i>Gövde CG</span>');
+    expect(w).toContain('</i>Birleşik CG</span>');
+    expect(fs.readFileSync(path.join(KOK, 'js/cp-mount-3b.js'), 'utf8')).toContain('<th>CG<em>mm</em></th>');
+    const veri = {
+      comps: [{ name: 'Motor', x: 100, y: -50, z: 500, mass: 400 }],
+      mounts: [{ name: 'Sağ', x: 400, y: 350, z: 480 }, { name: 'Sol', x: 400, y: -350, z: 480 }],
+      cg: { x: 100, y: -50, z: 500, m: 400 },
+    };
+    const t = cp._mnt2DViewSVG(veri, 1200);
+    expect(t).toContain('Birleşik CG');
+    expect(t).not.toMatch(/Ağırlık merkezi\s+\(/);
+  });
+});
+

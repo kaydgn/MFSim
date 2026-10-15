@@ -117,7 +117,7 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
 
 describe('ÇARPIM ATALETİNİN İŞARETİ — tensör bileşeni (CATIA: Ixy = −∫xy dm)', () => {
   // Kutu z etrafında 30° döndürülmüş: I = R·diag(Ixx, Iyy, Izz)·Rᵀ →
-  // Ixy = c·s·(Ixx_yerel − Iyy_yerel). İşaret ters çıkarsa çökme ve modlar
+  // Ixy = c·s·(Ixx_yerel − Iyy_yerel). İşaret ters çıkarsa sehim ve modlar
   // sessizce başka bir gövdeyi çözerdi.
   const a = 0.9, b = 0.3, c = 0.4, m = 120, th = Math.PI / 6;
   const metin = S.guçGrubuStep([{ id: 'K', ad: 'Döndürülmüş kutu', sekil: 'kutu', olcu: [a * 1000, b * 1000, c * 1000],
