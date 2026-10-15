@@ -3108,7 +3108,8 @@ function _mnt2DAttachHover(container){
   container.__mnt2dHover=true;
   var tip=document.getElementById('ve-mnt-2d-tip');
   if(!tip){ tip=document.createElement('div'); tip.id='ve-mnt-2d-tip';
-    tip.style.cssText='position:fixed; z-index:100060; pointer-events:none; display:none; max-width:280px; padding:7px 10px; font-size:var(--fs-body); line-height:1.5; white-space:pre-line; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg);';
+    tip.className='ve-mnt-hover-ip ve-mnt-hover-ip--metin';     // 3B'ninkiyle aynı kutu, CSS'ten
+    tip.style.zIndex='100060';                                  // tam ekran perdesinin (100045) üstünde
     document.body.appendChild(tip);
   }
   function info(t){ while(t && t!==container){ if(t.getAttribute){ var v=t.getAttribute('data-mnt-info'); if(v) return v; } t=t.parentNode; } return null; }
@@ -3565,7 +3566,7 @@ function veMnt2DGorunusSVG(veri, W, H, opt){
 // (10 → 7,8 px). Verilmezse (test, belge) 980.
 function _mnt2DViewSVG(data, en){
   if(!data.comps.length && !data.mounts.length){
-    return '<div style="padding:24px 10px; text-align:center; font-size:var(--fs-body); color:var(--text-muted);">Görüntülenecek bileşen yok.</div>';
+    return '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>';
   }
   // ÜÇ figür ALT ALTA — her biri KENDİ <svg>'sinde (bağımsız yakınlaştır/kaydır).
   // Üstten (X–Y) ve Yandan (X–Z) ortak X yatay ölçeğini paylaşır; Önden (Y–Z)
@@ -3630,15 +3631,15 @@ function _mnt2DViewSVG(data, en){
   var totMass=(data.cg&&data.cg.m)?data.cg.m:data.comps.reduce(function(s,c){ return s+(c.mass>0?c.mass:0); },0);
   var summary='<div class="ve-mnt2d-summary">'
     + '<span>Toplam kütle <b>'+fmt1(totMass)+' kg</b></span>'
-    + (data.cg?'<span>Birleşik CG <b>('+fmt1(data.cg.x)+' · '+fmt1(data.cg.y)+' · '+fmt1(data.cg.z)+') mm</b></span>':'')
+    + (data.cg?'<span>Birleşik AM <b>('+fmt1(data.cg.x)+'; '+fmt1(data.cg.y)+'; '+fmt1(data.cg.z)+') mm</b></span>':'')
     + '<span>Takoz <b>'+data.mounts.length+'</b></span>'
-    + '<span>Bileşen <b>'+data.comps.length+'</b></span>'
+    + '<span>Gövde <b>'+data.comps.length+'</b></span>'
     + '</div>';
   function sw(inner){ return '<svg width="16" height="14" viewBox="0 0 16 14" style="vertical-align:-2px;">'+inner+'</svg>'; }
   var legend='<div class="ve-mnt2d-legend">'
     + '<span>'+sw('<rect x="3" y="2.5" width="10" height="9" rx="1.5" fill="none" stroke="'+_MNT2D_C_MOUNT+'" stroke-width="1.6"/>')+' Takoz</span>'
-    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="none" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.6"/>')+' Bileşen CG <i>(kütle ≈ boyut)</i></span>'
-    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="var(--bg-primary)" stroke="'+_MNT2D_C_CG+'" stroke-width="1.6"/><path d="M8 7 L13 7 A5 5 0 0 1 8 12 Z" fill="'+_MNT2D_C_CG+'"/><path d="M8 7 L3 7 A5 5 0 0 1 8 2 Z" fill="'+_MNT2D_C_CG+'"/>')+' Birleşik CG</span>'
+    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="none" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.6"/>')+' Gövde AM <i>(kütleyle büyür)</i></span>'
+    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="var(--bg-primary)" stroke="'+_MNT2D_C_CG+'" stroke-width="1.6"/><path d="M8 7 L13 7 A5 5 0 0 1 8 12 Z" fill="'+_MNT2D_C_CG+'"/><path d="M8 7 L3 7 A5 5 0 0 1 8 2 Z" fill="'+_MNT2D_C_CG+'"/>')+' Birleşik AM</span>'
     + '</div>';
 
   var out=summary+legend+'<div class="ve-mnt2d-stack" style="display:flex; flex-direction:column; gap:14px; min-width:480px;">';
@@ -3648,7 +3649,7 @@ function _mnt2DViewSVG(data, en){
     refV:0, refLabel:null, axis:{hLabel:'+X', vLabel:'−Y', vDir:'down', note:'+Y (sağ) yukarı'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
-    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+' · '+fmt1(cg.y)+')'; } }));
+    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+'; '+fmt1(cg.y)+')'; } }));
   // ── YAN GÖRÜNÜŞ (X–Z) ──
   out+=wrap(fig({ title:'Yandan görünüş · X–Z', hKey:'x', vKey:'z', px:pxX, pyFn:pyZ, compAbove:false,
     hMin:minX-hpad/sx, hMax:maxX+hpad/sx, vMin:minZ, vMax:maxZ,
@@ -3662,7 +3663,7 @@ function _mnt2DViewSVG(data, en){
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+Y', vLabel:'+Z', vDir:'up', note:'+Y (sağ) →'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
-    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.y)+' · '+fmt1(cg.z)+')'; } }));
+    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.y)+'; '+fmt1(cg.z)+')'; } }));
   out+='</div>';
   return out;
 }
@@ -4510,8 +4511,9 @@ function _mntImza(si, torque, sd){
 // çözücü bu topolojide yok). Dönüş: { durum, R }.
 // `liste` (ops.): düğüm listesi — verilmezse canlı `nodes`. Kök tuvaldeki
 // modül kartı alt topolojinin KAYITLI listesiyle sorar (o an canlı değil).
-function veMntSonucDurumu(liste){
-  var R=_veMntLast;
+// `R` (ops.): sorulan çözüm — verilmezse son çözüm.
+function veMntSonucDurumu(liste, R){
+  R=R||_veMntLast;
   if(!R || R.error || !R.imza) return { durum:'yok', R:null };
   var list=liste || ((typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : []);
   var solver=null;
@@ -4520,6 +4522,50 @@ function veMntSonucDurumu(liste){
   var g=_mntGatherForSolver(solver, liste);
   var imza=_mntImza(_mntToSI(g, R.g||9.81), g.torque, solver.data);
   return { durum:(imza===R.imza ? 'guncel' : 'bayat'), R:R };
+}
+
+// Son çözümün modeli PROJENİN neresinde: canlı tuvalde (Takoz alt
+// topolojisindeyiz), kökteki Takoz kartının KAYITLI alt topolojisinde, Takoz
+// gezinme yığınında ya da sekmenin kayıtlı kökünde (başka bir modülün alt
+// topolojisindeyken — Sonuçlar ağacı çizilmeden hemen önce kaydediliyor).
+// FEAD'in veFeadLiveModelNodes kalıbı. null: model projede yok.
+function veMntProjeModeli(solverId){
+  if(!solverId) return null;
+  var has=function(list){
+    for(var i=0;i<(list||[]).length;i++){ if(list[i] && list[i].id===solverId) return true; }
+    return false;
+  };
+  var subOf=function(list){
+    for(var i=0;i<(list||[]).length;i++){
+      var n=list[i], sub=n && n.type==='mount-analysis' && n.data && n.data.subTopology;
+      if(sub && Array.isArray(sub.nodes) && has(sub.nodes)) return sub.nodes;
+    }
+    return null;
+  };
+  var cur=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : [];
+  if(has(cur)) return cur;
+  var hit=subOf(cur);
+  if(hit) return hit;
+  for(var k=veMntStack.length-1;k>=0;k--){
+    var ps=veMntStack[k] && veMntStack[k].parentState;
+    hit=subOf(ps && ps.nodes);
+    if(hit) return hit;
+  }
+  var tab=(typeof veTabs!=='undefined' && Array.isArray(veTabs) && typeof veActiveTabIdx!=='undefined') ? veTabs[veActiveTabIdx] : null;
+  return subOf(tab && tab.state && tab.state.nodes);
+}
+// SONUÇLAR SAYFASININ VE RAPORUN HÜKMÜ: son çözüm PROJEDEKİ modeline göre —
+// kök tuvaldeyken de. k ∈ yok · hata · guncel · bayat · kayip (FEAD'in
+// veFeadResultState sözlüğü). Pencereler veMntSonucDurumu'nu okur: onlar için
+// başka bir Takoz kartının çözümü "bu topolojinin" değildir.
+function veMntResultState(R){
+  if(R===undefined || R===null) R=_veMntLast;
+  if(!R) return { k:'yok', R:null };
+  if(R.error) return { k:'hata', R:R };
+  var liste=veMntProjeModeli(R.solverId);
+  if(!liste) return { k:'kayip', R:R };
+  var S=veMntSonucDurumu(liste, R);
+  return { k:(S.durum==='guncel' ? 'guncel' : (S.durum==='bayat' ? 'bayat' : 'yok')), R:R };
 }
 
 // Takoz düğümünün son çözümdeki yeri — SIRAYLA değil KİMLİKLE.
@@ -5194,6 +5240,8 @@ if(typeof module!=='undefined' && module.exports){
     // Pencere dili (2026-10-14): imza, canlı model, kroki, durumlar, tazeleme
     _mntImza: _mntImza,
     veMntSonucDurumu: veMntSonucDurumu,
+    veMntProjeModeli: veMntProjeModeli,
+    veMntResultState: veMntResultState,
     _mntTakozSonucu: _mntTakozSonucu,
     _mntCanliModel: _mntCanliModel,
     _mntAtalet: _mntAtalet,

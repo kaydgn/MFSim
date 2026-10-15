@@ -72,3 +72,21 @@ describe('cp-mount-viewer: işaret renkleri temaya uyar', () => {
     expect(mat.shininess).toBe(80);
   });
 });
+
+// FARE İPUCU PENCERELERİN DİLİNDE (2026-10-15): ipucu satır içi renkli
+// <span style="color:…"> kuruyordu, koordinatları "x · y · z" diye yazıyordu
+// (karar 7·C: "(x; y; z)") ve pencereler "AM" derken "CG" diyordu.
+describe('cp-mount-viewer: fare ipucu', () => {
+  test('renk CSS sınıfından, koordinat "(x; y; z)", etiket soluk sınıfta', () => {
+    const h = _mntViewerIpucu('takoz', 'Ön Takoz', [['Konum', _mntViewerUc(-196, 0, 180.25, 1) + ' mm']]);
+    expect(h).toBe('<b class="ve-mnt-ip-ad" data-t="takoz">Ön Takoz</b>'
+      + '<br><span class="ve-mnt-ip-et">Konum</span> (−196,0; 0,0; 180,3) mm');
+    expect(h).not.toMatch(/style=/);
+  });
+  test('kaynakta satır içi renk ve "CG (mm)" kalmadı', () => {
+    const src = loadSource('cp-mount-viewer.js');
+    expect(src).not.toMatch(/style="[^"]*(color|background|border)/);
+    expect(src).not.toMatch(/cssText\s*=[^;]*(color|background|border)/);
+    expect(src).not.toMatch(/CG \(mm\)/);
+  });
+});

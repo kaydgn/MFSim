@@ -36,8 +36,11 @@ var veResultSources = [
     match: function(id) { var L = this.lib(); return !!(L && L.isMountSensor(id)); },
     forget: function() { if(typeof _mntForgetResults === 'function') _mntForgetResults(); },
     kanal: 'takoz kanalı',
-    cozum: 'Takoz alt topolojisinde ▶ Hesapla ile yeniden çözün.',
-    treeBottom: function() { return veMntTreeReportHTML(); } },
+    cozum: 'Takoz alt topolojisinde Çözücü → Hesapla ile yeniden çözün.',
+    // Ağaç satırları (sonuç durumu · rapor) Takoz'un kendi sunum dosyasında
+    // (js/cp-mount-results.js) — burada yalnız bağlantı noktası duruyor.
+    treeTop: function() { return (typeof veMntResTreeTopHTML === 'function') ? veMntResTreeTopHTML() : ''; },
+    treeBottom: function() { return (typeof veMntResTreeReportHTML === 'function') ? veMntResTreeReportHTML() : ''; } },
   { tab: 'fead', ad: 'FEAD kayış tahriki', ikon: 'disc',
     lib: function() { return (typeof veFeadSignals !== 'undefined') ? veFeadSignals : null; },
     brief: function() { return (typeof veFeadBrief !== 'undefined') ? veFeadBrief : null; },
@@ -731,16 +734,6 @@ function veUpdateResultsTree() {
 // kalır. Sekmenin bu ikisi arasında kopukluk yaratmaması için Rapor buradan da
 // bir tık uzakta olsun — diğer çözüm sekmelerindeki TXT rapor satırıyla aynı
 // desen. nodeId yok: motor/ζ girdileri zaten çözüm sonucundan (R.gather) okunur.
-function veMntTreeReportHTML() {
-  if(typeof veMntGenerateReport !== 'function') return '';
-  var h = '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
-  h += '<div class="ve-tree-row" onclick="veMntGenerateReport(null)" style="cursor:pointer; display:flex; align-items:center; gap:4px;" ' +
-       'title="Takoz çökme-titreşim raporunu üret ve indir — modal frekanslar, KED, yük durumları ve uygunluk tabloları">';
-  h += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span>' +
-       '<span style="font-weight:600; color:var(--ink-accent);">Takoz Çökme-Titreşim raporu (HTML)</span></div>';
-  h += '</div>';
-  return h;
-}
 
 // Projenin TAM adı ('' = ad yok). veSetProjectNameButton (toolbar.js) 22
 // karakterden uzun adı ekranda "…" ile kısaltıyor; tam hâli title'da.

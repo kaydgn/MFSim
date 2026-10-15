@@ -229,10 +229,17 @@ function veMntGenerateReport(nodeId){
   // Durumun tonu CSS'ten (`data-d`): satır içi renk ikinci bir görünüm kaynağıydı.
   function setStatus(m,d){ if(st){ st.textContent=m; if(d) st.setAttribute('data-d', d); else st.removeAttribute('data-d'); } }
   if(typeof _veMntLast==='undefined' || !_veMntLast || _veMntLast.error){
-    if(typeof showToast==='function') showToast('Önce Çözücü\'de ▶ Hesapla ile modeli çözün.','warning');
-    setStatus('Çözülmüş sonuç yok — Çözücü\'yü çalıştırın.','warn');
+    if(typeof showToast==='function') showToast('Önce modeli çözün: Çözücü → Hesapla.','warning');
+    setStatus('Çözülmüş sonuç yok — Çözücü → Hesapla.','warn');
     return;
   }
+  // BAYAT SONUÇTAN RAPOR — üretilir ama SÖYLENİR (FEAD'in kuralı). Rapor
+  // ÇÖZÜLEN modeli anlatır; model o zamandan beri değiştiyse kullanıcı bunu
+  // belgeyi açtıktan sonra değil şimdi bilmeli. Hüküm Sonuçlar sayfasınınkiyle
+  // AYNI çağrıdan: rapor Sonuçlar ağacından da üretiliyor, orada pencere yok.
+  var _sd=(typeof veMntResultState==='function') ? veMntResultState(_veMntLast) : null;
+  if(_sd && _sd.k==='bayat' && typeof showToast==='function')
+    showToast('Rapor son çözümü anlatır; model o zamandan beri değişti. Güncel sayılar için Çözücü → Hesapla.', 'warning');
   var R=_veMntLast;
   var opts=veMntRaporOpts(nodeId);
   setStatus('Rapor hazırlanıyor…');
