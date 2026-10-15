@@ -2396,7 +2396,9 @@ function veFeadBandSVG(band, W, H, opt){
              : { ink:'var(--text-primary)', grid:'var(--border-color)',
                  mut:'var(--text-muted)', ana:'var(--accent-primary)',
                  uy:'var(--accent-warning)', kot:'var(--accent-danger)' };
-  var L = pr ? 58 : 42, R = 10, T = 10, B = pr ? 34 : 24;
+  // Ekranda 320 birimlik çizim ~360 px'e büyüyor: 9 birim ≈ 10 px (ölçek
+  // tabanı). 8 birim ekranda 9 px kalıyordu (yerlesim.spec.js, çizim).
+  var L = pr ? 58 : 44, R = 10, T = 10, B = pr ? 34 : 26;
   var x0 = -180, x1 = 180;
   var X = function(v){ return L + (v - x0) / (x1 - x0) * (W - L - R); };
 
@@ -2418,11 +2420,11 @@ function veFeadBandSVG(band, W, H, opt){
     s += '<line x1="' + L + '" y1="' + y.toFixed(1) + '" x2="' + (W - R)   // makine: SVG koordinatı
       + '" y2="' + y.toFixed(1) + '" stroke="' + C.grid + '" stroke-width="1"/>'   // makine: SVG koordinatı
       + '<text x="' + (L - 5) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end"'   // makine: SVG koordinatı
-      + ' font-size="' + (pr ? 10 : 8) + '" fill="' + C.mut + '">' + veSayi(yv, 0) + '</text>';
+      + ' font-size="' + (pr ? 10 : 9) + '" fill="' + C.mut + '">' + veSayi(yv, 0) + '</text>';
   }
   [-180, -90, 0, 90, 180].forEach(function(v){
     s += '<text x="' + X(v).toFixed(1) + '" y="' + (H - B + 12)   // makine: SVG koordinatı
-      + '" text-anchor="middle" font-size="' + (pr ? 10 : 8) + '" fill="' + C.mut + '">'
+      + '" text-anchor="middle" font-size="' + (pr ? 10 : 9) + '" fill="' + C.mut + '">'
       + v + '</text>';
   });
   // KULLANILAMAYAN AÇILAR taralı
@@ -2476,10 +2478,10 @@ function veFeadBandSVG(band, W, H, opt){
     + '<line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B)
     + '" stroke="' + C.ink + '" stroke-width="1"/>'
     + '<text x="' + ((L + W - R) / 2).toFixed(0) + '" y="' + (H - 2)   // makine: SVG koordinatı
-    + '" text-anchor="middle" font-size="' + (pr ? 11 : 8) + '" fill="' + C.mut + '">'
+    + '" text-anchor="middle" font-size="' + (pr ? 11 : 9) + '" fill="' + C.mut + '">'
     + 'kol çalışma açısı [°]</text>'
     + '<text transform="translate(' + (pr ? 13 : 10) + ',' + (H / 2).toFixed(0)   // makine: SVG dönüşümü
-    + ') rotate(-90)" text-anchor="middle" font-size="' + (pr ? 11 : 8) + '" fill="'
+    + ') rotate(-90)" text-anchor="middle" font-size="' + (pr ? 11 : 9) + '" fill="'
     + C.mut + '">gerginlik [N]</text>';
   s += '</svg>';
   return s;
@@ -4919,7 +4921,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   // SINIR DENETİMİ `altPay`ınkiyle aynı biçimde: uydurma bir pay çizimin
   // yarısını engele çevirip bütün etiketleri tek köşeye yığardı.
   var ROZ = (opts.ustPay && Number(opts.ustPay.w) > 0
-             && Number(opts.ustPay.w) < W * 0.9
+             && Number(opts.ustPay.w) < W * VE_FEAD_ROZET_ORAN
              && Number(opts.ustPay.h) > 0 && Number(opts.ustPay.h) < H / 3)
     ? { w: Number(opts.ustPay.w), h: Number(opts.ustPay.h) } : null;
   // KÜNYE SATIRI — TEK DEĞİŞKEN. Varsayılan 12; rozetle çakışacaksa aşağıdaki
@@ -5746,7 +5748,7 @@ function veFeadLayoutSVG(build, W, H, opts){
               ['180', cx - ay*(r+7), cy+3, ay>0?'end':'start'], ['270', cx, cy+r+11, 'middle']];
     et.forEach(function(t){
       svg += '<text x="' + f(t[1]) + '" y="' + f(t[2]) + '" text-anchor="' + t[3]
-          + '" font-size="7" fill="var(--text-muted)">' + t[0] + '</text>';
+          + '" font-size="7.5" fill="var(--text-muted)">' + t[0] + '</text>';   // masada ×1,35 = 10,1 px (7 → 9,4: ölçek tabanının altı)
     });
     // Açının ARTIŞ yönünü gösteren küçük yay (0°'den 90°'ye). Aynalı çizimde
     // bu yay ekranda saat yönünde görünür — doğrusu budur.
@@ -6369,7 +6371,7 @@ function veFeadLayoutCardHTML(node){
                               // köşe. Kutu rozetin KENDİ metninden türüyor
                               // (`veFeadRozetKutu`), ikinci bir dizeden değil.
                               ustPay: (function(){
-                                var r = veFeadRozetKutu(build, mode);
+                                var r = veFeadRozetKutu(build, mode, W);
                                 return r ? { w: r.w / yk, h: r.h / yk } : null;
                               })(),
                               vib: vib, scn: scn,
@@ -6430,7 +6432,7 @@ function veFeadLayoutCardHTML(node){
   // SIRA: rozet → katman paneli → titreşim şeridi → yüzen çubuk. Panel
   // çubuğun ÜSTÜNE oturuyor (`--fead-kat-alt`) ve yığın sırası z-index'ten
   // değil bu sıradan da okunabilsin.
-  h += veFeadLayoutCardStrip(build, mode);
+  h += veFeadLayoutCardStrip(build, mode, W);
   h += veFeadKatmanPanelHTML(node, kat, !!tenMap);
   if(vibSel !== 'off') h += veFeadVibStrip(node, build, vib, vibSel);
   h += veFeadPosPicker(node, build, mode, rpmSel, vibSel, vibModes,
@@ -7050,7 +7052,7 @@ function _feadAnimLabel(kin, fallback, vib, scn){
 // Sarım değişmezi (Σkaburgalı − Σsırttan = 360°) burada duruyor çünkü kapalı
 // bir kayış çevriminin geometrik ZORUNLULUĞU o; tutmuyorsa şema kendi içinde
 // tutarlı görünse bile yol yanlış çözülmüş demektir.
-function veFeadLayoutCardStrip(build, mode){
+function veFeadLayoutCardStrip(build, mode, en){
   // KASNAĞI OLMAYAN MODEL ARIZA DEĞİL BAŞLANGIÇTIR — rozet ÇİZİLMEZ. Kartın
   // boş hâli ne yapılacağını zaten söylüyor ("Kayış yolunda henüz kasnak
   // yok"); yanına kırmızı "Kayış yolu kapanmadı" koymak, henüz hiçbir şey
@@ -7077,7 +7079,7 @@ function veFeadLayoutCardStrip(build, mode){
   // olarak dururdu.
   //
   // İKİ OKUMA DA KAYBOLMUYOR: `title` her hâlde tamamını taşıyor.
-  var g = _feadRozetGorunen(ok, sol, sag);
+  var g = _feadRozetGorunen(ok, sol, sag, en);
   return '<div class="ve-fead-kan-durum ' + (ok ? 'ok' : 'no') + '"'
     + ' title="' + _feadEsc(sol + (sag ? ' · ' + sag : '')) + '">'
     + '<b>' + veIkon(ok ? 'check' : 'x') + '</b>'
@@ -7090,8 +7092,26 @@ function veFeadLayoutCardStrip(build, mode){
 // (yukarıda) ve çizimin ona ayırdığı yer (`veFeadRozetKutu` → `ustPay`).
 // İkinci bir yerde kurulsaydı rozetin biçimi değiştiğinde ayrılan yer sessizce
 // eskir ve yazılar yine üst üste binerdi — bu kaçağın kendisi zaten öyle doğdu.
-function _feadRozetGorunen(ok, sol, sag){
-  return { bir: ok ? (sag || sol) : sol, iki: (ok && sag) ? sol : '' };
+//
+// DAR KARTTA ROZET KISALIR (`en` = kartın genişliği, CSS px). Tam rozet
+// kartın `VE_FEAD_ROZET_ORAN`ını geçince çizici ayrılan payı uydurma sayıp
+// yok sayıyor (bkz. ROZ) — yani rozet ne kadar geniş kalırsa altındaki yazı o
+// kadar KORUMASIZ. Ölçüldü (AG00976, 340 px kart): rozet konum künyesinin
+// ve "Klima Kompresörü" adının üstüne biniyordu. Sığmayınca önce İKİNCİL
+// okuma düşer; arızanın cümlesi uzunsa yanındaki künye ("· 6 kasnak · L …")
+// kalkar — arıza KALIR. Tamamı her hâlde `title`da. `en` verilmezse kısaltma
+// yok (eski davranış birebir).
+function _feadRozetGorunen(ok, sol, sag, en){
+  var g = { bir: ok ? (sag || sol) : sol, iki: (ok && sag) ? sol : '' };
+  if(!(en > 0) || _feadRozetGen(g) < en * VE_FEAD_ROZET_ORAN) return g;
+  if(g.iki) g.iki = '';
+  else if(g.bir.indexOf(' · ') > 0) g.bir = g.bir.slice(0, g.bir.indexOf(' · '));
+  return g;
+}
+// Rozetin tahmini genişliği (CSS px) — kutu da kısaltma da BUNU sayar.
+function _feadRozetGen(g){
+  return VE_FEAD_ROZET_CEVRE
+    + (g.bir + (g.iki ? ' ' + g.iki : '')).length * VE_FEAD_ROZET_HARF;
 }
 
 // ── ROZETİN ÇİZİM ÜSTÜNDE KAPLADIĞI KUTU (CSS px) ─────────────────────────
@@ -7128,6 +7148,10 @@ var VE_FEAD_ROZET_UST = 5;
 // geri düşüş onu yine rozetin altına koyuyor (ölçüldü). Ayrılan yer gerçeğe ne
 // kadar yakınsa engel o kadar iş görüyor.
 var VE_FEAD_ROZET_HARF = 5.35;
+// ROZETİN KARTA ORANI TAVANI — çizicinin kabul ettiği pay ile rozetin
+// kısalma eşiği AYNI sayı: biri ötekinden ayrılırsa ya rozet gereksiz yere
+// kısalır ya da kabul edilmeyen bir payla yazıların üstüne biner.
+var VE_FEAD_ROZET_ORAN = 0.9;
 
 // BİR ADIN BAŞKA BİR ADLA ÖRTÜŞME TAVANI (px²). Altında kalan bir değme
 // okumayı bozmuyor; 9 puntoluk bir harf ~49 px² yer kaplıyor, yani eşik bir
@@ -7142,12 +7166,10 @@ var VE_FEAD_AD_ORT = 24;
 var VE_FEAD_AD_TABAN = 12;
 
 
-function veFeadRozetKutu(build, mode){
+function veFeadRozetKutu(build, mode, en){
   var yd = veFeadYolDurumu(build, mode);
   if(!(build && build.order && build.order.length)) return null;
-  var g = _feadRozetGorunen(yd.ok, yd.sol, yd.sag);
-  var n = (g.bir + (g.iki ? ' ' + g.iki : '')).length;
-  return { w: VE_FEAD_ROZET_CEVRE + n * VE_FEAD_ROZET_HARF,
+  return { w: _feadRozetGen(_feadRozetGorunen(yd.ok, yd.sol, yd.sag, en)),
            h: VE_FEAD_ROZET_UST + VE_FEAD_ROZET_H };
 }
 
@@ -9871,6 +9893,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadRozetKutu: veFeadRozetKutu,
     VE_FEAD_ROZET_H: VE_FEAD_ROZET_H, VE_FEAD_ROZET_UST: VE_FEAD_ROZET_UST,
     VE_FEAD_ROZET_CEVRE: VE_FEAD_ROZET_CEVRE, VE_FEAD_ROZET_HARF: VE_FEAD_ROZET_HARF,
+    VE_FEAD_ROZET_ORAN: VE_FEAD_ROZET_ORAN, _feadRozetGorunen: _feadRozetGorunen,
     veFeadRefreshLayoutCards: veFeadRefreshLayoutCards,
     VE_FEAD_CARD_CLASS: VE_FEAD_CARD_CLASS,
     VE_FEAD_PAFTA_CLASS: VE_FEAD_PAFTA_CLASS, VE_FEAD_PF: VE_FEAD_PF,

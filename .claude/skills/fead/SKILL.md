@@ -393,6 +393,12 @@ olurdu.
     büyüyor ki etiketin gidecek yeri kalmıyor, geri düşüş onu yine rozetin
     altına koyuyordu. Ölçüldü (12 örnek × 24 kart): rozetin altında kalan
     yazı **31 → 0**.
+    **DAR KARTTA ROZET KISALIR** (`_feadRozetGorunen(…, en)`): tam rozet
+    kartın `VE_FEAD_ROZET_ORAN`ını geçince ikincil okuma düşer (arıza hâlinde
+    cümle kalır, yanındaki künye düşer); tamamı `title`da. Çizicinin kabul
+    ettiği payın sınırı da AYNI sabit — ayrı olsalar geniş rozetin payı yok
+    sayılıyordu (340/280/240 px: yazı ↔ rozet çakışması 9 → 0). Kapı:
+    `fead-card-design.test.js` → *"DAR KARTTA ROZET KISALIR"*.
     **KÜNYE ROZETLE ÇAKIŞIRSA SATIRI DEĞİŞİR, METNİ DEĞİL** (`KUN_Y`): sol üst
     konum künyesi "hangi kol konumunu görüyorum" sorusunun tek cevabı,
     kırpılamaz — sığmıyorsa blok rozetin altına iner. Engel kutusu ile çizim

@@ -428,7 +428,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sonunda bölünmez — kod/numara `white-space:nowrap` ("TC-/411"), kapanış
   noktalaması satır başında yalnız kalmaz, kap yatayda kaymaz, esnek kapta
   alt simge kendi kutusunda, alta yapışan öğe kabın dibine oturur (`bottom`
-  = −dolgu). Kapı: `yerlesim.spec.js` (kontrast kapısıyla AYNI tur,
+  = −dolgu). SVG çizimde de: ekrandaki yazı ölçek tabanında (≥ 9,5 px; boy
+  `veThemeFs`ten ya da çizim büyütmesiyle) ve iki yazı üst üste değil.
+  Kapı: `yerlesim.spec.js` (kontrast kapısıyla AYNI tur,
   `tests/e2e/helpers/yuzey-turu.js`) + `yerlesim-olcu.test.js`.
 - **ARAYÜZ METNİNİN YAZIMI TEK** (`tipografi.test.js`): üç nokta tek karakter
   (…), etkileşim ipucu kısayol penceresinin dilinde ("Tekerlek: yakınlaştır ·

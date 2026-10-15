@@ -1882,7 +1882,8 @@ function getMnt2DViewPropertiesHTML(node){
 function veMnt2DViewRefresh(){
   var box=(typeof document!=='undefined')?document.getElementById('ve-mnt-2dview-box'):null;
   if(!box) return;
-  box.innerHTML=_mnt2DViewSVG(_mnt2DGather());
+  // Kabın İÇ genişliği (dolgu 2×8, kenar 2×1): çizim onda 1:1 kurulur.
+  box.innerHTML=_mnt2DViewSVG(_mnt2DGather(), box.clientWidth-16);
   _mnt2DAttachHover(box);
   _mnt2DAttachZoom(box);
 }
@@ -2056,44 +2057,89 @@ function _mnt2DAttachZoom(container){
     svg.addEventListener('dblclick', function(e){ e.preventDefault(); reset(); });
   });
 }
-// Çakışma önleyici etiket yerleştirici: her etiketi işaretinin üst/alt tarafına
-// koyar; yatayda üst üste gelenleri kademeler (tier) ve kademe > 0 ise ince kılavuz
-// çizgisi çeker; kenara taşanları başa/sona hizalar (kırpılmayı önler).
-function _mnt2DLabels(items, leftX, rightX){
-  var svg='';
-  ['above','below'].forEach(function(sideKey){
-    var above=(sideKey==='above');
-    var arr=items.filter(function(it){ return it.above===above; });
-    arr.sort(function(a,b){ return a.cx-b.cx; });
-    var tiers=[];
-    arr.forEach(function(it){
-      var halfW=Math.max(15, it.text.length*it.size*0.31);
-      var anchor='middle', tx=it.cx;
-      if(it.cx+halfW>rightX){ anchor='end'; tx=rightX; }
-      else if(it.cx-halfW<leftX){ anchor='start'; tx=leftX; }
-      it.anchor=anchor; it.tx=tx;
-      var xL=(anchor==='end')?tx-2*halfW:(anchor==='start'?tx:tx-halfW);
-      var xR=(anchor==='end')?tx:(anchor==='start'?tx+2*halfW:tx+halfW);
-      var t=0;
-      while(t<14){ var occ=tiers[t]||[];
-        var hit=occ.some(function(iv){ return !(xR<iv[0]-4 || xL>iv[1]+4); });
-        if(!hit){ (tiers[t]=occ).push([xL,xR]); break; } t++; }
-      it.tier=t;
-    });
-    arr.forEach(function(it){
-      var gap=it.mr+7, step=13;
-      var ly=above ? (it.cy-gap-it.tier*step) : (it.cy+gap+it.tier*step);
-      if(it.tier>0 && it.anchor==='middle'){
-        var y0=above?(it.cy-it.mr):(it.cy+it.mr), y1=above?(ly+3):(ly-9);
-        svg+='<line x1="'+_mnt2DR(it.cx)+'" y1="'+_mnt2DR(y0)+'" x2="'+_mnt2DR(it.cx)+'" y2="'+_mnt2DR(y1)+'" stroke="var(--border-color)" stroke-width="0.7"/>';
+// ÇİZİMİN YAZI BOYU ÖLÇEKTEN (theme.js → veThemeFs; tuvaldekiyle aynı kural):
+// boy sayıyla yazılıyordu (8–9,5) ve ekranda 7,8–9,3 px kalıyordu — ölçek
+// tabanı 10 px. Görünüm kabın genişliğinde 1:1 kurulduğu için (bkz.
+// _mnt2DViewSVG) bu boylar ekrandaki boydur.
+function _mnt2DFs(ad){
+  var y = { micro:10, tiny:11, body:12, md:13 };
+  return (typeof veThemeFs === 'function') ? veThemeFs(ad) : y[ad];
+}
+// Yazının kutusu (SVG kullanıcı birimi) — taban çizgisi y, çapa anchor.
+// Genişlik TAHMİNİ: rakam ve büyük harf ~0,6 em; tahmin bilerek cömert,
+// kapının ölçtüğü gerçek kutudan küçük kalırsa çakışma kaçar.
+function _mnt2DYaziKutu(x, y, t, anchor, size, bold){
+  var w = String(t).length * size * (bold ? 0.64 : 0.6);
+  var l = (anchor === 'end') ? x - w : (anchor === 'start') ? x : x - w / 2;
+  return { l:l, r:l + w, t:y - size * 0.82, b:y + size * 0.26 };
+}
+function _mnt2DKesisir(a, b, pay){
+  pay = pay || 0;
+  return a.l < b.r + pay && b.l < a.r + pay && a.t < b.b + pay && b.t < a.b + pay;
+}
+function _mnt2DKesisimAlani(a, b){
+  var x = Math.min(a.r, b.r) - Math.max(a.l, b.l), y = Math.min(a.b, b.b) - Math.max(a.t, b.t);
+  return (x > 0 && y > 0) ? x * y : 0;
+}
+// ETİKET YERLEŞTİRİCİ — kutu çakışması, iki eksende. Eski yerleştirici yalnız
+// aynı yandaki (üst/alt) etiketlerin YATAY aralıklarını kademeliyordu:
+// işaretleri farklı yükseklikte duran iki etiket kademeler arasında yine
+// biniyordu, öteki yanın etiketleriyle ve sabit yazılarla (eksen değeri,
+// "Z = 0", +X/+Y) hiç karşılaştırılmıyordu — Tulga'da 9 çakışma ölçüldü
+// (tests/e2e/yerlesim.spec.js). Şimdi her etiket, önce yerleşenlerin ve sabit
+// yazıların/işaretlerin KUTULARINA çarpmayan ilk adaya konur: tercih edilen
+// yan kademe kademe, sonra işaretin sağı/solu, sonra öteki yan. Hiçbiri boş
+// değilse en az çakışan aday seçilir (etiket kaybolmaz).
+// engeller: [{l,r,t,b}] · sinir: {l, r, t, b} — etiketin kalacağı alan.
+function _mnt2DLabels(items, sinir, engeller){
+  var svg = '', dolu = (engeller || []).slice(), PAY = 2;
+  // Öncelik: kalın (birleşik CG), sonra büyük işaret, sonra soldan sağa.
+  var sira = items.slice().sort(function(a, b){
+    return ((b.bold ? 1 : 0) - (a.bold ? 1 : 0)) || (b.mr - a.mr) || (a.cx - b.cx);
+  });
+  sira.forEach(function(it){
+    var h = it.size * 1.08, adim = h + 3, aday = [];
+    function dikey(ust, t){
+      var bosluk = it.mr + 6;
+      var y = ust ? (it.cy - bosluk - t * adim) : (it.cy + bosluk + it.size * 0.82 + t * adim);
+      return { x:it.cx, y:y, anchor:'middle', cizgi:t > 0, ust:ust };
+    }
+    var t;
+    for(t = 0; t < 4; t++) aday.push(dikey(it.above, t));
+    aday.push({ x:it.cx + it.mr + 5, y:it.cy + it.size * 0.32, anchor:'start', cizgi:false });
+    aday.push({ x:it.cx - it.mr - 5, y:it.cy + it.size * 0.32, anchor:'end', cizgi:false });
+    for(t = 0; t < 4; t++) aday.push(dikey(!it.above, t));
+    for(t = 4; t < 12; t++) aday.push(dikey(it.above, t));
+    var sec = null, enAz = Infinity;
+    for(var k = 0; k < aday.length; k++){
+      var a = aday[k], kutu = _mnt2DYaziKutu(a.x, a.y, it.text, a.anchor, it.size, it.bold);
+      // Kenara taşan orta çapalı aday kenara yaslanır (kırpılmasın).
+      if(a.anchor === 'middle'){
+        if(kutu.r > sinir.r){ a = { x:sinir.r, y:a.y, anchor:'end', cizgi:a.cizgi, ust:a.ust }; }
+        else if(kutu.l < sinir.l){ a = { x:sinir.l, y:a.y, anchor:'start', cizgi:a.cizgi, ust:a.ust }; }
+        kutu = _mnt2DYaziKutu(a.x, a.y, it.text, a.anchor, it.size, it.bold);
       }
-      svg+=_mnt2DText(it.tx, ly, it.text, it.anchor, it.color, it.size, it.bold);
-    });
+      if(kutu.l < sinir.l - 0.5 || kutu.r > sinir.r + 0.5 || kutu.t < sinir.t || kutu.b > sinir.b) continue;
+      var alan = 0;
+      for(var d = 0; d < dolu.length; d++) if(_mnt2DKesisir(kutu, dolu[d], PAY)) alan += _mnt2DKesisimAlani(kutu, dolu[d]) + 1;
+      if(alan === 0){ sec = { a:a, kutu:kutu }; break; }
+      if(alan < enAz){ enAz = alan; sec = { a:a, kutu:kutu }; }
+    }
+    if(!sec){ var a0 = dikey(it.above, 0); sec = { a:a0, kutu:_mnt2DYaziKutu(a0.x, a0.y, it.text, 'middle', it.size, it.bold) }; }
+    dolu.push(sec.kutu);
+    var A = sec.a;
+    if(A.cizgi){
+      // Kılavuz çizgisi işaretin kenarından etiketin kutusuna.
+      var y0 = A.ust ? (it.cy - it.mr) : (it.cy + it.mr), y1 = A.ust ? (sec.kutu.b + 1) : (sec.kutu.t - 1);
+      var xx = Math.max(sec.kutu.l + 2, Math.min(sec.kutu.r - 2, it.cx));
+      svg += '<line x1="'+_mnt2DR(it.cx)+'" y1="'+_mnt2DR(y0)+'" x2="'+_mnt2DR(xx)+'" y2="'+_mnt2DR(y1)+'" stroke="var(--border-color)" stroke-width="0.7"/>';
+    }
+    svg += _mnt2DText(A.x, A.y, it.text, A.anchor, it.color, it.size, it.bold);
   });
   return svg;
 }
 // Tek görünüş (üst/yan) çiz — akademik, tek renkli panel: başlık + eksen köşe
-// göstergesi + kesikli referans çizgisi + işaretler + kademeli etiketler + alt not.
+// göstergesi + kesikli referans çizgisi + işaretler + çakışmasız etiketler.
 function _mnt2DFigure(o){
   // o: {ox, boxX,boxY,boxW,boxH, FIG_W, title, plotTop,plotH,plotL,plotR, px,pyFn,
   //     hKey,vKey, mounts,comps,cg, cr, compAbove, refV,refLabel,
@@ -2101,44 +2147,79 @@ function _mnt2DFigure(o){
   // hKey → yatay eksen koordinatı ('x' üst/yan, 'y' önden); vKey → düşey ('y'/'z').
   var svg='', plotBottom=o.plotTop+o.plotH;
   var hKey=o.hKey||'x';
+  var FS={ deger:_mnt2DFs('micro'), etiket:_mnt2DFs('micro'), eksen:_mnt2DFs('tiny'), g:_mnt2DFs('tiny'), baslik:_mnt2DFs('md') };
+  var engel=[];   // sabit yazılar + işaretler — etiket yerleştiricinin kaçacağı kutular
+  function yaz(x, y, t, anchor, color, size, bold){
+    engel.push(_mnt2DYaziKutu(x, y, t, anchor, size, bold));
+    return _mnt2DText(x, y, t, anchor, color, size, bold);
+  }
   function hval(p){ return hKey==='y'?p.y:(hKey==='z'?p.z:p.x); }
   // dış panel
   svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="8" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
-  // ── ÖLÇEK IZGARASI + SAYISAL EKSEN DEĞERLERİ (mm) — işaretlerin ALTINDA ──
-  var gl=o.ox+o.plotL, gr=o.ox+o.FIG_W-o.plotR;
+  // ── ÖLÇEK IZGARASI — işaretlerin ALTINDA. Değer yazıları aşağıda, sabit
+  // yazılardan SONRA: köşedeki eksen göstergesi (+X/+Y) ve not sol kenardaki
+  // değer sütununa düşüyor; çarpan değer yazılmaz (çizgisi kalır). ──
+  var gl=o.ox+o.plotL, gr=o.ox+o.FIG_W-o.plotR, degerler=[];
   if(o.hMin!=null && o.hMax!=null){
     _mnt2DNiceTicks(o.hMin, o.hMax, 8).forEach(function(tv){
       var gx=o.px(tv); if(gx<gl-0.5 || gx>gr+0.5) return;
       svg+='<line x1="'+_mnt2DR(gx)+'" y1="'+_mnt2DR(o.plotTop)+'" x2="'+_mnt2DR(gx)+'" y2="'+_mnt2DR(plotBottom)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.4"/>';
-      svg+=_mnt2DText(gx, plotBottom+13, _mnt2DTick(tv), 'middle', 'var(--text-muted)', 8);
+      degerler.push([gx, plotBottom+FS.deger+4, _mnt2DTick(tv), 'middle']);
     });
   }
   if(o.vMin!=null && o.vMax!=null){
     _mnt2DNiceTicks(o.vMin, o.vMax, 5).forEach(function(tv){
       var gy=o.pyFn(tv); if(gy<o.plotTop-0.5 || gy>plotBottom+0.5) return;
       svg+='<line x1="'+_mnt2DR(gl)+'" y1="'+_mnt2DR(gy)+'" x2="'+_mnt2DR(gr)+'" y2="'+_mnt2DR(gy)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.4"/>';
-      svg+=_mnt2DText(gl-5, gy+3, _mnt2DTick(tv), 'end', 'var(--text-muted)', 8);
+      degerler.push([gl-5, gy+FS.deger*0.35, _mnt2DTick(tv), 'end']);
     });
   }
   // başlık
-  svg+=_mnt2DText(o.ox+o.plotL-2, o.boxY+21, o.title, 'start', 'var(--text-heading)', 13, true);
+  var baslikY=o.boxY+FS.baslik+8;
+  svg+=yaz(o.ox+o.plotL-2, baslikY, o.title, 'start', 'var(--text-heading)', FS.baslik, true);
   // kesikli referans çizgisi (Y=0 / Z=0)
   var ry=o.pyFn(o.refV);
   svg+='<line x1="'+_mnt2DR(o.ox+o.plotL-10)+'" y1="'+_mnt2DR(ry)+'" x2="'+_mnt2DR(o.ox+o.FIG_W-o.plotR)+'" y2="'+_mnt2DR(ry)+'" stroke="var(--border-color)" stroke-width="1.1" stroke-dasharray="5 4"/>';
-  if(o.refLabel) svg+=_mnt2DText(o.ox+o.FIG_W-o.plotR, ry-5, o.refLabel, 'end', 'var(--text-muted)', 10);
-  // eksen köşe göstergesi (yatay + düşey eksen)
-  var up=(o.axis.vDir==='up'), axx=o.ox+22, axy=(up? o.plotTop+44 : o.plotTop+14);
-  svg+=_mnt2DArrow(axx,axy,axx+26,axy,'var(--text-secondary)')+_mnt2DText(axx+30,axy+4,(o.axis.hLabel||'+X'),'start','var(--text-secondary)',10.5,true);
-  var vy=(up? axy-28 : axy+28);
-  svg+=_mnt2DArrow(axx,axy,axx,vy,'var(--text-secondary)')+_mnt2DText(axx-3,(up?vy-4:vy+12),o.axis.vLabel,'middle','var(--text-secondary)',10.5,true);
-  if(o.axis.note) svg+=_mnt2DText(o.ox+o.plotL-30, plotBottom-2, o.axis.note, 'start', 'var(--text-muted)', 8.5);
+  if(o.refLabel) svg+=yaz(o.ox+o.FIG_W-o.plotR, ry-5, o.refLabel, 'end', 'var(--text-muted)', FS.deger);
+  // eksen köşe göstergesi (yatay + düşey eksen). Gösterge sol kenardaki
+  // DEĞER SÜTUNUNA düşüyor; çarpan değer yazılmıyordu (yan ve önden
+  // görünüşte en üst ızgaranın "500"ü). Yeri sütundan kaçar: ilk temiz
+  // yükseklik seçilir, yoksa eski yer (çarpan değer yine düşer, çizgisi kalır).
+  var up=(o.axis.vDir==='up'), axx=o.ox+22, hEt=(o.axis.hLabel||'+X');
+  function gosterge(ay){
+    var vy=(up? ay-28 : ay+28), vyY=(up? vy-4 : vy+FS.eksen+1);
+    return { ay:ay, vy:vy, vyY:vyY, kutu:[
+      _mnt2DYaziKutu(axx+30, ay+FS.eksen*0.36, hEt, 'start', FS.eksen, true),
+      _mnt2DYaziKutu(axx-3, vyY, o.axis.vLabel, 'middle', FS.eksen, true),
+      // Okların kendisi — L biçimi İKİ kutu: tek dikdörtgen L'nin boş
+      // köşesini de kaplıyor ve oraya düşen değeri ("300") siliyordu.
+      { l:axx-2, r:axx+28, t:ay-4, b:ay+4 },
+      { l:axx-4, r:axx+4, t:Math.min(ay,vy)-2, b:Math.max(ay,vy)+2 } ] };
+  }
+  var degerKutu=degerler.map(function(d){ return _mnt2DYaziKutu(d[0], d[1], d[2], d[3], FS.deger, false); });
+  var ilkY=(up? o.plotTop+44 : o.plotTop+14), G=gosterge(ilkY);
+  for(var dy=0; dy<=80; dy+=2){
+    var g=gosterge(ilkY+dy);
+    if(Math.max(g.kutu[0].b, g.kutu[1].b, g.ay+4) > plotBottom-16) break;   // alt notun üstünde kalır
+    if(!g.kutu.some(function(k){ return degerKutu.some(function(d){ return _mnt2DKesisir(k, d, 1); }); })){ G=g; break; }
+  }
+  svg+=_mnt2DArrow(axx,G.ay,axx+26,G.ay,'var(--text-secondary)')+yaz(axx+30,G.ay+FS.eksen*0.36,hEt,'start','var(--text-secondary)',FS.eksen,true);
+  svg+=_mnt2DArrow(axx,G.ay,axx,G.vy,'var(--text-secondary)')+yaz(axx-3,G.vyY,o.axis.vLabel,'middle','var(--text-secondary)',FS.eksen,true);
+  engel.push(G.kutu[2], G.kutu[3]);
+  if(o.axis.note) svg+=yaz(o.ox+o.plotL-30, plotBottom-2, o.axis.note, 'start', 'var(--text-muted)', FS.deger);
+  var sabit=engel.slice();
+  degerler.forEach(function(d){
+    var k=_mnt2DYaziKutu(d[0], d[1], d[2], d[3], FS.deger, false);
+    if(sabit.some(function(e){ return _mnt2DKesisir(k, e, 1); })) return;
+    svg+=yaz(d[0], d[1], d[2], d[3], 'var(--text-muted)', FS.deger);
+  });
   var leftX=o.ox+o.plotL, rightX=o.ox+o.FIG_W-o.plotR, items=[];
   // ── İŞARETLER ── (etiketler ayrı geçişte, çakışma önleyici yerleştirilir)
   // takozlar — HER takoz GERÇEK izdüşüm konumunda çizilir (koordinat düzlemine
   // sadık; konum birleştirme yok). Yalnızca ~işaret boyutu kadar BİREBİR üst üste
   // binen işaretler (aynı piksele düşen sol/sağ çiftleri: yandan X–Z ve önden Y–Z
   // görünüşlerinde) görünürlük için hafifçe yatay yelpazelenir. Her takoz tek tek
-  // etiketlenir; çakışan etiketler kademelenir.
+  // etiketlenir; çakışan etiketler yerleştiricide çözülür.
   var mpts=o.mounts.map(function(m){ var mv=(o.vKey==='y'?m.y:m.z); return {m:m, v:mv, cx:o.px(hval(m)), cy:o.pyFn(mv)}; });
   var COIN=12;   // px — bu yarıçapta üst üste binenler yelpazelenir (konum aldatmacası değil)
   mpts.forEach(function(a,i){ if(a._grp) return; var grp=[a]; a._grp=1;
@@ -2149,7 +2230,8 @@ function _mnt2DFigure(o){
       var mx=pt.cx+(n>1?(k-(n-1)/2)*19:0), my=pt.cy;
       var info=['Takoz — '+(pt.m.name||'Takoz'), 'Konum  ('+veSayi(_mnt2DR(pt.m.x))+'; '+veSayi(_mnt2DR(pt.m.y))+'; '+veSayi(_mnt2DR(pt.m.z))+') mm'];
       svg+='<g'+_mnt2DInfoAttr(info)+'>'+_mnt2DMountMark(mx, my, o.vKey==='z', _MNT2D_C_MOUNT)+'</g>';
-      items.push({cx:mx, cy:my, mr:9, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:9, bold:false});
+      engel.push({ l:mx-9, r:mx+9, t:my-9, b:my+9 });
+      items.push({cx:mx, cy:my, mr:9, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:FS.etiket, bold:false});
     });
   });
   // bileşen CG (içi boş daire, kütleye göre boyut)
@@ -2158,7 +2240,8 @@ function _mnt2DFigure(o){
     if(c.mass>0) info.push('Kütle  '+veSayi(c.mass, 1)+' kg');
     svg+='<g'+_mnt2DInfoAttr(info)+'>';
     svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="var(--bg-primary)" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.5"/></g>';
-    items.push({cx:cx, cy:cy, mr:r, above:o.compAbove, text:o.compLabelFn(c), color:'var(--text-secondary)', size:9.5, bold:false});
+    engel.push({ l:cx-r, r:cx+r, t:cy-r, b:cy+r });
+    items.push({cx:cx, cy:cy, mr:r, above:o.compAbove, text:o.compLabelFn(c), color:'var(--text-secondary)', size:FS.etiket, bold:false});
   });
   // birleşik CG (jeodezik sembol)
   if(o.cg){ var gx=o.px(hval(o.cg)), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z);
@@ -2166,13 +2249,18 @@ function _mnt2DFigure(o){
     if(o.cg.m>0) cgInfo.push('Toplam kütle  '+veSayi(o.cg.m, 1)+' kg');
     svg+='<g'+_mnt2DInfoAttr(cgInfo)+'>'+_mnt2DCGMark(gx,gy,10,_MNT2D_C_CG);
     svg+='<circle cx="'+_mnt2DR(gx)+'" cy="'+_mnt2DR(gy)+'" r="12" fill="transparent"/></g>';
-    items.push({cx:gx, cy:gy, mr:11, above:o.compAbove, text:o.cgLabelFn(o.cg), color:'var(--text-primary)', size:10.5, bold:true});
+    engel.push({ l:gx-11, r:gx+11, t:gy-11, b:gy+11 });
+    items.push({cx:gx, cy:gy, mr:11, above:o.compAbove, text:o.cgLabelFn(o.cg), color:'var(--text-primary)', size:FS.g, bold:true});
   }
-  // ── ETİKETLER ── (üst/alt grupla, yatay çakışanları kademele, kenarda hizala)
-  svg+=_mnt2DLabels(items, leftX, rightX);
+  // ── ETİKETLER ── (sabit yazılara ve birbirine çarpmadan; kutunun içinde)
+  svg+=_mnt2DLabels(items, { l:leftX, r:rightX, t:baslikY+6, b:o.boxY+o.boxH-3 }, engel);
   return svg;
 }
-function _mnt2DViewSVG(data){
+// en: çizimin konacağı kabın genişliği (px). Verilirse görünüm 1:1 kurulur —
+// viewBox genişliği kabınki, yani yazı boyu ekrandaki boydur. Eskiden 980
+// birimlik sabit kutu kaba sığdırılıyordu ve yazılar ölçekle küçülüyordu
+// (10 → 7,8 px). Verilmezse (test, belge) 980.
+function _mnt2DViewSVG(data, en){
   if(!data.comps.length && !data.mounts.length){
     return '<div style="padding:24px 10px; text-align:center; font-size:var(--fs-body); color:var(--text-muted);">Görüntülenecek bileşen yok.</div>';
   }
@@ -2188,15 +2276,18 @@ function _mnt2DViewSVG(data){
   var minZ=Math.min.apply(null,zs), maxZ=Math.max.apply(null,zs), zRange=Math.max(maxZ-minZ,1);
 
   // Figür geometrisi — her figür aynı boyut; ayrı SVG viewBox'ta 0'dan başlar.
-  var FIG_W=980, plotL=66, plotR=40, usableW=FIG_W-plotL-plotR;
+  // YATAY PAY (hpad): uçtaki veri noktası çizim alanının tam kenarına
+  // düşüyordu ve işareti (en büyük daire r = 14) sol kenardaki DEĞER
+  // SÜTUNUNA taşıp eksen değerini ("0") örtüyordu. Düşeyde zaten pay var (vpad).
+  var FIG_W=(en>0) ? Math.round(Math.max(640, Math.min(1600, en))) : 980, plotL=66, plotR=40, hpad=16, usableW=FIG_W-plotL-plotR-2*hpad;
   var headroom=56, plotH=205, vpad=25, capSpace=20, boxY=6;
   var FIG_H=headroom+plotH+capSpace, VB_H=boxY+FIG_H+6, plotTop=boxY+headroom;
 
   // yatay ölçekler
   var sx=Math.max(0.02, Math.min(1.1, usableW/xRange));   // X (üst + yan ortak)
   var syh=Math.max(0.02, Math.min(1.1, usableW/yRange));  // Y (önden yatay)
-  function pxX(x){ return plotL+(x-minX)*sx; }
-  function pxY(y){ return plotL+(y-minY)*syh; }
+  function pxX(x){ return plotL+hpad+(x-minX)*sx; }
+  function pxY(y){ return plotL+hpad+(y-minY)*syh; }
   // düşey ölçekler
   var sy=(plotH-2*vpad)/yRange;                            // Y (üstten düşey)
   var sz=(plotH-2*vpad)/zRange;                            // Z (yan + ön düşey)
@@ -2250,21 +2341,21 @@ function _mnt2DViewSVG(data){
   var out=summary+legend+'<div class="ve-mnt2d-stack" style="display:flex; flex-direction:column; gap:14px; min-width:480px;">';
   // ── ÜST GÖRÜNÜŞ (X–Y) ──
   out+=wrap(fig({ title:'Üstten görünüş · X–Y', hKey:'x', vKey:'y', px:pxX, pyFn:pyTop, compAbove:true,
-    hMin:minX, hMax:maxX, vMin:minY, vMax:maxY,
+    hMin:minX-hpad/sx, hMax:maxX+hpad/sx, vMin:minY, vMax:maxY,
     refV:0, refLabel:null, axis:{hLabel:'+X', vLabel:'−Y', vDir:'down', note:'+Y (sağ) yukarı'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
     cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+' · '+fmt1(cg.y)+')'; } }));
   // ── YAN GÖRÜNÜŞ (X–Z) ──
   out+=wrap(fig({ title:'Yandan görünüş · X–Z', hKey:'x', vKey:'z', px:pxX, pyFn:pyZ, compAbove:false,
-    hMin:minX, hMax:maxX, vMin:minZ, vMax:maxZ,
+    hMin:minX-hpad/sx, hMax:maxX+hpad/sx, vMin:minZ, vMax:maxZ,
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+X', vLabel:'+Z', vDir:'up', note:null},
     compLabelFn:function(c){ return shortName(c.name)+' (z='+rz(c.z)+')'; },
     mountLabelFn:mntLabel,
     cgLabelFn:function(cg){ return 'G (z='+rz(cg.z)+')'; } }));
   // ── ÖNDEN GÖRÜNÜŞ (Y–Z) ──
   out+=wrap(fig({ title:'Önden görünüş · Y–Z', hKey:'y', vKey:'z', px:pxY, pyFn:pyZ, compAbove:true,
-    hMin:minY, hMax:maxY, vMin:minZ, vMax:maxZ,
+    hMin:minY-hpad/syh, hMax:maxY+hpad/syh, vMin:minZ, vMax:maxZ,
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+Y', vLabel:'+Z', vDir:'up', note:'+Y (sağ) →'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
@@ -2504,7 +2595,8 @@ function _mntLibForceChart(e, axis){
   var fmin=Math.min.apply(null, allF), fmax=Math.max.apply(null, allF);
   if(!(fmax>fmin)){ fmin-=1; fmax+=1; }
   var fpad=(fmax-fmin)*0.10; fmin-=fpad; fmax+=fpad;
-  // Geometri (yan yana 3 grafik için kompakt; fontlar küçültülüp okunur tutuldu)
+  // Geometri (yan yana 3 grafik için kompakt). Yazı ölçeğin tabanında
+  // (veThemeFs('micro')): 9–9,5 birim ekranda 9,1 px kalıyordu.
   var W=300, H=212, plotL=44, plotR=292, plotT=12, plotB=172;
   function px(xx){ return plotL+(xx-dmin)/(dmax-dmin)*(plotR-plotL); }
   function py(ff){ return plotB-(ff-fmin)/(fmax-fmin)*(plotB-plotT); }
@@ -2514,11 +2606,11 @@ function _mntLibForceChart(e, axis){
   var xticks=_mnt2DNiceTicks(dmin,dmax,4), yticks=_mnt2DNiceTicks(fmin,fmax,4);
   xticks.forEach(function(tv){ var gx=px(tv); if(gx<plotL-0.5||gx>plotR+0.5) return;
     s+='<line x1="'+_mnt2DR(gx)+'" y1="'+plotT+'" x2="'+_mnt2DR(gx)+'" y2="'+plotB+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
-    s+=_mnt2DText(gx, plotB+14, _mnt2DTick(tv), 'middle', 'var(--text-muted)', 9.5);
+    s+=_mnt2DText(gx, plotB+14, _mnt2DTick(tv), 'middle', 'var(--text-muted)', _mnt2DFs('micro'));
   });
   yticks.forEach(function(tv){ var gy=py(tv); if(gy<plotT-0.5||gy>plotB+0.5) return;
     s+='<line x1="'+plotL+'" y1="'+_mnt2DR(gy)+'" x2="'+plotR+'" y2="'+_mnt2DR(gy)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
-    s+=_mnt2DText(plotL-4, _mnt2DR(gy)+3, _mntFmtF(tv), 'end', 'var(--text-muted)', 9);
+    s+=_mnt2DText(plotL-4, _mnt2DR(gy)+3.5, _mntFmtF(tv), 'end', 'var(--text-muted)', _mnt2DFs('micro'));
   });
   // Sıfır eksenleri (vurgulu)
   var y0=py(0), x0=px(0);
@@ -2530,9 +2622,9 @@ function _mntLibForceChart(e, axis){
   s+='<polyline points="'+statPts.map(function(p){ return _mnt2DR(px(p[0]))+','+_mnt2DR(py(p[1])); }).join(' ')+'" fill="none" stroke="'+statColor+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
   if(pts) pts.forEach(function(p){ s+='<circle cx="'+_mnt2DR(px(p[0]))+'" cy="'+_mnt2DR(py(p[1]))+'" r="2.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.5"/>'; });
   // Eksen başlıkları
-  s+=_mnt2DText((plotL+plotR)/2, H-3, 'sehim δ [mm]', 'middle', 'var(--text-secondary)', 9.5);
+  s+=_mnt2DText((plotL+plotR)/2, H-3, 'sehim δ [mm]', 'middle', 'var(--text-secondary)', _mnt2DFs('micro'));
   var yc=(plotT+plotB)/2;
-  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="9.5" font-family="'+_MNT2D_YUZ+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f [N]</text>';
+  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="'+_mnt2DFs('micro')+'" font-family="'+_MNT2D_YUZ+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f [N]</text>';
   s+='</svg>';
   return s;
 }
@@ -3520,6 +3612,8 @@ if(typeof module!=='undefined' && module.exports){
     getMnt2DViewPropertiesHTML: getMnt2DViewPropertiesHTML,
     _mnt2DGather: _mnt2DGather,
     _mnt2DViewSVG: _mnt2DViewSVG,
+    _mnt2DYaziKutu: _mnt2DYaziKutu,
+    _mnt2DKesisir: _mnt2DKesisir,
     VE_MOUNT_LIBRARY: VE_MOUNT_LIBRARY,
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
