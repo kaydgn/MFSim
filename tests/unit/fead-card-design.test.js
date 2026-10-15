@@ -898,6 +898,64 @@ describe('rozet çiziciye SÖYLENİYOR — sağ üst köşe ayrılıyor', () => 
     expect(kunye(sigmaz)[2]).toMatch(/kol/);
   });
 
+  // DAR KART (ölçüldü, AG00976 · 340 px): tam rozet 325 px = kartın %96'sı.
+  // Çizici %90'dan geniş payı uydurma sayıp YOK SAYIYOR, yani rozet ne kadar
+  // genişse altındaki yazı o kadar korumasızdı — konum künyesi ve "Klima
+  // Kompresörü" adı rozetin altındaydı. Rozet kısalır; ayrılan pay ile rozetin
+  // kısalma eşiği AYNI sabitten (`VE_FEAD_ROZET_ORAN`).
+  test('DAR KARTTA ROZET KISALIR — pay hep çizicinin kabul ettiği sınırın altında', () => {
+    const { build } = kur();
+    const tam = fead.veFeadRozetKutu(build, 'mean');
+    [640, 440, 400, 340, 280, 240].forEach((W) => {
+      const k = fead.veFeadRozetKutu(build, 'mean', W);
+      expect(`${W}: ${k.w < W * fead.VE_FEAD_ROZET_ORAN}`).toBe(`${W}: true`);
+      const h = fead.veFeadLayoutCardStrip(build, 'mean', W);
+      // İKİ OKUMA KAYBOLMUYOR: tamamı her genişlikte `title`da.
+      const title = (/title="([^"]*)"/.exec(h) || [])[1] || '';
+      expect(title).toMatch(/Σsarım/);
+      expect(title).toMatch(/6 kasnak · L /);
+      // Geniş kartta rozet DEĞİŞMEZ (bugünkü görünüm), darda ikincil düşer.
+      if (tam.w < W * fead.VE_FEAD_ROZET_ORAN) {
+        expect(k.w).toBe(tam.w);
+        expect(h).toMatch(/<i>[^<]*kasnak/);
+      } else {
+        expect(h).not.toMatch(/<i>/);
+        expect(h).toMatch(/<span>Σsarım/);
+      }
+    });
+    // Genişlik verilmezse kısaltma yok — eski çağıranlar birebir.
+    expect(fead.veFeadLayoutCardStrip(build, 'mean')).toMatch(/<i>[^<]*kasnak/);
+  });
+
+  test('DAR KARTTA ROZETİN ALTINA ETİKET KONMUYOR — kısalan rozetin payı geçerli', () => {
+    const { build } = kur();
+    const H = 400;
+    [340, 280].forEach((W) => {
+      const roz = fead.veFeadRozetKutu(build, 'mean', W);
+      const svg = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'lay', posMode: 'mean', ustPay: roz });
+      const altinda = [...svg.matchAll(
+        /<text data-ve="(name|wrap|pos-label)" x="([-\d.]+)" y="([-\d.]+)"(?: text-anchor="(\w+)")? font-size="([\d.]+)"[^>]*>(?:<title>[^<]*<\/title>)?([^<]*)</g)]
+        .map((m) => {
+          const x = +m[2], y = +m[3], an = m[4] || 'start', w = m[6].length * +m[5] * 0.6;
+          const x0 = an === 'middle' ? x - w / 2 : an === 'start' ? x : x - w;
+          return { t: m[6], x0, x1: x0 + w, y0: y - 8, y1: y + 2 };
+        })
+        .filter((a) => !(a.x1 <= W - roz.w || a.x0 >= W || a.y1 <= 0 || a.y0 >= roz.h))
+        .map((a) => a.t);
+      expect(`${W}: ${altinda.join(' | ')}`).toBe(`${W}: `);
+    });
+  });
+
+  test('ARIZA HÂLİ de kısalır: arızanın cümlesi KALIR, yanındaki künye düşer', () => {
+    const g = fead._feadRozetGorunen(false,
+      'Kayış yolu KAPANMIYOR · 6 kasnak · L 1.716,2 mm · kord 1.709,7 mm', 'Σsarım 350,0°', 300);
+    expect(g).toEqual({ bir: 'Kayış yolu KAPANMIYOR', iki: '' });
+    // Geniş kartta tam cümle.
+    expect(fead._feadRozetGorunen(false,
+      'Kayış yolu KAPANMIYOR · 6 kasnak · L 1.716,2 mm · kord 1.709,7 mm', '', 640).bir)
+      .toMatch(/kord/);
+  });
+
   test('UYDURMA PAY YOK SAYILIR — çizimin üçte birinden büyük şerit engel olamaz', () => {
     const { build } = kur();
     const W = 440, H = 400;

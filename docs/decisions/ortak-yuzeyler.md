@@ -2003,9 +2003,16 @@ paletin yalnız örnekteki tiplerini açıyordu (66 ölçüm görünmüyordu).
 **Kapı:** `yerlesim.spec.js` (eski kodda Araç Performans 17, FEAD 16 bulgu;
 yenide 0) + `yerlesim-olcu.test.js` (matematik).
 
-**Bilerek kapı dışında:** SVG çizimin yazısı (küçük · binen). Ölçülür ve
-`YERLESIM_DOKUM=<önek>` ile dökülür ama henüz HTML yazısıyla aynı kapıya
-girmez — çizicilerin kendi yerleşim kuralları ayrı bir tur.
+**SVG çizim de kapıda (C2):** ekrandaki boy ve çakışma. Takoz kesit
+çizimi kabın genişliğinde 1:1 kurulur ve boyu `veThemeFs`ten alır (980
+birimlik sabit kutu kaba sığdırılıyor, yazı 7,8 px'e iniyordu); etiketleri
+kutu çakışmasıyla yerleşir (eski yerleştirici yalnız aynı yandaki yatay
+aralıkları kademeliyordu — 9 çakışma). FEAD gergi grafiği ve sihirbaz gülü
+ekran boyunda. **Bilerek açık (S12):** Kayış Yolu penceresinin şeması kartın
+küçük resmi, yazı ölçeği kanvas kartıyla ortak — 1,4 kat büyütme denendi,
+çizim küçüldü ve üç etiket çifti çakıştı. Muafiyet `yerlesim.spec.js`
+(`MUAF`) içinde ve her turda hâlâ gerçekleşiyor mu ölçülür; karar
+uygulanınca test kırılır. Kapı: `yerlesim.spec.js` + `mount-2d-etiket.test.js`.
 
 ## Ayarlar ve Program Durumu bilgisini kaynağından okur (2026-10-14, doku turu 5 · D)
 
