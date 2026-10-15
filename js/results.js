@@ -1239,7 +1239,7 @@ function veRenderDetailedReport(filter) {
   // ═══ Girdi Özeti ═══
   var showGirdi = showAll || isGirdi || girdiIds.indexOf(filter) >= 0;
   if(showGirdi) {
-  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border-radius:var(--radius-sm); box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border-radius:var(--radius-sm); box-shadow:var(--shadow-md); overflow:hidden;">';
   
   // Girdi Özeti ana başlık
   html += '<div style="padding:12px 18px; font-size:var(--fs-title); font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
@@ -1263,7 +1263,7 @@ function veRenderDetailedReport(filter) {
   // ═══ Araç Performans Özeti ═══
   var showPerf = showAll || isPerf || perfIds.indexOf(filter) >= 0;
   if(showPerf) {
-  html += '<div style="max-width:1100px; margin:16px auto 0; background:var(--bg-secondary); border-radius:var(--radius-sm); box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
+  html += '<div style="max-width:1100px; margin:16px auto 0; background:var(--bg-secondary); border-radius:var(--radius-sm); box-shadow:var(--shadow-md); overflow:hidden;">';
   html += '<div style="padding:12px 18px; font-size:var(--fs-title); font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
   html += '<span>Araç Performans özeti</span>' + veIkon('chevron-up', 'dr-gs-arrow') + '</div>';
   html += '<div class="dr-girdi-wrapper dr-girdi-open">';

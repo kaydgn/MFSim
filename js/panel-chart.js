@@ -143,12 +143,39 @@ function pcEnsureOverlays(canvas, uid) {
   if(!document.getElementById(ids.tooltip)) {
     var holder = document.createElement('div');
     holder.innerHTML =
-      '<div id="' + ids.tooltip + '" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 9px; font-size:var(--fs-tiny); color:var(--text-primary); line-height:1.45; box-shadow:0 4px 16px rgba(0,0,0,0.45); z-index:10; max-width:230px; white-space:nowrap;"></div>' +
-      '<div id="' + ids.crossV + '" style="position:absolute; top:0; width:1px; height:100%; background:rgba(255,255,255,0.14); pointer-events:none; display:none; z-index:5;"></div>' +
-      '<div id="' + ids.crossH + '" style="position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,0.14); pointer-events:none; display:none; z-index:5;"></div>';
+      '<div id="' + ids.tooltip + '" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 9px; font-size:var(--fs-tiny); color:var(--text-primary); line-height:1.45; box-shadow:var(--shadow-lg); z-index:10; max-width:230px; white-space:nowrap;"></div>' +
+      '<div id="' + ids.crossV + '" style="position:absolute; top:0; width:1px; height:100%; background:var(--border-hover); pointer-events:none; display:none; z-index:5;"></div>' +
+      '<div id="' + ids.crossH + '" style="position:absolute; left:0; width:100%; height:1px; background:var(--border-hover); pointer-events:none; display:none; z-index:5;"></div>';
     while(holder.firstChild) wrap.appendChild(holder.firstChild);
   }
   return ids;
+}
+
+// ── Artı imleci ───────────────────────────────────────────────────────────
+// Fare noktasından geçer ve ÇİZİM ALANINDA kalır. Kaplamalar kabın iç
+// kutusuna göre konumlanır, fare ise tuvale göre ölçülür: tuval kabın içinde
+// kaymışsa (dolgu) o kayma eklenmezse imleç fareden geride duruyordu —
+// ölçüldü: motor panelinde 4 px, büyük eşleştirme grafiğinde 10 px. Kabın
+// tamamını boyayan imleç eksen yazılarının üstünden geçiyordu. Dönüş:
+// ipucunun da aynı kaymayla konması için { ox, oy }.
+function pcArtiImlec(els, canvas, ctx, pos, cssX, cssY) {
+  var ox = 0, oy = 0, wrap = canvas.parentElement;
+  if(wrap) {
+    var w = wrap.getBoundingClientRect();
+    ox = pos.rect.left - w.left - wrap.clientLeft;
+    oy = pos.rect.top - w.top - wrap.clientTop;
+  }
+  if(els.crossV) {
+    var v = els.crossV.style;
+    v.display = 'block'; v.left = (ox + cssX) + 'px';
+    v.top = (oy + ctx.mt / pos.sy) + 'px'; v.height = (ctx.ph / pos.sy) + 'px';
+  }
+  if(els.crossH) {
+    var h = els.crossH.style;
+    h.display = 'block'; h.top = (oy + cssY) + 'px';
+    h.left = (ox + ctx.ml / pos.sx) + 'px'; h.width = (ctx.pw / pos.sx) + 'px';
+  }
+  return { ox: ox, oy: oy };
 }
 
 function pcEls(ctx) {
@@ -235,8 +262,7 @@ function pcMouseMove(e) {
   if(!pcInPlot(pos, ctx)) { pcHideOverlays(ctx); return; }
 
   var cssX = pos.mx / pos.sx, cssY = pos.my / pos.sy;
-  if(els.crossV) { els.crossV.style.display = 'block'; els.crossV.style.left = cssX + 'px'; }
-  if(els.crossH) { els.crossH.style.display = 'block'; els.crossH.style.top = cssY + 'px'; }
+  var kay = pcArtiImlec(els, canvas, ctx, pos, cssX, cssY);
 
   if(!els.tooltip || typeof ctx.tooltipHTML !== 'function') return;
   var xVal = ctx.xFromPx ? ctx.xFromPx(pos.mx) : null;
@@ -253,8 +279,8 @@ function pcMouseMove(e) {
   if(tx < 4) tx = 4;
   if(ty + th > pos.rect.height - 8) ty = pos.rect.height - th - 8;
   if(ty < 4) ty = 4;
-  els.tooltip.style.left = tx + 'px';
-  els.tooltip.style.top = ty + 'px';
+  els.tooltip.style.left = (kay.ox + tx) + 'px';
+  els.tooltip.style.top = (kay.oy + ty) + 'px';
 }
 
 function pcMouseLeave(e) {

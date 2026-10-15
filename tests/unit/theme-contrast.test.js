@@ -252,6 +252,92 @@ describe('aksan METİN olarak ham kullanılmıyor', () => {
   });
 });
 
+// ── Gölge ve tül temayı izler ──────────────────────────────────────────────
+// Tema yüzeyindeki sabit siyah gölge iki temada iki ayrı kusur: açıkta jetonun
+// dört katı koyu bir leke (ipucunun 0,45'i ↔ --shadow-color 0,10), koyuda
+// zemine karışıp kaybolur (Sonuçlar kartının 0,12'si ↔ 0,55). Pencere
+// kabuklarının kapısı (source-hygiene → "pencere kabukları jeton konuşur")
+// yalnız kabuğa bakıyordu; ipuçları, kartlar, radyo ve sihirbaz kutuları
+// dışarıda kalmıştı. Gölge jetondan: --shadow-sm/md/lg/xl/inset ya da
+// var(--shadow-color).
+// Sabit beyaz tül (`rgba(255,255,255,…)` zemin) aynı kusurun öteki yüzü:
+// grafiklerin artı imleci açık temada — varsayılan tema — açık zeminde HİÇ
+// görünmüyordu; "en yakın" satırın %4'lük vurgusu iki temada da yoktu.
+// Muaf: zemini de sabit olan yüzey — belge gövdesi (kâğıt sabit gri zeminde;
+// sınırı ikon kapısıyla AYNI tablodan, `tools/ikon-dili.js` → BELGE_DOSYA),
+// `// sabit renk: <sebep>` satırı (harita karosunun üstündeki Leaflet işareti)
+// ve oyunlar (kendi dünyasını çiziyor — pencere-ailesi.test.js → OYUN).
+describe('gölge ve tül temayı izler', () => {
+  const { yorumsuzJs, yorumsuzCss, yorumsuzHtml, belgeMi } = require('../../tools/ikon-dili.js');
+  const KOK = path.join(__dirname, '../..');
+  const OYUN = ['js/easter-egg.js', 'js/game-2048.js'];
+  const SIYAH = /(?:box-shadow\s*:|drop-shadow\()[^;"'}]*?(?:rgba?\(\s*0\s*,\s*0\s*,\s*0\s*[,)]|#000(?:000)?\b|\bblack\b)/g;
+  const TUL = /background(?:-color)?\s*:\s*rgba\(\s*255\s*,\s*255\s*,\s*255\s*,/g;
+
+  function tara() {
+    const bulunan = [];
+    let taranan = 0;
+    const ekle = (d, ham, s, belge) => {
+      taranan++;
+      const hamSatir = ham.split('\n');
+      let bas = 0;
+      s.split('\n').forEach((satir, i) => {
+        if (!/\/\/ sabit renk:/.test(hamSatir[i])) {
+          for (const re of [SIYAH, TUL]) {
+            re.lastIndex = 0;
+            let m;
+            while ((m = re.exec(satir))) if (!belge(bas + m.index)) bulunan.push(`${d}:${i + 1}`);
+          }
+        }
+        bas += satir.length + 1;
+      });
+    };
+    ['js', 'viewer/js', 'candbc/js'].forEach((dz) => {
+      fs.readdirSync(path.join(KOK, dz)).filter((f) => /\.js$/.test(f) && f !== 'fead-core.js')
+        .forEach((f) => {
+          const d = dz + '/' + f;
+          if (OYUN.includes(d)) return;
+          const ham = fs.readFileSync(path.join(KOK, d), 'utf8');
+          const s = yorumsuzJs(ham);
+          ekle(d, ham, s, belgeMi(d, s, true));
+        });
+    });
+    fs.readdirSync(path.join(KOK, 'css')).filter((f) => /\.css$/.test(f)).forEach((f) => {
+      const ham = fs.readFileSync(path.join(KOK, 'css', f), 'utf8');
+      ekle('css/' + f, ham, yorumsuzCss(ham), () => false);
+    });
+    ['index.html', 'viewer/index.html', 'candbc/index.html'].forEach((d) => {
+      const ham = fs.readFileSync(path.join(KOK, d), 'utf8');
+      ekle(d, ham, yorumsuzCss(yorumsuzHtml(ham)), () => false);
+    });
+    return { bulunan: [...new Set(bulunan)], taranan };
+  }
+
+  test('box-shadow sabit siyah, zemin sabit beyaz tül taşımıyor — tema yüzeyinde jetondan', () => {
+    const { bulunan, taranan } = tara();
+    expect(taranan).toBeGreaterThan(100);              // tarama gerçekten tarıyor
+    expect(bulunan).toEqual([]);
+  });
+
+  test('desen gerçekten yakalıyor — kapı boşa taramıyor', () => {
+    const yakala = (s) => [SIYAH, TUL].some((re) => { re.lastIndex = 0; return re.test(s); });
+    expect(yakala('box-shadow:0 4px 16px rgba(0,0,0,0.45);')).toBe(true);
+    expect(yakala('box-shadow:0 0 0 1px var(--accent-success), 0 2px 8px rgba(0,0,0,.14);')).toBe(true);
+    expect(yakala('box-shadow:inset 0 1px 4px rgba(0, 0, 0, 0.35)')).toBe(true);
+    expect(yakala('filter:drop-shadow(0 2px 3px #000)')).toBe(true);
+    expect(yakala('box-shadow:var(--shadow-lg);')).toBe(false);
+    expect(yakala('box-shadow:0 2px 8px var(--shadow-color);')).toBe(false);
+    expect(yakala('box-shadow:0 0 0 6px rgba(201,162,75,.35)')).toBe(false);   // siyah değil
+    expect(yakala('--shadow-color: rgba(0, 0, 0, 0.55);')).toBe(false);          // jetonun tanımı
+    expect(yakala('width:1px; background:rgba(255,255,255,0.14); pointer-events:none;')).toBe(true);
+    expect(yakala('background:var(--border-hover);')).toBe(false);
+    // Jetonlar tema farkında: koyu temanın gölgesi açığınkinden koyu.
+    const renk = [...css.matchAll(/--shadow-color:\s*rgba\(([^)]*)\)/g)].map((m) => Number(m[1].split(',')[3]));
+    expect(renk.length).toBeGreaterThanOrEqual(2);
+    expect(Math.max(...renk)).toBeGreaterThan(Math.min(...renk) * 3);
+  });
+});
+
 // ── Kenar tonu zeminden AYRIŞIR (2026-09-25) ──────────────────────────────
 // Kullanıcı: "programın dokusunda bir bulanıklık var." Kenar çizgisi tuvale
 // karşı 1,22:1, panele karşı 1,34:1'di; panel ile tuvalin kendisi 1,10:1 —

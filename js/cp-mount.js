@@ -3096,7 +3096,7 @@ function _mnt2DAttachHover(container){
   container.__mnt2dHover=true;
   var tip=document.getElementById('ve-mnt-2d-tip');
   if(!tip){ tip=document.createElement('div'); tip.id='ve-mnt-2d-tip';
-    tip.style.cssText='position:fixed; z-index:100060; pointer-events:none; display:none; max-width:280px; padding:7px 10px; font-size:var(--fs-body); line-height:1.5; white-space:pre-line; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:0 8px 24px rgba(0,0,0,0.45);';
+    tip.style.cssText='position:fixed; z-index:100060; pointer-events:none; display:none; max-width:280px; padding:7px 10px; font-size:var(--fs-body); line-height:1.5; white-space:pre-line; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg);';
     document.body.appendChild(tip);
   }
   function info(t){ while(t && t!==container){ if(t.getAttribute){ var v=t.getAttribute('data-mnt-info'); if(v) return v; } t=t.parentNode; } return null; }

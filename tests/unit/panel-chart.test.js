@@ -219,3 +219,51 @@ describe('pcEtiketYerlestir — etiketler üst üste yazılmaz', () => {
     expect(l.map((e) => e.ty)).toEqual([10, 200]);
   });
 });
+
+describe('artı imleci farenin altında ve çizim alanında', () => {
+  // Ölçülen kusur (gerçek tarayıcı): kaplamalar kabın iç kutusuna göre
+  // konuyor, fare tuvale göre ölçülüyordu; tuval kabın dolgusu kadar kaymış
+  // olduğundan imleç fareden geride duruyordu — motor panelinde 4 px, büyük
+  // eşleştirme grafiğinde 10 px. İmleç kabın tamamını boyuyor, çizim alanını
+  // 37–80 px taşıyıp eksen yazılarının üstünden geçiyordu (açık temada beyaz
+  // olduğu için hiç görünmüyordu; jetona bağlanınca görünür oldu).
+  // Kurulum gerçeğin kopyası: kap 4 px dolgulu, tuval 280×200 CSS px ve
+  // backing store aynı ölçüde (sx = sy = 1).
+  function kur() {
+    document.body.innerHTML = '<div id="kap" style="padding:4px"><canvas id="cv"></canvas></div>';
+    const kap = document.getElementById('kap'), cv = document.getElementById('cv');
+    kap.getBoundingClientRect = () => ({ left: 100, top: 50, width: 288, height: 208, right: 388, bottom: 258 });
+    cv.getBoundingClientRect = () => ({ left: 104, top: 54, width: 280, height: 200, right: 384, bottom: 254 });
+    pcAttach(cv, {
+      uid: 'tst', ml: 40, mr: 10, mt: 12, mb: 28, pw: 230, ph: 160,
+      minX: 0, maxX: 100, minY: 0, maxY: 50,
+      xFromPx: (x) => x, yFromPx: (y) => y, tooltipHTML: () => 'x'
+    });
+    return cv;
+  }
+  const px = (s) => parseFloat(s);
+
+  test('dikey ve yatay çizgi farenin olduğu yerde — kabın dolgusu sayılıyor', () => {
+    const cv = kur();
+    pcMouseMove({ currentTarget: cv, clientX: 204, clientY: 134 });
+    const v = document.getElementById('tst-pc-cv').style, h = document.getElementById('tst-pc-ch').style;
+    expect(v.display).toBe('block');
+    expect(px(v.left)).toBe(204 - 100);                 // kabın iç kutusuna göre fare
+    expect(px(h.top)).toBe(134 - 50);
+  });
+
+  test('çizgiler çizim alanında kalır — eksen yazılarına uzanmaz', () => {
+    const cv = kur();
+    pcMouseMove({ currentTarget: cv, clientX: 204, clientY: 134 });
+    const v = document.getElementById('tst-pc-cv').style, h = document.getElementById('tst-pc-ch').style;
+    expect([px(v.top), px(v.height)]).toEqual([4 + 12, 160]);
+    expect([px(h.left), px(h.width)]).toEqual([4 + 40, 230]);
+  });
+
+  test('eşleştirme grafikleri aynı yardımcıyı kullanıyor — ikinci bir hesap yok', () => {
+    const s = loadSource('cp-matching.js');
+    expect(s).toContain('pcArtiImlec(');
+    expect(s).not.toMatch(/crossV\.style\.left\s*=\s*cssX/);
+    expect(loadSource('panel-chart.js')).not.toMatch(/crossV\.style\.left\s*=\s*cssX/);
+  });
+});
