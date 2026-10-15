@@ -219,11 +219,12 @@ describe('DOĞRUDAN GİRİŞ — veStartModule', () => {
   };
   const sok = () => { delete global.createNode; delete global.veFeadOpenEditor; };
 
-  test('FEAD tipi doğrudan girişi BEYAN EDİYOR, diğer ikisi etmiyor', () => {
-    // Kayıt TİPTE duruyor ki ikinci bir modül aynı davranışı tek satırla alsın.
+  test('FEAD ve Takoz doğrudan girişi BEYAN EDİYOR, Araç Performans etmiyor', () => {
+    // Kayıt TİPTE duruyor ki ikinci bir modül aynı davranışı tek satırla alsın —
+    // ikincisi Takoz oldu (2026-10-14: FEAD'inki gibi bir başlangıç sayfası).
     expect(componentDefs['fead-analysis'].moduleEnter).toBe('veFeadOpenEditor');
+    expect(componentDefs['mount-analysis'].moduleEnter).toBe('veMntOpenEditor');
     expect(componentDefs['arac-performans'].moduleEnter).toBeUndefined();
-    expect(componentDefs['mount-analysis'].moduleEnter).toBeUndefined();
   });
 
   test('FEAD: açıcı ÇAĞRILIYOR, uçuş ve toast KURULMUYOR', () => {
@@ -257,7 +258,7 @@ describe('DOĞRUDAN GİRİŞ — veStartModule', () => {
   test('doğrudan girişi OLMAYAN modülde toast basılıyor', () => {
     sahne();
     try {
-      veStartModule('mount-analysis');
+      veStartModule('arac-performans');
       expect(global.nodes.length).toBe(1);
       expect(stubs.showToast).toHaveBeenCalled();
       expect(String(stubs.showToast.mock.calls[0][0])).toContain('eklendi');
@@ -265,7 +266,7 @@ describe('DOĞRUDAN GİRİŞ — veStartModule', () => {
   });
 
   test('_veModuleEnterFn: beyan yoksa ya da işlev değilse NULL', () => {
-    expect(_veModuleEnterFn('mount-analysis')).toBe(null);
+    expect(_veModuleEnterFn('arac-performans')).toBe(null);
     global.veFeadOpenEditor = 'işlev değil';
     try { expect(_veModuleEnterFn('fead-analysis')).toBe(null); }
     finally { delete global.veFeadOpenEditor; }

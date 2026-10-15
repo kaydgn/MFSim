@@ -85,13 +85,15 @@ function deleteConnection(connId) {
   updateNodeCount();
 
   // Aksesuar bağlantısı koptuysa → Motor'un net-tork modelini tazele
+  // Doğrulama yalnız motorun aksesuar bağlantısı koptuysa (ui-core.js
+  // createConnection'daki gerekçe: port adları her çok girişli düğümde var).
   if(typeof VE_ACC_PORT_MAP !== 'undefined' && VE_ACC_PORT_MAP[conn.toPort] && typeof veSyncEngineAccessories === 'function') {
     var engN = nodes.find(function(n){ return n.id === conn.to && n.type === 'engine'; });
     if(engN) {
       veSyncEngineAccessories(engN);
       if(typeof updateVENetChart === 'function') { try { updateVENetChart(engN.id); } catch(e){} }
+      if(typeof veSolverValidate === 'function' && document.getElementById('ve-solver-validation')) { try { veSolverValidate(); } catch(e){} }
     }
-    if(typeof veSolverValidate === 'function' && document.getElementById('ve-solver-validation')) { try { veSolverValidate(); } catch(e){} }
   }
 }
 

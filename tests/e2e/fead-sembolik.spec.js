@@ -56,7 +56,7 @@ for (const [W, H] of [[1366, 768], [1440, 900]]) {
     page.on('pageerror', (e) => hatalar.push(String(e)));
     await page.setViewportSize({ width: W, height: H });
     await feadAc(page);
-    await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
+    await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible({ timeout: 20000 });
     await page.locator('.ve-fw-stp-file').setInputFiles({
       name: 'AG00686.stpZ', mimeType: 'application/octet-stream', buffer: stpZ(O.ag00686Step()),
@@ -192,7 +192,7 @@ test('ŞERİTTEN ÇİZİME: konumsuz kasnak sürüklenince bırakıldığı mm\'
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1440, height: 900 });
   await feadAc(page);
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="bos"]').click();
   await page.waitForTimeout(400);
   await page.evaluate(() => {
     veStateBatch(() => { veFeadTableAdd('fead-crank'); veFeadTableAdd('fead-alternator'); veFeadTableAdd('fead-idler'); });

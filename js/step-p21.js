@@ -737,6 +737,72 @@ function veStepP21Metin(bayt){
   return { metin: _stpBaytMetin(b), kap: 'duz' };
 }
 
+// ── 11 · AĞAÇ — montajın düğümleri ve parçaların yüzleri (ANLAMSIZ) ──────
+// Örnek yolunun her öneki bir düğüm (kök · alt montaj · parça); parça başına
+// yüzlerin analitik tanımı ve görüntü ağı için gereken girdiler. Kim neyi
+// arayacağını kendisi bilir: FEAD kasnak (js/fead-step.js), Takoz gövde ve
+// takoz (js/mount-step.js). Okuma hiçbir şeye KARAR VERMEZ — ad dâhil.
+// (2026-10-14'e kadar bu gövde FEAD tanıyıcısının `veFeadStpOku`suydu; Takoz
+// aynı okumayı istediğinde ikinci bir kopya yerine buraya taşındı.)
+// Döner (asla fırlatmaz):
+//   { ok, hatalar[], uyarilar[], baslik, sureMs{oku,montaj,yuz}, agac[], parcalar[],
+//     _yuz[] (parça başına yüz tanımları), _model, _geo[] (üçgenleyicinin girdisi) }
+function _stpAd(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+function veStepP21Agac(metin){
+  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: {}, agac: [], parcalar: [], _yuz: [], _model: null, _geo: [] };
+  var t0 = Date.now(), model, mt;
+  try { model = veStepP21Oku(metin); } catch(e){ out.hatalar.push('Dosya okunamadı: ' + e.message); return out; }
+  if(model.hatalar.length){ out.hatalar = model.hatalar.slice(); return out; }
+  out.baslik = veStepP21Baslik(model);
+  out._model = model;
+  out.sureMs.oku = Date.now() - t0;
+  var t1 = Date.now();
+  try { mt = veStepP21Montaj(model); } catch(e2){ out.hatalar.push('Montaj ağacı okunamadı: ' + e2.message); return out; }
+  out.uyarilar = out.uyarilar.concat(mt.uyarilar);
+  out.sureMs.montaj = Date.now() - t1;
+
+  var anahtar = {};
+  function dugum(yol, urun, ebeveyn){
+    var k = yol.join('\u0001');
+    if(anahtar[k] !== undefined) return anahtar[k];
+    var i = out.agac.length;
+    out.agac.push({ i: i, ad: _stpAd(urun.aciklama || urun.ad || urun.id || yol[yol.length - 1] || ''),
+      id: urun.id || '', ornek: yol.length ? yol[yol.length - 1] : '', derinlik: yol.length,
+      ebeveyn: ebeveyn, cocuklar: [], parcalar: [] });
+    anahtar[k] = i;
+    if(ebeveyn >= 0) out.agac[ebeveyn].cocuklar.push(i);
+    return i;
+  }
+  var t2 = Date.now(), toplamYuz = 0;
+  mt.parcalar.forEach(function(p){
+    var e = -1;
+    for(var k = 0; k < p.yol.length; k++)
+      e = dugum(p.yol.slice(0, k), p.atalar[k] || { id: '', ad: '', aciklama: '' }, e);
+    var d = dugum(p.yol, p.urun, e);
+    var ad = out.agac[d].ad;
+    var yuzler = [];
+    if(p.yuzler.length && !(p.birim.mm > 0))
+      out.uyarilar.push('"' + ad + '" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı.');
+    else {
+      try { p.yuzler.forEach(function(f){ yuzler.push(veStepP21Yuz(model, f, p.M, p.birim)); }); }
+      catch(e3){ out.uyarilar.push('"' + ad + '" parçasının yüzleri okunamadı: ' + e3.message); }
+    }
+    toplamYuz += yuzler.length;
+    var pi = out.parcalar.length;
+    out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: yuzler.length });
+    out._yuz.push(yuzler);
+    out._geo.push({ yuzler: yuzler.length ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [] });
+    for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
+  });
+  out.sureMs.yuz = Date.now() - t2;
+  if(!toplamYuz){
+    out.hatalar.push('Dosyada okunabilir yüz yok. Dosya yalnız üçgen (tessellated) geometri taşıyor olabilir; CATIA’dan katı geometri olarak dışa aktarın.');
+    return out;
+  }
+  out.ok = true;
+  return out;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_STEP_P21_SURUM: VE_STEP_P21_SURUM,
@@ -757,6 +823,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veStepP21YonUygula: veStepP21YonUygula,
     veStepP21Montaj: veStepP21Montaj,
     veStepP21Yuz: veStepP21Yuz,
-    veStepP21Baslik: veStepP21Baslik
+    veStepP21Baslik: veStepP21Baslik,
+    veStepP21Agac: veStepP21Agac
   };
 }
