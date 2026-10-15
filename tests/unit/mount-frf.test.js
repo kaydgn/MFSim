@@ -188,7 +188,7 @@ describe('Rapor §8.13', () => {
     expect(h).toContain('8.13');
     expect(h).toContain('<svg');
     expect(h).toContain('sönümsüz');
-    expect(h).toContain('f_ateş');
+    expect(h).toMatch(/f<tspan[^>]*>ateş<\/tspan> = 30 Hz/);   // SVG alt simgesi (Tur 6)
     // _rF sondaki sıfırı kırpar: 22,0 → "22"
     expect(h).toMatch(/<td>%22<\/td><td>%21,9<\/td>/);     // tam çözüm satırı
     expect(h).toMatch(/<td>%21,9<\/td><td>%21,8<\/td>/);   // SDOF kestirimi satırı

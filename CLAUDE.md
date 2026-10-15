@@ -458,8 +458,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `veThemeFs`ten ya da çizim büyütmesiyle), iki yazı üst üste değil ve hiçbir
   çizgi yazının içinden geçmez — altından geçen çizgiyi yazının zemin
   hâlesi örter, üstte çizilen çizgiyi hiçbir şey örtmez (katmanı sonra çizen
-  kod geometrisini çiziciye ENGEL olarak bildirir). Topolojide iki düğüm adı
-  birbirine değmez (≥ 4 px). Kapı: `yerlesim.spec.js` (kontrast kapısıyla
+  kod geometrisini çiziciye ENGEL olarak bildirir). SVG yazısına HTML öğesi
+  (`<span>`, `<sub>`) GİRMEZ — alt simge `<tspan baseline-shift="sub">`: HTML
+  ayrıştırıcısı SVG'den çıkar, çizimin kalanı sessizce silinir ve yazı
+  ölçeri bunu görmez (`mount-rapor-doku.test.js` → *SVG İÇİNDE HTML YOK*).
+  Topolojide iki düğüm adı birbirine değmez (≥ 4 px). Kapı: `yerlesim.spec.js` (kontrast kapısıyla
   AYNI tur, `tests/e2e/helpers/yuzey-turu.js`) + `yerlesim-olcu.test.js`.
 - **ARAYÜZ METNİNİN YAZIMI TEK** (`tipografi.test.js`): üç nokta tek karakter
   (…), etkileşim ipucu kısayol penceresinin dilinde ("Tekerlek: yakınlaştır ·
