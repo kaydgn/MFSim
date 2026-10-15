@@ -1108,3 +1108,90 @@ describe('ad çizimin İÇİNDE kalır', () => {
     expect(svg).not.toMatch(/<text data-ve="name"[^>]*>[^<]*…</);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   YAZI KAYIŞIN VE GERGİ KOLUNUN ÜSTÜNE DÜŞMEZ (2026-10-15)
+   ──────────────────────────────────────────────────────────────────────────
+   Yerleştirici kayışı ENGEL sayıyordu ama yalnız düz açıklıkları; sarım
+   yayları, gergi kolu ve pivot işareti listede yoktu ve hiçbir aday temiz
+   değilken geri düşüş kayışı hiç saymıyordu. ÖLÇÜLDÜ (12 örnek × 7 kol konumu
+   × 6 kart ölçüsü = 504 çizim, 2.184 ad + 2.184 açı, uzun adlarla): 455 ad ve
+   227 açı kayışın üstünde, 171 ad ve 105 açı kolun üstündeydi. Gerçek kartta
+   (AG00976) "198,39°" açıklığın, "Otomatik Gergi" kolun pivotunun üstünde.
+   Çare: kol + pivot + sarım yayları sert engel, dört ana yer doluyken
+   köşegen adaylar, SIRALI geri düşüş (önce kutuya dokunmayanlar, aralarında
+   kayışa binmeyen), kayışa düşen uzun ad önce kısa adını dener.
+   Kalan: en dar iki kart ölçüsünde (340×298 · 380×320) kaçacak yer yok.
+   ══════════════════════════════════════════════════════════════════════════ */
+describe('yazı kayışın ve kolun üstüne düşmez', () => {
+  const C = require('../helpers/svg-cizgi.js');
+  const ORNEKLER = Object.keys(M.VE_FEAD_EXAMPLES);
+  const KONUMLAR = ['free', 'replace', 'max', 'mean', 'min', 'load', 'all'];
+  const DAR = new Set(['340x298', '380x320']);
+  function kol(svg) {
+    const out = [];
+    const a = svg.match(/<line data-ve="arm" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/);
+    if (a) out.push([+a[1], +a[2], +a[3], +a[4]]);
+    const g = svg.match(/<g data-ve="pivot"[^>]*>(.*?)<\/g>/);
+    if (g) [...g[1].matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/g)].forEach((l) => out.push([+l[1], +l[2], +l[3], +l[4]]));
+    return out;
+  }
+  const S = { cizim: 0, yazi: 0, kayis: { dar: 0, olagan: 0 }, kol: 0, ornek: [] };
+  [false, true].forEach((kisa) => ORNEKLER.forEach((key) => {
+    let pack;
+    try { pack = veFeadExampleNodes(key); } catch (e) { return; }
+    pack.nodes.forEach((n) => { n.def = componentDefs[n.type]; });
+    global.nodes = pack.nodes; global.connections = pack.connections;
+    let build;
+    try { build = veFeadBuildSystem(pack.nodes); } catch (e) { return; }
+    if (!build || !build.ok) return;
+    KONUMLAR.forEach((pm) => OLCULER.forEach(([W, H]) => {
+      let svg;
+      try { svg = fead.veFeadLayoutSVG(build, W, H, { nodeId: 'x', posMode: pm, shortNames: kisa }); } catch (e) { return; }
+      S.cizim++;
+      const yz = C.yaziKutulari(svg, 'name', 9).concat(C.yaziKutulari(svg, 'wrap', 8)), ky = C.kayisParcalari(svg), kl = kol(svg);
+      S.yazi += yz.length;
+      yz.forEach((r) => {
+        if (ky.some((g) => C.parcaKutu(g, r))) {
+          S.kayis[DAR.has(W + 'x' + H) ? 'dar' : 'olagan']++;
+          if (!DAR.has(W + 'x' + H)) S.ornek.push(`${key} ${pm} ${W}×${H} "${r.t}"`);
+        }
+        if (kl.some((g) => C.parcaKutu(g, r))) { S.kol++; S.ornek.push(`${key} ${pm} ${W}×${H} "${r.t}" ↔ kol`); }
+      });
+    }));
+  }));
+
+  test('süpürme gerçekten ölçüyor — 1.008 çizim, iki ad kipi', () => {
+    expect(S.cizim).toBeGreaterThan(900);
+    expect(S.yazi).toBeGreaterThan(8000);
+  });
+  test('hiçbir ad ya da açı gergi kolunun ya da pivot işaretinin üstünde değil', () => {
+    expect(S.kol).toBe(0);
+  });
+  test('olağan kart ölçülerinde hiçbir ad ya da açı kayışın üstünde değil', () => {
+    expect(S.ornek).toEqual([]);
+    expect(S.kayis.olagan).toBe(0);
+  });
+  test('en dar iki ölçüde kalan kesişme yazıların %1\'inden az', () => {
+    // Kaçacak yer yok: 340×298'de altı kasnak ve on iki yazı. Ölçülen 15 / ~8.700.
+    expect(S.kayis.dar).toBeLessThan(S.yazi * 0.01);
+  });
+});
+
+describe('açıklık gerilmesi sayısı dişlerin ve çemberlerin ÜSTÜNDE', () => {
+  // Hâle ancak ALTINDA kalanı örter: sayı dişlerden önce yazıldığında dişler
+  // hâlenin üstünden geçip rakamları kesiyordu (gerçek tarayıcı, AG00976
+  // işletme kartı: "1.381 N" ve "1.023 N").
+  test('her sayı, dişlerin yolundan ve son kasnak çemberinden SONRA yazılır', () => {
+    ['AG00976_GATES_2025', 'BMC_FEAD_2026'].forEach((anahtar) => {
+      const { build } = kur(anahtar);
+      const ten = veFeadSpanTensionMap(build, F.meanRel(build.sys), 2750);
+      const svg = fead.veFeadLayoutSVG(build, 440, 458, { nodeId: 'lay', tension: ten });
+      const dis = svg.indexOf('data-ve="rib"'), cember = svg.lastIndexOf('data-ve="pulley"');
+      const sayilar = [...svg.matchAll(/data-ve="span-tension"/g)].map((m) => m.index);
+      expect(sayilar.length).toBe(build.order.length);
+      expect(dis).toBeGreaterThan(0);
+      sayilar.forEach((i) => { expect(i).toBeGreaterThan(dis); expect(i).toBeGreaterThan(cember); });
+    });
+  });
+});

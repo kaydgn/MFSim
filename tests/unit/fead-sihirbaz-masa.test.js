@@ -844,3 +844,74 @@ describe('KÜNYEDEN GELEN ALAN "K" İŞARETLİ', () => {
     expect(adimDOM(2).querySelectorAll('.ve-fw-kun').length).toBe(0);
   });
 });
+
+// ═══════════════════════════════════════ ÇİZGİ YAZIYI KESMEZ (2026-10-15) ══
+// Masanın katmanları (`ek`) çizicinin etiketleri yerleştikten SONRA ve en
+// üstte çiziliyor; çizici onları bilmiyordu. Ölçüldü (gerçek tarayıcı, AG00976):
+// 6. adımda merkez mesafesi çizgisi "157,09°"un üstünden geçiyordu ve kutusu
+// Alternatör–Avara 2 açıklığının üstüne düşüp kayışı siliyordu; 3. adımda
+// gerginin salınım çemberi "Otomatik Gergi"nin içinden geçiyordu; 5. adımda
+// kesikli devir sınırı hâlesiz "çevrim tepesi" yazısını ortadan bölüyordu.
+// Çare: katmanı çizen kod aynı geometriyi `engel(T)` ile çiziciye bildirir;
+// kutu kayışa, kasnağa ve yerleşmiş yazılara binmeyen ilk yere konur.
+describe('MASA — çizgi yazıyı kesmez', () => {
+  const C = require('../helpers/svg-cizgi.js');
+  const OLC = [[910, 766], [1200, 860], [700, 640]];
+  const yazilar = (svg) => C.yaziKutulari(svg, 'name', 9).concat(C.yaziKutulari(svg, 'wrap', 8));
+
+  test('6. adım: merkez mesafesi çizgisi ad ve açıların üstünden geçmez', () => {
+    const kesen = [];
+    OLC.forEach(([W, H]) => {
+      ornek();
+      const svg = wiz._fwMasaCizim(5, wiz.veFeadWizBuild(), W, H);
+      const g = /<g data-ve="merkez-sinir"[^>]*>([\s\S]*?)<\/g>/.exec(svg);
+      expect(g).not.toBeNull();
+      const cizgiler = [...g[1].matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/g)].map((m) => [+m[1], +m[2], +m[3], +m[4]]);
+      expect(cizgiler.length).toBeGreaterThan(0);
+      yazilar(svg).forEach((y) => { if (cizgiler.some((c) => C.parcaKutu(c, y))) kesen.push(`${W}×${H} "${y.t}"`); });
+    });
+    expect(kesen).toEqual([]);
+  });
+
+  test('6. adım: merkez mesafesinin kutusu kayışın ve kasnağın üstüne konmaz', () => {
+    const binen = [];
+    OLC.forEach(([W, H]) => {
+      ornek();
+      const svg = wiz._fwMasaCizim(5, wiz.veFeadWizBuild(), W, H);
+      const ky = C.kayisParcalari(svg);
+      expect(ky.length).toBeGreaterThan(6);
+      const g = /<g data-ve="merkez-sinir"[^>]*>([\s\S]*?)<\/g>/.exec(svg);
+      [...g[1].matchAll(/<rect x="([-\d.]+)" y="([-\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)].forEach((r) => {
+        const k = { x0: +r[1], y0: +r[2], x1: +r[1] + +r[3], y1: +r[2] + +r[4] };
+        if (ky.some((p) => C.parcaKutu(p, k))) binen.push(`${W}×${H} kayış`);
+        [...svg.matchAll(/<circle data-ve="pulley" cx="([-\d.]+)" cy="([-\d.]+)" r="([-\d.]+)"/g)].forEach((c) => {
+          const nx = Math.max(k.x0, Math.min(+c[1], k.x1)), ny = Math.max(k.y0, Math.min(+c[2], k.y1));
+          if ((nx - c[1]) ** 2 + (ny - c[2]) ** 2 < (+c[3]) ** 2) binen.push(`${W}×${H} kasnak`);
+        });
+      });
+    });
+    expect(binen).toEqual([]);
+  });
+
+  test('3. adım (gergiye yakın): salınım çemberleri ve sınır kolları adın içinden geçmez', () => {
+    const kesen = [];
+    [[640, 600], [910, 766], [1200, 860]].forEach(([W, H]) => {
+      ornek();
+      wiz._fwMasaDurum({ gergi: 'yakin' });
+      const svg = wiz._fwMasaCizim(2, wiz.veFeadWizBuild(), W, H);
+      const cizgiler = [];
+      [...svg.matchAll(/<circle class="ve-fw-g-hayalet" cx="([-\d.]+)" cy="([-\d.]+)" r="([\d.]+)"/g)]
+        .forEach((c) => C.cemberParcalari(+c[1], +c[2], +c[3]).forEach((p) => cizgiler.push(p)));
+      [...svg.matchAll(/<line class="ve-fw-g-sinir" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/g)]
+        .forEach((m) => cizgiler.push([+m[1], +m[2], +m[3], +m[4]]));
+      expect(cizgiler.length).toBeGreaterThan(30);
+      C.yaziKutulari(svg, 'name', 9).forEach((y) => { if (cizgiler.some((p) => C.parcaKutu(p, y))) kesen.push(`${W}×${H} "${y.t}"`); });
+    });
+    expect(kesen).toEqual([]);
+  });
+
+  test('5. adım: devir diyagramının yazısı zemin hâlesi taşır (çizgiler altından geçer)', () => {
+    expect(kural('.ve-fw-md-yazi text')).toMatch(/paint-order:\s*stroke/);
+    expect(kural('.ve-fw-md-yazi text')).toMatch(/stroke:\s*var\(--bg-input\)/);
+  });
+});

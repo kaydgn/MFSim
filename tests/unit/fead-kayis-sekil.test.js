@@ -100,6 +100,20 @@ function sekilOlc(svg) {
   };
 }
 
+// 3B KARTINDA 1:1: şekil kartın İÇ genişliğinde kurulur (viewBox = --fw3b-kart
+// − iki yan dolgu). 416'da kurulup 392 px'e sığdırılınca 10 birimlik yazı
+// ekranda 9,4 px'e iniyordu (ölçek tabanı 9,5 — gerçek tarayıcı, 3B görüntüleyici).
+describe('ŞEKİL 1 — 3B kartında 1:1', () => {
+  test('viewBox genişliği 3B kartının iç genişliği (CSS\'ten okunur)', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    const kart = +/--fw3b-kart:(\d+)px/.exec(css)[1];
+    const dolgu = /\.ve-fw-3b-yan\{[^}]*padding:(\d+)px (\d+)px/.exec(css);
+    const ic = kart - +dolgu[2] * 2;
+    const svg = fead.veFeadKayisSekilSVG(geo('PK', 'GATES'), { hesap: 'dw' });
+    expect(+/viewBox="0 0 ([\d.]+) /.exec(svg)[1]).toBe(ic);
+  });
+});
+
 describe('ŞEKİL 1 — ölçekli ve anlamlı', () => {
   test('d_w ile d_b arası h_b, sırt ile d_w arası h_r — ORANI sayıyla, 14 bileşimin hepsinde', () => {
     let n = 0;

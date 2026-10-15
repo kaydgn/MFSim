@@ -2,7 +2,7 @@
 // Ölçer gerçek tarayıcıda koşuyor (tests/e2e/yerlesim.spec.js); burada tutulan
 // ölçütün kendisi: kırık sözcük kuralı yanlış olsa bütün tarama sessizce yeşil
 // (ya da her satır kırmızı) olurdu.
-const { ySozcukler, ySatirSayisi, yKirikMi, yKesisim, yTasma, yYapiskanSerit, KAYNAK } = require('../helpers/yerlesim-olcu.js');
+const { ySozcukler, ySatirSayisi, yKirikMi, yKesisim, yTasma, yYapiskanSerit, yCizgiSayilir, yKutudaNoktalar, KAYNAK } = require('../helpers/yerlesim-olcu.js');
 
 describe('yerleşim ölçütü', () => {
   test('sözcükler: boşlukla ayrılır, harf/rakam taşımayan parça sözcük değildir', () => {
@@ -44,6 +44,22 @@ describe('yerleşim ölçütü', () => {
     expect(yYapiskanSerit(952, 952, 10, -10)).toBe(0);      // dolgu kadar eksi bottom: dibe oturuyor
     expect(yYapiskanSerit(952, 700, 10, 0)).toBe(0);        // doğal yerinde (yapışık değil)
     expect(yYapiskanSerit(952, 952, 0, 0)).toBe(0);         // dolgusuz kap
+  });
+
+  // ÇİZGİ YAZIYI KESİYOR MU: hâle yalnız ALTINDA kalanı örter. Göbek diski
+  // gibi üstte çizilen dolgulu şeklin örttüğü nokta görünür sayılmaz (sayfa
+  // tarafı); görünür nokta yoksa çizgi yazıyı kesmiyordur.
+  test('çizgi: hâleli yazının altındaki çizgi sayılmaz, üstündeki sayılır', () => {
+    expect(yCizgiSayilir(true, false, 6)).toBe(false);    // önce çizilmiş, yazı hâleli → örtülür
+    expect(yCizgiSayilir(true, true, 6)).toBe(true);      // sonra çizilmiş → hâle örtmez
+    expect(yCizgiSayilir(false, false, 6)).toBe(true);    // hâlesiz yazının altından geçen
+    expect(yCizgiSayilir(false, true, 0)).toBe(false);    // görünür nokta yok (hepsi örtülü)
+  });
+
+  test('çizgi: kutunun İÇİNDEKİ noktalar — kenar sayılmaz', () => {
+    const k = { left: 10, right: 50, top: 0, bottom: 12 };
+    const n = [{ x: 9, y: 5 }, { x: 10, y: 5 }, { x: 11, y: 5 }, { x: 30, y: 6 }, { x: 49.9, y: 11.9 }, { x: 30, y: 12 }];
+    expect(yKutudaNoktalar(n, k)).toEqual([{ x: 11, y: 5 }, { x: 30, y: 6 }, { x: 49.9, y: 11.9 }]);
   });
 
   test('sayfa kaynağı kendi kendine yeterli (tek IIFE, dış ad yok)', () => {

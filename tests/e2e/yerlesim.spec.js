@@ -24,6 +24,13 @@
  * küçük yazı + 9 çakışma, kütüphane grafiğinde 5, gergi grafiğinde 11,
  * sihirbazın gülünde 8. Kayış Yolu penceresinin şemasındaki 18 küçük yazı
  * bilerek açık (S12 — aşağıda `MUAF`).
+ *
+ * Çizgi yazıyı kesmez, düğüm adları birbirine değmez (2026-10-15, C3): eski
+ * kodda FEAD turunda 15, Takoz turunda 81 yazının içinden bir çizgi geçiyordu
+ * (kayış, gergi kolu, salınım çemberi, merkez mesafesi, ızgara ve kılavuz
+ * çizgileri) ve Tulga topolojisinde "Koordinat Düzlemi" ile "3D
+ * Görüntüleyici" arasında 0 px vardı. Turlar artık iki örneğin topolojisini de
+ * ölçüyor.
  * Dökmek için `YERLESIM_DOKUM=<önek>` — her tur `<önek>-<tur>.txt`ye yazar.
  *
  * Node'da koşamaz: jsdom yerleşim hesaplamaz.
@@ -63,7 +70,7 @@ const TURLAR = [
 ];
 
 for (const [ad, modul, tur] of TURLAR) {
-  test(`${ad}: yazı kutusuna sığıyor — kesik, kırık sözcük, yatay kaydırma, küçük yazı, yetim, yapışkan şerit, çizimde çakışma yok`, async ({ page }) => {
+  test(`${ad}: yazı kutusuna sığıyor — kesik, kırık sözcük, yatay kaydırma, küçük yazı, yetim, yapışkan şerit, çizimde çakışma ve çizgi yok`, async ({ page }) => {
     const liste = [];
     const olc = olcucu(page, liste);
     await T.bootApp(page, { modul, kur: yerlesimKur, w: 1920, h: 952,

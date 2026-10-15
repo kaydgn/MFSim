@@ -152,6 +152,7 @@ async function apTuru(page, olc) {
   });
   await page.waitForFunction(() => nodes.some((n) => n.type === 'shift-controller'), null, { timeout: 20000 });
   await page.waitForTimeout(800);
+  await olc('#ve-canvas', 'topoloji');                     // düğüm adları (yapışık ad)
   const p = await pencereler(page, olc);
   expect(p.tip).toBeGreaterThan(8);
   expect(p.olculen).toBeGreaterThan(500);                 // tarama gerçekten ölçüyor
@@ -196,6 +197,18 @@ async function apTuru(page, olc) {
   expect(ik).toBeGreaterThan(100);
 }
 
+// SİHİRBAZ RAYI FARE ALTINDA: dinlenme ölçüsü durumu görmez — etkin olmayan
+// adımın zemini fare altında vurgu tonuna döner ve ipucu orada okunmalı
+// (ölçüldü: soluk jeton 4,43:1 açık · 4,23:1 koyu).
+async function rayFareAlti(page, olc, kok, yer) {
+  const adim = page.locator(kok + ' .ve-fw-step:not(.on)').first();
+  if (!(await adim.count())) return;
+  await adim.hover();
+  await page.waitForTimeout(200);   // zemin geçişi (.12 s)
+  await olc(kok + ' .ve-fw-steps', yer + '/ray (fare altı)');
+  await page.mouse.move(0, 0);
+}
+
 async function takozTuru(page, olc) {
   // Boş Takoz topolojisini başlangıç sayfası karşılar (FEAD'inkiyle aynı kit).
   // Tur kök topolojide geziyor: sayfa için modüle girilir, ölçülür, çıkılır ve
@@ -216,6 +229,7 @@ async function takozTuru(page, olc) {
   });
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-solver'), null, { timeout: 20000 });
   await page.waitForTimeout(800);
+  await olc('#ve-canvas', 'topoloji');                     // düğüm adları (yapışık ad)
   await page.evaluate(async () => { const s = nodes.find((n) => n.type === 'mnt-solver'); await veMntSolverCompute(s.id); });
   await page.waitForFunction(() => typeof veMntSets === 'function' && veMntSets().length > 0, null, { timeout: 180000 });
   // Sihirbaz: tuvaldeki modelle (Tulga) tohumlanır, her adım — FEAD turuyla
@@ -226,6 +240,7 @@ async function takozTuru(page, olc) {
     await page.waitForTimeout(450);
     await olc('#ve-mntwiz-overlay', 'sihirbaz/' + (i + 1));
   }
+  await rayFareAlti(page, olc, '#ve-mntwiz-overlay', 'sihirbaz');
   await page.evaluate(() => veMntWizKapat(false));
   const p = await pencereler(page, olc);
   expect(p.olculen).toBeGreaterThan(300);
@@ -262,6 +277,7 @@ async function feadTuru(page, olc) {
     await page.waitForTimeout(450);
     await olc('#ve-feadwiz-overlay', 'sihirbaz/' + (i + 1));
   }
+  await rayFareAlti(page, olc, '#ve-feadwiz-overlay', 'sihirbaz');
   await page.evaluate(() => veFeadWizClose(false));
   // Çözüm → Sonuçlar: gezgin, hazır diyagramlar (yorum notu açık), özet
   await page.evaluate(() => { const s = nodes.find((n) => n.type === 'fead-solver'); veFeadSolve(s.id); });

@@ -446,9 +446,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   noktalaması satır başında yalnız kalmaz, kap yatayda kaymaz, esnek kapta
   alt simge kendi kutusunda, alta yapışan öğe kabın dibine oturur (`bottom`
   = −dolgu). SVG çizimde de: ekrandaki yazı ölçek tabanında (≥ 9,5 px; boy
-  `veThemeFs`ten ya da çizim büyütmesiyle) ve iki yazı üst üste değil.
-  Kapı: `yerlesim.spec.js` (kontrast kapısıyla AYNI tur,
-  `tests/e2e/helpers/yuzey-turu.js`) + `yerlesim-olcu.test.js`.
+  `veThemeFs`ten ya da çizim büyütmesiyle), iki yazı üst üste değil ve hiçbir
+  çizgi yazının içinden geçmez — altından geçen çizgiyi yazının zemin
+  hâlesi örter, üstte çizilen çizgiyi hiçbir şey örtmez (katmanı sonra çizen
+  kod geometrisini çiziciye ENGEL olarak bildirir). Topolojide iki düğüm adı
+  birbirine değmez (≥ 4 px). Kapı: `yerlesim.spec.js` (kontrast kapısıyla
+  AYNI tur, `tests/e2e/helpers/yuzey-turu.js`) + `yerlesim-olcu.test.js`.
 - **ARAYÜZ METNİNİN YAZIMI TEK** (`tipografi.test.js`): üç nokta tek karakter
   (…), etkileşim ipucu kısayol penceresinin dilinde ("Tekerlek: yakınlaştır ·
   Sağ tık + sürükle: kaydır · Esc: kapat" — "Scroll/Zoom" yok), iki noktadan

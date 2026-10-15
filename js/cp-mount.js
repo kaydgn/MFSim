@@ -2926,9 +2926,24 @@ var _MNT2D_YUZ='inherit';
 var _MNT2D_C_MOUNT='var(--accent-success)';
 var _MNT2D_C_COMP ='var(--accent-warning)';
 var _MNT2D_C_CG   ='var(--accent-danger)';
-function _mnt2DText(x,y,t,anchor,color,size,bold,family){
+// hale: zemin rengi verilirse yazı o renkte bir kontur taşır (paint-order) —
+// altından geçen ızgara, referans ve kılavuz çizgisi yazının çevresinde kesilir.
+function _mnt2DText(x,y,t,anchor,color,size,bold,family,hale){
   return '<text x="'+_mnt2DR(x)+'" y="'+_mnt2DR(y)+'" text-anchor="'+(anchor||'middle')+'" font-size="'+(size||8)+'"'
-    + ' font-family="'+(family||_MNT2D_YUZ)+'" fill="'+(color||'var(--text-secondary)')+'"'+(bold?' font-weight="700"':'')+'>'+_mntEsc(t)+'</text>';
+    + ' font-family="'+(family||_MNT2D_YUZ)+'" fill="'+(color||'var(--text-secondary)')+'"'+(bold?' font-weight="700"':'')
+    + (hale ? ' paint-order="stroke" stroke="'+hale+'" stroke-width="2.4" stroke-linejoin="round"' : '')
+    + '>'+_mntEsc(t)+'</text>';
+}
+// Doğru parçası ↔ kutu {l,r,t,b} (pay kadar büyütülmüş kutuya göre).
+function _mnt2DSegKutu(x1, y1, x2, y2, k, pay){
+  pay = pay || 0;
+  var l = k.l - pay, r = k.r + pay, t = k.t - pay, b = k.b + pay;
+  if(Math.max(x1, x2) < l || Math.min(x1, x2) > r || Math.max(y1, y2) < t || Math.min(y1, y2) > b) return false;
+  if((x1 >= l && x1 <= r && y1 >= t && y1 <= b) || (x2 >= l && x2 <= r && y2 >= t && y2 <= b)) return true;
+  var dx = x2 - x1, dy = y2 - y1;
+  var yan = function(x, y){ return dx * (y - y1) - dy * (x - x1); };
+  var a = yan(l, t), c = yan(r, t), d = yan(r, b), e = yan(l, b);
+  return !((a > 0 && c > 0 && d > 0 && e > 0) || (a < 0 && c < 0 && d < 0 && e < 0));
 }
 function _mnt2DR(v){ return Math.round(v*10)/10; }
 // "Güzel" eksen adımı (1·2·5 ×10^k) ve o adıma oturan işaret (tick) değerleri —
@@ -3107,17 +3122,33 @@ function _mnt2DKesisimAlani(a, b){
 // yan kademe kademe, sonra işaretin sağı/solu, sonra öteki yan. Hiçbiri boş
 // değilse en az çakışan aday seçilir (etiket kaybolmaz).
 // engeller: [{l,r,t,b}] · sinir: {l, r, t, b} — etiketin kalacağı alan.
-function _mnt2DLabels(items, sinir, engeller){
-  var svg = '', dolu = (engeller || []).slice(), PAY = 2;
+// KILAVUZ ÇİZGİSİ DE BİR ENGEL (2026-10-15): kademeye çıkan etiketin
+// kılavuzu işaretten etikete dikey iner ve aradaki öteki etiketin İÇİNDEN
+// geçiyordu ("Ön Takoz Braketi"nin kılavuzu "Ön Takoz"un, "Braket"inki "Sağ
+// Arka Takoz"un üstünden — ölçüldü, sihirbazın masası). Aday, kılavuzu
+// yerleşmiş bir kutuyu kesiyorsa dolu sayılır; yerleşmiş kılavuzlar da
+// sonraki etiketlerin engeli.
+function _mnt2DLabels(items, sinir, engeller, hale){
+  // Kılavuzlar BÜTÜN yazılardan önce çizilir (`svgK`): kaçınılamayan bir
+  // kılavuz da öteki yazının hâlesinin altında kalır, harfleri kesmez.
+  var svg = '', svgK = '', dolu = (engeller || []).slice(), PAY = 2, kilavuzlar = [];
+  function kilavuzu(it, a, kutu){
+    if(!a.cizgi) return null;
+    var y0 = a.ust ? (it.cy - it.mr) : (it.cy + it.mr), y1 = a.ust ? (kutu.b + 1) : (kutu.t - 1);
+    return [it.cx, y0, Math.max(kutu.l + 2, Math.min(kutu.r - 2, it.cx)), y1];
+  }
   // Öncelik: kalın (birleşik CG), sonra büyük işaret, sonra soldan sağa.
   var sira = items.slice().sort(function(a, b){
     return ((b.bold ? 1 : 0) - (a.bold ? 1 : 0)) || (b.mr - a.mr) || (a.cx - b.cx);
   });
   sira.forEach(function(it){
     var h = it.size * 1.08, adim = h + 3, aday = [];
-    function dikey(ust, t){
+    // kay: 0 işaretin tam üstü/altı; ±1 bir yana kaymış (kılavuz eğik iner —
+    // dikey kılavuz aradaki etiketin içinden geçecekse).
+    function dikey(ust, t, kay){
       var bosluk = it.mr + 6;
       var y = ust ? (it.cy - bosluk - t * adim) : (it.cy + bosluk + it.size * 0.82 + t * adim);
+      if(kay) return { x:it.cx + kay * (it.mr + 4), y:y, anchor:(kay > 0 ? 'start' : 'end'), cizgi:t > 0, ust:ust };
       return { x:it.cx, y:y, anchor:'middle', cizgi:t > 0, ust:ust };
     }
     var t;
@@ -3126,7 +3157,13 @@ function _mnt2DLabels(items, sinir, engeller){
     aday.push({ x:it.cx - it.mr - 5, y:it.cy + it.size * 0.32, anchor:'end', cizgi:false });
     for(t = 0; t < 4; t++) aday.push(dikey(!it.above, t));
     for(t = 4; t < 12; t++) aday.push(dikey(it.above, t));
-    var sec = null, enAz = Infinity;
+    // kaydırılmış kademeler EN SONDA: yalnız öteki adayların hepsi doluyken
+    for(t = 1; t < 4; t++) aday.push(dikey(it.above, t, 1), dikey(it.above, t, -1), dikey(!it.above, t, 1), dikey(!it.above, t, -1));
+    // SIRALI SEÇİM: önce hiçbir kutuya binmeyen adaylar — aralarında kılavuzu
+    // da temiz olan ilki, yoksa kılavuzu en az kesen; hiçbiri kutulardan temiz
+    // değilse en az binen (eski ölçüt). Kılavuz cezası yazı binmesiyle aynı
+    // terazide tartılınca yazılar üst üste biniyordu (ölçüldü, 3 çift).
+    var sec = null, enAz = Infinity, temiz = null, temizCeza = Infinity;
     for(var k = 0; k < aday.length; k++){
       var a = aday[k], kutu = _mnt2DYaziKutu(a.x, a.y, it.text, a.anchor, it.size, it.bold);
       // Kenara taşan orta çapalı aday kenara yaslanır (kırpılmasın).
@@ -3136,23 +3173,36 @@ function _mnt2DLabels(items, sinir, engeller){
         kutu = _mnt2DYaziKutu(a.x, a.y, it.text, a.anchor, it.size, it.bold);
       }
       if(kutu.l < sinir.l - 0.5 || kutu.r > sinir.r + 0.5 || kutu.t < sinir.t || kutu.b > sinir.b) continue;
-      var alan = 0;
+      var alan = 0, ceza = 0;
       for(var d = 0; d < dolu.length; d++) if(_mnt2DKesisir(kutu, dolu[d], PAY)) alan += _mnt2DKesisimAlani(kutu, dolu[d]) + 1;
-      if(alan === 0){ sec = { a:a, kutu:kutu }; break; }
+      // yerleşmiş kılavuzlar bu kutuyu kesiyor mu · bu adayın kılavuzu yerleşmiş
+      // bir kutuyu kesiyor mu (çıktığı işaretin kendi kutusu hariç)
+      for(var g = 0; g < kilavuzlar.length; g++){
+        var L = kilavuzlar[g];
+        if(_mnt2DSegKutu(L[0], L[1], L[2], L[3], kutu, 1)) ceza++;
+      }
+      var kl = kilavuzu(it, a, kutu);
+      if(kl) for(var d2 = 0; d2 < dolu.length; d2++){
+        var o = dolu[d2];
+        if(kl[0] >= o.l - 1 && kl[0] <= o.r + 1 && kl[1] >= o.t - 1 && kl[1] <= o.b + 1) continue;   // kendi işareti
+        if(_mnt2DSegKutu(kl[0], kl[1], kl[2], kl[3], o, 1)) ceza++;
+      }
+      if(alan === 0 && ceza === 0){ temiz = { a:a, kutu:kutu }; temizCeza = 0; break; }
+      if(alan === 0 && ceza < temizCeza){ temizCeza = ceza; temiz = { a:a, kutu:kutu }; }
       if(alan < enAz){ enAz = alan; sec = { a:a, kutu:kutu }; }
     }
+    if(temiz) sec = temiz;
     if(!sec){ var a0 = dikey(it.above, 0); sec = { a:a0, kutu:_mnt2DYaziKutu(a0.x, a0.y, it.text, 'middle', it.size, it.bold) }; }
     dolu.push(sec.kutu);
-    var A = sec.a;
-    if(A.cizgi){
+    var A = sec.a, K = kilavuzu(it, A, sec.kutu);
+    if(K){
       // Kılavuz çizgisi işaretin kenarından etiketin kutusuna.
-      var y0 = A.ust ? (it.cy - it.mr) : (it.cy + it.mr), y1 = A.ust ? (sec.kutu.b + 1) : (sec.kutu.t - 1);
-      var xx = Math.max(sec.kutu.l + 2, Math.min(sec.kutu.r - 2, it.cx));
-      svg += '<line x1="'+_mnt2DR(it.cx)+'" y1="'+_mnt2DR(y0)+'" x2="'+_mnt2DR(xx)+'" y2="'+_mnt2DR(y1)+'" stroke="var(--border-color)" stroke-width="0.7"/>';
+      kilavuzlar.push(K);
+      svgK += '<line x1="'+_mnt2DR(K[0])+'" y1="'+_mnt2DR(K[1])+'" x2="'+_mnt2DR(K[2])+'" y2="'+_mnt2DR(K[3])+'" stroke="var(--border-color)" stroke-width="0.7"/>';
     }
-    svg += _mnt2DText(A.x, A.y, it.text, A.anchor, it.color, it.size, it.bold);
+    svg += _mnt2DText(A.x, A.y, it.text, A.anchor, it.color, it.size, it.bold, undefined, hale);
   });
-  return svg;
+  return svgK + svg;
 }
 // Tek görünüş (üst/yan) çiz — akademik, tek renkli panel: başlık + eksen köşe
 // göstergesi + kesikli referans çizgisi + işaretler + çakışmasız etiketler.
@@ -3173,9 +3223,13 @@ function _mnt2DFigure(o){
   var yalin=!!(o.yalin||o.sade), sade=!!o.sade;
   var FS={ deger:_mnt2DFs('micro'), etiket:_mnt2DFs('micro'), eksen:_mnt2DFs('tiny'), g:_mnt2DFs('tiny'), baslik:_mnt2DFs('md') };
   var engel=[];   // sabit yazılar + işaretler — etiket yerleştiricinin kaçacağı kutular
+  // HÂLE zeminin renginde: panelde dış kutunun dolgusu, yalın çizimde
+  // (sihirbazın masası) masanın zemini. Izgara, referans ve kılavuz çizgileri
+  // yazının altından geçiyordu (ölçüldü: masada 9, panelde 27 yazı).
+  var HALE = yalin ? 'var(--bg-input)' : 'var(--bg-secondary)';
   function yaz(x, y, t, anchor, color, size, bold){
     engel.push(_mnt2DYaziKutu(x, y, t, anchor, size, bold));
-    return _mnt2DText(x, y, t, anchor, color, size, bold);
+    return _mnt2DText(x, y, t, anchor, color, size, bold, undefined, HALE);
   }
   function hval(p){ return hKey==='y'?p.y:(hKey==='z'?p.z:p.x); }
   function secAttr(tur, i){ return o.secim ? ' data-mnt-sec="'+tur+':'+i+'"' : ''; }
@@ -3211,7 +3265,8 @@ function _mnt2DFigure(o){
   svg+='<line x1="'+_mnt2DR(yalin ? gl : o.ox+o.plotL-10)+'" y1="'+_mnt2DR(ry)+'" x2="'+_mnt2DR(o.ox+o.FIG_W-o.plotR)+'" y2="'+_mnt2DR(ry)+'" stroke="var(--border-color)" stroke-width="1.1" stroke-dasharray="5 4"/>';
   // Yalın çizimde (sihirbazın masası) yazı yok: çizginin sağ ucu takoz adlarının
   // yeriydi ve ikisi üst üste biniyordu; çizginin değeri eksenin "0" çentiği.
-  if(o.refLabel && !yalin) svg+=yaz(o.ox+o.FIG_W-o.plotR, ry-5, o.refLabel, 'end', 'var(--text-muted)', FS.deger);
+  // Referans yazısı ("Z = 0") işaretler çizildikten SONRA konur (aşağıda):
+  // çizginin sağ ucuna sabitken uçtaki takozun karesi onun üstüne biniyordu.
   if(!yalin){
     // eksen köşe göstergesi (yatay + düşey eksen). Gösterge sol kenardaki
     // DEĞER SÜTUNUNA düşüyor; çarpan değer yazılmıyordu (yan ve önden
@@ -3293,8 +3348,19 @@ function _mnt2DFigure(o){
     engel.push({ l:gx-11*iK, r:gx+11*iK, t:gy-11*iK, b:gy+11*iK });
     if(!sade) items.push({cx:gx, cy:gy, mr:11*iK, above:o.compAbove, text:o.cgLabelFn(o.cg), color:'var(--text-primary)', size:FS.g, bold:true});
   }
+  // Referans yazısı: çizginin sağ ucu (üst · alt), sonra sol ucu — işarete ve
+  // sabit yazıya binmeyen ilk yer; hiçbiri boş değilse eski yer.
+  if(o.refLabel && !yalin){
+    var refAday=[[gr, ry-5, 'end'], [gr, ry+FS.deger+3, 'end'], [gl+4, ry-5, 'start'], [gl+4, ry+FS.deger+3, 'start']];
+    var refSec=refAday[0];
+    for(var ri=0; ri<refAday.length; ri++){
+      var rk=_mnt2DYaziKutu(refAday[ri][0], refAday[ri][1], o.refLabel, refAday[ri][2], FS.deger, false);
+      if(!engel.some(function(e){ return _mnt2DKesisir(rk, e, 1); })){ refSec=refAday[ri]; break; }
+    }
+    svg+=yaz(refSec[0], refSec[1], o.refLabel, refSec[2], 'var(--text-muted)', FS.deger);
+  }
   // ── ETİKETLER ── (sabit yazılara ve birbirine çarpmadan; kutunun içinde)
-  if(!sade) svg+=_mnt2DLabels(items, { l:leftX, r:rightX, t:(yalin ? o.boxY+2 : baslikY+6), b:o.boxY+o.boxH-3 }, engel);
+  if(!sade) svg+=_mnt2DLabels(items, { l:leftX, r:rightX, t:(yalin ? o.boxY+2 : baslikY+6), b:o.boxY+o.boxH-3 }, engel, HALE);
   return svg;
 }
 
@@ -3326,9 +3392,15 @@ function veMnt2DGorunusSVG(veri, W, H, opt){
   var hMin=Math.min.apply(null,hs), hMax=Math.max.apply(null,hs);
   var vMin=Math.min.apply(null,vs), vMax=Math.max.apply(null,vs);
   var hR=Math.max(hMax-hMin,1), vR=Math.max(vMax-vMin,1);
-  var uw=Math.max(W-pay.sol-pay.sag,10), uh=Math.max(H-pay.ust-pay.alt,10);
+  // İŞARETLER İÇİN İÇ PAY: uçtaki işaret çizim alanının tam kenarına düşüp
+  // eksen değer sütununa taşıyordu (masada takozun karesi y ekseninin "0"ını
+  // örtüyordu — ölçüldü). 2D Görünüm'ün yatay payıyla aynı gerekçe; en büyük
+  // işaret (seçili gövdenin halkası) kadar.
+  var IC = sade ? 0 : 20*((opt.isaretK>0) ? opt.isaretK : 1);
+  var UW=Math.max(W-pay.sol-pay.sag,10), UH=Math.max(H-pay.ust-pay.alt,10);
+  var uw=Math.max(UW-2*IC,10), uh=Math.max(UH-2*IC,10);
   var s=Math.min(uw/hR, uh/vR);
-  var ox=pay.sol+(uw-hR*s)/2, oy=pay.ust+(uh-vR*s)/2;
+  var ox=pay.sol+IC+(uw-hR*s)/2, oy=pay.ust+IC+(uh-vR*s)/2;
   function px(h){ return ox+(h-hMin)*s; }
   function py(v){ return oy+(vMax-v)*s; }
   var ms=comps.map(function(c){return c.mass;}).filter(function(m){return m>0;});
@@ -3339,11 +3411,11 @@ function veMnt2DGorunusSVG(veri, W, H, opt){
   function cr(m){ if(!(m>0)) return 7*iK; var t=(mMax-mMin>1e-9)?(m-mMin)/(mMax-mMin):0.5; return (7+7*Math.sqrt(t))*iK; }
   function kisa(n){ n=String(n||''); return n.length>18?n.slice(0,17)+'…':n; }
   var inner=_mnt2DFigure({ isaretK:iK, ox:0, boxX:0, boxY:0, boxW:W, boxH:H, FIG_W:W,
-    plotTop:pay.ust, plotH:uh, plotL:pay.sol, plotR:pay.sag, px:px, pyFn:py, hKey:G.h, vKey:G.v,
+    plotTop:pay.ust, plotH:UH, plotL:pay.sol, plotR:pay.sag, px:px, pyFn:py, hKey:G.h, vKey:G.v,
     // Izgara görünen ALANI kaplar, verinin aralığını değil (tek ölçekte bir
     // eksen veriden geniş kalır).
-    hMin:hMin-(ox-pay.sol)/s, hMax:hMin-(ox-pay.sol)/s+uw/s,
-    vMin:vMax+(oy-pay.ust)/s-uh/s, vMax:vMax+(oy-pay.ust)/s,
+    hMin:hMin-(ox-pay.sol)/s, hMax:hMin-(ox-pay.sol)/s+UW/s,
+    vMin:vMax+(oy-pay.ust)/s-UH/s, vMax:vMax+(oy-pay.ust)/s,
     mounts:mounts, comps:comps, cg:cg, cr:cr, compAbove:true, refV:0, refLabel:G.refLabel,
     axis:{hLabel:G.hLabel, vLabel:G.vLabel}, yalin:true, sade:sade,
     secili:opt.secili||null, secim:!!opt.secim,

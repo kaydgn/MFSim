@@ -3025,6 +3025,11 @@ function veFeadKesitSVG(profile, brand, opt){
 }
 
 // ── ŞEKİL 1 · KAYIŞ KESİTİ (`veFeadKayisSekilSVG`) ──────────────────────────
+// GENİŞLİK = 3B kartının İÇİ: --fw3b-kart (420) − iki yan dolgu (14). Şekil
+// 416 birimde kurulup 392 px'e sığdırılıyordu: 10 birimlik yazı ekranda
+// 9,4 px'e iniyordu (ölçek tabanı 9,5 — ölçüldü, 3B görüntüleyici). Eşitlik
+// CSS'ten okunarak tutulur (fead-kayis-sekil.test.js).
+var VE_FEAD_SEKIL_W = 392;
 // Kullanıcı isteği (2026-09-29): ContiTech'in "Belt section" şekli 3B
 // görüntüleyicinin sağ sütununda, hesap çapı orada seçilir. Şekli PROGRAM
 // çizer, resim gömülmez: resmin tablosu tek markanın sayıları — Gates seçili
@@ -3048,9 +3053,10 @@ function veFeadKayisSekilSVG(g, opt){
   // %30 küçültüyordu (PK'da kayış 47 px yüksekliğe iniyordu).
   var n = 2, tas = 0.3 * e, rim = 0.4 * t;
   // Yatay bölgeler (çizim birimi): h etiketi · sol görünüş · h_r / h_b
-  // etiketleri · sağ görünüş · d etiketleri. W sütunun içeriğiyle bire bir.
+  // etiketleri · sağ görünüş · d etiketleri. W sütunun içeriğiyle bire bir
+  // (`VE_FEAD_SEKIL_W`; çağıran başka bir genişlik verebilir: `opt.en`).
   // zA "h 16,50"yi (PM) kesmeden taşır; zC "d_w · hesap"ı.
-  var W = 416, UST = 6, ALT = 4, zA = 52, zB = 58, zC = 64;
+  var W = (opt.en > 0) ? opt.en : VE_FEAD_SEKIL_W, UST = 6, ALT = 4, zA = 52, zB = 58, zC = 64;
   var s = (W - zA - zB - zC) / (2 * n * e + 2 * tas);
   var gV = 2.2 / s, gT = 3 / s;            // boşluklar pikselden (kasnaktaki kesit gibi)
   var yc = hr, yb = hr + hb, yv = yb - gV, yg = t + gT, yp = yg + rim;
@@ -4935,6 +4941,55 @@ function veFeadLayoutSVG(build, W, H, opts){
     (geom.spans || []).forEach(function(sp){
       segler.push([T0.tx(sp.Pi[0]), T0.ty(sp.Pi[1]), T0.tx(sp.Pj[0]), T0.ty(sp.Pj[1])]);
     });
+    // SARIM YAYLARI DA KAYIŞ — kayış yalnız açıklıklardan ibaret değil, her
+    // kasnağı bir yay boyunca sarıyor ve yerleştirici yalnız düz parçaları
+    // görüyordu (ölçüldü, 504 çizim: 22 açı yayın üstünde). Yay, çizilen yolla
+    // aynı uçlardan (`veFeadBeltPathD`: gelen açıklığın Pj'si → giden
+    // açıklığın Pi'si, kasnağın merkezi ve `wraps`) parçalara bölünür; yön
+    // uç noktadan doğrulanır.
+    (function(){
+      var q = geom.pulleys || [], sp = geom.spans || [], n = q.length;
+      if(!n || sp.length !== n || !geom.wraps) return;
+      for(var i = 0; i < n; i++){
+        var p = q[(i + 1) % n], a = sp[i].Pj, b = sp[(i + 1) % n].Pi, w = geom.wraps[(i + 1) % n];
+        if(!p || !p.c || !a || !b || !(w > 0)) continue;
+        var t0 = Math.atan2(a[1] - p.c[1], a[0] - p.c[0]), t1 = Math.atan2(b[1] - p.c[1], b[0] - p.c[0]);
+        var yon = (p.d > 0) ? 1 : -1;
+        var fark = function(y){ var e = t0 + y * w - t1; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
+        if(fark(-yon) < fark(yon)) yon = -yon;
+        var adim = Math.max(4, Math.ceil(w / 0.2)), ox = a[0], oy = a[1];
+        for(var k = 1; k <= adim; k++){
+          var t = t0 + yon * w * k / adim;
+          var nx = p.c[0] + p.rPitch * Math.cos(t), ny = p.c[1] + p.rPitch * Math.sin(t);
+          segler.push([T0.tx(ox), T0.ty(oy), T0.tx(nx), T0.ty(ny)]);
+          ox = nx; oy = ny;
+        }
+      }
+    })();
+    // GERGİ KOLU VE PİVOT İŞARETİ DE SERT ENGEL — kayışın açıklıklarıyla aynı
+    // gerekçe: kol çizimin kendisi (montaj açısı ve kol boyu onda okunuyor),
+    // üstüne düşen ad onu da kendini de okunmaz yapar. Listede yoktu ve
+    // gerginin adı tam kolun üstüne konuyordu (ölçüldü, 504 çizim: 171 ad,
+    // 105 açı kolun üstünde). Çizilen kolla AYNI uçlar: merkez → pivot, ±6 px artı.
+    if(pv){
+      var _ti = build.sys._tenIdx, _tp = (_ti >= 0 && ps[_ti]) ? ps[_ti] : null;
+      var _px = T0.tx(pv[0]), _py = T0.ty(pv[1]);
+      if(_tp) segler.push([T0.tx(_tp.c[0]), T0.ty(_tp.c[1]), _px, _py]);
+      segler.push([_px - 6, _py, _px + 6, _py], [_px, _py - 6, _px, _py + 6]);
+    }
+    // ÇAĞIRANIN ÇİZGİLERİ DE ENGEL (`opts.engel(T)` → [x1, y1, x2, y2] ekran
+    // parçaları). Ek katman (`opts.ek`) etiketler yerleştikten SONRA ve en
+    // üstte çiziliyor; sihirbazın salınım çemberi ve merkez mesafesi çizgisi
+    // bu yüzden adın ve açının üstünden geçiyordu. Çizici rozet gibi bunları
+    // da ancak SÖYLENİRSE bilir — katmanı çizen kod aynı geometriyi buradan
+    // bildirir. Patlarsa çizim yine döner.
+    if(typeof opts.engel === 'function'){
+      try {
+        (opts.engel({ tx: T0.tx, ty: T0.ty, s: s, W: W, H: H, geom: geom, ps: ps }) || []).forEach(function(g){
+          if(g && g.length === 4 && g.every(function(v){ return Number.isFinite(v); })) segler.push(g);
+        });
+      } catch(e){ /* engel bildirimi çizimi bozmaz */ }
+    }
     function kesisir(seg, r){                       // doğru parçası ↔ dikdörtgen
       var x1=seg[0], y1=seg[1], x2=seg[2], y2=seg[3];
       if(Math.max(x1,x2) < r.x0 || Math.min(x1,x2) > r.x1) return false;
@@ -5025,6 +5080,20 @@ function veFeadLayoutSVG(build, W, H, opts){
     // Yalnız biri olsaydı: engel olmadan ad koşulsuz açının üstüne düşerdi,
     // aday listesi olmadan da ad kaçamadığı her karede iki yazı üst üste kalırdı.
     var aciAday = [];
+    // KÖŞEGEN ADAYLAR — dört ana yer (üst · alt · sağ · sol) dolu olduğunda.
+    // Kayış kasnağı çoğu zaman tam bu dört yönden birinden sarıyor ve kalabalık
+    // kartta dördü birden dolu kalıyordu; yazı o zaman bir açıklığın ya da
+    // kolun üstüne düşüyordu. Çember üzerinde 45°'de, kasnağa değmeden; ana
+    // dörtten SONRA denenir, yani onlardan biri temizse hiçbir şey değişmez.
+    function kosegen(X, Y, R, w){
+      var d = R * 0.72;
+      return [
+        { x:X+d+4, y:Y+d+10, an:'start', x0:X+d+4,   x1:X+d+4+w, y0:Y+d+2,  y1:Y+d+12 },
+        { x:X-d-4, y:Y+d+10, an:'end',   x0:X-d-4-w, x1:X-d-4,   y0:Y+d+2,  y1:Y+d+12 },
+        { x:X+d+4, y:Y-d-4,  an:'start', x0:X+d+4,   x1:X+d+4+w, y0:Y-d-12, y1:Y-d-2 },
+        { x:X-d-4, y:Y-d-4,  an:'end',   x0:X-d-4-w, x1:X-d-4,   y0:Y-d-12, y1:Y-d-2 }
+      ];
+    }
     if(aciVar)
       ps.forEach(function(p, k){
         var X = offX + (p.c[0]-minX)*s, Yc = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
@@ -5037,7 +5106,7 @@ function veFeadLayoutSVG(build, W, H, opts){
           { x:X,       y:Yc-R-4,  an:'middle', x0:X-w/2,   x1:X+w/2,   y0:Yc-R-12, y1:Yc-R-2 },
           { x:X+R+5,   y:Yc+3,    an:'start',  x0:X+R+5,   x1:X+R+5+w, y0:Yc-5,    y1:Yc+5 },
           { x:X-R-5,   y:Yc+3,    an:'end',    x0:X-R-5-w, x1:X-R-5,   y0:Yc-5,    y1:Yc+5 }
-        ]);
+        ].concat(kosegen(X, Yc, R, w)));
         yumusak.push(aciAday[k][0]);          // adın gördüğü yumuşak engel: VARSAYILAN yer
       });
     // Gerilme sayıları da aynı tierde: ad ile sayı birbirini bilmiyordu.
@@ -5077,14 +5146,32 @@ function veFeadLayoutSVG(build, W, H, opts){
       // NEREYE. `akilliGeri` açıkken en az örtüşen aday seçilir; kapalıyken
       // ilk aday, yani eski davranış birebir.
       if(!akilliGeri) return aday[0];
-      var enIyi = aday[0], enAz = Infinity;
+      //
+      // SIRALI ÖLÇÜT (2026-10-15). Puan yalnız kutulara bakıyordu; en az örten
+      // aday çoğu zaman bir açıklığın ya da kolun üstündeydi (ölçüldü, 504
+      // çizim: 227 açı kayışta, 105 açı kolda). Ama kayıştan kaçmak bir
+      // KUTUYU örtmek pahasına olamaz — ad ↔ açı ve çubuğun altı ayrı
+      // kapılar. Bu yüzden önce sert engele HİÇ dokunmayan adaylar: aralarında
+      // kayışa/kola binmeyen, sonra en az yumuşak örten. Hiçbiri sert
+      // engelden temiz değilse eski ölçüt birebir.
+      var enIyi = null, enAz = Infinity;
       for(var i=0;i<aday.length;i++){
         var a = aday[i];
-        if(!icerde(a)) continue;
+        if(!icerde(a) || kutular.some(function(b){ return ortusur(b, a); })) continue;
         var puan = 0;
-        for(var m=0;m<kutular.length;m++) puan += ortAlan(kutular[m], a);
-        for(var y=0;y<yumusakList.length;y++) puan += ortAlan(yumusakList[y], a) * 0.25;
+        for(var j=0;j<segler.length;j++) if(kesisir(segler[j], a)) puan += 1e6;
+        for(var y=0;y<yumusakList.length;y++) puan += ortAlan(yumusakList[y], a);
         if(puan < enAz){ enAz = puan; enIyi = a; }
+      }
+      if(enIyi) return enIyi;
+      enIyi = aday[0]; enAz = Infinity;
+      for(var i2=0;i2<aday.length;i2++){
+        var a2 = aday[i2];
+        if(!icerde(a2)) continue;
+        var puan2 = 0;
+        for(var m=0;m<kutular.length;m++) puan2 += ortAlan(kutular[m], a2);
+        for(var y2=0;y2<yumusakList.length;y2++) puan2 += ortAlan(yumusakList[y2], a2) * 0.25;
+        if(puan2 < enAz){ enAz = puan2; enIyi = a2; }
       }
       return enIyi;
     }
@@ -5133,17 +5220,23 @@ function veFeadLayoutSVG(build, W, H, opts){
     }
     // 1) ADLAR — sert engellere, sonra (mümkünse) yumuşaklara göre.
     //
+    function adAdaylari(X, Y, R, w){
+      return [
+        { x:X,        y:Y-R-4,      an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y-R-4-8,   y1:Y-R-4+2 },
+        { x:X,        y:Y+R+11,     an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y+R+11-8,  y1:Y+R+11+2 },
+        // YAN: kasnaktan 7 px — kayışın yarı kalınlığı (1,3) ve dişleri (3,2)
+        // 4,5 px'lik bir bant; 5 px'te yazı dişin ucuna değiyordu (ölçüldü).
+        { x:X+R+7,    y:Y+3,        an:'start',  x0:X+R+7,  x1:X+R+7+w, y0:Y-5,      y1:Y+5 },
+        { x:X-R-7,    y:Y+3,        an:'end',    x0:X-R-7-w, x1:X-R-7, y0:Y-5,       y1:Y+5 }
+      ].concat(kosegen(X, Y, R, w));
+    }
+    function kayistaMi(a){ return segler.some(function(g){ return kesisir(g, a); }); }
     if(adVar)
       ps.forEach(function(p, k){
         var X = offX + (p.c[0]-minX)*s, Y = offY + (maxY-p.c[1])*s, R = p.rPitch*s;
         _adMetin[k] = gorAd(k);
         var w = adW(_adMetin[k]);
-        var aday = [
-          { x:X,        y:Y-R-4,      an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y-R-4-8,   y1:Y-R-4+2 },
-          { x:X,        y:Y+R+11,     an:'middle', x0:X-w/2,  x1:X+w/2,  y0:Y+R+11-8,  y1:Y+R+11+2 },
-          { x:X+R+5,    y:Y+3,        an:'start',  x0:X+R+5,  x1:X+R+5+w, y0:Y-5,      y1:Y+5 },
-          { x:X-R-5,    y:Y+3,        an:'end',    x0:X-R-5-w, x1:X-R-5, y0:Y-5,       y1:Y+5 }
-        ];
+        var aday = adAdaylari(X, Y, R, w);
         var sec = yerlestir(aday, yumusak, false);
         // KÖTÜ YER İKİ ŞEY: çizimin dışı ve rozetin altı. İkisi de etiketi
         // GÖRÜNMEZ yapıyor — biri kırpılarak, öteki örtülerek.
@@ -5172,6 +5265,29 @@ function veFeadLayoutSVG(build, W, H, opts){
         if(kotuYer(sec)){
           var ic = yerlestir(aday, yumusak, true);
           if(!kotuYer(ic)) sec = ic;
+        }
+        // ÜÇÜNCÜ KÖTÜ YER: KAYIŞIN YA DA KOLUN ÜSTÜ. Temiz aday yokken ad ilk
+        // adaya (üste) dönüyordu ve orası çoğu zaman bir açıklığın üstüydü
+        // (ölçüldü, 504 çizim: köşegen adaylardan sonra bile 59 ad kayışta,
+        // 21 ad kolda). Yalnız O ZAMAN akıllı geri düşüş — koşulsuz açmak
+        // 2026-10-02'de ölçülüp reddedildi (bkz. yukarı).
+        else if(kayistaMi(sec)){
+          var ic2 = yerlestir(aday, yumusak, true);
+          if(!kotuYer(ic2)) sec = ic2;
+        }
+        // UZUN AD HÂLÂ KAYIŞTA İSE KISA ADI DENER: parantezli ek atılır
+        // ("Otomatik Gergi (E9843)" → "Otomatik Gergi", `veFeadShortName`).
+        // Ek bilgi kaybolmaz — tam ad `<title>`da, tablonun satırında ve
+        // kasnağın panelinde. Ölçüldü (504 çizim, uzun adlar): 56 → 4 ad
+        // kayışın üstünde; kısa ad kipinde zaten 1.
+        if(kayistaMi(sec)){
+          var _kisa = veFeadShortName(_adMetin[k]);
+          if(_kisa && _kisa !== _adMetin[k]){
+            var adayK = adAdaylari(X, Y, R, adW(_kisa));
+            var secK = yerlestir(adayK, yumusak, false);
+            if(kotuYer(secK) || kayistaMi(secK)) secK = yerlestir(adayK, yumusak, true);
+            if(!kotuYer(secK) && !kayistaMi(secK)){ _adMetin[k] = _kisa; sec = secK; }
+          }
         }
         if(!icerde(sec)){
           var yer = (sec.an === 'start') ? (W - ROSE - 1 - sec.x)
@@ -5435,6 +5551,7 @@ function veFeadLayoutSVG(build, W, H, opts){
   // boyamak, olmayan bir sayıyı iddia etmek olurdu — yaylar temel amber kalıyor
   // ve haritanın NEREDE tanımlı olduğu çizimden okunuyor.
   var tmap = opts.tension;
+  var _spanEtSvg = '';
   if(tmap && tmap.spanN && tmap.spanN.length === (geom.spans || []).length){
     geom.spans.forEach(function(sp, i){
       var TN = tmap.spanN[i];
@@ -5451,10 +5568,15 @@ function veFeadLayoutSVG(build, W, H, opts){
       // sayı için okunmaz. Renk zaten yanı başındaki açıklıkta; sayının işi
       // okunmak. Zemin renginde bir hâle (`paint-order`) kayışın, dişlerin ve
       // kasnak çemberinin üstünde de okunur tutuyor.
+      //
+      // SAYI DİŞLERDEN VE ÇEMBERLERDEN SONRA YAZILIR (`_spanEtSvg`, etiket
+      // aşamasında). Hâle yalnız ALTINDA kalanı örter: sayı burada, dişlerden
+      // önce yazıldığında dişler hâlenin üstünden geçip rakamları kesiyordu
+      // (ölçüldü, gerçek tarayıcı: AG00976 işletme kartında iki sayı).
       var _e = null;
       _spanEt.forEach(function(x){ if(x.i === i) _e = x; });
       if(_e)
-        svg += '<text data-ve="span-tension" x="' + f(_e.x) + '" y="' + f(_e.y)
+        _spanEtSvg += '<text data-ve="span-tension" x="' + f(_e.x) + '" y="' + f(_e.y)
             + '" text-anchor="middle" font-size="9" font-weight="600"'
             + ' paint-order="stroke" stroke="var(--bg-input)" stroke-width="3.2"'
             + ' stroke-linejoin="round" fill="var(--text-primary)">' + _e.yazi + '</text>';
@@ -5607,6 +5729,8 @@ function veFeadLayoutSVG(build, W, H, opts){
           + veSayi(f(geom.wrapDeg(k))) + '°</text>';
     }
   });
+  // Açıklık gerilmesi sayıları — kayışın, dişlerin ve çemberlerin ÜSTÜNDE.
+  svg += _spanEtSvg;
 
   // SEÇİLİ KONUMUN KÜNYESİ — sol üstte. "Hangi konumu görüyorum" sorusu şemanın
   // kendi içinde cevaplanmalı; kip seçicisi kartın altında, çizimin dışında.
@@ -5766,7 +5890,9 @@ function veFeadLayoutSVG(build, W, H, opts){
     try {
       svg += opts.ek({ tx: tx, ty: ty, s: s, ox: offX, oy: offY, mx: minX, my: maxY,
                        W: W, H: H, f: f, geom: geom, ps: ps, order: build.order,
-                       sys: build.sys, hayalet: hayalet }) || '';
+                       sys: build.sys, hayalet: hayalet,
+                       // yerleşmiş ad ve açı kutuları: katmanın kendi yazısı onlara binmesin
+                       etiketler: _etiket.concat(_aciEt).filter(Boolean) }) || '';
     } catch(e){ /* katman çizimi bozmaz */ }
   }
   return svg + '</svg>';
@@ -9858,7 +9984,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
     veFeadDerivedLengthHTML: veFeadDerivedLengthHTML,
     veFeadBoyOkuma: veFeadBoyOkuma,
-    veFeadKesitSVG: veFeadKesitSVG, veFeadKayisSekilSVG: veFeadKayisSekilSVG,
+    veFeadKesitSVG: veFeadKesitSVG, veFeadKayisSekilSVG: veFeadKayisSekilSVG, VE_FEAD_SEKIL_W: VE_FEAD_SEKIL_W,
     veFeadKayisOlcuHTML: veFeadKayisOlcuHTML, VE_FEAD_KAYIS_OLCU: VE_FEAD_KAYIS_OLCU,
     veFeadBoyCizgileriHTML: veFeadBoyCizgileriHTML,
     veFeadKordKaynakAdi: veFeadKordKaynakAdi, veFeadHesapCapSecenekleri: veFeadHesapCapSecenekleri,
