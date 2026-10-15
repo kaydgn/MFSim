@@ -38,7 +38,7 @@ test('çalışma çevrimi otomatik gelir — sihirbaz ve panel', async ({ page }
   // BOŞ TOPOLOJİYİ BAŞLANGIÇ SAYFASI KARŞILAR (2026-09-29, FEAD kural 5):
   // sihirbazı sayfanın "Sihirbazla kur" kapısı açar. (2026-09-09 → 29 pencere
   // kendiliğinden açılıyordu; bu spec o dönemde de bir kez sessizce öldü.)
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
   await page.evaluate(() => veFeadWizGoto(4));
   await page.waitForTimeout(600);

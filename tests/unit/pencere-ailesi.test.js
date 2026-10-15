@@ -94,7 +94,8 @@ describe('başlık TEK bileşen', () => {
     // Eski lacivert degrade (başlık bandı + eylem düğmesi) kalmadı — üç küçük
     // pencere onu kendi satır içi stiliyle ve yazı karakteriyle ✕'le çiziyordu.
     expect(Object.keys(KAYNAK).filter((f) => /#1a365d/i.test(KAYNAK[f]))).toEqual([]);
-    expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(5);
+    // Altıncı: Takoz Başlangıç Sihirbazı (FEAD sihirbazının kabuğu, aynı başlık)
+    expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(6);
   });
 
   test('başlık yazısı kabuk bandınınki (Bileşenler · müfettiş)', () => {
@@ -146,8 +147,9 @@ describe('başlık ikonu onu açan şerit girişinin ikonu', () => {
 
   test('her başlık bir çizgi ikonla başlar (emoji yok)', () => {
     const basliklar = HTML.match(/<div class="ve-settings-header">\s*<span[^>]*>[^<]*<?/g) || [];
-    expect(basliklar).toHaveLength(5);
+    expect(basliklar).toHaveLength(6);
     basliklar.forEach((b) => expect(b).toMatch(/<span[^>]*>\s*<$/));
     expect(HTML).toMatch(/id="ve-fw-title"><span class="mf-ico mf-ico-wand"><\/span>/);
+    expect(HTML).toMatch(/id="ve-mw-title"><span class="mf-ico mf-ico-wand"><\/span>/);
   });
 });

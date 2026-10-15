@@ -488,10 +488,17 @@ function _mntRemoveNode(id){
   }
 }
 
-// İlk açılışta iç topolojiye YALNIZ "Başlangıç ve Örnekler" (mnt-example)
-// bileşeni gelir; kullanıcı örneği bu bileşenin panelinden aktarır. Bileşen,
-// referans yerleşimdeki sağ-üst konumuna (aynı taban) yerleştirilir; "Örneği
-// Aktar" güç grubunu sol-orta bölgeye (Çözücü sağ-üste) kurduğundan çakışmaz.
+// "BAŞLANGIÇ VE ÖRNEKLER" BİLEŞENİ YOKSA EKLE — örnek yükleyicisinin yardımcısı
+// (örneğin JSON'u onu taşımayabilir: ASFAT taşımıyor). Referans yerleşimdeki
+// sağ-üst yuvasına konur; "Örneği Aktar" güç grubunu sol-orta bölgeye
+// kurduğundan çakışmaz.
+//
+// AÇILIŞ ARTIK BUNU ÇAĞIRMAZ (2026-10-14, kullanıcı: *"FEAD modülünün
+// başlangıç ekranı çok güzel, aynı onun gibi bir ekran istiyorum"*): boş bir
+// Takoz topolojisini BAŞLANGIÇ SAYFASI karşılar (js/cp-mount-baslangic.js).
+// Bileşen kendiliğinden kurulsaydı sayfanın "model boş" sorusu bir düğümle
+// cevaplanmış olurdu; sayfa onu ayrıca "boş" sayar, çünkü 2026-10-14'ten önce
+// kaydedilmiş boş topolojiler bu tek düğümü taşıyor.
 function veMntPopulateStarter(){
   if(typeof createNode!=='function') return [];
   var base = (typeof veArrangeModuleBase==='function')
@@ -508,6 +515,75 @@ function veMntPopulateStarter(){
   }
   if(typeof updateAllConnections==='function') updateAllConnections();
   return created;
+}
+
+// ── ANALİZ ARAÇLARI — referans yerleşimin üst şeridi ────────────────────────
+// Kütle ve takoz dışındaki Takoz düğümleri. "Boş kanvas" kapısı ve sihirbazın
+// "Modeli kur"u bu listeyi kurar: EKSİK olanı ekler, var olanı ikinci kez
+// kurmaz — iki Çözücü olsaydı hangisinin sonucu yayınladığı belirsiz kalırdı.
+// Liste VE_MNT_STARTER_LAYOUT'un üst şeridinden TÜRER (ikinci bir liste yok).
+var VE_MNT_ARAC_TIPLERI = VE_MNT_STARTER_LAYOUT
+  .filter(function(it){ return it.ly===20; })
+  .map(function(it){ return it.type; });
+// `base` (ops.): yerleşim tabanı — verilmezse şerit görünür alanın ortasına.
+// Döner: kurulan düğümler.
+function _mntAracGaranti(base){
+  if(typeof createNode!=='function' || typeof nodes==='undefined') return [];
+  var serit = VE_MNT_STARTER_LAYOUT.filter(function(it){ return VE_MNT_ARAC_TIPLERI.indexOf(it.type)>=0; });
+  if(!base){
+    base = (typeof veArrangeModuleBase==='function')
+      ? veArrangeModuleBase(serit.map(function(it){ return {lx:it.lx, ly:it.ly}; }))
+      : { x:3000, y:3000 };
+  }
+  var created=[];
+  serit.forEach(function(it){
+    if(nodes.some(function(n){ return n.type===it.type; })) return;
+    var once=nodes.length;
+    createNode(it.type, base.x+it.lx, base.y+it.ly);
+    if(nodes.length>once){
+      var n=nodes[nodes.length-1];
+      if(it.name) _mntSetNodeName(n, it.name);
+      created.push(n);
+    }
+  });
+  return created;
+}
+
+// TOPLU KURULUMDAN SONRA SEÇİM BIRAKILIR. createNode her düğümü bir kare
+// SONRA seçiyor (setTimeout) — toplu kurulumun sonunda son kurulan düğüm
+// (şeridin sonundaki Rapor) seçili kalıyordu; seçim kullanıcının değil.
+function _mntSecimiBirak(){
+  if(typeof setTimeout!=='function' || typeof clearSelection!=='function') return;
+  setTimeout(function(){ clearSelection(); }, 40);
+}
+
+// BOŞ KANVAS — başlangıç sayfasının üçüncü kapısı. Analiz araçlarını kurar;
+// kütle gövdelerini ve takozları kullanıcı Bileşenler'den sürükler. Bir eylem
+// = bir geri-al adımı (veStateBatch): Ctrl+Z boş topolojiye, yani başlangıç
+// sayfasına döner. Döner: kurulan düğümler.
+function veMntKanvasBos(){
+  if(typeof createNode!=='function') return [];
+  var created=[];
+  var kur=function(){ created=_mntAracGaranti(); };
+  if(typeof veStateBatch==='function') veStateBatch(kur); else kur();
+  _mntSecimiBirak();
+  if(typeof updateAllConnections==='function') updateAllConnections();
+  if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
+  if(typeof showToast==='function')
+    showToast('Boş kanvas kuruldu — kütle gövdelerini ve takozları Bileşenler\'den sürükleyin','success');
+  return created;
+}
+
+// ÖRNEĞİ ANAHTARIYLA YÜKLE — başlangıç sayfasının karoları ve "Başlangıç ve
+// Örnekler" panelinin "Örneği aktar"ı. Kayıt girişinde JSON topolojisi varsa
+// ondan (birebir), yoksa programatik model kurucusundan.
+function veMntOrnekYukle(key){
+  if(typeof veMountCore==='undefined' || !key) return false;
+  var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
+  if(!ex) return false;
+  if(ex.topology){ _mntLoadExampleFromJSON(ex.topology, ex); return true; }
+  _mntLoadExampleFromModel(null, key);
+  return true;
 }
 
 // Sidebar kapsamını güncelle (takoz iç topolojisi ⇄ ana ekran). Kapsam açık
@@ -536,8 +612,12 @@ function veMntOpenEditor(nodeId, _silent){
     if(sub && sub.nodes && sub.nodes.length){
       veLoadTabState({ state: sub });
     } else {
+      // BOŞ TOPOLOJİYİ BAŞLANGIÇ SAYFASI KARŞILAR (js/cp-mount-baslangic.js) —
+      // düğüm kurulmaz. Sayfa kapsam senkronunda (aşağıda) modele göre açılır.
+      // Boş durum geri-al yığınının TABANI: ilk kapı (Boş kanvas · örnek ·
+      // sihirbaz) geri alınınca kullanıcı sayfaya döner.
       veLoadTabState({ state: null });
-      veMntPopulateStarter();
+      if(typeof veStateResetBaseline==='function') veStateResetBaseline();
     }
     _veMntSetSidebar('takoz');
   } finally { _veMntBusy=false; }
@@ -1063,33 +1143,44 @@ function veMntSetCheck(nodeId, key, checked){
 function veMntApplyLib(nodeId, key){
   if(!key) return;
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
-  var m=veMntGetLibraryMap()[key]; if(!m) return;
   if(!node.data) node.data={};
-  node.data.kxs=m.sx; node.data.kys=m.sy; node.data.kzs=m.sz;
-  node.data.kxd=m.dx; node.data.kyd=m.dy; node.data.kzd=m.dz; node.data.libKey=key;
+  if(!_mntLibUygula(node.data, key)) return;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// KÜTÜPHANE GİRDİSİNİ BİR TAKOZUN VERİSİNE YAZ — TEK YAZICI. Takoz paneli ve
+// sihirbazın Takozlar adımı bunu çağırır (FEAD kural 24'ün dersi: bir girdi
+// iki yüzeyde soruluyorsa yazıcısı tek olmalı — biri kapasiteyi temizleyip
+// öbürü temizlemeseydi tip değişince eski kapasite sessizce sürerdi).
+// `d`: takozun veri nesnesi (node.data ya da sihirbazın takoz satırı).
+// Döner: yazıldı mı (bilinmeyen anahtar → false, hiçbir alana dokunulmaz).
+function _mntLibUygula(d, key){
+  var m=key ? veMntGetLibraryMap()[key] : null;
+  if(!m || !d) return false;
+  d.kxs=m.sx; d.kys=m.sy; d.kzs=m.sz;
+  d.kxd=m.dx; d.kyd=m.dy; d.kzd=m.dz; d.libKey=key;
   // Taşıma kapasitesi de takoz TİPİNİN özelliğidir. Kütüphane girdisinde
   // tanımlıysa kopyalanır; tanımsızsa Takoz'daki eski değer TEMİZLENİR —
   // yoksa başka bir takoz tipine geçildiğinde önceki tipin kapasitesi sessizce
   // devam eder ve "%42 kullanımdasın" gibi yanlış bir cümle üretilirdi.
-  if(m.maxLoad!==undefined && m.maxLoad!==null && _mntNum(m.maxLoad,0)>0) node.data.maxLoad=m.maxLoad;
-  else delete node.data.maxLoad;
+  if(m.maxLoad!==undefined && m.maxLoad!==null && _mntNum(m.maxLoad,0)>0) d.maxLoad=m.maxLoad;
+  else delete d.maxLoad;
   // Nonlineer yasa kütüphane girdisinin özelliği: uygularken 3 ekseni de Takoz'a
   // KOPYALA (anlık snapshot; gather okur). Eksen başına fit ÖNCELİKLİ; yoksa nokta
   // tablosu; ikisi de yoksa o eksende eski yasa temizlenir (lineere döner).
   ['X','Y','Z'].forEach(function(A){
     var fit=m['fit'+A], cur=m['curve'+A];
     if(fit && (fit.form==='poly'||fit.form==='asym')){
-      node.data['fit'+A]=JSON.parse(JSON.stringify(fit));   // fabrika mutasyona uğramaz
-      delete node.data['curve'+A];
+      d['fit'+A]=JSON.parse(JSON.stringify(fit));   // fabrika mutasyona uğramaz
+      delete d['curve'+A];
     } else if(Array.isArray(cur) && cur.length>=2){
-      node.data['curve'+A]=cur.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; });
-      delete node.data['fit'+A];
+      d['curve'+A]=cur.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; });
+      delete d['fit'+A];
     } else {
-      delete node.data['fit'+A]; delete node.data['curve'+A];
+      delete d['fit'+A]; delete d['curve'+A];
     }
   });
-  if(typeof saveState==='function') saveState();
-  if(typeof showNodeProperties==='function') showNodeProperties(node);
+  return true;
 }
 
 // (Nonlineer z-eğrisi düzenleme artık Takoz Özellikleri kütüphane panelinde —
@@ -1236,6 +1327,19 @@ function _mntExampleDetailsHTML(ex){
   return h;
 }
 
+// BAŞLANGIÇ KAPILARI — boş topolojiyi karşılayan başlangıç sayfası model
+// kurulunca çekilir; aynı iki yol (sihirbaz · STEP) burada da açık kalır.
+// Kapı sayfanınkiyle AYNI üreticiden (js/baslangic-sayfa.js → veBasKapiHTML).
+function _mntExampleKapilarHTML(){
+  if(typeof veBasKapiHTML!=='function') return '';
+  return '<div class="ve-bas-kapilar ve-mnt-ex-kapilar">'
+    + veBasKapiHTML({ ey:'sihirbaz', ikon:'wand', ad:'Sihirbazla kur', birincil:true,
+        not:'Modeli adım adım kurar ya da tuvaldekini düzenler.', onclick:'veMntWizAc()' })
+    + veBasKapiHTML({ ey:'step', ikon:'box', ad:'STEP\'ten başla',
+        not:'Montajı oku; gövde ve takoz rollerini sen ver.', onclick:'veMntWizAcStep()' })
+    + '</div>';
+}
+
 function getMntExamplePropertiesHTML(node){
   if(!node.data) node.data={};
   var list=_mntExampleList();
@@ -1245,7 +1349,7 @@ function getMntExamplePropertiesHTML(node){
   var autoSvg = _mntExampleDiagramSVG(ex.model, ex.tools);
   var diagram = ex.image ? _mntExampleImageHTML(ex.image, autoSvg) : autoSvg;
   // ── SOL (girdi/bilgi): model seçici + detay + aktar/dışa-aktar + tutarlılık raporu ──
-  var left='';
+  var left=_mntExampleKapilarHTML();
   left+='<div style="font-size:var(--fs-micro); font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek model</div>';
   left+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-bottom:11px;">';
   list.forEach(function(e){ left+='<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; });
@@ -1399,11 +1503,20 @@ function _mntLoadExampleFromJSON(ref, ex){
       if(typeof showToast==='function') showToast('Örnek topolojisi yüklenemedi.','warning');
       return;
     }
+    // GERİ ALINABİLİR TEK ADIM (2026-10-14). veLoadTabState geri-al yığınını
+    // kaydın KENDİ yığınıyla değiştiriyor — örnek dosyasında yok, yani yığın
+    // boşalıyordu ve Ctrl+Z örnekten önceki modele (başlangıç sayfasından
+    // yüklendiyse sayfaya) dönemiyordu. Önceki yığın saklanır, yüklenen model
+    // onun üstüne TEK adım olarak yazılır.
+    var _once = (typeof undoStack!=='undefined' && Array.isArray(undoStack)) ? undoStack : null;
+    if(_once && !_once.length && typeof saveState==='function'){ saveState(); _once = undoStack; }
+    if(_once) _once = _once.slice();
     if(typeof veLoadTabState==='function') veLoadTabState({ state: state });
     // Başka örnek yüklenebilsin diye "Başlangıç ve Örnekler" düğümü yoksa ekle.
     if(typeof nodes!=='undefined' && !nodes.some(function(n){ return (_mntDef(n)||{}).isMountExample; }) && typeof veMntPopulateStarter==='function'){
       veMntPopulateStarter();
     }
+    if(_once){ undoStack = _once; redoStack = []; }
     if(typeof saveState==='function') saveState();
     if(typeof updateAllConnections==='function') updateAllConnections();
     if(typeof veMntUpdateBreadcrumb==='function') veMntUpdateBreadcrumb();
@@ -1422,9 +1535,7 @@ function veMntLoadExample(nodeId){
   var node = (typeof nodes!=='undefined') ? nodes.find(function(n){ return n.id===nodeId; }) : null;
   var key = (node && node.data && node.data.exampleKey)
     || ((veMountCore.getMountExampleList && veMountCore.getMountExampleList()[0]||{}).id) || 'siper';
-  var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
-  if(ex && ex.topology){ _mntLoadExampleFromJSON(ex.topology, ex); return; }
-  _mntLoadExampleFromModel(nodeId);
+  veMntOrnekYukle(key);
 }
 
 // ── Otomatik destek bağlantıları (GÖRSEL) ───────────────────────────────────
@@ -1670,10 +1781,10 @@ function _mntChassisGlyph(g, n, side){
 
 // Programatik model kurucusu (kayıt girişinde JSON yoksa): model'den kütle/takoz
 // düğümlerini oluşturur.
-function _mntLoadExampleFromModel(nodeId){
+function _mntLoadExampleFromModel(nodeId, anahtar){
   if(typeof veMountCore==='undefined' || typeof createNode!=='function') return;
-  var node = nodes.find(function(n){ return n.id===nodeId; });
-  var key = (node && node.data && node.data.exampleKey) || 'siper';
+  var node = nodeId ? nodes.find(function(n){ return n.id===nodeId; }) : null;
+  var key = anahtar || (node && node.data && node.data.exampleKey) || 'siper';
   // Seçilen örneğin modelini kayıt defterinden çöz (bilinmezse ilk örneğe düşer).
   var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
   var EX = (ex && ex.model) || veMountCore.TTAR_EXAMPLE; if(!EX) return;
@@ -1888,8 +1999,9 @@ function veMnt2DViewRefresh(){
   _mnt2DAttachZoom(box);
 }
 // Topolojiden 2D diyagram verisi topla (SI değil — mm; birleşik CG kütle-ağırlıklı).
-function _mnt2DGather(){
-  var g=_mntGatherForSolver();
+// `liste` (ops.): düğüm listesi (sihirbazın önizlemesi); yoksa canlı `nodes`.
+function _mnt2DGather(liste){
+  var g=_mntGatherForSolver(null, liste);
   var num=function(v){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n:NaN; };
   var comps=g.components.map(function(c){ return {name:c.name, mass:num(c.mass), x:num(c.cgx), y:num(c.cgy), z:num(c.cgz)}; })
     .filter(function(c){ return Number.isFinite(c.x)&&Number.isFinite(c.y)&&Number.isFinite(c.z); });
@@ -1949,8 +2061,8 @@ function _mnt2DCGMark(cx,cy,r,color){
 }
 // Takoz işareti — içi boş kare; yandan görünüşte tarama (hatch) ile doldurulur.
 // Yalnızca şekilleri döndürür; hover bilgisi grubu saran <g>'de tutulur.
-function _mnt2DMountMark(cx,cy,hatch,color){
-  var r=8, s='', col=color||'var(--text-secondary)';
+function _mnt2DMountMark(cx,cy,hatch,color,boy){
+  var r=boy||8, s='', col=color||'var(--text-secondary)';
   s+='<rect x="'+_mnt2DR(cx-r)+'" y="'+_mnt2DR(cy-r)+'" width="'+(2*r)+'" height="'+(2*r)+'" rx="1.5" fill="var(--bg-primary)" stroke="'+col+'" stroke-width="1.5"/>';
   if(hatch){
     s+='<line x1="'+_mnt2DR(cx-r)+'" y1="'+_mnt2DR(cy+r)+'" x2="'+_mnt2DR(cx+r)+'" y2="'+_mnt2DR(cy-r)+'" stroke="var(--text-muted)" stroke-width="0.8"/>';
@@ -2145,8 +2257,16 @@ function _mnt2DFigure(o){
   //     hKey,vKey, mounts,comps,cg, cr, compAbove, refV,refLabel,
   //     axis:{hLabel,vLabel,vDir,note}, compLabelFn, mountLabelFn, cgLabelFn}
   // hKey → yatay eksen koordinatı ('x' üst/yan, 'y' önden); vKey → düşey ('y'/'z').
+  // İsteğe bağlı (veMnt2DGorunusSVG; verilmezse 2D Görünüm'ün çıktısı BİREBİR):
+  //   yalin  → dış panel, başlık ve köşe göstergesi YOK; eksen adı uçlarda
+  //   sade   → yalin + ızgara değeri ve etiket YOK (yalnız işaretler)
+  //   secili → {tur:'takoz'|'govde', i}: o işaretin çevresinde halka
+  //   secim  → işaret grubu `data-mnt-sec="takoz:i"` taşır (masada tıklama)
+  //   isaretK → takoz ve birleşik CG işaretinin ölçek katsayısı (küçük resim)
   var svg='', plotBottom=o.plotTop+o.plotH;
+  var iK=(o.isaretK>0)?o.isaretK:1;
   var hKey=o.hKey||'x';
+  var yalin=!!(o.yalin||o.sade), sade=!!o.sade;
   var FS={ deger:_mnt2DFs('micro'), etiket:_mnt2DFs('micro'), eksen:_mnt2DFs('tiny'), g:_mnt2DFs('tiny'), baslik:_mnt2DFs('md') };
   var engel=[];   // sabit yazılar + işaretler — etiket yerleştiricinin kaçacağı kutular
   function yaz(x, y, t, anchor, color, size, bold){
@@ -2154,20 +2274,25 @@ function _mnt2DFigure(o){
     return _mnt2DText(x, y, t, anchor, color, size, bold);
   }
   function hval(p){ return hKey==='y'?p.y:(hKey==='z'?p.z:p.x); }
+  function secAttr(tur, i){ return o.secim ? ' data-mnt-sec="'+tur+':'+i+'"' : ''; }
+  function seciliMi(tur, i){ return !!(o.secili && o.secili.tur===tur && o.secili.i===i); }
+  function halka(cx, cy, r){
+    return '<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="none" stroke="var(--accent-primary)" stroke-width="2.2"/>';
+  }
   // dış panel
-  svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="8" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
+  if(!yalin) svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="8" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
   // ── ÖLÇEK IZGARASI — işaretlerin ALTINDA. Değer yazıları aşağıda, sabit
   // yazılardan SONRA: köşedeki eksen göstergesi (+X/+Y) ve not sol kenardaki
   // değer sütununa düşüyor; çarpan değer yazılmaz (çizgisi kalır). ──
   var gl=o.ox+o.plotL, gr=o.ox+o.FIG_W-o.plotR, degerler=[];
-  if(o.hMin!=null && o.hMax!=null){
+  if(!sade && o.hMin!=null && o.hMax!=null){
     _mnt2DNiceTicks(o.hMin, o.hMax, 8).forEach(function(tv){
       var gx=o.px(tv); if(gx<gl-0.5 || gx>gr+0.5) return;
       svg+='<line x1="'+_mnt2DR(gx)+'" y1="'+_mnt2DR(o.plotTop)+'" x2="'+_mnt2DR(gx)+'" y2="'+_mnt2DR(plotBottom)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.4"/>';
       degerler.push([gx, plotBottom+FS.deger+4, _mnt2DTick(tv), 'middle']);
     });
   }
-  if(o.vMin!=null && o.vMax!=null){
+  if(!sade && o.vMin!=null && o.vMax!=null){
     _mnt2DNiceTicks(o.vMin, o.vMax, 5).forEach(function(tv){
       var gy=o.pyFn(tv); if(gy<o.plotTop-0.5 || gy>plotBottom+0.5) return;
       svg+='<line x1="'+_mnt2DR(gl)+'" y1="'+_mnt2DR(gy)+'" x2="'+_mnt2DR(gr)+'" y2="'+_mnt2DR(gy)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.4"/>';
@@ -2176,37 +2301,45 @@ function _mnt2DFigure(o){
   }
   // başlık
   var baslikY=o.boxY+FS.baslik+8;
-  svg+=yaz(o.ox+o.plotL-2, baslikY, o.title, 'start', 'var(--text-heading)', FS.baslik, true);
+  if(!yalin) svg+=yaz(o.ox+o.plotL-2, baslikY, o.title, 'start', 'var(--text-heading)', FS.baslik, true);
   // kesikli referans çizgisi (Y=0 / Z=0)
   var ry=o.pyFn(o.refV);
-  svg+='<line x1="'+_mnt2DR(o.ox+o.plotL-10)+'" y1="'+_mnt2DR(ry)+'" x2="'+_mnt2DR(o.ox+o.FIG_W-o.plotR)+'" y2="'+_mnt2DR(ry)+'" stroke="var(--border-color)" stroke-width="1.1" stroke-dasharray="5 4"/>';
-  if(o.refLabel) svg+=yaz(o.ox+o.FIG_W-o.plotR, ry-5, o.refLabel, 'end', 'var(--text-muted)', FS.deger);
-  // eksen köşe göstergesi (yatay + düşey eksen). Gösterge sol kenardaki
-  // DEĞER SÜTUNUNA düşüyor; çarpan değer yazılmıyordu (yan ve önden
-  // görünüşte en üst ızgaranın "500"ü). Yeri sütundan kaçar: ilk temiz
-  // yükseklik seçilir, yoksa eski yer (çarpan değer yine düşer, çizgisi kalır).
-  var up=(o.axis.vDir==='up'), axx=o.ox+22, hEt=(o.axis.hLabel||'+X');
-  function gosterge(ay){
-    var vy=(up? ay-28 : ay+28), vyY=(up? vy-4 : vy+FS.eksen+1);
-    return { ay:ay, vy:vy, vyY:vyY, kutu:[
-      _mnt2DYaziKutu(axx+30, ay+FS.eksen*0.36, hEt, 'start', FS.eksen, true),
-      _mnt2DYaziKutu(axx-3, vyY, o.axis.vLabel, 'middle', FS.eksen, true),
-      // Okların kendisi — L biçimi İKİ kutu: tek dikdörtgen L'nin boş
-      // köşesini de kaplıyor ve oraya düşen değeri ("300") siliyordu.
-      { l:axx-2, r:axx+28, t:ay-4, b:ay+4 },
-      { l:axx-4, r:axx+4, t:Math.min(ay,vy)-2, b:Math.max(ay,vy)+2 } ] };
+  svg+='<line x1="'+_mnt2DR(yalin ? gl : o.ox+o.plotL-10)+'" y1="'+_mnt2DR(ry)+'" x2="'+_mnt2DR(o.ox+o.FIG_W-o.plotR)+'" y2="'+_mnt2DR(ry)+'" stroke="var(--border-color)" stroke-width="1.1" stroke-dasharray="5 4"/>';
+  // Yalın çizimde (sihirbazın masası) yazı yok: çizginin sağ ucu takoz adlarının
+  // yeriydi ve ikisi üst üste biniyordu; çizginin değeri eksenin "0" çentiği.
+  if(o.refLabel && !yalin) svg+=yaz(o.ox+o.FIG_W-o.plotR, ry-5, o.refLabel, 'end', 'var(--text-muted)', FS.deger);
+  if(!yalin){
+    // eksen köşe göstergesi (yatay + düşey eksen). Gösterge sol kenardaki
+    // DEĞER SÜTUNUNA düşüyor; çarpan değer yazılmıyordu (yan ve önden
+    // görünüşte en üst ızgaranın "500"ü). Yeri sütundan kaçar: ilk temiz
+    // yükseklik seçilir, yoksa eski yer (çarpan değer yine düşer, çizgisi kalır).
+    var up=(o.axis.vDir==='up'), axx=o.ox+22, hEt=(o.axis.hLabel||'+X');
+    var gosterge=function(ay){
+      var vy=(up? ay-28 : ay+28), vyY=(up? vy-4 : vy+FS.eksen+1);
+      return { ay:ay, vy:vy, vyY:vyY, kutu:[
+        _mnt2DYaziKutu(axx+30, ay+FS.eksen*0.36, hEt, 'start', FS.eksen, true),
+        _mnt2DYaziKutu(axx-3, vyY, o.axis.vLabel, 'middle', FS.eksen, true),
+        // Okların kendisi — L biçimi İKİ kutu: tek dikdörtgen L'nin boş
+        // köşesini de kaplıyor ve oraya düşen değeri ("300") siliyordu.
+        { l:axx-2, r:axx+28, t:ay-4, b:ay+4 },
+        { l:axx-4, r:axx+4, t:Math.min(ay,vy)-2, b:Math.max(ay,vy)+2 } ] };
+    };
+    var degerKutu=degerler.map(function(d){ return _mnt2DYaziKutu(d[0], d[1], d[2], d[3], FS.deger, false); });
+    var ilkY=(up? o.plotTop+44 : o.plotTop+14), G=gosterge(ilkY);
+    for(var dy=0; dy<=80; dy+=2){
+      var g=gosterge(ilkY+dy);
+      if(Math.max(g.kutu[0].b, g.kutu[1].b, g.ay+4) > plotBottom-16) break;   // alt notun üstünde kalır
+      if(!g.kutu.some(function(k){ return degerKutu.some(function(d){ return _mnt2DKesisir(k, d, 1); }); })){ G=g; break; }
+    }
+    svg+=_mnt2DArrow(axx,G.ay,axx+26,G.ay,'var(--text-secondary)')+yaz(axx+30,G.ay+FS.eksen*0.36,hEt,'start','var(--text-secondary)',FS.eksen,true);
+    svg+=_mnt2DArrow(axx,G.ay,axx,G.vy,'var(--text-secondary)')+yaz(axx-3,G.vyY,o.axis.vLabel,'middle','var(--text-secondary)',FS.eksen,true);
+    engel.push(G.kutu[2], G.kutu[3]);
+    if(o.axis.note) svg+=yaz(o.ox+o.plotL-30, plotBottom-2, o.axis.note, 'start', 'var(--text-muted)', FS.deger);
+  } else if(!sade){
+    // Yalın kipte eksen ADI uçlarda: yatayın sağ ucunda, düşeyin tepesinde.
+    svg+=yaz(gr, plotBottom+25, (o.axis.hLabel||'X')+' [mm]', 'end', 'var(--text-secondary)', FS.deger, true);
+    svg+=yaz(gl-5, o.plotTop-8, (o.axis.vLabel||'Y')+' [mm]', 'end', 'var(--text-secondary)', FS.deger, true);
   }
-  var degerKutu=degerler.map(function(d){ return _mnt2DYaziKutu(d[0], d[1], d[2], d[3], FS.deger, false); });
-  var ilkY=(up? o.plotTop+44 : o.plotTop+14), G=gosterge(ilkY);
-  for(var dy=0; dy<=80; dy+=2){
-    var g=gosterge(ilkY+dy);
-    if(Math.max(g.kutu[0].b, g.kutu[1].b, g.ay+4) > plotBottom-16) break;   // alt notun üstünde kalır
-    if(!g.kutu.some(function(k){ return degerKutu.some(function(d){ return _mnt2DKesisir(k, d, 1); }); })){ G=g; break; }
-  }
-  svg+=_mnt2DArrow(axx,G.ay,axx+26,G.ay,'var(--text-secondary)')+yaz(axx+30,G.ay+FS.eksen*0.36,hEt,'start','var(--text-secondary)',FS.eksen,true);
-  svg+=_mnt2DArrow(axx,G.ay,axx,G.vy,'var(--text-secondary)')+yaz(axx-3,G.vyY,o.axis.vLabel,'middle','var(--text-secondary)',FS.eksen,true);
-  engel.push(G.kutu[2], G.kutu[3]);
-  if(o.axis.note) svg+=yaz(o.ox+o.plotL-30, plotBottom-2, o.axis.note, 'start', 'var(--text-muted)', FS.deger);
   var sabit=engel.slice();
   degerler.forEach(function(d){
     var k=_mnt2DYaziKutu(d[0], d[1], d[2], d[3], FS.deger, false);
@@ -2220,7 +2353,7 @@ function _mnt2DFigure(o){
   // binen işaretler (aynı piksele düşen sol/sağ çiftleri: yandan X–Z ve önden Y–Z
   // görünüşlerinde) görünürlük için hafifçe yatay yelpazelenir. Her takoz tek tek
   // etiketlenir; çakışan etiketler yerleştiricide çözülür.
-  var mpts=o.mounts.map(function(m){ var mv=(o.vKey==='y'?m.y:m.z); return {m:m, v:mv, cx:o.px(hval(m)), cy:o.pyFn(mv)}; });
+  var mpts=o.mounts.map(function(m, mi){ var mv=(o.vKey==='y'?m.y:m.z); return {m:m, mi:mi, v:mv, cx:o.px(hval(m)), cy:o.pyFn(mv)}; });
   var COIN=12;   // px — bu yarıçapta üst üste binenler yelpazelenir (konum aldatmacası değil)
   mpts.forEach(function(a,i){ if(a._grp) return; var grp=[a]; a._grp=1;
     mpts.forEach(function(b,j){ if(j<=i || b._grp) return;
@@ -2229,32 +2362,93 @@ function _mnt2DFigure(o){
     grp.forEach(function(pt,k){
       var mx=pt.cx+(n>1?(k-(n-1)/2)*19:0), my=pt.cy;
       var info=['Takoz — '+(pt.m.name||'Takoz'), 'Konum  ('+veSayi(_mnt2DR(pt.m.x))+'; '+veSayi(_mnt2DR(pt.m.y))+'; '+veSayi(_mnt2DR(pt.m.z))+') mm'];
-      svg+='<g'+_mnt2DInfoAttr(info)+'>'+_mnt2DMountMark(mx, my, o.vKey==='z', _MNT2D_C_MOUNT)+'</g>';
-      engel.push({ l:mx-9, r:mx+9, t:my-9, b:my+9 });
-      items.push({cx:mx, cy:my, mr:9, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:FS.etiket, bold:false});
+      var sec=seciliMi('takoz', pt.mi), mR=(sec ? 13 : 9)*iK;
+      if(sec) svg+=halka(mx, my, 13*iK);
+      svg+='<g'+_mnt2DInfoAttr(info)+secAttr('takoz', pt.mi)+'>'+_mnt2DMountMark(mx, my, o.vKey==='z', _MNT2D_C_MOUNT, iK===1?undefined:8*iK)+'</g>';
+      engel.push({ l:mx-mR, r:mx+mR, t:my-mR, b:my+mR });
+      if(!sade) items.push({cx:mx, cy:my, mr:mR, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:FS.etiket, bold:false});
     });
   });
   // bileşen CG (içi boş daire, kütleye göre boyut)
-  o.comps.forEach(function(c){ var cv=(o.vKey==='y'?c.y:c.z), cx=o.px(hval(c)), cy=o.pyFn(cv), r=o.cr(c.mass);
+  o.comps.forEach(function(c, ci){ var cv=(o.vKey==='y'?c.y:c.z), cx=o.px(hval(c)), cy=o.pyFn(cv), r=o.cr(c.mass);
     var info=[c.name||'Bileşen', 'Ağırlık merkezi  ('+veSayi(_mnt2DR(c.x))+'; '+veSayi(_mnt2DR(c.y))+'; '+veSayi(_mnt2DR(c.z))+') mm'];
     if(c.mass>0) info.push('Kütle  '+veSayi(c.mass, 1)+' kg');
-    svg+='<g'+_mnt2DInfoAttr(info)+'>';
+    var sec=seciliMi('govde', ci), rR=sec ? r+5 : r;
+    if(sec) svg+=halka(cx, cy, r+5);
+    svg+='<g'+_mnt2DInfoAttr(info)+secAttr('govde', ci)+'>';
     svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="var(--bg-primary)" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.5"/></g>';
-    engel.push({ l:cx-r, r:cx+r, t:cy-r, b:cy+r });
-    items.push({cx:cx, cy:cy, mr:r, above:o.compAbove, text:o.compLabelFn(c), color:'var(--text-secondary)', size:FS.etiket, bold:false});
+    engel.push({ l:cx-rR, r:cx+rR, t:cy-rR, b:cy+rR });
+    if(!sade) items.push({cx:cx, cy:cy, mr:rR, above:o.compAbove, text:o.compLabelFn(c), color:'var(--text-secondary)', size:FS.etiket, bold:false});
   });
   // birleşik CG (jeodezik sembol)
   if(o.cg){ var gx=o.px(hval(o.cg)), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z);
     var cgInfo=['Birleşik ağırlık merkezi', 'Konum  ('+veSayi(_mnt2DR(o.cg.x))+'; '+veSayi(_mnt2DR(o.cg.y))+'; '+veSayi(_mnt2DR(o.cg.z))+') mm'];
     if(o.cg.m>0) cgInfo.push('Toplam kütle  '+veSayi(o.cg.m, 1)+' kg');
-    svg+='<g'+_mnt2DInfoAttr(cgInfo)+'>'+_mnt2DCGMark(gx,gy,10,_MNT2D_C_CG);
-    svg+='<circle cx="'+_mnt2DR(gx)+'" cy="'+_mnt2DR(gy)+'" r="12" fill="transparent"/></g>';
-    engel.push({ l:gx-11, r:gx+11, t:gy-11, b:gy+11 });
-    items.push({cx:gx, cy:gy, mr:11, above:o.compAbove, text:o.cgLabelFn(o.cg), color:'var(--text-primary)', size:FS.g, bold:true});
+    svg+='<g'+_mnt2DInfoAttr(cgInfo)+'>'+_mnt2DCGMark(gx,gy,10*iK,_MNT2D_C_CG);
+    svg+='<circle cx="'+_mnt2DR(gx)+'" cy="'+_mnt2DR(gy)+'" r="'+_mnt2DR(12*iK)+'" fill="transparent"/></g>';
+    engel.push({ l:gx-11*iK, r:gx+11*iK, t:gy-11*iK, b:gy+11*iK });
+    if(!sade) items.push({cx:gx, cy:gy, mr:11*iK, above:o.compAbove, text:o.cgLabelFn(o.cg), color:'var(--text-primary)', size:FS.g, bold:true});
   }
   // ── ETİKETLER ── (sabit yazılara ve birbirine çarpmadan; kutunun içinde)
-  svg+=_mnt2DLabels(items, { l:leftX, r:rightX, t:baslikY+6, b:o.boxY+o.boxH-3 }, engel);
+  if(!sade) svg+=_mnt2DLabels(items, { l:leftX, r:rightX, t:(yalin ? o.boxY+2 : baslikY+6), b:o.boxY+o.boxH-3 }, engel);
   return svg;
+}
+
+// ── TEK GÖRÜNÜŞ, VERİLEN ÖLÇÜDE, GERÇEK ORANDA ─────────────────────────────
+// 2D Görünüm'ün işaret dili (_mnt2DFigure) iki yüzeye daha: Takoz başlangıç
+// sayfasının küçük resmi (`sade` — yalnız işaretler) ve sihirbazın çizim masası
+// (`yalin` — eksen değerli, etiketli). Panelin üç figürü her ekseni AYRI
+// ölçekler (figür yüksekliğini doldurur); burada iki eksen TEK ölçekte —
+// küçük resim "bu güç grubu neye benziyor", masa "takoz nerede" sorusunu
+// cevaplar ve çarpıtılmış bir oranla ikisi de yanlış cevap verirdi.
+//   veri: _mnt2DGather biçimi {comps, mounts, cg}
+//   opt : {gorunus:'ust'|'yan'|'on', sade, pay:{sol,sag,ust,alt}, secili, secim}
+// Döner: '<svg …>' ya da gösterilecek işaret yoksa ''.
+var VE_MNT2D_GORUNUS = {
+  ust: { h:'x', v:'y', hLabel:'X', vLabel:'Y', refLabel:'Y = 0', ad:'Üstten' },
+  yan: { h:'x', v:'z', hLabel:'X', vLabel:'Z', refLabel:'Z = 0', ad:'Yandan' },
+  on:  { h:'y', v:'z', hLabel:'Y', vLabel:'Z', refLabel:'Z = 0', ad:'Önden' }
+};
+function veMnt2DGorunusSVG(veri, W, H, opt){
+  opt=opt||{}; W=W||330; H=H||150;
+  var G=VE_MNT2D_GORUNUS[opt.gorunus]||VE_MNT2D_GORUNUS.ust;
+  var sade=!!opt.sade;
+  var pay=opt.pay || (sade ? {sol:20, sag:20, ust:20, alt:20} : {sol:56, sag:30, ust:34, alt:36});
+  var comps=(veri&&veri.comps)||[], mounts=(veri&&veri.mounts)||[], cg=(veri&&veri.cg)||null;
+  if(!comps.length && !mounts.length) return '';
+  var hs=[], vs=[0];                          // referans çizgisi (v = 0) görünür kalsın
+  function ekle(p){ hs.push(p[G.h]); vs.push(p[G.v]); }
+  mounts.forEach(ekle); comps.forEach(ekle); if(cg) ekle(cg);
+  var hMin=Math.min.apply(null,hs), hMax=Math.max.apply(null,hs);
+  var vMin=Math.min.apply(null,vs), vMax=Math.max.apply(null,vs);
+  var hR=Math.max(hMax-hMin,1), vR=Math.max(vMax-vMin,1);
+  var uw=Math.max(W-pay.sol-pay.sag,10), uh=Math.max(H-pay.ust-pay.alt,10);
+  var s=Math.min(uw/hR, uh/vR);
+  var ox=pay.sol+(uw-hR*s)/2, oy=pay.ust+(uh-vR*s)/2;
+  function px(h){ return ox+(h-hMin)*s; }
+  function py(v){ return oy+(vMax-v)*s; }
+  var ms=comps.map(function(c){return c.mass;}).filter(function(m){return m>0;});
+  var mMin=ms.length?Math.min.apply(null,ms):0, mMax=ms.length?Math.max.apply(null,ms):1;
+  // KÜÇÜK RESİMDE İŞARET BÜYÜK: karo çizimi ~0,7 kat küçültür ve 8 birimlik
+  // takoz karesi 5 px'e iniyordu — karenin sorusu "nerede ne var".
+  var iK = (opt.isaretK>0) ? opt.isaretK : (sade ? 1.45 : 1);
+  function cr(m){ if(!(m>0)) return 7*iK; var t=(mMax-mMin>1e-9)?(m-mMin)/(mMax-mMin):0.5; return (7+7*Math.sqrt(t))*iK; }
+  function kisa(n){ n=String(n||''); return n.length>18?n.slice(0,17)+'…':n; }
+  var inner=_mnt2DFigure({ isaretK:iK, ox:0, boxX:0, boxY:0, boxW:W, boxH:H, FIG_W:W,
+    plotTop:pay.ust, plotH:uh, plotL:pay.sol, plotR:pay.sag, px:px, pyFn:py, hKey:G.h, vKey:G.v,
+    // Izgara görünen ALANI kaplar, verinin aralığını değil (tek ölçekte bir
+    // eksen veriden geniş kalır).
+    hMin:hMin-(ox-pay.sol)/s, hMax:hMin-(ox-pay.sol)/s+uw/s,
+    vMin:vMax+(oy-pay.ust)/s-uh/s, vMax:vMax+(oy-pay.ust)/s,
+    mounts:mounts, comps:comps, cg:cg, cr:cr, compAbove:true, refV:0, refLabel:G.refLabel,
+    axis:{hLabel:G.hLabel, vLabel:G.vLabel}, yalin:true, sade:sade,
+    secili:opt.secili||null, secim:!!opt.secim,
+    compLabelFn:function(c){ return kisa(c.name); },
+    mountLabelFn:function(m){ return kisa(m.name||'Takoz'); },
+    cgLabelFn:function(){ return 'G'; } });
+  return '<svg class="ve-mnt2d-gorunus" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet"'
+    + ' role="img" aria-label="'+G.ad+' görünüş"'
+    + ' style="font-family:'+_MNT2D_YUZ+';">'+inner+'</svg>';
 }
 // en: çizimin konacağı kabın genişliği (px). Verilirse görünüm 1:1 kurulur —
 // viewBox genişliği kabınki, yani yazı boyu ekrandaki boydur. Eskiden 980
@@ -2984,20 +3178,23 @@ function _mntLibCurveEditor(node, e){
 // diyagramının ÇALIŞMA BANDI üst sınırı bunlardan gelir (js/mount-signals.js
 // _engineSpec). Motorun en yüksek devri bilinmezse band rölantinin katından
 // tahmin edilir ve kesişimlerin bant içinde mi dışında mı olduğu yanlış söylenir.
-function _mntGatherTorque(){
+// `liste` (ops.): düğüm listesi — verilmezse canlı `nodes`. Sihirbaz kendi
+// modelini KURMAZ: durumunu düğüm listesine çevirip (veMntWizNodes) AYNI
+// toplayıcıdan geçirir; önizleme ile kurulan model aynı yoldan okunur.
+function _mntGatherTorque(liste){
   var keys=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate',
             'idleRpm','cylinders','TeRpm','PmaxRpm'];
   var t={};
-  (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
+  (liste || (typeof nodes!=='undefined'?nodes:[])).forEach(function(n){
     if(!(_mntDef(n)||{}).isMountBody) return;
     var d=n.data||{};
     keys.forEach(function(k){ if(t[k]===undefined && d[k]!==undefined && d[k]!==null && d[k]!=='') t[k]=d[k]; });
   });
   return t;
 }
-function _mntGatherForSolver(solver){
+function _mntGatherForSolver(solver, liste){
   var masses=[], mounts=[];
-  (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
+  (liste || (typeof nodes!=='undefined'?nodes:[])).forEach(function(n){
     var def=_mntDef(n)||{};
     if(def.isMountBody){
       var d=n.data||{};
@@ -3012,7 +3209,7 @@ function _mntGatherForSolver(solver){
                     curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
     }
   });
-  return { components:masses, mounts:mounts, torque:_mntGatherTorque() };
+  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste) };
 }
 // Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
 // İleri = 1. vites (en yüksek redüksiyon), geri = Geri vites. T_shaft çekirdeğin
@@ -3227,8 +3424,16 @@ function veMntSetZeta(nodeId, val){
 // {error,gather} (validasyon) | prep nesnesi (solveOne/solveModes fonksiyonlarıyla).
 function _mntPrepareSolve(solverId){
   var solver=nodes.find(function(n){return n.id===solverId;}); if(!solver) return null;
+  return _mntPrepareFrom(_mntGatherForSolver(solver), solver);
+}
+// Toplanmış modelden çözüme hazırlık. `solver` Çözücü düğümüdür; sihirbazın
+// canlı önizlemesi çözücü KURMADAN çözer ve yerine `{data:{}}` verir — çözüm
+// modu ve ζ o zaman Çözücü'nün varsayılanları (auto · çekirdeğin ζ'sı). Ayrı
+// bir "önizleme çözücüsü" yazılmadı: sihirbazın gösterdiği çökme, kurulan
+// modelde Çözücü'nün bulacağı çökmenin TA KENDİSİ olmalı.
+function _mntPrepareFrom(gather, solver){
+  solver=solver||{data:{}};
   var C=veMountCore;
-  var gather=_mntGatherForSolver(solver);
   var si=_mntToSI(gather, 9.81);
   var problems=C.validateModel(si.components, si.mounts);
   if(problems.length) return { error:problems, gather:gather };
@@ -3663,6 +3868,16 @@ if(typeof module!=='undefined' && module.exports){
     _mntToSI: _mntToSI,
     _mntFitForce: _mntFitForce,
     _mntDeflColor: _mntDeflColor,
-    _mntForceColor: _mntForceColor
+    _mntForceColor: _mntForceColor,
+    // Başlangıç sayfası ve sihirbaz (2026-10-14)
+    VE_MNT2D_GORUNUS: VE_MNT2D_GORUNUS,
+    veMnt2DGorunusSVG: veMnt2DGorunusSVG,
+    _mntPrepareFrom: _mntPrepareFrom,
+    _mntLibUygula: _mntLibUygula,
+    VE_MNT_ARAC_TIPLERI: VE_MNT_ARAC_TIPLERI,
+    _mntAracGaranti: _mntAracGaranti,
+    veMntKanvasBos: veMntKanvasBos,
+    veMntOrnekYukle: veMntOrnekYukle,
+    _mntExampleKapilarHTML: _mntExampleKapilarHTML
   };
 }

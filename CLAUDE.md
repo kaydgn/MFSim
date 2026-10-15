@@ -41,6 +41,20 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/cp-fead-baslangic.js` — FEAD **başlangıç sayfası**: boş topolojinin
   karşılaması (üç kapı + Gates raporları), sihirbaz kendiliğinden AÇILMAZ.
   Görünürlük modelden türer (kasnak yok ve kart yok); kurallar FEAD skill'inde (kural 5).
+- `js/baslangic-sayfa.js` — **ortak başlangıç sayfası kiti** (`.ve-bas*`): FEAD ile
+  Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
+  sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
+  söyler. Kapı: `mount-baslangic.test.js` → *ORTAK KİT*.
+- `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
+  başla · Boş kanvas + örnek karoları). Görünürlük modelden: yalnız "Başlangıç ve
+  Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
+  (`moduleEnter`). Kapı: `mount-baslangic.test.js` + `tests/e2e/mount-baslangic.spec.js`.
+- `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz
+  **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici: FEAD sihirbazının
+  kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir). **İlk hâl** —
+  ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). STEP'te kütle
+  yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Kapı:
+  `mount-step.test.js` + `mount-wizard.test.js`.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

@@ -79,6 +79,11 @@ olurdu.
    açılıyordu; ölçüldü: ekranın %77'si, ilk karede "7 eksik/çelişkili girdi".
    Sayfa (`js/cp-fead-baslangic.js`) tuvali örter: üç kapı (Sihirbazla kur ·
    STEP'ten başla · Boş çizim masası) + Gates raporlarının kayış yolları.
+   • **Görünüm ve DOM ORTAK KİTTEN** (`js/baslangic-sayfa.js` · `.ve-bas*`,
+     2026-10-14): Takoz aynı sayfayı kurar; FEAD'e özgü sınıf ailesi YOK
+     (`.ve-fead-bas*` kalktı, kimlik `#ve-fead-baslangic` duruyor). Burada
+     kalan yalnız FEAD'in kendisi: görünürlük, kapıların eylemi, rapor
+     karoları. Kapı: `mount-baslangic.test.js` → *ORTAK KİT*.
    • **Görünürlük MODELDEN türer, bayrak yok**: kasnak yok VE Kayış Yolu kartı
      yok → sayfa (`veFeadBaslangicGerekli`). Kapı modeli kurar, sayfa çekilir;
      Ctrl+Z geri alırsa geri gelir. Açılış yüzeyi bu yüzden kart KURMAZ,

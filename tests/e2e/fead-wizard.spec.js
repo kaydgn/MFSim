@@ -92,11 +92,11 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
     const id = await page.evaluate(() =>
       window.nodes.find((n) => n.type === 'fead-wizard').id);
     expect(await page.evaluate((i) => !!document.getElementById(i), id)).toBe(false);
-    await page.click('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="sihirbaz"]');
+    await page.click('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]');
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();
     await page.evaluate(() => { if (typeof veFeadWizClose === 'function') veFeadWizClose(true); });
     await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
-    await page.click('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]');
+    await page.click('#ve-fead-baslangic .ve-bas-kapi[data-ey="bos"]');
     await expect(page.locator('#ve-fead-araclar')).toBeVisible();
     await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="sihirbaz"]');
     await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();

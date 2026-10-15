@@ -296,67 +296,16 @@ function _fstKayisYanlari(yuzler, n){
 //     _yuz[]     — parça başına analitik yüzler (dünya koordinatı, mm) }
 // Kasnak ARANMAZ: kullanıcı rol verene kadar hiçbir parça "kasnak" sayılmaz.
 function veFeadStpOku(metin){
+  // OKUMA ORTAK VE ANLAMSIZ (js/step-p21.js → veStepP21Agac, 2026-10-14):
+  // ağaç + yüzler + üçgenleyicinin girdisi. Takoz aynı okumayı kullanır;
+  // gövde burada iki kopya olmasın diye okuyucuya taşındı — çıktı birebir.
   // Tarayıcıda okuyucu global (index.html'de bu dosyadan ÖNCE); Node'da modül.
-  var P = null;
-  if(typeof veStepP21Oku === 'function')
-    P = { veStepP21Oku: veStepP21Oku, veStepP21Montaj: veStepP21Montaj, veStepP21Yuz: veStepP21Yuz, veStepP21Baslik: veStepP21Baslik };
-  else if(typeof require === 'function'){ try { P = require('./step-p21.js'); } catch(e0){ P = null; } }
-  // _model + _geo: 3B görüntüleyicinin üçgenleyicisi (js/step-ucgen.js) için —
-  // parça başına yüz kimlikleri, dünya dönüşümü ve birim. Ölçüm onlardan alınmaz.
-  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: {}, agac: [], parcalar: [], _yuz: [], _model: null, _geo: [] };
-  if(!P){ out.hatalar.push('STEP okuyucusu (js/step-p21.js) yüklenmemiş.'); return out; }
-  var t0 = Date.now(), model, mt;
-  try { model = P.veStepP21Oku(metin); } catch(e){ out.hatalar.push('Dosya okunamadı: ' + e.message); return out; }
-  if(model.hatalar.length){ out.hatalar = model.hatalar.slice(); return out; }
-  out.baslik = P.veStepP21Baslik(model);
-  out._model = model;
-  out.sureMs.oku = Date.now() - t0;
-  var t1 = Date.now();
-  try { mt = P.veStepP21Montaj(model); } catch(e2){ out.hatalar.push('Montaj ağacı okunamadı: ' + e2.message); return out; }
-  out.uyarilar = out.uyarilar.concat(mt.uyarilar);
-  out.sureMs.montaj = Date.now() - t1;
-
-  // ── AĞAÇ: örnek yolunun her öneki bir düğüm (kök · alt montaj · parça) ──
-  var anahtar = {};
-  function dugum(yol, urun, ebeveyn){
-    var k = yol.join('\u0001');
-    if(anahtar[k] !== undefined) return anahtar[k];
-    var i = out.agac.length;
-    out.agac.push({ i: i, ad: _fstAd(urun.aciklama || urun.ad || urun.id || yol[yol.length - 1] || ''),
-      id: urun.id || '', ornek: yol.length ? yol[yol.length - 1] : '', derinlik: yol.length,
-      ebeveyn: ebeveyn, cocuklar: [], parcalar: [] });
-    anahtar[k] = i;
-    if(ebeveyn >= 0) out.agac[ebeveyn].cocuklar.push(i);
-    return i;
-  }
-  var t2 = Date.now(), toplamYuz = 0;
-  mt.parcalar.forEach(function(p){
-    var e = -1;
-    for(var k = 0; k < p.yol.length; k++)
-      e = dugum(p.yol.slice(0, k), p.atalar[k] || { id: '', ad: '', aciklama: '' }, e);
-    var d = dugum(p.yol, p.urun, e);
-    var ad = out.agac[d].ad;
-    var yuzler = [];
-    if(p.yuzler.length && !(p.birim.mm > 0))
-      out.uyarilar.push('"' + ad + '" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı.');
-    else {
-      try { p.yuzler.forEach(function(f){ yuzler.push(P.veStepP21Yuz(model, f, p.M, p.birim)); }); }
-      catch(e3){ out.uyarilar.push('"' + ad + '" parçasının yüzleri okunamadı: ' + e3.message); }
-    }
-    toplamYuz += yuzler.length;
-    var pi = out.parcalar.length;
-    out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: yuzler.length });
-    out._yuz.push(yuzler);
-    out._geo.push({ yuzler: yuzler.length ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [] });
-    for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
-  });
-  out.sureMs.yuz = Date.now() - t2;
-  if(!toplamYuz){
-    out.hatalar.push('Dosyada okunabilir yüz yok. Dosya yalnız üçgen (tessellated) geometri taşıyor olabilir; CATIA’dan katı geometri olarak dışa aktarın.');
-    return out;
-  }
-  out.ok = true;
-  return out;
+  var oku = null;
+  if(typeof veStepP21Agac === 'function') oku = veStepP21Agac;
+  else if(typeof require === 'function'){ try { oku = require('./step-p21.js').veStepP21Agac; } catch(e0){ oku = null; } }
+  if(!oku) return { ok: false, hatalar: ['STEP okuyucusu (js/step-p21.js) yüklenmemiş.'], uyarilar: [], baslik: null,
+                    sureMs: {}, agac: [], parcalar: [], _yuz: [], _model: null, _geo: [] };
+  return oku(metin);
 }
 
 // ── 5b · ÇÖZÜM: yalnız ROL VERİLEN düğümler ───────────────────────────────

@@ -45,7 +45,7 @@ async function feadAc(page) {
   await expect(page.locator('#ve-fead-baslangic')).toBeVisible();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeHidden();
   await expect(page.locator('#ve-fead-araclar')).toBeHidden();
-  await page.locator('#ve-fead-baslangic .ve-fead-bas-kapi[data-ey="bos"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="bos"]').click();
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
   await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
 }
