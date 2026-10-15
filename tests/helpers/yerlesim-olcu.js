@@ -19,6 +19,15 @@
  *   · kucuk   ekranda 9,5 px'ten küçük yazı (ölçek tabanı 10 px).
  *   · binen   aynı çizimdeki (SVG) iki yazı üst üste — kutuları her iki eksende
  *             2 px'ten fazla kesişiyor.
+ *   · yapisik topolojide iki düğüm ADI aynı satırda birbirine değiyor (arada
+ *             4 px'ten az): "Koordinat Düzlemi" ile "3D Görüntüleyici" tek
+ *             sözcük gibi okunuyordu ("Düzlemi3D").
+ *   · cizgi   aynı çizimde bir çizgi (kontur: line · path · polyline · polygon
+ *             · circle · ellipse · rect) yazının GÖRÜNEN kutusunun içinden
+ *             geçiyor. Sayılmaz: yazıdan ÖNCE çizilen çizgi yazı zemin
+ *             renginde hâle taşıyorsa (hâle onu örter), çizgiden SONRA
+ *             çizilen dolgulu bir şeklin örttüğü nokta (göbek diski), saydam
+ *             kontur (görünmez isabet yolu) ve kırpılmış yazı.
  *   · yapi    tipografik alt/üst simge (sınıfsız `<sub>`/`<sup>`) esnek ya da
  *             ızgara kabın DOĞRUDAN çocuğu: esnek öğede `vertical-align`
  *             işlemez, "L<sub>b</sub>" "L b" diye yan yana düşer.
@@ -85,6 +94,18 @@ function yYapiskanSerit(dip, alt, dolgu, bottom) {
   return Math.abs(serit - (dolgu + bottom)) <= 1 && serit > 1 ? serit : 0;
 }
 
+// Bir çizginin yazıyı kesmesi SAYILIR mı? Kutunun içinde görünen (örtülmemiş)
+// nokta yoksa hayır; çizgi yazıdan ÖNCE çizilmiş ve yazı hâle taşıyorsa hâle
+// onu örter — hayır; yazıdan SONRA çizilen çizgiyi hâle örtmez.
+function yCizgiSayilir(hale, cizgiSonra, gorunurNokta) {
+  if (!(gorunurNokta > 0)) return false;
+  return cizgiSonra || !hale;
+}
+// Noktalardan kutunun (kenarlar hariç) İÇİNDE kalanlar.
+function yKutudaNoktalar(noktalar, k) {
+  return noktalar.filter((p) => p.x > k.left && p.x < k.right && p.y > k.top && p.y < k.bottom);
+}
+
 // ── Sayfa tarafı: window.__yerlesim(kökSeçici) ─────────────────────────────
 function yKur() {
   const gizli = (el) => !!el.closest('title, canvas, script, style, noscript, template, option, [aria-hidden="true"]');
@@ -119,7 +140,7 @@ function yKur() {
   const KAPANIS = /^[)\]}.,;:!?…»”’]+$/;
   window.__yerlesim = (kokSec) => {
     const kok = typeof kokSec === 'string' ? document.querySelector(kokSec) : kokSec;
-    const out = { kesik: [], kirik: [], yatay: [], kucuk: [], kucukSvg: [], binen: [], yapi: [], yetim: [], yapiskan: [], olculen: 0 };
+    const out = { kesik: [], kirik: [], yatay: [], kucuk: [], kucukSvg: [], binen: [], cizgi: [], yapisik: [], yapi: [], yetim: [], yapiskan: [], olculen: 0 };
     if (!kok) { out.kesik.push({ metin: 'kök yok: ' + kokSec }); return out; }
     const gor = new Set();
     const ekle = (liste, k, v) => { if (gor.has(k)) return; gor.add(k); liste.push(v); };
@@ -236,6 +257,79 @@ function yKur() {
         }
       }
     });
+    // DÜĞÜM ADLARI BİRBİRİNE DEĞMEZ (topoloji): aynı satırdaki iki ad arasında
+    // en az 4 px. Ekranın dışındaki ad sayılmaz.
+    const adlar = [...kok.querySelectorAll('.ve-node-label')].filter((e) => !gizli(e) && e.getClientRects().length && e.textContent.trim())
+      .map((e) => ({ t: e.textContent.replace(/\s+/g, ' ').trim(), r: e.getBoundingClientRect() }))
+      .filter((a) => a.r.width > 0.5 && a.r.right > 0 && a.r.left < innerWidth && a.r.bottom > 0 && a.r.top < innerHeight);
+    for (let i = 0; i < adlar.length; i++) {
+      for (let j = i + 1; j < adlar.length; j++) {
+        const k = yKesisim(adlar[i].r, adlar[j].r);
+        if (k.y > 4 && k.x > -4) ekle(out.yapisik, 'a|' + adlar[i].t + '|' + adlar[j].t, { a: adlar[i].t.slice(0, 30), b: adlar[j].t.slice(0, 30), ara: Math.round(-k.x) });
+      }
+    }
+    // ÇİZGİ YAZIYI KESİYOR (aynı çizimde). Çizgi konturdan örneklenir
+    // (getPointAtLength); örtülme `isPointInFill` ile, çizgiden SONRA çizilen
+    // dolgulu şekillere sorulur.
+    const saydam = (c) => !c || c === 'none' || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c);
+    kok.querySelectorAll('svg').forEach((svg) => {
+      if (gizli(svg) || !svg.getBoundingClientRect().width) return;
+      const hepsi = [...svg.querySelectorAll('text, line, path, polyline, polygon, circle, ellipse, rect')]
+        .filter((e) => !e.closest('defs, clipPath, mask, title, marker, pattern, symbol'));
+      const sira = new Map(hepsi.map((e, i) => [e, i]));
+      const cizgiler = [], dolgular = [];
+      hepsi.forEach((e) => {
+        if (e.tagName === 'text') return;
+        const cs = getComputedStyle(e);
+        if (cs.display === 'none' || cs.visibility !== 'visible' || +cs.opacity === 0) return;
+        if (!saydam(cs.fill) && +cs.fillOpacity > 0.5 && e.isPointInFill) dolgular.push(e);
+        if (saydam(cs.stroke) || +cs.strokeOpacity === 0 || !(parseFloat(cs.strokeWidth) > 0)) return;
+        cizgiler.push({ el: e, r: e.getBoundingClientRect(), n: null, kontur: cs.stroke + ' ' + cs.strokeWidth });
+      });
+      if (!cizgiler.length) return;
+      const ornekle = (c) => {
+        if (c.n) return c.n;
+        const e = c.el, ctm = e.getScreenCTM(), L = e.getTotalLength ? e.getTotalLength() : 0;
+        c.n = [];
+        if (!ctm || !(L > 0)) return c.n;
+        const n = Math.min(400, Math.ceil(L / 1.5));
+        for (let k = 0; k <= n; k++) { const q = e.getPointAtLength(L * k / n); c.n.push(new DOMPoint(q.x, q.y).matrixTransform(ctm)); }
+        return c.n;
+      };
+      const sr = svg.getBoundingClientRect();
+      [...svg.querySelectorAll('text')].forEach((t) => {
+        if (gizli(t) || !/[0-9\p{L}]/u.test(t.textContent)) return;
+        const cs = getComputedStyle(t);
+        if (cs.visibility !== 'visible' || cs.display === 'none' || +cs.opacity === 0) return;
+        const r = t.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) return;
+        // GÖRÜNEN kutu: çizimin ve kırpan ataların kesişimi; yarısından azı
+        // görünüyorsa yazı kırpılmıştır (yakınlaştırılmış masa), ölçülmez.
+        let g = { left: Math.max(r.left, sr.left), top: Math.max(r.top, sr.top), right: Math.min(r.right, sr.right), bottom: Math.min(r.bottom, sr.bottom) };
+        kirpanlar(svg, kok).forEach((k) => { g = { left: Math.max(g.left, k.r.left), top: Math.max(g.top, k.r.top), right: Math.min(g.right, k.r.right), bottom: Math.min(g.bottom, k.r.bottom) }; });
+        if (g.right <= g.left || g.bottom <= g.top || (g.right - g.left) * (g.bottom - g.top) < 0.5 * r.width * r.height) return;
+        // içerden 1 px yatay, 2 px dikey pay: harfin kutusu satır aralığını da kapsıyor
+        const kutu = { left: Math.max(r.left + 1, g.left), right: Math.min(r.right - 1, g.right), top: Math.max(r.top + 2, g.top), bottom: Math.min(r.bottom - 2, g.bottom) };
+        const hale = /stroke/.test(cs.paintOrder || '') && !saydam(cs.stroke) && parseFloat(cs.strokeWidth) >= 1.5;
+        const ti = sira.get(t);
+        cizgiler.forEach((c) => {
+          if (c.r.right < kutu.left || c.r.left > kutu.right || c.r.bottom < kutu.top || c.r.top > kutu.bottom) return;
+          const ci = sira.get(c.el), sonra = ci > ti;
+          if (!sonra && hale) return;
+          const ic = yKutudaNoktalar(ornekle(c), kutu);
+          if (!ic.length) return;
+          const ortu = dolgular.filter((o) => sira.get(o) > ci && o !== t);
+          const gorunur = ic.filter((p) => !ortu.some((o) => {
+            const m = o.getScreenCTM(); if (!m) return false;
+            try { return o.isPointInFill(new DOMPoint(p.x, p.y).matrixTransform(m.inverse())); } catch (e) { return false; }
+          }));
+          if (!yCizgiSayilir(hale, sonra, gorunur.length)) return;
+          const ad = c.el.getAttribute('data-ve') || (typeof c.el.className === 'object' ? c.el.className.baseVal : '') || c.el.tagName.toLowerCase();
+          ekle(out.cizgi, 'c|' + t.textContent.trim().slice(0, 30) + '|' + ad + '|' + Math.round(r.left) + ',' + Math.round(r.top),
+            { metin: t.textContent.replace(/\s+/g, ' ').trim().slice(0, 40), cizgi: ad + (sonra ? ' (üstte)' : ''), nokta: gorunur.length, yol: yol(svg) });
+        });
+      });
+    });
     // ALTA YAPIŞAN öğe kabın DİBİNE oturmalı: arada kalan şeritten kayan
     // içerik görünür. Kab dipteyken öğe doğal yerindedir ve altında kayan bir
     // şey yoktur.
@@ -264,7 +358,7 @@ function yKur() {
 }
 
 // Sayfaya kurulan kaynak: saf fonksiyonlar + kurucu, tek IIFE (global kirletmez).
-const KAYNAK = '(function(){' + [ySozcukler, ySatirSayisi, yKirikMi, yKesisim, yTasma, yYapiskanSerit, yKur].map((f) => f.toString()).join('\n')
+const KAYNAK = '(function(){' + [ySozcukler, ySatirSayisi, yKirikMi, yKesisim, yTasma, yYapiskanSerit, yCizgiSayilir, yKutudaNoktalar, yKur].map((f) => f.toString()).join('\n')
   + '\nyKur();})()';
 
 async function yerlesimKur(page) { await page.evaluate(KAYNAK); }
@@ -281,9 +375,11 @@ function yerlesimOzet(r, yer, opt) {
     r.kucuk.map((x) => `${on}küçük yazı "${x.metin}" ${x.px} px — ${x.yol}`),
     cizim ? r.kucukSvg.map((x) => `${on}çizimde küçük yazı "${x.metin}" ${x.px} px — ${x.yol}`) : [],
     cizim ? r.binen.map((x) => `${on}binen "${x.a}" ↔ "${x.b}" ${x.x}×${x.y} px — ${x.yol}`) : [],
+    cizim ? (r.cizgi || []).map((x) => `${on}çizgi yazıyı kesiyor "${x.metin}" ← ${x.cizgi} — ${x.yol}`) : [],
+    (r.yapisik || []).map((x) => `${on}yapışık ad "${x.a}" ↔ "${x.b}" ara ${x.ara} px`),
     r.yapi.map((x) => `${on}alt simge esnek kapta "${x.metin}" (${x.kap}) — ${x.yol}`),
     r.yetim.map((x) => `${on}yetim "${x.metin}" (önceki satır "${x.onceki}") — ${x.yol}`),
     r.yapiskan.map((x) => `${on}yapışkan öğenin altında ${x.serit} px'lik şerit — ${x.yol}`));
 }
 
-module.exports = { ySozcukler, ySatirSayisi, yKirikMi, yKesisim, yTasma, yYapiskanSerit, KAYNAK, yerlesimKur, yerlesimOzet };
+module.exports = { ySozcukler, ySatirSayisi, yKirikMi, yKesisim, yTasma, yYapiskanSerit, yCizgiSayilir, yKutudaNoktalar, KAYNAK, yerlesimKur, yerlesimOzet };

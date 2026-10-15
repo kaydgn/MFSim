@@ -436,6 +436,23 @@ olurdu.
     dışındaydı**. İçeri alınınca ad ile açı beş kez köşe değiyor (hepsi aynı
     çift, en küçük kartta, **7,8 px²**), bu yüzden ölçüt artık SAYI değil
     ALAN: bir sayıyı örtmek ile köşesine değmek aynı şey değil.
+    **KAYIŞIN TAMAMI, KOL VE PİVOT SERT ENGEL; GERİ DÜŞÜŞ SIRALI**
+    (2026-10-15). Engel listesinde yalnız düz açıklıklar vardı: sarım yayları,
+    gergi kolu ve pivot işareti yoktu, temiz aday yokken geri düşüş kayışı
+    hiç saymıyordu (1.008 çizimde 1.079 yazı kayışta, 521 yazı kolda). Şimdi:
+    yaylar örneklenir, ana dört yer doluyken köşegen adaylar denenir, geri
+    düşüş ÖNCE hiçbir kutuya dokunmayan adaylardan kayışa binmeyeni seçer
+    (kayıştan kaçmak bir kutuyu örtmek pahasına olamaz — ad ↔ açı ve çubuk
+    kapıları), kayışa düşen uzun ad kısa adını dener, yan aday kasnaktan 7 px
+    (kayışın yarısı + diş 4,5 px). Kayış payı denendi ve reddedildi: temiz
+    aday azalınca kesişme 11 → 28'e çıkıyordu. Açıklık gerilmesi sayısı
+    dişlerden ve çemberlerden SONRA yazılır (hâle yalnız altındakini örter).
+    Ek katmanı (`opts.ek`) çizen çağıran, geometrisini `opts.engel(T)` ile
+    BİLDİRİR — sihirbazın salınım çemberi ve merkez mesafesi çizgisi böyle;
+    katman yerleşmiş ad/açı kutularını `T.etiketler`den okur. Kapılar:
+    `fead-card-design.test.js` → *"yazı kayışın ve kolun üstüne düşmez"* ·
+    *"açıklık gerilmesi sayısı … ÜSTÜNDE"*, `fead-sihirbaz-masa.test.js` →
+    *"MASA — çizgi yazıyı kesmez"*, `yerlesim.spec.js` (çizgi ölçütü).
 22. **AÇILIŞ KADRAJI: büyük kartlar SÜTUN DEĞİL, tek sıra** — iki kanvas yan
     yana (`veFeadArrangeByCoords` → `sira`). Üst üste dizilen büyük kartlar
     dar-uzun bir blok üretiyor ve geniş görüşe sığdırma yükseklikten

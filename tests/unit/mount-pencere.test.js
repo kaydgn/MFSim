@@ -330,6 +330,19 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     stiller.forEach((st) => expect(st).toMatch(/^(--fp-k:\d+;|width:\d+%)$/));
   });
 
+  // Bileşenden birleşik AM'ye uzanan kol ve ızgara yazının altından geçiyordu
+  // (gerçek tarayıcı: "Ön Takoz" ve konum yazısı kolun üstünde). Hâle zeminin
+  // rengi: krokinin kabı --bg-primary.
+  test('krokinin yazıları zeminin renginde hâle taşır', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kap = /\.ve-mnt-kroki\{([^}]*)\}/.exec(css);
+    expect(kap[1]).toMatch(/background:var\(--bg-primary\)/);
+    const hale = /\.ve-mk-y, \.ve-mk-yh, \.ve-mk-ym\{([^}]*)\}/.exec(css);
+    expect(hale).not.toBeNull();
+    expect(hale[1]).toMatch(/paint-order:stroke/);
+    expect(hale[1]).toMatch(/stroke:var\(--bg-primary\)/);
+  });
+
   test('FEAD\'in sekme DOM sözleşmesi: şerit ve gövde kimlikleri, gizli sekme `hidden`', () => {
     tulga();
     const html = cp.getMntMountPropertiesHTML(onTakoz());
