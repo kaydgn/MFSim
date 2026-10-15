@@ -970,7 +970,7 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   if(!ov) {
     ov = document.createElement('div');
     ov.id = 'sw-info-overlay';
-    ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:var(--scrim);z-index:99999;display:flex;align-items:center;justify-content:center;';
     document.body.appendChild(ov);
   }
   // Pencere ailesinin başlığı (.ve-settings-header) — eskiden kendi satır içi

@@ -2705,7 +2705,7 @@ function veDownloadTXTFromPreview() {
   // Mini modal — yazar adı sor
   var ov = document.createElement('div');
   ov.id = 've-txt-author-overlay';
-  ov.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;';
+  ov.style.cssText = 'position:fixed; inset:0; z-index:100000; background:var(--scrim); display:flex; align-items:center; justify-content:center;';
   ov.addEventListener('mousedown', function(e) { if(e.target === ov) ov.remove(); });
 
   var box = document.createElement('div');

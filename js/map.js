@@ -21,21 +21,21 @@ function veExpandRoadMap(nodeId) {
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-map-modal-overlay';
-  overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:var(--scrim); display:flex; align-items:center; justify-content:center; padding:20px;';
 
   // Modal
   var modal = document.createElement('div');
   modal.id = 've-map-modal';
-  modal.style.cssText = 'width:90%; max-width:1500px; min-width:480px; height:88vh; max-height:900px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); position:relative;';
+  modal.style.cssText = 'width:90%; max-width:1500px; min-width:480px; height:88vh; max-height:900px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-xl); position:relative;';
 
   // Header — ince ortak başlık
   var markerCount = (veRoadMarkers[nodeId] || []).length;
   var badge = markerCount > 0 ? ' <span style="font-size:var(--fs-tiny); padding:1px 6px; background:var(--accent-primary); color:var(--on-accent); border-radius:var(--radius-sm); margin-left:6px;">' + markerCount + ' nokta</span>' : '';
 
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-map"></span> Güzergah Haritası' + badge + '</span>' +
-    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'var(--on-danger)\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">' + veIkon('x') + '</button>';
+  header.className = 've-settings-header';   // pencere ailesi (CLAUDE.md → PENCERE AİLESİ TEK)
+  header.innerHTML = '<span><span class="mf-ico mf-ico-map"></span> Güzergah Haritası' + badge + '</span>' +
+    '<button class="ve-settings-close" type="button" onclick="veCloseMapModal()" title="Kapat (Esc)" aria-label="Kapat">' + veIkon('x') + '</button>';
   modal.appendChild(header);
   
   // Toolbar
@@ -1820,7 +1820,7 @@ function _veWaypointNameDialog(nodeId, dist, callback) {
 
   var ov = document.createElement('div');
   ov.id = 've-wp-name-dialog';
-  ov.style.cssText = 'position:fixed; inset:0; z-index:200000; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;';
+  ov.style.cssText = 'position:fixed; inset:0; z-index:200000; background:var(--scrim); display:flex; align-items:center; justify-content:center;';
   ov.addEventListener('mousedown', function(e) { if(e.target === ov) { ov.remove(); } });
 
   var distKm = veSayi(dist / 1000, 2);
@@ -2589,17 +2589,17 @@ function veExpandProfileChart(nodeId, chartType) {
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-profile-modal-overlay';
-  overlay.style.cssText = 'position:fixed; inset:0; z-index:100001; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:100001; background:var(--scrim); display:flex; align-items:center; justify-content:center; padding:20px;';
 
   // Modal
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-xl);';
 
   // Header — ince ortak başlık
   var curSmooth = (node.data && node.data.smoothLevel !== undefined) ? node.data.smoothLevel : 2;
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Rakım profili (GPS)</span>' +
+  header.className = 've-settings-header';   // pencere ailesi (CLAUDE.md → PENCERE AİLESİ TEK)
+  header.innerHTML = '<span><span class="mf-ico mf-ico-bar-chart"></span> Rakım profili (GPS)</span>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
     '<div style="display:inline-flex; align-items:center; gap:3px;">' +
     '<label style="font-size:var(--fs-micro); color:var(--text-muted);">Filtre:</label>' +
@@ -2611,7 +2611,7 @@ function veExpandProfileChart(nodeId, chartType) {
     '</select></div>' +
     '<button onclick="veUpdateProfilesExpanded(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:color-mix(in srgb, var(--accent-success) 65%, #000); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">Güncelle</button>' +
     '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:var(--fs-tiny); font-weight:600; background:var(--accent-primary); color:var(--on-accent); border:none; border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('arrow-left-right') + ' Yönü çevir</button>' +
-    '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-lg); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'var(--on-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">' + veIkon('x') + '</button></div>';
+    '<button class="ve-settings-close" type="button" onclick="veCloseProfileModal()" title="Kapat (Esc)" aria-label="Kapat">' + veIkon('x') + '</button></div>';
   modal.appendChild(header);
 
   // Chart container

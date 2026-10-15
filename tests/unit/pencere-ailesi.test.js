@@ -75,6 +75,21 @@ describe('kapat düğmesi TEK biçim', () => {
   });
 });
 
+// Pencereyi kuran satır: tam ekran sabit katman — PERDE. Pencereyi kimliğinin
+// adından (`…-overlay`) tanımak Takoz'un tam ekran görüntüleyicisini
+// (`ve-mnt-fs`) kaçırmıştı; perde her pencerede var.
+const PERDE = /position:\s*fixed;\s*(?:inset:\s*0|top:\s*0;\s*left:\s*0;\s*(?:right:\s*0;\s*bottom:\s*0|width:\s*100(?:%|vw);\s*height:\s*100(?:%|vh)))/;
+// Oyunlar kendi dünyasını çiziyor (kendi paleti, kendi perdesi): pencere değil.
+const OYUN = ['js/easter-egg.js', 'js/game-2048.js'];
+function perdeler() {
+  const out = [];
+  for (const [f, s] of Object.entries(KAYNAK)) {
+    if (!f.startsWith('js/') || OYUN.includes(f)) continue;
+    s.split('\n').forEach((satir, i) => { if (PERDE.test(satir)) out.push({ f, i, satir }); });
+  }
+  return out;
+}
+
 describe('başlık TEK bileşen', () => {
   test('eski başlık dilleri kalmadı (yardım başlığı, tablo kapatının görünümü)', () => {
     const eski = Object.entries(KAYNAK).filter(([, s]) => /ve-help-head|ve-help-close/.test(s)).map(([f]) => f);
@@ -96,6 +111,45 @@ describe('başlık TEK bileşen', () => {
     expect(Object.keys(KAYNAK).filter((f) => /#1a365d/i.test(KAYNAK[f]))).toEqual([]);
     // Altıncı: Takoz Başlangıç Sihirbazı (FEAD sihirbazının kabuğu, aynı başlık)
     expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(6);
+  });
+
+  test('pencere KURAN her dosya ortak başlığı taşır — liste değil kural', () => {
+    // Elle yazılmış dosya listesi sekiz pencereyi dışarıda bırakmıştı (yavaşlama
+    // sihirbazı, büyük yol profili, bilgi penceresi, eşleştirme büyük diyagramı,
+    // harita, rakım profili, Farklı kaydet, Takoz'un tam ekran görüntüleyicisi):
+    // her biri kendi bandını (5–11 px dolgu, kalın başlık, çerçeveli ✕) ya da
+    // bandsız 16 px başlığını çiziyordu.
+    const kuran = [...new Set(perdeler().map((p) => p.f))];
+    expect(kuran.length).toBeGreaterThanOrEqual(10);
+    expect(kuran.filter((f) => !/ve-settings-header/.test(KAYNAK[f]))).toEqual([]);
+    // eski büyük pencere bandı ve çerçeveli kapat kalmadı
+    const ESKI_BANT = 'padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+    expect(Object.keys(KAYNAK).filter((f) => KAYNAK[f].indexOf(ESKI_BANT) >= 0)).toEqual([]);
+    expect(Object.keys(KAYNAK).filter((f) => /title="Kapat \(ESC\)"/.test(KAYNAK[f]))).toEqual([]);
+  });
+
+  test('perde ve kabuk jetondan: --scrim (bulanıklıksız), --radius-lg, --shadow-xl', () => {
+    // Ölçülen: on iki pencerede perde jetondan değildi — beş ayrı koyuluk
+    // (%50 · %60 · %72 · %82 · %85) ve altısında bulanıklık; altı pencerenin
+    // kabuğu temadan habersiz sabit gölgeyle (0 20px 60px rgba(0,0,0,.6)).
+    const p = perdeler();
+    expect(p.length).toBeGreaterThanOrEqual(13);
+    expect(p.filter((x) => !/background:\s*var\(--scrim\)/.test(x.satir) || /backdrop-filter/.test(x.satir))
+      .map((x) => x.f + ':' + (x.i + 1))).toEqual([]);
+    // Kabuk: perdenin çevresinde kurulan köşesi --radius-lg olan kutu.
+    const sapan = [];
+    let kabuk = 0;
+    for (const x of p) {
+      const satirlar = KAYNAK[x.f].split('\n');
+      for (let j = Math.max(0, x.i - 15); j <= Math.min(satirlar.length - 1, x.i + 15); j++) {
+        const t = satirlar[j];
+        if (!/border-radius:\s*var\(--radius-lg\)/.test(t) || !/box-shadow:/.test(t)) continue;
+        kabuk++;
+        if (!/box-shadow:\s*var\(--shadow-xl\)/.test(t)) sapan.push(x.f + ':' + (j + 1));
+      }
+    }
+    expect(kabuk).toBeGreaterThanOrEqual(8);
+    expect([...new Set(sapan)]).toEqual([]);
   });
 
   test('başlık yazısı kabuk bandınınki (Bileşenler · müfettiş)', () => {

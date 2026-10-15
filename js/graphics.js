@@ -566,7 +566,7 @@ function veShowRaporModal() {
   
   var overlay = document.createElement('div');
   overlay.id = 've-rapor-modal-overlay';
-  overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:var(--scrim); display:flex; align-items:center; justify-content:center; padding:20px;';
   overlay.addEventListener('mousedown', function(e) { if(e.target === overlay) veCloseRaporModal(); });
   
   var modal = document.createElement('div');

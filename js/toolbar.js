@@ -123,18 +123,25 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
 
   var overlay = document.createElement('div');
   overlay.id = 've-save-dialog-overlay';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:var(--scrim);z-index:9999;display:flex;align-items:center;justify-content:center;';
   overlay.onclick = function(e) { if(e.target === overlay) overlay.remove(); };
 
   var modal = document.createElement('div');
-  modal.style.cssText = 'background:var(--bg-secondary);color:var(--text-primary);border-radius:var(--radius-lg);padding:24px;max-width:420px;width:90%;box-shadow:var(--shadow-xl);border:1px solid var(--border-color);';
+  modal.style.cssText = 'background:var(--bg-secondary);color:var(--text-primary);border-radius:var(--radius-lg);max-width:420px;width:90%;box-shadow:var(--shadow-xl);border:1px solid var(--border-color);overflow:hidden;';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-label', 'Farklı kaydet');
 
   var nameOnly = defaultName.replace(/\.[^.]+$/, '');
   var ext = defaultName.slice(nameOnly.length);
 
+  // Pencere ailesinin başlığı (CLAUDE.md → PENCERE AİLESİ TEK): eskiden
+  // bandsız 16 px başlık, kapat düğmesi yoktu (yalnız İptal ve Esc).
   modal.innerHTML =
-    '<h3 style="margin:0 0 16px 0;font-size:var(--fs-title);">Farklı kaydet</h3>' +
-    '<label style="font-size:var(--fs-lg);color:var(--text-muted);display:block;margin-bottom:6px;">Dosya adı</label>' +
+    '<div class="ve-settings-header"><span>' + veIkon('save') + ' Farklı kaydet</span>' +
+      '<button class="ve-settings-close" type="button" id="ve-save-x" title="Kapat (Esc)" aria-label="Kapat">' + veIkon('x') + '</button>' +
+    '</div>' +
+    '<div style="padding:16px 18px;">' +
+    '<label for="ve-save-filename" style="font-size:var(--fs-lg);color:var(--text-muted);display:block;margin-bottom:6px;">Dosya adı</label>' +
     '<div style="display:flex;align-items:center;gap:0;">' +
       '<input id="ve-save-filename" type="text" value="' + nameOnly.replace(/"/g, '&quot;') + '" ' +
         'style="flex:1;padding:8px 12px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm) 0 0 var(--radius-sm);font-size:var(--fs-lg);outline:none;" />' +
@@ -143,7 +150,7 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
     '<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">' +
       '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;font-size:var(--fs-lg);">İptal</button>' +
       '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary);color:var(--on-accent);border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--fs-lg);font-weight:600;">Kaydet</button>' +
-    '</div>';
+    '</div></div>';
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
@@ -199,6 +206,7 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
 
   document.getElementById('ve-save-confirm').onclick = doSave;
   document.getElementById('ve-save-cancel').onclick = function() { overlay.remove(); };
+  document.getElementById('ve-save-x').onclick = function() { overlay.remove(); };
   input.addEventListener('keydown', function(e) {
     if(e.key === 'Enter') doSave();
     if(e.key === 'Escape') overlay.remove();

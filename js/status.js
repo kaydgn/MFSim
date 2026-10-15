@@ -200,16 +200,22 @@ function _veStatusLoadCommits() {
 // Birleşme commit'inin konusu "Merge pull request #1077 from kaydgn/claude/…"
 // — dal adı kullanıcıya bir şey söylemez; asıl başlık gövdenin ilk satırı
 // (PR başlığı). Liste o başlığı basıyordu ama ilk satırı, yani dal adını.
+// İKİNCİ BİÇİM: "Merge pull request #1076 — FEAD: …" (başlığı elle verilmiş
+// birleşme; son 300 birleşmenin 16'sı) — başlık konunun kendisinde, gövdenin
+// ilk satırı çoğu zaman onun tekrarı.
 // Döner: { konu, govde, pr } — pr yoksa null. Kapı: tests/unit/status-konu.test.js.
 function _veStatusKonu(mesaj) {
   var satir = String(mesaj || '').split('\n');
   var konu = satir[0] || '';
   var govde = satir.slice(1).join('\n').trim();
-  var m = /^Merge pull request #(\d+) from \S+/.exec(konu);
+  var m = /^Merge pull request #(\d+)(?: from \S+| — (.+))/.exec(konu);
   if(!m) return { konu: konu, govde: govde, pr: null };
   var g = govde.split('\n');
-  var baslik = (g[0] || '').trim();
-  return { konu: baslik || konu, govde: baslik ? g.slice(1).join('\n').trim() : govde, pr: Number(m[1]) };
+  var ilk = (g[0] || '').trim();
+  var baslik = m[2] ? m[2].trim() : ilk;
+  // Gövdenin ilk satırı başlığın kendisiyse ikinci kez basılmaz.
+  var kalan = (ilk && ilk === baslik) ? g.slice(1).join('\n').trim() : govde;
+  return { konu: baslik || konu, govde: kalan, pr: Number(m[1]) };
 }
 
 function _veStatusRenderCommits(commits) {
