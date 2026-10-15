@@ -2192,8 +2192,8 @@ function _mntExampleDiagramSVG(model, tools){
   comps.forEach(function(c,i){ items.push({type:(c.kind||_mntExampleBodyType(c.name)), name:c.name, x:L.bodies[i].lx, y:L.bodies[i].ly, role:'body'}); });
   mounts.forEach(function(m,i){ items.push({type:'mnt-mount', name:m.name, x:L.mnts[i].lx, y:L.mnts[i].ly, role:'mount'}); });
   (tools||[]).forEach(function(t){ if(t && t.at && t.at.length===2) items.push({type:t.type, name:t.name, x:t.at[0], y:t.at[1], role:'tool'}); });
-  var CARD=54, IC=40, LBL=15, M=22, xs=[], ys=[];
-  items.forEach(function(it){ xs.push(it.x-CARD/2, it.x+CARD/2); ys.push(it.y-CARD/2, it.y+CARD/2+LBL); });
+  var CARD=54, IC=40, M=22, xs=[], ys=[];
+  items.forEach(function(it){ xs.push(it.x-CARD/2, it.x+CARD/2); ys.push(it.y-CARD/2, it.y+CARD/2); });
   var minX=Math.round(Math.min.apply(null,xs)-M), maxX=Math.round(Math.max.apply(null,xs)+M);
   var minY=Math.round(Math.min.apply(null,ys)-M), maxY=Math.round(Math.max.apply(null,ys)+M);
   var s='<svg viewBox="'+minX+' '+minY+' '+(maxX-minX)+' '+(maxY-minY)+'" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;font-family:inherit;">';
@@ -2204,9 +2204,12 @@ function _mntExampleDiagramSVG(model, tools){
     bodies.forEach(function(bp){ var dx=bp.x-mo.x, dy=bp.y-mo.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; nb=bp; } });
     if(nb) s+='<line x1="'+mo.x+'" y1="'+mo.y+'" x2="'+nb.x+'" y2="'+nb.y+'" stroke="var(--border-hover)" stroke-width="1.3" stroke-dasharray="3 3" opacity="0.55"/>';
   });
-  // Düğümler: kart + gerçek ikon (yoksa yedek) + etiket
+  // Düğümler: kart + gerçek ikon (yoksa yedek). Ad GÖRÜNÜR YAZI DEĞİL, <title>:
+  // şema sütunda ~0,45 ölçekle çiziliyor ve 10,5 birimlik ad ekranda 4,8 px
+  // kalıyordu (okunmuyor, çizgilere karışıyordu); ad fare üstünde ve künyede.
   items.forEach(function(it){
     var x0=it.x-CARD/2, y0=it.y-CARD/2, tool=it.role==='tool';
+    s+='<g><title>'+_mntEsc(it.name)+'</title>';
     var stroke=tool?'var(--border-color)':(it.role==='mount'?'var(--accent-success)':'var(--accent-primary)');
     s+='<rect x="'+x0+'" y="'+y0+'" width="'+CARD+'" height="'+CARD+'" rx="9" fill="var(--bg-secondary)" stroke="'+stroke+'" stroke-width="'+(tool?1.2:1.6)+'"'+(tool?' opacity="0.9"':'')+'/>';
     var inner=_mntIconInner(it.type);
@@ -2217,7 +2220,7 @@ function _mntExampleDiagramSVG(model, tools){
     } else {
       s+='<rect x="'+(it.x-16)+'" y="'+(it.y-9)+'" width="32" height="18" rx="3" fill="var(--bg-tertiary)" stroke="var(--accent-primary)" stroke-width="1.5"/>';
     }
-    s+='<text x="'+it.x+'" y="'+(it.y+CARD/2+11)+'" text-anchor="middle" font-size="10.5" fill="'+(tool?'var(--text-muted)':'var(--text-secondary)')+'">'+_mntEsc(it.name)+'</text>';
+    s+='</g>';
   });
   s+='</svg>';
   return s;
@@ -3318,6 +3321,21 @@ function _mnt2DLabels(items, sinir, engeller, hale){
 }
 // Tek görünüş (üst/yan) çiz — akademik, tek renkli panel: başlık + eksen köşe
 // göstergesi + kesikli referans çizgisi + işaretler + çakışmasız etiketler.
+// İşaretlerin kutuları — `_mnt2DFigure`'un çizdiği yerle aynı (takozlarda
+// yelpaze dâhil). Köşe göstergesinin yeri bunlardan kaçar.
+function _mnt2DIsaretKutulari(o, iK){
+  var hKey=o.hKey||'x', out=[];
+  function hval(p){ return hKey==='y'?p.y:(hKey==='z'?p.z:p.x); }
+  var mpts=(o.mounts||[]).map(function(m){ return { cx:o.px(hval(m)), cy:o.pyFn(o.vKey==='y'?m.y:m.z) }; });
+  mpts.forEach(function(a,i){ if(a._g) return; var grp=[a]; a._g=1;
+    mpts.forEach(function(b,j){ if(j<=i || b._g) return; if(Math.abs(a.cx-b.cx)<12 && Math.abs(a.cy-b.cy)<12){ grp.push(b); b._g=1; } });
+    grp.forEach(function(pt,k){ var mx=pt.cx+(grp.length>1?(k-(grp.length-1)/2)*19:0), r=9*iK; out.push({ l:mx-r, r:mx+r, t:pt.cy-r, b:pt.cy+r }); });
+  });
+  (o.comps||[]).forEach(function(c){ var cx=o.px(hval(c)), cy=o.pyFn(o.vKey==='y'?c.y:c.z), r=o.cr(c.mass);
+    out.push({ l:cx-r, r:cx+r, t:cy-r, b:cy+r }); });
+  if(o.cg){ var gx=o.px(hval(o.cg)), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z); out.push({ l:gx-11*iK, r:gx+11*iK, t:gy-11*iK, b:gy+11*iK }); }
+  return out;
+}
 function _mnt2DFigure(o){
   // o: {ox, boxX,boxY,boxW,boxH, FIG_W, title, plotTop,plotH,plotL,plotR, px,pyFn,
   //     hKey,vKey, mounts,comps,cg, cr, compAbove, refV,refLabel,
@@ -3409,7 +3427,10 @@ function _mnt2DFigure(o){
         { l:axx-2, r:axx+28, t:ay-4, b:ay+4 },
         { l:axx-4, r:axx+4, t:Math.min(ay,vy)-2, b:Math.max(ay,vy)+2 } ] };
     };
-    var degerKutu=degerler.map(function(d){ return _mnt2DYaziKutu(d[0], d[1], d[2], d[3], FS.deger, false); });
+    var degerKutu=degerler.map(function(d){ return _mnt2DYaziKutu(d[0], d[1], d[2], d[3], FS.deger, false); })
+      // İşaretler de engel: Siper'in önden görünüşünde soldaki takozun karesi
+      // "+Y"yi örtüyordu (kare göstergeden SONRA çiziliyor).
+      .concat(_mnt2DIsaretKutulari(o, iK));
     var ilkY=(up? o.plotTop+44 : o.plotTop+14), G=gosterge(ilkY);
     for(var dy=0; dy<=80; dy+=2){
       var g=gosterge(ilkY+dy);
@@ -3601,7 +3622,9 @@ function _mnt2DViewSVG(data, en){
   var mMin=ms.length?Math.min.apply(null,ms):0, mMax=ms.length?Math.max.apply(null,ms):1;
   function cr(m){ if(!(m>0)) return 7; var t=(mMax-mMin>1e-9)?(m-mMin)/(mMax-mMin):0.5; return 7+7*Math.sqrt(t); }
   function shortName(n){ n=String(n||''); return n.length>18?n.slice(0,17)+'…':n; }
-  function fmt1(v){ return veSayi(Math.round(v*10)/10); }
+  // Takoz ekranlarının yazımı: gerçek eksi; koordinat ayracı "; " (kural 7·C —
+  // "(582,5 · 21,5 · 422,8)" yazılıyordu).
+  function fmt1(v){ return veSayi(Math.round(v*10)/10, null, { eksi: '−' }); }
   function rz(v){ return veSayi(v, 0, { eksi: '−' }); }
   // Takoz etiketi — gerçek adı (kısaltılmış). Konum birleştirme olmadığından
   // her takoz kendi adıyla, kendi izdüşüm konumunda etiketlenir.
@@ -3630,7 +3653,7 @@ function _mnt2DViewSVG(data, en){
   var totMass=(data.cg&&data.cg.m)?data.cg.m:data.comps.reduce(function(s,c){ return s+(c.mass>0?c.mass:0); },0);
   var summary='<div class="ve-mnt2d-summary">'
     + '<span>Toplam kütle <b>'+fmt1(totMass)+' kg</b></span>'
-    + (data.cg?'<span>Birleşik CG <b>('+fmt1(data.cg.x)+' · '+fmt1(data.cg.y)+' · '+fmt1(data.cg.z)+') mm</b></span>':'')
+    + (data.cg?'<span>Birleşik CG <b>('+fmt1(data.cg.x)+'; '+fmt1(data.cg.y)+'; '+fmt1(data.cg.z)+') mm</b></span>':'')
     + '<span>Takoz <b>'+data.mounts.length+'</b></span>'
     + '<span>Bileşen <b>'+data.comps.length+'</b></span>'
     + '</div>';
@@ -3648,7 +3671,7 @@ function _mnt2DViewSVG(data, en){
     refV:0, refLabel:null, axis:{hLabel:'+X', vLabel:'−Y', vDir:'down', note:'+Y (sağ) yukarı'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
-    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+' · '+fmt1(cg.y)+')'; } }));
+    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+'; '+fmt1(cg.y)+')'; } }));
   // ── YAN GÖRÜNÜŞ (X–Z) ──
   out+=wrap(fig({ title:'Yandan görünüş · X–Z', hKey:'x', vKey:'z', px:pxX, pyFn:pyZ, compAbove:false,
     hMin:minX-hpad/sx, hMax:maxX+hpad/sx, vMin:minZ, vMax:maxZ,
@@ -3662,7 +3685,7 @@ function _mnt2DViewSVG(data, en){
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+Y', vLabel:'+Z', vDir:'up', note:'+Y (sağ) →'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
-    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.y)+' · '+fmt1(cg.z)+')'; } }));
+    cgLabelFn:function(cg){ return 'G ('+fmt1(cg.y)+'; '+fmt1(cg.z)+')'; } }));
   out+='</div>';
   return out;
 }
@@ -3693,12 +3716,6 @@ function _mntLibFoyGir(node, e, field, aria, setter, opt){
     + ' onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\''+field+'\',this.value)"></td>';
 }
 // ─── Grafik/detay yardımcıları (master-detay interaktif panel) ───────────────
-// Kuvvet biçimlendirici — grafik ekseni için kompakt (6400→"6.4k"), tipografik −.
-function _mntFmtF(v){
-  var a=Math.abs(v), s=(v<0)?'−':'';
-  if(a>=1000){ var k=a/1000; return s+veSayi(k>=10?Math.round(k):(Math.round(k*10)/10))+'k'; }
-  return s+veSayi(a, 0);
-}
 // [[δ,f],…] noktaları arasında lineer interpolasyon/klips (2 nokta veya spline yoksa).
 function _mntLinInterp(pts, x){
   var n=pts.length;
@@ -3914,9 +3931,14 @@ function _mntLibForceChart(e, axis){
     s+='<line x1="'+_mnt2DR(gx)+'" y1="'+plotT+'" x2="'+_mnt2DR(gx)+'" y2="'+plotB+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
     s+=_mnt2DText(gx, plotB+14, _mnt2DTick(tv), 'middle', 'var(--text-muted)', _mnt2DFs('micro'));
   });
+  // BİRİM EKSENİN BAŞLIĞINDA, DEĞERDE SONEK YOK: kuvvet bin newtonu aşınca
+  // eksen kN'dir ("10k" yazılıyordu, başlık [N] derken). Ondalık adımdan.
+  var kN=Math.max(Math.abs(fmin), Math.abs(fmax))>=1000;
+  var fAdim=yticks.length>1 ? Math.abs(yticks[1]-yticks[0])/(kN?1000:1) : 1;
+  var fBas=fAdim>=1 ? 0 : (fAdim>=0.1 ? 1 : 2);
   yticks.forEach(function(tv){ var gy=py(tv); if(gy<plotT-0.5||gy>plotB+0.5) return;
     s+='<line x1="'+plotL+'" y1="'+_mnt2DR(gy)+'" x2="'+plotR+'" y2="'+_mnt2DR(gy)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
-    s+=_mnt2DText(plotL-4, _mnt2DR(gy)+3.5, _mntFmtF(tv), 'end', 'var(--text-muted)', _mnt2DFs('micro'));
+    s+=_mnt2DText(plotL-4, _mnt2DR(gy)+3.5, veSayi(kN ? tv/1000 : tv, fBas, { eksi:'−' }), 'end', 'var(--text-muted)', _mnt2DFs('micro'));
   });
   // Sıfır eksenleri (vurgulu)
   var y0=py(0), x0=px(0);
@@ -3930,7 +3952,7 @@ function _mntLibForceChart(e, axis){
   // Eksen başlıkları
   s+=_mnt2DText((plotL+plotR)/2, H-3, 'sehim δ [mm]', 'middle', 'var(--text-secondary)', _mnt2DFs('micro'));
   var yc=(plotT+plotB)/2;
-  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="'+_mnt2DFs('micro')+'" font-family="'+_MNT2D_YUZ+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f [N]</text>';
+  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="'+_mnt2DFs('micro')+'" font-family="'+_MNT2D_YUZ+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f ['+(kN ? 'kN' : 'N')+']</text>';
   s+='</svg>';
   return s;
 }
@@ -4020,7 +4042,7 @@ function _mntLibKatalogHTML(custom, builtins, nCurve){
     + '<tr><td>Değiştirilmiş gömülü</td><td>'+nOv+'</td></tr>'
     + '<tr><td>Nonlineer yasalı</td><td>'+nCurve+'</td></tr>'+_MNT_FOY_KAPA;
   return _mntBolum('Katalog', 'bütün Takoz pencerelerinde', f
-    + _mntNot('Gömülü takozda yapılan değişiklik bu düğüme yazılır; fabrika değeri bozulmaz ("Fabrika" geri döndürür).', ''));
+    + _mntNot('Gömülü takozda yapılan değişiklik bu düğüme yazılır; fabrika değeri bozulmaz (“Fabrika” geri döndürür).', ''));
 }
 function _mntLibKimlikHTML(node, e, setter){
   var eylem=(!e.builtin)
@@ -5171,7 +5193,7 @@ function veMntViewerFullscreen(){
   var wrap='<div style="flex:1; min-height:0; position:relative; background:var(--bg-primary);"><canvas id="ve-mnt-fs-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   _mntFsOverlay('3D Görüntüleyici', bar+wrap,
     function(){ if(typeof _mntGatherForSolver==='function') _veMntViewerData=_mntGatherForSolver();
-      if(typeof veMountViewerInit==='function'){ try{ veMountViewerInit('ve-mnt-fs-canvas', 'model'); veMountViewerUpdate(); }catch(e){} } },
+      if(typeof veMountViewerInit==='function'){ try{ veMountViewerInit('ve-mnt-fs-canvas', 'model', { hafiza:'model:tam' }); veMountViewerUpdate(); }catch(e){} } },
     function(){ if(typeof veMountViewerDispose==='function'){ try{ veMountViewerDispose(); }catch(e){} }
       veMntViewerRefresh(); }
   );
@@ -5282,7 +5304,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntExampleReg: _mntExampleReg,
     _mntExampleList: _mntExampleList,
     _mntExampleLayout: _mntExampleLayout,
-    _mntExampleDiagramSVG: _mntExampleDiagramSVG,
+    _mntExampleDiagramSVG: _mntExampleDiagramSVG, _mntLibForceChart: _mntLibForceChart,
     _mntExampleBodyType: _mntExampleBodyType,
     _mntComputeSupportLinks: _mntComputeSupportLinks,
     _mntPtoConflict: _mntPtoConflict,
