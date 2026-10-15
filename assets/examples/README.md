@@ -8,11 +8,9 @@
 | `ap_*` | **Araç Performans** | `js/cp-arac-example.js` → `AP_EXAMPLES` |
 
 
-Bu klasör, "Takoz Çökme–Titreşim" modülündeki **Başlangıç ve Örnekler** panelinin
-kullandığı dosyaları tutar: topoloji **ekran görüntüleri (PNG)** ve **JSON topoloji**
-dosyaları. Deploy bu klasörü Pages'e `assets/examples/` altına kopyalar; build ise
-JSON'ları tek dosyaya **gömer** (görseller harici kalır). Böylece hem `index.html`
-(geliştirme) hem `MFSim_Code.html` (yayın/indirilmiş) çalışır.
+Takoz örnekleri yalnız **JSON topoloji** dosyalarıdır. Deploy bu klasörü Pages'e
+`assets/examples/` altına kopyalar; build JSON'ları tek dosyaya **gömer**. Böylece
+hem `index.html` (geliştirme) hem `MFSim_Code.html` (yayın/indirilmiş) çalışır.
 
 ## JSON topoloji ile örnek eklemek (önerilen)
 
@@ -34,47 +32,21 @@ JSON'ları tek dosyaya **gömer** (görseller harici kalır). Böylece hem `inde
    "Örneği Aktar" bu JSON'u iç topolojiye **birebir** kurar (konum, isim, bağlantı,
    tüm değerler). `topology` yoksa panel eski programatik `model`'i kullanır.
 
-## Görsel (PNG) eklemek
+## Görsel YOK — Örnek penceresi şemayı modelden çizer
 
-## Yeni görsel eklemek
-
-1. Ekran görüntüsünü **PNG** olarak al (topoloji alanını kırp; şeffaf/aydınlık
-   arka plan iyidir).
-2. Dosyayı bu klasöre, örneğin adıyla eşleşen adla koy:
-
-   | Örnek (kayıt anahtarı) | Dosya adı |
-   |------------------------|-----------|
-   | `siper`                | `siper.png` |
-   | `tulga`                | `tulga.png` |
-   | `asfat`                | `asfat.png` |
-
-   Ekran görüntüsünü elle almak zorunda değilsin: örneği "Örneği Aktar" ile kur,
-   kenar çubuğu/şerit/durum çubuğunu gizle ve kanvası düğümlerin + `.ve-boundary-rect`
-   sınır kutusuna kırparak kaydet — `siper.png`/`tulga.png` böyle üretildi.
-   `asfat.png` Playwright ile `#ve-canvas-wrapper` elemanı kırpılarak alındı; o
-   akışta ayrıca şunlar gizlenir: seçim halkaları, iç-topoloji breadcrumb çipi
-   (`#ve-mnt-breadcrumb`), minimap (`.ve-minimap*`) ve ses oynatıcı
-   (`#mf-splash-player`). Bunlar görselde durursa örnek kartı "uygulamanın
-   ekran görüntüsü" gibi değil, "topoloji şeması" gibi görünmez.
-
-3. Kayıt defterinde (`js/mount-core.js` → `MOUNT_EXAMPLES`) ilgili örneğin
-   `image` alanını bu yola ayarla:
-
-   ```js
-   image: 'assets/examples/siper.png',
-   ```
-
-   `image` boş (`''`) bırakılırsa panel modelden **otomatik şema** üretir.
-   Dosya yolu verildiğinde resim yüklenemezse (henüz eklenmemişse) panel yine
-   otomatik şemaya düşer — kırık resim gösterilmez.
+Takoz örneklerinin **ekran görüntüsü tutulmaz** (kullanıcı kararı S3·B,
+2026-10-15). Örnek penceresi topolojiyi her zaman modelden çizer: temaya uyar,
+tek dosyaya gömülüdür, ad fare üstündedir. Eski PNG'ler koyu temada ~5 px yazı
+taşıyordu ve tek dosyada hiç yüklenmiyordu. Kapı: `tests/unit/mount-pencere-doku.test.js`
+→ *"Örnek penceresi her zaman şema"*.
 
 ## Notlar
 
 - **Çerçeveler ve notlar da taşınır.** Dışa aktarma `annotations` alanını yazar,
-  yükleyici (`_mntTopoState`) geri kurar. Kullanıcının kurduğu gruplama
-  çerçeveleri (örn. "ŞASİ", "Araçlar", "Görselleştirici") örneğin parçasıdır.
-- Görsel harici dosya olduğu için `MFSim_Code.html` boyutunu şişirmez.
-- Makul boyut (< ~500 KB) sayfa yükleme hızını korur.
+  yükleyici (`_mntTopoState`) geri kurar. Üç örnekte de araç kartları iki
+  çerçevede (kullanıcı kararı S5·B): **Araçlar** (Takoz Özellikleri · Çözücü ·
+  Başlangıç ve Örnekler · Rapor) ve **Görselleştirici** (2D · Koordinat · 3D),
+  ikisi de tek sıra, 105 px adım. Kapı: `tests/unit/mount-ornek-yerlesim.test.js`.
 - Yol **göreli** olmalı (`assets/examples/…`), başında `/` olmadan — hem alt
   yol hem kök dağıtımda çalışsın diye.
 

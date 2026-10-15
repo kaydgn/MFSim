@@ -341,7 +341,7 @@
     {
       "id": "comp-17",
       "type": "mnt-report",
-      "x": 3296,
+      "x": 3401,
       "y": 3087,
       "width": 60,
       "height": 56,
@@ -393,8 +393,8 @@
     {
       "id": "comp-21",
       "type": "mnt-library",
-      "x": 3191,
-      "y": 2984,
+      "x": 3086,
+      "y": 3088,
       "width": 60,
       "height": 54,
       "customName": "",
@@ -404,10 +404,25 @@
       "data": {
         "mounts": []
       }
+    },
+    {
+      "id": "comp-22",
+      "type": "mnt-example",
+      "x": 3298,
+      "y": 3087,
+      "width": 56,
+      "height": 56,
+      "customName": "",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "exampleKey": "asfat"
+      }
     }
   ],
   "connections": [],
-  "compCounter": 21,
+  "compCounter": 22,
   "canvasOffset": {
     "x": 986.7154159345483,
     "y": 438.09004637821954
@@ -428,10 +443,10 @@
     {
       "id": "annot-2",
       "type": "frame",
-      "x": 3158.5,
-      "y": 2954,
-      "width": 227.5,
-      "height": 235,
+      "x": 3056,
+      "y": 3055,
+      "width": 435,
+      "height": 134,
       "text": "Araçlar",
       "color": "var(--accent-primary)",
       "fontSize": 11
