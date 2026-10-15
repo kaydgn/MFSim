@@ -410,6 +410,13 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   (tam ekran sabit katman) ve onu kuran her dosya başlığı taşır — elle yazılmış
   liste sekiz pencereyi, kimlik adı (`…-overlay`) Takoz'un tam ekranını
   dışarıda bırakmıştı. Kapı: `pencere-ailesi.test.js` + `pencere-ailesi.spec.js`.
+- **GÖLGE VE TÜL TEMADAN** (`--shadow-*` · `var(--shadow-color)`): tema
+  yüzeyinde sabit siyah gölge ve sabit beyaz yarı saydam zemin YAZILMAZ —
+  açık temada leke ya da görünmez çizgi (grafiklerin artı imleci varsayılan
+  temada hiç görünmüyordu). Muaf: belge gövdesi, `// sabit renk:` satırı
+  (harita karosu), oyunlar. Artı imleci tek yardımcıdan (`pcArtiImlec`):
+  farenin altında, çizim alanında. Kapı: `theme-contrast.test.js` → *"gölge
+  ve tül"* + `panel-chart.test.js` → *"artı imleci"*.
 - **MİNİMAP İÇERİĞİ ÖRTMEZ** (`js/minimap.js` → `_mmOtoDenetle`). Açık kutu
   bir karta, adına ya da nota değiyorsa köşedeki düğmesine iner, köşe
   boşalınca açılır; soluk durmak yetmiyordu (soluk kutu tıklamayı yutuyor).

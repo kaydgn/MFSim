@@ -273,7 +273,7 @@ function _veRestoreRoute(nodeId, node, map) {
     var marker = L.marker(latlng, {
       icon: L.divIcon({
         className: 'custom-marker',
-        html: '<div style="background:#1976d2; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:var(--fs-tiny); font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + label + '</div>',
+        html: '<div style="background:#1976d2; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:var(--fs-tiny); font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + label + '</div>',   // sabit renk: Leaflet işareti harita karosunun üstünde, temayı izlemez
         iconSize: [20, 20], iconAnchor: [10, 10]
       })
     }).addTo(map);
@@ -385,7 +385,7 @@ function veSearchLocation(nodeId) {
           window._veSearchMarker = L.marker([lat, lon], {
             icon: L.divIcon({
               className:'',
-              html:'<div style="background:#d32f2f;color:white;width:24px;height:24px;border-radius:50%;text-align:center;line-height:24px;font-size:var(--fs-lg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"><span class="mf-ico mf-ico-map-pin"></span></div>',
+              html:'<div style="background:#d32f2f;color:white;width:24px;height:24px;border-radius:50%;text-align:center;line-height:24px;font-size:var(--fs-lg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"><span class="mf-ico mf-ico-map-pin"></span></div>',   // sabit renk: Leaflet işareti harita karosunun üstünde, temayı izlemez
               iconSize:[24,24], iconAnchor:[12,24]
             })
           }).addTo(map).bindPopup('<b>' + data[0].display_name.split(',').slice(0,3).join(',') + '</b>').openPopup();
@@ -415,7 +415,7 @@ function veAddRoutePoint(nodeId, latlng) {
   var marker = L.marker(latlng, {
     icon: L.divIcon({
       className: 'custom-marker',
-      html: '<div style="background:#1976d2; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:var(--fs-tiny); font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + idx + '</div>',
+      html: '<div style="background:#1976d2; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:var(--fs-tiny); font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + idx + '</div>',   // sabit renk: Leaflet işareti harita karosunun üstünde, temayı izlemez
       iconSize: [20, 20], iconAnchor: [10, 10]
     })
   }).addTo(map);
@@ -434,7 +434,7 @@ function veAddRoutePoint(nodeId, latlng) {
         var newNum = ri + 1;
         markers[ri].setIcon(L.divIcon({
           className: 'custom-marker',
-          html: '<div style="background:#1976d2; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:var(--fs-tiny); font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + newNum + '</div>',
+          html: '<div style="background:#1976d2; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:var(--fs-tiny); font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + newNum + '</div>',   // sabit renk: Leaflet işareti harita karosunun üstünde, temayı izlemez
           iconSize: [20, 20], iconAnchor: [10, 10]
         }));
       }
