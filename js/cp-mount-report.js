@@ -50,6 +50,16 @@ function _rE(v, d){
   if(Math.abs(Number(m.toFixed(dd)))>=10){ m/=10; e+=1; }   // makine: mantis yuvarlaması
   return _rF(m, dd)+'·10<sup>'+String(e).replace(/^-/, '−')+'</sup>';
 }
+// Mod adı Türkçe, aslı parantezde ("yanal (lateral) + yalpalama (roll)") —
+// Sonuçlar'ın yorumuyla AYNI sözlükten (`veMntBrief.modeTR`). Çekirdeğin
+// etiketi İngilizce kısaltmadır; rapor onu çıplak basıyordu.
+// Çizim yazısının ZEMİN HÂLESİ: altından geçen çizgiyi yazının çevresinde örter
+// (ortak kural: altından geçen çizgiyi hâle örter, üstte çizileni hiçbir şey).
+var _R_HALE=' paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"';
+function _rMod(label){
+  var B=(typeof veMntBrief!=='undefined') ? veMntBrief : (typeof window!=='undefined' ? window.veMntBrief : null);
+  return _rEsc(B && B.modeTR ? B.modeTR(label) : (label||'—'));
+}
 function _rMountCore(){ return (typeof veMountCore!=='undefined')?veMountCore:(typeof window!=='undefined'?window.veMountCore:null); }
 
 // Raporun kullanacağı MOTOR büyüklükleri (ateşleme frekansı için). Rölanti devri
@@ -272,6 +282,37 @@ function _mntReportDownload(html, filename){
 }
 
 // ═══════════════════ RAPOR MONTAJI ══════════════════════════════════════════
+// KISA PARÇALI BİLEŞİK SATIR SONUNDA BÖLÜNMEZ ("üç-eksen", "baş-kıç", "roll–yaw",
+// "ön/arka", "N/60"): ortak kural — tirede bölünme ancak iki yan da ≥ 4 harfse
+// kabul ("Motor-/Şanzıman"). Yalnız METNE uygulanır; etiket, öznitelik ve TeX
+// ($$…$$, \(…\)) olduğu gibi kalır.
+var _R_BILESIK=/(^|[^\p{L}\p{N}\-–/])([\p{L}\p{N}]+(?:[\-–/][\p{L}\p{N}]+)+)(?=[^\p{L}\p{N}\-–/]|$)/gu;
+// SVG'nin, betiğin ve kod listesinin İÇİNE girilmez: SVG yazısındaki bir HTML
+// <span> ayrıştırıcıyı SVG'den çıkarır ve çizimin geri kalanı kaybolur
+// (ölçüldü: mod şekillerinde "Üstten (X–Y)" — kutular ve takozlar silindi).
+function _rBolunmez(html){
+  var tex=false, satir=false, dis=0;
+  return String(html).split(/(<[^>]*>)/).map(function(p){
+    if(!p) return p;
+    if(p.charAt(0)==='<'){
+      if(/^<(svg|script|style|pre)[\s>]/i.test(p) && !/\/>$/.test(p)) dis++;
+      else if(/^<\/(svg|script|style|pre)>/i.test(p)) dis=Math.max(0, dis-1);
+      return p;
+    }
+    if(dis>0) return p;
+    return p.split(/(\$\$|\\\(|\\\))/).map(function(q){
+      if(q==='$$'){ if(!satir) tex=!tex; return q; }
+      if(q==='\\('){ satir=true; return q; }
+      if(q==='\\)'){ satir=false; return q; }
+      if(tex || satir) return q;
+      return q.replace(_R_BILESIK, function(m, on, b){
+        var kisa=b.split(/[\-–/]/).some(function(x){ return x.length<4; });
+        return on + (kisa ? '<span style="white-space:nowrap">'+b+'</span>' : b);
+      });
+    }).join('');
+  }).join('');
+}
+
 function _mntBuildReportHTML(R, opts){
   var A=window.MNT_REPORT_ASSETS;
   var tpl=decodeURIComponent(escape(atob(window.MNT_REPORT_TEMPLATE_B64)));
@@ -281,8 +322,8 @@ function _mntBuildReportHTML(R, opts){
   // (Aynı kaçış js/results.js'te de var; ikisi aynı kuralı uygular.)
   var katexJs=A.katexJs.replace(/<\/script/gi,'<\\/script');
   var antet=_mntRepAntet(R);
-  var sec8=_mntRepSection8(R, opts);
-  var compliance=_mntRepCompliance(R, opts);
+  var sec8=_rBolunmez(_mntRepSection8(R, opts));
+  var compliance=_rBolunmez(_mntRepCompliance(R, opts));
   // Fonksiyon-replacer: dinamik HTML içindeki $$…$$ ($ desenleri) bozulmasın.
   return tpl
     .replace('@@ASSETS_CSS@@', function(){ return assetsCss; })
@@ -495,10 +536,10 @@ function _mntRepSection8(R, opts){
 function _mntRepDeflectionDetail(R){
   var mounts=R.mounts||[], cases=R.allCases||[];
   var h='<h3>8.6 Adım 6 — Takoz bazında üç-eksen çökme detayı</h3>';
-  h+='<p>Her takoz için tüm yük durumlarındaki üç-eksen sehimi: δ_x (boyuna), δ_y (enine), δ_z (düşey) [mm]. Düşey özetin (§8.5) ötesinde yanal ve boyuna sehimler de değerlendirilir — viraj / bordür darbesinde δ_y, fren / tahrik torkunda δ_x baskın olabilir. <b>Çekme</b> (δ_z &gt; 0, lift-off) ve herhangi bir eksende <b>±10 mm aşımı</b> (lineer-dışı) işaretlidir.</p>';
+  h+='<p>Her takoz için tüm yük durumlarındaki üç-eksen sehimi: δ<sub>x</sub> (boyuna), δ<sub>y</sub> (enine), δ<sub>z</sub> (düşey) [mm]. Düşey özetin (§8.5) ötesinde yanal ve boyuna sehimler de değerlendirilir — viraj / bordür darbesinde δ<sub>y</sub>, fren / tahrik torkunda δ<sub>x</sub> baskın olabilir. <b>Çekme</b> (δ<sub>z</sub> &gt; 0, lift-off) ve herhangi bir eksende <b>±10 mm aşımı</b> (lineer-dışı) işaretlidir.</p>';
   mounts.forEach(function(mnt, mi){
     h+='<table><caption>Tablo '+_rTbl()+' — '+_rEsc(mnt.name||('Takoz '+(mi+1)))+': yük durumlarına göre çökme [mm]</caption>';
-    h+='<tr><th>Yük durumu</th><th>δ_x</th><th>δ_y</th><th>δ_z</th><th>Durum</th></tr>';
+    h+='<tr><th>Yük durumu</th><th>δ<sub>x</sub></th><th>δ<sub>y</sub></th><th>δ<sub>z</sub></th><th>Durum</th></tr>';
     cases.forEach(function(rc){
       if(!rc.res){ h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td><td colspan="4" class="c">— (çözülemedi)</td></tr>'; return; }
       var pm=rc.res.perMount[mi]; if(!pm) return;
@@ -533,7 +574,8 @@ function _mntRepCaseTr(name){
 // Kısa takoz adı (matris sütun başlığı için).
 function _mntRepShort(name, n){
   name=String(name||'takoz').replace(/\s*takoz\s*$/i,'').trim() || 'takoz';
-  n=n||8; return name.length>n ? name.slice(0,n-1)+'…' : name;
+  // kesim boşlukta biterse üç nokta sözcükten kopmasın ("Cummins …")
+  n=n||8; return name.length>n ? name.slice(0,n-1).replace(/\s+$/,'')+'…' : name;
 }
 
 // Kritik sonuç özeti — tüm yük durumlarını tarar (5 saniyelik okuma).
@@ -556,7 +598,7 @@ function _mntRepCritical(R){
   var cls=(overC.length===0 && liftC.length===0)?'check':'warn';
   var row=function(k,v){ return '<div style="margin:3px 0;"><strong style="color:var(--vurgu);">'+k+':</strong> '+v+'</div>'; };
   var h='<div class="note '+cls+'"><span class="t">Kritik Sonuç Özeti</span>';
-  if(maxDz) h+=row('Maks düşey sehim', '|δ_z| = '+_rF(maxDz.v,2)+' mm — <b>'+_rEsc(maxDz.mount)+'</b> ('+_rEsc(_mntRepCaseTr(maxDz.cas))+')');
+  if(maxDz) h+=row('Maks düşey sehim', '|δ<sub>z</sub>| = '+_rF(maxDz.v,2)+' mm — <b>'+_rEsc(maxDz.mount)+'</b> ('+_rEsc(_mntRepCaseTr(maxDz.cas))+')');
   if(maxF)  h+=row('Maks takoz kuvveti (bileşke)', _rF(maxF.v,2)+' kN — <b>'+_rEsc(maxF.mount)+'</b> ('+_rEsc(_mntRepCaseTr(maxF.cas))+') — dayanım tasarımı için');
   h+=row('Çekme / lift-off', liftC.length ? '<b style="color:var(--warn);">var</b> — '+liftC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (takoz gerilmeye geçer)' : 'yok — tüm takozlar basıda');
   h+=row('Lineerlik (±10 mm)', overC.length ? '<b style="color:var(--warn);">aşım</b> — '+overC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (nonlineer bölge)' : 'tüm sehimler bantta');
@@ -571,7 +613,7 @@ function _mntRepCritical(R){
 function _mntRepMassTable(geom){
   var g=(_veMntLast.gather.components||[]);
   var h='<table><caption>Tablo '+_rTbl()+' — Bileşen kütle özellikleri (model girdisi; atalet, bileşenin kendi ağırlık merkezine göre)</caption>';
-  h+='<tr><th>Bileşen</th><th>m [kg]</th><th>c_x [mm]</th><th>c_y [mm]</th><th>c_z [mm]</th><th>I_xx</th><th>I_yy</th><th>I_zz [kg·m²]</th></tr>';
+  h+='<tr><th>Bileşen</th><th>m [kg]</th><th>c<sub>x</sub> [mm]</th><th>c<sub>y</sub> [mm]</th><th>c<sub>z</sub> [mm]</th><th>I<sub>xx</sub></th><th>I<sub>yy</sub></th><th>I<sub>zz</sub> [kg·m²]</th></tr>';
   g.forEach(function(c){
     var pm=!!c.pointMass;
     h+='<tr><td class="l">'+_rEsc(c.name||'bileşen')+'</td>'
@@ -589,7 +631,7 @@ function _mntRepMassTable(geom){
 function _mntRepMountTable(R){
   var g=(R.gather.mounts||[]);
   var h='<table><caption>Tablo '+_rTbl()+' — Takoz konumları ve rijitlikleri (statik / dinamik, üç eksen)</caption>';
-  h+='<tr><th>Takoz</th><th>x [mm]</th><th>y [mm]</th><th>z [mm]</th><th>k_x,s</th><th>k_y,s</th><th>k_z,s</th><th>k_x,d</th><th>k_y,d</th><th>k_z,d [N/mm]</th></tr>';
+  h+='<tr><th>Takoz</th><th>x [mm]</th><th>y [mm]</th><th>z [mm]</th><th>k<sub>x,s</sub></th><th>k<sub>y,s</sub></th><th>k<sub>z,s</sub></th><th>k<sub>x,d</sub></th><th>k<sub>y,d</sub></th><th>k<sub>z,d</sub> [N/mm]</th></tr>';
   g.forEach(function(m){
     h+='<tr><td class="l">'+_rEsc(m.name||'takoz')+'</td>'
       +'<td>'+_rF(m.x,2)+'</td><td>'+_rF(m.y,2)+'</td><td>'+_rF(m.z,2)+'</td>'
@@ -617,25 +659,35 @@ function _repClusterLabel(names, maxlen, nameLen, unit){
   var t=uniq.join(' · ');
   return (t.length>(maxlen||22)) ? names.length+' '+(unit||'öğe') : t;
 }
-// Etiket yerleştirme + dikey çakışma-önleme (greedy). Her etiket işaretinden
-// dışa doğru (dir) itilir; çakışırsa satır satır uzaklaştırılır.
-function _repPlaceLabels(labels, H){
-  labels.forEach(function(L){
-    L.h=11; L.w=Math.max(20, L.text.length*L.fs*0.56);
-    var off=(L.marker==='sq')?14:12;
-    L.y=L.ay + (L.dir>0 ? off+L.h*0.7 : -off);
-  });
+// Etiket yerleştirme (greedy): her etiket işaretinden dışa (dir) itilir; başka
+// bir etikete YA DA bir işarete (takoz karesi, gövde dairesi, G, eksen köşesi —
+// `engel`) değiyorsa satır satır uzaklaşır, o yanda yer kalmazsa öteki yana
+// geçer. İşaretler engel sayılmıyordu: "Braket" adı takoz karesinin altında,
+// küme adları dairelerin üstünde kalıyordu (Şekil 2/3).
+function _repPlaceLabels(labels, H, engel){
+  engel=engel||[];
+  labels.forEach(function(L){ L.h=11; L.w=Math.max(20, L.text.length*L.fs*0.56); });
   labels.sort(function(a,b){ return a.cx-b.cx; });
+  function kutu(L, y){ return { x0:L.cx-L.w/2, x1:L.cx+L.w/2, y0:y-L.h*0.8, y1:y+L.h*0.25 }; }
+  function carpar(a, b){ return a.x0 < b.x1+2 && a.x1+2 > b.x0 && a.y0 < b.y1+1 && a.y1+1 > b.y0; }
   var placed=[];
   labels.forEach(function(L){
-    var t=0;
-    while(t<16){
-      var ov=placed.some(function(P){ return Math.abs(P.cx-L.cx) < (P.w+L.w)/2+3 && Math.abs(P.y-L.y) < (P.h+L.h)/2+1; });
-      if(!ov) break;
-      L.y += L.dir*(L.h+2); t++;
+    // Adaylar UZAKLIK sırasıyla: önce iki yanın ilk yeri, sonra bir satır öte —
+    // tek yanda satır satır itmek adı kendi işaretinden uzaklaştırıp komşu
+    // işaretin adına yapıştırıyordu ("Braket" takozun adının üstünde).
+    var off=(L.marker==='sq')?14:12, aday=[];
+    var ilk=function(d){ return L.ay + (d>0 ? off+L.h*0.7 : -off); };
+    for(var t=0;t<10;t++){ [L.dir, -L.dir].forEach(function(d){ aday.push(ilk(d) + d*t*(L.h+2)); }); }
+    var sec=null;
+    for(var i=0;i<aday.length && sec===null;i++){
+      var y=aday[i];
+      if(y<11 || y>H-4) continue;
+      var b=kutu(L, y);
+      if(placed.some(function(P){ return carpar(b, P); }) || engel.some(function(E){ return carpar(b, E); })) continue;
+      sec=y;
     }
-    L.y=Math.max(11, Math.min(H-4, L.y));
-    placed.push({ cx:L.cx, y:L.y, w:L.w, h:L.h });
+    L.y=(sec===null) ? Math.max(11, Math.min(H-4, aday[0])) : sec;
+    placed.push(kutu(L, L.y));
   });
 }
 
@@ -679,19 +731,25 @@ function _mntRepFigure(geom, plane, no, caption){
   // bileşen CG daireleri
   cClust.forEach(function(k){ svg+='<circle cx="'+k.x.toFixed(1)+'" cy="'+k.y.toFixed(1)+'" r="6" fill="none" stroke="#5a6270" stroke-width="1.6"/>'; });   // makine: SVG koordinatı
   // birleşik CG (pinwheel G)
+  var GX=0, GY=0;
   if(geom.cg){
-    var GX=sx(geom.cg[horiz]), GY=sy(geom.cg[vert]), r=11;
+    GX=sx(geom.cg[horiz]); GY=sy(geom.cg[vert]); var r=11;
     svg+='<g transform="translate('+GX.toFixed(1)+','+GY.toFixed(1)+')">'   // makine: SVG koordinatı
        +'<circle r="'+r+'" fill="#fff" stroke="#26241f" stroke-width="1.6"/>'
        +'<path d="M0,0 L'+r+',0 A'+r+','+r+' 0 0 1 0,'+r+' Z M0,0 L-'+r+',0 A'+r+','+r+' 0 0 1 0,-'+r+' Z" fill="#26241f"/>'
        +'<text x="0" y="'+(-r-5)+'" text-anchor="middle" font-size="11.5" fill="#26241f" font-weight="600">G</text></g>';
   }
-  // etiketler → çakışma-önlemeyle yerleştir
+  // etiketler → çakışma-önlemeyle yerleştir; işaretler ENGEL
+  var engel=[{ x0:0, y0:0, x1:ax+80, y1:ay+60 }];
+  mClust.forEach(function(k){ engel.push({ x0:k.x-8, y0:k.y-8, x1:k.x+8, y1:k.y+8 }); });
+  cClust.forEach(function(k){ engel.push({ x0:k.x-7, y0:k.y-7, x1:k.x+7, y1:k.y+7 }); });
+  if(geom.cg) engel.push({ x0:GX-12, y0:GY-12-18, x1:GX+12, y1:GY+12 });
   var labels=[];
-  mClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'takoz'), dir:(k.y<=y0?-1:1), fs:9.5, col:'#26241f', marker:'sq' }); });
-  cClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,19,17,'bileşen'), dir:(k.y<y0?-1:1), fs:10, col:'#5a6270', marker:'ci' }); });
-  _repPlaceLabels(labels, H-2);
-  labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'">'+_rEsc(L.text)+'</text>'; });   // makine: SVG koordinatı
+  // Boy 10,5: viewBox (820) sayfada ~%96'ya iner — 9,5 ölçek tabanının altına düşmesin
+  mClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'takoz'), dir:(k.y<=y0?-1:1), fs:10.5, col:'#26241f', marker:'sq' }); });
+  cClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,19,17,'bileşen'), dir:(k.y<y0?-1:1), fs:10.5, col:'#5a6270', marker:'ci' }); });
+  _repPlaceLabels(labels, H-2, engel);
+  labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'"'+_R_HALE+'>'+_rEsc(L.text)+'</text>'; });   // makine: SVG koordinatı
   svg+='</svg>';
   return '<figure>'+svg+'<figcaption><b>Şekil '+no+' —</b> '+caption+'</figcaption></figure>';
 }
@@ -712,9 +770,9 @@ function _mntRepStep1Mass(R){
     var sfz=stat.res.sumF[2];
     var Fz=stat.res.F?stat.res.F[2]:(-m*9.81);
     h+='<div class="note check"><span class="t">Tutarlılık · kütle birleştirme</span>'
-      +'Statik durumda takozların ilettiği toplam düşey kuvvet Σf_z = '+_rF(sfz/1000,2)+' kN, dış düşey yükü '
-      +'F_z = '+_rF(Fz/1000,2)+' kN dengeler (fark '+_rF(Math.abs(stat.res.checks.sumFzResidual),1)+' N). '
-      +'Atalet tensöründeki çarpım terimleri (I_xz, I_yz) sıfırdan farklıysa, bounce–pitch ve roll–yaw kuplajlarının kütle tarafındaki kaynağıdır.</div>';
+      +'Statik durumda takozların ilettiği toplam düşey kuvvet Σf<sub>z</sub> = '+_rF(sfz/1000,2)+' kN, dış düşey yükü '
+      +'F<sub>z</sub> = '+_rF(Fz/1000,2)+' kN dengeler (fark '+_rF(Math.abs(stat.res.checks.sumFzResidual),1)+' N). '
+      +'Atalet tensöründeki çarpım terimleri (I<sub>xz</sub>, I<sub>yz</sub>) sıfırdan farklıysa, bounce–pitch ve roll–yaw kuplajlarının kütle tarafındaki kaynağıdır.</div>';
   }
   // ── Asal atalet — dış referanslarla karşılaştırma için ────────────────────
   // Çok gövdeli yazılımların "aggregate mass" çıktısı ataleti çoğu zaman ASAL
@@ -748,7 +806,7 @@ function _mntRepStep1Mass(R){
       +'%'+_rF(100*oran,1)+'. '
       +(oran < 0.02
         ? 'Model eksenleri asal eksenlere pratik olarak çakışıktır; global köşegen değerler doğrudan yorumlanabilir.'
-        : '<b>Model eksenleri asal eksenlerle çakışık değildir.</b> Dış bir yazılımın (Adams/CATIA) "aggregate mass" çıktısı ataleti asal eksende ve bir yönelim açısıyla basıyorsa, o sayılar buradaki global köşegenle DEĞİL, yukarıdaki asal atalet satırıyla karşılaştırılmalıdır.')
+        : '<b>Model eksenleri asal eksenlerle çakışık değildir.</b> Dış bir yazılımın (Adams/CATIA) “<span lang="en">aggregate mass</span>” çıktısı ataleti asal eksende ve bir yönelim açısıyla basıyorsa, o sayılar buradaki global köşegenle DEĞİL, yukarıdaki asal atalet satırıyla karşılaştırılmalıdır.')
       +' Birleştirme paralel-eksen teoremiyle yapılır; nokta kütle işaretli bileşenlerin kendi ataleti sıfır alınır.</p>';
   }
   return h;
@@ -774,14 +832,14 @@ function _mntRepStep3Static(R, geom){
   var stat=_mntRepFindCase(R,'Static');
   if(!stat || !stat.res){ return h+'<p>Statik durum çözülemedi.</p>'; }
   var res=stat.res, m=R.mp.m;
-  h+='<p>\\( \\mathbf F=[0;0;-mg;0;0;0]^{\\mathsf T} \\), \\( mg='+_rTeX(_rF(m*9.81/1000,2))+' \\) kN ile (6.1) çözülür. Takoz düşey sehimleri (δ_z) ve şasiye ilettikleri düşey kuvvetler:</p>';
+  h+='<p>\\( \\mathbf F=[0;0;-mg;0;0;0]^{\\mathsf T} \\), \\( mg='+_rTeX(_rF(m*9.81/1000,2))+' \\) kN ile (6.1) çözülür. Takoz düşey sehimleri (δ<sub>z</sub>) ve şasiye ilettikleri düşey kuvvetler:</p>';
   var mounts=R.mounts;
   // Taşıma kapasitesi OPSİYONEL bir katalog verisidir (mnt.fCap [N], cp-mount.js
   // _mntToSI). Hiçbir takozda tanımlı değilse sütun HİÇ açılmaz — boş bir
   // "Yük (%)" sütunu, kapasitenin bilindiği ama sıfır olduğu izlenimi verirdi.
   var anyCap=mounts.some(function(mt){ return mt && mt.fCap>0; });
   h+='<table><caption>Tablo '+_rTbl()+' — Statik durum: takoz düşey sehimleri ve kuvvetleri (statik rijitlik)</caption>';
-  h+='<tr><th>Takoz</th><th>δ_z [mm]</th><th>Düşey kuvvet f_z [kN]</th>'
+  h+='<tr><th>Takoz</th><th>δ<sub>z</sub> [mm]</th><th>Düşey kuvvet f<sub>z</sub> [kN]</th>'
     +(anyCap?'<th>Kapasite [kN]</th><th>Yük [%]</th>':'')+'<th>Durum</th></tr>';
   res.perMount.forEach(function(pm,i){
     var dz=pm.delta[2]*1000, fz=pm.f[2]/1000;
@@ -809,11 +867,11 @@ function _mntRepStep3Static(R, geom){
   var tot=front+rear||1;
   h+='<tr class="sum"><td class="l">Toplam / dağılım</td>'
     +'<td colspan="'+(anyCap?4:2)+'" class="c">ön (küçük X) %'+_rF(100*front/tot,1)+' · arka %'+_rF(100*rear/tot,1)+'</td>'
-    +'<td class="c">Σf_z = '+_rF(res.sumF[2]/1000,2)+' kN '+(res.checks.sumFzOk?'✓':'✗')+'</td></tr>';
+    +'<td class="c">Σf<sub>z</sub> = '+_rF(res.sumF[2]/1000,2)+' kN '+(res.checks.sumFzOk?'✓':'✗')+'</td></tr>';
   h+='</table>';
-  h+='<p>Σf_z değeri dış yükü (−mg) dengeler; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
+  h+='<p>Σf<sub>z</sub> değeri dış yükü (−mg) dengeler; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
   if(anyCap){
-    h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Bu bir DAYANIM hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve çökmeyi değiştirmez. Tedarikçi raporlarında aynı sütun "Load (%)" adıyla geçer ve tipik tasarım hedefi %25–50 bandıdır — çok düşük değer gereğinden sert/büyük takozu, %100\'e yaklaşan değer ömür riskini gösterir.</p>';
+    h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Bu bir DAYANIM hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve çökmeyi değiştirmez. Tedarikçi raporlarında aynı sütun “<span lang="en">Load (%)</span>” adıyla geçer ve tipik tasarım hedefi %25–50 bandıdır — çok düşük değer gereğinden sert/büyük takozu, %100\'e yaklaşan değer ömür riskini gösterir.</p>';
   }
   h+=_mntRepLoadBar(R);
   return h;
@@ -834,7 +892,7 @@ function _mntRepLoadBar(R){
     svg+='<text x="'+(padL+bw+6)+'" y="'+(cy+4)+'" font-size="11" fill="#3c4350" font-family="Inter,system-ui,sans-serif">'+_rF(r.v,2)+' kN</text>';
   });
   svg+='</svg>';
-  return '<figure>'+svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Statik durumda takozların şasiye ilettiği düşey kuvvet (|f_z|) dağılımı.</figcaption></figure>';
+  return '<figure>'+svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Statik durumda takozların şasiye ilettiği düşey kuvvet (|f<sub>z</sub>|) dağılımı.</figcaption></figure>';
 }
 
 // §8.4 — tork süperpozisyonu
@@ -881,12 +939,12 @@ function _mntRepStep4Torque(R){
 // §8.5 — TÜM yük durumları (çökme matrisi) ───────────────────────────────────
 function _mntRepLoadCaseMatrix(R){
   var mounts=R.mounts||[];
-  var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey çökme δ_z)</h3>';
-  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> çökme özeti. Her hücre takozun δ_z\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ_x/δ_y/δ_z) ayrıntı için §8.6.</p>';
+  var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey çökme δ<sub>z</sub>)</h3>';
+  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> çökme özeti. Her hücre takozun δ<sub>z</sub>\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>) ayrıntı için §8.6.</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Yük durumu × takoz düşey sehim matrisi [mm]</caption>';
   h+='<tr><th>Yük durumu</th>';
   mounts.forEach(function(m){ h+='<th title="'+_rEsc(m.name)+'">'+_rEsc(_mntRepShort(m.name,8))+'</th>'; });
-  h+='<th>Σf_z [kN]</th></tr>';
+  h+='<th>Σf<sub>z</sub> [kN]</th></tr>';
   (R.allCases||[]).forEach(function(rc){
     h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td>';
     if(!rc.res){ h+='<td colspan="'+(mounts.length+1)+'" class="c">— (K tekil / çözülemedi)</td></tr>'; return; }
@@ -923,10 +981,10 @@ function _mntRepStep5Modal(R, C){
       +'f_{d,r}=f_r\\sqrt{1-\\zeta_r^{\\,2}} $$';
   }
   h+='<table><caption>Tablo '+_rTbl()+' — Rijit gövde modları: doğal frekanslar'+(haveZ?', mod başına sönüm':'')+' ve baskın mod şekli</caption>';
-  h+='<tr><th>Mod</th><th>f (k_din) [Hz]</th><th>f (k_stat) [Hz]</th>'
+  h+='<tr><th>Mod</th><th>f (k<sub>din</sub>) [Hz]</th><th>f (k<sub>stat</sub>) [Hz]</th>'
     +(haveZ?'<th>ζ<sub>mod</sub></th><th>f<sub>d</sub> [Hz]</th>':'')
     +'<th>Baskın hareket (mod şekli)</th></tr>';
-  var lbl=['u_x','u_y','u_z','θ_x','θ_y','θ_z'];
+  var lbl=['u<sub>x</sub>','u<sub>y</sub>','u<sub>z</sub>','θ<sub>x</sub>','θ<sub>y</sub>','θ<sub>z</sub>'];
   modes.forEach(function(md,i){
     var shape='';
     if(md.phi){
@@ -934,7 +992,7 @@ function _mntRepStep5Modal(R, C){
       shape=idx.map(function(o){ return lbl[o.k]+'='+_rFs(md.phi[o.k],2); }).join('; ');
     }
     var fs = (mstat && mstat[i]) ? _rF(mstat[i].f_Hz,3) : '—';
-    var lb=_rEsc(md.label||'—')+(md.phi?' <span style="color:#5a6270">('+shape+')</span>':'');
+    var lb=_rMod(md.label)+(md.phi?' <span style="color:#5a6270">('+shape+')</span>':'');
     var zc='';
     if(haveZ){
       var zr=zmod[i]||{};
@@ -967,7 +1025,7 @@ function _mntRepStep5Modal(R, C){
                > Math.max(Math.abs(phiMax[0]),Math.abs(phiMax[1]),Math.abs(phiMax[2]));
       h+='<p style="font-size:0.9em; color:#5a6270;">Girilen tek sönüm oranı \\( \\zeta='+_rTeX(_rF(zIn,4))+' \\) '
         +'modlara <b>eşit dağılmaz</b>: burada '+_rF(zmin,4)+' – '+_rF(zmax,4)+' aralığında çıkar '
-        +'(en sönümlü mod '+(iMax+1)+' — '+_rEsc(modes[iMax].label||'—')+'). Sebep, sönüm katsayılarının takoz başına '
+        +'(en sönümlü mod '+(iMax+1)+' — '+_rMod(modes[iMax].label)+'). Sebep, sönüm katsayılarının takoz başına '
         +'\\( c=2\\zeta\\sqrt{k_{\\text{din}}m_{\\text{pay}}} \\) ile türetilmesi ve her modun takozları farklı '
         +'oranlarda zorlamasıdır'
         +(rotDom ? ' — bu modelde en sönümlü mod <b>dönme baskın</b>dır: takozlar kaldıraç koluyla zorlanır ve daha çok söner.'
@@ -1000,7 +1058,7 @@ function _mntRepStep5Modal(R, C){
 // sola −). Çubuk hem ekranda hem yazdırmada okunur (print-color-adjust:exact ile
 // arka plan basılır); metin koyu ink, daima okunaklı.
 function _mntRepModeMatrix(modes){
-  var lbl=['u_x','u_y','u_z','θ_x','θ_y','θ_z'];
+  var lbl=['u<sub>x</sub>','u<sub>y</sub>','u<sub>z</sub>','θ<sub>x</sub>','θ<sub>y</sub>','θ<sub>z</sub>'];
   var h='<table class="modeshape"><caption>Tablo '+_rTbl()+' — Mod şekilleri (en büyük bileşene normalize; çubuk = merkezden katılım, yön = işaret)</caption>';
   h+='<tr><th>Mod</th><th>f [Hz]</th>';
   lbl.forEach(function(l){ h+='<th>'+l+'</th>'; });
@@ -1073,8 +1131,8 @@ function _mntRepFreqPlacement(R, opts){
   var cls1=ok1?'check':'warn';
   h+='<div class="note '+cls1+'"><span class="t">'+(ok1?'Uygun':'Dikkat')+' · Kriter 1 — Roll modu &lt; %50 ateşleme</span>';
   h+='En yüksek rijit gövde (roll) modu <b>'+_rF(fRoll,2)+' Hz</b>, sınır \\( 0{,}5\\,f_{\\text{ateş}}='+_rTeX(_rF(lim1,1))+' \\) Hz\'in ';
-  h+= ok1 ? '<b>altındadır</b> (f_ateş/f_roll = '+_rF(r1,2)+' ≥ 2) — ateşleme mertebesinden izole.'
-         : '<b>ÜZERİNDEDİR</b> (f_ateş/f_roll = '+_rF(r1,2)+' &lt; 2) — %50 kriterini karşılamıyor; takoz dinamik rijitliklerini düşürmek (mod bandını aşağı taşımak) önerilir.';
+  h+= ok1 ? '<b>altındadır</b> (f<sub>ateş</sub>/f<sub>roll</sub> = '+_rF(r1,2)+' ≥ 2) — ateşleme mertebesinden izole.'
+         : '<b>ÜZERİNDEDİR</b> (f<sub>ateş</sub>/f<sub>roll</sub> = '+_rF(r1,2)+' &lt; 2) — %50 kriterini karşılamıyor; takoz dinamik rijitliklerini düşürmek (mod bandını aşağı taşımak) önerilir.';
   h+='</div>';
 
   // İzolasyon tabanı — düşey frekans, modal bant içindeki yeri
@@ -1092,7 +1150,7 @@ function _mntRepFreqPlacement(R, opts){
   h+='\\( T=\\sqrt{\\tfrac{1+(2\\zeta r)^2}{(1-r^2)^2+(2\\zeta r)^2}} \\) = <b>'+Tstr+'</b> '
     +'(sönümsüz karşılığı '+(isFinite(iso.T0)?'%'+_rF(iso.T0*100,1):'∞')+') ';
   h+= ok2 ? '&lt; %50 — güç grubu rölantide izole bölgede çalışır.'
-         : '&ge; %50 — izolasyon yetersiz; düşey rijitliği düşürmek (f_bounce\'u aşağı taşımak) veya sönümü artırmak gerekir.';
+         : '&ge; %50 — izolasyon yetersiz; düşey rijitliği düşürmek (f<sub>bounce</sub>\'u aşağı taşımak) veya sönümü artırmak gerekir.';
   h+='</div>';
 
   h+='<p style="font-size:0.9em; color:#5a6270;">Not: bu bir <b>tek-serbestlik kestirimidir</b> — güç grubunu düşey yönde tek kütle-yay olarak alır. '
@@ -1131,7 +1189,7 @@ function _mntRepIso3Table(R, opts, sdof){
     +'Bu değerler <b>tam 6 serbestlik dereceli</b> frekans yanıtından okunur (dönme kuplajları dahil); '
     +'yukarıdaki \\( T='+(isFinite(sdof && sdof.T)?_rTeX(_rF(sdof.T,4)):'—')+' \\) ise düşey tek-serbestlik kestirimidir. '
     +'İkisinin ayrışması normaldir — kestirim güç grubunu tek kütle-yay sayar, tabloda ise gerçek mod kuplajları vardır. '
-    +'Tedarikçi raporlarında (AMC, Angst+Pfister) verilen "Isolation %" sütunu <b>bu tablodaki</b> büyüklüktür; '
+    +'Tedarikçi raporlarında (AMC, Angst+Pfister) verilen “<span lang="en">Isolation %</span>” sütunu <b>bu tablodaki</b> büyüklüktür; '
     +'karşılaştırma buradan yapılmalıdır. Yaygın tasarım hedefi \\( T&lt;0{,}2 \\) (≥ %80 izolasyon); '
     +'şirket kriteri (Kriter 2) \\( T&lt;0{,}5 \\). Negatif izolasyon bir hata değil: o yönde ateşleme frekansı '
     +'bir rezonansa denk geliyor ve titreşim azalmak yerine katlanıyor demektir.</p>';
@@ -1254,15 +1312,25 @@ function _mntRepDamping(R){
 var _FRF_TMIN = 0.01, _FRF_TMAX = 1000, _FRF_FMIN = 0.1, _FRF_FMAX = 100;
 
 // Log-log eğri grafiği (SVG). pts = { f, T, T0 }. fFire varsa dikey imleç.
+var _frfKirpNo=0;
 function _mntRepFRFChart(pts, fFire){
   var W=760, H=400, L=64, Rr=18, Tp=16, Bt=44;
   var pw=W-L-Rr, ph=H-Tp-Bt;
   var lf0=Math.log10(_FRF_FMIN), lf1=Math.log10(_FRF_FMAX);
-  var lt0=Math.log10(_FRF_TMIN), lt1=Math.log10(_FRF_TMAX);
+  // T EKSENİ VERİDEN: sabit 0,01–1.000 aralığı eğriyi 75 Hz'ten sonra alt
+  // sınırda DÜZ ÇİZGİYE çeviriyordu (kırpılmış veri) ve üst yarı boş kalıyordu.
+  // Aralık SÖNÜMLÜ eğrinin onluklarına oturur (T = 1 her zaman içeride);
+  // sönümsüz eğrinin teorik olarak sonsuz tepeleri çizim alanında KESİLİR.
+  var tAlt=Infinity, tUst=0;
+  (pts.T||[]).forEach(function(v){ if(Number.isFinite(v) && v>0){ tAlt=Math.min(tAlt, v); tUst=Math.max(tUst, v); } });
+  if(!(tUst>0)){ tAlt=_FRF_TMIN; tUst=_FRF_TMAX; }
+  var lt0=Math.floor(Math.log10(Math.min(tAlt, 0.5))), lt1=Math.ceil(Math.log10(Math.max(tUst*1.2, 2)));
+  var tMin=Math.pow(10, lt0), tMax=Math.pow(10, lt1);
   var px=function(f){ return L + (Math.log10(f)-lf0)/(lf1-lf0)*pw; };
-  var py=function(t){ var v=Math.min(_FRF_TMAX, Math.max(_FRF_TMIN, t));
-                      return Tp + (lt1-Math.log10(v))/(lt1-lt0)*ph; };
+  var py=function(t){ return Tp + (lt1-Math.log10(t))/(lt1-lt0)*ph; };
+  var kirp='frfKirp'+(++_frfKirpNo);
   var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-family="inherit">';
+  s+='<defs><clipPath id="'+kirp+'"><rect x="'+L+'" y="'+Tp+'" width="'+pw+'" height="'+ph+'"/></clipPath></defs>';
   // ── ızgara: ondalık ana çizgiler + 2..9 ara çizgiler ──
   var d, k;
   for(d=lf0; d<=lf1; d++){
@@ -1274,7 +1342,7 @@ function _mntRepFRFChart(pts, fFire){
   }
   for(d=lt0; d<=lt1; d++){
     for(k=1;k<10;k++){
-      var tv=k*Math.pow(10,d); if(tv<_FRF_TMIN||tv>_FRF_TMAX) continue;
+      var tv=k*Math.pow(10,d); if(tv<tMin||tv>tMax) continue;
       var Y=py(tv);
       s+='<line x1="'+L+'" y1="'+Y.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+Y.toFixed(1)+'" stroke="#c6c0b4" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
     }
@@ -1286,35 +1354,54 @@ function _mntRepFRFChart(pts, fFire){
   }
   for(d=lt0; d<=lt1; d++){
     var tl=Math.pow(10,d);
-    s+='<text x="'+(L-7)+'" y="'+(py(tl)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#3c4350">'+_rEsc(tl<1?_rF(tl,2):_rF(tl,0))+'</text>';   // makine: SVG koordinatı
+    s+='<text x="'+(L-7)+'" y="'+(py(tl)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#3c4350">'+_rEsc(tl<1?_rF(tl,-d):_rF(tl,0))+'</text>';   // makine: SVG koordinatı
   }
   s+='<text x="'+(L+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="#26241f">Frekans [Hz]</text>';
   s+='<text x="14" y="'+(Tp+ph/2)+'" text-anchor="middle" font-size="12" fill="#26241f" transform="rotate(-90 14 '+(Tp+ph/2)+')">İletilebilirlik T</text>';
   // ── T = 1 referansı (izolasyon sınırı) ──
-  s+='<line x1="'+L+'" y1="'+py(1).toFixed(1)+'" x2="'+(L+pw)+'" y2="'+py(1).toFixed(1)+'" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="5 4"/>';   // makine: SVG koordinatı
-  s+='<text x="'+(L+6)+'" y="'+(py(1)-5).toFixed(1)+'" font-size="10.5" fill="#6d5310">T = 1 (izolasyon yok)</text>';   // makine: SVG koordinatı
-  // ── eğriler ──
+  var y1=py(1);
+  s+='<line x1="'+L+'" y1="'+y1.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+y1.toFixed(1)+'" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="5 4"/>';   // makine: SVG koordinatı
+  s+='<text x="'+(L+6)+'" y="'+(y1-5).toFixed(1)+'" font-size="10.5" fill="#6d5310"'+_R_HALE+'>T = 1 (izolasyon yok)</text>';   // makine: SVG koordinatı
+  // ── eğriler (çizim alanına kırpılır) ──
+  var noktalar=[];
   var path=function(arr){
     var p='', started=false;
     for(var i=0;i<pts.f.length;i++){
       var v=arr[i];
       if(!Number.isFinite(v)||v<=0){ started=false; continue; }
-      p += (started?'L':'M') + px(pts.f[i]).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';   // makine: SVG koordinatı
+      var X=px(pts.f[i]), Y=py(v);
+      p += (started?'L':'M') + X.toFixed(1) + ' ' + Y.toFixed(1) + ' ';   // makine: SVG koordinatı
+      if(started){ var o=noktalar[noktalar.length-1]; for(var q=1;q<=4;q++) noktalar.push({ x:o.x+(X-o.x)*q/4, y:o.y+(Y-o.y)*q/4 }); }
+      else noktalar.push({ x:X, y:Y });
       started=true;
     }
     return p;
   };
+  s+='<g clip-path="url(#'+kirp+')">';
   s+='<path d="'+path(pts.T0)+'" fill="none" stroke="#96441f" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/>';
   s+='<path d="'+path(pts.T)+'" fill="none" stroke="#b02a2a" stroke-width="2.1"/>';
+  s+='</g>';
   // ── f_ateş imleci ──
+  var engel=[{ x0:L, x1:L+pw, y0:y1-1, y1:y1+1 }, { x0:L+2, x1:L+150, y0:y1-17, y1:y1 }];
   if(Number.isFinite(fFire) && fFire>=_FRF_FMIN && fFire<=_FRF_FMAX){
     var XF=px(fFire);
     s+='<line x1="'+XF.toFixed(1)+'" y1="'+Tp+'" x2="'+XF.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#1b7f4b" stroke-width="1.6" stroke-dasharray="4 3"/>';   // makine: SVG koordinatı
-    s+='<text x="'+(XF+5).toFixed(1)+'" y="'+(Tp+13)+'" font-size="10.5" fill="#1b7f4b">f_ateş = '+_rEsc(_rF(fFire,1))+' Hz</text>';   // makine: SVG koordinatı
+    s+='<text x="'+(XF+5).toFixed(1)+'" y="'+(Tp+13)+'" font-size="10.5" fill="#1b7f4b"'+_R_HALE+'>f<tspan font-size="75%" baseline-shift="sub">ateş</tspan> = '+_rEsc(_rF(fFire,1))+' Hz</text>';   // makine: SVG koordinatı
+    engel.push({ x0:XF-1, x1:XF+1, y0:Tp, y1:Tp+ph }, { x0:XF, x1:XF+110, y0:Tp, y1:Tp+18 });
   }
-  // ── lejant ──
-  s+='<g transform="translate('+(L+pw-190)+',' +(Tp+ph-46)+')">';
-  s+='<rect x="-8" y="-13" width="196" height="42" fill="#ffffff" opacity="0.82" stroke="#c6c0b4" stroke-width="0.6"/>';
+  // ── lejant: eğrinin, T = 1 çizgisinin ve imlecin DEĞMEDİĞİ köşe ──
+  // Sabit sağ alt köşedeydi; eğri yüksek frekansta tam oradan iniyordu.
+  var LW=196, LH=42, adaylar=[[L+pw-LW-6, Tp+6], [L+8, Tp+6], [L+8, Tp+ph-LH-6], [L+pw-LW-6, Tp+ph-LH-6]];
+  var say=function(a){
+    var R0={ x0:a[0]-3, x1:a[0]+LW+3, y0:a[1]-3, y1:a[1]+LH+3 }, n=0;
+    noktalar.forEach(function(q){ if(q.x>=R0.x0 && q.x<=R0.x1 && q.y>=R0.y0 && q.y<=R0.y1 && q.y>=Tp && q.y<=Tp+ph) n++; });
+    engel.forEach(function(e){ if(e.x0<R0.x1 && e.x1>R0.x0 && e.y0<R0.y1 && e.y1>R0.y0) n+=1000; });
+    return n;
+  };
+  var en=adaylar[0], enN=Infinity;
+  for(var ai=0; ai<adaylar.length; ai++){ var nn=say(adaylar[ai]); if(nn<enN){ enN=nn; en=adaylar[ai]; } if(nn===0) break; }
+  s+='<g transform="translate('+(en[0]+8)+','+(en[1]+13)+')">';
+  s+='<rect x="-8" y="-13" width="'+LW+'" height="'+LH+'" fill="#ffffff" stroke="#c6c0b4" stroke-width="0.6"/>';
   s+='<line x1="0" y1="0" x2="26" y2="0" stroke="#b02a2a" stroke-width="2.1"/><text x="32" y="4" font-size="10.5" fill="#26241f">sönümlü</text>';
   s+='<line x1="0" y1="18" x2="26" y2="18" stroke="#96441f" stroke-width="1.4" stroke-dasharray="6 4"/><text x="32" y="22" font-size="10.5" fill="#26241f">sönümsüz</text>';
   s+='</g>';
@@ -1411,7 +1498,7 @@ function _mntRepModalEnergy(R){
       +'<td>'+_rE(e.mGen,3)+'</td><td>'+_rE(e.kGen,3)+'</td>'
       +'<td>'+_rF(fChk,3)+'</td><td>'+_rE(e.ke,3)+'</td>'
       +(haveZ?'<td>'+((zmod[i]&&Number.isFinite(zmod[i].zeta))?_rF(zmod[i].zeta,4):'—')+'</td>':'')
-      +'<td class="l">'+_rEsc(modes[i].label||'—')+'</td></tr>';
+      +'<td class="l">'+_rMod(modes[i].label)+'</td></tr>';
   });
   h+='</table>';
   var skipTxt = nSkip ? ' '+nSkip+' mod sıfıra yakın frekansta olduğu için kapı dışında bırakıldı (bkz. §8.7 serbest mod uyarısı).' : '';
@@ -1447,7 +1534,7 @@ function _mntRepModalEnergy(R){
         var bar='background:linear-gradient(90deg, rgba(36,66,95,0.20) '+p.toFixed(1) + '%, transparent '+p.toFixed(1) + '%);';   // makine: CSS gradyanı
         h+='<td style="'+bar+'">%'+_rF(b.pct,1)+'</td>';
       });
-      h+='<td class="l">'+_rEsc(modes[i].label||'—')+'</td></tr>';
+      h+='<td class="l">'+_rMod(modes[i].label)+'</td></tr>';
     });
     h+='</table>';
 
@@ -1465,7 +1552,7 @@ function _mntRepModalEnergy(R){
       // atlanmaz: okuyucu eksik mod numarasını aşağıdaki notta bulur.
       if(!(Math.abs(tot)>0)){ atlanan.push(i+1); return; }
       h+='<table><caption>Tablo '+_rTbl()+' — Mod '+(i+1)+' ('+_rF(modes[i].f_Hz,2)+' Hz, '
-        +_rEsc(modes[i].label||'—')+'): kinetik enerji dağılımı [%]</caption>';
+        +_rMod(modes[i].label)+'): kinetik enerji dağılımı [%]</caption>';
       h+='<tr><th>Gövde</th><th>Toplam</th>';
       dofs.forEach(function(dd){ h+='<th>'+dd[1]+'</th>'; });
       h+='</tr>';
@@ -1673,7 +1760,7 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#26241f" stroke-width="1.5"/>';   // makine: SVG koordinatı
   s+='<line x1="'+(gx-7).toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+(gx+7).toFixed(1)+'" y2="'+gy.toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';   // makine: SVG koordinatı
   s+='<line x1="'+gx.toFixed(1)+'" y1="'+(gy-7).toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy+7).toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';   // makine: SVG koordinatı
-  s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#26241f">G</text>';   // makine: SVG koordinatı
+  s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#26241f"'+_R_HALE+'>G</text>';   // makine: SVG koordinatı
   s+='</svg>';
   // flex-grow = viewBox genişliği → ekrandaki genişlik de W ile orantılı olur,
   // yani K = kap/ΣW üçünde ortaktır (px/mm eşitliğinin dayanağı budur).
@@ -1768,7 +1855,7 @@ function _mntRepModeShapes(R){
       +'</div>'
       +_MNT_MOD_LEJANT
       +'<figcaption><b>Şekil '+_rFig()+' —</b> Mod '+(i+1)+': '+_rF(md.f_Hz,2)+' Hz · '
-      +_rEsc(md.label||'—')+'. Üstten (X–Y), yandan (X–Z) ve önden (Y–Z) görünüş.</figcaption></figure>';
+      +_rMod(md.label)+'. Üstten (X–Y), yandan (X–Z) ve önden (Y–Z) görünüş.</figcaption></figure>';
   });
   return h;
 }
@@ -1898,7 +1985,7 @@ function _mntRepConsistency(R){
   });
   var cls = (nBal===nTot && overLin===0) ? 'check' : 'warn';
   h+='<div class="note '+cls+'"><span class="t">Tutarlılık özeti</span>';
-  h+='Çözülen '+nTot+' yük durumunun '+nBal+' tanesinde düşey kuvvet dengesi (Σf_z = dış yük) sağlanır. ';
+  h+='Çözülen '+nTot+' yük durumunun '+nBal+' tanesinde düşey kuvvet dengesi (Σf<sub>z</sub> = dış yük) sağlanır. ';
   h+='Çekme / lift-off gözlenen takoz-durum sayısı: '+tension+'. ';
   h+='±10 mm lineerlik bandını aşan takoz-durum sayısı: '+overLin+'. ';
   if(overLin>0){ h+='<strong>Lineer model bu bandın ötesinde yaklaşıktır</strong> — ilgili yük durumlarında takozun nonlineer kuvvet–sehim eğrisi (Bölüm 9.1) devreye girer; sonuçlar bu sınır göz önünde değerlendirilmelidir.'; }
@@ -1943,7 +2030,7 @@ function veMntUygunluk(R, opts){
     c1={ st:(asan.length?'no':'ok'),
          bulgu: asan.length
            ? asan.length+' mod sınırı aşıyor ('+asan.map(function(m){ return 'mod '+m.no+' '+_rF(m.f,2)+' Hz'; }).join(', ')
-             +') · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'
+             +') · sınır %50·f<sub>ateş</sub> = '+_rF(lim1,2)+' Hz'
            : 'En yüksek mod (mod '+modes.length+') <b>'+_rF(pl?pl.fMax:NaN,2)+'</b> Hz &lt; sınır '+_rF(lim1,2)+' Hz — 6/6 mod bandın altında' };
   }
 
@@ -1974,7 +2061,7 @@ function veMntUygunluk(R, opts){
   var iso=_mntRepIsolation(R, opts), c2;
   if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
   else c2={st:(iso.T<T_GATE?'ok':'no'),
-    bulgu:'f_ateş '+_rF(iso.fFire,1)+' Hz / f_bounce '+_rF(iso.fBounce,2)+' Hz → r='+_rF(iso.r,2)
+    bulgu:'f<sub>ateş</sub> '+_rF(iso.fFire,1)+' Hz / f<sub>bounce</sub> '+_rF(iso.fBounce,2)+' Hz → r='+_rF(iso.r,2)
          +', T=<b>'+(isFinite(iso.T)?'%'+_rF(iso.T*100,1):'∞')+'</b> (§8.8) · '
          +(isFinite(iso.T)
             ? (iso.T<T_REF ? '%10 referans eşiğini de sağlıyor'
@@ -2000,7 +2087,7 @@ function veMntUygunluk(R, opts){
   var c4={st:(c4Total>=4?'ok':'no'),
     bulgu:c4Total+'/4 koşul çözüldü — §8.10'+(haveTq?'':' (maks tork için tahrik kinematiği girin)')};
 
-  var satirlar=[['1', 'Modal bant — tüm modlar','Modal bant','&lt; %50 · f_ateş',c1],
+  var satirlar=[['1', 'Modal bant — tüm modlar','Modal bant','&lt; %50 · f<sub>ateş</sub>',c1],
    ['1a','Modlar arası ayrıklık','Mod ayrıklığı','&gt; 0,5 Hz',c1a],
    ['1b','Yaylandırılmamış kütle bandı','Yaylandırılmamış kütle bandı','8–10 Hz ile çakışmama',c1b],
    ['2', 'Rölanti transmissibility','Rölanti iletilebilirliği','&lt; %50 (referans %10)',c2],
@@ -2032,7 +2119,7 @@ function _mntRepCompliance(R, opts){
   else h+='<b>Tüm hedef kriterler sağlanıyor</b> — güç grubu takoz sistemi şirket motor takozu hedeflerini karşılıyor.';
   if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var — takoz seçimi gözden geçirilmeli.</span>';
   h+='</div>';
-  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Ateşleme frekansı f_ateş = (N/60)·(z/2). <b>Kriter 1</b> modların TAMAMINI sınar — en yüksek mod (mod '+(modes.length)+') tek başına belirleyici değildir; ortadaki bir mod da sınırı aşabilir. <b>Kriter 1a</b> komşu modların birbirine karışmasını, <b>1b</b> güç grubu modlarının aks/lastik (yaylandırılmamış kütle) bandına düşmesini engeller. Transmissibility T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] ile, DÜŞEY (bounce) doğal frekansı f_bounce=(1/2π)·√(Σk_z,din/m) tabanında hesaplanır (§8.8); ζ Çözücü\'de girilir; modal frekans bu hesaba GİRMEZ. Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10, kriterleri sağlamak için gereken rijitlik yumuşatması §8.15\'te ayrıntılıdır.</div>';
+  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Ateşleme frekansı f<sub>ateş</sub> = (N/60)·(z/2). <b>Kriter 1</b> modların TAMAMINI sınar — en yüksek mod (mod '+(modes.length)+') tek başına belirleyici değildir; ortadaki bir mod da sınırı aşabilir. <b>Kriter 1a</b> komşu modların birbirine karışmasını, <b>1b</b> güç grubu modlarının aks/lastik (yaylandırılmamış kütle) bandına düşmesini engeller. Transmissibility T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] ile, DÜŞEY (bounce) doğal frekansı f<sub>bounce</sub>=(1/2π)·√(Σk<sub>z,din</sub>/m) tabanında hesaplanır (§8.8); ζ Çözücü\'de girilir; modal frekans bu hesaba GİRMEZ. Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10, kriterleri sağlamak için gereken rijitlik yumuşatması §8.15\'te ayrıntılıdır.</div>';
   return h;
 }
 
@@ -2062,6 +2149,10 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepMassTable: _mntRepMassTable,
     _mntRepMountTable: _mntRepMountTable,
     _mntRepFigure: _mntRepFigure,
+    _mntRepModeFigure: _mntRepModeFigure,
+    _repPlaceLabels: _repPlaceLabels,
+    _rMod: _rMod,
+    _rBolunmez: _rBolunmez,
     _mntRepStep1Mass: _mntRepStep1Mass,
     _mntRepStep2Stiffness: _mntRepStep2Stiffness,
     _mntRepStep3Static: _mntRepStep3Static,

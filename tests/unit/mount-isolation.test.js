@@ -104,7 +104,7 @@ describe('Rapor — tek hesap noktası (_mntRepIsolation)', () => {
     const uy = rep._mntRepCompliance(R, {});
     expect(s8).toContain('21,9');
     expect(uy).toContain('21,9');
-    expect(uy).toContain('f_bounce');
+    expect(uy).toContain('f<sub>bounce</sub>');           // alt simge gerçek (Tur 6)
     // Eski hatanın kilidi: iletilebilirlik tabanı MODAL frekans olmamalı.
     // (Metin eşleşmesi değil, niyet kilitlenir — rapor bunu açıkça söylemeli.)
     expect(uy).toContain('modal frekans bu hesaba GİRMEZ');

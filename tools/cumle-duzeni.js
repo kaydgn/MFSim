@@ -50,7 +50,7 @@ const AD = _ten ? [_ten[1]] : [];
 const URUN = ['MFSim — Araç Performans Simülasyonu', 'Araç Performans Simülasyon Yazılımı',
   'MFSim Projesi', 'MFSim Raporu'];   // son ikisi varsayılan dosya adı
 const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cmd', 'Home', 'End',
-  'Vector', 'CANoe', 'Excel', 'GitHub', 'Windows', 'Gates', 'Allison', 'Cummins', 'Lucide', 'Edge',
+  'Vector', 'CANoe', 'Excel', 'GitHub', 'Windows', 'Gates', 'Allison', 'Cummins', 'Adams', 'Lucide', 'Edge',
   'Inter', 'Segoe', 'Workflow', 'Run', 'Grid', 'Minimap', 'Coast-Down', 'Hubload', 'Mean', 'Governed',
   'Deploy', 'Pages', 'Actions', 'Speed', 'Spline', 'Data', 'Mode', 'Recommended', 'Wide', 'Case',
   'Studio', 'Pitch', 'Arm', 'Length', 'Load', 'Notes', 'Schedule', 'Controller', 'Converter', 'Ref',

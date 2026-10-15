@@ -763,7 +763,9 @@ function _mntS(v, d){
 }
 // Raporun HTML bulgusu → düz metin (pencerede `title`a gider).
 function _mntDuzMetin(html){
-  return String(html==null?'':html).replace(/<[^>]*>/g, '')
+  // Alt simge düz metinde alt çizgiyle kalır ("f<sub>ateş</sub>" → "f_ateş");
+  // etiketi sökmek onu "fateş" diye okuturdu.
+  return String(html==null?'':html).replace(/<sub>([^<]*)<\/sub>/g, '_$1').replace(/<[^>]*>/g, '')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ').trim();
 }
@@ -5282,6 +5284,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntEksikGit: veMntEksikGit,
     veMntPencereTazele: veMntPencereTazele,
     _mntUygunlukHTML: _mntUygunlukHTML,
+    _mntDuzMetin: _mntDuzMetin,
     _mntTakozUygunlukHTML: _mntTakozUygunlukHTML,
     _mntKutleDurumu: _mntKutleDurumu,
     _mntMotorDurumu: _mntMotorDurumu,
