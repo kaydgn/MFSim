@@ -8281,8 +8281,11 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    geçerliliği değil KONUMU (i < adım) anlatıyordu. */
 .ve-fw-step.on{ background:var(--accent-tint-10); }
 .ve-fw-step.on .ve-fw-step-t b{ color:var(--text-heading); font-weight:700; }
-/* Etkin adımın açıklaması vurgu zemininde: soluk jeton orada 4,22:1 kalıyordu. */
-.ve-fw-step.on .ve-fw-step-t em{ color:var(--text-secondary); }
+/* Etkin adımın açıklaması vurgu zemininde: soluk jeton orada 4,22:1 kalıyordu.
+   Fare altındaki adımın zemini de vurgu tonu (%6): soluk jeton 4,43:1 (açık)
+   · 4,23:1 (koyu) — aynı kural. */
+.ve-fw-step.on .ve-fw-step-t em,
+.ve-fw-step:hover .ve-fw-step-t em{ color:var(--text-secondary); }
 .ve-fw-st-ok   { border-left-color:var(--accent-success); }
 .ve-fw-st-warn { border-left-color:var(--accent-warning); }
 .ve-fw-st-err  { border-left-color:var(--accent-danger); }
@@ -8802,10 +8805,16 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
    yalnız sınır bölgelerinin). */
 .ve-fw-md-guc{ fill:color-mix(in srgb, var(--text-secondary) 26%, transparent); stroke:var(--text-secondary); stroke-width:1; }
 .ve-fw-md-eksen{ stroke:var(--text-muted); stroke-width:1; }
-.ve-fw-md-yazi text{ font-size:var(--fs-micro); fill:var(--text-muted); font-variant-numeric:tabular-nums; }
+/* Hâle: devir çizgileri (sınırlar, çevrim noktaları) yazının ALTINDAN geçiyor;
+   hâlesiz hâlde kesikli sınır "çevrim tepesi" yazısını ortadan bölüyordu
+   (ölçüldü, 5. adım). Masanın öteki yazılarıyla aynı kural (.ve-fw-g-yazi). */
+.ve-fw-md-yazi text{ font-size:var(--fs-micro); fill:var(--text-muted); font-variant-numeric:tabular-nums;
+  paint-order:stroke; stroke:var(--bg-input); stroke-width:2.4px; stroke-linejoin:round; }
 .ve-fw-md-yazi .ve-fw-md-ad{ font-size:var(--fs-tiny); font-weight:600; fill:var(--text-heading); }
 .ve-fw-md-yazi .ve-fw-md-alt-err{ fill:var(--ink-danger); font-weight:600; }
-.ve-fw-md-yazi .ve-fw-md-sinir-y{ fill:var(--ink-warning); }
+/* Sınır yazısı renkli bölgenin İÇİNDE durur: zemin hâlesi orada açık bir kontur
+   olarak görünürdü; yazı kendi sınır çizgisinin yanında, ondan çizgi geçmez. */
+.ve-fw-md-yazi .ve-fw-md-sinir-y{ fill:var(--ink-warning); stroke:none; }
 .ve-fw-md-yazi .ve-fw-md-sinir-anlik{ fill:var(--ink-danger); }
 /* Eksenin dışındaki sınır: çizim alanının sağındaki olukta soluk yazı +
    eksenin ucunda işaret (js/cp-fead-wizard.js → _fwPencereSVG). */
@@ -10201,7 +10210,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mk-kol{ stroke:var(--accent-primary); stroke-width:1; stroke-dasharray:3 2; fill:none; }
 .ve-mk-ok{ stroke:var(--accent-primary); stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; }
 /* Çizimin yazıları ölçeğin en küçük basamağında (10 px görünüş birimi; dar
-   sütunda çizim 1:1, geniş pencerede tavanına kadar büyür). */
+   sütunda çizim 1:1, geniş pencerede tavanına kadar büyür). Zeminin renginde
+   hâle: bileşenden birleşik AM'ye uzanan kol ve ızgara yazının altından
+   geçiyordu (ölçüldü: "Ön Takoz" ve konum yazısı kolun üstünde). */
+.ve-mk-y, .ve-mk-yh, .ve-mk-ym{ paint-order:stroke; stroke:var(--bg-primary); stroke-width:2.4px; stroke-linejoin:round; }
 .ve-mk-y{ fill:var(--text-secondary); font-size:var(--fs-micro); font-family:inherit; }
 .ve-mk-yh{ fill:var(--text-heading); font-size:var(--fs-micro); font-weight:700; font-family:inherit; }
 .ve-mk-ym{ fill:var(--text-muted); font-size:var(--fs-micro); font-family:inherit; letter-spacing:.04em; }

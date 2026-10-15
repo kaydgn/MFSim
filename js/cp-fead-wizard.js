@@ -3251,7 +3251,8 @@ function _fwGergiMasa(b, W, H){
              oy: UST + ((H - UST - ALT) - (y1 - y0) * s) / 2 };
   return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: false, pivot: true,
     arrows: false, nameLabels: true, shortNames: true, wrapLabels: false, frame: false,
-    xfSabit: xf, ek: function(T){ return _fwGergiKatman(T, v); } })
+    xfSabit: xf, ek: function(T){ return _fwGergiKatman(T, v); },
+    engel: function(T){ return _fwGergiEngel(T, v); } })
     || _fwMasaBos('Kayış yolu henüz çözülmedi.');
 }
 // Pivot çevresinde a → b yayı; `ara` noktası yayın ÜSTÜNDE olmalı (kolun
@@ -3275,6 +3276,36 @@ function _fwYay(T, pv, a, c, ara){
   return 'M' + f(a2[0]) + ' ' + f(a2[1]) + ' A' + f(R) + ' ' + f(R) + ' 0 ' + (ext > Math.PI ? 1 : 0)
     + ' ' + sweep + ' ' + f(c2[0]) + ' ' + f(c2[1]);
 }
+// Yakın görünüşün çizgileri çizicinin ETİKETLERİNE engel: katman etiketler
+// yerleştikten sonra çiziliyor (`ek`), salınım çemberi gerginin adının tam
+// üstünden geçiyordu (ölçüldü, gerçek tarayıcı: AG00976, 3. adım). Çizici
+// onları ancak söylenirse bilir (`engel`); geometri katmanınkiyle aynı.
+function _fwGergiEngel(T, v){
+  var by = v.by, out = [], rpx = (v.rP || 30) * T.s;
+  var P = [T.tx(v.pv[0]), T.ty(v.pv[1])];
+  ['free', 'load'].forEach(function(k){
+    var r = by[k];
+    if(!r) return;
+    var X = T.tx(r.cen[0]), Y = T.ty(r.cen[1]);
+    out.push([P[0], P[1], X, Y]);
+    for(var i = 0; i < 32; i++){
+      var a0 = i / 32 * 2 * Math.PI, a1 = (i + 1) / 32 * 2 * Math.PI;
+      out.push([X + rpx * Math.cos(a0), Y + rpx * Math.sin(a0), X + rpx * Math.cos(a1), Y + rpx * Math.sin(a1)]);
+    }
+  });
+  var g = _fwGobekOk(T, v, rpx);
+  if(g) out.push([g.M[0], g.M[1], g.E[0], g.E[1]]);
+  return out;
+}
+// Göbek yükü oku: Mean merkezinden çekirdeğin yönüyle (y ekranda aşağı).
+// Katman da engel de buradan okur.
+function _fwGobekOk(T, v, rpx){
+  var st = v.st, by = v.by;
+  if(!(st && by.mean && Number.isFinite(st.hubloadN) && Number.isFinite(st.hubDirDeg))) return null;
+  var t = st.hubDirDeg * Math.PI / 180, L = Math.max(34, Math.min(90, rpx * 1.6));
+  var M = [T.tx(by.mean.cen[0]), T.ty(by.mean.cen[1])];
+  return { M: M, E: [M[0] + L * Math.cos(t), M[1] - L * Math.sin(t)], ux: Math.cos(t), uy: -Math.sin(t) };
+}
 function _fwGergiKatman(T, v){
   var f = T.f, by = v.by, pv = v.pv, rpx = (v.rP || 30) * T.s;
   var P = [T.tx(pv[0]), T.ty(pv[1])];
@@ -3292,11 +3323,9 @@ function _fwGergiKatman(T, v){
   if(by.max && by.min)
     h += '<path class="ve-fw-g-bant" data-ve="calisma-bandi" d="' + _fwYay(T, pv, by.max.cen, by.min.cen, by.mean.cen) + '"/>';
   // Göbek yükü: Mean merkezinden, çekirdeğin yönüyle (y ekranda aşağı).
-  var st = v.st, M = [T.tx(by.mean.cen[0]), T.ty(by.mean.cen[1])];
-  if(st && Number.isFinite(st.hubloadN) && Number.isFinite(st.hubDirDeg)){
-    var t = st.hubDirDeg * Math.PI / 180, L = Math.max(34, Math.min(90, rpx * 1.6));
-    var E = [M[0] + L * Math.cos(t), M[1] - L * Math.sin(t)];
-    var ux = Math.cos(t), uy = -Math.sin(t);
+  var st = v.st, gk = _fwGobekOk(T, v, rpx);
+  if(gk){
+    var M = gk.M, E = gk.E, ux = gk.ux, uy = gk.uy;
     h += '<line class="ve-fw-g-gobek" x1="' + f(M[0]) + '" y1="' + f(M[1]) + '" x2="' + f(E[0]) + '" y2="' + f(E[1]) + '"/>'
       + '<path class="ve-fw-g-gobek-uc" d="M' + f(E[0]) + ' ' + f(E[1])
         + ' L' + f(E[0] - 9 * ux + 4 * uy) + ' ' + f(E[1] - 9 * uy - 4 * ux)
@@ -3412,21 +3441,30 @@ function _fwKayisMasa(b, W, H){
 }
 // Açıklık boyları (mm) — çekirdeğin açıklık uzunluğu (`span.L`), orta
 // noktadan DIŞA doğru (kümenin ağırlık merkezinin tersine).
-function _fwAciklikKatman(T){
-  var f = T.f, g = T.geom;
-  if(!g || !g.spans) return '';
+function _fwAciklikYerleri(T){
+  var g = T.geom, out = [];
+  if(!g || !g.spans) return out;
   var gx = 0, gy = 0;
   T.ps.forEach(function(p){ gx += T.tx(p.c[0]); gy += T.ty(p.c[1]); });
   gx /= Math.max(1, T.ps.length); gy /= Math.max(1, T.ps.length);
-  var h = '<g data-ve="aciklik" class="ve-fw-aciklik">';
+  var fs = 10 / _fwMasaKat;
   g.spans.forEach(function(sp){
     if(!sp || !Number.isFinite(sp.L)) return;
     var ax = T.tx(sp.Pi[0]), ay = T.ty(sp.Pi[1]), bx = T.tx(sp.Pj[0]), by = T.ty(sp.Pj[1]);
     var mx = (ax + bx) / 2, my = (ay + by) / 2, vx = bx - ax, vy = by - ay;
     var l = Math.sqrt(vx * vx + vy * vy) || 1, nx = vy / l, ny = -vx / l;
     if((mx - gx) * nx + (my - gy) * ny < 0){ nx = -nx; ny = -ny; }
-    h += '<text x="' + f(mx + nx * 12) + '" y="' + f(my + ny * 12 + 4) + '" text-anchor="middle">'
-      + veSayi(sp.L, 1) + '</text>';
+    var x = mx + nx * 12, y = my + ny * 12 + 4, yazi = veSayi(sp.L, 1), w = yazi.length * fs * 0.62;
+    out.push({ x: x, y: y, yazi: yazi, x0: x - w / 2, x1: x + w / 2, y0: y - fs, y1: y + 3 });
+  });
+  return out;
+}
+function _fwAciklikKatman(T){
+  var f = T.f, yer = _fwAciklikYerleri(T);
+  if(!yer.length) return '';
+  var h = '<g data-ve="aciklik" class="ve-fw-aciklik">';
+  yer.forEach(function(e){
+    h += '<text x="' + f(e.x) + '" y="' + f(e.y) + '" text-anchor="middle">' + e.yazi + '</text>';
   });
   return h + '</g>';
 }
@@ -3453,33 +3491,88 @@ function _fwOzetMasa(b, W, H){
   return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: true, pivot: true,
     arrows: true, nameLabels: true, wrapLabels: true, frame: false, sembolik: true,
     kenarPay: _fwNefes(pay, W, H),
-    ek: function(T){ return _fwAciklikKatman(T) + _fwMerkezKatman(T, R); } })
+    ek: function(T){ return _fwAciklikKatman(T) + _fwMerkezKatman(T, R); },
+    engel: function(T){ return _fwMerkezSatirlar(T, R).map(function(m){ return [m.ax, m.ay, m.bx, m.by]; }); } })
     || _fwMasaBos(VE_FW_KASNAK_YOK);
 }
-function _fwMerkezKatman(T, R){
-  var c = R && R.centerDistance;
-  if(!c || !c.rows) return '';
-  var f = T.f, h = '<g data-ve="merkez-sinir" class="ve-fw-merkez">';
+// Sınırdaki merkez mesafesi satırları ekran koordinatında — katman da,
+// çiziciye giden engel de buradan okur (çizgi adın/açının üstünden geçmesin).
+function _fwMerkezSatirlar(T, R){
+  var c = R && R.centerDistance, out = [];
+  if(!c || !c.rows) return out;
   c.rows.forEach(function(r){
     if(r.ok) return;
     var pi = T.ps[r.i], pj = T.ps[r.j];
-    if(!pi || !pj) return;
-    var ax = T.tx(pi.c[0]), ay = T.ty(pi.c[1]), bx = T.tx(pj.c[0]), by = T.ty(pj.c[1]);
+    if(!pi || !pj || !pi.c || !pj.c) return;
+    out.push({ r: r, ax: T.tx(pi.c[0]), ay: T.ty(pi.c[1]), bx: T.tx(pj.c[0]), by: T.ty(pj.c[1]) });
+  });
+  return out;
+}
+function _fwMerkezKatman(T, R){
+  var satir = _fwMerkezSatirlar(T, R);
+  if(!satir.length) return '';
+  var f = T.f, h = '<g data-ve="merkez-sinir" class="ve-fw-merkez">';
+  var gx = 0, gy = 0;
+  T.ps.forEach(function(q){ gx += T.tx(q.c[0]); gy += T.ty(q.c[1]); });
+  gx /= Math.max(1, T.ps.length); gy /= Math.max(1, T.ps.length);
+  // KUTUNUN ENGELLERİ: kayışın açıklıkları, kasnak çemberleri, çizicinin
+  // yerleştirdiği ad ve açılar (`T.etiketler`) ve açıklık boyları. Kutu
+  // dolgulu: bir açıklığın üstüne konunca kayışı SİLİYORDU (ölçüldü: AG00976
+  // 6. adımda "a = 281,1 > 273,2 mm" Alternatör–Avara 2 açıklığının üstünde).
+  var spans = (T.geom && T.geom.spans) || [];
+  var segler = spans.map(function(sp){ return [T.tx(sp.Pi[0]), T.ty(sp.Pi[1]), T.tx(sp.Pj[0]), T.ty(sp.Pj[1])]; });
+  var kutular = (T.etiketler || []).slice();
+  _fwAciklikYerleri(T).forEach(function(k){ kutular.push(k); });
+  function bos(a){
+    if(a.x0 < 2 || a.y0 < 2 || a.x1 > T.W - 2 || a.y1 > T.H - 2) return false;
+    if(segler.some(function(g){ return _fwKesisir(g, a); })) return false;
+    if(kutular.some(function(b){ return !(a.x1 <= b.x0 || a.x0 >= b.x1 || a.y1 <= b.y0 || a.y0 >= b.y1); })) return false;
+    return !T.ps.some(function(q){
+      if(!q.c) return false;
+      var X = T.tx(q.c[0]), Y = T.ty(q.c[1]), rr = q.rPitch * T.s;
+      var nx = Math.max(a.x0, Math.min(X, a.x1)), ny = Math.max(a.y0, Math.min(Y, a.y1));
+      return (nx - X) * (nx - X) + (ny - Y) * (ny - Y) < rr * rr;
+    });
+  }
+  satir.forEach(function(m){
+    var r = m.r, ax = m.ax, ay = m.ay, bx = m.bx, by = m.by;
     var ust = r.a > r.hi;
     var yazi = 'a = ' + veSayi(r.a, 1) + (ust ? ' > ' + veSayi(r.hi, 1) : ' < ' + veSayi(r.lo, 1)) + ' mm';
     var fs = 11 / _fwMasaKat, w = yazi.length * fs * 0.58 + 12, mx = (ax + bx) / 2, my = (ay + by) / 2;
-    // Açıklık boyu orta noktanın DIŞINA yazılıyor (`_fwAciklikKatman`); kutu
-    // kümenin İÇİNE, bir yazı boyu kayar — ikisi üst üste binmesin.
-    var gx = 0, gy = 0;
-    T.ps.forEach(function(q){ gx += T.tx(q.c[0]); gy += T.ty(q.c[1]); });
-    gx /= Math.max(1, T.ps.length); gy /= Math.max(1, T.ps.length);
-    var dx = gx - mx, dy = gy - my, dl = Math.sqrt(dx * dx + dy * dy) || 1;
-    mx += dx / dl * fs * 2.2; my += dy / dl * fs * 2.2;
+    // ADAYLAR: çizginin orta noktasından dik yönde, önce kümenin İÇİNE (açıklık
+    // boyu orta noktanın DIŞINA yazılıyor), sonra dışına; adım bir yazı boyu.
+    // Hiçbiri boş değilse eski yer: içeri, bir yazı boyu kayık.
+    var vx = bx - ax, vy = by - ay, vl = Math.sqrt(vx * vx + vy * vy) || 1;
+    var nx = -vy / vl, ny = vx / vl;
+    if((gx - mx) * nx + (gy - my) * ny < 0){ nx = -nx; ny = -ny; }
+    var sec = null;
+    [2.2, 3.4, 4.6, 5.8, -2.2, -3.4, -4.6, -5.8, 7.2, -7.2].some(function(d){
+      [0, 0.18, -0.18, 0.32, -0.32].some(function(t){
+        var cx = mx + nx * fs * d + vx * t, cy = my + ny * fs * d + vy * t;
+        var a = { x0: cx - w / 2, x1: cx + w / 2, y0: cy - fs, y1: cy + fs };
+        if(bos(a)){ sec = [cx, cy]; return true; }
+        return false;
+      });
+      return !!sec;
+    });
+    if(!sec) sec = [mx + nx * fs * 2.2, my + ny * fs * 2.2];
+    kutular.push({ x0: sec[0] - w / 2, x1: sec[0] + w / 2, y0: sec[1] - fs, y1: sec[1] + fs });
     h += '<line x1="' + f(ax) + '" y1="' + f(ay) + '" x2="' + f(bx) + '" y2="' + f(by) + '"/>'
-      + '<rect x="' + f(mx - w / 2) + '" y="' + f(my - fs) + '" width="' + f(w) + '" height="' + f(2 * fs) + '" rx="3"/>'
-      + '<text x="' + f(mx) + '" y="' + f(my + fs * 0.36) + '" text-anchor="middle">' + _fwEsc(yazi) + '</text>';
+      + '<rect x="' + f(sec[0] - w / 2) + '" y="' + f(sec[1] - fs) + '" width="' + f(w) + '" height="' + f(2 * fs) + '" rx="3"/>'
+      + '<text x="' + f(sec[0]) + '" y="' + f(sec[1] + fs * 0.36) + '" text-anchor="middle">' + _fwEsc(yazi) + '</text>';
   });
   return h + '</g>';
+}
+// Doğru parçası ↔ dikdörtgen (çizicinin yerleştiricisiyle aynı ölçüt).
+function _fwKesisir(g, r){
+  var x1 = g[0], y1 = g[1], x2 = g[2], y2 = g[3];
+  if(Math.max(x1, x2) < r.x0 || Math.min(x1, x2) > r.x1) return false;
+  if(Math.max(y1, y2) < r.y0 || Math.min(y1, y2) > r.y1) return false;
+  if((x1 >= r.x0 && x1 <= r.x1 && y1 >= r.y0 && y1 <= r.y1) || (x2 >= r.x0 && x2 <= r.x1 && y2 >= r.y0 && y2 <= r.y1)) return true;
+  var dx = x2 - x1, dy = y2 - y1;
+  var yan = function(x, y){ return dx * (y - y1) - dy * (x - x1); };
+  var a = yan(r.x0, r.y0), b = yan(r.x1, r.y0), c = yan(r.x1, r.y1), d = yan(r.x0, r.y1);
+  return !((a > 0 && b > 0 && c > 0 && d > 0) || (a < 0 && b < 0 && c < 0 && d < 0));
 }
 function _fwOzetLejant(b, k){
   if(!(b && b.ok)) return '';
