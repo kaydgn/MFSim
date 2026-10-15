@@ -78,7 +78,10 @@ function _mwNum(v){
   return Number.isFinite(n) ? n : NaN;
 }
 function _mwVar(v){ return Number.isFinite(_mwNum(v)); }
-function _mwFmt(x, d){ return Number.isFinite(x) ? veSayi(x, d === undefined ? 1 : d) : '—'; }
+// Takoz ekranları GERÇEK EKSİ yazar (`_mntS`, cp-mount.js): aynı değer
+// Çözücü'de "−18.482", sihirbazda "-18.482" görünüyordu.
+function _mwSayi(x, d){ return veSayi(x, d, { eksi:'−' }); }
+function _mwFmt(x, d){ return Number.isFinite(x) ? _mwSayi(x, d === undefined ? 1 : d) : '—'; }
 function _mwAd(tip){ return ((typeof componentDefs !== 'undefined' && componentDefs[tip]) || {}).name || tip; }
 function _mwDef(n){ return (typeof componentDefs !== 'undefined' && n && componentDefs[n.type]) || (n && n.def) || {}; }
 function _mwKopya(o){ return (o === undefined) ? undefined : JSON.parse(JSON.stringify(o)); }
@@ -248,7 +251,7 @@ function veMntWizSorunlar(st){
   if(!(_mwNum(tq.Te) > 0)) ek('tork', 'warn', 'Motor torku yok — tork yük durumları kurulmaz.');
   else if(!(_mwNum(tq.Rstall) > 0) || !_mwNum(tq.g1)) ek('tork', 'warn', 'Tork zinciri eksik (stall oranı · 1. vites) — tork yük durumları kurulmaz.');
   if(!(_mwNum(tq.idleRpm) > 0) || !(_mwNum(tq.cylinders) > 0))
-    ek('tork', 'warn', 'Rölanti ya da silindir sayısı yok — ateşleme frekansı (raporun Kriter 1\'i) hesaplanmaz.');
+    ek('tork', 'warn', 'Rölanti ya da silindir sayısı yok — ateşleme frekansı hesaplanmaz; Kriter 1 ve 2 değerlendirilemez.');
   return l;
 }
 
@@ -290,7 +293,11 @@ function veMntWizCoz(st){
                kapasite:(kap > 0) ? yuk / kap : NaN, cekme:!!pm.tension };
     });
     var modlar = prep.solveModes([stat]);
-    out.modlar = (modlar || []).map(function(m){ return { f:m.f_Hz, ad:m.label }; });
+    // Biçim Türkçe: Çözücü'nün Modlar sekmesi ve Sonuçlar ile AYNI kısa ad
+    // (`veMntBrief.modeShort`); çekirdeğin etiketi ("lateral+roll") yalnız
+    // çevirici yoksa.
+    var kisa = (typeof veMntBrief !== 'undefined' && veMntBrief && veMntBrief.modeShort) ? veMntBrief.modeShort : null;
+    out.modlar = (modlar || []).map(function(m){ return { f:m.f_Hz, ad:kisa ? kisa(m.label) : m.label }; });
     out.ok = true;
   } catch(e){ out.hata = ['Çözüm hatası: ' + e.message]; }
   return out;
@@ -300,6 +307,17 @@ function veMntWizIssues(c, step){
   var k = (VE_MW_STEPS[step] || {}).key;
   var l = (c && c.sorun || []).filter(function(s){ return s.adim === k; });
   if(k === 'ozet' && c && c.hata && c.hata.length) l = l.concat(c.hata.map(function(m){ return { adim:'ozet', tur:'err', m:m }; }));
+  // ÇÖZÜLMEYEN MODELİN ÖZETİ "TAMAM" DEĞİL: önceki bir adımdaki eksik çözümü
+  // durdurunca (`veMntWizCoz` → engel) hata listesi boş kalıyordu ve rayda
+  // özet ✓ taşıyordu — panel "Çözülemiyor" derken. Engel tek satır: hangi
+  // adımlarda olduğunu söyler, eksikleri ikinci kez saymaz.
+  if(k === 'ozet' && c && !c.ok && !(c.hata && c.hata.length)){
+    var engel = VE_MW_STEPS.filter(function(s){
+      return (c.sorun || []).some(function(x){ return x.tur === 'err' && x.adim === s.key; });
+    }).map(function(s){ return s.ad; });
+    if(engel.length) l = l.concat([{ adim:'ozet', tur:'err',
+      m:'Model çözülemiyor — ' + engel.join(' ve ') + ' adımındaki eksikler giderilince çözülür.' }]);
+  }
   return l;
 }
 function veMntWizStepState(c, step){
@@ -634,8 +652,10 @@ function veMntWizNavHTML(c){
     var d = veMntWizStepState(c, i);
     var rozet = (d.durum === 'ok')
       ? '<span class="ve-fw-step-n" title="Bu adımda eksik girdi yok.">' + _mwIkon('check') + '</span>'
-      : '<span class="ve-fw-step-n" title="' + (d.err ? d.err + ' eksik girdi' : '') + (d.err && d.warn ? ' · ' : '')
-        + (d.warn ? d.warn + ' uyarı' : '') + '">' + (d.err || d.warn) + '</span>';
+      : '<span class="ve-fw-step-n" title="' + (s.key === 'ozet'
+          ? _mwEsc(veMntWizIssues(c, i).map(function(x){ return x.m; }).join(' · '))
+          : (d.err ? d.err + ' eksik girdi' : '') + (d.err && d.warn ? ' · ' : '') + (d.warn ? d.warn + ' uyarı' : ''))
+        + '">' + (d.err || d.warn) + '</span>';
     h += '<li class="ve-fw-step ve-fw-st-' + d.durum + (i === _mwStep ? ' on' : '') + '" onclick="veMntWizGoto(' + i + ')" tabindex="0"'
       + ' onkeydown="if(event.key===\'Enter\'){veMntWizGoto(' + i + ');}">'
       + '<span class="ve-fw-step-no">' + (i + 1) + '</span>'
@@ -692,8 +712,11 @@ function veMntWizStepHTML(step, c){
     + '</div>';
 }
 
-function _mwCard(baslik, inner){
-  return '<section class="ve-fw-card"><header class="ve-fw-card-h"><span>' + _mwEsc(baslik) + '</span></header>'
+// `baslikHTML`: başlıkta birim/simge varsa (özet panelinde başlık BÜYÜK HARFLE
+// yazılıyor, "1 g" → "1 G" oluyordu) birim `<u>` içinde verilir — CSS onu
+// dönüştürmez (kökteki kural: BÜYÜK HARF DÖNÜŞÜMÜ BİRİMİ ÇEVİRMEZ).
+function _mwCard(baslik, inner, baslikHTML){
+  return '<section class="ve-fw-card"><header class="ve-fw-card-h"><span>' + (baslikHTML || _mwEsc(baslik)) + '</span></header>'
     + '<div class="ve-fw-card-b">' + inner + '</div></section>';
 }
 function _mwInp(path, v, opt){
@@ -906,7 +929,7 @@ function _mwStpBirim(s, dugum){
 }
 // Koordinat üçlüsü ekranda 0,1 mm'ye, ayraç `; ` (karar 7·C)
 function _mwStpKonum(p){
-  return (p || []).map(function(v){ return veSayi(Math.round(v * 10) / 10); }).join('; ');
+  return (p || []).map(function(v){ return _mwSayi(Math.round(v * 10) / 10); }).join('; ');
 }
 // Hacim litre (dm³) — büyüklüğe göre hane
 function _mwStpHacim(V){
@@ -1203,7 +1226,7 @@ function _mwTakozListeHTML(c){
       + ' data-mw-satir="' + t.key + '">'
       + '<span class="ve-fw-kl-no">' + (i + 1) + '</span>'
       + '<span class="ve-fw-kl-ad"><span>' + _mwEsc(t.ad || 'Takoz') + '</span></span>'
-      + '<span class="ve-fw-kl-n">' + (_mwNum(t.kzs) > 0 ? 'k<sub>z</sub> ' + _mwFmt(_mwNum(t.kzs), 0) : '<span class="ve-fw-kl-dim">k yok</span>') + '</span>'
+      + '<span class="ve-fw-kl-n">' + (_mwNum(t.kzs) > 0 ? 'k<sub>z</sub> ' + _mwFmt(_mwNum(t.kzs), 0) + ' N/mm' : '<span class="ve-fw-kl-dim">k yok</span>') + '</span>'
       + '<span class="ve-mw-kl-d">' + veDurumIkon(d === 'ok' ? 'ok' : 'err', d === 'ok' ? 'Tamam' : 'Eksik girdi') + '</span>'
       + '</button>';
   });
@@ -1265,8 +1288,11 @@ function _mwMotorKatalogHTML(){
   if(!P) return '';
   var keys = Object.keys(P); if(!keys.length) return '';
   var cur = (_mwState.tork || {}).enginePreset || '', used = {};
-  var h = '<select class="ve-fw-inp" onchange="veMntWizMotorKatalog(this.value)" aria-label="Motor kataloğu">'
-    + '<option value="">— katalogdan motor seç (' + keys.length + ') —</option>';
+  // Yer tutucu takoz kataloğununkiyle aynı söz: "— katalogdan motor seç (24) —"
+  // 175 px'lik alana sığmıyor, sonu kesiliyordu. Sayı erişilebilir adda.
+  var h = '<select class="ve-fw-inp" onchange="veMntWizMotorKatalog(this.value)" aria-label="Motor kataloğu (' + keys.length + ' motor)"'
+    + ' title="Motor kataloğu · ' + keys.length + ' motor">'
+    + '<option value="">— katalogdan seç —</option>';
   (typeof _MNT_ENG_FAMILIES !== 'undefined' ? _MNT_ENG_FAMILIES : [{ label:'Motorlar', prefix:[] }]).forEach(function(fam){
     var ks = keys.filter(function(k){
       if(used[k]) return false;
@@ -1348,7 +1374,7 @@ function _mwStepOzet(c){
     h += _mwCard('Statik denge · 1 g', '<div class="ve-fw-reads">'
       + r('Toplam kütle', _mwFmt(m.m, 1) + ' kg')
       + (m.cg ? r('Birleşik CG', '(' + _mwFmt(m.cg[0] * 1000, 0) + '; ' + _mwFmt(m.cg[1] * 1000, 0) + '; ' + _mwFmt(m.cg[2] * 1000, 0) + ') mm') : '')
-      + '</div>' + tb);
+      + '</div>' + tb, 'Statik denge · 1 <u>g</u>');
     if(c.modlar.length){
       var md = '<table class="ve-fw-tbl ve-mw-tbl"><thead><tr><th>Mod</th><th>f <em>Hz</em></th><th>Biçim</th></tr></thead><tbody>';
       c.modlar.forEach(function(x, i){ md += '<tr><td>' + (i + 1) + '</td><td class="ve-fw-num">' + _mwFmt(x.f, 2) + '</td><td>' + _mwEsc(x.ad) + '</td></tr>'; });
@@ -1411,7 +1437,8 @@ function _mwCipIcHTML(c){
   var h = '<span class="ve-fw-damga ve-fw-pill-' + (c.ok ? d.durum : 'err') + '" data-model="' + (c.ok ? 'ok' : 'no') + '" data-durum="' + d.durum + '">'
     + _mwIkon(c.ok && d.durum === 'ok' ? 'check' : (c.ok ? 'alert-triangle' : 'x')) + ' '
     + (c.ok ? (d.err ? 'Çözülüyor · ' + d.err + ' eksik' : 'Çözülüyor' + (d.warn ? ' · ' + d.warn + ' uyarı' : ''))
-            : 'Çözülemiyor' + (d.err ? ' · ' + d.err + ' eksik' : '')) + '</span>';
+            // Özet adımının "eksiği" çözülmeyen modelin kendisi — sayısı anlamsız
+            : 'Çözülemiyor' + (d.err && VE_MW_STEPS[_mwStep].key !== 'ozet' ? ' · ' + d.err + ' eksik' : '')) + '</span>';
   var v = c.veri || {};
   if(v.cg && v.cg.m > 0) h += '<span class="ve-fw-pill">m <b>' + _mwFmt(v.cg.m, 1) + ' kg</b></span>';
   h += '<span class="ve-fw-pill">takoz <b>' + ((_mwState || {}).takozlar || []).length + '</b></span>';
@@ -1434,9 +1461,16 @@ function _mwMasaOlc(){
 // görünüş düğmeleri, sağda yakınlaştırma düğmeleri, altta lejant ve x ekseninin
 // yazısı. Üstüne kısa kenarın %6'sı NEFES (FEAD kural 47 · "SIĞDIRMA NEFESİ").
 var VE_MW_MASA_PAY = { sol:58, sag:66, ust:56, alt:66 };
-function _mwMasaPay(o){
+// ÖZET PANELİ masanın sağında YÜZER (CSS: `[data-adim="ozet"] > .ve-fw-yan`,
+// 288 px, sağdan 12): geniş masada çizim onun SOLUNA sığdırılır — FEAD'in özet
+// masasının kuralı (`VE_FW_OZET_PANEL`). Pay yokken Transfer Kutusu, Sağ Arka
+// Takoz ve bir braket panelin altında kalıyordu. Dar gövdede (≤ 760 px, CSS'in
+// container sorgusu) panel alta iner, pay gerekmez.
+var VE_MW_OZET_PANEL = 288;
+function _mwMasaPay(o, adim){
   var n = Math.round(0.06 * Math.min(o.w, o.h));
-  return { sol:VE_MW_MASA_PAY.sol + n, sag:VE_MW_MASA_PAY.sag + n, ust:VE_MW_MASA_PAY.ust + n, alt:VE_MW_MASA_PAY.alt + n };
+  var sag = (adim === 'ozet' && o.w > 760) ? VE_MW_OZET_PANEL + 24 : VE_MW_MASA_PAY.sag;
+  return { sol:VE_MW_MASA_PAY.sol + n, sag:sag + n, ust:VE_MW_MASA_PAY.ust + n, alt:VE_MW_MASA_PAY.alt + n };
 }
 function _mwGorAnahtar(){ return VE_MW_STEPS[_mwStep].key + ':' + _mwGorunus; }
 function _mwGorDurum(){ var k = _mwGorAnahtar(); return _mwGor[k] || (_mwGor[k] = { z:1, tx:0, ty:0 }); }
@@ -1476,7 +1510,10 @@ function _mwMasaCiz(c){
   if(tur === 'tork'){ el.innerHTML = _mwTorkZincirSVG(c, o.w, o.h); return; }
   var f = _mwFigurVeri(c);
   var svg = (typeof veMnt2DGorunusSVG === 'function')
-    ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGorunus, secili:f.secili, secim:true, pay:_mwMasaPay(o) }) : '';
+    ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGorunus, secili:f.secili, secim:true, pay:_mwMasaPay(o, k),
+        // Özette takozun etiketi 1 g çökmesini taşır (`_mwFigurVeri` → `etiket`);
+        // çizicinin varsayılanı yalnız adı okuyor, sayı hiç görünmüyordu.
+        takozEtiket:(k === 'ozet') ? function(m){ return m.etiket || m.name || 'Takoz'; } : null }) : '';
   if(!svg){
     el.innerHTML = '<div class="ve-fw-masa-bos">' + (k === 'kaynak'
       ? 'Model boş — örnekten doldur, STEP\'ten başla ya da Kütle gövdeleri adımında ekle.'
@@ -1573,7 +1610,7 @@ function _mwTorkZincirSVG(c, W, H){
   var tq = (_mwState || {}).tork || {};
   var Te = _mwNum(tq.Te), Rs = _mwNum(tq.Rstall), g1 = _mwNum(tq.g1), gR = _mwNum(tq.gR);
   var iTr = _mwNum(tq.iTransfer), pf = _mwNum(tq.phiFwd), pr = _mwNum(tq.phiRev);
-  var x = function(v, d){ return Number.isFinite(v) ? veSayi(v, d === undefined ? 3 : d) : '—'; };
+  var x = function(v, d){ return Number.isFinite(v) ? _mwSayi(v, d === undefined ? 3 : d) : '—'; };
   var halkalar = [
     { ad:'Motor', alt:'tepe tork', deg:Number.isFinite(Te) ? x(Te, 0) + ' N·m' : 'girilmedi' },
     { ad:'Konvertör', alt:'stall oranı', deg:'× ' + x(Rs, 2) },
@@ -1594,15 +1631,20 @@ function _mwTorkZincirSVG(c, W, H){
     if(i < n - 1) s += '<line class="ve-mw-tz-ok" x1="' + (x0 + kutuW + 3) + '" y1="' + (y0 + kutuH / 2) + '" x2="' + (x0 + adim - 5) + '" y2="' + (y0 + kutuH / 2) + '"/>'
       + '<path class="ve-mw-tz-uc" d="M' + (x0 + adim - 5) + ' ' + (y0 + kutuH / 2) + ' l-6 -4 v8 z"/>';
   });
-  var sy = y0 + kutuH + 56;
-  var sonuc = function(et, v, yy){
+  // SONUÇLAR TEK SÜTUN, SAĞA YASLI (sağ sütunun "Zincirin sonucu"yla aynı
+  // okuma): değerler iki ayrı sabit x'te ve sola yaslıydı — "12.761" ile
+  // "−18.482"nin basamakları alt alta gelmiyor, ateşleme frekansının "—"sı
+  // başka bir sütunda duruyordu. Sütunun sağ kenarı üçüncü halkanın sağı;
+  // dar masada en uzun etiketin (≈ 250 px) sağından başlar.
+  var sy = y0 + kutuH + 56, xDeg = Math.max(pad + 3 * adim - 26, Math.min(W - pad, pad + 380));
+  var sonuc = function(et, deg, yy){
     return '<text class="ve-mw-tz-alt" x="' + pad + '" y="' + yy + '">' + et + '</text>'
-      + '<text class="ve-mw-tz-sonuc" x="' + (pad + 150) + '" y="' + yy + '">' + (Number.isFinite(v) ? veSayi(v, 0) + ' N·m' : '—') + '</text>';
+      + '<text class="ve-mw-tz-sonuc" x="' + xDeg + '" y="' + yy + '" text-anchor="end">' + deg + '</text>';
   };
-  s += sonuc('Şaft torku · ileri', c.tork ? c.tork.ileri : NaN, sy);
-  s += sonuc('Şaft torku · geri', c.tork ? c.tork.geri : NaN, sy + 24);
-  s += '<text class="ve-mw-tz-alt" x="' + pad + '" y="' + (sy + 60) + '">Ateşleme frekansı (rölanti · silindir)</text>'
-    + '<text class="ve-mw-tz-sonuc" x="' + (pad + 270) + '" y="' + (sy + 60) + '">' + (Number.isFinite(c.fAtes) ? veSayi(c.fAtes, 1) + ' Hz' : '—') + '</text>';
+  var tork = function(v){ return Number.isFinite(v) ? _mwSayi(v, 0) + ' N·m' : '—'; };
+  s += sonuc('Şaft torku · ileri', tork(c.tork ? c.tork.ileri : NaN), sy);
+  s += sonuc('Şaft torku · geri', tork(c.tork ? c.tork.geri : NaN), sy + 24);
+  s += sonuc('Ateşleme frekansı (rölanti · silindir)', Number.isFinite(c.fAtes) ? _mwSayi(c.fAtes, 1) + ' Hz' : '—', sy + 60);
   return s + '</svg>';
 }
 
@@ -1709,6 +1751,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizOrnek: veMntWizOrnek, veMntWizOrnekSec: veMntWizOrnekSec, veMntWizOrnekAdim: veMntWizOrnekAdim,
     veMntWizSifirla: veMntWizSifirla, veMntWizCanCreate: veMntWizCanCreate, veMntWizKur: veMntWizKur,
     veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim, _mwAynaAd: _mwAynaAd,
+    _mwMasaPay: _mwMasaPay, VE_MW_OZET_PANEL: VE_MW_OZET_PANEL, _mwStepOzet: _mwStepOzet,
+    _mwStepTork: _mwStepTork, _mwTakozListeHTML: _mwTakozListeHTML, veMntWizNavHTML: veMntWizNavHTML,
     _mwOrnekModelden: _mwOrnekModelden, _mwKurulumPlani: _mwKurulumPlani, _mwTorkZincirSVG: _mwTorkZincirSVG,
     veMntWizStp: veMntWizStp, veMntWizStpOku: veMntWizStpOku, veMntWizStpBayt: veMntWizStpBayt,
     veMntWizStpRol: veMntWizStpRol, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
