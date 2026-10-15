@@ -79,7 +79,7 @@ describe('çözüm sonucunun yayınlanması', () => {
     const i1 = gz.x.data.findIndex((a) => Math.abs(a - 1) < 1e-9);
     const stat = R.allCases.find((c) => c.name === 'Static');
     R.mounts.forEach((mnt, k) => {
-      const ch = gz.channels.find((c) => c.name === mnt.name + ' · bileşke çökme');
+      const ch = gz.channels.find((c) => c.name === mnt.name + ' · bileşke sehim');
       const ref = Math.hypot(...stat.res.perMount[k].delta) * 1000;
       expect(ch.data[i1]).toBeCloseTo(ref, 9);
     });

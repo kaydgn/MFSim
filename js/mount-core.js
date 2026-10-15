@@ -214,7 +214,7 @@ var veMountCore = (function() {
   // A = [E3 | −skew(d)] — takoz kinematik matrisi: δ = A·q,  d = r_mount − c_G.
   //
   // STANDART rijit gövde kinematiği: δ_i = u + θ×d_i (birinci-prensip).
-  // Kaldıraç kolunun düşey bileşeni dz, dönme→düzlem-içi çökme kuplajına DOĞRUDAN
+  // Kaldıraç kolunun düşey bileşeni dz, dönme→düzlem-içi sehim kuplajına DOĞRUDAN
   // girer; hiçbir işaret çevirmesi YOK. Fiziksel akıl-sağlığı testi (regresyon):
   // frende (öne atalet, CG takozların ÜSTÜNDE) güç grubu BURUN AŞAĞI döner →
   // ön takozlar arka takozlardan daha çok basılı olmalı (K[x,θy] = k_x·Σdz < 0,
@@ -1292,7 +1292,7 @@ var veMountCore = (function() {
   // sabit K_dyn, adım başına tek doğrudan çözüm, nonlineer eğri de metal-metal
   // durdurucu da devre dışı. Statik çözücü aynı modeli Newton ile çözerken
   // (solveCaseNL) geçici rejim çözmüyordu; ölçülen fark 3,5 g'de %32 idi
-  // (sertleşen takozda lineer yol çökmeyi bu kadar FAZLA gösteriyor). Adams'ın
+  // (sertleşen takozda lineer yol sehimi bu kadar FAZLA gösteriyor). Adams'ın
   // her Δt'de koştuğu Newton–Raphson'ın karşılığı artık burada:
   //
   //   r(q) = Ψ(q) + M[a₀(q−qₙ) − a₂q̇ₙ − a₃q̈ₙ] + C[a₁(q−qₙ) − a₄q̇ₙ − a₅q̈ₙ] − F(t)
@@ -2016,7 +2016,7 @@ var veMountCore = (function() {
       name: 'ASFAT 8x8 Obüs Takoz Analizi',
       vehicle: 'ASFAT 8x8 Obüs',
       subtitle: '7 kütle · 6 takoz güç grubu',
-      description: 'ASFAT 8x8 Obüs güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — Cummins motor, Allison 4700 şanzıman + retarder, şaft, sol/sağ motor braketi ve üst/yan PTO grupları, altı elastomer takoz (57RS313774 ön ikili, 57RS313773 yan dörtlü) ile şasiye bağlanır. Değerler BMC ASR-SR-116 raporundan birebir alınmıştır; takoz yükleri ve çökmeleri raporun Adams sonuçlarını 0,01 kg / 0,005 mm içinde yeniden üretir.',
+      description: 'ASFAT 8x8 Obüs güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — Cummins motor, Allison 4700 şanzıman + retarder, şaft, sol/sağ motor braketi ve üst/yan PTO grupları, altı elastomer takoz (57RS313774 ön ikili, 57RS313773 yan dörtlü) ile şasiye bağlanır. Değerler BMC ASR-SR-116 raporundan birebir alınmıştır; takoz yükleri ve sehimleri raporun Adams sonuçlarını 0,01 kg / 0,005 mm içinde yeniden üretir.',
       specs: [
         ['Kütle gövdesi', String(ASFAT_EXAMPLE.components.length)],
         ['Takoz', String(ASFAT_EXAMPLE.mounts.length)],
@@ -2212,7 +2212,7 @@ var veMountCore = (function() {
     }
 
     // ── T8: Regresyon / negatif testler ──
-    // T8a: boş takoz tablosu → anlamlı hata, çökme yok
+    // T8a: boş takoz tablosu → anlamlı hata, program düşmez
     {
       const probs = validateModel(comps, []);
       const K0 = buildK([], mp.cg, false);

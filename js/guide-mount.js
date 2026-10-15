@@ -66,7 +66,7 @@ var VE_GUIDE_MOUNT_SECTIONS = [
   ['m7',  '7',    'Takoz kütüphanesi ve nonlineer eğri'],
   ['m8',  '8',    'Yük durumları'],
   ['m9',  '9',    'Çözücü'],
-  ['m10', '10',   'Çökme sonuçlarını okumak'],
+  ['m10', '10',   'Sehim sonuçlarını okumak'],
   ['m11', '11',   'Modal analiz ve izolasyon'],
   ['m12', '12',   'Rapor üretmek'],
   ['m13', '13',   'Sık yapılan hatalar'],
@@ -101,7 +101,7 @@ function _gmSec1(){
     + '<strong>bellekte</strong> yapılır: açık olan projenize hiçbir şekilde dokunulmaz.');
   h += '<h3>1.1 Bu modül neyi hesaplar</h3>';
   h += _gmAlanTablo('Kapsam', [
-    ['<strong>Statik çökme</strong>', 'Ağırlık ve ivme altında güç grubunun 6 serbestlik '
+    ['<strong>Statik sehim</strong>', 'Ağırlık ve ivme altında güç grubunun 6 serbestlik '
       + 'derecesindeki yer değiştirmesi', 'Bölüm 10'],
     ['<strong>Takoz kuvvetleri</strong>', 'Her takozda üç eksenli kuvvet; çekme ve durdurucu '
       + 'teması', 'Bölüm 10'],
@@ -153,7 +153,7 @@ function _gmSec2(){
       + 'teoremiyle birleştirilmiş atalet)'],
     ['Takozlar', 'konum · statik ve dinamik rijitlik (x, y, z) · kapasite',
       '<strong>rijitlik matrisi K</strong> (CG etrafında, 6×6)'],
-    ['Yük durumları', 'ivme vektörü ve tork', '<strong>çökme q</strong> · takoz kuvvetleri'],
+    ['Yük durumları', 'ivme vektörü ve tork', '<strong>sehim q</strong> · takoz kuvvetleri'],
     ['Çözücü', 'çözüm modu · sönüm oranı', '<strong>doğal frekanslar</strong> · mod '
       + 'biçimleri · izolasyon']
   ], ['Konu', 'Siz verirsiniz', 'Program hesaplar']);
@@ -245,7 +245,7 @@ function _gmSec4(){
     + 'uygular: her parçanın ataleti, parçanın CG’sinden ortak CG’ye taşınır. Ataleti zaten '
     + 'ortak CG’ye taşınmış olarak girerseniz taşıma <strong>iki kez</strong> yapılır ve '
     + 'atalet şişer. Belirtisi yalnız modal analizde görünür: dönme modları beklenenden '
-    + '<strong>düşük</strong> çıkar. Çökme sonuçları etkilenmez — bu yüzden hata sessizdir.');
+    + '<strong>düşük</strong> çıkar. Sehim sonuçları etkilenmez — bu yüzden hata sessizdir.');
   h += _gmNot('Birimler: kg · mm · kg·m² · N/mm',
       'Pencere bu birimlerde çalışır ve çekirdeğe geçerken SI’ya çevirir. Atalet '
     + '<strong>kg·m²</strong>’dir (kg·mm² değil): 10⁶ kat fark eder ve karıştırıldığında '
@@ -284,7 +284,7 @@ function _gmSec6(){
   h += '<p>Takoz, güç grubunu şasiye bağlayan üç eksenli bir yaydır. Her takoz kendi '
     + 'konumunu ve üç eksende iki ayrı rijitliğini taşır. Penceresinin iki sekmesi var: '
     + '<strong>Takoz ve yeri</strong> (girdiler) ve <strong>Yük durumları</strong> (son '
-    + 'çözümde bu takozun her yük durumundaki çökmesi ve sönüm katsayıları).</p>';
+    + 'çözümde bu takozun her yük durumundaki sehimi ve sönüm katsayıları).</p>';
   h += _gmAdimlar([
     'Takoza çift tıklayın.',
     '<strong>Takoz tipi</strong> listesinden hazır bir künye seçin — konum HARİÇ bütün '
@@ -308,9 +308,9 @@ function _gmSec6(){
   ]);
   h += _gmUyari('Statik ve dinamik rijitlik AYNI DEĞİLDİR',
       'Elastomer bir takoz, hızlı yüklemede yavaş yüklemeden <strong>daha rijittir</strong> — '
-    + 'tipik oran 1,4–1,8. Program ikisini ayrı ayrı kullanır: <strong>çökme</strong> statik '
+    + 'tipik oran 1,4–1,8. Program ikisini ayrı ayrı kullanır: <strong>sehim</strong> statik '
     + 'rijitlikle, <strong>doğal frekanslar</strong> dinamik rijitlikle hesaplanır. İkisine '
-    + 'aynı değeri yazarsanız model yine çözülür — ama ya çökme fazla küçük çıkar ya '
+    + 'aynı değeri yazarsanız model yine çözülür — ama ya sehim fazla küçük çıkar ya '
     + 'frekanslar fazla düşük. <strong>Hata verilmez.</strong> Pencere oranın eksenler '
     + 'arasında 1,5 kattan fazla yayıldığını işaretler: eksenlerin takaslı girildiğinin izidir.');
   h += _gmNot('Üç takoz alt sınırdır, dört üst sınır DEĞİLDİR',
@@ -347,21 +347,21 @@ function _gmSec7(){
     + '<strong>Kullanım</strong> bölümü onu gösterir. Bir katalog güncellemesinin kaydedilmiş '
     + 'bir analizi sessizce değiştirmesi, bu programın en çok kaçındığı hata sınıfıdır.');
   h += '<h3>7.2 Nonlineer z-eğrisi</h3>';
-  h += '<p>Elastomer takozlar büyük çökmede <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
+  h += '<p>Elastomer takozlar büyük sehimde <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
     + 'doğru değil, yukarı bükülen bir eğridir. Takoza bir '
     + '<strong>kuvvet–sehim eğrisi</strong> girerseniz çözücü otomatik olarak nonlineer '
     + 'yola (Newton iterasyonu) geçer.</p>';
   h += _gmAlanTablo('Doğrusal ↔ nonlineer', [
     ['Hiçbir takozda eğri yok', 'Doğrusal çözüm — tek adımda',
-      'Küçük çökmelerde (statik ağırlık) doğru ve hızlı'],
+      'Küçük sehimlerde (statik ağırlık) doğru ve hızlı'],
     ['En az bir takozda eğri var', 'Newton iterasyonu — bütün model nonlineer çözülür',
-      'Büyük çökme (3,5 g düşey gibi) için gerekli'],
+      'Büyük sehim (3,5 g düşey gibi) için gerekli'],
     ['Metal-metal durdurucu', 'Her zaman açık: her takozda düşeyde ±15 mm boşluk',
       'Takozun mekanik sınırına dayanmasını modeller; boşluk ayarlanmaz, yanal durdurucu yok']
   ], ['Durum', 'Çözüm yolu', 'Ne zaman']);
-  h += _gmUyari('Doğrusal model büyük çökmede İYİMSERDİR',
-      'Eğri girilmemişse program takozu <strong>her çökmede aynı rijitlikte</strong> sayar. '
-    + 'Gerçek takoz sertleştiği için doğrusal model büyük ivmelerde çökmeyi '
+  h += _gmUyari('Doğrusal model büyük sehimde İYİMSERDİR',
+      'Eğri girilmemişse program takozu <strong>her sehimde aynı rijitlikte</strong> sayar. '
+    + 'Gerçek takoz sertleştiği için doğrusal model büyük ivmelerde sehimi '
     + '<strong>fazla</strong>, takoz kuvvetini <strong>az</strong> gösterir. Sonuçlarda '
     + '“doğrusal aralık aşıldı” sayacı bunu bildirir — sıfırdan büyükse eğri girmeyi '
     + 'düşünün.');
@@ -372,11 +372,11 @@ function _gmSec8(){
   var h = _gmH2(7);
   h += '<p>Bir yük durumu iki şeyden oluşur: bir <strong>ivme vektörü</strong> (g cinsinden, '
     + 'x/y/z) ve bir <strong>tork</strong> (N·m, x/y/z). Program bunlardan güç grubuna etki '
-    + 'eden kuvvet ve momenti kurar, sonra çökmeyi çözer.</p>';
+    + 'eden kuvvet ve momenti kurar, sonra sehimi çözer.</p>';
   h += _gmTablo('Standart yük durumları',
     ['Durum', 'İvme n = [x, y, z]', 'Ne anlatıyor'],
     [
-      ['Static', '[0, 0, −1]', 'Yalnız ağırlık — çökmenin temel hâli'],
+      ['Static', '[0, 0, −1]', 'Yalnız ağırlık — sehimin temel hâli'],
       ['Max Bump', '[0, 0, −3]', 'Düşey darbe (3 g)'],
       ['Acceleration', '[+1, 0, −1]', 'Boyuna hızlanma'],
       ['Braking', '[−1, 0, −1]', 'Fren'],
@@ -398,7 +398,7 @@ function _gmSec9(){
   h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencerenin üç sekmesi var; sağ '
     + 'sütundaki <strong>Uygunluk</strong> bölümü ve <strong>Hesapla</strong> düğmesi her sekmede durur.</p>';
   h += _gmAlanTablo('Çözücü penceresi — sekmeler', [
-    ['Yük durumları', 'Yük kitabı (n, T, en büyük düşey çökme) ve vites başına takoz kuvveti',
+    ['Yük durumları', 'Yük kitabı (n, T, en büyük düşey sehim) ve vites başına takoz kuvveti',
       'Hesaplanmadıysa yalnız yük kitabının tanımı'],
     ['Modlar', 'Rijit gövde modları, mod başına sönüm, düşey (bounce) frekansı',
       'Aks bandındaki ya da sınırı aşan mod kırmızı'],
@@ -407,7 +407,7 @@ function _gmSec9(){
   h += _gmAdimlar([
     '<strong>Ayarlar</strong> sekmesinde çözüm modunu seçin; sönüm oranı ve şok darbesi '
       + 'varsayılan değerleriyle durur (yanındaki <em>i</em> kaynağını söyler).',
-    'Sönüm oranı yalnız şok ve izolasyon hesabına girer, çökmeye girmez.',
+    'Sönüm oranı yalnız şok ve izolasyon hesabına girer, sehime girmez.',
     '<strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin içinde akar.',
     'Sekme durumlarını ve <strong>Uygunluk</strong> bölümünü okuyun; Hesapla’nın altındaki '
       + 'satır toplam kütleyi, gövde ve takoz sayısını ve son hesabın güncel olup olmadığını söyler.'
@@ -428,7 +428,7 @@ function _gmSec10(){
   var h = _gmH2(9);
   h += '<p>Her yük durumu için çözülen şey <strong>q</strong> vektörüdür: güç grubunun '
     + 'ortak CG’sinin üç ötelenmesi (mm) ve üç dönmesi (derece).</p>';
-  h += _gmAlanTablo('Çökme sonuçları', [
+  h += _gmAlanTablo('Sehim sonuçları', [
     ['q<sub>x</sub> · q<sub>y</sub> · q<sub>z</sub>', 'CG’nin ötelenmesi, mm',
       'Statik durumda z genellikle en büyüğüdür'],
     ['θ<sub>x</sub> · θ<sub>y</sub> · θ<sub>z</sub>', 'Roll · pitch · yaw dönmesi, derece',
@@ -507,13 +507,13 @@ function _gmSec13(){
     ['Alan', 'Yanlış verilirse ne olur', 'Belirtisi'],
     [
       ['Karışık koordinat çerçevesi', 'Bir CG parça çerçevesinde, bir takoz araç '
-        + 'çerçevesinde', 'Çökme ve modlar birlikte anlamsızlaşır — ama hata çıkmaz'],
+        + 'çerçevesinde', 'Sehim ve modlar birlikte anlamsızlaşır — ama hata çıkmaz'],
       ['Atalet zaten taşınmış girilir', 'Paralel-eksen teoremi iki kez uygulanır',
-        'Yalnız <strong>dönme modları</strong> düşer; çökme normal görünür'],
+        'Yalnız <strong>dönme modları</strong> düşer; sehim normal görünür'],
       ['Atalet birimi kg·mm²', 'Atalet 10⁶ kat büyür',
         'Dönme modları sıfıra yakın çıkar'],
       ['Statik = dinamik rijitlik', 'İki ayrı büyüklüğe aynı sayı',
-        'Ya çökme küçük ya frekanslar düşük — ikisi birden doğru olamaz'],
+        'Ya sehim küçük ya frekanslar düşük — ikisi birden doğru olamaz'],
       ['PTO kütlesi iki yoldan', 'Aynı kütle iki kez sayılır',
         'Toplam kütle beklenenden büyük — tutarlılık uyarısı bunu söyler'],
       ['Üçten az takoz', 'Rijit gövde serbest kalır', 'K tekil — çözücü açıkça söyler'],
@@ -642,12 +642,12 @@ function _gmSec14(){
     + 'taşınmış girmenin — neden sonucu bozduğunu gösterir: taşıma burada '
     + '<strong>zaten</strong> yapılıyor.');
 
-  // ── 14.3 Çökme ───────────────────────────────────────────────────────────
+  // ── 14.3 Sehim ───────────────────────────────────────────────────────────
   var lc = ui.loadCases || [];
   var cozum = null;
   try { cozum = c.solveAllCases(model, lc, {}); } catch(e){ cozum = null; }
   if(cozum && cozum.length){
-    h += '<h3>14.3 Çökme — bütün yük durumları</h3>';
+    h += '<h3>14.3 Sehim — bütün yük durumları</h3>';
     var qSat = cozum.map(function(rc){
       var q = rc.res && rc.res.q;
       if(!q) return [_gmE(rc.name), '—', '—', '—', '—', '—', '—'];
@@ -659,14 +659,14 @@ function _gmSec14(){
                 ? ('<strong>' + ck.tensionCount + ' takoz</strong>')
                 : '<span class="ok">yok</span>'];
     });
-    h += _gmTablo('Çökme ve çekme — yük durumu başına',
+    h += _gmTablo('Sehim ve çekme — yük durumu başına',
       ['Yük durumu', 'qx [mm]', 'qy [mm]', 'qz [mm]', 'θx [°]', 'θy [°]', 'Çekme'],
       qSat, ['l', 'c', 'c', 'c', 'c', 'c', 'c']);
 
     var st = cozum[0] && cozum[0].res;
     if(st && st.checks){
-      h += _gmNot('Statik durum, çökmenin temel hâli',
-          'İlk satır yalnız ağırlık altındaki çökmedir: düşey ötelenme '
+      h += _gmNot('Statik durum, sehimin temel hâli',
+          'İlk satır yalnız ağırlık altındaki sehimdir: düşey ötelenme '
         + '<strong>' + _gmFs(st.q[2] * 1000, 3) + ' mm</strong>. Kuvvet dengesi artığı '
         + '<strong>' + _gmFs(st.checks.sumFzResidual || 0, 6) + '</strong> — sıfıra eşit '
         + 'olması çözümün kendi iç denetimidir (bölüm 10), bir yaklaşıklık değil.');
@@ -713,7 +713,7 @@ function _gmSec14(){
       + '<strong>▶ Örneği aktar</strong> deyin.',
     'Tutarlılık uyarılarının boş olduğunu doğrulayın.',
     'Çözücüde <strong>Hesapla</strong>’ya basın; bir kütle gövdesinin penceresinde toplam '
-      + 'kütleyi ve birleşik AM farkını yukarıdaki 14.2 tablosuyla karşılaştırın.',
+      + 'kütleyi ve birleşik CG farkını yukarıdaki 14.2 tablosuyla karşılaştırın.',
     'Ayrıntı için <strong>Rapor</strong> bileşeninden çevrimdışı HTML raporu üretin.'
   ]);
   h += _gmOnay('Kılavuz ile program aynı sayıyı verir',

@@ -174,10 +174,10 @@ describe('§14 — CANLI çözüm', () => {
     expect(ilkAlti[0]).toBeGreaterThan(0.5);
   });
 
-  test('çökme tablosu bütün yük durumlarını taşıyor', () => {
+  test('sehim tablosu bütün yük durumlarını taşıyor', () => {
     const core = global.veMountCore;
     const ex = core.getMountExampleList().filter((e) => e.id === 'siper')[0];
-    const t = (DOC.match(/<caption>Tablo [^<]*Çökme ve çekme[^<]*<\/caption>[\s\S]*?<\/table>/) || [''])[0];
+    const t = (DOC.match(/<caption>Tablo [^<]*Sehim ve çekme[^<]*<\/caption>[\s\S]*?<\/table>/) || [''])[0];
     ex.model.loadCases.forEach((lc) => { expect(t).toContain(lc.name); });
   });
 

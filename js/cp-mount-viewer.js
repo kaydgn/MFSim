@@ -417,7 +417,7 @@ function veMountViewerUpdate(){
       _mntViewerMarkerMat('--accent-warning', '#f59e0b', 20));
     s.position.copy(_mntW(x,y,z));
     s.userData={ info:_mntViewerIpucu('govde', c.name||'Bileşen',
-      [['Kütle', m>0 ? veSayi(m, 1)+' kg' : '—'], ['AM', _mntViewerUc(x, y, z, 1)+' mm']]) };
+      [['Kütle', m>0 ? veSayi(m, 1)+' kg' : '—'], ['CG', _mntViewerUc(x, y, z, 1)+' mm']]) };
     V.group.add(s);
   });
 
@@ -426,7 +426,7 @@ function veMountViewerUpdate(){
     var cgm=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
       _mntViewerMarkerMat('--accent-danger', '#ef4444', 80));
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
-    cgm.userData={ info:_mntViewerIpucu('am', 'Birleşik AM',
+    cgm.userData={ info:_mntViewerIpucu('am', 'Birleşik CG',
       [['Toplam kütle', veSayi(mSum, 1)+' kg'], ['Konum', _mntViewerUc(cg[0], cg[1], cg[2], 1)+' mm']]) };
     V.group.add(cgm);
   }

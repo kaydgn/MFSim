@@ -186,7 +186,7 @@ describe('Destek bağlantıları — taşınan gövde kuralı', () => {
     expect((links.find((l) => l.from === 'mnt') || {}).to).toBe('gbx');
   });
 
-  test('ana gövde yoksa PTO bağlantısız kalır (çökme yok)', () => {
+  test('ana gövde yoksa PTO bağlantısız kalır (sehim yok)', () => {
     const { links } = cp._mntComputeSupportLinks([L('pto', 'mnt-pto', 0, 0)]);
     expect(links).toHaveLength(0);
   });

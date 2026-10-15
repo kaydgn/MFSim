@@ -293,8 +293,8 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     expect(h).toContain('Yumuşatma gerekmiyor');
   });
 
-  test('§8.15 statik çökme uyarısını mutlaka basar (yumuşatmanın bedeli)', () => {
-    expect(rep._mntRepSoftening(R, {})).toContain('statik çökmeyi');
+  test('§8.15 statik sehim uyarısını mutlaka basar (yumuşatmanın bedeli)', () => {
+    expect(rep._mntRepSoftening(R, {})).toContain('statik sehimi');
   });
 
   test('§8.16 her mod için ÜÇ görünüş çizilir (üstten + yandan + önden)', () => {

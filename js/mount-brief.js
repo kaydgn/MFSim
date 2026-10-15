@@ -266,7 +266,7 @@ var veMntBrief = (function() {
     return { kind: id };
   }
 
-  // Kanalın adından takoz adını çıkar ("Ön Sol · bileşke çökme" → "Ön Sol").
+  // Kanalın adından takoz adını çıkar ("Ön Sol · bileşke sehim" → "Ön Sol").
   function chanMount(ch) {
     var s = (ch && ch.name) ? String(ch.name) : '';
     var i = s.indexOf(' · ');
@@ -284,7 +284,7 @@ var veMntBrief = (function() {
     return null;
   }
 
-  // Eğrinin bir noktadaki eğimi — kuvvet-deformasyon şeridinde "sertlik".
+  // Eğrinin bir noktadaki eğimi — kuvvet-sehim şeridinde "sertlik".
   // δ = ±1 mm arasındaki fark alınır: sıfırdaki teğet, nonlineer eğride
   // çalışma bandını temsil etmiyor.
   function slopeAt0(x, y) {
@@ -503,7 +503,7 @@ var veMntBrief = (function() {
     return { title: title, paras: paras };
   }
 
-  // ═══════════ 2) KUVVET-DEFORMASYON — şerit yorumu ═══════════
+  // ═══════════ 2) KUVVET-SEHİM — şerit yorumu ═══════════
   function fdeflLane(ds, R, chans) {
     var x = ds.x.data, paras = [];
     var mounts = (R && R.mounts) || [];
@@ -530,7 +530,7 @@ var veMntBrief = (function() {
       return NaN;
     }
 
-    paras.push('Yatay eksen çökme (' + b('mm') + '), dikey eksen kuvvet; eğim ' +
+    paras.push('Yatay eksen sehim (' + b('mm') + '), dikey eksen kuvvet; eğim ' +
                b('sertlik') + ' verir.' +
       // Nokta işaretleri yalnız düşey eksen çizildiğinde görünür (datasetMarks
       // Z kanalına bağlar); yoksa olmayan bir işareti anlatmış oluruz.
@@ -539,7 +539,7 @@ var veMntBrief = (function() {
           'izolasyon o noktadaki eğimden türer, sıfırdaki eğimden değil.'
         : ''));
 
-    var title = 'Kuvvet-deformasyon';
+    var title = 'Kuvvet-sehim';
     if(nM === 1 && nA > 1) {
       // Tek takoz, birden çok eksen → yön farkı (anizotropi)
       var mn = Object.keys(uniqMounts)[0];
@@ -569,7 +569,7 @@ var veMntBrief = (function() {
         (it.nl ? b('nonlineer') + ' (yük arttıkça sertleşiyor).' : b('doğrusal') + '.'));
       var wp = workPoint(it.mount);
       if(it.ax === 2 && isFinite(wp)) {
-        paras.push('Statik çökme ' + b(na(wp) + ' mm') + ': doğrusal bandın (' + b('±10 mm') +
+        paras.push('Statik sehim ' + b(na(wp) + ' mm') + ': doğrusal bandın (' + b('±10 mm') +
           ') ' + b(pct(wp / 10 * 100, 0)) + ' kadarı; durdurucuya ' + b(na(15 - wp) + ' mm') +
           ' pay kalıyor.');
       }
@@ -632,7 +632,7 @@ var veMntBrief = (function() {
     });
 
     var title = t.baslik;
-    paras.push('Yatay eksen ' + b(t.yon + ' ivme') + ', dikey eksen takoz çökmesi ve ' +
+    paras.push('Yatay eksen ' + b(t.yon + ' ivme') + ', dikey eksen takoz sehimi ve ' +
                'kuvveti; ' + t.sifir + '.');
 
     function atDesign(ch) { return interpAt(a, ch.data, t.tasarim); }
@@ -648,7 +648,7 @@ var veMntBrief = (function() {
           b(na(15 - srt[0].v) + ' mm') + ' pay kalıyor.');
       } else if(srt.length > 1) {
         title += ' — ' + srt.length + ' takoz';
-        paras.push(b(srt.length + ' takozun') + ' çökmesi. ' +
+        paras.push(b(srt.length + ' takozun') + ' sehimi. ' +
           b(t.tasarimAd) + ' altında en çok yüklenen ' + b(srt[0].name) + ' (' +
           b(na(srt[0].v) + ' mm') + '), en az yüklenen ' + b(srt[srt.length - 1].name) + ' (' +
           b(na(srt[srt.length - 1].v) + ' mm') + '). Aradaki fark ' +
@@ -681,7 +681,7 @@ var veMntBrief = (function() {
       var dMax = sums[0];
       var vD = atDesign(dMax), vEnd = dMax.data[dMax.data.length - 1];
       var v1 = interpAt(a, dMax.data, 1);
-      var s = '"En büyük takoz çökmesi" kanalı her ivmede en kötü takozu izler: ' +
+      var s = '"En büyük takoz sehimi" kanalı her ivmede en kötü takozu izler: ' +
               b(t.tasarimAd) + ' altında ' + b(na(isFinite(vD) ? vD : vEnd) + ' mm');
       if(ds.key === 'gz' && isFinite(v1)) s += ', araç dururken ' + b(na(v1) + ' mm');
       s += '; ' + b('±15 mm') + ' sınırına ' + b(na(15 - (isFinite(vD) ? vD : vEnd)) + ' mm') + ' pay var.';
@@ -950,7 +950,7 @@ var veMntBrief = (function() {
       }
     }
 
-    // ── Takoz çökmesi ve durdurucu kontrolü ──
+    // ── Takoz sehimi ve durdurucu kontrolü ──
     var dSrc = dmax ? [dmax] : defl;
     if(dSrc.length) {
       var worst = 0, worstName = '';
@@ -1201,9 +1201,9 @@ var veMntBrief = (function() {
     frf:    'Frekansa göre iletilebilirlik: şasiye geçen kuvvetin motor kuvvetine oranı.',
     campbell: 'Motor uyarma mertebeleri ile güç grubu doğal frekanslarının devir düzlemindeki kesişimi.',
     fdefl:  'Takoz kuvvet–sehim yasası ve statik çalışma noktaları.',
-    gz:     'Düşey ivme süpürmesi: takoz çökmesi ve kuvveti.',
-    gy:     'Yanal ivme süpürmesi: takoz çökmesi ve kuvveti.',
-    gx:     'Boyuna ivme süpürmesi: takoz çökmesi ve kuvveti.',
+    gz:     'Düşey ivme süpürmesi: takoz sehimi ve kuvveti.',
+    gy:     'Yanal ivme süpürmesi: takoz sehimi ve kuvveti.',
+    gx:     'Boyuna ivme süpürmesi: takoz sehimi ve kuvveti.',
     shockz: 'Düşey yarım-sinüs darbeye geçici rejim yanıtı.',
     shocky: 'Yanal yarım-sinüs darbeye geçici rejim yanıtı.',
     shockx: 'Boyuna yarım-sinüs darbeye geçici rejim yanıtı.'

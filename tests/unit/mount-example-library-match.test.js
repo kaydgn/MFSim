@@ -9,9 +9,9 @@
  *     örnekte : dx 335  dy 355  dz 740      ← X ↔ Z takas
  *
  * NEDEN SESSİZ KALDI: statik çözüm yalnız k_stat kullanır, dolayısıyla 14 yük
- * durumunun 210 çökme değerinin HİÇBİRİ değişmiyordu (ölçüldü: fark tam 0).
+ * durumunun 210 sehim değerinin HİÇBİRİ değişmiyordu (ölçüldü: fark tam 0).
  * Hata yalnız k_dyn'in girdiği yerde görünür — modal frekanslar, frekans yanıtı,
- * sönüm katsayıları ve şok çözümü. Yani "çökme tablosu doğru" diye bakan bir
+ * sönüm katsayıları ve şok çözümü. Yani "sehim tablosu doğru" diye bakan bir
  * gözden tamamen kaçıyordu.
  *
  * İKİ KAPI:

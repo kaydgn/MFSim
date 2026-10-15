@@ -20,7 +20,7 @@
  *      MLMT-0216-33-TK040 raporu ya da Adams girdi dosyası geldiğinde
  *      hangi tarafın oynayacağı belli olsun. Gerekçe fikstürün başlığında.
  *
- * Statik çökmeler k_dyn'e BAĞLI DEĞİLDİR (statik yol yalnız k_stat kullanır),
+ * Statik sehimler k_dyn'e BAĞLI DEĞİLDİR (statik yol yalnız k_stat kullanır),
  * dolayısıyla (1) ve (2) iki varyantta da AYNI çıkar — bu da ayrıca kilitli.
  */
 
@@ -135,7 +135,7 @@ describe('1) statik taraf — Adams ile örtüşüyor ve k_dyn\'den bağımsız'
     expect(s.within(0.50)).toBe(1);
   });
 
-  test('iki varyant AYNI çökmeleri veriyor — k_dyn statik çözüme girmez', () => {
+  test('iki varyant AYNI sehimleri veriyor — k_dyn statik çözüme girmez', () => {
     // Bu, TK040 düzeltmesinin statik doğrulamayı bozmadığının kilidi.
     REF.ROWS.forEach((r, ri) => {
       for (let c = 0; c < 5; c++) for (let a = 0; a < 3; a++) {

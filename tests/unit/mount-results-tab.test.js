@@ -289,7 +289,7 @@ describe('pano ile çözümün uzlaştırılması (veMntSyncBoard)', () => {
     veAddSignalToSlot(0, '~mnt-gz', 'dmax');
     veResultSlots[0].sensors[0].name = 'ESKİ AD';       // kaydedilmiş bayat etiket
     expect(veMntSyncBoard()).toBe(0);
-    expect(veResultSlots[0].sensors[0].name).toBe('En büyük takoz çökmesi');
+    expect(veResultSlots[0].sensors[0].name).toBe('En büyük takoz sehimi');
   });
 
   test('artık var olmayan kanal DÜŞÜRÜLÜR, ekseni de bırakılır', () => {

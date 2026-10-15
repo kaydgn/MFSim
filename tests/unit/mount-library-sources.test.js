@@ -10,7 +10,7 @@
  *   (1) iki kaynağın değerlerinin BİRBİRİNE KARIŞMADIĞINI,
  *   (2) kayıtlı projelerin bağını koparmayacak şekilde eski anahtarların
  *       KORUNDUĞUNU,
- *   (3) ASR-SR-116 satırlarının o dokümanın KENDİ sonuçlarını (Tablo 8 çökme,
+ *   (3) ASR-SR-116 satırlarının o dokümanın KENDİ sonuçlarını (Tablo 8 sehim,
  *       Tablo 11 sönüm) yeniden ürettiğini
  * kalıcı olarak kilitler. Bir hane kayarsa sonuçlar sessizce "makul ama yanlış"
  * çıkar — kritik olan da bu.
@@ -153,7 +153,7 @@ describe('ASR-SR-116 girdileri dokümanın KENDİ sonuçlarını üretiyor', () 
     expect(core.combineMassProps(COMPS).m).toBeCloseTo(2455, 6);
   });
 
-  test('Tablo 8 çökmeleri yeniden üretiliyor', () => {
+  test('Tablo 8 sehimleri yeniden üretiliyor', () => {
     const { res } = solve();
     const PDF = [-1.993, -1.985, -1.952, -1.897, -1.947, -1.893];   // Ön Sol…Sağ Arka
     res.perMount.forEach((pm, i) => {
