@@ -2918,7 +2918,12 @@ function veMntCoordFrameRefresh(){
 // (_mntCanliModel → combineMassProps) ve boş konum, çözücü gibi, 0'da çizilir —
 // föyde "boş" diye işaretlenir. Çizilmeseydi G onu yine sayardı: AM, çizimde
 // olmayan bir gövdeye doğru kaymış görünürdü.
-var VE_MNT_2D_SEKME = [['ust','Üstten'], ['yan','Yandan'], ['on','Önden']];
+// AKSONOMETRİK İLK SEKME (2026-10-15, kullanıcı seçimi — tasarım sayfası
+// "Aksonometrik 2B Görünüm"): çizici js/mount-akso.js. Düz görünüşlerin
+// sekme adı kısa — eksen çifti ("X–Y") görünüşün kutusunun başlığında;
+// "Üstten · X–Y" adlarıyla dört sekme 354 px'lik sütunda iki satıra
+// sarıyordu.
+var VE_MNT_2D_SEKME = [['akso','Aksonometrik'], ['ust','Üstten'], ['yan','Yandan'], ['on','Önden']];
 function _mnt2DPencereVeri(){
   var M=_mntCanliModel(), noG={}, noT={};
   var comps=M.g.components.map(function(c, i){ noG[c.id]=String(i+1);
@@ -2958,6 +2963,266 @@ function _mnt2DKutuIcHTML(P, gor, W){
     + '<button type="button" data-z="reset" title="Sıfırla" aria-label="Sıfırla">'+veIkon('rotate-ccw')+'</button>'
     + '</div></div>'+cizim;
 }
+// ════════════════════════════════════════════════════════════════════════════
+//  2D GÖRÜNÜM · AKSONOMETRİK SEKME (çizici js/mount-akso.js)
+// ════════════════════════════════════════════════════════════════════════════
+// GÖRÜNÜM TERCİHİ MODELDE DEĞİL (sekme durumu gibi, FEAD kural 15'in
+// gerekçesi): kaydedilmez, geri-al yığınına yazılmaz; tarayıcıda saklanır
+// (FEAD araçları penceresinin yeri gibi). Varsayılan kullanıcının seçimi:
+// dimetrik, önden-soldan-yukarıdan, katmanlar kapalı (gölge hep açık).
+var VE_MNT_AKSO_ANAHTAR = 've-mnt-akso';
+var VE_MNT_AKSO = { iz:'dim', bx:-1, by:-1, bz:1, direk:false, kuvvet:false, cokme:false, mod:false, rijit:false, duvar:false, modI:0, oynat:true };
+var _mntAksoOkundu = false;
+function _mntAksoOku(){
+  if(_mntAksoOkundu) return VE_MNT_AKSO;
+  _mntAksoOkundu = true;
+  try{
+    var k = (typeof localStorage!=='undefined') ? JSON.parse(localStorage.getItem(VE_MNT_AKSO_ANAHTAR) || 'null') : null;
+    if(k && typeof k==='object'){
+      if(k.iz==='dim' || k.iz==='iso') VE_MNT_AKSO.iz=k.iz;
+      ['bx','by','bz'].forEach(function(a){ if(k[a]===1 || k[a]===-1) VE_MNT_AKSO[a]=k[a]; });
+      ['direk','kuvvet','cokme','mod','rijit','duvar','oynat'].forEach(function(a){ if(typeof k[a]==='boolean') VE_MNT_AKSO[a]=k[a]; });
+      if(k.modI>=0 && k.modI<6) VE_MNT_AKSO.modI=Math.floor(k.modI);
+    }
+  }catch(e){ /* tarayıcı belleği yok: varsayılanlar */ }
+  return VE_MNT_AKSO;
+}
+function _mntAksoYaz(){
+  try{ if(typeof localStorage!=='undefined') localStorage.setItem(VE_MNT_AKSO_ANAHTAR, JSON.stringify(VE_MNT_AKSO)); }catch(e){ /* yok sayılır */ }
+}
+// Çizici ayrı dosyada (js/mount-akso.js): yükleyici bir modülü atlarsa
+// (loader: "atlanan modül görünür, yükleme sürer") sekme sebebini söyler.
+function _mntAk(){ return (typeof veMntAkso!=='undefined' && veMntAkso && veMntAkso.ciz) ? veMntAkso : null; }
+function _mntAksoKoord(x, y, z, b){ return '('+_mntS(x, b||0)+'; '+_mntS(y, b||0)+'; '+_mntS(z, b||0)+')'; }
+
+// ÇİZİMİN MODELİ — pencere hesaplamaz, okur. Gövde kutusu çekirdeğin
+// equivalentBox'ı (köşegen atalet; raporun mod şekli çizimiyle aynı çağrı),
+// G 2D görünüşlerinkiyle aynı (_mnt2DPencereVeri → combineMassProps), asal
+// eksenler canlı modelin I_G'sinden. Kuvvet, statik denge ve modlar YALNIZ
+// GÜNCEL çözümden: bayat bir kuvvet oku çizimde ölçüm gibi durur.
+function _mntAksoModel(P){
+  P=P||_mnt2DPencereVeri();
+  var M=P.M, C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  var S=veMntSonucDurumu(), R=(S.durum==='guncel') ? S.R : null;
+  var mTop=0;
+  M.g.components.forEach(function(c){ mTop+=Math.max(0, _mntNum(c.mass, 0)); });
+  var govde=M.g.components.map(function(c, i){
+    var mass=_mntNum(c.mass, 0), x=_mntNum(c.cgx), y=_mntNum(c.cgy), z=_mntNum(c.cgz);
+    var kutu=(C && C.equivalentBox) ? C.equivalentBox(mass, [[_mntNum(c.Ixx),0,0],[0,_mntNum(c.Iyy),0],[0,0,_mntNum(c.Izz)]], !!c.pointMass) : null;
+    if(kutu) kutu=kutu.map(function(v){ return v*1000; });
+    var pay=mTop>0 ? Math.max(0, mass)/mTop : 0, ad=String(c.name||'Gövde');
+    return { k:'g'+(i+1), no:String(i+1), ad:ad, m:mass, x:x, y:y, z:z, pay:pay, kutu:kutu, ana:false,
+      bilgi:[(i+1)+' · '+ad, 'Kütle '+_mntS(mass, 1)+' kg (%'+_mntS(pay*100, 1)+')', 'AM '+_mntAksoKoord(x, y, z)+' mm',
+        kutu ? 'Eşdeğer kutu '+kutu.map(function(v){ return _mntS(v, 0); }).join(' × ')+' mm'
+             : (c.pointMass ? 'Nokta kütle — kutu çizilmez' : 'Atalet kutu vermiyor — nokta çizilir')] };
+  });
+  // Ana gövde: raporun eşiği — toplamın %10'u, en az iki gövde.
+  var ana=govde.filter(function(g){ return g.pay>=(_mntAk() ? _mntAk().ANA_PAY : 0.10); });
+  if(ana.length<2) ana=govde.slice().sort(function(a, b){ return b.m-a.m; }).slice(0, 2);
+  ana.forEach(function(g){ g.ana=true; });
+  var ms=R ? (R.mounts||[]) : [], st=null;
+  if(R) (R.allCases||[]).forEach(function(rc){ if(rc.name==='Static' && rc.res) st=rc.res; });
+  var takoz=M.g.mounts.map(function(t, i){
+    var j=-1;
+    for(var q=0;q<ms.length;q++){ if(ms[q] && ms[q].id===t.id){ j=q; break; } }
+    var pm=(st && st.perMount && j>=0) ? st.perMount[j] : null;
+    var yuk=(R && R.loadShares && j>=0) ? R.loadShares[j] : null;
+    var x=_mntNum(t.x), y=_mntNum(t.y), z=_mntNum(t.z), ad=String(t.name||'Takoz');
+    var ks=[_mntNum(t.kxs), _mntNum(t.kys), _mntNum(t.kzs)];
+    var bilgi=['T'+(i+1)+' · '+ad, 'Konum '+_mntAksoKoord(x, y, z)+' mm', 'Statik rijitlik '+ks.map(function(v){ return _mntS(v, 0); }).join('; ')+' N/mm'];
+    if(pm && yuk!=null) bilgi.push('Statik yük '+_mntS(yuk, 1)+' kg · çökme '+_mntS(Math.abs(pm.delta[2]*1000), 2)+' mm');
+    return { k:'T'+(i+1), no:'T'+(i+1), ad:ad, x:x, y:y, z:z, ks:ks, f:pm ? pm.f.slice() : null, yukKg:yuk, bilgi:bilgi };
+  });
+  var cg=P.veri.cg;
+  var G=cg ? { x:cg.x, y:cg.y, z:cg.z, m:M.mTop,
+    bilgi:['Birleşik ağırlık merkezi', _mntAksoKoord(cg.x, cg.y, cg.z, 1)+' mm', 'Toplam kütle '+_mntS(M.mTop, 1)+' kg'] } : null;
+  var asal=null;
+  if(M.mp && C && C.principalInertia && C.equivalentBox){
+    var pr=C.principalInertia(M.mp.I_G);
+    var kb=pr ? C.equivalentBox(M.mp.m, [[pr.values[0],0,0],[0,pr.values[1],0],[0,0,pr.values[2]]], false) : null;
+    if(kb) asal={ degerler:pr.values, eksenler:pr.axes, kutu:kb.map(function(v){ return v*1000; }) };
+  }
+  var kisa=(typeof veMntBrief!=='undefined' && veMntBrief.modeShort) ? veMntBrief.modeShort : function(s){ return String(s||''); };
+  return { govde:govde, takoz:takoz, G:G,
+    cgR:(R && R.mp) ? R.mp.cg.map(function(v){ return v*1000; }) : (G ? [G.x, G.y, G.z] : [0, 0, 0]),
+    q:(R && R.qStatic) ? { u:R.qStatic.slice(0, 3).map(function(v){ return v*1000; }), t:R.qStatic.slice(3, 6) } : null,
+    modlar:(R && R.modes && R.modes.length) ? R.modes.map(function(md){ return { f:md.f_Hz, phi:md.phi, ad:kisa(md.label) }; }) : null,
+    asal:asal, cozum:S.durum };
+}
+function _mntAksoAzalt(){
+  try{ return typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; }
+}
+// Pencerenin ve tam ekranın aksonometrisi — denetimler, çizim, mod listesi,
+// gösterge. `tam`: tam ekran (denetimler tek satırda, üç duvar katmanı var,
+// işaretler adlarıyla).
+function _mntAksoHTML(P, W, tam, kapId){
+  if(!_mntAk()) return _mntNot('Aksonometrik çizici yüklenmedi — düz görünüşler sonraki sekmelerde.', 'warn');
+  var A=_mntAksoOku(), m=_mntAksoModel(P);
+  if(!m.govde.length && !m.takoz.length) return '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>';
+  var guncel=(m.cozum==='guncel');
+  var kuvvetVar=guncel && m.G && m.takoz.length>0 && m.takoz.every(function(t){ return t.f; }), modVar=guncel && !!m.modlar;
+  var kat={ golge:true, direk:A.direk, rijit:A.rijit, asal:A.rijit && !!m.asal,
+    kuvvet:A.kuvvet && kuvvetVar, cokme:A.kuvvet && kuvvetVar && A.cokme && !!m.q, duvar:!!tam && A.duvar };
+  var b={ x:A.bx, y:A.by, z:A.bz };
+  var o={ W:Math.max(200, Math.round(W)), iz:A.iz, b:b, stil:(kat.direk || kat.rijit || kat.duvar) ? 'xray' : 'golge', kat:kat,
+    etiket:(tam && W>=560) ? 'genis' : 'ad', zoom:true, fs:{ k:_mnt2DFs('micro'), b:_mnt2DFs('tiny') },
+    Hmax:tam ? Math.max(380, Math.min(680, Math.round(((typeof window!=='undefined' && window.innerHeight) || 900)*0.6))) : 420 };
+  var md=null, oyna=false;
+  if(A.mod && modVar){
+    md=m.modlar[Math.min(A.modI, m.modlar.length-1)];
+    oyna=A.oynat && !_mntAksoAzalt();
+    o.mod={ phi:md.phi, s:veMntAkso.modOlcek(m, md.phi), faz:oyna ? 0 : 1 };
+  }
+  var r=veMntAkso.ciz(m, o);
+  // Canlandırma çizilenin AYNI sığdırmasıyla (F) ve seçenekleriyle kare üretir.
+  _mntAksoSon[kapId]=md ? { m:m, o:o, F:r.F, md:md } : null;
+  var ay=function(k, v){ return 'veMntAksoAyar(\''+kapId+'\',\''+k+'\','+(typeof v==='number' ? v : '\''+v+'\'')+')'; };
+  var seg=function(aria, sec){
+    return '<div class="ve-mnt-seg" role="group" aria-label="'+aria+'">'+sec.map(function(s){
+      return '<button type="button" aria-pressed="'+(String(A[s[0]])===String(s[1]))+'" onclick="'+ay(s[0], s[1])+'">'+s[2]+'</button>';
+    }).join('')+'</div>';
+  };
+  var gor='<div class="ve-mnt-ak-gor">'
+    + seg('İzdüşüm', [['iz', 'dim', 'Dimetrik'], ['iz', 'iso', 'İzometrik']])
+    + seg('Ön ya da arka', [['bx', -1, 'Önden'], ['bx', 1, 'Arkadan']])
+    + seg('Sol ya da sağ', [['by', -1, 'Soldan'], ['by', 1, 'Sağdan']])
+    + seg('Üst ya da alt', [['bz', 1, 'Yukarıdan'], ['bz', -1, 'Alttan']])+'</div>';
+  var neden=(m.cozum==='bayat') ? 'Model son hesaptan sonra değişti — Çözücü\'de Hesapla.' : 'Henüz çözüm yok — Çözücü\'de Hesapla.';
+  var tg=function(k, ad, ipucu, yok){
+    var on=!!A[k] && !yok;
+    return '<button type="button" class="mnt-vwr-toggle'+(on ? ' is-on' : '')+'" aria-pressed="'+on+'"'
+      + (yok ? ' aria-disabled="true" title="'+_mntEsc(ad+': '+neden)+'"' : ' title="'+_mntEsc(ipucu)+'" onclick="'+ay('kat', k)+'"')+'>'+ad+'</button>';
+  };
+  var katlar=tg('direk', 'Direk', 'Takozun ve G\'nin Z = 0\'a düşeyi ve yüksekliği')
+    + (tam ? tg('duvar', 'Duvar', 'Taban, yan duvar ve uç duvara düşen gölgeler: üç düz görünüş aksonometrinin içinde') : '')
+    + tg('kuvvet', 'Kuvvet', 'Serbest cisim: G\'de ağırlık, takozlarda statik tepki — aynı ölçekte', !kuvvetVar)
+    + tg('mod', 'Mod', 'Rijit gövde modları canlandırılır', !modVar)
+    + tg('rijit', 'Rijitlik', 'Takozda statik rijitlik kolu (X · Y · Z), G\'de asal eksenler ve eşdeğer kutu');
+  // Bağlama göre: kuvvet açıkken statik çökme, mod açıkken mod listesi.
+  var alt='';
+  if(kat.kuvvet && m.q){
+    alt+='<div class="ve-mnt-ak-alt">'+tg('cokme', 'Statik çökme', 'Statik dengedeki yer değiştirme, büyütülmüş')
+      + (kat.cokme ? '<span class="ve-mnt-ak-not">çizimde ×'+_mntS(r.cokmeN, 0)+' büyütülmüş</span>' : '')+'</div>';
+  }
+  if(md){
+    alt+='<div class="ve-mnt-ak-mod" role="group" aria-label="Titreşim modu">'+m.modlar.map(function(q, i){
+      return '<button type="button" aria-pressed="'+(q===md)+'" onclick="'+ay('mod', i)+'"><b>'+(i+1)+'</b> '+_mntS(q.f, 2)+' Hz<span>'+_mntEsc(q.ad)+'</span></button>';
+    }).join('')+'</div>'
+      + '<div class="ve-mnt-ak-alt">'+(_mntAksoAzalt()
+        ? '<span class="ve-mnt-ak-not">Hareket azaltma açık: modun uç konumu çiziliyor.</span>'
+        : '<button type="button" class="mnt-vwr-action" onclick="'+ay('oynat', 1)+'">'+veIkon(oyna ? 'square' : 'play')+'<span>'+(oyna ? 'Durdur' : 'Oynat')+'</span></button>'
+          + '<span class="ve-mnt-ak-not">genlik görsel: %10 açıklık, en çok 6°</span>')+'</div>';
+  }
+  // Başlık izdüşümün ADI ve bakış (sekme zaten "Aksonometrik"): dar sütunda
+  // "Aksonometrik · dimetrik (ISO 5456-3) · …" yakınlaştırma düğmelerini
+  // kabın dışına itiyordu.
+  var kutu='<div class="ve-mnt-2d ve-mnt-akso" data-mnt2d="akso"><div class="ve-mnt-kroki-bas"><b>'+veMntAkso.IZ[A.iz].ad+'</b>'
+    + '<em>'+_mntEsc((tam && A.iz==='dim' ? 'ISO 5456-3 · ' : '')+veMntAkso.bakisAdi(b))+'</em>'
+    + '<div class="ve-mnt2d-zoomctl" role="group" aria-label="Yakınlaştırma">'
+    + '<button type="button" data-z="in" title="Yakınlaştır" aria-label="Yakınlaştır">'+veIkon('plus')+'</button>'
+    + '<button type="button" data-z="out" title="Uzaklaştır" aria-label="Uzaklaştır">'+veIkon('minus')+'</button>'
+    + '<button type="button" data-z="reset" title="Sıfırla" aria-label="Sıfırla">'+veIkon('rotate-ccw')+'</button>'
+    + '</div></div>'+r.svg+alt+'</div>';
+  var lej='<div class="ve-mnt-kroki-lej ve-mnt-ak-lej">'
+    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-g" d="M5 1 L9 3 L5 5 L1 3 Z"/><path class="ve-ak-lj-gy" d="M1 3 L5 5 L5 9 L1 7 Z"/><path class="ve-ak-lj-gx" d="M5 5 L9 3 L9 7 L5 9 Z"/></svg>gövde · eşdeğer kutu</span>'
+    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-ak-lj-t" x="2" y="2" width="6" height="6" rx="1"/></svg>takoz · T</span>'
+    + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-G" cx="5" cy="5" r="3.6"/></svg>G · birleşik AM</span>'
+    + (m.govde.some(function(g){ return !g.kutu; }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-n" cx="5" cy="5" r="2"/></svg>nokta kütle</span>' : '')
+    + (A.bz>0 && !kat.duvar ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-gol" d="M1 6 L5 4 L9 6 L5 8 Z"/></svg>Z = 0\'a düşen iz</span>' : '')
+    + (kat.rijit ? '<span><svg class="ve-mnt-lej-cizgi" viewBox="0 0 16 9" aria-hidden="true"><line class="ve-ak-rj-x" x1="1" y1="4.5" x2="5" y2="4.5"/><line class="ve-ak-rj-y" x1="6" y1="4.5" x2="10" y2="4.5"/><line class="ve-ak-rj-z" x1="11" y1="4.5" x2="15" y2="4.5"/></svg>rijitlik X · Y · Z</span>' : '')
+    + (kat.kuvvet ? '<span><svg class="ve-mnt-lej-cizgi" viewBox="0 0 16 9" aria-hidden="true"><line class="ve-ak-lj-kv" x1="2" y1="4.5" x2="14" y2="4.5"/></svg>statik tepki · aynı ölçek</span>' : '')
+    + '</div>';
+  var not=(!guncel && (A.kuvvet || A.mod)) ? _mntNot('Kuvvet ve mod son çözümden çizilir. '+neden, 'warn') : '';
+  if(tam) return '<div class="ve-mnt-ak-bar">'+gor+'<div class="ve-mnt-ak-kat">'+katlar+'</div></div>'+not+kutu+lej;
+  return kutu+lej+not
+    + _mntBolum('Görünüş', '', gor)
+    + _mntBolum('Katmanlar', 'gölge hep açık', '<div class="mnt-vwr-toggles ve-mnt-ak-kat">'+katlar+'</div>');
+}
+// Kabın aksonometrisini GERÇEK genişliğinde kur, dinleyicileri bağla, mod
+// açıksa canlandır. W verilmezse kabın kendi genişliği.
+var _mntAksoAnim = {}, _mntAksoSon = {};
+function _mntAksoKur(kapId, W, P){
+  if(typeof document==='undefined') return false;
+  var kap=document.getElementById(kapId); if(!kap) return false;
+  if(!(W>200)) W=Math.floor(kap.clientWidth)-2;
+  if(!(W>200)) return false;
+  _mntAksoDur(kapId);
+  var tam=kap.getAttribute('data-tam')==='1';
+  P=P||_mnt2DPencereVeri();
+  kap.innerHTML=_mntAksoHTML(P, W, tam, kapId);
+  _mnt2DAttachHover(kap);
+  _mnt2DAttachZoom(kap);
+  _mntAksoVurguBagla(kap);
+  var A=VE_MNT_AKSO, svg=kap.querySelector('svg.ve-mnt2d-akso');
+  if(svg && A.mod && A.oynat && !_mntAksoAzalt() && _mntAksoSon[kapId]) _mntAksoOynat(kapId);
+  return true;
+}
+// Canlandırma: çizimin yalnız hareket eden katmanı (gövdeler, takozlar, G)
+// her karede yeniden yazılır; sığdırma, zemin, yazılar yerinde kalır.
+function _mntAksoOynat(kapId){
+  var son=_mntAksoSon[kapId];
+  if(!son || typeof requestAnimationFrame!=='function') return;
+  var m=son.m, o=son.o, md=son.md, s=o.mod.s, F=son.F, t0=0, iz={ raf:0 };
+  _mntAksoAnim[kapId]=iz;
+  var adim=function(t){
+    var kap=document.getElementById(kapId), g=kap && kap.querySelector('svg.ve-mnt2d-akso .ve-ak-hareket');
+    if(!g){ delete _mntAksoAnim[kapId]; return; }
+    if(!t0) t0=t;
+    if(!kap.closest('[hidden]')){
+      var faz=Math.sin((t-t0)/1000*2*Math.PI/1.6);
+      g.innerHTML=veMntAkso.ciz(m, Object.assign({}, o, { mod:{ phi:md.phi, s:s, faz:faz }, F:F, yalnizHareket:true })).hareket;
+    }
+    iz.raf=requestAnimationFrame(adim);
+  };
+  iz.raf=requestAnimationFrame(adim);
+}
+function _mntAksoDur(kapId){
+  var iz=_mntAksoAnim[kapId];
+  if(iz && iz.raf && typeof cancelAnimationFrame==='function') cancelAnimationFrame(iz.raf);
+  delete _mntAksoAnim[kapId];
+}
+// Bağlantılı vurgu: işaretin üstüne gelince aynı işaretin her izi (gövde,
+// gölgesi, duvardaki izdüşümleri, etiketi) birlikte vurgulanır. Yazı
+// opaklıkla soldurulmaz — vurgulanan işaretin kenarı vurgu rengini alır.
+function _mntAksoVurguBagla(kap){
+  if(!kap || kap.__mntAksoVurgu) return;
+  kap.__mntAksoVurgu=true;
+  var son=null;
+  var bitir=function(){ if(son){ Array.prototype.forEach.call(kap.querySelectorAll('.ve-ak-vurgu'), function(e){ e.classList.remove('ve-ak-vurgu'); }); son=null; } };
+  kap.addEventListener('mousemove', function(e){
+    var el=e.target && e.target.closest ? e.target.closest('svg.ve-mnt2d-akso [data-ak]') : null;
+    var k=el ? el.getAttribute('data-ak') : null;
+    if(k==='duvar') k=null;
+    if(k===son) return;
+    bitir();
+    if(!k) return;
+    son=k;
+    Array.prototype.forEach.call(kap.querySelectorAll('svg.ve-mnt2d-akso [data-ak="'+k+'"]'), function(x){ x.classList.add('ve-ak-vurgu'); });
+  });
+  kap.addEventListener('mouseleave', bitir);
+}
+// Denetim: görünüm tercihini yaz ve kabın aksonometrisini yeniden kur
+// (pencere kurulmaz — sekme ve sağ sütun yerinde kalır).
+function veMntAksoAyar(kapId, k, v){
+  var A=_mntAksoOku();
+  if(k==='iz'){ if(v==='dim' || v==='iso') A.iz=v; }
+  else if(k==='bx' || k==='by' || k==='bz') A[k]=(Number(v)>0) ? 1 : -1;
+  else if(k==='kat'){ if(Object.prototype.hasOwnProperty.call(A, v) && typeof A[v]==='boolean') A[v]=!A[v]; }
+  else if(k==='mod'){ A.modI=Math.max(0, Math.min(5, Math.floor(Number(v)||0))); A.oynat=true; }
+  else if(k==='oynat') A.oynat=!A.oynat;
+  _mntAksoYaz();
+  if(typeof document==='undefined') return false;
+  var kap=document.getElementById(kapId);
+  var odak=(document.activeElement && kap && kap.contains(document.activeElement)) ? document.activeElement.getAttribute('onclick') : null;
+  var ok=_mntAksoKur(kapId);
+  // Odak basılan denetimde kalır (klavyeyle gezen kullanıcı yerini kaybetmez).
+  if(ok && odak){
+    var yeni=Array.prototype.filter.call(kap.querySelectorAll('button[onclick]'), function(b){ return b.getAttribute('onclick')===odak; })[0];
+    if(yeni && yeni.focus) yeni.focus();
+  }
+  return ok;
+}
+
 function _mnt2DIsaretFoy(P){
   var M=P.M, cg=P.veri.cg, eks=0;
   var hucre=function(v){ return _mntBos(v) ? '<td class="eks">boş</td>' : '<td>'+_mntS(_mntNum(v),0)+'</td>'; };
@@ -2979,8 +3244,11 @@ function getMnt2DViewPropertiesHTML(node){
   var P=_mnt2DPencereVeri(), M=P.M;
   var bos=!M.g.components.length && !M.g.mounts.length;
   var sekmeler=VE_MNT_2D_SEKME.map(function(g){
+    if(g[0]==='akso') return { k:'akso', ad:g[1],
+      govde:bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>'
+        : '<div class="ve-mnt-akso-kap" id="ve-mnt-akso-'+node.id+'">'+_mntAksoHTML(P, _MNT_KROKI_W, false, 've-mnt-akso-'+node.id)+'</div>' };
     var G=VE_MNT2D_GORUNUS[g[0]];
-    return { k:g[0], ad:g[1]+' · '+G.hLabel+'–'+G.vLabel,
+    return { k:g[0], ad:g[1],
       govde:'<div class="ve-mnt-2d" data-mnt2d="'+g[0]+'">'
         + (bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>' : _mnt2DKutuIcHTML(P, g[0], _MNT_KROKI_W))+'</div>'
         + '<div class="ve-mnt-kroki-lej">'
@@ -2991,7 +3259,7 @@ function getMnt2DViewPropertiesHTML(node){
   });
   var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz'+(M.mTop>0 ? ' · '+_mntS(M.mTop,1)+' kg' : '');
   var yan=_mntBolum('İşaretler', em, bos ? _mntNot('Kanvasta henüz model yok.', '') : _mnt2DIsaretFoy(P))
-    + (bos ? '' : '<div class="ve-fp-eylem">'+_mntVwrAction('veMnt2DTamEkran()', 'maximize', 'Tam ekran · üç görünüş adlarıyla', 'Üç görünüşü alt alta, işaretleri adlarıyla tam ekranda aç')+'</div>')
+    + (bos ? '' : '<div class="ve-fp-eylem">'+_mntVwrAction('veMnt2DTamEkran()', 'maximize', 'Tam ekran', 'Aksonometriyi (üç duvarıyla) ve üç düz görünüşü, işaretler adlarıyla, tam ekranda aç')+'</div>')
     + _mntBolum('Etkileşim', '', _mntVwrIpucu(['Sürükle: kaydır', 'Ctrl + tekerlek: yakınlaştır',
         'Çift tık: sıfırla', 'İşaretin üstüne gel: ad ve koordinat']));
   return _mntPencereKabuk(node, sekmeler, yan, '');
@@ -3009,10 +3277,12 @@ function veMnt2DViewRefresh(){
   if(!(W>200)) return;
   var P=_mnt2DPencereVeri();
   Array.prototype.forEach.call(kok.querySelectorAll('.ve-mnt-2d[data-mnt2d]'), function(box){
+    if(!VE_MNT2D_GORUNUS[box.getAttribute('data-mnt2d')]) return;     // aksonometri aşağıda
     box.innerHTML=_mnt2DKutuIcHTML(P, box.getAttribute('data-mnt2d'), W);
     _mnt2DAttachHover(box);
     _mnt2DAttachZoom(box);
   });
+  _mntAksoKur('ve-mnt-akso-'+node.id, W, P);
 }
 // Topolojiden 2D diyagram verisi topla (SI değil — mm; birleşik CG kütle-ağırlıklı).
 // `liste` (ops.): düğüm listesi (sihirbazın önizlemesi); yoksa canlı `nodes`.
@@ -5221,14 +5491,20 @@ function _mntFsOverlay(title, innerHTML, onMount, onClose){
 // yerleştiricisi tam adları çakıştırmadan dizer). Sütundaki pencere tek
 // görünüş ve numara taşır; ayrıntıya buradan bakılır. Birleşik AM pencereyle
 // aynı (çözücünün birleştirmesi).
+// Aksonometri üstte (üç duvar katmanı yalnız burada), düz görünüşler altında.
 function veMnt2DTamEkran(){
   if(typeof document==='undefined') return;
-  _mntFsOverlay('2D görünüm · üç görünüş', '<div class="ve-mnt2d-fs" id="ve-mnt-2d-fs"></div>', function(){
+  _mntFsOverlay('2D görünüm', '<div class="ve-mnt2d-fs" id="ve-mnt-2d-fs">'
+    + '<div class="ve-mnt-akso-kap" id="ve-mnt-akso-fs" data-tam="1"></div>'
+    + '<div class="ve-mnt2d-fs-uc" id="ve-mnt-2d-fs-uc"></div></div>', function(){
     var kap=document.getElementById('ve-mnt-2d-fs'); if(!kap) return;
-    kap.innerHTML=_mnt2DViewSVG(_mnt2DPencereVeri().veri, kap.clientWidth-24);
-    _mnt2DAttachHover(kap);
-    _mnt2DAttachZoom(kap);
-  });
+    var P=_mnt2DPencereVeri(), W=kap.clientWidth-24;
+    _mntAksoKur('ve-mnt-akso-fs', W-2, P);
+    var uc=document.getElementById('ve-mnt-2d-fs-uc');
+    uc.innerHTML='<div class="ve-fp-sect"><b>Düz görünüşler</b><em>üstten · yandan · önden</em></div>'+_mnt2DViewSVG(P.veri, W);
+    _mnt2DAttachHover(uc);
+    _mnt2DAttachZoom(uc);
+  }, function(){ _mntAksoDur('ve-mnt-akso-fs'); });
 }
 // 3D Görüntüleyici'yi (model modu) tam ekran aç. Koordinat Düzlemi'nde tam ekran yok.
 function veMntViewerFullscreen(){
@@ -5257,6 +5533,10 @@ if(typeof module!=='undefined' && module.exports){
     getMntReportPropertiesHTML: getMntReportPropertiesHTML,
     _mnt2DPencereVeri: _mnt2DPencereVeri,
     _mnt2DPencereSVG: _mnt2DPencereSVG,
+    _mntAksoModel: _mntAksoModel,
+    _mntAksoHTML: _mntAksoHTML,
+    VE_MNT_AKSO: VE_MNT_AKSO,
+    veMntAksoAyar: veMntAksoAyar,
     _mntRaporFrekansHTML: _mntRaporFrekansHTML,
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,

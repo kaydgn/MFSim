@@ -55,6 +55,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). STEP'te kütle
   yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Kapı:
   `mount-step.test.js` + `mount-wizard.test.js`.
+- `js/mount-akso.js` — Takoz **2D Görünüm'ün aksonometrik çizicisi** (pencerenin İLK
+  sekmesi; kullanıcı seçimi 2026-10-15): dimetrik (ISO 5456-3) varsayılan, izometrik
+  seçicide, sekiz bakış; gölge hep açık, direk · kuvvet · mod · rijitlik düğmeyle, üç
+  duvar tam ekranda. DOM'suz, çizim OKUR (modeli `_mntAksoModel` kurar; kuvvet ve mod
+  yalnız güncel çözümden); görünüm tercihi modelde değil. Kapı: `mount-akso.test.js` +
+  `mount-pencere.spec.js` → *Aksonometrik*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

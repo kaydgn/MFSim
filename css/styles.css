@@ -10160,6 +10160,132 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-2d svg{ display:block; width:100%; height:auto; }
 .ve-mnt2d-fs{ flex:1; min-height:0; overflow:auto; padding:12px; }
 
+/* ── 2D GÖRÜNÜM · AKSONOMETRİK (js/mount-akso.js; kullanıcı seçimi 2026-10-15) ──
+   Pencerenin ilk sekmesi. Renk ürünün işaret dilinden — takoz yeşil (2D, 3B,
+   kroki), gövde AM'si kehribar, G ve G'ye ait her şey (asal eksen, eşdeğer
+   kutu) kırmızı, rijitlik kolu eksenin rengi (--eksen-*). Zemin --bg-input;
+   yazının hâlesi zeminin renginde, çizgiler yazının altından geçer. Yazı
+   boyu çizicinin özniteliği (veThemeFs) — burada yazılmaz. */
+.ve-mnt2d-akso{ display:block; width:100%; height:auto; font-family:inherit; touch-action:none; }
+.ve-ak-zem{ fill:var(--bg-input); }
+.ve-ak-izg{ fill:none; stroke:color-mix(in srgb, var(--border-color) 75%, transparent); stroke-width:.8; }
+.ve-ak-sim{ stroke:var(--text-muted); stroke-width:.7; stroke-dasharray:10 3 2 3; }
+/* Alttan bakış: Z = 0 düzlemi izleyiciyle gövdeler arasında — cam zemin, üstte. */
+.ve-ak-izg.cam{ stroke:color-mix(in srgb, var(--text-muted) 38%, transparent); stroke-width:.7; pointer-events:none; }
+.ve-ak-sim.cam{ stroke:color-mix(in srgb, var(--text-muted) 70%, transparent); pointer-events:none; }
+.ve-ak-gol{ fill:color-mix(in srgb, var(--text-muted) 15%, transparent); }
+.ve-ak-g path{ stroke:color-mix(in srgb, var(--text-primary) 45%, var(--bg-input)); stroke-width:.8; stroke-linejoin:round; }
+.ve-ak-g.ana path{ stroke:color-mix(in srgb, var(--text-primary) 72%, var(--bg-input)); }
+.ve-ak-g .f-ust{ fill:color-mix(in srgb, var(--text-muted) 8%, var(--bg-input)); }
+.ve-ak-g .f-y{ fill:color-mix(in srgb, var(--text-muted) 22%, var(--bg-input)); }
+.ve-ak-g .f-x{ fill:color-mix(in srgb, var(--text-muted) 34%, var(--bg-input)); }
+.ve-ak-g .f-alt{ fill:color-mix(in srgb, var(--text-muted) 44%, var(--bg-input)); }
+.ve-ak-g .f-cam{ fill:color-mix(in srgb, var(--text-muted) 9%, transparent); stroke:color-mix(in srgb, var(--text-primary) 55%, var(--bg-input)); stroke-width:.9; }
+.ve-ak-g.ana .f-cam{ fill:color-mix(in srgb, var(--text-muted) 14%, transparent); }
+.ve-ak-g .k-gizli{ fill:none; stroke:color-mix(in srgb, var(--text-muted) 75%, transparent); stroke-width:.8; stroke-dasharray:3 2; }
+.ve-ak-amk circle{ fill:var(--bg-input); stroke:var(--accent-warning); stroke-width:1; }
+.ve-ak-amk path{ fill:none; stroke:var(--accent-warning); stroke-width:.9; }
+.ve-ak-nokta{ fill:var(--accent-warning); }
+.ve-ak-t path{ stroke:var(--bg-input); stroke-width:.6; stroke-linejoin:round; }
+.ve-ak-t .t-z{ fill:color-mix(in srgb, var(--accent-success) 50%, var(--bg-input)); }
+.ve-ak-t .t-y{ fill:var(--accent-success); }
+.ve-ak-t .t-x{ fill:color-mix(in srgb, var(--accent-success) 70%, var(--text-heading)); }
+.ve-ak-gam circle{ fill:var(--bg-input); stroke:var(--accent-danger); stroke-width:1.5; }
+.ve-ak-gam path{ fill:var(--accent-danger); }
+.ve-ak-gdus{ stroke:var(--accent-danger); stroke-width:1; stroke-dasharray:3 2; }
+.ve-ak-giz{ fill:none; stroke:var(--accent-danger); stroke-width:1.2; }
+/* Üç duvar (tam ekran) */
+.ve-ak-d-taban{ fill:color-mix(in srgb, var(--text-muted) 5%, var(--bg-input)); stroke:var(--border-color); stroke-width:.8; }
+.ve-ak-d-yan{ fill:color-mix(in srgb, var(--text-muted) 9%, var(--bg-input)); stroke:var(--border-color); stroke-width:.8; }
+.ve-ak-d-uc{ fill:color-mix(in srgb, var(--text-muted) 13%, var(--bg-input)); stroke:var(--border-color); stroke-width:.8; }
+.ve-ak-d-izg{ fill:none; stroke:color-mix(in srgb, var(--border-color) 70%, transparent); stroke-width:.7; }
+.ve-ak-d-gol path{ fill:color-mix(in srgb, var(--text-muted) 22%, transparent); stroke:color-mix(in srgb, var(--text-muted) 60%, transparent); stroke-width:.6; }
+.ve-ak-d-gol.ana path{ fill:color-mix(in srgb, var(--text-muted) 32%, transparent); }
+.ve-ak-d-tg rect{ fill:var(--accent-success); }
+.ve-ak-d-gg path{ fill:none; stroke:var(--accent-danger); stroke-width:1.3; }
+.ve-ak-d-gk{ stroke:var(--accent-danger); stroke-width:.8; stroke-dasharray:2 2; }
+/* Cetvel, direk, statik çökme, mod hayaleti */
+.ve-ak-cv{ stroke:var(--text-secondary); stroke-width:.9; }
+.ve-ak-direk .dr-c{ stroke:var(--accent-success); stroke-width:1; stroke-dasharray:3 2; }
+.ve-ak-direk .dr-i{ fill:none; stroke:var(--accent-success); stroke-width:1.2; }
+.ve-ak-cokme path{ fill:none; stroke:var(--accent-primary); stroke-width:1; stroke-dasharray:3 2; }
+.ve-ak-hayalet path{ fill:none; stroke:var(--text-muted); stroke-width:.8; stroke-dasharray:3 2; }
+/* Rijitlik kolu ekseninin renginde; asal eksenler ve eşdeğer kutu G'nin renginde */
+.ve-ak-rj-x, .ve-ak-rj-y, .ve-ak-rj-z{ stroke-width:2.2; stroke-linecap:round; }
+.ve-ak-rj-x{ stroke:var(--eksen-x); } .ve-ak-rj-y{ stroke:var(--eksen-y); } .ve-ak-rj-z{ stroke:var(--eksen-z); }
+.ve-ak-as-kutu path{ fill:none; stroke:var(--accent-danger); stroke-width:.8; stroke-dasharray:4 3; opacity:.75; }
+.ve-ak-as-1{ stroke:var(--accent-danger); stroke-width:1.8; }
+.ve-ak-as-2{ stroke:var(--accent-danger); stroke-width:1.3; stroke-dasharray:7 3; }
+.ve-ak-as-3{ stroke:var(--accent-danger); stroke-width:1.3; stroke-dasharray:2 2; }
+/* Serbest cisim: ağırlık metnin renginde, tepkiler takozun renginde */
+.ve-ak-kv-wo{ stroke:var(--text-heading); stroke-width:2.2; }
+.ve-ak-kv-wo-uc{ fill:var(--text-heading); }
+.ve-ak-kv-ro{ stroke:var(--accent-success); stroke-width:1.9; }
+.ve-ak-kv-ro-uc{ fill:var(--accent-success); }
+.ve-ak-eks{ stroke:var(--text-secondary); stroke-width:1; }
+.ve-ak-eks-uc{ fill:var(--text-secondary); }
+/* Yazılar: zeminin renginde hâle (çizgi yazının altından geçer) */
+.ve-ak-yz, .ve-ak-cvy, .ve-ak-cvad{ paint-order:stroke; stroke:var(--bg-input); stroke-width:4.5px; stroke-linejoin:round; }
+.ve-ak-yz{ fill:var(--text-primary); }
+.ve-ak-yz.ikincil, .ve-ak-yz.ve-ak-eksy{ fill:var(--text-secondary); }
+.ve-ak-yz.duvar{ fill:var(--text-secondary); letter-spacing:.05em; }
+.ve-ak-yz.ve-ak-kat{ fill:var(--text-secondary); }
+.ve-ak-cvy{ fill:var(--text-secondary); font-variant-numeric:tabular-nums; }
+.ve-ak-cvad{ fill:var(--text-secondary); }
+.ve-ak-kilavuz{ stroke:var(--text-muted); stroke-width:.75; }
+.ve-ak-cip rect{ fill:var(--bg-input); stroke:var(--border-hover); stroke-width:1; }
+.ve-ak-cip text{ fill:var(--text-heading); }
+.ve-ak-cip .ikincil{ fill:var(--text-secondary); }
+.ve-ak-cip.t-cip rect{ stroke:color-mix(in srgb, var(--accent-success) 60%, var(--bg-input)); }
+.ve-ak-cip.as-cip rect{ stroke:color-mix(in srgb, var(--accent-danger) 60%, var(--bg-input)); }
+/* Bağlantılı vurgu: üstüne gelinen işaretin her izi vurgu renginde (yazı soldurulmaz) */
+.ve-ak-g.ve-ak-vurgu path{ stroke:var(--accent-primary); stroke-width:1.6; }
+.ve-ak-t.ve-ak-vurgu path{ stroke:var(--accent-primary); stroke-width:1.2; }
+.ve-ak-gol.ve-ak-vurgu{ fill:color-mix(in srgb, var(--accent-primary) 22%, transparent); }
+.ve-ak-d-gol.ve-ak-vurgu path{ fill:color-mix(in srgb, var(--accent-primary) 28%, transparent); stroke:var(--accent-primary); }
+.ve-ak-d-tg.ve-ak-vurgu rect{ fill:var(--accent-primary); }
+.ve-ak-cip.ve-ak-vurgu rect{ stroke:var(--accent-primary); stroke-width:1.4; }
+/* Gösterge örnekleri çizimin renkleriyle */
+.ve-ak-lj-g{ fill:color-mix(in srgb, var(--text-muted) 8%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; }
+.ve-ak-lj-gy{ fill:color-mix(in srgb, var(--text-muted) 22%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; }
+.ve-ak-lj-gx{ fill:color-mix(in srgb, var(--text-muted) 34%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; }
+.ve-ak-lj-t{ fill:var(--accent-success); }
+.ve-ak-lj-G{ fill:var(--bg-input); stroke:var(--accent-danger); stroke-width:1.4; }
+.ve-ak-lj-n{ fill:var(--accent-warning); }
+.ve-ak-lj-gol{ fill:color-mix(in srgb, var(--text-muted) 30%, transparent); }
+.ve-ak-lj-kv{ stroke:var(--accent-success); stroke-width:1.9; }
+/* Denetimler: izdüşüm ve bakış segmentleri sarar; katmanlar dört eşit sütun */
+.ve-mnt-ak-gor{ display:flex; flex-wrap:wrap; gap:6px; }
+.ve-mnt-ak-gor .ve-mnt-seg{ margin-left:0; }
+.ve-mnt-ak-gor .ve-mnt-seg button{ font-size:var(--fs-tiny); padding:3px 9px; }
+.mnt-vwr-toggles.ve-mnt-ak-kat{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.mnt-vwr-toggle[aria-disabled="true"], .mnt-vwr-toggle[aria-disabled="true"]:hover{
+  color:var(--text-muted); border-color:var(--border-color); background:var(--bg-tertiary); cursor:default;
+}
+.mnt-vwr-toggle[aria-disabled="true"]::before{ background:transparent; box-shadow:inset 0 0 0 1px var(--text-muted); }
+/* Bağlama göre satır (statik çökme, mod listesi) — kutunun içinde, çizimin altında */
+.ve-mnt-ak-alt{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:6px 9px; border-top:1px solid var(--border-color); background:var(--bg-secondary); }
+.ve-mnt-ak-alt .mnt-vwr-toggle, .ve-mnt-ak-alt .mnt-vwr-action{ width:auto; padding:5px 11px; }
+.ve-mnt-ak-not{ font-size:var(--fs-micro); color:var(--text-muted); }
+.ve-mnt-ak-mod{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:5px; padding:6px 9px; border-top:1px solid var(--border-color); background:var(--bg-secondary); }
+.ve-mnt-ak-mod button{
+  display:flex; flex-direction:column; align-items:flex-start; gap:1px; min-width:0; padding:4px 8px; cursor:pointer;
+  font:inherit; font-size:var(--fs-tiny); text-align:left; color:var(--text-primary);
+  background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-mnt-ak-mod button span{ font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap; }
+.ve-mnt-ak-mod button:hover{ border-color:var(--border-hover); }
+.ve-mnt-ak-mod button:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-mnt-ak-mod button[aria-pressed="true"]{ border-color:var(--accent-primary); background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-input)); }
+.ve-mnt-ak-mod button[aria-pressed="true"] span{ color:var(--text-secondary); }
+/* Tam ekran: denetimler tek satırda, çizimin üstünde */
+.ve-mnt-ak-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin:0 0 10px; }
+.ve-mnt-ak-bar .ve-mnt-ak-kat{ display:flex; flex-wrap:wrap; gap:6px; }
+.ve-mnt-ak-bar .mnt-vwr-toggle{ width:auto; padding:5px 11px; }
+.ve-mnt-akso-kap{ min-width:0; }
+.ve-mnt2d-fs-uc{ margin-top:14px; }
+@media (min-width: 900px){ .ve-mnt-akso-kap[data-tam] .ve-mnt-ak-mod{ grid-template-columns:repeat(6, minmax(0, 1fr)); } }
+
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
    kuralları onunla birlikte gitti (kural 26). */
 
