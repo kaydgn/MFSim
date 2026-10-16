@@ -60,8 +60,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   seçicide, sekiz bakış; gölge hep açık, direk · kuvvet · mod · rijitlik düğmeyle, üç
   duvar tam ekranda. DOM'suz, çizim OKUR (modeli `_mntAksoModel` kurar; kuvvet ve mod
   yalnız güncel çözümden); görünüm tercihi modelde değil. Başlangıç sayfasının örnek
-  karoları da bu çizicinin sade kipi (`veMntAksoOrnekModel`). Kapı: `mount-akso.test.js` +
-  `mount-pencere.spec.js` → *Aksonometrik* · `mount-baslangic.test.js` → *KÜÇÜK RESİM*.
+  karoları da bu çizicinin sade kipi (`veMntAksoOrnekModel`); raporun §8'indeki teknik
+  illüstrasyon (x-ışını, SABİT görünüş, çözümün girdisinden — `veMntAksoCozumModel`) da.
+  Kapı: `mount-akso.test.js` (→ *RAPOR*) + `mount-pencere.spec.js` → *Aksonometrik* ·
+  `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

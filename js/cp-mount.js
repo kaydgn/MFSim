@@ -3022,6 +3022,13 @@ function veMntAksoOrnekModel(model){
   }
   return _mntAksoModelKur(g, mp, null, 'yok');
 }
+// Çözümün KENDİ girdisinden (R.gather · R.mp) — raporun teknik illüstrasyonu.
+// Rapor çözülen modeli anlatır: canlı topoloji o zamandan beri değişmiş
+// olabilir, çizim ondan kurulmaz.
+function veMntAksoCozumModel(R){
+  if(!R || !R.gather || !R.gather.components || !R.mp) return null;
+  return _mntAksoModelKur(R.gather, R.mp, R, 'guncel');
+}
 // Kurucu — saf: g (_mntGatherForSolver'ın biçimi: mm, kg, N/mm), mp
 // (combineMassProps, SI), R (GÜNCEL çözüm ya da null), durum (yok · guncel ·
 // bayat — düğmelerin sebebi).
@@ -3046,8 +3053,11 @@ function _mntAksoModelKur(g, mp, R, durum){
   var ms=R ? (R.mounts||[]) : [], st=null;
   if(R) (R.allCases||[]).forEach(function(rc){ if(rc.name==='Static' && rc.res) st=rc.res; });
   var takoz=g.mounts.map(function(t, i){
-    var j=-1;
-    for(var q=0;q<ms.length;q++){ if(ms[q] && ms[q].id===t.id){ j=q; break; } }
+    // Kimlikle eşle; kimliksiz girdide (elle kurulmuş çözüm) sıra: R.mounts
+    // _mntToSI'nin çıktısı, toplanan sırayı korur. Eskiden iki tarafın da
+    // kimliği yokken undefined === undefined her takozu İLK takoza bağlıyordu.
+    var j=(t.id==null) ? (i<ms.length ? i : -1) : -1;
+    for(var q=0;q<ms.length && t.id!=null;q++){ if(ms[q] && ms[q].id===t.id){ j=q; break; } }
     var pm=(st && st.perMount && j>=0) ? st.perMount[j] : null;
     var yuk=(R && R.loadShares && j>=0) ? R.loadShares[j] : null;
     var x=_mntNum(t.x), y=_mntNum(t.y), z=_mntNum(t.z), ad=String(t.name||'Takoz');
@@ -5559,6 +5569,7 @@ if(typeof module!=='undefined' && module.exports){
     _mnt2DPencereSVG: _mnt2DPencereSVG,
     _mntAksoModel: _mntAksoModel,
     veMntAksoOrnekModel: veMntAksoOrnekModel,
+    veMntAksoCozumModel: veMntAksoCozumModel,
     _mntAksoHTML: _mntAksoHTML,
     VE_MNT_AKSO: VE_MNT_AKSO,
     veMntAksoAyar: veMntAksoAyar,

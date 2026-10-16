@@ -377,6 +377,9 @@ var veMntAkso = (function(){
       if(stil==='xray'){
         var am=Ph(q.c);
         govdeSvg+='<g class="ve-ak-amk"'+ak(g.k)+'><circle cx="'+R(am[0])+'" cy="'+R(am[1])+'" r="2.6"/><path d="M'+R(am[0]-4.5)+' '+R(am[1])+' H'+R(am[0]+4.5)+' M'+R(am[0])+' '+R(am[1]-4.5)+' V'+R(am[1]+4.5)+'"/></g>';
+        // Gövdenin CG işareti bir veri işaretidir: yazı onu örtmez (raporun
+        // çiziminde "G · z 798" ASFAT motorunun işaretinin üstüne düşüyordu).
+        engel.push({ l:am[0]-5, t:am[1]-5, r:am[0]+5, b:am[1]+5 });
       }
     });
     // Takozlar: küçük küp (izdüşümün kendi ekseniyle), gövdelerin üstünde.
