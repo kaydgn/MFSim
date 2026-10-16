@@ -498,6 +498,24 @@ function _gmSec11(){
     + '<strong>kısıtlanmamıştır</strong> — genellikle takozlar tek bir düzlemde ya da tek bir '
     + 'doğru üzerinde dizilmiştir. Sonuç sayısal olarak üretilir ama fiziksel değildir; '
     + 'takoz yerleşimine dönün.');
+  h += '<h3>11.2 Duyarlılık — hangi takoz hangi modu oynatıyor</h3>';
+  h += '<p>Program her takozun her ekseni için <strong>esnekliği</strong> verir: o rijitlik %1 '
+    + 'artınca modun frekansı yüzde kaç artar. Esneklik, yayın o moddaki şekil değiştirme '
+    + 'enerjisi payının yarısıdır; her modda bütün takoz ve eksenlerin toplamı 0,5’tir. Bir '
+    + 'yayın sertleşmesi hiçbir frekansı düşürmez.</p>';
+  h += _gmAlanTablo('Duyarlılık nerede', [
+    ['Çözücü → Modlar → Kaldıraçlar', 'Her modun en etkili takozu ve ekseni',
+      'Sınırı aşan ya da banda düşen modu hangi takoz taşıyor'],
+    ['Takoz → Yük durumları → Duyarlılık', 'Bu takozun üç ekseninin altı moddaki esnekliği',
+      'Kalın hücre: o modun en etkili kaldıracı bu takozda'],
+    ['Rapor §8.17', 'Tam matris ve frekans kriterlerinin kaldıraçları',
+      'Tek kaldıraçla sınıra kadar yüzde kaç — yeniden çözülerek']
+  ], ['Yer', 'Ne', 'Ne için']);
+  h += _gmNot('Esneklik bir eğimdir',
+      'Küçük değişimde doğrudur. İki mod birbirine yakınsa (0,5 Hz’ten az) rijitlik değişince '
+    + 'birbirinden kaçarlar ve eğim çabuk değişir. Raporun kaldıraç tablosu bu yüzden sınıra '
+    + 'kadarki değişimi takozun tek eksenini ölçekleyip yeniden çözerek bulur; doğrusal tahmin '
+    + 'yanında durur. Statik sehim bu hesaba girmez — yumuşatılan takozun sehimi artar.');
   return h;
 }
 
