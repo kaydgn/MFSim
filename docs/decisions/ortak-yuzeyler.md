@@ -2077,3 +2077,67 @@ denetimi, tipler `componentDefs`ten · kabuk işaretlemesi yalnız kitte · tek
 sekmeyi yalnız beyan bağışlar) +
 `fead-pencere-ailesi.test.js` + `mount-sutun.test.js` → *"FEAD karşılığıyla
 aynı genişlik sınıfı"*.
+
+
+## Arayüz anlatmaz — ekranda ve belgede yalnız ad, veri, durum (2026-10-16)
+
+**Hüküm:** ekranda ve indirilen/basılan belgede duran metin ad, veri ya da
+durumdur. Açıklama, tarif, sohbet sesi, kendini anlatma, tasarım gerekçesi,
+geliştirme dili ve tekrar yazılmaz; açıklamanın tek yeri kılavuzdur. Kural
+metni CLAUDE.md → *ARAYÜZ ANLATMAZ*.
+
+**Gerekçe:** kullanıcı (*"programa AŞIRI BİR AMATÖRLÜK KATIYOR"*). Aynı
+şikâyet 2026-08-31 (Sonuçlar'daki "kol açısı" açıklaması), 2026-09-23
+(pencerenin tepesindeki özet), 2026-09-28 (FEAD pencerelerinin notları,
+FEAD kural 45) ve 2026-10-16'da (başlangıç sayfası) geldi. İlk üçü tek
+yüzeyin kuralına yazıldı; iki gün sonra yazılan başlangıç sayfası "pencere"
+olmadığı için kuralın dışında kaldı ve beş açıklama yuvalı bir kit olarak
+ikinci modüle kopyalandı. Dört kök: modelin sohbet sesi, kalıptaki
+açıklama yuvaları, geliştirme notlarının "hüküm + gerekçe" biçiminin ürüne
+taşınması, "sessiz kalma" ilkesinin durumdan her şeye genişletilmesi.
+
+**Kapı:** `tests/unit/metin-dili.test.js` → `tools/metin-dili.js` (sözlük,
+profil, çıkarma tek yerde) + `tests/fixtures/metin-dili-taban.json` (cırcır:
+yalnız küçülür, yeni kayıt yalnız kullanıcının "kalsın" kararıyla
+`--kabul`). Sözlük aday işaretler; hükmü aşamanın incelemesi verir.
+
+**Temizliğin yöntemi** (her aşama aynı beş adım):
+
+1. *Toplama* — kaynak taraması aşamanın dosyalarındaki her metni satırıyla
+   çıkarır (`node tools/metin-dili.js --envanter`). Ekran turu aşamanın
+   yüzeylerini gerçek tarayıcıda açar, görünen her metnin yerini ve sayfanın
+   görüntüsünü alır. Kodda sabit yazılı olmayan metin (karşılamadaki commit
+   listesi gibi) yalnız turda görünür.
+2. *İnceleme* — üç ve daha çok sözcüklü her metin ile işaretli her kısa metin
+   tek tek okunur: ad · veri · durum kalır; öteki sınıflar karar tahtasına
+   gider.
+3. *Karar tahtası* — aşamanın başında bir Artifact (`db`): her metin bir kart
+   (sayfa görüntüsünde numarası, metnin kendisi, sınıfı, tek satır gerekçe)
+   ve üç seçenek: **Kaldır · Yeni metin · Kalsın**. Metinsiz kalamayan durum
+   iletisinde "Yeni metin" alanı kısa bir öneriyle dolu gelir.
+4. *Uygulama* — kararlar tahtanın `db`sinden okunur. Kaldırmak yapıyı da
+   söker (boş paragraf, yuva, ipucu özniteliği, artık kullanılmayan CSS);
+   metne bağlı testler ve kılavuz atıfları güncellenir; taban küçülür.
+   Modül testi → `npm run hazir` (+ kabuğa dokunduysa `npm run test:urun`)
+   → PR → merge.
+5. *Sonuç* — aynı tahta önce/sonra sayılarıyla "uygulandı" durumuna geçer.
+
+**Aşamalar** (sayılar 2026-10-16 envanteri: incelenecek metin / işaretli aday):
+
+| # | Aşama | Kapsam | İncelenecek | Aday |
+|---|-------|--------|-------------|------|
+| 1 | Başlangıç ve karşılama | başlangıç kiti, FEAD ve Takoz başlangıç sayfaları, karşılama ekranı, açılış ekranı, boş tuval ipucu | 87 | 30 |
+| 2 | Kabuk | şerit, menüler, bağlam menüleri, komut paleti, Ayarlar, Program Durumu, Program Arşivi, Komuta, onay ve bildirimler, bileşen kartları | 372 | 71 |
+| 3 | FEAD tuvali ve pencereleri | Kayış Yolu kartı, Kayış Tablosu, FEAD araçları, FEAD pencereleri, kataloglar | 402 | 143 |
+| 4 | FEAD sihirbazı ve STEP | sihirbaz, STEP okuyucu, 3B görüntüleyici | 203 | 57 |
+| 5 | FEAD uyarı ve hata metinleri | `fead-model.js`: köprünün iletileri, örnek künyeleri | 214 | 93 |
+| 6 | Takoz | pencereler, sihirbaz, STEP, Görünümler, çekirdeğin iletileri | 426 | 101 |
+| 7 | Araç Performans pencereleri | motor, şanzıman, konvertör, eşleştirme, aksesuar, araç, harita | 598 | 146 |
+| 8 | Çözücü ve sensörler | çözücü pencereleri, sensör açıklamaları, engel ve segment | 612 | 143 |
+| 9 | Sonuçlar | gezgin, pano, diyagram yorumları (üç modül), sonuç tablosu, içe aktarma | 547 | 155 |
+| 10 | FEAD raporları | FEAD raporu, Sonuç Özeti, A3 pano | 491 | 33 |
+| 11 | Takoz raporu | `cp-mount-report.js` | 208 | 11 |
+| 12 | Araç Performans raporları | HTML rapor, TXT raporlar (`results.js` belge gövdesi, `graphics.js` rapor üreticileri) | 745 | 108 |
+| 13 | FEAD kılavuzu | `guide-fead.js` | 877 | 135 |
+| 14 | Takoz ve Araç Performans kılavuzları | `guide-mount.js`, `guide-arac.js`, `guide-kit.js` | 638 | 59 |
+| 15 | Ölçüm Görüntüleyici ve CAN Çözümleyici | kendi dosyaları (ortak kopyalar `js/` ile temizlenir) | 123 | 45 |
