@@ -363,7 +363,7 @@
     audio.addEventListener('error', function () {
       if (!current) return;
       toast(current.type === 'station'
-        ? 'İstasyona bağlanılamadı — yayın kapalı olabilir veya internet yok.'
+        ? 'İstasyona bağlanılamadı.'
         : 'Parça çalınamadı.', 'error');
       setPlaying(false);
     });
@@ -575,7 +575,7 @@
                '</div>';
       }).join('');
       if (!rows) rows = (sel === CAT_FAV)
-        ? '<div class="mf-radio-empty">Henüz favori yok. Bir yayının <span class="mf-radio-catstar" aria-hidden="true">' + ICONS.starO + '</span> yıldızına basarak ekle.</div>'
+        ? '<div class="mf-radio-empty">Favori yok.</div>'
         : '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
       body = '<div class="mf-radio-list">' + rows + '</div>' +
         '<div class="mf-radio-add">' +
@@ -592,7 +592,7 @@
     var head =
       '<button type="button" class="mf-radio-pick">' + ICONS.folder + '<span>Dosya ekle…</span></button>';
     if (!library.length) {
-      pane.innerHTML = head + '<div class="mf-radio-empty">Kendi müziğini ekle. Tarayıcıdan çıkmaz; internetsiz de çalar.</div>';
+      pane.innerHTML = head + '<div class="mf-radio-empty">Parça yok.</div>';
       return;
     }
     var rows = library.map(function (tr, i) {
@@ -717,7 +717,7 @@
       '</div>' +
       '<div class="mf-radio-lcd">' +
         '<div class="mf-radio-lcd-title" id="mf-radio-title">— Kapalı —</div>' +
-        '<div class="mf-radio-lcd-sub" id="mf-radio-sub">Bir istasyon ya da parça seç</div>' +
+        '<div class="mf-radio-lcd-sub" id="mf-radio-sub"></div>' +
       '</div>' +
       '<div class="mf-radio-transport">' +
         '<button type="button" class="mf-radio-tbtn" data-act="prev" title="Önceki">' + ICONS.prev + '</button>' +

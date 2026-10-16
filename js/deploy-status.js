@@ -60,9 +60,9 @@ function veRefreshApp() {
         _veShowPopup(dot, info, veIkon('check-circle') + ' Program güncel', false);
       }
     } else if(info.status === 'in_progress' || info.status === 'queued') {
-      _veShowPopup(dot, info, veIkon('clock') + ' Deploy devam ediyor', false);
+      _veShowPopup(dot, info, veIkon('clock') + ' Yayın sürüyor', false);
     } else {
-      _veShowPopup(dot, info, veIkon('alert-circle') + ' Deploy başarısız', false);
+      _veShowPopup(dot, info, veIkon('alert-circle') + ' Yayın başarısız', false);
     }
   });
 }
@@ -102,13 +102,13 @@ function _veApplyDotState(dot, info) {
   }
   if(info.status === 'in_progress' || info.status === 'queued') {
     dot.className = 've-deploy-dot ve-deploy-pending';
-    dot.title = 'Deploy devam ediyor…';
+    dot.title = 'Yayın sürüyor…';
   } else if(info.status === 'completed' && info.conclusion === 'success') {
     dot.className = 've-deploy-dot ve-deploy-success';
     dot.title = 'Güncel';
   } else {
     dot.className = 've-deploy-dot ve-deploy-error';
-    dot.title = 'Deploy başarısız';
+    dot.title = 'Yayın başarısız';
   }
 }
 
@@ -149,7 +149,7 @@ function _veCheckDeployViaApi(callback) {
   fetch('https://api.github.com/repos/' + DEPLOY_REPO + '/actions/runs?per_page=1')
     .then(function(r) {
       if(r.status === 403 || r.status === 429) {
-        if(dot) { dot.className = 've-deploy-dot ve-deploy-ratelimit'; dot.title = 'API limiti — birkaç dakika bekleyin'; }
+        if(dot) { dot.className = 've-deploy-dot ve-deploy-ratelimit'; dot.title = 'API limiti aşıldı'; }
         callback(null);
         return null;
       }
@@ -163,7 +163,7 @@ function _veCheckDeployViaApi(callback) {
     .then(function(data) {
       if(!data) return;
       if(!data.workflow_runs || data.workflow_runs.length === 0) {
-        if(dot) { dot.className = 've-deploy-dot ve-deploy-unknown'; dot.title = 'Deploy bilgisi yok'; }
+        if(dot) { dot.className = 've-deploy-dot ve-deploy-unknown'; dot.title = 'Yayın bilgisi yok'; }
         callback(null);
         return;
       }
@@ -266,7 +266,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   // PR bilgisi
   if(info.prTitle) {
     html += '<div style="margin-bottom:10px;">';
-    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:3px;">Pull Request #' + info.prNumber + '</div>';
+    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:3px;">PR #' + info.prNumber + '</div>';
     html += '<div style="font-weight:600; color:var(--text-heading); line-height:1.4;">' + _veEscHtml(info.prTitle) + '</div>';
     if(info.prBody) {
       var bodyHtml = info.prBody
@@ -339,7 +339,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   if(showUpdateBtn) {
     html += '<button onclick="_veApplyUpdate()" style="width:100%; margin-top:12px; padding:10px; background:var(--accent-success); color:var(--on-success); border:none; cursor:pointer; font-weight:600; font-size:var(--fs-lg); transition:background 0.2s;" onmouseenter="this.style.background=\'#16a34a\'" onmouseleave="this.style.background=\'#22c55e\'">Şimdi güncelle</button>';
   } else if(isPending) {
-    html += '<div style="margin-top:12px; padding:10px; background:var(--bg-primary); text-align:center; color:var(--ink-warning); font-size:var(--fs-md);">Deploy devam ediyor, biraz sonra tekrar deneyin.</div>';
+    html += '<div style="margin-top:12px; padding:10px; background:var(--bg-primary); text-align:center; color:var(--ink-warning); font-size:var(--fs-md);">Yayın sürüyor.</div>';
   }
 
   // Linkler
@@ -348,7 +348,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
     html += '<a href="' + info.prUrl + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--ink-accent); text-decoration:none;">PR detayı →</a>';
   }
   if(info.url) {
-    html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--ink-accent); text-decoration:none;">Actions Log →</a>';
+    html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--ink-accent); text-decoration:none;">Yayın koşusu →</a>';
   }
   html += '</div>';
 
@@ -437,7 +437,7 @@ function _veAutoCheck() {
     }
     if(isNewer && info.status === 'completed' && info.conclusion === 'success') {
       dot.className = 've-deploy-dot ve-deploy-update-available';
-      dot.title = 'Yeni sürüm mevcut — tıklayın';
+      dot.title = 'Yeni sürüm mevcut';
     }
   });
 }
@@ -516,8 +516,7 @@ function _veShowRefreshedPopup() {
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
       '<span style="font-weight:600; color:var(--ink-success); font-size:var(--fs-lg);">' + veIkon('check-circle') + ' Program güncellendi</span>' +
       '<button class="ve-settings-close" type="button" onclick="_veDismissPopup()" title="Kapat" aria-label="Kapat"><span class="mf-ico mf-ico-x"></span></button>' +
-    '</div>' +
-    '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';
+    '</div>';
 
   document.body.appendChild(popup);
 

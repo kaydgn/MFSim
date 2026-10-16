@@ -72,13 +72,14 @@ describe('onur penceresi (smoke)', () => {
 
 // ── Tema düğmesi kablolaması ──────────────────────────────────────────
 describe('veDenizHarpApplyTheme — Donanma Mavisi', () => {
-  test('changeTheme(temaId) çağırır, toast atar ve pencereyi kapatır', () => {
+  // Tema değişimi ekranda görünüyor; bildirim tekrar olurdu (ARAYÜZ ANLATMAZ).
+  test('changeTheme(temaId) çağırır, bildirim atmaz ve pencereyi kapatır', () => {
     global.changeTheme = jest.fn();
     global.showToast = jest.fn();
     egg.veDenizHarpOpen();
     egg.veDenizHarpApplyTheme();
     expect(global.changeTheme).toHaveBeenCalledWith(egg.MF_DHO_CONFIG.temaId); // 'navy'
-    expect(global.showToast).toHaveBeenCalled();
+    expect(global.showToast).not.toHaveBeenCalled();
     const ov = document.getElementById('mf-dho');
     expect(ov.classList.contains('open')).toBe(false);
     delete global.changeTheme;

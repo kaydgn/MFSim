@@ -100,7 +100,7 @@ describe('fiil sözlüğü — fiş v2', () => {
     K.VE_KOMUTA_FIILLER.forEach((f) => {
       expect(String(f.ad || '')).not.toBe('');
       expect(String(f.isaret || '')).not.toBe('');
-      expect(String(f.aciklama || '')).not.toBe('');
+      expect(f.aciklama).toBeUndefined();   // açıklama yuvası yok (ARAYÜZ ANLATMAZ)
       expect(f.id).toMatch(/^[a-z]+$/);      // fişe diakritiksiz yazılıyor
     });
   });
@@ -147,11 +147,11 @@ describe('künye satırı — sapma kapısı', () => {
     expect(m).toContain('2026-09-09');
   });
 
-  test('künye YOKSA satır boş kalmaz — doğrulanması gerektiğini söyler', () => {
+  test('künye YOKSA satır boş kalmaz — modüler kopya olduğunu söyler', () => {
     [null, undefined, {}, { sha: '' }].forEach((b) => {
       const m = K.veKomutaKunyeMetni(b === undefined ? null : b);
       expect(m.trim()).not.toBe('');
-      expect(m).toMatch(/dogrulanmali/);
+      expect(m).toBe('(modüler kopya)');
     });
   });
 

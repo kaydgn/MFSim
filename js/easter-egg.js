@@ -216,7 +216,6 @@ function veDenizHarpToggle() {
 function veDenizHarpApplyTheme() {
   var id = MF_DHO_CONFIG.temaId || 'koyu';
   if (typeof changeTheme === 'function') changeTheme(id);
-  if (typeof showToast === 'function') showToast('Donanma Mavisi teması uygulandı', 'success');
   veDenizHarpClose();
 }
 

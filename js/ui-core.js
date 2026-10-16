@@ -9,8 +9,8 @@ function escapeHTML(str) {
 // topology, state, component-extras ×2, cp-drivetrain), ipuçları ayrışmıştı
 // ve yıldız bir yazı tipi karakteriydi (karar 10·B: çizgi ikon).
 var VE_MASTER_IPUCU = {
-  wheel: 'Master tekerlek — diğer tekerlekleri kontrol eder',
-  differential: 'Master diferansiyel — parametreleri bu bileşenden okunur'
+  wheel: 'Master tekerlek',
+  differential: 'Master diferansiyel'
 };
 function veMasterRozet(tip) {
   return '<div class="ve-wheel-master-badge" title="' + VE_MASTER_IPUCU[tip] + '">' + veIkon('star') + '</div>';
@@ -637,9 +637,6 @@ document.addEventListener('DOMContentLoaded', function() {
       nodes.forEach(function(node) {
         addToSelection(node);
       });
-      if(nodes.length > 0) {
-        showToast(nodes.length + ' bileşen seçildi');
-      }
     }
     
     // Ctrl+D - Duplicate (seçilileri hızlı kopyala)
@@ -973,8 +970,8 @@ function veTryConnectPorts(fromNodeId, fromPort, toNodeId, toPort) {
   if(!fOut && tOut) { createConnection(toNodeId, fromNodeId, toPort, fromPort); return true; }
   if(typeof showToast === 'function')
     showToast(fOut
-      ? 'İki ÇIKIŞ portu birbirine bağlanmaz — çıkışı karşı bileşenin GİRİŞ portuna bağlayın.'
-      : 'İki GİRİŞ portu birbirine bağlanmaz — girişe karşı bileşenin ÇIKIŞ portundan gelin.',
+      ? 'İki çıkış portu birbirine bağlanmaz.'
+      : 'İki giriş portu birbirine bağlanmaz.',
       'warning');
   return false;
 }
@@ -1166,7 +1163,7 @@ function veCheckShiftControllerRequired() {
   if(!veIsTCConnectedToGearbox()) return;
   var hasShiftCtrl = nodes.some(function(n) { return n.type === 'shift-controller'; });
   if(!hasShiftCtrl) {
-    showToast('Tork Konvertörü → Şanzıman bağlantısı otomatik şanzıman gerektirir. Lütfen "Şanzıman Kontrol" bileşenini ekleyin.', 'warning');
+    showToast('Tork Konvertörü → Şanzıman bağlantısı Şanzıman Kontrol bileşeni gerektirir.', 'warning');
   }
 }
 

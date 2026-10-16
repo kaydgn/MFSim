@@ -98,7 +98,7 @@ test.describe('Program Arşivi penceresi', () => {
     // içeridekini de silmez.
     expect(s.satir).toBeGreaterThan(40);
     expect(s.etkin).toBe(0);
-    expect(s.metin).toContain('yanında değil');
+    expect(s.metin).toContain('bu kopyanın yanında yok');
     expect(hatalar).toEqual([]);
   });
 
@@ -110,7 +110,7 @@ test.describe('Program Arşivi penceresi', () => {
 
     expect(s.satir).toBeGreaterThan(40);
     expect(s.etkin).toBe(s.satir);
-    expect(s.metin).toContain('Arşiv yanınızda');
+    expect(s.metin).toContain('Arşiv bulundu');
 
     // Asıl teslim: satır AÇIYOR mu? Katalogdaki ilk artifact ile ölçülür.
     const i = await page.evaluate(() => veProgramlarListe().findIndex((x) => x.kume === 'artifact'));

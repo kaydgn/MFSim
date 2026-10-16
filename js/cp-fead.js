@@ -537,7 +537,6 @@ function veFeadCloseEditor(_silent){
   veFeadUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
-  if(!_silent && typeof showToast === 'function') showToast('Ana topolojiye dönüldü', 'info');
 }
 
 function veFeadCollapseToRoot(){

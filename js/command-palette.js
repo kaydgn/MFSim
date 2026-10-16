@@ -70,11 +70,11 @@ function _cmdkStaticCommands() {
     { sec:'Görünüm', label:'Uzaklaştır',                kw:'zoom out küçült',                   icon:_cmdkIco('zoom-out'),   run:function(){ _cmdkCall('veZoomOut'); } },
     { sec:'Görünüm', label:'Yakınlaştırmayı %100 yap',  kw:'zoom reset sıfırla yüzde',          icon:_cmdkIco('crosshair'),  run:function(){ _cmdkCall('veResetZoom'); } },
     { sec:'Görünüm', label:'Görünümü sıfırla',          kw:'reset view merkez',                 icon:_cmdkIco('crosshair'),  run:function(){ _cmdkCall('veResetView'); } },
-    { sec:'Görünüm', label:'Grid göster / gizle',       kw:'ızgara grid toggle',                icon:_cmdkIco('grid'),       run:function(){ _cmdkCall('veToggleGrid'); } },
-    { sec:'Görünüm', label:'Grid yoğunluğu',            kw:'ızgara grid density sıklık',        icon:_cmdkIco('grid'),       run:function(){ _cmdkCall('veCycleGridDensity'); } },
-    { sec:'Görünüm', label:'Hizalama (snap)',           kw:'snap hizala align',                 icon:_cmdkIco('ruler'),      run:function(){ _cmdkCall('veToggleSnap'); } },
+    { sec:'Görünüm', label:'Izgara göster / gizle',     kw:'ızgara grid toggle',                icon:_cmdkIco('grid'),       run:function(){ _cmdkCall('veToggleGrid'); } },
+    { sec:'Görünüm', label:'Izgara yoğunluğu',          kw:'ızgara grid density sıklık',        icon:_cmdkIco('grid'),       run:function(){ _cmdkCall('veCycleGridDensity'); } },
+    { sec:'Görünüm', label:'Izgaraya yapış',            kw:'snap hizala align ızgara yapış',                 icon:_cmdkIco('ruler'),      run:function(){ _cmdkCall('veToggleSnap'); } },
     { sec:'Görünüm', label:'Güç akışı animasyonu',      kw:'flow akış animasyon enerji',        icon:_cmdkIco('zap'),        run:function(){ _cmdkCall('veToggleFlow'); } },
-    { sec:'Görünüm', label:'Minimap göster / gizle',    kw:'minimap genel görünüm harita',      icon:_cmdkSvg('map'),        run:function(){ _cmdkCall('veMinimapToggle'); } },
+    { sec:'Görünüm', label:'Genel görünüm göster / gizle', kw:'minimap genel görünüm harita',      icon:_cmdkSvg('map'),        run:function(){ _cmdkCall('veMinimapToggle'); } },
     // Düzen
     { sec:'Düzen',   label:'Geri al',                   kw:'undo geri ctrl z',                  icon:_cmdkIco('undo'),       run:function(){ _cmdkCall('veUndo'); } },
     { sec:'Düzen',   label:'İleri al',                  kw:'redo ileri ctrl y',                 icon:_cmdkIco('redo'),       run:function(){ _cmdkCall('veRedo'); } },
@@ -87,14 +87,14 @@ function _cmdkStaticCommands() {
     { sec:'Dosya',   label:'SVG olarak dışa aktar',      kw:'export dışa aktar svg vektör indir', icon:_cmdkIco('download'), run:function(){ _cmdkCall('veExportTopology', 'svg'); } },
     { sec:'Dosya',   label:'Tümünü temizle',            kw:'temizle sil clear hepsi',           icon:_cmdkIco('trash'),      run:function(){ _cmdkCall('veClearAll'); } },
     // Çözücü
-    { sec:'Çözücü',  label:'Çözümü doğrula',            kw:'doğrula validate kontrol çözücü',   icon:_cmdkSvg('check'),      run:function(){ _cmdkCall('veSolverValidate'); } },
+    { sec:'Çözücü',  label:'Topolojiyi doğrula',        kw:'doğrula validate kontrol çözücü',   icon:_cmdkSvg('check'),      run:function(){ _cmdkCall('veSolverValidate'); } },
     { sec:'Çözücü',  label:'Çözücüyü aç',               kw:'çalıştır run simüle çözücü solve aç',  icon:_cmdkIco('play'),    run:function(){ _cmdkCall('veSolverRun'); } },
     // Paneller
     { sec:'Panel',   label:'Ayarlar',                   kw:'ayarlar settings tema',             icon:_cmdkIco('settings'),   run:function(){ _cmdkCall('veOpenSettings'); } },
     { sec:'Panel',   label:'Program Durumu',            kw:'durum status bilgi versiyon',       icon:_cmdkSvg('info'),       run:function(){ _cmdkCall('veOpenStatusModal'); } },
     { sec:'Panel',   label:'Program Arşivi',             kw:'arşiv program artifact html araç defter', icon:_cmdkIco('folder-open'), run:function(){ _cmdkCall('veProgramArsiviOpen'); } },
     { sec:'Panel',   label:'Uyarılar panelini aç / kapa', kw:'uyarı warning hata',              icon:_cmdkIco('alert-triangle'), run:function(){ _cmdkCall('veToggleWarnings'); } },
-    { sec:'Panel',   label:'Kenar çubuğu (sidebar)',    kw:'sidebar kenar çubuğu bileşen',      icon:_cmdkSvg('panel'),      run:function(){ _cmdkCall('veToggleSidebar'); } },
+    { sec:'Panel',   label:'Bileşenler paneli',         kw:'sidebar kenar çubuğu bileşen palet',      icon:_cmdkSvg('panel'),      run:function(){ _cmdkCall('veToggleSidebar'); } },
     { sec:'Panel',   label:'Özellikler paneli',         kw:'özellik properties panel',          icon:_cmdkIco('sliders'),    run:function(){ _cmdkCall('veTogglePropertiesPanel'); } },
     { sec:'Panel',   label:'Rapor',                     kw:'rapor report pdf',                  icon:_cmdkIco('file-text'),  run:function(){ _cmdkCall('veShowRaporModal'); } },
     { sec:'Genel',   label:'Klavye kısayolları',        kw:'klavye kısayol shortcut yardım help tuş', icon:_cmdkSvg('kbd'), run:function(){ _cmdkCall('veShortcutsHelpOpen'); } },
@@ -142,7 +142,6 @@ function _cmdkAddCommands() {
           if(typeof createNode !== 'function') { if(typeof showToast==='function') showToast('Bileşen eklenemedi', 'warning'); return; }
           var c = _cmdkViewCenter();
           createNode(t, c.x - 32, c.y - 30);
-          if(typeof showToast === 'function') showToast(n + ' eklendi', 'success');
         }
       });
     })(type, name);
@@ -161,7 +160,7 @@ function _cmdkBuildDom() {
       '<div class="ve-cmdk-search">' +
         '<span class="mf-ico mf-ico-search ve-cmdk-search-ico"></span>' +
         '<input type="text" id="ve-cmdk-input" role="combobox" aria-controls="ve-cmdk-list" aria-expanded="true" ' +
-               'placeholder="Komut ara…  (örn. sığdır, kaydet, motor ekle)" autocomplete="off" spellcheck="false" aria-label="Komut ara">' +
+               'placeholder="Komut ara…" autocomplete="off" spellcheck="false" aria-label="Komut ara">' +
         '<kbd class="ve-cmdk-kbd">ESC</kbd>' +
       '</div>' +
       '<div class="ve-cmdk-list" id="ve-cmdk-list" role="listbox" aria-label="Komutlar"></div>' +

@@ -175,8 +175,8 @@ test('künye şeridi bu kopyanın sürümünü gösteriyor (boş bırakmıyor)',
   await ac(page); await girisYap(page);
   const metin = await page.locator('.ve-komuta-kunye-metin').textContent();
   expect(metin.trim()).not.toBe('');
-  // Tek dosyada künye GÖMÜLÜ — "doğrulanmalı" yedeği burada görünmemeli.
-  expect(metin).not.toMatch(/dogrulanmali/);
+  // Tek dosyada künye GÖMÜLÜ — "modüler kopya" yedeği burada görünmemeli.
+  expect(metin).not.toMatch(/modüler kopya/);
   expect(metin).toMatch(/[0-9a-f]{7}/);
 });
 
@@ -232,8 +232,6 @@ test('FİİL SEÇİMİ: fişin isteği değişiyor ve kart işareti onunla eşit
     expect(await page.inputValue('#ve-komuta-fis')).toContain('istek : ' + f.id);
     // Seçili kartın işareti de o fiili söylüyor — kart YENİDEN KURULMADAN.
     await expect(page.locator('.ve-komuta-kart.secili .ve-komuta-isaret')).toHaveText(f.isaret);
-    // Açıklama satırı da eşitleniyor
-    await expect(page.locator('#ve-komuta-fiil-aciklama')).toHaveText(f.aciklama);
   }
   // Seçim fiil değişimlerinden SAĞ ÇIKIYOR (kart yeniden kurulsaydı düşerdi)
   await expect(page.locator('.ve-komuta-kart.secili')).toHaveCount(1);

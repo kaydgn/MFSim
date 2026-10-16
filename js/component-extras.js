@@ -1181,9 +1181,9 @@ function veUpdateWarnings() {
       if(hasEngine && !hasGearbox && !hasWheel) warnings.push({type:'info', msg:'Güç zinciri eksik — Şanzıman ve Tekerlek yok.'});
       if(hasEngine && hasGearbox && !hasWheel) warnings.push({type:'warn', msg:'Tekerlek bileşeni eksik.'});
       if(hasWheel && !hasEngine) warnings.push({type:'warn', msg:'Motor bileşeni eksik.'});
-      if(!hasVehicle && nodes.length >= 3) warnings.push({type:'info', msg:'Araç bileşeni önerilir (kütle, Cd, alan parametreleri için).'});
+      if(!hasVehicle && nodes.length >= 3) warnings.push({type:'info', msg:'Araç bileşeni yok.'});
       if(!hasSolver && nodes.length >= 3) warnings.push({type:'info', msg:'Çözücü bileşeni eklenmemiş.'});
-      if(!hasRoad && nodes.length >= 4) warnings.push({type:'info', msg:'Yol/Ortam bileşeni önerilir.'});
+      if(!hasRoad && nodes.length >= 4) warnings.push({type:'info', msg:'Yol/Ortam bileşeni yok.'});
     } else {
       if(!hasEngine) warnings.push({type:'warn', msg:'Motor bileşeni eksik.'});
       warnings.push({type:'info', msg:'Sonlandırıcı aktif — kısmi analiz modu.'});

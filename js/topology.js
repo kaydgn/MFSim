@@ -539,7 +539,6 @@ function veAddTab(name, silent) {
   saveState(); // İlk undo noktası
   
   veRenderTabs();
-  if(!silent) showToast('Yeni sekme: ' + tab.name);
 }
 
 function veCloseTab(idx) {
@@ -577,7 +576,6 @@ function veCloseTab(idx) {
     }
     
     veRenderTabs();
-    showToast(tab.name + ' kapatıldı');
   };
   
   if(nodeCount > 0) {
@@ -641,7 +639,6 @@ function veDuplicateTab(idx) {
   
   veTabs.push(newTab);
   veRenderTabs();
-  showToast(newTab.name + ' oluşturuldu');
 }
 
 function veRenderTabs() {
@@ -766,7 +763,6 @@ function veActivateSplit(rightTabIdx) {
   veRenderSnapshot(1);
   veUpdateSplitFocus();
   veRenderTabs();
-  showToast('Bölünmüş görünüm açıldı');
 }
 
 function veCloseSplit() {
@@ -786,7 +782,6 @@ function veCloseSplit() {
   
   veRemoveSplitDOM();
   veRenderTabs();
-  showToast('Tek görünüme dönüldü');
 }
 
 function veCreateSplitDOM() {
@@ -929,7 +924,7 @@ function veUpdatePaneLabels() {
     var name = tab ? tab.name : '?';
     var isFocused = (i === veFocusedPane);
     label.textContent = name;
-    label.title = isFocused ? 'Düzenlenebilir (aktif)' : 'Salt görüntüleme — tıklayarak aktif edin';
+    label.title = isFocused ? 'Düzenlenebilir (aktif)' : 'Salt görüntüleme';
     // Kip ikonu ADIN DIŞINDA: ad uzunsa üç noktayla kısalır, ikon kısalmaz.
     var kip = label.parentNode && label.parentNode.querySelector('.ve-pane-mode');
     if(kip) { veIkonDegis(kip, isFocused ? 'edit' : 'eye'); kip.setAttribute('title', label.title); }
@@ -1300,7 +1295,7 @@ function veSplitResizerInit(resizer, pane0, pane1) {
     if(!veSplitMode) {
       // Yeni split: aktif sekme bir tarafta, bırakılan diğer tarafta
       if(tabIdx === veActiveTabIdx) {
-        showToast('Farklı bir sekmeyi sürükleyin', 'warning');
+        showToast('Sekme kendisiyle bölünemez.', 'warning');
         return;
       }
       if(side === 0) {
@@ -1321,7 +1316,6 @@ function veSplitResizerInit(resizer, pane0, pane1) {
       veRenderSnapshot(1);
       veUpdateSplitFocus();
       veRenderTabs();
-      showToast('Bölünmüş görünüm açıldı');
     } else {
       // Zaten split — ilgili pane'i değiştir
       var targetPane = side;

@@ -135,14 +135,6 @@ function handleNodeContextAction(action) {
     });
   }
   updateAllConnections();
-  
-  var labels = {
-    'toggle-axis': 'Port yönü değiştirildi',
-    'mirror-h': 'Yatay aynalama uygulandı',
-    'mirror-v': 'Dikey aynalama uygulandı',
-    'reset-ports': 'Portlar varsayılana döndü'
-  };
-  showToast(labels[action] || 'Port düzeni güncellendi');
 }
 
 // ============================================================================
@@ -281,7 +273,6 @@ function handlePortContextAction(action) {
   // Port pozisyonunu güncelle
   updatePortPosition(portEl, node, portKey);
   updateAllConnections();
-  showToast('Port pozisyonu güncellendi');
 }
 
 // ── Dinamik port ekle / kaldır (tüm düğümler için) ───────────────────────────
@@ -340,7 +331,6 @@ function addNodePort(node, portKey){
   _remapNodePorts(node, kind, oldC, newC, -1);
   veRebuildNodePorts(node);
   updateAllConnections();
-  showToast(kind === 'input' ? 'Giriş portu eklendi' : 'Çıkış portu eklendi');
 }
 
 function removeNodePort(node, portKey){
@@ -355,7 +345,6 @@ function removeNodePort(node, portKey){
   _remapNodePorts(node, kind, oldC, oldC - 1, idx);
   veRebuildNodePorts(node);
   updateAllConnections();
-  showToast('Port kaldırıldı');
 }
 
 // Port DOM'unu yerine oturt. Geometri TEK kaynaktan gelir (components.js
@@ -464,7 +453,6 @@ function handleLabelContextAction(action){
   // saveState() burada mutasyondan ÖNCE çağrılıyor (geri-al yığını), yani
   // tazelemeyi o üstlenemez; tek tazeleme noktası veUpdateBoundary.
   if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
-  if(typeof showToast === 'function') showToast('Etiket konumu güncellendi');
 }
 
 // ============================================================================
@@ -553,25 +541,20 @@ function handleConnectionContextAction(action) {
   switch(action) {
     case 'curve':
       conn.lineType = 'curve';
-      showToast('Eğri çizgi yapıldı');
       break;
     case 'straight':
       conn.lineType = 'straight';
       conn.controlPoints = [];
-      showToast('Düz çizgi yapıldı');
       break;
     case 'stepped':
       conn.lineType = 'stepped';
       conn.controlPoints = [];
-      showToast('Kademeli çizgi yapıldı');
       break;
     case 'addPoint':
       addControlPointToConnection(conn);
-      showToast('Kontrol noktası eklendi');
       break;
     case 'delete':
       deleteConnection(conn.id);
-      showToast('Bağlantı silindi');
       break;
   }
   

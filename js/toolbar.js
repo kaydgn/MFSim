@@ -13,7 +13,6 @@ function veZoomIn() {
   canvasOffset.x = centerX - (centerX - canvasOffset.x) * zoomRatio;
   canvasOffset.y = centerY - (centerY - canvasOffset.y) * zoomRatio;
   updateCanvasTransform();
-  showToast('Yakınlaştırma: %' + Math.round(canvasZoom * 100));
 }
 
 function veZoomOut() {
@@ -27,7 +26,6 @@ function veZoomOut() {
   canvasOffset.x = centerX - (centerX - canvasOffset.x) * zoomRatio;
   canvasOffset.y = centerY - (centerY - canvasOffset.y) * zoomRatio;
   updateCanvasTransform();
-  showToast('Yakınlaştırma: %' + Math.round(canvasZoom * 100));
 }
 
 function veResetView() {
@@ -35,7 +33,6 @@ function veResetView() {
   canvasZoom = 1;
   canvasOffset = (typeof veHomeCameraOffset === 'function') ? veHomeCameraOffset() : {x: 3000, y: 3000};
   updateCanvasTransform();
-  showToast('Görünüm sıfırlandı');
 }
 
 function veUndo() {
@@ -65,7 +62,6 @@ function veNewProject() {
     veProjectName = '';
     veSetProjectNameButton('MFSim');
     veAddTab('Topoloji 1');
-    showToast('Yeni proje oluşturuldu');
   };
   
   if(totalNodes > 0) {
@@ -219,7 +215,7 @@ function veClearAll() {
     showToast('Temizlenecek bileşen yok', 'warning');
     return;
   }
-  showConfirmToast('Bu sekmedeki tüm bileşenleri silmek istediğinize emin misiniz?', function() {
+  showConfirmToast('Sekmedeki tüm bileşenler silinsin mi?', function() {
     saveState();
     nodes.forEach(function(n) {
       var el = document.getElementById(n.id);
@@ -233,7 +229,6 @@ function veClearAll() {
     updateNodeCount();
     veSaveActiveTabState();
     veRenderTabs();
-    showToast('Sekme temizlendi');
   });
 }
 
@@ -468,7 +463,7 @@ function veLoadTopology() {
         veSaveActiveTabState();
         veRenderTabs();
         
-        showToast('Topoloji yüklendi: ' + data.nodes.length + ' bileşen (v1 format)');
+        showToast('Topoloji yüklendi: ' + data.nodes.length + ' bileşen');
       } catch(err) {
         showToast('Dosya okunamadı: ' + err.message, 'error');
       }
