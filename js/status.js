@@ -261,17 +261,20 @@ function _veStatusRenderCommits(commits) {
         var dateStr = date ? new Date(date).toLocaleString('tr-TR') : '';   // makine: tarih — tr-TR yerel biçimi, sayı değil
 
         html += '<li class="ve-status-commit" data-sha="' + fullSha + '">';
-        html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(\'' + fullSha + '\')"'
-          + ' title="' + _veStatusEsc(subject).replace(/"/g, '&quot;') + '">';   // konu satırda kısalabiliyor (75 karakter + CSS üç noktası)
+        html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(\'' + fullSha + '\')">';
         html += veIkon('chevron-right', 've-status-commit-arrow');
         html += '<code class="ve-status-commit-sha">' + sha + '</code>';
         if(k.pr) html += '<span class="ve-status-commit-pr">#' + k.pr + '</span>';
-        html += '<span class="ve-status-commit-msg">' + _veStatusEsc(subjectShort) + '</span>';
+        // Konu DIŞ METİN (data-ve-dis-metin): programın değil commit'i yazanın;
+        // içinde tamamı rakam bir kısaltma geçebiliyor ("… (2f9051a · 0352592)")
+        // ve Türkçe sayı ölçütü onu atlar. Tam konu kısalan öğenin kendi
+        // title'ında (75 karakter + CSS üç noktası).
+        html += '<span class="ve-status-commit-msg" data-ve-dis-metin title="' + _veStatusEsc(subject) + '">' + _veStatusEsc(subjectShort) + '</span>';
         html += '<small class="ve-status-commit-when">' + when + '</small>';
         html += '</div>';
         html += '<div class="ve-status-commit-detail">';
         if(body) {
-          html += '<pre class="ve-status-commit-body">' + _veStatusEsc(body) + '</pre>';
+          html += '<pre class="ve-status-commit-body" data-ve-dis-metin>' + _veStatusEsc(body) + '</pre>';
         }
         html += '<div class="ve-status-commit-meta">';
         html += '<div><span class="ve-status-commit-meta-label">Yazar</span>' + _veStatusEsc(author);
