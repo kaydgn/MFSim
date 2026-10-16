@@ -350,13 +350,14 @@ var veMntBrief = (function() {
         var pk = peaks(f, e.ch.data, 1.05);
         if(pk.length && (!worst || pk[0].v > worst.v)) worst = { v: pk[0].v, f: pk[0].f, dir: e.dir };
       });
-      var pk0 = [];
-      undamped.forEach(function(e) { var q = peaks(f, e.ch.data, 1.05); if(q.length) pk0.push(q[0].v); });
       var s = '';
       if(worst) s += 'En kötü durum ' + b(AX_TR[worst.dir]) + ' yönde: ' + b(na(worst.f) + ' Hz') +
                      '\'de kuvvet ' + b(na(worst.v) + '×') + ' büyüyor. ';
-      if(pk0.length) s += 'Ölçeği ele geçiren eğri sönümsüz olandır — tepesi ' +
-                          b(na(Math.max.apply(null, pk0)) + '×') + '. ';
+      // Sönümsüz tepe rezonansta SINIRSIZDIR: ızgarada okunan yükseklik yalnız
+      // örneğin rezonansa ne kadar yaklaştığını söyler (ızgara tepeleri
+      // incelttikçe büyür) — sayı olarak basılmaz.
+      if(undamped.length) s += 'Ölçeği ele geçiren eğri sönümsüz olandır: sönümsüz sistemin tepesi ' +
+                               'rezonansta sınırsızdır, çizilen yükseklik yalnız frekans örneklemesine bağlıdır. ';
       s += 'Verim kanalı rezonansta ' + b('eksi') + ' değerlere iner; dikey eksen ' +
            'bu yüzden iki tarafa birden gerilir.';
       paras.push(s);
@@ -468,15 +469,15 @@ var veMntBrief = (function() {
         var u = null;
         undamped.forEach(function(q) { if(q.dir === e.dir) u = q; });
         if(!u) return;
-        var pd = peaks(f, e.ch.data, 1.05), pu = peaks(f, u.ch.data, 1.05);
-        if(!pd.length || !pu.length) return;
-        paras.push(b(AX_TR[e.dir]) + ': sönümsüz tepe ' + b(na(pu[0].v) + '×') +
-                   ', sönümlü tepe ' + b(na(pd[0].v) + '×') + ' — sönüm tepeyi ' +
-                   b(na(pu[0].v / pd[0].v) + ' kat') + ' bastırıyor' +
+        var pd = peaks(f, e.ch.data, 1.05);
+        if(!pd.length) return;
+        paras.push(b(AX_TR[e.dir]) + ': sönümlü tepe ' + b(na(pd[0].v) + '×') + ' (' +
+                   b(na(pd[0].f) + ' Hz') + '); sönümsüz sistemde aynı tepe sınırsızdır — ' +
+                   'tepeyi yalnız sönüm sınırlıyor' +
                    (isFinite(R.zeta) ? ' (kritik sönüm payı ' + b(pct(R.zeta * 100, 1)) + ')' : '') + '.');
       });
-      paras.push('Sönümsüz tepe çok daha yüksek olduğu için ortak eksende sönümlü eğri ' +
-                 'düz görünür; karşılaştırma sayısaldır.');
+      paras.push('Sönümsüz eğri rezonansta sınırsız yükseldiği için ortak eksende sönümlü eğri ' +
+                 'düz görünür; çizilen sönümsüz tepe yüksekliği yalnız frekans örneklemesine bağlıdır.');
       return { title: 'Frekans yanıtı — sönüm karşılaştırması', paras: paras };
     }
 

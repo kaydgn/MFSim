@@ -57,6 +57,64 @@ describe('tek nokta kütle: dönme ataleti sıfır', () => {
   });
 });
 
+// ═══════════════════ MEKANİZMA — çözülmez, SÖYLENİR ═══════════════════
+// Takoz noktasal yaydır: hepsi tek doğru üzerindeyse o doğru etrafındaki dönme
+// rijitliksizdir ve K tekildir (rijitlik ne olursa olsun). Eskiden üretim yolu
+// (durduruculu çözücü) artık kapısı taşımadığı için tekil K'yı yuvarlama
+// artığıyla "çözüyordu": yanal yükte sehim 1,2·10¹⁸ mm, |θ| 2·10³² rad, uyarısız.
+const DOGRU = (dy) => [-500, 0, 600].map((x, i) => ({ ad: 'T' + i, p: [300 + x, 20 + (i === 2 ? dy : 0), 450],
+  ks: [900, 700, 400], kd: [1400, 1050, 600] }));
+
+describe('mekanizma: takozlar tek doğru üzerinde → çözüm reddedilir ve sebebi söylenir', () => {
+  test('üç takoz x ekseni boyunca: çözücü reddediyor, Hesapla\'dan ÖNCE ön denetim aynı cümleyi gösteriyor', () => {
+    const topo = H.kurguModel({ govdeler: GOVDE, takozlar: DOGRU(0), cozucu: {} });
+    const R = H.coz(topo);
+    expect(R.allCases).toBeUndefined();
+    expect(R.error).toHaveLength(1);
+    expect(R.error[0]).toMatch(/tek bir doğru üzerinde.*kinematik olarak serbest/);
+    global.nodes = topo.nodes; global.connections = [];
+    const { cp } = H.kur();
+    expect(cp._mntOnDenetim(topo.nodes.find((n) => n.type === 'mnt-solver'))).toEqual(R.error);
+  });
+
+  test('tek takoz ve iki takoz da mekanizma (nokta · doğru)', () => {
+    [[DOGRU(0).slice(0, 1), /Tek takoz var/], [DOGRU(0).slice(0, 2), /İki takoz tek bir doğru/]].forEach(([tk, re]) => {
+      const R = H.coz(H.kurguModel({ govdeler: GOVDE, takozlar: tk, cozucu: {} }));
+      expect(R.error).toHaveLength(1);
+      expect(R.error[0]).toMatch(re);
+    });
+  });
+
+  test('doğrudan 20 mm sapan takoz mekanizma DEĞİL: çözülür ve 6 bileşenli denge tutar', () => {
+    const R = H.coz(H.kurguModel({ govdeler: GOVDE, takozlar: DOGRU(20), cozucu: {} }));
+    expect(R.error).toBeUndefined();
+    R.allCases.forEach((rc) => {
+      expect(rc.res).toBeTruthy();
+      const s = H.genelKuvvet(R.mounts, R.mp.cg, rc.res.perMount.map((pm) => pm.f));
+      expect(H.norm(s.map((v, c) => v - rc.res.F[c])) / (H.norm(rc.res.F) + R.mp.m * G)).toBeLessThan(1e-9);
+    });
+  });
+
+  test('tolerans göreli ve birimden bağımsız: sapma/uzaklık 10⁻⁷ → doğru, 10⁻⁵ → değil (mm ve m aynı hüküm)', () => {
+    const nokta = (e, olcek) => [[0, 0, 0], [1, 0, 0], [2, e, 0]].map((p) => p.map((v) => v * olcek));
+    [1, 1000].forEach((olcek) => {
+      expect(core.collinearPoints(nokta(1e-7, olcek))).toBe('dogru');
+      expect(core.collinearPoints(nokta(1e-5, olcek))).toBeNull();
+    });
+    expect(core.collinearPoints([[1, 2, 3], [1, 2, 3], [1, 2, 3]])).toBe('nokta');
+  });
+
+  test('durduruculu çözücü tekil K\'yı çözmüş saymıyor (artık kapısı, lineerdeki ile aynı)', () => {
+    // Doğrudan çekirdek: doğrulama kapısı atlanırsa da sahte çözüm dönmesin.
+    const ms = DOGRU(0).map((t) => ({ name: t.ad, pos: t.p.map((v) => v / 1000),
+      kstat: t.ks.map((v) => v * 1000), kdyn: t.kd.map((v) => v * 1000) }));
+    const cg = [0.3, 0.02, 0.65], K = core.buildK(ms, cg, false);
+    const yanal = { n: [0, 0.6, -1], T: [0, 0, 0] };            // doğru etrafında moment → çözüm yok
+    expect(core.solveCaseStop(K, ms, cg, 1200, G, yanal, {})).toBeNull();
+    expect(core.solveCase(K, ms, cg, 1200, G, yanal)).toBeNull();
+  });
+});
+
 // Kriter testleri gerçek bir çözümün modlarını kullanır; yalnız motor girdisi
 // (rölanti, silindir) ve gerekiyorsa mod listesi değiştirilir.
 const RA = H.coz(H.ornek('asfat'));
@@ -77,6 +135,18 @@ describe('Kriter 1 — eşiğin iki yanında doğru hüküm, iki yüzey aynı h�
     const R = motorlu(RA, 40 * fmax * k, 6);
     expect(st(rp.veMntUygunluk(R, {}), '1')).toBe(beklenen);
     expect(rozet1(R)).toBe(beklenen);                   // §8.8 rozeti aynı hükmü veriyor
+  });
+});
+
+describe('Kriter 1 — TAM sınırda (f = 0,5·f_ateş) iki yüzey aynı hüküm', () => {
+  // Kriter "f < 0,5·f_ateş" der: tam sınırdaki mod İHLALDİR. §8.8 rozeti bunu
+  // '<' ile, uygunluk tablosu (modePlacement) '>' ile karşılaştırıyordu — tam
+  // sınırda rozet "Dikkat", tablo "uygun" diyordu.
+  test('600 d/dk · 6 sil. → sınır tam 15 Hz; en yüksek mod tam 15 Hz → ikisi de kontrol', () => {
+    const R = motorlu(RA, 600, 6, RA.modes.map((m, i) => Object.assign({}, m, { f_Hz: [5, 6, 7, 11, 13, 15][i] })));
+    expect(0.5 * (600 / 60) * (6 / 2)).toBe(15);                // testin anlamı: tam eşitlik
+    expect(st(rp.veMntUygunluk(R, {}), '1')).toBe('no');
+    expect(rozet1(R)).toBe('no');
   });
 });
 
@@ -124,6 +194,52 @@ describe('Kriter 2 — §8.8 ile uygunluk tablosu aynı sayıyı ve aynı hükm�
     expect(Math.abs(iso.T - hedef)).toBeLessThan(1e-9);
     expect(st(rp.veMntUygunluk(R, {}), '2')).toBe(beklenen);
     expect(iso.ok).toBe(beklenen === 'ok');
+  });
+});
+
+// ═══════════════════ FRF TEPESİ — ızgaradan değil, tepenin kendisinden ═══════════════════
+// Sönümü küçük modun tepesi ızgara aralığından dar: eşit aralıklı 240 noktalık
+// ızgara tepeyi ıskalıyordu (TULGA Y 18,88× ↔ tepe 22,74×, %17; SİPER Y ikincil
+// tepe %27). Rapor ayrıca 260 noktalık AYRI bir ızgara kullanıyordu: aynı tepe
+// iki yüzeyde iki sayıydı. Hakem bağımsız karmaşık FRF (H.frfHakem) ve ızgara
+// komşuları arasında altın oran araması — çekirdeğin hiçbir fonksiyonu değil.
+describe('FRF tepesi: Sonuçlar ve rapor tepenin KENDİSİNİ okur', () => {
+  const MOD = ['siper', 'tulga', 'asfat'].map((ad) => [ad, H.coz(H.ornek(ad), { sinyal: true })]);
+
+  test.each(MOD)('%s: üç yönde her yerel tepe hakemin yerel en büyüğüne ≤ 10⁻⁶', (ad, R) => {
+    const mk = H.birlesikKutle(R.components), Mm = H.M6of(mk.m, mk.I);
+    const kb = R.kBasis || R.mounts.map((m) => m.kdyn), cl = R.damping.map((d) => d.c);
+    const K = H.topla6(R.mounts, R.mp.cg, kb), Cm = H.topla6(R.mounts, R.mp.cg, cl);
+    const ds = R.signals.find((s) => s.key === 'frf'), f = ds.x.data;
+    let n = 0;
+    [0, 1, 2].forEach((dir) => {
+      const T = ds.channels.find((c) => c.id === 'T_' + dir).data;
+      const hk = (x) => H.frfHakem(R.mounts, R.mp.cg, Mm, K, Cm, kb, cl, x, dir);
+      for (let i = 1; i < f.length - 1; i++) {
+        if (!(T[i] > T[i - 1] && T[i] >= T[i + 1] && T[i] > 1.05)) continue;
+        let a = f[i - 1], b = f[i + 1];
+        for (let k = 0; k < 60; k++) {                    // üçe bölme — tek tepeli aralık
+          const c = a + (b - a) / 3, d = b - (b - a) / 3;
+          if (hk(c) > hk(d)) b = d; else a = c;
+        }
+        expect((hk((a + b) / 2) - T[i]) / T[i]).toBeLessThan(1e-6);
+        n++;
+      }
+    });
+    expect(n).toBeGreaterThanOrEqual(6);                  // testin anlamı: tepeler gerçekten kıyaslandı
+  });
+
+  test('rapor §8.13 Sonuçlar ile AYNI ızgarayı kullanıyor ve SVG\'de NaN yok', () => {
+    const R = MOD[1][1];
+    const ds = R.signals.find((s) => s.key === 'frf');
+    const orj = core.frequencyResponse, izgaralar = [];
+    core.frequencyResponse = function (m, cg, M6, dmp, o) { izgaralar.push(o && o.f); return orj.apply(this, arguments); };
+    let h;
+    try { h = rp._mntRepFRF(R, {}); } finally { core.frequencyResponse = orj; }
+    expect(izgaralar).toHaveLength(1);
+    expect(izgaralar[0]).toEqual(ds.x.data);
+    expect(h).toContain('<svg');
+    expect(h).not.toMatch(/NaN/);
   });
 });
 
