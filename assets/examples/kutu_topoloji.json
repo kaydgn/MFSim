@@ -1,0 +1,263 @@
+{
+  "format": "mfsim-mount-example",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "mnt-motor",
+      "x": 578,
+      "y": 394,
+      "width": 84,
+      "height": 76,
+      "customName": "Kutu",
+      "data": {
+        "mass": 1200,
+        "cgx": 300,
+        "cgy": 20,
+        "cgz": 650,
+        "Ixx": 113,
+        "Iyy": 185,
+        "Izz": 170,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": false,
+        "Te": 500,
+        "Rstall": 2,
+        "g1": 3,
+        "g2": 1.6,
+        "gR": -4,
+        "iTransfer": 1.25,
+        "phiFwd": 0.8,
+        "phiRev": 0.7,
+        "derate": 0.9,
+        "idleRpm": 800,
+        "cylinders": 6
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n2",
+      "type": "mnt-mount",
+      "x": 295,
+      "y": 215,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Ön Takoz",
+      "data": {
+        "x": -300,
+        "y": 370,
+        "z": 650,
+        "kxs": 900,
+        "kys": 700,
+        "kzs": 400,
+        "kxd": 1400,
+        "kyd": 1050,
+        "kzd": 600
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n3",
+      "type": "mnt-mount",
+      "x": 895,
+      "y": 215,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Arka Takoz",
+      "data": {
+        "x": 900,
+        "y": 370,
+        "z": 650,
+        "kxs": 900,
+        "kys": 700,
+        "kzs": 400,
+        "kxd": 1400,
+        "kyd": 1050,
+        "kzd": 600
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n4",
+      "type": "mnt-mount",
+      "x": 295,
+      "y": 611,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Ön Takoz",
+      "data": {
+        "x": -300,
+        "y": -330,
+        "z": 650,
+        "kxs": 900,
+        "kys": 700,
+        "kzs": 400,
+        "kxd": 1400,
+        "kyd": 1050,
+        "kzd": 600
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n5",
+      "type": "mnt-mount",
+      "x": 895,
+      "y": 611,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Arka Takoz",
+      "data": {
+        "x": 900,
+        "y": -330,
+        "z": 650,
+        "kxs": 900,
+        "kys": 700,
+        "kzs": 400,
+        "kxd": 1400,
+        "kyd": 1050,
+        "kzd": 600
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n6",
+      "type": "mnt-example",
+      "x": 1257,
+      "y": 163,
+      "width": 56,
+      "height": 56,
+      "customName": "",
+      "data": {
+        "exampleKey": "kutu"
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n7",
+      "type": "mnt-2dview",
+      "x": 1045,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n8",
+      "type": "mnt-solver",
+      "x": 1147.5,
+      "y": 161,
+      "width": 65,
+      "height": 60,
+      "customName": "",
+      "data": {
+        "matrixMode": "delta",
+        "zeta": 0.05
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n9",
+      "type": "mnt-report",
+      "x": 1360,
+      "y": 163,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n10",
+      "type": "mnt-library",
+      "x": 1045,
+      "y": 164,
+      "width": 60,
+      "height": 54,
+      "customName": "",
+      "data": {
+        "mounts": []
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n11",
+      "type": "mnt-viewer",
+      "x": 1255,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n12",
+      "type": "mnt-coordframe",
+      "x": 1150,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    }
+  ],
+  "connections": [],
+  "compCounter": 12,
+  "canvasOffset": {
+    "x": 2839.3503196952106,
+    "y": 2881.4967211058097
+  },
+  "canvasZoom": 0.9414317882700003,
+  "annotations": [
+    {
+      "id": "annot-1",
+      "type": "frame",
+      "x": 1015,
+      "y": 293,
+      "width": 330,
+      "height": 130,
+      "text": "Görselleştirici",
+      "color": "var(--text-muted)",
+      "fontSize": 11
+    },
+    {
+      "id": "annot-2",
+      "type": "frame",
+      "x": 1015,
+      "y": 131,
+      "width": 435,
+      "height": 134,
+      "text": "Araçlar",
+      "color": "var(--accent-primary)",
+      "fontSize": 11
+    }
+  ]
+}

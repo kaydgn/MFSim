@@ -1,0 +1,408 @@
+{
+  "format": "mfsim-mount-example",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "mnt-pump",
+      "x": 471,
+      "y": 409,
+      "width": 50,
+      "height": 46,
+      "customName": "Hava kompresörü",
+      "data": {
+        "mass": 24,
+        "cgx": 120,
+        "cgy": -330,
+        "cgz": 720,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n2",
+      "type": "mnt-motor",
+      "x": 547,
+      "y": 394,
+      "width": 84,
+      "height": 76,
+      "customName": "Motor",
+      "data": {
+        "mass": 640,
+        "cgx": 300,
+        "cgy": 0,
+        "cgz": 640,
+        "Ixx": 78.87,
+        "Iyy": 121.75,
+        "Izz": 98.18,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": false,
+        "Te": 1200,
+        "TeRpm": 1300,
+        "Pmax": 220,
+        "PmaxRpm": 2300,
+        "idleRpm": 600,
+        "cylinders": 6
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n3",
+      "type": "mnt-gearbox",
+      "x": 888,
+      "y": 402,
+      "width": 65,
+      "height": 60,
+      "customName": "Şanzıman",
+      "data": {
+        "mass": 175,
+        "cgx": 1180,
+        "cgy": 0,
+        "cgz": 520,
+        "Ixx": 8.52,
+        "Iyy": 11.72,
+        "Izz": 11.09,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": false,
+        "g1": 6.7,
+        "g2": 4.1,
+        "g3": 2.5,
+        "g4": 1.6,
+        "g5": 1,
+        "g6": 0.78,
+        "gR": -6.1,
+        "Rstall": 1
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n4",
+      "type": "mnt-mount",
+      "x": 295,
+      "y": 215,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Ön Takoz",
+      "data": {
+        "x": -320,
+        "y": 320,
+        "z": 470,
+        "kxs": 120,
+        "kys": 90,
+        "kzs": 300,
+        "kxd": 180,
+        "kyd": 135,
+        "kzd": 450,
+        "fitX": {
+          "form": "poly",
+          "k0": 120,
+          "c3": 0.25,
+          "c5": 0
+        },
+        "fitY": {
+          "form": "poly",
+          "k0": 90,
+          "c3": 0.2,
+          "c5": 0
+        },
+        "fitZ": {
+          "form": "asym",
+          "comp": {
+            "k0": 300,
+            "xmax": 20
+          },
+          "ext": {
+            "k0": 300,
+            "c3": 0.6
+          }
+        }
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n5",
+      "type": "mnt-mount",
+      "x": 751,
+      "y": 215,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Arka Takoz",
+      "data": {
+        "x": 820,
+        "y": 380,
+        "z": 600,
+        "kxs": 250,
+        "kys": 200,
+        "kzs": 500,
+        "kxd": 375,
+        "kyd": 300,
+        "kzd": 750,
+        "fitX": {
+          "form": "poly",
+          "k0": 250,
+          "c3": 0.25,
+          "c5": 0
+        },
+        "fitY": {
+          "form": "poly",
+          "k0": 200,
+          "c3": 0.2,
+          "c5": 0
+        },
+        "fitZ": {
+          "form": "asym",
+          "comp": {
+            "k0": 500,
+            "xmax": 20
+          },
+          "ext": {
+            "k0": 500,
+            "c3": 0.6
+          }
+        }
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n6",
+      "type": "mnt-mount",
+      "x": 295,
+      "y": 611,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Ön Takoz",
+      "data": {
+        "x": -320,
+        "y": -320,
+        "z": 470,
+        "kxs": 120,
+        "kys": 90,
+        "kzs": 300,
+        "kxd": 180,
+        "kyd": 135,
+        "kzd": 450,
+        "fitX": {
+          "form": "poly",
+          "k0": 120,
+          "c3": 0.25,
+          "c5": 0
+        },
+        "fitY": {
+          "form": "poly",
+          "k0": 90,
+          "c3": 0.2,
+          "c5": 0
+        },
+        "fitZ": {
+          "form": "asym",
+          "comp": {
+            "k0": 300,
+            "xmax": 20
+          },
+          "ext": {
+            "k0": 300,
+            "c3": 0.6
+          }
+        }
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n7",
+      "type": "mnt-mount",
+      "x": 751,
+      "y": 611,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Arka Takoz",
+      "data": {
+        "x": 820,
+        "y": -380,
+        "z": 600,
+        "kxs": 250,
+        "kys": 200,
+        "kzs": 500,
+        "kxd": 375,
+        "kyd": 300,
+        "kzd": 750,
+        "fitX": {
+          "form": "poly",
+          "k0": 250,
+          "c3": 0.25,
+          "c5": 0
+        },
+        "fitY": {
+          "form": "poly",
+          "k0": 200,
+          "c3": 0.2,
+          "c5": 0
+        },
+        "fitZ": {
+          "form": "asym",
+          "comp": {
+            "k0": 500,
+            "xmax": 20
+          },
+          "ext": {
+            "k0": 500,
+            "c3": 0.6
+          }
+        }
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n8",
+      "type": "mnt-example",
+      "x": 1265,
+      "y": 163,
+      "width": 56,
+      "height": 56,
+      "customName": "",
+      "data": {
+        "exampleKey": "kamyon"
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n9",
+      "type": "mnt-2dview",
+      "x": 1053,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n10",
+      "type": "mnt-solver",
+      "x": 1155.5,
+      "y": 161,
+      "width": 65,
+      "height": 60,
+      "customName": "",
+      "data": {
+        "matrixMode": "delta",
+        "zeta": 0.05
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n11",
+      "type": "mnt-report",
+      "x": 1368,
+      "y": 163,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n12",
+      "type": "mnt-library",
+      "x": 1053,
+      "y": 164,
+      "width": 60,
+      "height": 54,
+      "customName": "",
+      "data": {
+        "mounts": []
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n13",
+      "type": "mnt-viewer",
+      "x": 1263,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n14",
+      "type": "mnt-coordframe",
+      "x": 1158,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    }
+  ],
+  "connections": [],
+  "compCounter": 14,
+  "canvasOffset": {
+    "x": 2839.3503196952106,
+    "y": 2881.4967211058097
+  },
+  "canvasZoom": 0.9414317882700003,
+  "annotations": [
+    {
+      "id": "annot-1",
+      "type": "frame",
+      "x": 1023,
+      "y": 293,
+      "width": 330,
+      "height": 130,
+      "text": "Görselleştirici",
+      "color": "var(--text-muted)",
+      "fontSize": 11
+    },
+    {
+      "id": "annot-2",
+      "type": "frame",
+      "x": 1023,
+      "y": 131,
+      "width": 435,
+      "height": 134,
+      "text": "Araçlar",
+      "color": "var(--accent-primary)",
+      "fontSize": 11
+    }
+  ]
+}

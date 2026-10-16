@@ -104,7 +104,9 @@ describe('örnek kartları — denetim gerçekten koşuyor', () => {
     expect(ORNEKLER.length).toBeGreaterThanOrEqual(3);
     ORNEKLER.forEach((e) => {
       expect(e.model.mounts.length).toBeGreaterThanOrEqual(3);
-      expect(e.model.components.length).toBeGreaterThanOrEqual(2);
+      // Kurgu analitik kutu BİLEREK tek gövde (kapalı form onun için yazıldı);
+      // gerçek güç grubu en az iki gövde taşır.
+      expect(e.model.components.length).toBeGreaterThanOrEqual(e.kurgu ? 1 : 2);
       expect(fs.existsSync(path.join(JSON_DIR, path.basename(e.topology)))).toBe(true);
     });
   });

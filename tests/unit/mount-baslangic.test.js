@@ -87,8 +87,24 @@ describe('İÇERİK — kapılar ve örnekler', () => {
   test('örnek karoları kayıt defterinin KENDİSİ; hiçbiri "çizilemedi" değil', () => {
     const liste = core.getMountExampleList();
     const karo = html.match(/class="ve-bas-karo" data-ey="ornek" data-v="[^"]+"/g) || [];
-    expect(karo.map((k) => k.match(/data-v="([^"]+)"/)[1])).toEqual(liste.map((e) => e.id));
+    const sira = liste.filter((e) => !e.kurgu).concat(liste.filter((e) => e.kurgu)).map((e) => e.id);
+    expect(karo.map((k) => k.match(/data-v="([^"]+)"/)[1])).toEqual(sira);
     expect(html).not.toContain('ve-bas-resim-yok');
+  });
+  // Kurgu doğrulama modelleri gerçek araçlarla karışmaz: ayrı bölüm, başlığı ve
+  // her karonun künyesi "kurgu" der (kullanıcı isteği 2026-10-16).
+  test('iki bölüm: gerçek araçlar · "Doğrulama örnekleri — kurgu"; kurgu karosu işaretli', () => {
+    const liste = core.getMountExampleList();
+    const bas = html.match(/<div class="ve-bas-baslik"><h2>[^<]+<\/h2>/g).map((b) => b.replace(/.*<h2>|<\/h2>/g, ''));
+    expect(bas).toEqual(['Örnek modellerden başla', 'Doğrulama örnekleri — kurgu']);
+    const [gercek, kurgu] = html.split('Doğrulama örnekleri — kurgu');
+    liste.forEach((e) => {
+      const yer = e.kurgu ? kurgu : gercek, oteki = e.kurgu ? gercek : kurgu;
+      expect(yer).toContain('data-v="' + e.id + '"');
+      expect(oteki).not.toContain('data-v="' + e.id + '"');
+    });
+    expect((kurgu.match(/<i>kurgu<\/i>/g) || []).length).toBe(liste.filter((e) => e.kurgu).length);
+    expect(gercek).not.toContain('<i>kurgu</i>');
   });
 });
 

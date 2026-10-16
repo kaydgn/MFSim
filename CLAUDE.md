@@ -51,7 +51,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
   başla · Boş kanvas + örnek karoları). Görünürlük modelden: yalnız "Başlangıç ve
   Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
-  (`moduleEnter`). Kapı: `mount-baslangic.test.js` + `tests/e2e/mount-baslangic.spec.js`.
+  (`moduleEnter`). **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
+  AYRI grupta ("Doğrulama örnekleri — kurgu") durur; kart metnindeki iddiaları
+  kapılıdır. Kapı: `mount-baslangic.test.js` + `mount-ornek-kurgu.test.js` +
+  `tests/e2e/mount-baslangic.spec.js`.
 - `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz
   **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici: FEAD sihirbazının
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir). **İlk hâl** —

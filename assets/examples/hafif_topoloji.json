@@ -1,0 +1,293 @@
+{
+  "format": "mfsim-mount-example",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "mnt-pump",
+      "x": 295,
+      "y": 409,
+      "width": 50,
+      "height": 46,
+      "customName": "Alternatör + klima",
+      "data": {
+        "mass": 18,
+        "cgx": 250,
+        "cgy": 235,
+        "cgz": 600,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n2",
+      "type": "mnt-motor",
+      "x": 372,
+      "y": 394,
+      "width": 84,
+      "height": 76,
+      "customName": "Motor",
+      "data": {
+        "mass": 185,
+        "cgx": 380,
+        "cgy": 10,
+        "cgz": 520,
+        "Ixx": 11.15,
+        "Iyy": 12.24,
+        "Izz": 10.76,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": false,
+        "Te": 360,
+        "TeRpm": 1750,
+        "Pmax": 120,
+        "PmaxRpm": 3500,
+        "idleRpm": 750,
+        "cylinders": 4
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n3",
+      "type": "mnt-gearbox",
+      "x": 779,
+      "y": 402,
+      "width": 65,
+      "height": 60,
+      "customName": "Şanzıman",
+      "data": {
+        "mass": 62,
+        "cgx": 930,
+        "cgy": -15,
+        "cgz": 470,
+        "Ixx": 1.66,
+        "Iyy": 2.31,
+        "Izz": 2.14,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": false,
+        "g1": 4.86,
+        "g2": 2.61,
+        "g3": 1.52,
+        "g4": 1,
+        "g5": 0.8,
+        "g6": 0.67,
+        "gR": -4.39,
+        "Rstall": 1
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n4",
+      "type": "mnt-mount",
+      "x": 895,
+      "y": 409,
+      "width": 50,
+      "height": 46,
+      "customName": "Şanzıman Takozu",
+      "data": {
+        "x": 1080,
+        "y": 0,
+        "z": 440,
+        "kxs": 145,
+        "kys": 70,
+        "kzs": 240,
+        "kxd": 205,
+        "kyd": 100,
+        "kzd": 335
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n5",
+      "type": "mnt-mount",
+      "x": 331,
+      "y": 215,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Motor Takozu",
+      "data": {
+        "x": 300,
+        "y": 300,
+        "z": 480,
+        "kxs": 90,
+        "kys": 90,
+        "kzs": 300,
+        "kxd": 125,
+        "kyd": 125,
+        "kzd": 420
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n6",
+      "type": "mnt-mount",
+      "x": 331,
+      "y": 611,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Motor Takozu",
+      "data": {
+        "x": 300,
+        "y": -300,
+        "z": 480,
+        "kxs": 90,
+        "kys": 90,
+        "kzs": 300,
+        "kxd": 125,
+        "kyd": 125,
+        "kzd": 420
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n7",
+      "type": "mnt-example",
+      "x": 1257,
+      "y": 163,
+      "width": 56,
+      "height": 56,
+      "customName": "",
+      "data": {
+        "exampleKey": "hafif"
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n8",
+      "type": "mnt-2dview",
+      "x": 1045,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n9",
+      "type": "mnt-solver",
+      "x": 1147.5,
+      "y": 161,
+      "width": 65,
+      "height": 60,
+      "customName": "",
+      "data": {
+        "matrixMode": "delta",
+        "zeta": 0.05
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n10",
+      "type": "mnt-report",
+      "x": 1360,
+      "y": 163,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n11",
+      "type": "mnt-library",
+      "x": 1045,
+      "y": 164,
+      "width": 60,
+      "height": 54,
+      "customName": "",
+      "data": {
+        "mounts": []
+      },
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n12",
+      "type": "mnt-viewer",
+      "x": 1255,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    },
+    {
+      "id": "n13",
+      "type": "mnt-coordframe",
+      "x": 1150,
+      "y": 323,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "data": {},
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false
+    }
+  ],
+  "connections": [],
+  "compCounter": 13,
+  "canvasOffset": {
+    "x": 2839.3503196952106,
+    "y": 2881.4967211058097
+  },
+  "canvasZoom": 0.9414317882700003,
+  "annotations": [
+    {
+      "id": "annot-1",
+      "type": "frame",
+      "x": 1015,
+      "y": 293,
+      "width": 330,
+      "height": 130,
+      "text": "Görselleştirici",
+      "color": "var(--text-muted)",
+      "fontSize": 11
+    },
+    {
+      "id": "annot-2",
+      "type": "frame",
+      "x": 1015,
+      "y": 131,
+      "width": 435,
+      "height": 134,
+      "text": "Araçlar",
+      "color": "var(--accent-primary)",
+      "fontSize": 11
+    }
+  ]
+}

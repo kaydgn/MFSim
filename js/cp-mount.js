@@ -2290,7 +2290,7 @@ function getMntExamplePropertiesHTML(node){
   var diagram=_mntExampleDiagramSVG(ex.model, ex.tools);
   var secim='<label class="ve-fp-f"><span class="ve-fp-l">Örnek model</span>'
     + '<select class="ve-fp-sel" id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)">'
-    + list.map(function(e){ return '<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }).join('')
+    + _mntOrnekSecenekleri(list, sel)
     + '</select></label>';
   var mdl=ex.model||{};
   var ornek=_mntBolum('Örnek model', (mdl.components||[]).length+' gövde · '+(mdl.mounts||[]).length+' takoz',
@@ -2309,6 +2309,16 @@ function getMntExamplePropertiesHTML(node){
     + veIkon('download')+' İç topolojiyi JSON dışa aktar</button></div>';
   return _mntPencereKabuk(node, [{ k:'ornek', ad:'Örnek', govde:ornek },
                                  { k:'bas', ad:'Başlangıç', govde:baslangic }], yan);
+}
+
+// Seçenekler başlangıç sayfasıyla AYNI iki grupta: gerçek araçlar · kurgu
+// doğrulama modelleri (kayıtta `kurgu`). Kurgu yoksa düz liste.
+function _mntOrnekSecenekleri(list, sel){
+  var opt=function(e){ return '<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
+  var kurgu=list.filter(function(e){ return e.kurgu; });
+  if(!kurgu.length) return list.map(opt).join('');
+  return '<optgroup label="Gerçek araç modelleri">'+list.filter(function(e){ return !e.kurgu; }).map(opt).join('')+'</optgroup>'
+    + '<optgroup label="Doğrulama örnekleri — kurgu">'+kurgu.map(opt).join('')+'</optgroup>';
 }
 
 // Örnek modeli tutarlılık kontrolü — uyarı nesneleri döner ({level,msg}).
