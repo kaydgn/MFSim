@@ -129,12 +129,9 @@ function veProgramlarBoyut(n) {
 }
 
 var VE_PROGRAMLAR_KUMELER = [
-  { anahtar: 'urun',      baslik: 'MFSim ürünleri',
-    not: 'Build hattının çıktısı — programın yanında durur' },
-  { anahtar: 'artifact',  baslik: 'Artifact arşivi',
-    not: 'Sohbette üretilmiş tek dosyalık HTML programlar' },
-  { anahtar: 'disaridan', baslik: 'Dışarıdan gelenler',
-    not: 'MFSim üretmedi; kaynak araç olarak duruyor' }
+  { anahtar: 'urun',      baslik: 'MFSim ürünleri' },
+  { anahtar: 'artifact',  baslik: 'Artifact arşivi' },
+  { anahtar: 'disaridan', baslik: 'Dışarıdan gelenler' }
 ];
 
 function veProgramlarSuz(liste, q) {
@@ -204,22 +201,17 @@ function _vpaSatir(p, i, varMi) {
 
 // Arşiv yoksa liste GİZLENMEZ, pasif çizilir: kullanıcı neyin var olduğunu
 // görmeli — kapının kapalı olması içeridekini de silmez.
-function _vpaDurumSeridi(varMi, n) {
+function _vpaDurumSeridi(varMi) {
   if(varMi) {
     return '<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-micro); '
       + 'background:rgba(16,185,129,.12); color:var(--text-primary); '
       + 'border-left:3px solid var(--accent-success);">'
-      + '<b>Arşiv yanınızda.</b> ' + n + ' program açılmaya hazır.</div>';
+      + '<b>Arşiv bulundu</b></div>';
   }
   return '<div style="padding:10px; margin-bottom:10px; font-size:var(--fs-micro); '
     + 'line-height:1.55; background:var(--bg-tertiary); color:var(--text-primary); '
     + 'border-left:3px solid var(--accent-warning);">'
-    + '<b>Arşiv klasörü bu kopyanın yanında değil.</b> Liste aşağıda duruyor ama '
-    + 'dosyalar açılamıyor.<br>Bu programlar <code>programlar/</code> klasöründe '
-    + 'durur; klasörü <b>MFSim_Code.html ile aynı dizine</b> çıkarınca satırlar '
-    + 'etkinleşir.<br><span style="color:var(--text-muted);">Katalog gömülü, '
-    + 'dosyalar değil: arşiv sıkıştırılmış 17,4 MB ve gömülseydi program '
-    + 'sohbetle gönderilemeyecek kadar büyürdü.</span></div>';
+    + '<b>Arşiv klasörü (<code>programlar/</code>) bu kopyanın yanında yok.</b></div>';
 }
 
 // TEK SÜTUN KAPSAYICI ŞART. `.ve-help-body` iki sütunlu bir grid (Kılavuz
@@ -246,8 +238,8 @@ function _vpaCiz() {
   var varMi = (_vpaVar === true);
   var bulunan = veProgramlarSuz(liste, q);
 
-  var h = '<div style="grid-column:1/-1; min-width:0;">' + _vpaDurumSeridi(varMi, liste.length);
-  h += '<input type="search" id="ve-programlar-ara" placeholder="Ara — ad, dosya, not" '
+  var h = '<div style="grid-column:1/-1; min-width:0;">' + _vpaDurumSeridi(varMi);
+  h += '<input type="search" id="ve-programlar-ara" placeholder="Ara" '
     + 'value="' + _vpaEsc(q) + '" oninput="_vpaCiz()" '
     + 'style="width:100%; box-sizing:border-box; padding:7px 10px; margin-bottom:10px; '
     + 'font-size:var(--fs-micro); background:var(--bg-primary); color:var(--text-primary); '
@@ -261,9 +253,7 @@ function _vpaCiz() {
     h += '<div style="margin:12px 0 6px;">'
       + '<div style="font-size:var(--fs-micro); font-weight:700; letter-spacing:.06em; '
       + 'text-transform:uppercase; color:var(--text-primary);">' + _vpaOzelAd(_vpaEsc(k.baslik))
-      + ' <span style="font-weight:400; color:var(--text-muted);">(' + uyan.length + ')</span></div>'
-      + '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">'
-      + _vpaEsc(k.not) + '</div></div>';
+      + ' <span style="font-weight:400; color:var(--text-muted);">(' + uyan.length + ')</span></div></div>';
     h += '<div style="display:flex; flex-direction:column; gap:6px;">';
     uyan.forEach(function(p) { h += _vpaSatir(p, liste.indexOf(p), varMi); });
     h += '</div>';
@@ -285,8 +275,7 @@ function _vpaCiz() {
 
   var f = document.getElementById('ve-programlar-foot');
   if(f) {
-    f.textContent = liste.length + ' program · katalog gömülü, dosyalar '
-      + 'programlar/ klasöründe';
+    f.textContent = liste.length + ' program';
   }
 }
 

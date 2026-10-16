@@ -254,7 +254,6 @@ function deleteSelectedAnnotations() {
   var count = selectedAnnotations.length;
   selectedAnnotations = [];
   if(typeof saveState === 'function') saveState();
-  if(typeof showToast === 'function') showToast(count + ' açıklama silindi');
 }
 
 function deleteAnnotation(annot) {

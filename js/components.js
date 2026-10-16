@@ -765,7 +765,7 @@ var componentDefs = {
     inputs: 0, outputs: 0, noCanvasBox: true, isFeadBelt: true, maxInstances: 1,
     // SİLİNMEZ (map.js deleteSelectedNodes · cp-core.js): kutusu yokken
     // silinse kullanıcının onu geri kurabileceği bir yol kalmazdı.
-    noDelete: 'Kayış modelin parçası, silinmez — özelliklerini penceresinden değiştirin.',
+    noDelete: 'Kayış modelin parçası, silinmez.',
     defaultWidth: 60, defaultHeight: 54
   },
   // ── ÇÖZÜCÜ, RAPOR, SİHİRBAZ: KUTUSUZ ARAÇ DÜĞÜMLERİ (2026-09-28) ─────────
@@ -785,7 +785,7 @@ var componentDefs = {
     name: 'Çözücü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-warning, #8a6a12)"/><circle cx="78" cy="22" r="6" fill="var(--accent-primary, #a8502b)"/></svg>',
     inputs: 0, outputs: 0, isFeadSolver: true, noCanvasBox: true, maxInstances: 1,
-    noDelete: 'Çözücü modelin parçası, silinmez — ayarları FEAD araçları penceresinden açılır.'
+    noDelete: 'Çözücü modelin parçası, silinmez.'
   },
   // "BAŞLANGIÇ VE ÖRNEKLER" (`fead-example`) KALDIRILDI (2026-09-09, kullanıcı
   // isteği: *"Gerek yok."*). Sunduğu iki şeyin ikisi de Başlangıç Sihirbazının
@@ -854,14 +854,14 @@ var componentDefs = {
     // Numaralı adımlar + son adımda onay işareti: "sırayla doldur, sonunda kur".
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="26" cy="26" r="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="26" cy="52" r="9" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5"/><circle cx="26" cy="78" r="9" fill="var(--accent-warning, #8a6a12)"/><line x1="26" y1="35" x2="26" y2="43" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="26" y1="61" x2="26" y2="69" stroke="var(--text-muted, #676055)" stroke-width="4"/><line x1="44" y1="26" x2="82" y2="26" stroke="var(--text-muted, #676055)" stroke-width="5" stroke-linecap="round"/><line x1="44" y1="52" x2="74" y2="52" stroke="var(--text-muted, #676055)" stroke-width="5" stroke-linecap="round"/><path d="M46 78 l8 9 l17 -19" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0, outputs: 0, isFeadWizard: true, maxInstances: 1, noCanvasBox: true,
-    noDelete: 'Başlangıç Sihirbazı taslağı taşır, silinmez — FEAD araçları penceresinden açılır.',
+    noDelete: 'Başlangıç Sihirbazı taslağı taşır, silinmez.',
     defaultWidth: 60, defaultHeight: 56
   },
   'fead-report': {
     name: 'Rapor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #a8502b)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #a8502b)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #a8502b)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isFeadReport: true, noCanvasBox: true, maxInstances: 1,
-    noDelete: 'Rapor modelin parçası, silinmez — FEAD araçları penceresinden indirilir.',
+    noDelete: 'Rapor modelin parçası, silinmez.',
     defaultWidth: 60, defaultHeight: 56
   },
 };

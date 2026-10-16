@@ -90,9 +90,9 @@ function _veStatusRender() {
 
   var labels = {
     've-deploy-success':          'Program güncel',
-    've-deploy-pending':           'Deploy devam ediyor',
+    've-deploy-pending':           'Yayın sürüyor',
     've-deploy-update-available':  'Güncelleme mevcut',
-    've-deploy-error':             'Deploy başarısız',
+    've-deploy-error':             'Yayın başarısız',
     've-deploy-unknown':           'Henüz kontrol edilmedi',
     've-deploy-offline':           'Çevrimdışı',
     've-deploy-ratelimit':         'API limiti aşıldı',
@@ -107,7 +107,6 @@ function _veStatusRender() {
     html += '<div class="ve-status-update-banner">';
     html += '<div class="ve-status-update-banner-info">';
     html += '<div class="ve-status-update-banner-title"><span class="mf-ico mf-ico-bell"></span> Yeni sürüm mevcut</div>';
-    html += '<div class="ve-status-update-banner-desc">Yeni sürüm indirildi; uygulanması için sayfanın yenilenmesi gerekiyor.</div>';
     html += '</div>';
     html += '<button class="ve-status-update-banner-btn" onclick="_veApplyUpdate()"><span class="mf-ico mf-ico-refresh"></span> Şimdi güncelle</button>';
     html += '</div>';
@@ -121,11 +120,11 @@ function _veStatusRender() {
   html += '</div></div>';
 
   if(info && info.runId) {
-    html += '<div class="ve-settings-row"><span class="ve-settings-label">Workflow Run</span>';
+    html += '<div class="ve-settings-row"><span class="ve-settings-label">Yayın koşusu</span>';
     html += '<div class="ve-settings-value"><a href="https://github.com/kaydgn/MFSim/actions/runs/' + info.runId + '" target="_blank" rel="noopener">#' + info.runId + '</a></div></div>';
   }
   if(info && info.headSha) {
-    html += '<div class="ve-settings-row"><span class="ve-settings-label">Commit</span>';
+    html += '<div class="ve-settings-row"><span class="ve-settings-label">Değişiklik</span>';
     html += '<div class="ve-settings-value"><code style="font-size:var(--fs-body);">' + info.headSha.slice(0,8) + '</code></div></div>';
   }
   if(info && (info.updated_at || info.timestamp)) {
@@ -140,7 +139,6 @@ function _veStatusRender() {
 
   // Son güncellemeler bölümü — GitHub commits API
   html += '<h3 class="ve-settings-section-title" style="margin-top:24px;">Son güncellemeler</h3>';
-  html += '<p class="ve-settings-desc">main branch\'ine yapılan son commit\'ler.</p>';
   html += '<div id="ve-status-commits"><div style="color:var(--text-muted);font-size:var(--fs-body);padding:10px 0;">Yükleniyor…</div></div>';
 
   content.innerHTML = html;
@@ -222,7 +220,7 @@ function _veStatusRenderCommits(commits) {
       var el = document.getElementById('ve-status-commits');
       if(!el) return;
       if(!Array.isArray(commits) || !commits.length) {
-        el.innerHTML = '<div style="color:var(--text-muted);font-size:var(--fs-body);">Commit bulunamadı.</div>';
+        el.innerHTML = '<div style="color:var(--text-muted);font-size:var(--fs-body);">Değişiklik bulunamadı.</div>';
         return;
       }
       // Tarihe göre grupla: Bugün / Dün / Bu hafta / Eski
@@ -281,7 +279,7 @@ function _veStatusRenderCommits(commits) {
         if(authorLogin) html += ' <small class="ve-status-commit-login">(@' + _veStatusEsc(authorLogin) + ')</small>';
         html += '</div>';
         if(dateStr) html += '<div><span class="ve-status-commit-meta-label">Tarih</span>' + _veStatusEsc(dateStr) + '</div>';
-        html += '<div><span class="ve-status-commit-meta-label">Commit</span><code class="ve-status-commit-tamsha">' + _veStatusEsc(fullSha) + '</code></div>';
+        html += '<div><span class="ve-status-commit-meta-label">Değişiklik</span><code class="ve-status-commit-tamsha">' + _veStatusEsc(fullSha) + '</code></div>';
         html += '</div>';
         html += '<div class="ve-status-commit-actions"><a href="' + url + '" target="_blank" rel="noopener" class="ve-settings-btn"><span class="mf-ico mf-ico-link"></span> GitHub\'da aç</a></div>';
         html += '</div>';

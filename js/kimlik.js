@@ -52,7 +52,7 @@ function veAvatarYaz() {
   var bh = veKimlikBasHarf(ad);
   el.textContent = bh;
   el.classList.toggle('ve-bant-avatar--bos', !bh);
-  el.setAttribute('title', ad ? (ad + ' — hesap menüsü') : 'Adını gir — hesap menüsü');
+  el.setAttribute('title', ad ? (ad + ' — hesap menüsü') : 'Hesap menüsü');
   el.setAttribute('aria-label', ad || 'Hesap menüsü');
 }
 
@@ -105,17 +105,16 @@ function _veAvatarMenuHTML() {
      +   '<span class="ve-avatar-menu-av' + (bh ? '' : ' bos') + '" aria-hidden="true">' + _veKimlikEsc(bh) + '</span>'
      +   '<div class="ve-avatar-menu-kim">'
      +     (ad ? '<b>' + _veKimlikEsc(ad) + '</b>' : '<b class="bos">Ad girilmedi</b>')
-     +     '<span>Bu tarayıcıda saklanır · projeye yazılmaz</span>'
      +   '</div>'
      + '</div>';
   h += '<form class="ve-avatar-menu-ad" hidden>'
      +   '<input class="ve-fp-inp ve-fp-inp--text" type="text" maxlength="40"'
-     +   ' placeholder="Adın ve soyadın" aria-label="Ad" value="' + _veKimlikEsc(ad) + '">'
+     +   ' placeholder="Ad soyad" aria-label="Ad" value="' + _veKimlikEsc(ad) + '">'
      +   '<button type="submit" title="Kaydet" aria-label="Kaydet"><span class="mf-ico mf-ico-check-circle" aria-hidden="true"></span></button>'
      + '</form>';
   h += '<div class="ve-context-divider"></div>';
   h += '<div class="ve-context-item" role="menuitem" tabindex="-1" data-ve-avatar="ad">'
-     +   '<span class="mf-ico mf-ico-edit" aria-hidden="true"></span>' + (ad ? 'Adı değiştir' : 'Adını gir') + '</div>';
+     +   '<span class="mf-ico mf-ico-edit" aria-hidden="true"></span>' + (ad ? 'Adı değiştir' : 'Ad gir') + '</div>';
   h += '<div class="ve-context-item" role="menuitem" tabindex="-1" data-ve-avatar="ayarlar">'
      +   '<span class="mf-ico mf-ico-settings" aria-hidden="true"></span>Ayarlar</div>';
   h += '<div class="ve-context-item" role="menuitem" tabindex="-1" data-ve-avatar="durum">'

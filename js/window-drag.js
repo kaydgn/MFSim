@@ -162,7 +162,6 @@
     if (e.target.closest && e.target.closest('.ve-properties-close, button')) return;
     clearPos();
     resetToCenter();
-    if (typeof global.showToast === 'function') global.showToast('Pencere konumu sıfırlandı', 'info');
   }
 
   // ─── Kurulum ────────────────────────────────────────────────────────────────

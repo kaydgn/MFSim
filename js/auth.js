@@ -94,7 +94,7 @@ function mfsimLogout() {
   };
   if(typeof showConfirmToast === 'function') {
     showConfirmToast('Oturum kapatılsın mı? Kaydedilmemiş değişiklikler kaybolur.',
-                     doLogout, null, 'Çıkış Yap');
+                     doLogout, null, 'Çıkış yap');
   } else {
     doLogout();
   }

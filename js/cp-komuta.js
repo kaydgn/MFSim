@@ -83,11 +83,11 @@ function _vkGirisTus(e) { if (e && e.key === 'Enter') veKomutaGiris(); }
 // ── KÜNYE ──────────────────────────────────────────────────────────────────
 
 // Fişin ilk bilgi satırı. Gömülü künye yoksa (modüler index.html) SESSİZ
-// KALMAZ — bir sonraki okuyucuya sapmanın ölçülmediğini söyler.
+// KALMAZ — kopyanın modüler olduğunu, yani künyesi olmadığını söyler.
 function veKomutaKunyeMetni(build) {
   var b = build;
   if (b === undefined) b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
-  if (!b || !(b.shortSha || b.sha)) return '(modüler kopya — main ile dogrulanmali)';
+  if (!b || !(b.shortSha || b.sha)) return '(modüler kopya)';
   var p = [String(b.shortSha || b.sha).slice(0, 7)];
   if (b.prNumber) p.push('PR #' + b.prNumber);
   if (b.date) p.push(String(b.date).slice(0, 10));
@@ -155,9 +155,9 @@ var VE_KOMUTA_BOS = '(yok)';
 //   incele  bu kayıtlara bak, doğru mu söyle  (örneklerin verisi tutuyor mu)
 // Dördüncüsü, onu isteyen gerçek bir iş çıkınca eklenir.
 var VE_KOMUTA_FIILLER = [
-  { id: 'kaldir', ad: 'Kaldır', isaret: 'kaldırılacak', aciklama: 'Seçili kayıtları listeden çıkar' },
-  { id: 'duzelt', ad: 'Düzelt', isaret: 'düzeltilecek', aciklama: 'Seçili kayıtlarda bir şey yanlış — nota yaz' },
-  { id: 'incele', ad: 'İncele', isaret: 'incelenecek',  aciklama: 'Seçili kayıtlara bak, doğru mu söyle' }
+  { id: 'kaldir', ad: 'Kaldır', isaret: 'kaldırılacak' },
+  { id: 'duzelt', ad: 'Düzelt', isaret: 'düzeltilecek' },
+  { id: 'incele', ad: 'İncele', isaret: 'incelenecek' }
 ];
 
 function veKomutaFiilGecerli(x) {
@@ -266,7 +266,6 @@ var VE_KOMUTA_TEZGAHLAR = [
     dosya: 'js/karsilama-gorseller.js',
     disaAktarim: 'VE_KARSILAMA_GORSELLER',
     duzen: 'izgara',
-    ipucu: 'Açılışta gösterilen kareler. Kaldırılacakları tıklayın.',
     kaynak: function () {
       return (typeof VE_KARSILAMA_GORSELLER !== 'undefined' && VE_KARSILAMA_GORSELLER) || [];
     },
@@ -292,7 +291,6 @@ var VE_KOMUTA_TEZGAHLAR = [
     dosya: 'programlar/kayit.json',
     disaAktarim: 'programlar',
     duzen: 'liste',
-    ipucu: 'Araçlar → Program Arşivi\'nde listelenen tek dosyalık programlar.',
     kaynak: function () {
       var k = (typeof veProgramlarKayit === 'function') ? veProgramlarKayit() : null;
       return (k && k.programlar) || [];
@@ -314,7 +312,6 @@ var VE_KOMUTA_TEZGAHLAR = [
     dosya: 'js/cp-arac-example.js',
     disaAktarim: 'AP_EXAMPLES',
     duzen: 'liste',
-    ipucu: 'Araç Performans modülünün örnek kartları.',
     kaynak: function () { return (typeof AP_EXAMPLES !== 'undefined' && AP_EXAMPLES) || []; },
     olc: function (veri) { return _vkOrnekKayitlari(veri); }
   },
@@ -324,7 +321,6 @@ var VE_KOMUTA_TEZGAHLAR = [
     dosya: 'js/mount-core.js',
     disaAktarim: 'MOUNT_EXAMPLES',
     duzen: 'liste',
-    ipucu: 'Takoz Çökme-Titreşim modülünün örnek modelleri.',
     // `MOUNT_EXAMPLES` tarayıcıda GLOBAL DEĞİL: mount-core.js bir IIFE ve değer
     // `veMountCore` ad alanından geliyor (module.exports ise Node'da düz veriyor).
     // İlk yazımda çıplak ad okundu, tezgâh SESSİZCE "0 kayıt" gösterdi —
@@ -414,15 +410,13 @@ function veKomutaNotYaz(v) { _vkNot = v; _vkFisTazele(); }
 function veKomutaIstekSec(v) {
   if (!veKomutaFiilGecerli(v)) return;
   _vkIstek = v;
-  var m = _vkFiilAciklama(v);
-  var el = document.getElementById('ve-komuta-fiil-aciklama');
-  if (el) el.textContent = m.aciklama;
+  var m = _vkFiil(v);
   var isaretler = document.querySelectorAll('#ve-komuta-content .ve-komuta-isaret');
   for (var i = 0; i < isaretler.length; i++) isaretler[i].textContent = m.isaret;
   _vkFisTazele();
 }
 
-function _vkFiilAciklama(id) {
+function _vkFiil(id) {
   for (var i = 0; i < VE_KOMUTA_FIILLER.length; i++) {
     if (VE_KOMUTA_FIILLER[i].id === id) return VE_KOMUTA_FIILLER[i];
   }
@@ -465,7 +459,7 @@ function veKomutaFisKopyala() {
   ta.select();
   var bildir = function (ok) {
     if (typeof showToast === 'function') {
-      showToast(ok ? 'Sipariş fişi panoya kopyalandı.' : 'Fiş seçildi — Ctrl+C ile kopyalayın.');
+      showToast(ok ? 'Sipariş fişi panoya kopyalandı.' : 'Fiş seçildi · Ctrl+C');
     }
   };
   try {
@@ -491,7 +485,6 @@ function _vkKacir(s) {
 function _vkGirisHTML() {
   return '<div class="ve-komuta-giris">' +
     '<div class="ve-komuta-giris-baslik">Komuta Penceresi</div>' +
-    '<div class="ve-komuta-giris-alt">Bu pencere programı değiştirmez; yalnızca durum okur ve sipariş fişi yazar.</div>' +
     '<input type="password" id="ve-komuta-sifre" class="ve-komuta-sifre" placeholder="Şifre" ' +
     'autocomplete="off" onkeydown="_vkGirisTus(event)">' +
     '<button type="button" class="ve-komuta-btn ve-komuta-btn-birincil" onclick="veKomutaGiris()">Gir</button>' +
@@ -512,7 +505,7 @@ function _vkKayitHTML(t, k, secili) {
   h += '<span class="ve-komuta-no">' + _vkKacir(k.anahtar) + '</span>';
   h += '<span class="ve-komuta-ad">' + _vkKacir(k.baslik || k.etiket) + '</span>';
   if (k.meta) h += '<span class="ve-komuta-meta">' + _vkKacir(k.meta) + '</span>';
-  h += '<span class="ve-komuta-isaret">' + _vkKacir(_vkFiilAciklama(_vkIstek).isaret) + '</span>';
+  h += '<span class="ve-komuta-isaret">' + _vkKacir(_vkFiil(_vkIstek).isaret) + '</span>';
   return h + '</button>';
 }
 
@@ -537,7 +530,6 @@ function _vkRender() {
   h += '<div class="ve-komuta-kunye">' +
     '<span class="mf-ico mf-ico-activity"></span>' +
     '<span class="ve-komuta-kunye-metin">' + _vkKacir(veKomutaKunyeMetni()) + '</span>' +
-    '<span class="ve-komuta-kunye-not">Ölçülen her sayı bu kopyaya ait — fiş bunu taşır.</span>' +
     '</div>';
 
   // Tezgâh seçimi (bugün tek tezgâh var; liste N için kuruldu)
@@ -552,7 +544,6 @@ function _vkRender() {
 
   if (t) {
     h += '<div class="ve-komuta-satir">' +
-      '<span class="ve-komuta-ipucu">' + _vkKacir(t.ipucu || '') + '</span>' +
       '<code class="ve-komuta-dosya">' + _vkKacir(t.dosya) + '</code>' +
       '</div>';
     h += '<div class="ve-komuta-kaydir"><div class="ve-komuta-izgara ' +
@@ -570,16 +561,13 @@ function _vkRender() {
       return '<option value="' + _vkKacir(f.id) + '"' + (f.id === _vkIstek ? ' selected' : '') +
         '>' + _vkKacir(f.ad) + '</option>';
     }).join('') + '</select>' +
-    '<span id="ve-komuta-fiil-aciklama" class="ve-komuta-fiil-aciklama">' +
-    _vkKacir(_vkFiilAciklama(_vkIstek).aciklama) + '</span>' +
     '<span id="ve-komuta-sayac" class="ve-komuta-sayac"></span>' +
     '<button type="button" class="ve-komuta-btn" onclick="veKomutaSecimTemizle()">İşaretleri temizle</button>' +
     '<button type="button" class="ve-komuta-btn ve-komuta-btn-birincil" onclick="veKomutaFisKopyala()">Kopyala</button>' +
     '</div>';
-  h += '<input type="text" class="ve-komuta-not" id="ve-komuta-not" placeholder="Not (isteğe bağlı) — örn. 05 ile 08 aynı kare" ' +
+  h += '<input type="text" class="ve-komuta-not" id="ve-komuta-not" placeholder="Not" ' +
     'value="' + _vkKacir(_vkNot) + '" oninput="veKomutaNotYaz(this.value)">';
   h += '<textarea id="ve-komuta-fis" class="ve-komuta-fis" readonly spellcheck="false" rows="8"></textarea>';
-  h += '<div class="ve-komuta-fis-alt">Bu metni Claude Code\'a yapıştırın. Künye satırı, fişin hangi sürüme karşı yazıldığını söyler.</div>';
   h += '</div>';
 
   kap.innerHTML = h;

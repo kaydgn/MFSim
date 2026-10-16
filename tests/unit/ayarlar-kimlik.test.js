@@ -36,10 +36,14 @@ describe('Kimlik bloğunun görünümü', () => {
     expect(css).toMatch(/\.ve-avatar-menu-av\.bos\{/);
   });
 
-  test('not kardeş açıklamanın ölçüsünde: gövde basamağı ve soluk renk', () => {
-    const kural = (css.match(/\.ve-set-not\s*\{([^}]*)\}/) || [])[1] || '';
-    expect(kural).toMatch(/font-size:\s*var\(--fs-body\)/);
-    expect(kural).toMatch(/color:\s*var\(--text-muted\)/);
+  // "Avatarda baş harfleri görünür. Bu tarayıcıda saklanır, proje dosyasına
+  // yazılmaz." notu 2026-10-16'da kalktı (ARAYÜZ ANLATMAZ); sınıfı ve kuralı da.
+  test('Kimlik bloğu açıklama notu taşımaz', () => {
+    const blok = settings.slice(settings.indexOf("<h4 class=\"ve-settings-subhead\">Kimlik</h4>"),
+      settings.indexOf("<h4 class=\"ve-settings-subhead\">Tema</h4>"));
+    expect(blok).not.toMatch(/<p\b/);
+    expect(blok).not.toMatch(/saklanır|yazılmaz/);
+    expect(/\.ve-set-not\b/.test(css)).toBe(false);   // dosyayı dökmesin
   });
 
   test('Görünüm sayfasında iki büyük başlık üst üste yok; Kimlik ve Tema ara başlık', () => {

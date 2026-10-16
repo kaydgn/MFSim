@@ -218,7 +218,6 @@ function veAracOpenEditor(nodeId, _silent){
   // ana topolojinin (ya da statik yer tutucunun) durumunu göstermeye devam
   // eder ve alt topolojideki gerçek eksikleri saklar.
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
-  if(!_silent && typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
 }
 
 // _silent: köke çökerken (veAracCollapseToRoot → kaydet/sekme değiştir öncesi) true
@@ -255,12 +254,6 @@ function veAracCloseEditor(_silent){
   // eder ve alt topolojideki gerçek eksikleri saklar.
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
 
-  // Ana topolojiye dönünce ilgili düğümü seç
-  var back = veAracStack.length === 0;
-  if(!_silent && back && typeof nodes !== 'undefined'){
-    // en son çıkılan düğüm id'si artık stack'te yok; sadece bilgi ver
-    if(typeof showToast === 'function') showToast('Ana topolojiye dönüldü', 'info');
-  }
 }
 
 // İç içe her seviyeden köke (ana topoloji) kadar çıkar. Kaydet/sekme-değiştir
@@ -293,9 +286,8 @@ function veAracUpdateBreadcrumb(){
     host.appendChild(el);
   }
   var depth = veAracStack.length;
-  // Kapsam etiketi title'da: düğme 26 px, metin sığmaz — ama bilgi de atılmaz.
   el.innerHTML =
-    '<button onclick="veAracCloseEditor()" title="Ana topolojiye dön — Araç Performans · Alt Topoloji'
+    '<button onclick="veAracCloseEditor()" title="Ana topolojiye dön'
     + (depth > 1 ? ' (derinlik ' + depth + ')' : '') + '">'
     + '<span class="mf-ico mf-ico-chevrons-left" aria-hidden="true"></span>'
     + (depth > 1 ? '<i class="ve-bc-depth">' + depth + '</i>' : '')

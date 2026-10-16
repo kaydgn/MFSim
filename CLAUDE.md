@@ -313,7 +313,9 @@ sebebi). Başka hiçbir şey yazılmaz:
   kitinin beş yuvası iki modülde 15 açıklama üretti.
 - **Silinen bir bloğun yerine yönlendirme cümlesi konmaz.** 2026-08-31'de
   "Katalog Önerisi" kalkınca yerine böyle bir satır kondu.
-- **Kapı:** `tests/unit/metin-dili.test.js`. Kural ve sözlük tek yerde:
+- **Kapı:** `tests/unit/metin-dili.test.js` (sözlüğün görmediği işaretsiz
+  sınıflar — tekrar bildirimi, adı tekrarlayan ipucu — aşamanın kendi
+  kapısında: kabuk `kabuk-metin.test.js`). Kural ve sözlük tek yerde:
   `tools/metin-dili.js`. Kuraldan önce yazılmış işaretli metinler
   `tests/fixtures/metin-dili-taban.json`'da dondurulmuştur ve taban yalnız
   küçülür: yeni işaretli metin kırmızıdır, temizlenen metin tabandan düşer

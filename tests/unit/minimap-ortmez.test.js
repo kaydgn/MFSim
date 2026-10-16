@@ -204,10 +204,11 @@ describe('kullanıcının seçimi', () => {
     expect(el.classList.contains('collapsed')).toBe(true);
   });
 
-  test('düğmenin adı oto inişi söyler', () => {
+  // Ad yalnız eylemi söyler; inişin gerekçesi yazılmaz (ARAYÜZ ANLATMAZ).
+  test('oto inişte düğmenin adı elle kapatılmışla aynı', () => {
     global.nodes = [ALTINDA()];
     _mmOtoDenetle(el);
-    expect(document.getElementById('ve-minimap-toggle').title).toMatch(/örtmesin/);
+    expect(document.getElementById('ve-minimap-toggle').title).toBe('Genel görünümü göster');
   });
 });
 

@@ -35,12 +35,12 @@ function _veHelpGroups() {
     ]},
     { title: 'Görünüm', items: [
       { keys: ['Fare tekerleği'], label: 'Yakınlaştır / uzaklaştır' },
-      { keys: ['Sağ tık', 'sürükle'], label: 'Görünümü kaydır (pan)' }
+      { keys: ['Sağ tık', 'sürükle'], label: 'Görünümü kaydır' }
     ]},
     { title: 'Genel', items: [
       { keys: [_VE_MOD, 'S'], label: 'Kaydet' },
       { keys: [_VE_MOD, 'K'], label: 'Komut paleti' },
-      { keys: ['?'], label: 'Bu yardım penceresi' }
+      { keys: ['?'], label: 'Klavye kısayolları' }
     ]}
   ];
 }
