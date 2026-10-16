@@ -23,7 +23,7 @@
 //    STEP sihirbazın 1. adımının dosya seçicisi (AYNI tıklamada), Boş kanvas
 //    `veMntKanvasBos`, örnek `veMntOrnekYukle`. İkinci bir kurucu, iki yolun
 //    sessizce ayrışması demekti.
-//  • KÜÇÜK RESİM 2D Görünüm'ün ilk sekmesinin çizicisinden (`veMntAkso.ciz`,
+//  • KÜÇÜK RESİM Görünümler'in çizicisinden (`veMntAkso.ciz`,
 //    sade kip) ve kurucusundan (`veMntAksoOrnekModel`), örneğin KENDİ
 //    modelinden — sunum kendi geometrisini kurmaz.
 //  • Paletten sayfanın üstüne bırakılan bileşen tuvale kurulur (kit
@@ -91,7 +91,7 @@ function veMntBaslangicOrnekler(){
   return out;
 }
 
-// Örneğin AKSONOMETRİSİ — 2D Görünüm'ün ilk sekmesinin resmi (kullanıcı
+// Örneğin AKSONOMETRİSİ — Görünümler'in resmi (kullanıcı
 // seçimi 2026-10-15: "seçtiklerimizi bileşene aktar", sonra karolar). Çizici
 // de model de TEK KAYNAK: veMntAkso.ciz (sade kip: yazısız, cetvelsiz) ve
 // veMntAksoOrnekModel (pencerenin kurucusu, örneğin KENDİ kaydından).

@@ -8,7 +8,7 @@
 // 3D Görüntüleyici'nin three.js sahnesi ("model" kipi: takoz küpleri, CG
 // küreleri, fare ipucu, kendi tam ekranı) 2026-10-16'da KALDIRILDI —
 // kullanıcı kararı: "Klasik 3B" sekmesi yalnız ad olarak kalır, ilerleyen
-// zamanda gerçek CAD dosyasıyla işlenecek. Model Aksonometrik sekmede
+// zamanda gerçek CAD dosyasıyla işlenecek. Model Görünümler bileşeninde
 // döndürülüyor (js/mount-akso.js).
 //
 // Koordinat: kullanıcı girişi X=fore/aft, Y=left/right, Z=up (mm).

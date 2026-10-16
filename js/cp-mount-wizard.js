@@ -15,7 +15,7 @@
 //  • GÖRÜNÜM FEAD SİHİRBAZININ KABUĞUNDAN (`.ve-fw-*`): aynı ray, masa, denetim
 //    sütunu ve alt çubuk; Takoz'a özgü birkaç kural `.ve-mw-*`. Kullanıcı
 //    "aynısını" istedi; kopya bir kabuk ilk rötuşta ayrışırdı.
-//  • MASA 2D Görünüm'ün çizicisini okur (`veMnt2DGorunusSVG`, gerçek oranda),
+//  • MASA düz görünüş çizicisini okur (`veMnt2DGorunusSVG`, gerçek oranda),
 //    tork adımında zincirin çarpanlarını çekirdekten (`torqueChain`).
 //  • KATALOG BİR ÖNERİ, KISIT DEĞİL (FEAD kural 17): takoz kataloğu ve motor
 //    kataloğu alanları doldurur; değer katalogdan farklıysa "elle" yazılır.

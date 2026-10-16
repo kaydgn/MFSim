@@ -26,7 +26,7 @@
 var _mw3b = null;
 
 // Rol → tema jetonu. TEK KAYNAK: 3B malzeme de karttaki renk noktası da buradan.
-// Takoz yeşil (2D Görünüm'ün takoz işaretinin rengi), motor vurgu.
+// Takoz yeşil (Görünümler'in takoz işaretinin rengi), motor vurgu.
 var VE_MW_3B_ROL_RENK = {
   'mnt-motor': '--accent-primary', 'mnt-gearbox': '--seri-1', 'mnt-transfer': '--seri-2',
   'mnt-bracket': '--seri-3', 'mnt-mount': '--accent-success', 'mnt-shaft': '--seri-4',

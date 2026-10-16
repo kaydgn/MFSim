@@ -126,7 +126,8 @@ function vePencereSekmeleriHTML(nodeId, sekmeler, aktif, o){
 // niteliği (Takoz'un yerinde tazelemesi kökü `data-mnt-pencere`den bulur).
 // Kabuk TEK SEKMEYİ de şeritle çizer: şerit sekmenin durumunu taşıyor ve
 // iskelet her pencerede aynı kalıyor (aile kuralı ≥ 2 kategori ister; tek
-// sekmeli bir pencere kurmak modülün kendi kusurudur, kapı onu adıyla söyler).
+// sekmeli bir pencere kurmak modülün kendi kusurudur, kapı onu adıyla söyler —
+// tek istisna tipin YER TUTUCU beyanı, componentDefs[t].yerTutucu).
 function vePencereKabuk(node, sekmeler, yan, o){
   o = o || {};
   var id = node && node.id;

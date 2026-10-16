@@ -92,11 +92,11 @@ describe('İÇERİK — kapılar ve örnekler', () => {
   });
 });
 
-// Kullanıcı seçimi (2026-10-15): 2D Görünüm'ün ilk sekmesi aksonometri;
+// Kullanıcı seçimi (2026-10-15): Görünümler'in (eski 2D Görünüm) çizimi aksonometri;
 // karo aynı resmi gösterir. "Aynı" = TEK çizici ve TEK kurucu — karo kendi
 // modelini kurarsa (eski kip kendi kütle-ağırlıklı CG'sini hesaplıyordu)
 // pencere ile karo sessizce ayrışır.
-describe('KÜÇÜK RESİM — 2D Görünüm\'ün aksonometrisi, örneğin kendi modelinden', () => {
+describe('KÜÇÜK RESİM — Görünümler\'in aksonometrisi, örneğin kendi modelinden', () => {
   const W = BS.VE_MNT_BAS_RESIM.w, H = BS.VE_MNT_BAS_RESIM.h;
   test('her örnek: pencerenin çizicisi ve kurucusu; takoz sayısı örneğinki; karoda yazı yok', () => {
     core.getMountExampleList().forEach((ex) => {

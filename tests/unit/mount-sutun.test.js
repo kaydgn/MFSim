@@ -11,8 +11,9 @@
  *     görüntüleyici genişliği (1000 / 1040 px) kalktı.
  *   · DİL — on altı tipin ve modül kartının penceresi aynı kabukta ve hiçbir
  *     satır içi stil renk/zemin/kenar yazmıyor (eski hâlde 484 + 155).
- *   · 2D DAR ÇİZİM — sütun genişliğinde 1:1, yazı ölçek tabanında, çakışma
- *     yok; adlar çizimde NUMARA ve açılımı föyde.
+ *   · GÖRÜNÜMLER (eski 2D Görünüm) — çizim çözücünün modeli; çizimdeki her
+ *     numaranın açılımı İşaretler föyünde. Düz görünüşler 2026-10-16'da
+ *     kalktı; aksonometrinin yazı kapıları mount-akso.test.js'te.
  *   · TEK KAYNAK — eksen örnekleri 3B sahnenin renkleri; 2D'nin G'si
  *     çözücünün birleşik CG'si; kütüphanenin oran denetimi Takoz'unki.
  *   · DURUMLAR — kütüphane (sıfır rijitlik, eksen takası, kullanımdaki
@@ -130,66 +131,24 @@ describe('DİL — aynı kabuk, satır içi stil renk yazmıyor', () => {
   });
 });
 
-describe('2D GÖRÜNÜM — sütunda tek görünüş, gerçek ölçek, numaralı işaret', () => {
-  // <text x y text-anchor font-size [font-weight]>içerik</text> → çizicinin kutu tahmini
-  function yazilar(svg) {
-    const out = [];
-    const re = /<text x="([-\d.]+)" y="([-\d.]+)" text-anchor="(\w+)" font-size="([\d.]+)"[^>]*?(font-weight="700")?>([^<]*)<\/text>/g;
-    let m;
-    while ((m = re.exec(svg))) {
-      out.push({ t: m[6], px: Number(m[4]), k: cp._mnt2DYaziKutu(Number(m[1]), Number(m[2]), m[6], m[3], Number(m[4]), !!m[5]) });
-    }
-    return out;
-  }
-
-  test('her görünüş sütunun genişliğinde 1:1, yazı ≥ 10 px, iki yazı üst üste değil', () => {
+describe('GÖRÜNÜMLER — çizim çözücünün modeli, numaraların açılımı föyde', () => {
+  // Çizimdeki her takoz numarası (T1…Tm) ve G, İşaretler föyünde bir satır;
+  // föy gövdeleri 1…n, takozları T1…Tm sırasıyla verir.
+  test('çizimdeki her numaranın açılımı föyde (gövde 1…n, takoz T1…Tm, G)', () => {
     tulga();
-    const P = cp._mnt2DPencereVeri();
-    const kucuk = [], binen = [];
-    [338, 354].forEach((W) => ['ust', 'yan', 'on'].forEach((g) => {
-      const svg = cp._mnt2DPencereSVG(P, g, W);
-      expect(svg).toMatch(new RegExp('viewBox="0 0 ' + W + ' '));
-      const y = yazilar(svg);
-      expect(y.length).toBeGreaterThan(15);
-      y.forEach((a) => { if (a.px < 10) kucuk.push(`${W}/${g}: ${a.t} ${a.px}`); });
-      for (let i = 0; i < y.length; i++) for (let j = i + 1; j < y.length; j++)
-        if (cp._mnt2DKesisir(y[i].k, y[j].k, 0)) binen.push(`${W}/${g}: "${y[i].t}" ↔ "${y[j].t}"`);
-    }));
-    expect(kucuk).toEqual([]);
-    expect(binen).toEqual([]);
-  });
-
-  // Değer çizgisiz kalmaz: dar çizimde sabit sekiz hedef 200 mm'lik adımla
-  // "1.000"leri 26 px aralığa diziyordu, sağ uçtakiler eksen adına çarpıp
-  // düşüyordu ("1.200" · "1.400" yazılmıyordu, çizgileri duruyordu).
-  test('her ızgara çizgisinin DEĞERİ yazılı — dar çizimde adım yazıya göre', () => {
-    tulga();
-    const P = cp._mnt2DPencereVeri();
-    const deger = /^[−-]?[\d.]+$/;
-    [338, 354].forEach((W) => ['ust', 'yan', 'on'].forEach((g) => {
-      const f = cp._mnt2DPencereSVG(P, g, W);
-      const yatay = [...f.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="[-\d.]+" y2="\2" stroke="var\(--border-color\)" stroke-width="0.5"/g)].length;
-      const dikey = [...f.matchAll(/<line x1="([-\d.]+)" y1="[-\d.]+" x2="\1" y2="[-\d.]+" stroke="var\(--border-color\)" stroke-width="0.5"/g)].length;
-      // değerler soluk yazıyla; işaret numaraları ikincil renkte
-      const sol = [...f.matchAll(/<text [^>]*text-anchor="end"[^>]*fill="var\(--text-muted\)"[^>]*>([^<]*)<\/text>/g)].filter((m) => deger.test(m[1])).length;
-      const alt = [...f.matchAll(/<text [^>]*text-anchor="middle"[^>]*fill="var\(--text-muted\)"[^>]*>([^<]*)<\/text>/g)].filter((m) => deger.test(m[1])).length;
-      expect(dikey).toBeGreaterThan(2);
-      expect(`${W}/${g}: ${sol}/${yatay} · ${alt}/${dikey}`).toBe(`${W}/${g}: ${yatay}/${yatay} · ${dikey}/${dikey}`);
-    }));
-  });
-
-  test('çizimde ad YOK, numara var; her numaranın açılımı föyde (gövde 1…n, takoz T1…Tm, G)', () => {
-    tulga();
-    const P = cp._mnt2DPencereVeri();
-    const svg = cp._mnt2DPencereSVG(P, 'ust', 354);
-    const isaretler = yazilar(svg).map((y) => y.t).filter((t) => !/^[−-]?[\d.]+$/.test(t) || /^\d$/.test(t));
-    // Eksen adları dışındaki her yazı bir numara: 1…8, T1…T5 ya da G
-    const etiket = isaretler.filter((t) => !/\[mm\]$/.test(t));
-    expect(etiket.every((t) => /^(\d+|T\d+|G)$/.test(t))).toBe(true);
-    expect(etiket).toEqual(expect.arrayContaining(['G', '1', '8', 'T1', 'T5']));
-    const html = cp.getMnt2DViewPropertiesHTML({ id: 'd2', type: 'mnt-2dview', data: {} });
-    P.M.g.components.forEach((c, i) => expect(html).toContain(`<td>${i + 1}</td><td class="sol" title="${c.name}">`));
-    P.M.g.mounts.forEach((m, i) => expect(html).toContain(`<td>T${i + 1}</td><td class="sol" title="${m.name}">`));
+    global.veMntAkso = require('../../js/mount-akso.js');
+    try {
+      const P = cp._mnt2DPencereVeri();
+      const html = cp.getMnt2DViewPropertiesHTML({ id: 'd2', type: 'mnt-2dview', data: {} });
+      const d = document.createElement('div'); d.innerHTML = html;
+      const cizim = [...d.querySelectorAll('#ve-mnt-akso3b-d2 svg.ve-mnt2d-akso text')].map((t) => t.textContent);
+      const numara = cizim.filter((t) => /^(T\d+|G)$/.test(t));
+      expect(numara).toEqual(expect.arrayContaining(['G', 'T1', 'T5']));
+      const foy = [...d.querySelectorAll('#ve-fp-panes-d2 > [data-k="isaret"] tbody tr td:first-child')].map((t) => t.textContent);
+      numara.forEach((n) => expect({ n, foyde: foy.includes(n) }).toEqual({ n, foyde: true }));
+      P.M.g.components.forEach((c, i) => expect(html).toContain(`<td>${i + 1}</td><td class="sol" title="${c.name}">`));
+      P.M.g.mounts.forEach((m, i) => expect(html).toContain(`<td>T${i + 1}</td><td class="sol" title="${m.name}">`));
+    } finally { delete global.veMntAkso; }
   });
 
   test('çizim ÇÖZÜCÜNÜN modeli: G birleşik CG (combineMassProps), boş konum 0\'da ve föyde "boş"', () => {
@@ -206,22 +165,6 @@ describe('2D GÖRÜNÜM — sütunda tek görünüş, gerçek ölçek, numaralı
     const html = cp.getMnt2DViewPropertiesHTML({ id: 'd3', type: 'mnt-2dview', data: {} });
     expect(html).toMatch(/<td class="eks">boş<\/td>/);
     expect(html).toContain('1 işaretin konumu eksik — çözücü boş konumu 0 alır');
-  });
-
-  test('tekerlek sütunu kaydırır; yakınlaştırma Ctrl + tekerlek', () => {
-    tulga();
-    const kap = document.createElement('div');
-    kap.innerHTML = cp._mnt2DPencereSVG(cp._mnt2DPencereVeri(), 'ust', 354);
-    document.body.appendChild(kap);
-    cp._mnt2DAttachZoom(kap);
-    const svg = kap.querySelector('svg.ve-mnt2d-fig');
-    const duz = new window.WheelEvent('wheel', { deltaY: -1, bubbles: true, cancelable: true });
-    svg.dispatchEvent(duz);
-    expect(duz.defaultPrevented).toBe(false);
-    const ctrl = new window.WheelEvent('wheel', { deltaY: -1, ctrlKey: true, bubbles: true, cancelable: true });
-    svg.dispatchEvent(ctrl);
-    expect(ctrl.defaultPrevented).toBe(true);
-    kap.remove();
   });
 });
 

@@ -2106,7 +2106,7 @@ var veMountCore = (function() {
         {type:'mnt-library',    name:'Takoz Özellikleri', at:[ 85, 70]},
         {type:'mnt-coordframe', name:'Koordinat Düzlemi',  at:[200, 80]},
         {type:'mnt-solver',     name:'Çözücü',             at:[740,265]},
-        {type:'mnt-2dview',     name:'2D Görünüm',         at:[ 85,450]},
+        {type:'mnt-2dview',     name:'Görünümler',         at:[ 85,450]},
         {type:'mnt-viewer',     name:'3D Görüntüleyici',   at:[200,450]},
         {type:'mnt-example',    name:'Örnek',              at:[730,450]}
       ],
@@ -2141,7 +2141,7 @@ var veMountCore = (function() {
         {type:'mnt-library',    name:'Takoz Özellikleri', at:[816, 40]},
         {type:'mnt-solver',     name:'Çözücü',            at:[913, 40]},
         {type:'mnt-report',     name:'Rapor',             at:[997, 41]},
-        {type:'mnt-2dview',     name:'2D Görünüm',        at:[790,232]},
+        {type:'mnt-2dview',     name:'Görünümler',        at:[790,232]},
         {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[884,234]},
         {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[983,235]},
         {type:'mnt-example',    name:'Örnek',             at:[995,401]}
@@ -2174,7 +2174,7 @@ var veMountCore = (function() {
         {type:'mnt-library',    name:'Takoz Özellikleri', at:[893,226]},
         {type:'mnt-solver',     name:'Çözücü',            at:[893,328]},
         {type:'mnt-report',     name:'Rapor',             at:[987,330]},
-        {type:'mnt-2dview',     name:'2D Görünüm',        at:[812,490]},
+        {type:'mnt-2dview',     name:'Görünümler',        at:[812,490]},
         {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[925,490]},
         {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1036,490]}
       ],
