@@ -47,6 +47,9 @@ const AD = [
   // "Čepon 2011" (yazar adında Slav aksanı: Č Š Ž)
   ['kaynak yılı', /[A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+(?: ve ark\.| & [A-ZÇĞİÖŞÜČŠŽ][a-zçğıöşüčšž]+)? \(?(?:19|20)\d\d\b|\d+\(\d+\), (?:19|20)\d\d/],
   ['bölüm no', /§/],
+  // PR / iş numarası bir başvurudur, nicelik değil: Program Durumu'nun commit
+  // listesi "#1104" yazıyor (PR'lar 1.000'i geçti; yüzey turu onu da tarıyor).
+  ['PR no', /#\d{2,}/],
   // Denklem ve bölüm NUMARASI ondalık değil: "(4.4)", "Bölüm 8.18", başlık "9.1 Dinamik rijitlik".
   // Alt denklem harf ekiyle yazılır: "(5.7a)", parantez içinde sürebilir "(5.7a, yalnız …)".
   // Ek a–d ile sınırlı: bitişik birim ("(0.5s)", "(2.5m, …)") yine noktalı ondalıktır.

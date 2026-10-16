@@ -27,6 +27,11 @@ describe('yazım taraması', () => {
     expect(turler('Yükle AG00902 2023 4 kasnak · Gates AG00902 raporu (1275) · (8PK1715HD, Ten@-250/110, IDR1)')).toEqual([]);
     expect(turler('hız 2023 km · boy (1275) mm · konum @-250')).toEqual(['grupsuz 2023', 'grupsuz 1275', 'tire eksi -250']);
   });
+  test('PR numarası ad sayılır ("#1104"); diyezsiz aynı sayı yine yakalanır', () => {
+    const turler = (t) => O.tara(t).sorun.map((s) => s.tur + ' ' + s.sayi);
+    expect(turler('DÜN 6a2b9d4 #1104 Her ekranda gerçek eksi')).toEqual([]);
+    expect(turler('1104 test · renk #26241f')).toEqual(['grupsuz 1104']);
+  });
   test('sondaki yüzde hücre sınırını aşmaz: sekme ve satır sonu komşu hücredir', () => {
     const turler = (t) => O.tara(t).sorun.map((s) => s.tur + ' ' + s.sayi);
     expect(turler('273,2\t%−2,9 · 95,6\n%3,1')).toEqual([]);

@@ -708,3 +708,37 @@ describe('ipucu satırı', () => {
     expect(tip.textContent).toBe(kapanistaki);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OTOMASYONDA SÜS BEKLEMESİ YOK (2026-10-16). Adım gecikmesi (150 ms) ve en az
+// toplam süre (6,5 sn) ilerlemenin GÖZLE izlenmesi içindir; 106 modülde her
+// e2e açılışına 15,9 sn ekliyordu ve ürün kapısı (e2e-urun) 20 dk sınırını
+// aştı. Kapı iki yönü birden tutar: otomasyonda bekleme yok, insanın açılışı
+// birebir eski.
+describe('otomasyon: süs beklemesi yok, insanın açılışı aynı', () => {
+  const ON = Array.from({ length: 10 }, (_, i) => ({ label: 'M' + i }));
+  const perde = () => document.getElementById('mfsim-loading-screen').style.display;
+  afterEach(() => { delete window.navigator.webdriver; });
+
+  test('navigator.webdriver → modüller arka arkaya yüklenir, perde hemen kalkar', async () => {
+    Object.defineProperty(window.navigator, 'webdriver', { value: true, configurable: true });
+    kur(ON);
+    baslat();
+    await ilerlet(30, 1);
+    expect(window.__yuklendi).toBe(10);
+    await ilerlet(800);                       // "Tamamlandı" 400 ms + söneme 340 ms
+    expect(perde()).toBe('none');
+  });
+
+  test('insan: adım başına 150 ms ve en az 6,5 sn — eskisinin aynısı', async () => {
+    kur(ON);
+    baslat();
+    await ilerlet(30, 1);
+    expect(window.__yuklendi).toBeLessThan(2);
+    await ilerlet(1600);                      // 10 × 150 ms: hepsi yüklendi…
+    expect(window.__yuklendi).toBe(10);
+    expect(perde()).not.toBe('none');         // …ama en az süre dolmadı
+    await ilerlet(6500);
+    expect(perde()).toBe('none');
+  });
+});
