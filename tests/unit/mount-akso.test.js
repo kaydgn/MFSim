@@ -445,3 +445,192 @@ describe('YAZI — x-ışınında gövdenin CG işaretini yazı örtmez', () => 
     expect(ihlal).toEqual([]);
   });
 });
+
+// Adım 3 (2026-10-16): 3D Görüntüleyici'nin ilk sekmesi aynı çizicinin SERBEST
+// kamerası — kullanıcı: "bunu 3B tarzında da yapacağız, o zaman 3B
+// görüntüleyiciye gerek kalmayacak". Kapılar: hazır bakışın açısı o
+// izdüşümün kendisi; sığdırma dönmeden bağımsız (döndürürken çizim büyüyüp
+// küçülmez); tekerlek imlecin altındaki noktayı tutar; model eli izler;
+// her açıda yazı kuralları; 3B tercihi 2D'ninkinden ayrı.
+describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
+  const sayilar = (svg) => (svg.replace(/aria-label="[^"]*"/, '').match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+  test('hazır bakışın açısı o izdüşümün kendisi: iki izdüşüm × sekiz bakışta aynı çizim', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel();
+    ['dim', 'iso'].forEach((iz) => BAKIS.forEach((b) => {
+      const a = AK.kamAci(iz, b);
+      const s1 = sayilar(AK.ciz(m, { W: 354, iz, b, kat: { golge: true }, fs: FS }).svg);
+      const s2 = sayilar(AK.ciz(m, { W: 354, kam: a, kat: { golge: true }, fs: FS }).svg);
+      expect(s2.length).toBe(s1.length);
+      const fark = Math.max(...s1.map((v, i) => Math.abs(v - s2[i])));
+      expect({ iz, b, fark: fark < 0.02 }).toEqual({ iz, b, fark: true });
+    }));
+    // dimetrik önden-soldan-yukarıdan = az 249,3° · yükseliş 19,5°
+    const d = AK.kamAci('dim', { x: -1, y: -1, z: 1 });
+    expect([+d.az.toFixed(1), +d.el.toFixed(2)]).toEqual([249.3, 19.47]);   // makine: test karşılaştırması
+  });
+
+  test('küre sığdırması dönmeden bağımsız: ölçek her açıda aynı, modelin merkezi çizimin ortasında', () => {
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel(), sc = [], mrk = [];
+      for (let az = 0; az < 360; az += 30) [-60, -20, 0, 20, 60, 88].forEach((el) => {
+        const r = AK.ciz(m, { W: 354, H: 326, kam: { az, el }, kure: true, kat: { golge: true }, fs: FS });
+        sc.push(r.sc); mrk.push(r.F.kure.join(','));
+      });
+      expect({ k, oran: Math.max(...sc) / Math.min(...sc) - 1 < 1e-12 }).toEqual({ k, oran: true });
+      expect(new Set(mrk).size).toBe(1);
+    });
+  });
+
+  test('yakınlık ölçeği çarpar, kaydırma çizimi kaydırır; tekerlek imlecin altındaki noktayı tutar', () => {
+    yukle('asfat');
+    const m = cp._mntAksoModel(), kam = { az: 230, el: 25 };
+    const o = (y, kay) => ({ W: 354, H: 326, kam, kure: true, yakin: y, kay, kat: { golge: true }, fs: FS });
+    const K = AK.kamera('dim', { x: -1, y: -1, z: 1 }, AK.kamYon(kam));
+    const ekran = (F, p) => { const q = K.P(p); return [F.ox + q[0] * F.sc, F.oy + q[1] * F.sc]; };
+    const G = [m.G.x, m.G.y, m.G.z];
+    const F1 = AK.ciz(m, o(1, [0, 0])).F, F2 = AK.ciz(m, o(2, [10, -5])).F;
+    expect(F2.sc / F1.sc).toBeCloseTo(2, 12);
+    const g1 = ekran(F1, G), g2 = ekran(F2, G), c = F1.kure;
+    expect(g2[0] - (c[0] + 10)).toBeCloseTo(2 * (g1[0] - c[0]), 9);
+    expect(g2[1] - (c[1] - 5)).toBeCloseTo(2 * (g1[1] - c[1]), 9);
+    // tekerlek: imleç bir takozun üstünde; üç tık sonra takoz aynı yerde
+    const t = m.takoz[2], p = [t.x, t.y, t.z];
+    let Gs = { yakin: 1, kay: [0, 0] }, F = F1;
+    const imlec = ekran(F1, p);
+    for (let i = 0; i < 3; i++) { Gs = cp._mntAkso3bYakinlas(Gs, 1.15, imlec, F.kure); F = AK.ciz(m, o(Gs.yakin, Gs.kay)).F; }
+    expect(Gs.yakin).toBeCloseTo(Math.pow(1.15, 3), 12);
+    const son = ekran(F, p);
+    expect(Math.hypot(son[0] - imlec[0], son[1] - imlec[1])).toBeLessThan(1e-9);
+  });
+
+  // Ölçüldü (gerçek tarayıcı): yazısız karede üst pay 14, yazılıda 34 px'ti —
+  // bırakınca çizim 10 px zıplıyor, tekerleğin merkezi kayıyordu (3 tıkta 3 px).
+  test('yazısız kare (sürüklerken) yazılı kareyle aynı yerde: serbest kamerada pay yazıdan bağımsız', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), o = { W: 354, H: 326, kam: { az: 230, el: 25 }, kure: true, kat: { golge: true }, fs: FS };
+    const F1 = AK.ciz(m, Object.assign({}, o, { etiket: 'ad' })).F, F2 = AK.ciz(m, Object.assign({}, o, { etiket: 'yok' })).F;
+    expect([F2.sc, F2.ox, F2.oy, F2.kure]).toEqual([F1.sc, F1.ox, F1.oy, F1.kure]);
+  });
+
+  test('model eli izler: sağa çekmek azimutu azaltır, aşağı çekmek yükselişi artırır; ±88° ve 360° sınırı', () => {
+    const d = cp._mntAkso3bDondur({ az: 249.3, el: 19.5 }, 80, 0);
+    expect([d.az, d.el]).toEqual([expect.closeTo(209.3, 9), 19.5]);
+    expect(cp._mntAkso3bDondur({ az: 10, el: 80 }, 40, 40)).toEqual({ az: 350, el: 88 });
+    expect(cp._mntAkso3bDondur({ az: 350, el: -80 }, -40, -40)).toEqual({ az: 10, el: -88 });
+    // sağa çekince modelin önü (−X yüzü) izleyiciye döner: önden bakış yaklaşır
+    const once = AK.kamYon({ az: 249.3, el: 19.5 }), sonra = AK.kamYon(cp._mntAkso3bDondur({ az: 249.3, el: 19.5 }, 80, 0));
+    expect(sonra[0]).toBeLessThan(once[0]);
+  });
+
+  test('yakınlaşmış çizimde dışarıda kalan işaretin yazısı basılmaz', () => {
+    yukle('siper');
+    const m = cp._mntAksoModel();
+    const r = AK.ciz(m, { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, yakin: 5, kay: [140, 0], kat: { golge: true }, fs: FS });
+    expect(r.etiket.length).toBeGreaterThan(0);
+    r.etiket.forEach((e) => { expect(e.x >= 0 && e.x <= 354 && e.y >= 0 && e.y <= r.H).toBe(true); });
+    const tumu = AK.ciz(m, { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS });
+    expect(r.etiket.length).toBeLessThan(tumu.etiket.length);
+  });
+
+  test('her açıda yazı kuralları: üç örnek × sekiz azimut × dört yükseliş × dört katman', () => {
+    const yazilar = (svg) => [...svg.matchAll(/<text([^>]*)>([^<]*)<\/text>/g)].map((mt) => {
+      const a = (n) => { const q = new RegExp(' ' + n + '="([^"]*)"').exec(mt[1]); return q ? q[1] : null; };
+      const px = Number(a('font-size')), x = Number(a('x')), y = Number(a('y')), an = a('text-anchor') || 'start';
+      const w = AK.tahmin(mt[2], px, a('font-weight') === '600'), l = an === 'middle' ? x - w / 2 : (an === 'end' ? x - w : x);
+      return { t: mt[2], px, k: { l, r: l + w, t: y - px * 0.82, b: y + px * 0.26 } };
+    });
+    const kesis = (a, b) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5;
+    const sorun = [];
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k); coz();
+      const m = cp._mntAksoModel();
+      for (let az = 0; az < 360; az += 45) [-35, 10, 35, 70].forEach((el) => [
+        ['temel', {}, 'golge'], ['direk', { direk: true }, 'xray'], ['kuvvet', { kuvvet: true, cokme: true }, 'golge'], ['rijit', { rijit: true, asal: true }, 'xray'],
+      ].forEach(([ad, kat, stil]) => {
+        const svg = AK.ciz(m, { W: 354, H: 326, kam: { az, el }, kure: true, stil, kat: Object.assign({ golge: true }, kat), fs: FS }).svg;
+        const yer = `${k}/${az}/${el}/${ad}`;
+        if (/NaN|undefined|Infinity/.test(svg)) sorun.push(yer + ' bozuk');
+        const y = yazilar(svg);
+        y.forEach((a) => { if (a.px < 10) sorun.push(`${yer}: küçük ${a.t}`); });
+        for (let i = 0; i < y.length; i++) for (let j = i + 1; j < y.length; j++) if (kesis(y[i].k, y[j].k)) sorun.push(`${yer}: "${y[i].t}" ↔ "${y[j].t}"`);
+        const sonra = svg.slice(svg.indexOf('<text'));
+        if (/<(line|path|polyline|polygon|circle|ellipse)\b/.test(sonra)) sorun.push(yer + ': çizgi yazıdan sonra');
+      }));
+    });
+    expect(sorun.slice(0, 10)).toEqual([]);
+  });
+
+  // Ölçüldü: canlandırma bakışı ve sığdırmayı başlarken yakalıyordu — mod
+  // açıkken sürüklenince zemin dönüyor, gövdeler her karede ESKİ açıya
+  // yazılıyordu. Kare, sürüklemenin tazelediği seçenekleri okumalı.
+  test('mod canlanırken sürükleme: gövdeler zeminle AYNI açıda çizilir', () => {
+    yukle('tulga'); coz();
+    localStorage.removeItem('ve-mnt-akso3b');
+    const kuyruk = [], rafEski = global.requestAnimationFrame, cafEski = global.cancelAnimationFrame;
+    global.requestAnimationFrame = (cb) => { kuyruk.push(cb); return kuyruk.length; };
+    global.cancelAnimationFrame = (id) => { kuyruk[id - 1] = null; };
+    const bosalt = () => kuyruk.splice(0).forEach((cb) => cb && cb(1000));   // aynı an: faz 0
+    const kap = document.createElement('div');
+    kap.id = 've-mnt-akso3b-v8';
+    Object.defineProperty(kap, 'clientWidth', { value: 356 });
+    document.body.appendChild(kap);
+    const A3 = cp.VE_MNT_AKSO3B, y3 = JSON.parse(JSON.stringify(A3));
+    const hareket = () => kap.querySelector('svg.ve-mnt2d-akso .ve-ak-hareket').innerHTML.replace(/<!--h[bs]-->/g, '');
+    try {
+      Object.assign(A3, { az: 249.3, el: 19.5, mod: false, oynat: true, modI: 0 });
+      cp.veMntAksoAyar(kap.id, 'kat', 'mod');
+      bosalt();
+      const ilk = hareket();
+      const sv = kap.querySelector('svg.ve-mnt2d-akso');
+      const fare = (t, x) => new MouseEvent(t, { bubbles: true, button: 0, clientX: x, clientY: 100 });
+      sv.dispatchEvent(fare('pointerdown', 100));
+      sv.dispatchEvent(fare('pointermove', 180));
+      bosalt();                                     // hızlı kare: yeni açı
+      const yeni = hareket();
+      expect(yeni).not.toBe(ilk);
+      bosalt();                                     // canlandırmanın sonraki karesi
+      expect(hareket()).toBe(yeni);
+      sv.dispatchEvent(fare('pointerup', 180));
+    } finally {
+      global.requestAnimationFrame = rafEski; global.cancelAnimationFrame = cafEski;
+      Object.assign(A3, y3);
+      kap.remove();
+    }
+  });
+
+  test('pencere: ilk sekme Aksonometrik, three.js "Klasik 3B"de; 3B tercihi 2D\'ninkinden ayrı ve modelde değil', () => {
+    yukle('tulga'); coz();
+    const h = cp.getMntViewerPropertiesHTML({ id: 'v3', type: 'mnt-viewer', data: {} });
+    const sekme = [...h.matchAll(/class="ve-fp-tab"[^>]*data-k="(\w+)"[\s\S]*?<span class="ve-fp-tab-ad">([^<]*)<\/span>/g)].map((x) => [x[1], x[2]]);
+    expect(sekme).toEqual([['akso', 'Aksonometrik'], ['sahne', 'Klasik 3B']]);
+    expect(h).toContain('id="ve-mnt-akso3b-v3"');
+    expect(h).toContain('ve-mnt-inline-viewer-canvas');               // klasik sahne yerinde
+    expect(h).toContain('<b data-ak3b-ad>Dimetrik</b>');
+    localStorage.removeItem('ve-mnt-akso3b');
+    localStorage.removeItem('ve-mnt-akso');
+    const kap = document.createElement('div');
+    kap.id = 've-mnt-akso3b-v9';
+    Object.defineProperty(kap, 'clientWidth', { value: 356 });
+    document.body.appendChild(kap);
+    const A2 = cp.VE_MNT_AKSO, A3 = cp.VE_MNT_AKSO3B, y2 = JSON.parse(JSON.stringify(A2)), y3 = JSON.parse(JSON.stringify(A3));
+    const once = JSON.stringify(global.nodes.map((n) => n.data));
+    try {
+      expect(cp.veMntAksoAyar('ve-mnt-akso3b-v9', 'kat', 'direk')).toBe(true);
+      expect([A3.direk, A2.direk]).toEqual([true, false]);
+      cp.veMntAksoAyar('ve-mnt-akso3b-v9', 'on', 'ust');
+      expect([A3.az, A3.el]).toEqual([270, 88]);
+      expect(kap.innerHTML).toMatch(/<b data-ak3b-ad(="")?>Üstten<\/b>/);
+      expect(kap.innerHTML).toMatch(/<svg class="ve-mnt2d-akso" viewBox="0 0 354 \d+"[^>]*aria-label="Serbest bakış · /);
+      expect(stubs.saveState).not.toHaveBeenCalled();
+      expect(JSON.stringify(global.nodes.map((n) => n.data))).toBe(once);
+      const yaz = JSON.parse(localStorage.getItem('ve-mnt-akso3b'));
+      expect([yaz.az, yaz.el, yaz.direk]).toEqual([270, 88, true]);
+      expect(localStorage.getItem('ve-mnt-akso')).toBeNull();
+    } finally {
+      Object.assign(A2, y2); Object.assign(A3, y3);
+      kap.remove();
+    }
+  });
+});
