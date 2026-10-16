@@ -6,9 +6,7 @@
  * arkasında değildi. Üçü de sessiz kırılma sınıfı —
  *
  *   • `#mfsim-loading-cetvel` yeniden adlandırılsa cetvel hiç dolmaz, hata çıkmaz;
- *   • bir modül atlanırsa program EKSİK açılır ve tek iz console.warn'dur;
- *   • ipucu döngüsü kapanışta durdurulmazsa uygulama açıldıktan sonra da
- *     arkada saymaya devam eder.
+ *   • bir modül atlanırsa program EKSİK açılır ve tek iz console.warn'dur.
  *
  * Testler gerçek `index.html`'in splash gövdesini kullanıyor (elle kopya
  * DEĞİL): gövde ile yükleyici ayrışırsa buradan kırmızı döner.
@@ -40,7 +38,7 @@ function loaderIds() {
 }
 
 // ── Sahte belge kurulumu ────────────────────────────────────────────────────
-// mods: [{ stage?: 'Çekirdek', label: '...', src?: '...' }]
+// mods: [{ stage?: 'Çekirdek', src?: '...' }]
 // src verilmezse satır içi (inline) script kurulur; verilirse jsdom kaynağı
 // çekmez → yükleyicinin zaman aşımı/atlama yolu çalışır.
 function kur(mods) {
@@ -52,7 +50,6 @@ function kur(mods) {
     const s = document.createElement('script');
     s.setAttribute('type', 'text/x-mfsim-defer');
     if (m.stage) s.setAttribute('data-mfsim-stage', m.stage);
-    if (m.label) s.setAttribute('data-mfsim-label', m.label);
     if (m.src) s.setAttribute('src', m.src);
     else s.textContent = 'window.__yuklendi = (window.__yuklendi || 0) + 1;';
     document.body.appendChild(s);
@@ -164,7 +161,7 @@ describe('açılış karesi — liste yükleyiciden ÖNCE', () => {
 describe('açılış karesi — seçim ve boyama', () => {
   test('listeden bir kare seçilir, katmana boyanır, sınıf eklenir', async () => {
     window.VE_KARSILAMA_GORSELLER = KARELER;
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(10);
 
@@ -189,7 +186,7 @@ describe('açılış karesi — seçim ve boyama', () => {
       for (const r of [0, 0.3, 0.6, 0.99]) {
         Math.random = () => r;
         document.body.innerHTML = '';
-        kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+        kur([{ stage: 'Çekirdek' }]);
         baslat();
         await ilerlet(10);
         secilen.add(window.__MFSIM_ACILIS_KARE);
@@ -201,7 +198,7 @@ describe('açılış karesi — seçim ve boyama', () => {
   test('gömülü kare varsa data URI kullanılır (çevrimdışı tek dosya)', async () => {
     window.VE_KARSILAMA_GORSELLER = ['karsilama-01.webp'];
     window.__MFSIM_KARSILAMA = { 'karsilama-01.webp': 'data:image/webp;base64,AAAA' };
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(10);
     expect(document.getElementById('mfsim-loading-photo').style.backgroundImage)
@@ -210,7 +207,7 @@ describe('açılış karesi — seçim ve boyama', () => {
 
   test('künye yoksa dosya yoluna düşer (modüler kopya)', async () => {
     window.VE_KARSILAMA_GORSELLER = ['karsilama-01.webp'];
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(10);
     expect(document.getElementById('mfsim-loading-photo').style.backgroundImage)
@@ -218,7 +215,7 @@ describe('açılış karesi — seçim ve boyama', () => {
   });
 
   test('kare YOKSA ekran kâğıt zeminde açılır — sınıf yok, hata yok', async () => {
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(8000);
     expect(document.getElementById('mfsim-loading-photo').style.backgroundImage).toBe('');
@@ -252,7 +249,7 @@ describe('tema ilk karede', () => {
     document.documentElement.setAttribute('data-theme', 'acik');
     const gercek = window.localStorage.getItem;
     window.localStorage.setItem('mf-theme', 'koyu');
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     // baslat() loader'ı eval eder; tema çağrısı IIFE değerlendirilirken koşar,
     // yani MFSimLoader.start()'tan da önce.
     // eslint-disable-next-line no-eval
@@ -269,7 +266,7 @@ describe('tema ilk karede', () => {
   test('eski kimlik ilk karede göçüyor', () => {
     document.documentElement.setAttribute('data-theme', 'acik');
     window.localStorage.setItem('mf-theme', 'navy');
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     // eslint-disable-next-line no-eval
     eval(LOADER_SRC);
     expect(document.documentElement.getAttribute('data-theme')).toBe('koyu');
@@ -283,7 +280,7 @@ describe('tema ilk karede', () => {
   test('bozuk kayıt varsayılana düşer, çöpten türetilmez', () => {
     document.documentElement.setAttribute('data-theme', 'koyu');
     window.localStorage.setItem('mf-theme', '../kotu değer');
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     // eslint-disable-next-line no-eval
     eval(LOADER_SRC);
     expect(document.documentElement.getAttribute('data-theme')).toBe('acik');
@@ -323,7 +320,7 @@ describe('kademeli ilerleme — cetvel', () => {
   });
 
   test('cetvel kademe başına BİR bölme kuruyor', async () => {
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(10);
     // jsdom stil sayfası yüklemez: jeton okunamaz, tasarım değerine (12) düşer.
@@ -332,7 +329,7 @@ describe('kademeli ilerleme — cetvel', () => {
 
   test('ilerleme KADEMEYE yuvarlanıyor — her modülde kımıldamıyor', async () => {
     kur(Array.from({ length: 24 }, (_, i) => ({
-      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+      stage: i === 0 ? 'Çekirdek' : undefined
     })));
     baslat();
     await ilerlet(10);
@@ -346,7 +343,7 @@ describe('kademeli ilerleme — cetvel', () => {
 
   test('SON KADEME atlanmıyor — yükleme bitince cetvel TAM ve ucu sönük', async () => {
     kur(Array.from({ length: 85 }, (_, i) => ({
-      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+      stage: i === 0 ? 'Çekirdek' : undefined
     })));
     baslat();
     await ilerlet(20000);
@@ -365,7 +362,7 @@ describe('kademeli ilerleme — cetvel', () => {
 
   test('dişli de kademeyle döner ve %100\'de TAM TUR tamamlar', async () => {
     kur(Array.from({ length: 24 }, (_, i) => ({
-      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+      stage: i === 0 ? 'Çekirdek' : undefined
     })));
     baslat();
     await ilerlet(10);
@@ -379,18 +376,27 @@ describe('kademeli ilerleme — cetvel', () => {
     expect(ico.style.transform).toBe('rotate(360.0deg)');
   });
 
-  test('modül adı da KADEMEYLE değişir — 85 kez çırpınmaz', async () => {
+  // DOSYA ADI SATIRI YOK (ARAYÜZ ANLATMAZ — aşama 1 kararı 2026-10-16): 106
+  // modülün adı ("FEAD: veri modeli köprüsü…") kademe kademe akıyordu. Satır
+  // aşamanın DURUMUNU söyler; script'te kalmış bir `data-mfsim-label` bile
+  // ekrana çıkmaz.
+  test('DOSYA ADI SATIRI YOK — durum satırı aşamayı söyler', async () => {
     kur(Array.from({ length: 24 }, (_, i) => ({
-      stage: i === 0 ? 'Çekirdek' : undefined, label: 'Modül ' + i
+      stage: i === 0 ? 'Çekirdek' : undefined
     })));
+    document.querySelectorAll('script[type="text/x-mfsim-defer"]')
+      .forEach((sc, i) => sc.setAttribute('data-mfsim-label', 'Modül ' + i));
     baslat();
-    await ilerlet(10);
     const msg = () => document.getElementById('mfsim-loading-message').textContent;
-    expect(msg()).toBe('Modül 0');
-    await ilerlet(200);          // modül 1 yükleniyor, kademe DEĞİŞMEDİ
-    expect(msg()).toBe('Modül 0');
-    await ilerlet(200);          // modül 2 → kademe 1
-    expect(msg()).toBe('Modül 2');
+    const gorulen = new Set();
+    for (let t = 0; t < 24; t++) { await ilerlet(150); gorulen.add(msg()); }
+    await ilerlet(8000);
+    gorulen.add(msg());
+    const DURUM = ['Modüller hazırlanıyor…', 'Son hazırlıklar…', 'Tamamlandı'];
+    expect([...gorulen].filter((m) => !DURUM.includes(m))).toEqual([]);
+    expect(gorulen.has('Modüller hazırlanıyor…')).toBe(true);
+    expect(msg()).toBe('Tamamlandı');
+    expect(INDEX).not.toContain('data-mfsim-label');
   });
 
   test('süsleme hareketleri KALDIRILDI — dönen dişli ve parıltı yok', () => {
@@ -512,11 +518,11 @@ describe('index.html aşama işaretleri', () => {
 describe('o anki öbek', () => {
   test('işaretler öbekleri kurar; işaretsiz script bir öncekine yazılır', async () => {
     kur([
-      { stage: 'Çekirdek', label: 'Tema motoru' },
-      { label: 'Ayarlar paneli' },
-      { label: 'Sekmeler' },
-      { stage: 'Takoz', label: 'Takoz: hesap çekirdeği' },
-      { label: 'Takoz: rapor üreteci' }
+      { stage: 'Çekirdek' },
+      {},
+      {},
+      { stage: 'Takoz' },
+      {}
     ]);
     baslat();
     await ilerlet(10);
@@ -528,7 +534,7 @@ describe('o anki öbek', () => {
   });
 
   test('öbek adında & geçebilir — metin olarak yazılıyor, HTML olarak değil', async () => {
-    kur([{ stage: 'Araçlar & ölçüm', label: 'Harita modülü' }]);
+    kur([{ stage: 'Araçlar & ölçüm' }]);
     baslat();
     await ilerlet(10);
     const ad = document.getElementById('mfsim-loading-bolum').children[1];
@@ -537,7 +543,7 @@ describe('o anki öbek', () => {
   });
 
   test('Roma rakamı öbek SIRASINDAN — 4 → IV, 9 → IX, 14 → XIV', async () => {
-    kur(Array.from({ length: 14 }, (_, i) => ({ stage: 'Öbek ' + (i + 1), label: 'M' + i })));
+    kur(Array.from({ length: 14 }, (_, i) => ({ stage: 'Öbek ' + (i + 1) })));
     baslat();
     const gorulen = [];
     for (let i = 0; i < 14; i++) {
@@ -550,9 +556,9 @@ describe('o anki öbek', () => {
 
   test('etiket yalnız öbek DEĞİŞİNCE belirir — öbek içinde kımıldamaz', async () => {
     kur([
-      { stage: 'Çekirdek', label: 'A' },
-      { label: 'B' },
-      { stage: 'Takoz', label: 'C' }
+      { stage: 'Çekirdek' },
+      {},
+      { stage: 'Takoz' }
     ]);
     baslat();
     await ilerlet(10);
@@ -567,9 +573,9 @@ describe('o anki öbek', () => {
 
   test('yükleme bitince etiket "Hazır" + onay ikonu, cetvel tam, modüller GERÇEKTEN çalıştı', async () => {
     kur([
-      { stage: 'Çekirdek', label: 'Tema motoru' },
-      { label: 'Ayarlar paneli' },
-      { stage: 'FEAD', label: 'FEAD: kayış kataloğu' }
+      { stage: 'Çekirdek' },
+      {},
+      { stage: 'FEAD' }
     ]);
     baslat();
     await ilerlet(10);
@@ -586,28 +592,15 @@ describe('o anki öbek', () => {
     expect(window.__yuklendi).toBe(3);
   });
 
-  test('o anki modülün tam adı ayrı satırda kalır', async () => {
-    kur([
-      { stage: 'FEAD', label: 'FEAD: kayış kataloğu' },
-      { label: 'FEAD: gergi künye kütüphanesi' }
-    ]);
-    baslat();
-    await ilerlet(10);
-    expect(document.getElementById('mfsim-loading-message').textContent)
-      .toBe('FEAD: kayış kataloğu');
-    await ilerlet(200);
-    expect(document.getElementById('mfsim-loading-message').textContent)
-      .toBe('FEAD: gergi künye kütüphanesi');
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('atlanan modül', () => {
   test('yüklenemeyen modül uyarı olarak GÖRÜNÜR, yükleme devam eder', async () => {
     kur([
-      { stage: 'Çekirdek', label: 'Tema motoru' },
-      { stage: 'Takoz', label: '3D kütüphanesi', src: 'vendor/yok-boyle-bir-dosya.js' },
-      { label: 'Takoz: görüntüleyici' }
+      { stage: 'Çekirdek' },
+      { stage: 'Takoz', src: 'vendor/yok-boyle-bir-dosya.js' },
+      {}
     ]);
     baslat();
 
@@ -624,8 +617,9 @@ describe('atlanan modül', () => {
     // bekleme 15 300'de dolar, kaynak atlanır; sıradaki modül 150 ms sonra
     await ilerlet(350);
     expect(uyari.hidden).toBe(false);
-    expect(uyari.textContent).toContain('3D kütüphanesi');
-    expect(uyari.textContent).toContain('konsol');
+    // Durumu söyler, tarif vermez: dosyanın ADI + "yüklenemedi" (aşama 1
+    // kararı — "ayrıntı tarayıcı konsolunda" bir geliştirici tarifiydi).
+    expect(uyari.textContent).toBe('yok-boyle-bir-dosya.js yüklenemedi.');
 
     // Öbek sürdüğü sürece etiketi de işaretli (rakam kehribar)
     expect(bolum()).toMatchObject({ no: 'II', ad: 'Takoz' });
@@ -640,8 +634,20 @@ describe('atlanan modül', () => {
     expect(window.__yuklendi).toBe(2);
   });
 
+  test('birden çok atlama: sayı ve sonuncunun adı', async () => {
+    kur([
+      { stage: 'Çekirdek', src: 'vendor/a-yok.js' },
+      { src: 'vendor/b-yok.js' },
+      {}
+    ]);
+    baslat();
+    await ilerlet(32000);
+    expect(document.getElementById('mfsim-loading-skips').textContent)
+      .toBe('2 dosya yüklenemedi (son: b-yok.js).');
+  });
+
   test('atlama yoksa uyarı satırı hiç görünmez', async () => {
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(8000);
     expect(document.getElementById('mfsim-loading-skips').hidden).toBe(true);
@@ -655,7 +661,7 @@ describe('sürüm künyesi', () => {
     window.__MFSIM_BUILD = {
       shortSha: 'abc1234', prNumber: 867, date: '2026-09-04T10:00:00Z'
     };
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(10);
     const t = document.getElementById('mfsim-loading-stamp').textContent;
@@ -665,7 +671,7 @@ describe('sürüm künyesi', () => {
   });
 
   test('modüler geliştirme kopyasında künye YOK — satır boş kalır', async () => {
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(10);
     expect(document.getElementById('mfsim-loading-stamp').textContent).toBe('');
@@ -673,7 +679,7 @@ describe('sürüm künyesi', () => {
 
   test('bozuk tarih künyeyi düşürmez, yalnız tarihi atlar', async () => {
     window.__MFSIM_BUILD = { shortSha: 'def5678', prNumber: 0, date: 'çöp' };
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(10);
     expect(document.getElementById('mfsim-loading-stamp').textContent).toBe('def5678');
@@ -681,31 +687,47 @@ describe('sürüm künyesi', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// İPUCU SATIRI YOK (aşama 1 kararı 2026-10-16): açılışta dönen "İpucu: …"
+// satırı bir tarifti; kısayollar kısayol penceresinde. Döngü de yok —
+// kapanıştan sonra arkada sayan bir zamanlayıcı kalmaz.
 describe('ipucu satırı', () => {
-  test('açılışta bir ipucu görünür ve süreyle değişir', async () => {
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
-    baslat();
-    await ilerlet(10);
-
-    const tip = document.getElementById('mfsim-loading-tip');
-    const ilk = tip.textContent;
-    expect(ilk).toMatch(/^İpucu: .+/);
-
-    // TIP_ROTATE_MS = 4200, geçiş 180 ms
-    await ilerlet(4600);
-    expect(tip.textContent).toMatch(/^İpucu: .+/);
-    expect(tip.textContent).not.toBe(ilk);
-  });
-
-  test('kapanışta döngü DURUR — uygulama açıldıktan sonra arkada saymaz', async () => {
-    kur([{ stage: 'Çekirdek', label: 'Tema motoru' }]);
+  test('gövdede ipucu satırı ve yükleyicide ipucu döngüsü yok', async () => {
+    expect(splashMarkup()).not.toContain('id="mfsim-loading-tip"');
+    expect(LOADER_SRC).not.toMatch(/TIPS|İpucu: |setInterval/);
+    kur([{ stage: 'Çekirdek' }]);
     baslat();
     await ilerlet(8000);   // yükleme bitti + splash kapandı
+    expect(jest.getTimerCount()).toBe(0);
+  });
+});
 
-    const tip = document.getElementById('mfsim-loading-tip');
-    const kapanistaki = tip.textContent;
-    await ilerlet(20000);
-    expect(tip.textContent).toBe(kapanistaki);
+// GENEL HATA YAKALAYICI — bildirim DURUM söyler (aşama 1 kararı): söz reddi de
+// "Beklenmeyen hata" (JavaScript terimi çevirisi "Islenmemis soz reddi" idi),
+// üçüncü bildirimin "(sonraki hatalar yalnizca konsola yazilacak)" eki yok.
+// Yakalayıcı sahte bir pencereye kurulur: gerçek pencereye her `baslat()`
+// yeni dinleyici ekliyor, sayım onlarla karışırdı.
+describe('genel hata yakalayıcı', () => {
+  const YAKALAYICI = LOADER_SRC.slice(0, LOADER_SRC.indexOf('// ═══ MFSim Loader'));
+  const kurYakalayici = () => {
+    const dinle = {};
+    const toast = jest.fn();
+    // eslint-disable-next-line no-new-func
+    new Function('window', 'console', 'showToast', YAKALAYICI)(
+      { addEventListener: (t, f) => { dinle[t] = f; } }, { error() {} }, toast);
+    return { dinle, toast };
+  };
+
+  test('hata ve söz reddi AYNI başlıkla; en çok üç bildirim, ek cümle yok', () => {
+    const { dinle, toast } = kurYakalayici();
+    dinle.error({ error: new Error('bir'), filename: 'a.js', lineno: 3 });
+    dinle.unhandledrejection({ reason: new Error('iki') });
+    dinle.unhandledrejection({ reason: 'üç' });
+    dinle.unhandledrejection({ reason: new Error('dört') });
+    expect(toast.mock.calls).toEqual([
+      ['Beklenmeyen hata: bir', 'error'],
+      ['Beklenmeyen hata: iki', 'error'],
+      ['Beklenmeyen hata: üç', 'error']
+    ]);
   });
 });
 
@@ -716,7 +738,7 @@ describe('ipucu satırı', () => {
 // aştı. Kapı iki yönü birden tutar: otomasyonda bekleme yok, insanın açılışı
 // birebir eski.
 describe('otomasyon: süs beklemesi yok, insanın açılışı aynı', () => {
-  const ON = Array.from({ length: 10 }, (_, i) => ({ label: 'M' + i }));
+  const ON = Array.from({ length: 10 }, () => ({}));
   const perde = () => document.getElementById('mfsim-loading-screen').style.display;
   afterEach(() => { delete window.navigator.webdriver; });
 

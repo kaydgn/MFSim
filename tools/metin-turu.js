@@ -62,7 +62,7 @@ function topla(kokSel) {
   // Başka bir yüzeyin altında kalan metin görünmez: ortasındaki noktada üstte
   // duran öğe bloğun kendisi (ya da içi) değilse sayılmaz. Görüş alanı
   // dışındaki nokta sınanamaz; o metin sayılır. İsabet sınaması
-  // pointer-events:none öğeyi atlar (boş tuval ipucu) — sınama süresince açılır.
+  // pointer-events:none öğeyi atlar — sınama süresince açılır.
   const ac = document.createElement('style');
   ac.textContent = '*{pointer-events:auto!important}';
   document.head.appendChild(ac);
@@ -156,7 +156,7 @@ const ASAMALAR = {
       { ad: 'Açılış ekranı', kok: '#mfsim-loading-screen', ac: async (p) => {
         await p.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
         await p.waitForFunction(() => {
-          const t = document.getElementById('mfsim-loading-tip');
+          const t = document.querySelector('#mfsim-loading-bolum .mfsim-amblem-bolum-ad');
           return t && t.textContent.trim().length > 0;
         }, null, { timeout: 60000 });
         await bekle(p, 600);
@@ -168,10 +168,7 @@ const ASAMALAR = {
       } },
       { ad: 'Modül giriş ekranı', kok: '#mfsim-module-loading .mfsim-loading-panel', ac: async (p) => {
         await p.evaluate(() => veStartModule('fead-analysis'));
-        await p.waitForFunction(() => {
-          const m = document.getElementById('ve-modload-message');
-          return m && m.textContent && m.textContent !== 'Hazırlanıyor…';
-        }, null, { timeout: 20000 });
+        await p.waitForSelector('#ve-modload-stages li.is-done', { timeout: 20000 });
         await bekle(p, 250);
       }, bildirim: true },
       // Kök tuvalin kabı: sayfanın üstündeki dönüş düğmesi (ve ipucu) da girsin.
@@ -186,17 +183,19 @@ const ASAMALAR = {
         await p.waitForFunction(() => typeof veMntBaslangicAcik === 'function' && veMntBaslangicAcik(), null, { timeout: 30000 });
         await bekle(p, 800);
       }, bildirim: true },
+      // Boş tuvalin ipucu 2026-10-16'da kalktı (aşama 1 kararı): yüzey boş
+      // tuvalin kendisi, ipucu yoksa sıfır metin sayılır. Kabuğun öteki
+      // metinleri (minimap, araç çubuğu) aşama 2'nin yüzeyi.
       { ad: 'Boş tuval', kok: '#ve-canvas-wrapper', ac: async (p) => {
         await p.evaluate(() => {
           if (typeof veMntCloseEditor === 'function') veMntCloseEditor(true);
           clearSelection();
           nodes.slice().forEach((n) => addToSelection(n));
           deleteSelectedNodes();
-          if (typeof veEmptyHintUpdate === 'function') veEmptyHintUpdate();
         });
-        await p.waitForFunction(() => { const e = document.getElementById('ve-empty-hint'); return e && e.classList.contains('visible'); }, null, { timeout: 15000 });
+        await p.waitForFunction(() => Array.isArray(window.nodes) && nodes.length === 0, null, { timeout: 15000 });
         await bekle(p, 800);
-      }, bildirim: true, yalniz: '#ve-empty-hint' }
+      }, bildirim: true, yalniz: '#ve-empty-hint', yalnizYoksaBos: true }
     ]
   }
 };
@@ -263,8 +262,9 @@ async function main() {
     await bildirimleriSil(sayfa);
     iz('bildirimler silindi');
     await bekle(sayfa, 200);
-    const sec = y.yalniz || y.kok;
-    const v = await sayfa.evaluate(topla, sec);
+    let sec = y.yalniz || y.kok;
+    if (y.yalniz && y.yalnizYoksaBos && !(await sayfa.$(y.yalniz))) sec = null;
+    const v = sec ? await sayfa.evaluate(topla, sec) : { ogeler: [] };
     iz('metin toplandı');
     if (!v) { console.log('YOK  ' + y.ad + ' (' + sec + ')'); continue; }
     const dosya = y.ad.toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]+/g, '-').replace(/^-|-$/g, '') + '.jpg';
@@ -273,7 +273,7 @@ async function main() {
     const kutu = await sayfa.evaluate(([a, b]) => {
       const ka = document.querySelector(a).getBoundingClientRect(), kb = document.querySelector(b).getBoundingClientRect();
       return { x: kb.left - ka.left, y: kb.top - ka.top };
-    }, [y.kok, sec]);
+    }, [y.kok, sec || y.kok]);
     v.ogeler.forEach((x) => { x.x += kutu.x; x.y += kutu.y; x.kaynak = esle(dizin, x.metin); });
     const kokBoy = await sayfa.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return { w: r.width, h: r.height }; }, y.kok);
     yuzeyler.push({ ad: y.ad, kok: y.kok, resim: dosya, w: kokBoy.w, h: kokBoy.h, ogeler: v.ogeler,

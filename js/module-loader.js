@@ -111,15 +111,14 @@ function _veModLoadDurum(adimlar, i, bittiMi){
       if(mk) { if(bitti) mk.innerHTML = veIkon('check'); else mk.textContent = '·'; }
     }
   }
-  // MESAJ ADIM ADINI TEKRARLAMAZ: liste zaten adları gösteriyor, mesaj o
-  // adımın AYRINTISINI taşıyor. Ve sıradaki BİTMEMİŞ adımdan okunuyor —
-  // indisten okunsaydı iş biten adımın adı, bir sonrakine geçilene kadar
-  // (bir duruş boyu) "şu an yapılıyor" gibi durur (ölçüldü).
-  var siradaki = null;
-  for(var m = 0; m < adimlar.length; m++){ if(!adimlar[m].bitti){ siradaki = adimlar[m]; break; } }
+  // MESAJ YALNIZ SONUCU SÖYLER ("Hazır"). Adım adı listede zaten yazılı;
+  // adımın ayrıntı notu (`not`) 2026-10-16'da kalktı (ARAYÜZ ANLATMAZ —
+  // "Bileşen paneli ve şerit yerine oturuyor" bir durum değil anlatımdı).
+  // Satırın yüksekliği CSS'te sabit (min-height): boş satır çubuğu kaydırmaz.
+  var bekleyen = false;
+  for(var m = 0; m < adimlar.length; m++){ if(!adimlar[m].bitti){ bekleyen = true; break; } }
   var mesaj = _veModLoadEl('mesaj');
-  if(mesaj) mesaj.textContent = (bittiMi || !siradaki)
-    ? 'Hazır' : (siradaki.not || siradaki.ad || '');
+  if(mesaj) mesaj.textContent = (bittiMi || !bekleyen) ? 'Hazır' : '';
 
   var kac = 0;
   adimlar.forEach(function(a){ if(a.bitti) kac++; });

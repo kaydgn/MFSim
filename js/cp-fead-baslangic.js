@@ -130,41 +130,26 @@ function veFeadBaslangicResim(key){
 }
 
 // ── HTML — SAF: yalnız sabitlerden ve örnek kaydından ─────────────────────
-// Sayfanın İSKELETİ kitin (veBasSayfaHTML); buradaki iş içeriği söylemek.
+// Sayfanın İSKELETİ kitin (veBasSayfaHTML); buradaki iş içeriği söylemek:
+// kapıların adı ve raporların künyesi. Karo ipucu taşımaz — künye karoda.
 function veFeadBaslangicHTML(){
-  // Sihirbazın adımları RAYIN KENDİ ADLARIYLA (ilk adım "Başlangıç" bu
-  // sayfanın ta kendisi, listede yok) — elle yazılmış bir sayı ya da liste,
-  // adım eklenince/kalkınca sessizce bayatlardı (ölçüldü: sihirbazın kendi
-  // metinlerinde "7. adım" yazıyordu, adım sayısı 6).
-  var adimlar = (typeof VE_FW_STEPS !== 'undefined' && VE_FW_STEPS)
-    ? VE_FW_STEPS.slice(1).map(function(s){ return s.ad; }).join(' · ') : '';
   var raporlar = veFeadBaslangicRaporlar();
   var K = _feadBasKit();
   if(!K) return '';
   return K.sayfa({
-    ust: 'FEAD · yeni kayış sistemi',
-    baslik: 'Nereden başlayalım?',
-    alt: 'Kayış yolu henüz boş. Seçtiğin kapı modeli kurar ve bu sayfa çekilir — '
-      + 'sonra her şey çizimde ve Kayış Tablosu\'nda değişir.',
     kapilar: [
-      { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true, rozet: 'önerilen',
-        not: adimlar ? ('Adım adım: ' + adimlar + '.') : 'Modeli adım adım kurar.' },
-      { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla',
-        not: 'CATIA/3DEXPERIENCE montajını oku; kasnak rollerini 3B görüntüleyicide sen ver.' },
-      { ey: 'bos', ikon: 'ruler', ad: 'Boş çizim masası',
-        not: 'Kayış Yolu kartını boş kur; kasnakları Kayış Tablosu\'ndan ekle.' }
+      { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true },
+      { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla' },
+      { ey: 'bos', ikon: 'ruler', ad: 'Boş çizim masası' }
     ],
     bolum: {
       baslik: 'Gates raporlarından başla',
-      not: raporlar.length + ' rapor · raporun modeli birebir yüklenir, sonra her şey değiştirilebilir',
       karolar: raporlar.map(function(r){
-        return { ey: 'rapor', v: r.key, baslik: r.ad, resim: veFeadBaslangicResim(r.key),
+        return { ey: 'rapor', v: r.key, resim: veFeadBaslangicResim(r.key),
                  kod: r.kod, yil: r.yil, sag: r.kasnak + ' kasnak',
                  alt: [r.kayis, r.sistem].filter(Boolean).join(' · ') };
       })
-    },
-    not: 'Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: '
-      + 'Sihirbaz ve yeni kanvas FEAD araçları penceresinde, STEP ve raporlar sihirbazın ilk adımında.'
+    }
   });
 }
 

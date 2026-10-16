@@ -84,14 +84,16 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
 });
 
 test('TEKERLEK sayfayı kaydırır, kadrajı oynatmaz', async ({ page }) => {
-  await page.setViewportSize({ width: 1366, height: 768 });
+  // Sayfanın taştığı bir boy: başlık ve açıklamalar kalkınca (2026-10-16)
+  // sayfa 1366×768'e sığıyor.
+  await page.setViewportSize({ width: 1366, height: 600 });
   await bootApp(page);
   await feadGir(page);
   const once = await page.evaluate(() => ({ z: canvasZoom, x: canvasOffset.x, y: canvasOffset.y,
     s: document.getElementById('ve-fead-baslangic').scrollTop,
     tasma: document.getElementById('ve-fead-baslangic').scrollHeight
          - document.getElementById('ve-fead-baslangic').clientHeight }));
-  expect(once.tasma).toBeGreaterThan(0);     // 768'de sayfa kaydırılabilir
+  expect(once.tasma).toBeGreaterThan(0);     // 600'de sayfa kaydırılabilir
   const k = await page.locator('#ve-fead-baslangic .ve-bas-karo').first().boundingBox();
   await page.mouse.move(k.x + k.width / 2, k.y + k.height / 2);
   await page.mouse.wheel(0, 400);
