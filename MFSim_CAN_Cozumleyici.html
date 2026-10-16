@@ -11574,7 +11574,8 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-bas-kapi-t > span{ font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); }
 
 /* KAROLAR — FEAD'de Gates arşivinin kayış yolları, Takoz'da örnek modellerin
-   üstten görünüşü; ikisi de modülün KENDİ çizicisinden, gerçek oranda. */
+   aksonometrisi (2D Görünüm'ün ilk sekmesi); ikisi de modülün KENDİ
+   çizicisinden, gerçek oranda. */
 .ve-bas-baslik{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; margin-top:26px; }
 .ve-bas-baslik h2{ margin:0; font-size:var(--fs-md); font-weight:700; color:var(--text-heading); }
 .ve-bas-baslik span{ font-size:var(--fs-tiny); color:var(--text-muted); }
@@ -11604,6 +11605,9 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 #ve-fead-baslangic .ve-bas-resim [data-ve="pos-label"],
 #ve-fead-baslangic .ve-bas-resim [data-ve="rib-legend"],
 #ve-fead-baslangic .ve-bas-resim [data-ve="rib"]{ display:none; }
+/* Aksonometrinin zemin dikdörtgeni pencerede kabın rengidir; karoda çizim
+   karonun kendi resim zeminine oturur (eski üstten görünüş gibi). */
+#ve-mnt-baslangic .ve-bas-resim .ve-ak-zem{ display:none; }
 .ve-bas-resim em{
   position:absolute; right:7px; top:7px; font-style:normal; font-size:var(--fs-micro); font-weight:700;
   color:var(--on-accent); background:var(--accent-primary); border-radius:var(--radius-xs); padding:2px 7px;
