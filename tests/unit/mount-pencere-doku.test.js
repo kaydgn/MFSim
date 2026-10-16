@@ -65,6 +65,19 @@ describe('Örnek şeması: ad görünür yazı değil, <title>', () => {
     expect(d.querySelectorAll('text').length).toBe(0);
     expect(d.querySelectorAll('g > title').length).toBeGreaterThan(5);
   });
+  // Araç adı elle YAZILMAZ: "2D Görünüm" → "Görünümler" yeniden adlandırmasında
+  // kayıttaki kopyalardan üçü eski adda kaldı ve hiçbir kapı görmedi; "Örnek"
+  // de kanvasa kurulan düğümün adı değildi. Şema adı componentDefs'ten okur.
+  test('araçların adı bileşenin kendi adı (componentDefs) — kayıtta ad kopyası yok', () => {
+    const liste = require('../../js/mount-core.js').getMountExampleList();
+    expect(liste.length).toBeGreaterThanOrEqual(6);
+    liste.forEach((ex) => {
+      expect(ex.tools.length).toBeGreaterThan(0);
+      ex.tools.forEach((t) => expect(`${ex.id} ${t.type}: ${t.name}`).toBe(`${ex.id} ${t.type}: undefined`));
+      const adlar = [...div(cp._mntExampleDiagramSVG(ex.model, ex.tools)).querySelectorAll('g > title')].map((x) => x.textContent);
+      ex.tools.forEach((t) => expect(adlar).toContain(componentDefs[t.type].name));
+    });
+  });
   test('CSS: yalnız şemanın kendisi kabın eninde (iç ikon svg\'leri değil)', () => {
     const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
     expect(css).not.toMatch(/\.ve-mnt-ex-sema svg\s*[{,]/);
