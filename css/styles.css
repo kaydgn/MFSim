@@ -563,12 +563,6 @@
       /* tracking display bağlamasından — burada TEKRAR etmek, bağlama
          değişince sessizce ayrışacak ikinci bir kaynak demekti. */
     }
-    .ve-settings-desc {
-      font-size:var(--fs-body);
-      color: var(--text-muted);
-      margin: 0 0 18px;
-      line-height: 1.5;
-    }
     .ve-settings-subhead {
       font-size:var(--fs-tiny);
       font-weight: 600;
@@ -578,18 +572,10 @@
       margin: 14px 0 8px;
     }
     /* AYARLAR → KİMLİK. Bu bloğun sınıflarının kuralı hiç yazılmamıştı:
-       baş harfler 16 px çıplak metin olarak ayrı satıra düşüyor, not
-       tarayıcının varsayılan 16 px'i ve koyu mürekkebiyle yazılıyordu
-       (ölçüldü; kardeş açıklama 12 px ve soluk). Avatar dairesi hesap
+       baş harfler 16 px çıplak metin olarak ayrı satıra düşüyordu (ölçüldü). Avatar dairesi hesap
        menüsündekinin kendisi (.ve-avatar-menu-av) — ikinci kopya yazılmadı. */
     .ve-set-kimlik { display: flex; align-items: flex-end; gap: 12px; }
     .ve-set-kimlik-av { margin-bottom: 1px; }
-    .ve-set-not {
-      font-size:var(--fs-body);
-      color: var(--text-muted);
-      margin: 6px 0 4px;
-      line-height: 1.5;
-    }
     .ve-settings-row {
       display: flex;
       align-items: center;
@@ -7051,6 +7037,7 @@ body.mf-radio-dragging .mf-radio-head{ cursor:grabbing; }
   font-size:var(--fs-body); color:var(--text-muted);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+.mf-radio-lcd-sub:empty::before{ content:'\00a0'; }
 
 /* ── Transport ── */
 .mf-radio-transport{ display:flex; align-items:center; gap:6px; padding:2px 12px 10px; }
@@ -7445,7 +7432,6 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .ve-avatar-menu-kim b.bos{ color:var(--text-muted); font-weight:500; }
-.ve-avatar-menu-kim span{ font-size:var(--fs-micro); color:var(--text-muted); }
 /* Yerinde ad alanı — başlığın YERİNİ alır, altına eklenmez. */
 .ve-avatar-menu-ad{ display:flex; gap:6px; padding:8px 12px 10px; }
 /* `display:flex` `hidden` özniteliğini EZER (projede genel bir `[hidden]`
@@ -10764,7 +10750,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 /* ── giriş (kapak) ── */
 .ve-komuta-giris{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:48px 20px 56px; text-align:center; }
 .ve-komuta-giris-baslik{ font-size:var(--fs-title); font-weight:600; color:var(--text-heading); }
-.ve-komuta-giris-alt{ font-size:var(--fs-md); color:var(--text-muted); max-width:420px; line-height:1.5; margin-bottom:6px; }
 .ve-komuta-sifre{ width:240px; padding:9px 12px; border-radius:var(--radius-md); font-size:var(--fs-lg);
   background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
 .ve-komuta-sifre:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
@@ -10776,7 +10761,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   background:var(--accent-tint-8); border:1px solid var(--accent-tint-20); }
 .ve-komuta-kunye-metin{ font-size:var(--fs-md);
   font-weight:600; color:var(--text-heading); }
-.ve-komuta-kunye-not{ font-size:var(--fs-body); color:var(--text-muted); margin-left:auto; }
 
 /* ── tezgâh sekmeleri ── */
 .ve-komuta-tezgahlar{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
@@ -10790,7 +10774,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   background:var(--bg-primary); color:var(--text-muted); }
 
 .ve-komuta-satir{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
-.ve-komuta-ipucu{ font-size:var(--fs-md); color:var(--text-secondary); }
 .ve-komuta-dosya{ font-size:var(--fs-body);
   padding:2px 7px; border-radius:var(--radius-sm); margin-left:auto;
   background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-muted); }
@@ -10844,7 +10827,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-komuta-fiil{ padding:4px 8px; border-radius:var(--radius-md); font-size:var(--fs-md); cursor:pointer;
   background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
 .ve-komuta-fiil:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
-.ve-komuta-fiil-aciklama{ font-size:var(--fs-body); color:var(--text-muted); }
 .ve-komuta-sayac{ font-size:var(--fs-body); color:var(--text-muted); margin-right:auto; }
 .ve-komuta-sayac.dolu{ color:var(--ink-danger); font-weight:600; }
 .ve-komuta-btn{ padding:6px 12px; border-radius:var(--radius-md); font-size:var(--fs-md); cursor:pointer;
@@ -10860,7 +10842,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   font-size:var(--fs-md); line-height:1.6;
   background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
 .ve-komuta-fis:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
-.ve-komuta-fis-alt{ font-size:var(--fs-body); color:var(--text-muted); margin-top:7px; }
 
 /* ═══ FEAD — SONUÇLAR SEKMESİ (js/cp-fead-results.js) ═════════════════════
    Başlangıç kartı (boş pano) · Veri Gezgini satırları · Sonuç Özeti

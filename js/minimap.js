@@ -352,7 +352,6 @@ function _mmSyncToggleIcon() {
   if(!btn || !el) return;
   var collapsed = el.classList.contains('collapsed');
   btn.title = !collapsed ? 'Genel görünümü gizle'
-    : el.classList.contains('oto') ? 'Genel görünümü göster — altındaki içeriği örtmesin diye küçüldü'
     : 'Genel görünümü göster';
   btn.setAttribute('aria-label', btn.title);
   // collapsed → harita ikonu (aç), açık → köşeye küçült ikonu

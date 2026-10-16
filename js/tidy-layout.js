@@ -169,7 +169,6 @@ function veTidyLayout(opts) {
     veFitViewToContent({ maxZoom: opts.maxZoom || 1.2 });
     setTimeout(function() { if(canvas) canvas.classList.remove('tidy-cam'); }, 520);
   }
-  if(typeof showToast === 'function') showToast('Topoloji düzenlendi', 'success');
 }
 
 if(typeof module !== 'undefined' && module.exports) {

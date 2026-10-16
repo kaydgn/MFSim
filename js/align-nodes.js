@@ -33,7 +33,7 @@ function _veApplyPositions() {
 // mode: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
 function veAlignNodes(mode) {
   if(typeof selectedNodes === 'undefined' || !selectedNodes || selectedNodes.length < 2) {
-    if(typeof showToast === 'function') showToast('Hizalamak için en az 2 bileşen seçin', 'warning');
+    if(typeof showToast === 'function') showToast('Hizalama için en az 2 bileşen gerekli.', 'warning');
     return;
   }
   if(typeof saveState === 'function') saveState();
@@ -50,13 +50,12 @@ function veAlignNodes(mode) {
     }
   });
   _veApplyPositions();
-  if(typeof showToast === 'function') showToast('Hizalandı', 'success');
 }
 
 // axis: 'h' | 'v' — merkezleri ilk ve son eleman arasında eşit aralıklı dağıtır.
 function veDistributeNodes(axis) {
   if(typeof selectedNodes === 'undefined' || !selectedNodes || selectedNodes.length < 3) {
-    if(typeof showToast === 'function') showToast('Dağıtmak için en az 3 bileşen seçin', 'warning');
+    if(typeof showToast === 'function') showToast('Dağıtma için en az 3 bileşen gerekli.', 'warning');
     return;
   }
   if(typeof saveState === 'function') saveState();
@@ -75,7 +74,6 @@ function veDistributeNodes(axis) {
     else      n.y = target - (n.height || 60) / 2;
   });
   _veApplyPositions();
-  if(typeof showToast === 'function') showToast('Eşit dağıtıldı', 'success');
 }
 
 // Çoklu-seçim panelindeki hizalama araç HTML'i (showMultipleSelection çağırır).

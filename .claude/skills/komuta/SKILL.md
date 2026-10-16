@@ -95,7 +95,6 @@ bir satırı olduğunu ölçüyor — yeni tezgâh eklenip tablo unutulursa test
   dosya: 'js/...',              // fişin adresi VE doğrulayıcının okuduğu modül
   disaAktarim: 'DISA_AKTARILAN', // o modülün dışa aktardığı ad
   duzen: 'izgara' | 'liste',
-  ipucu: '...',
   kaynak: function () { ... },  // TARAYICIDA aynı veriyi nereden okur
   olc: function (veri) { ... }  // veri → [{anahtar, baslik, meta, gorsel?}]. SAF
 }
@@ -112,6 +111,9 @@ Kontrol listesi — hepsinin testi var, atlarsan kırmızıya döner:
   (`veSayi`…) okuyan modül yalnız doğrulayıcıda çöker — jest `setup.js`'te
   onları kurduğu için görmez (`komuta-dogrula.test.js` → *"çıplak Node"*)
 - Yukarıdaki **skill tablosuna bir satır** ekle
+
+Tezgâh ve fiil **açıklama yuvası taşımaz** (`ipucu`, `aciklama` 2026-10-16'da
+kalktı — kökteki *ARAYÜZ ANLATMAZ* kuralı): sekmenin ve fiilin adı yeter.
 
 Görünüm `css/styles.css`'te: satır içi CSS `:hover`/`:focus-visible`/`.secili`
 ifade edemez ve yüzey donuk görünür (Kayış Tablosu'nda bir kez ölçüldü).

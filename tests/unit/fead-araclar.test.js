@@ -86,7 +86,8 @@ describe('bileşen sözleşmesi — araçlar KUTUSUZ, pencere onlara BAĞLANIR',
   test('çözücü · rapor · sihirbaz: kutusuz, silinmez, tek kopya; Dönüş Yönü tipi yok', () => {
     ['fead-solver', 'fead-report', 'fead-wizard'].forEach((t) => {
       const d = componentDefs[t];
-      expect({ t, kutusuz: d.noCanvasBox, sebep: /FEAD araçları/.test(d.noDelete || '') })
+      // Sebep yalnız durumu söyler; yönlendirme kuyruğu yok (ARAYÜZ ANLATMAZ).
+      expect({ t, kutusuz: d.noCanvasBox, sebep: /^[^—]* silinmez\.$/.test(d.noDelete || '') })
         .toEqual({ t, kutusuz: true, sebep: true });
       expect({ t, tek: d.maxInstances }).toEqual({ t, tek: 1 });
     });

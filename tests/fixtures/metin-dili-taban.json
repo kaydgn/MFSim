@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 1284,
+ "sayi": 1228,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -50,25 +50,11 @@
    "f7230cff21": "Bu kimlikler kayıtta var ama yüklü DBC bunları tanımlamıyor"
   },
   "index.html": {
-   "22b0744f06": "Görünümler — güç grubunun döndürülebilir aksonometrisi; hazır bakışlar: dimetrik",
-   "2773a7dca2": "Takoz Çökme-Titreşim — güç grubu takoz sistemi alt topolojisi",
-   "73d501eea9": "Sonuçlar — çözüm çıktılarını incele",
-   "82db9f91c4": "Başlangıç ve Örnekler — sihirbaz, STEP ve örnek modeller; modelin tutarlılık uya",
-   "97018ffcb4": "PTO Toplam — PTO grubu tek kalemde: grup kütlesi + CG + atalet. Ayrı PTO/Pompa b",
-   "9b070918cd": "Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)",
-   "a5b4f1726b": "PTO (kuyruk mili) — güç grubuna civatalanan yardımcı kütle: kütle + CG",
-   "ad641f1070": "Başlangıç ve Örnekler — gerçek iSCAAN raporlarından kurulmuş hazır araçları (TUR",
-   "b4f87c42d9": "Topoloji — modeli kur ve düzenle",
-   "f1fe103b6d": "Çözücü — iç topolojideki tüm kütle+takozları otomatik algılar, 6 SD analiz eder "
-  },
-  "js/align-nodes.js": {
-   "05c002d846": "Hizalamak için en az 2 bileşen seçin",
-   "5d1cc1600a": "Dağıtmak için en az 3 bileşen seçin"
+   "9b070918cd": "Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)"
   },
   "js/command-palette.js": {
    "2c93dfd87c": "komuta sipariş fiş durum ölç",
    "76c232c89b": "çalıştır run simüle çözücü solve aç",
-   "e4ee0b66d6": "Komut ara… (örn. sığdır, kaydet, motor ekle)",
    "e696b2f7ee": "excel csv import içe aktar ölçüm canoe vector sütun grafik xlsx"
   },
   "js/component-extras.js": {
@@ -87,7 +73,6 @@
    "7abead9c28": "Yüklü koşulda ve köşe teması göz önünde bulundurularak girilmelidir. Lastiğin ze",
    "8a51c18951": "Engel köşesinde oluşan ek lastik ezilmesi. Tipik değerler: sert lastik / düşük y",
    "8cb073ee17": "Coast-Down modülü topolojiye dahilse, Tekerlek bileşenindeki Crr alanı otomatik ",
-   "8e0cfe998b": "Araç bileşeni önerilir (kütle, Cd, alan parametreleri için).",
    "97a8b26979": "Bileşen parametrelerini farklı değerlerle tarayarak otomatik çoklu simülasyon ça",
    "b022fd4b6f": "Şanzıman çıkışındaki maksimum tork değeri. Girilirse şanzıman çıkış torku bu değ",
    "b1c510ecb9": "Topolojide Senaryolar bileşeni bulunamadı. Önce ekleyin.",
@@ -104,17 +89,10 @@
    "fa7c66c6ae": "CAD datadan, aracın en kalın kesitinin alanı olarak girilebilir."
   },
   "js/components.js": {
-   "036865339b": "Başlangıç Sihirbazı taslağı taşır, silinmez — FEAD araçları penceresinden açılır",
    "04d2bc493e": "Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi",
    "3f186e2927": "Önerilen şanzıman",
-   "aea2d32013": "Kayış modelin parçası, silinmez — özelliklerini penceresinden değiştirin.",
    "d03fc594a5": "Önerilen konvertör",
-   "d334018175": "Rapor modelin parçası, silinmez — FEAD araçları penceresinden indirilir.",
-   "d420113de2": "Bu bileşen gerçek CAD dosyasıyla çalışmaya ayrıldı. Model Görünümler bileşeninde",
-   "e547e7d6c8": "Çözücü modelin parçası, silinmez — ayarları FEAD araçları penceresinden açılır."
-  },
-  "js/connections.js": {
-   "2e8dbae8f7": "Konvertör ↔ Şanzıman: eşleştirme ilişkisi — konvertör ailesi şanzımana göre filt"
+   "d420113de2": "Bu bileşen gerçek CAD dosyasıyla çalışmaya ayrıldı. Model Görünümler bileşeninde"
   },
   "js/context-menus.js": {
    "54745ae534": "Motor'un aksesuar giriş portları sabittir (Klima / Alternatör / Hava Komp.).",
@@ -430,13 +408,6 @@
    "9bd04536d4": "Converter-mod geçişleri lineer/segmentli model ile hesaplanır. N_out = N_engine ",
    "c64dcd2f7a": "Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. N_out = "
   },
-  "js/cp-komuta.js": {
-   "40539a4242": "Seçili kayıtlarda bir şey yanlış — nota yaz",
-   "6a6d64b863": "‹› Ölçülen her sayı bu kopyaya ait — fiş bunu taşır.",
-   "c5c8b0ef16": "Bu pencere programı değiştirmez; yalnızca durum okur ve sipariş fişi yazar.",
-   "c60011be17": "Açılışta gösterilen kareler. Kaldırılacakları tıklayın.",
-   "feb8b38db6": "Bu metni Claude Code'a yapıştırın. Künye satırı, fişin hangi sürüme karşı yazıld"
-  },
   "js/cp-matching.js": {
    "0104c437b8": "C9: Motor gücü (‹› kW) > Şanzıman giriş güç limiti (‹› kW)",
    "24c692cbbf": "En iyi seçenek: ‹› (SR@Gov: ‹›). Lockup modunda çalışacağından performans kabul ",
@@ -565,9 +536,6 @@
    "f89223649c": "Nonlineer seçili ama hiçbir takozda eğri yok — lineer çözülür.",
    "fad1d70833": "Gömülü takoz — lineer; nonlineer eğri yalnız özel takozda."
   },
-  "js/cp-programlar.js": {
-   "32e2368e1e": "Arşiv klasörü bu kopyanın yanında değil. Liste aşağıda duruyor ama dosyalar açıl"
-  },
   "js/cp-solver.js": {
    "0dd6171169": "Downshift koşulu: Nout < eşik → alt vitese düş. Histerezis = upshift eşiği − dow",
    "1c7f444866": "Converter modda şanzıman çıkış devri (Nout) belirli eşiklere ulaştığında geçiş t",
@@ -600,11 +568,6 @@
    "d3dfc96b8d": "1000/2000 serisi. Düşük tork çarpanı (1,58). Yüksek hız, düşük stall.",
    "d557e1c1b6": "4000 serisi. Yüksek stall tork oranı (2,42). Ağır yük, düşük hız uygulamaları.",
    "e2fb1e5834": "Kilitli konvertör direkt bağlantı sağlar (oran 1.0). Kilitsiz durumda tork çarpa"
-  },
-  "js/deploy-status.js": {
-   "3b7ba9c6ec": "Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.",
-   "6eea81062d": "Deploy devam ediyor, biraz sonra tekrar deneyin.",
-   "ae0351d4d7": "Yeni sürüm mevcut — tıklayın"
   },
   "js/easter-egg.js": {
    "688621d594": "Denizciliği Türk’ün büyük millî ülküsü olarak düşünmeli ve onu az zamanda başarm"
@@ -1113,9 +1076,6 @@
    "a9ddd38187": "‹› şerit kaldırıldı: içe aktarılan ölçüm kendi zaman eksenini getiriyor ve pence",
    "c7083f0f9e": "Dosya çok büyük: ilk ‹› satır alındı, gerisi okunmadı."
   },
-  "js/minimap.js": {
-   "a8ca69b396": "Genel görünümü göster — altındaki içeriği örtmesin diye küçüldü"
-  },
   "js/mount-akso.js": {
    "cf6c89fcbd": "yukarıdan"
   },
@@ -1187,12 +1147,6 @@
    "1520f81c22": "Etkileşim: imleçle gezinerek değerleri okuyun · Ctrl + tekerlek yakınlaştırır · ",
    "adf5ca5d08": "İmleçle değerleri okuyun · Ctrl + tekerlek: yakınlaştır · Sağ tık + sürükle: kay"
   },
-  "js/radio.js": {
-   "0986c3a145": "Kendi müziğini ekle. Tarayıcıdan çıkmaz; internetsiz de çalar.",
-   "7728d4ccb4": "İstasyona bağlanılamadı — yayın kapalı olabilir veya internet yok.",
-   "cb708bae82": "Bir istasyon ya da parça seç",
-   "db9a0421b2": "Henüz favori yok. Bir yayının ‹› yıldızına basarak ekle."
-  },
   "js/results.js": {
    "0c59e45710": "Bu ayrımın atlanması sinsi bir hata sınıfıdır: eğim kuvveti hem yanlış işaretle ",
    "0e36058044": "Veri Gezgini'nden en az 2 sinyal seçin (X, Y). 3. sinyal Z olur.",
@@ -1231,17 +1185,6 @@
    "f385acf510": "Sütun birimi kW; ortalamalar ‹› örnek üzerinden alınmıştır. Son satırın sıfır ol",
    "fa5dbcf79a": "Tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır",
    "fce47159dc": "FEAD alt topolojisinde FEAD araçları → Hesapla ile yeniden çözün."
-  },
-  "js/ribbon.js": {
-   "03acdca000": "Bu sekmedeki tüm bileşenleri sil",
-   "135db650eb": "Sınır opaklığını sırayla değiştir",
-   "32d4912dfb": "Modül kullanım kılavuzları — aç ya da indir",
-   "3cb4a11501": "Program durumunu ölç ve sipariş fişi yaz",
-   "42e9696c8e": "Şu an içinde olduğunuz modülün kullanım kılavuzunu aç",
-   "9b1477ebf9": "Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı) — sütunları seçip diy",
-   "9fa60f0996": "Kayıtlı bir proje dosyası aç",
-   "a9be041f85": "Oturumu kapat ve giriş ekranına dön",
-   "e63fabe7ad": "Excel/CSV ölçüm dosyasını içe aktar ve şeritlere dök"
   },
   "js/sayi-alan.js": {
    "c7663f6815": "“‹›” ‹› okundu. Nokta binlik ayırıcıysa noktasız yazın: ‹›"
@@ -1354,15 +1297,9 @@
    "fe00808019": "Motorun tam gaz tork eğrisinin hangi bölümünde çalıştığını gösterir. Fan ve AC k"
   },
   "js/settings.js": {
-   "0d35c6f26b": "Uygulama tüm tercih ve yedeklerini tarayıcının yerel depolamasında tutar.",
-   "184192676a": "Program tek bir tasarım dili taşır; seçtiğin şey o dilin zemini. Seçim anında uy",
    "275a0fc2b8": "Tema, panel durumu ve diğer tercihler sıfırlanacak (oturum ve otomatik yedek kor",
-   "3df9c7be0a": "TÜM yerel veriler silinecek (oturum, tema, yedek, tercihler) ve uygulama yeniden",
-   "4db0000d09": "Avatarda baş harfleri görünür. Bu tarayıcıda saklanır, proje dosyasına yazılmaz.",
    "61992e756b": "Mevcut çalışma alanı yedekteki içerikle değiştirilecek. Devam edilsin mi?",
-   "a0d01eb877": "Tercihleri sıfırla — tema/panel/sidebar (oturum & yedek korunur)",
-   "b6d9956b7e": "Sistem kipinde işletim sistemi koyuya döndüğünde program da o anda döner; elle s",
-   "b8287d4d75": "Aktif projeyi belirli aralıklarla tarayıcı depolamasına yedekler. Beklenmedik bi"
+   "7122d06868": "Tüm yerel veriler (oturum, tema, yedek, tercihler) silinecek ve uygulama yeniden"
   },
   "js/signal-tree.js": {
    "5ff2430565": "‹›‹› · ‹›::‹› · ‹› — sürükle veya çift tıkla",
@@ -1400,23 +1337,12 @@
    "76dc7e5ecf": "‹› satır panoya kopyalandı — Excel'e yapıştırabilirsiniz."
   },
   "js/status.js": {
-   "388ff8420d": "Commit",
-   "7aa3c28c0d": "Yeni sürüm indirildi; uygulanması için sayfanın yenilenmesi gerekiyor.",
-   "b65c707aca": "ve-status-commit-arrow",
-   "ca151a1485": "main branch'ine yapılan son commit'ler.",
-   "de4f630623": "Commit bulunamadı.",
-   "e59c17fcc4": "Commit ‹›"
+   "b65c707aca": "ve-status-commit-arrow"
   },
   "js/step-p21.js": {
    "9dc7d67789": "Dosyada okunabilir yüz yok. Dosya yalnız üçgen (tessellated) geometri taşıyor ol",
    "aac1737027": "\"‹›\" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı.",
    "c89ed3a71f": "Dosyada ‹› MAPPED_ITEM var; bu kalıpla konumlandırılmış parçalar OKUNMAZ. Montaj"
-  },
-  "js/toolbar.js": {
-   "5e3b82758a": "Bu sekmedeki tüm bileşenleri silmek istediğinize emin misiniz?"
-  },
-  "js/topology.js": {
-   "352c0f8b73": "Farklı bir sekmeyi sürükleyin"
   },
   "js/trace-view.js": {
    "060d6eb88f": "veri yok — önce çözümü çalıştırın",
@@ -1434,9 +1360,7 @@
    "dfffdb026b": "Seçilenler tek diyagramda toplanır; her sinyal kendi Y ekseninde kalır."
   },
   "js/ui-core.js": {
-   "183970d2b2": "İki GİRİŞ portu birbirine bağlanmaz — girişe karşı bileşenin ÇIKIŞ portundan gel",
-   "49cfe4b416": "Tork Konvertörü → Şanzıman bağlantısı otomatik şanzıman gerektirir. Lütfen \"Şanz",
-   "c4c72dffe0": "İki ÇIKIŞ portu birbirine bağlanmaz — çıkışı karşı bileşenin GİRİŞ portuna bağla"
+   "bf6f6bf278": "Tork Konvertörü → Şanzıman bağlantısı Şanzıman Kontrol bileşeni gerektirir."
   },
   "viewer/index.html": {
    "052ad6f8a0": "Dosyayı buraya sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz",

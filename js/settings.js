@@ -109,15 +109,11 @@ function _veSettingsRenderAppearance() {
        +      '<span class="ve-fp-l">Ad</span>'
        +      '<input class="ve-fp-inp ve-fp-inp--text" id="ve-set-kimlik-ad" type="text"'
        +      ' value="' + String(_kAd).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"'
-       +      ' placeholder="Adın ve soyadın" maxlength="40"'
+       +      ' placeholder="Ad soyad" maxlength="40"'
        +      ' onchange="veKimlikAdYaz(this.value); veSettingsShowSection(\'appearance\');">'
        +    '</label>'
-       +  '</div>'
-       +  '<p class="ve-set-not">Avatarda baş harfleri görünür. Bu tarayıcıda saklanır,'
-       +  ' proje dosyasına yazılmaz.</p>';
+       +  '</div>';
   html += '<h4 class="ve-settings-subhead">Tema</h4>';
-  html += '<p class="ve-settings-desc">Program tek bir tasarım dili taşır; ' +
-          'seçtiğin şey o dilin zemini. Seçim anında uygulanır ve hatırlanır.</p>';
   html += '<div class="ve-settings-theme-grid">';
   kipler.forEach(function(t) {
     var a = (t.id === current) ? ' active' : '';
@@ -130,8 +126,6 @@ function _veSettingsRenderAppearance() {
     html += '</button>';
   });
   html += '</div>';
-  html += '<p class="ve-settings-desc">Sistem kipinde işletim sistemi koyuya ' +
-          'döndüğünde program da o anda döner; elle seçim yaptıysan dokunulmaz.</p>';
   return html;
 }
 
@@ -209,7 +203,6 @@ function _veSettingsRenderAutosave() {
     return d + ' gün önce';
   }
   var html = _veSettingsBaslik('autosave');
-  html += '<p class="ve-settings-desc">Aktif projeyi belirli aralıklarla tarayıcı depolamasına yedekler. Beklenmedik bir kapanmadan sonra son yedek “Yedeği geri yükle” ile açılır.</p>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Sıklık</span><div class="ve-settings-radios">';
   var labels = { 0: 'Kapalı', 5: '5 dakika', 10: '10 dakika', 30: '30 dakika' };
   VE_SETTINGS_AUTOSAVE_INTERVALS.forEach(function(v) {
@@ -234,7 +227,6 @@ function _veSettingsRenderAutosave() {
 // sürükleme seçim kutusu açar, kaydırma sağ tıkla (ui-core.js).
 function _veSettingsRenderShortcuts() {
   var html = _veSettingsBaslik('shortcuts');
-  html += '<p class="ve-settings-desc">Programın kısayolları — <kbd>?</kbd> ile açılan pencereyle aynı liste.</p>';
   html += '<div class="ve-set-kisayol">' + (typeof veKisayolGruplariHTML === 'function' ? veKisayolGruplariHTML() : '') + '</div>';
   return html;
 }
@@ -277,7 +269,7 @@ function veSettingsClearAutosave() {
   veSettingsShowSection('data');
 }
 function veSettingsClearAll() {
-  if(!confirm('TÜM yerel veriler silinecek (oturum, tema, yedek, tercihler) ve uygulama yeniden başlatılacak. Bu işlem geri alınamaz. Devam edilsin mi?')) return;
+  if(!confirm('Tüm yerel veriler (oturum, tema, yedek, tercihler) silinecek ve uygulama yeniden başlayacak. Geri alınamaz. Devam edilsin mi?')) return;
   try { localStorage.clear(); sessionStorage.clear(); } catch(e) {}
   setTimeout(function() { location.reload(); }, 300);
 }
@@ -290,10 +282,9 @@ function _veSettingsRenderData() {
   var hasBackup = false;
   try { hasBackup = !!localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
   var html = _veSettingsBaslik('data');
-  html += '<p class="ve-settings-desc">Uygulama tüm tercih ve yedeklerini tarayıcının yerel depolamasında tutar.</p>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Toplam boyut</span><div class="ve-settings-value">' + _veSettingsFmtBytes(bytes) + ' (' + keys.length + ' anahtar)</div></div>';
   html += '<div class="ve-settings-btn-row" style="flex-direction:column; align-items:stretch; gap:8px; margin-top:14px;">';
-  html += '<button class="ve-settings-btn" onclick="veSettingsResetPreferences()"><span class="mf-ico mf-ico-refresh"></span> Tercihleri sıfırla<small> — tema/panel/sidebar (oturum & yedek korunur)</small></button>';
+  html += '<button class="ve-settings-btn" onclick="veSettingsResetPreferences()"><span class="mf-ico mf-ico-refresh"></span> Tercihleri sıfırla</button>';
   if(hasBackup) {
     html += '<button class="ve-settings-btn" onclick="veSettingsClearAutosave()"><span class="mf-ico mf-ico-trash"></span> Otomatik yedeği sil</button>';
   }
@@ -337,8 +328,7 @@ function _veSettingsModuller() {
 function _veSettingsRenderAbout() {
   var html = _veSettingsBaslik('about');
   var mod = _veSettingsModuller();
-  html += '<p class="ve-settings-desc">MFSim — tarayıcıda çalışan mühendislik simülasyonu'
-    + (mod.length ? ': ' + mod.join(' · ') : '') + '.</p>';
+  if(mod.length) html += '<div class="ve-settings-row"><span class="ve-settings-label">Modüller</span><div class="ve-settings-value">' + mod.join(' · ') + '</div></div>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Sürüm</span><div class="ve-settings-value">' + _veSettingsSurum() + '</div></div>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Lisans</span><div class="ve-settings-value">' + VE_SETTINGS_LISANS + '</div></div>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Kaynak kod</span><div class="ve-settings-value"><a href="https://github.com/kaydgn/MFSim" target="_blank" rel="noopener">github.com/kaydgn/MFSim</a></div></div>';

@@ -672,7 +672,6 @@ function veMntCloseEditor(_silent){
   } finally { _veMntBusy=false; }
   if(!_silent && typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('exit');
   veMntUpdateBreadcrumb();
-  if(!_silent && typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
 }
 
 function veMntCollapseToRoot(){
@@ -2174,7 +2173,7 @@ function _mntLoadExampleFromJSON(ref, ex){
     // ölçüsüne göreydi; başka boyutta bir ekranda topolojinin bir kısmı görüş
     // dışında (kenara yapışmış) kalıyordu.
     if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
-    if(typeof showToast==='function') showToast('Örnek yüklendi'+(ex&&ex.vehicle?(' — '+ex.vehicle):'')+' (JSON).','info');
+    if(typeof showToast==='function') showToast('Örnek yüklendi'+(ex&&ex.vehicle?(' — '+ex.vehicle):'')+'.','info');
   });
 }
 
