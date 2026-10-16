@@ -64,9 +64,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   illüstrasyon (x-ışını, SABİT görünüş, çözümün girdisinden — `veMntAksoCozumModel`) da.
   **3D Görüntüleyici'nin ilk sekmesi** aynı çizicinin SERBEST kamerası (`o.kam` azimut ·
   yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle döndürür, tekerlek imlecin
-  altını tutarak yakınlaştırır, sağ tık kaydırır); three.js sahnesi "Klasik 3B"
-  sekmesinde — kaldırma kararı kullanıcının. Kapı: `mount-akso.test.js` (→ *RAPOR* ·
-  *SERBEST KAMERA*) + `mount-pencere.spec.js` → *Aksonometrik* · *3D Görüntüleyici* ·
+  altını tutarak yakınlaştırır, sağ tık kaydırır). **"Klasik 3B" sekmesi YALNIZ AD**
+  (kullanıcı kararı 2026-10-16): three.js sahnesi kaldırıldı, sekme ilerleyen zamanda
+  gerçek CAD dosyasıyla işlenecek; `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin
+  sahnesi. Kapı: `mount-akso.test.js` (→ *RAPOR* · *SERBEST KAMERA* · *KLASİK 3B*) +
+  `mount-pencere.spec.js` → *Aksonometrik* · *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —

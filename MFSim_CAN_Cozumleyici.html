@@ -5355,16 +5355,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .mnt-vwr-toggle.is-on::before{ background:var(--accent-primary); }
 .mnt-vwr-action .mf-ico{ font-size:var(--fs-body); }
-.mnt-vwr-hint{
-  font-size:var(--fs-micro);color:var(--text-muted);
-  line-height:1.55;margin-bottom:2px;
-}
-/* Tam ekran üst çubuğu: aynı çip dili, yatay dizilim. */
-.mnt-vwr-bar{
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-  padding:8px 14px;flex-shrink:0;border-bottom:1px solid var(--border-color);
-}
-.mnt-vwr-bar .mnt-vwr-toggle,.mnt-vwr-bar .mnt-vwr-action{ width:auto;padding:5px 11px; }
 
 /* ── Bileşen kimlik bloğu (simge + ad + TİP + sil düğmesi) ──
    Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
@@ -10231,7 +10221,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fp-solve-not[data-d="warn"]{ color:var(--ink-warning); }
 .ve-fp-solve-not[data-d="no"]{ color:var(--ink-danger); }
 
-/* SAHNE (3B · Koordinat) — sütun genişliğinde KARE. Eskiden 58vh boyunda
+/* SAHNE (Koordinat Düzlemi) — sütun genişliğinde KARE. Eskiden 58vh boyunda
    dikine bir şeritti: 380 px'lik sütunda 354 × 540. */
 .ve-mnt-sahne{
   position:relative; width:100%; aspect-ratio:1 / 1; max-height:60vh; margin:0 0 8px;
@@ -10241,7 +10231,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-sahne > canvas{ display:block; width:100%; height:100%; }
 /* Görüntüleyicinin eylemleri pencerenin eylem satırında, eşit genişlikte. */
 .ve-mnt-pencere .ve-fp-eylem > .mnt-vwr-action{ flex:1 1 0; width:auto; }
-.mnt-vwr-bar .mnt-vwr-hint{ margin:0 0 0 auto; }
 
 /* İŞARET ÖRNEĞİ — föy satırının başında, sahnedeki işaretin rengi. Metin değil
    işaret: renk yazıya taşınmaz (kontrast kuralı). */
@@ -10249,9 +10238,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   display:inline-block; width:9px; height:9px; margin-right:6px; vertical-align:-1px;
   border-radius:50%; background:var(--text-muted);
 }
-.ve-mnt-is[data-i="takoz"]{ border-radius:var(--radius-xs); background:var(--accent-success); }
-.ve-mnt-is[data-i="govde"]{ background:var(--accent-warning); }
-.ve-mnt-is[data-i="am"]{ background:var(--accent-danger); }
 .ve-mnt-is[data-i="x"], .ve-mnt-is[data-i="y"], .ve-mnt-is[data-i="z"]{
   width:12px; height:3px; border-radius:0; vertical-align:2px;
 }
@@ -10259,10 +10245,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-is[data-i="y"]{ background:var(--eksen-y); }
 .ve-mnt-is[data-i="z"]{ background:var(--eksen-z); }
 
-/* FARE İPUCU — 3B sahne ve 2D çizim aynı kutu. Satır içinde yalnız konum
-   (left/top/display) ve katman: tam ekran perdesi (satır içi 100045) jeton
-   sisteminin dışında, ipucu onun üstünde durmalı. Renk, zemin ve kenar burada.
-   Ad işaretin renginde ama METİN mürekkebiyle (--ink-*), etiket soluk. */
+/* FARE İPUCU — 2D çizimlerin ve aksonometrinin kutusu. Satır içinde yalnız
+   konum (left/top/display) ve katman: tam ekran perdesi (satır içi 100045)
+   jeton sisteminin dışında, ipucu onun üstünde durmalı. Renk, zemin ve kenar
+   burada. */
 .ve-mnt-hover-ip{
   position:fixed; pointer-events:none; display:none; max-width:260px;
   padding:7px 9px; font-size:var(--fs-tiny); line-height:1.5;
@@ -10271,10 +10257,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   font-variant-numeric:tabular-nums;
 }
 .ve-mnt-hover-ip--metin{ max-width:280px; padding:7px 10px; font-size:var(--fs-body); white-space:pre-line; }
-.ve-mnt-ip-et{ color:var(--text-muted); }
-.ve-mnt-ip-ad[data-t="takoz"]{ color:var(--ink-success); }
-.ve-mnt-ip-ad[data-t="govde"]{ color:var(--ink-warning); }
-.ve-mnt-ip-ad[data-t="am"]{ color:var(--ink-danger); }
 
 /* ETKİLEŞİM — kısayol penceresinin dilinde birer satır. */
 .ve-mnt-ipucu{ margin:0; padding:0; list-style:none; font-size:var(--fs-tiny); color:var(--text-secondary); }

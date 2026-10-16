@@ -2803,7 +2803,7 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
 // düğmesi (tek seferlik iş). Eskiden ikisi de aynı gri butondu ve kapalı katman
 // opacity:0.45 ile soldurulduğu için "devre dışı/bozuk" görünüyordu. Katmanlar
 // üçlü ızgarada (.mnt-vwr-toggles), eylemler pencerenin eylem satırında
-// (.ve-fp-eylem) ya da tam ekranın üst çubuğunda (.mnt-vwr-bar).
+// (.ve-fp-eylem).
 function _mntVwrToggle(what, label, title, on){
   var isOn = (on !== false);
   return '<button type="button" class="mnt-vwr-toggle'+(isOn?' is-on':'')+'" aria-pressed="'+(isOn?'true':'false')+'"'
@@ -2815,19 +2815,6 @@ function _mntVwrAction(onclick, icon, label, title){
   return '<button type="button" class="mnt-vwr-action" onclick="'+onclick+'" title="'+_mntEsc(title||label)+'">'
     + (icon ? '<span class="mf-ico mf-ico-'+icon+'"></span>' : '')
     + '<span>'+_mntEsc(label)+'</span></button>';
-}
-// GÖSTERGE — işaret · anlam föyü (3B sahnenin renkleri; kenar tonu jetondan).
-// Çizim three.js'te sabit renkli; föyün örnek işaretleri AYNI renk sınıfları
-// (`.ve-mnt-is[data-i]`, CSS) — renk bilgisi metin rengine taşınmaz.
-function _mntVwrLegend(){
-  function satir(i, ad, not){
-    return '<tr><td><span class="ve-mnt-is" data-i="'+i+'" aria-hidden="true"></span>'+ad+'</td><td class="sol sf">'+not+'</td></tr>';
-  }
-  return _mntFoyAc([{ b:'İşaret', gen:'44%' }, { b:'Anlam', gen:'56%', sinif:'sol' }], 'Sahne göstergesi')
-    + satir('takoz', 'Takoz', 'küp')
-    + satir('govde', 'Bileşen CG', 'küre · kütleyle büyür')
-    + satir('am', 'Birleşik CG', 'toplam ağırlık merkezi')
-    + _MNT_FOY_KAPA;
 }
 // ETKİLEŞİM — kısayol penceresinin dilinde (tipografi kuralı).
 function _mntVwrIpucu(satirlar){
@@ -2841,31 +2828,19 @@ function _mntSahneHTML(wrapId, canvasId){
 // 3B GÖRÜNÜM — iki sekme (adım 3, 2026-10-16). İLK sekme 2D Görünüm'ün
 // aksonometrisinin SERBEST kamerası: aynı çizici, aynı model, aynı katmanlar;
 // döndürülür, yakınlaştırılır, kaydırılır (kullanıcı: "bunu 3B tarzında da
-// yapacağız, o zaman 3B görüntüleyiciye gerek kalmayacak"). three.js sahnesi
-// "Klasik 3B" sekmesinde durur — kaldırma kararı kullanıcının.
+// yapacağız, o zaman 3B görüntüleyiciye gerek kalmayacak"). "Klasik 3B"
+// sekmesi YALNIZ AD (kullanıcı kararı 2026-10-16): three.js sahnesi kaldırıldı,
+// sekme ilerleyen zamanda gerçek CAD dosyasıyla işlenecek.
 function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};
   var M=_mntCanliModel();
-  var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz';
   var bos=!M.g.components.length && !M.g.mounts.length, kapId='ve-mnt-akso3b-'+node.id;
   var akso=bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>'
     : '<div class="ve-mnt-akso-kap" id="'+kapId+'">'+_mntAksoHTML(_mnt2DPencereVeri(), _MNT_KROKI_W, false, kapId)+'</div>'
       + '<div class="ve-fp-eylem">'+_mntVwrAction('veMntAkso3BTamEkran()', 'maximize', 'Tam ekran', 'Döndürülebilir aksonometriyi, üç duvarıyla, tam ekranda aç')+'</div>';
-  var klasik=_mntBolum('Sahne', em,
-      _mntSahneHTML('ve-mnt-inline-viewer-wrap', 've-mnt-inline-viewer-canvas')
-    + '<div class="ve-fp-eylem">'
-    +   _mntVwrAction("veMountViewerReset();", 'crosshair', 'Sıfırla', 'Kamera açısını ve yakınlığı başlangıca döndür')
-    +   _mntVwrAction("veMntViewerFullscreen();", 'maximize', 'Tam ekran', 'Görüntüleyiciyi tam ekran aç')
-    +   _mntVwrAction("veMntViewerRefresh()", 'refresh', 'Yenile', 'Topolojiyi yeniden oku ve sahneyi güncelle')
-    + '</div>')
-    + _mntBolum('Katmanlar', '', '<div class="mnt-vwr-toggles">'
-    +   _mntVwrToggle('grid', 'Zemin', 'Zemin ızgarasını gizle/göster', false)
-    +   _mntVwrToggle('axes', 'Eksen', 'Eksenleri gizle/göster')
-    +   _mntVwrToggle('labels', 'Etiket', 'Eksen etiketlerini gizle/göster')
-    + '</div>')
-    + _mntBolum('Gösterge', '', _mntVwrLegend());
+  var klasik='<div class="ve-mnt-kroki-bos">Bu sekme gerçek CAD dosyasıyla çalışmaya ayrıldı. Model Aksonometrik sekmesinde döndürülür.</div>';
   var yan=_mntBolum('Etkileşim', '', _mntVwrIpucu(['Sol tık + sürükle: döndür', 'Sağ tık + sürükle: kaydır',
-        'Tekerlek: yakınlaştır', 'Çift tık: aksonometride sıfırla', 'İşaretin üstüne gel: bileşenin bilgisi']));
+        'Tekerlek: yakınlaştır', 'Çift tık: sıfırla', 'İşaretin üstüne gel: bileşenin bilgisi']));
   return _mntPencereKabuk(node, [{ k:'akso', ad:'Aksonometrik', govde:akso }, { k:'sahne', ad:'Klasik 3B', govde:klasik }], yan, '');
 }
 // Aksonometrik sekmeyi kabın GERÇEK genişliğinde kur (sekme gizliyken de:
@@ -3642,14 +3617,14 @@ function _mnt2DMountMark(cx,cy,hatch,color,boy){
 function _mnt2DInfoAttr(lines){
   return ' data-mnt-info="'+_mntEsc(lines.join('\n')).replace(/\n/g,'&#10;')+'"';
 }
-// 2D SVG işaretlerine fare-üstü (hover) bilgi kutusu bağla — 3D görüntüleyicideki
-// gibi. Container'a olay dinleyici ekler; tek bir yüzen tooltip div'i paylaşılır.
+// 2D SVG işaretlerine fare-üstü (hover) bilgi kutusu bağla. Container'a olay
+// dinleyici ekler; tek bir yüzen tooltip div'i paylaşılır.
 function _mnt2DAttachHover(container){
   if(!container || typeof document==='undefined' || container.__mnt2dHover) return;
   container.__mnt2dHover=true;
   var tip=document.getElementById('ve-mnt-2d-tip');
   if(!tip){ tip=document.createElement('div'); tip.id='ve-mnt-2d-tip';
-    tip.className='ve-mnt-hover-ip ve-mnt-hover-ip--metin';     // 3B'ninkiyle aynı kutu, CSS'ten
+    tip.className='ve-mnt-hover-ip ve-mnt-hover-ip--metin';     // kutu CSS'ten
     tip.style.zIndex='100060';                                  // tam ekran perdesinin (100045) üstünde
     document.body.appendChild(tip);
   }
@@ -4715,13 +4690,10 @@ function veMntLibSearchKey(ev, nodeId){
   if(first) first.click();
 }
 
-// Panel içi 3B görüntüleyiciyi güncel topolojiyle (yeniden) başlat.
+// 3D Görüntüleyici penceresini güncel topolojiyle tazele: aksonometri kabın
+// GERÇEK genişliğinde yeniden kurulur. three.js sahnesi YOK ("Klasik 3B"
+// yalnız ad, 2026-10-16) — pencere açılınca WebGL bağlamı kurulmaz.
 function veMntViewerRefresh(){
-  if(typeof _mntGatherForSolver!=='function') return;
-  _veMntViewerData = _mntGatherForSolver();
-  if(typeof veMountViewerInit==='function'){
-    try{ veMountViewerInit('ve-mnt-inline-viewer-canvas'); veMountViewerUpdate(); }catch(e){}
-  }
   _mntAkso3bTazele();
 }
 
@@ -5773,26 +5745,6 @@ function veMnt2DTamEkran(){
     _mnt2DAttachZoom(uc);
   }, function(){ _mntAksoDur('ve-mnt-akso-fs'); });
 }
-// 3D Görüntüleyici'yi (model modu) tam ekran aç. Koordinat Düzlemi'nde tam ekran yok.
-function veMntViewerFullscreen(){
-  var toggles = _mntVwrToggle('grid','Zemin','Zemin ızgarasını gizle/göster', false)
-    + _mntVwrToggle('axes','Eksen','Eksenleri gizle/göster')
-    + _mntVwrToggle('labels','Etiket','Eksen etiketlerini gizle/göster');
-  var bar='<div class="mnt-vwr-bar">'
-    + toggles + _mntVwrAction("veMountViewerReset();",'crosshair','Sıfırla','Kamera açısını ve yakınlığı başlangıca döndür')
-    + '<span class="mnt-vwr-hint">Sol tık + sürükle: döndür · Sağ tık + sürükle: kaydır · Tekerlek: yakınlaştır · Esc: kapat</span></div>';
-  var wrap='<div style="flex:1; min-height:0; position:relative; background:var(--bg-primary);"><canvas id="ve-mnt-fs-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
-  _mntFsOverlay('3D Görüntüleyici', bar+wrap,
-    function(){ if(typeof _mntGatherForSolver==='function') _veMntViewerData=_mntGatherForSolver();
-      if(typeof veMountViewerInit==='function'){ try{ veMountViewerInit('ve-mnt-fs-canvas', 'model', { hafiza:'model:tam' }); veMountViewerUpdate(); }catch(e){} } },
-    function(){ if(typeof veMountViewerDispose==='function'){ try{ veMountViewerDispose(); }catch(e){} }
-      veMntViewerRefresh(); }
-  );
-}
-
-// 3D viewer veri sağlayıcısı (cp-mount-viewer.js okur)
-var _veMntViewerData = null;
-
 // Node/Jest için dışa aç
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
@@ -5863,6 +5815,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntForgetResults: _mntForgetResults,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
+    veMntViewerRefresh: veMntViewerRefresh,
     getMntCoordFramePropertiesHTML: getMntCoordFramePropertiesHTML,
     getMnt2DViewPropertiesHTML: getMnt2DViewPropertiesHTML,
     _mnt2DGather: _mnt2DGather,
