@@ -247,3 +247,131 @@ test('2D Görünüm · Aksonometrik: hareket azaltma açıkken mod durağan çiz
   expect(await page.evaluate(() => document.querySelector('#ve-properties .ve-mnt-ak-alt').textContent)).toContain('Hareket azaltma açık');
   await page.evaluate(AKSO_SIFIR);
 });
+
+// ── 3D GÖRÜNTÜLEYİCİ · AKSONOMETRİK (adım 3, 2026-10-16) ─────────────────
+// Aynı çizicinin SERBEST kamerası. Node'daki kapı (mount-akso.test.js →
+// SERBEST KAMERA) çizicinin matematiğini tutuyor; burada GERÇEK fare:
+// sol tık + sürükle modeli eliyle döndürür ve çizim büyüyüp küçülmez,
+// tekerlek imlecin altındaki takozu yerinde tutar, sağ tık kaydırır, oklar
+// döndürür; her açıda, her katmanda ve tam ekranda üç duvarla yerleşim temiz;
+// three.js sahnesi "Klasik 3B" sekmesinde çalışıyor.
+const AKSO3B_SIFIR = () => Object.assign(VE_MNT_AKSO3B, { az: null, el: null, direk: false, kuvvet: false, cokme: false,
+  mod: false, rijit: false, duvar: false, modI: 0, oynat: true });
+test('3D Görüntüleyici · Aksonometrik: sürükle-döndür, tekerlek, kaydır; her açıda yerleşim temiz', async ({ page }) => {
+  await bootApp(page);
+  const out = [];
+  for (const [k, imza] of ORNEK) {
+    await ornek(page, k, imza);
+    await page.evaluate(async () => { const s = nodes.find((n) => n.type === 'mnt-solver'); await veMntSolverCompute(s.id); });
+    await page.evaluate(AKSO3B_SIFIR);
+    await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
+    await page.waitForTimeout(900);
+    await page.evaluate(Y.KAYNAK);
+    const ilk = await page.evaluate(() => {
+      const t = document.querySelector('#ve-properties .ve-fp-tab[aria-selected="true"]');
+      const kap = document.querySelector('#ve-properties .ve-mnt-akso-kap'), svg = kap && kap.querySelector('svg.ve-mnt2d-akso');
+      return { sekme: t && t.getAttribute('data-k'), id: kap && kap.id, vb: svg && svg.viewBox.baseVal.width, en: svg && svg.getBoundingClientRect().width };
+    });
+    expect(ilk.sekme).toBe('akso');
+    expect(Math.abs(ilk.vb - ilk.en)).toBeLessThan(1.5);          // 1:1 — yazı küçülmez
+    const id = ilk.id;
+    const durum = () => page.evaluate((i) => ({ az: VE_MNT_AKSO3B.az, el: VE_MNT_AKSO3B.el, sc: _mntAksoCizim[i].F.sc,
+      ad: document.querySelector('#' + i + ' [data-ak3b-ad]').textContent }), id);
+    const olc = async (ad) => {
+      await page.mouse.move(4, 4);
+      await page.waitForTimeout(250);
+      const r = await page.evaluate(() => window.__yerlesim('#ve-properties'));
+      Y.yerlesimOzet(r, k + ' · ' + ad).forEach((x) => out.push(x));
+    };
+    const ayar = (a, b) => page.evaluate(([i, kk, vv]) => veMntAksoAyar(i, kk, vv), [id, a, b]);
+    await olc('dimetrik');
+    // GERÇEK sürükleme: sağa 80 px → azimut 40° azalır, ölçek aynı
+    const once = await durum();
+    const kutu = async () => (await page.$('#' + id + ' svg.ve-mnt2d-akso')).boundingBox();
+    let s = await kutu();
+    await page.mouse.move(s.x + s.width / 2, s.y + s.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) await page.mouse.move(s.x + s.width / 2 + i * 10, s.y + s.height / 2);
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    const sag = await durum();
+    expect(sag.az).toBeCloseTo((once.az - 40 + 360) % 360, 6);
+    expect(sag.sc).toBeCloseTo(once.sc, 9);
+    expect(sag.ad).toBe('Serbest bakış');
+    await olc('sağa sürüklendi');
+    s = await kutu();
+    await page.mouse.move(s.x + s.width / 2, s.y + s.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 6; i++) await page.mouse.move(s.x + s.width / 2, s.y + s.height / 2 + i * 10);
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+    expect((await durum()).el).toBeCloseTo(once.el + 30, 6);
+    await olc('aşağı sürüklendi');
+    for (const [on, ad] of [['ust', 'Üstten'], ['on', 'Önden'], ['yan', 'Yandan'], ['iso', 'İzometrik']]) {
+      await ayar('on', on);
+      expect((await durum()).ad).toBe(ad);
+      await olc(ad);
+    }
+    await page.evaluate((i) => { VE_MNT_AKSO3B.az = 200; VE_MNT_AKSO3B.el = 30; _mntAksoKur(i); }, id);
+    await ayar('kat', 'kuvvet'); await ayar('kat', 'cokme'); await olc('az 200 · kuvvet + statik sehim');
+    await ayar('kat', 'cokme'); await ayar('kat', 'kuvvet');
+    await ayar('kat', 'rijit'); await olc('az 200 · rijitlik'); await ayar('kat', 'rijit');
+    await ayar('kat', 'direk'); await olc('az 200 · direk'); await ayar('kat', 'direk');
+    if (k === 'tulga') {
+      // TEKERLEK: imleç T1'in üstünde; üç tık sonra T1 yine imlecin altında
+      const t1 = async () => { const b = await (await page.$('#' + id + ' svg.ve-mnt2d-akso .ve-ak-t[data-ak="T1"]')).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+      const p0 = await t1();
+      await page.mouse.move(p0[0], p0[1]);
+      for (let i = 0; i < 3; i++) { await page.mouse.wheel(0, -100); await page.waitForTimeout(60); }
+      await page.waitForTimeout(450);
+      const p1 = await t1();
+      expect(Math.hypot(p1[0] - p0[0], p1[1] - p0[1])).toBeLessThan(1.5);
+      expect(await page.evaluate((i) => _mntAksoGor[i].yakin, id)).toBeCloseTo(Math.pow(1.15, 3), 6);
+      await olc('yakınlaşmış');
+      // SAĞ TIK + sürükle: çizim imleçle kayar (görünüm 1:1)
+      const g0 = await (await page.$('#' + id + ' svg.ve-mnt2d-akso .ve-ak-gam')).boundingBox();
+      await page.mouse.move(p1[0] + 30, p1[1]);
+      await page.mouse.down({ button: 'right' });
+      for (let i = 1; i <= 4; i++) await page.mouse.move(p1[0] + 30 + i * 10, p1[1] + i * 5);
+      await page.mouse.up({ button: 'right' });
+      await page.waitForTimeout(300);
+      const g1 = await (await page.$('#' + id + ' svg.ve-mnt2d-akso .ve-ak-gam')).boundingBox();
+      expect(g1.x - g0.x).toBeCloseTo(40, 0);
+      expect(g1.y - g0.y).toBeCloseTo(20, 0);
+      // KLAVYE: odaktaki çizimde sol ok azimutu 5° artırır; 0 sıfırlar
+      const az0 = (await durum()).az;
+      await page.focus('#' + id + ' svg.ve-mnt2d-akso');
+      await page.keyboard.press('ArrowLeft');
+      expect((await durum()).az).toBeCloseTo((az0 + 5) % 360, 6);
+      await page.keyboard.press('0');
+      const sifir = await durum();
+      expect([sifir.ad, await page.evaluate((i) => _mntAksoGor[i].yakin, id)]).toEqual(['Dimetrik', 1]);
+      // MOD canlanıyor
+      await ayar('kat', 'mod');
+      const kare = () => page.evaluate((i) => document.querySelector('#' + i + ' svg.ve-mnt2d-akso .ve-ak-hareket').innerHTML, id);
+      const a1 = await kare(); await page.waitForTimeout(350); const a2 = await kare();
+      if (a1 === a2) out.push(k + ' · mod canlanmıyor');
+      await ayar('kat', 'mod');
+      // KLASİK 3B: three.js sahnesi kendi sekmesinde gerçek boyutta çiziyor
+      const nid = await page.evaluate(() => nodes.find((x) => x.type === 'mnt-viewer').id);
+      await page.click('#ve-fp-tabs-' + nid + ' .ve-fp-tab[data-k="sahne"]');
+      await page.waitForTimeout(700);
+      const kl = await page.evaluate(() => { const c = document.getElementById('ve-mnt-inline-viewer-canvas'); return { w: c.clientWidth, cocuk: _veMountViewer.group.children.length }; });
+      expect(kl.w).toBeGreaterThan(200);
+      expect(kl.cocuk).toBeGreaterThan(5);
+      await page.click('#ve-fp-tabs-' + nid + ' .ve-fp-tab[data-k="akso"]');
+    }
+    // TAM EKRAN: üç duvar, serbest açı
+    await page.evaluate(() => { VE_MNT_AKSO3B.az = 200; VE_MNT_AKSO3B.el = 30; veMntAkso3BTamEkran(); });
+    await page.waitForTimeout(900);
+    await page.evaluate(() => veMntAksoAyar('ve-mnt-akso3b-fs', 'kat', 'duvar')); await page.waitForTimeout(400);
+    const tam = await page.evaluate(() => ({ yer: window.__yerlesim('#ve-mnt-fs'), duvar: document.querySelectorAll('#ve-mnt-akso3b-fs .ve-ak-d-gol').length }));
+    Y.yerlesimOzet(tam.yer, k + ' · tam ekran üç duvar').forEach((x) => out.push(x));
+    if (!tam.duvar) out.push(k + ' · tam ekranda duvar gölgesi yok');
+    await page.evaluate(() => veMntAksoAyar('ve-mnt-akso3b-fs', 'kat', 'duvar'));
+    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    await page.evaluate(() => veTogglePropertiesPanel(false));
+  }
+  await page.evaluate(AKSO3B_SIFIR);
+  expect(out).toEqual([]);
+});

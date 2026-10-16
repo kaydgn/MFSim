@@ -144,7 +144,9 @@ function _gmSec2(){
     ['<strong>3D Görüntüleyici · 2D Görünüm · Koordinat Düzlemi</strong>',
       'Modeli gözle denetleme yüzeyleri; 2D Görünüm ilk sekmede modeli aksonometrik çizer '
       + '(dimetrik ya da izometrik, sekiz bakış; direk, kuvvet, mod ve rijitlik katmanları), '
-      + 'düz görünüşlerde işaretleri numarayla çizer ve adlarını yan sütundaki föyde verir', 'Hesaba girmez'],
+      + 'düz görünüşlerde işaretleri numarayla çizer ve adlarını yan sütundaki föyde verir; '
+      + '3D Görüntüleyici aynı çizimi serbestçe döndürür (sürükle: döndür, tekerlek: yakınlaştır, '
+      + 'sağ tık: kaydır), eski sahne Klasik 3B sekmesinde', 'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12']
   ], ['Bileşen', 'Ne', 'Not']);
   h += '<h3>2.2 Neyi siz verirsiniz, neyi program hesaplar</h3>';
