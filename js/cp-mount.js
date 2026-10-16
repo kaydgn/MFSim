@@ -1706,6 +1706,7 @@ function _mntPencereHTML(node){
   if(node.type==='mnt-solver') return getMntSolverPropertiesHTML(node);
   if(node.type==='mnt-library') return getMntLibraryPropertiesHTML(node);
   if(node.type==='mnt-report') return getMntReportPropertiesHTML(node);
+  if(node.type==='mnt-parametric' && typeof getMntParamPropertiesHTML==='function') return getMntParamPropertiesHTML(node);
   if((_mntDef(node)||{}).isMountBody || _MNT_POINTMASS_DEFAULT[node.type]!==undefined || _MNT_PTO_REF[node.type]
      || /^mnt-(motor|gearbox|bracket|transfer)$/.test(node.type)) return getMntMassPropertiesHTML(node);
   return '';
@@ -1808,7 +1809,12 @@ function veMntApplyLib(nodeId, key){
 // `d`: takozun veri nesnesi (node.data ya da sihirbazın takoz satırı).
 // Döner: yazıldı mı (bilinmeyen anahtar → false, hiçbir alana dokunulmaz).
 function _mntLibUygula(d, key){
-  var m=key ? veMntGetLibraryMap()[key] : null;
+  return _mntLibGirdiYaz(d, key ? veMntGetLibraryMap()[key] : null, key);
+}
+// Yazıcının kendisi — girdi (`m`, birleşik haritanın kaydı) elde. Katalog
+// taraması haritayı bir kez kurar ve her kombinasyonda bunu çağırır
+// (js/cp-mount-param.js); ikinci bir yazıcı açılmaz.
+function _mntLibGirdiYaz(d, m, key){
   if(!m || !d) return false;
   d.kxs=m.sx; d.kys=m.sy; d.kzs=m.sz;
   d.kxd=m.dx; d.kyd=m.dy; d.kzd=m.dz; d.libKey=key;
@@ -5140,6 +5146,12 @@ if(typeof module!=='undefined' && module.exports){
     veMnt2DGorunusSVG: veMnt2DGorunusSVG,
     _mntPrepareFrom: _mntPrepareFrom,
     _mntLibUygula: _mntLibUygula,
+    // Parametrik Analiz (js/cp-mount-param.js) bu yardımcılarla kurar
+    _mntLibGirdiYaz: _mntLibGirdiYaz, _mntEntryHasLaw: _mntEntryHasLaw,
+    _mntDef: _mntDef, _mntNum: _mntNum, _mntEsc: _mntEsc, _mntS: _mntS, _mntSym: _mntSym, _mntBos: _mntBos,
+    _mntDugum: _mntDugum, _mntPencereKabuk: _mntPencereKabuk, _mntPencereHTML: _mntPencereHTML,
+    _mntBolum: _mntBolum, _mntIzgara: _mntIzgara, _mntOku: _mntOku,
+    _mntFoyAc: _mntFoyAc, _MNT_FOY_KAPA: _MNT_FOY_KAPA,
     VE_MNT_ARAC_TIPLERI: VE_MNT_ARAC_TIPLERI,
     _mntAracGaranti: _mntAracGaranti,
     veMntKanvasBos: veMntKanvasBos,

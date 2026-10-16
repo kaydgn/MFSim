@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','mnt-parametric','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -561,6 +561,15 @@ var componentDefs = {
     name: 'Rapor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #a8502b)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #a8502b)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #a8502b)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isMountReport: true, defaultWidth: 60, defaultHeight: 56
+  },
+  // Parametrik Analiz — ilk analizi "Katalogdan seçim": takoz gruplarına
+  // kütüphanedeki tipleri takıp her kombinasyonu Çözücü'nün yolundan geçirir;
+  // sonuç ayrı bir raporda. Fiziksel topolojiye bağlanmaz. Pencere ve koşucu:
+  // cp-mount-param.js, çekirdek mount-katalog.js, rapor cp-mount-param-rapor.js.
+  'mnt-parametric': {
+    name: 'Parametrik Analiz',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M18 14 V82 H88" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 24 Q38 62 82 72" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="4" stroke-linecap="round"/><circle cx="58" cy="36" r="4.5" fill="var(--text-muted, #676055)"/><circle cx="74" cy="50" r="4.5" fill="var(--text-muted, #676055)"/><circle cx="30" cy="24" r="5" fill="var(--accent-success, #2f6b45)"/><circle cx="82" cy="72" r="5" fill="var(--accent-success, #2f6b45)"/><circle cx="44" cy="55" r="7.5" fill="var(--accent-primary, #a8502b)"/></svg>',
+    inputs: 0, outputs: 0, isMountParametric: true, defaultWidth: 60, defaultHeight: 56
   },
   // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
   // Sürüklenebilir composite düğüm: ana canvas'ta tek blok; çift tıklanınca

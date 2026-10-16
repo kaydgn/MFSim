@@ -76,8 +76,8 @@ describe('LİSTE — Takoz\'un hiçbir penceresi modal değil', () => {
     return (new Function('return ' + m[1]))();
   };
 
-  test('tarama gerçekten tarıyor: on altı Takoz tipi', () => {
-    expect(TAKOZ_TIPLERI.length).toBe(16);
+  test('tarama gerçekten tarıyor: on yedi Takoz tipi', () => {
+    expect(TAKOZ_TIPLERI.length).toBe(17);
   });
 
   test('VE_SUTUNA_SIGMAYAN\'da Takoz tipi yok', () => {

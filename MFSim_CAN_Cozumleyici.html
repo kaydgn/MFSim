@@ -10120,6 +10120,14 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 
 /* Föyde eksik değer ("girilmedi", "konum eksik") — kehribar. */
 .ve-properties-content .ve-mnt-foy td.eks{ color:var(--ink-warning); font-weight:600; }
+/* Föyde seçim kutusu (Parametrik Analiz: grup taranır · tip aday · kısıt
+   açık). Sütunun ilk hücresi olsa da ortalanır — `td:first-child` sola
+   yaslamasını aşan özgüllük (table + td). */
+.ve-properties-content table.ve-mnt-foy th.ve-mnt-sec,
+.ve-properties-content table.ve-mnt-foy td.ve-mnt-sec{ text-align:center; }
+.ve-mnt-foy .ve-mnt-sec input[type="checkbox"]{
+  width:14px; height:14px; margin:0; vertical-align:middle; cursor:pointer; accent-color:var(--accent-primary);
+}
 /* Eylemin altındaki not, eylemin sonucuyla tonlanır (rapor indi · hata).
    Eskiden satır içi `style.color` yazılıyordu. */
 .ve-fp-solve-not[data-d="ok"], .ve-fp-durum-not[data-d="ok"]{ color:var(--ink-success); }
