@@ -12,12 +12,12 @@
  * Böylece 20 yük durumunun TAMAMI (tork dâhil) Newton'a kapalı formla kıyaslanır.
  */
 const H = require('../helpers/takoz-dogrulama.js');
-const { core } = H.kur();
+const { core, rp } = H.kur();
 const G = H.G, GAP = 0.015, ORAN = 100;
 
 const KUTU = { m: 1200, kutu: [1100, 700, 800], cg: [300, 20, 650], Lx: 600, Ly: 350,
                ks: [900, 700, 400], kd: [1400, 1050, 600] };
-const MOTOR = { Te: 500, Rstall: 2, g1: 3, g2: 1.6, gR: -4 };
+const MOTOR = { Te: 500, Rstall: 2, g1: 3, g2: 1.6, gR: -4, idleRpm: 800, cylinders: 4 };
 function kutuModel(ek, cozucu) {
   return H.kurguModel({ govdeler: [{ ad: 'Kutu', m: KUTU.m, cg: KUTU.cg, kutu: KUTU.kutu }],
     takozlar: H.dortluTakoz(KUTU.cg, KUTU.Lx, KUTU.Ly, 0, KUTU.ks, KUTU.kd, ek),
@@ -86,6 +86,34 @@ describe('N1 — rasyonel basma yasası: 20 yük durumunda Newton = kapalı form
     const i = R1.modes.findIndex((md) => H.bagil(md.f_Hz, fb) < 1e-9);
     expect(i).toBeGreaterThanOrEqual(0);
     expect(H.bagil(R1.modalDamping[i].zeta, 0.05)).toBeLessThan(1e-9);
+  });
+
+  // SDOF izolasyon kestirimi (rapor §8.8, Kriter 2, Sonuçlar kartı) ve yumuşatma
+  // taraması modal çözümle AYNI tabandan beslenir. Bu kutuda zıplama tam ayrışık
+  // olduğu için SDOF frekansı modun KENDİSİDİR. Eskiden nominal k_dyn'den
+  // geliyordu: 7,12 Hz (mod 10,86 Hz), T %8,2 (doğrusu %20,4) — "%10 referansını
+  // sağlıyor" hükmü yanlıştı.
+  test('SDOF kestirimi tanjant tabanından: f_bounce = tam ayrışık zıplama modu, T kapalı formla', () => {
+    const x = zTers(-KUTU.m * G / 4);
+    const fb = H.fHz(4 * ZFIT.comp.k0 / (1 + x / ZFIT.comp.xmax) ** 2 * 1000 * 1.5 / KUTU.m);
+    const iso = rp._mntRepIsolation(R1, {});
+    expect(H.bagil(iso.fBounce, fb)).toBeLessThan(1e-9);
+    expect(R1.modes.some((md) => H.bagil(md.f_Hz, fb) < 1e-9)).toBe(true);
+    const fAtes = (MOTOR.idleRpm / 60) * (MOTOR.cylinders / 2);
+    expect(H.bagil(iso.T, H.sdofT(fAtes, fb, 0.05))).toBeLessThan(1e-9);
+  });
+
+  test('yumuşatma taraması (§8.15): %100 satırı §8.7 modları ve f_bounce, %50 satırı tam √0,5 katı', () => {
+    const h = rp._mntRepSoftening(R1, {});
+    const satir = (yuzde) => [...h.split('<tr').find((r) => r.includes('<b>%' + yuzde + '</b>'))
+      .matchAll(/<td>([^<%]*)<\/td>/g)].map((m) => veSayiOku(m[1]));
+    const fb = rp._mntRepIsolation(R1, {}).fBounce;
+    [[100, 1], [50, Math.SQRT1_2]].forEach(([yuzde, k]) => {
+      const v = satir(yuzde);                         // 6 mod + f_bounce (2 ondalık)
+      R1.modes.forEach((md, i) => expect(Math.abs(v[i] - md.f_Hz * k)).toBeLessThanOrEqual(0.005 + 1e-9));
+      expect(Math.abs(v[6] - fb * k)).toBeLessThanOrEqual(0.005 + 1e-9);
+    });
+    expect(h).toContain('dinamik tanjanttır');        // tarama doğrusallaştırılmış — söyleniyor
   });
 });
 

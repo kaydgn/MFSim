@@ -94,7 +94,7 @@ function _mntRepIsolation(R, opts){
   var zeta=_mntRepZeta(R, opts);
   var fFire=(eng.idleRpm>0 && eng.cylinders>0) ? (eng.idleRpm/60)*(eng.cylinders/2) : NaN;
   var m=(R && R.mp && R.mp.m)>0 ? R.mp.m : NaN;
-  var fB=(C && C.bounceFrequency) ? C.bounceFrequency(R && R.mounts, m) : NaN;
+  var fB=(C && C.bounceFrequency) ? C.bounceFrequency(R && R.mounts, m, R && R.kBasis) : NaN;   // taban modal çözümünki
   var T =(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, zeta) : NaN;
   var T0=(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, 0)    : NaN;
   return { fFire:fFire, fBounce:fB, r:(fB>0?fFire/fB:NaN), T:T, T0:T0, zeta:zeta, ok:(T<0.5) };
@@ -1934,7 +1934,7 @@ function _mntRepSoftening(R, opts){
   var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
   var zeta=_mntRepZeta(R, opts||{});
   var M6=C.buildM6(R.mp.m, R.mp.I_G);
-  var scan=C.softeningScan(R.mounts, R.mp.cg, M6, R.mp.m, _SOFT_FACTORS, fFire, zeta);
+  var scan=C.softeningScan(R.mounts, R.mp.cg, M6, R.mp.m, _SOFT_FACTORS, fFire, zeta, R.kBasis||null);
   if(!scan || !scan.length) return '';
 
   var GAP_MIN=0.5, BAND=[8,10], lim=haveIdle?0.5*fFire:NaN;
@@ -1979,7 +1979,11 @@ function _mntRepSoftening(R, opts){
   });
   h+='</table>';
   h+='<p style="font-size:0.9em; color:#5a6270;">%100 satırı mevcut tasarımdır (§8.7 ile aynı frekanslar). '
-    +'Frekanslar [Hz], T rölanti ateşleme frekansındaki düşey kuvvet iletilebilirliğidir.</p>';
+    +'Frekanslar [Hz], T rölanti ateşleme frekansındaki düşey kuvvet iletilebilirliğidir.'
+    +(R.kBasis ? ' Nonlineer yasalı takozlarda ölçeklenen, statik dengedeki <b>dinamik tanjanttır</b> '
+      +'(§8.7\'nin tabanı); tarama o çalışma noktasında doğrusallaştırılmıştır — yumuşatılan takozun '
+      +'büyüyen sehimiyle kayan çalışma noktası dahil değildir.' : '')
+    +'</p>';
 
   // ── Hüküm: kriterleri sağlayan en SERT (en az yumuşatılmış) tasarım ──
   var uygunIdx=-1;

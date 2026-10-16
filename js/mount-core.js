@@ -902,12 +902,16 @@ var veMountCore = (function() {
   //
   // NOT: bu SDOF kestirimidir. Tam çok-serbestlikli frekans yanıtı (Şekil 9
   // eğrisi) ayrı bir adımdır; sönüm matrisi C = ΣAᵀcA ile kurulur.
-  function bounceFrequency(mounts, mTotal){
+  //
+  // k_z,dyn TABANI modal çözümünkiyle AYNI diziden (dynStiffBasis): nonlineer
+  // yasalı takozda kBasis statik dengedeki dinamik tanjanttır. Nominal k_dyn'e
+  // dönülürse kestirim modlardan kopar — rasyonel yasalı simetrik kutuda tam
+  // ayrışık zıplama modu 10,86 Hz iken bu fonksiyon 7,12 Hz veriyordu.
+  function bounceFrequency(mounts, mTotal, kBasis){
     if(!(mTotal > 0)) return NaN;
     let kz = 0;
-    for(const mnt of (mounts || [])){
-      const k = (mnt.kdyn && mnt.kdyn[2] > 0) ? mnt.kdyn[2] : 0;
-      kz += k;
+    for(const k of dynStiffBasis(mounts, kBasis)){
+      kz += (k && k[2] > 0) ? k[2] : 0;
     }
     if(!(kz > 0)) return NaN;
     return Math.sqrt(kz / mTotal) / (2 * Math.PI);
@@ -1037,20 +1041,20 @@ var veMountCore = (function() {
   //     gibi) √α kuralı DÜŞER; aynı fonksiyon o durumu da doğru çözer.
   //   · Kriter değerlendirmesi (mod ayrıklığı, 8–10 Hz bandı) gerçek frekans
   //     listesini ister; ölçekten çıkarım yapmak hataya açıktır.
+  // Ölçeklenen taban modal çözümünki (dynStiffBasis): katsayı 1 satırı mevcut
+  // tasarımın modlarını BİREBİR verir. Nonlineer yasalı takozda bu statik
+  // dengedeki dinamik tanjanttır, yani tarama o çalışma noktasında
+  // doğrusallaştırılmıştır — yumuşayan takozun büyüyen sehimi (çalışma
+  // noktasının kayması) dahil değildir.
   // Dönüş: [{ factor, modes:[{f_Hz,label}], fBounce, T, T0 }]
-  function softeningScan(mounts, cg, M6, mTotal, factors, fExc, zeta){
+  function softeningScan(mounts, cg, M6, mTotal, factors, fExc, zeta, kBasis){
     if(!mounts || !mounts.length || !M6) return null;
     const z = (zeta >= 0 && zeta < 1) ? zeta : 0;
+    const taban = dynStiffBasis(mounts, kBasis);
     return (factors || [1]).map(function(fac){
-      const scaled = mounts.map(function(m){
-        const c = {};
-        Object.keys(m).forEach(function(k){ c[k] = m[k]; });
-        c.kstat = (m.kstat||[0,0,0]).map(function(v){ return v*fac; });
-        c.kdyn  = (m.kdyn ||[0,0,0]).map(function(v){ return v*fac; });
-        return c;
-      });
-      const md = solveModal(buildK(scaled, cg, true), M6, scaled, cg);
-      const fB = bounceFrequency(scaled, mTotal);
+      const kb = taban.map(function(k){ return k.map(function(v){ return v*fac; }); });
+      const md = solveModal(buildKfromBasis(mounts, cg, kb), M6, mounts, cg);
+      const fB = bounceFrequency(mounts, mTotal, kb);
       return {
         factor: fac,
         modes: (md||[]).map(function(m){ return { f_Hz:m.f_Hz, label:m.label }; }),
