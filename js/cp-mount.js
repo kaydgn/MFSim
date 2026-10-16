@@ -1898,7 +1898,7 @@ function _mntTakozYukSekme(node, T){
         f4+='<tr><td>'+(r+1)+'</td><td>'+_mntS(s.f,2)+'</td>';
         [0,1,2].forEach(function(ax){
           var v=s.e[j] ? s.e[j][ax] : NaN, en=!!(s.en && s.en.i===j && s.en.ax===ax);
-          f4+='<td'+(en ? ' class="en" title="Modun en etkili kaldıracı"' : '')+'>'
+          f4+='<td'+(en ? ' class="en" title="En etkili kaldıraç"' : '')+'>'
             + (Number.isFinite(v) ? (v>=0.005 ? _mntS(v,2) : '·') : '—')+'</td>';
         });
         f4+='</tr>';
@@ -5030,7 +5030,7 @@ function _mntCozucuModSekme(node, R, S){
     var S=R.sensitivity;
     if(S && S.length){
       var fk=_mntFoyAc([{ b:'#', gen:'10%' }, { b:'Takoz · eksen', gen:'66%', sinif:'sol' },
-                        { b:_mntSym('e'), gen:'24%', ipucu:'Esneklik: rijitlik %1 artınca frekansın yüzde artışı (her modda bütün takoz ve eksenlerin toplamı 0,5)' }],
+                        { b:_mntSym('e'), gen:'24%', ipucu:'Esneklik' }],
                        'Kaldıraçlar');
       S.forEach(function(s, r){
         var b=s.en, ad=b ? ((R.mounts[b.i] && R.mounts[b.i].name) || ('Takoz '+(b.i+1)))+' · '+'XYZ'.charAt(b.ax) : '—';
