@@ -9,7 +9,7 @@
 // yazıyordu; ikinci yazım iki istisna biriktirmişti — sekmelerin ÜSTÜNE kroki
 // ve kütüphane seçicisi koyan `ust` yuvası, tek bölmeli pencerede sekme
 // şeridini hiç çizmeyen dal. Ölçüldü (Tulga + AG00976, gerçek tarayıcı):
-// Takoz'un on üç penceresinden altısında sekmelerin üstünde içerik, beşinde
+// Takoz'un on üç penceresinden altısında sekmelerin üstünde içerik, dördünde
 // şerit yoktu; FEAD'in on birinde ikisi de sıfır. "Aynı" sözcüğünün karşılığı
 // TEK üretici (başlangıç sayfası kitinin, js/baslangic-sayfa.js, gerekçesi).
 //

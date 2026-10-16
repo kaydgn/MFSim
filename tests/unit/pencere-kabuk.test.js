@@ -6,15 +6,18 @@
  * olmadığını görüyorum biraz. Tüm programda tek tip bir kozmetik yapımız
  * olacak."*
  *
- * Ölçülen önce (gerçek tarayıcı, Tulga + AG00976, 1920 × 952 ve 1200 × 800):
+ * Ölçülen önce (main 2f43cda, gerçek tarayıcı, Tulga + AG00976, 1920 × 952 ve
+ * 1200 × 800):
  *   · kabuk İKİ üreticideydi (FEAD `veFeadPanelShell` · Takoz `_mntPencereKabuk`)
  *   · Takoz'un 13 penceresinden 6'sında sekmelerin ÜSTÜNDE içerik (kroki ×5,
  *     Takoz Özellikleri'nin seçicisi ×1) — FEAD'in 11'inde 0
- *   · 5 Takoz penceresinde sekme şeridi YOK (Örnek, Braket, Rapor, 3B,
- *     Koordinat) — FEAD'in her penceresi ≥ 2 kategori
- *   · durum notları ikonlu renkli kutu (`.ve-mnt-not`, Tulga'da 11 kutu) —
+ *   · 4 Takoz penceresinde sekme şeridi YOK (Örnek, Braket, Rapor, Koordinat)
+ *     — FEAD'in her penceresi ≥ 2 kategori
+ *   · durum notları ikonlu renkli kutu (`.ve-mnt-not`, Tulga'da 8 pencerede
+ *     13 kutu) —
  *     FEAD'de soluk satır, kutu yalnız pencerenin cevabı (`.ve-fp-durum`)
- *   · modül kartı ve 3 araç penceresinin sağ sütununda Uygunluk yok
+ *   · 6 pencerenin sağ sütununda Uygunluk yok (modül kartı, Örnek, Takoz
+ *     Özellikleri, 2D, 3D Görüntüleyici, Koordinat)
  *   · dar ekranın modalında Rapor 980 px (Takoz) ↔ 560 px (FEAD)
  *
  * Kapı bir LİSTE değil bir KURAL: tipler `componentDefs`ten, her tipin
