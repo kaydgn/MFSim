@@ -76,17 +76,21 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Etkileşim **YOK**; çizim **SONUÇ GÖSTERMEZ** (katmanlar çizicide durur, pencere
   çizmez). Gölge hep açık; işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan
   büyümez). DOM'suz, çizim OKUR (modeli `_mntAksoModelKur`, canlı modelden,
-  çözümsüz); görünüm tercihi modelde değil, yalnız açı. Bileşen pencerelerinin
-  **"Güç grubundaki yeri"** bu çizicinin sabit dimetriği (`o.secili` + etiket
-  `'secili'`: bileşen işaretli ve adıyla). Başlangıç sayfasının örnek karoları sade
+  çözümsüz); görünüm tercihi modelde değil, yalnız açı. Sürüklerken kare YAZILI ve
+  yazı bir önceki karenin yerini korur (yapışkan yer, `o.yer`); föyün satırı
+  parçasını **perdenin** üstüne alır (`o.secili` + `o.perde`: parça aydınlık, kalan
+  model gölgede). Bileşen pencerelerinin **"Güç grubundaki yeri"** Görünümler'in
+  AYNI bileşeni (açı ortak, sabit genişlik `data-w` — yerinde tazelemede değişmesin),
+  bileşen perdenin üstünde. Tam ekran kabın yüksekliğini doldurur. Başlangıç sayfasının örnek karoları sade
   kipi (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
   görünüş, çözümün girdisinden — `veMntAksoCozumModel`); ikisi de katsız.
   **3D Görüntüleyici YER TUTUCU** (`componentDefs['mnt-viewer'].yerTutucu`): "Klasik
   3B" tek sekme, ilerleyen zamanda gerçek CAD dosyasıyla işlenecek;
   `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin sahnesi. Kapı:
-  `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *RAPOR* ·
-  *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* + `mount-pencere.spec.js` →
-  *Görünümler* · *Güç grubundaki yeri* · *3D Görüntüleyici* ·
+  `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *YAPIŞKAN
+  YER* · *PERDE* · *RAPOR* · *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* +
+  `mount-pencere.spec.js` → *Görünümler* · *Güç grubundaki yeri* · *tam ekran* ·
+  *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı

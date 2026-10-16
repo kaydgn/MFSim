@@ -983,38 +983,39 @@ function _mntAtalet(d){
 // Kullanıcı isteği (2026-10-16): *"Diğer bileşen pencerelerinin içinde de
 // 'Güç grubundaki yeri' kısmında aksonometrik görünümün görünmesini
 // istiyorum."* Kroki Görünümler'in çizicisi (js/mount-akso.js) ve AYNI
-// kurucusu (_mntAksoModelKur) — canlı modelden, çözümsüz: gövdeler eşdeğer
-// kutu, takozlar küp, G birleşik CG; bu bileşen vurgulu ve adıyla (o.secili ·
-// etiket 'secili'), öteki işaretlerin bilgisi fare üstünde. Eskiden kendi 2B
+// kurucusu (_mntAksoModelKur) — canlı modelden, çözümsüz. Eskiden kendi 2B
 // çizimiydi (üstten / yandan, daire ve kare) ve takozda son çözümün sehim
 // okunu taşıyordu — pencere sonuç göstermez (aşağıda).
 //
-// Bakış SABİT dimetrik (başlangıç karoları ve raporla aynı): kroki her girdi
-// değişikliğinde yerinde yeniden kurulur (`data-tazele`); döndürülen bir
-// kamera her kurulumda sıfırlanırdı. Döndürmek Görünümler'in işi.
+// GÖRÜNÜMLER'İN KENDİSİ (kullanıcı, ikinci tur: *"o 3B olmamış. Aynı
+// 'Görünümler' bileşenindeki gibi olacak. Bileşene göre parçayı belirgin
+// gösterecek."*): sabit dimetrik çizim emekli; kroki Görünümler'in serbest
+// kameralı bileşeni (_mntAksoHTML — başlık, görünüm düğmeleri, sürükle-döndür,
+// tekerlek, tam ekran) ve açı onunla ORTAK (VE_MNT_AKSO3B). Bu bileşen
+// perdenin ÜSTÜNDE, adıyla (o.secili + o.perde): parça aydınlık, kalan model
+// gölgede — föy satırının vurgusuyla aynı dil.
+//
+// Kroki her girdi değişikliğinde yerinde tazelenir (`data-tazele`, dış HTML
+// karşılaştırılır): bu yüzden HEP AYNI genişlikte kurulur (data-w) — gerçek
+// genişlikte kurulsaydı her tazelemede değişmiş sayılıp yeniden yazılırdı.
+// Açı ortak ve kalıcı, yakınlık kap başına: tazeleme kamerayı sıfırlamaz.
 var _MNT_KROKI_W = 354;   // Görünümler'in çiziminin birimi (müfettiş sütununun içi)
 // KROKİ SAĞ SÜTUNDA (FEAD'in bağlam sütunu): çizimin birimi sağ sütunun iki
 // sütunlu (modal) penceredeki genişliği — 296 px (`.ve-fp-split`). Tek
 // sütunlu müfettişte (354 px) 1,2 büyür.
 var _MNT_YER_W = 296;
 
-// Bölüm FEAD'in başlığıyla (`.ve-fp-sect`); ipucu kutusu ilk fare girişinde
-// bağlanır — bölüm yerinde tazelenince öğe değişir, dinleyici onunla gider.
+// Bölüm FEAD'in başlığıyla (`.ve-fp-sect`); dinleyiciler ilk fare girişinde
+// ya da odakta bağlanır — bölüm yerinde tazelenince öğe değişir, dinleyici
+// onunla gider.
 function _mntKrokiHTML(node, M){
-  return '<section class="ve-fp-card ve-mnt-yer" id="ve-mnt-kroki-'+node.id+'" data-tazele onmouseenter="_mnt2DAttachHover(this)">'
-    + '<div class="ve-fp-sect"><b>Güç grubundaki yeri</b><em>dimetrik</em></div>'
-    + _mntKrokiCizim(node, M)+'</section>';
-}
-function _mntKrokiCizim(node, M){
-  if(!M.g.components.length && !M.g.mounts.length) return _mntNot('Modelde gövde ya da takoz yok.', '');
-  if(!_mntAk()) return _mntNot('Aksonometrik çizici yüklenmedi.', 'warn');
-  var m=_mntAksoModelKur(M.g, M.mp, null, 'yok'), sec=null;
-  m.govde.concat(m.takoz).forEach(function(x){ if(x.id!=null && x.id===node.id) sec=x; });
-  var r=veMntAkso.ciz(m, { W:_MNT_YER_W, iz:'dim', b:{ x:-1, y:-1, z:1 }, stil:'golge', kat:{ golge:true },
-    etiket:'secili', secili:sec ? sec.k : null, isaret:_mntAksoIsaret(_MNT_YER_W), Hmax:300,
-    fs:{ k:_mnt2DFs('micro'), b:_mnt2DFs('tiny') },
-    aria:'Güç grubundaki yeri'+(sec ? ': '+sec.ad : '')+' · dimetrik' });
-  return '<div class="ve-mnt-kroki ve-mnt-yer-akso">'+r.svg+'</div>'+_mntAksoLejant(m, { z:1 }, sec);
+  var kapId='ve-mnt-yer-'+node.id;
+  var ic=(!M.g.components.length && !M.g.mounts.length) ? _mntNot('Modelde gövde ya da takoz yok.', '')
+    : '<div class="ve-mnt-akso-kap" id="'+kapId+'" data-sec="'+_mntEsc(node.id)+'" data-w="'+_MNT_YER_W+'"'
+      + ' onmouseenter="_mntAksoBagla(this)" onfocusin="_mntAksoBagla(this)">'
+      + _mntAksoHTML({ M:M }, _MNT_YER_W, false, kapId, { sec:node.id })+'</div>';
+  return '<section class="ve-fp-card ve-mnt-yer" id="ve-mnt-kroki-'+node.id+'" data-tazele>'
+    + '<div class="ve-fp-sect"><b>Güç grubundaki yeri</b></div>'+ic+'</section>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2585,13 +2586,38 @@ function getMntViewerPropertiesHTML(node){
 // Görünümler'in aksonometrisi tam ekranda (düğmesi çizimin başlığında):
 // aynı çizim, işaretler adlarıyla. Kapanınca pencerenin çizimi aynı bakışa
 // (tercih ortak) yeniden kurulur.
-function veMntAkso3BTamEkran(){
+// `sec`: "Güç grubundaki yeri"nden açılınca bileşenin kimliği (tam ekranda da
+// perdenin üstünde). Çizim kabın yüksekliğini doldurur ve pencere boyu
+// değişince yeniden ölçülür (_mntAksoTamH).
+function veMntAkso3BTamEkran(sec){
   if(typeof document==='undefined') return;
+  var gozcu=null;
   _mntFsOverlay('Görünümler', '<div class="ve-mnt2d-fs" id="ve-mnt-akso3b-fs-kap">'
-    + '<div class="ve-mnt-akso-kap" id="ve-mnt-akso3b-fs" data-tam="1"></div></div>', function(){
+    + '<div class="ve-mnt-akso-kap" id="ve-mnt-akso3b-fs" data-tam="1"'+(sec!=null ? ' data-sec="'+_mntEsc(sec)+'"' : '')+'></div></div>', function(){
     var kap=document.getElementById('ve-mnt-akso3b-fs-kap'); if(!kap) return;
-    _mntAksoKur('ve-mnt-akso3b-fs', kap.clientWidth-26);
-  }, function(){ veMnt2DViewRefresh(); });
+    var kur=function(){ _mntAksoKur('ve-mnt-akso3b-fs', kap.clientWidth-26); };
+    kur();
+    if(typeof ResizeObserver!=='undefined'){
+      var raf=0, son=[kap.clientWidth, kap.clientHeight];
+      gozcu=new ResizeObserver(function(){
+        if(kap.clientWidth===son[0] && kap.clientHeight===son[1]) return;
+        son=[kap.clientWidth, kap.clientHeight];
+        if(raf) cancelAnimationFrame(raf);
+        raf=requestAnimationFrame(function(){ raf=0; kur(); });
+      });
+      gozcu.observe(kap);
+    }
+  }, function(){ if(gozcu) gozcu.disconnect(); veMntAksoTazele(); });
+}
+// Pencerenin aksonometrileri (Görünümler ve "Güç grubundaki yeri") ortak
+// açıyla yeniden kurulur — tam ekran kapanınca.
+function veMntAksoTazele(){
+  if(typeof document==='undefined') return 0;
+  var n=veMnt2DViewRefresh() ? 1 : 0;
+  Array.prototype.forEach.call(document.querySelectorAll('.ve-properties-content .ve-mnt-yer .ve-mnt-akso-kap[id]'), function(k){
+    if(_mntAksoKur(k.id)) n++;
+  });
+  return n;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2844,24 +2870,35 @@ function _mntAksoLejant(m, b, sec){
     + (sec ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-ak-lj-sec" x="1.5" y="1.5" width="7" height="7" rx="1.5"/></svg>bu bileşen</span>' : '')
     + '</div>';
 }
-// Pencerenin ve tam ekranın aksonometrisi — başlık (bakışın adı, görünüm
-// düğmeleri), çizim, gösterge. `tam`: tam ekran (işaretler adlarıyla;
-// başlıkta tam ekran düğmesi yok).
-function _mntAksoHTML(P, W, tam, kapId){
+// Pencerenin, tam ekranın ve "Güç grubundaki yeri"nin aksonometrisi — başlık
+// (bakışın adı, görünüm düğmeleri), çizim, gösterge. `tam`: tam ekran
+// (işaretler adlarıyla; başlıkta tam ekran düğmesi yok). `ek.sec`: bu bileşenin
+// düğüm kimliği — perdenin üstünde, adıyla; `ek.H`: tam ekranın ölçülen
+// yüksekliği (_mntAksoTamH).
+function _mntAksoHTML(P, W, tam, kapId, ek){
   if(!_mntAk()) return _mntNot('Aksonometrik çizici yüklenmedi.', 'warn');
+  ek=ek||{};
   var A=_mntAkso3bOku(), m=_mntAksoModel(P);
   if(!m.govde.length && !m.takoz.length) return '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>';
   var ekranH=(typeof window!=='undefined' && window.innerHeight) || 900;
   var G=_mntAksoGorus(kapId), b=veMntAkso.kamB(veMntAkso.kamYon(A)), on=_mntAkso3bOnAdi(A);
+  // Bileşen kimlikle bulunur (sıra, silinen bir düğümle kayardı).
+  var sec=null;
+  if(ek.sec!=null) m.govde.concat(m.takoz).forEach(function(x){ if(x.id!=null && String(x.id)===String(ek.sec)) sec=x; });
   W=Math.max(200, Math.round(W));
-  // Serbest kamera: sığdırma dönmeden bağımsız (küre), yükseklik sabit.
+  // Serbest kamera: sığdırma dönmeden bağımsız (küre), yükseklik sabit. Yazı
+  // yerleri bir önceki çizimden (yapışkan yer, mount-akso.js → yerlestir).
   var o={ W:W, stil:'golge', kat:{ golge:true }, etiket:(tam && W>=560) ? 'genis' : 'ad',
     fs:{ k:_mnt2DFs('micro'), b:_mnt2DFs('tiny') },
     kam:{ az:A.az, el:A.el }, kure:true, yakin:G.yakin, kay:G.kay, isaret:_mntAksoIsaret(W),
-    H:tam ? Math.max(380, Math.min(760, Math.round(ekranH*0.7))) : Math.round(Math.max(280, Math.min(460, W*0.92))) };
-  var r=veMntAkso.ciz(m, o);
-  // Sürüklerken hızlı kare aynı model ve seçeneklerle çizilir (_mntAkso3bHizli).
-  _mntAksoCizim[kapId]={ m:m, o:o, F:r.F };
+    H:tam ? (ek.H>0 ? Math.round(ek.H) : Math.max(380, Math.min(760, Math.round(ekranH*0.7))))
+          : Math.round(Math.max(280, Math.min(460, W*0.92))),
+    yer:(_mntAksoCizim[kapId] && _mntAksoCizim[kapId].yer) || null };
+  if(sec){ o.secili=sec.k; o.perde=true; o.aria='Güç grubundaki yeri: '+sec.ad; }
+  var r=veMntAkso.ciz(m, o), svg=_mntAksoSvg(r.svg);
+  // Sürüklerken hızlı kare ve föyün vurgusu aynı model ve seçeneklerle
+  // çizilir (_mntAkso3bHizli · _mntAksoOdak); `svg` son çizimin kendisi.
+  _mntAksoCizim[kapId]={ m:m, o:o, F:r.F, yer:r.yer, svg:svg };
   var ay=function(k, v){ return 'veMntAksoAyar(\''+kapId+'\',\''+k+'\''+(v==null ? '' : ',\''+v+'\'')+')'; };
   var dg=function(js, ik, ad){ return '<button type="button" title="'+ad+'" aria-label="'+ad+'" onclick="'+js+'">'+veIkon(ik)+'</button>'; };
   // Başlık: bakışın adı (ipucu çizimin etkileşimi), sağda görünüm düğmeleri —
@@ -2871,44 +2908,81 @@ function _mntAksoHTML(P, W, tam, kapId){
     + '<div class="ve-mnt2d-zoomctl" role="group" aria-label="Görünüm">'
     + dg(ay('yakin', 'in'), 'plus', 'Yakınlaştır')+dg(ay('yakin', 'out'), 'minus', 'Uzaklaştır')
     + dg(ay('sifirla'), 'rotate-ccw', 'Sıfırla — dimetrik bakış')
-    + (tam ? '' : dg('veMntAkso3BTamEkran()', 'maximize', 'Tam ekran'))
+    + (tam ? '' : dg('veMntAkso3BTamEkran('+(sec ? '\''+_mntEsc(ek.sec)+'\'' : '')+')', 'maximize', 'Tam ekran'))
     + '</div>';
-  return '<div class="ve-mnt-2d ve-mnt-akso ve-mnt-akso3b" data-mnt2d="akso"><div class="ve-mnt-kroki-bas">'+bas+'</div>'+r.svg+'</div>'
-    + _mntAksoLejant(m, b, null);
+  return '<div class="ve-mnt-2d ve-mnt-akso ve-mnt-akso3b" data-mnt2d="akso"><div class="ve-mnt-kroki-bas">'+bas+'</div>'+svg+'</div>'
+    + _mntAksoLejant(m, b, sec);
+}
+// Çizim klavyeyle odaklanır (oklar döndürür): tabindex dizgide — kap yerinde
+// tazelenirken (kroki, `data-tazele`) dış HTML karşılaştırılır, sonradan
+// eklenen bir nitelik her tazelemede "değişti" saydırırdı.
+function _mntAksoSvg(svg){ return /^<svg [^>]*tabindex=/.test(svg) ? svg : svg.replace(/^<svg ([^>]*)>/, '<svg $1 tabindex="0">'); }
+// Kabın çizimini yerinde değiştir (başlık, gösterge ve odak yerinde kalır).
+function _mntAksoSvgDegis(kap, svg){
+  var eski=kap.querySelector('svg.ve-mnt2d-akso'); if(!eski) return false;
+  var tmp=document.createElement('div'); tmp.innerHTML=_mntAksoSvg(svg);
+  var yeni=tmp.firstChild, odakta=(document.activeElement===eski);
+  eski.parentNode.replaceChild(yeni, eski);
+  if(odakta && yeni.focus) yeni.focus();
+  return true;
+}
+// TAM EKRANDA ÇİZİME KALAN YÜKSEKLİK (kullanıcı 2026-10-16: "büyük ekran
+// yaptığımda, görselleştiricinin altında … çok geniş bir boşluk var"): çizim
+// ekranın %70'i, en çok 760 px kuruluyordu ve pencere ondan uzundu — altında
+// 85 (1366 × 768) ile 495 px (2560 × 1440) arası boşluk. Yükseklik kabın
+// (.ve-mnt2d-fs) içinden ölçülür: iç yükseklik eksi dolgu, eksi başlık ve
+// gösterge (kurulu çizimden; ilk kurulumda tahmin).
+function _mntAksoTamH(kap){
+  var fs=kap && kap.parentNode; if(!fs || !fs.clientHeight) return 0;
+  var cs=(typeof getComputedStyle==='function') ? getComputedStyle(fs) : null;
+  var pad=cs ? (parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0) : 24;
+  var sv=kap.querySelector('svg.ve-mnt2d-akso');
+  var dis=sv ? kap.getBoundingClientRect().height-sv.getBoundingClientRect().height : 64;
+  return Math.max(320, Math.floor(fs.clientHeight-pad-dis-1));
 }
 // Kabın aksonometrisini GERÇEK genişliğinde kur ve dinleyicileri bağla. W
 // verilmezse kabın kendi genişliği.
 function _mntAksoKur(kapId, W, P){
   if(typeof document==='undefined') return false;
   var kap=document.getElementById(kapId); if(!kap) return false;
-  if(!(W>200)) W=Math.floor(kap.clientWidth)-2;
+  var sabit=Number(kap.getAttribute('data-w'));            // kroki: hep aynı genişlik
+  if(sabit>200) W=sabit;
+  else if(!(W>200)) W=Math.floor(kap.clientWidth)-2;
   if(!(W>200)) return false;
-  var tam=kap.getAttribute('data-tam')==='1';
+  var tam=kap.getAttribute('data-tam')==='1', ek={ sec:kap.getAttribute('data-sec') };
   P=P||_mnt2DPencereVeri();
-  kap.innerHTML=_mntAksoHTML(P, W, tam, kapId);
-  _mnt2DAttachHover(kap);
-  // Yakınlaştırma çizicinin kendi ölçeği (sürükleme, tekerlek, klavye —
-  // _mntAkso3bBagla); görünüm kutusu büyütülmez.
-  _mntAkso3bBagla(kap, kapId);
-  _mntAksoVurguBagla(kap);
-  var svg=kap.querySelector('svg.ve-mnt2d-akso');
-  if(svg) svg.setAttribute('tabindex', '0');
+  if(tam) ek.H=_mntAksoTamH(kap);
+  kap.innerHTML=_mntAksoHTML(P, W, tam, kapId, ek);
+  // Tam ekran kabı doldurur: başlık ve gösterge ölçülür, ikinci kurulum farkı kapatır.
+  if(tam){ var H2=_mntAksoTamH(kap); if(H2 && Math.abs(H2-ek.H)>1){ ek.H=H2; kap.innerHTML=_mntAksoHTML(P, W, tam, kapId, ek); } }
+  _mntAksoBagla(kap);
   return true;
 }
+// Dinleyiciler KABA bir kez (kap tam çizimde yerinde kalır): fare üstü
+// bilgisi, serbest kameranın eli (sürükleme, tekerlek, klavye —
+// _mntAkso3bBagla; yakınlaştırma çizicinin kendi ölçeği, görünüm kutusu
+// büyütülmez) ve bağlantılı vurgu. Krokide ilk fare girişinde ya da odakta.
+function _mntAksoBagla(kap){
+  if(!kap || !kap.id) return;
+  _mnt2DAttachHover(kap);
+  _mntAkso3bBagla(kap, kap.id);
+  _mntAksoVurguBagla(kap);
+}
 // SÜRÜKLERKEN HIZLI KARE: yalnız çizim yeniden yazılır (aynı model ve
-// seçenekler, yazısız); başlık ve gösterge yerinde kalır. Bırakınca tam
-// çizim (yazılarıyla) _mntAksoKur'dan.
+// seçenekler), başlık ve gösterge yerinde kalır; bırakınca tam çizim
+// _mntAksoKur'dan. YAZILARIYLA (kullanıcı 2026-10-16: "görüntünün üzerindeki
+// yazılar kayboluyor … beraber dönsünler"): eskiden kare yazısız çiziliyordu
+// (Tulga'da 15 yazının 12'si sürükleme boyunca yoktu); yazı yerleri bir önceki
+// kareden (yapışkan yer) — yazı işaretiyle yürür. Kare pencerede ~2 ms, tam
+// ekranda ~8 ms.
 function _mntAkso3bHizli(kapId){
   var c=_mntAksoCizim[kapId], kap=(typeof document!=='undefined') ? document.getElementById(kapId) : null;
   if(!c || !kap) return false;
   var A=_mntAkso3bOku(), G=_mntAksoGorus(kapId);
-  var o=Object.assign({}, c.o, { kam:{ az:A.az, el:A.el }, yakin:G.yakin, kay:G.kay, etiket:'yok' });
-  var r=veMntAkso.ciz(c.m, o);
-  var eski=kap.querySelector('svg.ve-mnt2d-akso'); if(!eski) return false;
-  var tmp=document.createElement('div'); tmp.innerHTML=r.svg;
-  var yeni=tmp.firstChild; yeni.setAttribute('tabindex', '0');
-  eski.parentNode.replaceChild(yeni, eski);
-  c.F=r.F;
+  var o=Object.assign({}, c.o, { kam:{ az:A.az, el:A.el }, yakin:G.yakin, kay:G.kay, yer:c.yer });
+  var r=veMntAkso.ciz(c.m, o), svg=_mntAksoSvg(r.svg);
+  if(!_mntAksoSvgDegis(kap, svg)) return false;
+  c.F=r.F; c.yer=r.yer; c.svg=svg; c.odak=null;
   var on=_mntAkso3bOnAdi(A), ad=kap.querySelector('[data-ak3b-ad]');
   if(ad) ad.textContent=on ? on[1] : 'Serbest bakış';
   return true;
@@ -2938,6 +3012,9 @@ function _mntAkso3bBagla(kap, kapId){
         birim:(bb.width>0 ? (Number(sv.viewBox.baseVal.width) || bb.width)/bb.width : 1), oynadi:false, odak:document.activeElement===sv };
     try{ kap.setPointerCapture(e.pointerId); }catch(x){ /* eski tarayıcı */ }
     kap.classList.add('ve-ak3b-surukle');
+    // Fare üstü bilgisi çizimi örtmez: basılı düğmede fare olayı gelmez
+    // (pointerdown'ın preventDefault'u), kutu bırakınca yeniden açılır.
+    var ip=document.getElementById('ve-mnt-2d-tip'); if(ip) ip.style.display='none';
   });
   kap.addEventListener('pointermove', function(e){
     if(!s) return;
@@ -2983,7 +3060,7 @@ function _mntAkso3bBagla(kap, kapId){
     else if(e.key==='ArrowDown') y=_mntAkso3bDondur(A, 0, 10);
     else if(e.key==='+' || e.key==='=') G.yakin=Math.min(8, G.yakin*1.25);
     else if(e.key==='-') G.yakin=Math.max(0.4, G.yakin/1.25);
-    else if(e.key==='0'){ G.yakin=1; G.kay=[0, 0]; y=_mntAkso3bOnAci('dim'); }
+    else if(e.key==='0'){ G.yakin=1; G.kay=[0, 0]; y=_mntAkso3bOnAci('dim'); if(_mntAksoCizim[kapId]) _mntAksoCizim[kapId].yer=null; }
     else return;
     e.preventDefault();
     if(y){ A.az=y.az; A.el=y.el; }
@@ -3017,6 +3094,8 @@ function _mntAksoVurguBagla(kap){
 // düğmesi yok (2026-10-16), testler bakışı onunla kurar.
 function veMntAksoAyar(kapId, k, v){
   var A=_mntAkso3bOku(), G=_mntAksoGorus(kapId), a=null;
+  // Sıçrayan bakışta (Sıfırla, hazır bakış) yazılar yapışmaz: yerleri baştan.
+  if((k==='sifirla' || k==='on') && _mntAksoCizim[kapId]) _mntAksoCizim[kapId].yer=null;
   if(k==='yakin'){
     if(v==='in') G.yakin=Math.min(8, G.yakin*1.25);
     else if(v==='out') G.yakin=Math.max(0.4, G.yakin/1.25);
@@ -3039,18 +3118,41 @@ function veMntAksoAyar(kapId, k, v){
   return ok;
 }
 
+// FÖYÜN SATIRI → ÇİZİM (kullanıcı 2026-10-16: "o tabloda fare ile üstünde
+// gezdirirken … o parçaya geldiğimde aydınlık olsun, diğer parçalar gölgeye
+// düşsün"): satır çizimin anahtarını taşır (data-ak — _mntAksoModelKur'un
+// k'si: G · g1… · T1…); fare satırdayken o parça perdenin üstünde, kalan
+// model altında. Çizim aynı model, kamera ve yazı yerleriyle yeniden çizilir;
+// satırdan çıkınca son çizim AYNEN geri konur (yazılar kıpırdamaz).
+function _mntAksoOdak(kapId, k){
+  if(typeof document==='undefined') return false;
+  var c=_mntAksoCizim[kapId], kap=document.getElementById(kapId);
+  if(!c || !kap) return false;
+  k=k || null;
+  if((c.odak || null)===k) return true;
+  c.odak=k;
+  if(!k) return _mntAksoSvgDegis(kap, c.svg);
+  var A=_mntAkso3bOku(), G=_mntAksoGorus(kapId);
+  var o=Object.assign({}, c.o, { kam:{ az:A.az, el:A.el }, yakin:G.yakin, kay:G.kay, yer:c.yer, secili:k, perde:true });
+  return _mntAksoSvgDegis(kap, veMntAkso.ciz(c.m, o).svg);
+}
+// Föyün dinleyicisi tablonun kabında (satırlar yerinde tazelenebilir).
+function _mntFoyOdak(e, kapId){
+  var tr=(e && e.target && e.target.closest) ? e.target.closest('tr[data-ak]') : null;
+  return _mntAksoOdak(kapId, tr ? tr.getAttribute('data-ak') : null);
+}
 function _mnt2DIsaretFoy(P){
   var M=P.M, cg=P.veri.cg, eks=0;
   var hucre=function(v){ return _mntBos(v) ? '<td class="eks">boş</td>' : '<td>'+_mntS(_mntNum(v),0)+'</td>'; };
-  var sat=function(no, ad, x, y, z){
+  var sat=function(k, no, ad, x, y, z){
     if(_mntBos(x) || _mntBos(y) || _mntBos(z)) eks++;
-    return '<tr><td>'+no+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td>'+hucre(x)+hucre(y)+hucre(z)+'</tr>';
+    return '<tr data-ak="'+k+'"><td>'+no+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td>'+hucre(x)+hucre(y)+hucre(z)+'</tr>';
   };
   var h=_mntFoyAc([{ b:'No', gen:'12%' }, { b:'Ad', gen:'40%', sinif:'sol' }, { b:'X', gen:'16%' }, { b:'Y', gen:'16%' }, { b:'Z', gen:'16%' }],
                   'İşaretler', 've-mnt-foy--sik');
-  if(cg) h+='<tr class="top"><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
-  M.g.components.forEach(function(c, i){ h+=sat(String(i+1), c.name, c.cgx, c.cgy, c.cgz); });
-  M.g.mounts.forEach(function(m, i){ h+=sat('T'+(i+1), m.name, m.x, m.y, m.z); });
+  if(cg) h+='<tr class="top" data-ak="G"><td>G</td><td class="sol">Birleşik CG</td><td>'+_mntS(cg.x,0)+'</td><td>'+_mntS(cg.y,0)+'</td><td>'+_mntS(cg.z,0)+'</td></tr>';
+  M.g.components.forEach(function(c, i){ h+=sat('g'+(i+1), String(i+1), c.name, c.cgx, c.cgy, c.cgz); });
+  M.g.mounts.forEach(function(m, i){ h+=sat('T'+(i+1), 'T'+(i+1), m.name, m.x, m.y, m.z); });
   h+=_MNT_FOY_KAPA;
   if(eks) h+=_mntNot(eks+' işaretin konumu eksik — çözücü boş konumu 0 alır, çizim de 0\'da gösterir.', 'warn');
   return h;
@@ -3066,7 +3168,8 @@ function getMnt2DViewPropertiesHTML(node){
   var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz'+(M.mTop>0 ? ' · '+_mntS(M.mTop,1)+' kg' : '');
   var govde=bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>'+_mntBolum('İşaretler', em, _mntNot('Kanvasta henüz model yok.', ''))
     : '<div class="ve-mnt-akso-kap" id="'+kapId+'">'+_mntAksoHTML(P, _MNT_KROKI_W, false, kapId)+'</div>'
-      + _mntBolum('İşaretler', em, _mnt2DIsaretFoy(P));
+      + _mntBolum('İşaretler', em, '<div class="ve-mnt-foy-odak" onmouseover="_mntFoyOdak(event,\''+kapId+'\')"'
+        + ' onmouseleave="_mntAksoOdak(\''+kapId+'\',null)">'+_mnt2DIsaretFoy(P)+'</div>');
   return _mntPencereKabuk(node, [{ k:'akso', ad:'Aksonometrik', govde:govde }], '');
 }
 // Açılışta (cp-core), sütun genişliği değişince ve tam ekran kapanınca:
@@ -3185,6 +3288,8 @@ function _mnt2DAttachHover(container){
   }
   function info(t){ while(t && t!==container){ if(t.getAttribute){ var v=t.getAttribute('data-mnt-info'); if(v) return v; } t=t.parentNode; } return null; }
   container.addEventListener('mousemove', function(e){
+    // Sürüklerken (düğme basılı) bilgi kutusu çizimi örtmez.
+    if(e.buttons){ tip.style.display='none'; return; }
     var v=info(e.target);
     if(v){ tip.textContent=v; tip.style.display='block';
       var x=e.clientX+14, y=e.clientY+16;
@@ -5027,6 +5132,9 @@ if(typeof module!=='undefined' && module.exports){
     veMntAksoOrnekModel: veMntAksoOrnekModel,
     veMntAksoCozumModel: veMntAksoCozumModel,
     _mntAksoHTML: _mntAksoHTML,
+    _mntAksoKur: _mntAksoKur, _mntAkso3bHizli: _mntAkso3bHizli, _mntAksoOdak: _mntAksoOdak, _mntFoyOdak: _mntFoyOdak,
+    _mntAksoTamH: _mntAksoTamH, veMntAksoTazele: veMntAksoTazele, veMntAkso3BTamEkran: veMntAkso3BTamEkran,
+    _mntAksoCizim: _mntAksoCizim, _mntAksoGorus: _mntAksoGorus,
     _mntAksoIsaret: _mntAksoIsaret,
     veMnt2DViewRefresh: veMnt2DViewRefresh,
     veMntAksoAyar: veMntAksoAyar,
