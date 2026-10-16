@@ -220,7 +220,8 @@ function veMntWizNodes(st){
 
 // ── DOĞRULAMA — adım başına (rayın rozeti, uyarı kutusu, alt çubuk) ─────────
 // Kural çözücünün kapısıyla aynı (veMountCore.validateModel): kütle > 0,
-// rijitliğin altı ekseni > 0; 6 serbestlik derecesi için en az üç takoz.
+// rijitliğin altı ekseni > 0; 6 serbestlik derecesi için aynı doğru üzerinde
+// olmayan en az üç takoz.
 function veMntWizSorunlar(st){
   st = st || _mwState || veMntWizDefault();
   var l = [];
@@ -246,6 +247,12 @@ function veMntWizSorunlar(st){
     if(!['kxs', 'kys', 'kzs'].every(function(k){ return _mwNum(t[k]) > 0; })) ek('takoz', 'err', ad + ': statik rijitlik eksik.');
     if(!['kxd', 'kyd', 'kzd'].every(function(k){ return _mwNum(t[k]) > 0; })) ek('takoz', 'err', ad + ': dinamik rijitlik eksik.');
   });
+  // Mekanizma: çözücünün kapısıyla AYNI kural ve cümle (çekirdek, birimden bağımsız)
+  var C = (typeof veMountCore !== 'undefined') ? veMountCore : null;
+  if(n >= 3 && C && C.collinearPoints && st.takozlar.every(function(t){ return _mwVar(t.x) && _mwVar(t.y) && _mwVar(t.z); })){
+    var mek = C.mechanismProblem(C.collinearPoints(st.takozlar.map(function(t){ return [_mwNum(t.x), _mwNum(t.y), _mwNum(t.z)]; })), n);
+    if(mek) ek('takoz', 'err', mek);
+  }
 
   var tq = st.tork || {};
   if(!(_mwNum(tq.Te) > 0)) ek('tork', 'warn', 'Motor torku yok — tork yük durumları kurulmaz.');

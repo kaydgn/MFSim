@@ -86,6 +86,14 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     const l = W.veMntWizSorunlar(W.veMntWizDefault());
     expect(l.filter((s) => s.tur === 'err').map((s) => s.adim).sort()).toEqual(['govde', 'takoz']);
   });
+  test('tek doğru üzerindeki üç takoz MEKANİZMA: çözücünün kuralı ve cümlesi (çekirdekten)', () => {
+    const takoz = (x, y) => ({ ad: 'T' + x, x, y, z: 450, kxs: 900, kys: 700, kzs: 400, kxd: 1400, kyd: 1050, kzd: 600 });
+    const st = (dy) => ({ govdeler: [{ type: 'mnt-motor', ad: 'Motor', mass: 1200, cgx: 300, cgy: 20, cgz: 650, Ixx: 90, Iyy: 140, Izz: 120 }],
+      takozlar: [takoz(-200, 20), takoz(300, 20), takoz(900, 20 + dy)], tork: {} });
+    const hata = (l) => l.filter((s) => s.tur === 'err');
+    expect(hata(W.veMntWizSorunlar(st(0)))).toEqual([{ adim: 'takoz', tur: 'err', m: core.mechanismProblem('dogru', 3) }]);
+    expect(hata(W.veMntWizSorunlar(st(20)))).toEqual([]);
+  });
 });
 
 describe('STEP KARTI — rol → hesap → kütle → aktar', () => {
