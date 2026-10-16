@@ -2208,7 +2208,13 @@ function _mntExampleDiagramSVG(model, tools){
   var items=[];
   comps.forEach(function(c,i){ items.push({type:(c.kind||_mntExampleBodyType(c.name)), name:c.name, x:L.bodies[i].lx, y:L.bodies[i].ly, role:'body'}); });
   mounts.forEach(function(m,i){ items.push({type:'mnt-mount', name:m.name, x:L.mnts[i].lx, y:L.mnts[i].ly, role:'mount'}); });
-  (tools||[]).forEach(function(t){ if(t && t.at && t.at.length===2) items.push({type:t.type, name:t.name, x:t.at[0], y:t.at[1], role:'tool'}); });
+  // Araç adı bileşenin KENDİ adı (componentDefs): kayıtta elle yazılmış kopya
+  // bayatlıyordu — "2D Görünüm" → "Görünümler" yeniden adlandırmasında kurgu
+  // örnekler eski adda kaldı; "Örnek" de kanvasa kurulan düğümün adı değildi.
+  (tools||[]).forEach(function(t){
+    var d=(typeof componentDefs!=='undefined') ? componentDefs[t.type] : null;
+    if(t && t.at && t.at.length===2) items.push({type:t.type, name:(d && d.name) || t.type, x:t.at[0], y:t.at[1], role:'tool'});
+  });
   var CARD=54, IC=40, M=22, xs=[], ys=[];
   items.forEach(function(it){ xs.push(it.x-CARD/2, it.x+CARD/2); ys.push(it.y-CARD/2, it.y+CARD/2); });
   var minX=Math.round(Math.min.apply(null,xs)-M), maxX=Math.round(Math.max.apply(null,xs)+M);

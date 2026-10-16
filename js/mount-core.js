@@ -2214,13 +2214,14 @@ var veMountCore = (function() {
       ],
       // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ),
       // kullanıcının verdiği topoloji düzeniyle aynı yerleşimde yardımcı araçlar.
+      // Araç adı YAZILMAZ: şema bileşenin kendi adını componentDefs'ten okur.
       tools: [
-        {type:'mnt-library',    name:'Takoz Özellikleri', at:[ 85, 70]},
-        {type:'mnt-coordframe', name:'Koordinat Düzlemi',  at:[200, 80]},
-        {type:'mnt-solver',     name:'Çözücü',             at:[740,265]},
-        {type:'mnt-2dview',     name:'Görünümler',         at:[ 85,450]},
-        {type:'mnt-viewer',     name:'3D Görüntüleyici',   at:[200,450]},
-        {type:'mnt-example',    name:'Örnek',              at:[730,450]}
+        {type:'mnt-library',    at:[ 85, 70]},
+        {type:'mnt-coordframe', at:[200, 80]},
+        {type:'mnt-solver',     at:[740,265]},
+        {type:'mnt-2dview',     at:[ 85,450]},
+        {type:'mnt-viewer',     at:[200,450]},
+        {type:'mnt-example',    at:[730,450]}
       ],
       // JSON topolojisi (model'den ÖNCELİKLİ): "Örneği Aktar" bu dosyayı iç
       // topolojiye birebir kurar. model aşağıda kalır (panel spec tablosu +
@@ -2250,13 +2251,13 @@ var veMountCore = (function() {
       // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ).
       // Konumlar JSON topolojisindeki yardımcı araç düğümleriyle aynı.
       tools: [
-        {type:'mnt-library',    name:'Takoz Özellikleri', at:[816, 40]},
-        {type:'mnt-solver',     name:'Çözücü',            at:[913, 40]},
-        {type:'mnt-report',     name:'Rapor',             at:[997, 41]},
-        {type:'mnt-2dview',     name:'Görünümler',        at:[790,232]},
-        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[884,234]},
-        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[983,235]},
-        {type:'mnt-example',    name:'Örnek',             at:[995,401]}
+        {type:'mnt-library',    at:[816, 40]},
+        {type:'mnt-solver',     at:[913, 40]},
+        {type:'mnt-report',     at:[997, 41]},
+        {type:'mnt-2dview',     at:[790,232]},
+        {type:'mnt-coordframe', at:[884,234]},
+        {type:'mnt-viewer',     at:[983,235]},
+        {type:'mnt-example',    at:[995,401]}
       ],
       topology: 'assets/examples/tulga_topoloji.json',
       model: TULGA_EXAMPLE
@@ -2283,12 +2284,12 @@ var veMountCore = (function() {
       // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ).
       // Konumlar JSON topolojisindeki yardımcı araç düğümleriyle aynı.
       tools: [
-        {type:'mnt-library',    name:'Takoz Özellikleri', at:[893,226]},
-        {type:'mnt-solver',     name:'Çözücü',            at:[893,328]},
-        {type:'mnt-report',     name:'Rapor',             at:[987,330]},
-        {type:'mnt-2dview',     name:'Görünümler',        at:[812,490]},
-        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[925,490]},
-        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1036,490]}
+        {type:'mnt-library',    at:[893,226]},
+        {type:'mnt-solver',     at:[893,328]},
+        {type:'mnt-report',     at:[987,330]},
+        {type:'mnt-2dview',     at:[812,490]},
+        {type:'mnt-coordframe', at:[925,490]},
+        {type:'mnt-viewer',     at:[1036,490]}
       ],
       topology: 'assets/examples/asfat_topoloji.json',
       model: ASFAT_EXAMPLE
@@ -2311,13 +2312,13 @@ var veMountCore = (function() {
       ],
       // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
       tools: [
-        {type:'mnt-library',    name:'Takoz Özellikleri', at:[840, 90]},
-        {type:'mnt-solver',     name:'Çözücü',            at:[945, 90]},
-        {type:'mnt-example',    name:'Örnek',             at:[1050, 90]},
-        {type:'mnt-report',     name:'Rapor',             at:[1155, 90]},
-        {type:'mnt-2dview',     name:'2D Görünüm',        at:[840,250]},
-        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[945,250]},
-        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1050,250]}
+        {type:'mnt-library',    at:[840, 90]},
+        {type:'mnt-solver',     at:[945, 90]},
+        {type:'mnt-example',    at:[1050, 90]},
+        {type:'mnt-report',     at:[1155, 90]},
+        {type:'mnt-2dview',     at:[840,250]},
+        {type:'mnt-coordframe', at:[945,250]},
+        {type:'mnt-viewer',     at:[1050,250]}
       ],
       topology: 'assets/examples/kutu_topoloji.json',
       model: KUTU_EXAMPLE
@@ -2338,13 +2339,13 @@ var veMountCore = (function() {
       ],
       // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
       tools: [
-        {type:'mnt-library',    name:'Takoz Özellikleri', at:[840, 90]},
-        {type:'mnt-solver',     name:'Çözücü',            at:[945, 90]},
-        {type:'mnt-example',    name:'Örnek',             at:[1050, 90]},
-        {type:'mnt-report',     name:'Rapor',             at:[1155, 90]},
-        {type:'mnt-2dview',     name:'2D Görünüm',        at:[840,250]},
-        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[945,250]},
-        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1050,250]}
+        {type:'mnt-library',    at:[840, 90]},
+        {type:'mnt-solver',     at:[945, 90]},
+        {type:'mnt-example',    at:[1050, 90]},
+        {type:'mnt-report',     at:[1155, 90]},
+        {type:'mnt-2dview',     at:[840,250]},
+        {type:'mnt-coordframe', at:[945,250]},
+        {type:'mnt-viewer',     at:[1050,250]}
       ],
       topology: 'assets/examples/hafif_topoloji.json',
       model: HAFIF_EXAMPLE
@@ -2365,13 +2366,13 @@ var veMountCore = (function() {
       ],
       // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
       tools: [
-        {type:'mnt-library',    name:'Takoz Özellikleri', at:[848, 90]},
-        {type:'mnt-solver',     name:'Çözücü',            at:[953, 90]},
-        {type:'mnt-example',    name:'Örnek',             at:[1058, 90]},
-        {type:'mnt-report',     name:'Rapor',             at:[1163, 90]},
-        {type:'mnt-2dview',     name:'2D Görünüm',        at:[848,250]},
-        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[953,250]},
-        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1058,250]}
+        {type:'mnt-library',    at:[848, 90]},
+        {type:'mnt-solver',     at:[953, 90]},
+        {type:'mnt-example',    at:[1058, 90]},
+        {type:'mnt-report',     at:[1163, 90]},
+        {type:'mnt-2dview',     at:[848,250]},
+        {type:'mnt-coordframe', at:[953,250]},
+        {type:'mnt-viewer',     at:[1058,250]}
       ],
       topology: 'assets/examples/kamyon_topoloji.json',
       model: KAMYON_EXAMPLE
