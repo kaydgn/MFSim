@@ -62,42 +62,8 @@ const IZIN = [
 ];
 const izinli = (m) => IZIN.some((re) => re.test(m));
 
-// Bir ifadenin olası metinleri: + zinciri birleşir, koşulun iki kolu ayrı sayılır.
-function metinleri(x) {
-  if (!x) return ['‹›'];
-  if (x.type === 'StringLiteral') return [x.value];
-  if (x.type === 'TemplateLiteral') return [x.quasis.map((q) => q.value.cooked).join('‹›')];
-  if (x.type === 'BinaryExpression' && x.operator === '+') {
-    const out = [];
-    metinleri(x.left).forEach((a) => metinleri(x.right).forEach((b) => out.push(a + b)));
-    return out.map((m) => m.replace(/(‹›)+/g, '‹›'));
-  }
-  if (x.type === 'ConditionalExpression') return metinleri(x.consequent).concat(metinleri(x.alternate));
-  if (x.type === 'LogicalExpression') return metinleri(x.left).concat(metinleri(x.right));
-  return ['‹›'];
-}
-
-function bildirimler(dosya) {
-  const ast = parser.parse(oku(dosya), { sourceType: 'script', errorRecovery: true });
-  const out = [];
-  (function yuru(n) {
-    if (!n || typeof n.type !== 'string') return;
-    if (n.type === 'CallExpression') {
-      const c = n.callee;
-      const ad = c.type === 'Identifier' ? c.name : (c.type === 'MemberExpression' && c.property ? c.property.name : '');
-      if ((ad === 'showToast' || (ad === 'toast' && dosya === 'js/radio.js')) && n.arguments.length) {
-        const tur = n.arguments[1];
-        const uyari = tur && tur.type === 'StringLiteral' && /^(warning|error)$/.test(tur.value);
-        if (!uyari) {
-          metinleri(n.arguments[0]).filter((m) => /\p{L}/u.test(m))
-            .forEach((m) => out.push({ satir: n.loc.start.line, metin: m }));
-        }
-      }
-    }
-    for (const k of Object.keys(n)) { const v = n[k]; if (k === 'loc') continue; if (Array.isArray(v)) v.forEach(yuru); else if (v && typeof v.type === 'string') yuru(v); }
-  })(ast.program);
-  return out;
-}
+const { metinleri, bilgiBildirimleri } = require('../helpers/bildirim-olcu.js');
+const bildirimler = (dosya) => bilgiBildirimleri(dosya, dosya === 'js/radio.js' ? 'toast' : null);
 
 describe('kabukta bilgi bildirimi yalnız görünmeyen sonucu söyler', () => {
   test('uyarı/hata olmayan her bildirim izin listesinde', () => {

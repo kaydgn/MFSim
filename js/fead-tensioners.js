@@ -110,7 +110,7 @@ var VE_FEAD_TENSIONER_DB = [
     inertia:null, ribs:8, note:'' },
   { key:'AG00879', part:'T38665', src:'AG00879 · 5 kasnak · kol 56 mm',
     armLen:56, preloadNm:20.05, rateNm:0.409, meanNm:31.14, od:74.0, contact:'back',
-    loadStopRelDeg:39.0, inertia:null, ribs:8, note:'Bandın DIŞINDA: kısa kollu ayrı bir gövde' },
+    loadStopRelDeg:39.0, inertia:null, ribs:8, note:'Bandın dışında: kısa kollu ayrı bir gövde' },
   { key:'AG00894', part:'E9843', src:'AG00894 · 6 kasnak',
     armLen:90, preloadNm:8.93, rateNm:0.475, meanNm:23.00, od:75.0, contact:'back',
     loadStopRelDeg:60.7, inertia:0.0002, ribs:8, note:'' },
@@ -138,7 +138,7 @@ var VE_FEAD_TENSIONER_DB = [
   { key:'AG00810', src:'AG00810 · 4 kasnak',
     armLen:90, preloadNm:11.561, preloadDerived:true, rateNm:0.483, meanNm:29.48,
     od:75.0, contact:'back', loadStopRelDeg:66.5, inertia:0.0004, ribs:10, part:'T38519',
-    note:'Ön yük RAPORDA YOK — mean torktan türetildi (11.561). Ayar bandın üstünde.' }
+    note:'Ön yük türetilmiş (11,561 Nm) · bandın üstünde' }
 ];
 
 // Kol 90 mm ailesinin ÖLÇÜLEN bandı. Uydurma bir tolerans değil: yukarıdaki

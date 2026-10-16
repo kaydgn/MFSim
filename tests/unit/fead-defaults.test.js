@@ -441,7 +441,7 @@ describe('tahrik oranı: tek kademeli düzen', () => {
     const h = fead.veFeadDriveCard(node);
     expect(h).toContain('value="direct"');
     expect(h).toContain('<option value="direct" selected>');
-    expect(h).toMatch(/ESKİ KAYIT/);
+    expect(h).toMatch(/eski kayıt/);
     expect(h).toMatch(/ve-fead-driveRatio/);
     // Köprü değeri okumaya devam ediyor — sayı DEĞİŞMİYOR.
     expect(veFeadDriveRatio(node.data).ratio).toBe(1.1);

@@ -139,7 +139,7 @@ describe('DEVİR SINIRLARI — sayım KAPININ gördüğüyle aynı', () => {
   test('sınırı olmayan aksesuar 0/3 eksik; sınırı olan tamam — kapı da ikincisini görüyor', () => {
     ornek();
     expect(durum('ex-A_C').dev).toEqual(expect.objectContaining({ d: 'eksik', yazi: '0/3 girildi' }));
-    expect(durum('ex-A_C').dev.neden).toMatch(/değerlendirilemiyor/);
+    expect(durum('ex-A_C').dev.neden).toBe('Devir sınırları boş — devir sınırı denetlenmiyor.');
     expect(durum('ex-ALT').dev).toEqual(expect.objectContaining({ d: 'ok' }));
     // Kapının kendisi: devir sınırı satırlarında alternatör VAR, klima YOK.
     const b = kopru();
@@ -166,7 +166,7 @@ describe('DEVİR SINIRLARI — sayım KAPININ gördüğüyle aynı', () => {
     dugum('ex-A_C').data.maxContRpm = 7000;
     const D = durum('ex-A_C').dev;
     expect(D).toEqual(expect.objectContaining({ d: 'eksik', yazi: '1/3 girildi' }));
-    expect(D.neden).toMatch(/^2 sınır boş/);
+    expect(D.neden).toBe('2 devir sınırı boş.');
   });
 });
 
@@ -395,7 +395,7 @@ describe('ŞERİT VE BANT — pencerede', () => {
     expect(bant).toBeTruthy();
     expect(bant.querySelectorAll('.ve-fp-eksik-s').length).toBe(1);
     expect(bant.textContent).toMatch(/Devir sınırları/);
-    expect(bant.textContent).toMatch(/değerlendirilemiyor/);
+    expect(bant.textContent).toMatch(/devir sınırı denetlenmiyor/);
     expect(bant.querySelector('button').getAttribute('onclick')).toMatch(/veFeadEksikGit\('ex-A_C','dev'\)/);
     // Bant sekme gövdelerinin DIŞINDA — hangi sekme açık olursa olsun görünür.
     expect(kap.querySelector('[id^="ve-fp-panes-"]').contains(bant)).toBe(false);
@@ -450,7 +450,7 @@ describe('YERİNDE TAZELEME — panel kurulmadan, odak düşmeden', () => {
     const bant = document.querySelector('.ve-fp-eksik');
     expect(bant).toBeTruthy();
     expect(bant.previousElementSibling.classList.contains('ve-fp-tabs')).toBe(true);
-    expect(bant.textContent).toMatch(/1 sınır boş/);
+    expect(bant.textContent).toMatch(/1 devir sınırı boş/);
   });
 
   test('saveState TAZELER — "girdi değişti" olayının tek kaynağı', () => {

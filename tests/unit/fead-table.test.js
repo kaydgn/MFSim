@@ -379,11 +379,11 @@ describe('pafta HTML\'i', () => {
     const k = dom(paftaHTML());
     expect(k.querySelector('.ve-fead-pf-bas .ve-fead-ek[data-ve="add-pulley"]')).toBeTruthy();
     expect(k.querySelectorAll('[data-ve="add-pulley"]')).toHaveLength(1);
-    // Boş tablonun tavsiyesi o yeri gösteriyor ("aşağıdaki" artık bayat olurdu).
+    // Boş tablo yalnız durumunu söyler; ekleyiciyi tarif etmez (ARAYÜZ ANLATMAZ).
     global.nodes = []; global.connections = [];
     const b = paftaHTML();
-    expect(b).toContain('Yukarıdaki');
-    expect(b).not.toContain('Aşağıdaki');
+    expect(b).toContain('<b>Tablo boş.</b></td>');
+    expect(b).not.toMatch(/Yukarıdaki|Aşağıdaki/);
   });
 
   // ── SÜRÜCÜ SATIRIN KENDİSİNDE ─────────────────────────────────────────

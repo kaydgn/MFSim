@@ -63,8 +63,7 @@ var VE_FEAD_DUTY_DB = [
     ad: 'BMC 6 silindir — tedarikçi sayfası',
     kaynak: 'FEAD_INFORMATION (BMC, 26.05.2025)',
     degC: 90,
-    not: 'Tedarikçiye GİDEN sayfanın kendi çevrimi. Rölanti ağırlıklı (%25) ' +
-         've 2750 RPM\'ya kadar uzanıyor.',
+    not: 'Tedarikçi sayfasının çevrimi; rölanti ağırlıklı (%25), 2750 RPM\'ya kadar.',
     rpm:   [800, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750],
     dcPct: [25,     4,    5,    6,    9,   12,   18,   16,    5]
   },
@@ -85,8 +84,7 @@ var VE_FEAD_DUTY_DB = [
     ad: 'Altı noktalı ağır ticari — Gates AG00686',
     kaynak: 'Gates AG00686 / AG0868 ailesi (5 sistem)',
     degC: 90,
-    not: 'Arşivde EN ÇOK sistemin paylaştığı çevrim: rölantiden anma ' +
-         'devrine altı kademe.',
+    not: 'Arşivin en yaygın çevrimi: altı kademe.',
     rpm:   [800, 1000, 1250, 1500, 1750, 2000],
     dcPct: [27,    10,   13,   18,   19,   13]
   },
@@ -96,8 +94,7 @@ var VE_FEAD_DUTY_DB = [
     ad: 'Ara noktaları sıfır ağırlıklı — Gates AG00810',
     kaynak: 'Gates AG00810',
     degC: 90,
-    not: 'AG00686 ile aynı ağırlıklar, araya SIFIR ağırlıklı devir noktaları ' +
-         'serpiştirilmiş: o noktalar gerilme tablosuna girer, ömür ağırlığına girmez.',
+    not: 'AG00686 ağırlıkları; arada sıfır ağırlıklı devirler.',
     rpm:   [600, 900, 1000, 1200, 1400, 1500, 1600, 1800, 1900, 2000],
     dcPct: [27,    0,   10,   13,    0,   18,    0,   19,    0,   13]
   },

@@ -1142,6 +1142,11 @@ olurdu.
     (`js/guide-fead.js`); aynı sayıyı ikinci kez söyleyen not da açıklamadır
     (ölçüldü: 12 örneğin pencerelerinde 590 not → 135). Kapı: kural 26'nın
     kapıları + `fead-pencere-ailesi.test.js`.
+    **Durumun tarif kuyruğu yok, çare önerilmez** (2026-10-16, kökteki *ARAYÜZ
+    ANLATMAZ*): "— … sekmesinden girin" yerine eksiğin YERİ bir yol verisidir
+    (`· Sürücü kasnak › Çevrim`); hüküm ("gergi gergin tarafta") sayısıyla
+    durur, çaresi kılavuzda. Ekranda görünen sonucu tekrarlayan bildirim ve
+    katman satırının açıklama yuvası (`ip`) yok. Kapı: `fead-metin.test.js`.
 
 46. **İŞLETME HESABI MOTOR VE AKSESUAR OLMADAN YAPILMAZ** (2026-09-29,
     kullanıcı bildirimi: *"program motor ve aksesuar seçmeden hesap yapıyor …
