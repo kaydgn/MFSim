@@ -54,4 +54,14 @@ describe('bayraklar ve aşamalar', () => {
       'FEAD başlangıç sayfası', 'Takoz başlangıç sayfası', 'Boş tuval']);
     y.forEach((x) => { expect(typeof x.kok).toBe('string'); expect(typeof x.ac).toBe('function'); });
   });
+
+  test('aşama 2 kabuğun yüzeylerini tanımlar; adlar tekil (görüntü dosyası addan)', () => {
+    const y = T.ASAMALAR[2].yuzeyler;
+    expect(y.length).toBeGreaterThanOrEqual(25);
+    expect(new Set(y.map((x) => x.ad)).size).toBe(y.length);
+    ['Şerit · Giriş', 'Komut paleti', 'Ayarlar · Hakkında', 'Program Arşivi', 'Komuta · tezgâh'].forEach((ad) => {
+      expect(y.map((x) => x.ad)).toContain(ad);
+    });
+    y.forEach((x) => { expect(typeof x.kok).toBe('string'); expect(typeof x.ac).toBe('function'); });
+  });
 });
