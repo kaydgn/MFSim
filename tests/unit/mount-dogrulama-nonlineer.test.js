@@ -174,6 +174,49 @@ describe('N2 — kübik yasa ve durdurucu: Newton + aktif küme kapalı formla',
   });
 });
 
+// ═══════════════════ N2b — YASA ↔ KATALOG ═══════════════════
+// Aynı takozun iki kaynağı: yasa (çözüm onu kullanır) ve katalog k_stat
+// (durdurucuya ve k_din/k_stat oranına girer). Orijinde aynı eğimi vermiyorlarsa
+// lineer ve nonlineer çözüm sistematik ayrışır — rapor bunu SAYISIYLA söyler.
+describe('N2b — yasa ↔ katalog: orijin eğimi uyuşmazlığı söyleniyor', () => {
+  const { cp } = H.kur();
+  const RTK = H.coz(H.yasaTak(H.ornek('tulga'), cp.VE_MOUNT_LIBRARY));
+
+  test('tolerans %20, iki yöne simetrik (oran ve tersi)', () => {
+    const takoz = (k0, ks) => ({ name: 'T', pos: [0, 0, 0], kstat: [ks, ks, ks], kdyn: [ks, ks, ks],
+      fits: { z: { form: 'poly', k0: k0 / 1000, c3: 0, c5: 0 } } });
+    expect(core.lawCatalogMismatch(takoz(1.19e5, 1e5))).toEqual([]);
+    expect(core.lawCatalogMismatch(takoz(1e5, 1.19e5))).toEqual([]);
+    expect(core.lawCatalogMismatch(takoz(1.21e5, 1e5)).map((u) => u.eksen)).toEqual(['z']);
+    expect(core.lawCatalogMismatch(takoz(1e5, 1.21e5)).map((u) => u.eksen)).toEqual(['z']);
+  });
+
+  test('uyumlu yasa (k0 = k_stat): uyuşmazlık yok ve rapor susuyor', () => {
+    R1.mounts.forEach((m) => expect(core.lawCatalogMismatch(m)).toEqual([]));
+    expect(rp._mntRepNLNote(R1)).not.toMatch(/uyuşmazlığı/);
+  });
+
+  // DEFTER: gömülü TK kütüphanesinin BUGÜNKÜ hâli. x/y yasaları katalogla
+  // orijinde birebir; z yasaları 1,31–1,91× sert ve üç sertlik derecesinde
+  // (35/45/50 ShA) neredeyse aynı eğim (367–387 N/mm) — katalog ise sertlikle
+  // artıyor (192/242/290). MLMT-0216-33-TK0xx raporları depoda yok; geldiğinde
+  // hangi tarafın oynayacağı bu sayılardan okunur.
+  test('defter: TULGA + TK — yalnız z ekseni, oranlar 1,31 / 1,60 / 1,91; rapor hepsini sayısıyla yazıyor', () => {
+    const oran = {};
+    RTK.mounts.forEach((m) => core.lawCatalogMismatch(m).forEach((u) => {
+      expect(u.eksen).toBe('z');
+      oran[m.name] = Math.round(u.oran * 100) / 100;
+    }));
+    expect(oran).toEqual({ 'Ön Takoz': 1.31, 'Sağ Ön Takoz': 1.6, 'Sol Ön Takoz': 1.6,
+                           'Sağ Arka Takoz': 1.91, 'Sol Arka Takoz': 1.91 });
+    const h = rp._mntRepNLNote(RTK);
+    expect(h).toMatch(/Yasa ↔ katalog uyuşmazlığı/);
+    expect(h).toContain('Sağ Ön Takoz Z: 387 ↔ 242 N/mm (1,6×)');          // rapor sondaki sıfırı atar
+    expect(h).toContain('Sağ Arka Takoz Z: 367 ↔ 192 N/mm (1,91×)');
+    expect(h).not.toMatch(/Takoz [XY]:/);
+  });
+});
+
 // ═══════════════════ N3 — NOKTA TABLOSU ═══════════════════
 
 describe('N3 — nokta tablosu (monoton kübik) yolu', () => {
