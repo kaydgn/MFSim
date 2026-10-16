@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 1331,
+ "sayi": 1329,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -507,7 +507,6 @@
    "340e06552e": "Çözülmüş sonuç yok — Çözücü → Hesapla.",
    "58f2690f34": "(maks tork için tahrik kinematiği girin)",
    "5bcc0a590c": "Rapor son çözümü anlatır; model o zamandan beri değişti. Güncel sayılar için Çöz",
-   "dd6dabff48": "‡ Çakışık mod: frekansı komşusuyla aynı, mod şekli tek değil. Tek tek türev keyf",
    "e4e8db5b3a": "Ateşleme frekansı fateş = (N/60)·(z/2). Kriter 1 modların TAMAMINI sınar — en yü",
    "e74700820f": "Üç görünüş neden gerekli: her dönme ekseni farklı düzlemde görünür. Roll ( \\( \\t",
    "fb49c0c7e5": "Bir veya daha fazla kriter sağlanmıyor / kontrol gerektiriyor; ilgili satırları ",
@@ -556,7 +555,6 @@
    "377c5d4f08": "Motor katalogdan yüklendi: ‹› — kütle / CG / atalet elle girilir.",
    "3a3339ae5a": "Bu özel takozu sil",
    "3f973d5dd9": "Silindir sayısı boş — ateşleme frekansı yok; Kriter 1 ve 2 değerlendirilemiyor.",
-   "3fe9820042": "Esneklik: rijitlik %1 artınca frekansın yüzde artışı (her modda bütün takoz ve e",
    "438607d9aa": "Serbest cisim: G'de ağırlık, takozlarda statik tepki — aynı ölçekte",
    "44782d5339": "Din./stat. oranı eksenler arasında ‹› kat yayılıyor · sınır ‹› (eksen takası bu ",
    "45442c1c7e": "Yeni özel takoz ekle ve seç",
