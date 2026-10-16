@@ -57,6 +57,64 @@ describe('tek nokta kütle: dönme ataleti sıfır', () => {
   });
 });
 
+// ═══════════════════ MEKANİZMA — çözülmez, SÖYLENİR ═══════════════════
+// Takoz noktasal yaydır: hepsi tek doğru üzerindeyse o doğru etrafındaki dönme
+// rijitliksizdir ve K tekildir (rijitlik ne olursa olsun). Eskiden üretim yolu
+// (durduruculu çözücü) artık kapısı taşımadığı için tekil K'yı yuvarlama
+// artığıyla "çözüyordu": yanal yükte sehim 1,2·10¹⁸ mm, |θ| 2·10³² rad, uyarısız.
+const DOGRU = (dy) => [-500, 0, 600].map((x, i) => ({ ad: 'T' + i, p: [300 + x, 20 + (i === 2 ? dy : 0), 450],
+  ks: [900, 700, 400], kd: [1400, 1050, 600] }));
+
+describe('mekanizma: takozlar tek doğru üzerinde → çözüm reddedilir ve sebebi söylenir', () => {
+  test('üç takoz x ekseni boyunca: çözücü reddediyor, Hesapla\'dan ÖNCE ön denetim aynı cümleyi gösteriyor', () => {
+    const topo = H.kurguModel({ govdeler: GOVDE, takozlar: DOGRU(0), cozucu: {} });
+    const R = H.coz(topo);
+    expect(R.allCases).toBeUndefined();
+    expect(R.error).toHaveLength(1);
+    expect(R.error[0]).toMatch(/tek bir doğru üzerinde.*kinematik olarak serbest/);
+    global.nodes = topo.nodes; global.connections = [];
+    const { cp } = H.kur();
+    expect(cp._mntOnDenetim(topo.nodes.find((n) => n.type === 'mnt-solver'))).toEqual(R.error);
+  });
+
+  test('tek takoz ve iki takoz da mekanizma (nokta · doğru)', () => {
+    [[DOGRU(0).slice(0, 1), /Tek takoz var/], [DOGRU(0).slice(0, 2), /İki takoz tek bir doğru/]].forEach(([tk, re]) => {
+      const R = H.coz(H.kurguModel({ govdeler: GOVDE, takozlar: tk, cozucu: {} }));
+      expect(R.error).toHaveLength(1);
+      expect(R.error[0]).toMatch(re);
+    });
+  });
+
+  test('doğrudan 20 mm sapan takoz mekanizma DEĞİL: çözülür ve 6 bileşenli denge tutar', () => {
+    const R = H.coz(H.kurguModel({ govdeler: GOVDE, takozlar: DOGRU(20), cozucu: {} }));
+    expect(R.error).toBeUndefined();
+    R.allCases.forEach((rc) => {
+      expect(rc.res).toBeTruthy();
+      const s = H.genelKuvvet(R.mounts, R.mp.cg, rc.res.perMount.map((pm) => pm.f));
+      expect(H.norm(s.map((v, c) => v - rc.res.F[c])) / (H.norm(rc.res.F) + R.mp.m * G)).toBeLessThan(1e-9);
+    });
+  });
+
+  test('tolerans göreli ve birimden bağımsız: sapma/uzaklık 10⁻⁷ → doğru, 10⁻⁵ → değil (mm ve m aynı hüküm)', () => {
+    const nokta = (e, olcek) => [[0, 0, 0], [1, 0, 0], [2, e, 0]].map((p) => p.map((v) => v * olcek));
+    [1, 1000].forEach((olcek) => {
+      expect(core.collinearPoints(nokta(1e-7, olcek))).toBe('dogru');
+      expect(core.collinearPoints(nokta(1e-5, olcek))).toBeNull();
+    });
+    expect(core.collinearPoints([[1, 2, 3], [1, 2, 3], [1, 2, 3]])).toBe('nokta');
+  });
+
+  test('durduruculu çözücü tekil K\'yı çözmüş saymıyor (artık kapısı, lineerdeki ile aynı)', () => {
+    // Doğrudan çekirdek: doğrulama kapısı atlanırsa da sahte çözüm dönmesin.
+    const ms = DOGRU(0).map((t) => ({ name: t.ad, pos: t.p.map((v) => v / 1000),
+      kstat: t.ks.map((v) => v * 1000), kdyn: t.kd.map((v) => v * 1000) }));
+    const cg = [0.3, 0.02, 0.65], K = core.buildK(ms, cg, false);
+    const yanal = { n: [0, 0.6, -1], T: [0, 0, 0] };            // doğru etrafında moment → çözüm yok
+    expect(core.solveCaseStop(K, ms, cg, 1200, G, yanal, {})).toBeNull();
+    expect(core.solveCase(K, ms, cg, 1200, G, yanal)).toBeNull();
+  });
+});
+
 // Kriter testleri gerçek bir çözümün modlarını kullanır; yalnız motor girdisi
 // (rölanti, silindir) ve gerekiyorsa mod listesi değiştirilir.
 const RA = H.coz(H.ornek('asfat'));
@@ -77,6 +135,18 @@ describe('Kriter 1 — eşiğin iki yanında doğru hüküm, iki yüzey aynı h�
     const R = motorlu(RA, 40 * fmax * k, 6);
     expect(st(rp.veMntUygunluk(R, {}), '1')).toBe(beklenen);
     expect(rozet1(R)).toBe(beklenen);                   // §8.8 rozeti aynı hükmü veriyor
+  });
+});
+
+describe('Kriter 1 — TAM sınırda (f = 0,5·f_ateş) iki yüzey aynı hüküm', () => {
+  // Kriter "f < 0,5·f_ateş" der: tam sınırdaki mod İHLALDİR. §8.8 rozeti bunu
+  // '<' ile, uygunluk tablosu (modePlacement) '>' ile karşılaştırıyordu — tam
+  // sınırda rozet "Dikkat", tablo "uygun" diyordu.
+  test('600 d/dk · 6 sil. → sınır tam 15 Hz; en yüksek mod tam 15 Hz → ikisi de kontrol', () => {
+    const R = motorlu(RA, 600, 6, RA.modes.map((m, i) => Object.assign({}, m, { f_Hz: [5, 6, 7, 11, 13, 15][i] })));
+    expect(0.5 * (600 / 60) * (6 / 2)).toBe(15);                // testin anlamı: tam eşitlik
+    expect(st(rp.veMntUygunluk(R, {}), '1')).toBe('no');
+    expect(rozet1(R)).toBe('no');
   });
 });
 

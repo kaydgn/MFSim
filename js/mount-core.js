@@ -508,6 +508,10 @@ var veMountCore = (function() {
       }
       q = solveLinear(K, rhs);
       if(!q) return null;
+      // Çözüm kalitesi kapısı — solveCase'teki (T8b) ile aynı. Lineer modelin
+      // ÜRETİM yolu bu fonksiyon (useStop); kapı yalnız solveCase'te kalınca
+      // rank-eksik K yuvarlama artığıyla "çözülüyordu".
+      if(norm(matVec(K, q).map((v,i)=>v-rhs[i])) > 1e-6 * (norm(rhs) + 1)) return null;
       // Aktif küme güncelle: gap'i aşan → temas; içine dönen → serbest.
       let changed=false;
       for(let i=0;i<mounts.length;i++){
@@ -1013,9 +1017,11 @@ var veMountCore = (function() {
     return {
       fMax: Math.max.apply(null, f),
       fLimit: fLimit,
+      // Kriter 1 "f < 0,5·f_ateş" der; ihlal f ≥ sınır. §8.8 rozeti (f < sınır)
+      // ile uygunluk tablosu tam sınırda aynı hükmü vermek zorunda.
       exceed: Number.isFinite(fLimit)
         ? modes.map((m,i)=>({no:i+1, f:m.f_Hz, label:m.label}))
-               .filter(m => m.f > fLimit) : [],
+               .filter(m => m.f >= fLimit) : [],
       gaps: gaps,
       gapMin: gapMin,
       minGap: minGap ? minGap.gap : NaN,
@@ -1706,6 +1712,42 @@ var veMountCore = (function() {
   // ═══════════════════ Doğrulama (SPEC 5 hata durumları, T8) ═══════════════════
 
   // Saf girdi doğrulaması; problem dizisi döner (boş = geçerli).
+  // ── Mekanizma: takozlar tek bir doğru (ya da noktada) mı? ──
+  //
+  // Takoz noktasal yaydır, dönme rijitliği taşımaz. Her eksende k > 0 iken
+  // K = Σ Aᵀ·diag(k)·A tekildir ⟺ bütün takozlarda Aᵢ·q = 0 olan bir q ≠ 0
+  // vardır ⟺ u + θ×dᵢ = 0 ∀i ⟺ takoz noktaları θ'ya paralel TEK bir doğru
+  // üzerindedir. Yani denetim GEOMETRİKTİR, rijitliğe bakmaz; birimden de
+  // bağımsızdır (sihirbaz mm ile, çözücü m ile çağırır).
+  // Tolerans göreli: doğrudan en büyük uzaklık ≤ 1e-6 × ağırlık merkezinden en
+  // uzak takozun uzaklığı (metrede 1 µm). Ölçüldü: üç takoz x ekseni boyunca
+  // dizilince yanal yükte sehim 1,2·10¹⁸ mm, artık ‖Kq−F‖/‖F‖ 4·10¹⁶ "çözülüyordu".
+  // Dönüş: 'nokta' | 'dogru' | null (doğru dışında takoz var — sorun yok).
+  function collinearPoints(points, tol){
+    const P = (points||[]).filter(p => p && p.length===3 && p.every(Number.isFinite));
+    if(!P.length) return null;
+    const n = P.length;
+    const c = [0,1,2].map(j => P.reduce((s,p)=>s+p[j],0)/n);
+    let far = null, rFar = 0;
+    P.forEach(p => { const r = Math.hypot(p[0]-c[0], p[1]-c[1], p[2]-c[2]); if(r > rFar){ rFar = r; far = p; } });
+    if(!(rFar > 0)) return 'nokta';
+    const u = [0,1,2].map(j => (far[j]-c[j])/rFar);
+    let dMax = 0;
+    P.forEach(p => {
+      const v = [p[0]-c[0], p[1]-c[1], p[2]-c[2]];
+      dMax = Math.max(dMax, Math.hypot(v[1]*u[2]-v[2]*u[1], v[2]*u[0]-v[0]*u[2], v[0]*u[1]-v[1]*u[0]));
+    });
+    return (dMax <= ((tol > 0) ? tol : 1e-6) * rFar) ? 'dogru' : null;
+  }
+  // Sihirbaz aynı cümleyi basar (kural tek yerde).
+  function mechanismProblem(kind, nMounts){
+    const ek = ' — montaj kinematik olarak serbest. 6 serbestlik dereceli denge için aynı doğru üzerinde olmayan en az üç takoz gerekir.';
+    if(kind === 'nokta') return (nMounts === 1 ? 'Tek takoz var: montaj takoz noktası' : 'Takozların hepsi aynı noktada: montaj o nokta')
+      + ' etrafında her yönde dönebilir' + ek;
+    if(kind === 'dogru') return (nMounts === 2 ? 'İki takoz' : 'Takozların hepsi')
+      + ' tek bir doğru üzerinde: bu doğru etrafındaki dönmeye karşı rijitlik yok' + ek;
+    return null;
+  }
   function validateModel(components, mounts){
     const problems=[];
     if(!components || !components.length) problems.push('Bileşen tablosu boş.');
@@ -1717,6 +1759,12 @@ var veMountCore = (function() {
       if(mnt.kstat.some(k=>!(k>0))) problems.push('Statik rijitlik ≤ 0: ' + (mnt.name||'takoz'));
       if(mnt.kdyn.some(k=>!(k>0))) problems.push('Dinamik rijitlik ≤ 0: ' + (mnt.name||'takoz'));
     });
+    // Rijitlik geçerliyse K'nın tekilliği yalnız geometriden gelir (yukarıdaki
+    // denklik) — çözüm denenmeden reddedilir; ÖN DENETİM de aynı cümleyi gösterir.
+    if(!problems.length){
+      const mp = mechanismProblem(collinearPoints(mounts.map(m => m.pos)), mounts.length);
+      if(mp) problems.push(mp);
+    }
     return problems;
   }
 
@@ -2290,7 +2338,7 @@ var veMountCore = (function() {
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
-    torqueChain, classifyMode, validateModel,
+    torqueChain, classifyMode, validateModel, collinearPoints, mechanismProblem,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,
     // Çoklu örnek kayıt defteri (UI katmanı için)
