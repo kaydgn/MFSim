@@ -64,7 +64,7 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
       donus: !!(ust && btn.contains(ust)),
       kapi: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi')].map((b) => b.getAttribute('data-ey')),
       karo: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-karo').length,
-      cizim: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-resim svg.ve-mnt2d-gorunus').length,
+      cizim: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-resim svg.ve-mnt2d-akso').length,
       ornek: veMountCore.getMountExampleList().length };
   });
   expect(Math.round(o.sayfa.w)).toBe(Math.round(o.kap.w));

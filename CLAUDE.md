@@ -59,8 +59,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   sekmesi; kullanıcı seçimi 2026-10-15): dimetrik (ISO 5456-3) varsayılan, izometrik
   seçicide, sekiz bakış; gölge hep açık, direk · kuvvet · mod · rijitlik düğmeyle, üç
   duvar tam ekranda. DOM'suz, çizim OKUR (modeli `_mntAksoModel` kurar; kuvvet ve mod
-  yalnız güncel çözümden); görünüm tercihi modelde değil. Kapı: `mount-akso.test.js` +
-  `mount-pencere.spec.js` → *Aksonometrik*.
+  yalnız güncel çözümden); görünüm tercihi modelde değil. Başlangıç sayfasının örnek
+  karoları da bu çizicinin sade kipi (`veMntAksoOrnekModel`). Kapı: `mount-akso.test.js` +
+  `mount-pencere.spec.js` → *Aksonometrik* · `mount-baslangic.test.js` → *KÜÇÜK RESİM*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

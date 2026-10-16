@@ -2997,11 +2997,39 @@ function _mntAksoKoord(x, y, z, b){ return '('+_mntS(x, b||0)+'; '+_mntS(y, b||0
 // GÜNCEL çözümden: bayat bir kuvvet oku çizimde ölçüm gibi durur.
 function _mntAksoModel(P){
   P=P||_mnt2DPencereVeri();
-  var M=P.M, C=(typeof veMountCore!=='undefined') ? veMountCore : null;
-  var S=veMntSonucDurumu(), R=(S.durum==='guncel') ? S.R : null;
-  var mTop=0;
-  M.g.components.forEach(function(c){ mTop+=Math.max(0, _mntNum(c.mass, 0)); });
-  var govde=M.g.components.map(function(c, i){
+  var S=veMntSonucDurumu();
+  return _mntAksoModelKur(P.M.g, P.M.mp, (S.durum==='guncel') ? S.R : null, S.durum);
+}
+// Örnek kaydından (veMountCore.getMountExample(k).model; mm, kg, N/mm) —
+// başlangıç sayfasının karosu. Pencereyle AYNI kurucu: karo kendi modelini
+// kurmaz. Örnekte çözüm yok; kuvvet ve mod katmanı zaten kapalı.
+function veMntAksoOrnekModel(model){
+  if(!model || !model.components) return null;
+  var g={
+    components:model.components.map(function(c, i){
+      var cg=c.cg||[0, 0, 0];
+      return { id:'g'+i, name:c.name, mass:c.mass, cgx:cg[0], cgy:cg[1], cgz:cg[2],
+        Ixx:c.Ixx, Iyy:c.Iyy, Izz:c.Izz, Ixy:c.Ixy, Ixz:c.Ixz, Iyz:c.Iyz, pointMass:!!c.pointMass };
+    }),
+    mounts:(model.mounts||[]).map(function(t, i){
+      var p=t.pos||[0, 0, 0], k=t.kstat||[0, 0, 0];
+      return { id:'t'+i, name:t.name, x:p[0], y:p[1], z:p[2], kxs:k[0], kys:k[1], kzs:k[2] };
+    })
+  };
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null, mp=null;
+  if(C && C.combineMassProps && C.mmToM && g.components.length){
+    try{ mp=C.combineMassProps(_mntToSI(g, 9.81).components); }catch(e){ mp=null; }
+  }
+  return _mntAksoModelKur(g, mp, null, 'yok');
+}
+// Kurucu — saf: g (_mntGatherForSolver'ın biçimi: mm, kg, N/mm), mp
+// (combineMassProps, SI), R (GÜNCEL çözüm ya da null), durum (yok · guncel ·
+// bayat — düğmelerin sebebi).
+function _mntAksoModelKur(g, mp, R, durum){
+  var C=(typeof veMountCore!=='undefined') ? veMountCore : null;
+  var mTop=0, mHam=0;
+  g.components.forEach(function(c){ mTop+=Math.max(0, _mntNum(c.mass, 0)); mHam+=_mntNum(c.mass, 0); });
+  var govde=g.components.map(function(c, i){
     var mass=_mntNum(c.mass, 0), x=_mntNum(c.cgx), y=_mntNum(c.cgy), z=_mntNum(c.cgz);
     var kutu=(C && C.equivalentBox) ? C.equivalentBox(mass, [[_mntNum(c.Ixx),0,0],[0,_mntNum(c.Iyy),0],[0,0,_mntNum(c.Izz)]], !!c.pointMass) : null;
     if(kutu) kutu=kutu.map(function(v){ return v*1000; });
@@ -3017,7 +3045,7 @@ function _mntAksoModel(P){
   ana.forEach(function(g){ g.ana=true; });
   var ms=R ? (R.mounts||[]) : [], st=null;
   if(R) (R.allCases||[]).forEach(function(rc){ if(rc.name==='Static' && rc.res) st=rc.res; });
-  var takoz=M.g.mounts.map(function(t, i){
+  var takoz=g.mounts.map(function(t, i){
     var j=-1;
     for(var q=0;q<ms.length;q++){ if(ms[q] && ms[q].id===t.id){ j=q; break; } }
     var pm=(st && st.perMount && j>=0) ? st.perMount[j] : null;
@@ -3028,13 +3056,14 @@ function _mntAksoModel(P){
     if(pm && yuk!=null) bilgi.push('Statik yük '+_mntS(yuk, 1)+' kg · sehim '+_mntS(Math.abs(pm.delta[2]*1000), 2)+' mm');
     return { k:'T'+(i+1), no:'T'+(i+1), ad:ad, x:x, y:y, z:z, ks:ks, f:pm ? pm.f.slice() : null, yukKg:yuk, bilgi:bilgi };
   });
-  var cg=P.veri.cg;
-  var G=cg ? { x:cg.x, y:cg.y, z:cg.z, m:M.mTop,
-    bilgi:['Birleşik CG', _mntAksoKoord(cg.x, cg.y, cg.z, 1)+' mm', 'Toplam kütle '+_mntS(M.mTop, 1)+' kg'] } : null;
+  // G 2D görünüşlerinkiyle aynı (_mnt2DPencereVeri'nin cg'si).
+  var cg=(mp && mp.cg && mp.cg.every(Number.isFinite)) ? { x:mp.cg[0]*1000, y:mp.cg[1]*1000, z:mp.cg[2]*1000 } : null;
+  var G=cg ? { x:cg.x, y:cg.y, z:cg.z, m:mHam,
+    bilgi:['Birleşik CG', _mntAksoKoord(cg.x, cg.y, cg.z, 1)+' mm', 'Toplam kütle '+_mntS(mHam, 1)+' kg'] } : null;
   var asal=null;
-  if(M.mp && C && C.principalInertia && C.equivalentBox){
-    var pr=C.principalInertia(M.mp.I_G);
-    var kb=pr ? C.equivalentBox(M.mp.m, [[pr.values[0],0,0],[0,pr.values[1],0],[0,0,pr.values[2]]], false) : null;
+  if(mp && C && C.principalInertia && C.equivalentBox){
+    var pr=C.principalInertia(mp.I_G);
+    var kb=pr ? C.equivalentBox(mp.m, [[pr.values[0],0,0],[0,pr.values[1],0],[0,0,pr.values[2]]], false) : null;
     if(kb) asal={ degerler:pr.values, eksenler:pr.axes, kutu:kb.map(function(v){ return v*1000; }) };
   }
   var kisa=(typeof veMntBrief!=='undefined' && veMntBrief.modeShort) ? veMntBrief.modeShort : function(s){ return String(s||''); };
@@ -3042,7 +3071,7 @@ function _mntAksoModel(P){
     cgR:(R && R.mp) ? R.mp.cg.map(function(v){ return v*1000; }) : (G ? [G.x, G.y, G.z] : [0, 0, 0]),
     q:(R && R.qStatic) ? { u:R.qStatic.slice(0, 3).map(function(v){ return v*1000; }), t:R.qStatic.slice(3, 6) } : null,
     modlar:(R && R.modes && R.modes.length) ? R.modes.map(function(md){ return { f:md.f_Hz, phi:md.phi, ad:kisa(md.label) }; }) : null,
-    asal:asal, cozum:S.durum };
+    asal:asal, cozum:durum };
 }
 function _mntAksoAzalt(){
   try{ return typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; }
@@ -5529,6 +5558,7 @@ if(typeof module!=='undefined' && module.exports){
     _mnt2DPencereVeri: _mnt2DPencereVeri,
     _mnt2DPencereSVG: _mnt2DPencereSVG,
     _mntAksoModel: _mntAksoModel,
+    veMntAksoOrnekModel: veMntAksoOrnekModel,
     _mntAksoHTML: _mntAksoHTML,
     VE_MNT_AKSO: VE_MNT_AKSO,
     veMntAksoAyar: veMntAksoAyar,

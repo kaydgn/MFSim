@@ -28,9 +28,10 @@ eval(loadSource('components.js'));
 global.componentDefs = componentDefs;
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
+const AK = require('../../js/mount-akso.js');
+global.veMntAkso = AK;
 const cp = require('../../js/cp-mount.js');
-global.veMnt2DGorunusSVG = cp.veMnt2DGorunusSVG;
-global.VE_MNT2D_GORUNUS = cp.VE_MNT2D_GORUNUS;
+global.veMntAksoOrnekModel = cp.veMntAksoOrnekModel;
 const WIZ = require('../../js/cp-mount-wizard.js');
 global.VE_MW_STEPS = WIZ.VE_MW_STEPS;
 const BS = require('../../js/cp-mount-baslangic.js');
@@ -88,7 +89,44 @@ describe('İÇERİK — kapılar ve örnekler', () => {
     const karo = html.match(/class="ve-bas-karo" data-ey="ornek" data-v="[^"]+"/g) || [];
     expect(karo.map((k) => k.match(/data-v="([^"]+)"/)[1])).toEqual(liste.map((e) => e.id));
     expect(html).not.toContain('ve-bas-resim-yok');
-    liste.forEach((e) => expect(BS.veMntBaslangicResim(e.id)).toMatch(/^<svg class="ve-mnt2d-gorunus"/));
+  });
+});
+
+// Kullanıcı seçimi (2026-10-15): 2D Görünüm'ün ilk sekmesi aksonometri;
+// karo aynı resmi gösterir. "Aynı" = TEK çizici ve TEK kurucu — karo kendi
+// modelini kurarsa (eski kip kendi kütle-ağırlıklı CG'sini hesaplıyordu)
+// pencere ile karo sessizce ayrışır.
+describe('KÜÇÜK RESİM — 2D Görünüm\'ün aksonometrisi, örneğin kendi modelinden', () => {
+  const W = BS.VE_MNT_BAS_RESIM.w, H = BS.VE_MNT_BAS_RESIM.h;
+  test('her örnek: pencerenin çizicisi ve kurucusu; takoz sayısı örneğinki; karoda yazı yok', () => {
+    core.getMountExampleList().forEach((ex) => {
+      const svg = BS.veMntBaslangicResim(ex.id);
+      expect(svg).toBe(AK.ciz(cp.veMntAksoOrnekModel(ex.model), { W, H, sade: true }).svg);
+      expect(svg).toMatch(/^<svg class="ve-mnt2d-akso"/);
+      expect((svg.match(/class="ve-ak-t"/g) || []).length).toBe(ex.model.mounts.length);
+      expect(svg).toContain('class="ve-ak-gam"');           // G
+      expect(svg).toContain('class="ve-ak-gol"');           // Z = 0 gölgesi hep açık
+      expect(svg).not.toContain('<text');                    // künye karonun altında
+    });
+  });
+  test('kurucu pencereninki: G çözücünün birleştirmesi, kutu çekirdeğin eşdeğer kutusu, çözüm yok', () => {
+    core.getMountExampleList().forEach((ex) => {
+      const m = cp.veMntAksoOrnekModel(ex.model);
+      const si = ex.model.components.map((c) => ({ mass: c.mass, cg: c.cg.map((v) => v / 1000), pointMass: !!c.pointMass,
+        I: [[c.Ixx, c.Ixy || 0, c.Ixz || 0], [c.Ixy || 0, c.Iyy, c.Iyz || 0], [c.Ixz || 0, c.Iyz || 0, c.Izz]] }));
+      const mp = core.combineMassProps(si);
+      expect(m.G.x).toBeCloseTo(mp.cg[0] * 1000, 6);
+      expect(m.G.y).toBeCloseTo(mp.cg[1] * 1000, 6);
+      expect(m.G.z).toBeCloseTo(mp.cg[2] * 1000, 6);
+      ex.model.components.forEach((c, i) => {
+        const kutu = core.equivalentBox(c.mass, [[c.Ixx, 0, 0], [0, c.Iyy, 0], [0, 0, c.Izz]], !!c.pointMass);
+        expect(m.govde[i].kutu).toEqual(kutu ? kutu.map((v) => v * 1000) : null);
+      });
+      expect(m.takoz.map((t) => [t.x, t.y, t.z])).toEqual(ex.model.mounts.map((t) => t.pos));
+      expect(m.cozum).toBe('yok');
+      expect(m.modlar).toBeNull();
+      expect(m.takoz.every((t) => t.f === null)).toBe(true);
+    });
   });
 });
 

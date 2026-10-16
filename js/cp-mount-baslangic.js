@@ -23,8 +23,9 @@
 //    STEP sihirbazın 1. adımının dosya seçicisi (AYNI tıklamada), Boş kanvas
 //    `veMntKanvasBos`, örnek `veMntOrnekYukle`. İkinci bir kurucu, iki yolun
 //    sessizce ayrışması demekti.
-//  • KÜÇÜK RESİM 2D Görünüm'ün çizicisinden (`veMnt2DGorunusSVG`, sade kip),
-//    örneğin KENDİ modelinden — sunum kendi geometrisini kurmaz.
+//  • KÜÇÜK RESİM 2D Görünüm'ün ilk sekmesinin çizicisinden (`veMntAkso.ciz`,
+//    sade kip) ve kurucusundan (`veMntAksoOrnekModel`), örneğin KENDİ
+//    modelinden — sunum kendi geometrisini kurmaz.
 //  • Paletten sayfanın üstüne bırakılan bileşen tuvale kurulur (kit
 //    sürükle-bırakı sızdırır) ve sayfa çekilir: dördüncü kapı.
 //  • Tazeleme iki noktadan: kapsam değişimi (`veSyncSidebarScope` →
@@ -32,8 +33,11 @@
 //    `veMntBaslangicTazele` — ekleme, silme, geri yükleme, sekme yükleme).
 
 var VE_MNT_BAS_ID = 've-mnt-baslangic';
-// Küçük resmin tuvali (kullanıcı birimi) — FEAD karosuyla aynı oran.
-var VE_MNT_BAS_RESIM = { w: 330, h: 150 };
+// Küçük resmin tuvali (kullanıcı birimi) — karonun resim kutusunun oranı
+// (1440 px'te 228 × 79 px). FEAD'in 330 × 150'si aksonometride yüksekliği
+// sınırlıyordu: çizim kutunun eninin %76'sında kalıyordu (Siper'de ölçek
+// 0,033 → 0,043 px/mm).
+var VE_MNT_BAS_RESIM = { w: 330, h: 114 };
 var _mntBasResimler = {};        // anahtar → SVG (örnekler durağan: oturumluk önbellek)
 var _mntBasKapsam = false;       // Takoz alt topolojisinde miyiz (veSyncSidebarScope yazar)
 
@@ -87,29 +91,21 @@ function veMntBaslangicOrnekler(){
   return out;
 }
 
-// Örneğin modelinden 2D veri (2D Görünüm'ün biçimi: mm, birleşik CG kütle-ağırlıklı).
-function _mntBasVeri(M){
-  var comps = (M.components || []).map(function(c){
-    return { name: c.name, mass: Number(c.mass) || 0, x: c.cg[0], y: c.cg[1], z: c.cg[2] };
-  });
-  var mounts = (M.mounts || []).map(function(m){
-    return { name: m.name, x: m.pos[0], y: m.pos[1], z: m.pos[2] };
-  });
-  var ms = 0, sx = 0, sy = 0, sz = 0;
-  comps.forEach(function(c){ if(c.mass > 0){ ms += c.mass; sx += c.mass * c.x; sy += c.mass * c.y; sz += c.mass * c.z; } });
-  return { comps: comps, mounts: mounts, cg: ms > 0 ? { x: sx / ms, y: sy / ms, z: sz / ms, m: ms } : null };
-}
-
-// Örneğin ÜSTTEN görünüşü — çizici TEK KAYNAK (veMnt2DGorunusSVG). Çizilemezse
-// boş (karo yine basılır, künyesiyle; yükleme de yine çalışır).
+// Örneğin AKSONOMETRİSİ — 2D Görünüm'ün ilk sekmesinin resmi (kullanıcı
+// seçimi 2026-10-15: "seçtiklerimizi bileşene aktar", sonra karolar). Çizici
+// de model de TEK KAYNAK: veMntAkso.ciz (sade kip: yazısız, cetvelsiz) ve
+// veMntAksoOrnekModel (pencerenin kurucusu, örneğin KENDİ kaydından).
+// Görünüş pencerenin varsayılanı: dimetrik, önden-soldan-yukarıdan, gölge.
+// Çizilemezse boş (karo yine basılır, künyesiyle; yükleme de yine çalışır).
 function veMntBaslangicResim(key){
   if(Object.prototype.hasOwnProperty.call(_mntBasResimler, key)) return _mntBasResimler[key];
   var svg = '';
   try {
     var ex = (typeof veMountCore !== 'undefined' && veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
-    if(ex && ex.model && typeof veMnt2DGorunusSVG === 'function')
-      svg = veMnt2DGorunusSVG(_mntBasVeri(ex.model), VE_MNT_BAS_RESIM.w, VE_MNT_BAS_RESIM.h,
-                              { gorunus: 'ust', sade: true }) || '';
+    var Ak = (typeof veMntAkso !== 'undefined' && veMntAkso && veMntAkso.ciz) ? veMntAkso : null;
+    var m = (ex && ex.model && typeof veMntAksoOrnekModel === 'function') ? veMntAksoOrnekModel(ex.model) : null;
+    if(Ak && m && (m.govde.length || m.takoz.length))
+      svg = Ak.ciz(m, { W: VE_MNT_BAS_RESIM.w, H: VE_MNT_BAS_RESIM.h, sade: true }).svg || '';
   } catch(e){ svg = ''; }
   _mntBasResimler[key] = svg;
   return svg;
