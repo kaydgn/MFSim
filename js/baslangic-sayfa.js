@@ -63,7 +63,8 @@ function veBasKaroHTML(k){
 }
 
 // ── SAYFA — üst satır · başlık · alt metin · kapılar · karolar · not ───────
-// s: { ust, baslik, alt, kapilar:[kapı…], bolum:{ baslik, not, karolar:[karo…] }, not }
+// s: { ust, baslik, alt, kapilar:[kapı…], bolumler:[{ baslik, not, karolar:[karo…] }], not }
+// Tek bölüm `bolum` olarak da verilebilir (FEAD). Karosuz bölüm basılmaz.
 function veBasSayfaHTML(s){
   s = s || {};
   var h = '<div class="ve-bas-ic">'
@@ -71,12 +72,12 @@ function veBasSayfaHTML(s){
     + '<h1>' + veBasEsc(s.baslik) + '</h1>'
     + '<p class="ve-bas-alt">' + veBasEsc(s.alt) + '</p>'
     + '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>';
-  var b = s.bolum;
-  if(b && b.karolar && b.karolar.length){
+  (s.bolumler || (s.bolum ? [s.bolum] : [])).forEach(function(b){
+    if(!b || !b.karolar || !b.karolar.length) return;
     h += '<div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2>'
       + (b.not ? '<span>' + veBasEsc(b.not) + '</span>' : '') + '</div>'
       + '<div class="ve-bas-raporlar">' + b.karolar.map(veBasKaroHTML).join('') + '</div>';
-  }
+  });
   if(s.not) h += '<p class="ve-bas-not">' + veBasEsc(s.not) + '</p>';
   return h + '</div>';
 }

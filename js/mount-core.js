@@ -2086,6 +2086,118 @@ var veMountCore = (function() {
   const _aralik = (z) => { const lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
     return lo === hi ? _sayi(lo) : _sayi(lo) + ' – ' + _sayi(hi); };
 
+  // ═══════════════════ KURGU örnekler — doğrulama modelleri ═══════════════════
+  // Gerçek bir aracı TEMSİL ETMEZLER (kayıtta `kurgu: true`; başlangıç sayfası
+  // onları gerçek örneklerden AYRI bir grupta, kurgu olduklarını söyleyerek
+  // gösterir). Üç amaç: (1) kapalı formu bilinen bir model — kullanıcı programı
+  // el hesabıyla kıyaslayabilsin; (2) rölanti + silindir dahil tüm girdileri
+  // dolu modeller — gerçek örneklerin yalnız biri Kriter 1/2'yi işletiyor;
+  // (3) nonlineer yasalı bir model. Sayılar programın kendi çözüm yolunda
+  // parametrik aramayla seçildi; kart metnindeki iddialar (kriterler tutuyor,
+  // hangi viteste kaç takoz çekmeye geçiyor) tests/unit/mount-ornek-kurgu.test.js'te
+  // kilitli — model değişirse metin sessizce yalan söylemez.
+  //
+  // Gövdenin `veri`si JSON topolojisindeki düğüm alanlarıdır (rölanti, silindir,
+  // vites dizisi): programatik yükleyici (TTAR biçimi) onları taşımaz, JSON taşır.
+  const _torkDurumlari = (t) => {
+    const chain = d => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:d.iGear,
+                                     iTransfer:t.iTransfer, phiAxle:d.phiAxle, derate:t.derate });
+    const T = { 'Forward Torque': -chain(t.fwd), 'Reverse Torque': -chain(t.rev) };
+    return defaultLoadCases().map(c => (c.name in T) ? Object.assign({}, c, { T:[T[c.name],0,0] }) : c);
+  };
+  const _torkIleri = (t) => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:t.fwd.iGear,
+                                          iTransfer:t.iTransfer, phiAxle:t.fwd.phiAxle, derate:t.derate });
+
+  // ── Analitik kutu — kapalı form ──
+  // Tek prizma gövde (1100 × 700 × 800 mm, 1.200 kg → I = m·(b² + c²)/12 …),
+  // dört özdeş takoz ±600 / ±350 mm köşelerde ve ağırlık merkeziyle AYNI
+  // yükseklikte: K'nın bütün kuplaj terimleri sıfır, altı mod ayrışık.
+  // tests/unit/mount-dogrulama-analitik.test.js (B1) aynı modeli kurar.
+  const KUTU_TORQUE = { Te:500, Rstall:2, iTransfer:1.25,
+                        fwd:{iGear:3, phiAxle:0.8}, rev:{iGear:-4, phiAxle:0.7}, derate:0.9 };
+  const KUTU_EXAMPLE = {
+    g: 9.81,
+    components: [
+      {name:'Kutu', mass:1200, cg:[300, 20, 650], Ixx:113, Iyy:185, Izz:170, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor', at:[385,331],
+       veri:{ Te:500, Rstall:2, g1:3, g2:1.6, gR:-4, iTransfer:1.25, phiFwd:0.8, phiRev:0.7, derate:0.9, idleRpm:800, cylinders:6 }}
+    ],
+    mounts: [
+      {name:'Sağ Ön Takoz',   pos:[-300,  370, 650], kstat:[900,700,400], kdyn:[1400,1050,600], at:[ 85,137]},
+      {name:'Sol Ön Takoz',   pos:[-300, -330, 650], kstat:[900,700,400], kdyn:[1400,1050,600], at:[ 85,533]},
+      {name:'Sağ Arka Takoz', pos:[ 900,  370, 650], kstat:[900,700,400], kdyn:[1400,1050,600], at:[685,137]},
+      {name:'Sol Arka Takoz', pos:[ 900, -330, 650], kstat:[900,700,400], kdyn:[1400,1050,600], at:[685,533]}
+    ],
+    torque: KUTU_TORQUE,
+    cozucu: { zeta:0.05 },
+    loadCases: _torkDurumlari(KUTU_TORQUE)
+  };
+  // Kapalı form — EL HESABI, çözücü değil: takozlar ağırlık merkezi düzleminde ve simetrik,
+  // K köşegen, her mod tek satır f = (1/2π)·√(k_eşdeğer / atalet).
+  function _kutuKapali(M){
+    const c = M.components[0], t = M.mounts[0], m = c.mass;
+    const Lx = Math.abs(t.pos[0] - c.cg[0]) / 1000, Ly = Math.abs(t.pos[1] - c.cg[1]) / 1000;
+    const k = t.kdyn.map(v => v * 1000 * M.mounts.length);                 // Σk [N/m]
+    const f = (K, I) => Math.sqrt(K / I) / (2 * Math.PI);
+    return { 'ileri-geri': f(k[0], m), yanal: f(k[1], m), 'zıplama': f(k[2], m),
+             yalpalama: f(k[2] * Ly * Ly, c.Ixx), 'baş-kıç': f(k[2] * Lx * Lx, c.Iyy),
+             savrulma: f(k[0] * Ly * Ly + k[1] * Lx * Lx, c.Izz) };
+  }
+  const _KUTU_F = _kutuKapali(KUTU_EXAMPLE);
+
+  // ── Hafif ticari — 3 noktalı askı ──
+  // 2,2 L dört silindirli dizel + 6 ileri manuel, arkadan itiş (boyuna motor).
+  // İki motor takozu (sıkıştırma/kayma ≈ 3,3) + bir şanzıman takozu.
+  const HAFIF_TORQUE = { Te:360, Rstall:1, iTransfer:1,
+                         fwd:{iGear:4.86, phiAxle:1}, rev:{iGear:-4.39, phiAxle:1}, derate:1 };
+  const HAFIF_EXAMPLE = {
+    g: 9.81,
+    components: [
+      {name:'Motor', mass:185, cg:[380, 10, 520], Ixx:11.15, Iyy:12.24, Izz:10.76, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor', at:[179,331],
+       veri:{ Te:360, TeRpm:1750, Pmax:120, PmaxRpm:3500, idleRpm:750, cylinders:4 }},
+      {name:'Şanzıman', mass:62, cg:[930, -15, 470], Ixx:1.66, Iyy:2.31, Izz:2.14, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox', at:[577,331],
+       veri:{ g1:4.86, g2:2.61, g3:1.52, g4:1, g5:0.8, g6:0.67, gR:-4.39, Rstall:1 }},
+      {name:'Alternatör + klima', mass:18, cg:[250, 235, 600], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump', at:[85,331]}
+    ],
+    mounts: [
+      {name:'Sağ Motor Takozu', pos:[ 300,  300, 480], kstat:[ 90,90,300], kdyn:[125,125,420], at:[121,137]},
+      {name:'Sol Motor Takozu', pos:[ 300, -300, 480], kstat:[ 90,90,300], kdyn:[125,125,420], at:[121,533]},
+      {name:'Şanzıman Takozu',  pos:[1080,    0, 440], kstat:[145,70,240], kdyn:[205,100,335], at:[685,331]}
+    ],
+    torque: HAFIF_TORQUE,
+    cozucu: { zeta:0.05 },
+    loadCases: _torkDurumlari(HAFIF_TORQUE)
+  };
+
+  // ── Orta kamyon — nonlineer takoz ──
+  // 7,7 L altı silindirli dizel + 6 ileri manuel; önde ve arkada ikişer takoz.
+  // Yasalar katalogla orijinde ÖZ-TUTARLI (k0 = k_stat — lawCatalogMismatch
+  // susar): basmada sertleşen rasyonel yasa (asimptot 20 mm), yanal/boyunada
+  // kübik sertleşme, geri-gelmede kübik.
+  const _kamyonYasa = (ks) => ({ x:{ form:'poly', k0:ks[0], c3:0.25, c5:0 }, y:{ form:'poly', k0:ks[1], c3:0.2, c5:0 },
+                                 z:{ form:'asym', comp:{ k0:ks[2], xmax:20 }, ext:{ k0:ks[2], c3:0.6 } } });
+  const KAMYON_TORQUE = { Te:1200, Rstall:1, iTransfer:1,
+                          fwd:{iGear:6.7, phiAxle:1}, rev:{iGear:-6.1, phiAxle:1}, derate:1 };
+  const KAMYON_EXAMPLE = {
+    g: 9.81,
+    components: [
+      {name:'Motor', mass:640, cg:[300, 0, 640], Ixx:78.87, Iyy:121.75, Izz:98.18, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor', at:[354,331],
+       veri:{ Te:1200, TeRpm:1300, Pmax:220, PmaxRpm:2300, idleRpm:600, cylinders:6 }},
+      {name:'Şanzıman', mass:175, cg:[1180, 0, 520], Ixx:8.52, Iyy:11.72, Izz:11.09, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox', at:[686,331],
+       veri:{ g1:6.7, g2:4.1, g3:2.5, g4:1.6, g5:1, g6:0.78, gR:-6.1, Rstall:1 }},
+      {name:'Hava kompresörü', mass:24, cg:[120, -330, 720], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump', at:[261,331]}
+    ],
+    mounts: [
+      {name:'Sağ Ön Takoz',   pos:[-320,  320, 470], kstat:[120, 90,300], kdyn:[180,135,450], fits:_kamyonYasa([120, 90,300]), at:[ 85,137]},
+      {name:'Sol Ön Takoz',   pos:[-320, -320, 470], kstat:[120, 90,300], kdyn:[180,135,450], fits:_kamyonYasa([120, 90,300]), at:[ 85,533]},
+      {name:'Sağ Arka Takoz', pos:[ 820,  380, 600], kstat:[250,200,500], kdyn:[375,300,750], fits:_kamyonYasa([250,200,500]), at:[541,137]},
+      {name:'Sol Arka Takoz', pos:[ 820, -380, 600], kstat:[250,200,500], kdyn:[375,300,750], fits:_kamyonYasa([250,200,500]), at:[541,533]}
+    ],
+    torque: KAMYON_TORQUE,
+    cozucu: { zeta:0.05 },
+    loadCases: _torkDurumlari(KAMYON_TORQUE)
+  };
+  const _KURGU_KAYNAK = ['Kaynak', 'Kurgu — gerçek bir aracı temsil etmez'];
+
   const MOUNT_EXAMPLES = {
     siper: {
       id: 'siper',
@@ -2180,6 +2292,89 @@ var veMountCore = (function() {
       ],
       topology: 'assets/examples/asfat_topoloji.json',
       model: ASFAT_EXAMPLE
+    },
+    kutu: {
+      id: 'kutu', kurgu: true,
+      name: 'Analitik kutu — kapalı form',
+      vehicle: 'Analitik kutu',
+      subtitle: '1 kütle · 4 takoz · altı ayrışık mod',
+      description: 'Kurgu doğrulama modeli: tek prizma gövde (1.200 kg, 1100 × 700 × 800 mm) dört özdeş takozun üstünde; takozlar ±600 / ±350 mm köşelerde ve ağırlık merkeziyle aynı yükseklikte. Bu düzende rijitlik matrisinin bütün kuplaj terimleri sıfırdır: altı mod birer serbestliğe ayrışır ve her biri tek satırlık formüldür, f = (1/2π)·√(k/m) ya da √(k·L²/I). Programın sonucu bu el hesabıyla makine hassasiyetinde örtüşür. Kriterlerin bir kısmı bilerek tutmaz — amaç tasarım değil, kıyas.',
+      specs: [
+        ['Gövde', '1 prizma · ' + _toplamKg(KUTU_EXAMPLE)],
+        ['Takoz', '4 özdeş · ağırlık merkezi düzleminde'],
+        ['Öteleme (kapalı form)', 'ileri-geri ' + _sayi(_KUTU_F['ileri-geri'], 2) + ' · yanal ' + _sayi(_KUTU_F.yanal, 2)
+          + ' · zıplama ' + _sayi(_KUTU_F['zıplama'], 2) + ' Hz'],
+        ['Dönme (kapalı form)', 'yalpalama ' + _sayi(_KUTU_F.yalpalama, 2) + ' · baş-kıç ' + _sayi(_KUTU_F['baş-kıç'], 2)
+          + ' · savrulma ' + _sayi(_KUTU_F.savrulma, 2) + ' Hz'],
+        ['Rölanti · silindir', '800 d/dk · 6 → f_ateş 40 Hz'],
+        _KURGU_KAYNAK
+      ],
+      // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
+      tools: [
+        {type:'mnt-library',    name:'Takoz Özellikleri', at:[840, 90]},
+        {type:'mnt-solver',     name:'Çözücü',            at:[945, 90]},
+        {type:'mnt-example',    name:'Örnek',             at:[1050, 90]},
+        {type:'mnt-report',     name:'Rapor',             at:[1155, 90]},
+        {type:'mnt-2dview',     name:'2D Görünüm',        at:[840,250]},
+        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[945,250]},
+        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1050,250]}
+      ],
+      topology: 'assets/examples/kutu_topoloji.json',
+      model: KUTU_EXAMPLE
+    },
+    hafif: {
+      id: 'hafif', kurgu: true,
+      name: 'Hafif ticari — 3 noktalı askı',
+      vehicle: 'Hafif ticari',
+      subtitle: '3 kütle · 3 takoz güç grubu',
+      description: 'Kurgu model: 2,2 L dört silindirli dizel motor ve 6 ileri manuel şanzımandan oluşan, arkadan itişli hafif ticari güç grubu; iki motor takozu ve bir şanzıman takozuyla üç noktadan asılır. Takoz rijitlikleri ve yerleşimi Kriter 1, 1a ve 1b\'yi birlikte sağlayacak biçimde programın kendisiyle seçildi: yanal, ileri-geri ve savrulma modları 8 Hz\'in altında; zıplama, baş-kıç ve yalpalama 10–12,5 Hz arasında. 1. vites tam torkunda (' + _sayi(_torkIleri(HAFIF_TORQUE), 0) + ' N·m) bir motor takozu çekmeye geçer — izolasyon ile tork tutuşu arasındaki klasik çelişki.',
+      specs: [
+        ['Kütle gövdesi', String(HAFIF_EXAMPLE.components.length)],
+        ['Takoz', String(HAFIF_EXAMPLE.mounts.length) + ' · iki motor + şanzıman'],
+        ['Toplam kütle', _toplamKg(HAFIF_EXAMPLE)],
+        ['Motor torku', _sayi(HAFIF_TORQUE.Te) + ' N·m · 1. vites ' + _sayi(_torkIleri(HAFIF_TORQUE), 0) + ' N·m'],
+        ['Rölanti · silindir', '750 d/dk · 4 → f_ateş 25 Hz'],
+        _KURGU_KAYNAK
+      ],
+      // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
+      tools: [
+        {type:'mnt-library',    name:'Takoz Özellikleri', at:[840, 90]},
+        {type:'mnt-solver',     name:'Çözücü',            at:[945, 90]},
+        {type:'mnt-example',    name:'Örnek',             at:[1050, 90]},
+        {type:'mnt-report',     name:'Rapor',             at:[1155, 90]},
+        {type:'mnt-2dview',     name:'2D Görünüm',        at:[840,250]},
+        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[945,250]},
+        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1050,250]}
+      ],
+      topology: 'assets/examples/hafif_topoloji.json',
+      model: HAFIF_EXAMPLE
+    },
+    kamyon: {
+      id: 'kamyon', kurgu: true,
+      name: 'Orta kamyon — nonlineer takoz',
+      vehicle: 'Orta kamyon',
+      subtitle: '3 kütle · 4 nonlineer takoz',
+      description: 'Kurgu model: 7,7 L altı silindirli dizel motor ve 6 ileri manuel şanzımandan oluşan orta kamyon güç grubu; önde ve arkada ikişer takoz. Takozlar nonlineerdir: eksenel basmada sertleşen rasyonel yasa (asimptot 20 mm), yanal ve boyuna yönde kübik sertleşme; yasaların orijin eğimi katalog rijitliğiyle aynıdır. Denge Newton ile bulunur; modal çözüm, frekans yanıtı ve şok statik dengedeki tanjanttan beslenir. Kriter 1, 1a ve 1b sağlanır; 1. vitesin ' + _sayi(_torkIleri(KAMYON_TORQUE), 0) + ' N·m\'lik torkunda iki takoz çekmeye geçer.',
+      specs: [
+        ['Kütle gövdesi', String(KAMYON_EXAMPLE.components.length)],
+        ['Takoz', String(KAMYON_EXAMPLE.mounts.length) + ' · nonlineer yasa (x · y · z)'],
+        ['Toplam kütle', _toplamKg(KAMYON_EXAMPLE)],
+        ['Motor torku', _sayi(KAMYON_TORQUE.Te) + ' N·m · 1. vites ' + _sayi(_torkIleri(KAMYON_TORQUE), 0) + ' N·m'],
+        ['Rölanti · silindir', '600 d/dk · 6 → f_ateş 30 Hz'],
+        _KURGU_KAYNAK
+      ],
+      // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
+      tools: [
+        {type:'mnt-library',    name:'Takoz Özellikleri', at:[848, 90]},
+        {type:'mnt-solver',     name:'Çözücü',            at:[953, 90]},
+        {type:'mnt-example',    name:'Örnek',             at:[1058, 90]},
+        {type:'mnt-report',     name:'Rapor',             at:[1163, 90]},
+        {type:'mnt-2dview',     name:'2D Görünüm',        at:[848,250]},
+        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[953,250]},
+        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1058,250]}
+      ],
+      topology: 'assets/examples/kamyon_topoloji.json',
+      model: KAMYON_EXAMPLE
     }
   };
   // id → örnek girişi (bilinmezse defterdeki ilk örneğe düşer).

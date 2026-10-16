@@ -85,7 +85,8 @@ function veMntBaslangicOrnekler(){
     out.push({
       key: ex.id, ad: ex.name || ex.id, arac: ex.vehicle || ex.name || ex.id,
       govde: M.components.length, takoz: (M.mounts || []).length, kutle: kutle,
-      govdeAdlari: M.components.map(function(c){ return c.name; })
+      govdeAdlari: M.components.map(function(c){ return c.name; }),
+      kurgu: !!ex.kurgu
     });
   });
   return out;
@@ -122,6 +123,15 @@ function veMntBaslangicHTML(){
   var K = _mntBasKit();
   if(!K) return '';
   var kg = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
+  // Alt satır SIĞAN künye: gövde adlarının listesi karoda üç noktayla
+  // kesiliyordu (yerleşim kapısı, 3 karonun 3'ü) — adlar ipucunda.
+  var karo = function(o){
+    return { ey: 'ornek', v: o.key, baslik: o.ad + ' — ' + o.govdeAdlari.join(' · '),
+             resim: veMntBaslangicResim(o.key), kod: o.arac, yil: kg(o.kutle) + ' kg',
+             sag: o.kurgu ? 'kurgu' : '', alt: o.govde + ' gövde · ' + o.takoz + ' takoz' };
+  };
+  var gercek = ornekler.filter(function(o){ return !o.kurgu; });
+  var kurgu = ornekler.filter(function(o){ return o.kurgu; });
   return K.sayfa({
     ust: 'Takoz Çökme-Titreşim · yeni güç grubu modeli',
     baslik: 'Nereden başlayalım?',
@@ -135,17 +145,17 @@ function veMntBaslangicHTML(){
       { ey: 'bos', ikon: 'grid', ad: 'Boş kanvas',
         not: 'Analiz araçlarını kur; kütle gövdelerini ve takozları Bileşenler\'den sürükle.' }
     ],
-    bolum: {
-      baslik: 'Örnek modellerden başla',
-      not: ornekler.length + ' örnek · modelin topolojisi birebir yüklenir, sonra her şey değiştirilebilir',
-      // Alt satır SIĞAN künye: gövde adlarının listesi karoda üç noktayla
-      // kesiliyordu (yerleşim kapısı, 3 karonun 3'ü) — adlar ipucunda.
-      karolar: ornekler.map(function(o){
-        return { ey: 'ornek', v: o.key, baslik: o.ad + ' — ' + o.govdeAdlari.join(' · '),
-                 resim: veMntBaslangicResim(o.key), kod: o.arac, yil: kg(o.kutle) + ' kg',
-                 alt: o.govde + ' gövde · ' + o.takoz + ' takoz' };
-      })
-    },
+    // İki grup: gerçek araçlar ve KURGU doğrulama modelleri (kayıtta `kurgu`).
+    // Kurgu model gerçek bir aracı temsil etmez — bölüm başlığı ve karonun
+    // künyesi bunu söyler; gerçek örneklerle aynı listede karışmaz.
+    bolumler: [
+      { baslik: 'Örnek modellerden başla',
+        not: gercek.length + ' gerçek araç · modelin topolojisi birebir yüklenir, sonra her şey değiştirilebilir',
+        karolar: gercek.map(karo) },
+      { baslik: 'Doğrulama örnekleri — kurgu',
+        not: kurgu.length + ' model · gerçek bir aracı temsil etmez: kapalı formu bilinen ya da bütün kriterleri işleten modeller',
+        karolar: kurgu.map(karo) }
+    ],
     not: 'Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: '
       + 'Sihirbaz, STEP ve örnekler Başlangıç ve Örnekler bileşeninin penceresinde.'
   });

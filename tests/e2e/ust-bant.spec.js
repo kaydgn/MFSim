@@ -222,7 +222,9 @@ const menuOlc = () => {
     saydam: /rgba\([^)]*,\s*0\)$/.test(cs.backgroundColor) || cs.backgroundColor === 'transparent',
     kenar: cs.borderTopWidth, golge: cs.boxShadow !== 'none',
     ustte: nok.every(([x, y]) => { const u = document.elementFromPoint(x, y); return !!(u && m.contains(u)); }),
-    sagHiza: Math.round(r.right - a.right), ekranda: r.left >= 0 && r.right <= innerWidth,
+    // + 0: fark (−0,5; 0) aralığındayken Math.round −0 verir ve toBe(0) onu
+    // Object.is ile ayırır — yarım pikselin içinde yaslı menü "kaymış" sayılıyordu.
+    sagHiza: Math.round(r.right - a.right) + 0, ekranda: r.left >= 0 && r.right <= innerWidth,
   };
 };
 
