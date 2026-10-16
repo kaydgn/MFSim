@@ -413,6 +413,7 @@ function veMntParamRaporHTML(E){
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
     veMntParamRaporHTML: veMntParamRaporHTML, _MNT_PRM_KAYNAK: _MNT_PRM_KAYNAK,
+    _mntPrmKaynakNo: _mntPrmKaynakNo, _mntPrmRef: _mntPrmRef, _mntPrmKisitTanim: _mntPrmKisitTanim,
     _mntPrmKapsam: _mntPrmKapsam, _mntPrmYontem: _mntPrmYontem, _mntPrmKisitlar: _mntPrmKisitlar,
     _mntPrmEleme: _mntPrmEleme, _mntPrmSonuc: _mntPrmSonuc, _mntPrmSiralama: _mntPrmSiralama,
     _mntPrmSekil: _mntPrmSekil, _mntPrmSatirOlcu: _mntPrmSatirOlcu

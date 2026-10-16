@@ -243,6 +243,24 @@ describe('PENCERE — yalnız girdi', () => {
     expect(n.data.acik).toBeUndefined();
   });
 
+  test('yerinde tazeleme: aday kalmayınca kombinasyon, cevap ve düğme pencere kurulmadan değişir', () => {
+    modelKur('kamyon');
+    const n = node();
+    document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
+    const dugme = () => document.getElementById('ve-mnt-param-btn-pa');
+    expect(dugme().disabled).toBe(false);
+    const sekme = document.querySelector('#ve-fp-tabs-pa');                 // pencere kurulmuyor: aynı öğe kalmalı
+    n.data.haric = Object.keys(cp.veMntGetLibraryMap());
+    expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
+    expect(dugme().disabled).toBe(true);
+    expect(document.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Aday tip yok');
+    expect([...document.querySelectorAll('#ve-mnt-param-ozet-pa input')].map((i) => i.value)).toEqual(['2', '0', '0']);
+    expect(document.querySelector('#ve-fp-tabs-pa')).toBe(sekme);
+    delete n.data.haric;
+    cp.veMntPencereTazele();
+    expect(dugme().disabled).toBe(false);
+  });
+
   test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit · kombinasyon sınırı', () => {
     global.nodes = [];
     expect(P._mntParamHazirlik(node()).eksik).toBe('Takoz yok');
@@ -294,6 +312,25 @@ describe('RAPOR — ayrı belge', () => {
     } else {
       expect(govde).toContain('<span class="t">Uygun kombinasyon yok</span>');
     }
+  });
+
+  test('dayanaklar: anılan her anahtar listede, listedeki her kaynak anılıyor; bilinmeyen anahtar [0] değil hata', () => {
+    const fs = require('fs');
+    const kaynak = fs.readFileSync(require.resolve('../../js/cp-mount-param-rapor.js'), 'utf8');
+    const liste = RP._MNT_PRM_KAYNAK.map((x) => x.k);
+    const anilan = new Set();
+    // Doğrudan atıflar: _mntPrmRef('a', 'b') — işlenmeyen dallar dâhil, kaynaktan.
+    (kaynak.match(/_mntPrmRef\(([^)]*)\)/g) || []).forEach((c) =>
+      (c.match(/'([^']+)'/g) || []).forEach((q) => anilan.add(q.slice(1, -1))));
+    // Kısıt tablosunun dayanak sütunu.
+    const ctx = K.baglam({ fAtes: 30, s: Object.assign({}, K.SINIR_VARSAYILAN), acik: {} });
+    Object.values(RP._mntPrmKisitTanim(ctx)).forEach((d) => d[2].forEach((k) => anilan.add(k)));
+    expect(anilan.size).toBeGreaterThan(5);
+    anilan.forEach((k) => expect(liste).toContain(k));
+    liste.forEach((k) => expect(anilan.has(k)).toBe(true));
+    expect(RP._mntPrmRef('sirket', 'bmc')).toBe('[1] [' + liste.length + ']');
+    expect(() => RP._mntPrmKaynakNo('yok')).toThrow(/Kaynak yok: yok/);
+    expect(() => RP._mntPrmRef('shen', 'yok')).toThrow();
   });
 
   test('uygun kombinasyonu olmayan model: "Uygun kombinasyon yok" ve en az ihlalli sıra', () => {

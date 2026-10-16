@@ -222,7 +222,9 @@ function _mntParamYanHTML(node, H){
   var durum='<div id="ve-mnt-param-durum-'+node.id+'" data-tazele>'
     + (H.eksik ? _mntDurumKutu('<b>'+H.eksik+'</b>', 'warn') : _mntDurumKutu('<b>Taramaya hazır</b>', 'ok'))+'</div>';
   var is=!!(_MNT_PARAM_IS && _MNT_PARAM_IS.nodeId===node.id);
-  var eylem='<button type="button" class="ve-fp-solve" id="ve-mnt-param-btn-'+node.id+'"'
+  // Düğme de yerinde tazelenir (`data-tazele`): aday kalmayınca ya da bütün
+  // gruplar sabitlenince pencere yeniden kurulmadan kapanır.
+  var eylem='<button type="button" class="ve-fp-solve" id="ve-mnt-param-btn-'+node.id+'" data-tazele'
     + ((H.eksik && !is) ? ' disabled' : ' onclick="veMntParamTara(\''+node.id+'\')"')+'>'
     + (is ? veIkon('square')+' Durdur' : veIkon('play')+' Tara ve raporu indir')+'</button>'
     + '<div class="ve-fp-durum-not" id="ve-mnt-param-st-'+node.id+'"></div>';
