@@ -34,8 +34,6 @@ const RS = require('../../js/cp-fead-results.js');
 Object.keys(RS).forEach((k) => { if (global[k] === undefined) global[k] = RS[k]; });
 const RP = require('../../js/cp-fead-report.js');
 Object.keys(RP).forEach((k) => { if (global[k] === undefined) global[k] = RP[k]; });
-const WIZ = require('../../js/cp-fead-wizard.js');
-global.VE_FW_STEPS = WIZ.VE_FW_STEPS;
 const AR = require('../../js/cp-fead-araclar.js');
 const BS = require('../../js/cp-fead-baslangic.js');
 Object.keys(BS).forEach((k) => { global[k] = BS[k]; });
@@ -151,12 +149,29 @@ describe('SAYFANIN HTML\'İ', () => {
     karo.forEach((b) => expect(b.getAttribute('data-ey')).toBe('rapor'));
   });
 
-  test('sihirbazın adımları RAYIN KENDİ ADLARIYLA — elle yazılmış sayı yok', () => {
-    const t = kur().textContent;
-    WIZ.VE_FW_STEPS.slice(1).forEach((s) => expect(t).toContain(s.ad));
-    // Ölçülen bayat metin sınıfı ("7. adımdaki iki kapı", adım sayısı 6):
-    // sayfa adım numarası ya da adım SAYISI yazmıyor.
-    expect(t).not.toMatch(/\d+\s*adım/);
+  // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): sayfada üst
+  // satır, başlık ("Nereden başlayalım?"), alt metin, kapı notu, "önerilen"
+  // rozeti, bölüm notu, dipnot ve karo ipucu YOK. Kalan metin yalnız ad ve künye.
+  test('ARAYÜZ ANLATMAZ — yalnız kapı adları, bölüm adı ve karonun künyesi', () => {
+    const d = kur();
+    expect(d.querySelector('h1, p, .ve-bas-ust, .ve-bas-alt, .ve-bas-not, .ve-bas-kapi-t > span, .ve-bas-kapi-t b i, .ve-bas-baslik span'))
+      .toBeNull();
+    expect([...d.querySelectorAll('.ve-bas-kapi')].map((b) => b.textContent.trim()))
+      .toEqual(['Sihirbazla kur', 'STEP\'ten başla', 'Boş çizim masası']);
+    expect([...d.querySelectorAll('.ve-bas-baslik')].map((b) => b.textContent.trim()))
+      .toEqual(['Gates raporlarından başla']);
+    d.querySelectorAll('.ve-bas-karo').forEach((b) => expect(b.hasAttribute('title')).toBe(false));
+    // Sözlüğün gördüğü hiçbir aday yok (tools/metin-dili.js — kuralın tek yeri).
+    const MD = require('../../tools/metin-dili.js');
+    const tw = document.createTreeWalker(d, NodeFilter.SHOW_TEXT);
+    const aday = [];
+    for (let t = tw.nextNode(); t; t = tw.nextNode()) {
+      // Küçük resmin içi çizicinin metni (kendi aşaması); burada sayfanın metni.
+      if (t.parentElement.closest('svg')) continue;
+      const m = t.nodeValue.trim();
+      if (m && MD.isaretle(m, 'arayuz').length) aday.push(m);
+    }
+    expect(aday).toEqual([]);
   });
 
   test('ikon ailesi tek: kapılar çizgi ikon taşır, sembol karakteri değil', () => {

@@ -132,11 +132,13 @@ describe('veSelectModuleFromOverlay', () => {
     expect(veActiveModule).toBe('full-throttle');
   });
 
-  test('Araç Performans seçilince mod "performans" olur ve toast gösterilir', () => {
+  test('Araç Performans seçilince mod "performans" olur; bildirim YOK', () => {
+    // "Araç Performans aktif" ekranda olanı söylüyordu (ARAYÜZ ANLATMAZ —
+    // aşama 1 kararı 2026-10-16).
     showToast.mockClear();
     veSelectModuleFromOverlay('arac-performans');
     expect(veSidebarMode).toBe('performans');
-    expect(showToast).toHaveBeenCalledWith('Araç Performans aktif', 'info');
+    expect(showToast).not.toHaveBeenCalled();
   });
 });
 

@@ -31,28 +31,29 @@ function veBasEsc(s){
 function _veBasIkon(ad){ return (typeof veIkon === 'function') ? veIkon(ad) : ''; }
 
 // ── KAPI — sayfanın birincil eylemleri ─────────────────────────────────────
-// k: { ey, ikon, ad, not, birincil, rozet, onclick }. `ey` kapının eylem
-// anahtarı — sayfanın tek tıklama dinleyicisi onu modülün eylemine verir.
-// `onclick` yalnız sayfanın DIŞINDA basılan kapı için (bir bileşen penceresi
-// aynı kapıyı gösterir, dinleyicisi yoktur).
+// k: { ey, ikon, ad, birincil, onclick }. `ey` kapının eylem anahtarı —
+// sayfanın tek tıklama dinleyicisi onu modülün eylemine verir. `onclick`
+// yalnız sayfanın DIŞINDA basılan kapı için (bir bileşen penceresi aynı
+// kapıyı gösterir, dinleyicisi yoktur).
+// AÇIKLAMA YUVASI YOK (ARAYÜZ ANLATMAZ, kök CLAUDE.md): kapının not satırı ve
+// "önerilen" rozeti iki modülde altı açıklama üretmişti.
 function veBasKapiHTML(k){
   k = k || {};
   return '<button type="button" class="ve-bas-kapi' + (k.birincil ? ' birincil' : '') + '" data-ey="' + veBasEsc(k.ey) + '"'
     + (k.onclick ? ' onclick="' + veBasEsc(k.onclick) + '"' : '') + '>'
     + '<span class="ve-bas-kapi-ik">' + _veBasIkon(k.ikon) + '</span>'
-    + '<span class="ve-bas-kapi-t"><b>' + veBasEsc(k.ad)
-    + (k.rozet ? '<i>' + veBasEsc(k.rozet) + '</i>' : '') + '</b>'
-    + '<span>' + veBasEsc(k.not) + '</span></span></button>';
+    + '<span class="ve-bas-kapi-t"><b>' + veBasEsc(k.ad) + '</b></span></button>';
 }
 
 // ── KARO — örnek / rapor kartı ─────────────────────────────────────────────
-// k: { ey, v, baslik (title), resim (SVG), kod, yil, sag, alt }. Resim yoksa
-// karo yine basılır, künyesiyle ("çizilemedi") — yükleme de yine çalışır.
-// Resim modülün KENDİ çizicisinden gelir; kit çizim yapmaz.
+// k: { ey, v, baslik (title, isteğe bağlı), resim (SVG), kod, yil, sag, alt }.
+// Resim yoksa karo yine basılır, künyesiyle ("çizilemedi") — yükleme de yine
+// çalışır. Resim modülün KENDİ çizicisinden gelir; kit çizim yapmaz.
+// `baslik` karoda yazmayan VERİ içindir (gövde adları); komut eki yok.
 function veBasKaroHTML(k){
   k = k || {};
   return '<button type="button" class="ve-bas-karo" data-ey="' + veBasEsc(k.ey) + '" data-v="' + veBasEsc(k.v) + '"'
-    + ' title="' + veBasEsc(k.baslik) + ' — yükle">'
+    + (k.baslik ? ' title="' + veBasEsc(k.baslik) + '"' : '') + '>'
     + '<span class="ve-bas-resim">' + (k.resim || '<i class="ve-bas-resim-yok">çizilemedi</i>')
     + '<em>Yükle</em></span>'
     + '<span class="ve-bas-kunye"><span class="ve-bas-kunye-1"><b>' + veBasEsc(k.kod) + '</b>'
@@ -62,23 +63,22 @@ function veBasKaroHTML(k){
     + '</span></button>';
 }
 
-// ── SAYFA — üst satır · başlık · alt metin · kapılar · karolar · not ───────
-// s: { ust, baslik, alt, kapilar:[kapı…], bolumler:[{ baslik, not, karolar:[karo…] }], not }
+// ── SAYFA — kapılar · karolar ──────────────────────────────────────────────
+// s: { kapilar:[kapı…], bolumler:[{ baslik, karolar:[karo…] }] }
 // Tek bölüm `bolum` olarak da verilebilir (FEAD). Karosuz bölüm basılmaz.
+// Sayfanın üst satırı, başlığı, alt metni, bölüm notu ve dipnotu YOK
+// (2026-10-16, kullanıcı kararı — metin temizliği aşama 1): beş yuva iki
+// modülde on beş açıklama üretmişti ("Nereden başlayalım?" · "Seçtiğin kapı
+// modeli kurar ve bu sayfa çekilir …").
 function veBasSayfaHTML(s){
   s = s || {};
   var h = '<div class="ve-bas-ic">'
-    + '<span class="ve-bas-ust">' + veBasEsc(s.ust) + '</span>'
-    + '<h1>' + veBasEsc(s.baslik) + '</h1>'
-    + '<p class="ve-bas-alt">' + veBasEsc(s.alt) + '</p>'
     + '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>';
   (s.bolumler || (s.bolum ? [s.bolum] : [])).forEach(function(b){
     if(!b || !b.karolar || !b.karolar.length) return;
-    h += '<div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2>'
-      + (b.not ? '<span>' + veBasEsc(b.not) + '</span>' : '') + '</div>'
+    h += '<div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2></div>'
       + '<div class="ve-bas-raporlar">' + b.karolar.map(veBasKaroHTML).join('') + '</div>';
   });
-  if(s.not) h += '<p class="ve-bas-not">' + veBasEsc(s.not) + '</p>';
   return h + '</div>';
 }
 

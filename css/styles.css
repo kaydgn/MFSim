@@ -1004,7 +1004,7 @@
       text-shadow:none;
     }
 
-    /* Dip: ipucu + sürüm künyesi, amblemle aynı sol kenarda. */
+    /* Dip: sürüm künyesi, amblemle aynı sol kenarda. */
     .mfsim-amblem-dip{
       position:absolute;
       left:56px; bottom:32px;
@@ -1015,12 +1015,6 @@
       color:var(--text-muted);
       text-shadow:0 0 12px color-mix(in srgb, var(--bg-primary) 70%, transparent);
     }
-    .mfsim-amblem-ipucu{
-      text-shadow:none;          /* kırpılan satır — bkz. .mfsim-amblem-mesaj */
-      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-      transition:opacity var(--dur-slow) var(--ease-out);
-    }
-    .mfsim-amblem-ipucu.is-swapping{ opacity:0; }
     /* Surum kunyesi: hangi kopyanin acildigi PROGRAM ACILMADAN gorunur.
        Modüler index.html'de window.__MFSIM_BUILD yoktur → eleman bos kalir ve
        :empty ile hic yer kaplamaz. */
@@ -1193,12 +1187,11 @@
 
     /* Hareket azaltma: dişlinin çentiği, cetvelin geçişi, öbek etiketinin
        belirişi ve kapanış geçişi durur. İlerleme BİLGİSİ kalır (cetvel,
-       öbek, modül adı) — kapatılan yalnız hareket. */
+       öbek, durum satırı) — kapatılan yalnız hareket. */
     @media (prefers-reduced-motion: reduce){
       .mfsim-loading-logo-ico{ transition:none; }
       .mfsim-amblem-cetvel > span{ transition:none; }
       .mfsim-amblem-bolum[data-belir]{ animation:none; }
-      .mfsim-amblem-ipucu{ transition:none; }
       .mfsim-loading-bar{ transition:none; }
       .mfsim-loading-screen.mfsim-fading-out,
       .mfsim-loading-screen.mfsim-fading-out .mfsim-amblem,
@@ -1321,7 +1314,6 @@
     .mfsim-loading-logo,
     .ve-welcome-logo,
     .ve-settings-section-title,
-    .ve-empty-hint-title,
     .ve-komuta-giris-baslik {
       letter-spacing: -0.01em;
     }
@@ -3517,42 +3509,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .ve-align-btn:hover:not([disabled]){ background:var(--accent-primary); color:var(--on-accent); border-color:var(--accent-primary); }
 .ve-align-btn:active:not([disabled]){ transform:translateY(1px); }
 .ve-align-btn[disabled]{ opacity:.4; cursor:not-allowed; }
-
-/* ── Boş tuval ipucu (empty-state) ──────────────────────────────────────── */
-.ve-empty-hint{
-  position:absolute; inset:0; z-index:6;
-  display:flex; align-items:center; justify-content:center;
-  pointer-events:none;                 /* tuvale bırakmayı engelleme */
-  opacity:0; visibility:hidden;
-  transition:opacity var(--dur-slow,0.18s) ease, visibility var(--dur-slow,0.18s);
-}
-.ve-empty-hint.visible{ opacity:1; visibility:visible; }
-.ve-empty-hint-inner{
-  display:flex; flex-direction:column; align-items:center; text-align:center;
-  color:var(--text-muted); user-select:none; padding:20px;
-  transform:translateY(6px); transition:transform var(--dur-slow,0.18s) var(--ease-out,ease);
-}
-.ve-empty-hint.visible .ve-empty-hint-inner{ transform:none; }
-.ve-empty-hint-icon{ color:var(--text-muted); opacity:.55; margin-bottom:14px; }
-.ve-empty-hint-title{ font-size:var(--fs-title); font-weight:700; color:var(--text-secondary); }
-.ve-empty-hint-sub{ font-size:var(--fs-lg); margin-top:4px; margin-bottom:18px; }
-.ve-empty-hint-rows{ display:flex; flex-direction:column; gap:9px; }
-.ve-empty-hint-row{
-  display:flex; align-items:center; gap:9px; justify-content:center;
-  font-size:var(--fs-lg); color:var(--text-muted);
-}
-.ve-empty-hint-row b{ color:var(--text-secondary); font-weight:600; }
-.ve-empty-hint-ic{ display:inline-flex; color:var(--accent-primary); opacity:.85; }
-.ve-empty-hint-keys{ display:inline-flex; gap:3px; }
-.ve-empty-hint-keys kbd{
-  font-size:var(--fs-body); font-weight:600;
-  color:var(--text-secondary); background:var(--bg-tertiary,var(--bg-primary));
-  border:1px solid var(--border-color); border-bottom-width:2px; border-radius:var(--radius-sm);
-  padding:2px 6px; line-height:1.2; min-width:16px; text-align:center;
-}
-@media (prefers-reduced-motion: reduce){
-  .ve-empty-hint, .ve-empty-hint-inner{ transition:none; }
-}
 
 .ve-canvas-wrapper.panning{
   cursor:grabbing;
@@ -11275,24 +11231,16 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   box-sizing:border-box; max-width:1120px; margin:0 auto;
   padding:28px 48px 28px; display:flex; flex-direction:column;
 }
-.ve-bas-ust{
-  font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wider);
-  text-transform:uppercase; color:var(--text-muted);
-}
-.ve-bas h1{
-  margin:6px 0 0; font-size:var(--fs-h2); font-weight:700; letter-spacing:-0.01em;
-  color:var(--text-heading); text-wrap:balance;
-}
-.ve-bas-alt{ margin:6px 0 0; max-width:72ch; line-height:var(--leading-normal); color:var(--text-secondary); }
-
-/* KAPILAR — üç eşit sütun; dar tuvalde alt alta. Birincil kapı aksan zeminli. */
+/* KAPILAR — üç eşit sütun; dar tuvalde alt alta. Birincil kapı aksan zeminli.
+   Kapı yalnız ikon + ad taşır (ARAYÜZ ANLATMAZ, 2026-10-16): not satırı ve
+   "önerilen" rozeti kalktı, sayfanın üst satırı · başlığı · alt metni de. */
 .ve-bas-kapilar{
   display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
-  gap:16px; margin-top:20px;
+  gap:16px;
 }
 .ve-bas-kapi{
-  display:flex; align-items:flex-start; gap:12px; min-height:88px; box-sizing:border-box;
-  padding:14px 14px 12px; font-family:inherit; color:inherit; text-align:left; cursor:pointer;
+  display:flex; align-items:center; gap:12px; min-height:64px; box-sizing:border-box;
+  padding:14px; font-family:inherit; color:inherit; text-align:left; cursor:pointer;
   background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
   transition:border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
@@ -11306,26 +11254,14 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 }
 .ve-bas-kapi-ik .mf-ico{ width:18px; height:18px; }
 .ve-bas-kapi.birincil .ve-bas-kapi-ik{ background:var(--accent-primary); color:var(--on-accent); }
-.ve-bas-kapi-t{ display:flex; flex-direction:column; gap:4px; min-width:0; }
-.ve-bas-kapi-t b{
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  font-size:var(--fs-lg); font-weight:600; color:var(--text-heading);
-}
-.ve-bas-kapi-t b i{
-  /* Dolu rozet, kapının ikon karesiyle aynı çift (vurgu + --on-accent):
-     %15'lik vurgu zemininde okunur vurgu bile 4,38:1 kalıyordu (kapının kendi
-     %6'lık zemininin üstünde iki kat tint). */
-  font-style:normal; font-size:var(--fs-micro); font-weight:700; color:var(--on-accent);
-  background:var(--accent-primary); border-radius:var(--radius-pill); padding:1px 7px;
-}
-.ve-bas-kapi-t > span{ font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); }
+.ve-bas-kapi-t{ display:flex; min-width:0; }
+.ve-bas-kapi-t b{ font-size:var(--fs-lg); font-weight:600; color:var(--text-heading); }
 
 /* KAROLAR — FEAD'de Gates arşivinin kayış yolları, Takoz'da örnek modellerin
    aksonometrisi (Görünümler'in çizicisi); ikisi de modülün KENDİ
    çizicisinden, gerçek oranda. */
-.ve-bas-baslik{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; margin-top:26px; }
+.ve-bas-baslik{ display:flex; align-items:baseline; margin-top:26px; }
 .ve-bas-baslik h2{ margin:0; font-size:var(--fs-md); font-weight:700; color:var(--text-heading); }
-.ve-bas-baslik span{ font-size:var(--fs-tiny); color:var(--text-muted); }
 .ve-bas-raporlar{
   display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
   gap:14px; margin-top:12px; font-variant-numeric:tabular-nums;
@@ -11372,7 +11308,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   font-size:var(--fs-tiny); color:var(--text-secondary);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.ve-bas-not{ margin:14px 0 0; font-size:var(--fs-tiny); color:var(--text-muted); }
 @media (prefers-reduced-motion: reduce){
   .ve-bas-kapi, .ve-bas-karo, .ve-bas-resim em{ transition:none; }
 }

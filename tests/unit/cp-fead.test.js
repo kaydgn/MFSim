@@ -2991,10 +2991,14 @@ describe('FEAD editörü açılışı', () => {
   test('KAYITSIZ topolojiye girince sihirbaz AÇILMAZ — açılış yalnız araçları kurar', () => {
     const iz = kabuk();
     global.nodes = [{ id: 'fa1', type: 'fead-analysis', data: {} }];
+    stubs.showToast.mockClear();
     fead.veFeadOpenEditor('fa1');
     sok();
     expect(iz.yuklenen).toEqual(['boş']);
     expect(iz.wiz).toBe(0);
+    // Girişte bildirim YOK: "FEAD — İç Topoloji" ekranda olanı söylüyordu
+    // (ARAYÜZ ANLATMAZ — metin temizliği aşama 1, 2026-10-16).
+    expect(stubs.showToast).not.toHaveBeenCalled();
     // Araç düğümleri kuruldu (sihirbaz dâhil — başlangıç sayfasının "Sihirbazla
     // kur" kapısı ve FEAD araçları penceresi ona bağlanır), Kayış Yolu kartı
     // KURULMADI: başlangıç sayfası "kasnak yok VE kart yok" iken görünür.

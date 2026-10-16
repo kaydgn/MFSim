@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 1309,
+ "sayi": 1284,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -64,11 +64,6 @@
   "js/align-nodes.js": {
    "05c002d846": "Hizalamak için en az 2 bileşen seçin",
    "5d1cc1600a": "Dağıtmak için en az 3 bileşen seçin"
-  },
-  "js/auth.js": {
-   "a10d3ae7fe": "Lütfen şifre giriniz.",
-   "d4c861ce24": "Oturumu kapatmak istediğinize emin misiniz? Kaydedilmemiş değişiklikler kaybolur",
-   "eea9e2bff1": "Çok fazla hatalı deneme. ‹› sn sonra tekrar deneyin."
   },
   "js/command-palette.js": {
    "2c93dfd87c": "komuta sipariş fiş durum ölç",
@@ -208,15 +203,6 @@
    "b9915739f3": "‹› — sürükle: tuvalde bıraktığın yere; tıkla: ‹›",
    "bb7ea2e25a": "aria-disabled=\"true\" title=\"Rapor çözümden üretilir — önce modeli hesaplayın.\" a",
    "dc86bbfe9f": "aria-disabled=\"true\" title=\"Rapor çözümden üretilir — önce modeli hesaplayın.\""
-  },
-  "js/cp-fead-baslangic.js": {
-   "21e547ac5f": "Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: Sihirbaz ve yeni ka",
-   "42f17b8ad1": "‹› rapor · raporun modeli birebir yüklenir, sonra her şey değiştirilebilir",
-   "5ebfd27444": "önerilen",
-   "696a61a3e6": "CATIA/3DEXPERIENCE montajını oku; kasnak rollerini 3B görüntüleyicide sen ver.",
-   "76c9de232d": "Nereden başlayalım?",
-   "8e894251ff": "Kayış Yolu kartını boş kur; kasnakları Kayış Tablosu'ndan ekle.",
-   "f4fd177b6c": "Kayış yolu henüz boş. Seçtiğin kapı modeli kurar ve bu sayfa çekilir — sonra her"
   },
   "js/cp-fead-pano.js": {
    "acacd402a4": "Senaryo çözümde yok — kayış verisiyle yeniden çözün."
@@ -489,16 +475,6 @@
    "a6ce58d659": "Rol vermek için modelde bir parçaya tıklayın",
    "a7e5173b32": "Modelde bir parçaya tıklayın, alttaki diziden rolünü verin"
   },
-  "js/cp-mount-baslangic.js": {
-   "28b52f4436": "Analiz araçlarını kur; kütle gövdelerini ve takozları Bileşenler'den sürükle.",
-   "62b9ba01aa": "Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: Sihirbaz, STEP ve ö",
-   "695d6b331b": "CATIA/3DEXPERIENCE montajını oku; gövde ve takoz rollerini 3B görüntüleyicide se",
-   "a3f7843f1f": "Güç grubu modeli henüz boş. Seçtiğin kapı modeli kurar ve bu sayfa çekilir — son",
-   "cda855005b": "‹› gerçek araç · modelin topolojisi birebir yüklenir, sonra her şey değiştirileb",
-   "e07a5d2779": "‹› model · gerçek bir aracı temsil etmez: kapalı formu bilinen ya da bütün krite",
-   "e5ea2c9038": "önerilen",
-   "e7e6098254": "Nereden başlayalım?"
-  },
   "js/cp-mount-report.js": {
    "0d1eb3470c": "Önce modeli çözün: Çözücü → Hesapla.",
    "0f2f08c472": "Model eksenleri asal eksenlerle çakışık değildir. Dış bir yazılımın (Adams/CATIA",
@@ -553,7 +529,6 @@
    "3f973d5dd9": "Silindir sayısı boş — ateşleme frekansı yok; Kriter 1 ve 2 değerlendirilemiyor.",
    "44782d5339": "Din./stat. oranı eksenler arasında ‹› kat yayılıyor · sınır ‹› (eksen takası bu ",
    "45442c1c7e": "Yeni özel takoz ekle ve seç",
-   "5218428325": "Modeli adım adım kurar ya da tuvaldekini düzenler.",
    "540ac1201d": "Bu takoz ‹› taşıyor (‹›, Takoz Özellikleri'nden) — çözücü onu Newton ile çözer.",
    "55c21624b0": "bayat",
    "564fded9d5": "Çözücü bulunamadı — sonuç için bir Çözücü ekleyin.",
@@ -585,7 +560,6 @@
    "cb9e5d19e3": "‹› işaretin konumu eksik — çözücü boş konumu 0 alır, çizim de 0'da gösterir.",
    "ecd356bc8f": "Kütle gövdesi yok — en az bir kütle gerekir.",
    "ee96c844c0": "Rölanti devri boş — ateşleme frekansı yok; Kriter 1 ve 2 değerlendirilemiyor.",
-   "f4dc4287c9": "Montajı oku; gövde ve takoz rollerini sen ver.",
    "f54b5a664a": "‹› tork alanı başka bir gövdede de dolu (‹›) — çözücü ‹› gövdesinin değerini oku",
    "f7ecdd45cb": "Din./stat. oranı eksenler arasında ‹› kat yayılıyor (sınır ‹›) — eksen takası ol",
    "f89223649c": "Nonlineer seçili ama hiçbir takozda eğri yok — lineer çözülür.",
@@ -634,10 +608,6 @@
   },
   "js/easter-egg.js": {
    "688621d594": "Denizciliği Türk’ün büyük millî ülküsü olarak düşünmeli ve onu az zamanda başarm"
-  },
-  "js/empty-hint.js": {
-   "4051c97452": "Başlamak için bir bileşen ekleyin",
-   "bbcb4113b7": "‹›K komut paleti ile ekleyin"
   },
   "js/fead-accessories.js": {
    "560e12316c": "KIRPI II NEX GEN FEAD defteri · \"Alternator\" ve \"Klima Komp.\" sayfaları (BMC SAS"
@@ -1117,11 +1087,6 @@
    "e21ad9cd1c": "Kuvvet dengesi çözümün KENDİ denetimidir",
    "e4c7c8c40d": "3.1 Yol A — hazır bir örnekten başlamak (önerilen)",
    "e5a5b8aacd": "Her gövdenin ataleti kendi CG’sinde girildi ve program onları ortak CG’ye taşıyı"
-  },
-  "js/loader.js": {
-   "6ed5b8541c": "Ölçüm dosyasını pencereye sürükle-bırak",
-   "83f5fcd58f": "‹› modül yüklenemedi ve atlandı (son: ‹›) — ilgili özellikler eksik olabilir, ay",
-   "d571fd1c80": "Bir modül yüklenemedi ve atlandı: ‹› — ilgili özellikler eksik olabilir, ayrıntı"
   },
   "js/map.js": {
    "0056fa6e3a": "Özellikleri burada açılır",

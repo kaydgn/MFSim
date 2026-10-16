@@ -31,7 +31,7 @@ const ASAMA1 = ['index.html', 'css/styles.css', 'viewer/index.html', 'viewer/js/
   'js/kimlik.js', 'js/cp-programlar.js', 'js/tablo-pencere.js', 'js/solver-pro.js', 'js/trace-view.js',
   'js/measure-import-ui.js', 'js/signal-tree.js', 'js/deploy-status.js', 'js/topology.js',
   'js/ui-core.js', 'js/components.js', 'js/state.js', 'js/loader.js', 'js/module-loader.js',
-  'js/annotations.js', 'js/cp-core.js', 'js/radio.js', 'js/empty-hint.js', 'js/tabs.js', 'js/theme.js'];
+  'js/annotations.js', 'js/cp-core.js', 'js/radio.js', 'js/tabs.js', 'js/theme.js'];
 // Aşama 2: bileşen panelleri (js/cp-*.js — rapor üreticileri aşama 3'te),
 // yardımcı bileşenler, harita, çözücü paneli, FEAD köprüsünün yön etiketi.
 // Kılavuz metinleri (guide-*.js) belge — tools/ikon-dili.js başlığında sebebi.

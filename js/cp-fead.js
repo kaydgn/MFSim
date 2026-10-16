@@ -499,7 +499,6 @@ function veFeadOpenEditor(nodeId, _silent){
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veFeadUpdateBreadcrumb();
   if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
-  if(!_silent && typeof showToast === 'function') showToast('FEAD — İç Topoloji', 'info');
 
   // ── BOŞ BİR FEAD TOPOLOJİSİNİ BAŞLANGIÇ SAYFASI KARŞILAR ────────────────
   //
@@ -564,7 +563,7 @@ function veFeadUpdateBreadcrumb(){
   }
   var depth = veFeadStack.length;
   el.innerHTML =
-    '<button onclick="veFeadCloseEditor()" title="Ana topolojiye dön — FEAD · İç Topoloji'
+    '<button onclick="veFeadCloseEditor()" title="Ana topolojiye dön'
     + (depth > 1 ? ' (derinlik ' + depth + ')' : '') + '">'
     + '<span class="mf-ico mf-ico-chevrons-left" aria-hidden="true"></span>'
     + (depth > 1 ? '<i class="ve-bc-depth">' + depth + '</i>' : '')

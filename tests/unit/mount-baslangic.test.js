@@ -32,8 +32,6 @@ const AK = require('../../js/mount-akso.js');
 global.veMntAkso = AK;
 const cp = require('../../js/cp-mount.js');
 global.veMntAksoOrnekModel = cp.veMntAksoOrnekModel;
-const WIZ = require('../../js/cp-mount-wizard.js');
-global.VE_MW_STEPS = WIZ.VE_MW_STEPS;
 const BS = require('../../js/cp-mount-baslangic.js');
 
 const CSS = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
@@ -79,10 +77,32 @@ describe('İÇERİK — kapılar ve örnekler', () => {
     const kapi = html.match(/<button type="button" class="ve-bas-kapi[^"]*" data-ey="[a-z]+"/g);
     expect(kapi.map((k) => k.match(/data-ey="([a-z]+)"/)[1])).toEqual(['sihirbaz', 'step', 'bos']);
     expect(kapi[0]).toContain('ve-bas-kapi birincil');
-    expect(html).toContain('Nereden başlayalım?');
   });
-  test('sihirbaz kapısı adımları RAYIN kendi adlarıyla sayar (elle yazılmış liste yok)', () => {
-    WIZ.VE_MW_STEPS.slice(1).forEach((s) => expect(html).toContain(s.ad));
+  // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): üst satır,
+  // başlık, alt metin, kapı notu, rozet, bölüm notları ve dipnot YOK; karonun
+  // ipucu gövde adlarını (VERİ) taşır, "— yükle" komutunu değil.
+  test('ARAYÜZ ANLATMAZ — yalnız kapı adları, bölüm adları ve karonun künyesi', () => {
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    expect(d.querySelector('h1, p, .ve-bas-ust, .ve-bas-alt, .ve-bas-not, .ve-bas-kapi-t > span, .ve-bas-kapi-t b i, .ve-bas-baslik span'))
+      .toBeNull();
+    expect([...d.querySelectorAll('.ve-bas-kapi')].map((b) => b.textContent.trim()))
+      .toEqual(['Sihirbazla kur', 'STEP\'ten başla', 'Boş kanvas']);
+    const liste = BS.veMntBaslangicOrnekler();
+    d.querySelectorAll('.ve-bas-karo').forEach((b) => {
+      const o = liste.find((x) => x.key === b.getAttribute('data-v'));
+      expect(b.getAttribute('title')).toBe(o.ad + ' — ' + o.govdeAdlari.join(' · '));
+    });
+    const MD = require('../../tools/metin-dili.js');
+    const tw = document.createTreeWalker(d, NodeFilter.SHOW_TEXT);
+    const aday = [];
+    for (let t = tw.nextNode(); t; t = tw.nextNode()) {
+      // Küçük resmin içi çizicinin metni (kendi aşaması); burada sayfanın metni.
+      if (t.parentElement.closest('svg')) continue;
+      const m = t.nodeValue.trim();
+      if (m && MD.isaretle(m, 'arayuz').length) aday.push(m);
+    }
+    expect(aday).toEqual([]);
   });
   test('örnek karoları kayıt defterinin KENDİSİ; hiçbiri "çizilemedi" değil', () => {
     const liste = core.getMountExampleList();
@@ -216,5 +236,23 @@ describe('ORTAK KİT — "aynı" ekran TEK üreticiden', () => {
     expect(CSS).not.toMatch(/\.ve-fead-bas/);
     expect(CSS).not.toMatch(/\.ve-mnt-bas/);
     expect(CSS).toMatch(/\.ve-bas-kapi\{/);
+  });
+  // KALIP AÇIKLAMA YUVASI TAŞIMAZ (kök CLAUDE.md → ARAYÜZ ANLATMAZ): kitin beş
+  // yuvası iki modülde on beş açıklama üretmişti. Alan verilse de basılmaz —
+  // yeni bir kullanan onu dolduramasın.
+  test('KİT AÇIKLAMA YUVASI TAŞIMAZ — üst/başlık/alt/not/rozet verilse de basılmaz', () => {
+    const K = require('../../js/baslangic-sayfa.js');
+    const h = K.veBasSayfaHTML({ ust: 'ÜSTSATIR', baslik: 'SAYFABAŞLIĞI', alt: 'ALTMETİN', not: 'DİPNOT',
+      kapilar: [{ ey: 'a', ikon: 'wand', ad: 'Kapı', not: 'KAPINOTU', rozet: 'ROZET' }],
+      bolumler: [{ baslik: 'Bölüm', not: 'BÖLÜMNOTU', karolar: [{ ey: 'k', v: '1', kod: 'K1' }] }] });
+    ['ÜSTSATIR', 'SAYFABAŞLIĞI', 'ALTMETİN', 'DİPNOT', 'KAPINOTU', 'ROZET', 'BÖLÜMNOTU']
+      .forEach((m) => expect(h).not.toContain(m));
+    expect(h).toContain('<b>Kapı</b>');
+    expect(h).toContain('<h2>Bölüm</h2>');
+    // Karo ipucu yalnız verilirse ve komut eki olmadan.
+    expect(h).not.toContain('title=');
+    const karo = K.veBasKaroHTML({ ey: 'k', v: '1', baslik: 'Motor · Şanzıman' });
+    expect(karo).toContain('title="Motor · Şanzıman"');
+    expect(karo).not.toMatch(/yükle"/);
   });
 });
