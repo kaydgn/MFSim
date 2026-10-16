@@ -463,6 +463,23 @@ function _mntRepNLNote(R){
   var conv = notConv
     ? '<b style="color:#b45309;">'+notConv+' yük durumunda yakınsama sağlanamadı</b>'
     : 'tüm yük durumları yakınsadı (en çok '+iters+' Newton iterasyonu)';
+  // Yasa ↔ katalog: aynı takozun iki kaynağı orijinde aynı eğimi vermiyorsa
+  // SÖYLENİR (çekirdek lawCatalogMismatch). Hangisinin doğru olduğu bilinmez;
+  // sessiz kalınca lineer ile nonlineer çözümün farkı "yasanın etkisi" sanılır.
+  var C=_rMountCore(), uyusmaz=[];
+  if(C && C.lawCatalogMismatch) nl.forEach(function(m){
+    C.lawCatalogMismatch(m).forEach(function(u){
+      uyusmaz.push(_rEsc(m.name||'takoz')+' '+u.eksen.toUpperCase()+': '+_rF(u.k0/1000,0)+' ↔ '
+        +_rF(u.kstat/1000,0)+' N/mm ('+_rF(u.oran,2)+'×)');
+    });
+  });
+  var katalog = uyusmaz.length
+    ? '<br><b style="color:#b45309;">Yasa ↔ katalog uyuşmazlığı.</b> Bu eksenlerde yasanın orijin eğimi '
+      +'(basma tarafı) takozun katalog statik rijitliğinden %20\'den fazla sapıyor: '+uyusmaz.join(' · ')+'. '
+      +'Çözüm yasayı kullanır; katalog değeri yalnız durdurucu rijitliğine ve dinamik/statik oranına girer. '
+      +'Aynı model lineer (katalog) ve nonlineer (yasa) çözüldüğünde frekans ve sehim bu yüzden '
+      +'sistematik olarak ayrışır — iki girdiden hangisinin doğru olduğu tedarikçi raporundan doğrulanmalıdır.'
+    : '';
   return '<div style="margin:10px 0 14px; padding:10px 13px; border-left:3px solid #b45309; background:rgba(180,83,9,0.06); font-size:0.93em; line-height:1.55;">'
     + '<b>Nonlineer çözüm.</b> '+nl.length+' takoz ('+names+') nonlineer kuvvet–sehim yasası taşır; '
     + 'denge doğrudan lineer ters-çözüm yerine <b>Newton-Raphson</b> ile bulunmuştur '
@@ -472,7 +489,7 @@ function _mntRepNLNote(R){
     + 'noktası) — doğal frekans, iletilebilirlik tepesi ve şok salınımı böylece aynı '
     + 'frekansı gösterir. Geçici rejimde denge <b>her zaman adımında</b> yeniden '
     + 'iterasyonla bulunur (Newmark-β + Newton); metal-metal durdurucu temas kuvveti '
-    + 'yasanın parçasıdır. Yakınsama: '+conv+'.</div>';
+    + 'yasanın parçasıdır. Yakınsama: '+conv+'.'+katalog+'</div>';
 }
 
 // ─── Geometri (mm) — R.gather'dan sayısal; birleşik CG R.mp'den (otorite) ────

@@ -685,6 +685,31 @@ var veMountCore = (function() {
   }
   function anyCurve(mounts){ return (mounts||[]).some(mountHasCurve); }
 
+  // ── Yasa ↔ katalog uyumu ──
+  // Yasası olan eksende çözüm YASAYI kullanır; katalog k_stat yalnız durdurucu
+  // rijitliğine ve dinamik/statik oranına (k_din/k_stat) girer. İkisi aynı
+  // takozun iki ayrı kaynağıdır ve orijinde (δ → 0⁻, basma tarafı) aynı eğimi
+  // vermeleri beklenir. Sapma göreli `tol`u (varsayılan %20 — kauçuk takoz
+  // rijitlik toleransı mertebesi) aşarsa döner: lineer (katalog) ve nonlineer
+  // (yasa) çözüm frekansta ve sehimde SİSTEMATİK olarak ayrışır. Hangi girdinin
+  // doğru olduğunu program bilemez — söyler.
+  // Dönüş: [{ eksen:'x'|'y'|'z', k0 [N/m], kstat [N/m], oran }]
+  function lawCatalogMismatch(mnt, tol){
+    const t = (tol > 0) ? tol : 0.2;
+    if(!mnt || !mountHasCurve(mnt)) return [];
+    const laws = mountStaticLaws(mnt), out = [];
+    ['x','y','z'].forEach(function(ad, ax){
+      const yasa = (mnt.fits && mnt.fits[ad]) || (mnt.curves && mnt.curves[ad] && mnt.curves[ad].length >= 2);
+      const ks = mnt.kstat && mnt.kstat[ax];
+      if(!yasa || !(ks > 0)) return;
+      const k0 = laws[ax].tangent(-1e-9);
+      if(!(k0 > 0)) return;
+      const oran = k0 / ks;
+      if(oran > 1 + t || oran < 1 / (1 + t)) out.push({ eksen: ad, k0: k0, kstat: ks, oran: oran });
+    });
+    return out;
+  }
+
   // Çoklu yük durumu: sistem lineer → durumlar bağımsız çözülür.
   // model = { m, cg, Kstat, mounts, g }. Dönüş satırları Adams çıktı düzeni
   // (satır = yük durumu, sütun = takoz × {δx,δy,δz}).
@@ -2402,7 +2427,7 @@ var veMountCore = (function() {
     mmToM, nPerMmToNPerM,
     // Constitutive — takoz kuvvet yasası (Newton çözücüsü + testler için)
     buildMonotoneCubic, makeAxisLaw, mountStaticLaws, mountDynamicLaws,
-    mountHasCurve, anyCurve,
+    mountHasCurve, anyCurve, lawCatalogMismatch,
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Sabitler
