@@ -143,10 +143,10 @@ function _gmSec2(){
     ['<strong>Başlangıç ve Örnekler</strong>', 'Kayıtlı gerçek modeller', 'Bölüm 3'],
     ['<strong>Görünümler · Koordinat Düzlemi · 3D Görüntüleyici</strong>',
       'Modeli gözle denetleme yüzeyleri; Görünümler modeli aksonometrik çizer ve serbestçe '
-      + 'döndürür (sol tık + sürükle: döndür, tekerlek: yakınlaştır, sağ tık: kaydır; hazır '
-      + 'bakışlar dimetrik, izometrik, üstten, önden, yandan; direk, kuvvet, mod ve rijitlik '
-      + 'katmanları), işaretlerin adlarını ve konumlarını İşaretler sekmesindeki föyde verir; '
-      + '3D Görüntüleyici gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
+      + 'döndürür (sol tık + sürükle: döndür, tekerlek: yakınlaştır, sağ tık: kaydır; '
+      + 'başlıktaki düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar), '
+      + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir; 3D Görüntüleyici '
+      + 'gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12']
   ], ['Bileşen', 'Ne', 'Not']);
   h += '<h3>2.2 Neyi siz verirsiniz, neyi program hesaplar</h3>';
@@ -160,6 +160,11 @@ function _gmSec2(){
     ['Çözücü', 'çözüm modu · sönüm oranı', '<strong>doğal frekanslar</strong> · mod '
       + 'biçimleri · izolasyon']
   ], ['Konu', 'Siz verirsiniz', 'Program hesaplar']);
+  h += _gmNot('Sonuçlar raporda',
+      'Bileşen pencereleri yalnız girdiyi ve girdiden türeyeni gösterir (birleşik kütle, '
+    + 'CG farkı, dinamik/statik oranı, mil torku). Sehim, takoz kuvvetleri, modlar ve '
+    + 'uygunluk hükmü <strong>ayrıntılı raporda</strong>dır (bölüm 12); pencerelerde çözümle '
+    + 'değişen tek şey Çözücü’nün ve Rapor’un son hesabın güncel olup olmadığını söyleyen satırıdır.');
   h += _gmNot('Koordinat sistemi',
       'Bütün konumlar ve ağırlık merkezleri <strong>aynı çerçevede</strong> ve '
     + '<strong>mm</strong> cinsinden girilir. Çerçevenin nerede olduğu önemli değildir — '
@@ -218,8 +223,8 @@ function _gmSec4(){
     + 'sekmeleri, sağda (dar pencerede altta) sekmeden bağımsız sütun. İlk iki sekme her '
     + 'gövdede aynıdır (<strong>Kütle ve CG</strong> · <strong>Atalet</strong>); tipe göre '
     + 'değişen üçüncü sekmedir (bölüm 5). Sağ sütundaki <strong>Güç grubundaki yeri</strong> '
-    + 'krokisi gövdeyi modelin geri kalanıyla, birleşik ağırlık merkezine uzaklığıyla birlikte '
-    + 'gösterir — üstten ya da yandan; altında modelin <strong>Uygunluk</strong> hükmü durur.</p>';
+    + 'krokisi gövdeyi modelin geri kalanıyla birlikte aksonometrik (dimetrik) çizer: bu gövde '
+    + 'vurgulu ve adıyla, öteki işaretlerin bilgisi farenin altında.</p>';
   h += _gmAdimlar([
     'Gövdeye çift tıklayın.',
     '<strong>Kütle ve CG</strong> sekmesinde kütleyi (kg) ve <strong>Ağırlık merkezi</strong> '
@@ -294,8 +299,9 @@ function _gmSec6(){
   var h = _gmH2(5);
   h += '<p>Takoz, güç grubunu şasiye bağlayan üç eksenli bir yaydır. Her takoz kendi '
     + 'konumunu ve üç eksende iki ayrı rijitliğini taşır. Penceresinin iki sekmesi var: '
-    + '<strong>Takoz ve yeri</strong> (girdiler) ve <strong>Yük durumları</strong> (son '
-    + 'çözümde bu takozun her yük durumundaki sehimi ve sönüm katsayıları).</p>';
+    + '<strong>Tip ve rijitlik</strong> (künye, rijitlik, kuvvet–sehim yasası, kapasite) ve '
+    + '<strong>Konum</strong> (konum ve birleşik ağırlık merkezine farkı); sağ sütunda takozu '
+    + 'vurgulayan <strong>Güç grubundaki yeri</strong> krokisi.</p>';
   h += _gmAdimlar([
     'Takoza çift tıklayın.',
     '<strong>Takoz tipi</strong> listesinden hazır bir künye seçin — konum HARİÇ bütün '
@@ -305,7 +311,7 @@ function _gmSec6(){
     'Künye kütüphanede yoksa <strong>Rijitlik</strong> föyüne üç eksenin statik ve dinamik '
       + 'değerlerini girin (N/mm); her satırın dinamik/statik oranı yanında türetilir.',
     'Elinizde varsa <strong>Kapasite</strong> bölümüne takozun azami eksenel yükünü '
-      + 'yazın — uygunlukta kullanım yüzdesi olarak görünür.'
+      + 'yazın — raporun uygunluğunda kullanım yüzdesi olarak görünür.'
   ]);
   h += _gmAlanTablo('Takoz penceresi — alanlar', [
     ['Konum [mm]', 'x / y / z — takozun <strong>elastik merkezi</strong>',
@@ -415,13 +421,12 @@ function _gmSec8(){
 
 function _gmSec9(){
   var h = _gmH2(8);
-  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencerenin üç sekmesi var; sağ '
-    + 'sütundaki <strong>Uygunluk</strong> bölümü ve <strong>Hesapla</strong> düğmesi her sekmede durur.</p>';
+  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencerenin iki sekmesi var; sağ '
+    + 'sütundaki ön denetim ve <strong>Hesapla</strong> düğmesi her sekmede durur. Pencere '
+    + 'sonucu göstermez — sonuç raporda (bölüm 12).</p>';
   h += _gmAlanTablo('Çözücü penceresi — sekmeler', [
-    ['Yük durumları', 'Yük kitabı (n, T, en büyük düşey sehim) ve vites başına takoz kuvveti',
-      'Hesaplanmadıysa yalnız yük kitabının tanımı'],
-    ['Modlar', 'Rijit gövde modları, mod başına sönüm, düşey (bounce) frekansı',
-      'Aks bandındaki ya da sınırı aşan mod kırmızı'],
+    ['Yük durumları', 'Yük kitabı: çözülecek durumlar, ivme (n) ve tork (T)',
+      'Modelin girdisinden; tork durumları tork girildiyse'],
     ['Ayarlar', 'Çözüm modu, sönüm oranı ζ, şok darbesi', 'Bir sonraki Hesapla’da uygulanır']
   ], ['Sekme', 'Ne', 'Not']);
   h += _gmAdimlar([
@@ -429,18 +434,18 @@ function _gmSec9(){
       + 'varsayılan değerleriyle durur (yanındaki <em>i</em> kaynağını söyler).',
     'Sönüm oranı yalnız şok ve izolasyon hesabına girer, sehime girmez.',
     '<strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin içinde akar.',
-    'Sekme durumlarını ve <strong>Uygunluk</strong> bölümünü okuyun; Hesapla’nın altındaki '
-      + 'satır toplam kütleyi, gövde ve takoz sayısını ve son hesabın güncel olup olmadığını söyler.'
+    'Hesapla’nın altındaki satır toplam kütleyi, gövde ve takoz sayısını ve son hesabın '
+      + 'güncel olup olmadığını söyler; sonucu <strong>Rapor</strong> bileşeninden okuyun.'
   ]);
-  h += _gmUyari('Yük kitabındaki işaretler bir HÜKÜMDÜR',
-      'Satırların sağındaki işaretler <strong>çekme</strong> (bir takoz çekiye giriyor), '
-    + '<strong>durdurucu teması</strong> ve <strong>doğrusal aralık aşımı</strong> der; '
-    + '<strong>yakınsamama</strong> ve <strong>f ≈ 0 modu</strong> sekmenin durumuna yazılır. '
-    + 'Bunlar hata değildir — modelin size söylediği şeylerdir. Ayrıntısı raporda.');
+  h += _gmUyari('Çekme, durdurucu ve yakınsamama raporda bir HÜKÜMDÜR',
+      'Raporun yük durumu tabloları <strong>çekme</strong> (bir takoz çekiye giriyor), '
+    + '<strong>durdurucu teması</strong> ve <strong>doğrusal aralık aşımı</strong> işaretlerini, '
+    + '<strong>yakınsamama</strong> ve <strong>f ≈ 0 modu</strong> uyarılarını taşır. Bunlar '
+    + 'hata değildir — modelin size söylediği şeylerdir.');
   h += _gmNot('Sonuç BAYAT olabilir',
-      'Hesaptan sonra modelde bir alan değişirse pencereler son çözümü <strong>bayat</strong> '
-    + 'diye işaretler: sayılar eski modelindir. Adı değiştirmek sonucu bayatlatmaz — ad '
-    + 'fiziğe girmez. Yeniden <strong>Hesapla</strong>’ya basın.');
+      'Hesaptan sonra modelde bir alan değişirse Çözücü ve Rapor son hesabı <strong>bayat</strong> '
+    + 'diye işaretler: raporun sayıları eski modelin olur. Adı değiştirmek sonucu bayatlatmaz — '
+    + 'ad fiziğe girmez. Yeniden <strong>Hesapla</strong>’ya basın.');
   return h;
 }
 
@@ -508,10 +513,10 @@ function _gmSec12(){
     + 've uygunluk hükmü.</p>';
   h += _gmAdimlar([
     'Önce modeli <strong>çözün</strong> — rapor bir sonuç belgesidir ve çözümsüz üretilmez.',
-    'Rapor bileşenine çift tıklayın: <strong>İçerik</strong> sekmesi raporun anlatacağı '
-      + 'çözümü, <strong>Girdiler</strong> sekmesi §8.8’in girdilerinin (rölanti devri, silindir '
-      + 'sayısı, ζ) nereden geldiğini gösterir; çözümün güncel mi bayat mı olduğu sağ sütunda, '
-      + 'düğmenin üstündedir.',
+    'Rapor bileşenine çift tıklayın: <strong>İçerik</strong> sekmesi raporun hangi çözümden '
+      + 'üretileceğini, <strong>Girdiler</strong> sekmesi §8.8’in girdilerinin (rölanti devri, '
+      + 'silindir sayısı, ζ) nereden geldiğini gösterir; çözümün güncel mi bayat mı olduğu sağ '
+      + 'sütunda, düğmenin üstündedir. Uygunluk hükmü raporun kendisinde.',
     'Raporu üretip indirin. Dosya tek başına açılır; internet gerekmez.'
   ]);
   h += _gmUyari('Rapor çözümün fotoğrafıdır',
@@ -760,11 +765,11 @@ function _gmEkA(){
       ['Vites oranları', 'Şanzıman', 'Vitesler → Vites oranları'],
       ['Transfer oranı', 'Transfer Kutusu', 'Tahrik → Oran ve aks payı'],
       ['PTO giriş yolu', 'PTO grubu', 'PTO grubu → Giriş yolu'],
-      ['Takoz konumu', 'Takoz', 'Takoz ve yeri → Konum'],
-      ['Statik rijitlik', 'Takoz', 'Takoz ve yeri → Rijitlik'],
-      ['Dinamik rijitlik', 'Takoz', 'Takoz ve yeri → Rijitlik'],
-      ['Taşıma kapasitesi', 'Takoz', 'Takoz ve yeri → Kapasite'],
-      ['Kuvvet–sehim eğrisi', 'Takoz', 'Takoz ve yeri → Kuvvet–sehim yasası'],
+      ['Takoz konumu', 'Takoz', 'Konum → Konum'],
+      ['Statik rijitlik', 'Takoz', 'Tip ve rijitlik → Rijitlik'],
+      ['Dinamik rijitlik', 'Takoz', 'Tip ve rijitlik → Rijitlik'],
+      ['Taşıma kapasitesi', 'Takoz', 'Tip ve rijitlik → Kapasite'],
+      ['Kuvvet–sehim eğrisi', 'Takoz', 'Tip ve rijitlik → Kuvvet–sehim yasası'],
       ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', 'Tip · Rijitlik · Kuvvet–sehim'],
       ['Çözüm modu', 'Çözücü', 'Ayarlar → Yöntem'],
       ['Sönüm oranı', 'Çözücü', 'Ayarlar → Yöntem'],

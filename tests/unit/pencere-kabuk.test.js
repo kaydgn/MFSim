@@ -20,6 +20,14 @@
  *     Özellikleri, 2D, 3D Görüntüleyici, Koordinat)
  *   (2026-10-16: 2D Görünüm'ün adı Görünümler; 3D Görüntüleyici tek sekmeli
  *   YER TUTUCU — bağışı tipin beyanından, aşağıdaki `yerTutucu`.)
+ *
+ * PENCERE SONUÇ GÖSTERMEZ (kullanıcı kararı 2026-10-16, Takoz): *"TÜM
+ * BİLEŞENLERİN İÇİNDE sonuç ile alakalı bir bilgi, bir sonuç vs olmayacak …
+ * kullanıcı sadece detaylı sonuç raporu ile yetinecek."* Ölçülen önce (main
+ * 35b98c8, Tulga, Node): 17 Takoz penceresinin 17'si sağ sütununda Uygunluk
+ * taşıyordu ve 17'si çözümden sonra değişiyordu (eylemin hazırlık satırları
+ * hariç). Sonra: 0 · 0. Takoz'da Uygunluk YASAK, sağ sütun içeriği varsa
+ * var (yoksa kabuk tek sütun); FEAD'in kuralı değişmedi.
  *   · dar ekranın modalında Rapor 980 px (Takoz) ↔ 560 px (FEAD)
  *
  * Kapı bir LİSTE değil bir KURAL: tipler `componentDefs`ten, her tipin
@@ -64,6 +72,7 @@ Object.keys(FK).forEach((k) => { global[k] = FK[k]; });
 // ── Takoz (mount-sutun.test.js'in kurulumu) ──
 global.veMountCore = require('../../js/mount-core.js');
 global.veMntBrief = require('../../js/mount-brief.js');
+global.veMntAkso = require('../../js/mount-akso.js');
 const cp = require('../../js/cp-mount.js');
 const rep = require('../../js/cp-mount-report.js');
 ['veMntUygunluk', 'veMntRaporOpts', '_mntRepCaseTr', '_mntRepIsolation', '_mntRepEngine', '_mntRepZeta']
@@ -92,11 +101,18 @@ const TAKOZ_TIP = Object.keys(componentDefs).filter((t) => /^mnt-/.test(t) && !/
 function dom(html) { const d = document.createElement('div'); d.innerHTML = html; return d; }
 
 // AİLE DENETİMİ — iki modüle AYNI soru. Döner: bulgu listesi (boşsa ailede).
-// TEK SEKMEYİ yalnız tipin YER TUTUCU beyanı bağışlar (componentDefs[t]
-// .yerTutucu = notun metni; ilk kullanıcısı 2026-10-16'da 3D Görüntüleyici —
-// "Klasik 3B" gerçek CAD dosyasına ayrıldı, çizimi Görünümler'e taşındı).
+// TEK SEKMEYİ yalnız tipin BEYANI bağışlar: YER TUTUCU (componentDefs[t]
+// .yerTutucu = notun metni; 3D Görüntüleyici — "Klasik 3B" gerçek CAD
+// dosyasına ayrıldı) ya da TEK SEKME (.tekSekme = sebep; Görünümler — çizim
+// ve işaretleri tek görünümde, kullanıcı kararı 2026-10-16). `bagis` false:
+// beyan yok sayılır (bağışın gerçekten beyandan geldiğini ölçmek için).
+// SAĞ SÜTUN: FEAD'de Uygunluk taşır; Takoz'da Uygunluk YASAK (sonuç yalnız
+// raporda) ve sütun içeriği varsa çizilir — yoksa kabuk tek sütun.
 const yerTutucu = (t) => !!(t && componentDefs[t] && componentDefs[t].yerTutucu);
-function aile(d, t) {
+const tekSekme = (t) => !!(t && componentDefs[t] && (componentDefs[t].yerTutucu || componentDefs[t].tekSekme));
+const takozTipi = (t) => !!t && (/^mnt-/.test(t) || t === 'mount-analysis');
+const uygunlukVar = (el) => [...el.querySelectorAll('.ve-fp-sect b')].some((x) => x.textContent.trim() === 'Uygunluk');
+function aile(d, t, bagis = true) {
   const b = [];
   const fp = d.querySelector('.ve-fp');
   if (!fp) return ['kabuk yok'];
@@ -104,10 +120,14 @@ function aile(d, t) {
   const ana = fp.querySelector('.ve-fp-split > .ve-fp-main');
   const ilk = ana && ana.firstElementChild;
   if (!ilk || !ilk.classList.contains('ve-fp-tabs')) b.push('sekmelerin ÜSTÜNDE: ' + (ilk ? ilk.className || ilk.tagName : 'boş'));
-  if (fp.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length < (yerTutucu(t) ? 1 : 2)) b.push('kategori sekmesi < 2');
+  if (fp.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length < (bagis && tekSekme(t) ? 1 : 2)) b.push('kategori sekmesi < 2');
   const yan = fp.querySelector('.ve-fp-split > .ve-fp-side');
-  if (!yan) b.push('sağ sütun yok');
-  else if (![...yan.querySelectorAll('.ve-fp-sect b')].some((x) => x.textContent.trim() === 'Uygunluk')) b.push('sağ sütunda Uygunluk yok');
+  if (takozTipi(t)) {
+    if (uygunlukVar(d)) b.push('Uygunluk (sonuç) pencerede');
+    if (!yan && !fp.querySelector('.ve-fp-split.ve-fp-split--tek')) b.push('sağ sütun yok ama kabuk tek sütun değil');
+    if (yan && !yan.innerHTML.trim()) b.push('boş sağ sütun');
+  } else if (!yan) b.push('sağ sütun yok');
+  else if (!uygunlukVar(yan)) b.push('sağ sütunda Uygunluk yok');
   if (d.querySelector('.ve-mnt-not')) b.push('eski not kutusu (.ve-mnt-not)');
   const eylem = d.querySelectorAll('.ve-fp-solve').length;
   if (eylem > 1 || eylem !== d.querySelectorAll('.ve-fp-side > .ve-fp-solve').length) b.push('eylem sağ sütunda ve tek değil');
@@ -188,7 +208,7 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
   test('FEAD: her pencere ailede (referans — kural bu modülden)', () => {
     feadKur();
     const disarida = [];
-    FEAD_TIP.forEach((t) => { const b = aile(feadPencere(t)); if (b.length) disarida.push(t + ': ' + b.join(' · ')); });
+    FEAD_TIP.forEach((t) => { const b = aile(feadPencere(t), t); if (b.length) disarida.push(t + ': ' + b.join(' · ')); });
     expect(disarida).toEqual([]);
   });
 
@@ -200,23 +220,29 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
     expect(disarida).toEqual([]);
   });
 
-  // Bağış kural değil İSTİSNA: beyanı olan tip tek sekme taşır VE notunu
-  // gösterir; beyanı olmayan tek sekmeli pencere ailenin dışında kalır.
-  test('tek sekmeyi yalnız YER TUTUCU beyanı bağışlar; beyan eden pencere notunu gösterir', () => {
+  // Bağış kural değil İSTİSNA: beyanı olan tip tek sekme taşır; beyanı
+  // olmayan tek sekmeli pencere ailenin dışında kalır.
+  test('tek sekmeyi yalnız tipin BEYANI bağışlar: yer tutucu notunu, Görünümler çizim + işaretleri gösterir', () => {
     takozKur();
-    const beyanli = FEAD_TIP.concat(TAKOZ_TIP).filter(yerTutucu);
-    expect(beyanli).toEqual(['mnt-viewer']);
+    const beyanli = FEAD_TIP.concat(TAKOZ_TIP).filter(tekSekme);
+    expect(beyanli.sort()).toEqual(['mnt-2dview', 'mnt-viewer']);
+    expect(FEAD_TIP.concat(TAKOZ_TIP).filter(yerTutucu)).toEqual(['mnt-viewer']);
     beyanli.forEach((t) => {
       const d = takozPencere(t);
       expect(d.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length).toBe(1);
-      expect(d.querySelector('.ve-fp-main [role="tabpanel"]').textContent.trim()).toBe(componentDefs[t].yerTutucu);
-      expect(aile(d)).toEqual(['kategori sekmesi < 2']);              // beyansız okunursa ailenin dışında
+      expect(aile(d, t, false)).toEqual(['kategori sekmesi < 2']);      // beyansız okunursa ailenin dışında
     });
+    expect(takozPencere('mnt-viewer').querySelector('.ve-fp-main [role="tabpanel"]').textContent.trim()).toBe(componentDefs['mnt-viewer'].yerTutucu);
+    const g = takozPencere('mnt-2dview').querySelector('.ve-fp-main [role="tabpanel"]');
+    expect(g.querySelector('.ve-mnt-akso-kap svg.ve-mnt2d-akso')).not.toBeNull();
+    expect([...g.querySelectorAll('.ve-fp-sect b')].map((x) => x.textContent)).toEqual(['İşaretler']);
   });
 
   // Kroki sekmeden bağımsız bağlamdır → FEAD'in bağlam sütunu (sağ sütunun
-  // başı); sekmelerin üstünde değil.
-  test('Takoz: "Güç grubundaki yeri" kütle ve takoz pencerelerinde sağ sütunun İLK bölümü', () => {
+  // başı); sekmelerin üstünde değil. 2026-10-16'dan beri AKSONOMETRİK
+  // (kullanıcı: "'Güç grubundaki yeri' kısmında aksonometrik görünümün
+  // görünmesini istiyorum") ve bu bileşen çizimde işaretli.
+  test('Takoz: "Güç grubundaki yeri" kütle ve takoz pencerelerinde sağ sütunun İLK bölümü, aksonometrik, bileşen işaretli', () => {
     takozKur();
     const tipler = TAKOZ_TIP.filter((t) => componentDefs[t] && (componentDefs[t].isMountBody || componentDefs[t].isMount));
     expect(tipler.length).toBeGreaterThanOrEqual(9);
@@ -224,7 +250,9 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
     tipler.forEach((t) => {
       const yan = takozPencere(t).querySelector('.ve-fp-side');
       const ilk = yan && yan.firstElementChild;
-      if (!ilk || ilk.id.indexOf('ve-mnt-kroki-') !== 0) yanlis.push(t + ': ' + (ilk ? ilk.id || ilk.className : 'yok'));
+      if (!ilk || ilk.id.indexOf('ve-mnt-kroki-') !== 0) { yanlis.push(t + ': ' + (ilk ? ilk.id || ilk.className : 'yok')); return; }
+      if (!ilk.querySelector('svg.ve-mnt2d-akso')) yanlis.push(t + ': aksonometri yok');
+      else if (!ilk.querySelector('svg.ve-mnt2d-akso [data-sec]')) yanlis.push(t + ': bileşen işaretli değil');
     });
     expect(yanlis).toEqual([]);
   });
@@ -237,6 +265,48 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
     const css = oku('css/styles.css');
     expect(css).toMatch(/\.ve-fp-not, \.ve-fead-not\{/);           // FEAD'in satırıyla TEK kural
     expect(css).not.toMatch(/\.ve-mnt-not\s*[{,]/);
+  });
+});
+
+// PENCERE SONUÇ GÖSTERMEZ (kullanıcı kararı 2026-10-16) — KURAL, liste değil:
+// tipler componentDefs'ten, kurucular dağıtımdan. Model önce TAM kurulur
+// (Tulga'da olmayan tipler geçerli bir nokta kütleyle): pencere açılırken
+// eklenen boş düğüm modeli değiştirir, çözücü onu reddeder ve kapı boşa
+// ölçerdi (çözümsüz önce = çözümsüz sonra).
+describe('ÇÖZÜMDEN BAĞIMSIZ — Takoz penceresi sonuç göstermez', () => {
+  const HAZIRLIK = '[data-cozum-durumu]';
+  const sade = (d) => { const k = d.cloneNode(true); k.querySelectorAll(HAZIRLIK).forEach((e) => e.remove()); return k.innerHTML; };
+  function tamKur() {
+    takozKur();
+    TAKOZ_TIP.forEach((t) => {
+      if (t === 'mount-analysis' || global.nodes.some((n) => n.type === t)) return;
+      const d = componentDefs[t] || {};
+      global.nodes.push({ id: t + '-t', type: t, def: d, data: d.isMountBody ? { mass: 10, cgx: 100, cgy: 0, cgz: 300, pointMass: true } : {} });
+    });
+  }
+
+  test('her pencere çözümden önce ve sonra AYNI — değişen yalnız eylemin hazırlığı', () => {
+    tamKur();
+    const once = {};
+    TAKOZ_TIP.forEach((t) => { once[t] = takozPencere(t); });
+    coz();
+    expect(global._veMntLast && !global._veMntLast.error).toBe(true);    // gerçekten çözüldü — kapı boşa ölçmüyor
+    const sonra = {};
+    TAKOZ_TIP.forEach((t) => { sonra[t] = takozPencere(t); });
+    expect(TAKOZ_TIP.filter((t) => sade(once[t]) !== sade(sonra[t]))).toEqual([]);
+    // Hazırlık işareti yalnız eylemi çözüme bağlı iki pencerede ve çözümle
+    // gerçekten değişiyor (işaret her şeyi bağışlayan bir kaçış değil).
+    const isaretli = TAKOZ_TIP.filter((t) => sonra[t].querySelector(HAZIRLIK));
+    expect(isaretli.sort()).toEqual(['mnt-report', 'mnt-solver']);
+    isaretli.forEach((t) => expect(once[t].innerHTML).not.toBe(sonra[t].innerHTML));
+  });
+
+  test('hazırlık sonuç taşımaz: Çözücü\'nün notu modelin büyüklüğü ve son hesabın durumu', () => {
+    tamKur();
+    const not = () => takozPencere('mnt-solver').querySelector(HAZIRLIK).textContent;
+    expect(not()).toMatch(/ kg · \d+ kütle · \d+ takoz · hesaplanmadı$/);
+    coz();
+    expect(not()).toMatch(/ kg · \d+ kütle · \d+ takoz · son hesap güncel$/);
   });
 });
 
@@ -254,6 +324,18 @@ describe('KİT — kabuğun davranışı', () => {
     expect(bant).toEqual([["fG('n1','a','f-a')", 'Doldur'], ["fG('n1','c')", 'Aç']]);
     expect([...d.querySelectorAll('#ve-fp-panes-n1 > [role="tabpanel"]')].map((p) => p.hidden)).toEqual([false, true, true]);
     expect(d.querySelector('.ve-fp-side').innerHTML).toBe('<b>yan</b>');
+  });
+
+  // Takoz pencereleri sonuç taşımıyor: bağlamı ya da eylemi olmayan pencere
+  // (Görünümler, 3D Görüntüleyici, Koordinat Düzlemi) iki sütunlu modalda
+  // 296 px'lik boş bir sütun bırakıyordu.
+  test('boş sağ sütun çizilmez: kabuk tek sütuna iner', () => {
+    const d = dom(PK.vePencereKabuk({ id: 'n3' }, sekmeler(), '', {}));
+    expect(d.querySelector('.ve-fp-side')).toBeNull();
+    expect(d.querySelector('.ve-fp-split').classList.contains('ve-fp-split--tek')).toBe(true);
+    expect(dom(PK.vePencereKabuk({ id: 'n4' }, sekmeler(), '  \n ', {})).querySelector('.ve-fp-side')).toBeNull();
+    expect(dom(PK.vePencereKabuk({ id: 'n5' }, sekmeler(), '<b>yan</b>', {})).querySelector('.ve-fp-split--tek')).toBeNull();
+    expect(oku('css/styles.css')).toMatch(/\.ve-fp-split--tek\{ grid-template-columns:minmax\(0,1fr\); \}/);
   });
 
   test('sekme değişince pencere KURULMAZ: aynı elemanlar, hafıza açılan sekmede', () => {

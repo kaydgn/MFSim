@@ -5,17 +5,22 @@
 // KULLANICI SEÇİMİ (2026-10-15, tasarım sayfası "Aksonometrik 2B Görünüm"):
 // izdüşüm dimetrik (ISO 5456-3; eksen oranı X : Y : Z = 0,94 : 0,47 : 0,94),
 // seçicide izometrik (0,82 üçünde), bakış önden-soldan-yukarıdan. Çizim dili
-// gölgeli prizma; Z = 0'a düşen gölge hep açık; direk, kuvvet, mod ve
-// rijitlik düğmeyle; üç duvar tam ekranda. 2026-10-16'dan beri Görünümler
-// penceresinin (eski 2D Görünüm) TEK çizimi SERBEST kamerada (o.kam: azimut ·
-// yükseliş, döndürülür); sabit bakış (iz + b) başlangıç sayfasının
-// karolarında ve raporun illüstrasyonunda.
+// gölgeli prizma; Z = 0'a düşen gölge hep açık. 2026-10-16'dan beri
+// Görünümler penceresinin (eski 2D Görünüm) TEK çizimi SERBEST kamerada
+// (o.kam: azimut · yükseliş, döndürülür); sabit bakış (iz + b) bileşen
+// pencerelerinin "Güç grubundaki yeri" krokisinde (o.secili), başlangıç
+// sayfasının karolarında ve raporun illüstrasyonunda.
 //
-// ÇİZİM OKUR, HESAPLAMAZ. Modeli cp-mount.js kurar (`_mntAksoModel`):
+// KATMANLAR (direk, duvar, kuvvet, statik sehim, mod, rijitlik, asal eksen)
+// çizicide durur, PENCEREDE YOK: kullanıcı kararı (2026-10-16) — pencere
+// sonuç göstermez, "kullanıcı sadece detaylı sonuç raporu ile yetinecek";
+// raporun illüstrasyonu direği kullanır.
+//
+// ÇİZİM OKUR, HESAPLAMAZ. Modeli cp-mount.js kurar (`_mntAksoModelKur`):
 // gövde kutusu çekirdeğin equivalentBox'ı (köşegen atalet — raporun mod
 // şekli çizimiyle aynı çağrı), G çözücünün birleştirmesi (combineMassProps),
-// asal eksenler principalInertia, kuvvet / mod / statik denge son GÜNCEL
-// çözümden. Burası saf çizim: DOM'a dokunmaz, Jest'te doğrudan sınanır.
+// asal eksenler principalInertia, kuvvet / mod / statik denge YALNIZ raporun
+// çözümünden. Burası saf çizim: DOM'a dokunmaz, Jest'te doğrudan sınanır.
 //
 // KAMERA paralel izdüşüm: P model (mm) → ekran (sağ, aşağı); d izdüşüm
 // yönü (izleyiciden sahneye). Görünen yüz n · d < 0; boyama sırası uzaktan
@@ -45,10 +50,12 @@
 // SEÇENEK (o):
 //   W, H?, Hmin?, Hmax?, iz:'dim'|'iso', b:{x,y,z}, stil:'golge'|'xray',
 //   kat:{ zemin, golge, direk, duvar, kuvvet, cokme, rijit, asal, cetvel },
-//   etiket:'ad'|'genis'|'yok', sade, mod:{ phi, s, faz }, F (sabit sığdırma),
+//   etiket:'ad'|'genis'|'secili'|'yok', sade, mod:{ phi, s, faz }, F (sabit sığdırma),
 //   ucluyok, fs:{ k, b } (yazı boyu px), olc(t, px, kalin) (yazı genişliği),
 //   yalnizHareket (yalnız hareket eden katman — canlandırmanın karesi),
-//   kam:{ az, el } + kure + yakin + kay (serbest kamera), isaret (işaret boyu katı)
+//   kam:{ az, el } + kure + yakin + kay (serbest kamera), isaret (işaret boyu katı),
+//   secili (vurgulanan bileşenin k'si — "Güç grubundaki yeri"; etiket:'secili'
+//   yalnız onu ve G'yi yazar), aria (çizimin erişilebilir adı)
 // ═══════════════════════════════════════════════════════════════════════════
 
 var veMntAkso = (function(){
@@ -71,7 +78,11 @@ var veMntAkso = (function(){
   function esc(s){ return String(s==null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function R(v){ return Math.round(v*10)/10; }
   function bilgiAttr(satirlar){ return satirlar && satirlar.length ? ' data-mnt-info="'+esc(satirlar.join('\n')).replace(/\n/g,'&#10;')+'"' : ''; }
-  function ak(k, satirlar){ return ' data-ak="'+esc(k)+'"'+bilgiAttr(satirlar); }
+  // SEÇİLİ (o.secili): bir bileşen penceresinin "Güç grubundaki yeri"nde o
+  // bileşen — onun bütün parçaları `data-sec` taşır (CSS vurgular). Çizimin
+  // süresince ayarlanır; ciz her çağrıda yeniden yazar.
+  var _secili=null;
+  function ak(k, satirlar){ return ' data-ak="'+esc(k)+'"'+((_secili!=null && k===_secili) ? ' data-sec=""' : '')+bilgiAttr(satirlar); }
   // Yazı genişliği TAHMİNİ: rakam ve büyük harf ~0,6 em — 2D çizicinin
   // _mnt2DYaziKutu'suyla aynı ve bilerek cömert (kapının ölçtüğü gerçek
   // kutudan küçük kalırsa çakışma kaçar). Tarayıcı ölçeri `o.olc` ile gelir.
@@ -306,6 +317,7 @@ var veMntAkso = (function(){
   // ════════════════════════════════════════════════════════════════════════
   function ciz(m, o){
     o=o||{};
+    _secili=(o.secili!=null) ? o.secili : null;
     var W=o.W||354, sade=!!o.sade, stil=o.stil||'golge';
     // Serbest kamerada (o.kam = { az, el }) bakış işaretleri yönden türer:
     // duvar, cam zemin ve G'nin izi hangi tarafın izleyiciye baktığını sorar.
@@ -403,7 +415,9 @@ var veMntAkso = (function(){
     function yol(l, f){ return l.map(function(q){ var s=(f||P)(q); return R(s[0])+' '+R(s[1]); }).join(' L'); }
 
     // ── GÖVDELER (uzaktan yakına), TAKOZLAR, G — hareket eden katman ─────
-    var engel=[], govdeSvg='';
+    // Seçimin halkası (o.secili) EN ÜSTTE: nokta kütle ve takoz önündeki bir
+    // küpün altında kalıyordu (Tulga'nın arka braketi T3'ün arkasında).
+    var engel=[], govdeSvg='', secSvg='';
     var sira=kut.map(function(q){ return { q:q, d:K.derin(q.c) }; })
       .concat(nok.map(function(g){ return { g:g, d:K.derin([g.x, g.y, g.z]) }; }))
       .sort(function(a, c){ return a.d-c.d; });
@@ -411,6 +425,7 @@ var veMntAkso = (function(){
       if(it.g){
         var gq=Ph([it.g.x, it.g.y, it.g.z]);
         govdeSvg+='<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(2.4*ik)+'"/>';
+        if(it.g.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(6.5*ik)+'"/>';
         engel.push({ l:gq[0]-3*ik, t:gq[1]-3*ik, r:gq[0]+3*ik, b:gq[1]+3*ik });
         return;
       }
@@ -444,6 +459,7 @@ var veMntAkso = (function(){
       var Y=yuzler(c, [hm, hm, hm]).filter(function(f){ return K.gorunur(f.n); });
       takozSvg+='<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+Y.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>';
       var q=P(c); engel.push({ l:q[0]-7*ik, t:q[1]-7*ik, r:q[0]+7*ik, b:q[1]+7*ik });
+      if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(q[0])+'" cy="'+R(q[1])+'" r="'+R(10*ik)+'"/>';
     });
     // G — düşey izi (yukarıdan bakışta, gölge ya da direk açıkken) ve işareti.
     var gSvg='', gq=null, g3=null;
@@ -457,7 +473,7 @@ var veMntAkso = (function(){
       gSvg+='<g class="ve-ak-gam">'+amG(gq[0], gq[1], R(6.5*ik))+'</g></g>';
       engel.push({ l:gq[0]-8*ik, t:gq[1]-8*ik, r:gq[0]+8*ik, b:gq[1]+8*ik });
     }
-    if(o.yalnizHareket) return { hareket:govdeSvg+takozSvg+gSvg, H:H, F:F };
+    if(o.yalnizHareket) return { hareket:govdeSvg+takozSvg+gSvg+secSvg, H:H, F:F };
 
     var s=['<rect class="ve-ak-zem" x="0" y="0" width="'+W+'" height="'+H+'"/>'], ets=[], camZemin='';
     // ── DUVARLAR: taban + iki uzak duvar, üzerlerinde üç düz görünüş ──────
@@ -636,20 +652,27 @@ var veMntAkso = (function(){
     }
     // ── ETİKETLER ───────────────────────────────────────────────────────────
     if(etk!=='yok'){
-      var dar=W<560 && etk!=='genis';
+      // 'secili' ("Güç grubundaki yeri"): yalnız bu bileşen — adıyla, vurgu
+      // kenarlı çipte — ve G; öteki işaretlerin bilgisi fare üstünde.
+      var dar=W<560 && etk!=='genis', yalniz=(etk==='secili');
+      // dar çizimde uzun ad kısalır (tam adı ipucunda): "Motor — Cummins …" → "Motor"
+      var kisalt=function(ad){ return (dar && ad.indexOf(' — ')>0) ? ad.split(' — ')[0] : ((dar && ad.length>24) ? ad.slice(0, 22)+'…' : ad); };
+      var yukari=b.z>0 ? [2, 4, 5, 0, 1, 3, 6, 7] : [3, 6, 7, 0, 1, 2, 4, 5];
       kut.concat(nok.map(function(g){ return { g:g, c:[g.x, g.y, g.z], h:[0, 0, 0] }; })).forEach(function(q){
         var g=q.g;
-        if(!(g.ana || etk==='genis')) return;
+        if(yalniz ? g.k!==_secili : !(g.ana || etk==='genis')) return;
         var ust=P([q.c[0], q.c[1], q.c[2]+(b.z>0 ? q.h[2] : -q.h[2])]);
-        // dar çizimde uzun ad kısalır (tam adı ipucunda): "Motor — Cummins …" → "Motor"
-        var ad=(dar && g.ad.indexOf(' — ')>0) ? g.ad.split(' — ')[0] : ((dar && g.ad.length>24) ? g.ad.slice(0, 22)+'…' : g.ad);
-        ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:g.kutu ? 3 : 3*ik, m1:ad, m2:sayi(g.m, 0)+' kg', fs:FB, fs2:FK, kalin:true,
-          pri:g.ana ? 7 : 5, yon:b.z>0 ? [2, 4, 5, 0, 1, 3, 6, 7] : [3, 6, 7, 0, 1, 2, 4, 5] }, olc));
+        if(yalniz) ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:g.kutu ? 3 : 6.5*ik, m1:kisalt(g.ad), fs:FB, kalin:true,
+          cip:true, sinif:'sec-cip', pri:8, yon:yukari }, olc));
+        else ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:g.kutu ? 3 : 3*ik, m1:kisalt(g.ad), m2:sayi(g.m, 0)+' kg', fs:FB, fs2:FK, kalin:true,
+          pri:g.ana ? 7 : 5, yon:yukari }, olc));
       });
       if(!kat.kuvvet) m.takoz.forEach(function(t){
+        if(yalniz && t.k!==_secili) return;
         var q=P(hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z]);
-        var m1=etk==='genis' ? t.no+' '+t.ad : (kat.direk ? t.no+' · z '+sayi(t.z, 0) : t.no);
-        ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:6*ik, m1:m1, fs:FK, kalin:true, cip:true, sinif:'t-cip', pri:5 }, olc));
+        var m1=etk==='genis' ? t.no+' '+t.ad : (yalniz ? t.no+' '+kisalt(t.ad) : (kat.direk ? t.no+' · z '+sayi(t.z, 0) : t.no));
+        ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:(yalniz ? 10 : 6)*ik, m1:m1, fs:FK, kalin:true, cip:true,
+          sinif:yalniz ? 't-cip sec-cip' : 't-cip', pri:yalniz ? 8 : 5 }, olc));
       });
       if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7*ik, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true }, olc));
     }
@@ -703,9 +726,9 @@ var veMntAkso = (function(){
     var L=yerlestir(ets, engel, { l:3, t:3, r:W-3, b:H-3 }), et=etiketCiz(L);
     var oran=K.oran.map(function(v){ return sayi(v, 2); }).join(' : ');
     var svg='<svg class="ve-mnt2d-akso" viewBox="0 0 '+W+' '+H+'"'
-      + ' preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc((yon ? 'Serbest bakış' : IZ[iz].ad)+' · '+bakisAdi(b))+'">'
+      + ' preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(o.aria || ((yon ? 'Serbest bakış' : IZ[iz].ad)+' · '+bakisAdi(b)))+'">'
       + s.join('')+direkSvg+hayalet
-      + '<g class="ve-ak-hareket"><!--hb-->'+govdeSvg+takozSvg+gSvg+'<!--hs--></g>'
+      + '<g class="ve-ak-hareket"><!--hb-->'+govdeSvg+takozSvg+gSvg+secSvg+'<!--hs--></g>'
       + camZemin+cokmeSvg+rijitSvg+asalSvg+kuvvetSvg
       // bütün çizgiler yazılardan önce: kılavuz, üçlünün okları; sonra yazılar
       + et.kilavuz+triOk+triYazi+cvYazi+katYazi+et.yazi+'</svg>';

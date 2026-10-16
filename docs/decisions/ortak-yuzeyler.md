@@ -2072,8 +2072,40 @@ değil TİPİN BEYANI (`componentDefs[t].yerTutucu` = pencerenin notu, "kendini
 beyan eder" kalıbı): beyansız tek sekmeli pencere ailenin dışında kalır ve kapı
 onu adıyla söyler.
 
+**İstisna — TEK SEKME (2026-10-16, ikinci tur):** Görünümler'in çizimi ve
+işaretlerin föyü tek görünümde (kullanıcı: *"ayrı olmasına gerek yok"*);
+beyan `componentDefs['mnt-2dview'].tekSekme` = sebep.
+
 **Kapı:** `pencere-kabuk.test.js` (iki modülün bütün pencereleri AYNI aile
 denetimi, tipler `componentDefs`ten · kabuk işaretlemesi yalnız kitte · tek
 sekmeyi yalnız beyan bağışlar) +
 `fead-pencere-ailesi.test.js` + `mount-sutun.test.js` → *"FEAD karşılığıyla
 aynı genişlik sınıfı"*.
+
+
+## Takoz penceresi SONUÇ GÖSTERMEZ — sonuç yalnız ayrıntılı raporda (2026-10-16)
+
+**Hüküm:** Takoz'un hiçbir bileşen penceresi (Başlangıç Sihirbazı dâhil)
+çözümün sonucunu taşımaz: Uygunluk satırları, sehim, takoz yükü, sönüm,
+kapasite kullanımı, modlar, vites başına kuvvet, Görünümler'in kuvvet / sehim /
+mod katmanları ve canlandırma kalktı. Pencerede çözümle değişen TEK şey
+eylemin hazırlığıdır — Çözücü'nün notu (hesaplanmadı · son hesap güncel ·
+bayat) ve Rapor'un çözüm durumu; ikisi `data-cozum-durumu` taşır. Sağ sütunu
+boş kalan pencere tek sütuna iner (`.ve-fp-split--tek`); Takoz'da sağ sütun
+Uygunluk taşımaz (FEAD'in kuralı değişmedi).
+
+**Gerekçe:** kullanıcı (*"TÜM BİLEŞENLERİN İÇİNDE sonuç ile alakalı bir
+bilgi, bir sonuç vs olmayacak … Şu an güncel olarak kullanıcı sadece detaylı
+sonuç raporu ile yetinecek … İlerleyen zamanlarda farklı tasarımlar
+yapacağız."*). Ölçüldü (main 35b98c8, Tulga, Node): 17 Takoz penceresinin
+17'si Uygunluk taşıyordu ve 17'si çözümden sonra değişiyordu (hazırlık
+satırları hariç). Sonra 0 · 0. Çizicinin sonuç katmanları (`js/mount-akso.js`)
+duruyor — pencere onları çizmiyor, raporun modeli (`veMntAksoCozumModel`)
+çizebiliyor; "farklı tasarımlar" geldiğinde yeniden kurulmaları gerekmez.
+Kapsam Takoz: FEAD'in pencereleri ve Sonuçlar sayfası değişmedi.
+
+**Kapı:** `pencere-kabuk.test.js` → *"ÇÖZÜMDEN BAĞIMSIZ"* (bütün Takoz
+pencereleri çözümden önce ve sonra AYNI, hazırlık işareti yalnız Çözücü ile
+Rapor'da ve gerçekten değişiyor; model önce TAM kurulur, yoksa çözüm reddedilir
+ve kapı boşa ölçer) + *AİLE* (Takoz'da Uygunluk yasak) +
+`mount-sihirbaz-doku.test.js` → *"SONUÇ YOK"*.

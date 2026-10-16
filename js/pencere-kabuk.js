@@ -127,15 +127,20 @@ function vePencereSekmeleriHTML(nodeId, sekmeler, aktif, o){
 // Kabuk TEK SEKMEYİ de şeritle çizer: şerit sekmenin durumunu taşıyor ve
 // iskelet her pencerede aynı kalıyor (aile kuralı ≥ 2 kategori ister; tek
 // sekmeli bir pencere kurmak modülün kendi kusurudur, kapı onu adıyla söyler —
-// tek istisna tipin YER TUTUCU beyanı, componentDefs[t].yerTutucu).
+// istisna tipin BEYANI: componentDefs[t].yerTutucu ya da .tekSekme).
+// BOŞ SAĞ SÜTUN ÇİZİLMEZ (2026-10-16): Takoz pencereleri sonuç taşımıyor
+// (Uygunluk yalnız raporda) ve bağlamı ya da eylemi olmayan pencerede iki
+// sütunlu modal 296 px'lik boş bir sütun bırakıyordu — kabuk tek sütuna iner
+// (`.ve-fp-split--tek`).
 function vePencereKabuk(node, sekmeler, yan, o){
   o = o || {};
   var id = node && node.id;
   var aktif = vePencereSekmeOf(id, sekmeler.map(function(s){ return s.k; }));
+  var tek = !String(yan == null ? '' : yan).trim();
   return '<div class="sw-panel ve-fp' + (o.sinif ? ' ' + o.sinif : '') + '"' + (o.nitelik || '') + '>'
-    + '<div class="ve-fp-split"><div class="ve-fp-main">'
+    + '<div class="ve-fp-split' + (tek ? ' ve-fp-split--tek' : '') + '"><div class="ve-fp-main">'
     + vePencereSekmeleriHTML(id, sekmeler, aktif, o)
-    + '</div><div class="ve-fp-side">' + (yan || '') + '</div></div></div>';
+    + '</div>' + (tek ? '' : '<div class="ve-fp-side">' + yan + '</div>') + '</div></div>';
 }
 
 if(typeof module !== 'undefined' && module.exports){

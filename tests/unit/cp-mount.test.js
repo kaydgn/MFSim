@@ -798,20 +798,23 @@ describe('3D Görüntüleyici bileşeni', () => {
 describe('Görünümler bileşeni (eski 2D Görünüm)', () => {
   afterEach(() => { delete global.nodes; });
   // 2026-10-16: döndürülebilir aksonometri (3D Görüntüleyici'den taşındı) ve
-  // işaretlerin föyü. Düz görünüş sekmeleri ve tam ekranın düz görünüşleri
-  // kalktı — hazır bakışlar aynı yönleri veriyor. Kapının tamamı
-  // mount-akso.test.js → PENCERE.
-  test('panel: Aksonometrik (serbest kamera) · İşaretler (föy) · tam ekran; düz görünüş yok', () => {
+  // işaretlerin föyü — aynı gün ikinci turda TEK sekme (kullanıcı: "ayrı
+  // olmasına gerek yok"), tam ekran çizimin başlığında. Düz görünüş sekmeleri
+  // ve tam ekranın düz görünüşleri kalktı. Kapının tamamı mount-akso.test.js
+  // → PENCERE.
+  test('panel: tek sekme — Aksonometrik (serbest kamera) + İşaretler (föy) · tam ekran; düz görünüş yok', () => {
     global.nodes = [
       { id: 'a', type: 'mnt-motor', def: { isMountBody: true }, customName: 'Motor', data: { mass: 100, cgx: 0, cgy: 0, cgz: 100 } },
       { id: 'm', type: 'mnt-mount', def: { isMount: true }, customName: 'Ön Takoz', data: { x: -50, y: 20, z: 30 } }
     ];
-    const html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} });
+    global.veMntAkso = require('../../js/mount-akso.js');          // tam ekran düğmesi çizimin başlığında
+    let html;
+    try { html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} }); } finally { delete global.veMntAkso; }
     const d = document.createElement('div'); d.innerHTML = html;
-    expect([...d.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'))).toEqual(['akso', 'isaret']);
+    expect([...d.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'))).toEqual(['akso']);
     expect(d.querySelector('#ve-fp-panes-d1 > [data-k="akso"] #ve-mnt-akso3b-d1')).not.toBeNull();
-    expect(html).toMatch(/<td>T1<\/td><td class="sol" title="Ön Takoz">Ön Takoz<\/td>/);   // föy İşaretler sekmesinde
-    expect(d.querySelector('#ve-fp-panes-d1 > [data-k="isaret"]').innerHTML).toContain('<td>T1</td>');
+    expect(html).toMatch(/<td>T1<\/td><td class="sol" title="Ön Takoz">Ön Takoz<\/td>/);   // föy çizimle aynı sekmede
+    expect(d.querySelector('#ve-fp-panes-d1 > [data-k="akso"]').innerHTML).toContain('<td>T1</td>');
     expect(html).toContain('veMntAkso3BTamEkran()');
     ['data-mnt2d="ust"', 've-mnt2d-gorunus', 've-mnt2d-fig', 'veMnt2DTamEkran', 'veMnt2DViewRefresh()']
       .forEach((x) => expect({ x, var: html.includes(x) }).toEqual({ x, var: false }));

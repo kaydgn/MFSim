@@ -127,17 +127,6 @@ describe('ALT SİMGE — alt çizgiyle değil, gerçek alt simgeyle', () => {
   });
 });
 
-describe('PENCERE — uygunluk satırının ipucu düz metin', () => {
-  // Raporun satırları pencerede ipucuna (title) düz metin olarak gidiyor;
-  // alt simgeyi sökmek "f<sub>ateş</sub>"ı "fateş" diye okuturdu.
-  test('alt simge düz metinde alt çizgiyle kalır', () => {
-    global.window = global.window || global;
-    const cp = require('../../js/cp-mount.js');
-    expect(cp._mntDuzMetin('f<sub>ateş</sub> 32,5 Hz / f<sub>bounce</sub> 7,1 Hz')).toBe('f_ateş 32,5 Hz / f_bounce 7,1 Hz');
-    expect(cp._mntDuzMetin('<b>Kriter</b> &lt; %50')).toBe('Kriter < %50');
-  });
-});
-
 describe('SVG İÇİNDE HTML YOK — ayrıştırıcı SVG\'den çıkmasın', () => {
   // SVG yazısına giren bir HTML öğesi (<span>, <sub>) HTML ayrıştırıcısını
   // SVG'den çıkarır; çizimin geri kalanı HTML sayılır ve kaybolur. Bir kez

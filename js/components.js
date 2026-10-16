@@ -549,11 +549,14 @@ var componentDefs = {
   },
   // Görünümler (eski adıyla 2D Görünüm, 2026-10-16) — güç grubunun döndürülebilir
   // aksonometrisi: gövdeler eşdeğer kutularıyla, takozlar, gövde ağırlık
-  // merkezleri ve birleşik G; hazır bakışlar (dimetrik · izometrik · üstten ·
-  // önden · yandan). Fiziksel topolojiye bağlanmaz. Panel: cp-mount.js, çizici
-  // mount-akso.js.
+  // merkezleri ve birleşik G; altında işaretlerin föyü. Fiziksel topolojiye
+  // bağlanmaz. Panel: cp-mount.js, çizici mount-akso.js.
   'mnt-2dview': {
     name: 'Görünümler',
+    // TEK SEKME (kullanıcı kararı 2026-10-16: "Aksonometrik ve İşaretler …
+    // birleştirelim, ayrı olmasına gerek yok"). Aile kuralı ≥ 2 kategori
+    // ister; tek sekmeyi bu beyan bağışlar (pencere-kabuk.test.js).
+    tekSekme: 'Çizim ve işaretleri tek görünümde (kullanıcı kararı 2026-10-16)',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M16 25 A40 15 0 0 1 80 20" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linecap="round"/><path d="M84 13 L84 26 L72 22 Z" fill="var(--accent-primary, #a8502b)"/><path d="M20 44 L50 33 L80 44 L50 55 Z" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><path d="M20 44 V70 L50 81 L80 70 V44 M50 55 V81" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="63" r="7" fill="var(--bg-input, #ffffff)" stroke="var(--accent-danger, #9a3b3b)" stroke-width="3.5"/><rect x="12" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/><rect x="76" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/></svg>',
     inputs: 0, outputs: 0, isMount2DView: true, defaultWidth: 60, defaultHeight: 56
   },
