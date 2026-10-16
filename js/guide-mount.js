@@ -134,8 +134,8 @@ function _gmSec2(){
   h += '<h3>2.1 Bileşenler</h3>';
   h += _gmAlanTablo('İç topolojideki bileşenler', [
     ['<strong>Kütle gövdeleri</strong>', 'Motor · Şanzıman · Şaft · Braket · Transfer · '
-      + 'PTO · Pompa · PTO grubu', 'Hepsi aynı “Kütle ve atalet” sekmesini taşır; farkları '
-      + 'ikinci sekmede'],
+      + 'PTO · Pompa · PTO grubu', 'Hepsi aynı “Kütle ve CG” ve “Atalet” sekmelerini taşır; '
+      + 'farkları üçüncü sekmede'],
     ['<strong>Takoz</strong>', 'Konum ve üç eksenli rijitlik', 'En az 3, tipik olarak 3–4'],
     ['<strong>Takoz Özellikleri</strong>', 'Takoz tiplerinin kataloğu: rijitlik, kuvvet–sehim '
       + 'yasası, kapasite', 'Katalogdan seçip takoza uygulamak için'],
@@ -212,16 +212,19 @@ function _gmSec3(){
 function _gmSec4(){
   var h = _gmH2(3);
   h += '<p>Güç grubunun her parçası bir <strong>kütle gövdesi</strong> düğümüdür. Penceresi '
-    + 'sağdaki sütunda açılır. Hepsinin ilk sekmesi aynıdır (<strong>Kütle ve atalet</strong>); '
-    + 'tipe göre değişen tek şey ikinci sekmedir (bölüm 5). Sekmelerin üstündeki '
-    + '<strong>Güç grubundaki yeri</strong> krokisi gövdeyi modelin geri kalanıyla, birleşik '
-    + 'ağırlık merkezine uzaklığıyla birlikte gösterir — üstten ya da yandan.</p>';
+    + 'sağdaki sütunda açılır. Pencere FEAD pencereleriyle aynı yapıdadır: üstte kategori '
+    + 'sekmeleri, sağda (dar pencerede altta) sekmeden bağımsız sütun. İlk iki sekme her '
+    + 'gövdede aynıdır (<strong>Kütle ve CG</strong> · <strong>Atalet</strong>); tipe göre '
+    + 'değişen üçüncü sekmedir (bölüm 5). Sağ sütundaki <strong>Güç grubundaki yeri</strong> '
+    + 'krokisi gövdeyi modelin geri kalanıyla, birleşik ağırlık merkezine uzaklığıyla birlikte '
+    + 'gösterir — üstten ya da yandan; altında modelin <strong>Uygunluk</strong> hükmü durur.</p>';
   h += _gmAdimlar([
     'Gövdeye çift tıklayın.',
-    '<strong>Kütle ve atalet</strong> sekmesinde kütleyi (kg) ve <strong>Ağırlık merkezi</strong> '
+    '<strong>Kütle ve CG</strong> sekmesinde kütleyi (kg) ve <strong>Ağırlık merkezi</strong> '
       + 'föyüne CG’yi (mm, x/y/z) yazın — yanındaki sütun birleşik ağırlık merkezine farkı gösterir.',
-    'Gövde ince ya da hafifse <strong>Nokta kütle</strong> kutusunu işaretleyin — atalet tensörü '
-      + 'sıfır kabul edilir.',
+    '<strong>Atalet</strong> sekmesinde, gövde ince ya da hafifse <strong>Nokta kütle</strong> '
+      + 'kutusunu işaretleyin — atalet tensörü sıfır kabul edilir, kütle CG’de toplanır; grubun '
+      + 'ataleti gövdelerin CG yayılımından (paralel eksen) yine doğar.',
     'Aksi hâlde <strong>Atalet tensörü</strong> matrisinin üst üçgenine köşegen (I<sub>xx</sub>, '
       + 'I<sub>yy</sub>, I<sub>zz</sub>) ve çarpım (I<sub>xy</sub>, I<sub>xz</sub>, '
       + 'I<sub>yz</sub>) terimlerini kg·m² cinsinden girin; alt üçgen simetriden kendiliğinden dolar.',
@@ -257,7 +260,10 @@ function _gmSec4(){
 function _gmSec5(){
   var h = _gmH2(4);
   h += '<p>Bazı kütle gövdeleri, kütlelerine ek olarak <strong>tork</strong> üretir ya da '
-    + 'iletir. Bu bilgiler pencerenin ikinci sekmesindedir; sekme gövdenin tipine göre değişir.</p>';
+    + 'iletir. Bu bilgiler pencerenin üçüncü sekmesindedir; sekme gövdenin tipine göre değişir. '
+    + 'Motor kataloğundan bir motor seçmek tepe torku, maks. gücü ve rölantiyi doldurur; '
+    + '<strong>kütle, CG ve atalet doldurulmaz</strong> — kataloğun ataleti krank milinin döner '
+    + 'ataletidir, gövdenin tensörü değil.</p>';
   h += _gmAlanTablo('Tipe özel sekmeler', [
     ['Motor · Motor ve tork', 'Katalog, motor noktaları (tepe tork, maks. güç, rölanti, '
       + 'silindir sayısı), tork zinciri, ateşleme frekansı', 'Motor künyesi'],
@@ -274,7 +280,9 @@ function _gmSec5(){
   h += _gmUyari('PTO kütlesi İKİ KEZ sayılabilir',
       'PTO grubunun kütlesini iki yoldan verebilirsiniz: tek bir <strong>PTO grubu</strong> '
     + 'gövdesiyle toplu olarak, ya da ayrı <strong>PTO</strong> ve <strong>Pompa</strong> '
-    + 'gövdeleriyle parça parça. <strong>İkisini birden</strong> tanımlarsanız aynı kütle iki '
+    + 'gövdeleriyle parça parça. Toplu girişte grubun kütlesi, CG’si ve atalet tensörü tek '
+    + 'kalemdir; ayrıntılı girişte parça başına kütle ve CG girilir ve grubun ataleti parçaların '
+    + 'yayılımından doğar. <strong>İkisini birden</strong> tanımlarsanız aynı kütle iki '
     + 'kez sayılır ve çözücü “makul ama yanlış” bir toplam üretir. Tutarlılık uyarıları bunu '
     + 'yakalar ve adıyla söyler — ama yalnız bakarsanız.');
   return h;
@@ -331,7 +339,9 @@ function _gmSec7(){
     + 'uyguladığınızda rijitlikler ve kapasite dolar; <strong>konum dolmaz</strong> — o '
     + 'motorun verisidir, parçanın değil.</p>';
   h += _gmAlanTablo('Takoz Özellikleri penceresi', [
-    ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı, taşıma kapasitesi',
+    ['Tip', 'Takoz tipi seçici, seçili tipin adı ve türü (gömülü · özel · değiştirilmiş), '
+      + 'taşıma kapasitesi', 'Öteki iki sekme seçili tipin adını bölüm başlığında taşır'],
+    ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı',
       'Sekme <strong>rijitlik eksik</strong> der: boş ya da ≤ 0 değer var, çözücü bu tipi '
       + 'taşıyan takozu reddeder. <strong>oran?</strong> der: oran eksenler arasında 1,5 '
       + 'kattan fazla yayılıyor, eksenler takaslı girilmiş olabilir'],
@@ -345,7 +355,10 @@ function _gmSec7(){
     + 'Katalog sürümü bir gün güncellenip bir değer düzeltilse bile kaydedilmiş projeniz '
     + '<strong>kendiliğinden değişmez</strong>; yalnız hangi künyeden geldiğinin izi kalır. '
     + 'Tipi sonradan değiştirirseniz takoz da eski değerinde kalır; pencerenin '
-    + '<strong>Kullanım</strong> bölümü onu gösterir. Bir katalog güncellemesinin kaydedilmiş '
+    + '<strong>Kullanım</strong> bölümü onu gösterir. Taşıma kapasitesi de kopyalanır; tipte '
+    + 'tanımsızsa takozdaki eski değer silinir. Gömülü bir takozda yaptığınız değişiklik bu '
+    + 'Takoz Özellikleri düğümüne yazılır, fabrika değeri bozulmaz — <strong>Fabrika</strong> '
+    + 'düğmesi geri döndürür. Bir katalog güncellemesinin kaydedilmiş '
     + 'bir analizi sessizce değiştirmesi, bu programın en çok kaçındığı hata sınıfıdır.');
   h += '<h3>7.2 Nonlineer z-eğrisi</h3>';
   h += '<p>Elastomer takozlar büyük sehimde <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
@@ -366,6 +379,10 @@ function _gmSec7(){
     + '<strong>fazla</strong>, takoz kuvvetini <strong>az</strong> gösterir. Sonuçlarda '
     + '“doğrusal aralık aşıldı” sayacı bunu bildirir — sıfırdan büyükse eğri girmeyi '
     + 'düşünün.');
+  h += _gmNot('Eğrinin noktaları',
+      'z-eğrisi özel bir takoz tipinde, <strong>Takoz Özellikleri → Kuvvet–sehim</strong> '
+    + 'sekmesinde tanımlanır ve tip bir takoza uygulanınca onunla birlikte kopyalanır. '
+    + 'Çözücü noktaları sehime (δ) göre sıralar; monoton bir eğri girin (basma eksi).');
   return h;
 }
 
@@ -489,8 +506,10 @@ function _gmSec12(){
     + 've uygunluk hükmü.</p>';
   h += _gmAdimlar([
     'Önce modeli <strong>çözün</strong> — rapor bir sonuç belgesidir ve çözümsüz üretilmez.',
-    'Rapor bileşenine çift tıklayın: pencere çözümün güncel mi bayat mı olduğunu ve '
-      + '§8.8’in girdilerinin (rölanti devri, silindir sayısı, ζ) nereden geldiğini gösterir.',
+    'Rapor bileşenine çift tıklayın: <strong>İçerik</strong> sekmesi raporun anlatacağı '
+      + 'çözümü, <strong>Girdiler</strong> sekmesi §8.8’in girdilerinin (rölanti devri, silindir '
+      + 'sayısı, ζ) nereden geldiğini gösterir; çözümün güncel mi bayat mı olduğu sağ sütunda, '
+      + 'düğmenin üstündedir.',
     'Raporu üretip indirin. Dosya tek başına açılır; internet gerekmez.'
   ]);
   h += _gmUyari('Rapor çözümün fotoğrafıdır',
@@ -731,9 +750,10 @@ function _gmEkA(){
   h += _gmTablo('Alan → pencere eşlemesi',
     ['Aradığınız', 'Pencere', 'Sekme → bölüm'],
     [
-      ['Kütle ve ağırlık merkezi', 'Kütle gövdesi', 'Kütle ve atalet → Kütle · Ağırlık merkezi'],
-      ['Atalet tensörü', 'Kütle gövdesi', 'Kütle ve atalet → Atalet tensörü'],
-      ['Nokta kütle anahtarı', 'Kütle gövdesi', 'Kütle ve atalet → Atalet tensörü'],
+      ['Kütle ve ağırlık merkezi', 'Kütle gövdesi', 'Kütle ve CG → Kütle · Ağırlık merkezi'],
+      ['Atalet tensörü', 'Kütle gövdesi', 'Atalet → Atalet tensörü'],
+      ['Nokta kütle anahtarı', 'Kütle gövdesi', 'Atalet → Atalet tensörü'],
+      ['Güç grubundaki yeri (kroki)', 'Kütle gövdesi · Takoz', 'Sağ sütun'],
       ['Motor torku', 'Motor', 'Motor ve tork → Motor noktaları'],
       ['Vites oranları', 'Şanzıman', 'Vitesler → Vites oranları'],
       ['Transfer oranı', 'Transfer Kutusu', 'Tahrik → Oran ve aks payı'],
@@ -743,12 +763,12 @@ function _gmEkA(){
       ['Dinamik rijitlik', 'Takoz', 'Takoz ve yeri → Rijitlik'],
       ['Taşıma kapasitesi', 'Takoz', 'Takoz ve yeri → Kapasite'],
       ['Kuvvet–sehim eğrisi', 'Takoz', 'Takoz ve yeri → Kuvvet–sehim yasası'],
-      ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', 'Rijitlik · Kuvvet–sehim'],
+      ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', 'Tip · Rijitlik · Kuvvet–sehim'],
       ['Çözüm modu', 'Çözücü', 'Ayarlar → Yöntem'],
       ['Sönüm oranı', 'Çözücü', 'Ayarlar → Yöntem'],
       ['Şok darbesi', 'Çözücü', 'Ayarlar → Şok darbesi'],
-      ['Örnek modeller', 'Başlangıç ve Örnekler', '—'],
-      ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü', 'Rapor penceresi kaynağını gösterir']
+      ['Örnek modeller', 'Başlangıç ve Örnekler', 'Örnek · Başlangıç'],
+      ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü', 'Rapor → Girdiler kaynağını gösterir']
     ], ['l', 'c', 'l']);
   return h;
 }

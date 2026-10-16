@@ -431,16 +431,16 @@ function getMntModulePropertiesHTML(node){
     var d=(n && _mntDef(n)) || {};
     if(d.isMountBody) say.govde++; else if(d.isMount) say.takoz++; else say.arac++;
   });
+  // FEAD'in modül kartının grameri: salt okunur alan ızgarası (Kasnak · Gergi
+  // · Kayış · Araç ↔ Kütle gövdesi · Takoz · Araç · Bağlantı). Takoz'da
+  // bağlantı gerçek bir sayıdır (salt görsel, çözücü tipe göre toplar) —
+  // FEAD'de yapısal olarak hep 0 olduğu için kalkmıştı.
   var icerik = kurulu
-    ? _mntFoyAc([{ b:'Tür', gen:'64%' }, { b:'Adet', gen:'36%' }], 'Alt topolojinin içeriği')
-      + '<tr><td>Kütle gövdesi</td><td>'+say.govde+'</td></tr>'
-      + '<tr><td>Takoz</td><td>'+say.takoz+'</td></tr>'
-      + '<tr><td>Araç</td><td>'+say.arac+'</td></tr>'
-      + '<tr class="top"><td>Bileşen</td><td>'+liste.length+'</td></tr>'
-      + '<tr><td>Bağlantı</td><td>'+nBag+'</td></tr>'+_MNT_FOY_KAPA
+    ? _mntIzgara(2, _mntOku('Kütle gövdesi', String(say.govde)) + _mntOku('Takoz', String(say.takoz))
+                  + _mntOku('Araç', String(say.arac)) + _mntOku('Bağlantı', String(nBag)))
     : _mntNot('Alt topoloji henüz açılmadı.', '');
-  icerik = _mntBolum('Bileşenler', 'alt topolojide', icerik);
-  var model = '';
+  icerik = _mntBolum('Bileşenler', kurulu ? liste.length+' bileşen · alt topolojide' : 'alt topolojide', icerik);
+  var model = '', S=null;
   if(kurulu){
     var g=_mntGatherForSolver(null, liste), mTop=0, mp=null;
     g.components.forEach(function(c){ mTop+=_mntNum(c.mass,0); });
@@ -448,26 +448,24 @@ function getMntModulePropertiesHTML(node){
     if(C && C.mmToM && C.combineMassProps && g.components.length){
       try{ mp=C.combineMassProps(_mntToSI(g, 9.81).components); }catch(e){ mp=null; }
     }
-    model = _mntFoyAc([{ b:'Büyüklük', gen:'52%' }, { b:'Değer', gen:'48%' }], 'Modelin özeti')
-      + '<tr><td>Toplam kütle</td><td>'+(g.components.length ? _mntS(mTop, 1)+' kg' : '—')+'</td></tr>'
-      + ['X','Y','Z'].map(function(A, i){
-          return '<tr><td>Birleşik CG · '+A+'</td>'+_mntFoyCoz(mp ? _mntS(mp.cg[i]*1000, 1)+' mm' : '—')+'</tr>';
-        }).join('')
-      + _MNT_FOY_KAPA;
-    // Son çözüm BAŞKA bir Takoz kartının olabilir: çözücüsü bu listede
-    // değilse bu kartın çözümü yoktur ("bayat" değil).
-    var S=veMntSonucDurumu(liste);
-    var R=(S.R && liste.some(function(n){ return n && n.id===S.R.solverId; })) ? S.R : null;
-    model += !R ? _mntNot('Son çözüm yok — Çözücü → Hesapla.', '')
-      : S.durum==='bayat' ? _mntNot('<b>Son çözüm bayat</b> — model hesaptan sonra değişti.', 'warn')
-      : _mntNot('<b>Son çözüm güncel</b> — '+(R.allCases||[]).length+' yük durumu · '+(R.modes||[]).length+' mod.', 'ok');
+    model = _mntIzgara(1, _mntOku('Toplam kütle <u>[kg]</u>', g.components.length ? _mntS(mTop, 1) : '—'))
+      + _mntIzgara(3, ['X','Y','Z'].map(function(A, i){
+          return _mntOku('CG · '+A+' <u>[mm]</u>', mp ? _mntS(mp.cg[i]*1000, 1) : '—');
+        }).join(''));
     model = _mntBolum('Model', 'alt topolojinin değerlerinden', model);
+    // Son çözüm BAŞKA bir Takoz kartının olabilir: çözücüsü bu listede
+    // değilse bu kartın çözümü yoktur ("bayat" değil). Hüküm sağ sütunun
+    // Uygunluk bölümünde (FEAD'in modül kartı gibi).
+    var S0=veMntSonucDurumu(liste);
+    S=(S0.R && liste.some(function(n){ return n && n.id===S0.R.solverId; })) ? S0 : { durum:'yok', R:null };
   } else {
     model = _mntBolum('Model', '', _mntNot('Model henüz kurulmadı.', ''));
+    S={ durum:'yok', R:null };
   }
-  var yan = '<button type="button" class="ve-fp-solve" onclick="veMntOpenEditor(\''+node.id+'\')">'
+  var yan = _mntUygunlukHTML(node.id, S)
+    + '<button type="button" class="ve-fp-solve" onclick="veMntOpenEditor(\''+node.id+'\')">'
     + veIkon('folder-open')+' Alt topolojiyi aç</button>';
-  return _mntPencereKabuk(node, [{ k:'ic', ad:'İçerik', govde:icerik }, { k:'mod', ad:'Model', govde:model }], yan, '');
+  return _mntPencereKabuk(node, [{ k:'ic', ad:'İçerik', govde:icerik }, { k:'mod', ad:'Model', govde:model }], yan);
 }
 
 // REFERANS yerleşim (yerel px) — güç grubunun düzenli üstten-görünüş şeması ve
@@ -754,8 +752,9 @@ function _mntEnsureMassData(node){
 
 // Sekme durumu MODELDE DEĞİL (FEAD kural 15'in gerekçesi): kaydedilmez, geri-al
 // yığınına yazılmaz — ama pencere her seçimde yeniden kurulduğu için bir yerde
-// durmak zorunda, yoksa her açılış ilk sekmeye dönerdi.
-var VE_MNT_PENCERE_SEKME = {};
+// durmak zorunda, yoksa her açılış ilk sekmeye dönerdi. Hafıza ORTAK KİTİN
+// (js/pencere-kabuk.js — FEAD ile aynı üretici, 2026-10-16).
+var VE_MNT_PENCERE_SEKME = (typeof VE_PENCERE_SEKME !== 'undefined') ? VE_PENCERE_SEKME : {};
 
 // Türkçe sayı, gerçek eksi (−). Sayı değilse '—'.
 function _mntS(v, d){
@@ -798,44 +797,17 @@ function _mntTakozKisa(name){ return String(name||'takoz').replace(/\s*takoz\s*$
 function _mntDurum(d, yazi, neden, hedef, bant){
   return { d:d, yazi:yazi, neden:neden||'', hedef:hedef||'', bant:(bant!==false) };
 }
-function _mntSekmeDurumHTML(D){
-  return '<span class="ve-fp-tab-d" data-d="'+D.d+'"><i aria-hidden="true"></i>'+_mntEsc(D.yazi)+'</span>';
-}
+function _mntSekmeDurumHTML(D){ return vePencereSekmeDurumHTML(D); }
 // EKSİK BANDI — şeridin altında, yalnız eksik varken: sonucu ve oraya giden
-// bağlantı (FEAD'in bandıyla aynı biçim ve kimlik: `ve-fp-eksik-<id>`).
+// bağlantı. Üretici ORTAK KİTTE (FEAD'in bandıyla aynı DOM ve kimlik).
 function _mntEksikBandi(nodeId, sekmeler){
-  var eks=(sekmeler||[]).filter(function(s){ return s.durum && s.durum.d==='eksik' && s.durum.bant; });
-  if(!eks.length) return '';
-  return '<div class="ve-fp-eksik" role="status" id="ve-fp-eksik-'+nodeId+'">'
-    + eks.map(function(s){
-        return '<div class="ve-fp-eksik-s">'+veIkon('alert-triangle')
-          + '<span class="ve-fp-eksik-t"><b>'+_mntEsc(s.ad)+'</b> — '+_mntEsc(s.durum.neden)+'</span>'
-          + '<button type="button" onclick="veMntEksikGit(\''+nodeId+'\',\''+s.k+'\''
-          + (s.durum.hedef ? ',\''+_mntEsc(s.durum.hedef)+'\'' : '')+')">'
-          + (s.sonuc ? 'Aç' : 'Doldur')+' '+veIkon('arrow-right')+'</button></div>';
-      }).join('')
-    + '</div>';
+  return vePencereEksikBandi(nodeId, sekmeler, 'veMntEksikGit');
 }
 
-function _mntSekmeOf(nodeId, keys){
-  var k=VE_MNT_PENCERE_SEKME[nodeId];
-  return (k && keys.indexOf(k)>=0) ? k : keys[0];
-}
+function _mntSekmeOf(nodeId, keys){ return vePencereSekmeOf(nodeId, keys); }
 // SEKME DEĞİŞİNCE PENCERE KURULMAZ, yalnız `hidden` çevrilir: düzenlenen
 // alanın odağı ve sağ sütun (Uygunluk, Hesapla) yerinde kalır.
-function veMntPencereSekme(nodeId, key){
-  if(typeof document==='undefined') return false;
-  var kap=document.getElementById('ve-fp-tabs-'+nodeId);
-  var gov=document.getElementById('ve-fp-panes-'+nodeId);
-  if(!kap || !gov) return false;
-  VE_MNT_PENCERE_SEKME[nodeId]=key;
-  Array.prototype.forEach.call(kap.querySelectorAll('.ve-fp-tab'), function(b){
-    b.setAttribute('aria-selected', String(b.getAttribute('data-k')===key));
-  });
-  Array.prototype.forEach.call(gov.children, function(p){ p.hidden=(p.getAttribute('data-k')!==key); });
-  if(typeof veTabloOlcIcinde==='function') veTabloOlcIcinde(gov);
-  return true;
-}
+function veMntPencereSekme(nodeId, key){ return vePencereSekme(nodeId, key); }
 // Bandın bağlantısı: sekmeyi açar ve eksiğin alanına — durum bir HEDEF
 // taşımıyorsa ilk BOŞ girdiye — odaklanır; boş girdi yoksa sekmenin kendisine.
 function veMntEksikGit(nodeId, k, hedefId){
@@ -859,34 +831,22 @@ function veMntEksikGit(nodeId, k, hedefId){
   return true;
 }
 
-// PENCERE KABUĞU TEK ÜRETİCİDEN — Takoz'un bütün pencereleri bunu kullanır.
-// `ust` sekmelerin ÜSTÜNDE durur (kroki: hangi sekmede olunursa olunsun yer
-// bağlamı); `yan` sağ sütun (Uygunluk, çözücüde Hesapla) — sekmeden bağımsız.
-// TEK BÖLMELİ pencerede sekme şeridi çizilmez: tek düğmelik şerit bir seçim
-// sunmaz, yalnız yer kaplar (Rapor, 3B, Koordinat, Örnek).
-function _mntPencereKabuk(node, sekmeler, yan, ust){
-  var aktif=_mntSekmeOf(node.id, sekmeler.map(function(s){ return s.k; }));
-  var tek=(sekmeler.length===1);
-  var h='<div class="sw-panel ve-fp ve-mnt-pencere" data-mnt-pencere="'+node.id+'">'
-    + '<div class="ve-fp-split"><div class="ve-fp-main">'+(ust||'');
-  if(!tek){
-    h+='<div class="ve-fp-tabs" role="tablist" id="ve-fp-tabs-'+node.id+'">';
-    sekmeler.forEach(function(s){
-      var D=s.durum||null;
-      h+='<button type="button" class="ve-fp-tab" role="tab" data-k="'+s.k+'"'
-        + (D ? ' data-d="'+D.d+'"' : '')
-        + ' aria-selected="'+(s.k===aktif?'true':'false')+'"'
-        + ' onclick="veMntPencereSekme(\''+node.id+'\',\''+s.k+'\')">'
-        + '<span class="ve-fp-tab-ad">'+_mntEsc(s.ad)+'</span>'
-        + (D ? _mntSekmeDurumHTML(D) : '')+'</button>';
-    });
-    h+='</div>'+_mntEksikBandi(node.id, sekmeler);
-  }
-  h+='<div id="ve-fp-panes-'+node.id+'">';
-  sekmeler.forEach(function(s){
-    h+='<div data-k="'+s.k+'"'+(tek ? '' : ' role="tabpanel"')+(s.k===aktif?'':' hidden')+'>'+s.govde+'</div>';
-  });
-  return h+'</div></div><div class="ve-fp-side">'+(yan||'')+'</div></div></div>';
+// PENCERE KABUĞU ORTAK KİTTEN (js/pencere-kabuk.js) — FEAD'in pencereleriyle
+// AYNI üretici (kullanıcı, 2026-10-16: *"Tüm programda tek tip bir kozmetik
+// yapımız olacak"*). İskelet FEAD'inki: kimlik → KATEGORİ SEKMELERİ → eksik
+// bandı → gövdeler; `yan` sağ sütun — sekmeden bağımsız bağlam (kroki,
+// işaretler), Uygunluk ve pencerenin eylemi.
+// SEKMELERİN ÜSTÜNDE HİÇBİR ŞEY YOK ve her pencere ≥ 2 kategori taşır. Bu
+// dosyanın 2026-10-14 yazımında iki istisna vardı: `ust` yuvası (kroki ve
+// Takoz Özellikleri'nin seçicisi sekmelerin üstündeydi) ve TEK BÖLMELİ
+// pencerede şeridi hiç çizmeyen dal (Örnek, Braket, Şaft, Rapor, 3B,
+// Koordinat). İkisi de kalktı: kroki sağ sütunun başında (FEAD'in bağlam
+// sütunu), seçici Takoz Özellikleri'nin ilk sekmesinde. Kapı:
+// tests/unit/pencere-kabuk.test.js.
+function _mntPencereKabuk(node, sekmeler, yan){
+  return vePencereKabuk(node, sekmeler, yan, {
+    sinif:'ve-mnt-pencere', nitelik:' data-mnt-pencere="'+node.id+'"',
+    sekmeFn:'veMntPencereSekme', git:'veMntEksikGit' });
 }
 
 // BÖLÜM — başlık çizgisi + içerik (FEAD'in `.ve-fp-sect`'i). `opt.id` +
@@ -937,12 +897,24 @@ function _mntVarsayilanAlan(node, key, etiket, varsayilan, kaynak, degis){
     + '<button type="button" class="ve-fp-i" data-kaynak="'+(elle?'elle':'varsayilan')+'"'
     + ' data-ipucu="'+_mntEsc(t)+'" aria-label="'+_mntEsc(t)+'">'+veIkon('info')+'</button></span></div>';
 }
-// DURUM SATIRI — bir seçimin ya da hesabın SONUCU, açıklama değil.
+// DURUM SATIRI — bir seçimin ya da hesabın SONUCU, açıklama değil (FEAD kural
+// 45: "pencere açıklama taşımaz, durum söyler"; açıklama kılavuzda). Biçim
+// FEAD'in satırı (`_feadHint` · `.ve-fead-not`): alanın altında soluk, kısa
+// bir not; hükmü baştaki kalın sözcük taşır ve tonu `data-d`den (css) — FEAD
+// aynı tonu satır içi `style=` ile yazıyor. Kalın sözcüğü olmayan uyarı
+// cümlenin tamamını kalın yazar (FEAD'in kalıbı). Eskiden ikonlu, renk
+// zeminli bir kutuydu (`.ve-mnt-not`): FEAD'de kutu yalnız pencerenin
+// CEVABIDIR (`_mntDurumKutu`).
 function _mntNot(ic, d, opt){
   opt=opt||{};
-  var ik=opt.ikon || (d==='no' ? 'x' : d==='warn' ? 'alert-triangle' : d==='ok' ? 'check' : 'info');
-  return '<div class="ve-mnt-not"'+(d?' data-d="'+d+'"':'')+(opt.id?' id="'+opt.id+'" data-tazele':'')+'>'
-    + veIkon(ik)+'<span>'+ic+'</span></div>';
+  ic=String(ic==null?'':ic);
+  if((d==='warn' || d==='no') && ic.indexOf('<b>')<0) ic='<b>'+ic+'</b>';
+  return '<div class="ve-fp-not"'+(d?' data-d="'+d+'"':'')+(opt.id?' id="'+opt.id+'" data-tazele':'')+'>'+ic+'</div>';
+}
+// PENCERENİN CEVABI — FEAD'in durum kutusu (`.ve-fp-durum`, Rapor penceresi):
+// sağ sütunda, eylemin üstünde; hükmü baştaki kalın sözcük taşır.
+function _mntDurumKutu(ic, d){
+  return '<div class="ve-fp-durum"'+(d?' data-d="'+d+'"':'')+'>'+ic+'</div>';
 }
 
 // ── FÖY TABLOSU — eksen başına bir satır: girdi ve ondan türetilen yan yana ─
@@ -1032,24 +1004,37 @@ function _mntAtalet(d){
 // Görünüş seçimi modelde değil, pencere grubu başına: gövdede üstten (CG'nin
 // yanal dengesi), takozda yandan (düşey sehim oku).
 var VE_MNT_KROKI_GOR = { govde:'ust', takoz:'yan' };
-var _MNT_KROKI_W = 354;   // görünüş kutusunun genişliği (müfettiş sütununun içi)
+var _MNT_KROKI_W = 354;   // ana sütundaki görünüş kutusunun genişliği (müfettiş sütununun içi — 2D Görünüm)
+// KROKİ SAĞ SÜTUNDA (2026-10-16): FEAD'in bağlam sütunu. Çizimin birimi sağ
+// sütunun iki sütunlu (modal) penceredeki genişliği — 296 px (`.ve-fp-split`):
+// 354 birimle kurulsaydı orada 0,83'e küçülür, yazı ölçek tabanının (9,5 px)
+// altına inerdi. Tek sütunlu müfettişte (354 px) 1,2 büyür.
+var _MNT_YER_W = 296;
 function _mntR1(v){ return Math.round(v*10)/10; }
 
+// GÜÇ GRUBUNDAKİ YERİ — sağ sütunun ilk bölümü, FEAD'in bölüm başlığıyla
+// (`.ve-fp-sect`): görünüş seçimi başlığın sağında (FEAD'in `em`inin yeri),
+// çizim kendi zemininde (yazıların hâlesi o zeminin rengi), gösterge altında.
+// Eskiden sekmelerin ÜSTÜNDE, kendi başlık bandı olan bir kutuydu — FEAD'in
+// hiçbir penceresinde sekmelerden önce bir şey durmuyor.
 function _mntKrokiHTML(node, grup, M, T){
   var gor=(VE_MNT_KROKI_GOR[grup]==='yan') ? 'yan' : 'ust';
-  var bas='<div class="ve-mnt-kroki-bas"><b>Güç grubundaki yeri</b>'
-    + '<div class="ve-mnt-seg" role="group" aria-label="Görünüş">'
-    + '<button type="button" aria-pressed="'+(gor==='ust')+'" onclick="veMntKrokiGor(\''+node.id+'\',\''+grup+'\',\'ust\')">Üstten X–Y</button>'
-    + '<button type="button" aria-pressed="'+(gor==='yan')+'" onclick="veMntKrokiGor(\''+node.id+'\',\''+grup+'\',\'yan\')">Yandan X–Z</button>'
-    + '</div></div>';
-  return '<div class="ve-mnt-kroki" id="ve-mnt-kroki-'+node.id+'" data-tazele>'+bas+_mntKrokiCizim(node, grup, gor, M, T)+'</div>';
+  var dugme=function(g, ad, tam){
+    return '<button type="button" aria-pressed="'+(gor===g)+'" title="'+tam+'"'
+      + ' onclick="veMntKrokiGor(\''+node.id+'\',\''+grup+'\',\''+g+'\')">'+ad+'</button>';
+  };
+  var seg='<span class="ve-mnt-seg" role="group" aria-label="Görünüş">'
+    + dugme('ust', 'Üstten', 'Üstten görünüş · X–Y') + dugme('yan', 'Yandan', 'Yandan görünüş · X–Z')+'</span>';
+  return '<section class="ve-fp-card ve-mnt-yer" id="ve-mnt-kroki-'+node.id+'" data-tazele>'
+    + '<div class="ve-fp-sect"><b>Güç grubundaki yeri</b>'+seg+'</div>'
+    + _mntKrokiCizim(node, grup, gor, M, T)+'</section>';
 }
 
 function _mntKrokiCizim(node, grup, gor, M, T){
   var mm=function(v){ return _mntNum(v,0); };
   var gv=M.g.components.map(function(c){ return { id:c.id, ad:c.name, m:Math.max(0,_mntNum(c.mass,0)), p:[mm(c.cgx),mm(c.cgy),mm(c.cgz)] }; });
   var tk=M.g.mounts.map(function(m){ return { id:m.id, ad:m.name, p:[mm(m.x),mm(m.y),mm(m.z)] }; });
-  if(!gv.length && !tk.length) return '<div class="ve-mnt-kroki-bos">Modelde gövde ya da takoz yok.</div>';
+  if(!gv.length && !tk.length) return _mntNot('Modelde gövde ya da takoz yok.', '');
   var am=M.mp ? [M.mp.cg[0]*1000, M.mp.cg[1]*1000, M.mp.cg[2]*1000] : null;
   var sec=null;
   gv.forEach(function(o){ if(o.id===node.id) sec=o; });
@@ -1057,7 +1042,8 @@ function _mntKrokiCizim(node, grup, gor, M, T){
   var secTk=!!(sec && tk.indexOf(sec)>=0);
 
   // ── Ortak ölçek (iki görünüş aynı X'i kullanır) ──
-  var W=_MNT_KROKI_W, PL=8, PR=304, IP=16, UST=16, ALT=12, HMAX=152;
+  // Sağda 50 birim "Z = 0" yazısının payı.
+  var W=_MNT_YER_W, PL=8, PR=W-50, IP=16, UST=16, ALT=12, HMAX=152;
   var pts=gv.map(function(o){ return o.p; }).concat(tk.map(function(o){ return o.p; }));
   if(am) pts.push(am);
   var ara=function(i){ var a=Infinity, b=-Infinity; pts.forEach(function(p){ a=Math.min(a,p[i]); b=Math.max(b,p[i]); }); return [a,b]; };
@@ -1182,8 +1168,8 @@ function _mntKrokiCizim(node, grup, gor, M, T){
   var aria=(gor==='yan' ? 'Yandan görünüş' : 'Üstten görünüş')
     + (sec ? ': '+sec.ad+(kol!=null ? ', birleşik ağırlık merkezine '+_mntS(kol,0)+' mm' : '') : '')
     + (okEtiket ? ', statik '+okEtiket : '');
-  var cizim='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+_mntEsc(aria)+'">'+svg.join('')+ust.join('')+'</svg>';
-  var lej='<div class="ve-mnt-kroki-lej">'
+  var cizim='<div class="ve-mnt-kroki"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+_mntEsc(aria)+'">'+svg.join('')+ust.join('')+'</svg></div>';
+  var lej='<div class="ve-mnt-lej ve-mnt-yer-lej">'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-gv" cx="5" cy="5" r="4"/></svg>gövde (kütleyle büyür)</span>'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-mk-tk" x="1.5" y="1.5" width="7" height="7"/></svg>takoz</span>'
     + (am ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-mk-am" cx="5" cy="5" r="3.6"/></svg>birleşik CG</span>' : '')
@@ -1426,10 +1412,14 @@ function _mntEngineSection(node){
   var sel=_mntEnginePresetSelect(node), P=_mntEnginePresets();
   var h='';
   if(sel){
-    var sap=_mntMotorSapma(node), not;
-    if(!sap) not=_mntNot('<b>Katalogdan:</b> tepe tork · maks. güç · rölanti. Kütle, CG ve atalet elle girilir.', '');
-    else if(sap.farkli.length) not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.farkli.join(', ')+' katalogtan farklı (elle). Kütle, CG ve atalet elle girilir.', 'warn');
-    else not=_mntNot('<b>'+_mntEsc(sap.ad)+'</b> · '+sap.ayni.length+'/'+sap.ayni.length+' değer katalogla aynı. Kütle, CG ve atalet elle girilir.', 'ok');
+    // DURUM: seçimin getirdiği ve GETİRMEDİĞİ (FEAD kural 44 — "seçimin
+    // getirdiği yazılı"; FEAD'in motor kartı: "Alanlar X kaydıyla birebir" ·
+    // "Katalogdan sapıldı"). Getirmediği bir sessiz hata kalkanıdır: kataloğun
+    // ataleti KRANK MİLİNİNKİ, gövde tensörü değil (mount-engine-preset.test.js).
+    var sap=_mntMotorSapma(node), not, elle=' · kütle, CG ve atalet elle girilir.';
+    if(sap && sap.farkli.length) not=_mntNot('<b>Katalogdan sapıldı:</b> '+sap.farkli.join(', ')+' ('+_mntEsc(sap.ad)+')'+elle, 'warn');
+    else if(sap) not=_mntNot('Alanlar <b>'+_mntEsc(sap.ad)+'</b> kaydıyla birebir ('+sap.ayni.length+'/'+sap.ayni.length+')'+elle, 'ok');
+    else not=_mntNot('<b>Katalog</b> tepe tork, maks. güç ve rölantiyi doldurur'+elle, '');
     h+=_mntBolum('Katalog', Object.keys(P).length+' motor',
         _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Motor</span>'+sel+'</label>')
       + '<div id="ve-mnt-motorkat-'+node.id+'" data-tazele>'+not+'</div>');
@@ -1589,11 +1579,11 @@ function _mntPtoRefTable(type){
 }
 
 // PTO SEKMESİ — giriş yolu (toplu/ayrıntılı), iki yolun ÇAKIŞMASI ve referans.
+// Giriş yolunun ADI bölümün künyesinde (toplu · ayrıntılı); iki yolun ne
+// demek olduğu kılavuzda (FEAD kural 45). Pencerede kalan, iki yolun ÇAKIŞMASI.
 function _mntPtoSection(node){
   var grup=(node.type==='mnt-pto-group');
-  var yol=grup
-    ? _mntNot('<b>Toplu giriş</b> — tüm PTO grubu tek kalem: grup kütlesi, grup CG\'si ve grup atalet tensörü.', '')
-    : _mntNot('<b>Ayrıntılı giriş</b> — parça başına kütle ve CG; grubun ataleti parçaların yayılımından doğar.', '');
+  var yol=_mntIzgara(1, _mntOku('Bu bileşen', grup ? 'PTO grubunun toplamı (grup tensörüyle)' : 'parça (kütle ve CG)'));
   var cf=_mntPtoConflict();
   var cak='<div id="ve-mnt-ptocak-'+node.id+'" data-tazele>'
     + (cf ? _mntNot('<b>Kütle iki kez sayılıyor olabilir.</b> Topolojide hem PTO Toplam ('+cf.groups.length
@@ -1614,7 +1604,11 @@ function _mntNoktaKutle(node){
   return '<label class="ve-fp-chk"><input type="checkbox"'+(node.data.pointMass?' checked':'')
     + ' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"><span>Nokta kütle (atalet = 0)</span></label>';
 }
-function _mntKutleSekme(node, M){
+// İKİ KATEGORİ (2026-10-16, FEAD'in Geometri · Rol ayrımı): KÜTLE VE CG
+// (kütle, ağırlık merkezi ve birleşik CG'ye göre yeri) · ATALET (tensör ya da
+// nokta kütle). Tek "Kütle ve atalet" sekmesi braket ve şaftta pencerenin TEK
+// sekmesiydi ve şerit hiç çizilmiyordu; FEAD'in her penceresi ≥ 2 kategori.
+function _mntKutleCgSekme(node, M){
   var d=node.data||{};
   var ph=_MNT_PTO_PH[node.type] || null;      // tipe özel yer tutucu (PTO grubu)
   var m=_mntNum(d.mass,0), pay=(M.mTop>0 && m>0) ? m/M.mTop : NaN;
@@ -1632,6 +1626,11 @@ function _mntKutleSekme(node, M){
   });
   f+='<tr class="top"><td>Uzaklık</td><td></td>'+_mntFoyCoz(F ? _mntS(F.r,1) : '—', { ay:true, id:'ve-mnt-amr-'+node.id })+'</tr>';
   h+=_mntBolum('Ağırlık merkezi', '[mm] · global eksen', f+_MNT_FOY_KAPA);
+  return h;
+}
+function _mntAtaletSekme(node){
+  var d=node.data||{}, h='';
+  var ph=_MNT_PTO_PH[node.type] || null;
   // Atalet tensörü — simetrik: üst üçgen yazılır, alt üçgen onun aynası.
   if(!d.pointMass){
     var A=_mntAtalet(d), phI=(ph && ph.I) ? ph.I : null;
@@ -1661,12 +1660,14 @@ function _mntKutleSekme(node, M){
         + _mntOku('Eşdeğer kutu <u>[mm]</u>', kutu, { id:'ve-mnt-kutu-'+node.id,
             ipucu:'Aynı kütle ve ataletteki dolu dikdörtgen prizma, X × Y × Z — 3B görünümün kutusu' })));
   } else {
-    h+=_mntBolum('Atalet', 'nokta kütle · I = 0', _mntNoktaKutle(node)
-      + _mntNot('Kütle ağırlık merkezinde toplanır; tensör sıfır alınır. Grubun ataleti gövdelerin CG yayılımından doğar.', ''));
+    // Nokta kütlede tensör SORULMAZ; bunun ne demek olduğu kılavuzda (FEAD
+    // kural 45 — pencere açıklama taşımaz).
+    h+=_mntBolum('Atalet', 'nokta kütle · I = 0', _mntNoktaKutle(node));
   }
   return h;
 }
-function _mntKutleDurumu(node){
+// Sekme durumları — çözücünün boş alan kuralından (boş = 0 ya da ret).
+function _mntKutleCgDurumu(node){
   var d=node.data||{}, id=node.id;
   if(_mntBos(d.mass)) return _mntDurum('eksik', 'eksik', 'Kütle boş — çözücü bu gövdeyi reddeder (kütle ≤ 0).', 've-mnt-mass-'+id);
   if(!(_mntNum(d.mass,0)>0)) return _mntDurum('eksik', 'eksik', 'Kütle ≤ 0 — çözücü bu gövdeyi reddeder.', 've-mnt-mass-'+id);
@@ -1674,30 +1675,43 @@ function _mntKutleDurumu(node){
   for(var i=0;i<3;i++){
     if(_mntBos(d[ax[i]])) return _mntDurum('eksik', 'CG eksik', 'Ağırlık merkezinin '+_MNT_EKSEN[i][0]+' alanı boş — çözücü 0 alır.', 've-mnt-'+ax[i]+'-'+id);
   }
-  if(!d.pointMass){
-    var A=_mntAtalet(d);
-    if(A.bos) return _mntDurum('eksik', 'atalet yok', 'Atalet tensörü boş — çözücü sıfır alır (nokta kütle gibi); nokta kütleyse işaretleyin.', 've-mnt-Ixx-'+id);
-    var dk=['Ixx','Iyy','Izz'];
-    for(var j=0;j<3;j++){
-      if(_mntBos(d[dk[j]])) return _mntDurum('eksik', 'atalet eksik', dk[j]+' boş — çözücü 0 alır.', 've-mnt-'+dk[j]+'-'+id);
-    }
-    if(A.ihlal) return _mntDurum('eksik', 'fiziksel değil', 'Atalet tensörü fiziksel değil ('+A.ihlal+') — modlar sessizce yanlış çıkar.', 've-mnt-Ixx-'+id);
-  }
   return _mntDurum('ok', 'tamam');
 }
+function _mntAtaletDurumu(node){
+  var d=node.data||{}, id=node.id;
+  if(d.pointMass) return _mntDurum('ok', 'nokta kütle');
+  var A=_mntAtalet(d);
+  if(A.bos) return _mntDurum('eksik', 'atalet yok', 'Atalet tensörü boş — çözücü sıfır alır (nokta kütle gibi); nokta kütleyse işaretleyin.', 've-mnt-Ixx-'+id);
+  var dk=['Ixx','Iyy','Izz'];
+  for(var j=0;j<3;j++){
+    if(_mntBos(d[dk[j]])) return _mntDurum('eksik', 'atalet eksik', dk[j]+' boş — çözücü 0 alır.', 've-mnt-'+dk[j]+'-'+id);
+  }
+  if(A.ihlal) return _mntDurum('eksik', 'fiziksel değil', 'Atalet tensörü fiziksel değil ('+A.ihlal+') — modlar sessizce yanlış çıkar.', 've-mnt-Ixx-'+id);
+  return _mntDurum('ok', 'tamam');
+}
+// Gövdenin TOPLU hükmü (iki sekmenin ilk eksiği) — sihirbaz ve testler okur.
+function _mntKutleDurumu(node){
+  var D=_mntKutleCgDurumu(node);
+  if(D.d!=='ok') return D;
+  D=_mntAtaletDurumu(node);
+  return (D.d==='ok') ? _mntDurum('ok', 'tamam') : D;
+}
 
-// KÜTLE GÖVDESİ PENCERESİ — sekmeler: Kütle ve atalet + tipe özel ikinci sekme
-// (Motor ve tork · Vitesler · Tahrik · PTO grubu); sağda modelin uygunluğu,
-// üstte güç grubundaki yeri.
+// KÜTLE GÖVDESİ PENCERESİ — sekmeler: Kütle ve CG · Atalet + tipe özel
+// üçüncü sekme (Motor ve tork · Vitesler · Tahrik · PTO grubu); sağ sütunda
+// güç grubundaki yeri ve modelin uygunluğu.
 function getMntMassPropertiesHTML(node){
   _mntEnsureMassData(node);
   var M=_mntCanliModel();
-  var sekmeler=[{ k:'kutle', ad:'Kütle ve atalet', govde:_mntKutleSekme(node, M), durum:_mntKutleDurumu(node) }];
+  var sekmeler=[
+    { k:'kutle', ad:'Kütle ve CG', govde:_mntKutleCgSekme(node, M), durum:_mntKutleCgDurumu(node) },
+    { k:'atalet', ad:'Atalet', govde:_mntAtaletSekme(node), durum:_mntAtaletDurumu(node) }
+  ];
   if(node.type==='mnt-motor') sekmeler.push({ k:'motor', ad:'Motor ve tork', govde:_mntEngineSection(node), durum:_mntMotorDurumu(node) });
   else if(node.type==='mnt-gearbox') sekmeler.push({ k:'vites', ad:'Vitesler', govde:_mntGearboxSection(node), durum:_mntVitesDurumu(node) });
   else if(node.type==='mnt-transfer') sekmeler.push({ k:'tahrik', ad:'Tahrik', govde:_mntTransferSection(node), durum:_mntTahrikDurumu(node) });
   else if(_MNT_PTO_REF[node.type]) sekmeler.push({ k:'pto', ad:'PTO grubu', govde:_mntPtoSection(node), durum:_mntPtoDurumu(node) });
-  return _mntPencereKabuk(node, sekmeler, _mntUygunlukHTML(node.id), _mntKrokiHTML(node, 'govde', M, null));
+  return _mntPencereKabuk(node, sekmeler, _mntKrokiHTML(node, 'govde', M, null)+_mntUygunlukHTML(node.id));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1931,7 +1945,7 @@ function getMntMountPropertiesHTML(node){
     { k:'yer', ad:'Takoz ve yeri', govde:_mntTakozYerSekme(node, M, T), durum:_mntTakozYerDurumu(node) },
     { k:'yuk', ad:'Yük durumları', govde:_mntTakozYukSekme(node, T), durum:_mntTakozYukDurumu(T), sonuc:true }
   ];
-  return _mntPencereKabuk(node, sekmeler, _mntTakozUygunlukHTML(node, T), _mntKrokiHTML(node, 'takoz', M, T));
+  return _mntPencereKabuk(node, sekmeler, _mntKrokiHTML(node, 'takoz', M, T)+_mntTakozUygunlukHTML(node, T));
 }
 
 // Takoz'a uygulanmış nonlineer yasa için SALT-OKUNUR bilgi notu. Yasa artık
@@ -1964,9 +1978,10 @@ function _mntMountCurveNote(node){
              : anyFit ? 'analitik fit' : 'ölçülmüş nokta tablosu';
   var carrier=(axes.length===1) ? ('<b>nonlineer '+labels+'-yasası</b>')
                                  : ('<b>'+labels+'</b> eksenlerinde <b>nonlineer yasa</b>');
+  // Durum: yasanın varlığı, KAYNAĞI (değerin nereden geldiği — FEAD'in 'i'si
+  // gibi) ve çözücünün yolu; burada düzenlenmez.
   return _mntBolum('Kuvvet–sehim yasası ('+labels+')', _mntEsc(kaynak)+' · kütüphaneden',
-    _mntNot('Bu takoz '+carrier+' taşıyor ('+_mntEsc(kaynak)+') → çözücü onu Newton ile çözer. '
-      + 'Yasa <b>Takoz Özellikleri</b> bileşenindeki takoz tipinden gelir ve oradan düzenlenir.', ''));
+    _mntNot('Bu takoz '+carrier+' taşıyor ('+_mntEsc(kaynak)+', Takoz Özellikleri\'nden) — çözücü onu Newton ile çözer.', ''));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2256,10 +2271,12 @@ function _mntExampleKapilarHTML(){
     + '</div>';
 }
 
-// ÖRNEK PENCERESİ — tek bölme: modeli kurmanın öteki yolları (sihirbaz ·
-// STEP, başlangıç sayfasıyla aynı kapılar), örnek seçimi, künyesi ve kanvasa
-// kurulacak topolojinin resmi. Sağ sütun KANVASTAKİ modelin denetimi ve
-// eylem ("Örneği aktar" kanvası değiştirir — birincil düğme).
+// ÖRNEK PENCERESİ — iki kategori, pencerenin adı gibi (Başlangıç ve Örnekler):
+// ÖRNEK (seçim, künye ve kanvasa kurulacak topolojinin resmi) · BAŞLANGIÇ
+// (modeli kurmanın öteki yolları: sihirbaz · STEP — başlangıç sayfasıyla aynı
+// kapılar). Sağ sütun KANVASTAKİ modelin denetimi ve eylem ("Örneği aktar"
+// kanvası değiştirir — birincil düğme). Eskiden tek bölmeydi ve sekme şeridi
+// çizilmiyordu (FEAD'in her penceresi ≥ 2 kategori).
 function getMntExamplePropertiesHTML(node){
   if(!node.data) node.data={};
   var list=_mntExampleList();
@@ -2280,14 +2297,18 @@ function getMntExamplePropertiesHTML(node){
       secim+_mntExampleDetailsHTML(ex)
     + (diagram ? '<figure class="ve-mnt-ex-sema">'+diagram+'<figcaption>Kanvasa kurulacak topoloji</figcaption></figure>' : ''));
   var kapilar=_mntExampleKapilarHTML();
-  var govde=(kapilar ? _mntBolum('Modeli kur', 'öteki yollar', kapilar) : '')+ornek;
-  var yan=_mntBolum('Tutarlılık uyarıları', 'kanvastaki model', '<div id="ve-mnt-example-report">'+_mntExampleDenetimIc(_mntExampleValidate(), true)+'</div>')
+  var baslangic=_mntBolum('Modeli kur', 'öteki yollar', kapilar || _mntNot('Başlangıç kiti yüklenmedi.', 'warn'));
+  // Sağ sütun FEAD'in sırasıyla: Uygunluk → pencerenin cevabı (tutarlılık) →
+  // eylem → eylemin notu → ikincil eylem.
+  var yan=_mntUygunlukHTML(nid)
+    + _mntBolum('Tutarlılık uyarıları', 'kanvastaki model', '<div id="ve-mnt-example-report">'+_mntExampleDenetimIc(_mntExampleValidate(), true)+'</div>')
     + '<button type="button" class="ve-fp-solve" onclick="veMntLoadExample(\''+nid+'\')">'+veIkon('play')+' Örneği aktar</button>'
     + '<div class="ve-fp-solve-not">Kanvastaki model örnekle değişir; Ctrl+Z geri alır.</div>'
     + '<div class="ve-fp-eylem"><button type="button" class="ve-fp-dugme" onclick="veMntExportTopology()"'
     + ' title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için">'
     + veIkon('download')+' İç topolojiyi JSON dışa aktar</button></div>';
-  return _mntPencereKabuk(node, [{ k:'ornek', ad:'Örnek', govde:govde }], yan, '');
+  return _mntPencereKabuk(node, [{ k:'ornek', ad:'Örnek', govde:ornek },
+                                 { k:'bas', ad:'Başlangıç', govde:baslangic }], yan);
 }
 
 // Örnek modeli tutarlılık kontrolü — uyarı nesneleri döner ({level,msg}).
@@ -2313,17 +2334,18 @@ function _mntExampleValidate(){
 }
 
 // Denetimin satırları — pencere kurulurken ve örnek yüklenince AYNI üretici.
-// Boş kanvas bir hata değil başlangıçtır: "henüz model yok" der.
+// Boş kanvas bir hata değil başlangıçtır: "henüz model yok" der. Hüküm
+// pencerenin CEVABI: FEAD'in durum kutusu (`.ve-fp-durum`), maddeler liste.
 function _mntExampleDenetimIc(warnings, kurulus){
   var g=_mntGatherForSolver();
   if(kurulus && !g.components.length && !g.mounts.length) return _mntNot('Kanvasta henüz model yok.', '');
-  if(!warnings.length) return _mntNot('<b>Model tutarlı</b> — uyarı yok.', 'ok');
+  if(!warnings.length) return _mntDurumKutu('<b>Model tutarlı</b> — uyarı yok.', 'ok');
   // Çözücünün ön denetimiyle aynı dil: tek durum satırı, maddeler liste.
   var hata=warnings.filter(function(w){ return w.level==='err'; });
   var uyari=warnings.filter(function(w){ return w.level!=='err'; });
   var liste=function(L){ return '<ul>'+L.map(function(w){ return '<li>'+w.msg+'</li>'; }).join('')+'</ul>'; };
-  return (hata.length ? _mntNot('<b>'+hata.length+' hata</b> — çözücü modeli reddeder.'+liste(hata), 'no') : '')
-    + (uyari.length ? _mntNot('<b>'+uyari.length+' uyarı</b>'+liste(uyari), 'warn') : '');
+  return (hata.length ? _mntDurumKutu('<b>'+hata.length+' hata</b> — çözücü modeli reddeder.'+liste(hata), 'no') : '')
+    + (uyari.length ? _mntDurumKutu('<b>'+uyari.length+' uyarı</b>'+liste(uyari), 'warn') : '');
 }
 function _mntRenderExampleReport(warnings, silent){
   var el = (typeof document!=='undefined') ? document.getElementById('ve-mnt-example-report') : null;
@@ -2838,7 +2860,11 @@ function _mntVwrIpucu(satirlar){
 function _mntSahneHTML(wrapId, canvasId){
   return '<div class="ve-mnt-sahne" id="'+wrapId+'"><canvas id="'+canvasId+'"></canvas></div>';
 }
-// 3B GÖRÜNÜM — tek bölme: sahne, araçlar, katmanlar; gösterge yan sütunda.
+// 3B GÖRÜNÜM — iki kategori, FEAD'in Kayış Yolu penceresinin kalıbı (Şema ·
+// Geometri): SAHNE (çizim, araçlar, katmanlar) · GÖSTERGE (işaretlerin anlamı
+// ve etkileşim). Sağ sütun modelin Uygunluk'u — FEAD'in her penceresinde
+// olduğu gibi. Gizli sekmedeki sahne 0 boyutludur; görüntüleyicinin
+// ResizeObserver'ı sekme açılınca tuvali boyutlar (cp-mount-viewer.js).
 function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};
   var M=_mntCanliModel();
@@ -2855,10 +2881,11 @@ function getMntViewerPropertiesHTML(node){
     +   _mntVwrToggle('axes', 'Eksen', 'Eksenleri gizle/göster')
     +   _mntVwrToggle('labels', 'Etiket', 'Eksen etiketlerini gizle/göster')
     + '</div>');
-  var yan=_mntBolum('Gösterge', '', _mntVwrLegend())
+  var gosterge=_mntBolum('Gösterge', 'sahnenin işaretleri', _mntVwrLegend())
     + _mntBolum('Etkileşim', '', _mntVwrIpucu(['Sol tık + sürükle: döndür', 'Sağ tık + sürükle: kaydır',
         'Tekerlek: yakınlaştır', 'İşaretin üstüne gel: bileşenin bilgisi']));
-  return _mntPencereKabuk(node, [{ k:'sahne', ad:'Sahne', govde:govde }], yan, '');
+  return _mntPencereKabuk(node, [{ k:'sahne', ad:'Sahne', govde:govde },
+                                 { k:'gos', ad:'Gösterge', govde:gosterge }], _mntUygunlukHTML(node.id));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2886,9 +2913,12 @@ function getMntCoordFramePropertiesHTML(node){
     +   _mntVwrToggle('planes', 'Düzlem', 'Koordinat düzlemlerini gizle/göster')
     +   _mntVwrToggle('grid', 'Zemin', 'Zemin ızgarasını gizle/göster', false)
     + '</div>');
-  var yan=_mntBolum('Eksenler', 'konum ve CG bu yönlerde', foy)
+  // İki kategori (3B Görüntüleyici'nin kalıbı): SAHNE · EKSENLER (yönlerin
+  // föyü ve etkileşim); sağ sütunda modelin Uygunluk'u.
+  var eksenler=_mntBolum('Eksenler', 'konum ve CG bu yönlerde', foy)
     + _mntBolum('Etkileşim', '', _mntVwrIpucu(['Sol tık + sürükle: döndür', 'Tekerlek: yakınlaştır']));
-  return _mntPencereKabuk(node, [{ k:'sahne', ad:'Sahne', govde:govde }], yan, '');
+  return _mntPencereKabuk(node, [{ k:'sahne', ad:'Sahne', govde:govde },
+                                 { k:'eks', ad:'Eksenler', govde:eksenler }], _mntUygunlukHTML(node.id));
 }
 function veMntCoordFrameRefresh(){
   if(typeof veMountViewerInit==='function'){
@@ -3292,11 +3322,14 @@ function getMnt2DViewPropertiesHTML(node){
         + '</div>' };
   });
   var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz'+(M.mTop>0 ? ' · '+_mntS(M.mTop,1)+' kg' : '');
+  // Sağ sütun FEAD'in sırasıyla: sekmeden bağımsız bağlam (numaraların
+  // açılımı — çizimle yan yana okunur), Uygunluk, etkileşim.
   var yan=_mntBolum('İşaretler', em, bos ? _mntNot('Kanvasta henüz model yok.', '') : _mnt2DIsaretFoy(P))
     + (bos ? '' : '<div class="ve-fp-eylem">'+_mntVwrAction('veMnt2DTamEkran()', 'maximize', 'Tam ekran', 'Aksonometriyi (üç duvarıyla) ve üç düz görünüşü, işaretler adlarıyla, tam ekranda aç')+'</div>')
+    + _mntUygunlukHTML(node.id)
     + _mntBolum('Etkileşim', '', _mntVwrIpucu(['Sürükle: kaydır', 'Ctrl + tekerlek: yakınlaştır',
         'Çift tık: sıfırla', 'İşaretin üstüne gel: ad ve koordinat']));
-  return _mntPencereKabuk(node, sekmeler, yan, '');
+  return _mntPencereKabuk(node, sekmeler, yan);
 }
 // Açılışta (cp-core) ve sütun genişliği değişince: çizimler kabın GERÇEK
 // genişliğinde yeniden kurulur. Gizli sekmenin kabı 0 genişlikte — genişlik
@@ -4143,15 +4176,18 @@ function _mntLibRijitlikHTML(node, e, setter){
         ? 'Din./stat. oranı eksenler arasında '+_mntS(O.yayilim,2)+' kat yayılıyor · sınır '+sinir+' (eksen takası bu sınırı aşar)'
         : 'Altı rijitlik girilince ölçülür')+'">'
     + '<i></i>Eksenler arası oran yayılımı<span>'+(O ? _mntS(O.yayilim,2)+' · sınır '+sinir : '—')+'</span></div>';
+  return _mntBolum('Rijitlik', '[N/mm] · '+_mntEsc(e.name), f+_MNT_FOY_KAPA+kapi);
+}
+// TAŞIMA KAPASİTESİ — tipin özelliği, Tip sekmesinde. Takoza uygulanınca
+// kopyalandığı (tanımsızsa takozdaki eski değerin silindiği) kılavuzda.
+function _mntLibKapasiteHTML(node, e, setter){
   var mlv=(e.maxLoad===undefined||e.maxLoad===null)?'':e.maxLoad;
   var kap=_mntIzgara(2,
       '<label class="ve-fp-f"><span class="ve-fp-l">Maks. eksenel yük <u>[kg]</u></span>'
     + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="ve-mnt-lib-maxLoad-'+node.id+'" value="'+_mntEsc(mlv)+'"'
     + ' placeholder="tanımsız" onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\'maxLoad\',this.value)"></label>'
     + _mntOku('Kuvvet karşılığı <u>(1 g)</u>', (_mntNum(mlv,0)>0) ? _mntS(_mntNum(mlv)*9.81/1000,2)+' kN' : '—', { id:'ve-mnt-lib-kapN-'+node.id }));
-  return _mntBolum('Rijitlik', '[N/mm]', f+_MNT_FOY_KAPA+kapi)
-    + _mntBolum('Taşıma kapasitesi', 'tipin özelliği · hesaba girmez', kap
-    + _mntNot('Takoza uygulanınca kopyalanır; tipte tanımsızsa takozdaki eski değer silinir.', ''));
+  return _mntBolum('Taşıma kapasitesi', 'tipin özelliği · hesaba girmez', kap);
 }
 // Grafiğin göstergesi — statik (lineer ya da eğri), dinamik, ölçüm noktaları.
 // Örnek çizgiler SVG özniteliğiyle, yazı rengi CSS'ten.
@@ -4295,10 +4331,10 @@ function _mntLibEgriHTML(node, e){
     var y=_mntLibYasa(e, a[0]);
     f+='<tr><td>'+a[1]+' <span class="sf">'+a[2]+'</span></td><td class="sol">'+y.ad+'</td><td class="sol sf">'+y.ayr+'</td></tr>';
   });
-  h+=_mntBolum('Yasa', 'δ [mm] · f [N]', f+_MNT_FOY_KAPA);
+  h+=_mntBolum('Yasa', _mntEsc(e.name)+' · δ [mm] · f [N]', f+_MNT_FOY_KAPA);
   if(e.builtin){
-    h+=_mntNot(_mntEntryHasLaw(e) ? 'Gömülü takoz — eğriler <b>fabrika</b> değeridir, salt okunur.'
-      : 'Bu gömülü takoz lineerdir; nonlineer eğri yalnız özel takozda tanımlanır.', '');
+    h+=_mntNot(_mntEntryHasLaw(e) ? '<b>Gömülü takoz</b> — eğriler fabrika değeri, salt okunur.'
+      : '<b>Gömülü takoz</b> — lineer; nonlineer eğri yalnız özel takozda.', '');
   } else {
     h+=_mntLibCurveEditor(node, _mntLibCustomEntry(node, e.key) || e);
   }
@@ -4348,8 +4384,9 @@ function _mntLibKatalogHTML(custom, builtins, nCurve){
     + '<tr><td>Gömülü takoz</td><td>'+builtins.length+'</td></tr>'
     + '<tr><td>Değiştirilmiş gömülü</td><td>'+nOv+'</td></tr>'
     + '<tr><td>Nonlineer yasalı</td><td>'+nCurve+'</td></tr>'+_MNT_FOY_KAPA;
-  return _mntBolum('Katalog', 'bütün Takoz pencerelerinde', f
-    + _mntNot('Gömülü takozda yapılan değişiklik bu düğüme yazılır; fabrika değeri bozulmaz (“Fabrika” geri döndürür).', ''));
+  // Gömülü takozdaki değişikliğin nereye yazıldığı (düğüme; "Fabrika" geri
+  // döndürür) kılavuzda — pencere açıklama taşımaz (FEAD kural 45).
+  return _mntBolum('Katalog', 'bütün Takoz pencerelerinde', f);
 }
 function _mntLibKimlikHTML(node, e, setter){
   var eylem=(!e.builtin)
@@ -4362,10 +4399,14 @@ function _mntLibKimlikHTML(node, e, setter){
     + _mntLibRozet(e)+eylem+'</div>';
 }
 // TAKOZ ÖZELLİKLERİ PENCERESİ — sütunda (2026-10-15'e dek 1040 px'lik modal
-// bir görüntüleyiciydi: seçici + üç eksen grafiği yan yana). Üstte açılır
-// liste ve seçili tipin kimliği; sekmeler Rijitlik · Kuvvet–sehim; sağ
-// sütunda Kullanım (bu tip hangi takozlarda, değerleri tiple aynı mı) ve
-// Katalog. Açılır listenin davranışı (arama, klavye) değişmedi.
+// bir görüntüleyiciydi: seçici + üç eksen grafiği yan yana). Üç kategori:
+// TİP (açılır liste, seçili tipin kimliği ve taşıma kapasitesi — FEAD'in Kayış
+// penceresinin Profil sekmesi gibi seçim ilk sekmede) · RİJİTLİK ·
+// KUVVET–SEHİM; sağ sütunda Kullanım (bu tip hangi takozlarda, değerleri
+// tiple aynı mı) ve Katalog. Seçici eskiden sekmelerin ÜSTÜNDEYDİ — FEAD'in
+// hiçbir penceresinde sekmelerden önce bir şey yok; öteki iki sekme seçili
+// tipin adını bölüm künyesinde taşır. Açılır listenin davranışı (arama,
+// klavye) değişmedi.
 function getMntLibraryPropertiesHTML(node){
   var d=_mntLibEnsure(node);
   var custom=d.mounts;                                        // bu düğümün özel takozları (ham girdiler; builtin yok → özel)
@@ -4374,20 +4415,28 @@ function getMntLibraryPropertiesHTML(node){
   var sel=null;
   if(d._selKey) sel=custom.concat(builtins).find(function(e){ return e.key===d._selKey; });
   if(!sel) sel=custom[0]||builtins[0]||null;
-  var ust='<div class="mntlib-bar">'
+  var secici='<div class="mntlib-bar">'
     + '<div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, custom, builtins, sel)+'</div>'
     + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')" title="Yeni özel takoz ekle ve seç">'+veIkon('plus')+' Yeni takoz</button>'
     + '</div>';
   var katalog=_mntLibKatalogHTML(custom, builtins, nCurve);
-  if(!sel) return _mntPencereKabuk(node, [{ k:'rij', ad:'Rijitlik', govde:_mntNot('Takoz seçilmedi.', '') }], katalog, ust);
+  var tipEm=custom.length+' özel · '+builtins.length+' gömülü';
+  if(!sel){
+    return _mntPencereKabuk(node, [
+      { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', tipEm, secici+_mntNot('Takoz seçilmedi.', '')) },
+      { k:'rij', ad:'Rijitlik', govde:_mntBolum('Rijitlik', '[N/mm]', _mntNot('Takoz seçilmedi.', '')) }],
+      katalog+_mntUygunlukHTML(node.id));
+  }
   var setter=sel.builtin ? 'veMntLibSetBuiltin' : 'veMntLibSet';
-  ust+=_mntLibKimlikHTML(node, sel, setter);
   var D=_mntLibDurumlari(node, sel);
   var sekmeler=[
+    { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', tipEm, secici+_mntLibKimlikHTML(node, sel, setter))
+        + _mntLibKapasiteHTML(node, sel, setter),
+      durum:_mntDurum('ok', sel.builtin ? (sel.overridden ? 'değiştirildi' : 'gömülü') : 'özel') },
     { k:'rij', ad:'Rijitlik', govde:_mntLibRijitlikHTML(node, sel, setter), durum:D.rij },
     { k:'egri', ad:'Kuvvet–sehim', govde:_mntLibEgriHTML(node, sel), durum:D.egri }
   ];
-  return _mntPencereKabuk(node, sekmeler, _mntLibKullanimHTML(node, sel)+katalog, ust);
+  return _mntPencereKabuk(node, sekmeler, _mntLibKullanimHTML(node, sel)+katalog+_mntUygunlukHTML(node.id));
 }
 
 // ─── Açılır liste denetimi (aç/kapa · ara · klavye) ──────────────────────────
@@ -4614,8 +4663,9 @@ function _mntLibCurveEditor(node, e){
   var pts=Array.isArray(e.curveZ) ? e.curveZ : null;
   var k="'"+node.id+"','"+_mntEsc(e.key)+"'";
   if(!pts || pts.length<2){
+    // Durum: eğri yok → tip lineer. Eğrinin çözücüye etkisi kılavuzda.
     return _mntBolum('Düşey (z) eğrisi', 'özel takoz',
-        _mntNot('Tanımlanırsa bu tip bir takoza uygulandığında çözücü onu <b>nonlineer</b> (Newton) çözer; tanımlanmazsa statik kz ile lineer kalır.', '')
+        _mntNot('<b>Eğri yok</b> — tip lineer (statik kz).', '')
       + '<div class="ve-fp-eylem"><button type="button" class="ve-fp-dugme" onclick="veMntLibCurveEnable('+k+')">'
       + veIkon('activity')+' z-eğrisi tanımla (kz\'den lineer başlangıç)</button></div>');
   }
@@ -4630,7 +4680,6 @@ function _mntLibCurveEditor(node, e){
   });
   f+=_MNT_FOY_KAPA;
   return _mntBolum('Düşey (z) eğrisi', pts.length+' nokta · basma −', f   // metin: işaret kuralı (basma eksi)
-    + _mntNot('Çözücü noktaları δ\'ya göre sıralar; monoton eğri önerilir.', '')
     + '<div class="ve-fp-eylem">'
     + '<button type="button" class="ve-fp-dugme" onclick="veMntLibCurveAddPoint('+k+')">'+veIkon('plus')+' Nokta</button>'
     + '<button type="button" class="ve-fp-dugme" onclick="veMntLibCurveDisable('+k+')">Lineere dön</button></div>');
@@ -4930,10 +4979,11 @@ function _mntOnDenetim(node){
   var si=_mntToSI(_mntGatherForSolver(node), 9.81);
   return C.validateModel(si.components, si.mounts);
 }
+// Hüküm pencerenin CEVABI: FEAD'in durum kutusu (boşken yer kaplamaz).
 function _mntOnDenetimHTML(node){
   var p=_mntOnDenetim(node);
   return '<div class="ve-mnt-sonuc" id="ve-mnt-results" data-tazele>'
-    + (p.length ? _mntNot('<b>Hesaplanamaz — '+p.length+' sorun.</b><ul>'
+    + (p.length ? _mntDurumKutu('<b>Hesaplanamaz — '+p.length+' sorun.</b><ul>'
         + p.map(function(x){ return '<li>'+_mntEsc(x)+'</li>'; }).join('')+'</ul>', 'no') : '')
     + '</div>';
 }
@@ -5127,12 +5177,14 @@ function getMntSolverPropertiesHTML(node){
     { k:'mod', ad:'Modlar', govde:_mntCozucuModSekme(node, R, S), durum:D.mod, sonuc:true },
     { k:'ayar', ad:'Ayarlar', govde:_mntCozucuAyarSekme(node), durum:D.ayar }
   ];
+  // Sağ sütun FEAD'in sırasıyla: Uygunluk → pencerenin cevabı (ön denetim) →
+  // eylem → eylemin notu.
   var yan=_mntUygunlukHTML(node.id, S)
+    + _mntOnDenetimHTML(node)
     + '<button type="button" class="ve-fp-solve" id="ve-mnt-hesapla-'+node.id+'" onclick="veMntSolverCompute(\''+node.id+'\')">'
     + veIkon('play')+' Hesapla</button>'
-    + '<div class="ve-fp-solve-not" id="ve-mnt-cnot-'+node.id+'" data-tazele>'+_mntEsc(_mntCozucuNotu(node, S))+'</div>'
-    + _mntOnDenetimHTML(node);
-  return _mntPencereKabuk(node, sekmeler, yan, '');
+    + '<div class="ve-fp-solve-not" id="ve-mnt-cnot-'+node.id+'" data-tazele>'+_mntEsc(_mntCozucuNotu(node, S))+'</div>';
+  return _mntPencereKabuk(node, sekmeler, yan);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -5156,21 +5208,35 @@ function getMntReportPropertiesHTML(node){
     nD=(R.allCases||[]).length; nMod=(R.modes||[]).length;
   }
   var ozet=nC+' bileşen · '+nM+' takoz'+(nD ? ' · '+nD+' yük durumu' : '')+(nMod ? ' · '+nMod+' mod' : '');
-  var durum = !cozuldu
-    ? _mntNot('<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir — önce Çözücü → Hesapla.', 'warn')
+  // PENCERENİN CEVABI — FEAD'in Rapor penceresi gibi sağ sütunda, eylemin
+  // üstünde (`.ve-fp-durum`). Eskiden tek bölmenin başında bir kutuydu.
+  var durum = '<div id="ve-mnt-rap-coz-'+node.id+'" data-tazele>'+(!cozuldu
+    ? _mntDurumKutu('<b>Model çözülmedi.</b> Rapor, Çözücü sonuçlarından üretilir — önce Çözücü → Hesapla.', 'warn')
     : bayat
-      ? _mntNot('<b>Model çözüldü, ama bayat</b> — '+ozet+'. Model hesaptan sonra değişti; rapor ESKİ çözümden üretilir.', 'warn')
-      : _mntNot('<b>Model çözüldü</b> — '+ozet+'. Rapor bu çözümden üretilir.', 'ok');
-  var govde=_mntBolum('Çözüm', cozuldu ? (bayat ? 'bayat' : (S.durum==='guncel' ? 'güncel' : 'son çözüm')) : 'yok', durum,
-                       { id:'ve-mnt-rap-coz-'+node.id, tazele:true })
-    + _mntRaporFrekansHTML(node, R);
+      ? _mntDurumKutu('<b>Model çözüldü, ama bayat</b> — '+ozet+'. Model hesaptan sonra değişti; rapor ESKİ çözümden üretilir.', 'warn')
+      : _mntDurumKutu('<b>Model çözüldü</b> — '+ozet+'. Rapor bu çözümden üretilir.', 'ok'))+'</div>';
+  // İKİ KATEGORİ (FEAD: Tür · Künye): İÇERİK (raporun anlatacağı çözüm) ·
+  // GİRDİLER (§8.8'in değerleri ve kaynağı). Eskiden tek bölmeydi ve sekme
+  // şeridi çizilmiyordu. İki bölüm de çözümden okur, yani yerinde tazelenir
+  // (`data-tazele`) — pencere açıkken gelen çözüm onları bayat bırakmasın.
+  var icerik=_mntBolum('Çözüm', cozuldu ? (bayat ? 'bayat' : (S.durum==='guncel' ? 'güncel' : 'son çözüm')) : 'yok',
+      cozuldu
+        ? _mntIzgara(2, _mntOku('Bileşen', String(nC)) + _mntOku('Takoz', String(nM))
+                      + _mntOku('Yük durumu', String(nD)) + _mntOku('Mod', String(nMod)))
+          + _mntIzgara(1, _mntOku('Çözüm yolu', _mntCozumModuEtiketi(R)))
+        : _mntNot('Hesaplanmadı — Çözücü\'de <b>Hesapla</b>.', ''),
+      { id:'ve-mnt-rap-ic-'+node.id, tazele:true });
   var eylem='<button type="button" class="ve-fp-solve"'
     + (cozuldu ? ' onclick="veMntGenerateReport(\''+node.id+'\')"' : ' disabled')+'>'
     + veIkon('download')+' Raporu oluştur ve indir</button>'
-    + '<div class="ve-fp-solve-not" id="ve-mnt-report-status">'
+    // Eylemin notu FEAD Rapor'unun satırı (`.ve-fp-durum-not`, kutusuz);
+    // üretimin durumu da buraya yazılır (veMntGenerateReport → data-d).
+    + '<div class="ve-fp-durum-not" id="ve-mnt-report-status">'
     + (cozuldu ? (bayat ? 'Çözüm bayat — önce Çözücü penceresinde “Hesapla”.' : 'Rapor tek dosya HTML olarak iner.')
                : 'Çözüm yok — Çözücü → Hesapla.')+'</div>';
-  return _mntPencereKabuk(node, [{ k:'rapor', ad:'Rapor', govde:govde }], _mntUygunlukHTML(node.id, S)+eylem, '');
+  return _mntPencereKabuk(node, [{ k:'ic', ad:'İçerik', govde:icerik },
+                                 { k:'gir', ad:'Girdiler', govde:_mntRaporFrekansHTML(node, R) }],
+                          _mntUygunlukHTML(node.id, S)+durum+eylem);
 }
 // §8.8'in girdileri — değer, KAYNAK ve türetilen ateşleme frekansı. Kaynak
 // raporun kendi seçicisinden (_mntRepEngine/_mntRepZeta): Motor'da yoksa eski
@@ -5198,7 +5264,7 @@ function _mntRaporFrekansHTML(node, R){
     + _mntFoyCoz(Number.isFinite(fAtes) ? kirp(fAtes, 1)+' Hz' : '—')+'<td class="sol sf">türetilen</td></tr>';
   h+=_MNT_FOY_KAPA;
   if(!Number.isFinite(fAtes)) h+=_mntNot('Ateşleme frekansı hesaplanamıyor — Motor bileşenine rölanti devri ve silindir sayısını girin; §8.8 atlanır.', 'warn');
-  return _mntBolum('Frekans yerleşimi ve izolasyon', 'rapor §8.8', h);
+  return _mntBolum('Frekans yerleşimi ve izolasyon', 'rapor §8.8', h, { id:'ve-mnt-rap-gir-'+node.id, tazele:true });
 }
 
 // Şok darbesi girdisi (tepe ivme [g] / süre [ms]). Boş/geçersiz → alan silinir
@@ -5600,6 +5666,11 @@ if(typeof module!=='undefined' && module.exports){
     veMntEksikGit: veMntEksikGit,
     veMntPencereTazele: veMntPencereTazele,
     _mntUygunlukHTML: _mntUygunlukHTML,
+    // Pencere ailesi (2026-10-16): FEAD'in not satırı ve cevap kutusu, iki kategori
+    _mntNot: _mntNot,
+    _mntDurumKutu: _mntDurumKutu,
+    _mntKutleCgDurumu: _mntKutleCgDurumu,
+    _mntAtaletDurumu: _mntAtaletDurumu,
     _mntDuzMetin: _mntDuzMetin,
     _mntTakozUygunlukHTML: _mntTakozUygunlukHTML,
     _mntKutleDurumu: _mntKutleDurumu,
