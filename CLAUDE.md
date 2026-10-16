@@ -22,6 +22,12 @@ ediyordu. Sebebi bir kural değil **biçim taklidiydi**: dosyayı okuyan her
 oturum üslubunu sürdürdü, dosya büyüdü, desen güçlendi. Yukarıdaki tablo o
 döngünün sönümleyicisidir; olmadan yeni yapı da aynı şekilde şişer.
 
+**Kullanıcının bir yüzeydeki şikâyeti bir sınıfı gösteriyorsa kural o sınıf
+için yazılır: buraya, programın tamamına.** Modül skill'ine yalnız o modüle
+özgü uygulaması gider. Açıklama şikâyeti üç kez tek bir yüzeyin kuralına
+yazıldı (FEAD pencereleri, pencerenin tepesi, Sonuçlar'daki bir not) ve
+kalıp her yeni ekranda geri geldi (bkz. *ARAYÜZ ANLATMAZ*).
+
 ## Proje Yapısı
 Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framework yok).
 
@@ -259,6 +265,55 @@ uyarlaması sırasındaki tek işaret hatası "testten geçen ama yanlış" bir 
 
 ## Proje geneli kurallar
 
+### ARAYÜZ ANLATMAZ — ekranda ve belgede yalnız ad, veri, durum
+
+Kullanıcı kararı (2026-10-16): *"Pencerede hemen hemen her yerde birer
+açıklama var … programa AŞIRI BİR AMATÖRLÜK KATIYOR."* Aynı şikâyet dördüncü
+kez geldi (2026-08-31 · 09-23 · 09-28 · 10-16). Önceki üçü tek bir yüzeyin
+kuralına yazıldı ve kalıp her yeni ekranda geri geldi; bu kural programın
+tamamı içindir: kabuk, pencereler, sihirbazlar, Sonuçlar, raporlar, kılavuz,
+görüntüleyici ve CAN Çözümleyici.
+
+Ekranda ve indirilen ya da basılan belgede duran her metin üç türden biridir:
+**ad** (denetimin, bölümün, sütunun adı), **veri** (sayı, birim, künye,
+kaynak), **durum** (hata, uyarı, eksik girdi, yapılamayan işlemin kısa
+sebebi). Başka hiçbir şey yazılmaz:
+
+| Yazılmaz | Örnek |
+|----------|-------|
+| Açıklama: denetimin ne yaptığı, sayfanın nasıl çalıştığı | "Seçtiğin kapı modeli kurar ve bu sayfa çekilir" |
+| Tarif: kullanıcıya adım söylemek | "Kayış Yolu kartını boş kur; kasnakları … ekle" |
+| Sohbet sesi: başlayalım · seçtiğin · sen · istersen · önerilen · lütfen | "Nereden başlayalım?" |
+| Kendini anlatma: bu sayfa / pencere / tablo · aşağıdaki · burada | "Sayısal karşılığı aşağıdaki tablodadır" |
+| Tasarım gerekçesi: programın neden böyle davrandığı | raporda "Neden ayrıca sorulmuyor: …" |
+| Geliştirme dili: kapı · çekilir · ölçüldü · bayat · büyük harfle vurgu | "Bu bir SEÇİCİ değil, bir KAPIDIR" |
+| Tekrar: ekranda zaten yazanı ikinci kez söylemek | aynı sayfada iki kez "bu sayfa çekilir" |
+
+- **Durum metni olanı söyler, tarif vermez:** "Ara kademenin çapları eksik."
+  Arkasına "… girin" ya da "… ile yeniden çözün" eklenmez.
+- **Açıklamanın tek yeri kılavuzdur** (`js/guide-*.js`). Orada da sohbet sesi,
+  geliştirme dili ve tasarım gerekçesi yoktur.
+- **Belgede** (rapor, A3 pano, TXT) mühendislik içeriği kalır: yöntem,
+  varsayım, kaynak, kabul ölçütü. Yazılımın kendi davranışının gerekçesi,
+  test ölçümü ve okuma tarifi ("Üç görünüş neden gerekli") yazılmaz.
+- **Kalıp açıklama yuvası taşımaz.** Bir üretici (kit, kabuk, kart) `not`,
+  `alt` ya da `aciklama` alanı açarsa her kullanan onu doldurur: başlangıç
+  kitinin beş yuvası iki modülde 15 açıklama üretti.
+- **Silinen bir bloğun yerine yönlendirme cümlesi konmaz.** 2026-08-31'de
+  "Katalog Önerisi" kalkınca yerine böyle bir satır kondu.
+- **Kapı:** `tests/unit/metin-dili.test.js`. Kural ve sözlük tek yerde:
+  `tools/metin-dili.js`. Kuraldan önce yazılmış işaretli metinler
+  `tests/fixtures/metin-dili-taban.json`'da dondurulmuştur ve taban yalnız
+  küçülür: yeni işaretli metin kırmızıdır, temizlenen metin tabandan düşer
+  (`node tools/metin-dili.js --taban`). Tabana yeni kayıt yalnız kullanıcının
+  "kalsın" kararıyla `--kabul` bayrağıyla girer. İşaret bir hüküm değil
+  adaydır; sözlüğün görmediği açıklama da bu kurala tabidir.
+- **Temizlik aşama aşama ve kullanıcının kararıyla yürür.** Her aşamanın
+  başında bulunan metinler bir Artifact karar tahtasında sunulur (Kaldır ·
+  Yeni metin · Kalsın). Kararlar tahtanın `db`sinden okunur ve uygulanır.
+  Aşama listesi ve yöntem: `docs/decisions/ortak-yuzeyler.md` → *Arayüz
+  anlatmaz*.
+
 ### AĞIR VARLIKLAR GÖMÜLÜR — çevrimdışı çalışmak ŞART
 
 MFSim tek dosya olarak indirilip kullanılıyor. Yanında `vendor/` klasörü
@@ -406,7 +461,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `fead-core.js`. `toFixed` taşımayan çıplak birleştirmeyi (`cd + ' kW'`)
   kaynak taraması görmez, ekran/belge/günlük taraması görür. CAN Çözümleyici
   `js/`'ten dosya almadığı için kendi yazıcısını taşır (`cdbSayi`); aynılık
-  `can-sayi.test.js`'te ölçülür.
+  `can-sayi.test.js`'te ölçülür. Programın YAZMADIĞI metin (commit konusu)
+  `data-ve-dis-metin` taşır; ekran taraması onu ve `<code>`'u atlar (tamamı
+  rakam kısaltma "0352592"). Yüzey turu GitHub API'sini sabit fikstürle
+  karşılar (`tests/e2e/helpers/github-fikstur.js`) — canlı listeyle kapının
+  sonucu başka oturumların o an yazdığına bağlıydı.
 - **BÜYÜK HARF DÖNÜŞÜMÜ BİRİMİ, SİMGEYİ, ÖZEL ADI ÇEVİRMEZ** (belge
   `lang="tr"`): birim `<u>` ve Yunan harfi `.ve-fp-sym` içinde, CSS'te
   `text-transform:none` (FEAD'de üretici `_feadEtiket`); İngilizce terim ve

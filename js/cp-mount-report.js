@@ -543,6 +543,7 @@ function _mntRepSection8(R, opts){
   h+=_mntRepModalEnergy(R);
   h+=_mntRepSoftening(R, opts);
   h+=_mntRepModeShapes(R);
+  h+=_mntRepSensitivity(R, opts);
   return h;
 }
 
@@ -2057,6 +2058,222 @@ function _mntRepSoftening(R, opts){
   return h;
 }
 
+// §8.17 — Takoz ve eksen başına frekans duyarlılığı (optimizasyonun ilk adımı).
+// §8.15 bütün takozları AYNI katsayıyla ölçekler ve "eksen ya da takoz başına
+// farklılaştırma bu taramanın kapsamı dışındadır" der; bu bölüm o
+// farklılaştırmadır. Matris çözümün KENDİSİNDEN okunur (R.sensitivity —
+// modları üreten taban, çekirdek modalSensitivity). Kriter satırları tek yay
+// ölçeklenip özdeğer problemi YENİDEN çözülerek bulunur (springScaleFor);
+// doğrusal tahmin yanında durur ki türevin nereye kadar taşıdığı görünsün.
+var _SENS_ARALIK=[0.1, 10];   // tek kaldıracın taranan ölçeği (×0,1 – ×10)
+var _SENS_EKSEN=['x','y','z'];
+function _mntRepDuyarlilik(R){
+  if(R && R.sensitivity) return R.sensitivity;
+  var C=_rMountCore();
+  if(!C || !C.modalSensitivity || !R || !R.modes || !R.mp || !R.mounts) return null;
+  return C.modalSensitivity(R.modes, C.buildM6(R.mp.m, R.mp.I_G), R.mounts, R.mp.cg, R.kBasis||null);
+}
+// Modun en etkili kaldıracı: esnekliği en büyük takoz · eksen (çekirdek `en`).
+function _mntRepEnEtkili(S, r){ return (S[r] && S[r].en) || null; }
+// Sabit ondalık (sondaki sıfır KALIR — tablo sütununda hizalı): 18,10 · 0,005.
+function _rFd(v, d){ return Number.isFinite(Number(v)) ? veSayi(Number(v), d, { eksi:'−' }) : '—'; }
+// İşaretli sabit ondalık: +0,048 · −0,010.
+function _rFsd(v, d){ var n=Number(v); return Number.isFinite(n) ? (n<0?'−':'+')+veSayi(Math.abs(n), d) : '—'; }
+// Ölçek → işaretli yüzde değişim: 1,074 → "+%7,4", 0,947 → "−%5,3".
+function _rYuzdeDegisim(s){
+  var p=(s-1)*100;
+  return (p<0?'−':'+')+'%'+_rF(Math.abs(p),1);
+}
+function _mntRepKaldiracAd(R, b){
+  return _rEsc((R.mounts[b.i]&&R.mounts[b.i].name)||('Takoz '+(b.i+1)))+' · k<sub>'+_SENS_EKSEN[b.ax]+'</sub>';
+}
+// Kriter 1 · 1a · 1b — sınıra en yakın (ya da sınırı aşan) mod, onun en etkili
+// kaldıracı ve o kaldıracın sınıra kadar değişimi. Ölçütler §8.8/§8.15 ile AYNI:
+// ½·f_ateş, 0,5 Hz ayrıklık, 8–10 Hz bandı.
+function _mntRepKaldiraclar(R, opts){
+  var C=_rMountCore(), S=_mntRepDuyarlilik(R), modes=R.modes||[];
+  if(!C || !C.springScaleFor || !S || modes.length<2 || !R.mp) return [];
+  var M6=C.buildM6(R.mp.m, R.mp.I_G);
+  var _eng=_mntRepEngine(R, opts||{}), rpm=_eng.idleRpm, z=_eng.cylinders;
+  var haveIdle=(rpm>0 && z>0), L=haveIdle ? 0.5*(rpm/60)*(z/2) : NaN;
+  var GAP=0.5, BAND=[8,10];
+  function ara(b, olcut, hedef, yon){
+    return b ? C.springScaleFor(R.mounts, R.mp.cg, M6, R.kBasis||null, b.i, b.ax, olcut, hedef, yon,
+                                { sMin:_SENS_ARALIK[0], sMax:_SENS_ARALIK[1] }) : null;
+  }
+  function f(md, r){ return md[r].f_Hz; }
+  var rows=[];
+
+  // ── Kriter 1: modların tamamı ½·f_ateş'in altında — en yüksek mod belirler.
+  var rT=modes.length-1;
+  if(!haveIdle){
+    rows.push({ no:'1', ad:'Modal bant', durum:'wait', mod:rT, kritik:'mod '+(rT+1)+' · '+_rFd(f(modes,rT),2)+' Hz',
+      sinir:'&lt; ½·f<sub>ateş</sub>', b:null, sonuc:'Rölanti devri ve silindir sayısı yok — sınır tanımsız' });
+  } else {
+    var b1=_mntRepEnEtkili(S, rT), ihlal1=f(modes,rT)>=L, yon1=ihlal1?-1:+1;
+    var fmax=function(md){ return Math.max.apply(null, md.map(function(m){ return m.f_Hz; })); };
+    var z1=ara(b1, fmax, L, yon1);
+    rows.push({ no:'1', ad:'Modal bant', durum:ihlal1?'no':'ok', mod:rT,
+      kritik:'mod '+(rT+1)+' · '+_rFd(f(modes,rT),2)+' Hz', sinir:'&lt; '+_rF(L,2)+' Hz', b:b1, z:z1, yon:yon1,
+      etki: b1 ? b1.e*f(modes,rT)/100 : NaN,
+      dogrusal: b1 && b1.e>0 ? 1+(L/f(modes,rT)-1)/b1.e : NaN,
+      sonuc: !b1 ? '—' : z1 ? (ihlal1 ? _rYuzdeDegisim(z1.s)+' yumuşatmayla sağlanır' : _rYuzdeDegisim(z1.s)+' sertleşmede sınıra değer')
+                : (ihlal1 ? '×0,1\'de bile sağlanmıyor — tek kaldıraç yetmez' : '×10 sertleşmede bile sağlanıyor') });
+  }
+
+  // ── Kriter 1a: komşu modlar arası en küçük ayrıklık > 0,5 Hz. Aralığın
+  // kaldıracı d(f_{p+1} − f_p)/d ln k = e_{p+1}·f_{p+1} − e_p·f_p (işaretli).
+  var p=0, gaps=modes.slice(1).map(function(m,k){ return m.f_Hz-modes[k].f_Hz; });
+  gaps.forEach(function(g,k){ if(g<gaps[p]) p=k; });
+  var bA=null;
+  S[p].e.forEach(function(row, i){ row.forEach(function(_, ax){
+    var d=S[p+1].e[i][ax]*f(modes,p+1) - S[p].e[i][ax]*f(modes,p);
+    if(Number.isFinite(d) && (!bA || Math.abs(d)>Math.abs(bA.d))) bA={ i:i, ax:ax, d:d }; }); });
+  var ihlalA=!(gaps[p]>GAP);
+  // ihlalde aralığı AÇAN yön, payda KAPATAN yön
+  var yonA=bA ? ((bA.d>0 ? 1 : -1)*(ihlalA ? 1 : -1)) : 1;
+  var minGap=function(md){ var m=Infinity; for(var k=1;k<md.length;k++) m=Math.min(m, md[k].f_Hz-md[k-1].f_Hz); return m; };
+  var zA=(bA && bA.d!==0) ? ara(bA, minGap, GAP, yonA) : null;
+  rows.push({ no:'1a', ad:'Mod ayrıklığı', durum:ihlalA?'no':'ok', cift:[p, p+1],
+    kritik:'mod '+(p+1)+'–'+(p+2)+' · '+_rFd(gaps[p],3)+' Hz', sinir:'&gt; '+_rF(GAP,1)+' Hz', b:bA, z:zA, yon:yonA,
+    etki: bA ? bA.d/100 : NaN,
+    dogrusal: (bA && bA.d!==0) ? 1+(GAP-gaps[p])/bA.d : NaN,
+    sonuc: !bA ? '—' : zA ? _rYuzdeDegisim(zA.s)+(ihlalA ? ' ile aralık 0,5 Hz\'i geçer' : (zA.s>1 ? ' sertleşmede' : ' yumuşamada')+' aralık 0,5 Hz\'e iner')
+              : (ihlalA ? 'tek kaldıraçla açılmıyor (×0,1–×10)' : '×0,1–×10 aralığında 0,5 Hz\'e inmiyor') });
+
+  // ── Kriter 1b: hiçbir mod 8–10 Hz bandında değil. Bantta mod varsa onu
+  // en yakın kenarın dışına çıkaran değişim (ve öteki modların bantta kalıp
+  // kalmadığı); yoksa banda en yakın modun banda girdiği değişim.
+  var bantta=function(md){ return md.filter(function(m){ return m.f_Hz>=BAND[0] && m.f_Hz<=BAND[1]; }).length; };
+  var ici=[]; modes.forEach(function(m, r){ if(m.f_Hz>=BAND[0] && m.f_Hz<=BAND[1]) ici.push(r); });
+  if(ici.length){
+    ici.forEach(function(r){
+      var b=_mntRepEnEtkili(S, r), fr=function(md){ return f(md, r); };
+      var za=ara(b, fr, BAND[0], -1), zu=ara(b, fr, BAND[1], +1);
+      var zb=(za && (!zu || Math.abs(Math.log(za.s))<=Math.abs(Math.log(zu.s)))) ? za : zu;
+      var hedef=(zb===za) ? BAND[0] : BAND[1];
+      var kalan=zb ? bantta(zb.modes) : null;
+      rows.push({ no:'1b', ad:'Aks bandı', durum:'no', mod:r,
+        kritik:'mod '+(r+1)+' · '+_rFd(f(modes,r),2)+' Hz', sinir:_rF(BAND[0],0)+'–'+_rF(BAND[1],0)+' Hz dışında',
+        b:b, z:zb, yon:(zb===za)?-1:1, etki: b ? b.e*f(modes,r)/100 : NaN,
+        dogrusal: b && b.e>0 ? 1+(hedef/f(modes,r)-1)/b.e : NaN,
+        sonuc: !b ? '—' : zb ? _rYuzdeDegisim(zb.s)+' ile banttan çıkar'+(kalan ? ' — ama '+kalan+' mod bantta kalır' : ' — kriter sağlanır')
+                  : 'tek kaldıraçla banttan çıkmıyor (×0,1–×10)' });
+    });
+  } else {
+    var en=null;
+    modes.forEach(function(m, r){
+      var d=(m.f_Hz<BAND[0]) ? BAND[0]-m.f_Hz : m.f_Hz-BAND[1];
+      if(!en || d<en.d) en={ r:r, d:d, alt:(m.f_Hz<BAND[0]) };
+    });
+    var r=en.r, bB=_mntRepEnEtkili(S, r), hedefB=en.alt ? BAND[0] : BAND[1], yonB=en.alt ? +1 : -1;
+    var zB=ara(bB, function(md){ return f(md, r); }, hedefB, yonB);
+    rows.push({ no:'1b', ad:'Aks bandı', durum:'ok', mod:r,
+      kritik:'mod '+(r+1)+' · '+_rFd(f(modes,r),2)+' Hz', sinir:_rF(BAND[0],0)+'–'+_rF(BAND[1],0)+' Hz dışında',
+      b:bB, z:zB, yon:yonB, etki: bB ? bB.e*f(modes,r)/100 : NaN,
+      dogrusal: bB && bB.e>0 ? 1+(hedefB/f(modes,r)-1)/bB.e : NaN,
+      sonuc: !bB ? '—' : zB ? _rYuzdeDegisim(zB.s)+(yonB>0 ? ' sertleşmede' : ' yumuşamada')+' banda girer'
+                : '×0,1–×10 aralığında banda girmiyor' });
+  }
+  return rows;
+}
+
+function _mntRepSensitivity(R, opts){
+  var S=_mntRepDuyarlilik(R), modes=R.modes||[], mounts=R.mounts||[];
+  if(!S || !S.length || !mounts.length) return '';
+  var h='<h3>8.17 Takoz ve eksen başına frekans duyarlılığı</h3>';
+  h+='<p>§8.15 bütün takozları aynı katsayıyla ölçekler. Tasarımda ise çoğu zaman tek bir takozun '
+    +'tek bir ekseni değişir: başka bir katalog tipi, başka bir sertlik derecesi. Bu bölüm her takoz '
+    +'ve eksen için modal frekansların rijitliğe türevini verir: hangi takozun hangi ekseni hangi '
+    +'modu ne kadar oynatıyor. Ayrık bir özdeğerin türevi kapalı formdadır (kütle matrisi rijitlikten '
+    +'bağımsızdır):</p>';
+  h+='$$ \\frac{\\partial \\lambda_r}{\\partial k_{i,a}}=\\frac{(\\mathbf a_{i,a}\\boldsymbol\\varphi_r)^2}'
+    +'{\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf M\\boldsymbol\\varphi_r},\\qquad '
+    +'e_{r,i,a}=\\frac{k_{i,a}}{f_r}\\,\\frac{\\partial f_r}{\\partial k_{i,a}}'
+    +'=\\frac{1}{2}\\,\\frac{k_{i,a}(\\mathbf a_{i,a}\\boldsymbol\\varphi_r)^2}'
+    +'{\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf K\\boldsymbol\\varphi_r} $$';
+  h+='<p>\\( \\mathbf a_{i,a} \\), i. takozun a ekseninin kinematik satırıdır (§8.2). <b>Esneklik</b> '
+    +'\\( e \\), o rijitlik %1 artınca modun frekansının yüzde kaç arttığıdır ve yayın o moddaki şekil '
+    +'değiştirme enerjisi payının <b>yarısına</b> eşittir. Bu yüzden her mod sütununun toplamı 0,50\'dir: '
+    +'bütün takozlar aynı oranda sertleşirse frekans o oranın karekökü kadar artar (§8.15). '
+    +'Türev hiçbir zaman eksi değildir — bir yayın sertleşmesi hiçbir frekansı düşürmez.</p>';
+
+  // ── Matris: satır takoz · eksen, sütun mod ──
+  var yakin=modes.map(function(m, r){
+    var g=Infinity;
+    if(r>0) g=Math.min(g, m.f_Hz-modes[r-1].f_Hz);
+    if(r<modes.length-1) g=Math.min(g, modes[r+1].f_Hz-m.f_Hz);
+    return g<0.5;
+  });
+  var enler=modes.map(function(_, r){ return _mntRepEnEtkili(S, r); });
+  h+='<table><caption>Tablo '+_rTbl()+' — Esneklik e = (k/f)·∂f/∂k: takozun ekseni %1 sertleşince '
+    +'modun frekansı yüzde kaç artar</caption>';
+  h+='<tr><th>Takoz</th><th>Eksen</th>';
+  modes.forEach(function(m, r){
+    h+='<th>Mod '+(r+1)+(S[r].cakisik ? '‡' : (yakin[r] ? '†' : ''))+'<br>'+_rFd(m.f_Hz,2)+' Hz</th>';
+  });
+  h+='</tr>';
+  mounts.forEach(function(mt, i){
+    _SENS_EKSEN.forEach(function(a, ax){
+      h+='<tr>'+(ax===0 ? '<td class="l" rowspan="3">'+_rEsc(mt.name||('Takoz '+(i+1)))+'</td>' : '')
+        +'<td class="c">k<sub>'+a+'</sub></td>';
+      S.forEach(function(s, r){
+        var v=s.e[i][ax], en=enler[r] && enler[r].i===i && enler[r].ax===ax;
+        if(!Number.isFinite(v)){ h+='<td>—</td>'; return; }
+        // Ton esneklikle orantılı (sütunun en büyüğü 0,5'e yaklaşır); en etkili hücre kalın.
+        var ton=Math.min(1, v/0.5)*0.30;
+        var st=(v>=0.005 ? ' style="background:rgba(36,66,95,'+ton.toFixed(3)+');'+(en?'font-weight:700;':'')+'"' : '');   // makine: CSS saydamlığı
+        h+='<td'+st+'>'+(v>=0.005 ? veSayi(v, 2, { eksi:'−' }) : '·')+'</td>';
+      });
+      h+='</tr>';
+    });
+  });
+  h+='<tr><td class="l" colspan="2"><b>Toplam</b></td>';
+  S.forEach(function(s){
+    var t=s.e.reduce(function(a, row){ return a+row.reduce(function(b, v){ return b+(Number.isFinite(v)?v:0); }, 0); }, 0);
+    h+='<td><b>'+veSayi(t, 2, { eksi:'−' })+'</b></td>';
+  });
+  h+='</tr></table>';
+  var not=['Koyu ton ve kalın yazı: modun en etkili kaldıracı. Nokta (·): 0,005\'ten küçük.'];
+  if(yakin.some(function(v, r){ return v && !S[r].cakisik; }))
+    not.push('† Komşu moda 0,5 Hz\'ten yakın: rijitlik değişince iki mod birbirinden kaçar (mod kaçınması); '
+      +'esneklik yalnız küçük değişimde geçerlidir. Aşağıdaki tablo bu yüzden sınıra kadarki değişimi yeniden çözerek bulur.');
+  if(S.some(function(s){ return s.cakisik; }))
+    not.push('‡ Çakışık mod: frekansı komşusuyla aynı, mod şekli tek değil; sütun kümenin ortalamasıdır.');
+  if(R.kBasis) not.push('Nonlineer yasalı takozlarda türev, statik dengedeki <b>dinamik tanjanta</b> göredir '
+    +'(§8.7\'nin tabanı); çalışma noktası sabit tutulur.');
+  h+='<p style="font-size:0.9em; color:#5a6270;">'+not.join(' ')+'</p>';
+
+  // ── Kriter kaldıraçları ──
+  var K=_mntRepKaldiraclar(R, opts);
+  if(K.length){
+    h+='<p>Esneklik bir eğimdir. Kriterin sınırına kadar ne kadar değişim gerektiğini, tek bir takoz '
+      +'ekseni ölçeklenip özdeğer problemi <b>yeniden çözülerek</b> aşağıdaki tablo verir. Her satırda '
+      +'sınıra en yakın (ya da sınırı aşan) mod ve onun en etkili kaldıracı yer alır. Öteki her şey '
+      +'sabittir; arama ×0,1 – ×10 aralığındadır.</p>';
+    h+='<table><caption>Tablo '+_rTbl()+' — Frekans kriterlerinin en etkili kaldıracı ve sınıra kadar değişim</caption>';
+    h+='<tr><th>Kriter</th><th>Kritik mod</th><th>Sınır</th><th>Durum</th><th>En etkili kaldıraç</th>'
+      +'<th>%1 sertleşme</th><th>Sınıra kadar (yeniden çözüm)</th><th>Doğrusal tahmin</th></tr>';
+    function tik(st){ return st==='ok' ? '<span class="ok">✓</span>' : (st==='wait' ? '—' : '<span style="color:var(--warn);font-weight:600;">✗</span>'); }
+    K.forEach(function(k){
+      h+='<tr><td class="l">'+k.no+' · '+k.ad+'</td><td>'+k.kritik+'</td><td>'+k.sinir+'</td><td class="c">'+tik(k.durum)+'</td>'
+        +'<td class="l">'+(k.b ? _mntRepKaldiracAd(R, k.b) : '—')+'</td>'
+        +'<td>'+(Number.isFinite(k.etki) ? _rFsd(k.etki,3)+' Hz' : '—')+'</td>'
+        +'<td class="l">'+k.sonuc+'</td>'
+        +'<td>'+(Number.isFinite(k.dogrusal) && k.dogrusal>0 ? _rYuzdeDegisim(k.dogrusal) : '—')+'</td></tr>';
+    });
+    h+='</table>';
+    h+='<p style="font-size:0.9em; color:#5a6270;">"%1 sertleşme": kaldıraç %1 sertleşince kritik modun '
+      +'(Kriter 1a\'da iki modun aralığının) frekansı kaç Hz değişir. Yeniden çözüm ile doğrusal tahmin '
+      +'arasındaki fark türevin o değişime kadar taşıyıp taşımadığını gösterir. Statik sehim bu tabloya '
+      +'girmez: yumuşatılan takozun sehimi artar (§8.5–§8.6). Kriter 2 (rölanti iletilebilirliği) modal '
+      +'frekansa değil düşey tek serbestlik frekansına bağlıdır (§8.8): f<sub>bounce</sub>\'un bir takozun '
+      +'k<sub>z</sub>\'sine esnekliği ½·k<sub>z</sub>/Σk<sub>z</sub>\'dir; bütün takozların birlikte '
+      +'ölçeklenmesi §8.15\'te.</p>';
+  }
+  return h;
+}
+
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
   var h='<h3>8.11 Model içi tutarlılık kontrolleri</h3>';
@@ -2270,6 +2487,10 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepModalEnergy: _mntRepModalEnergy,
     _mntRepSoftening: _mntRepSoftening,
     _mntRepModeShapes: _mntRepModeShapes,
+    _mntRepSensitivity: _mntRepSensitivity,
+    _mntRepKaldiraclar: _mntRepKaldiraclar,
+    _mntRepDuyarlilik: _mntRepDuyarlilik,
+    _mntRepEnEtkili: _mntRepEnEtkili,
     _rF: _rF, _rFs: _rFs, _rE: _rE, _rEsc: _rEsc
   };
 }

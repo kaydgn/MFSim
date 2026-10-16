@@ -49,6 +49,9 @@ const { tara } = require('../helpers/sayi-olcu.js');
 const T = require('./helpers/yuzey-turu');
 
 test.describe.configure({ timeout: 300000 });
+// GitHub API'si fikstürden (helpers/github-fikstur.js): servis çalışanının çektiği
+// istek route'a uğramaz.
+test.use({ serviceWorkers: 'block' });
 
 function olcucu(page, liste, sayilar) {
   return async (kok, yer) => {
@@ -62,13 +65,22 @@ function olcucu(page, liste, sayilar) {
     const metin = await page.evaluate((k) => {
       const el = document.querySelector(k), parca = [];
       if (el) {
-        // <code> makine metnidir, ad: commit kısaltması "9278536" yalnız
-        // rakamdan oluşabiliyor ((10/16)^7 ≈ %4) ve gruplanmamış sayı sayılıyordu.
-        let t = el.innerText || '';
-        el.querySelectorAll('code').forEach((c) => { const s = c.innerText; if (s) t = t.replace(s, ''); });
-        parca.push(t);
+        // Ölçüt programın YAZDIĞI sayıya bakar; iki istisna okunurken görünmez
+        // yapılır (visibility kutuyu korur, yerleşim ölçümü zaten bitti):
+        //   <code>               makine metni — commit kısaltması "0352592" yalnız
+        //                        rakamdan oluşabiliyor ((10/16)^7 ≈ %4)
+        //   [data-ve-dis-metin]  programın yazmadığı metin — commit konusu o
+        //                        kısaltmayı içinde taşıyabiliyor
+        // Eski yol metinden kodun İLK eşleşmesini siliyordu: aynı kısaltma daha
+        // yeni bir commit'in konusunda önce geçince silinen o oluyor, kod yerinde
+        // kalıyordu (#1119–#1120'de e2e-urun kırmızı).
+        const dis = [...el.querySelectorAll('code, [data-ve-dis-metin]')];
+        const eski = dis.map((d) => d.style.visibility);
+        dis.forEach((d) => { d.style.visibility = 'hidden'; });
+        parca.push(el.innerText || '');
+        dis.forEach((d, i) => { d.style.visibility = eski[i]; });
         el.querySelectorAll('svg text').forEach((x) => parca.push(x.textContent));
-        el.querySelectorAll('[title]').forEach((x) => parca.push(x.getAttribute('title')));
+        el.querySelectorAll('[title]').forEach((x) => { if (!x.closest('[data-ve-dis-metin]')) parca.push(x.getAttribute('title')); });
       }
       parca.push((window.__sayiFill || []).join('\n'));
       window.__sayiFill = [];

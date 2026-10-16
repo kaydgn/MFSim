@@ -437,14 +437,14 @@ function _gmSec9(){
     'Hesapla’nın altındaki satır toplam kütleyi, gövde ve takoz sayısını ve son hesabın '
       + 'güncel olup olmadığını söyler; sonucu <strong>Rapor</strong> bileşeninden okuyun.'
   ]);
-  h += _gmUyari('Çekme, durdurucu ve yakınsamama raporda bir HÜKÜMDÜR',
+  h += _gmUyari('Çekme, durdurucu ve yakınsamama raporda bir hükümdür',
       'Raporun yük durumu tabloları <strong>çekme</strong> (bir takoz çekiye giriyor), '
     + '<strong>durdurucu teması</strong> ve <strong>doğrusal aralık aşımı</strong> işaretlerini, '
     + '<strong>yakınsamama</strong> ve <strong>f ≈ 0 modu</strong> uyarılarını taşır. Bunlar '
     + 'hata değildir — modelin size söylediği şeylerdir.');
-  h += _gmNot('Sonuç BAYAT olabilir',
-      'Hesaptan sonra modelde bir alan değişirse Çözücü ve Rapor son hesabı <strong>bayat</strong> '
-    + 'diye işaretler: raporun sayıları eski modelin olur. Adı değiştirmek sonucu bayatlatmaz — '
+  h += _gmNot('Sonuç eski modelin olabilir',
+      'Hesaptan sonra modelde bir alan değişirse Çözücü ve Rapor son hesabın güncel olmadığını '
+    + 'işaretler: raporun sayıları eski modelin olur. Adı değiştirmek sonucu etkilemez — '
     + 'ad fiziğe girmez. Yeniden <strong>Hesapla</strong>’ya basın.');
   return h;
 }
@@ -503,6 +503,19 @@ function _gmSec11(){
     + '<strong>kısıtlanmamıştır</strong> — genellikle takozlar tek bir düzlemde ya da tek bir '
     + 'doğru üzerinde dizilmiştir. Sonuç sayısal olarak üretilir ama fiziksel değildir; '
     + 'takoz yerleşimine dönün.');
+  h += '<h3>11.2 Duyarlılık — hangi takoz hangi modu oynatıyor</h3>';
+  h += '<p>Program her takozun her ekseni için <strong>esnekliği</strong> verir: o rijitlik %1 '
+    + 'artınca modun frekansı yüzde kaç artar. Esneklik, yayın o moddaki şekil değiştirme '
+    + 'enerjisi payının yarısıdır; her modda bütün takoz ve eksenlerin toplamı 0,5’tir. Bir '
+    + 'yayın sertleşmesi hiçbir frekansı düşürmez.</p>';
+  h += '<p>Duyarlılık raporun <strong>§8.17</strong> bölümündedir: takoz ve eksen başına altı '
+    + 'moddaki esneklik matrisi (kalın hücre modun en etkili kaldıracı) ve frekans kriterlerinin '
+    + 'kaldıraçları — tek kaldıraçla sınıra kadar yüzde kaç, yeniden çözülerek.</p>';
+  h += _gmNot('Esneklik bir eğimdir',
+      'Küçük değişimde doğrudur. İki mod birbirine yakınsa (0,5 Hz’ten az) rijitlik değişince '
+    + 'birbirinden kaçarlar ve eğim çabuk değişir. Raporun kaldıraç tablosu bu yüzden sınıra '
+    + 'kadarki değişimi takozun tek eksenini ölçekleyip yeniden çözerek bulur; doğrusal tahmin '
+    + 'yanında durur. Statik sehim bu hesaba girmez — yumuşatılan takozun sehimi artar.');
   return h;
 }
 
@@ -515,7 +528,7 @@ function _gmSec12(){
     'Önce modeli <strong>çözün</strong> — rapor bir sonuç belgesidir ve çözümsüz üretilmez.',
     'Rapor bileşenine çift tıklayın: <strong>İçerik</strong> sekmesi raporun hangi çözümden '
       + 'üretileceğini, <strong>Girdiler</strong> sekmesi §8.8’in girdilerinin (rölanti devri, '
-      + 'silindir sayısı, ζ) nereden geldiğini gösterir; çözümün güncel mi bayat mı olduğu sağ '
+      + 'silindir sayısı, ζ) nereden geldiğini gösterir; çözümün güncel olup olmadığı sağ '
       + 'sütunda, düğmenin üstündedir. Uygunluk hükmü raporun kendisinde.',
     'Raporu üretip indirin. Dosya tek başına açılır; internet gerekmez.'
   ]);

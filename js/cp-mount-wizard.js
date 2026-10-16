@@ -36,7 +36,7 @@ var VE_MW_STEPS = [
   { key:'govde',  ad:'Kütle gövdeleri', ipucu:'Motor · şanzıman · braket — kütle, ağırlık merkezi, atalet' },
   { key:'takoz',  ad:'Takozlar',        ipucu:'Konum · katalog · statik ve dinamik rijitlik' },
   { key:'tork',   ad:'Tork ve çalışma', ipucu:'Motor torku · vites oranları · rölanti ve silindir' },
-  { key:'ozet',   ad:'Özet ve kurulum', ipucu:'Kurulacaklar · modelin özeti · modeli kur' }
+  { key:'ozet',   ad:'Özet ve kurulum', ipucu:'Kurulacaklar · modelin özeti · kurulum' }
 ];
 // Kütle gövdesi tipleri — Bileşenler'in "Takoz alt bileşenleri" ve "PTO
 // grubu" sırasıyla. Ad componentDefs'ten okunur.

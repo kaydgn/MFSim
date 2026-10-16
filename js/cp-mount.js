@@ -1014,7 +1014,7 @@ function _mntKrokiCizim(node, M){
   var r=veMntAkso.ciz(m, { W:_MNT_YER_W, iz:'dim', b:{ x:-1, y:-1, z:1 }, stil:'golge', kat:{ golge:true },
     etiket:'secili', secili:sec ? sec.k : null, isaret:_mntAksoIsaret(_MNT_YER_W), Hmax:300,
     fs:{ k:_mnt2DFs('micro'), b:_mnt2DFs('tiny') },
-    aria:'Güç grubundaki yeri'+(sec ? ': '+sec.ad : '')+' · dimetrik, önden-soldan-yukarıdan' });
+    aria:'Güç grubundaki yeri'+(sec ? ': '+sec.ad : '')+' · dimetrik' });
   return '<div class="ve-mnt-kroki ve-mnt-yer-akso">'+r.svg+'</div>'+_mntAksoLejant(m, { z:1 }, sec);
 }
 
@@ -4850,6 +4850,10 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
       R.modalDamping = C.modalDampingRatios(modes, prep.M6, R.C6);
     }
     if(C.modalEnergy) R.modalEnergy = C.modalEnergy(modes, prep.M6, prep.Kmodal, prep.si.components, prep.mp.cg);
+    // Takoz ve eksen başına frekans duyarlılığı — modları üreten AYNI taban
+    // (prep.kBasis; lineerde null → k_din). Rapor §8.17 OKUR; bileşen
+    // pencereleri sonuç göstermez (kullanıcı kararı 2026-10-16).
+    if(C.modalSensitivity) R.sensitivity = C.modalSensitivity(modes, prep.M6, prep.mounts, prep.mp.cg, prep.kBasis);
   }
   // ── Sonuçlar paneli kanalları (js/mount-signals.js) ───────────────────────
   // Süpürmeler ÇÖZÜCÜNÜN kendi yolunu (prep.solveOne) kullanır — nonlineerse

@@ -11,10 +11,14 @@
  */
 const { expect } = require('@playwright/test');
 const { motorluOrnekler } = require('./fead-motor');
+const { githubFikstur } = require('./github-fikstur');
 
 async function bootApp(page, { modul = 'arac-performans', tema = 'acik', kur, karsilama, w = 1600, h = 1000 } = {}) {
   await page.setViewportSize({ width: w, height: h });
   page.on('dialog', (d) => d.accept());
+  // Program Durumu'nun commit listesi canlı değil SABİT (github-fikstur.js) —
+  // turun sonucu başka oturumların o an yazdığına bağlı kalmasın.
+  await githubFikstur(page);
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
   await page.waitForFunction(() =>
