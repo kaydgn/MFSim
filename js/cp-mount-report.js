@@ -756,8 +756,8 @@ function _mntRepFigure(geom, plane, no, caption){
 }
 
 // ─── §8 — GÜÇ GRUBUNUN AKSONOMETRİSİ (teknik illüstrasyon) ──────────────────
-// Kullanıcı seçimi (2026-10-15): 2D Görünüm'ün ilk sekmesi aksonometri; rapor
-// aynı resmi teknik illüstrasyon olarak taşır. Çizici o sekmeninki
+// Kullanıcı seçimi (2026-10-15): Görünümler'in (eski 2D Görünüm) çizimi
+// aksonometri; rapor aynı resmi teknik illüstrasyon olarak taşır. Çizici onunki
 // (js/mount-akso.js), modeli onun kurucusu — ÇÖZÜMÜN girdisinden
 // (veMntAksoCozumModel): rapor çözülen modeli anlatır. Görünüş SABİT, belge
 // tarayıcıdaki pencere tercihine bağlı olamaz: dimetrik (ISO 5456-3),

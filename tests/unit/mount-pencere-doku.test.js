@@ -4,7 +4,8 @@
  * Node'da düşebilen halkalar; yerleşim, CSS ve WebGL tarayıcıda:
  * tests/e2e/mount-pencere.spec.js. Ölçülen eski hâl:
  *   · kütüphanenin kuvvet ekseni "10k · 0 · −10k", başlığı "kuvvet f [N]"
- *   · 2D tam ekranda koordinat üçlüsü "(582,5 · 21,5 · 422,8) mm" (kural 7·C: "; ")
+ *   · 2D tam ekranda koordinat üçlüsü "(582,5 · 21,5 · 422,8) mm" (kural 7·C: "; ";
+ *     düz görünüşler 2026-10-16'da kalktı — kural Görünümler'in işaret bilgisinde)
  *   · Örnek şemasında 17 ad, sütunda 4,8 px'e iniyordu
  *   · kütüphane notunda düz tırnak ("Fabrika")
  */
@@ -35,17 +36,25 @@ describe('kütüphane: kuvvet ekseninin birimi başlıkta, değerde sonek yok', 
   });
 });
 
-describe('2D tam ekran: koordinat ayracı "; ", gerçek eksi', () => {
-  test('künye şeridi ve G etiketleri', () => {
-    const veri = {
-      comps: [{ name: 'Motor', x: 100, y: -50, z: 500, mass: 400 }, { name: 'Şanzıman', x: 800, y: 40, z: 360, mass: 160 }],
-      mounts: [{ name: 'Sağ', x: 400, y: 350, z: 480 }, { name: 'Sol', x: 400, y: -350, z: 480 }, { name: 'Arka', x: 1300, y: 0, z: 40 }],
-      cg: { x: 316.7, y: -24.3, z: 461.4, m: 560 },
-    };
-    const t = div(cp._mnt2DViewSVG(veri, 1200)).textContent;
-    expect(t).toContain('(316,7; −24,3; 461,4) mm');
-    expect(t).toContain('G (316,7; −24,3)');
-    expect(t).not.toMatch(/\d · [−-]?\d/);
+// 2026-10-16: düz görünüşler kalktı; koordinat üçlüsü artık Görünümler'in
+// işaret bilgisinde (fare üstü) ve İşaretler föyünde.
+const IKI_GOVDE = () => [
+  { id: 'a', type: 'mnt-motor', def: componentDefs['mnt-motor'], customName: 'Motor', data: { mass: 400, cgx: 100, cgy: -50, cgz: 500 } },
+  { id: 'b', type: 'mnt-gearbox', def: componentDefs['mnt-gearbox'], customName: 'Şanzıman', data: { mass: 160, cgx: 800, cgy: 40, cgz: 360 } },
+  { id: 't', type: 'mnt-mount', def: componentDefs['mnt-mount'], customName: 'Sol', data: { x: 400, y: -350, z: 480 } },
+];
+describe('Görünümler: koordinat ayracı "; ", gerçek eksi', () => {
+  test('işaretlerin bilgisi (G, gövde CG\'si, takoz konumu)', () => {
+    global.nodes = IKI_GOVDE();
+    try {
+      const m = cp._mntAksoModel();
+      expect(m.G.bilgi[1]).toBe('(300,0; −24,3; 460,0) mm');          // (400·100 + 160·800) / 560 …
+      expect(m.govde[0].bilgi[2]).toBe('CG (100; −50; 500) mm');
+      expect(m.takoz[0].bilgi[1]).toBe('Konum (400; −350; 480) mm');
+      const t = m.govde.concat(m.takoz).concat([m.G]).map((x) => x.bilgi.join('\n')).join('\n');
+      expect(t).not.toMatch(/\d · [−-]?\d/);
+      expect(t).not.toMatch(/-\d/);                                       // gerçek eksi
+    } finally { global.nodes = []; }
   });
 });
 
@@ -117,19 +126,20 @@ describe('Takoz terimleri tek: CG ve sehim (S1·C · S2·C)', () => {
     expect(tara(new RegExp('(^|[^' + H + '])[Çç]ökme', 'u'))).toEqual([]);
     expect(tara(/deformasyon/i)).toEqual([]);
   });
-  test('kısa etiketler CG: sihirbaz masasının lejantı, STEP tablosu, 2D ipucu', () => {
+  test('kısa etiketler CG: sihirbaz masasının lejantı, STEP tablosu, Görünümler\'in işareti ve göstergesi', () => {
     const w = fs.readFileSync(path.join(KOK, 'js/cp-mount-wizard.js'), 'utf8');
     expect(w).toContain('</i>Gövde CG</span>');
     expect(w).toContain('</i>Birleşik CG</span>');
     expect(fs.readFileSync(path.join(KOK, 'js/cp-mount-3b.js'), 'utf8')).toContain('<th>CG<em>mm</em></th>');
-    const veri = {
-      comps: [{ name: 'Motor', x: 100, y: -50, z: 500, mass: 400 }],
-      mounts: [{ name: 'Sağ', x: 400, y: 350, z: 480 }, { name: 'Sol', x: 400, y: -350, z: 480 }],
-      cg: { x: 100, y: -50, z: 500, m: 400 },
-    };
-    const t = cp._mnt2DViewSVG(veri, 1200);
-    expect(t).toContain('Birleşik CG');
-    expect(t).not.toMatch(/Ağırlık merkezi\s+\(/);
+    global.nodes = IKI_GOVDE();
+    global.veMntAkso = require('../../js/mount-akso.js');
+    try {
+      expect(cp._mntAksoModel().G.bilgi[0]).toBe('Birleşik CG');
+      const t = cp._mntAksoHTML(cp._mnt2DPencereVeri(), 354, false, 've-mnt-akso3b-x');
+      expect(t).toContain('G · birleşik CG');
+      expect(t).toContain('data-mnt-info="Birleşik CG');
+      expect(t).not.toMatch(/Ağırlık merkezi\s+\(/);
+    } finally { global.nodes = []; delete global.veMntAkso; }
   });
 });
 

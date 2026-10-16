@@ -58,20 +58,22 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). STEP'te kütle
   yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Kapı:
   `mount-step.test.js` + `mount-wizard.test.js`.
-- `js/mount-akso.js` — Takoz **2D Görünüm'ün aksonometrik çizicisi** (pencerenin İLK
-  sekmesi; kullanıcı seçimi 2026-10-15): dimetrik (ISO 5456-3) varsayılan, izometrik
-  seçicide, sekiz bakış; gölge hep açık, direk · kuvvet · mod · rijitlik düğmeyle, üç
-  duvar tam ekranda. DOM'suz, çizim OKUR (modeli `_mntAksoModel` kurar; kuvvet ve mod
-  yalnız güncel çözümden); görünüm tercihi modelde değil. Başlangıç sayfasının örnek
-  karoları da bu çizicinin sade kipi (`veMntAksoOrnekModel`); raporun §8'indeki teknik
-  illüstrasyon (x-ışını, SABİT görünüş, çözümün girdisinden — `veMntAksoCozumModel`) da.
-  **3D Görüntüleyici'nin ilk sekmesi** aynı çizicinin SERBEST kamerası (`o.kam` azimut ·
-  yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle döndürür, tekerlek imlecin
-  altını tutarak yakınlaştırır, sağ tık kaydırır). **"Klasik 3B" sekmesi YALNIZ AD**
-  (kullanıcı kararı 2026-10-16): three.js sahnesi kaldırıldı, sekme ilerleyen zamanda
-  gerçek CAD dosyasıyla işlenecek; `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin
-  sahnesi. Kapı: `mount-akso.test.js` (→ *RAPOR* · *SERBEST KAMERA* · *KLASİK 3B*) +
-  `mount-pencere.spec.js` → *Aksonometrik* · *3D Görüntüleyici* ·
+- `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
+  Görünüm; kullanıcı kararları 2026-10-15/16). Pencerenin TEK çizimi SERBEST kamerada
+  (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle döndürür,
+  tekerlek imlecin altını tutarak yakınlaştırır, sağ tık kaydırır); hazır bakışlar
+  dimetrik (ISO 5456-3) · izometrik · üstten · önden · yandan, **düz görünüş YOK**.
+  Gölge hep açık, direk · kuvvet · mod · rijitlik düğmeyle, üç duvar tam ekranda;
+  işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan büyümez). DOM'suz, çizim OKUR
+  (modeli `_mntAksoModel` kurar; kuvvet ve mod yalnız güncel çözümden); görünüm
+  tercihi modelde değil. Başlangıç sayfasının örnek karoları bu çizicinin sade kipi
+  (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
+  görünüş, çözümün girdisinden — `veMntAksoCozumModel`); ikisi de katsız.
+  **3D Görüntüleyici YER TUTUCU** (`componentDefs['mnt-viewer'].yerTutucu`): "Klasik
+  3B" tek sekme, ilerleyen zamanda gerçek CAD dosyasıyla işlenecek;
+  `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin sahnesi. Kapı:
+  `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *RAPOR* ·
+  *KLASİK 3B*) + `mount-pencere.spec.js` → *Görünümler* · *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
@@ -426,7 +428,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `input[inputmode="decimal"]` kullanır. Kapı: `sayi-alan.test.js` +
   `sayi-alan.spec.js`.
 - **BİLEŞEN PENCERESİ TEK İSKELET** (`js/pencere-kabuk.js`, 2026-10-16): FEAD ve
-  Takoz'un her penceresi kimlik → ≥ 2 kategori sekmesi → gövde; sağ sütunda
+  Takoz'un her penceresi kimlik → ≥ 2 kategori sekmesi → gövde (tek sekmeyi yalnız
+  tipin YER TUTUCU beyanı bağışlar: `componentDefs.yerTutucu`); sağ sütunda
   bağlam → Uygunluk → cevap (`.ve-fp-durum`) → tek eylem. Sekmelerin ÜSTÜNDE hiçbir
   şey yok; durum notu FEAD'in satırı (`.ve-fp-not`), açıklama kılavuzda. Kabuk
   işaretlemesi yalnız kitte (ikinci yazım Takoz'da 17/17 pencereyi aileden

@@ -1,13 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// TAKOZ 2B GÖRÜNÜM — AKSONOMETRİK ÇİZİCİ
+// TAKOZ GÖRÜNÜMLER — AKSONOMETRİK ÇİZİCİ
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // KULLANICI SEÇİMİ (2026-10-15, tasarım sayfası "Aksonometrik 2B Görünüm"):
-// 2D Görünüm penceresinin İLK sekmesi aksonometri. İzdüşüm dimetrik
-// (ISO 5456-3; eksen oranı X : Y : Z = 0,94 : 0,47 : 0,94), seçicide
-// izometrik (0,82 üçünde). Bakış önden-soldan-yukarıdan, sekiz yöne döner.
-// Çizim dili gölgeli prizma; Z = 0'a düşen gölge hep açık; direk, kuvvet,
-// mod ve rijitlik düğmeyle; üç duvar tam ekranda.
+// izdüşüm dimetrik (ISO 5456-3; eksen oranı X : Y : Z = 0,94 : 0,47 : 0,94),
+// seçicide izometrik (0,82 üçünde), bakış önden-soldan-yukarıdan. Çizim dili
+// gölgeli prizma; Z = 0'a düşen gölge hep açık; direk, kuvvet, mod ve
+// rijitlik düğmeyle; üç duvar tam ekranda. 2026-10-16'dan beri Görünümler
+// penceresinin (eski 2D Görünüm) TEK çizimi SERBEST kamerada (o.kam: azimut ·
+// yükseliş, döndürülür); sabit bakış (iz + b) başlangıç sayfasının
+// karolarında ve raporun illüstrasyonunda.
 //
 // ÇİZİM OKUR, HESAPLAMAZ. Modeli cp-mount.js kurar (`_mntAksoModel`):
 // gövde kutusu çekirdeğin equivalentBox'ı (köşegen atalet — raporun mod
@@ -45,7 +47,8 @@
 //   kat:{ zemin, golge, direk, duvar, kuvvet, cokme, rijit, asal, cetvel },
 //   etiket:'ad'|'genis'|'yok', sade, mod:{ phi, s, faz }, F (sabit sığdırma),
 //   ucluyok, fs:{ k, b } (yazı boyu px), olc(t, px, kalin) (yazı genişliği),
-//   yalnizHareket (yalnız hareket eden katman — canlandırmanın karesi)
+//   yalnizHareket (yalnız hareket eden katman — canlandırmanın karesi),
+//   kam:{ az, el } + kure + yakin + kay (serbest kamera), isaret (işaret boyu katı)
 // ═══════════════════════════════════════════════════════════════════════════
 
 var veMntAkso = (function(){
@@ -84,7 +87,7 @@ var veMntAkso = (function(){
   // ── Kamera ──────────────────────────────────────────────────────────────
   // b: izleyicinin yeri ({x,y,z} ∈ ±1). Dimetrikte izdüşüm yönü ISO 5456-3'ün
   // (1/3, √7/3, 1/3) vektörü: bakış yandan baskın, Y eksenin yarısı.
-  // yon: SERBEST kamera (3D Görüntüleyici) — izleyicinin yönü [x, y, z];
+  // yon: SERBEST kamera (Görünümler) — izleyicinin yönü [x, y, z];
   // verilirse izdüşümün adı ve b yok sayılır.
   function kamera(iz, b, yon){
     var a=(IZ[iz]||IZ.dim).yon;
@@ -314,6 +317,14 @@ var veMntAkso = (function(){
     var etk=sade ? 'yok' : (o.etiket||'ad');
     var FK=(o.fs && o.fs.k) || 10, FB=(o.fs && o.fs.b) || 11;
     var olc=o.olc || tahmin;
+    // İŞARET BOYU (kullanıcı 2026-10-16: "takoz ve bileşenlerin ağırlık
+    // merkezlerinin görünümü biraz ufak olmuş"): takoz küpü, G, gövde CG'si,
+    // nokta kütle ve onların izleri o.isaret katıyla büyür; serbest kamerada
+    // yakınlaştırmayla da (√yakın, 0,75–1,75) — model büyürken işaret noktaya
+    // dönmez, uzaklaşınca modeli boğmaz. ÖLÇÜ olanlar büyümez: kuvvet okunun
+    // boyu (ağırlıkla tepkiler aynı px/N), cetvel, eksen üçlüsü, yazı.
+    // Varsayılan 1: rapor ve karolar birebir eski.
+    var ik=(o.isaret>0 ? o.isaret : 1)*(o.kure ? Math.max(0.75, Math.min(1.75, Math.sqrt(o.yakin || 1))) : 1);
     var kut=m.govde.filter(function(g){ return g.kutu; }).map(function(g){ return { g:g, c:[g.x, g.y, g.z], h:g.kutu.map(function(v){ return v/2; }) }; });
     var nok=m.govde.filter(function(g){ return !g.kutu; });
     var Kp=kapsam(m);
@@ -382,7 +393,7 @@ var veMntAkso = (function(){
       if(kat.kuvvet && m.G) ek.push([m.G.x, m.G.y, m.G.z-Lw*1.15]);
       m.takoz.forEach(function(t){
         if(kat.kuvvet) ek.push([t.x, t.y, t.z+Lw*0.6]);
-        ek.push([t.x+26/F.sc, t.y+26/F.sc, t.z+26/F.sc], [t.x-26/F.sc, t.y-26/F.sc, t.z-26/F.sc]);
+        ek.push([t.x+26*ik/F.sc, t.y+26*ik/F.sc, t.z+26*ik/F.sc], [t.x-26*ik/F.sc, t.y-26*ik/F.sc, t.z-26*ik/F.sc]);
       });
       F=sigdir(ek, o.H);
     }
@@ -399,8 +410,8 @@ var veMntAkso = (function(){
     sira.forEach(function(it){
       if(it.g){
         var gq=Ph([it.g.x, it.g.y, it.g.z]);
-        govdeSvg+='<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="2.4"/>';
-        engel.push({ l:gq[0]-3, t:gq[1]-3, r:gq[0]+3, b:gq[1]+3 });
+        govdeSvg+='<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(2.4*ik)+'"/>';
+        engel.push({ l:gq[0]-3*ik, t:gq[1]-3*ik, r:gq[0]+3*ik, b:gq[1]+3*ik });
         return;
       }
       var q=it.q, g=q.g, Y=yuzler(q.c, q.h);
@@ -419,19 +430,20 @@ var veMntAkso = (function(){
                    r:Math.max.apply(null, sp.map(function(v){ return v[0]; })), b:Math.max.apply(null, sp.map(function(v){ return v[1]; })), a:0.012 });
       if(stil==='xray'){
         var am=Ph(q.c);
-        govdeSvg+='<g class="ve-ak-amk"'+ak(g.k)+'><circle cx="'+R(am[0])+'" cy="'+R(am[1])+'" r="2.6"/><path d="M'+R(am[0]-4.5)+' '+R(am[1])+' H'+R(am[0]+4.5)+' M'+R(am[0])+' '+R(am[1]-4.5)+' V'+R(am[1]+4.5)+'"/></g>';
+        var ar=2.6*ik, ac=4.5*ik;
+        govdeSvg+='<g class="ve-ak-amk"'+ak(g.k)+'><circle cx="'+R(am[0])+'" cy="'+R(am[1])+'" r="'+R(ar)+'"/><path d="M'+R(am[0]-ac)+' '+R(am[1])+' H'+R(am[0]+ac)+' M'+R(am[0])+' '+R(am[1]-ac)+' V'+R(am[1]+ac)+'"/></g>';
         // Gövdenin CG işareti bir veri işaretidir: yazı onu örtmez (raporun
         // çiziminde "G · z 798" ASFAT motorunun işaretinin üstüne düşüyordu).
-        engel.push({ l:am[0]-5, t:am[1]-5, r:am[0]+5, b:am[1]+5 });
+        engel.push({ l:am[0]-5*ik, t:am[1]-5*ik, r:am[0]+5*ik, b:am[1]+5*ik });
       }
     });
     // Takozlar: küçük küp (izdüşümün kendi ekseniyle), gövdelerin üstünde.
-    var takozSvg='', hm=4.4/sc;
+    var takozSvg='', hm=4.4*ik/sc;
     m.takoz.slice().sort(function(a, c){ return K.derin([a.x, a.y, a.z])-K.derin([c.x, c.y, c.z]); }).forEach(function(t){
       var c=hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z];
       var Y=yuzler(c, [hm, hm, hm]).filter(function(f){ return K.gorunur(f.n); });
       takozSvg+='<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+Y.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>';
-      var q=P(c); engel.push({ l:q[0]-7, t:q[1]-7, r:q[0]+7, b:q[1]+7 });
+      var q=P(c); engel.push({ l:q[0]-7*ik, t:q[1]-7*ik, r:q[0]+7*ik, b:q[1]+7*ik });
     });
     // G — düşey izi (yukarıdan bakışta, gölge ya da direk açıkken) ve işareti.
     var gSvg='', gq=null, g3=null;
@@ -441,9 +453,9 @@ var veMntAkso = (function(){
       var gz=P([m.G.x, m.G.y, 0]);
       gSvg='<g'+ak('G', m.G.bilgi)+'>';
       if((kat.golge || kat.direk) && !kat.duvar && b.z>0 && !hareket)
-        gSvg+=cz(gq[0], gq[1]+7, gz[0], gz[1], 've-ak-gdus')+'<path class="ve-ak-giz" d="M'+R(gz[0]-5)+' '+R(gz[1])+' H'+R(gz[0]+5)+' M'+R(gz[0])+' '+R(gz[1]-3)+' V'+R(gz[1]+3)+'"/>';
-      gSvg+='<g class="ve-ak-gam">'+amG(gq[0], gq[1], 6.5)+'</g></g>';
-      engel.push({ l:gq[0]-8, t:gq[1]-8, r:gq[0]+8, b:gq[1]+8 });
+        gSvg+=cz(gq[0], gq[1]+7*ik, gz[0], gz[1], 've-ak-gdus')+'<path class="ve-ak-giz" d="M'+R(gz[0]-5*ik)+' '+R(gz[1])+' H'+R(gz[0]+5*ik)+' M'+R(gz[0])+' '+R(gz[1]-3*ik)+' V'+R(gz[1]+3*ik)+'"/>';
+      gSvg+='<g class="ve-ak-gam">'+amG(gq[0], gq[1], R(6.5*ik))+'</g></g>';
+      engel.push({ l:gq[0]-8*ik, t:gq[1]-8*ik, r:gq[0]+8*ik, b:gq[1]+8*ik });
     }
     if(o.yalnizHareket) return { hareket:govdeSvg+takozSvg+gSvg, H:H, F:F };
 
@@ -468,12 +480,12 @@ var veMntAkso = (function(){
           + '<path d="M'+yol([[xD, c[1]-h[1], c[2]-h[2]], [xD, c[1]+h[1], c[2]-h[2]], [xD, c[1]+h[1], c[2]+h[2]], [xD, c[1]-h[1], c[2]+h[2]]])+' Z"/></g>';
       });
       m.takoz.forEach(function(t){
-        gol+='<g class="ve-ak-d-tg"'+ak(t.k, t.bilgi)+'>'+[[t.x, t.y, zD], [t.x, yD, t.z], [xD, t.y, t.z]].map(function(p){ var q=P(p); return '<rect x="'+R(q[0]-2.6)+'" y="'+R(q[1]-2.6)+'" width="5.2" height="5.2" rx="1"/>'; }).join('')+'</g>';
+        gol+='<g class="ve-ak-d-tg"'+ak(t.k, t.bilgi)+'>'+[[t.x, t.y, zD], [t.x, yD, t.z], [xD, t.y, t.z]].map(function(p){ var q=P(p); return '<rect x="'+R(q[0]-2.6*ik)+'" y="'+R(q[1]-2.6*ik)+'" width="'+R(5.2*ik)+'" height="'+R(5.2*ik)+'" rx="1"/>'; }).join('')+'</g>';
       });
       if(m.G){
         var G3=[m.G.x, m.G.y, m.G.z], Ga=P(G3);
         gol+='<g class="ve-ak-d-gg"'+ak('G', m.G.bilgi)+'>'+[[m.G.x, m.G.y, zD], [m.G.x, yD, m.G.z], [xD, m.G.y, m.G.z]].map(function(p){
-          var q=P(p); return cz(Ga[0], Ga[1], q[0], q[1], 've-ak-d-gk')+'<path d="M'+R(q[0]-4)+' '+R(q[1])+' H'+R(q[0]+4)+' M'+R(q[0])+' '+R(q[1]-4)+' V'+R(q[1]+4)+'"/>';
+          var q=P(p); return cz(Ga[0], Ga[1], q[0], q[1], 've-ak-d-gk')+'<path d="M'+R(q[0]-4*ik)+' '+R(q[1])+' H'+R(q[0]+4*ik)+' M'+R(q[0])+' '+R(q[1]-4*ik)+' V'+R(q[1]+4*ik)+'"/>';
         }).join('')+'</g>';
       }
       s.push(gol);
@@ -554,7 +566,7 @@ var veMntAkso = (function(){
     var direkSvg='';
     if(kat.direk) m.takoz.forEach(function(t){
       var a=P([t.x, t.y, t.z]), z0=P([t.x, t.y, 0]);
-      direkSvg+='<g class="ve-ak-direk"'+ak(t.k)+'>'+cz(a[0], a[1], z0[0], z0[1], 'dr-c')+'<path class="dr-i" d="M'+R(z0[0]-4)+' '+R(z0[1])+' H'+R(z0[0]+4)+' M'+R(z0[0])+' '+R(z0[1]-2.5)+' V'+R(z0[1]+2.5)+'"/></g>';
+      direkSvg+='<g class="ve-ak-direk"'+ak(t.k)+'>'+cz(a[0], a[1], z0[0], z0[1], 'dr-c')+'<path class="dr-i" d="M'+R(z0[0]-4*ik)+' '+R(z0[1])+' H'+R(z0[0]+4*ik)+' M'+R(z0[0])+' '+R(z0[1]-2.5*ik)+' V'+R(z0[1]+2.5*ik)+'"/></g>';
     });
     // ── MOD: dinlenme hâli kesikli, hareket edenin altında ─────────────────
     var hayalet='';
@@ -581,7 +593,7 @@ var veMntAkso = (function(){
       m.takoz.forEach(function(t){
         var h='<g class="ve-ak-rj"'+ak(t.k, t.bilgi)+'>';
         [0, 1, 2].forEach(function(i){
-          var L=(24/sc)*Math.max(0, t.ks[i]||0)/kmax, e=[0, 0, 0]; e[i]=L;
+          var L=(24*ik/sc)*Math.max(0, t.ks[i]||0)/kmax, e=[0, 0, 0]; e[i]=L;
           if(!(L>0)) return;
           var a=P([t.x-e[0], t.y-e[1], t.z-e[2]]), c=P([t.x+e[0], t.y+e[1], t.z+e[2]]);
           h+=cz(a[0], a[1], c[0], c[1], 've-ak-rj-'+'xyz'[i]);
@@ -610,13 +622,13 @@ var veMntAkso = (function(){
       var Wn=m.G.m*9.81, Lk=70, fA=Lk/Math.max(Wn, 1e-9);   // px / N: AĞIRLIK ve TEPKİLER AYNI ÖLÇEKTE
       var yonEkran=function(v){ var p0=P([0, 0, 0]), p1=P(v), dx=p1[0]-p0[0], dy=p1[1]-p0[1], L=Math.sqrt(dx*dx+dy*dy)||1; return [dx/L, dy/L]; };
       var asagi=yonEkran([0, 0, -1]);
-      var wy={ x:gq[0]+asagi[0]*(Lk+8), y:gq[1]+asagi[1]*(Lk+8) };
-      kuvvetSvg+='<g class="ve-ak-kv-w"'+ak('G', m.G.bilgi)+'>'+ok(gq[0], gq[1]+8, wy.x, wy.y, 've-ak-kv-wo', 7)+'</g>';
+      var wy={ x:gq[0]+asagi[0]*(Lk+8*ik), y:gq[1]+asagi[1]*(Lk+8*ik) };
+      kuvvetSvg+='<g class="ve-ak-kv-w"'+ak('G', m.G.bilgi)+'>'+ok(gq[0], gq[1]+8*ik, wy.x, wy.y, 've-ak-kv-wo', 7)+'</g>';
       engel.push({ l:wy.x-4, t:Math.min(gq[1], wy.y), r:wy.x+4, b:Math.max(gq[1], wy.y) });
       if(!sade) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:wy.x, y:wy.y, r:4, m1:'ağırlık '+sayi(m.G.m, 0)+' kg', fs:FK, kalin:true, pri:8, yon:[3, 0, 1, 6, 7] }, olc));
       m.takoz.forEach(function(t){
         var fr=mul(t.f, -1), L=Math.sqrt(dot(fr, fr))*fA, u=yonEkran(fr), a=P([t.x, t.y, t.z]);
-        var b0=[a[0]+u[0]*7, a[1]+u[1]*7], b1=[b0[0]+u[0]*L, b0[1]+u[1]*L];
+        var b0=[a[0]+u[0]*7*ik, a[1]+u[1]*7*ik], b1=[b0[0]+u[0]*L, b0[1]+u[1]*L];
         kuvvetSvg+='<g class="ve-ak-kv-r"'+ak(t.k, t.bilgi)+'>'+ok(b0[0], b0[1], b1[0], b1[1], 've-ak-kv-ro', 5)+'</g>';
         engel.push({ l:Math.min(b0[0], b1[0])-3, t:Math.min(b0[1], b1[1])-3, r:Math.max(b0[0], b1[0])+3, b:Math.max(b0[1], b1[1])+3 });
         if(!sade && t.yukKg!=null) ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:b1[0], y:b1[1], r:3, m1:sayi(t.yukKg, 0)+' kg', fs:FK, kalin:true, cip:true, sinif:'t-cip', pri:6, yon:[2, 4, 5, 0, 1] }, olc));
@@ -631,15 +643,15 @@ var veMntAkso = (function(){
         var ust=P([q.c[0], q.c[1], q.c[2]+(b.z>0 ? q.h[2] : -q.h[2])]);
         // dar çizimde uzun ad kısalır (tam adı ipucunda): "Motor — Cummins …" → "Motor"
         var ad=(dar && g.ad.indexOf(' — ')>0) ? g.ad.split(' — ')[0] : ((dar && g.ad.length>24) ? g.ad.slice(0, 22)+'…' : g.ad);
-        ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:3, m1:ad, m2:sayi(g.m, 0)+' kg', fs:FB, fs2:FK, kalin:true,
+        ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:g.kutu ? 3 : 3*ik, m1:ad, m2:sayi(g.m, 0)+' kg', fs:FB, fs2:FK, kalin:true,
           pri:g.ana ? 7 : 5, yon:b.z>0 ? [2, 4, 5, 0, 1, 3, 6, 7] : [3, 6, 7, 0, 1, 2, 4, 5] }, olc));
       });
       if(!kat.kuvvet) m.takoz.forEach(function(t){
         var q=P(hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z]);
         var m1=etk==='genis' ? t.no+' '+t.ad : (kat.direk ? t.no+' · z '+sayi(t.z, 0) : t.no);
-        ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:6, m1:m1, fs:FK, kalin:true, cip:true, sinif:'t-cip', pri:5 }, olc));
+        ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:6*ik, m1:m1, fs:FK, kalin:true, cip:true, sinif:'t-cip', pri:5 }, olc));
       });
-      if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true }, olc));
+      if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7*ik, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true }, olc));
     }
     var katYazi='';
     if(kat.cokme && cokmeN && !sade){ katYazi=yazi(W-8, 14, 'sehim ×'+sayi(cokmeN, 0), 've-ak-yz ve-ak-kat', FK, 'end', true); engel.push({ l:W-80, t:2, r:W-4, b:18 }); }
@@ -690,7 +702,7 @@ var veMntAkso = (function(){
     if(o.kure) ets=ets.filter(function(e){ return e.x>=0 && e.x<=W && e.y>=0 && e.y<=H; });
     var L=yerlestir(ets, engel, { l:3, t:3, r:W-3, b:H-3 }), et=etiketCiz(L);
     var oran=K.oran.map(function(v){ return sayi(v, 2); }).join(' : ');
-    var svg='<svg class="ve-mnt2d-akso'+(o.zoom ? ' ve-mnt2d-fig' : '')+'" viewBox="0 0 '+W+' '+H+'"'+(o.zoom ? ' data-vb="0 0 '+W+' '+H+'"' : '')
+    var svg='<svg class="ve-mnt2d-akso" viewBox="0 0 '+W+' '+H+'"'
       + ' preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc((yon ? 'Serbest bakış' : IZ[iz].ad)+' · '+bakisAdi(b))+'">'
       + s.join('')+direkSvg+hayalet
       + '<g class="ve-ak-hareket"><!--hb-->'+govdeSvg+takozSvg+gSvg+'<!--hs--></g>'

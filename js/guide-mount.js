@@ -141,12 +141,12 @@ function _gmSec2(){
       + 'yasası, kapasite', 'Katalogdan seçip takoza uygulamak için'],
     ['<strong>Çözücü</strong>', 'Çözüm modu, sönüm, şok', 'Tuvalde bir tane'],
     ['<strong>Başlangıç ve Örnekler</strong>', 'Kayıtlı gerçek modeller', 'Bölüm 3'],
-    ['<strong>3D Görüntüleyici · 2D Görünüm · Koordinat Düzlemi</strong>',
-      'Modeli gözle denetleme yüzeyleri; 2D Görünüm ilk sekmede modeli aksonometrik çizer '
-      + '(dimetrik ya da izometrik, sekiz bakış; direk, kuvvet, mod ve rijitlik katmanları), '
-      + 'düz görünüşlerde işaretleri numarayla çizer ve adlarını yan sütundaki föyde verir; '
-      + '3D Görüntüleyici aynı çizimi serbestçe döndürür (sürükle: döndür, tekerlek: yakınlaştır, '
-      + 'sağ tık: kaydır); Klasik 3B sekmesi gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
+    ['<strong>Görünümler · Koordinat Düzlemi · 3D Görüntüleyici</strong>',
+      'Modeli gözle denetleme yüzeyleri; Görünümler modeli aksonometrik çizer ve serbestçe '
+      + 'döndürür (sol tık + sürükle: döndür, tekerlek: yakınlaştır, sağ tık: kaydır; hazır '
+      + 'bakışlar dimetrik, izometrik, üstten, önden, yandan; direk, kuvvet, mod ve rijitlik '
+      + 'katmanları), işaretlerin adlarını ve konumlarını İşaretler sekmesindeki föyde verir; '
+      + '3D Görüntüleyici gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12']
   ], ['Bileşen', 'Ne', 'Not']);
   h += '<h3>2.2 Neyi siz verirsiniz, neyi program hesaplar</h3>';

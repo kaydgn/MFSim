@@ -533,6 +533,10 @@ var componentDefs = {
   'mnt-viewer': {
     name: '3D Görüntüleyici',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linejoin="round"/></svg>',
+    // YER TUTUCU (kullanıcı kararı 2026-10-16): "Klasik 3B" ilerleyen zamanda
+    // gerçek CAD dosyasıyla işlenecek; pencere bu notu gösterir ve aile
+    // kapısı tek sekmesini yalnız bu beyanla bağışlar (pencere-kabuk.test.js).
+    yerTutucu: 'Bu bileşen gerçek CAD dosyasıyla çalışmaya ayrıldı. Model Görünümler bileşeninde döndürülür.',
     inputs: 0, outputs: 0, isMountViewer: true, defaultWidth: 60, defaultHeight: 56
   },
   // Koordinat Düzlemi — koordinat sistemini (X/Y/Z eksenleri + düzlemler) 3B
@@ -543,12 +547,14 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #676055)" opacity="0.18" stroke="var(--text-muted, #676055)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #9a3b3b)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #9a3b3b)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #2f6b45)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #2f6b45)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #a8502b)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #a8502b)"/></svg>',
     inputs: 0, outputs: 0, isMountCoordFrame: true, defaultWidth: 60, defaultHeight: 56
   },
-  // 2D Görünüm — güç grubunun üstten (X–Y) ve yandan (X–Z) ölçekli diyagramları:
-  // takozlar, bileşen ağırlık merkezleri ve birleşik ağırlık merkezi. Topoloji
-  // güncellendikçe yeniden çizilir. Fiziksel topolojiye bağlanmaz. Panel: cp-mount.js.
+  // Görünümler (eski adıyla 2D Görünüm, 2026-10-16) — güç grubunun döndürülebilir
+  // aksonometrisi: gövdeler eşdeğer kutularıyla, takozlar, gövde ağırlık
+  // merkezleri ve birleşik G; hazır bakışlar (dimetrik · izometrik · üstten ·
+  // önden · yandan). Fiziksel topolojiye bağlanmaz. Panel: cp-mount.js, çizici
+  // mount-akso.js.
   'mnt-2dview': {
-    name: '2D Görünüm',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="14" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><line x1="20" y1="40" x2="20" y2="20" stroke="var(--accent-danger, #9a3b3b)" stroke-width="2.5"/><line x1="20" y1="40" x2="44" y2="40" stroke="var(--accent-success, #2f6b45)" stroke-width="2.5"/><circle cx="52" cy="30" r="4" fill="var(--accent-warning, #8a6a12)"/><rect x="64" y="24" width="8" height="8" fill="var(--accent-success, #2f6b45)"/><rect x="12" y="54" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="3"/><line x1="20" y1="80" x2="20" y2="60" stroke="var(--accent-danger, #9a3b3b)" stroke-width="2.5"/><line x1="20" y1="80" x2="44" y2="80" stroke="var(--accent-primary, #a8502b)" stroke-width="2.5"/><circle cx="52" cy="66" r="4" fill="var(--accent-warning, #8a6a12)"/><rect x="64" y="70" width="8" height="8" fill="var(--accent-success, #2f6b45)"/></svg>',
+    name: 'Görünümler',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M16 25 A40 15 0 0 1 80 20" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linecap="round"/><path d="M84 13 L84 26 L72 22 Z" fill="var(--accent-primary, #a8502b)"/><path d="M20 44 L50 33 L80 44 L50 55 Z" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><path d="M20 44 V70 L50 81 L80 70 V44 M50 55 V81" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="63" r="7" fill="var(--bg-input, #ffffff)" stroke="var(--accent-danger, #9a3b3b)" stroke-width="3.5"/><rect x="12" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/><rect x="76" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/></svg>',
     inputs: 0, outputs: 0, isMount2DView: true, defaultWidth: 60, defaultHeight: 56
   },
   // Rapor — Çözücü'nün 6 SD sonuçlarını akademik, tamamen çevrimdışı bir HTML

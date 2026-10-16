@@ -10,6 +10,12 @@
  *     eksen değeri, +X) hiç karşılaştırılmıyordu
  * Burada çizicinin kendi kutu tahminiyle ölçülür (hızlı kapı); gerçek kutular
  * tarayıcıda, yerleşim kapısında.
+ *
+ * 2026-10-16: 2D Görünüm'ün üç düz görünüşlük paneli kalktı (pencere
+ * Görünümler oldu — döndürülebilir aksonometri). Aynı işaret dili ve etiket
+ * yerleştirici (_mnt2DFigure · _mnt2DLabels) sihirbazın ÇİZİM MASASINDA
+ * yaşıyor; kapılar oraya taşındı, panelin kendi ölçüleri (980 birimlik
+ * görünüm kutusu, dış kutunun hâlesi, "Z = 0") onunla birlikte gitti.
  */
 const cp = require('../../js/cp-mount.js');
 const ornek = require('../../assets/examples/tulga_topoloji.json');
@@ -33,67 +39,47 @@ function yazilar(svg) {
   return out;
 }
 
-describe('Takoz kesit çizimi (Tulga)', () => {
-  const veri = tulga();
-  const figurler = cp._mnt2DViewSVG(veri, 955).split('<svg class="ve-mnt2d-fig"').slice(1);
+// Sihirbazın masası: üç ölçü × üç görünüş — masanın kendi boyları.
+const MASA_OLCU = [[1098, 824], [900, 640], [700, 520]];
+function masaCiz(veri) {
+  const out = [];
+  MASA_OLCU.forEach(([W, H]) => ['ust', 'yan', 'on'].forEach((g) => out.push(cp.veMnt2DGorunusSVG(veri, W, H, { gorunus: g }))));
+  return out;
+}
+function masaYazilari(svg) {
+  const out = [];
+  const re = /<text ([^>]*)>([^<]*)<\/text>/g;
+  let m;
+  while ((m = re.exec(svg))) {
+    const a = (k) => { const q = new RegExp(k + '="([^"]*)"').exec(m[1]); return q ? q[1] : null; };
+    const t = m[2].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    out.push({ t, px: +a('font-size'), k: cp._mnt2DYaziKutu(+a('x'), +a('y'), t, a('text-anchor'), +a('font-size'), a('font-weight') === '700') });
+  }
+  return out;
+}
 
-  test('örnek gerçekten dolu: beş takoz, bileşenler, birleşik CG, üç görünüş', () => {
+describe('Takoz kesit çizimi — sihirbazın masası (Tulga)', () => {
+  const veri = tulga();
+  const figurler = masaCiz(veri);
+
+  test('örnek gerçekten dolu: beş takoz, bileşenler, birleşik CG, dokuz çizim', () => {
     expect(veri.mounts.length).toBe(5);
     expect(veri.comps.length).toBeGreaterThanOrEqual(4);
     expect(veri.cg).toBeTruthy();
-    expect(figurler.length).toBe(3);
-  });
-
-  test('görünüm kabın genişliğinde 1:1 kurulur (viewBox = kap); kap verilmezse 980', () => {
-    expect(figurler[0]).toMatch(/^ viewBox="0 0 955 /);
-    expect(cp._mnt2DViewSVG(veri)).toMatch(/viewBox="0 0 980 /);
-    expect(cp._mnt2DViewSVG(veri, 300)).toMatch(/viewBox="0 0 640 /);   // taban: altı sıkışmaz
+    expect(figurler.length).toBe(9);
+    figurler.forEach((f, i) => expect({ i, svg: /^<svg class="ve-mnt2d-gorunus" viewBox="0 0 /.test(f) }).toEqual({ i, svg: true }));
   });
 
   test('hiçbir yazı ölçek tabanının (10 px) altında değil', () => {
     const kucuk = [];
-    figurler.forEach((f) => yazilar(f).forEach((y) => { if (y.px < 10) kucuk.push(`${y.t} ${y.px}`); }));
+    figurler.forEach((f, i) => masaYazilari(f).forEach((y) => { if (y.px < 10) kucuk.push(`${i}: ${y.t} ${y.px}`); }));
     expect(kucuk).toEqual([]);
   });
 
-  // Çakışan değer yazılmıyor (çizgisi kalıyor) — ama kaçınılabilen bir
-  // çakışma yüzünden değil: eksen göstergesi (+X/+Z okları) sol değer
-  // sütununa düşüyordu ve yan/önden görünüşte en üst ızgaranın "500"ü,
-  // okları saran tek dikdörtgen yüzünden üstten görünüşte "300" düşüyordu.
-  test('her ızgara çizgisinin DEĞERİ yazılı — eksen göstergesi değer sütunundan kaçar', () => {
-    const sayi = /^[−-]?[\d.]+$/;
-    figurler.concat(cp._mnt2DViewSVG(veri, 640).split('<svg class="ve-mnt2d-fig"').slice(1)).forEach((f, i) => {
-      const yatay = [...f.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="[-\d.]+" y2="\2" stroke="var\(--border-color\)" stroke-width="0.5"/g)].length;
-      const dikey = [...f.matchAll(/<line x1="([-\d.]+)" y1="[-\d.]+" x2="\1" y2="[-\d.]+" stroke="var\(--border-color\)" stroke-width="0.5"/g)].length;
-      const sol = [...f.matchAll(/<text x="[-\d.]+" y="[-\d.]+" text-anchor="end"[^>]*>([^<]*)<\/text>/g)].filter((m) => sayi.test(m[1])).length;
-      const alt = [...f.matchAll(/<text x="[-\d.]+" y="[-\d.]+" text-anchor="middle"[^>]*>([^<]*)<\/text>/g)].filter((m) => sayi.test(m[1])).length;
-      expect(yatay).toBeGreaterThan(3);
-      expect(`${i}: ${sol}/${yatay} · ${alt}/${dikey}`).toBe(`${i}: ${yatay}/${yatay} · ${dikey}/${dikey}`);
-    });
-  });
-
-  // Uçtaki veri noktası çizim alanının tam kenarına düşüyordu: Tulga'da
-  // "Ön Takoz" işareti sol değer sütununa taşıp üstten görünüşün "0"ını
-  // örtüyordu (yazı ↔ yazı ölçüsü bunu görmez — örten bir işaret).
-  test('işaretler çizim alanının İÇİNDE — değer sütununa taşıp eksen değerini örtmez', () => {
-    const PLOT_L = 66, PLOT_R = 40, disari = [];
-    figurler.forEach((f, i) => {
-      const W = Number(/^ viewBox="0 0 (\d+)/.exec(f)[1]);
-      for (const g of f.matchAll(/<g data-mnt-info="([^"]*)">([\s\S]*?)<\/g>/g)) {
-        const ad = g[1].split('&#10;')[0];
-        for (const r of g[2].matchAll(/<rect x="([-\d.]+)" y="[-\d.]+" width="([\d.]+)"/g))
-          if (+r[1] < PLOT_L - 0.5 || +r[1] + +r[2] > W - PLOT_R + 0.5) disari.push(`${i}: ${ad}`);
-        for (const c of g[2].matchAll(/<circle cx="([-\d.]+)" cy="[-\d.]+" r="([\d.]+)"/g))
-          if (+c[1] - +c[2] < PLOT_L - 0.5 || +c[1] + +c[2] > W - PLOT_R + 0.5) disari.push(`${i}: ${ad}`);
-      }
-    });
-    expect(disari).toEqual([]);
-  });
-
-  test('aynı görünüşte iki yazı üst üste değil (etiketler, eksen değerleri, "Z = 0", +X)', () => {
+  test('aynı görünüşte iki yazı üst üste değil (etiketler, eksen değerleri, eksen adları)', () => {
     const binen = [];
     figurler.forEach((f, i) => {
-      const y = yazilar(f);
+      const y = masaYazilari(f);
       expect(y.length).toBeGreaterThan(15);
       for (let a = 0; a < y.length; a++) for (let b = a + 1; b < y.length; b++)
         if (cp._mnt2DKesisir(y[a].k, y[b].k, 0)) binen.push(`${i}: "${y[a].t}" ↔ "${y[b].t}"`);
@@ -111,11 +97,8 @@ describe('Takoz kesit çizimi (Tulga)', () => {
  * "0"ını, panelde "Z = 0" yazısını örtüyordu. */
 describe('Takoz kesit çizimi — çizgi yazının altında kalır, işaret yazıyı örtmez', () => {
   const veri = tulga();
-  const panel = cp._mnt2DViewSVG(veri, 955).split('<svg class="ve-mnt2d-fig"').slice(1);
-  const masa = [];
-  [[1098, 824], [900, 640], [700, 520]].forEach(([W, H]) => ['ust', 'yan', 'on'].forEach((g) =>
-    masa.push(cp.veMnt2DGorunusSVG(veri, W, H, { gorunus: g }))));
-  const hepsi = panel.concat(masa);
+  const masa = masaCiz(veri);
+  const hepsi = masa;
   // Sırayla öğeler: yazı (kutusu) ve kılavuz (0,7 px çizgi)
   function ogeler(svg) {
     const out = [];
@@ -138,13 +121,12 @@ describe('Takoz kesit çizimi — çizgi yazının altında kalır, işaret yaz�
     return false;
   };
 
-  test('her yazı zeminin renginde hâle taşır — panelde dış kutunun, masada masanın', () => {
+  test('her yazı zeminin renginde hâle taşır — masanın zemini', () => {
     const halesiz = [];
     hepsi.forEach((f, i) => ogeler(f).filter((o) => o.tur === 'yazi').forEach((o) => {
       if (!/paint-order="stroke"/.test(o.attr)) halesiz.push(`${i}: ${o.t}`);
     }));
     expect(halesiz).toEqual([]);
-    expect(panel[0]).toMatch(/<text [^>]*stroke="var\(--bg-secondary\)"/);
     expect(masa[0]).toMatch(/<text [^>]*stroke="var\(--bg-input\)"/);
   });
 
@@ -179,19 +161,6 @@ describe('Takoz kesit çizimi — çizgi yazının altında kalır, işaret yaz�
       const is = isaretler(f);
       deger.forEach((d) => { if (is.some((k) => cp._mnt2DKesisir(d.k, k, 0))) ortulen.push(`${i}: ${d.t}`); });
     });
-    expect(ortulen).toEqual([]);
-  });
-
-  test('panelde "Z = 0" yazısı işaretin altında kalmaz (yan ve ön görünüş)', () => {
-    const ortulen = [];
-    let n = 0;
-    panel.forEach((f, i) => {
-      ogeler(f).filter((o) => o.tur === 'yazi' && /^[YZ] = 0$/.test(o.t)).forEach((r) => {
-        n++;
-        if (isaretler(f).some((k) => cp._mnt2DKesisir(r.k, k, 0))) ortulen.push(`${i}: ${r.t}`);
-      });
-    });
-    expect(n).toBe(2);                       // üstten görünüşte referans yazısı yok
     expect(ortulen).toEqual([]);
   });
 });

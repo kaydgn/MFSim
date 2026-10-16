@@ -157,7 +157,7 @@ function clearSelection() {
 // `tests/e2e/mufettis-sigma.spec.js` onu sütunda ölçer.
 // TAKOZ'UN HİÇBİR TİPİ BURADA DEĞİL (2026-10-15, kullanıcı kararı: "eski tipte
 // hiçbir bileşen kalmasın"): kütle gövdeleri, Takoz ve Çözücü 2026-10-14'te,
-// kalanlar (Örnek, 2D Görünüm, Takoz Özellikleri) ertesi gün çıktı. İki
+// kalanlar (Örnek, 2D Görünüm — bugün Görünümler —, Takoz Özellikleri) ertesi gün çıktı. İki
 // görüntüleyici "KALICI modal" kaydıyla buradaydı; sütunda tek görünüş/tek
 // eksen düzeniyle yeniden kuruldular (docs/decisions/ortak-yuzeyler.md →
 // "Müfettiş tuvalin YANINDADIR"). Kapı: mount-sutun.test.js → *LİSTE*.
@@ -441,14 +441,6 @@ function showNodeProperties(node) {
   // Takoz Çözücü: hesap YALNIZ "▶ Hesapla" düğmesiyle koşar (otomatik tetik YOK).
   // Panel açılışında model çözülmez; ayrıntılı sonuçlara Rapor bileşeninden bakılır.
 
-  // Takoz 3D Görüntüleyici: panel açılınca aksonometriyi kabın gerçek genişliğinde kur
-  if(node.type === 'mnt-viewer') {
-    setTimeout(function() {
-      if(typeof veMntViewerRefresh === 'function') veMntViewerRefresh();
-    }, 140);
-  }
-
-
   // Takoz Koordinat Düzlemi: panel açılınca koordinat sistemini 3B çiz
   if(node.type === 'mnt-coordframe') {
     setTimeout(function() {
@@ -456,7 +448,7 @@ function showNodeProperties(node) {
     }, 140);
   }
 
-  // Takoz 2D Görünüm: panel açılınca üstten/yandan diyagramı çiz
+  // Takoz Görünümler: panel açılınca aksonometriyi kabın gerçek genişliğinde kur
   if(node.type === 'mnt-2dview') {
     setTimeout(function() {
       if(typeof veMnt2DViewRefresh === 'function') veMnt2DViewRefresh();

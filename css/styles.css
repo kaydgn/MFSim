@@ -4696,7 +4696,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .ve-properties-overlay.visible .ve-properties{ transform:scale(1); }
 
-/* 2D Görünüm (1000 px) ve Takoz Özellikleri (1040 px) modal görüntüleyici
+/* 2D Görünüm (bugün Görünümler; 1000 px) ve Takoz Özellikleri (1040 px) modal görüntüleyici
    genişlikleri 2026-10-15'te KALKTI: iki pencere de sütunda (Takoz bloğu). */
 
 /* ══ ÖZELLİK PENCERESİ GENİŞ EKRANDA SÜTUNDUR, MODAL DEĞİL ══════════════
@@ -5270,36 +5270,13 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   opacity:1;
 }
 .ve-properties--compact .ve-prop-del:hover{ background:var(--bg-input); }
-/* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
-   grabbing imleci sürükleme sırasında JS ile ayarlanır. */
-.ve-mnt2d-fig{ cursor:grab; }
-.ve-mnt2d-fig:active{ cursor:grabbing; }
-
-/* Özet şeridi — toplam kütle · birleşik CG · takoz/bileşen sayısı (her zaman görünür) */
-.ve-mnt2d-summary{
-  display:flex; flex-wrap:wrap; gap:6px 16px;
-  padding:7px 10px; margin-bottom:6px;
-  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
-  font-size:var(--fs-tiny); color:var(--text-secondary);
-}
-.ve-mnt2d-summary b{ color:var(--text-heading); font-weight:600; }
-/* Lejant — sembol/renk açıklaması */
-.ve-mnt2d-legend{
-  display:flex; flex-wrap:wrap; gap:4px 16px;
-  padding:5px 10px; margin-bottom:9px;
-  font-size:var(--fs-tiny); color:var(--text-muted);
-}
-.ve-mnt2d-legend span{ display:inline-flex; align-items:center; gap:5px; }
-.ve-mnt2d-legend i{ font-style:normal; color:var(--text-muted); }
-
-/* Her figür + köşesindeki zoom kontrolleri */
-.ve-mnt2d-figwrap{ position:relative; }
+/* Yakınlaştırma düğmeleri (aksonometrinin başlık şeridinde — aşağıdaki
+   `.ve-mnt-2d .ve-mnt2d-zoomctl` onu şeride oturtur). */
 .ve-mnt2d-zoomctl{
   position:absolute; top:10px; right:12px; z-index:2;
   display:flex; flex-direction:column; gap:3px;
   opacity:0.32; transition:opacity 0.15s ease;
 }
-.ve-mnt2d-figwrap:hover .ve-mnt2d-zoomctl,
 .ve-mnt2d-zoomctl:focus-within{ opacity:1; }
 .ve-mnt2d-zoomctl button{
   width:23px; height:23px; padding:0;
@@ -10038,7 +10015,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 /* ── KALAN PENCERELER (2026-10-15) — TAKOZ'UN HİÇBİR PENCERESİ MODAL DEĞİL ──
    Kullanıcı kararı: "Hepsini sütuna al … eski tipte hiçbir bileşen kalmasın."
    Rapor, modül kartı, 3B, Koordinat, Örnek, Takoz Özellikleri ve 2D Görünüm
-   aynı kabukta (`.ve-fp-*`) ve föyde; burada yalnız yeni parçaları. */
+   (bugün Görünümler) aynı kabukta (`.ve-fp-*`) ve föyde; burada yalnız yeni parçaları. */
 
 /* Föyde eksik değer ("girilmedi", "konum eksik") — kehribar. */
 .ve-properties-content .ve-mnt-foy td.eks{ color:var(--ink-warning); font-weight:600; }
@@ -10126,7 +10103,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    göstergenin örnek çizgisi 16 × 9 (krokinin 10 × 10 işaretinden geniş). */
 .ve-mnt-kroki-bas em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap; }
 .ve-mnt-kroki-bas .ve-fp-sym{ font-style:normal; text-transform:none; letter-spacing:normal; }
-/* 2D görünüşün yakınlaştırma düğmeleri şeritte (çizimin köşesinde değil). */
+/* Aksonometrinin yakınlaştırma düğmeleri şeritte (çizimin köşesinde değil). */
 .ve-mnt-2d .ve-mnt2d-zoomctl{ position:static; flex-direction:row; opacity:1; margin-left:auto; }
 .ve-mnt-2d .ve-mnt2d-zoomctl button{ width:22px; height:20px; }
 .ve-mnt-kroki-lej svg.ve-mnt-lej-cizgi{ width:16px; height:9px; }
@@ -10138,7 +10115,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-sil:hover{ border-color:var(--border-color); background:var(--bg-tertiary); }
 .ve-mnt-sil:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 
-/* 2D GÖRÜNÜM — görünüşün çizimi (kroki çerçevesinde) ve tam ekranın kabı. */
+/* GÖRÜNÜMLER — aksonometrinin çerçevesi (kroki çerçevesi gibi) ve tam ekranın kabı. */
 .ve-mnt-2d{
   margin:0 0 6px; border:1px solid var(--border-color); border-radius:var(--radius-md);
   background:var(--bg-primary); overflow:hidden;
@@ -10146,8 +10123,8 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-2d svg{ display:block; width:100%; height:auto; }
 .ve-mnt2d-fs{ flex:1; min-height:0; overflow:auto; padding:12px; }
 
-/* ── 2D GÖRÜNÜM · AKSONOMETRİK (js/mount-akso.js; kullanıcı seçimi 2026-10-15) ──
-   Pencerenin ilk sekmesi. Renk ürünün işaret dilinden — takoz yeşil (2D, 3B,
+/* ── GÖRÜNÜMLER · AKSONOMETRİK (js/mount-akso.js; kullanıcı seçimi 2026-10-15) ──
+   Pencerenin ilk sekmesi (2026-10-16'dan beri döndürülebilir). Renk ürünün işaret dilinden — takoz yeşil (2D, 3B,
    kroki), gövde AM'si kehribar, G ve G'ye ait her şey (asal eksen, eşdeğer
    kutu) kırmızı, rijitlik kolu eksenin rengi (--eksen-*). Zemin --bg-input;
    yazının hâlesi zeminin renginde, çizgiler yazının altından geçer. Yazı
@@ -10269,13 +10246,12 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-ak-bar .ve-mnt-ak-kat{ display:flex; flex-wrap:wrap; gap:6px; }
 .ve-mnt-ak-bar .mnt-vwr-toggle{ width:auto; padding:5px 11px; }
 .ve-mnt-akso-kap{ min-width:0; }
-/* 3D Görüntüleyici · serbest kamera: çizim tutulup döndürülür (sol tık),
+/* Görünümler · serbest kamera: çizim tutulup döndürülür (sol tık),
    kaydırılır (sağ tık), tekerlekle yakınlaşır; odaktaki çizimde oklar döner. */
 .ve-mnt-akso3b svg.ve-mnt2d-akso{ cursor:grab; }
 .ve-ak3b-surukle .ve-mnt-akso3b svg.ve-mnt2d-akso{ cursor:grabbing; }
 .ve-mnt-akso3b svg.ve-mnt2d-akso:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-mnt-ak-ipucu{ margin:6px 0 0; font-size:var(--fs-micro); color:var(--text-muted); }
-.ve-mnt2d-fs-uc{ margin-top:14px; }
 @media (min-width: 900px){ .ve-mnt-akso-kap[data-tam] .ve-mnt-ak-mod{ grid-template-columns:repeat(6, minmax(0, 1fr)); } }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
@@ -11389,7 +11365,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-bas-kapi-t > span{ font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); }
 
 /* KAROLAR — FEAD'de Gates arşivinin kayış yolları, Takoz'da örnek modellerin
-   aksonometrisi (2D Görünüm'ün ilk sekmesi); ikisi de modülün KENDİ
+   aksonometrisi (Görünümler'in çizicisi); ikisi de modülün KENDİ
    çizicisinden, gerçek oranda. */
 .ve-bas-baslik{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; margin-top:26px; }
 .ve-bas-baslik h2{ margin:0; font-size:var(--fs-md); font-weight:700; color:var(--text-heading); }
@@ -11455,7 +11431,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
    TAKOZ BAŞLANGIÇ SİHİRBAZI (js/cp-mount-wizard.js) — kabuk FEAD sihirbazının
    (`.ve-fw-*`, kullanıcı: *"aynısını istiyorum"*). Burada yalnız Takoz'a özgü
    olanlar: liste sütunları, üçlü (x · y · z) alan satırı, masanın lejant
-   işaretleri (2D Görünüm'ün renkleri), tork zinciri şeması ve özet tabloları.
+   işaretleri (Görünümler'in renkleri), tork zinciri şeması ve özet tabloları.
    ════════════════════════════════════════════════════════════════════════════ */
 .ve-mw-liste{ display:flex; flex-direction:column; gap:1px; }
 .ve-mw-liste .ve-fw-kl{ grid-template-columns:22px minmax(0,1fr) auto 16px; }

@@ -1,11 +1,13 @@
 /**
- * mount-akso.test.js — TAKOZ 2D GÖRÜNÜM · AKSONOMETRİK SEKME (2026-10-15)
+ * mount-akso.test.js — TAKOZ GÖRÜNÜMLER · AKSONOMETRİ (2026-10-15 · 10-16)
  * ─────────────────────────────────────────────────────────────────────────
- * Kullanıcı seçimi (tasarım sayfası "Aksonometrik 2B Görünüm"): pencerenin
- * İLK sekmesi aksonometri — dimetrik (ISO 5456-3) varsayılan, izometrik
- * seçicide; sekiz bakış; gölge hep açık; direk, kuvvet, mod ve rijitlik
- * düğmeyle; üç duvar tam ekranda. Çizici js/mount-akso.js (DOM'suz), model
- * ve pencere js/cp-mount.js. Kapılar:
+ * Kullanıcı seçimi (tasarım sayfası "Aksonometrik 2B Görünüm"): aksonometri —
+ * dimetrik (ISO 5456-3) varsayılan, izometrik seçicide; gölge hep açık;
+ * direk, kuvvet, mod ve rijitlik düğmeyle; üç duvar tam ekranda. 2026-10-16:
+ * döndürülebilir hâli 3D Görüntüleyici'den Görünümler'e (eski 2D Görünüm)
+ * taşındı ve pencerenin TEK çizimi oldu — düz görünüşler kalktı, işaretler
+ * büyüdü. Çizici js/mount-akso.js (DOM'suz), model ve pencere
+ * js/cp-mount.js. Kapılar:
  *
  *   · KAMERA — eksen oranı ISO 5456-3'ün 1 : ½ : 1'i (0,94 : 0,47 : 0,94) ve
  *     izometrinin 0,82'si; önden-soldan-yukarıdan +X sağa, +Z yukarı; her
@@ -20,11 +22,15 @@
  *     ekran genişliğinde: yazı ≥ 10 px, iki yazı üst üste değil (çizicinin
  *     kendi kutu tahmini — gerçek kutular yerlesim.spec'te), BÜTÜN çizgiler
  *     yazılardan önce (hâle çizgiyi örter, çipin yazısını çipin dolgusu)
- *   · PENCERE — ilk sekme Aksonometrik, düz görünüşlerin adı kısa; denetim
- *     modeli değiştirmez (saveState yok, düğüm verisi aynı) ve tarayıcıya
- *     yazar; çözüm yokken / bayatken kuvvet ve mod kapalı, sebebi yazılı
- *   · KLASİK 3B — 3D Görüntüleyici'nin ikinci sekmesi yalnız ad: bölmesinde
- *     tuval ve düğme yok, tazeleme three.js sahnesi kurmaz (2026-10-16)
+ *   · PENCERE — Görünümler: Aksonometrik (serbest kamera) · İşaretler; düz
+ *     görünüş yok; denetim modeli değiştirmez (saveState yok, düğüm verisi
+ *     aynı) ve tarayıcıya yazar; çözüm yokken / bayatken kuvvet ve mod kapalı,
+ *     sebebi yazılı
+ *   · İŞARET BOYU — takoz, G, gövde CG'si ve nokta kütle pencerede ×1,5,
+ *     geniş çizimde √2 kata dek daha, yakınlaştırmayla √yakın (0,75–1,75);
+ *     ölçü olan (kuvvet okunun boyu) büyümez; rapor ve karolar birebir eski
+ *   · KLASİK 3B — 3D Görüntüleyici yer tutucu: tek sekme, tipin beyan ettiği
+ *     not; tuval, düğme ve çizim yok, tazeleyicisi yok (2026-10-16)
  */
 const fs = require('fs');
 const path = require('path');
@@ -294,21 +300,40 @@ describe('YAZI — okunur, çakışmaz, çizgi altında', () => {
   });
 });
 
-describe('PENCERE — ilk sekme, denetim, tercih modelde değil', () => {
+describe('PENCERE — Görünümler: iki sekme, denetim, tercih modelde değil', () => {
   function pencere() { return cp.getMnt2DViewPropertiesHTML({ id: 'd2', type: 'mnt-2dview', data: {} }); }
   const tg = (h, ad) => {
     const mt = h.match(new RegExp('<button type="button" class="mnt-vwr-toggle[^"]*" aria-pressed="(true|false)"([^>]*)>' + ad + '</button>'));
     return mt ? { basili: mt[1] === 'true', kapali: /aria-disabled="true"/.test(mt[2]), baslik: (mt[2].match(/title="([^"]*)"/) || [])[1] } : null;
   };
 
-  test('ilk sekme Aksonometrik; düz görünüşlerin adı kısa (eksen çifti kutunun başlığında)', () => {
+  // Kullanıcı (2026-10-16): "alt taraftaki görünümler vs olmayacak, klasik
+  // 3B görünüm gibi olacak". Ölçülen önce: dört sekme (Aksonometrik · Üstten ·
+  // Yandan · Önden), sabit bakışın 10 düğmesi, tam ekranın altında üç düz
+  // görünüş. Sonra: tek döndürülen çizim + numaraların föyü.
+  test('iki sekme — Aksonometrik (serbest kamera) · İşaretler (föy); düz görünüş yok', () => {
     yukle('tulga');
     const h = pencere();
     const sekme = [...h.matchAll(/class="ve-fp-tab"[^>]*data-k="(\w+)"[^>]*aria-selected="(true|false)"[\s\S]*?<span class="ve-fp-tab-ad">([^<]*)<\/span>/g)].map((x) => [x[1], x[2], x[3]]);
-    expect(sekme).toEqual([['akso', 'true', 'Aksonometrik'], ['ust', 'false', 'Üstten'], ['yan', 'false', 'Yandan'], ['on', 'false', 'Önden']]);
-    expect((h.match(/<svg class="ve-mnt2d-akso ve-mnt2d-fig"/g) || []).length).toBe(1);
-    expect(h).toContain('<b>Dimetrik</b><em>önden-soldan-yukarıdan</em>');
-    expect(h).toMatch(/<b>Üstten görünüş<\/b><em>X–Y · gerçek ölçek<\/em>/);
+    expect(sekme).toEqual([['akso', 'true', 'Aksonometrik'], ['isaret', 'false', 'İşaretler']]);
+    expect((h.match(/<svg class="ve-mnt2d-akso"/g) || []).length).toBe(1);
+    expect(h).toContain('id="ve-mnt-akso3b-d2"');                       // serbest kameranın kabı
+    expect(h).toContain('<b data-ak3b-ad>Dimetrik</b>');
+    // hazır bakışlar eski düz görünüşlerin yönleri; sabit bakışın düğmeleri yok
+    const on = [...h.matchAll(/<button type="button" aria-pressed="(?:true|false)" onclick="veMntAksoAyar\('ve-mnt-akso3b-d2','on','(\w+)'\)">([^<]*)</g)].map((x) => x[2]);
+    expect(on).toEqual(['Dimetrik', 'İzometrik', 'Üstten', 'Önden', 'Yandan']);
+    ['data-mnt2d="ust"', 've-mnt2d-gorunus', 've-mnt2d-fig', "'iz'", "'bx'", "'by'", "'bz'", 'Üstten görünüş', 'veMnt2DTamEkran']
+      .forEach((x) => expect({ x, var: h.includes(x) }).toEqual({ x, var: false }));
+    // föy İşaretler sekmesinde: G, gövdeler 1…n, takozlar T1…Tm
+    const d = document.createElement('div'); d.innerHTML = h;
+    const foy = d.querySelector('#ve-fp-panes-d2 > [data-k="isaret"]');
+    expect(foy.querySelector('.ve-fp-sect b').textContent).toBe('İşaretler');
+    expect([...foy.querySelectorAll('tbody tr td:first-child')].map((t) => t.textContent))
+      .toEqual(['G', '1', '2', '3', '4', '5', '6', '7', '8', 'T1', 'T2', 'T3', 'T4', 'T5']);
+    // tam ekran düğmesi çizimin altında; ipucu TEK kopya (sağ sütunun Etkileşim'i)
+    expect(d.querySelector('#ve-fp-panes-d2 > [data-k="akso"] .ve-fp-eylem button').getAttribute('onclick')).toBe('veMntAkso3BTamEkran()');
+    expect(d.querySelectorAll('.ve-mnt-ak-ipucu').length).toBe(0);
+    expect([...d.querySelectorAll('.ve-fp-side .ve-fp-sect b')].map((b) => b.textContent)).toEqual(['Uygunluk', 'Etkileşim']);
   });
 
   test('çözüm yokken ve bayatken kuvvet ile mod kapalı ve sebebini söyler; güncel çözümde açık', () => {
@@ -328,30 +353,29 @@ describe('PENCERE — ilk sekme, denetim, tercih modelde değil', () => {
 
   test('denetim modeli değiştirmez, tarayıcıya yazar; katman ve mod listesi pencereye gelir', () => {
     yukle('tulga'); coz();
-    localStorage.removeItem('ve-mnt-akso');
+    localStorage.removeItem('ve-mnt-akso3b');
     const kap = document.createElement('div');
-    kap.id = 've-mnt-akso-d9';
+    kap.id = 've-mnt-akso3b-d9';
     Object.defineProperty(kap, 'clientWidth', { value: 356 });
     document.body.appendChild(kap);
     kap.innerHTML = pencere();
     const once = JSON.stringify(global.nodes.map((n) => n.data));
-    const A = cp.VE_MNT_AKSO;
+    const A = cp.VE_MNT_AKSO3B;
     const yedek = JSON.parse(JSON.stringify(A));
     try {
-      expect(cp.veMntAksoAyar('ve-mnt-akso-d9', 'kat', 'kuvvet')).toBe(true);
+      expect(cp.veMntAksoAyar('ve-mnt-akso3b-d9', 'kat', 'kuvvet')).toBe(true);
       expect(kap.innerHTML).toContain('ağırlık 788 kg');
       expect(tg(kap.innerHTML, 'Kuvvet').basili).toBe(true);
-      cp.veMntAksoAyar('ve-mnt-akso-d9', 'kat', 'mod');
+      cp.veMntAksoAyar('ve-mnt-akso3b-d9', 'kat', 'mod');
       const mod = [...kap.querySelectorAll('.ve-mnt-ak-mod button')].map((b) => b.textContent);
       expect(mod.length).toBe(6);
       expect(mod[0]).toMatch(/^1 6,51 Hzyanal\+yalpalama$/);
-      cp.veMntAksoAyar('ve-mnt-akso-d9', 'iz', 'iso');
-      cp.veMntAksoAyar('ve-mnt-akso-d9', 'bz', -1);
-      expect(kap.innerHTML).toContain('<b>İzometrik</b><em>önden-soldan-alttan</em>');
+      cp.veMntAksoAyar('ve-mnt-akso3b-d9', 'on', 'iso');
+      expect(kap.innerHTML).toMatch(/<b data-ak3b-ad(="")?>İzometrik<\/b><em data-ak3b-aci(="")?>yükseliş 35° · azimut 225°<\/em>/);
       expect(stubs.saveState).not.toHaveBeenCalled();
       expect(JSON.stringify(global.nodes.map((n) => n.data))).toBe(once);
-      const yaz = JSON.parse(localStorage.getItem('ve-mnt-akso'));
-      expect([yaz.iz, yaz.bz, yaz.kuvvet, yaz.mod]).toEqual(['iso', -1, true, true]);
+      const yaz = JSON.parse(localStorage.getItem('ve-mnt-akso3b'));
+      expect([yaz.az, +yaz.el.toFixed(2), yaz.kuvvet, yaz.mod]).toEqual([225, 35.26, true, true]);   // makine: test karşılaştırması
     } finally {
       Object.assign(A, yedek);
       kap.remove();
@@ -383,14 +407,14 @@ describe('RAPOR — §8\'in teknik illüstrasyonu', () => {
     ['k-gizli', 've-ak-amk', 've-ak-direk', '>Motor<', '>T1 Ön Takoz<'].forEach((s) => expect(sekil(s8)).toContain(s));
   });
 
-  test('görünüş sabit: pencerenin tercihi (izometrik, arkadan-alttan, katmanlar) raporu değiştirmez', () => {
+  test('görünüş sabit: pencerenin tercihi (arkadan-alttan açı, katmanlar) raporu değiştirmez', () => {
     yukle('siper'); coz();
     const once = sekil(rapor());
     // Tarayıcıda pencerenin tercihi bir GLOBAL — rapor onu görebilir; Node'da
     // da görsün ki kapı ölçsün.
-    const A = global.VE_MNT_AKSO = cp.VE_MNT_AKSO, yedek = Object.assign({}, A);
-    Object.assign(A, { iz: 'iso', bx: 1, bz: -1, rijit: true, kuvvet: true, mod: true });
-    try { expect(sekil(rapor())).toBe(once); } finally { Object.assign(A, yedek); delete global.VE_MNT_AKSO; }
+    const A = global.VE_MNT_AKSO3B = cp.VE_MNT_AKSO3B, yedek = Object.assign({}, A);
+    Object.assign(A, { az: 45, el: -30, rijit: true, kuvvet: true, mod: true, duvar: true });
+    try { expect(sekil(rapor())).toBe(once); } finally { Object.assign(A, yedek); delete global.VE_MNT_AKSO3B; }
     expect(once).toContain('aria-label="Dimetrik · önden-soldan-yukarıdan"');
   });
 
@@ -448,13 +472,13 @@ describe('YAZI — x-ışınında gövdenin CG işaretini yazı örtmez', () => 
   });
 });
 
-// Adım 3 (2026-10-16): 3D Görüntüleyici'nin ilk sekmesi aynı çizicinin SERBEST
-// kamerası — kullanıcı: "bunu 3B tarzında da yapacağız, o zaman 3B
-// görüntüleyiciye gerek kalmayacak". Kapılar: hazır bakışın açısı o
+// Adım 3 (2026-10-16): aynı çizicinin SERBEST kamerası — kullanıcı: "bunu 3B
+// tarzında da yapacağız, o zaman 3B görüntüleyiciye gerek kalmayacak"; aynı
+// gün Görünümler'in TEK çizimi oldu. Kapılar: hazır bakışın açısı o
 // izdüşümün kendisi; sığdırma dönmeden bağımsız (döndürürken çizim büyüyüp
 // küçülmez); tekerlek imlecin altındaki noktayı tutar; model eli izler;
-// her açıda yazı kuralları; 3B tercihi 2D'ninkinden ayrı.
-describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
+// her açıda yazı kuralları (pencerenin işaret boyuyla).
+describe('SERBEST KAMERA — Görünümler', () => {
   const sayilar = (svg) => (svg.replace(/aria-label="[^"]*"/, '').match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
   test('hazır bakışın açısı o izdüşümün kendisi: iki izdüşüm × sekiz bakışta aynı çizim', () => {
     yukle('tulga');
@@ -536,7 +560,7 @@ describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
     expect(r.etiket.length).toBeLessThan(tumu.etiket.length);
   });
 
-  test('her açıda yazı kuralları: üç örnek × sekiz azimut × dört yükseliş × dört katman', () => {
+  test('her açıda yazı kuralları: üç örnek × sekiz azimut × dört yükseliş × dört katman (pencerenin işaret boyuyla)', () => {
     const yazilar = (svg) => [...svg.matchAll(/<text([^>]*)>([^<]*)<\/text>/g)].map((mt) => {
       const a = (n) => { const q = new RegExp(' ' + n + '="([^"]*)"').exec(mt[1]); return q ? q[1] : null; };
       const px = Number(a('font-size')), x = Number(a('x')), y = Number(a('y')), an = a('text-anchor') || 'start';
@@ -551,7 +575,7 @@ describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
       for (let az = 0; az < 360; az += 45) [-35, 10, 35, 70].forEach((el) => [
         ['temel', {}, 'golge'], ['direk', { direk: true }, 'xray'], ['kuvvet', { kuvvet: true, cokme: true }, 'golge'], ['rijit', { rijit: true, asal: true }, 'xray'],
       ].forEach(([ad, kat, stil]) => {
-        const svg = AK.ciz(m, { W: 354, H: 326, kam: { az, el }, kure: true, stil, kat: Object.assign({ golge: true }, kat), fs: FS }).svg;
+        const svg = AK.ciz(m, { W: 354, H: 326, kam: { az, el }, kure: true, isaret: cp._mntAksoIsaret(354), stil, kat: Object.assign({ golge: true }, kat), fs: FS }).svg;
         const yer = `${k}/${az}/${el}/${ad}`;
         if (/NaN|undefined|Infinity/.test(svg)) sorun.push(yer + ' bozuk');
         const y = yazilar(svg);
@@ -602,25 +626,25 @@ describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
     }
   });
 
-  test('pencere: ilk sekme Aksonometrik, "Klasik 3B" yalnız ad; 3B tercihi 2D\'ninkinden ayrı ve modelde değil', () => {
+  test('pencere: Görünümler\'in kabı serbest kamera; tercih tek, tarayıcıda ve modelde değil', () => {
     yukle('tulga'); coz();
-    const h = cp.getMntViewerPropertiesHTML({ id: 'v3', type: 'mnt-viewer', data: {} });
-    const sekme = [...h.matchAll(/class="ve-fp-tab"[^>]*data-k="(\w+)"[\s\S]*?<span class="ve-fp-tab-ad">([^<]*)<\/span>/g)].map((x) => [x[1], x[2]]);
-    expect(sekme).toEqual([['akso', 'Aksonometrik'], ['sahne', 'Klasik 3B']]);
+    const h = cp.getMnt2DViewPropertiesHTML({ id: 'v3', type: 'mnt-2dview', data: {} });
     expect(h).toContain('id="ve-mnt-akso3b-v3"');
     expect(h).not.toContain('ve-mnt-inline-viewer-canvas');           // three.js sahnesi yok
     expect(h).toContain('<b data-ak3b-ad>Dimetrik</b>');
+    // sabit bakışın tercihi emekli: ne dışa açılıyor ne okunuyor
+    expect(cp.VE_MNT_AKSO).toBeUndefined();
     localStorage.removeItem('ve-mnt-akso3b');
     localStorage.removeItem('ve-mnt-akso');
     const kap = document.createElement('div');
     kap.id = 've-mnt-akso3b-v9';
     Object.defineProperty(kap, 'clientWidth', { value: 356 });
     document.body.appendChild(kap);
-    const A2 = cp.VE_MNT_AKSO, A3 = cp.VE_MNT_AKSO3B, y2 = JSON.parse(JSON.stringify(A2)), y3 = JSON.parse(JSON.stringify(A3));
+    const A3 = cp.VE_MNT_AKSO3B, y3 = JSON.parse(JSON.stringify(A3));
     const once = JSON.stringify(global.nodes.map((n) => n.data));
     try {
       expect(cp.veMntAksoAyar('ve-mnt-akso3b-v9', 'kat', 'direk')).toBe(true);
-      expect([A3.direk, A2.direk]).toEqual([true, false]);
+      expect(A3.direk).toBe(true);
       cp.veMntAksoAyar('ve-mnt-akso3b-v9', 'on', 'ust');
       expect([A3.az, A3.el]).toEqual([270, 88]);
       expect(kap.innerHTML).toMatch(/<b data-ak3b-ad(="")?>Üstten<\/b>/);
@@ -631,37 +655,141 @@ describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
       expect([yaz.az, yaz.el, yaz.direk]).toEqual([270, 88, true]);
       expect(localStorage.getItem('ve-mnt-akso')).toBeNull();
     } finally {
-      Object.assign(A2, y2); Object.assign(A3, y3);
+      Object.assign(A3, y3);
       kap.remove();
     }
   });
 });
 
+// İŞARET BOYU (kullanıcı 2026-10-16: "takoz ve bileşenlerin ağırlık
+// merkezlerinin görünümü biraz ufak olmuş. Onları da büyültelim."). Ölçülen
+// önce (pencere 354 px): takoz küpü 12 px, G 13 px, nokta kütle 4,8 px,
+// gövde CG'si 9 px — işaret yazının boyundaydı. Kural: pencerede ×1,5; geniş
+// çizimde √(W/354) ile en çok √2 kat daha; serbest kamerada √yakın
+// (0,75–1,75). Ölçü olan büyümez; rapor ve karolar katsız.
+describe('İŞARET BOYU — takoz, G, gövde CG\'si ve nokta kütle büyür; ölçü büyümez', () => {
+  const olc = (svg) => {
+    const d = document.createElement('div'); d.innerHTML = svg;
+    const r = (el) => (el ? +el.getAttribute('r') : null);
+    const gen = (g) => {
+      if (!g) return null;
+      const xs = [...g.querySelectorAll('path')].flatMap((p) => [...p.getAttribute('d').matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((q) => +q[1]));
+      return Math.max(...xs) - Math.min(...xs);
+    };
+    return { G: r(d.querySelector('.ve-ak-gam circle')), nokta: r(d.querySelector('circle.ve-ak-nokta')),
+             amk: r(d.querySelector('.ve-ak-amk circle')), takoz: gen(d.querySelector('g.ve-ak-t')) };
+  };
+  const yakin = (a, b, k) => Math.abs(b / a - k) < 0.02 * k;
+
+  test('katsayı: pencere (354 px) ×1,5; geniş çizimde √(W/354), en çok √2 kat daha; dar sütunda küçülmez', () => {
+    expect(cp._mntAksoIsaret(354)).toBe(1.5);
+    expect(cp._mntAksoIsaret(280)).toBe(1.5);
+    expect(cp._mntAksoIsaret(500)).toBeCloseTo(1.5 * Math.sqrt(500 / 354), 12);
+    expect(cp._mntAksoIsaret(708)).toBeCloseTo(1.5 * Math.SQRT2, 12);
+    expect(cp._mntAksoIsaret(1700)).toBeCloseTo(1.5 * Math.SQRT2, 12);
+  });
+
+  test('dört işaret katla birlikte büyür (Tulga, x-ışını): G, nokta kütle, gövde CG\'si, takoz küpü', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel();
+    const o = { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, stil: 'xray', kat: { golge: true, direk: true }, fs: FS };
+    const a = olc(AK.ciz(m, o).svg);
+    expect([a.G, a.nokta, a.amk]).toEqual([6.5, 2.4, 2.6]);            // katsız: eski boy
+    [1.5, cp._mntAksoIsaret(1200)].forEach((k) => {
+      const b = olc(AK.ciz(m, Object.assign({}, o, { isaret: k })).svg);
+      ['G', 'nokta', 'amk', 'takoz'].forEach((ad) => expect({ k, ad, oran: yakin(a[ad], b[ad], k) }).toEqual({ k, ad, oran: true }));
+    });
+  });
+
+  test('yakınlaştırma √yakın kadar büyütür (0,75–1,75); sabit bakışta yakınlık işarete dokunmaz', () => {
+    yukle('siper');
+    const m = cp._mntAksoModel();
+    const G = (o) => olc(AK.ciz(m, Object.assign({ W: 354, H: 326, kat: { golge: true }, fs: FS, isaret: 1.5 }, o)).svg).G;
+    const kam = { kam: { az: 249.3, el: 19.5 }, kure: true };
+    expect(G(Object.assign({ yakin: 1 }, kam))).toBe(9.8);             // 6,5 · 1,5
+    expect(G(Object.assign({ yakin: 2 }, kam))).toBe(13.8);            // 6,5 · 1,5 · √2 = 13,79
+    expect(G(Object.assign({ yakin: 8 }, kam))).toBe(17.1);            // tavan 1,75
+    expect(G(Object.assign({ yakin: 0.4 }, kam))).toBe(7.3);           // taban 0,75
+    expect(G({ iz: 'dim', b: { x: -1, y: -1, z: 1 }, yakin: 4 })).toBe(9.8);
+  });
+
+  test('ölçü büyümez: ağırlık ve tepki oklarının ekrandaki boyu katla aynı (aynı px/N)', () => {
+    yukle('tulga'); coz();
+    const m = cp._mntAksoModel();
+    const oklar = (k) => {
+      const d = document.createElement('div');
+      d.innerHTML = AK.ciz(m, { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, isaret: k, kat: { golge: true, kuvvet: true }, fs: FS }).svg;
+      return [...d.querySelectorAll('.ve-ak-kv-w line, .ve-ak-kv-r line')].map((l) => Math.hypot(l.getAttribute('x2') - l.getAttribute('x1'), l.getAttribute('y2') - l.getAttribute('y1')));
+    };
+    const a = oklar(1), b = oklar(2.2);
+    expect(a.length).toBe(1 + m.takoz.length);
+    a.forEach((v, i) => expect({ i, fark: Math.abs(v - b[i]) < 0.2 }).toEqual({ i, fark: true }));
+  });
+
+  test('rapor ve karolar katsız: çizimleri eski boyda (G r = 6,5)', () => {
+    yukle('tulga'); coz();
+    const R = cp.veMntSonucDurumu().R;
+    expect(olc(AK.ciz(cp.veMntAksoCozumModel(R), rep._MNT_REP_AKSO_O).svg).G).toBe(6.5);
+    expect(rep._MNT_REP_AKSO_O.isaret).toBeUndefined();
+    const ex = core.getMountExampleList()[0];
+    expect(olc(AK.ciz(cp.veMntAksoOrnekModel(ex.model), { W: 300, H: 200, sade: true }).svg).G).toBe(6.5);
+  });
+
+  test('büyüyen işaretle de yazı onları örtmez: takoz, G ve gövde CG\'si (üç örnek × dört açı × iki genişlik)', () => {
+    const ihlal = [];
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel();
+      [[230, 25], [300, 35], [160, 15], [249.3, 19.5]].forEach(([az, el]) => [[354, 'ad', 326], [1200, 'genis', 640]].forEach(([W, etiket, H]) => {
+        const ik = cp._mntAksoIsaret(W);
+        const r = AK.ciz(m, { W, H, kam: { az, el }, kure: true, isaret: ik, stil: 'xray', kat: { golge: true, direk: true }, etiket, fs: FS });
+        const d = document.createElement('div'); d.innerHTML = r.svg;
+        const isaret = [];
+        d.querySelectorAll('.ve-ak-gam circle').forEach((c) => isaret.push([+c.getAttribute('cx'), +c.getAttribute('cy'), 6.5 * ik, 'G']));
+        d.querySelectorAll('.ve-ak-amk circle').forEach((c) => isaret.push([+c.getAttribute('cx'), +c.getAttribute('cy'), 4.5 * ik, 'CG']));
+        m.takoz.forEach((t) => { const g = d.querySelector('g.ve-ak-t[data-ak="' + t.k + '"]'); if (!g) return;
+          const xy = [...g.innerHTML.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map((q) => [+q[1], +q[2]]);
+          const xs = xy.map((p) => p[0]), ys = xy.map((p) => p[1]);
+          isaret.push([(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2, (Math.max(...xs) - Math.min(...xs)) / 2, t.no]); });
+        r.etiket.forEach((e) => isaret.forEach(([x, y, h, ad]) => {
+          const b = e.kutu;
+          if (b.l < x + h && b.r > x - h && b.t < y + h && b.b > y - h) ihlal.push(`${k} ${az}/${el} ${W}: "${e.m1}" ↔ ${ad}`);
+        }));
+      }));
+    });
+    expect(ihlal).toEqual([]);
+  });
+});
+
 // KLASİK 3B YALNIZ AD (kullanıcı kararı 2026-10-16: "Klasik 3B'yi kaldıralım …
-// sadece isim olarak kalabilir, ama içeriğini kaldıralım" — sekme ilerleyen
-// zamanda gerçek CAD dosyasıyla işlenecek). Ölçüldü (main 2f43cda): pencere
-// açılınca 1 WebGL bağlamı kuruluyordu, her tazelemede bir yenisi; sekmede
-// 1 tuval + 6 düğme + gösterge vardı.
-describe('KLASİK 3B — yalnız ad, içerik yok', () => {
-  test('sekme adıyla duruyor; bölmesinde tuval ve düğme yok, yalnız not', () => {
+// sadece isim olarak kalabilir, ama içeriğini kaldıralım" — ilerleyen zamanda
+// gerçek CAD dosyasıyla işlenecek). Ölçüldü (main 2f43cda): pencere açılınca
+// 1 WebGL bağlamı kuruluyordu, her tazelemede bir yenisi; sekmede 1 tuval + 6
+// düğme + gösterge vardı. Aynı gün aksonometri Görünümler'e taşındı: 3D
+// Görüntüleyici bir YER TUTUCU — tek sekme, notu tipin beyanından.
+describe('KLASİK 3B — 3D Görüntüleyici yer tutucu', () => {
+  test('tek sekme "Klasik 3B"; bölmesinde tuval, düğme ve çizim yok, yalnız tipin notu', () => {
     yukle('tulga'); coz();
     const d = document.createElement('div');
     d.innerHTML = cp.getMntViewerPropertiesHTML({ id: 'v5', type: 'mnt-viewer', data: {} });
-    const ad = d.querySelector('#ve-fp-tabs-v5 .ve-fp-tab[data-k="sahne"] .ve-fp-tab-ad');
+    expect([...d.querySelectorAll('#ve-fp-tabs-v5 .ve-fp-tab .ve-fp-tab-ad')].map((x) => x.textContent)).toEqual(['Klasik 3B']);
     const p = d.querySelector('#ve-fp-panes-v5 > [data-k="sahne"]');
-    expect(ad && ad.textContent).toBe('Klasik 3B');
-    expect({ tuval: p.querySelectorAll('canvas').length, dugme: p.querySelectorAll('button').length, svg: p.querySelectorAll('svg').length })
+    expect({ tuval: d.querySelectorAll('canvas').length, dugme: p.querySelectorAll('button').length, svg: d.querySelectorAll('svg').length })
       .toEqual({ tuval: 0, dugme: 0, svg: 0 });
-    expect(p.textContent).toMatch(/gerçek CAD dosyasıyla/);
-    expect(p.innerHTML).not.toMatch(/veMountViewer|veMntViewerFullscreen|Sahne göstergesi/);
+    expect(p.textContent).toBe(componentDefs['mnt-viewer'].yerTutucu);
+    expect(p.textContent).toMatch(/gerçek CAD dosyasıyla.*Görünümler/);
+    expect(d.innerHTML).not.toMatch(/veMountViewer|veMntViewerFullscreen|Sahne göstergesi|ve-mnt-akso|veMntAkso3BTamEkran/);
   });
 
-  test('pencere tazelemesi three.js sahnesi kurmaz', () => {
+  test('tazeleyicisi yok: açılışta hiçbir şey kurulmaz; Görünümler\'in tazelemesi three.js sahnesi kurmaz', () => {
+    expect(cp.veMntViewerRefresh).toBeUndefined();
+    const CORE = fs.readFileSync(path.join(KOK, 'js/cp-core.js'), 'utf8');
+    expect(CORE).not.toMatch(/if\(node\.type === 'mnt-viewer'\) \{\s*setTimeout/);
     const init = jest.fn(), guncelle = jest.fn();
     global.veMountViewerInit = init; global.veMountViewerUpdate = guncelle;
     try {
       yukle('tulga'); coz();
-      cp.veMntViewerRefresh();
+      cp.veMnt2DViewRefresh();
       expect([init.mock.calls.length, guncelle.mock.calls.length]).toEqual([0, 0]);
     } finally {
       delete global.veMountViewerInit; delete global.veMountViewerUpdate;

@@ -2017,6 +2017,15 @@ küçük resmi, yazı ölçeği kanvas kartıyla ortak — 1,4 kat büyütme den
 (`MUAF`) içinde ve her turda hâlâ gerçekleşiyor mu ölçülür; karar
 uygulanınca test kırılır. Kapı: `yerlesim.spec.js` + `mount-2d-etiket.test.js`.
 
+**2026-10-16 — 2D'nin düz görünüşleri emekli.** Kullanıcı: *"alt taraftaki
+görünümler vs olmayacak, klasik 3B görünüm gibi olacak"*; bileşenin adı
+Görünümler, tek çizimi döndürülebilir aksonometri (hazır bakışlar eski düz
+görünüşlerin yönleri), numaraların açılımı İşaretler sekmesinde. Bilinen
+bedel: çizimin ÜSTÜNDE tekerlek sütunu kaydırmaz, yakınlaştırır (klasik 3B
+görüntüleyicinin eli — 3D Görüntüleyici'de onaylanan davranış taşındı);
+sütun çizimin dışında kayar. Kesit çizicinin (`_mnt2DFigure`) kapıları
+sihirbazın masasında (`mount-2d-etiket.test.js`).
+
 ## Ayarlar ve Program Durumu bilgisini kaynağından okur (2026-10-14, doku turu 5 · D)
 
 **Hüküm:** Ayarlar → Hakkında'daki sürüm, açıklama, lisans ve bağımlılık
@@ -2056,7 +2065,15 @@ dar ekranın modalında Rapor 980 ↔ 560 px. Sonra 0 / 17. Kroki sağ sütunun
 başında (FEAD'in bağlam sütunu), seçici Takoz Özellikleri'nin ilk sekmesinde
 (FEAD Kayış'ın Profil'i gibi); çizimin birimi sağ sütunun 296 px'i.
 
+**İstisna — YER TUTUCU (2026-10-16):** içeriği bilerek boş bırakılmış bir
+bileşen (ilk kullanıcısı 3D Görüntüleyici: "Klasik 3B" gerçek CAD dosyasına
+ayrıldı, çizimi Görünümler'e taşındı) tek sekme taşır. Bağış kuralın kendisi
+değil TİPİN BEYANI (`componentDefs[t].yerTutucu` = pencerenin notu, "kendini
+beyan eder" kalıbı): beyansız tek sekmeli pencere ailenin dışında kalır ve kapı
+onu adıyla söyler.
+
 **Kapı:** `pencere-kabuk.test.js` (iki modülün bütün pencereleri AYNI aile
-denetimi, tipler `componentDefs`ten · kabuk işaretlemesi yalnız kitte) +
+denetimi, tipler `componentDefs`ten · kabuk işaretlemesi yalnız kitte · tek
+sekmeyi yalnız beyan bağışlar) +
 `fead-pencere-ailesi.test.js` + `mount-sutun.test.js` → *"FEAD karşılığıyla
 aynı genişlik sınıfı"*.

@@ -778,41 +778,43 @@ describe('Örnek JSON topolojisi (dışa aktar + çözümleme)', () => {
 });
 
 describe('3D Görüntüleyici bileşeni', () => {
-  // "Klasik 3B" YALNIZ AD (kullanıcı kararı 2026-10-16): three.js sahnesi,
-  // katmanları, Yenile ve kendi tam ekranı kaldırıldı; model Aksonometrik
-  // sekmede döndürülüyor. Kapının tamamı mount-akso.test.js → KLASİK 3B.
-  test('panel: iki sekme, hover ipucu; three.js denetimi ve eski kalıntılar yok', () => {
-    const node = { id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} };
-    const html = cp.getMntViewerPropertiesHTML(node);
-    expect(html).toContain('data-k="akso"');
-    expect(html).toContain('data-k="sahne"');
-    expect(html).toContain('bilgi');
-    ['ve-mnt-inline-viewer-canvas', 'veMntViewerRefresh()', 'veMountViewerToggle', 'veMountViewerReset()',
-      'veMntViewerFullscreen()', 'Sahne göstergesi',
-      // Büyüt/resize kaldırıldı (kullanıcı isteği: iç 3D genişlemesi gereksiz); garip açıklama kutusu yok
-      'veMntViewerExpand', 'resize:vertical', 'Aktif tema ile uyumlu']
-      .forEach((s) => expect({ s, var: html.includes(s) }).toEqual({ s, var: false }));
+  // YER TUTUCU (kullanıcı kararları 2026-10-16): "Klasik 3B" gerçek CAD
+  // dosyasıyla çalışmaya ayrıldı, döndürülebilir aksonometri Görünümler'e
+  // taşındı. Kapının tamamı mount-akso.test.js → KLASİK 3B.
+  test('panel: tek sekme "Klasik 3B", tipin beyan ettiği not; çizim, three.js ve eski kalıntılar yok', () => {
+    global.componentDefs = { 'mnt-viewer': { yerTutucu: 'Yer tutucunun notu.' } };
+    try {
+      const html = cp.getMntViewerPropertiesHTML({ id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} });
+      const d = document.createElement('div'); d.innerHTML = html;
+      expect([...d.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'))).toEqual(['sahne']);
+      expect(d.querySelector('#ve-fp-panes-vw1 > [data-k="sahne"]').textContent).toBe('Yer tutucunun notu.');
+      ['ve-mnt-akso', 'veMntAkso3BTamEkran()', 've-mnt-inline-viewer-canvas', 'veMntViewerRefresh()', 'veMountViewerToggle',
+        'veMountViewerReset()', 'veMntViewerFullscreen()', 'Sahne göstergesi', 'veMntViewerExpand', 'resize:vertical', 'Aktif tema ile uyumlu']
+        .forEach((x) => expect({ x, var: html.includes(x) }).toEqual({ x, var: false }));
+    } finally { delete global.componentDefs; }
   });
 });
 
-describe('2D Görünüm bileşeni', () => {
+describe('Görünümler bileşeni (eski 2D Görünüm)', () => {
   afterEach(() => { delete global.nodes; });
-  // 2026-10-15'ten beri sütunda: her görünüş bir SEKME, çizim gerçek ölçekte
-  // ve işaretler NUMARALI (açılımı İşaretler föyünde). Yenile düğmesi yok —
-  // çizim açılışta ve sütun genişliği değişince kendini kurar. Adlı üç
-  // görünüş tam ekranda.
-  test('panel: üç görünüş sekmesi, numaralı çizim, İşaretler föyü, tam ekran', () => {
+  // 2026-10-16: döndürülebilir aksonometri (3D Görüntüleyici'den taşındı) ve
+  // işaretlerin föyü. Düz görünüş sekmeleri ve tam ekranın düz görünüşleri
+  // kalktı — hazır bakışlar aynı yönleri veriyor. Kapının tamamı
+  // mount-akso.test.js → PENCERE.
+  test('panel: Aksonometrik (serbest kamera) · İşaretler (föy) · tam ekran; düz görünüş yok', () => {
     global.nodes = [
       { id: 'a', type: 'mnt-motor', def: { isMountBody: true }, customName: 'Motor', data: { mass: 100, cgx: 0, cgy: 0, cgz: 100 } },
       { id: 'm', type: 'mnt-mount', def: { isMount: true }, customName: 'Ön Takoz', data: { x: -50, y: 20, z: 30 } }
     ];
     const html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} });
-    expect((html.match(/data-mnt2d="(ust|yan|on)"/g) || []).length).toBe(3);
-    expect((html.match(/<svg class="ve-mnt2d-gorunus ve-mnt2d-fig"/g) || []).length).toBe(3);
-    expect(html).toMatch(/>T1<\/text>/);                 // takoz numarası çizimde
-    expect(html).toMatch(/<td>T1<\/td><td class="sol" title="Ön Takoz">Ön Takoz<\/td>/);   // açılımı föyde
-    expect(html).toContain('veMnt2DTamEkran()');
-    expect(html).not.toContain('veMnt2DViewRefresh()');
+    const d = document.createElement('div'); d.innerHTML = html;
+    expect([...d.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'))).toEqual(['akso', 'isaret']);
+    expect(d.querySelector('#ve-fp-panes-d1 > [data-k="akso"] #ve-mnt-akso3b-d1')).not.toBeNull();
+    expect(html).toMatch(/<td>T1<\/td><td class="sol" title="Ön Takoz">Ön Takoz<\/td>/);   // föy İşaretler sekmesinde
+    expect(d.querySelector('#ve-fp-panes-d1 > [data-k="isaret"]').innerHTML).toContain('<td>T1</td>');
+    expect(html).toContain('veMntAkso3BTamEkran()');
+    ['data-mnt2d="ust"', 've-mnt2d-gorunus', 've-mnt2d-fig', 'veMnt2DTamEkran', 'veMnt2DViewRefresh()']
+      .forEach((x) => expect({ x, var: html.includes(x) }).toEqual({ x, var: false }));
   });
   test('_mnt2DGather kütle-ağırlıklı birleşik CG hesaplar', () => {
     global.nodes = [
@@ -825,32 +827,8 @@ describe('2D Görünüm bileşeni', () => {
     expect(d.mounts).toHaveLength(1);
     expect(d.cg.x).toBeCloseTo(150, 3); // (100·0 + 300·200)/400 = 150
   });
-  test('_mnt2DViewSVG: boş → mesaj, dolu → üç ölçekli görünüş (üst/yan/ön)', () => {
-    expect(cp._mnt2DViewSVG({ comps: [], mounts: [], cg: null })).toMatch(/Görüntülenecek bileşen yok/);
-    const svg = cp._mnt2DViewSVG({
-      comps: [{ name: 'Motor', mass: 100, x: 0, y: 0, z: 100 }],
-      mounts: [{ name: 'Ön Takoz', x: -50, y: 20, z: 30 }],
-      cg: { x: 0, y: 0, z: 100, m: 100 }
-    });
-    expect(svg).toContain('<svg');
-    expect(svg).toContain('Üstten görünüş');
-    expect(svg).toContain('Yandan görünüş');
-    expect(svg).toContain('Önden görünüş');               // yeni üçüncü görünüş
-    // her görünüş kendi SVG'sinde (bağımsız yakınlaştırma) → üç figür
-    expect((svg.match(/class="ve-mnt2d-fig"/g) || []).length).toBe(3);
-    expect(svg).toContain('<rect');       // takoz karesi / çerçeve
-    expect(svg).toMatch(/Z\s*=\s*0/);     // zemin çizgisi etiketi
-    expect(svg).toContain('data-mnt-info'); // fare-üstü (hover) bilgi attribute'u
-  });
-  test('_mnt2DViewSVG hover bilgisi koordinat ve kütle taşır', () => {
-    const svg = cp._mnt2DViewSVG({
-      comps: [{ name: 'Motor', mass: 1386.3, x: -321.4, y: 4.9, z: 859.3 }],
-      mounts: [{ name: 'Ön Takoz', x: -50, y: 20, z: 30 }],
-      cg: { x: -321.4, y: 4.9, z: 859.3, m: 1386.3 }
-    });
-    expect(svg).toContain('CG  (');               // bileşen hover: CG (x; y; z) mm
-    expect(svg).toContain('Birleşik CG');          // birleşik CG hover
-    expect(svg).toMatch(/1\.386,3 kg/);            // kütle bilgisi
+  test('üç düz görünüşün paneli ve yakınlaştırıcısı emekli (dışa açılmıyor)', () => {
+    expect([cp._mnt2DViewSVG, cp._mnt2DAttachZoom, cp._mnt2DPencereSVG, cp.veMntViewerRefresh]).toEqual([undefined, undefined, undefined, undefined]);
   });
 });
 

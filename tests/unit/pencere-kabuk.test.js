@@ -18,6 +18,8 @@
  *     FEAD'de soluk satır, kutu yalnız pencerenin cevabı (`.ve-fp-durum`)
  *   · 6 pencerenin sağ sütununda Uygunluk yok (modül kartı, Örnek, Takoz
  *     Özellikleri, 2D, 3D Görüntüleyici, Koordinat)
+ *   (2026-10-16: 2D Görünüm'ün adı Görünümler; 3D Görüntüleyici tek sekmeli
+ *   YER TUTUCU — bağışı tipin beyanından, aşağıdaki `yerTutucu`.)
  *   · dar ekranın modalında Rapor 980 px (Takoz) ↔ 560 px (FEAD)
  *
  * Kapı bir LİSTE değil bir KURAL: tipler `componentDefs`ten, her tipin
@@ -90,7 +92,11 @@ const TAKOZ_TIP = Object.keys(componentDefs).filter((t) => /^mnt-/.test(t) && !/
 function dom(html) { const d = document.createElement('div'); d.innerHTML = html; return d; }
 
 // AİLE DENETİMİ — iki modüle AYNI soru. Döner: bulgu listesi (boşsa ailede).
-function aile(d) {
+// TEK SEKMEYİ yalnız tipin YER TUTUCU beyanı bağışlar (componentDefs[t]
+// .yerTutucu = notun metni; ilk kullanıcısı 2026-10-16'da 3D Görüntüleyici —
+// "Klasik 3B" gerçek CAD dosyasına ayrıldı, çizimi Görünümler'e taşındı).
+const yerTutucu = (t) => !!(t && componentDefs[t] && componentDefs[t].yerTutucu);
+function aile(d, t) {
   const b = [];
   const fp = d.querySelector('.ve-fp');
   if (!fp) return ['kabuk yok'];
@@ -98,7 +104,7 @@ function aile(d) {
   const ana = fp.querySelector('.ve-fp-split > .ve-fp-main');
   const ilk = ana && ana.firstElementChild;
   if (!ilk || !ilk.classList.contains('ve-fp-tabs')) b.push('sekmelerin ÜSTÜNDE: ' + (ilk ? ilk.className || ilk.tagName : 'boş'));
-  if (fp.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length < 2) b.push('kategori sekmesi < 2');
+  if (fp.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length < (yerTutucu(t) ? 1 : 2)) b.push('kategori sekmesi < 2');
   const yan = fp.querySelector('.ve-fp-split > .ve-fp-side');
   if (!yan) b.push('sağ sütun yok');
   else if (![...yan.querySelectorAll('.ve-fp-sect b')].some((x) => x.textContent.trim() === 'Uygunluk')) b.push('sağ sütunda Uygunluk yok');
@@ -190,8 +196,22 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
     takozKur();
     if (cozulu) coz();
     const disarida = [];
-    TAKOZ_TIP.forEach((t) => { const b = aile(takozPencere(t)); if (b.length) disarida.push(t + ': ' + b.join(' · ')); });
+    TAKOZ_TIP.forEach((t) => { const b = aile(takozPencere(t), t); if (b.length) disarida.push(t + ': ' + b.join(' · ')); });
     expect(disarida).toEqual([]);
+  });
+
+  // Bağış kural değil İSTİSNA: beyanı olan tip tek sekme taşır VE notunu
+  // gösterir; beyanı olmayan tek sekmeli pencere ailenin dışında kalır.
+  test('tek sekmeyi yalnız YER TUTUCU beyanı bağışlar; beyan eden pencere notunu gösterir', () => {
+    takozKur();
+    const beyanli = FEAD_TIP.concat(TAKOZ_TIP).filter(yerTutucu);
+    expect(beyanli).toEqual(['mnt-viewer']);
+    beyanli.forEach((t) => {
+      const d = takozPencere(t);
+      expect(d.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length).toBe(1);
+      expect(d.querySelector('.ve-fp-main [role="tabpanel"]').textContent.trim()).toBe(componentDefs[t].yerTutucu);
+      expect(aile(d)).toEqual(['kategori sekmesi < 2']);              // beyansız okunursa ailenin dışında
+    });
   });
 
   // Kroki sekmeden bağımsız bağlamdır → FEAD'in bağlam sütunu (sağ sütunun
