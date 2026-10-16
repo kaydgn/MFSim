@@ -124,11 +124,12 @@ describe('Rapor §8.8 — Motor\'dan gelen değerlerle üretilir', () => {
   });
 });
 
+// 2026-10-16: penceredeki girdiler CANLI modelden (Motor · Çözücü) —
+// pencere çözümden bağımsız; rapor aynı değerleri çözümün girdisinden okur.
 describe('Rapor paneli — artık girdi değil, kaynak göstergesi', () => {
   test('değerleri ve nereden geldiğini gösterir, girdi alanı basmaz', () => {
-    global._veMntLast = { zeta: 0.02, gather: { torque: { idleRpm: 600, cylinders: 6 }, components: [] },
-                          mounts: [], error: null };
-    cp._veMntLast = global._veMntLast;
+    global.nodes = [motor({ idleRpm: 600, cylinders: 6 }),
+                    { id: 'c1', type: 'mnt-solver', def: componentDefs['mnt-solver'], data: { zeta: 0.02 } }];
     const html = cp.getMntReportPropertiesHTML({ id: 'r1', type: 'mnt-report', data: {} });
     // Föy: büyüklük · değer · KAYNAK — kaynak sütunu bileşenin adı
     expect(html).toMatch(/Rölanti devri<\/td><td>600 d\/dk<\/td><td class="sol">Motor<\/td>/);

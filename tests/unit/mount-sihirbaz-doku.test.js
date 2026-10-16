@@ -11,6 +11,10 @@
  *   · özet masasının çizimi yüzen panelin altına giriyordu (3 işaret)
  *   · takoz listesinde rijitlik birimsiz ("k_z 290")
  *   · ateşleme uyarısı "Kriter 1" diyordu, Motor penceresi "Kriter 1 ve 2"
+ * 2026-10-16 (kullanıcı kararı: "kullanıcı sadece detaylı sonuç raporu ile
+ * yetinecek"): sihirbaz SONUÇ GÖSTERMEZ — özetin statik denge ve doğal
+ * frekans tabloları, masadaki sehim etiketi, sehim ve f₁ hapları kalktı;
+ * canlı denetim yalnız "çözülüyor / çözülemiyor" hükmünü verir.
  */
 const fs = require('fs');
 const path = require('path');
@@ -161,33 +165,36 @@ describe('BİRİM VE DİL — aynı şey modülün her yerinde aynı sözle', ()
     expect(kriter(motor)).toBe('Kriter 1 ve 2');
     expect(kriter(m)).toBe(kriter(motor));
   });
-
-  test('özetin mod biçimi Türkçe — Çözücü\'nün kısa adıyla aynı', () => {
-    const c = tulga();
-    expect(c.modlar.length).toBe(6);
-    const ad = c.modlar.map((m) => m.ad).join(' ');
-    expect(ad).not.toMatch(/\b(lateral|roll|bounce|pitch|yaw|fore-aft)\b/);
-    expect(c.modlar[0].ad).toBe(global.veMntBrief.modeShort('lateral+roll'));
-  });
-
-  test('özet başlığındaki "1 g" birimi büyük harfe dönmeyen kapta', () => {
-    const c = tulga();
-    const d = div(W._mwStepOzet(c));
-    const bas = [...d.querySelectorAll('.ve-fw-card-h span')].find((e) => /Statik denge/.test(e.textContent));
-    expect(bas.querySelector('u').textContent).toBe('g');
-    expect(CSS).toMatch(/\.ve-fw-card-h u\{[^}]*text-transform:none/);
-  });
 });
 
-describe('ÖZET MASASI — takozun 1 g sehimi yerinde yazılı', () => {
-  // `_mwFigurVeri` etiketi kuruyordu ("Sağ Ön Takoz · 7,12 mm"), çizicinin
-  // varsayılanı yalnız adı okuyordu: özellik yazıldığı günden beri görünmüyordu.
-  test('masada her takozun etiketi adı + sehimi, öteki adımlarda yalnız ad', () => {
+// SONUÇ YOK (kullanıcı kararı 2026-10-16): sihirbaz modelin ÇÖZÜLEBİLİR
+// olduğunu söyler (Çözücü'nün yoluyla), sonucunu değil — sehim, takoz yükü,
+// kapasite ve doğal frekanslar yalnız ayrıntılı raporda.
+describe('SONUÇ YOK — sihirbaz sehim, yük ve frekans göstermez', () => {
+  test('canlı denetim yalnız hüküm döner; haplar modelin büyüklüğü', () => {
     const c = tulga();
+    expect([c.ok, c.statik, c.modlar]).toEqual([true, undefined, undefined]);
+    W.veMntWizGoto(OZET);
+    const hap = [...document.querySelectorAll('#ve-mw-live .ve-fw-damga, #ve-mw-live .ve-fw-pill')].map((e) => e.textContent.trim());
+    expect(hap).toEqual(['Çözülüyor', 'm 788,4 kg', 'takoz 5']);
+  });
+
+  test('özet: Kurulacaklar ve modelin girdiden türeyen özeti; tablo ve sonuç kartı yok', () => {
+    const c = tulga();
+    const d = div(W._mwStepOzet(c));
+    expect([...d.querySelectorAll('.ve-fw-card-h span')].map((e) => e.textContent)).toEqual(['Kurulacaklar', 'Model']);
+    expect(d.querySelectorAll('table').length).toBe(0);
+    expect(d.textContent).not.toMatch(/[Ss]ehim|Doğal frekans|Statik denge|Kap\./);
+    expect(d.textContent).toContain('Birleşik CG(582; 22; 423) mm');
+  });
+
+  // `_mwFigurVeri` özette takozun etiketine 1 g sehimini yazıyordu ("Sağ Ön
+  // Takoz · 7,12 mm"); 2026-10-16'dan beri her adımda yalnız ad.
+  test('özet masasında takozun etiketi yalnız adı', () => {
+    tulga();
     W.veMntWizGoto(OZET);
     const yazi = document.getElementById('ve-mw-masa-cizim').textContent;
-    c.statik.forEach((s) => expect(yazi).toContain(s.ad + ' · ' + veSayi(-s.d[2], 2) + ' mm'));
-    W.veMntWizGoto(W.VE_MW_STEPS.findIndex((s) => s.key === 'takoz'));
-    expect(document.getElementById('ve-mw-masa-cizim').textContent).not.toMatch(/Takoz · [\d,]+ mm/);
+    expect(yazi).toContain('Sağ Ön Takoz');
+    expect(yazi).not.toMatch(/Takoz · [\d,]+ mm/);
   });
 });

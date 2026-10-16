@@ -18,7 +18,8 @@
  *     çözücünün birleşik CG'si; kütüphanenin oran denetimi Takoz'unki.
  *   · DURUMLAR — kütüphane (sıfır rijitlik, eksen takası, kullanımdaki
  *     takozun tipten sapması), Rapor (kaynak, bayat çözüm), modül kartı
- *     (kayıtlı listenin imzası), Örnek (kanvastaki modelin denetimi).
+ *     (kayıtlı listenin modeli; sonuç yok — 2026-10-16), Örnek (kanvastaki
+ *     modelin denetimi).
  */
 const fs = require('fs');
 const path = require('path');
@@ -144,7 +145,8 @@ describe('GÖRÜNÜMLER — çizim çözücünün modeli, numaraların açılım
       const cizim = [...d.querySelectorAll('#ve-mnt-akso3b-d2 svg.ve-mnt2d-akso text')].map((t) => t.textContent);
       const numara = cizim.filter((t) => /^(T\d+|G)$/.test(t));
       expect(numara).toEqual(expect.arrayContaining(['G', 'T1', 'T5']));
-      const foy = [...d.querySelectorAll('#ve-fp-panes-d2 > [data-k="isaret"] tbody tr td:first-child')].map((t) => t.textContent);
+      // 2026-10-16: föy çizimle AYNI sekmede (kullanıcı: "birleştirelim")
+      const foy = [...d.querySelectorAll('#ve-fp-panes-d2 > [data-k="akso"] tbody tr td:first-child')].map((t) => t.textContent);
       numara.forEach((n) => expect({ n, foyde: foy.includes(n) }).toEqual({ n, foyde: true }));
       P.M.g.components.forEach((c, i) => expect(html).toContain(`<td>${i + 1}</td><td class="sol" title="${c.name}">`));
       P.M.g.mounts.forEach((m, i) => expect(html).toContain(`<td>T${i + 1}</td><td class="sol" title="${m.name}">`));
@@ -245,7 +247,7 @@ describe('RAPOR — kaynak, bayat çözüm, eylem', () => {
   test('çözüm yokken eylem kapalı ve sebebi yazılı', () => {
     tulga();
     const h = cp.getMntReportPropertiesHTML(dugum('mnt-report'));
-    expect(h).toMatch(/<button type="button" class="ve-fp-solve" disabled>/);
+    expect(h).toMatch(/<button type="button" class="ve-fp-solve" data-cozum-durumu disabled>/);
     expect(h).toContain('Çözüm yok — Çözücü → Hesapla.');
   });
 });
@@ -261,27 +263,28 @@ describe('MODÜL KARTI — kayıtlı listenin modeli ve son çözümü', () => {
     // kökteyiz: alt topoloji canlı değil, tuvalde kartla birlikte başka bir gövde var
     global.nodes = [k, { id: 'baska', type: 'mnt-motor', def: componentDefs['mnt-motor'], data: { mass: 100, cgx: 0, cgy: 0, cgz: 0 } }];
     const h = cp.getMntModulePropertiesHTML(k);
-    // FEAD'in modül kartının grameri: salt okunur ızgara; son çözümün hükmü
-    // sağ sütunun Uygunluk bölümünde (FEAD'in modül kartı gibi).
+    // FEAD'in modül kartının grameri: salt okunur ızgara; sağ sütunda
+    // yalnız eylem (Uygunluk 2026-10-16'dan beri yalnız raporda).
     const alan = (ad) => (h.match(new RegExp(ad + '(?: <u>[^<]*</u>)?</span><input class="ve-fp-inp" value="([^"]*)" readonly')) || [])[1];
     expect(alan('Kütle gövdesi')).toBe('8');
     expect(alan('Takoz')).toBe('5');
     expect(alan('Bağlantı')).toBe('2');
     expect(alan('Toplam kütle')).toBe('788,4');
-    expect(h).toMatch(/<div class="ve-fp-side"><section class="ve-fp-card" id="ve-mnt-uyg-kart" data-tazele><div class="ve-fp-sect"><b>Uygunluk<\/b><em>son çözüm · 14 yük durumu<\/em>/);
+    expect(h).toMatch(/<div class="ve-fp-side"><button type="button" class="ve-fp-solve" onclick="veMntOpenEditor\('kart'\)">/);
   });
 
-  test('kayıtlı model hesaptan sonra değiştiyse "bayat"; son çözüm başka kartınsa "yok"', () => {
-    tulga(); const R = coz();
+  test('kart sonuç göstermez: çözümden önce, sonra ve kayıtlı model değişince yalnız modelin sayıları değişir', () => {
+    tulga();
     const k = kart();
+    const once = cp.getMntModulePropertiesHTML(k);
+    coz();
     global.nodes = [k];
+    expect(cp.getMntModulePropertiesHTML(k)).toBe(once);
+    expect(once).not.toMatch(/Uygunluk|çözüm|bayat/i);
     k.data.subTopology.nodes.find((n) => n.type === 'mnt-motor').data.mass = 500;
-    const bayat = cp.getMntModulePropertiesHTML(k);
-    expect(bayat).toMatch(/<b>Uygunluk<\/b><em>son çözüm · \d+ yük durumu · bayat<\/em>/);
-    expect(bayat).toContain('<b>Bayat.</b> Model hesaptan sonra değişti');
-    const baska = kart();
-    baska.data.subTopology.nodes = baska.data.subTopology.nodes.filter((n) => n.id !== R.solverId);
-    expect(cp.getMntModulePropertiesHTML(baska)).toMatch(/<i><\/i>Son çözüm yok<span>/);
+    const yeni = cp.getMntModulePropertiesHTML(k);
+    expect(yeni).not.toBe(once);
+    expect(yeni).toContain('value="870,4"');                       // 788,4 − 418 + 500
   });
 });
 

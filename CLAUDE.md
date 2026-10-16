@@ -68,21 +68,25 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Kapı:
   `mount-step.test.js` + `mount-wizard.test.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
-  Görünüm; kullanıcı kararları 2026-10-15/16). Pencerenin TEK çizimi SERBEST kamerada
-  (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle döndürür,
-  tekerlek imlecin altını tutarak yakınlaştırır, sağ tık kaydırır); hazır bakışlar
-  dimetrik (ISO 5456-3) · izometrik · üstten · önden · yandan, **düz görünüş YOK**.
-  Gölge hep açık, direk · kuvvet · mod · rijitlik düğmeyle, üç duvar tam ekranda;
-  işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan büyümez). DOM'suz, çizim OKUR
-  (modeli `_mntAksoModel` kurar; kuvvet ve mod yalnız güncel çözümden); görünüm
-  tercihi modelde değil. Başlangıç sayfasının örnek karoları bu çizicinin sade kipi
-  (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
+  Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
+  çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle
+  döndürür, tekerlek imlecin altını tutarak yakınlaştırır, sağ tık kaydırır) +
+  işaretlerin föyü; başlıkta bakışın adı ve görünüm düğmeleri (yakınlaştır ·
+  uzaklaştır · sıfırla · **tam ekran**). Açı yazısı, Görünüş, Katmanlar, Uygunluk,
+  Etkileşim **YOK**; çizim **SONUÇ GÖSTERMEZ** (katmanlar çizicide durur, pencere
+  çizmez). Gölge hep açık; işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan
+  büyümez). DOM'suz, çizim OKUR (modeli `_mntAksoModelKur`, canlı modelden,
+  çözümsüz); görünüm tercihi modelde değil, yalnız açı. Bileşen pencerelerinin
+  **"Güç grubundaki yeri"** bu çizicinin sabit dimetriği (`o.secili` + etiket
+  `'secili'`: bileşen işaretli ve adıyla). Başlangıç sayfasının örnek karoları sade
+  kipi (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
   görünüş, çözümün girdisinden — `veMntAksoCozumModel`); ikisi de katsız.
   **3D Görüntüleyici YER TUTUCU** (`componentDefs['mnt-viewer'].yerTutucu`): "Klasik
   3B" tek sekme, ilerleyen zamanda gerçek CAD dosyasıyla işlenecek;
   `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin sahnesi. Kapı:
   `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *RAPOR* ·
-  *KLASİK 3B*) + `mount-pencere.spec.js` → *Görünümler* · *3D Görüntüleyici* ·
+  *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* + `mount-pencere.spec.js` →
+  *Görünümler* · *Güç grubundaki yeri* · *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
@@ -496,11 +500,18 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `sayi-alan.spec.js`.
 - **BİLEŞEN PENCERESİ TEK İSKELET** (`js/pencere-kabuk.js`, 2026-10-16): FEAD ve
   Takoz'un her penceresi kimlik → ≥ 2 kategori sekmesi → gövde (tek sekmeyi yalnız
-  tipin YER TUTUCU beyanı bağışlar: `componentDefs.yerTutucu`); sağ sütunda
-  bağlam → Uygunluk → cevap (`.ve-fp-durum`) → tek eylem. Sekmelerin ÜSTÜNDE hiçbir
-  şey yok; durum notu FEAD'in satırı (`.ve-fp-not`), açıklama kılavuzda. Kabuk
-  işaretlemesi yalnız kitte (ikinci yazım Takoz'da 17/17 pencereyi aileden
-  düşürmüştü). Kapı: `pencere-kabuk.test.js`; gerekçe `docs/decisions/ortak-yuzeyler.md`.
+  tipin beyanı bağışlar: `componentDefs.yerTutucu` · `.tekSekme`); sağ sütunda
+  bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) → tek eylem; BOŞ sağ sütun
+  çizilmez (`.ve-fp-split--tek`). Sekmelerin ÜSTÜNDE hiçbir şey yok; durum notu
+  FEAD'in satırı (`.ve-fp-not`), açıklama kılavuzda. Kabuk işaretlemesi yalnız
+  kitte (ikinci yazım Takoz'da 17/17 pencereyi aileden düşürmüştü). Kapı:
+  `pencere-kabuk.test.js`; gerekçe `docs/decisions/ortak-yuzeyler.md`.
+- **TAKOZ PENCERESİ SONUÇ GÖSTERMEZ** (kullanıcı kararı 2026-10-16: *"kullanıcı
+  sadece detaylı sonuç raporu ile yetinecek"*): hiçbir Takoz penceresi (sihirbaz
+  dâhil) Uygunluk, sehim, yük, mod, kuvvet taşımaz — sonuç yalnız raporda. Çözümle
+  değişen tek şey eylemin hazırlığı (`data-cozum-durumu`: Çözücü'nün notu, Rapor'un
+  çözüm durumu). Kapı: `pencere-kabuk.test.js` → *ÇÖZÜMDEN BAĞIMSIZ*; gerekçe
+  `docs/decisions/ortak-yuzeyler.md`.
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

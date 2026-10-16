@@ -8,10 +8,13 @@
 //
 // KURALLAR:
 //  • KENDİ MODELİNİ KURMAZ. Durum → `veMntWizNodes` → Takoz düğüm listesi;
-//    masadaki 2B görünüş, canlı çözüm ve "Modeli kur" AYNI listeden geçer.
-//    Canlı çözüm Çözücü'nün kendi yolu (`_mntPrepareFrom`, cp-mount.js):
-//    sihirbazın gösterdiği sehim, kurulan modelde Çözücü'nün bulacağı sehimin
-//    ta kendisi olmalı — ikinci bir "önizleme çözücüsü" sessizce ayrışırdı.
+//    masadaki 2B görünüş, canlı denetim ve "Modeli kur" AYNI listeden geçer.
+//    Canlı denetim Çözücü'nün kendi yolu (`_mntPrepareFrom`, cp-mount.js):
+//    "model çözülüyor" hükmü kurulan modelde Çözücü'nün vereceği hükmün ta
+//    kendisi — ikinci bir "önizleme çözücüsü" sessizce ayrışırdı.
+//  • SONUÇ GÖSTERMEZ (kullanıcı kararı 2026-10-16: "kullanıcı sadece detaylı
+//    sonuç raporu ile yetinecek"): canlı denetim yalnız modelin ÇÖZÜLEBİLİR
+//    olduğunu söyler; sehim, takoz yükü ve doğal frekanslar raporda.
 //  • GÖRÜNÜM FEAD SİHİRBAZININ KABUĞUNDAN (`.ve-fw-*`): aynı ray, masa, denetim
 //    sütunu ve alt çubuk; Takoz'a özgü birkaç kural `.ve-mw-*`. Kullanıcı
 //    "aynısını" istedi; kopya bir kabuk ilk rötuşta ayrışırdı.
@@ -33,7 +36,7 @@ var VE_MW_STEPS = [
   { key:'govde',  ad:'Kütle gövdeleri', ipucu:'Motor · şanzıman · braket — kütle, ağırlık merkezi, atalet' },
   { key:'takoz',  ad:'Takozlar',        ipucu:'Konum · katalog · statik ve dinamik rijitlik' },
   { key:'tork',   ad:'Tork ve çalışma', ipucu:'Motor torku · vites oranları · rölanti ve silindir' },
-  { key:'ozet',   ad:'Özet ve kurulum', ipucu:'Canlı çözüm · sehim ve takoz yükleri · modeli kur' }
+  { key:'ozet',   ad:'Özet ve kurulum', ipucu:'Kurulacaklar · modelin özeti · kurulum' }
 ];
 // Kütle gövdesi tipleri — Bileşenler'in "Takoz alt bileşenleri" ve "PTO
 // grubu" sırasıyla. Ad componentDefs'ten okunur.
@@ -262,13 +265,15 @@ function veMntWizSorunlar(st){
   return l;
 }
 
-// ── CANLI ÇÖZÜM — Çözücü'nün yolu ──────────────────────────────────────────
-// Döner: { liste, veri (2B), sorun[], ok, hata[], mp, statik[], modlar[], fAtes, tork:{ileri, geri} }
+// ── CANLI DENETİM — Çözücü'nün yolu ────────────────────────────────────────
+// Statik denge Çözücü'nün yoluyla çözülür; yalnız HÜKÜM döner (ok · hata):
+// model kurulursa çözülür mü. Sayılar (sehim, yük, mod) sihirbazda yok.
+// Döner: { liste, veri (2B), sorun[], ok, hata[], mp, fAtes, tork:{ileri, geri} }
 function veMntWizCoz(st){
   st = st || _mwState || veMntWizDefault();
   var liste = veMntWizNodes(st);
   var out = { liste:liste, veri:(typeof _mnt2DGather === 'function') ? _mnt2DGather(liste) : { comps:[], mounts:[], cg:null },
-              sorun:veMntWizSorunlar(st), ok:false, hata:[], statik:[], modlar:[] };
+              sorun:veMntWizSorunlar(st), ok:false, hata:[] };
   var tq = st.tork || {};
   var idle = _mwNum(tq.idleRpm), cyl = _mwNum(tq.cylinders);
   out.fAtes = (idle > 0 && cyl > 0) ? (idle / 60) * (cyl / 2) : NaN;
@@ -292,19 +297,6 @@ function veMntWizCoz(st){
       out.hata = [(stat && stat.error) || 'Statik denge çözülemedi — montaj kinematik olarak serbest olabilir.'];
       return out;
     }
-    var g = prep.si.g || 9.81;
-    out.statik = stat.res.perMount.map(function(pm, i){
-      var t = st.takozlar[i] || {}, kap = _mwNum(t.maxLoad);
-      var yuk = Math.abs(pm.f[2]) / g;
-      return { ad:pm.name, d:pm.delta.map(function(v){ return v * 1000; }), yukKg:yuk,
-               kapasite:(kap > 0) ? yuk / kap : NaN, cekme:!!pm.tension };
-    });
-    var modlar = prep.solveModes([stat]);
-    // Biçim Türkçe: Çözücü'nün Modlar sekmesi ve Sonuçlar ile AYNI kısa ad
-    // (`veMntBrief.modeShort`); çekirdeğin etiketi ("lateral+roll") yalnız
-    // çevirici yoksa.
-    var kisa = (typeof veMntBrief !== 'undefined' && veMntBrief && veMntBrief.modeShort) ? veMntBrief.modeShort : null;
-    out.modlar = (modlar || []).map(function(m){ return { f:m.f_Hz, ad:kisa ? kisa(m.label) : m.label }; });
     out.ok = true;
   } catch(e){ out.hata = ['Çözüm hatası: ' + e.message]; }
   return out;
@@ -1368,27 +1360,14 @@ function _mwStepOzet(c){
     + '</div>';
   var h = _mwCard('Kurulacaklar', kur);
   if(c.ok){
-    var tb = '<table class="ve-fw-tbl ve-mw-tbl"><thead><tr><th>Takoz</th><th>Sehim <em>mm</em></th><th>Yük <em>kg</em></th>'
-      + (c.statik.some(function(s){ return Number.isFinite(s.kapasite); }) ? '<th>Kap. <em>%</em></th>' : '') + '</tr></thead><tbody>';
-    var kapVar = c.statik.some(function(s){ return Number.isFinite(s.kapasite); });
-    c.statik.forEach(function(s){
-      tb += '<tr' + (s.cekme ? ' class="ve-mw-cekme" title="Çekme — takoz yükten kurtuluyor"' : '') + '><td>' + _mwEsc(s.ad) + '</td>'
-        + '<td class="ve-fw-num">' + _mwFmt(-s.d[2], 2) + '</td><td class="ve-fw-num">' + _mwFmt(s.yukKg, 0) + '</td>'
-        + (kapVar ? '<td class="ve-fw-num">' + (Number.isFinite(s.kapasite) ? _mwFmt(s.kapasite * 100, 0) : '—') + '</td>' : '') + '</tr>';
-    });
-    tb += '</tbody></table>';
+    // Modelin özeti — GİRDİDEN türeyen büyüklükler (birleştirme, ateşleme
+    // frekansı); sonuç (sehim, yük, mod) yok: raporda.
     var m = c.mp || {};
-    h += _mwCard('Statik denge · 1 g', '<div class="ve-fw-reads">'
+    h += _mwCard('Model', '<div class="ve-fw-reads">'
       + r('Toplam kütle', _mwFmt(m.m, 1) + ' kg')
       + (m.cg ? r('Birleşik CG', '(' + _mwFmt(m.cg[0] * 1000, 0) + '; ' + _mwFmt(m.cg[1] * 1000, 0) + '; ' + _mwFmt(m.cg[2] * 1000, 0) + ') mm') : '')
-      + '</div>' + tb, 'Statik denge · 1 <u>g</u>');
-    if(c.modlar.length){
-      var md = '<table class="ve-fw-tbl ve-mw-tbl"><thead><tr><th>Mod</th><th>f <em>Hz</em></th><th>Biçim</th></tr></thead><tbody>';
-      c.modlar.forEach(function(x, i){ md += '<tr><td>' + (i + 1) + '</td><td class="ve-fw-num">' + _mwFmt(x.f, 2) + '</td><td>' + _mwEsc(x.ad) + '</td></tr>'; });
-      md += '</tbody></table>';
-      if(Number.isFinite(c.fAtes)) md += '<div class="ve-fw-reads">' + r('Ateşleme frekansı', _mwFmt(c.fAtes, 1) + ' Hz') + '</div>';
-      h += _mwCard('Doğal frekanslar', md);
-    }
+      + r('Ateşleme frekansı', Number.isFinite(c.fAtes) ? _mwFmt(c.fAtes, 1) + ' Hz' : '—')
+      + '</div>');
   } else {
     var hepsi = (c.sorun || []).filter(function(s){ return s.tur === 'err'; }).map(function(s){ return s.m; }).concat(c.hata || []);
     h += _mwCard('Canlı çözüm', '<div class="ve-fw-issues">' + (hepsi.length ? hepsi.slice(0, 6).map(function(m){
@@ -1449,14 +1428,7 @@ function _mwCipIcHTML(c){
   var v = c.veri || {};
   if(v.cg && v.cg.m > 0) h += '<span class="ve-fw-pill">m <b>' + _mwFmt(v.cg.m, 1) + ' kg</b></span>';
   h += '<span class="ve-fw-pill">takoz <b>' + ((_mwState || {}).takozlar || []).length + '</b></span>';
-  if(c.ok && c.statik.length){
-    var enCok = Math.max.apply(null, c.statik.map(function(s){ return -s.d[2]; }));
-    h += '<span class="ve-fw-pill">1 g sehim en çok <b>' + _mwFmt(enCok, 2) + ' mm</b></span>';
-  }
-  // Simge KENDİ kutusunda: hap esnek kap ve alt simgesi onun doğrudan
-  // çocuğu olunca "f 1" diye yan yana düşüyor (FEAD sihirbazının L_b hapıyla
-  // aynı kural — tests/helpers/yerlesim-olcu.js → "alt simge esnek kapta").
-  if(c.ok && c.modlar.length) h += '<span class="ve-fw-pill"><span>f<sub>1</sub></span> <b>' + _mwFmt(c.modlar[0].f, 2) + ' Hz</b></span>';
+  // Sehim ve f₁ hapları kalktı (2026-10-16): sihirbaz sonuç göstermez.
   return h;
 }
 function _mwMasaOlc(){
@@ -1488,13 +1460,6 @@ function _mwFigurVeri(c){
   // kaydın kendisinden (veMntStpKayit), ikinci bir dönüşümden değil.
   if(k === 'kaynak' && _mwStpOnizleme() && typeof _mnt2DGather === 'function')
     return { veri:_mnt2DGather(veMntStpKayit(_mwStp.coz, _mwStp.kutle).liste), secili:null };
-  // Özet adımında takozun etiketi 1 g sehimi: masa sayıyı yerinde söyler.
-  if(k === 'ozet' && c.ok){
-    v = { comps:v.comps, cg:v.cg, mounts:v.mounts.map(function(m, i){
-      var s = c.statik[i]; var e = {}; for(var k in m) e[k] = m[k];
-      if(s) e.etiket = (m.name || 'Takoz') + ' · ' + _mwFmt(-s.d[2], 2) + ' mm';
-      return e; }) };
-  }
   // Seçim: satır anahtarı → 2B veri dizisindeki konum (yalnız konumu tam olanlar çizilir).
   var secili = null;
   if(k === 'govde' && _mwSec.govde){
@@ -1517,10 +1482,7 @@ function _mwMasaCiz(c){
   if(tur === 'tork'){ el.innerHTML = _mwTorkZincirSVG(c, o.w, o.h); return; }
   var f = _mwFigurVeri(c);
   var svg = (typeof veMnt2DGorunusSVG === 'function')
-    ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGorunus, secili:f.secili, secim:true, pay:_mwMasaPay(o, k),
-        // Özette takozun etiketi 1 g sehimini taşır (`_mwFigurVeri` → `etiket`);
-        // çizicinin varsayılanı yalnız adı okuyor, sayı hiç görünmüyordu.
-        takozEtiket:(k === 'ozet') ? function(m){ return m.etiket || m.name || 'Takoz'; } : null }) : '';
+    ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGorunus, secili:f.secili, secim:true, pay:_mwMasaPay(o, k) }) : '';
   if(!svg){
     el.innerHTML = '<div class="ve-fw-masa-bos">' + (k === 'kaynak'
       ? 'Model boş — örnekten doldur, STEP\'ten başla ya da Kütle gövdeleri adımında ekle.'
