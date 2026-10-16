@@ -33,13 +33,13 @@ function mfsimClearRL() {
 async function mfsimLogin() {
   var pw = document.getElementById('mfsim-login-password').value;
   var errEl = document.getElementById('mfsim-login-error');
-  if(!pw) { errEl.textContent = 'Lütfen şifre giriniz.'; return; }
+  if(!pw) { errEl.textContent = 'Şifre boş.'; return; }
 
   var now = Date.now();
   var rl = mfsimGetRL();
   if(rl.lockUntil > now) {
     var sec = Math.ceil((rl.lockUntil - now) / 1000);
-    errEl.textContent = 'Çok fazla hatalı deneme. ' + sec + ' sn sonra tekrar deneyin.';
+    errEl.textContent = 'Çok fazla hatalı deneme. ' + sec + ' sn kilitli.';
     return;
   }
 
@@ -93,7 +93,7 @@ function mfsimLogout() {
     location.reload();
   };
   if(typeof showConfirmToast === 'function') {
-    showConfirmToast('Oturumu kapatmak istediğinize emin misiniz? Kaydedilmemiş değişiklikler kaybolur.',
+    showConfirmToast('Oturum kapatılsın mı? Kaydedilmemiş değişiklikler kaybolur.',
                      doLogout, null, 'Çıkış Yap');
   } else {
     doLogout();

@@ -648,7 +648,6 @@ function veMntOpenEditor(nodeId, _silent){
   } finally { _veMntBusy=false; }
   if(!_silent && typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('enter');
   veMntUpdateBreadcrumb();
-  if(!_silent && typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
 }
 
 // _silent: köke çökerken (veMntCollapseToRoot → kaydet/sekme değiştir öncesi) true
@@ -701,7 +700,7 @@ function veMntUpdateBreadcrumb(){
   }
   var depth=veMntStack.length;
   el.innerHTML=
-    '<button onclick="veMntCloseEditor()" title="Ana topolojiye dön — Takoz Çökme-Titreşim · İç Topoloji'
+    '<button onclick="veMntCloseEditor()" title="Ana topolojiye dön'
     + (depth>1 ? ' (derinlik '+depth+')' : '') + '">'
     + '<span class="mf-ico mf-ico-chevrons-left" aria-hidden="true"></span>'
     + (depth>1 ? '<i class="ve-bc-depth">'+depth+'</i>' : '')
@@ -1982,10 +1981,8 @@ function _mntExampleDetailsHTML(ex){
 function _mntExampleKapilarHTML(){
   if(typeof veBasKapiHTML!=='function') return '';
   return '<div class="ve-bas-kapilar ve-mnt-ex-kapilar">'
-    + veBasKapiHTML({ ey:'sihirbaz', ikon:'wand', ad:'Sihirbazla kur', birincil:true,
-        not:'Modeli adım adım kurar ya da tuvaldekini düzenler.', onclick:'veMntWizAc()' })
-    + veBasKapiHTML({ ey:'step', ikon:'box', ad:'STEP\'ten başla',
-        not:'Montajı oku; gövde ve takoz rollerini sen ver.', onclick:'veMntWizAcStep()' })
+    + veBasKapiHTML({ ey:'sihirbaz', ikon:'wand', ad:'Sihirbazla kur', birincil:true, onclick:'veMntWizAc()' })
+    + veBasKapiHTML({ ey:'step', ikon:'box', ad:'STEP\'ten başla', onclick:'veMntWizAcStep()' })
     + '</div>';
 }
 

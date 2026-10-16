@@ -76,9 +76,9 @@ afterEach(() => {
 });
 
 const adimlarKur = () => ([
-  { ad: 'Bir', not: 'birinci ayrıntı', is: jest.fn() },
-  { ad: 'İki', not: 'ikinci ayrıntı', is: jest.fn() },
-  { ad: 'Üç', not: 'üçüncü ayrıntı', is: jest.fn() },
+  { ad: 'Bir', is: jest.fn() },
+  { ad: 'İki', is: jest.fn() },
+  { ad: 'Üç', is: jest.fn() },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -154,19 +154,23 @@ describe('EKRAN — adımlar, çubuk, kapanış', () => {
     }
   });
 
-  test('MESAJ biten adımın adında KALMIYOR — sıradakinin ayrıntısını yazıyor', () => {
-    // Ölçülen kusur: mesaj indisten okunduğu için iş biten adımın adı bir
-    // duruş boyu "şu an yapılıyor" gibi duruyordu; üstelik listedeki adı
-    // ikinci kez tekrarlıyordu.
+  test('MESAJ adım adını TEKRARLAMAZ — çalışırken boş, sonunda yalnız "Hazır"', () => {
+    // Adımın adı listede yazılı; mesaj onu ikinci kez söylüyordu, adımın
+    // "ayrıntısı" (`not`) da bir anlatımdı ("Bileşen paneli ve şerit yerine
+    // oturuyor") — ARAYÜZ ANLATMAZ, aşama 1 kararı 2026-10-16. Verilen `not`
+    // da basılmaz: kalıp açıklama yuvası taşımaz.
     kabuk();
     const a = adimlarKur();
+    a[1].not = 'ikinci ayrıntı';
     const msg = () => document.getElementById('ve-modload-message').textContent;
     {
       ML.veModuleLoaderRun({ ad: 'X' }, a);
       expect(a[0].bitti).toBe(true);
-      expect(msg()).toBe('ikinci ayrıntı');       // biten 1., sıradaki 2.
-      expect(msg()).not.toBe('Bir');
-      jest.advanceTimersByTime(ML.VE_MODLOAD_DURUS * 3 + 30);
+      expect(msg()).toBe('');
+      jest.advanceTimersByTime(ML.VE_MODLOAD_DURUS + 10);
+      expect(a[1].bitti).toBe(true);
+      expect(msg()).toBe('');
+      jest.advanceTimersByTime(ML.VE_MODLOAD_DURUS * 2 + 30);
       expect(msg()).toBe('Hazır');
     }
   });
@@ -246,22 +250,22 @@ describe('DOĞRUDAN GİRİŞ — veStartModule', () => {
 
   test('açıcı YÜKLENMEMİŞSE eski yol birebir duruyor', () => {
     // `veFeadOpenEditor` global'de yoksa (modül yüklenmemiş) doğrudan giriş
-    // sessizce kapanır ve kullanıcı yine kart + toast alır.
+    // sessizce kapanır ve kullanıcı yine kartı alır.
     sahne();
     try {
       veStartModule('fead-analysis');
       expect(global.nodes.length).toBe(1);
-      expect(stubs.showToast).toHaveBeenCalled();
     } finally { sok(); }
   });
 
-  test('doğrudan girişi OLMAYAN modülde toast basılıyor', () => {
+  test('doğrudan girişi OLMAYAN modülde "‹ad› eklendi" bildirimi YOK', () => {
+    // Uçan kart eklendiğini gösteriyor; bildirim ekranda olanı ikinci kez
+    // söylüyordu (ARAYÜZ ANLATMAZ, aşama 1 kararı 2026-10-16).
     sahne();
     try {
       veStartModule('arac-performans');
       expect(global.nodes.length).toBe(1);
-      expect(stubs.showToast).toHaveBeenCalled();
-      expect(String(stubs.showToast.mock.calls[0][0])).toContain('eklendi');
+      expect(stubs.showToast).not.toHaveBeenCalled();
     } finally { sok(); }
   });
 

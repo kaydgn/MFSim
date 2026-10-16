@@ -890,7 +890,8 @@ describe('Modüle geçiş — uçuş/kabuk eklendikten sonra da blok tam ortada'
     expect(nodes.length).toBe(1);
     expect(nodes[0].type).toBe('fead-analysis');
     expect(document.getElementById('ve-module-overlay').style.display).toBe('none');
-    expect(showToast).toHaveBeenCalled();
+    // "‹ad› eklendi" bildirimi 2026-10-16'da kalktı (ARAYÜZ ANLATMAZ): uçuşun
+    // ardından çalışan son satır oydu; kapı kartın kurulmasına bakar.
   });
 });
 

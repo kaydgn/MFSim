@@ -33,8 +33,7 @@
         shown++;
         var kisa = (hata && hata.message) ? hata.message : String(hata);
         if(kisa.length > 120) kisa = kisa.slice(0, 117) + '…';
-        showToast(baslik + ': ' + kisa +
-          (shown === MAX_TOAST ? ' (sonraki hatalar yalnizca konsola yazilacak)' : ''), 'error');
+        showToast(baslik + ': ' + kisa, 'error');
       }
     } catch(e) {
       // Yakalayicinin kendisi patlarsa sessiz kal — asil hata zaten konsolda.
@@ -56,7 +55,7 @@
   }, true);
 
   window.addEventListener('unhandledrejection', function(ev) {
-    report('Islenmemis soz reddi', ev && ev.reason, '');
+    report('Beklenmeyen hata', ev && ev.reason, '');
   });
 })();
 
@@ -68,7 +67,9 @@
 //
 // NE GOSTERILIR (AMBLEM, 2026-09-23): liste de yuzde de yok. Ilerlemeyi
 // 12 bolmeli CETVEL gosteriyor, altinda yalniz O ANKI OBEK Roma rakamiyla
-// (I CEKIRDEK, II ARAC PERFORMANS...) ve o anki modulun tam adi. Eskiden
+// (I CEKIRDEK, II ARAC PERFORMANS...) ve asamanin durum satiri. Modulun tam
+// adi (data-mfsim-label) ve ipucu satiri 2026-10-16'da kalkti (ARAYUZ
+// ANLATMAZ — 106 dosya adi kademe kademe akiyordu). Eskiden
 // obeklerin hepsi sayaclariyla alt alta duruyordu; hicbiri okunmuyor ama
 // hepsi okunmayi bekliyormus gibi duruyordu. Obek sinirlari index.html'de
 // yalnizca birkac script'e konan `data-mfsim-stage` ozniteliginden okunuyor:
@@ -101,8 +102,6 @@
   // uygulamayi baslatilamaz hale getiremez. Tum kutuphaneler artik yerel
   // (vendor/) oldugu icin normal kosulda bu sinir hic devreye girmez.
   var MODULE_TIMEOUT_MS = 15000;
-  // Ipucu satirinin degisme araligi.
-  var TIP_ROTATE_MS = 4200;
   // Kapanis: zemin 0.34 s'de eriyor (css/styles.css) — DOM'dan cekilmesi o
   // sureyi beklemek zorunda, yoksa gecis yarida kesilir.
   var FADE_OUT_MS = 340;
@@ -117,32 +116,9 @@
     msg: 'mfsim-loading-message',
     photo: 'mfsim-loading-photo',
     skips: 'mfsim-loading-skips',
-    tip: 'mfsim-loading-tip',
     stamp: 'mfsim-loading-stamp',
     login: 'mfsim-login-overlay'
   };
-
-  // Kisayol ipuclarinda degistirici tus: Mac'te ⌘, digerlerinde Ctrl.
-  // js/shortcuts-help.js ile AYNI ayrim, ama o dosya bu asamada henuz
-  // yuklenmedigi icin burada kendi kontrolu var.
-  var MOD = (function() {
-    var ua = (typeof navigator !== 'undefined')
-      ? ((navigator.platform || '') + ' ' + (navigator.userAgent || '')) : '';
-    return /Mac|iPhone|iPad|iPod/.test(ua) ? '⌘' : 'Ctrl';
-  })();
-
-  // KISA TUTULUYOR: dipte tek satir. Uzun ipucu kirpilir ve yarim cumle
-  // kalan bir ipucu hic olmamasindan kotu (kart doneminde olculdu: ~46
-  // karakterden uzunu kirpiliyordu).
-  var TIPS = [
-    MOD + '+K — komut paleti',
-    '? — klavye kısayolları penceresi',
-    'Çift tık: modülün iç topolojisi',
-    'Ölçüm dosyasını pencereye sürükle-bırak',
-    'Sağ tık + sürükle — görünümü kaydır',
-    MOD + '+Z / ' + MOD + '+Y — geri al / ileri al',
-    'Araçlar → Program Durumu: sürüm künyesi'
-  ];
 
   // ── Tema, ILK KAREDE ─────────────────────────────────────────────────────
   // js/theme.js kayitli temayi DOMContentLoaded'da uyguluyor; bu dosya o kuyrugu
@@ -290,40 +266,15 @@
   // Bir modul zaman asimina ugrar ya da yuklenemezse ATLANIR ve uygulama yine
   // acilir. Eskiden bunun tek izi console.warn'du: kullanici eksik bir
   // programla calismaya devam ediyor, hicbir sey soylemiyordu.
+  // Metin DURUMU soyler, tarif vermez (ARAYUZ ANLATMAZ): "dosya yuklenemedi".
   function paintSkips(skips) {
     var el = $(ELS.skips);
     if (!el) return;
     if (!skips.length) { el.hidden = true; el.textContent = ''; return; }
     el.hidden = false;
     el.textContent = (skips.length === 1)
-      ? 'Bir modül yüklenemedi ve atlandı: ' + skips[0] +
-        ' — ilgili özellikler eksik olabilir, ayrıntı tarayıcı konsolunda.'
-      : skips.length + ' modül yüklenemedi ve atlandı (son: ' +
-        skips[skips.length - 1] + ') — ilgili özellikler eksik olabilir, ' +
-        'ayrıntı tarayıcı konsolunda.';
-  }
-
-  // ── Ipucu satiri ─────────────────────────────────────────────────────────
-  var tipTimer = null;
-  var tipIdx = 0;
-  function startTips() {
-    var el = $(ELS.tip);
-    if (!el || !TIPS.length) return;
-    tipIdx = Math.floor(Math.random() * TIPS.length);
-    el.textContent = 'İpucu: ' + TIPS[tipIdx];
-    tipTimer = setInterval(function() {
-      var t = $(ELS.tip);
-      if (!t) return;
-      t.classList.add('is-swapping');
-      setTimeout(function() {
-        tipIdx = (tipIdx + 1) % TIPS.length;
-        t.textContent = 'İpucu: ' + TIPS[tipIdx];
-        t.classList.remove('is-swapping');
-      }, 180);
-    }, TIP_ROTATE_MS);
-  }
-  function stopTips() {
-    if (tipTimer) { clearInterval(tipTimer); tipTimer = null; }
+      ? skips[0] + ' yüklenemedi.'
+      : skips.length + ' dosya yüklenemedi (son: ' + skips[skips.length - 1] + ').';
   }
 
   // ── Acilis karesi ────────────────────────────────────────────────────────
@@ -436,7 +387,6 @@
   }
 
   function hideSplash() {
-    stopTips();
     var splash = $(ELS.splash);
     if (splash) {
       // Marka devamlılığı: karşılama ekranı splash logosunu SÖNMEDEN önce devralır
@@ -530,7 +480,6 @@
     showSplash();
     paintPhoto();
     paintStamp();
-    startTips();
 
     var placeholders = Array.prototype.slice.call(
       document.querySelectorAll('script[type="text/x-mfsim-defer"]')
@@ -540,7 +489,6 @@
     var stages = stageInfo.list;
     var stageOf = stageInfo.of;
     var skips = [];
-    var sonKademe = -1;          // etiket yalniz kademe degisince yazilir
     renderCetvel();
 
     if (total === 0) {
@@ -560,24 +508,16 @@
         return;
       }
       var ph = placeholders[idx];
-      var label = ph.getAttribute('data-mfsim-label');
       var si = stageOf[idx];
-      // Etiket de KADEMEYLE degisir, 85 kez degil. Cubuk agirlasirken yazinin
-      // cirpinmaya devam etmesi ikisini birden yiyordu: goz nereye bakacagini
-      // bilemiyor, ne cubugu takip ediyor ne adi okuyordu.
-      var k = kademe(idx, total);
-      if (label && k !== sonKademe) {
-        sonKademe = k;
-        var msg = $(ELS.msg);
-        if (msg) msg.textContent = label;
-      }
       paintBolum(stages, si);
       // Her adim arasi kucuk gecikme — ilerleme gozle takip edilebilsin.
       setTimeout(function() {
         loadOne(ph).then(function(atlandi) {
           if (atlandi) {
             stages[si].skipped++;
-            skips.push(label || (ph.src || '').split('/').pop() || 'bilinmeyen modül');
+            // Yuklenemeyen dosyanin ADI (veri): satir ici modul atlanamaz,
+            // atlanan her zaman kaynagi olan bir dosyadir.
+            skips.push((ph.getAttribute('src') || ph.src || '').split('/').pop() || '?');
             paintSkips(skips);
           }
           idx++;

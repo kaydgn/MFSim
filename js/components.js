@@ -62,7 +62,6 @@ function veSelectModuleFromOverlay(mode) {
     veSidebarMode = 'performans';
     veShowAllSidebarComponents();
   }
-  showToast('Araç Performans aktif', 'info');
 }
 
 // Karşılama ekranındaki modül kartı → overlay'i kapat + seçilen modül bloğunu
@@ -161,23 +160,19 @@ function veStartModule(type) {
   // girmek için o karta AYRICA çift tıklamak gerekiyordu ve bunu söyleyen
   // hiçbir şey yoktu.
   //
-  // UÇUŞ VE TOAST BU YOLDA KURULMUYOR, çünkü ikisi de yükleme ekranının
-  // ALTINDA kalıyor: uçuş --z-widget, toast 5000, ekran --z-boot+1 = 9001.
-  // Görünmeyen bir animasyon kurmak ve okunmayan bir bildirim basmak, işin
-  // yapıldığını sanmanın iki ayrı yolu olurdu.
+  // UÇUŞ BU YOLDA KURULMUYOR, çünkü yükleme ekranının ALTINDA kalıyor: uçuş
+  // --z-widget, ekran --z-boot+1 = 9001. Görünmeyen bir animasyon kurmak,
+  // işin yapıldığını sanmanın bir yolu olurdu.
   if(acici && typeof veModuleLoaderRun === 'function') {
     var kurulan = null;
     veModuleLoaderRun(
       { ad: def.name || type, alt: def.moduleSubtitle || '', svg: def.svg || '' },
       [
         { ad: 'Çalışma alanı hazırlanıyor',
-          not: 'Bileşen paneli ve şerit yerine oturuyor',
           is: function() { _veModuleShellSetup(type); } },
         { ad: 'Modül bloğu yerleştiriliyor',
-          not: 'Ana topolojiye modül kartı ekleniyor',
           is: function() { kurulan = _veModulePlaceNode(type); } },
         { ad: 'İç topoloji açılıyor',
-          not: 'Modülün kendi çalışma yüzeyi kuruluyor',
           is: function() { if(kurulan && kurulan.id) acici(kurulan.id); } }
       ]
     );
@@ -194,9 +189,8 @@ function veStartModule(type) {
     var nodeEl = (yeni && yeni.id) ? document.getElementById(yeni.id) : null;
     if(kart && nodeEl) veWelcomeFlyToNode(kart, nodeEl, kartRect);
   } catch(e) {}
-
-  var label = def.name ? def.name : type;
-  if(typeof showToast === 'function') showToast(label + ' eklendi', 'info');
+  // Bildirim YOK (ARAYÜZ ANLATMAZ — aşama 1): uçan kart eklendiğini gösteriyor;
+  // "‹ad› eklendi" ekranda olanı ikinci kez söylüyordu.
 }
 // Aktif moda ait sidebar bileşenlerini göster.
 // data-always-visible kategorileri her modda görünür; geri kalanlar

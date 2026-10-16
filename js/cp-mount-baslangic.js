@@ -113,18 +113,17 @@ function veMntBaslangicResim(key){
 }
 
 // ── HTML — SAF: yalnız sabitlerden ve örnek kaydından ─────────────────────
+// Kapıların adı ve örneklerin künyesi. İki grup: gerçek araçlar ve KURGU
+// doğrulama modelleri (kayıtta `kurgu`) — kurgu model gerçek bir aracı temsil
+// etmez; bölüm başlığı ve karonun "kurgu" işareti bunu söyler, gerçek
+// örneklerle aynı listede karışmaz.
 function veMntBaslangicHTML(){
-  // Sihirbazın adımları RAYIN KENDİ ADLARIYLA (ilk adım "Başlangıç" bu
-  // sayfanın ta kendisi, listede yok) — elle yazılmış bir liste adım
-  // eklenince/kalkınca sessizce bayatlardı (FEAD'de ölçülmüş sınıf).
-  var adimlar = (typeof VE_MW_STEPS !== 'undefined' && VE_MW_STEPS)
-    ? VE_MW_STEPS.slice(1).map(function(s){ return s.ad; }).join(' · ') : '';
   var ornekler = veMntBaslangicOrnekler();
   var K = _mntBasKit();
   if(!K) return '';
   var kg = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
   // Alt satır SIĞAN künye: gövde adlarının listesi karoda üç noktayla
-  // kesiliyordu (yerleşim kapısı, 3 karonun 3'ü) — adlar ipucunda.
+  // kesiliyordu (yerleşim kapısı, 3 karonun 3'ü) — adlar ipucunda (VERİ).
   var karo = function(o){
     return { ey: 'ornek', v: o.key, baslik: o.ad + ' — ' + o.govdeAdlari.join(' · '),
              resim: veMntBaslangicResim(o.key), kod: o.arac, yil: kg(o.kutle) + ' kg',
@@ -133,31 +132,15 @@ function veMntBaslangicHTML(){
   var gercek = ornekler.filter(function(o){ return !o.kurgu; });
   var kurgu = ornekler.filter(function(o){ return o.kurgu; });
   return K.sayfa({
-    ust: 'Takoz Çökme-Titreşim · yeni güç grubu modeli',
-    baslik: 'Nereden başlayalım?',
-    alt: 'Güç grubu modeli henüz boş. Seçtiğin kapı modeli kurar ve bu sayfa çekilir — '
-      + 'sonra her şey tuvalde ve bileşen pencerelerinde değişir.',
     kapilar: [
-      { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true, rozet: 'önerilen',
-        not: adimlar ? ('Adım adım: ' + adimlar + '.') : 'Modeli adım adım kurar.' },
-      { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla',
-        not: 'CATIA/3DEXPERIENCE montajını oku; gövde ve takoz rollerini 3B görüntüleyicide sen ver.' },
-      { ey: 'bos', ikon: 'grid', ad: 'Boş kanvas',
-        not: 'Analiz araçlarını kur; kütle gövdelerini ve takozları Bileşenler\'den sürükle.' }
+      { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true },
+      { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla' },
+      { ey: 'bos', ikon: 'grid', ad: 'Boş kanvas' }
     ],
-    // İki grup: gerçek araçlar ve KURGU doğrulama modelleri (kayıtta `kurgu`).
-    // Kurgu model gerçek bir aracı temsil etmez — bölüm başlığı ve karonun
-    // künyesi bunu söyler; gerçek örneklerle aynı listede karışmaz.
     bolumler: [
-      { baslik: 'Örnek modellerden başla',
-        not: gercek.length + ' gerçek araç · modelin topolojisi birebir yüklenir, sonra her şey değiştirilebilir',
-        karolar: gercek.map(karo) },
-      { baslik: 'Doğrulama örnekleri — kurgu',
-        not: kurgu.length + ' model · gerçek bir aracı temsil etmez: kapalı formu bilinen ya da bütün kriterleri işleten modeller',
-        karolar: kurgu.map(karo) }
-    ],
-    not: 'Sayfa bir kapı seçilince çekilir. Aynı yollar sonra da açık: '
-      + 'Sihirbaz, STEP ve örnekler Başlangıç ve Örnekler bileşeninin penceresinde.'
+      { baslik: 'Örnek modellerden başla', karolar: gercek.map(karo) },
+      { baslik: 'Doğrulama örnekleri — kurgu', karolar: kurgu.map(karo) }
+    ]
   });
 }
 
