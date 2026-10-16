@@ -10,3 +10,4 @@ tarih,sha,ham_bayt,gzip_bayt,assets_vendor_bayt,not
 2026-10-02,575ffa1,29498970,17463849,23231921,+12 KB kod (FEAD STEP kayis sirasi eskizden #1076) - kare ve varlik degismedi
 2026-10-14,e33110b,29518155,17472622,23231921,+19 KB kod (FEAD kanvas rozet/ad yerlesimi + buyuk harf + kontrast #1078-#1081) - kare ve varlik degismedi
 2026-10-14,fe4f181,29520079,17472716,23231921,+2 KB kod (#1082 kalan sabit renkli yazilar AA kontrast) - ayni gun ikinci teslim: e33110b gonderilirken paralel oturum #1082'yi birlestirdi
+2026-10-16,5b55606,29966522,17621558,22861069,+446 KB kod: Takoz genislemesi ~350 KB (cp-mount +129 · yeni sihirbaz 95 · aksonometri 45 · 3B 35 · STEP 13 · baslangic 10) + css 40 + FEAD 22 (#1085-#1110); 3 takoz PNG silindi (-370 KB kaynak) ama tek dosyaya girmiyordu; 30 MiB sinirina 1.42 MiB kaldi
