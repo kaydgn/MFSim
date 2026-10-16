@@ -298,7 +298,9 @@ describe('rapor §8.17 — kriter kaldıraçları çekirdeğin aramasıyla AYNI 
 });
 
 // ═══════════════ PENCERELER ═══════════════
-describe('pencereler: Çözücü → Modlar → Kaldıraçlar · Takoz → Yük durumları → Duyarlılık', () => {
+// Bileşen pencereleri sonuç göstermez (kullanıcı kararı 2026-10-16): duyarlılık
+// yalnız raporun §8.17'sinde. Çözüm R.sensitivity'yi yine yazar — rapor OKUR.
+describe('pencereler duyarlılığı göstermez — yalnız rapor §8.17', () => {
   global.veMntUygunluk = rp.veMntUygunluk;
   global.veMntRaporOpts = rp.veMntRaporOpts;
   global._mntRepCaseTr = rp._mntRepCaseTr;
@@ -310,30 +312,22 @@ describe('pencereler: Çözücü → Modlar → Kaldıraçlar · Takoz → Yük 
     const Rx = cp._mntComputeResults(s.id); global._veMntLast = Rx;
     return { s, Rx };
   };
-  const bolum = (html, ad) => [...dom(html).querySelectorAll('.ve-fp-card')].find((c) => c.querySelector('.ve-fp-sect b').textContent === ad);
-  test('Kaldıraçlar: altı mod, her satır çekirdeğin `en` kaldıracı ve esnekliği', () => {
+  const sekmeler = (d) => [...d.querySelectorAll('.ve-fp-tab .ve-fp-tab-ad')].map((x) => x.textContent);
+  const bolumler = (d) => [...d.querySelectorAll('.ve-fp-sect b')].map((x) => x.textContent);
+  test('çözüm R.sensitivity yazar; Çözücü\'de Modlar · Kaldıraçlar, takozda Duyarlılık yok', () => {
     const { s, Rx } = kurHafif();
-    const b = bolum(cp.getMntSolverPropertiesHTML(s), 'Kaldıraçlar');
-    const satir = [...b.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent));
-    expect(satir).toHaveLength(6);
-    expect(satir[5]).toEqual(['6', 'Sol Motor Takozu · Z', veSayi(Rx.sensitivity[5].en.e, 2)]);
-  });
-  test('Duyarlılık: bu takozun üç ekseni × altı mod; kalın hücre modun en etkili kaldıracı', () => {
-    const { Rx } = kurHafif();
+    expect(Rx.sensitivity).toHaveLength(6);
+    const cz = dom(cp.getMntSolverPropertiesHTML(s));
+    expect(sekmeler(cz)).toEqual(['Yük durumları', 'Ayarlar']);   // pencere gerçekten kuruldu
+    expect(bolumler(cz)).not.toContain('Kaldıraçlar');
     const n = global.nodes.find((x) => x.customName === 'Sol Motor Takozu');
-    const j = Rx.mounts.findIndex((m) => m.name === 'Sol Motor Takozu');
-    const b = bolum(cp.getMntMountPropertiesHTML(n), 'Duyarlılık');
-    const tr = [...b.querySelectorAll('tbody tr')];
-    expect(tr).toHaveLength(6);
-    tr.forEach((row, r) => {
-      const td = [...row.querySelectorAll('td')];
-      [0, 1, 2].forEach((ax) => {
-        const v = Rx.sensitivity[r].e[j][ax];
-        expect(td[2 + ax].textContent).toBe(v >= 0.005 ? veSayi(v, 2) : '·');
-        const en = Rx.sensitivity[r].en.i === j && Rx.sensitivity[r].en.ax === ax;
-        expect(td[2 + ax].classList.contains('en')).toBe(en);
-      });
-    });
-    expect(tr[5].querySelectorAll('td')[4].classList.contains('en')).toBe(true);   // mod 6 · Z
+    const tk = dom(cp.getMntMountPropertiesHTML(n));
+    expect(sekmeler(tk)).toEqual(['Tip ve rijitlik', 'Konum']);
+    expect(bolumler(tk)).not.toContain('Duyarlılık');
+    expect(tk.querySelector('td.en')).toBeNull();
+  });
+  test('rapor §8.17 aynı çözümden basılıyor', () => {
+    const { Rx } = kurHafif();
+    expect(rp._mntRepSensitivity(Rx, {})).toContain('8.17 Takoz ve eksen başına frekans duyarlılığı');
   });
 });

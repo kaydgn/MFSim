@@ -96,7 +96,8 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
   expect.soft(oz.ortulen).toEqual([]);
   expect(oz.isaret).toBeGreaterThan(5);
   expect.soft(oz.altinda).toBe(0);
-  expect.soft(oz.bas.join(' | ')).toContain('1 g');
+  // Özet SONUÇ GÖSTERMEZ (2026-10-16): statik denge ve doğal frekans kartları yok
+  expect.soft(oz.bas.map((x) => x.toLocaleLowerCase('tr'))).toEqual(['kurulacaklar', 'model']);
   // Görünüş düğmesi gerçekten çalışıyor (örtülmüş düğmenin tıklaması panele gidiyordu)
   await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: 'Yandan' }).click();
   await expect(page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: 'Yandan' })).toHaveAttribute('aria-pressed', 'true');
