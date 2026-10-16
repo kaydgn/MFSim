@@ -83,12 +83,19 @@
 (function() {
   'use strict';
 
+  // OTOMASYONDA SÜS BEKLEMESİ YOK. Aşağıdaki iki bekleme ilerlemenin GÖZLE
+  // izlenebilmesi içindir; tarayıcı otomasyonunda (Playwright —
+  // navigator.webdriver) izleyen göz yok. 106 modülde 106 × 150 ms = 15,9 sn
+  // her e2e testinin açılışına ekleniyordu (açılış 20 sn → 4 sn): ürün kapısı
+  // (e2e-urun, 143 test) 20 dk sınırını aştı ve dört birleşmede yayın
+  // atlandı (koşu 1280–1286). Kullanıcının açılışı DEĞİŞMEZ.
+  var OTOMASYON = (typeof navigator !== 'undefined' && navigator.webdriver === true);
   // Her modul adimi arasi minimum gecikme. Toplam splash suresi yaklasik
   // (modul_sayisi * STEP_DELAY_MS) + gercek yukleme isi olur.
-  var STEP_DELAY_MS = 150;
+  var STEP_DELAY_MS = OTOMASYON ? 0 : 150;
   // Tum yuklemenin (script'ler bitti, splash kapanmadan onceki) minimum
   // toplam suresi. Gerçek is bu su̇reden hızlıysa fark kadar bekleriz.
-  var MIN_TOTAL_DURATION_MS = 6500;
+  var MIN_TOTAL_DURATION_MS = OTOMASYON ? 0 : 6500;
   // Tek bir external modulun yuklenmesi icin ust sinir. Bu sureyi asan modul
   // ATLANIR ve yukleme devam eder — boylece askida kalan tek bir kaynak tum
   // uygulamayi baslatilamaz hale getiremez. Tum kutuphaneler artik yerel

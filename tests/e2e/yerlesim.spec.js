@@ -62,7 +62,11 @@ function olcucu(page, liste, sayilar) {
     const metin = await page.evaluate((k) => {
       const el = document.querySelector(k), parca = [];
       if (el) {
-        parca.push(el.innerText || '');
+        // <code> makine metnidir, ad: commit kısaltması "9278536" yalnız
+        // rakamdan oluşabiliyor ((10/16)^7 ≈ %4) ve gruplanmamış sayı sayılıyordu.
+        let t = el.innerText || '';
+        el.querySelectorAll('code').forEach((c) => { const s = c.innerText; if (s) t = t.replace(s, ''); });
+        parca.push(t);
         el.querySelectorAll('svg text').forEach((x) => parca.push(x.textContent));
         el.querySelectorAll('[title]').forEach((x) => parca.push(x.getAttribute('title')));
       }
