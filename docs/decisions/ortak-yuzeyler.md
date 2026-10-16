@@ -2179,7 +2179,7 @@ yalnız küçülür, yeni kayıt yalnız kullanıcının "kalsın" kararıyla
 kart önerinin kendisidir (kullanıcı kararı: kartlar önerimle seçili gelir).
 `durum/tahta.tamam` kullanıcının "Kararlarım tamam"ıdır. Tahtalar:
 aşama 1 → https://claude.ai/artifact/XynJyhKjg5oqyNZLGshtLk (uygulandı, kaydgn/MFSim#1129) ·
-aşama 2 → https://claude.ai/artifact/3qGwTRv3om6LayaJrBXdCj (uygulandı).
+aşama 2 → https://claude.ai/artifact/3qGwTRv3om6LayaJrBXdCj (uygulandı, kaydgn/MFSim#1135).
 
 **Aşama 3'ten sonra tahta yok** (kullanıcı kararı, 2026-10-16: *"Senin
 önerilerin gayet güzel. Sen adım adım hepsini yap. Sonra tüm yaptıklarını tek
