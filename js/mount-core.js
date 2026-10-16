@@ -1220,9 +1220,62 @@ var veMountCore = (function() {
     return null;
   }
 
+  // FRF IZGARASI — logaritmik nPts nokta + sönümlü eğrinin YEREL TEPELERİ.
+  //
+  // NEDEN: sönümü küçük modun tepesi ızgara aralığından dar. 240 noktada komşu
+  // oran 1,029; ζ_mod 0,02'lik tepenin yarı güç genişliği f·0,04. Eşit aralıklı
+  // ızgara tepeyi ıskalıyordu — ölçüldü: TULGA Y'de 18,88× okunuyor, tepe
+  // 22,74× (%17); SİPER Y'nin ikincil tepesi %27 düşük.
+  // NASIL: modal frekanslar da eklenmiş tarama ızgarasında her yönün sönümlü
+  // eğrisinin yerel en büyükleri bulunur ve ızgara komşuları arasında (yerel tek
+  // tepeli aralık) altın oranla inceltilir; bulunan frekanslar ızgaraya girer.
+  // Modal frekansın KENDİSİ çıktıya girmez: sönümsüz sistem orada tekildir ve
+  // sönümsüz eğri yuvarlama artığından sahte bir tepe basardı. Sönüm yoksa
+  // (ζ = 0) sönümlü eğri de tekil — inceltilecek sonlu tepe yok, taban döner.
+  // Izgara bütün yönlerin tepelerini taşır: Sonuçlar'da üç yön tek X eksenini
+  // paylaşır ve rapor §8.13 aynı ızgarayı kullanır (iki yüzey aynı sayı).
+  // opts: { fMin=0.1, fMax=100, nPts=240, dirs=[0,1,2], fModal=[], kBasis }
+  function frfGrid(mounts, cg, M6, damping, opts){
+    opts = opts || {};
+    const fMin = (opts.fMin > 0) ? opts.fMin : 0.1;
+    const fMax = (opts.fMax > fMin) ? opts.fMax : 100;
+    const nPts = (opts.nPts > 1) ? Math.floor(opts.nPts) : 240;
+    if(!mounts || !mounts.length || !M6) return null;
+    const lo = Math.log10(fMin), hi = Math.log10(fMax);
+    const taban = [];
+    for(let i=0;i<nPts;i++) taban.push(Math.pow(10, lo + (hi-lo)*i/(nPts-1)));
+    const cList = mounts.map(function(_, i){
+      return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
+    if(!cList.some(function(c){ return c.some(function(v){ return v > 0; }); })) return taban;
+    const kb = dynStiffBasis(mounts, resolveKBasis(mounts, damping, opts.kBasis));
+    const K6 = buildKfromBasis(mounts, cg, kb);
+    const C6 = buildCdamp(mounts, cg, damping);
+    const tara = taban.concat((opts.fModal || []).filter(function(v){ return v > fMin && v < fMax; }))
+                      .sort(function(a, b){ return a - b; });
+    const ek = [], g = (Math.sqrt(5) - 1) / 2;
+    (opts.dirs || [0,1,2]).forEach(function(dir){
+      const Tf = function(ff){ return frfPoint(mounts, cg, M6, K6, C6, cList, 2*Math.PI*ff, dir, kb); };
+      const T = tara.map(Tf);
+      for(let i=1;i<tara.length-1;i++){
+        if(!(T[i] > T[i-1] && T[i] >= T[i+1])) continue;
+        let a = tara[i-1], b = tara[i+1];
+        let c = b - g*(b-a), d = a + g*(b-a), Tc = Tf(c), Td = Tf(d);
+        for(let k=0;k<40;k++){
+          if(Tc > Td){ b = d; d = c; Td = Tc; c = b - g*(b-a); Tc = Tf(c); }
+          else       { a = c; c = d; Tc = Td; d = a + g*(b-a); Td = Tf(d); }
+        }
+        ek.push((a + b) / 2);
+      }
+    });
+    const hepsi = taban.concat(ek).sort(function(a, b){ return a - b; }), out = [];
+    hepsi.forEach(function(v){ if(!out.length || v - out[out.length-1] > 1e-9 * v) out.push(v); });
+    return out;
+  }
+
   // Frekans taraması. opts: { fMin=0.1, fMax=100, nPts=240, dir=2 (düşey),
-  //                           perMount=false }.
-  // Dönüş: { f:[Hz], T:[sönümlü], T0:[sönümsüz] } — logaritmik eşit aralıklı.
+  //                           perMount=false, f }.
+  // Dönüş: { f:[Hz], T:[sönümlü], T0:[sönümsüz] } — logaritmik eşit aralıklı;
+  // opts.f verilirse o ızgara (frfGrid: taban + inceltilmiş tepeler).
   // perMount istenirse Tm:[[takoz başına |Fᵢ|]] de döner (takoz sırasıyla).
   function frequencyResponse(mounts, cg, M6, damping, opts){
     opts = opts || {};
@@ -1241,8 +1294,10 @@ var veMountCore = (function() {
     const f = [], T = [], T0 = [];
     const Tm = opts.perMount ? mounts.map(function(){ return []; }) : null;
     const lo = Math.log10(fMin), hi = Math.log10(fMax);
-    for(let i=0;i<nPts;i++){
-      const ff = Math.pow(10, lo + (hi-lo)*i/(nPts-1));
+    const izgara = (opts.f && opts.f.length > 1) ? opts.f : null;
+    const n = izgara ? izgara.length : nPts;
+    for(let i=0;i<n;i++){
+      const ff = izgara ? izgara[i] : Math.pow(10, lo + (hi-lo)*i/(nPts-1));
       const w = 2*Math.PI*ff;
       f.push(ff);
       const r = frfForces(mounts, cg, M6, K6, C6, cList, w, dir, kb);
@@ -2333,7 +2388,7 @@ var veMountCore = (function() {
     combineMassProps, buildK, buildKfromBasis, dynStiffBasis, buildM6, buildModel,
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
-    transmissibility, bounceFrequency,
+    transmissibility, bounceFrequency, frfGrid,
     mountLoadShares, mountDamping,
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
