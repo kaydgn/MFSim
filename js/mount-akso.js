@@ -158,7 +158,7 @@ var veMntAkso = (function(){
     var a=Math.atan2(y2-y1, x2-x1); b=b||5;
     return cz(x1, y1, x2-Math.cos(a)*b*0.8, y2-Math.sin(a)*b*0.8, c)+okUcu(x2, y2, a, b, c+'-uc');
   }
-  // Birleşik CG — jeodezik işaret (2D görünüşlerin _mnt2DCGMark'ı).
+  // Birleşik CG — jeodezik işaret (düz görünüşlerin _mnt2DCGMark'ı).
   function amG(x, y, r){
     return '<circle cx="'+R(x)+'" cy="'+R(y)+'" r="'+r+'"/>'
       + '<path d="M'+R(x)+' '+R(y)+' L'+R(x+r)+' '+R(y)+' A'+r+' '+r+' 0 0 1 '+R(x)+' '+R(y+r)+' Z M'+R(x)+' '+R(y)+' L'+R(x-r)+' '+R(y)+' A'+r+' '+r+' 0 0 1 '+R(x)+' '+R(y-r)+' Z"/>';

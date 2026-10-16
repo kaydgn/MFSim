@@ -3007,7 +3007,7 @@ function _mntAksoKoord(x, y, z, b){ return '('+_mntS(x, b||0)+'; '+_mntS(y, b||0
 
 // ÇİZİMİN MODELİ — pencere hesaplamaz, okur. Gövde kutusu çekirdeğin
 // equivalentBox'ı (köşegen atalet; raporun mod şekli çizimiyle aynı çağrı),
-// G 2D görünüşlerinkiyle aynı (_mnt2DPencereVeri → combineMassProps), asal
+// G İşaretler föyününkiyle aynı (_mnt2DPencereVeri → combineMassProps), asal
 // eksenler canlı modelin I_G'sinden. Kuvvet, statik denge ve modlar YALNIZ
 // GÜNCEL çözümden: bayat bir kuvvet oku çizimde ölçüm gibi durur.
 function _mntAksoModel(P){
@@ -3081,7 +3081,7 @@ function _mntAksoModelKur(g, mp, R, durum){
     if(pm && yuk!=null) bilgi.push('Statik yük '+_mntS(yuk, 1)+' kg · sehim '+_mntS(Math.abs(pm.delta[2]*1000), 2)+' mm');
     return { k:'T'+(i+1), no:'T'+(i+1), ad:ad, x:x, y:y, z:z, ks:ks, f:pm ? pm.f.slice() : null, yukKg:yuk, bilgi:bilgi };
   });
-  // G 2D görünüşlerinkiyle aynı (_mnt2DPencereVeri'nin cg'si).
+  // G İşaretler föyününkiyle aynı (_mnt2DPencereVeri'nin cg'si).
   var cg=(mp && mp.cg && mp.cg.every(Number.isFinite)) ? { x:mp.cg[0]*1000, y:mp.cg[1]*1000, z:mp.cg[2]*1000 } : null;
   var G=cg ? { x:cg.x, y:cg.y, z:cg.z, m:mHam,
     bilgi:['Birleşik CG', _mntAksoKoord(cg.x, cg.y, cg.z, 1)+' mm', 'Toplam kütle '+_mntS(mHam, 1)+' kg'] } : null;
