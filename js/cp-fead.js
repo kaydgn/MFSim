@@ -1166,11 +1166,15 @@ function veFeadSetDriver(nodeId, on){
 // kaydedilmez ve geri-al yığınına YAZILMAZ — yazılsaydı Ctrl+Z sekme
 // gezdirirdi. Ama panel her seçim değişiminde yeniden kurulduğu için bir
 // yerde durmak ZORUNDA, yoksa panel her açılışta ilk sekmeye dönerdi.
-var VE_FEAD_PANEL_TAB = {};
+//
+// KABUK ORTAK KİTTEN (js/pencere-kabuk.js, 2026-10-16): Takoz pencereleri de
+// aynı üreticiden basar — kullanıcı: *"Tüm programda tek tip bir kozmetik
+// yapımız olacak."* Sekme hafızası kitin; buradaki adlar çağıranlar (onclick,
+// e2e turları, kılavuz) için duruyor.
+var VE_FEAD_PANEL_TAB = (typeof VE_PENCERE_SEKME !== 'undefined') ? VE_PENCERE_SEKME : {};
 
 function veFeadPanelTabOf(nodeId, gecerli){
-  var k = VE_FEAD_PANEL_TAB[nodeId];
-  return (k && gecerli.indexOf(k) >= 0) ? k : gecerli[0];
+  return vePencereSekmeOf(nodeId, gecerli);
 }
 
 // SEKME DEĞİŞİNCE PANEL YENİDEN KURULMAZ, yalnız `hidden` çevrilir.
@@ -1181,45 +1185,22 @@ function veFeadPanelTabOf(nodeId, gecerli){
 // BAĞIMSIZ durması. Üstelik sağ sütun bir çözüm koşturuyor; her tıklamada
 // yeniden koşmak şemayı yanıp söndürürdü.
 function veFeadPanelTab(nodeId, key){
-  if(typeof document === 'undefined') return false;
-  var kap = document.getElementById('ve-fp-tabs-' + nodeId);
-  var gov = document.getElementById('ve-fp-panes-' + nodeId);
-  if(!kap || !gov) return false;
-  VE_FEAD_PANEL_TAB[nodeId] = key;
-  Array.prototype.forEach.call(kap.querySelectorAll('.ve-fp-tab'), function(b){
-    b.setAttribute('aria-selected', String(b.getAttribute('data-k') === key));
-  });
-  Array.prototype.forEach.call(gov.children, function(pn){
-    pn.hidden = (pn.getAttribute('data-k') !== key);
-  });
-  // Açılan sekmedeki tablo birimi AYNI karede karar alır — gözlemciye
-  // kalsaydı geniş tablo bir kare yatay kaydırmayla görünürdü.
-  if(typeof veTabloOlcIcinde === 'function') veTabloOlcIcinde(gov);
-  return true;
+  return vePencereSekme(nodeId, key);
 }
 
 // Sekme şeridi + gövdeler. Her sekme ADININ altında DURUMUNU taşır
 // (`s.durum` — bkz. `veFeadSekmeDurumlari`); durumu olmayan pencerede (araç
 // pencereleri) yalnız ad basılır. Eski sayı rozeti bu satıra yerini bıraktı
 // ve KALKTI: çözücünün satır sayısı artık Çevrim sekmesinin durum satırı.
+// Üretici ortak kitte (js/pencere-kabuk.js); bant FEAD'in (Sonuç sekmesi "Aç").
 function veFeadTabsHTML(nodeId, sekmeler, aktif){
-  var h = '<div class="ve-fp-tabs" role="tablist" id="ve-fp-tabs-' + nodeId + '">';
-  sekmeler.forEach(function(s){
-    var D = s.durum || null;
-    h += '<button type="button" class="ve-fp-tab" role="tab" data-k="' + s.k + '"'
-      + (D ? ' data-d="' + D.d + '"' : '')
-      + ' aria-selected="' + (s.k === aktif ? 'true' : 'false') + '"'
-      + ' onclick="veFeadPanelTab(\'' + nodeId + '\',\'' + s.k + '\')">'
-      + '<span class="ve-fp-tab-ad">' + _feadEsc(s.ad) + '</span>'
-      + (D ? _feadSekmeDurumHTML(D) : '')
-      + '</button>';
-  });
-  h += '</div>' + veFeadEksikBandi(nodeId, sekmeler)
-     + '<div id="ve-fp-panes-' + nodeId + '">';
-  sekmeler.forEach(function(s){
-    h += '<div data-k="' + s.k + '"' + (s.k === aktif ? '' : ' hidden') + '>' + s.govde + '</div>';
-  });
-  return h + '</div>';
+  return vePencereSekmeleriHTML(nodeId, _feadBantSekmeleri(sekmeler), aktif,
+    { sekmeFn: 'veFeadPanelTab', git: 'veFeadEksikGit' });
+}
+// Çözücünün Sonuç sekmesinin bağlantısı "Aç": doldurulacak alanı yok.
+function _feadBantSekmeleri(sekmeler){
+  (sekmeler || []).forEach(function(s){ s.sonuc = (s.k === 'son'); });
+  return sekmeler || [];
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1462,26 +1443,15 @@ function _feadCozucuDurum(node, build){
 // Sekmenin durum satırı. Nokta süs değil: renk körlüğünde ve gri basımda
 // dört durumu BİÇİM ayırır (dolu · kesikli halka · yok).
 function _feadSekmeDurumHTML(D){
-  return '<span class="ve-fp-tab-d" data-d="' + D.d + '"><i aria-hidden="true"></i>'
-    + _feadEsc(D.yazi) + '</span>';
+  return vePencereSekmeDurumHTML(D);
 }
 
 // EKSİK BANDI — şeridin altında, yalnız eksik varken. Her eksik sekme için
 // SONUCU (`neden`) ve oraya giden bağlantı; sonuç eskiden yalnız sağ sütunun
 // dibinde yazıyordu ve 380 px'lik müfettişte kaydırmadan görünmüyordu.
+// Üretici ortak kitte; durum tazelemesi (`veFeadSekmeTazele`) de buradan basar.
 function veFeadEksikBandi(nodeId, sekmeler){
-  var eks = (sekmeler || []).filter(function(s){ return s.durum && s.durum.d === 'eksik'; });
-  if(!eks.length) return '';
-  return '<div class="ve-fp-eksik" role="status" id="ve-fp-eksik-' + nodeId + '">'
-    + eks.map(function(s){
-        return '<div class="ve-fp-eksik-s"><span class="mf-ico mf-ico-alert-triangle" aria-hidden="true"></span>'
-          + '<span class="ve-fp-eksik-t"><b>' + _feadEsc(s.ad) + '</b> — '
-          + _feadEsc(s.durum.neden || '') + '</span>'
-          + '<button type="button" onclick="veFeadEksikGit(\'' + nodeId + '\',\'' + s.k + '\''
-          + (s.durum.hedef ? ',\'' + _feadEsc(s.durum.hedef) + '\'' : '') + ')">'
-          + (s.k === 'son' ? 'Aç' : 'Doldur') + ' ' + veIkon('arrow-right') + '</button></div>';
-      }).join('')
-    + '</div>';
+  return vePencereEksikBandi(nodeId, _feadBantSekmeleri(sekmeler), 'veFeadEksikGit');
 }
 
 // Bantın bağlantısı: sekmeyi açar ve eksiğin alanına — durum bir HEDEF
@@ -1686,14 +1656,14 @@ function veFeadToolSide(node, baslik, kaynak, satirlar, ekBlok){
 // düğümün tipinden sorar (`veFeadSekmeDurumlari`). Kurucu zaten hesapladıysa
 // (kasnak: sürücünün iki sekmesinin GÖVDESİ de duruma bağlı) dördüncü
 // argümanla verir — ikinci kez hesaplanmasın.
+//
+// İSKELET ORTAK KİTİN (js/pencere-kabuk.js): Takoz'un pencereleri aynı
+// üreticiden basar; burada kalan FEAD'in kendisi — durumlar ve bant işleyicisi.
 function veFeadPanelShell(node, sekmeler, yan, durumlar){
   var D = (durumlar !== undefined) ? durumlar : veFeadSekmeDurumlari(node);
   if(D) sekmeler.forEach(function(s){ if(!s.durum && D[s.k]) s.durum = D[s.k]; });
-  var aktif = veFeadPanelTabOf(node.id, sekmeler.map(function(s){ return s.k; }));
-  return '<div class="sw-panel ve-fp">'
-    + '<div class="ve-fp-split"><div class="ve-fp-main">'
-    + veFeadTabsHTML(node.id, sekmeler, aktif)
-    + '</div><div class="ve-fp-side">' + yan.html + '</div></div></div>';
+  return vePencereKabuk(node, _feadBantSekmeleri(sekmeler), yan.html,
+    { sekmeFn: 'veFeadPanelTab', git: 'veFeadEksikGit' });
 }
 
 function getFeadPulleyPropertiesHTML(node){

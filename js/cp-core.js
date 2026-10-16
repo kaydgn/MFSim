@@ -171,9 +171,13 @@ var VE_SUTUNA_SIGMAYAN = ['engine', 'ec-matching', 'gear-shift', 'shift-controll
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
   // Aksesuarlar — iki sütun (model/oran | güç-çekişi grafiği)
   'acc-ac', 'acc-alternator', 'acc-aircomp',
-  // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
+  // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir).
+  // Rapor BURADA DEĞİL (2026-10-16): FEAD Rapor penceresi gibi hafif pencere
+  // (aşağıdaki liste) — dar ekranın modalında 980 ↔ 560 px açılıyordu. (Bu
+  // listenin yorumlarında kesme işareti YAZILMAZ: source-hygiene listeyi
+  // tırnak eşleştirerek okuyor.)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
-  'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview', 'mnt-report',
+  'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Çözücü artık sekmeli bir pencere (yük kitabı · modlar · ayarlar) — FEAD
   // çözücüsü gibi geniş; dar "eylem kartı" listesinden çıktı.
   'mnt-solver',
@@ -194,7 +198,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
 
 // Hafif paneller — içerik az (kısa metin / birkaç alan / tek eylem): geniş yerine
 // DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
-var VE_COMPACT_PANEL_TYPES = ['mount-analysis',
+var VE_COMPACT_PANEL_TYPES = ['mount-analysis', 'mnt-report',
   'fead-analysis', 'fead-report',
   'fead-wizard',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];

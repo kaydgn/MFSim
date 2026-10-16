@@ -9383,11 +9383,18 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    `68ch` üst sınırı metni kısaltmadan satırı kısaltıyor.
    Denetimler (alan · açılır liste) tam genişlikte KALIR: sınır yalnız
    OKUNAN metne konur, hizalanan yüzeye değil. */
-.ve-fead-not{
+/* `.ve-fp-not` AYNI satırın pencere ailesindeki adı (js/pencere-kabuk.js):
+   Takoz pencereleri de bunu basar (2026-10-16 — "tek tip kozmetik yapı").
+   Hükmün tonu `data-d`den — FEAD aynı tonu satır içi `style=` ile yazıyor. */
+.ve-fp-not, .ve-fead-not{
   font-size:var(--fs-micro); color:var(--text-muted);
   line-height:1.45; margin:-3px 0 9px; max-width:68ch;
 }
-.ve-fead-not b, .ve-fead-not strong{ color:var(--text-secondary); font-weight:600; }
+.ve-fead-not b, .ve-fead-not strong, .ve-fp-not b, .ve-fp-not strong{ color:var(--text-secondary); font-weight:600; }
+.ve-fp-not[data-d="warn"] b{ color:var(--ink-warning); }
+.ve-fp-not[data-d="no"] b{ color:var(--ink-danger); }
+.ve-fp-not[data-d="ok"] b{ color:var(--ink-success); }
+.ve-fp-not ul{ margin:3px 0 0 16px; padding:0; }
 
 /* ══ FEAD PANEL DİLİ (.ve-fp-*) ═══════════════════════════════════════════
    Kullanıcı bildirimi (2026-09-21, ekran görüntüsüyle): *"çok karışık ve kötü
@@ -9855,6 +9862,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    kehribar "sınırda" demek olurdu. Kapıların üç durumuyla aynı sözlük. */
 .ve-fp-durum[data-d="no"]{ background:var(--danger-tint-8); border-color:var(--danger-tint-15); }
 .ve-fp-durum[data-d="no"] b{ color:var(--ink-danger); }
+/* Maddeli cevap (Takoz: ön denetimin sorunları, örneğin tutarlılık uyarıları). */
+.ve-fp-durum ul{ margin:4px 0 0 16px; padding:0; }
+/* Bölüm başlığının hemen altındaki cevap üst pay almaz (başlığın 9 px'i yeter). */
+.ve-fp-sect + .ve-fp-durum, .ve-fp-sect + div > .ve-fp-durum:first-child{ margin-top:0; }
 
 /* ── DÖNÜŞ YÖNÜ PENCERESİ — yön okunur bir DEĞER, rengi hükümden ──────────
    Eski panel rengi satır içi yazıyordu; `data-ton` bir ANLAM adı. */
@@ -10121,25 +10132,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-mtx-g.ve-mnt-zor{ border-color:var(--warning-tint-15); background:var(--warning-tint-8); }
 .ve-mnt-mtx-g.ve-mnt-zor::placeholder{ color:var(--ink-warning); opacity:1; }
 
-/* DURUM SATIRI — bir seçimin ya da hesabın SONUCU (açıklama değil): kütüphane
-   eşleşmesi, katalog sapması, çözüm durumu. Tonu anlamdan. */
-.ve-mnt-not{
-  display:flex; align-items:flex-start; gap:7px; margin:-2px 0 12px; padding:7px 9px;
-  border-radius:var(--radius-md); font-size:var(--fs-tiny); line-height:1.45;
-  color:var(--text-primary); background:var(--bg-tertiary); border:1px solid var(--border-color);
-}
-.ve-mnt-not b{ color:var(--text-heading); }
-.ve-mnt-not > .mf-ico{ flex:none; margin-top:1px; color:var(--ink-accent); }
-.ve-mnt-not > span{ flex:1; min-width:0; }
-.ve-mnt-not[data-d="ok"]{ background:var(--success-tint-8); border-color:var(--success-tint-15); }
-.ve-mnt-not[data-d="ok"] > .mf-ico{ color:var(--ink-success); }
-.ve-mnt-not[data-d="warn"]{ background:var(--warning-tint-8); border-color:var(--warning-tint-15); }
-.ve-mnt-not[data-d="warn"] > .mf-ico{ color:var(--ink-warning); }
-.ve-mnt-not[data-d="no"]{ background:var(--danger-tint-8); border-color:var(--danger-tint-15); }
-.ve-mnt-not[data-d="no"] > .mf-ico{ color:var(--ink-danger); }
-.ve-mnt-not ul{ margin:4px 0 0 16px; padding:0; }
-/* Çözücünün ön denetimi Hesapla'nın altında (boşken yer kaplamaz). */
-.ve-mnt-sonuc > .ve-mnt-not{ margin:8px 0 0; }
+/* DURUM SATIRI — FEAD'in satırı (`.ve-fp-not` · `.ve-fead-not`, yukarıda) ve
+   pencerenin cevabı FEAD'in kutusu (`.ve-fp-durum`). Eskiden ikonlu, renk
+   zeminli kendi kutusu vardı (`.ve-mnt-not`) — aynı pencere ailesinde ikinci
+   bir not dili (2026-10-16'da kalktı). */
 /* Kapı satırındaki kriter numarası (K1a…) — kuralın adı değil adresi. */
 .ve-mnt-kno{ font-size:var(--fs-micro); color:var(--text-muted); }
 .ve-fp-gate.ve-mnt-ic{ margin:-4px 0 12px; border-bottom:none; }
@@ -10157,9 +10153,17 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    (kare), birleşik AM ve seçili bileşen. Koordinatı OKUR, çizmez: sayılar
    çözücünün kullandığı AYNI birleştirmeden (combineMassProps). */
 .ve-mnt-kroki{
-  margin:0 0 12px; border:1px solid var(--border-color); border-radius:var(--radius-md);
+  margin:0 0 10px; border:1px solid var(--border-color); border-radius:var(--radius-md);
   background:var(--bg-primary); overflow:hidden;
 }
+/* GÜÇ GRUBUNDAKİ YERİ SAĞ SÜTUNDA (2026-10-16 — FEAD'in bağlam sütunu): başlık
+   FEAD'in bölüm başlığı, görünüş seçimi onun sağında (`em`in yeri). Başlığın
+   büyük harfi ve kalınlığı düğmelere geçmez. Gösterge çizimin altında, föy
+   göstergesinin satırı (`.ve-mnt-lej`). */
+.ve-fp-sect > .ve-mnt-seg{ align-self:center; text-transform:none; letter-spacing:normal; }
+.ve-fp-sect > .ve-mnt-seg button{ font-weight:400; }
+.ve-fp-sect > .ve-mnt-seg button[aria-pressed="true"]{ font-weight:700; }
+.ve-mnt-lej svg{ width:10px; height:10px; flex:none; }
 .ve-mnt-kroki-bas{
   display:flex; align-items:center; gap:6px; padding:4px 5px 4px 9px;
   border-bottom:1px solid var(--border-color); background:var(--bg-secondary);
@@ -10217,9 +10221,9 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-properties-content .ve-mnt-foy td.eks{ color:var(--ink-warning); font-weight:600; }
 /* Eylemin altındaki not, eylemin sonucuyla tonlanır (rapor indi · hata).
    Eskiden satır içi `style.color` yazılıyordu. */
-.ve-fp-solve-not[data-d="ok"]{ color:var(--ink-success); }
-.ve-fp-solve-not[data-d="warn"]{ color:var(--ink-warning); }
-.ve-fp-solve-not[data-d="no"]{ color:var(--ink-danger); }
+.ve-fp-solve-not[data-d="ok"], .ve-fp-durum-not[data-d="ok"]{ color:var(--ink-success); }
+.ve-fp-solve-not[data-d="warn"], .ve-fp-durum-not[data-d="warn"]{ color:var(--ink-warning); }
+.ve-fp-solve-not[data-d="no"], .ve-fp-durum-not[data-d="no"]{ color:var(--ink-danger); }
 
 /* SAHNE (Koordinat Düzlemi) — sütun genişliğinde KARE. Eskiden 58vh boyunda
    dikine bir şeritti: 380 px'lik sütunda 354 × 540. */

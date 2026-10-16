@@ -82,9 +82,16 @@ describe('LİSTE — Takoz\'un hiçbir penceresi modal değil', () => {
     expect(liste('VE_SUTUNA_SIGMAYAN').filter((t) => /^mnt-/.test(t))).toEqual([]);
   });
 
-  test('her Takoz tipi geniş pencere ailesinde (dar ekranın modalında iki sütun)', () => {
-    const genis = liste('VE_WIDE_PANEL_TYPES');
-    expect(TAKOZ_TIPLERI.filter((t) => genis.indexOf(t) < 0)).toEqual([]);
+  // FEAD İLE AYNI PENCERE SINIFI (2026-10-16 — "tek tip kozmetik yapı"): her
+  // Takoz tipi kompakt-sol kimliği veren iki listeden birinde, ve FEAD'de
+  // karşılığı olan pencere FEAD'inkiyle AYNI listede — dar ekranın modalında
+  // Rapor 980 px (Takoz) ↔ 560 px (FEAD) açılıyordu.
+  test('her Takoz tipi kimlik satırı ailesinde; FEAD karşılığıyla aynı genişlik sınıfı', () => {
+    const genis = liste('VE_WIDE_PANEL_TYPES'), kompakt = liste('VE_COMPACT_PANEL_TYPES');
+    expect(TAKOZ_TIPLERI.filter((t) => genis.indexOf(t) < 0 && kompakt.indexOf(t) < 0)).toEqual([]);
+    const sinif = (t) => (kompakt.indexOf(t) >= 0 ? 'kompakt' : genis.indexOf(t) >= 0 ? 'geniş' : 'yok');
+    [['mount-analysis', 'fead-analysis'], ['mnt-report', 'fead-report'], ['mnt-solver', 'fead-solver']]
+      .forEach(([tk, fd]) => expect(`${tk}: ${sinif(tk)}`).toBe(`${tk}: ${sinif(fd)}`));
   });
 
   test('görüntüleyici genişlikleri (2D 1000 px · kütüphane 1040 px) kalktı', () => {
@@ -311,11 +318,14 @@ describe('MODÜL KARTI — kayıtlı listenin modeli ve son çözümü', () => {
     // kökteyiz: alt topoloji canlı değil, tuvalde kartla birlikte başka bir gövde var
     global.nodes = [k, { id: 'baska', type: 'mnt-motor', def: componentDefs['mnt-motor'], data: { mass: 100, cgx: 0, cgy: 0, cgz: 0 } }];
     const h = cp.getMntModulePropertiesHTML(k);
-    expect(h).toMatch(/Kütle gövdesi<\/td><td>8</);
-    expect(h).toMatch(/Takoz<\/td><td>5</);
-    expect(h).toMatch(/Bağlantı<\/td><td>2</);
-    expect(h).toContain('788,4 kg');
-    expect(h).toContain('Son çözüm güncel');
+    // FEAD'in modül kartının grameri: salt okunur ızgara; son çözümün hükmü
+    // sağ sütunun Uygunluk bölümünde (FEAD'in modül kartı gibi).
+    const alan = (ad) => (h.match(new RegExp(ad + '(?: <u>[^<]*</u>)?</span><input class="ve-fp-inp" value="([^"]*)" readonly')) || [])[1];
+    expect(alan('Kütle gövdesi')).toBe('8');
+    expect(alan('Takoz')).toBe('5');
+    expect(alan('Bağlantı')).toBe('2');
+    expect(alan('Toplam kütle')).toBe('788,4');
+    expect(h).toMatch(/<div class="ve-fp-side"><section class="ve-fp-card" id="ve-mnt-uyg-kart" data-tazele><div class="ve-fp-sect"><b>Uygunluk<\/b><em>son çözüm · 14 yük durumu<\/em>/);
   });
 
   test('kayıtlı model hesaptan sonra değiştiyse "bayat"; son çözüm başka kartınsa "yok"', () => {
@@ -323,10 +333,12 @@ describe('MODÜL KARTI — kayıtlı listenin modeli ve son çözümü', () => {
     const k = kart();
     global.nodes = [k];
     k.data.subTopology.nodes.find((n) => n.type === 'mnt-motor').data.mass = 500;
-    expect(cp.getMntModulePropertiesHTML(k)).toContain('Son çözüm bayat');
+    const bayat = cp.getMntModulePropertiesHTML(k);
+    expect(bayat).toMatch(/<b>Uygunluk<\/b><em>son çözüm · \d+ yük durumu · bayat<\/em>/);
+    expect(bayat).toContain('<b>Bayat.</b> Model hesaptan sonra değişti');
     const baska = kart();
     baska.data.subTopology.nodes = baska.data.subTopology.nodes.filter((n) => n.id !== R.solverId);
-    expect(cp.getMntModulePropertiesHTML(baska)).toContain('Son çözüm yok');
+    expect(cp.getMntModulePropertiesHTML(baska)).toMatch(/<i><\/i>Son çözüm yok<span>/);
   });
 });
 

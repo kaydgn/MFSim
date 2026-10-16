@@ -45,8 +45,9 @@ describe('Ana modül (alt-sistem) paneli', () => {
   test('başlatılmış alt-topoloji özeti bileşen/bağlantı sayısını gösterir', () => {
     const node = { id: 'comp-2', type: 'mount-analysis', data: { subTopology: { nodes: [{}, {}, {}], connections: [{}, {}] } } };
     const html = cp.getMntModulePropertiesHTML(node);
-    expect(html).toContain('>3<'); // 3 bileşen
-    expect(html).toContain('>2<'); // 2 bağlantı
+    // FEAD'in modül kartının grameri (2026-10-16): salt okunur alan ızgarası
+    expect(html).toContain('3 bileşen');                                   // bölüm künyesi
+    expect(html).toMatch(/Bağlantı<\/span><input class="ve-fp-inp" value="2" readonly/);
   });
 });
 

@@ -77,6 +77,15 @@ global.loadCanSource = function loadCanSource(file) {
   global.veSayiOku = SY.veSayiOku;
 }
 
+// BİLEŞEN PENCERESİNİN KABUĞU (js/pencere-kabuk.js) GERÇEK sürümüyle — aynı
+// gerekçe: FEAD ve Takoz pencerelerinin TEK üreticisi; testte eval edilen bir
+// modül onu göremeseydi ReferenceError alırdı, bir stub ise kabuk kapılarını
+// sessizce anlamsızlaştırırdı.
+{
+  const PK = require(path.join(JS_DIR, 'pencere-kabuk.js'));
+  Object.keys(PK).forEach(function (k) { global[k] = PK[k]; });
+}
+
 // TUVAL YAZI YÜZÜ KÖPRÜSÜ (js/theme.js) HER TESTTE TANIMLI — `stubGlobals()`
 // çağrılmasa da. Tuval çizen modüller onu KOŞULSUZ çağırıyor (renk köprüsünün
 // aksine `typeof` kalkanı yok): tek yüz kapısı (`tek-yazi-tipi.test.js`) her

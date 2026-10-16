@@ -313,6 +313,25 @@ describe('YERİNDE TAZELEME — pencere kurulmaz, odak kalır', () => {
     expect(document.getElementById('ve-fp-eksik-' + m.id)).toBeNull();
   });
 
+  // Rapor penceresinin İÇERİK ve GİRDİLER bölümleri çözümden okur (2026-10-16:
+  // iki kategoriye ayrıldı). Kimliksiz kalsalar pencere açıkken gelen çözüm
+  // cevap kutusunu "çözüldü"ye çevirir ama İçerik "Hesaplanmadı" der — sessiz.
+  test('Rapor açıkken çözüm gelir: cevap kutusu, İçerik ve Girdiler AYNI çözümü söyler', () => {
+    tulga();
+    const r = bul((n) => n.type === 'mnt-report');
+    document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntReportPropertiesHTML(r) + '</div>';
+    const ic = () => document.getElementById('ve-mnt-rap-ic-' + r.id).textContent;
+    expect(ic()).toContain('Hesaplanmadı');
+    coz();
+    expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
+    expect(document.getElementById('ve-mnt-rap-coz-' + r.id).textContent).toContain('Model çözüldü');
+    expect(ic()).not.toContain('Hesaplanmadı');
+    const yuk = document.querySelector('#ve-mnt-rap-ic-' + r.id + ' input[value="' + global._veMntLast.allCases.length + '"]');
+    expect(yuk).not.toBeNull();
+    // ζ'nin kaynağı çözümden gelir: çözülmeden "varsayılan" ya da Rapor (eski)
+    expect(document.getElementById('ve-mnt-rap-gir-' + r.id).textContent).toContain('Çözücü');
+  });
+
   test('saveState kancası pencereyi tazeler (girdi değişti olayının tek kaynağı)', () => {
     const state = fs.readFileSync(path.join(__dirname, '../../js/state.js'), 'utf8');
     const govde = state.slice(state.indexOf('function saveState()'), state.indexOf('function _veStateKopya'));

@@ -555,7 +555,10 @@ olurdu.
 
 31. **HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE — DAR KAPTA DA** (2026-09-23,
     kullanıcı isteği: *"kategori kategori pencereler"*). Kabuk TEK üreticiden
-    (`veFeadPanelShell`: kategori sekmeleri · sağ sütun). **Tepede özet şeridi
+    (`veFeadPanelShell`: kategori sekmeleri · sağ sütun) — 2026-10-16'dan beri
+    o da ORTAK KİTE gider (`js/pencere-kabuk.js` · `vePencereKabuk`): Takoz'un
+    pencereleri aynı iskeletten basar ve aile denetimi iki modüle aynı soruyu
+    sorar (`pencere-kabuk.test.js`); FEAD'in durumları ve bandı burada kalır. **Tepede özet şeridi
     YOK** (kullanıcı kararı, aynı gün: *"tepede böyle özet bir açıklamaya gerek
     yok"* — çipleri pencerenin kendisinde zaten yazılı olanı tekrar ediyordu);
     Kayış Yolu (Şema · Geometri), Rapor

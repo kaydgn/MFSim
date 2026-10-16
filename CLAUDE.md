@@ -45,6 +45,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
   söyler. Kapı: `mount-baslangic.test.js` → *ORTAK KİT*.
+- `js/pencere-kabuk.js` — **bileşen penceresinin kabuğu, ortak kit** (`vePencereKabuk`):
+  FEAD ile Takoz pencereleri AYNI üreticiden basar (kullanıcı: *"tüm programda tek
+  tip bir kozmetik yapı"*). Kural aşağıda (ortak yüzeyler); kapı `pencere-kabuk.test.js`.
 - `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
   başla · Boş kanvas + örnek karoları). Görünürlük modelden: yalnız "Başlangıç ve
   Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
@@ -422,6 +425,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   işaretlenir ve bildirim çıkar. Sayı alanını TİPİYLE seçen kod
   `input[inputmode="decimal"]` kullanır. Kapı: `sayi-alan.test.js` +
   `sayi-alan.spec.js`.
+- **BİLEŞEN PENCERESİ TEK İSKELET** (`js/pencere-kabuk.js`, 2026-10-16): FEAD ve
+  Takoz'un her penceresi kimlik → ≥ 2 kategori sekmesi → gövde; sağ sütunda
+  bağlam → Uygunluk → cevap (`.ve-fp-durum`) → tek eylem. Sekmelerin ÜSTÜNDE hiçbir
+  şey yok; durum notu FEAD'in satırı (`.ve-fp-not`), açıklama kılavuzda. Kabuk
+  işaretlemesi yalnız kitte (ikinci yazım Takoz'da 17/17 pencereyi aileden
+  düşürmüştü). Kapı: `pencere-kabuk.test.js`; gerekçe `docs/decisions/ortak-yuzeyler.md`.
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da
