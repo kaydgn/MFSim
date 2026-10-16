@@ -21,3 +21,8 @@ karsilama-secici-uretilen.html
 # `npm run karsilama:aday-secici` sayfayı kurar.
 .karsilama-adaylar/
 karsilama-aday-secici-uretilen.html
+
+# Metin temizliğinin ekran turu çıktısı (görüntüler + tur.json) — üretilir,
+# commit edilmez. `node tools/metin-turu.js --asama <no>` üretir.
+metin-turu-*/
+metin-envanteri.json

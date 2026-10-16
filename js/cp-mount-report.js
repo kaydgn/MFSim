@@ -2182,21 +2182,15 @@ function _mntRepSensitivity(R, opts){
   var S=_mntRepDuyarlilik(R), modes=R.modes||[], mounts=R.mounts||[];
   if(!S || !S.length || !mounts.length) return '';
   var h='<h3>8.17 Takoz ve eksen başına frekans duyarlılığı</h3>';
-  h+='<p>§8.15 bütün takozları aynı katsayıyla ölçekler. Tasarımda ise çoğu zaman tek bir takozun '
-    +'tek bir ekseni değişir: başka bir katalog tipi, başka bir sertlik derecesi. Bu bölüm her takoz '
-    +'ve eksen için modal frekansların rijitliğe türevini verir: hangi takozun hangi ekseni hangi '
-    +'modu ne kadar oynatıyor. Ayrık bir özdeğerin türevi kapalı formdadır (kütle matrisi rijitlikten '
-    +'bağımsızdır):</p>';
+  h+='<p>Ayrık özdeğerin takoz rijitliğine türevi (kütle matrisi rijitlikten bağımsız):</p>';
   h+='$$ \\frac{\\partial \\lambda_r}{\\partial k_{i,a}}=\\frac{(\\mathbf a_{i,a}\\boldsymbol\\varphi_r)^2}'
     +'{\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf M\\boldsymbol\\varphi_r},\\qquad '
     +'e_{r,i,a}=\\frac{k_{i,a}}{f_r}\\,\\frac{\\partial f_r}{\\partial k_{i,a}}'
     +'=\\frac{1}{2}\\,\\frac{k_{i,a}(\\mathbf a_{i,a}\\boldsymbol\\varphi_r)^2}'
     +'{\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf K\\boldsymbol\\varphi_r} $$';
-  h+='<p>\\( \\mathbf a_{i,a} \\), i. takozun a ekseninin kinematik satırıdır (§8.2). <b>Esneklik</b> '
-    +'\\( e \\), o rijitlik %1 artınca modun frekansının yüzde kaç arttığıdır ve yayın o moddaki şekil '
-    +'değiştirme enerjisi payının <b>yarısına</b> eşittir. Bu yüzden her mod sütununun toplamı 0,50\'dir: '
-    +'bütün takozlar aynı oranda sertleşirse frekans o oranın karekökü kadar artar (§8.15). '
-    +'Türev hiçbir zaman eksi değildir — bir yayın sertleşmesi hiçbir frekansı düşürmez.</p>';
+  h+='<p>\\( \\mathbf a_{i,a} \\): i. takozun a ekseninin kinematik satırı (§8.2). <b>Esneklik</b> '
+    +'\\( e \\): rijitlik %1 arttığında frekansın yüzde artışı; yayın moddaki şekil değiştirme enerjisi '
+    +'payının yarısı. Her modda \\( \\textstyle\\sum e = 0{,}5 \\) ve \\( e \\ge 0 \\).</p>';
 
   // ── Matris: satır takoz · eksen, sütun mod ──
   var yakin=modes.map(function(m, r){
@@ -2206,8 +2200,7 @@ function _mntRepSensitivity(R, opts){
     return g<0.5;
   });
   var enler=modes.map(function(_, r){ return _mntRepEnEtkili(S, r); });
-  h+='<table><caption>Tablo '+_rTbl()+' — Esneklik e = (k/f)·∂f/∂k: takozun ekseni %1 sertleşince '
-    +'modun frekansı yüzde kaç artar</caption>';
+  h+='<table><caption>Tablo '+_rTbl()+' — Esneklik e = (k/f)·∂f/∂k — takoz · eksen × mod</caption>';
   h+='<tr><th>Takoz</th><th>Eksen</th>';
   modes.forEach(function(m, r){
     h+='<th>Mod '+(r+1)+(S[r].cakisik ? '‡' : (yakin[r] ? '†' : ''))+'<br>'+_rFd(m.f_Hz,2)+' Hz</th>';
@@ -2234,23 +2227,20 @@ function _mntRepSensitivity(R, opts){
     h+='<td><b>'+veSayi(t, 2, { eksi:'−' })+'</b></td>';
   });
   h+='</tr></table>';
-  var not=['Koyu ton ve kalın yazı: modun en etkili kaldıracı. Nokta (·): 0,005\'ten küçük.'];
+  var not=['Kalın: modun en etkili kaldıracı. ·: e &lt; 0,005.'];
   if(yakin.some(function(v, r){ return v && !S[r].cakisik; }))
-    not.push('† Komşu moda 0,5 Hz\'ten yakın: rijitlik değişince iki mod birbirinden kaçar (mod kaçınması); '
-      +'esneklik yalnız küçük değişimde geçerlidir. Aşağıdaki tablo bu yüzden sınıra kadarki değişimi yeniden çözerek bulur.');
+    not.push('† Komşu moda 0,5 Hz\'ten yakın mod: esneklik yalnız küçük değişimde geçerli (mod kaçınması).');
   if(S.some(function(s){ return s.cakisik; }))
-    not.push('‡ Çakışık mod: frekansı komşusuyla aynı, mod şekli tek değil; sütun kümenin ortalamasıdır.');
-  if(R.kBasis) not.push('Nonlineer yasalı takozlarda türev, statik dengedeki <b>dinamik tanjanta</b> göredir '
-    +'(§8.7\'nin tabanı); çalışma noktası sabit tutulur.');
+    not.push('‡ Çakışık mod (frekansı komşusuyla aynı): sütun kümenin ortalaması.');
+  if(R.kBasis) not.push('Nonlineer yasalı takozlarda türev statik dengedeki dinamik tanjanta göre (§8.7); çalışma noktası sabit.');
   h+='<p style="font-size:0.9em; color:#5a6270;">'+not.join(' ')+'</p>';
 
   // ── Kriter kaldıraçları ──
   var K=_mntRepKaldiraclar(R, opts);
   if(K.length){
-    h+='<p>Esneklik bir eğimdir. Kriterin sınırına kadar ne kadar değişim gerektiğini, tek bir takoz '
-      +'ekseni ölçeklenip özdeğer problemi <b>yeniden çözülerek</b> aşağıdaki tablo verir. Her satırda '
-      +'sınıra en yakın (ya da sınırı aşan) mod ve onun en etkili kaldıracı yer alır. Öteki her şey '
-      +'sabittir; arama ×0,1 – ×10 aralığındadır.</p>';
+    h+='<p>Sınıra kadar değişim: kritik modun (sınıra en yakın ya da sınırı aşan) en etkili kaldıracı '
+      +'ölçeklenir ve özdeğer problemi yeniden çözülür; öteki girdiler sabit, arama aralığı ×0,1 – ×10. '
+      +'Doğrusal tahmin: aynı değişim esneklikten, birinci mertebe.</p>';
     h+='<table><caption>Tablo '+_rTbl()+' — Frekans kriterlerinin en etkili kaldıracı ve sınıra kadar değişim</caption>';
     h+='<tr><th>Kriter</th><th>Kritik mod</th><th>Sınır</th><th>Durum</th><th>En etkili kaldıraç</th>'
       +'<th>%1 sertleşme</th><th>Sınıra kadar (yeniden çözüm)</th><th>Doğrusal tahmin</th></tr>';
@@ -2263,13 +2253,9 @@ function _mntRepSensitivity(R, opts){
         +'<td>'+(Number.isFinite(k.dogrusal) && k.dogrusal>0 ? _rYuzdeDegisim(k.dogrusal) : '—')+'</td></tr>';
     });
     h+='</table>';
-    h+='<p style="font-size:0.9em; color:#5a6270;">"%1 sertleşme": kaldıraç %1 sertleşince kritik modun '
-      +'(Kriter 1a\'da iki modun aralığının) frekansı kaç Hz değişir. Yeniden çözüm ile doğrusal tahmin '
-      +'arasındaki fark türevin o değişime kadar taşıyıp taşımadığını gösterir. Statik sehim bu tabloya '
-      +'girmez: yumuşatılan takozun sehimi artar (§8.5–§8.6). Kriter 2 (rölanti iletilebilirliği) modal '
-      +'frekansa değil düşey tek serbestlik frekansına bağlıdır (§8.8): f<sub>bounce</sub>\'un bir takozun '
-      +'k<sub>z</sub>\'sine esnekliği ½·k<sub>z</sub>/Σk<sub>z</sub>\'dir; bütün takozların birlikte '
-      +'ölçeklenmesi §8.15\'te.</p>';
+    h+='<p style="font-size:0.9em; color:#5a6270;">%1 sertleşme: kaldıraç %1 sertleştiğinde kritik frekansın '
+      +'(1a\'da iki modun aralığının) değişimi. Statik sehim hesaba katılmaz (§8.5–§8.6). Kriter 2 tek '
+      +'serbestlik tabanlı (§8.8): f<sub>bounce</sub>\'un k<sub>z,i</sub>\'ye esnekliği ½·k<sub>z,i</sub>/Σk<sub>z</sub>.</p>';
   }
   return h;
 }

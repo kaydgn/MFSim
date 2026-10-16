@@ -2172,3 +2172,10 @@ yalnız küçülür, yeni kayıt yalnız kullanıcının "kalsın" kararıyla
 | 13 | FEAD kılavuzu | `guide-fead.js` | 877 | 135 |
 | 14 | Takoz ve Araç Performans kılavuzları | `guide-mount.js`, `guide-arac.js`, `guide-kit.js` | 638 | 59 |
 | 15 | Ölçüm Görüntüleyici ve CAN Çözümleyici | kendi dosyaları (ortak kopyalar `js/` ile temizlenir) | 123 | 45 |
+
+**Karar tahtasının sözleşmesi:** tahta bir Artifact (`db`). Her kart
+`kararlar/<kart>` belgesine `{secim, metin, zaman}` yazar (`secim`: `kaldir`
+· `yeni` · `kalsin`, kartın kendi seçenekleri de olabilir); belgesi olmayan
+kart önerinin kendisidir (kullanıcı kararı: kartlar önerimle seçili gelir).
+`durum/tahta.tamam` kullanıcının "Kararlarım tamam"ıdır. Tahtalar:
+aşama 1 → https://claude.ai/artifact/XynJyhKjg5oqyNZLGshtLk

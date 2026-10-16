@@ -512,10 +512,9 @@ function _gmSec11(){
     + 'moddaki esneklik matrisi (kalın hücre modun en etkili kaldıracı) ve frekans kriterlerinin '
     + 'kaldıraçları — tek kaldıraçla sınıra kadar yüzde kaç, yeniden çözülerek.</p>';
   h += _gmNot('Esneklik bir eğimdir',
-      'Küçük değişimde doğrudur. İki mod birbirine yakınsa (0,5 Hz’ten az) rijitlik değişince '
-    + 'birbirinden kaçarlar ve eğim çabuk değişir. Raporun kaldıraç tablosu bu yüzden sınıra '
-    + 'kadarki değişimi takozun tek eksenini ölçekleyip yeniden çözerek bulur; doğrusal tahmin '
-    + 'yanında durur. Statik sehim bu hesaba girmez — yumuşatılan takozun sehimi artar.');
+      'Küçük değişimde doğrudur. İki mod birbirine 0,5 Hz’ten yakınsa rijitlik değişince '
+    + 'birbirinden kaçarlar ve eğim çabuk değişir; büyük değişimde raporun kaldıraç tablosundaki '
+    + 'yeniden çözülmüş değeri okuyun. Statik sehim bu hesaba girmez: yumuşatılan takozun sehimi artar.');
   return h;
 }
 
