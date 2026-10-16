@@ -507,6 +507,7 @@ function _mntRepSection8(R, opts){
   h+=_mntRepCritical(R);
   h+=_mntRepMassTable(geom);
   h+=_mntRepMountTable(R);
+  h+=_mntRepAkso(R);
   h+=_mntRepFigure(geom,'xy',_rFig(),'Üstten görünüş (X–Y düzlemi, ölçekli): takozlar (kare, adlı), bileşen ağırlık merkezleri (daire) ve birleşik ağırlık merkezi (G).');
   h+=_mntRepFigure(geom,'xz',_rFig(),'Yandan görünüş (X–Z düzlemi, ölçekli). Ağırlık merkezinin takoz düzlemlerine göre düşey ofseti, öteleme–dönme kuplajının (K<sub>tθ</sub>) ana kaynağıdır.');
   h+=_mntRepStep1Mass(R);
@@ -752,6 +753,62 @@ function _mntRepFigure(geom, plane, no, caption){
   labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'"'+_R_HALE+'>'+_rEsc(L.text)+'</text>'; });   // makine: SVG koordinatı
   svg+='</svg>';
   return '<figure>'+svg+'<figcaption><b>Şekil '+no+' —</b> '+caption+'</figcaption></figure>';
+}
+
+// ─── §8 — GÜÇ GRUBUNUN AKSONOMETRİSİ (teknik illüstrasyon) ──────────────────
+// Kullanıcı seçimi (2026-10-15): 2D Görünüm'ün ilk sekmesi aksonometri; rapor
+// aynı resmi teknik illüstrasyon olarak taşır. Çizici o sekmeninki
+// (js/mount-akso.js), modeli onun kurucusu — ÇÖZÜMÜN girdisinden
+// (veMntAksoCozumModel): rapor çözülen modeli anlatır. Görünüş SABİT, belge
+// tarayıcıdaki pencere tercihine bağlı olamaz: dimetrik (ISO 5456-3),
+// önden-soldan-yukarıdan; x-ışını (gizli kenar kesik, gövde CG'si görünür),
+// direkler ve adlar. Renkler belgenin jetonlarından (şablonun :root'u);
+// takoz mod şekillerindeki gibi mor. Çizicinin her sınıfının burada bir
+// kuralı var — kuralsız sınıf SVG'nin varsayılanıyla (siyah dolgu) çizilir
+// (kapı: tests/unit/mount-akso.test.js → RAPOR).
+var _MNT_REP_AKSO_CSS =
+  '.rp-akso svg{display:block;width:100%;height:auto}'
+ +'.rp-akso .ve-ak-zem{fill:#fff}'
+ +'.rp-akso .ve-ak-izg{fill:none;stroke:var(--line-soft);stroke-width:.8}'
+ +'.rp-akso .ve-ak-sim{stroke:var(--line);stroke-width:.8;stroke-dasharray:10 3 2 3}'
+ +'.rp-akso .ve-ak-gol{fill:rgba(38,36,31,.08)}'
+ +'.rp-akso .ve-ak-g path{stroke:#5a6270;stroke-width:.8;stroke-linejoin:round}'
+ +'.rp-akso .ve-ak-g.ana path{stroke:var(--ink)}'
+ +'.rp-akso .ve-ak-g .f-cam{fill:rgba(36,66,95,.05);stroke:#5a6270;stroke-width:.9}'
+ +'.rp-akso .ve-ak-g.ana .f-cam{fill:rgba(36,66,95,.10);stroke:var(--ink)}'
+ +'.rp-akso .ve-ak-g .k-gizli{fill:none;stroke:#8b8f99;stroke-width:.8;stroke-dasharray:3 2}'
+ +'.rp-akso .ve-ak-amk circle{fill:#fff;stroke:var(--vurgu);stroke-width:1}'
+ +'.rp-akso .ve-ak-amk path{fill:none;stroke:var(--vurgu);stroke-width:.9}'
+ +'.rp-akso .ve-ak-nokta{fill:var(--vurgu)}'
+ +'.rp-akso .ve-ak-t path{stroke:#fff;stroke-width:.6;stroke-linejoin:round}'
+ +'.rp-akso .ve-ak-t .t-z{fill:#c7a2d3}.rp-akso .ve-ak-t .t-y{fill:#8a3ca0}.rp-akso .ve-ak-t .t-x{fill:#5d2a6d}'
+ +'.rp-akso .ve-ak-gam circle{fill:#fff;stroke:var(--ink);stroke-width:1.5}'
+ +'.rp-akso .ve-ak-gam path{fill:var(--ink)}'
+ +'.rp-akso .ve-ak-gdus{stroke:var(--ink);stroke-width:1;stroke-dasharray:3 2}'
+ +'.rp-akso .ve-ak-giz{fill:none;stroke:var(--ink);stroke-width:1.2}'
+ +'.rp-akso .ve-ak-direk .dr-c{stroke:#8a3ca0;stroke-width:1;stroke-dasharray:3 2}'
+ +'.rp-akso .ve-ak-direk .dr-i{fill:none;stroke:#8a3ca0;stroke-width:1.2}'
+ +'.rp-akso .ve-ak-eks{stroke:#5a6270;stroke-width:1}.rp-akso .ve-ak-eks-uc{fill:#5a6270}'
+ +'.rp-akso .ve-ak-yz{paint-order:stroke;stroke:#fff;stroke-width:4.5px;stroke-linejoin:round;fill:var(--ink)}'
+ +'.rp-akso .ve-ak-yz.ikincil,.rp-akso .ve-ak-yz.ve-ak-eksy{fill:#5a6270}'
+ +'.rp-akso .ve-ak-kilavuz{stroke:#8b8f99;stroke-width:.75}'
+ +'.rp-akso .ve-ak-cip rect{fill:#fff;stroke:var(--line);stroke-width:1}'
+ +'.rp-akso .ve-ak-cip text{fill:var(--ink)}.rp-akso .ve-ak-cip .ikincil{fill:#5a6270}'
+ +'.rp-akso .ve-ak-cip.t-cip rect{stroke:#c7a2d3}';
+// Görünüş seçenekleri — rapor ile kapısı AYNI nesneyi okur.
+var _MNT_REP_AKSO_O = { W:820, iz:'dim', b:{ x:-1, y:-1, z:1 }, stil:'xray', kat:{ golge:true, direk:true },
+  etiket:'genis', fs:{ k:10.5, b:11.5 }, Hmax:460 };
+function _mntRepAkso(R){
+  var Ak=(typeof veMntAkso!=='undefined' && veMntAkso && veMntAkso.ciz) ? veMntAkso : null;
+  var m=(Ak && typeof veMntAksoCozumModel==='function') ? veMntAksoCozumModel(R) : null;
+  if(!m || !(m.govde.length || m.takoz.length)) return '';
+  var r=Ak.ciz(m, _MNT_REP_AKSO_O);
+  return '<style>'+_MNT_REP_AKSO_CSS+'</style>'
+    +'<figure class="rp-akso">'+r.svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Güç grubunun aksonometrisi: '
+    +'dimetrik izdüşüm (ISO 5456-3; eksen oranı X : Y : Z = '+r.oran+'), önden-soldan-yukarıdan. '
+    +'Gövdeler eşdeğer atalet kutularıyla çizilir — gizli kenar kesik çizgi, artı işaretli daire gövdenin '
+    +'ağırlık merkezi. Takozlar mor küp, G birleşik ağırlık merkezi; kesik düşeyler takozların ve G\'nin '
+    +'Z = 0 düzlemine izdüşümü, tabandaki gri alanlar gövdelerin gölgesi.</figcaption></figure>';
 }
 
 // §8.1 — kütle birleştirme (m, c_G, I_G)
@@ -2145,6 +2202,9 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepLawKind: _mntRepLawKind,
     _mntRepNLNote: _mntRepNLNote,
     _mntRepGeom: _mntRepGeom,
+    _mntRepAkso: _mntRepAkso,
+    _MNT_REP_AKSO_CSS: _MNT_REP_AKSO_CSS,
+    _MNT_REP_AKSO_O: _MNT_REP_AKSO_O,
     _mntRepSection8: _mntRepSection8,
     _mntRepMassTable: _mntRepMassTable,
     _mntRepMountTable: _mntRepMountTable,

@@ -356,3 +356,92 @@ describe('PENCERE — ilk sekme, denetim, tercih modelde değil', () => {
     }
   });
 });
+
+// Adım 2 (2026-10-16): raporun §8'i aynı resmi TEKNİK İLLÜSTRASYON olarak
+// taşır. "Aynı" = TEK çizici ve TEK kurucu, ÇÖZÜMÜN girdisinden (rapor çözülen
+// modeli anlatır); görünüş SABİT (belge tarayıcıdaki pencere tercihine bağlı
+// olamaz); belge kendi renklerini taşır — kuralsız bir sınıf SVG'nin
+// varsayılanıyla, siyah dolguyla çizilirdi.
+describe('RAPOR — §8\'in teknik illüstrasyonu', () => {
+  global.veMntAksoCozumModel = cp.veMntAksoCozumModel;
+  const sekil = (s8) => {
+    const a = s8.indexOf('<figure class="rp-akso">');
+    return a < 0 ? '' : s8.slice(a, s8.indexOf('</figure>', a));
+  };
+  const rapor = () => { const R = cp.veMntSonucDurumu().R; global._veMntLast = R; return rep._mntRepSection8(R); };
+
+  test('pencerenin çizicisi ve kurucusu, çözümün girdisinden; Şekil 2, düz görünüşler 3 ve 4', () => {
+    yukle('tulga'); coz();
+    const s8 = rapor(), R = cp.veMntSonucDurumu().R;
+    expect(sekil(s8)).toContain(AK.ciz(cp.veMntAksoCozumModel(R), rep._MNT_REP_AKSO_O).svg);
+    expect(sekil(s8)).toMatch(/<b>Şekil 2 —<\/b> Güç grubunun aksonometrisi: dimetrik izdüşüm \(ISO 5456-3; eksen oranı X : Y : Z = 0,94 : 0,47 : 0,94\)/);
+    expect(s8).toMatch(/<b>Şekil 3 —<\/b> Üstten görünüş/);
+    expect(s8).toMatch(/<b>Şekil 4 —<\/b> Yandan görünüş/);
+    // x-ışını teknik illüstrasyon: gizli kenar, gövde CG'si, direk ve adlar
+    ['k-gizli', 've-ak-amk', 've-ak-direk', '>Motor<', '>T1 Ön Takoz<'].forEach((s) => expect(sekil(s8)).toContain(s));
+  });
+
+  test('görünüş sabit: pencerenin tercihi (izometrik, arkadan-alttan, katmanlar) raporu değiştirmez', () => {
+    yukle('siper'); coz();
+    const once = sekil(rapor());
+    // Tarayıcıda pencerenin tercihi bir GLOBAL — rapor onu görebilir; Node'da
+    // da görsün ki kapı ölçsün.
+    const A = global.VE_MNT_AKSO = cp.VE_MNT_AKSO, yedek = Object.assign({}, A);
+    Object.assign(A, { iz: 'iso', bx: 1, bz: -1, rijit: true, kuvvet: true, mod: true });
+    try { expect(sekil(rapor())).toBe(once); } finally { Object.assign(A, yedek); delete global.VE_MNT_AKSO; }
+    expect(once).toContain('aria-label="Dimetrik · önden-soldan-yukarıdan"');
+  });
+
+  test('rapor ÇÖZÜLEN modeli çizer: çözümden sonra kanvasta yapılan değişiklik şekle girmez', () => {
+    yukle('tulga'); coz();
+    const once = sekil(rapor());
+    global.nodes.find((n) => n.type === 'mnt-motor').data.cgz = 2000;
+    expect(sekil(rapor())).toBe(once);
+  });
+
+  test('belge renkleri: çizimdeki her sınıfın raporun stilinde bir kuralı var', () => {
+    const yapisal = ['rp-akso', 've-mnt2d-akso', 've-ak-hareket', 'xray'];
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k); coz();
+      const siniflar = new Set();
+      (sekil(rapor()).match(/class="[^"]+"/g) || []).forEach((c) => c.slice(7, -1).split(/\s+/).forEach((s) => siniflar.add(s)));
+      const eksik = [...siniflar].filter((s) => !yapisal.includes(s) && rep._MNT_REP_AKSO_CSS.indexOf('.' + s) < 0);
+      expect({ k, eksik }).toEqual({ k, eksik: [] });
+    });
+  });
+
+  // Elle kurulmuş bir çözümde (rapor testlerinin kalıbı) takozun kimliği yok:
+  // undefined === undefined her takozu İLK takozun sonucuna bağlıyordu.
+  test('kimliksiz girdide takoz sırayla eşlenir', () => {
+    yukle('tulga'); coz();
+    const R = cp.veMntSonucDurumu().R;
+    const kimliksiz = Object.assign({}, R, {
+      gather: Object.assign({}, R.gather, { mounts: R.gather.mounts.map((t) => Object.assign({}, t, { id: undefined })) }),
+      mounts: R.mounts.map((t) => Object.assign({}, t, { id: undefined })) });
+    const a = cp.veMntAksoCozumModel(R).takoz.map((t) => t.f), b = cp.veMntAksoCozumModel(kimliksiz).takoz.map((t) => t.f);
+    expect(b).toEqual(a);
+    expect(new Set(b.map((f) => f[2])).size).toBeGreaterThan(1);
+  });
+});
+
+// Gövdenin CG işareti (x-ışını) bir VERİ işaretidir: yazı onu örtmez. Ölçüldü
+// (raporun çizimi, ASFAT): "G · z 798" motorun CG işaretinin üstüne düşüyordu
+// — işaret yerleştiricinin engel listesinde yoktu.
+describe('YAZI — x-ışınında gövdenin CG işaretini yazı örtmez', () => {
+  test('üç örnek × iki izdüşüm × sekiz bakış × iki genişlik', () => {
+    const ihlal = [];
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel();
+      ['dim', 'iso'].forEach((iz) => BAKIS.forEach((b) => [[354, 'ad'], [820, 'genis']].forEach(([W, etiket]) => {
+        const r = AK.ciz(m, { W, iz, b, stil: 'xray', kat: { golge: true, direk: true }, etiket, fs: FS });
+        const isaret = [...r.svg.matchAll(/<g class="ve-ak-amk"[^>]*><circle cx="([\d.-]+)" cy="([\d.-]+)"/g)].map((q) => [+q[1], +q[2]]);
+        r.etiket.forEach((e) => isaret.forEach(([x, y]) => {
+          const b2 = e.kutu;
+          if (b2.l < x + 4.5 && b2.r > x - 4.5 && b2.t < y + 4.5 && b2.b > y - 4.5) ihlal.push(k + ' ' + iz + ' ' + JSON.stringify(b) + ' ' + W + ' ' + e.m1);
+        }));
+      })));
+    });
+    expect(ihlal).toEqual([]);
+  });
+});
