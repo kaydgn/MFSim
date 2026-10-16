@@ -11,3 +11,5 @@ tarih,sha,ham_bayt,gzip_bayt,assets_vendor_bayt,not
 2026-10-14,e33110b,29518155,17472622,23231921,+19 KB kod (FEAD kanvas rozet/ad yerlesimi + buyuk harf + kontrast #1078-#1081) - kare ve varlik degismedi
 2026-10-14,fe4f181,29520079,17472716,23231921,+2 KB kod (#1082 kalan sabit renkli yazilar AA kontrast) - ayni gun ikinci teslim: e33110b gonderilirken paralel oturum #1082'yi birlestirdi
 2026-10-16,5b55606,29966522,17621558,22861069,+446 KB kod: Takoz genislemesi ~350 KB (cp-mount +129 · yeni sihirbaz 95 · aksonometri 45 · 3B 35 · STEP 13 · baslangic 10) + css 40 + FEAD 22 (#1085-#1110); 3 takoz PNG silindi (-370 KB kaynak) ama tek dosyaya girmiyordu; 30 MiB sinirina 1.42 MiB kaldi
+2026-10-16,2f9051a,29981718,17623477,22879934,+15 KB kod (Takoz dogrulama turu: mekanizma kapisi · FRF tepe · f_bounce tabani · yasa-katalog notu + Gorunumler + 3 kurgu ornek #1112-#1118) - kareler ayni; 30 MiB sinirina 1.41 MiB kaldi
+2026-10-16,0352592,29981030,17623550,22879934,-0.7 KB kod (#1119 Takoz ornek semasinda 40 arac adi kopyasi silindi) - ayni gun ikinci teslim: 2f9051a gonderilirken paralel oturum #1119'u birlestirdi; 30 MiB sinirina 1.41 MiB kaldi
