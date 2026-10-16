@@ -2035,3 +2035,28 @@ saymaz (dosya listesi alınamazsa kayıt kalır).
 `status-konu.test.js` · `version-embed.test.js` → *"yalnız belgeye dokunan
 birleşme"*.
 
+
+## Bileşen penceresinin kabuğu TEK üreticiden — FEAD ile Takoz aynı iskelet (2026-10-16)
+
+**Hüküm:** FEAD ve Takoz'un bütün bileşen pencereleri kabuğunu
+`js/pencere-kabuk.js`'ten alır (`vePencereKabuk`): kimlik satırı → KATEGORİ
+SEKMELERİ (≥ 2) → eksik bandı → gövdeler; sağ sütun sekmeden bağımsız
+bağlam → Uygunluk → pencerenin cevabı (`.ve-fp-durum`) → TEK eylem.
+Sekmelerin üstünde hiçbir şey durmaz. Durum notu FEAD'in soluk satırı
+(`.ve-fp-not` = `.ve-fead-not`); açıklama pencerede değil kılavuzda (FEAD
+kural 45). FEAD'de karşılığı olan pencere FEAD'inkiyle aynı genişlik sınıfında
+(Rapor kompakt).
+
+**Gerekçe:** kullanıcı (*"Tüm programda tek tip bir kozmetik yapımız
+olacak"*). Kabuk iki üreticideydi ve ikinci yazım iki istisna biriktirmişti;
+ölçüldü (main 2f43cda, Tulga + AG00976): Takoz'un 17 penceresinin 17'si FEAD'in
+aile denetiminden düşüyordu — sekmelerin üstünde içerik 10 (kroki ×9, kütüphane
+seçicisi ×1), şerit yok 5, ikonlu not kutusu 13, sağ sütunda Uygunluk yok 6;
+dar ekranın modalında Rapor 980 ↔ 560 px. Sonra 0 / 17. Kroki sağ sütunun
+başında (FEAD'in bağlam sütunu), seçici Takoz Özellikleri'nin ilk sekmesinde
+(FEAD Kayış'ın Profil'i gibi); çizimin birimi sağ sütunun 296 px'i.
+
+**Kapı:** `pencere-kabuk.test.js` (iki modülün bütün pencereleri AYNI aile
+denetimi, tipler `componentDefs`ten · kabuk işaretlemesi yalnız kitte) +
+`fead-pencere-ailesi.test.js` + `mount-sutun.test.js` → *"FEAD karşılığıyla
+aynı genişlik sınıfı"*.
