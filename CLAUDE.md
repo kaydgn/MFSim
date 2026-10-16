@@ -130,6 +130,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   tıkla → rol). `js/step-ucgen.js` yüzleri **yalnız görüntü için** üçgenler —
   ölçüm analitik kalır.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
+- `tools/metin-dili.js` + `tools/metin-turu.js` — *ARAYÜZ ANLATMAZ* kuralının tarayıcısı
+  (kaynaktaki her arayüz metni, aday işaretleri, cırcır tabanı) ve **ekran turu**
+  (bir temizlik aşamasının yüzeylerini gerçek tarayıcıda açar, görünen metni yeri ve
+  kaynak satırıyla toplar, karar tahtası için görüntü alır; görüntü bu iş için
+  kullanıcı onaylı). Tur çıktısı git'e dâhil değil.
 - `tools/cumle-duzeni.js` — arayüz etiketlerinin **cümle düzeni kuralı** (karar 9·B): kural,
   özel adların listesi ve tarama desenleri TEK yerde; kapı ile dönüştürme aynı dosyayı çağırır.
 - `tools/ikonlar.js` + `tools/ikonlar.json` — **`css/icons.css` ÜRETECİ** (ad → SVG gövdesi;
@@ -966,6 +971,11 @@ Sebebi bir süs değil bir kanal: kullanıcının ağı **GitHub'a da Pages'e de
 çıkamıyor** (bkz. "Güncel programı alayım"), yani PR gövdesini okuyamıyor.
 Sohbetteki özet de kaydırmada kayboluyor. Artifact, o turda NE DEĞİŞTİĞİNİN
 kalıcı ve paylaşılabilir tek kaydı.
+
+**Artifact açık renkli, tek tema** (kullanıcı isteği 2026-10-16: *"Koyu
+renklerden çok sıkıldım."*): koyu tema bloğu (`prefers-color-scheme: dark`,
+`[data-theme="dark"]`) yazılmaz; `:root` açık paleti ve `color-scheme: light`
+taşır.
 
 Sayfa **ne yapıldığını değil ne ÖLÇÜLDÜĞÜNÜ** taşır — bu deponun her yerindeki
 kural: hüküm + gerekçe + kapı. Asgarî içerik:
