@@ -84,9 +84,11 @@ var veMntAkso = (function(){
   // ── Kamera ──────────────────────────────────────────────────────────────
   // b: izleyicinin yeri ({x,y,z} ∈ ±1). Dimetrikte izdüşüm yönü ISO 5456-3'ün
   // (1/3, √7/3, 1/3) vektörü: bakış yandan baskın, Y eksenin yarısı.
-  function kamera(iz, b){
+  // yon: SERBEST kamera (3D Görüntüleyici) — izleyicinin yönü [x, y, z];
+  // verilirse izdüşümün adı ve b yok sayılır.
+  function kamera(iz, b, yon){
     var a=(IZ[iz]||IZ.dim).yon;
-    var d=mul(norm([b.x*a[0], b.y*a[1], b.z*a[2]]), -1);
+    var d=mul(norm(yon || [b.x*a[0], b.y*a[1], b.z*a[2]]), -1);
     var r=norm(cross(d, [0, 0, 1])), u=cross(r, d);
     var K={ d:d, P:function(p){ return [dot(r, p), -dot(u, p)]; } };
     K.derin=function(p){ return -dot(d, p); };            // büyük = izleyiciye yakın
@@ -97,6 +99,22 @@ var veMntAkso = (function(){
   function bakisAdi(b){
     return (b.x<0 ? 'önden' : 'arkadan')+'-'+(b.y<0 ? 'soldan' : 'sağdan')+'-'+(b.z>0 ? 'yukarıdan' : 'alttan');
   }
+  // ── Serbest kamera: azimut ve yükseliş (derece) ↔ izleyicinin yönü ──────
+  // Azimut XY düzleminde +X'ten +Y'ye; yükseliş ±88°'de durur (tam tepeden
+  // bakışta ekranın sağı tanımsız). Hazır bakışlar aynı yönün açısı:
+  // dimetrik önden-soldan-yukarıdan = az 249,3° · yükseliş 19,5°.
+  var EL_SINIR = 88;
+  function kamYon(k){
+    var az=(Number(k && k.az)||0)*Math.PI/180;
+    var el=Math.max(-EL_SINIR, Math.min(EL_SINIR, Number(k && k.el)||0))*Math.PI/180;
+    return [Math.cos(el)*Math.cos(az), Math.cos(el)*Math.sin(az), Math.sin(el)];
+  }
+  function kamAci(iz, b){
+    var a=(IZ[iz]||IZ.dim).yon, v=norm([b.x*a[0], b.y*a[1], b.z*a[2]]);
+    var az=Math.atan2(v[1], v[0])*180/Math.PI;
+    return { az:(az+360)%360, el:Math.asin(v[2])*180/Math.PI };
+  }
+  function kamB(yon){ return { x:yon[0]>0 ? 1 : -1, y:yon[1]>0 ? 1 : -1, z:yon[2]<0 ? -1 : 1 }; }
 
   // ── Kutu: yüzler ve kenarlar ────────────────────────────────────────────
   function yuzler(c, h){                 // 6 yüz: {n, eks, s, pts:[4 köşe]}
@@ -286,9 +304,12 @@ var veMntAkso = (function(){
   function ciz(m, o){
     o=o||{};
     var W=o.W||354, sade=!!o.sade, stil=o.stil||'golge';
-    var b={ x:(o.b && o.b.x>0) ? 1 : -1, y:(o.b && o.b.y>0) ? 1 : -1, z:(o.b && o.b.z<0) ? -1 : 1 };
+    // Serbest kamerada (o.kam = { az, el }) bakış işaretleri yönden türer:
+    // duvar, cam zemin ve G'nin izi hangi tarafın izleyiciye baktığını sorar.
+    var yon=o.kam ? kamYon(o.kam) : null;
+    var b=yon ? kamB(yon) : { x:(o.b && o.b.x>0) ? 1 : -1, y:(o.b && o.b.y>0) ? 1 : -1, z:(o.b && o.b.z<0) ? -1 : 1 };
     var iz=IZ[o.iz] ? o.iz : 'dim';
-    var K=kamera(iz, b);
+    var K=kamera(iz, b, yon);
     var kat=Object.assign({ zemin:true, golge:true }, o.kat||{});
     var etk=sade ? 'yok' : (o.etiket||'ad');
     var FK=(o.fs && o.fs.k) || 10, FB=(o.fs && o.fs.b) || 11;
@@ -312,18 +333,25 @@ var veMntAkso = (function(){
     nok.forEach(function(g){ nokta3.push([g.x, g.y, g.z]); });
     m.takoz.forEach(function(t){ nokta3.push([t.x, t.y, t.z]); });
     if(m.G) nokta3.push([m.G.x, m.G.y, m.G.z]);
+    // Serbest kameranın küresi MODELİN kendisinden (zemin, duvar ve cetvel
+    // hariç): döndürülen modeldir; zemin kenarda kesilebilir.
+    var modelNokta=nokta3.slice();
     if(kat.zemin || kat.direk || kat.golge) [gx0, gx1].forEach(function(x){ [gy0, gy1].forEach(function(y){ nokta3.push([x, y, 0]); }); });
     if(kat.duvar) [gx0, gx1].forEach(function(x){ [gy0, gy1].forEach(function(y){ [zf, zt].forEach(function(z){ nokta3.push([x, y, z]); }); }); });
     // Z cetveli ekranda EN SOLDAKİ taban köşesinde: model onu hiç örtmez.
     var zk=[[gx0, gy0], [gx1, gy0], [gx0, gy1], [gx1, gy1]].reduce(function(a, c){ return K.P([c[0], c[1], 0])[0] < K.P([a[0], a[1], 0])[0]-1e-6 ? c : a; });
     if(kat.cetvel && !sade) nokta3.push([zk[0], zk[1], zt]);
-    if(o.mod) [1, -1].forEach(function(sg){ kut.forEach(function(q){ yuzler(q.c, q.h).forEach(function(f){ f.pts.forEach(function(p){ nokta3.push(add(p, modDelta(o.mod.phi, m.cgR, p, sg*o.mod.s))); }); }); }); });
+    var ikisi=function(p){ nokta3.push(p); modelNokta.push(p); };
+    if(o.mod) [1, -1].forEach(function(sg){ kut.forEach(function(q){ yuzler(q.c, q.h).forEach(function(f){ f.pts.forEach(function(p){ ikisi(add(p, modDelta(o.mod.phi, m.cgR, p, sg*o.mod.s))); }); }); }); });
     if(kat.asal && m.asal && m.G){
       var E0=m.asal.eksenler, H0=m.asal.kutu.map(function(v){ return v/2; });
-      [-1, 1].forEach(function(sg){ E0.forEach(function(e, i){ nokta3.push(add([m.G.x, m.G.y, m.G.z], mul(e, sg*H0[i]))); }); });
+      [-1, 1].forEach(function(sg){ E0.forEach(function(e, i){ ikisi(add([m.G.x, m.G.y, m.G.z], mul(e, sg*H0[i]))); }); });
     }
+    // Serbest kamerada pay yazıdan bağımsız: sürüklerken yazısız çizilen kare
+    // bırakınca yazılı çizilenle AYNI yerde olmalı (yoksa çizim zıplar ve
+    // tekerleğin merkezi kayar).
     var pad=sade ? { l:6, r:6, t:6, b:6 }
-      : { l:kat.cetvel ? 46 : 18, r:kat.cetvel ? 34 : 18, t:etk==='yok' ? 14 : (kat.cetvel ? 48 : 34), b:o.ucluyok ? 16 : 44 };
+      : { l:kat.cetvel ? 46 : 18, r:kat.cetvel ? 34 : 18, t:(etk==='yok' && !o.kure) ? 14 : (kat.cetvel ? 48 : 34), b:o.ucluyok ? 16 : 44 };
     function sigdir(pts, H0){
       var sp=pts.map(function(p){ return K.P(p); });
       var a=Math.min.apply(null, sp.map(function(q){ return q[0]; })), c=Math.max.apply(null, sp.map(function(q){ return q[0]; }));
@@ -333,8 +361,23 @@ var veMntAkso = (function(){
       var sc=Math.min(sc0, (H-pad.t-pad.b)/Math.max(e-d, 1));
       return { sc:sc, ox:pad.l+(W-pad.l-pad.r-(c-a)*sc)/2-a*sc, oy:pad.t+(H-pad.t-pad.b-(e-d)*sc)/2-d*sc, H:H };
     }
-    var F=o.F || sigdir(nokta3, o.H);
-    if(!o.F && (kat.kuvvet || kat.rijit)){
+    // SERBEST kamerada (o.kure) sığdırma DÖNMEDEN BAĞIMSIZ: noktaların 3B
+    // kutusunun merkezi çizimin ortasına, en uzak nokta yarıçap — döndürürken
+    // çizim büyüyüp küçülmez. o.yakin ölçek çarpanı, o.kay [px, px] kaydırma.
+    function kure(pts){
+      var mn=[Infinity, Infinity, Infinity], mx=[-Infinity, -Infinity, -Infinity], rr=1;
+      pts.forEach(function(p){ for(var i=0;i<3;i++){ if(p[i]<mn[i]) mn[i]=p[i]; if(p[i]>mx[i]) mx[i]=p[i]; } });
+      var c=[(mn[0]+mx[0])/2, (mn[1]+mx[1])/2, (mn[2]+mx[2])/2];
+      pts.forEach(function(p){ var d=Math.sqrt(Math.pow(p[0]-c[0], 2)+Math.pow(p[1]-c[1], 2)+Math.pow(p[2]-c[2], 2)); if(d>rr) rr=d; });
+      var H=o.H || Math.round(W*0.78), kay=o.kay || [0, 0];
+      var sc=Math.min(W-pad.l-pad.r, H-pad.t-pad.b)/(2*rr)*(o.yakin || 1);
+      var q=K.P(c), cx=pad.l+(W-pad.l-pad.r)/2, cy=pad.t+(H-pad.t-pad.b)/2;
+      return { sc:sc, ox:cx-q[0]*sc+kay[0], oy:cy-q[1]*sc+kay[1], H:H, kure:[cx, cy] };
+    }
+    var F=o.F || (o.kure ? kure(modelNokta) : sigdir(nokta3, o.H));
+    // Okların ikinci geçişi serbest kamerada YOK: px boylu ok model biriminde
+    // yakınlıkla değişir ve küreyi her yakınlaştırmada oynatırdı.
+    if(!o.F && !o.kure && (kat.kuvvet || kat.rijit)){
       var ek=nokta3.slice(), Lw=70/F.sc;
       if(kat.kuvvet && m.G) ek.push([m.G.x, m.G.y, m.G.z-Lw*1.15]);
       m.takoz.forEach(function(t){
@@ -603,24 +646,52 @@ var veMntAkso = (function(){
     // ── EKSEN ÜÇLÜSÜ (cetvel yokken): kutusu hesaplanıp çizimin içine oturur
     var triOk='', triYazi='';
     if(!sade && !o.ucluyok && !kat.cetvel){
+      // Serbest kamerada bir eksen izleyiciye doğru bakabilir: izdüşümü
+      // kısaldıkça yönü belirsizleşir ve yazısı ötekilerin üstüne biner.
+      // Kısa eksen (birim izdüşüm < 0,2) okla değil çizim notasyonuyla
+      // çizilir — ⊙ izleyiciye, ⊗ izleyiciden; çakışan yazı eksene dik
+      // kaydırılır. Hazır bakışlarda (en kısa eksen 0,47) çizim birebir eski.
       var L0=20, par=[];
+      var yaziKutu=function(p){ var l=p.an==='start' ? p.tx : (p.an==='end' ? p.tx-p.tw : p.tx-p.tw/2); return { l:l, r:l+p.tw, t:p.ty-FK, b:p.ty+3 }; };
       [[1, 0, 0, 'X arka'], [0, 1, 0, 'Y sağ'], [0, 0, 1, 'Z']].forEach(function(e){
-        var q0=K.P([0, 0, 0]), q=K.P([e[0], e[1], e[2]]), ux=q[0]-q0[0], uy=q[1]-q0[1], n=Math.sqrt(ux*ux+uy*uy)||1; ux/=n; uy/=n;
-        var ex=ux*L0, ey=uy*L0, an=ux>0.3 ? 'start' : (ux<-0.3 ? 'end' : 'middle');
-        var tx=ex+ux*5, ty=ey+uy*5+(uy>0.3 ? 8 : (uy<-0.3 ? -2 : 3.5)), tw=olc(e[3], FK, false);
-        var l=an==='start' ? tx : (an==='end' ? tx-tw : tx-tw/2);
-        par.push({ ex:ex, ey:ey, tx:tx, ty:ty, ad:e[3], an:an, kutu:{ l:Math.min(0, ex, l), r:Math.max(0, ex, l+tw), t:Math.min(0, ey, ty-FK), b:Math.max(0, ey, ty+3) } });
+        var q0=K.P([0, 0, 0]), q=K.P([e[0], e[1], e[2]]), ux=q[0]-q0[0], uy=q[1]-q0[1], n=Math.sqrt(ux*ux+uy*uy);
+        var nokta=n<0.2, tw=olc(e[3], FK, false);
+        if(nokta){ ux=0.71; uy=0.71; } else { ux/=n; uy/=n; }
+        var ex=nokta ? 0 : ux*L0, ey=nokta ? 0 : uy*L0, an=ux>0.3 ? 'start' : (ux<-0.3 ? 'end' : 'middle');
+        var tx=nokta ? 7 : ex+ux*5, ty=nokta ? 13 : ey+uy*5+(uy>0.3 ? 8 : (uy<-0.3 ? -2 : 3.5));
+        par.push({ ex:ex, ey:ey, tx:tx, ty:ty, tx0:tx, ty0:ty, ux:ux, uy:uy, tw:tw, ad:e[3], an:nokta ? 'start' : an,
+          nokta:nokta ? (dot([e[0], e[1], e[2]], K.d)<0 ? 'goz' : 'arka') : null });
       });
+      var cak=function(a, c){ return a.l<c.r+1 && c.l<a.r+1 && a.t<c.b+1 && c.t<a.b+1; };
+      for(var ti=1;ti<par.length;ti++){
+        var pp=par[ti], dn=0;
+        while(dn<10 && par.slice(0, ti).some(function(o2){ return cak(yaziKutu(pp), yaziKutu(o2)); })){
+          dn++;
+          var kay2=(dn%2 ? 1 : -1)*Math.ceil(dn/2)*7;
+          pp.tx=pp.tx0-pp.uy*kay2; pp.ty=pp.ty0+pp.ux*kay2;
+        }
+      }
+      // ±4 px pay yalnız ⊙/⊗ dairesine: oklu üçlünün kutusu eskisiyle aynı.
+      par.forEach(function(p){ var k2=yaziKutu(p), r0=p.nokta ? 4 : 0; p.kutu={ l:Math.min(-r0, p.ex, k2.l), r:Math.max(r0, p.ex, k2.r), t:Math.min(-r0, p.ey, k2.t), b:Math.max(r0, p.ey, k2.b) }; });
       var bl=Math.min.apply(null, par.map(function(q){ return q.kutu.l; })), br=Math.max.apply(null, par.map(function(q){ return q.kutu.r; }));
       var bt=Math.min.apply(null, par.map(function(q){ return q.kutu.t; })), bb=Math.max.apply(null, par.map(function(q){ return q.kutu.b; }));
       var bx=8-bl, by=H-6-bb;
-      par.forEach(function(q){ triOk+=ok(bx, by, bx+q.ex, by+q.ey, 've-ak-eks', 4); triYazi+=yazi(bx+q.tx, by+q.ty, q.ad, 've-ak-yz ve-ak-eksy', FK, q.an, false); });
+      par.forEach(function(q){
+        if(q.nokta) triOk+='<circle class="ve-ak-eks ve-ak-eks-n" cx="'+R(bx)+'" cy="'+R(by)+'" r="3.4"/>'
+          + (q.nokta==='goz' ? '<circle class="ve-ak-eks-uc" cx="'+R(bx)+'" cy="'+R(by)+'" r="1.1"/>'
+                             : '<path class="ve-ak-eks" d="M'+R(bx-2.2)+' '+R(by-2.2)+' L'+R(bx+2.2)+' '+R(by+2.2)+' M'+R(bx-2.2)+' '+R(by+2.2)+' L'+R(bx+2.2)+' '+R(by-2.2)+'"/>');
+        else triOk+=ok(bx, by, bx+q.ex, by+q.ey, 've-ak-eks', 4);
+        triYazi+=yazi(bx+q.tx, by+q.ty, q.ad, 've-ak-yz ve-ak-eksy', FK, q.an, false);
+      });
       engel.push({ l:bx+bl-2, t:by+bt-2, r:bx+br+2, b:by+bb+2 });
     }
+    // Yakınlaşmış serbest kamerada işaretin kendisi çizimin dışında kalabilir:
+    // onun yazısı kenara kelepçelenip boşluğu gösteren bir kılavuz olurdu.
+    if(o.kure) ets=ets.filter(function(e){ return e.x>=0 && e.x<=W && e.y>=0 && e.y<=H; });
     var L=yerlestir(ets, engel, { l:3, t:3, r:W-3, b:H-3 }), et=etiketCiz(L);
     var oran=K.oran.map(function(v){ return sayi(v, 2); }).join(' : ');
     var svg='<svg class="ve-mnt2d-akso'+(o.zoom ? ' ve-mnt2d-fig' : '')+'" viewBox="0 0 '+W+' '+H+'"'+(o.zoom ? ' data-vb="0 0 '+W+' '+H+'"' : '')
-      + ' preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(IZ[iz].ad+' · '+bakisAdi(b))+'">'
+      + ' preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc((yon ? 'Serbest bakış' : IZ[iz].ad)+' · '+bakisAdi(b))+'">'
       + s.join('')+direkSvg+hayalet
       + '<g class="ve-ak-hareket"><!--hb-->'+govdeSvg+takozSvg+gSvg+'<!--hs--></g>'
       + camZemin+cokmeSvg+rijitSvg+asalSvg+kuvvetSvg
@@ -632,7 +703,7 @@ var veMntAkso = (function(){
   function hareketIci(svg){ var a=svg.indexOf('<!--hb-->'), c=svg.indexOf('<!--hs-->'); return (a>=0 && c>a) ? svg.slice(a+9, c) : ''; }
 
   return {
-    IZ:IZ, ANA_PAY:ANA_PAY, kamera:kamera, bakisAdi:bakisAdi, yuzler:yuzler, ciz:ciz, hareketIci:hareketIci,
+    IZ:IZ, ANA_PAY:ANA_PAY, EL_SINIR:EL_SINIR, kamera:kamera, kamYon:kamYon, kamAci:kamAci, kamB:kamB, bakisAdi:bakisAdi, yuzler:yuzler, ciz:ciz, hareketIci:hareketIci,
     modDelta:modDelta, modOlcek:modOlcek, cokmeDelta:cokmeDelta, yerlestir:yerlestir, tahmin:tahmin, koord:koord
   };
 })();

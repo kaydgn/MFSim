@@ -10403,7 +10403,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-kv-wo-uc{ fill:var(--text-heading); }
 .ve-ak-kv-ro{ stroke:var(--accent-success); stroke-width:1.9; }
 .ve-ak-kv-ro-uc{ fill:var(--accent-success); }
-.ve-ak-eks{ stroke:var(--text-secondary); stroke-width:1; }
+.ve-ak-eks{ fill:none; stroke:var(--text-secondary); stroke-width:1; }
 .ve-ak-eks-uc{ fill:var(--text-secondary); }
 /* Yazılar: zeminin renginde hâle (çizgi yazının altından geçer) */
 .ve-ak-yz, .ve-ak-cvy, .ve-ak-cvad{ paint-order:stroke; stroke:var(--bg-input); stroke-width:4.5px; stroke-linejoin:round; }
@@ -10464,6 +10464,12 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-ak-bar .ve-mnt-ak-kat{ display:flex; flex-wrap:wrap; gap:6px; }
 .ve-mnt-ak-bar .mnt-vwr-toggle{ width:auto; padding:5px 11px; }
 .ve-mnt-akso-kap{ min-width:0; }
+/* 3D Görüntüleyici · serbest kamera: çizim tutulup döndürülür (sol tık),
+   kaydırılır (sağ tık), tekerlekle yakınlaşır; odaktaki çizimde oklar döner. */
+.ve-mnt-akso3b svg.ve-mnt2d-akso{ cursor:grab; }
+.ve-ak3b-surukle .ve-mnt-akso3b svg.ve-mnt2d-akso{ cursor:grabbing; }
+.ve-mnt-akso3b svg.ve-mnt2d-akso:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-mnt-ak-ipucu{ margin:6px 0 0; font-size:var(--fs-micro); color:var(--text-muted); }
 .ve-mnt2d-fs-uc{ margin-top:14px; }
 @media (min-width: 900px){ .ve-mnt-akso-kap[data-tam] .ve-mnt-ak-mod{ grid-template-columns:repeat(6, minmax(0, 1fr)); } }
 
