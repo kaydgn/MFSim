@@ -8,14 +8,9 @@
  *     svg'leri de yakalıyor: 40 → 137 px), adları 4,8 px'ti
  *   · 2D tam ekranda köşe göstergesi ("+Y") soldaki takozun karesinin altında
  *     (Siper, önden görünüş); koordinat üçlüsü "·" ayraçlıydı
- *   · 3B tam ekranda model görüntünün küçük bir köşesinde: kamera sabit
- *     uzaklıktaydı; geometrinin izdüşümü Tulga'da görüntünün 0,27'si (yeni
- *     0,79). Sığdırma grubun eksen hizalı kutusuna yapılsaydı çapraz dizilişte
- *     kutunun köşeleri boşlukta kalır, model yine küçük kalırdı
- *   · kamera hafızası modele bağlı değildi: yeni sığdırmayla Tulga'nın kamerası
- *     Siper'e taşınınca kamera modelin İÇİNE düşüyordu (izdüşüm 40,84 kat)
- *   · 3B ipucunda üçlüler "582,5 · 21,5 · 422,8" (16 ipucu; kural "; ")
- * Node'da koşamaz: CSS seçicisi, yerleşim ve WebGL kamerası tarayıcıda.
+ *   · (3B tam ekranın three.js kamerası ve ipucu kapıları 2026-10-16'da
+ *     sahneyle birlikte EMEKLİ: "Klasik 3B" yalnız ad — kullanıcı kararı)
+ * Node'da koşamaz: CSS seçicisi ve yerleşim tarayıcıda.
  */
 const { test, expect } = require('@playwright/test');
 const Y = require('../helpers/yerlesim-olcu.js');
@@ -119,59 +114,6 @@ test('2D tam ekran: köşe göstergesi işaretin altında değil, koordinat ayra
   expect(out).toEqual([]);
 });
 
-// Görünen içeriğin izdüşümü: geometrinin GERÇEK köşeleri (grubun eksen hizalı
-// kutusu değil — çapraz dizilişte o kutunun köşeleri boşlukta kalıyor)
-const IZDUSUM = () => {
-  const V = _veMountViewer, c = V.canvas, W = c.clientWidth, H = c.clientHeight;
-  V.camera.updateMatrixWorld(); V.group.updateMatrixWorld(true);
-  const xs = [], ys = [], v = new THREE.Vector3();
-  V.group.traverse((o) => {
-    const a = o.visible && o.geometry && o.geometry.attributes && o.geometry.attributes.position;
-    if (!a) return;
-    for (let i = 0; i < a.count; i++) {
-      v.fromBufferAttribute(a, i).applyMatrix4(o.matrixWorld).project(V.camera);
-      xs.push((v.x + 1) / 2 * W); ys.push((1 - v.y) / 2 * H);
-    }
-  });
-  const w = (Math.max(...xs) - Math.min(...xs)) / W, h = (Math.max(...ys) - Math.min(...ys)) / H;
-  const bilgi = [];
-  V.group.traverse((o) => { if (o.userData && o.userData.info) bilgi.push(o.userData.info.replace(/<[^>]+>/g, '')); });
-  return { W, H, dolu: Math.round(Math.max(w, h) * 100) / 100,
-    icinde: Math.min(...xs) >= 0 && Math.max(...xs) <= W && Math.min(...ys) >= 0 && Math.max(...ys) <= H, bilgi };
-};
-async function tamEkran3B(page) {
-  await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
-  await page.waitForTimeout(900);
-  await page.evaluate(() => veMntViewerFullscreen());
-  await page.waitForFunction(() => window._veMountViewer && _veMountViewer.group && _veMountViewer.group.children.length > 0
-    && _veMountViewer.canvas.id === 've-mnt-fs-canvas', null, { timeout: 20000 });
-  await page.waitForTimeout(800);
-  return page.evaluate(IZDUSUM);
-}
-
-test('3B tam ekran: model görüntüyü doldurur, içinde kalır; başka örnekte eski kamera taşınmaz', async ({ page }) => {
-  await bootApp(page);
-  await ornek(page, 'tulga', 'Ön Takoz Braketi');
-  const a = await tamEkran3B(page);
-  expect(a.W).toBeGreaterThan(1000);
-  // Tulga eski hâl: 540×341 px / 1.598×823 → 0,41
-  expect(a.dolu).toBeGreaterThan(0.7);
-  expect(a.icinde).toBe(true);
-  // Koordinat üçlüsü ipucunda da "(x; y; z)" — kural 7·C
-  expect(a.bilgi.length).toBeGreaterThan(5);
-  expect(a.bilgi.filter((t) => /\d · [−-]?\d/.test(t))).toEqual([]);
-  // Her ipucu (takoz · gövde · birleşik CG) bir konum taşır ve o "(x; y; z)" yazılır
-  expect(a.bilgi.filter((t) => !/\([−\d.,]+; [−\d.,]+; [−\d.,]+\) mm/.test(t))).toEqual([]);
-  // Kapanınca kamera hafızaya yazılır; Siper yüklenince o kamera Siper'e uygulanmaz
-  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
-  await page.evaluate(() => veTogglePropertiesPanel(false));
-  await ornek(page, 'siper', 'cradle');
-  const b = await tamEkran3B(page);
-  // Siper'de kamera içeriğin sınır küresinin dışında kalmak için durur (0,70)
-  expect(b.icinde).toBe(true);
-  expect(b.dolu).toBeGreaterThan(0.6);
-});
-
 // ── 2D GÖRÜNÜM · AKSONOMETRİK SEKME (2026-10-15, kullanıcı seçimi) ─────────
 // Node'daki kapı (mount-akso.test.js) çizicinin KUTU TAHMİNİYLE ölçüyor;
 // burada yazının gerçek kutusu, hâlesi ve çizgilerin gerçek sırası: üç örnek,
@@ -253,8 +195,9 @@ test('2D Görünüm · Aksonometrik: hareket azaltma açıkken mod durağan çiz
 // SERBEST KAMERA) çizicinin matematiğini tutuyor; burada GERÇEK fare:
 // sol tık + sürükle modeli eliyle döndürür ve çizim büyüyüp küçülmez,
 // tekerlek imlecin altındaki takozu yerinde tutar, sağ tık kaydırır, oklar
-// döndürür; her açıda, her katmanda ve tam ekranda üç duvarla yerleşim temiz;
-// three.js sahnesi "Klasik 3B" sekmesinde çalışıyor.
+// döndürür; her açıda, her katmanda ve tam ekranda üç duvarla yerleşim temiz.
+// "Klasik 3B" YALNIZ AD (kullanıcı kararı 2026-10-16): sekme duruyor, bölmesinde
+// tuval ve düğme yok, pencere açılınca three.js sahnesi (WebGL) kurulmuyor.
 const AKSO3B_SIFIR = () => Object.assign(VE_MNT_AKSO3B, { az: null, el: null, direk: false, kuvvet: false, cokme: false,
   mod: false, rijit: false, duvar: false, modI: 0, oynat: true });
 test('3D Görüntüleyici · Aksonometrik: sürükle-döndür, tekerlek, kaydır; her açıda yerleşim temiz', async ({ page }) => {
@@ -270,9 +213,11 @@ test('3D Görüntüleyici · Aksonometrik: sürükle-döndür, tekerlek, kaydır
     const ilk = await page.evaluate(() => {
       const t = document.querySelector('#ve-properties .ve-fp-tab[aria-selected="true"]');
       const kap = document.querySelector('#ve-properties .ve-mnt-akso-kap'), svg = kap && kap.querySelector('svg.ve-mnt2d-akso');
-      return { sekme: t && t.getAttribute('data-k'), id: kap && kap.id, vb: svg && svg.viewBox.baseVal.width, en: svg && svg.getBoundingClientRect().width };
+      return { sekme: t && t.getAttribute('data-k'), id: kap && kap.id, vb: svg && svg.viewBox.baseVal.width, en: svg && svg.getBoundingClientRect().width,
+        sahne: !!window._veMountViewer };
     });
     expect(ilk.sekme).toBe('akso');
+    expect(ilk.sahne).toBe(false);                                 // three.js sahnesi kurulmadı
     expect(Math.abs(ilk.vb - ilk.en)).toBeLessThan(1.5);          // 1:1 — yazı küçülmez
     const id = ilk.id;
     const durum = () => page.evaluate((i) => ({ az: VE_MNT_AKSO3B.az, el: VE_MNT_AKSO3B.el, sc: _mntAksoCizim[i].F.sc,
@@ -352,13 +297,17 @@ test('3D Görüntüleyici · Aksonometrik: sürükle-döndür, tekerlek, kaydır
       const a1 = await kare(); await page.waitForTimeout(350); const a2 = await kare();
       if (a1 === a2) out.push(k + ' · mod canlanmıyor');
       await ayar('kat', 'mod');
-      // KLASİK 3B: three.js sahnesi kendi sekmesinde gerçek boyutta çiziyor
+      // KLASİK 3B YALNIZ AD: sekme seçilir, bölmesinde yalnız not; sahne yok
       const nid = await page.evaluate(() => nodes.find((x) => x.type === 'mnt-viewer').id);
       await page.click('#ve-fp-tabs-' + nid + ' .ve-fp-tab[data-k="sahne"]');
-      await page.waitForTimeout(700);
-      const kl = await page.evaluate(() => { const c = document.getElementById('ve-mnt-inline-viewer-canvas'); return { w: c.clientWidth, cocuk: _veMountViewer.group.children.length }; });
-      expect(kl.w).toBeGreaterThan(200);
-      expect(kl.cocuk).toBeGreaterThan(5);
+      await page.waitForTimeout(300);
+      const kl = await page.evaluate((n) => {
+        const p = document.querySelector('#ve-fp-panes-' + n + ' > [data-k="sahne"]');
+        return { gorunur: !!p && !p.hidden, tuval: p.querySelectorAll('canvas').length, dugme: p.querySelectorAll('button').length,
+          not: /gerçek CAD dosyasıyla/.test(p.textContent), sahne: !!window._veMountViewer };
+      }, nid);
+      expect(kl).toEqual({ gorunur: true, tuval: 0, dugme: 0, not: true, sahne: false });
+      await olc('Klasik 3B');
       await page.click('#ve-fp-tabs-' + nid + ' .ve-fp-tab[data-k="akso"]');
     }
     // TAM EKRAN: üç duvar, serbest açı

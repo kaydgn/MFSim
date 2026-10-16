@@ -1,26 +1,29 @@
 // ============================================================================
-// TAKOZ ÇÖKME-TİTREŞİM — 3D GÖRÜNTÜLEYİCİ (SPEC Bölüm 8, v1)
+// TAKOZ ÇÖKME-TİTREŞİM — KOORDİNAT DÜZLEMİ'NİN 3B SAHNESİ
 // ============================================================================
 // A26 Three.js görüntüleyicisinin portu (MFSim vendored THREE r144 ile).
-// Çizilenler: takoz küpleri · bileşen CG işaretleri (kütleye göre boyut) ·
-// birleşik CG (kırmızı) · bağlantı çizgileri · eksen üçlüsü.
+// Koordinat Düzlemi (mnt-coordframe) penceresi: üç eksen oku, eksi yönlerin
+// soluk çizgileri, üç yarı saydam düzlem, yön etiketleri.
+//
+// 3D Görüntüleyici'nin three.js sahnesi ("model" kipi: takoz küpleri, CG
+// küreleri, fare ipucu, kendi tam ekranı) 2026-10-16'da KALDIRILDI —
+// kullanıcı kararı: "Klasik 3B" sekmesi yalnız ad olarak kalır, ilerleyen
+// zamanda gerçek CAD dosyasıyla işlenecek. Model Aksonometrik sekmede
+// döndürülüyor (js/mount-akso.js).
 //
 // Koordinat: kullanıcı girişi X=fore/aft, Y=left/right, Z=up (mm).
 // Three.js Y-up → (x,y,z)_giriş = (x, z, y)_dünya (A26 konvansiyonu).
-// Ölçek: 1 sahne birimi = 1 mm.
-//
-// Veri kaynağı: _veMntViewerData (Çözücü'nün topladığı kütle+takoz, cp-mount.js).
 // Saf sunum: matematiğe dokunmaz. THREE yoksa graceful no-op.
 // ----------------------------------------------------------------------------
 
 var _veMountViewer = null;
 
-// Kamera hafızası (mod başına: 'model' | 'coordframe'). Görüntüleyici kendi
-// kanvasına bağlıdır; panel HTML'i her yeniden çizildiğinde (arka-plan kaydetme
-// sonrası panel tazeleme, "Yenile", tam ekrandan dönüş) kanvas yeniden kurulur
-// ve sahne SIFIRDAN inşa edilir. Açıyı da sıfırlamak kullanıcının döndürüp
-// yakınlaştırdığı görüşü habersiz siliyordu → dispose anında sakla, aynı modda
-// kurulurken geri yükle. "Sıfırla" düğmesi hafızayı da temizler.
+// Kamera hafızası (kip başına). Görüntüleyici kendi kanvasına bağlıdır;
+// panel HTML'i her yeniden çizildiğinde (arka-plan kaydetme sonrası panel
+// tazeleme) kanvas yeniden kurulur ve sahne SIFIRDAN inşa edilir. Açıyı da
+// sıfırlamak kullanıcının döndürüp yakınlaştırdığı görüşü habersiz siliyordu →
+// dispose anında sakla, aynı kipte kurulurken geri yükle. "Sıfırla" düğmesi
+// hafızayı da temizler.
 var _veMountViewerCam = {};
 
 // ─── Tema yardımcıları ───────────────────────────────────────────────────────
@@ -38,32 +41,15 @@ function _mntViewerCssColor(varName, fallback){
   try { return new THREE.Color(_mntViewerCssStr(varName, fallback)); }
   catch(e){ return new THREE.Color(fallback); }
 }
-// Aktif zemin açık mı? (ışık/etiket dengesi için basit parlaklık eşiği)
+// Aktif zemin açık mı? (ışık dengesi için basit parlaklık eşiği)
 function _mntViewerBgIsLight(){
   try {
     var c = _mntViewerCssColor('--bg-primary', '#0a0a0a');
     return (0.299*c.r + 0.587*c.g + 0.114*c.b) > 0.5;
   } catch(e){ return false; }
 }
-// İşaret malzemesi (tema uyumu). Takoz/bileşen/CG işaretleri UI'nin semantik
-// accent renklerini (--accent-success/-warning/-danger) kullanır; bu renkler her
-// temada zemine göre ayarlıdır → açık temada koyulaşıp beyaz zemine karşı okunur
-// kalır (2D görünümün takoz rengiyle de aynı değişken). Emissive parıltı yalnızca
-// koyu temada eklenir; açık temada kapanır ki işaretler solmadan doygun görünsün.
-function _mntViewerMarkerMat(varName, fallback, shininess){
-  var base = _mntViewerCssColor(varName, fallback);
-  var emF = _mntViewerBgIsLight() ? 0 : 0.3;
-  return new THREE.MeshPhongMaterial({
-    color: base,
-    emissive: base.clone().multiplyScalar(emF),
-    shininess: shininess
-  });
-}
 
-// `opt.hafiza`: kamera hafızasının anahtarı (varsayılan kip). Tam ekran
-// kendi anahtarını taşır — sütunun dar tuvaline göre kurulmuş kamerayı
-// devralınca model geniş ekranın onda birinde kalıyordu.
-function veMountViewerInit(canvasId, mode, opt){
+function veMountViewerInit(canvasId, mode){
   if(typeof THREE === 'undefined') return;      // THREE yüklü değil → sessiz atla
   veMountViewerDispose();
   var canvas = document.getElementById(canvasId);
@@ -88,44 +74,37 @@ function veMountViewerInit(canvasId, mode, opt){
   var d1 = new THREE.DirectionalLight(0xffffff, isLight ? 0.6 : 0.8); d1.position.set(500,1000,500); scene.add(d1);
   var d2 = new THREE.DirectionalLight(0xffffff, 0.3); d2.position.set(-500,-500,-500); scene.add(d2);
 
-  // Izgara çizgileri: kenarlık rengi (tema) + soluk varyantı. Hem 3D görüntüleyici
-  // (model modu) hem koordinat modu AÇILIŞTA zemini GİZLİ getirir (kullanıcı isteği:
-  // eksenler "havada" + geri çekilmiş görünüm). "Zemin" düğmesiyle açılabilir.
-  var _mode = mode||'model';
+  // Izgara çizgileri: kenarlık rengi (tema) + soluk varyantı. AÇILIŞTA GİZLİ
+  // (kullanıcı isteği: eksenler "havada" + geri çekilmiş görünüm); "Zemin"
+  // düğmesiyle açılır, zemin düzlemiyle hizalı.
   var gc = _mntViewerCssColor('--border-color', '#333333');
   var grid = new THREE.GridHelper(3000, 30, gc, gc.clone().multiplyScalar(0.55));
-  grid.position.y = -200; grid.visible = false; scene.add(grid);
+  grid.position.y = 0; grid.visible = false; scene.add(grid);
 
   var group = new THREE.Group(); scene.add(group);   // yeniden kurulan içerik
 
+  // Başlangıç: geri çekilmiş, dikey ekseni (+Z) çerçeveleyen görünüm (hedef biraz yukarı).
   _veMountViewer = {
     scene:scene, camera:camera, renderer:renderer, canvas:canvas, group:group,
-    grid:grid, mode:_mode,
+    grid:grid, mode:mode||'coordframe',
     axes:[], labelSprites:[], planes:[],
-    massScale:{min:0,max:1},
-    ctrl:{ theta:-Math.PI*0.75, phi:Math.PI/3, radius:2800, target:new THREE.Vector3(0,0,0) },
-    raf:null, disposed:false, ro:null, detach:[],
-    raycaster:new THREE.Raycaster(), mouse:new THREE.Vector2(), tooltip:null, dragging:false,
-    hafiza:(opt && opt.hafiza) || _mode
+    ctrl:{ theta:-Math.PI*0.75, phi:Math.PI/3, radius:2600, target:new THREE.Vector3(0,150,0) },
+    raf:null, disposed:false, ro:null, detach:[]
   };
 
   // Önceki oturumun kamera açısı varsa geri yükle (bkz. _veMountViewerCam).
-  // _framed=true → veMountViewerUpdate içerik gelince kamerayı yeniden
-  // çerçevelemeye kalkmaz, kullanıcının bıraktığı açı korunur.
-  var _memo = _veMountViewerCam[_veMountViewer.hafiza];
+  // _framed=true → veMountViewerUpdate kamerayı yeniden çerçevelemeye
+  // kalkmaz, kullanıcının bıraktığı açı korunur.
+  var _memo = _veMountViewerCam[_veMountViewer.mode];
   if(_memo){
     var _c = _veMountViewer.ctrl;
     _c.theta=_memo.theta; _c.phi=_memo.phi; _c.radius=_memo.radius;
     _c.target.set(_memo.tx, _memo.ty, _memo.tz);
     _veMountViewer._framed = true;
-    _veMountViewer._memoKimlik = _memo.kimlik;
   }
 
-  // Sabit eksen üçlüsü (model modu). Koordinat modu ekseni kendi çizer.
-  if(_veMountViewer.mode !== 'coordframe') _mntViewerAxes(scene);
   _mntViewerUpdateCamera();
   _mntViewerAttachControls(canvas);
-  _mntViewerAttachHover(canvas);
 
   // Panel yeniden boyutlandığında canvas'ı takip et (resize desteği).
   if(typeof ResizeObserver !== 'undefined'){
@@ -175,16 +154,15 @@ function veMountViewerToggle(what){
   return vis;
 }
 
-// Görünümü başlangıç açısına/uzaklığına sıfırla (ve içeriğe yeniden çerçevele).
+// Görünümü başlangıç açısına/uzaklığına sıfırla.
 function veMountViewerReset(){
   var V=_veMountViewer; if(!V) return;
   // Sıfırlama kamera hafızasını da siler — yoksa panel bir sonraki yeniden
   // çiziminde sıfırladığın açı yerine eski açıya dönerdi.
-  try { delete _veMountViewerCam[V.hafiza || V.mode]; } catch(e){}
+  try { delete _veMountViewerCam[V.mode]; } catch(e){}
   V.ctrl.theta=-Math.PI*0.75; V.ctrl.phi=Math.PI/3;
-  V.ctrl.radius=(V.mode==='coordframe')?2600:2800;
-  // Koordinat modu: dikey ekseni (+Z) çerçevelemek için hedefi biraz yukarı al.
-  V.ctrl.target.set(0, (V.mode==='coordframe')?150:0, 0);
+  V.ctrl.radius=2600;
+  V.ctrl.target.set(0, 150, 0);      // dikey ekseni (+Z) çerçevele: hedef biraz yukarıda
   V._framed=false;
   _mntViewerUpdateCamera();
   if(typeof veMountViewerUpdate==='function') veMountViewerUpdate();
@@ -206,8 +184,8 @@ function _mntViewerUpdateCamera(){
 function _mntViewerAttachControls(canvas){
   var V=_veMountViewer; if(!V) return;
   var dragging=false, btn=0, px=0, py=0;
-  function onDown(e){ dragging=true; btn=e.button; px=e.clientX; py=e.clientY; if(_veMountViewer) _veMountViewer.dragging=true; e.preventDefault(); }
-  function onUp(){ dragging=false; if(_veMountViewer) _veMountViewer.dragging=false; }
+  function onDown(e){ dragging=true; btn=e.button; px=e.clientX; py=e.clientY; e.preventDefault(); }
+  function onUp(){ dragging=false; }
   function onMove(e){
     var W=_veMountViewer; if(!W || W.disposed || !dragging) return;
     var dx=e.clientX-px, dy=e.clientY-py; px=e.clientX; py=e.clientY;
@@ -246,100 +224,6 @@ function _mntViewerAttachControls(canvas){
   });
 }
 
-// Fare ile bileşen/takoz üzerine gelince özelliklerini tooltip olarak göster
-// (raycast). İşaretlerde userData.info (HTML) tutulur (bkz. veMountViewerUpdate).
-function _mntViewerAttachHover(canvas){
-  var V=_veMountViewer; if(!V) return;
-  var tip=document.createElement('div');
-  tip.className='ve-mnt-hover-ip';          // görünüm CSS'te; satır içinde konum ve katman
-  tip.style.zIndex='100060';                // tam ekran perdesinin (100045) üstünde
-  document.body.appendChild(tip);
-  V.tooltip=tip;
-  function onHover(e){
-    var W=_veMountViewer; if(!W || W.disposed || !W.tooltip) return;
-    if(W.dragging){ W.tooltip.style.display='none'; return; }
-    var rect=canvas.getBoundingClientRect();
-    W.mouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
-    W.mouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
-    W.raycaster.setFromCamera(W.mouse, W.camera);
-    var hits=W.raycaster.intersectObjects(W.group.children, false);
-    var hit=null;
-    for(var i=0;i<hits.length;i++){ if(hits[i].object && hits[i].object.userData && hits[i].object.userData.info){ hit=hits[i].object; break; } }
-    if(hit){
-      W.tooltip.innerHTML=hit.userData.info;
-      W.tooltip.style.display='block';
-      var tx=e.clientX+14, ty=e.clientY+14;
-      var tw=W.tooltip.offsetWidth, th=W.tooltip.offsetHeight;
-      if(tx+tw>window.innerWidth-8) tx=e.clientX-tw-14;
-      if(ty+th>window.innerHeight-8) ty=e.clientY-th-14;
-      W.tooltip.style.left=tx+'px'; W.tooltip.style.top=ty+'px';
-      canvas.style.cursor='pointer';
-    } else {
-      W.tooltip.style.display='none';
-      canvas.style.cursor='';
-    }
-  }
-  function onLeave(){ if(_veMountViewer && _veMountViewer.tooltip) _veMountViewer.tooltip.style.display='none'; }
-  canvas.addEventListener('mousemove', onHover);
-  canvas.addEventListener('mouseleave', onLeave);
-  V.detach.push(function(){
-    canvas.removeEventListener('mousemove', onHover);
-    canvas.removeEventListener('mouseleave', onLeave);
-  });
-}
-
-function _mntViewerAxes(scene){
-  var V=_veMountViewer;
-  function line(a,b,color){
-    var g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a[0],a[1],a[2]), new THREE.Vector3(b[0],b[1],b[2])]);
-    var ln=new THREE.Line(g, new THREE.LineBasicMaterial({color:color}));
-    scene.add(ln); if(V) V.axes.push(ln); return ln;
-  }
-  function label(t,p){ var s=_mntViewerLabel(t,p); scene.add(s); if(V) V.labelSprites.push(s); return s; }
-  var L=400;
-  // giriş X→dünya +X (kırmızı), giriş Y→dünya +Z (yeşil), giriş Z→dünya +Y (mavi)
-  line([0,0,0],[L,0,0],0xff4444);
-  line([0,0,0],[0,0,L],0x44ff44);
-  line([0,0,0],[0,L,0],0x4444ff);
-  label('X',[L+40,0,0]);
-  label('Y',[0,0,L+40]);
-  label('Z',[0,L+40,0]);
-}
-function _mntViewerLabel(text, pos){
-  var cv=document.createElement('canvas'); cv.width=64; cv.height=64;
-  var ctx=cv.getContext('2d'); ctx.fillStyle=_mntViewerCssStr('--text-primary','#ffffff'); ctx.font=veThemeFont(40, 'bold'); ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(text, 32, 32);
-  var tex=new THREE.CanvasTexture(cv);
-  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true}));
-  sp.position.set(pos[0],pos[1],pos[2]); sp.scale.set(60,60,1);
-  return sp;
-}
-
-// giriş (x,y,z) mm → dünya vektörü
-function _mntW(x,y,z){ return new THREE.Vector3(x, z, y); }
-
-// Hover tooltip için basit kaçış + sayısal biçim.
-function _mntViewerEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function _mntViewerN(v,d){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?veSayi(n, d===undefined?1:d, { eksi:'−' }):'—'; }
-
-// Kütle → CG işaret yarıçapı (A26 getCGMarkerRadiusFromMass portu)
-function _mntCGRadius(mass, ms){
-  if(!(mass>0)) return 22;
-  var rng=ms.max-ms.min;
-  var t = rng>1e-9 ? (mass-ms.min)/rng : 0.5;
-  return 18 + 28*Math.sqrt(Math.max(0,Math.min(1,t)));
-}
-// Fare ipucunun içeriği — pencerelerin dilinde: ad (işaretin renginde,
-// CSS'ten), etiketler soluk, koordinat üçlüsü "(x; y; z)" (karar 7·C).
-function _mntViewerUc(a, b, c, d){
-  return '('+_mntViewerN(a, d)+'; '+_mntViewerN(b, d)+'; '+_mntViewerN(c, d)+')';
-}
-function _mntViewerIpucu(tur, ad, satirlar){
-  var h='<b class="ve-mnt-ip-ad" data-t="'+tur+'">'+_mntViewerEsc(ad)+'</b>';
-  satirlar.forEach(function(r){ h+='<br><span class="ve-mnt-ip-et">'+r[0]+'</span> '+r[1]; });
-  return h;
-}
-
 // Grup içeriğini temizle (geometri/materyal serbest bırak).
 function _mntViewerClearGroup(V){
   while(V.group.children.length){
@@ -350,138 +234,13 @@ function _mntViewerClearGroup(V){
   }
 }
 
+// Sahneyi kur: eksen + düzlem + yön etiketleri; veri gerektirmez.
 function veMountViewerUpdate(){
   var V=_veMountViewer; if(!V) return;
-
-  // Koordinat düzlemi modu: eksen + düzlem + yön etiketleri çiz, veri gerektirmez.
-  if(V.mode==='coordframe'){
-    _mntViewerClearGroup(V); V.axes=[]; V.labelSprites=[]; V.planes=[];
-    _mntViewerDrawCoordFrame(V);
-    // Geri çekilmiş + dikey ekseni çerçeveleyen başlangıç görünümü (hedef biraz yukarı).
-    if(!V._framed){ V.ctrl.target.set(0,150,0); V.ctrl.radius=2600; _mntViewerUpdateCamera(); V._framed=true; }
-    return;
-  }
-
-  // Çözücü'nün topladığı kütle+takoz verisi (UI mm; cp-mount.js sağlar)
-  var d = (typeof _veMntViewerData!=='undefined' && _veMntViewerData) ? _veMntViewerData : null;
-  if(!d) return;
-  if(!d.components) d.components=[]; if(!d.mounts) d.mounts=[];
-
-  // Eski içeriği temizle
-  _mntViewerClearGroup(V);
-
-  var num=function(v){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n:NaN; };
-
-  // Kütle ölçeği
-  var masses = d.components.map(function(c){ return num(c.mass); }).filter(function(m){ return m>0; });
-  V.massScale.min = masses.length ? Math.min.apply(null,masses) : 0;
-  V.massScale.max = masses.length ? Math.max.apply(null,masses) : 1;
-
-  // Birleşik CG (kütle ağırlıklı ortalama, mm)
-  var mSum=0, sx=0, sy=0, sz=0;
-  d.components.forEach(function(c){
-    var m=num(c.mass), x=num(c.cgx), y=num(c.cgy), z=num(c.cgz);
-    if(m>0 && Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z)){ mSum+=m; sx+=m*x; sy+=m*y; sz+=m*z; }
-  });
-  var hasCG = mSum>0;
-  var cg = hasCG ? [sx/mSum, sy/mSum, sz/mSum] : [0,0,0];
-
-  // CG→takoz kılavuz çizgisi: temaya göre soluk gri (açık temada koyulaşır).
-  var lineCol = _mntViewerCssColor('--text-muted', '#888888');
-
-  // Takoz küpleri + bağlantı çizgileri
-  d.mounts.forEach(function(mt){
-    var x=num(mt.x), y=num(mt.y), z=num(mt.z);
-    if(!(Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z))) return;
-    var box=new THREE.Mesh(new THREE.BoxGeometry(60,40,60),
-      _mntViewerMarkerMat('--accent-success', '#22c55e', 30));
-    box.position.copy(_mntW(x,y,z));
-    var sat=[['Konum', _mntViewerUc(x, y, z, 1)+' mm']];
-    if(mt.kxs!==undefined||mt.kzs!==undefined) sat.push(['Statik k', _mntViewerUc(mt.kxs, mt.kys, mt.kzs, 0)+' N/mm']);
-    box.userData={ info:_mntViewerIpucu('takoz', mt.name||'Takoz', sat) };
-    V.group.add(box);
-    if(hasCG){
-      var g=new THREE.BufferGeometry().setFromPoints([_mntW(cg[0],cg[1],cg[2]), _mntW(x,y,z)]);
-      var ln=new THREE.Line(g, new THREE.LineDashedMaterial({color:lineCol, dashSize:30, gapSize:15, transparent:true, opacity:0.6}));
-      ln.computeLineDistances();
-      V.group.add(ln);
-    }
-  });
-
-  // Bileşen CG işaretleri
-  d.components.forEach(function(c){
-    var m=num(c.mass), x=num(c.cgx), y=num(c.cgy), z=num(c.cgz);
-    if(!(Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z))) return;
-    var r=_mntCGRadius(m, V.massScale);
-    var s=new THREE.Mesh(new THREE.SphereGeometry(r,18,18),
-      _mntViewerMarkerMat('--accent-warning', '#f59e0b', 20));
-    s.position.copy(_mntW(x,y,z));
-    s.userData={ info:_mntViewerIpucu('govde', c.name||'Bileşen',
-      [['Kütle', m>0 ? veSayi(m, 1)+' kg' : '—'], ['CG', _mntViewerUc(x, y, z, 1)+' mm']]) };
-    V.group.add(s);
-  });
-
-  // Birleşik CG (kırmızı)
-  if(hasCG){
-    var cgm=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
-      _mntViewerMarkerMat('--accent-danger', '#ef4444', 80));
-    cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
-    cgm.userData={ info:_mntViewerIpucu('am', 'Birleşik CG',
-      [['Toplam kütle', veSayi(mSum, 1)+' kg'], ['Konum', _mntViewerUc(cg[0], cg[1], cg[2], 1)+' mm']]) };
-    V.group.add(cgm);
-  }
-  // İLK KURULUMDA KAMERA İÇERİĞE SIĞAR: içeriğin sınır küresi tuvalin dar
-  // açısına (yatay ya da düşey) oturur. Yarıçap sabit 2.800 mm'ydi — dar
-  // sütunda doğru, geniş tam ekranda model görüntünün onda biri.
-  // Hafızadaki kamera yalnız KENDİ modeline uygulanır (`_mntViewerKimlik`).
-  V.kimlik=_mntViewerKimlik(d);
-  if(V._memoKimlik!==undefined){ if(V._memoKimlik!==V.kimlik) V._framed=false; V._memoKimlik=undefined; }
-  if(!V._framed && V.group.children.length){ _mntViewerSigdir(V); V._framed=true; }
-}
-
-// KAMERA HAFIZASI MODELE AİTTİR: kimlik gövde ve takoz düğümlerinin
-// kimliklerinden. Değer düzenlemek kamerayı korur; başka bir örnek yüklemek
-// (düğümler yeniden kurulur) yeni çerçeve ister — yoksa Tulga'nın kamerası
-// Siper'e uygulanıyor, model tuvalden taşıyordu.
-function _mntViewerKimlik(d){
-  return ((d && d.components) || []).concat((d && d.mounts) || [])
-    .map(function(x){ return String(x && x.id); }).sort().join('|');
-}
-
-// Kamera: içeriğin GERÇEK noktalarına (geometri köşeleri) sığar — eksen
-// hizalı kutunun köşelerine değil: çapraz dizilmiş bir güç grubunda kutunun
-// köşeleri boşlukta kalır ve kutuya sığdırılan model görüntünün üçte birinde
-// kalıyor (ölçüldü, Tulga tam ekran: 540×341 px / 1.598×823). İçerik izdüşümde
-// ortalanır, geniş kenarı görüntünün %85'i; açı (theta/phi) korunur, kamera
-// içeriğin sınır küresinin dışında kalır.
-function _mntViewerSigdir(V){
-  var P=[], v=new THREE.Vector3();
-  V.group.updateMatrixWorld(true);
-  V.group.traverse(function(o){
-    var a=o.visible && o.geometry && o.geometry.attributes && o.geometry.attributes.position;
-    if(!a) return;
-    var adim=Math.max(1, Math.floor(a.count/64));
-    for(var i=0; i<a.count; i+=adim) P.push(v.fromBufferAttribute(a, i).applyMatrix4(o.matrixWorld).clone());
-  });
-  if(!P.length) return;
-  var kure=new THREE.Sphere().setFromPoints(P), R=Math.max(kure.radius, 50);
-  var fv=V.camera.fov*Math.PI/180, th=Math.tan(fv/2), en=Math.max(1e-3, V.camera.aspect);
-  V.ctrl.target.copy(kure.center); V.ctrl.radius=R/Math.sin(Math.min(fv, 2*Math.atan(th*en))/2);
-  var sag=new THREE.Vector3(), ust=new THREE.Vector3(), q=new THREE.Vector3();
-  for(var k=0; k<4; k++){
-    _mntViewerUpdateCamera(); V.camera.updateMatrixWorld();
-    var x0=Infinity, x1=-Infinity, y0=Infinity, y1=-Infinity;
-    P.forEach(function(p){ q.copy(p).project(V.camera);
-      x0=Math.min(x0, q.x); x1=Math.max(x1, q.x); y0=Math.min(y0, q.y); y1=Math.max(y1, q.y); });
-    var yari=Math.max(x1-x0, y1-y0)/2;
-    if(!(yari>0) || !isFinite(yari)) break;
-    // izdüşümün merkezi görüntünün merkezine: hedef kamera düzleminde kayar
-    var d=V.camera.position.distanceTo(V.ctrl.target);
-    sag.setFromMatrixColumn(V.camera.matrixWorld, 0); ust.setFromMatrixColumn(V.camera.matrixWorld, 1);
-    V.ctrl.target.addScaledVector(sag, (x0+x1)/2*d*th*en).addScaledVector(ust, (y0+y1)/2*d*th);
-    V.ctrl.radius=Math.max(V.ctrl.radius*yari/0.85, R*1.05);
-  }
-  _mntViewerUpdateCamera();
+  _mntViewerClearGroup(V); V.axes=[]; V.labelSprites=[]; V.planes=[];
+  _mntViewerDrawCoordFrame(V);
+  // Geri çekilmiş + dikey ekseni çerçeveleyen başlangıç görünümü (hedef biraz yukarı).
+  if(!V._framed){ V.ctrl.target.set(0,150,0); V.ctrl.radius=2600; _mntViewerUpdateCamera(); V._framed=true; }
 }
 
 // ─── Koordinat Düzlemi (mnt-coordframe) — eksen + düzlem + yön etiketleri ─────
@@ -505,7 +264,6 @@ function _mntViewerTextSprite(text, pos, color, worldSize){
 }
 function _mntViewerDrawCoordFrame(V){
   var G=V.group, L=700, S=900;
-  if(V.grid) V.grid.position.y=0;   // ızgarayı zemin düzlemiyle hizala
   function arrow(dir,color){
     var a=new THREE.ArrowHelper(new THREE.Vector3(dir[0],dir[1],dir[2]).normalize(), new THREE.Vector3(0,0,0), L, color, 95, 58);
     G.add(a); V.axes.push(a);
@@ -544,19 +302,18 @@ function veMountViewerDispose(){
   // Kamera açısını sakla (yalnız çerçevelenmiş bir görünüm anlamlıdır).
   if(V.mode && V.ctrl && V._framed){
     try {
-      _veMountViewerCam[V.hafiza || V.mode] = {
+      _veMountViewerCam[V.mode] = {
         theta:V.ctrl.theta, phi:V.ctrl.phi, radius:V.ctrl.radius,
-        tx:V.ctrl.target.x, ty:V.ctrl.target.y, tz:V.ctrl.target.z, kimlik:V.kimlik
+        tx:V.ctrl.target.x, ty:V.ctrl.target.y, tz:V.ctrl.target.z
       };
     } catch(e){}
   }
   if(V.raf) cancelAnimationFrame(V.raf);
   if(V.ro){ try{ V.ro.disconnect(); }catch(e){} }
   if(V.detach){ V.detach.forEach(function(fn){ try{ fn(); }catch(e){} }); V.detach=[]; }
-  if(V.tooltip){ try{ V.tooltip.remove(); }catch(e){} V.tooltip=null; }
   try {
     // Sahnenin TAMAMINI boşalt: group içeriği + doğrudan sahneye eklenen
-    // eksen çizgileri/etiket sprite'ları (bunlar eskiden sızıyordu).
+    // ışıklar ve ızgara (bunlar eskiden sızıyordu).
     if(V.scene && typeof V.scene.traverse==='function'){
       V.scene.traverse(function(o){
         if(o.geometry && o.geometry.dispose) o.geometry.dispose();

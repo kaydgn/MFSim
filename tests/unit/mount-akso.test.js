@@ -23,6 +23,8 @@
  *   · PENCERE — ilk sekme Aksonometrik, düz görünüşlerin adı kısa; denetim
  *     modeli değiştirmez (saveState yok, düğüm verisi aynı) ve tarayıcıya
  *     yazar; çözüm yokken / bayatken kuvvet ve mod kapalı, sebebi yazılı
+ *   · KLASİK 3B — 3D Görüntüleyici'nin ikinci sekmesi yalnız ad: bölmesinde
+ *     tuval ve düğme yok, tazeleme three.js sahnesi kurmaz (2026-10-16)
  */
 const fs = require('fs');
 const path = require('path');
@@ -600,13 +602,13 @@ describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
     }
   });
 
-  test('pencere: ilk sekme Aksonometrik, three.js "Klasik 3B"de; 3B tercihi 2D\'ninkinden ayrı ve modelde değil', () => {
+  test('pencere: ilk sekme Aksonometrik, "Klasik 3B" yalnız ad; 3B tercihi 2D\'ninkinden ayrı ve modelde değil', () => {
     yukle('tulga'); coz();
     const h = cp.getMntViewerPropertiesHTML({ id: 'v3', type: 'mnt-viewer', data: {} });
     const sekme = [...h.matchAll(/class="ve-fp-tab"[^>]*data-k="(\w+)"[\s\S]*?<span class="ve-fp-tab-ad">([^<]*)<\/span>/g)].map((x) => [x[1], x[2]]);
     expect(sekme).toEqual([['akso', 'Aksonometrik'], ['sahne', 'Klasik 3B']]);
     expect(h).toContain('id="ve-mnt-akso3b-v3"');
-    expect(h).toContain('ve-mnt-inline-viewer-canvas');               // klasik sahne yerinde
+    expect(h).not.toContain('ve-mnt-inline-viewer-canvas');           // three.js sahnesi yok
     expect(h).toContain('<b data-ak3b-ad>Dimetrik</b>');
     localStorage.removeItem('ve-mnt-akso3b');
     localStorage.removeItem('ve-mnt-akso');
@@ -631,6 +633,38 @@ describe('SERBEST KAMERA — 3D Görüntüleyici', () => {
     } finally {
       Object.assign(A2, y2); Object.assign(A3, y3);
       kap.remove();
+    }
+  });
+});
+
+// KLASİK 3B YALNIZ AD (kullanıcı kararı 2026-10-16: "Klasik 3B'yi kaldıralım …
+// sadece isim olarak kalabilir, ama içeriğini kaldıralım" — sekme ilerleyen
+// zamanda gerçek CAD dosyasıyla işlenecek). Ölçüldü (main 2f43cda): pencere
+// açılınca 1 WebGL bağlamı kuruluyordu, her tazelemede bir yenisi; sekmede
+// 1 tuval + 6 düğme + gösterge vardı.
+describe('KLASİK 3B — yalnız ad, içerik yok', () => {
+  test('sekme adıyla duruyor; bölmesinde tuval ve düğme yok, yalnız not', () => {
+    yukle('tulga'); coz();
+    const d = document.createElement('div');
+    d.innerHTML = cp.getMntViewerPropertiesHTML({ id: 'v5', type: 'mnt-viewer', data: {} });
+    const ad = d.querySelector('#ve-fp-tabs-v5 .ve-fp-tab[data-k="sahne"] .ve-fp-tab-ad');
+    const p = d.querySelector('#ve-fp-panes-v5 > [data-k="sahne"]');
+    expect(ad && ad.textContent).toBe('Klasik 3B');
+    expect({ tuval: p.querySelectorAll('canvas').length, dugme: p.querySelectorAll('button').length, svg: p.querySelectorAll('svg').length })
+      .toEqual({ tuval: 0, dugme: 0, svg: 0 });
+    expect(p.textContent).toMatch(/gerçek CAD dosyasıyla/);
+    expect(p.innerHTML).not.toMatch(/veMountViewer|veMntViewerFullscreen|Sahne göstergesi/);
+  });
+
+  test('pencere tazelemesi three.js sahnesi kurmaz', () => {
+    const init = jest.fn(), guncelle = jest.fn();
+    global.veMountViewerInit = init; global.veMountViewerUpdate = guncelle;
+    try {
+      yukle('tulga'); coz();
+      cp.veMntViewerRefresh();
+      expect([init.mock.calls.length, guncelle.mock.calls.length]).toEqual([0, 0]);
+    } finally {
+      delete global.veMountViewerInit; delete global.veMountViewerUpdate;
     }
   });
 });

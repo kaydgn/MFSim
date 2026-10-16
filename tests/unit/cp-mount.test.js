@@ -778,23 +778,20 @@ describe('Örnek JSON topolojisi (dışa aktar + çözümleme)', () => {
 });
 
 describe('3D Görüntüleyici bileşeni', () => {
-  test('panel: canvas + Yenile + interaktif kontroller + resize', () => {
+  // "Klasik 3B" YALNIZ AD (kullanıcı kararı 2026-10-16): three.js sahnesi,
+  // katmanları, Yenile ve kendi tam ekranı kaldırıldı; model Aksonometrik
+  // sekmede döndürülüyor. Kapının tamamı mount-akso.test.js → KLASİK 3B.
+  test('panel: iki sekme, hover ipucu; three.js denetimi ve eski kalıntılar yok', () => {
     const node = { id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} };
     const html = cp.getMntViewerPropertiesHTML(node);
-    expect(html).toContain('ve-mnt-inline-viewer-canvas');
-    expect(html).toContain('veMntViewerRefresh()');
-    expect(html).toContain('ve-mnt-sahne');            // kare sahne kabı (zemin CSS'te)
-    // interaktif: katman aç/kapa + sıfırla + büyüt + boyutlandırma
-    expect(html).toContain("veMountViewerToggle('grid')");
-    expect(html).toContain('veMountViewerReset()');
-    // tam ekran (tüm pencereyi büyüt) + hover ipucu
-    expect(html).toContain('veMntViewerFullscreen()');
+    expect(html).toContain('data-k="akso"');
+    expect(html).toContain('data-k="sahne"');
     expect(html).toContain('bilgi');
-    // Büyüt/resize kaldırıldı (kullanıcı isteği: iç 3D genişlemesi gereksiz)
-    expect(html).not.toContain('veMntViewerExpand');
-    expect(html).not.toContain('resize:vertical');
-    // garip açıklama kutusu YOK
-    expect(html).not.toContain('Aktif tema ile uyumlu');
+    ['ve-mnt-inline-viewer-canvas', 'veMntViewerRefresh()', 'veMountViewerToggle', 'veMountViewerReset()',
+      'veMntViewerFullscreen()', 'Sahne göstergesi',
+      // Büyüt/resize kaldırıldı (kullanıcı isteği: iç 3D genişlemesi gereksiz); garip açıklama kutusu yok
+      'veMntViewerExpand', 'resize:vertical', 'Aktif tema ile uyumlu']
+      .forEach((s) => expect({ s, var: html.includes(s) }).toEqual({ s, var: false }));
   });
 });
 

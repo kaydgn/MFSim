@@ -146,7 +146,7 @@ function _gmSec2(){
       + '(dimetrik ya da izometrik, sekiz bakış; direk, kuvvet, mod ve rijitlik katmanları), '
       + 'düz görünüşlerde işaretleri numarayla çizer ve adlarını yan sütundaki föyde verir; '
       + '3D Görüntüleyici aynı çizimi serbestçe döndürür (sürükle: döndür, tekerlek: yakınlaştır, '
-      + 'sağ tık: kaydır), eski sahne Klasik 3B sekmesinde', 'Hesaba girmez'],
+      + 'sağ tık: kaydır); Klasik 3B sekmesi gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12']
   ], ['Bileşen', 'Ne', 'Not']);
   h += '<h3>2.2 Neyi siz verirsiniz, neyi program hesaplar</h3>';

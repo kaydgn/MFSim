@@ -441,7 +441,7 @@ function showNodeProperties(node) {
   // Takoz Çözücü: hesap YALNIZ "▶ Hesapla" düğmesiyle koşar (otomatik tetik YOK).
   // Panel açılışında model çözülmez; ayrıntılı sonuçlara Rapor bileşeninden bakılır.
 
-  // Takoz 3D Görüntüleyici: panel açılınca güncel topolojiyle başlat
+  // Takoz 3D Görüntüleyici: panel açılınca aksonometriyi kabın gerçek genişliğinde kur
   if(node.type === 'mnt-viewer') {
     setTimeout(function() {
       if(typeof veMntViewerRefresh === 'function') veMntViewerRefresh();

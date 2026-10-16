@@ -130,8 +130,9 @@ test('yirmi bir pencere tek aile: bant, başlık yazısı, kapat, başlık ikonu
   await ac('Diyagram künyesi', 'swShowDiagramInfo(SENSOR_PACKAGES[0].id, 0)', { kok: '#sw-info-overlay', kab: '#sw-info-overlay .ve-mini-pencere', perde: '#sw-info-overlay' }, "document.getElementById('sw-info-overlay').remove()");
   await ac('TXT rapor indir', "window._veTxtPreviewContent = 'deneme'; veDownloadTXTFromPreview()", { kok: '#ve-txt-author-overlay', kab: '#ve-txt-author-overlay .ve-mini-pencere', perde: '#ve-txt-author-overlay' }, "document.getElementById('ve-txt-author-overlay').remove()");
   // Takoz'un tam ekran görüntüleyicisi: kimliği '-overlay' ile bitmiyordu, ad
-  // listesinden kaçıyordu.
-  await ac('3D tam ekran', 'veMntViewerFullscreen()', { kok: '#ve-mnt-fs', kab: '#ve-mnt-fs > div', perde: '#ve-mnt-fs' }, "document.getElementById('ve-mnt-fs-x').click()");
+  // listesinden kaçıyordu. three.js tam ekranı 2026-10-16'da kaldırıldı ("Klasik
+  // 3B" yalnız ad); aynı perdeyi aksonometrinin tam ekranı kuruyor.
+  await ac('3D tam ekran', 'veMntAkso3BTamEkran()', { kok: '#ve-mnt-fs', kab: '#ve-mnt-fs > div', perde: '#ve-mnt-fs' }, "document.getElementById('ve-mnt-fs-x').click()");
 
   // Çözücü: kapat çözüm bitince görünür
   await page.evaluate(() => veSolverRunProfessional());

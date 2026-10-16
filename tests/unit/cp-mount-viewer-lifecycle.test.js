@@ -16,6 +16,10 @@
  * Ayrıca panel yeniden çizilince kullanıcının döndürdüğü kamera açısı da
  * siliniyordu; artık mod başına saklanıp geri yükleniyor.
  *
+ * 2026-10-16'dan beri modül yalnız Koordinat Düzlemi'nin sahnesi: 3D
+ * Görüntüleyici'nin "model" kipi (ipucu ve tam ekran dâhil) kaldırıldı —
+ * "Klasik 3B" yalnız ad. Ölçülen yaşam döngüsü kuralları aynen geçerli.
+ *
  * jsdom; THREE ve WebGL yok → gereken kadarıyla stub'lanır.
  */
 
@@ -177,16 +181,6 @@ describe('dispose: WebGL bağlamını ve dinleyicileri GERÇEKTEN bırakır', ()
     expect(removed.map((c) => c[1]).sort()).toEqual(added.map((c) => c[1]).sort());
   });
 
-  test('tooltip elemanı body\'den kaldırılır', () => {
-    mountCanvas('cv');
-    veMountViewerInit('cv', 'coordframe');
-    const tip = _veMountViewer.tooltip;
-    expect(document.body.contains(tip)).toBe(true);
-
-    veMountViewerDispose();
-    expect(document.body.contains(tip)).toBe(false);
-  });
-
   test('yeniden kurulum eskisini bırakır: aynı anda tek bağlam canlı kalır', () => {
     mountCanvas('cv');
     for (let i = 0; i < 5; i++) veMountViewerInit('cv', 'coordframe');
@@ -270,17 +264,6 @@ describe('kamera hafızası: panel yeniden çizilince açı korunur', () => {
     veMountViewerDispose();
 
     expect(_veMountViewerCam.coordframe).toBeUndefined();
-  });
-
-  test('mod başına ayrı hafıza: coordframe açısı model moduna sızmaz', () => {
-    mountCanvas('cv');
-    veMountViewerInit('cv', 'coordframe');
-    _veMountViewer._framed = true;
-    _veMountViewer.ctrl.radius = 1111;
-    veMountViewerDispose();
-
-    veMountViewerInit('cv', 'model');
-    expect(_veMountViewer.ctrl.radius).toBe(2800);  // model modunun varsayılanı
   });
 
   test('Sıfırla hafızayı da temizler (sonraki çizimde eski açı geri gelmesin)', () => {
