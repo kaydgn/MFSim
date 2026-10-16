@@ -1779,6 +1779,105 @@ var veMountCore = (function() {
     });
   }
 
+  // ═══════ Modal duyarlılık — frekansın takoz rijitliğine türevi ═══════
+  //
+  // Yumuşatma taraması (softeningScan) bütün takozları AYNI katsayıyla
+  // ölçekler; tasarımda ise çoğu zaman tek bir takozun tek bir ekseni değişir
+  // (başka katalog tipi, başka sertlik). Soru: hangi takozun hangi ekseni
+  // hangi modu ne kadar oynatıyor? Ayrık özdeğerin türevi (M rijitlikten
+  // bağımsız; φ'nin normalizasyonu sonucu değiştirmez):
+  //
+  //   ∂λ_r/∂k_{i,a} = (a_{i,a}·φ_r)² / (φ_rᵀMφ_r)        a_{i,a}: A_i'nin a. satırı
+  //   ∂f_r/∂k_{i,a} = (∂λ_r/∂k_{i,a}) / (8π²·f_r)
+  //
+  // ESNEKLİK (yüzde → yüzde): e = (k/f)·∂f/∂k = ½·k(a·φ)²/(φᵀKφ) — yayın
+  // moddaki şekil değiştirme enerjisi payının YARISI. Her modda Σ e = ½ (test
+  // kilidi): bütün yaylar aynı oranda sertleşirse f o oranın karekökü kadar
+  // artar. (a·φ)² ≥ 0 — hiçbir yayın sertleşmesi hiçbir frekansı düşürmez.
+  //
+  // ÇAKIŞIK MOD: iki modun frekansı aynıysa (simetrik model) mod şekli tek
+  // değildir ve tek tek türev keyfi tabana bağlıdır; kümenin TOPLAMI ise
+  // değildir. Küme üyelerine kümenin ortalaması yazılır, `cakisik` işaretlenir
+  // — keyfi bir tabanın sayısı sessizce basılmaz.
+  //
+  // Taban modal çözümünki (dynStiffBasis): nonlineer yasada statik dengedeki
+  // dinamik tanjant, yani çalışma noktası sabit tutulur. f ≈ 0 modunda türev
+  // tanımsızdır → NaN.
+  // Dönüş: [{ f, cakisik, e:[[ex,ey,ez]…], dfdk:[[…]] (Hz/(N/m)),
+  //           en:{i, ax, e} — modun en etkili kaldıracı (esnekliği en büyük takoz · eksen) }]
+  const CAKISIK_TOL = 1e-6;   // göreli frekans farkı — sayısal çakışma, fiziksel yakınlık değil
+  function modalSensitivity(modes, M6, mounts, cg, kBasis){
+    if(!modes || !M6 || !mounts) return null;
+    const kb = dynStiffBasis(mounts, kBasis);
+    const A = mounts.map(function(mnt){ return makeA([mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]]); });
+    const ham = modes.map(function(md){
+      const f = md.f_Hz, phi = md.phi || [0,0,0,0,0,0], mG = quadForm(M6, phi);
+      const ok = (f > 1e-6) && (mG > 0);
+      return { f: f, ok: ok, lam: Math.pow(2*Math.PI*f, 2),
+               dl: A.map(function(Ai){ return [0,1,2].map(function(ax){
+                 const s = dot(Ai[ax], phi); return ok ? s*s/mG : NaN; }); }) };
+    });
+    const kume = ham.map(function(_, r){ return r; });
+    for(let r=1; r<ham.length; r++){
+      const a = ham[r-1], b = ham[r];
+      if(a.ok && b.ok && Math.abs(b.f - a.f) <= CAKISIK_TOL*Math.max(a.f, b.f)) kume[r] = kume[r-1];
+    }
+    return ham.map(function(h, r){
+      const uye = [];
+      kume.forEach(function(k, j){ if(k === kume[r]) uye.push(j); });
+      const dl = h.dl.map(function(row, i){ return row.map(function(_, ax){
+        let s = 0; uye.forEach(function(j){ s += ham[j].dl[i][ax]; }); return s/uye.length; }); });
+      const e = dl.map(function(row, i){ return row.map(function(v, ax){ return h.ok ? kb[i][ax]*v/(2*h.lam) : NaN; }); });
+      let en = null;
+      e.forEach(function(row, i){ row.forEach(function(v, ax){
+        if(Number.isFinite(v) && (!en || v > en.e)) en = { i: i, ax: ax, e: v }; }); });
+      return {
+        f: h.f, cakisik: uye.length > 1, e: e, en: en,
+        dfdk: dl.map(function(row){ return row.map(function(v){ return h.ok ? v/(8*Math.PI*Math.PI*h.f) : NaN; }); })
+      };
+    });
+  }
+
+  // Tek yay ölçeklenince modlar — duyarlılığın KESİN karşılığı: özdeğer
+  // problemi yeniden kurulur, doğrusal tahmin değil. Taban kopyalanır.
+  function modesWithSpringScale(mounts, cg, M6, kBasis, i, ax, s){
+    const kb = dynStiffBasis(mounts, kBasis).map(function(r){ return r.slice(); });
+    kb[i][ax] *= s;
+    return solveModal(buildKfromBasis(mounts, cg, kb), M6, mounts, cg);
+  }
+
+  // Bir ölçüt hedefe tek yayın hangi ölçeğinde ulaşır? `olcut(modlar)` sayı
+  // döner. s, yön > 0'da 1 → sMax, yön < 0'da 1 → sMin arasında geometrik
+  // adımla taranır, ilk işaret değişimi ikiye bölmeyle inceltilir. Tarama
+  // şart: ölçüt tekdüze olmayabilir (iki modun aralığı). Ulaşılamazsa null.
+  // Dönüş: { s, modes } — s ölçütün hedefi GEÇTİĞİ taraf, modes o ölçekte.
+  function springScaleFor(mounts, cg, M6, kBasis, i, ax, olcut, hedef, yon, opts){
+    const o = opts || {};
+    const uc = (yon > 0) ? (o.sMax || 10) : (o.sMin || 0.1), n = o.adim || 48;
+    const fark = function(s){
+      const md = modesWithSpringScale(mounts, cg, M6, kBasis, i, ax, s);
+      return { d: md ? olcut(md) - hedef : NaN, md: md };
+    };
+    const isaret = function(v){ return v > 0 ? 1 : (v < 0 ? -1 : 0); };
+    let a = 1, fa = fark(1);
+    if(!Number.isFinite(fa.d)) return null;
+    if(fa.d === 0) return { s: 1, modes: fa.md };
+    for(let k=1; k<=n; k++){
+      const s = Math.pow(uc, k/n), fs = fark(s);
+      if(!Number.isFinite(fs.d)) return null;
+      if(isaret(fs.d) !== isaret(fa.d)){
+        let lo = a, flo = fa, hi = s, fhi = fs;
+        for(let it=0; it<60 && Math.abs(Math.log(hi/lo)) > 1e-10; it++){
+          const m = Math.sqrt(lo*hi), fm = fark(m);
+          if(isaret(fm.d) === isaret(flo.d)){ lo = m; flo = fm; } else { hi = m; fhi = fm; }
+        }
+        return { s: hi, modes: fhi.md };
+      }
+      a = s; fa = fs;
+    }
+    return null;
+  }
+
   // ═══════════════════ Tork zinciri (SPEC 4.5) ═══════════════════
 
   // T_shaft = Te,max × R_stall × i_gear × i_transfer × φ_axle × derate
@@ -2614,6 +2713,7 @@ var veMountCore = (function() {
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
+    modalSensitivity, modesWithSpringScale, springScaleFor,
     torqueChain, classifyMode, validateModel, collinearPoints, mechanismProblem,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,

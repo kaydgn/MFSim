@@ -1888,6 +1888,23 @@ function _mntTakozYukSekme(node, T){
       });
       h+=_mntBolum('Sönüm', em+(R.kBasisTangent ? ' · tanjant k' : ''), f3+_MNT_FOY_KAPA);
     }
+    // Bu takozun üç ekseninin her moddaki esnekliği (R.sensitivity); kalın hücre
+    // modun en etkili kaldıracının bu takozda olduğunu söyler.
+    var S=R.sensitivity;
+    if(S && S.length){
+      var f4=_mntFoyAc([{ b:'#', gen:'13%' }, { b:_mntSym('f')+' <u>[Hz]</u>', gen:'24%' },
+                        { b:'X', gen:'21%' }, { b:'Y', gen:'21%' }, { b:'Z', gen:'21%' }], 'Duyarlılık');
+      S.forEach(function(s, r){
+        f4+='<tr><td>'+(r+1)+'</td><td>'+_mntS(s.f,2)+'</td>';
+        [0,1,2].forEach(function(ax){
+          var v=s.e[j] ? s.e[j][ax] : NaN, en=!!(s.en && s.en.i===j && s.en.ax===ax);
+          f4+='<td'+(en ? ' class="en" title="Modun en etkili kaldıracı"' : '')+'>'
+            + (Number.isFinite(v) ? (v>=0.005 ? _mntS(v,2) : '·') : '—')+'</td>';
+        });
+        f4+='</tr>';
+      });
+      h+=_mntBolum('Duyarlılık', 'bu takoz · '+_mntSym('e')+' = %Δf / %Δk'+(bayat ? ' · bayat' : ''), f4+_MNT_FOY_KAPA);
+    }
   }
   return '<div id="ve-mnt-yuk-'+node.id+'" data-tazele>'+h+'</div>';
 }
@@ -5008,6 +5025,19 @@ function _mntCozucuModSekme(node, R, S){
       + _mntIzgara(2,
           _mntOku('Düşey (bounce) <u>[Hz]</u>', (iso && iso.fBounce>0) ? _mntS(iso.fBounce,2)+' · SDOF' : '—')
         + _mntOku('Mod sınırı '+_mntSym('½·f<sub>ateş</sub>')+' <u>[Hz]</u>', Number.isFinite(lim) ? _mntS(lim,2) : '— (silindir/rölanti yok)')));
+    // Mod başına en etkili kaldıraç — çözümün duyarlılığından (R.sensitivity,
+    // çekirdek modalSensitivity). Tam matris ve kriter payları raporun §8.17'si.
+    var S=R.sensitivity;
+    if(S && S.length){
+      var fk=_mntFoyAc([{ b:'#', gen:'10%' }, { b:'Takoz · eksen', gen:'66%', sinif:'sol' },
+                        { b:_mntSym('e'), gen:'24%', ipucu:'Esneklik: rijitlik %1 artınca frekansın yüzde artışı (her modda bütün takoz ve eksenlerin toplamı 0,5)' }],
+                       'Kaldıraçlar');
+      S.forEach(function(s, r){
+        var b=s.en, ad=b ? ((R.mounts[b.i] && R.mounts[b.i].name) || ('Takoz '+(b.i+1)))+' · '+'XYZ'.charAt(b.ax) : '—';
+        fk+='<tr><td>'+(r+1)+'</td><td class="sol" title="'+_mntEsc(ad)+'">'+_mntEsc(ad)+'</td><td>'+(b ? _mntS(b.e,2) : '—')+'</td></tr>';
+      });
+      h+=_mntBolum('Kaldıraçlar', 'mod başına en etkili · '+_mntSym('e')+' = %Δf / %Δk', fk+_MNT_FOY_KAPA);
+    }
   }
   return '<div id="ve-mnt-cmod-'+node.id+'" data-tazele>'+h+'</div>';
 }
@@ -5322,6 +5352,9 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
       R.modalDamping = C.modalDampingRatios(modes, prep.M6, R.C6);
     }
     if(C.modalEnergy) R.modalEnergy = C.modalEnergy(modes, prep.M6, prep.Kmodal, prep.si.components, prep.mp.cg);
+    // Takoz ve eksen başına frekans duyarlılığı — modları üreten AYNI taban
+    // (prep.kBasis; lineerde null → k_din). Pencereler ve rapor §8.17 OKUR.
+    if(C.modalSensitivity) R.sensitivity = C.modalSensitivity(modes, prep.M6, prep.mounts, prep.mp.cg, prep.kBasis);
   }
   // ── Sonuçlar paneli kanalları (js/mount-signals.js) ───────────────────────
   // Süpürmeler ÇÖZÜCÜNÜN kendi yolunu (prep.solveOne) kullanır — nonlineerse
