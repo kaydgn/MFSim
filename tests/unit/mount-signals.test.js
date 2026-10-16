@@ -98,9 +98,14 @@ describe('build — hangi veri kümeleri üretiliyor', () => {
 describe('frekans yanıtı (frf)', () => {
   const ds = setOf('frf');
 
-  test('ızgara Rapor §8.13 ile aynı bantta (0.1–100 Hz), logaritmik ve artan', () => {
+  test('ızgara Rapor §8.13 ile aynı bantta (0.1–100 Hz): logaritmik taban + inceltilmiş tepeler, artan', () => {
     expect(ds.x.unit).toBe('Hz');
-    expect(ds.x.data.length).toBe(S.FRF_NPTS);
+    // Taban 240 logaritmik nokta EKSİKSİZ; üstüne her yönün tepe noktaları (frfGrid)
+    const lo = Math.log10(S.FRF_FMIN), hi = Math.log10(S.FRF_FMAX);
+    for (let i = 0; i < S.FRF_NPTS; i++) {
+      expect(ds.x.data).toContain(Math.pow(10, lo + (hi - lo) * i / (S.FRF_NPTS - 1)));
+    }
+    expect(ds.x.data.length).toBeGreaterThan(S.FRF_NPTS);
     expect(ds.x.data[0]).toBeCloseTo(S.FRF_FMIN, 9);
     expect(ds.x.data[ds.x.data.length - 1]).toBeCloseTo(S.FRF_FMAX, 9);
     // Logaritmik ve kesin artan: imleç ikili aramayla örnek kilitliyor
@@ -364,10 +369,16 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     expect(t).not.toBe(text(lane('frf', ['T_2'])));
   });
 
-  test('sönümlü + sönümsüz: sönümün katkısı sayıyla', () => {
+  // Sönümsüz tepe rezonansta SINIRSIZ: ızgarada okunan yüksekliği "N kat
+  // bastırıyor" diye oranlamak örnekleme artığını sayı diye basmaktı (tepe
+  // inceltilince oran 4,7'den 55'e sıçradı — fizik değişmeden).
+  test('sönümlü + sönümsüz: sönümlü tepe sayıyla, sönümsüz tepe SINIRSIZ (örnekleme artığı oran basılmaz)', () => {
     const br = lane('frf', ['T_2', 'T0_2']);
     expect(br.title).toContain('sönüm');
-    expect(text(br)).toMatch(/kat\b/);
+    const t = text(br);
+    expect(t).toMatch(/sönümlü tepe \*\*[0-9.,]+×\*\*/);
+    expect(t).toMatch(/sınırsız/);
+    expect(t).not.toMatch(/kat\b/);
   });
 
   test('BİRLEŞİK: tüm kanallar tek şeritteyken kendine özel yorum', () => {

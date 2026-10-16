@@ -1470,8 +1470,14 @@ function _mntRepFRF(R, opts){
   var C=_rMountCore();
   if(!C || !C.frequencyResponse || !R.mounts || !R.mounts.length || !R.damping) return '';
   var M6=C.buildM6(R.mp.m, R.mp.I_G);
+  // Izgara Sonuçlar'ınkiyle AYNI (mount-signals _frfIzgara): 240 nokta + üç
+  // yönün inceltilmiş tepeleri. Eskiden burada 260, orada 240 noktaydı ve tepe
+  // iki yüzeyde farklı (ve ızgaraya göre düşük) okunuyordu.
+  var izgara=C.frfGrid ? C.frfGrid(R.mounts, R.mp.cg, M6, R.damping,
+    { fMin:_FRF_FMIN, fMax:_FRF_FMAX, nPts:240, dirs:[0,1,2],
+      fModal:(R.modes||[]).map(function(m){ return m.f_Hz; }) }) : null;
   var pts=C.frequencyResponse(R.mounts, R.mp.cg, M6, R.damping,
-    { fMin:_FRF_FMIN, fMax:_FRF_FMAX, nPts:260, dir:2 });
+    { fMin:_FRF_FMIN, fMax:_FRF_FMAX, dir:2, f:izgara });
   if(!pts) return '';
   var iso=_mntRepIsolation(R, opts);
   var fFire=iso.fFire;

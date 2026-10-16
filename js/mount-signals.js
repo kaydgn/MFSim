@@ -140,6 +140,14 @@ var veMntSignals = (function() {
   //
   // Sönümsüz eğri (T0) da kanal olarak açılır: sönümün rezonans tepesini ne
   // kadar bastırdığı aynı şeritte üst üste görünsün.
+  // Izgara: 240 logaritmik nokta + üç yönün inceltilmiş tepeleri (çekirdek
+  // frfGrid). Rapor §8.13 aynı çağrıyı yapar — iki yüzey aynı ızgara, aynı tepe.
+  function _frfIzgara(C, R, M6) {
+    return C.frfGrid ? C.frfGrid(R.mounts, R.mp.cg, M6, R.damping,
+      { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dirs: [0, 1, 2],
+        fModal: (R.modes || []).map(function(m) { return m.f_Hz; }) }) : null;
+  }
+
   function _frfSet(R) {
     var C = _core();
     if(!C || !C.frequencyResponse || !C.buildM6) return null;
@@ -150,9 +158,10 @@ var veMntSignals = (function() {
 
     var f = null, chans = [], perChans = [];
     var keys = _mountKeys(R.mounts);
+    var izgara = _frfIzgara(C, R, M6);
     for(var dir = 0; dir < 3; dir++) {
       var pts = C.frequencyResponse(R.mounts, R.mp.cg, M6, R.damping,
-        { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dir: dir, perMount: true });
+        { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dir: dir, perMount: true, f: izgara });
       if(!pts || !pts.f || !pts.f.length) return null;
       if(!f) f = pts.f;
       var ax = AXIS_NAMES[dir];

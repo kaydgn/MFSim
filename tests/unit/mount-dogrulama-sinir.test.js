@@ -197,6 +197,52 @@ describe('Kriter 2 — §8.8 ile uygunluk tablosu aynı sayıyı ve aynı hükm�
   });
 });
 
+// ═══════════════════ FRF TEPESİ — ızgaradan değil, tepenin kendisinden ═══════════════════
+// Sönümü küçük modun tepesi ızgara aralığından dar: eşit aralıklı 240 noktalık
+// ızgara tepeyi ıskalıyordu (TULGA Y 18,88× ↔ tepe 22,74×, %17; SİPER Y ikincil
+// tepe %27). Rapor ayrıca 260 noktalık AYRI bir ızgara kullanıyordu: aynı tepe
+// iki yüzeyde iki sayıydı. Hakem bağımsız karmaşık FRF (H.frfHakem) ve ızgara
+// komşuları arasında altın oran araması — çekirdeğin hiçbir fonksiyonu değil.
+describe('FRF tepesi: Sonuçlar ve rapor tepenin KENDİSİNİ okur', () => {
+  const MOD = ['siper', 'tulga', 'asfat'].map((ad) => [ad, H.coz(H.ornek(ad), { sinyal: true })]);
+
+  test.each(MOD)('%s: üç yönde her yerel tepe hakemin yerel en büyüğüne ≤ 10⁻⁶', (ad, R) => {
+    const mk = H.birlesikKutle(R.components), Mm = H.M6of(mk.m, mk.I);
+    const kb = R.kBasis || R.mounts.map((m) => m.kdyn), cl = R.damping.map((d) => d.c);
+    const K = H.topla6(R.mounts, R.mp.cg, kb), Cm = H.topla6(R.mounts, R.mp.cg, cl);
+    const ds = R.signals.find((s) => s.key === 'frf'), f = ds.x.data;
+    let n = 0;
+    [0, 1, 2].forEach((dir) => {
+      const T = ds.channels.find((c) => c.id === 'T_' + dir).data;
+      const hk = (x) => H.frfHakem(R.mounts, R.mp.cg, Mm, K, Cm, kb, cl, x, dir);
+      for (let i = 1; i < f.length - 1; i++) {
+        if (!(T[i] > T[i - 1] && T[i] >= T[i + 1] && T[i] > 1.05)) continue;
+        let a = f[i - 1], b = f[i + 1];
+        for (let k = 0; k < 60; k++) {                    // üçe bölme — tek tepeli aralık
+          const c = a + (b - a) / 3, d = b - (b - a) / 3;
+          if (hk(c) > hk(d)) b = d; else a = c;
+        }
+        expect((hk((a + b) / 2) - T[i]) / T[i]).toBeLessThan(1e-6);
+        n++;
+      }
+    });
+    expect(n).toBeGreaterThanOrEqual(6);                  // testin anlamı: tepeler gerçekten kıyaslandı
+  });
+
+  test('rapor §8.13 Sonuçlar ile AYNI ızgarayı kullanıyor ve SVG\'de NaN yok', () => {
+    const R = MOD[1][1];
+    const ds = R.signals.find((s) => s.key === 'frf');
+    const orj = core.frequencyResponse, izgaralar = [];
+    core.frequencyResponse = function (m, cg, M6, dmp, o) { izgaralar.push(o && o.f); return orj.apply(this, arguments); };
+    let h;
+    try { h = rp._mntRepFRF(R, {}); } finally { core.frequencyResponse = orj; }
+    expect(izgaralar).toHaveLength(1);
+    expect(izgaralar[0]).toEqual(ds.x.data);
+    expect(h).toContain('<svg');
+    expect(h).not.toMatch(/NaN/);
+  });
+});
+
 describe('yüzeyler arası tutarlılık — Sonuçlar yorumu ↔ rapor', () => {
   const R = H.coz(H.ornek('asfat'), { sinyal: true });
   const ds = R.signals.find((s) => s.key === 'frf');

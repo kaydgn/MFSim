@@ -119,8 +119,8 @@ describe('veri yolu — veGetSensorData', () => {
   test('kanal ve X ekseni araç çözümü olmadan okunur', () => {
     const f = veGetSensorData('~mnt-frf', 'f');
     const T = veGetSensorData('~mnt-frf', 'T_2');
-    expect(f.length).toBe(S.FRF_NPTS);
-    expect(T.length).toBe(S.FRF_NPTS);
+    expect(f.length).toBeGreaterThanOrEqual(S.FRF_NPTS);   // taban + inceltilmiş tepeler
+    expect(T.length).toBe(f.length);
     expect(window.veSimResults).toBeNull();     // araç sonucu gerekmedi
   });
 
