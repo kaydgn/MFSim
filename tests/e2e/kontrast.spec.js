@@ -22,6 +22,9 @@ const { kontrastKur, kontrastOzet } = require('../helpers/kontrast-olcu.js');
 const T = require('./helpers/yuzey-turu');
 
 test.describe.configure({ timeout: 240000 });
+// GitHub API'si fikstürden (helpers/github-fikstur.js): servis çalışanının çektiği
+// istek route'a uğramaz.
+test.use({ serviceWorkers: 'block' });
 
 // Bir kökü ölç; kapalı <details>'ları önce aç (içindeki tablo da yazıdır).
 function olcucu(page, kotu) {

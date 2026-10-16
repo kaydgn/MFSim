@@ -402,7 +402,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   `fead-core.js`. `toFixed` taşımayan çıplak birleştirmeyi (`cd + ' kW'`)
   kaynak taraması görmez, ekran/belge/günlük taraması görür. CAN Çözümleyici
   `js/`'ten dosya almadığı için kendi yazıcısını taşır (`cdbSayi`); aynılık
-  `can-sayi.test.js`'te ölçülür.
+  `can-sayi.test.js`'te ölçülür. Programın YAZMADIĞI metin (commit konusu)
+  `data-ve-dis-metin` taşır; ekran taraması onu ve `<code>`'u atlar (tamamı
+  rakam kısaltma "0352592"). Yüzey turu GitHub API'sini sabit fikstürle
+  karşılar (`tests/e2e/helpers/github-fikstur.js`) — canlı listeyle kapının
+  sonucu başka oturumların o an yazdığına bağlıydı.
 - **BÜYÜK HARF DÖNÜŞÜMÜ BİRİMİ, SİMGEYİ, ÖZEL ADI ÇEVİRMEZ** (belge
   `lang="tr"`): birim `<u>` ve Yunan harfi `.ve-fp-sym` içinde, CSS'te
   `text-transform:none` (FEAD'de üretici `_feadEtiket`); İngilizce terim ve
