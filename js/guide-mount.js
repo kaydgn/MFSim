@@ -71,6 +71,7 @@ var VE_GUIDE_MOUNT_SECTIONS = [
   ['m12', '12',   'Rapor üretmek'],
   ['m13', '13',   'Sık yapılan hatalar'],
   ['m14', '14',   'Sayısal örnek: BMC SİPER'],
+  ['m15', '15',   'Parametrik analiz: katalogdan seçim'],
   ['mEk', 'Ek A', 'Alan → pencere hızlı başvurusu']
 ];
 
@@ -147,7 +148,9 @@ function _gmSec2(){
       + 'başlıktaki düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar), '
       + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir; 3D Görüntüleyici '
       + 'gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
-    ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12']
+    ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12'],
+    ['<strong>Parametrik Analiz</strong>', 'Katalogdan seçim: takoz gruplarına kütüphanedeki '
+      + 'tipler, kısıtlar, iletilebilirlik–sehim dengesi; sonuç ayrı bir raporda', 'Bölüm 15']
   ], ['Bileşen', 'Ne', 'Not']);
   h += '<h3>2.2 Neyi siz verirsiniz, neyi program hesaplar</h3>';
   h += _gmAlanTablo('Girdi / türeyen ayrımı', [
@@ -762,8 +765,94 @@ function _gmSec14(){
   return h;
 }
 
-function _gmEkA(){
+// ═══ 15 — PARAMETRİK ANALİZ: KATALOGDAN SEÇİM ════════════════════════════
+// Kısıtların adı ve varsayılan sınırı çekirdekten (js/mount-katalog.js): kılavuz
+// ile pencere aynı tablodan okur.
+function _gmSec15(){
+  var K = (typeof veMntKatalog !== 'undefined') ? veMntKatalog : require('./mount-katalog.js');
+  var V = K.SINIR_VARSAYILAN;
   var h = _gmH2(14);
+  h += '<p><strong>Parametrik Analiz</strong> bileşeninin ilk analizi <strong>Katalogdan seçim</strong>dir: '
+    + 'takoz gruplarına kütüphanedeki tipleri tek tek takar, her kombinasyonu Çözücü’nün çözüm yolundan '
+    + 'geçirir ve kısıtları sağlayanlar arasında iletilebilirlik ile statik sehim arasındaki dengeyi arar. '
+    + 'Pencere girdileri taşır; sonuç ayrı bir rapordadır (<em>takoz_katalogdan_secim.html</em>).</p>';
+  h += _gmAlanTablo('Parametrik Analiz penceresi', [
+    ['<strong>Gruplar</strong>', 'Sağ/sol çiftler ve tek takozlar, x konumu, mevcut tip',
+      '“Tara” işareti kalkan grup modeldeki takoz verisiyle kalır'],
+    ['<strong>Adaylar</strong>', 'Kütüphanenin bütün tipleri: gömülü, değiştirilmiş, özel',
+      'İşareti kalkan tip hiçbir gruba takılmaz'],
+    ['<strong>Kısıtlar</strong>', 'Kesin kriterler (1 · 1a · 1b · 2), ek kısıtlar ve sınırları, amaç ağırlığı',
+      'Kesin kriterler kapatılamaz'],
+    ['<strong>Katalogdan seçim</strong>', 'Grup · tip · kombinasyon sayısı',
+      'Kombinasyon = tip sayısı ^ taranan grup sayısı; üst sınır ' + _gmF(K.MAKS_KOMB, 0)]
+  ], ['Kısım', 'Ne', 'Not']);
+  h += '<h3>15.1 Gruplar</h3>';
+  h += '<p>Bir grubun takozları aynı tiptir. Adında tek bir yan sözcüğü (<em>sağ</em> ya da <em>sol</em>) bulunan '
+    + 'iki takoz, o sözcük çıkınca kalan adları aynıysa çifttir: “Sağ Ön Takoz” ile “Sol Ön Takoz”, '
+    + '“Ön Sağ · 57RS313774” ile “Ön Sol · 57RS313774”. Adla eşleşmeyen iki takoz y’de ayna, x ve z’de '
+    + _gmF(K.TOL_MM, 0) + ' mm içinde aynıysa çifttir. Kalan takoz tek başına bir gruptur (orta hattaki '
+    + 'takoz). Gruplar önden arkaya, x’e göre sıralanır. Takoz konumları değişmez; yalnız tip değişir.</p>';
+  h += '<h3>15.2 Kısıtlar</h3>';
+  var olcut = {
+    k1: ['bütün modlar &lt; 0,5·f<sub>ateş</sub>', 'kesin'],
+    k1a: ['komşu iki mod arası &gt; 0,5 Hz', 'kesin'],
+    k1b: ['hiçbir mod 8–10 Hz bandında değil', 'kesin'],
+    k2: ['T(f<sub>ateş</sub>) &lt; %50', 'kesin'],
+    sehimAlt: ['en büyük 1 g statik düşey sehim δ<sub>s</sub>', '≥ ' + _gmF(V.sehimAlt, 1) + ' mm'],
+    sehim: ['δ<sub>s</sub>', '≤ ' + _gmF(V.sehimUst, 1) + ' mm'],
+    altMod: ['en düşük mod', '≥ ' + _gmF(V.altMod, 1) + ' Hz'],
+    kapasite: ['1 g statik yük / kapasite', '≤ %' + _gmF(V.kapasite * 100, 0)],
+    ayrisma: ['zıplama ve yalpa modlarında kinetik enerji payı', '≥ %' + _gmF(V.ayrisma * 100, 0)],
+    isletme: ['işletme yüklerinde en büyük |δ|', '≤ ' + _gmF(V.isletmeUst, 1) + ' mm'],
+    durdurucu: ['aynısı, sürünmüş çalışma noktasında', '≤ ' + _gmF(V.durdurucuUst, 1) + ' mm'],
+    cekme: ['işletme yüklerinde düşey çekme', '0 mm'],
+    darbe: ['darbe yüklerinde en büyük yük / kapasite', '≤ %' + _gmF(V.darbe * 100, 0)]
+  };
+  h += _gmTablo('Kısıtlar ve varsayılan sınırlar', ['No', 'Kısıt', 'Ölçüt', 'Varsayılan', 'Açık'],
+    K.KISITLAR.map(function(x){
+      return [x.no, x.ad, olcut[x.k][0], olcut[x.k][1], x.zorunlu ? 'her zaman' : (K.ACIK_VARSAYILAN[x.k] ? 'evet' : 'hayır')];
+    }), ['c', 'l', 'l', '', 'c']);
+  h += '<p>Ek kısıtların dayanağı raporun Kısıtlar bölümündedir: statik sehim bandı ve en düşük mod ticari araç ve ağır '
+    + 'kamyon çalışmalarından, sürünme payı (bir yılda +%20 · 45 ShA … +%33 · 75 ShA) ile darbe yükü sınırı (2 × anma yükü) '
+    + 'üretici kataloğundan, işletme sehimi sınırı ±15 mm durdurucuya 5 mm pay bırakan doğrusal banttan; durdurucu payı '
+    + 'sürünmüş takozun işletmede metal–metal durdurucuya oturmamasıdır. '
+    + 'Kapasite kısıtları kapasitesi tanımlı tiplerde değerlendirilir.</p>';
+  h += _gmTablo('Değerlendirme parametreleri', ['Parametre', 'Varsayılan', 'Etkisi'], [
+    ['Sürünme payı', '%' + _gmF(V.surunme * 100, 0), 'E7’de işletme yüklerinin düşey çalışma noktası statik sehimin bu kadarı aşağıda'],
+    ['Rijitlik toleransı', '±%' + _gmF(V.tolerans * 100, 0) + ' (kapalı)', 'Açıksa bütün takozlar sert ve yumuşak köşede de çözülür; '
+      + 'frekans üstü ve T sertte, sehim ve alt frekans yumuşakta sınanır'],
+    ['İletilebilirlik ağırlığı w', _gmF(V.agirlik, 1), 'Uzlaşı uzaklığında T’nin ağırlığı; sehiminki 1 − w']
+  ], ['l', 'c', 'l']);
+  h += '<p><strong>İşletme yükleri</strong> 1 g düşey ile birlikte en çok 1 g yatay ivme ve tahrik torkudur: statik, '
+    + 'frenleme, hızlanma, viraj, fren + viraj, ileri ve geri tork, vites başına tork, 1 g yanal ve 1 g boyuna. '
+    + '<strong>Darbe yükleri</strong> (3,5 g düşey, çukur + fren, 1,55 g bordür, geri esneme) ±15 mm metal–metal '
+    + 'durdurucuyla sınırlanır; raporda yalnız en büyük sehimleri ve durdurucuya oturan takoz sayısı yazılır.</p>';
+  h += '<h3>15.3 Amaç ve sıra</h3>';
+  h += '<p>İki büyüklük birlikte küçültülür: rölanti iletilebilirliği <strong>T</strong> (Kriter 2’nin tanımı) ve '
+    + 'en büyük statik sehim <strong>δ<sub>s</sub></strong>. Yumuşak takoz T’yi düşürür ve sehimi büyütür. '
+    + 'Bütün kısıtları sağlayan kombinasyonlardan, iki amaçta da kendisinden iyi başka bir kombinasyon '
+    + 'bulunmayanlar <strong>Pareto cephesi</strong>dir. <strong>Uzlaşı çözümü</strong>, iki amaç uygun kümenin '
+    + 'en küçüğü ile en büyüğü arasında 0–1’e çekildikten sonra ideal noktaya ağırlıklı uzaklığı en küçük olan '
+    + 'kombinasyondur; ağırlık <em>w</em> iletilebilirliğindir (varsayılan ' + _gmF(V.agirlik, 1) + '), sehiminki 1 − w.</p>';
+  h += _gmNot('Uygun kombinasyon yoksa',
+      'Rapor kısıtların normalleştirilmiş ihlallerinin toplamına göre en az ihlalli kombinasyonları '
+    + 'sıralar ve her birinin hangi kısıtı sağlamadığını yazar.');
+  h += '<h3>15.4 Tarama</h3>';
+  h += _gmAdimlar([
+    'Motor bileşenine rölanti devri ve silindir sayısı girilir: Kriter 1 ve 2 ateşleme frekansından türer.',
+    '<strong>Gruplar</strong> ve <strong>Adaylar</strong> sekmelerinde taranacaklar işaretlenir; '
+      + 'sağ sütundaki kombinasyon sayısı tarama süresinin ölçüsüdür (kombinasyon başına yaklaşık 0,5 ms).',
+    '<strong>Tara ve raporu indir</strong>: birinci aşama bütün kombinasyonlarda statik denge ve modal analiz, '
+      + 'ikinci aşama yalnız birinci aşamayı sağlayanlarda işletme yükleri. Düğme tarama sürerken '
+      + '<strong>Durdur</strong>dur.',
+    'Rapor iner: kapsam, yöntem, kısıtlar, eleme, sonuç (uzlaşı çözümü ve mevcut tasarım yan yana, '
+      + 'Pareto şekli), sıralama, varsayımlar ve kaynaklar.'
+  ]);
+  return h;
+}
+
+function _gmEkA(){
+  var h = _gmH2(15);
   h += '<p>Bir alanı nerede bulacağınızı hatırlamak için. Sekme ve bölüm adları programdaki '
     + 'başlıklarla birebir aynıdır.</p>';
   h += _gmTablo('Alan → pencere eşlemesi',
@@ -787,7 +876,10 @@ function _gmEkA(){
       ['Sönüm oranı', 'Çözücü', 'Ayarlar → Yöntem'],
       ['Şok darbesi', 'Çözücü', 'Ayarlar → Şok darbesi'],
       ['Örnek modeller', 'Başlangıç ve Örnekler', 'Örnek · Başlangıç'],
-      ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü', 'Rapor → Girdiler kaynağını gösterir']
+      ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü', 'Rapor → Girdiler kaynağını gösterir'],
+      ['Takoz grupları, taranan grup', 'Parametrik Analiz', 'Gruplar → Gruplar'],
+      ['Aday takoz tipleri', 'Parametrik Analiz', 'Adaylar → Adaylar'],
+      ['Ek kısıtların sınırı, sürünme, tolerans, amaç ağırlığı', 'Parametrik Analiz', 'Kısıtlar → Ek kısıtlar · Değerlendirme · Amaç']
     ], ['l', 'c', 'l']);
   return h;
 }
@@ -819,7 +911,7 @@ function veGuideMountHTML(){
   govde += veGuideToc(VE_GUIDE_MOUNT_SECTIONS);
   govde += _gmSec1() + _gmSec2() + _gmSec3() + _gmSec4() + _gmSec5() + _gmSec6()
          + _gmSec7() + _gmSec8() + _gmSec9() + _gmSec10() + _gmSec11() + _gmSec12()
-         + _gmSec13() + _gmSec14() + _gmEkA();
+         + _gmSec13() + _gmSec14() + _gmSec15() + _gmEkA();
 
   return veGuideDocHTML({
     title: 'MFSim — Takoz Çökme-Titreşim kılavuzu',

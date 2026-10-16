@@ -88,6 +88,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* + `mount-pencere.spec.js` →
   *Görünümler* · *Güç grubundaki yeri* · *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
+- `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
+  **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
+  isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
+  Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz; dört kesin kriter
+  (1 · 1a · 1b · 2) + kaynaklı ek kısıtlar (E1–E9), Pareto ve uzlaşı. Pencere yalnız
+  girdi; sonuç AYRI raporda, ana rapora eklenmez. Kapı: `mount-katalog.test.js` +
+  `mount-param.test.js` (→ *TEK YOL* · *AYNI HÜKÜM*).
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

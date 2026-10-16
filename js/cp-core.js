@@ -178,6 +178,8 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // tırnak eşleştirerek okuyor.)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
+  // Parametrik Analiz — grup, aday ve kısıt föyleri.
+  'mnt-parametric',
   // Çözücü artık sekmeli bir pencere (yük kitabı · modlar · ayarlar) — FEAD
   // çözücüsü gibi geniş; dar "eylem kartı" listesinden çıktı.
   'mnt-solver',
@@ -299,6 +301,8 @@ function showNodeProperties(node) {
     html += getMnt2DViewPropertiesHTML(node);
   } else if(node.type === 'mnt-report') {
     html += getMntReportPropertiesHTML(node);
+  } else if(node.type === 'mnt-parametric') {
+    html += getMntParamPropertiesHTML(node);
   } else if(node.type === 'ap-example') {
     html += getApExamplePropertiesHTML(node);
   } else if(node.type === 'arac-performans') {

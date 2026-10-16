@@ -78,6 +78,9 @@ const rep = require('../../js/cp-mount-report.js');
 ['veMntUygunluk', 'veMntRaporOpts', '_mntRepCaseTr', '_mntRepIsolation', '_mntRepEngine', '_mntRepZeta']
   .forEach((k) => { global[k] = rep[k]; });
 Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k]; });
+global.veMntKatalog = require('../../js/mount-katalog.js');
+const pa = require('../../js/cp-mount-param.js');
+Object.keys(pa).forEach((k) => { if (global[k] === undefined) global[k] = pa[k]; });
 
 const PK = require('../../js/pencere-kabuk.js');
 
@@ -173,7 +176,7 @@ function coz() {
 describe('TEK ÜRETİCİ — iki modülün kabuğu ortak kitten', () => {
   test('dağıtım iki modülün her tipini bir kurucuya bağlıyor (tarama gerçekten tarıyor)', () => {
     expect(FEAD_TIP.length).toBeGreaterThanOrEqual(15);
-    expect(TAKOZ_TIP.length).toBe(17);
+    expect(TAKOZ_TIP.length).toBe(18);
     expect(FEAD_TIP.concat(TAKOZ_TIP).filter((t) => typeof global[KURUCU[t]] !== 'function')).toEqual([]);
   });
 

@@ -2477,6 +2477,6 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepKaldiraclar: _mntRepKaldiraclar,
     _mntRepDuyarlilik: _mntRepDuyarlilik,
     _mntRepEnEtkili: _mntRepEnEtkili,
-    _rF: _rF, _rFs: _rFs, _rE: _rE, _rEsc: _rEsc
+    _rF: _rF, _rFs: _rFs, _rE: _rE, _rEsc: _rEsc, _rTeX: _rTeX, _R_HALE: _R_HALE
   };
 }
