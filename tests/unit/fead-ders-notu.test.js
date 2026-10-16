@@ -426,7 +426,7 @@ describe('c₂ GRUBU — silindir sayısından öneri (ders notu s.65)', () => {
     const cel = fead.veFeadServisTabloHTML({ cylinders: 3, servisHucre: 'agir.normal.16', serviceFact: 1.3 }, X);
     expect(cel).toMatch(/data-ve="servis-oneri" data-uyari="1"/);
     expect(cel).toContain('— seçili hücre normal kalkış');
-    expect(cel).toContain('onclick="X(\'agir.yuksek.16\')">Önerilen hücre (c₂ 1,5)</button>');
+    expect(cel).toContain('onclick="X(\'agir.yuksek.16\')">Grubun hücresi (c₂ 1,5)</button>');
     const uyum = fead.veFeadServisTabloHTML({ cylinders: 6, servisHucre: 'agir.normal.16', serviceFact: 1.3 }, X);
     expect(uyum).not.toContain('servis-oneri');
     // Hücre düğmesi sayısı değişmez (24).

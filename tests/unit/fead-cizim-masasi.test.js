@@ -659,8 +659,7 @@ describe('açıklığa ekle — TEK geri-al adımı', () => {
     expect(sira.indexOf(sag)).toBe(sira.indexOf(n.id) + 1);
     expect(sira[sira.length - 1]).toBe('ex-TEN');                  // gergi SONDA kaldı
     expect(fead.veFeadYolDurumu(M.veFeadBuildSystem(global.nodes), 'mean').ok).toBe(true);
-    expect(showToast).toHaveBeenCalledWith(
-      expect.stringMatching(/eklendi — .+ ile .+ arasına$/), 'success');
+    expect(showToast).not.toHaveBeenCalled();      // ekleme çizimde ve tabloda görünüyor
   });
 
   test('reddedilen eklemede düğüm KURULMAZ, yığına adım girmez', () => {

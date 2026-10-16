@@ -2188,3 +2188,10 @@ doğrudan uygulanır, her aşama yine ayrı PR'dır ve önce/sonra sayıları, g
 alma kanıtı ve kalanlar tek rapor sayfasında toplanır. Taramanın görmediği
 sınıf (işaretsiz tekrar bildirimi, adı tekrarlayan ipucu) aşamanın kendi
 kapısıyla tutulur — kabuk için `tests/unit/kabuk-metin.test.js`.
+
+**Uygulananlar (tahtasız):** aşama 3 → kaydgn/MFSim#1137 (kapı
+`tests/unit/fead-metin.test.js`: bilgi bildirimi yalnız ekranda görünmeyen
+sonucu söyler, katman ve ön ayar açıklama yuvası taşımaz, araç düğmesinin
+ipucu ad). Tarayıcı etkileşim ipucunu ("tıkla: …", "sürükle: …") kısayol
+penceresinin dilinde bir ad sayar — tarif ve uzunluk sayımından düşer
+(`ETKILESIM`, `tools/metin-dili.js`).

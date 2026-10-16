@@ -435,9 +435,9 @@ describe('Yön yüzeyi — FEAD araçları penceresi (rozetin ve panelin yerine)
     expect(metin).toContain(veSayi(R.tensionerSide.minN, 1) + ' N');
     expect(metin).toContain(veSayi(R.tensionerSide.deficitN, 1) + ' N');
     expect(metin).not.toMatch(/undefined|NaN|\[object/);
-    // ULAŞILAMAZ ÇARE YASAK — tasarım gerginliği bir alan DEĞİL.
+    // ÇARE YAZILMAZ (ARAYÜZ ANLATMAZ): hüküm durumu söyler; ulaşılamaz çare de yok.
     expect(metin).not.toMatch(/gerginliği yükselt/i);
-    expect(metin).toMatch(/Yönü çevirin/);
+    expect(metin).not.toMatch(/çevirin|alın\b/);
   });
 
   test('ÇÖZDÜKTEN SONRA hüküm tazelenir — bir çözüm GERİDE kalmaz', () => {
@@ -508,8 +508,8 @@ describe('Yön yüzeyi — FEAD araçları penceresi (rozetin ve panelin yerine)
     const ipucu = secili(b)[0].getAttribute('title');
     expect(ipucu).toBe(M.veFeadSpinLabel(ORNEK_SPIN).uzun);
     expect(ipucu).toContain(M._feadPlaneName());
-    // Başlık neyin değişip neyin DEĞİŞMEDİĞİNİ söyler (geometri yönden bağımsız).
-    expect(b.querySelector('h4').getAttribute('title')).toMatch(/DEĞİŞMEZ/);
+    // Başlık yalnız ad: yönün neyi değiştirdiği kılavuzda (ARAYÜZ ANLATMAZ).
+    expect(b.querySelector('h4').hasAttribute('title')).toBe(false);
     // Yön bir ALAN değil — okumak hiçbir düğüme yazmaz.
     expect(JSON.stringify(global.nodes.map((n) => n.data))).toBe(once);
     // Koordinatsız modelde yön 0: anahtar pasif, seçim iddia edilmez.
@@ -526,9 +526,9 @@ describe('Yön yüzeyi — FEAD araçları penceresi (rozetin ve panelin yerine)
     global.veFeadResults = Object.assign({ ok: true }, R);
     const h = fead.veFeadResultVerdicts(
       Object.assign({}, R, { pulleyNames: s.b.names }));
-    expect(h).toContain('GERGİN tarafında');
-    expect(h).toMatch(/yükseltilemez/);
+    expect(h).toContain('gergin tarafında');
     expect(h).not.toMatch(/[Tt]asarım gerginliğini yükseltin/);
+    expect(h).not.toMatch(/Çare|çevirmek/);
     // Çöken zincirde kayma hükmü VERİLMEZ: slipSafety gevşek tarafı 1e-9'a
     // kenetliyor, çıkan −0.00 bir emniyet faktörü değil sayısal gölge.
     expect(h).toMatch(/kayma emniyet faktörü hüküm vermez/i);

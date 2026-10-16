@@ -132,7 +132,7 @@ test('Hesapla → Güncel + dört kart; Yön → Bayat, hüküm düşer; yeniden
   const once = await secili.getAttribute('data-v');
   await govde(page).locator('[data-bol="yon"] [role="radio"][aria-checked="false"]').click();
   await expect(secili).not.toHaveAttribute('data-v', once);
-  await expect(cip).toHaveText('Bayat — model değişti');
+  await expect(cip).toHaveText('Model değişti');
   await expect(huk).toHaveCount(0);                     // eski yönün hükmü gösterilmez
   await expect(govde(page).locator('.ve-fead-arac-kpi.bayat')).toHaveCount(1);
 
@@ -151,7 +151,7 @@ test('Ayarlar Çözücü penceresini, Künye Rapor penceresini, Sihirbaz sihirba
   // BOŞ topoloji: Hesapla pasif ve sebebini ipucunda taşıyor.
   const h = govde(page).locator('[data-ey="hesapla"]');
   await expect(h).toHaveAttribute('aria-disabled', 'true');
-  await expect(h).toHaveAttribute('title', /Henüz kasnak yok/);
+  await expect(h).toHaveAttribute('title', 'Kasnak yok.');
 
   await govde(page).locator('[data-ey="sihirbaz"]').click();
   await expect(page.locator('#ve-feadwiz-overlay')).toBeVisible();

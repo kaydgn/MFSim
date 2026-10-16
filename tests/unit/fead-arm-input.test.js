@@ -352,7 +352,7 @@ describe('yüzey — kayış kipi KİLİTLİ', () => {
     const pack = kurKanvas();
     const ten = pack.nodes.find((n) => n.type === 'fead-tensioner');
     const h = fead.veFeadArmReadout(ten);
-    expect(h).toMatch(/Gereken KAYIŞ BOYU \(çıktı\)/);
+    expect(h).toMatch(/Gereken kayış boyu \(çıktı\)/);
     expect(h).toMatch(/Serbest kol açısı \(türedi\)/);
     expect(h).toMatch(/Tasarım gerginliği \(türedi\)/);
     expect(h).not.toMatch(/undefined|NaN/);

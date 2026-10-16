@@ -220,7 +220,7 @@ describe('panel yüzeyi', () => {
   test('bandın DIŞINDA açıda panel SEBEBİ yazıyor', () => {
     const { ten } = kur(KEY, (td) => { td.armMeanDeg = 28; });
     const h = fead.getFeadTensionerPropertiesHTML(ten);
-    expect(h).toMatch(/bandın DIŞINDA/);
+    expect(h).toMatch(/bandın dışında/);
     expect(h).toMatch(/Bu açı kullanılamaz/);
     expect(h).not.toMatch(/NaN|undefined/);
   });

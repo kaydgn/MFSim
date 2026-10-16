@@ -369,15 +369,15 @@ function veFeadScenarioBuild(build, opts){
   }
 
   if(!inp.curve)
-    notlar.push('Rampa DOĞRUSAL: motor katalogtan seçilmedi, tork eğrisi yok.');
+    notlar.push('Rampa doğrusal: tork eğrisi yok.');
   else
     notlar.push('Rampa şekli motorun tam yük tork eğrisinden; büyüklüğü ivme alanından.');
-  notlar.push('Devir geçmişi DAYATILMIŞ — krank dinamiği simüle EDİLMİYOR (volan ataleti yok).');
+  notlar.push('Devir geçmişi dayatılmış; volan ataleti yok.');
   notlar.push('Marş devri ' + veSayi(inp.crankRpm) + ' d/dk ve yavaşlama sabit: MFSim\'de marş ve motor freni verisi yok.');
   if(inp.kaynak.accelVarsayilan)
     notlar.push('İvme girilmemiş, ' + veSayi(VE_FEAD_SCN_ACCEL_DEF, 0) + ' d/dk/s varsayıldı.');
-  notlar.push('Gergi kolu dinamiği DAHİL DEĞİL (çekirdeğin peakEstimate sınırı).');
-  notlar.push('Gerilme ÇİZİLEN kol konumunun gerginliğinden (' + veSayi(stT, 0) + ' N) yürüyor.');
+  notlar.push('Gergi kolu dinamiği dahil değil.');
+  notlar.push('Gerilme çizilen kol konumunun gerginliğinden (' + veSayi(stT, 0) + ' N).');
   // KAYIŞ VERİSİ KAPISI. Açıklık frekansı katalog birim kütlesinden (m′) gelir;
   // kayış tipine bağlı çıktılar kapalıyken çözüm onu SİLİYOR ve panel
   // "üretilmiyor" diyor. Senaryo onu yeniden hesaplayıp "⚠ REZONANS" yazıyordu
@@ -385,7 +385,7 @@ function veFeadScenarioBuild(build, opts){
   // devir ve ateşleme frekansı katalogtan bağımsız olduğu için kalır.
   var fAcik = (typeof veFeadBeltDataOn === 'function') ? veFeadBeltDataOn(build) : true;
   if(!fAcik)
-    notlar.push('Açıklık frekansları ÜRETİLMİYOR: kayış tipine bağlı çıktılar kapalı (birim kütle katalogdan).');
+    notlar.push('Açıklık frekansları üretilmiyor: kayış verisi kapalı.');
 
   var r4 = function(v){ return Math.round(v * 1e4) / 1e4; };
   return {

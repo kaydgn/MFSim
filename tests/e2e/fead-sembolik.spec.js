@@ -201,7 +201,7 @@ test('ŞERİTTEN ÇİZİME: konumsuz kasnak sürüklenince bırakıldığı mm\'
   const kart = page.locator('.ve-fead-layout-card').first();
   await expect(kart.locator('svg[data-sembolik="1"]')).toHaveCount(1);
   await expect(kart.locator('circle[data-ve="sem-kasnak"][data-yok]')).toHaveCount(3);
-  await expect(kart.locator('[data-ve="sem-bekleyen"] text').first()).toHaveText('konum yok — çizime sürükle');
+  await expect(kart.locator('[data-ve="sem-bekleyen"] text').first()).toHaveText('konum yok · sürükle: konum ver');
 
   // Tık: yalnız pencere açılır, konum YAZILMAZ.
   const ilk = kart.locator('.ve-fead-hit[data-yok]').first();

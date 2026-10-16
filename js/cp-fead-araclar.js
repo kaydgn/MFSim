@@ -128,15 +128,16 @@ function _feadAracKasnakSay(){
   }).length;
 }
 
-// İŞLETME EKSİĞİNİN YERİ — ilk eksik grubun girildiği pencere: motor künyesi
+// İŞLETME EKSİĞİNİN YERİ — ilk eksik grubun girildiği pencere (yol verisi,
+// tarif değil — ARAYÜZ ANLATMAZ): motor künyesi
 // ve tahrik sürücü kasnağın "Motor" sekmesinde, çevrim "Çevrim" sekmesinde
 // (kural 42), aksesuar modeli aksesuarın "Rol" sekmesinde (kural 44).
 function _feadAracIsletmeYeri(isl){
   var g = ((isl && isl.eksik) || [])[0];
   var grup = g ? g.grup : '';
-  if(grup === 'aksesuar') return ' — aksesuarın “Rol” sekmesinden model seçin ya da sürücü kasnağın “Çevrim” sekmesine kW girin.';
-  if(grup === 'cevrim')   return ' — sürücü kasnağın “Çevrim” sekmesinden en az bir satır girin.';
-  return ' — sürücü kasnağın “Motor” sekmesinden tamamlayın.';
+  if(grup === 'aksesuar') return ' · Aksesuar › Rol';
+  if(grup === 'cevrim')   return ' · Sürücü kasnak › Çevrim';
+  return ' · Sürücü kasnak › Motor';
 }
 
 // Pencerenin okuduğu her şey tek nesnede. Hesaplanan hiçbir şey burada
@@ -160,9 +161,8 @@ function veFeadAraclarDurum(){
   var isl = build && build.isletme;
   var islOk = !(isl && !isl.ok);
   var neden = !solver ? 'Çözücü yok.'
-    : !modelOk ? (kasnak ? 'Model eksik — kasnak konumlarını tamamlayın.'
-                         : 'Henüz kasnak yok — modeli sihirbazla kurun.')
-    : !(satir > 0) ? 'Çalışma çevrimi boş — sürücü kasnağın “Çevrim” sekmesinden en az bir satır girin.'
+    : !modelOk ? (kasnak ? 'Kasnak konumları eksik.' : 'Kasnak yok.')
+    : !(satir > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çevrim'
     : !islOk ? veFeadIsletmeMetni(isl) + _feadAracIsletmeYeri(isl)
     : '';
   // Özet kartları yalnız bu modelin sonucu varken (BAYAT sonuç da gösterilir —
@@ -226,20 +226,20 @@ function veFeadAraclarGovdeHTML(d){
   // MODEL — künye + Sihirbaz
   h += '<section class="ve-fead-arac-bol" data-bol="model"><h4>Model</h4>'
     + '<div class="ve-fead-arac-kunye">'
-    + (d.kasnak ? '<b>' + d.kasnak + ' kasnak</b>' : '<b>Henüz kasnak yok</b>')
+    + (d.kasnak ? '<b>' + d.kasnak + ' kasnak</b>' : '<b>Kasnak yok</b>')
     + (d.kayisKunye
         ? '<button type="button" class="ve-fead-arac-bag" data-ey="kayis" title="Kayış Özellikleri">'
           + _feadAracEsc(d.kayisKunye) + '</button>'
         : '')
     + '</div><div class="ve-fead-arac-sat">'
     + _feadAracDugme('sihirbaz', 'wand', 'Sihirbaz', d.kasnak ? 've-fead-arac-btn' : 've-fead-arac-btn birincil',
-        ' title="Başlangıç Sihirbazı — modeli adım adım kurar"')
+        ' title="Başlangıç Sihirbazı"')
     + '<span class="bos"></span>'
     // YENİ KANVAS — FEAD'de "Bileşenler" sütunu yok (components.js →
     // noPalette); sütunun Kayış Yolu satırının yeri burası. Kasnak ise
     // kartın Kayış Tablosu'ndan eklenir ("＋ Kasnak ekle").
     + _feadAracDugme('kanvas', 'plus', 'Kanvas', 've-fead-arac-bag',
-        ' title="Yeni Kayış Yolu kanvası — kartların sağına eklenir"')
+        ' title="Yeni Kayış Yolu kanvası"')
     + '</div></section>';
 
   // ÇÖZÜM — durum çipi, Hesapla, Ayarlar, özet kartları, uygunluk
@@ -247,10 +247,10 @@ function veFeadAraclarGovdeHTML(d){
   h += '<section class="ve-fead-arac-bol" data-bol="cozum"><h4>Çözüm' + cip + '</h4>'
     + '<div class="ve-fead-arac-sat">'
     + _feadAracDugme('hesapla', 'play', 'Hesapla', 've-fead-arac-btn birincil',
-        d.hazir ? ' title="Modeli çalışma çevrimiyle çöz"' : ' aria-disabled="true" title="' + _feadAracEsc(d.neden) + '"')
+        d.hazir ? '' : ' aria-disabled="true" title="' + _feadAracEsc(d.neden) + '"')
     + '<span class="bos"></span>'
     + _feadAracDugme('ayarlar', 'sliders', 'Ayarlar', 've-fead-arac-bag',
-        ' title="Çözücü penceresi — yöntemler, model ve sonuç"')
+        ' title="Çözücü penceresi"')
     + '</div>';
   if(!d.hazir && d.neden) h += '<p class="ve-fead-arac-not">' + _feadAracEsc(d.neden) + '</p>';
   if(d.hata) h += '<p class="ve-fead-arac-huk" data-d="no">' + (typeof veDurumIkon === 'function' ? veDurumIkon('err') : '')
@@ -288,15 +288,15 @@ function veFeadAraclarGovdeHTML(d){
     // alanlar (Rapor penceresi → Künye) başka hiçbir yoldan açılmıyor.
     + '<div class="ve-fead-arac-sat ve-fead-arac-alt">'
     + _feadAracDugme('indir', 'download', 'İndir', 've-fead-arac-btn',
-        d.sonucVar ? ' title="Raporu oluştur ve indir"' : ' aria-disabled="true" title="Rapor çözümden üretilir — önce modeli hesaplayın."')
+        d.sonucVar ? '' : ' aria-disabled="true" title="Çözüm yok."')
     + '<span class="bos"></span>'
     + _feadAracDugme('rapor', 'edit', 'Künye', 've-fead-arac-bag',
-        ' title="Rapor penceresi — tür ve belge künyesi"')
+        ' title="Rapor penceresi"')
     + '</div></section>';
 
   // YÖN — iki durumlu anahtar + gergi tarafı hükmü
   var yonVar = d.spin !== 0;
-  h += '<section class="ve-fead-arac-bol" data-bol="yon"><h4 title="Yön değişince sarım açıları, açıklıklar ve kayış boyu DEĞİŞMEZ; gergin açıklık, span gerilmeleri, hubload yönleri ve kayma emniyeti DEĞİŞİR.">Yön</h4><div class="ve-fead-arac-sat">'
+  h += '<section class="ve-fead-arac-bol" data-bol="yon"><h4>Yön</h4><div class="ve-fead-arac-sat">'
     + '<span class="ve-fead-arac-seg" role="radiogroup" aria-label="Kayış dönüş yönü">'
     + _feadAracYonDugme(-1, d, yonVar) + _feadAracYonDugme(1, d, yonVar)
     + '</span></div>';
@@ -309,9 +309,7 @@ function veFeadAraclarGovdeHTML(d){
         + (typeof veSayi === 'function' ? veSayi(d.taraf.minN, 1) : String(d.taraf.minN)) + ' N ('
         + _feadAracEsc(d.taraf.minName || '—') + '), ankrajın '
         + (typeof veSayi === 'function' ? veSayi(d.taraf.deficitN, 1) : String(d.taraf.deficitN))
-        + ' N altında. Yönü çevirin ya da gergiyi sürücünün önüne alın.</span></p>';
-  } else if(yonVar){
-    h += '<p class="ve-fead-arac-not">Yön Kayış Tablosu\'nun sırasından türer; gergi tarafı hükmü için hesaplayın.</p>';
+        + ' N altında.</span></p>';
   }
   h += '</section>';
 
@@ -322,7 +320,7 @@ function veFeadAraclarGovdeHTML(d){
     + VE_FEAD_ARAC_NOT.map(function(n){
         return '<div class="ve-fead-arac-btn tasinir" role="button" tabindex="0" draggable="true"'
           + ' data-ey="not" data-v="' + n.tip + '"'
-          + ' title="' + _feadAracEsc(n.uzun + ' — sürükle: tuvalde bıraktığın yere; tıkla: ' + n.tik) + '">'
+          + ' title="' + _feadAracEsc(n.uzun + ' — sürükle: tuvale bırak · tıkla: ' + n.tik) + '">'
           + _feadAracIkon(n.ikon) + '<span>' + n.ad + '</span></div>';
       }).join('')
     + '</div></section>';
@@ -338,14 +336,14 @@ function veFeadAraclarRayHTML(d){
     + _feadAracDugme('hesapla', 'play', '', 've-fead-arac-ray-btn birincil',
         d.hazir ? ' title="Hesapla" aria-label="Hesapla"' : ' aria-disabled="true" title="' + _feadAracEsc(d.neden) + '" aria-label="Hesapla"')
     + _feadAracDugme('indir', 'download', '', 've-fead-arac-ray-btn',
-        d.sonucVar ? ' title="Raporu indir" aria-label="Raporu indir"' : ' aria-disabled="true" title="Rapor çözümden üretilir — önce modeli hesaplayın." aria-label="Raporu indir"')
+        d.sonucVar ? ' title="Raporu indir" aria-label="Raporu indir"' : ' aria-disabled="true" title="Çözüm yok." aria-label="Raporu indir"')
     + _feadAracDugme('yon', 'refresh', '', 've-fead-arac-ray-btn', ' title="Yönü çevir" aria-label="Yönü çevir" data-v="cevir"')
     + _feadAracDugme('sihirbaz', 'wand', '', 've-fead-arac-ray-btn', ' title="Başlangıç Sihirbazı" aria-label="Başlangıç Sihirbazı"');
 }
 
 function veFeadAraclarHTML(d){
   d = d || veFeadAraclarDurum();
-  return '<div class="ve-settings-header ve-fead-arac-bas" title="Sürükle — çift tık: katla">'
+  return '<div class="ve-settings-header ve-fead-arac-bas" title="Sürükle: taşı · çift tık: katla">'
     + '<span>' + _feadAracIkon('wrench') + '<span class="ve-fead-arac-ad">FEAD araçları</span></span>'
     + '<button type="button" class="ve-fead-arac-katla" data-ey="katla" aria-label="Katla" title="Katla">'
     + _feadAracIkon('chevron-up') + '</button></div>'
@@ -392,7 +390,7 @@ function veFeadAracEylem(ad, v){
     return true;
   }
   if(ad === 'indir'){
-    if(!d.sonucVar){ if(typeof showToast === 'function') showToast('Rapor çözümden üretilir — önce modeli hesaplayın.', 'warning'); return false; }
+    if(!d.sonucVar){ if(typeof showToast === 'function') showToast('Rapor için çözüm yok.', 'warning'); return false; }
     if(typeof veFeadGenerateReport === 'function') veFeadGenerateReport(d.raporId);
     return true;
   }
@@ -508,9 +506,6 @@ function veFeadNotEkle(tip){
       if(typeof updateCanvasTransform === 'function') updateCanvasTransform();
     }
   }
-  if(typeof showToast === 'function')
-    showToast((tip === 'frame' ? 'Gruplama çerçevesi' : 'Yazı etiketi')
-      + ' eklendi — metni çift tıklayarak düzenleyin.', 'success');
   return a;
 }
 

@@ -589,7 +589,7 @@ describe('sahneler programın kendi bileşeni', () => {
       'kasnak paneli': 'Devir sınırları',
       'gergi paneli': 'Avara kasnağının merkezi',
       'kayış künyesi': 'Gereken efektif boy',
-      'kayış kataloğu': 'gereken boya en yakınlar',
+      'kayış kataloğu': 'gereken boya en yakın',
       'çözücü paneli': 'Algılanan model',
       'rapor paneli': 'Detaylı raporu',
       // Dönüş Yönü penceresi 2026-09-28'de kalktı; yön FEAD araçları
@@ -1481,12 +1481,14 @@ describe('güncellik: kılavuz ↔ programın bugünkü yüzeyleri', () => {
     const govde = f.slice(0, f.indexOf('\n}'));
     expect(govde).toContain('value="');          // DEĞER basılıyor
     expect(govde).toContain('_feadIBtn(');       // yanında 'i'
-    expect(SRC).toContain('Alan boş kaldıkça hesaba bu değer girer.');
+    // 'i' kaynağı söyler, açıklama kılavuzda (ARAYÜZ ANLATMAZ).
+    expect(SRC).toContain("return 'Varsayılan — ' + a.ipucu + '.';");
+    expect(SRC).not.toContain('Alan boş kaldıkça');
     // Kılavuz: alanın boş kaldığını SÖYLEMİYOR, 'i' rozetini anlatıyor.
     expect(KENDI).not.toContain('alan boş kalır');
     expect(KENDI).toContain('boş görünmez');
-    expect(KENDI).toContain('Alan boş kaldıkça hesaba bu değer girer.');
-    expect(KENDI).toContain('boşaltırsanız varsayılan değer geri gelir');
+    expect(KENDI).toContain('alan boş kaldıkça hesaba bu değer girer');
+    expect(KENDI).toContain('boşaltılınca varsayılan değer geri gelir');
   });
 
   test('SONUÇLAR SEKMESİ: dört küme ve ön ayarlar PROGRAMIN adlarıyla', () => {

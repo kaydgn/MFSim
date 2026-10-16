@@ -208,7 +208,7 @@ test('KAYIŞ YOLU KARTI: bant yok, çubuk tek satır, gül açıkta', async ({ p
   await page.waitForTimeout(600);
   const kot = await rozetParca();
   expect(kot.isaret).toBe('x');
-  expect(kot.birincil).toMatch(/KAPANMIYOR|İÇİNDEN|kapanmadı/);  // birincil: arıza
+  expect(kot.birincil).toMatch(/kapanmıyor|içinden geçiyor|kapanmadı/);  // birincil: arıza
   expect(kot.ikincil).toBeNull();                           // ikincil YOK
   // Kırmızı ve YEŞİL DEĞİL — renk CSS'ten geliyor, jsdom hesaplamaz.
   expect(kot.renk).not.toBe(iyi.renk);

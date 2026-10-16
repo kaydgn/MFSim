@@ -362,7 +362,7 @@ describe('kayış boyu kipi: Pafta başlığındaki anahtar', () => {
       expect(b.classList.contains('kilit')).toBe(true);
       expect(b.getAttribute('aria-disabled')).toBe('true');
       expect(b.hasAttribute('disabled')).toBe(false);
-      expect(b.getAttribute('title')).toMatch(/KİLİTLİ/);
+      expect(b.getAttribute('title')).toBe('Kayış boyu serbest · kilitli');
     } finally {
       if (eski === undefined) delete global.veFeadBeltModeLocked; else global.veFeadBeltModeLocked = eski;
     }
@@ -1078,7 +1078,7 @@ describe('Kayış Yolu kanvas kartı', () => {
     const html = fead.veFeadLayoutCardHTML(lay);
     expect(html).toMatch(/data-ve="belt"/);               // sayılar var → çizilir
     expect(html).toMatch(ROZET_NO);                       // ama geçersiz
-    expect(html).toMatch(/KAPANMIYOR|İÇİNDEN geçiyor/);   // ve sebebi YAZILI
+    expect(html).toMatch(/kapanmıyor|içinden geçiyor/);   // ve sebebi YAZILI
   });
 
   // SÖZLEŞME DEĞİŞTİ (kullanıcı, 2026-10-01: *"En azından sembolik bir çizim
@@ -2314,7 +2314,7 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
   test('SAĞLIKLI modelde metin değişmedi — yanlış alarm YOK', () => {
     const belt = bmc();
     const t = duz(fead.veFeadDerivedLengthHTML(belt));
-    expect(t).toMatch(/Tedarikçiye verilecek boy budur/);
+    expect(t).toMatch(/Tedarikçi boyu \(kol /);
     expect(t).not.toMatch(/künyesi eksik|oturamadı/);
     // sayı amber kalır, soru işareti eklenmez
     // RENK ARTIK BİR ANLAM ADI: değer `data-ton="warning"` taşıyor, jetonu
@@ -2344,7 +2344,7 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
       p.nodes.find((n) => n.type === 'fead-tensioner').data.kArm = 0.048;  // ondalık kayması
     });
     const h = fead.veFeadDerivedLengthHTML(belt), t = duz(h);
-    expect(t).toMatch(/Kol nominal açısına oturamadı/);
+    expect(t).toMatch(/Kol nominale oturamadı/);
     expect(t).not.toMatch(/Tedarikçiye verilecek boy budur/);
     expect(h).toMatch(/data-ton="danger"/);
   });

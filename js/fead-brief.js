@@ -106,7 +106,7 @@ var veFeadBrief = (function() {
     cevrim:   'Çalışma çevriminin çözülmüş devir noktaları: gerginlik, hubload, kayma emniyeti ve aksesuar yükü.',
     campbell: 'Motor uyarma mertebeleri ile FEAD doğal frekanslarının devir düzlemindeki kesişimi.',
     kol:      'Gergi kolunun açısına göre gerginlik, hubload ve take-up — kolun çalışma zarfı.',
-    senaryo:  'Marştan stopa bir motor çevrimi — devir geçmişi DAYATILMIŞ (volan ataleti yok), gergi kolu dinamiği dâhil değil.'
+    senaryo:  'Marştan stopa motor çevrimi; devir geçmişi dayatılmış.'
   };
 
   // ── Küme işaretleri — hangi kanalın çizildiğinden bağımsız ───────────────
@@ -543,8 +543,8 @@ var veFeadBrief = (function() {
   // şeridi rampanın nereden geldiğini, gerginlik şeridi hangi ankrajdan
   // yürüdüğünü, frekans şeridi frekansın varlığını anlatır.
   var SCN_NOT = [
-    { re: /Rampa|DAYATILMIŞ|Marş devri|İvme girilmemiş/, tur: 'devir' },
-    { re: /Gergi kolu dinamiği|Gerilme ÇİZİLEN/,          tur: 'gerg' },
+    { re: /Rampa|dayatılmış|Marş devri|İvme girilmemiş/, tur: 'devir' },
+    { re: /Gergi kolu dinamiği|Gerilme çizilen/,          tur: 'gerg' },
     { re: /Açıklık frekansları/,                          tur: 'frek' }
   ];
   function _scnTur(t) {
