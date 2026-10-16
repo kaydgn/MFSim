@@ -20,7 +20,7 @@
  * Hakem tarafı çekirdeği çağırmaz (tests/helpers/takoz-dogrulama.js).
  */
 const H = require('../helpers/takoz-dogrulama.js');
-const { core, cp } = H.kur();
+const { core, cp, rp } = H.kur();
 const G = H.G, GAP = 0.015, ORAN = 100;
 const LIB = cp.VE_MOUNT_LIBRARY;
 
@@ -205,6 +205,19 @@ describe.each(MODELLER.map((M) => [M.ad, M]))('%s', (ad, M) => {
     expect(kiyas(ms.map((m) => m.kstat), core.buildK(ms, cg, false))).toBeLessThan(1e-7);
     const kb = tabanK(R);
     expect(kiyas(kb, core.buildKfromBasis(ms, cg, kb))).toBeLessThan(1e-7);
+  });
+
+  // Tek taban kuralı (dynStiffBasis): SDOF kestirimi ve yumuşatma taraması modal
+  // çözümle AYNI k'den. Lineerde taban nominal k_dyn, nonlineerde statik dengedeki
+  // dinamik tanjant — ikisinde de §8.15'in "%100 satırı = §8.7" iddiası doğru olmalı.
+  test('SDOF f_bounce ve §8.15 %100 satırı modal tabandan (Σk_z · 6 mod)', () => {
+    const fb = H.fHz(tabanK(R).reduce((a, k) => a + k[2], 0) / R.mp.m);
+    expect(H.bagil(rp._mntRepIsolation(R, {}).fBounce, fb)).toBeLessThan(1e-12);
+    const h = rp._mntRepSoftening(R, {});
+    const v = [...h.split('<tr').find((r) => r.includes('<b>%100</b>'))
+      .matchAll(/<td>([^<%]*)<\/td>/g)].map((m) => veSayiOku(m[1]));
+    R.modes.forEach((md, i) => expect(Math.abs(v[i] - md.f_Hz)).toBeLessThanOrEqual(0.005 + 1e-9));
+    expect(Math.abs(v[6] - fb)).toBeLessThanOrEqual(0.005 + 1e-9);
   });
 
   (M.lineer ? yok : test)('nonlineer: dinamik tanjant tabanı = yasanın statik dengedeki türevi × k_din/k_stat', () => {
