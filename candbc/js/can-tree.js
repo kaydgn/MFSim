@@ -61,8 +61,7 @@ function cdbRefreshTree() {
   var db = cdbState.db, st = cdbState.store;
 
   if (!db) {
-    host.innerHTML = '<div class="vsig-empty">Önce bir <b>.dbc</b> dosyası yükleyin.<br>' +
-                     'Mesaj ve sinyal tanımları oradan gelir.</div>';
+    host.innerHTML = '<div class="vsig-empty">DBC yüklenmedi.</div>';
     cdbUpdateTreeCount();
     return;
   }
@@ -130,7 +129,7 @@ function cdbRefreshTree() {
   // Kayıtta geçen ama DBC'de tanımı olmayan kimlikler
   var orphans = cdbOrphanIds();
   if (orphans.length && !q) {
-    html += '<div class="vsig-orphan-head" title="Bu kimlikler kayıtta var ama yüklü DBC bunları tanımlamıyor">' +
+    html += '<div class="vsig-orphan-head" title="Kayıtta olup DBC\'de tanımı olmayan kimlikler">' +
             'Tanımsız kimlikler (' + orphans.length + ')</div>';
     for (var o = 0; o < orphans.length && o < 60; o++) {
       html += '<div class="vsig-orphan"><span style="font-family:var(--font-mono);">' +
@@ -142,7 +141,7 @@ function cdbRefreshTree() {
 
   if (!shownMsgs) {
     html = '<div class="vsig-empty">' + (q ? 'Aramaya uyan mesaj/sinyal yok.' :
-      cdbTree.filter === 'log' ? 'Yüklü DBC\'deki hiçbir mesaj kayıtta geçmiyor.<br>Süzgeci <b>Tümü</b> yapıp tanımları görebilirsiniz.' :
+      cdbTree.filter === 'log' ? 'Yüklü DBC\'deki hiçbir mesaj kayıtta geçmiyor.' :
       'Gösterilecek mesaj yok.') + '</div>';
   }
 
@@ -156,7 +155,7 @@ function cdbMsgTitle(msg, count) {
            (msg.extended ? '  (29 bit)' : '  (11 bit)')];
   p.push('DLC ' + msg.dlc + ' bayt · gönderen: ' + msg.transmitter);
   if (msg.cycleTime) p.push('Çevrim: ' + msg.cycleTime + ' ms');
-  p.push(count ? ('Kayıtta ' + cdbThousands(count) + ' kare') : 'Bu kayıtta hiç geçmiyor');
+  p.push(count ? ('Kayıtta ' + cdbThousands(count) + ' kare') : 'Kayıtta geçmiyor');
   if (msg.comment) p.push('', msg.comment);
   return p.join('\n');
 }
@@ -169,14 +168,14 @@ function cdbSigTitle(msg, sig, can) {
   p.push('Fiziksel = ham × ' + sig.factor + ' + ' + sig.offset + (sig.unit ? '  [' + sig.unit + ']' : ''));
   if (sig.min !== null && sig.max !== null) p.push('Aralık: ' + sig.min + ' … ' + sig.max);
   if (sig.muxValue !== null) p.push('Yalnız çoklayıcı = ' + sig.muxValue + ' iken geçerli');
-  if (sig.isMuxor) p.push('Bu sinyal mesajın ÇOKLAYICISIdır');
+  if (sig.isMuxor) p.push('Çoklayıcı sinyal');
   if (sig.valueType !== 'int') p.push('IEEE ' + sig.valueType);
   if (sig.values) {
     var ks = Object.keys(sig.values).slice(0, 8);
     p.push('Değerler: ' + ks.map(function(k) { return k + '=' + sig.values[k]; }).join(', ') +
            (Object.keys(sig.values).length > 8 ? ' …' : ''));
   }
-  if (!can) p.push('', 'Bu mesaj kayıtta geçmiyor — çizilemez.');
+  if (!can) p.push('', 'Mesaj kayıtta geçmiyor.');
   if (sig.comment) p.push('', sig.comment);
   return p.join('\n');
 }
@@ -238,10 +237,10 @@ function cdbToggleSignal(sigKey) {
   if (cdbChartHasSignal(sigKey)) {
     cdbChartRemoveSignal(sigKey);
   } else {
-    if (!count) { cdbToast(found.msg.name + ' bu kayıtta hiç geçmiyor — çizilecek veri yok.'); return; }
+    if (!count) { cdbToast(found.msg.name + ' kayıtta geçmiyor.'); return; }
     cdbChartAddSignal(found.msg, found.sig);
     var ser = cdbSeriesOf(sigKey);
-    if (ser && !ser.n) cdbToast(found.sig.name + ': mesaj var ama sinyal hiçbir karede çözülemedi (çoklama ya da kısa DLC).');
+    if (ser && !ser.n) cdbToast(found.sig.name + ': hiçbir karede çözülmedi (çoklama / kısa DLC).');
   }
   cdbRefreshTree();
 }

@@ -11549,7 +11549,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
       border-left:1px solid var(--border-color);
     }
     #mfv-topbar .mfv-spacer { margin-left:auto; }
-    #mfv-topbar .mfv-hint { font-size:var(--fs-micro); color:var(--text-muted); }
     /* .ve-sub-page flex:1 + min-height:0 bekliyor; body kolonu onu karşılıyor. */
     #ve-page-sonuclar { display:flex; flex-direction:row; }
 
@@ -11559,15 +11558,13 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 <body>
 
 <header id="mfv-topbar">
-  <!-- Program adı. Ad işin ne olduğunu SÖYLEMEDİĞİ için yanındaki alt başlık
-       artık tek açıklama: programı ilk kez açan biri ne işe yaradığını orada
-       okuyor. Alt başlığı kaldırırken bunu hatırla. -->
+  <!-- Program adı (CACIK) işin ne olduğunu söylemiyor; yanındaki alt başlık
+       programın tanımlayıcı ADIDIR, cümle değil (CLAUDE.md → ARAYÜZ ANLATMAZ). -->
   <span class="mfv-brand"><span class="mf-ico mf-ico-activity"></span> CACIK</span>
-  <span class="mfv-sub">Excel / CSV ölçüm dosyalarını okur ve diyagrama döker</span>
+  <span class="mfv-sub">Ölçüm Görüntüleyici</span>
   <span class="mfv-spacer"></span>
-  <span class="mfv-hint">Dosyayı buraya sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz</span>
   <button type="button" id="mfv-theme-btn" class="ve-imp-tool" onclick="mfvCycleTheme()"
-          title="Tema — değiştirmek için tıklayın">
+          title="Tema">
     <span class="mf-ico mf-ico-contrast"></span> <span id="mfv-theme-label">Sistem</span>
   </button>
 </header>
@@ -11630,7 +11627,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
     </div>
     <div class="ve-imp-body" id="ve-import-content"></div>
     <div class="ve-imp-footer">
-      <span class="ve-imp-hint">İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.</span>
+      <span class="ve-imp-hint">X ekseni varsayılan olarak ilk sütundur.</span>
       <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
       <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara aktar</button>
     </div>
@@ -11979,8 +11976,7 @@ function mfvApply(mode) {
   var btn = document.getElementById('mfv-theme-btn');
   if(btn) {
     btn.title = 'Tema: ' + (MFV_LABEL[mode] || 'Sistem') +
-                (mode === 'system' ? ' (işletim sistemini izliyor)' : '') +
-                ' — değiştirmek için tıklayın';
+                (mode === 'system' ? ' (işletim sistemini izliyor)' : '');
     btn.setAttribute('aria-label', btn.title);
   }
 
@@ -15216,8 +15212,7 @@ function veUpdateResultsTree() {
 
   if(groups.length === 0) {
     html += '<div class="vsig-empty" style="padding:14px 10px; line-height:1.5;">' +
-            'Henüz ölçüm yok.<br>Yukarıdaki <b>İçe aktar</b> ile bir ' +
-            '.xlsx / .csv dosyası açın.</div>';
+            'Henüz ölçüm yok.</div>';
   } else {
     var channels = 0;
     groups.forEach(function(g) { channels += g.items.length; });
@@ -15436,7 +15431,7 @@ function veRenderSlot(slotIdx) {
       '<div class="ve-trace-empty" style="display:flex;">' +
       '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-clipboard"></span></div>' +
       '<div class="ve-trace-empty-title">Veri tablosu boş</div>' +
-      '<div class="ve-trace-empty-sub">Veri Gezgini\'nden sinyal seçin.</div></div>';
+      '<div class="ve-trace-empty-sub">Sinyal seçilmedi.</div></div>';
     return;
   }
 
@@ -15549,7 +15544,7 @@ function veShowXAxisPicker(slotIdx, e) {
 
   var options = veGetAvailableXAxisOptions(slotIdx);
   if(options.length === 0) {
-    showToast('X ekseni seçimi için önce bir ölçüm içe aktarın.', 'info');
+    showToast('X ekseni için ölçüm yok.', 'info');
     return;
   }
 
@@ -18021,11 +18016,9 @@ function veTrEmptyHTML() {
   if(noSim && typeof veSolverRun !== 'function') {
     h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-upload"></span></div>';
     h += '<div class="ve-trace-empty-title">Henüz ölçüm yok</div>';
-    h += '<div class="ve-trace-empty-sub">Bir Excel (.xlsx) ya da CSV ölçüm dosyası açın — ' +
-         'sütunları seçin, her sinyal kendi şeridinde çizilsin.</div>';
     if(typeof veImpOpenPicker === 'function') {
       h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
-           'style="height:26px;margin-top:6px;">' +
+           'style="height:26px;margin-top:6px;" title="Excel · CSV">' +
            '<span class="mf-ico mf-ico-upload"></span> Ölçüm verisi içe aktar</button>';
     }
     return h;

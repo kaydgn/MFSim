@@ -57,7 +57,7 @@ test('örnek yükleme: DBC + kayıt çözülür, şeritler çizilir', async ({ p
   page.on('pageerror', e => errors.push(String(e)));
   await open(page);
 
-  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.click('#cdb-example-btn');
   await page.waitForFunction(() => cdbState.store && cdbState.store.n > 0, null, { timeout: 20000 });
 
   const s = await page.evaluate(() => ({
@@ -94,7 +94,7 @@ test('örnek yükleme: DBC + kayıt çözülür, şeritler çizilir', async ({ p
 
 test('sinyal gezgini: onay kutusu şeridi açar ve kapatır', async ({ page }) => {
   await open(page);
-  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.click('#cdb-example-btn');
   await page.waitForFunction(() => cdbChart.lanes.length === 5, null, { timeout: 20000 });
 
   const key = await page.evaluate(() => cdbChart.lanes[0].keys[0]);
@@ -108,7 +108,7 @@ test('sekmeler: kare listesi, istatistik ve tanı dolu gelir', async ({ page }) 
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
   await open(page);
-  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.click('#cdb-example-btn');
   await page.waitForFunction(() => cdbState.store && cdbState.store.n > 0, null, { timeout: 20000 });
 
   for (const [tab, enAz] of [['frames', 50], ['stats', 5], ['diag', 5]]) {
@@ -138,7 +138,7 @@ test('sayılar Türkçe: noktalı ondalık, gruplanmamış sayı, sondaki yüzde
     CanvasRenderingContext2D.prototype.fillText = function (t) { window.__cdbFill.push(String(t)); return f.apply(this, arguments); };
   });
   await open(page);
-  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.click('#cdb-example-btn');
   await page.waitForFunction(() => cdbState.store && cdbState.store.n > 0, null, { timeout: 20000 });
   await page.waitForTimeout(500);
   const parca = [];
@@ -180,7 +180,7 @@ test('yazılar zemine karşı AA: boş durum, örnek, kare listesi, istatistik, 
     (await page.evaluate(() => window.__kontrast('body'))).kotu.forEach((x) => kotu.push(Object.assign({ yer }, x)));
   };
   await olc('boş');
-  await page.click('#cdb-topbar button[title^="Elinizde dosya yoksa"]');
+  await page.click('#cdb-example-btn');
   await page.waitForFunction(() => cdbState.store && cdbState.store.n > 0, null, { timeout: 20000 });
   await page.waitForTimeout(500);
   await page.evaluate(() => { document.querySelectorAll('#cdb-tree .vsig-ghead').forEach((g) => { if (g.getAttribute('aria-expanded') !== 'true') g.click(); }); });

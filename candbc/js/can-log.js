@@ -412,7 +412,7 @@ function cdbParseLogAsync(text, opts, onProgress, onDone) {
   var det = cdbDetectLogFormat(head, ctx);
   var fmt = opts.formatId ? cdbFormatById(opts.formatId) : (det.best && det.best.format);
   if (!fmt) {
-    onDone({ error: 'Bu dosyada tanınan bir CAN kayıt biçimi bulunamadı.', detect: det, store: null });
+    onDone({ error: 'Dosyada tanınan bir CAN kayıt biçimi yok.', detect: det, store: null });
     return;
   }
   var scale = (opts.timeScale !== undefined && opts.timeScale !== null) ? opts.timeScale : fmt.timeScale;

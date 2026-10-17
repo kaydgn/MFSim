@@ -48,8 +48,8 @@ var CDB_EXAMPLE_DBC = [
 ' SG_ BuyukUcluDeger : 7|16@0- (0.1,0) [-3276.8|3276.7] "Nm"  GOSTERGE',
 ' SG_ Bayrak : 23|1@0+ (1,0) [0|1] ""  GOSTERGE',
 '',
-'CM_ BO_ 256 "Sanziman durumu — SayfaNo coklayicisiyla iki farkli yuk tasiyor";',
-'CM_ SG_ 512 BuyukUcluDeger "Motorola (@0) duzenli, isaretli sinyal — bit duzeni kapisi";',
+'CM_ BO_ 256 "Sanziman durumu (SayfaNo ile coklanmis)";',
+'CM_ SG_ 512 BuyukUcluDeger "Motorola (@0), isaretli";',
 '',
 'VAL_ 256 Vites 0 "Bos" 1 "1. vites" 2 "2. vites" 3 "3. vites" 4 "4. vites" 5 "5. vites" 14 "Geri" 15 "Hata" ;',
 'VAL_ 2364540158 MotorDurumu 0 "Durdu" 1 "Mars" 2 "Rolanti" 3 "Calisiyor" ;',
@@ -177,7 +177,7 @@ function cdbMakeExampleLog() {
   }
   // Kayıt dosyaları zaman sırasındadır; üretilen kareler de öyle olsun.
   out.sort(function(a, b) { return a.t - b.t; });
-  var lines = ['# MFSim CAN Cozumleyici — URETILMIS ornek kayit (gercek arac verisi degildir)'];
+  var lines = ['# MFSim CAN Cozumleyici - uretilmis gosteri kaydi'];
   for (var i = 0; i < out.length; i++) lines.push(out[i].line);
   return lines.join('\n') + '\n';
 }

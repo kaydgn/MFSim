@@ -158,3 +158,4 @@ değiştirir.
 | `tests/unit/can-chart.test.js` | Eksen adımı, imleç örneklemesi, ondalık türetme + **gidiş-dönüş** (üret → yaz → ayrıştır → çöz → karşılaştır) |
 | `tests/unit/can-sayi.test.js` | Sayı yazıcısı MFSim'inkiyle aynı (tohum karşılaştırması), biçimlendiriciler Türkçe, kaynakta işaretsiz yazım yok, CSV Excel-TR |
 | `tests/unit/source-hygiene.test.js` | `candbc/js/` üst-seviye ad çakışması ve kontrol karakteri |
+| `tests/unit/ayri-program-metin.test.js` | Arayüz metni yalnız ad, veri, durum (CLAUDE.md → ARAYÜZ ANLATMAZ): üst bantta açıklama yok, büyük harf vurgusu yok, ipucu kısayol dilinde; görüntüleyiciyle ortak |

@@ -2343,11 +2343,9 @@ function veTrEmptyHTML() {
   if(noSim && typeof veSolverRun !== 'function') {
     h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-upload"></span></div>';
     h += '<div class="ve-trace-empty-title">Henüz ölçüm yok</div>';
-    h += '<div class="ve-trace-empty-sub">Bir Excel (.xlsx) ya da CSV ölçüm dosyası açın — ' +
-         'sütunları seçin, her sinyal kendi şeridinde çizilsin.</div>';
     if(typeof veImpOpenPicker === 'function') {
       h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
-           'style="height:26px;margin-top:6px;">' +
+           'style="height:26px;margin-top:6px;" title="Excel · CSV">' +
            '<span class="mf-ico mf-ico-upload"></span> Ölçüm verisi içe aktar</button>';
     }
     return h;
