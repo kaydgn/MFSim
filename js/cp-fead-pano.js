@@ -1226,7 +1226,7 @@ function _fpnBlok(R, V, id, eh, W){
         + (S && eh > 0 ? '<div class="graf" style="height:' + eh + 'px">' + _fpnMotorGrafik(S, W, eh) + '</div>'
                + '<p class="not">Devir dayatılır · ' + (S.egri ? 'rampa tork eğrisinden' : 'rampa doğrusal')
                + ' · gergi kolu dinamiği yok</p>'
-             : '<p class="not">Senaryo çözümde yok — kayış verisiyle yeniden çözün.</p>');
+             : '<p class="not">Senaryo çözümde yok.</p>');
     case 'bur':
       var B = V.burulma;
       return _fpnH2('Burulma titreşimi', B ? B.modlar.length + ' elastik mod · bant ' + _frF(B.bantLo, 0) + '–'

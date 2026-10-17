@@ -340,7 +340,7 @@ describe('rapor yüzeyi', () => {
   test('pim künyesi yoksa rapor sayı yerine SEBEP basıyor', () => {
     const h = raporBolumu({ part: '' });
     expect(h).toMatch(/konum pimi/i);
-    expect(h).toMatch(/uydurulmaz/i);
+    expect(h).toMatch(/parça çiziminden gelir/i);
     expect(h).not.toMatch(/31,00 mm/);
   });
 

@@ -528,7 +528,7 @@ function _gfSahneKapilar(){
   // sahne motorun devir sınırlarını yazmaya başlayınca (2026-09-29) hiçbir
   // satır "değerlendirilemedi" demiyordu ama altyazı o satırları açıklamaya
   // devam ediyordu. Şekil canlıysa onu anlatan cümle de canlı olmak zorunda.
-  var alt = 'Uygunluk kapıları kartı, örnek model üzerinde <b>canlı ölçülmüş</b> '
+  var alt = 'Uygunluk kriterleri kartı, örnek model üzerinde <b>canlı ölçülmüş</b> '
     + 'hâlde. Rozetler üç kuralın o modeldeki hükmünü taşıyor.';
   if(html.indexOf('değerlendirilemedi') >= 0)
     alt += ' “Değerlendirilemedi” satırları o kasnakta devir sınırı girilmediği için öyle.';
@@ -1249,11 +1249,11 @@ function _gfSec6(){
     + 'Sonradan yazılan kW’ı Katalog modeli ve Güç eğrisi bölümleri satır sayısıyla bildirir.');
   h += _gfSahneModel();
   h += _gfSahneKasnakPaneli();
-  h += '<h3>6.2 Devir sınırları — uygunluk kapısının girdisi</h3>';
+  h += '<h3>6.2 Devir sınırları — uygunluk kriterinin girdisi</h3>';
   h += _gfSahneDevirSinir();
   h += '<p>Aksesuar kasnaklarının panelinde bir <strong>Devir sınırları</strong> kartı vardır. '
-    + 'Buradaki üç sayı bir <em>bilgi</em> değil, Bölüm 11.5’teki uygunluk kapılarının '
-    + '<strong>girdisidir</strong>: onlar boşsa kapı hüküm veremez ve o kasnak '
+    + 'Buradaki üç sayı bir <em>bilgi</em> değil, Bölüm 11.5’teki uygunluk kriterlerinin '
+    + '<strong>girdisidir</strong>: onlar boşsa kriter hüküm veremez ve o kasnak '
     + '<strong>“değerlendirilemedi”</strong> sayılır — uygun sayılmaz.</p>';
   h += _gfAlanTablo('Devir sınırları kartı', [
     ['Optimum [d/dk]', 'Aksesuarın çalışmasının istendiği devir',
@@ -1711,10 +1711,9 @@ function _gfSec9(){
       'Aksesuar <strong>anlık maksimum</strong> kapısı bu devirde ölçülür; boşsa o kapı '
       + '“değerlendirilemedi” der, “uygun” demez']
   ], ['Sınır', 'Nedir', 'Nereye girer']);
-  h += _gfNot('“No load governed” sorulmuyor',
-      'Katalogda duruyor ve künye seçilince modele yazılıyor — ama onu <em>okuyan</em> '
-    + 'hiçbir hesap, uygunluk kapısı ya da rapor satırı yok. Sorulsaydı hesaba giriyormuş '
-    + 'izlenimi verirdi; ne pencere ne sihirbaz soruyor.');
+  h += _gfNot('“No load governed” hesaba girmez',
+      'Katalogda durur ve künye seçilince modele yazılır; onu <em>okuyan</em> hesap, '
+    + 'uygunluk kriteri ya da rapor satırı yok.');
   h += _gfNot('Katalogdan sapmak serbest — ama sessiz değil',
       'Seçimden sonra bir alanı elle değiştirirseniz kart bunu <strong>yazar</strong>: '
     + '“Katalogdan sapıldı: …”. Bu bir hata değildir — kayıt varyanta göre değişebilir — ama '
@@ -1894,7 +1893,7 @@ function _gfSec10(){
     + 'Özellikleri panellerinde ve ayrıntılı raporun §8 girişinde listelenir.');
   h += _gfNot('Sıfır girmek, boş bırakmak DEĞİLDİR',
       'Toleransa <strong>0</strong> yazmak “zarfı kapat” demektir ve geçerli bir seçimdir; '
-    + 'varsayılan onu ezmez ve ipucu “girilen değer” der. Varsayılan yalnız <em>hiç '
+    + 'varsayılan onu ezmez ve ipucu “Girilen değer” der. Varsayılan yalnız <em>hiç '
     + 'dokunulmamış</em> alana iner — alanı silmek de o hâle döndürür.');
   h += _gfNot('Her tipin varsayılanı yok',
       'Su pompası, direksiyon pompası ve hava kompresörü arşivdeki yedi raporun hiçbirinde '
@@ -2001,7 +2000,7 @@ function _gfSec11(){
       + 'oranı; altında efektif boy, pitch boyu ve Σ sarım', 'Hayır'],
     ['Çözücü — Algılanan model', 'Algılanan model · <strong>Gergi konum tablosu</strong> (altı '
       + 'konum × kol açısı, gerginlik, hubload, yön, β, sarım) · '
-      + '<strong>Uygunluk kapıları</strong> · uyarılar', 'Hayır'],
+      + '<strong>Uygunluk kriterleri</strong> · uyarılar', 'Hayır'],
     ['Çözücü — Sonuç', 'Çıkış gerilmeleri ve min. kayma emniyeti hükmü · hubload · '
       + 'burulma titreşimi · kaburga yorulma dağılımı · B10 ömür · geçerlilik sınırları',
       '<strong>Evet</strong>'],
@@ -2010,7 +2009,7 @@ function _gfSec11(){
     ['<strong>FEAD araçları</strong> — Rapor bölümü', 'Detaylı · Özet · A3 sonuç panosu '
       + '(kutusu yok: pencerenin bölümü)', '<strong>Evet</strong>']
   ], ['Panel', 'Ne okunur', 'Hesapla gerekir mi']);
-  h += '<h3>11.4 Uygunluk kapıları — üç hüküm</h3>';
+  h += '<h3>11.4 Uygunluk kriterleri — üç hüküm</h3>';
   h += '<p>Çözücü penceresinde <strong>Algılanan model</strong>in altındaki kart, BMC’nin kendi FEAD '
     + 'hesap defterinden gelen üç kuralı model üzerinde ölçer. Kart <strong>çözüm '
     + 'gerektirmez</strong>: geometri ve künyeler tamamsa hüküm oradadır.</p>';
@@ -2195,7 +2194,7 @@ function _gfSec13(){
         + 'çözülür; çevrim yine kapanabilir',
         'Sarım dağılımı ve açıklıklar baştan başka — <strong>gergi de yanlış tarafa</strong> '
         + 'düşebilir'],
-      ['Aksesuar devir sınırı', 'Girilmezse uygunluk kapısı hüküm veremez',
+      ['Aksesuar devir sınırı', 'Girilmezse uygunluk kriteri hüküm veremez',
         'Kapı <strong>“değerlendirilemedi”</strong> olur ve <strong>uygun sayılmaz</strong> — '
         + 'geçilmiş sanmayın'],
       ['Gergi kasnak kütlesi', 'Girilmezse nokta kütle terimi eksik kalır',
@@ -2711,7 +2710,7 @@ function _gfEkA(){
       ['Türeyen tasarım gerginliği', 'Çözücü', 'Algılanan model'],
       ['Gergi kol konumları (altı konum)', 'Çözücü', 'Gergi konum tablosu'],
       ['<strong>Merkez mesafesi · çevrim oranı · devir sınırı hükmü</strong>', 'Çözücü',
-        'Uygunluk kapıları'],
+        'Uygunluk kriterleri'],
       ['Sarım, açıklık, hız oranı', 'Kayış Yolu', 'Geometri'],
       ['Gergi kol konumu seçici, yön gülü', 'Kayış Yolu', 'Şema'],
       ['<strong>Katman seçimi ve ön ayar (Geometri / İşletme)</strong>',

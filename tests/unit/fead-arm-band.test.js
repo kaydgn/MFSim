@@ -326,9 +326,10 @@ describe('rapor yüzeyi', () => {
     expect(h).toMatch(/Kol açısı fiziksel olarak kullanılabilir mi/);
     expect(h).toMatch(/Kol açısı bandı/);
     expect(h).toMatch(/data-ve="band-curve"/);
-    expect(h).toMatch(/14\/14/);                 // ölçümün kendisi belgede
-    expect(h).toMatch(/96…218/);
-    expect(h).toMatch(/Bu bir SEÇİCİ değil, bir KAPIDIR/);
+    // Belge test ölçümü taşımaz (ARAYÜZ ANLATMAZ); 14 sisteme karşı ölçüm bu
+    // dosyanın kendisinde koşuyor. Bandın ne olduğu kalır.
+    expect(h).not.toMatch(/14\/14|96…218|SEÇİCİ|KAPIDIR/);
+    expect(h).toMatch(/Bant bir kabul ölçütüdür/);
     expect(h).not.toMatch(/NaN|undefined|\[object/);
   });
 

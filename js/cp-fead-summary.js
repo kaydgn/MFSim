@@ -430,7 +430,7 @@ function _fsrSheet1(R, node){
   h += _fsrBlk('Doğal frekans haritası',
     _fsrFig(typeof _frFreqFigure === 'function' ? _frFreqFigure : null, R, 780, 150),
     'Eğriler serbest açıklıkların temel enine titreşim frekansı; kesikli doğru ateşleme '
-    + 'frekansı (3 × devir / 60). Sayısal karşılığı aşağıdaki tablodadır.');
+    + 'frekansı (3 × devir / 60).');
   h += _fsrVibBlock(R);
   h += _fsrTorsionalBlock(R);
 
@@ -670,7 +670,7 @@ function _fsrSheet5(R, node){
     // Ayrıntılı raporun §8.11'iyle AYNI hüküm, özetin yerine sığan hâli.
     // Eski metin ("kasnaktan sonraki açıklık") tablo sırasının diliydi ve
     // kayışın gidişinde tersini söylüyordu.
-    'Sütun sırası kayışın gidişinin tersi; değer, kayışın o kasnağa GİRDİĞİ '
+    'Sütun sırası kayışın gidişinin tersi; değer, kayışın o kasnağa girdiği '
     + 'açıklığın gerginliğidir. En büyüğü sürücüye giren (gergin) açıklıkta.');
   h += mat('Ortalama Hubloadlar [N]',
     function(d, i){ return ((d.hubloads || [])[i] || {}).FN; }, 0,
@@ -771,9 +771,9 @@ function _fsrSheet6(R, node){
   if(life.modelMismatch)
     omurNot = '<b class="bad">Saat değeri ' + _frEsc(life.calibratedModel || '')
       + ' sabitleriyle hesaplanmıştır; seçili yorulma modeli '
-      + _frEsc(life.modelMismatch) + '.</b> Mutlak ömür seçilen modeli kullanamaz — '
+      + _frEsc(life.modelMismatch) + '.</b> Mutlak ömür seçili modeli kullanamaz: '
       + 'kalibrasyon sabiti geometri toplamının ölçeğini soğurur, üs değişince ömür '
-      + 'yüzlerce kat kayar. Kaburga yorulma DAĞILIMI seçtiğiniz modeli kullanır. '
+      + 'yüzlerce kat kayar. Kaburga yorulma dağılımı seçili modeli kullanır. '
       + omurNot;
   h += _fsrBlk('Kayış ömrü', _fsrKVT(om), omurNot);
 

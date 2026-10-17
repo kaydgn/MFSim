@@ -5460,7 +5460,7 @@ function _fwStepOzet(b){
 // hesap iki yüzeyin sessizce ayrışması olurdu (modülün tekrar eden kuralı).
 function _fwChecksCard(b){
   if(typeof veFeadChecks !== 'function')
-    return _fwCard('Uygunluk kapıları', 'var(--text-muted)',
+    return _fwCard('Uygunluk kriterleri', 'var(--text-muted)',
       '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Uygunluk denetimi yüklenmedi.</div>');
   var st = _fwState, s = (st && st.solver) || {};
   var R = veFeadChecks(b, veFeadCheckOpt(s, s.duty || []));
@@ -5544,7 +5544,7 @@ function _fwChecksCard(b){
   var renk = d.indexOf('no') >= 0 ? 'var(--accent-danger)'
            : d.indexOf('warn') >= 0 ? 'var(--accent-warning)'
            : d.indexOf('wait') >= 0 ? 'var(--text-muted)' : 'var(--accent-success)';
-  return _fwCard('Uygunluk kapıları', renk,
+  return _fwCard('Uygunluk kriterleri', renk,
     '<div data-ve-fw-checks="1" data-ve-fw-checks-durum="' + _fwEsc(d.join('/')) + '">'
       + h + '</div>');
 }

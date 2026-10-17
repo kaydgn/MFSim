@@ -198,7 +198,7 @@ describe('BÜTÜN YÜZEYLER AYNI d_w\'yi yazar — CAD ve d_b', () => {
   const esc = (s) => s.replace(/\./g, '\\.');
 
   test.each([
-    ['cad', CAD, 1.5, 'CAD kayış eskizinden ölçüldü', 'kesit-dw'],
+    ['cad', CAD, 1.5, 'CAD kayış eskizi', 'kesit-dw'],
     ['db', { hesapCap: 'db' }, 0, 'yok sayıldı — hesap d<sub>b</sub> çizgisinde', 'kesit-db']
   ])('%s: rapor · özet · sihirbaz bandı · kart · sağ sütun aynı kordu yazar', (_ad, alan, hb, kaynak, cizgi) => {
     const { R, belt } = coz(alan);

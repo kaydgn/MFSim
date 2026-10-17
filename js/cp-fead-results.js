@@ -539,7 +539,7 @@ function veFeadResSummaryHTML(R) {
       });
     }, [{ t: 'Aksesuar', l: 1 }, { t: 'Nokta', l: 1 }, { t: 'Motor [d/dk]' }, { t: 'Aksesuar [d/dk]' },
         { t: 'Sınır [d/dk]' }, { t: 'Pay [%]' }]);
-    h += _feadResSec('Uygunluk kapıları', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂) · oran penceresi · devir sınırı', kh);
+    h += _feadResSec('Uygunluk kriterleri', '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂) · oran penceresi · devir sınırı', kh);
   }
 
   // 9) Geçerlilik — sınır sonucun İÇİNDE taşınır (FEAD kuralı 10)

@@ -357,7 +357,7 @@ describe('uygunluk — ayrıntılı raporun ölçütleri, TEK üretici', () => {
     expect([u2.durum, u2.kisaBulgu]).toEqual(['no', 'ALT 7.611 > 8.000 d/d']);
     const R3 = Object.assign({}, R, { checks: null });
     expect(PN.veFeadPanoVeri(R3, NODE).uyg.slice(10).map((u) => [u.durum, u.kisaBulgu]))
-      .toEqual([['wait', 'çözümde kapı yok'], ['wait', 'çözümde kapı yok'], ['wait', 'çözümde kapı yok']]);
+      .toEqual([['wait', 'çözümde yok'], ['wait', 'çözümde yok'], ['wait', 'çözümde yok']]);
   });
 
   test('§8.18\'in mertebe kesişmeleri panoyla TEK üreticiden', () => {
