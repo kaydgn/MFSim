@@ -7476,8 +7476,17 @@ var VE_FEAD_TBL_OPEN_ICON =
 // ve işaret bir seçimde bir satırda, ötekinde başka satırda kalırdı.
 function _feadSelectedId(){
   if(typeof selectedNodes === 'undefined' || !selectedNodes) return null;
-  if(selectedNodes.length !== 1) return null;
-  return (selectedNodes[0] && selectedNodes[0].id) || null;
+  if(selectedNodes.length === 1) return (selectedNodes[0] && selectedNodes[0].id) || null;
+  if(selectedNodes.length > 1) return null;
+  // PENCERE SEÇİM BOŞALINCA DA AÇIK KALIR (map.js, kullanıcı isteği
+  // 2026-10-16): işaret "hangi kasnağın penceresi açık" sorusunun cevabı
+  // olduğu için seçim boşalınca pencerenin KONUSUNDA kalır; pencere kapanınca
+  // söner (veMufettisIsaretle bu kapıyı çağırır).
+  if(typeof veMufettisAcik === 'function' && veMufettisAcik() && typeof veMufettisKonusu === 'function') {
+    var k = veMufettisKonusu();
+    return (k && k.id) || null;
+  }
+  return null;
 }
 
 // SEÇİM DEĞİŞİNCE TABLO YENİDEN KURULMAZ, yalnız sınıf eşitlenir.
@@ -7997,7 +8006,11 @@ function veFeadTableAfterEdit(){
   if(typeof updateAllConnections === 'function') updateAllConnections();
   veFeadRefreshCards();
   if(typeof veFeadRefreshBadges === 'function') { try { veFeadRefreshBadges(); } catch(e){} }
-  if(typeof showNodeProperties === 'function' && typeof selectedNodes !== 'undefined'
+  // Açık pencere KONUSUYLA tazelenir — pencere seçim boşalınca da açık kalıyor.
+  var _acik = (typeof veMufettisAcik === 'function' && veMufettisAcik() && typeof veMufettisKonusu === 'function')
+    ? veMufettisKonusu() : null;
+  if(_acik && typeof showNodeProperties === 'function') showNodeProperties(_acik);
+  else if(typeof showNodeProperties === 'function' && typeof selectedNodes !== 'undefined'
      && selectedNodes && selectedNodes.length === 1)
     showNodeProperties(selectedNodes[0]);
 }

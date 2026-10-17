@@ -230,6 +230,11 @@ function veFlushOpenPanelData() {
   var node = selectedNodes[0];
   if(!node || !node.id) return;
   var nid = node.id;
+  // İÇERİK BU BİLEŞENİN DEĞİLSE OKUNMAZ: işleyiciler alanları kimlikle DOM'dan
+  // okuyor; çoklu seçimde ya da sütun kartında (cp-core.js) o alanlar yok ve
+  // okunan boşluk bileşenin verisine yazılırdı.
+  if(typeof _veLastPropNodeId !== 'undefined' && _veLastPropNodeId !== nid) return;
+  if(typeof _veMufettisKart !== 'undefined' && _veMufettisKart) return;
   var isFT = veActiveModule === 'full-throttle';
 
   try {
@@ -425,7 +430,7 @@ function veLoadTabState(tab) {
     updateCanvasTransform();
     updateAllConnections();
     updateNodeCount();
-    showEmptyProperties();
+    if(typeof veMufettisKapat === 'function') veMufettisKapat(); else showEmptyProperties();   // bağlam değişti — pencere kapanır (map.js)
     veRefreshResultsUI();
     return;
   }
@@ -451,7 +456,7 @@ function veLoadTabState(tab) {
     updateAllConnections();
     updateNodeCount();
   }
-  showEmptyProperties();
+  if(typeof veMufettisKapat === 'function') veMufettisKapat(); else showEmptyProperties();   // bağlam değişti — pencere kapanır (map.js)
   veRefreshResultsUI();
 }
 
@@ -534,7 +539,7 @@ function veAddTab(name, silent) {
   updateCanvasTransform();
   updateAllConnections();
   updateNodeCount();
-  showEmptyProperties();
+  if(typeof veMufettisKapat === 'function') veMufettisKapat(); else showEmptyProperties();
   veRefreshResultsUI();
   saveState(); // İlk undo noktası
   

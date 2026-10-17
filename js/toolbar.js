@@ -224,7 +224,7 @@ function veClearAll() {
     nodes = [];
     connections = [];
     selectedNodes = [];
-    showEmptyProperties();
+    if(typeof veMufettisKapat === 'function') veMufettisKapat(); else showEmptyProperties();
     updateAllConnections();
     updateNodeCount();
     veSaveActiveTabState();
