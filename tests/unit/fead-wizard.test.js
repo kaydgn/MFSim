@@ -860,7 +860,7 @@ describe('adım eşlemesi ve yüzeyler', () => {
     const bosNode = { id: 'w1', type: 'fead-wizard', data: {} };
     const h1 = wiz.getFeadWizardPropertiesHTML(bosNode);
     expect(h1).toContain("veFeadWizOpen('w1')");
-    expect(h1).toMatch(/Henüz taslak yok/);
+    expect(h1).toMatch(/Taslak yok\./);
     kabuk();
     wiz.veFeadWizSeed('BMC_FEAD_2026');
     const doluNode = { id: 'w2', type: 'fead-wizard',
@@ -972,8 +972,8 @@ describe('gergi satırı — Kasnaklar listesinde, silinemez, tek kaynak', () =>
     // Uyarı iki kez taşındı ve İKİSİ DE kullanıcı isteğiydi: önce satırdaki
     // amber çipten kart açıklamasına, sonra (2026-09-02, açıklamalar tümden
     // kalkınca) alanın kendi `title` ipucuna. İpucu üzerine gelince çıkıyor,
-    // yüzeyi doldurmuyor — ve ÖLÇÜLMÜŞ BEDELİ de taşıyor, yoksa bir gün
-    // "sadeleştirme" diye tamamen silinirdi.
+    // yüzeyi doldurmuyor. İpucu bir AD: alanın ne olduğu ve ne olmadığı
+    // (ARAYÜZ ANLATMAZ — ölçülmüş bedel ekranda değil, bu testte).
     kur('AG00976_GATES_2025');
     expect(wiz.veFeadWizTenCoordKeys()).toEqual(['cenX', 'cenY']);
     const r = tenSatiri();
@@ -985,8 +985,7 @@ describe('gergi satırı — Kasnaklar listesinde, silinemez, tek kaynak', () =>
     const xy = r.match(/<input[^>]*veFeadWizTenSet\('cen[XY]'/g) || [];
     expect(xy.length).toBe(2);
     xy.forEach((alan) => {
-      expect(alan).toMatch(/title="[^"]*MERKEZ/);
-      expect(alan).toMatch(/title="[^"]*\+%1526/);      // bedel de ipucunda
+      expect(alan).toMatch(/title="Avara merkezi \(montaj konumu değil\)"/);
     });
     // ...ve montaj konumu alanına ASLA yazmıyor: o bir ÇIKTI. Satırın oraya
     // yazması, kullanıcının girdiği sayıyı 90 mm ötedeki bir noktaya koymak
@@ -1292,7 +1291,7 @@ describe('aksesuar modelleri — elle kW girişi YOK', () => {
     const alt = st.pulleys.find((p) => p.type === 'fead-alternator');
     st.solver.duty.forEach((r) => { delete r.kw[alt.key]; });   // gücünü kes
     const h = wiz.veFeadWizStepHTML(4, wiz.veFeadWizBuild());
-    expect(h).toMatch(/0 kW.*ile koşacak|gücü hiçbir/i);
+    expect(h).toMatch(/Güç kaynağı yok/);
     expect(h).toContain('Alternatör');
     // avaralar uyarıda GEÇMEZ (güç çekmemeleri doğru davranış)
     const uyari = h.slice(h.indexOf('ve-fw-issue-warn'));
@@ -1765,10 +1764,7 @@ describe('serpantin sırası — iki sıra birleşti', () => {
 
     wiz.veFeadWizRouteReverse();
     const kotu = wiz.veFeadWizStepHTML(1, wiz.veFeadWizBuild());
-    expect(kotu).toMatch(/çıkışında değil \(6\/6\)/);
-    // ÇARE UYDURULMUYOR: sayıların etkilenmediği AYNI cümlede yazılı, yoksa
-    // okuyucu bunu bir hesap hatası sanardı.
-    expect(kotu).toMatch(/Sayılar bundan etkilenmez/);
+    expect(kotu).toMatch(/çıkışında değil \(6\/6\); sayılar etkilenmez\./);
     expect(kotu).not.toMatch(/undefined|NaN|\[object/);
     void st;
   });
@@ -3351,7 +3347,7 @@ describe('sihirbazda açıklama yüzeyi YOK', () => {
     kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
     expect(wiz.veFeadWizStepHTML(3, wiz.veFeadWizBuild())).toContain('ve-fw-reads');
     // Alan başına ipucu da duruyor (üzerine gelince çıkar).
-    expect(_fwEditor('__ten__')).toMatch(/title="[^"]*MERKEZ/);
+    expect(_fwEditor('__ten__')).toMatch(/title="Avara merkezi/);
   });
 });
 
@@ -3436,6 +3432,31 @@ describe('açı seçici — yeşil yayın ne olduğu YAZILI', () => {
     wiz.veFeadWizAngOpen();
     const h2 = wiz.veFeadWizAngHTML();
     expect(h2).not.toContain('ve-fw-legend');
+  });
+
+  // Kullanıcı bildirimi (2026-09-22): *"…açı tanımları çok başka olmuş. Kafa
+  // karıştırıyor."* Tanım bant olsun olmasın durur ve bir ANAHTARDIR, paragraf
+  // değil (ARAYÜZ ANLATMAZ, 2026-10-16). Bu kapı yoktu: metin temizliği tanımı
+  // bir kez fark edilmeden silmişti.
+  test('açının tanımı bant olsun olmasın durur — anahtar, paragraf değil', () => {
+    const tanim = (h) => {
+      const m = /<div class="ve-fw-angdef">([\s\S]*?)<\/div>/.exec(h);
+      return m ? m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : null;
+    };
+    kabuk(); wiz.veFeadWizSeed('AG00976_GATES_2025');
+    wiz.veFeadWizAngOpen();
+    const t1 = tanim(wiz.veFeadWizAngHTML());
+    expect(t1).toMatch(/Kol yönü: merkez → gövde · 0° \+X · CCW \+ · −180…\+180/);
+    expect(t1).toMatch(/Kesikli çember: olanaklı montaj noktaları/);
+    expect(t1).not.toMatch(/\b(nedir|bakar|zorunda|yazar)\b/);
+    kabuk(); wiz.veFeadWizReset();
+    wiz.veFeadWizState().ten = { cenX: 0, cenY: 0, armLen: 90, od: 75 };
+    wiz.veFeadWizAngOpen();
+    expect(tanim(wiz.veFeadWizAngHTML())).toBe(t1);
+    // Görünüşü de bir gösterge: açıklama bloğunun sol çizgisi ve zemini yok.
+    const kural = /\.ve-fw-angdef\{([^}]*)\}/.exec(CSS);
+    expect(kural).not.toBeNull();
+    expect(kural[1]).not.toMatch(/border-left|background/);
   });
 });
 
@@ -3618,7 +3639,7 @@ describe('gerginin sayıları: tohum BOŞ, kapı KURULUMDA', () => {
     expect(k0.ok).toBe(true);
     expect(k0.not).toMatch(/kasnak çapı/);
     expect(k0.not).toMatch(/kol boyu/);
-    expect(k0.not).toMatch(/3\. adım/);           // NEREDE girileceği yazılı
+    expect(k0.not).not.toMatch(/adımda|seçin|girin/);   // durum söyler, tarif vermez
 
     st.ten.od = 75;
     expect(wiz.veFeadWizCanCreate().not).not.toMatch(/kasnak çapı/);

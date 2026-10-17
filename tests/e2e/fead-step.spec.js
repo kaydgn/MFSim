@@ -208,7 +208,7 @@ test('STEP\'ten başla: .stpZ seç → 3B\'de parçaya tıklayıp rol ver → he
   // Boşluğa tıklamak seçimi kaldırır (tuvalin sol üst köşesi)
   const tuv = await page.locator('#ve-fw-3b-tuval').boundingBox();
   await page.mouse.click(tuv.x + 12, tuv.y + 12);
-  await expect(page.locator('#ve-fw-3b-alt')).toContainText('modelde bir parçaya tıklayın');   // yönerge dizide (tasarım B)
+  await expect(page.locator('#ve-fw-3b-alt')).toContainText('Seçili parça yok');   // durum dizide (tasarım B)
   await expect(yan.locator('[data-ve-3b-secili]')).toHaveCount(0);
   // Rol KARTLA ORTAK: kartın ağacında aynı roller
   const adSatiri = (ad) => satir.filter({ has: page.locator('td:first-child', { hasText: new RegExp(ad) }) });

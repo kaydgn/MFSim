@@ -336,7 +336,7 @@ describe('tanıyıcı: bakış yönü görünür bir varsayılan', () => {
   test('orijin düzlemin ÜSTÜNDE: varsayım yapılmaz, uyarı yazılır', () => {
     const r = coz(ag00686Step({ duzlem: 0 }));
     expect(r.bakis.kaynak).toBe('varsayilan');
-    expect(r.uyarilar.join(' ')).toMatch(/Bakış yönü dosyadan çıkarılamadı/);
+    expect(r.uyarilar.join(' ')).toMatch(/Bakış yönü çıkarılamadı: orijin kayış düzleminde\./);
   });
 });
 
@@ -432,7 +432,7 @@ describe('ROL KULLANICININ: okuma kasnak aramaz, analiz yalnız rol verilen dü�
     expect(w.od).toBeCloseTo(90, 9);
     const kay = S.veFeadStpKayit(r, { gergiKatalog: [] });
     expect(kay.pulleys.find((p) => p.type === 'fead-waterpump').data.contact).toBe('back');
-    expect(kay.uyarilar.join(' ')).toMatch(/SU POMPASI" düz yüzeyli ama rolü fead-waterpump/);
+    expect(kay.uyarilar.join(' ')).toMatch(/SU POMPASI" düz yüzeyli: temas sırt \(back\)\./);
   });
 
   test('bir parça TEK birime ait: rollü iki atadan EN YAKINI alır', () => {

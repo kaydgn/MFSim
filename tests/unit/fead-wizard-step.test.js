@@ -412,7 +412,7 @@ describe('kullanıcının rol ve bakış seçimi', () => {
     wiz.veFeadWizStpRol(dugum(/KL[İI]MA/), 'fead-alternator');
     wiz.veFeadWizStpHesapla();
     const h = wiz._fwStpKartHTML();
-    expect(h).toMatch(/aktarımdan sonra değişti/);
+    expect(h).toMatch(/Aktarımdan sonra rol ya da bakış değişti/);
     expect(h).toMatch(/Yeniden aktar/);
     expect(wiz.veFeadWizState().pulleys.map((p) => p.type)).toContain('fead-ac');
   });
