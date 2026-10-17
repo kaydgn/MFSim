@@ -254,8 +254,7 @@ function veUpdateResultsTree() {
 
   if(groups.length === 0) {
     html += '<div class="vsig-empty" style="padding:14px 10px; line-height:1.5;">' +
-            'Henüz ölçüm yok.<br>Yukarıdaki <b>İçe aktar</b> ile bir ' +
-            '.xlsx / .csv dosyası açın.</div>';
+            'Henüz ölçüm yok.</div>';
   } else {
     var channels = 0;
     groups.forEach(function(g) { channels += g.items.length; });
@@ -474,7 +473,7 @@ function veRenderSlot(slotIdx) {
       '<div class="ve-trace-empty" style="display:flex;">' +
       '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-clipboard"></span></div>' +
       '<div class="ve-trace-empty-title">Veri tablosu boş</div>' +
-      '<div class="ve-trace-empty-sub">Veri Gezgini\'nden sinyal seçin.</div></div>';
+      '<div class="ve-trace-empty-sub">Sinyal seçilmedi.</div></div>';
     return;
   }
 
@@ -587,7 +586,7 @@ function veShowXAxisPicker(slotIdx, e) {
 
   var options = veGetAvailableXAxisOptions(slotIdx);
   if(options.length === 0) {
-    showToast('X ekseni seçimi için önce bir ölçüm içe aktarın.', 'info');
+    showToast('X ekseni için ölçüm yok.', 'info');
     return;
   }
 

@@ -1,53 +1,17 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 151,
+ "sayi": 113,
  "dosyalar": {
-  "candbc/index.html": {
-   "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
-   "22e18d8b4d": "İkisini birden bırakabilirsiniz",
-   "4649363ce0": "Tema — değiştirmek için tıklayın",
-   "50c9469287": "Y ekseni görünen pencereye mi, tüm kayda mı ölçeklensin",
-   "6326d691f5": "Aynı birimdeki sinyalleri tek şeritte birleştirir — farklı birimler birleştirilm",
-   "7e77a72ab9": "CAN kayıtlarını DBC'ye göre çözer ve diyagrama döker",
-   "a48b2db286": "Dosyaları sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz",
-   "ada9383d1c": "'nden bir sinyal işaretleyin. Elinizde dosya yoksa üst bandın sağındaki",
-   "cd548e4b90": "Kayıt biçimi — otomatik algılama yanılırsa elle seçin",
-   "db7c71f365": "Soldaki",
-   "fb0e21a93f": "Görünen zaman aralığındaki ölçüm noktalarını CSV olarak indir"
-  },
-  "candbc/js/can-app.js": {
-   "1bfc1f3e2a": "Zaman damgaları artan sırada DEĞİL.",
-   "1f731631c2": "Bu kareler okundu ama çözülemedi — yüklü DBC bu kimlikleri tanımlamıyor. Yanlış ",
-   "2c6c66afd1": "İstatistik için önce bir CAN kaydı yükleyin.",
-   "66f26be36e": "Önce grafiğe sinyal ekleyin.",
-   "6fafec29c4": "Dosya okundu ama hiç CAN karesi çözülemedi. Tanı sekmesine bakın.",
-   "836d27090c": "Zaman ekseni ayarı bir sonraki kayıt yüklemesinde geçerli olur.",
-   "86a5e66ee3": "Örnek yüklendi: gerçek bir araç kaydı değil, gösteri için üretilmiş veridir.",
-   "8b83a60c8c": "‹› mesaj okundu · ‹› uyarı var (Tanı sekmesine bakın).",
-   "b953f016c0": "Kare listesi için önce bir CAN kaydı yükleyin.",
-   "bb053688c5": "‹› ölçüm noktası CSV olarak indirildi (görünen zaman aralığı).",
-   "fe365bdc8f": "Kayıtta zaman damgası yok — kare sırası eksen olarak kullanıldı"
-  },
   "candbc/js/can-dbc.js": {
    "337310b05e": "‹›: çoklanmış sinyal var ama çoklayıcı (M) sinyali yok — o sinyaller çözülemez.",
    "4ab5deedb8": "‹›.‹›: sinyal ‹›. bite kadar uzanıyor ama mesaj ‹› bayt (‹› bit).",
    "84a378a52e": "‹›: ‹› bit — ham değer 53 bitten uzun, düşük bitler yuvarlanır."
   },
   "candbc/js/can-example.js": {
-   "0bc2ce0223": "# MFSim CAN Cozumleyici — URETILMIS ornek kayit (gercek arac verisi degildir)",
-   "0f2e360f1d": "CM_ SG_ 512 BuyukUcluDeger \"Motorola (@0) duzenli, isaretli sinyal — bit duzeni ",
-   "8d7b8b1c07": "VAL_ 256 Vites 0 \"Bos\" 1 \"1. vites\" 2 \"2. vites\" 3 \"3. vites\" 4 \"4. vites\" 5 \"5.",
-   "f3783fd1c4": "CM_ BO_ 256 \"Sanziman durumu — SayfaNo coklayicisiyla iki farkli yuk tasiyor\";"
+   "8d7b8b1c07": "VAL_ 256 Vites 0 \"Bos\" 1 \"1. vites\" 2 \"2. vites\" 3 \"3. vites\" 4 \"4. vites\" 5 \"5."
   },
   "candbc/js/can-log.js": {
-   "448ac409aa": "Bu dosyada tanınan bir CAN kayıt biçimi bulunamadı.",
    "4e8ec03cdb": "candump (SocketCAN, ID#VERİ)"
-  },
-  "candbc/js/can-tree.js": {
-   "2bc6411760": "Önce bir .dbc dosyası yükleyin. Mesaj ve sinyal tanımları oradan gelir.",
-   "8f561ddc35": "‹›: mesaj var ama sinyal hiçbir karede çözülemedi (çoklama ya da kısa DLC).",
-   "c0644a2325": "Yüklü DBC'deki hiçbir mesaj kayıtta geçmiyor. Süzgeci Tümü yapıp tanımları göreb",
-   "f7230cff21": "Bu kimlikler kayıtta var ama yüklü DBC bunları tanımlamıyor"
   },
   "js/command-palette.js": {
    "2c93dfd87c": "komuta sipariş fiş durum ölç",
@@ -222,20 +186,6 @@
   },
   "js/ui-core.js": {
    "bf6f6bf278": "Tork Konvertörü → Şanzıman bağlantısı Şanzıman Kontrol bileşeni gerektirir."
-  },
-  "viewer/index.html": {
-   "052ad6f8a0": "Dosyayı buraya sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz",
-   "28f24d8937": "İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.",
-   "6503c7ac88": "Excel / CSV ölçüm dosyalarını okur ve diyagrama döker",
-   "fcc66448aa": "Tema — değiştirmek için tıklayın"
-  },
-  "viewer/js/board.js": {
-   "07f6225bc6": "Henüz ölçüm yok. Yukarıdaki İçe aktar ile bir .xlsx / .csv dosyası açın.",
-   "c2966aa5d6": "X ekseni seçimi için önce bir ölçüm içe aktarın.",
-   "d4569b5bf8": "Veri Gezgini'nden sinyal seçin."
-  },
-  "viewer/js/theme.js": {
-   "dcd04bca2e": "Tema: ‹›‹› — değiştirmek için tıklayın"
   }
  }
 }

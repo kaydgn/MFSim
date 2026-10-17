@@ -60,8 +60,7 @@ function mfvApply(mode) {
   var btn = document.getElementById('mfv-theme-btn');
   if(btn) {
     btn.title = 'Tema: ' + (MFV_LABEL[mode] || 'Sistem') +
-                (mode === 'system' ? ' (işletim sistemini izliyor)' : '') +
-                ' — değiştirmek için tıklayın';
+                (mode === 'system' ? ' (işletim sistemini izliyor)' : '');
     btn.setAttribute('aria-label', btn.title);
   }
 

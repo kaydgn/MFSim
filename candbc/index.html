@@ -48,10 +48,6 @@
       display:flex; align-items:center; gap:7px;
       font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);
     }
-    .cdb-sub {
-      font-size:var(--fs-micro); color:var(--text-muted);
-      padding-left:10px; margin-left:2px; border-left:1px solid var(--border-color);
-    }
     /* Yüklü dosya künyesi. Boşken de DURUR ve ne beklendiğini söyler —
        kullanıcı "hangi dosyayı yükledim" sorusunu ekrandan cevaplayabilsin. */
     .cdb-chip {
@@ -205,7 +201,6 @@
     .cdb-toast.err  { border-left-color:var(--accent-danger); }
 
     @media (max-width: 760px) {
-      .cdb-sub, .cdb-hint { display:none; }
       #cdb-side { width:180px; }
     }
   </style>
@@ -214,7 +209,6 @@
 
 <header id="cdb-topbar">
   <span class="cdb-brand"><span class="mf-ico mf-ico-activity"></span> CAN Çözümleyici</span>
-  <span class="cdb-sub">CAN kayıtlarını DBC'ye göre çözer ve diyagrama döker</span>
 
   <span class="cdb-chip" id="cdb-chip-dbc" title="Yüklü sinyal veritabanı">DBC yüklenmedi</span>
   <span class="cdb-chip" id="cdb-chip-log" title="Yüklü CAN kaydı">Kayıt yüklenmedi</span>
@@ -225,14 +219,13 @@
   <button type="button" class="ve-imp-tool" onclick="cdbPickLog()" title="CAN kaydı yükle (.log .asc .trc .txt)">
     <span class="mf-ico mf-ico-upload"></span> Kayıt
   </button>
-  <select class="cdb-sel" id="cdb-fmt-select" title="Kayıt biçimi — otomatik algılama yanılırsa elle seçin"></select>
+  <select class="cdb-sel" id="cdb-fmt-select" title="Kayıt biçimi"></select>
 
   <span style="margin-left:auto"></span>
-  <span class="cdb-sub cdb-hint" style="border:0">Dosyaları sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz</span>
-  <button type="button" class="ve-imp-tool" onclick="cdbLoadExample()" title="Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler">
+  <button type="button" class="ve-imp-tool" id="cdb-example-btn" onclick="cdbLoadExample()" title="Örnek: üretilmiş gösteri veritabanı ve kaydı">
     <span class="mf-ico mf-ico-lightbulb"></span> Örnek
   </button>
-  <button type="button" class="ve-imp-tool" id="cdb-theme-btn" onclick="cdbCycleTheme()" title="Tema — değiştirmek için tıklayın">
+  <button type="button" class="ve-imp-tool" id="cdb-theme-btn" onclick="cdbCycleTheme()" title="Tema">
     <span class="mf-ico mf-ico-contrast"></span> <span id="cdb-theme-label">Sistem</span>
   </button>
 </header>
@@ -287,12 +280,12 @@
       <button type="button" class="ve-trace-btn icon" onclick="cdbChartZoom(1.4, cdbChart.cursorT)" title="Uzaklaş (−)" aria-label="Uzaklaş"><span class="mf-ico mf-ico-zoom-out" aria-hidden="true"></span></button>
       <button type="button" class="ve-trace-btn icon" onclick="cdbChartBack()" title="Önceki görünüm (Backspace)" aria-label="Önceki görünüm"><span class="mf-ico mf-ico-rotate-ccw" aria-hidden="true"></span></button>
       <button type="button" class="ve-trace-btn" id="cdb-yscope" onclick="cdbToggleYScope()"
-              title="Y ekseni görünen pencereye mi, tüm kayda mı ölçeklensin">Y: pencere</button>
+              title="Y ekseni ölçeği">Y: pencere</button>
 
       <span class="ve-trace-sep"></span>
 
       <button type="button" class="ve-trace-btn" onclick="cdbChartMergeByUnit()"
-              title="Aynı birimdeki sinyalleri tek şeritte birleştirir — farklı birimler birleştirilmez">
+              title="Aynı birimdeki sinyalleri tek şeritte birleştir">
         <span class="mf-ico mf-ico-shuffle"></span> Birimde birleştir
       </button>
       <button type="button" class="ve-trace-btn" onclick="cdbChartSplitAll()" title="Her sinyali kendi şeridine ayır">Ayır</button>
@@ -302,7 +295,7 @@
 
       <span class="ve-trace-spacer"></span>
 
-      <button type="button" class="ve-trace-btn" onclick="cdbExportCsv()" title="Görünen zaman aralığındaki ölçüm noktalarını CSV olarak indir">
+      <button type="button" class="ve-trace-btn" onclick="cdbExportCsv()" title="CSV indir (görünen aralık)">
         <span class="mf-ico mf-ico-download"></span> CSV
       </button>
       <button type="button" class="ve-trace-btn" onclick="cdbExportPng()" title="Diyagramı PNG olarak indir">
@@ -321,11 +314,8 @@
           <div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-activity"></span></div>
           <div class="ve-trace-empty-title">Henüz çizili sinyal yok</div>
           <div class="ve-trace-empty-sub">
-            Soldaki <b>Sinyal Gezgini</b>'nden bir sinyal işaretleyin. Elinizde dosya yoksa
-            üst bandın sağındaki <b>Örnek</b> düğmesi çalışan bir kurulum yükler.<br><br>
-            Diyagramda: <b>tekerlek</b> yakınlaştırır · <b>sürükle</b> kaydırır ·
-            <b>Shift+sürükle</b> kutu seçer · <b>çift tık</b> sığdırır ·
-            <b>sağ tık</b> imleci sabitler (Δt).
+            Tekerlek: yakınlaştır · Sürükle: kaydır · Shift + sürükle: kutu seç ·
+            Çift tık: sığdır · Sağ tık: imleci sabitle (Δt)
           </div>
         </div>
       </div>
@@ -346,7 +336,6 @@
     <span class="mf-ico mf-ico-upload"></span>
     <div class="ve-imp-drop-title">Dosyaları bırakın</div>
     <div class="ve-imp-drop-sub">.dbc (sinyal veritabanı) · .log .asc .trc .txt (CAN kaydı)</div>
-    <div class="ve-imp-drop-sub">İkisini birden bırakabilirsiniz</div>
   </div>
 </div>
 

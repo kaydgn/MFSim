@@ -11546,10 +11546,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
       display:flex; align-items:center; gap:7px;
       font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);
     }
-    .cdb-sub {
-      font-size:var(--fs-micro); color:var(--text-muted);
-      padding-left:10px; margin-left:2px; border-left:1px solid var(--border-color);
-    }
     /* Yüklü dosya künyesi. Boşken de DURUR ve ne beklendiğini söyler —
        kullanıcı "hangi dosyayı yükledim" sorusunu ekrandan cevaplayabilsin. */
     .cdb-chip {
@@ -11703,7 +11699,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
     .cdb-toast.err  { border-left-color:var(--accent-danger); }
 
     @media (max-width: 760px) {
-      .cdb-sub, .cdb-hint { display:none; }
       #cdb-side { width:180px; }
     }
   </style>
@@ -11712,7 +11707,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 
 <header id="cdb-topbar">
   <span class="cdb-brand"><span class="mf-ico mf-ico-activity"></span> CAN Çözümleyici</span>
-  <span class="cdb-sub">CAN kayıtlarını DBC'ye göre çözer ve diyagrama döker</span>
 
   <span class="cdb-chip" id="cdb-chip-dbc" title="Yüklü sinyal veritabanı">DBC yüklenmedi</span>
   <span class="cdb-chip" id="cdb-chip-log" title="Yüklü CAN kaydı">Kayıt yüklenmedi</span>
@@ -11723,14 +11717,13 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   <button type="button" class="ve-imp-tool" onclick="cdbPickLog()" title="CAN kaydı yükle (.log .asc .trc .txt)">
     <span class="mf-ico mf-ico-upload"></span> Kayıt
   </button>
-  <select class="cdb-sel" id="cdb-fmt-select" title="Kayıt biçimi — otomatik algılama yanılırsa elle seçin"></select>
+  <select class="cdb-sel" id="cdb-fmt-select" title="Kayıt biçimi"></select>
 
   <span style="margin-left:auto"></span>
-  <span class="cdb-sub cdb-hint" style="border:0">Dosyaları sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz</span>
-  <button type="button" class="ve-imp-tool" onclick="cdbLoadExample()" title="Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler">
+  <button type="button" class="ve-imp-tool" id="cdb-example-btn" onclick="cdbLoadExample()" title="Örnek: üretilmiş gösteri veritabanı ve kaydı">
     <span class="mf-ico mf-ico-lightbulb"></span> Örnek
   </button>
-  <button type="button" class="ve-imp-tool" id="cdb-theme-btn" onclick="cdbCycleTheme()" title="Tema — değiştirmek için tıklayın">
+  <button type="button" class="ve-imp-tool" id="cdb-theme-btn" onclick="cdbCycleTheme()" title="Tema">
     <span class="mf-ico mf-ico-contrast"></span> <span id="cdb-theme-label">Sistem</span>
   </button>
 </header>
@@ -11785,12 +11778,12 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
       <button type="button" class="ve-trace-btn icon" onclick="cdbChartZoom(1.4, cdbChart.cursorT)" title="Uzaklaş (−)" aria-label="Uzaklaş"><span class="mf-ico mf-ico-zoom-out" aria-hidden="true"></span></button>
       <button type="button" class="ve-trace-btn icon" onclick="cdbChartBack()" title="Önceki görünüm (Backspace)" aria-label="Önceki görünüm"><span class="mf-ico mf-ico-rotate-ccw" aria-hidden="true"></span></button>
       <button type="button" class="ve-trace-btn" id="cdb-yscope" onclick="cdbToggleYScope()"
-              title="Y ekseni görünen pencereye mi, tüm kayda mı ölçeklensin">Y: pencere</button>
+              title="Y ekseni ölçeği">Y: pencere</button>
 
       <span class="ve-trace-sep"></span>
 
       <button type="button" class="ve-trace-btn" onclick="cdbChartMergeByUnit()"
-              title="Aynı birimdeki sinyalleri tek şeritte birleştirir — farklı birimler birleştirilmez">
+              title="Aynı birimdeki sinyalleri tek şeritte birleştir">
         <span class="mf-ico mf-ico-shuffle"></span> Birimde birleştir
       </button>
       <button type="button" class="ve-trace-btn" onclick="cdbChartSplitAll()" title="Her sinyali kendi şeridine ayır">Ayır</button>
@@ -11800,7 +11793,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 
       <span class="ve-trace-spacer"></span>
 
-      <button type="button" class="ve-trace-btn" onclick="cdbExportCsv()" title="Görünen zaman aralığındaki ölçüm noktalarını CSV olarak indir">
+      <button type="button" class="ve-trace-btn" onclick="cdbExportCsv()" title="CSV indir (görünen aralık)">
         <span class="mf-ico mf-ico-download"></span> CSV
       </button>
       <button type="button" class="ve-trace-btn" onclick="cdbExportPng()" title="Diyagramı PNG olarak indir">
@@ -11819,11 +11812,8 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
           <div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-activity"></span></div>
           <div class="ve-trace-empty-title">Henüz çizili sinyal yok</div>
           <div class="ve-trace-empty-sub">
-            Soldaki <b>Sinyal Gezgini</b>'nden bir sinyal işaretleyin. Elinizde dosya yoksa
-            üst bandın sağındaki <b>Örnek</b> düğmesi çalışan bir kurulum yükler.<br><br>
-            Diyagramda: <b>tekerlek</b> yakınlaştırır · <b>sürükle</b> kaydırır ·
-            <b>Shift+sürükle</b> kutu seçer · <b>çift tık</b> sığdırır ·
-            <b>sağ tık</b> imleci sabitler (Δt).
+            Tekerlek: yakınlaştır · Sürükle: kaydır · Shift + sürükle: kutu seç ·
+            Çift tık: sığdır · Sağ tık: imleci sabitle (Δt)
           </div>
         </div>
       </div>
@@ -11844,7 +11834,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
     <span class="mf-ico mf-ico-upload"></span>
     <div class="ve-imp-drop-title">Dosyaları bırakın</div>
     <div class="ve-imp-drop-sub">.dbc (sinyal veritabanı) · .log .asc .trc .txt (CAN kaydı)</div>
-    <div class="ve-imp-drop-sub">İkisini birden bırakabilirsiniz</div>
   </div>
 </div>
 
@@ -12777,7 +12766,7 @@ function cdbParseLogAsync(text, opts, onProgress, onDone) {
   var det = cdbDetectLogFormat(head, ctx);
   var fmt = opts.formatId ? cdbFormatById(opts.formatId) : (det.best && det.best.format);
   if (!fmt) {
-    onDone({ error: 'Bu dosyada tanınan bir CAN kayıt biçimi bulunamadı.', detect: det, store: null });
+    onDone({ error: 'Dosyada tanınan bir CAN kayıt biçimi yok.', detect: det, store: null });
     return;
   }
   var scale = (opts.timeScale !== undefined && opts.timeScale !== null) ? opts.timeScale : fmt.timeScale;
@@ -13988,8 +13977,7 @@ function cdbRefreshTree() {
   var db = cdbState.db, st = cdbState.store;
 
   if (!db) {
-    host.innerHTML = '<div class="vsig-empty">Önce bir <b>.dbc</b> dosyası yükleyin.<br>' +
-                     'Mesaj ve sinyal tanımları oradan gelir.</div>';
+    host.innerHTML = '<div class="vsig-empty">DBC yüklenmedi.</div>';
     cdbUpdateTreeCount();
     return;
   }
@@ -14057,7 +14045,7 @@ function cdbRefreshTree() {
   // Kayıtta geçen ama DBC'de tanımı olmayan kimlikler
   var orphans = cdbOrphanIds();
   if (orphans.length && !q) {
-    html += '<div class="vsig-orphan-head" title="Bu kimlikler kayıtta var ama yüklü DBC bunları tanımlamıyor">' +
+    html += '<div class="vsig-orphan-head" title="Kayıtta olup DBC\'de tanımı olmayan kimlikler">' +
             'Tanımsız kimlikler (' + orphans.length + ')</div>';
     for (var o = 0; o < orphans.length && o < 60; o++) {
       html += '<div class="vsig-orphan"><span style="font-family:var(--font-mono);">' +
@@ -14069,7 +14057,7 @@ function cdbRefreshTree() {
 
   if (!shownMsgs) {
     html = '<div class="vsig-empty">' + (q ? 'Aramaya uyan mesaj/sinyal yok.' :
-      cdbTree.filter === 'log' ? 'Yüklü DBC\'deki hiçbir mesaj kayıtta geçmiyor.<br>Süzgeci <b>Tümü</b> yapıp tanımları görebilirsiniz.' :
+      cdbTree.filter === 'log' ? 'Yüklü DBC\'deki hiçbir mesaj kayıtta geçmiyor.' :
       'Gösterilecek mesaj yok.') + '</div>';
   }
 
@@ -14083,7 +14071,7 @@ function cdbMsgTitle(msg, count) {
            (msg.extended ? '  (29 bit)' : '  (11 bit)')];
   p.push('DLC ' + msg.dlc + ' bayt · gönderen: ' + msg.transmitter);
   if (msg.cycleTime) p.push('Çevrim: ' + msg.cycleTime + ' ms');
-  p.push(count ? ('Kayıtta ' + cdbThousands(count) + ' kare') : 'Bu kayıtta hiç geçmiyor');
+  p.push(count ? ('Kayıtta ' + cdbThousands(count) + ' kare') : 'Kayıtta geçmiyor');
   if (msg.comment) p.push('', msg.comment);
   return p.join('\n');
 }
@@ -14096,14 +14084,14 @@ function cdbSigTitle(msg, sig, can) {
   p.push('Fiziksel = ham × ' + sig.factor + ' + ' + sig.offset + (sig.unit ? '  [' + sig.unit + ']' : ''));
   if (sig.min !== null && sig.max !== null) p.push('Aralık: ' + sig.min + ' … ' + sig.max);
   if (sig.muxValue !== null) p.push('Yalnız çoklayıcı = ' + sig.muxValue + ' iken geçerli');
-  if (sig.isMuxor) p.push('Bu sinyal mesajın ÇOKLAYICISIdır');
+  if (sig.isMuxor) p.push('Çoklayıcı sinyal');
   if (sig.valueType !== 'int') p.push('IEEE ' + sig.valueType);
   if (sig.values) {
     var ks = Object.keys(sig.values).slice(0, 8);
     p.push('Değerler: ' + ks.map(function(k) { return k + '=' + sig.values[k]; }).join(', ') +
            (Object.keys(sig.values).length > 8 ? ' …' : ''));
   }
-  if (!can) p.push('', 'Bu mesaj kayıtta geçmiyor — çizilemez.');
+  if (!can) p.push('', 'Mesaj kayıtta geçmiyor.');
   if (sig.comment) p.push('', sig.comment);
   return p.join('\n');
 }
@@ -14165,10 +14153,10 @@ function cdbToggleSignal(sigKey) {
   if (cdbChartHasSignal(sigKey)) {
     cdbChartRemoveSignal(sigKey);
   } else {
-    if (!count) { cdbToast(found.msg.name + ' bu kayıtta hiç geçmiyor — çizilecek veri yok.'); return; }
+    if (!count) { cdbToast(found.msg.name + ' kayıtta geçmiyor.'); return; }
     cdbChartAddSignal(found.msg, found.sig);
     var ser = cdbSeriesOf(sigKey);
-    if (ser && !ser.n) cdbToast(found.sig.name + ': mesaj var ama sinyal hiçbir karede çözülemedi (çoklama ya da kısa DLC).');
+    if (ser && !ser.n) cdbToast(found.sig.name + ': hiçbir karede çözülmedi (çoklama / kısa DLC).');
   }
   cdbRefreshTree();
 }
@@ -14260,8 +14248,8 @@ var CDB_EXAMPLE_DBC = [
 ' SG_ BuyukUcluDeger : 7|16@0- (0.1,0) [-3276.8|3276.7] "Nm"  GOSTERGE',
 ' SG_ Bayrak : 23|1@0+ (1,0) [0|1] ""  GOSTERGE',
 '',
-'CM_ BO_ 256 "Sanziman durumu — SayfaNo coklayicisiyla iki farkli yuk tasiyor";',
-'CM_ SG_ 512 BuyukUcluDeger "Motorola (@0) duzenli, isaretli sinyal — bit duzeni kapisi";',
+'CM_ BO_ 256 "Sanziman durumu (SayfaNo ile coklanmis)";',
+'CM_ SG_ 512 BuyukUcluDeger "Motorola (@0), isaretli";',
 '',
 'VAL_ 256 Vites 0 "Bos" 1 "1. vites" 2 "2. vites" 3 "3. vites" 4 "4. vites" 5 "5. vites" 14 "Geri" 15 "Hata" ;',
 'VAL_ 2364540158 MotorDurumu 0 "Durdu" 1 "Mars" 2 "Rolanti" 3 "Calisiyor" ;',
@@ -14389,7 +14377,7 @@ function cdbMakeExampleLog() {
   }
   // Kayıt dosyaları zaman sırasındadır; üretilen kareler de öyle olsun.
   out.sort(function(a, b) { return a.t - b.t; });
-  var lines = ['# MFSim CAN Cozumleyici — URETILMIS ornek kayit (gercek arac verisi degildir)'];
+  var lines = ['# MFSim CAN Cozumleyici - uretilmis gosteri kaydi'];
   for (var i = 0; i < out.length; i++) lines.push(out[i].line);
   return lines.join('\n') + '\n';
 }
@@ -14501,8 +14489,8 @@ function cdbApplyDbc(db, name) {
   var sigs = 0;
   for (var i = 0; i < db.messages.length; i++) sigs += db.messages[i].signals.length;
   cdbSetChip('cdb-chip-dbc', name + ' · ' + db.messages.length + ' mesaj / ' + sigs + ' sinyal');
-  if (!db.messages.length) cdbToast('Bu DBC dosyasında hiç mesaj tanımı bulunamadı.', 'err');
-  else if (db.warnings.length) cdbToast(db.messages.length + ' mesaj okundu · ' + db.warnings.length + ' uyarı var (Tanı sekmesine bakın).', 'warn');
+  if (!db.messages.length) cdbToast('DBC dosyasında mesaj tanımı yok.', 'err');
+  else if (db.warnings.length) cdbToast(db.messages.length + ' mesaj okundu · ' + db.warnings.length + ' uyarı.', 'warn');
   else cdbToast(db.messages.length + ' mesaj, ' + sigs + ' sinyal okundu.');
   cdbRefreshTree();
   cdbRenderTab();
@@ -14524,7 +14512,7 @@ function cdbLoadLogFile(file) {
       cdbShowProgress(false);
       if (res.error) {
         cdbState.logDetect = res.detect;
-        cdbToast(res.error + ' Tanı sekmesinde denenen biçimler listeleniyor.', 'err');
+        cdbToast(res.error, 'err');
         cdbState.tab = 'diag'; cdbRenderTab();
         return;
       }
@@ -14548,9 +14536,9 @@ function cdbApplyStore(store, name, detect) {
 
   var msg = cdbThousands(store.n) + ' kare okundu (' + store.formatName + ').';
   if (store.skipped) msg += ' ' + cdbThousands(store.skipped) + ' satır çözülemedi.';
-  if (!store.timeMonotonic) msg += ' Zaman damgaları artan sırada DEĞİL.';
+  if (!store.timeMonotonic) msg += ' Zaman damgaları artan sırada değil.';
   cdbToast(msg, store.skipped ? 'warn' : '');
-  if (!store.n) cdbToast('Dosya okundu ama hiç CAN karesi çözülemedi. Tanı sekmesine bakın.', 'err');
+  if (!store.n) cdbToast('Dosyada çözülen CAN karesi yok.', 'err');
 }
 
 function cdbSetChip(id, text) {
@@ -14650,7 +14638,7 @@ var CDB_PAGE = 200;
 
 function cdbRenderFrames() {
   var st = cdbState.store, db = cdbState.db;
-  if (!st || !st.n) return cdbAltEmpty('Kare listesi için önce bir CAN kaydı yükleyin.');
+  if (!st || !st.n) return cdbAltEmpty('CAN kaydı yüklenmedi.');
 
   // Mesaj seçici — kayıtta GERÇEKTEN geçen kimlikler, kare sayısına göre.
   var opts = '<option value="">Tüm kareler (' + cdbThousands(st.n) + ')</option>';
@@ -14721,7 +14709,7 @@ function cdbRenderFrames() {
 
 function cdbRenderStats() {
   var st = cdbState.store, db = cdbState.db;
-  if (!st || !st.n) return cdbAltEmpty('İstatistik için önce bir CAN kaydı yükleyin.');
+  if (!st || !st.n) return cdbAltEmpty('CAN kaydı yüklenmedi.');
   var keys = Object.keys(st.counts).sort(function(a, b) { return st.counts[b] - st.counts[a]; });
   var h = '<div class="cdb-alt-bar"><span class="cdb-alt-lbl">' + keys.length +
           ' ayrı kimlik · ' + cdbThousands(st.n) + ' kare · ' +
@@ -14777,14 +14765,14 @@ function cdbRenderDiag() {
       h += cdbKv('Okunan satır', cdbThousands(st.lines));
       h += cdbKv('Çözülen kare', cdbThousands(st.n));
       h += cdbKv('Çözülemeyen satır', st.skipped ? '<span class="cdb-warn">' + cdbThousands(st.skipped) + '</span>' : '0');
-      h += cdbKv('Zaman aralığı', st.noTime ? 'Kayıtta zaman damgası yok — kare sırası eksen olarak kullanıldı'
+      h += cdbKv('Zaman aralığı', st.noTime ? 'Zaman damgası yok · eksen: kare sırası'
                 : cdbSayi(st.t0, 6) + ' … ' + cdbSayi(st.t1, 6) + ' s  (' + cdbSayi(st.t1 - st.t0, 3) + ' s)');
       h += cdbKv('Zaman artan sırada mı', st.timeMonotonic ? 'Evet' :
-                '<span class="cdb-warn">HAYIR — damgalar geriye atlıyor</span>');
+                '<span class="cdb-warn">Hayır — damgalar geriye atlıyor</span>');
       h += '</table>';
     }
     if (det && det.scores) {
-      h += '<h4>Biçim yarışı (ilk 400 satır üzerinde)</h4>';
+      h += '<h4>Biçim algılama (ilk 400 satır)</h4>';
       h += '<table class="cdb-table"><thead><tr><th>Biçim</th><th style="width:110px">Çözülen / denenen</th><th style="width:70px">Oran</th></tr></thead><tbody>';
       det.scores.slice().sort(function(a, b) { return b.hit - a.hit; }).forEach(function(s) {
         h += '<tr><td>' + cdbEsc(s.name) + '</td><td class="num">' + s.hit + ' / ' + s.seen +
@@ -14824,8 +14812,6 @@ function cdbRenderDiag() {
   var orphans = cdbOrphanIds();
   if (orphans.length) {
     h += '<div class="cdb-diag-sec"><h3>Kayıtta olup DBC\'de tanımı olmayan kimlikler (' + orphans.length + ')</h3>';
-    h += '<p class="cdb-dim">Bu kareler okundu ama çözülemedi — yüklü DBC bu kimlikleri tanımlamıyor. ' +
-         'Yanlış veritabanı yüklendiyse belirti tam olarak budur.</p>';
     h += '<table class="cdb-table"><thead><tr><th style="width:120px">Kimlik</th><th style="width:90px">Kare</th><th>Payı</th></tr></thead><tbody>';
     var tot = cdbState.store ? cdbState.store.n : 1;
     orphans.slice(0, 80).forEach(function(o) {
@@ -14879,7 +14865,7 @@ function cdbToggleYScope() {
 function cdbToggleTimeRel(btn) {
   var on = btn.getAttribute('aria-pressed') !== 'true';
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  if (cdbState.store) cdbToast('Zaman ekseni ayarı bir sonraki kayıt yüklemesinde geçerli olur.');
+  if (cdbState.store) cdbToast('Zaman ekseni ayarı sonraki kayıtta geçerli.');
 }
 
 // ── Dışa aktarma ──────────────────────────────────────────────────────────
@@ -14897,7 +14883,7 @@ function cdbDownload(name, blob) {
 // olmayan ölçüm noktaları uydurmak olurdu. Bu yüzden CSV UZUN BİÇİMDEdir:
 // her satır bir ölçüm — zaman, sinyal, değer.
 function cdbExportCsv() {
-  if (!cdbChart.lanes.length) { cdbToast('Önce grafiğe sinyal ekleyin.', 'err'); return; }
+  if (!cdbChart.lanes.length) { cdbToast('Grafikte sinyal yok.', 'err'); return; }
   var rows = ['zaman_s;mesaj;sinyal;deger;birim;metin'];
   var n = 0;
   for (var li = 0; li < cdbChart.lanes.length; li++) {
@@ -14922,13 +14908,13 @@ function cdbExportCsv() {
   }
   cdbDownload((cdbState.logName || 'can') + '_sinyaller.csv',
               new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-  cdbToast(cdbThousands(n) + ' ölçüm noktası CSV olarak indirildi (görünen zaman aralığı).');
+  cdbToast(cdbThousands(n) + ' ölçüm noktası indirildi (CSV · görünen aralık).');
 }
 
 function cdbExportPng() {
   var cv = document.getElementById('cdb-canvas');
   var ax = document.getElementById('cdb-axis');
-  if (!cdbChart.lanes.length) { cdbToast('Önce grafiğe sinyal ekleyin.', 'err'); return; }
+  if (!cdbChart.lanes.length) { cdbToast('Grafikte sinyal yok.', 'err'); return; }
   var out = document.createElement('canvas');
   out.width = cv.width;
   out.height = cv.height + ax.height;
@@ -14985,7 +14971,7 @@ function cdbLoadExample() {
       cdbChartAddSignal(found.msg, found.sig);
     });
     cdbRefreshTree();
-    cdbToast('Örnek yüklendi: gerçek bir araç kaydı değil, gösteri için üretilmiş veridir.');
+    cdbToast('Örnek yüklendi.');
   });
 }
 

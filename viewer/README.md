@@ -123,6 +123,9 @@ npx playwright test tests/e2e/viewer.spec.js      # uçtan uca, file:// üzerind
 - `tests/unit/viewer-board.test.js` — panonun tek kuralı: **bir panoda tek
   ölçüm dosyası**. İki dosyanın sütunları karışırsa seriler indeks hizasıyla
   çizilir; grafik makul görünür, veri yanlış olur.
+- `tests/unit/ayri-program-metin.test.js` — arayüz metni yalnız ad, veri, durum
+  (CLAUDE.md → ARAYÜZ ANLATMAZ): üst bantta açıklama yok, boş ölçüm penceresi
+  (`sync.js`'in yerel farkı) tarif taşımaz; CAN Çözümleyici ile ortak kapı.
 - `tests/e2e/viewer.spec.js` — **üretilen tek dosyayı** `file://` üzerinden
   test eder (modüler kaynağı değil): gerçek `.xlsx` baytları → gerçek şeritler,
   tuvale gerçekten çizim, sıfır ağ isteği.

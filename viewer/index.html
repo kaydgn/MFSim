@@ -51,7 +51,6 @@
       border-left:1px solid var(--border-color);
     }
     #mfv-topbar .mfv-spacer { margin-left:auto; }
-    #mfv-topbar .mfv-hint { font-size:var(--fs-micro); color:var(--text-muted); }
     /* .ve-sub-page flex:1 + min-height:0 bekliyor; body kolonu onu karşılıyor. */
     #ve-page-sonuclar { display:flex; flex-direction:row; }
 
@@ -61,15 +60,13 @@
 <body>
 
 <header id="mfv-topbar">
-  <!-- Program adı. Ad işin ne olduğunu SÖYLEMEDİĞİ için yanındaki alt başlık
-       artık tek açıklama: programı ilk kez açan biri ne işe yaradığını orada
-       okuyor. Alt başlığı kaldırırken bunu hatırla. -->
+  <!-- Program adı (CACIK) işin ne olduğunu söylemiyor; yanındaki alt başlık
+       programın tanımlayıcı ADIDIR, cümle değil (CLAUDE.md → ARAYÜZ ANLATMAZ). -->
   <span class="mfv-brand"><span class="mf-ico mf-ico-activity"></span> CACIK</span>
-  <span class="mfv-sub">Excel / CSV ölçüm dosyalarını okur ve diyagrama döker</span>
+  <span class="mfv-sub">Ölçüm Görüntüleyici</span>
   <span class="mfv-spacer"></span>
-  <span class="mfv-hint">Dosyayı buraya sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz</span>
   <button type="button" id="mfv-theme-btn" class="ve-imp-tool" onclick="mfvCycleTheme()"
-          title="Tema — değiştirmek için tıklayın">
+          title="Tema">
     <span class="mf-ico mf-ico-contrast"></span> <span id="mfv-theme-label">Sistem</span>
   </button>
 </header>
@@ -132,7 +129,7 @@
     </div>
     <div class="ve-imp-body" id="ve-import-content"></div>
     <div class="ve-imp-footer">
-      <span class="ve-imp-hint">İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.</span>
+      <span class="ve-imp-hint">X ekseni varsayılan olarak ilk sütundur.</span>
       <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
       <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara aktar</button>
     </div>
