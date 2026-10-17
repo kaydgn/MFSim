@@ -142,8 +142,8 @@ function _veSaYapistir(e) {
   var yazi = m[1].replace('−', '-');
   if(_VE_SA_GRUPLU_TAM.test(yazi)) {
     el.classList.add('ve-sayi-belirsiz');
-    _veSaBildir('“' + yazi + '” ' + veSayi(parseFloat(makine)) + ' okundu. '
-      + 'Nokta binlik ayırıcıysa noktasız yazın: ' + yazi.replace(/\./g, ''));
+    _veSaBildir('“' + yazi + '” ' + veSayi(parseFloat(makine)) + ' okundu; binlik ise '
+      + yazi.replace(/\./g, '') + '.');
   }
 }
 

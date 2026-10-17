@@ -100,8 +100,7 @@ function veImpAcceptDropped(files) {
   // sıraya dizmek modal üstüne modal olurdu. İlki açılır — ama sessizce değil,
   // kullanıcı diğerlerinin ne olduğunu bilmeli.
   if(all.length > 1 && typeof showToast === 'function') {
-    showToast(all.length + ' dosya bırakıldı, ilki açılıyor: ' + ok[0].name +
-              '. Diğerlerini tek tek bırakabilirsiniz.', 'info');
+    showToast(all.length + ' dosya bırakıldı; ilki açılıyor: ' + ok[0].name + '.', 'info');
   }
   return ok[0];
 }

@@ -142,7 +142,7 @@ describe('2 · seyreltme GÖRÜNÜR — not satırı söyler', () => {
     expect(sey.idx.length).toBe(201);
     expect(sey.idx[sey.idx.length - 1]).toBe(5000);
     expect(T.veFoyNot(5001, sey))
-      .toBe('Satır: 201 / 5.001 · her 25. örnek gösteriliyor — Kopyala ve CSV tamamını alır');
+      .toBe('Satır: 201 / 5.001 · her 25. örnek · Kopyala ve CSV: tümü');
   });
 
   test('adım sonu atlarsa SON örnek yine eklenir (tablonun sonu serinin sonu)', () => {

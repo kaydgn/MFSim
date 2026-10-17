@@ -36,7 +36,6 @@ var veResultSources = [
     match: function(id) { var L = this.lib(); return !!(L && L.isMountSensor(id)); },
     forget: function() { if(typeof _mntForgetResults === 'function') _mntForgetResults(); },
     kanal: 'takoz kanalı',
-    cozum: 'Takoz alt topolojisinde Çözücü → Hesapla ile yeniden çözün.',
     // Ağaç satırları (sonuç durumu · rapor) Takoz'un kendi sunum dosyasında
     // (js/cp-mount-results.js) — burada yalnız bağlantı noktası duruyor.
     treeTop: function() { return (typeof veMntResTreeTopHTML === 'function') ? veMntResTreeTopHTML() : ''; },
@@ -48,7 +47,6 @@ var veResultSources = [
     match: function(id) { var L = this.lib(); return !!(L && L.isFeadSensor(id)); },
     forget: function() { if(typeof _feadForgetResults === 'function') _feadForgetResults(); },
     kanal: 'FEAD kanalı',
-    cozum: 'FEAD alt topolojisinde FEAD araçları → Hesapla ile yeniden çözün.',
     // Ağaç süsleri ve pano boş durumu FEAD'in kendi sunum dosyasında
     // (js/cp-fead-results.js) — burada yalnız bağlantı noktası duruyor.
     treeTop: function() { return (typeof veFeadResTreeTopHTML === 'function') ? veFeadResTreeTopHTML() : ''; },
@@ -477,7 +475,7 @@ function veUpdateResultsTree() {
       if(unbound.length > 0 && !veSigState.query) {
         html += '<div class="vsig-orphan-head">Bağlı olmayan · ' + unbound.length + '</div>';
         unbound.forEach(function(sn) {
-          html += '<div class="vsig-orphan" title="Bir bağlantıya ya da bileşene tutturulmadığı için veri üretmiyor">' +
+          html += '<div class="vsig-orphan" title="Bağlı değil: veri yok">' +
                   escapeHTML(sn.customName || 'Sensör') + '</div>';
         });
       }
@@ -521,7 +519,7 @@ function veUpdateResultsTree() {
         impShown.forEach(function(g) {
           html += veSigGroupHTML(g, _targetSlot, veSigState.query);
           // Veri kümesini kaldırma: grup başlığının altında, sönük bir satır.
-          html += '<div class="vsig-orphan" style="cursor:pointer;" title="Bu ölçüm dosyasını oturumdan kaldır"' +
+          html += '<div class="vsig-orphan" style="cursor:pointer;" title="Oturumdan kaldır"' +
                   ' onclick="veImpDropDataset(\'' + escapeHTML(g._import) + '\')">' + veIkon('x') + ' ' +
                   escapeHTML(g.name) + ' — kaldır</div>';
         });
@@ -598,13 +596,13 @@ function veUpdateResultsTree() {
 
           var reason = !hasSimForWiz || !diagSigDef
             ? ' — Simülasyon gerekli'
-            : (!xOk ? ' — Pano X ekseni: ' + (_boardXName || 'Zaman [s]') +
-                      ' (bu diyagram ' + veWizDiagXAxis(diagSigDef).name + ' istiyor)'
+            : (!xOk ? ' — X ekseni: pano ' + (_boardXName || 'Zaman [s]') +
+                      ', diyagram ' + veWizDiagXAxis(diagSigDef).name
                     : ' — Slota sürükle');
           var diagIcon = canDrag ? (is3dDiag ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>') : '<span class="mf-ico mf-ico-lock"></span>';
           html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + reason + '">';
           html += diagIcon + ' ' + diag.name;
-          if(diag.note) html += ' ' + veDurumIkon('warn', 'Bu diyagramın notu var');
+          if(diag.note) html += ' ' + veDurumIkon('warn', 'Not var');
           html += '</div>';
         });
 
@@ -674,16 +672,16 @@ function veUpdateResultsTree() {
       });
       if(_ftHasLowRange) {
         html += '<div style="margin-top:2px;">';
-        html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Yüksek kademe — tüm hesaplamaların adım adım (formül + sayı) dökümü">';
+        html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Yüksek kademe · formül + sayı">';
         html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detay matematik hesapları — Yüksek kademe (TXT)</span></div>';
         html += '</div>';
         html += '<div style="margin-top:2px;">';
-        html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace-low\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Düşük kademe — tüm hesaplamaların adım adım (formül + sayı) dökümü">';
+        html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace-low\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Düşük kademe · formül + sayı">';
         html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detay matematik hesapları — Düşük kademe (TXT)</span></div>';
         html += '</div>';
       } else {
         html += '<div style="margin-top:2px;">';
-        html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Programın yaptığı tüm hesaplamaların adım adım (formül + sayı) dökümü — doğrulama / hata avı">';
+        html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Formül + sayı">';
         html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detay matematik hesapları (TXT)</span></div>';
         html += '</div>';
       }
@@ -851,7 +849,7 @@ function veRenderDetailedReport(filter) {
   
   var sim = window.veSimResults;
   if(!sim || !sim.reportSnapshot) {
-    showToast('Rapor verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    showToast('Rapor verisi yok.', 'warning');
     return;
   }
   var R = sim.reportSnapshot;
@@ -1172,7 +1170,7 @@ function veRenderDetailedReport(filter) {
       // Yanında durumun ADI yazılı: ikon süstür, rengini hücreden (stC) alır.
       var stI = veIkon(r.status==='recommended' ? 'check'
         : (r.status==='caution' || r.status==='not-recommended') ? 'alert-triangle' : 'x');
-      var stT = r.status==='recommended'?'Önerilen':r.status==='caution'?'Dikkat':r.status==='not-recommended'?'Önerilmez':'Uyumsuz';
+      var stT = r.status==='recommended'?'Uygun':r.status==='caution'?'Dikkat':r.status==='not-recommended'?'Önerilmez':'Uyumsuz';
       var stC = r.status==='recommended'?'var(--ink-success)':r.status==='caution'?'var(--ink-warning)':r.status==='not-recommended'?'var(--ink-warning)':'var(--ink-danger)';
       var td = function(v,c,al){return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:'+(al||'center')+'; color:'+(c||'var(--text-primary)')+';">'+v+'</td>';};
       ecmHTML += '<tr>';
@@ -1190,7 +1188,7 @@ function veRenderDetailedReport(filter) {
     if(_ecmResults.length > 0) {
       var best = _ecmResults[0];
       ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-top:10px;">';
-      ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:var(--fs-md);">Önerilen konvertör</td>';
+      ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:var(--fs-md);">Uygun konvertör</td>';
       ecmHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + (best.status==='recommended'?'<span class="mf-ico mf-ico-trophy"></span> ':'') + best.name + '  —  Stall: ' + veSayi(best.stallSpeed, 0) + ' rpm | SR@Gov: ' + veSayi(best.srGov, 3) + ' | T_turb: ' + veSayi(best.tTurbineStall, 0) + ' N·m</td></tr>';
       ecmHTML += '</table>';
     }
@@ -1225,8 +1223,7 @@ function veRenderDetailedReport(filter) {
     title: reportTitle,
     back: filter ? { onclick: 'veRenderDetailedReport()', icon: 'arrow-left', label: 'Tüm rapor' } : null,
     actions: [
-      { onclick: 'veDownloadReportHTML()', icon: 'download', label: 'HTML indir',
-        title: 'Bağımsız, baskıya hazır HTML rapor indir' },
+      { onclick: 'veDownloadReportHTML()', icon: 'download', label: 'HTML indir' },
       { onclick: 'veCloseDetailedReport()', icon: 'x', label: 'Kapat', danger: true }
     ]
   });
@@ -1338,7 +1335,7 @@ function veRenderDetailedReport(filter) {
     }
     ftGradeHTML += '</div>';
   } else {
-    ftGradeHTML = '<span style="color:var(--text-muted); font-style:italic;">Eğim kabiliyeti verisi bulunamadı — tam gaz simülasyonu gerekli</span>';
+    ftGradeHTML = '<span style="color:var(--text-muted); font-style:italic;">Eğim kabiliyeti verisi yok (tam gaz simülasyonu)</span>';
   }
   if(shouldShow('ft-grade')) {
   var gradeAutoOpen = (filter === 'ft-grade');
@@ -1415,7 +1412,7 @@ function veRenderDetailedReport(filter) {
     }
     ftAccelHTML += '</div>';
   } else {
-    ftAccelHTML = '<span style="color:var(--text-muted); font-style:italic;">Hızlanma verisi bulunamadı — tam gaz simülasyonu gerekli</span>';
+    ftAccelHTML = '<span style="color:var(--text-muted); font-style:italic;">Hızlanma verisi yok (tam gaz simülasyonu)</span>';
   }
   if(shouldShow('ft-accel')) {
   var accelAutoOpen = (filter === 'ft-accel');
@@ -2519,8 +2516,7 @@ function veTxtPreviewHTML(title, txtContent) {
     title: title,
     back: { onclick: 'veRenderDetailedReport()', icon: 'arrow-left', label: 'Detaylı rapor' },
     actions: [
-      { onclick: 'veDownloadTXTPreviewAsHTML()', icon: 'download', label: 'HTML indir',
-        title: 'Ekrandaki TXT raporunu bağımsız HTML olarak indir' },
+      { onclick: 'veDownloadTXTPreviewAsHTML()', icon: 'download', label: 'HTML indir' },
       { onclick: 'veDownloadTXTFromPreview()', icon: 'download', label: 'TXT indir' },
       { onclick: 'veCloseDetailedReport()', icon: 'x', label: 'Kapat', danger: true }
     ]
@@ -2587,7 +2583,7 @@ function veDownloadTXTPreviewAsHTML() {
   var a = document.createElement('a'); a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
-  showToast('HTML rapor indirildi — tarayıcıda ortalı açılır', 'success');
+  showToast('HTML rapor indirildi.', 'success');
 }
 
 function veRenderTXTReport(reportType) {
@@ -2596,7 +2592,7 @@ function veRenderTXTReport(reportType) {
 
   var sim = window.veSimResults;
   if(!sim || !sim.time || sim.time.length === 0) {
-    showToast('Rapor verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    showToast('Rapor verisi yok.', 'warning');
     return;
   }
 
@@ -2612,7 +2608,7 @@ function veRenderTXTReport(reportType) {
     downloadName = 'BMC_TamGaz_Rapor_' + dateStr + '.txt';
     reportTitle = 'Tam Gaz Hızlanma Raporu (TXT)';
   } else if(reportType === 'ft-trace' || reportType === 'ft-trace-low') {
-    if(typeof veGenerateFTCalcTraceReport !== 'function') { showToast('İz rapor fonksiyonu bulunamadı', 'warning'); return; }
+    if(typeof veGenerateFTCalcTraceReport !== 'function') { showToast('Rapor üreticisi yüklenmedi.', 'warning'); return; }
     var _isLow = (reportType === 'ft-trace-low');
     showToast('Detay matematik hesapları üretiliyor…', 'info');
     txtContent = veGenerateFTCalcTraceReport(sim, null, _isLow ? 'low' : null);
@@ -2634,12 +2630,12 @@ function veRenderSegmentDriveTXTReport() {
 
   var sim = window.veSimResults;
   if(!sim || !sim.segmentDrive || !sim.segmentDrive.segmentSummary) {
-    showToast('Segment sürüş verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    showToast('Segment sürüş verisi yok.', 'warning');
     return;
   }
 
   if(typeof veGenerateSegmentDriveTxtReport !== 'function') {
-    showToast('Rapor fonksiyonu bulunamadı', 'warning');
+    showToast('Rapor üreticisi yüklenmedi.', 'warning');
     return;
   }
 
@@ -2660,7 +2656,7 @@ function veRenderObstacleCrossingTXTReport() {
 
   var sim = window.veSimResults;
   if(!sim || !sim.obstacleCrossing) {
-    showToast('Engel atlama verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    showToast('Engel atlama verisi yok.', 'warning');
     return;
   }
 
@@ -4117,7 +4113,7 @@ function veDownloadReportHTML() {
   var sim = window.veSimResults;
   var R = sim && sim.reportSnapshot;
   if(!R) {
-    if(typeof showToast === 'function') showToast('Rapor verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    if(typeof showToast === 'function') showToast('Rapor verisi yok.', 'warning');
     return;
   }
 
@@ -4571,7 +4567,7 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
 // Build complete HTML for FT Upshifts section
 function veBuildFTUpshiftsHTML(sim, R) {
   if(!sim || !sim.speed || sim.speed.length < 2) {
-    return '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:var(--fs-body);">Simülasyon verisi bulunamadı.</div>';
+    return '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:var(--fs-body);">Simülasyon verisi yok.</div>';
   }
   
   var ss = sim.solverStats || {};
@@ -5036,8 +5032,7 @@ function veEnterResults() {
   veResultSources.forEach(function(src) {
     var _dropped = veResSyncBoard(src.tab);
     if(_dropped && typeof showToast === 'function') {
-      showToast(_dropped + ' ' + src.kanal + ' güncel çözümde yok — ölçüm penceresinden düşürüldü. ' +
-                src.cozum, 'warning');
+      showToast(_dropped + ' ' + src.kanal + ' güncel çözümde yok; ölçüm penceresinden düşürüldü.', 'warning');
     }
   });
   veResSinyalAdTazele();
@@ -5048,8 +5043,7 @@ function veEnterResults() {
   if(typeof veImpPruneSlots === 'function') {
     var dropped = veImpPruneSlots(veResultSlots);
     if(dropped > 0 && typeof showToast === 'function') {
-      showToast(dropped + ' şerit kaldırıldı: içe aktarılan ölçüm verisi bu oturumda yok. ' +
-                'Dosyayı yeniden içe aktarın.', 'info');
+      showToast(dropped + ' ölçüm şeridi kaldırıldı: veri oturumda yok.', 'info');
     }
   }
   veUpdateResultsTree();
@@ -5196,16 +5190,14 @@ function veSyncBoardState() {
   if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
 }
 
-// Uyumsuz bırakma uyarısı — hangi eksenin geçerli olduğunu ve nasıl
-// değiştirileceğini söyler, yoksa kullanıcı neden reddedildiğini bilemez.
+// Uyumsuz bırakma uyarısı — iki ekseni de adıyla söyler (görüntüleyicinin
+// ikiziyle aynı metin, viewer/js/board.js).
 function veWarnXAxisMismatch(wantedXAxis) {
   if(typeof showToast !== 'function') return;
   var b = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
   var cur = (b && b.xAxis && b.xAxis.name) ? b.xAxis.name : 'Zaman [s]';
   var want = (wantedXAxis && wantedXAxis.name) ? wantedXAxis.name : 'farklı bir eksen';
-  showToast('Pano X ekseni: ' + cur + ' — bu öğe ' + want +
-            ' istiyor. Değiştirmek için ölçüm penceresinin X ekseni seçicisini kullanın.',
-            'warning');
+  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '.', 'warning');
 }
 
 // İçe aktarılan ölçüm panosuna simülasyon sinyali giremez.
@@ -5228,7 +5220,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   var diag = pkg.diagrams[diagIdx];
   var sigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
   if(!sigDef) {
-    if(typeof showToast === 'function') showToast('Bu diyagram için sinyal haritası tanımlı değil', 'warning');
+    if(typeof showToast === 'function') showToast('Sinyal haritası yok.', 'warning');
     return;
   }
 
@@ -5300,7 +5292,6 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
 
   if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
   veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
-  if(typeof showToast === 'function') showToast(diag.name + ' diyagramı eklendi', 'success');
 }
 
 // Tek sinyal slot'a ekle
@@ -5659,8 +5650,8 @@ function veRenderSlot(slotIdx) {
   if(sensors.length === 0) {
     var emptyName = (type === 'scatter3d') ? '3B dağılım' : 'Veri tablosu';
     var emptyHint = (type === 'scatter3d')
-      ? 'Veri Gezgini\'nden en az 2 sinyal seçin (X, Y). 3. sinyal Z olur.'
-      : 'Veri Gezgini\'nden sinyal seçin.';
+      ? 'En az 2 sinyal gerekli (X, Y).'
+      : 'Sinyal seçilmedi.';
     body.innerHTML =
       '<div class="ve-trace-empty" style="display:flex;">' +
       '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-' +
@@ -5678,8 +5669,8 @@ function veRenderSlot(slotIdx) {
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:var(--fs-md); text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:var(--fs-h1); margin-bottom:6px;"><span class="mf-ico mf-ico-package"></span></div>';
     html += (sensors.length < 2)
-      ? 'En az 2 sinyal seçin (X, Y). 3. sinyal Z ekseni olur, yoksa zaman kullanılır.'
-      : 'Simülasyon sonrası 3B grafik görünecek';
+      ? 'En az 2 sinyal gerekli (X, Y).'
+      : 'Simülasyon sonucu yok.';
     html += '</div>';
 
     var axisLabels3d = ['X', 'Y', 'Z'];
@@ -6058,13 +6049,11 @@ function veSetSlotXAxis(slotIdx, optIdx) {
   // ── Ortak X ekseni: seçim TÜM panelleri birden değiştirir ──
   // Pano tek eksen üzerinde çalıştığı için tek paneli ayırmak, imleci o
   // panelde ortak olmaktan çıkarırdı. 3D paneller muaf (kendi X/Y/Z'leri var).
-  var changed = 0;
   for(var si = 0; si < veResultSlots.length; si++) {
     var s = veResultSlots[si];
     if(!s || !s.sensors || s.sensors.length === 0) continue;
     if((s.type || 'line') === 'scatter3d') continue;
     s.xAxis = Object.assign({}, newAxis);
-    changed++;
 
     // X-axis etiketi ve tablo başlığı
     var btn = document.querySelector('#ve-xaxis-area-' + si + ' .ve-xaxis-btn span:first-child');
@@ -6087,10 +6076,6 @@ function veSetSlotXAxis(slotIdx, optIdx) {
   // başka bir alana ait (zaman pini devir eksenine taşınmaz)
   if(typeof veTrResetView === 'function') veTrResetView();
   veSyncBoardState();
-
-  if(changed && typeof showToast === 'function') {
-    showToast('X ekseni ' + newAxis.name + ' olarak ayarlandı', 'info');
-  }
 }
 
 // ===== CANVAS PAN/ZOOM (Gelişmiş canvasOffset sistemi aşağıda) =====
@@ -6291,9 +6276,9 @@ function veToggleSnap() {
   var btn = document.getElementById('ve-snap-btn');
   if(btn) {
     btn.classList.toggle('active', SNAP_ENABLED);
-    btn.title = SNAP_ENABLED ? 'Hizalama açık (kapatmak için tıkla)' : 'Hizalama kapalı (Q tuşu ile geçici aktif)';
+    btn.title = SNAP_ENABLED ? 'Hizalama açık · tıkla: kapat' : 'Hizalama kapalı · Q basılıyken açık';
   }
-  showToast(SNAP_ENABLED ? 'Hizalama açık' : 'Hizalama kapalı (Q tuşu ile geçici)');
+  showToast(SNAP_ENABLED ? 'Hizalama açık' : 'Hizalama kapalı · Q basılıyken açık');
 }
 
 var veGridVisible = false;
@@ -6310,7 +6295,6 @@ function veToggleGrid() {
     else { wrapper.classList.add('grid-hidden'); }
   }
   if(btn) btn.classList.toggle('active', veGridVisible);
-  showToast(veGridVisible ? 'Grid gösteriliyor' : 'Grid gizlendi');
 }
 
 // Güç akışı animasyonu — bağlantılarda akan kesik çizgiler (from→to yönünde).
@@ -6372,7 +6356,6 @@ function veToggleBoundary() {
   var btn = document.getElementById('ve-boundary-btn');
   if(btn) btn.classList.toggle('active', veBoundaryVisible);
   veUpdateBoundary();
-  showToast(veBoundaryVisible ? 'Topoloji sınırı gösteriliyor' : 'Topoloji sınırı gizlendi');
 }
 
 function veUpdateBoundary() {

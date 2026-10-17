@@ -53,7 +53,9 @@ describe('sözlük — aday işaretleri', () => {
     'Değişikliği uygulamak için olduğunu varsaydığı değer', 'Kayış yolu kapanmıyor.',
     // etkileşim ipucu kısayol dilinde bir addır
     'Kayış boyu serbest — tıkla: sabit', 'Yön gülü — sürükle: taşı · çift tık: varsayılan yer',
-    'Tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Esc: kapat'
+    'Tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Esc: kapat',
+    // tire ile bağlı bileşik terim emir kipi değildir
+    'Boş hücrede son değer (örnekle-ve-tut)'
   ])('%p işaretlenmez', (metin) => {
     expect(T.isaretle(metin, 'arayuz')).toEqual([]);
   });

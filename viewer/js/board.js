@@ -328,15 +328,13 @@ function veSyncBoardState() {
   veUpdateResultsTree();
 }
 
-// Uyumsuz bırakma uyarısı — hangi eksenin geçerli olduğunu ve nasıl
-// değiştirileceğini söyler, yoksa kullanıcı neden reddedildiğini bilemez.
+// Uyumsuz bırakma uyarısı — iki ekseni de adıyla söyler (MFSim'deki ikiziyle
+// aynı metin, js/results.js).
 function veWarnXAxisMismatch(wantedXAxis) {
   var b = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
   var cur = (b && b.xAxis && b.xAxis.name) ? b.xAxis.name : 'Zaman [s]';
   var want = (wantedXAxis && wantedXAxis.name) ? wantedXAxis.name : 'farklı bir eksen';
-  showToast('Pano X ekseni: ' + cur + ' — bu öğe ' + want +
-            ' istiyor. Değiştirmek için ölçüm penceresinin X ekseni seçicisini kullanın.',
-            'warning');
+  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '.', 'warning');
 }
 
 // ── Şerit ekleme / çıkarma ────────────────────────────────────────────────
