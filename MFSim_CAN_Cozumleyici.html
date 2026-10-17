@@ -9152,17 +9152,11 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   display:flex; align-items:flex-start; gap:7px;
   font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.5;
 }
-/* AÇININ TANIMI — göstergeden AYRI ve KOŞULSUZ. `.ve-fw-legend` yeşil banda
-   bağlı (bant yoksa basılmıyor); tanım her zaman durmak zorunda, çünkü asıl
-   kusur tanımın seçim yüzeyinde HİÇ olmamasıydı. Sol kenar çizgisi onu bir
-   açıklama bloğu olarak ayırıyor, göstergeyle karışmasın. */
+/* AÇININ TANIMI — göstergenin anahtarı, banttan bağımsız (bant yoksa da durur). */
 .ve-fw-angdef{
-  font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.55;
-  padding:6px 9px; margin-top:6px;
-  border-left:2px solid var(--accent-tint-35);
-  background:var(--bg-tertiary); border-radius:var(--radius-sm);
+  display:flex; flex-direction:column; gap:2px; margin-top:4px;
+  font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.5;
 }
-.ve-fw-angdef b{ color:var(--text-secondary); }
 .ve-fw-legend-arc{
   flex:0 0 auto; width:22px; height:4px; margin-top:5px; border-radius:var(--radius-xs);
   background:var(--accent-success); opacity:0.32;

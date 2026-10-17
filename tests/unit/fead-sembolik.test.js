@@ -225,7 +225,7 @@ describe('ÇİZİCİ — sembolik çizim yalnız GİRDİLERİ çizer', () => {
     expect(fead.veFeadLayoutSVG(b, 474, 444, { sembolik: true })).toBeNull();
     const m = adimDOM(ADIM('kasnak')).querySelector('#ve-fw-masa-cizim');
     expect(m.querySelector('svg')).toBeNull();
-    expect(m.querySelector('.ve-fw-masa-bos').textContent).toContain('Henüz kasnak yok.');
+    expect(m.querySelector('.ve-fw-masa-bos').textContent).toContain('Kasnak yok.');
   });
 
   test('özet: çizilenin sayımı çizimle aynı (anahtarın kaynağı)', () => {
@@ -386,7 +386,7 @@ describe('KURULUM — çözülmeyen model de kurulur, söylenerek', () => {
     const dugme = d.querySelector('#ve-fw-create');
     expect(dugme.disabled).toBe(false);                 // eskiden: disabled (b.ok istiyordu)
     expect(dugme.getAttribute('data-cozumsuz')).toBe('1');
-    expect(dugme.getAttribute('title')).toContain('eksikler kanvastaki kartta');
+    expect(dugme.getAttribute('title')).toBe('Kayış yolu çözülmedi');
     // Kurulum kartı ne olacağını kurmadan ÖNCE söylüyor.
     const oz = adimDOM(ADIM('ozet'));
     expect(oz.querySelector('[data-ve-fw-kur-sembolik]').textContent).toContain('3 eksik');
@@ -398,7 +398,7 @@ describe('KURULUM — çözülmeyen model de kurulur, söylenerek', () => {
     expect(kasnaklar).toHaveLength(4);
     const t = stubs.showToast.mock.calls.pop();
     expect(t[1]).toBe('warning');
-    expect(t[0]).toContain('kayış yolu çözülmedi: 3 eksik girdi');
+    expect(t[0]).toBe('Model kuruldu; kayış yolu çözülmedi (3 eksik girdi).');
     // Kurulan model önizlemeyle AYNI eksiği taşıyor ve kart onu sembolik çizer.
     const kb = M.veFeadBuildSystem(global.nodes);
     expect(kb.ok).toBe(false);
@@ -411,19 +411,18 @@ describe('KURULUM — çözülmeyen model de kurulur, söylenerek', () => {
     kabuk(); wiz.veFeadWizReset();
     const k0 = wiz.veFeadWizCanCreate();
     expect(k0.ok).toBe(false);                          // kurulacak kasnak yok
-    expect(k0.sebep).toMatch(/henüz kasnak yok/i);
-    expect(k0.sebep).toMatch(new RegExp(ADIM('kasnak') + 1 + '\\. adımda'));
+    expect(k0.sebep).toBe('Kasnak yok.');
 
     elle();
     const k1 = wiz.veFeadWizCanCreate();
     expect(k1.ok).toBe(true);
     expect(k1.eksik).toEqual(['kasnak çapı', 'kol boyu']);
     expect(k1.not).toMatch(/kasnak çapı ve kol boyu girilmedi/);
-    expect(k1.not).toMatch(new RegExp(ADIM('gergi') + 1 + '\\. adımda'));
+    expect(k1.not).not.toMatch(/adımda|seçin|girin/);    // durum söyler, tarif vermez
     const kart = adimDOM(ADIM('ozet'));
     const notlar = [...kart.querySelectorAll('.ve-fw-issue-warn')].map((e) => e.textContent);
     expect(notlar.some((m) => /kol boyu girilmedi/.test(m))).toBe(true);
-    expect(notlar.some((m) => /Model yine kurulur/.test(m))).toBe(true);
+    expect(notlar.some((m) => /Kayış yolu çözülmüyor \(\d+ eksik\)\./.test(m))).toBe(true);
   });
 
   test('çözülen modelde düğme işaretsiz, bildirim BAŞARI', () => {

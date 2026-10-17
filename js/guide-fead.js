@@ -1322,7 +1322,7 @@ function _gfSec7(){
       + 'göre yönü — <strong>merkez→gövde</strong>, 0° sağda, saat yönünün '
       + 'tersi artı, işaretli (−180…+180). Panele <strong>bu</strong> girilir.',
       'Gerginin parça/montaj çizimi aynı yönü TERS uçtan ve mutlak yazar '
-      + '(E9843: <em>“344° MEAN ANGLE”</em> ↔ panelde <strong>164°</strong>)'],
+      + '(E9843 parça çizimi: <em>344° MEAN ANGLE</em> ↔ panelde <strong>164°</strong>)'],
     ['θ<sub>kol</sub> (mutlak)', 'Aynı kolun <strong>gövde→merkez</strong> yönü, '
       + '0…360. Çekirdeğin, raporun ve pim açısının dili; panelde okunur, '
       + 'girilmez. θ = kol yönü + 180°.',

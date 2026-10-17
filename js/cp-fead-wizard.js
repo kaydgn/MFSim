@@ -58,7 +58,7 @@ var VE_FW_STEPS = [
   { key:'gergi',  ad:'Otomatik Gergi', ipucu:'Montaj noktası · kol boyu · yay künyesi' },
   { key:'kayis',  ad:'Kayış',          ipucu:'Profil · kanal sayısı · katalog sonuçları' },
   { key:'cevrim', ad:'Motor ve çevrim',ipucu:'Tahrik oranı · motor künyesi · çalışma çevrimi' },
-  { key:'ozet',   ad:'Özet ve kurulum',ipucu:'Canlı çözüm · kayış yolu şeması · modeli kur' }
+  { key:'ozet',   ad:'Özet ve kurulum',ipucu:'Canlı çözüm · kayış yolu şeması · kurulum' }
 ];
 
 // Kasnak tipleri — ad ve varsayılan temas tarafı componentDefs'ten okunuyor,
@@ -411,9 +411,8 @@ function veFeadWizSpinHTML(b){
   }
   // Durumun cümlesi grubun İPUCUNDA (sihirbazda açıklama yüzeyi yok): yön
   // sıradan türer; okunamıyorsa neden okunamadığı.
-  return '<div class="ve-fw-spinbox" role="group" aria-label="Dönüş yönü" title="' + (sp
-        ? 'Dönüş yönü sıradan türer; seçim serpantin sırasını ters yürütür.'
-        : 'Yön henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.') + '">'
+  return '<div class="ve-fw-spinbox" role="group" aria-label="Dönüş yönü"' + (sp ? ''
+        : ' title="Yön okunamıyor: kasnak ya da koordinat eksik."') + '>'
     // İPUCU METNİ DE TEK ÜRETİCİDEN. Düzlem adı burada İKİNCİ KEZ yazılsaydı,
     // ayna bayrağı değişince bu iki düğme sessizce eskirdi — tam olarak bir
     // kez olan şey (metin koşulsuz "önden bakışta" diyordu).
@@ -531,9 +530,7 @@ function veFeadWizTenLocked(st){
   st = st || _fwState;
   return !!(st && st.ten && st.ten.tenLib);
 }
-var VE_FW_TEN_LOCK_NOTE = 'Künye kütüphaneden seçili — bu alan parçanın verisi. '
-  + 'Değiştirmek için Tip listesinden "elle gir" seçin; seçtiğiniz künyenin '
-  + 'değerleri korunur.';
+var VE_FW_TEN_LOCK_NOTE = 'Künye kütüphaneden seçili.';
 
 function veFeadWizTenLib(key){
   if(!_fwState) return;
@@ -1419,7 +1416,7 @@ function veFeadWizFootHTML(b){
     var _cozsuz = !(b && b.ok);
     h += '<button type="button" id="ve-fw-create" class="ve-fw-btn ve-fw-btn-go"'
        + (kur.ok ? '' : ' disabled')
-       + (kur.ok && _cozsuz ? ' data-cozumsuz="1" title="Kayış yolu çözülmeden kurulur — eksikler kanvastaki kartta yazar"'
+       + (kur.ok && _cozsuz ? ' data-cozumsuz="1" title="Kayış yolu çözülmedi"'
                             : (kur.ok ? '' : ' title="' + _fwEsc(kur.sebep) + '"'))
        + ' onclick="veFeadWizCreate()">' + veIkon('settings') + ' Modeli kur</button>';
   }
@@ -1873,7 +1870,7 @@ function _fwStepKaynak(b){
   var bosSecili = (yuklu !== null && String(yuklu) === '');
   if(bosSecili) yukluAd = 'Boş başla';
   secenekler += '<option value=""' + (bosSecili ? ' selected' : '') + '>'
-    + 'Boş başla — bütün alanları temizler</option>';
+    + 'Boş başla</option>';
 
   // ÖRNEKLER ARASINDA ↑ ↓ — kullanıcı isteği (2026-09-04): *"örnekleri
   // seçtiğimiz yerin uygun bir altına böyle yukarı aşağı oklar koyalım…
@@ -2085,7 +2082,7 @@ function _fwStpSiraDurum(sr, s){
   return sr.kaynak === 'kayis' ? 'Sıra kayışın eskizinden'
     : sr.kaynak === 'kayis-yon' ? 'Sıra eskizden, yön belirsiz'
     : (s && s.coz && s.coz.kayis) ? 'Sıra ağaçtan — kayışın eskizi okunamadı'
-    : 'Sıra ağaçtan — kayışa rol verin';
+    : 'Sıra ağaçtan — kayışa rol verilmedi';
 }
 function _fwStpHesapCap(s){
   var st = _fwState;
@@ -2319,7 +2316,7 @@ function veFeadWizStpDosya(dosya){
 function veFeadWizStpBayt(bayt, ad){
   var m;
   try {
-    if(typeof veStepP21Metin !== 'function') throw new Error('STEP okuyucusu (js/step-p21.js) yüklenmemiş.');
+    if(typeof veStepP21Metin !== 'function') throw new Error('STEP okuyucusu yüklenmemiş.');
     m = veStepP21Metin(bayt);
   } catch(e){
     _fwStp = { dosya: ad, durum: 'hata', hata: (e && e.message) || String(e), nodeId: _fwNodeId };
@@ -2336,7 +2333,7 @@ function veFeadWizStpBayt(bayt, ad){
 // başka parçaya verir — seçimi kazanır.
 function veFeadWizStpOku(metin, ad, kap){
   var sonuc = (typeof veFeadStpOku === 'function') ? veFeadStpOku(metin)
-    : { ok: false, hatalar: ['FEAD tanıyıcısı (js/fead-step.js) yüklenmemiş.'], agac: [], parcalar: [] };
+    : { ok: false, hatalar: ['FEAD tanıyıcısı yüklenmemiş.'], agac: [], parcalar: [] };
   var s = { dosya: ad || 'STEP', kap: kap || 'duz', durum: sonuc.ok ? 'hazir' : 'hata',
             sonuc: sonuc, ayna: false, nodeId: _fwNodeId, coz: null,
             roller: (sonuc.agac || []).map(function(){ return null; }), oneri: null, otomatik: null };
@@ -2525,13 +2522,10 @@ function veFeadWizSiraOnay(){
   veFeadWizRender();
   return true;
 }
-var VE_FW_SIRA_AGAC = 'Kayış sırası STEP ağacından geldi — kayışın eskizinden okunmadı '
-  + '(kayışa rol verilmedi ya da eskizi her kasnaktan geçmiyor). Kayışa 3B\'de rol verip yeniden '
-  + 'aktarın ya da ↑ ↓ ile düzeltin; doğruysa "Sıra doğru" ile onaylayın.';
+var VE_FW_SIRA_AGAC = 'Kayış sırası STEP ağacından; kayışın eskizinden okunmadı.';
 // Çevrim eskizden okundu ama YÖN belirsiz (gergi krankın komşusu değil ya da
 // gergi yok): hangi yöne dönüldüğü dosyada yazmaz.
-var VE_FW_SIRA_YON = 'Kayış sırası kayışın eskizinden okundu ama dönüş yönü belirsiz '
-  + '(gergi yok ya da krankın komşusu değil). CW/CCW ile yönü seçin; doğruysa "Sıra doğru" ile onaylayın.';
+var VE_FW_SIRA_YON = 'Kayış sırası eskizden; dönüş yönü belirsiz.';
 function _fwSiraUyari(st){
   return !st ? null : st.siraKaynagi === 'agac' ? VE_FW_SIRA_AGAC
     : st.siraKaynagi === 'kayis-yon' ? VE_FW_SIRA_YON : null;
@@ -2591,13 +2585,13 @@ function _fwStpKartHTML(){
   // gerçek tarayıcı testi iki elemana çarpıp düştü (fead-sihirbaz-tablo.spec).
   h += '<div class="ve-fw-rowbtns">'
     + '<label class="ve-fw-btn ve-fw-stp-sec"'
-    + ' title="STEP dosyasını seçin ya da bu alana bırakın — .stp · .step · .stpZ (AP214 / AP242, katı geometri)">'
+    + ' title=".stp · .step · .stpZ (AP214 / AP242)">'
     + '<input type="file" class="ve-fw-stp-file" accept=".stp,.step,.stpz,.p21"'
     + ' onchange="veFeadWizStpDosya(this.files && this.files[0]); this.value=\'\';">'
     + (s ? 'Başka dosya seç…' : 'STEP dosyası seç…') + '</label>';
   if(s && s.durum === 'hazir' && typeof veFeadWiz3bAc === 'function')
     h += '<button type="button" class="ve-fw-btn" id="ve-fw-stp-3b" onclick="veFeadWiz3bAc()"'
-      + ' title="Montajı 3B görüntüleyicide açın; parçaya tıklayıp rolünü verin">3B\'de seç</button>';
+      + ' title="3B görüntüleyici">3B\'de seç</button>';
   if(s && s.durum !== 'okunuyor')
     h += '<button type="button" class="ve-fw-mini" title="Dosyayı karttan kaldır" onclick="veFeadWizStpKapat()">' + veIkon('x') + '</button>';
   h += '</div>';
@@ -2705,10 +2699,9 @@ function _fwStpKartHTML(){
       : 'Dosyadan çıkarılamadı — varsayılan.';
     h += _fwField('Bakış', '<div class="ve-fw-spinbox">'
       + '<button type="button" class="ve-fw-spin' + (s.ayna ? '' : ' ve-fw-spin-on') + '"'
-        + ' title="Önden: kasnakların önünden, motorun karşısından. ' + _fwEsc(kaynak) + '"'
+        + ' title="' + _fwEsc(kaynak) + '"'
         + ' onclick="veFeadWizStpAyna(false)">Önden</button>'
       + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '"'
-        + ' title="Arkadan: x ekseni aynalanır; krankın dönüş yönü de ters okunur."'
         + ' onclick="veFeadWizStpAyna(true)">Arkadan</button></div>');
     h += _fwField('Hesap çapı', _fwStpHesapCapHTML(s));
     // ÇİZİM MASADA (çizim masası, 2026-09-29): kartın içindeki ikinci kopya
@@ -2724,7 +2717,7 @@ function _fwStpKartHTML(){
     if(aktarildi && !degisti)
       h += '<div class="ve-fw-seeded">' + veIkon('check') + ' <b>' + st.stepKaynak.kasnak + ' kasnak</b> sihirbaza aktarıldı'
         + ' <em>' + _fwEsc(st.stepKaynak.dosya) + '</em></div>';
-    if(degisti) d.uyari.unshift('Rol ya da bakış aktarımdan sonra değişti; sihirbaz eski seçimle dolu.');
+    if(degisti) d.uyari.unshift('Aktarımdan sonra rol ya da bakış değişti.');
   }
   var liste = d.engel.filter(function(m){ return !(d.hesapsiz && m === 'Çap ve merkezler henüz hesaplanmadı.'); })
     .map(function(m){ return { tur: 'err', m: m }; })
@@ -2791,7 +2784,7 @@ function _fwKasnakOpt(xf, ek, W, H){
 // ÇÖZÜLMEYEN MODEL DE ÇİZİLİR (kullanıcı, 2026-10-01): kayış yolu yoksa
 // girdilerin sembolik çizimi (`sembolik` → `_feadSembolikSVG`); eksikler
 // çipte ve rayda. Kasnak hiç yoksa çizilecek bir şey yok.
-var VE_FW_KASNAK_YOK = 'Henüz kasnak yok.';
+var VE_FW_KASNAK_YOK = 'Kasnak yok.';
 function _fwKasnakMasa(b, W, H){
   if(typeof veFeadLayoutSVG !== 'function') return _fwMasaBos(VE_FW_KASNAK_YOK);
   // Yakınlık ve kaydırma görünüm katmanında (`_fwLayout`), bütün adımlarla ortak.
@@ -3010,7 +3003,7 @@ function _fwSiraDugmeleri(key, i, n, gergiSonda, silinir){
   var altKapali = ten ? (i >= n - 1) : (i === 0 || i >= n - 1 - (gergiSonda ? 1 : 0));
   return '<div class="ve-fw-ed-ops">'
     + '<button type="button" class="ve-fw-btn"' + (ustKapali ? ' disabled' : '')
-      + (ten && i === n - 1 ? ' title="Gergi son satırda kilitli: döngü otomatik gergiyle biter."' : '')
+      + (ten && i === n - 1 ? ' title="Gergi son satırda kilitli."' : '')
       + ' onclick="veFeadWizPulleyMove(\'' + key + '\',-1)">' + veIkon('arrow-up') + ' Sırada öne</button>'
     + '<button type="button" class="ve-fw-btn"' + (altKapali ? ' disabled' : '')
       + ' onclick="veFeadWizPulleyMove(\'' + key + '\',1)">' + veIkon('arrow-down') + ' Arkaya</button>'
@@ -3018,7 +3011,7 @@ function _fwSiraDugmeleri(key, i, n, gergiSonda, silinir){
     // sebebi ipucunda (çekirdek her modelde tam bir gergi istiyor).
     + '<button type="button" class="ve-fw-btn ve-fw-btn-sil"'
       + (silinir ? ' onclick="veFeadWizPulleyDel(\'' + key + '\')"'
-                 : ' disabled title="Gergi silinemez: çekirdek her modelde tam bir gergi ister."')
+                 : ' disabled title="Gergi silinemez."')
       + '>' + veIkon('trash') + ' Sil</button>'
     + '</div>';
 }
@@ -3048,10 +3041,7 @@ function _fwKasnakEditorHTML(b, sira, byKey){
     // Gergide de X/Y KASNAĞIN MERKEZİ (kolun çalışma konumunda); gövdenin
     // montaj noktası bir girdi değil, türeyen sonuç — ipucunda, açıklama
     // paragrafı olarak değil.
-    var mnt = 'Gergide de X/Y kasnağın MERKEZİDİR (kolun çalışma konumunda), '
-      + 'diğer satırlarla aynı şey. Gövdenin montaj noktası bir girdi değil, '
-      + 'ondan ve kol açısından türeyen bir sonuçtur — ' + _fwAdimNo('gergi') + '. adımda okunur. '
-      + 'Karıştırmanın ölçülmüş bedeli gerginlikte medyan +%1526 ve model yine çözülür.';
+    var mnt = 'Avara merkezi (montaj konumu değil)';
     // GERGİ EDİTÖRÜ KASNAKLARINKİYLE BİREBİR (kullanıcı isteği 2026-09-01:
     // *"onu da diğer satırlar gibi yapalım"*): aynı alanlar aynı sırada. Tip
     // TEK seçenekli liste — kilit görünümle değil SEÇENEK KÜMESİYLE; sürücü
@@ -3072,7 +3062,7 @@ function _fwKasnakEditorHTML(b, sira, byKey){
       + alan('Temas', _fwTemasHTML(t.contact === 'grooved' ? 'grooved' : 'back',
           function(v){ return 'veFeadWizTenTemas(\'' + v + '\')'; }, kilit))
       + alan('J', sayi(t.inertia, 'veFeadWizTenSet(\'inertia\', this.value)', '—'))
-      + '<label class="ve-fw-check" title="Gergi sürücü olamaz: kayışı tahrik etmez, gerer.">'
+      + '<label class="ve-fw-check" title="Gergi sürücü olamaz.">'
         + '<input type="radio" disabled><span>Sürücü kasnak</span></label>'
       + '<div class="ve-fw-rowbtns">'
         + '<button type="button" class="ve-fw-btn" onclick="veFeadWizGoto(' + (_fwAdimNo('gergi') - 1) + ')">'
@@ -3124,15 +3114,12 @@ function _fwStepKasnak(b){
   var _tord = b && b.tensionerOrder, _hkm = '';
   if(_tord && _tord.afterDriver){
     _hkm = '<p class="ve-fw-dim ve-fw-kl-hukum">Gergi krankın <strong>çıkışında</strong> (kayış '
-      + 'sırasında 2.) — otomatik gergi gevşek açıklıkta durur; Gates tablosunda bu, sıranın sonudur.</p>';
+      + 'sırasında 2.)</p>';
   } else if(_tord){
+    // "Sayılar etkilenmez" bir DURUM: hükmün hesabı değiştirmediği — yoksa
+    // okuyucu uyarıyı bir hesap hatası sanar. Köprünün uyarısıyla aynı cümle.
     _hkm = '<p class="ve-fw-warn ve-fw-kl-hukum">' + veIkon('alert-triangle') + ' Gergi krankın çıkışında değil ('
-      + (_tord.index + 1) + '/' + _tord.count + '). Otomatik gergi kayışın kranktan <strong>çıktığı</strong> '
-      + '(gevşek) açıklıkta durur — kayış sırasında krankın hemen ardında. '
-      // ÇARE UYDURULMAZ: sayıların etkilenmediği AYNI cümlede — yoksa okuyucu
-      // bunu bir hesap hatası sanardı.
-      + '<span class="ve-fw-dim">Sayılar bundan etkilenmez; etkilenen tedarikçi '
-      + 'raporlarıyla satır satır karşılaştırılabilirlik.</span></p>';
+      + (_tord.index + 1) + '/' + _tord.count + '); sayılar etkilenmez.</p>';
   }
 
   // "SIRA VE YÖN" BLOĞU KALKTI (kullanıcı isteği 2026-09-29: *"Aşağıdaki
@@ -3158,8 +3145,7 @@ function _fwStepKasnak(b){
       + '<button type="button" id="ve-fw-sira-onay" class="ve-fw-btn" onclick="veFeadWizSiraOnay()"'
       + ' title="' + _fwEsc(siraU) + '">' + veIkon('check') + ' Sıra doğru</button></div>'
     : st.siraKaynagi === 'kayis'
-    ? '<div class="ve-fw-kl-onay" data-ve="sira-onay" data-kaynak="kayis"'
-      + ' title="Sıra STEP dosyasındaki kayışın eskizinden: her yay bir kasnağa eşlendi. Yön gergiden — gevşek tarafta, tablonun sonunda.">'
+    ? '<div class="ve-fw-kl-onay" data-ve="sira-onay" data-kaynak="kayis">'
       + veIkon('check') + '<span class="ve-fw-kl-onay-y">Sıra kayışın eskizinden okundu</span></div>'
     : '';
   var liste = '<div class="ve-fw-kl-arac">' + ekle + veFeadWizSpinHTML(b) + '</div>' + onay
@@ -3202,7 +3188,7 @@ function _fwKaynakMasa(b, W, H){
   if(s && s.durum === 'okunuyor') return _fwMasaBos('STEP dosyası okunuyor…');
   if(s && s.durum === 'hazir')
     return _fwMasaBos(s.coz && !s.coz.ok ? 'Kasnak bulunamadı.' : 'Kasnak çizimi hesaptan sonra.');
-  return _fwMasaBos('Örnek seçin ya da STEP dosyası açın.');
+  return _fwMasaBos('Kasnak yok.');
 }
 
 // ── 3 · OTOMATİK GERGİ — YAKIN ÇİZİM ───────────────────────────────────────
@@ -4424,9 +4410,7 @@ function veFeadWizAngHTML(){
     // Kol PİVOT etrafında döner; avara merkezi kolun UCUDUR. Seçici, gövdenin
     // montaj noktasının olanaklı yerini çiziyor — kolun gezindiği çemberi
     // değil. Bu iki cümle diyagramın yanlış okunmasını doğrudan öğretiyordu.
-    return '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Açı seçmek için önce '
-      + '<b>avara merkezi (X/Y)</b> ve <b>kol boyu</b> gerekli — gövdenin montaj '
-      + 'noktası o merkezden kol boyu kadar uzakta olmak zorunda.</div>';
+    return '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' <b>Avara merkezi (X/Y)</b> ve <b>kol boyu</b> eksik.</div>';
   var d = VE_FW_ANG ? VE_FW_ANG.shown : NaN;
   var piv = null;
   if(Number.isFinite(d) && typeof veFeadArmFromShown === 'function'
@@ -4451,37 +4435,20 @@ function veFeadWizAngHTML(){
     + (sc.band && sc.band.samples && sc.band.samples.length
         ? '<div class="ve-fw-legend">'
           + '<span class="ve-fw-legend-arc"></span>'
-          + 'Yeşil yay: kolun bu açıda durabildiği aralık — kayış sarımı ve '
-          + 'yay servis aralığı birlikte sağlanıyor. Boşluklar, kolun oraya '
-          + 'gelemediği ya da gelirse çözümün servis aralığından çıktığı açılar.'
+          + 'Yeşil yay: kolun durabildiği açılar'
           + '</div>'
         : '')
-    // AÇININ TANIMI SEÇİM YÜZEYİNİN KENDİSİNDE.
-    //
-    // Kullanıcı bildirimi (2026-09-22): *"Kol açısını seçtiğimiz diyagramdaki
-    // açı tanımları çok başka olmuş. Kafa karıştırıyor."* Ölçüldü: bu modal
-    // yalnız çizim + zoom + yeşil yay göstergesi + üç okuma + giriş kutusu
-    // basıyordu. "0° nereden ölçülüyor", "artı yön hangisi", "yeşil ok neyi
-    // gösteriyor", "kesikli çember ne" — hiçbiri ekranda YAZILI DEĞİLDİ. Bu
-    // bilgiyi taşıyan tek metin BAŞKA bir yüzeydeki panel ipucuydu ve
-    // kullanıcı açıyı seçerken onu görmüyordu.
-    //
-    // En sezgisel olmayan parça referans NOKTASIDIR: gösterilen açı merkezden
-    // PİVOTA bakar, yani "Kol yönü 0°" demek "gövde avaranın SAĞINDA, kol
-    // SOLA uzanıyor" demektir. Bir ad ("kol yönü") doğal olarak "kolun baktığı
-    // yön" diye okunur ve o tam tersidir — bu yüzden ok açıkça adlandırılıyor.
-    // SINIF AYRI (`ve-fw-angdef`): `ve-fw-legend` BANDA bağlı ve bant yokken
-    // basılmıyor (kapısı fead-wizard.test.js'te). Tanım ise her zaman durmalı
-    // — asıl kusur zaten tanımın hiç görünmemesiydi.
+    // AÇININ TANIMI SEÇİM YÜZEYİNDE — kullanıcı bildirimi (2026-09-22):
+    // *"Kol açısını seçtiğimiz diyagramdaki açı tanımları çok başka olmuş.
+    // Kafa karıştırıyor."* 0° nereden ölçülüyor, artı yön hangisi, kesikli
+    // çember ne — ekranda yazılı olmalı. ARAYÜZ ANLATMAZ (2026-10-16) onu
+    // paragraftan GÖSTERGE anahtarına indirdi; açıklaması kılavuzda (Kol yönü).
+    // Sınıf ayrı: `ve-fw-legend` banda bağlı, tanım her zaman durur.
     + '<div class="ve-fw-angdef">'
-      + '<b>Kol yönü nedir:</b> yeşil ok <b>avara merkezinden gövdenin montaj '
-      + 'noktasına</b> bakar. <b>0° sağda, saat yönünün tersi artı</b>, değer '
-      + 'işaretli (−180…+180 — programın yön gülü aynı ekseni 0…360 ile yazar, '
-      + 'yani buradaki −90 gülde 270\'tir). Kesikli çember montaj noktasının '
-      + 'olanaklı yerleridir: merkez ve kol boyu sabit olduğu için nokta o '
-      + 'çember üzerinde durmak zorunda. Parça çizimi aynı yönü TERS uçtan, '
-      + 'mutlak yazar (E9843: <i>"344° MEAN ANGLE"</i> ↔ burada 164°).'
-      + '</div>'
+      + ['Kol yönü: merkez → gövde · 0° +X · CCW + · −180…+180',
+         'Kesikli çember: olanaklı montaj noktaları']
+        .map(function(t){ return '<span>' + t + '</span>'; }).join('')
+    + '</div>'
     + '<div class="ve-fw-reads">' + _fwAngReads(sc, d) + '</div>'
     + '<div class="ve-fw-ang-row">'
       + '<label class="ve-fw-lbl" for="ve-fw-ang-in">Kol yönü [°]</label>'
@@ -4937,8 +4904,6 @@ function veFeadWizEngineLib(key){
   if(!key){ delete s.engineLib; delete s.engineLibVer; }
   else if(typeof veFeadEngineApply === 'function' && veFeadEngineOf(key)){
     veFeadEngineApply(s, key);
-    if(typeof showToast === 'function')
-      showToast(veFeadEngineOf(key).ad + ' künyesi yüklendi', 'success');
   }
   veFeadWizRender();
 }
@@ -4970,8 +4935,7 @@ function veFeadWizAccLib(key, libKey){
 function _fwEngineLibRow(s){
   // KÜTÜPHANE YOKSA SESSİZ KALINMAZ — bu bir açıklama değil, bir HATA DURUMU.
   if(typeof veFeadEngineList !== 'function')
-    return '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Motor kataloğu yüklenmedi '
-      + '(js/fead-engines.js).</div>';
+    return '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Motor kataloğu yüklenmedi.</div>';
   var liste = veFeadEngineList(), sec = (s && s.engineLib) || '';
   var sel = '<select class="ve-fw-inp" onchange="veFeadWizEngineLib(this.value)">'
     + '<option value="">— elle gir —</option>'
@@ -5001,9 +4965,7 @@ function _sicaklikAlani(duty){
   return '<input type="text" inputmode="decimal" class="ve-fw-inp"'
     + ' value="' + _fwEsc(ortak === null ? '' : ortak) + '"'
     + ' placeholder="' + (ayrisik ? 'satır başına farklı' : '90') + '"'
-    + ' title="Kayışın gördüğü ortam sıcaklığı. Bütün devir noktalarına yazılır;'
-    + ' ömür hesabı satır başına saklanan sıcaklıklardan hasar-eşdeğer bir'
-    + ' sıcaklık türetiyor."'
+
     + ' oninput="veFeadWizDutyTemp(this.value)">';
 }
 
@@ -5087,8 +5049,7 @@ function veFeadWizEngHTML(){
   return _fwEngineLibRow(s)
     + _fwCard('Motordan gelen', 'var(--accent-success)', alanlar(kat))
     + _fwCard('Motora bağlı olmayan', 'var(--accent-warning)', alanlar(elle))
-    + '<div class="ve-fw-ang-row"><span class="ve-fw-lbl">'
-      + 'Motor kataloğu bu ikinci grubu yazmaz — hiçbir kayıt taşımıyor.</span>'
+    + '<div class="ve-fw-ang-row"><span class="ve-fw-lbl"></span>'
       + '<button type="button" class="ve-fw-btn ve-fw-btn-primary"'
         + ' onclick="veFeadWizEngClose()">Kapat</button></div>';
 }
@@ -5134,9 +5095,7 @@ function _fwTahrikOkuHTML(st){
       + _fwRead('Kaynak', veFeadDriveModeLabel(dr.mode, dr.ok))
     + '</div>'
     + (yarim
-        ? '<div class="ve-fw-issue ve-fw-issue-warn">! <b>Yalnız bir çap girildi.</b> '
-          + 'Oran iki çaptan türüyor ve biri boşken çözülmüyor. İkincisini de girin, '
-          + 'ya da ara kademe yoksa üstteki seçimi değiştirin.</div>'
+        ? '<div class="ve-fw-issue ve-fw-issue-warn">! <b>Yalnız bir çap girildi</b>; oran çözülmüyor.</div>'
         : '');
 }
 function _fwStepCevrim(b){
@@ -5379,16 +5338,13 @@ function _fwAccCard(st, b, yuk){
   // düzleşiyordu. Artık işletme hesabı onsuz YAPILMAZ (fead-model.js →
   // veFeadIsletmeEksik).
   if(eksik.length)
-    h += '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Gücü hiçbir kaynaktan '
-      + 'gelmiyor: <b>' + _fwEsc(eksik.join(', ')) + '</b> — işletme hesabı (gerilme, kayma, ömür) '
-      + 'bunlarsız yapılmaz.</div>';
+    h += '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Güç kaynağı yok: <b>' + _fwEsc(eksik.join(', ')) + '</b> — işletme hesabı yapılmaz.</div>';
   // SESSİZ "wait" KAPISI: sınırı olmayan aksesuar kapıda hüküm ALMAZ ve bu
   // "geçti" demek DEĞİL. Kullanıcı özet adımında "değerlendirilemedi" görmeden
   // önce burada sebebini görmeli.
   if(sinirsiz)
     h += '<div class="ve-fw-issue ve-fw-issue-warn">' + _fwSorunIkon('warn') + ' <b>' + sinirsiz
-      + ' aksesuarın</b> devir sınırı yok; ' + _fwAdimNo('ozet') + '. adımdaki iki kapı onlar için '
-      + '<b>değerlendirilemedi</b> der ve <b>uygun sayılmaz</b>.</div>';
+      + ' aksesuarın</b> devir sınırı yok.</div>';
   return _fwCard('Aksesuarlar', 'var(--accent-success)', h);
 }
 
@@ -5403,7 +5359,7 @@ function _fwAccCard(st, b, yuk){
 function _fwAccSinirHTML(p){
   if(typeof veFeadAccLimits !== 'function')
     return { eksik: true, html: '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err')
-      + ' Aksesuar kataloğu yüklenmedi (js/fead-accessories.js).</div>' };
+      + ' Aksesuar kataloğu yüklenmedi.</div>' };
   var lim = veFeadAccLimits(p);
   function alan(a, ad){
     return _fwField(ad, '<input type="text" inputmode="decimal" class="ve-fw-inp"'
@@ -5485,8 +5441,7 @@ function _fwStepOzet(b){
     // ÖNCE yazılı (kapı bu yüzden kapalı değil, bkz. veFeadWizCanCreate).
     if(kur.not) kh2 += '<div class="ve-fw-issue ve-fw-issue-warn">' + _fwSorunIkon('warn') + ' ' + _fwEsc(kur.not) + '</div>';
     if(!ok) kh2 += '<div class="ve-fw-issue ve-fw-issue-warn" data-ve-fw-kur-sembolik="1">' + _fwSorunIkon('warn')
-      + ' Kayış yolu çözülmüyor (' + ((b && b.errors) || []).length + ' eksik — Uyarılar\'da). Model yine kurulur: '
-      + 'kanvastaki kart girdilerin sembolik çizimini gösterir ve eksiği yazar.</div>';
+      + ' Kayış yolu çözülmüyor (' + ((b && b.errors) || []).length + ' eksik).</div>';
   }
   h += _fwCard('Kurulum', 'var(--accent-primary)', kh2);
   return h;
@@ -5504,8 +5459,7 @@ function _fwStepOzet(b){
 function _fwChecksCard(b){
   if(typeof veFeadChecks !== 'function')
     return _fwCard('Uygunluk kapıları', 'var(--text-muted)',
-      '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Uygunluk kapıları yüklenmedi '
-      + '(js/fead-checks.js).</div>');
+      '<div class="ve-fw-issue ve-fw-issue-err">' + _fwSorunIkon('err') + ' Uygunluk denetimi yüklenmedi.</div>');
   var st = _fwState, s = (st && st.solver) || {};
   var R = veFeadChecks(b, veFeadCheckOpt(s, s.duty || []));
 
@@ -5622,17 +5576,14 @@ function veFeadWizCanCreate(){
     out.varOlan = nodes.filter(function(n){ return _feadIsPulley(n); }).length;
   if(out.varOlan > 0 && !_fwState.temizle){
     out.ok = false;
-    out.sebep = 'İç topolojide zaten ' + out.varOlan + ' kasnak var. Üstüne kurmak '
-      + 'iki ayrı kayış yolunun kasnaklarını TEK sıraya karıştırır; silme onayını '
-      + 'işaretleyin ya da kasnakları elle kaldırın.';
+    out.sebep = 'İç topolojide zaten ' + out.varOlan + ' kasnak var.';
     return out;
   }
   // Kurulacak kasnak yoksa kurulum bir şey kurmaz — gergi tek başına bir
   // kayış yolu değil.
   if(!(_fwState.pulleys || []).length){
     out.ok = false;
-    out.sebep = 'Kayış yolunda henüz kasnak yok. ' + _fwAdimNo('kasnak')
-      + '. adımda ("Kasnaklar") kasnakları kayış sırasıyla ekleyin.';
+    out.sebep = 'Kasnak yok.';
     return out;
   }
   // ÇÖZÜLMEYEN MODEL DE KURULUR (kullanıcı, 2026-10-01: *"kayış ve otomatik
@@ -5650,9 +5601,7 @@ function veFeadWizCanCreate(){
   if(!Number.isFinite(_fwNum(_t.armLen, NaN))) _eksik.push('kol boyu');
   out.eksik = _eksik;
   if(_eksik.length)
-    out.not = 'Otomatik gerginin ' + _eksik.join(' ve ') + ' girilmedi — '
-      + _fwAdimNo('gergi') + '. adımda ("Otomatik Gergi") katalogdan bir künye seçin ya da '
-      + 'değerleri elle girin; girilmeden kurulan modelin kayış yolu çözülmez.';
+    out.not = 'Otomatik gerginin ' + _eksik.join(' ve ') + ' girilmedi — kayış yolu çözülmez.';
   return out;
 }
 
@@ -5841,11 +5790,9 @@ function veFeadWizCreate(){
   if(typeof showToast === 'function'){
     var _ks = kuruldu.filter(function(n){ return _feadIsPulley(n); }).length;
     if(_onB && _onB.ok)
-      showToast('Model kuruldu — ' + kuruldu.length + ' bileşen, ' + _ks + ' kasnak kayış sırasında.', 'success');
+      showToast('Model kuruldu.', 'success');
     else
-      showToast('Model kuruldu — ' + _ks + ' kasnak; kayış yolu çözülmedi: '
-        + ((_onB && _onB.errors) || []).length + ' eksik girdi. Kart girdilerin sembolik çizimini '
-        + 'gösteriyor, eksik üstünde yazılı.', 'warning');
+      showToast('Model kuruldu; kayış yolu çözülmedi (' + ((_onB && _onB.errors) || []).length + ' eksik girdi).', 'warning');
   }
   return kuruldu;
 }
@@ -5908,17 +5855,12 @@ function getFeadWizardPropertiesHTML(node){
       + _feadRO('Çalışma çevrimi', nokta + ' devir noktası')
       + '</div>')
     : _feadCard('Kayıtlı taslak', 'bu düğümde', 'var(--text-muted)',
-        _feadHint('Henüz taslak yok. Sihirbazı açıp boş başlayabilir ya da hazır bir '
-          + 'örnekten doldurabilirsiniz.'));
-  taslak += _feadHint('Sihirbaz <b>FEAD araçları</b> penceresinden açılır. Kurulumdan sonra '
-    + 'taslak modelde kalır — geri dönüp bir sayıyı düzeltebilirsiniz.');
+        _feadHint('Taslak yok.'));
 
   var adimlar = _feadCard('Adımlar', VE_FW_STEPS.length + ' adım', 'var(--accent-primary)',
       '<ol class="ve-fp-liste">' + VE_FW_STEPS.map(function(s){
         return '<li><b>' + _fwEsc(s.ad) + '</b> — ' + _fwEsc(s.ipucu) + '</li>';
-      }).join('') + '</ol>'
-    + _feadHint('Her adımda model <b>canlı çözülür</b>, yani eksik girdiyi son adımı '
-      + 'beklemeden görürsünüz.'));
+      }).join('') + '</ol>');
 
   var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadWizOpen(\''
     + node.id + '\')"><span class="mf-ico mf-ico-wand" aria-hidden="true"></span>'

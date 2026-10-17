@@ -303,7 +303,7 @@ function veFeadStpOku(metin){
   var oku = null;
   if(typeof veStepP21Agac === 'function') oku = veStepP21Agac;
   else if(typeof require === 'function'){ try { oku = require('./step-p21.js').veStepP21Agac; } catch(e0){ oku = null; } }
-  if(!oku) return { ok: false, hatalar: ['STEP okuyucusu (js/step-p21.js) yüklenmemiş.'], uyarilar: [], baslik: null,
+  if(!oku) return { ok: false, hatalar: ['STEP okuyucusu yüklenmemiş.'], uyarilar: [], baslik: null,
                     sureMs: {}, agac: [], parcalar: [], _yuz: [], _model: null, _geo: [] };
   return oku(metin);
 }
@@ -465,7 +465,7 @@ function veFeadStpCoz(sonuc, roller){
         + veSayi(s.eksenel, 2) + ' mm eksenel; ' + veSayi(s.aci, 2) + '° açısal kaçık.');
   });
   if(out.bakis.kaynak === 'varsayilan')
-    out.uyarilar.push('Bakış yönü dosyadan çıkarılamadı (modelin orijini kayış düzleminde). Önden bakışı onaylayın.');
+    out.uyarilar.push('Bakış yönü çıkarılamadı: orijin kayış düzleminde.');
   if(out.kayis) out.kayis.uyarilar.forEach(function(m){ out.uyarilar.push(m); });
   out.ok = out.kasnaklar.length > 0;
   return out;
@@ -501,7 +501,7 @@ function _fstKayisCoz(b, sonuc, n, p0, kasnaklar){
     }
   }
   var ad = '"' + b.ad + '"';
-  if(!c) k.uyarilar.push(ad + ': adında kayış kodu (ör. 8PK1410) bulunamadı; numara ve kanal sayısını elle girin.');
+  if(!c) k.uyarilar.push(ad + ': adında kayış kodu (ör. 8PK1410) yok.');
   if(k.kanalGenislikten && !k.kanal){ k.kanal = k.kanalGenislikten; k.kanalKaynak = 'genislik'; }
   else if(k.kanalGenislikten && k.kanal !== k.kanalGenislikten)
     k.uyarilar.push(ad + ': kodda ' + k.kanal + ' kanal, genişlik (' + veSayi(k.genislik, 2) + ' mm) '
@@ -716,7 +716,7 @@ function veFeadStpKayit(cozum, secim){
       var gi = -1;
       cozum.gergiler.forEach(function(g, j){ if(g.kasnak === i) gi = j; });
       if(gi < 0){
-        uyarilar.push('"' + ad + '": gerginin pivot ekseni bulunamadı; kol boyu ve açısı elle girilmeli.');
+        uyarilar.push('"' + ad + '": gerginin pivot ekseni bulunamadı.');
         data.cenX = _fstYuv(xy.x, MM); data.cenY = _fstYuv(xy.y, MM);
       } else {
         var gg = iki.gergiler[gi];
@@ -737,7 +737,7 @@ function veFeadStpKayit(cozum, secim){
       data.x = _fstYuv(xy.x, MM); data.y = _fstYuv(xy.y, MM);
       if(tip === 'fead-crank' && !surucu){ data.driver = true; surucu = key; srcI = i; }
       if(k.tur === 'duz' && tip !== 'fead-idler')
-        uyarilar.push('"' + ad + '" düz yüzeyli ama rolü ' + tip + '; temas tarafı sırt (back) yazıldı, kontrol edin.');
+        uyarilar.push('"' + ad + '" düz yüzeyli: temas sırt (back).');
     }
     // `stpI`: tanıyıcının kasnak indisi — 3B'nin ve kartın aktarılacak sırayı
     // aktarımdan ÖNCE göstermesi için (veFeadWizStpSira); modele girmez.
@@ -755,7 +755,7 @@ function veFeadStpKayit(cozum, secim){
     siraKaynagi = ss.yon === 'gergi' ? 'kayis' : 'kayis-yon';
     if(siraKaynagi === 'kayis-yon')
       uyarilar.push('Kayış sırası "' + (es.ad || _fstAd(ky.ad)) + '" eskizinden okundu; dönüş yönü belirsiz ('
-        + (gergiKey ? 'gergi krankın komşusu değil' : 'gergi seçilmedi') + '). Yönü Kasnaklar adımında seçin.');
+        + (gergiKey ? 'gergi krankın komşusu değil' : 'gergi seçilmedi') + ').');
   } else {
     if(surucu) route.push(surucu);
     pulleys.forEach(function(p){ if(p.key !== surucu && p.key !== gergiKey) route.push(p.key); });
@@ -767,7 +767,7 @@ function veFeadStpKayit(cozum, secim){
       : (ss && ss.cift && ss.cift.length) ? 'eskiz ' + adlar(ss.cift) + ' kasnağından birden çok kez geçiyor'
       : (ss && ss.eksik && ss.eksik.length) ? 'eskiz ' + adlar(ss.eksik) + ' kasnağından geçmiyor'
       : 'sürücü seçilmedi';
-    uyarilar.push('Kayış sırası dosyadan okunmadı (' + sebep + '); ağaç sırasıyla dizildi. Sırayı Kasnaklar adımında verin.');
+    uyarilar.push('Kayış sırası dosyadan okunmadı (' + sebep + '); ağaç sırasıyla dizildi.');
   }
   var bas = cozum.baslik || {};
   var kayit = {

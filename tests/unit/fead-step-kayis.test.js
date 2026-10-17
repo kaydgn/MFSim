@@ -118,7 +118,7 @@ describe('TANIYICI: kayış birimi kasnak değil', () => {
     const o = S.veFeadStpOku(metin);
     const c = S.veFeadStpCoz(o, o.agac.map((d) => ({ 'KRANK KASNAK': 'fead-crank', ALTERNATOR: 'fead-alternator', KAYIS: 'fead-belt' })[d.ad] || null));
     expect(c.kayis).toMatchObject({ kod: null, profil: 'PK', kanal: 6, kanalKaynak: 'genislik' });
-    expect(c.uyarilar.join(' ')).toMatch(/kayış kodu \(ör\. 8PK1410\) bulunamadı/);
+    expect(c.uyarilar.join(' ')).toMatch(/adında kayış kodu \(ör\. 8PK1410\) yok/);
   });
   test('kod ile genişlik ayrışırsa ikisi de yazılır', () => {
     const metin = O.feadStep([

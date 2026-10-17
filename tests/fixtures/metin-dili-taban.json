@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 1091,
+ "sayi": 1046,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -161,11 +161,6 @@
    "e46f46cb79": "ƒ sütunları düzenlenemez, her hücre değişiminde yeniden hesaplanır: D = aksesuar",
    "f4487924a7": "Brüt tork–güç verisi üreticinin katalog değeridir. Aksesuar kayıpları krank tork"
   },
-  "js/cp-fead-3b.js": {
-   "47361badd4": "Modelde bir parçaya tıklayın, alttaki diziden rolünü verin",
-   "4d877e7225": "Rol vermek için modelde bir parçaya tıklayın",
-   "955e50decc": "3B çizim bu tarayıcıda açılamadı (WebGL yok). Rolleri kartın tablosundan verebil"
-  },
   "js/cp-fead-araclar.js": {
    "2d3fe62412": "bayat"
   },
@@ -229,47 +224,13 @@
   },
   "js/cp-fead-wizard.js": {
    "0ae2d38eba": "Devir pencereleritek eksen: motor devri sürekli sınırın üstü anlık sınırın üstü ",
-   "0bec384a32": "Kol yönü nedir: yeşil ok avara merkezinden gövdenin montaj noktasına bakar. 0° s",
-   "11db044135": "Arkadan: x ekseni aynalanır; krankın dönüş yönü de ters okunur.",
    "1bed1579a4": "Çap ve merkezleri hesapla",
-   "1f93a01994": "‹› Gergi krankın çıkışında değil (‹›‹›/‹›). Otomatik gergi kayışın kranktan çıkt",
-   "202e65cbf3": "Gergide de X/Y kasnağın MERKEZİDİR (kolun çalışma konumunda), diğer satırlarla a",
    "21dd440c49": "Tahrik zinciri: krank, FEAD sürücüsü ve aksesuarların motor devrine oranı",
-   "221d10ad2c": "Yeşil yay: kolun bu açıda durabildiği aralık — kayış sarımı ve yay servis aralığ",
-   "24e1952a3c": "Kayış yolunda henüz kasnak yok. ‹›. adımda (\"Kasnaklar\") kasnakları kayış sırası",
-   "26a641d7f2": "disabled title=\"Gergi silinemez: çekirdek her modelde tam bir gergi ister.\"",
-   "275f81d627": "Dönüş yönü sıradan türer; seçim serpantin sırasını ters yürütür.",
-   "44630d3cec": "Rol ya da bakış aktarımdan sonra değişti; sihirbaz eski seçimle dolu.",
-   "4addc9d895": "Her adımda model canlı çözülür, yani eksik girdiyi son adımı beklemeden görürsün",
    "4dcfa6d77e": "Dosyadan: montaj orijini kayış düzleminin arkasında (motor tarafı).",
-   "536c371fd5": "‹› Uygunluk kapıları yüklenmedi (js/fead-checks.js).",
-   "539f345f3f": "Kayış sırası kayışın eskizinden okundu ama dönüş yönü belirsiz (gergi yok ya da ",
-   "557875d67b": "Henüz taslak yok. Sihirbazı açıp boş başlayabilir ya da hazır bir örnekten doldu",
-   "6b0c83fe45": "Örnek seçin ya da STEP dosyası açın.",
-   "75c5dce04d": "Kayışın gördüğü ortam sıcaklığı. Bütün devir noktalarına yazılır; ömür hesabı sa",
-   "8944b8d742": "İç topolojide zaten ‹› kasnak var. Üstüne kurmak iki ayrı kayış yolunun kasnakla",
-   "988bb27032": "Yön henüz okunamıyor — en az üç kasnak ve koordinatları gerekli.",
-   "9f5e4f0f46": "! Yalnız bir çap girildi. Oran iki çaptan türüyor ve biri boşken çözülmüyor. İki",
    "a1ff6ad0a4": "Kanvastaki ‹› kasnağı sil, modeli yeniden kur",
-   "abe5134c7c": "Otomatik gerginin ‹› girilmedi — ‹›. adımda (\"Otomatik Gergi\") katalogdan bir kü",
-   "aff088a5ef": "Sıra STEP dosyasındaki kayışın eskizinden: her yay bir kasnağa eşlendi. Yön gerg",
-   "b34e660918": "Model kuruldu — ‹› kasnak; kayış yolu çözülmedi: ‹› eksik girdi. Kart girdilerin",
-   "b51c470207": "‹› Açı seçmek için önce avara merkezi (X/Y) ve kol boyu gerekli — gövdenin monta",
    "b9173f0523": "Uygunluk kapıları",
-   "bd18226db3": "Kayış sırası STEP ağacından geldi — kayışın eskizinden okunmadı (kayışa rol veri",
-   "c1f49bd815": "Canlı çözüm · kayış yolu şeması · modeli kur",
-   "c294eddb1c": "Montajı 3B görüntüleyicide açın; parçaya tıklayıp rolünü verin",
-   "c8aa4f417c": "Motor kataloğu bu ikinci grubu yazmaz — hiçbir kayıt taşımıyor.",
-   "ce3a8ea5cc": "Sihirbaz FEAD araçları penceresinden açılır. Kurulumdan sonra taslak modelde kal",
-   "da0770a3be": "‹› ‹› aksesuarın devir sınırı yok; ‹›. adımdaki iki kapı onlar için değerlendiri",
    "dc6b4fdb99": "Devir pencereleri: motor devri ekseninde çevrim noktaları ve aksesuar sınırları",
-   "df31464acb": "Gergi krankın çıkışında (kayış sırasında 2.) — otomatik gergi gevşek açıklıkta d",
-   "e871c8e9e2": "Sıra ağaçtan — kayışa rol verin",
-   "ebf19acd82": "‹› Gücü hiçbir kaynaktan gelmiyor: ‹› — işletme hesabı (gerilme, kayma, ömür) bu",
-   "eca08be7d3": "Değer yazılmadı: μ 0,05–3, küçük kasnak kaybı 0–20 mm aralığında olmalı.",
-   "ecf0f58520": "‹› Kayış yolu çözülmüyor (‹› eksik — Uyarılar'da). Model yine kurulur: kanvastak",
-   "f4ad053e99": "STEP dosyasını seçin ya da bu alana bırakın — .stp · .step · .stpZ (AP214 / AP24",
-   "f5811719c3": "Künye kütüphaneden seçili — bu alan parçanın verisi. Değiştirmek için Tip listes"
+   "eca08be7d3": "Değer yazılmadı: μ 0,05–3, küçük kasnak kaybı 0–20 mm aralığında olmalı."
   },
   "js/cp-fead.js": {
    "0131e93b5e": "Kol çalışma açısına göre gerginlik ve olanaklı bant",
@@ -610,14 +571,8 @@
   },
   "js/fead-step.js": {
    "0e3a65e67c": "\"‹›\" ikinci gergi rolü; model tek gergi taşır, aktarılmadı.",
-   "20b1f0344e": "Kayış sırası dosyadan okunmadı (‹›); ağaç sırasıyla dizildi. Sırayı Kasnaklar ad",
-   "3b4419ee4b": "‹›: adında kayış kodu (ör. 8PK1410) bulunamadı; numara ve kanal sayısını elle gi",
    "419f1d71a1": "\"‹›\": kasnak yüzeyi (kaburga kanalı ya da düz yüzey) bulunamadı; aktarılmaz.",
-   "44669f903d": "‹›: ‹› kasnaklarda yay − dış çap farkı tutarsız (yayılım ‹› mm); ‹› eskizden alı",
-   "456c4e4bbb": "\"‹›\": gerginin pivot ekseni bulunamadı; kol boyu ve açısı elle girilmeli.",
-   "6ea3bdc694": "Kayış sırası \"‹›\" eskizinden okundu; dönüş yönü belirsiz (‹›). Yönü Kasnaklar ad",
-   "9210c901e9": "Bakış yönü dosyadan çıkarılamadı (modelin orijini kayış düzleminde). Önden bakış",
-   "f7138acd11": "\"‹›\" düz yüzeyli ama rolü ‹›; temas tarafı sırt (back) yazıldı, kontrol edin."
+   "44669f903d": "‹›: ‹› kasnaklarda yay − dış çap farkı tutarsız (yayılım ‹› mm); ‹› eskizden alı"
   },
   "js/fead-tensioners.js": {
    "2a6d6075aa": "E9843 parça çizimi — \"PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TO"
@@ -1203,9 +1158,7 @@
    "b65c707aca": "ve-status-commit-arrow"
   },
   "js/step-p21.js": {
-   "9dc7d67789": "Dosyada okunabilir yüz yok. Dosya yalnız üçgen (tessellated) geometri taşıyor ol",
-   "aac1737027": "\"‹›\" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı.",
-   "c89ed3a71f": "Dosyada ‹› MAPPED_ITEM var; bu kalıpla konumlandırılmış parçalar OKUNMAZ. Montaj"
+   "aac1737027": "\"‹›\" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı."
   },
   "js/trace-view.js": {
    "060d6eb88f": "veri yok — önce çözümü çalıştırın",

@@ -1161,6 +1161,11 @@ olurdu.
     `fead-isletme.test.js` başlıklarda arar); hüküm ("gergi gergin tarafta") sayısıyla
     durur, çaresi kılavuzda. Ekranda görünen sonucu tekrarlayan bildirim ve
     katman satırının açıklama yuvası (`ip`) yok. Kapı: `fead-metin.test.js`.
+    **Sihirbazın açı seçicisinde açının TANIMI durur** (kullanıcı bildirimi
+    2026-09-22: *"açı tanımları … kafa karıştırıyor"*) — paragraf değil,
+    gösterge anahtarı: "Kol yönü: merkez → gövde · 0° +X · CCW + · −180…+180"
+    ve "Kesikli çember: olanaklı montaj noktaları"; bant olsun olmasın. Kapı:
+    `fead-wizard.test.js` → *açının tanımı*.
 
 46. **İŞLETME HESABI MOTOR VE AKSESUAR OLMADAN YAPILMAZ** (2026-09-29,
     kullanıcı bildirimi: *"program motor ve aksesuar seçmeden hesap yapıyor …

@@ -160,7 +160,7 @@ describe('arşivin 11 düzeni — ağaç tablonun TERSİ', () => {
       const kayit = kayitOf(O.duzenStep(duzen, tersAgac(duzen)), duzen, false);
       expect(kayit.siraKaynagi).toBe('agac');
       expect(siraUyari(kayit)).toEqual(['Kayış sırası dosyadan okunmadı (kayışa rol verilmedi); '
-        + 'ağaç sırasıyla dizildi. Sırayı Kasnaklar adımında verin.']);
+        + 'ağaç sırasıyla dizildi.']);
       // ağaç sırası: sürücü, ağaçtaki öteki kasnaklar, gergi
       const ag = tersAgac(duzen).filter((a) => a !== 'KAYIS');
       const bek = [duzen[0].ad].concat(ag.filter((a) => a !== duzen[0].ad && a !== duzen[duzen.length - 1].ad),
@@ -230,7 +230,7 @@ describe('yön belirsizse çevrim eskizden, yön İŞARETLİ', () => {
     expect(k.siraKaynagi).toBe('kayis-yon');
     expect(kayitSira(k)).toEqual(tabloAd(KARE));
     expect(siraUyari(k)).toEqual(['Kayış sırası "Sketch.2" eskizinden okundu; dönüş yönü belirsiz '
-      + '(gergi krankın komşusu değil). Yönü Kasnaklar adımında seçin.']);
+      + '(gergi krankın komşusu değil).']);
     // ters eskiz: çevrim aynı, yön ters — dosya yönü söylemiyor
     const t = kayitOf(O.duzenStep(KARE, tersAgac(KARE), { eskizTers: true }), KARE);
     expect(t.siraKaynagi).toBe('kayis-yon');
@@ -406,7 +406,7 @@ describe('aktarılacak sıra aktarmadan ÖNCE görünür', () => {
     const s = akis(duzen, tersAgac(duzen), { kayisRol: false });
     const p = html(G.veFeadWiz3bPanelHTML(s, -1)).querySelector('[data-ve-3b-sira-kaynak]');
     expect(p.getAttribute('data-ve-3b-sira-kaynak')).toBe('agac');
-    expect(p.textContent.trim()).toBe('Sıra ağaçtan — kayışa rol verin');
+    expect(p.textContent.trim()).toBe('Sıra ağaçtan — kayışa rol verilmedi');
     expect(p.getAttribute('title')).toMatch(/kayışa rol verilmedi/);
   });
 

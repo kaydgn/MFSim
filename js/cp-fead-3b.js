@@ -130,8 +130,7 @@ function veFeadWiz3bAc(){
   } catch(e){
     ov.style.display = 'flex';
     kap.setAttribute('data-durum', 'hata');
-    kap.insertAdjacentHTML('afterbegin', '<p class="ve-fw-3b-yok">3B çizim bu tarayıcıda açılamadı (WebGL yok). '
-      + 'Rolleri kartın tablosundan verebilirsiniz.</p>');
+    kap.insertAdjacentHTML('afterbegin', '<p class="ve-fw-3b-yok">3B çizim açılamadı (WebGL yok).</p>');
     _fw3b = V;
     _fw3bPanel();
     return true;
@@ -387,8 +386,7 @@ function veFeadWiz3bPanelHTML(s, secili){
       + '<button type="button" class="ve-fw-spin' + (s.ayna ? ' ve-fw-spin-on' : '') + '" onclick="veFeadWizStpAyna(true)">Arkadan</button></div>';
   } else {
     var rollu = s.roller.filter(function(r){ return !!r && r !== 'fead-belt'; }).length;
-    h += '<p class="ve-fw-dim">' + (rollu ? rollu + ' rollü birim — alttan "Tüm kasnakları hesapla"'
-      : 'Modelde bir parçaya tıklayın, alttaki diziden rolünü verin') + '</p>';
+    h += '<p class="ve-fw-dim">' + (rollu ? rollu + ' rollü birim' : 'Rol verilmedi') + '</p>';
   }
   var sorun = rolEngel.filter(function(m){ return m !== 'Hiçbir parçaya rol verilmedi.'; })
     .concat(coz ? coz.hatalar.concat(coz.uyarilar) : []);
@@ -418,7 +416,7 @@ function veFeadWiz3bPanelHTML(s, secili){
     for(var e = so.agac[secili].ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var n = so.agac[secili].parcalar.length;
     h += '<p class="ve-fw-dim">' + n + ' parça' + (ata >= 0 ? ' · ' + _fwEsc(so.agac[ata].ad) + ' biriminin içinde ('
-      + _fwEsc(_fwStpRolAd(s.roller[ata])) + ') — rol verirseniz birimin rolü kalkar' : '') + '</p></section>';
+      + _fwEsc(_fwStpRolAd(s.roller[ata])) + ')' : '') + '</p></section>';
   }
   // ── SEÇİLİ KASNAĞIN KESİTİ (hesaptan sonra; seçim bir birimin içindeyse o birim) ──
   var kKi = _fw3bSeciliKasnak(s, secili);
@@ -469,7 +467,7 @@ function veFeadWiz3bAltHTML(s, secili){
         + '<option value="-" data-ve-3b-rol=""' + (rol ? '' : ' disabled') + '>Rolü kaldır</option></select>';
     }
     h += '</div>';
-  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Rol vermek için modelde bir parçaya tıklayın</span>';
+  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok</span>';
   h += '</div>';
   // ── TEK DÜĞME (2026-09-30): rollü bütün birimler birlikte ──
   var coz = s.coz, rolEngel = typeof _fwStpRolDenetim === 'function' ? _fwStpRolDenetim(s) : [];

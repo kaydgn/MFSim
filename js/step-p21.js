@@ -418,7 +418,7 @@ function veStepP21Montaj(model){
   });
   if(tipler.MAPPED_ITEM)
     out.uyarilar.push('Dosyada ' + tipler.MAPPED_ITEM + ' MAPPED_ITEM var; bu kalıpla konumlandırılmış '
-      + 'parçalar OKUNMAZ. Montajı CATIA\'dan tek dosya olarak yeniden dışa aktarın.');
+      + 'parçalar okunmaz.');
 
   var kokler = Object.keys(pdUrun).map(Number).filter(function(pd){ return !cocukMu[pd]; });
   var ziyaret = 0;
@@ -722,12 +722,12 @@ function veStepP21Metin(bayt){
     if(flg & 16){ while(p < b.length && b[p] !== 0) p++; p++; }  // FCOMMENT
     if(flg & 2) p += 2;                                          // FHCRC
     ac = _stpAcici();
-    if(!ac || !ac.inflate) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı (js/xlsx-read.js) yüklenmemiş.');
+    if(!ac || !ac.inflate) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı yüklenmemiş.');
     return { metin: _stpBaytMetin(ac.inflate(b.subarray(p))), kap: 'gzip' };
   }
   if(b.length >= 4 && b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04){
     ac = _stpAcici();
-    if(!ac || !ac.zip) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı (js/xlsx-read.js) yüklenmemiş.');
+    if(!ac || !ac.zip) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı yüklenmemiş.');
     var zip = ac.zip(b);
     var adlar = zip.names.filter(function(a){ return !/\/$/.test(a); });
     var ad = adlar.filter(function(a){ return /\.(stp|step|p21)$/i.test(a); })[0] || adlar[0];
@@ -796,7 +796,7 @@ function veStepP21Agac(metin){
   });
   out.sureMs.yuz = Date.now() - t2;
   if(!toplamYuz){
-    out.hatalar.push('Dosyada okunabilir yüz yok. Dosya yalnız üçgen (tessellated) geometri taşıyor olabilir; CATIA’dan katı geometri olarak dışa aktarın.');
+    out.hatalar.push('Okunabilir yüz yok; geometri üçgen (tessellated) olabilir.');
     return out;
   }
   out.ok = true;
