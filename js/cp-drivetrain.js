@@ -5,7 +5,7 @@ function getTransferPropertiesHTML(node) {
   
   var html = '<div class="sw-panel ve-cp-panel">';
 
-  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Transfer Kutusu <button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button></div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Transfer Kutusu</div>';
 
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Transfer Case Parametreleri ──
@@ -29,7 +29,7 @@ function getTransferPropertiesHTML(node) {
     var ftTrPreset = nodeData.ftTrPreset || '';
     html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
     html += '<select id="ve-fttr-preset-' + node.id + '" onchange="onVEFTTransferPresetSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-    html += '<option value="">-- Transfer Case Preset (' + Object.keys(VE_TRANSFER_PRESETS).length + ') --</option>';
+    html += '<option value="">— Transfer Case (' + Object.keys(VE_TRANSFER_PRESETS).length + ' preset) —</option>';
     var _trBrands = {};
     Object.keys(VE_TRANSFER_PRESETS).forEach(function(tk) { var b = VE_TRANSFER_PRESETS[tk].marka; if(!_trBrands[b]) _trBrands[b] = []; _trBrands[b].push(tk); });
     Object.keys(_trBrands).sort().forEach(function(brand) {
@@ -88,7 +88,6 @@ function getTransferPropertiesHTML(node) {
     html += '</div>';
     
     // ── BİLGİ NOTU ──
-    html += '<div class="sw-pkg-desc">Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır; sonuçlar kademe başına ayrı iSCAAN tablosu olarak raporlanır.</div>';
     html += '</div>';                                  // ve-cp-col (sağ) kapat
     html += '</div>';                                  // ve-cp-grid kapat
 
@@ -161,7 +160,7 @@ function getTransferPropertiesHTML(node) {
   html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Seçili kademe</th>';
   html += '<td style="background:var(--bg-tertiary);">';
   html += '<select id="ve-transfer-mode-' + node.id + '" onchange="onVETransferModeChange(\'' + node.id + '\')" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-  html += '<option value="">-- Seçin --</option>';
+  html += '<option value="">—</option>';
   html += '</select>';
   html += '</td>';
   html += '</tr>';
@@ -246,7 +245,6 @@ function onVEFTTransferPresetSelect(nodeId, value) {
   
   // Panel'i yeniden render et
   showNodeProperties(node);
-  showToast('Transfer Case: ' + fullName);
 }
 
 // Transfer kutusu preset verileri - Klasik Arayüz ile aynı veri seti
@@ -285,7 +283,6 @@ function onVETransferSelectChange(nodeId, value) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(node) { if(!node.data) node.data = {}; node.data.selectedTransfer = value; }
   onVETransferDataChange(nodeId);
-  showToast('Transfer kutusu: ' + preset.marka + ' ' + preset.model);
 }
 
 function veUpdateTransferModels(nodeId) {
@@ -362,7 +359,7 @@ function onVETransferDataChange(nodeId) {
   // Kademe seçici güncelle
   var selectEl = document.getElementById('ve-transfer-mode-' + nodeId);
   if(selectEl) {
-    selectEl.innerHTML = '<option value="">-- Seçin --</option>';
+    selectEl.innerHTML = '<option value="">—</option>';
     data.forEach(function(d, idx) {
       var opt = document.createElement('option');
       opt.value = idx;
@@ -403,7 +400,7 @@ function getPropshaftPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Propşaft <button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button></div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Propşaft</div>';
 
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft parametreleri</span></div>';
@@ -484,7 +481,7 @@ function getDifferentialPropertiesHTML(node) {
       var html = '<div class="sw-panel">';
       html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:var(--fs-micro); font-weight:600; padding:1px 5px; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-desc">';
-      html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
+      html += 'Parametreler: Master diferansiyel' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Diferansiyel') + ')' : '');
       html += '</div>';
       html += '</div>';
       return html;
@@ -501,7 +498,7 @@ function getDifferentialPropertiesHTML(node) {
   if(isFullThrottle) {
     html += ' <span class="ve-master-rozet">' + veIkon('star') + ' MASTER</span>';
   }
-  html += ' <button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button></div>';
+  html += '</div>';
   
   // Tablo
   html += '<table class="ve-pnl-tbl ve-pnl-tbl--framed">';
@@ -513,7 +510,7 @@ function getDifferentialPropertiesHTML(node) {
   html += '</tr>';
   
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Son tahrik oranı. Askeri araçlarda tipik değer: 4,5–8,0 arası.</td>';
+  html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Tipik 4,5–8,0</td>';
   html += '</tr>';
   
   // Verim
@@ -523,7 +520,7 @@ function getDifferentialPropertiesHTML(node) {
   html += '</tr>';
   
   html += '<tr>';
-  html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Diferansiyel mekanik verimi. Tipik değer: %95–98 arası.</td>';
+  html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Tipik %95–98</td>';
   html += '</tr>';
   
   // Atalet

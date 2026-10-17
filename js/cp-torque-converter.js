@@ -35,14 +35,14 @@ function getTorqueConverterPropertiesHTML(node) {
     var hasECM = nodes.some(function(n) { return n.type === 'ec-matching'; });
     html += '<div style="margin-bottom:10px;">';
     if(hasECM) {
-      html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;"><span class="mf-ico mf-ico-lock"></span> Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+      html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;"><span class="mf-ico mf-ico-lock"></span> Konvertör Motor-Konvertör Eşleştirme\'den seçili.</div>';
     }
     html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:var(--fs-body); padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
-    html += '<option value="">-- Konvertör seçiniz --</option>';
+    html += '<option value="">— Konvertör —</option>';
     
     if(!_gbFamily) {
       // Şanzıman seçilmemiş → uyarı ve tüm konvertörleri göster
-      html += '<option value="" disabled style="color:var(--ink-warning);">Önce şanzıman seçiniz (aile filtreleme)</option>';
+      html += '<option value="" disabled style="color:var(--ink-warning);">Şanzıman seçilmedi</option>';
       ['1000_2000','3000','4000'].forEach(function(fam) {
         var famTCs = Object.keys(VE_FT_TC_PRESETS).filter(function(k) { return VE_FT_TC_PRESETS[k].family === fam; });
         if(famTCs.length === 0) return;
@@ -192,18 +192,12 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</td>';
     html += '</tr>';
     
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Kilitli konvertör direkt bağlantı sağlar (oran 1.0). Kilitsiz durumda tork çarpanı uygulanır.</td>';
-    html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tork konvertörü oranı [-]</th>';
     html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-tc-ratio-' + node.id + '" value="' + tcRatio + '" min="0.5" max="3" step="0.01" ' + (isLocked ? 'disabled' : '') + ' style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;' + (isLocked ? ' opacity:0.5; cursor:not-allowed;' : '') + '" onchange="onVETCParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
-    html += '<tr>';
-    html += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Kilitli konvertörde oran 1.0\'dır. Kilitsiz çalışmada tipik değerler: düşük hızda 1.8–2.5, yüksek hızda ≈1.0.</td>';
-    html += '</tr>';
     
     html += '</table>';
     html += '</div></div>'; // sw-pkg-body + sw-pkg-card
@@ -225,7 +219,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-210',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Yüksek stall tork oranı (2,05). Geniş yelpaze, genel amaçlı.',
+    description: '1000/2000 serisi · stall tork oranı 2,05',
     data: [
       {sr:0.00, kpump:101.50, tau:2.05},
       {sr:0.10, kpump:101.91, tau:1.96},
@@ -251,7 +245,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-211',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Orta-yüksek tork çarpanı (1,90). İyi kalkış performansı.',
+    description: '1000/2000 serisi · stall tork oranı 1,90',
     data: [
       {sr:0.00, kpump:91.67, tau:1.90},
       {sr:0.10, kpump:91.12, tau:1.85},
@@ -277,7 +271,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-221',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Orta tork çarpanı (1,73). Dengeli kalkış/cruise.',
+    description: '1000/2000 serisi · stall tork oranı 1,73',
     data: [
       {sr:0.00, kpump:84.01, tau:1.73},
       {sr:0.10, kpump:83.32, tau:1.66},
@@ -303,7 +297,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-222',
     family: '1000_2000',
     pumpTorqueDrop: 14.9,
-    description: '1000/2000 serisi. Düşük tork çarpanı (1,58). Yüksek hız, düşük stall.',
+    description: '1000/2000 serisi · stall tork oranı 1,58',
     data: [
       {sr:0.00, kpump:73.13, tau:1.58},
       {sr:0.10, kpump:73.36, tau:1.56},
@@ -330,7 +324,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-411',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Yüksek stall tork oranı (2,71). Düşük hızlı ağır yük uygulamaları.',
+    description: 'stall tork oranı 2,71',
     data: [
       {sr:0.00, kpump:97.98, tau:2.71},
       {sr:0.10, kpump:96.79, tau:2.49},
@@ -356,7 +350,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-413',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Yüksek tork çarpanı (2,44). Orta-ağır yük, iyi kalkış performansı.',
+    description: 'stall tork oranı 2,44',
     data: [
       {sr:0.00, kpump:73.33, tau:2.44},
       {sr:0.10, kpump:73.04, tau:2.27},
@@ -382,7 +376,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-415',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Orta tork çarpanı (2,35). Genel amaçlı ağır hizmet uygulamaları.',
+    description: 'stall tork oranı 2,35',
     data: [
       {sr:0.00, kpump:68.18, tau:2.35},
       {sr:0.10, kpump:68.28, tau:2.20},
@@ -408,7 +402,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-417',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Orta tork çarpanı (2,20). Dengeli kalkış/cruise performansı.',
+    description: 'stall tork oranı 2,20',
     data: [
       {sr:0.00, kpump:60.54, tau:2.20},
       {sr:0.10, kpump:60.99, tau:2.08},
@@ -434,7 +428,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-418',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Düşük stall tork oranı (1,98). Yüksek verimli, az kayıplı tasarım.',
+    description: 'stall tork oranı 1,98',
     data: [
       {sr:0.00, kpump:61.14, tau:1.98},
       {sr:0.10, kpump:61.83, tau:1.94},
@@ -460,7 +454,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-419',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'Orta-düşük tork çarpanı (2,02). İyi cruise verimliliği.',
+    description: 'stall tork oranı 2,02',
     data: [
       {sr:0.00, kpump:54.94, tau:2.02},
       {sr:0.10, kpump:55.58, tau:1.94},
@@ -486,7 +480,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-421',
     family: '3000',
     pumpTorqueDrop: 17.6,
-    description: 'En düşük tork çarpanı (1,77). Yüksek hızlı uygulamalar, düşük stall.',
+    description: 'stall tork oranı 1,77',
     data: [
       {sr:0.00, kpump:47.89, tau:1.77},
       {sr:0.10, kpump:48.12, tau:1.73},
@@ -513,7 +507,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-521',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Yüksek stall tork oranı (2,42). Ağır yük, düşük hız uygulamaları.',
+    description: '4000 serisi · stall tork oranı 2,42',
     data: [
       {sr:0.00, kpump:50.68, tau:2.42},
       {sr:0.10, kpump:50.84, tau:2.22},
@@ -539,7 +533,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-531',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Yüksek tork çarpanı (2,34). İyi kalkış, geniş çalışma aralığı.',
+    description: '4000 serisi · stall tork oranı 2,34',
     data: [
       {sr:0.00, kpump:44.82, tau:2.34},
       {sr:0.10, kpump:45.37, tau:2.15},
@@ -565,7 +559,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-541',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Orta tork çarpanı (1,90). Dengeli performans.',
+    description: '4000 serisi · stall tork oranı 1,90',
     data: [
       {sr:0.00, kpump:39.71, tau:1.90},
       {sr:0.10, kpump:40.79, tau:1.79},
@@ -591,7 +585,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-551',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Orta-düşük tork çarpanı (1,79). İyi cruise verimliliği.',
+    description: '4000 serisi · stall tork oranı 1,79',
     data: [
       {sr:0.00, kpump:38.22, tau:1.79},
       {sr:0.10, kpump:39.18, tau:1.69},
@@ -617,7 +611,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-561',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. Düşük tork çarpanı (1,58). Yüksek hız uygulamaları.',
+    description: '4000 serisi · stall tork oranı 1,58',
     data: [
       {sr:0.00, kpump:35.41, tau:1.58},
       {sr:0.10, kpump:35.72, tau:1.54},
@@ -643,7 +637,7 @@ var VE_FT_TC_PRESETS = {
     name: 'TC-571',
     family: '4000',
     pumpTorqueDrop: 36.6,
-    description: '4000 serisi. En düşük tork çarpanı (1,62). Yüksek hız, düşük stall.',
+    description: '4000 serisi · stall tork oranı 1,62',
     data: [
       {sr:0.00, kpump:32.45, tau:1.62},
       {sr:0.10, kpump:32.03, tau:1.56},
@@ -753,7 +747,7 @@ function veRefreshTCDropdownForFamily() {
     var currentTC = (tcNode.data || {}).tcPresetKey || '';
     if(currentTC && currentTC !== 'manual' && VE_FT_TC_PRESETS[currentTC]) {
       if(VE_FT_TC_PRESETS[currentTC].family !== newFamily) {
-        showToast('Seçili konvertör (' + VE_FT_TC_PRESETS[currentTC].name + ') yeni şanzıman ailesiyle uyumsuz. Lütfen konvertörü güncelleyin.', 'warning');
+        showToast('Seçili konvertör (' + VE_FT_TC_PRESETS[currentTC].name + ') yeni şanzıman ailesiyle uyumsuz.', 'warning');
       }
     }
   }
@@ -810,7 +804,6 @@ function onVEFTTCSelect(nodeId, value) {
     
     // Grafikleri güncelle
     setTimeout(function() { updateVETCCharts(nodeId); }, 50);
-    showToast(preset.name + ' verileri yüklendi (' + preset.data.length + ' nokta)');
     
   } else if(value === 'manual') {
     // Manuel: temizle
@@ -869,7 +862,6 @@ function clearVETCTable(nodeId) {
   tbody.innerHTML = '';
   for(var i = 0; i < 5; i++) addVETCRow(nodeId);
   onVETCDataChange(nodeId);
-  showToast('TC tablosu temizlendi');
 }
 
 function deleteVETCData(nodeId) {
@@ -879,7 +871,6 @@ function deleteVETCData(nodeId) {
   node.data.tcData = [];
   var tbody = document.getElementById('ve-tc-table-' + nodeId);
   if(tbody) tbody.innerHTML = '';
-  showToast('TC verisi silindi');
 }
 
 function saveVETCData(nodeId) {

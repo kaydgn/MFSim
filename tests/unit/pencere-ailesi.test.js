@@ -120,7 +120,8 @@ describe('başlık TEK bileşen', () => {
     // her biri kendi bandını (5–11 px dolgu, kalın başlık, çerçeveli ✕) ya da
     // bandsız 16 px başlığını çiziyordu.
     const kuran = [...new Set(perdeler().map((p) => p.f))];
-    expect(kuran.length).toBeGreaterThanOrEqual(10);
+    // Bilgi penceresi ("hakkında") 2026-10-17'de kalktı: açıklama kılavuzda.
+    expect(kuran.length).toBeGreaterThanOrEqual(9);
     expect(kuran.filter((f) => !/ve-settings-header/.test(KAYNAK[f]))).toEqual([]);
     // eski büyük pencere bandı ve çerçeveli kapat kalmadı
     const ESKI_BANT = 'padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
@@ -133,7 +134,7 @@ describe('başlık TEK bileşen', () => {
     // (%50 · %60 · %72 · %82 · %85) ve altısında bulanıklık; altı pencerenin
     // kabuğu temadan habersiz sabit gölgeyle (0 20px 60px rgba(0,0,0,.6)).
     const p = perdeler();
-    expect(p.length).toBeGreaterThanOrEqual(13);
+    expect(p.length).toBeGreaterThanOrEqual(12);
     expect(p.filter((x) => !/background:\s*var\(--scrim\)/.test(x.satir) || /backdrop-filter/.test(x.satir))
       .map((x) => x.f + ':' + (x.i + 1))).toEqual([]);
     // Kabuk: perdenin çevresinde kurulan köşesi --radius-lg olan kutu.

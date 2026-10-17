@@ -47,7 +47,7 @@ function veExpandRoadMap(nodeId) {
     '<button onclick="veSearchLocation(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-primary);color:var(--on-accent);"><span class="mf-ico mf-ico-search"></span> Konum ara</button>' +
     '<button onclick="veClearRoute(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-danger);color:var(--on-danger);"><span class="mf-ico mf-ico-trash"></span> Temizle</button>' +
     '<span style="flex:1;"></span>' +
-    '<span id="ve-map-modal-info" style="font-size:var(--fs-tiny); color:var(--text-muted);">Haritaya tıklayarak nokta ekleyin</span>';
+    '<span id="ve-map-modal-info" style="font-size:var(--fs-tiny); color:var(--text-muted);">Nokta yok</span>';
   modal.appendChild(toolbar);
   
   // Harita alanı
@@ -129,7 +129,7 @@ function veExpandRoadMap(nodeId) {
     var info = document.getElementById('ve-map-modal-info');
     if(!info) return;
     var mc = (veRoadMarkers[nodeId] || []).length;
-    info.textContent = mc === 0 ? 'Haritaya tıklayarak nokta ekleyin' : mc + ' nokta seçildi' + (mc >= 2 ? ' — Rota hesaplanabilir' : '');
+    info.textContent = mc === 0 ? 'Nokta yok' : mc + ' nokta seçildi';
   }, 400);
   
   // ESC handler
@@ -635,7 +635,6 @@ function veClearRoute(nodeId) {
   // Profil bölümünü gizle
   var profilesSection = document.getElementById('ve-road-profiles-' + nodeId);
   if(profilesSection) profilesSection.style.display = 'none';
-  showToast('Güzergah temizlendi');
 }
 
 // Haversine mesafe hesaplama
@@ -1051,7 +1050,7 @@ function veCalcElevation(nodeId, onComplete) {
     // Haritada waypoint'leri göster
     _veWaypointShowOnMap(nodeId);
 
-    showToast('Rakım verisi okundu: ' + gpsSamples.length + ' sample, ' + veSayi(toplamMesafe / 1000, 2) + ' km');
+    showToast('Rakım verisi okundu: ' + gpsSamples.length + ' örnek, ' + veSayi(toplamMesafe / 1000, 2) + ' km');
 
     // Callback (profil oluşturma vb.)
     if(typeof onComplete === 'function') onComplete();
@@ -1101,13 +1100,12 @@ function veCalcAirDensityRoad(nodeId) {
   var densEl = document.getElementById('ve-road-density-' + nodeId);
   if(!altEl || !tempEl || !densEl) return;
   var h = parseFloat(altEl.value), T = parseFloat(tempEl.value);
-  if(isNaN(h) || isNaN(T)) { showToast('Yükseklik ve sıcaklık giriniz', 'warning'); return; }
+  if(isNaN(h) || isNaN(T)) { showToast('Yükseklik ya da sıcaklık eksik.', 'warning'); return; }
   var P0=101325,T0=288.15,L=0.0065,R=287.05,g=9.80665;
   var Tk=T+273.15, P=P0*Math.pow(1-L*h/T0,g/(R*L)), rho=P/(R*Tk);
   densEl.value = rho.toFixed(4);   // makine: sayı alanının değeri
   var node = nodes.find(function(n){return n.id===nodeId;});
   if(node){if(!node.data)node.data={};node.data.airDensity=rho;}
-  showToast('Hava yoğunluğu: '+veSayi(rho, 4)+' kg/m³');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1119,13 +1117,12 @@ function veCalcAirDensityRoad(nodeId) {
 function veUpdateProfiles(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node || !node.data || !node.data.routeCoords || node.data.routeCoords.length < 2) {
-    showToast('Önce haritadan rota hesaplayın', 'warning');
+    showToast('Rota yok.', 'warning');
     return;
   }
   showToast('Profil güncelleniyor…');
   veCalcElevation(nodeId, function() {
     veCalcDistGradeProfile(nodeId);
-    showToast('Profil güncellendi');
   });
 }
 
@@ -1133,7 +1130,7 @@ function veUpdateProfiles(nodeId) {
 function veUpdateProfilesExpanded(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node || !node.data || !node.data.routeCoords || node.data.routeCoords.length < 2) {
-    showToast('Rota verisi bulunamadı', 'warning'); return;
+    showToast('Rota verisi yok.', 'warning'); return;
   }
   showToast('Profil güncelleniyor…');
   veCalcElevation(nodeId, function() {
@@ -1144,7 +1141,6 @@ function veUpdateProfilesExpanded(nodeId) {
       veRenderAltitudeProfile('ve-road-altitude-expanded-' + nodeId, node.data.gpsSamples, nodeId);
       _veAltUpdateLineList(nodeId);
     }
-    showToast('Profil güncellendi');
   });
 }
 
@@ -1187,7 +1183,7 @@ function veToggleDistGradeProfile(nodeId) {
 function veCalcDistGradeProfile(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node || !node.data || !node.data.gpsSamples || node.data.gpsSamples.length < 2) {
-    showToast('Önce rota hesaplayın (en az 2 nokta gerekli)', 'warning');
+    showToast('Rota yok.', 'warning');
     return;
   }
 
@@ -1199,7 +1195,7 @@ function veCalcDistGradeProfile(nodeId) {
   // Profil HTML şablonu (sadece Rakım Profili GPS)
   function _buildProfileHTML(canvasId) {
     var altCanvasId = canvasId.replace('distgrade', 'altitude');
-    if(!gpsSamples) return '<div style="color:var(--text-muted); font-size:var(--fs-tiny); padding:8px;">GPS verisi bulunamadı.</div>';
+    if(!gpsSamples) return '<div style="color:var(--text-muted); font-size:var(--fs-tiny); padding:8px;">GPS verisi yok.</div>';
     return '<div style="position:relative; margin-bottom:8px;">' +
       '<canvas id="' + altCanvasId + '" style="width:100%; cursor:crosshair; border-radius:var(--radius-sm);"></canvas>' +
       '<div id="' + altCanvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
@@ -1238,7 +1234,6 @@ function veCalcDistGradeProfile(nodeId) {
     }, 100);
   }
 
-  showToast('Rakım profili oluşturuldu');
 }
 
 function veRenderDistGradeProfile(canvasId, segments, nodeId) {
@@ -1759,7 +1754,7 @@ function _veAttachRouteClickForWaypoint(nodeId) {
     L.DomEvent.stopPropagation(e); // Harita click'ini engelle
     var node = nodes.find(function(n) { return n.id === nodeId; });
     if(!node || !node.data || !node.data.gpsSamples || node.data.gpsSamples.length < 2) {
-      showToast('Önce rota hesaplayın', 'warning'); return;
+      showToast('Rota yok.', 'warning'); return;
     }
     // Tıklanan noktanın rota üzerindeki en yakın mesafesini bul
     var clickLatLng = e.latlng;
@@ -1775,7 +1770,6 @@ function _veAttachRouteClickForWaypoint(nodeId) {
       _veWaypointUpdateList(nodeId);
       _veAltRedrawAll(nodeId);
       _veWaypointShowOnMap(nodeId);
-      showToast('Referans noktası eklendi: ' + name);
     });
   });
 }
@@ -1868,7 +1862,7 @@ function _veWaypointUpdateList(nodeId) {
   if(!listEl) return;
   var wps = _veRouteWaypoints[nodeId] || [];
   if(wps.length === 0) {
-    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Henüz referans noktası yok. Grafikte sağ tık ile ekleyin.</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Referans noktası yok.</div>';
     return;
   }
   var html = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse;">';
@@ -2318,7 +2312,7 @@ function _veAltUpdateLineList(nodeId) {
   if(!listEl) return;
   var lines = _veAltGradeLines[nodeId] || [];
   if(lines.length === 0) {
-    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Henüz eğim çizgisi yok. Grafikte sol tık ile çizin.</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Eğim çizgisi yok.</div>';
     return;
   }
   var html = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse;">';
@@ -2366,14 +2360,14 @@ function _veAltRedrawAll(nodeId) {
 function veTransferSegmentsToScenario(roadNodeId) {
   var lines = _veAltGradeLines[roadNodeId] || [];
   if(lines.length === 0) {
-    showToast('Aktarılacak eğim çizgisi yok. Önce rakım profilinde çizgi çizin.', 'warning');
+    showToast('Aktarılacak eğim çizgisi yok.', 'warning');
     return;
   }
 
   // Topolojideki scenario node'u bul
   var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
   if(!scenarioNode) {
-    showToast('Topolojide Senaryolar bileşeni bulunamadı. Önce ekleyin.', 'warning');
+    showToast('Senaryolar bileşeni yok.', 'warning');
     return;
   }
   if(!scenarioNode.data) scenarioNode.data = {};
@@ -2569,18 +2563,17 @@ function veAltReverseDirection(nodeId) {
     selInfo.style.fontStyle = 'normal';
   }
 
-  showToast('Profil yönü çevrildi');
 }
 
 
 // ═══ Profil grafiği büyütme modalı ═══
 function veExpandProfileChart(nodeId, chartType) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
-  if(!node || !node.data) { showToast('Profil verisi bulunamadı', 'warning'); return; }
+  if(!node || !node.data) { showToast('Profil verisi yok.', 'warning'); return; }
 
   var isAlt = true; // Sadece rakım profili destekleniyor
   if(!node.data.gpsSamples || node.data.gpsSamples.length < 2) {
-    showToast('GPS rakım verisi bulunamadı', 'warning'); return;
+    showToast('GPS rakım verisi yok.', 'warning'); return;
   }
 
   // Alttaki Özellikler modalı bu büyük chart'ın altında kalmasın → otomatik kapan
@@ -2641,7 +2634,6 @@ function veExpandProfileChart(nodeId, chartType) {
           '<button onclick="veWaypointClearAllUI(\'' + nodeId + '\')" style="padding:3px 8px; font-size:var(--fs-micro); background:var(--accent-danger); color:var(--on-danger); border:none; border-radius:var(--radius-sm); cursor:pointer; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">Tümünü sil</button>' +
         '</div>' +
         '<div id="ve-wp-list-' + nodeId + '" style="max-height:140px; overflow-y:auto; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:4px; background:var(--bg-tertiary);"></div>' +
-        '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px; opacity:0.7;">Haritada rota çizgisi üzerine tıklayarak referans noktası ekleyin</div>' +
       '</div>';
     modal.appendChild(controlBox);
   }
@@ -2814,7 +2806,6 @@ function getTerminatorPropertiesHTML(node) {
   // Açıklama
   html += '<div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:12px;">';
   html += '<div style="font-size:var(--fs-body); color:var(--ink-danger); font-weight:600; margin-bottom:4px;"><span class="mf-ico mf-ico-scissors"></span> Hesap sonlandırma noktası</div>';
-  html += '<div style="font-size:var(--fs-body); color:var(--text-secondary); line-height:1.5;">Bu bileşen, güç akış zincirini burada keser. Çözücü, bu noktaya kadar olan bileşenlerin hesabını yapar ve durur. Tam model kurmadan kısmi analizler yapmanızı sağlar.</div>';
   html += '</div>';
   
   // Bağlantı durumu - bu terminatöre gelen zinciri bul
@@ -2822,8 +2813,7 @@ function getTerminatorPropertiesHTML(node) {
   
   if(!inConn) {
     html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:12px; text-align:center;">';
-    html += '<div style="font-size:var(--fs-md); color:var(--text-muted);">' + veIkon('alert-triangle') + ' Henüz bir bileşene bağlanmadı</div>';
-    html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-top:4px;">Bir bileşenin çıkış portuna bağlayın</div>';
+    html += '<div style="font-size:var(--fs-md); color:var(--text-muted);">' + veIkon('alert-triangle') + ' Bağlı değil</div>';
     html += '</div>';
   } else {
     // Upstream zinciri bul
@@ -2850,7 +2840,7 @@ function getTerminatorPropertiesHTML(node) {
     html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;"><span class="mf-ico mf-ico-ruler"></span> Hesap zinciri</div>';
     
     if(chain.length === 0) {
-      html += '<div style="font-size:var(--fs-body); color:var(--text-muted);">Upstream güç bileşeni bulunamadı.</div>';
+      html += '<div style="font-size:var(--fs-body); color:var(--text-muted);">Besleyen güç bileşeni yok.</div>';
     } else {
       html += '<div style="display:flex; flex-direction:column; gap:2px;">';
       chain.forEach(function(nd, idx) {
@@ -2874,7 +2864,7 @@ function getTerminatorPropertiesHTML(node) {
       var lastNode = chain[chain.length - 1];
       var lastDef = componentDefs[lastNode.type] || {};
       html += '<div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border-color);">';
-      html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;"><span class="mf-ico mf-ico-bar-chart"></span> Bu noktada ölçülebilir</div>';
+      html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;"><span class="mf-ico mf-ico-bar-chart"></span> Ölçülebilir büyüklükler</div>';
       
       // Bileşen tipine göre çıkış sinyalleri
       var signals = [];
@@ -2911,7 +2901,7 @@ function getTerminatorPropertiesHTML(node) {
 function getDefaultPropertiesHTML(node) {
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
   html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
-  html += '<div style="font-size:var(--fs-lg); color:var(--text-secondary);">Bu bileşen için henüz parametre tanımlanmamış.</div>';
+  html += '<div style="font-size:var(--fs-lg); color:var(--text-secondary);">Parametre yok.</div>';
   html += '</div>';
   return html;
 }
@@ -2950,7 +2940,6 @@ function veEditNodeName(nodeId) {
     // (canvas-space.js veNodeLabelOverflow), o yüzden yeniden adlandırma
     // çerçeveyi de tazelemeli.
     if(typeof veUpdateBoundary === 'function') veUpdateBoundary();
-    showToast('İsim güncellendi: ' + newName);
   }
   
   input.addEventListener('blur', applyName);
@@ -3205,7 +3194,7 @@ function deleteSelectedNodes() {
   if(veIsTCConnectedToGearbox()) {
     var hasMandatory = selectedNodes.some(function(n) { return n.type === 'shift-controller'; });
     if(hasMandatory) {
-      showToast('Tork Konvertörü şanzımana bağlıyken Şanzıman Kontrol bileşeni zorunludur, silinemez', 'error');
+      showToast('Şanzıman Kontrol silinemez: Tork Konvertörü şanzımana bağlı.', 'error');
       selectedNodes = selectedNodes.filter(function(n) { return n.type !== 'shift-controller'; });
       if(selectedNodes.length === 0) return;
     }
