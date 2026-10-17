@@ -110,6 +110,15 @@ describe('§8.13 kestirimin farkı SAYIYLA söylenir', () => {
 });
 
 describe('teori şablonu yazılımı anlatmaz', () => {
+  // FEAD kapısıyla AYNI ölçüt (tests/helpers/teori-sablon.js): şablon taban64
+  // gömülü, cırcır görmüyor.
+  const TS = require('../helpers/teori-sablon.js');
+  test('düz metin: yazılım davranışı, geçmiş, test ölçümü, okuyucuya iş yok; büyük harf vurgusu yok', () => {
+    const h = TS.sablon('js/mount-report-template.js', 'MNT_REPORT_TEMPLATE_B64');
+    expect(TS.yasakBulgulari(h)).toEqual([]);
+    expect(TS.buyukHarfBulgulari(h, [])).toEqual([]);
+  });
+
   test('alt bilgi ve §1 özeti: "otomatik üretilmiştir" ve "harici referans yerine" yok', () => {
     global.window = global.window || {};
     require('../../js/mount-report-template.js');

@@ -123,8 +123,10 @@ test('Araç Performans: TXT raporları, ayrıntılı rapor, grafikleri, indirile
     veSolverRunProfessional();
   });
   await page.waitForFunction(() => window.veSimResults && window.veSimResults.reportSnapshot, null, { timeout: 180000 });
-  // Çözücü günlüğü (aşama 3c): son satırı yazılana kadar beklenir.
-  await page.waitForFunction(() => /Sonuçlar sayfasındadır/.test((document.getElementById('ve-sp-log') || {}).innerText || ''), null, { timeout: 60000 });
+  // Çözücü günlüğü (aşama 3c): bitince "Log İndir" düğmesi görünür. Eski işaret
+  // son satırın metniydi ("… Sonuçlar sayfasındadır"); o satır metin temizliği
+  // aşama 8'de kalktı — işaret metinden değil durumdan.
+  await page.waitForFunction(() => { const b = document.getElementById('ve-solver-log-dl'); return !!b && b.style.display === ''; }, null, { timeout: 60000 });
   const gunluk = await page.evaluate(() => document.getElementById('ve-sp-log').innerText);
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const o = document.getElementById('ve-solver-modal-overlay'); if (o) o.remove(); });

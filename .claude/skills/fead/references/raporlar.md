@@ -14,6 +14,19 @@
 > kendisiyle" — ölçüm `fead-arm-band.test.js`te koşuyor), okuyucuya tarif ve
 > büyük harfle vurgu yazılmaz. "Uygunluk kapıları" kullanıcıya görünen her
 > yerde **"Uygunluk kriterleri"**. Kapı: `fead-rapor-metin.test.js` + cırcır.
+>
+> **TEORİ ŞABLONU DA** (aşama 11b): §4.5'in seçim ölçütü geçmişi ("Bir dönem
+> program bu açıyı seçiyordu … 2/14 … 20,7°"), (4.9)'un "SEÇİCİ değildir —
+> ölçüldü" kutusu, §3.4'ün "panelde aç/kapa, kanvasta rozet" anlatısı (rozet
+> 2026-09-09'da kalkmıştı), Ek A'nın "köprü katmanı … yazar" yorumları ve alt
+> bilginin "otomatik üretilmiştir" cümlesi kalktı; ölçümler bu skill'in
+> kayıtlarında ve testlerde duruyor. **§4.1 bayattı**: "girilen koordinat
+> gövdenin montaj noktasıdır" diyordu — 2026-09-01'den beri girdi AVARA
+> MERKEZİ (§4.5 doğru anlatıyordu, belge kendiyle çelişiyordu). Şablon taban64
+> gömülü olduğu için cırcır görmüyor; düz metni `tests/helpers/teori-sablon.js`
+> ile taranır (Takoz şablonuyla AYNI ölçüt) ve şablonun kaynakla tazeliği
+> `fead-rapor-metin.test.js` → *ŞABLON* ile tutulur (Takoz'da vardı, FEAD'de
+> yoktu).
 
 #### Çevrimdışı HTML rapor (`js/cp-fead-report.js`)
 
