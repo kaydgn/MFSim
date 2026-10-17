@@ -1231,6 +1231,12 @@ describe('kılavuzun sesi ve yapısı (aşama 13)', () => {
     expect([...duz.matchAll(YASAK)].map((m) => duz.slice(Math.max(0, m.index - 40), m.index + 40))).toEqual([]);
   });
 
+  test('ikinci kişi yok (aşama 14: üç kılavuzda aynı ölçüt)', () => {
+    // eski: "3.5 Yol D — kendi CAD montajınızdan (STEP)" — cırcırın sözlüğü görmüyordu
+    const SIZ = /(?<![\p{L}])(?:siz|sizin|size|sizi)(?![\p{L}])|\p{L}+(?:sınız|siniz|sunuz|sünüz|ınız|iniz|unuz|ünüz)\p{L}{0,4}(?![\p{L}])/giu;
+    expect([...duz.matchAll(SIZ)].map((m) => duz.slice(Math.max(0, m.index - 40), m.index + 40))).toEqual([]);
+  });
+
   test('bayat anlatım yok: kol konumu kart başına, yön hücresi metin düğmesi, durum "Model değişti"', () => {
     expect(duz).not.toContain('Kol konumu TEK alandır');      // 2026-09-01'den beri kart başına
     expect(duz).toMatch(/farklı\s+kol konumlarıyla/);

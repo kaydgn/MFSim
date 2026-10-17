@@ -60,7 +60,9 @@ const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cm
   // kişi adları (yöntemler, diyagramlar)
   'Euler', 'Newton', 'Raphson', 'Newmark', 'Heun', 'Ralston', 'Runge', 'Kutta', 'Dormand', 'Prince', 'Campbell',
   'Rayleigh', 'Hermite', 'Fritsch', 'Carlson', 'Coulomb', 'Fourier', 'Bode', 'Nyquist', 'Kelvin', 'Voigt',
-  'Info', 'Log', 'K-Factor', 'Drawbar', 'Pull', 'Ratio', 'Cr', 'Retarder', 'No']);
+  'Info', 'Log', 'K-Factor', 'Drawbar', 'Pull', 'Ratio', 'Cr', 'Retarder', 'No',
+  // araç model adları (örneklerin `vehicle` alanı: "BMC Siper")
+  'Siper']);
 const KISALTMA = new Set(['Ort', 'Ağ', 'Ag', 'Ör', 'Örn', 'Maks', 'Min', 'Max', 'vb', 'vs', 'No', 'Nr', 'Ref',
   'Std', 'Yakl', 'bkz', 'Bkz', 'yak']);
 const COK = [...new Set([...BILESEN, ...YUZEY, ...YER, ...DEFTER, ...AD])].filter((a) => /\s/.test(a)).sort((a, b) => b.length - a.length);

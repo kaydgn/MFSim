@@ -79,6 +79,20 @@ Bu Takoz modülünün alanına giriyor; oraya dokunuyorsan bu maddeyi de oku.
 
 ---
 
+## 4 · Coast-Down'ın Crr'si Tam Gaz çözücüsüne ulaşmıyor
+
+`js/component-extras.js` `cdwApplyResults` — test sihirbazının aktarımı Crr'yi
+Coast-Down düğümüne (`node.data.crr`), CFD Cd'sini Araç'a (`ftCd`) yazar. Motor
+Freni tekerleği Crr'yi Coast-Down'dan okur ve alanı kilitler; Tam Gaz tekerleği
+(`ftCrr`) ve çözücüleri (`ft-performance.js` · `ft-segment-drive.js`)
+Coast-Down'a hiç bakmaz. Bileşen Araç Performans paletinde ("Çevre") duruyor.
+
+2026-10-17'de kılavuz temizliğinde (metin aşama 14) bulundu. Kapatılmadı:
+aktarım Tam Gaz'ın sonucunu değiştirir, kalibrasyon çıpaları yeniden ölçülür.
+Kılavuz bugünkü davranışı yazar (§9.3).
+
+---
+
 ## Küçük bulgular (aynı taramadan)
 
 - `js/ft-performance.js` `lerpTable` — hiçbir yerden çağrılmıyor, yalnız dışa

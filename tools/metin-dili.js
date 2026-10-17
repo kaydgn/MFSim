@@ -97,7 +97,7 @@ const SOZLUK = {
 // Türkçe harf taşımadığı için düşmez. Türkçe harfli özel ad: AD_BUYUK.
 const BUYUK = /(?<![\p{L}\p{N}_])[A-ZÇĞİÖŞÜ]{4,}(?![\p{L}\p{N}_])/gu;
 const VURGU = new Set(['ASLA', 'AYNI', 'SADECE', 'YALNIZ', 'TAMAMI', 'KALIR', 'ARTIK', 'ANCAK', 'HEPSİ']);
-const AD_BUYUK = new Set(['KİRPİ', 'ŞİMŞEK', 'GÜÇ']);
+const AD_BUYUK = new Set(['KİRPİ', 'ŞİMŞEK', 'GÜÇ', 'SİPER']);
 
 const PROFIL_ISARET = {
   arayuz: ['sohbet', 'kendi', 'gerekce', 'gelistirme', 'tarif', 'uzun'],

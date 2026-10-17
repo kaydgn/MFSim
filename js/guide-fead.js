@@ -818,7 +818,7 @@ function _gfSec3(){
     + 'meselesidir, model değil. Şeritteki <strong>Otomatik düzenle</strong> düğmesi onları '
     + 'yan yana dizer ve kadrajı <strong>FEAD araçları</strong> penceresinin sağından başlatır. '
     + 'Kasnaklar ve araçlar dizilmez — dizilecek bir kutuları yok.');
-  h += '<h3>3.5 Yol D — kendi CAD montajınızdan (STEP)</h3>';
+  h += '<h3>3.5 Yol D — bir CAD montajından (STEP)</h3>';
   h += '<p>CATIA ya da 3DEXPERIENCE düzeninin <strong>STEP dosyasından</strong> kasnakların dış '
     + 'çapı, kanal sayısı ve merkezleri, gerginin avara merkezi, kol boyu ve kol açısı '
     + '<strong>okunur</strong>. Parçaların rolü <strong>elle verilir</strong>; yalnız rol verilen '

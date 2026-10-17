@@ -41,14 +41,14 @@
 // `uret` bir GLOBAL FONKSİYON ADIDIR, fonksiyonun kendisi değil: dosya yükleme
 // sırası bu listeyi bağlamasın (guide-kit.js, kılavuz üreticilerinden ÖNCE de
 // yüklenebilir). Ad çözülemiyorsa satır "hazırlanıyor" olarak çizilir.
+//
+// Kayıt açıklama alanı TAŞIMAZ: kart yalnız kılavuzun adını ve durumunu basar
+// (CLAUDE.md → ARAYÜZ ANLATMAZ: kalıp açıklama yuvası açmaz).
 var VE_GUIDE_KIT = [
   {
     id: 'fead',
     modul: 'FEAD',
     baslik: 'FEAD — Kayış-kasnak sistemi',
-    ozet: 'Serpantin kayış tahrikini sıfırdan modelleme: kasnak yerleşimi, '
-        + 'kayış yolu, otomatik gergi montaj zarfı, çalışma çevrimi, sonuçların '
-        + 'okunması ve rapor. Sonunda uçtan uca işlenmiş bir örnek.',
     uret: 'veGuideFeadHTML',
     dosya: 'MFSim_FEAD_Kullanim_Kilavuzu'
   },
@@ -56,8 +56,6 @@ var VE_GUIDE_KIT = [
     id: 'arac',
     modul: 'Araç Performans',
     baslik: 'Araç Performans — Güç aktarma zinciri',
-    ozet: 'Motor, konvertör, şanzıman, transfer, diferansiyel ve tekerlek '
-        + 'zincirinin kurulması; senaryo ve çözücü ayarları.',
     uret: 'veGuideAracHTML',
     dosya: 'MFSim_Arac_Performans_Kullanim_Kilavuzu'
   },
@@ -65,8 +63,6 @@ var VE_GUIDE_KIT = [
     id: 'mount',
     modul: 'Takoz Çökme-Titreşim',
     baslik: 'Takoz — Çökme ve titreşim analizi',
-    ozet: 'Motor-şanzıman kütlesinin takozlara oturtulması, taşıma kapasitesi, '
-        + 'izolasyon ve şok analizi.',
     uret: 'veGuideMountHTML',
     dosya: 'MFSim_Takoz_Kullanim_Kilavuzu'
   }
@@ -749,15 +745,13 @@ function _gkKart(k){
     + kenar + '; background:var(--bg-primary); padding:12px 14px; display:flex; '
     + 'flex-direction:column; gap:8px;">';
   h += '<div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">'
-     + '<b style="font-size:var(--fs-body); color:var(--text-primary);">' + _gkEsc(k.modul) + '</b>'
+     + '<b style="font-size:var(--fs-body); color:var(--text-primary);">' + _gkEsc(k.baslik) + '</b>'
      + '<span style="font-size:var(--fs-micro); '
      + 'letter-spacing:.08em; text-transform:uppercase; padding:1px 6px; border-radius:var(--radius-xs); '
      + (hazir
-        ? 'background:rgba(16,185,129,.14); color:var(--ink-success);">HAZIR'
-        : 'background:var(--bg-tertiary); color:var(--text-muted);">HAZIRLANIYOR')
+        ? 'background:rgba(16,185,129,.14); color:var(--ink-success);">Hazır'
+        : 'background:var(--bg-tertiary); color:var(--text-muted);">Hazırlanıyor')
      + '</span></div>';
-  h += '<div style="font-size:var(--fs-micro); line-height:1.5; color:var(--text-muted);">'
-     + _gkEsc(k.ozet) + '</div>';
   if(hazir){
     h += '<div style="display:flex; gap:6px; margin-top:2px;">'
       + '<button type="button" onclick="veGuideOpen(\'' + _gkEsc(k.id) + '\')" '
@@ -767,9 +761,6 @@ function _gkKart(k){
       + 'style="flex:1; padding:7px 10px; font-size:var(--fs-micro); font-weight:600; '
       + 'border:1px solid var(--border-color); cursor:pointer; background:var(--bg-tertiary); '
       + 'color:var(--text-primary);">İndir</button></div>';
-  } else {
-    h += '<div style="font-size:var(--fs-micro); color:var(--text-muted); '
-      + 'font-style:italic; margin-top:2px;">Bu modülün kılavuzu henüz yazılmadı.</div>';
   }
   return h + '</div>';
 }
@@ -802,8 +793,7 @@ function _gkRender(){
   var f = document.getElementById('ve-guide-kit-foot');
   if(f){
     var n = veGuideKitCount();
-    f.textContent = n + ' / ' + VE_GUIDE_KIT.length + ' kılavuz hazır · belge '
-      + 'çevrimdışı açılan tek dosyadır';
+    f.textContent = n + ' / ' + VE_GUIDE_KIT.length + ' kılavuz hazır';
   }
 }
 
