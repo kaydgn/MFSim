@@ -287,12 +287,19 @@ function _mntReportDownload(html, filename){
 // kabul ("Motor-/Şanzıman"). Yalnız METNE uygulanır; etiket, öznitelik ve TeX
 // ($$…$$, \(…\)) olduğu gibi kalır.
 var _R_BILESIK=/(^|[^\p{L}\p{N}\-–/])([\p{L}\p{N}]+(?:[\-–/][\p{L}\p{N}]+)+)(?=[^\p{L}\p{N}\-–/]|$)/gu;
+// ALT SİMGELİ ZİNCİR de bölünmez ("δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>",
+// "f<sub>ateş</sub>/f<sub>roll</sub>"): etiketler metni parçaladığı için yukarıdaki
+// kural onu görmüyordu ve satır sonu yazı tipine göre "/|δ"ye düşebiliyordu (CI'da
+// Chrome 145 ile üç örnekte ölçüldü). <sub> SVG'ye girmez (mount-rapor-doku), zincir
+// yalnız HTML metninde olur.
+var _R_ALTSIMGE=/([\p{L}\p{N}]+<sub>[^<]{1,16}<\/sub>(?:\/[\p{L}\p{N}]+<sub>[^<]{1,16}<\/sub>)+)/gu;
 // SVG'nin, betiğin ve kod listesinin İÇİNE girilmez: SVG yazısındaki bir HTML
 // <span> ayrıştırıcıyı SVG'den çıkarır ve çizimin geri kalanı kaybolur
 // (ölçüldü: mod şekillerinde "Üstten (X–Y)" — kutular ve takozlar silindi).
 function _rBolunmez(html){
   var tex=false, satir=false, dis=0;
-  return String(html).split(/(<[^>]*>)/).map(function(p){
+  return String(html).replace(_R_ALTSIMGE, '<span style="white-space:nowrap">$1</span>')
+    .split(/(<[^>]*>)/).map(function(p){
     if(!p) return p;
     if(p.charAt(0)==='<'){
       if(/^<(svg|script|style|pre)[\s>]/i.test(p) && !/\/>$/.test(p)) dis++;
