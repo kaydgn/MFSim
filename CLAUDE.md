@@ -1068,6 +1068,11 @@ birleşme boyunca fark edilmeden kırmızıydı ve `deploy` atlandı (#977–#98
 Yerelde koşturmak bir CI turundan hızlı. **Ürün kabuğuna dokunan bir turda
 koştur; dokunmayan turda ne koştur ne bekle.**
 
+**Yerel yeşil, CI'nın yeşili DEĞİLDİR.** Yerel Chromium ile CI'nın Chrome'u ayrı
+sürüm; satır kırılımına bağlı ölçüm (sözcük bölünmesi, taşma) ikisinde ayrışır —
+yerelde yeşil bir rapor testi CI'da yedi birleşme kırmızı kaldı (#1149–#1155),
+`deploy` atlandı. Aşağıdaki kural bu yüzden atlanmaz.
+
 **Bir sonraki turun İLK işi önceki birleşmenin koşu SONUCUNU okumaktır** —
 kuyruktaki bir koşuya "bir kez bakmak" sonucu göstermez.
 

@@ -181,6 +181,17 @@ describe('BÖLÜNMEZ BİLEŞİK — kısa parçalı tireli sözcük satır sonun
     expect(h).toContain('$$ a-b $$');                         // display TeX
     expect(h).toContain('\\( fore-aft \\)');                  // satır içi TeX
   });
+
+  test('alt simgeli zincir de sarılır: "δx/δy/δz", "f ateş/f roll" — etiketler metni parçalıyordu', () => {
+    // CI'da (Chrome 145) "Üç eksen (δx/δy/δz)" satır sonunda "/|δ"de bölünüyordu;
+    // kırılımın yeri yazı tipine bağlı, yerelde düşmüyordu. Genişlik taraması
+    // (200–900 px): sarılmadan 69 genişlikte bölünüyor, sarılınca 0.
+    const h = rep._rBolunmez('<p>Üç eksen (δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>): §8.6. '
+      + 'Oran (f<sub>ateş</sub>/f<sub>roll</sub>) · tek δ<sub>z</sub></p>');
+    expect(h).toContain('(<span style="white-space:nowrap">δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub></span>)');
+    expect(h).toContain('(<span style="white-space:nowrap">f<sub>ateş</sub>/f<sub>roll</sub></span>)');
+    expect(h).toContain('tek δ<sub>z</sub></p>');              // tek simge sarılmaz
+  });
 });
 
 describe('ŞEKİL 2/3 — ad komşu işaretin üstüne yerleşmez', () => {
