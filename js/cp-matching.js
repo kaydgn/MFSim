@@ -800,7 +800,7 @@ function getEngineGearboxMatchingHTML(node) {
   // Başlık
   html += '<div class="sw-panel">';
   html += '<div class="sw-section-title">Motor — Şanzıman eşleştirme analizi</div>';
-  html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetlerini C9/C10 kriterleri ile analiz eder.</div>';
+  html += '<div class="sw-pkg-desc">C9 · C10</div>';
 
   // Motor bağlantı durumu
   html += '<div id="egm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';

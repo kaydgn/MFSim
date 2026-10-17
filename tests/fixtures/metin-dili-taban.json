@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 113,
+ "sayi": 112,
  "dosyalar": {
   "candbc/js/can-dbc.js": {
    "337310b05e": "‹›: çoklanmış sinyal var ama çoklayıcı (M) sinyali yok — o sinyaller çözülemez.",
@@ -66,8 +66,7 @@
   "js/cp-matching.js": {
    "0104c437b8": "C9: Motor gücü (‹› kW) > Şanzıman giriş güç limiti (‹› kW)",
    "725120fe92": "Peak tork: ‹› N·m @ ‹› rpm Governed: ‹› rpm Pump düşüm: TC'ye bağlı",
-   "d74080134e": "C10: Motor torku (‹› Nm) > Şanzıman giriş tork limiti (‹› Nm)",
-   "fa81d9d4ba": "Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetl"
+   "d74080134e": "C10: Motor torku (‹› Nm) > Şanzıman giriş tork limiti (‹› Nm)"
   },
   "js/cp-mount.js": {
    "55c21624b0": "bayat",
