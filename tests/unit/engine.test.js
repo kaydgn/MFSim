@@ -309,13 +309,14 @@ describe('panel yerleşimi (smoke)', () => {
     expect(html).toContain('ve-net-chart-' + n.id);
   });
 
-  test('boş durumda dipnot ve üç sütun içeriği gizli (seçim diyaloğu kalır)', () => {
+  test('boş durumda üç sütun içeriği gizli (seçim diyaloğu kalır)', () => {
     const n = engineNode('comp-1', { torqueData: [] });
     const html = getEnginePropertiesHTML(n);
-    // Dipnot ve veri-bağımlı sarmalayıcıların hepsi display:none ile başlar
-    expect(html).toContain('class="sw-footer ve-ft-extra"');
-    // Beş sarmalayıcı: özet şeridi + üç sütun + dipnot
-    expect((html.match(/ve-ft-extra[^>]*display:none/g) || []).length).toBe(5);
+    // Veri-bağımlı sarmalayıcıların hepsi display:none ile başlar. Dört
+    // sarmalayıcı: özet şeridi + üç sütun — brüt/net anlatan dipnot kalktı
+    // (ARAYÜZ ANLATMAZ; anlatım kılavuzda).
+    expect(html).not.toContain('sw-footer');
+    expect((html.match(/ve-ft-extra[^>]*display:none/g) || []).length).toBe(4);
     expect(html).toContain('ve-motor-placeholder-' + n.id);
   });
 

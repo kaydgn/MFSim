@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 905,
+ "sayi": 766,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -57,35 +57,6 @@
    "76c232c89b": "çalıştır run simüle çözücü solve aç",
    "e696b2f7ee": "excel csv import içe aktar ölçüm canoe vector sütun grafik xlsx"
   },
-  "js/component-extras.js": {
-   "0d80affd59": "CFD Cd sabit kabul edilerek, tüm test verilerinden Crr hesaplanır.",
-   "1222bec64a": "Ağırlık merkezi kaymasıyla engel aşma kabiliyetinin parametrik analizi. Sonuçlar",
-   "150fcfd4c2": "İşaretlenirse, motor devri RPM eşiğine ulaştığında otomatik vites değişimi simül",
-   "2c72a297bb": "Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.",
-   "2eba818e0e": "Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu d",
-   "3efac79380": "Araç kütlesi ve frontal alan girilmeden hesap yapılamaz.",
-   "42d5d86275": "Crr hesaplandı. CFD Cd=‹› ile aero düzeltme uygulandı. ‹› satır, R²=‹›",
-   "4b228d906c": "Hesaplamaya hazır (‹›) — aşağıdakiler bloklamıyor",
-   "59e87b77d7": "Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek‹› üzerinden tanım",
-   "70f8779815": "Dinamik tekerlek yarıçapı. Lastik boyutundan hesaplanır veya ölçülür.",
-   "759733196c": "Dönen parçaların (tekerlek, şaft, motor) etkili kütle artışı. Tipik: 1.05–1.15.",
-   "7abead9c28": "Yüklü koşulda ve köşe teması göz önünde bulundurularak girilmelidir. Lastiğin ze",
-   "8a51c18951": "Engel köşesinde oluşan ek lastik ezilmesi. Tipik değerler: sert lastik / düşük y",
-   "8cb073ee17": "Coast-Down modülü topolojiye dahilse, Tekerlek bileşenindeki Crr alanı otomatik ",
-   "97a8b26979": "Bileşen parametrelerini farklı değerlerle tarayarak otomatik çoklu simülasyon ça",
-   "b022fd4b6f": "Şanzıman çıkışındaki maksimum tork değeri. Girilirse şanzıman çıkış torku bu değ",
-   "b1c510ecb9": "Topolojide Senaryolar bileşeni bulunamadı. Önce ekleyin.",
-   "bae0b2719f": "Topolojiye Parametrik Analiz bileşeni ekleyin",
-   "c85ef28a11": "‹› Bu yönde okunabilir sinyal yok — yönü değiştirin",
-   "d209acb2ca": "Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.",
-   "dcd0061ea2": "‹› Basitleştirilmiş coast-down modeli. Çok düşük hızlar, kısa süreler veya ölçüm",
-   "e202deacb7": "ℹ Yuvarlanma direnci hızla birlikte otomatik olarak artırılır (iSCAAN evrensel d",
-   "e85f286a5b": "‹› / ‹› sinyal aktif — Sonuçlara sürüklendiğinde tüm aktif sinyaller okunur.",
-   "ef39bcf5c5": "Şanzıman, transfer kutusu ve diferansiyelin toplam mekanik verimi. Her bileşenin",
-   "ef612c45f6": "Araç parametresi değişti — sonuçlar güncelliğini yitirdi, raporu yenilemek için ",
-   "f02263b4dd": "Sensör portu bir bağlantı çizgisine veya bileşene bağlı değil.",
-   "fa7c66c6ae": "CAD datadan, aracın en kalın kesitinin alanı olarak girilebilir."
-  },
   "js/components.js": {
    "04d2bc493e": "Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi",
    "3f186e2927": "Önerilen şanzıman",
@@ -95,71 +66,6 @@
   "js/context-menus.js": {
    "54745ae534": "Motor'un aksesuar giriş portları sabittir (Klima / Alternatör / Hava Komp.).",
    "dde8d34a30": "Aynı tipten port ekle"
-  },
-  "js/cp-accessories.js": {
-   "11175861b7": "Motor bağlı değil ya da tork eğrisi yok — net tork payı hesaplanamıyor.",
-   "12aaf55ce4": "ƒ sütunları türetilmiştir: motor devri = aksesuar devri ÷ oran, kayıp tork = P ×",
-   "1c634aa9f6": "Aksesuar_devri = Motor_devri × oran. ‹› motordan farklı devirde döner; oran pres",
-   "21c8068d1a": "Bağlanmadı — Motor kutusunun ‹› portuna bağlayın",
-   "2b132a5915": "Önce bir model seçin.",
-   "50de4ce490": "Manuel sabit kW modunda eğri kullanılmaz — çekilen güç tüm devirlerde Adım 1'dek",
-   "60336bc55d": "Motor ‹›–‹› rpm aralığında bu aksesuarın çektiği güç (kW); motorun net torkundan",
-   "654eef73bc": "Model seçilince eğri burada çizilir.",
-   "723d26123a": "Grafik için bir model seçin.",
-   "843b86e9e0": "boş satır — “+ Satır ekle” ya da “Yapıştır” (rpm ⇥ kW)",
-   "a54329ab75": "‹› nokta motor aralığının (‹›–‹› rpm) dışında — çözücüde uç değere sabitlenir.",
-   "a5d559b700": "Seçim, aşağıdaki eğri tablosunu doldurur.",
-   "c87571a199": "Çekilen güç aksesuarın kendi devrindeki eğriden okunur, krank torkuna çevrilir v",
-   "cf17370c9d": "Eğri tablosu boş — “Preset'ten doldur” ile geri getirin ya da elle nokta ekleyin",
-   "db87e74d6b": "Metrikler için bir model seçin ya da eğri girin.",
-   "e1d70be015": "Motor devrine göre bu aksesuarın çektiği güç (kW). Değer, motorun net torkundan ",
-   "e61da796cc": "Eğri boş — tabloya nokta ekleyin.",
-   "f0043126a6": "Tablodaki düzenlemeler preset eğrisiyle değiştirilecek. Devam edilsin mi?"
-  },
-  "js/cp-arac-example.js": {
-   "1212979268": "Yerli BMC AZRA I4 motor (280 kW @2100), Allison 3200 SP, 6,54 aks, 1,054/2,337 t",
-   "09fb29e327": "Programın kalibrasyon referansı. Cummins ISB6.7 340 (FR98387), Allison 3000 SP, ",
-   "1d2102923f": "Allison 4000 SP ailesinin örneği (3,51/1,906/1,429/1,0/0,737/0,639), TC571 konve",
-   "36ed2c3c51": "Dokuz ileri vitesli 2957 SP Wide, TC221, tek kademeli 3,43 transfer. iSCAAN 497-",
-   "3c6b6ba522": "Bir öncekiyle aynı araç, TC413 konvertörle. İki konvertörün etkisini yan yana ka",
-   "47d1210673": "Üç akslı askeri kamyon: transfer kutusu üç çıkışlı, üç diferansiyel, altı tekerl",
-   "57a2517ce1": "TURAN ile aynı motor/konvertör/şanzıman üçlüsü, farklı aks (7,370), transfer (1,",
-   "5a58e212e7": "Aynı 6×6 platformun 430HP motorlu sürümü. Aksesuar yükü 47 kW’a çıkıyor. iSCAAN ",
-   "6d95df1094": "TURAN ile aynı motor, farklı şanzıman ve konvertör: 3200 SP + TC411. iSCAAN konv",
-   "6db64e3876": "32 t sürümün hafifletilmiş hâli, Allison 5. Nesil kontrollerle. Geçiş noktaları ",
-   "98de7bfdfa": "Yüksek devirli benzin-benzeri dizel (470 hp @2800, ESL 3000). Konvertör stall’ı ",
-   "9f90935378": "Kaynak rapor yalnız \"Input Summary\". TK eğrisi ve vites oranları TTA2 raporundan",
-   "a209a20637": "380HP sürümüyle aynı güç aktarma organları, daha güçlü motor (298 kW, mekanik ko",
-   "b5312c7603": "Vites geçiş profili (\"2400 rpm Variable\") artık kalibre — dokuz geçiş de raporda",
-   "bdb8e06a15": "Kaynak rapor yalnız \"Input Summary\" — performans tabloları yok. TK eğrisi ve vit",
-   "ce0612cf39": "Platformun en güçlü sürümü (343 kW). iSCAAN bu eşleşmede TC551’i \"Unacceptable\" ",
-   "e5e2c54c47": "İç topoloji, seçilen örnekle DEĞİŞTİRİLECEK. Devam edilsin mi?",
-   "f41a107d24": "Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için"
-  },
-  "js/cp-core.js": {
-   "161d260843": "Diferansiyel (son tahrik), dönme hareketini tekerleklere aktarır ve virajlarda i",
-   "4f2f5c75df": "Tekerlek yarıçapı, hız ve devir hesaplamalarında kritiktir. Yuvarlanma direnci (",
-   "75fd20ee7c": "Tork konvertörü, motor ile şanzıman arasında hidrolik bağlantı sağlar. Kilitli k",
-   "9bea284b07": "Propşaft (kardan mili), şanzıman çıkışı ile transfer kutusu veya transfer kutusu",
-   "aad53fa820": "Allison TD-148G standardına göre motor ile tüm mevcut tork konvertörlerinin uyum",
-   "ad01e5ba60": "Transfer kutusu, çift kademe (High/Low) veya tek kademe olabilir. High kademe ge"
-  },
-  "js/cp-drivetrain.js": {
-   "68171787b2": "Son tahrik oranı. Askeri araçlarda tipik değer: 4,5–8,0 arası.",
-   "cee272a604": "Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel‹› üzerind",
-   "d4e8bb262d": "Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır; sonuçlar"
-  },
-  "js/cp-engine.js": {
-   "0129a8f450": "Hazır motor listesinden seçin",
-   "4368ffd9c7": "Motorun maksimum çalışma devri. Vites değişim mantığı: • Upshift: Motor devri > ",
-   "43def521a3": "boş satır — yaz ya da “Yapıştır” ile devir ⇥ tork ⇥ güç aktar",
-   "471c1245d5": "Tablodaki motor verilerini temizlemek istediğinize emin misiniz?",
-   "4784005692": "Katalog tork/güç değerleri bu oranla çarpılarak kullanılır (%95 → ×0,95).",
-   "7ac918ff77": "Tablodaki tüm verileri silmek istediğinize emin misiniz?",
-   "9a3fe5cf63": "Fan kaybı devirle küp (devir/governed)³, diğerleri lineer ölçeklenir. Bağlı akse",
-   "a89afc4bdc": "Motor seçilmedi — listeden bir motor ya da son seçenek + Manuel giriş.",
-   "e46f46cb79": "ƒ sütunları düzenlenemez, her hücre değişiminde yeniden hesaplanır: D = aksesuar",
-   "f4487924a7": "Brüt tork–güç verisi üreticinin katalog değeridir. Aksesuar kayıpları krank tork"
   },
   "js/cp-fead-araclar.js": {
    "2d3fe62412": "bayat"
@@ -253,47 +159,11 @@
    "ea5e1eb05c": "FEAD tahriki çözülemedi (ara kademenin çapları eksik) — işletme hesabı yapılmaz.",
    "ef78ba6fd1": "Çevrimin ‹› satırında bu kasnak için elle kW yazılı — o satırlarda eğri kullanıl"
   },
-  "js/cp-gearbox.js": {
-   "1f7db150ef": "Araç yavaşlarken N_out eşiğin altına düşerse alt vitese geçilir. Oran tabanlı fo",
-   "22a91fa492": "Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shi",
-   "295f9327aa": "Converter-mod geçişleri şanzıman çıkış devri oranına (N_out / N_shift_ref) göre ",
-   "3c24400313": "N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çap",
-   "591a5d4cef": "‹› Diferansiyel oranı tanımlı değil (i_diff=‹›). Diferansiyel bileşenini kontrol",
-   "6c50f2fd77": "‹› Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed S",
-   "7a34313ba4": "Tablodaki tüm verileri silmek istediğinize emin misiniz?",
-   "962e4c713e": "ℹ iSCAAN raporlarındaki \"Shift Speed & Strategy\" değeri. Genellikle motor govern",
-   "9bd04536d4": "Converter-mod geçişleri lineer/segmentli model ile hesaplanır. N_out = N_engine ",
-   "c64dcd2f7a": "Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. N_out = "
-  },
   "js/cp-matching.js": {
    "0104c437b8": "C9: Motor gücü (‹› kW) > Şanzıman giriş güç limiti (‹› kW)",
-   "24c692cbbf": "En iyi seçenek: ‹› (SR@Gov: ‹›). Lockup modunda çalışacağından performans kabul ",
-   "2b22fbb5a1": "Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0,80 SR kapasite eğ",
-   "392b28392b": "C4 — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).",
-   "4a0d1495a7": "Motor net tork eğrisi ve konvertör kapasite eğrileri — etkileşimli: Ctrl+tekerle",
-   "4d9cee9826": "Şanzıman bileşeni bulunamadı. Önce canvas'a ekleyin.",
-   "513a3bfcfc": "‹› Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşen",
-   "526e9d0b9b": "Önerilen : ≥%15 marj | Dikkat : %5–15 marj | Sıkı : <%5 marj | Uyumsuz : Limit a",
-   "551ddb80f3": "C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir ",
-   "572687e7c5": "C10 — Motor Torku@Gov ≤ ‹› N·m: Governed devirdeki motor torku şanzıman giriş to",
-   "5e7392dee7": "Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konver",
-   "6d29d29c5b": "Önerilen: ‹›",
    "725120fe92": "Peak tork: ‹› N·m @ ‹› rpm Governed: ‹› rpm Pump düşüm: TC'ye bağlı",
-   "88a8b96746": "‹› Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini gi",
-   "9426812f19": "C9 — Motor Gücü@Gov (‹› kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki moto",
-   "a030a8a8e5": "‹› Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin",
-   "b5eccfca1f": "C5 — Min Motor Devri ≥ Peak Tork Devri (‹› rpm): Konvertör fazında motorun ulaşt",
-   "b94679398a": "C9 — Motor Gücü@Gov ≤ ‹› kW: Governed devirdeki motor gücü şanzıman giriş güç li",
-   "bb678b18ab": "Önerilen",
-   "bbd933b8fa": "Bu konvertörü TC bileşenine yükle",
-   "c19a1841d4": "C8 — SR @ Governed ≥ 0,80: Governed hızda kayma oranı. Düşükse loose match → per",
-   "c21db1f0cf": "Tork Konvertörü bileşeni bulunamadı. Önce canvas'a ekleyin.",
    "d74080134e": "C10: Motor torku (‹› Nm) > Şanzıman giriş tork limiti (‹› Nm)",
-   "e2b5febb76": "Motor bileşeni bağlı değil — lütfen giriş portunu Motor çıkışına bağlayın",
-   "ee094a1dcf": "C7 — Stall Türbin Torku ≤ ‹› N·m: Stall'da türbin torku şanzıman limitini aşmama",
-   "f65c13929c": "C10 — Motor Torku@Gov (‹› N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki ",
-   "fa81d9d4ba": "Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetl",
-   "fdbea1265d": "Önerilen Şanzımanlar (‹›)"
+   "fa81d9d4ba": "Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetl"
   },
   "js/cp-mount-report.js": {
    "0d1eb3470c": "Önce modeli çözün: Çözücü → Hesapla.",
@@ -337,20 +207,7 @@
    "d5f5eaf6b4": "Bağlantılardan zincir oluşturulamadı. Bileşenleri bağlayın."
   },
   "js/cp-torque-converter.js": {
-   "01bb97b55f": "1000/2000 serisi. Yüksek stall tork oranı (2,05). Geniş yelpaze, genel amaçlı.",
-   "07d39c7556": "Düşük stall tork oranı (1,98). Yüksek verimli, az kayıplı tasarım.",
-   "37debd6fa5": "4000 serisi. Yüksek tork çarpanı (2,34). İyi kalkış, geniş çalışma aralığı.",
-   "45f7891433": "SR = Türbin/Pump Devir Oranı. Kpump = Pump K-Factor [rpm/√(N·m)]. τ = Tork Oranı",
-   "54fd855cff": "Seçili konvertör (‹›) yeni şanzıman ailesiyle uyumsuz. Lütfen konvertörü güncell",
-   "73da60f0ef": "Yüksek tork çarpanı (2,44). Orta-ağır yük, iyi kalkış performansı.",
-   "7b36dd5689": "4000 serisi. En düşük tork çarpanı (1,62). Yüksek hız, düşük stall.",
-   "7e2f74cf94": "Yüksek stall tork oranı (2,71). Düşük hızlı ağır yük uygulamaları.",
-   "8bba9f77e2": "Orta tork çarpanı (2,35). Genel amaçlı ağır hizmet uygulamaları.",
-   "b606888b80": "En düşük tork çarpanı (1,77). Yüksek hızlı uygulamalar, düşük stall.",
-   "bcf0e22126": "Kilitli konvertörde oran 1.0'dır. Kilitsiz çalışmada tipik değerler: düşük hızda",
-   "d3dfc96b8d": "1000/2000 serisi. Düşük tork çarpanı (1,58). Yüksek hız, düşük stall.",
-   "d557e1c1b6": "4000 serisi. Yüksek stall tork oranı (2,42). Ağır yük, düşük hız uygulamaları.",
-   "e2fb1e5834": "Kilitli konvertör direkt bağlantı sağlar (oran 1.0). Kilitsiz durumda tork çarpa"
+   "45f7891433": "SR = Türbin/Pump Devir Oranı. Kpump = Pump K-Factor [rpm/√(N·m)]. τ = Tork Oranı"
   },
   "js/easter-egg.js": {
    "688621d594": "Denizciliği Türk’ün büyük millî ülküsü olarak düşünmeli ve onu az zamanda başarm"
@@ -740,17 +597,7 @@
    "e5a5b8aacd": "Her gövdenin ataleti kendi CG’sinde girildi ve program onları ortak CG’ye taşıyı"
   },
   "js/map.js": {
-   "389a890603": "Topolojide Senaryolar bileşeni bulunamadı. Önce ekleyin.",
-   "44e899d549": "Bu bileşen, güç akış zincirini burada keser. Çözücü, bu noktaya kadar olan bileş",
-   "51ce251395": "Henüz eğim çizgisi yok. Grafikte sol tık ile çizin.",
-   "798e7dc6c5": "Henüz referans noktası yok. Grafikte sağ tık ile ekleyin.",
-   "81eb0d9d47": "Tork Konvertörü şanzımana bağlıyken Şanzıman Kontrol bileşeni zorunludur, siline",
-   "86513ce084": "Aktarılacak eğim çizgisi yok. Önce rakım profilinde çizgi çizin.",
-   "8e047d3fe2": "Sol tık: rota noktası ekle │ Rota üzerine tık: referans noktası │ Tekerlek: yakı",
-   "9f87f0551e": "Haritada rota çizgisi üzerine tıklayarak referans noktası ekleyin",
-   "b2f0ad6626": "Önce haritadan rota hesaplayın",
-   "cc9e7b864e": "Bir bileşenin çıkış portuna bağlayın",
-   "fec2820ba4": "Haritaya tıklayarak nokta ekleyin"
+   "8e047d3fe2": "Sol tık: rota noktası ekle │ Rota üzerine tık: referans noktası │ Tekerlek: yakı"
   },
   "js/measure-dropzone.js": {
    "8be46ded4a": "‹› dosya bırakıldı, ilki açılıyor: ‹›. Diğerlerini tek tek bırakabilirsiniz."

@@ -35,7 +35,7 @@ function getSensorPropertiesHTML(node) {
   if(!conn && !compNode) {
     // Bağlı değil
     html += '<tr><td style="padding:10px; text-align:center; background:var(--bg-tertiary); color:var(--text-muted); font-size:var(--fs-tiny);">';
-    html += '<span class="mf-ico mf-ico-radio"></span> Sensör portu bir bağlantı çizgisine<br>veya bileşene bağlı değil.';
+    html += '<span class="mf-ico mf-ico-radio"></span> Sensör bağlı değil.';
     html += '</td></tr>';
   } else if(compNode) {
     // Doğrudan bileşene bağlı
@@ -73,7 +73,7 @@ function getSensorPropertiesHTML(node) {
     
     // Seçili sinyal sayısı
     html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:4px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary);">';
-    html += '<span class="mf-ico mf-ico-bar-chart"></span> <b>' + selectedSignals.length + '</b> / ' + availableSignals.length + ' sinyal aktif — Sonuçlara sürüklendiğinde tüm aktif sinyaller okunur.';
+    html += '<span class="mf-ico mf-ico-bar-chart"></span> <b>' + selectedSignals.length + '</b> / ' + availableSignals.length + ' sinyal aktif';
     html += '</td></tr>';
     
     // Koparma
@@ -126,7 +126,7 @@ function getSensorPropertiesHTML(node) {
     
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); font-size:var(--fs-tiny); vertical-align:top;">Sinyaller</th>';
     if(availableSignals.length === 0) {
-      html += '<td style="padding:6px; background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--ink-warning); font-style:italic;">' + veIkon('alert-triangle') + ' Bu yönde okunabilir sinyal yok — yönü değiştirin</td></tr>';
+      html += '<td style="padding:6px; background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--ink-warning); font-style:italic;">' + veIkon('alert-triangle') + ' Bu yönde okunabilir sinyal yok.</td></tr>';
     } else {
       var selectedSignals = d.selectedSignals || (d.selectedSignal ? [d.selectedSignal] : []);
       if(selectedSignals.length === 0 && availableSignals.length > 0) {
@@ -159,7 +159,6 @@ function getSensorPropertiesHTML(node) {
   }
   
   html += '</table>';
-  html += '<div style="margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted);">Simülasyonda seçili sinyal zamana bağlı kaydedilir.</div>';
   html += '</div>';
   return html;
 }
@@ -284,7 +283,6 @@ function veAttachSensorToConnection(sensorNode, connId) {
     }
   }
   
-  showToast('Sensör bağlantıya eklendi');
 }
 
 // Sensörü doğrudan bir bileşene bağla (vehicle, road vb.)
@@ -305,7 +303,6 @@ function veAttachSensorToComponent(sensorNode, compId) {
     }
   }
   
-  showToast('Sensör bileşene bağlandı: ' + compName);
 }
 
 // Sensörü bağlantıdan/bileşenden ayır
@@ -348,7 +345,6 @@ function getScenarioPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   html += '<div class="sw-section-title">Senaryo parametreleri</div>';
-  html += '<div class="sw-pkg-desc">Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
   
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -363,7 +359,6 @@ function getScenarioPropertiesHTML(node) {
   var showThrottle = ['partial_throttle','full_throttle','custom'].indexOf(scenarioType) > -1;
   html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
-  html += '<tr><td colspan="2" style="padding:5px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Senaryo tipi simülasyon davranışını belirler.</td></tr>';
 
   html += '</table>';
 
@@ -386,7 +381,6 @@ function getScenarioPropertiesHTML(node) {
     html += '<tr><th style="padding:5px 6px; text-align:left; width:50%; font-weight:500; color:var(--text-secondary);">Başlangıç hızı [km/h]</th>';
     html += '<td style="padding:5px 6px;"><input type="text" inputmode="decimal" id="ve-scenario-seg-initspeed-' + node.id + '" value="' + segInitSpeed + '" step="5" min="0" max="200" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
     html += '</table>';
-    html += '<div class="sw-pkg-desc">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
     html += '</div></div>'; // sw-pkg-body + sw-pkg-card
   }
 
@@ -430,7 +424,6 @@ function getCoastDownPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   html += '<div class="sw-section-title">Coast-Down parametreleri</div>';
-  html += '<div class="sw-pkg-desc">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</div>';
   
   html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -446,7 +439,6 @@ function getCoastDownPropertiesHTML(node) {
   // Sonuç - sadece test modunda anlamlı
   html += '<tr id="ve-cd-result-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (method!=='test'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hesaplanan Crr</th><td style="padding:6px; background:var(--bg-tertiary);"><span id="ve-cd-result-' + node.id + '" style="font-weight:600; color:var(--ink-accent);">' + (method==='test' && crr ? crr : '—') + '</span></td></tr>';
   
-  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><span class="mf-ico mf-ico-zap"></span> Coast-Down modülü topolojiye dahilse, Tekerlek bileşenindeki Crr alanı otomatik doldurulur ve kilitlenir.</td></tr>';
   
   html += '</table></div>';
   return html;
@@ -584,7 +576,6 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yüklü lastik yarıçapı <span style="color:var(--text-muted); font-weight:400;">R<sub>eff</sub> [m]</span></th>';
   html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-loaded-radius-' + nid + '" value="' + loadedTireRadius + '" step="0.001" min="0" placeholder="0.540" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Yüklü koşulda ve köşe teması göz önünde bulundurularak girilmelidir. Lastiğin zemine temas ettiği andaki efektif yarıçaptır.</td></tr>';
 
   // Köşe defleksiyonu
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -592,7 +583,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   var cornerDefl = (node.data.cornerDeflection !== undefined && node.data.cornerDeflection !== null) ? node.data.cornerDeflection : '';
   html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-corner-defl-' + nid + '" value="' + cornerDefl + '" step="1" min="0" max="100" placeholder="15" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Engel köşesinde oluşan ek lastik ezilmesi. Tipik değerler: sert lastik / düşük yük için 5–10 mm, normal koşullar için 10–20 mm, yumuşak lastik / ağır yük için 20–30 mm. Boş bırakılırsa köşe düzeltmesi yapılmaz.</td></tr>';
+  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Tipik 5–10 · 10–20 · 20–30 mm (sert → yumuşak lastik)</td></tr>';
 
   html += '</table>';
 
@@ -609,7 +600,7 @@ function getObstacleCrossingPropertiesHTML(node) {
       html += '<option value="' + idx + '"' + (idx === selectedGearIdx ? ' selected' : '') + '>' + g.name + ' (i=' + veSayi(g.ratio) + ')</option>';
     });
   } else {
-    html += '<option value="0">Şanzıman bileşeni bulunamadı</option>';
+    html += '<option value="0">Şanzıman bileşeni yok</option>';
   }
   html += '</select></td>';
   html += '</tr>';
@@ -626,7 +617,6 @@ function getObstacleCrossingPropertiesHTML(node) {
   var gbTorqueLimit = (node.data.gbTorqueLimit !== undefined && node.data.gbTorqueLimit !== null) ? node.data.gbTorqueLimit : '';
   html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-obs-gb-torque-limit-' + nid + '" value="' + gbTorqueLimit + '" step="10" min="0" placeholder="ör: 3200" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman çıkışındaki maksimum tork değeri. Girilirse şanzıman çıkış torku bu değerle sınırlandırılır. Boş bırakılırsa sınırlama uygulanmaz.</td></tr>';
 
   html += '</table>';
 
@@ -636,7 +626,7 @@ function getObstacleCrossingPropertiesHTML(node) {
 
   html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-primary); margin-bottom:6px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
   html += '<input type="checkbox" id="ve-obs-load-transfer-' + nid + '" ' + (loadTransferEnabled ? 'checked' : '') + ' onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
-  html += '<div><div style="font-weight:600;">Yük transferi analizi</div><div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">Ağırlık merkezi kaymasıyla engel aşma kabiliyetinin parametrik analizi. Sonuçlar TXT raporunda gösterilir.</div></div>';
+  html += '<div><div style="font-weight:600;">Yük transferi analizi</div></div>';
   html += '</label>';
   html += '</div>';                                   // ve-cp-col (sağ) kapat
   html += '</div>';                                   // ve-cp-grid kapat
@@ -788,7 +778,7 @@ function veOpenCoastDownWizard(nodeId) {
   var tableHtml = '<div style="margin-bottom:14px; border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden;">' +
     '<div style="padding:8px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between;">' +
     '<div><div style="font-size:var(--fs-md); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Coast-Down test verileri</div>' +
-    '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">Her satır tek bir coast-down testi.</div></div>' +
+    '</div>' +
     '<div style="display:flex; gap:6px;">' +
     '<button onclick="cdwAddRow()" style="padding:3px 10px; font-size:var(--fs-body); font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">+ Satır</button>' +
     '<button onclick="cdwClearRows()" style="padding:3px 10px; font-size:var(--fs-body); font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;"><span class="mf-ico mf-ico-trash"></span> Sil</button>' +
@@ -818,7 +808,7 @@ function veOpenCoastDownWizard(nodeId) {
   var summaryHtml = '<div style="margin-bottom:14px; border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden;">' +
     '<div style="padding:8px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color);">' +
     '<div style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Crr sonuçları</div>' +
-    '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">CFD Cd sabit kabul edilerek, tüm test verilerinden Crr hesaplanır.</div></div>' +
+    '</div>' +
     '<div style="padding:10px 12px;">' +
 
     '<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 24px; font-size:var(--fs-body); color:var(--text-secondary); margin-bottom:8px;">' +
@@ -836,13 +826,11 @@ function veOpenCoastDownWizard(nodeId) {
 
   // === Sonucu Aktar butonu ===
   var applyHtml = '<div style="display:flex; gap:10px; justify-content:flex-end; align-items:center; margin-bottom:8px;">' +
-    '<span style="font-size:var(--fs-tiny); color:var(--text-muted);">Crr → tekerlek, CFD Cd → Araç bileşenine aktarılır</span>' +
     '<button onclick="cdwApplyResults(\'' + nodeId + '\')" style="padding:7px 20px; font-size:var(--fs-md); font-weight:700; background:var(--accent-success); color:var(--on-success); border:none; border-radius:var(--radius-sm); cursor:pointer;">' + veIkon('check') + ' Sonuçları bileşene aktar</button>' +
     '</div>';
 
-  var footerNote = '<div style="font-size:var(--fs-tiny); color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:8px;">' + veIkon('alert-triangle') + ' Basitleştirilmiş coast-down modeli. Çok düşük hızlar, kısa süreler veya ölçüm hataları sonuçları etkileyebilir.</div>';
 
-  content.innerHTML = paramHtml + tableHtml + summaryHtml + applyHtml + footerNote;
+  content.innerHTML = paramHtml + tableHtml + summaryHtml + applyHtml;
   modal.appendChild(content);
 
   // Footer
@@ -952,11 +940,11 @@ function cdwComputeCrr() {
   cdwResetSummaries();
 
   if(!mass || !area) {
-    document.getElementById('cdw-crr-hint').textContent = 'Araç kütlesi ve frontal alan girilmeden hesap yapılamaz.';
+    document.getElementById('cdw-crr-hint').textContent = 'Araç kütlesi ya da frontal alan eksik.';
     return;
   }
   if(!isFinite(cdCFD)) {
-    document.getElementById('cdw-crr-hint').textContent = 'CFD Cd değeri girilmeden Crr hesaplanamaz.';
+    document.getElementById('cdw-crr-hint').textContent = 'CFD Cd eksik.';
     return;
   }
 
@@ -1034,9 +1022,9 @@ function cdwComputeCrr() {
     document.getElementById('cdw-crr-rms').textContent = veSayi(rms, 6);
     document.getElementById('cdw-crr-r2').textContent = veSayi(r2, 5);
 
-    document.getElementById('cdw-crr-hint').textContent = 'Crr hesaplandı. CFD Cd=' + veSayi(cdCFD, 4) + ' ile aero düzeltme uygulandı. ' + crrValues.length + ' satır, R²=' + veSayi(r2, 4);
+    document.getElementById('cdw-crr-hint').textContent = 'CFD Cd = ' + veSayi(cdCFD, 4) + ' · ' + crrValues.length + ' satır · R² = ' + veSayi(r2, 4);
   } else {
-    document.getElementById('cdw-crr-hint').textContent = 'Geçerli veri bulunamadı.';
+    document.getElementById('cdw-crr-hint').textContent = 'Geçerli veri yok.';
   }
 }
 
@@ -1090,7 +1078,7 @@ function cdwApplyResults(nodeId) {
   var meanCrr = parseFloat(ortEl ? ortEl.getAttribute('data-deger') : NaN);
 
   if(!isFinite(meanCrr)) {
-    showToast('Aktarılacak Crr değeri bulunamadı. Önce hesaplama yapın.', 'warning');
+    showToast('Aktarılacak Crr yok.', 'warning');
     return;
   }
 
@@ -1182,7 +1170,7 @@ function veUpdateWarnings() {
       if(hasEngine && hasGearbox && !hasWheel) warnings.push({type:'warn', msg:'Tekerlek bileşeni eksik.'});
       if(hasWheel && !hasEngine) warnings.push({type:'warn', msg:'Motor bileşeni eksik.'});
       if(!hasVehicle && nodes.length >= 3) warnings.push({type:'info', msg:'Araç bileşeni yok.'});
-      if(!hasSolver && nodes.length >= 3) warnings.push({type:'info', msg:'Çözücü bileşeni eklenmemiş.'});
+      if(!hasSolver && nodes.length >= 3) warnings.push({type:'info', msg:'Çözücü bileşeni yok.'});
       if(!hasRoad && nodes.length >= 4) warnings.push({type:'info', msg:'Yol/Ortam bileşeni yok.'});
     } else {
       if(!hasEngine) warnings.push({type:'warn', msg:'Motor bileşeni eksik.'});
@@ -1238,8 +1226,8 @@ function veRenderWarningsPanel(items, opts) {
     // Dürüst boş durum: doğrulanmadıysa "hazır" DEME. Eskiden hiç bileşen
     // yokken bile "Topoloji hazır" yazıyordu ve Çalıştır aynı anda reddediyordu.
     var msg = (opts.source === 'dogrulama')
-      ? '<span style="color:var(--ink-success);">' + veIkon('check') + ' Doğrulama temiz — hesaplamaya hazır.</span>'
-      : 'Uyarı yok — doğrulama henüz çalıştırılmadı.';
+      ? '<span style="color:var(--ink-success);">' + veIkon('check') + ' Hesaplamaya hazır.</span>'
+      : 'Doğrulama çalıştırılmadı.';
     body.innerHTML = '<div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">' + msg + '</div>';
     return;
   }
@@ -1267,13 +1255,13 @@ function veShowValidationInWarnings(res) {
   // Bloklayan hata yokken listede yalnız uyarılar kalırsa "başarısız mı?" diye
   // okunur. Sonucu açıkça söyleyen bir satır başa eklenir.
   if(res.allOk && items.length > 0) {
-    items.unshift({ type:'ok', msg: 'Hesaplamaya hazır (' + res.mode + ') — aşağıdakiler bloklamıyor' });
+    items.unshift({ type:'ok', msg: 'Hesaplamaya hazır (' + res.mode + ')' });
   }
   veRenderWarningsPanel(items, { source: 'dogrulama' });
   veOpenWarningsPanel();
   if(typeof showToast === 'function') {
-    if(res.allOk) showToast('Doğrulama temiz — ' + res.mode + ', hesaplamaya hazır', 'success');
-    else showToast(res.errors.length + ' eksik bulundu — Uyarılar panelinde listelendi', 'error');
+    if(res.allOk) showToast('Hesaplamaya hazır (' + res.mode + ').', 'success');
+    else showToast(res.errors.length + ' eksik.', 'error');
   }
 }
 
@@ -1342,7 +1330,7 @@ function getWheelPropertiesHTML(node) {
       html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
       html += '<div class="sw-pkg-body">';
       html += '<div class="sw-pkg-desc">';
-      html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
+      html += 'Parametreler: Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '');
       html += '</div>';
       html += '</div></div>';
       html += '</div>';
@@ -1360,7 +1348,7 @@ function getWheelPropertiesHTML(node) {
     
     var html = '<div class="sw-panel">';
 
-    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek verileri <span class="ve-master-rozet">' + veIkon('star') + ' MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
+    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek verileri <span class="ve-master-rozet">' + veIkon('star') + ' MASTER</span></div>';
 
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tekerlek parametreleri</span></div>';
@@ -1406,7 +1394,7 @@ function getWheelPropertiesHTML(node) {
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yuvarlanma direnci katsayısı <span style="color:var(--text-muted); font-weight:400;">(Crr)</span></th>';
     html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-ftwh-crr-' + node.id + '" value="' + ftCrr + '" step="0.001" min="0.001" max="0.1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTWheelParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
-    html += '<tr><td colspan="2" style="padding:4px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;"><span style="color:var(--ink-accent);">ℹ</span> Yuvarlanma direnci hızla birlikte otomatik olarak artırılır (iSCAAN evrensel düzeltme modeli: 80 km/h\'de ~%50 artış).</td></tr>';
+    html += '<tr><td colspan="2" style="padding:4px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Crr hız düzeltmesi: iSCAAN (80 km/h\'de ~%50)</td></tr>';
     
     // Yüzey Faktörü
     html += '<tr>';
@@ -1450,7 +1438,7 @@ function getWheelPropertiesHTML(node) {
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-body">';
     html += '<div class="sw-pkg-desc">';
-    html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
+    html += 'Parametreler: Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '');
     html += '</div>';
     html += '</div></div>';
     html += '</div>';
@@ -1464,7 +1452,7 @@ function getWheelPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   // Başlık
-  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek parametreleri <span class="ve-master-rozet">' + veIkon('star') + ' MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek parametreleri <span class="ve-master-rozet">' + veIkon('star') + ' MASTER</span></div>';
   
   // Lastik Preset Seçici
   var mfTirePresetId = nodeData.tirePreset || '';
@@ -1483,9 +1471,6 @@ function getWheelPropertiesHTML(node) {
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-wheel-radius-' + node.id + '" value="' + wheelRadius + '" step="0.00001" min="0.1" max="2" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEWheelParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
-  html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Dinamik tekerlek yarıçapı. Lastik boyutundan hesaplanır veya ölçülür.</td>';
-  html += '</tr>';
   
   // Yuvarlanma direnci - Coast-Down modülü varsa kilitli
   var hasCoastDown = nodes.some(function(n) { return n.type === 'coast-down'; });
@@ -1503,10 +1488,10 @@ function getWheelPropertiesHTML(node) {
   if(crrLocked) {
     html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--ink-accent); background:var(--bg-secondary); line-height:1.4;"><span class="mf-ico mf-ico-link"></span> Coast-Down modülünden alınıyor (Crr = ' + cdCrr + ')</td>';
   } else {
-    html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Yuvarlanma direnci katsayısı. Tipik: Asfalt 0.008–0.012, Arazi 0.02–0.05.</td>';
+    html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Tipik: asfalt 0,008–0,012 · arazi 0,02–0,05</td>';
   }
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:4px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;"><span style="color:var(--ink-accent);">ℹ</span> Yuvarlanma direnci hızla birlikte otomatik olarak artırılır (iSCAAN evrensel düzeltme modeli: 80 km/h\'de ~%50 artış).</td></tr>';
+  html += '<tr><td colspan="2" style="padding:4px 8px; font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Crr hız düzeltmesi: iSCAAN (80 km/h\'de ~%50)</td></tr>';
   
   // Döner kütle faktörü
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -1515,7 +1500,7 @@ function getWheelPropertiesHTML(node) {
   html += '</tr>';
   
   html += '<tr>';
-  html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Dönen parçaların (tekerlek, şaft, motor) etkili kütle artışı. Tipik: 1.05–1.15.</td>';
+  html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Tipik 1,05–1,15</td>';
   html += '</tr>';
   
   html += '</table>';
@@ -1613,7 +1598,7 @@ var VE_TIRE_PRESETS = [
 
 // Lastik preset seçici HTML'i oluştur (optgroup ile jant çapına göre gruplu)
 function veBuildTirePresetOptions(selectedId) {
-  var html = '<option value="">-- Lastik Seçiniz (' + VE_TIRE_PRESETS.length + ' preset) --</option>';
+  var html = '<option value="">— Lastik (' + VE_TIRE_PRESETS.length + ' preset) —</option>';
   var groups = ['R17.5','R19.5','R20','R22.5','R24'];
   groups.forEach(function(grp) {
     var tires = VE_TIRE_PRESETS.filter(function(t) { return t.group === grp; });
@@ -1658,7 +1643,6 @@ function onVEFTTirePresetChange(nodeId, value) {
   if(inertiaEl) inertiaEl.value = totalInertia;
   if(revKmEl && preset.radius > 0) revKmEl.value = (1000 / (2 * Math.PI * preset.radius)).toFixed(1);   // makine: sayı alanının değeri
   
-  showToast('Lastik yüklendi: ' + preset.name + ' (r=' + veSayi(preset.radius) + ' m, I=' + veSayi(preset.inertia) + '×' + (wheelCount||4) + '=' + veSayi(totalInertia, 1) + ' kg·m²)', 'success');
 }
 
 // Motor Freni — Lastik preset değişimi
@@ -1687,7 +1671,6 @@ function onVETirePresetChange(nodeId, value) {
     });
   }
   
-  showToast('Lastik yüklendi: ' + preset.name + ' (r=' + veSayi(preset.radius) + ' m)', 'success');
 }
 
 // Araç özellikleri - Klasik arayüzdeki tüm parametreler
@@ -1816,7 +1799,7 @@ function getVehiclePropertiesHTML(node) {
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-cd-' + node.id + '" value="' + cd + '" step="0.01" min="0" max="2" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">CFD analizinden alınır. Askeri araçlarda tipik aralık 0.63–0.67.</td>';
+  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Kaynak: CFD · askeri araç tipik 0,63–0,67</td>';
   html += '</tr>';
   
   // Frontal alan
@@ -1825,7 +1808,7 @@ function getVehiclePropertiesHTML(node) {
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-area-' + node.id + '" value="' + frontalArea + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEVehicleParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">CAD datadan, aracın en kalın kesitinin alanı olarak girilebilir.</td>';
+  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Kaynak: CAD · en büyük kesit alanı</td>';
   html += '</tr>';
   
   // Otomatik vites değişimi
@@ -1838,9 +1821,6 @@ function getVehiclePropertiesHTML(node) {
   html += '</label>';
   html += '</td>';
   html += '</tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">İşaretlenirse, motor devri RPM eşiğine ulaştığında otomatik vites değişimi simüle edilir. 1. ve 2. viteslerde motor freni devre dışıdır.</td>';
-  html += '</tr>';
   
   // Aktarma organları toplam verimi (hesaplanan - read only)
   // Bağlı bileşenlerin verimlerini çarp
@@ -1850,7 +1830,7 @@ function getVehiclePropertiesHTML(node) {
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-vehicle-eff-' + node.id + '" value="' + calcEff.toFixed(1) + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed; font-weight:600;"></td>';   // makine: sayı alanının değeri
   html += '</tr>';
   html += '<tr>';
-  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman, transfer kutusu ve diferansiyelin toplam mekanik verimi. Her bileşenin kendi veriminden otomatik hesaplanır. Tipik değer: %92–95 arası.</td>';
+  html += '<td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman × transfer × diferansiyel · tipik %92–95</td>';
   html += '</tr>';
   
   html += '</table>';
@@ -1946,7 +1926,7 @@ function onVEFTVehicleParamChange(nodeId) {
     prev.cd     !== nrm(node.data.ftCd, 0.900) ||
     prev.rho    !== nrm(node.data.ftRho, 1.225);
   if(changed && typeof veInvalidateStaleSimResults === 'function') {
-    veInvalidateStaleSimResults('Araç parametresi değişti — sonuçlar güncelliğini yitirdi, raporu yenilemek için yeniden çözün');
+    veInvalidateStaleSimResults('Araç parametresi değişti; sonuçlar temizlendi.');
   }
 }
 
@@ -2025,7 +2005,6 @@ function getRoadPropertiesHTML(node) {
   html += '<div class="sw-pkg-body">';
   // Harita container
   html += '<div id="ve-road-map-' + node.id + '" class="ve-road-map-el" style="width:100%; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:6px; background:var(--bg-secondary); position:relative;"></div>';
-  html += '<div class="sw-pkg-desc" style="text-align:center;">Özellikler için haritayı büyültün</div>';
   
   // Sonuç kutusu
   html += '<div id="ve-road-route-result-' + node.id + '" style="display:none; background:var(--bg-secondary); padding:8px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-top:4px;">';
@@ -2070,7 +2049,7 @@ function onVERoadParamChange(nodeId) {
 
 function _veManualSegTableHTML(nodeId, segs) {
   if(!segs || segs.length === 0) {
-    return '<div style="padding:14px; text-align:center; font-size:var(--fs-tiny); color:var(--text-muted);">Henüz segment eklenmedi.</div>';
+    return '<div style="padding:14px; text-align:center; font-size:var(--fs-tiny); color:var(--text-muted);">Segment yok.</div>';
   }
   var html = '<table style="width:100%; font-size:var(--fs-tiny); border-collapse:collapse; table-layout:fixed;">';
   html += '<colgroup><col style="width:24px;"><col><col style="width:62px;"><col style="width:58px;"><col style="width:68px;"><col style="width:50px;"><col style="width:22px;"></colgroup>';
@@ -2228,11 +2207,11 @@ function _veManualSegRefresh(nodeId) {
 function veManualSegTransfer(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node || !node.data || !node.data.routeSegments || node.data.routeSegments.length === 0) {
-    showToast('Aktarılacak segment bulunamadı', 'warning'); return;
+    showToast('Aktarılacak segment yok.', 'warning'); return;
   }
   var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
   if(!scenarioNode) {
-    showToast('Topolojide Senaryolar bileşeni bulunamadı. Önce ekleyin.', 'warning'); return;
+    showToast('Senaryolar bileşeni yok.', 'warning'); return;
   }
   if(!scenarioNode.data) scenarioNode.data = {};
   scenarioNode.data.roadSegments = node.data.routeSegments.slice();
@@ -2547,8 +2526,6 @@ function getParametricPropertiesHTML(node) {
   html += '<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:var(--radius-sm); background:var(--accent-primary); color:var(--on-accent); font-weight:800; font-size:var(--fs-body);">P</span>';
   html += ' Parametrik Analiz</div>';
   
-  html += '<p style="font-size:var(--fs-tiny); color:var(--text-muted); margin-bottom:12px; line-height:1.4;">';
-  html += 'Bileşen parametrelerini farklı değerlerle tarayarak otomatik çoklu simülasyon çalıştırır.</p>';
   
   // Durum göstergesi
   html += '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px; margin-bottom:12px;">';
@@ -2556,7 +2533,7 @@ function getParametricPropertiesHTML(node) {
   if(params.length === 0) {
     html += '<div style="text-align:center; padding:12px 0;">';
     html += '<div style="font-size:var(--fs-h1); margin-bottom:6px; opacity:0.4;"><span class="mf-ico mf-ico-bar-chart"></span></div>';
-    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); font-weight:500;">Henüz parametre eklenmedi</div>';
+    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); font-weight:500;">Parametre yok</div>';
     html += '</div>';
   } else {
     html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:8px;"><span class="mf-ico mf-ico-clipboard"></span> Taranacak Parametreler (' + params.length + ')</div>';
@@ -2634,7 +2611,6 @@ function veRemoveParametric(nodeId, idx) {
   if(!node || !node.data || !node.data.params) return;
   node.data.params.splice(idx, 1);
   showNodeProperties(node);
-  showToast('Parametre kaldırıldı');
 }
 
 function veUpdateParametric(nodeId, idx, field, value) {
@@ -2648,7 +2624,7 @@ function veAddParametricParam(compId, fieldKey, fieldLabel) {
   // Parametrik analiz bileşenini bul
   var paramNode = nodes.find(function(n) { return n.type === 'parametric'; });
   if(!paramNode) {
-    showToast('Topolojiye Parametrik Analiz bileşeni ekleyin', 'error');
+    showToast('Parametrik Analiz bileşeni yok.', 'error');
     return;
   }
   
@@ -2677,7 +2653,6 @@ function veAddParametricParam(compId, fieldKey, fieldLabel) {
     step: undefined
   });
   
-  showToast('Parametre eklendi: ' + fieldLabel, 'success');
   
   // Parametrik analiz paneli açıksa güncelle
   if(selectedNodes.indexOf(paramNode) > -1) {

@@ -663,10 +663,10 @@ describe('panel üreticileri (smoke)', () => {
     expect(h2).toContain('sw-chain-bar fail');
   });
 
-  test('model yokken metrikler yönlendirme metni verir', () => {
+  test('model yokken metrikler durumu söyler', () => {
     var n = accNode('acc-ac', 'ac-1', { accPreset:'' });
     nodes = [n]; connections = [];
-    expect(veAccMetricsHTML(n)).toContain('Metrikler için');
+    expect(veAccMetricsHTML(n)).toContain('Model ya da eğri yok.');
   });
 
   test('manuel modda eğri tablosu yerine "kullanılmıyor" açıklaması gelir', () => {

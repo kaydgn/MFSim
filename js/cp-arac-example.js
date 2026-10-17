@@ -16,7 +16,7 @@ var AP_EXAMPLES = [
     {
       id: 'turan', name: 'TURAN — ISB6.7 340 / 3000 SP',
       vehicle: 'BMC TURAN', subtitle: '4×4 · 13,06 t · TC413',
-      description: 'Programın kalibrasyon referansı. Cummins ISB6.7 340 (FR98387), Allison 3000 SP, TC413 konvertör, 5,904 aks, 1,257/2,337 iki kademeli transfer. iSCAAN 497-A321222-1 raporundan birebir kuruldu.',
+      description: 'Kalibrasyon referansı · ISB6.7 340 (FR98387) · 3000 SP · iSCAAN 497-A321222-1',
       specs: [
         ['Motor', '252 kW · 1.100 N·m · governed 2.800 rpm'],
         ['Aksesuar kaybı', '25,3 kW'],
@@ -32,7 +32,7 @@ var AP_EXAMPLES = [
     {
       id: 'bmc10ton_380_32t', name: 'BMC 10TON 6×6 — ISG12 380HP',
       vehicle: 'BMC 10TON 6×6', subtitle: '6×6 · 32 t · 4500 SP / TC551',
-      description: 'Üç akslı askeri kamyon: transfer kutusu üç çıkışlı, üç diferansiyel, altı tekerlek. Cummins ISG12 380HP, Allison 4500 SP, 8,337 aks, 0,874/1,536 transfer. iSCAAN 497-A355435-1.',
+      description: 'ISG12 380HP · 4500 SP · 3 diferansiyel · iSCAAN 497-A355435-1',
       specs: [
         ['Motor', '283 kW · 1.998 N·m · governed 1.900 rpm'],
         ['Aksesuar kaybı', '41,6 kW'],
@@ -48,7 +48,7 @@ var AP_EXAMPLES = [
     {
       id: 'bmc10ton_380_30t', name: 'BMC 10TON 6×6 — 30 t (5. Nesil)',
       vehicle: 'BMC 10TON 6×6', subtitle: '6×6 · 30 t · 5. Nesil kontrol',
-      description: '32 t sürümün hafifletilmiş hâli, Allison 5. Nesil kontrollerle. Geçiş noktaları 6. Nesille birebir aynı çıkar — kontrol nesli vites programını değiştirmiyor. iSCAAN 497-A355294-1.',
+      description: 'Allison 5. Nesil kontroller · iSCAAN 497-A355294-1',
       specs: [
         ['Motor', '283 kW · 1.998 N·m · governed 1.900 rpm'],
         ['Aksesuar kaybı', '41,6 kW'],
@@ -64,7 +64,7 @@ var AP_EXAMPLES = [
     {
       id: 'bmc10ton_400', name: 'BMC 10TON 6×6 — ISG12 400HP',
       vehicle: 'BMC 10TON 6×6', subtitle: '6×6 · 32 t · 298 kW',
-      description: '380HP sürümüyle aynı güç aktarma organları, daha güçlü motor (298 kW, mekanik kontrol). Tork platosu 1.400 rpm’e kadar uzuyor. iSCAAN 497-A355435-1 Iter. 3.',
+      description: 'Mekanik kontrol · iSCAAN 497-A355435-1 Iter. 3',
       specs: [
         ['Motor', '298 kW · 1.998 N·m · governed 1.900 rpm'],
         ['Aksesuar kaybı', '43,9 kW'],
@@ -80,7 +80,7 @@ var AP_EXAMPLES = [
     {
       id: 'bmc10ton_430_32t', name: 'BMC 10TON 6×6 — ISG12 430HP',
       vehicle: 'BMC 10TON 6×6', subtitle: '6×6 · 32 t · 320 kW',
-      description: 'Aynı 6×6 platformun 430HP motorlu sürümü. Aksesuar yükü 47 kW’a çıkıyor. iSCAAN 497-A355435-1 Iter. 4.',
+      description: 'Aksesuar yükü 47 kW · iSCAAN 497-A355435-1 Iter. 4',
       specs: [
         ['Motor', '320 kW · 1.998 N·m · governed 1.900 rpm'],
         ['Aksesuar kaybı', '47,0 kW'],
@@ -96,7 +96,7 @@ var AP_EXAMPLES = [
     {
       id: 'bmc10ton_430_30t', name: 'BMC 10TON 6×6 — 430HP / 30 t',
       vehicle: 'BMC 10TON 6×6', subtitle: '6×6 · 30 t · 5. Nesil kontrol',
-      description: '430HP motor + 30 t kütle + 5. Nesil kontroller. iSCAAN 497-A355294-1 Iter. 3.',
+      description: '430HP · 5. Nesil kontroller · iSCAAN 497-A355294-1 Iter. 3',
       specs: [
         ['Motor', '320 kW · 1.998 N·m · governed 1.900 rpm'],
         ['Aksesuar kaybı', '47,0 kW'],
@@ -112,7 +112,7 @@ var AP_EXAMPLES = [
     {
       id: 'bmc10ton_460', name: 'BMC 10TON 6×6 — ISG12 460HP',
       vehicle: 'BMC 10TON 6×6', subtitle: '6×6 · 32 t · 343 kW',
-      description: 'Platformun en güçlü sürümü (343 kW). iSCAAN bu eşleşmede TC551’i "Unacceptable" işaretliyor — konvertör motora göre küçük kalıyor. iSCAAN 497-A355435-1 Iter. 5.',
+      description: 'iSCAAN: TC551 "Unacceptable" · iSCAAN 497-A355435-1 Iter. 5',
       specs: [
         ['Motor', '343 kW · 2.101 N·m · governed 1.900 rpm'],
         ['Aksesuar kaybı', '37,7 kW'],
@@ -128,7 +128,7 @@ var AP_EXAMPLES = [
     {
       id: 'tta2', name: 'BMC TTA2 — AZRA I4 280 kW',
       vehicle: 'BMC TTA2', subtitle: '4×4 · 21,1 t · 3200 SP / TC421',
-      description: 'Yerli BMC AZRA I4 motor (280 kW @2100), Allison 3200 SP, 6,54 aks, 1,054/2,337 transfer. Hızlanma süreleri iSCAAN ile %1 içinde. iSCAAN 497-A299082-1.',
+      description: 'AZRA I4 280 kW @2100 · 3200 SP · iSCAAN 497-A299082-1',
       specs: [
         ['Motor', '280 kW · 1.600 N·m · governed 2.100 rpm'],
         ['Aksesuar kaybı', '28,0 kW'],
@@ -144,7 +144,7 @@ var AP_EXAMPLES = [
     {
       id: 'isb340_tc411', name: 'ISB6.7 340 — 3200 SP / TC411',
       vehicle: 'BMC 4×4', subtitle: '4×4 · 13,15 t · TC411 (Recommended)',
-      description: 'TURAN ile aynı motor, farklı şanzıman ve konvertör: 3200 SP + TC411. iSCAAN konvertörü "Recommended" işaretliyor. 497-A380681-1.',
+      description: 'TURAN motoru · 3200 SP + TC411 · iSCAAN 497-A380681-1',
       specs: [
         ['Motor', '252 kW · 1.100 N·m · governed 2.800 rpm'],
         ['Aksesuar kaybı', '25,3 kW'],
@@ -160,7 +160,7 @@ var AP_EXAMPLES = [
     {
       id: 'isb340_tc413', name: 'ISB6.7 340 — 3200 SP / TC413',
       vehicle: 'BMC 4×4', subtitle: '4×4 · 13,15 t · TC413',
-      description: 'Bir öncekiyle aynı araç, TC413 konvertörle. İki konvertörün etkisini yan yana karşılaştırmak için ikisi birlikte duruyor. iSCAAN 497-A380684-1.',
+      description: 'TURAN motoru · 3200 SP + TC413 · iSCAAN 497-A380684-1',
       specs: [
         ['Motor', '252 kW · 1.100 N·m · governed 2.800 rpm'],
         ['Aksesuar kaybı', '25,3 kW'],
@@ -176,7 +176,7 @@ var AP_EXAMPLES = [
     {
       id: 'isg430_4000sp', name: 'ISG12 430 — 4000 SP / TC571',
       vehicle: 'BMC 6×6', subtitle: '6×6 · 30 t · 4000 SP',
-      description: 'Allison 4000 SP ailesinin örneği (3,51/1,906/1,429/1,0/0,737/0,639), TC571 konvertör. Altı vites geçişi de raporla ±2 rpm uyuşuyor. iSCAAN 497-A380787-1.',
+      description: 'Allison 4000 SP · TC571 · iSCAAN 497-A380787-1',
       specs: [
         ['Motor', '320 kW · 2.000 N·m · governed 1.900 rpm'],
         ['Aksesuar kaybı', '34,8 kW'],
@@ -192,7 +192,7 @@ var AP_EXAMPLES = [
     {
       id: 'duramax', name: 'GM Duramax 6.6L — 3200 SP',
       vehicle: 'GM Duramax L5D', subtitle: '4×4 · 11,5 t · 470 hp @2800',
-      description: 'Yüksek devirli benzin-benzeri dizel (470 hp @2800, ESL 3000). Konvertör stall’ı 1.023 rpm’de — TC415 bu motora göre çok büyük, iSCAAN "Unacceptable" işaretliyor. iSCAAN 497-A392415-1.',
+      description: 'ESL 3000 · TC415 · iSCAAN: "Unacceptable" · iSCAAN 497-A392415-1',
       specs: [
         ['Motor', '350 kW · 1.332 N·m · governed 3.000 rpm'],
         ['Aksesuar kaybı', '41,6 kW'],
@@ -208,8 +208,8 @@ var AP_EXAMPLES = [
     {
       id: 'ypa4x4', name: 'BMC YPA 4×4 — 2957 SP (9 vites)',
       vehicle: 'BMC YPA', subtitle: '4×4 · 7,65 t · 2957 SP Wide',
-      description: 'Dokuz ileri vitesli 2957 SP Wide, TC221, tek kademeli 3,43 transfer. iSCAAN 497-A336126-1.',
-      warning: 'Vites geçiş profili ("2400 rpm Variable") artık kalibre — dokuz geçiş de rapordaki hızlara ±0.1 km/h oturuyor. Kalan tek fark: rapor 1. viteste kilitleniyor (1C→1L→2L), programın durum makinesi bunu temsil edemiyor ve 10–14 km/h arasında 2. viteste kilitli koşuyor. Bu aralık dışında hızlanma izi güvenilir.',
+      description: '9 ileri · TC221 · transfer 3,43 (tek kademe) · iSCAAN 497-A336126-1',
+      warning: 'Fark: 10–14 km/h arasında rapor 1., program 2. viteste kilitli.',
       specs: [
         ['Motor', '157 kW · 759 N·m · governed 2.500 rpm'],
         ['Aksesuar kaybı', '19,3 kW'],
@@ -225,8 +225,8 @@ var AP_EXAMPLES = [
     {
       id: 'jmma', name: 'BMC 4x4-JMMA — 3000 SP / TC413',
       vehicle: 'BMC 4x4-JMMA', subtitle: '4×4 · 12,3 t · Goodyear 335/80R20',
-      description: 'TURAN ile aynı motor/konvertör/şanzıman üçlüsü, farklı aks (7,370), transfer (1,000/2,470) ve lastik. iSCAAN 497-A392127-1.',
-      warning: 'Kaynak rapor yalnız "Input Summary" — performans tabloları yok. TK eğrisi ve vites oranları TURAN raporundan alındı (aynı donanım), Crr varsayıldı. DOĞRULANMADI.',
+      description: 'TURAN donanımı · aks 7,370 · iSCAAN 497-A392127-1',
+      warning: 'Doğrulanmadı · TK, vites: TURAN raporu · Crr: varsayım',
       specs: [
         ['Motor', '252 kW · 1.100 N·m · governed 2.800 rpm'],
         ['Aksesuar kaybı', '25,3 kW'],
@@ -243,7 +243,7 @@ var AP_EXAMPLES = [
       id: 'bmc4x4_25t', name: 'BMC 4X4 2.5T — AZRA I4 / 3200 SP',
       vehicle: 'BMC 4X4 2.5T', subtitle: '4×4 · 17 t · TC421',
       description: 'AZRA I4 280 kW, Allison 3200 SP, 7,75 aks, 0,880/1,769 transfer. iSCAAN 497-A339391-1.',
-      warning: 'Kaynak rapor yalnız "Input Summary". TK eğrisi ve vites oranları TTA2 raporundan alındı (aynı 3200 SP + TC421). DOĞRULANMADI.',
+      warning: 'Doğrulanmadı · TK, vites: TTA2 raporu (3200 SP + TC421)',
       specs: [
         ['Motor', '280 kW · 1.600 N·m · governed 2.100 rpm'],
         ['Aksesuar kaybı', '28,0 kW'],
@@ -311,7 +311,7 @@ function getApExamplePropertiesHTML(node){
   }
 
   left += '<button onclick="veApLoadExample(\'' + nid + '\')" style="width:100%; padding:11px 14px; font-size:var(--fs-md); font-weight:700; background:var(--accent-warning); color:var(--on-warning); border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">' + veIkon('play') + ' Örneği aktar</button>';
-  left += '<button onclick="veApExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">' + veIkon('download') + ' İç topolojiyi JSON dışa aktar</button>';
+  left += '<button onclick="veApExportTopology()" style="width:100%; margin-top:8px; padding:8px 14px; font-size:var(--fs-body); font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">' + veIkon('download') + ' İç topolojiyi JSON dışa aktar</button>';
 
   var right = '';
   if(ex.image){
@@ -403,7 +403,7 @@ function veApLoadExample(nodeId){
   var POWER = { engine:1, 'torque-converter':1, gearbox:1, propshaft:1, transfer:1, differential:1, wheel:1 };
   var hasChain = (typeof nodes!=='undefined') && nodes.some(function(n){ return POWER[n.type]; });
   if(hasChain && typeof confirm==='function'){
-    if(!confirm('İç topoloji, seçilen örnekle DEĞİŞTİRİLECEK. Devam edilsin mi?')) return;
+    if(!confirm('İç topoloji örnekle değiştirilsin mi?')) return;
   }
 
   _apResolveTopology(ex.topology, function(state){

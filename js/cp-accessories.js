@@ -329,10 +329,9 @@ function getAccessoryPropertiesHTML(node){
   s1 += '<span class="ve-acc-stepno ' + mb.step + '" id="ve-acc-stepno1-' + nid + '">1</span><span class="sw-pkg-name">Model</span>';
   s1 += '<span class="sw-pkg-badge ' + mb.cls + '" id="ve-acc-modelbadge-' + nid + '">' + mb.text + '</span>';
   s1 += '</div><div class="sw-pkg-body ve-acc-stepbody">';
-  s1 += '<div class="sw-pkg-desc">Seçim, aşağıdaki eğri tablosunu doldurur.</div>';
 
   s1 += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" class="ve-acc-select">';
-  s1 += '<option value="">-- Model Seçiniz (' + Object.keys(lib).length + ' preset) --</option>';
+  s1 += '<option value="">— Model (' + Object.keys(lib).length + ' preset) —</option>';
   Object.keys(lib).forEach(function(key){
     s1 += '<option value="' + key + '"' + (key === d.accPreset ? ' selected' : '') + '>' + lib[key].name + '</option>';
   });
@@ -342,7 +341,7 @@ function getAccessoryPropertiesHTML(node){
   // Manuel kW (yalnız manuel modda)
   s1 += '<div id="ve-acc-manual-wrap-' + nid + '" style="display:' + (isManual ? 'block' : 'none') + ';">';
   s1 += '<table class="ve-acc-tbl"><tr><th>Sabit güç [kW]</th><td><input type="text" inputmode="decimal" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr></table>';
-  s1 += '<div class="sw-footer" style="margin:0;">Manuel modda güç tüm devirlerde sabit alınır.</div>';
+  s1 += '<div class="sw-footer" style="margin:0;">Manuel: güç devirden bağımsız</div>';
   s1 += '</div>';
 
   s1 += '<table class="ve-acc-tbl">';
@@ -350,12 +349,12 @@ function getAccessoryPropertiesHTML(node){
   s1 += '<tr><th>Motor idle</th><td class="ve-acc-ro">' + veSayi(ctx.idle, 0) + ' rpm</td></tr>';
   s1 += '<tr><th>Governed</th><td class="ve-acc-ro">' + veSayi(ctx.gov, 0) + ' rpm</td></tr>';
   s1 += '</table>';
-  s1 += '<div class="sw-footer" style="margin:0;">Aksesuar_devri = Motor_devri × oran. ' + info.label + ' motordan farklı devirde döner; oran preset ile gelir, elle değiştirilebilir.</div>';
+  s1 += '<div class="sw-footer" style="margin:0;">Aksesuar devri = motor devri × oran</div>';
 
   s1 += connected
     ? '<div class="sw-status-bar installed" style="margin:0;"><span class="sw-status-dot"></span><span>Motora bağlı · ' + info.port + '</span></div>'
-    : '<div class="sw-status-bar not-installed" style="margin:0;"><span class="sw-status-dot"></span><span>Bağlanmadı — Motor kutusunun ' + info.port + ' portuna bağlayın</span></div>';
-  s1 += '<div class="sw-pkg-desc" style="margin:0;">Veri kaynağı: BMC GG matrisi — ölçülmüş kW.</div>';
+    : '<div class="sw-status-bar not-installed" style="margin:0;"><span class="sw-status-dot"></span><span>Motorun ' + info.port + ' portuna bağlı değil</span></div>';
+  s1 += '<div class="sw-pkg-desc" style="margin:0;">Kaynak: BMC GG matrisi (ölçülmüş kW)</div>';
   s1 += '</div></div>';
 
   // ══ ADIM 2 — EĞRİ ══
@@ -374,7 +373,7 @@ function getAccessoryPropertiesHTML(node){
   s3 += '<span class="ve-acc-stepno">3</span><span class="sw-pkg-name">Doğrulama</span>';
   s3 += '<span id="ve-acc-badge-' + nid + '" class="sw-pkg-badge ok">–</span>';
   s3 += '</div><div class="sw-pkg-body ve-acc-stepbody">';
-  s3 += '<div class="sw-pkg-desc" id="ve-acc-desc-' + nid + '">Motor devrine göre bu aksesuarın çektiği güç (kW). Değer, motorun net torkundan düşülür.</div>';
+  s3 += '<div class="sw-pkg-desc" id="ve-acc-desc-' + nid + '"></div>';
   s3 += '<div id="ve-acc-chart-' + nid + '" class="ve-acc-chart"></div>';
   // Lejant grafiğin İŞARETÇİLERİNİ gösterir (Plotly: dolu daire, dolu yıldız) —
   // yazı tipi karakteri değil, aynı şekiller (karar 10·B).
@@ -391,7 +390,6 @@ function getAccessoryPropertiesHTML(node){
   html += '<div class="ve-cp-col ve-cp-col--in">' + s2 + '</div>';
   html += '<div class="ve-cp-col ve-cp-col--out">' + s3 + '</div>';
   html += '</div>';   // ve-cp-grid
-  html += '<div class="sw-footer">Çekilen güç aksesuarın kendi devrindeki eğriden okunur, krank torkuna çevrilir ve motorun brüt torkundan düşülür. Tüm çözücüler aynı modeli okur.</div>';
   html += '</div>';   // sw-panel
   return html;
 }
@@ -424,7 +422,7 @@ function veAccCurveTableHTML(node){
   // Manuel sabit kW modunda eğri hiç okunmaz → boş tablo + dört düğme ölü
   // arayüzdü; niçin ölü olduğunu söyleyen tek satır daha dürüst.
   if(node.data && node.data.accPreset === '__manual__'){
-    return '<div class="sw-pkg-desc" style="margin:0;">Manuel sabit kW modunda eğri kullanılmaz — çekilen güç tüm devirlerde Adım 1\'deki sabit değerdir.</div>';
+    return '<div class="sw-pkg-desc" style="margin:0;">Manuel sabit kW: eğri kullanılmaz.</div>';
   }
 
   var h = '<table class="ve-acc-curve">';
@@ -448,14 +446,14 @@ function veAccCurveTableHTML(node){
   });
 
   h += '<tr class="hint"><td class="num idx">' + (curve.length+1) + '</td>'
-     + '<td colspan="5">boş satır — “+ Satır ekle” ya da “Yapıştır” (rpm ⇥ kW)</td></tr>';
+     + '<td colspan="5">boş satır · rpm ⇥ kW</td></tr>';
   h += '</table>';
 
   if(curve.length && curve.length < 2){
     h += '<div class="sw-chain-bar fail">' + veIkon('x') + ' Eğri için en az 2 nokta gerekir.</div>';
   } else if(outCount){
-    h += '<div class="sw-chain-bar warn">' + outCount + ' nokta motor aralığının ('
-       + veSayi(ctx.idle, 0) + '–' + veSayi(ctx.gov, 0) + ' rpm) dışında — çözücüde uç değere sabitlenir.</div>';
+    h += '<div class="sw-chain-bar warn">' + outCount + ' nokta motor aralığı ('
+       + veSayi(ctx.idle, 0) + '–' + veSayi(ctx.gov, 0) + ' rpm) dışında: uç değer.</div>';
   }
 
   h += '<div class="sw-btn-row" style="justify-content:flex-start;margin:0;">';
@@ -464,7 +462,7 @@ function veAccCurveTableHTML(node){
   h += '<button class="sw-btn sw-btn-outline" onclick="onVEAccCurvePaste(\'' + nid + '\')">Yapıştır</button>';
   h += '<button class="sw-btn sw-btn-danger" style="margin-left:auto;" onclick="onVEAccCurveClear(\'' + nid + '\')">Temizle</button>';
   h += '</div>';
-  h += '<div class="sw-footer" style="margin:0;">ƒ sütunları türetilmiştir: motor devri = aksesuar devri ÷ oran, kayıp tork = P × 9550 / motor devri.</div>';
+  h += '<div class="sw-footer" style="margin:0;">ƒ: n<sub>motor</sub> = n<sub>aks</sub> ÷ oran · T<sub>kayıp</sub> = P × 9550 / n<sub>motor</sub></div>';
   return h;
 }
 
@@ -473,7 +471,7 @@ function veAccCurveTableHTML(node){
 function veAccMetricsHTML(node){
   var ctx = veAccPanelCtx(node);
   var model = veAccGetNodeModel(node);
-  if(!model) return '<div class="sw-pkg-desc">Metrikler için bir model seçin ya da eğri girin.</div>';
+  if(!model) return '<div class="sw-pkg-desc">Model ya da eğri yok.</div>';
 
   var govKw = model.curve ? veAccInterpCurve(model.curve, ctx.gov * ctx.ratio) : (model.kwConst || 0);
   var idleKw = model.curve ? veAccInterpCurve(model.curve, ctx.idle * ctx.ratio) : (model.kwConst || 0);
@@ -502,7 +500,7 @@ function veAccMetricsHTML(node){
        + ' Nm\'si bu aksesuara gidiyor.</div></div>';
     h += '<div class="sw-chain-bar ok">' + veIkon('check') + ' Motorun net tork modeli güncellendi (' + ctx.eng.id + ')</div>';
   } else {
-    h += '<div class="sw-chain-bar fail">Motor bağlı değil ya da tork eğrisi yok — net tork payı hesaplanamıyor.</div>';
+    h += '<div class="sw-chain-bar fail">Motor ya da tork eğrisi yok.</div>';
   }
   return h;
 }
@@ -561,12 +559,12 @@ function veAccDrawChart(nodeId){
     badge.className = 'sw-pkg-badge ' + (model ? 'ok' : 'miss');   // yoklukta yeşil okunuyordu
   }
   var emptyMsg = curveEmptied
-    ? 'Eğri tablosu boş — “Preset\'ten doldur” ile geri getirin ya da elle nokta ekleyin.'
-    : 'Grafik için bir model seçin.';
+    ? 'Eğri tablosu boş.'
+    : 'Model seçilmedi.';
   var desc = document.getElementById('ve-acc-desc-' + nodeId);
   if(desc){
     desc.textContent = model
-      ? ('Motor ' + veSayi(idle, 0) + '–' + veSayi(gov, 0) + ' rpm aralığında bu aksesuarın çektiği güç (kW); motorun net torkundan düşülür. ' + (eng ? 'Bağlı motorun devir aralığı kullanıldı.' : 'Motor bağlı değil — varsayılan aralık.'))
+      ? ('Motor ' + veSayi(idle, 0) + '–' + veSayi(gov, 0) + ' rpm' + (eng ? '' : ' (varsayılan aralık)'))
       : emptyMsg;
   }
 
@@ -582,7 +580,7 @@ function veAccDrawChart(nodeId){
   if(!model){
     Plotly.purge(el);
     el.innerHTML = '<div class="ve-acc-chart-empty">' +
-      (curveEmptied ? 'Eğri boş — tabloya nokta ekleyin.' : 'Model seçilince eğri burada çizilir.') + '</div>';
+      (curveEmptied ? 'Eğri boş.' : 'Model seçilmedi.') + '</div>';
     return;
   }
   // Yer tutucu metin kutuda KALIYORDU: Plotly.react mevcut çocukları silmiyor,
@@ -792,9 +790,9 @@ function onVEAccCurveFill(nodeId){
   if(!node) return;
   var lib = veAccPresetLib(node.type);
   var p = node.data && node.data.accPreset && lib[node.data.accPreset];
-  if(!p){ if(typeof showToast === 'function') showToast('Önce bir model seçin.', 'warning'); return; }
+  if(!p){ if(typeof showToast === 'function') showToast('Model seçilmedi.', 'warning'); return; }
   if(node.data.accCurveDirty && typeof confirm === 'function' &&
-     !confirm('Tablodaki düzenlemeler preset eğrisiyle değiştirilecek. Devam edilsin mi?')) return;
+     !confirm('Tablo preset eğrisiyle değiştirilecek. Devam edilsin mi?')) return;
   node.data.accCurve = p.curve.slice();
   node.data.accCurveDirty = false;
   veAccRefreshPanel(nodeId, true);
@@ -837,7 +835,7 @@ function onVEAccCurvePaste(nodeId){
     if(typeof showToast === 'function') showToast(pts.length + ' nokta alındı.', 'success');
   };
   var ask = function(){
-    var t = (typeof prompt === 'function') ? prompt('Satırları yapıştırın (rpm ⇥ kW):') : '';
+    var t = (typeof prompt === 'function') ? prompt('Satırlar (rpm ⇥ kW):') : '';
     apply(t || '');
   };
   if(typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.readText){

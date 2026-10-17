@@ -9,7 +9,6 @@ function getShiftControllerPropertiesHTML(node) {
   // İngilizce terim kendi dilinde büyür: Türkçe yerelde "SHİFT" yazılıyordu.
   html += '<div class="sw-section-title"><span lang="en">Shift Schedule</span> (vites geçiş takvimi)</div>';
 
-  html += '<div class="sw-pkg-desc">Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
   
   // Şanzıman ve motor bileşenlerinden veri çek
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
@@ -88,7 +87,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-pkg-desc">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + veSayi(shiftRefRPM) + ' − ' + veSayi(lockupOffset) + ' = <b>' + veSayi(N_shift_lockup) + ' rpm</b></div>';
   
   if(governed <= 0) {
-    html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed Speed giriniz.</div>';
+    html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Governed speed tanımlı değil.</div>';
   } else {
     // Lockup destekli ileri vitesler (F2 ve üstü lockup shift yapabilir).
     // İleri vites ayrımı veIsForwardGear'dan — 'F' ön eki tek adlandırma değil.
@@ -127,7 +126,7 @@ function getShiftControllerPropertiesHTML(node) {
     
     // Bilgilendirme
     if(!diffNode || (i_diff <= 1.01 && !diffData.diffRatio)) {
-      html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Diferansiyel oranı tanımlı değil (i_diff=' + veSayi(i_diff, 3) + '). Diferansiyel bileşenini kontrol edin.</div>';
+      html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Diferansiyel oranı tanımlı değil (i_diff = ' + veSayi(i_diff, 3) + ').</div>';
     }
   }
   
@@ -142,14 +141,13 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Converter Mode Shift mantığı</span></div>';
   html += '<div class="sw-pkg-body">';
-  html += '<div class="sw-pkg-desc">Converter-mod geçişleri şanzıman çıkış devri oranına (N_out / N_shift_ref) göre belirlenir. Bu oranlar motordan bağımsızdır — farklı governed RPM\'li motorlarda da doğru shift noktası verir.</div>';
   
   // Parametre tablosu
   html += '<table class="ve-pnl-tbl ve-pnl-tbl--tiny ve-pnl-tbl--framed" style="margin-bottom:8px;">';
   html += '<thead><tr style="background:var(--bg-secondary);">';
   html += '<th class="lbl">Parametre</th>';
   html += '<th style="width:20%;">Değer</th>';
-  html += '<th class="lbl">Açıklama</th>';
+  html += '<th class="lbl">Koşul</th>';
   html += '</tr></thead><tbody>';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<td style="font-weight:500;">1C→2C oran (N_out/N_gov)</td>';
@@ -163,65 +161,20 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</tr>';
   html += '</tbody></table>';
   
-  // Shift mantığı kuralları
-  html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; margin-bottom:8px; border:1px solid var(--border-color); font-size:var(--fs-tiny); line-height:1.6; color:var(--text-secondary);">';
-  html += '1C → 2C: shift @ N_out ≥ ' + veSayi(shift1C2C_outRatio) + ' × N_shift_ref<br>';
-  html += '2C → 2L: shift @ N_out ≥ ' + veSayi(shift2C2L_outRatio) + ' × N_shift_ref (lockup engage)';
-  html += '</div>';
   
-  // Bilgi kutusu
-  html += '<div class="sw-pkg-desc" style="border-left:3px solid var(--accent-primary); padding:8px 10px;">';
-  html += 'N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çapraz validasyonundan türetildi: 3200 SP 2 motor, 4000 SP 3 motor + 2 TC ile doğrulandı.';
-  html += '</div>';
+  html += '<div class="sw-pkg-desc">N_out = N_engine × SR / i_gear</div>';
 
   html += '</div></div>';
 
-  // ── SHIFT CONTROLLER ALGORİTMASI (Görsel) ──
+  // ── SHIFT SIRASI ──
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
-  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Shift Controller algoritması</span></div>';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name"><span lang="en">Shift</span> sırası</span></div>';
   html += '<div class="sw-pkg-body">';
-  
-  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
-  
-  html += '<div style="' + codeStyle + '">';
-  html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, V_vehicle, current_gear, mode</span>\n\n';
-  html += '<span style="color:var(--ink-warning);">=== BAŞLANGIÇ DURUMU ===</span>\n';
-  html += '  gear = F1, mode = CONVERTER, V = 0\n\n';
-  html += '<span style="color:var(--ink-warning);">=== HER ZAMAN ADIMINDA ===</span>\n\n';
-  
-  html += '<span style="color:var(--ink-accent);">Adım 1: Converter modunda 1C → 2C upshift</span>\n';
-  html += '  Eğer mode == CONVERTER VE gear == F1:\n';
-  html += '    N_out = N_engine × SR / i_gear_F1\n';
-  html += '    Eğer N_out >= ' + veSayi(shift1C2C_outRatio) + ' × N_shift_ref:\n';
-  html += '      → gear = F2, mode = CONVERTER (2C)\n\n';
-  
-  html += '<span style="color:var(--ink-accent);">Adım 2: Converter → Lockup geçişi (2C → 2L)</span>\n';
-  html += '  Eğer mode == CONVERTER VE gear == F2:\n';
-  html += '    N_out = N_engine × SR / i_gear_F2\n';
-  html += '    Eğer N_out >= ' + veSayi(shift2C2L_outRatio) + ' × N_shift_ref:\n';
-  html += '      → mode = LOCKUP (2L)\n';
-  html += '      → N_engine = N_turbine (1:1 mekanik kilit)\n\n';
-  
-  html += '<span style="color:var(--ink-accent);">Adım 3: Lockup modunda upshift (2L→3L→...→6L)</span>\n';
-  html += '  Eğer mode == LOCKUP:\n';
-  html += '    N_shift = N_shift_ref − ' + veSayi(lockupOffset) + '\n';
-  html += '    Eğer N_engine >= N_shift:\n';
-  html += '      next_gear = bir üst vites\n';
-  html += '      Eğer next_gear var VE lockup destekliyse:\n';
-  html += '        → gear = next_gear, mode = LOCKUP\n';
-  html += '      Eğer next_gear yoksa:\n';
-  html += '        → Shift yapma (son vites, governed\'a yaklaş)\n\n';
-  
-  html += '<span style="color:var(--ink-accent);">Adım 4: Shift sonrası devir düşüşü</span>\n';
-  html += '  Shift gerçekleştiğinde:\n';
-  html += '    N_engine_yeni = N_engine_eski × (i_eski / i_yeni)\n';
-  html += '    Bu değer &lt; governed olmalı (kontrol)';
-  html += '</div>';
   
   // Shift sırası görsel
   // Profil adı İngilizce bir katalog adı ("Allison 3200 SP — S1 Performance"):
   // Türkçe yerelde büyük harf "ALLİSON", "SHİFT" yazıyordu.
-  html += '<div class="sw-section-title" style="margin-top:10px;"><span lang="en">Shift</span> sırası — <span lang="en">' + profileName + ', full throttle (WOT)</span>:</div>';
+  html += '<div class="sw-section-title"><span lang="en">' + profileName + ' · full throttle (WOT)</span></div>';
   
   html += '<div style="background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
   html += '<span style="color:var(--ink-accent); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
@@ -248,7 +201,6 @@ function veRefreshShiftSchedule() {
   if(scNode) {
     selectedNodes = [scNode];
     showNodeProperties(scNode);
-    showToast('Shift Schedule güncellendi');
   }
 }
 
@@ -464,7 +416,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</div>';
     html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--ink-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--ink-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
     if(hasEGM) {
-      html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+      html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman Motor-Şanzıman Eşleştirme\'den seçili.</div>';
     }
 
     // Şanzıman limitleri bilgi kutusu
@@ -510,7 +462,7 @@ function getGearboxPropertiesHTML(node) {
       html += '<option value="' + spKey + '"' + sel + '>' + sp.name + ' ✦</option>';   // metin: seçenek metni (kalibrasyon işareti)
     });
     if(spCount === 0) {
-      html += '<option value="" disabled selected>— Bu şanzıman için kalibrasyon yok —</option>';
+      html += '<option value="" disabled selected>— kalibrasyon yok —</option>';
     }
     html += '</select>';
     html += '</td>';
@@ -522,7 +474,6 @@ function getGearboxPropertiesHTML(node) {
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Shift Ref. RPM</th>';
     html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-shift-ref-' + node.id + '" value="' + shiftRefVal + '" placeholder="boş = motor governed" step="50" min="600" max="4000" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTGBParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
-    html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><span style="color:var(--ink-accent);">ℹ</span> iSCAAN raporlarındaki "Shift Speed &amp; Strategy" değeri. Genellikle motor governed hızına eşittir. Farklıysa buraya girin.</td></tr>';
     
     // Shift profili parametreleri (readonly)
     var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || {lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594};
@@ -554,7 +505,6 @@ function getGearboxPropertiesHTML(node) {
         }
         html += '</tr>';
       }
-      html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçişleri lineer/segmentli model ile hesaplanır. N_out = N_engine × SR / i_gear.</td></tr>';
     } else {
       // Basit oran bazlı converter model (3200SP, 4000SP)
       html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -567,7 +517,6 @@ function getGearboxPropertiesHTML(node) {
       html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-sr-lockup-' + node.id + '" value="' + (spData.shift2C2L_outRatio || 0.3594) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
 
-      html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. N_out = N_engine × SR / i_gear.</td></tr>';
     }
 
     // Lockup-mod geçiş parametreleri (per-gear kalibrasyon varsa göster)
@@ -640,7 +589,6 @@ function getGearboxPropertiesHTML(node) {
         html += '<td style="background:var(--bg-tertiary); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.3;">' + formula + '</td>';
         html += '</tr>';
       });
-      html += '<tr><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Araç yavaşlarken N_out eşiğin altına düşerse alt vitese geçilir. Oran tabanlı formüller (N_engine = k × ESL). Histerezis: upshift &gt; downshift.</td></tr>';
     }
 
     // Vites Sayısı (İleri)
@@ -665,7 +613,7 @@ function getGearboxPropertiesHTML(node) {
     if(autoGoverned) { nodeData.gbGovernedSpeed = parseFloat(autoGoverned); }
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Governed Speed <span style="color:var(--text-muted); font-weight:400;">[rpm]</span></th>';
-    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-governed-' + node.id + '" value="' + govValue + '"' + (govReadonly ? ' readonly tabindex="-1"' : '') + ' placeholder="' + (autoGoverned ? 'Motordan: ' + autoGoverned : 'Giriniz') + '" step="1" min="0" style="' + govStyle + '"' + (govReadonly ? '' : ' onchange="onVEFTGBParamChange(\'' + node.id + '\')"') + '></td>';
+    html += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-gb-governed-' + node.id + '" value="' + govValue + '"' + (govReadonly ? ' readonly tabindex="-1"' : '') + ' placeholder="' + (autoGoverned ? 'Motordan: ' + autoGoverned : '—') + '" step="1" min="0" style="' + govStyle + '"' + (govReadonly ? '' : ' onchange="onVEFTGBParamChange(\'' + node.id + '\')"') + '></td>';
     html += '</tr>';
     
     if(autoGoverned) {
@@ -733,7 +681,7 @@ function getGearboxPropertiesHTML(node) {
   var _hasEGM2 = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
   html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
   html += '<select id="ve-gearbox-select-' + node.id + '"' + (_hasEGM2 ? ' disabled' : '') + ' onchange="onVEGearboxSelectChange(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (_hasEGM2 ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
-  html += '<option value="">-- Şanzıman Seçiniz (' + Object.keys(VE_GEARBOX_PRESETS).length + ' preset) --</option>';
+  html += '<option value="">— Şanzıman (' + Object.keys(VE_GEARBOX_PRESETS).length + ' preset) —</option>';
   Object.keys(VE_GEARBOX_PRESETS).forEach(function(key) {
     var gp = VE_GEARBOX_PRESETS[key];
     var fwdCount = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
@@ -746,7 +694,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</div>';
   html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--ink-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--ink-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
   if(_hasEGM2) {
-    html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+    html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman Motor-Şanzıman Eşleştirme\'den seçili.</div>';
   }
 
   // Veri alanı
@@ -796,7 +744,7 @@ function getGearboxPropertiesHTML(node) {
   html += '<th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Kaçıncı vites?</th>';
   html += '<td style="background:var(--bg-tertiary);">';
   html += '<select id="ve-gear-select-' + node.id + '" onchange="onVEGearSelectChange(\'' + node.id + '\')" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-  html += '<option value="">-- Vites seçin --</option>';
+  html += '<option value="">— Vites —</option>';
   html += '</select>';
   html += '</td>';
   html += '</tr>';
@@ -884,7 +832,6 @@ function clearVEFTGearTable(nodeId) {
   tbody.innerHTML = '';
   for(var i = 0; i < 3; i++) addVEFTGearRow(nodeId);
   onVEFTGearDataChange(nodeId);
-  showToast('Vites tablosu temizlendi');
 }
 
 function saveVEFTGearData(nodeId) {
@@ -2506,7 +2453,6 @@ function onVEGearboxSelectChange(nodeId, value) {
     });
     node.data.gearData = JSON.parse(JSON.stringify(preset.gears));
     updateVEGearSelectOptions(nodeId);
-    showToast(preset.name + ' yüklendi');
   }
 }
 
@@ -2520,7 +2466,7 @@ function updateVEGearSelectOptions(nodeId) {
   
   var gearData = node.data && node.data.gearData ? node.data.gearData : getVEGearboxTableData(nodeId);
   
-  selectEl.innerHTML = '<option value="">-- Vites seçin --</option>';
+  selectEl.innerHTML = '<option value="">— Vites —</option>';
   gearData.forEach(function(g, idx) {
     if(g.gear && g.ratio && parseFloat(g.ratio) > 0) { // Geri vites hariç
       var opt = document.createElement('option');
@@ -2598,7 +2544,7 @@ function removeVEGearboxRow(btn, nodeId) {
 
 // Şanzıman tablosu temizle
 function clearVEGearboxTable(nodeId) {
-  showConfirmToast('Tablodaki tüm verileri silmek istediğinize emin misiniz?', function() {
+  showConfirmToast('Tablodaki tüm veriler silinsin mi?', function() {
     var tbody = document.getElementById('ve-gearbox-table-' + nodeId);
     if(tbody) {
       tbody.innerHTML = '';
@@ -2609,7 +2555,6 @@ function clearVEGearboxTable(nodeId) {
       node.data.gearData = [];
     }
     updateVEGearSelectOptions(nodeId);
-    showToast('Tablo temizlendi');
   });
 }
 

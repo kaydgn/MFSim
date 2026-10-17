@@ -53,10 +53,10 @@ function getEnginePropertiesHTML(node) {
     // Sütuna sığdırılan seçicide uzun ad kırpılır ve <select> üç nokta koyamaz;
     // tam ad ipucu olarak durur (pencere başlığında da var).
     var _selTitle = (savedPreset && VE_FT_MOTOR_PRESETS[savedPreset])
-      ? escapeHTML(VE_FT_MOTOR_PRESETS[savedPreset].name) : 'Hazır motor listesinden seçin';
+      ? escapeHTML(VE_FT_MOTOR_PRESETS[savedPreset].name) : 'Motor seçilmedi';
     selectHtml += '<select id="ve-ft-motor-select-' + node.id + '" title="' + _selTitle +
                   '" onchange="onVEFTMotorSelect(\'' + node.id + '\', this.value)" style="flex:1; min-width:0; width:100%; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-    selectHtml += '<option value="">-- Motor Seçiniz (' + Object.keys(VE_FT_MOTOR_PRESETS).length + ' preset) --</option>';
+    selectHtml += '<option value="">— Motor (' + Object.keys(VE_FT_MOTOR_PRESETS).length + ' preset) —</option>';
     // Aile bazlı gruplama
     var _ftFamilies = [
       {label: 'BMC / AZRA', prefix: ['azra_', 'bmc_']},
@@ -95,7 +95,7 @@ function getEnginePropertiesHTML(node) {
     selectHtml += '<div style="font-size:var(--fs-h1); margin-bottom:8px;"><span class="mf-ico mf-ico-zap"></span></div>';
     // Kontrolün NEREDE olduğunu söyle: "Manuel Giriş" ayrı bir düğme değil,
     // yukarıdaki listenin son seçeneği.
-    selectHtml += '<div style="font-size:var(--fs-md); color:var(--text-muted);">Motor seçilmedi — listeden bir motor<br>ya da son seçenek <strong>+ Manuel giriş</strong>.</div>';
+    selectHtml += '<div style="font-size:var(--fs-md); color:var(--text-muted);">Motor seçilmedi.</div>';
     selectHtml += '</div>';
   }
 
@@ -220,8 +220,7 @@ function getEnginePropertiesHTML(node) {
         accData, initGoverned);
     });
     sheetHtml += '</tbody><tfoot><tr><td class="n">' + (rows.length + 1) + '</td>' +
-                 '<td colspan="6">boş satır — yaz ya da “Yapıştır” ile ' +
-                 '<span>devir ⇥ tork ⇥ güç</span> aktar</td>' +
+                 '<td colspan="6">boş satır · <span>devir ⇥ tork ⇥ güç</span></td>' +
                  '</tr></tfoot></table></div>';
 
     // Resize tutamacı — mevcut davranış (tablo yüksekliği node.data.tableHeight)
@@ -238,11 +237,10 @@ function getEnginePropertiesHTML(node) {
                  '\')"><span class="mf-ico mf-ico-save"></span> Kaydet</button>';
     sheetHtml += '</div>';
     sheetHtml += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">' +
-                 'ƒ sütunları düzenlenemez, her hücre değişiminde yeniden hesaplanır: ' +
+                 'ƒ: ' +
                  '<span style=" color:var(--text-secondary);">D = aksesuar kaybı(devir)</span> · ' +
                  '<span style=" color:var(--text-secondary);">F = max(0, C − D)</span> · ' +
-                 '<span style=" color:var(--text-secondary);">E = F × 9549,3 / A</span>. ' +
-                 'Çözücü ve raporlar E–F sütunlarını okur.</div>';
+                 '<span style=" color:var(--text-secondary);">E = F × 9549,3 / A</span></div>';
     sheetHtml += '</div>';  // ve-motor-data-area
   }
 
@@ -301,7 +299,7 @@ function getEnginePropertiesHTML(node) {
   fitHtml += '</div>';
 
   fitHtml += '<div id="ve-motor-fit-' + node.id + '" style="font-size:var(--fs-tiny); color:var(--text-muted); padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); word-break:break-all; line-height:1.5;">';
-  fitHtml += 'Veri girildikten sonra denklem gösterilecek.';
+  fitHtml += 'Veri yok.';
   fitHtml += '</div>';
   if(!isFullThrottle) fitHtml += '</div></div>'; // sw-pkg-body + sw-pkg-card
 
@@ -345,8 +343,7 @@ function getEnginePropertiesHTML(node) {
     // "Kayıpları Uygula" doğrulama sütununa taşındı — sonucu orada okunuyor.
     accHtml += '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45;' +
                ' background:var(--bg-tertiary); border:1px solid var(--border-color); padding:5px 7px;">' +
-               'Fan kaybı devirle küp (devir/governed)³, diğerleri lineer ölçeklenir. ' +
-               'Bağlı aksesuar düğümü varsa kayıp o düğümün eğrisinden okunur.</div>';
+               'Fan kaybı ∝ (devir/governed)³ · diğerleri doğrusal</div>';
 
     // ── DOĞRULAMA SÜTUNU: tek kanvas + metrikler + eğri yaklaşımı + eylemler ──
     // Governed devirdeki toplam aksesuar kaybı (eğrili/manuel/legacy — tek kaynak).
@@ -406,10 +403,6 @@ function getEnginePropertiesHTML(node) {
     brakeHtml += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-mf-verim-' + node.id + '" value="' + verim + '" min="0" max="100" step="1" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEMotorParamChange(\'' + node.id + '\')"></td>';
     brakeHtml += '</tr>';
 
-    // Verim açıklama satırı
-    brakeHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
-    brakeHtml += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Katalog tork/güç değerleri bu oranla çarpılarak kullanılır (%95 → ×0,95).</td>';
-    brakeHtml += '</tr>';
 
     // Governed RPM satırı
     brakeHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -417,10 +410,6 @@ function getEnginePropertiesHTML(node) {
     brakeHtml += '<td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-governed-rpm-' + node.id + '" value="' + governedRpm + '" min="500" max="5000" step="100" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEMotorParamChange(\'' + node.id + '\')"></td>';
     brakeHtml += '</tr>';
 
-    // Governed RPM açıklama satırı
-    brakeHtml += '<tr>';
-    brakeHtml += '<td colspan="2" style="font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Motorun maksimum çalışma devri. Vites değişim mantığı:<br>• <b>Upshift:</b> Motor devri > Governed + 400 olunca üst vitese geçer<br>• <b>Downshift:</b> Motor devri < (Governed + 400) × (i<sub>mevcut</sub> / i<sub>alt</sub>) olunca alt vitese geçer</td>';
-    brakeHtml += '</tr>';
 
     brakeHtml += '</table>';
     brakeHtml += '</div></div>'; // sw-pkg-body + sw-pkg-card
@@ -486,12 +475,6 @@ function getEnginePropertiesHTML(node) {
     html += '</div>';
     html += '</div>';
     html += '</div>';                                     // ve-cp-grid
-    // Dipnot da veriye bağlı: boş durumda (motor seçilmeden) yalnız seçim
-    // diyaloğu kalsın.
-    html += '<div class="sw-footer ve-ft-extra" data-node="' + node.id + '" style="display:' +
-            (hasData ? 'block' : 'none') + ';">Brüt tork–güç verisi üreticinin katalog değeridir. ' +
-            'Aksesuar kayıpları krank torkuna çevrilip her devirde brüt güçten düşülür; ' +
-            'çözücü, vites mantığı ve raporlar net eğriyi kullanır.</div>';
   } else {
     html += '<div class="ve-cp-grid">';
     html += '<div class="ve-cp-col ve-cp-col--in">';    // sol: girdiler
@@ -2123,7 +2106,6 @@ function clearVEMotorTable(nodeId, skipConfirm) {
     // Dropdown'ı sıfırlama - veri alanı görünür kalsın
     // Grafiği güncelle
     updateVEMotorChart(nodeId);
-    showToast('Tablo temizlendi');
   }
   
   if(skipConfirm) {
@@ -2131,7 +2113,7 @@ function clearVEMotorTable(nodeId, skipConfirm) {
   } else {
     var data = getVEMotorTableData(nodeId);
     if(data.length > 0) {
-      showConfirmToast('Tablodaki tüm verileri silmek istediğinize emin misiniz?', doClear);
+      showConfirmToast('Tablodaki tüm veriler silinsin mi?', doClear);
     } else {
       showToast('Tablo zaten boş', 'warning');
     }
@@ -2150,7 +2132,7 @@ function deleteVEMotorSavedSet(nodeId) {
     return;
   }
   
-  showConfirmToast('Tablodaki motor verilerini temizlemek istediğinize emin misiniz?', function() {
+  showConfirmToast('Tablodaki motor verileri silinsin mi?', function() {
     // Onaylandı - temizle
     if(node.data) {
       node.data.torqueData = [];
@@ -2170,7 +2152,6 @@ function deleteVEMotorSavedSet(nodeId) {
     
     // Grafiği güncelle
     updateVEMotorChart(nodeId);
-    showToast('Motor verisi temizlendi');
   });
 }
 
@@ -2284,7 +2265,6 @@ function onVEMotorSelectChange(nodeId, value) {
     }
     onVEMotorDataChange(nodeId);
     updateVEMotorChart(nodeId);
-    showToast('Yeni motor verisi için tablo hazır');
     return;
   }
   
@@ -2306,7 +2286,6 @@ function onVEMotorSelectChange(nodeId, value) {
   
   onVEMotorDataChange(nodeId);
   updateVEMotorChart(nodeId);
-  showToast('Motor verisi yüklendi: ' + preset.name);
 }
 
 // Tam Gaz Hızlanma — Motor Seçici
@@ -2353,7 +2332,6 @@ function onVEFTMotorSelect(nodeId, value) {
     }
     onVEMotorDataChange(nodeId);
     updateVEMotorChart(nodeId);
-    showToast('Manuel veri girişi için tablo hazır');
     return;
   }
   
@@ -2418,7 +2396,6 @@ function onVEFTMotorSelect(nodeId, value) {
   // Governed speed'i tüm bağımlı bileşenlere yay
   propagateGovernedSpeed();
   
-  showToast('Motor verisi yüklendi: ' + preset.name);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2498,7 +2475,6 @@ function onVEApplyAccLosses(nodeId) {
   if(!node) return;
   // Net chart ve tabloyu güncelle
   updateVENetChart(nodeId);
-  showToast('Aksesuar kayıpları net değerlere uygulandı');
 }
 
 function veUpdateAccTotals(nodeId) {
@@ -2916,7 +2892,7 @@ function onVEEngSheetPaste(nodeId) {
     showToast(parsed.length + ' satır yapıştırıldı');
   };
   var ask = function() {
-    var t = (typeof prompt === 'function') ? prompt('Satırları yapıştırın (devir ⇥ tork ⇥ güç):') : '';
+    var t = (typeof prompt === 'function') ? prompt('Satırlar (devir ⇥ tork ⇥ güç):') : '';
     apply(t || '');
   };
   if(typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.readText) {
@@ -3123,10 +3099,8 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
   
   if(method === 'linear') {
     html = '<b>Lineer interpolasyon:</b><br>';
-    html += '<span style="color:var(--text-muted);">Veri noktaları arasında doğrusal geçiş.</span>';
   } else if(method === 'pchip') {
     html = '<b>PCHIP Spline:</b><br>';
-    html += '<span style="color:var(--text-muted);">Monoton kübik interpolasyon (pürüzsüz).</span>';
   } else if(method === 'poly') {
     var degreeEl = document.getElementById('ve-poly-degree-' + nodeId);
     var degree = degreeEl ? parseInt(degreeEl.value) : 3;

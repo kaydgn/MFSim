@@ -7,7 +7,7 @@ function getECMatchingPropertiesHTML(node) {
   // Başlık
   html += '<div class="sw-panel ve-cp-panel">';
   html += '<div class="sw-section-title">Motor — Konvertör eşleştirme analizi</div>';
-  html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. C4/C5/C7/C8/C9/C10 kontrollerini uygular.</div>';
+  html += '<div class="sw-pkg-desc">Allison TD-148G · C4 · C5 · C7 · C8 · C9 · C10</div>';
 
   // İki sütun (asimetrik) — İNCE SOL ray: motor özeti + türbin limiti girdisi
   html += '<div class="ve-cp-grid ve-cp-grid--wideright"><div class="ve-cp-col ve-cp-col--in">';
@@ -28,14 +28,14 @@ function getECMatchingPropertiesHTML(node) {
   html += '<td style="border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="text" inputmode="decimal" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '</table>';
-  html += '<div class="sw-pkg-desc">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</div>';
+  html += '<div class="sw-pkg-desc">C7 · Net Turbine Torque (şanzıman presetinden)</div>';
   html += '</div></div>';
   html += '</div>';                                     // ve-cp-col--in kapat (ince sol ray)
   html += '<div class="ve-cp-col ve-cp-col--out">';     // GENİŞ SAĞ: sonuç tablosu + grafik
 
   // Analiz sonuç tablosu
   html += '<div id="ecm-results-' + node.id + '" style="padding:10px 12px;">';
-  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:var(--fs-body);">Analiz bekleniyor... Motor bileşeni tanımlandığında otomatik çalışır.</div>';
+  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:var(--fs-body);">Analiz bekleniyor…</div>';
   html += '</div>';
   
   // Absorption chart canvas — Büyüt düğmesi kartın BAŞLIĞINDA: çizimin sağ
@@ -45,9 +45,8 @@ function getECMatchingPropertiesHTML(node) {
     '<button class="sw-btn sw-btn-outline" onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt" style="padding:2px 8px;"><span class="mf-ico mf-ico-maximize"></span> Büyüt</button></div>';
   html += '<div class="sw-pkg-body">';
   html += '<div style="position:relative;">';
-  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" role="img" aria-label="Motor net tork eğrisi ve konvertör kapasite eğrileri — etkileşimli: Ctrl+tekerlek yakınlaştırır, sağ tık sürükleme kaydırır" title="İmleçle değerleri okuyun · Ctrl + tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Sol tık: sıfırla" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color);"></canvas>';
+  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" role="img" aria-label="Motor net torku ve konvertör kapasite eğrileri" title="Ctrl + tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Sol tık: sıfırla" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color);"></canvas>';
   html += '</div>';
-  html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0,80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0,80 SR çalışma noktalarını verir.<br><b>Etkileşim:</b> imleçle gezinerek değerleri okuyun · <b>Ctrl + tekerlek</b> yakınlaştırır · <b>sağ tık + sürükle</b> kaydırır · <b>sol tık</b> sıfırlar · <b>Büyüt</b> tam ekran açar.</div>';
   html += '</div></div>';
   html += '</div>';  // ve-cp-col--out kapat
   html += '</div>';  // ve-cp-grid kapat
@@ -96,7 +95,7 @@ function runECMatchingAnalysis(nodeId) {
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
 
   if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Bağlı motor ya da tork verisi yok.</div>';
     return;
   }
   
@@ -320,12 +319,12 @@ function runECMatchingAnalysis(nodeId) {
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
     h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol kriterleri</div>';
-    h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
-    h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + veSayi(peakRPM, 0) + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
-    h += '<b style="color:var(--text-primary);">C7</b> — Stall Türbin Torku ≤ ' + veSayi(turbineRating, 0) + ' N·m: Stall\'da türbin torku şanzıman limitini aşmamalı.<br>';
-    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0,80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).<br>';
-    if(gbLimits.grossInputPower !== null) h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov ≤ ' + veSayi(gbLimits.grossInputPower, 0) + ' kW: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
-    if(gbLimits.grossInputTorque !== null) h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov ≤ ' + veSayi(gbLimits.grossInputTorque, 0) + ' N·m: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.';
+    h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed (referans)<br>';
+    h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + veSayi(peakRPM, 0) + ' rpm)<br>';
+    h += '<b style="color:var(--text-primary);">C7</b> — Stall Türbin Torku ≤ ' + veSayi(turbineRating, 0) + ' N·m<br>';
+    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0,80<br>';
+    if(gbLimits.grossInputPower !== null) h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov ≤ ' + veSayi(gbLimits.grossInputPower, 0) + ' kW<br>';
+    if(gbLimits.grossInputTorque !== null) h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov ≤ ' + veSayi(gbLimits.grossInputTorque, 0) + ' N·m';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color); font-size:var(--fs-micro); color:var(--text-muted); font-style:italic;">Referans doküman: TD-148G</div>';
     h += '</div></div></div>';
     
@@ -373,7 +372,7 @@ function runECMatchingAnalysis(nodeId) {
                        r.status === 'caution' ? veDurumIkon('warn') :
                        r.status === 'not-recommended' ? veDurumIkon('warn') :
                        veDurumIkon('err');
-      var statusText = r.status === 'recommended' ? 'Önerilen' :
+      var statusText = r.status === 'recommended' ? 'Uygun' :
                        r.status === 'caution' ? 'Dikkat' :
                        r.status === 'not-recommended' ? 'Önerilmez' :
                        'Uyumsuz';
@@ -390,7 +389,7 @@ function runECMatchingAnalysis(nodeId) {
       // dil). Eskiden yalnız ince bir sol kenar çizgisi vardı — tablo zaten
       // renkli olduğu için görünmüyordu.
       h += '<td style="border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name
-         + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-success); color:var(--on-success); padding:0 4px; border-radius:var(--radius-sm);" title="Bu konvertör Tork Konvertörü bileşenine yüklü">' + veIkon('check') + '</span>' : '')
+         + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-success); color:var(--on-success); padding:0 4px; border-radius:var(--radius-sm);" title="Yüklü">' + veIkon('check') + '</span>' : '')
          + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + veSayi(r.stallTau, 2) + '</td>';
       h += '<td style="border:1px solid var(--border-color); color:var(--text-primary);">' + veSayi(r.stallSpeed, 0) + '</td>';
@@ -403,9 +402,9 @@ function runECMatchingAnalysis(nodeId) {
       h += '<td style="border:1px solid var(--border-color);">';
       if(isSelected) {
         // Zaten yüklü → düğme pasif ve onay ikonlu; şanzıman tablosundaki davranışın aynısı
-        h += '<button class="sw-btn" style="padding:2px 8px; font-size:var(--fs-micro); opacity:0.5; cursor:default;" disabled title="Bu konvertör hâlihazırda yüklü">' + veIkon('check') + '</button>';
+        h += '<button class="sw-btn" style="padding:2px 8px; font-size:var(--fs-micro); opacity:0.5; cursor:default;" disabled title="Yüklü">' + veIkon('check') + '</button>';
       } else if(r.status !== 'unacceptable') {
-        h += '<button class="sw-btn sw-btn-primary" onclick="ecmSelectConverter(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:var(--fs-micro);" title="Bu konvertörü TC bileşenine yükle">Seç</button>';
+        h += '<button class="sw-btn sw-btn-primary" onclick="ecmSelectConverter(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:var(--fs-micro);">Seç</button>';
       }
       h += '</td>';
       h += '</tr>';
@@ -416,13 +415,13 @@ function runECMatchingAnalysis(nodeId) {
     // Önerilen konvertör özeti
     if(results.length > 0 && results[0].status === 'recommended') {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-success);">';
-      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-success);"><span class="mf-ico mf-ico-trophy"></span> Önerilen: ' + results[0].name + '</span></div>';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-success);"><span class="mf-ico mf-ico-trophy"></span> En uygun: ' + results[0].name + '</span></div>';
       h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">Stall: ' + veSayi(results[0].stallSpeed, 0) + ' rpm | SR@Gov: ' + veSayi(results[0].srGov, 3) + ' | T_turb: ' + veSayi(results[0].tTurbineStall, 0) + ' N·m</div></div>';
       h += '</div>';
     } else if(results.length > 0) {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-warning);">';
       h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Tam uyumlu konvertör bulunamadı</span></div>';
-      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + veSayi(results[0].srGov, 3) + '). Lockup modunda çalışacağından performans kabul edilebilir olabilir.</div></div>';
+      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + veSayi(results[0].srGov, 3) + ')</div></div>';
       h += '</div>';
     }
     
@@ -810,7 +809,7 @@ function getEngineGearboxMatchingHTML(node) {
 
   // Analiz sonuç tablosu
   html += '<div id="egm-results-' + node.id + '" style="padding:10px 12px;">';
-  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:var(--fs-body);">Analiz bekleniyor... Motor bileşenine bağlandığında otomatik çalışır.</div>';
+  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:var(--fs-body);">Analiz bekleniyor…</div>';
   html += '</div>';
 
   html += '</div>'; // close sw-panel
@@ -828,14 +827,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Bağlı motoru bul
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Motor bağlı değil.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
   if(torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Motor tork verisi yok.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
@@ -948,10 +947,10 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
     h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol kriterleri</div>';
-    h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + veSayi(powerAtGov, 0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
-    h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + veSayi(torqueAtGov, 0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
+    h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + veSayi(powerAtGov, 0) + ' kW) ≤ Şanzıman Giriş Güç Limiti<br>';
+    h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + veSayi(torqueAtGov, 0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti<br>';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color);">';
-    h += '<span style="color:var(--ink-success);">Önerilen</span>: ≥%15 marj | <span style="color:var(--ink-warning);">Dikkat</span>: %5–15 marj | <span style="color:var(--ink-warning);">Sıkı</span>: &lt;%5 marj | <span style="color:var(--ink-danger);">Uyumsuz</span>: Limit aşılıyor';
+    h += '<span style="color:var(--ink-success);">Uygun</span> ≥%15 · <span style="color:var(--ink-warning);">Dikkat</span> %5–15 · <span style="color:var(--ink-warning);">Sıkı</span> &lt;%5 · <span style="color:var(--ink-danger);">Uyumsuz</span>: limit aşılıyor';
     h += '</div></div></div></div>';
 
     // Tablo — BİRİM (js/tablo-pencere.js): sütuna sığmazsa yerinde özet kartı
@@ -990,7 +989,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
                        r.status === 'caution' ? veDurumIkon('warn') :
                        r.status === 'tight' ? veDurumIkon('warn') :
                        r.status === 'unacceptable' ? veDurumIkon('err') : '—';
-      var statusText = r.status === 'recommended' ? 'Önerilen' :
+      var statusText = r.status === 'recommended' ? 'Uygun' :
                        r.status === 'caution' ? 'Dikkat' :
                        r.status === 'tight' ? 'Sıkı' :
                        r.status === 'unacceptable' ? 'Uyumsuz' : 'Veri yok';
@@ -1027,7 +1026,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     var recommended = results.filter(function(r) { return r.status === 'recommended'; });
     if(recommended.length > 0) {
       h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-success);">';
-      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-success);"><span class="mf-ico mf-ico-trophy"></span> Önerilen Şanzımanlar (' + recommended.length + ')</span></div>';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--ink-success);"><span class="mf-ico mf-ico-trophy"></span> Uygun şanzımanlar (' + recommended.length + ')</span></div>';
       h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">' + recommended.map(function(r) { return r.name; }).join(', ') + '</div></div>';
       h += '</div>';
     } else {
@@ -1051,7 +1050,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 function egmSelectGearbox(egmNodeId, gbPresetKey) {
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
   if(!gbNode) {
-    showToast('Şanzıman bileşeni bulunamadı. Önce canvas\'a ekleyin.', 'warning');
+    showToast('Şanzıman bileşeni yok.', 'warning');
     return;
   }
 
@@ -1082,7 +1081,7 @@ function egmSelectGearbox(egmNodeId, gbPresetKey) {
 function ecmSelectConverter(ecmNodeId, tcPresetKey) {
   var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
   if(!tcNode) {
-    showToast('Tork Konvertörü bileşeni bulunamadı. Önce canvas\'a ekleyin.', 'warning');
+    showToast('Tork Konvertörü bileşeni yok.', 'warning');
     return;
   }
   // TC bileşenine preset yükle
@@ -1208,7 +1207,7 @@ function ecmExpandChart(nodeId) {
   
   // Motor verisini bağlantı üzerinden bul
   var engineNode = findConnectedEngine(nodeId);
-  if(!engineNode) { showToast('Motor bileşeni bağlı değil — lütfen giriş portunu Motor çıkışına bağlayın', 'warning'); return; }
+  if(!engineNode) { showToast('Motor bileşeni bağlı değil.', 'warning'); return; }
   
   var torqueData = engineNode.data.torqueData || [];
   var motorSpecs = engineNode.data.motorSpecs || {};
@@ -1621,7 +1620,7 @@ function ecmDrawModalChart() {
     ctx.fillStyle = veThemeRgba('--accent-primary', isDark ? 0.25 : 0.15, 'rgba(59,130,246,0.15)');
     ctx.font = veThemeFont('body');
     ctx.textAlign = 'right';
-    ctx.fillText('' + veSayi(_ecmZoom.scale, 1) + '× — scroll ile yakınlaştırın, tıklayarak sıfırlayın', ml + pw - 4, mt + 14);
+    ctx.fillText('' + veSayi(_ecmZoom.scale, 1) + '× · tık: sıfırla', ml + pw - 4, mt + 14);
   }
   
   // Store data for interaction — paylaşılan bağlam sözleşmesi (bkz. dosya başı).
