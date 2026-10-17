@@ -64,6 +64,7 @@ describe('kural', () => {
     ['Coast-Down Parametreleri', 'Coast-Down parametreleri'], // tireli terimin bütünü (8·A)
     ['Yakınsama · Newton-Raphson', 'Yakınsama · Newton-Raphson'],   // kişi adları
     ['Otomatik → Lineer', 'Otomatik → Lineer'],               // ok sonrası sonucun adı
+    ['Çevrim boş · Sürücü kasnak › Çevrim', 'Çevrim boş · Sürücü kasnak › Çevrim'],  // yol ayracı: her parça bir ad
     ['Efektif Çap', 'Efektif Çap'],                           // defter sütunu
     ['3 · Otomatik Gergi', '3 · Otomatik Gergi'],             // sihirbazın gergi adı
     ['Motor Devri – Araç Hızı', 'Motor devri – Araç hızı'],   // " – " iki büyüklüğü ayırır

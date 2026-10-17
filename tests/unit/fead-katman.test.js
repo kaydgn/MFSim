@@ -331,9 +331,10 @@ describe('panel', () => {
     expect([...kap3.querySelectorAll('.ve-fead-kat-islem.onayar button.is-acik')]
       .map((b) => b.textContent)).toEqual(['Geometri']);
     fead.VE_FEAD_KATMANLAR.forEach((K) => expect(h).toContain(K.t));
-    // Kişiselleştirmenin ne olduğu panelde YAZILI — yoksa kullanıcı ayarın
-    // bütün kartları mı yoksa bu kartı mı bağladığını deneyerek öğrenirdi.
-    expect(h).toMatch(/yalnız bu karta/i);
+    // Panel açıklama TAŞIMAZ (ARAYÜZ ANLATMAZ); seçimin kart başına olduğunu
+    // kılavuz anlatır. Satırlar ve ön ayarlar yalnız adlarıyla.
+    expect(h).not.toMatch(/ve-fead-kat-not|yalnız bu karta/i);
+    expect(h).not.toMatch(/<label class="ve-fead-kat-sat[^"]*" title=/);
   });
 
   test('AÇIK ama o an ÇİZİLMEYEN katman sebebini söylüyor', () => {

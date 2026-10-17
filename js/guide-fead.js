@@ -1085,7 +1085,7 @@ function _gfSec4(){
     ['<strong>Rozet</strong> (kartın sağ üstü)', '<strong>✓ Σsarım</strong> · kasnak sayısı · '
       + '<strong>L</strong> (efektif boy)',
       '<strong>Σsarım 360,0° olmak zorundadır.</strong> Değilse rozet arızanın cümlesini yazar '
-      + '(<em>Kayış yolu KAPANMIYOR</em>, <em>Kayış kasnağın İÇİNDEN geçiyor</em>)'],
+      + '(<em>Kayış yolu kapanmıyor</em>, <em>Kayış kasnağın içinden geçiyor</em>)'],
     ['<strong>Gergi sonda değil</strong> (başlık şeridi)', 'Yalnız kural kırıkken belirir',
       'Sıra sürücüyle başladığına göre gergi son satır olmalı (Bölüm 5)'],
     ['<strong>Profil · marka</strong> ve <strong>SERBEST / SABİT</strong> (başlık şeridi)',
@@ -1188,7 +1188,7 @@ function _gfSec5(){
   h += _gfAlanTablo('Kapanış denetimi', [
     ['Kayış Yolu kartı — sağ üst rozet', '✓/✗ Σsarım · kasnak sayısı · L (efektif boy) · kord',
       'Σsarım <strong>360,0°</strong> olmak zorunda; ✗ ise sebebini yazar (“Kayış yolu '
-      + 'KAPANMIYOR”, “Kayış kasnağın İÇİNDEN geçiyor”)'],
+      + 'kapanmıyor”, “Kayış kasnağın içinden geçiyor”)'],
     ['Pencerelerin sağ sütunu', '<em>Çevrim kapalı</em> kapısı · Σ',
       'Aynı çözümden; değerlendirilemiyorsa gri']
   ], ['Nerede', 'Ne yazar', 'Kural']);
@@ -1666,7 +1666,7 @@ function _gfSec9(){
     + 'hız oranları bütün gerilmeleri <strong>%17</strong> düşürüyordu. Hiçbir yüzey artık '
     + 'elle oran sormaz. '
     + 'Elinizde o kipte kurulmuş <em>eski bir model</em> varsa panel onu bir kez daha '
-    + 'gösterir ve “ESKİ KAYIT” diye işaretler — düzeni değiştirdiğinizde satır bir daha '
+    + 'gösterir ve “eski kayıt” diye işaretler — düzen değişince satır bir daha '
     + 'görünmez.');
   h += _gfAdimlar([
     'Düzeninize uyan seçeneği seçin.',
@@ -1860,9 +1860,9 @@ function _gfSec10(){
   h += _gfNot('Varsayılan alanın DEĞERİ olarak yazılıdır — yanında bir “i” durur',
       'Bu alanlar <strong>boş görünmez</strong>: alanda varsayılan sayının kendisi yazılıdır '
     + 've yanındaki <strong>i</strong> düğmesi kaynağını söyler: varsayılanın nereden '
-    + 'geldiğini yazar, ardından “<em>Alan boş kaldıkça hesaba bu değer girer.</em>” '
-    + 'Üstüne yazdığınızda ipucu “<em>Girilen değer — hesaba bu giriyor.</em>” olur; alanı '
-    + '<strong>boşaltırsanız varsayılan değer geri gelir</strong>. Bir dönem bu alanlar boş '
+    + 'geldiğini yazar; alan boş kaldıkça hesaba bu değer girer. '
+    + 'Üstüne yazılınca ipucu “<em>Girilen değer</em>” olur; alan '
+    + '<strong>boşaltılınca varsayılan değer geri gelir</strong>. Bir dönem bu alanlar boş '
     + 'bırakılıyordu ve soluk bir yer tutucu gösteriyordu: sayının hesaba katıldığı '
     + 'okunamıyordu. Model <strong>yine de</strong> boş kalır — “girdim” ile “varsayıldı” '
     + 'ayrımını artık alanın boşluğu değil <em>bu rozet</em> taşır.');
@@ -1944,7 +1944,7 @@ function _gfSec11(){
     ['Kasnak içi ok', 'Dönüş yönü (sırttan temas edende ters döner)'],
     ['Yeşil artı ve kesikli çizgi', 'Gerginin <strong>montaj konumu</strong> ve kolu'],
     ['Yön gülü', 'Açı konvansiyonu — sürüklenebilir, çift tıkla varsayılana döner'],
-    ['Soluk gri yollar', 'Kolun gezdiği diğer konumlar (“TÜMÜ” kipinde)'],
+    ['Soluk gri yollar', 'Kolun gezdiği diğer konumlar (“Tümü” kipinde)'],
     ['Üst künye', 'Çizilen konumun adı · kol açısı · gerginlik. <strong>Kasnak künye '
       + 'tablosu kartta değildir</strong> — ad · Ø · sarım · devir · güç sütunlarını '
       + 'Kayış Tablosu yazıyor, aynı sayıyı iki yüzeyde tutmamak için kalktı'],

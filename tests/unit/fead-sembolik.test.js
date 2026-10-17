@@ -308,8 +308,9 @@ describe('KANVAS KARTI — çözülmeyen model ÇİZİLİR, kart Çizim Masası 
     const h = d.querySelector('g[data-ve="hit"] circle[data-fead-k="' + ac.id + '"]');
     expect(h).not.toBeNull();
     expect(h.getAttribute('data-yok')).toBe('1');
-    expect(h.querySelector('title').textContent).toContain('çizime sürükle');
-    expect(d.querySelector('[data-ve="sem-bekleyen"] text').textContent).toBe('konum yok — çizime sürükle');
+    // Etkileşim ipucu kısayol dilinde (ARAYÜZ ANLATMAZ): "sürükle: konum ver".
+    expect(h.querySelector('title').textContent).toContain('sürükle: konum ver');
+    expect(d.querySelector('[data-ve="sem-bekleyen"] text').textContent).toBe('konum yok · sürükle: konum ver');
   });
 
   test('seçili kasnak işaretli — şeritte de; rapor çizimi katman taşımaz', () => {

@@ -327,8 +327,7 @@ describe("İPUCU — 'i' metni ve varsayılan AYNI örneklemden", () => {
     const idx = () => { const b = kopru(); return b.sys.pulleys[b.order.findIndex((x) => x.id === 'ex-A_C')]; };
     expect(el().getAttribute('data-kaynak')).toBe('varsayilan');
     expect(el().querySelector('input').value).toBe(String(D.inertiaKgM2['fead-ac']));
-    expect(ib().getAttribute('data-ipucu')).toBe('Varsayılan — ' + veFeadVarsayilanKaynagi('fead-ac')
-      + '. Alan boş kaldıkça hesaba bu değer girer.');
+    expect(ib().getAttribute('data-ipucu')).toBe('Varsayılan — ' + veFeadVarsayilanKaynagi('fead-ac') + '.');
     expect(ib().getAttribute('aria-label')).toBe(ib().getAttribute('data-ipucu'));
 
     veFeadVarsayilanSet('ex-A_C', 'inertia', '0.0123', 'ex-A_C');

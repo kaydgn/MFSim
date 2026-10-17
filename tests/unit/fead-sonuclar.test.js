@@ -149,7 +149,7 @@ describe('KUSUR 2 · sonuç hangi modele ait — model değişince BAYAT', () =>
     expect(Math.abs(yeni - eski) / eski).toBeGreaterThan(0.05);
     // Çözücü penceresi bunu SÖYLER.
     const h = fead.getFeadSolverPropertiesHTML(sv);
-    expect(h).toMatch(/BAYAT — model değişti/);
+    expect(h).toMatch(/>Model değişti</);
     expect(h).toMatch(/Model çözümden sonra değişti/);
   });
 
@@ -454,18 +454,18 @@ describe('diyagram yorumu — sayı modelden, genel geçer metin yok', () => {
     const tA = ds.channels.filter((c) => /\.T$/.test(c.id)).map((c) => c.id);
     const gerg = B.forLane(ds, R, tA).paras.join('\n');
     const tek = B.forLane(ds, R, [tA[0]]).paras.join('\n');
-    expect(devir).toMatch(/DAYATILMIŞ/);
-    expect(gerg).not.toMatch(/DAYATILMIŞ/);
-    expect(gerg).toMatch(/Gerilme ÇİZİLEN/);
-    expect(devir).not.toMatch(/Gerilme ÇİZİLEN/);
-    expect(tek).not.toMatch(/Gerilme ÇİZİLEN/);
+    expect(devir).toMatch(/dayatılmış/);
+    expect(gerg).not.toMatch(/dayatılmış/);
+    expect(gerg).toMatch(/Gerilme çizilen/);
+    expect(devir).not.toMatch(/Gerilme çizilen/);
+    expect(tek).not.toMatch(/Gerilme çizilen/);
   });
   test('kayış verisi kapalıyken senaryonun frekans şeridi frekansın NEDEN olmadığını söyler', () => {
     const { R } = coz('AG00976_GATES_2025', 'none');
     const ds = kume(R, 'senaryo');
     const son = S.presets(R.signals).find((p) => p.k === 'sen').lanes.slice(-1)[0];
     expect(son).toEqual(['fire']);
-    expect(B.forLane(ds, R, son).paras.join('\n')).toMatch(/Açıklık frekansları ÜRETİLMİYOR/);
+    expect(B.forLane(ds, R, son).paras.join('\n')).toMatch(/Açıklık frekansları üretilmiyor/);
   });
   test('kol ön ayarı: her şerit KENDİ kanalının sayısını Mean\'de okur', () => {
     const { R } = coz();
@@ -540,8 +540,8 @@ describe('yorum TEKRAR ETMEZ — hazır diyagram, "Ayır" ve tek şerit düzenle
   const GENEL = [/^Gergi ankrajı/, /^Kaymamak için gereken/, /^İstenen servis faktörü/,
     /^Yalnız YÜK TAŞIYAN/, /gergin tarafında/, /^Burulma modeli KALİBRE/, /^Frekans merkezkaç payıyla/,
     /^Açıklık frekansları \*\*çizilmiyor/, /^Açıklık gerginlikleri çevrim boyunca/, /^Rampa /,
-    /DAYATILMIŞ/, /^Marş devri/, /^İvme girilmemiş/, /^Gergi kolu dinamiği/, /^Gerilme ÇİZİLEN/,
-    /^Açıklık frekansları ÜRETİLMİYOR/];
+    /dayatılmış/, /^Marş devri/, /^İvme girilmemiş/, /^Gergi kolu dinamiği/, /^Gerilme çizilen/,
+    /^Açıklık frekansları üretilmiyor/];
   const genel = (ds, R, lanes) => {
     const out = {};
     lanes.forEach((L) => (B.forLane(ds, R, L) || { paras: [] }).paras.forEach((p) => {

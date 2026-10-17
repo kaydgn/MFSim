@@ -45,7 +45,7 @@ function _feadResState(R) {
 // Sonuç durumu çipi. Sözlük: ok · warn · no · off · info — KPI kartlarıyla aynı.
 var VE_FEAD_RES_DURUM = {
   guncel:     { d: 'ok',   t: 'Güncel' },
-  bayat:      { d: 'warn', t: 'Bayat — model değişti' },
+  bayat:      { d: 'warn', t: 'Model değişti' },
   kayip:      { d: 'off',  t: 'Modeli projede yok' },
   bilinmiyor: { d: 'info', t: 'Son çözüm' },
   hata:       { d: 'no',   t: 'Çözüm hatası' },
@@ -130,7 +130,7 @@ function veFeadResTreeTopHTML() {
     + '<button type="button" class="ve-trace-btn ve-fr-tree-btn" onclick="veFeadResSummaryOpen()"'
     + ' title="Kasnak, çevrim, gergi, burulma, tepe yük ve uygunluk tabloları">'
     + '<span class="mf-ico mf-ico-clipboard"></span>Özet</button></div>'
-    + (st.k === 'bayat' ? '<div class="ve-fr-tree-uyari">Model çözümden sonra değişti — yeniden hesaplayın.</div>' : '')
+    + (st.k === 'bayat' ? '<div class="ve-fr-tree-uyari">Model çözümden sonra değişti.</div>' : '')
     + '</div>';
 }
 

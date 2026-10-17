@@ -79,7 +79,7 @@ describe('devir geçmişi — DAYATILMIŞ, ve bunu söylüyor', () => {
   // marş devrini ve yavaşlamayı ölçülmüş sanardı.
   test('dayatılan üç şey notlarda AÇIKÇA yazılı', () => {
     const n = TR.veFeadScenarioBuild(kur(), {}).notlar.join(' | ');
-    expect(n).toMatch(/DAYATILMI[ŞS]/);
+    expect(n).toMatch(/dayatılmış/);
     expect(n).toMatch(/marş|Marş/);
     expect(n).toMatch(/gergi kolu dinamiği/i);
   });
@@ -120,7 +120,7 @@ describe('rampa ŞEKLİ — motorun kendi tork eğrisinden', () => {
   test('eğri YOKSA rampa doğrusal ve kart bunu YAZAR', () => {
     const scn = TR.veFeadScenarioBuild(kur({ engineLib: '' }), {});
     expect(scn.egri).toBe(false);
-    expect(scn.notlar.join(' ')).toMatch(/DO[ĞG]RUSAL/);
+    expect(scn.notlar.join(' ')).toMatch(/Rampa doğrusal/);
     const acc = scn.ph.find((p) => p.k === 'accel');
     const ic = [];
     for (let i = 15; i <= 85; i += 10)
@@ -256,7 +256,7 @@ describe('gerilme — çekirdekle BİREBİR, animatörde yeniden kurulur', () =>
     const gergin = TR.veFeadScenarioBuild(build, { relDeg: mean });
     expect(TR.veFeadScnStateAt(gevsek, 0).spanN[0])
       .toBeLessThan(TR.veFeadScnStateAt(gergin, 0).spanN[0]);
-    expect(gevsek.notlar.join(' ')).toMatch(/ÇİZİLEN kol konumunun/);
+    expect(gevsek.notlar.join(' ')).toMatch(/çizilen kol konumunun/);
   });
 });
 

@@ -109,14 +109,22 @@ function sozcukSay(t) {
     .filter((p) => /^\p{L}[\p{L}'’-]*$/u.test(p) && p.length >= 2).length;
 }
 
+// Etkileşim ipucu kısayol penceresinin dilinde bir AD'dır, tarif değil
+// (CLAUDE.md → arayüz metninin yazımı): "Sağ tık + sürükle: kaydır",
+// "tıkla: penceresini aç". Hareketten iki noktaya, ayraca (· ; —) kadar olan
+// parça tarif ve uzunluk sayımından düşülür; cümle içindeki emir sayılır.
+const ETKILESIM = /(?<![\p{L}\p{N}_])(?:çift tık|sağ tık|tıkla|sürükle|tekerlek|esc|enter)(?:\s*\+\s*(?:sürükle|tıkla))?\s*:\s*[^·;—\n]*/gu;
+
 function isaretle(metin, profil) {
   const kucuk = metin.toLocaleLowerCase('tr');
-  const n = sozcukSay(metin), out = [];
+  const sade = kucuk.replace(ETKILESIM, ' ');
+  const n = sozcukSay(metin), ns = sozcukSay(sade), out = [];
   for (const k of PROFIL_ISARET[profil]) {
-    if (k === 'uzun') { if (n >= ESIK) out.push(k); continue; }
-    if (k === 'tarif' && n < 4) continue;
+    if (k === 'uzun') { if (ns >= ESIK) out.push(k); continue; }
+    if (k === 'tarif' && ns < 4) continue;
     const res = SOZLUK[k];
-    if (res.some((re) => { re.lastIndex = 0; return re.test(kucuk); })) { out.push(k); continue; }
+    const hedef = (k === 'tarif') ? sade : kucuk;
+    if (res.some((re) => { re.lastIndex = 0; return re.test(hedef); })) { out.push(k); continue; }
     if (k === 'gelistirme' && /\p{Ll}/u.test(metin)) {
       // Baştaki iki ve daha çok büyük harfli sözcük bir başlıktır ("TEKERLEK GÜCÜ (ortalama)").
       const govde = metin.replace(/^[\s‹›(\[]*(?:[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9.\-–/]*[\s:—–·-]+){2,}/u, '');

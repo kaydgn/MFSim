@@ -214,7 +214,7 @@ describe('durum — pencere hesaplamaz, modülün çağrılarından okur', () =>
       .map((t, i) => ({ id: 'b' + i, type: t, def: componentDefs[t], data: {} }));
     const d = AR.veFeadAraclarDurum();
     expect(d.hazir).toBe(false);
-    expect(d.neden).toMatch(/Henüz kasnak yok/);
+    expect(d.neden).toBe('Kasnak yok.');
     const g = govde();
     const h = g.querySelector('[data-bol="cozum"] [data-ey="hesapla"]');
     // `disabled` DEĞİL: devre dışı düğme ipucunu göstermez, sebep okunamazdı.
@@ -335,7 +335,7 @@ describe('eylemler — hepsi modülün var olan çağrılarına gider', () => {
       global.nodes = global.nodes.filter((n) => !(componentDefs[n.type] || {}).isFeadPulley);
       expect(AR.veFeadAracEylem('hesapla')).toBe(false);
       expect(s.c).not.toHaveBeenCalled();
-      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/kasnak/), 'warning');
+      expect(stubs.showToast).toHaveBeenCalledWith('Kasnak yok.', 'warning');
     } finally { s.geri(); }
   });
 
@@ -384,7 +384,7 @@ describe('eylemler — hepsi modülün var olan çağrılarına gider', () => {
     try {
       expect(AR.veFeadAracEylem('indir')).toBe(false);
       expect(r.c).not.toHaveBeenCalled();
-      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/önce modeli hesaplayın/), 'warning');
+      expect(stubs.showToast).toHaveBeenCalledWith('Rapor için çözüm yok.', 'warning');
       global.veFeadResults = { ok: true, solvedNodeId: tip('fead-solver').id };
       expect(AR.veFeadAracEylem('indir')).toBe(true);
       expect(r.c).toHaveBeenCalledWith(tip('fead-report').id);
@@ -439,7 +439,7 @@ describe('YENİ KANVAS — sıranın sağına, tek geri-al adımı', () => {
       expect(global.createNode).toHaveBeenCalledWith('fead-layout', 3664 + 440 + 24, 2760);
       expect(batch.c).toHaveBeenCalledTimes(1);
       expect(fit.c).toHaveBeenCalledTimes(1);
-      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/Kayış Yolu kanvası eklendi/), 'success');
+      expect(stubs.showToast).not.toHaveBeenCalled();     // kart ekranda; bildirim tekrar olurdu
     } finally { batch.geri(); fit.geri(); delete global.createNode; }
   });
 
@@ -571,7 +571,7 @@ describe('NOT ARAÇLARI — pencerede; tık görünür yere, sürükleme annotat
       expect(global.clearSelection).toHaveBeenCalled();
       expect(global.clearAnnotationSelection).toHaveBeenCalled();
       expect(global.selectAnnotation).toHaveBeenCalledWith(o.kurulan[0]);
-      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/Gruplama çerçevesi eklendi/), 'success');
+      expect(stubs.showToast).not.toHaveBeenCalled();     // not tuvalde görünüyor; bildirim tekrar olurdu
       // Yazı kartların sol üstünün ÜSTÜNE; az önceki çerçevenin üst bandı
       // (etiketi) altında kalır: y = (çerçeve.y − 12) − 30 − 12.
       AR.veFeadAracEylem('not', 'text');
@@ -738,7 +738,7 @@ describe('DOM — kapsam, yuva, olay, tazeleme', () => {
       el().querySelector('.ve-fead-arac-govde [data-ey="yon"]').click();   // yön yok → pasif
       expect(t.c).not.toHaveBeenCalled();
       el().querySelector('.ve-fead-arac-govde [data-ey="hesapla"]').click();
-      expect(stubs.showToast).toHaveBeenCalledWith(expect.stringMatching(/kasnak/), 'warning');
+      expect(stubs.showToast).toHaveBeenCalledWith('Kasnak yok.', 'warning');
     } finally { t.geri(); }
   });
 

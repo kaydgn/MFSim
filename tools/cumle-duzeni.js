@@ -92,10 +92,11 @@ function cumle(t) {
   let bas = true;
   s = s.replace(/(\S+)(\s*)/g, (tam, w, bosluk) => {
     // " – " iki büyüklüğü ayırır ("Motor devri – Araç hızı"); ok da
-    // ("Otomatik → Lineer": sonucun adı).
+    // ("Otomatik → Lineer": sonucun adı); yol ayracı da ("Sürücü kasnak › Çevrim":
+    // her parça bir yüzeyin adı).
     // "+" bir ikon değil bağlaçtır ("Sağ tık + sürükle"); başta durunca ("+ Satır ekle")
     // zaten harf taşımadığı için bölüt başını bozmaz.
-    if (/^[—–:·|│→⇒]$/.test(w) || /^[▶▷►✓✔✗✕⚠●○↓↑⚙★☆📄]+$/u.test(w)) { bas = true; return w + bosluk; }
+    if (/^[—–:·|│→⇒›]$/.test(w) || /^[▶▷►✓✔✗✕⚠●○↓↑⚙★☆📄]+$/u.test(w)) { bas = true; return w + bosluk; }
     if (/^[“"]/.test(w)) bas = true;                          // tırnak içindeki ad kendi bölütüdür
     // Tireli birleşik kelime de parçalanır ("Kayış-Kasnak"); bütünü bir terimse ("Coast-Down") kalır.
     const butun = w.replace(/^[(“"']+|[.,)”"':;]+$/g, '');

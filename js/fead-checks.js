@@ -177,7 +177,7 @@ function veFeadCheckRatioWindow(build, opt){
     });
   }
   if(!out.rows.length){
-    out.note = 'Devir penceresi bilinen aksesuar yok (katalogdan seçin ya da sınırları elle girin).';
+    out.note = 'Devir penceresi bilinen aksesuar yok.';
     return out;
   }
   out.ok = out.rows.every(function(r){ return r.ok; });

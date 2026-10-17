@@ -152,7 +152,7 @@ describe('üç yüzey AYNI hükmü verir — çözüm · pencere · panel', () =
     kur();
     const d = AR.veFeadAraclarDurum();
     expect(d.hazir).toBe(false);
-    expect(d.neden).toBe('Motor künyesi eksik: rölanti devri · governed devri — sürücü kasnağın “Motor” sekmesinden tamamlayın.');
+    expect(d.neden).toBe('Motor künyesi eksik: rölanti devri · governed devri · Sürücü kasnak › Motor');
     const h = AR.veFeadAraclarGovdeHTML(d);
     expect(h).toMatch(/data-ey="hesapla" aria-disabled="true"/);
     motorTamamla(sv().data);
@@ -170,12 +170,12 @@ describe('üç yüzey AYNI hükmü verir — çözüm · pencere · panel', () =
     };
     kur();
     const surucu = global.nodes.find((n) => n.data && n.data.driver);
-    const pencereOf = { 'aksesuarın': tip('fead-alternator'), 'sürücü kasnağın': surucu };
-    // Her tırnaklı sekme SAHİBİYLE yazılır ve o pencerede bulunur.
+    const pencereOf = { 'Aksesuar': tip('fead-alternator'), 'Sürücü kasnak': surucu };
+    // Yer bir YOL VERİSİ — "· Sahip › Sekme" — ve o pencerede bulunur; tarif yok.
     const denetle = (s) => {
-      const y = [...s.matchAll(/(aksesuarın|sürücü kasnağın) “([^”]+)”/g)];
-      expect(y.length).toBeGreaterThan(0);
-      expect(y.length).toBe((s.match(/“[^”]+”/g) || []).length);
+      const y = [...s.matchAll(/ · (Aksesuar|Sürücü kasnak) › (\S+)$/g)];
+      expect(y.length).toBe(1);
+      expect(s).not.toMatch(/girin|tamamlayın|seçin/);
       y.forEach(([, sahip, ad]) => expect(sekmeAdlari(pencereOf[sahip])).toContain(ad));
     };
     let d = AR.veFeadAraclarDurum();
