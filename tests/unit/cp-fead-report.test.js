@@ -1241,12 +1241,11 @@ describe('teori kaynağı — türetme ve ankraj', () => {
     expect(T).toMatch(/\(4\.7\)/);
     // (4.7) YÖNÜ: p = c − a(cosθ, sinθ) — TERSİ değil
     expect(T).toMatch(/\\mathbf\{p\} \\;=\\; \\mathbf\{c\} \\;-\\;/);
-    // fiziksel gerekçe ve ölçülen sınır BASILMAK ZORUNDA
+    // fiziksel sebep (paketleme) ve tedarikçi bandı basılır; seçim ölçütünün
+    // geçmişi (yazılımın davranışı, test ölçümü) belgede değil, FEAD skill'inde
     expect(T).toMatch(/paketleme/);
     expect(T).toMatch(/42,5…60,1/);                       // β bandı
-    expect(T).toMatch(/2<\/strong> ±5° içinde|<strong>ikisini<\/strong>/);  // ölçütün çöküşü
-    expect(T).toMatch(/20,7/);
-    expect(T).toMatch(/24,1/);                            // platonun genişlemesi
+    expect(T).not.toMatch(/Bir dönem program|<strong>çöktü<\/strong>|20,7°|24,1°/);
   });
 
   test('MONTAJ ZARFI KALKTI — belge artık bir seçim ölçütü anlatmıyor', () => {

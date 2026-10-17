@@ -12,6 +12,8 @@
  *   · pencere kartlarının alt satırı ("hangi belge indirilecek")
  *   · belgede yazılımın test ölçümü ve pencereye yönlendirme
  *   · "Uygunluk kapıları" (geliştirme dili) → "Uygunluk kriterleri"
+ *   · teori şablonu (aşama 11b): taban64 gömülü olduğu için cırcır görmüyor;
+ *     düz metni dosyanın sonundaki blokta taranır
  */
 const fs = require('fs');
 const path = require('path');
@@ -80,5 +82,60 @@ describe('"Uygunluk kapıları" emekli: kullanıcıya görünen ad "Uygunluk kri
     expect(oku('js/cp-fead.js')).toMatch(/_feadCard\('Uygunluk kriterleri'/);
     expect(oku('js/cp-fead-wizard.js')).toMatch(/_fwCard\('Uygunluk kriterleri'/);
     expect(oku('js/cp-fead-results.js')).toMatch(/_feadResSec\('Uygunluk kriterleri'/);
+  });
+});
+
+// ── Teori şablonu (aşama 11b) ─────────────────────────────────────────────
+// Şablon js/fead-report-template.js'e taban64 gömülü: cırcır onu görmüyor.
+// Düz metni ortak yardımcıyla taranır (Takoz kapısıyla AYNI ölçüt). Yazılımın
+// davranışı ("köprü katmanı … yazar", "panelde aç/kapa, kanvasta rozet"),
+// geliştirme geçmişi ("Bir dönem program bu açıyı seçiyordu"), test ölçümü
+// ("SEÇİCİ değildir — ölçüldü … 14/14"), okuyucuya iş ("Nasıl okunmalı",
+// "karıştırılmamalıdır") ve büyük harfle vurgu girmez.
+const TS = require('../helpers/teori-sablon.js');
+const sablon = () => TS.sablon('js/fead-report-template.js', 'FEAD_REPORT_TEMPLATE_B64');
+
+// Kaynak düzenlenip şablon yeniden üretilmezse teslim edilen belge sessizce
+// bayat kalır (Takoz şablonunun aynı kapısı: mount-rapor-doku.test.js → ŞABLON).
+describe('ŞABLON — gömülü şablon kaynağıyla taze', () => {
+  test('tools/report-assets/fead-theory-source.html → js/fead-report-template.js (üreteç belirlenimci)', () => {
+    const os = require('os');
+    const { execFileSync } = require('child_process');
+    const gecici = path.join(os.tmpdir(), 'fead-sablon-' + process.pid + '.js');
+    try {
+      execFileSync(process.execPath, [path.join(ROOT, 'tools/report-assets/build-fead-report-template.js'),
+        path.join(ROOT, 'tools/report-assets/fead-theory-source.html'), gecici], { stdio: 'pipe' });
+      // BAYATSA: npm run build:fead-report
+      expect(fs.readFileSync(gecici, 'utf8') === oku('js/fead-report-template.js')).toBe(true);
+    } finally { try { fs.unlinkSync(gecici); } catch (e) { /* yok */ } }
+  });
+});
+
+describe('teori şablonu yazılımı anlatmaz (aşama 11b)', () => {
+  test('düz metin ve Ek A yorumları: yazılım davranışı, geçmiş, test ölçümü, okuyucuya iş yok', () => {
+    expect(TS.yasakBulgulari(sablon())).toEqual([]);
+  });
+
+  test('büyük harfle vurgu yok (kısaltma ve Ek A kodu hariç)', () => {
+    expect(TS.buyukHarfBulgulari(sablon(), ['FEAD'])).toEqual([]);
+  });
+
+  test('§4.1 girilen koordinatı 2026-09-01 tanımıyla söyler: avara kasnağının merkezi', () => {
+    const t = sablon();
+    expect(t).toContain('Girilen koordinat avara kasnağının merkezidir');
+    expect(t).not.toMatch(/Girilen koordinat gövdenin montaj noktasıdır/);
+    expect(t).not.toMatch(/gerginin <strong>tek<\/strong> koordinatıdır/);
+  });
+
+  test('kapı düşebiliyor: eski metinler yakalanır', () => {
+    ['(4.9) bir seçici değildir — ölçüldü', 'Bir dönem program bu açıyı bir ölçütten seçiyordu',
+     'köprü katmanı montaj konumunu (4.7) ile ondan türetip buraya yazar', 'Nasıl okunmalı',
+     'hem panelde açık bir aç/kapa hem de kanvasta bir rozet olarak gösterilir',
+     'Bu rapor, projede tanımlı FEAD modelinden otomatik üretilmiştir', 'İki büyüklük karıştırılmamalıdır.',
+     'Bu bir kapıdır, bir sonuç değil']
+      .forEach((m) => expect(TS.TEORI_YASAK.test(m)).toBe(true));
+    expect(TS.TEORI_YASAK.test('Kapalı çevrim değişmezi')).toBe(false);
+    expect(TS.TEORI_YASAK.test('kalibre edilmiştir')).toBe(false);
+    expect(TS.buyukHarfBulgulari('<p>Bu, sistemin burulma modu DEĞİLDİR</p>', [])).toEqual(['DEĞİLDİR']);
   });
 });

@@ -326,6 +326,9 @@ sebebi). Başka hiçbir şey yazılmaz:
   (`node tools/metin-dili.js --taban`). Tabana yeni kayıt yalnız kullanıcının
   "kalsın" kararıyla `--kabul` bayrağıyla girer. İşaret bir hüküm değil
   adaydır; sözlüğün görmediği açıklama da bu kurala tabidir.
+  Rapor teori şablonları (`js/*-report-template.js`) taban64 gömülü: cırcır
+  onları görmez; düz metinleri `tests/helpers/teori-sablon.js` ile rapor
+  kapılarında taranır.
 - **Temizlik aşama aşama ve kullanıcının kararıyla yürür.** Her aşamanın
   başında bulunan metinler bir Artifact karar tahtasında sunulur (Kaldır ·
   Yeni metin · Kalsın). Kararlar tahtanın `db`sinden okunur ve uygulanır.
