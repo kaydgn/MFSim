@@ -173,7 +173,7 @@ function veCollectValidation() {
   }
 
   if(hasTerminator && terminatorConnected) {
-    addInfo('Kısmi Analiz Modu — Sonlandırıcı tespit edildi, zincir sonlandırıcıya kadar hesaplanacak');
+    addInfo('Kısmi analiz: zincir sonlandırıcıya kadar');
     if(hasGearbox) addItem(true, 'Şanzıman bileşeni', 'mevcut');
     if(hasWheel) addItem(true, 'Tekerlek bileşeni', 'mevcut');
     if(hasVehicle) addItem(true, 'Araç Gövdesi bileşeni', 'mevcut');
@@ -184,7 +184,7 @@ function veCollectValidation() {
     if(typeof veActiveModule !== 'undefined' && veActiveModule !== 'full-throttle') {
       addItem(hasRoad, 'Yol / Eğim bileşeni', hasRoad ? 'mevcut' : 'eksik');
     } else if(hasRoad) {
-      addInfo('Yol / Eğim bileşeni mevcut (opsiyonel — eğim Araç bileşeninden alınır)');
+      addInfo('Yol / Eğim bileşeni mevcut (opsiyonel)');
     }
     if(!hasDiff) addWarn('Diferansiyel bileşeni eksik — varsayılan oran kullanılacak');
   }
@@ -325,7 +325,7 @@ function veRenderValidationCard(res) {
   if(res.allOk) {
     html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--ink-success);font-weight:600;">' + veIkon('check') + ' ' + res.mode + ' - hesaplamaya hazır</div>';
   } else {
-    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--ink-danger);font-weight:600;">' + veIkon('x') + ' Eksikler var - hesaplama yapılamaz</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--ink-danger);font-weight:600;">' + veIkon('x') + ' Eksik var: hesaplama yapılamaz</div>';
   }
   container.innerHTML = html;
 
@@ -367,7 +367,7 @@ function veSolverRun() {
 
   if(!solverNode) {
     if(typeof showToast === 'function') {
-      showToast('Topolojide Çözücü bileşeni yok — önce bir Çözücü ekleyin.', 'error');
+      showToast('Çözücü bileşeni yok.', 'error');
     }
     return;
   }
@@ -488,14 +488,14 @@ function veSolverRunLegacy() {
             if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600;">' + veSayiUstel(ss.dtMin, 2) + ' → ' + veSayiUstel(ss.dtMax, 2) + ' s</td></tr>';
             if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600;">' + veSayiUstel(ss.maxError, 2) + '</td></tr>';
             if(ss.events && ss.events.length > 0) rhtml += '<tr><td>Algılanan olaylar:</td><td style="text-align:right; font-weight:600;">' + ss.events.length + '</td></tr>';
-            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Sertlik uyarısı</td></tr><tr><td colspan="2" style="font-size:var(--fs-tiny); color:var(--ink-danger);">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
+            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Sertlik uyarısı</td></tr><tr><td colspan="2" style="font-size:var(--fs-tiny); color:var(--ink-danger);">Problem sert (stiff) olabilir.</td></tr>';
           }
           
           // Enerji dengesi (tüm yöntemler için)
           if(ss.energyError) {
             var ee = ss.energyError;
             var errColor = ee.error_pct < 0.1 ? '#22c55e' : ee.error_pct < 1.0 ? '#f59e0b' : '#ef4444';
-            var errLabel = ee.error_pct < 0.1 ? 'Mükemmel' : ee.error_pct < 1.0 ? 'Kabul edilebilir' : 'Yüksek — adım sayısını artırın';
+            var errLabel = ee.error_pct < 0.1 ? 'Mükemmel' : ee.error_pct < 1.0 ? 'Kabul edilebilir' : 'Yüksek';
             rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:600; color:var(--text-heading);"><span class="mf-ico mf-ico-zap"></span> Enerji dengesi</td></tr>';
             rhtml += '<tr><td>Hata:</td><td style="text-align:right; font-weight:700; color:' + errColor + ';">%' + veSayi(ee.error_pct, 4) + '</td></tr>';
             rhtml += '<tr><td>Durum:</td><td style="text-align:right; font-weight:600; color:' + errColor + ';">' + errLabel + '</td></tr>';
@@ -513,7 +513,6 @@ function veSolverRunLegacy() {
           rhtml += '</div>';
         }
         
-        rhtml += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center;">Ayrıntılar Sonuçlar sekmesindedir.</div>';
         rhtml += '</div>';
         resultEl.innerHTML = rhtml;
         

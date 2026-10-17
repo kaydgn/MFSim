@@ -71,7 +71,7 @@ const JETON = () => {
   return j;
 };
 
-test('yirmi pencere tek aile: bant, başlık yazısı, kapat, başlık ikonu, köşe, gölge, perde', async ({ page }) => {
+test('on dokuz pencere tek aile: bant, başlık yazısı, kapat, başlık ikonu, köşe, gölge, perde', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1032 });
   page.on('dialog', (d) => d.accept());
   await page.goto('file://' + BUILD);
@@ -126,7 +126,6 @@ test('yirmi pencere tek aile: bant, başlık yazısı, kapat, başlık ikonu, k�
   await ac('Harita', `veExpandRoadMap('${yol}')`, { kok: '#ve-map-modal-overlay', kab: '#ve-map-modal-overlay > div', perde: '#ve-map-modal-overlay' }, 'veCloseMapModal(); veTogglePropertiesPanel(false)');
   await ac('Referans noktası', `_veWaypointNameDialog('${yol}', 1234, function () {})`, { kok: '#ve-wp-name-dialog', kab: '#ve-wp-name-dialog .ve-mini-pencere', perde: '#ve-wp-name-dialog' }, "document.getElementById('ve-wp-name-dialog').remove()");
   await ac('Farklı kaydet', "veShowSaveDialog('proje.json', new Blob(['{}']), 'ok')", { kok: '#ve-save-dialog-overlay', kab: '#ve-save-dialog-overlay > div', perde: '#ve-save-dialog-overlay' }, "document.getElementById('ve-save-x').click()");
-  await ac('Diyagram künyesi', 'swShowDiagramInfo(SENSOR_PACKAGES[0].id, 0)', { kok: '#sw-info-overlay', kab: '#sw-info-overlay .ve-mini-pencere', perde: '#sw-info-overlay' }, "document.getElementById('sw-info-overlay').remove()");
   await ac('TXT rapor indir', "window._veTxtPreviewContent = 'deneme'; veDownloadTXTFromPreview()", { kok: '#ve-txt-author-overlay', kab: '#ve-txt-author-overlay .ve-mini-pencere', perde: '#ve-txt-author-overlay' }, "document.getElementById('ve-txt-author-overlay').remove()");
   // Takoz'un tam ekran görüntüleyicisi: kimliği '-overlay' ile bitmiyordu, ad
   // listesinden kaçıyordu. three.js tam ekranı 2026-10-16'da kaldırıldı ("Klasik
@@ -156,7 +155,7 @@ test('yirmi pencere tek aile: bant, başlık yazısı, kapat, başlık ikonu, k�
     if (v.golge !== null && v.golge !== J.golge) sapma.push(`${ad}: gölge jetondan değil`);
     if (v.perde !== null && v.perde !== J.perde) sapma.push(`${ad}: perde ${v.perde} (jeton ${J.perde})`);
   }
-  expect(Object.keys(S)).toHaveLength(20);   // "hakkında" bilgi penceresi 2026-10-17'de kalktı (açıklama kılavuzda)
+  expect(Object.keys(S)).toHaveLength(19);   // "hakkında" bilgi penceresi ve diyagram künyesi 2026-10-17'de kalktı
   expect(sapma).toEqual([]);
   expect(kirik).toEqual([]);
 });

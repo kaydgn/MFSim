@@ -14,15 +14,13 @@ var VE_LOG_LIST_CAP = 300;
  * @param {Array}    arr      basılacak kayıtlar
  * @param {function} logFn    log(mesaj, tip) — çağıranın kendi log fonksiyonu
  * @param {function} lineFn   (kayıt, indeks) → satır metni
- * @param {string}   whatNote kesme mesajında geçen açıklama (opsiyonel)
  */
-function veLogCappedList(arr, logFn, lineFn, whatNote) {
+function veLogCappedList(arr, logFn, lineFn) {
   var n = arr.length;
   var shown = Math.min(n, VE_LOG_LIST_CAP);
   for(var i = 0; i < shown; i++) logFn(lineFn(arr[i], i));
   if(n > shown) {
-    logFn('  … ' + veSayi(n - shown, 0) + ' satır daha (toplam ' + veSayi(n, 0) + ') — log okunabilirliği için gizlendi.', 'dim');
-    if(whatNote) logFn('    ' + whatNote, 'dim');
+    logFn('  … ' + veSayi(n - shown, 0) + ' satır daha (toplam ' + veSayi(n, 0) + ')', 'dim');
   }
 }
 
@@ -234,10 +232,10 @@ function veSolverRunProfessional() {
     logSpacer();
     
     if(!hasEngine || !hasSolver) {
-      log('KRİTİK: Motor ve Çözücü bileşenleri zorunludur!', 'err');
+      log('Motor ve Çözücü bileşenleri zorunlu.', 'err');
     }
     if(_scenarioRequired && !hasScenario) {
-      log('KRİTİK: Senaryolar bileşeni bu modülde zorunludur!', 'err');
+      log('Senaryolar bileşeni zorunlu.', 'err');
     }
     
     // Zincir kontrolü
@@ -261,7 +259,7 @@ function veSolverRunProfessional() {
         log('  Şanzıman Kontrol : ✓ Bulundu', 'ok');
       } else {
         log('  Şanzıman Kontrol : ✗ EKSİK', 'err');
-        log('  Tork Konvertörü şanzımana bağlı — Şanzıman Kontrol bileşeni zorunludur!', 'err');
+        log('  Tork Konvertörü şanzımana bağlı: Şanzıman Kontrol zorunlu.', 'err');
       }
       logSpacer();
     }
@@ -616,7 +614,6 @@ function veSolverRunProfessional() {
         var _roadCheck = nodes.find(function(n) { return n.type === 'road'; });
         if(_roadCheck && _roadCheck.data && _roadCheck.data.egimMode === 'segment' && sd.method === 'rk45') {
           log('  ⚠ Segment bazlı modda RK45 → RK4 olarak çalıştırılacak', 'warn');
-          log('    (Mesafe takibi gerektiğinden adaptif adım kullanılamaz)', 'dim');
         }
       
         if(sd.timeMode === 'stop') {
@@ -639,7 +636,6 @@ function veSolverRunProfessional() {
     var sensors = nodes.filter(function(n) { return n.type === 'sensor'; });
     if(sensors.length === 0) {
       log('Topolojide sensör bulunmadı.', 'dim');
-      log('  (Sensörler opsiyoneldir, simülasyon çalışır)', 'dim');
     } else {
       log('Toplam sensör sayısı: ' + sensors.length, 'info');
       logSpacer();
@@ -678,7 +674,7 @@ function veSolverRunProfessional() {
     
     if(errors.length > 0) {
       log('KRİTİK HATA SAYISI: ' + errors.length, 'fatal');
-      log('Simülasyon başlatılamıyor. Lütfen hataları düzeltin.', 'fatal');
+      log('Simülasyon başlatılamıyor.', 'fatal');
       logSpacer();
       setProgress(100, 'Hata — Tamamlanamadı');
       barEl.style.background = 'linear-gradient(90deg,#c62828,#f44336)';
@@ -733,8 +729,8 @@ function veSolverRunProfessional() {
       var _estTime = _totalRouteDist / (_v0 / 3.6);
       log('  Güzergah mesafesi: ' + veSayi(_totalRouteDist/1000, 2) + ' km, Tahmini süre: ~' + veSayi(_estTime, 0) + ' s', 'dim');
       if(sd.timeMode !== 'stop' && simTime < _estTime * 0.8) {
-        log('  ⚠ Simülasyon süresi güzergahı tamamlamak için yetersiz olabilir!', 'warn');
-        log('    Önerilen süre: ' + veSayi(Math.ceil(_estTime * 1.3), 0) + ' s veya "Durma Analizi" kullanın', 'warn');
+        log('  ⚠ Simülasyon süresi güzergah için kısa olabilir.', 'warn');
+        log('    Gereken süre: ~' + veSayi(Math.ceil(_estTime * 1.3), 0) + ' s', 'warn');
       }
     }
     } // end validation
@@ -870,10 +866,9 @@ function veSolverRunProfessional() {
 
         // Adım bütçesi hedef süreye varmadan bittiyse sonuç EKSİKTİR — sessiz kalma.
         if(simResult.solverStats && simResult.solverStats.truncatedByStepBudget) {
-          log('  ⚠ Adım bütçesi doldu: simülasyon ' +
+          log('  ⚠ Adım bütçesi doldu: ' +
               veSayi(simResult.solverStats.simEndTime || 0, 2) + ' s\'de kesildi (hedef ' +
-              veSayi(simResult.solverStats.maxTime || 0) + ' s). Sonuç EKSİK.', 'warn');
-          log('    Δt\'yi büyütün ya da sabit adımlı bir yöntem (RK4) kullanın.', 'warn');
+              veSayi(simResult.solverStats.maxTime || 0) + ' s).', 'warn');
         }
 
         // Segment drive da çalıştıysa çift analiz modunu belirt
@@ -1024,10 +1019,9 @@ function veSolverRunProfessional() {
                 return '  t=' + veSayi(s.t, 2) + 's | ' + s.fromMode + ' → ' + s.toMode
                   + ' | V=' + veSayi(s.v_kmh, 1) + ' km/h | N=' + veSayi(s.N_engine, 0)
                   + ' rpm | SR=' + veSayi(s.SR, 3);
-              }, 'Tam liste için Log İndir düğmesini kullanın.');
+              });
               if(r.solverStats.suppressedHunts > 0) {
-                log('  ⚠ ' + veSayi(r.solverStats.suppressedHunts, 0) + ' vites salınımı (hunt) bastırıldı — ' +
-                    'shift profili şanzıman oranlarıyla tam uyuşmuyor olabilir.', 'warn');
+                log('  ⚠ ' + veSayi(r.solverStats.suppressedHunts, 0) + ' vites salınımı (hunt) bastırıldı.', 'warn');
               }
               if(r.solverStats.reachedMaxSpeed) {
                 log('  ✓ Maks. hız: ' + veSayi(r.solverStats.maxSpeed_kmh, 1) + ' km/h (' + r.solverStats.finalGear + ')', 'ok');
@@ -1044,7 +1038,7 @@ function veSolverRunProfessional() {
               return '  t=' + veSayi(s.t, 2) + 's | ' + s.fromMode + ' → ' + s.toMode
                 + ' | V=' + veSayi(s.v_kmh, 1) + ' km/h | N=' + veSayi(s.N_engine, 0)
                 + ' rpm | SR=' + veSayi(s.SR, 3);
-            }, 'Tam liste için Log İndir düğmesini kullanın.');
+            });
           }
         }
         logSpacer();
@@ -1189,7 +1183,7 @@ function veSolverRunProfessional() {
                   log('  ' + statusIcon + ' ' + s.fromMode + ' → ' + s.toMode + ' @ V=' + veSayi(s.v_kmh || 0, 1) + ' km/h; N=' + veSayi(s.N_engine || 0, 0) + ' rpm [' + shiftType + ']' + statusNote);
                 } else if(_si === VE_LOG_LIST_CAP) {
                   log('  … ' + veSayi(sh.length - VE_LOG_LIST_CAP, 0) + ' satır daha (toplam ' + veSayi(sh.length, 0) +
-                      ') — log okunabilirliği için gizlendi. Doğrulama hepsi için yapıldı.', 'dim');
+                      '); doğrulama hepsinde.', 'dim');
                 }
               });
 
@@ -1236,7 +1230,7 @@ function veSolverRunProfessional() {
             }
             
             if(kinErrors === 0) {
-              log('  ✓ N_output doğrulama: ' + kinChecked + '/' + kinChecked + ' nokta BAŞARILI (maks. sapma: ' + veSayi(maxNoutErr, 1) + ' rpm)', 'ok');
+              log('  ✓ N_output doğrulama: ' + kinChecked + '/' + kinChecked + ' nokta başarılı (maks. sapma: ' + veSayi(maxNoutErr, 1) + ' rpm)', 'ok');
             } else {
               log('  ✗ N_output doğrulama: ' + kinErrors + '/' + kinChecked + ' noktada sapma (maks: ' + veSayi(maxNoutErr, 1) + ' rpm)', 'err');
             }
@@ -1452,11 +1446,11 @@ function veSolverRunProfessional() {
           var hizDeg = simResult.speed[li] - simResult.speed[0];
           log('KUVVET DENGESİ DEĞERLENDİRMESİ:', 'info');
           if(kap0 >= 100 && kapL >= 100) {
-            log('  ✓ Direnç kuvvetleri tüm süre boyunca YETERLİ', 'ok');
+            log('  ✓ Direnç kuvvetleri tüm süre boyunca yeterli', 'ok');
           } else if(kap0 >= 100) {
             log('  ⚠ Direnç kuvvetleri başlangıçta yeterli, sonda yetersiz', 'warn');
           } else {
-            log('  ✗ Direnç kuvvetleri YETERSİZ', 'err');
+            log('  ✗ Direnç kuvvetleri yetersiz', 'err');
           }
           log('  Hız değişimi: ' + (hizDeg >= 0 ? '+' : '') + veSayi(hizDeg, 2) + ' km/h (' + (hizDeg > 0.5 ? 'hızlandı' : (hizDeg < -0.5 ? 'yavaşladı' : 'dengede')) + ')');
           logSpacer();
@@ -1492,14 +1486,11 @@ function veSolverRunProfessional() {
         log('═══════════════════════════════════════════', 'ok');
         if(errors.length === 0 && warnings.length === 0) {
           log('  ✓ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji', 'ok');
-          log('  Herhangi bir sorunla karşılaşılmadı.', 'ok');
         } else if(errors.length === 0) {
           log('  ✓ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji (' + warnings.length + ' uyarı)', 'ok');
-          log('  Hesap başarılı, ancak bazı uyarılar mevcut.', 'warn');
         }
         log('═══════════════════════════════════════════', 'ok');
         log('');
-        log('Detaylı sonuçlar ve diyagramlar Sonuçlar sayfasındadır.', 'dim');
         
         // ── Log İndir butonunu aktifleştir ──
         if(logDlBtn) logDlBtn.style.display = '';
