@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 980,
+ "sayi": 905,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -295,11 +295,6 @@
    "fa81d9d4ba": "Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetl",
    "fdbea1265d": "Önerilen Şanzımanlar (‹›)"
   },
-  "js/cp-mount-3b.js": {
-   "8927d74077": "3B çizim bu tarayıcıda açılamadı (WebGL yok). Rolleri kartın tablosundan verebil",
-   "a6ce58d659": "Rol vermek için modelde bir parçaya tıklayın",
-   "a7e5173b32": "Modelde bir parçaya tıklayın, alttaki diziden rolünü verin"
-  },
   "js/cp-mount-report.js": {
    "0d1eb3470c": "Önce modeli çözün: Çözücü → Hesapla.",
    "0f2f08c472": "Model eksenleri asal eksenlerle çakışık değildir. Dış bir yazılımın (Adams/CATIA",
@@ -319,74 +314,10 @@
    "839949e395": "Model çözümden sonra değişti — Çözücü → Hesapla.",
    "83f1a04479": "Bayat — model değişti"
   },
-  "js/cp-mount-wizard.js": {
-   "058b6372f0": "STEP dosyasında kütle yok. Yazılırsa atalet tensörü katının şeklinden, homojen y",
-   "0b311f2975": "STEP dosyasını seçin ya da bu alana bırakın — .stp · .step · .stpZ (AP214 / AP24",
-   "0bb5e7e46b": "PTO Toplam ile ayrı PTO/Pompa gövdeleri birlikte — aynı kütle iki kez sayılıyor ",
-   "1ab9723128": "Statik denge çözülemedi — montaj kinematik olarak serbest olabilir.",
-   "335555a27f": "‹› takoz var — 6 serbestlik dereceli denge için en az üç takoz gerekir.",
-   "41501792f7": "Model boş — örnekten doldur, STEP'ten başla ya da Kütle gövdeleri adımında ekle.",
-   "4dbaf548de": "Masadaki çizim STEP dosyasının ölçümü; sihirbaz henüz eski modelle dolu.",
-   "5409231bd5": "Kütle gövdesi yok — en az bir gövde gerekir.",
-   "686a5048a4": "Nonlineer yasa: ‹› ekseni — katalogdan, çözücü Newton ile çözer.",
-   "6ad9b0ab7d": "Rölanti ya da silindir sayısı yok — ateşleme frekansı hesaplanmaz; Kriter 1 ve 2",
-   "6f47c563d9": "Rol aktarımdan sonra değişti; sihirbaz eski seçimle dolu.",
-   "71a1ac1488": "STEP geometrisinden — homojen yoğunluk varsayımı; ölçülen değeri yazınca işaret ",
-   "7214ad9217": "Tork zinciri eksik (stall oranı · 1. vites) — tork yük durumları kurulmaz.",
-   "817ef41a51": "Montajı 3B görüntüleyicide açın; parçaya tıklayıp rolünü verin",
-   "8ad5c45fcf": "Tuvaldeki ‹› kütle/takoz bileşeni sihirbazın modelinde yok ve çıkarılacak. Devam",
-   "ae6255f725": "Çizilecek gövde ya da takoz yok — konumu girilen öğe masada görünür.",
-   "cdb98d00d8": "Ağ kapalı değil — hacim ölçülemedi; atalet sihirbazda elle girilir",
-   "d10702422f": "‹› takoz rolü — 6 serbestlik dereceli denge için en az üç takoz gerekir.",
-   "d641c52134": "‹›: atalet tensörü girilmedi — gövde nokta kütle gibi çözülür."
-  },
   "js/cp-mount.js": {
-   "053993bb5d": "Çözüm yok — Çözücü → Hesapla.",
-   "0b7370ae9b": "Topolojide ‹› kütle/takoz bileşeni var. Örnek yüklenirken bunlar silinecek. Deva",
-   "15c8dc2c4d": "Takoz yok — 6 SD kısıtı için en az 3 takoz gerekir.",
-   "22ae8ff3e8": "Az takoz: ‹› takoz — rijit gövde kısıtı için ≥3 önerilir.",
-   "23329bdd60": "Aynı kütle ve ataletteki dolu dikdörtgen prizma, X × Y × Z — 3B görünümün kutusu",
-   "24dcbbcb9e": "Varsayılan — ‹›. Alan boş kaldıkça hesaba bu değer girer.",
-   "2ae5742321": "İç topoloji, seçilen örnekle DEĞİŞTİRİLECEK. Devam edilsin mi?",
-   "3623e5306e": "Ateşleme frekansı hesaplanamıyor — Motor bileşenine rölanti devri ve silindir sa",
-   "377c5d4f08": "Motor katalogdan yüklendi: ‹› — kütle / CG / atalet elle girilir.",
-   "3a3339ae5a": "Bu özel takozu sil",
-   "3f973d5dd9": "Silindir sayısı boş — ateşleme frekansı yok; Kriter 1 ve 2 değerlendirilemiyor.",
-   "44782d5339": "Din./stat. oranı eksenler arasında ‹› kat yayılıyor · sınır ‹› (eksen takası bu ",
-   "45442c1c7e": "Yeni özel takoz ekle ve seç",
-   "540ac1201d": "Bu takoz ‹› taşıyor (‹›, Takoz Özellikleri'nden) — çözücü onu Newton ile çözer.",
    "55c21624b0": "bayat",
-   "564fded9d5": "Çözücü bulunamadı — sonuç için bir Çözücü ekleyin.",
-   "56c8402fd7": "Model çözülmedi. Rapor, Çözücü sonuçlarından üretilir — önce Çözücü → Hesapla.",
-   "60abbdf4d3": "Fazla takoz: ‹› takoz tanımlı — tipik güç grubu 3–4 takozla bağlanır (aşırı-kısı",
-   "63bd448a42": "Mil torku — çözücünün vites başına tork durumu (Kriter 3)",
-   "68d324a553": "Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için",
-   "6c33058197": "‹› rijitlik değeri boş ya da ≤ 0 — bu tipi taşıyan takozu çözücü reddeder.",
-   "6e98cfb2e2": "Model çözüldü, ama bayat — ‹›. Model hesaptan sonra değişti; rapor ESKİ çözümden",
-   "6fccb09aba": "Transfer oranı boş — çözücü 1 alır (redüksiyonsuz); mil torku eksik çıkar.",
-   "6ff6e72a00": "Tork zinciri eksik (stall oranı ya da 1. vites yok, Şanzıman penceresinde) — tor",
-   "76236905f9": "Nonlineer seçili ama hiçbir takozda eğri yok — lineer çözülür. Eğri Takoz Özelli",
-   "7a32e7a304": "Kütle iki kez sayılıyor olabilir. Topolojide hem PTO Toplam (‹›) hem ayrı PTO/Po",
-   "84006f6b31": "Atalet tensörü fiziksel değil (‹›) — modlar sessizce yanlış çıkar.",
-   "8953bf93c7": "Tepe tork boş — tork yük durumları kurulmuyor; Kriter 3 ve 4 eksik kalır.",
-   "8fd25f148a": "son hesap bayat",
-   "a04c64a313": "Çözüm bayat — önce Çözücü penceresinde “Hesapla”.",
-   "a09c111a13": "Takoz uygulandığı anın değerlerini kopyalar; tip sonradan değişirse takoz eskisi",
-   "a2bc378a68": "K matrisi singular/çözülemedi (montaj kinematik olarak serbest olabilir).",
-   "a4c08a3a89": "Atalet tensörü boş — çözücü sıfır alır (nokta kütle gibi); nokta kütleyse işaret",
-   "a670c83005": "Boş kanvas kuruldu — kütle gövdelerini ve takozları Bileşenler'den sürükleyin",
-   "b0cd67661e": "Girilen değer — hesaba bu giriyor. Boşaltınca varsayılana (‹›) döner.",
-   "b8a2b42b57": "Kütüphanede bu altı değerle bir takoz yok — değerler elle.",
-   "b91de38b66": "Bu gövdenin CG'si eksi bütün modelin birleşik CG'si",
-   "bbdf6577cd": "PTO Toplam (‹›) ile ayrı PTO/Pompa bileşenleri (‹›) birlikte tanımlı — aynı kütl",
-   "c7ffb8dec4": "Kütle iki kez sayılıyor olabilir — hem PTO Toplam hem ayrı PTO/Pompa var; birini",
-   "cb9e5d19e3": "‹› işaretin konumu eksik — çözücü boş konumu 0 alır, çizim de 0'da gösterir.",
-   "ecd356bc8f": "Kütle gövdesi yok — en az bir kütle gerekir.",
-   "ee96c844c0": "Rölanti devri boş — ateşleme frekansı yok; Kriter 1 ve 2 değerlendirilemiyor.",
    "f54b5a664a": "‹› tork alanı başka bir gövdede de dolu (‹›) — çözücü ‹› gövdesinin değerini oku",
-   "f7ecdd45cb": "Din./stat. oranı eksenler arasında ‹› kat yayılıyor (sınır ‹›) — eksen takası ol",
-   "f89223649c": "Nonlineer seçili ama hiçbir takozda eğri yok — lineer çözülür.",
-   "fad1d70833": "Gömülü takoz — lineer; nonlineer eğri yalnız özel takozda."
+   "f7ecdd45cb": "Din./stat. oranı eksenler arasında ‹› kat yayılıyor (sınır ‹›) — eksen takası ol"
   },
   "js/cp-solver.js": {
    "0dd6171169": "Downshift koşulu: Nout < eşik → alt vitese düş. Histerezis = upshift eşiği − dow",
@@ -884,20 +815,8 @@
    "fba413d93c": "‹› ayrı iletilebilirliği: her eğri o takozun şasiye geçirdiği kuvvettir, sistem "
   },
   "js/mount-core.js": {
-   "0cb2916905": "Kurgu model: 2,2 L dört silindirli dizel motor ve 6 ileri manuel şanzımandan olu",
-   "1a788c21ca": "ASFAT 8x8 Obüs güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — Cum",
    "4005b3089b": "Sıfıra yakın frekans: yapılandırma kinematik olarak serbest olabilir.",
-   "4f1eaf6a81": "— montaj kinematik olarak serbest. 6 serbestlik dereceli denge için aynı doğru ü",
-   "7dcf59e1ef": "BMC Siper güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — motor, ş",
-   "81ebc9f8bf": "TULGA güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — motor, şanzı",
-   "83e182eb4e": "K matrisi singular/çözülemedi (montaj kinematik olarak serbest olabilir).",
-   "9ceacc006e": "Kurgu model: 7,7 L altı silindirli dizel motor ve 6 ileri manuel şanzımandan olu",
-   "ab0b38b605": "‹› tek bir doğru üzerinde: bu doğru etrafındaki dönmeye karşı rijitlik yok‹›",
-   "ebbc592427": "Kurgu doğrulama modeli: tek prizma gövde (1.200 kg, 1100 × 700 × 800 mm) dört öz"
-  },
-  "js/mount-step.js": {
-   "03e6517d4c": "Rol verilmiş parça yok — gövdelere ve takozlara rol verin.",
-   "dcf77cca09": "\"‹›\": ağ kapalı değil (‹›) — hacim merkezi yerine kutunun merkezi; atalet yazılm"
+   "ab0b38b605": "‹› tek bir doğru üzerinde: bu doğru etrafındaki dönmeye karşı rijitlik yok‹›"
   },
   "js/panel-chart.js": {
    "1520f81c22": "Etkileşim: imleçle gezinerek değerleri okuyun · Ctrl + tekerlek yakınlaştırır · "

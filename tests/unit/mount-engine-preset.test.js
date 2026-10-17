@@ -157,11 +157,18 @@ describe('Uygulama — davranış', () => {
 });
 
 describe('Panel', () => {
-  test('Motor panelinde seçici + gruplar + uyarı metni var', () => {
+  test('Motor panelinde seçici + gruplar; seçimin GETİRMEDİĞİ eksik bandında', () => {
     const html = cp._mntEngineSection(mkMotor());
     expect(html).toContain('veMntApplyEnginePreset');
     expect(html).toContain('Cummins ISX 15L');
-    expect(html).toContain('elle girilir');            // ne gelmediği yazıyor
+    // Katalog kütle, CG ve gövde ataleti getirmez (kataloğun ataleti krank
+    // milininki). Bunu ayrı bir not anlatmaz: alan boş kalır, pencerenin
+    // eksik bandı söyler (ARAYÜZ ANLATMAZ).
+    const n = mkMotor(); global.nodes = [n];
+    cp.veMntApplyEnginePreset('mo', 'isb67_fr98387');
+    const bant = [...cp.getMntMassPropertiesHTML(n).matchAll(/class="ve-fp-eksik-t">([\s\S]*?)<\/span>/g)].map((x) => x[1]).join(' | ');
+    expect(bant).toMatch(/Kütle boş/);
+    expect(bant).toMatch(/Atalet tensörü boş/);
   });
 
   test('seçili preset işaretli gelir', () => {

@@ -55,7 +55,7 @@ function _mstUcgen(){
 
 function veMntStpOku(metin){
   var P = _mstOkuyucu();
-  if(!P || !P.Agac) return { ok: false, hatalar: ['STEP okuyucusu (js/step-p21.js) yüklenmemiş.'], uyarilar: [], agac: [], parcalar: [] };
+  if(!P || !P.Agac) return { ok: false, hatalar: ['STEP okuyucusu yüklenmemiş.'], uyarilar: [], agac: [], parcalar: [] };
   return P.Agac(metin);
 }
 
@@ -171,7 +171,7 @@ function veMntStpCoz(sonuc, roller, opt){
   var out = { ok: false, hatalar: [], uyarilar: [], birimler: [] };
   if(!sonuc || !sonuc.ok){ out.hatalar.push('STEP dosyası okunmadı.'); return out; }
   var birimler = veMntStpBirimler(sonuc, roller || []);
-  if(!birimler.length){ out.hatalar.push('Rol verilmiş parça yok — gövdelere ve takozlara rol verin.'); return out; }
+  if(!birimler.length){ out.hatalar.push('Rol verilmiş parça yok.'); return out; }
   var U = _mstUcgen(), B = null;
   var agAl = function(pi){
     var a = (typeof opt.ag === 'function') ? opt.ag(pi) : null;
@@ -190,7 +190,7 @@ function veMntStpCoz(sonuc, roller, opt){
       r.konum = [(oz.kutu[0] + oz.kutu[3]) / 2, (oz.kutu[1] + oz.kutu[4]) / 2, (oz.kutu[2] + oz.kutu[5]) / 2];
       r.kaynak = 'kutu';
       out.uyarilar.push('"' + b.ad + '": ağ kapalı değil (' + (oz.kenarYuz ? oz.kenarYuz + ' yüz üçgenlenemedi' : oz.acik + ' açık kenar')
-        + ') — hacim merkezi yerine kutunun merkezi; atalet yazılmaz.');
+        + '): kutu merkezi, atalet yok.');
     } else {
       out.uyarilar.push('"' + b.ad + '": çizilebilir yüz yok, birim atlandı.');
       return;

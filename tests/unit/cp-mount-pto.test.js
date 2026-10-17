@@ -158,7 +158,7 @@ describe('Çift-sayım koruması', () => {
     expect(cf.groups).toEqual(['Üst PTO Grubu']);
     expect(cf.parts).toHaveLength(4);
     const warns = cp._mntExampleValidate();
-    expect(warns.some((w) => /iki kez sayılıyor/.test(w.msg))).toBe(true);
+    expect(warns.some((w) => /^Olası çift sayım: PTO Toplam \(1\) \+ PTO\/Pompa \(4\)$/.test(w.msg))).toBe(true);
   });
 });
 
@@ -245,6 +245,6 @@ describe('Panel (smoke)', () => {
     global.nodes = [mkNode('p0', 'mnt-pto', 'PTO', 25, TOP_PARTS[0].cg),
                     mkNode('g1', 'mnt-pto-group', 'Grup', 97, TOP_GROUP.cg)];
     const html = cp.getMntMassPropertiesHTML(global.nodes[0]);
-    expect(html).toContain('Kütle iki kez sayılıyor olabilir');
+    expect(html).toContain('Olası çift sayım: PTO Toplam (1) + PTO/Pompa (1)');
   });
 });

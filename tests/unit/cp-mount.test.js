@@ -966,8 +966,8 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     expect(noCurve).not.toContain('z-eğrisi ekle');
     const withCurve = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640, curveZ: [[-10, -6400], [0, 0], [10, 6400]] } });
     // Not artık hem nokta tablosunu hem analitik fit'i kapsıyor → "eğri" yerine
-    // "yasa"; kaynağını da yazıyor. Testin amacı değişmedi: salt-okunur bilgi notu.
-    expect(withCurve).toContain('nonlineer z-yasası');           // salt-okunur bilgi notu
+    // "yasa"; kaynağını da yazıyor. Testin amacı değişmedi: salt-okunur bölüm.
+    expect(withCurve).toContain('Kuvvet–sehim yasası (z)');      // salt-okunur bölüm
     expect(withCurve).toContain('ölçülmüş nokta tablosu');
     expect(withCurve).toContain('Takoz Özellikleri');
     expect(withCurve).not.toContain('veMntLibCurveSetPoint');   // burada düzenlenmez

@@ -10,9 +10,10 @@
  * Bu dosya üç şeyi kilitler:
  *   1. sevk edilen analitik kutu, programın KENDİ yolundan (JSON → çözücü)
  *      çözülünce bağımsız kapalı formu verir ve kartın künyesi o sayıları basar;
- *   2. kart metnindeki iddialar (kriterler tutuyor, hangi modlar 8 Hz altında,
- *      1. viteste kaç takoz çekmeye geçiyor) DOĞRU — model değişirse metin
- *      sessizce yalan söylemez;
+ *   2. kart SONUÇ İDDİASI TAŞIMAZ (TAKOZ PENCERESİ SONUÇ GÖSTERMEZ — açıklama
+ *      künyedir); kurgunun tasarım özellikleri (kriterler tutuyor, hangi modlar
+ *      8 Hz altında, 1. viteste kaç takoz çekmeye geçiyor) yine sayıyla
+ *      kilitli — model değişirse sessizce kaymaz;
  *   3. iki kopya (kayıt defteri ↔ JSON) sayı sayı aynı — panel önizlemesi ve
  *      başlangıç sayfasının resmi modelden, "Örneği aktar" JSON'dan okur.
  * Hakem tarafı çekirdeğin fonksiyonlarını çağırmaz (kapalı form ve tork zinciri
@@ -83,14 +84,13 @@ describe('kutu — sevk edilen JSON programın yolundan kapalı formu veriyor', 
     Object.keys(f).forEach((ad) => expect(kunye).toContain(ad + ' ' + veSayi(f[ad], 2)));
   });
 
-  test('kriterler bilerek tutmuyor: kart bunu söylüyor, rapor da aynı hükmü veriyor', () => {
+  test('kriterler bilerek tutmuyor: rapor bu hükmü veriyor', () => {
     const U = rp.veMntUygunluk(R.kutu, {});
     expect([st(U, '1'), st(U, '1a'), st(U, '1b'), st(U, '2')]).toEqual(['ok', 'no', 'no', 'ok']);
-    expect(core.getMountExample('kutu').description).toMatch(/bilerek tutmaz/);
   });
 });
 
-describe('hafif ve kamyon — kart metnindeki iddialar doğru', () => {
+describe('hafif ve kamyon — kurgunun tasarım özellikleri tutuyor', () => {
   // Hakem tork zinciri: T = Te · Rstall · i_vites · i_transfer · φ_aks · düşüm
   const tork = (e) => { const g = json(e).nodes.find((n) => n.type === 'mnt-motor').data;
     const s = json(e).nodes.find((n) => n.type === 'mnt-gearbox').data; return g.Te * s.Rstall * s.g1; };
@@ -99,10 +99,10 @@ describe('hafif ve kamyon — kart metnindeki iddialar doğru', () => {
     const e = core.getMountExample(id), Rx = R[id];
     const U = rp.veMntUygunluk(Rx, {});
     expect([st(U, '1'), st(U, '1a'), st(U, '1b'), st(U, '2')]).toEqual(['ok', 'ok', 'ok', 'ok']);
-    expect(e.description).toMatch(/Kriter 1, 1a ve 1b/);
     expect(vites(Rx, '1. Vites').checks.tensionCount).toBe(cek);
     expect(vites(Rx, '1. Vites').checks.clampCount).toBe(0);              // durdurucuya değmiyor
-    expect(e.description).toContain(veSayi(tork(e), 0) + ' N·m');
+    // 1. vitesin torku bir GİRDİ (Te · R_stall · i₁), sonuç değil: künyede durur
+    expect(e.specs.map((r) => r[1]).join(' ')).toContain(veSayi(tork(e), 0) + ' N·m');
   });
 
   test.each(['hafif', 'kamyon'])('%s: üç mod 8 Hz altında, üçü 10 Hz ile 0,5·f_ateş arasında', (id) => {
@@ -112,9 +112,19 @@ describe('hafif ve kamyon — kart metnindeki iddialar doğru', () => {
     expect(f.slice(3).every((v) => v > 10 && v < lim)).toBe(true);
   });
 
-  test('hafif: kartın dediği üç düşük mod yanal, ileri-geri ve savrulma', () => {
+  test('hafif: üç düşük mod yanal, ileri-geri ve savrulma', () => {
     expect(R.hafif.modes.slice(0, 3).map((m) => m.label).sort()).toEqual(['fore-aft', 'lateral', 'yaw']);
-    expect(core.getMountExample('hafif').description).toMatch(/yanal, ileri-geri ve savrulma modları 8 Hz/);
+  });
+
+  // TAKOZ PENCERESİ SONUÇ GÖSTERMEZ: örnek kartı ve penceresi açıklamayı
+  // gösterir; açıklama kimlik ve kaynaktır, çözümün iddiası değil (frekans,
+  // kriter hükmü, çekme, sehim). Eskiden kurgu kartları "Kriter 1, 1a ve 1b
+  // tutar", "modları 8 Hz altında" diyordu.
+  test('bütün örneklerin açıklaması sonuç iddiası taşımaz', () => {
+    const SONUC = /\bHz\b|Kriter|çekme|sehim|tutar|tutmaz|izolasyon|%\s?\d/i;
+    const hepsi = core.getMountExampleList();
+    expect(hepsi.length).toBeGreaterThan(5);
+    expect(hepsi.filter((e) => SONUC.test(e.description || '')).map((e) => e.id + ': ' + e.description)).toEqual([]);
   });
 
   test.each(['hafif', 'kamyon'])('%s: statik sehim 2–6 mm, durgunken çekme yok', (id) => {
