@@ -405,7 +405,7 @@ describe('14.1 — gergi satırı diğerlerinden AYRIŞIR', () => {
   });
 
   test('ayrım kutuyla ve ölçülmüş bedeliyle yazılı', () => {
-    expect(DOC).toContain('Gergi satırı da bir KASNAK MERKEZİDİR');
+    expect(DOC).toContain('Gergi satırı da bir kasnak merkezidir');
     expect(DOC).toContain('Pivot Point');
     expect(DOC).toContain('Layout Data');
     expect(DOC).toContain('+%1526');       // yanlış nokta girilirse gerginlik
@@ -443,7 +443,7 @@ describe('içerik yönlendirici', () => {
     expect(DOC).toContain('Temas tarafı');
     expect(DOC).toContain('+%1526');
     // ...ve karışıklığın SESSİZ kalabildiği yazılı: sayı büyük ama uyarı yok.
-    expect(DOC).toContain('5/14 sistemde uyarı YOK');
+    expect(DOC).toContain('5/14 sistemde uyarı yok');
   });
 
   test('kayma emniyetinin yük taşıyan ayrımı anlatılıyor', () => {
@@ -463,7 +463,7 @@ describe('içerik yönlendirici', () => {
     // Boş modülü BAŞLANGIÇ SAYFASI karşılıyor (2026-09-29, kullanıcı kararı;
     // 2026-09-09 → 29 sihirbaz kendiliğinden açılıyordu). Kılavuz eski yolu
     // anlatmaya devam ederse kullanıcı gelmeyen pencereyi arar.
-    expect(DOC).toMatch(/başlangıç sayfasıyla karşılar/);
+    expect(DOC).toMatch(/başlangıç sayfası açılır/);
     expect(DOC).toContain('sihirbaz kendiliğinden açılmaz');
     expect(DOC).not.toMatch(/Sihirbaz(ı)? ile karşılar/);
     expect(DOC).not.toMatch(/sihirbaz zaten açıktır/);
@@ -543,7 +543,7 @@ describe('içerik yönlendirici', () => {
     });
     // ...ve kalkan adım geri gelmiş gibi anlatılmıyor.
     expect(DOC).not.toContain('3 · Kayış Yolu');
-    expect(DOC).toContain('Ayrı bir “Kayış Yolu” adımı yok');
+    expect(DOC).toContain('Kayış sırası “Kasnaklar” adımında');
   });
 
   test('hızlı başvuru eki alan → panel eşlemesi veriyor', () => {
@@ -1180,11 +1180,11 @@ describe('kılavuz ↔ program: kart adları', () => {
   // montaj konumunu raporun kendi satırıyla SAYIYLA kapatması (yukarıda).
   test('kol açısının bir GİRDİ olduğu ve seçilmediği yazılı', () => {
     expect(DOC).not.toContain('Açıyı zarf seçerse');
-    expect(DOC).toContain('Kol çalışma açısını program SEÇMEZ');
-    // Gerekçe SAYIYLA duruyor — "öylesine bir tercih" gibi okunmasın.
-    expect(DOC).toContain('2/14');
-    expect(DOC).toContain('20,7');
-    expect(DOC).toContain('24,1');
+    expect(DOC).toContain('Kol çalışma açısı bir girdidir');
+    expect(DOC).toContain('paketleme');
+    // Seçim ölçütünün geçmişi ve test ölçümü kılavuzda yok (ARAYÜZ ANLATMAZ,
+    // aşama 13 — raporun teori şablonuyla aynı hüküm, cp-fead-report.test.js).
+    expect(DOC).not.toMatch(/Bir dönem program|ölçüt çöktü|20,7°|24,1°/);
   });
 
   test('kayış boyu alanı YOK — kılavuz da girmeyi söylemiyor', () => {
@@ -1214,6 +1214,63 @@ describe('kılavuz ↔ program: kart adları', () => {
 // arıyor. Programın yazmadığı bir metni tırnaklamak ancak DÜZYAZI ise
 // serbest — o küme aşağıda AÇIKÇA duruyor ve kendi öksüz kapısı var: küme
 // kullanılmayan satır taşıyamaz, yoksa sessizce bir çöplüğe dönüşür.
+// ═══════════════════════════════════════════════════════════════════════════
+// ARAYÜZ ANLATMAZ — kılavuzun sesi (metin temizliği aşama 13). Kılavuz
+// açıklamanın yeridir; sohbet sesi, geliştirme dili ve tasarım gerekçesi
+// taşımaz (CLAUDE.md). Cırcır sözlüğün gördüğünü tutar (tests/unit/metin-dili);
+// bu blok sözlüğün görmediği iki sınıfı ve iki yapı kuralını tutar.
+describe('kılavuzun sesi ve yapısı (aşama 13)', () => {
+  const duz = DOC.replace(/<(script|style|svg)\b[\s\S]*?<\/\1>/g, ' ').replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ');
+
+  test('geliştirme geçmişi ve yazılım anlatısı yok', () => {
+    // eski: "Bir dönem kasnaklar da kanvasta kutuydu", "Modülün son sürümünde girdi
+    // kümesi bilinçli olarak küçültüldü", "Bu bir ekran görüntüsü değil — … bu resim
+    // kendiliğinden değişir", "Her satır programdaki bir çağrıya bağlıdır"
+    const YASAK = /(?<![\p{L}])(bir dönem|bir zamanlar|son sürüm\p{L}*|eskiden|bilinçli olarak|ekran görüntüsü değil|kendiliğinden değişir|programdaki bir çağrı\p{L}*|pano hesaplamaz|ölçüt çöktü)(?![\p{L}])/giu;
+    expect([...duz.matchAll(YASAK)].map((m) => duz.slice(Math.max(0, m.index - 40), m.index + 40))).toEqual([]);
+  });
+
+  test('bayat anlatım yok: kol konumu kart başına, yön hücresi metin düğmesi, durum "Model değişti"', () => {
+    expect(duz).not.toContain('Kol konumu TEK alandır');      // 2026-09-01'den beri kart başına
+    expect(duz).toMatch(/farklı\s+kol konumlarıyla/);
+    expect(duz).not.toContain('iki durumlu bir düğmedir');    // Pafta: simge + Sağ/Sol, tık çevirir
+    expect(duz).not.toMatch(/Bayat — model değişti|bayat damgası/);
+    expect(duz).toContain('Model değişti');
+  });
+
+  test('alt bölüm numarası bölümünün numarasıyla başlar', () => {
+    // eski: "9.5 Girilmeyen alanlar" 10. bölümün içindeydi
+    const sapan = [];
+    let bolum = null, alt = 0;
+    for (const m of DOC.matchAll(/<h2\b[^>]*><span class="no">([^<]+)<\/span>|<h([34])>(\d+(?:\.\d+)+)\s/g)) {
+      if (m[1] !== undefined) { bolum = m[1].trim(); continue; }
+      alt++;
+      if (m[3].split('.')[0] !== bolum) sapan.push(bolum + ' içinde ' + m[3]);
+    }
+    expect(sapan).toEqual([]);
+    expect(alt).toBeGreaterThan(40);          // kapı boş belgeyle yeşil kalmasın
+  });
+
+  test('kılavuzun kendi bölüm göndermeleri var olan başlığa gider', () => {
+    // eski: devir sınırları "Bölüm 11.5’teki uygunluk kriterleri"ne gönderiyordu
+    // (kriterler 11.4); "Bölüm 8.3" anahtarı (8.4). Rapor göndermesi (§8.17) ayrı belge.
+    const var_ = new Set();
+    for (const m of DOC.matchAll(/<span class="no">(\d+)<\/span>|<h[34]>(\d+(?:\.\d+)+)\s/g)) var_.add(m[1] || m[2]);
+    const yok = [];
+    let bakilan = 0;
+    for (const m of duz.matchAll(/(Bölüm|§)\s?(\d+(?:\.\d+)*)/g)) {
+      const once = duz.slice(Math.max(0, m.index - 12), m.index);
+      if (/rapor\p{L}*\s*$/iu.test(once)) continue;
+      bakilan++;
+      if (!var_.has(m[2])) yok.push(m[0] + ' ← ' + duz.slice(Math.max(0, m.index - 40), m.index + 20));
+    }
+    expect(yok).toEqual([]);
+    expect(bakilan).toBeGreaterThan(30);
+    expect(duz).toMatch(/Bölüm 11\.4’teki uygunluk kriterlerinin/);
+  });
+});
+
 describe('kılavuz ↔ program: TIRNAKLANAN metinler', () => {
   // KAPSAM MODÜLÜN DOSYALARI — elle yazılmış kısa bir liste, kılavuz yeni bir
   // yüzeyi anlatmaya başlayınca o yüzeyin metnini GÖREMEZ ve alıntı kapısı
@@ -1242,25 +1299,14 @@ describe('kılavuz ↔ program: TIRNAKLANAN metinler', () => {
   // KILAVUZUN KENDİ SESİ — program bunları yazmaz, kılavuz kullanıcının ya da
   // mühendisin ağzından konuşur. Alıntı oldukları için tırnaktalar.
   const DUZYAZI = [
-    'yön şu, temas tarafı bu',
     'Bu düzen için hangi kayışı ısmarlamalıyım?',
     'Elimdeki bu kayış bu düzene uyar mı?',
-    'doğru cevap',
-    'hangi kaydı seçtim',
-    'tablomda şu an ne var',
-    'Boş görünmeyen ama denetlenmemiş',
     "şu kadar alan elle girilmiş ve katalog değerinin yerine geçiyor",
-    // Bunların sekizi yorum SÖKÜLENE kadar kapıdan geçiyordu: aynı sözler
-    // kaynağın YORUMLARINDA var, arayüzünde yok. Kılavuzun kendi sesi —
-    // kullanıcının içinden geçen soru, deponun hüküm deyişleri, ve PROGRAMDA
-    // OLMAYAN bir alanın adı ("No load governed" sorulmuyor, kural 25).
-    'önce ne koyayım',
-    'katalogdan geldi',
-    'tek kaynak',
+    // Kılavuzun kendi deyişleri ve PROGRAMDA OLMAYAN bir alanın adı ("No load
+    // governed" sorulmuyor, kural 25). Aynı sözler kaynağın YORUMLARINDA var,
+    // arayüzünde yok — yorum sökülmeden bakılsaydı kapıdan geçerlerdi.
     'makul ama yanlış',
-    'katalogda yok',
     'No load governed',
-    'girdim',
     'zarfı kapat'
   ].map(duzelt);
 
@@ -1536,7 +1582,7 @@ describe('güncellik: kılavuz ↔ programın bugünkü yüzeyleri', () => {
     expect(io_read('js/cp-fead.js')).toContain('_feadSembolikSVG');
     expect(KENDI).toContain('sembolik');
     expect(KENDI).toContain('konum yok');
-    expect(KENDI).toContain('çözüm İSTEMEZ');
+    expect(KENDI).toContain('çözüm istemez');
   });
 
   test('EKSİK BANDI — kılavuz "Doldur"u programın adıyla anlatıyor', () => {
