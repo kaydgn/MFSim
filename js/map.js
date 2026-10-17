@@ -2960,6 +2960,121 @@ function veEditNodeName(nodeId) {
   });
 }
 
+// ══ PENCERE AÇIK KALIR — kapatma ✕ ve Esc'te (kullanıcı isteği 2026-10-16) ══
+// "Bileşen pencerelerine çift tıklayınca yanda açılan pencere kalsın, boşluğa
+// veya başka bir yere tıklayınca gitmesin. Başka bir bileşene tıklayınca da
+// onun penceresi gelecek." Pencereyi SEÇİMİN BOŞALMASI kapatıyordu
+// (showEmptyProperties): ölçüldü, boş alana tık · başka bir bileşene tık (seçim
+// önce temizleniyor) · Ctrl+Z — üçü de pencereyi kapatıp tuvali 380 px
+// zıplatıyordu. Kural artık:
+//   · pencerenin KONUSU son gösterilen bileşendir; seçim boşalınca içerik kalır
+//   · başka bir bileşen seçilince içerik YERİNDE değişir — kapanıp açılmaz
+//   · bağlam değişince (proje sekmesi, modüle giriş/çıkış, yeni proje) açıkça
+//     kapanır: veMufettisKapat
+// Kapı: tests/unit/mufettis-kalir.test.js + tests/e2e/mufettis-sutun.spec.js → *KALIR*.
+function veMufettisAcik() {
+  if(typeof document === 'undefined') return false;
+  var ov = document.getElementById('ve-properties-overlay');
+  return !!(ov && ov.classList.contains('visible'));
+}
+// İçeriği gösterilen bileşen — modelde yoksa (silindi, başka topoloji) null.
+function veMufettisKonusu() {
+  if(typeof _veLastPropNodeId === 'undefined' || !_veLastPropNodeId || typeof nodes === 'undefined' || !nodes) return null;
+  for(var i = 0; i < nodes.length; i++) if(nodes[i] && nodes[i].id === _veLastPropNodeId) return nodes[i];
+  return null;
+}
+// Geniş ekranda pencere bir SÜTUNDUR — eşik CSS'teki @media ile aynı (1280 px).
+function veMufettisSutunKipi() {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(min-width:1280px)').matches;
+}
+// YAZILMIŞ AMA ONAYLANMAMIŞ GİRDİ ESKİ BİLEŞENE YAZILIR. İçerik değişmeden önce
+// odak bırakılır: alanın change/blur dinleyicisi (bileşenin kimliğiyle) koşar.
+// Odaktaki alan DOM'dan sökülürse tarayıcı change'i ateşlemek ZORUNDA değil.
+function _veMufettisGirdiyiYaz() {
+  if(typeof document === 'undefined') return;
+  var ae = document.activeElement, ic = document.querySelector('.ve-properties-content');
+  if(ae && ic && ae !== document.body && ic.contains(ae) && typeof ae.blur === 'function') ae.blur();
+}
+// Pencere boyunu ve kipini tipe göre ayarlayan sınıflar. Boş, çoklu seçim ve
+// kart hâlinde hiçbiri kalmaz — kalırsa boş içerik bir MODAL olarak açılırdı.
+var VE_MUFETTIS_TIP_SINIFLARI = ['ve-properties--modal', 've-properties--wide', 've-properties--accwide',
+  've-properties--engine-empty', 've-properties--engwide', 've-properties--road', 've-properties--compact'];
+function _veMufettisSinifSifirla() {
+  var w = (typeof document !== 'undefined') ? document.getElementById('ve-properties') : null;
+  if(w) VE_MUFETTIS_TIP_SINIFLARI.forEach(function(c) { w.classList.remove(c); });
+}
+// KONU TUVALDE İŞARETLİ: seçim boşalınca pencerenin hangi bileşene ait olduğu
+// kutunun kesikli kenarından okunur (seçili kutunun çift çeperi ayrı kalır).
+// Kutusuz düğüm (FEAD kasnağı) aynı işareti tablosunda ve çiziminde taşır.
+function veMufettisIsaretle() {
+  if(typeof document === 'undefined') return;
+  var k = veMufettisAcik() ? veMufettisKonusu() : null;
+  var eski = document.querySelectorAll('.ve-node.ve-node--mufettis');
+  for(var i = 0; i < eski.length; i++) if(!k || eski[i].id !== k.id) eski[i].classList.remove('ve-node--mufettis');
+  if(k) { var el = document.getElementById(k.id); if(el) el.classList.add('ve-node--mufettis'); }
+  if(typeof veFeadMarkSelectedRow === 'function') veFeadMarkSelectedRow();
+}
+// Bağlam değişti: pencere kapanır ve konusunu bırakır.
+function veMufettisKapat() {
+  veTogglePropertiesPanel(false);
+  showEmptyProperties();
+}
+// Pencere açıkken içeriği konunun GÜNCEL düğümünden yeniden kurar (geri-al
+// düğüm nesnelerini yeniden yaratır — eski içerik eski değerleri gösterirdi).
+function veMufettisTazele() {
+  if(!veMufettisAcik()) return;
+  var k = veMufettisKonusu();
+  if(k && typeof showNodeProperties === 'function') showNodeProperties(k, { kip: _veMufettisKart ? 'kart' : 'tam' });
+  else showEmptyProperties();
+}
+
+// KONU KENDİ PENCERESİNİN ALTINDA KALMAZ. Sütun tuvali sağdan daraltır, kamera
+// yerinde durur: ölçüldü (AP örneği, 1366×768) sütun açılınca 17 bileşenin 6'sı
+// onun altına düşüyordu — sağdaki tekerleğe çift tık tekerleği kendi
+// penceresinin altına sokuyordu. Sütunu AÇAN çağrı, açılıştan önce görünen konu
+// sütunun altına düşüyorsa kamerayı yalnız yatayda ve yalnız gereken kadar
+// kaydırır; ölçek değişmez. Konu açılıştan önce de görünmüyorduysa (kullanıcı
+// başka yere bakıyor) kamera oynamaz. Ölçü ekran kutusundan: kamera ölçeği dâhil.
+var VE_MUFETTIS_KADRAJ_PAY = 24;   // kayan konunun tuval kenarına uzaklığı (px)
+function _veMufettisKadrajOlc() {
+  if(typeof document === 'undefined' || !veMufettisSutunKipi()) return null;
+  var k = veMufettisKonusu();
+  var el = k ? document.getElementById(k.id) : null;
+  var wr = document.getElementById('ve-canvas-wrapper');
+  if(!el || !wr || !el.offsetWidth) return null;
+  return { el: el, wr: wr, kap: wr.getBoundingClientRect() };
+}
+function _veMufettisKadrajUygula(o) {
+  if(!o || typeof canvasOffset === 'undefined' || typeof updateCanvasTransform !== 'function') return;
+  var pw = document.getElementById('ve-properties');
+  if(pw && pw.classList.contains('ve-properties--modal')) return;   // perdeli pencere tuvali daraltmaz
+  var r = o.el.getBoundingClientRect(), k0 = o.kap, k1 = o.wr.getBoundingClientRect();
+  if(r.left < k0.left || r.right > k0.right || r.bottom <= k0.top || r.top >= k0.bottom) return;
+  if(r.right <= k1.right) return;
+  var pay = VE_MUFETTIS_KADRAJ_PAY;
+  var sol = k1.left + (typeof veTuvalSolOrtu === 'function' ? veTuvalSolOrtu(o.wr) : 0) + pay;
+  // Görünür alandan geniş kutuda sol kenar görünür kalır.
+  var dx = Math.max(k1.right - pay - r.right, sol - r.left);
+  if(Math.abs(dx) < 0.5) return;
+  canvasOffset.x += dx;
+  updateCanvasTransform();
+}
+
+// SÜTUNA SIĞMAYAN BİLEŞEN (VE_SUTUNA_SIGMAYAN) SÜTUNDA KART OLARAK GELİR.
+// Sütun açıkken tek tık onun penceresini MODAL olarak açsaydı tek tık tuvali
+// perdeyle örterdi; kart sütunu yerinde bırakır, geniş pencere çift tıkla ya
+// da karttaki düğmeyle açılır ve kapanınca sütuna (karta) dönülür.
+// (İçeriğin kart olduğu `_veMufettisKart`ta — cp-core.js.)
+var _veModalSutundan = false;     // açık modal sütundan mı açıldı
+function veMufettisGenisAc() {
+  var k = veMufettisKonusu();
+  if(!k || typeof showNodeProperties !== 'function') return;
+  _veModalSutundan = veMufettisAcik() && veMufettisSutunKipi();
+  showNodeProperties(k, { kip: 'tam' });
+  veTogglePropertiesPanel(true);
+}
+
 // Bileşen özellikleri MODAL toggle — overlay fade-in/out yönetir.
 // forceState true → aç; false → kapat; undefined → toggle.
 // Race-safe: hızlı kapat→aç sıralarında bekleyen close timeout'unun yeni
@@ -2974,9 +3089,31 @@ function veTogglePropertiesPanel(forceState) {
   // Kullanıcı hiçbir şey yapmadı; o turdaki clearSelection/openEditor
   // kapatma çağrıları paneli gözünün önünde kapatıyordu.
   if(!open && typeof veSubtopoNavRestoring === 'function' && veSubtopoNavRestoring()) return;
+  // Kart hâlindeki bileşen AÇILINCA geniş penceresine geçer (çift tık, şerit).
+  if(open && _veMufettisKart) {
+    var kk = veMufettisKonusu();
+    if(kk && typeof showNodeProperties === 'function') {
+      _veModalSutundan = isVisible && veMufettisSutunKipi();
+      showNodeProperties(kk, { kip: 'tam' });
+    }
+  }
+  // Sütundan açılmış geniş pencere KAPANINCA sütuna, konunun kartına döner.
+  var pw = document.getElementById('ve-properties');
+  if(!open && isVisible && _veModalSutundan && pw && pw.classList.contains('ve-properties--modal')) {
+    _veModalSutundan = false;
+    var kd = veMufettisKonusu();
+    if(kd && veMufettisSutunKipi() && typeof showNodeProperties === 'function') {
+      showNodeProperties(kd, { kip: 'kart' });
+      return;
+    }
+  }
+  if(!open) _veModalSutundan = false;
   // Tuval sütunu müfettiş kadar daralsın (geniş ekranda; dar ekranda kural
   // @media içinde olduğu için sınıfın karşılığı yok ve modal davranış durur).
+  // Sütunu açan çağrı konuyu sütunun altında bırakmaz (_veMufettisKadrajUygula).
+  var kadraj = (open && !isVisible) ? _veMufettisKadrajOlc() : null;
   document.documentElement.classList.toggle('ve-mufettis-acik', open);
+  if(kadraj) _veMufettisKadrajUygula(kadraj);
   if(open) {
     if(ov.style.display !== 'flex') {
       // Tamamen kapalıydı → display set, sonra rAF ile visible (geçiş 0→1)
@@ -2993,12 +3130,17 @@ function veTogglePropertiesPanel(forceState) {
     // Açılır tablo penceresi müfettişin İÇERİĞİNİ taşıyor — müfettiş
     // kapanırken sahipsiz kalmasın (js/tablo-pencere.js).
     if(typeof veTabloKapat === 'function') veTabloKapat();
+    _veMufettisGirdiyiYaz();
     ov.classList.remove('visible');
     setTimeout(function() {
       // 220ms sonra hâlâ visible değilse gerçekten kapat (race-safe)
       if(!ov.classList.contains('visible')) ov.style.display = 'none';
     }, 220);
   }
+  // `visible` açılışta iki kare SONRA geliyor: işaret o karede de tazelenir.
+  veMufettisIsaretle();
+  if(open && typeof requestAnimationFrame === 'function')
+    requestAnimationFrame(function() { requestAnimationFrame(function() { requestAnimationFrame(veMufettisIsaretle); }); });
 }
 // ESC: modal açıksa kapat (input/textarea içinde değilse)
 document.addEventListener('keydown', function(e) {
@@ -3006,12 +3148,21 @@ document.addEventListener('keydown', function(e) {
   var t = e.target;
   if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   var ov = document.getElementById('ve-properties-overlay');
+  // Başka sayfada gizli pencere o sayfanın Esc'iyle kapanmaz.
+  if(document.documentElement.classList.contains('ve-sayfa-diger')) return;
   if(ov && ov.style.display === 'flex') veTogglePropertiesPanel(false);
 });
 
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
+  _veMufettisGirdiyiYaz();
+  // Çoklu seçimin tek bir konusu yok: seçim boşalınca pencere boş hâline iner.
+  _veLastPropNodeId = null;
+  _veMufettisKart = false;
+  _veMufettisSinifSifirla();
+  var titleEl = document.getElementById('ve-properties-title');
+  if(titleEl) titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>Özellikler';
 
   var html = '<div style="text-align:center; padding:20px 20px 16px;">';
   html += '<div style="font-size:var(--fs-display); margin-bottom:12px;"><span class="mf-ico mf-ico-package"></span></div>';
@@ -3024,16 +3175,29 @@ function showMultipleSelection() {
   html += '</div>';
 
   content.innerHTML = html;
+  content.scrollTop = 0;
+  veMufettisIsaretle();
   // Modal otomatik açılmaz — kullanıcı çift tık ile veya marker'a tıklayarak açar
 }
 
+// SEÇİM BOŞALDI ≠ PENCERE KAPANSIN (bkz. veMufettisAcik üstündeki kural).
+// Açık pencerenin konusu modeldeyse içerik OLDUĞU GİBİ kalır; konusu yoksa
+// (silindi) pencere açık kalır ve boş hâline iner. Kapatmak isteyen çağıran
+// veMufettisKapat'ı çağırır.
 function showEmptyProperties() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Seçim yok → modal'ı kapat
-  veTogglePropertiesPanel(false);
+  if(veMufettisAcik() && veMufettisKonusu()) { veMufettisIsaretle(); return; }
+  _veMufettisGirdiyiYaz();
+  _veLastPropNodeId = null;
+  _veMufettisKart = false;
+  _veMufettisSinifSifirla();
+  var titleEl = document.getElementById('ve-properties-title');
+  if(titleEl) titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>Özellikler';
 
-  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özellikleri burada açılır</small></div>';
+  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div><div>Seçili bileşen yok</div></div>';
+  content.scrollTop = 0;
+  veMufettisIsaretle();
 }
 
 function deleteSelectedNodes() {

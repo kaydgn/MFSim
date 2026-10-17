@@ -1052,10 +1052,47 @@ yoktur. Düşmesi ölçüldü: eşik erişilemez yapılınca iki geniş halka **
 belirtiyle** düşüyor (`rgba(0, 0, 0, 0.6)` geri geliyor, overlay tuvalin
 merkezini yine sahipleniyor), dar halka yeşil kalıyor.
 
-**Tıklamanın gerçekten geçtiğini ayıran ölçü seçimdir**, pencerenin açık
-kalması değil: boş tuvale tıklamak seçimi boşaltır ve pencere onun **sonucu**
-olarak kapanır. Perdeli dünyada aynı tıklama perdeye düşer, pencere kapanır ve
-seçim **olduğu gibi kalır**. Halka `selectedNodes.length` 1 → 0 geçişini ölçer.
+**Tıklamanın gerçekten geçtiğini ayıran ölçü seçimdir**: sütun kipinde boş
+tuvale tıklamak seçimi boşaltır. Perdeli dünyada aynı tıklama perdeye düşer,
+pencere kapanır ve seçim **olduğu gibi kalır**. Halka `selectedNodes.length`
+1 → 0 geçişini ölçer.
+
+## Bileşen penceresi açık kalır (2026-10-16)
+
+**Kullanıcı isteği.** *"Çift tıklayınca yanda açılan pencere kalsın, boşluğa
+veya başka bir yere tıklayınca gitmesin. Başka bir bileşene tıklayınca da onun
+penceresi gelecek."*
+
+**Ölçülen kusur.** Pencereyi seçimin boşalması kapatıyordu (`showEmptyProperties`).
+Boş alana tık, başka bileşene tek tık (seçim önce temizleniyor) ve Ctrl+Z
+pencereyi kapatıp tuvali 380 px zıplatıyordu — sütun kipinin kendi sözü ("kapatma
+✕ ve ESC'te kalır") tutulmuyordu.
+
+**Hüküm.** Pencerenin bir KONUSU var (son gösterilen bileşen): seçim boşalınca
+konu kalır, başka bir bileşen seçilince içerik yerinde değişir. Konu silinirse
+pencere açık kalır ve boş hâline iner. Kapatanlar: ✕, Esc ve bağlam değişimi
+(`veMufettisKapat`). Seçime bakan pencere düğmeleri konuya bakar (çöp kutusu,
+FEAD tablosunun tazelemesi); `veFlushOpenPanelData` içerik o bileşenin değilse
+okumaz. Sütuna sığmayan bileşen (`VE_SUTUNA_SIGMAYAN`) açık sütunda tek tıkta
+perdeyle açılmaz, KART olur (yalnız "Pencerede aç" düğmesi — ARAYÜZ ANLATMAZ);
+geniş pencere kapanınca karta döner. Kapı: `mufettis-kalir.test.js` +
+`mufettis-sutun.spec.js` → *KALIR*.
+
+**Konu kendi penceresinin altında kalmaz.** Sütun tuvali sağdan daraltır, kamera
+yerinde durur. Ölçüldü (her bileşen konu olarak, sütun kapalıyken görünürken):
+
+| Ekran | AP (17) | Takoz (20) | kameranın en çok kayması |
+|-------|---------|------------|--------------------------|
+| 1366×768 | 6 → 0 | 7 → 0 | 314 px |
+| 1600×900 | 6 → 0 | 5 → 0 | 285 px |
+| 1920×952 | 4 → 0 | 1 → 0 | 125 px |
+
+Sütunu AÇAN çağrı, açılıştan önce görünen konu sütunun altına düşüyorsa kamerayı
+yalnız yatayda ve yalnız gereken kadar kaydırır; ölçek değişmez, öteki
+bileşenlere bakılmaz. Reddedilen: içeriğe yeniden sığdırmak (1366'da ölçek
+%92 → %53 — kullanıcının kadrajı her açılışta silinirdi). Kapı:
+`mufettis-kalir.test.js` → *KONU KENDİ PENCERESİNİN ALTINDA KALMAZ* +
+`mufettis-sutun.spec.js` → *KADRAJ*.
 
 
 ## Pencere kabukları jeton konuşur (2026-09-22)

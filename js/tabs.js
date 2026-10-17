@@ -14,6 +14,10 @@ var currentSubTab = 'arac-performans';
 
 function veSubTabDegistir(tabName) {
   currentSubTab = tabName;
+  // Bileşen penceresi topoloji sayfasının yüzü: öteki sayfalarda GİZLENİR ama
+  // açık kalır, dönünce yerindedir (css/styles.css → html.ve-sayfa-diger).
+  if(typeof document !== 'undefined' && document.documentElement)
+    document.documentElement.classList.toggle('ve-sayfa-diger', tabName !== 'arac-performans');
 
   // Sayfa rayı (.ve-nav-rail, bkz. index.html) — dikey tablist.
   // Roving tabindex: yalnız AKTİF öğe Tab sırasında; ray'a bir kez uğranır,

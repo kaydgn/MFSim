@@ -3990,6 +3990,14 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   border-color:var(--accent-primary);
   box-shadow:0 0 0 1px var(--accent-primary);
 }
+/* PENCERENİN KONUSU (js/map.js → veMufettisIsaretle). Bileşen penceresi seçim
+   boşalınca da açık kalıyor (kullanıcı isteği 2026-10-16); pencerenin hangi
+   bileşene ait olduğu kesikli kenardan okunur. Seçili kutunun çift çeperi
+   ayrı kalır — seçim başka, pencere başka. */
+.ve-node.ve-node--mufettis:not(.selected) .ve-node-box{
+  border-color:var(--accent-primary);
+  border-style:dashed;
+}
 
 /* Yeni bileşen canvas'a eklenince yaylanarak belirir (drop-in) — yalnızca
    kullanıcı eklemesinde (createNode); restore/load ayrı yoldan render eder. */
@@ -4874,6 +4882,16 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   /* Tuval sütunu müfettiş kadar daralır. Sınıf veTogglePropertiesPanel'den. */
   html.ve-mufettis-acik:not(:has(.ve-properties--modal)) .ve-canvas-area{ padding-right:var(--inspector-w); }
 }
+/* Pencere topoloji sayfasının yüzüdür: öteki sayfalarda GİZLENİR, kapanmaz —
+   dönünce yerindedir (js/tabs.js → veSubTabDegistir). Gizlenmeseydi açık
+   kalan sütun Sonuçlar'da panonun sağ 380 px'ini örterdi. */
+html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
+
+/* SÜTUNA SIĞMAYAN BİLEŞENİN SÜTUNDAKİ KARTI (js/cp-core.js →
+   _veMufettisKartHTML). Sütun açıkken böyle bir bileşene tek tık geniş
+   penceresini perdeyle açmaz; kart düğmesiyle ya da çift tıkla açılır. */
+.ve-prop-genis{ display:flex; padding:10px 2px 0; }
+.ve-prop-genis .sw-btn{ display:inline-flex; align-items:center; gap:6px; font-size:var(--fs-body); padding:6px 12px; }
 
 /* ══ TAKOZ SEÇİCİ — AÇILIR LİSTE (combobox) ══
    Önceki hâl: 25+ gömülü takoz sol sütunda alt alta dizili; seçili takozun
@@ -10054,10 +10072,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 
 /* ── GÜÇ GRUBUNDAKİ YERİ — KROKİ ──────────────────────────────────────────
-   2026-10-16'dan beri AKSONOMETRİK: Görünümler'in çizicisi (`.ve-ak-*`,
-   aşağıda), bu bileşen `[data-sec]` ile işaretli. Kap (`.ve-mnt-kroki`) ve
-   başlık bandı (`.ve-mnt-kroki-bas`) Takoz Özellikleri'nin grafik
-   çerçevesiyle ortak. */
+   2026-10-16'dan beri Görünümler'in serbest kameralı bileşeni (`.ve-mnt-akso3b`,
+   çizim `.ve-ak-*`, aşağıda); bu bileşen perdenin üstünde, `[data-sec]` ile
+   işaretli. Başlık bandı (`.ve-mnt-kroki-bas`) ve kap (`.ve-mnt-kroki`)
+   Takoz Özellikleri'nin grafik çerçevesiyle ortak. */
 .ve-mnt-kroki{
   margin:0 0 10px; border:1px solid var(--border-color); border-radius:var(--radius-md);
   background:var(--bg-primary); overflow:hidden;
@@ -10329,6 +10347,13 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-t[data-sec] path{ stroke:var(--accent-primary); stroke-width:1.2; }
 .ve-ak-sec-hale{ fill:none; stroke:var(--accent-primary); stroke-width:1.8; }
 .ve-ak-cip.sec-cip rect{ stroke:var(--accent-primary); stroke-width:1.4; }
+/* PERDE (o.perde): seçili parça aydınlık, kalan model gölgede — perde
+   tema-nötr karartmadan (--scrim, %45'i), çizimin yazıları altında da AA
+   (iki temada hesaplı: mount-akso.test.js → PERDE). Fare olayları perdeden
+   geçer: öteki işaretlerin bilgisi fare üstünde. */
+.ve-ak-perde{ fill:color-mix(in srgb, var(--scrim) 45%, transparent); pointer-events:none; }
+/* Föyün satırı çizimdeki parçasını aydınlatır (cp-mount.js → _mntAksoOdak). */
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr[data-ak]:hover td{ background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-input)); }
 .ve-ak-lj-sec{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--bg-input)); stroke:var(--accent-primary); stroke-width:1.2; }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
