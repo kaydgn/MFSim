@@ -420,10 +420,10 @@ describe('hazır diyagramlar — var olmayan kanal için şerit yok', () => {
 });
 
 describe('diyagram yorumu — sayı modelden, genel geçer metin yok', () => {
-  test('dört kümenin de öncü satırı ve işaretleri var', () => {
+  test('dört kümenin de işaretleri var; öncü satır (açıklama yuvası) yok', () => {
     const { R } = coz();
     R.signals.forEach((ds) => {
-      expect(ds.brief && ds.brief.lead).toBeTruthy();
+      expect(ds.brief && !('lead' in ds.brief)).toBe(true);
       expect(ds.brief.marks.length).toBeGreaterThan(0);
     });
   });
@@ -503,7 +503,7 @@ describe('diyagram yorumu — sayı modelden, genel geçer metin yok', () => {
     // Tam şerit (ön ayar) bandı ve kalibrasyon notunu taşır
     const tam = B.forLane(ds, R, ds.channels.map((c) => c.id)).paras.join('\n');
     expect(tam).toMatch(/Çalışma bandı/);
-    expect(tam).toMatch(/KALİBRE/);
+    expect(tam).toMatch(/Burulma modeli Gates System Resonance'a kalibre/);
   });
   test('yorum HTML üretmez — vurgu `**` işaretiyle, kaçırma sunumun işi', () => {
     const { R } = coz();
@@ -538,8 +538,8 @@ describe('yorum TEKRAR ETMEZ — hazır diyagram, "Ayır" ve tek şerit düzenle
       [['ön ayar ' + p.k, p.lanes], ['ön ayar ' + p.k + ' → Ayır', ayir(p.lanes)]]));
   // Kümenin geneline dair cümleler: tekrar etmemeli, "Ayır" ile de KAYBOLMAMALI.
   const GENEL = [/^Gergi ankrajı/, /^Kaymamak için gereken/, /^İstenen servis faktörü/,
-    /^Yalnız YÜK TAŞIYAN/, /gergin tarafında/, /^Burulma modeli KALİBRE/, /^Frekans merkezkaç payıyla/,
-    /^Açıklık frekansları \*\*çizilmiyor/, /^Açıklık gerginlikleri çevrim boyunca/, /^Rampa /,
+    /gergin tarafta/, /^Burulma modeli /, /^Frekans merkezkaç düzeltmeli/,
+    /^Açıklık gerginlikleri çevrim boyunca/, /^Rampa /,
     /dayatılmış/, /^Marş devri/, /^İvme girilmemiş/, /^Gergi kolu dinamiği/, /^Gerilme çizilen/,
     /^Açıklık frekansları üretilmiyor/];
   const genel = (ds, R, lanes) => {

@@ -578,15 +578,17 @@ describe('veTrNoteHTML — grafiğin altındaki yorum şeridi', () => {
   const two = { title: 'Düşey ivme süpürmesi', paras: ['Çökme **7,1 mm**.'] };
 
   test('tek şerit: başlık üstte, gövde tek bölüm', () => {
-    const h = T.veTrNoteHTML([one], { lead: 'özet' });
+    const h = T.veTrNoteHTML([one]);
     expect(h).toContain('data-act="note-toggle"');
+    // Öncü satır (açıklama yuvası) yok: başlıkta yalnız şeridin adı
+    expect(h).not.toContain('ve-trace-note-line');
     expect(h).toContain('Frekans yanıtı — düşey (Z)');
     // Tek şeritte bölüm başlığı TEKRARLANMAZ — üstteki satır zaten söylüyor
     expect(h).not.toContain('ve-trace-note-h"');
   });
 
   test('iki şerit: her biri kendi başlığıyla ayrı bölüm', () => {
-    const h = T.veTrNoteHTML([one, two], { lead: 'özet' });
+    const h = T.veTrNoteHTML([one, two]);
     expect((h.match(/ve-trace-note-sec/g) || []).length).toBe(2);
     expect((h.match(/ve-trace-note-h"/g) || []).length).toBe(2);
     expect(h).toContain('Düşey ivme süpürmesi');

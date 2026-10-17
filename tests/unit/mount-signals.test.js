@@ -344,13 +344,11 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
   const lane = (key, ids) => B.forLane(setOf(key), R, ids);
   const text = (br) => br.paras.join(' ');
 
-  test('kümenin kendisi tek satır özet + grafik işaretleri taşır', () => {
+  test('kümenin kendisi grafik işaretleri taşır; öncü satır (açıklama yuvası) yok', () => {
     SETS.forEach((ds) => {
-      expect(ds.brief.lead.length).toBeGreaterThan(20);
+      expect('lead' in ds.brief).toBe(false);
       expect(ds.brief.marks.length).toBeGreaterThan(0);
     });
-    const leads = SETS.map((d) => d.brief.lead);
-    expect(new Set(leads).size).toBe(leads.length);
   });
 
   test('tek kanal: o yönün kendi sayıları', () => {
@@ -385,11 +383,12 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     const ds = setOf('frf');
     const br = lane('frf', ds.channels.map((c) => c.id));
     expect(br.title).toContain('birleşik');
+    expect(br.title).toContain(ds.channels.length + ' kanal');
     const t = text(br);
-    expect(t).toContain(ds.channels.length + ' kanal');
-    // Okuma tuzaklarını söylemeli: ölçeği ele geçiren eğri ve eksi verim
-    expect(t).toMatch(/sönümsüz/);
-    expect(t).toMatch(/eksi/);
+    // Geçerlilik sınırı kalır (sönümsüz tepe örneklemeye bağlı); okuma tarifi
+    // (ölçek, eksi verim, kanal sayısının tekrarı) kılavuzda.
+    expect(t).toMatch(/Sönümsüz tepe rezonansta sınırsız/);
+    expect(t).not.toMatch(/eksi değer|kanal\*\* üst üste/);
     // Ve diğer hiçbir şerit yorumuyla aynı olmamalı
     [['T_2'], ['T_0', 'T_1', 'T_2'], ['T_2', 'T0_2'], ['eta_2']]
       .forEach((ids) => expect(t).not.toBe(text(lane('frf', ids))));
@@ -426,7 +425,7 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     const br = B.forLane(ds, R, ids);
     const t = text(br);
     expect(t).toContain('en çok yüklenen');
-    expect(t).toContain('en az yüklenen');
+    expect(t).toContain('en azı');
     expect(t).toMatch(/mm/);
   });
 
@@ -637,7 +636,7 @@ describe('Campbell yorumu — kesişim devirleri ve işaretler', () => {
   });
 
   test('tek aile çizilmişse kesişim uydurulmaz, eksik olan söylenir', () => {
-    expect(text(lane(['ord.1', 'ord.3']))).toContain('yalnız');
+    expect(text(lane(['ord.1', 'ord.3']))).toContain('mod çizgisi yok');
     expect(text(lane(['ord.1', 'ord.3']))).not.toContain('kesiyor');
     expect(text(lane(modeIds))).toContain('mertebe');
   });
@@ -738,12 +737,12 @@ describe('takoz başına iletilebilirlik', () => {
     a.T.forEach((v, i) => expect(b.T[i]).toBeCloseTo(v, 12));
   });
 
-  test('yorum: en çok / en az geçiren takoz ve vektörel toplam uyarısı', () => {
+  test('yorum: en çok / en az geçiren takoz (vektörel toplamın açıklaması kılavuzda)', () => {
     const ids = MOUNTS.map((m) => tmId(2, m));
     const br = B.forLane(ds, R, ids);
     const t = br.paras.join(' ');
     expect(br.title).toContain('Takoz başına');
-    expect(t).toContain('vektörel');
+    expect(t).not.toContain('vektörel');
     // Ateşleme frekansındaki sıralama modelin kendi sayısından
     const fExc = (750 / 60) * (6 / 2);
     const vals = MOUNTS.map((m) => ({

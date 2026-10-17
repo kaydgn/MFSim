@@ -106,16 +106,13 @@ function _feadResBolunmez(s) {
   });
 }
 
-// Bayat sonucun uyarısı — sebebi ve çaresiyle.
+// Bayat sonucun uyarısı — durum ve sebebi (çare kılavuzda).
 function _feadResStaleNote(st) {
   if(!st) return '';
   if(st.k === 'bayat')
-    return '<div class="ve-fr-note" data-d="warn"><b>Bu sonuç eski modele ait.</b> Model çözümden sonra '
-      + 'değişti; sayılar artık tuvaldeki modeli anlatmıyor. FEAD alt topolojisinde FEAD araçları → '
-      + '<b>' + veIkon('play') + ' Hesapla</b> ile yeniden çözün.</div>';
+    return '<div class="ve-fr-note" data-d="warn"><b>Model çözümden sonra değişti.</b> Sayılar son çözümden.</div>';
   if(st.k === 'kayip')
-    return '<div class="ve-fr-note" data-d="off">Bu sonucun modeli artık projede yok (FEAD kartı '
-      + 'silinmiş ya da başka bir proje sekmesinde).</div>';
+    return '<div class="ve-fr-note" data-d="off">FEAD kartı silinmiş ya da başka sekmede.</div>';
   return '';
 }
 
@@ -128,9 +125,8 @@ function veFeadResTreeTopHTML() {
     + '<div class="ve-fr-tree-row">' + veFeadResChipHTML(st)
     + '<span class="ve-fr-tree-meta">' + _feadResEsc(_feadResMeta(R)) + '</span>'
     + '<button type="button" class="ve-trace-btn ve-fr-tree-btn" onclick="veFeadResSummaryOpen()"'
-    + ' title="Kasnak, çevrim, gergi, burulma, tepe yük ve uygunluk tabloları">'
+    + '>'
     + '<span class="mf-ico mf-ico-clipboard"></span>Özet</button></div>'
-    + (st.k === 'bayat' ? '<div class="ve-fr-tree-uyari">Model çözümden sonra değişti.</div>' : '')
     + '</div>';
 }
 
@@ -186,8 +182,6 @@ function veFeadResEmptyHTML() {
     });
     h += '</div>';
   }
-  h += '<div class="ve-fr-foot">ya da <b>Veri Gezgini</b>\'nden kanal seçin — her küme kendi X ekseninde: '
-     + 'çevrim ve Campbell <b>motor devri</b>, gergi kolu <b>kol açısı</b>, senaryo <b>zaman</b>.</div>';
   h += _feadResCodes(R);
   return h + '</div>';
 }
@@ -230,7 +224,7 @@ function veFeadResPreset(k) {
 // ── SONUÇLAR'DA AÇ — çözücü penceresinden ──────────────────────────────────
 function veFeadOpenResults() {
   if(!_feadResSets().length) {
-    if(typeof showToast === 'function') showToast('Önce FEAD araçları → Hesapla ile modeli çözün.', 'warning');
+    if(typeof showToast === 'function') showToast('FEAD sonucu yok.', 'warning');
     return false;
   }
   // Müfettiş penceresi topoloji sayfasının yüzü; açık kalırsa Sonuçlar'da
@@ -254,7 +248,7 @@ function veFeadResSummaryOpen() {
   var R = _feadResR();
   if(!overlay) return false;
   if(!R || !R.ok) {
-    if(typeof showToast === 'function') showToast('FEAD sonucu yok — önce FEAD araçları → Hesapla ile çözün.', 'warning');
+    if(typeof showToast === 'function') showToast('FEAD sonucu yok.', 'warning');
     return false;
   }
   var bant = (typeof veRepHeadHTML === 'function') ? veRepHeadHTML({
@@ -368,7 +362,7 @@ function veFeadResSummaryHTML(R) {
     var mh = [{ t: 'Devir' }, { t: '%' }, { t: 'Kayış [m/s]' }];
     P.forEach(function(p) { mh.push({ t: _feadResEsc(p.code) }); });
     mh.push({ t: 'En düşük SF' });
-    h += _feadResSec('Çıkış gerginlikleri', 'çevrim satırı başına [N] — kasnağın ÇIKIŞ açıklığı',
+    h += _feadResSec('Çıkış gerginlikleri', 'çevrim satırı başına [N] · kasnağın çıkış açıklığı',
       _feadResTbl(mh, rows.map(function(d) {
         var m = Infinity;
         (d.slip || []).forEach(function(s) {
@@ -380,8 +374,7 @@ function veFeadResSummaryHTML(R) {
         (d.perPulley || []).forEach(function(q) { c.push(_feadResN(q.exitTensionN, 0)); });
         c.push(ters ? '—' : _feadResN(m, 2));
         return { c: c, cls: cls };
-      })) + (ters ? '<div class="ve-fr-note" data-d="no">Gergi kayışın <b>gergin tarafında</b>: kayma '
-        + 'emniyeti hüküm vermez. Çare kayış dönüş yönünü çevirmek ya da gergiyi sürücünün önüne almaktır.</div>'
+      })) + (ters ? '<div class="ve-fr-note" data-d="no">Gergi <b>gergin tarafta</b>: kayma emniyeti hüküm vermez.</div>'
         : (c2Sec ? '<div class="ve-fr-mute ve-fr-alt">SF tasarım yükünde · c₂ = '
           + ((typeof veFeadServisYaz === 'function') ? veFeadServisYaz(svT.deger) : _feadResN(svT.deger, 2))
           + ' — SF &lt; 1 kırmızı.</div>' : '')));
@@ -402,7 +395,7 @@ function veFeadResSummaryHTML(R) {
   if(pos.length) {
     var TR = {};
     if(typeof VE_FEAD_POSITIONS !== 'undefined') VE_FEAD_POSITIONS.forEach(function(p) { TR[p.core] = p.label; });
-    h += _feadResSec('Gergi kolu konumları', 'kayış toleransı ve aşınmayla kolun gezdiği zarf', _feadResTbl(
+    h += _feadResSec('Gergi kolu konumları', '', _feadResTbl(
       [{ t: 'Konum', l: 1 }, { t: 'Göreli [°]' }, { t: 'Mutlak [°]' }, { t: 'Gerginlik [N]' },
        { t: 'Hubload [N]' }, { t: 'Yön [°]' }, { t: 'Sarım [°]' }, { t: 'Take-up [mm/°]' }, { t: 'Kayış boyu [mm]' }],
       pos.map(function(p) {
@@ -440,9 +433,8 @@ function veFeadResSummaryHTML(R) {
         });
         return { c: c, cls: (m.fHz >= fLo && m.fHz <= fHi) ? 'is-warn' : '' };
       }))
-      + '<div class="ve-fr-mute ve-fr-alt">Sarı satır: frekansı çevrimin ateşleme bandında ('
-      + _feadResN(fLo, 0) + '–' + _feadResN(fHi, 0) + ' Hz). Rijit cisim modu ' + T.rigidBodyModes
-      + ' (1 olmalı) listelenmez.'
+      + '<div class="ve-fr-mute ve-fr-alt">Sarı: ateşleme bandı ('
+      + _feadResN(fLo, 0) + '–' + _feadResN(fHi, 0) + ' Hz) · rijit cisim modu: ' + T.rigidBodyModes + '.'
       // TAKE-UP ÖZDEŞLİĞİ — modelin kendi iç tutarlılık kapısı: kol→açıklık
       // uzama türevlerinin toplamı gergi take-up oranına EŞİT olmak zorunda.
       + ((T.takeupCheck && isFinite(T.takeupCheck.errPct))
@@ -464,14 +456,11 @@ function veFeadResSummaryHTML(R) {
          + '</span></div>';
       // SEÇİLEN YORULMA MODELİ MUTLAK ÖMRE GEÇMİYOR — bunu bölümün kendisi söyler.
       if(L.modelMismatch)
-        oh += '<div class="ve-fr-note" data-d="warn"><b>Seçilen yorulma modeline göre DEĞİL.</b> Saat değeri '
-           + _feadResEsc(L.calibratedModel || 'PK-2_2p-MT3') + ' sabitleriyle kalibre; çözücüde '
-           + _feadResEsc(L.modelMismatch) + ' seçili. Aşağıdaki DAĞILIM seçtiğiniz modeli kullanır.</div>';
+        oh += '<div class="ve-fr-note" data-d="warn"><b>Saat ' + _feadResEsc(L.calibratedModel || 'PK-2_2p-MT3')
+           + ' sabitleriyle</b> · seçili model ' + _feadResEsc(L.modelMismatch) + ' · dağılım seçili modelle.</div>';
       if(!gec)
-        oh += '<div class="ve-fr-note" data-d="warn"><b>Geçerlilik alanı dışında.</b> Mutlak ömür yalnız bütün '
-           + 'kasnak çapları 79,6–176 mm iken doğrulanıyor; aralık dışında sistematik ~0,55× (düzeltme '
-           + 'sayıya dâhil). Aralık dışı: ' + _feadResEsc((L.outOfRange || []).join(', '))
-           + '. Sertifikasyon için kullanmayın.</div>';
+        oh += '<div class="ve-fr-note" data-d="warn"><b>Çap penceresi dışı</b> (79,6–176 mm): '
+           + _feadResEsc((L.outOfRange || []).join(', ')) + ' · ~0,55× düzeltmeli · sertifikasyon dışı.</div>';
     }
     if(F && F.perPulley && F.perPulley.length) {
       oh += _feadResTbl([{ t: 'Kod', l: 1 }, { t: 'd_eff [mm]' }, { t: 'Temas', l: 1 }, { t: 'Hasar payı [%]' }],
@@ -479,9 +468,9 @@ function veFeadResSummaryHTML(R) {
           return { c: ['<b>' + _feadResEsc(P[i] ? P[i].code : q.name) + '</b>', _feadResN(q.dEffMm, 1),
             q.contact === 'back' ? 'sırttan' : 'kaburgalı', _feadResN(q.sharePct, 1)] };
         }))
-        + '<div class="ve-fr-mute ve-fr-alt">Dağılım YALNIZ çapa ve temas tarafına bağlı (gerilmeden bağımsız): '
+        + '<div class="ve-fr-mute ve-fr-alt">Dağılım çap ve temas tarafından: '
         + 'hasar ∝ w·d<sub>eff</sub><sup>−m</sup>, m = ' + _feadResEsc(F.constants && F.constants.m)
-        + ' — göreli karşılaştırmanın güvenilir ölçütü budur, mutlak ömür değil.</div>';
+        + ' (göreli).</div>';
     }
     h += _feadResSec('Kayış ömrü ve kaburga yorulması', F && F.constants ? F.constants.fatigueModel : '', oh);
   }
@@ -495,8 +484,7 @@ function veFeadResSummaryHTML(R) {
       pk.rows.map(function(r, i) {
         return { c: ['<b>' + _feadResEsc(P[i] ? P[i].code : r.name) + '</b>', _feadResN(r.tensionN, 0),
           r.accelRpmS > 0 ? 'hızlanma' : 'yavaşlama', _feadResN(r.hubloadN, 0), _feadResN(r.dirDeg, 1)] };
-      })) + '<div class="ve-fr-mute ve-fr-alt">Yarı-statik yaklaşım; gergi kolu dinamiği dâhil değil. '
-      + 'Doğrulama kümesinde tepe değeri yok — sayı bir mertebe göstergesidir.</div>', 'warn');
+      })) + '<div class="ve-fr-mute ve-fr-alt">Yarı-statik, kol dinamiği yok · doğrulanmadı (mertebe).</div>', 'warn');
   }
 
   // 7) Hizalama payı — ÇÖZÜMDEN (`R.hizalama`, köprü: kasnağa GİREN açıklık).
@@ -512,9 +500,8 @@ function veFeadResSummaryHTML(R) {
           return { c: ['<b>' + _feadResEsc(kodu(a.kasnak)) + '</b>',
             _feadResEsc(kodu(a.onceki)) + (a.oncekiDuz ? ' · düz' : ''),
             _feadResN(a.acikMm, 1), _feadResN(a.izinMm, 2)] };
-        })) + '<div class="ve-fr-mute ve-fr-alt">Kayışın gidiş yönünde, ' + _feadResN(al[0].limDeg, 2)
-      + '° giriş açısı sınırından; düz kasnak açısal kaçıklığı girilmediği için 0 alındı. '
-      + 'Sertifikasyon için değil.</div>', 'warn');
+        })) + '<div class="ve-fr-mute ve-fr-alt">' + _feadResN(al[0].limDeg, 2)
+      + '° giriş açısı sınırından · açısal kaçıklık 0 (girilmedi).</div>', 'warn');
   }
 
   // 8) Uygunluk kapıları — kapıların KENDİ durumu ve satırları
@@ -563,7 +550,7 @@ function veFeadResSummaryHTML(R) {
   // R.limits satırları köprünün KENDİ yazdığı, bilinen etiketli metin (veFeadLimitsBox da HTML basıyor).
   (R.limits || []).forEach(function(w) { lim.push(String(w)); });
   if(lim.length)
-    h += _feadResSec('Geçerlilik ve uyarılar', 'sayının yanında sınırı', '<ul class="ve-fr-lim">'
+    h += _feadResSec('Geçerlilik ve uyarılar', '', '<ul class="ve-fr-lim">'
       + lim.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ul>');
 
   return h + '</div>';

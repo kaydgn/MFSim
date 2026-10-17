@@ -700,7 +700,7 @@ var veFeadSignals = (function() {
                  sensorId: ds.sensorId,
                  lanes: [ids(ds, function(c) { return end(c.id, '.T'); }),
                          ids(ds, function(c) { return c.id === 'sfmin' || end(c.id, '.sf'); })] });
-      out.push({ k: 'hub', ad: 'Hubload', ikon: 'crosshair', alt: 'Kasnak başına büyüklük ve yön',
+      out.push({ k: 'hub', ad: 'Hubload', ikon: 'crosshair', alt: 'Büyüklük · yön',
                  sensorId: ds.sensorId,
                  lanes: [ids(ds, function(c) { return end(c.id, '.hub'); }),
                          ids(ds, function(c) { return end(c.id, '.dir'); })] });
@@ -714,10 +714,10 @@ var veFeadSignals = (function() {
     if(cb) out.push({ k: 'camp', ad: 'Campbell diyagramı', ikon: 'git-branch', alt: 'Uyarma mertebeleri × doğal frekanslar',
                       sensorId: cb.sensorId, lanes: [cb.channels.map(function(c) { return c.id; })] });
     var kl = setOf(sets, SENSOR_PREFIX + 'kol');
-    if(kl) out.push({ k: 'kol', ad: 'Gergi kolu', ikon: 'sliders', alt: 'Gerginlik kontrol eğrisi · take-up',
+    if(kl) out.push({ k: 'kol', ad: 'Gergi kolu', ikon: 'sliders', alt: 'Gerginlik · hubload · take-up · sarım',
                       sensorId: kl.sensorId, lanes: [['T', 'hub'], ['tk'], ['phi']] });
     var sn = setOf(sets, SENSOR_PREFIX + 'senaryo');
-    if(sn) out.push({ k: 'sen', ad: 'Motor çevrimi', ikon: 'play', alt: 'Marştan stopa devir ve gerginlik',
+    if(sn) out.push({ k: 'sen', ad: 'Motor çevrimi', ikon: 'play', alt: 'Devir · gerginlik · frekans',
                       sensorId: sn.sensorId,
                       lanes: [['rpm'],
                               ids(sn, function(c) { return end(c.id, '.T'); }),
@@ -787,10 +787,10 @@ var veFeadSignals = (function() {
       : '';
     if(ters) {
       out.push({ k: 'kayma', ad: 'Kayma emniyeti', deger: '—', birim: '', durum: 'no',
-                 not: 'Gergi kayışın GERGİN tarafında — kayma emniyeti hüküm vermez' });
+                 not: 'Gergi gergin tarafta' });
     } else if(!isFinite(m.v)) {
       out.push({ k: 'kayma', ad: 'Kayma emniyeti', deger: '—', birim: '', durum: 'wait',
-                 not: 'Yük taşıyan kasnak yok — aksesuar gücü girilmeden hüküm verilmez' });
+                 not: 'Aksesuar gücü girilmedi' });
     } else {
       var d1 = m.v < 1 ? 'no' : 'ok';
       // Birim YOK: SF boyutsuz bir oran; kartta "×" başıboş bir harf gibi okunuyordu.
@@ -812,7 +812,7 @@ var veFeadSignals = (function() {
     // 3) Gergi tarafı
     if(ten) out.push({ k: 'taraf', ad: 'Gergi konumu', deger: ten.ok === false ? 'Gergin taraf' : 'Gevşek taraf',
                        birim: '', durum: ten.ok === false ? 'no' : 'ok',
-                       not: ten.ok === false ? 'Otomatik gergi gevşek tarafa konur' : 'Kayış gidişinde doğru yerde' });
+                       not: '' });
 
     // 4) Çalışma noktası
     var tn = A.tensioner || {};
@@ -847,7 +847,7 @@ var veFeadSignals = (function() {
     } else if(L && _num(L.damageRate) > 0) {
       var saat = L.inValidRange ? _num(L.hoursB10) : _num(L.hoursB10Corrected);
       out.push({ k: 'omur', ad: 'B10 kayış ömrü', deger: _tr(saat, 0), birim: 'saat', durum: 'info',
-                 not: L.inValidRange ? 'çap penceresi içinde' : 'çap penceresi DIŞINDA — ampirik düzeltmeli' });
+                 not: L.inValidRange ? 'çap penceresi içinde' : 'çap penceresi dışında · ampirik düzeltmeli' });
     } else {
       out.push({ k: 'omur', ad: 'B10 kayış ömrü', deger: '—', birim: '', durum: 'wait',
                  not: 'çevrim yüzdeleri girilmedi' });

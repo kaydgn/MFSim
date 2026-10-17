@@ -102,12 +102,7 @@ var veFeadBrief = (function() {
     return ad + ' — ' + chans.length + ' kanal';
   }
 
-  var LEADS = {
-    cevrim:   'Çalışma çevriminin çözülmüş devir noktaları: gerginlik, hubload, kayma emniyeti ve aksesuar yükü.',
-    campbell: 'Motor uyarma mertebeleri ile FEAD doğal frekanslarının devir düzlemindeki kesişimi.',
-    kol:      'Gergi kolunun açısına göre gerginlik, hubload ve take-up — kolun çalışma zarfı.',
-    senaryo:  'Marştan stopa motor çevrimi; devir geçmişi dayatılmış.'
-  };
+  var KUMELER = ['cevrim', 'campbell', 'kol', 'senaryo'];
 
   // ── Küme işaretleri — hangi kanalın çizildiğinden bağımsız ───────────────
   function marks(ds, R) {
@@ -226,15 +221,13 @@ var veFeadBrief = (function() {
         var an = R.analysis && R.analysis.tensioner && R.analysis.tensioner.tensionN;
         var tmn = _chan(ds, 'tmin'), eg = tmn ? _ext(tmn.data, x) : null;
         if(isFinite(an))
-          p.push('Gergi ankrajı **' + n(an, 0) + ' N** — yay dengesinden.'
-            + (eg && eg.ok && eg.lo < 0 ? ' Yükseltilemez; bir açıklık gevşiyorsa çekilen güç ya da '
-              + 'gerginin yeri gözden geçirilmeli.' : ''));
+          p.push('Gergi ankrajı **' + n(an, 0) + ' N** — yay dengesinden.');
         if(m.slipThreshold && m.slipThreshold.tensionN > 0)
           p.push('Kaymamak için gereken en düşük ankraj **' + n(m.slipThreshold.tensionN, 0) + ' N** ('
             + m.slipThreshold.pulley + ', ' + n(m.slipThreshold.engineRpm, 0) + ' d/dk); tasarım gerginliği '
             + 'bunun **' + n(m.slipThreshold.margin, 2) + ' katı**.');
         if(m.ters)
-          p.push('Gergi kayışın **gergin tarafında**: kayma emniyeti bu modelde hüküm vermez ve çizilmez.');
+          p.push('Gergi **gergin tarafta**: kayma emniyeti hüküm vermez.');
       }
       say(tA); say(tO);
     }
@@ -251,8 +244,6 @@ var veFeadBrief = (function() {
           + n(e.loX, 0) + ' d/dk\'da. ' + (e.lo < 1 ? '**SF 1\'in altında: kayış' + tas + ' o devirde kayar.**'
             : 'SF 1\'in üstünde:' + tas + ' kayma yok.'));
       }
-      p.push('Yalnız YÜK TAŞIYAN kasnaklar çizilir: avara ve gergi güç çekmez, payları hükme girmez. '
-        + 'Her devirdeki sayı o devirde ivme ve yük kombinasyonlarının en kötüsüdür.');
       say(sA); soylendi.sfmin = true;
     } else if(sA.length) {
       var sl = sA.map(function(c) {
@@ -278,7 +269,7 @@ var veFeadBrief = (function() {
         p.push((hA.length === 1 ? '**' + hb.ad + '** hubload\'u en fazla **' + n(hb.v, 0) + ' N** ('
             + n(hb.x, 0) + ' d/dk).'
           : 'En büyük hubload **' + n(hb.v, 0) + ' N** — ' + hb.ad + ', ' + n(hb.x, 0) + ' d/dk.')
-          + ' Kasnak rulmanı ve aksesuar mili bu kuvveti taşır.');
+);
         say(hA);
       }
     }
@@ -306,7 +297,7 @@ var veFeadBrief = (function() {
         p.push((rA.length === 1 ? '**' + rp.ad + '** kasnağı en fazla **' + n(rp.v, 0) + ' d/dk** döner (motor '
             + n(rp.x, 0) + ' d/dk).'
           : 'En hızlı dönen kasnak **' + rp.ad + '**: **' + n(rp.v, 0) + ' d/dk** (motor ' + n(rp.x, 0) + ' d/dk).')
-          + ' Aksesuar devir sınırı uygunluk kapısında denetlenir.');
+);
         say(rA);
       }
     }
@@ -317,7 +308,7 @@ var veFeadBrief = (function() {
         p.push((qA.length === 1 ? '**' + q.ad + '** mil torku en fazla **' + n(q.v, 1) + ' Nm** (' + n(q.x, 0)
             + ' d/dk).'
           : 'En büyük ortalama mil torku **' + n(q.v, 1) + ' Nm** — ' + q.ad + ', ' + n(q.x, 0) + ' d/dk.')
-          + ' Q = 9549·P/n; hızlanmadaki atalet tepeleri bu değere dâhil DEĞİL.');
+          + ' Q = 9549·P/n; hızlanmadaki atalet tepeleri hariç.');
         say(qA);
       }
     }
@@ -360,19 +351,16 @@ var veFeadBrief = (function() {
     if(has('tc')) {
       var et = _ext(_chan(ds, 'tc').data, x);
       if(et.ok) {
-        p.push('Merkezkaç gerginliği m′v² **' + n(et.lo, 0) + '–' + n(et.hi, 0) + ' N** — kayış hızının '
-          + 'karesiyle büyür.');
+        p.push('Merkezkaç gerginliği m′v² **' + n(et.lo, 0) + '–' + n(et.hi, 0) + ' N**.');
         soylendi.tc = true;
       }
     }
     if(fA.length >= 2 || has('tc'))
-      p.push('Frekans merkezkaç payıyla GERÇEK gerginlikten; bu düzeltme türetilmiştir, tedarikçiye '
-        + 'kalibre değildir.');
+      p.push('Frekans merkezkaç düzeltmeli gerginlikten (türetilmiş, kalibre değil).');
     if(has('fat')) {
       var e7 = _ext(_chan(ds, 'fat').data, x);
       if(e7.ok) {
-        p.push('Kaburga yorulmasının en büyük payı **%' + n(e7.hi, 1) + '** ile **' + n(e7.hiX, 0)
-          + ' d/dk** satırından — devir × çevrim yüzdesi × kayış geçiş sayısı.');
+        p.push('Kaburga yorulmasının en büyük payı **' + n(e7.hiX, 0) + ' d/dk** satırında: **%' + n(e7.hi, 1) + '**.');
         soylendi.fat = true;
       }
     }
@@ -402,14 +390,11 @@ var veFeadBrief = (function() {
           ? 'Bantta **' + tors.length + ' burulma kesişimi**: ' + tors.slice(0, 6).map(function(c) {
               return 'mod ' + c.mode + ' (' + n(c.f, 1) + ' Hz) × ' + c.label + ' → **' + n(c.rpm, 0) + ' d/dk**';
             }).join(' · ') + (tors.length > 6 ? ' · (+' + (tors.length - 6) + ')' : '') + '.'
-          : 'Bantta burulma modu kesişimi yok: ' + m.modes.length + ' elastik modun hiçbiri çalışma '
-            + 'devirlerinde bir mertebeyle çakışmıyor.');
-        p.push('Burulma modeli KALİBRE bir modeldir (Gates System Resonance\'a 6 sistemde RMS ~%8) — '
-          + 'bir mertebe göstergesi olarak okuyun.');
+          : 'Bantta burulma modu kesişimi yok (' + m.modes.length + ' elastik mod).');
+        p.push('Burulma modeli Gates System Resonance\'a kalibre (RMS ~%8).');
       }
       if(!m.beltOn) {
-        p.push('Açıklık frekansları **çizilmiyor**: kayış tipine bağlı çıktılar kapalı (birim kütle '
-          + 'katalogdan gelir). Kayış Özellikleri penceresinden (çizimde kayışa tıklayın) açılabilir.');
+        p.push('Açıklık frekansları üretilmiyor: kayış verisi kapalı.');
       } else if(spns.length && span.length) {
         p.push('Açıklık frekansı kesişimleri: ' + span.slice(0, 6).map(function(c) {
           return c.span + ' × ' + c.label + ' → **' + n(c.rpm, 0) + ' d/dk**';
@@ -444,11 +429,9 @@ var veFeadBrief = (function() {
         : 'çalışma bandında hiçbir mertebeyle kesişmiyor.'));
     });
     if(mods.some(function(c) { return c.id === 'tmod.1'; })) {
-      p.push('Burulma modeli KALİBRE bir modeldir (Gates System Resonance\'a 6 sistemde RMS ~%8) — '
-        + 'bir mertebe göstergesi olarak okuyun.');
+      p.push('Burulma modeli Gates System Resonance\'a kalibre (RMS ~%8).');
       if(!m.beltOn)
-        p.push('Açıklık frekansları **çizilmiyor**: kayış tipine bağlı çıktılar kapalı (birim kütle '
-          + 'katalogdan gelir). Kayış Özellikleri penceresinden (çizimde kayışa tıklayın) açılabilir.');
+        p.push('Açıklık frekansları üretilmiyor: kayış verisi kapalı.');
     }
     // Yalnız açıklık frekansları
     spns.forEach(function(c) {
@@ -495,8 +478,7 @@ var veFeadBrief = (function() {
       if(gez.length)
         p.push('Kol serbest konumdan ' + (load ? 'load stop\'a (**' + n(load.rel, 1) + '°**)' : 'erişim sınırına')
           + ' giderken ' + gez.join(', ') + ' arasında geziyor.'
-          + (has('T') && isFinite(m.cutAt) ? ' Eğri kolun ucunda tekilleşir; konum gerginliklerinin 1,6 katında (**'
-              + n(m.tCap, 0) + ' N**) kesildi.' : ''));
+          + (has('T') && isFinite(m.cutAt) ? ' Eğri **' + n(m.tCap, 0) + ' N**\'de kesildi (konum gerginliklerinin 1,6 katı).' : ''));
     }
     // Mean'deki değer çözülemezse (konum listesi hatalı) cümle aralığa düşer;
     // yön VARSAYILMAZ — taramanın gerçek başı → sonu yazılır.
@@ -510,28 +492,27 @@ var veFeadBrief = (function() {
       p.push((isFinite(vt) ? 'Take-up oranı Mean\'de **' + n(vt, 3) + ' mm/°**'
           + (et.ok ? ' (tarama boyunca ' + n(et.lo, 3) + '–' + n(et.hi, 3) + ')' : '')
         : 'Take-up oranı **' + n(et.lo, 3) + '–' + n(et.hi, 3) + ' mm/°**')
-        + '. Gerginlik T = M/(dL/dθ) olduğu için oran küçüldükçe gerginlik büyür.');
+        + '.');
     }
     if(has('phi')) {
       var vp = deger('phi'), up = uclar('phi');
       p.push((isFinite(vp) ? 'Gergi sarım açısı Mean\'de **' + n(vp, 1) + '°**; kol ilerledikçe '
           : 'Gergi sarım açısı kol ilerledikçe ')
-        + n(up.a, 1) + '° → ' + n(up.b, 1) + '°. Sarım daraldıkça gergi kasnağı kayışı daha az kavrar.');
+        + n(up.a, 1) + '° → ' + n(up.b, 1) + '°.');
     }
     if(has('beta')) {
       var vb = deger('beta'), eb = _ext(_chan(ds, 'beta').data, x);
       p.push('Hubload–kol açısı β ' + (isFinite(vb) ? 'Mean\'de **' + n(vb, 1) + '°**'
-        : '**' + n(eb.lo, 1) + '–' + n(eb.hi, 1) + '°**') + ' — take-up oranı sin β ile orantılı.');
+        : '**' + n(eb.lo, 1) + '–' + n(eb.hi, 1) + '°**') + '.');
     }
     if(has('M')) {
       var vm = deger('M'), em = _ext(_chan(ds, 'M').data, x);
       p.push('Yay momenti **' + n(em.lo, 1) + '–' + n(em.hi, 1) + ' Nm**'
-        + (isFinite(vm) ? ' (Mean\'de ' + n(vm, 1) + ' Nm)' : '') + ' — yay torku ön yük + katsayı × göreli açı.');
+        + (isFinite(vm) ? ' (Mean\'de ' + n(vm, 1) + ' Nm)' : '') + '.');
     }
     if(has('L')) {
       var ul = uclar('L');
-      p.push('Tahrik boyu kol ilerledikçe **' + n(ul.a, 1) + ' → ' + n(ul.b, 1) + ' mm** — '
-        + 'gergi kayışın boyunu bu kadar topluyor.');
+      p.push('Tahrik boyu kol ilerledikçe **' + n(ul.a, 1) + ' → ' + n(ul.b, 1) + ' mm**.');
     }
     if(!p.length) chans.forEach(function(c) { p.push(_aralik(c, x)); });
     var title = chans.length === 1 ? chans[0].name : (ds.name + ' — ' + chans.length + ' kanal');
@@ -616,8 +597,7 @@ var veFeadBrief = (function() {
     }
     tA.forEach(function(c) { soylendi[c.id] = true; });
     if(tA.length >= 2 || has(_tSahip(ds))) {
-      p.push('Açıklık gerginlikleri çevrim boyunca **' + n(m.tMin, 0) + '–' + n(m.tMax, 0) + ' N** '
-        + 'arasında geziyor; ivme gerilmeyi doğrusal oynatır (T = A(N) + α·B(N)).');
+      p.push('Açıklık gerginlikleri çevrim boyunca **' + n(m.tMin, 0) + '–' + n(m.tMax, 0) + ' N** arasında.');
       not('gerg');
     }
     // Frekans: açıklık kanalı kendi rezonansını; çoklu şerit hepsini sayar.
@@ -670,12 +650,12 @@ var veFeadBrief = (function() {
   }
 
   function build(ds, R) {
-    if(!ds || !R || !LEADS[ds.key]) return null;
-    try { return { lead: LEADS[ds.key], marks: marks(ds, R) }; }
+    if(!ds || !R || KUMELER.indexOf(ds.key) < 0) return null;
+    try { return { marks: marks(ds, R) }; }
     catch(e) { return null; }
   }
 
-  return { build: build, forLane: forLane, LEADS: LEADS, _n: n };
+  return { build: build, forLane: forLane, _n: n };
 })();
 
 if(typeof module !== 'undefined' && module.exports) { module.exports = veFeadBrief; }

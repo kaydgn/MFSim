@@ -251,7 +251,7 @@ describe('Sonuçlar sayfası yüzleri', () => {
     const not = veTrNoteEntries();
     expect(not.length).toBe(1);
     expect(not[0].paras.join(' ')).toMatch(/Çalışma bandı/);
-    expect(veTrNoteLead().lead).toBe(cb.brief.lead);
+    expect(typeof veTrNoteLead).toBe('undefined');   // öncü satır yuvası kalktı
   });
   test('Sonuç Özeti rapor penceresine basılır, bant tek üreticiden', () => {
     coz();

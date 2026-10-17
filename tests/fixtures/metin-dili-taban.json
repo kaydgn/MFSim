@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 577,
+ "sayi": 491,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -103,23 +103,9 @@
    "fc8b8a5220": "çözümde kapı yok"
   },
   "js/cp-fead-results.js": {
-   "0c848183e0": "Gergi kayışın gergin tarafında: kayma emniyeti hüküm vermez. Çare kayış dönüş yö",
-   "10cc149245": "Yarı-statik yaklaşım; gergi kolu dinamiği dâhil değil. Doğrulama kümesinde tepe ",
-   "3ae7cc111f": "ya da Veri Gezgini'nden kanal seçin — her küme kendi X ekseninde: çevrim ve Camp",
-   "4193b480ff": "Seçilen yorulma modeline göre DEĞİL. Saat değeri ‹› sabitleriyle kalibre; çözücü",
-   "459c3c44cc": "Bu sonuç eski modele ait. Model çözümden sonra değişti; sayılar artık tuvaldeki ",
-   "554ea48ae9": "çevrim satırı başına [N] — kasnağın ÇIKIŞ açıklığı",
-   "5575ed8ff4": "FEAD sonucu yok — önce FEAD araçları → Hesapla ile çözün.",
-   "8717af82b7": "Dağılım YALNIZ çapa ve temas tarafına bağlı (gerilmeden bağımsız): hasar ∝ w·def",
-   "8750c8b482": "Kayışın gidiş yönünde, ‹›° giriş açısı sınırından; düz kasnak açısal kaçıklığı g",
    "8b8e63f364": "çalışma (Mean) konumunda · kalibre model (RMS ~%8) · şekil en büyük genliğe norm",
-   "8d3c58d9d9": "Kasnak, çevrim, gergi, burulma, tepe yük ve uygunluk tabloları",
-   "a59a95e8b3": "Geçerlilik alanı dışında. Mutlak ömür yalnız bütün kasnak çapları 79,6–176 mm ik",
-   "a83f9315ab": "Bu sonucun modeli artık projede yok (FEAD kartı silinmiş ya da başka bir proje s",
    "aca5626b1d": "KALİBRE EDİLMEDİ — kaburgalı kasnağa giren açıklıkta izin verilen eksenel kaçıkl",
-   "db66208bf1": "Uygunluk kapıları",
-   "ebfb91166a": "Önce FEAD araçları → Hesapla ile modeli çözün.",
-   "fe965cc84d": "Sarı satır: frekansı çevrimin ateşleme bandında (‹›–‹› Hz). Rijit cisim modu ‹› "
+   "db66208bf1": "Uygunluk kapıları"
   },
   "js/cp-fead-summary.js": {
    "9bc66b8db6": "Saat değeri ‹› sabitleriyle hesaplanmıştır; seçili yorulma modeli ‹›. Mutlak ömü",
@@ -175,12 +161,6 @@
    "fb49c0c7e5": "Bir veya daha fazla kriter sağlanmıyor / kontrol gerektiriyor; ilgili satırları ",
    "fdfcc1d549": "‹› mod sıfıra yakın frekansta olduğu için kapı dışında bırakıldı (bkz. §8.7 serb"
   },
-  "js/cp-mount-results.js": {
-   "097863d33f": "Modal frekanslar, KED, yük durumları ve uygunluk tabloları — indirilir",
-   "0c88230ddf": "Çözülen model bu projede yok; sinyaller son çözümden.",
-   "839949e395": "Model çözümden sonra değişti — Çözücü → Hesapla.",
-   "83f1a04479": "Bayat — model değişti"
-  },
   "js/cp-mount.js": {
    "55c21624b0": "bayat",
    "f54b5a664a": "‹› tork alanı başka bir gövdede de dolu (‹›) — çözücü ‹› gövdesinin değerini oku",
@@ -201,29 +181,9 @@
   },
   "js/fead-brief.js": {
    "1a9ba932cd": "Devir ivmesi **‹›…‹› d/dk/s** — en büyük ivme **‹› s**'de, en sert yavaşlama **‹",
-   "20ef1bf301": "Gergi kayışın **gergin tarafında**: kayma emniyeti bu modelde hüküm vermez ve çi",
    "25a4008639": "Kaymamak için gereken en düşük ankraj **‹› N** (‹›, ‹› d/dk); tasarım gerginliği",
-   "298c221176": "Yalnız YÜK TAŞIYAN kasnaklar çizilir: avara ve gergi güç çekmez, payları hükme g",
-   "2e2a786a37": "‹›. Gerginlik T = M/(dL/dθ) olduğu için oran küçüldükçe gerginlik büyür.",
-   "30a4013cbc": "‹›‹›° → ‹›°. Sarım daraldıkça gergi kasnağı kayışı daha az kavrar.",
-   "34650438f9": "‹› Q = 9549·P/n; hızlanmadaki atalet tepeleri bu değere dâhil DEĞİL.",
-   "350088712d": "Burulma modeli KALİBRE bir modeldir (Gates System Resonance'a 6 sistemde RMS ~%8",
-   "3d9e6484e0": "Bantta burulma modu kesişimi yok: ‹› elastik modun hiçbiri çalışma devirlerinde ",
    "57676dec86": "Hubload yönü en çok **‹›** kasnağında değişiyor: çevrim boyunca **‹›°**.",
-   "5e39287826": "Gergi kolunun açısına göre gerginlik, hubload ve take-up — kolun çalışma zarfı.",
    "7342fe0c5d": "Çalışma bandı **‹›–‹› d/dk** (çevrimin uçları). Mertebeler: dönme ve ateşlemenin",
-   "80aab85d79": "Açıklık frekansları **çizilmiyor**: kayış tipine bağlı çıktılar kapalı (birim kü",
-   "84400d3eb3": "Kaburga yorulmasının en büyük payı **%‹›** ile **‹› d/dk** satırından — devir × ",
-   "8445b9de5b": "Frekans merkezkaç payıyla GERÇEK gerginlikten; bu düzeltme türetilmiştir, tedari",
-   "8c7e735094": "Tahrik boyu kol ilerledikçe **‹› → ‹› mm** — gergi kayışın boyunu bu kadar toplu",
-   "9803d887ba": "Çalışma çevriminin çözülmüş devir noktaları: gerginlik, hubload, kayma emniyeti ",
-   "982aeac535": "Açıklık gerginlikleri çevrim boyunca **‹›–‹› N** arasında geziyor; ivme gerilmey",
-   "aa6f2865cd": "Yükseltilemez; bir açıklık gevşiyorsa çekilen güç ya da gerginin yeri gözden geç",
-   "c497675bdd": "‹› Aksesuar devir sınırı uygunluk kapısında denetlenir.",
-   "c97739d29b": "Motor uyarma mertebeleri ile FEAD doğal frekanslarının devir düzlemindeki kesişi",
-   "ce2249e198": "‹› Kasnak rulmanı ve aksesuar mili bu kuvveti taşır.",
-   "e1f871989f": "Yay momenti **‹›–‹› Nm**‹› — yay torku ön yük + katsayı × göreli açı.",
-   "f316f3af09": "Eğri kolun ucunda tekilleşir; konum gerginliklerinin 1,6 katında (**‹› N**) kesi",
    "f55cd5e33e": "Çevrim boyunca hiçbir açıklık ateşlemenin 1×–4× katına %4'ten yakın geçmiyor."
   },
   "js/fead-checks.js": {
@@ -266,10 +226,7 @@
    "fd8beb5505": "Gates 508C el kitabı (Belt Mass Constants, Micro-V K): 18 g/m/kaburga"
   },
   "js/fead-signals.js": {
-   "076a640322": "Yük taşıyan kasnak yok — aksesuar gücü girilmeden hüküm verilmez",
-   "4f666ec3e0": "sen",
-   "7449814c74": "Gergi kayışın GERGİN tarafında — kayma emniyeti hüküm vermez",
-   "7605705194": "çap penceresi DIŞINDA — ampirik düzeltmeli"
+   "4f666ec3e0": "sen"
   },
   "js/fead-step.js": {
    "0e3a65e67c": "\"‹›\" ikinci gergi rolü; model tek gergi taşır, aktarılmadı.",
@@ -280,7 +237,6 @@
    "2a6d6075aa": "E9843 parça çizimi — \"PIN POSITION FOR THE 344° MEAN ANGLE AND 22.5 Nm SPRING TO"
   },
   "js/fead-transient.js": {
-   "20f1e5e175": "Marş devri ‹› d/dk ve yavaşlama sabit: MFSim'de marş ve motor freni verisi yok.",
    "25564303b6": "tepe devir (çevrim ya da governed, rölantinin üstünde)",
    "6b6c8170b6": "Rampa şekli motorun tam yük tork eğrisinden; büyüklüğü ivme alanından."
   },
@@ -582,52 +538,8 @@
    "cf6c89fcbd": "yukarıdan"
   },
   "js/mount-brief.js": {
-   "0b9b220265": "Çizili mertebelerin tüm kesişimleri (‹›) rölantinin altında kalıyor: ‹›‹›. Çalış",
-   "0ede7d8f6d": "‹›: sönümlü tepe ‹› (‹›); sönümsüz sistemde aynı tepe sınırsızdır — tepeyi yalnı",
-   "153450c82a": "Tipik tasarım bandı ‹›; değer bandın ‹› — takoz gereğinden sert olabilir.",
-   "15d65b7938": "Şeritte yalnız ‹› var; kesişim için en az bir ‹› çizgisi gerekir.",
-   "168894428a": "Sertleşen eğri, büyük darbede durdurucuya oturmayı geciktirir; ‹› metal-metal te",
-   "1d88b9c0c3": "Takoz eğrilerinin aritmetik toplamı sistem eğrisini vermez: kuvvetler ‹› taşır, ",
-   "22a98a6017": "En yüksek tepe ‹› takozunda: ‹›'de ‹›. Tepe frekansları bütün takozlarda ortaktı",
-   "27a0a163ce": "Katalog kapasitesi ‹›, yani bu yükte kapasitenin ‹› kadarı‹› (Kapasite eksenel b",
-   "2da9947f39": "Sönümlü ve sönümsüz iletilebilirlik birlikte; aradaki fark sönümün katkısıdır.",
-   "352dc5d8b9": "‹›'den sonra eğri kalıcı olarak ‹›'in altında — izolasyon bölgesi orası.",
-   "3f91058e7a": "\"En büyük takoz sehimi\" kanalı her ivmede en kötü takozu izler: ‹› altında ‹›",
-   "420a046b82": "Sayaç kanallarının birimi ‹›'tir (mm değil): çekmeye geçen ve durdurucuya oturan",
-   "4840475ac9": "Bandın ‹› kesişimler yalnız kalkış ve durmada geçilir; ‹› kesişimler motor o dev",
-   "4a144bda2b": "Rölanti ‹›; motorun en yüksek devri modelde tanımlı değil, bu yüzden bandın üst ",
-   "4a676b82a3": "Salınım tepe genliğinin ‹›'ine ‹›'de iniyor; darbe süresi ‹›, oran ‹›. Sönme sür",
-   "60224ce4b8": "Ağırlık merkezinin şasiye göre yer değiştirme aralığı: ‹›. Tedarikçi raporlarınd",
-   "615736bed9": "⚠ ‹›. Eğri çizilmiştir ama sayısal olarak güvenilmez: darbe genliğini ya da süre",
-   "675f77699f": "Ölçeği ele geçiren eğri sönümsüz olandır: sönümsüz sistemin tepesi rezonansta sı",
    "6a7b7210aa": "Rölanti ateşleme frekansında (‹›) en çok kuvvet geçiren takoz ‹› (‹›)",
-   "6de290f0f0": "‹› üst üste: üç yönün sönümlü ve sönümsüz iletilebilirliği, izolasyon verimi‹›. ",
-   "6f85667a79": "Motor uyarma mertebeleri ile güç grubu doğal frekanslarının devir düzlemindeki k",
-   "75e4603bd8": "Şeritte yalnız ‹› var — sistemin yanıtı değil, girdinin kendisi.",
-   "77bd287b11": "Rölanti ölçütü: ateşleme frekansı ‹›, en yüksek mod ‹›, oran ‹›. İzolasyon koşul",
-   "79dcbefada": "Sönümsüz eğri rezonansta sınırsız yükseldiği için ortak eksende sönümlü eğri düz",
-   "83945fba2d": "Şeritte yalnız ‹› var — devirden bağımsız yatay doğrular; kesişim için en az bir",
-   "88baf0019e": "Hiçbiri çalışma bandının içinde değil; bu rezonanslar yalnız kalkış ve durmada g",
-   "8b504c32da": "— ‹›. Temas modelde var: o andan sonra takoz kauçuk rijitliğiyle değil ‹› çalışı",
-   "9100ca08bc": "Yatay eksen ‹›, dikey eksen takoz sehimi ve kuvveti; ‹›.",
-   "9a559b9aed": "Yatay eksen ‹›; güç grubuna ‹› yönde ‹› tepeli ‹›'lik ‹› uygulanıyor. Darbe sonr",
-   "9e700e0de8": "‹› yönde iletilebilirlik: şasiye geçen kuvvetin motor kuvvetine oranı. ‹› = azal",
-   "9f29c5fdbd": "Doğrusal eğri, takoz için sabit bir rijitlik girildiğini gösterir; nonlineer yas",
-   "a0e571a624": "Uyarmanın baskın bileşeni ‹› (ateşleme). Modları şu devirlerde kesiyor: ‹›.",
-   "a11904b7da": "Rölanti ateşleme frekansı ‹› ve orada iletilebilirlik ‹› — yani ‹›. Tedarikçi ra",
-   "a6c02e3eca": "‹› çalışma bandının içinde (‹›); ilgili mod o devirde sürekli besleniyor.",
-   "a851390921": "Statik sehim ‹›: doğrusal bandın (‹›) ‹› kadarı; durdurucuya ‹› pay kalıyor.",
-   "a8990b4eae": "Tipik tasarım bandı ‹›; değer bandın ‹› — dinamik darbeler için pay az.",
-   "ac9cea00c0": "Yatay eksen ‹›, dikey eksen ‹›. ‹› çizgiler motorun ürettiği uyarmalardır — devi",
-   "af534a0e41": "Bandın içinde ateşleme dışı ‹› daha var: ‹›‹›. Kaynakları ateşlemeden zayıftır (",
-   "b27466c30d": "Rezonansta değer eksiye iner (iletilebilirlik > 1); ölçek bu yüzden iletilebilir",
-   "b5ce57595b": "‹› sehimi. ‹› altında en çok yüklenen ‹› (‹›), en az yüklenen ‹› (‹›). Aradaki f",
-   "bf88d551a7": "— ‹›. Bu çözüm lineerdir, durdurucu modelde yoktur: bu genlikten sonrası ‹›.",
-   "e0a2f95fa7": "Frekansa göre iletilebilirlik: şasiye geçen kuvvetin motor kuvvetine oranı.",
-   "e2a4ef37c3": "Verim kanalı rezonansta ‹› değerlere iner; dikey eksen bu yüzden iki tarafa bird",
-   "e7a086fe70": "Eğri üstündeki ‹› statik çalışma noktalarıdır; ömür ve izolasyon o noktadaki eği",
-   "f053dfefa9": "Tepeler güç grubunun doğal frekanslarıdır. ‹›bu yönde ‹› belirgin tepe veriyor: ",
-   "fba413d93c": "‹› ayrı iletilebilirliği: her eğri o takozun şasiye geçirdiği kuvvettir, sistem "
+   "a851390921": "Statik sehim ‹›: doğrusal bandın (‹›) ‹› kadarı; durdurucuya ‹› pay kalıyor."
   },
   "js/mount-core.js": {
    "4005b3089b": "Sıfıra yakın frekans: yapılandırma kinematik olarak serbest olabilir.",
