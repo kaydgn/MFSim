@@ -200,18 +200,18 @@ function _mntParamOlcucu(M, ctx){
 }
 
 // ── PENCERE ─────────────────────────────────────────────────────────────────
-// Üç kategori (FEAD'in ≥ 2 kuralı): GRUPLAR (model taraması, sabit tutulan
+// Üç kategori, gövdede alt alta: GRUPLAR (model taraması, sabit tutulan
 // grup) · ADAYLAR (kütüphane) · KISITLAR (dört kesin kriter, ek kısıtlar,
 // amaç ağırlığı). Sağ sütun: analizin adı ve büyüklüğü → cevap → eylem.
 function getMntParamPropertiesHTML(node){
   if(!node.data) node.data={};
   var H=_mntParamHazirlik(node);
-  var sekmeler=[
+  var kategoriler=[
     { k:'grup', ad:'Gruplar', govde:_mntParamGrupHTML(node, H) },
     { k:'aday', ad:'Adaylar', govde:_mntParamAdayHTML(node, H) },
     { k:'kisit', ad:'Kısıtlar', govde:_mntParamKisitHTML(node, H) }
   ];
-  return _mntPencereKabuk(node, sekmeler, _mntParamYanHTML(node, H));
+  return _mntPencereKabuk(node, kategoriler, _mntParamYanHTML(node, H));
 }
 
 function _mntParamYanHTML(node, H){

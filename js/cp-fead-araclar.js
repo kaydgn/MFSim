@@ -128,15 +128,16 @@ function _feadAracKasnakSay(){
   }).length;
 }
 
-// İŞLETME EKSİĞİNİN YERİ — ilk eksik grubun girildiği pencere (yol verisi,
-// tarif değil — ARAYÜZ ANLATMAZ): motor künyesi
-// ve tahrik sürücü kasnağın "Motor" sekmesinde, çevrim "Çevrim" sekmesinde
-// (kural 42), aksesuar modeli aksesuarın "Rol" sekmesinde (kural 44).
+// İŞLETME EKSİĞİNİN YERİ — ilk eksik grubun girildiği pencere ve bölüm (yol
+// verisi, tarif değil — ARAYÜZ ANLATMAZ): motor künyesi ve tahrik sürücü
+// kasnağın "Motor" bölümünde, çevrim "Çalışma çevrimi"nde (kural 42), aksesuar
+// modeli aksesuarın "Katalog modeli"nde (kural 44). Bölüm adı pencerede görünen
+// başlıktır (kategoriler 2026-10-16'dan beri sekme değil, tek gövdede).
 function _feadAracIsletmeYeri(isl){
   var g = ((isl && isl.eksik) || [])[0];
   var grup = g ? g.grup : '';
-  if(grup === 'aksesuar') return ' · Aksesuar › Rol';
-  if(grup === 'cevrim')   return ' · Sürücü kasnak › Çevrim';
+  if(grup === 'aksesuar') return ' · Aksesuar › Katalog modeli';
+  if(grup === 'cevrim')   return ' · Sürücü kasnak › Çalışma çevrimi';
   return ' · Sürücü kasnak › Motor';
 }
 
@@ -162,7 +163,7 @@ function veFeadAraclarDurum(){
   var islOk = !(isl && !isl.ok);
   var neden = !solver ? 'Çözücü yok.'
     : !modelOk ? (kasnak ? 'Kasnak konumları eksik.' : 'Kasnak yok.')
-    : !(satir > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çevrim'
+    : !(satir > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çalışma çevrimi'
     : !islOk ? veFeadIsletmeMetni(isl) + _feadAracIsletmeYeri(isl)
     : '';
   // Özet kartları yalnız bu modelin sonucu varken (BAYAT sonuç da gösterilir —

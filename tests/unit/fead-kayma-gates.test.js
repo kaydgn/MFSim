@@ -440,7 +440,7 @@ describe('YÜZEYLER — kayış penceresi ve sihirbaz aynı seçiciyi basar', ()
   };
   const dugme = (h) => (h.match(/class="ve-fead-mu-b"/g) || []).length;
 
-  test('kayışın Tasarım sekmesinde seçici var; üç düğme, yazıcısı depoya', () => {
+  test('kayışın Tasarım kategorisinde seçici var; üç düğme, yazıcısı depoya', () => {
     const ns = kurBMC();
     const depo = M.veFeadIsletmeDeposu(ns);
     const h = fead.getFeadBeltPropertiesHTML(ns.find((n) => n.type === 'fead-belt'));

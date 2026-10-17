@@ -166,3 +166,30 @@ de kaldıralım."* · *"Aşağıdaki 'Sıra ve yön' kısmına ne gerek var?"* �
   görünürdü. Yeni pencerenin ilk hâli bunu kaybetmişti (18 sınırın 11'i
   eksenin ötesinde, görünmez); sürekli sınırı kapsayan eksen + sağdaki oluk
   onu geri verdi — kapı `fead-sihirbaz-masa.test.js` → *"EKSEN DIŞI SINIR"*.
+
+
+## SEKMELİ PENCERE (2026-09-21 → 2026-10-16)
+
+**Hüküm:** her FEAD penceresi kategorilerini sekmelere bölüyordu (kasnak 4 ·
+avara 2 · gergi 3 · kayış 4 · çözücü 3); bir anda yalnız açık sekmenin gövdesi
+görünüyordu, sekme hafızası düğüm başına tutuluyordu (`VE_FEAD_PANEL_TAB`) ve
+2026-09-26'dan beri sekme adının altında bir durum satırı vardı (kural 35).
+2026-10-16'da aynı kabuk ortak kite geçti ve Takoz da sekmeli oldu.
+
+**Neden emekli:** kullanıcı kararı (2026-10-16: *"bir bileşen özelinde tek bir
+pencerede tamamı sığacak içerikleri genel olarak iki pencereye ayırmışız …
+Tek bir pencerede hepsi sığar … Kullanışlı ve kompakt bir tasarım olsun."*).
+Ölçüldü (main 8a88b49, gerçek tarayıcı, 379 × 974 px müfettiş sütunu, Tulga +
+AG00976): 33 pencerenin 31'i 2–4 sekmeye bölünmüştü (88 sekme), aynı anda 57
+kategori gizliydi, hepsini görmek 57 tık. Tek gövdede 14 pencere kaydırmasız
+sığıyor; en uzunları Kayış 2.141 px ve Çözücü 2.127 px (2,2 ekran).
+
+**Sekmeli dönemin doğru yaptığı ve korunan şey:** eksiği adıyla göstermek.
+Durum sekmeyle gitmedi — kategorinin kabında (`data-d`) duruyor, sonucu ve
+"Doldur" bağlantısı gövdenin üstündeki bantta, eksik kategori kenarında
+kehribar çizgi taşıyor (kaydırırken de görünür). Sekmenin söylediği AD ise
+bölümün kendi başlığına geçti: her kategori başlıklı bir bölüm taşır
+(`_feadDepoYok` başlıklı kart — başlıksız not, hangi bölümün yerinde
+durduğunu söylemezdi). Gergide sekmelerin gerekçesi (kol yönü ile yay
+katsayısı tek sürgüde 600 px arayla) yeniden geçerli; sıra üç sorunun sırası.
+Kapı: `pencere-kabuk.test.js` → *AİLE* · `fead-sekme-durum.spec.js`.

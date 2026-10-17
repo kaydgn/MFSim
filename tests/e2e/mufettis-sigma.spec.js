@@ -64,34 +64,30 @@ const pencereOlc = async (tip) => {
   // düzenlenen sütuna 42 px kalıyordu (tek sütuna geçiş EKRAN sorgusuydu,
   // panelin değil). Sekmeler alt alta kayıyor, girdiler parmak ucu kadar
   // kalıyor, etiketler SOLDAN kırpılıyordu — `scrollWidth` başlangıç
-  // yönüne taşmayı hiç saymaz. Bu yüzden her sekme gezilir ve ölçü
-  // ÇİZİLMİŞ kutudan alınır.
+  // yönüne taşmayı hiç saymaz. Bu yüzden ölçü ÇİZİLMİŞ kutudan alınır; pencere
+  // tek gövde (2026-10-16), bütün kategoriler aynı anda çizili.
   const sorun = [];
   if (ov.getBoundingClientRect().width < innerWidth) {
     const icW = ic.clientWidth - parseFloat(getComputedStyle(ic).paddingLeft) - parseFloat(getComputedStyle(ic).paddingRight);
-    const sekmeler = [...ic.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'));
-    for (const k of (sekmeler.length ? sekmeler : [null])) {
-      if (k) { veFeadPanelTab(n.id, k); await new Promise((r) => setTimeout(r, 60)); }
-      const ana = ic.querySelector('.ve-fp-main');
-      if (ana && ana.offsetWidth < icW * 0.9) sorun.push(`${k}: düzenlenen sütun ${ana.offsetWidth}/${Math.round(icW)} px`);
-      ic.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea').forEach((e) => {
-        if (e.offsetWidth && e.offsetWidth < 56) sorun.push(`${k}: ${e.tagName.toLowerCase()} ${e.offsetWidth} px`); });
-      ic.querySelectorAll('.ve-fp-l').forEach((l) => {
-        if (!l.offsetWidth) return;
-        const q = l.getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(l); const t = rg.getBoundingClientRect();
-        if (q.left - t.left > 0.5 || t.right - q.right > 0.5) sorun.push(`${k}: etiket kırpık "${l.textContent.trim().slice(0, 24)}"`); });
-      ic.querySelectorAll('.ve-fp-sect').forEach((h) => {
-        if (h.offsetWidth && h.offsetWidth < icW * 0.9) sorun.push(`${k}: başlık büzük ${h.offsetWidth} px`); });
-      // İÇERİDE YATAY KAYDIRMA YOK (2026-09-23). Taşma ve kesik ölçümü
-      // yalnız AÇILIŞ sekmesine bakıyordu ve kendi kabında kayan bir tablo
-      // pencereyi hiç taşırmıyor: çalışma çevrimi "Çevrim" sekmesinde
-      // 1162/359 px kayıyordu, tarama yeşildi. Sığmayan tablo artık açılır
-      // pencerede (js/tablo-pencere.js); sütunda kayan kap kalmamalı.
-      ic.querySelectorAll('*').forEach((el) => {
-        if (!el.offsetWidth || el === ic) return;
-        if (/(auto|scroll)/.test(getComputedStyle(el).overflowX) && el.scrollWidth > el.clientWidth + 1)
-          sorun.push(`${k}: yatay kaydırma ${el.scrollWidth}/${el.clientWidth} px`); });
-    }
+    const ana = ic.querySelector('.ve-fp-main');
+    if (ana && ana.offsetWidth < icW * 0.9) sorun.push(`düzenlenen sütun ${ana.offsetWidth}/${Math.round(icW)} px`);
+    ic.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea').forEach((e) => {
+      if (e.offsetWidth && e.offsetWidth < 56) sorun.push(`${e.tagName.toLowerCase()} ${e.offsetWidth} px`); });
+    ic.querySelectorAll('.ve-fp-l').forEach((l) => {
+      if (!l.offsetWidth) return;
+      const q = l.getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(l); const t = rg.getBoundingClientRect();
+      if (q.left - t.left > 0.5 || t.right - q.right > 0.5) sorun.push(`etiket kırpık "${l.textContent.trim().slice(0, 24)}"`); });
+    ic.querySelectorAll('.ve-fp-sect').forEach((h) => {
+      if (h.offsetWidth && h.offsetWidth < icW * 0.9) sorun.push(`başlık büzük ${h.offsetWidth} px`); });
+    // İÇERİDE YATAY KAYDIRMA YOK (2026-09-23). Taşma ve kesik ölçümü
+    // yalnız AÇILIŞ sekmesine bakıyordu ve kendi kabında kayan bir tablo
+    // pencereyi hiç taşırmıyor: çalışma çevrimi "Çevrim" sekmesinde
+    // 1162/359 px kayıyordu, tarama yeşildi. Sığmayan tablo artık açılır
+    // pencerede (js/tablo-pencere.js); sütunda kayan kap kalmamalı.
+    ic.querySelectorAll('*').forEach((el) => {
+      if (!el.offsetWidth || el === ic) return;
+      if (/(auto|scroll)/.test(getComputedStyle(el).overflowX) && el.scrollWidth > el.clientWidth + 1)
+        sorun.push(`yatay kaydırma ${el.scrollWidth}/${el.clientWidth} px`); });
   }
   // DÜĞME YAZISI KIRILMAZ (2026-09-26) — sütunda da modalda da. Motor
   // penceresinde "+ Satır Ekle", "Tümünü Sil", "Veriyi Temizle" 89–104 px'e

@@ -85,7 +85,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kipi (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
   görünüş, çözümün girdisinden — `veMntAksoCozumModel`); ikisi de katsız.
   **3D Görüntüleyici YER TUTUCU** (`componentDefs['mnt-viewer'].yerTutucu`): "Klasik
-  3B" tek sekme, ilerleyen zamanda gerçek CAD dosyasıyla işlenecek;
+  3B" yalnız yer tutucu notu, ilerleyen zamanda gerçek CAD dosyasıyla işlenecek;
   `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin sahnesi. Kapı:
   `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *YAPIŞKAN
   YER* · *PERDE* · *RAPOR* · *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* +
@@ -511,14 +511,22 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   işaretlenir ve bildirim çıkar. Sayı alanını TİPİYLE seçen kod
   `input[inputmode="decimal"]` kullanır. Kapı: `sayi-alan.test.js` +
   `sayi-alan.spec.js`.
-- **BİLEŞEN PENCERESİ TEK İSKELET** (`js/pencere-kabuk.js`, 2026-10-16): FEAD ve
-  Takoz'un her penceresi kimlik → ≥ 2 kategori sekmesi → gövde (tek sekmeyi yalnız
-  tipin beyanı bağışlar: `componentDefs.yerTutucu` · `.tekSekme`); sağ sütunda
-  bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) → tek eylem; BOŞ sağ sütun
-  çizilmez (`.ve-fp-split--tek`). Sekmelerin ÜSTÜNDE hiçbir şey yok; durum notu
-  FEAD'in satırı (`.ve-fp-not`), açıklama kılavuzda. Kabuk işaretlemesi yalnız
-  kitte (ikinci yazım Takoz'da 17/17 pencereyi aileden düşürmüştü). Kapı:
-  `pencere-kabuk.test.js`; gerekçe `docs/decisions/ortak-yuzeyler.md`.
+- **BİLEŞEN PENCERESİ TEK İSKELET, TEK GÖVDE — SEKME YOK** (`js/pencere-kabuk.js`,
+  kullanıcı kararı 2026-10-16: *"Tek bir pencerede hepsi sığar … Kullanışlı ve
+  kompakt bir tasarım olsun."*). FEAD ve Takoz'un her penceresi kimlik → eksik
+  bandı → kategoriler TEK GÖVDEDE alt alta; hiçbir kategori gizli değil. Bölümü
+  kartın başlığı adlandırır: her kategori başlıklı bir bölüm taşır (başlıksızı
+  yalnız tipin beyanı bağışlar: `componentDefs.yerTutucu`). Kategorinin durumu
+  kabında (`data-d`); eksiğin sonucunu bant yazar, eksik kategori kenarında
+  çizgi taşır. Sağ sütunda bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) →
+  tek eylem; BOŞ sağ sütun çizilmez (`.ve-fp-split--tek`). Gövdenin ÜSTÜNDE
+  banttan başka bir şey yok; durum notu FEAD'in satırı (`.ve-fp-not`), açıklama
+  kılavuzda — kılavuz da pencereyi bölüm başlığıyla anlatır, sekmeyle değil.
+  Aynı bileşenin yeniden kurulması kaydırmayı korur, başka bileşen baştan açılır
+  (`showNodeProperties`). Kabuk işaretlemesi yalnız kitte (ikinci yazım Takoz'da
+  17/17 pencereyi aileden düşürmüştü). Kapı: `pencere-kabuk.test.js` (→ *AİLE* ·
+  *KILAVUZ*) + `fead-sekme-durum.spec.js` (→ *KAYDIRMA*) + iki kılavuz testi (→
+  *PENCERELERDE SEKME YOK*); gerekçe `docs/decisions/ortak-yuzeyler.md`.
 - **TAKOZ PENCERESİ SONUÇ GÖSTERMEZ** (kullanıcı kararı 2026-10-16: *"kullanıcı
   sadece detaylı sonuç raporu ile yetinecek"*): hiçbir Takoz penceresi (sihirbaz
   dâhil) Uygunluk, sehim, yük, mod, kuvvet taşımaz — sonuç yalnız raporda. Çözümle
@@ -579,9 +587,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
 - **SÜTUNDA YATAY KAYDIRMA YOK — sığmayan tablo AÇILIR PENCEREDE**
   (`js/tablo-pencere.js`). Panel tabloyu + kendi düğmelerini bir BİRİM
   işaretler (`data-ve-tablo` · `-baslik` · `-ozet`); karar ÖLÇÜMDEN (sığmıyorsa
-  özet kartı + "Tabloyu aç"), tablo pencereye TAŞINIR, kopyalanmaz. Sekme
-  açan kod kararı AYNI karede ister (`veTabloOlcIcinde`). İki sütunlu pencere
-  de ekrana değil PENCEREYE sorar (`@container vepanel`). Kapı:
+  özet kartı + "Tabloyu aç"), tablo pencereye TAŞINIR, kopyalanmaz. İki sütunlu
+  pencere de ekrana değil PENCEREYE sorar (`@container vepanel`). Kapı:
   `tablo-pencere.test.js` + `tablo-pencere.spec.js` + `mufettis-sigma.spec.js`.
 - **EKRANDAKİ YAZI KUTUSUNA SIĞAR** (`tests/helpers/yerlesim-olcu.js`): yazı
   kırpılmaz (üç noktayla kısaltılan tam metni `title`'da taşır), sözcük satır

@@ -23,9 +23,10 @@
  * altı yardımcıdan geçiyor. İmzalar korunarak yalnız ÜRETTİKLERİ işaretleme
  * sınıf tabanlı yapıldı — yani BÜTÜN FEAD panelleri tek yerden düzeldi.
  *
- * Seçilen pencere tasarımı (kullanıcı, 2026-09-21): **B + C** — sekmeler
- * panelin UZUNLUĞUNU çözüyor, sabit sağ sütun sekmenin ALDIĞI BAĞLAMI geri
- * veriyor. CSS tarafının kapısı `source-hygiene.test.js` → *"PANEL DİLİ"*.
+ * Pencere tasarımı: sabit sağ sütun (kullanıcı, 2026-09-21 · C) ve TEK GÖVDE
+ * (2026-10-16 — kategoriler sekme değil, alt alta: *"Tek bir pencerede hepsi
+ * sığar"*; 09-21'in B'si, sekmeler, emekli). CSS tarafının kapısı
+ * `source-hygiene.test.js` → *"PANEL DİLİ"*.
  */
 const fs = require('fs');
 const path = require('path');
@@ -138,113 +139,70 @@ describe('ALAN SATIRI — etiket SOLDA, değer SAĞDA (P2 · P3)', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('SEKMELER — panelin uzunluğunu çözüyor', () => {
-  test('SÜRÜCÜDE dört sekme (Motor · Çevrim), aksesuarda dört, AVARADA iki', () => {
+describe('TEK GÖVDE — kategoriler alt alta, hiçbiri gizli değil', () => {
+  // Kullanıcı (2026-10-16): *"bir bileşen özelinde tek bir pencerede tamamı
+  // sığacak içerikleri genel olarak iki pencereye ayırmışız … Tüm bileşenler
+  // için bunu uygulayalım."* Kategoriler VERİ olarak kalır (ad · durum · bant),
+  // sekme şeridi ve gizli gövde yok.
+  const kategoriler = (k) => [...k.querySelectorAll('.ve-fp-govde > .ve-fp-kat')].map((t) => t.getAttribute('data-k'));
+  test('SÜRÜCÜDE dört kategori (Motor · Çevrim), aksesuarda dört, AVARADA iki', () => {
     // Sürücü motoru taşır (2026-09-28): Motor (motor · devir sınırları · güç
     // eğrisi · FEAD tahriki) ve Çevrim — Çözücü'den geldiler.
     const k = ciz(getFeadPulleyPropertiesHTML(kasnak()));
-    expect([...k.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')))
-      .toEqual(['geo', 'rol', 'mot', 'cev']);
+    expect(kategoriler(k)).toEqual(['geo', 'rol', 'mot', 'cev']);
     const ac = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'c1', type: 'fead-ac',
       data: { od: 120, x: 0, y: 0 } })));
-    expect([...ac.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')))
-      .toEqual(['geo', 'rol', 'dev', 'egr']);
+    expect(kategoriler(ac)).toEqual(['geo', 'rol', 'dev', 'egr']);
     // Avara kayıştan güç ÇEKMEZ: devir sınırı da güç eğrisi de ona sorulmuyor
     // (kural 25 — sorulan her alanın bir tüketicisi olmak zorunda).
     const a = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'a1', type: 'fead-idler',
       data: { od: 75, x: 0, y: 0 } })));
-    expect([...a.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')))
-      .toEqual(['geo', 'rol']);
+    expect(kategoriler(a)).toEqual(['geo', 'rol']);
   });
 
-  test('yalnız AÇIK sekmenin gövdesi görünür', () => {
+  test('bütün kategoriler GÖRÜNÜR, sekme şeridi YOK — bölümü kartın başlığı adlandırır', () => {
     const kap = ciz(getFeadPulleyPropertiesHTML(kasnak()));
     const gov = kap.querySelector('#ve-fp-panes-k1');
-    const acik = [...gov.children].filter((c) => !c.hasAttribute('hidden'));
-    expect(acik.length).toBe(1);
-    expect(acik[0].getAttribute('data-k')).toBe('geo');
-    expect(kap.querySelector('.ve-fp-tab[aria-selected="true"]').getAttribute('data-k')).toBe('geo');
+    expect([...gov.children].filter((c) => c.hasAttribute('hidden') || c.getAttribute('role') === 'tabpanel')).toEqual([]);
+    expect(kap.querySelector('.ve-fp-tabs, .ve-fp-tab, [role="tablist"]')).toBeNull();
+    // Her kategori en az bir başlıklı kart taşır: başlık katmanı kartın kendisi.
+    [...gov.children].forEach((kat) => expect({ k: kat.getAttribute('data-k'), baslik: !!kat.querySelector('.ve-fp-sect > b') })
+      .toEqual({ k: kat.getAttribute('data-k'), baslik: true }));
   });
 
-  test('SEKME DURUMU MODELDE DEĞİL — Ctrl+Z sekme gezdirmesin', () => {
-    // Kural 15'in (`VE_FEAD_KAT_ACIK`) birebir aynı gerekçesi.
+  test('GÖRÜNÜM DURUMU MODELDE YOK — çizmek ve kategoriye gitmek düğümü değiştirmez', () => {
+    // Kural 15'in (`VE_FEAD_KAT_ACIK`) birebir aynı gerekçesi: Ctrl+Z görünüm
+    // gezdirmesin. ÇİZİMİN KENDİSİ de yazmamalı — davranış ölçülmeden metin
+    // aramak kapı değildir.
     const n = kasnak();
-    // ÇİZİMİN KENDİSİ de yazmamalı: ölçüldü, yalnız `veFeadPanelTab`i ölçen
-    // bir kapı, sekmeyi panel kurulurken `node.data`ya yazan bir kodu
-    // GÖRMÜYORDU (ve `SRC` düzenli ifadesi yazımı değiştirince atlanıyor —
-    // davranış ölçülmeden metin aramak kapı değildir).
     const cizimOnce = JSON.stringify(n.data);
     document.body.innerHTML = getFeadPulleyPropertiesHTML(n);
     expect(JSON.stringify(n.data)).toBe(cizimOnce);
-    const once = JSON.stringify(n.data);
-    expect(fead.veFeadPanelTab('k1', 'rol')).toBe(true);
-    expect(JSON.stringify(n.data)).toBe(once);       // düğüm verisi DEĞİŞMEDİ
-    expect(stubs.saveState).not.toHaveBeenCalled();  // yığına adım YAZILMADI
+    expect(vePencereKategoriGit('k1', 'rol')).toBe(true);
+    expect(fead.veFeadEksikGit('k1', 'cev')).toBe(true);
+    expect(JSON.stringify(n.data)).toBe(cizimOnce);     // düğüm verisi DEĞİŞMEDİ
+    expect(stubs.saveState).not.toHaveBeenCalled();     // yığına adım YAZILMADI
     expect(SRC).not.toMatch(/node\.data\.panelTab|data\.sekme/);
-  });
-
-  test('açılan sekmedeki tablo birimi AYNI KAREDE karar alır — gözlemciye kalmaz', () => {
-    // Gizli sekmedeki birim ölçülemiyor; karar ResizeObserver'ın sonraki
-    // karesine kalınca geniş tablo sekme açılır açılmaz yatay kaydırmayla
-    // görünüyordu (mufettis-sigma.spec, Çözücü "Çevrim" 1217/359 px).
-    document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak());
-    // Sekme ÖNCE açılır, karar SONRA: ters sırada gizli sekme ölçülürdü.
-    // Durum ÇAĞRI ANINDA okunur — sonradan bakmak sırayı kanıtlamaz.
-    let cagriAnindaGizli = null;
-    const olc = jest.fn((gov) => { cagriAnindaGizli = gov.querySelector('[data-k="rol"]').hasAttribute('hidden'); });
-    global.veTabloOlcIcinde = olc;
-    try { fead.veFeadPanelTab('k1', 'rol'); } finally { delete global.veTabloOlcIcinde; }
-    expect(olc).toHaveBeenCalledTimes(1);
-    expect(olc.mock.calls[0][0]).toBe(document.querySelector('#ve-fp-panes-k1'));
-    expect(cagriAnindaGizli).toBe(false);
-  });
-
-  test('ama durum bir yerde DURUYOR — panel yeniden kurulunca aynı sekme', () => {
-    // Hiçbir yerde durmasaydı panel her seçim değişiminde ilk sekmeye dönerdi.
-    document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak());
-    fead.veFeadPanelTab('k1', 'cev');
-    const kap = ciz(getFeadPulleyPropertiesHTML(kasnak()));
-    expect(kap.querySelector('.ve-fp-tab[aria-selected="true"]').getAttribute('data-k')).toBe('cev');
-  });
-
-  test('tanınmayan/geçersiz sekme İLK sekmeye düşer', () => {
-    // Avarada 'cev' yok: kayıtlı sekme o tipte geçersizse panel boş açılmamalı.
-    // (Sürücü işaretli kasnak rolü taşır — avara bile olsa motor sekmelerini
-    // alır; bu yüzden ikinci çizim SÜRÜCÜ OLMAYAN bir avara.)
-    document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak({ id: 'a2', type: 'fead-crank' }));
-    fead.veFeadPanelTab('a2', 'cev');
-    const a = ciz(getFeadPulleyPropertiesHTML(kasnak({ id: 'a2', type: 'fead-idler',
-      data: { od: 75, x: 0, y: 0 } })));
-    expect(a.querySelector('.ve-fp-tab[aria-selected="true"]').getAttribute('data-k')).toBe('geo');
+    expect(vePencereKategoriGit('k1', 'yok')).toBe(false);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('SAĞ SÜTUN — sekmeden BAĞIMSIZ (tasarımın iddiası)', () => {
-  test('sekme değişince sağ sütun YENİDEN KURULMUYOR — aynı eleman kalıyor', () => {
-    // Tasarımın bütün iddiası bu. Panel yeniden kurulsaydı (a) düzenlenen
-    // alanın odağı düşerdi, (b) sağ sütundaki şema her tıklamada yanıp sönerdi
-    // — üstelik orada bir çözüm koşuyor.
+describe('SAĞ SÜTUN — gövdeden BAĞIMSIZ (tasarımın iddiası)', () => {
+  test('kategoriye gitmek pencereyi KURMAZ — sağ sütun aynı eleman, gövdenin DIŞINDA', () => {
+    // Pencere yeniden kurulsaydı (a) düzenlenen alanın odağı düşerdi, (b) sağ
+    // sütundaki çözüm her tıklamada yeniden koşardı.
     document.body.innerHTML = getFeadPulleyPropertiesHTML(kasnak());
     const yan = document.querySelector('.ve-fp-side');
-    const thumb = document.querySelector('.ve-fp-thumb');
+    const gov = document.querySelector('#ve-fp-panes-k1');
     expect(yan).toBeTruthy();
-    fead.veFeadPanelTab('k1', 'rol');
+    fead.veFeadEksikGit('k1', 'rol');
     expect(document.querySelector('.ve-fp-side')).toBe(yan);     // AYNI nesne
-    expect(document.querySelector('.ve-fp-thumb')).toBe(thumb);
-    // "AYNI NESNE" TEK BAŞINA YETMEZ — ölçüldü: sağ sütunu bir sekme
-    // gövdesinin içine koyup `hidden` vermek de aynı nesneyi bırakıyor, ama
-    // C'nin panele kattığı şeyi (sekme ne olursa olsun duran bağlam) tamamen
-    // yok ediyordu. Bu yüzden İKİ şey ayrıca ölçülür: sütun gövdelerin
-    // DIŞINDA ve hiçbir sekmeye bağlı DEĞİL.
-    expect(document.querySelector('#ve-fp-panes-k1').contains(yan)).toBe(false);
+    expect(document.querySelector('#ve-fp-panes-k1')).toBe(gov);
+    // Sütun gövdenin DIŞINDA ve hiçbir kategoriye bağlı DEĞİL.
+    expect(gov.contains(yan)).toBe(false);
     expect(yan.hasAttribute('hidden')).toBe(false);
     expect(yan.hasAttribute('data-k')).toBe(false);
-    // Ve sekme gerçekten değişti.
-    const acik = [...document.querySelector('#ve-fp-panes-k1').children]
-      .filter((c) => !c.hasAttribute('hidden'));
-    expect(acik.length).toBe(1);
-    expect(acik[0].getAttribute('data-k')).toBe('rol');
   });
 
   test('kapılar TEK ÇAĞRIDAN — veFeadChecks (kural 16)', () => {
@@ -353,32 +311,30 @@ describe('KAPSAM — yalnız kasnak değil, BÜTÜN FEAD panelleri', () => {
     });
   });
 
-  test('DÖRT PANELİN DÖRDÜ DE sekmeli ve sağ sütunlu — kapsamlı (kullanıcı isteği)', () => {
+  test('DÖRT PANELİN DÖRDÜ DE kategorili TEK gövde ve sağ sütunlu — kapsamlı (kullanıcı isteği)', () => {
     // Kullanıcı (2026-09-21): *"Diğer bileşenlerin pencereleri için de aynı
-    // değişiklikleri kapsamlı olarak yapmamız gerekiyor."* Yalnız ortak ALAN
-    // SATIRINI paylaşmak bunu karşılamıyordu: gergi 8 bölüm / 15 alan, çözücü
-    // 7 bölüm / 12 alan ile tek sürgüde duruyordu ve kullanıcının şikâyet
-    // ettiği uzunluk aynen yerindeydi.
+    // değişiklikleri kapsamlı olarak yapmamız gerekiyor."* — ve 2026-10-16:
+    // *"Tüm bileşenler için bunu uygulayalım"* (kategoriler tek gövdede).
     Object.keys(panel).forEach((ad) => {
       const kap = ciz(panel[ad]());
-      const sek = [...kap.querySelectorAll('.ve-fp-tab')];
-      expect(sek.length).toBeGreaterThanOrEqual(2);              // sekme VAR
-      expect(sek.filter((b) => b.getAttribute('aria-selected') === 'true').length).toBe(1);
+      const gov = kap.querySelector('[id^="ve-fp-panes-"]');
+      const kat = [...gov.children];
+      expect(kat.length).toBeGreaterThanOrEqual(2);              // kategoriler VAR
+      expect(kat.every((c) => c.classList.contains('ve-fp-kat') && !c.hasAttribute('hidden'))).toBe(true);
+      expect(kap.querySelector('.ve-fp-tab')).toBeNull();         // sekme YOK
       const yan = kap.querySelector('.ve-fp-side');
       expect(yan).toBeTruthy();                                  // sağ sütun VAR
-      // Ve sütun sekmenin İÇİNDE değil — yoksa sekme değişince kaybolurdu.
-      const gov = kap.querySelector('[id^="ve-fp-panes-"]');
+      // Ve sütun gövdenin İÇİNDE değil.
       expect(gov.contains(yan)).toBe(false);
       // Her panelde kapılar aynı tek çağrıdan geliyor.
       expect(kap.querySelectorAll('.ve-fp-gate').length).toBe(4);
-      // Açık gövde TEK.
-      expect([...gov.children].filter((c) => !c.hasAttribute('hidden')).length).toBe(1);
     });
   });
 
-  test('ÇÖZÜCÜNÜN EYLEMİ sekmeye girmiyor — sağ sütunda duruyor', () => {
-    // Pencerenin tek eylemi "Hesapla". Bir sekmenin içine girseydi kullanıcı
-    // çevrimi düzenlerken düğmeyi göremez, üç sekme gezip geri dönerdi.
+  test('ÇÖZÜCÜNÜN EYLEMİ gövdeye girmiyor — sağ sütunda duruyor', () => {
+    // Pencerenin tek eylemi "Hesapla". Gövdeye girseydi kullanıcı çevrimi
+    // düzenlerken düğmeyi aramak için gövdenin dibine inerdi; sağ sütunda dar
+    // kapta da kaydırma alanının dibine yapışır.
     const kap = ciz(panel.cozucu());
     const dugme = kap.querySelector('.ve-fp-solve');
     expect(dugme).toBeTruthy();
@@ -394,7 +350,7 @@ describe('KAPSAM — yalnız kasnak değil, BÜTÜN FEAD panelleri', () => {
     // Gergi künyesi ve BMC motor kataloğu kendi `display:flex` satırlarını
     // kuruyordu: `flex:1` etiket bütün boşluğu yiyip seçiciyi sağ uca
     // fırlatıyor, etiket ise üç satıra sarıyordu ("BMC / motor / kataloğu").
-    // Motor kataloğu 2026-09-28'den beri sürücünün Motor sekmesinde; aksesuarın
+    // Motor kataloğu 2026-09-28'den beri sürücünün Motor kategorisinde; aksesuarın
     // TEK model seçicisi de aynı satırda.
     const secPanel = {
       gergi: panel.gergi,
@@ -416,7 +372,7 @@ describe('KAPSAM — yalnız kasnak değil, BÜTÜN FEAD panelleri', () => {
 
   test('KABUK DENGELİ — tek kök, kapanmamış <div> yok', () => {
     // Dört panelin dördü de kabuğunu artık `veFeadPanelShell`den alıyor ve
-    // gövdeleri sekmelere BÖLÜNDÜ. Bölerken bir `</div>` fazla kalsaydı
+    // gövdeleri kategorilere BÖLÜNDÜ. Bölerken bir `</div>` fazla kalsaydı
     // `sw-panel` erken kapanır, sağ sütun modalın DIŞINA düşerdi — ve bu
     // sessizdir: tarayıcı açılmamış etiketi onarır, jsdom de öyle.
     Object.keys(panel).forEach((ad) => {

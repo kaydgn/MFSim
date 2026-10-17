@@ -145,7 +145,7 @@ describe('GÖRÜNÜMLER — çizim çözücünün modeli, numaraların açılım
       const cizim = [...d.querySelectorAll('#ve-mnt-akso3b-d2 svg.ve-mnt2d-akso text')].map((t) => t.textContent);
       const numara = cizim.filter((t) => /^(T\d+|G)$/.test(t));
       expect(numara).toEqual(expect.arrayContaining(['G', 'T1', 'T5']));
-      // 2026-10-16: föy çizimle AYNI sekmede (kullanıcı: "birleştirelim")
+      // 2026-10-16: föy çizimle AYNI gövdede (kullanıcı: "birleştirelim")
       const foy = [...d.querySelectorAll('#ve-fp-panes-d2 > [data-k="akso"] tbody tr td:first-child')].map((t) => t.textContent);
       numara.forEach((n) => expect({ n, foyde: foy.includes(n) }).toEqual({ n, foyde: true }));
       P.M.g.components.forEach((c, i) => expect(html).toContain(`<td>${i + 1}</td><td class="sol" title="${c.name}">`));
@@ -170,32 +170,36 @@ describe('GÖRÜNÜMLER — çizim çözücünün modeli, numaraların açılım
   });
 });
 
-describe('TAKOZ ÖZELLİKLERİ — sekme durumu ve kullanım', () => {
+describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve kullanım', () => {
   function kutuphane(e) {
     tulga();
     const lib = dugum('mnt-library');
     lib.data = { mounts: [Object.assign({ key: 'k1', name: 'Deneme' }, e)], _selKey: 'k1' };
     return lib;
   }
+  // Kategorinin durumu kabında (`data-d`); eksikse SONUCU bantta, bağlantısı
+  // o kategoriye gider (sekmeler 2026-10-16'da kalktı — durum yazısı yok).
   const durum = (h, k) => {
-    const m = h.match(new RegExp('data-k="' + k + '" data-d="(\\w+)"[^>]*>[\\s\\S]*?<span class="ve-fp-tab-d"[^>]*><i[^>]*></i>([^<]*)</span>'));
-    return m ? m[1] + ' ' + m[2] : null;
+    const d = document.createElement('div'); d.innerHTML = h;
+    const kat = d.querySelector('.ve-fp-kat[data-k="' + k + '"]');
+    const s = [...d.querySelectorAll('.ve-fp-eksik-s')]
+      .find((x) => x.querySelector('button').getAttribute('onclick').includes(",'" + k + "'"));
+    return { d: kat && kat.getAttribute('data-d'), bant: s ? s.querySelector('.ve-fp-eksik-t').textContent : null };
   };
 
   test('sıfır/boş rijitlik → "rijitlik eksik" (çözücü bu tipi taşıyan takozu reddeder)', () => {
     const h = cp.getMntLibraryPropertiesHTML(kutuphane({ sx: 0, sy: 0, sz: 290, dx: 0, dy: 0, dz: 0 }));
-    expect(durum(h, 'rij')).toBe('eksik rijitlik eksik');
-    expect(h).toContain('5 rijitlik değeri boş ya da ≤ 0');
+    expect(durum(h, 'rij')).toEqual({ d: 'eksik', bant: expect.stringContaining('5 rijitlik değeri boş ya da ≤ 0') });
   });
 
   test('dinamik X ile Z takaslı (TK040: 335/355/740 · statik 545/550/245) → "oran?"', () => {
     const h = cp.getMntLibraryPropertiesHTML(kutuphane({ sx: 545, sy: 550, sz: 245, dx: 335, dy: 355, dz: 740 }));
-    expect(durum(h, 'rij')).toBe('eksik oran?');
+    expect(durum(h, 'rij')).toEqual({ d: 'eksik', bant: expect.stringContaining('kat yayılıyor (sınır 1,5) — eksen takası olabilir') });
   });
 
   test('tutarlı girdi → "tamam"; oran Takoz penceresinin AYNI denetiminden', () => {
     const h = cp.getMntLibraryPropertiesHTML(kutuphane({ sx: 665, sy: 335, sz: 290, dx: 1165, dy: 590, dz: 490 }));
-    expect(durum(h, 'rij')).toBe('ok tamam');
+    expect(durum(h, 'rij')).toEqual({ d: 'ok', bant: null });
     expect(h).toMatch(/id="ve-mnt-lib-orz-[^"]+" data-tazele>1,69</);    // 490 / 290
   });
 

@@ -751,7 +751,7 @@ var veFeadSignals = (function() {
     return dar ? 'en dar pay ' + kod(dar) + ' · %' + _tr(dar.kritik.payPct, 1) + ' (' + dar.kritik.ad + ')' : '';
   }
 
-  // ── ÖZET — pencerenin ilk ekranı ve çözücü penceresinin Sonuç sekmesi ─────
+  // ── ÖZET — pencerenin ilk ekranı ve çözücü penceresinin Sonuç bölümü ──────
   //
   // TEK üretici: Sonuçlar sekmesinin kartları ile çözücü penceresinin özeti
   // aynı listeyi basar. Durum sözlüğü: ok · warn · no · wait (veri eksik,

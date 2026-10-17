@@ -175,7 +175,7 @@ describe('YÜZEYLER — kayış penceresi ve sihirbaz aynı tabloyu basar', () =
   };
   const dugmeler = (h) => (h.match(/class="ve-fead-c2-h"/g) || []).length;
 
-  test('kayışın Tasarım sekmesinde tablo var; 24 hücre düğmesi, yazıcısı depoya', () => {
+  test('kayışın Tasarım kategorisinde tablo var; 24 hücre düğmesi, yazıcısı depoya', () => {
     const ns = kur();
     const kayis = ns.find((n) => n.type === 'fead-belt');
     const depo = M.veFeadIsletmeDeposu(ns);

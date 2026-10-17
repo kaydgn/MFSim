@@ -559,7 +559,7 @@ olurdu.
 
 31. **HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE — DAR KAPTA DA** (2026-09-23,
     kullanıcı isteği: *"kategori kategori pencereler"*). Kabuk TEK üreticiden
-    (`veFeadPanelShell`: kategori sekmeleri · sağ sütun) — 2026-10-16'dan beri
+    (`veFeadPanelShell`: tek gövde · sağ sütun) — 2026-10-16'dan beri
     o da ORTAK KİTE gider (`js/pencere-kabuk.js` · `vePencereKabuk`): Takoz'un
     pencereleri aynı iskeletten basar ve aile denetimi iki modüle aynı soruyu
     sorar (`pencere-kabuk.test.js`); FEAD'in durumları ve bandı burada kalır. **Tepede özet şeridi
@@ -575,13 +575,20 @@ olurdu.
     `componentDefs`ten, kurucuyu `cp-core.js`'in dağıtımından okur. **Tek sütuna geçişi PANELİN genişliği
     söyler** (`@container vepanel`, ≤ 640 px) — ekran sorgusu 380 px'lik
     müfettiş sütununda hiç tetiklenmiyordu ve düzenlenen sütuna 42 px
-    kalıyordu. Dar kapta sekmeler üste, pencerenin EYLEMİ (`.ve-fp-solve`:
+    kalıyordu. Dar kapta sağ sütun gövdenin altına iner, pencerenin EYLEMİ (`.ve-fp-solve`:
     Hesapla · Raporu Oluştur) kaydırma alanının dibine yapışır — `bottom`
     kabın dolgusu kadar EKSİ: yapışkan konum dolguya saygı gösterir, 0'da
     düğmenin altında 10 px'lik şerit kalıp kayan yazı oradan görünüyordu
     (`yerlesim.spec.js`). Kapı:
     `tests/e2e/mufettis-sigma.spec.js` (okunurluk: düzenlenen sütun · girdi ·
-    etiket · başlık · yatay kaydırma, her sekme gezilerek) + `cp-fead-report.test.js`.
+    etiket · başlık · yatay kaydırma; bütün kategoriler aynı anda çizili) + `cp-fead-report.test.js`.
+    **KATEGORİLER SEKME DEĞİL, TEK GÖVDEDE ALT ALTA** (2026-10-16, kullanıcı:
+    *"Tek bir pencerede hepsi sığar … Kullanışlı ve kompakt bir tasarım olsun."*):
+    bölümü kartın başlığı adlandırır, her kategori başlıklı bir bölüm taşır
+    (depo yoksa bile — `_feadDepoYok` başlıklı karttır); sekme hafızası
+    (`VE_FEAD_PANEL_TAB`) ve işleyicisi YOK. Emekli yönün ölçümü
+    `references/emekli-yonler.md` → *Sekmeli pencere*. Kapı:
+    `pencere-kabuk.test.js` → *AİLE* + `fead-panel-dili.test.js` → *TEK GÖVDE*.
     **Veri tablosu (çevrim · güç eğrisi · gergi konumu) bir BİRİMDİR** (`data-ve-tablo`,
     tablo + kendi düğmeleri): sütuna sığmazsa yerinde özet kartı kalır ve
     "Tabloyu aç" onu küçük bir pencereye TAŞIR (`js/tablo-pencere.js`) —
@@ -645,7 +652,7 @@ olurdu.
     • **Kayış verisi kapısı TEK soru** (`veFeadBeltDataOn`): kapalıyken ne
       çözüm, ne kartın çırpması, ne senaryo, ne pano açıklık frekansı üretir.
       Ölçülen kusur: 11/11 örnekte senaryo "⚠ REZONANS" yazıyordu.
-    • Çözücü penceresinin Sonuç sekmesi ÖZETTİR (durum · kartlar · hüküm ·
+    • Çözücü penceresinin Sonuç bölümü ÖZETTİR (durum · kartlar · hüküm ·
       "Sonuçlar'da aç"); tablolar Sonuç Özeti penceresinde. Kartlar İKİ
       yüzeyde aynı üreticiden (`veFeadSignals.summary`).
     • Ortak dosyalarda FEAD dalı YOK: kaynak tablosuna (`veResultSources`,
@@ -896,30 +903,33 @@ olurdu.
     ve XY düzleminde yukarı · hesap seçimi kaldırır · Esc · kart altından
     değişince 3B kapanır · bırakma · Modeli Kur).
 
-35. **SEKME ADI DURUMUNU TAŞIR — kural köprünün, kapı ANLAŞMA** (2026-09-26,
+35. **KATEGORİ DURUMU — kural köprünün, kapı ANLAŞMA** (2026-09-26,
     kullanıcı: *"kullanıcı bu kısmı görmeyebilir ve eksik bilgi girebilir"* →
     tasarım tezgâhından B · Durumlu Sekmeler). `veFeadSekmeDurumlari`: ok ·
     eksik (boşluğun bir SONUCU var: köprü hatası, varsayılan uyarısı, kapının
     'wait'i, sessiz sıfır) · bos (isteğe bağlı) · yok (hiçbir hesap okumuyor).
-    Eksik varsa şeridin altında sonucu ve oraya giden bağlantı. Kurallar:
+    Durum kategorinin kabında (`data-d`; eksik kategori kenarında çizgi);
+    eksiğin sonucu ve oraya giden bağlantı gövdenin üstündeki BANTTA
+    (2026-10-16'ya dek sekme adının altındaydı — sekme kalktı, durum kaldı). Kurallar:
     • **Yüklemler köprünün**: `veFeadHasOD` · `veFeadAccLimits` (katalogtan
       gelen sınır DOLU sayılır) · `veFeadResolveDriver` (işaretsiz krank da
       sürücü) · `veFeadBeltModeLocked` · `veFeadResultState`.
-    • **Sürücünün sekmeleri DEPODAN okur** (kural 42): Motor (tahrik oranı ·
-      governed · overspeed · rölanti) ve Çevrim. Aksesuarın iki sekmesi
+    • **Sürücünün kategorileri DEPODAN okur** (kural 42): Motor (tahrik oranı ·
+      governed · overspeed · rölanti) ve Çevrim. Aksesuarın iki kategorisi
       (devir sınırları · güç eğrisi) sürücüde YOK — sürücülük bir ROL, işaret
-      geçince geri gelir. Birleşik sekmede "Doldur" eksiğin KENDİ alanına
+      geçince geri gelir. Birleşik Motor kategorisinde "Doldur" eksiğin KENDİ alanına
       gider (`durum.hedef`), ilk boş alana değil.
     • **Güç eğrisi sessiz sıfırı yakalar**: eğri de katalog da yokken boş kW
       hücresine köprü 0 yazıyor (`veFeadDutyToCore`).
     • **Durum YERİNDE tazelenir** (`veFeadSekmeTazele`, `saveState`ten): sayı
       alanı paneli kurmaz, kursaydı Sekme ile geçilen alan sökülürdü.
     • **Köprüye yeni zorunlu alan ekleyen onu buraya da ekler.** Kapı her
-      zorunlu alanı gerçek modelde tek tek boşaltıp köprünün sözü ile sekmenin
+      zorunlu alanı gerçek modelde tek tek boşaltıp köprünün sözü ile kategorinin
       hükmünü BİRLİKTE ölçer — biri olup öteki olmazsa kırmızı.
     Kapılar: `fead-sekme-durum.test.js` + `tests/e2e/fead-sekme-durum.spec.js`
-    (gerçek klavye → `onchange` → kayıt kancası, sürücüde DEPOYA; dar
-    müfettişte sürücü dâhil tek satır; iki temada kontrast).
+    (gerçek klavye → `onchange` → kayıt kancası, sürücüde DEPOYA; bandın
+    bağlantısı uzun gövdede alanı görüş alanına alıyor; *KAYDIRMA*; iki temada
+    bant).
 
 36. **KAYNAKLI VARSAYILAN KÖPRÜDE, ÇEKİRDEK BİREBİR** (2026-09-26, literatür
     turu). Çekirdeğin kaynaksız ya da tek markaya bağlı sabiti köprüde
@@ -948,7 +958,7 @@ olurdu.
     kordu (d_w = d_b + 2·h_b, `LpitchMm`) ölçer. Gerekçe: d_w'yi numara saymak
     kayışı 2π·h_b uzun seçtirir ve kolu sessizce başka açıya oturtur.
     • **Dönüşüm TEK yerde**: `veFeadBoyCizgileri` (köprü) — fark h_b'den, yani
-      MARKADAN (PK Gates 7,54 · ContiTech 9,42 mm). Her yüzey (Boy sekmesinin
+      MARKADAN (PK Gates 7,54 · ContiTech 9,42 mm). Her yüzey (Boy kategorisinin
       kesit figürü `veFeadKesitSVG` · sağ sütun · rozet · sihirbaz bandı · rapor
       §8.2 · Sonuç Özeti) numarayı d_b'de yazar, kordu yanına bu dönüşümle.
     • **Okuma TEK kaynak**: `veFeadBoyOkuma` — çözüm varsa köprünün çözüme
@@ -1090,18 +1100,17 @@ olurdu.
     kullanıcı: *"Krank kasnağı üzerinden sistemi tahrik edecek motoru
     seçelim … 'Çözücü' kısmında ben sadece sayısal yöntemler ve çözüm
     yaklaşımları görmek istiyorum"*).
-    • **Sürücü kasnağın penceresi: Geometri · Rol · Motor · Çevrim.** Motor
-      sekmesi motor kataloğunu, devir sınırlarını, güç eğrisini (tam yük +
-      FEAD'in payı) ve FEAD tahrikini BİRLİKTE taşır — seçimin getirdiği
-      seçicinin altında görünür; ayrı sekmelerle şerit 380 px'lik müfettişte
-      iki satıra kırılıyordu (458 / 345 px). Pencere SÜRÜCÜNÜN
+    • **Sürücü kasnağın penceresi: Geometri · Rol · Motor · Çevrim** (kategoriler,
+      tek gövdede alt alta). Motor kategorisi motor kataloğunu, devir sınırlarını,
+      güç eğrisini (tam yük + FEAD'in payı) ve FEAD tahrikini BİRLİKTE taşır —
+      seçimin getirdiği seçicinin altında görünür. Pencere SÜRÜCÜNÜN
       (`veFeadResolveDriver`), krank tipininki değil — ikincil tahrikte fan.
     • **Veri depoda** (`veFeadIsletmeDeposu` = çözücü düğümü: garanti, tek,
       silinmez): sürücülük ROL — işaret geçince ya da kasnak silinince motor
       ve çevrim kalır. Eylemler AÇIK pencereyi kurar (`_feadPencereTazele`),
       yazılan düğümünkini değil — motor seçen kullanıcı Çözücü'ye atılmaz.
       Çevrim tohumu pencere kurulurken (`_feadDepo`).
-    • **Kayış penceresinin Tasarım sekmesi** boy ofseti + yorulma modeli (depoda).
+    • **Kayış penceresinin Tasarım kategorisi** boy ofseti + yorulma modeli (depoda).
     • **Çözücü girdi SORMAZ**: Yöntemler (`VE_FEAD_YONTEMLER` — her satır bir
       ÇAĞRIYA bağlı; kodda karşılığı kalmayan yöntem listede yaşayamaz) ·
       Model · Sonuç. Yöntem seçimleri bu temelin üstüne kurulur.
@@ -1130,7 +1139,7 @@ olurdu.
 
 44. **AKSESUAR MODELİ TEK SEÇİCİ, SEÇİM ÇEVRİME ULAŞIR** (2026-09-28,
     kullanıcı: *"aksesuarları seçtiğimde bile değerleri sanki gelmiyor … bayat
-    gibi"*). BMC künyesi ve Araç Performans modeli Rol sekmesinde TEK listede
+    gibi"*). BMC künyesi ve Araç Performans modeli Rol kategorisinde (Katalog modeli) TEK listede
     (`veFeadAccModelOpts`, `bmc:` / `ap:` ön ekli) ve TEK yazıcıda
     (`veFeadAccModelSet` — sihirbazla aynı, kural 24). Eğri getiren seçim o
     aksesuarın çevrim kW'larını siler — öncelik `çevrim kW > kendi eğri >
@@ -1148,7 +1157,8 @@ olurdu.
     kapıları + `fead-pencere-ailesi.test.js`.
     **Durumun tarif kuyruğu yok, çare önerilmez** (2026-10-16, kökteki *ARAYÜZ
     ANLATMAZ*): "— … sekmesinden girin" yerine eksiğin YERİ bir yol verisidir
-    (`· Sürücü kasnak › Çevrim`); hüküm ("gergi gergin tarafta") sayısıyla
+    (`· Sürücü kasnak › Çalışma çevrimi` — yolun sonu pencerenin bölüm BAŞLIĞI,
+    `fead-isletme.test.js` başlıklarda arar); hüküm ("gergi gergin tarafta") sayısıyla
     durur, çaresi kılavuzda. Ekranda görünen sonucu tekrarlayan bildirim ve
     katman satırının açıklama yuvası (`ip`) yok. Kapı: `fead-metin.test.js`.
     **Sihirbazın açı seçicisinde açının TANIMI durur** (kullanıcı bildirimi
@@ -1177,7 +1187,7 @@ olurdu.
       her devirde bir güç kaynağı: kayıtlı kW → kendi eğrisi → katalog),
       **çevrim** (≥1 devir). Metin tek üreticiden (`veFeadIsletmeMetni`).
     • Okuyanlar aynı hükmü verir: `veFeadSolve` koşmaz ve bildirir; FEAD
-      araçları penceresi (sebep + eksiğin sekmesi) ile çözücü paneli
+      araçları penceresi (sebep + eksiğin bölümü) ile çözücü paneli
       Hesapla'yı pasifler; sürücünün Motor çipi ve aksesuarın güç çipi
       "işletme hesabı yapılmaz" der (kural 42'nin penceresi);
       kart haritasız çizer, eksik lejantın yerinde (`data-ve="isletme-eksik"`),
@@ -1285,7 +1295,7 @@ olurdu.
     *"kullanıcı tablodaki değerlerin birini seçecek. Matematiksel hesap ona
     göre güncellenecek"*). c₂ ContiTech / ISO-DIN yük katsayısı tablosundan
     (`VE_FEAD_SERVIS`, 4 yük sınıfı × 2 sürücü × 3 günlük süre) seçilir —
-    kayışın Tasarım sekmesinde ve sihirbazın Kayış adımında, TEK üreticiyle
+    kayışın Tasarım kategorisinde ve sihirbazın Kayış adımında, TEK üreticiyle
     (`veFeadServisTabloHTML`) ve TEK yazıcıyla (`veFeadServisSet`); veri
     depoda (`servisHucre` + `serviceFact`). Serbest sayı alanı yok.
     • **Kayma tasarım yükünde**: P_B = c₂·P, zincir afin
@@ -1330,7 +1340,7 @@ olurdu.
       tablosunun gördüğü yük kaymadan sessizce düşmez (AG00902).
     • **Sürtünme seçimi** (`VE_FEAD_SURTUNME`, depo `surtunme` + elle üç sayı,
       TEK yazıcı `veFeadSurtunmeSet`, TEK üretici `veFeadSurtunmeHTML` — kayışın
-      Tasarım sekmesi ve sihirbazın Kayış adımı). **Gates kalibrasyonu
+      Tasarım kategorisi ve sihirbazın Kayış adımı). **Gates kalibrasyonu
       varsayılan**: oluklu μ 0,92 + küçük kasnak kaybı ℓ = 7 mm
       (φ_etkin = φ − 2ℓ/r, YALNIZ oluklu — sırta uygulanınca küçük sarımlı
       avara Gates'le çelişiyor), sırt μ 0,60. **Literatür** çekirdeğin

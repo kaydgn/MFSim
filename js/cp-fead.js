@@ -790,7 +790,7 @@ function veFeadIpucuGizle(){
   if(_feadIpucuSaat){ clearTimeout(_feadIpucuSaat); _feadIpucuSaat = 0; }
 }
 // KUTU DÜĞMESİNDEN UZUN YAŞAMAZ. Kutu belgenin gövdesinde durduğu için
-// pencere yeniden kurulunca (başka bileşen, sekme, tema) düğmesi DOM'dan
+// pencere yeniden kurulunca (başka bileşen, tema) düğmesi DOM'dan
 // kalkıyor ama `mouseout` hiç gelmiyor — ölçüldü: klimanın ipucu kayış
 // penceresinin üstünde asılı kaldı. Açıkken düğmenin belgede olup olmadığı
 // yoklanır.
@@ -1140,66 +1140,39 @@ function veFeadSetDriver(nodeId, on){
 //   • Krank (isFeadDriver)    → tahrik kaynağı, yük torku YOK.
 //   • Aksesuar (isFeadAccessory) → çektiği tork/güç alanı VAR.
 //   • Avara (isFeadIdler)     → yük çekmez, yalnız kayış yolunu yönlendirir.
-// ── SEKME DURUMU MODELDE DEĞİL ────────────────────────────────────────────
+// ── KATEGORİLER TEK GÖVDEDE (2026-10-16) ───────────────────────────────────
+// Kullanıcı: *"Tek bir pencerede hepsi sığar … Tüm bileşenler için bunu
+// uygulayalım. Kullanışlı ve kompakt bir tasarım olsun."* Pencerenin
+// kategorileri (Geometri · Rol · Motor · Çevrim …) artık SEKME değil, gövdede
+// sırayla durur — ortak kit (js/pencere-kabuk.js). Kategorinin adı ve durumu
+// kalır: eksik bandı ve kategori kabının `data-d`si. Sekme hafızası ve sekme
+// işleyicisi bununla birlikte KALKTI (kural 31).
 //
-// Kural 15'in (`VE_FEAD_KAT_ACIK`) birebir aynı gerekçesi: görünüm durumu
-// kaydedilmez ve geri-al yığınına YAZILMAZ — yazılsaydı Ctrl+Z sekme
-// gezdirirdi. Ama panel her seçim değişiminde yeniden kurulduğu için bir
-// yerde durmak ZORUNDA, yoksa panel her açılışta ilk sekmeye dönerdi.
-//
-// KABUK ORTAK KİTTEN (js/pencere-kabuk.js, 2026-10-16): Takoz pencereleri de
-// aynı üreticiden basar — kullanıcı: *"Tüm programda tek tip bir kozmetik
-// yapımız olacak."* Sekme hafızası kitin; buradaki adlar çağıranlar (onclick,
-// e2e turları, kılavuz) için duruyor.
-var VE_FEAD_PANEL_TAB = (typeof VE_PENCERE_SEKME !== 'undefined') ? VE_PENCERE_SEKME : {};
-
-function veFeadPanelTabOf(nodeId, gecerli){
-  return vePencereSekmeOf(nodeId, gecerli);
-}
-
-// SEKME DEĞİŞİNCE PANEL YENİDEN KURULMAZ, yalnız `hidden` çevrilir.
-//
-// Yeniden kurmak iki şeyi birden bozardı: (a) düzenlenen alanın odağı düşer
-// (bu deponun tekrar eden dersi — bkz. `veFeadMarkSelectedRow`), (b) SAĞ SÜTUN
-// da yeniden çizilir, oysa bu tasarımın bütün iddiası sağ sütunun sekmeden
-// BAĞIMSIZ durması. Üstelik sağ sütun bir çözüm koşturuyor; her tıklamada
-// yeniden koşmak şemayı yanıp söndürürdü.
-function veFeadPanelTab(nodeId, key){
-  return vePencereSekme(nodeId, key);
-}
-
-// Sekme şeridi + gövdeler. Her sekme ADININ altında DURUMUNU taşır
-// (`s.durum` — bkz. `veFeadSekmeDurumlari`); durumu olmayan pencerede (araç
-// pencereleri) yalnız ad basılır. Eski sayı rozeti bu satıra yerini bıraktı
-// ve KALKTI: çözücünün satır sayısı artık Çevrim sekmesinin durum satırı.
-// Üretici ortak kitte (js/pencere-kabuk.js); bant FEAD'in (Sonuç sekmesi "Aç").
-function veFeadTabsHTML(nodeId, sekmeler, aktif){
-  return vePencereSekmeleriHTML(nodeId, _feadBantSekmeleri(sekmeler), aktif,
-    { sekmeFn: 'veFeadPanelTab', git: 'veFeadEksikGit' });
-}
-// Çözücünün Sonuç sekmesinin bağlantısı "Aç": doldurulacak alanı yok.
-function _feadBantSekmeleri(sekmeler){
-  (sekmeler || []).forEach(function(s){ s.sonuc = (s.k === 'son'); });
-  return sekmeler || [];
+// Çözücünün Sonuç kategorisinin bağlantısı "Göster": doldurulacak alanı yok.
+function _feadBantKategorileri(kategoriler){
+  (kategoriler || []).forEach(function(s){ s.sonuc = (s.k === 'son'); });
+  return kategoriler || [];
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SEKME DURUMU — "bu sekmede eksik bir şey var mı"
+//  KATEGORİ DURUMU — "bu kategoride eksik bir şey var mı"
 // ════════════════════════════════════════════════════════════════════════════
 // Kullanıcı isteği (2026-09-26, ekran görüntüsüyle): *"kullanıcı bu kısmı
 // görmeyebilir ve eksik bilgi girebilir"* → tasarım tezgâhından **B · Durumlu
-// Sekmeler** seçildi. Sekme adının altında bir durum satırı, eksik varsa
-// şeridin altında sebebini ve oraya giden bağlantıyı yazan bir bant.
+// Sekmeler** seçildi. Sekmeler 2026-10-16'da kalktı, durum kaldı: eksik varsa
+// gövdenin üstünde sebebini ve oraya giden bağlantıyı yazan bir bant, eksik
+// kategorinin kenarında bir çizgi (`data-d`). Adlar (`veFeadSekmeDurumlari`,
+// `veFeadSekmeTazele`) o dönemden; işlevleri aynı.
 //
 // DÖRT DURUM, dördü de koddan okunur — tahmin edilmez:
 //   ok     hesabın kullandığı bütün alanlar dolu
 //   eksik  boş alanın bir SONUCU var: köprünün hatası, varsayılan uyarısı,
 //          bir kapının 'wait'i ya da sessiz sıfır. Sonuç `neden`de yazılı.
 //   bos    boş ama yerine başka kaynak var (isteğe bağlı)
-//   yok    bu düğümde hiçbir hesap sekmeyi okumuyor — sürücünün devir sınırı
+//   yok    bu düğümde hiçbir hesap kategoriyi okumuyor — sürücünün devir sınırı
 //          ve güç eğrisi (iki kapı da sürücüyü atlar, sürücünün gücü
 //          öteki kasnakların toplamıdır). Kural 25: sorulan her alanın bir
-//          tüketicisi olmalı; bu sekmeler sürücüde ALAN SORMAZ, sebebini yazar.
+//          tüketicisi olmalı; bu kategoriler sürücüde ALAN SORMAZ, sebebini yazar.
 //
 // KURALLAR KÖPRÜNÜN KENDİ YÜKLEMLERİ, ikinci bir liste değil: `veFeadHasOD`,
 // `veFeadAccLimits` (katalogtan gelen sınır DOLU sayılır — yalnız ham alana
@@ -1208,7 +1181,7 @@ function _feadBantSekmeleri(sekmeler){
 // köprünün TİPTEN seçtiği), `veFeadPresetOf`, `veFeadResultState`. Yine de
 // ayrı yazılmış bir doğrulama köprü değişince sessizce eskirdi — kapı bu
 // yüzden ANLAŞMAYI ölçer: her zorunlu alan gerçek bir modelde tek tek
-// boşaltılır ve hem sekme 'eksik' der hem köprü hatasını/uyarısını verir
+// boşaltılır ve hem kategori 'eksik' der hem köprü hatasını/uyarısını verir
 // (`tests/unit/fead-sekme-durum.test.js`). KÖPRÜYE YENİ ZORUNLU ALAN
 // EKLEYEN, ONU BURAYA DA EKLER.
 function _feadDurum(d, yazi, neden){
@@ -1236,7 +1209,7 @@ function _feadDurumModel(build){
 
 // Köprünün sürücüsü: açık işaret → TİP → ilk kasnak (`veFeadResolveDriver`).
 // Yalnız `data.driver`a bakmak, işaretsiz krankı sürücü saymayıp iki ölü
-// sekmeyi "eksik" diye gösterirdi.
+// kategoriyi "eksik" diye gösterirdi.
 function _feadEtkinSurucuMu(node, build){
   var drv = (build && Array.isArray(build.order) && build.order.length
              && typeof veFeadResolveDriver === 'function') ? veFeadResolveDriver(build.order) : null;
@@ -1266,7 +1239,7 @@ function _feadKasnakDurum(node, build){
   out.rol = (at.kaynak === 'yok') ? _feadDurum('eksik', 'atalet yok', 'Atalet — ' + at.ipucu)
                                   : _feadDurum('ok', 'tamam');
   if(surucu) return _feadSurucuDurum(depo, sd, out);
-  if(def.isFeadIdler) return out;               // avarada bu iki sekme hiç açılmaz
+  if(def.isFeadIdler) return out;               // avarada bu iki kategori hiç yok
 
   // DEVİR SINIRLARI — iki kapının girdisi (fead-checks.js).
   var lim = (typeof veFeadAccLimits === 'function') ? veFeadAccLimits(node) : null, n = 0;
@@ -1279,7 +1252,7 @@ function _feadKasnakDurum(node, build){
   // GÜÇ EĞRİSİ — çevrimdeki boş kW hücresi önce bu eğriden, sonra katalogdan
   // dolar; ikisi de yoksa o satırda aksesuarın GÜCÜ YOK ve işletme hesabı
   // yapılmaz (kural 46 — eskiden köprü 0 kW yazıyordu, sessiz sıfır). Eğri boş
-  // ama çevrim kW'ı taşıyorsa sekme isteğe bağlıdır.
+  // ama çevrim kW'ı taşıyorsa kategori isteğe bağlıdır.
   var pts = (typeof veFeadPowerCurve === 'function') ? veFeadPowerCurve(node) : [];
   var pre = (typeof veFeadPresetOf === 'function') ? veFeadPresetOf(node) : null;
   if(pts.length) out.egr = _feadDurum('ok', pts.length + ' nokta');
@@ -1298,14 +1271,14 @@ function _feadKasnakDurum(node, build){
   return out;
 }
 
-// SÜRÜCÜ — iki sekme DEPODAN okur (kullanıcı kararı 2026-09-28: motor,
+// SÜRÜCÜ — iki kategori DEPODAN okur (kullanıcı kararı 2026-09-28: motor,
 // tahrik ve çevrim Çözücü'den sürücüye geldi). Yüklemler köprünün:
 //   Motor   İŞLETME HESABININ MOTOR GİRDİSİ köprünün tek kaynağından
 //           (`veFeadIsletmeEksik`, kural 46): silindir · rölanti · governed ·
 //           tahrik oranı ZORUNLU; overspeed isteğe bağlı (devir sınırı kapısı).
 //           Güç eğrisi isteğe bağlı: yoksa senaryo rampası doğrusal.
 //   Çevrim  `veFeadDutyRows`
-// Motor sekmesinde servis faktörü gibi İSTEĞE BAĞLI boş alanlar da var:
+// Motor kategorisinde servis faktörü gibi İSTEĞE BAĞLI boş alanlar da var:
 // "Doldur" ilk boş alana değil, eksiğin KENDİ alanına gitsin diye durum
 // hedefini taşır (`hedef` — girdi kimliği).
 function _feadSurucuDurum(depo, sd, out){
@@ -1416,84 +1389,56 @@ function _feadCozucuDurum(node, build){
   return out;
 }
 
-// Sekmenin durum satırı. Nokta süs değil: renk körlüğünde ve gri basımda
-// dört durumu BİÇİM ayırır (dolu · kesikli halka · yok).
-function _feadSekmeDurumHTML(D){
-  return vePencereSekmeDurumHTML(D);
-}
-
-// EKSİK BANDI — şeridin altında, yalnız eksik varken. Her eksik sekme için
+// EKSİK BANDI — gövdenin üstünde, yalnız eksik varken. Her eksik kategori için
 // SONUCU (`neden`) ve oraya giden bağlantı; sonuç eskiden yalnız sağ sütunun
 // dibinde yazıyordu ve 380 px'lik müfettişte kaydırmadan görünmüyordu.
 // Üretici ortak kitte; durum tazelemesi (`veFeadSekmeTazele`) de buradan basar.
-function veFeadEksikBandi(nodeId, sekmeler){
-  return vePencereEksikBandi(nodeId, _feadBantSekmeleri(sekmeler), 'veFeadEksikGit');
+function veFeadEksikBandi(nodeId, kategoriler){
+  return vePencereEksikBandi(nodeId, _feadBantKategorileri(kategoriler), 'veFeadEksikGit');
 }
 
-// Bantın bağlantısı: sekmeyi açar ve eksiğin alanına — durum bir HEDEF
-// taşımıyorsa İLK BOŞ girişe — odaklanır. Boş giriş yoksa (sonuç sekmesi,
-// çevrim tablosu) odak sekmenin kendisine gider — klavyeyle gelen kullanıcı
-// nerede olduğunu kaybetmesin.
+// Bandın bağlantısı: kategoriye gider ve eksiğin alanına — durum bir HEDEF
+// taşımıyorsa İLK BOŞ girişe — odaklanır. Boş giriş yoksa (sonuç, çevrim
+// tablosu) odak kategorinin kabına gider — klavyeyle gelen kullanıcı nerede
+// olduğunu kaybetmesin. Gövdesi ortak kitte (`vePencereEksikGit`).
 function veFeadEksikGit(nodeId, k, hedefId){
-  if(!veFeadPanelTab(nodeId, k)) return false;
-  var gov = document.getElementById('ve-fp-panes-' + nodeId);
-  var pn = gov && gov.querySelector('[data-k="' + k + '"]');
-  var h0 = (hedefId && pn) ? pn.querySelector('#' + hedefId) : null;
-  var hedef = h0 ? h0 : pn ? Array.prototype.filter.call(
-      pn.querySelectorAll('input.ve-fp-inp:not([readonly]):not([disabled])'),
-      function(i){ return String(i.value).trim() === ''; })[0] : null;
-  if(!hedef){
-    var kap = document.getElementById('ve-fp-tabs-' + nodeId);
-    hedef = kap && kap.querySelector('.ve-fp-tab[data-k="' + k + '"]');
-  }
-  if(hedef && hedef.focus){
-    hedef.focus();
-    if(hedef.scrollIntoView) hedef.scrollIntoView({ block: 'nearest' });
-  }
-  return true;
+  return vePencereEksikGit(nodeId, k, hedefId, 'input.ve-fp-inp:not([readonly]):not([disabled])');
 }
 
 // DURUM YERİNDE TAZELENİR, PANEL KURULMAZ. Sayı alanları (`veFeadSet`) paneli
 // yeniden kurmuyor — kursaydı Sekme ile geçilen bir sonraki alanın odağı
-// düşerdi (bu deponun tekrar eden dersi). Ama durum satırı o zaman bir
-// düzenleme geride kalırdı: "0/3" yazan sekmeye üç sınır girildiği hâlde.
+// düşerdi (bu deponun tekrar eden dersi). Ama kategori durumu ve bant o zaman
+// bir düzenleme geride kalırdı: "Üçü de boş" diyen bant, üç sınır girildiği hâlde.
 // `saveState` "girdi değişti" olayının tek kaynağı ve bunu oradan çağırır;
-// yalnız durum satırlarına ve banda dokunur, girdi elemanlarına DOKUNMAZ.
+// yalnız kategori kabının durumuna ve banda dokunur (ortak kit,
+// `vePencereDurumTazele`), girdi elemanlarına DOKUNMAZ.
 function veFeadSekmeTazele(){
   if(typeof document === 'undefined' || typeof nodes === 'undefined') return 0;
   var n = 0, build;
-  Array.prototype.forEach.call(document.querySelectorAll('.ve-fp-tabs[id^="ve-fp-tabs-"]'), function(kap){
-    var id = kap.id.slice('ve-fp-tabs-'.length);
+  Array.prototype.forEach.call(document.querySelectorAll('.ve-fp-govde[id^="ve-fp-panes-"]'), function(gov){
+    var id = gov.id.slice('ve-fp-panes-'.length);
     var node = nodes.filter(function(x){ return x.id === id; })[0];
     if(!node) return;
     if(build === undefined) build = _feadDurumModel(null);
     var D = veFeadSekmeDurumlari(node, build);
     if(!D) return;
-    var sekmeler = [];
-    Array.prototype.forEach.call(kap.querySelectorAll('.ve-fp-tab'), function(b){
-      var k = b.getAttribute('data-k'), yeni = D[k];
-      var adEl = b.querySelector('.ve-fp-tab-ad');
-      sekmeler.push({ k: k, ad: adEl ? adEl.textContent : k, durum: yeni || null });
-      if(!yeni) return;
-      b.setAttribute('data-d', yeni.d);
-      var eski = b.querySelector('.ve-fp-tab-d');
-      if(eski) eski.outerHTML = _feadSekmeDurumHTML(yeni);
-      else b.insertAdjacentHTML('beforeend', _feadSekmeDurumHTML(yeni));
+    var kategoriler = Array.prototype.filter.call(gov.children, function(c){
+      return c.classList.contains('ve-fp-kat');
+    }).map(function(kat){
+      var k = kat.getAttribute('data-k');
+      return { k: k, ad: kat.getAttribute('aria-label') || k, durum: D[k] };
     });
-    var bant = document.getElementById('ve-fp-eksik-' + id);
-    var html = veFeadEksikBandi(id, sekmeler);
-    if(bant){ if(html) bant.outerHTML = html; else bant.remove(); }
-    else if(html) kap.insertAdjacentHTML('afterend', html);
+    vePencereDurumTazele(id, _feadBantKategorileri(kategoriler), 'veFeadEksikGit');
     n++;
   });
   return n;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SAĞ SÜTUN — sekmenin ALDIĞI BAĞLAMI geri veren sabit şerit
+//  SAĞ SÜTUN — pencerenin bağlamı, uygunluğu ve tek eylemi
 // ════════════════════════════════════════════════════════════════════════════
-// Kullanıcı seçimi (2026-09-21): B (sekmeler) + C (sağ özet). Sekme panelin
-// UZUNLUĞUNU çözüyor, sağ sütun sekme ne olursa olsun duruyor.
+// Kullanıcı seçimi (2026-09-21): C (sağ özet). Geniş modalde gövdenin yanında,
+// dar sütunda gövdenin altında durur; eylem kaydırma alanının dibine yapışır.
 //
 // TÜRETİLEN SAYILAR TABLONUN KENDİ SATIRINDAN (`veFeadTableRows`): panel ve
 // tablo aynı alanı okumak zorunda (kural 9). Kapılar TEK ÇAĞRIDAN
@@ -1578,8 +1523,8 @@ function _feadSideRO(baslik, kaynak, satirlar){
 }
 
 // `M` (model + satır) ve `depo` pencereden gelir: model iki kez kurulmasın.
-// SÜRÜCÜDE İŞLETME BLOĞU: motor, tahrik oranı ve çevrim sürücünün dört
-// sekmesine dağıldı; sütun üçünün ÖZETİNİ sekme ne olursa olsun tutar.
+// SÜRÜCÜDE İŞLETME BLOĞU: motor, tahrik oranı ve çevrim sürücünün uzun
+// gövdesine dağıldı; sütun üçünün ÖZETİNİ kaydırma nerede olursa olsun tutar.
 function veFeadPulleySide(node, M, depo){
   var out = { html: '' };
   M = M || _feadSideModel(node);
@@ -1607,13 +1552,13 @@ function veFeadPulleySide(node, M, depo){
 
 // ÖZET ŞERİDİ YOK (2026-09-23, kullanıcı: "tepede böyle özet bir açıklamaya
 // gerek yok"). Pencerenin başında çap · konum · rol · temas · sıra çipleri
-// duruyordu; beşinin de yeri pencerenin kendisindeydi (Geometri sekmesi ve
+// duruyordu; beşinin de yeri pencerenin kendisindeydi (Kasnak geometrisi ve
 // sağ sütunun "Türetilenler"i), yani şerit aynı sayıları ikinci kez, üstelik
-// sekmelerin ÜSTÜNDE yazıyordu. Kapı: fead-pencere-ailesi.test.js.
+// kategorilerin ÜSTÜNDE yazıyordu. Kapı: fead-pencere-ailesi.test.js.
 
 // ── ARAÇ PANELLERİNİN SAĞ SÜTUNU (kayış · çözücü · tablo · rapor · …)
 // Kasnak sütununun aynısı, TÜRETİLENLER HARİÇ. `ekBlok` panelin kendi cevabını (çözücüde "Hesapla" düğmesi) sütuna asmak
-// için — sekme ne olursa olsun görünmesi gereken tek şey o.
+// için — kaydırma nerede olursa olsun görünmesi gereken tek şey o.
 function veFeadToolSide(node, baslik, kaynak, satirlar, ekBlok){
   var out = { html: '' };
   var M = _feadSideModel(node);
@@ -1623,23 +1568,22 @@ function veFeadToolSide(node, baslik, kaynak, satirlar, ekBlok){
   return out;
 }
 
-// Panel kabuğu TEK ÜRETİCİDEN: sekmeler + sağ sütun. Dört panel bunu elle
-// kursaydı biri `ve-fp-side`ı sekme gövdesinin İÇİNE koyup (ölçüldü: aynı DOM
-// nesnesi kalıyor, kapı fark etmiyordu) tasarımın bütün katkısını sessizce
-// yok edebilirdi.
+// Panel kabuğu TEK ÜRETİCİDEN: kategoriler (tek gövde) + sağ sütun. Dört
+// panel bunu elle kursaydı biri `ve-fp-side`ı gövdenin İÇİNE koyup (ölçüldü:
+// aynı DOM nesnesi kalıyor, kapı fark etmiyordu) tasarımın bütün katkısını
+// sessizce yok edebilirdi.
 //
-// SEKME DURUMLARI DA BURADA BAĞLANIR: pencere kurucusu durum yazmaz, kabuk
+// KATEGORİ DURUMLARI DA BURADA BAĞLANIR: pencere kurucusu durum yazmaz, kabuk
 // düğümün tipinden sorar (`veFeadSekmeDurumlari`). Kurucu zaten hesapladıysa
-// (kasnak: sürücünün iki sekmesinin GÖVDESİ de duruma bağlı) dördüncü
+// (kasnak: sürücünün iki kategorisinin GÖVDESİ de duruma bağlı) dördüncü
 // argümanla verir — ikinci kez hesaplanmasın.
 //
 // İSKELET ORTAK KİTİN (js/pencere-kabuk.js): Takoz'un pencereleri aynı
 // üreticiden basar; burada kalan FEAD'in kendisi — durumlar ve bant işleyicisi.
-function veFeadPanelShell(node, sekmeler, yan, durumlar){
+function veFeadPanelShell(node, kategoriler, yan, durumlar){
   var D = (durumlar !== undefined) ? durumlar : veFeadSekmeDurumlari(node);
-  if(D) sekmeler.forEach(function(s){ if(!s.durum && D[s.k]) s.durum = D[s.k]; });
-  return vePencereKabuk(node, _feadBantSekmeleri(sekmeler), yan.html,
-    { sekmeFn: 'veFeadPanelTab', git: 'veFeadEksikGit' });
+  if(D) kategoriler.forEach(function(s){ if(!s.durum && D[s.k]) s.durum = D[s.k]; });
+  return vePencereKabuk(node, _feadBantKategorileri(kategoriler), yan.html, { git: 'veFeadEksikGit' });
 }
 
 function getFeadPulleyPropertiesHTML(node){
@@ -1647,7 +1591,7 @@ function getFeadPulleyPropertiesHTML(node){
   veFeadMigrateNode(node);                       // eski kayıt: dia → od
   var def = _feadDefOf(node);
   var isIdler = !!def.isFeadIdler;
-  // Model BİR KEZ kurulur: sekmeler, durumları ve sağ sütun aynı çözümü okur.
+  // Model BİR KEZ kurulur: kategoriler, durumları ve sağ sütun aynı çözümü okur.
   var M = _feadSideModel(node);
   var build = M.build;
   var surucu = _feadEtkinSurucuMu(node, build);
@@ -1655,7 +1599,7 @@ function getFeadPulleyPropertiesHTML(node){
 
   // ── GEOMETRİ ────────────────────────────────────────────────────────────
   // TEMAS TARAFI sessiz hataya karşı en kritik alan (kural 8): ters verilirse
-  // çekirdek BAŞKA BİR GEÇERLİ güzergâh çözer, hata vermez. İlk sekmede ve
+  // çekirdek BAŞKA BİR GEÇERLİ güzergâh çözer, hata vermez. Gövdenin başında ve
   // DANGER tonunda duruyor. Altındaki açıklama paragrafları KALKTI
   // (kullanıcı isteği 2026-09-28: "çok gereksiz açıklamalar var") — ton ve
   // vurgu tonda.
@@ -1683,8 +1627,8 @@ function getFeadPulleyPropertiesHTML(node){
     + '</div>');
   if(!surucu && !isIdler) rol += veFeadAccModelCard(node);
 
-  var sekmeler = [{ k:'geo', ad:'Geometri', govde: geo },
-                  { k:'rol', ad:'Rol',      govde: rol }];
+  var kategoriler = [{ k:'geo', ad:'Geometri', govde: geo },
+                     { k:'rol', ad:'Rol',      govde: rol }];
 
   // ── SÜRÜCÜ MOTORU TAŞIR ─────────────────────────────────────────────────
   // Kullanıcı kararı (2026-09-28): *"Krank kasnağı üzerinden sistemi tahrik
@@ -1696,36 +1640,36 @@ function getFeadPulleyPropertiesHTML(node){
   // (`veFeadIsletmeDeposu` — çözücü düğümü, silinmez): sürücülük bir ROL,
   // işaret başka kasnağa geçince ya da kasnak silinince çevrim gitmesin.
   //
-  // DEVİR SINIRLARI VE GÜÇ EĞRİSİ MOTOR SEÇİCİSİNİN ALTINDA — AYNI SEKMEDE.
+  // DEVİR SINIRLARI VE GÜÇ EĞRİSİ MOTOR SEÇİCİSİNİN ALTINDA — AYNI KATEGORİDE.
   // Sürücüde ikisi de motordan gelir: sınırlar (governed → çevrim oranı
   // kapısı, overspeed → devir sınırı kapısı, rölanti → senaryo) ve tam yük
   // eğrisi (senaryo rampasının şekli; çevrimin her satırında FEAD'in motor
   // gücündeki payı). Seçimin getirdiği şey seçicinin hemen altında görünür.
-  // DÖRT SEKME, TEK SATIR: ayrı sekmelerle şerit 380 px'lik müfettişte iki
-  // satıra kırılıyordu (ölçüldü: altı sekme 458 px, Rol'süz beş sekme 397 px,
-  // şeridin içi 345 px) — kapı `fead-sekme-durum.spec.js` → "TEK SATIR".
+  // DÖRT KATEGORİ: Geometri · Rol · Motor · Çevrim — 2026-10-16'dan beri sekme
+  // değil, tek gövdede alt alta (ortak kit).
   if(surucu){
-    var bos = _feadDepoYok();
-    sekmeler.push({ k:'mot', ad:'Motor', govde: depo
+    kategoriler.push({ k:'mot', ad:'Motor', govde: depo
       ? veFeadEngineCard(depo) + veFeadEngineSpeedCard(depo) + veFeadEngineCurveCard(depo, build)
         + veFeadDriveCard(depo)
-      : bos });
-    sekmeler.push({ k:'cev', ad:'Çevrim',
-                    govde: depo ? veFeadDutyEditor(depo, build) : bos });
+      : _feadDepoYok('Motor') });
+    kategoriler.push({ k:'cev', ad:'Çevrim',
+                       govde: depo ? veFeadDutyEditor(depo, build) : _feadDepoYok('Çalışma çevrimi') });
   } else if(!isIdler){
     // AVARA kayıştan güç çekmez: devir sınırı da güç eğrisi de onun için
-    // sorulmuyor, sekme de açılmıyor (kural 25).
-    sekmeler.push({ k:'dev', ad:'Devir sınırları', govde: veFeadAccLimitCard(node) });
-    sekmeler.push({ k:'egr', ad:'Güç eğrisi',      govde: veFeadPowerCurveCard(node, build) });
+    // sorulmuyor, kategorisi de yok (kural 25).
+    kategoriler.push({ k:'dev', ad:'Devir sınırları', govde: veFeadAccLimitCard(node) });
+    kategoriler.push({ k:'egr', ad:'Güç eğrisi',      govde: veFeadPowerCurveCard(node, build) });
   }
 
-  return veFeadPanelShell(node, sekmeler, veFeadPulleySide(node, M, depo),
+  return veFeadPanelShell(node, kategoriler, veFeadPulleySide(node, M, depo),
                           veFeadSekmeDurumlari(node, build));
 }
 
-// Depo yoksa (garanti bozulmuş eski kayıt) sekme sessiz kalmaz.
-function _feadDepoYok(){
-  return '<div class="ve-fp-olu">Çözücü düğümü yok.</div>';
+// Depo yoksa (garanti bozulmuş eski kayıt) kategori sessiz kalmaz. Başlıklı
+// kart: tek gövdede başlıksız bir not hangi bölümün yerinde durduğunu
+// söylemezdi (sekme adı bunu 2026-10-16'ya dek örtüyordu).
+function _feadDepoYok(baslik){
+  return _feadCard(baslik, '', 'var(--text-muted)', '<div class="ve-fp-olu">Çözücü düğümü yok.</div>');
 }
 
 // ── AKSESUAR MODELİ — TEK SEÇİCİ ───────────────────────────────────────────
@@ -1786,7 +1730,8 @@ function veFeadApplyAccModel(nodeId, val){
   var r = veFeadAccModelSet(node.type, node.data, val,
     depo && depo.data ? depo.data.duty : null, node.id);
   // Seçimin kendisi ve gelen sınırlar pencerede görünür; görünmeyen tek sonuç
-  // başka sekmedeki elle kW'ların silinmesi (ARAYÜZ ANLATMAZ: tekrar yok).
+  // başka penceredeki (sürücünün Çalışma çevrimi) elle kW'ların silinmesi
+  // (ARAYÜZ ANLATMAZ: tekrar yok).
   if(r.deger && r.kwTemiz && typeof showToast === 'function')
     showToast('Çevrimdeki ' + r.kwTemiz + ' elle kW silindi.', 'info');
   if(typeof saveState === 'function') saveState();
@@ -1796,7 +1741,7 @@ function veFeadApplyAccModel(nodeId, val){
 // ── AKSESUAR DEVİR SINIRLARI ────────────────────────────────────────────────
 // Üç alan iki kapıyı besliyor (js/fead-checks.js — devir penceresi ve devir
 // sınırı). Değerler modelden gelir (katalog seçimi ALANLARA yazar); SEÇİCİ
-// burada DEĞİL, Rol sekmesindeki tek Model seçicisinde. Elle girilen değer
+// burada DEĞİL, Rol kategorisindeki tek Model seçicisinde. Elle girilen değer
 // katalogtan ÜSTÜNDÜR (`veFeadAccLimits`) ve bu kartta sayılır.
 function veFeadAccLimitCard(node){
   var h = _feadGrid(node, [
@@ -2085,17 +2030,18 @@ function getFeadTensionerPropertiesHTML(node){
 
   var _yay = html;
 
-  // ÜÇ SEKME, ÜÇ SORU: kasnak nerede duruyor · kol hangi parça · yay ne
-  // veriyor. Gergi paneli 15 alan + 8 bölümle FEAD'in EN UZUN penceresiydi;
-  // tek sürgüde kol yönü ile yay katsayısı arasında 600 px vardı ve ikisi
-  // aynı hesabın iki ucu.
-  var sekmeler = [{ k:'geo', ad:'Yerleşim',  govde: _geo },
-                  { k:'kol', ad:'Kol',       govde: _kol },
-                  { k:'yay', ad:'Yay',       govde: _yay }];
+  // ÜÇ KATEGORİ, ÜÇ SORU: kasnak nerede duruyor · kol hangi parça · yay ne
+  // veriyor. Gergi paneli 15 alan + 8 bölümle FEAD'in EN UZUN penceresi; bu
+  // yüzden bir dönem sekmelere bölünmüştü, 2026-10-16'da kullanıcı isteğiyle
+  // (*"Tek bir pencerede hepsi sığar"*) tek gövdeye döndü — sıra bu üç sorunun
+  // sırası.
+  var kategoriler = [{ k:'geo', ad:'Yerleşim',  govde: _geo },
+                     { k:'kol', ad:'Kol',       govde: _kol },
+                     { k:'yay', ad:'Yay',       govde: _yay }];
 
   // GERGİ DE KAYIŞ YOLUNDA BİR KASNAK: sağ sütunu kasnağınkiyle AYNI. İkinci
   // bir "gergi sütunu" yazmak, sarım açısını iki ayrı yerden okumak olurdu.
-  return veFeadPanelShell(node, sekmeler, veFeadPulleySide(node));
+  return veFeadPanelShell(node, kategoriler, veFeadPulleySide(node));
 }
 
 
@@ -2470,7 +2416,7 @@ function veFeadKayisMarkaAdi(k){
   return String(k || '');
 }
 // ── SERVİS FAKTÖRÜ c₂ TABLOSU — TEK ÜRETİCİ (kural 48) ──────────────────────
-// Kayış penceresinin Tasarım sekmesi ve sihirbazın Kayış adımı AYNI tabloyu
+// Kayış penceresinin Tasarım kategorisi ve sihirbazın Kayış adımı AYNI tabloyu
 // basar; hücre bir düğmedir ve tıklaması yüzeyin KENDİ yazıcısına gider
 // (`cagri(anahtar)` → onclick metni). Değer ve etiket köprünün tablosundan
 // (`VE_FEAD_SERVIS`); ikinci bir sayı listesi burada TUTULMAZ.
@@ -2534,7 +2480,7 @@ function veFeadServisTabloHTML(sd, cagri){
 }
 
 // ── SÜRTÜNME VARSAYIMI — TEK ÜRETİCİ (kural 49) ─────────────────────────────
-// Kayış penceresinin Tasarım sekmesi ve sihirbazın Kayış adımı AYNI seçiciyi
+// Kayış penceresinin Tasarım kategorisi ve sihirbazın Kayış adımı AYNI seçiciyi
 // basar; seçenek bir düğmedir, tıklaması yüzeyin KENDİ yazıcısına gider
 // (`cagri(anahtar)`; alan için `cagri('elle', alan)` → `this.value` taşır).
 // Değerler ve kaynak köprüden (`VE_FEAD_SURTUNME` · `veFeadSurtunme`); ön
@@ -2718,19 +2664,20 @@ function getFeadBeltPropertiesHTML(node){
           veFeadSurtunmeHTML(depo.data, function(k, a){
             return 'veFeadSurtunmeSec(\'' + depo.id + '\',\'' + k + '\''
               + (a ? ',\'' + a + '\',this.value' : '') + ')'; }))
-    : _feadDepoYok();
+    : _feadDepoYok('Tasarım');
 
-  var sekmeler = [{ k:'pro', ad:'Profil',   govde: _pro },
-                  { k:'boy', ad:'Boy',      govde: _boy },
-                  { k:'mal', ad:'Malzeme',  govde: _mal },
-                  { k:'tas', ad:'Tasarım',  govde: _tas }];
+  var kategoriler = [{ k:'pro', ad:'Profil',   govde: _pro },
+                     { k:'boy', ad:'Boy',      govde: _boy },
+                     { k:'mal', ad:'Malzeme',  govde: _mal },
+                     { k:'tas', ad:'Tasarım',  govde: _tas }];
 
   // SAĞ SÜTUN kayışın kendi sorusuna cevap veriyor: hangi profil, kaç kanal,
   // hangi boy — ve o boy KATALOGDAN mı GEOMETRİDEN mi geldi. Kip alt satırda
-  // bir açılır liste; sekme değişince kayboluyordu ve kullanıcı serbest kipte
+  // bir açılır liste; sekmeli dönemde Boy sekmesindeydi, sekme değişince
+  // kayboluyordu ve kullanıcı serbest kipte
   // olduğunu unutup katalog boyu arıyordu.
   var _bs = veFeadBeltSideRows(node);
-  return veFeadPanelShell(node, sekmeler,
+  return veFeadPanelShell(node, kategoriler,
     veFeadToolSide(node, 'Kayış Künyesi', 'seçimden', _bs.satirlar));
 }
 
@@ -2744,7 +2691,7 @@ function veFeadBeltSideRows(node){
   var kanal = Number.isFinite(_feadNum(d.ribs, NaN)) ? String(_feadNum(d.ribs, NaN)) : '—';
 
   // BOY İKİ ÇİZGİDE (kullanıcı kararı 2026-09-28). Numara d_b çizgisinde, kord
-  // boyu d_w'de; ikisi Boy sekmesindeki kartla AYNI okumadan. Burada bir dönem
+  // boyu d_w'de; ikisi Boy kategorisindeki kartla AYNI okumadan. Burada bir dönem
   // "PITCH çevresi katalog boyu bu" yazıyordu — tersi: katalog numarası çekirdeğin
   // L_eff'i (d_b), pitch/kord çevresi ondan 2π·h_b uzun.
   var x = veFeadBoyOkuma(node);
@@ -2756,7 +2703,7 @@ function veFeadBeltSideRows(node){
       ['Profil', prof],
       ['Kanal sayısı', kanal],
       // Etikette SEMBOL YOK: `.ve-fp-l` büyük harfe çeviren bir flex kutusu —
-      // "d<sub>b</sub>" "D B" olur, π Π'ye döner. Semboller Boy sekmesinin
+      // "d<sub>b</sub>" "D B" olur, π Π'ye döner. Semboller Boy kategorisinin
       // figüründe ve açıklamasında.
       ['Kayış numarası', mm(x.db)],
       ['Kord boyu', mm(x.dw)],
@@ -2765,7 +2712,7 @@ function veFeadBeltSideRows(node){
       ['Hesap çapı', x.kaynak === 'db' ? 'Kasnak dış çapı (d_b)'
         : 'Kord (d_w) · ' + (x.kaynak === 'cad' ? 'CAD eskizi' : 'katalog')],
       // KİLİT DE SAYILIR: gergi varken kip alanı 'fixed' yazsa bile boy çıktıdır —
-      // Boy sekmesi "SERBEST (kilitli)" derken sütun "katalogdan" diyordu.
+      // Boy kartı "SERBEST (kilitli)" derken sütun "katalogdan" diyordu.
       ['Boy kaynağı', x.serbest ? 'tasarımdan hesaplanır' : 'katalogdan seçilir']
     ]
   };
@@ -2780,7 +2727,7 @@ function veFeadBeltSideRows(node){
 // eskizinin ölçtüğü d_w = d_b + 2·h_b (kord) boyu yanında yazılır. Sayılar
 // köprüden (`veFeadBoyCizgileri`); burada yalnız dizilir.
 
-// OKUMA TEK KAYNAK — Boy sekmesinin kartı ve sağ sütun bunu çağırır. Numara:
+// OKUMA TEK KAYNAK — Boy kategorisinin kartı ve sağ sütun bunu çağırır. Numara:
 // çözüm varsa köprünün çözüme yazdığı boy (sabit kipte girilen, serbest/kilitli
 // kipte türetilen); çözüm yoksa sabit kipte girilen boy, serbestte YOK.
 function veFeadBoyOkuma(node, b){
@@ -3143,7 +3090,7 @@ function veFeadKayisOlcuHTML(brand, profile){
   return h + '</tr></tbody></table>';
 }
 
-// ── BOY ÇİZGİLERİ KARTI (Boy sekmesi) ───────────────────────────────────────
+// ── BOY ÇİZGİLERİ KARTI (Boy kategorisi) ────────────────────────────────────
 // Satır etiketleri SEMBOLSÜZ (sağ sütunla aynı sebep); d_b / d_w eşlemesini
 // figür ve açıklama taşır — ikisi de büyük harfe çevrilmiyor.
 function veFeadBoyCizgileriHTML(node){
@@ -8490,7 +8437,7 @@ function veFeadAnimEnsure(){
 // ── KAYIŞ YOLU PENCERESİ — KRANK KASNAĞI AİLESİNDE ─────────────────────────
 // İki KATEGORİ: ŞEMA (kol konumu · titreşim · ölçekli çizim) ve GEOMETRİ
 // (çekirdeğin kasnak başına span · sarım · hız oranı). Eskiden ikisi alt
-// alta tek bir akıştı. Özet sütununda KÜÇÜK RESİM YOK: Şema sekmesi aynı
+// alta tek bir akıştı. Özet sütununda KÜÇÜK RESİM YOK: Şema kategorisi aynı
 // kayış yolunu kol konumuyla, pivotla ve yön gülüyle zaten çiziyor — ikinci
 // bir çizim aynı resmi iki kez göstermek olurdu. Sütunda uygunluk ve modelin
 // uyarıları durur (pencerenin CEVABI).
@@ -8672,8 +8619,8 @@ function getFeadSolverPropertiesHTML(node){
   // bileşenine … 'Çalışma Çevrimi' kısmı da 'Krank Kasnağı' kısmına gitsin.
   // Yani bu 'Çözücü' kısmında ben sadece sayısal yöntemler ve çözüm
   // yaklaşımları görmek istiyorum. Onun temelini at."* Girdiler ve Çevrim
-  // sekmeleri sürücü kasnağın ve kayışın pencerelerine taşındı; VERİ yine bu
-  // düğümde (`veFeadIsletmeDeposu` — silinmez, tek kopya). Yöntemler sekmesi
+  // sürücü kasnağın ve kayışın pencerelerine taşındı; VERİ yine bu
+  // düğümde (`veFeadIsletmeDeposu` — silinmez, tek kopya). Yöntemler kategorisi
   // temeldir: çözüm zincirinin aşamaları, her biri bir çağrıya bağlı
   // (`VE_FEAD_YONTEMLER`); yöntem seçimi bir sonraki turun işi.
   var _yon = veFeadYontemKart(build);
@@ -8690,7 +8637,7 @@ function getFeadSolverPropertiesHTML(node){
 
   var _son = veFeadResultBlock(node);
 
-  // HESAPLA DÜĞMESİ SEKMEYE GİRMEZ — pencerenin tek EYLEMİ, sağ sütunda.
+  // HESAPLA DÜĞMESİ GÖVDEYE GİRMEZ — pencerenin tek EYLEMİ, sağ sütunda.
   // Görünümü CSS'te (`.ve-fp-solve`, kural 14).
   var satirSay = veFeadDutyRows(node).length;
   // İşletme girdisi (motor künyesi · tahrik oranı · aksesuar gücü) köprünün
@@ -8701,12 +8648,12 @@ function getFeadSolverPropertiesHTML(node){
     + ' onclick="veFeadSolve(\'' + node.id + '\')">' + veIkon('play') + ' Hesapla</button>'
     + (hazir ? '' : '<div class="ve-fp-solve-not">'
         + (!build.ok ? 'Kasnak konumları eksik.'
-           : !(satirSay > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çevrim'
+           : !(satirSay > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çalışma çevrimi'
            : _feadEsc(veFeadIsletmeMetni(build.isletme)) + '.') + '</div>');
 
-  var sekmeler = [{ k:'yon', ad:'Yöntemler', govde: _yon },
-                  { k:'mod', ad:'Model',     govde: _mod },
-                  { k:'son', ad:'Sonuç',     govde: _son }];
+  var kategoriler = [{ k:'yon', ad:'Yöntemler', govde: _yon },
+                     { k:'mod', ad:'Model',     govde: _mod },
+                     { k:'son', ad:'Sonuç',     govde: _son }];
 
   // SON HESAP SONUCUN KENDİSİNDEN (`veFeadResultState`): yok · güncel · BAYAT.
   var _sd = veFeadResultState(null, node.id);
@@ -8716,7 +8663,7 @@ function getFeadSolverPropertiesHTML(node){
     ['Son hesap', _sd.metin]
   ], dugme);
 
-  return veFeadPanelShell(node, sekmeler, yan);
+  return veFeadPanelShell(node, kategoriler, yan);
 }
 
 // ── YÖNTEMLER — çözüm zincirinin aşamaları ─────────────────────────────────
@@ -8918,14 +8865,14 @@ function veFeadDriveCard(node){
 }
 
 // ── MOTOR ────────────────────────────────────────────────────────────────
-// Sürücü kasnağın Motor sekmesi (2026-09-28'e kadar Çözücü'nün "Motor
-// künyesi" kartı). Devir sınırları ve güç eğrisi AYNI sekmede, bu kartın
+// Sürücü kasnağın Motor kategorisi (2026-09-28'e kadar Çözücü'nün "Motor
+// künyesi" kartı). Devir sınırları ve güç eğrisi AYNI kategoride, bu kartın
 // altında (`veFeadEngineSpeedCard` · `veFeadEngineCurveCard`); krank mili
-// ataleti Rol sekmesinde — hepsi DEPODA (`veFeadIsletmeDeposu`).
+// ataleti Rol kategorisinde — hepsi DEPODA (`veFeadIsletmeDeposu`).
 // Her alanın bir tüketicisi var (kural 25): silindir → ateşleme frekansı,
 // ivmelenme/yavaşlama → tepe yük tablosu ve senaryo rampası.
 // "No load governed" SORULMUYOR (tüketicisi yok). SERVİS FAKTÖRÜ BURADA DEĞİL: yük
-// katsayısı tablosu olarak kayışın Tasarım sekmesinde (kural 48) — serbest
+// katsayısı tablosu olarak kayışın Tasarım kategorisinde (kural 48) — serbest
 // sayı alanı tablonun dışında bir değer yazdırıyordu.
 // YER TUTUCU VARSAYILANIN KENDİSİ: ivme boşken 1100 koşuyor.
 function veFeadEngineCard(node){
@@ -9737,7 +9684,7 @@ function veFeadResultBlock(node){
 
 // ── SONUÇ KARTI — pencerede ÖZET, ayrıntı Sonuçlar'da ──────────────────────
 //
-// Bu sekme bir dönem beş kart taşıyordu (devir × kasnak gerginlik tablosu,
+// Bu kategori bir dönem beş kart taşıyordu (devir × kasnak gerginlik tablosu,
 // hubload tablosu, burulma, yorulma, ömür) — 380 px'lik müfettiş sütununda
 // yatay kaydırılan tablolar. Hepsi 2026-09-24'te Sonuçlar sayfasının FEAD
 // sekmesine taşındı (grafik + Sonuç Özeti penceresi, js/cp-fead-results.js);
@@ -9792,7 +9739,7 @@ function veFeadResultVerdicts(R){
   var h = '';
   var yon = R.tensionerSide || null;
   var tersYerlesim = !!(yon && yon.ok === false);
-  // SERVİS FAKTÖRÜ HÜKMÜ — kayışın Tasarım sekmesindeki c₂ burada karşılanıyor:
+  // SERVİS FAKTÖRÜ HÜKMÜ — kayışın Tasarım kategorisindeki c₂ burada karşılanıyor:
   // en düşük SF tasarım yükünde, eşik 1. Seçilmemişse (c₂ = 1) satır çıkmaz;
   // SF < 1 aşağıda ayrıca söylenir.
   if(!tersYerlesim && sv.kaynak !== 'yok' && Number.isFinite(enKucukSF)){
@@ -9981,13 +9928,11 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadWizOpenAny: veFeadWizOpenAny,
     veFeadPopulateStarter: veFeadPopulateStarter,
     veFeadOpenEditor: veFeadOpenEditor,
-    veFeadPanelTab: veFeadPanelTab, veFeadPanelTabOf: veFeadPanelTabOf,
-    veFeadTabsHTML: veFeadTabsHTML, veFeadPulleySide: veFeadPulleySide,
+    veFeadPulleySide: veFeadPulleySide,
     veFeadToolSide: veFeadToolSide, veFeadPanelShell: veFeadPanelShell,
     veFeadSekmeDurumlari: veFeadSekmeDurumlari, veFeadEksikBandi: veFeadEksikBandi,
     veFeadEksikGit: veFeadEksikGit, veFeadSekmeTazele: veFeadSekmeTazele, _feadSideGates: _feadSideGates,
     veFeadBeltSideRows: veFeadBeltSideRows,
-    veFeadPanelTabState: function(){ return VE_FEAD_PANEL_TAB; },
     getFeadModulePropertiesHTML: getFeadModulePropertiesHTML,
     getFeadPulleyPropertiesHTML: getFeadPulleyPropertiesHTML,
     getFeadTensionerPropertiesHTML: getFeadTensionerPropertiesHTML,

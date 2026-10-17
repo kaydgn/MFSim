@@ -60,13 +60,16 @@ describe('FEAD araçları penceresi', () => {
     expect(ipucu.filter((t) => / — /.test(t) && !/(tıkla|sürükle|çift tık):/i.test(t))).toEqual([]);
   });
 
-  test('Hesapla\'nın sebebi tarif vermez: eksiğin yeri "· Sahip › Sekme"', () => {
+  test('Hesapla\'nın sebebi tarif vermez: eksiğin yeri "· Sahip › Bölüm"', () => {
     const src = oku('js/cp-fead-araclar.js');
     const i = src.indexOf('function _feadAracIsletmeYeri');
     const govde = src.slice(i, src.indexOf('\n}', i));
     const yerler = [...govde.matchAll(/return ' · ([^']+)';/g)].map((m) => m[1]);
     expect(yerler.length).toBe(3);
-    yerler.forEach((y) => expect(y).toMatch(/^(Aksesuar|Sürücü kasnak) › \S+$/));
+    // Bölüm, pencerenin bölüm BAŞLIĞIDIR (2026-10-16'dan beri sekme yok) ve boşluk
+    // taşıyabilir ("Çalışma çevrimi"); başlığın pencerede var olduğu
+    // fead-isletme.test.js → "sebep eksiğin YERİNİ söyler"de ölçülür.
+    yerler.forEach((y) => expect(y).toMatch(/^(Aksesuar|Sürücü kasnak) › [^·›]+$/));
     expect(govde).not.toMatch(/girin|tamamlayın|seçin/);
   });
 });

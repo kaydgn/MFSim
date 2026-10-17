@@ -224,7 +224,7 @@ describe('Panel (smoke)', () => {
   test('üç tip de panel üretir; PTO şeridi ve referans tablosu görünür', () => {
     ['mnt-pto', 'mnt-pump', 'mnt-pto-group'].forEach((t) => {
       const html = cp.getMntMassPropertiesHTML({ id: 'n1', type: t, def: componentDefs[t], data: {} });
-      expect(html).toContain('>PTO grubu<');
+      expect(html).toContain('aria-label="PTO grubu"');            // kategori (2026-10-16'dan beri sekme değil)
       expect(html).toContain('<b>Giriş yolu</b>');
       expect(html).toContain('ASR-SR-116');
       expect(html.length).toBeGreaterThan(500);

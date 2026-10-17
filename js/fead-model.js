@@ -255,7 +255,7 @@ function veFeadVarsayilanKaynagi(anahtar){
     + ' (' + _feadSayiTr(s[0]) + ' … ' + _feadSayiTr(s[s.length - 1]) + ')';
 }
 
-// Boy ofseti — kayış penceresinin Tasarım sekmesi ve köprü AYNI cevabı okur.
+// Boy ofseti — kayış penceresinin Tasarım kategorisi ve köprü AYNI cevabı okur.
 // Değer depoda (çözücü düğümü); boşken arşivin ortalaması.
 function veFeadBoyOfseti(sd){
   var d = sd || {};
@@ -264,7 +264,7 @@ function veFeadBoyOfseti(sd){
              ipucu: veFeadVarsayilanKaynagi('boyOfseti') };
   return { deger: _feadNum(d.lengthOffsetMm, 0), kaynak: 'elle', alan: 'lengthOffsetMm' };
 }
-// Kaburga başına kütle — kayış penceresinin Malzeme sekmesi. Değer HER ZAMAN
+// Kaburga başına kütle — kayış penceresinin Malzeme kategorisi. Değer HER ZAMAN
 // geçer (kural 36); boşken köprünün kaynaklı varsayılanı ya da çekirdeğin
 // kataloğu (`veFeadBeltMassOf`).
 function veFeadKayisKutlesi(bd){
@@ -355,7 +355,7 @@ function veFeadGergiAtalet(td, anahtar){
 // ── ÇÖZÜM ZİNCİRİ — SAYISAL YÖNTEMLER ──────────────────────────────────────
 // Kullanıcı kararı (2026-09-28): *"Çözücü kısmında ben sadece sayısal
 // yöntemler ve çözüm yaklaşımları görmek istiyorum. Onun temelini at."*
-// Çözücü penceresinin Yöntemler sekmesi bu listeyi basar. Her satır bir
+// Çözücü penceresinin Çözüm zinciri bölümü bu listeyi basar. Her satır bir
 // ÇAĞRIYA bağlı (`fn`: çekirdekte `FEADCore.<ad>`, köprüde global ad) —
 // `fead-yontemler.test.js` adın var olduğunu denetler; kodda karşılığı
 // kalmayan bir yöntem listede sessizce yaşayamaz. `girdi` o aşamanın
@@ -2400,7 +2400,7 @@ var VE_FEAD_EXAMPLES = {
     // SERVİS FAKTÖRÜ YOK (2026-09-29, kural 48): Gates raporu servis faktörü
     // uygulamıyor ve yazmıyor; kayıttaki 1,3'ün kaynağı yoktu ve c₂ bir yük
     // katsayısı olunca örneğin kayma sayılarını raporun gerçek yükünden
-    // uzaklaştırıyordu. Kullanıcı isterse Tasarım sekmesinden seçer.
+    // uzaklaştırıyordu. Kullanıcı isterse kayış penceresinin Tasarım'ından seçer.
     solver:{ ratioMode:'direct', driveRatio:1,
              cylinders:6, crankInertia:0.70,
              // "Peak Tension & Hubload" sayfasındaki Accel. RPM/s sütunu.
@@ -6201,7 +6201,7 @@ function veFeadAnalyze(build, opts){
     // Kayış verisi kapalıyken kaybolanları `beltDataOff` listesi ZATEN ve
     // DOĞRU biçimde anlatıyor (B10 · yorulma dağılımı · açıklık frekansları ·
     // zarf); ikinci bir uyarı bilgi eklemiyor, yanlış bilgi ekliyordu.
-    out.warnings.push('Çalışma çevrimi boş: yük ve frekans hesaplanmadı.');
+    out.warnings.push('Çalışma çevrimi boş: işletme sonuçları hesaplanmadı.');
   }
 
   // Spesifikasyon §7 — her koşuda görünür olmalı, dipnotta değil.
@@ -6240,7 +6240,7 @@ function veFeadBeltDataOn(build){
 // Sonuç oturumluk bir global ve rapor bilerek ÇÖZÜLEN modeli anlatıyor. Eksik
 // olan, modelin çözümden SONRA değişip değişmediğini söyleyen bir damgaydı.
 // ÖLÇÜLDÜ (AG00976): çözümden sonra sürücü kasnak çapı 162 → 178,2 mm; Sonuç
-// sekmesi 880 d/d'de 1381 N göstermeye devam etti, güncel model 1272 N veriyor
+// bölümü 880 d/d'de 1381 N göstermeye devam etti, güncel model 1272 N veriyor
 // (≈ %8) ve hiçbir yüzey bunu söylemedi.
 //
 // İMZA MODEL DÜĞÜMLERİNİN VERİSİNDEN: kasnaklar (gergi dâhil), kayış ve

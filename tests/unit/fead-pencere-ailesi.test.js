@@ -2,9 +2,11 @@
  * fead-pencere-ailesi.test.js — HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE
  *
  * Kullanıcı isteği (2026-09-23): bileşen pencereleri Krank Kasnağı'nın
- * yapısında, KATEGORİ KATEGORİ — kategori sekmeleri ve sekmeden bağımsız sağ
- * sütun. (Tepedeki özet şeridi aynı gün kullanıcı kararıyla KALKTI; küçük
- * resim yalnız kasnak pencerelerinde kaldı — ikisinin de kapısı burada.)
+ * yapısında, KATEGORİ KATEGORİ ve gövdeden bağımsız sağ sütun. (Tepedeki özet
+ * şeridi aynı gün kullanıcı kararıyla KALKTI; küçük resim 09-28'de — ikisinin
+ * de kapısı burada.) Kategoriler 2026-10-16'dan beri SEKME DEĞİL, tek gövdede
+ * alt alta (kullanıcı: *"Tek bir pencerede hepsi sığar … Tüm bileşenler için
+ * bunu uygulayalım"*).
  * Kural (FEAD skill'i, kural 31) "HER FEAD penceresi" diyordu ama onu tutan
  * bir kapı YOKTU: turun ilk yarısı kapandığında üç
  * pencere (modül kartı · Dönüş Yönü · Sihirbaz) hâlâ eski düz paneldeydi ve
@@ -118,13 +120,19 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
     return d;
   }
 
-  test('her tipin penceresi kabuğu kuruyor: ≥2 kategori · sağ sütun', () => {
+  test('her tipin penceresi kabuğu kuruyor: tek gövde, başlıklı kategoriler · sağ sütun', () => {
     kur('AG00976_GATES_2025');
     const disarida = [];
     TIPLER.forEach((t) => {
       const d = pencere(t);
       const eksik = [];
-      if (d.querySelectorAll('.ve-fp-tabs .ve-fp-tab').length < 2) eksik.push('kategori sekmeleri');
+      const kat = [...d.querySelectorAll('.ve-fp-main > .ve-fp-govde > .ve-fp-kat')];
+      if (!kat.length) eksik.push('kategori yok');
+      if (d.querySelector('.ve-fp-tab, .ve-fp-tabs, [role="tablist"]')) eksik.push('sekme şeridi');
+      if (kat.some((k) => k.hasAttribute('hidden'))) eksik.push('gizli kategori');
+      // Tek gövdede başlıksız kategori sahipsiz bir not olurdu — sekme adı onu
+      // 2026-10-16'ya dek örtüyordu.
+      kat.filter((k) => !k.querySelector('.ve-fp-sect > b')).forEach((k) => eksik.push('başlıksız kategori ' + k.getAttribute('data-k')));
       if (!d.querySelector('.ve-fp-split > .ve-fp-side')) eksik.push('sağ sütun');
       if (eksik.length) disarida.push(t + ' (' + KURUCU[t] + '): ' + eksik.join(', '));
     });
@@ -132,11 +140,11 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
   });
 
   // KULLANICI KARARI (2026-09-23): "tepede böyle özet bir açıklamaya gerek
-  // yok". Şerit çap · konum · rol · temas · sıra çiplerini sekmelerin ÜSTÜNDE
+  // yok". Şerit çap · konum · rol · temas · sıra çiplerini pencerenin ÜSTÜNDE
   // yazıyordu; beşinin de yeri pencerenin kendisinde. Kapı geri dönüşe karşı:
-  // hiçbir FEAD penceresi sekmelerden önce bir şerit basmaz — pencerenin ilk
+  // hiçbir FEAD penceresi gövdeden önce bir şerit basmaz — pencerenin ilk
   // çocuğu bölünmüş gövdenin kendisi.
-  test('ÖZET ŞERİDİ YOK — pencere doğrudan sekmelerle başlıyor', () => {
+  test('ÖZET ŞERİDİ YOK — pencere doğrudan gövdeyle başlıyor', () => {
     kur('AG00976_GATES_2025');
     const serit = [];
     TIPLER.forEach((t) => {
@@ -173,10 +181,10 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
     expect(yanlis).toEqual([]);
   });
 
-  test('pencerenin EYLEMİ sağ sütunda ve tek — sekme değişince kaybolmasın', () => {
+  test('pencerenin EYLEMİ sağ sütunda ve tek', () => {
     kur('AG00976_GATES_2025');
-    // Eylemi olan pencereler: düğmesi kategori sekmesine gömülseydi öteki
-    // sekmedeyken görünmezdi (çözücüdeki Hesapla'nın gerekçesi).
+    // Eylemi olan pencereler: düğmesi gövdeye gömülseydi uzun pencerede
+    // aranırdı; sağ sütunda dar kapta kaydırma alanının dibine yapışır.
     // (Dönüş Yönü penceresi 2026-09-28'de kalktı — yön FEAD araçları
     // penceresinin bölümü; tipi yok, kapı `cp-fead.test.js`.)
     const eylemli = ['fead-analysis', 'fead-solver', 'fead-report', 'fead-wizard'];

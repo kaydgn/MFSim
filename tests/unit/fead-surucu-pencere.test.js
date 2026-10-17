@@ -9,7 +9,7 @@
  *
  * Kapılar — her biri düzeltme geri alınınca DÜŞER (PR'de ölçüldü):
  *   TOHUM     çevrim sürücünün penceresi İLK kurulurken dolu
- *   DEPO      sürücünün sekmeleri depoya yazar; AÇIK pencere yeniden kurulur
+ *   DEPO      sürücünün Motor ve Çevrim kategorileri depoya yazar; AÇIK pencere yeniden kurulur
  *   ATALET    pencerede yazan sayı = hesaba giren sayı (12 örnek, 52 kasnak)
  *   İPUCU     'i' metni ve varsayılan AYNI örneklemden
  *   MODEL     seçilen model çevrime ULAŞIR (elle kW silinir, yük eğriyi izler)
@@ -74,7 +74,7 @@ function pencere(n) {
   if (d.isFeadSolver) return getFeadSolverPropertiesHTML(n);
   return '';
 }
-const sekme = (kap, k) => kap.querySelector('[id^="ve-fp-panes-"] > [data-k="' + k + '"]');
+const kat = (kap, k) => kap.querySelector('[id^="ve-fp-panes-"] > [data-k="' + k + '"]');   // kategori kabı
 const motorEgrili = () => veFeadEngineList().map((e) => e.key)
   .find((k) => (veFeadEngineOf(k).curve || []).length >= 2);
 const medyan = (a) => {
@@ -94,7 +94,7 @@ beforeEach(() => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('TOHUM — çevrim sürücünün penceresi İLK kurulurken dolu', () => {
-  test('tohumsuz depo: pencere kurulunca varsayılan çevrim yüklü ve Çevrim sekmesinde satırlar var', () => {
+  test('tohumsuz depo: pencere kurulunca varsayılan çevrim yüklü ve Çevrim kategorisinde satırlar var', () => {
     ornek();
     const sv = depo();
     delete sv.data.duty; delete sv.data.dutySeeded; delete sv.data.dutyLib;
@@ -103,7 +103,7 @@ describe('TOHUM — çevrim sürücünün penceresi İLK kurulurken dolu', () =>
     expect(n).toBeGreaterThan(0);
     expect(sv.data.duty.length).toBe(n);
     expect(sv.data.dutyLib).toBe(VE_FEAD_DUTY_DEFAULT);
-    expect(sekme(kap, 'cev').querySelectorAll(
+    expect(kat(kap, 'cev').querySelectorAll(
       'input[onchange*="veFeadDutySet(\'ex-solver\',"][onchange*=",\'rpm\',"]').length).toBe(n);
   });
 
@@ -148,9 +148,9 @@ describe('DEPO — veri çözücü düğümünde, pencere sürücününki', () =
     dugum('ex-ALT').data.driver = true;
     expect(depo().data.duty.length).toBe(satir);
     const kap = ciz(getFeadPulleyPropertiesHTML(dugum('ex-ALT')));
-    expect(sekme(kap, 'mot').querySelector('select[onchange*="veFeadApplyEngineLib(\'ex-solver\'"]').value)
+    expect(kat(kap, 'mot').querySelector('select[onchange*="veFeadApplyEngineLib(\'ex-solver\'"]').value)
       .toBe(key);
-    expect(sekme(kap, 'cev').querySelectorAll('input[onchange*=",\'rpm\',"]').length).toBe(satir);
+    expect(kat(kap, 'cev').querySelectorAll('input[onchange*=",\'rpm\',"]').length).toBe(satir);
   });
 });
 
@@ -439,7 +439,7 @@ describe('MODEL — seçilen aksesuar modeli çevrime ULAŞIR', () => {
     expect(veFeadDutyElleKw(veFeadDutyRows(depo()), 'ex-ALT')).toBe(0);
     const sonra = altYuk();
     altDevir().forEach((rpm, r) => expect(sonra[r]).toBeCloseTo(veAccInterpCurve(pre.curve, rpm), 9));
-    const tb = sekme(ciz(getFeadPulleyPropertiesHTML(dugum('ex-ALT'))), 'egr')
+    const tb = kat(ciz(getFeadPulleyPropertiesHTML(dugum('ex-ALT'))), 'egr')
       .querySelector('[data-ve-tablo^="fead-curve:"] tbody');
     expect(tb.querySelectorAll('tr').length).toBe(pre.curve.length);
   });
@@ -469,14 +469,14 @@ describe('MODEL — seçilen aksesuar modeli çevrime ULAŞIR', () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 describe('MOTOR — sürücüde seçilir; devir sınırları ve eğri motordan', () => {
-  test('seçim devir sınırlarını depoya yazar ve sürücünün Motor sekmesi onları seçicinin altında gösterir', () => {
+  test('seçim devir sınırlarını depoya yazar ve sürücünün Motor kategorisi onları seçicinin altında gösterir', () => {
     ornek();
     const key = motorEgrili(), e = veFeadEngineOf(key);
     veFeadApplyEngineLib('ex-solver', key);
     const kap = ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN')));
     [['idleRpm', e.idleRpm], ['governedRpm', e.governedRpm], ['overspeedRpm', e.overspeedRpm]].forEach(([k, v]) => {
       expect(Number(depo().data[k])).toBe(v);
-      expect(Number(sekme(kap, 'mot').querySelector('#ve-fead-' + k + '-ex-solver').value)).toBe(v);
+      expect(Number(kat(kap, 'mot').querySelector('#ve-fead-' + k + '-ex-solver').value)).toBe(v);
     });
     // Senaryo rölantiyi motordan alıyor; varsayılanı YOK (FEAD kural 46).
     const g = veFeadScnInputs(kopru());
@@ -487,10 +487,10 @@ describe('MOTOR — sürücüde seçilir; devir sınırları ve eğri motordan',
   test('Güç eğrisi kartı motorun tam yük eğrisi — nokta sayısı ve değerleri katalogdan', () => {
     ornek();
     const key = motorEgrili(), e = veFeadEngineOf(key);
-    const bos = sekme(ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN'))), 'mot');
+    const bos = kat(ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN'))), 'mot');
     expect(bos.querySelector('[data-ve-tablo^="fead-motor-egri:"]')).toBeNull();
     veFeadApplyEngineLib('ex-solver', key);
-    const tb = sekme(ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN'))), 'mot')
+    const tb = kat(ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN'))), 'mot')
       .querySelector('[data-ve-tablo^="fead-motor-egri:"] tbody');
     const tr = tb.querySelectorAll('tr');
     expect(tr.length).toBe(e.curve.length);
@@ -515,7 +515,7 @@ describe('MOTOR — sürücüde seçilir; devir sınırları ve eğri motordan',
       expect(p.motorKw).toBeCloseTo(veFeadEngineAt(key, core[i].engineRpm).kw, 9);
       expect(p.payPct).toBeCloseTo(100 * f / p.motorKw, 9);
     });
-    const tb = sekme(ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN'))), 'mot')
+    const tb = kat(ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN'))), 'mot')
       .querySelector('[data-ve-tablo^="fead-motor-pay:"] tbody');
     expect(tb.querySelectorAll('tr').length).toBe(pay.length);
     expect(tb.querySelector('tr td:last-child').textContent).toBe('%' + veSayi(pay[0].payPct, 1));
@@ -539,10 +539,10 @@ describe('YÖNTEMLER — Çözücü\'nün temeli: her satır bir ÇAĞRIYA bağl
     expect(new Set(VE_FEAD_YONTEMLER.map((y) => y.k)).size).toBe(VE_FEAD_YONTEMLER.length);
   });
 
-  test('Çözücü penceresinin Yöntemler sekmesi listeyi SIRASIYLA basar ve girdi SORMAZ', () => {
+  test('Çözücü penceresinin Yöntemler kategorisi listeyi SIRASIYLA basar ve girdi SORMAZ', () => {
     ornek();
     const kap = ciz(getFeadSolverPropertiesHTML(depo()));
-    const yon = sekme(kap, 'yon');
+    const yon = kat(kap, 'yon');
     const metin = yon.textContent;
     let son = -1;
     VE_FEAD_YONTEMLER.forEach((y) => {
