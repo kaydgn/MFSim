@@ -529,7 +529,7 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linejoin="round"/></svg>',
     // YER TUTUCU (kullanıcı kararı 2026-10-16): "Klasik 3B" ilerleyen zamanda
     // gerçek CAD dosyasıyla işlenecek; pencere yalnız bu notu gösterir.
-    yerTutucu: 'Bu bileşen gerçek CAD dosyasıyla çalışmaya ayrıldı. Model Görünümler bileşeninde döndürülür.',
+    yerTutucu: 'Gerçek CAD dosyasıyla 3B görüntüleme: henüz yok.',
     inputs: 0, outputs: 0, isMountViewer: true, defaultWidth: 60, defaultHeight: 56
   },
   // Koordinat Düzlemi — koordinat sistemini (X/Y/Z eksenleri + düzlemler) 3B

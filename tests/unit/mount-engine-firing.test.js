@@ -115,11 +115,11 @@ describe('Rapor §8.8 — Motor\'dan gelen değerlerle üretilir', () => {
     expect(rep._mntRepFreqPlacement(baseR(undefined, undefined), {})).toBe('');
   });
 
-  test('uygunluk tablosu da Motor\'dan okur; yoksa "bekliyor" der ve Motor\'a yönlendirir', () => {
+  test('uygunluk tablosu da Motor\'dan okur; yoksa "bekliyor" der ve eksik girdinin yerini (Motor) söyler', () => {
     const ok = rep._mntRepCompliance(baseR(600, 6), {});
     expect(ok).toContain('f<sub>ateş</sub> 30 Hz');      // alt simge gerçek (Tur 6)
     const wait = rep._mntRepCompliance(baseR(undefined, undefined), {});
-    expect(wait).toContain('Motor bileşeni');
+    expect(wait).toContain('silindir sayısı yok (Motor)');
     expect(wait).not.toContain('Rapor paneli');   // eski yanlış yönlendirme gitmeli
   });
 });

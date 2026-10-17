@@ -991,7 +991,8 @@ describe('KLASİK 3B — 3D Görüntüleyici yer tutucu', () => {
     expect({ tuval: d.querySelectorAll('canvas').length, dugme: p.querySelectorAll('button').length, svg: d.querySelectorAll('svg').length })
       .toEqual({ tuval: 0, dugme: 0, svg: 0 });
     expect(p.textContent).toBe(componentDefs['mnt-viewer'].yerTutucu);
-    expect(p.textContent).toMatch(/gerçek CAD dosyasıyla.*Görünümler/);
+    expect(p.textContent).toMatch(/gerçek CAD dosyasıyla/i);
+    expect(p.textContent).not.toMatch(/Görünümler|Bu bileşen/);    // durum söyler; yönlendirme ve kendini anlatma yok
     expect(d.innerHTML).not.toMatch(/veMountViewer|veMntViewerFullscreen|Sahne göstergesi|ve-mnt-akso|veMntAkso3BTamEkran/);
   });
 
