@@ -132,7 +132,7 @@ describe('Sihirbaz — BMC motor kataloğu', () => {
   test('katalog yüklü değilse satır SESSİZ kalmıyor', () => {
     const yedek = global.veFeadEngineList;
     delete global.veFeadEngineList;
-    expect(wiz._fwEngineLibRow({})).toContain('fead-engines.js');
+    expect(wiz._fwEngineLibRow({})).toContain('Motor kataloğu yüklenmedi.');
     global.veFeadEngineList = yedek;
   });
 });
@@ -210,8 +210,7 @@ describe('Sihirbaz — BMC aksesuar künyesi ve devir sınırları', () => {
   test('sınırı olmayan aksesuar blokta ADIYLA uyarılıyor', () => {
     bmcKur();
     const h = kart();
-    expect(h).toContain('değerlendirilemedi');
-    expect(h).toContain('uygun sayılmaz');
+    expect(h).toMatch(/aksesuarın<\/b> devir sınırı yok\./);
   });
 });
 
@@ -389,7 +388,7 @@ describe('Sihirbaz — 7. adımın uygunluk kapıları', () => {
   test('kapılar yüklü değilse kart SESSİZ kalmıyor', () => {
     const yedek = global.veFeadChecks;
     delete global.veFeadChecks;
-    expect(wiz._fwChecksCard(null)).toContain('fead-checks.js');
+    expect(wiz._fwChecksCard(null)).toContain('Uygunluk denetimi yüklenmedi.');
     global.veFeadChecks = yedek;
   });
 });

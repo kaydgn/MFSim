@@ -176,7 +176,7 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   expect(cizim.okUcu).toBe(true);
   expect(cizim.okRengi).not.toBe('');
   // Kasnak ADI yok — yalnız eksen etiketleri ve açı sayısı.
-  cizim.yazi.forEach(t => expect(t).toMatch(/^-?\d+(,\d+)?°$/));   // Türkçe sayı (7·C)
+  cizim.yazi.forEach(t => expect(t).toMatch(/^[-−]?\d+(,\d+)?°$/));   // Türkçe sayı (7·C), gerçek eksi (S4·B)
   expect(cizim.zoomDugme).toBe(3);
 
   // YAKINLAŞTIRMA gerçek tıkla ölçeği büyütüyor

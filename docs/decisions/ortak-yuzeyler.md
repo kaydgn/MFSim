@@ -2189,7 +2189,10 @@ alma kanıtı ve kalanlar tek rapor sayfasında toplanır. Taramanın görmediğ
 sınıf (işaretsiz tekrar bildirimi, adı tekrarlayan ipucu) aşamanın kendi
 kapısıyla tutulur — kabuk için `tests/unit/kabuk-metin.test.js`.
 
-**Uygulananlar (tahtasız):** aşama 3 → kaydgn/MFSim#1137 (kapı
+**Uygulananlar (tahtasız):** aşama 4 → kaydgn/MFSim#1138 (sihirbaz, STEP, 3B;
+kapı `fead-metin.test.js` → *FEAD sihirbazı ve STEP*; açının tanımı anahtar
+biçiminde kaldı — `fead-wizard.test.js` → *açının tanımı*) · aşama 3 →
+kaydgn/MFSim#1137 (kapı
 `tests/unit/fead-metin.test.js`: bilgi bildirimi yalnız ekranda görünmeyen
 sonucu söyler, katman ve ön ayar açıklama yuvası taşımaz, araç düğmesinin
 ipucu ad). Tarayıcı etkileşim ipucunu ("tıkla: …", "sürükle: …") kısayol

@@ -119,7 +119,7 @@ test('tur3 — seçili kart · gergi satırı · yön · tablo hizası · kaydı
   expect(satir.tipSecenek).toBe(1);
   expect(satir.cip).toBe(false);
   expect(satir.yukseklikFarki).toBeLessThanOrEqual(2);   // satır artık şişmiyor
-  expect(satir.xIpucu).toMatch(/montaj noktas/);
+  expect(satir.xIpucu).toBe('Avara merkezi (montaj konumu değil)');
 
   // ── 3 · CCW/CW SEÇİCİSİ VAR ve TEK ÜRETİCİDEN ─────────────────────────
   //

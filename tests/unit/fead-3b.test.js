@@ -81,7 +81,7 @@ describe('BİRİM: parça rollü atasına aittir — bir yolda tek rol', () => {
     // Birimin içindeki parçaya rol: birim dağılır (panel bunu "birimin rolü kalkar" diye söyler)
     const kd = s.sonuc.parcalar[pi('KASNAK')].dugum;
     document.body.insertAdjacentHTML('beforeend', '<div id="b">' + G.veFeadWiz3bPanelHTML(s, kd) + '</div>');
-    expect(document.getElementById('b').textContent).toMatch(/OTOMATİK GERGİ biriminin içinde.*birimin rolü kalkar/);
+    expect(document.getElementById('b').textContent).toMatch(/OTOMATİK GERGİ biriminin içinde \(Otomatik Gergi\)/);
     wiz.veFeadWizStpRol(kd, 'fead-idler');
     expect(s.roller[g]).toBeNull();
     expect(G.veFeadWiz3bBirim(s, pi('KASNAK'))).toBe(kd);

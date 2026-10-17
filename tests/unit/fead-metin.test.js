@@ -70,3 +70,41 @@ describe('FEAD araçları penceresi', () => {
     expect(govde).not.toMatch(/girin|tamamlayın|seçin/);
   });
 });
+
+// ── Aşama 4 · sihirbaz, STEP okuyucusu, 3B görüntüleyici ─────────────────
+const parser = require('@babel/parser');
+function dizgeler(dosya) {
+  const ast = parser.parse(oku(dosya), { sourceType: 'script', errorRecovery: true });
+  const out = [];
+  (function yuru(n) {
+    if (!n || typeof n.type !== 'string') return;
+    if (n.type === 'StringLiteral') out.push({ satir: n.loc.start.line, metin: n.value });
+    for (const k in n) {
+      if (k === 'loc' || k === 'start' || k === 'end') continue;
+      const v = n[k];
+      if (Array.isArray(v)) v.forEach(yuru); else if (v && typeof v.type === 'string') yuru(v);
+    }
+  })(ast.program);
+  return out;
+}
+
+describe('FEAD sihirbazı ve STEP', () => {
+  test('sihirbazın ve 3B görüntüleyicinin bilgi bildirimi yalnız "Model kuruldu."', () => {
+    ['js/cp-fead-wizard.js', 'js/cp-fead-3b.js'].forEach((f) => {
+      const sapan = bilgiBildirimleri(f).filter((b) => b.metin !== 'Model kuruldu.')
+        .map((b) => f + ':' + b.satir + ' ' + b.metin);
+      expect(sapan).toEqual([]);
+    });
+  });
+
+  test('ileti dosya yolu taşımaz ("(js/…)" geliştiricinin dili)', () => {
+    const sapan = ['js/cp-fead.js', 'js/cp-fead-araclar.js', 'js/cp-fead-wizard.js', 'js/cp-fead-3b.js',
+      'js/fead-step.js', 'js/step-p21.js']
+      .flatMap((f) => dizgeler(f).filter((d) => /\bjs\/[\w-]+\.js\b/.test(d.metin)).map((d) => f + ':' + d.satir + ' ' + d.metin));
+    expect(sapan).toEqual([]);
+  });
+
+  test('kapı düşebiliyor: dosya yollu ileti yakalanır', () => {
+    expect(/\bjs\/[\w-]+\.js\b/.test('Hesap çekirdeği yüklenmedi (js/fead-core.js).')).toBe(true);
+  });
+});
