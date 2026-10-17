@@ -274,7 +274,7 @@ function veFeadKayisKutlesi(bd){
   var m = veFeadBeltMassOf(d.profile, d.brand);
   if(m.value > 0) return { deger: m.value, kaynak: 'varsayilan', alan: 'massPerRibKgM', ipucu: m.source };
   return { deger: NaN, kaynak: 'yok', alan: 'massPerRibKgM',
-           ipucu: 'Bu profil ve marka için katalogda kütle yok — açıklık frekansı kurulamaz.' };
+           ipucu: 'Katalogda kütle yok; açıklık frekansı kurulamaz.' };
 }
 
 // Boy toleransı ve uzama + aşınma payı — kayış penceresinin Künye kartı ve
@@ -316,7 +316,7 @@ function veFeadKasnakAtalet(node, sd, isDrv){
     if(jc > 0) return { deger: jc, kaynak: 'elle', alan: 'crankInertia' };
     var jk = _feadNum(d.inertia, NaN);
     if(jk > 0) return { deger: jk, kaynak: 'kasnak', alan: 'crankInertia',
-      ipucu: 'Kasnağın kendi atalet alanından (eski kayıt). Krank mili ataletini yazın.' };
+      ipucu: 'Kasnağın atalet alanından (eski kayıt)' };
     return { deger: VE_FEAD_DEFAULTS.crankInertiaKgM2, kaynak: 'varsayilan', alan: 'crankInertia',
       ipucu: veFeadVarsayilanKaynagi('krank') };
   }
@@ -325,13 +325,12 @@ function veFeadKasnakAtalet(node, sd, isDrv){
   // Boş olmayan ama pozitif olmayan değer (0, eksi) hesaba GİRMİYOR ve
   // varsayılana da düşmüyor — köprünün eski davranışı; 'yok' gibi okunur.
   if(!_feadBlank(d.inertia)) return { deger: NaN, kaynak: 'yok', alan: 'inertia',
-    ipucu: 'Atalet sıfırdan büyük olmalı — bu değer hesaba girmiyor.' };
+    ipucu: 'Atalet sıfırdan büyük olmalı; hesaba girmiyor.' };
   var v = veFeadDefaultInertia(node && node.type, false);
   if(v > 0) return { deger: v, kaynak: 'varsayilan', alan: 'inertia',
     ipucu: veFeadVarsayilanKaynagi(node.type) };
   return { deger: NaN, kaynak: 'yok', alan: 'inertia',
-    ipucu: 'Bu tip için arşivde ölçülmüş atalet yok — girilmezse burulma modeli '
-      + '(doğal frekanslar) kurulamaz.' };
+    ipucu: 'Arşivde ölçülmüş atalet yok; burulma modeli kurulamaz.' };
 }
 
 // Gergi kolunun iki burulma girdisi — kol ataleti ve kasnak kütlesi
@@ -346,7 +345,7 @@ function veFeadGergiAtalet(td, anahtar){
   if(v > 0) return { deger: v, kaynak: 'elle', alan: anahtar };
   if(!_feadBlank(d[anahtar]))
     return kol ? { deger: NaN, kaynak: 'yok', alan: anahtar,
-                   ipucu: 'Kol ataleti sıfırdan büyük olmalı — bu değerle burulma modeli kurulamaz.' }
+                   ipucu: 'Kol ataleti sıfırdan büyük olmalı.' }
                : { deger: 0, kaynak: 'elle', alan: anahtar };
   return { deger: kol ? VE_FEAD_DEFAULTS.tenArmInertiaKgM2 : VE_FEAD_DEFAULTS.tenPulleyMassKg,
            kaynak: 'varsayilan', alan: anahtar,
@@ -537,7 +536,7 @@ function veFeadKordOfset(b){
     }
     // CAD seçili ama ölçü yok: katalog, ve uyarıyla — sessiz bir yedek
     // kullanıcıya CAD çizgisinde hesaplandığını sandırırdı.
-    out.uyari = 'Hesap çapı "CAD eskizi" seçili ama eskizden ölçülmüş h_b yok; marka kataloğu kullanıldı.';
+    out.uyari = 'CAD eskizinde h_b yok; marka kataloğu kullanıldı.';
     out.kaynak = 'katalog'; out.hrKaynak = 'katalog';
   }
   if(kat){ out.hb = kat.hb; out.hr = kat.hr; }
@@ -795,8 +794,7 @@ function veFeadSpringSetup(td){
   if(Number.isFinite(pre) && Number.isFinite(mean) && Number.isFinite(rate) && rate > 0){
     out.relMeanDeg = (mean - pre) / rate;
     if(out.relMeanDeg < 0)
-      out.notes.push('Yay çalışma momenti ön yükten KÜÇÜK (' + mean + ' < ' + pre
-        + ' Nm); kol serbest konumun ters yanında kalır.');
+      out.notes.push('Yay çalışma momenti ön yükten küçük (' + veSayi(mean) + ' < ' + veSayi(pre) + ' Nm).');
   }
   return out;
 }
@@ -939,12 +937,12 @@ function veFeadBeltMode(bd){
 function veFeadSolveArmClamped(sys, kind, target){
   var out = { ok:false, relDeg:0, atLimit:null, error:null };
   if(typeof FEADCore === 'undefined' || !sys){
-    out.error = 'Hesap çekirdeği yüklenmedi (js/fead-core.js).'; return out;
+    out.error = 'Hesap çekirdeği yüklenmedi.'; return out;
   }
   if(!Number.isFinite(target)){
     out.error = (kind === 'tension') ? 'Tasarım gerginliği çözülemedi.'
               : (kind === 'arm')     ? 'Gergi kolunun nominal açısı çözülemedi.'
-                                     : 'Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).';
+                                     : 'Kayış efektif boyu girilmedi.';
     return out;
   }
   var isT = (kind === 'tension'), isArm = (kind === 'arm');
@@ -1026,52 +1024,39 @@ function veFeadAtLimitText(al){
   if(!al) return '';
   var f1 = function(x){ return veSayi(Math.round(x * 10) / 10, 1); };
   if(al.kind === 'arm'){
-    return 'Gerginin nominal çalışma açısı (' + f1(al.target) + '°) bu yerleşimde '
-      + 'kolun erişebildiği aralığın dışında (0…' + f1(al.rangeMax) + '°). '
-      + 'Kol ' + f1(al.achieved) + '° konumuna kenetlendi ve gereken kayış boyu '
-      + 'oradan hesaplandı. Gergi künyesi (ön yük, yay katsayısı, çalışma '
-      + 'momenti) ya da kasnak yerleşimi bu gergiyle uyumlu değil.';
+    return 'Gergi kolu nominal açısı (' + f1(al.target) + '°) aralık dışında (0…'
+      + f1(al.rangeMax) + '°); kol ' + f1(al.achieved) + '°.';
   }
   if(al.kind === 'belt'){
     var fazla = al.target - al.achieved;
-    return 'Seçilen kayış (' + f1(al.target) + ' mm) bu yerleşime '
-      + f1(Math.abs(fazla)) + ' mm ' + (fazla > 0 ? 'UZUN' : 'KISA')
-      + '. Gergi kolunun tüm gezinme aralığı (0…' + f1(al.relMaxDeg) + '°) '
-      + f1(al.rangeMin) + '…' + f1(al.rangeMax) + ' mm karşılıyor. '
+    return 'Kayış (' + f1(al.target) + ' mm) ' + f1(Math.abs(fazla)) + ' mm '
+      + (fazla > 0 ? 'uzun' : 'kısa') + '; gergi kolu aralığı (0…' + f1(al.relMaxDeg) + '°) '
+      + f1(al.rangeMin) + '…' + f1(al.rangeMax) + ' mm. '
       + (al.resolvedAt === 'nominalArm'
-          ? 'Çalışma noktası, gerginin nominal kol açısına alındı; '
-            + 'bu yerleşim için gereken kayış ' + f1(al.suggestedBeltMm) + ' mm. '
-            + 'Kayış boyunu SERBEST bırakırsanız bu değer doğrudan hesaplanır.'
-          : 'Kol ' + (al.side === 'free' ? 'serbest' : 'yük stopu') + ' konumuna '
-      + 'kenetlendi. ' + (al.degenerate
-          ? 'O konumda kolun take-up etkisi sıfıra iniyor (serbest konumun '
-            + 'yalnız %' + (100 * (al.takeupRatio || 0)).toPrecision(2) + '\u2019i), '
-            + 'yani gerginlik ve hubload sayıları FİZİKSEL DEĞİL. Bu kayış bu '
-            + 'yerleşime takılamaz. '
-          : 'Gerilmeler o konumdan hesaplandı. ')
-      + 'Kayış boyunu değiştirin ya da kayış boyunu SERBEST bırakın.');
+          ? 'Nominal kol açısında gereken kayış ' + f1(al.suggestedBeltMm) + ' mm.'
+          : 'Kol ' + (al.side === 'free' ? 'serbest' : 'yük stopu') + ' konumunda. '
+      + (al.degenerate
+          ? 'Take-up serbest konumun %' + veSayi(+(100 * (al.takeupRatio || 0)).toPrecision(2))
+            + '\u2019i: sayılar fiziksel değil.'
+          : 'Gerilmeler o konumdan.'));
   }
-  return 'Tasarım gerginliği (' + f1(al.target) + ' N) bu yerleşimde kol boyunca '
-    + 'erişilemiyor; aralık ' + f1(al.rangeMin) + '…' + f1(al.rangeMax) + ' N '
-    + '(kol 0…' + f1(al.relMaxDeg) + '°). Kol ' + f1(al.achieved) + ' N veren '
-    + (al.side === 'free' ? 'serbest' : 'uç') + ' konuma kenetlendi. '
-    + 'Yay künyesi ya da kasnak yerleşimi bu gerginliği desteklemiyor.';
+  return 'Tasarım gerginliği (' + f1(al.target) + ' N) erişilemiyor: aralık '
+    + f1(al.rangeMin) + '…' + f1(al.rangeMax) + ' N (kol 0…' + f1(al.relMaxDeg) + '°).';
 }
 
 // Geometri ihlalini kullanıcının dilinde yaz (çekirdeğin hoşgörülü kipi).
 function veFeadViolationText(v){
   if(!v) return '';
   if(v.type === 'wrapSum')
-    return 'Kayış yolu KAPANMIYOR: işaretli sarım toplamı '
+    return 'Kayış yolu kapanmıyor: Σsarım '
       + veSayi(v.signedWrapDeg, 2) + '° (360° olmalı, fark '
-      + veSayi(v.deltaDeg, 2) + '°). Sayılar hesaplandı ama bu YOL geçersiz — '
-      + 'kasnak sırası kayışın gidiş yönünde mi, temas tarafları doğru mu?';
+      + veSayi(v.deltaDeg, 2) + '°).';
   if(v.type === 'clearance')
-    return 'Kayış bir kasnağın İÇİNDEN geçiyor: '
+    return 'Kayış kasnağın içinden geçiyor: '
       + (v.items || []).map(function(c){
           return c.span + ' spanı ' + c.pulley + ' kasnağını '
             + veSayi(-c.clearanceMm, 1) + ' mm kesiyor'; }).join('; ')
-      + '. Sayılar hesaplandı ama bu yerleşim fiziksel değil.';
+      + '; yerleşim fiziksel değil.';
   return v.message || '';
 }
 
@@ -1222,19 +1207,17 @@ function veFeadPinPlan(td, armAbsDeg){
   var part = (td && td.tenPart) ? String(td.tenPart) : '';
   var a = _feadNum(armAbsDeg, NaN);
   if(!part){
-    out.reason = 'Gergi parça kodu yok — pim künyesi yalnız kütüphaneden '
-               + 'uygulanan ve kodu raporunda geçen künyelerde var.';
+    out.reason = 'Gergi parça kodu yok.';
     return out;
   }
   out.part = part;
   if(typeof veFeadTenPinAngle !== 'function'){
-    out.reason = 'Gergi künye kütüphanesi yüklenmedi (js/fead-tensioners.js).';
+    out.reason = 'Gergi künye kütüphanesi yüklenmedi.';
     return out;
   }
   var pk = veFeadTenPin(part);
   if(!pk){
-    out.reason = part + ' için parça çizimi yok — pim yarıçapı ve ofseti '
-               + 'UYDURULMAZ.';
+    out.reason = part + ' için parça çizimi yok.';
     return out;
   }
   out.rMm = pk.rMm; out.offsetDeg = pk.offsetDeg; out.src = pk.src;
@@ -1417,7 +1400,7 @@ function veFeadBeltOptions(build, opt){
     out.error = 'Gereken kayış boyu henüz belli değil.'; return out;
   }
   if(typeof veFeadBeltNearest !== 'function'){
-    out.error = 'Kayış kataloğu yüklenmedi (js/fead-belts.js).'; return out;
+    out.error = 'Kayış kataloğu yüklenmedi.'; return out;
   }
 
   // Çalışma noktası ADAYLARDAN BAĞIMSIZ olmalı: her aday kendi çözümünü
@@ -1541,9 +1524,7 @@ function veFeadPosSelection(build, mode){
     out.ghosts.push(r);
   });
   if(!out.ghosts.length)
-    out.note = 'Bütün kol konumları aynı açıda — kayış toleransı ve aşınma payı 0 '
-             + 'girilmiş (çizimde kayışa tıklayın → Kayış Özellikleri). Tolerans girilince konum '
-             + 'zarfı burada görünür.';
+    out.note = 'Kol konumları aynı açıda: tolerans ve aşınma 0.';
   return out;
 }
 
@@ -2265,9 +2246,7 @@ var VE_FEAD_EXAMPLES = {
     // çıpaları ve arşivdeki tek `derive` düzeni bu kayıtta.
     hidden: true,
     name: 'BMC 6 silindir — FEAD (tedarikçi sayfası)',
-    note: 'FEAD_INFORMATION sayfasındaki 6 kasnaklı düzen: fan tahrikli sürücü '
-        + 'kasnak, iki avara, klima kompresörü, alternatör ve otomatik gergi. '
-        + 'Kayış 8PK/EPDM, efektif boy 1715 mm, servis faktörü 1.3.',
+    note: 'Kaynak: FEAD_INFORMATION sayfası · EPDM · servis faktörü 1,3',
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK 1715', ribs:8,
              effLength:1715, tolerance:0, wearPct:0 },
     // Tasarım gerginliği burada YOK ve olmamalı: sayfa da vermiyor, model de
@@ -2395,13 +2374,7 @@ var VE_FEAD_EXAMPLES = {
   // (BMC_FEAD_2026 öyle kurulu).
   'AG00976_GATES_2025': {
     name: 'BMC Otomotif FEAD 5 — Gates AG00976 raporu',
-    note: 'Tedarikçiden dönen Gates raporunun (8PK1715HD, Ten@-250/110, '
-        + 'Corrected-IDR1, 05.06.2025) birebir modeli. Aynı 6 kasnaklı düzen, '
-        + 'ama gergi PİVOTU, kayış toleransı (±6 mm) ve aşınma payı (%0,60) '
-        + 'raporda var, tedarikçiye giden sayfada yok. Raporun sonuç '
-        + 'sayfalarını geri üretir. Raporun notu: Cummins motor · gergi E9843 · '
-        + 'avara E9839 (iki avaradan hangisi olduğu yazmıyor) · tasarım adında '
-        + 'klima TM32.',
+    note: 'Gates · Corrected-IDR1 · 05.06.2025 · Cummins · gergi E9843 · avara E9839 · klima TM32',
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK1715HD', ribs:8,
              // Bkz. yukarıdaki "EFEKTİF BOY" notu: rapor başlığı 1715 diyor,
              // kendi REBL sütunu 1714.6 istiyor.
@@ -2544,12 +2517,7 @@ var VE_FEAD_EXAMPLES = {
   // serbestliği krank milidir (doğrulama harness'i de öyle besliyor).
   'AG00879_GATES_2023': {
     name: 'Anadolu Isuzu 6x6 — Gates AG00879 raporu',
-    note: 'Cummins ikincil ALT&AC tahriki, 5 kasnak (FAN · Avara · Klima · '
-        + 'Alternatör · Gergi). Gates 8PK1392HD, gergi T38665 (kol 56 mm). '
-        + 'Farklı araç, farklı gergi ve farklı çaplarla modelin '
-        + 'evrenselliğini sınar; raporun sonuç sayfalarını geri üretir. '
-        + 'Raporun bileşen dosyaları: alternatör 24 V · 220 A, klima '
-        + '"A_C - QP - 21HD".',
+    note: 'Cummins ikincil ALT&AC tahriki · alternatör 24 V · 220 A · klima "A_C - QP - 21HD"',
     // Başlık ve REBL(Mean) burada aynı fikirde: 1392.
     belt:  { profile:'PK', brand:'GATES', beltType:'8PK1392HD', ribs:8,
              effLength:1392, tolerance:5, wearPct:0.007 },
@@ -2663,7 +2631,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG0868_4PK_GATES_2022': {
     name: "BMC 6 silindir — Gates AG0868 raporu (4PK)",
-    note: "Üç kasnaklı en küçük düzen: krank · klima (SD7H15) · gergi. AYNI sistemin üç kaburga sayısındaki üç raporundan biri (4PK · E9843 @16 Nm) — kaburga ölçeklemesini yan yana görmek için üçü de duruyor.",
+    note: "AG0868 üçlüsü: 4PK · 6PK · 8PK (aynı geometri)",
     belt:  { profile:'PK', brand:'GATES', beltType:"4PK1013HD", ribs:4,
              effLength:1013.4, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -2707,7 +2675,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG0868_6PK_GATES_2022': {
     name: "BMC 6 silindir — Gates AG0868 raporu (6PK)",
-    note: "4PK kardeşiyle AYNI geometri, farklı kaburga sayısı ve yay momenti (6PK · E9843 @19 Nm). Kayış kütlesi ve gerginlik kaburgayla ölçekleniyor; üç rapor bunun ölçüsü.",
+    note: "AG0868 üçlüsü: 4PK · 6PK · 8PK (aynı geometri)",
     belt:  { profile:'PK', brand:'GATES', beltType:"6PK1018HD", ribs:6,
              effLength:1018, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -2751,7 +2719,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG0868_8PK_GATES_2022': {
     name: "BMC 6 silindir — Gates AG0868 raporu (8PK)",
-    note: "Üçlünün en güçlüsü (8PK · E9843 @22.5 Nm). Aynı üç kasnak, aynı koordinatlar; değişen yalnız kayış ve yay künyesi.",
+    note: "AG0868 üçlüsü: 4PK · 6PK · 8PK (aynı geometri)",
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1020HD", ribs:8,
              effLength:1020, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -2795,7 +2763,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG00810_GATES_2021': {
     name: "BMC Otomotiv TTA-6x6 — Gates AG00810 raporu",
-    note: "250 A alternatör tahriki, 10PK — arşivin EN GENİŞ kayışı. Gergi T38519. Raporda yay ÖN YÜKÜ yok; ortalama momentten türetilmiş ve künyede öyle işaretli.",
+    note: "250 A alternatör tahriki · ön yük raporda yok, türetildi",
     belt:  { profile:'PK', brand:'GATES', beltType:"10PK1215HD", ribs:10,
              effLength:1214.3, tolerance:5, wearPct:0.006 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -2841,7 +2809,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG00686_1475_GATES_2023': {
     name: "BMC 6 silindir — Gates AG00686 raporu (1475)",
-    note: "Dört kasnak: krank ø160 · avara · klima ø127 · gergi T38624 @24.6 Nm. Doğrulama kapısının en çok değer taşıyan raporu; 1520'lik kardeşiyle birlikte KASNAK ÇAPI değişiminin etkisini gösteriyor.",
+    note: "Çift: 1475 · 1520 (farklı kasnak çapı) · krank ø160 · klima ø127",
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1475HD", ribs:8,
              effLength:1475, tolerance:6, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -2880,7 +2848,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG00686_1520_GATES_2023': {
     name: "BMC 6 silindir — Gates AG00686 raporu (1520)",
-    note: "AYNI gergi, BÜYÜTÜLMÜŞ kasnaklar (krank ø172 · klima ø137) ve buna bağlı uzayan kayış. 1475'lik kardeşiyle çift olarak okunur — eğilme terimi için kritik ikili.",
+    note: "Çift: 1475 · 1520 (farklı kasnak çapı) · krank ø172 · klima ø137",
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1520HD", ribs:8,
              effLength:1519.6, tolerance:6, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -2919,7 +2887,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG00902_1275_GATES_2023': {
     name: "BMC Otomotiv Valeo TM21 — Gates AG00902 raporu (1275)",
-    note: "Dört kasnaklı klima tahriki (TM21 ø127). PDF'i ALINTI (11 sayfanın 5'i); geometri ve gergi tam, eksik sayfalar sonuç tabloları.",
+    note: "Çift: 1275 · 1300 (farklı kasnak çapı) · PDF alıntı (5/11 sayfa)",
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1275HD", ribs:8,
              effLength:1274.7, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -2971,7 +2939,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG00902_1300_GATES_2023': {
     name: "BMC Otomotiv Valeo TM21 — Gates AG00902 raporu (1300)",
-    note: "1275'in kardeşi: aynı sistem, FARKLI kasnak çapları (krank 159→146, klima 137→127). PDF'i ALINTI (11 sayfanın 5'i).",
+    note: "Çift: 1275 · 1300 (farklı kasnak çapı) · PDF alıntı (5/11 sayfa)",
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1300HD", ribs:8,
              effLength:1301.8, tolerance:5, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -3008,7 +2976,7 @@ var VE_FEAD_EXAMPLES = {
 
   'AG00894_GATES_2023': {
     name: "BMC Otomotiv — Gates AG00894 raporu (iki klima)",
-    note: "Altı kasnaklı FARKLI TOPOLOJİ: İKİ klima kompresörü (TM31 + SD7H15), alternatör YOK. Arşivdeki tek çift-kompresör düzeni. PDF'i ALINTI (12 sayfanın 6'sı).",
+    note: "Klima kompresörleri TM31 · SD7H15 · alternatör yok · PDF alıntı (6/12 sayfa)",
     belt:  { profile:'PK', brand:'GATES', beltType:"8PK1738HD", ribs:8,
              effLength:1738.7, tolerance:6, wearPct:0.007 },
     solver:{ ratioMode:'direct', driveRatio:1,
@@ -3437,7 +3405,7 @@ function veFeadArmBand(build, opt){
   var a = _feadNum(build.cfg.tensioner && build.cfg.tensioner.armLength, NaN);
   var relNom = _feadNum(build.spring && build.spring.relMeanDeg, NaN);
   if(!(a > 0) || !Number.isFinite(relNom)){
-    out.note = 'Kol boyu ve yay künyesi olmadan bant hesaplanamaz.'; return out;
+    out.note = 'Kol boyu ya da yay künyesi eksik.'; return out;
   }
   out.userDeg = _feadNum(build.armAbsDeg, NaN);
   var c = build.center, s = out.step, i, x;
@@ -3464,7 +3432,7 @@ function veFeadArmBand(build, opt){
     out.userRelMaxDeg = u.relMaxDeg;
   }
   out.ok = out.arcDeg > 0;
-  if(!out.ok) out.note = 'Bu yerleşimde kolun hiçbir açısı servis aralığını taşıyamıyor.';
+  if(!out.ok) out.note = 'Kolun hiçbir açısı servis aralığını taşımıyor.';
   return out;
 }
 
@@ -3928,7 +3896,7 @@ function veFeadSpinLabel(spin){
   if(!f) return { sense: 0, ikon: null, kisa: '—', uzun: '—' };
   return f > 0
     ? { sense: 1, ikon: 'rotate-ccw', kisa: 'CCW',
-        uzun: 'CCW (saat yönünün TERSİNE) — ' + _feadPlaneName() }
+        uzun: 'CCW (saat yönünün tersine) — ' + _feadPlaneName() }
     : { sense: -1, ikon: 'rotate-cw', kisa: 'CW',
         uzun: 'CW (saat yönünde) — ' + _feadPlaneName() };
 }
@@ -3979,50 +3947,46 @@ function veFeadUniqueNames(order){
 // OLDUĞU GİBİ geçer — sessizce yutulmaz, çünkü bilinmeyen bir hatayı gizlemek
 // yanlış bir çeviriden kötüdür.
 //
-// GERGİ YOK — tavsiye kullanıcının YAPABİLECEĞİ şeyi söyler. Eskiden gergiyi
-// "Bileşenler" sütunundan eklemeyi söylüyordu; FEAD'in iç topolojisinde o
-// sütun yok (2026-09-28, components.js → noPalette) ve gergi Kayış
-// Tablosu'nun ekleyicisinden gelir. Metin iki yerde kullanılıyor (çekirdek hatasının
-// çevirisi + köprünün kendi denetimi); tek sabit, iki kopya ayrışmasın.
-var VE_FEAD_GERGI_YOK = 'İç topolojide Gergi yok. Kayış Tablosu\'ndaki "＋ Kasnak ekle"den bir Gergi ekleyin.';
+// GERGİ YOK — durum yalnız eksiği söyler (ARAYÜZ ANLATMAZ); ekleyicinin yeri
+// kılavuzda. Metin iki yerde kullanılıyor (çekirdek hatasının çevirisi +
+// köprünün kendi denetimi); tek sabit, iki kopya ayrışmasın.
+var VE_FEAD_GERGI_YOK = 'Gergi yok.';
 var VE_FEAD_ERROR_MAP = [
   [/isaretli sarim toplami/i,
-   'Kayış yolu kapanmıyor. İki olası neden: bağlantı sırası kayışın gidiş yönünde değil, '
-   + 'ya da bir kasnağın temas tarafı (kaburgalı / sırttan) yanlış.'],
+   'Kayış yolu kapanmıyor (kasnak sırası · temas tarafı).'],
   [/kayis yolu kasnaklarin icinden geciyor/i,
-   'Kayış bir kasnağın içinden geçiyor. Temas taraflarını ve kasnak sırasını kontrol edin.'],
+   'Kayış kasnağın içinden geçiyor.'],
   [/teget cozulemedi/i,
-   'İki kasnak arasında teğet çözülemedi: kasnaklar çakışıyor ya da temas tarafları yanlış.'],
-  [/en az 3 kasnak gerekli/i, 'En az 3 kasnak gerekli (sürücü + aksesuar + gergi).'],
-  [/crank:true kasnak tanimlanmali/i, 'Sürücü kasnak seçilmedi. Bir kasnağın panelinden "Sürücü" işaretleyin.'],
-  [/birden fazla crank:true/i, 'Birden fazla sürücü kasnak işaretli; yalnız biri olabilir.'],
+   'Teğet çözülemedi (kasnak çakışması · temas tarafı).'],
+  [/en az 3 kasnak gerekli/i, 'En az 3 kasnak gerekli.'],
+  [/crank:true kasnak tanimlanmali/i, 'Sürücü kasnak seçilmedi.'],
+  [/birden fazla crank:true/i, 'Birden fazla sürücü kasnak işaretli.'],
   [/tensioner:true kasnak tanimlanmali/i, VE_FEAD_GERGI_YOK],
-  [/birden fazla tensioner:true/i, 'Birden fazla Gergi var; çekirdek tek gergi destekliyor.'],
+  [/birden fazla tensioner:true/i, 'Birden fazla gergi var.'],
   [/tensioner blogu gerekli/i, 'Gergi verisi eksik.'],
   [/tensioner\.(\w+) gerekli/i, 'Gergi panelinde eksik alan: $1'],
   [/kasnagi icin od \(dis cap\)/i, 'Bir kasnağın dış çapı girilmedi.'],
   [/kasnagi icin x,y gerekli/i, 'Bir kasnağın konumu (X / Y) girilmedi.'],
-  [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).'],
+  [/belt\.effLength gerekli/i, 'Kayış efektif boyu girilmedi.'],
   // Tasarım gerginliği artık sorulmuyor, türetiliyor — bu hata "girilmedi"
   // demek yerine türetmenin neden yapılamadığını göstermeli.
   [/designTensionN veya slackN gerekli/i,
-   'Tasarım gerginliği yay dengesinden türetilemedi (gergi yay künyesi veya kol geometrisi eksik).'],
+   'Tasarım gerginliği türetilemedi (gergi künyesi · kol geometrisi).'],
   [/bilinmeyen kayis profili/i, 'Kayış profili tanınmıyor (PK / PJ / PH / PL / PM).'],
   // Kord rijitliği yalnız PK'da var (Gates Mode 1'e kalibre etkin değer; PK'nın
   // öteki markaları onu devralır — veFeadCordStiffness). PK dışında sayı
   // UYDURULMAZ; çekirdeğin teknik cümlesi yerine sebebi söylenir.
   [/kayis kord rijitligi yok[\s\S]*/i,
-   'Bu kayış profili için kord rijitliği kalibrasyonu yok (yalnız PK profilinde, Gates '
-   + 'raporlarının Mode 1 değerlerine uydurulmuş bir etkin değer var); burulma modeli kurulmadı.'],
+   'Kayış profilinde kord rijitliği yok; burulma kurulmadı.'],
   [/markasi yok/i, 'Bu kayış profilinde seçilen marka yok.'],
   [/hedef .* erisilebilir araligin disinda/i,
-   'Gergi kolu bu kayış boyuna ulaşamıyor. Kayış boyu, gergi pivotu veya kol boyu uyumsuz.'],
-  [/take-up ~0/i, 'Gergi bu konumda kayışı geremiyor (sarım açısı sıfıra iniyor).'],
+   'Gergi kolu bu kayış boyuna ulaşamıyor.'],
+  [/take-up ~0/i, 'Gergi kayışı geremiyor: sarım açısı sıfır.'],
   [/serbest kol konumunda bile geometri cozulemiyor/i,
-   'Serbest kol konumunda bile geometri çözülemiyor: gergi pivotu / kol boyu kasnak yerleşimiyle uyumsuz.'],
-  [/kayis hizi sifir/i, 'Kayış hızı sıfır: motor devri veya sürücü kasnak çapı eksik.'],
+   'Gergi serbest kol konumunda çözülemiyor.'],
+  [/kayis hizi sifir/i, 'Kayış hızı sıfır (devir · sürücü kasnak çapı).'],
   [/surucu gucu .* esit degil/i,
-   'Sürücü kasnağa elle güç girilmiş ve diğerlerinin toplamına eşit değil. Sürücü gücü girilmez, hesaplanır.']
+   'Sürücünün elle gücü aksesuar toplamına eşit değil.']
 ];
 function veFeadTranslateError(msg){
   var s = String(msg == null ? '' : msg);
@@ -4072,7 +4036,7 @@ function _feadBuildSystem(nodeList, opt){
   // kalması demekti.
   veFeadMigrateAll(all);
   if(typeof FEADCore === 'undefined'){
-    out.errors.push('Hesap çekirdeği yüklenmedi (js/fead-core.js).');
+    out.errors.push('Hesap çekirdeği yüklenmedi.');
     return out;
   }
 
@@ -4092,21 +4056,21 @@ function _feadBuildSystem(nodeList, opt){
   // kurulamayan hatalar. Bir kasnak listede varsa kayıştadır; liste her zaman
   // kapalı bir çevrimdir. Geriye kalan tek topoloji kuralı sayıdır (altta),
   // geometrinin kendi hataları çekirdekten gelmeye devam ediyor.
-  if(order.length < 3){ out.errors.push('En az 3 kasnak gerekli (sürücü + aksesuar + gergi); şu an ' + order.length + '.'); }
+  if(order.length < 3){ out.errors.push('En az 3 kasnak gerekli; şu an ' + order.length + '.'); }
 
   var un = veFeadUniqueNames(order);
   out.names = un.names; out.byName = un.byName;
 
   var tensNodes = order.filter(function(n){ return !!_feadDefOf(n).isFeadTensioner; });
   if(!tensNodes.length) out.errors.push(VE_FEAD_GERGI_YOK);
-  if(tensNodes.length > 1) out.errors.push('Birden fazla Gergi var; çekirdek tek gergi destekliyor.');
+  if(tensNodes.length > 1) out.errors.push('Birden fazla gergi var.');
 
   var driver = veFeadResolveDriver(order);
   var explicit = order.filter(function(n){ return n.data && n.data.driver; });
-  if(explicit.length > 1) out.errors.push('Birden fazla kasnak "Sürücü" işaretli; yalnız biri olabilir.');
+  if(explicit.length > 1) out.errors.push('Birden fazla sürücü kasnak işaretli.');
   if(!explicit.length && driver) {
-    out.warnings.push('Sürücü kasnak açıkça seçilmedi; "' + _feadNodeName(driver)
-      + '" tipinden sürücü sayıldı. Panelinden onaylamanız önerilir.');
+    out.warnings.push('Sürücü kasnak seçilmedi; "' + _feadNodeName(driver)
+      + '" tipinden sürücü sayıldı.');
   }
 
   var beltNode = all.filter(function(n){ return !!_feadDefOf(n).isFeadBelt; })[0] || null;
@@ -4117,9 +4081,9 @@ function _feadBuildSystem(nodeList, opt){
   // katmanının DOM'suz kalması tam olarak bunu engellemek için.
   out.solver = solvNode;
   // Kayışın kutusu ve palet satırı yok (2026-09-26); düğümü açılış yüzeyi ya
-  // da sihirbaz kurar. Tavsiye kullanıcının YAPABİLECEĞİ şeyi söyler.
-  if(!beltNode) out.errors.push('Kayış tanımı yok — modeli Başlangıç Sihirbazı ile kurun; kayışı o ekler.');
-  if(!solvNode) out.warnings.push('Çözücü düğümü yok; tasarım gerginliği ve tahrik oranı varsayılanla alınır.');
+  // da sihirbaz kurar.
+  if(!beltNode) out.errors.push('Kayış tanımı yok.');
+  if(!solvNode) out.warnings.push('Çözücü yok; gerginlik ve tahrik oranı varsayılan.');
 
   // ── GERGİ KRANKIN ÇIKIŞINDA MI — KARŞILAŞTIRILABİLİRLİK ÖLÇÜTÜ ──────────
   //
@@ -4169,12 +4133,10 @@ function _feadBuildSystem(nodeList, opt){
     out.tensionerOrder = { index: pos, count: seq.length,
                            afterDriver: pos === 1, last: ti === seq.length - 1 };
     if(out.tensionerOrder.afterDriver) return;
-    out.warnings.push('Kayış sırasında gergi krankın çıkışında değil ("'
-      + _feadNodeName(seq[ti]) + '" ' + (pos+1) + '/' + seq.length + '). Otomatik '
-      + 'gergi kayışın kranktan ÇIKAN (gevşek) açıklığında durur, yani kayış '
-      + 'sırasında krankın hemen ardında; Gates tablolarında bu, sıranın SONU '
-      + 'demektir (tablo gidişin tersi). Sayılar bundan etkilenmiyor; etkilenen '
-      + 'yerleşimin tedarikçi raporlarıyla satır satır karşılaştırılabilirliği.');
+    // "Sayılar etkilenmez" bir DURUM: hüküm hesabı değiştirmiyor, yalnız
+    // tedarikçi raporlarıyla satır satır karşılaştırmayı (sihirbazla aynı cümle).
+    out.warnings.push('Gergi krankın çıkışında değil ("'
+      + _feadNodeName(seq[ti]) + '" ' + (pos+1) + '/' + seq.length + '); sayılar etkilenmez.');
   }());
 
   var bd = (beltNode && beltNode.data) || {};
@@ -4241,7 +4203,7 @@ function _feadBuildSystem(nodeList, opt){
   out.beltDataMode = veFeadBeltDataMode(bd);
   var effLength = _feadNum(bd.effLength != null ? bd.effLength : bd.length, 0);
   if(beltMode === 'fixed' && !(effLength > 0))
-    out.errors.push('Kayış efektif boyu girilmedi (çizimde kayışa tıklayın → Kayış Özellikleri).');
+    out.errors.push('Kayış efektif boyu girilmedi.');
   var ribs = _feadNum(bd.ribs, 0);
   if(!(ribs > 0)) out.errors.push('Kayış kanal (kaburga) sayısı girilmedi.');
   var cfgBelt = {
@@ -4334,9 +4296,7 @@ function _feadBuildSystem(nodeList, opt){
   out.armAbsDeg = armAbs;
   if(tensNodes.length === 1){
     if(!Number.isFinite(cenX) || !Number.isFinite(cenY))
-      out.errors.push('Otomatik gergi avarasının merkez koordinatı (X / Y) '
-        + 'girilmedi. Kayış yolu bu noktadan geçiyor; gövdenin montaj konumu '
-        + 'ondan ve kol çalışma açısından türer.');
+      out.errors.push('Gergi avarasının merkez koordinatı (X / Y) girilmedi.');
     if(!(armLen > 0)) out.errors.push('Gergi kol boyu girilmedi.');
     // KOL ÇALIŞMA AÇISI BİR GİRDİ ve varsayılanı YOK. Avara merkezi
     // verildikten sonra kayış yolu tamamen belirli; geriye kalan tek
@@ -4346,16 +4306,11 @@ function _feadBuildSystem(nodeList, opt){
     // medyan sapma 15,9°). Uydurulmuş bir varsayılan sessizce yanlış
     // gerginlik üretirdi.
     if(!Number.isFinite(armAbs))
-      out.errors.push('Gergi kolunun çalışma açısı (mutlak, +X\'ten CCW) '
-        + 'girilmedi. Gergi gövdesinin montajdaki saat konumu budur ve '
-        + 'gerginin parça/montaj çiziminde yazar (E9843: 344°). Avara merkezi '
-        + 'ile birlikte gövdenin montaj konumunu ve take-up yönünü belirler.');
+      out.errors.push('Gergi kolunun çalışma açısı (mutlak, +X\'ten CCW) girilmedi.');
     if(!Number.isFinite(preload)) out.errors.push('Gergi yay ön yük momenti girilmedi.');
     if(!Number.isFinite(rate)) out.errors.push('Gergi yay katsayısı (Nm/°) girilmedi.');
     if(!Number.isFinite(spring.relMeanDeg))
-      out.errors.push('Yay çalışma momenti (Spring Mean Load) girilmedi; kolun '
-        + 'nominal dönmesi (M_mean − M₀)/k onsuz türetilemez ve serbest kol '
-        + 'açısı kurulamaz.');
+      out.errors.push('Yay çalışma momenti (Spring Mean Load) girilmedi.');
     spring.notes.forEach(function(n){ out.warnings.push(n); });
   }
   // Serbest açı bir GİRDİ DEĞİL: kol çalışma açısından türüyor
@@ -4643,18 +4598,16 @@ function _feadBuildSystem(nodeList, opt){
       sys.designTensionN = tsTut.tensionN;
       cfg.designTensionN = tsTut.tensionN;      // cfg ile sys ayrışmasın
     } else {
-      out.warnings.push('Tasarım gerginliği yay dengesinden türetilemedi; '
-        + 'gerilme, hubload ve ömür hesaplanamaz. Gergi yay künyesini (ön yük, '
-        + 'yay katsayısı) ve kol geometrisini kontrol edin.');
+      out.warnings.push('Tasarım gerginliği türetilemedi: gerilme, hubload, ömür hesaplanmadı.');
     }
   } catch(e){
-    out.warnings.push('Tasarım gerginliği yay dengesinden türetilemedi: '
+    out.warnings.push('Tasarım gerginliği türetilemedi: '
       + veFeadTranslateError(e && e.message));
   }
 
   if(sys._senseAuto)
-    out.warnings.push('Gergi dönüş yönü (sense) verilmedi; çekirdek kayışın kısaldığı yönden '
-      + (sys.tensioner.sense > 0 ? '+1' : '−1') + ' buldu.');
+    out.warnings.push('Gergi dönüş yönü (sense) türetildi: '
+      + (sys.tensioner.sense > 0 ? '+1' : '−1') + '.');
   return out;
 }
 
@@ -5013,7 +4966,7 @@ function veFeadIsletmeEksik(sd, order, driverId, rows){
   var dr = veFeadDriveRatio(sd);
   if(!dr.ok)
     eksik.push({ grup: 'oran', alan: 'ratioMode',
-                 ad: 'tahrik oranı (ara kademede krank ve kademe kasnağı çapı)' });
+                 ad: 'tahrik oranı (ara kademe çapları)' });
 
   var satir = (rows || []).filter(function(r){ return r && r.rpm > 0; });
   if(!satir.length)
@@ -5422,8 +5375,7 @@ var VE_FEAD_SERVIS = {
         + 'karıştırıcılar · vinçler ve krenler · kovalı ekskavatörler',
       deger: { normal: [1.3, 1.4, 1.5], yuksek: [1.5, 1.6, 1.8] } }
   ],
-  kaynak: 'ContiTech kayış tasarım programının yük katsayısı c₂ tablosu (kullanıcının '
-    + 'ekran görüntüsü, 2026-09-29); sürücü sınıfları ISO/DIN V-kayış hesabıyla aynı.'
+  kaynak: 'ContiTech c₂ tablosu · ISO/DIN sürücü sınıfları'
 };
 
 // Hücre anahtarı 'yük.sürücü.saat' (ör. 'agir.normal.16'). Tanınmayan anahtar
@@ -5458,8 +5410,7 @@ function veFeadServisFaktoru(sd){
                       etiket: 'kayıtlı değer — tablodan seçilmedi', uyari: null };
   if(v > 0) return { deger: 1, kaynak: 'kayit', anahtar: null, hucre: null,
                      etiket: 'kayıtlı değer 1\'in altında — 1 alındı',
-                     uyari: 'Kayıtlı servis faktörü (' + veSayi(v, 2) + ') 1\'in altında; '
-                       + 'yük katsayısı yükü azaltamaz, c₂ = 1 alındı.' };
+                     uyari: 'Kayıtlı servis faktörü (' + veSayi(v, 2) + ') 1\'in altında; c₂ = 1 alındı.' };
   return { deger: 1, kaynak: 'yok', anahtar: null, hucre: null, etiket: 'seçilmedi', uyari: null };
 }
 
@@ -5564,9 +5515,7 @@ var VE_FEAD_SURTUNME = {
   varsayilan: 'gates',
   secenek: [
     { k: 'gates', ad: 'Gates kalibrasyonu', muOluk: 0.92, muSirt: 0.60, kayipMm: 7,
-      kaynak: 'Gates raporlarının kayma eğrilerinden: 11 rapor, 45 kasnak, 1.722 nokta '
-        + '(docs/gates-reports/kayma). Oluklu μ ile küçük kasnak kaybı birlikte uyduruldu; '
-        + 'kayıp yalnız oluklu temasta ve Ø57–61 ile Ø120–178 kasnaklarda sınandı.' },
+      kaynak: 'Gates kayma eğrileri · 11 rapor · 45 kasnak · 1.722 nokta' },
     { k: 'literatur', ad: 'Literatür', muOluk: 0.90, muSirt: 0.35, kayipMm: 0,
       kaynak: 'Oluklu: ham μ 0,31 ⁄ sin 20° (Gerbert ve Hansson 1990; Lotfy 1996; Kubas 2019). '
         + 'Sırt: Dayco US 8,192,315 (%10 kaymada 0,36–0,42). Küçük kasnak kaybı yok.' },
@@ -5848,8 +5797,7 @@ function _feadKaymaSinirlari(build, K, out){
       + 'çevrimin kayıtlı yükü %100 sayıldı.');
   if(K.kayitliIdx.length)
     out.limits.push('Kayma emniyeti: ' + K.kayitliIdx.map(function(i){ return build.sys.pulleys[i].name; }).join(', ')
-      + ' güç çekmeyen bir kasnak ama çevrimde gücü yazılı — gerilme tablosuyla aynı yük kaymaya '
-      + 'da katıldı (Gates\'in kayma analizi avarayı yalnız yatak sürtünmesiyle alır).');
+      + ' (güç çekmeyen) çevrim gücüyle katıldı.');
   var s = K.surtunme;
   if(s && s.kayipMm > 0){
     var B = VE_FEAD_SURTUNME.sinandiMm, dis = [];
@@ -6121,8 +6069,7 @@ function veFeadAnalyze(build, opts){
       out.torsional.cordStiffness = { perRib: _ks.perRib, devralindi: true, marka: _ks.marka };
       out.limits.push('Burulma modeli: ' + (_ks.marka || 'seçilen marka') + ' kayışı için kord '
         + 'rijitliği kalibre edilmedi; Gates PK\'nın etkin değeri (' + veSayi(_ks.perRib / 1000, 0)
-        + ' kN/kaburga) kullanıldı. Bu değer Gates kayışlarının Mode 1\'ine uydurulmuş etkin bir '
-        + 'parametredir, malzeme sabiti değildir; bu markada 1. mod yalnız mertebe göstergesidir.');
+        + ' kN/kaburga) kullanıldı.');
     }
   } catch(e){
     out.torsional = null;
@@ -6157,10 +6104,10 @@ function veFeadAnalyze(build, opts){
     try { out.surunme = veFeadSurunme(build.sys, out.analysis.duty); }
     catch(e){ out.warnings.push('Sürünme: ' + veFeadTranslateError(e && e.message)); }
     if(out.surunme)
-      out.limits.push('Sürünme bir bant olarak verilir: kayış kord rijitliği (EA) ölçülen aralıktan, '
+      out.limits.push('Sürünme bir bant: kord rijitliği (EA) '
         + veSayi(VE_FEAD_EA_KABURGA.minN / 1000, 0) + '–' + veSayi(VE_FEAD_EA_KABURGA.maxN / 1000, 0)
         + ' kN/kaburga (' + VE_FEAD_EA_KABURGA.kaynak + '). Aksesuar devri, kayma ve devir sınırı '
-        + 'kapısı kinematik devirle hesaplanır.');
+        + 'denetimi kinematik devirle hesaplanır.');
   }
   // ── GERGİ TARAFI HÜKMÜ + ÇEKİRDEK UYARILARININ YÜKSELTİLMESİ ────────────
   //
@@ -6191,13 +6138,10 @@ function veFeadAnalyze(build, opts){
     });
     out.tensionerSide = enKotu || { ok: true };
     if(enKotu){
-      out.warnings.push('Gergi kayışın GERGİN tarafında: '
-        + enKotu.drain.length + ' span ankrajın (' + _feadFmt3(enKotu.anchorN)
-        + ' N) altına iniyor, en düşüğü ' + _feadFmt3(enKotu.minN) + ' N ("'
-        + enKotu.minName + '"). Otomatik gergi kayışın GEVŞEK tarafına konur — '
-        + 'kayış dönüş yönünü çevirin ya da gergiyi kayış sırasında sürücünün '
-        + 'önüne alın. Tasarım gerginliği yay dengesinden TÜREDİĞİ için '
-        + 'yükseltilemez.');
+      out.warnings.push('Gergi gergin tarafta: '
+        + enKotu.drain.length + ' span < ankraj (' + _feadFmt3(enKotu.anchorN)
+        + ' N); en düşük ' + _feadFmt3(enKotu.minN) + ' N ("'
+        + enKotu.minName + '").');
     }
   } catch(e){ /* hüküm üretilemezse çözüm yine de döner */ }
 
@@ -6223,8 +6167,7 @@ function veFeadAnalyze(build, opts){
       // Bütün yüzdeler boşsa hasar sıfır, ömür sonsuz çıkar ve kart "—" gösterir.
       // Sebebini yazmazsak kullanıcı hesabın çöktüğünü sanır.
       if(out.life && !(out.life.damageRate > 0))
-        out.warnings.push('Çalışma çevrimi yüzdeleri (%zaman) girilmedi; mutlak ömür '
-          + 'hesaplanamaz. Yorulma dağılımı yüzdeden bağımsızdır ve geçerlidir.');
+        out.warnings.push('Çevrim yüzdeleri (%zaman) girilmedi: mutlak ömür hesaplanmadı.');
 
       // MUTLAK ÖMÜR SEÇİLEN YORULMA MODELİNİ KULLANAMAZ. Dağılım kullanır —
       // ikisi yan yana basıldığı için farkı söylemek zorunlu (bkz.
@@ -6236,11 +6179,10 @@ function veFeadAnalyze(build, opts){
         out.life.modelMismatch = fatModel;
         out.life.calibratedModel = VE_FEAD_LIFE_FATIGUE_MODEL;
         out.limits.push('Mutlak B10 ömrü <b>' + VE_FEAD_LIFE_FATIGUE_MODEL + '</b> sabitleriyle '
-          + '(m = ' + bilinen[VE_FEAD_LIFE_FATIGUE_MODEL].m + ') kalibre edildi; seçili yorulma '
-          + 'modeli <b>' + fatModel + '</b> (m = ' + bilinen[fatModel].m + '). Kaburga yorulma '
-          + 'DAĞILIMI seçtiğiniz modeli kullanır, mutlak ömür KULLANAMAZ: kalibrasyon sabiti '
-          + 'geometri toplamının ölçeğini soğuruyor, üs değişince ömür yüzlerce kat kayar. '
-          + 'Aşağıdaki saat değeri ' + VE_FEAD_LIFE_FATIGUE_MODEL + ' üssüne göredir.');
+          + '(m = ' + veSayi(bilinen[VE_FEAD_LIFE_FATIGUE_MODEL].m) + ') kalibre edildi; seçili yorulma '
+          + 'modeli <b>' + fatModel + '</b> (m = ' + veSayi(bilinen[fatModel].m) + '). Kaburga yorulma '
+          + 'dağılımı <b>' + fatModel + '</b>, mutlak ömür <b>' + VE_FEAD_LIFE_FATIGUE_MODEL
+          + '</b> üssüyle hesaplandı.');
       }
     } catch(e){ out.warnings.push('B10 ömrü: ' + veFeadTranslateError(e && e.message)); }
   } else if(!duty.length){
@@ -6268,14 +6210,11 @@ function veFeadAnalyze(build, opts){
   // Gates'in "System Resonance (Mode 1)" satırına kalibre. Ama güven düzeyi
   // statik zincirle AYNI DEĞİL ve bunu söylemek zorundayız: statik zincir 17
   // raporda %0.33, burulma 6 sistemde RMS ~%8.
-  out.limits.push('Burulma (dönel titreşim) modeli KALİBRE bir modeldir, statik zincir gibi '
-    + 'deterministik değildir: Gates "System Resonance (Mode 1)" değerlerine 6 sistemde '
-    + 'RMS ~%8 ile oturur (statik gerilme/geometri zinciri %0,33). Sonucu bir mertebe '
-    + 'göstergesi olarak okuyun; sertifikasyon için değil. Kayış kord rijitliği ve '
-    + 'kavis payı bu kalibrasyonun serbest parametreleridir.');
-  out.limits.push('Gergi KOL MODU tahmini (tensionerMode) ayrı ve daha kabadır — tek '
-    + 'serbestlik dereceli olduğu için raporun "Natural Frequency" değeriyle '
-    + 'karşılaştırılamaz. Karşılaştırılacak olan burulma modelinin 1. elastik modudur.');
+  out.limits.push('Burulma (dönel titreşim) modeli kalibre: Gates "System Resonance (Mode 1)" '
+    + 'değerlerine 6 sistemde RMS ~%8 (statik gerilme/geometri zinciri %0,33). Kord '
+    + 'rijitliği ve kavis payı kalibrasyonun serbest parametreleri.');
+  out.limits.push('Gergi kol modu tahmini (tensionerMode) tek serbestlik dereceli; raporun '
+    + '"Natural Frequency" değerinin karşılığı burulma modelinin 1. elastik modu.');
   out.limits.push('Peak / geçici rejim: model yarı-statiktir, gergi kolu dinamiği dahil değildir.');
   out.limits.push('Hizalama payı: kalibre edilmedi.');
   return out;

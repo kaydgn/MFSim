@@ -1663,7 +1663,9 @@ okunduğunu ancak modülü bilen biri biliyordu. Boş bir iç topolojide kullan�
    `errors/warnings` listesi adıma süzülüp gösteriliyor (`VE_FW_ERR_STEP`).
    İkinci bir zorunlu-alan listesi, köprü değişince sessizce eskiyen bir kapı
    olurdu. Köprü hiçbir durumda istisna atmadığı için sihirbaz İLK adımdan
-   itibaren canlı çalışıyor.
+   itibaren canlı çalışıyor. Eşleme köprünün METNİNDEN: yeniden yazılan ileti
+   Özet'e düşer — kapı `fead-wizard.test.js` → *köprünün bütün iletileri
+   adımına düşüyor*.
 3. **DURUM OTURUMLUK, KURULUM KALICI.** Kırk alanlık bir formda her tuş vuruşu
    `saveState()` çağırsaydı geri-al yığını kullanılamaz hale gelirdi (panel
    alanlarının kuralı burada geçerli DEĞİL: orada bir alan = bir karar). Taslak

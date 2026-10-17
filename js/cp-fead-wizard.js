@@ -881,14 +881,16 @@ function veFeadWizBuild(){
 
 // Hangi hata hangi adıma ait — kullanıcı "eksik alan" mesajını girdiği yerde
 // görsün diye. Eşleşmeyen mesaj ÖZET adımında toplanıyor: bilinmeyen bir
-// hatayı gizlemek, yanlış yere koymaktan kötüdür.
+// hatayı gizlemek, yanlış yere koymaktan kötüdür. Eşleme köprünün METNİNDEN:
+// metin değişince ileti sessizce Özet'e düşer (kapı: fead-wizard.test.js →
+// *adımına düşüyor*, köprünün bütün iletileri).
 var VE_FW_ERR_STEP = [
-  { re: /kasnağının konumu|dış çapı|Sürücü kasnak|kasnak gerekli|hiç kasnak/i, step: 1 },
+  { re: /kasnağ(ın)?ın konumu|dış çapı|Sürücü kasnak|kasnak gerekli|hiç kasnak/i, step: 1 },
   // Kayış yolu hataları da KASNAKLAR adımına gidiyor: sıra artık orada.
-  { re: /Kayış yolu kapanmıyor|bağlı olmayan kasnak|kayış çıkıyor|kayış giriyor/i, step: 1 },
+  { re: /Kayış yolu kapanmıyor|kasnağın içinden geçiyor|[Tt]eğet çözülemedi/i, step: 1 },
   { re: /[Gg]ergi|avara|montaj konumu|yay|kol boyu|kol(un)? çalışma açısı/i, step: 2 },
   { re: /[Kk]ayış (efektif boyu|kanal|profil)|Kayış Özellikleri/i, step: 3 },
-  { re: /tahrik oranı|Çözücü|devir/i, step: 4 }
+  { re: /tahrik oranı|Çözücü|devir|elle gücü/i, step: 4 }
 ];
 function veFeadWizStepOf(msg){
   for(var i = 0; i < VE_FW_ERR_STEP.length; i++)

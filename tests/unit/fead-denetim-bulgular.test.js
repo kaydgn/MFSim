@@ -462,7 +462,7 @@ describe('kord rijitliği markadan bağımsız (PK)', () => {
     let msg = '';
     try { F.torsionalModel(sys, {}); } catch (e) { msg = e.message; }
     const tr = veFeadTranslateError(msg);
-    expect(tr).toMatch(/kord rijitliği kalibrasyonu yok/);
+    expect(tr).toMatch(/kord rijitliği yok/);
     expect(tr).not.toMatch(/BELT_DB|opt\.cordStiffnessN/);
   });
 });

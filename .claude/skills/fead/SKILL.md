@@ -1166,6 +1166,13 @@ olurdu.
     gösterge anahtarı: "Kol yönü: merkez → gövde · 0° +X · CCW + · −180…+180"
     ve "Kesikli çember: olanaklı montaj noktaları"; bant olsun olmasın. Kapı:
     `fead-wizard.test.js` → *açının tanımı*.
+    **Köprünün iletisi (`fead-model.js`) de durumdur**: hata, sınır ve ihlal
+    metni olanı söyler, tarif ve dosya yolu taşımaz, büyük harfle vurgulamaz.
+    Sihirbaz iletiyi adımına METİNDEN eşler (`VE_FW_ERR_STEP`): yeniden
+    yazılan ileti sessizce Özet'e düşer — "KAPANMIYOR" `/i` ile eşleşmiyordu
+    (JS `ı`/`I` katlamaz). Kapı: `fead-metin.test.js` → *FEAD köprüsünün
+    iletileri* + `fead-wizard.test.js` → *köprünün bütün iletileri adımına
+    düşüyor*.
 
 46. **İŞLETME HESABI MOTOR VE AKSESUAR OLMADAN YAPILMAZ** (2026-09-29,
     kullanıcı bildirimi: *"program motor ve aksesuar seçmeden hesap yapıyor …

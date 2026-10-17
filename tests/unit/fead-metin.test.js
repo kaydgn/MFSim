@@ -111,3 +111,23 @@ describe('FEAD sihirbazı ve STEP', () => {
     expect(/\bjs\/[\w-]+\.js\b/.test('Hesap çekirdeği yüklenmedi (js/fead-core.js).')).toBe(true);
   });
 });
+
+// ── Aşama 5 · köprünün iletileri (fead-model.js) ─────────────────────────
+// Hata, uyarı ve sınır metni olanı söyler: arkasına tarif ("… girin",
+// "… kontrol edin") ve dosya yolu eklenmez.
+const TARIF = /(?<![\p{L}])(ekleyin|girin|işaretleyin|kontrol edin|önerilir|bırakın|değiştirin|tıklayın|seçin|yazın|kurun|çevirin|düzeltin|kullanın)(?![\p{L}])/u;
+
+describe('FEAD köprüsünün iletileri', () => {
+  test('dizgeler tarif fiili ve dosya yolu taşımaz', () => {
+    const sapan = dizgeler('js/fead-model.js')
+      .filter((d) => TARIF.test(d.metin) || /\bjs\/[\w-]+\.js\b/.test(d.metin))
+      .map((d) => d.satir + ' ' + d.metin);
+    expect(sapan).toEqual([]);
+  });
+
+  test('kapı düşebiliyor: tarifli ileti yakalanır', () => {
+    ['Gergi kolunun çalışma açısını girin.', 'Kasnak sırasını kontrol edin.', 'Gergi eklenmesi önerilir.']
+      .forEach((m) => expect(TARIF.test(m)).toBe(true));
+    expect(TARIF.test('Gergi avarasının merkez koordinatı (X / Y) girilmedi.')).toBe(false);
+  });
+});
