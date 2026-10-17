@@ -2266,7 +2266,7 @@ alma kanıtı ve kalanlar tek rapor sayfasında toplanır. Taramanın görmediğ
 sınıf (işaretsiz tekrar bildirimi, adı tekrarlayan ipucu) aşamanın kendi
 kapısıyla tutulur — kabuk için `tests/unit/kabuk-metin.test.js`.
 
-**Uygulananlar (tahtasız):** aşama 9b → kaydgn/MFSim#PRNO (Sonuçlar'ın FEAD ve Takoz
+**Uygulananlar (tahtasız):** aşama 9b → kaydgn/MFSim#1147 (Sonuçlar'ın FEAD ve Takoz
 sekmeleri ve diyagram yorum motorları; kapı `yorum-metin.test.js`; şerit yorumunun
 öncü satırı — kümenin sabit açıklaması — kalktı, yorum bulgu, ölçüt ve geçerlilik
 sınırı söyler; eksen anlatımı ve fizik açıklaması Takoz kılavuzu §11.3'e taşındı) ·
