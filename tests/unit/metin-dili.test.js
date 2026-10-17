@@ -41,7 +41,9 @@ describe('sözlük — aday işaretleri', () => {
     ['Hizalamak için en az 2 bileşen seçin', 'tarif'],
     ['Model çözümden sonra değişti — yeniden hesaplayın.', 'tarif'],
     ['Kasnakları çizime sürükleyin, sonra tablodan sıralayın.', 'tarif'],
-    ['Kayış yolu henüz boş ve model kurulunca her şey çizimde değişir.', 'uzun']
+    ['Kayış yolu henüz boş ve model kurulunca her şey çizimde değişir.', 'uzun'],
+    // numaralı başlıktan sonraki vurgu yine vurgudur
+    ['2) DİRENÇ KUVVETLERİ: eğim kuvveti ASLA ihmal edilmez', 'gelistirme']
   ])('%p → %s', (metin, isaret) => {
     expect(T.isaretle(metin, 'arayuz')).toContain(isaret);
   });
@@ -49,7 +51,7 @@ describe('sözlük — aday işaretleri', () => {
   test.each([
     'Sihirbazla kur', 'Hesapla', 'Boş çizim masası', 'Gates raporlarından başla', 'Sessize al',
     'Girdi', 'Kasnak girdisi', 'Kayış boyu ve tahrik oranı', 'Ara kademenin çapları eksik.',
-    'TEKERLEK GÜCÜ DAĞILIMI (Ortalama)', 'SONUÇ ÖZETİ', 'FEAD · STEP · CATIA', 'Kayma emniyeti 1,2 — sınırın altında',
+    'TEKERLEK GÜCÜ DAĞILIMI (Ortalama)', '2) DİRENÇ KUVVETLERİ (g=9,81; theta=atan(eğim/100))', 'SONUÇ ÖZETİ', 'FEAD · STEP · CATIA', 'Kayma emniyeti 1,2 — sınırın altında',
     'Değişikliği uygulamak için olduğunu varsaydığı değer', 'Kayış yolu kapanmıyor.',
     // etkileşim ipucu kısayol dilinde bir addır
     'Kayış boyu serbest — tıkla: sabit', 'Yön gülü — sürükle: taşı · çift tık: varsayılan yer',

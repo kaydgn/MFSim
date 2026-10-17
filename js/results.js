@@ -2733,7 +2733,7 @@ function veDownloadTXTFromPreview() {
   });
 
   document.getElementById('ve-txt-author-ok').addEventListener('click', function() {
-    var authorName = inp.value.trim() || 'Belirtilmemis';
+    var authorName = inp.value.trim() || 'Belirtilmemiş';
     var sim = window.veSimResults;
     var rType = window._veTxtPreviewReportType;
     var content = '';
@@ -2922,7 +2922,7 @@ function _veReportAntet(R, projectName, dateStr) {
     +   '<div class="band">'
     +     '<div class="eyebrow">Analiz raporu · Araç Performansı</div>'
     +     '<h1>' + esc(projectName) + '</h1>'
-    +     '<div class="sub">Tam gaz otomatik vites geçişleri, eğim tırmanma kabiliyeti ve hızlanma analizi — projede tanımlı güç aktarma modelinden otomatik üretilmiştir.</div>'
+    +     '<div class="sub">Tam gaz otomatik vites geçişleri, eğim tırmanma kabiliyeti ve hızlanma analizi</div>'
     +   '</div>'
     +   '<div class="fields">'
     +     '<div class="f"><div class="k">Doküman türü</div><div class="v">Performans raporu</div></div>'
@@ -2940,7 +2940,7 @@ function _veRepSecPlatform(R, sim, H, charts) {
   if(!R) return null;
   var revPerKm = (R.tireRadius > 0) ? veSayi((1000 / (2 * Math.PI * R.tireRadius)), 0) : '—';
   var body = '';
-  body += H.p('Bu bölüm, aracın aerodinamik ve kütle parametreleri ile lastik özelliklerini özetler. Bu değerler yol yükü (yuvarlanma ve aerodinamik direnç), çekiş kuvveti ve devir–hız dönüşümü hesaplarının temel girdileridir.');
+  body += H.p('Aracın aerodinamik ve kütle parametreleri ile lastik özellikleri yol yükü (yuvarlanma ve aerodinamik direnç), çekiş kuvveti ve devir–hız dönüşümü hesaplarının temel girdileridir.');
 
   body += H.p('Araca hareket yönünün tersine etkiyen toplam yol yükü \\( F_{\\text{yol}} \\) üç bileşenin toplamıdır: yuvarlanma direnci \\( F_{r} \\), aerodinamik direnç \\( F_{a} \\) ve eğim bileşeni \\( F_{e} \\). Simülasyonun her adımında üçü de anlık hıza \\( v \\) ve yol eğimi açısına \\( \\alpha \\) göre yeniden hesaplanır:');
   body += H.eq('F_{\\text{yol}}(v)=F_{r}+F_{a}+F_{e}');
@@ -2988,7 +2988,7 @@ function _veRepSecMotor(R, sim, H, charts) {
   });
 
   var body = '';
-  body += H.p('Bu bölüm, projede tanımlı motorun karakteristik parametrelerini ve tam devir aralığındaki tork/güç eğrisini özetler. Değerler, çekiş kuvveti ve motor freni hesaplarının kaynak girdisidir; net değerler fan ve diğer aksesuar kayıplarının governed devre göre ölçeklenmesiyle brüt eğriden türetilir.');
+  body += H.p('Motorun karakteristik parametreleri ve tam devir aralığındaki tork/güç eğrisi çekiş kuvveti ve motor freni hesaplarının kaynak girdisidir; net değerler fan ve diğer aksesuar kayıplarının governed devre göre ölçeklenmesiyle brüt eğriden türetilir.');
 
   body += H.p('Tork ile güç arasındaki dönüşüm, devrin \\( n \\) [rpm], torkun \\( T \\) [N·m] ve gücün \\( P \\) [kW] '
             + 'birimlerinde şu bağıntıyla yapılır:');
@@ -3009,10 +3009,9 @@ function _veRepSecMotor(R, sim, H, charts) {
   body += H.eq('T(n)=T(n_{\\text{gov}})\\left(1-\\frac{n-n_{\\text{gov}}}{n_{\\text{nl}}-n_{\\text{gov}}}\\right),'
              + '\\qquad n_{\\text{gov}}\\le n\\le n_{\\text{nl}}');
   body += H.note('', 'Çift Düşüm Koruması',
-      'Bu sentetik regülatör düşümü <strong>yalnızca</strong> tork tablosu governed devrin üzerini kapsamıyorsa '
-    + 'uygulanır. Tablo zaten yüksüz governed noktasına inen bir düşüş taşıyorsa eğri olduğu gibi izlenir; aksi '
-    + 'hâlde düşüm iki kez sayılırdı. Tablo noktaları arasında tork, monoton PCHIP spline ile ara değerlenir '
-    + '(bkz. Sayısal Yöntemler) — doğrusal ara değerlemenin vites geçişlerinde ürettiği köşeler böylece oluşmaz.');
+      'Sentetik regülatör düşümü <strong>yalnızca</strong> tork tablosu governed devrin üzerini kapsamıyorsa '
+    + 'uygulanır; tablo yüksüz governed noktasına inen bir düşüş taşıyorsa eğri olduğu gibi izlenir (düşüm bir kez). '
+    + 'Tablo noktaları arasında tork monoton PCHIP spline ile ara değerlenir; vites geçişlerinde köşe oluşmaz.');
 
   // ── Motor özeti (kaynak 716-729) ──
   body += H.h3('Motor Özeti');
@@ -3113,7 +3112,7 @@ function _veRepSecTransmission(R, sim, H, charts) {
   if(!R) return null;
 
   var body = '';
-  body += H.p('Bu bölüm, güç aktarma organının şanzıman tanımını ve tam gaz otomatik vites geçişlerini yöneten kontrol stratejisini özetler. Şanzıman verimi ve vites geçiş eşikleri, çekiş kuvveti ve devir–hız profilinin hesaplanmasında doğrudan rol oynar.');
+  body += H.p('Şanzıman verimi ve tam gaz otomatik vites geçişlerini yöneten eşikler çekiş kuvveti ve devir–hız profilinin hesabına doğrudan girer.');
 
   body += H.p('Motor devri ile araç hızı arasındaki bağı toplam aktarma oranı kurar. Mekanik zincir, seçili vitesin '
             + 'oranı \\( i_{v} \\), kardan mili \\( i_{k} \\), transfer kutusu \\( i_{t} \\) ve aks \\( i_{a} \\) '
@@ -3121,7 +3120,7 @@ function _veRepSecTransmission(R, sim, H, charts) {
   body += H.eq('i_{\\text{top}}=i_{v}\\,i_{k}\\,i_{t}\\,i_{a}');
   body += H.eq('n=\\frac{60\\,i_{\\text{top}}}{2\\pi r_{d}}\\;v');
   body += H.p('Tork konvertörünün tork oranı \\( TR \\) bu mekanik zincire ait değildir; devir–hız ilişkisine girmez, '
-            + 'yalnızca türbin çıkışındaki torku çarpar (bkz. Konvertör Değerlendirmesi ve Aktarma Organları).');
+            + 'yalnızca türbin çıkışındaki torku çarpar.');
 
   body += H.h3('Dişli Verimi');
   body += H.p('Şanzıman verimi katalogdan gelen tek bir sayı değildir: çözücü her vites için, oranın logaritmasına ve '
@@ -3131,7 +3130,7 @@ function _veRepSecTransmission(R, sim, H, charts) {
              + '1-\\lvert\\ln i\\rvert\\,(0{,}0175+2{,}93\\times10^{-6}\\,N_{t})\\bigr)\\Bigr)');
   body += H.p('Burada \\( N_{t} \\) türbin devridir — kilitli çalışmada motor devrine, konvertör açıkken '
             + '\\( N_{t}=SR\\cdot N_{p} \\) değerine eşittir. Bu verim, tork konvertörlü kollarda çıkış torkuna '
-            + '<strong>bir kez</strong> uygulanır; aşağıdaki tabloların katalog verim sütunlarıyla çarpılmaz, '
+            + '<strong>bir kez</strong> uygulanır; tablolardaki katalog verim sütunlarıyla çarpılmaz, '
             + 'onların yerine geçer (çift sayım olmaması için).');
 
   body += H.h3('Vites Geçiş Eşikleri');
@@ -3147,9 +3146,9 @@ function _veRepSecTransmission(R, sim, H, charts) {
              + 'n^{\\ast}=n_{j}^{\\ast}+\\frac{n_{\\text{ref}}-n_{j}}{n_{j+1}-n_{j}}\\bigl(n_{j+1}^{\\ast}-n_{j}^{\\ast}\\bigr)');
   body += H.p('İkinci biçimdeki ara değerleme, 2C→2L gibi kalibrasyon tablosuyla verilen geçişlerde, '
             + 'tablo geçerlilik sınırının altındaki referans devirler için kullanılır. Küçültme (downshift) '
-            + 'eşikleri aynı ailedendir; ek olarak bazı kutularda alt sınır kelepçesi (cap) taşırlar. '
-            + 'Ard arda ters yönlü geçişi engelleyen bir kilit de vardır: bir yönde geçiş yapıldıktan sonra '
-            + 'belirli bir süre ters geçişe izin verilmez — aksi hâlde eşik civarında salınım (shift hunting) oluşur.');
+            + 'eşikleri aynı ailedendir; bazı kutularda alt sınır kelepçesi (cap) de vardır. '
+            + 'Ters yönlü geçiş kilidi: bir yönde geçişten sonra belirli bir süre ters geçiş yapılmaz '
+            + '(eşik civarında salınım — shift hunting — önlenir).');
 
   // ─── Şanzıman ───
   body += H.h3('Şanzıman');
@@ -3206,7 +3205,7 @@ function _veRepSecConverter(R, sim, H, charts) {
   if(!R) return null;
 
   var body = '';
-  body += H.p('Bu bölüm, motor tork eğrisi ile aday tork konvertörlerinin eşleştirmesini değerlendirir. Her aday için stall noktası, türbin torku ve governed devirdeki hız oranı (SR) hesaplanır; C5/C7/C8 uygunluk kriterleri ile şanzıman giriş güç/tork limitleri (C9/C10) denetlenir.');
+  body += H.p('Motor tork eğrisi ile aday tork konvertörlerinin eşleştirmesi: her aday için stall noktası, türbin torku ve governed devirdeki hız oranı (SR) hesaplanır; C5/C7/C8 uygunluk kriterleri ile şanzıman giriş güç/tork limitleri (C9/C10) denetlenir.');
 
   body += H.p('Konvertörün çalışma noktası üç boyutsuz büyüklükle tanımlanır — pompa (motor tarafı) devri '
             + '\\( n_{p} \\), türbin (şanzıman tarafı) devri \\( n_{t} \\) olmak üzere:');
@@ -3228,14 +3227,14 @@ function _veRepSecConverter(R, sim, H, charts) {
             + 'yuttuğu tork ile motorun verdiği net tork eşitlenene kadar motor kendi eğrisi üzerinde kayar. '
             + 'Hız oranı motor devrine bağlı olduğundan bu <strong>bağlaşık</strong> bir denklemdir ve kapalı '
             + 'çözümü yoktur; her zaman adımında kökü aranır:');
-  body += H.eq('g(N)=\\underbrace{\\bigl[T_{\\text{mot}}(N)-\\Delta T_{p}\\bigr]}_{\\text{motorun verdigi}}'
-             + '-\\underbrace{\\frac{N^{2}}{K_{p}(SR)^{2}}}_{\\text{konvertorun yuttugu}}=0,'
+  body += H.eq('g(N)=\\underbrace{\\bigl[T_{\\text{mot}}(N)-\\Delta T_{p}\\bigr]}_{\\text{motorun verdiği}}'
+             + '-\\underbrace{\\frac{N^{2}}{K_{p}(SR)^{2}}}_{\\text{konvertörün yuttuğu}}=0,'
              + '\\qquad SR=\\frac{N_{t}}{N}');
   body += H.p('Kök ikiye bölme (bisection) ile bulunur; durma ölçütü \\( \\lvert N_{ü}-N_{a}\\rvert<0{,}5 \\) rpm '
             + 'veya \\( \\lvert g\\rvert<0{,}1 \\) N·m. Bulunan noktada türbin torku ve konvertör verimi:');
   body += H.eq('T_{t}=T_{p}\\,\\tau(SR),\\qquad \\eta_{\\text{TK}}=SR\\cdot\\tau(SR)');
-  body += H.p('\\( K_{p}(SR) \\) ve \\( \\tau(SR) \\) katalog tablosundan monoton PCHIP spline ile ara değerlenir '
-            + '(bkz. Sayısal Yöntemler); hız oranı \\( [0;\\,0{,}99] \\) aralığına kelepçelenir. '
+  body += H.p('\\( K_{p}(SR) \\) ve \\( \\tau(SR) \\) katalog tablosundan monoton PCHIP spline ile ara değerlenir; '
+            + 'hız oranı \\( [0;\\,0{,}99] \\) aralığına kelepçelenir. '
             + 'Kavrama noktası (coupling), \\( \\tau \\le 1{,}005 \\) olan ilk hız oranıdır.');
 
   body += H.h3('Oturmuş Stall');
@@ -3244,7 +3243,7 @@ function _veRepSecConverter(R, sim, H, charts) {
             + 'ilk sıfır geçişi alınır:');
   body += H.eq('E(n)=T_{\\text{mot}}(n)-\\Delta T_{p}-\\frac{n^{2}}{K_{p}(0)^{2}},'
              + '\\qquad n_{\\text{stall}}=\\min\\{\\,n\\ge n_{\\text{rol}}\\;:\\;E(n)\\le 0\\,\\}');
-  body += H.note('', 'Neden En Küçük Kök Değil',
+  body += H.note('', 'Sığ Vadi Stall Değildir',
       '\\( E(n) \\) düşük devirlerde sığ bir pozitif vadi yapabilir. Bu bir stall <strong>değildir</strong> — '
     + 'motorun rev-up sırasında geçtiği bir asılma (near-hang) noktasıdır; \\( E \\) orada sıfırın altına inmediği '
     + 'için kabul edilmez ve motor yüksek dengeye tırmanır. Ölçüt tek: fazlalığın işaret değiştirdiği ilk devir. '
@@ -3253,12 +3252,12 @@ function _veRepSecConverter(R, sim, H, charts) {
   body += H.h3('Kilitli Çalışma ve Isı Reddi');
   body += H.p('Kilit kavraması devredeyken pompa–türbin kayması yoktur; pompa tork düşümü uygulanmaz, tek konvertör '
             + 'kaynaklı kayıp kavrama sürtünmesidir:');
-  body += H.eq('\\Delta T_{k}=10{,}0+0{,}00367\\,N,\\qquad T_{\\text{cikis}}=\\max\\bigl(0,\\;T_{\\text{mot}}-\\Delta T_{k}\\bigr)');
+  body += H.eq('\\Delta T_{k}=10{,}0+0{,}00367\\,N,\\qquad T_{\\text{çıkış}}=\\max\\bigl(0,\\;T_{\\text{mot}}-\\Delta T_{k}\\bigr)');
   body += H.p('Soğutucuya reddedilen ısı, çalışma koluna göre iki ayrı biçimde hesaplanır. Konvertör açıkken '
             + 'baskın terim kayma kaybıdır (\\( 1-SR\\tau \\) oranındaki güç ısıya döner), kilitli çalışmada ise '
             + 'vitese özgü, devre bağlı doğrusal bir mekanik kayıp modeli kullanılır:');
   body += H.eq('\\dot{Q}_{\\text{konv}}=\\frac{T_{p}\\,\\omega\\,(1-SR\\,\\tau)}{1000}'
-             + '+P_{t}\\,(1-\\eta_{\\text{ic}}),\\qquad '
+             + '+P_{t}\\,(1-\\eta_{\\text{iç}}),\\qquad '
              + '\\dot{Q}_{\\text{kilit}}=a_{v}\\,N+b_{v}');
   body += H.p('Tork konvertörü hiç yoksa (doğrudan tahrik) ısı yalnızca dişli mekanik kaybıdır: '
             + '\\( \\dot{Q}=T\\,\\omega\\,(1-\\eta)/1000 \\). Bu değerler Tam gaz vites geçişleri tablosundaki '
@@ -3266,7 +3265,7 @@ function _veRepSecConverter(R, sim, H, charts) {
 
   // Veri koşulu — kaynaktaki gibi torque eğrisi ve TC preset'leri gerekli
   if(!(R.torqueData && R.torqueData.length > 2 && typeof VE_FT_TC_PRESETS !== 'undefined' && typeof veGetFamilyTCKeys === 'function')) {
-    body += H.note('warn', 'Veri Yok', 'Motor–TC eşleştirme verisi bulunamadı; bu değerlendirme için tam motor tork eğrisi ve tanımlı konvertör aileleri gereklidir.');
+    body += H.note('warn', 'Veri Yok', 'Motor–TC eşleştirme verisi yok: tam motor tork eğrisi ya da tanımlı konvertör aileleri eksik.');
     return { id: 'ecm', title: 'Konvertör değerlendirmesi', body: body };
   }
 
@@ -3347,7 +3346,7 @@ function _veRepSecConverter(R, sim, H, charts) {
   ];
   var rows = _ecmResults.map(function(r){
     var stKind = r.status==='recommended' ? 'ok' : r.status==='caution' ? 'warn' : r.status==='not-recommended' ? 'warn' : 'bad';
-    var stTxt = r.status==='recommended' ? 'Önerilen' : r.status==='caution' ? 'Dikkat' : r.status==='not-recommended' ? 'Önerilmez' : 'Uyumsuz';
+    var stTxt = r.status==='recommended' ? 'Uygun' : r.status==='caution' ? 'Dikkat' : r.status==='not-recommended' ? 'Önerilmez' : 'Uyumsuz';
     return [
       { v: H.st(stKind, stTxt), a: 'l' },
       { v: H.esc(r.name), a: 'l' },
@@ -3370,7 +3369,7 @@ function _veRepSecConverter(R, sim, H, charts) {
     var summary = H.esc(best.name)
       + ' — Stall: ' + H.f(best.stallSpeed, 0) + ' rpm · SR@Gov: ' + H.f(best.srGov, 3)
       + ' · T_turb: ' + H.f(best.tTurbineStall, 0) + ' N·m';
-    body += H.note(kind, 'Önerilen Konvertör', summary);
+    body += H.note(kind, 'En Uygun Konvertör', summary);
   }
 
   // (d) ECM grafiği
@@ -3382,24 +3381,24 @@ function _veRepSecDriveline(R, sim, H, charts) {
   if(!R) return null;
 
   var body = '';
-  body += H.p('Bu bölüm, şanzıman çıkışından tekerleklere kadar uzanan güç aktarma zincirini (kardan milleri, diferansiyel ve — varsa — transfer kutusu) oran ve verim değerleriyle özetler. Bu bileşenlerin oran çarpımı toplam aktarma oranını, verim çarpımı ise tekerleğe iletilen net gücü belirler.');
+  body += H.p('Şanzıman çıkışından tekerleklere uzanan zincirde (kardan milleri, diferansiyel ve — varsa — transfer kutusu) oranların çarpımı toplam aktarma oranını, verimlerin çarpımı tekerleğe iletilen net gücü belirler.');
 
   body += H.p('Zincirdeki her kademe kendi verimini toplam verime <strong>çarpan</strong> olarak taşır; kayıplar '
             + 'toplanmaz, birbirinin üzerine biner:');
   body += H.eq('\\eta_{\\text{top}}=\\eta_{d}\\,\\eta_{k}\\,\\eta_{t}\\,\\eta_{a}');
   body += H.p('Çekiş kuvvetinin girdisi motor torku <em>değil</em>, <strong>şanzıman giriş düzlemindeki çıkış '
-            + 'torkudur</strong> \\( T_{\\text{cikis}} \\). Bu ayrım kritiktir: konvertör açıkken tork çarpanı '
+            + 'torkudur</strong> \\( T_{\\text{çıkış}} \\): konvertör açıkken tork çarpanı '
             + '\\( \\tau \\) burada devreye girer ve kuvveti iki katına kadar büyütebilir; kilitli çalışmada ise '
             + 'yalnız kavrama sürtünmesi düşülür. Üç kol:');
-  body += H.eq('T_{\\text{cikis}}=\\begin{cases}'
-             + 'T_{p}\\,\\tau(SR), & \\text{konvertor acik}\\\\[3pt]'
+  body += H.eq('T_{\\text{çıkış}}=\\begin{cases}'
+             + 'T_{p}\\,\\tau(SR), & \\text{konvertör açık}\\\\[3pt]'
              + 'T_{\\text{mot}}-\\Delta T_{k}, & \\text{kilitli}\\\\[3pt]'
-             + 'T_{\\text{mot}}\\,\\eta_{v}, & \\text{konvertor yok}'
+             + 'T_{\\text{mot}}\\,\\eta_{v}, & \\text{konvertör yok}'
              + '\\end{cases}');
   body += H.p('Tekerlek çevresindeki ham çekiş kuvveti, bu çıkış torkunun mekanik zincirle büyütülüp yuvarlanma '
             + 'yarıçapına bölünmesiyle bulunur. Dişli verimi \\( \\eta_{d} \\) (Şanzıman ve Kontrol bölümündeki '
             + 'model) yalnızca <strong>bir kez</strong> uygulanır:');
-  body += H.eq('F_{t}^{\\,\\text{ham}}=\\frac{T_{\\text{cikis}}\\;\\eta_{d}\\;i_{v}\\,'
+  body += H.eq('F_{t}^{\\,\\text{ham}}=\\frac{T_{\\text{çıkış}}\\;\\eta_{d}\\;i_{v}\\,'
              + '(i_{k}\\eta_{k})\\,(i_{t}\\eta_{t})\\,(i_{a}\\eta_{a})}{r_{d}}');
   body += H.p('Son olarak kuvvet, tahrikli akslara düşen ağırlığın taşıyabileceği <strong>tutunum sınırıyla</strong> '
             + 'kırpılır — motor ne kadar tork verirse versin, lastik zeminden daha fazlasını alamaz:');
@@ -3408,7 +3407,7 @@ function _veRepSecDriveline(R, sim, H, charts) {
             + 'düşen ağırlık oranıdır. Bu kırpma düşük viteslerde ve kalkışta devreye girer; hangi adımlarda etkin '
             + 'olduğu hesap izinde ayrıca işaretlenir. \\( F_{t} \\), hareket denkleminde yol yüküne karşı koyan '
             + 'tek itici terimdir.');
-  body += H.p('Aşağıdaki tabloların N/V sütunu, şanzıman çıkışındaki oranın \\( i_{o}=i_{a}\\,i_{t} \\) doğrudan '
+  body += H.p('Tablolardaki N/V sütunu, şanzıman çıkışındaki oranın \\( i_{o}=i_{a}\\,i_{t} \\) doğrudan '
             + 'sonucudur — 1 km/h araç hızına karşılık gelen çıkış devri:');
   body += H.eq('\\frac{n}{v}=\\frac{1000\\,i_{o}}{60\\cdot 2\\pi r_{d}}\\quad[\\mathrm{rpm}\\,/\\,\\mathrm{km\\,h^{-1}}]');
 
@@ -3490,33 +3489,27 @@ function _veRepSecGrade(R, sim, H, charts) {
   if(!G || !G.high) return null;
 
   var body = '';
-  body += H.p('Bu bölüm, tam gaz otomatik vites geçişleriyle aracın çıkabildiği maksimum eğimleri özetler. Durma (stall) ve kalkış (launch) tırmanma kabiliyeti, düşük hız eğim performansı ve düz yolda ulaşılan maksimum hız ile birlikte, artan eğime karşılık gelen en yüksek araç hızı ve o noktadaki vites kademesi verilir.');
+  body += H.p('Tam gaz otomatik vites geçişleriyle aracın çıkabildiği en büyük eğimler: durma (stall) ve kalkış (launch) tırmanma kabiliyeti, düşük hız eğim performansı, düz yolda en yüksek hız ve artan eğime karşılık gelen en yüksek araç hızı ile o noktadaki vites kademesi.');
 
   body += H.p('Tırmanma kabiliyetinin ölçütü <strong>çeki kancası kuvvetidir</strong> (drawbar pull, \\( DP \\)): '
             + 'çekiş kuvvetinden düz yol dirençleri düşüldükten sonra <em>geriye kalan</em> kuvvet. Eğim bileşeni '
-            + 'bilerek dışarıda bırakılır — aranan zaten o kuvvetin kaldırabileceği eğimdir:');
+            + '\\( DP \\)\'ye katılmaz: aranan, bu kuvvetin kaldırabildiği eğimdir:');
   body += H.eq('DP=F_{t}-F_{r}-F_{a}');
   body += H.p('Denge hâlinde bu artık kuvvet, ağırlığın eğim yönündeki bileşenini tam olarak karşılar '
-            + '(\\( DP=m\\,g\\sin\\theta \\)). Eğim ise yüzde olarak <strong>tanjantla</strong> raporlanır — '
-            + 'Allison/iSCAAN standardı bunu şart koşar; sinüs ile tanjantı karıştırmak dik eğimlerde ciddi sapma verir:');
+            + '(\\( DP=m\\,g\\sin\\theta \\)). Eğim yüzde olarak <strong>tanjantla</strong> raporlanır '
+            + '(Allison/iSCAAN standardına göre); dik eğimlerde sinüs ile tanjant belirgin biçimde ayrışır:');
   body += H.eq('\\sin\\theta=\\frac{DP}{m\\,g},\\qquad '
              + 'G_{\\%}=100\\tan\\theta=\\frac{100\\,\\sin\\theta}{\\sqrt{1-\\sin^{2}\\theta}}');
   body += H.p('Tablodaki her satır, ilgili vites kademesinde \\( DP \\) sıfıra düştüğü — yani aracın o eğimde daha fazla '
             + 'hızlanamadığı — dengeleme noktasına karşılık gelir. Durma (stall) satırı, simülasyonun \\( t=0 \\) '
-            + 'geçici satırından değil, motorun fiilen oturduğu konvertör dengesinden okunur (bkz. Konvertör '
-            + 'Değerlendirmesi, oturmuş stall).');
+            + 'geçici satırından değil, motorun fiilen oturduğu konvertör dengesinden (oturmuş stall) okunur.');
 
   body += H.h3('Eğim İşareti');
-  body += H.p('Yol tanımındaki eğim, kullanıcı arayüzünün <em>harita</em> konvansiyonundadır: iniş pozitif işaretle '
-            + 'girilir. Fizik tarafı bunun tersini ister — eğim kuvveti yokuş yukarıda <strong>direnç</strong> '
-            + 'olarak pozitif olmalıdır. Çeviri tek bir yerde yapılır ve tüm zincir bu konvansiyonu izler:');
+  body += H.p('Yol tanımında eğim <em>harita</em> konvansiyonundadır (iniş pozitif); kuvvet hesabında eğim kuvveti '
+            + 'yokuş yukarıda <strong>direnç</strong> olarak pozitiftir:');
   body += H.eq('\\alpha_{\\text{fizik}}=-\\,\\alpha_{\\text{harita}},'
              + '\\qquad \\theta=\\arctan\\!\\left(\\frac{\\alpha_{\\text{fizik}}}{100}\\right),'
              + '\\qquad F_{e}=m\\,g\\sin\\theta');
-  body += H.p('Bu ayrımın atlanması sinsi bir hata sınıfıdır: eğim kuvveti hem yanlış işaretle üretilip hem de net '
-            + 'kuvvete yanlış işaretle eklenirse iki hata birbirini götürür, <em>ivme doğru çıkar</em> ama yayınlanan '
-            + 'eğim kuvveti sinyali diğer modüllerin tersi işaretle raporlanır. Çeviri bu yüzden tek noktada '
-            + 'toplanmıştır ve regresyon testiyle kilitlidir.');
 
   // Üst bilgi — analiz koşulları
   var trRatioHigh = G.high.transferRatio || 1.0;
@@ -3572,7 +3565,7 @@ function _veRepSecAccel(R, sim, H, charts) {
   if(!A || !A.high) return null;
 
   var body = '';
-  body += H.p('Bu bölüm, durgun halden hedef hızlara ulaşmak için gereken süre ve mesafeyi tam gaz otomatik vites geçişleri altında özetler. Değerler, güç aktarma modelinden ve yol yükü hesabından türetilir; her hedef hız için ulaşılan süre ve kat edilen mesafe verilir.');
+  body += H.p('Durgun hâlden hedef hızlara tam gaz otomatik vites geçişleriyle ulaşma süresi ve kat edilen mesafe; güç aktarma modelinden ve yol yükü hesabından türetilir.');
 
   body += H.p('Hızlanma, Newton’un ikinci yasasının boyuna eksende çözülmesidir. Aracın öteleme kütlesine ek olarak '
             + 'motor, şanzıman ve tekerleklerin <em>dönen</em> atalet momentleri de hızlanmaya direnir:');
@@ -3583,14 +3576,14 @@ function _veRepSecAccel(R, sim, H, charts) {
             + 'kadarki aktarma oranının <strong>karesiyle</strong> çarpılır; toplam eşdeğer atalet yuvarlanma '
             + 'yarıçapının karesine bölünerek kütleye eklenir. Alt zincir oranı '
             + '\\( i_{\\text{alt}}=i_{k}i_{t}i_{a} \\) olmak üzere:');
-  body += H.eq('m_{e}=m+\\frac{I_{\\text{es}}}{r_{d}^{2}},\\qquad \\lambda=\\frac{m_{e}}{m}');
-  body += H.eq('I_{\\text{es}}=\\begin{cases}'
+  body += H.eq('m_{e}=m+\\frac{I_{\\text{eş}}}{r_{d}^{2}},\\qquad \\lambda=\\frac{m_{e}}{m}');
+  body += H.eq('I_{\\text{eş}}=\\begin{cases}'
              + '(I_{\\text{mot}}+I_{\\text{konv}})\\,i_{\\text{top}}^{2}'
              + '+(I_{s}+I_{k})\\,i_{\\text{alt}}^{2}+I_{\\text{TK}}\\,i_{a}^{2}+I_{a}+I_{l},'
              + ' & \\text{kilitli}\\\\[6pt]'
              + 'I_{\\text{turb}}\\,i_{\\text{top}}^{2}'
              + '+(I_{s}+I_{k})\\,i_{\\text{alt}}^{2}+I_{\\text{TK}}\\,i_{a}^{2}+I_{a}+I_{l},'
-             + ' & \\text{konvertor acik}'
+             + ' & \\text{konvertör açık}'
              + '\\end{cases}');
   body += H.p('İki satır arasındaki fark fizikseldir: konvertör açıkken motor ile tekerlek arasında akışkan '
             + 'bağlantı vardır, motorun ataleti araç hızlanmasına doğrudan direnmez — yerine yalnız türbin '
@@ -3601,9 +3594,9 @@ function _veRepSecAccel(R, sim, H, charts) {
 
   body += H.h3('Sayısal Çözüm');
   body += H.p('Çekiş kuvveti ile yol yükünün ikisi de hıza bağlı, üstelik vites geçişleri süreksizlik ürettiği için '
-            + 'denklemin kapalı-form çözümü yoktur. Program hız üzerinden bir integral almaz; '
-            + '<strong>zaman ekseninde adım adım</strong> integre eder (varsayılan RK4, istenirse adaptif RK45 — '
-            + 'bkz. Sayısal Yöntemler) ve mesafeyi yamuk kuralıyla biriktirir:');
+            + 'denklemin kapalı-form çözümü yoktur. Denklem hız üzerinden integralle değil, '
+            + '<strong>zaman ekseninde adım adım</strong> integre edilir (varsayılan RK4, istenirse adaptif RK45); '
+            + 'mesafe yamuk kuralıyla biriktirilir:');
   body += H.eq('\\frac{dv}{dt}=\\frac{F_{t}(v)-F_{\\text{yol}}(v)}{m_{e}(v)},'
              + '\\qquad \\Delta s_{k}=\\tfrac{1}{2}\\bigl(v_{k}+v_{k+1}\\bigr)\\,\\Delta t');
   body += H.p('Tablodaki hedef hızlara varış anı ve o ana kadarki mesafe, çözümün kayıtlı örnekleri arasında '
@@ -3713,7 +3706,7 @@ function _veRepSecUpshift(R, sim, H, charts) {
   }
 
   var body = '';
-  body += H.p('Bu bölüm, aracın duruştan azami hıza tam gaz hızlanması sırasında otomatik şanzımanın vites geçiş noktalarını adım adım listeler. Her satır, ilgili hız/devir noktasındaki çekiş kuvvetini, tekerlek gücünü, tırmanılabilen net eğimi ve soğutucuya reddedilen ısıyı özetler; simülasyon standart güç eğrisi ve standart araç parametreleri ile motor fanı açık koşulunda yürütülmüştür.');
+  body += H.p('Duruştan azami hıza tam gaz hızlanmada otomatik şanzımanın vites geçiş noktaları: her satırda ilgili hız/devir noktasındaki çekiş kuvveti, tekerlek gücü, tırmanılabilen net eğim ve soğutucuya reddedilen ısı. Koşul: standart güç eğrisi, standart araç parametreleri, motor fanı açık.');
 
   body += H.p('Tablonun sütunları, önceki bölümlerde kurulan bağıntıların her vites geçiş noktasında değerlendirilmiş '
             + 'hâlidir: çekiş kuvveti \\( F_{t} \\), net çekiş \\( DP \\) ve net eğim \\( G_{\\%} \\). Tekerlek gücü, '
@@ -3784,8 +3777,7 @@ function _veRepSecNumerics(R, sim, H, charts) {
   var eb = ss.energyBalance || null;
 
   var body = '';
-  body += H.p('Bu bölüm, önceki bölümlerdeki denklemlerin sayısal olarak nasıl çözüldüğünü ve çözümün nasıl '
-            + 'denetlendiğini özetler. Üç sayısal araç kullanılır: tablo verisini sürekli fonksiyona çeviren '
+  body += H.p('Önceki bölümlerdeki denklemlerin sayısal çözümü ve denetimi. Üç sayısal araç kullanılır: tablo verisini sürekli fonksiyona çeviren '
             + 'monoton spline, hareket denklemini zamanda ilerleten Runge–Kutta integratörü ve konvertör '
             + 'çalışma noktasını bulan kök arayıcı.');
 
@@ -3825,14 +3817,13 @@ function _veRepSecNumerics(R, sim, H, charts) {
              + '\\qquad r=\\frac{\\varepsilon}{sc}');
   body += H.eq('\\Delta t_{\\text{yeni}}=\\Delta t\\cdot\\min\\!\\Bigl(5{,}0,\\;\\max\\bigl(0{,}2,\\;'
              + '0{,}84\\,r^{-1/5}\\bigr)\\Bigr)');
-  body += H.p('\\( r\\le 1 \\) ise adım kabul edilir, aksi hâlde aynı noktadan küçültülmüş adımla yeniden denenir. '
+  body += H.p('\\( r\\le 1 \\) ise adım kabul edilir; \\( r>1 \\) ise aynı noktadan küçültülmüş adımla yeniden denenir. '
             + 'Üstel \\( -1/5 \\) beşinci mertebeden gelir: hata \\( \\Delta t^{5} \\) ile ölçeklendiğinden hedef '
             + 'hataya götüren adım oranı budur. 0,84 güvenlik payı, 0,2–5,0 kelepçeleri tek adımda aşırı '
             + 'büyüme/küçülmeyi engeller.');
-  body += H.p('Değişken adımlı çözümden sabit aralıklı çıktı üretmek için adım içi kübik Hermite ara değerlemesi '
-            + '(dense output) kullanılır — böylece tablolar ve grafikler düzgün aralıklı kalırken integratör '
-            + 'kendi adımını serbestçe seçebilir. Vites geçişi olduğunda ilk-aynı-son (FSAL) kısayolu '
-            + 'geçersizleştirilir, çünkü türev o noktada sıçrar.');
+  body += H.p('Sabit aralıklı çıktı adım içi kübik Hermite ara değerlemesiyle (dense output) üretilir; integratör '
+            + 'adımını serbestçe seçer. Vites geçişinde türev sıçradığı için ilk-aynı-son (FSAL) kısayolu '
+            + 'geçersizleştirilir.');
 
   // ── 9.3 Kök bulma ─────────────────────────────────────────────────────────
   body += H.h3('Kök Bulma — İkiye Bölme');
@@ -3862,16 +3853,16 @@ function _veRepSecNumerics(R, sim, H, charts) {
   body += H.p('Çözücü her adımda motor gücünün nereye gittiğini ayrıştırır: bir kısmı tekerleğe iletilir, '
             + 'kalanı konvertör ısısına ve aktarma organı kayıplarına gider. Tekerleğe ulaşan güç de dört '
             + 'yere bölünür — yuvarlanma, aerodinamik, eğim ve aracı hızlandırmak:');
-  body += H.eq('P_{w}=P_{\\text{yuv}}+P_{\\text{aero}}+P_{\\text{egim}}+P_{\\text{ivme}},'
+  body += H.eq('P_{w}=P_{\\text{yuv}}+P_{\\text{aero}}+P_{\\text{eğim}}+P_{\\text{ivme}},'
              + '\\qquad P_{\\text{ivme}}=m_{e}\\,\\frac{dv}{dt}\\,v');
-  body += H.note('', 'Bu Bir Özdeşliktir, Denetim Değil',
-      'Yukarıdaki eşitlik her adımda <strong>tam olarak</strong> sağlanır ve sağlanmak zorundadır: ivme zaten '
-    + '\\( a=(F_{t}-F_{\\text{yuv}}-F_{a}-F_{e})/m_{e} \\) olarak tanımlandığından, \\( P_{\\text{ivme}} \\) '
-    + 'terimi diğer üçünü tanım gereği tamamlar. Dolayısıyla artığın sıfır çıkması sayısal doğruluğun '
-    + '<em>kanıtı değildir</em> — yalnızca kuvvet terimlerinin tutarlı defterlendiğini gösterir. '
-    + 'Çözümün gerçek hata denetimi adım büyüklüğünde yapılır: sabit adımlı RK4\'te \\( \\Delta t \\) '
-    + 'seçimiyle, adaptif RK45\'te ise yukarıdaki gömülü hata tahminiyle (41)–(42).');
-  body += H.p('Aşağıdaki tablo bu bütçenin bu koşudaki dağılımıdır — teorik bir sınır değil, ölçülen değerler. '
+  body += H.note('', 'Bütçe Bir Özdeşliktir',
+      'Güç bütçesi eşitliği her adımda <strong>tam olarak</strong> sağlanır: ivme '
+    + '\\( a=(F_{t}-F_{\\text{yuv}}-F_{a}-F_{e})/m_{e} \\) olarak tanımlı olduğundan \\( P_{\\text{ivme}} \\) '
+    + 'terimi diğer üçünü tanım gereği tamamlar. Sıfır artık, sayısal doğruluğun '
+    + '<em>kanıtı değildir</em>; kuvvet terimlerinin tutarlı defterlendiğini gösterir. '
+    + 'Çözümün hata denetimi adım büyüklüğündedir: sabit adımlı RK4\'te \\( \\Delta t \\) '
+    + 'seçimiyle, adaptif RK45\'te gömülü hata tahminiyle (41)–(42).');
+  body += H.p('Bütçenin bu koşudaki dağılımı ölçülen değerlerdir. '
             + 'Aktarma organı kaybı doğrudan ölçülmez; motor gücünden konvertör ısısı ve tekerlek gücü '
             + 'düşülerek elde edilen bakiyedir:');
 
@@ -3893,28 +3884,26 @@ function _veRepSecNumerics(R, sim, H, charts) {
        { v: H.f(eb.maxResidual_kW, 3), a: 'r' },
        { v: '—', a: 'r' }]
     ]);
-    body += H.p('Sütun birimi kW; ortalamalar ' + H.f(eb.samples, 0) + ' örnek üzerinden alınmıştır. '
-              + 'Son satırın sıfır olması beklenen sonuçtur (yukarıdaki nota bakınız); sıfırdan sapması '
-              + 'ancak bir yazılım hatasına işaret ederdi.');
+    body += H.p('Sütun birimi kW; ortalamalar ' + H.f(eb.samples, 0) + ' örnek üzerinden. '
+              + 'Son satır tanım gereği sıfırdır.');
     body += H.p('Anlık aktarma verimi \\( \\eta=P_{w}/P_{\\text{mot}} \\) koşu boyunca en çok '
               + '<strong>%' + H.f(eb.eta_max, 1) + '</strong> değerine ulaşmış, hareketli bölümün ortalaması '
               + '<strong>%' + H.f(eb.eta_avg, 1) + '</strong> olmuştur.');
     if(eb.eta_min < 1) {
-      body += H.note('', 'Verimin Alt Ucu Neden Sıfır',
+      body += H.note('', 'Verimin Alt Ucu Sıfırdır',
           'Kalkış anında araç hızı sıfırdır; tekerlek gücü \\( P_{w}=F_{t}\\,v \\) tanım gereği sıfırken motor '
         + 'gücü sıfır değildir — motorun verdiği her şey konvertör kaymasında ısıya döner. Anlık verim bu '
         + 'noktada sıfırdır ve bu bir kayıp göstergesi değil, tork çarpımının bedelidir. Aktarma organının '
-        + 'mekanik verimi olarak okunması gereken değer, tablodaki ortalama ve tepe değerlerdir.');
+        + 'mekanik verimi tablodaki ortalama ve tepe değerlerdir.');
     }
   } else {
     body += H.note('warn', 'Veri Yok', 'Bu koşu için güç bütçesi istatistiği üretilmemiş.');
   }
 
   body += H.note('', 'Kapsam',
-      'Bu bölümdeki yöntemler, modeli değil <em>çözümü</em> ilgilendirir. Modelin kendi geçerlilik sınırları '
-    + '(rijit araç gövdesi, boyuna tek serbestlik derecesi, quasi-statik aktarma organı, sabit tutunum '
-    + 'katsayısı, hava yoğunluğunun sabit alınması) ilgili bölümlerde belirtilmiştir. Tasarım kararlarında '
-    + 'sonuçlar güncel tedarikçi ve test verisiyle teyit edilmelidir.');
+      'Sayısal yöntemler <em>çözümü</em> ilgilendirir, modeli değil. Modelin geçerlilik sınırları: '
+    + 'rijit araç gövdesi, boyuna tek serbestlik derecesi, quasi-statik aktarma organı, sabit tutunum '
+    + 'katsayısı, sabit hava yoğunluğu.');
 
   return { id: 'numerics', title: 'Sayısal yöntemler ve doğrulama', body: body };
 }
@@ -4232,7 +4221,7 @@ function veDownloadReportHTML() {
           + _veReportAntet(R, projectName, dateStr)
           + asm.toc
           + asm.body
-          + '<p class="foot">Bu rapor, projede tanımlı güç aktarma modelinden <strong>otomatik üretilmiştir</strong>; girdi değerleri modeldeki bileşen tanımlarından alınır. Tasarım kararlarında güncel tedarikçi / test verisiyle teyit edilmelidir. · MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</p>'
+          + '<p class="foot">MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</p>'
           + '</div>'
           + (katexJs ? '<script>' + katexJs + '<\/script>'
               + '<script>document.addEventListener("DOMContentLoaded",function(){try{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\\\(",right:"\\\\)",display:false}],throwOnError:false});}catch(e){}});<\/script>' : '')
