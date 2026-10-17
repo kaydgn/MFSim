@@ -69,7 +69,7 @@ describe('ÖZET ADIMI — çözülmeyen model "tamam" değil', () => {
     const d = W.veMntWizStepState(bos, OZET);
     expect(d.durum).toBe('err');
     const m = W.veMntWizIssues(bos, OZET).map((x) => x.m).join(' ');
-    expect(m).toContain('Kütle gövdeleri ve Takozlar');
+    expect(m).toContain('Kütle gövdeleri · Takozlar eksik');
     expect(W.veMntWizStepState(tulga(), OZET).durum).toBe('ok');
   });
 
@@ -81,7 +81,7 @@ describe('ÖZET ADIMI — çözülmeyen model "tamam" değil', () => {
     expect(c2.ok).toBe(false);
     const l = W.veMntWizIssues(c2, OZET);
     expect(l).toHaveLength(1);
-    expect(l[0].m).toContain('Takozlar adımındaki');
+    expect(l[0].m).toContain('Model çözülemiyor: Takozlar eksik.');
     expect(l[0].m).not.toContain('Kütle gövdeleri');
     expect(c.ok).toBe(true);
   });
@@ -158,11 +158,11 @@ describe('BİRİM VE DİL — aynı şey modülün her yerinde aynı sözle', ()
 
   test('ateşleme frekansının eksiği: sihirbaz ve Motor penceresi AYNI kriterleri sayıyor', () => {
     const st = W.veMntWizDefault();
-    const m = W.veMntWizSorunlar(st).filter((s) => /Ateşleme|ateşleme/.test(s.m)).map((s) => s.m)[0];
+    const m = W.veMntWizSorunlar(st).filter((s) => /^Rölanti ya da silindir yok/.test(s.m)).map((s) => s.m)[0];
     const motor = fs.readFileSync(path.join(__dirname, '../../js/cp-mount.js'), 'utf8')
-      .match(/ateşleme frekansı yok; (Kriter[^.']*)/)[1];
-    const kriter = (t) => (t.match(/Kriter [\d ve]+\d/) || [''])[0].trim();
-    expect(kriter(motor)).toBe('Kriter 1 ve 2');
+      .match(/'Silindir sayısı boş: (Kriter[^.']*)/)[1];
+    const kriter = (t) => (t.match(/Kriter [\d–]+\d [\p{L}]+/u) || [''])[0];
+    expect(kriter(motor)).toBe('Kriter 1–2 değerlendirilemiyor');
     expect(kriter(m)).toBe(kriter(motor));
   });
 });

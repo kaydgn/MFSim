@@ -229,21 +229,21 @@ function veMntWizSorunlar(st){
   st = st || _mwState || veMntWizDefault();
   var l = [];
   var ek = function(adim, tur, m){ l.push({ adim:adim, tur:tur, m:m }); };
-  if(!st.govdeler.length) ek('govde', 'err', 'Kütle gövdesi yok — en az bir gövde gerekir.');
+  if(!st.govdeler.length) ek('govde', 'err', 'Kütle gövdesi yok.');
   st.govdeler.forEach(function(g){
     var ad = g.ad || _mwAd(g.type);
     if(!(_mwNum(g.mass) > 0)) ek('govde', 'err', ad + ': kütle eksik.');
     if(!_mwVar(g.cgx) || !_mwVar(g.cgy) || !_mwVar(g.cgz)) ek('govde', 'err', ad + ': ağırlık merkezi eksik.');
     if(!g.pointMass && !['Ixx', 'Iyy', 'Izz'].some(function(k){ return _mwNum(g[k]) > 0; }))
-      ek('govde', 'warn', ad + ': atalet tensörü girilmedi — gövde nokta kütle gibi çözülür.');
+      ek('govde', 'warn', ad + ': atalet tensörü yok; nokta kütle.');
   });
   var pto = st.govdeler.filter(function(g){ return g.type === 'mnt-pto-group'; }).length;
   var parca = st.govdeler.filter(function(g){ return g.type === 'mnt-pto' || g.type === 'mnt-pump'; }).length;
-  if(pto && parca) ek('govde', 'warn', 'PTO Toplam ile ayrı PTO/Pompa gövdeleri birlikte — aynı kütle iki kez sayılıyor olabilir.');
+  if(pto && parca) ek('govde', 'warn', 'Olası çift sayım: PTO Toplam + PTO/Pompa');
 
   var n = st.takozlar.length;
-  if(!n) ek('takoz', 'err', 'Takoz yok — en az üç takoz gerekir.');
-  else if(n < 3) ek('takoz', 'err', n + ' takoz var — 6 serbestlik dereceli denge için en az üç takoz gerekir.');
+  if(!n) ek('takoz', 'err', 'Takoz yok (en az 3).');
+  else if(n < 3) ek('takoz', 'err', n + ' takoz var (en az 3).');
   st.takozlar.forEach(function(t){
     var ad = t.ad || 'Takoz';
     if(!_mwVar(t.x) || !_mwVar(t.y) || !_mwVar(t.z)) ek('takoz', 'err', ad + ': konum eksik.');
@@ -259,9 +259,9 @@ function veMntWizSorunlar(st){
 
   var tq = st.tork || {};
   if(!(_mwNum(tq.Te) > 0)) ek('tork', 'warn', 'Motor torku yok — tork yük durumları kurulmaz.');
-  else if(!(_mwNum(tq.Rstall) > 0) || !_mwNum(tq.g1)) ek('tork', 'warn', 'Tork zinciri eksik (stall oranı · 1. vites) — tork yük durumları kurulmaz.');
+  else if(!(_mwNum(tq.Rstall) > 0) || !_mwNum(tq.g1)) ek('tork', 'warn', 'Tork zinciri eksik: tork yük durumları kurulmaz.');
   if(!(_mwNum(tq.idleRpm) > 0) || !(_mwNum(tq.cylinders) > 0))
-    ek('tork', 'warn', 'Rölanti ya da silindir sayısı yok — ateşleme frekansı hesaplanmaz; Kriter 1 ve 2 değerlendirilemez.');
+    ek('tork', 'warn', 'Rölanti ya da silindir yok: Kriter 1–2 değerlendirilemiyor.');
   return l;
 }
 
@@ -294,7 +294,7 @@ function veMntWizCoz(st){
     out.mp = prep.mp;
     var stat = prep.solveOne(MNT_AUTO_CASES[0]);
     if(!stat || !stat.res){
-      out.hata = [(stat && stat.error) || 'Statik denge çözülemedi — montaj kinematik olarak serbest olabilir.'];
+      out.hata = [(stat && stat.error) || 'Statik denge çözülemedi (kinematik serbestlik olabilir).'];
       return out;
     }
     out.ok = true;
@@ -315,7 +315,7 @@ function veMntWizIssues(c, step){
       return (c.sorun || []).some(function(x){ return x.tur === 'err' && x.adim === s.key; });
     }).map(function(s){ return s.ad; });
     if(engel.length) l = l.concat([{ adim:'ozet', tur:'err',
-      m:'Model çözülemiyor — ' + engel.join(' ve ') + ' adımındaki eksikler giderilince çözülür.' }]);
+      m:'Model çözülemiyor: ' + engel.join(' · ') + ' eksik.' }]);
   }
   return l;
 }
@@ -677,10 +677,10 @@ function veMntWizIssueHTML(c, step){
 
 function veMntWizFootStateHTML(c){
   var st = _mwState || veMntWizDefault();
-  if(!st.govdeler.length && !st.takozlar.length) return '<span class="ve-fw-dim">model henüz boş</span>';
+  if(!st.govdeler.length && !st.takozlar.length) return '<span class="ve-fw-dim">model boş</span>';
   var err = (c.sorun || []).filter(function(s){ return s.tur === 'err'; }).length + (c.hata || []).length;
-  if(c.ok) return '<span class="ve-fw-ok">' + _mwIkon('check') + ' model çözülüyor — kurulmaya hazır</span>';
-  return '<span class="ve-fw-err">' + err + ' eksik/çelişkili girdi — model yine kurulabilir</span>';
+  if(c.ok) return '<span class="ve-fw-ok">' + _mwIkon('check') + ' model çözülüyor</span>';
+  return '<span class="ve-fw-err">' + err + ' eksik/çelişkili girdi</span>';
 }
 function veMntWizFootHTML(c){
   var son = (_mwStep === VE_MW_STEPS.length - 1);
@@ -731,7 +731,7 @@ function _mwAlan(et, ic, sinif){
 }
 // Alanın STEP geometrisinden geldiğini söyleyen işaret — `.ve-fw-kun`un dili
 // (künyeden gelen "K"): sebep `title`da.
-var VE_MW_STEP_NOT = 'STEP geometrisinden — homojen yoğunluk varsayımı; ölçülen değeri yazınca işaret düşer';
+var VE_MW_STEP_NOT = 'STEP geometrisinden · homojen yoğunluk';
 function _mwKaynakIsaret(r, alan){
   return (r && r.kaynak && r.kaynak[alan]) ? '<sup class="ve-fw-kun" title="' + _mwEsc(VE_MW_STEP_NOT) + '">S</sup>' : '';
 }
@@ -753,7 +753,7 @@ function _mwStepKaynak(c){
     sec += '<option value="' + _mwEsc(ex.id) + '"' + (String(yuklu) === String(ex.id) ? ' selected' : '') + '>'
       + _mwEsc((ex.vehicle || ex.name) + '  ·  ' + (M.components || []).length + ' gövde · ' + (M.mounts || []).length + ' takoz') + '</option>';
   });
-  sec += '<option value=""' + (yuklu === '' ? ' selected' : '') + '>Boş başla — bütün alanları temizler</option></select>';
+  sec += '<option value=""' + (yuklu === '' ? ' selected' : '') + '>Boş başla</option></select>';
   var ids = liste.map(function(e){ return e.id; });
   var sira = ids.indexOf(String(yuklu));
   var yok = (sira < 0);
@@ -788,8 +788,7 @@ function _mwStepKaynak(c){
 var _mwStp = null;
 // Kartın durumu — 3B görüntüleyici (js/cp-mount-3b.js) aynı nesneyi okur
 function veMntWizStp(){ return _mwStp; }
-var VE_MW_STP_KUTLE_NOT = 'STEP dosyasında kütle yok. Yazılırsa atalet tensörü katının şeklinden, homojen '
-  + 'yoğunluk varsayımıyla türetilir; yazılmazsa gövde yalnız ağırlık merkeziyle aktarılır.';
+var VE_MW_STP_KUTLE_NOT = 'STEP dosyasında kütle yok.';
 
 // Dosya → metin → okuma. Okuma asenkron (File API); ayrıştırma bir kare SONRA
 // — "okunuyor" durumu çizilmeden donmuş bir düğme görünmesin (FEAD'de ölçüldü:
@@ -817,7 +816,7 @@ function veMntWizStpDosya(dosya){
 function veMntWizStpBayt(bayt, ad){
   var m;
   try {
-    if(typeof veStepP21Metin !== 'function') throw new Error('STEP okuyucusu (js/step-p21.js) yüklenmemiş.');
+    if(typeof veStepP21Metin !== 'function') throw new Error('STEP okuyucusu yüklenmedi.');
     m = veStepP21Metin(bayt);
   } catch(e){
     _mwStp = { dosya:ad, durum:'hata', hata:(e && e.message) || String(e), modul:_mwModulId() };
@@ -830,7 +829,7 @@ function veMntWizStpBayt(bayt, ad){
 // karar vermez (FEAD kural 34); dosya okununca 3B görüntüleyici açılır.
 function veMntWizStpOku(metin, ad, kap){
   var sonuc = (typeof veMntStpOku === 'function') ? veMntStpOku(metin)
-    : { ok:false, hatalar:['Takoz STEP tanıyıcısı (js/mount-step.js) yüklenmemiş.'], agac:[], parcalar:[] };
+    : { ok:false, hatalar:['Takoz STEP tanıyıcısı yüklenmemiş.'], agac:[], parcalar:[] };
   var s = { dosya:ad || 'STEP', kap:kap || 'duz', durum:sonuc.ok ? 'hazir' : 'hata', sonuc:sonuc,
             roller:(sonuc.agac || []).map(function(){ return null; }), coz:null, kutle:{}, ag:[], modul:_mwModulId() };
   if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosya okunamadı.';
@@ -937,7 +936,7 @@ function _mwStpHacim(V){
 }
 function _mwStpAtaletHTML(s, b){
   if(!b) return '—';
-  if(!b.kapali) return '<span class="ve-fw-kl-dim" title="Ağ kapalı değil — hacim ölçülemedi; atalet sihirbazda elle girilir">yok</span>';
+  if(!b.kapali) return '<span class="ve-fw-kl-dim" title="Ağ kapalı değil: hacim ölçülemedi">yok</span>';
   return (s.kutle[b.dugum] > 0)
     ? veDurumIkon('ok', 'Atalet tensörü homojen yoğunlukla türetilir') + ' türetilir'
     : '<span class="ve-fw-kl-dim">kütle bekliyor</span>';
@@ -998,8 +997,8 @@ function veMntWizStpDenetim(s){
   (s.coz.uyarilar || []).forEach(function(m){ out.uyari.push(m); });
   if(s.coz.ok){
     var nt = _mwStpTakozlar(s).length;
-    if(!_mwStpGovdeler(s).length) out.uyari.push('Gövde rolü verilmedi — kütle gövdesi sihirbazda eklenir.');
-    if(nt < 3) out.uyari.push(nt + ' takoz rolü — 6 serbestlik dereceli denge için en az üç takoz gerekir.');
+    if(!_mwStpGovdeler(s).length) out.uyari.push('Gövde rolü verilmedi.');
+    if(nt < 3) out.uyari.push(nt + ' takoz rolü (en az 3).');
   }
   return out;
 }
@@ -1044,13 +1043,13 @@ function _mwStpKartHTML(){
   // KARTIN DÜĞMELERİ BİRİNCİL DEĞİL: adımın tek birincil eylemi alttaki "İleri".
   h += '<div class="ve-fw-rowbtns">'
     + '<label class="ve-fw-btn ve-fw-stp-sec"'
-    + ' title="STEP dosyasını seçin ya da bu alana bırakın — .stp · .step · .stpZ (AP214 / AP242, katı geometri)">'
+    + ' title=".stp · .step · .stpZ (AP214 / AP242)">'
     + '<input type="file" class="ve-fw-stp-file ve-mw-stp-file" accept=".stp,.step,.stpz,.p21"'
     + ' onchange="veMntWizStpDosya(this.files && this.files[0]); this.value=\'\';">'
     + (s ? 'Başka dosya seç…' : 'STEP dosyası seç…') + '</label>';
   if(s && s.durum === 'hazir' && typeof veMntWiz3bAc === 'function')
     h += '<button type="button" class="ve-fw-btn" id="ve-mw-stp-3b" onclick="veMntWiz3bAc()"'
-      + ' title="Montajı 3B görüntüleyicide açın; parçaya tıklayıp rolünü verin">3B\'de seç</button>';
+      + ' title="3B görüntüleyici">3B\'de seç</button>';
   if(s && s.durum !== 'okunuyor')
     h += '<button type="button" class="ve-fw-mini" title="Dosyayı karttan kaldır" aria-label="Dosyayı karttan kaldır"'
       + ' onclick="veMntWizStpKapat()">' + _mwIkon('x') + '</button>';
@@ -1131,7 +1130,7 @@ function _mwStpKartHTML(){
     if(aktarildi && !degisti)
       h += '<div class="ve-fw-seeded">' + _mwIkon('check') + ' <b>' + st.stepKaynak.govde + ' gövde · ' + st.stepKaynak.takoz
         + ' takoz</b> sihirbaza aktarıldı <em>' + _mwEsc(st.stepKaynak.dosya) + '</em></div>';
-    if(degisti) d.uyari.unshift('Rol aktarımdan sonra değişti; sihirbaz eski seçimle dolu.');
+    if(degisti) d.uyari.unshift('Aktarımdan sonra rol değişti.');
   }
   var liste = d.engel.filter(function(m){ return !(d.hesapsiz && m === 'Konumlar henüz hesaplanmadı.'); })
     .map(function(m){ return { tur:'err', m:m }; })
@@ -1153,7 +1152,7 @@ function _mwGovdeDurum(g){
 }
 function _mwGovdeListeHTML(c){
   var st = _mwState;
-  if(!st.govdeler.length) return '<div class="ve-fw-dim">Henüz gövde yok.</div>';
+  if(!st.govdeler.length) return '<div class="ve-fw-dim">Gövde yok.</div>';
   var h = '';
   st.govdeler.forEach(function(g, i){
     var on = (_mwSec.govde === g.key), d = _mwGovdeDurum(g);
@@ -1217,7 +1216,7 @@ function _mwTakozDurum(t){
 }
 function _mwTakozListeHTML(c){
   var st = _mwState;
-  if(!st.takozlar.length) return '<div class="ve-fw-dim">Henüz takoz yok.</div>';
+  if(!st.takozlar.length) return '<div class="ve-fw-dim">Takoz yok.</div>';
   var h = '';
   st.takozlar.forEach(function(t, i){
     var on = (_mwSec.takoz === t.key), d = _mwTakozDurum(t);
@@ -1262,9 +1261,9 @@ function _mwTakozEditorHTML(t){
         _mwInp(P + 'kxd', t.kxd, { ph:'kx', baslik:'Dinamik kx' }) + _mwInp(P + 'kyd', t.kyd, { ph:'ky', baslik:'Dinamik ky' })
         + _mwInp(P + 'kzd', t.kzd, { ph:'kz', baslik:'Dinamik kz' }), 've-mw-ed-xyz')
     + _mwAlan('Kapasite [kg]', _mwInp(P + 'maxLoad', t.maxLoad, { ph:'isteğe bağlı', baslik:'Kapasite' }))
-    + (yasa.length ? '<div class="ve-mw-not">Nonlineer yasa: ' + yasa.join(', ').toLowerCase() + ' ekseni — katalogdan, çözücü Newton ile çözer.</div>' : '')
+    + (yasa.length ? '<div class="ve-mw-not">Nonlineer yasa: ' + yasa.join(', ').toLowerCase() + ' ekseni · katalogdan</div>' : '')
     + '<div class="ve-fw-ed-ops">'
-    + '<button type="button" class="ve-fw-btn"' + (aynaOlur ? '' : ' disabled title="y = 0 düzlemindeki takozun aynalı eşi kendisidir"')
+    + '<button type="button" class="ve-fw-btn"' + (aynaOlur ? '' : ' disabled title="Takoz y = 0 düzleminde"')
       + ' onclick="veMntWizTakozAyna(\'' + k + '\')">' + _mwIkon('arrow-left-right') + ' Aynalı eşini ekle</button>'
     + '<button type="button" class="ve-fw-btn ve-fw-btn-sil" onclick="veMntWizTakozSil(\'' + k + '\')">' + _mwIkon('trash') + ' Sil</button>'
     + '</div></div>';
@@ -1415,7 +1414,7 @@ function _mwMasaHTML(k, c){
 function _mwCipIcHTML(c){
   if(VE_MW_STEPS[_mwStep].key === 'kaynak' && _mwStpOnizleme()){
     var sy = _mwStpSayim(_mwStp.coz).split(' · ');
-    return '<span class="ve-fw-damga ve-fw-pill-warn" data-model="stp" title="Masadaki çizim STEP dosyasının ölçümü; sihirbaz henüz eski modelle dolu.">'
+    return '<span class="ve-fw-damga ve-fw-pill-warn" data-model="stp">'
       + _mwIkon('box') + ' STEP önizlemesi · aktarılmadı</span>'
       + sy.map(function(x){ return '<span class="ve-fw-pill">' + _mwEsc(x) + '</span>'; }).join('');
   }
@@ -1485,8 +1484,8 @@ function _mwMasaCiz(c){
     ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGorunus, secili:f.secili, secim:true, pay:_mwMasaPay(o, k) }) : '';
   if(!svg){
     el.innerHTML = '<div class="ve-fw-masa-bos">' + (k === 'kaynak'
-      ? 'Model boş — örnekten doldur, STEP\'ten başla ya da Kütle gövdeleri adımında ekle.'
-      : 'Çizilecek gövde ya da takoz yok — konumu girilen öğe masada görünür.') + '</div>';
+      ? 'Model boş.'
+      : 'Konumlu gövde ya da takoz yok.') + '</div>';
     return;
   }
   el.innerHTML = svg;
@@ -1633,7 +1632,7 @@ function veMntWizKur(){
   if(!kapi.ok){ if(typeof showToast === 'function') showToast(kapi.sebep, 'warning'); return null; }
   var pl = _mwKurulumPlani();
   if(pl.sil && typeof confirm === 'function'
-     && !confirm('Tuvaldeki ' + pl.sil + ' kütle/takoz bileşeni sihirbazın modelinde yok ve çıkarılacak. Devam edilsin mi?')) return null;
+     && !confirm(pl.sil + ' kütle/takoz bileşeni çıkarılacak. Devam edilsin mi?')) return null;
   var paket = veMntWizNodes(st);
   var sonuc = { yeni:[], guncel:[], sil:0 };
   var kur = function(){

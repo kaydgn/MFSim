@@ -98,8 +98,7 @@ function veMntWiz3bAc(){
     V.renderer = new THREE.WebGLRenderer({ antialias: true });
   } catch(e){
     kap.setAttribute('data-durum', 'hata');
-    kap.insertAdjacentHTML('afterbegin', '<p class="ve-fw-3b-yok">3B çizim bu tarayıcıda açılamadı (WebGL yok). '
-      + 'Rolleri kartın tablosundan verebilirsiniz.</p>');
+    kap.insertAdjacentHTML('afterbegin', '<p class="ve-fw-3b-yok">3B çizim açılamadı (WebGL yok).</p>');
     _mw3b = V;
     _mw3bPanel();
     return true;
@@ -344,8 +343,7 @@ function veMntWiz3bPanelHTML(s, secili){
     }
   } else {
     var rollu = s.roller.filter(function(r){ return !!r; }).length;
-    h += '<p class="ve-fw-dim">' + (rollu ? rollu + ' rollü birim — alttan "Konumları hesapla"'
-      : 'Modelde bir parçaya tıklayın, alttaki diziden rolünü verin') + '</p>';
+    h += '<p class="ve-fw-dim">' + (rollu ? rollu + ' rollü birim' : 'Rol verilmedi') + '</p>';
   }
   var d = typeof veMntWizStpDenetim === 'function' ? veMntWizStpDenetim(s) : { engel: [], uyari: [] };
   var sorun = (coz ? d.engel : []).concat(d.uyari);
@@ -372,7 +370,7 @@ function veMntWiz3bPanelHTML(s, secili){
     for(var e = so.agac[secili].ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var n = so.agac[secili].parcalar.length;
     h += '<p class="ve-fw-dim">' + n + ' parça' + (ata >= 0 ? ' · ' + _mwEsc(so.agac[ata].ad) + ' biriminin içinde ('
-      + _mwEsc(_mwAd(s.roller[ata])) + ') — rol verirseniz birimin rolü kalkar' : '') + '</p></section>';
+      + _mwEsc(_mwAd(s.roller[ata])) + ')' : '') + '</p></section>';
   }
   // ── ROL VERİLENLER ──
   var atanan = so.agac.filter(function(dg){ return !!s.roller[dg.i]; });
@@ -413,7 +411,7 @@ function veMntWiz3bAltHTML(s, secili){
         + '<option value="-" data-ve-3b-rol=""' + (rol ? '' : ' disabled') + '>Rolü kaldır</option></select>';
     }
     h += '</div>';
-  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Rol vermek için modelde bir parçaya tıklayın</span>';
+  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok</span>';
   h += '</div>';
   var coz = s.coz, rolEngel = typeof _mwStpRolDenetim === 'function' ? _mwStpRolDenetim(s) : [];
   h += '<div class="ve-fw-3b-eylem" data-ve-3b-hesapbar="1">'

@@ -166,7 +166,7 @@ describe('GÖRÜNÜMLER — çizim çözücünün modeli, numaraların açılım
     expect(m && m.y).toBe(0);
     const html = cp.getMnt2DViewPropertiesHTML({ id: 'd3', type: 'mnt-2dview', data: {} });
     expect(html).toMatch(/<td class="eks">boş<\/td>/);
-    expect(html).toContain('1 işaretin konumu eksik — çözücü boş konumu 0 alır');
+    expect(html).toContain('1 işaretin konumu eksik: 0 alındı.');
   });
 });
 
@@ -189,7 +189,7 @@ describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve kullanım', () => {
 
   test('sıfır/boş rijitlik → "rijitlik eksik" (çözücü bu tipi taşıyan takozu reddeder)', () => {
     const h = cp.getMntLibraryPropertiesHTML(kutuphane({ sx: 0, sy: 0, sz: 290, dx: 0, dy: 0, dz: 0 }));
-    expect(durum(h, 'rij')).toEqual({ d: 'eksik', bant: expect.stringContaining('5 rijitlik değeri boş ya da ≤ 0') });
+    expect(durum(h, 'rij')).toEqual({ d: 'eksik', bant: expect.stringContaining('5 rijitlik boş ya da ≤ 0: çözücü reddeder.') });
   });
 
   test('dinamik X ile Z takaslı (TK040: 335/355/740 · statik 545/550/245) → "oran?"', () => {
@@ -211,7 +211,7 @@ describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve kullanım', () => {
     tk.data.kzs = 300;
     const h = cp.getMntLibraryPropertiesHTML(lib);
     expect(h).toMatch(/Ön Takoz<\/td><td class="sol kr" title="kz stat\.">1 değer farklı/);
-    expect(h).toContain('tip sonradan değişirse takoz eskisinde kalır');
+    expect(h).toContain('Takozlarda tipin eski değerleri var.');
   });
 
   test('eksen seçimi görünüm durumu: grafik o ekseni çizer, model değişmez', () => {
@@ -237,22 +237,24 @@ describe('RAPOR — kaynak, bayat çözüm, eylem', () => {
     expect(h).toContain('40 Hz');                               // (800/60)·(6/2)
   });
 
-  test('model hesaptan sonra değişince "bayat" der; rapor yine üretilebilir (eski çözümden)', () => {
+  test('model hesaptan sonra değişince bunu TEK yerde söyler; rapor yine üretilebilir (eski çözümden)', () => {
     tulga(); coz();
     const r = dugum('mnt-report');
     expect(cp.getMntReportPropertiesHTML(r)).toContain('<b>Model çözüldü</b>');
     bul((n) => n.customName === 'Ön Takoz').data.kzs = '300';
     const h = cp.getMntReportPropertiesHTML(r);
-    expect(h).toContain('Model çözüldü, ama bayat');
+    expect(h).toContain('<b>Model son hesaptan sonra değişti</b>');
     expect(h).toContain(`veMntGenerateReport('${r.id}')`);
-    expect(h).toContain('Çözüm bayat — önce Çözücü penceresinde');
+    expect(h.split('son hesaptan sonra değişti').length - 1).toBe(1);     // cevap bir kez, notta tekrarı yok
+    expect(h).toContain('id="ve-mnt-report-status" data-cozum-durumu></div>');
   });
 
   test('çözüm yokken eylem kapalı ve sebebi yazılı', () => {
     tulga();
     const h = cp.getMntReportPropertiesHTML(dugum('mnt-report'));
     expect(h).toMatch(/<button type="button" class="ve-fp-solve" data-cozum-durumu disabled>/);
-    expect(h).toContain('Çözüm yok — Çözücü → Hesapla.');
+    expect(h).toContain('<b>Model çözülmedi.</b>');
+    expect(h).toContain('id="ve-mnt-report-status" data-cozum-durumu></div>');
   });
 });
 
@@ -293,10 +295,10 @@ describe('MODÜL KARTI — kayıtlı listenin modeli ve son çözümü', () => {
 });
 
 describe('ÖRNEK — kanvastaki modelin denetimi', () => {
-  test('boş kanvas bir hata değil: "henüz model yok"', () => {
+  test('boş kanvas bir hata değil: "model yok"', () => {
     global.nodes = [];
     const h = cp.getMntExamplePropertiesHTML({ id: 'e1', type: 'mnt-example', data: {} });
-    expect(h).toContain('Kanvasta henüz model yok.');
+    expect(h).toContain('Kanvasta model yok.');
   });
 
   test('uyarılar ve hatalar ayrı satırlarda, hata çözücünün reddi', () => {

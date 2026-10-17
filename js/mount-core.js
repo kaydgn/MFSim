@@ -734,7 +734,7 @@ var veMountCore = (function() {
       const res = solve(lc);
       return res ? {name: lc.name, loadCase: lc, res}
                  : {name: lc.name, loadCase: lc, res: null,
-                    error: 'K matrisi singular/çözülemedi (montaj kinematik olarak serbest olabilir).'};
+                    error: 'K matrisi tekil (kinematik serbestlik olabilir).'};
     });
   }
 
@@ -1920,7 +1920,7 @@ var veMountCore = (function() {
   }
   // Sihirbaz aynı cümleyi basar (kural tek yerde).
   function mechanismProblem(kind, nMounts){
-    const ek = ' — montaj kinematik olarak serbest. 6 serbestlik dereceli denge için aynı doğru üzerinde olmayan en az üç takoz gerekir.';
+    const ek = ' — montaj kinematik olarak serbest.';
     if(kind === 'nokta') return (nMounts === 1 ? 'Tek takoz var: montaj takoz noktası' : 'Takozların hepsi aynı noktada: montaj o nokta')
       + ' etrafında her yönde dönebilir' + ek;
     if(kind === 'dogru') return (nMounts === 2 ? 'İki takoz' : 'Takozların hepsi')
@@ -2303,7 +2303,7 @@ var veMountCore = (function() {
       name: 'BMC SİPER Takoz Analizi',
       vehicle: 'BMC Siper',
       subtitle: '5 kütle · 6 takoz güç grubu',
-      description: 'BMC Siper güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — motor, şanzıman, şaft payı ve sol/sağ cradle braketleri, altı elastomer takoz (LMT-1433-37, 55 ShA) ile şasiye bağlanır. Değerler CATIA atalet ölçümü ve ADAMS doğrulamasından alınmıştır.',
+      description: 'Kaynak: CATIA atalet ölçümü · ADAMS doğrulaması',
       specs: [
         ['Kütle gövdesi', String(SIPER_EXAMPLE.components.length)],
         ['Takoz', String(SIPER_EXAMPLE.mounts.length)],
@@ -2333,7 +2333,7 @@ var veMountCore = (function() {
       name: 'TULGA Takoz Analizi',
       vehicle: 'TULGA',
       subtitle: '8 kütle · 5 takoz güç grubu',
-      description: 'TULGA güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — motor, şanzıman ve transfer kutusu, dört takoz braketi ve bir ön takoz braketiyle birlikte beş elastomer takoz üzerinden şasiye oturur. Kütle, ağırlık merkezi, atalet ve takoz rijitlikleri kullanıcının TULGA proje kaydından birebir alınmıştır.',
+      description: 'Kaynak: TULGA proje kaydı',
       specs: [
         ['Kütle gövdesi', String(TULGA_EXAMPLE.components.length)],
         ['Takoz', String(TULGA_EXAMPLE.mounts.length)],
@@ -2366,7 +2366,7 @@ var veMountCore = (function() {
       name: 'ASFAT 8x8 Obüs Takoz Analizi',
       vehicle: 'ASFAT 8x8 Obüs',
       subtitle: '7 kütle · 6 takoz güç grubu',
-      description: 'ASFAT 8x8 Obüs güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — Cummins motor, Allison 4700 şanzıman + retarder, şaft, sol/sağ motor braketi ve üst/yan PTO grupları, altı elastomer takoz (57RS313774 ön ikili, 57RS313773 yan dörtlü) ile şasiye bağlanır. Değerler BMC ASR-SR-116 raporundan birebir alınmıştır; takoz yükleri ve sehimleri raporun Adams sonuçlarını 0,01 kg / 0,005 mm içinde yeniden üretir.',
+      description: 'Takozlar 57RS313774 (ön) · 57RS313773 (yan)',
       specs: [
         ['Kütle gövdesi', String(ASFAT_EXAMPLE.components.length)],
         ['Takoz', String(ASFAT_EXAMPLE.mounts.length)],
@@ -2398,7 +2398,7 @@ var veMountCore = (function() {
       name: 'Analitik kutu — kapalı form',
       vehicle: 'Analitik kutu',
       subtitle: '1 kütle · 4 takoz · altı ayrışık mod',
-      description: 'Kurgu doğrulama modeli: tek prizma gövde (1.200 kg, 1100 × 700 × 800 mm) dört özdeş takozun üstünde; takozlar ±600 / ±350 mm köşelerde ve ağırlık merkeziyle aynı yükseklikte. Bu düzende rijitlik matrisinin bütün kuplaj terimleri sıfırdır: altı mod birer serbestliğe ayrışır ve her biri tek satırlık formüldür, f = (1/2π)·√(k/m) ya da √(k·L²/I). Programın sonucu bu el hesabıyla makine hassasiyetinde örtüşür. Kriterlerin bir kısmı bilerek tutmaz — amaç tasarım değil, kıyas.',
+      description: 'Kapalı form kıyas modeli',
       specs: [
         ['Gövde', '1 prizma · ' + _toplamKg(KUTU_EXAMPLE)],
         ['Takoz', '4 özdeş · ağırlık merkezi düzleminde'],
@@ -2427,7 +2427,7 @@ var veMountCore = (function() {
       name: 'Hafif ticari — 3 noktalı askı',
       vehicle: 'Hafif ticari',
       subtitle: '3 kütle · 3 takoz güç grubu',
-      description: 'Kurgu model: 2,2 L dört silindirli dizel motor ve 6 ileri manuel şanzımandan oluşan, arkadan itişli hafif ticari güç grubu; iki motor takozu ve bir şanzıman takozuyla üç noktadan asılır. Takoz rijitlikleri ve yerleşimi Kriter 1, 1a ve 1b\'yi birlikte sağlayacak biçimde programın kendisiyle seçildi: yanal, ileri-geri ve savrulma modları 8 Hz\'in altında; zıplama, baş-kıç ve yalpalama 10–12,5 Hz arasında. 1. vites tam torkunda (' + _sayi(_torkIleri(HAFIF_TORQUE), 0) + ' N·m) bir motor takozu çekmeye geçer — izolasyon ile tork tutuşu arasındaki klasik çelişki.',
+      description: '2,2 L dizel · 6 ileri manuel · 3 noktalı askı',
       specs: [
         ['Kütle gövdesi', String(HAFIF_EXAMPLE.components.length)],
         ['Takoz', String(HAFIF_EXAMPLE.mounts.length) + ' · iki motor + şanzıman'],
@@ -2454,7 +2454,7 @@ var veMountCore = (function() {
       name: 'Orta kamyon — nonlineer takoz',
       vehicle: 'Orta kamyon',
       subtitle: '3 kütle · 4 nonlineer takoz',
-      description: 'Kurgu model: 7,7 L altı silindirli dizel motor ve 6 ileri manuel şanzımandan oluşan orta kamyon güç grubu; önde ve arkada ikişer takoz. Takozlar nonlineerdir: eksenel basmada sertleşen rasyonel yasa (asimptot 20 mm), yanal ve boyuna yönde kübik sertleşme; yasaların orijin eğimi katalog rijitliğiyle aynıdır. Denge Newton ile bulunur; modal çözüm, frekans yanıtı ve şok statik dengedeki tanjanttan beslenir. Kriter 1, 1a ve 1b sağlanır; 1. vitesin ' + _sayi(_torkIleri(KAMYON_TORQUE), 0) + ' N·m\'lik torkunda iki takoz çekmeye geçer.',
+      description: '7,7 L dizel · 6 ileri manuel · nonlineer takoz',
       specs: [
         ['Kütle gövdesi', String(KAMYON_EXAMPLE.components.length)],
         ['Takoz', String(KAMYON_EXAMPLE.mounts.length) + ' · nonlineer yasa (x · y · z)'],

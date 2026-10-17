@@ -110,7 +110,6 @@ describe('Panel — Çözücü guard\'ı (çözülmemişse UYARIR)', () => {
     global._veMntLast = null; cp._veMntLast = null;
     const html = cp.getMntReportPropertiesHTML({ id: 'n1' });
     expect(html).toContain('Model çözülmedi');
-    expect(html).toContain('Çözücü');
     expect(html).toContain('disabled');
     expect(html).not.toContain('veMntGenerateReport(\'n1\')');
   });
