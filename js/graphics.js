@@ -772,6 +772,7 @@ function veGenerateReport() {
 }
 
 function veNameToEmail(name) {
+  if (/^belirtilmemi[şs]$/i.test(String(name || '').trim())) return '';   // ad yoksa adres de yok
   var tr = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','Ç':'c','Ğ':'g','İ':'i','Ö':'o','Ş':'s','Ü':'u'};
   var s = name.trim().toLowerCase().replace(/[çğıöşüÇĞİÖŞÜ]/g, function(c){ return tr[c] || c; });
   var parts = s.split(/\s+/).filter(function(p){ return p.length > 0; });
@@ -978,7 +979,7 @@ function veBuildTopologyDetailFT(H) {
 
   // ── PROPSAFT ──
   if (propNode) {
-    r += specBox('PROPSAFT (KARDAN MİLİ)', [
+    r += specBox('PROPŞAFT (KARDAN MİLİ)', [
       ['Tanım', tr(psd.psName || propNode.customName || '-')],
       ['Oran', '1.000 (Direkt)'],
       (psd.psEff !== undefined) && ['Verim', '%' + num(psd.psEff, 2)],
@@ -1134,18 +1135,10 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     var labelW = 32;
     return indent + pad(label, labelW) + ': ' + value + '\n';
   }
-  function ascii(s) {
-    return String(s)
-      .replace(/ğ/g,'g').replace(/Ğ/g,'G')
-      .replace(/ü/g,'u').replace(/Ü/g,'U')
-      .replace(/ş/g,'s').replace(/Ş/g,'S')
-      .replace(/ı/g,'i').replace(/İ/g,'I')
-      .replace(/ö/g,'o').replace(/Ö/g,'O')
-      .replace(/ç/g,'c').replace(/Ç/g,'C');
-  }
+  function yazi(s) { return String(s); }
 
   // ── UNICODE KUTU-CIZIMI YARDIMCILARI (UTF-8; hepsi tek kod-birimi → pad hizasi korunur) ──
-  // Gercek Turkce metni oldugu gibi birak (ascii() sadelestirmesinin tersi).
+  // Gercek Turkce metni oldugu gibi birak (yazi() sadelestirmesinin tersi).
   function tr(s) { return s == null ? '' : String(s); }
   function rep(ch, n) { var s = ''; for (var i = 0; i < n; i++) s += ch; return s; }
 
@@ -1227,7 +1220,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   var G = sim.gradeability;
   var A = sim.acceleration;
   var ss = sim.solverStats || {};
-  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemiş';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
@@ -1514,7 +1507,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   // Konvertör Eşleşmesi — YALNIZ tork konvertörü varsa
   if (R.hasTC && _ecmResults.length > 0) {
     var selEC = _ecmResults.find(function(e) { return e.name === R.tcName; }) || _ecmResults[0];
-    var durStr = selEC.status === 'recommended' ? 'Önerilen' : selEC.status === 'caution' ? 'Dikkat' : 'Önerilmez';
+    var durStr = selEC.status === 'recommended' ? 'Uygun' : selEC.status === 'caution' ? 'Dikkat' : 'Önerilmez';
     boxSections.push({ title: 'KONVERTÖR EŞLEŞMESİ', rows: [
       { label: 'Eşleme durumu', value: durStr + ' (' + tr(selEC.name) + ')' },
       { label: 'SR @ Governed', value: num(selEC.srGov, 3) },
@@ -1791,9 +1784,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       // Match point belirleme
       var _mpF = '';
       if (_sr === 0) _mpF = 'Durma';
-      else if (Math.abs(_etaF - 0.70) < 0.015) _mpF = 'Yuzde 70';
-      else if (Math.abs(_etaF - 0.80) < 0.015) _mpF = 'Yuzde 80';
-      else if (Math.abs(_etaF - 0.85) < 0.015) _mpF = 'Yuzde 85';
+      else if (Math.abs(_etaF - 0.70) < 0.015) _mpF = '%70';
+      else if (Math.abs(_etaF - 0.80) < 0.015) _mpF = '%80';
+      else if (Math.abs(_etaF - 0.85) < 0.015) _mpF = '%85';
       else if (Math.abs(_TRm - 1.0) < 0.01) _mpF = 'Kavrama';
       if (_Nm >= _cmGovSpeed - 5 && _mpF === '') _mpF = 'Governed';
 
@@ -1994,12 +1987,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
   r += titledBox('İMZA', [
     _kv('Hazırlayan', tr(hazirlayan), 12),
-    _kv('İletişim', veNameToEmail(hazirlayan), 12)
+    _kv('İletişim', veNameToEmail(hazirlayan) || '—', 12)
   ], W) + '\n';
-
-  r += pad('Bu rapor BMC MFSim Tam Gaz Hızlanma Performans Hesaplama Programı ile', W, 'center') + '\n';
-  r += pad('otomatik oluşturulmuştur. Hesaplamalar teorik modellere dayanmaktadır;', W, 'center') + '\n';
-  r += pad('gerçek test sonuçları ile doğrulama yapılması önerilir.', W, 'center') + '\n\n';
 
   r += pad('© ' + now.getFullYear() + ' BMC Otomotiv — Tüm Hakları Saklıdır', W, 'center') + '\n';
 
@@ -2022,22 +2011,17 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
     if (align === 'center') { var t = len - str.length; if (t <= 0) return str; var l = Math.floor(t / 2); return ln(' ', l) + str + ln(' ', t - l); }
     while (str.length < len) str += ' '; return str;
   }
-  function ascii(s) {
-    return String(s).replace(/ğ/g,'g').replace(/Ğ/g,'G').replace(/ü/g,'u').replace(/Ü/g,'U')
-      .replace(/ş/g,'s').replace(/Ş/g,'S').replace(/ı/g,'i').replace(/İ/g,'I')
-      .replace(/ö/g,'o').replace(/Ö/g,'O').replace(/ç/g,'c').replace(/Ç/g,'C');
-  }
-  // Türkçe sayı (karar 7·C): binlik nokta, ondalık virgül — 141.264,5. Belge
-  // ASCII kalır: iki ayırıcı da ASCII.
+  function yazi(s) { return String(s); }
+  // Türkçe sayı (karar 7·C): binlik nokta, ondalık virgül — 141.264,5.
   function n(v, d) { d = (d == null) ? 2 : d; return isFinite(v) ? veSayi(Number(v), d) : '-'; }
   function ni(v) { return isFinite(v) ? veSayi(Math.round(v), 0) : '-'; }
   function boxTop() { return '╔' + ln('═', W - 2) + '╗'; }
   function boxBot() { return '╚' + ln('═', W - 2) + '╝'; }
-  function boxCtr(t) { return '║' + pad(ascii(t), W - 2, 'center') + '║'; }
-  function h1(title) { var st = ' ' + ascii(title) + ' '; if (st.length >= W) return '\n' + ln('═', W) + '\n' + pad(ascii(title), W, 'center') + '\n' + ln('═', W) + '\n\n'; var l = Math.floor((W - st.length) / 2); return '\n' + ln('═', l) + st + ln('═', W - l - st.length) + '\n\n'; }
-  function h2(title) { return '\n  ' + ascii(title) + '\n  ' + ln('-', W - 4) + '\n'; }
-  function kv(label, val, unit) { return '  ' + pad(ascii(label), 32) + ' : ' + val + (unit ? (' ' + unit) : '') + '\n'; }
-  function fx(label, expr) { return '    ' + pad(ascii(label), 22) + ' = ' + expr + '\n'; }
+  function boxCtr(t) { return '║' + pad(yazi(t), W - 2, 'center') + '║'; }
+  function h1(title) { var st = ' ' + yazi(title) + ' '; if (st.length >= W) return '\n' + ln('═', W) + '\n' + pad(yazi(title), W, 'center') + '\n' + ln('═', W) + '\n\n'; var l = Math.floor((W - st.length) / 2); return '\n' + ln('═', l) + st + ln('═', W - l - st.length) + '\n\n'; }
+  function h2(title) { return '\n  ' + yazi(title) + '\n  ' + ln('-', W - 4) + '\n'; }
+  function kv(label, val, unit) { return '  ' + pad(yazi(label), 32) + ' : ' + val + (unit ? (' ' + unit) : '') + '\n'; }
+  function fx(label, expr) { return '    ' + pad(yazi(label), 22) + ' = ' + expr + '\n'; }
 
   // ── HANGİ TRANSFER KADEMESİ ──
   // rangeSel = 'low' → düşük kademe; aksi halde yüksek (varsayılan/ilk).
@@ -2050,13 +2034,13 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   var kademe = null;
   if (trGears && trGears.length) {
     if (wantLow) {
-      if (trGears.length < 2) return '(Dusuk kademe izi uretilemedi: bu araçta tek transfer kademesi mevcut.)\n';
+      if (trGears.length < 2) return '(Düşük kademe izi üretilemedi: bu araçta tek transfer kademesi mevcut.)\n';
       kademe = trGears[1].kademe || trGears[1].mode || 'Low';
     } else {
       kademe = trGears[0].kademe || trGears[0].mode || 'High';
     }
   } else if (wantLow) {
-    return '(Dusuk kademe izi uretilemedi: araçta transfer kutusu yok — yalnizca tek kademe var.)\n';
+    return '(Düşük kademe izi üretilemedi: araçta transfer kutusu yok — yalnızca tek kademe var.)\n';
   }
 
   // ── İZLİ YENİDEN KOŞU ──
@@ -2073,11 +2057,11 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   }
   var T = traced && traced.calcTrace;
   if (!T || !T.params) {
-    return '(Hesaplama izi uretilemedi: iz verisi toplanamadi.\n Once Tam Gaz simulasyonu calistirin, sonra tekrar deneyin.)\n';
+    return '(Hesaplama izi üretilemedi: Tam Gaz simülasyon verisi yok.)\n';
   }
   var P = T.params;
   var _hazEl = (hasWin && typeof document !== 'undefined' && document.getElementById) ? document.getElementById('ve-rapor-hazirlayan') : null;
-  var hazirlayan = optHazirlayan || (_hazEl ? _hazEl.value : '') || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (_hazEl ? _hazEl.value : '') || 'Belirtilmemiş';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2, '0') + '.' + String(now.getMonth() + 1).padStart(2, '0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
@@ -2100,127 +2084,124 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
 
   // ── BAŞLIK ──
   r += '\n' + boxTop() + '\n';
-  r += boxCtr('BMC Otomotiv -- Guc Grubu Mudurlugu') + '\n';
-  r += boxCtr('TAM GAZ HIZLANMA -- DETAY MATEMATIK HESAPLARI') + '\n';
+  r += boxCtr('BMC Otomotiv -- Güç Grubu Müdürlüğü') + '\n';
+  r += boxCtr('TAM GAZ HIZLANMA -- DETAY MATEMATİK HESAPLARI') + '\n';
   r += boxBot() + '\n';
   r += kv('Rapor tarihi / saati', tarih + ' ' + saat);
-  r += kv('Hazirlayan', ascii(hazirlayan));
-  r += kv('Cozucu metodu', solverLabel + '  (dt=' + n(P.dt, 4) + ' s)');
-  r += kv('Transfer kademesi', ascii(P.transferRange || 'High') + '  (oran ' + n(P.i_transfer, 4) + ')');
-  r += kv('Yakalanan kilit adim', String(T.steps.length));
+  r += kv('Hazırlayan', yazi(hazirlayan));
+  r += kv('Çözücü metodu', solverLabel + '  (dt=' + n(P.dt, 4) + ' s)');
+  r += kv('Transfer kademesi', yazi(P.transferRange || 'High') + '  (oran ' + n(P.i_transfer, 4) + ')');
+  r += kv('Yakalanan kilit adım', String(T.steps.length));
   r += ln('=', W) + '\n';
 
   // ── İÇİNDEKİLER / KİLİT ADIM İNDEKSİ ──
-  r += h1('ICINDEKILER — KILIT ADIM INDEKSI');
-  r += '  ' + pad('Adim', 6) + pad('t (s)', 9, 'right') + pad('v (km/h)', 11, 'right') + '   ' + pad('Vites', 6) + 'Tetikleyen\n';
+  r += h1('İÇİNDEKİLER — KİLİT ADIM İNDEKSİ');
+  r += '  ' + pad('Adım', 6) + pad('t (s)', 9, 'right') + pad('v (km/h)', 11, 'right') + '   ' + pad('Vites', 6) + 'Tetikleyen\n';
   r += '  ' + ln('-', W - 4) + '\n';
   T.steps.forEach(function (st, i) {
     var _gn = String(st.gearName || '').replace(/[^0-9]/g, '') || '?';
     var _md = st.hasTC ? (st.isLockup ? 'L' : 'C') : '';
-    r += '  ' + pad(stepSec + '.' + (i + 1), 6) + pad(n(st.t, 3), 9, 'right') + pad(n(st.v_kmh, 2), 11, 'right') + '   ' + pad(_gn + _md, 6) + ascii(st.reason || '') + '\n';
+    r += '  ' + pad(stepSec + '.' + (i + 1), 6) + pad(n(st.t, 3), 9, 'right') + pad(n(st.v_kmh, 2), 11, 'right') + '   ' + pad(_gn + _md, 6) + yazi(st.reason || '') + '\n';
   });
 
   // ── BÖLÜM 0: OKUMA KILAVUZU ──
-  r += h1('0. OKUMA KILAVUZU');
-  r += '  Bu belge simulasyonun HER kilit noktasinda uygulanan formulleri, sayilari\n';
-  r += '  yerine konmus halde gosterir. Boylece her sonucun nasil ciktigi elle izlenebilir.\n\n';
-  r += '  Notasyon:  *=carpma  /=bolme  ^2=kare  sqrt=karekok  ->=sonuc/gecis\n';
-  r += '  Birimler:  N (Newton), N.m (tork), kW (guc), rpm (devir/dk), m/s & km/h (hiz)\n';
-  r += '  Kilit adimlar: kalkis (v=0), her ~10 km/h hiz izgarasi, her vites gecisi ve\n';
-  r += '  maksimum hiz (V_max). Ara adimlar (~50 ms) ekranda/CSV raporundadir.\n';
+  r += h1('0. NOTASYON VE BİRİMLER');
+  r += '  Notasyon:  *=çarpma  /=bölme  ^2=kare  sqrt=karekök  ->=sonuç/geçiş\n';
+  r += '  Birimler:  N (Newton), N.m (tork), kW (güç), rpm (devir/dk), m/s & km/h (hız)\n';
+  r += '  Kilit adımlar: kalkış (v=0), her ~10 km/h hız ızgarası, her vites geçişi ve\n';
+  r += '  maksimum hız (V_max).\n';
 
   // ── BÖLÜM A: GİRDİLER VE SABİTLER ──
-  r += h1('A. GIRDILER VE SABITLER');
-  r += h2('A.1 Arac ve Aerodinamik');
-  r += kv('Brut agirlik (GVW)  m', ni(P.m_vehicle), 'kg');
-  r += kv('Tahrikli agirlik orani', '%' + n(P.drivenPct * 100, 0));
-  r += kv('Yukseklik / genislik', n(P.ftHeight, 3) + ' / ' + n(P.ftWidth, 3), 'm');
-  r += kv('Alin alani  A = H*W', n(P.A_frontal, 3), 'm^2');
-  r += kv('Aerodinamik katsayi  Cd', n(P.Cd, 3));
-  r += kv('Hava yogunlugu  rho', n(P.rho, 3), 'kg/m^3');
-  r += kv('Yol egimi', '%' + n(P.grade_pct, 2));
+  r += h1('A. GİRDİLER VE SABİTLER');
+  r += h2('A.1 Araç ve Aerodinamik');
+  r += kv('Brüt ağırlık (GVW)  m', ni(P.m_vehicle), 'kg');
+  r += kv('Tahrikli ağırlık oranı', '%' + n(P.drivenPct * 100, 0));
+  r += kv('Yükseklik / genişlik', n(P.ftHeight, 3) + ' / ' + n(P.ftWidth, 3), 'm');
+  r += kv('Alın alanı  A = H*W', n(P.A_frontal, 3), 'm^2');
+  r += kv('Aerodinamik katsayı  Cd', n(P.Cd, 3));
+  r += kv('Hava yoğunluğu  rho', n(P.rho, 3), 'kg/m^3');
+  r += kv('Yol eğimi', '%' + n(P.grade_pct, 2));
   r += h2('A.2 Lastik ve Zemin');
-  r += kv('Yuvarlanma yaricapi  r_tire', n(P.r_tire, 4), 'm');
+  r += kv('Yuvarlanma yarıçapı  r_tire', n(P.r_tire, 4), 'm');
   r += kv('Lastik/teker ataleti  I_tire', n(P.I_tire, 3), 'kg.m^2');
   r += kv('Yuvarlanma direnci  Crr (statik)', n(P.Crr, 5));
-  r += kv('Hiz duzeltme K1 / K2', n(P.crrK1, 6) + ' / ' + n(P.crrK2, 8));
-  r += kv('Yuzey faktoru', n(P.surfFactor, 3));
+  r += kv('Hız düzeltme K1 / K2', n(P.crrK1, 6) + ' / ' + n(P.crrK2, 8));
+  r += kv('Yüzey faktörü', n(P.surfFactor, 3));
   r += h2('A.3 Motor');
   r += kv('Governed devir', ni(P.governedSpeed), 'rpm');
-  r += kv('Bosta (idle) devir', ni(P.idleRpm), 'rpm');
-  r += kv('Yuksuz governed (no-load)', ni(P.noLoadGoverned), 'rpm');
+  r += kv('Boşta (idle) devir', ni(P.idleRpm), 'rpm');
+  r += kv('Yüksüz governed (no-load)', ni(P.noLoadGoverned), 'rpm');
   r += kv('Motor ataleti  I_engine', n(P.I_engine, 4), 'kg.m^2');
-  r += kv('Aksesuar: Fan / diger kaybi', n(P.accFanLoss, 2) + ' / ' + n(P.accOtherLoss, 2), 'kW @gov');
-  r += kv('Fan modeli', P.accFanMode === 'on' ? 'sabit (on)' : 'kavramali N^3 (clutch)');
+  r += kv('Aksesuar: Fan / diğer kaybı', n(P.accFanLoss, 2) + ' / ' + n(P.accOtherLoss, 2), 'kW @gov');
+  r += kv('Fan modeli', P.accFanMode === 'on' ? 'sabit (on)' : 'kavramalı N^3 (clutch)');
   if (P.hasTC) {
-    r += h2('A.4 Tork Konvertoru');
-    r += kv('Pompa tork dususu  drop', n(P.pumpTorqueDrop, 2), 'N.m');
-    r += kv('TC ataleti (lockup/turbin)', n(P.I_conv, 3) + ' / ' + n(P.I_conv_turbine, 3), 'kg.m^2');
+    r += h2('A.4 Tork Konvertörü');
+    r += kv('Pompa tork düşüşü  drop', n(P.pumpTorqueDrop, 2), 'N.m');
+    r += kv('TC ataleti (lockup/türbin)', n(P.I_conv, 3) + ' / ' + n(P.I_conv_turbine, 3), 'kg.m^2');
     r += kv('Rev-up ataleti  I_eng_rev', n(P.I_eng_rev, 4), 'kg.m^2');
-    r += kv('Kavrama noktasi  couplingSR', n(P.couplingSR, 3));
-    r += kv('Dusuk-dal kopus esigi', n(P.CONV_MATCH_THRESHOLD, 1), 'N.m');
+    r += kv('Kavrama noktası  couplingSR', n(P.couplingSR, 3));
+    r += kv('Düşük-dal kopuş eşiği', n(P.CONV_MATCH_THRESHOLD, 1), 'N.m');
   }
-  r += h2('A.5 Sanziman ve Vites Oranlari');
-  r += kv('Shift profili', ascii(P.shiftProfile));
+  r += h2('A.5 Şanzıman ve Vites Oranları');
+  r += kv('Shift profili', yazi(P.shiftProfile));
   r += kv('Shift referans devri  ESL', ni(P.shiftRefRPM), 'rpm');
   r += kv('Lockup ofseti', ni(P.lockupOffset), 'rpm');
   r += '  ' + pad('Vites', 8) + pad('Oran', 12, 'right') + pad('Verim %', 12, 'right') + '\n';
   P.forwardGears.forEach(function (g) {
-    r += '  ' + pad(ascii(g.name), 8) + pad(n(g.ratio, 4), 12, 'right') + pad(n(g.eff, 2), 12, 'right') + '\n';
+    r += '  ' + pad(yazi(g.name), 8) + pad(n(g.ratio, 4), 12, 'right') + pad(n(g.eff, 2), 12, 'right') + '\n';
   });
-  r += h2('A.6 Aktarma Organlari');
-  r += kv('Propsaft verimi / ataleti', '%' + n(P.psEff * 100, 2) + ' / ' + n(P.I_propshaft, 3), 'kg.m^2');
-  r += kv('Transfer orani / verimi', n(P.i_transfer, 4) + ' / %' + n(P.eta_transfer * 100, 2));
-  r += kv('Aks orani / verimi', n(P.i_axle, 4) + ' / %' + n(P.eta_axle * 100, 2));
+  r += h2('A.6 Aktarma Organları');
+  r += kv('Propşaft verimi / ataleti', '%' + n(P.psEff * 100, 2) + ' / ' + n(P.I_propshaft, 3), 'kg.m^2');
+  r += kv('Transfer oranı / verimi', n(P.i_transfer, 4) + ' / %' + n(P.eta_transfer * 100, 2));
+  r += kv('Aks oranı / verimi', n(P.i_axle, 4) + ' / %' + n(P.eta_axle * 100, 2));
   r += kv('Aks / transfer ataleti', n(P.I_axle, 3) + ' / ' + n(P.I_tc, 3), 'kg.m^2');
-  r += kv('Sanziman ic ataleti  I_trans', n(P.I_trans, 3), 'kg.m^2');
-  r += h2('A.7 Tutunma ve Cozucu — Turetilen');
-  r += kv('Yercekimi ivmesi  g', n(9.81, 2), 'm/s^2');
-  r += kv('Tutunma katsayisi  mu', n(P.mu_traction, 3));
+  r += kv('Şanzıman iç ataleti  I_trans', n(P.I_trans, 3), 'kg.m^2');
+  r += h2('A.7 Tutunma ve Çözücü — Türetilen');
+  r += kv('Yerçekimi ivmesi  g', n(9.81, 2), 'm/s^2');
+  r += kv('Tutunma katsayısı  mu', n(P.mu_traction, 3));
   r += '    F_grip = mu * m * tahrik% * g\n';
   r += '           = ' + n(P.mu_traction, 2) + ' * ' + ni(P.m_vehicle) + ' * ' + n(P.drivenPct, 2) + ' * 9,81  =  ' + ni(P.F_grip) + ' N\n';
-  r += kv('Cozucu / dt', solverLabel + ' / ' + n(P.dt, 4) + ' s');
+  r += kv('Çözücü / dt', solverLabel + ' / ' + n(P.dt, 4) + ' s');
   if (P.method === 'rk45') r += kv('RK45 atol / rtol', n(P.ftAtol, 8) + ' / ' + n(P.ftRtol, 6));
 
   // ── BÖLÜM B: FORMÜL SÖZLÜĞÜ ──
-  r += h1('B. FORMUL SOZLUGU (kod konumlariyla)');
-  r += '  Bu bolum YALNIZ bu aracin konfigurasyonunda GERCEKTEN kullanilan yolu gosterir\n';
-  r += '  (' + (P.hasTC ? 'tork konvertorlu' : 'konvertorsuz / dogrudan tahrik') + ').\n\n';
-  r += '  Motor devri (kinematik):  N = (v/r_tire) * i_total * 60/(2*pi)      [ft-performance.js: speedToTurbineRpm]\n';
-  r += '  Motor torku (net):        T_net = T_gross(N) - T_aksesuar(N)         [motorTorqueFn]\n';
-  r += '  Aksesuar kaybi:           P_kayip = SUM(egri-interp | sabit-kW | legacy) ; T=P/omega   [veAccessoryLossKw]\n';
-  r += '   (legacy: Fan*(N/Ngov)^3 [kavramali] veya sabit [on] + Diger*(N/Ngov))\n';
+  r += h1('B. FORMÜL SÖZLÜĞÜ');
+  r += '  Konfigürasyon: ' + (P.hasTC ? 'tork konvertörlü' : 'konvertörsüz / doğrudan tahrik') + '.\n\n';
+  r += '  Motor devri (kinematik):  N = (v/r_tire) * i_total * 60/(2*pi)\n';
+  r += '  Motor torku (net):        T_net = T_gross(N) - T_aksesuar(N)\n';
+  r += '  Aksesuar kaybı:           P_kayip = SUM(eğri-interp | sabit-kW | fan+diğer) ; T=P/omega\n';
+  r += '   (fan+diğer: Fan*(N/Ngov)^3 [kavramalı] veya sabit [on] + Diğer*(N/Ngov))\n';
   if (P.hasTC) {
-    r += '  Pompa emisi (converter):  T_pump = N_engine^2 / K_pump(SR)^2         [calcStepPhysics]\n';
-    r += '  Turbin torku (converter): T_cikis(ham) = T_pump * tau(SR)            (etaConvIc yok; yalniz isi)\n';
-    r += '  Lockup cikis:             T_cikis(ham) = T_net - dT_lockup           (pompa drop YOK, SR=1)\n';
-    r += '   (dT_lockup = 10 + 0,00367*N ; kilit-klac surtunmesi)\n';
-    r += '  Disli verimi (TK modu):   T_cikis = T_cikis(ham) * eta_gear          [calcGearEfficiency]\n';
-    r += '   (eta_gear = 1 - |ln(i_gear)| * (0,0175 + 2,93e-6 * N_turb) ; TEK uygulama)\n';
-    r += '  Dusuk-dal eslesme:        excess(N)=T_net-drop-N^2/K_pump^2 vadisi, N in [idle, noLoad]\n';
-    r += '  Rev-up (yuksek dal):      dN/dt = (T_net - drop - T_pump)/I_eng_rev * 60/(2pi)\n';
+    r += '  Pompa emişi (converter):  T_pump = N_engine^2 / K_pump(SR)^2\n';
+    r += '  Türbin torku (converter): T_cikis(ham) = T_pump * tau(SR)            (iç verim yok; kayıp ısı)\n';
+    r += '  Lockup çıkış:             T_cikis(ham) = T_net - dT_lockup           (pompa drop yok, SR=1)\n';
+    r += '   (dT_lockup = 10 + 0,00367*N ; kilit-klaç sürtünmesi)\n';
+    r += '  Dişli verimi (TK modu):   T_cikis = T_cikis(ham) * eta_gear\n';
+    r += '   (eta_gear = 1 - |ln(i_gear)| * (0,0175 + 2,93e-6 * N_turb) ; tek uygulama)\n';
+    r += '  Düşük-dal eşleşme:        excess(N)=T_net-drop-N^2/K_pump^2 vadisi, N in [idle, noLoad]\n';
+    r += '  Rev-up (yüksek dal):      dN/dt = (T_net - drop - T_pump)/I_eng_rev * 60/(2pi)\n';
   } else {
-    r += '  Dogrudan tahrik cikis:    T_cikis = T_net * eta_direct              [calcStepPhysics: no-tc-direct]\n';
-    r += '   (eta_direct = vitesin verimi ftGearData.eff/100 ; rijit motor-sanziman — TK/pompa/lockup YOK)\n';
-    r += '   (kalkis: motor tork-tepe devrinde tutulur — debriyaj kaydirma stall)\n';
+    r += '  Doğrudan tahrik çıkış:    T_cikis = T_net * eta_direct\n';
+    r += '   (eta_direct = vitesin verimi ; rijit motor-şanzıman — TK/pompa/lockup yok)\n';
+    r += '   (kalkış: motor tork-tepe devrinde tutulur — debriyaj kaydırma stall)\n';
   }
-  r += '  Cekis kuvveti:            F = T_cikis * i_gear * i_ps*eta_ps * i_tr*eta_tr * i_ax*eta_ax / r_tire  [calcTractiveEffort]\n';
-  r += '  Yuvarlanma direnci:       F_roll = Crr_eff * yuzey * m * g * cos(theta)   [calcResistForces]\n';
-  r += '   (Crr_eff = Crr*(1 + K1*v + K2*v^2))                                  [getCrrEffective]\n';
-  r += '  Aerodinamik direnc:       F_aero = 0,5 * rho * Cd * A * v^2\n';
-  r += '  Egim direnci:             F_grade = m * g * sin(theta) ; theta=atan(egim/100)\n';
-  r += '  Guc (turetilen):          P_motor = T_net*omega_eng/1000 ; P_teker = F_cekis*v/1000\n';
-  r += '  Esdeger kutle:            m_eff = m + I_eff/r_tire^2 ; I_eff = SUM(I_k * i_k^2)  [calcEquivalentMass]\n';
-  r += '  Ivme:                     a = (F_cekis - F_direnc) / m_eff\n';
+  r += '  Çekiş kuvveti:            F = T_cikis * i_gear * i_ps*eta_ps * i_tr*eta_tr * i_ax*eta_ax / r_tire\n';
+  r += '  Yuvarlanma direnci:       F_roll = Crr_eff * yüzey * m * g * cos(theta)\n';
+  r += '   (Crr_eff = Crr*(1 + K1*v + K2*v^2))\n';
+  r += '  Aerodinamik direnç:       F_aero = 0,5 * rho * Cd * A * v^2\n';
+  r += '  Eğim direnci:             F_grade = m * g * sin(theta) ; theta=atan(eğim/100)\n';
+  r += '  Güç (türetilen):          P_motor = T_net*omega_eng/1000 ; P_teker = F_cekis*v/1000\n';
+  r += '  Eşdeğer kütle:            m_eff = m + I_eff/r_tire^2 ; I_eff = SUM(I_k * i_k^2)\n';
+  r += '  İvme:                     a = (F_cekis - F_direnc) / m_eff\n';
   r += '  Entegrasyon (RK4):        dv = (k1+2k2+2k3+k4)/6 * dt ; k=a(v+...)\n';
 
   // ── BÖLÜM: MOTOR TORKU (PCHIP + governor) ──
-  r += H1('MOTOR TORKU — PCHIP EGRISI + GOVERNOR');
-  r += '  Brut motor torku, tork tablosu uzerinden MONOTON PCHIP spline ile interpole edilir\n';
-  r += '  (Fritsch-Carlson; capa noktalari arasi asiri-salinim yok). Net tork = brut - aksesuar.\n\n';
-  r += h2('Tork Tablosu (capa noktalari)');
+  r += H1('MOTOR TORKU — PCHIP EĞRİSİ + GOVERNOR');
+  r += '  Brüt motor torku, tork tablosu üzerinden monoton PCHIP spline ile interpole edilir\n';
+  r += '  (Fritsch-Carlson; çapa noktaları arası aşırı-salınım yok). Net tork = brüt - aksesuar.\n\n';
+  r += h2('Tork Tablosu (çapa noktaları)');
   if (P.torqueData && P.torqueData.length) {
-    r += '  ' + pad('rpm', 10, 'right') + pad('T_brut (N.m)', 16, 'right') + pad('Guc (kW)', 12, 'right') + '\n';
+    r += '  ' + pad('rpm', 10, 'right') + pad('T_brut (N.m)', 16, 'right') + pad('Güç (kW)', 12, 'right') + '\n';
     r += '  ' + ln('-', 38) + '\n';
     P.torqueData.forEach(function (row) {
       var _pw = (row.power != null && isFinite(row.power)) ? n(row.power, 1)
@@ -2232,14 +2213,14 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   r += h2('Governor Droop');
   r += '  governed = ' + ni(P.governedSpeed) + ' rpm    no-load = ' + ni(P.noLoadGoverned) + ' rpm    idle = ' + ni(P.idleRpm) + ' rpm\n';
   if (P.noLoadGoverned > P.governedSpeed) {
-    r += '  Sentetik droop (tablo governed ustunu KAPSAMIYORSA), governed < rpm < no-load icin:\n';
+    r += '  Sentetik droop (tablo governed üstünü kapsamıyorsa), governed < rpm < no-load için:\n';
     r += '    frac = (rpm - governed) / (no-load - governed) ;  T = T_brut * (1 - frac)\n';
     r += '    rpm >= no-load  ->  T = 0    (lineer droop)\n';
   } else {
-    r += '  Tablo governed ile ayni devirde bitiyor; governed ustu duz ekstrapolasyon.\n';
+    r += '  Tablo governed ile aynı devirde bitiyor; governed üstü düz ekstrapolasyon.\n';
   }
-  r += '  Not: Tablo zaten no-load a dusuyorsa (son nokta ~0) sentetik droop UYGULANMAZ (cift-droop yok).\n\n';
-  r += h2('Ornek Interpolasyon (brut PCHIP) — 200 rpm izgarasi');
+  r += '  Not: Tablo zaten no-load\'a düşüyorsa (son nokta ~0) sentetik droop uygulanmaz (çift-droop yok).\n\n';
+  r += h2('Örnek interpolasyon (brüt PCHIP) — 200 rpm ızgarası');
   try {
     if (typeof FT_SOLVER !== 'undefined' && P.torqueData && P.torqueData.length >= 2) {
       var _mfn = FT_SOLVER.createMotorTorqueFn(P.torqueData, P.governedSpeed, P.noLoadGoverned);
@@ -2252,25 +2233,25 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
       r += '  ' + ln('-', 26) + '\n';
     }
   } catch (eMt) { /* interpolasyon ornegi atlanir */ }
-  r += '  Net tork (aksesuar dusulmus) her kilit adimin [1] blogunda: T_net = T_brut - T_aksesuar.\n';
+  r += '  Net tork (aksesuar düşülmüş) her kilit adımın [1] bloğunda: T_net = T_brut - T_aksesuar.\n';
 
   // ── BÖLÜM: TORK KONVERTÖRÜ KARAKTERİSTİĞİ (TK varsa) ──
   if (_hasConv) {
-    r += H1('TORK KONVERTORU KARAKTERISTIGI — K_pump / tau / eta');
-    r += '  Konvertor iki egriyle tanimlanir (SR = N_turbin / N_motor, kayma orani):\n';
-    r += '    K_pump(SR) : K-faktoru (pompa emis kapasitesi)   ->  T_pump_emis = N_motor^2 / K_pump^2\n';
-    r += '    tau(SR)    : tork orani (cogaltma)                ->  T_turbin    = T_pump_emis * tau\n';
-    r += '    eta(SR)    = SR * tau   (konvertor hidrolik verimi; tau>1 iken cogaltma bolgesi)\n';
-    r += '  Iki egri de SR verisi uzerinden PCHIP ile kurulur; SR girisi [0; 0,99] araligina klip edilir.\n';
-    r += '  Coupling SR (tau <= 1,005 olan ilk nokta) = ' + n(P.couplingSR, 3) + (P.tcName ? '     [' + ascii(P.tcName) + ']' : '') + '\n\n';
-    r += h2('Capa Noktalari (ham veri)');
+    r += H1('TORK KONVERTÖRÜ KARAKTERİSTİĞİ — K_pump / tau / eta');
+    r += '  Konvertör iki eğriyle tanımlanır (SR = N_turbin / N_motor, kayma oranı):\n';
+    r += '    K_pump(SR) : K-faktörü (pompa emiş kapasitesi)   ->  T_pump_emis = N_motor^2 / K_pump^2\n';
+    r += '    tau(SR)    : tork oranı (çoğaltma)                ->  T_turbin    = T_pump_emis * tau\n';
+    r += '    eta(SR)    = SR * tau   (konvertör hidrolik verimi; tau>1 iken çoğaltma bölgesi)\n';
+    r += '  İki eğri de SR verisi üzerinden PCHIP ile kurulur; SR girişi [0; 0,99] aralığına klip edilir.\n';
+    r += '  Coupling SR (tau <= 1,005 olan ilk nokta) = ' + n(P.couplingSR, 3) + (P.tcName ? '     [' + yazi(P.tcName) + ']' : '') + '\n\n';
+    r += h2('Çapa noktaları (ham veri)');
     r += '  ' + pad('SR', 8, 'right') + pad('K_pump', 12, 'right') + pad('tau', 10, 'right') + pad('eta=SR*tau', 14, 'right') + '\n';
     r += '  ' + ln('-', 44) + '\n';
     P.tcData.forEach(function (row) {
       r += '  ' + pad(n(row.sr, 3), 8, 'right') + pad(n(row.kpump, 2), 12, 'right') + pad(n(row.tau, 3), 10, 'right') + pad(n(row.sr * row.tau, 3), 14, 'right') + '\n';
     });
     r += '  ' + ln('-', 44) + '\n\n';
-    r += h2('PCHIP Interpolasyon (0,05 SR adim)');
+    r += h2('PCHIP interpolasyon (0,05 SR adım)');
     try {
       if (typeof FT_SOLVER !== 'undefined') {
         var _tcf = FT_SOLVER.createTCFunctions(P.tcData);
@@ -2286,75 +2267,74 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
 
   // ── BÖLÜM: KONVERTÖR–MOTOR BAĞLAŞIMI VE DAL MANTIĞI (TK varsa) ──
   if (_hasConv) {
-    r += H1('KONVERTOR-MOTOR BAGLASIMI VE DAL MANTIGI');
-    r += '  Converter modda motor devri N_motor, turbinden BAGIMSIZ bir DINAMIK durumdur:\n';
-    r += '  pompa emisi ile motorun sagladigi tork arasindaki dengeye gore belirlenir.\n\n';
-    r += h2('Denge (fazlalik) denklemi');
-    r += '  Motorun konvertore verebildigi tork:   T_pump_mevcut(N) = T_net(N) - drop\n';
-    r += '  Konvertorun emdigi tork:               T_pump_emis(N)   = N^2 / K_pump(SR)^2 ,  SR = N_turb/N\n';
-    r += '  Fazlalik:                              excess(N) = T_pump_mevcut - T_pump_emis\n';
+    r += H1('KONVERTÖR-MOTOR BAĞLAŞIMI VE DAL MANTIĞI');
+    r += '  Converter modda motor devri N_motor, türbinden bağımsız bir dinamik durumdur:\n';
+    r += '  pompa emişi ile motorun sağladığı tork arasındaki dengeye göre belirlenir.\n\n';
+    r += h2('Denge (fazlalık) denklemi');
+    r += '  Motorun konvertöre verebildiği tork:   T_pump_mevcut(N) = T_net(N) - drop\n';
+    r += '  Konvertörün emdiği tork:               T_pump_emis(N)   = N^2 / K_pump(SR)^2 ,  SR = N_turb/N\n';
+    r += '  Fazlalık:                              excess(N) = T_pump_mevcut - T_pump_emis\n';
     r += '    excess = 0  ->  denge (motor bu devirde oturur)\n';
-    r += '    excess > 0  ->  net ivmelendirici tork  ->  motor hizlanir (rev-up)\n';
-    r += '    excess < 0  ->  motor yavaslar\n';
-    r += '  drop = pompa (sarj) tork dususu = ' + n(P.pumpTorqueDrop, 2) + ' N.m     I_eng_rev = ' + n(P.I_eng_rev, 3) + ' kg.m^2\n\n';
-    r += h2('Dal secimi (her adimda)');
-    r += '  idle..no-load taramasi: excess(N) ILK kez <= 0 oluyorsa GERCEK dusuk denge vardir\n';
-    r += '    ->  DUSUK DAL: motor o eslesme noktasinda TUTULUR (surunme; dN/dt = 0).\n';
-    r += '  excess dusuk-rpm de <= 0 a inmiyorsa (yalniz sig pozitif vadi = near-hang)\n';
-    r += '    ->  YUKSEK DAL: motor near-hang i gecip yuksek stall dengesine tirmanir; devir\n';
-    r += '        DINAMIK entegre edilir:\n';
+    r += '    excess > 0  ->  net ivmelendirici tork  ->  motor hızlanır (rev-up)\n';
+    r += '    excess < 0  ->  motor yavaşlar\n';
+    r += '  drop = pompa (şarj) tork düşüşü = ' + n(P.pumpTorqueDrop, 2) + ' N.m     I_eng_rev = ' + n(P.I_eng_rev, 3) + ' kg.m^2\n\n';
+    r += h2('Dal seçimi (her adımda)');
+    r += '  idle..no-load taraması: excess(N) ilk kez <= 0 oluyorsa düşük denge vardır\n';
+    r += '    ->  Düşük dal: motor o eşleşme noktasında tutulur (sürünme; dN/dt = 0).\n';
+    r += '  excess düşük rpm\'de <= 0\'a inmiyorsa (yalnız sığ pozitif vadi = near-hang)\n';
+    r += '    ->  Yüksek dal: motor near-hang\'i geçip yüksek stall dengesine tırmanır; devir\n';
+    r += '        dinamik entegre edilir:\n';
     r += '        dN/dt = (T_net - drop - T_pump_emis) / I_eng_rev * 60/(2pi)   [rpm/s]\n';
-    r += '  Kalkis (v=0) yuksek dengesi computeSettledStall ile baslatilir (bkz. OTURMUS STALL bolumu).\n';
-    r += '  Uc yol (stall koku, dusuk-dal eslesmesi, per-adim) TEK denge tanimini paylasir: excess ilk <= 0.\n\n';
-    r += h2('Motor-turbin devir izi (converter-modu kilit adimlari)');
+    r += '  Kalkış (v=0) yüksek dengeden başlatılır.\n';
+    r += '  Denge tanımı (stall kökü, düşük dal eşleşmesi ve adım çözümü için ortak): excess ilk kez <= 0.\n\n';
+    r += h2('Motor-türbin devir izi (converter-modu kilit adımları)');
     var _cvRows = (T.steps || []).filter(function (s) { return s.branch === 'converter'; });
     if (_cvRows.length) {
       r += '  ' + pad('v(km/h)', 9, 'right') + pad('N_turb', 9, 'right') + pad('N_mot', 9, 'right') + pad('SR', 7, 'right') + pad('tau', 7, 'right') + pad('K_pump', 9, 'right') + pad('T_pump', 9, 'right') + pad('T_turb', 9, 'right') + '  dal\n';
       r += '  ' + ln('-', 78) + '\n';
       _cvRows.forEach(function (s) {
-        var _br = (s.lowBranchScan && s.lowBranchScan.onLowBranch) ? 'dusuk' : 'yuksek';
+        var _br = (s.lowBranchScan && s.lowBranchScan.onLowBranch) ? 'düşük' : 'yüksek';
         r += '  ' + pad(n(s.v_kmh, 1), 9, 'right') + pad(ni(s.N_turbine), 9, 'right') + pad(ni(s.N_engine), 9, 'right') + pad(n(s.SR, 3), 7, 'right') + pad(n(s.tau, 3), 7, 'right') + pad(n(s.Kp, 2), 9, 'right') + pad(ni(s.T_pump_absorbed), 9, 'right') + pad(ni(s.T_turbine_raw), 9, 'right') + '  ' + _br + '\n';
       });
       r += '  ' + ln('-', 78) + '\n';
     } else {
-      r += '  (Bu kosuda converter-modu kilit adimi yakalanmadi — kalkis fazi cok kisa;\n';
-      r += '   stall ve dusuk-hiz calisma noktalari asagidaki bolumlerde ayrintili.)\n';
+      r += '  (Bu koşuda converter-modu kilit adımı yok — kalkış fazı çok kısa.)\n';
     }
-    r += '  Her converter kilit adiminin tam dokumu (SR, tau, K_pump, T_pump, rev-up, isi) adim [2] blogundadir.\n';
+    r += '  Her converter kilit adımının tam dökümü (SR, tau, K_pump, T_pump, rev-up, ısı) adım [2] bloğundadır.\n';
 
   }
 
   // ── OTURMUŞ STALL (calisma noktasi — kalkis/egim ornegi) ──
   if (_hasStall) {
     var SS = T.settledStall, sc = SS.scan;
-    r += H1('OTURMUS STALL (v=0) — kalkis/egim metrigi');
-    r += '  Motor kalkista anlik dengeye ATLAMAZ; teget bolgesinde asili kalir (surunur).\n';
-    r += '  Tarama: N=idle..' + ni(sc.iterations && sc.iterations.length ? sc.iterations[sc.iterations.length - 1].N : 0) + ', fazlalik = T_net(N) - drop - N^2/K0^2\n';
+    r += H1('OTURMUŞ STALL (v=0) — kalkış/eğim metriği');
+    r += '  Motor kalkışta anlık dengeye atlamaz; teğet bölgesinde asılı kalır (sürünür).\n';
+    r += '  Tarama: N=idle..' + ni(sc.iterations && sc.iterations.length ? sc.iterations[sc.iterations.length - 1].N : 0) + ', fazlalık = T_net(N) - drop - N^2/K0^2\n';
     r += '  K0=K_pump(0)=' + n(sc.K0, 3) + '   tau0=tau(0)=' + n(sc.tau0, 3) + '   drop=' + n(sc.pumpDrop, 2) + ' N.m\n';
-    r += '  (tol=' + n(sc.tol, 1) + ' N.m yalnizca referans/geriye-uyum; KABUL KAPISI excess<=0 ilk gecisidir.)\n\n';
-    r += '  ' + pad('N (rpm)', 10, 'right') + pad('T_net', 12, 'right') + pad('T_pump_emis', 14, 'right') + pad('Fazlalik', 12, 'right') + '\n';
+    r += '  (tol=' + n(sc.tol, 1) + ' N.m referans; kabul ölçütü: excess<=0 ilk geçişi.)\n\n';
+    r += '  ' + pad('N (rpm)', 10, 'right') + pad('T_net', 12, 'right') + pad('T_pump_emis', 14, 'right') + pad('Fazlalık', 12, 'right') + '\n';
     r += '  ' + ln('-', 48) + '\n';
     (sc.iterations || []).forEach(function (it) {
       r += '  ' + pad(ni(it.N), 10, 'right') + pad(n(it.Te, 1), 12, 'right') + pad(n(it.T_pump_absorb, 1), 14, 'right') + pad(n(it.excess, 1), 12, 'right') + '\n';
     });
     r += '  ' + ln('-', 48) + '\n';
-    r += '  -> Secilen N = ' + ni(sc.chosenN) + ' rpm   (' + ascii(sc.reason || '') + ')\n';
+    r += '  -> Seçilen N = ' + ni(sc.chosenN) + ' rpm   (' + yazi(sc.reason || '') + ')\n';
     r += '     T_pump = N^2/K0^2 = ' + ni(sc.chosenN) + '^2 / ' + n(sc.K0, 2) + '^2 = ' + n(sc.T_pump, 1) + ' N.m\n';
     r += '     T_turbine = T_pump * tau0 = ' + n(sc.T_pump, 1) + ' * ' + n(sc.tau0, 3) + ' = ' + n(SS.T_turbine, 1) + ' N.m\n';
-    r += '     T_output = T_turbine * eta_gear = ' + n(SS.T_turbine, 1) + ' * ' + n(SS.etaGear, 3) + ' = ' + n(SS.T_output, 1) + ' N.m   (calcGearEfficiency, SR=0)\n';
-    r += '     TE = ' + n(SS.TE_kN, 2) + ' kN (grip-limitsiz kapasite' + (SS.slip ? '; TE>F_grip -> kayma bayragi "!"' : '') + ')   DP(duz yol) = TE - F_roll0 = ' + n(SS.DP_kN, 2) + ' kN\n';
+    r += '     T_output = T_turbine * eta_gear = ' + n(SS.T_turbine, 1) + ' * ' + n(SS.etaGear, 3) + ' = ' + n(SS.T_output, 1) + ' N.m   (dişli verimi, SR=0)\n';
+    r += '     TE = ' + n(SS.TE_kN, 2) + ' kN (grip-limitsiz kapasite' + (SS.slip ? '; TE>F_grip -> kayma bayrağı "!"' : '') + ')   DP(düz yol) = TE - F_roll0 = ' + n(SS.DP_kN, 2) + ' kN\n';
   }
 
   // ── DÜŞÜK-HIZ ÇALIŞMA NOKTASI (calisma noktasi ornegi) ──
   if (_hasLowOp) {
     var LO = T.lowSpeedOp, bi = LO.bisection;
-    r += H1('DUSUK-HIZ CALISMA NOKTASI (~10 km/h) — bisection');
-    r += '  NOT: Bu STATIK bir referans calisma noktasidir (excess=0 tam dengesi bisection ile).\n';
-    r += '  Kosunun GERCEK motor devri DINAMIK durumdur (KONVERTOR-MOTOR BAGLASIMI devir-izi ve\n';
-    r += '  adim [2] bloklari); dinamik durum tam oturmadigindan ikisi yakin ama birebir olmayabilir.\n\n';
-    r += '  Turbin devri: N_turb = ' + ni(LO.N_turbine) + ' rpm  (v=' + n(LO.v_ms, 3) + ' m/s)\n';
-    r += '  Bisection: motor devri N icin  hata(N) = (T_net(N)-drop) - N^2/K_pump(SR)^2 = 0\n';
-    r += '  Baslangic araligi: [' + ni(bi.N_lo0) + '; ' + ni(bi.N_hi0) + ']  hata=[' + n(bi.f_lo0, 1) + '; ' + n(bi.f_hi0, 1) + ']\n\n';
+    r += H1('DÜŞÜK-HIZ ÇALIŞMA NOKTASI (~10 km/h) — bisection');
+    r += '  NOT: Statik bir referans çalışma noktası (excess=0 tam dengesi, bisection).\n';
+    r += '  Koşunun motor devri dinamik durumdur; dinamik durum tam oturmadığından ikisi yakın ama\n';
+    r += '  birebir olmayabilir.\n\n';
+    r += '  Türbin devri: N_turb = ' + ni(LO.N_turbine) + ' rpm  (v=' + n(LO.v_ms, 3) + ' m/s)\n';
+    r += '  Bisection: motor devri N için  hata(N) = (T_net(N)-drop) - N^2/K_pump(SR)^2 = 0\n';
+    r += '  Başlangıç aralığı: [' + ni(bi.N_lo0) + '; ' + ni(bi.N_hi0) + ']  hata=[' + n(bi.f_lo0, 1) + '; ' + n(bi.f_hi0, 1) + ']\n\n';
     r += '  ' + pad('#', 5, 'right') + pad('N_lo', 10, 'right') + pad('N_hi', 10, 'right') + pad('N_mid', 10, 'right') + pad('hata(N_mid)', 14, 'right') + '\n';
     r += '  ' + ln('-', 49) + '\n';
     (bi.iterations || []).forEach(function (it) {
@@ -2366,15 +2346,15 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   }
 
   // ── BÖLÜM: DİRENÇ KUVVETLERİ (hız-bağımlı model) ──
-  r += H1('DIRENC KUVVETLERI — hiz-bagimli model');
-  r += '  Yuvarlanma katsayisi hiza gore duzeltilir (iSCAAN evrensel fit; R^2=0,9994; 0-33 m/s):\n';
+  r += H1('DİRENÇ KUVVETLERİ — hız-bağımlı model');
+  r += '  Yuvarlanma katsayısı hıza göre düzeltilir (iSCAAN evrensel fit; R^2=0,9994; 0-33 m/s):\n';
   r += '    f(V) = 1 + K1*V + K2*V^2 ,   K1 = ' + n(P.crrK1, 6) + '   K2 = ' + n(P.crrK2, 8) + '\n';
   r += '    Crr_eff = Crr_static * f(V)   (Crr_static = ' + n(P.Crr, 5) + ')\n';
-  r += '  Bilesenler (g = 9,81 m/s^2 ;  theta = atan(egim/100)):\n';
-  r += '    F_roll  = Crr_eff * yuzey * m * g * cos(theta)\n';
+  r += '  Bileşenler (g = 9,81 m/s^2 ;  theta = atan(eğim/100)):\n';
+  r += '    F_roll  = Crr_eff * yüzey * m * g * cos(theta)\n';
   r += '    F_aero  = 0,5 * rho * Cd * A * V^2      (k_aero = 0,5*rho*Cd*A = ' + n(0.5 * P.rho * P.Cd * P.A_frontal, 4) + ' N/(m/s)^2)\n';
   r += '    F_grade = m * g * sin(theta)\n\n';
-  r += h2('Hiza gore ornek (kilit adim hizlarinda)');
+  r += h2('Hıza göre örnek (kilit adım hızlarında)');
   r += '  ' + pad('v(km/h)', 9, 'right') + pad('f(V)', 9, 'right') + pad('Crr_eff', 11, 'right') + pad('F_roll(N)', 11, 'right') + pad('F_aero(N)', 11, 'right') + '\n';
   r += '  ' + ln('-', 51) + '\n';
   (T.steps || []).forEach(function (s) {
@@ -2384,29 +2364,29 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   r += '  ' + ln('-', 51) + '\n';
 
   // ── BÖLÜM: EŞDEĞER (DÖNEN) KÜTLE ──
-  r += H1('ESDEGER (DONEN) KUTLE');
-  r += '  Tum donen ataletler tekerlek duzlemine indirgenir: her atalet kendi (devir/tekerlek)^2\n';
-  r += '  orani ile carpilip r_tire^2 ye bolunur; boylece eslenik bir "ek kutle" olusur.\n';
+  r += H1('EŞDEĞER (DÖNEN) KÜTLE');
+  r += '  Tüm dönen ataletler tekerlek düzlemine indirgenir: her atalet kendi (devir/tekerlek)^2\n';
+  r += '  oranı ile çarpılıp r_tire^2 ye bölünür; böylece eşlenik bir "ek kütle" oluşur.\n';
   r += '    i_total = i_gear*i_ps*i_tr*i_axle       i_down = i_ps*i_tr*i_axle\n';
   r += '    m_eff   = m + I_eff / r_tire^2\n\n';
-  r += '  LOCKUP / dogrudan tahrik (motor rijit bagli):\n';
+  r += '  LOCKUP / doğrudan tahrik (motor rijit bağlı):\n';
   r += '    I_eff = I_eng*i_total^2 + I_conv*i_total^2 + I_trans*i_down^2 + I_ps*i_down^2\n';
   r += '          + I_tc*i_axle^2 + I_axle + I_tire\n';
-  r += '  CONVERTER modu (motor ataleti akiskanla ayrisir -> DEVRE DISI):\n';
+  r += '  CONVERTER modu (motor ataleti akışkanla ayrışır -> devre dışı):\n';
   r += '    I_eff = I_conv_turbin*i_total^2 + I_trans*i_down^2 + I_ps*i_down^2\n';
   r += '          + I_tc*i_axle^2 + I_axle + I_tire\n\n';
   r += '  Atalet girdileri [kg.m^2]:\n';
   r += '    I_eng=' + n(P.I_engine, 3) + '  I_conv=' + n(P.I_conv, 3) + '  I_conv_turbin=' + n(P.I_conv_turbine, 3) + '  I_trans=' + n(P.I_trans, 3) + '\n';
   r += '    I_ps=' + n(P.I_propshaft, 3) + '  I_tc=' + n(P.I_tc, 3) + '  I_axle=' + n(P.I_axle, 3) + '  I_tire=' + n(P.I_tire, 3) + '\n';
-  r += '  Vites/moda gore acik terim dokumu (I_ham * carpan^2 = katki) her adimin [5] blogundadir.\n';
+  r += '  Vites/moda göre açık terim dökümü (I_ham * çarpan^2 = katkı) her adımın [5] bloğundadır.\n';
 
   // ── BÖLÜM: SAYISAL ÇÖZÜCÜ ──
-  r += H1('SAYISAL COZUCU (' + solverLabel + ')');
+  r += H1('SAYISAL ÇÖZÜCÜ (' + solverLabel + ')');
   r += '  Hareket denklemi:  dv/dt = a(v) = (F_cekis(v) - F_direnc(v)) / m_eff(v)\n';
-  r += '  Adim: dt = ' + n(P.dt, 4) + ' s . Her kilit adimin ic-asamalari [entegrasyon] blogunda sayilarla gosterilir.\n\n';
+  r += '  Adım: dt = ' + n(P.dt, 4) + ' s . Her kilit adımın iç-aşamaları [entegrasyon] bloğunda sayılarla gösterilir.\n\n';
   if (P.method === 'rk45') {
-    r += '  RK4/5 Dormand-Prince (adaptif): 6 asama (k1..k6), 5. derece cozum. Yerel hata tahminine\n';
-    r += '  gore dt otomatik ayarlanir.   atol = ' + n(P.ftAtol, 8) + '   rtol = ' + n(P.ftRtol, 6) + '\n';
+    r += '  RK4/5 Dormand-Prince (adaptif): 6 aşama (k1..k6), 5. derece çözüm. Yerel hata tahminine\n';
+    r += '  göre dt otomatik ayarlanır.   atol = ' + n(P.ftAtol, 8) + '   rtol = ' + n(P.ftRtol, 6) + '\n';
   } else if (P.method === 'rk4') {
     r += '  RK4 (klasik 4. derece):  dv = (k1 + 2*k2 + 2*k3 + k4)/6 * dt\n';
     r += '    k1 = a(v)   k2 = a(v + k1*dt/2)   k3 = a(v + k2*dt/2)   k4 = a(v + k3*dt)\n';
@@ -2419,22 +2399,22 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   }
 
   // ── BÖLÜM: VİTES-GEÇİŞ MANTIĞI ──
-  r += H1('VITES-GECIS MANTIGI (iSCAAN esikleri)');
-  r += '  Shift profili: ' + ascii(P.shiftProfile || 'Governed') + '     referans devir (ESL) = ' + ni(P.shiftRefRPM) + ' rpm\n';
+  r += H1('VİTES-GEÇİŞ MANTIĞI (iSCAAN eşikleri)');
+  r += '  Shift profili: ' + yazi(P.shiftProfile || 'Governed') + '     referans devir (ESL) = ' + ni(P.shiftRefRPM) + ' rpm\n';
   r += '  Lockup ofseti = ' + ni(P.lockupOffset) + ' rpm  ->  lockup shift devri  N_shift_lu = ESL - ofset = ' + ni(P.N_shift_lockup) + ' rpm\n';
   if (P.hasTC) {
-    r += '  Cikis-devri esikleri (converter fazi):\n';
+    r += '  Çıkış-devri eşikleri (converter fazı):\n';
     r += '    1C -> 2C :  N_out >= ' + n(P.shift1C2C_outRatio, 4) + ' * ESL\n';
     r += '    2C -> 2L :  N_out >= ' + n(P.shift2C2L_outRatio, 4) + ' * ESL\n';
-    r += '  Yuksek vitesler (lockup):  N_out_lu >= esik.\n';
+    r += '  Yüksek vitesler (lockup):  N_out_lu >= eşik.\n';
   } else {
-    r += '  Vites yukseltme: cikis devri esigi asilinca (oran*ESL) ust vitese gecilir.\n';
+    r += '  Vites yükseltme: çıkış devri eşiği aşılınca (oran*ESL) üst vitese geçilir.\n';
   }
-  r += '  Ayrica governed ust-vites guvenligi: N_motor >= governed -> zorunlu ust vites (over-rev korumasi).\n';
-  r += '  Her gercek gecis karari ilgili kilit adimin [vites gecisi karari] blogunda sayilarla gosterilir.\n';
+  r += '  Ayrıca governed üst-vites güvenliği: N_motor >= governed -> zorunlu üst vites (over-rev koruması).\n';
+  r += '  Her gerçek geçiş kararı ilgili kilit adımın [vites geçişi kararı] bloğunda sayılarla gösterilir.\n';
 
   // ── BÖLÜM: ADIM ADIM HIZLANMA İZİ ──
-  r += H1('ADIM ADIM HIZLANMA IZI (kilit noktalar)');
+  r += H1('ADIM ADIM HIZLANMA İZİ (kilit noktalar)');
   var _prevMassSig = null;
   T.steps.forEach(function (s, idx) {
     // Eşdeğer-kütle ayrışım tablosu yalnız VİTES/MOD değişince tam basılır; tekrar
@@ -2443,7 +2423,7 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
     var _sig = String(s.gearName || '') + '|' + (_mt.isLockup ? 'L' : 'C');
     var _showFullMass = (_sig !== _prevMassSig);
     _prevMassSig = _sig;
-    r += veFTTraceRenderStep(s, idx, { n: n, ni: ni, pad: pad, ln: ln, ascii: ascii, W: W, P: P, showFullMass: _showFullMass, stepLetter: stepSec });
+    r += veFTTraceRenderStep(s, idx, { n: n, ni: ni, pad: pad, ln: ln, yazi: yazi, W: W, P: P, showFullMass: _showFullMass, stepLetter: stepSec });
   });
 
   // ── BÖLÜM F: PERFORMANS ÖZETİ (mikro iz → makro sonuç çapraz kontrolü) ──
@@ -2452,19 +2432,19 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
       var _accSum = veCalculateAcceleration(traced);
       var _hi = _accSum && _accSum.high;
       if (_hi && _hi.rows) {
-        r += H1('PERFORMANS OZETI — MAKRO DOGRULAMA');
-        r += '  Adim-adim iz (mikro) ile biten ayni kosunun makro sonuclari — capraz kontrol icin.\n\n';
-        r += '  ' + pad('Hedef', 12) + pad('Sure (s)', 12, 'right') + pad('Mesafe (m)', 14, 'right') + '\n';
+        r += H1('PERFORMANS ÖZETİ — MAKRO DOĞRULAMA');
+        r += '  Adım-adım iz (mikro) ile biten aynı koşunun makro sonuçları — çapraz kontrol için.\n\n';
+        r += '  ' + pad('Hedef', 12) + pad('Süre (s)', 12, 'right') + pad('Mesafe (m)', 14, 'right') + '\n';
         r += '  ' + ln('-', 38) + '\n';
         _hi.rows.forEach(function (row) {
-          var _tv = (row.time == null) ? 'ulasilmadi' : n(row.time, 1);
+          var _tv = (row.time == null) ? 'ulaşılmadı' : n(row.time, 1);
           var _dv = (row.distance == null) ? '-' : ni(row.distance);
           r += '  ' + pad(ni(row.targetSpeed) + ' km/h', 12) + pad(_tv, 12, 'right') + pad(_dv, 14, 'right') + '\n';
         });
         r += '  ' + ln('-', 38) + '\n';
-        r += kv('Ulasilan V_max', n(_hi.maxSpeed, 1), 'km/h');
+        r += kv('Ulaşılan V_max', n(_hi.maxSpeed, 1), 'km/h');
         var _tEnd = traced.time[traced.time.length - 1];
-        r += kv('Toplam sure', n(_tEnd, 1), 's');
+        r += kv('Toplam süre', n(_tEnd, 1), 's');
         if (traced.distance && traced.distance.length) r += kv('Toplam mesafe', ni(traced.distance[traced.distance.length - 1]), 'm');
       }
     }
@@ -2472,8 +2452,7 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
 
   // ── SON ──
   r += '\n' + ln('=', W) + '\n';
-  r += pad('RAPOR SONU — ' + T.steps.length + ' kilit adim gosterildi', W, 'center') + '\n';
-  r += pad('Bu belge dogrulama/hata-avi amaclidir. Hesaplar teorik modellere dayanir.', W, 'center') + '\n';
+  r += pad('RAPOR SONU — ' + T.steps.length + ' kilit adım gösterildi', W, 'center') + '\n';
   r += ln('=', W) + '\n';
   return r;
 }
@@ -2482,7 +2461,7 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
 // Düzen: her hesap "isim = formul / = sayilar / = sonuc" biçiminde hizalı,
 // bloklar arası boşluklu — okumasi ferah olsun diye.
 function veFTTraceRenderStep(s, idx, H) {
-  var n = H.n, ni = H.ni, pad = H.pad, ln = H.ln, ascii = H.ascii, W = H.W;
+  var n = H.n, ni = H.ni, pad = H.pad, ln = H.ln, yazi = H.yazi, W = H.W;
   var P = H.P || {};
   var gnum = String(s.gearName || '').replace(/[^0-9]/g, '') || '?';
   var mode = s.hasTC ? (s.isLockup ? 'L' : 'C') : '';
@@ -2500,23 +2479,23 @@ function veFTTraceRenderStep(s, idx, H) {
   function NT(label, text) { return IND + pad(label, LW) + ' : ' + text + '\n'; }   // "isim : metin"
   function SUB(label, text) { return IND + '   ' + pad(label, LW - 3) + ' = ' + text + '\n'; }  // ara-adım (bir kademe içeri)
   function TX(text) { return IND + text + '\n'; }                                   // düz girintili satır
-  function BH(num, title) { return '\n    [' + num + ']  ' + ascii(title) + '\n    ' + ln('─', W - 8) + '\n'; }  // blok başlığı + ayraç
+  function BH(num, title) { return '\n    [' + num + ']  ' + yazi(title) + '\n    ' + ln('─', W - 8) + '\n'; }  // blok başlığı + ayraç
 
   var r = '';
   r += '\n  ┌' + ln('─', W - 4) + '┐\n';
   var _SL = H.stepLetter || 'E';
-  r += '  │ ' + pad(_SL + '.' + (idx + 1) + '   ' + ascii(s.reason || ''), W - 6) + ' │\n';
+  r += '  │ ' + pad(_SL + '.' + (idx + 1) + '   ' + yazi(s.reason || ''), W - 6) + ' │\n';
   r += '  │ ' + pad('t = ' + n(s.t, 3) + ' s   v = ' + n(s.v_kmh, 2) + ' km/h (' + n(s.v_ms, 3) + ' m/s)   vites = ' + gLabel, W - 6) + ' │\n';
   if (s.dist != null || s.step != null) {
     var _dl = '';
     if (s.dist != null) _dl += 'dist = ' + n(s.dist, 1) + ' m';
-    if (s.step != null) _dl += (_dl ? '   ' : '') + 'adim# = ' + ni(s.step);
+    if (s.step != null) _dl += (_dl ? '   ' : '') + 'adım# = ' + ni(s.step);
     r += '  │ ' + pad(_dl, W - 6) + ' │\n';
   }
   r += '  └' + ln('─', W - 4) + '┘\n';
 
   // ── [1] MOTOR DEVRİ + TORK ──
-  r += BH(1, 'MOTOR DEVRI VE TORKU');
+  r += BH(1, 'MOTOR DEVRİ VE TORKU');
   var iTot = s.i_gear * d.i_propshaft * d.i_transfer * d.i_axle;
   var _omgW = (d.r_tire ? s.v_ms / d.r_tire : 0);
   r += E('i_total', ['i_gear * i_ps * i_tr * i_axle',
@@ -2531,136 +2510,136 @@ function veFTTraceRenderStep(s, idx, H) {
       var _trow = function (c, L, M, Rr) { var o = L; for (var i = 0; i < c.length; i++) o += c[i] + (i < c.length - 1 ? M : Rr); return o; };
       var _rule = function (L, M, Rr) { return IND + _trow([ln('─', _cw[0]), ln('─', _cw[1]), ln('─', _cw[2]), ln('─', _cw[3])], L, M, Rr); };
       var _drow = function (vv) { return IND + _trow([' ' + pad(vv[0], _cw[0] - 2, 'right') + ' ', ' ' + pad(vv[1], _cw[1] - 2, 'right') + ' ', ' ' + pad(vv[2], _cw[2] - 2, 'right') + ' ', ' ' + pad(vv[3], _cw[3] - 2, 'right') + ' '], '│', '│', '│'); };
-      r += '\n' + TX('Dusuk-dal eslesme taramasi — excess(N) = T_net - drop - N^2/K_pump^2 :');
+      r += '\n' + TX('Düşük-dal eşleşme taraması — excess(N) = T_net - drop - N^2/K_pump^2 :');
       r += _rule('┌', '┬', '┐') + '\n' + _drow(['N (rpm)', 'SR', 'K_pump', 'excess']) + '\n' + _rule('├', '┼', '┤') + '\n';
       var _cap = Math.min(_rows.length, 20);
       for (var _ri = 0; _ri < _cap; _ri++) { var _rw = _rows[_ri]; r += _drow([ni(_rw.N), n(_rw.SR, 3), n(_rw.kpump, 2), n(_rw.excess, 1)]) + '\n'; }
       r += _rule('└', '┴', '┘') + '\n';
-      if (_rows.length > _cap) r += TX('  ... ' + (_rows.length - _cap) + ' ara satir gizlendi');
-      r += TX('min fazlalik = ' + n(sbs.minExcess, 1) + ' N.m @ N = ' + ni(sbs.minN) + ' rpm   (kopus esigi ' + n(sbs.threshold, 1) + ' N.m)');
-      r += TX('  -> ' + (sbs.onLowBranch ? 'DUSUK DAL (surunme): N_engine = ' + ni(s.N_engine) + ' rpm' : 'YUKSEK DAL (kopmus): N_engine = ' + ni(s.N_engine) + ' rpm, dinamik rev-up'));
+      if (_rows.length > _cap) r += TX('  ... ' + (_rows.length - _cap) + ' ara satır gizlendi');
+      r += TX('min fazlalık = ' + n(sbs.minExcess, 1) + ' N.m @ N = ' + ni(sbs.minN) + ' rpm   (kopuş eşiği ' + n(sbs.threshold, 1) + ' N.m)');
+      r += TX('  -> ' + (sbs.onLowBranch ? 'DÜŞÜK DAL (sürünme): N_engine = ' + ni(s.N_engine) + ' rpm' : 'YÜKSEK DAL (kopmuş): N_engine = ' + ni(s.N_engine) + ' rpm, dinamik rev-up'));
     }
     r += '\n';
-    r += NT('T_gross', n(s.motorGross, 1) + ' N.m   (PCHIP tork egrisi @ ' + ni(s.N_engine) + ' rpm)');
+    r += NT('T_gross', n(s.motorGross, 1) + ' N.m   (PCHIP tork eğrisi @ ' + ni(s.N_engine) + ' rpm)');
     r += E('T_net', ['T_gross - T_aksesuar', n(s.motorGross, 1) + ' - ' + n(s.motorGross - s.T_engine, 1), n(s.T_engine, 1) + ' N.m']);
   } else {
     var _nkin = s.N_engine_kinematic != null ? s.N_engine_kinematic : s.N_engine;
     r += E('N_engine', ['omega_wheel * i_total * 60/(2pi)', n(_omgW, 4) + ' * ' + n(iTot, 4) + ' * 9,54930',
-                        ni(_nkin) + ' rpm' + (s.N_engine_clampedIdle ? '   -> taban devrine kelepcelendi (' + ni(s.floorRpm != null ? s.floorRpm : s.N_engine) + ' rpm; TK-yok=kalkis-stall, lockup=idle)' : '')]);
+                        ni(_nkin) + ' rpm' + (s.N_engine_clampedIdle ? '   -> taban devrine kelepçelendi (' + ni(s.floorRpm != null ? s.floorRpm : s.N_engine) + ' rpm; TK-yok=kalkış-stall, lockup=idle)' : '')]);
     r += '\n';
-    r += NT('T_gross', n(s.motorGross, 1) + ' N.m   (PCHIP tork egrisi @ ' + ni(s.N_engine) + ' rpm)');
+    r += NT('T_gross', n(s.motorGross, 1) + ' N.m   (PCHIP tork eğrisi @ ' + ni(s.N_engine) + ' rpm)');
     r += E('T_net', ['T_gross - T_aksesuar', n(s.motorGross, 1) + ' - ' + n(s.motorGross - s.T_engine, 1), n(s.T_engine, 1) + ' N.m']);
   }
 
   // ── [2] KONVERTÖR / LOCKUP / DOĞRUDAN ──
   if (s.branch === 'converter') {
-    r += BH(2, 'TORK KONVERTORU (converter mod)');
+    r += BH(2, 'TORK KONVERTÖRÜ (converter mod)');
     r += E('SR', ['N_turbine / N_engine', ni(s.N_turbine) + ' / ' + ni(s.N_engine), n(s.SR, 4)]);
-    r += NT('tau(SR)', n(s.tau, 4) + '   (PCHIP tork-orani egrisi)');
-    r += NT('K_pump(SR)', n(s.Kp, 3) + '   (PCHIP K-faktoru egrisi)');
-    r += NT('TC verimi', 'eta = SR*tau = ' + n(s.SR, 3) + '*' + n(s.tau, 3) + ' = ' + n(s.SR * s.tau, 3) + '   (>1: hidrolik tork cogaltma)');
+    r += NT('tau(SR)', n(s.tau, 4) + '   (PCHIP tork-oranı eğrisi)');
+    r += NT('K_pump(SR)', n(s.Kp, 3) + '   (PCHIP K-faktörü eğrisi)');
+    r += NT('TC verimi', 'eta = SR*tau = ' + n(s.SR, 3) + '*' + n(s.tau, 3) + ' = ' + n(s.SR * s.tau, 3) + '   (>1: hidrolik tork çoğaltma)');
     r += E('omega_eng', ['N_engine * 2pi/60', ni(s.N_engine) + ' * 0,104720', n(s.omega_eng, 2) + ' rad/s']);
     r += E('T_pump', ['N_engine^2 / K_pump^2', ni(s.N_engine) + '^2 / ' + n(s.Kp, 2) + '^2', n(s.T_pump_absorbed, 1) + ' N.m']);
     r += E('T_turbine', ['T_pump * tau', n(s.T_pump_absorbed, 1) + ' * ' + n(s.tau, 3), n(s.T_turbine_raw, 1) + ' N.m']);
-    r += NT('T_cikis (ham)', n(s.T_output_pre_gear != null ? s.T_output_pre_gear : s.T_turbine_raw, 1) + ' N.m   (= T_turbine; disli verimi [2b]\'de ayrica)');
+    r += NT('T_cikis (ham)', n(s.T_output_pre_gear != null ? s.T_output_pre_gear : s.T_turbine_raw, 1) + ' N.m   (= T_turbine; dişli verimi [2b]\'de ayrıca)');
     if (s.engRate) {
-      r += '\n' + TX('Rev-up dinamigi (yuksek dal):');
+      r += '\n' + TX('Rev-up dinamiği (yüksek dal):');
       if (s.T_eng_net != null) r += SUB('T_eng_net', 'T_net - drop - T_pump = ' + n(s.T_engine, 1) + ' - ' + n(s.pumpTorqueDrop, 1) + ' - ' + n(s.T_pump_absorbed, 1) + ' = ' + n(s.T_eng_net, 1) + ' N.m');
       r += SUB('dN/dt', 'T_eng_net / I_eng_rev * 60/(2pi) = ' + (s.T_eng_net != null ? n(s.T_eng_net, 1) : '?') + ' / ' + n(s.I_eng_rev, 2) + ' * 9,54930 = ' + n(s.engRate, 1) + ' rpm/s');
     }
-    r += '\n' + TX('Isi reddi bilesenleri (negatifler 0 a kliplenip toplanir):');
+    r += '\n' + TX('Isı reddi bileşenleri (negatifler 0 a kliplenip toplanır):');
     r += SUB('P_TC_slip', 'T_pump*omega_eng*(1-SR*tau)/1000 = ' + n(s.T_pump_absorbed, 1) + '*' + n(s.omega_eng, 1) + '*(1-' + n(s.SR * s.tau, 3) + ')/1000 = ' + n(s.P_heat_converter, 2) + ' kW');
     r += SUB('P_turbine', 'T_turbine*(N_eng*SR)*2pi/60/1000 = ' + n(s.P_turbine_kW, 2) + ' kW');
     r += SUB('P_gear_mek', 'P_turbine*(1-eta_conv_ic ' + n(s.eta_conv_internal, 3) + ') = ' + n(s.P_heat_gear_mech, 2) + ' kW');
-    r += NT('Isi reddi', n(s.heatRejection_kW, 2) + ' kW');
+    r += NT('Isı reddi', n(s.heatRejection_kW, 2) + ' kW');
   } else if (s.branch === 'lockup') {
-    r += BH(2, 'KILITLI KONVERTOR (lockup)');
-    r += TX('SR = 1,  tau = 1   (motor-turbin rijit; hidrolik pompa emisi=0 -> pompa drop UYGULANMAZ)');
-    r += E('dT_lockup', ['10 + 0,00367 * N', '10 + 0,00367 * ' + ni(s.N_engine), n(s.deltaT_lockup, 1) + ' N.m   (kilit-klac surtunmesi)']);
+    r += BH(2, 'KİLİTLİ KONVERTÖR (lockup)');
+    r += TX('SR = 1,  tau = 1   (motor-türbin rijit; hidrolik pompa emişi=0 -> pompa drop uygulanmaz)');
+    r += E('dT_lockup', ['10 + 0,00367 * N', '10 + 0,00367 * ' + ni(s.N_engine), n(s.deltaT_lockup, 1) + ' N.m   (kilit-klaç sürtünmesi)']);
     r += E('T_net_lockup', ['T_net - dT_lockup', n(s.T_engine, 1) + ' - ' + n(s.deltaT_lockup, 1), n(s.T_net_lockup, 1) + ' N.m']);
-    r += NT('T_cikis (ham)', n(s.T_output_pre_gear != null ? s.T_output_pre_gear : s.T_net_lockup, 1) + ' N.m   (= T_net_lockup; disli verimi [2b]\'de ayrica)');
+    r += NT('T_cikis (ham)', n(s.T_output_pre_gear != null ? s.T_output_pre_gear : s.T_net_lockup, 1) + ' N.m   (= T_net_lockup; dişli verimi [2b]\'de ayrıca)');
     r += NT('kilit verimi', 'T_net_lockup / T_net = ' + n(s.tcEtaLockup, 3));
     r += '\n';
-    r += NT('Isi reddi', 'a*N + b = ' + (s.heatCoeff ? (n(s.heatCoeff.a, 5) + '*' + ni(s.N_engine) + ' + (' + n(s.heatCoeff.b, 3) + ')') : '') + ' = ' + n(s.heatRejection_kW, 2) + ' kW  (vites ' + (s.heatGearNum || '?') + ')');
+    r += NT('Isı reddi', 'a*N + b = ' + (s.heatCoeff ? (n(s.heatCoeff.a, 5) + '*' + ni(s.N_engine) + ' + (' + n(s.heatCoeff.b, 3) + ')') : '') + ' = ' + n(s.heatRejection_kW, 2) + ' kW  (vites ' + (s.heatGearNum || '?') + ')');
   } else {
-    r += BH(2, 'DOGRUDAN TAHRIK (TK yok)');
-    r += TX('Rijit dogrudan tahrik  (eta_direct = ' + n(s.eta_direct, 3) + ')');
+    r += BH(2, 'DOĞRUDAN TAHRİK (TK yok)');
+    r += TX('Rijit doğrudan tahrik  (eta_direct = ' + n(s.eta_direct, 3) + ')');
     r += E('T_output', ['T_net * eta_direct', n(s.T_engine, 1) + ' * ' + n(s.eta_direct, 3), n(s.T_output_geared != null ? s.T_output_geared : s.T_output, 1) + ' N.m']);
     r += '\n';
-    r += NT('Isi reddi', n(s.heatRejection_kW, 2) + ' kW   (dishli mekanik kaybi)');
+    r += NT('Isı reddi', n(s.heatRejection_kW, 2) + ' kW   (dişli mekanik kaybı)');
   }
 
   // ── [2b] DİŞLİ VERİMİ — TK'li modda tek uygulama (converter+lockup ortak) ──
   if (s.gearEffApplied) {
-    r += BH('2b', 'DISLI VERIMI (calcGearEfficiency — TK\'li modda tek uygulama)');
+    r += BH('2b', 'DİŞLİ VERİMİ (TK\'li modda tek uygulama)');
     var _absLn = Math.abs(Math.log(s.i_gear || 1));
     var _paren = 0.0175 + 2.93e-6 * s.N_turb_for_eff;
     r += SUB('absLn', '|ln(i_gear)| = |ln(' + n(s.i_gear, 4) + ')| = ' + n(_absLn, 4));
     r += SUB('paren', '0,0175 + 2,93e-6*N_turb = 0,0175 + 2,93e-6*' + ni(s.N_turb_for_eff) + ' = ' + n(_paren, 6));
     r += SUB('ham', '1 - absLn*paren = ' + n(1 - _absLn * _paren, 4));
-    r += E('eta_gear', ['calcGearEfficiency(i_gear, N_turb, gearEffCo)', n(s.eta_gear, 4) + '   (N_turb = ' + ni(s.N_turb_for_eff) + ' rpm)']);
+    r += E('eta_gear', ['1 - absLn*paren', n(s.eta_gear, 4) + '   (N_turb = ' + ni(s.N_turb_for_eff) + ' rpm)']);
     r += E('T_cikis', ['T_cikis(ham) * eta_gear', n(s.T_output_pre_gear, 1) + ' * ' + n(s.eta_gear, 4), n(s.T_output_geared, 1) + ' N.m']);
   }
 
   // ── [3] ÇEKİŞ ──
-  r += BH(3, 'CEKIS KUVVETI (tekerlekte)');
+  r += BH(3, 'ÇEKİŞ KUVVETİ (tekerlekte)');
   r += E('F_ham', ['T_out * i_gear * i_ps*eta_ps * i_tr*eta_tr * i_ax*eta_ax / r_tire',
                    n(s.T_output_geared != null ? s.T_output_geared : s.T_output, 1) + ' * ' + n(s.i_gear, 3) + ' * ' + n(d.i_propshaft, 3) + '*' + n(d.psEff, 4) + ' * ' + n(d.i_transfer, 3) + '*' + n(d.eta_transfer, 4) + ' * ' + n(d.i_axle, 3) + '*' + n(d.eta_axle, 4) + ' / ' + n(d.r_tire, 4),
                    ni(s.F_traction_raw) + ' N']);
   r += '\n';
-  r += NT('Tutunma', 'F_grip = mu*m*tahrik%*g = ' + n(P.mu_traction, 2) + '*' + ni(s.m_vehicle) + '*' + n(P.drivenPct, 2) + '*9,81 = ' + ni(s.F_grip) + ' N   ->   ' + (s.gripLimited ? 'SINIRLANDI (tekerlek kaymasi)' : 'serbest (limit asilmadi)'));
+  r += NT('Tutunma', 'F_grip = mu*m*tahrik%*g = ' + n(P.mu_traction, 2) + '*' + ni(s.m_vehicle) + '*' + n(P.drivenPct, 2) + '*9,81 = ' + ni(s.F_grip) + ' N   ->   ' + (s.gripLimited ? 'SINIRLANDI (tekerlek kayması)' : 'serbest (limit aşılmadı)'));
   r += NT('F_cekis', ni(s.F_traction) + ' N   (' + n(s.F_traction / 1000, 2) + ' kN)');
 
   // ── [4] DİRENÇLER ──
-  r += BH(4, 'DIRENC KUVVETLERI');
+  r += BH(4, 'DİRENÇ KUVVETLERİ');
   var _theta = Math.atan((s.grade_pct || 0) / 100), _cos = Math.cos(_theta), _sin = Math.sin(_theta);
   var _K1 = (P.crrK1 != null ? P.crrK1 : 0.026909), _K2 = (P.crrK2 != null ? P.crrK2 : -0.00018893);
   var _fcrr = 1 + _K1 * s.v_ms + _K2 * s.v_ms * s.v_ms;
   var _kaero = 0.5 * s.rho * s.Cd * s.A_frontal;
   var _flatRoad = Math.abs(s.grade_pct || 0) < 1e-9;
   if (_flatRoad) {
-    r += TX('Egim %0  ->  theta=0, cos=1, sin=0, F_grade=0 N  (bu kosuda tum adimlarda ayni)');
+    r += TX('Eğim %0  ->  theta=0, cos=1, sin=0, F_grade=0 N  (bu koşuda tüm adımlarda aynı)');
   } else {
     r += E('theta', ['atan(grade% / 100)', 'atan(' + n((s.grade_pct || 0) / 100, 4) + ')', n(_theta, 6) + ' rad (' + n(_theta * 180 / Math.PI, 3) + ' deg)']);
     r += SUB('cos(theta)', n(_cos, 6));
     r += SUB('sin(theta)', n(_sin, 6));
   }
-  r += E('f (hiz duz.)', ['1 + K1*v + K2*v^2', '1 + ' + n(_K1, 6) + '*' + n(s.v_ms, 3) + ' + (' + n(_K2, 8) + ')*' + n(s.v_ms * s.v_ms, 3), n(_fcrr, 6)]);
+  r += E('f (hız düz.)', ['1 + K1*v + K2*v^2', '1 + ' + n(_K1, 6) + '*' + n(s.v_ms, 3) + ' + (' + n(_K2, 8) + ')*' + n(s.v_ms * s.v_ms, 3), n(_fcrr, 6)]);
   r += E('Crr_eff', ['Crr_static * f', n(s.Crr_static, 5) + ' * ' + n(_fcrr, 6), n(s.Crr_eff, 6)]);
-  r += E('F_roll', ['Crr_eff * yuzey * m * g * cos(theta)', n(s.Crr_eff, 6) + ' * ' + n(s.surfFactor, 3) + ' * ' + ni(s.m_vehicle) + ' * 9,81 * ' + n(_cos, 5), ni(s.F_rolling) + ' N']);
+  r += E('F_roll', ['Crr_eff * yüzey * m * g * cos(theta)', n(s.Crr_eff, 6) + ' * ' + n(s.surfFactor, 3) + ' * ' + ni(s.m_vehicle) + ' * 9,81 * ' + n(_cos, 5), ni(s.F_rolling) + ' N']);
   r += SUB('k_aero', '0,5*rho*Cd*A = 0,5*' + n(s.rho, 3) + '*' + n(s.Cd, 3) + '*' + n(s.A_frontal, 3) + ' = ' + n(_kaero, 4));
   r += E('F_aero', ['k_aero * v^2', n(_kaero, 4) + ' * ' + n(s.v_ms * s.v_ms, 3), ni(s.F_aero) + ' N']);
-  if (!_flatRoad) r += E('F_grade', ['m * g * sin(theta)', ni(s.m_vehicle) + ' * 9,81 * ' + n(_sin, 5), ni(s.F_grade) + ' N   (egim %' + n(s.grade_pct, 1) + ')']);
+  if (!_flatRoad) r += E('F_grade', ['m * g * sin(theta)', ni(s.m_vehicle) + ' * 9,81 * ' + n(_sin, 5), ni(s.F_grade) + ' N   (eğim %' + n(s.grade_pct, 1) + ')']);
   r += E('F_direnc', ['F_roll + F_aero + F_grade', ni(s.F_rolling) + ' + ' + ni(s.F_aero) + ' + ' + ni(s.F_grade), ni(s.F_resist) + ' N']);
 
   // ── [5] EŞDEĞER KÜTLE + İVME ──
   var mt = s.massTerms || {};
   var _it2 = (mt.i_total || 0) * (mt.i_total || 0), _id2 = (mt.i_down || 0) * (mt.i_down || 0), _ia2 = (d.i_axle || 0) * (d.i_axle || 0);
   var _r2 = (mt.r2 != null ? mt.r2 : (d.r_tire || 0) * (d.r_tire || 0));
-  r += BH(5, 'ESDEGER KUTLE VE IVME');
+  r += BH(5, 'EŞDEĞER KÜTLE VE İVME');
   r += E('F_net', ['F_cekis - F_direnc', ni(s.F_traction) + ' - ' + ni(s.F_resist), ni(s.F_net) + ' N']);
   if (H.showFullMass !== false) {
-    r += '\n' + TX('I_eff = SUM( I_k(ham) * carpan^2 )  — her terimin acik katkisi:');
-    r += IND + '  ' + pad('terim', 13) + pad('I_ham', 8, 'right') + '  ' + pad('carpan^2', 20) + pad('katki', 9, 'right') + '\n';
+    r += '\n' + TX('I_eff = SUM( I_k(ham) * çarpan^2 )  — her terimin açık katkısı:');
+    r += IND + '  ' + pad('terim', 13) + pad('I_ham', 8, 'right') + '  ' + pad('çarpan^2', 20) + pad('katkı', 9, 'right') + '\n';
     r += IND + '  ' + ln('-', 50) + '\n';
     var _mrow = function (lbl, Iraw, facLbl, facVal, contrib) { return IND + '  ' + pad(lbl, 13) + pad(n(Iraw, 2), 8, 'right') + '  ' + pad(facLbl + ' = ' + n(facVal, 3), 20) + pad(n(contrib, 2), 9, 'right') + '\n'; };
     if (mt.isLockup) {
       r += _mrow('motor', P.I_engine, 'i_total^2', _it2, mt.I_engine);
-      if (P.I_conv > 0) r += _mrow('konvertor', P.I_conv, 'i_total^2', _it2, mt.I_conv);   // TK yoksa 0 → satiri atla
+      if (P.I_conv > 0) r += _mrow('konvertör', P.I_conv, 'i_total^2', _it2, mt.I_conv);   // TK yoksa 0 → satiri atla
     } else {
-      r += _mrow('konv-turbin', P.I_conv_turbine, 'i_total^2', _it2, mt.I_conv_turbine);
+      r += _mrow('konv-türbin', P.I_conv_turbine, 'i_total^2', _it2, mt.I_conv_turbine);
     }
-    r += _mrow('sanziman', P.I_trans, 'i_down^2', _id2, mt.I_trans);
-    r += _mrow('propsaft', P.I_propshaft, 'i_down^2', _id2, mt.I_propshaft);
+    r += _mrow('şanzıman', P.I_trans, 'i_down^2', _id2, mt.I_trans);
+    r += _mrow('propşaft', P.I_propshaft, 'i_down^2', _id2, mt.I_propshaft);
     r += _mrow('transfer', P.I_tc, 'i_axle^2', _ia2, mt.I_tc);
     r += _mrow('aks', P.I_axle, '1', 1, mt.I_axle);
     r += _mrow('teker', P.I_tire, '1', 1, mt.I_tire);
     r += IND + '  ' + ln('-', 50) + '\n';
     r += IND + '  ' + pad('toplam', 13) + pad('', 8) + '  ' + pad('', 20) + pad(n(s.I_eff, 2), 9, 'right') + ' kg.m^2\n';
-    r += SUB('i_down', 'i_ps*i_tr*i_axle = ' + n(mt.i_down, 3) + '  (sanziman/propsaft carpani)');
-    r += SUB('r_tire^2', n(d.r_tire, 4) + '^2 = ' + n(_r2, 4) + ' m^2  (m_eff boleni)');
+    r += SUB('i_down', 'i_ps*i_tr*i_axle = ' + n(mt.i_down, 3) + '  (şanzıman/propşaft çarpanı)');
+    r += SUB('r_tire^2', n(d.r_tire, 4) + '^2 = ' + n(_r2, 4) + ' m^2  (m_eff böleni)');
   } else {
-    r += '\n' + TX('I_eff = ' + n(s.I_eff, 2) + ' kg.m^2   (ayrisim degismedi — ayni vites/mod; yukaridaki son tam tablo)');
+    r += '\n' + TX('I_eff = ' + n(s.I_eff, 2) + ' kg.m^2   (ayrışım değişmedi — aynı vites/mod)');
   }
   r += E('m_eff', ['m + I_eff / r_tire^2', ni(s.m_vehicle) + ' + ' + n(s.I_eff, 2) + ' / ' + n(_r2, 4), ni(s.m_eff) + ' kg   (x' + n(s.massRatio, 4) + ')']);
   r += E('a', ['F_net / m_eff', ni(s.F_net) + ' / ' + ni(s.m_eff), n(s.accel, 4) + ' m/s^2   (' + n(s.accel_g, 4) + ' g)']);
@@ -2669,25 +2648,25 @@ function veFTTraceRenderStep(s, idx, H) {
   var _omgEng = (s.N_engine || 0) * 2 * Math.PI / 60;
   var _Pmotor = (s.T_engine || 0) * _omgEng / 1000;
   var _Pteker = (s.F_traction || 0) * (s.v_ms || 0) / 1000;
-  r += '\n' + TX('Guc (turetilen):');
+  r += '\n' + TX('Güç (türetilen):');
   r += SUB('P_motor', 'T_net * omega_eng / 1000 = ' + n(s.T_engine, 1) + ' * ' + n(_omgEng, 1) + ' / 1000 = ' + n(_Pmotor, 1) + ' kW  (krank, net)');
-  r += SUB('P_teker', 'F_cekis * v / 1000 = ' + ni(s.F_traction) + ' * ' + n(s.v_ms, 3) + ' / 1000 = ' + n(_Pteker, 1) + ' kW  (yer temasi)');
+  r += SUB('P_teker', 'F_cekis * v / 1000 = ' + ni(s.F_traction) + ' * ' + n(s.v_ms, 3) + ' / 1000 = ' + n(_Pteker, 1) + ' kW  (yer teması)');
 
   // ── [6] VİTES KARARI (varsa) ──
   var lastNum = 5;
   if (s.shiftEvent) {
     var se = s.shiftEvent;
-    r += BH(6, 'VITES GECISI KARARI');
-    r += NT('Gecis', ascii(se.fromMode) + '  ->  ' + ascii(se.toMode) + (se.isDownshift ? '   (DOWNSHIFT)' : ''));
+    r += BH(6, 'VİTES GEÇİŞİ KARARI');
+    r += NT('Geçiş', yazi(se.fromMode) + '  ->  ' + yazi(se.toMode) + (se.isDownshift ? '   (downshift)' : ''));
     if (se.reason === 'governed-safety') {
-      r += NT('Kural', 'governed ust-vites guvenligi (over-rev korumasi)');
-      r += NT('Karar', 'N_engine = ' + ni(se.N_engine) + ' >= governed   ->  ust vitese ZORUNLU GECIS');
+      r += NT('Kural', 'governed üst-vites güvenliği (over-rev koruması)');
+      r += NT('Karar', 'N_engine = ' + ni(se.N_engine) + ' >= governed   ->  üst vitese zorunlu geçiş');
     } else if (se.threshold != null) {
-      r += NT('Kural', ascii(se.thresholdBasis || ''));
-      r += NT('Karar', 'N_out = ' + ni(se.N_out) + '   vs   esik = ' + ni(se.threshold) + '   ->  GECIS');
+      r += NT('Kural', yazi(se.thresholdBasis || ''));
+      r += NT('Karar', 'N_out = ' + ni(se.N_out) + '   vs   eşik = ' + ni(se.threshold) + '   ->  geçiş');
     } else {
-      r += NT('Kural', ascii(se.thresholdBasis || se.reason || ''));
-      r += NT('Karar', 'N_out = ' + ni(se.N_out) + '   ->  GECIS');
+      r += NT('Kural', yazi(se.thresholdBasis || se.reason || ''));
+      r += NT('Karar', 'N_out = ' + ni(se.N_out) + '   ->  geçiş');
     }
     lastNum = 6;
   }
@@ -2698,9 +2677,9 @@ function veFTTraceRenderStep(s, idx, H) {
     r += BH(lastNum + 1, 'SAYISAL ENTEGRASYON (' + ig.method.toUpperCase() + ', dt = ' + n(ig.dt, 4) + ' s)');
     var _stg = ig.stages || [];
     var _hasVin = _stg.some(function (st) { return st.v_in != null; });
-    if (_hasVin) r += TX('Her asama, degerlendirildigi giris hizinda a(v):');
+    if (_hasVin) r += TX('Her aşama, değerlendirildiği giriş hızında a(v):');
     _stg.forEach(function (st) {
-      var _lbl = ascii(String(st.label).replace(/·/g, '*'));
+      var _lbl = yazi(String(st.label).replace(/·/g, '*'));
       if (st.v_in != null) r += IND + pad(_lbl, 22) + ' @ v_in=' + n(st.v_in, 4) + '  ->  a = ' + n(st.accel, 5) + ' m/s^2\n';
       else r += IND + pad(_lbl, 22) + ' = ' + n(st.accel, 5) + ' m/s^2\n';
     });
@@ -2711,7 +2690,7 @@ function veFTTraceRenderStep(s, idx, H) {
     else if (ig.method === 'heun' && _acc.length === 2) _num = '(' + n(_acc[0], 5) + ' + ' + n(_acc[1], 5) + ')/2 * ' + n(ig.dt, 4);
     else if (ig.method === 'ralston' && _acc.length === 2) _num = '(' + n(_acc[0], 5) + '/4 + 3*' + n(_acc[1], 5) + '/4) * ' + n(ig.dt, 4);
     else if (ig.method === 'euler' && _acc.length === 1) _num = n(_acc[0], 5) + ' * ' + n(ig.dt, 4);
-    r += NT('dv', ascii(String(ig.formula || '').replace(/·/g, '*')).replace(/^dv\s*=\s*/, ''));
+    r += NT('dv', yazi(String(ig.formula || '').replace(/·/g, '*')).replace(/^dv\s*=\s*/, ''));
     if (_num) r += IND + pad('', LW) + '   = ' + _num + '\n';
     r += IND + pad('', LW) + '   = ' + n(ig.dv, 5) + ' m/s\n';
     r += NT('v_sonraki', 'v + dv = ' + n(s.v_ms, 4) + ' + ' + n(ig.dv, 5) + ' = ' + n(ig.v_next, 4) + ' m/s');
@@ -2744,17 +2723,9 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
     var labelW = 32;
     return indent + pad(label, labelW) + ': ' + value + '\n';
   }
-  function ascii(s) {
-    return String(s || '')
-      .replace(/ğ/g,'g').replace(/Ğ/g,'G')
-      .replace(/ü/g,'u').replace(/Ü/g,'U')
-      .replace(/ş/g,'s').replace(/Ş/g,'S')
-      .replace(/ı/g,'i').replace(/İ/g,'I')
-      .replace(/ö/g,'o').replace(/Ö/g,'O')
-      .replace(/ç/g,'c').replace(/Ç/g,'C');
-  }
+  function yazi(s) { return String(s || ''); }
 
-  var hazirlayan = optHazirlayan || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || 'Belirtilmemiş';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
@@ -2787,7 +2758,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   var sd = solverNode ? (solverNode.data || {}) : {};
   var psd = propNode ? (propNode.data || {}) : {};
 
-  var modNames = {'engine-brake':'Motor freni performans','full-throttle':'Tam gaz hizlanma','performance':'Arac performans','fuel':'Yakit tuketimi'};
+  var modNames = {'engine-brake':'Motor freni performans','full-throttle':'Tam gaz hızlanma','performance':'Araç Performans','fuel':'Yakıt tüketimi'};
   var modLabel = modNames[veActiveModule] || veActiveModule || '-';
 
   var r = '';
@@ -2800,22 +2771,22 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
   r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
   r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
-  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
+  r += pad('Güç Grubu Müdürlüğü', W, 'center') + '\n\n';
   r += ln('=', W) + '\n\n';
   r += pad('+' + ln('-', 40) + '+', W, 'center') + '\n';
-  r += pad('|       TOPOLOJI DETAY RAPORU       |', W, 'center') + '\n';
+  r += pad('|       TOPOLOJİ DETAY RAPORU       |', W, 'center') + '\n';
   r += pad('+' + ln('-', 40) + '+', W, 'center') + '\n\n';
 
   // ═══ RAPOR BILGILERI ═══
-  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
+  r += ln('-', W) + '\n  RAPOR BİLGİLERİ\n' + ln('-', W) + '\n';
   r += pRow('Rapor tarihi', tarih);
   r += pRow('Rapor saati', saat);
   r += pRow('Rapor no', raporNo);
-  r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Proje adi', ascii(veProjectName || 'Belirtilmemis'));
-  r += pRow('Aktif modul', modLabel);
-  r += pRow('Bilesen sayisi', String(nodes.length));
-  r += pRow('Baglanti sayisi', String(connections.length));
+  r += pRow('Hazırlayan', yazi(hazirlayan));
+  r += pRow('Proje adı', yazi(veProjectName || 'Belirtilmemiş'));
+  r += pRow('Aktif modül', modLabel);
+  r += pRow('Bileşen sayısı', String(nodes.length));
+  r += pRow('Bağlantı sayısı', String(connections.length));
   r += ln('-', W) + '\n\n';
 
   var secNo = 1;
@@ -2825,29 +2796,29 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (vehNode) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. ARAC', W, 'center') + '\n';
+    r += pad(secNo + '. ARAÇ', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  ARAC OZELLIKLERI\n';
+    r += '  ARAÇ ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    if (vd.ftVehName || vd.ftVehicleName) r += pRow('Arac adi', ascii(vd.ftVehName || vd.ftVehicleName));
+    if (vd.ftVehName || vd.ftVehicleName) r += pRow('Araç adı', yazi(vd.ftVehName || vd.ftVehicleName));
     var mass = vd.ftGVW || vd.mass || 0;
-    if (mass) r += pRow('Brut arac agirligi (GVW)', numI(mass) + ' kg');
-    if (vd.initialSpeed !== undefined) r += pRow('Baslangic hizi', num(vd.initialSpeed, 1) + ' km/sa');
+    if (mass) r += pRow('Brüt araç ağırlığı (GVW)', numI(mass) + ' kg');
+    if (vd.initialSpeed !== undefined) r += pRow('Başlangıç hızı', num(vd.initialSpeed, 1) + ' km/sa');
     r += '\n';
 
-    r += '  AERODINAMIK\n';
+    r += '  AERODİNAMİK\n';
     r += '  ' + ln('-', 38) + '\n';
     var cd = vd.ftCd || vd.cd || 0;
-    if (cd) r += pRow('Suruklenme katsayisi (Cd)', num(cd, 3));
+    if (cd) r += pRow('Sürüklenme katsayısı (Cd)', num(cd, 3));
     var fa = vd.frontalArea || ((vd.ftHeight || 0) * (vd.ftWidth || 0)) || 0;
-    if (fa) r += pRow('Alin alani (A)', num(fa, 2) + ' m2');
-    if (vd.ftHeight) r += pRow('Yukseklik', num(vd.ftHeight, 3) + ' m');
-    if (vd.ftWidth) r += pRow('Genislik', num(vd.ftWidth, 3) + ' m');
+    if (fa) r += pRow('Alın alanı (A)', num(fa, 2) + ' m2');
+    if (vd.ftHeight) r += pRow('Yükseklik', num(vd.ftHeight, 3) + ' m');
+    if (vd.ftWidth) r += pRow('Genişlik', num(vd.ftWidth, 3) + ' m');
     var rho = vd.ftRho || vd.airDensity || 0;
-    if (rho) r += pRow('Hava yogunlugu (rho)', num(rho, 3) + ' kg/m3');
+    if (rho) r += pRow('Hava yoğunluğu (rho)', num(rho, 3) + ' kg/m3');
     if (cd && fa) r += pRow('CdA', num(cd * fa, 3) + ' m2');
-    if (vd.autoShift !== undefined) r += pRow('Otomatik vites', vd.autoShift ? 'Evet' : 'Hayir');
+    if (vd.autoShift !== undefined) r += pRow('Otomatik vites', vd.autoShift ? 'Evet' : 'Hayır');
     r += '\n\n';
     secNo++;
   }
@@ -2858,18 +2829,18 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (engineNode) {
     var ms = ed.motorSpecs || {};
-    var engName = engineNode.customName || ascii(ed.ftMotorPreset || ed.mfMotorPreset || '-');
+    var engName = engineNode.customName || yazi(ed.ftMotorPreset || ed.mfMotorPreset || '-');
     r += ln('=', W) + '\n';
     r += pad(secNo + '. MOTOR', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  MOTOR OZELLIKLERI\n';
+    r += '  MOTOR ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    r += pRow('Motor tanimi', ascii(engName));
+    r += pRow('Motor tanımı', yazi(engName));
     if (ms.displacement) r += pRow('Silindir hacmi', num(ms.displacement, 2) + ' L');
     if (ms.governedSpeed) r += pRow('Governed devir', numI(ms.governedSpeed) + ' rpm');
     if (ms.noLoadGoverned) r += pRow('No-Load Governed', numI(ms.noLoadGoverned) + ' rpm');
-    if (ms.idleRpm) r += pRow('Rolanti devri', numI(ms.idleRpm) + ' rpm');
+    if (ms.idleRpm) r += pRow('Rölanti devri', numI(ms.idleRpm) + ' rpm');
     if (ms.inertia) r += pRow('Motor ataleti', num(ms.inertia, 4) + ' kg.m2');
     if (ed.verim !== undefined) r += pRow('Motor freni verimi', '%' + num(ed.verim, 0));
     r += '\n';
@@ -2887,15 +2858,15 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
         if (pw > pkP) { pkP = pw; pkPr = rpm; }
       });
       r += pRow('Pik tork', num(pkT, 1) + ' N.m @ ' + numI(pkTr) + ' rpm');
-      r += pRow('Pik guc', num(pkP, 1) + ' kW (' + numI(pkP * 1.341) + ' HP) @ ' + numI(pkPr) + ' rpm');
+      r += pRow('Pik güç', num(pkP, 1) + ' kW (' + numI(pkP * 1.341) + ' HP) @ ' + numI(pkPr) + ' rpm');
       r += '\n';
 
       // Sol taraf: tork tablosu satırları
       var leftLines = [];
       var LW = 46;
-      leftLines.push('  MOTOR TORK / GUC VERISI');
+      leftLines.push('  MOTOR TORK / GÜÇ VERİSİ');
       leftLines.push('  ' + ln('-', 40));
-      leftLines.push('  ' + pad('Devir', 9, 'right') + pad('Tork', 14, 'right') + pad('Guc', 14, 'right'));
+      leftLines.push('  ' + pad('Devir', 9, 'right') + pad('Tork', 14, 'right') + pad('Güç', 14, 'right'));
       leftLines.push('  ' + pad('[rpm]', 9, 'right') + pad('[N.m]', 14, 'right') + pad('[kW]', 14, 'right'));
       leftLines.push('  ' + ln('-', 40));
       tData.forEach(function(p) {
@@ -2909,7 +2880,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
         leftLines.push('  ' + pad(numI(rpm), 9, 'right') + pad(num(torque, 1), 14, 'right') + pad(num(pw, 1), 14, 'right') + tag);
       });
       leftLines.push('  ' + ln('-', 40));
-      leftLines.push('  *T=Pik Tork  *P=Pik Guc  *G=Governed');
+      leftLines.push('  *T=Pik Tork  *P=Pik Güç  *G=Governed');
 
       // Sağ taraf: aksesuar kayıpları satırları
       var rightLines = [];
@@ -2921,7 +2892,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
         rightLines.push(pad('', 20) + pad('[kW]', 8, 'right') + pad('[kW]', 8, 'right'));
         rightLines.push(ln('-', 36));
         ed.accessories.forEach(function(a) {
-          var aName = ascii(a.name);
+          var aName = yazi(a.name);
           if (aName.length > 20) aName = aName.substring(0, 18) + '..';
           rightLines.push(pad(aName, 20) + pad(num(a.standardLoss, 1), 8, 'right') + pad(num(a.userLoss, 1), 8, 'right'));
           aStd += (a.standardLoss || 0);
@@ -2947,7 +2918,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
       r += '  ' + ln('-', 34) + '\n';
       var aStd2 = 0, aUsr2 = 0;
       ed.accessories.forEach(function(a) {
-        r += '  ' + pad(ascii(a.name), 16) + pad(num(a.standardLoss, 1), 9, 'right') + pad(num(a.userLoss, 1), 9, 'right') + '\n';
+        r += '  ' + pad(yazi(a.name), 16) + pad(num(a.standardLoss, 1), 9, 'right') + pad(num(a.userLoss, 1), 9, 'right') + '\n';
         aStd2 += (a.standardLoss || 0);
         aUsr2 += (a.userLoss || 0);
       });
@@ -2963,22 +2934,22 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (tcNode) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. TORK KONVERTORU', W, 'center') + '\n';
+    r += pad(secNo + '. TORK KONVERTÖRÜ', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  KONVERTOR OZELLIKLERI\n';
+    r += '  KONVERTÖR ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    r += pRow('Konvertor adi', ascii(td.tcName || td.tcPresetKey || '-'));
-    if (td.pumpTorqueDrop !== undefined) r += pRow('Pompa tork dusumu', num(td.pumpTorqueDrop, 1) + ' N.m');
-    if (td.tcRatio !== undefined) r += pRow('TC orani (M.Freni)', num(td.tcRatio, 2));
-    r += pRow('Kilit durumu', td.isLocked ? 'Kilitli' : 'Acik');
+    r += pRow('Konvertör adı', yazi(td.tcName || td.tcPresetKey || '-'));
+    if (td.pumpTorqueDrop !== undefined) r += pRow('Pompa tork düşümü', num(td.pumpTorqueDrop, 1) + ' N.m');
+    if (td.tcRatio !== undefined) r += pRow('TC oranı (M.Freni)', num(td.tcRatio, 2));
+    r += pRow('Kilit durumu', td.isLocked ? 'Kilitli' : 'Açık');
     r += '\n';
 
     var tcData = td.tcData || [];
     if (tcData.length > 0) {
-      r += '  KONVERTOR KARAKTERISTIK VERISI\n';
+      r += '  KONVERTÖR KARAKTERİSTİK VERİSİ\n';
       r += '  ' + ln('-', 52) + '\n';
-      r += '  ' + pad('SR', 10, 'right') + pad('K_pump', 14, 'right') + pad('Tork Orani', 14, 'right') + pad('Verim', 14, 'right') + '\n';
+      r += '  ' + pad('SR', 10, 'right') + pad('K_pump', 14, 'right') + pad('Tork Oranı', 14, 'right') + pad('Verim', 14, 'right') + '\n';
       r += '  ' + pad('[-]', 10, 'right') + pad('[rpm/sqrt(Nm)]', 14, 'right') + pad('(tau) [-]', 14, 'right') + pad('[%]', 14, 'right') + '\n';
       r += '  ' + ln('-', 52) + '\n';
       tcData.forEach(function(p) {
@@ -3022,13 +2993,13 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
         var stallTorque = motorTorkAt(stallSpeed) - ptd;
         var turbineTorque = stallTorque * stallTau;
 
-        r += '\n  MOTOR-KONVERTOR ESLESMESI\n';
+        r += '\n  MOTOR-KONVERTÖR EŞLEŞMESİ\n';
         r += '  ' + ln('-', 48) + '\n';
-        r += pRow('Pompa tork dusumu', num(ptd, 1) + ' N.m');
+        r += pRow('Pompa tork düşümü', num(ptd, 1) + ' N.m');
         r += pRow('Stall devri', numI(stallSpeed) + ' rpm');
         r += pRow('Stall motor torku', numI(stallTorque) + ' N.m');
-        r += pRow('Stall tork orani (tau)', num(stallTau, 3));
-        r += pRow('Stall turbin torku', numI(turbineTorque) + ' N.m');
+        r += pRow('Stall tork oranı (tau)', num(stallTau, 3));
+        r += pRow('Stall türbin torku', numI(turbineTorque) + ' N.m');
 
         // Governed'da SR hesapla
         var govRpm = ms.governedSpeed || 0;
@@ -3047,7 +3018,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
             if (srAtGov === 0 && kpNeeded > tcData[tcData.length-1].kpump) srAtGov = 0.99;
             r += pRow('Governed devir', numI(govRpm) + ' rpm');
             r += pRow('SR @ Governed', num(srAtGov, 3));
-            r += pRow('Governed durumu', srAtGov >= 0.80 ? 'OK (SR >= 0,80)' : 'DIKKAT (SR < 0,80)');
+            r += pRow('Governed durumu', srAtGov >= 0.80 ? 'Uygun (SR >= 0,80)' : 'Dikkat (SR < 0,80)');
           }
         }
         r += '  ' + ln('-', 48) + '\n';
@@ -3063,23 +3034,23 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (gbNode) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. SANZIMAN', W, 'center') + '\n';
+    r += pad(secNo + '. ŞANZIMAN', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  SANZIMAN OZELLIKLERI\n';
+    r += '  ŞANZIMAN ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    r += pRow('Sanziman modeli', ascii(gd.gbName || gd.selectedGearbox || gd.ftGBPreset || '-'));
+    r += pRow('Şanzıman modeli', yazi(gd.gbName || gd.selectedGearbox || gd.ftGBPreset || '-'));
     if (gd.efficiency !== undefined) r += pRow('Verim', '%' + num(gd.efficiency, 1));
-    if (gd.forwardGears) r += pRow('Ileri vites sayisi', String(gd.forwardGears));
-    if (gd.reverseGears) r += pRow('Geri vites sayisi', String(gd.reverseGears));
-    if (gd.shiftProfile) r += pRow('Shift profili', ascii(gd.shiftProfile));
+    if (gd.forwardGears) r += pRow('İleri vites sayısı', String(gd.forwardGears));
+    if (gd.reverseGears) r += pRow('Geri vites sayısı', String(gd.reverseGears));
+    if (gd.shiftProfile) r += pRow('Shift profili', yazi(gd.shiftProfile));
     if (gd.shiftRefRPM) r += pRow('Shift referans RPM', numI(gd.shiftRefRPM) + ' rpm');
     r += '\n';
 
     // FT gear data
     var gears = gd.ftGearData || gd.gearData || [];
     if (gears.length > 0) {
-      r += '  VITES ORANLARI\n';
+      r += '  VİTES ORANLARI\n';
       r += '  ' + ln('-', 44) + '\n';
       r += '  ' + pad('Vites', 8) + pad('Oran', 14, 'right') + pad('Verim (%)', 14, 'right') + '\n';
       r += '  ' + ln('-', 44) + '\n';
@@ -3090,7 +3061,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
       });
       r += '  ' + ln('-', 44) + '\n';
     } else if (gd.gearRatios && gd.gearRatios.length > 0) {
-      r += '  VITES ORANLARI\n';
+      r += '  VİTES ORANLARI\n';
       r += '  ' + ln('-', 30) + '\n';
       r += '  ' + pad('Vites', 8) + pad('Oran', 14, 'right') + '\n';
       r += '  ' + ln('-', 30) + '\n';
@@ -3111,16 +3082,16 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
     r += pad(secNo + '. TRANSFER KUTUSU', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  TRANSFER OZELLIKLERI\n';
+    r += '  TRANSFER ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
     var trName = trNode.customName || trd.ftTrName || trd.ftTrPreset || '-';
-    r += pRow('Transfer adi', ascii(trName));
+    r += pRow('Transfer adı', yazi(trName));
     if (trd.efficiency !== undefined) r += pRow('Verim', '%' + num(trd.efficiency, 1));
     r += '\n';
 
     var trGears = trd.ftTrGears || trd.transferData || [];
     if (trGears.length > 0) {
-      r += '  TRANSFER KADEMELERI\n';
+      r += '  TRANSFER KADEMELERİ\n';
       r += '  ' + ln('-', 44) + '\n';
       r += '  ' + pad('Kademe', 16) + pad('Oran', 14, 'right') + pad('Verim (%)', 14, 'right') + '\n';
       r += '  ' + ln('-', 44) + '\n';
@@ -3128,12 +3099,12 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
         var kd = tg.kademe || tg.mode || '-';
         var ratio = tg.ratio || tg.oran || 0;
         var eff = tg.eff || tg.verim || trd.efficiency || '-';
-        r += '  ' + pad(ascii(kd), 16) + pad(num(ratio, 3), 14, 'right') + pad(eff !== '-' ? num(eff, 1) : '-', 14, 'right') + '\n';
+        r += '  ' + pad(yazi(kd), 16) + pad(num(ratio, 3), 14, 'right') + pad(eff !== '-' ? num(eff, 1) : '-', 14, 'right') + '\n';
       });
       r += '  ' + ln('-', 44) + '\n';
     } else {
-      if (trd.selectedMode) r += pRow('Secili mod', ascii(trd.selectedMode));
-      if (trd.selectedRatio) r += pRow('Secili oran', num(trd.selectedRatio, 3));
+      if (trd.selectedMode) r += pRow('Seçili mod', yazi(trd.selectedMode));
+      if (trd.selectedRatio) r += pRow('Seçili oran', num(trd.selectedRatio, 3));
     }
     r += '\n\n';
     secNo++;
@@ -3144,12 +3115,12 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (propNode) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. PROPSAFT (KARDAN MILI)', W, 'center') + '\n';
+    r += pad(secNo + '. PROPŞAFT (KARDAN MİLİ)', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  PROPSAFT OZELLIKLERI\n';
+    r += '  PROPŞAFT ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    r += pRow('Tanim', ascii(psd.psName || propNode.customName || '-'));
+    r += pRow('Tanım', yazi(psd.psName || propNode.customName || '-'));
     r += pRow('Oran', '1,000 (Direkt)');
     if (psd.psEff !== undefined) r += pRow('Verim', '%' + num(psd.psEff, 2));
     if (psd.psInertia !== undefined) r += pRow('Atalet', num(psd.psInertia, 4) + ' kg.m2');
@@ -3162,14 +3133,14 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (diffNode) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. DIFERANSIYEL', W, 'center') + '\n';
+    r += pad(secNo + '. DİFERANSİYEL', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  DIFERANSIYEL OZELLIKLERI\n';
+    r += '  DİFERANSİYEL ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    r += pRow('Tanim', ascii(diffNode.customName || '-'));
-    if (dd.diffRatio !== undefined) r += pRow('Diferansiyel orani', num(dd.diffRatio, 3));
-    else if (dd.ratio !== undefined) r += pRow('Diferansiyel orani', num(dd.ratio, 3));
+    r += pRow('Tanım', yazi(diffNode.customName || '-'));
+    if (dd.diffRatio !== undefined) r += pRow('Diferansiyel oranı', num(dd.diffRatio, 3));
+    else if (dd.ratio !== undefined) r += pRow('Diferansiyel oranı', num(dd.ratio, 3));
     if (dd.efficiency !== undefined) r += pRow('Verim', '%' + num(dd.efficiency, 1));
     if (dd.diffInertia !== undefined) r += pRow('Atalet', num(dd.diffInertia, 4) + ' kg.m2');
     r += '\n\n';
@@ -3181,22 +3152,22 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (wheelNode) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. TEKERLEK / LASTIK', W, 'center') + '\n';
+    r += pad(secNo + '. TEKERLEK / LASTİK', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  LASTIK OZELLIKLERI\n';
+    r += '  LASTİK ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    if (wd.ftTireName) r += pRow('Lastik adi', ascii(wd.ftTireName));
+    if (wd.ftTireName) r += pRow('Lastik adı', yazi(wd.ftTireName));
     var tireR = wd.ftTireRadius || wd.wheelRadius || wd.radius || 0;
     if (tireR) {
-      r += pRow('Yuvarlanma yaricapi', num(tireR, 4) + ' m');
+      r += pRow('Yuvarlanma yarıçapı', num(tireR, 4) + ' m');
       r += pRow('Lastik devir/km', numI(Math.round(1000 / (2 * Math.PI * tireR))) + ' devir/km');
     }
     var crr = wd.ftCrr || wd.rollingResistance || wd.crr || 0;
     if (crr) r += pRow('Yuvarlanma direnci (Crr)', num(crr, 4));
-    if (wd.ftSurfaceFactor !== undefined) r += pRow('Yuzey faktoru', num(wd.ftSurfaceFactor, 2));
+    if (wd.ftSurfaceFactor !== undefined) r += pRow('Yüzey faktörü', num(wd.ftSurfaceFactor, 2));
     if (wd.ftTireInertia !== undefined) r += pRow('Lastik/tekerlek ataleti', num(wd.ftTireInertia, 4) + ' kg.m2');
-    if (wd.rotatingMass !== undefined) r += pRow('Doner kutle faktoru', num(wd.rotatingMass, 2));
+    if (wd.rotatingMass !== undefined) r += pRow('Döner kütle faktörü', num(wd.rotatingMass, 2));
     r += '\n\n';
     secNo++;
   }
@@ -3209,24 +3180,24 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
     r += pad(secNo + '. YOL / ORTAM', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  YOL OZELLIKLERI\n';
+    r += '  YOL ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    if (rd.grade !== undefined) r += pRow('Yol egimi', '%' + num(rd.grade, 1));
-    if (rd.egimMode) r += pRow('Egim modu', rd.egimMode === 'segment' ? 'Segment (rota)' : 'Manuel (sabit)');
+    if (rd.grade !== undefined) r += pRow('Yol eğimi', '%' + num(rd.grade, 1));
+    if (rd.egimMode) r += pRow('Eğim modu', rd.egimMode === 'segment' ? 'Segment (rota)' : 'Manuel (sabit)');
     if (rd.altitude !== undefined) r += pRow('Rakım', num(rd.altitude, 0) + ' m');
-    if (rd.temperature !== undefined) r += pRow('Sicaklik', num(rd.temperature, 1) + ' C');
-    if (rd.airDensity !== undefined) r += pRow('Hava yogunlugu', num(rd.airDensity, 4) + ' kg/m3');
+    if (rd.temperature !== undefined) r += pRow('Sıcaklık', num(rd.temperature, 1) + ' C');
+    if (rd.airDensity !== undefined) r += pRow('Hava yoğunluğu', num(rd.airDensity, 4) + ' kg/m3');
     r += '\n';
 
     // Yol segmentleri
     var segs = rd.roadSegments || [];
     if (segs.length > 0) {
-      r += '  YOL SEGMENTLERI (' + segs.length + ' segment)\n';
+      r += '  YOL SEGMENTLERİ (' + segs.length + ' segment)\n';
       r += '  ' + ln('-', 58) + '\n';
-      r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 11, 'right') + pad('Delta H [m]', 13, 'right') + pad('Komut', 17) + '\n';
+      r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Eğim [%]', 11, 'right') + pad('Delta H [m]', 13, 'right') + pad('Komut', 17) + '\n';
       r += '  ' + ln('-', 58) + '\n';
       segs.forEach(function(s, i) {
-        r += '  ' + pad(String(s.no || (i+1)), 5) + pad(num(s.distance, 1), 12, 'right') + pad(num(s.grade, 1), 11, 'right') + pad(num(s.deltaH, 1), 13, 'right') + pad(ascii(s.command || '-'), 17) + '\n';
+        r += '  ' + pad(String(s.no || (i+1)), 5) + pad(num(s.distance, 1), 12, 'right') + pad(num(s.grade, 1), 11, 'right') + pad(num(s.deltaH, 1), 13, 'right') + pad(yazi(s.command || '-'), 17) + '\n';
       });
       r += '  ' + ln('-', 58) + '\n';
     }
@@ -3242,12 +3213,12 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
     r += pad(secNo + '. SENARYO', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  SENARYO OZELLIKLERI\n';
+    r += '  SENARYO ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    var stMap = {'full_throttle':'Tam gaz','partial_throttle':'Kismi gaz','custom':'Ozel'};
+    var stMap = {'full_throttle':'Tam gaz','partial_throttle':'Kısmi gaz','custom':'Özel'};
     r += pRow('Senaryo tipi', stMap[scd.scenarioType] || scd.scenarioType || '-');
-    if (scd.throttle !== undefined) r += pRow('Gaz pedali', '%' + num(scd.throttle, 0));
-    if (scd.segInitSpeed !== undefined) r += pRow('Baslangic hizi', num(scd.segInitSpeed, 1) + ' km/sa');
+    if (scd.throttle !== undefined) r += pRow('Gaz pedalı', '%' + num(scd.throttle, 0));
+    if (scd.segInitSpeed !== undefined) r += pRow('Başlangıç hızı', num(scd.segInitSpeed, 1) + ' km/sa');
     r += '\n\n';
     secNo++;
   }
@@ -3257,17 +3228,17 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (solverNode) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. COZUCU', W, 'center') + '\n';
+    r += pad(secNo + '. ÇÖZÜCÜ', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  COZUCU OZELLIKLERI\n';
+    r += '  ÇÖZÜCÜ ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
     var mMap = {'euler':'Euler (1. derece)','heun':'Heun (2. derece)','ralston':'Ralston (2. derece)','rk4':'RK4 (4. derece)','rk45':'RK4/5 adaptif (Dormand-Prince)'};
-    r += pRow('Sayisal yontem', mMap[sd.method] || sd.method || 'euler');
-    if (sd.maxSimTime !== undefined) r += pRow('Maks. simulasyon suresi', num(sd.maxSimTime, 0) + ' s');
-    if (sd.ftDt !== undefined) r += pRow('Zaman adimi (dt)', num(sd.ftDt, 4) + ' s');
+    r += pRow('Sayısal yöntem', mMap[sd.method] || sd.method || 'euler');
+    if (sd.maxSimTime !== undefined) r += pRow('Maks. simülasyon süresi', num(sd.maxSimTime, 0) + ' s');
+    if (sd.ftDt !== undefined) r += pRow('Zaman adımı (dt)', num(sd.ftDt, 4) + ' s');
     if (sd.ftAtol !== undefined) r += pRow('Mutlak tolerans (atol)', sd.ftAtol);
-    if (sd.ftRtol !== undefined) r += pRow('Bagil tolerans (rtol)', sd.ftRtol);
+    if (sd.ftRtol !== undefined) r += pRow('Bağıl tolerans (rtol)', sd.ftRtol);
     r += '\n\n';
     secNo++;
   }
@@ -3278,18 +3249,18 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   if (obsNode) {
     var od = obsNode.data || {};
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. ENGEL GECME', W, 'center') + '\n';
+    r += pad(secNo + '. ENGEL GEÇME', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  ENGEL GECME PARAMETRELERI\n';
+    r += '  ENGEL GEÇME PARAMETRELERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    if (od.obstacleHeight !== undefined) r += pRow('Engel yuksekligi', num(od.obstacleHeight, 3) + ' m');
-    if (od.a1 !== undefined) r += pRow('Agirlik merkezi - on aks', num(od.a1, 3) + ' m');
-    if (od.a2 !== undefined) r += pRow('Agirlik merkezi - arka aks', num(od.a2, 3) + ' m');
-    if (od.a1 && od.a2) r += pRow('Aks acikligi (L)', num(od.a1 + od.a2, 3) + ' m');
-    if (od.loadedTireRadius !== undefined) r += pRow('Yuklu lastik yari.', num(od.loadedTireRadius, 4) + ' m');
-    if (od.cornerDeflection !== undefined) r += pRow('Kose defleksiyonu', num(od.cornerDeflection, 1) + ' mm');
-    if (od.gbTorqueLimit !== undefined) r += pRow('Sanziman tork limiti', numI(od.gbTorqueLimit) + ' N.m');
+    if (od.obstacleHeight !== undefined) r += pRow('Engel yüksekliği', num(od.obstacleHeight, 3) + ' m');
+    if (od.a1 !== undefined) r += pRow('Ağırlık merkezi - ön aks', num(od.a1, 3) + ' m');
+    if (od.a2 !== undefined) r += pRow('Ağırlık merkezi - arka aks', num(od.a2, 3) + ' m');
+    if (od.a1 && od.a2) r += pRow('Aks açıklığı (L)', num(od.a1 + od.a2, 3) + ' m');
+    if (od.loadedTireRadius !== undefined) r += pRow('Yüklü lastik yarı.', num(od.loadedTireRadius, 4) + ' m');
+    if (od.cornerDeflection !== undefined) r += pRow('Köşe defleksiyonu', num(od.cornerDeflection, 1) + ' mm');
+    if (od.gbTorqueLimit !== undefined) r += pRow('Şanzıman tork limiti', numI(od.gbTorqueLimit) + ' N.m');
     r += '\n\n';
     secNo++;
   }
@@ -3303,10 +3274,10 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
     r += pad(secNo + '. FREN / RETARDER', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    r += '  FREN OZELLIKLERI\n';
+    r += '  FREN ÖZELLİKLERİ\n';
     r += '  ' + ln('-', 38) + '\n';
-    r += pRow('Bilesen tipi', brakeNode.type === 'retarder' ? 'Retarder' : 'Fren');
-    r += pRow('Tanim', ascii(brakeNode.customName || '-'));
+    r += pRow('Bileşen tipi', brakeNode.type === 'retarder' ? 'Retarder' : 'Fren');
+    r += pRow('Tanım', yazi(brakeNode.customName || '-'));
     r += '\n\n';
     secNo++;
   }
@@ -3317,7 +3288,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   var diffR = dd.diffRatio || dd.ratio || 0;
   if (diffR > 0) {
     r += ln('=', W) + '\n';
-    r += pad(secNo + '. TOPLAM AKTARMA OZETI', W, 'center') + '\n';
+    r += pad(secNo + '. TOPLAM AKTARMA ÖZETİ', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
     var trGsum = trd.ftTrGears || trd.transferData || [];
@@ -3330,7 +3301,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
     if (trGsum.length > 0) {
       r += '  ' + ln('-', 68) + '\n';
       r += '  ' + pad('Kademe', 14) + pad('Diff', 10, 'right') + pad('Transfer', 10, 'right') + pad('Toplam', 12, 'right') + pad('N/V', 12, 'right') + pad('Verim', 10, 'right') + '\n';
-      r += '  ' + pad('', 14) + pad('Orani', 10, 'right') + pad('Orani', 10, 'right') + pad('Oran', 12, 'right') + pad('[rpm/kph]', 12, 'right') + pad('[%]', 10, 'right') + '\n';
+      r += '  ' + pad('', 14) + pad('Oranı', 10, 'right') + pad('Oranı', 10, 'right') + pad('Oran', 12, 'right') + pad('[rpm/kph]', 12, 'right') + pad('[%]', 10, 'right') + '\n';
       r += '  ' + ln('-', 68) + '\n';
       trGsum.forEach(function(tg) {
         var trR = tg.ratio || tg.oran || 1;
@@ -3338,14 +3309,14 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
         var totalR = diffR * trR;
         var totalEff = diffEffSum * (trE / 100) * psEffSum * 100;
         var nv = (totalR * 1000) / (tireRsum * 2 * Math.PI * 60);
-        r += '  ' + pad(ascii(tg.kademe || tg.mode || '-'), 14) + pad(num(diffR, 3), 10, 'right') + pad(num(trR, 3), 10, 'right') + pad(num(totalR, 3), 12, 'right') + pad(num(nv, 3), 12, 'right') + pad(num(totalEff, 1), 10, 'right') + '\n';
+        r += '  ' + pad(yazi(tg.kademe || tg.mode || '-'), 14) + pad(num(diffR, 3), 10, 'right') + pad(num(trR, 3), 10, 'right') + pad(num(totalR, 3), 12, 'right') + pad(num(nv, 3), 12, 'right') + pad(num(totalEff, 1), 10, 'right') + '\n';
       });
       r += '  ' + ln('-', 68) + '\n';
     } else {
       var totalSingle = diffR;
       var nvSingle = (totalSingle * 1000) / (tireRsum * 2 * Math.PI * 60);
-      r += pRow('Diferansiyel orani', num(diffR, 3));
-      r += pRow('Toplam aktarma orani', num(totalSingle, 3));
+      r += pRow('Diferansiyel oranı', num(diffR, 3));
+      r += pRow('Toplam aktarma oranı', num(totalSingle, 3));
       r += pRow('N/V (rpm/kph)', num(nvSingle, 3));
       r += pRow('Toplam verim', '%' + num(diffEffSum * psEffSum * 100, 1));
     }
@@ -3358,17 +3329,14 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   r += pad('RAPOR SONU', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
   r += ln('-', W) + '\n';
-  r += pad('BMC OTOMOTIV SANAYI VE TICARET A.S.', W, 'center') + '\n';
-  r += pad('GUC GRUBU MUDURLUGU', W, 'center') + '\n';
+  r += pad('BMC OTOMOTİV SANAYİ VE TİCARET A.S.', W, 'center') + '\n';
+  r += pad('GÜÇ GRUBU MÜDÜRLÜĞÜ', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
-  r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Iletisim', veNameToEmail(hazirlayan));
+  r += pRow('Hazırlayan', yazi(hazirlayan));
+  r += pRow('İletişim', veNameToEmail(hazirlayan) || '—');
   r += '\n';
-  r += ln('-', W) + '\n';
-  r += pad('Bu rapor BMC MFSim Topoloji Detay Raporu olarak', W, 'center') + '\n';
-  r += pad('otomatik olusturulmustur.', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
-  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tüm Hakları Saklıdır', W, 'center') + '\n';
 
   return r;
 }
@@ -3439,26 +3407,18 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     var labelW = 32;
     return indent + pad(label, labelW) + ': ' + value + '\n';
   }
-  function ascii(s) {
-    return String(s)
-      .replace(/ğ/g,'g').replace(/Ğ/g,'G')
-      .replace(/ü/g,'u').replace(/Ü/g,'U')
-      .replace(/ş/g,'s').replace(/Ş/g,'S')
-      .replace(/ı/g,'i').replace(/İ/g,'I')
-      .replace(/ö/g,'o').replace(/Ö/g,'O')
-      .replace(/ç/g,'c').replace(/Ç/g,'C');
-  }
+  function yazi(s) { return String(s); }
 
   // ── VERİ KAYNAKLARI ──
   var sdAll = sim.segmentDriveAllRanges;
   var sdTrGears = sim.segmentDriveTransferGears || [];
   var sdPrimary = sim.segmentDrive;
   if (!sdPrimary || !sdPrimary.segmentSummary) {
-    return '(Rapor olusturulamadi: Hizlanma-Yavaslama simulasyon verisi bulunamadi.)\n';
+    return '(Rapor oluşturulamadı: Hızlanma-Yavaşlama simülasyon verisi bulunamadı.)\n';
   }
 
   var R = sim.reportSnapshot || {};
-  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemiş';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
@@ -3480,21 +3440,21 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
   r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
   r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
-  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
+  r += pad('Güç Grubu Müdürlüğü', W, 'center') + '\n\n';
   r += ln('=', W) + '\n\n';
   r += pad('+' + ln('-', 52) + '+', W, 'center') + '\n';
-  r += pad('|   HIZLANMA-YAVASLAMA SEGMENT ANALIZI RAPORU   |', W, 'center') + '\n';
+  r += pad('|   HIZLANMA-YAVAŞLAMA SEGMENT ANALİZİ RAPORU   |', W, 'center') + '\n';
   r += pad('+' + ln('-', 52) + '+', W, 'center') + '\n\n';
 
   // ── 1. RAPOR BILGILERI ──
-  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
+  r += ln('-', W) + '\n  RAPOR BİLGİLERİ\n' + ln('-', W) + '\n';
   r += pRow('Rapor tarihi', tarih);
   r += pRow('Rapor saati', saat);
   r += pRow('Rapor no', raporNo);
-  r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Hesaplama modu', 'Hizlanma-Yavaslama Segment Analizi');
-  r += pRow('Cozucu metodu', solverLabel);
-  r += pRow('Zaman adimi (dt)', num(ss0.dt, 4) + ' s');
+  r += pRow('Hazırlayan', yazi(hazirlayan));
+  r += pRow('Hesaplama modu', 'Hızlanma-Yavaşlama Segment Analizi');
+  r += pRow('Çözücü metodu', solverLabel);
+  r += pRow('Zaman adımı (dt)', num(ss0.dt, 4) + ' s');
   r += ln('-', W) + '\n\n';
 
 
@@ -3502,7 +3462,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   // 2. SEGMENT TANIMI (GIRDI)
   // ════════════════════════════════════════════════════════════════════════
   r += ln('=', W) + '\n';
-  r += pad('1. SEGMENT TANIMI (GIRDI)', W, 'center') + '\n';
+  r += pad('1. SEGMENT TANIMI (GİRDİ)', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
   // Orijinal segment girdi verisi (simülasyon sonucundan bağımsız)
@@ -3510,23 +3470,23 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   var segSummary = sdPrimary.segmentSummary;
   var routeWaypoints = sim.routeWaypoints || [];
 
-  r += pRow('Baslangic hizi', num(ss0.initSpeed_kmh, 1) + ' km/h');
-  r += pRow('Toplam segment sayisi', String(inputSegments.length || ss0.segments || segSummary.length));
+  r += pRow('Başlangıç hızı', num(ss0.initSpeed_kmh, 1) + ' km/h');
+  r += pRow('Toplam segment sayısı', String(inputSegments.length || ss0.segments || segSummary.length));
   if(routeWaypoints.length > 0) {
-    r += pRow('Referans nokta sayisi', String(routeWaypoints.length));
+    r += pRow('Referans nokta sayısı', String(routeWaypoints.length));
   }
   r += '\n';
 
   // Referans noktaları özeti (varsa)
   if(routeWaypoints.length > 0) {
-    r += '  REFERANS NOKTALARI (GUZERGAH)\n';
+    r += '  REFERANS NOKTALARI (GÜZERGAH)\n';
     var wpTW = 60;
     r += '  ' + ln('-', wpTW) + '\n';
-    r += '  ' + pad('#', 4) + pad('Ad', 28) + pad('Mesafe [km]', 14, 'right') + pad('Rakim [m]', 14, 'right') + '\n';
+    r += '  ' + pad('#', 4) + pad('Ad', 28) + pad('Mesafe [km]', 14, 'right') + pad('Rakım [m]', 14, 'right') + '\n';
     r += '  ' + ln('-', wpTW) + '\n';
     routeWaypoints.forEach(function(wp, idx) {
       r += '  ' + pad(String(idx + 1), 4);
-      r += pad(ascii(wp.name), 28);
+      r += pad(yazi(wp.name), 28);
       r += pad(num(wp.dist / 1000, 2), 14, 'right');
       r += pad(numI(wp.elev), 14, 'right');
       r += '\n';
@@ -3538,8 +3498,8 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   var inputSegs = inputSegments.length > 0 ? inputSegments : segSummary;
   var segTW = 74;
   r += '  ' + ln('-', segTW) + '\n';
-  r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 10, 'right');
-  r += pad('dH [m]', 9, 'right') + pad('Komut', 16, 'right') + pad('Yon', 22, 'right') + '\n';
+  r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Eğim [%]', 10, 'right');
+  r += pad('dH [m]', 9, 'right') + pad('Komut', 16, 'right') + pad('Yön', 22, 'right') + '\n';
   r += '  ' + ln('-', segTW) + '\n';
 
   var toplamMesafe = 0, toplamDeltaH = 0;
@@ -3549,7 +3509,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     // Orijinal girdi: seg.distance, segmentSummary: seg.targetDist
     var mesafe = seg.distance || seg.targetDist || seg.actualDist || 0;
     var dH = seg.deltaH || (mesafe * Math.sin(Math.atan(grade / 100)));
-    var yonStr = grade > 0.01 ? 'Yokus asagi' : (grade < -0.01 ? 'Yokus yukari' : 'Duz');
+    var yonStr = grade > 0.01 ? 'Yokuş aşağı' : (grade < -0.01 ? 'Yokuş yukarı' : 'Düz');
     toplamMesafe += mesafe;
     toplamDeltaH += dH;
 
@@ -3566,44 +3526,44 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   r += pad('', 10) + pad(num(toplamDeltaH, 1), 9, 'right') + '\n';
   r += '  ' + ln('-', segTW) + '\n\n';
 
-  r += '  EGIM ISARET KONVANSIYONU\n';
-  r += '  Pozitif egim (+) = yokus asagi (arac potansiyel enerji kazanir)\n';
-  r += '  Negatif egim (-) = yokus yukari (arac potansiyel enerji harcar)\n\n\n';
+  r += '  EĞİM İŞARET KONVANSİYONU\n';
+  r += '  Pozitif eğim (+) = yokuş aşağı (araç potansiyel enerji kazanır)\n';
+  r += '  Negatif eğim (-) = yokuş yukarı (araç potansiyel enerji harcar)\n\n\n';
 
 
   // ════════════════════════════════════════════════════════════════════════
   // 3. GUC AKTARMA ZINCIRI PARAMETRELERI
   // ════════════════════════════════════════════════════════════════════════
   r += ln('=', W) + '\n';
-  r += pad('2. GUC AKTARMA ZINCIRI PARAMETRELERI', W, 'center') + '\n';
+  r += pad('2. GÜÇ AKTARMA ZİNCİRİ PARAMETRELERİ', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
-  r += '  ARAC VE YOL\n';
+  r += '  ARAÇ VE YOL\n';
   r += '  ' + ln('-', 38) + '\n';
-  r += pRow('Arac agirligi (GVW)', numI(ss0.m_vehicle || R.gvw) + ' kg');
-  r += pRow('Alin alani (A)', num(ss0.A_frontal || (R.frontalArea), 3) + ' m2');
-  r += pRow('Aerodinamik direnc (Cd)', num(ss0.Cd || R.cd, 3));
+  r += pRow('Araç ağırlığı (GVW)', numI(ss0.m_vehicle || R.gvw) + ' kg');
+  r += pRow('Alın alanı (A)', num(ss0.A_frontal || (R.frontalArea), 3) + ' m2');
+  r += pRow('Aerodinamik direnç (Cd)', num(ss0.Cd || R.cd, 3));
   r += pRow('Yuvarlanma direnci (Crr)', num(ss0.Crr || R.crr, 4));
-  r += pRow('Lastik yaricapi (r)', num(ss0.r_tire || R.tireRadius, 4) + ' m');
+  r += pRow('Lastik yarıçapı (r)', num(ss0.r_tire || R.tireRadius, 4) + ' m');
   r += '\n';
 
   r += '  AKTARMA ORANLARI\n';
   r += '  ' + ln('-', 38) + '\n';
-  r += pRow('Aks orani (i_axle)', num(ss0.i_axle || R.diffRatio, 3));
+  r += pRow('Aks oranı (i_axle)', num(ss0.i_axle || R.diffRatio, 3));
   r += pRow('Aks verimi', '%' + num((ss0.eta_axle || R.diffEff || 97), 2));
-  r += pRow('Transfer orani (i_transfer)', num(ss0.i_transfer, 3));
+  r += pRow('Transfer oranı (i_transfer)', num(ss0.i_transfer, 3));
   r += pRow('Transfer verimi', '%' + num((ss0.eta_transfer || 97), 2));
   r += '\n';
 
   // Vites tablosu
   var fwGears = ss0.forwardGears || [];
   if (fwGears.length > 0) {
-    r += '  SANZIMAN VITESLERI\n';
+    r += '  ŞANZIMAN VİTESLERİ\n';
     r += '  ' + ln('-', 42) + '\n';
     r += '  ' + pad('No', 5) + pad('Kademe', 14) + pad('Oran', 12, 'right') + pad('Verim (%)', 11, 'right') + '\n';
     r += '  ' + ln('-', 42) + '\n';
     fwGears.forEach(function(g, i) {
-      r += '  ' + pad(String(i + 1), 5) + pad(ascii(g.name || ''), 14);
+      r += '  ' + pad(String(i + 1), 5) + pad(yazi(g.name || ''), 14);
       r += pad(num(g.ratio, 3), 12, 'right') + pad(num(g.eff, 1), 11, 'right') + '\n';
     });
     r += '  ' + ln('-', 42) + '\n';
@@ -3635,13 +3595,13 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
 
     if (hasMultiTransfer) {
       r += ln('*', W) + '\n';
-      r += pad('TRANSFER KADEMESI: ' + ascii(String(trKey)).toUpperCase() + ' (i=' + num(ssSd.i_transfer, 3) + ')', W, 'center') + '\n';
+      r += pad('TRANSFER KADEMESİ: ' + yazi(String(trKey)).toUpperCase() + ' (i=' + num(ssSd.i_transfer, 3) + ')', W, 'center') + '\n';
       r += ln('*', W) + '\n\n';
     }
 
     // ── GUZERGAH BAZLI SONUC OZETI ──
     r += ln('=', W) + '\n';
-    r += pad(sectionNum + '. GUZERGAH BAZLI SONUC OZETI', W, 'center') + '\n';
+    r += pad(sectionNum + '. GÜZERGAH BAZLI SONUÇ ÖZETİ', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
     // Kümülatif mesafe ve süre hesapla (segment bazında)
@@ -3690,19 +3650,19 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
         wpGear.push(ratio < 0.5 ? (bSeg.startGear || '') : (bSeg.endGear || ''));
       }
 
-      r += '  GUZERGAH AKISI\n';
+      r += '  GÜZERGAH AKIŞI\n';
       r += '  ' + ln('-', W - 4) + '\n\n';
 
       for(var wi2 = 0; wi2 < routeWaypoints.length; wi2++) {
         var wp = routeWaypoints[wi2];
         var wpDistKm = wp.dist / 1000;
 
-        r += '  >> Arac "' + ascii(wp.name) + '" noktasinda\n';
-        r += '     Konum   : km ' + num(wpDistKm, 2) + ' | Rakim: ' + numI(wp.elev) + ' m\n';
-        r += '     Hiz     : ' + num(wpSpeed[wi2], 1) + ' km/h';
-        if(wpGear[wi2]) r += ' | Vites: ' + ascii(String(wpGear[wi2]));
+        r += '  >> Araç "' + yazi(wp.name) + '" noktasında\n';
+        r += '     Konum   : km ' + num(wpDistKm, 2) + ' | Rakım: ' + numI(wp.elev) + ' m\n';
+        r += '     Hız     : ' + num(wpSpeed[wi2], 1) + ' km/h';
+        if(wpGear[wi2]) r += ' | Vites: ' + yazi(String(wpGear[wi2]));
         r += '\n';
-        r += '     Sure    : ' + num(wpCumTime[wi2], 1) + ' s\n';
+        r += '     Süre    : ' + num(wpCumTime[wi2], 1) + ' s\n';
 
         // Sonraki waypoint'e olan bolum bilgisi
         if(wi2 < routeWaypoints.length - 1) {
@@ -3711,16 +3671,16 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
           var araSure = wpCumTime[wi2 + 1] - wpCumTime[wi2];
           var dhFark = wp.elev - wpNext.elev;
           var ortEgim = aradaki > 0.1 ? (dhFark / aradaki * 100) : 0;
-          var egimYon = ortEgim > 0.5 ? 'inis' : (ortEgim < -0.5 ? 'cikis' : 'duz');
+          var egimYon = ortEgim > 0.5 ? 'iniş' : (ortEgim < -0.5 ? 'çıkış' : 'düz');
 
           r += '\n     ' + ln('.', 40) + '\n';
-          r += '     ' + ascii(wp.name) + '  -->  ' + ascii(wpNext.name) + '\n';
+          r += '     ' + yazi(wp.name) + '  -->  ' + yazi(wpNext.name) + '\n';
           r += '     Mesafe: ' + num(aradaki / 1000, 2) + ' km';
           r += ' | dh: ' + num(dhFark, 0) + ' m';
-          r += ' | Ort. egim: %' + num(ortEgim, 2) + ' (' + egimYon + ')';
-          r += '\n     Gecis suresi: ' + num(araSure, 1) + ' s';
+          r += ' | Ort. eğim: %' + num(ortEgim, 2) + ' (' + egimYon + ')';
+          r += '\n     Geçiş süresi: ' + num(araSure, 1) + ' s';
           var ortHiz = araSure > 0 ? (aradaki / 1000) / (araSure / 3600) : 0;
-          r += ' | Ort. hiz: ' + num(ortHiz, 1) + ' km/h';
+          r += ' | Ort. hız: ' + num(ortHiz, 1) + ' km/h';
           r += '\n\n';
         } else {
           r += '\n';
@@ -3730,26 +3690,26 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += '  ' + ln('-', W - 4) + '\n\n';
 
       // Genel ozet
-      r += '  GENEL OZET\n';
+      r += '  GENEL ÖZET\n';
       r += '  ' + ln('-', 50) + '\n';
       r += pRow('Toplam mesafe', num(cumDist / 1000, 2) + ' km');
-      r += pRow('Toplam sure', num(totalTime, 1) + ' s (' + num(totalTime / 60, 1) + ' dk)');
-      r += pRow('Baslangic hizi', num(v0, 1) + ' km/h');
-      r += pRow('Bitis hizi', num(vF, 1) + ' km/h');
-      r += pRow('Hiz degisimi', (vF - v0 >= 0 ? '+' : '') + num(vF - v0, 1) + ' km/h');
+      r += pRow('Toplam süre', num(totalTime, 1) + ' s (' + num(totalTime / 60, 1) + ' dk)');
+      r += pRow('Başlangıç hızı', num(v0, 1) + ' km/h');
+      r += pRow('Bitiş hızı', num(vF, 1) + ' km/h');
+      r += pRow('Hız değişimi', (vF - v0 >= 0 ? '+' : '') + num(vF - v0, 1) + ' km/h');
       var totalDownshifts = 0;
       segSum.forEach(function(s) { totalDownshifts += (s.downshiftCount || 0); });
-      r += pRow('Toplam vites dususu', String(totalDownshifts));
+      r += pRow('Toplam vites düşüşü', String(totalDownshifts));
       r += '  ' + ln('-', 50) + '\n\n\n';
 
     } else {
       // Waypoint yoksa: eski segment tablosu
       var sumTW = 120;
       r += '  ' + ln('-', sumTW) + '\n';
-      r += '  ' + pad('No', 4) + pad('Komut', 12) + pad('Egim %', 8, 'right');
+      r += '  ' + pad('No', 4) + pad('Komut', 12) + pad('Eğim %', 8, 'right');
       r += pad('Mesafe m', 10, 'right') + pad('V_giris', 10, 'right') + pad('V_cikis', 10, 'right');
       r += pad('dV', 8, 'right') + pad('V_max', 9, 'right') + pad('V_min', 9, 'right');
-      r += pad('Sure s', 9, 'right') + pad('Bas.Vites', 10, 'right') + pad('Bit.Vites', 10, 'right') + pad('DS', 4, 'right') + pad('Durum', 10) + '\n';
+      r += pad('Süre s', 9, 'right') + pad('Baş.Vites', 10, 'right') + pad('Bit.Vites', 10, 'right') + pad('DS', 4, 'right') + pad('Durum', 10) + '\n';
       r += '  ' + ln('-', sumTW) + '\n';
 
       var totalTime = 0;
@@ -3757,14 +3717,14 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
         var komut = seg.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
         var dv = seg.endSpeed_kmh - seg.startSpeed_kmh;
         var durum = '';
-        if (seg.endSpeed_kmh < 1.0) durum = 'DURDU';
-        else if (dv > 1) durum = 'HIZLANDI';
-        else if (dv < -1) durum = 'YAVASLADI';
-        else durum = 'SABIT';
+        if (seg.endSpeed_kmh < 1.0) durum = 'Durdu';
+        else if (dv > 1) durum = 'Hızlandı';
+        else if (dv < -1) durum = 'Yavaşladı';
+        else durum = 'Sabit';
         totalTime += seg.duration || 0;
 
         r += '  ' + pad(String(seg.no), 4);
-        r += pad(ascii(komut), 12);
+        r += pad(yazi(komut), 12);
         r += pad(num(seg.grade, 2), 8, 'right');
         r += pad(numI(seg.actualDist || seg.targetDist), 10, 'right');
         r += pad(num(seg.startSpeed_kmh, 1), 10, 'right');
@@ -3773,8 +3733,8 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
         r += pad(num(seg.maxSpeed_kmh, 1), 9, 'right');
         r += pad(num(seg.minSpeed_kmh, 1), 9, 'right');
         r += pad(num(seg.duration, 1), 9, 'right');
-        r += pad(ascii(String(seg.startGear || '')), 10, 'right');
-        r += pad(ascii(String(seg.endGear || '')), 10, 'right');
+        r += pad(yazi(String(seg.startGear || '')), 10, 'right');
+        r += pad(yazi(String(seg.endGear || '')), 10, 'right');
         r += pad(String(seg.downshiftCount || 0), 4, 'right');
         r += '  ' + durum;
         r += '\n';
@@ -3801,16 +3761,16 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += '  ' + ln('-', sumTW) + '\n\n';
 
       r += '  DURUM KODLARI\n';
-      r += '  HIZLANDI  : Segment sonunda hiz artisi > 1 km/h\n';
-      r += '  YAVASLADI : Segment sonunda hiz dususu > 1 km/h\n';
-      r += '  SABIT     : Hiz degisimi ±1 km/h araliginda\n';
-      r += '  DURDU     : Arac durma noktasina geldi (< 1 km/h)\n\n\n';
+      r += '  Hızlandı  : Segment sonunda hız artışı > 1 km/h\n';
+      r += '  Yavaşladı : Segment sonunda hız düşüşü > 1 km/h\n';
+      r += '  Sabit     : Hız değişimi ±1 km/h aralığında\n';
+      r += '  Durdu     : Araç durma noktasına geldi (< 1 km/h)\n\n\n';
     }
 
 
     // ── ZAMANSAL DIFERANSIYEL HESAPLAMA TABLOSU ──
     r += ln('=', WW) + '\n';
-    r += pad((sectionNum + 1) + '. ZAMANSAL DIFERANSIYEL HESAPLAMA TABLOSU', WW, 'center') + '\n';
+    r += pad((sectionNum + 1) + '. ZAMANSAL DİFERANSİYEL HESAPLAMA TABLOSU', WW, 'center') + '\n';
     r += ln('=', WW) + '\n\n';
 
     // Tablo başlığı
@@ -3855,9 +3815,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
             if(_wd < _closestD) { _closestD = _wd; _closestWp = routeWaypoints[_wi]; }
           }
           if(_closestWp && _closestD < 2000) {
-            _segTransLabel = '  >> ' + ascii(_closestWp.name) + ' civari (km ' + num(_segTransDist / 1000, 2) + ')';
+            _segTransLabel = '  >> ' + yazi(_closestWp.name) + ' civarı (km ' + num(_segTransDist / 1000, 2) + ')';
           } else {
-            _segTransLabel = '  [km ' + num(_segTransDist / 1000, 2) + ' | egim degisimi]';
+            _segTransLabel = '  [km ' + num(_segTransDist / 1000, 2) + ' | eğim değişimi]';
           }
         } else {
           _segTransLabel = '  [Seg ' + (prevSeg + 1) + ' -> ' + (segIdx + 1) + ']';
@@ -3888,12 +3848,12 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
 
       r += '  ' + pad(num(sd.time[idx], 2), 7, 'right');
       r += pad(String(segIdx + 1), 5, 'right');
-      r += ' ' + pad(ascii(cmdStr), 9);
+      r += ' ' + pad(yazi(cmdStr), 9);
       r += pad(num(v_kmh, 1), 9, 'right');
       var rpmStr = numI(rpm);
       if(_noLoadGov > 0 && rpm > _noLoadGov) rpmStr += '!';
       r += pad(rpmStr, 8, 'right');
-      r += ' ' + pad(ascii(String(gear)), 6);
+      r += ' ' + pad(yazi(String(gear)), 6);
       r += pad(numI(F_te), 10, 'right');
       r += pad(numI(F_roll), 9, 'right');
       r += pad(numI(F_aero), 9, 'right');
@@ -3908,34 +3868,34 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '  ' + ln('-', WW - 4) + '\n\n';
 
     // Sütun açıklamaları
-    r += '  SUTUN ACIKLAMALARI\n';
+    r += '  SÜTUN AÇIKLAMALARI\n';
     r += '  t            : Zaman [saniye]\n';
-    r += '  Seg          : Aktif segment numarasi\n';
-    r += '  Komut        : Surucu komutu (Tam Gaz / Gaz Kesme)\n';
-    r += '  v [km/h]     : Arac hizi\n';
-    r += '  n [rpm]      : Motor devri (! = no-load governed ustu, yakit yok)\n';
-    r += '  Vites        : Aktif vites kademesi (C=Konvertor, L=Lockup)\n';
-    r += '  F_cekis [N]  : Tekerlek cevresindeki cekis kuvveti\n';
-    r += '  F_yuv [N]    : Yuvarlanma direnc kuvveti\n';
-    r += '  F_aero [N]   : Aerodinamik suruklenme kuvveti\n';
-    r += '  F_egim [N]   : Egim kuvveti (pozitif = direnc / negatif = itici)\n';
+    r += '  Seg          : Aktif segment numarası\n';
+    r += '  Komut        : Sürücü komutu (Tam Gaz / Gaz Kesme)\n';
+    r += '  v [km/h]     : Araç hızı\n';
+    r += '  n [rpm]      : Motor devri (! = no-load governed üstü, yakıt yok)\n';
+    r += '  Vites        : Aktif vites kademesi (C=Konvertör, L=Lockup)\n';
+    r += '  F_cekis [N]  : Tekerlek çevresindeki çekiş kuvveti\n';
+    r += '  F_yuv [N]    : Yuvarlanma direnç kuvveti\n';
+    r += '  F_aero [N]   : Aerodinamik sürüklenme kuvveti\n';
+    r += '  F_egim [N]   : Eğim kuvveti (pozitif = direnç / negatif = itici)\n';
     r += '  F_net [N]    : Net kuvvet (m_eff * a)\n';
-    r += '  a [m/s2]     : Ivme (pozitif = hizlanma, negatif = yavaslanma)\n';
+    r += '  a [m/s2]     : İvme (pozitif = hızlanma, negatif = yavaşlanma)\n';
     r += '  s [m]        : Toplam kat edilen mesafe\n';
-    r += '  P_mot [kW]   : Motor gucu\n';
-    r += '  P_tek [kW]   : Tekerlek gucu\n\n\n';
+    r += '  P_mot [kW]   : Motor gücü\n';
+    r += '  P_tek [kW]   : Tekerlek gücü\n\n\n';
 
 
     // ── VITES GECIS OLAYLARI (SHIFT LOG) ──
     var shiftHist = ssSd.shiftHistory || [];
     if (shiftHist.length > 0) {
       r += ln('=', WW) + '\n';
-      r += pad((sectionNum + 2) + '. VITES GECIS OLAYLARI (SHIFT LOG)', WW, 'center') + '\n';
+      r += pad((sectionNum + 2) + '. VİTES GEÇİŞ OLAYLARI (SHIFT LOG)', WW, 'center') + '\n';
       r += ln('=', WW) + '\n\n';
 
       var slTW = 90;
       r += '  ' + ln('-', slTW) + '\n';
-      r += '  ' + pad('t [s]', 9, 'right') + pad('Seg', 5, 'right') + pad('Gecis', 14);
+      r += '  ' + pad('t [s]', 9, 'right') + pad('Seg', 5, 'right') + pad('Geçiş', 14);
       r += pad('v [km/h]', 10, 'right') + pad('N_eng [rpm]', 12, 'right') + pad('N_out [rpm]', 12, 'right');
       r += pad('Tip', 14) + pad('F_cek/F_dir', 14, 'right') + '\n';
       r += '  ' + ln('-', slTW) + '\n';
@@ -3956,9 +3916,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
           if (sh.t <= segEnd + 0.001) { shSeg = segSum[si2].no || (si2 + 1); break; }
         }
 
-        var gecisStr = ascii(sh.fromMode + ' -> ' + sh.toMode);
+        var gecisStr = yazi(sh.fromMode + ' -> ' + sh.toMode);
         var tipStr = isDS ? 'Downshift' : (sh.toMode && sh.toMode.indexOf('L') >= 0 && sh.fromMode && sh.fromMode.indexOf('C') >= 0 ? 'Lockup' : 'Upshift');
-        if (sh.fromMode === '1C' && sh.toMode === '2C') tipStr = 'Baslangic';
+        if (sh.fromMode === '1C' && sh.toMode === '2C') tipStr = 'Başlangıç';
 
         var fStr = '';
         if (isDS && sh.F_traction !== undefined && sh.F_resist !== undefined) {
@@ -3983,7 +3943,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += '  ' + ln('-', slTW) + '\n\n';
 
       // Özet
-      r += '  OZET:\n';
+      r += '  ÖZET:\n';
       r += pRow('Toplam Upshift', String(totalUpshifts));
       r += pRow('Toplam Downshift', String(totalDownshiftsLog));
 
@@ -4000,72 +3960,72 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       for (var ci = 1; ci < shiftHist.length; ci++) {
         if (shiftHist[ci].isDownshift && shiftHist[ci - 1].isDownshift) {
           hasCascade = true;
-          cascadeInfo = ascii(shiftHist[ci - 1].fromMode + '->' + shiftHist[ci - 1].toMode + ', ' + shiftHist[ci].fromMode + '->' + shiftHist[ci].toMode);
+          cascadeInfo = yazi(shiftHist[ci - 1].fromMode + '->' + shiftHist[ci - 1].toMode + ', ' + shiftHist[ci].fromMode + '->' + shiftHist[ci].toMode);
           break;
         }
       }
-      r += pRow('Kaskad Downshift', hasCascade ? ('Evet (' + cascadeInfo + ')') : 'Hayir');
+      r += pRow('Kaskad Downshift', hasCascade ? ('Evet (' + cascadeInfo + ')') : 'Hayır');
       r += '\n\n';
     }
 
     // ── PERFORMANS DEGERLENDIRME ──
     r += ln('=', W) + '\n';
-    r += pad((sectionNum + 2 + (shiftHist.length > 0 ? 1 : 0)) + '. PERFORMANS DEGERLENDIRME', W, 'center') + '\n';
+    r += pad((sectionNum + 2 + (shiftHist.length > 0 ? 1 : 0)) + '. PERFORMANS DEĞERLENDİRME', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
     // Genel özet
-    r += '  GENEL OZET\n';
+    r += '  GENEL ÖZET\n';
     r += '  ' + ln('-', 50) + '\n';
-    r += pRow('Baslangic hizi', num(v0, 1) + ' km/h');
-    r += pRow('Bitis hizi', num(vF, 1) + ' km/h');
-    r += pRow('Toplam hiz degisimi', (dvTotal >= 0 ? '+' : '') + num(dvTotal, 1) + ' km/h');
+    r += pRow('Başlangıç hızı', num(v0, 1) + ' km/h');
+    r += pRow('Bitiş hızı', num(vF, 1) + ' km/h');
+    r += pRow('Toplam hız değişimi', (dvTotal >= 0 ? '+' : '') + num(dvTotal, 1) + ' km/h');
     r += pRow('Toplam mesafe', num(ssSd.totalDistance || 0, 1) + ' m');
-    r += pRow('Toplam sure', num(totalTime, 1) + ' s');
+    r += pRow('Toplam süre', num(totalTime, 1) + ' s');
     if (totalTime > 0 && ssSd.totalDistance > 0) {
       var avgSpeed = (ssSd.totalDistance / totalTime) * 3.6;
-      r += pRow('Ortalama hiz', num(avgSpeed, 1) + ' km/h');
+      r += pRow('Ortalama hız', num(avgSpeed, 1) + ' km/h');
     }
     r += '\n';
 
     // Segment bazlı değerlendirme
-    r += '  SEGMENT BAZLI DEGERLENDIRME\n';
+    r += '  SEGMENT BAZLI DEĞERLENDİRME\n';
     r += '  ' + ln('-', 70) + '\n';
     segSum.forEach(function(seg) {
       var komut = seg.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
       var dv = seg.endSpeed_kmh - seg.startSpeed_kmh;
       var grade = seg.grade || 0;
 
-      r += '  Segment ' + seg.no + ' (' + ascii(komut) + ', %' + num(grade, 1) + ' egim):\n';
-      r += '    Hiz: ' + num(seg.startSpeed_kmh, 1) + ' -> ' + num(seg.endSpeed_kmh, 1) + ' km/h';
+      r += '  Segment ' + seg.no + ' (' + yazi(komut) + ', %' + num(grade, 1) + ' eğim):\n';
+      r += '    Hız: ' + num(seg.startSpeed_kmh, 1) + ' -> ' + num(seg.endSpeed_kmh, 1) + ' km/h';
       r += ' (dV = ' + (dv >= 0 ? '+' : '') + num(dv, 1) + ' km/h)\n';
-      r += '    Mesafe: ' + numI(seg.actualDist || seg.targetDist) + ' m, Sure: ' + num(seg.duration, 1) + ' s\n';
+      r += '    Mesafe: ' + numI(seg.actualDist || seg.targetDist) + ' m, Süre: ' + num(seg.duration, 1) + ' s\n';
       if (seg.startGear || seg.endGear) {
-        r += '    Vites: ' + ascii(String(seg.startGear || '?')) + ' -> ' + ascii(String(seg.endGear || '?'));
+        r += '    Vites: ' + yazi(String(seg.startGear || '?')) + ' -> ' + yazi(String(seg.endGear || '?'));
         if (seg.downshiftCount > 0) r += ' (' + seg.downshiftCount + ' downshift)';
         r += '\n';
       }
 
       // Yorum
       if (seg.endSpeed_kmh < 1.0) {
-        r += '    >> UYARI: Arac bu segmentte durma noktasina gelmistir!\n';
+        r += '    >> UYARI: Araç bu segmentte durma noktasına gelmiştir!\n';
       } else if (seg.command === 'coast' && dv > 5) {
-        r += '    >> NOT: Gaz kesme modunda belirgin hizlanma -- yokus asagi etkisi.\n';
+        r += '    >> NOT: Gaz kesme modunda belirgin hızlanma -- yokuş aşağı etkisi.\n';
       } else if (seg.command === 'full_throttle' && dv < -5) {
-        r += '    >> NOT: Tam gaz modunda belirgin yavaslanma -- yuksek egim direnci.\n';
+        r += '    >> NOT: Tam gaz modunda belirgin yavaşlama -- yüksek eğim direnci.\n';
       }
       r += '\n';
     });
 
     // Kritik noktalar
-    r += '  KRITIK NOKTALAR\n';
+    r += '  KRİTİK NOKTALAR\n';
     r += '  ' + ln('-', 50) + '\n';
     var hasStall = segSum.some(function(seg) { return seg.endSpeed_kmh < 1.0; });
     var allSpeeds = sd.speed || [];
     var globalMaxSpeed = allSpeeds.length > 0 ? Math.max.apply(null, allSpeeds) : 0;
     var globalMinSpeed = allSpeeds.length > 0 ? Math.min.apply(null, allSpeeds) : 0;
 
-    r += pRow('Maksimum hiz', num(globalMaxSpeed, 1) + ' km/h');
-    r += pRow('Minimum hiz', num(globalMinSpeed, 1) + ' km/h');
+    r += pRow('Maksimum hız', num(globalMaxSpeed, 1) + ' km/h');
+    r += pRow('Minimum hız', num(globalMinSpeed, 1) + ' km/h');
 
     // Vites bilgileri
     var shHistCrit = ssSd.shiftHistory || [];
@@ -4085,7 +4045,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       }
     });
     if (critTotalDS > 0) {
-      r += pRow('Toplam Downshift sayisi', String(critTotalDS));
+      r += pRow('Toplam Downshift sayısı', String(critTotalDS));
       if (critMinGear < 99) {
         r += pRow('Minimum vites', (critMinGear + 1) + 'L (Segment ' + critMinGearSeg + ', t=' + num(critMinGearTime, 1) + 's)');
       }
@@ -4094,7 +4054,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       for (var ci2 = 1; ci2 < shHistCrit.length; ci2++) {
         if (shHistCrit[ci2].isDownshift && shHistCrit[ci2 - 1].isDownshift) {
           critCascade = true;
-          critCascadeInfo = ascii(shHistCrit[ci2].fromMode + '->' + shHistCrit[ci2].toMode);
+          critCascadeInfo = yazi(shHistCrit[ci2].fromMode + '->' + shHistCrit[ci2].toMode);
           break;
         }
       }
@@ -4104,12 +4064,11 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     }
 
     if (hasStall) {
-      r += '  >> UYARI: Arac bir veya daha fazla segmentte durma noktasina gelmistir.\n';
-      r += '     Daha uygun vites veya guzergah secimi degerlendirilmelidir.\n';
+      r += '  >> UYARI: Araç bir veya daha fazla segmentte durma noktasına gelmiştir.\n';
     } else if (globalMinSpeed < 10) {
-      r += '  >> DIKKAT: Minimum hiz 10 km/h altina dusmustur.\n';
+      r += '  >> UYARI: Minimum hız 10 km/h altına düşmüştür.\n';
     } else {
-      r += '  >> Arac tum segmentleri basarili bir sekilde tamamlamistir.\n';
+      r += '  >> Araç tüm segmentleri başarılı bir şekilde tamamlamıştır.\n';
     }
     r += '\n\n';
 
@@ -4128,7 +4087,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (hasMultiTransfer) {
     r += ln('=', W) + '\n';
-    r += pad(sectionNum + '. TRANSFER KADEMESI KARSILASTIRMA', W, 'center') + '\n';
+    r += pad(sectionNum + '. TRANSFER KADEMESİ KARŞILAŞTIRMA', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
     var cmpW = 58;
@@ -4136,13 +4095,13 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '  ' + ln('-', cmpW + (trGearKeys.length - 1) * 24) + '\n';
     r += '  ' + pad('Parametre', 34);
     trGearKeys.forEach(function(trKey) {
-      r += pad(ascii(String(trKey)), 24, 'right');
+      r += pad(yazi(String(trKey)), 24, 'right');
     });
     r += '\n';
     r += '  ' + ln('-', cmpW + (trGearKeys.length - 1) * 24) + '\n';
 
     // Transfer oranı
-    r += '  ' + pad('Transfer Orani', 34);
+    r += '  ' + pad('Transfer Oranı', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var ss2 = sd2.solverStats || {};
@@ -4151,7 +4110,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '\n';
 
     // Başlangıç/bitiş hızı
-    r += '  ' + pad('Baslangic Hizi [km/h]', 34);
+    r += '  ' + pad('Başlangıç Hızı [km/h]', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var sum2 = sd2.segmentSummary || [];
@@ -4160,7 +4119,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     });
     r += '\n';
 
-    r += '  ' + pad('Bitis Hizi [km/h]', 34);
+    r += '  ' + pad('Bitiş Hızı [km/h]', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var sum2 = sd2.segmentSummary || [];
@@ -4169,7 +4128,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     });
     r += '\n';
 
-    r += '  ' + pad('Hiz Degisimi [km/h]', 34);
+    r += '  ' + pad('Hız Değişimi [km/h]', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var sum2 = sd2.segmentSummary || [];
@@ -4181,7 +4140,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '\n';
 
     // Toplam süre
-    r += '  ' + pad('Toplam Sure [s]', 34);
+    r += '  ' + pad('Toplam Süre [s]', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var sum2 = sd2.segmentSummary || [];
@@ -4192,7 +4151,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '\n';
 
     // Minimum hız
-    r += '  ' + pad('Minimum Hiz [km/h]', 34);
+    r += '  ' + pad('Minimum Hız [km/h]', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var spArr = sd2.speed || [];
@@ -4202,7 +4161,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '\n';
 
     // Maksimum hız
-    r += '  ' + pad('Maksimum Hiz [km/h]', 34);
+    r += '  ' + pad('Maksimum Hız [km/h]', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var spArr = sd2.speed || [];
@@ -4212,7 +4171,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '\n';
 
     // Durma durumu
-    r += '  ' + pad('Arac Durumu', 34);
+    r += '  ' + pad('Araç Durumu', 34);
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var sum2 = sd2.segmentSummary || [];
@@ -4227,10 +4186,10 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       var routeComplete = totalActualDist >= totalRouteDist - 1;
       var timeExceeded = totalTime2 >= (ss2.maxTime || 9999) - 0.1;
       var status;
-      if(stalled) status = 'DURDU';
-      else if(!routeComplete && timeExceeded) status = 'SURE LIMITI';
-      else if(!routeComplete) status = 'EKSIK';
-      else status = 'TAMAMLADI';
+      if(stalled) status = 'Durdu';
+      else if(!routeComplete && timeExceeded) status = 'Süre limiti';
+      else if(!routeComplete) status = 'Eksik';
+      else status = 'Tamamladı';
       r += pad(status, 24, 'right');
     });
     r += '\n';
@@ -4238,11 +4197,11 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '  ' + ln('-', cmpW + (trGearKeys.length - 1) * 24) + '\n\n';
 
     // Segment bazlı karşılaştırma
-    r += '  SEGMENT BAZLI HIZ KARSILASTIRMASI (Cikis Hizlari [km/h])\n';
+    r += '  SEGMENT BAZLI HIZ KARŞILAŞTIRMASI (Çıkış Hızları [km/h])\n';
     r += '  ' + ln('-', cmpW + (trGearKeys.length - 1) * 24) + '\n';
-    r += '  ' + pad('Segment', 10) + pad('Egim %', 10, 'right') + '  ' + pad('Komut', 12);
+    r += '  ' + pad('Segment', 10) + pad('Eğim %', 10, 'right') + '  ' + pad('Komut', 12);
     trGearKeys.forEach(function(trKey) {
-      r += pad(ascii(String(trKey)), 24, 'right');
+      r += pad(yazi(String(trKey)), 24, 'right');
     });
     r += '\n';
     r += '  ' + ln('-', cmpW + (trGearKeys.length - 1) * 24) + '\n';
@@ -4250,7 +4209,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     var refSegSum = sdPrimary.segmentSummary || [];
     refSegSum.forEach(function(seg, si) {
       var komut = seg.command === 'coast' ? 'Gaz kesme' : 'Tam gaz';
-      r += '  ' + pad('Seg ' + seg.no, 10) + pad(num(seg.grade, 1), 10, 'right') + '  ' + pad(ascii(komut), 12);
+      r += '  ' + pad('Seg ' + seg.no, 10) + pad(num(seg.grade, 1), 10, 'right') + '  ' + pad(yazi(komut), 12);
       trGearKeys.forEach(function(trKey) {
         var sd2 = sdAll[trKey] || sdPrimary;
         var sum2 = sd2.segmentSummary || [];
@@ -4273,69 +4232,69 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   // HESAPLAMA YONTEMI
   // ════════════════════════════════════════════════════════════════════════
   r += ln('=', W) + '\n';
-  r += pad(sectionNum + '. HESAPLAMA YONTEMI', W, 'center') + '\n';
+  r += pad(sectionNum + '. HESAPLAMA YÖNTEMİ', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
-  r += '  1) HAREKET DENKLEMI\n';
+  r += '  1) HAREKET DENKLEMİ\n';
   r += '  ' + ln('-', 68) + '\n';
   r += '  m_eff * dv/dt = F_cekis - F_yuv - F_aero - F_egim - F_motor_fren\n';
   r += '  a = F_net / m_eff ,  F_net = F_cekis - F_yuv - F_aero - F_egim - F_motor_fren\n\n';
 
-  r += '  2) DIRENC KUVVETLERI   (g=9,81; theta=atan(aktif_egim/100))\n';
+  r += '  2) DİRENÇ KUVVETLERİ   (g=9,81; theta=atan(aktif_egim/100))\n';
   r += '  ' + ln('-', 68) + '\n';
   r += '  Crr_eff = Crr * (1 + K1*v + K2*v^2)     K1=' + num(ss0.crrK1 || 0.026909, 6) + '  K2=' + num(ss0.crrK2 || -0.00018893, 8) + '\n';
-  r += '  F_yuv  = Crr_eff * yuzey * m * g * cos(theta)\n';
+  r += '  F_yuv  = Crr_eff * yüzey * m * g * cos(theta)\n';
   r += '  F_aero = 0,5 * rho * Cd * A * v^2\n';
   r += '  F_egim = m * g * sin(theta)\n';
-  r += '  Egim isareti: aktif_egim = -(segment egimi)  (harita "+ = yokus asagi" -> fizik "+ = yokusa direnc").\n';
-  r += '  -> Yokus asagi segmentte F_egim < 0 (itici); yokus yukari F_egim > 0 (direnc).\n\n';
+  r += '  Eğim işareti: aktif_egim = -(segment eğimi)  (harita "+ = yokuş aşağı" -> fizik "+ = yokuşa direnç").\n';
+  r += '  -> Yokuş aşağı segmentte F_egim < 0 (itici); yokuş yukarı F_egim > 0 (direnç).\n\n';
 
-  r += '  3) TAM GAZ — CEKIS KUVVETI\n';
+  r += '  3) TAM GAZ — ÇEKİŞ KUVVETİ\n';
   r += '  ' + ln('-', 68) + '\n';
   r += '  F_cekis = T_out * i_gear * i_ps*eta_ps * i_tr*eta_tr * i_axle*eta_axle / r_tire\n';
-  r += '   NOT: Sanziman disli verimi cekiste UYGULANMAZ (calcTractiveEffort gear-eta = 1,0 ile cagrilir;\n';
-  r += '        eta_gear yalniz raporda gosterilir).  Grip siniri (F>0 iken): F_cekis <= F_grip = ' + numI(ss0.F_grip) + ' N = mu*m*tahrik%*g.\n';
-  r += '  Lockup/dogrudan: T_out = (T_net - drop - (10 + 0,00367*N)) * eta_lockup\n';
+  r += '   NOT: Şanzıman dişli verimi çekişe uygulanmaz (çekişte eta_gear = 1,0; tablodaki eta_gear yalnız bilgi).\n';
+  r += '        Grip sınırı (F>0 iken): F_cekis <= F_grip = ' + numI(ss0.F_grip) + ' N = mu*m*tahrik%*g.\n';
+  r += '  Lockup/doğrudan: T_out = (T_net - drop - (10 + 0,00367*N)) * eta_lockup\n';
   r += '     drop = ' + num(ss0.pumpTorqueDrop, 2) + ' N.m (pompa) ,  eta_lockup = ' + num(ss0.etaLockup, 3) + '\n';
-  if (ss0.hasTC) r += '  Converter: motor-TK calisma noktasi (solveTCOperatingPoint biseksiyon) -> T_out = T_turbin * eta_conv_ic (' + num(ss0.etaConvInternal, 3) + ')\n';
-  r += '  Asiri devir freni: N > ' + numI(ss0.mechanicalLimit) + ' rpm (governed*1,30) -> T_net = -(BMEP_mot*V_d/4pi), BMEP_mot=50 kPa\n\n';
+  if (ss0.hasTC) r += '  Converter: motor-TK çalışma noktası (biseksiyon) -> T_out = T_turbin * eta_conv_ic (' + num(ss0.etaConvInternal, 3) + ')\n';
+  r += '  Aşırı devir freni: N > ' + numI(ss0.mechanicalLimit) + ' rpm (governed*1,30) -> T_net = -(BMEP_mot*V_d/4pi), BMEP_mot=50 kPa\n\n';
 
-  r += '  4) GAZ KESME (COAST) — YAVASLAMA MODELI\n';
+  r += '  4) GAZ KESME (COAST) — YAVAŞLAMA MODELİ\n';
   r += '  ' + ln('-', 68) + '\n';
-  r += '  F_cekis = 0.  Yavaslama = yol direnci + motor kompresyon (surtunme) freni:\n';
+  r += '  F_cekis = 0.  Yavaşlama = yol direnci + motor kompresyon (sürtünme) freni:\n';
   r += '  F_motor_fren = T_motoring * i_total / r_tire   (i_total = i_gear*i_ps*i_tr*i_axle ; HAM oran, verimsiz)\n';
   r += '  T_motoring   = BMEP_coast * V_d / (4*pi)\n';
-  r += '  BMEP_coast   = 50000 * (0,5 + 0,5*N/governed) Pa   (~25 kPa idle .. ~50 kPa governed)   [yalniz v>0,5 m/s]\n';
+  r += '  BMEP_coast   = 50000 * (0,5 + 0,5*N/governed) Pa   (~25 kPa idle .. ~50 kPa governed)   [yalnız v>0,5 m/s]\n';
   r += '  V_d = ' + num(ss0.displacement_L, 2) + ' L = ' + num((ss0.displacement_L || 0) / 1000, 5) + ' m^3\n';
-  r += '  -> F_net = -(F_yuv + F_aero + F_egim) - F_motor_fren   (yeterince dik inniste F_egim<0 -> yine hizlanabilir).\n\n';
+  r += '  -> F_net = -(F_yuv + F_aero + F_egim) - F_motor_fren   (yeterince dik inişte F_egim<0 -> yine hızlanabilir).\n\n';
 
-  r += '  5) ESDEGER (DONEN) KUTLE\n';
+  r += '  5) EŞDEĞER (DÖNEN) KÜTLE\n';
   r += '  ' + ln('-', 68) + '\n';
   r += '  m_eff = m + I_eff / r_tire^2 ;   i_total=i_gear*i_ps*i_tr*i_axle ,  i_down=i_ps*i_tr*i_axle\n';
   r += '  Lockup:    I_eff = I_eng*i_total^2 + I_conv*i_total^2 + I_trans*i_down^2 + I_ps*i_down^2 + I_tc*i_axle^2 + I_axle + I_tire\n';
   r += '  Converter: I_eff = I_conv_turbin*i_total^2 + I_trans*i_down^2 + I_ps*i_down^2 + I_tc*i_axle^2 + I_axle + I_tire\n';
   r += '  Atalet [kg.m^2]: I_eng=' + num(ss0.I_engine, 3) + ' I_conv=' + num(ss0.I_conv, 3) + ' I_conv_t=' + num(ss0.I_conv_turbine, 3) + ' I_trans=' + num(ss0.I_trans, 3) + ' I_ps=' + num(ss0.I_propshaft, 3) + ' I_tc=' + num(ss0.I_tc, 3) + ' I_axle=' + num(ss0.I_axle, 3) + ' I_tire=' + num(ss0.I_tire, 3) + '\n\n';
 
-  r += '  6) ENTEGRASYON VE SEGMENT SONUCLARININ HESABI\n';
+  r += '  6) ENTEGRASYON VE SEGMENT SONUÇLARININ HESABI\n';
   r += '  ' + ln('-', 68) + '\n';
-  r += '  Hiz (varsayilan RK4):  dv = (k1 + 2k2 + 2k3 + k4)/6 * dt\n';
-  r += '     k1=a(v), k2=a(v+k1*dt/2), k3=a(v+k2*dt/2), k4=a(v+k3*dt)   (Heun/Euler secilirse kendi formulu)\n';
-  r += '     ("RK4/5 Adaptif"/"Ralston" etiketi gorunse de segment cozucu sabit adimli RK4 kosar.)\n';
-  r += '  Mesafe (YAMUK kural):  s += (v + v_yeni)/2 * dt      (s += v*dt DEGIL)\n';
-  r += '  Segment biter:  biriken segment mesafesi >= hedef mesafe (veya sure/adim limiti veya durma).\n';
-  r += '  Sure (segment): bitis_t - baslangic_t = (segmentteki adim sayisi) * dt.\n';
-  r += '  V_max / V_min:  segment boyunca v izlenerek gorulen en yuksek / en dusuk hiz.\n';
-  r += '  dV = V_cikis - V_giris.   Bas./Bit. Vites: segment sinirinda vites korunur (sureklilik).\n';
-  r += '  Ort. hiz = toplam_mesafe / toplam_sure * 3,6 [km/h].\n';
+  r += '  Hız (varsayılan RK4):  dv = (k1 + 2k2 + 2k3 + k4)/6 * dt\n';
+  r += '     k1=a(v), k2=a(v+k1*dt/2), k3=a(v+k2*dt/2), k4=a(v+k3*dt)   (Heun/Euler seçilirse kendi formülü)\n';
+  r += '     (RK4/5 Adaptif ve Ralston seçildiğinde segment çözücü sabit adımlı RK4 kullanır.)\n';
+  r += '  Mesafe (yamuk kuralı):  s += (v + v_yeni)/2 * dt\n';
+  r += '  Segment biter:  biriken segment mesafesi >= hedef mesafe (veya süre/adım limiti veya durma).\n';
+  r += '  Süre (segment): bitis_t - baslangic_t = (segmentteki adım sayısı) * dt.\n';
+  r += '  V_max / V_min:  segment boyunca v izlenerek görülen en yüksek / en düşük hız.\n';
+  r += '  dV = V_cikis - V_giris.   Başlangıç/bitiş vitesi: segment sınırında vites korunur (süreklilik).\n';
+  r += '  Ort. hız = toplam_mesafe / toplam_sure * 3,6 [km/h].\n';
   r += '  Waypoint interpolasyonu:  oran = (wp_mesafe - seg_bas)/seg_uzunluk (0..1),\n';
-  r += '     v_wp = v_giris + oran*(v_cikis - v_giris) ;  t_wp = onceki segment sureleri + oran*seg_suresi.\n\n';
+  r += '     v_wp = v_giris + oran*(v_cikis - v_giris) ;  t_wp = önceki segment süreleri + oran*seg_suresi.\n\n';
 
-  r += '  COZUCU PARAMETRELERI\n';
+  r += '  ÇÖZÜCÜ PARAMETRELERİ\n';
   r += '  ' + ln('-', 60) + '\n';
   r += pRow('Entegrasyon metodu', solverLabel + (solverMethod !== 'rk4' && solverMethod !== 'euler' && solverMethod !== 'heun' ? ' (fiilen RK4)' : ''));
-  r += pRow('Zaman adimi (dt)', num(ss0.dt, 4) + ' s');
-  r += pRow('Toplam adim', ss0.steps ? veSayi(ss0.steps, 0) : '-');
-  r += pRow('Maks. simulasyon suresi', num(ss0.maxTime, 0) + ' s');
+  r += pRow('Zaman adımı (dt)', num(ss0.dt, 4) + ' s');
+  r += pRow('Toplam adım', ss0.steps ? veSayi(ss0.steps, 0) : '-');
+  r += pRow('Maks. simülasyon süresi', num(ss0.maxTime, 0) + ' s');
   r += '\n\n';
   sectionNum++;
 
@@ -4388,12 +4347,12 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       var m_eff = m + I_eff / r2;
 
       var o = '';
-      o += '  >> ' + (coast ? 'YAVASLAMA (gaz kesme)' : 'HIZLANMA (tam gaz)') + ' adimi:  t=' + num(A.time[i], 2) + ' s | segment ' + (segIdx + 1)
-        + ' | v=' + num(vk, 1) + ' km/h (' + num(v, 3) + ' m/s) | N=' + numI(N) + ' rpm | vites ' + ascii(label) + '\n';
+      o += '  >> ' + (coast ? 'Yavaşlama (gaz kesme)' : 'Hızlanma (tam gaz)') + ' adımı:  t=' + num(A.time[i], 2) + ' s | segment ' + (segIdx + 1)
+        + ' | v=' + num(vk, 1) + ' km/h (' + num(v, 3) + ' m/s) | N=' + numI(N) + ' rpm | vites ' + yazi(label) + '\n';
       o += '     ' + ln('.', 72) + '\n';
       o += '     aktif_egim = -(' + num(gradeMap, 2) + ') = %' + num(gradeAkt, 2) + '   theta=atan(' + num(gradeAkt / 100, 4) + ')=' + num(th, 5) + ' rad  cos=' + num(cth, 5) + ' sin=' + num(sth, 5) + '\n';
       o += '     Crr_eff = ' + num(ss0.Crr, 5) + '*(1+' + num(K1, 6) + '*' + num(v, 2) + num(K2, 8) + '*' + num(v * v, 2) + ') = ' + num(crrEff, 6) + '\n';
-      o += '     F_yuv   = Crr_eff*yuzey*m*g*cos = ' + num(crrEff, 6) + '*' + num(ss0.surfFactor, 2) + '*' + numI(m) + '*9,81*' + num(cth, 4) + ' = ' + numI(A.F_rolling[i]) + ' N\n';
+      o += '     F_yuv   = Crr_eff*yüzey*m*g*cos = ' + num(crrEff, 6) + '*' + num(ss0.surfFactor, 2) + '*' + numI(m) + '*9,81*' + num(cth, 4) + ' = ' + numI(A.F_rolling[i]) + ' N\n';
       o += '     F_aero  = 0,5*rho*Cd*A*v^2 = 0,5*' + num(rho, 3) + '*' + num(ss0.Cd, 3) + '*' + num(ss0.A_frontal, 3) + '*' + num(v * v, 2) + ' = ' + numI(A.F_aero[i]) + ' N\n';
       o += '     F_egim  = m*g*sin = ' + numI(m) + '*9,81*' + num(sth, 5) + ' = ' + numI(A.F_grade[i]) + ' N\n';
       if (coast) {
@@ -4405,7 +4364,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
         o += '     F_motor_fren = T_motoring*i_total/r_tire = ' + num(Tmot, 1) + '*' + num(i_total, 3) + '/' + num(r_t, 4) + ' = ' + numI(A.F_engine_drag ? A.F_engine_drag[i] : 0) + ' N\n';
         o += '     F_cekis = 0 (gaz kesme)\n';
       } else {
-        o += '     F_cekis = ' + numI((A.TE[i] || 0) * 1000) + ' N   (T_out * i_gear*i_ps*eta_ps*i_tr*eta_tr*i_axle*eta_axle / r_tire ; T_out motor/TK calisma noktasindan)\n';
+        o += '     F_cekis = ' + numI((A.TE[i] || 0) * 1000) + ' N   (T_out * i_gear*i_ps*eta_ps*i_tr*eta_tr*i_axle*eta_axle / r_tire ; T_out motor/TK çalışma noktasından)\n';
       }
       o += '     F_net = ' + numI(A.F_net[i]) + ' N   (= F_cekis - F_yuv - F_aero - F_egim' + (coast ? ' - F_motor_fren' : '') + ')\n';
       o += '     I_eff = ' + num(I_eff, 1) + ' kg.m^2 (' + (isLU ? 'lockup' : 'converter') + ', i_total=' + num(i_total, 3) + ')  ->  m_eff = ' + numI(m) + ' + ' + num(I_eff, 1) + '/' + num(r2, 4) + ' = ' + numI(m_eff) + ' kg\n';
@@ -4414,12 +4373,12 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     }
 
     r += ln('=', W) + '\n';
-    r += pad(sectionNum + '. SAYISAL DERIVASYON ORNEKLERI', W, 'center') + '\n';
+    r += pad(sectionNum + '. SAYISAL DERİVASYON ÖRNEKLERİ', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
-    r += '  Zamansal tablodaki degerlerin formul+sayi ile nasil ciktigini gosterir (birincil kademe).\n\n';
+    r += '  Zamansal tablodaki değerlerin formül+sayı ile nasıl çıktığını gösterir (birincil kademe).\n\n';
     var iA = pick(false), iC = pick(true);
     if (iA >= 0) r += deriv(iA, false);
-    if (iC >= 0) r += deriv(iC, true); else r += '  (Bu kosuda hareket halinde gaz-kesme (coast) adimi bulunamadi — yavaslama ornegi atlandi.)\n\n';
+    if (iC >= 0) r += deriv(iC, true); else r += '  (Bu koşuda hareket hâlinde gaz-kesme (coast) adımı bulunamadı — yavaşlama örneği atlandı.)\n\n';
     sectionNum++;
   })();
 
@@ -4432,22 +4391,17 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   r += ln('=', W) + '\n\n';
 
   r += ln('-', W) + '\n';
-  r += pad('BMC OTOMOTIV SANAYI VE TICARET A.S.', W, 'center') + '\n';
-  r += pad('GUC GRUBU MUDURLUGU', W, 'center') + '\n';
+  r += pad('BMC OTOMOTİV SANAYİ VE TİCARET A.S.', W, 'center') + '\n';
+  r += pad('GÜÇ GRUBU MÜDÜRLÜĞÜ', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
 
-  r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Iletisim', veNameToEmail(hazirlayan));
+  r += pRow('Hazırlayan', yazi(hazirlayan));
+  r += pRow('İletişim', veNameToEmail(hazirlayan) || '—');
   r += '\n';
 
-  r += ln('-', W) + '\n';
-  r += pad('Bu rapor BMC MFSim Hizlanma-Yavaslama Segment Analizi Programi', W, 'center') + '\n';
-  r += pad('ile otomatik olusturulmustur. Hesaplamalar', W, 'center') + '\n';
-  r += pad('teorik modellere dayanmaktadir. Gercek test sonuclari ile', W, 'center') + '\n';
-  r += pad('dogrulama yapilmasi onerilir.', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
 
-  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tüm Hakları Saklıdır', W, 'center') + '\n';
 
   return r;
 }
@@ -4477,24 +4431,16 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     var labelW = 32;
     return indent + pad(label, labelW) + ': ' + value + '\n';
   }
-  function ascii(s) {
-    return String(s)
-      .replace(/ğ/g,'g').replace(/Ğ/g,'G')
-      .replace(/ü/g,'u').replace(/Ü/g,'U')
-      .replace(/ş/g,'s').replace(/Ş/g,'S')
-      .replace(/ı/g,'i').replace(/İ/g,'I')
-      .replace(/ö/g,'o').replace(/Ö/g,'O')
-      .replace(/ç/g,'c').replace(/Ç/g,'C');
-  }
+  function yazi(s) { return String(s); }
 
   var obs = sim.obstacleCrossing;
   if (!obs) {
-    return '(Rapor olusturulamadi: Engel Atlama simulasyon verisi bulunamadi.)\n';
+    return '(Rapor oluşturulamadı: Engel Atlama simülasyon verisi bulunamadı.)\n';
   }
 
   var inp = obs.inputParams || {};
   var geo = obs.geometry || {};
-  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemiş';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
@@ -4510,10 +4456,10 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
   r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
   r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
-  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
+  r += pad('Güç Grubu Müdürlüğü', W, 'center') + '\n\n';
   r += ln('=', W) + '\n\n';
   r += pad('+' + ln('-', 44) + '+', W, 'center') + '\n';
-  r += pad('|   ENGEL ATLAMA ANALIZI RAPORU   |', W, 'center') + '\n';
+  r += pad('|   ENGEL ATLAMA ANALİZİ RAPORU   |', W, 'center') + '\n';
   r += pad('+' + ln('-', 44) + '+', W, 'center') + '\n\n';
 
   // Topoloji bileşen isimlerini topla
@@ -4549,20 +4495,20 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     if(!cn && nd.data && nd.data.motorName) cn = nd.data.motorName;
     if(!cn && typeof componentDefs !== 'undefined' && componentDefs[nd.type]) cn = componentDefs[nd.type].name;
     if(!cn) cn = nd.type;
-    return ascii(cn);
+    return yazi(cn);
   }
 
   var vehicleName = _vehNode ? (_vehNode.customName || _vehD.ftVehicleName || '') : '';
 
   // 1. RAPOR BILGILERI
-  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
+  r += ln('-', W) + '\n  RAPOR BİLGİLERİ\n' + ln('-', W) + '\n';
   r += pRow('Rapor tarihi', tarih);
   r += pRow('Rapor saati', saat);
   r += pRow('Rapor no', raporNo);
-  r += pRow('Arac', vehicleName ? ascii(vehicleName) : 'Belirtilmemis');
-  r += pRow('Hazirlayan', ascii(hazirlayan));
+  r += pRow('Araç', vehicleName ? yazi(vehicleName) : 'Belirtilmemiş');
+  r += pRow('Hazırlayan', yazi(hazirlayan));
   var hazEmail = (typeof veNameToEmail === 'function') ? veNameToEmail(hazirlayan) : '';
-  if(hazEmail) r += pRow('Iletisim', hazEmail);
+  if(hazEmail) r += pRow('İletişim', hazEmail);
   r += pRow('Hesaplama modu', 'Engel Atlama Analizi');
   r += '\n';
 
@@ -4570,33 +4516,33 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   // 1. ARAC PARAMETRELERI
   // ════════════════════════════════════════════════════════════════════════
   r += '\n' + ln('=', W) + '\n';
-  r += pad('1. ARAC PARAMETRELERI', W, 'center') + '\n';
+  r += pad('1. ARAÇ PARAMETRELERİ', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
-  r += pRow('Arac kutle (GVW)', num(inp.mass, 0) + ' kg');
-  r += pRow('Ag. merkezi-on aks (a1)', num(inp.a1, 3) + ' m');
-  r += pRow('Ag. merkezi-arka aks (a2)', num(inp.a2, 3) + ' m');
+  r += pRow('Araç kütle (GVW)', num(inp.mass, 0) + ' kg');
+  r += pRow('Ağ. merkezi-ön aks (a1)', num(inp.a1, 3) + ' m');
+  r += pRow('Ağ. merkezi-arka aks (a2)', num(inp.a2, 3) + ' m');
   r += pRow('Dingil Mesafesi (L=a1+a2)', num(inp.wheelbase, 3) + ' m');
   r += '\n';
 
   // KONFIGURASYON alt bölümü
   r += '\n';
-  r += '  KONFIGURASYON\n';
+  r += '  KONFİGÜRASYON\n';
   r += '  ' + ln('-', 38) + '\n';
   if(_engNodeR) r += pRow('Motor', _cName(_engNodeR));
-  if(_tcNodeR) r += pRow('Tork konvertor', _cName(_tcNodeR));
-  if(_gbNodeR) r += pRow('Sanziman', _cName(_gbNodeR));
+  if(_tcNodeR) r += pRow('Tork konvertör', _cName(_tcNodeR));
+  if(_gbNodeR) r += pRow('Şanzıman', _cName(_gbNodeR));
   if(_trNodeR) r += pRow('Transfer Kutusu', _cName(_trNodeR));
   if(_propNodeR) r += pRow('Propshaft', _cName(_propNodeR));
   if(_diffNodeR) r += pRow('Diferansiyel', _cName(_diffNodeR));
   if(_wheelNodeR) r += pRow('Tekerlek / lastik', _cName(_wheelNodeR));
-  r += pRow('Lastik', ascii(inp.tireName));
+  r += pRow('Lastik', yazi(inp.tireName));
   if(_brakeNodeR) r += pRow('Fren / Retarder', _cName(_brakeNodeR));
-  if(_obsNodeR) r += pRow('Engel gecme', _cName(_obsNodeR));
+  if(_obsNodeR) r += pRow('Engel geçme', _cName(_obsNodeR));
   // Topolojideki diğer bileşenler
   var _listedTypes = ['vehicle','engine','torque-converter','gearbox','transfer','propshaft','differential','wheel','retarder','brake','obstacle-crossing','solver'];
   nodes.forEach(function(nd) {
     if(_listedTypes.indexOf(nd.type) < 0 && nd.type !== 'road') {
-      r += pRow(ascii(nd.type), _cName(nd));
+      r += pRow(yazi(nd.type), _cName(nd));
     }
   });
   r += '\n';
@@ -4605,23 +4551,23 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   // 2. ENGEL PARAMETRELERI
   // ════════════════════════════════════════════════════════════════════════
   r += '\n' + ln('=', W) + '\n';
-  r += pad('2. ENGEL VE LASTIK PARAMETRELERI', W, 'center') + '\n';
+  r += pad('2. ENGEL VE LASTİK PARAMETRELERİ', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
-  r += '  ENGEL PARAMETRELERI\n';
+  r += '  ENGEL PARAMETRELERİ\n';
   r += '  ' + ln('-', 38) + '\n';
-  r += pRow('Engel yuksekligi (h)', num(inp.h, 3) + ' m');
+  r += pRow('Engel yüksekliği (h)', num(inp.h, 3) + ' m');
   r += '\n';
 
   r += '\n';
-  r += '  LASTIK PARAMETRELERI\n';
+  r += '  LASTİK PARAMETRELERİ\n';
   r += '  ' + ln('-', 38) + '\n';
-  r += pRow('Lastik', ascii(inp.tireName));
-  r += pRow('Yuvarlanma yaricapi', num(inp.rollingRadius, 3) + ' m');
-  r += pRow('Yuklu lastik yaricapi (R_eff)', num(inp.R_eff, 3) + ' m');
+  r += pRow('Lastik', yazi(inp.tireName));
+  r += pRow('Yuvarlanma yarıçapı', num(inp.rollingRadius, 3) + ' m');
+  r += pRow('Yüklü lastik yarıçapı (R_eff)', num(inp.R_eff, 3) + ' m');
   if(inp.cornerDeflection) {
     var R_corner_val = inp.R_eff - inp.cornerDeflection / 1000;
-    r += pRow('Kose defleksiyonu (delta)', num(inp.cornerDeflection, 0) + ' mm');
-    r += pRow('Kose yaricapi (R_corner)', num(R_corner_val, 4) + ' m');
+    r += pRow('Köşe defleksiyonu (delta)', num(inp.cornerDeflection, 0) + ' mm');
+    r += pRow('Köşe yarıçapı (R_corner)', num(R_corner_val, 4) + ' m');
   }
   r += '\n';
 
@@ -4641,18 +4587,18 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   // 3. MOTOR & TORK KONVERTOR VERILERI
   // ════════════════════════════════════════════════════════════════════════
   r += '\n' + ln('=', W) + '\n';
-  r += pad('3. MOTOR & TORK KONVERTOR VERILERI', W, 'center') + '\n';
+  r += pad('3. MOTOR & TORK KONVERTÖR VERİLERİ', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
   // Üst bilgiler yan yana
   var cL = 38, cR = 38;
-  if(motorAdi) r += '  ' + pad('Motor: ' + ascii(motorAdi), cL) + (tcAdi ? 'TC: ' + ascii(tcAdi) : '') + '\n';
+  if(motorAdi) r += '  ' + pad('Motor: ' + yazi(motorAdi), cL) + (tcAdi ? 'TC: ' + yazi(tcAdi) : '') + '\n';
   var govStr = _engSpecs.governedSpeed ? num(parseFloat(_engSpecs.governedSpeed), 0) + ' RPM' : '-';
   var idlStr = _engSpecs.idleRpm ? num(parseFloat(_engSpecs.idleRpm), 0) + ' RPM' : '-';
   var ineStr = _engSpecs.inertia ? num(parseFloat(_engSpecs.inertia), 4) + ' kg.m2' : '-';
   var pdStr = _tcD.pumpTorqueDrop !== undefined ? num(parseFloat(_tcD.pumpTorqueDrop), 1) + ' Nm' : '-';
-  r += '  ' + pad('Governed: ' + govStr, cL) + 'Pump Dusumu: ' + pdStr + '\n';
-  r += '  ' + pad('Rolanti: ' + idlStr, cL) + '\n';
+  r += '  ' + pad('Governed: ' + govStr, cL) + 'Pump Düşümü: ' + pdStr + '\n';
+  r += '  ' + pad('Rölanti: ' + idlStr, cL) + '\n';
   r += '  ' + pad('Atalet: ' + ineStr, cL) + '\n';
   r += '\n';
 
@@ -4660,7 +4606,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var maxRows = Math.max(_engTorqueData.length, _tcDataArr.length);
   if(maxRows > 0) {
     // Başlıklar
-    r += '  ' + pad('Motor Tork Egrisi', cL) + 'TC Karakteristik\n';
+    r += '  ' + pad('Motor Tork Eğrisi', cL) + 'TC Karakteristik\n';
     r += '  ' + pad(pad('RPM', 7, 'right') + pad('Tork(Nm)', 11, 'right'), cL);
     r += pad('SR', 7, 'right') + pad('K_pump', 9, 'right') + pad('TR', 7, 'right') + '\n';
     r += '  ' + pad(ln('-', 18), cL) + ln('-', 23) + '\n';
@@ -4690,23 +4636,23 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     var _cmTW = 0; for (var _wi = 0; _wi < _c.length; _wi++) _cmTW += _c[_wi];
 
     r += ln('=', _cmTW + 4) + '\n';
-    r += pad('KONVERTOR MODU (Tum Kademeler)', _cmTW + 4, 'center') + '\n';
+    r += pad('KONVERTÖR MODU (Tüm Kademeler)', _cmTW + 4, 'center') + '\n';
     r += ln('=', _cmTW + 4) + '\n\n';
 
-    r += '  ' + pad('Motor Fani', 16) + pad('Klima', 16) + pad('Motor Gucu', 30) + 'Arac Parametreleri\n';
+    r += '  ' + pad('Motor Fanı', 16) + pad('Klima', 16) + pad('Motor Gücü', 30) + 'Araç Parametreleri\n';
     r += '  ' + ln('-', _cmTW) + '\n';
-    r += '  ' + pad('Acik', 16) + pad('Kapali', 16) + pad('Standart Guc Egrisi', 30) + 'Standart\n\n';
+    r += '  ' + pad('Açık', 16) + pad('Kapalı', 16) + pad('Standart Güç Eğrisi', 30) + 'Standart\n\n';
 
     // Tablo basligi — satir 1
-    r += '  ' + pad('Hiz', _c[0], 'right') + pad('Tork', _c[1], 'right') + pad('Motor', _c[2], 'right');
+    r += '  ' + pad('Hız', _c[0], 'right') + pad('Tork', _c[1], 'right') + pad('Motor', _c[2], 'right');
     r += pad('Net Motor', _c[3], 'right') + pad('Net Motor', _c[4], 'right');
-    r += pad('Turbin', _c[5], 'right') + pad('Turbin', _c[6], 'right') + pad('Turbin', _c[7], 'right');
-    r += pad('Konvertor Isi', _c[8], 'right') + pad('Esleme', _c[9], 'right') + '\n';
+    r += pad('Türbin', _c[5], 'right') + pad('Türbin', _c[6], 'right') + pad('Türbin', _c[7], 'right');
+    r += pad('Konvertör Isı', _c[8], 'right') + pad('Eşleme', _c[9], 'right') + '\n';
     // Tablo basligi — satir 2
-    r += '  ' + pad('Orani', _c[0], 'right') + pad('Orani', _c[1], 'right') + pad('Devri', _c[2], 'right');
-    r += pad('Torku (N-m)', _c[3], 'right') + pad('Gucu (kW)', _c[4], 'right');
-    r += pad('Devri', _c[5], 'right') + pad('Torku (N-m)', _c[6], 'right') + pad('Gucu (kW)', _c[7], 'right');
-    r += pad('Reddi (kW)', _c[8], 'right') + pad('Noktasi', _c[9], 'right') + '\n';
+    r += '  ' + pad('Oranı', _c[0], 'right') + pad('Oranı', _c[1], 'right') + pad('Devri', _c[2], 'right');
+    r += pad('Torku (N-m)', _c[3], 'right') + pad('Gücü (kW)', _c[4], 'right');
+    r += pad('Devri', _c[5], 'right') + pad('Torku (N-m)', _c[6], 'right') + pad('Gücü (kW)', _c[7], 'right');
+    r += pad('Reddi (kW)', _c[8], 'right') + pad('Noktası', _c[9], 'right') + '\n';
     // Tablo basligi — satir 3 (birimler)
     r += '  ' + pad('', _c[0], 'right') + pad('', _c[1], 'right') + pad('(rpm)', _c[2], 'right');
     r += pad('', _c[3], 'right') + pad('', _c[4], 'right');
@@ -4727,13 +4673,13 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     r += '  ' + ln('-', _cmTW) + '\n\n';
 
     var _ptd = (inp.pumpTorqueDrop !== undefined) ? inp.pumpTorqueDrop : 17.6;
-    r += '  Not: T_turbin = T_pompa x TR.  T_pompa = (N_motor / K_pompa)^2.  Dusurme = ' + num(_ptd, 1) + ' N.m.\n';
-    r += '       T_motor(N) - Dusurme = T_pompa(N)  denklemi bisection ile cozulmustur.\n';
+    r += '  Not: T_türbin = T_pompa x TR.  T_pompa = (N_motor / K_pompa)^2.  Düşürme = ' + num(_ptd, 1) + ' N.m.\n';
+    r += '       T_motor(N) - Düşürme = T_pompa(N)  denklemi bisection ile çözülmüştür.\n';
     r += '\n\n';
 
     // ŞANZIMAN ÇIKIŞ TABLOSU
-    var gearLabel = inp.gearName ? ascii(inp.gearName) : '1C';
-    r += '\n  SANZIMAN CIKIS TABLOSU (Gear ' + gearLabel + ' - Converter Mode)\n';
+    var gearLabel = inp.gearName ? yazi(inp.gearName) : '1C';
+    r += '\n  ŞANZIMAN ÇIKIŞ TABLOSU (Gear ' + gearLabel + ' - Converter Mode)\n';
     r += '  ' + ln('-', 60) + '\n\n';
 
     r += '  ' + pad('SR', 7, 'right') + pad('N_eng', 7, 'right') + pad('T_eng', 8, 'right') + pad('P_eng', 8, 'right');
@@ -4756,14 +4702,14 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
   // 7. AKTARMA PARAMETRELERI
   var stl = obs.stallAnalysis;
-  r += ln('-', W) + '\n  AKTARMA PARAMETRELERI\n' + ln('-', W) + '\n';
-  r += pRow('Secilen vites', '1C  (' + ascii(inp.gearName) + ', i_g = ' + num(inp.gearRatio, 3) + ')');
+  r += ln('-', W) + '\n  AKTARMA PARAMETRELERİ\n' + ln('-', W) + '\n';
+  r += pRow('Seçilen vites', '1C  (' + yazi(inp.gearName) + ', i_g = ' + num(inp.gearRatio, 3) + ')');
   if(stl && stl.hasData) {
-    r += pRow('Transfer kademe', ascii(stl.transferName) + '  (i_tr = ' + num(stl.i_transfer, 3) + '; eta = %' + num(stl.eta_transfer * 100, 1) + ')');
-    r += pRow('Diferansiyel orani', 'i_diff = ' + num(stl.i_axle, 3) + '  (eta = %' + num(stl.eta_axle * 100, 1) + ')');
+    r += pRow('Transfer kademe', yazi(stl.transferName) + '  (i_tr = ' + num(stl.i_transfer, 3) + '; eta = %' + num(stl.eta_transfer * 100, 1) + ')');
+    r += pRow('Diferansiyel oranı', 'i_diff = ' + num(stl.i_axle, 3) + '  (eta = %' + num(stl.eta_axle * 100, 1) + ')');
     r += pRow('Propshaft verimi', '%' + num(stl.eta_prop * 100, 2));
     r += pRow('Toplam verim (eta_total)', '%' + num(stl.eta_total * 100, 2));
-    r += pRow('Tahrikli teker sayisi (n_d)', stl.n_d);
+    r += pRow('Tahrikli teker sayısı (n_d)', stl.n_d);
   }
   r += '\n';
 
@@ -4771,19 +4717,19 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var trq = obs.torqueAnalysis;
 
   if(obs.geometryFail) {
-    r += '  *** GEOMETRIK GECERLILIK BASARISIZ ***\n\n';
-    r += '  Sebep: ' + ascii(obs.geometryFailReason) + '\n\n';
+    r += '  *** GEOMETRİK GEÇERLİLİK BAŞARISIZ ***\n\n';
+    r += '  Sebep: ' + yazi(obs.geometryFailReason) + '\n\n';
     r += '  Hesaplama bu noktada durduruldu.\n';
   } else if(trq) {
     r += ln('=', W) + '\n';
-    r += pad('5. TORK GEREKSINIMI ANALIZI (Statik)', W, 'center') + '\n';
+    r += pad('5. TORK GEREKSİNİMİ ANALİZİ (Statik)', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
     r += '  W = ' + num(inp.mass, 0) + ' kg x 9,81 = ' + num(trq.W, 0) + ' N\n';
     r += '  x = sqrt(2*R*h - h^2) = ' + num(geo.x, 4) + ' m\n\n';
 
     // Yan yana tablo
     var colW = 36;
-    r += '  ' + pad('ON TEKER ENGELDE', colW) + 'ARKA TEKER ENGELDE\n';
+    r += '  ' + pad('ÖN TEKER ENGELDE', colW) + 'ARKA TEKER ENGELDE\n';
     r += '  ' + ln('-', colW) + ln('-', colW) + '\n';
     r += '  ' + pad('D = L + x = ' + num(trq.D_front, 4) + ' m', colW);
     if(trq.D_rear > 0) {
@@ -4808,10 +4754,10 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     if(isFinite(trq.T_req_rear)) {
       r += 'T_req_arka = ' + num(trq.T_req_rear, 1) + ' Nm\n';
     } else {
-      r += 'Hesaplanamadi\n';
+      r += 'Hesaplanamadı\n';
     }
     r += '\n';
-    r += '  Kritik senaryo: ' + ascii(trq.criticalScenario) + ' (' + num(trq.T_req_critical, 1) + ' Nm)\n';
+    r += '  Kritik senaryo: ' + yazi(trq.criticalScenario) + ' (' + num(trq.T_req_critical, 1) + ' Nm)\n';
     if(isFinite(trq.T_req_rear) && trq.T_req_front > 0) {
       var ratio = trq.T_req_rear / trq.T_req_front;
       r += '  Arka/On oran: ' + num(ratio, 2) + 'x\n';
@@ -4826,33 +4772,33 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var dyn = sim.obstacleDynamic;
   if(dyn) {
     r += '\n' + ln('=', W) + '\n';
-    r += pad('6. DINAMIK SIMULASYON SONUCLARI', W, 'center') + '\n';
+    r += pad('6. DİNAMİK SİMÜLASYON SONUÇLARI', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
-    r += '  ' + pad('Zaman Adimli Engel Atlama Modeli', W - 4, 'center') + '\n\n';
+    r += '  ' + pad('Zaman Adımlı Engel Atlama Modeli', W - 4, 'center') + '\n\n';
 
     if(!dyn.success && !dyn.log) {
-      r += '  *** ' + ascii(dyn.reason) + ' ***\n\n';
+      r += '  *** ' + yazi(dyn.reason) + ' ***\n\n';
     } else {
 
       // ┌─────────────────────────────────────────────┐
       //  SIMULASYON PARAMETRELERI
       // └─────────────────────────────────────────────┘
       r += '  +' + ln('-', 64) + '+\n';
-      r += '  |' + pad(' SIMULASYON PARAMETRELERI', 64) + '|\n';
+      r += '  |' + pad(' SİMÜLASYON PARAMETRELERİ', 64) + '|\n';
       r += '  +' + ln('-', 64) + '+\n';
-      r += pRow('Zaman adimi (dt)', num(dyn.dt * 1000, 1) + ' ms');
-      r += pRow('Surucu talebi (DD)', '%100 sabit (tam gaz)');
+      r += pRow('Zaman adımı (dt)', num(dyn.dt * 1000, 1) + ' ms');
+      r += pRow('Sürücü talebi (DD)', '%100 sabit (tam gaz)');
       r += pRow('Yuvarlanma direnci (Cr)', num(dyn.params.Cr, 4));
-      r += pRow('Motor ataleti (J_engine)', num(dyn.params.J_engine, 4) + ' kg.m2  (' + (dyn.params.J_engine_source || 'varsayilan') + ')');
+      r += pRow('Motor ataleti (J_engine)', num(dyn.params.J_engine, 4) + ' kg.m2  (' + (dyn.params.J_engine_source || 'varsayılan') + ')');
       r += pRow('TC pump ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
-      r += pRow('TC sivi ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2');
+      r += pRow('TC sıvı ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2');
       r += pRow('J_eff (toplam)', num(dyn.params.J_engine + dyn.params.J_tc + dyn.params.J_fluid, 2) + ' kg.m2  [J_engine + J_tc + J_fluid]');
-      r += pRow('Baslangic acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
-      r += pRow('Arka teker baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
+      r += pRow('Başlangıç açısı (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
+      r += pRow('Arka teker başlangıç', 'v=0 (momentum taşınmaz, duruştan başlar)');
       if(dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0) {
-        r += pRow('Sanziman cikis tork limiti', num(dyn.params.gbTorqueLimit, 0) + ' Nm');
+        r += pRow('Şanzıman çıkış tork limiti', num(dyn.params.gbTorqueLimit, 0) + ' Nm');
         if(dyn.params.motorTorquePct && dyn.params.motorTorquePct < 1.0) {
-          r += pRow('Motor tork yuzdesi', '%' + num(dyn.params.motorTorquePct * 100, 1) + '  (T_gb limitinden hesaplandi)');
+          r += pRow('Motor tork yüzdesi', '%' + num(dyn.params.motorTorquePct * 100, 1) + '  (T_gb limitinden hesaplandı)');
         }
       }
       r += '\n';
@@ -4862,14 +4808,14 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       // └─────────────────────────────────────────────┘
       r += '  +' + ln('=', 64) + '+\n';
       if(dyn.success) {
-        r += '  |' + pad('>>> BASARILI — ENGEL ASILDI <<<', 64, 'center') + '|\n';
+        r += '  |' + pad('>>> BAŞARILI — ENGEL AŞILDI <<<', 64, 'center') + '|\n';
       } else {
-        r += '  |' + pad('>>> BASARISIZ — ENGEL ASILAMADI <<<', 64, 'center') + '|\n';
+        r += '  |' + pad('>>> BAŞARISIZ — ENGEL AŞILAMADI <<<', 64, 'center') + '|\n';
       }
-      r += '  |' + pad('Toplam Sure: ' + num(dyn.totalTime, 3) + ' s  |  Adim Sayisi: ' + dyn.totalSteps, 64, 'center') + '|\n';
+      r += '  |' + pad('Toplam Süre: ' + num(dyn.totalTime, 3) + ' s  |  Adım Sayısı: ' + dyn.totalSteps, 64, 'center') + '|\n';
       r += '  +' + ln('=', 64) + '+\n';
       if(!dyn.success) {
-        r += '  Sebep: ' + ascii(dyn.reason) + '\n';
+        r += '  Sebep: ' + yazi(dyn.reason) + '\n';
       }
       r += '\n';
 
@@ -4880,7 +4826,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       if(!_transferRuns || _transferRuns.length === 0) {
         // Geriye donuk: tek kademe (mevcut dyn/obs)
         _transferRuns = [{
-          kademe: (dyn.stallAnalysis && dyn.stallAnalysis.transferName) || (obs.stallAnalysis && obs.stallAnalysis.transferName) || 'Varsayilan',
+          kademe: (dyn.stallAnalysis && dyn.stallAnalysis.transferName) || (obs.stallAnalysis && obs.stallAnalysis.transferName) || 'Varsayılan',
           ratio: (obs.stallAnalysis && obs.stallAnalysis.i_transfer) || null,
           obstacleDynamic: dyn,
           obstacleCrossing: obs
@@ -4898,9 +4844,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
         // Bolum basligi (kademe bilgisiyle)
         r += '  +' + ln('-', 64) + '+\n';
-        var _trLbl = ' ZAMAN SERISI VERILERI';
+        var _trLbl = ' ZAMAN SERİSİ VERİLERİ';
         if(_transferRuns.length > 1 || _trRun.ratio != null) {
-          _trLbl += ' -- ' + ascii(_trRun.kademe) + ' KADEME';
+          _trLbl += ' -- ' + yazi(_trRun.kademe) + ' KADEME';
           if(_trRun.ratio != null) _trLbl += ' (i_tr=' + num(_trRun.ratio, 3) + ')';
         }
         r += '  |' + pad(_trLbl, 64) + '|\n';
@@ -4909,11 +4855,11 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         // Mini sonuc banner — birden fazla kademe varken her birinin durumu
         if(_transferRuns.length > 1) {
           var _miniLbl = _trDyn.success
-            ? '>>> BASARILI: Engel asildi'
-            : '>>> BASARISIZ: Engel asilamadi';
-          r += '  ' + pad(_miniLbl + '  |  Sure: ' + num(_trDyn.totalTime, 3) + ' s  |  Adim: ' + _trDyn.totalSteps, 64, 'center') + '\n';
+            ? '>>> BAŞARILI — ENGEL AŞILDI'
+            : '>>> BAŞARISIZ — ENGEL AŞILAMADI';
+          r += '  ' + pad(_miniLbl + '  |  Süre: ' + num(_trDyn.totalTime, 3) + ' s  |  Adım: ' + _trDyn.totalSteps, 64, 'center') + '\n';
           if(!_trDyn.success && _trDyn.reason) {
-            r += '  ' + pad('Sebep: ' + ascii(_trDyn.reason), 64, 'center') + '\n';
+            r += '  ' + pad('Sebep: ' + yazi(_trDyn.reason), 64, 'center') + '\n';
           }
           r += '\n';
         }
@@ -4968,7 +4914,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           // Faz degisim ayraci
           if(d.phase !== prevPhase && prevPhase !== '') {
             r += '  ' + ln('.', hdr.length - 2) + '\n';
-            r += '  ' + pad('>>> FAZ GECISI: ' + (d.phase === 'rear' ? 'ON TEKER -> ARKA TEKER' : 'ARKA TEKER TAMAMLANDI') + ' <<<', hdr.length - 2, 'center') + '\n';
+            r += '  ' + pad('>>> FAZ GEÇİŞİ: ' + (d.phase === 'rear' ? 'ÖN TEKER -> ARKA TEKER' : 'ARKA TEKER TAMAMLANDI') + ' <<<', hdr.length - 2, 'center') + '\n';
             r += '  ' + ln('.', hdr.length - 2) + '\n';
           }
           prevPhase = d.phase;
@@ -4977,7 +4923,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           var rowMilestones = msForRow[li] || [];
           for(var rmi = 0; rmi < rowMilestones.length; rmi++) {
             var matchedMs = rowMilestones[rmi];
-            var mLbl = '>>> ' + ascii(matchedMs.label);
+            var mLbl = '>>> ' + yazi(matchedMs.label);
             var mDet = [];
             if(matchedMs.T_wheel !== undefined && matchedMs.T_req !== undefined) {
               mDet.push('T_whl=' + num(matchedMs.T_wheel, 0) + ' Nm');
@@ -4996,7 +4942,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
               mDet.push('marj=%' + (matchedMs.margin_pct >= 0 ? '+' : '') + num(matchedMs.margin_pct, 1));
             }
             if(matchedMs.duration !== undefined) {
-              mDet.push('sure=' + num(matchedMs.duration, 3) + ' s');
+              mDet.push('süre=' + num(matchedMs.duration, 3) + ' s');
             }
             if(matchedMs.T_gb_out !== undefined) {
               mDet.push('T_gb=' + num(matchedMs.T_gb_out, 0) + ' Nm');
@@ -5035,26 +4981,26 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '  ' + ln('=', hdr.length - 2) + '\n';
         r += '\n';
         var logMs = (_trDyn.params && _trDyn.params.logIntervalSec) ? _trDyn.params.logIntervalSec * 1000 : 10;
-        r += '  Toplam ' + logData.length + ' kayit, ~' + num(_trDyn.totalTime, 2) + ' s surec.\n';
-        r += '  (Veriler ' + num(logMs, 0) + ' ms aralikla kaydedilmistir. ">>>" ile baslayan satirlar onemli olaylari gosterir.)\n';
+        r += '  Toplam ' + logData.length + ' kayıt, ~' + num(_trDyn.totalTime, 2) + ' s süreç.\n';
+        r += '  (Veriler ' + num(logMs, 0) + ' ms aralıkla kaydedilmiştir.)\n';
         r += '\n';
 
         // Kolon aciklamalari
-        r += '  Kolon Aciklamalari:\n';
-        r += '    t(s)     = Simulasyon zamani (saniye)\n';
-        r += '    v(km/h)  = Arac hizi (kilometre/saat)\n';
+        r += '  Kolon Açıklamaları:\n';
+        r += '    t(s)     = Simülasyon zamanı (saniye)\n';
+        r += '    v(km/h)  = Araç hızı (kilometre/saat)\n';
         r += '    N_eng    = Motor devri (RPM)\n';
         r += '    T_eng    = Motor torku (Nm)\n';
-        r += '    TR       = Tork konvertor tork orani\n';
-        r += '    SR       = Tork konvertor hiz orani (N_turbin/N_motor)\n';
-        r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = motor tork yuzdesi %' + num(((_trDyn.params && _trDyn.params.motorTorquePct) || 1) * 100, 1) + ' uygulanmis)' : '') + '\n';
+        r += '    TR       = Tork konvertör tork oranı\n';
+        r += '    SR       = Tork konvertör hız oranı (N_turbin/N_motor)\n';
+        r += '    T_gb     = Şanzıman çıkış torku (Nm)' + (hasGbLimit ? '  (* = motor tork yüzdesi %' + num(((_trDyn.params && _trDyn.params.motorTorquePct) || 1) * 100, 1) + ' uygulanmış)' : '') + '\n';
         r += '    T_whl    = Tek teker torku (Nm)\n';
         r += '    T_whl_e  = Efektif tek teker torku (Nm) = T_whl x [1 + (R_corner/R_eff) x cos(phi)]\n';
-        r += '    T_req    = Anlik gerekli tork — tek teker (Nm)\n';
-        r += '    phi(d)   = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';
+        r += '    T_req    = Anlık gerekli tork — tek teker (Nm)\n';
+        r += '    phi(d)   = Açısal konum (derece, +: tırmanış, 0: tepe, -: iniş)\n';
         r += '    F_net    = Net kuvvet (N) = F_itme - F_engel - F_yuvarlanma\n';
         r += '    KE(J)    = Kinetik enerji (Joule) = 0,5 x m x v2\n';
-        r += '    >>>      = Onemli olay (milestone)\n';
+        r += '    >>>      = Önemli olay (milestone)\n';
         r += '\n';
       }
     }
@@ -5083,16 +5029,15 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     if(tekTarafGecti) {
       r += '\n';
       r += ln('=', W) + '\n';
-      r += pad('7. PARAMETRIK CALISMA: YUK TRANSFERI ANALIZI', W, 'center') + '\n';
+      r += pad('7. PARAMETRİK ÇALIŞMA: YÜK TRANSFERİ ANALİZİ', W, 'center') + '\n';
       r += ln('=', W) + '\n\n';
 
       if(onGecti && !arkaGecti) {
-        r += '  Mevcut durumda on teker engeli asiyor ancak arka teker asamiyor.\n';
+        r += '  Mevcut durumda ön teker engeli aşıyor ancak arka teker aşamıyor.\n';
       } else {
-        r += '  Mevcut durumda arka teker engeli asiyor ancak on teker asamiyor.\n';
+        r += '  Mevcut durumda arka teker engeli aşıyor ancak ön teker aşamıyor.\n';
       }
-      r += '  Agirlik merkezi kaydirarak her iki tekerin de engeli asabilecegi\n';
-      r += '  kosullar arastirilmaktadir.\n\n';
+      r += '\n';
 
       // Geometri ve parametreler
       var _pGeo = _pCc ? _pCc.geometry : geo;
@@ -5121,27 +5066,27 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += '  +' + ln('-', 64) + '+\n';
       r += '  |' + pad(' MEVCUT DURUM', 64) + '|\n';
       r += '  +' + ln('-', 64) + '+\n';
-      r += pRow('a1 (AG merkezi-on aks)', num(_pA1, 3) + ' m');
-      r += pRow('a2 (AG merkezi-arka aks)', num(_pA2, 3) + ' m');
+      r += pRow('a1 (AĞ merkezi-ön aks)', num(_pA1, 3) + ' m');
+      r += pRow('a2 (AĞ merkezi-arka aks)', num(_pA2, 3) + ' m');
       r += pRow('T_wheel (pik, dinamik)', num(_pTwPeak, 0) + ' Nm');
       r += pRow('T_wheel_eff (n_eff x T_whl)', num(_pTwEff, 0) + ' Nm  (n_eff/2 = ' + num(_n_eff_start, 3) + ')');
       var _pTrOn = _pW * _pA2 * _px / (2 * (_pL + _px));
       var _pTrArka = _pW * _pA1 * _px / (2 * (_pL - _px));
       var _pMarjOn = _pTrOn > 0 ? ((_pTwEff - _pTrOn) / _pTrOn * 100) : 0;
       var _pMarjArka = _pTrArka > 0 ? ((_pTwEff - _pTrArka) / _pTrArka * 100) : 0;
-      r += pRow('T_req_on', num(_pTrOn, 0) + ' Nm  (marj: %' + (_pMarjOn >= 0 ? '+' : '') + num(_pMarjOn, 1) + ')' + (_pMarjOn < 0 ? '  <- YETERSIZ' : ''));
-      r += pRow('T_req_arka', num(_pTrArka, 0) + ' Nm  (marj: %' + (_pMarjArka >= 0 ? '+' : '') + num(_pMarjArka, 1) + ')' + (_pMarjArka < 0 ? '  <- YETERSIZ' : ''));
+      r += pRow('T_req_on', num(_pTrOn, 0) + ' Nm  (marj: %' + (_pMarjOn >= 0 ? '+' : '') + num(_pMarjOn, 1) + ')' + (_pMarjOn < 0 ? '  <- YETERSİZ' : ''));
+      r += pRow('T_req_arka', num(_pTrArka, 0) + ' Nm  (marj: %' + (_pMarjArka >= 0 ? '+' : '') + num(_pMarjArka, 1) + ')' + (_pMarjArka < 0 ? '  <- YETERSİZ' : ''));
       r += '\n';
 
       // ── AG MERKEZİ TARAMASI ──
       r += '  +' + ln('-', 64) + '+\n';
-      r += '  |' + pad(' AGIRLIK MERKEZI TARAMASI', 64) + '|\n';
+      r += '  |' + pad(' AĞIRLIK MERKEZİ TARAMASI', 64) + '|\n';
       r += '  +' + ln('-', 64) + '+\n\n';
 
       // Tablo başlığı
       r += '  ' + pad('a1(m)', 8) + pad('a2(m)', 8);
       r += pad('T_req_on', 10) + pad('T_req_ar', 10);
-      r += pad('On', 8) + pad('Arka', 8) + 'Durum\n';
+      r += pad('Ön', 8) + pad('Arka', 8) + 'Durum\n';
       r += '  ' + ln('-', 60) + '\n';
 
       // a₂'yi 0.025m adımlarla tara
@@ -5176,21 +5121,21 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
         r += '  ' + pad(num(_a1n, 3), 8) + pad(num(_a2n, 3), 8);
         r += pad(num(_trOn, 0), 10) + pad(num(_trArka, 0), 10);
-        r += pad(_onOk ? 'ASAR' : 'ASAMAZ', 8) + pad(_arkaOk ? 'ASAR' : 'ASAMAZ', 8);
+        r += pad(_onOk ? 'AŞAR' : 'AŞAMAZ', 8) + pad(_arkaOk ? 'AŞAR' : 'AŞAMAZ', 8);
         r += _durum + _etiket + '\n';
       }
       r += '\n';
 
       // ── SONUÇ ──
       r += '  +' + ln('-', 64) + '+\n';
-      r += '  |' + pad(' SONUC', 64) + '|\n';
+      r += '  |' + pad(' SONUÇ', 64) + '|\n';
       r += '  +' + ln('-', 64) + '+\n';
 
       if(_pMinPassA2 !== null) {
         var _deltaA2min = _pMinPassA2 - _pA2;
-        var _yonMin = _deltaA2min > 0 ? 'one' : 'arkaya';
-        r += '  Her iki tekerin de asmasi icin:\n';
-        r += '    a2 en az ' + num(_pMinPassA2, 3) + ' m olmali (Da2 = ' + (_deltaA2min >= 0 ? '+' : '') + num(_deltaA2min, 3) + ' m ' + _yonMin + ')\n';
+        var _yonMin = _deltaA2min > 0 ? 'öne' : 'arkaya';
+        r += '  Her iki tekerin de aşması için:\n';
+        r += '    a2 en az ' + num(_pMinPassA2, 3) + ' m olmalı (Da2 = ' + (_deltaA2min >= 0 ? '+' : '') + num(_deltaA2min, 3) + ' m ' + _yonMin + ')\n';
 
         if(_pOptA2 !== null) {
           var _a1opt = _pL - _pOptA2;
@@ -5206,18 +5151,18 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         // Hedef Δa₂'ye ulaşmak için: P × d = m_total × Δa₂
         var _deltaA2opt = (_pOptA2 || _pMinPassA2) - _pA2;
         var _momentOpt = Math.abs(_pMass * _deltaA2opt);
-        var _yonOpt = _deltaA2opt > 0 ? 'one' : 'arkaya';
+        var _yonOpt = _deltaA2opt > 0 ? 'öne' : 'arkaya';
 
         if(_momentOpt > 0.1) {
           r += '  +' + ln('-', 64) + '+\n';
-          r += '  |' + pad(' YUK YAKINSAMASI', 64) + '|\n';
+          r += '  |' + pad(' YÜK YAKINSAMASI', 64) + '|\n';
           r += '  +' + ln('-', 64) + '+\n';
-          r += '  AG merkezini ' + num(Math.abs(_deltaA2opt), 3) + ' m ' + _yonOpt + ' kaydirmak icin:\n';
+          r += '  AĞ merkezini ' + num(Math.abs(_deltaA2opt), 3) + ' m ' + _yonOpt + ' kaydırmak için:\n';
           r += '  Gerekli moment: P x d = ' + num(_momentOpt, 0) + ' kg.m\n';
           r += '  Dingil mesafesi (L): ' + num(_pL, 3) + ' m\n\n';
 
           // Mesafe-yük tablosu
-          r += '    ' + pad('Mesafe (m)', 14) + pad('Min. Yuk (kg)', 16) + pad('Yon', 10) + '\n';
+          r += '    ' + pad('Mesafe (m)', 14) + pad('Min. Yük (kg)', 16) + pad('Yön', 10) + '\n';
           r += '    ' + ln('-', 40) + '\n';
           for(var _mStep = 0.5; _mStep <= _pL + 0.01; _mStep += 0.5) {
             var _d = Math.min(Math.round(_mStep * 100) / 100, _pL);
@@ -5227,11 +5172,11 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
             if(Math.abs(_d - _pL) < 0.01) break;
           }
           r += '\n';
-          r += '  NOT: Tasima mesafesi dingil mesafesini (L=' + num(_pL, 3) + ' m) asmamalidir.\n';
+          r += '  NOT: Taşıma mesafesi dingil mesafesini (L=' + num(_pL, 3) + ' m) aşmamalıdır.\n';
         }
       } else {
-        r += '  Agirlik merkezi kaydirarak cozum bulunamadi.\n';
-        r += '  Teker torku her iki teker icin de yetersiz.\n';
+        r += '  Ağırlık merkezi kaydırılarak çözüm bulunamadı.\n';
+        r += '  Teker torku her iki teker için de yetersiz.\n';
       }
       r += '\n';
     }
@@ -5241,63 +5186,60 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   // 8. MATEMATIKSEL ALTYAPI — Hesaplama Teorisi ve Formuller
   // ════════════════════════════════════════════════════════════════════════
   r += '\n' + ln('=', W) + '\n';
-  r += pad('8. MATEMATIKSEL ALTYAPI', W, 'center') + '\n';
+  r += pad('8. MATEMATİKSEL ALTYAPI', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
-  r += '  Bu bolumde raporun dayandigi fiziksel model ve matematiksel\n';
-  r += '  formuller aciklanmaktadir. Her adimda sizin kendi girdileriniz\n';
-  r += '  ile somut sayisal ornekler gosterilmistir.\n\n';
 
   // --- A. GEOMETRIK TEMEL ---
   r += ln('-', W) + '\n';
-  r += '  A. GEOMETRIK TEMEL — Teker-Engel Temas Noktasi\n';
+  r += '  A. GEOMETRİK TEMEL — Teker-Engel Temas Noktası\n';
   r += ln('-', W) + '\n\n';
-  r += '  Dairesel bir tekerin dik engel kosesine temas ettigi anda, teker ile\n';
-  r += '  engel arasindaki tek temas noktasi kosenin kendisidir (P noktasi).\n';
-  r += '  Teker merkezi (M) ile P arasindaki yatay uzaklik "moment kolu" olup\n';
-  r += '  Pisagor bagintisi ile hesaplanir:\n\n';
+  r += '  Dairesel bir tekerin dik engel köşesine temas ettiği anda, teker ile\n';
+  r += '  engel arasındaki tek temas noktası köşenin kendisidir (P noktası).\n';
+  r += '  Teker merkezi (M) ile P arasındaki yatay uzaklık "moment kolu" olup\n';
+  r += '  Pisagor bağıntısı ile hesaplanır:\n\n';
   r += '      x^2 + (R - h)^2 = R^2    =>    x = sqrt(2*R*h - h*h)\n\n';
-  r += '  Merkez-kose acisi:  theta = arccos(x / R)\n';
-  r += '  Zorluk kriteri   :  h/R orani  ( <0,50 Kolay; <0,75 Orta; >=0,75 Zor )\n\n';
+  r += '  Merkez-köşe açısı:  theta = arccos(x / R)\n';
+  r += '  Zorluk kriteri   :  h/R oranı  ( <0,50 Kolay; <0,75 Orta; >=0,75 Zor )\n\n';
   if(!obs.geometryFail && geo && isFinite(geo.x)) {
-    r += '  Sizin degerleriniz:\n';
+    r += '  Sayısal değerler:\n';
     r += '    R_eff = ' + num(inp.R_eff, 3) + ' m,   h = ' + num(inp.h, 3) + ' m\n';
     r += '    x     = sqrt(2 * ' + num(inp.R_eff, 3) + ' * ' + num(inp.h, 3) + ' - '
       + num(inp.h, 3) + '^2) = ' + num(geo.x, 4) + ' m\n';
     r += '    theta = arccos(' + num(geo.x, 4) + ' / ' + num(inp.R_eff, 3) + ') = '
       + num(geo.theta_deg, 2) + ' derece\n';
     r += '    h/R   = ' + num(geo.hR_ratio, 3) + '   =>   Zorluk: '
-      + ascii(geo.difficultyLabel) + '\n';
+      + yazi(geo.difficultyLabel) + '\n';
   } else {
-    r += '  (Geometrik gecerlilik saglanmadigi icin sayisal ornek gosterilemedi.)\n';
+    r += '  (Geometrik geçerlilik sağlanmadığı için sayısal örnek gösterilemedi.)\n';
   }
   r += '\n';
 
   // --- B. STATIK TORK GEREKSINIMI ---
   r += ln('-', W) + '\n';
-  r += '  B. STATIK TORK GEREKSINIMI — Moment Dengesi\n';
+  r += '  B. STATİK TORK GEREKSİNİMİ — Moment Dengesi\n';
   r += ln('-', W) + '\n\n';
-  r += '  Teker engele dayandigi anda arac, karsi aksin yer temas noktasi\n';
-  r += '  etrafinda donmeye direnir. Bu pivot etrafinda moment dengesi\n';
-  r += '  kurulursa engele gelen dusey yuk bulunur; buradan tekerin uretmesi\n';
-  r += '  gereken cevirme torku cikarilir.\n\n';
-  r += '  SENARYO A — On Teker Engelde:\n';
-  r += '    Pivot = arka teker temas noktasi\n';
-  r += '    Pivot-P yatay uzakligi :  D = L + x\n';
-  r += '    On akstaki toplam yuk  :  N_f   = W * a2 / (L + x)\n';
-  r += '    Tek tekere dusen yuk   :  N_f1  = N_f / 2\n';
+  r += '  Teker engele dayandığı anda araç, karşı aksın yer temas noktası\n';
+  r += '  etrafında dönmeye direnir. Bu pivot etrafında moment dengesi\n';
+  r += '  kurulursa engele gelen düşey yük bulunur; buradan tekerin üretmesi\n';
+  r += '  gereken çevirme torku çıkarılır.\n\n';
+  r += '  SENARYO A — Ön Teker Engelde:\n';
+  r += '    Pivot = arka teker temas noktası\n';
+  r += '    Pivot-P yatay uzaklığı :  D = L + x\n';
+  r += '    Ön akstaki toplam yük  :  N_f   = W * a2 / (L + x)\n';
+  r += '    Tek tekere düşen yük   :  N_f1  = N_f / 2\n';
   r += '    Gerekli teker torku    :  T_req_on = N_f1 * x\n\n';
   r += '  SENARYO B — Arka Teker Engelde:\n';
-  r += '    Pivot = on teker temas noktasi,  D = L - x\n';
+  r += '    Pivot = ön teker temas noktası,  D = L - x\n';
   r += '    N_r = W * a1 / (L - x),  T_req_arka = (N_r / 2) * x\n';
-  r += '    L - x <= 0 ise arka senaryo matematiksel olarak cozulemez.\n\n';
-  r += '  Simetri nedeniyle genelde |N_r| > |N_f| oldugundan ARKA teker\n';
-  r += '  senaryosu kritik (daha yuksek T_req gerektiren) senaryodur.\n\n';
+  r += '    L - x <= 0 ise arka senaryo matematiksel olarak çözülemez.\n\n';
+  r += '  Simetri nedeniyle genelde |N_r| > |N_f| olduğundan arka teker\n';
+  r += '  senaryosu kritik (daha yüksek T_req gerektiren) senaryodur.\n\n';
   if(trq && !obs.geometryFail) {
-    r += '  Sizin degerleriniz:\n';
+    r += '  Sayısal değerler:\n';
     r += '    W = m*g = ' + num(inp.mass, 0) + ' * 9,81 = ' + num(trq.W, 0) + ' N\n';
     r += '    L = a1 + a2 = ' + num(inp.a1, 3) + ' + ' + num(inp.a2, 3) + ' = '
       + num(inp.wheelbase, 3) + ' m,    x = ' + num(geo.x, 4) + ' m\n\n';
-    r += '    On teker :  D = ' + num(trq.D_front, 4) + ' m\n';
+    r += '    Ön teker :  D = ' + num(trq.D_front, 4) + ' m\n';
     r += '                N_f  = ' + num(trq.W, 0) + ' * ' + num(inp.a2, 3) + ' / '
       + num(trq.D_front, 4) + ' = ' + num(trq.N_f, 0) + ' N\n';
     r += '                T_req_on   = ' + num(trq.N_f1, 0) + ' * ' + num(geo.x, 4)
@@ -5309,37 +5251,37 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += '                T_req_arka = ' + num(trq.N_r1, 0) + ' * ' + num(geo.x, 4)
         + ' = ' + num(trq.T_req_rear, 1) + ' Nm\n';
     } else {
-      r += '    Arka teker: L - x <= 0, senaryo cozulemedi.\n';
+      r += '    Arka teker: L - x <= 0, senaryo çözülemedi.\n';
     }
-    r += '    Kritik   : ' + ascii(trq.criticalScenario) + ' (T_req = '
+    r += '    Kritik   : ' + yazi(trq.criticalScenario) + ' (T_req = '
       + num(trq.T_req_critical, 1) + ' Nm)\n';
   }
   r += '\n';
 
   // --- C. MEVCUT TEKER TORKU ---
   r += ln('-', W) + '\n';
-  r += '  C. MEVCUT TEKER TORKU — Motor/Konvertor/Aktarma Zinciri\n';
+  r += '  C. MEVCUT TEKER TORKU — Motor/Konvertör/Aktarma Zinciri\n';
   r += ln('-', W) + '\n\n';
-  r += '  Arac durdugunda (v=0, SR=0) motor, tork konvertor pompasina yuk\n';
-  r += '  bindirir. Pompa yuku kuadratiktir:\n\n';
+  r += '  Araç durduğunda (v=0, SR=0) motor, tork konvertör pompasına yük\n';
+  r += '  bindirir. Pompa yükü kuadratiktir:\n\n';
   r += '      T_pump(N) = (N / K_pump)^2\n\n';
-  r += '  Motor governed devrine ulasamaz; stall denge noktasi:\n\n';
+  r += '  Motor governed devrine ulaşamaz; stall denge noktası:\n\n';
   r += '      T_motor_net(N) - pump_drop = T_pump(N)   =>   N_stall\n\n';
-  r += '  Bu denklem 1 RPM adimla taranir (bisection/iteratif olarak cozulur).\n\n';
-  r += '  ONEMLI FIZIKSEL AYRIM (SCAAN dogrulamasi):\n';
-  r += '    Motor torkunun bir kismi donen kutlelerin ivmelenmesine gider.\n';
-  r += '    Akiskan yoluyla turbine aktarilan sadece pompa torkudur:\n\n';
-  r += '        T_turbine = T_pump x TR        (T_engine x TR DEGIL!)\n\n';
-  r += '    TR: torque ratio (tau), TC karakteristik egrisinden okunur.\n\n';
-  r += '  Aktarma zinciri (stall anindaki teker torku):\n\n';
+  r += '  Bu denklem 1 RPM adımla taranır (bisection/iteratif olarak çözülür).\n\n';
+  r += '  FİZİKSEL AYRIM (SCAAN doğrulaması):\n';
+  r += '    Motor torkunun bir kısmı dönen kütlelerin ivmelenmesine gider.\n';
+  r += '    Akışkan yoluyla türbine aktarılan yalnız pompa torkudur:\n\n';
+  r += '        T_turbine = T_pump x TR\n\n';
+  r += '    TR: torque ratio (tau), TC karakteristik eğrisinden okunur.\n\n';
+  r += '  Aktarma zinciri (stall anındaki teker torku):\n\n';
   r += '      T_wheel = T_turbine * i_g * eta_gear\n';
   r += '                         * i_tr  * eta_tr\n';
   r += '                         * i_diff * eta_diff\n';
   r += '                         * eta_propshaft\n';
   r += '                         / n_d\n\n';
-  r += '  n_d: tahrikli teker sayisi (transfer+diff kilitli 4x4 => n_d = 4).\n\n';
+  r += '  n_d: tahrikli teker sayısı (transfer+diff kilitli 4x4 => n_d = 4).\n\n';
   if(stl && stl.hasData) {
-    r += '  Sizin konfigurasyonunuz (stall):\n';
+    r += '  Sayısal değerler (stall):\n';
     r += '    N_stall              = ' + num(stl.N_stall, 0) + ' RPM\n';
     r += '    K_pump(SR=0)         = ' + num(stl.K_pump_stall, 2) + '\n';
     r += '    T_pump               = (' + num(stl.N_stall, 0) + ' / '
@@ -5347,8 +5289,8 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     r += '    TR (SR=0)            = ' + num(stl.TR_stall, 3) + '\n';
     r += '    T_turbine            = ' + num(stl.T_pump_stall, 1) + ' * '
       + num(stl.TR_stall, 3) + ' = ' + num(stl.T_pump_stall * stl.TR_stall, 1) + ' Nm\n';
-    r += '    i_g (' + ascii(stl.gearName) + ')        = ' + num(stl.gearRatio, 3) + '\n';
-    r += '    i_tr (' + ascii(stl.transferName) + ')      = ' + num(stl.i_transfer, 3)
+    r += '    i_g (' + yazi(stl.gearName) + ')        = ' + num(stl.gearRatio, 3) + '\n';
+    r += '    i_tr (' + yazi(stl.transferName) + ')      = ' + num(stl.i_transfer, 3)
       + '    (eta = %' + num(stl.eta_transfer * 100, 1) + ')\n';
     r += '    i_diff               = ' + num(stl.i_axle, 3)
       + '    (eta = %' + num(stl.eta_axle * 100, 1) + ')\n';
@@ -5356,55 +5298,52 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     r += '    n_d                  = ' + stl.n_d + '\n';
     r += '    T_wheel (tek teker)  = ' + num(stl.T_wheel, 1) + ' Nm\n';
   } else {
-    r += '  (Motor/TC verisi eksik oldugu icin sayisal ornek gosterilemedi.)\n';
+    r += '  (Motor/TC verisi eksik olduğu için sayısal örnek gösterilemedi.)\n';
   }
   r += '\n';
 
   // --- D. DINAMIK SIMULASYON ---
   r += ln('-', W) + '\n';
-  r += '  D. DINAMIK SIMULASYON — Zaman Adimli Model\n';
+  r += '  D. DİNAMİK SİMÜLASYON — Zaman Adımlı Model\n';
   r += ln('-', W) + '\n\n';
-  r += '  Statik analiz "teorik olarak gecer mi?" sorusunu, dinamik sim ise\n';
-  r += '  "zaman icinde gercekten gecebilir mi, hizlanma profili nasil?"\n';
-  r += '  sorusunu cevaplar. Her dt (tipik 1 ms) adimda su denklemler\n';
-  r += '  entegre edilir:\n\n';
-  r += '  1) KINEMATIK:\n';
+  r += '  Her dt (tipik 1 ms) adımında entegre edilen denklemler:\n\n';
+  r += '  1) KİNEMATİK:\n';
   r += '       v_new   = max(0, v + a*dt)\n';
-  r += '       phi_new = phi - (v / R_eff) * dt        (phi: teker-kose acisi)\n\n';
-  r += '  2) ANLIK MOMENT KOLU (phi degistikce degisir):\n';
+  r += '       phi_new = phi - (v / R_eff) * dt        (phi: teker-köşe açısı)\n\n';
+  r += '  2) ANLIK MOMENT KOLU (phi değiştikçe değişir):\n';
   r += '       moment_kolu = R_eff * sin(phi)\n';
   r += '       T_req(t)    = (N_aks / 2) * moment_kolu\n';
-  r += '     phi=phi_start iken moment_kolu=x (statikle ayni), phi=0 tepede\n';
+  r += '     phi=phi_start iken moment_kolu=x (statikle aynı), phi=0 tepede\n';
   r += '     moment_kolu=0 ve T_req=0 olur.\n\n';
-  r += '  3) EFEKTIF TAHRIKLI TEKER SAYISI n_eff(phi):\n';
-  r += '     Engeldeki 2 teker kose etrafinda DOGRUDAN moment uygular.\n';
-  r += '     Duz zemindeki 2 teker ise araci yatay iter; bu itme de P kosesi\n';
-  r += '     etrafinda moment uretir, moment kolu ~ R*cos(phi):\n\n';
+  r += '  3) EFEKTİF TAHRİKLİ TEKER SAYISI n_eff(phi):\n';
+  r += '     Engeldeki 2 teker köşe etrafında doğrudan moment uygular.\n';
+  r += '     Düz zemindeki 2 teker ise aracı yatay iter; bu itme de P köşesi\n';
+  r += '     etrafında moment üretir, moment kolu ~ R*cos(phi):\n\n';
   r += '       n_eff(phi) = 2 * [ 1 + (R_corner / R_flat) * cos(phi) ]\n\n';
-  r += '     phi = phi_start (temas)  : cos kucuk; n_eff ~ 2,5\n';
+  r += '     phi = phi_start (temas)  : cos küçük; n_eff ~ 2,5\n';
   r += '     phi = 0          (tepe)  : cos = 1; n_eff ~ 4,0\n\n';
-  r += '  4) KUVVET DENGESI:\n';
+  r += '  4) KUVVET DENGESİ:\n';
   r += '       F_itme  = T_wheel * n_eff / R_eff\n';
   r += '       F_engel = N_aks * moment_kolu / R_eff\n';
   r += '       F_net   = F_itme - F_engel\n';
   r += '       a       = F_net / m\n';
-  r += '     (Yuvarlanma direnci engel kuvveti yaninda ihmal edilir.)\n\n';
-  r += '  5) MOTOR DINAMIGI (Newton rotasyonel):\n';
+  r += '     (Yuvarlanma direnci engel kuvveti yanında ihmal edilir.)\n\n';
+  r += '  5) MOTOR DİNAMİĞİ (Newton rotasyonel):\n';
   r += '       T_net   = T_engine(N) - T_pump(N) - pump_drop\n';
   r += '       J_eff   = J_engine + J_tc + J_fluid\n';
   r += '       alpha   = T_net / J_eff\n';
   r += '       N_new   = N + alpha * dt * 60/(2*pi)\n\n';
-  r += '     J_fluid ~ 3,0 kg.m2 = TC kabugundaki ATF sivi ataleti,\n';
-  r += '     CAN-bus dN/dt olcumleriyle kalibre edilmistir.\n\n';
-  r += '  6) FAZ GECISI:\n';
-  r += '     phi <= -phi_start olunca on teker engeli asmistir. Arka faz\n';
-  r += '     baslar; arka teker engele degdiginde arac duracagi icin v ve\n';
-  r += '     motor devri sifirlanir (momentum tasinmaz varsayimi).\n\n';
-  r += '  7) STALL TESPITI:\n';
+  r += '     J_fluid ~ 3,0 kg.m2 = TC kabuğundaki ATF sıvı ataleti,\n';
+  r += '     CAN-bus dN/dt ölçümleriyle kalibre edilmiştir.\n\n';
+  r += '  6) FAZ GEÇİŞİ:\n';
+  r += '     phi <= -phi_start olunca ön teker engeli aşmıştır. Arka faz\n';
+  r += '     başlar; arka teker engele değdiğinde araç duracağı için v ve\n';
+  r += '     motor devri sıfırlanır (momentum taşınmaz varsayımı).\n\n';
+  r += '  7) STALL TESPİTİ:\n';
   r += '     v ~ 0 ve DD=%100 ve T_wheel < T_req ve motor dN/dt < 5 RPM/s\n';
-  r += '     kosulu 0,5 s boyunca saglanirsa arac "takildi" (stall).\n\n';
+  r += '     koşulu 0,5 s boyunca sağlanırsa araç "takıldı" (stall).\n\n';
   if(dyn && dyn.params) {
-    r += '  Sizin dinamik simulasyonunuzda kullanilan degerler:\n';
+    r += '  Dinamik simülasyonda kullanılan değerler:\n';
     r += '    dt       = ' + num(dyn.dt * 1000, 1) + ' ms\n';
     r += '    J_engine = ' + num(dyn.params.J_engine, 3) + ' kg.m2\n';
     r += '    J_tc     = ' + num(dyn.params.J_tc, 3) + ' kg.m2\n';
@@ -5413,48 +5352,39 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       + ' kg.m2  (toplam)\n';
     r += '    phi_start= ' + num(dyn.params.phi_start_deg, 2) + ' derece\n';
   } else {
-    r += '  (Dinamik simulasyon calistirilmadigi icin sayisal ornek yok.)\n';
+    r += '  (Dinamik simülasyon çalıştırılmadığı için sayısal örnek yok.)\n';
   }
   r += '\n';
 
   // --- E. KARAR KRITERI ---
   r += ln('-', W) + '\n';
-  r += '  E. KARAR KRITERI\n';
+  r += '  E. KARAR KRİTERİ\n';
   r += ln('-', W) + '\n\n';
-  r += '  Basari kosulu: HER IKI teker de engeli asmalidir.\n\n';
-  r += '      On teker gecer   <=>   T_wheel >= T_req_on\n';
-  r += '      Arka teker gecer <=>   T_wheel >= T_req_arka\n';
-  r += '      Genel basari     <=>   Her iki kosul birden saglanir\n\n';
-  r += '  Marj yuzdesi:  marj% = (T_wheel - T_req) / T_req * 100\n';
-  r += '      < %0      : Yetersiz  (kirmizi)\n';
-  r += '      %0 - %5   : Sinirda   (sari)\n';
-  r += '      > %5      : Guvenli   (yesil)\n\n';
+  r += '  Başarı koşulu: HER İKİ teker de engeli aşmalıdır.\n\n';
+  r += '      Ön teker geçer   <=>   T_wheel >= T_req_on\n';
+  r += '      Arka teker geçer <=>   T_wheel >= T_req_arka\n';
+  r += '      Genel başarı     <=>   Her iki koşul birden sağlanır\n\n';
+  r += '  Marj yüzdesi:  marj% = (T_wheel - T_req) / T_req * 100\n';
+  r += '      < %0      : Yetersiz  (kırmızı)\n';
+  r += '      %0 - %5   : Sınırda   (sarı)\n';
+  r += '      > %5      : Güvenli   (yeşil)\n\n';
 
   // --- F. KAYNAK VE DOGRULAMA ---
   r += ln('-', W) + '\n';
-  r += '  F. KAYNAK VE DOGRULAMA\n';
+  r += '  F. KAYNAK VE DOĞRULAMA\n';
   r += ln('-', W) + '\n\n';
-  r += '  - Geometri : Klasik Pisagor analizi (askeri arac literaturu).\n';
-  r += '  - TC modeli: T_turbine = T_pump x TR — SCAAN (Allison) dogrulamasi.\n';
+  r += '  - Geometri : Klasik Pisagor analizi (askeri araç literatürü).\n';
+  r += '  - TC modeli: T_turbine = T_pump x TR — SCAAN (Allison) doğrulaması.\n';
   r += '  - Vites verimi (evrensel): eta = 1 - |ln(i_g)|*(0,0175 + 2,93e-6*N),\n';
-  r += '    iSCAAN performans modeli ile 7 vites 2 mod dogrulamasi (<=%0,1 hata).\n';
-  r += '  - J_fluid kalibrasyonu: CAN-bus dN/dt olcumleriyle fit edilmistir.\n';
-  r += '  - Tum interpolasyonlar PCHIP (monoton-korumali kubik) spline ile\n';
-  r += '    yapilmistir (tork egrisi, K_pump(SR), tau(SR)).\n';
+  r += '    iSCAAN performans modeli ile 7 vites 2 mod doğrulaması (<=%0,1 hata).\n';
+  r += '  - J_fluid kalibrasyonu: CAN-bus dN/dt ölçümleriyle fit edilmiştir.\n';
+  r += '  - Tüm interpolasyonlar PCHIP (monoton-korumalı kübik) spline ile\n';
+  r += '    yapılmıştır (tork eğrisi, K_pump(SR), tau(SR)).\n';
   r += '\n';
 
-  // FERAGAT
-  r += ln('-', W) + '\n';
-  r += pad('FERAGATNAME', W, 'center') + '\n';
-  r += ln('=', W) + '\n\n';
-  r += ln('-', W) + '\n';
-  r += pad('Bu rapor MFSim Engel Atlama Analizi Programi', W, 'center') + '\n';
-  r += pad('ile otomatik olusturulmustur. Hesaplamalar', W, 'center') + '\n';
-  r += pad('teorik modellere dayanmaktadir. Gercek test sonuclari ile', W, 'center') + '\n';
-  r += pad('dogrulama yapilmasi onerilir.', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
 
-  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tüm Hakları Saklıdır', W, 'center') + '\n';
 
   return r;
 }

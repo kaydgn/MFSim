@@ -127,8 +127,9 @@ function isaretle(metin, profil) {
     const hedef = (k === 'tarif') ? sade : kucuk;
     if (res.some((re) => { re.lastIndex = 0; return re.test(hedef); })) { out.push(k); continue; }
     if (k === 'gelistirme' && /\p{Ll}/u.test(metin)) {
-      // Baştaki iki ve daha çok büyük harfli sözcük bir başlıktır ("TEKERLEK GÜCÜ (ortalama)").
-      const govde = metin.replace(/^[\s‹›(\[]*(?:[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9.\-–/]*[\s:—–·-]+){2,}/u, '');
+      // Baştaki iki ve daha çok büyük harfli sözcük bir başlıktır ("TEKERLEK GÜCÜ (ortalama)"),
+      // numaralı da olsa ("2) DİRENÇ KUVVETLERİ (g=9,81)").
+      const govde = metin.replace(/^[\s‹›(\[]*(?:\d+[.)]\s+)?(?:[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9.\-–/]*[\s:—–·-]+){2,}/u, '');
       const vurgu = [...govde.matchAll(BUYUK)].map((m) => m[0])
         .some((w) => !AD_BUYUK.has(w) && (VURGU.has(w) || /[ÇĞİÖŞÜ]/.test(w)));
       if (vurgu) out.push(k);

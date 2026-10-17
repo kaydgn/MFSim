@@ -71,11 +71,11 @@ describe('veGenerateFTCalcTraceReport — smoke', () => {
   });
 
   test('ana bölümler mevcut (kılavuz, girdiler, formül, stall, adım izi)', () => {
-    expect(txt).toContain('DETAY MATEMATIK HESAPLARI');
-    expect(txt).toContain('A. GIRDILER VE SABITLER');
-    expect(txt).toContain('B. FORMUL SOZLUGU');
-    expect(txt).toContain('OTURMUS STALL');
-    expect(txt).toContain('ADIM ADIM HIZLANMA IZI');
+    expect(txt).toContain('DETAY MATEMATİK HESAPLARI');
+    expect(txt).toContain('A. GİRDİLER VE SABİTLER');
+    expect(txt).toContain('B. FORMÜL SÖZLÜĞÜ');
+    expect(txt).toContain('OTURMUŞ STALL');
+    expect(txt).toContain('ADIM ADIM HIZLANMA İZİ');
     expect(txt).toContain('Test Muhendis');       // yazar başlıkta
   });
 

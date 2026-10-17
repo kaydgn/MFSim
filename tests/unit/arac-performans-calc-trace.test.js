@@ -107,8 +107,8 @@ describe('Detaylı Hesaplama İzi — faithfulness + yapı', () => {
     expect(T.lowSpeedOp).toBeTruthy();
   });
 
-  test('kalkış adımı yakalandı (reason=kalkis, v≈0)', () => {
-    const launch = R_on.calcTrace.steps.find(s => /kalkis/.test(s.reason));
+  test('kalkış adımı yakalandı (reason=kalkış, v≈0)', () => {
+    const launch = R_on.calcTrace.steps.find(s => /kalkış/.test(s.reason));
     expect(launch).toBeTruthy();
     expect(launch.v_kmh).toBeLessThan(0.5);
     expect(launch.branch).toBe('converter');       // TK var → kalkış converter dalında
@@ -117,7 +117,7 @@ describe('Detaylı Hesaplama İzi — faithfulness + yapı', () => {
   });
 
   test('vites geçişi adımı yakalandı + shiftEvent eşik içeriyor', () => {
-    const sh = R_on.calcTrace.steps.filter(s => s.reason === 'vites-gecisi');
+    const sh = R_on.calcTrace.steps.filter(s => s.reason === 'vites geçişi');
     expect(sh.length).toBeGreaterThanOrEqual(1);
     const withEvent = sh.find(s => s.shiftEvent);
     expect(withEvent).toBeTruthy();

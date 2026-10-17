@@ -85,7 +85,11 @@ const METIN_ISARETI = /\/\/\s*metin:\s*\S/;
 // BURADA DEĞİL — Sonuçlar'ın ekrandaki Detaylı raporu da değil: indirilen
 // belge onu kopyalamaz, `_veReportAssemble` ile ayrıca kurulur.
 const BELGE = {
-  'js/results.js': ['_veRepSec*', '_veReportAntet', '_veReportAssemble', '_veMakeReportHelpers']
+  'js/results.js': ['_veRepSec*', '_veReportAntet', '_veReportAssemble', '_veMakeReportHelpers'],
+  // TXT raporları: Sonuçlar'daki A4 sayfası ve indirilen belge (veGenerateReport arayüz tarafıdır)
+  'js/graphics.js': ['veBuildTopologyDetailFT', 'veGenerateFTTxtReport', 'veGenerateFTCalcTraceReport',
+    'veFTTraceRenderStep', 'veGenerateTopologyTxtReport', 'veGenerateSegmentDriveTxtReport',
+    'veGenerateObstacleCrossingTxtReport']
 };
 // Dosyanın TAMAMI belge üreticisi; yalnız adı yazılı işlevler ARAYÜZDÜR
 // (müfettiş paneli, üretim bildirimi) ve taranır. Adı geçen işlev dosyada

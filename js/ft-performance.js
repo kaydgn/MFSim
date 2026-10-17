@@ -324,9 +324,9 @@ var FT_SOLVER = (function() {
       if(excess < minExcess) { minExcess = excess; minN = N; }
       // TEK KABUL KURALI (§2.5/§2.7): yalnız GERÇEK denge = excess'in İLK ≤ 0 geçişi. Sığ
       // pozitif vadi (near-hang) stall değildir → geçilir; motor yüksek dengeye tırmanır.
-      if(excess <= 0) { chosenN = N; if(trace) trace.reason = 'denge koku (excess ilk <=0)'; break; }
+      if(excess <= 0) { chosenN = N; if(trace) trace.reason = 'denge kökü (excess ilk kez <= 0)'; break; }
     }
-    if(chosenN === null) { chosenN = minN; if(trace) trace.reason = 'kesisim yok — min excess noktasi (fallback)'; }   // sıfır geçişi yoksa en düşük fazlalık noktası
+    if(chosenN === null) { chosenN = minN; if(trace) trace.reason = 'kesişim yok — en küçük excess noktası (fallback)'; }   // sıfır geçişi yoksa en düşük fazlalık noktası
     var T_pump = (chosenN * chosenN) / (K0 * K0);
     if(trace) { trace.chosenN = chosenN; trace.minExcess = minExcess; trace.T_pump = T_pump; trace.T_turbine = T_pump * tau0; }
     return { N_engine: chosenN, T_pump: T_pump, T_turbine: T_pump * tau0, tau: tau0, SR: 0, minExcess: minExcess };
@@ -912,7 +912,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
           shiftState.shiftHistory.push({
             t: t, fromGear: 1, toGear: 1, fromMode: veGearModeLabel(2, false), toMode: veGearModeLabel(2, true),
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out,
-            eta: SR * tau, threshold: threshold_2C2L, thresholdBasis: '2C2L esik'
+            eta: SR * tau, threshold: threshold_2C2L, thresholdBasis: '2C2L eşiği'
           });
           shiftState.isLockup = true;
           shifted = true;
@@ -934,7 +934,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         if(spData.lockupShifts && spData.lockupShifts[shiftKey]) {
           var ls = spData.lockupShifts[shiftKey];
           var threshold_lu = calcDownshiftThreshold(ls, shiftRefRPM);
-          lu_threshold = threshold_lu; lu_basis = 'N_out_lu >= esik';
+          lu_threshold = threshold_lu; lu_basis = 'N_out_lu >= eşik';
           if(N_out_lu >= threshold_lu) luShiftTriggered = true;
         } else {
           // Eski yöntem: sabit lockupOffset
@@ -1035,7 +1035,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
           shiftState.shiftHistory.push({
             t: t, fromGear: g, toGear: g - 1, fromMode: dsFromName, toMode: dsToName,
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_ds,
-            isDownshift: true, threshold: dsThreshold, thresholdBasis: 'N_out_ds < esik (downshift)'
+            isDownshift: true, threshold: dsThreshold, thresholdBasis: 'N_out_ds < eşik (downshift)'
           });
           shiftState.gearIdx = g - 1;
           noteShift(t, -1);
@@ -1806,8 +1806,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     if(!isFinite(v) || !isFinite(ph.accel)) {
       throw new Error('Sayısal çözüm bozuldu (adım ' + step + ', t=' + veSayi(t, 2) + ' s): ' +
                       'hız=' + v + ', ivme=' + ph.accel + '. ' +
-                      'Genellikle motor tork tablosu veya konvertör tablosundaki geçersiz/yinelenen ' +
-                      'satırdan kaynaklanır — ilgili bileşenin verisini kontrol edin.');
+                      'Olası kaynak: motor tork tablosunda ya da konvertör tablosunda geçersiz/yinelenen ' +
+                      'satır.');
     }
 
     // Kayıt (örnekleme aralığında)
@@ -1821,7 +1821,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       var _band = Math.floor((v * 3.6) / TRACE_SPEED_STEP);
       if(step === 0 || _band > _lastTraceBand) {
         _lastTraceBand = _band;
-        _traceStep(step === 0 ? 'kalkis (v=0)' : ('hiz-izgarasi (~' + (_band * TRACE_SPEED_STEP) + ' km/h)'), t, v, dist, dt);
+        _traceStep(step === 0 ? 'kalkış (v=0)' : ('hız ızgarası (~' + (_band * TRACE_SPEED_STEP) + ' km/h)'), t, v, dist, dt);
       }
     }
 
@@ -1840,7 +1840,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       recordStep(t, v, dist, phNew);
       // ── İZ: vites geçişi — YENİ vites durumuyla tam yakalama + geçiş olayı ──
       if(traceMode) {
-        var _shTr = _traceStep('vites-gecisi', t, v, dist, dt);
+        var _shTr = _traceStep('vites geçişi', t, v, dist, dt);
         _shTr.shiftEvent = shiftState.shiftHistory[shiftState.shiftHistory.length - 1] || null;
       }
     }
@@ -1855,7 +1855,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         if(step - lastSampleStep > 0) {
           recordStep(t, v, dist, ph);
         }
-        if(traceMode) _traceStep('maks-hiz (V_max)', t, v, dist, dt);
+        if(traceMode) _traceStep('en yüksek hız (V_max)', t, v, dist, dt);
         break;
       }
     }
@@ -1895,8 +1895,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         if(!isFinite(dt) || dt <= 0) dt = dt_min;   // NaN/0 dt'yi tabana çek
         if(++rk45Tries > 100) {
           throw new Error('RK45 adaptif adım yakınsamadı (adım ' + step + ', t=' + veSayi(t, 2) +
-                          ' s, dt=' + dt + '). Sabit adımlı bir yöntem (RK4) deneyin ya da ' +
-                          'motor/konvertör tablolarını kontrol edin.');
+                          ' s, dt=' + dt + ').');
         }
         // Dormand-Prince katsayıları (Butcher tablosu)
         var dk1 = calcStepPhysics(v).accel;

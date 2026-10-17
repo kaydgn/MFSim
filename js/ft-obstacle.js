@@ -77,12 +77,12 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
   }
   if(h > R_eff) {
     result.geometryFail = true;
-    result.geometryFailReason = 'Engel yüksekliği teker yarıçapını aşıyor (h=' + veSayi(h, 3) + ' m > R_eff=' + veSayi(R_eff, 3) + ' m), geometrik olarak aşılamaz.';
+    result.geometryFailReason = 'Engel teker yarıçapından yüksek (h=' + veSayi(h, 3) + ' m > R_eff=' + veSayi(R_eff, 3) + ' m): aşılamaz.';
     return result;
   }
   if(h === R_eff) {
     result.geometryFail = true;
-    result.geometryFailReason = 'Engel yüksekliği teker yarıçapına eşit (h=R_eff=' + veSayi(R_eff, 3) + ' m). Moment kolu x=0, pratikte aşılamaz.';
+    result.geometryFailReason = 'Engel yüksekliği teker yarıçapına eşit (h=R_eff=' + veSayi(R_eff, 3) + ' m, x=0): aşılamaz.';
     return result;
   }
 
@@ -795,7 +795,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_gb_check = T_turbine_check * i_g * eta_gear_val;
     if(gbTorqueLimit_dyn && !gbLimitActivated && T_gb_check >= gbTorqueLimit_dyn) {
       gbLimitActivated = true;
-      addMilestone(msPrefix + 'gb_limit', (phase === 'front' ? 'On' : 'Arka') + ' teker: T_gb limite ulasti (' + veSayi(Math.round(gbTorqueLimit_dyn), 0) + ' Nm), motor tork %' + veSayi(motorTorquePct * 100, 1) + ' ile sinirlandirildi', {
+      addMilestone(msPrefix + 'gb_limit', (phase === 'front' ? 'Ön' : 'Arka') + ' teker: T_gb limitinde (' + veSayi(Math.round(gbTorqueLimit_dyn), 0) + ' Nm), motor torku %' + veSayi(motorTorquePct * 100, 1), {
         T_gb_out: T_gb_check, N_engine: N_engine
       });
     }
@@ -929,14 +929,14 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
 
     // Teker engele dokunuyor (simülasyon başlangıcı)
     if(stepCount === 1) {
-      addMilestone('f_contact', 'On teker engel kosesine temas', {
+      addMilestone('f_contact', 'Ön teker engel köşesine temas', {
         phi_deg: phi * 180 / Math.PI, T_req: T_req_anlik, T_wheel: T_wheel
       });
     }
 
     // İlk hareket anı (v sıfırdan pozitife geçiş)
     if(prev_v < 1e-9 && v_new > 1e-6) {
-      addMilestone(msPrefix + 'first_move', (phase === 'front' ? 'On' : 'Arka') + ' teker harekete basladi', {
+      addMilestone(msPrefix + 'first_move', (phase === 'front' ? 'Ön' : 'Arka') + ' teker harekete başladı', {
         v: v_new, T_wheel: T_wheel, T_req: T_req_anlik, N_engine: N_engine_new, DD: DD
       });
     }
@@ -944,7 +944,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // T_wheel ilk kez T_req'i aştı (yeterli tork anı)
     var currentTwVsReq = isFinite(T_req_anlik) && T_wheel >= T_req_anlik;
     if(currentTwVsReq && !prev_T_wheel_vs_req && T_req_anlik > 0) {
-      addMilestone(msPrefix + 'torque_sufficient', (phase === 'front' ? 'On' : 'Arka') + ' teker: T_wheel >= T_req', {
+      addMilestone(msPrefix + 'torque_sufficient', (phase === 'front' ? 'Ön' : 'Arka') + ' teker: T_wheel >= T_req', {
         T_wheel: T_wheel, T_req: T_req_anlik, margin_pct: ((T_wheel - T_req_anlik) / T_req_anlik * 100)
       });
     }
@@ -952,14 +952,14 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
 
     // Gaz pedalı %100'e ulaştı
     if(DD >= 100 && !_ms['gas_100']) {
-      addMilestone('gas_100', 'Gaz pedali %100 (tam yuk)', {
+      addMilestone('gas_100', 'Gaz pedalı %100 (tam yük)', {
         N_engine: N_engine_new, T_engine: T_engine, T_wheel: T_wheel
       });
     }
 
     // Tepe noktası (φ sıfırı geçiyor, teker P'nin tam üstüne geliyor)
     if(prev_phi > 0 && phi_new <= 0) {
-      addMilestone(msPrefix + 'apex', (phase === 'front' ? 'On' : 'Arka') + ' teker tepe noktasina ulasti (phi=0)', {
+      addMilestone(msPrefix + 'apex', (phase === 'front' ? 'Ön' : 'Arka') + ' teker tepe noktasına ulaştı (phi=0)', {
         v: v_new, phi_deg: phi_new * 180 / Math.PI, T_wheel: T_wheel, KE: 0.5 * mass * v_new * v_new
       });
     }
@@ -1000,7 +1000,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         frontCompleted = true;
         frontCompletionTime = t;
         frontCompletionSpeed = v_new;
-        addMilestone('f_complete', 'On teker engeli asti', {
+        addMilestone('f_complete', 'Ön teker engeli aştı', {
           v: v_new, duration: t, KE: 0.5 * mass * v_new * v_new
         });
         // Arka teker fazına geç
@@ -1013,17 +1013,17 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         prev_T_wheel_vs_req = false; // Arka teker için sıfırla
         gbLimitActivated = false;   // Arka teker için T_gb limiti tekrar tetiklenebilir
         // (ECM kaldırıldı — TC sıvı dinamiği modeli kullanılıyor)
-        addMilestone('r_contact', 'Arka teker engel kosesine temas', {
+        addMilestone('r_contact', 'Arka teker engel köşesine temas', {
           phi_deg: phi_new * 180 / Math.PI, v: v_new, N_engine: N_engine_new
         });
       } else {
         // Arka teker de aştı — başarılı
-        addMilestone('r_complete', 'Arka teker engeli asti', {
+        addMilestone('r_complete', 'Arka teker engeli aştı', {
           v: v_new, totalTime: t, KE: 0.5 * mass * v_new * v_new
         });
         simComplete = true;
         simSuccess = true;
-        reason = 'Her iki teker de engeli basariyla asti.';
+        reason = 'Her iki teker de engeli aştı.';
       }
     }
 
@@ -1043,10 +1043,10 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
           stallPhase = phase;
           simComplete = true;
           simSuccess = false;
-          reason = (phase === 'front' ? 'On' : 'Arka') + ' teker fazinda arac takildi (stall). T_wheel (' +
+          reason = (phase === 'front' ? 'Ön' : 'Arka') + ' teker fazında araç takıldı (stall). T_wheel (' +
                    veSayi(T_wheel, 0) + ' Nm) < T_req (' + veSayi(T_req_anlik, 0) + ' Nm).';
           addMilestone(phase === 'front' ? 'f_stall' : 'r_stall',
-            (phase === 'front' ? 'On' : 'Arka') + ' teker: STALL — arac takildi', {
+            (phase === 'front' ? 'Ön' : 'Arka') + ' teker: stall — araç takıldı', {
             T_wheel: T_wheel, T_req: T_req_anlik, N_engine: N_engine_new, phi_deg: phi_new * 180 / Math.PI
           });
         }
@@ -1062,7 +1062,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     if(!simComplete && t >= maxTime) {
       simComplete = true;
       simSuccess = false;
-      reason = 'Maksimum simulasyon suresi asildi (' + maxTime + ' s).';
+      reason = 'Maksimum simülasyon süresi aşıldı (' + maxTime + ' s).';
     }
 
     // Durumları güncelle
@@ -1126,7 +1126,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       DD_initial: DD_initial,
       Cr: Cr,
       J_engine: J_engine,
-      J_engine_source: (isFinite(J_engine_from_spec) && J_engine_from_spec > 0) ? 'motor bileseni' : 'varsayilan',
+      J_engine_source: (isFinite(J_engine_from_spec) && J_engine_from_spec > 0) ? 'motor bileşeni' : 'varsayılan',
       J_tc: J_tc,
       momentumCarry: false,
       phi_start_deg: phi_start * 180 / Math.PI,
