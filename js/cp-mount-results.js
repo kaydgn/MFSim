@@ -27,7 +27,7 @@ function _mntResIkon(ad) { return (typeof veIkon === 'function') ? veIkon(ad) : 
 // Durum çipi — FEAD'in sözlüğüyle aynı tonlar (ok · warn · no · off).
 var VE_MNT_RES_DURUM = {
   guncel: { d: 'ok',   t: 'Güncel' },
-  bayat:  { d: 'warn', t: 'Bayat — model değişti' },
+  bayat:  { d: 'warn', t: 'Model değişti' },
   kayip:  { d: 'off',  t: 'Modeli projede yok' },
   hata:   { d: 'no',   t: 'Çözüm hatası' },
   yok:    { d: 'off',  t: 'Sonuç yok' }
@@ -52,9 +52,7 @@ function veMntResTreeTopHTML() {
   var R = _mntResR();
   if(!R || R.error) return '';
   var st = (typeof veMntResultState === 'function') ? veMntResultState(R) : { k: 'yok', R: R };
-  var not = st.k === 'bayat' ? 'Model çözümden sonra değişti — Çözücü → Hesapla.'
-          : st.k === 'kayip' ? 'Çözülen model bu projede yok; sinyaller son çözümden.'
-          : '';
+  var not = st.k === 'kayip' ? 'Sinyaller son çözümden.' : '';
   return '<div class="ve-fr-tree-top">'
     + '<div class="ve-fr-tree-row">' + veMntResChipHTML(st)
     + '<span class="ve-fr-tree-meta">' + _mntResEsc(_mntResMeta(R)) + '</span></div>'
@@ -67,7 +65,7 @@ function veMntResTreeReportHTML() {
   if(typeof veMntGenerateReport !== 'function') return '';
   return '<div class="ve-fr-tree-rep">'
     + '<button type="button" class="ve-fr-tree-link" onclick="veMntGenerateReport(null)"'
-    + ' title="Modal frekanslar, KED, yük durumları ve uygunluk tabloları — indirilir">'
+    + '>'
     + _mntResIkon('file-text') + 'Takoz Çökme-Titreşim raporu (HTML)</button>'
     + '</div>';
 }

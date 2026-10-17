@@ -100,8 +100,9 @@ describe('DURUM ÇİPİ — hüküm proje çapında', () => {
     expect(cip()).toBe('ok Güncel');
     expect(agac().querySelector('.ve-fr-tree-meta').textContent).toMatch(/\d+ yük durumu · \d+ mod$/);
     ilkTakoz(global.nodes).data.kzs = '300';
-    expect(cip()).toBe('warn Bayat — model değişti');
-    expect(agac().querySelector('.ve-fr-tree-uyari').textContent).toBe('Model çözümden sonra değişti — Çözücü → Hesapla.');
+    expect(cip()).toBe('warn Model değişti');
+    // Çip durumu söyler; ağaçta ikinci kez yazılmaz (aynı durum bir kez, çare kılavuzda).
+    expect(agac().querySelector('.ve-fr-tree-uyari')).toBeNull();
   });
 
   test('kökteyken: kartın KAYITLI alt topolojisinden — değişmemiş model güncel, değişen bayat', () => {
@@ -110,7 +111,7 @@ describe('DURUM ÇİPİ — hüküm proje çapında', () => {
     global.nodes = [kart(kayitli)];
     expect(cip()).toBe('ok Güncel');
     ilkTakoz(kayitli).data.kzs = '300';
-    expect(cip()).toBe('warn Bayat — model değişti');
+    expect(cip()).toBe('warn Model değişti');
   });
 
   test('başka bir modülün alt topolojisindeyken: sekmenin kayıtlı kökünden', () => {

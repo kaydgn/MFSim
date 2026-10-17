@@ -5916,21 +5916,15 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   width:11px;height:11px;flex-shrink:0;opacity:0.55;
 }
 .ve-trace-note-head:hover .mf-ico{opacity:0.8;}
-.ve-trace-note-line{
-  flex:1;min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
 .ve-trace-note-caret{
-  flex-shrink:0;font-size:var(--fs-micro);opacity:0.6;
+  flex-shrink:0;margin-left:auto;font-size:var(--fs-micro);opacity:0.6;
   transition:transform 0.14s ease;
 }
 .ve-trace-note.open .ve-trace-note-caret{transform:rotate(180deg);}
-.ve-trace-note.open .ve-trace-note-line{white-space:normal;overflow:visible;}
 
 .ve-trace-note-title{
   flex-shrink:0;font-weight:700;color:var(--text-secondary);
 }
-.ve-trace-note-title::after{content:'·';margin:0 5px;opacity:0.5;font-weight:400;}
 
 /* Yorum gövdesi: uzun metin dar sütunda okunmaz, geniş sütunda göz satır
    kaybeder. 78ch üst sınır tipografik okunabilirlik bandının içinde tutar;
@@ -17875,13 +17869,6 @@ function veTrNoteEntries(lanes) {
   return out;
 }
 
-// Kapalı hâlde görünen tek satır — panonun genel özeti.
-function veTrNoteLead() {
-  var m = veTrModDataset();
-  var ds = m && m.ds;
-  return (ds && ds.brief) ? { name: ds.name, lead: ds.brief.lead || '' } : null;
-}
-
 // Kaçış: tarayıcıda signal-tree'nin veSigEsc'i, Jest'te (tek dosya require
 // edildiğinde) yerel yedek. Metin sabit olsa da kaçışsız innerHTML alışkanlığı
 // açılmaz.
@@ -17906,7 +17893,7 @@ function _veTrRich(s) {
   return uyari ? '<span class="mf-ico mf-ico-alert-triangle ve-trace-note-uyari" aria-hidden="true"></span> ' + h : h;
 }
 
-function veTrNoteHTML(entries, lead) {
+function veTrNoteHTML(entries) {
   if(!entries || !entries.length) return '';
   var open = veTrNoteOpen();
   var multi = entries.length > 1;
@@ -17918,7 +17905,6 @@ function veTrNoteHTML(entries, lead) {
   h += '<span class="mf-ico mf-ico-lightbulb"></span>';
   h += '<span class="ve-trace-note-title">' +
        _veTrEsc(multi ? (entries.length + ' şerit') : entries[0].title) + '</span>';
-  h += '<span class="ve-trace-note-line">' + _veTrEsc((lead && lead.lead) || '') + '</span>';
   h += '<span class="mf-ico mf-ico-chevron-down ve-trace-note-caret" aria-hidden="true"></span>';
   h += '</button>';
   h += '<div class="ve-trace-note-body">';
@@ -17959,7 +17945,6 @@ function veTrRenderNote(lanes, force) {
   var el = document.getElementById('ve-trace-note');
   if(!el) return;
   var entries = veTrNoteEntries(lanes);
-  var lead = veTrNoteLead();
   // Anahtar şeritlerin BAŞLIKLARINDAN kurulur: kanal eklenip çıkarıldığında
   // yorum değişmeli, ama yakınlaştırma/sürükleme karesinde yeniden kurulmamalı.
   var key = entries.map(function(e) { return e.title; }).join('¦') +
@@ -17970,7 +17955,7 @@ function veTrRenderNote(lanes, force) {
   if(!entries.length) { el.style.display = 'none'; el.innerHTML = ''; el.classList.remove('open'); return; }
   el.style.display = '';
   el.classList.toggle('open', veTrNoteOpen());
-  el.innerHTML = veTrNoteHTML(entries, lead);
+  el.innerHTML = veTrNoteHTML(entries);
   veTrApplyNoteH(el);
   veTrNoteOverflow(el);
   if(el._veTrBound) return;

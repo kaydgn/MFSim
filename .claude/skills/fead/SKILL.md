@@ -665,6 +665,10 @@ olurdu.
       yazılıyordu, zarfa bağlı sahip ise bölünen ön ayarda cümleyi hiç
       yazmıyordu, ve tek kasnaklı kayma şeridi zarfın değerini o kasnağın
       adıyla basıyordu (yanlış sayı, sessiz).
+    • **Öncü satır YOK** (2026-10-17, ARAYÜZ ANLATMAZ): kümenin sabit açıklama
+      cümlesi (`brief.lead`) kalktı — kalıp açıklama yuvası; `build` yalnız
+      işaret döner. Yorum bulgu, ölçüt ve geçerlilik sınırı söyler; okuma
+      tarifi ve fizik açıklaması kılavuzda. Kapı: `yorum-metin.test.js`.
     • **Şerit yorumunun başlığı ŞERİDİ adlandırır**: kanalların çoğunluğunun
       grubu ("Kayma emniyeti — 4 kanal"), yoksa küme. Küme adı iki şeritte
       aynıydı (Hubload'un iki şeridi de "Çalışma çevrimi — 6 kanal").

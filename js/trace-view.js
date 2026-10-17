@@ -2188,13 +2188,6 @@ function veTrNoteEntries(lanes) {
   return out;
 }
 
-// Kapalı hâlde görünen tek satır — panonun genel özeti.
-function veTrNoteLead() {
-  var m = veTrModDataset();
-  var ds = m && m.ds;
-  return (ds && ds.brief) ? { name: ds.name, lead: ds.brief.lead || '' } : null;
-}
-
 // Kaçış: tarayıcıda signal-tree'nin veSigEsc'i, Jest'te (tek dosya require
 // edildiğinde) yerel yedek. Metin sabit olsa da kaçışsız innerHTML alışkanlığı
 // açılmaz.
@@ -2219,7 +2212,7 @@ function _veTrRich(s) {
   return uyari ? '<span class="mf-ico mf-ico-alert-triangle ve-trace-note-uyari" aria-hidden="true"></span> ' + h : h;
 }
 
-function veTrNoteHTML(entries, lead) {
+function veTrNoteHTML(entries) {
   if(!entries || !entries.length) return '';
   var open = veTrNoteOpen();
   var multi = entries.length > 1;
@@ -2231,7 +2224,6 @@ function veTrNoteHTML(entries, lead) {
   h += '<span class="mf-ico mf-ico-lightbulb"></span>';
   h += '<span class="ve-trace-note-title">' +
        _veTrEsc(multi ? (entries.length + ' şerit') : entries[0].title) + '</span>';
-  h += '<span class="ve-trace-note-line">' + _veTrEsc((lead && lead.lead) || '') + '</span>';
   h += '<span class="mf-ico mf-ico-chevron-down ve-trace-note-caret" aria-hidden="true"></span>';
   h += '</button>';
   h += '<div class="ve-trace-note-body">';
@@ -2272,7 +2264,6 @@ function veTrRenderNote(lanes, force) {
   var el = document.getElementById('ve-trace-note');
   if(!el) return;
   var entries = veTrNoteEntries(lanes);
-  var lead = veTrNoteLead();
   // Anahtar şeritlerin BAŞLIKLARINDAN kurulur: kanal eklenip çıkarıldığında
   // yorum değişmeli, ama yakınlaştırma/sürükleme karesinde yeniden kurulmamalı.
   var key = entries.map(function(e) { return e.title; }).join('¦') +
@@ -2283,7 +2274,7 @@ function veTrRenderNote(lanes, force) {
   if(!entries.length) { el.style.display = 'none'; el.innerHTML = ''; el.classList.remove('open'); return; }
   el.style.display = '';
   el.classList.toggle('open', veTrNoteOpen());
-  el.innerHTML = veTrNoteHTML(entries, lead);
+  el.innerHTML = veTrNoteHTML(entries);
   veTrApplyNoteH(el);
   veTrNoteOverflow(el);
   if(el._veTrBound) return;

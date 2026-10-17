@@ -373,7 +373,7 @@ function veFeadScenarioBuild(build, opts){
   else
     notlar.push('Rampa şekli motorun tam yük tork eğrisinden; büyüklüğü ivme alanından.');
   notlar.push('Devir geçmişi dayatılmış; volan ataleti yok.');
-  notlar.push('Marş devri ' + veSayi(inp.crankRpm) + ' d/dk ve yavaşlama sabit: MFSim\'de marş ve motor freni verisi yok.');
+  notlar.push('Marş devri ' + veSayi(inp.crankRpm) + ' d/dk, yavaşlama sabit (veri yok).');
   if(inp.kaynak.accelVarsayilan)
     notlar.push('İvme girilmemiş, ' + veSayi(VE_FEAD_SCN_ACCEL_DEF, 0) + ' d/dk/s varsayıldı.');
   notlar.push('Gergi kolu dinamiği dahil değil.');

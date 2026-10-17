@@ -529,6 +529,19 @@ function _gmSec11(){
       'Küçük değişimde doğrudur. İki mod birbirine 0,5 Hz’ten yakınsa rijitlik değişince '
     + 'birbirinden kaçarlar ve eğim çabuk değişir; büyük değişimde raporun kaldıraç tablosundaki '
     + 'yeniden çözülmüş değeri okuyun. Statik sehim bu hesaba girmez: yumuşatılan takozun sehimi artar.');
+  h += '<h3>11.3 Frekans yanıtı ve Campbell diyagramı</h3>';
+  h += '<p><strong>İletilebilirlik</strong> T, şasiye geçen kuvvetin motor kuvvetine oranıdır: '
+    + 'T = 1 azalma yok, T &lt; 1 izolasyon. İzolasyon verimi (1 − T) × 100’dür ve rezonansta '
+    + '(T &gt; 1) eksiye iner. Sönümsüz sistemin tepesi rezonansta sınırsızdır: çizilen sönümsüz '
+    + 'tepe yüksekliği frekans örneklemesine bağlıdır, tepeyi yalnız sönüm sınırlar.</p>';
+  h += '<p><strong>Takoz başına iletilebilirlik</strong> her takozun şasiye geçirdiği kuvvettir. '
+    + 'Tepe frekansları bütün takozlarda ortaktır: tepeler takoza değil, yapının modlarına '
+    + 'aittir. Takoz eğrilerinin aritmetik toplamı sistem eğrisini vermez: kuvvetler genlik ve faz '
+    + 'taşır, toplam vektöreldir; zıt fazlı iki takozda tekil genlikler büyük, sistem toplamı küçük çıkar.</p>';
+  h += '<p><strong>Campbell diyagramında</strong> eğik çizgiler motorun uyarma mertebeleridir '
+    + '(frekansları devirle büyür), yatay çizgiler güç grubunun doğal frekanslarıdır. İkisinin '
+    + 'kesiştiği devirde motor o modu tam frekansından besler. Çalışma bandının altındaki kesişimler '
+    + 'yalnız kalkış ve durmada geçilir; bandın içindekiler motor o devirde çalıştıkça sürer.</p>';
   return h;
 }
 

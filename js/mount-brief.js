@@ -229,13 +229,10 @@ var veMntBrief = (function() {
 
   var GS_TEXT = {
     gz: { yon: 'düşey', baslik: 'Düşey ivme süpürmesi',
-          sifir: '1 g statik yük durumudur',
           tasarim: 3.5, tasarimAd: '3,5 g düşey' },
-    gy: { yon: 'yanal', baslik: 'Yanal ivme süpürmesi',
-          sifir: 'düşey yük 1 g\'de sabit tutulur',
+    gy: { yon: 'yanal', baslik: 'Yanal ivme süpürmesi', varsayim: 'Düşey yük 1 g sabit.',
           tasarim: 1, tasarimAd: '1 g yanal' },
-    gx: { yon: 'boyuna', baslik: 'Boyuna ivme süpürmesi',
-          sifir: 'düşey yük 1 g\'de sabit tutulur',
+    gx: { yon: 'boyuna', baslik: 'Boyuna ivme süpürmesi', varsayim: 'Düşey yük 1 g sabit.',
           tasarim: 1, tasarimAd: '1 g boyuna' }
   };
 
@@ -244,6 +241,10 @@ var veMntBrief = (function() {
   function b(x) { return '**' + x + '**'; }
 
   var AX_TR = ['boyuna (X)', 'yanal (Y)', 'düşey (Z)'];
+
+  // Geçerlilik sınırı (kural: sayı gizlenmez, sınırı yanında yazılır): sönümsüz
+  // tepe rezonansta sınırsızdır, ızgarada okunan yüksekliği örnekleme belirler.
+  var SONUMSUZ = 'Sönümsüz tepe rezonansta sınırsız; yükseklik örneklemeye bağlı.';
 
   // ── Kanal kimliği çözümleme ──────────────────────────────────────────────
   // FRF:      T_<dir> | T0_<dir> | eta_<dir>
@@ -327,40 +328,31 @@ var veMntBrief = (function() {
         });
         s += 'en yüksek tepe ' + b(na(pk[0].f) + ' Hz') +
              (near && bestD < 0.05 ? ' (' + modeShort(near.label) + ')' : '') +
-             ', orada kuvvet ' + b(na(pk[0].v) + '×') + ' büyüyor';
+             ' ' + b(na(pk[0].v) + '×');
       } else { s += 'belirgin tepe yok'; }
       if(eng) {
         var Tf = interpAt(f, e.ch.data, eng.f, true);
         if(isFinite(Tf)) s += '; ateşlemede ' + b(na(Tf)) +
-          ' (titreşimin ' + b(pct((1 - Tf) * 100, 1)) + ' kadarı takozda kalıyor)';
+          ' (izolasyon ' + b(pct((1 - Tf) * 100, 1)) + ')';
       }
       return s + '.';
     }
 
     // ── BİRLEŞİK: kümenin tüm kanalları tek şeritte ──
     if(full) {
-      paras.push(
-        b(chans.length + ' kanal') + ' üst üste: üç yönün sönümlü ve sönümsüz ' +
-        'iletilebilirliği, izolasyon verimi' +
-        (perM.length ? ' ve ' + b(perM.length + ' takoz kırılımı') : '') +
-        '. Birimler karışık (iletilebilirlik birimsiz, verim ' + b('%') + '); ' +
-        'kanallar tek ölçeğe oturmuyor.');
       var worst = null;
       damped.forEach(function(e) {
         var pk = peaks(f, e.ch.data, 1.05);
         if(pk.length && (!worst || pk[0].v > worst.v)) worst = { v: pk[0].v, f: pk[0].f, dir: e.dir };
       });
       var s = '';
-      if(worst) s += 'En kötü durum ' + b(AX_TR[worst.dir]) + ' yönde: ' + b(na(worst.f) + ' Hz') +
-                     '\'de kuvvet ' + b(na(worst.v) + '×') + ' büyüyor. ';
+      if(worst) s += 'En yüksek tepe ' + b(AX_TR[worst.dir]) + ' yönde: ' + b(na(worst.f) + ' Hz') +
+                     ', ' + b(na(worst.v) + '×') + '. ';
       // Sönümsüz tepe rezonansta SINIRSIZDIR: ızgarada okunan yükseklik yalnız
       // örneğin rezonansa ne kadar yaklaştığını söyler (ızgara tepeleri
       // incelttikçe büyür) — sayı olarak basılmaz.
-      if(undamped.length) s += 'Ölçeği ele geçiren eğri sönümsüz olandır: sönümsüz sistemin tepesi ' +
-                               'rezonansta sınırsızdır, çizilen yükseklik yalnız frekans örneklemesine bağlıdır. ';
-      s += 'Verim kanalı rezonansta ' + b('eksi') + ' değerlere iner; dikey eksen ' +
-           'bu yüzden iki tarafa birden gerilir.';
-      paras.push(s);
+      if(undamped.length) s += SONUMSUZ;
+      if(s) paras.push(s.trim());
       return { title: title, paras: paras };
     }
 
@@ -374,8 +366,6 @@ var veMntBrief = (function() {
       var dks = Object.keys(dirsUsed);
       var titleM = 'Takoz başına iletilebilirlik' +
         (dks.length === 1 ? ' — ' + AX_TR[+dks[0]] : '');
-      paras.push(b(perM.length + ' takozun') + ' ayrı iletilebilirliği: her eğri o ' +
-        'takozun şasiye geçirdiği kuvvettir, sistem eğrisi hepsinin toplamıdır.');
 
       // Ateşleme frekansında sıralama — asıl kullanım noktası burası.
       if(eng) {
@@ -405,14 +395,9 @@ var veMntBrief = (function() {
       }).filter(Boolean).sort(function(a, c) { return c.v - a.v; });
       if(pkRows.length) {
         paras.push('En yüksek tepe ' + b(pkRows[0].name) + ' takozunda: ' +
-          b(na(pkRows[0].f) + ' Hz') + '\'de ' + b(na(pkRows[0].v) + '×') +
-          '. Tepe frekansları bütün takozlarda ortaktır: tepeler yapının ' +
-          'modlarına aittir, takoza değil.');
+          b(na(pkRows[0].f) + ' Hz') + '\'de ' + b(na(pkRows[0].v) + '×') + '.');
       }
 
-      paras.push('Takoz eğrilerinin aritmetik toplamı sistem eğrisini vermez: ' +
-        'kuvvetler ' + b('genlik ve faz') + ' taşır, toplam vektöreldir. Zıt fazlı ' +
-        'iki takozda tekil genlikler büyük, sistem toplamı küçük çıkar.');
       return { title: titleM, paras: paras };
     }
 
@@ -420,8 +405,6 @@ var veMntBrief = (function() {
     if(damped.length && !undamped.length && !effs.length && !perM.length) {
       if(damped.length === 1) {
         var e = damped[0];
-        paras.push(b(AX_TR[e.dir]) + ' yönde iletilebilirlik: şasiye geçen kuvvetin ' +
-                   'motor kuvvetine oranı. ' + b('1') + ' = azalma yok.');
         var pk = peaks(f, e.ch.data, 1.05);
         if(pk.length) {
           var det = pk.slice(0, 3).map(function(q) {
@@ -433,27 +416,21 @@ var veMntBrief = (function() {
             return b(na(q.f) + ' Hz') + (near && bd < 0.05 ? ' (' + modeShort(near.label) + ')' : '') +
                    ' → ' + b(na(q.v) + '×');
           });
-          paras.push('Tepeler güç grubunun doğal frekanslarıdır. ' +
-                     (modes.length ? 'Toplam ' + b(modes.length + ' mod') + ' var, ' : '') +
-                     'bu yönde ' + b(pk.length + ' tanesi') + ' belirgin tepe veriyor: ' +
-                     det.join(', ') + '. Diğer modlar bu yönde uyarılmıyor.');
+          paras.push('Belirgin tepe' + (modes.length ? ' (' + b(pk.length + ' / ' + modes.length + ' mod') + ')' : '') +
+                     ': ' + det.join(', ') + '.');
         }
         var cross = lastCrossBelow(f, e.ch.data, 1);
         var s3 = '';
-        if(isFinite(cross)) s3 += b(na(cross) + ' Hz') + '\'den sonra eğri kalıcı olarak ' +
-                                  b('1') + '\'in altında — izolasyon bölgesi orası. ';
+        if(isFinite(cross)) s3 += 'İzolasyon başlangıcı ' + b(na(cross) + ' Hz') + ' (T < 1). ';
         if(eng) {
           var Tf2 = interpAt(f, e.ch.data, eng.f, true);
           if(isFinite(Tf2)) s3 += 'Rölanti ateşleme frekansı ' + b(na(eng.f) + ' Hz') +
-            ' ve orada iletilebilirlik ' + b(na(Tf2)) + ' — yani ' +
-            b('izolasyon ' + pct((1 - Tf2) * 100, 1)) + '. Tedarikçi raporlarındaki ' +
-            b('"Isolation %"') + ' sütunu bu sayıdır. Yaygın tasarım hedefi ' +
-            b('T < 0,2') + ' (≥ %80 izolasyon); model bunu ' +
+            ': iletilebilirlik ' + b(na(Tf2)) + ', ' + b('izolasyon ' + pct((1 - Tf2) * 100, 1)) +
+            '. Hedef ' + b('T < 0,2') + ' (≥ %80 izolasyon): ' +
             (Tf2 < 0.2 ? b('sağlıyor') : b('sağlamıyor')) + '.';
         }
-        if(s3) paras.push(s3);
+        if(s3) paras.push(s3.trim());
       } else {
-        paras.push(b(damped.length + ' yönün') + ' iletilebilirliği ortak eksende.');
         damped.sort(function(a, c) { return a.dir - c.dir; }).forEach(function(e) {
           paras.push(line(e));
         });
@@ -463,8 +440,6 @@ var veMntBrief = (function() {
 
     // ── Sönümlü + sönümsüz karşılaştırması ──
     if(damped.length && undamped.length) {
-      paras.push('Sönümlü ve sönümsüz iletilebilirlik birlikte; aradaki fark sönümün ' +
-                 'katkısıdır.');
       damped.forEach(function(e) {
         var u = null;
         undamped.forEach(function(q) { if(q.dir === e.dir) u = q; });
@@ -472,19 +447,15 @@ var veMntBrief = (function() {
         var pd = peaks(f, e.ch.data, 1.05);
         if(!pd.length) return;
         paras.push(b(AX_TR[e.dir]) + ': sönümlü tepe ' + b(na(pd[0].v) + '×') + ' (' +
-                   b(na(pd[0].f) + ' Hz') + '); sönümsüz sistemde aynı tepe sınırsızdır — ' +
-                   'tepeyi yalnız sönüm sınırlıyor' +
-                   (isFinite(R.zeta) ? ' (kritik sönüm payı ' + b(pct(R.zeta * 100, 1)) + ')' : '') + '.');
+                   b(na(pd[0].f) + ' Hz') + ')' +
+                   (isFinite(R.zeta) ? '; kritik sönüm payı ' + b(pct(R.zeta * 100, 1)) : '') + '.');
       });
-      paras.push('Sönümsüz eğri rezonansta sınırsız yükseldiği için ortak eksende sönümlü eğri ' +
-                 'düz görünür; çizilen sönümsüz tepe yüksekliği yalnız frekans örneklemesine bağlıdır.');
+      paras.push(SONUMSUZ);
       return { title: 'Frekans yanıtı — sönüm karşılaştırması', paras: paras };
     }
 
     // ── Yalnız izolasyon verimi ──
     if(effs.length && !damped.length && !undamped.length) {
-      paras.push('İzolasyon verimi = (1 − iletilebilirlik) × 100. ' + b('%100') +
-                 ' tam izolasyon, ' + b('%0') + ' azalma yok.');
       effs.forEach(function(e) {
         var y = e.ch.data, last = y[y.length - 1];
         var mn = Infinity, mnf = NaN;
@@ -493,13 +464,10 @@ var veMntBrief = (function() {
                    b(pct(last, 1)) + '; en kötü nokta ' + b(na(mnf) + ' Hz') + '\'de ' +
                    b(pct(mn, 0)) + '.');
       });
-      paras.push('Rezonansta değer eksiye iner (iletilebilirlik > 1); ölçek bu yüzden ' +
-                 'iletilebilirlik kanallarıyla ortak eksende açılır.');
       return { title: 'Frekans yanıtı — izolasyon verimi', paras: paras };
     }
 
     // ── Karışık ──
-    paras.push(b(chans.length + ' kanal') + ' ortak eksende.');
     damped.forEach(function(e) { paras.push(line(e)); });
     return { title: title, paras: paras };
   }
@@ -531,15 +499,6 @@ var veMntBrief = (function() {
       return NaN;
     }
 
-    paras.push('Yatay eksen sehim (' + b('mm') + '), dikey eksen kuvvet; eğim ' +
-               b('sertlik') + ' verir.' +
-      // Nokta işaretleri yalnız düşey eksen çizildiğinde görünür (datasetMarks
-      // Z kanalına bağlar); yoksa olmayan bir işareti anlatmış oluruz.
-      ((stat && items.some(function(i2) { return i2.ax === 2; }))
-        ? ' Eğri üstündeki ' + b('noktalar') + ' statik çalışma noktalarıdır; ömür ve ' +
-          'izolasyon o noktadaki eğimden türer, sıfırdaki eğimden değil.'
-        : ''));
-
     var title = 'Kuvvet-sehim';
     if(nM === 1 && nA > 1) {
       // Tek takoz, birden çok eksen → yön farkı (anizotropi)
@@ -558,16 +517,14 @@ var veMntBrief = (function() {
       // Aynı eksen, birden çok takoz → yük paylaşımı
       var axi = +Object.keys(uniqAx)[0];
       title += ' — ' + AX_TR[axi] + ' eksen';
-      paras.push(b(nM + ' takozun') + ' ' + b(AX_TR[axi]) + ' eksen eğrisi.');
       var srt = items.slice().sort(function(a, c) { return c.k - a.k; });
       paras.push('En sert: ' + b(srt[0].mount) + ' ' + b(na(srt[0].k) + ' N/mm') +
         ' · en yumuşak: ' + b(srt[srt.length - 1].mount) + ' ' + b(na(srt[srt.length - 1].k) + ' N/mm') + '.');
     } else if(items.length === 1) {
       var it = items[0];
       title += ' — ' + it.mount + ' · ' + AX_TR[it.ax];
-      paras.push(b(it.mount) + ' takozunun ' + b(AX_TR[it.ax]) + ' eksen yasası. ' +
-        'Sertlik ' + b(na(it.k) + ' N/mm') + '; eğri ' +
-        (it.nl ? b('nonlineer') + ' (yük arttıkça sertleşiyor).' : b('doğrusal') + '.'));
+      paras.push('Sertlik ' + b(na(it.k) + ' N/mm') + '; eğri ' +
+        (it.nl ? b('nonlineer') : b('doğrusal')) + '.');
       var wp = workPoint(it.mount);
       if(it.ax === 2 && isFinite(wp)) {
         paras.push('Statik sehim ' + b(na(wp) + ' mm') + ': doğrusal bandın (' + b('±10 mm') +
@@ -577,7 +534,7 @@ var veMntBrief = (function() {
     } else {
       title += ' — ' + items.length + ' kanal';
       var kk = items.map(function(i2) { return i2.k; }).filter(isFinite);
-      if(kk.length) paras.push(b(items.length + ' eğri') + '; sertlikler ' +
+      if(kk.length) paras.push('Sertlikler ' +
         b(na(Math.min.apply(null, kk)) + ' N/mm') + ' ile ' +
         b(na(Math.max.apply(null, kk)) + ' N/mm') + ' arasında.');
     }
@@ -594,26 +551,17 @@ var veMntBrief = (function() {
       uses.sort(function(a, c) { return c.u.pct - a.u.pct; });
       var top = uses[0];
       var s2 = (uses.length === 1 ? b(top.name) + ' takozu' : 'En çok yüklenen takoz (' + b(top.name) + ')') +
-        ' araç kendi ağırlığındayken ' + b(na(top.u.f / 1000) + ' kN') + ' taşıyor: katalog ' +
+        ' 1 g statikte ' + b(na(top.u.f / 1000) + ' kN') + ' taşıyor: katalog ' +
         'kapasitesinin (' + b(na(top.u.fCap / 1000) + ' kN') + ') ' + b(pct(top.u.pct, 1)) + ' kadarı. ';
       s2 += (top.u.pct > 100)
-        ? b('Kapasite aşılıyor') + ' — statik yük tek takozun katalog sınırının üstünde.'
-        : (top.u.pct > 50
-            ? 'Tipik tasarım bandı ' + b('%25–50') + '; değer bandın ' + b('üstünde') +
-              ' — dinamik darbeler için pay az.'
-            : (top.u.pct < 15
-                ? 'Tipik tasarım bandı ' + b('%25–50') + '; değer bandın ' + b('altında') +
-                  ' — takoz gereğinden sert olabilir.'
-                : 'Tipik tasarım bandı ' + b('%25–50') + '; değer band ' + b('içinde') + '.'));
+        ? b('Kapasite aşılıyor') + '.'
+        : 'Tipik tasarım bandı ' + b('%25–50') + '; değer ' +
+          (top.u.pct > 50 ? 'bandın ' + b('üstünde') : (top.u.pct < 15 ? 'bandın ' + b('altında') : 'band ' + b('içinde'))) + '.';
       paras.push(s2);
     }
 
-    var anyNL = items.some(function(i2) { return i2.nl; });
-    paras.push(anyNL
-      ? 'Sertleşen eğri, büyük darbede durdurucuya oturmayı geciktirir; ' + b('±15 mm') +
-        ' metal-metal temas sınırıdır.'
-      : 'Doğrusal eğri, takoz için sabit bir rijitlik girildiğini gösterir; nonlineer yasa ' +
-        'Takoz Özellikleri\'nde tanımlanır.');
+    if(items.some(function(i2) { return i2.nl; }))
+      paras.push('Metal-metal temas sınırı ' + b('±15 mm') + '.');
     return { title: title, paras: paras };
   }
 
@@ -633,8 +581,7 @@ var veMntBrief = (function() {
     });
 
     var title = t.baslik;
-    paras.push('Yatay eksen ' + b(t.yon + ' ivme') + ', dikey eksen takoz sehimi ve ' +
-               'kuvveti; ' + t.sifir + '.');
+    if(t.varsayim) paras.push(t.varsayim);
 
     function atDesign(ch) { return interpAt(a, ch.data, t.tasarim); }
 
@@ -649,11 +596,10 @@ var veMntBrief = (function() {
           b(na(15 - srt[0].v) + ' mm') + ' pay kalıyor.');
       } else if(srt.length > 1) {
         title += ' — ' + srt.length + ' takoz';
-        paras.push(b(srt.length + ' takozun') + ' sehimi. ' +
-          b(t.tasarimAd) + ' altında en çok yüklenen ' + b(srt[0].name) + ' (' +
-          b(na(srt[0].v) + ' mm') + '), en az yüklenen ' + b(srt[srt.length - 1].name) + ' (' +
-          b(na(srt[srt.length - 1].v) + ' mm') + '). Aradaki fark ' +
-          b(na(srt[0].v - srt[srt.length - 1].v) + ' mm') + ' (yük dağılımı dengesizliği).');
+        paras.push(b(t.tasarimAd) + ' altında en çok yüklenen ' + b(srt[0].name) + ' (' +
+          b(na(srt[0].v) + ' mm') + '), en azı ' + b(srt[srt.length - 1].name) + ' (' +
+          b(na(srt[srt.length - 1].v) + ' mm') + '); fark ' +
+          b(na(srt[0].v - srt[srt.length - 1].v) + ' mm') + '.');
       }
     }
 
@@ -663,16 +609,14 @@ var veMntBrief = (function() {
       if(fs.length) {
         var sF = (fs.length === 1 ? b(fs[0].name) + ' takozuna' : 'En çok yüklenen takoza (' + b(fs[0].name) + ')') +
                  ' ' + b(t.tasarimAd) + ' altında ' + b(na(fs[0].v) + ' N') + ' bileşke kuvvet biniyor.';
-        // Katalog kapasitesi EKSENEL BASMA için verilir; bileşke ondan biraz
-        // büyüktür. Oran yine de anlamlıdır — ama cümle bunu saklamaz.
+        // Katalog kapasitesi EKSENEL BASMA için verilir, kuvvet bileşkedir:
+        // kapasitenin yanında bu yazılır, oran gizlenmez.
         var fc = capOf(R, fs[0].name);
         if(isFinite(fc)) {
           var r = fs[0].v / fc * 100;
-          sF += ' Katalog kapasitesi ' + b(na(fc / 1000) + ' kN') + ', yani bu yükte kapasitenin ' +
+          sF += ' Katalog kapasitesinin (' + b(na(fc / 1000) + ' kN') + ', eksenel basma) ' +
                 b(pct(r, 0)) + ' kadarı' +
-                (r > 100 ? ' — ' + b('kapasite aşılıyor') + '.' : '.') +
-                ' (Kapasite eksenel basma için verilir; buradaki bileşke kuvvet yanal ' +
-                'bileşenleri de içerdiği için biraz büyüktür.)';
+                (r > 100 ? ' — ' + b('kapasite aşılıyor') + '.' : '.');
         }
         paras.push(sF);
       }
@@ -682,9 +626,9 @@ var veMntBrief = (function() {
       var dMax = sums[0];
       var vD = atDesign(dMax), vEnd = dMax.data[dMax.data.length - 1];
       var v1 = interpAt(a, dMax.data, 1);
-      var s = '"En büyük takoz sehimi" kanalı her ivmede en kötü takozu izler: ' +
+      var s = 'En büyük takoz sehimi ' +
               b(t.tasarimAd) + ' altında ' + b(na(isFinite(vD) ? vD : vEnd) + ' mm');
-      if(ds.key === 'gz' && isFinite(v1)) s += ', araç dururken ' + b(na(v1) + ' mm');
+      if(ds.key === 'gz' && isFinite(v1)) s += ', 1 g\'de ' + b(na(v1) + ' mm');
       s += '; ' + b('±15 mm') + ' sınırına ' + b(na(15 - (isFinite(vD) ? vD : vEnd)) + ' mm') + ' pay var.';
       paras.push(s);
     }
@@ -699,15 +643,10 @@ var veMntBrief = (function() {
     var aC = nc ? firstNonZero(a, nc.data) : NaN;
     var ev = [];
     if(isFinite(aT)) ev.push('İlk çekme (lift-off) ' + b(na(aT) + ' g') + '\'de.');
-    if(isFinite(aC)) ev.push('İlk metal-metal temas ' + b(na(aC) + ' g') + '\'de; eğrideki ' +
-      'keskin kırılma orada.');
+    if(isFinite(aC)) ev.push('İlk metal-metal temas ' + b(na(aC) + ' g') + '\'de.');
     paras.push(ev.length ? ev.join(' ')
       : 'Süpürme boyunca çekme ve durdurucu teması yok.');
 
-    if(counters.length) {
-      paras.push('Sayaç kanallarının birimi ' + b('adet') + '\'tir (mm değil): çekmeye geçen ' +
-        've durdurucuya oturan takoz sayısı.');
-    }
     return { title: title, paras: paras };
   }
 
@@ -769,35 +708,19 @@ var veMntBrief = (function() {
     ords.sort(function(a, c) { return a.o - c.o; });
     mds.sort(function(a, c) { return a.f - c.f; });
 
-    paras.push('Yatay eksen ' + b('motor devri') + ', dikey eksen ' + b('frekans') + '. ' +
-      b('Eğik') + ' çizgiler motorun ürettiği uyarmalardır — devir arttıkça frekansları ' +
-      'büyür. ' + b('Yatay') + ' çizgiler güç grubunun kendi doğal frekanslarıdır; devirden ' +
-      'bağımsız, sabit. İkisinin kesiştiği devirde motor o modu tam frekansından besler: ' +
-      b('rezonans') + ' orada olur.');
-
     // ── Çalışma bandı ──
     var bandTxt = '';
     if(isFinite(idle) && isFinite(bandHi)) {
       bandTxt = 'Çalışma bandı ' + b(n(idle, 0) + ' d/dk') + ' rölanti ile ' +
-                b(n(bandHi, 0) + ' d/dk') + ' arasında. ';
+                b(n(bandHi, 0) + ' d/dk') + ' arasında.';
     } else if(isFinite(idle)) {
-      bandTxt = 'Rölanti ' + b(n(idle, 0) + ' d/dk') + '; motorun en yüksek devri modelde ' +
-                'tanımlı değil, bu yüzden bandın üst ucu çizilemiyor (Motor bileşenine ' +
-                b('@ Devir') + ' girilirse görünür). ';
+      bandTxt = 'Rölanti ' + b(n(idle, 0) + ' d/dk') + '; en yüksek devir tanımlı değil.';
     }
-    if(bandTxt) {
-      bandTxt += 'Bandın ' + b('altındaki') + ' kesişimler yalnız kalkış ve durmada geçilir; ' +
-                 b('içindeki') + ' kesişimler motor o devirde çalıştığı sürece devam eder.';
-      paras.push(bandTxt);
-    }
+    if(bandTxt) paras.push(bandTxt);
 
     // ── Şerit eksikse önce onu söyle ──
     if(!ords.length || !mds.length) {
-      paras.push(ords.length
-        ? 'Şeritte yalnız ' + b('mertebe çizgileri') + ' var; kesişim için en az bir ' +
-          b('mod') + ' çizgisi gerekir.'
-        : 'Şeritte yalnız ' + b('mod çizgileri') + ' var — devirden bağımsız yatay doğrular; ' +
-          'kesişim için en az bir ' + b('mertebe') + ' çizgisi gerekir.');
+      paras.push(ords.length ? 'Şeritte mod çizgisi yok.' : 'Şeritte mertebe çizgisi yok.');
       return { title: 'Campbell diyagramı', paras: paras };
     }
 
@@ -814,25 +737,19 @@ var veMntBrief = (function() {
     if(fir.length) {
       var firIn = fir.filter(function(c) { return !(isFinite(idle) && c.rpm < idle) &&
                                                  !(isFinite(bandHi) && c.rpm > bandHi); });
-      var s = 'Uyarmanın baskın bileşeni ' + b(ordTxt(firingOrder)) +
-              ' (ateşleme). Modları şu devirlerde kesiyor: ' +
+      var s = 'Ateşleme (' + b(ordTxt(firingOrder)) + ') kesişimleri: ' +
               fir.slice(0, 6).map(crossTxt).join(', ') + '. ';
-      if(!firIn.length) {
-        s += 'Hiçbiri çalışma bandının içinde değil; bu rezonanslar yalnız kalkış ve ' +
-             'durmada geçiliyor.';
-      } else {
-        s += b(firIn.length + ' tanesi') + ' çalışma bandının içinde (' +
-             firIn.map(function(c) { return b(n(c.rpm, 0) + ' d/dk'); }).join(', ') +
-             '); ilgili mod o devirde sürekli besleniyor.';
-      }
+      s += !firIn.length ? 'Çalışma bandının içinde kesişim yok.'
+        : b(firIn.length + ' tanesi') + ' çalışma bandının içinde (' +
+          firIn.map(function(c) { return b(n(c.rpm, 0) + ' d/dk'); }).join(', ') + ').';
       paras.push(s);
     } else if(inBand.length) {
       paras.push('Çalışma bandının içinde ' + b(inBand.length + ' kesişim') + ' var: ' +
         inBand.slice(0, 6).map(crossTxt).join(', ') + '.');
     } else if(below.length) {
-      paras.push('Çizili mertebelerin tüm kesişimleri (' + b(below.length + ' adet') +
-        ') rölantinin altında kalıyor: ' + below.slice(0, 4).map(crossTxt).join(', ') +
-        (below.length > 4 ? ' …' : '') + '. Çalışma bandında doğrudan uyarma yok.');
+      paras.push('Kesişimlerin tümü (' + b(below.length + ' adet') +
+        ') rölantinin altında: ' + below.slice(0, 4).map(crossTxt).join(', ') +
+        (below.length > 4 ? ' …' : '') + '.');
     }
 
     // Ateşleme temiz çıksa bile iş bitmez: krank balanssızlığı (1. mertebe) ve
@@ -844,9 +761,7 @@ var veMntBrief = (function() {
         other.slice(0, 5).map(function(c) {
           return b(n(c.rpm, 0) + ' d/dk') + ' (' + ordTxt(c.o) +
                  (c.label ? ' × ' + c.label : '') + ')';
-        }).join(', ') + (other.length > 5 ? ' …' : '') + '. Kaynakları ateşlemeden zayıftır ' +
-        '(' + b('1. mertebe') + ' krank/volan balanssızlığı, üst mertebeler ateşleme ' +
-        'harmonikleri) ama band içinde sürekli etkindir.');
+        }).join(', ') + (other.length > 5 ? ' …' : '') + '.');
     }
 
     // ── Asıl ölçüt: rölantide izolasyon var mı? ──
@@ -855,11 +770,10 @@ var veMntBrief = (function() {
     mds.forEach(function(m2) { if(m2.f > fMax) fMax = m2.f; });
     if(eng && fMax > 0) {
       var ratio = eng.f / fMax;
-      paras.push('Rölanti ölçütü: ateşleme frekansı ' + b(na(eng.f) + ' Hz') +
-        ', en yüksek mod ' + b(na(fMax) + ' Hz') + ', oran ' + b(na(ratio)) +
-        '. İzolasyon koşulu oran > ' + b('√2 ≈ 1,41') + '; model bunu ' +
-        (ratio > ISO_RATIO ? b('sağlıyor') : b('sağlamıyor')) +
-        (ratio > ISO_RATIO ? '.' : ' — en yüksek mod rölantide büyütme bölgesinde.'));
+      paras.push('Rölanti: ateşleme ' + b(na(eng.f) + ' Hz') +
+        ' / en yüksek mod ' + b(na(fMax) + ' Hz') + ' = ' + b(na(ratio)) +
+        ' (izolasyon koşulu > ' + b('√2 ≈ 1,41') + '): ' +
+        (ratio > ISO_RATIO ? b('sağlıyor') : b('sağlamıyor')) + '.');
     }
 
     var title = 'Campbell diyagramı';
@@ -930,13 +844,10 @@ var veMntBrief = (function() {
       else if(ch.id === 'dmax') dmax = ch;
     });
 
-    // Giriş TEK CÜMLE: aynı panoda üç şerit açıldığında bu paragraf üç kez
-    // tekrarlanıyor. Uzun bir tanım üçe katlanınca yorum penceresi asıl
-    // bilgiyi (tepe değerler, sönme süresi) aşağı itiyordu.
-    paras.push('Yatay eksen ' + b('zaman') + '; güç grubuna ' + b(yon) + ' yönde ' +
-      b(nz(meta.aPeak) + ' g') + ' tepeli ' + b(nz(meta.dur * 1000, 1) + ' ms') +
-      '\'lik ' + b('yarım sinüs darbe') + ' uygulanıyor. Darbe sonrası, sistemin kendi ' +
-      'doğal frekanslarıyla sönümlü serbest salınımıdır.');
+    // Giriş TEK SATIR, darbenin künyesi: aynı panoda üç şerit açıldığında bu
+    // paragraf üç kez yazılıyor.
+    paras.push('Darbe: ' + b(yon) + ' ' + b(nz(meta.aPeak) + ' g') + ' · ' +
+      b(nz(meta.dur * 1000, 1) + ' ms') + ' ' + b('yarım sinüs') + '.');
 
     // ── Ağırlık merkezi yer değiştirmesi ──
     if(cg.length) {
@@ -946,8 +857,7 @@ var veMntBrief = (function() {
       }).filter(Boolean);
       if(parts.length) {
         paras.push('Ağırlık merkezinin şasiye göre yer değiştirme aralığı: ' +
-          parts.join(', ') + '. Tedarikçi raporlarındaki "shock response" referans nokta ' +
-          'yer değiştirmesi bu büyüklüktür.');
+          parts.join(', ') + '.');
       }
     }
 
@@ -971,16 +881,15 @@ var veMntBrief = (function() {
                (isFinite(pre) ? ' (önyük ' + b(na(pre) + ' mm') + ')' : '');
           if(meta.stopHit) {
             s += ' — ' + b('metal-metal durdurucuya (±' + STOP_MM + ' mm) oturuyor') +
-                 '. Temas modelde var: o andan sonra takoz kauçuk rijitliğiyle değil ' +
-                 b('temas rijitliğiyle') + ' çalışır ve fazla yük komşu takozlara dağılır.';
+                 ' (temas modelde).';
           } else {
             s += '; ' + b('±' + STOP_MM + ' mm') + ' durdurucu sınırına ' +
                  b(na(STOP_MM - tot) + ' mm') + ' pay kalıyor.';
           }
         } else if(worst >= STOP_MM) {
           s += ' — ' + b('metal-metal durdurucu boşluğunu (±' + STOP_MM + ' mm) aşıyor') +
-               '. Bu çözüm lineerdir, durdurucu modelde yoktur: bu genlikten sonrası ' +
-               b('geçerli değildir') + '.';
+               '; lineer çözümde durdurucu yok, bu genlikten sonrası ' +
+               b('geçerli değil') + '.';
         } else {
           s += '; ' + b('±' + STOP_MM + ' mm') + ' durdurucu sınırına ' +
                b(na(STOP_MM - worst) + ' mm') + ' pay kalıyor.';
@@ -993,8 +902,7 @@ var veMntBrief = (function() {
         // Yorum DÜZ METİN: paragrafın başındaki "⚠ " uyarı işaretidir ve ekranda
         // çizgi ikona döner (trace-view.js → _veTrRich).
         paras.push('⚠ ' + b('Newton iterasyonu bazı zaman adımlarında yakınsamadı') +   // metin: yorumun uyarı işareti (ekranda ikona döner)
-          '. Eğri çizilmiştir ama sayısal olarak güvenilmez: darbe genliğini ya da ' +
-          'süresini değiştirip yeniden çözün.');
+          '; eğri sayısal olarak güvenilmez.');
       }
     }
 
@@ -1013,7 +921,7 @@ var veMntBrief = (function() {
           sf += ' — katalog kapasitesinin (' + b(na(fc / 1000) + ' kN') + ') ' +
                 b(pct(fRows[0].v / fc * 100, 0)) + ' kadarı';
         }
-        paras.push(sf + '. Ömür hesabının dinamik yük girdisi budur.');
+        paras.push(sf + '.');
       }
     }
 
@@ -1022,16 +930,11 @@ var veMntBrief = (function() {
     if(sRef) {
       var ts = settleTime(t, sRef.data, 0.05);
       if(isFinite(ts) && ts > meta.dur) {
-        paras.push('Salınım tepe genliğinin ' + b('%5') + '\'ine ' + b(na(ts * 1000) + ' ms') +
-          '\'de iniyor; darbe süresi ' + b(nz(meta.dur * 1000, 1) + ' ms') + ', oran ' +
-          b(na(ts / meta.dur) + '×') + '. Sönme süresi yalnız ' + b('sönüme') + ' bağlıdır (ζ' +
-          (isFinite(R.zeta) ? ' = ' + b(pct(R.zeta * 100, 1)) : '') + ').');
+        paras.push('Sönme süresi (' + b('%5') + ' genliğe) ' + b(na(ts * 1000) + ' ms') +
+          '; darbe süresi ' + b(nz(meta.dur * 1000, 1) + ' ms') + ', oran ' +
+          b(na(ts / meta.dur) + '×') +
+          (isFinite(R.zeta) ? ' (ζ = ' + b(pct(R.zeta * 100, 1)) + ')' : '') + '.');
       }
-    }
-
-    if(acc && chans.length === 1) {
-      paras.push('Şeritte yalnız ' + b('uygulanan darbe') + ' var — sistemin yanıtı değil, ' +
-        'girdinin kendisi.');
     }
 
     return { title: (ds.name || 'Şok yanıtı') +
@@ -1081,7 +984,7 @@ var veMntBrief = (function() {
       if(eng) marks.push({ axis: 'x', value: eng.f, kind: 'event',
         label: 'rölanti ateşleme ' + na(eng.f) + ' Hz' });
       marks.push({ axis: 'y', value: 1, unit: '−', kind: 'limit',
-                   label: 'T = 1 · altı izolasyon, üstü büyütme' });
+                   label: 'T = 1' });
     } else if(ds.key === 'campbell') {
       var mt = ds.meta || {};
       if(isFinite(mt.idleRpm)) marks.push({ axis: 'x', value: mt.idleRpm, kind: 'event',
@@ -1169,9 +1072,9 @@ var veMntBrief = (function() {
                      label: 'darbe biter ' + na(mt2.dur * 1000) + ' ms' });
       }
       // Durdurucu sınırı mm şeridinde: lineer çözümün NEREDE geçersizleştiği
-      // grafiğin üstünde görünsün.
+      // grafiğin üstünde görünsün (şerit yorumu hangi fiziğin çözüldüğünü söyler).
       marks.push({ axis: 'y', value: STOP_MM, unit: 'mm', kind: 'stop',
-                   label: 'durdurucu ' + STOP_MM + ' mm — üstü lineer çözümün dışı' });
+                   label: 'durdurucu ' + STOP_MM + ' mm' });
       var dm = chan(ds, 'dmax');
       if(dm) {
         var ts2 = settleTime(ds.x.data, dm.data, 0.05);
@@ -1196,24 +1099,14 @@ var veMntBrief = (function() {
     return marks;
   }
 
-  // Pano kapalıyken görünen tek satır: çizilen BÜYÜKLÜĞÜN adı ve ekseni.
-  // Kullanım anlatmaz, sonuç yorumlamaz — o iş şerit yorumunun.
-  var LEADS = {
-    frf:    'Frekansa göre iletilebilirlik: şasiye geçen kuvvetin motor kuvvetine oranı.',
-    campbell: 'Motor uyarma mertebeleri ile güç grubu doğal frekanslarının devir düzlemindeki kesişimi.',
-    fdefl:  'Takoz kuvvet–sehim yasası ve statik çalışma noktaları.',
-    gz:     'Düşey ivme süpürmesi: takoz sehimi ve kuvveti.',
-    gy:     'Yanal ivme süpürmesi: takoz sehimi ve kuvveti.',
-    gx:     'Boyuna ivme süpürmesi: takoz sehimi ve kuvveti.',
-    shockz: 'Düşey yarım-sinüs darbeye geçici rejim yanıtı.',
-    shocky: 'Yanal yarım-sinüs darbeye geçici rejim yanıtı.',
-    shockx: 'Boyuna yarım-sinüs darbeye geçici rejim yanıtı.'
-  };
+  // Kümenin işaretleri. Açıklama satırı (öncü) YOK — kalıp açıklama yuvası
+  // taşımaz; şerit başlığı büyüklüğü adlandırır.
+  var KUMELER = ['frf', 'campbell', 'fdefl', 'gz', 'gy', 'gx', 'shockz', 'shocky', 'shockx'];
 
   function build(ds, R) {
-    if(!ds || !R || R.error || !LEADS[ds.key]) return null;
+    if(!ds || !R || R.error || KUMELER.indexOf(ds.key) < 0) return null;
     try {
-      return { lead: LEADS[ds.key], marks: datasetMarks(ds, R) };
+      return { marks: datasetMarks(ds, R) };
     } catch(e) { return null; }
   }
 
