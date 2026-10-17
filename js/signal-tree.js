@@ -463,7 +463,7 @@ function veSigRowHTML(item, slot, q, sparkW, sparkH) {
   var dirTag = item.dir === 'in' ? 'arrow-left' : (item.dir === 'out' ? 'arrow-right' : '');
   var title = item.name + (item.unit ? ' [' + item.unit + ']' : '') +
               ' · ' + item.compType + '::' + item.signalId +
-              ' · ' + item.source + ' — sürükle veya çift tıkla';
+              ' · ' + item.source + ' · sürükle / çift tık: şeride ekle';
 
   var h = '<div class="vsig-row' + (on ? ' on' : '') + '"' +
           ' data-sig="' + veSigEsc(item.sensorId) + '" data-sid="' + veSigEsc(item.signalId) + '"' +
@@ -693,7 +693,7 @@ function veSigInspectorHTML() {
   if(pts) {
     h += '<div class="vsig-preview">' + veSigSparkSVG(pts, color, pw, ph) + '</div>';
   } else {
-    h += '<div class="vsig-preview empty">Veri yok — önce simülasyonu çalıştırın</div>';
+    h += '<div class="vsig-preview empty">Veri yok</div>';
   }
   h += '</div>';
 

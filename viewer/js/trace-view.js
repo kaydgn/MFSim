@@ -1329,7 +1329,7 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
     ctx.font = veThemeFont('tiny');
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(128,128,128,0.75)';
-    ctx.fillText('veri yok — önce çözümü çalıştırın', x0 + pw / 2, y0 + ph / 2);
+    ctx.fillText('veri yok', x0 + pw / 2, y0 + ph / 2);
   }
 
   // Kilit rozeti (elle Y sınırı)
@@ -2224,7 +2224,7 @@ function veTrNoteHTML(entries, lead) {
   var open = veTrNoteOpen();
   var multi = entries.length > 1;
   var h = '<div class="ve-trace-note-grip" data-act="note-grip" ' +
-          'title="Yorum penceresinin boyunu sürükleyerek ayarlayın"></div>';
+          'title="sürükle: boy"></div>';
   h += '<button type="button" class="ve-trace-note-head" data-act="note-toggle"' +
           ' aria-expanded="' + (open ? 'true' : 'false') + '"' +
           ' title="Yorumu ' + (open ? 'gizle' : 'göster') + '">';
@@ -2246,7 +2246,7 @@ function veTrNoteHTML(entries, lead) {
     h += '</section>';
   });
   h += '</div>';
-  h += '<div class="ve-trace-note-more"><span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span> Devamı var — yorumu kaydırın</div>';
+  h += '<div class="ve-trace-note-more"><span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span> Devamı var</div>';
   return h;
 }
 
@@ -2365,8 +2365,6 @@ function veTrEmptyHTML() {
   if(noSim) {
     h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-play"></span></div>';
     h += '<div class="ve-trace-empty-title">Çözüm sonucu yok</div>';
-    h += '<div class="ve-trace-empty-sub">Çizilecek veri yok; eksikler Uyarılar ' +
-         'panelinde listelenir.</div>';
     if(typeof veSolverRun === 'function') {
       // Düğme hesabı başlatmıyor, Çözücü bileşenini açıyor — etiket de bunu
       // söylesin. "Çalıştır" yazıp panel açmak yanıltıyordu.
@@ -2376,10 +2374,8 @@ function veTrEmptyHTML() {
     }
     // Çözüm koşmak tek yol değil: hazır bir ölçüm dosyası da çizilebilir.
     if(typeof veImpOpenPicker === 'function') {
-      h += '<div class="ve-trace-empty-sub" style="margin-top:10px;">ya da bir ölçüm ' +
-           'dosyası (Excel/CSV):</div>';
       h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
-           'style="height:26px;margin-top:4px;">' +
+           'style="height:26px;margin-top:4px;" title="Excel · CSV">' +
            '<span class="mf-ico mf-ico-upload"></span> Ölçüm verisi içe aktar</button>';
     }
     return h;
@@ -2387,9 +2383,6 @@ function veTrEmptyHTML() {
 
   h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-trending-up"></span></div>';
   h += '<div class="ve-trace-empty-title">Ölçüm penceresi boş</div>';
-  h += '<div class="ve-trace-empty-sub"><b>Veri Gezgini</b>\'nden seçilen her sinyal kendi ' +
-       'şeridinde ve kendi Y ekseninde çizilir; bir şeridin üzerine bırakılan sinyal ' +
-       'ortak eksende birleşir.</div>';
   return h;
 }
 
@@ -2408,7 +2401,7 @@ function veTrRenderToolbar() {
   // X ekseni seçici — veShowXAxisPicker açılır listeyi bu kabın içine koyar
   h += '<div class="ve-trace-xaxis" id="ve-xaxis-area-0">';
   h += '<button type="button" class="ve-trace-btn wide" data-act="xaxis" ' +
-       'title="Pencerenin X eksenini değiştir (tüm şeritler paylaşır)">' +
+       'title="X ekseni">' +
        '<span class="mf-ico mf-ico-trending-up"></span>' +
        '<span>' + veSigEsc((slot.xAxis && slot.xAxis.name) ? slot.xAxis.name : 'Zaman [s]') + '</span>' +
        '<span class="mf-ico mf-ico-chevron-down ve-trace-caret" aria-hidden="true"></span></button>';
@@ -2450,8 +2443,8 @@ function veTrIzAraclari(slot, n, zoomed) {
          ' aria-pressed="' + (logOn ? 'true' : 'false') + '"' +
          (logOn ? ' style="color:var(--ink-accent);border-color:var(--accent-primary);"' : '') +
          ' title="' + (logOn
-            ? 'Logaritmik X ekseni açık — lineer eksene geç'
-            : 'X eksenini logaritmik yap (geniş frekans aralığı okunur hâle gelir)') +
+            ? 'Logaritmik X ekseni açık'
+            : 'Logaritmik X ekseni') +
          '">log x</button>';
   }
 
@@ -2464,18 +2457,18 @@ function veTrIzAraclari(slot, n, zoomed) {
          ' aria-pressed="' + (yOn ? 'true' : 'false') + '"' +
          (yOn ? ' style="color:var(--ink-accent);border-color:var(--accent-primary);"' : '') +
          ' title="' + (yOn
-            ? 'Logaritmik Y ekseni açık — lineer eksene geç'
-            : 'Y eksenini logaritmik yap (küçük değerler de okunur hâle gelir)') +
+            ? 'Logaritmik Y ekseni açık'
+            : 'Logaritmik Y ekseni') +
          '">log y</button>';
   }
 
   h += '<span class="ve-trace-sep"></span>';
 
   h += '<button type="button" class="ve-trace-btn" data-act="fit"' +
-       (zoomed ? '' : ' disabled') + ' title="Tüm veriyi göster (çift tık)">Sığdır</button>';
-  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-in" title="Zaman ekseninde yakınlaş" aria-label="Yakınlaş">' +
+       (zoomed ? '' : ' disabled') + ' title="Çift tık: sığdır">Sığdır</button>';
+  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-in" title="X ekseninde yakınlaş" aria-label="Yakınlaş">' +
        '<span class="mf-ico mf-ico-zoom-in" aria-hidden="true"></span></button>';
-  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-out" title="Zaman ekseninde uzaklaş" aria-label="Uzaklaş">' +
+  h += '<button type="button" class="ve-trace-btn icon" data-act="zoom-out" title="X ekseninde uzaklaş" aria-label="Uzaklaş">' +
        '<span class="mf-ico mf-ico-zoom-out" aria-hidden="true"></span></button>';
 
   if(veTrState.pinX != null) {
@@ -2485,10 +2478,9 @@ function veTrIzAraclari(slot, n, zoomed) {
 
   h += '<span class="ve-trace-sep"></span>';
   h += '<button type="button" class="ve-trace-btn" data-act="split-all"' +
-       (n > 1 ? '' : ' disabled') + ' title="Her sinyali kendi şeridine ayır">Ayır</button>';
+       (n > 1 ? '' : ' disabled') + '>Ayır</button>';
   h += '<button type="button" class="ve-trace-btn" data-act="merge-all"' +
-       (n > 1 ? '' : ' disabled') +
-       ' title="Hangi şeritlerin tek diyagramda birleşeceğini seç — her sinyal kendi Y ekseninde kalır">Birleştir</button>';
+       (n > 1 ? '' : ' disabled') + '>Birleştir</button>';
 
   return h;
 }
@@ -2500,10 +2492,10 @@ function veTrIzAraclari(slot, n, zoomed) {
 function veTrTabloAraclari(n) {
   var h = '<span class="ve-trace-sep"></span>';
   h += '<button type="button" class="ve-trace-btn" data-act="tablo-kopyala"' + (n ? '' : ' disabled') +
-       ' title="Tablonun tüm örneklerini panoya kopyala — Excel\'e yapıştırılır">' +
+       ' title="Panoya kopyala · tüm örnekler">' +
        '<span class="mf-ico mf-ico-clipboard" aria-hidden="true"></span>Kopyala</button>';
   h += '<button type="button" class="ve-trace-btn" data-act="tablo-csv"' + (n ? '' : ' disabled') +
-       ' title="Tablonun tüm örneklerini CSV dosyası olarak indir">' +
+       ' title="CSV indir · tüm örnekler">' +
        '<span class="mf-ico mf-ico-download" aria-hidden="true"></span>CSV</button>';
   return h;
 }
@@ -2648,7 +2640,7 @@ function veTrMergeByUnit() {
     // Hiçbir şey değişmeyecekse şeritleri yeniden kurup kullanıcının
     // yüksekliklerini sıfırlamanın anlamı yok; sebebi söylemek daha yararlı.
     if(typeof showToast === 'function') {
-      showToast('Aynı birimi paylaşan şerit yok — birleştirilecek bir şey bulunamadı.', 'info');
+      showToast('Aynı birimi paylaşan şerit yok.', 'info');
     }
     return;
   }
@@ -2657,9 +2649,6 @@ function veTrMergeByUnit() {
     return { ids: byUnit[k], h: VE_TR.LANE_DEF_H, min: null, max: null };
   });
   veTrRender();
-  if(typeof showToast === 'function') {
-    showToast(merged + ' birim ortak ölçekte toplandı.', 'success');
-  }
 }
 
 function veTrClear() {
@@ -3227,8 +3216,6 @@ function veTrShowMergePicker(e) {
   pop.className = 've-trace-pop ve-trace-pop-wide';
 
   var h = '<div class="ve-trace-pop-title">Birleştirilecek şeritler</div>';
-  h += '<div class="ve-trace-pop-hint">Seçilenler tek diyagramda toplanır; ' +
-       'her sinyal kendi Y ekseninde kalır.</div>';
   h += '<div class="ve-trace-pop-list" role="group">';
   defs.forEach(function(L, i) {
     var built = lanes && lanes[i] ? lanes[i] : null;
@@ -3244,13 +3231,13 @@ function veTrShowMergePicker(e) {
     // her şeyi dağıtan "Ayır"a gitmek zorunda kalmasın.
     if(L.ids.length > 1) {
       h += '<button type="button" class="ve-trace-pop-x" data-act="split" data-lane="' + i +
-           '" title="Bu birleşik şeridi dağıt">Dağıt</button>';
+           '" title="Birleşik şeridi dağıt">Dağıt</button>';
     }
     h += '</label>';
   });
   h += '</div>';
   h += '<div class="ve-trace-pop-row">' +
-       '<button type="button" data-act="by-unit" title="Aynı birimdeki şeritleri kendiliğinden birleştir">Birime göre</button>' +
+       '<button type="button" data-act="by-unit" title="Aynı birimdeki şeritleri birleştir">Birime göre</button>' +
        '<button type="button" class="primary" data-act="merge-ok">Birleştir</button>' +
        '</div>';
   pop.innerHTML = h;
@@ -3284,14 +3271,13 @@ function veTrShowMergePicker(e) {
       });
       if(idxs.length < 2) {
         if(typeof showToast === 'function') {
-          showToast('En az iki şerit işaretleyin.', 'warning');
+          showToast('En az iki şerit gerekli.', 'warning');
         }
         return;
       }
       pop.remove();
       var n = veTrMergeSelected(idxs);
       if(n && typeof showToast === 'function') {
-        showToast(n + ' şerit tek diyagramda birleşti — her sinyal kendi Y ekseninde.', 'success');
       }
     }
   });
@@ -3516,17 +3502,14 @@ function veTrEnter() {
   var slot = veTrBoard();
   var mig = veTrMigrateSlots();
   if(mig && typeof showToast === 'function') {
-    showToast(mig.moved + ' sinyal eski panellerden ölçüm penceresine taşındı; ' +
-              'her panel kendi şeridi oldu.', 'info');
+    showToast(mig.moved + ' sinyal eski panellerden ölçüm penceresine taşındı.', 'info');
     // Sessiz birleştirme kabul edilemez: farklı X eksenli paneller artık tek
     // eksende okunuyor, kullanıcı bunu bilmeli.
     if(mig.mismatched) {
-      showToast(mig.mismatched + ' panel farklı bir X ekseninde çiziliyordu. ' +
-                'Pencere tek eksende çalışır — o şeritleri kontrol edin.', 'warning');
+      showToast(mig.mismatched + ' panel farklı X ekseninde çiziliyordu; şeritler tek eksende.', 'warning');
     }
     if(mig.from3d) {
-      showToast('3B panelin X/Y/Z sinyalleri ayrı eğriler olarak geldi. ' +
-                '3B kipi görünüm çubuğundadır.', 'info');
+      showToast('3B panelin X/Y/Z sinyalleri ayrı eğriler olarak geldi.', 'info');
     }
   }
   if(!slot.xAxis && typeof veInheritedXAxis === 'function') {

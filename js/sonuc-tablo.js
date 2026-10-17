@@ -146,7 +146,7 @@ function veFoyAd(ad, birim) {
 function veFoyNot(n, sey) {
   if(!sey || sey.adim <= 1) return 'Satır: ' + veSayi(n, 0) + ' · tamamı';
   return 'Satır: ' + veSayi(sey.idx.length, 0) + ' / ' + veSayi(n, 0) +
-         ' · her ' + veSayi(sey.adim, 0) + '. örnek gösteriliyor — Kopyala ve CSV tamamını alır';
+         ' · her ' + veSayi(sey.adim, 0) + '. örnek · Kopyala ve CSV: tümü';
 }
 
 // Sinyal rengi VERİDİR (kullanıcı seçebiliyor): yalnız renk sözdizimi geçer.
@@ -299,13 +299,13 @@ function _veFoyEskiPano(metin) {
 
 function veFoyKopyala() {
   var m = _veFoySimdiki();
-  if(!m) { _veFoyUyar('Kopyalanacak tablo yok — önce Veri Gezgini\'nden sinyal seçin.'); return; }
+  if(!m) { _veFoyUyar('Kopyalanacak tablo yok.'); return; }
   var metin = veFoyMetin(m, 'pano');
   var n = m.x.veri.length;
   var bildir = function(ok) {
-    if(!ok) { _veFoyUyar('Pano bu tarayıcıda kullanılamadı — tabloyu CSV ile indirin.'); return; }
+    if(!ok) { _veFoyUyar('Pano kullanılamıyor.'); return; }
     if(typeof showToast === 'function') {
-      showToast(veSayi(n, 0) + ' satır panoya kopyalandı — Excel\'e yapıştırabilirsiniz.', 'success');
+      showToast(veSayi(n, 0) + ' satır panoya kopyalandı.', 'success');
     }
   };
   try {
@@ -320,7 +320,7 @@ function veFoyKopyala() {
 
 function veFoyCsvIndir() {
   var m = _veFoySimdiki();
-  if(!m) { _veFoyUyar('Dışa aktarılacak tablo yok — önce Veri Gezgini\'nden sinyal seçin.'); return; }
+  if(!m) { _veFoyUyar('Dışa aktarılacak tablo yok.'); return; }
   // BOM: Excel UTF-8'i ancak onunla tanır (başlıkta →, ·, ü var)
   var blob = new Blob(['﻿' + veFoyMetin(m, 'csv')], { type: 'text/csv;charset=utf-8' });
   var url = URL.createObjectURL(blob);

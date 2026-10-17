@@ -175,7 +175,7 @@ describe('tek X ekseni kuralı FEAD kümelerinde de geçerli', () => {
     veAddSignalToSlot(0, '~fead-cevrim', ds.channels[0].id);
     veAddSignalToSlot(0, '~fead-campbell', 'ord.1');   // aynı birim (d/dk) ama başka ızgara
     expect(ids(veResultSlots[0])).toEqual([ds.channels[0].id]);
-    expect(toasts.some((t) => /Pano X ekseni/.test(t.msg))).toBe(true);
+    expect(toasts.some((t) => /X ekseni uyuşmuyor/.test(t.msg))).toBe(true);
   });
   test('FEAD sekmesinde X seçici YALNIZ kümelerin eksenlerini sunar (zaman yok)', () => {
     coz();

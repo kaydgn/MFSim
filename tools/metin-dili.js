@@ -85,8 +85,9 @@ const SOZLUK = {
   gelistirme: [
     S('ölçüldü|ölçtük|kapı|kapı[sdyln]\\p{L}*|çekilir|sessizce|tek kaynak\\p{L}*|bayat\\p{L}*|regresyon\\p{L}*|commit\\p{L}*|kullanıcı (?:kararı|isteği|bildirimi)|bu kod\\p{L}*|kodun kendisi\\p{L}*')
   ],
+  // Tire ile bağlı bileşik terim ('örnekle-ve-tut') emir kipi değildir.
   tarif: [
-    new RegExp('(?<![\\p{L}\\p{N}_])(?:ekle|seç|sürükle|tıkla|gir|kur|aç|kapat|kullan|bak|ver|oku|yaz|değiştir|düzelt|dene|çalıştır|hesapla|yükle|kaydet|sil|taşı|bırak|çöz|başla|dön|tanımla|belirle|işaretle|onayla|bağla|güncelle|ayarla|sırala|çevir|çiz|ölç|incele|tut|bas)'
+    new RegExp('(?<![\\p{L}\\p{N}_-])(?:ekle|seç|sürükle|tıkla|gir|kur|aç|kapat|kullan|bak|ver|oku|yaz|değiştir|düzelt|dene|çalıştır|hesapla|yükle|kaydet|sil|taşı|bırak|çöz|başla|dön|tanımla|belirle|işaretle|onayla|bağla|güncelle|ayarla|sırala|çevir|çiz|ölç|incele|tut|bas)'
       + '(?:in|ın|un|ün|yin|yın|yun|yün)?(?=\\s*(?:[.;:!)…]|$)|\\s+(?:ya da|veya|ve|ile|sonra)(?![\\p{L}]))', 'gu'),
     S('kaydedin')
   ]

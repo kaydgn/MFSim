@@ -557,7 +557,7 @@ function veExportResults() {
 function veShowRaporModal() {
   var r = window.veSimResults;
   if(!r || !r.time || r.time.length === 0) {
-    showToast('Rapor oluşturulacak sonuç yok — önce simülasyon çalıştırın', 'warning');
+    showToast('Rapor için sonuç yok.', 'warning');
     return;
   }
   
@@ -5474,7 +5474,7 @@ function veRender3DScatter(slotIdx) {
   // Plotly yüklü mü kontrol et
   if(typeof Plotly === 'undefined') {
     if(placeholder) {
-      placeholder.innerHTML = '<div style="font-size:var(--fs-h1); margin-bottom:6px;">' + veIkon('alert-triangle') + '</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
+      placeholder.innerHTML = '<div style="font-size:var(--fs-h1); margin-bottom:6px;">' + veIkon('alert-triangle') + '</div>Plotly.js yüklenemedi.';
       placeholder.style.display = '';
     }
     return;

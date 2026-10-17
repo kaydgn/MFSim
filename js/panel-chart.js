@@ -318,7 +318,7 @@ function pcAttach(canvas, opts) {
   canvas.style.cursor = 'crosshair';
   if(!canvas.getAttribute('role')) canvas.setAttribute('role', 'img');
   if(!canvas.getAttribute('title')) {
-    canvas.setAttribute('title', 'İmleçle değerleri okuyun · Ctrl + tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Sol tık: sıfırla');
+    canvas.setAttribute('title', 'Ctrl + tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Sol tık: sıfırla');
   }
   return canvas._pcCtx;
 }
@@ -333,7 +333,7 @@ function pcDrawHint(ctx2d, canvas, ml, mt, pw, isDark) {
   ctx2d.textAlign = 'left';
   ctx2d.fillStyle = veThemeRgba('--seri-1', 1);
   ctx2d.font = veThemeFont('micro', 'bold');
-  ctx2d.fillText(veSayi(canvas._pcZoom.scale, 1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
+  ctx2d.fillText(veSayi(canvas._pcZoom.scale, 1) + '× · Sol tık: sıfırla', ml + 6, mt + 11);
   ctx2d.textAlign = prevAlign; ctx2d.font = prevFont; ctx2d.fillStyle = prevFill;
 }
 
@@ -363,7 +363,7 @@ function pcEtiketYerlestir(etiketler, satirH, engeller) {
 
 // Panel açıklamalarına eklenecek standart etkileşim cümlesi (gerçek metin —
 // canvas bitmap'indeki ipucu seçilemez/çevrilemez, ekran okuyucuya görünmez).
-var PC_HINT_HTML = '<b>Etkileşim:</b> imleçle gezinerek değerleri okuyun · <b>Ctrl + tekerlek</b> yakınlaştırır · <b>sağ tık + sürükle</b> kaydırır · <b>sol tık</b> sıfırlar.';
+var PC_HINT_HTML = '<b>Ctrl + tekerlek</b>: yakınlaştır · <b>Sağ tık + sürükle</b>: kaydır · <b>Sol tık</b>: sıfırla';
 
 if(typeof module !== 'undefined' && module.exports) {
   module.exports = { pcZoomWindow: pcZoomWindow, pcInPlot: pcInPlot, pcPointerPos: pcPointerPos, pcEtiketYerlestir: pcEtiketYerlestir };

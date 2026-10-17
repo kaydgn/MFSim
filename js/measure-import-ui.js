@@ -193,8 +193,7 @@ function veImpRender() {
 
   if(veImpUI.busy) {
     el.innerHTML = '<div class="ve-imp-state"><div class="ve-imp-spin"></div>' +
-      '<div>' + veImpEsc(veImpUI.fileName) + ' okunuyor…</div>' +
-      '<div class="ve-imp-dim">Büyük dosyalarda birkaç saniye sürebilir.</div></div>';
+      '<div>' + veImpEsc(veImpUI.fileName) + ' okunuyor…</div></div>';
     return;
   }
   if(veImpUI.error) {
@@ -207,8 +206,8 @@ function veImpRender() {
   if(!veImpUI.rows) {
     el.innerHTML = '<div class="ve-imp-state">' +
       '<div class="ve-imp-drop-ico"><span class="mf-ico mf-ico-upload"></span></div>' +
-      '<div><b>Ölçüm dosyası seçin</b></div>' +
-      '<div class="ve-imp-dim">Vector CANoe ve benzeri araçların Excel çıktısı · .xlsx, .csv, .tsv</div>' +
+      '<div><b>Ölçüm dosyası</b></div>' +
+      '<div class="ve-imp-dim">.xlsx · .csv · .tsv</div>' +
       '<button type="button" class="ve-imp-btn ve-imp-btn-primary" onclick="veImpOpenPicker()">Gözat…</button></div>';
     return;
   }
@@ -239,8 +238,8 @@ function veImpHeaderHTML() {
   h += '</div>';
 
   if(veImpUI.truncated) {
-    h += '<div class="ve-imp-warn">Dosya çok büyük: ilk ' +
-         veSayi(VE_IMP_MAX_ROWS, 0) + ' satır alındı, gerisi okunmadı.</div>';
+    h += '<div class="ve-imp-warn">Dosya büyük: ilk ' +
+         veSayi(VE_IMP_MAX_ROWS, 0) + ' satır alındı.</div>';
   }
   return h;
 }
@@ -289,12 +288,11 @@ function veImpAxisHTML() {
 
   var xc = veImpUI.columns[veImpUI.xIndex];
   if(xc) {
-    var note = xc._monotonic ? 'artan — zaman ekseni için uygun'
-                             : 'artan DEĞİL — imleç ve zaman ölçeği beklenmedik davranabilir';
+    var note = xc._monotonic ? 'artan' : 'artan değil';
     h += '<span class="ve-imp-xnote' + (xc._monotonic ? '' : ' bad') + '">' + note + '</span>';
   }
   if(veImpUI.dateCols[xc ? xc.index : -1]) {
-    h += '<span class="ve-imp-badge">tarih/saat biçimi → saniyeye çevrilecek</span>';
+    h += '<span class="ve-imp-badge">tarih/saat → saniye</span>';
   }
   // X ekseninde boşluk olamaz (imleç ve zaman ölçeği ona dayanıyor), bu yüzden
   // eksik zaman damgası bir öncekiyle DOLDURULUR. Sessiz kalırsa kullanıcı iki
@@ -302,13 +300,12 @@ function veImpAxisHTML() {
   // eksik hücre sayısı açıkça yazılır.
   if(xc && xc.sampled > 0 && xc.filled < xc.sampled) {
     var gaps = xc.sampled - xc.filled;
-    h += '<span class="ve-imp-xnote bad">' + gaps + ' satırda zaman değeri boş — ' +
-         'bir önceki damga sürdürülecek</span>';
+    h += '<span class="ve-imp-xnote bad">' + gaps + ' satırda zaman boş: önceki damga sürer</span>';
   }
   h += '</div>';
   h += '<label class="ve-imp-check"><input type="checkbox"' + (veImpUI.holdSparse ? ' checked' : '') +
-       ' onchange="veImpUI.holdSparse=this.checked;"> Boş hücreleri son değerle doldur ' +
-       '<span class="ve-imp-dim">(örnekle-ve-tut — farklı periyotla gelen sinyaller için)</span></label>';
+       ' onchange="veImpUI.holdSparse=this.checked;"> Boş hücrede son değer ' +
+       '<span class="ve-imp-dim">(örnekle-ve-tut)</span></label>';
   h += '</div>';
   return h;
 }
@@ -458,7 +455,7 @@ function veImpConfirm() {
     .sort(function(a, b) { return a - b; });
 
   if(yIdx.length === 0) {
-    if(typeof showToast === 'function') showToast('En az bir Y ekseni sütunu seçin', 'warning');
+    if(typeof showToast === 'function') showToast('Y ekseni sütunu seçilmedi.', 'warning');
     return;
   }
 
@@ -512,8 +509,7 @@ function veImpApplyToBoard(ds) {
     slot.lanes = [];
     slot.yAxisLock = {};
     if(typeof showToast === 'function') {
-      showToast(had + ' şerit kaldırıldı: içe aktarılan ölçüm kendi zaman eksenini ' +
-                'getiriyor ve pencere tek X ekseninde çalışır.', 'info');
+      showToast(had + ' şerit kaldırıldı: ölçüm kendi zaman eksenini getiriyor.', 'info');
     }
   }
 
@@ -570,5 +566,4 @@ function veImpDropDataset(id) {
   if(typeof veSigResetCache === 'function') veSigResetCache();
   if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
   if(typeof veTrRefresh === 'function') veTrRefresh();
-  if(typeof showToast === 'function') showToast(ds.name + ' kaldırıldı', 'info');
 }

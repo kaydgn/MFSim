@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 630,
+ "sayi": 577,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -48,9 +48,6 @@
    "8f561ddc35": "‹›: mesaj var ama sinyal hiçbir karede çözülemedi (çoklama ya da kısa DLC).",
    "c0644a2325": "Yüklü DBC'deki hiçbir mesaj kayıtta geçmiyor. Süzgeci Tümü yapıp tanımları göreb",
    "f7230cff21": "Bu kimlikler kayıtta var ama yüklü DBC bunları tanımlamıyor"
-  },
-  "index.html": {
-   "9b070918cd": "Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)"
   },
   "js/command-palette.js": {
    "2c93dfd87c": "komuta sipariş fiş durum ölç",
@@ -302,7 +299,6 @@
    "047b0e08ce": "Lockup ofseti = ‹› rpm -> lockup shift devri N_shift_lu = ESL - ofset = ‹› rpm",
    "0b2aa47fa8": "Kosunun GERCEK motor devri DINAMIK durumdur (KONVERTOR-MOTOR BAGLASIMI devir-izi",
    "14d338c425": "SR = 1, tau = 1 (motor-turbin rijit; hidrolik pompa emisi=0 -> pompa drop UYGULA",
-   "152a09bdd6": "Rapor oluşturulacak sonuç yok — önce simülasyon çalıştırın",
    "1557a68848": "Ayrica governed ust-vites guvenligi: N_motor >= governed -> zorunlu ust vites (o",
    "16f6aa3f9d": "adim [2] bloklari); dinamik durum tam oturmadigindan ikisi yakin ama birebir olm",
    "186b694a17": "(eta_direct = vitesin verimi ftGearData.eff/100 ; rijit motor-sanziman — TK/pomp",
@@ -582,17 +578,6 @@
   "js/map.js": {
    "8e047d3fe2": "Sol tık: rota noktası ekle │ Rota üzerine tık: referans noktası │ Tekerlek: yakı"
   },
-  "js/measure-dropzone.js": {
-   "8be46ded4a": "‹› dosya bırakıldı, ilki açılıyor: ‹›. Diğerlerini tek tek bırakabilirsiniz."
-  },
-  "js/measure-import-ui.js": {
-   "066edfed25": "‹› satırda zaman değeri boş — bir önceki damga sürdürülecek",
-   "1f2163c472": "En az bir Y ekseni sütunu seçin",
-   "48a54847e4": "artan DEĞİL — imleç ve zaman ölçeği beklenmedik davranabilir",
-   "611adadad3": "Boş hücreleri son değerle doldur (örnekle-ve-tut — farklı periyotla gelen sinyal",
-   "a9ddd38187": "‹› şerit kaldırıldı: içe aktarılan ölçüm kendi zaman eksenini getiriyor ve pence",
-   "c7083f0f9e": "Dosya çok büyük: ilk ‹› satır alındı, gerisi okunmadı."
-  },
   "js/mount-akso.js": {
    "cf6c89fcbd": "yukarıdan"
   },
@@ -648,47 +633,21 @@
    "4005b3089b": "Sıfıra yakın frekans: yapılandırma kinematik olarak serbest olabilir.",
    "ab0b38b605": "‹› tek bir doğru üzerinde: bu doğru etrafındaki dönmeye karşı rijitlik yok‹›"
   },
-  "js/panel-chart.js": {
-   "1520f81c22": "Etkileşim: imleçle gezinerek değerleri okuyun · Ctrl + tekerlek yakınlaştırır · "
-  },
   "js/results.js": {
    "0c59e45710": "Bu ayrımın atlanması sinsi bir hata sınıfıdır: eğim kuvveti hem yanlış işaretle ",
-   "0e36058044": "Veri Gezgini'nden en az 2 sinyal seçin (X, Y). 3. sinyal Z olur.",
    "22d52b9f2d": "Verimin Alt Ucu Neden Sıfır",
-   "27bd4e6f1f": "Yüksek kademe — tüm hesaplamaların adım adım (formül + sayı) dökümü",
    "285d06005c": "Önerilen",
-   "2b68cdb736": "— Pano X ekseni: ‹› (bu diyagram ‹› istiyor)",
    "2c2bf3535d": "\\( r\\le 1 \\) ise adım kabul edilir, aksi hâlde aynı noktadan küçültülmüş adımla ",
    "2d9d553807": "İkinci biçimdeki ara değerleme, 2C→2L gibi kalibrasyon tablosuyla verilen geçişl",
    "2e4659e266": "Bu rapor, projede tanımlı güç aktarma modelinden otomatik üretilmiştir; girdi de",
-   "37e7cd4fd6": "Bu diyagramın notu var",
    "39d687ae25": "Bu sentetik regülatör düşümü yalnızca tork tablosu governed devrin üzerini kapsa",
-   "3df854f9e0": "‹› şerit kaldırıldı: içe aktarılan ölçüm verisi bu oturumda yok. Dosyayı yeniden",
    "5818f01a6c": "Tırmanma kabiliyetinin ölçütü çeki kancası kuvvetidir (drawbar pull, \\( DP \\)): ",
-   "62a3ec8a05": "Düşük kademe — tüm hesaplamaların adım adım (formül + sayı) dökümü",
    "66e8f0351b": "Önerilen Konvertör",
-   "68ad868e35": "Eğim kabiliyeti verisi bulunamadı — tam gaz simülasyonu gerekli",
    "6cebb16741": "Neden En Küçük Kök Değil",
-   "7e4ae45403": "Segment sürüş verisi bulunamadı — önce simülasyon çalıştırın",
-   "89fabbca16": "Bu diyagram için sinyal haritası tanımlı değil",
-   "9e42d11867": "Programın yaptığı tüm hesaplamaların adım adım (formül + sayı) dökümü — doğrulam",
    "9f6a649c78": "Değişken adımlı çözümden sabit aralıklı çıktı üretmek için adım içi kübik Hermit",
-   "ac20332d94": "Hizalama açık (kapatmak için tıkla)",
-   "b11b71965d": "En az 2 sinyal seçin (X, Y). 3. sinyal Z ekseni olur, yoksa zaman kullanılır.",
-   "bea988ee93": "Önerilen konvertör",
-   "caa5653017": "Bir bağlantıya ya da bileşene tutturulmadığı için veri üretmiyor",
-   "ce5f999faf": "Veri Gezgini'nden sinyal seçin.",
-   "d2345c3a30": "Pano X ekseni: ‹› — bu öğe ‹› istiyor. Değiştirmek için ölçüm penceresinin X eks",
-   "d566c200a0": "Engel atlama verisi bulunamadı — önce simülasyon çalıştırın",
-   "d805beead4": "Takoz alt topolojisinde Çözücü → Hesapla ile yeniden çözün.",
-   "e4204cb571": "Rapor verisi bulunamadı — önce simülasyon çalıştırın",
    "e63af7d23b": "Yukarıdaki eşitlik her adımda tam olarak sağlanır ve sağlanmak zorundadır: ivme ",
    "f11be4cbd5": "Denge hâlinde bu artık kuvvet, ağırlığın eğim yönündeki bileşenini tam olarak ka",
-   "f385acf510": "Sütun birimi kW; ortalamalar ‹› örnek üzerinden alınmıştır. Son satırın sıfır ol",
-   "fce47159dc": "FEAD alt topolojisinde FEAD araçları → Hesapla ile yeniden çözün."
-  },
-  "js/sayi-alan.js": {
-   "c7663f6815": "“‹›” ‹› okundu. Nokta binlik ayırıcıysa noktasız yazın: ‹›"
+   "f385acf510": "Sütun birimi kW; ortalamalar ‹› örnek üzerinden alınmıştır. Son satırın sıfır ol"
   },
   "js/sensors.js": {
    "33ea9977e5": "Arka plan BSFC kontur haritası motor veritabanından gelir."
@@ -698,42 +657,16 @@
    "61992e756b": "Mevcut çalışma alanı yedekteki içerikle değiştirilecek. Devam edilsin mi?",
    "7122d06868": "Tüm yerel veriler (oturum, tema, yedek, tercihler) silinecek ve uygulama yeniden"
   },
-  "js/signal-tree.js": {
-   "5ff2430565": "‹›‹› · ‹›::‹› · ‹› — sürükle veya çift tıkla",
-   "9901447651": "Veri yok — önce simülasyonu çalıştırın"
-  },
   "js/solver-pro.js": {
    "07dc8ce4ce": "» Dinamik eğim aktif: her adımda mesafeye göre eğim güncellenir",
    "722be0c346": "✗ EKSİK — zorunlu bileşen",
    "d7f85f6837": "Şanzıman Kontrol : ✗ EKSİK"
-  },
-  "js/sonuc-tablo.js": {
-   "166bafcbfe": "Satır: ‹› / ‹› · her ‹›. örnek gösteriliyor — Kopyala ve CSV tamamını alır",
-   "2562b75c54": "Dışa aktarılacak tablo yok — önce Veri Gezgini'nden sinyal seçin.",
-   "3d6ce41d2b": "Pano bu tarayıcıda kullanılamadı — tabloyu CSV ile indirin.",
-   "5a2c16017d": "Kopyalanacak tablo yok — önce Veri Gezgini'nden sinyal seçin.",
-   "76dc7e5ecf": "‹› satır panoya kopyalandı — Excel'e yapıştırabilirsiniz."
   },
   "js/status.js": {
    "b65c707aca": "ve-status-commit-arrow"
   },
   "js/step-p21.js": {
    "aac1737027": "\"‹›\" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı."
-  },
-  "js/trace-view.js": {
-   "060d6eb88f": "veri yok — önce çözümü çalıştırın",
-   "19942a7255": "X eksenini logaritmik yap (geniş frekans aralığı okunur hâle gelir)",
-   "2959f0d357": "Yorum penceresinin boyunu sürükleyerek ayarlayın",
-   "37a63b29ce": "Y eksenini logaritmik yap (küçük değerler de okunur hâle gelir)",
-   "4a6feb0354": "En az iki şerit işaretleyin.",
-   "82dec9d1cc": "‹› sinyal eski panellerden ölçüm penceresine taşındı; her panel kendi şeridi old",
-   "8eb6b09d0a": "Hangi şeritlerin tek diyagramda birleşeceğini seç — her sinyal kendi Y ekseninde",
-   "bad457287a": "Aynı birimi paylaşan şerit yok — birleştirilecek bir şey bulunamadı.",
-   "c3f492c1e0": "3B panelin X/Y/Z sinyalleri ayrı eğriler olarak geldi. 3B kipi görünüm çubuğunda",
-   "c47d2b23e5": "‹› şerit tek diyagramda birleşti — her sinyal kendi Y ekseninde.",
-   "df3d915955": "‹› panel farklı bir X ekseninde çiziliyordu. Pencere tek eksende çalışır — o şer",
-   "df7c6b91f8": "Veri Gezgini'nden seçilen her sinyal kendi şeridinde ve kendi Y ekseninde çizili",
-   "dfffdb026b": "Seçilenler tek diyagramda toplanır; her sinyal kendi Y ekseninde kalır."
   },
   "js/ui-core.js": {
    "bf6f6bf278": "Tork Konvertörü → Şanzıman bağlantısı Şanzıman Kontrol bileşeni gerektirir."
@@ -742,12 +675,10 @@
    "052ad6f8a0": "Dosyayı buraya sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz",
    "28f24d8937": "İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.",
    "6503c7ac88": "Excel / CSV ölçüm dosyalarını okur ve diyagrama döker",
-   "f4070e09e4": "Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)",
    "fcc66448aa": "Tema — değiştirmek için tıklayın"
   },
   "viewer/js/board.js": {
    "07f6225bc6": "Henüz ölçüm yok. Yukarıdaki İçe aktar ile bir .xlsx / .csv dosyası açın.",
-   "aaf0ff12d6": "Pano X ekseni: ‹› — bu öğe ‹› istiyor. Değiştirmek için ölçüm penceresinin X eks",
    "c2966aa5d6": "X ekseni seçimi için önce bir ölçüm içe aktarın.",
    "d4569b5bf8": "Veri Gezgini'nden sinyal seçin."
   },
