@@ -76,17 +76,21 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Etkileşim **YOK**; çizim **SONUÇ GÖSTERMEZ** (katmanlar çizicide durur, pencere
   çizmez). Gölge hep açık; işaret boyu `o.isaret` (pencerede ×1,5, ölçü olan
   büyümez). DOM'suz, çizim OKUR (modeli `_mntAksoModelKur`, canlı modelden,
-  çözümsüz); görünüm tercihi modelde değil, yalnız açı. Bileşen pencerelerinin
-  **"Güç grubundaki yeri"** bu çizicinin sabit dimetriği (`o.secili` + etiket
-  `'secili'`: bileşen işaretli ve adıyla). Başlangıç sayfasının örnek karoları sade
+  çözümsüz); görünüm tercihi modelde değil, yalnız açı. Sürüklerken kare YAZILI ve
+  yazı bir önceki karenin yerini korur (yapışkan yer, `o.yer`); föyün satırı
+  parçasını **perdenin** üstüne alır (`o.secili` + `o.perde`: parça aydınlık, kalan
+  model gölgede). Bileşen pencerelerinin **"Güç grubundaki yeri"** Görünümler'in
+  AYNI bileşeni (açı ortak, sabit genişlik `data-w` — yerinde tazelemede değişmesin),
+  bileşen perdenin üstünde. Tam ekran kabın yüksekliğini doldurur. Başlangıç sayfasının örnek karoları sade
   kipi (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
   görünüş, çözümün girdisinden — `veMntAksoCozumModel`); ikisi de katsız.
   **3D Görüntüleyici YER TUTUCU** (`componentDefs['mnt-viewer'].yerTutucu`): "Klasik
   3B" yalnız yer tutucu notu, ilerleyen zamanda gerçek CAD dosyasıyla işlenecek;
   `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin sahnesi. Kapı:
-  `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *RAPOR* ·
-  *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* + `mount-pencere.spec.js` →
-  *Görünümler* · *Güç grubundaki yeri* · *3D Görüntüleyici* ·
+  `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *YAPIŞKAN
+  YER* · *PERDE* · *RAPOR* · *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* +
+  `mount-pencere.spec.js` → *Görünümler* · *Güç grubundaki yeri* · *tam ekran* ·
+  *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
@@ -529,6 +533,18 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   değişen tek şey eylemin hazırlığı (`data-cozum-durumu`: Çözücü'nün notu, Rapor'un
   çözüm durumu). Kapı: `pencere-kabuk.test.js` → *ÇÖZÜMDEN BAĞIMSIZ*; gerekçe
   `docs/decisions/ortak-yuzeyler.md`.
+- **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
+  boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
+  kalır ve tuvalde kesikli kenarla işaretlenir; başka bileşene tık içeriği
+  YERİNDE değiştirir. Kapatan yalnız ✕ · Esc · bağlam değişimi
+  (`veMufettisKapat`: proje sekmesi, modüle giriş/çıkış, yeni proje). İçerik
+  değişmeden önce odak bırakılır (yazılmış değer eski bileşene yazılsın).
+  Sütuna sığmayan bileşen açık sütunda KART olur, geniş pencere çift tıkla ya
+  da karttan açılır ve kapanınca karta döner. Çöp kutusu konuyu siler, seçimi
+  değil. Öteki sayfalarda pencere gizlenir, kapanmaz. Sütunu açan çağrı konuyu
+  sütunun altında bırakmaz: kamera yalnız yatayda, gereken kadar kayar (ölçek
+  değişmez). Kapı: `mufettis-kalir.test.js` + `mufettis-sutun.spec.js` →
+  *KALIR* · *KADRAJ*.
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

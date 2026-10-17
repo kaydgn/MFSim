@@ -57,8 +57,7 @@ async function panelAc(page, tip) {
     const n = createNode(tip, 400, 300);
     clearSelection(); addToSelection(n);
   }, tip || SUTUN_TIPI);
-  // Seçim ile AÇMA arasına nefes: modülün açılış yüzeyi yerleşirken
-  // `clearSelection` çağırıyor ve o da pencereyi kapatıyor.
+  // Seçim ile AÇMA arasına nefes: modülün açılış yüzeyi yerleşiyor.
   await page.waitForTimeout(500);
   await page.evaluate(() => veTogglePropertiesPanel(true));
   await page.waitForFunction(() =>
@@ -128,8 +127,8 @@ test('GENİŞ ekranda müfettiş açıkken TUVAL hâlâ tıklanabilir', async ({
 
   // Ve GERÇEK bir tıklama tuvale İŞ YAPTIRIYOR. İki dünyayı ayıran ölçü bu:
   // perdeli modalde aynı tıklama perdenin `onmousedown`una düşer, pencere
-  // kapanır ve SEÇİM OLDUĞU GİBİ KALIR. Sütun kipinde tıklama tuvale ulaşır,
-  // seçimi boşaltır — pencerenin kapanması da onun SONUCUdur, perdenin değil.
+  // kapanır ve SEÇİM OLDUĞU GİBİ KALIR. Sütun kipinde tıklama tuvale ulaşır ve
+  // seçimi boşaltır; pencere AÇIK KALIR (aşağıdaki *KALIR* halkası).
   const oncesi = await page.evaluate(() => selectedNodes.length);
   const k = await page.evaluate(() => {
     const r = document.getElementById('ve-split-container').getBoundingClientRect();
@@ -140,6 +139,180 @@ test('GENİŞ ekranda müfettiş açıkken TUVAL hâlâ tıklanabilir', async ({
   const sonrasi = await page.evaluate(() => selectedNodes.length);
   expect(oncesi).toBe(1);
   expect(sonrasi).toBe(0);
+});
+
+// ══ PENCERE AÇIK KALIR — kapatma ✕ ve Esc'te (kullanıcı isteği 2026-10-16) ══
+// "Bileşen pencerelerine çift tıklayınca yanda açılan pencere kalsın, boşluğa
+// veya başka bir yere tıklayınca gitmesin. Başka bir bileşene tıklayınca da
+// onun penceresi gelecek." Ölçülen eski hâl (AP örneği, 1920×952): boş alana
+// tık, başka bileşene tek tık (sütun ya da modal tipi) ve Ctrl+Z pencereyi
+// kapatıyor, tuval 1.256 → 1.636 px zıplıyordu. Halka GERÇEK fareyle yürür;
+// mekanizması tests/unit/mufettis-kalir.test.js'te.
+test('KALIR — boş alana ve başka bileşene tık pencereyi kapatmaz, içerik yerinde değişir', async ({ page }) => {
+  await bootApp(page, GENIS);
+  const kim = await page.evaluate(() => {
+    const a = createNode('differential', 400, 260), b = createNode('propshaft', 620, 260), m = createNode('engine', 400, 460);
+    clearSelection();
+    if (typeof veFitViewToContent === 'function') veFitViewToContent({ maxZoom: 1 });
+    return { a: a.id, b: b.id, m: m.id };
+  });
+  await page.waitForTimeout(600);
+  const merkez = (id) => page.evaluate((id) => {
+    const r = document.getElementById(id).getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  }, id);
+  const durum = () => page.evaluate(() => {
+    const ov = document.getElementById('ve-properties-overlay');
+    return {
+      acik: ov.classList.contains('visible') && getComputedStyle(ov).display !== 'none',
+      baslik: document.getElementById('ve-properties-title').textContent.trim(),
+      modal: document.getElementById('ve-properties').classList.contains('ve-properties--modal'),
+      kart: !!document.querySelector('.ve-properties-content .ve-prop-genis'),
+      perde: getComputedStyle(ov).backgroundColor,
+      secili: selectedNodes.length,
+      tuvalW: Math.round(document.getElementById('ve-split-container').getBoundingClientRect().width),
+      kapanis: window.__kapanis || 0,
+    };
+  });
+  const bosNokta = () => page.evaluate(() => {
+    const k = document.getElementById('ve-split-container').getBoundingClientRect();
+    for (let fy = 0.1; fy < 0.95; fy += 0.05) for (let fx = 0.05; fx < 0.95; fx += 0.05) {
+      const x = k.left + k.width * fx, y = k.top + k.height * fy, el = document.elementFromPoint(x, y);
+      if (el && el.closest('.ve-canvas-area') && !el.closest('.ve-node, button, .ve-minimap, [class*="minimap"]')) return { x: Math.round(x), y: Math.round(y) };
+    }
+    return null;
+  });
+  const tik = async (id, cift) => {
+    const m = await merkez(id);
+    if (cift) await page.mouse.dblclick(m.x, m.y); else await page.mouse.click(m.x, m.y);
+    await page.waitForTimeout(450);
+  };
+
+  await tik(kim.a, true);
+  const ilk = await durum();
+  expect(ilk.acik).toBe(true);
+  expect(ilk.baslik).toContain('Diferansiyel');
+  // Bundan sonra pencerenin bir kez bile kapanması sayılır.
+  await page.evaluate(() => {
+    window.__kapanis = 0;
+    const ov = document.getElementById('ve-properties-overlay');
+    new MutationObserver(() => { if (!ov.classList.contains('visible')) window.__kapanis++; })
+      .observe(ov, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  // 1 · boş alana tık: seçim boşalır, pencere ve tuval yerinde, konu işaretli
+  const b = await bosNokta();
+  expect(b).not.toBeNull();
+  await page.mouse.click(b.x, b.y);
+  await page.waitForTimeout(450);
+  const bos = await durum();
+  expect(bos).toMatchObject({ acik: true, secili: 0, tuvalW: ilk.tuvalW, kapanis: 0 });
+  expect(bos.baslik).toContain('Diferansiyel');
+  expect(await page.evaluate((id) => document.getElementById(id).classList.contains('ve-node--mufettis'), kim.a)).toBe(true);
+
+  // 2 · başka bileşene tek tık: içerik yerinde değişir
+  await tik(kim.b);
+  const baska = await durum();
+  expect(baska).toMatchObject({ acik: true, kapanis: 0, tuvalW: ilk.tuvalW });
+  expect(baska.baslik).toContain('Propşaft');
+
+  // 3 · yazılmış ama onaylanmamış değer, başka bileşene geçince KAYBOLMAZ
+  const alan = await page.evaluate(() => {
+    const g = [...document.querySelectorAll('.ve-properties-content input[inputmode="decimal"]')]
+      .find((x) => x.offsetParent && !x.readOnly && !x.disabled && x.id && x.getAttribute('onchange'));
+    if (!g) return null;
+    g.scrollIntoView({ block: 'center' });
+    const r = g.getBoundingClientRect();
+    return { id: g.id, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  });
+  expect(alan).not.toBeNull();
+  await page.mouse.click(alan.x, alan.y);
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('7,25');
+  await tik(kim.a);
+  expect((await durum()).baslik).toContain('Diferansiyel');
+  await tik(kim.b);
+  expect(await page.evaluate((id) => document.getElementById(id).value, alan.id)).toBe('7.25');
+
+  // 4 · sütuna sığmayan bileşen (motor): tek tık sütunda KART — perde yok, tuval yerinde
+  await tik(kim.m);
+  const kart = await durum();
+  expect(kart).toMatchObject({ acik: true, kart: true, modal: false, tuvalW: ilk.tuvalW, kapanis: 0 });
+  // çift tık geniş pencereyi açar, Esc sütuna (karta) döner, ikinci Esc kapatır
+  await tik(kim.m, true);
+  const genis = await durum();
+  expect(genis).toMatchObject({ acik: true, modal: true, kart: false });
+  expect(genis.perde).not.toMatch(/rgba\(0,\s*0,\s*0,\s*0\)|transparent/);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  expect(await durum()).toMatchObject({ acik: true, modal: false, kart: true });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  expect((await durum()).acik).toBe(false);
+
+  // 5 · Ctrl+Z pencereyi kapatmaz
+  await tik(kim.a, true);
+  await page.mouse.click(b.x, b.y);
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(500);
+  expect((await durum()).acik).toBe(true);
+
+  // 6 · başka sayfada gizli, dönünce yerinde
+  await page.evaluate(() => veSubTabDegistir('sonuclar'));
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => getComputedStyle(document.getElementById('ve-properties-overlay')).display)).toBe('none');
+  await page.evaluate(() => veSubTabDegistir('arac-performans'));
+  await page.waitForTimeout(500);
+  expect((await durum()).acik).toBe(true);
+});
+
+// ══ KONU KENDİ PENCERESİNİN ALTINDA KALMAZ ══
+// Sütun tuvali sağdan daraltır, kamera yerinde durur. Ölçülen eski hâl (AP
+// örneği isb340_tc411): sütun açılınca 1366×768'de 17 bileşenin 6'sı, 1920×952'de
+// 4'ü onun altına düşüyordu — sağdaki tekerleğe çift tık tekerleği kendi
+// penceresinin altına sokuyordu. Mekanizma: tests/unit/mufettis-kalir.test.js.
+test('KADRAJ — sütun açılınca konusu onun altında kalmaz, ölçek değişmez', async ({ page }) => {
+  await bootApp(page, GENIS);
+  const kim = await page.evaluate(() => {
+    const a = createNode('differential', 400, 260), b = createNode('propshaft', 620, 260);
+    clearSelection();
+    if (typeof veFitViewToContent === 'function') veFitViewToContent({ maxZoom: 1 });
+    // b tuvalin sağ kenarına: sütun kapalıyken tam görünür
+    const w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
+    canvasOffset.x += (w.right - 40) - document.getElementById(b.id).getBoundingClientRect().right;
+    updateCanvasTransform();
+    return { a: a.id, b: b.id };
+  });
+  await page.waitForTimeout(300);
+  const olc = (id) => page.evaluate((id) => {
+    const r = document.getElementById(id).getBoundingClientRect(), w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
+    return { sol: r.left, sag: r.right, kapSol: w.left, kapSag: w.right, zoom: canvasZoom, x: canvasOffset.x, y: canvasOffset.y };
+  }, id);
+  const once = await olc(kim.b);
+  expect(once.sag).toBeLessThanOrEqual(once.kapSag);
+  const m = { x: Math.round((once.sol + once.sag) / 2), y: await page.evaluate((id) => {
+    const r = document.getElementById(id).getBoundingClientRect(); return Math.round(r.top + r.height / 2); }, kim.b) };
+  await page.mouse.dblclick(m.x, m.y);
+  await page.waitForTimeout(450);
+  const sonra = await olc(kim.b);
+  expect(await page.evaluate(() => document.documentElement.classList.contains('ve-mufettis-acik'))).toBe(true);
+  expect(sonra.kapSag).toBeLessThan(once.kapSag - 300);          // tuval gerçekten daraldı
+  expect(sonra.sag).toBeLessThanOrEqual(sonra.kapSag);           // konu görünür alanda
+  expect(sonra.sol).toBeGreaterThanOrEqual(sonra.kapSol);
+  expect(Math.abs(sonra.kapSag - 24 - sonra.sag)).toBeLessThan(1.5);   // yalnız gereken kadar
+  expect(sonra.zoom).toBe(once.zoom);
+  expect(sonra.y).toBe(once.y);
+  // Kapanış kamerayı geri oynatmaz; görünen konuya çift tık kamerayı oynatmaz.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(350);
+  const kapali = await olc(kim.a);
+  expect(kapali.x).toBe(sonra.x);
+  const a = await page.evaluate((id) => { const r = document.getElementById(id).getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; }, kim.a);
+  await page.mouse.dblclick(a.x, a.y);
+  await page.waitForTimeout(450);
+  expect((await olc(kim.a)).x).toBe(sonra.x);
 });
 
 test('DAR ekranda modal davranış BİREBİR duruyor', async ({ page }) => {

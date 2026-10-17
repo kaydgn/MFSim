@@ -165,6 +165,10 @@ olurdu.
     düzenlenen hücrenin odağını, çizimde fare altındaki öğeyi düşürürdü. Ölçüldü: çağrı
     olmadan işaret hiç tazelenmiyor ve tabloda paneli AÇIK OLMAYAN bir satır
     işaretli kalıyor — işaretin hiç olmamasından kötü.
+    **Pencere seçim boşalınca da açık kalır** (2026-10-16, ortak kural): seçim
+    yoksa işaret AÇIK pencerenin kasnağında (`_feadSelectedId` →
+    `veMufettisKonusu`), pencere kapanınca söner; tablo tazelemesi de konuyla
+    (`veFeadTableAfterEdit`). Kapı: `fead-table.test.js` → *seçim boşken*.
 12. **Negatif kapı (kutu döneminden kalan): `veFeadApplyBadge` kasnak kutusuna
     kesikli çember ÇİZMEZ.** Kasnakların kutusu artık hiç yok, yani rozet de
     çizilmiyor; kapı yine de duruyor çünkü "gerçek çap hayaleti" fikri geri

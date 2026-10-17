@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 1092,
+ "sayi": 1091,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -920,7 +920,6 @@
    "e5a5b8aacd": "Her gövdenin ataleti kendi CG’sinde girildi ve program onları ortak CG’ye taşıyı"
   },
   "js/map.js": {
-   "0056fa6e3a": "Özellikleri burada açılır",
    "389a890603": "Topolojide Senaryolar bileşeni bulunamadı. Önce ekleyin.",
    "44e899d549": "Bu bileşen, güç akış zincirini burada keser. Çözücü, bu noktaya kadar olan bileş",
    "51ce251395": "Henüz eğim çizgisi yok. Grafikte sol tık ile çizin.",

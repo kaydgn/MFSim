@@ -146,7 +146,8 @@ function _gmSec2(){
       'Modeli gözle denetleme yüzeyleri; Görünümler modeli aksonometrik çizer ve serbestçe '
       + 'döndürür (sol tık + sürükle: döndür, tekerlek: yakınlaştır, sağ tık: kaydır; '
       + 'başlıktaki düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar), '
-      + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir; 3D Görüntüleyici '
+      + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir (föyün satırının '
+      + 'üstüne gelince o parça çizimde aydınlanır, modelin geri kalanı gölgeye düşer); 3D Görüntüleyici '
       + 'gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12'],
     ['<strong>Parametrik Analiz</strong>', 'Katalogdan seçim: takoz gruplarına kütüphanedeki '
@@ -228,8 +229,9 @@ function _gmSec4(){
     + '<strong>Atalet</strong>); tipe göre değişenler onların altındadır (bölüm 5). Bir alan '
     + 'eksikse pencerenin en üstünde <strong>eksik bandı</strong> belirir. Sağ sütundaki '
     + '<strong>Güç grubundaki yeri</strong> '
-    + 'krokisi gövdeyi modelin geri kalanıyla birlikte aksonometrik (dimetrik) çizer: bu gövde '
-    + 'vurgulu ve adıyla, öteki işaretlerin bilgisi farenin altında.</p>';
+    + 'Görünümler’in çizimidir ve onunla aynı açıda döner (sol tık + sürükle; başlıktaki '
+    + 'düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar): bu gövde aydınlık '
+    + 've adıyla, modelin geri kalanı gölgede; öteki işaretlerin bilgisi farenin altında.</p>';
   h += _gmAdimlar([
     'Gövdeye çift tıklayın.',
     '<strong>Kütle</strong> bölümüne kütleyi (kg), <strong>Ağırlık merkezi</strong> föyüne '
