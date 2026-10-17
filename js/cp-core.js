@@ -182,7 +182,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Parametrik Analiz — grup, aday ve kısıt föyleri.
   'mnt-parametric',
-  // Çözücü artık sekmeli bir pencere (yük kitabı · modlar · ayarlar) — FEAD
+  // Çözücü çok bölümlü bir pencere (yük kitabı · yöntem · şok darbesi) — FEAD
   // çözücüsü gibi geniş; dar "eylem kartı" listesinden çıktı.
   'mnt-solver',
   // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri.
@@ -246,7 +246,7 @@ function showNodeProperties(node, opt) {
   if(degisti && typeof _veMufettisGirdiyiYaz === 'function') _veMufettisGirdiyiYaz();
   // Başka bir bileşen açıldığında pencereyi ORTALA — önceki bileşenin
   // sürüklenmiş konumunu miras alma. Aynı bileşenin içeriği yerinde
-  // yenilenirken (sekme/profil değişimi) konumu koru → sürüklediğin yer bozulmaz.
+  // yenilenirken (profil, katalog seçimi) konumu koru → sürüklediğin yer bozulmaz.
   if(typeof VEWindowDrag !== 'undefined' && VEWindowDrag && typeof VEWindowDrag.resetToCenter === 'function') {
     if(degisti) VEWindowDrag.resetToCenter();
   }
@@ -390,8 +390,11 @@ function showNodeProperties(node, opt) {
   
   
   content.innerHTML = html;
-  // Başka bileşenin penceresi EN ÜSTTEN açılır: kaydırıcı aynı öğe, değeri
-  // önceki bileşenden kalıyordu.
+  // BAŞKA BİLEŞENİN PENCERESİ EN ÜSTTEN açılır, aynı bileşenin yenilenmesi
+  // (katalog seçimi, onay kutusu) kaydırmayı korur. Kaydırıcı aynı öğe ve
+  // değeri önceki bileşenden kalıyordu: tek gövdede (2026-10-16 — kategoriler
+  // sekme değil, alt alta) Kayış'ta 700 px aşağıdayken Çözücü 700 px'ten
+  // açılıyordu (ölçüldü). Kapı: fead-sekme-durum.spec.js → "KAYDIRMA".
   if(degisti) content.scrollTop = 0;
   if(kart) {
     if(typeof _veMufettisSinifSifirla === 'function') _veMufettisSinifSifirla();

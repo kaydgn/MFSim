@@ -133,8 +133,8 @@ function veFeadReportKind(node){
 // Görünüm artık CSS'te (`.ve-fp-tur*` · `.ve-fp-durum*` — FEAD pencere ailesinin sınıfları; kılavuzun söküm önekine kendiliğinden girer), durum ifade edebiliyor.
 //
 // KÜNYE ARTIK MODEL ÇÖZÜLMEDEN DE DOLDURULABİLİR: alanların tüketicisi antet
-// (kural 25) ve belge bilgisini çözümden önce girmek meşru; sekme kümesi
-// çözüm durumuna göre değişseydi sekmeler görünüp kaybolurdu.
+// (kural 25) ve belge bilgisini çözümden önce girmek meşru; kategori kümesi
+// çözüm durumuna göre değişseydi bölümler görünüp kaybolurdu.
 function getFeadReportPropertiesHTML(node){
   if(!node.data) node.data = {};
   var R = _frResults();
@@ -954,14 +954,14 @@ function _frBeltTable(R){
     h += tr('En küçük kasnak çapı', _frFs(bp.minPulleyDia, 0), 'mm', 'profil sınırı');
     h += tr('Azami kayış hızı', _frFs(bp.maxSpeedMs, 0), 'm/s', 'profil sınırı');
   }
-  // SERVİS FAKTÖRÜ c₂ — kayışın Tasarım sekmesinden; çözümün dondurduğu değer
+  // SERVİS FAKTÖRÜ c₂ — kayışın Tasarım kategorisinden; çözümün dondurduğu değer
   // (kural 48). Kaynak hücresiyle yazılır: aynı sayı tabloda birden çok hücrede.
   var _svB = _frServis(R);
   h += tr('Servis faktörü c₂ (kayma tasarım yükü)', _svB.secili ? _svB.yaz : '1', '—',
           _svB.kaynak === 'tablo' ? 'yük katsayısı tablosu: ' + _frEsc(_svB.etiket)
           : (_svB.kaynak === 'kayit' ? 'kayıtlı değer — tablodan seçilmedi' : 'seçilmedi — gerçek yük'));
   h += '</table>';
-  // KESİT FİGÜRÜ — pencerenin Boy sekmesindekiyle TEK üretici (basım paleti).
+  // KESİT FİGÜRÜ — pencerenin Boy kategorisindekiyle TEK üretici (basım paleti).
   var kes = '';
   try { if(typeof veFeadKesitSVG === 'function') kes = veFeadKesitSVG(b.profile, b.brand, { print: true, maxW: 420, kord: _ko }); }
   catch(e){ kes = ''; }
@@ -2656,7 +2656,7 @@ function _frTorsionalSection(R){
     h += '<div class="note warn"><span class="t">Hesaplanamadı</span>'
        + 'Burulma modeli her kasnağın atalet momentini, gergi kolunun ataletini ve gergi kasnağının '
        + 'kütlesini ister. Bunlardan biri eksikse model kurulamaz — eksik olan alan Çözücü penceresinin '
-       + 'Model sekmesindeki uyarılarda yazılıdır. Tedarikçi raporunun "System Vibration Analysis" sayfası bu '
+       + 'Algılanan model bölümündeki uyarılarda yazılıdır. Tedarikçi raporunun "System Vibration Analysis" sayfası bu '
        + 'değerleri listeler.</div>';
     return h;
   }

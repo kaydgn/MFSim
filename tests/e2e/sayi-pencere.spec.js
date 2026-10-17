@@ -115,15 +115,12 @@ for (const [modul, M] of Object.entries(MODULLER)) {
         clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
         await new Promise((r) => setTimeout(r, 500));
         const ic = document.querySelector('.ve-properties-content');
-        const sekmeler = [...ic.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'));
         const parca = [], gor = new Set();
         const ekle = (a) => { if (a && !gor.has(a)) { gor.add(a); parca.push(a); } };
-        for (const k of (sekmeler.length ? sekmeler : [null])) {
-          if (k) { veFeadPanelTab(n.id, k); await new Promise((r) => setTimeout(r, 80)); }
-          const tw = document.createTreeWalker(ic, NodeFilter.SHOW_TEXT);
-          let t; while ((t = tw.nextNode())) { const p = t.parentElement; if (p && !p.closest('script,style')) ekle(t.nodeValue); }
-          ic.querySelectorAll('[title]').forEach((e) => ekle(e.getAttribute('title')));
-        }
+        // Kategoriler tek gövdede (2026-10-16): bütün metin tek geçişte.
+        const tw = document.createTreeWalker(ic, NodeFilter.SHOW_TEXT);
+        let t; while ((t = tw.nextNode())) { const p = t.parentElement; if (p && !p.closest('script,style')) ekle(t.nodeValue); }
+        ic.querySelectorAll('[title]').forEach((e) => ekle(e.getAttribute('title')));
         window.__olcKayit = false;
         window.__olcFill.forEach(ekle);
         veTogglePropertiesPanel(false); await new Promise((r) => setTimeout(r, 200));

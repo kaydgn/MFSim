@@ -263,7 +263,7 @@ describe('KAYIŞ PENCERESİ VE SİHİRBAZ — tek liste, tek alan', () => {
     expect(s[0][1]).toMatch(/Gates kataloğu · h_b 1,20/);
     expect(s[1][1]).toMatch(/CAD eskizi · h_b 1,50/);
   });
-  test('pencere seçiciyi Profil sekmesinde basar, seçili olan alanın değeri; ipucu hesaptaki çifti söyler', () => {
+  test('pencere seçiciyi Profil ve marka bölümünde basar, seçili olan alanın değeri; ipucu hesaptaki çifti söyler', () => {
     const n = tekKayis({ lengthMode: 'fixed', effLength: 1410, profile: 'PK', brand: 'GATES', hesapCap: 'cad', hbCad: 1.5, hrCad: 1.5 });
     const d = document.createElement('div');
     d.innerHTML = fead.getFeadBeltPropertiesHTML(n);
@@ -301,6 +301,6 @@ describe('KILAVUZ — açıklama kılavuzda, sihirbazda değil', () => {
     for (const s of ['Kord (d<sub>w</sub>) · marka kataloğu', 'Kord (d<sub>w</sub>) · CAD eskizi', 'Kasnak dış çapı (d<sub>b</sub>)'])
       expect(src).toContain(s);
     expect(src).toMatch(/kayış için tektir/);
-    expect(src).toMatch(/Profil<\/b> sekmesi → <em>Hesap çapı<\/em>/);
+    expect(src).toMatch(/Profil ve marka<\/b> → <em>Hesap çapı<\/em>/);   // bölümün başlığı (sekme yok)
   });
 });

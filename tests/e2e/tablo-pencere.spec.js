@@ -11,7 +11,8 @@
  * sekme): FEAD Çözücü'nün çalışma çevrimi tablosu 1162 px / görünen 359 px;
  * AP motor-şanzıman eşleştirme tablosu 337 / 335 px ("Seç" düğmesi tablonun
  * 2,2 px dışında). Eski sığma taraması yalnız AÇILIŞ sekmesini ölçüyordu —
- * çevrim tablosu "Çevrim" sekmesinde olduğu için hiç görülmedi.
+ * çevrim tablosu "Çevrim" sekmesinde olduğu için hiç görülmedi. Pencereler
+ * 2026-10-16'dan beri tek gövde: her tablo açılışta görünür ve ölçülür.
  *
  * Node'da koşamaz: jsdom `scrollWidth`i hep 0 döndürür, `ResizeObserver`ı
  * yoktur ve bir yazının hangi katmanın üstünde olduğunu bilmez.
@@ -47,34 +48,30 @@ const FEAD = "if (typeof veFeadWizClose === 'function') veFeadWizClose(false); v
 const AP = "let ex = nodes.find((x) => x.type === 'ap-example'); if (!ex) ex = createNode('ap-example', 300, 200);"
   + " ex.data = ex.data || {}; ex.data.exampleKey = 'isb340_tc411'; veApLoadExample(ex.id);";
 
-// Açık pencerenin HER sekmesinde, içeride yatay kayan bir kap var mı.
+// Açık pencerenin gövdesinde (bütün kategoriler), içeride yatay kayan bir kap var mı.
 const yatayKayanlar = async (tip) => {
   const n = nodes.find((x) => x.type === tip) || createNode(tip, 900, 800);
   clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
   await new Promise((r) => setTimeout(r, 700));
   const ic = document.querySelector('.ve-properties-content');
   const out = [];
-  const sekmeler = [...ic.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'));
-  for (const k of (sekmeler.length ? sekmeler : [null])) {
-    if (k) { veFeadPanelTab(n.id, k); await new Promise((r) => setTimeout(r, 120)); }
-    ic.querySelectorAll('*').forEach((el) => {
-      if (!el.offsetWidth || el === ic) return;
-      if (/(auto|scroll)/.test(getComputedStyle(el).overflowX) && el.scrollWidth > el.clientWidth + 1)
-        out.push(`${tip}${k ? ':' + k : ''} ${el.scrollWidth}/${el.clientWidth} px`);
-    });
-  }
+  ic.querySelectorAll('*').forEach((el) => {
+    if (!el.offsetWidth || el === ic) return;
+    if (/(auto|scroll)/.test(getComputedStyle(el).overflowX) && el.scrollWidth > el.clientWidth + 1)
+      out.push(`${tip} ${el.scrollWidth}/${el.clientWidth} px`);
+  });
   veTogglePropertiesPanel(false);
   await new Promise((r) => setTimeout(r, 250));
   return out;
 };
 
-test('sütunda YATAY KAYDIRMA YOK — FEAD pencerelerinin her sekmesi', async ({ page }) => {
+test('sütunda YATAY KAYDIRMA YOK — FEAD pencerelerinin bütün gövdesi', async ({ page }) => {
   await modulAc(page, 'fead-analysis', FEAD);
   const tipler = await page.evaluate(() => [...new Set(nodes.map((n) => n.type))].filter((t) => /^fead-/.test(t)));
   expect(tipler.length).toBeGreaterThanOrEqual(10);        // tarama gerçekten açıyor
   const fead = [];
   for (const t of tipler) fead.push(...await page.evaluate(yatayKayanlar, t));
-  // Eski hâl: "fead-solver:cev 1162/359 px".
+  // Eski hâl: "fead-solver:cev 1162/359 px" (çevrim o gün çözücünün sekmesindeydi).
   expect(fead).toEqual([]);
 });
 
@@ -95,7 +92,7 @@ test('çalışma çevrimi: kart → küçük pencere → hücre modeli yazar →
     return { id: n.id, depo: nodes.find((x) => x.type === 'fead-solver').id };
   });
   await page.waitForTimeout(700);
-  await page.evaluate((i) => veFeadPanelTab(i, 'cev'), id);
+  await page.evaluate((i) => vePencereKategoriGit(i, 'cev'), id);   // çevrim gövdede: oraya kaydırılır
   await page.waitForTimeout(300);
 
   // 1) SÜTUNDA: tablo katlı, yerinde özet kartı.

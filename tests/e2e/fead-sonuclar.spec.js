@@ -53,20 +53,13 @@ async function feadCoz(page, boy) {
 
 test('çözücü penceresi → "Sonuçlar\'da aç" → FEAD sekmesi, başlangıç kartı sayfa boyu', async ({ page }) => {
   const { hatalar, sv } = await feadCoz(page);
-  // Çözücü penceresini aç ve Sonuç sekmesine geç
+  // Çözücü penceresini aç — Sonuç bölümü gövdede (2026-10-16'dan beri sekme değil)
   await page.evaluate((id) => {
     if (typeof clearSelection === 'function') clearSelection();
     addToSelection(nodes.find((n) => n.id === id));
     veTogglePropertiesPanel(true);
   }, sv);
   await page.waitForTimeout(250);
-  await page.evaluate(() => {
-    // Sekme ADI kendi öğesinde: sekme 2026-09-26'dan beri adının altında
-    // DURUMUNU da taşıyor, tüm metin artık yalnız "Sonuç" değil.
-    const ad = (x) => (x.querySelector('.ve-fp-tab-ad') || x).textContent;
-    const b = [...document.querySelectorAll('button, [role=tab]')].find((x) => /^\s*Sonuç\s*$/.test(ad(x)));
-    if (b) b.click();
-  });
   const ac = page.locator('.ve-fr-ac');
   await expect(ac).toBeVisible();
   await expect(page.locator('.ve-properties-content .ve-fr-kpi')).toHaveCount(10);

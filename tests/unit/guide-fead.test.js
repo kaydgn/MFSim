@@ -1539,13 +1539,43 @@ describe('güncellik: kılavuz ↔ programın bugünkü yüzeyleri', () => {
     expect(KENDI).toContain('çözüm İSTEMEZ');
   });
 
-  test('SEKME ADI DURUM TAŞIR — kılavuz "Doldur"u programın adıyla anlatıyor', () => {
-    // Kural 35: eksik alanı sekme şeridi söyler ve "Doldur" o ALANA gider.
-    const SRC = io_read('js/cp-fead.js');
-    expect(SRC).toContain('veFeadSekmeDurumlari');
-    expect(SRC).toContain('Doldur');
+  test('EKSİK BANDI — kılavuz "Doldur"u programın adıyla anlatıyor', () => {
+    // Kural 35: eksiği gövdenin üstündeki bant söyler ve "Doldur" o ALANA gider.
+    // Bağlantının adı ortak kitte (js/pencere-kabuk.js) — kılavuz onu yazmalı.
+    const KIT = io_read('js/pencere-kabuk.js');
+    expect(io_read('js/cp-fead.js')).toContain('veFeadSekmeDurumlari');
+    expect(KIT).toContain("'Doldur'");
     expect(KENDI).toContain('Doldur');
-    expect(KENDI).toContain('sekmenin ilk boş alanına değil');
+    expect(KENDI).toContain('eksik bandı');
+    expect(KENDI).toContain('bölümün ilk boş alanına değil');
+  });
+
+  test('PENCERELERDE SEKME YOK — kılavuz bileşen penceresini sekmeyle anlatmıyor', () => {
+    // 2026-10-16: kategoriler tek gövdede alt alta (js/pencere-kabuk.js). Kılavuzda
+    // kalan "X sekmesi" kullanıcıyı olmayan bir sekmeyi aramaya gönderir. Kalabilen
+    // tek "sekme" Sonuçlar sayfasının FEAD sekmesi (başlığı "Sonuçlar sayfası"
+    // olan alt bölüm ve hemen önünde Sonuçlar/FEAD kayış tahriki geçen yer) ve
+    // klavyenin Sekme tuşu — izin bağlamdan okunur, liste tutulmaz. Şeklin
+    // ALTYAZISI da metindir (sahnenin kendisi programın penceresi, o hariç).
+    const metinOf = (html) => html
+      .replace(/<figure class="appfig">[\s\S]*?<\/figure>/g,
+        (f) => (f.match(/<figcaption>[\s\S]*?<\/figcaption>/) || [''])[0])
+      .replace(/<style[\s\S]*?<\/style>/g, '')
+      .replace(/<[^>]+>/g, (t) => (/^<\/?strong>$/.test(t) ? t : ' '));
+    const bulgu = [];
+    DOC.split(/(?=<h[23][\s>])/).forEach((bolum) => {
+      const baslik = (bolum.match(/^<h[23][^>]*>([\s\S]*?)<\/h[23]>/) || ['', ''])[1];
+      if (/Sonuçlar sayfası/.test(baslik)) return;
+      const metin = metinOf(bolum);
+      const re = /sekme\w*/gi; let m;
+      while ((m = re.exec(metin))) {
+        const once = metin.slice(Math.max(0, m.index - 45), m.index);
+        if (/Sonuçlar|FEAD kayış tahriki/.test(once)) continue;
+        if (metin.slice(Math.max(0, m.index - 8), m.index + 15).indexOf('<strong>Sekme</strong>') >= 0) continue;
+        bulgu.push(metin.slice(Math.max(0, m.index - 70), m.index + 30).replace(/\s+/g, ' '));
+      }
+    });
+    expect(bulgu).toEqual([]);
   });
 
   test('RAPOR TÜRÜ SAYISI raporun KENDİ listesinden', () => {

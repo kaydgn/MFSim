@@ -197,7 +197,8 @@ describe('PENCERE — yalnız girdi', () => {
   test('üç kategori; sağ sütunda analiz adı, büyüklüğü, cevap ve tek eylem', () => {
     modelKur('kamyon');
     const d = dom(P.getMntParamPropertiesHTML(node()));
-    expect([...d.querySelectorAll('.ve-fp-tab')].map((t) => t.textContent.trim())).toEqual(['Gruplar', 'Adaylar', 'Kısıtlar']);
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kısıtlar']);
+    expect(d.querySelector('.ve-fp-tab')).toBeNull();                       // tek gövde (2026-10-16)
     expect(d.querySelector('.ve-fp-side .ve-fp-sect b').textContent).toBe('Katalogdan seçim');
     expect([...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value)).toEqual(['2', '27', '729']);
     expect(d.querySelector('.ve-fp-side .ve-fp-durum').textContent).toBe('Taramaya hazır');
@@ -249,13 +250,13 @@ describe('PENCERE — yalnız girdi', () => {
     document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
     const dugme = () => document.getElementById('ve-mnt-param-btn-pa');
     expect(dugme().disabled).toBe(false);
-    const sekme = document.querySelector('#ve-fp-tabs-pa');                 // pencere kurulmuyor: aynı öğe kalmalı
+    const govde = document.querySelector('#ve-fp-panes-pa');                // pencere kurulmuyor: aynı öğe kalmalı
     n.data.haric = Object.keys(cp.veMntGetLibraryMap());
     expect(cp.veMntPencereTazele()).toBeGreaterThan(0);
     expect(dugme().disabled).toBe(true);
     expect(document.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Aday tip yok');
     expect([...document.querySelectorAll('#ve-mnt-param-ozet-pa input')].map((i) => i.value)).toEqual(['2', '0', '0']);
-    expect(document.querySelector('#ve-fp-tabs-pa')).toBe(sekme);
+    expect(document.querySelector('#ve-fp-panes-pa')).toBe(govde);
     delete n.data.haric;
     cp.veMntPencereTazele();
     expect(dugme().disabled).toBe(false);

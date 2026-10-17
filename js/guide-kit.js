@@ -576,7 +576,13 @@ function _gkFlatten(html, no){
 // kimlik uydurmak, kartın adı değişince sessizce boş şekil demekti.
 function veGuideCard(panelHtml, baslik){
   var s = String(panelHtml || '');
-  var i = s.indexOf('>' + baslik + '<');
+  // ÖNCE BÖLÜM BAŞLIĞI (`.ve-fp-sect > b`): ad metnin başka bir yerinde de
+  // geçebilir — "Katalog modeli" kartı "Devir sınırları"nı anıyor. Pencere
+  // sekmeliyken ilk geçiş sekmenin etiketiydi ve ayıklayıcı (yanlışlıkla)
+  // BÜTÜN paneli döndürüyordu; tek gövdede (2026-10-16) ilk geçiş başka bir
+  // kartın içine düşüyordu. Başlıkta yoksa eski arama.
+  var bm = new RegExp('<div class="ve-fp-sect"[^>]*><b>' + baslik.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '</b>').exec(s);
+  var i = bm ? bm.index + bm[0].indexOf('>' + baslik + '<') : s.indexOf('>' + baslik + '<');
   if(i < 0) return '';
   // ── KART KUTUSU ARTIK BİR SINIF, SATIR İÇİ ÇERÇEVE DEĞİL ────────────────
   // FEAD panelleri ortak dile geçince (`.ve-fp-*`) kart kutusu

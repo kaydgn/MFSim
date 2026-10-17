@@ -14,7 +14,7 @@
  *     KİMLİKLE bulur.
  *   · TEK KAYNAK — CG farkı çekirdeğin combineMassProps'u, mil torku
  *     çözücünün tork durumu, Rapor'un girdileri raporun okuduğu yedekler.
- *   · ÇÖZÜCÜNÜN BOŞ ALAN KURALI — boş alan pencerede de 0'dır ve sekme
+ *   · ÇÖZÜCÜNÜN BOŞ ALAN KURALI — boş alan pencerede de 0'dır ve pencere
  *     bunu "eksik" diye söyler.
  *   · YERİNDE TAZELEME — düzenleme pencereyi kurmaz; türetilen alanlar
  *     tazelenir, odaktaki girdi aynı eleman kalır.
@@ -144,7 +144,7 @@ describe('TEK KAYNAK — pencere raporun ve çekirdeğin sayısını okur', () =
     const dx = html.match(/id="ve-mnt-amd-0-[^"]+" data-tazele>([^<]+)</)[1];
     expect(dx).toBe(veSayi(124.96 - cg[0], 1, { eksi: '−' }));
     expect(dx).toBe('−457,5');
-    // Boş Y: pencere de 0 alır ve sekme bunu söyler
+    // Boş Y: pencere de 0 alır ve kategori durumu (bant) bunu söyler
     motor().data.cgy = '';
     expect(cp._mntKutleDurumu(motor()).yazi).toBe('CG eksik');
   });
@@ -155,7 +155,7 @@ describe('TEK KAYNAK — pencere raporun ve çekirdeğin sayısını okur', () =
     const fwd = cp._mntToSI(cp._mntGatherForSolver(), 9.81).loadCases.find((c) => c.name === 'Forward Torque');
     expect(Z.ileri).toBeCloseTo(-fwd.T[0], 9);
     expect(Math.round(Z.ileri)).toBe(12761);          // 760 · 1,58 · 3,10 · 3,428
-    // Boş transfer oranı çözücüde 1'dir: zincir onu kullanır, Transfer sekmesi eksik der
+    // Boş transfer oranı çözücüde 1'dir: zincir onu kullanır, Tahrik kategorisi eksik der
     bul((n) => n.type === 'mnt-transfer').data.iTransfer = '';
     expect(Math.round(cp._mntTorkZinciri().ileri)).toBe(Math.round(760 * 1.58 * 3.10));
     expect(cp._mntTahrikDurumu(bul((n) => n.type === 'mnt-transfer')).d).toBe('eksik');
@@ -172,7 +172,7 @@ describe('TEK KAYNAK — pencere raporun ve çekirdeğin sayısını okur', () =
   });
 });
 
-describe('SEKME DURUMU — boş alan çözücüde 0 ya da ret demek', () => {
+describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => {
   test('atalet: geçerli → tamam · hane kayması (14,7 → 147) → fiziksel değil · boş → atalet yok', () => {
     tulga();
     expect(cp._mntKutleDurumu(motor()).d).toBe('ok');
@@ -193,7 +193,7 @@ describe('SEKME DURUMU — boş alan çözücüde 0 ya da ret demek', () => {
     expect(A.kutu.map((v) => Math.round(v * 1000))).toEqual([650, 355, 544]);
   });
 
-  test('takoz: eksen takası (TK040 kalıbı) oran yayılımını 1,5 üstüne çıkarır → sekme "oran?"', () => {
+  test('takoz: eksen takası (TK040 kalıbı) oran yayılımını 1,5 üstüne çıkarır → durum "oran?"', () => {
     tulga();
     const t = onTakoz();
     expect(cp._mntOranYayilim(t.data).yayilim).toBeCloseTo(1.042, 2);
@@ -346,16 +346,22 @@ describe('YERİNDE TAZELEME — pencere kurulmaz, odak kalır', () => {
       .toBe('%' + veSayi(500 / toplam * 100, 1, { eksi: '−' }) + ' · ' + veSayi(toplam, 1, { eksi: '−' }) + ' kg içinde');
   });
 
-  test('silindir girilince sekme durumu "tamam"a döner ve eksik bandı kalkar', () => {
+  test('silindir girilince kategori durumu "tamam"a döner ve eksik bandı kalkar', () => {
     tulga();
     const m = motor();
     ac(m);
+    const kat = document.querySelector('#ve-fp-panes-' + m.id + ' > .ve-fp-kat[data-k="motor"]');
+    expect(kat.getAttribute('data-d')).toBe('eksik');
     expect(document.getElementById('ve-fp-eksik-' + m.id)).not.toBeNull();
     m.data.cylinders = '6';
     cp.veMntPencereTazele();
-    const sekme = document.querySelector('#ve-fp-tabs-' + m.id + ' .ve-fp-tab[data-k="motor"]');
-    expect(sekme.getAttribute('data-d')).toBe('ok');
+    expect(document.querySelector('#ve-fp-panes-' + m.id + ' > .ve-fp-kat[data-k="motor"]')).toBe(kat);   // kurulmadı
+    expect(kat.getAttribute('data-d')).toBe('ok');
     expect(document.getElementById('ve-fp-eksik-' + m.id)).toBeNull();
+    m.data.cylinders = '';                                              // geri boşaltılınca bant geri gelir
+    cp.veMntPencereTazele();
+    expect(kat.getAttribute('data-d')).toBe('eksik');
+    expect(document.getElementById('ve-fp-eksik-' + m.id).nextElementSibling.id).toBe('ve-fp-panes-' + m.id);
   });
 
   // Rapor penceresinin İÇERİK bölümü ve cevap kutusu raporun HAZIRLIĞIdır
@@ -417,13 +423,14 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     expect(css).not.toMatch(/\.ve-mk-[a-z]+[ ,{]/);                  // eski 2B krokinin kuralları gitti
   });
 
-  test('FEAD\'in sekme DOM sözleşmesi: şerit ve gövde kimlikleri, gizli sekme `hidden`', () => {
+  test('FEAD\'in DOM sözleşmesi: tek gövde, kategoriler alt alta — şerit ve gizli kategori yok', () => {
     tulga();
     const html = cp.getMntMountPropertiesHTML(onTakoz());
     const id = onTakoz().id;
-    expect(html).toContain('id="ve-fp-tabs-' + id + '"');
     expect(html).toContain('id="ve-fp-panes-' + id + '"');
-    expect(html).toMatch(/<div data-k="konum" role="tabpanel" hidden>/);
+    expect(html).not.toContain('ve-fp-tabs');
+    expect(html).not.toMatch(/role="tabpanel"|\shidden[\s>]/);
+    expect(html).toMatch(/<div class="ve-fp-kat" data-k="konum" data-d="ok" tabindex="-1" aria-label="Konum">/);
   });
 
   test('Hesapla ilerlemesi düğmenin içinde; bitince düğme bırakılır', () => {

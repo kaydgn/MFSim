@@ -312,17 +312,17 @@ describe('pencereler duyarlılığı göstermez — yalnız rapor §8.17', () =>
     const Rx = cp._mntComputeResults(s.id); global._veMntLast = Rx;
     return { s, Rx };
   };
-  const sekmeler = (d) => [...d.querySelectorAll('.ve-fp-tab .ve-fp-tab-ad')].map((x) => x.textContent);
+  const kategoriler = (d) => [...d.querySelectorAll('.ve-fp-kat')].map((x) => x.getAttribute('aria-label'));
   const bolumler = (d) => [...d.querySelectorAll('.ve-fp-sect b')].map((x) => x.textContent);
   test('çözüm R.sensitivity yazar; Çözücü\'de Modlar · Kaldıraçlar, takozda Duyarlılık yok', () => {
     const { s, Rx } = kurHafif();
     expect(Rx.sensitivity).toHaveLength(6);
     const cz = dom(cp.getMntSolverPropertiesHTML(s));
-    expect(sekmeler(cz)).toEqual(['Yük durumları', 'Ayarlar']);   // pencere gerçekten kuruldu
+    expect(kategoriler(cz)).toEqual(['Yük durumları', 'Ayarlar']);   // pencere gerçekten kuruldu
     expect(bolumler(cz)).not.toContain('Kaldıraçlar');
     const n = global.nodes.find((x) => x.customName === 'Sol Motor Takozu');
     const tk = dom(cp.getMntMountPropertiesHTML(n));
-    expect(sekmeler(tk)).toEqual(['Tip ve rijitlik', 'Konum']);
+    expect(kategoriler(tk)).toEqual(['Tip ve rijitlik', 'Konum']);
     expect(bolumler(tk)).not.toContain('Duyarlılık');
     expect(tk.querySelector('td.en')).toBeNull();
   });

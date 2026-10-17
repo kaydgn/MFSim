@@ -77,7 +77,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   expect(lib.kapi).toBe(true);
 
   // ── 2) SÜRÜCÜ KASNAĞIN PENCERESİ: MOTOR KATALOĞU GERÇEK SEÇİMLE ───────
-  // Motor künyesi 2026-09-28'de Çözücü'den SÜRÜCÜ KASNAĞIN Motor sekmesine
+  // Motor künyesi 2026-09-28'de Çözücü'den SÜRÜCÜ KASNAĞIN Motor bölümüne
   // taşındı (kullanıcı kararı); veri yine çözücü düğümünde durur — işletme
   // deposu. Çözücü'nün penceresi ("Ayarlar") artık yalnız yöntem · model ·
   // sonuç: orada motor seçicisi YOK.
@@ -85,7 +85,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
     window.nodes.find((n) => n.type === 'fead-solver').id);
   await page.click('#ve-fead-araclar .ve-fead-arac-govde [data-ey="ayarlar"]');
   await page.waitForTimeout(400);
-  await expect(page.locator('.ve-fp-tab[data-k="yon"]')).toHaveCount(1);
+  await expect(page.locator('.ve-fp-kat[data-k="yon"]')).toHaveCount(1);
   await expect(page.locator('select[onchange*="veFeadApplyEngineLib"]')).toHaveCount(0);
 
   const drvId = await page.evaluate(() => {
@@ -94,7 +94,7 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   });
   await page.evaluate((id) => showNodeProperties(window.nodes.find((x) => x.id === id)), drvId);
   await page.waitForTimeout(300);
-  await page.click('.ve-fp-tab[data-k="mot"]');
+  // Kategoriler tek gövdede (2026-10-16): seçici sekme açmadan görünür.
   const motorSec = page.locator('select[onchange*="veFeadApplyEngineLib"]');
   await expect(motorSec).toHaveCount(1);
   await expect(motorSec).toBeVisible();
@@ -124,11 +124,9 @@ test('katalog seçimi ve üç kapı — panel, çözüm ve rapor', async ({ page
   }, altId);
   await page.waitForTimeout(300);
 
-  // MODEL SEÇİCİSİ TEK VE "ROL" SEKMESİNDE (2026-09-28): BMC künyesi ile Araç
-  // Performans modeli tek listede, değer ön ekli (`bmc:` · `ap:`). Gizli
-  // sekmedeki listeye `selectOption` 3 dk bekleyip düşer (2026-09-23'te
-  // ölçüldü) — kullanıcının yolu: sekmeye bas, sonra seç.
-  await page.click('.ve-fp-tab[data-k="rol"]');
+  // MODEL SEÇİCİSİ TEK VE "Katalog modeli" BÖLÜMÜNDE (2026-09-28): BMC künyesi
+  // ile Araç Performans modeli tek listede, değer ön ekli (`bmc:` · `ap:`).
+  // Kategoriler tek gövdede (2026-10-16): gizli bölme yok, seçici doğrudan.
   const accSec = page.locator('select[onchange*="veFeadApplyAccModel"]');
   await expect(accSec).toHaveCount(1);
   await expect(accSec).toBeVisible();
