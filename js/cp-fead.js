@@ -8694,7 +8694,7 @@ function veFeadYontemKart(build){
 // ÜÇ DURUM VAR, İKİ DEĞİL: 'wait' (veri yok) uygun SAYILMAZ ve gizlenmez.
 function veFeadChecksCard(node, build){
   if(typeof veFeadChecks !== 'function')
-    return _feadCard('Uygunluk kapıları', '', 'var(--text-muted)',
+    return _feadCard('Uygunluk kriterleri', '', 'var(--text-muted)',
       _feadHint('Uygunluk denetimi yüklenmedi.'));
 
   var opt = veFeadCheckOpt(node.data || {}, veFeadDutyRows(node));
@@ -8791,7 +8791,7 @@ function veFeadChecksCard(node, build){
   // Kararlı tutamak: kartın gövdesi bir öznitelikle işaretli. E2E testi kartı
   // metinden aramak zorunda kalsaydı dış sarmalları da yakalar ve "üç tablo"
   // gibi bir ölçüt sessizce yanlış sayardı (ölçüldü: 6 tablo).
-  return _feadCard('Uygunluk kapıları', 'BMC hesap defteri', renk,
+  return _feadCard('Uygunluk kriterleri', 'BMC hesap defteri', renk,
     '<div data-ve-fead-checks="1" data-ve-fead-checks-durum="'
       + _feadEsc(c.durum + '/' + w.durum + '/' + s.durum) + '">' + h + '</div>');
 }

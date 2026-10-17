@@ -595,7 +595,7 @@ describe('sunum — Sonuç Özeti ve başlangıç kartı (duman testi + taşına
     const { R } = coz('AG00976_GATES_2025', 'full');
     const h = RS.veFeadResSummaryHTML(R);
     ['Kasnaklar', 'Kasnak yükleri', 'Çıkış gerginlikleri', 'Hubload', 'Gergi kolu konumları',
-     'Burulma modları', 'Tepe yükler', 'Hizalama payı', 'Uygunluk kapıları',
+     'Burulma modları', 'Tepe yükler', 'Hizalama payı', 'Uygunluk kriterleri',
      'Kayış ömrü ve kaburga yorulması', 'Geçerlilik ve uyarılar'].forEach((b) => expect(h).toContain(b));
     expect(h).not.toMatch(/undefined|NaN|\[object/);
     expect(h).toMatch(/KALİBRE DEĞİL/);        // tepe yük

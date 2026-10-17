@@ -450,7 +450,7 @@ describe('rapor — kayış boyu ÇIKTI, montaj konumu TÜREV', () => {
 
   test('envanterde kayış boyu ve montaj konumu TÜREV tarafında', () => {
     const z = coz();
-    const ayrac = z.indexOf('aşağıdakilerin hiçbiri girilmez');
+    const ayrac = z.indexOf('>Türetilenler<');
     expect(ayrac).toBeGreaterThan(0);
     expect(z.indexOf('Kayış efektif boyu')).toBeGreaterThan(ayrac);
     expect(z.indexOf('Gövdenin montaj konumu')).toBeGreaterThan(ayrac);
@@ -529,13 +529,13 @@ describe('kayış tipine bağlı çıktılar', () => {
     // bir test, onu §8'den düşüren mutasyonu GEÇİRİYORDU.
     R.pulleyNames = R.build && R.build.names;
     const h = RP._frSection8(R, { id: 'rep1', type: 'fead-report', data: {} });
-    expect(h).toMatch(/YER ALMIYOR/);
+    expect(h).toMatch(/Kayış tipine bağlı çıktılar yok/);
     expect(h).toMatch(/B10 kayış ömrü/);
-    expect(h).toMatch(/kapatılamaz/);
+    expect(h).toMatch(/Profil sabitleri .* hesaptadır/);
     // açıkken kutu HİÇ basılmıyor (yanlış alarm yok)
     const a = coz(true, 'full'); a.R.pulleyNames = a.build.names;
     expect(RP._frSection8(a.R, { id: 'r2', type: 'fead-report', data: {} }))
-      .not.toMatch(/YER ALMIYOR/);
+      .not.toMatch(/Kayış tipine bağlı çıktılar yok/);
     expect(RP._frBeltDataBox(a.R)).toBe('');
   });
 

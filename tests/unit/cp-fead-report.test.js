@@ -115,7 +115,7 @@ describe('§8.8 — konum sayısı başlıkta DOĞRU yazıyor', () => {
   test('ALTI konumda başlık "altı" diyor', () => {
     expect(R8.analysis.positions).toHaveLength(6);
     expect(HTML8).toContain('8.8 Gergi kolunun gezdiği zarf — altı konum');
-    expect(HTML8).not.toContain('Load sütunu basılmadı');
+    expect(HTML8).not.toContain('Load sütunu yok');
   });
 
   test('BEŞ konumda başlık "beş" diyor ve SEBEBİ yazılı', () => {
@@ -125,7 +125,7 @@ describe('§8.8 — konum sayısı başlıkta DOĞRU yazıyor', () => {
     expect(H5).toContain('8.8 Gergi kolunun gezdiği zarf — beş konum');
     expect(H5).not.toContain('— altı konum');
     // Eksik sütun bir hesap hatası DEĞİL, eksik bir GİRDİ — ve bu yazılı.
-    expect(H5).toContain('Load sütunu basılmadı');
+    expect(H5).toContain('Load sütunu yok');
     expect(H5).toMatch(/mekanik durdurucu/);
     // Sütun sayısı da gerçekten beş: başlık ile tablo AYNI şeyi söylüyor.
     const i = H5.indexOf('<h3>8.8'), j = H5.indexOf('</table>', i);
@@ -454,7 +454,7 @@ describe('dürüstlük kapıları', () => {
     const i = HTML8.indexOf('8.18 Sistem burulma titreşimi');
     expect(i).toBeGreaterThan(0);
     const blok = HTML8.slice(i);
-    expect(blok).toContain('KALİBRE');
+    expect(blok).toMatch(/Güven düzeyi: kalibre model/);
     expect(blok).toMatch(/%0,33/);      // deterministik zincirin sapması
     expect(blok).toMatch(/RMS ~%8/);    // burulmanın sapması
     expect(blok).toContain('sertifikasyon');
@@ -925,12 +925,12 @@ describe('§8.7 — tasarım gerginliğinin kuruluşu (tek kanal)', () => {
     expect(HTML8).toContain(Math.round(T).toString());
   });
 
-  test('neden sorulmadığı — sessiz kayma sınıfı belgede anlatılıyor', () => {
-    expect(HTML8).toContain('Neden ayrıca sorulmuyor');
-    expect(HTML8).toMatch(/çelişebilir/);
-    expect(HTML8).toMatch(/kayma payını da aynı ölçüde yanlış gösterirdi/i);
-    // Değiştirilecek şeyin KÜNYE olduğu söyleniyor, bir alan değil
-    expect(HTML8).toMatch(/gergi <b>künyesidir<\/b>/);
+  test('tasarım gerginliği yay dengesinden; programın "neden sormuyor" gerekçesi belgede yok', () => {
+    // ARAYÜZ ANLATMAZ (belge): yazılımın davranış gerekçesi yazılmaz; mühendislik
+    // içeriği (yay dengesi, tedarikçi sayfasıyla doğrulama) kalır.
+    expect(HTML8).not.toContain('Neden ayrıca sorulmuyor');
+    expect(HTML8).toMatch(/yay dengesinden belirlidir/);
+    expect(HTML8).toMatch(/<span class="t">Doğrulama<\/span>/);
   });
 
   test('ESKİ karşılaştırma tablosu ARTIK YOK', () => {
@@ -1002,7 +1002,7 @@ describe('§8.9 — take-up: ANLIK türev ≠ ORTALAMA eğim', () => {
 
   test('take-up oranı ANLIK eğim olarak tanımlanıyor', () => {
     const blok = blk();
-    expect(blok).toMatch(/ANLIK eğimidir/);
+    expect(blok).toMatch(/anlık eğimidir/);
     expect(blok).toContain(RP._frFs(R8.analysis.tensioner.takeupMmPerDeg, 4));
   });
 
@@ -1314,7 +1314,7 @@ describe('şekil açıklama sütunu ve ölçüsü', () => {
 
   test('φ şekli sembolleri TANIMLIYOR', () => {
     const t = yaziGetir(RP._frWrapFigure(R8)).join(' | ');
-    expect(t).toMatch(/φ — SARIM AÇISI/);
+    expect(t).toMatch(/φ — sarım açısı/);
     expect(t).toMatch(/teğet noktaları/);
     expect(t).toMatch(/teğet açıları/);
     expect(t).toMatch(/d — sarım işareti/);
@@ -1447,7 +1447,7 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     bos.analysis.duty.forEach((d) => d.perPulley.forEach((q) => { q.powerKw = 0; }));
     const hb = RP._frSection8(bos, NODE);
     expect(hb).toMatch(/Aksesuar gücü girilmedi/);
-    expect(hb).toMatch(/eksik\s*girdidir/);
+    expect(hb).toMatch(/sıfırdan büyük bir güç yok/);
     // Dolu modelde uyarı YOK ve tablo gerçekten dolu.
     expect(H8).not.toMatch(/Aksesuar gücü girilmedi/);
     expect(H8).toMatch(/Aksesuar ortalama mil torku/);
@@ -1471,7 +1471,7 @@ describe('rapor incelemesi — etiket, bayat metin ve hüküm kapıları', () =>
     expect(Math.min.apply(null, bos.map((s) => s.SF))).toBeGreaterThan(
       Math.min.apply(null, yuklu.map((s) => s.SF)) * 3);
 
-    expect(H8).toMatch(/En kritik YÜK TAŞIYAN kasnak/);
+    expect(H8).toMatch(/En kritik yük taşıyan kasnak/);
     expect(H8).toMatch(/Yük taşımayan kasnaklar hükme girmez/);
     // Yük taşımayanlar GİZLENMİYOR: tabloda da, açıklamada da adları geçiyor.
     expect(H8).toMatch(/Otomatik Gergi \(E9843\)/);
@@ -1571,7 +1571,7 @@ describe('gerginlik grafiği · kayma eşiği çizgisi', () => {
     const fig = RP._frTensionFigure(R8);
     expect((fig.match(/data-ve="slip-threshold"/g) || []).length).toBe(1);
     expect(fig).toContain('kayma eşiği ' + Math.round(A.tensionN) + ' N');
-    expect(fig).toContain('KAYMA EŞİĞİ (' + Math.round(A.tensionN) + ' N)');
+    expect(fig).toContain('kayma eşiği (' + Math.round(A.tensionN) + ' N)');
     // Belirleyici kasnak ve devir künyede ADIYLA yazıyor.
     expect(fig).toContain(A.pulley);
     expect(fig).toContain(String(A.engineRpm).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' d/d');

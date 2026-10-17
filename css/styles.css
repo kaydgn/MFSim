@@ -9562,10 +9562,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fp-tur-k:hover{ border-color:var(--border-hover); background-color:var(--bg-tertiary); }
 .ve-fp-tur-k:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-fp-tur-k[aria-checked="true"]{ border-color:var(--accent-primary); background-color:var(--accent-tint-8); }
-/* Seçili kartın açıklaması vurgu zemininde: soluk jeton koyu temada 4,5'in altına iniyordu. */
-.ve-fp-tur-k[aria-checked="true"] em{ color:var(--text-secondary); }
 .ve-fp-tur-k b{ font-size:var(--fs-body); font-weight:600; color:var(--text-heading); }
-.ve-fp-tur-k em{ grid-column:2; font-style:normal; font-size:var(--fs-tiny); color:var(--text-muted); line-height:1.4; }
 .ve-fp-tur-nok{
   width:12px; height:12px; border-radius:50%;
   border:2px solid var(--text-muted); background:transparent;

@@ -202,7 +202,7 @@ describe('Gates çıpaları — tedarikçi sayfası geri üretiliyor', () => {
   test('sayfa 5: gerginlik sütununun anlamı BEYAN EDİLİYOR', () => {
     const s5 = SU._fsrSheet5(R, NODE);
     expect(s5).toMatch(/gidişinin tersi/);
-    expect(s5).toMatch(/GİRDİĞİ/);
+    expect(s5).toMatch(/girdiği açıklığın/);
     expect(s5).toMatch(/sürücüye giren \(gergin\) açıklıkta/);
     expect(s5).not.toMatch(/Değer, kasnaktan sonraki açıklığın gerginliğidir/);
   });

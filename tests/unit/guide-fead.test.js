@@ -619,7 +619,7 @@ describe('sahneler programın kendi bileşeni', () => {
     // silen değişikliği kaçırıyordu (ölçüldü — çözücü sahnesi kapıyı tek
     // başına yeşil tutuyordu). Ayrım: tek başına duran sahnede panelin geri
     // kalanı YOK.
-    if (!sahneler.some((f) => f.indexOf('Uygunluk kapıları') >= 0
+    if (!sahneler.some((f) => f.indexOf('Uygunluk kriterleri') >= 0
                            && f.indexOf('Algılanan model') < 0))
       eksik.push('uygunluk kapıları (tek başına)');
     expect(eksik).toEqual([]);
@@ -693,7 +693,7 @@ describe('sahneler programın kendi bileşeni', () => {
   });
 
   test('uygunluk kapıları sahnesi ÜÇ KURALI da basıyor', () => {
-    const f = sahneler.filter((x) => x.indexOf('Uygunluk kapıları') >= 0)[0] || '';
+    const f = sahneler.filter((x) => x.indexOf('Uygunluk kriterleri') >= 0)[0] || '';
     expect(f).not.toBe('');
     ['Kasnak merkez mesafesi', 'Çevrim oranı penceresi', 'Aksesuar devir sınırı']
       .forEach((k) => { expect(f).toContain(k); });

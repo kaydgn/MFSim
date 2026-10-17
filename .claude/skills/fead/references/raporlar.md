@@ -6,6 +6,15 @@
 > kuralları SKILL.md kural 50'de; bu dosyadaki ortak kurallar (tek çizici,
 > palet jetonları, KALİBRE DEĞİL damgası, sayı biçimi) ona da uygulanır.
 
+> **BELGE YAZILIMI ANLATMAZ** (2026-10-17, kök `CLAUDE.md` → *ARAYÜZ ANLATMAZ*):
+> üç belgede mühendislik içeriği kalır (yöntem, varsayım, kaynak, kabul
+> ölçütü, geçerlilik sınırı); programın davranış gerekçesi ("Kol çalışma
+> açısını program seçmez", "Neden ayrıca sorulmuyor", "Denetim
+> okuyucunundur"), yazılımın test ölçümü ("ÖLÇÜLDÜ … 14/14 … bu kodun
+> kendisiyle" — ölçüm `fead-arm-band.test.js`te koşuyor), okuyucuya tarif ve
+> büyük harfle vurgu yazılmaz. "Uygunluk kapıları" kullanıcıya görünen her
+> yerde **"Uygunluk kriterleri"**. Kapı: `fead-rapor-metin.test.js` + cırcır.
+
 #### Çevrimdışı HTML rapor (`js/cp-fead-report.js`)
 
 Tedarikçi (Gates) "Accessory Belt Drive System" çıktısının 11 sayfası, Takoz

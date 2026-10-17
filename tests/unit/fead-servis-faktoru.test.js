@@ -368,7 +368,7 @@ describe('BELGELER — hüküm tasarım yükünde ve eşik 1', () => {
     const { R } = coz('AG00902_1275_GATES_2023', temizle);
     const s8 = RP._frSection8(R, { id: 'r', type: 'fead-report', data: {} }).replace(/<[^>]+>/g, ' ');
     expect(s8).not.toMatch(/Servis faktörünün üstünde/);
-    expect(s8).toMatch(/gerçek yükte \(c₂ seçilmedi\) KAYIYOR/);
+    expect(s8).toMatch(/gerçek yükte \(c₂ seçilmedi\)\s+kayıyor/);
     const u = RP._frCompliance(R).replace(/<[^>]+>/g, ' ');
     expect(u).toMatch(/SF ≥ 1 \(c₂ seçilmedi\)/);
   });

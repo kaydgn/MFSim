@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 491,
+ "sayi": 446,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -67,49 +67,9 @@
   "js/cp-fead-araclar.js": {
    "2d3fe62412": "bayat"
   },
-  "js/cp-fead-pano.js": {
-   "acacd402a4": "Senaryo çözümde yok — kayış verisiyle yeniden çözün."
-  },
-  "js/cp-fead-report.js": {
-   "13d9e07d09": "Cıvata ekseni = kol dönme ekseni Model, gövdenin montaj cıvatasını kolun dönme e",
-   "1e7b4255af": "İç tutarlılık: kol açısının açıklık boylarına türevlerinin toplamı, gergi take-u",
-   "1f1f265ad6": "CAD kayış eskizinden ölçüldü (katalog ‹›)",
-   "1fc83d3f72": "CAD kayış eskizinden ölçüldü",
-   "363f72476e": "Bu bir SEÇİCİ değil, bir KAPIDIR Bant fiziksel olarak çok geniştir ve içinden bi",
-   "36f2012587": "Modelde kapıya takılan bir bulgu yok; Bölüm 9'daki geçerlilik sınırları geçerlid",
-   "4d5ed8a4da": "; eğri, çalışma konumlarının ‹› katını aştığı yerde kesilmiştir (tekilliğe kadar",
-   "5edc0b3df9": "Denetim okuyucunundur Tedarikçiden dönen rapor gövdenin montaj konumunu ayrı bir",
-   "5fbed71145": "Kasnak başına EN DÜŞÜK kayma emniyet faktörü (tüm devir noktaları ve koşullar üz",
-   "64594a159f": "Bu tablo AÇIKLIK titreşimidir, sistem burulması değil Yukarıdaki değerler açıklı",
-   "660f68ec7c": "En kritik YÜK TAŞIYAN kasnak ‹›, ‹› d/d‹› — SF = ‹›. ‹›‹›",
-   "6ddb639ce1": "Mutlak ömür geçerlilik penceresinin dışında ‹›Model bu durumda mutlak saati sist",
-   "7cfc68d60c": "Güven düzeyi: bu bölüm KALİBRE bir modeldir Bu belgenin geometri ve gerginlik zi",
-   "90a6ee3b20": "Kayış yolu montaj konumuna bağlı değildir. Geometri yalnız kasnak merkezlerine b",
-   "a76c6e8bb9": "Açıklıkların temel enine titreşim frekansı ve motorun ateşleme frekansı (7.2)–(7",
-   "ae89b342ff": "Take-up oranının kol açısıyla değişimi. Eğri monoton değildir, çünkü (4.3)'ün ik",
-   "af5f45c080": "Model çözüldü — ‹› kasnak · ‹› devir noktası. Rapor güncel çözüme göre üretilir.",
-   "b2192301d4": "Kırmızı kesikli doğru KAYMA EŞİĞİ (‹› N): yük taşıyan kasnakların en düşük emniy",
-   "be7f66eaa6": "Kayış tipine bağlı çıktılar bu belgede YER ALMIYOR. Tasarım aşamasında kayış boy",
-   "c9a6199e81": "Kol çalışma açısı bir girdidir ve program onu seçmez — ama girilen her açı kulla",
-   "d16f216ec9": "Aksesuar devri matrisi kinematiktir (motor devri × hız oranı). Kasnak yüzeyi, ka",
-   "d17bbf7d73": "Rapor SON ÇÖZÜMÜ anlatır — model o zamandan beri değişti. Güncel sayılar için FE",
-   "e37b218fe2": "Önce FEAD araçları penceresinden Hesapla ile modeli çözün.",
-   "e3a908bfc6": "Rapor üretilemedi: model çözülmemiş. Önce FEAD araçları → Hesapla.",
-   "e98496d277": "Kol çalışma açısını program seçmez Avara merkezi verildikten sonra geriye tek bi",
-   "ea0232f527": "Girilmeyen ‹› alan Gates arşivinden varsayıldı. Aşağıdakiler bu sistemin ölçülmü",
-   "f36a8184a6": "Konumlar kayış düzleminde, kasnak merkezlerinin koordinatlarıdır. Temas tarafı b",
-   "f5e6ac6585": "φ — SARIM AÇISI",
-   "f6a6088519": "Neden ayrıca sorulmuyor Bu değer bir tasarım tercihi değil, kurulan gerginin son",
-   "fc8b8a5220": "çözümde kapı yok"
-  },
   "js/cp-fead-results.js": {
    "8b8e63f364": "çalışma (Mean) konumunda · kalibre model (RMS ~%8) · şekil en büyük genliğe norm",
-   "aca5626b1d": "KALİBRE EDİLMEDİ — kaburgalı kasnağa giren açıklıkta izin verilen eksenel kaçıkl",
-   "db66208bf1": "Uygunluk kapıları"
-  },
-  "js/cp-fead-summary.js": {
-   "9bc66b8db6": "Saat değeri ‹› sabitleriyle hesaplanmıştır; seçili yorulma modeli ‹›. Mutlak ömü",
-   "b44771be4b": "Sütun sırası kayışın gidişinin tersi; değer, kayışın o kasnağa GİRDİĞİ açıklığın"
+   "aca5626b1d": "KALİBRE EDİLMEDİ — kaburgalı kasnağa giren açıklıkta izin verilen eksenel kaçıkl"
   },
   "js/cp-fead-wizard.js": {
    "0ae2d38eba": "Devir pencereleritek eksen: motor devri sürekli sınırın üstü anlık sınırın üstü ",
@@ -117,7 +77,6 @@
    "21dd440c49": "Tahrik zinciri: krank, FEAD sürücüsü ve aksesuarların motor devrine oranı",
    "4dcfa6d77e": "Dosyadan: montaj orijini kayış düzleminin arkasında (motor tarafı).",
    "a1ff6ad0a4": "Kanvastaki ‹› kasnağı sil, modeli yeniden kur",
-   "b9173f0523": "Uygunluk kapıları",
    "dc6b4fdb99": "Devir pencereleri: motor devri ekseninde çevrim noktaları ve aksesuar sınırları",
    "eca08be7d3": "Değer yazılmadı: μ 0,05–3, küçük kasnak kaybı 0–20 mm aralığında olmalı."
   },
@@ -125,7 +84,6 @@
    "0131e93b5e": "Kol çalışma açısına göre gerginlik ve olanaklı bant",
    "1f6a58c582": "‹› İçten yanmalı motor 600 d/dk üstündeyse normal kalkış grubundadır. Silindir ö",
    "3fc672b84f": "senaryo ‹› s (gerçek zaman) · dönüş ‹› ağır çekim · tepe ‹› dev/dk‹›‹›",
-   "4478a64326": "Uygunluk kapıları",
    "4839c00a2a": "Değer yazılmadı: μ 0,05–3, küçük kasnak kaybı 0–20 mm aralığında olmalı.",
    "573945ff69": "bayat",
    "674e82bd11": "Ortalama konumda take-up ‹› mm/° · yay momenti ‹› Nm · efektif tahrik boyu ‹› mm",
@@ -376,10 +334,8 @@
    "01aa0e1a9d": "Anlık aşımın kapısı",
    "046d928b35": "Çalışma Noktası kartının devir seçicisinden bir çalışma noktası seçerseniz kayış",
    "04bde23fd4": "Bir sayı kalibre edilmemişse başlığında damgası, altında ölçülen sapma bandı var",
-   "05c37f5158": "“No load governed” sorulmuyor",
    "08a8bfaaee": "Çizimde bırakılan açıklığa, listeden eklenen otomatik gerginin önüne düşer; sıra",
    "08d5e94538": "Varsayılan alanın DEĞERİ olarak yazılıdır — yanında bir “i” durur",
-   "09d63501a9": "6.2 Devir sınırları — uygunluk kapısının girdisi",
    "0a7f20b964": "Çözümden sonra modeli değiştirirseniz (bir çapı büyütmek yeter) sekme bayat damg",
    "0bea7c598a": "Gergide yön neden bu şekilde",
    "0c39764893": "Tuvale sürükleyin — bıraktığınız yere kurulur; ya da tıklayın — çerçeve kartları",
@@ -405,13 +361,10 @@
    "284ec6c9b9": "İki kart aynı kol konumunu çizer ve o alan Kayış Yolu düğümünde durur. Çalışma k",
    "28607c19a0": "Üç kapı",
    "2bdcbc7d45": "CATIA ya da 3DEXPERIENCE’ta çizdiğiniz düzeni STEP dosyası olarak verirseniz kas",
-   "2de3f8b27b": "Algılanan model · Gergi konum tablosu (altı konum × kol açısı, gerginlik, hubloa",
    "3a03704745": "Liste bir rapor değil bir giriş yüzeyidir. Model henüz çözülemiyorsa (kasnaklar ",
    "3a3cbbc49f": "Kayış boyu bilerek boş bırakıldı",
    "3c76c2ee1e": "Gerginin biçimi kasnaklardan ayrışır: kayış düzleminde bir avara ve ona paralel,",
-   "405b22cead": "Aksesuar kasnaklarının panelinde bir Devir sınırları kartı vardır. Buradaki üç s",
    "412b4ddb9b": "Bir modeli kurmak için en az şunlar gerekir: üç kasnak (biri sürücü, biri gergi)",
-   "43822b8a5d": "Uygunluk kapıları kartı, örnek model üzerinde canlı ölçülmüş hâlde. Rozetler üç ",
    "44f8e1a71c": "Kartın altındaki “Kullanılan tahrik oranı” satırından hem sayıyı hem de hangi dü",
    "4526c10573": "Bu belgeye programın içinden istediğiniz zaman dönebilirsiniz: şeritteki ‹› düğm",
    "465c4894e4": "Sürünme (elastik kayma): kasnak yüzeyi, kayışın ona girdiği açıklığın hızıyla dö",
@@ -473,7 +426,6 @@
    "c1c388892c": "Kanalları tek tek seçmek zorunda değilsiniz: sekmenin ön ayarları sık sorulan al",
    "c5395c2e12": "Kartın girdi bölgesindeki Kasnak Dönüş Yönü alanı iki durumlu bir düğmedir: Sağ ",
    "c7e0e234a7": "Karşılama ekranında FEAD kartına tıklayın. Kısa bir yükleme ekranından sonra doğ",
-   "c8e6b439a2": "Girilmezse uygunluk kapısı hüküm veremez",
    "c932604c48": "Ön ayar bir BAŞLANGIÇ NOKTASI, kilit değil",
    "cedd7ce180": "Listeden sürüklediğiniz kasnağı çizimde bir açıklığın (iki kasnak arasındaki düz",
    "cfad39788f": "Her kayıt, sayıları geri üretilebilsin diye bir tedarikçi raporuna bağlıdır. Bir",
@@ -481,20 +433,17 @@
    "d3a9146639": "Program adlara güvenmez",
    "d56433427b": "Bir dönem vardı ve serpantin sırasını orada diziyordunuz. Sıra artık Kasnaklar l",
    "d8354d90ce": "Ömür hesabı sıcaklığı tek bir eşdeğer değer olarak ister. Program bunu hasar-eşd",
-   "db30f48795": "Katalogda duruyor ve künye seçilince modele yazılıyor — ama onu okuyan hiçbir he",
    "db41089620": "Bir dönem kasnaklar da kanvasta kutuydu ve aralarına kayış teli çekiliyordu. Bug",
    "dbe8e5884c": "Kayışa giren her parçaya tıklayın ve sağdaki panelden rolünü verin (krank, klima",
    "dd78ea2f35": "Kol çalışma açısını program SEÇMEZ",
    "de85a35c25": "Hücreler 63,5 yazımını kabul eder ve 63,5 olarak okur. Bu bir incelik değil bir ",
    "e298062fc0": "Her bölüm aynı düzendedir: önce ne yapacağınız numaralı adımlarla, sonra hangi a",
    "e92e65dfb3": "Aradığınız",
-   "ec1c1f9a3c": "Uygunluk kapıları",
    "eccccc7be5": "Bu bilinçli bir tercihtir: programda karşılıklı doğrulama yoktur. Girilen tek ko",
    "ed1abd6dd7": "Varsayılan bu sistemin değeri DEĞİL",
    "ed2329bcc9": "Aksesuarın kaç devirde döndüğü kasnak pitch çaplarından gelir; elle hız oranı gi",
    "edf57e5844": "Pano bir şerit diyagramı panosudur: sol sütundaki Veri Gezgini’nden seçtiğiniz k",
    "f0695c62a3": "Parça adları ve ağacın yapısı dosyadan dosyaya değişir; “ALT” bir dosyada altern",
-   "f200586ddb": "11.4 Uygunluk kapıları — üç hüküm",
    "f646695b65": "Buraya kadar okuduğunuz yüzeyler sayı yüzeyleriydi. Sayının devirle, kol açısıyl",
    "f885ec9e84": "Çevrim kapalı kapısı · Σ",
    "fa6e95404a": "Panele yazdığınız sayının kendisi"
