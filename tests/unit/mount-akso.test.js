@@ -736,6 +736,250 @@ describe('İŞARET BOYU — takoz, G, gövde CG\'si ve nokta kütle büyür; öl
 // 1 WebGL bağlamı kuruluyordu, her tazelemede bir yenisi; sekmede 1 tuval + 6
 // düğme + gösterge vardı. Aynı gün aksonometri Görünümler'e taşındı: 3D
 // Görüntüleyici bir YER TUTUCU — tek sekme, notu tipin beyanından.
+// YAPIŞKAN YER (kullanıcı 2026-10-16: "'Görünümler' bileşeninde aksonometrik
+// görüntüyü oynatırken görüntünün üzerindeki yazılar kayboluyor … kaybolmasın.
+// Beraber dönsünler."). Sürüklerken hızlı kare YAZISIZ çiziliyordu (Tulga'da
+// 15 yazının 12'si yoktu). Yazılı karede her kare yeniden yerleşince yazı
+// kareden kareye sıçrıyordu: 2°'lik adımda yazıların %7–15'i 10 px'ten çok
+// (en çok 320 px). Yazı bir önceki karenin yerini, yeri kapanmadıkça korur.
+describe('YAPIŞKAN YER — döndürürken yazılar işaretiyle yürür', () => {
+  const tur = (m, W, yapis) => {
+    const o = { W, H: W > 600 ? 760 : 326, stil: 'golge', kat: { golge: true }, etiket: W > 600 ? 'genis' : 'ad', fs: FS, kure: true, isaret: cp._mntAksoIsaret(W) };
+    let onceki = null, yer = null, n = 0, sicra = 0, binen = 0, disari = 0;
+    for (let az = 0; az <= 180; az += 2) {
+      const r = AK.ciz(m, Object.assign({}, o, { kam: { az, el: 20 }, yer: yapis ? yer : null }));
+      yer = r.yer;
+      const simdi = {};
+      r.etiket.forEach((e) => { simdi[e.k + '|' + (e.sinif || '')] = [(e.kutu.l + e.kutu.r) / 2 - e.x, (e.kutu.t + e.kutu.b) / 2 - e.y]; });
+      if (onceki) Object.keys(simdi).forEach((k) => { if (!onceki[k]) return; n++; if (Math.hypot(simdi[k][0] - onceki[k][0], simdi[k][1] - onceki[k][1]) > 10) sicra++; });
+      onceki = simdi;
+      const K = r.etiket.map((e) => e.kutu);
+      K.forEach((a) => { if (a.l < 2.5 || a.t < 2.5 || a.r > W - 2.5 || a.b > r.H - 2.5) disari++; });
+      for (let i = 0; i < K.length; i++) for (let j = i + 1; j < K.length; j++)
+        if (Math.min(K[i].r, K[j].r) - Math.max(K[i].l, K[j].l) > 0.5 && Math.min(K[i].b, K[j].b) - Math.max(K[i].t, K[j].t) > 0.5) binen++;
+    }
+    return { oran: sicra / n, binen, disari };
+  };
+  test('üç örnek, pencere ve tam ekran genişliği: sıçrama en az yarıya iner ve %4\'ün altında; yazı yazıya binmez', () => {
+    const sorun = [];
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel();
+      [354, 1500].forEach((W) => {
+        const a = tur(m, W, false), b = tur(m, W, true), yer = k + '@' + W;
+        if (!(b.oran <= 0.04)) sorun.push(`${yer}: yapışkan %${(b.oran * 100).toFixed(1)}`);
+        if (!(b.oran <= a.oran / 2)) sorun.push(`${yer}: %${(a.oran * 100).toFixed(1)} → %${(b.oran * 100).toFixed(1)} (yarısı değil)`);
+        if (b.binen > a.binen) sorun.push(`${yer}: binen ${a.binen} → ${b.binen}`);
+        if (b.disari) sorun.push(`${yer}: çizimin dışında ${b.disari}`);
+      });
+    });
+    expect(sorun).toEqual([]);
+  });
+  test('verilmezse birebir eski: yer verilmeyen çizim yer:null ile aynı; çizici her çizimde yazıların yerini döndürür', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), o = { W: 354, H: 326, kam: { az: 230, el: 25 }, kure: true, kat: { golge: true }, fs: FS };
+    const r = AK.ciz(m, o);
+    expect(AK.ciz(m, Object.assign({}, o, { yer: null })).svg).toBe(r.svg);
+    expect(Object.keys(r.yer).length).toBe(r.etiket.length);
+    // aynı kamerada kendi yeriyle çizilen kare birebir aynı (bırakınca zıplamaz)
+    expect(AK.ciz(m, Object.assign({}, o, { yer: r.yer })).svg).toBe(r.svg);
+  });
+});
+
+// PERDE (kullanıcı 2026-10-16): föyün satırı — "o parçaya geldiğimde aydınlık
+// olsun, diğer parçalar gölgeye düşsün" — ve bileşen pencerelerinin "Güç
+// grubundaki yeri" — "Bileşene göre parçayı belirgin gösterecek". Model,
+// yazıları ve kılavuzları perdenin ALTINDA; seçilinin gövdesi, halkası ve adı
+// ÜSTÜNDE. Üstte çizilen kenar ve halka hiçbir yazının içinden geçmez.
+describe('PERDE — parça aydınlık, kalan model gölgede', () => {
+  const ac = (m) => [...m.govde.map((g) => g.k), ...m.takoz.map((t) => t.k), 'G'];
+  const parca = (svg) => {
+    const a = svg.indexOf('<rect class="ve-ak-perde"'), b = svg.indexOf('<g class="ve-ak-odak">');
+    return { alt: svg.slice(0, a), odak: b >= 0 ? svg.slice(b) : '', a, b };
+  };
+  test('perde seçiliden hemen önce, odak en üstte; odakta YALNIZ seçilinin gövdesi, halkası ve adı', () => {
+    const sorun = [];
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel();
+      ac(m).forEach((sec) => {
+        const svg = AK.ciz(m, { W: 296, H: 280, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS, etiket: 'ad', secili: sec, perde: true }).svg;
+        const p = parca(svg), yer = k + '/' + sec;
+        if (p.a < 0 || p.b < 0) { sorun.push(yer + ': perde ya da odak yok'); return; }
+        if (!/^<rect class="ve-ak-perde"[^>]*\/><g class="ve-ak-odak">/.test(svg.slice(p.a))) sorun.push(yer + ': odak perdenin hemen ardında değil');
+        if (!p.odak.endsWith('</g></svg>')) sorun.push(yer + ': odak en üstte değil');
+        const odakAk = new Set([...p.odak.matchAll(/data-ak="([^"]+)"/g)].map((x) => x[1]));
+        if (odakAk.size !== 1 || !odakAk.has(sec)) sorun.push(yer + ': odakta ' + [...odakAk].join(','));
+        if (!/ve-ak-sec-hale/.test(p.odak) && (sec[0] === 'T' || sec === 'G' || !m.govde.find((g) => g.k === sec).kutu)) sorun.push(yer + ': halka yok');
+        if (sec !== 'G' && !/sec-cip/.test(p.odak)) sorun.push(yer + ': adı çipte değil');
+        if (/ve-ak-kilavuz/.test(p.odak)) sorun.push(yer + ': kılavuz perdenin üstünde');
+        if (/ve-ak-gol"/.test(p.odak)) sorun.push(yer + ': zemindeki iz perdenin üstünde');
+      });
+    });
+    expect(sorun).toEqual([]);
+  });
+  test('perde yokken (o.secili tek başına) çizim eskisi gibi: halka hareket katmanında, perde ve odak grubu yok', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel();
+    const svg = AK.ciz(m, { W: 296, iz: 'dim', b: { x: -1, y: -1, z: 1 }, kat: { golge: true }, fs: FS, etiket: 'secili', secili: 'T1' }).svg;
+    expect(svg).not.toMatch(/ve-ak-perde|ve-ak-odak/);
+    expect(svg).toMatch(/<circle class="ve-ak-sec-hale"[^>]*\/><!--hs--><\/g>/);
+  });
+  test('üstte çizilen kenar ve halka hiçbir yazının içinden geçmez: üç örnek × her işaret × altı açı × iki genişlik', () => {
+    const yazilar = (svg) => [...svg.matchAll(/<text([^>]*)>([^<]*)<\/text>/g)].map((mt) => {
+      const a = (n) => { const q = new RegExp(' ' + n + '="([^"]*)"').exec(mt[1]); return q ? q[1] : null; };
+      const px = Number(a('font-size')), x = Number(a('x')), y = Number(a('y')), an = a('text-anchor') || 'start';
+      const w = AK.tahmin(mt[2], px, a('font-weight') === '600'), l = an === 'middle' ? x - w / 2 : (an === 'end' ? x - w : x);
+      return { t: mt[2], l, r: l + w, ust: y - px * 0.82, alt: y + px * 0.26 };
+    });
+    // odaktaki çizgilerin kutusu: yolların noktaları ve halkanın çemberi (dolgulu çip hariç)
+    const kutu = (odak) => {
+      const sekil = odak.replace(/<g class="ve-ak-cip[\s\S]*?<\/g>/g, '');
+      const pts = [];
+      // yol: M/L çift, H x, V y, A yedi sayı (son ikisi uç; yarıçap kadar pay)
+      [...sekil.matchAll(/ d="([^"]+)"/g)].forEach((d) => {
+        const tk = d[1].match(/[MLHVAZ]|-?[\d.]+/g); let c = '', x = 0, y = 0;
+        for (let i = 0; i < tk.length;) {
+          if (/[MLHVAZ]/.test(tk[i])) { c = tk[i++]; continue; }
+          if (c === 'H') { x = +tk[i++]; pts.push([x, y]); } else if (c === 'V') { y = +tk[i++]; pts.push([x, y]); } else if (c === 'A') {
+            const r = Math.max(+tk[i], +tk[i + 1]); x = +tk[i + 5]; y = +tk[i + 6]; i += 7; pts.push([x - r, y - r], [x + r, y + r]);
+          } else { x = +tk[i]; y = +tk[i + 1]; i += 2; pts.push([x, y]); }
+        }
+      });
+      [...sekil.matchAll(/<line[^>]* x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/g)].forEach((l) => pts.push([+l[1], +l[2]], [+l[3], +l[4]]));
+      [...sekil.matchAll(/<circle[^>]* cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)].forEach((c) => { const x = +c[1], y = +c[2], r = +c[3] + 1; pts.push([x - r, y - r], [x + r, y + r]); });
+      return { l: Math.min(...pts.map((p) => p[0])), r: Math.max(...pts.map((p) => p[0])), ust: Math.min(...pts.map((p) => p[1])), alt: Math.max(...pts.map((p) => p[1])) };
+    };
+    const sorun = [];
+    Object.keys(ORNEK).forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel();
+      ac(m).forEach((sec) => [[249.3, 19.5], [200, 30], [300, 10], [120, 45], [30, -20], [270, 88]].forEach(([az, el]) => [296, 354].forEach((W) => {
+        const svg = AK.ciz(m, { W, H: Math.round(Math.max(280, Math.min(460, W * 0.92))), kam: { az, el }, kure: true, isaret: cp._mntAksoIsaret(W), kat: { golge: true }, fs: FS, etiket: 'ad', secili: sec, perde: true }).svg;
+        const p = parca(svg), K = kutu(p.odak);
+        yazilar(p.alt).forEach((y) => {
+          const x = Math.min(y.r, K.r) - Math.max(y.l, K.l), h = Math.min(y.alt, K.alt) - Math.max(y.ust, K.ust);
+          if (x > 0.5 && h > 0.5) sorun.push(`${k}/${sec}/${az}/${el}/${W}: "${y.t}"`);
+        });
+      })));
+    });
+    expect(sorun.slice(0, 10)).toEqual([]);
+  });
+  test('perde altında çizimin yazıları AA (4,5:1): iki temada, perdenin koyuluğu CSS\'ten', () => {
+    const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
+    const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const oran = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const scrim = /--scrim:\s*rgba\(0,\s*0,\s*0,\s*([\d.]+)\)/.exec(css);
+    const pay = /\.ve-ak-perde\{\s*fill:color-mix\(in srgb, var\(--scrim\) (\d+)%, transparent\)/.exec(css);
+    expect(scrim && pay).toBeTruthy();
+    const alfa = Number(scrim[1]) * Number(pay[1]) / 100, kar = (c) => c.map((v) => v * (1 - alfa));
+    // çizimin yazı renkleri: ad ve çip yazısı, ikincil (kütle, eksen adı); zemin çizimin zemini (hâle, çip)
+    expect(css).toMatch(/\.ve-ak-yz\{ fill:var\(--text-primary\); \}/);
+    expect(css).toMatch(/\.ve-ak-yz\.ikincil, \.ve-ak-yz\.ve-ak-eksy\{ fill:var\(--text-secondary\); \}/);
+    expect(css).toMatch(/\.ve-ak-cip text\{ fill:var\(--text-heading\); \}/);
+    const sorun = [];
+    [['acik', /:root, \[data-theme="acik"\]\s*\{([^}]*)\}/], ['koyu', /\[data-theme="koyu"\]\s*\{([^}]*)\}/]].forEach(([ad, re]) => {
+      const blok = re.exec(css)[1], v = (n) => hex(new RegExp('--' + n + ':\\s*(#[0-9a-fA-F]{6})').exec(blok)[1]);
+      const zem = kar(v('bg-input'));
+      ['text-primary', 'text-secondary', 'text-heading'].forEach((t) => {
+        const o = oran(kar(v(t)), zem);
+        if (o < 4.5) sorun.push(`${ad}: ${t} ${o.toFixed(2)}:1`);
+      });
+    });
+    expect(sorun).toEqual([]);
+  });
+  test('her kipte seçili ADIYLA, vurgu kenarlı çipte — ana olmayan gövde (braket) de; adın düz yazısı yok', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), br = m.govde.find((g) => !g.ana && !g.kutu);
+    ['ad', 'genis'].forEach((etiket) => {
+      const W = etiket === 'genis' ? 1200 : 354;
+      const r = AK.ciz(m, { W, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS, etiket, secili: br.k, perde: true });
+      const e = r.etiket.filter((x) => x.k === br.k);
+      expect(e.map((x) => [x.sinif, x.m1])).toEqual([['sec-cip', 'Braket']]);
+      const t1 = AK.ciz(m, { W, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS, etiket, secili: 'T1', perde: true });
+      expect(t1.etiket.filter((x) => x.k === 'T1').map((x) => x.sinif)).toEqual(['t-cip sec-cip']);
+    });
+  });
+});
+
+// PENCERE (jsdom): sürüklerken çizilen kare YAZILI ve yapışkan; föyün satırı
+// çizimdeki parçayı perdenin üstüne alır, satırdan çıkınca son çizim AYNEN
+// geri gelir. Gerçek fare ve tam ekranın ölçüsü mount-pencere.spec.js'te.
+describe('PENCERE — sürüklerken yazılı kare; föyün satırı çizimdeki parçayı aydınlatır', () => {
+  const kur = (id) => {
+    document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMnt2DViewPropertiesHTML({ id, type: 'mnt-2dview', data: {} }) + '</div>';
+    const kap = document.getElementById('ve-mnt-akso3b-' + id);
+    Object.defineProperty(kap, 'clientWidth', { value: 356 });    // jsdom'da yerleşim yok: müfettiş sütunu
+    return kap;
+  };
+  const yazi = (kap) => [...kap.querySelectorAll('svg.ve-mnt2d-akso text')].map((t) => t.textContent);
+  afterEach(() => { cp.veMntAksoAyar('yok', 'sifirla'); document.body.innerHTML = ''; });
+
+  test('Sıfırla yapışkan yerleri siler: tam tur sürüklendikten sonra çizim ilk açılıştakiyle BİREBİR', () => {
+    yukle('tulga');
+    const kap = kur('h0'), A = cp.VE_MNT_AKSO3B, sv = () => kap.querySelector('svg.ve-mnt2d-akso').outerHTML;
+    cp.veMntAksoAyar(kap.id, 'sifirla');
+    const ilk = sv(), az0 = A.az;
+    for (let d = 4; d <= 360; d += 4) { A.az = (az0 + d) % 360; cp._mntAkso3bHizli(kap.id); }   // tam tur, yapışkan kareler
+    const tur = sv();
+    cp.veMntAksoAyar(kap.id, 'sifirla');
+    expect(sv()).toBe(ilk);
+    // tur yazıların yerini gerçekten değiştirmişti (yoksa kapı boşa ölçerdi)
+    expect(tur).not.toBe(ilk);
+  });
+
+  test('hızlı kare tam çizimin yazılarını taşır (önce yalnız eksen adları kalıyordu); yazılar yapışkan', () => {
+    yukle('tulga');
+    const kap = kur('h1'), A = cp.VE_MNT_AKSO3B;
+    const dinlenme = yazi(kap);
+    expect(dinlenme.length).toBeGreaterThanOrEqual(15);
+    A.az = (A.az + 6) % 360;                                       // 12 px sürükleme
+    expect(cp._mntAkso3bHizli(kap.id)).toBe(true);
+    expect(yazi(kap).sort()).toEqual(dinlenme.slice().sort());
+    expect(kap.querySelector('svg.ve-mnt2d-akso').getAttribute('tabindex')).toBe('0');
+    // bırakınca tam çizim aynı yerleri kullanır: zıplamaz
+    const hizli = kap.querySelector('svg.ve-mnt2d-akso').outerHTML;
+    expect(cp._mntAksoKur(kap.id, 354)).toBe(true);
+    expect(kap.querySelector('svg.ve-mnt2d-akso').outerHTML).toBe(hizli);
+  });
+
+  test('föyün her satırı çizimdeki bir işaretin anahtarını taşır (G · gövdeler · takozlar)', () => {
+    yukle('tulga');
+    const kap = kur('h2');
+    const satir = [...document.querySelectorAll('.ve-mnt-foy-odak tr[data-ak]')].map((tr) => tr.getAttribute('data-ak'));
+    const m = cp._mntAksoModel();
+    expect(satir).toEqual(['G', ...m.govde.map((g) => g.k), ...m.takoz.map((t) => t.k)]);
+    satir.forEach((k) => expect({ k, var: !!kap.querySelector('svg [data-ak="' + k + '"]') }).toEqual({ k, var: true }));
+  });
+
+  test('satırın üstünde: parça perdenin üstünde, öteki işaretler altında; satırdan çıkınca son çizim AYNEN', () => {
+    yukle('tulga');
+    const kap = kur('h3'), sv = () => kap.querySelector('svg.ve-mnt2d-akso');
+    const once = sv().outerHTML;
+    const foy = document.querySelector('.ve-mnt-foy-odak'), tr = foy.querySelector('tr[data-ak="T3"]');
+    cp._mntFoyOdak({ target: tr.querySelector('td:nth-child(2)') }, kap.id);
+    const odak = sv().querySelector(':scope > g.ve-ak-odak');
+    expect(sv().querySelector(':scope > rect.ve-ak-perde')).not.toBeNull();
+    expect(new Set([...odak.querySelectorAll('[data-ak]')].map((e) => e.getAttribute('data-ak')))).toEqual(new Set(['T3']));
+    expect(odak.querySelector('.sec-cip').textContent).toBe('T3 Sağ Arka Takoz');
+    // aynı satırda gezinmek yeniden çizmez; başka satır başka parça
+    const t3 = sv();
+    cp._mntFoyOdak({ target: tr }, kap.id);
+    expect(sv()).toBe(t3);
+    cp._mntFoyOdak({ target: foy.querySelector('tr[data-ak="g2"] td') }, kap.id);
+    expect(sv().querySelector('.ve-ak-odak .ve-ak-g[data-sec]').getAttribute('data-ak')).toBe('g2');
+    // başlık satırı (anahtarsız) ve föyden çıkış: çizim birebir eski
+    cp._mntFoyOdak({ target: foy.querySelector('thead th') }, kap.id);
+    expect(sv().outerHTML).toBe(once);
+    cp._mntAksoOdak(kap.id, 'G');
+    cp._mntAksoOdak(kap.id, null);
+    expect(sv().outerHTML).toBe(once);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+  });
+});
+
 describe('KLASİK 3B — 3D Görüntüleyici yer tutucu', () => {
   test('tek sekme "Klasik 3B"; bölmesinde tuval, düğme ve çizim yok, yalnız tipin notu', () => {
     yukle('tulga'); coz();
