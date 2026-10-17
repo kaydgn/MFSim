@@ -446,7 +446,8 @@ function _gmSec9(){
   h += _gmAdimlar([
     '<strong>Yöntem</strong> bölümünde çözüm modunu seçin; sönüm oranı ve şok darbesi '
       + 'varsayılan değerleriyle durur (yanındaki <em>i</em> kaynağını söyler).',
-    'Sönüm oranı yalnız şok ve izolasyon hesabına girer, sehime girmez.',
+    'Sönüm oranı yalnız şok ve izolasyon hesabına girer, sehime girmez; her takozun viskoz sönüm '
+      + 'katsayısı ondan türer: c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>).',
     '<strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin içinde akar.',
     'Hesapla’nın altındaki satır toplam kütleyi, gövde ve takoz sayısını ve son hesabın '
       + 'güncel olup olmadığını söyler; sonucu <strong>Rapor</strong> bileşeninden okuyun.'

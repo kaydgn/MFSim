@@ -512,7 +512,7 @@ describe('Rapor — §8.7 sönümlü sütunlar ve §8.14 modal enerji', () => {
     const h = rep._mntRepModalEnergy(Object.assign({}, R, { modes: mf, modalEnergy: ef, modalDamping: null }));
     expect(h).toContain('note check');
     expect(h).not.toContain('Beklenenden büyük');
-    expect(h).toContain('kapı dışında bırakıldı');
+    expect(h).toContain('denetim dışı');
     expect(h).toContain('1 mod sıfıra yakın frekansta');
   });
 
@@ -538,6 +538,6 @@ describe('Rapor — §8.7 sönümlü sütunlar ve §8.14 modal enerji', () => {
   test('§8.12 metni C matrisinin gerçekten girdiği yerleri söylüyor', () => {
     const h = rep._mntRepDamping(R);
     expect(h).toContain('§8.13');
-    expect(h).toContain('sönümü hiç içermez');      // §8.14 C kullanmıyor — açıkça yazılı
+    expect(h).toContain('modal enerji hesabı sönüm içermez');      // §8.14 C kullanmıyor — açıkça yazılı
   });
 });

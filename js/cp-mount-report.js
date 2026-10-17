@@ -239,8 +239,8 @@ function veMntGenerateReport(nodeId){
   // Durumun tonu CSS'ten (`data-d`): satır içi renk ikinci bir görünüm kaynağıydı.
   function setStatus(m,d){ if(st){ st.textContent=m; if(d) st.setAttribute('data-d', d); else st.removeAttribute('data-d'); } }
   if(typeof _veMntLast==='undefined' || !_veMntLast || _veMntLast.error){
-    if(typeof showToast==='function') showToast('Önce modeli çözün: Çözücü → Hesapla.','warning');
-    setStatus('Çözülmüş sonuç yok — Çözücü → Hesapla.','warn');
+    if(typeof showToast==='function') showToast('Rapor üretilemedi: model çözülmemiş.','warning');
+    setStatus('Çözülmüş sonuç yok.','warn');
     return;
   }
   // BAYAT SONUÇTAN RAPOR — üretilir ama SÖYLENİR (FEAD'in kuralı). Rapor
@@ -249,7 +249,7 @@ function veMntGenerateReport(nodeId){
   // AYNI çağrıdan: rapor Sonuçlar ağacından da üretiliyor, orada pencere yok.
   var _sd=(typeof veMntResultState==='function') ? veMntResultState(_veMntLast) : null;
   if(_sd && _sd.k==='bayat' && typeof showToast==='function')
-    showToast('Rapor son çözümü anlatır; model o zamandan beri değişti. Güncel sayılar için Çözücü → Hesapla.', 'warning');
+    showToast('Rapor son çözümden; model sonra değişti.', 'warning');
   var R=_veMntLast;
   var opts=veMntRaporOpts(nodeId);
   setStatus('Rapor hazırlanıyor…');
@@ -428,7 +428,7 @@ function _mntRepAntet(R){
   + '  <div class="band">'
   + '    <div class="eyebrow">Analiz raporu · Güç Aktarma Organları Mühendisliği</div>'
   + '    <h1>Güç grubu takoz sistemi: Sehim ve titreşim analizi</h1>'
-  + '    <div class="sub">Elastik mesnetler üzerindeki güç grubunun statik sehim ve rijit gövde titreşim analizi — projede tanımlı modelden otomatik üretilmiştir</div>'
+  + '    <div class="sub">Elastik mesnetler üzerindeki güç grubunun statik sehim ve rijit gövde titreşim analizi</div>'
   + '  </div>'
   + '  <div class="fields">'
   + '    <div class="f"><div class="k">Doküman türü</div><div class="v">Analiz raporu</div></div>'
@@ -478,7 +478,7 @@ function _mntRepNLNote(R){
       +'(basma tarafı) takozun katalog statik rijitliğinden %20\'den fazla sapıyor: '+uyusmaz.join(' · ')+'. '
       +'Çözüm yasayı kullanır; katalog değeri yalnız durdurucu rijitliğine ve dinamik/statik oranına girer. '
       +'Aynı model lineer (katalog) ve nonlineer (yasa) çözüldüğünde frekans ve sehim bu yüzden '
-      +'sistematik olarak ayrışır — iki girdiden hangisinin doğru olduğu tedarikçi raporundan doğrulanmalıdır.'
+      +'sistematik olarak ayrışır.'
     : '';
   return '<div style="margin:10px 0 14px; padding:10px 13px; border-left:3px solid #b45309; background:rgba(180,83,9,0.06); font-size:0.93em; line-height:1.55;">'
     + '<b>Nonlineer çözüm.</b> '+nl.length+' takoz ('+names+') nonlineer kuvvet–sehim yasası taşır; '
@@ -519,7 +519,7 @@ function _mntRepSection8(R, opts){
   var C=_rMountCore();
   var geom=_mntRepGeom(R);
   var h='<h2 id="s8"><span class="no">8</span>Sayısal örnek: Bu modelin çözümü</h2>';
-  h+='<p>Bölüm 2–7\'deki yöntem, projede tanımlı güç grubuna uygulanır. Tüm kütle ve takozlar iç topolojiden otomatik toplanır; girdiler aşağıda listelenir, ardından kütle birleştirme, rijitlik, statik sehim, tork süperpozisyonu, tüm yük durumları ve modal analiz adımları bu modelin gerçek değerleriyle çözülür. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
+  h+='<p>Bölüm 2–7\'deki yöntem bu güç grubuna uygulanır: kütle birleştirme, rijitlik, statik sehim, tork süperpozisyonu, yük durumları ve modal analiz. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
   h+=_mntRepNLNote(R);
   h+=_mntRepCritical(R);
   h+=_mntRepMassTable(geom);
@@ -623,7 +623,7 @@ function _mntRepCritical(R){
   h+=row('Lineerlik (±10 mm)', overC.length ? '<b style="color:var(--warn);">aşım</b> — '+overC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (nonlineer bölge)' : 'tüm sehimler bantta');
   h+=row('Durdurucu (±15 mm metal-metal)', clampC.length ? '<b style="color:var(--warn);">devrede</b> — '+clampC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (takoz dibe oturur; yük yeniden dağılır)' : 'hiçbir takoz durdurucuya oturmadı');
   if(modes.length) h+=row('Modal bant', 'en düşük '+_rF(modes[0].f_Hz,2)+' Hz · en yüksek '+_rF(modes[modes.length-1].f_Hz,2)+' Hz ('+modes.length+' rijit gövde modu)');
-  h+='<div style="margin-top:5px; font-size:0.9em; color:#5a6270;">'+nCases+' yük durumu çözüldü; ayrıntı için aşağıdaki adımlar ve yük durumu matrisi.</div>';
+  h+='<div style="margin-top:5px; font-size:0.9em; color:#5a6270;">'+nCases+' yük durumu çözüldü.</div>';
   h+='</div>';
   return h;
 }
@@ -881,7 +881,7 @@ function _mntRepStep1Mass(R){
       +'%'+_rF(100*oran,1)+'. '
       +(oran < 0.02
         ? 'Model eksenleri asal eksenlere pratik olarak çakışıktır; global köşegen değerler doğrudan yorumlanabilir.'
-        : '<b>Model eksenleri asal eksenlerle çakışık değildir.</b> Dış bir yazılımın (Adams/CATIA) “<span lang="en">aggregate mass</span>” çıktısı ataleti asal eksende ve bir yönelim açısıyla basıyorsa, o sayılar buradaki global köşegenle DEĞİL, yukarıdaki asal atalet satırıyla karşılaştırılmalıdır.')
+        : '<b>Model eksenleri asal eksenlerle çakışık değildir</b>: asal eksende basılan dış atalet çıktısı (Adams/CATIA “<span lang="en">aggregate mass</span>”) asal atalet satırıyla karşılaştırılır, global köşegenle değil.')
       +' Birleştirme paralel-eksen teoremiyle yapılır; nokta kütle işaretli bileşenlerin kendi ataleti sıfır alınır.</p>';
   }
   return h;
@@ -946,7 +946,7 @@ function _mntRepStep3Static(R, geom){
   h+='</table>';
   h+='<p>Σf<sub>z</sub> değeri dış yükü (−mg) dengeler; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
   if(anyCap){
-    h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Bu bir DAYANIM hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve sehimi değiştirmez. Tedarikçi raporlarında aynı sütun “<span lang="en">Load (%)</span>” adıyla geçer ve tipik tasarım hedefi %25–50 bandıdır — çok düşük değer gereğinden sert/büyük takozu, %100\'e yaklaşan değer ömür riskini gösterir.</p>';
+    h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Dayanım hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve sehimi değiştirmez. Tedarikçi raporlarında aynı sütun “<span lang="en">Load (%)</span>”; tipik tasarım hedefi %25–50 — çok düşük değer gereğinden sert/büyük takoz, %100\'e yakın değer ömür riski.</p>';
   }
   h+=_mntRepLoadBar(R);
   return h;
@@ -976,7 +976,7 @@ function _mntRepStep4Torque(R){
   var stat=_mntRepFindCase(R,'Static');
   var h='<h3>8.4 Adım 4 — Tahrik torku ve süperpozisyon</h3>';
   if(!fwd || !fwd.res || !stat || !stat.res){
-    h+='<p>Bu modelde tork yük durumu tanımlı değil (kinematik girdiler — motor torku, stall oranı, vites — boş). Statik ve g-tabanlı yük durumları geçerlidir; tahrik torku reaksiyonu için Motor/Şanzıman/Transfer girdilerini doldurun.</p>';
+    h+='<p>Tork yük durumu yok: kinematik girdiler (motor torku, stall oranı, vites) boş. Statik ve g-tabanlı yük durumları geçerlidir.</p>';
     return h;
   }
   var Ts = fwd.loadCase && fwd.loadCase.T ? -fwd.loadCase.T[0] : NaN;
@@ -1015,7 +1015,7 @@ function _mntRepStep4Torque(R){
 function _mntRepLoadCaseMatrix(R){
   var mounts=R.mounts||[];
   var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey sehim δ<sub>z</sub>)</h3>';
-  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> sehim özeti. Her hücre takozun δ<sub>z</sub>\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>) ayrıntı için §8.6.</p>';
+  h+='<p>Yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> sehim. Her hücre takozun δ<sub>z</sub>\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç eksen (δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>): §8.6.</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Yük durumu × takoz düşey sehim matrisi [mm]</caption>';
   h+='<tr><th>Yük durumu</th>';
   mounts.forEach(function(m){ h+='<th title="'+_rEsc(m.name)+'">'+_rEsc(_mntRepShort(m.name,8))+'</th>'; });
@@ -1032,7 +1032,7 @@ function _mntRepLoadCaseMatrix(R){
     h+='<td>'+_rF(rc.res.sumF[2]/1000,2)+(rc.res.checks.sumFzOk?' <span class="ok">✓</span>':' ✗')+'</td></tr>';
   });
   h+='</table>';
-  h+='<p>Manevra durumları (tümsek/fren/viraj) takoz kuvvetlerinin dayanım zarfını, tork durumları ise tahrik reaksiyonunun etkisini verir. Çekme veya lineerlik aşımı işaretli hücreler, o durum için takoz seçimi / yerleşiminin gözden geçirilmesi gereğine işaret eder.</p>';
+  h+='<p>Manevra durumları (tümsek/fren/viraj) takoz kuvvetlerinin dayanım zarfını, tork durumları ise tahrik reaksiyonunun etkisini verir.</p>';
   return h;
 }
 
@@ -1121,9 +1121,9 @@ function _mntRepStep5Modal(R, C){
   }
   var warn=modes.some(function(m){return m.warning;});
   if(warn){
-    h+='<div class="note warn"><span class="t">Uyarı · serbest mod</span>Bir veya daha fazla mod sıfıra yakın frekansta çıktı — yapılandırma kinematik olarak serbest olabilir (yetersiz takoz kısıtı). Takoz sayısını/yerleşimini gözden geçirin.</div>';
+    h+='<div class="note warn"><span class="t">Uyarı · serbest mod</span>Bir veya daha fazla mod sıfıra yakın frekansta çıktı — yapılandırma kinematik olarak serbest olabilir (yetersiz takoz kısıtı).</div>';
   }
-  h+='<p>Mod şekilleri en büyük bileşene normalize edilmiştir; birden fazla bileşenin belirgin olması modların <em>kuplajlı</em> (saf olmayan) olduğunu gösterir. Aşağıdaki matris her modun altı serbestlik derecesindeki katılımını renk yoğunluğuyla gösterir (koyu = baskın).</p>';
+  h+='<p>Birden fazla belirgin bileşeni olan mod <em>kuplajlıdır</em> (saf olmayan).</p>';
   h+=_mntRepModeMatrix(modes);
   h+='<p>Rijit gövde modlarının hedef bandı, alttan süspansiyon modlarının üzerinde, üstten motorun rölanti ateşleme mertebesinin altında seçilir (Bölüm 7.2).</p>';
   return h;
@@ -1200,14 +1200,14 @@ function _mntRepFreqPlacement(R, opts){
   h+='<p>Dört zamanlı motorun rölanti ateşleme frekansı \\( f_{\\text{ateş}}=\\dfrac{N}{60}\\cdot\\dfrac{z}{2} \\); '
     +'girilen değerlerle \\( N='+_rTeX(_rF(rpm,0))+' \\) d/dk, \\( z='+_rTeX(_rF(z,0))+' \\) silindir → '
     +'\\( f_{\\text{ateş}}='+_rTeX(_rF(fFire,1))+' \\) Hz; sönüm oranı \\( \\zeta='+_rTeX(_rF(zeta,4))+' \\) '
-    +'(Çözücü\'de tüm montaj için tek değer olarak girilir — bkz. §8.12).</p>';
+    +'(montaj genelinde tek değer, §8.12).</p>';
 
   // Kriter 1 rozeti
   var cls1=ok1?'check':'warn';
   h+='<div class="note '+cls1+'"><span class="t">'+(ok1?'Uygun':'Dikkat')+' · Kriter 1 — Roll modu &lt; %50 ateşleme</span>';
   h+='En yüksek rijit gövde (roll) modu <b>'+_rF(fRoll,2)+' Hz</b>, sınır \\( 0{,}5\\,f_{\\text{ateş}}='+_rTeX(_rF(lim1,1))+' \\) Hz\'in ';
   h+= ok1 ? '<b>altındadır</b> (f<sub>ateş</sub>/f<sub>roll</sub> = '+_rF(r1,2)+' ≥ 2) — ateşleme mertebesinden izole.'
-         : '<b>ÜZERİNDEDİR</b> (f<sub>ateş</sub>/f<sub>roll</sub> = '+_rF(r1,2)+' &lt; 2) — %50 kriterini karşılamıyor; takoz dinamik rijitliklerini düşürmek (mod bandını aşağı taşımak) önerilir.';
+         : '<b>üzerindedir</b> (f<sub>ateş</sub>/f<sub>roll</sub> = '+_rF(r1,2)+' &lt; 2) — %50 kriterini karşılamıyor.';
   h+='</div>';
 
   // İzolasyon tabanı — düşey frekans, modal bant içindeki yeri
@@ -1217,7 +1217,7 @@ function _mntRepFreqPlacement(R, opts){
     +_rTeX(_rF(fB,2))+'\\ \\text{Hz},\\qquad r=\\frac{f_{\\text{ateş}}}{f_{\\text{bounce}}}='+_rTeX(_rF(iso.r,2))+' $$';
   h+='<p style="font-size:0.9em; color:#5a6270;">Rijit gövde modları '+_rF(fLo,2)+'–'+_rF(fHi,2)+' Hz bandındadır. '
     +'Bounce modu simetrik yerleşimde tam ayrışır; asimetride pitch ile kuplajlanıp iki moda bölünür ve '
-    +'\\( f_{\\text{bounce}} \\) aralarına düşer — bu modelde '+(fB>fLo&&fB<fHi?'öyledir':'bandın dışındadır, yerleşim gözden geçirilmelidir')+'.</p>';
+    +'\\( f_{\\text{bounce}} \\) aralarına düşer — bu modelde '+(fB>fLo&&fB<fHi?'öyledir':'bandın dışındadır')+'.</p>';
 
   // Kriter 2 rozeti
   var cls2=ok2?'check':'warn';
@@ -1225,7 +1225,7 @@ function _mntRepFreqPlacement(R, opts){
   h+='\\( T=\\sqrt{\\tfrac{1+(2\\zeta r)^2}{(1-r^2)^2+(2\\zeta r)^2}} \\) = <b>'+Tstr+'</b> '
     +'(sönümsüz karşılığı '+(isFinite(iso.T0)?'%'+_rF(iso.T0*100,1):'∞')+') ';
   h+= ok2 ? '&lt; %50 — güç grubu rölantide izole bölgede çalışır.'
-         : '&ge; %50 — izolasyon yetersiz; düşey rijitliği düşürmek (f<sub>bounce</sub>\'u aşağı taşımak) veya sönümü artırmak gerekir.';
+         : '&ge; %50 — izolasyon yetersiz.';
   h+='</div>';
 
   h+='<p style="font-size:0.9em; color:#5a6270;">Not: bu bir <b>tek-serbestlik kestirimidir</b> — güç grubunu düşey yönde tek kütle-yay olarak alır. '
@@ -1261,13 +1261,11 @@ function _mntRepIso3Table(R, opts, sdof){
   });
   h+='</table>';
   h+='<p style="font-size:0.9em; color:#5a6270;">\\( \\text{İzolasyon}\\,[\\%]=(1-T)\\cdot 100 \\). '
-    +'Bu değerler <b>tam 6 serbestlik dereceli</b> frekans yanıtından okunur (dönme kuplajları dahil); '
-    +'yukarıdaki \\( T='+(isFinite(sdof && sdof.T)?_rTeX(_rF(sdof.T,4)):'—')+' \\) ise düşey tek-serbestlik kestirimidir. '
-    +'İkisinin ayrışması normaldir — kestirim güç grubunu tek kütle-yay sayar, tabloda ise gerçek mod kuplajları vardır. '
-    +'Tedarikçi raporlarında (AMC, Angst+Pfister) verilen “<span lang="en">Isolation %</span>” sütunu <b>bu tablodaki</b> büyüklüktür; '
-    +'karşılaştırma buradan yapılmalıdır. Yaygın tasarım hedefi \\( T&lt;0{,}2 \\) (≥ %80 izolasyon); '
-    +'şirket kriteri (Kriter 2) \\( T&lt;0{,}5 \\). Negatif izolasyon bir hata değil: o yönde ateşleme frekansı '
-    +'bir rezonansa denk geliyor ve titreşim azalmak yerine katlanıyor demektir.</p>';
+    +'Tam 6 serbestlik dereceli frekans yanıtından (dönme kuplajları dâhil); '
+    +'düşey tek-serbestlik kestirimi: \\( T='+(isFinite(sdof && sdof.T)?_rTeX(_rF(sdof.T,4)):'—')+' \\). '
+    +'Tedarikçi raporlarındaki “<span lang="en">Isolation %</span>” sütunu (AMC, Angst+Pfister) bu büyüklüktür. '
+    +'Yaygın tasarım hedefi \\( T&lt;0{,}2 \\) (≥ %80 izolasyon); şirket kriteri (Kriter 2) \\( T&lt;0{,}5 \\). '
+    +'Negatif izolasyon: ateşleme frekansı o yönde bir rezonansa denk gelir, titreşim büyür.</p>';
   return h;
 }
 
@@ -1293,7 +1291,7 @@ function _mntRepGearForces(R){
   var rows=R.gearCases||[];
   if(!rows.length) return '';   // tork girilmemişse bölümü atla
   var h='<h3>8.9 Kriter 3 — Vites bazında takoz kuvvetleri</h3>';
-  h+='<p>Tasarım kriteri her vites için takoz kuvvetlerinin kontrolünü ister. Kütle ve rijitlik sabit, yalnız şaft torku \\(T_{\\text{shaft}}\\) vites oranıyla ölçeklenir; en yüksek redüksiyonlu <b>1. vites en yüksek tork</b> ürettiğinden ileri vitesler için <b>bağlayıcı</b> durumdur. Değerler ±15 mm durdurucu modeliyle (bkz. §9) çözülür.</p>';
+  h+='<p>Tasarım kriteri her vites için takoz kuvvetlerinin kontrolünü ister. Kütle ve rijitlik sabit, yalnız şaft torku \\(T_{\\text{shaft}}\\) vites oranıyla ölçeklenir; en yüksek redüksiyonlu <b>1. vites en yüksek tork</b> ürettiğinden ileri vitesler için <b>bağlayıcı</b> durumdur. Değerler ±15 mm durdurucu modeliyle (§9) çözülür.</p>';
   h+='<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body); margin:8px 0;">';
   h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c6c0b4);">'
     +'<th style="text-align:left; padding:4px 6px;">Vites</th>'
@@ -1353,7 +1351,7 @@ function _mntRepDamping(R){
   if(!d || !d.length) return '';          // statik durum çözülemedi → tablo basma
   var zeta=_mntRepZeta(R, {});
   var h='<h3>8.12 Takoz sönüm katsayıları</h3>';
-  h+='<p>Sönüm oranı \\( \\zeta \\) montaj genelinde <b>tek bir şirket kabulü</b> olarak girilir (Çözücü paneli); '
+  h+='<p>Sönüm oranı \\( \\zeta \\) montaj genelinde <b>tek bir şirket kabulü</b> olarak girilir; '
     +'burada \\( \\zeta='+_rTeX(_rF(zeta,4))+' \\). Her takozun eksen başına viskoz sönüm katsayısı bu orandan, '
     +'takozun <b>dinamik rijitliği</b> ve üzerine düşen <b>statik yük payı</b> ile türetilir:</p>';
   h+='$$ c_{\\text{eksen}} = 2\\,\\zeta\\,\\sqrt{k_{\\text{din,eksen}}\\; m_{\\text{pay}}} $$';
@@ -1374,10 +1372,9 @@ function _mntRepDamping(R){
     +'Daha sert ve/veya daha çok yük taşıyan takoz daha çok söner. '
     +'<b>Nereye girer:</b> doğal frekanslar sönümsüz özdeğer probleminden hesaplanır (§8.7). Bu katsayılar '
     +'\\( \\mathbf C=\\sum_i \\mathbf A_i^{\\mathsf T}\\mathrm{diag}(c_i)\\mathbf A_i \\) matrisine toplanır ve '
-    +'yalnız iki yerde KULLANILIR: mod başına sönüm oranı \\( \\zeta_{\\text{mod}} \\) (§8.7 tablosu) ve tam '
+    +'yalnız iki yerde kullanılır: mod başına sönüm oranı \\( \\zeta_{\\text{mod}} \\) (§8.7 tablosu) ve tam '
     +'frekans yanıtı (§8.13). §8.8 ise C matrisini değil, girilen skaler \\( \\zeta \\)\'yı kullanır; §8.14 '
-    +'modal enerji hesabı sönümü hiç içermez — oradaki \\( \\zeta_{\\text{mod}} \\) sütunu §8.7\'den yalnızca '
-    +'gösterim amaçlı taşınır.</p>';
+    +'modal enerji hesabı sönüm içermez; oradaki \\( \\zeta_{\\text{mod}} \\) sütunu §8.7\'den.</p>';
   return h;
 }
 
@@ -1527,10 +1524,8 @@ function _mntRepFRF(R, opts){
     h+='<tr><td class="l">Tek-serbestlik kestirimi (§8.8)</td><td>'+(isFinite(iso.T)?'%'+_rF(iso.T*100,1):'—')+'</td><td>'+(isFinite(iso.T0)?'%'+_rF(iso.T0*100,1):'—')+'</td></tr>';
     var dev=(Number.isFinite(Td)&&Td>0)?Math.abs(iso.T-Td)/Td*100:NaN;
     h+='</table>';
-    h+='<p style="font-size:0.9em; color:#5a6270;">Fark '+(Number.isFinite(dev)?'%'+_rF(dev,1):'—')
-      +'. İzolasyon bölgesinde (r &gt; √2) tek-serbestlik kestirimi tam çözüme çok yakındır; '
-      +'bu, §8.8 değerlendirmesinin bu model için geçerli olduğunu doğrular. Rezonans civarında '
-      +'ikisi ayrışır — orada yalnız bu bölümün eğrisi kullanılmalıdır.</p>';
+    h+='<p style="font-size:0.9em; color:#5a6270;">Kestirimin tam çözümden farkı: '+(Number.isFinite(dev)?'%'+_rF(dev,1):'—')
+      +'. Rezonans civarında tek-serbestlik kestirimi geçerli değildir.</p>';
   }
   return h;
 }
@@ -1582,7 +1577,7 @@ function _mntRepModalEnergy(R){
       +'<td class="l">'+_rMod(modes[i].label)+'</td></tr>';
   });
   h+='</table>';
-  var skipTxt = nSkip ? ' '+nSkip+' mod sıfıra yakın frekansta olduğu için kapı dışında bırakıldı (bkz. §8.7 serbest mod uyarısı).' : '';
+  var skipTxt = nSkip ? ' '+nSkip+' mod sıfıra yakın frekansta; denetim dışı (§8.7 serbest mod).' : '';
   if(!nEval){
     // Değerlendirilebilir tek mod yok → "fark 0" gibi DOĞRULANMAMIŞ bir olumlu
     // iddia basılmaz; kapı nötr kalır.
@@ -1620,7 +1615,7 @@ function _mntRepModalEnergy(R){
     h+='</table>';
 
     // ── Mod başına ayrıntı: gövde × serbestlik derecesi (PDF Tablo 12–17 yapısı) ──
-    h+='<p>Aşağıda her mod için enerji, gövde <em>ve</em> serbestlik derecesi bazında ayrıştırılmıştır. '
+    h+='<p>Mod başına kinetik enerji, gövde <em>ve</em> serbestlik derecesi bazında. '
       +'X/Y/Z öteleme, RXX/RYY/RZZ dönme atalet terimleri, RXY/RXZ/RYZ ise atalet <b>çarpım</b> '
       +'terimleridir (asimetrik kütle dağılımının kuplaj katkısı; nokta kütlelerde ve simetrik '
       +'bileşenlerde sıfırdır). Tüm değerler o modun toplam kinetik enerjisinin yüzdesidir.</p>';
@@ -1651,8 +1646,8 @@ function _mntRepModalEnergy(R){
     });
     if(atlanan.length){
       h+='<div class="note warn"><span class="t">Atlanan modlar</span>'
-        +'Mod '+atlanan.join(', ')+' için ayrıntı tablosu üretilmedi: frekans sıfıra yakın olduğundan '
-        +'kinetik enerji de sıfırdır ve yüzde dağılım tanımsızdır (serbest mod — bkz. §8.7).</div>';
+        +'Mod '+atlanan.join(', ')+': frekans sıfıra yakın, kinetik enerji sıfır; '
+        +'yüzde dağılım tanımsız (serbest mod, §8.7).</div>';
     }
     h+='<p style="font-size:0.9em; color:#5a6270;">Gövde enerjilerinin toplamı, birleşik kütle '
       +'matrisiyle hesaplanan \\( \\tfrac12\\omega^2\\boldsymbol\\varphi^{\\mathsf T}\\mathbf M\\boldsymbol\\varphi \\) '
@@ -1877,7 +1872,7 @@ function _mntRepModeShapes(R){
     +'§8.7 matrisi hangi serbestlik derecesinin baskın olduğunu <em>sayıyla</em> verir; burada gövdenin '
     +'<b>nasıl</b> hareket ettiği çizilir. Kesikli soluk şekiller referans (deforme olmamış) konumu, dolu '
     +'şekiller deforme konumu gösterir; mor kare = takoz, ⊕ = birleşik ağırlık merkezi.</p>';
-  h+='<p>Gövde kutuları <b>uydurma ikon değildir</b>: her bileşenin girilen kütlesini ve atalet momentlerini '
+  h+='<p>Gövde kutuları her bileşenin girilen kütlesini ve atalet momentlerini '
     +'birebir veren <em>tek</em> düzgün yoğunluklu dikdörtgen prizmadır. '
     +'\\( I_{xx}=\\tfrac{m}{12}(b^2+c^2) \\) üçlüsü a, b, c için tek çözümlüdür:</p>';
   h+='$$ a=\\sqrt{\\tfrac{6}{m}(I_{yy}{+}I_{zz}{-}I_{xx})},\\quad '
@@ -1893,18 +1888,12 @@ function _mntRepModeShapes(R){
     +'boşluk kalır. Bu boşluk, bakan uçlar yarı yarıya uzatılarak kapatılır — <b>en ve yükseklik '
     +'ataletten gelen değerde kalır</b>, yalnız tahrik ekseni boyunca uzunluk büyür. Önden görünüşte '
     +'gövdeler zaten üst üste düştüğü için uzatma uygulanmaz.</p>';
-  h+='<p style="font-size:0.9em; color:#5a6270;">Şekil okunabilir kalsın diye kutu yalnız '
-    +'<b>kütlece baskın</b> gövdelere çizilir (toplam kütlenin %10\'undan fazlasını taşıyanlar: '
+  h+='<p style="font-size:0.9em; color:#5a6270;">Kutu yalnız <b>kütlece baskın</b> gövdelere çizilir '
+    +'(toplam kütlenin %10\'undan fazlası: '
     +ANA.map(function(n){ return _rEsc(String(n).split('—')[0].trim()); }).join(', ')
-    +'; şekil üzerine ad yazılmaz, sıra soldan sağa aynıdır). Kalan gövdeler ağırlık merkezleriyle küçük soluk nokta olarak yer alır — modelden '
-    +'çıkarılmazlar, yalnız görsel ağırlıkları azaltılır; kinetik enerji payları §8.14\'te tam olarak verilir.</p>';
-  h+='<p style="font-size:0.9em; color:#5a6270;"><b>Üç görünüş neden gerekli:</b> her dönme ekseni farklı '
-    +'düzlemde görünür. Roll ( \\( \\theta_x \\) ) yandan bakışta kaybolur — ±y\'deki gövdeler üst üste '
-    +'düşer ve zıt hareketleri görsel olarak birbirini götürür; <b>önden (Y–Z)</b> görünüşte ise açıkça okunur. '
-    +'Yunuslama ( \\( \\theta_y \\) ) yandan, sapma ( \\( \\theta_z \\) ) üstten görünüşün konusudur. '
-    +'Üçü <b>yan yana</b> verilir ve <b>aynı mm/px ölçeğini</b> paylaşır: panel genişlikleri kendi yatay '
-    +'açıklıklarıyla orantılıdır, bu yüzden önden görünüş dardır — çizim küçültülmüş değildir, gövde '
-    +'boyutları üç panelde birebir karşılaştırılabilir.</p>';
+    +'; sıra soldan sağa). Kalan gövdeler ağırlık merkezlerinde küçük soluk noktadır; kinetik enerji payları §8.14\'te.</p>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Üç görünüş (önden Y–Z · yandan · üstten) <b>aynı mm/px ölçeğinde</b>; '
+    +'panel genişlikleri yatay açıklıklarıyla orantılıdır.</p>';
   modes.forEach(function(md,i){
     var phi=md.phi||[0,0,0,0,0,0];
     // Her mod için ölçek: bu modun en büyük nokta yer değiştirmesi span'ın %12'si olsun
@@ -1977,15 +1966,12 @@ function _mntRepSoftening(R, opts){
   var sonuc=scan.map(degerlendir);
 
   var h='<h3>8.15 Rijitlik yumuşatma duyarlılığı</h3>';
-  h+='<p>Frekans kriterleri sağlanmıyorsa tasarım adımı takozu <em>yumuşatmaktır</em>. '
-    +'Aşağıda takoz rijitlikleri (statik ve dinamik birlikte) ölçeklenip her adımda '
+  h+='<p>Takoz rijitlikleri (statik ve dinamik birlikte) aynı katsayıyla ölçeklenir; her ölçekte '
     +'özdeğer problemi ve iletilebilirlik <b>yeniden çözülür</b>.</p>';
   h+='<p style="font-size:0.9em; color:#5a6270;">Tüm takozlar aynı katsayıyla ölçeklendiğinde '
     +'frekanslar <b>tam olarak</b> \\( \\sqrt{\\alpha} \\) ile gider ( \\( \\alpha\\mathbf K\\boldsymbol\\varphi'
     +'=\\omega^2\\mathbf M\\boldsymbol\\varphi\\Rightarrow\\omega^2\\propto\\alpha \\), kuplaj olsun olmasın). '
-    +'Tablonun asıl bilgisi frekans sütunları değil, <b>iletilebilirlik ve kriter sonuçlarıdır</b>: '
-    +'T katsayıyla orantılı ölçeklenmez, mod ayrıklığı ve bant çakışması ise ancak gerçek '
-    +'frekans listesine bakılarak değerlendirilebilir.</p>';
+    +'İletilebilirlik T ölçekle orantılı değişmez.</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Takoz rijitliği ölçeklendikçe mod frekansları ve rölanti iletilebilirliği</caption>';
   h+='<tr><th>Ölçek</th>';
   for(var i=1;i<=modes.length;i++) h+='<th>f<sub>'+i+'</sub></th>';
@@ -2018,8 +2004,7 @@ function _mntRepSoftening(R, opts){
   var mevcutOK = sonuc[0] && sonuc[0].k1!==false && sonuc[0].k1a!==false && sonuc[0].k1b!==false && sonuc[0].k2!==false;
   if(mevcutOK){
     h+='<div class="note check"><span class="t">Yumuşatma gerekmiyor</span>'
-      +'Mevcut takoz rijitlikleri (%100) taranan frekans ve izolasyon kriterlerinin tümünü sağlıyor. '
-      +'Tablo yine de tasarım payını gösterir: hangi yumuşatma seviyesine kadar kriterlerin korunduğu okunabilir.</div>';
+      +'Mevcut takoz rijitlikleri (%100) taranan frekans ve izolasyon kriterlerinin tümünü sağlıyor.</div>';
   } else if(uygunIdx>=0){
     var f0=scan[uygunIdx];
     h+='<div class="note warn"><span class="t">Yumuşatma gerekiyor</span>'
@@ -2027,7 +2012,7 @@ function _mntRepSoftening(R, opts){
       +'<b>en sert</b> tasarım <b>%'+_rF(f0.factor*100,0)+'</b> ölçek: modlar '
       +f0.modes.map(function(m){ return _rF(m.f_Hz,2); }).join(' / ')+' Hz, '
       +'T = '+(Number.isFinite(f0.T)?'%'+_rF(f0.T*100,1):'—')+'. '
-      +'Bu bir <em>hedef</em>tir; nihai takoz kataloğundan seçildikten sonra analiz tekrarlanmalıdır.</div>';
+      +'</div>';
   } else {
     // Hangi kriter(ler) engelliyor? Yalnız "olmadı" demek kullanıcıyı kör bırakır;
     // takozu daha da yumuşatmanın çözmeyeceği bir kriter varsa bunu söylemek gerekir.
@@ -2039,22 +2024,17 @@ function _mntRepSoftening(R, opts){
     var hicSaglanmayan=Object.keys(engel).filter(function(k){ return engel[k]===sonuc.length; });
     h+='<div class="note warn"><span class="t">Taranan aralıkta tüm kriterleri sağlayan seviye yok</span>'
       +'%'+_rF(_SOFT_FACTORS[0]*100,0)+' – %'+_rF(_SOFT_FACTORS[_SOFT_FACTORS.length-1]*100,0)
-      +' aralığında hiçbir ölçek katsayısı kriterlerin tümünü aynı anda sağlamıyor. '
-      +'Engelleyen kriterler: '
-      +Object.keys(engel).map(function(k){ return '<b>'+AD[k]+'</b> ('+engel[k]+'/'+sonuc.length+' seviyede kırmızı)'; }).join(', ')+'. ';
+      +' aralığında engelleyen kriterler: '
+      +Object.keys(engel).map(function(k){ return '<b>'+AD[k]+'</b> ('+engel[k]+'/'+sonuc.length+' seviyede ✗)'; }).join(', ')+'. ';
     if(hicSaglanmayan.length){
-      h+='<b>'+hicSaglanmayan.map(function(k){ return AD[k]; }).join(' ve ')+' hiçbir seviyede sağlanmıyor</b> — '
-        +'bu kriter(ler) rijitlik ölçeğine duyarsızdır ya da ters yönde çalışır; '
-        +'yalnız yumuşatarak çözülemez. ';
+      h+='<b>'+hicSaglanmayan.map(function(k){ return AD[k]; }).join(' ve ')+' hiçbir seviyede sağlanmıyor.</b> ';
     }
-    h+='Takoz <b>yerleşimi</b> (hardpoint), kütle dağılımı veya eksen başına farklı '
-      +'oranda yumuşatma (yalnız düşey ekseni indirmek gibi) değerlendirilmelidir. '
-      +'Bu tablo tüm takozları AYNI katsayıyla ölçekler; eksen ya da takoz başına '
-      +'farklılaştırma bu taramanın kapsamı dışındadır.</div>';
+    h+='Tarama bütün takozları aynı katsayıyla ölçekler; eksen ya da takoz başına '
+      +'farklılaştırma kapsam dışı.</div>';
   }
   h+='<p style="font-size:0.9em; color:#5a6270;">Tarama yalnız <b>frekans ve izolasyon</b> kriterlerini değerlendirir. '
     +'Yumuşatma statik sehimi \\( 1/\\text{ölçek} \\) oranında büyütür: %50 yumuşatma statik sehimi ikiye katlar '
-    +'ve ±15 mm metal-metal durdurucuya yaklaştırır. Seçim kesinleşmeden §8.5, §8.6 ve §8.10 yeniden okunmalıdır.</p>';
+    +'ve ±15 mm metal-metal durdurucuya yaklaştırır.</p>';
   return h;
 }
 
@@ -2275,7 +2255,7 @@ function _mntRepConsistency(R){
   h+='Çözülen '+nTot+' yük durumunun '+nBal+' tanesinde düşey kuvvet dengesi (Σf<sub>z</sub> = dış yük) sağlanır. ';
   h+='Çekme / lift-off gözlenen takoz-durum sayısı: '+tension+'. ';
   h+='±10 mm lineerlik bandını aşan takoz-durum sayısı: '+overLin+'. ';
-  if(overLin>0){ h+='<strong>Lineer model bu bandın ötesinde yaklaşıktır</strong> — ilgili yük durumlarında takozun nonlineer kuvvet–sehim eğrisi (Bölüm 9.1) devreye girer; sonuçlar bu sınır göz önünde değerlendirilmelidir.'; }
+  if(overLin>0){ h+='<strong>Lineer model bu bandın ötesinde yaklaşıktır</strong> — ilgili yük durumlarında takozun nonlineer kuvvet–sehim eğrisi (Bölüm 9.1) devreye girer.'; }
   else { h+='Tüm sehimler lineer bantta — model varsayımları bu yük durumlarında geçerlidir.'; }
   h+='</div>';
   return h;
@@ -2310,7 +2290,7 @@ function veMntUygunluk(R, opts){
     ? _C.modePlacement(modes, { fLimit: haveIdle ? 0.5*fFire : undefined }) : null;
 
   var c1;
-  if(!haveIdle) c1={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
+  if(!haveIdle) c1={st:'wait', bulgu:'Rölanti devri ve silindir sayısı yok (Motor)'};
   else {
     var lim1=0.5*fFire;
     var asan=(pl&&pl.exceed)||[];
@@ -2346,7 +2326,7 @@ function veMntUygunluk(R, opts){
   // sayı için iki farklı hükmün nereden geldiği görünsün.
   var T_GATE=0.5, T_REF=0.10;
   var iso=_mntRepIsolation(R, opts), c2;
-  if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
+  if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri ve silindir sayısı yok (Motor)'};
   else c2={st:(iso.T<T_GATE?'ok':'no'),
     bulgu:'f<sub>ateş</sub> '+_rF(iso.fFire,1)+' Hz / f<sub>bounce</sub> '+_rF(iso.fBounce,2)+' Hz → r='+_rF(iso.r,2)
          +', T=<b>'+(isFinite(iso.T)?'%'+_rF(iso.T*100,1):'∞')+'</b> (§8.8) · '
@@ -2361,7 +2341,7 @@ function veMntUygunluk(R, opts){
     if(!gmax||mf.v>gmax.v) gmax={v:mf.v, g:(rc.loadCase&&rc.loadCase.gearLabel)||rc.name, mnt:mf.name}; });
   var c3 = (gears.length && gmax)
     ? {st:'ok', bulgu:'Her vites ayrı çözüldü ('+gears.length+' durum, §8.9); en yüksek bileşke takoz kuvveti <b>'+_rF(gmax.v,2)+'</b> kN ('+_rEsc(gmax.g)+' · '+_rEsc(gmax.mnt)+')'}
-    : {st:'no', bulgu:'Tahrik torku girdisi yok — vites başına kontrol için Motor/Şanzıman kinematiğini doldurun'};
+    : {st:'no', bulgu:'Tahrik torku girdisi yok (Motor/Şanzıman kinematiği)'};
 
   // Kriter 4 — Tasarım yük koşulları (§8.10): maks tork, 3,5g düşey, 1g yanal,
   // 1g boyuna. 1g yanal, kalibreli 0,6g virajdan AYRI bir dayanım case'idir.
@@ -2372,7 +2352,7 @@ function veMntUygunluk(R, opts){
   dPresent.forEach(function(rc){ if(rc.res.checks.tensionCount>0) concern.push(rc.name); });
   if(haveTq && gears[0].res.checks.tensionCount>0) concern.push('maks tork');
   var c4={st:(c4Total>=4?'ok':'no'),
-    bulgu:c4Total+'/4 koşul çözüldü — §8.10'+(haveTq?'':' (maks tork için tahrik kinematiği girin)')};
+    bulgu:c4Total+'/4 koşul çözüldü — §8.10'+(haveTq?'':' (maks tork: tahrik kinematiği yok)')};
 
   var satirlar=[['1', 'Modal bant — tüm modlar','Modal bant','&lt; %50 · f<sub>ateş</sub>',c1],
    ['1a','Modlar arası ayrıklık','Mod ayrıklığı','&gt; 0,5 Hz',c1a],
@@ -2390,7 +2370,7 @@ function _mntRepCompliance(R, opts){
   opts=opts||{};
   var modes=R.modes||[];
   var h='<h2 id="uygunluk"><span class="no">✓</span>Motor takozu uygunluğu</h2>';
-  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Modal bant ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (<strong>Motor</strong> bileşeninden girilir); mod ayrıklığı ve yaylandırılmamış kütle bandı kriterleri yalnız modal sonuca bakar.</p>';
+  h+='<p>§8 sonuçları <strong>şirket motor takozu hedef kriterlerine</strong> göre. Modal bant ve rölanti izolasyon kriterleri motor rölanti devri ve silindir sayısına bağlıdır; mod ayrıklığı ve yaylandırılmamış kütle bandı kriterleri yalnız modal sonuca bakar.</p>';
   if(!modes.length){ return h+'<div class="note warn"><span class="t">Değerlendirilemedi</span>Modal sonuç yok — çözüm üretilemedi.</div>'; }
   var U=veMntUygunluk(R, opts), concern=U.concern, anyNo=U.anyNo, anyWait=U.anyWait;
 
@@ -2401,12 +2381,12 @@ function _mntRepCompliance(R, opts){
   h+='</table>';
 
   h+='<div class="note '+(anyNo?'warn':(anyWait?'':'check'))+'"><span class="t">Genel hüküm</span>';
-  if(anyNo) h+='Bir veya daha fazla kriter <b>sağlanmıyor / kontrol gerektiriyor</b>; ilgili satırları ve §8 ayrıntısını inceleyin.';
-  else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility için <b>Motor</b> bileşenine rölanti devri + silindir sayısı girin → tam değerlendirme.';
-  else h+='<b>Tüm hedef kriterler sağlanıyor</b> — güç grubu takoz sistemi şirket motor takozu hedeflerini karşılıyor.';
-  if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var — takoz seçimi gözden geçirilmeli.</span>';
+  if(anyNo) h+='Bir veya daha fazla kriter <b>sağlanmıyor / kontrol gerektiriyor</b>.';
+  else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility değerlendirilemedi (Motor: rölanti devri ve silindir sayısı yok).';
+  else h+='<b>Tüm hedef kriterler sağlanıyor.</b>';
+  if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var.</span>';
   h+='</div>';
-  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Ateşleme frekansı f<sub>ateş</sub> = (N/60)·(z/2). <b>Kriter 1</b> modların TAMAMINI sınar — en yüksek mod (mod '+(modes.length)+') tek başına belirleyici değildir; ortadaki bir mod da sınırı aşabilir. <b>Kriter 1a</b> komşu modların birbirine karışmasını, <b>1b</b> güç grubu modlarının aks/lastik (yaylandırılmamış kütle) bandına düşmesini engeller. Transmissibility T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] ile, DÜŞEY (bounce) doğal frekansı f<sub>bounce</sub>=(1/2π)·√(Σk<sub>z,din</sub>/m) tabanında hesaplanır (§8.8); ζ Çözücü\'de girilir; modal frekans bu hesaba GİRMEZ. Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10, kriterleri sağlamak için gereken rijitlik yumuşatması §8.15\'te ayrıntılıdır.</div>';
+  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Ateşleme frekansı f<sub>ateş</sub> = (N/60)·(z/2). <b>Kriter 1</b> modların tamamını sınar — en yüksek mod (mod '+(modes.length)+') tek başına belirleyici değildir; ortadaki bir mod da sınırı aşabilir. <b>Kriter 1a</b> komşu modların birbirine karışmasını, <b>1b</b> güç grubu modlarının aks/lastik (yaylandırılmamış kütle) bandına düşmesini engeller. Transmissibility T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] ile, düşey (bounce) doğal frekansı f<sub>bounce</sub>=(1/2π)·√(Σk<sub>z,din</sub>/m) tabanında hesaplanır (§8.8); ζ girdidir; modal frekans bu hesaba girmez.</div>';
   return h;
 }
 

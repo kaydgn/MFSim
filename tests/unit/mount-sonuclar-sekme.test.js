@@ -138,7 +138,7 @@ describe('DURUM ÇİPİ — hüküm proje çapında', () => {
 });
 
 describe('RAPOR — bayat çözümden üretilir ama söylenir', () => {
-  const uyari = () => stubs.showToast.mock.calls.filter((c) => /son çözümü anlatır/.test(c[0]) && c[1] === 'warning');
+  const uyari = () => stubs.showToast.mock.calls.filter((c) => /son çözümden; model sonra değişti/.test(c[0]) && c[1] === 'warning');
 
   test('güncel çözümde uyarı yok', () => {
     coz();

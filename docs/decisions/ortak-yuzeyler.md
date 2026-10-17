@@ -2266,7 +2266,7 @@ alma kanıtı ve kalanlar tek rapor sayfasında toplanır. Taramanın görmediğ
 sınıf (işaretsiz tekrar bildirimi, adı tekrarlayan ipucu) aşamanın kendi
 kapısıyla tutulur — kabuk için `tests/unit/kabuk-metin.test.js`.
 
-**Uygulananlar (tahtasız):** aşama 10 → kaydgn/MFSim#1148 (FEAD raporları: pencere,
+**Uygulananlar (tahtasız):** aşama 11 → kaydgn/MFSim#1149 (Takoz raporu: §8, uygunluk ve teori şablonunun alt bilgisi; kapı `mount-rapor-metin.test.js`; belgede yazılım anlatısı, okuma tarifi ve hükme eklenen öneri kalktı, geçerlilik sınırı kaldı; §8.13'ün sayıdan bağımsız "geçerli olduğunu doğrular" iddiası farkın kendisiyle değişti) · aşama 10 → kaydgn/MFSim#1148 (FEAD raporları: pencere,
 ayrıntılı rapor, özet, A3 pano; kapı `fead-rapor-metin.test.js`; belgede programın
 davranış gerekçesi ve test ölçümü kalktı, mühendislik içeriği kaldı; "Uygunluk
 kapıları" → "Uygunluk kriterleri") · aşama 9b → kaydgn/MFSim#1147 (Sonuçlar'ın FEAD ve Takoz

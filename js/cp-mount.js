@@ -4625,7 +4625,7 @@ function _mntCozucuAyarGovde(node){
     + (_mntEgriYok(node) ? _mntNot('Nonlineer seçili, eğri yok: lineer çözülür.', 'warn') : '')
     + '</div>'
     + _mntIzgara(1, _mntVarsayilanAlan(node, 'zeta', 'Sönüm oranı '+_mntSym('ζ')+' · tüm montaj', _mntZetaDefault(),
-        'şirket kabulü; her takozun c = 2ζ√(k_din·m_pay) katsayısı bundan türer', 'veMntSetZeta(\''+node.id+'\',this.value)')));
+        'şirket kabulü', 'veMntSetZeta(\''+node.id+'\',this.value)')));
   h+=_mntBolum('Şok darbesi', 'yarım sinüs',
       _mntIzgara(2,
         _mntVarsayilanAlan(node, 'shockG', 'Tepe ivme <u>[g]</u>', MNT_SHOCK_G, 'AMC tedarikçi raporlarının darbesi',

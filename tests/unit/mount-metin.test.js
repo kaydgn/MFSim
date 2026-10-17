@@ -71,6 +71,36 @@ describe('Takoz dizgeleri tarif ve dosya yolu taşımaz', () => {
   });
 });
 
+describe('künye ve yer tutucu yuvası açıklama taşımaz', () => {
+  // Varsayılan alanın beşinci argümanı KAYNAKTIR ("tam tepki", "AMC tedarikçi
+  // raporlarının darbesi"); sönüm oranında katsayının türetilişini taşıyordu —
+  // açıklama kılavuzda (§ sönüm).
+  test('_mntVarsayilanAlan kaynağı kısa ad: en çok beş sözcük, cümle yok', () => {
+    const ast = parser.parse(oku('js/cp-mount.js'), { sourceType: 'script', errorRecovery: true });
+    const kaynaklar = [];
+    (function yuru(n) {
+      if (!n || typeof n.type !== 'string') return;
+      if (n.type === 'CallExpression' && n.callee.name === '_mntVarsayilanAlan' && n.arguments[4]
+        && n.arguments[4].type === 'StringLiteral') kaynaklar.push(n.arguments[4].value);
+      for (const k in n) {
+        if (k === 'loc' || k === 'start' || k === 'end') continue;
+        const v = n[k];
+        if (Array.isArray(v)) v.forEach(yuru); else if (v && typeof v.type === 'string') yuru(v);
+      }
+    })(ast.program);
+    expect(kaynaklar.length).toBeGreaterThanOrEqual(5);
+    const sapan = kaynaklar.filter((k) => /[;.]/.test(k) || k.split(/\s+/).length > 5);
+    expect(sapan).toEqual([]);
+  });
+
+  test('3B görüntüleyicinin yer tutucusu durum söyler: kendini anlatma ve yönlendirme yok', () => {
+    const src = oku('js/components.js');
+    const m = /yerTutucu: '([^']*)'/.exec(src);
+    expect(m).toBeTruthy();
+    expect(m[1]).not.toMatch(/Bu bileşen|bileşeninde|döndürülür/);
+  });
+});
+
 describe('aynı durum aynı pencerede bir kez', () => {
   test('PTO çakışması eksik bandında; kategori ikinci kez not basmaz', () => {
     const src = oku('js/cp-mount.js');

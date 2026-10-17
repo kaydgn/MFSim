@@ -314,9 +314,10 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     // "isterleri sağlamaktadır" hükmü bu iki kriteri gözden kaçırıyor.
     const h = rep._mntRepSoftening(R, {});
     expect(h).toContain('tüm kriterleri sağlayan seviye yok');
-    expect(h).toContain('Engelleyen kriterler');
+    expect(h).toContain('engelleyen kriterler');
     expect(h).toContain('Kriter 1a (mod ayrıklığı)');
-    expect(h).toContain('yerleşimi');                          // yönlendirme veriyor
+    expect(h).toContain('takoz başına farklılaştırma kapsam dışı');   // geçerlilik sınırı
+    expect(h).not.toContain('değerlendirilmelidir');               // öneri/tarif yok
   });
 
   test('§8.15 uygun bir seviye VARSA onu önerir (en SERT olanı)', () => {
@@ -351,7 +352,7 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     expect(h).toContain('Yandan (X–Z)');
     expect(h).toContain('Önden (Y–Z)');
     expect(h).toContain('görseldir');                          // genlik uyarısı
-    expect(h).toContain('uydurma ikon değildir');              // kutuların kaynağı açıklanıyor
+    expect(h).toContain('düzgün yoğunluklu dikdörtgen prizmadır');   // kutuların kaynağı (yöntem)
     // Motor kutusu ölçekli çizilmeli: eşdeğer prizma 1154×460×787 mm
     const e = core.equivalentBox(1600, [[110.7, 0, 0], [0, 260.2, 0], [0, 0, 205.9]], false);
     expect(e[0] * 1000).toBeCloseTo(1154, 0);

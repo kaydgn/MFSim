@@ -107,7 +107,7 @@ describe('Rapor — tek hesap noktası (_mntRepIsolation)', () => {
     expect(uy).toContain('f<sub>bounce</sub>');           // alt simge gerçek (Tur 6)
     // Eski hatanın kilidi: iletilebilirlik tabanı MODAL frekans olmamalı.
     // (Metin eşleşmesi değil, niyet kilitlenir — rapor bunu açıkça söylemeli.)
-    expect(uy).toContain('modal frekans bu hesaba GİRMEZ');
+    expect(uy).toContain('modal frekans bu hesaba girmez');
     // roll modunun frekansı (18,87 Hz) taban olarak GEÇMEMELİ
     expect(uy).not.toContain('f_bounce 18,87');
   });

@@ -158,7 +158,8 @@ describe('§8 dinamik içerik — modelin gerçek değerleri', () => {
     R2.allCases = R2.allCases.filter(c => c.name !== 'Forward Torque');
     global._veMntLast = R2;
     const h = rep._mntRepStep4Torque(R2);
-    expect(h).toContain('tork yük durumu tanımlı değil');
+    expect(h).toContain('Tork yük durumu yok');
+    expect(h).not.toContain('doldurun');                 // durum söyler, tarif vermez
     expect(h).not.toContain('Tablo 4');
   });
 });

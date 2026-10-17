@@ -37,7 +37,7 @@ h = h.replace(/<h2 id="s8">[\s\S]*?(?=<h2 id="s9">)/, '@@SECTION8@@\n\n@@COMPLIA
 // ── 5) Generalize example/validation-specific prose (no Adams claim) ────────
 function must(sub){ if(h.indexOf(sub)<0){ console.error('EDIT ANCHOR MISSING:\n'+sub.slice(0,80)); process.exit(1);} }
 const s1old = "Bölüm 8'de yöntem, 8×8 TTAR güç grubu verileriyle adım adım uygulanmış ve Adams (BMC_TTAR_2031 modeli) sonuçlarıyla doğrulanmıştır: altı doğal frekansın tamamı 0,01 Hz mertebesinde, statik sehim değerleri 0,1 mm mertebesinde örtüşmektedir.";
-const s1new = "Bölüm 8, bu iki adımı — kütle birleştirme, rijitlik matrisinin kurulması, statik sehim, tahrik torku süperpozisyonu ve modal analiz — bu projede tanımlı güç grubu modeline uygular. Harici bir referans çözüm yerine, her adımın sonucu <strong>model içi tutarlılık kriterleriyle</strong> (düşey kuvvet dengesi Σf<sub>z</sub> = −m·g, çekme / lift-off ve ±10 mm lineerlik bandı) denetlenir.";
+const s1new = "Bölüm 8, bu iki adımı — kütle birleştirme, rijitlik matrisinin kurulması, statik sehim, tahrik torku süperpozisyonu ve modal analiz — bu projede tanımlı güç grubu modeline uygular. Her adımın sonucu <strong>model içi tutarlılık kriterleriyle</strong> (düşey kuvvet dengesi Σf<sub>z</sub> = −m·g, çekme / lift-off ve ±10 mm lineerlik bandı) denetlenir.";
 must(s1old); h = h.replace(s1old, s1new);
 
 const s71old = "Tüm yaylar aynı oranda sertleştiğinde frekansların yaklaşık \\( \\sqrt{k_{\\text{din}}/k_{\\text{stat}}} \\) katına çıkacağı öngörülebilir — Bölüm 8.5'te bu oran sayısal olarak da görülmektedir (≈ 1,24).";
@@ -46,7 +46,7 @@ must(s71old); h = h.replace(s71old, s71new);
 
 const footOld = /Bu doküman yöntem raporudur;[\s\S]*?Adams BMC_TTAR_2031 modeli çıktıları\./;
 if(!footOld.test(h)){ console.error('FOOTER ANCHOR MISSING'); process.exit(1); }
-h = h.replace(footOld, "Bu rapor, projede tanımlı güç grubu modelinden <strong>otomatik üretilmiştir</strong>; girdi değerleri modeldeki bileşen ve takoz tanımlarından alınır. Sonuçlar 6 serbestlik dereceli rijit gövde ve üç eksenli lineer yay matematiğine dayanır; model içi tutarlılık kontrolleriyle denetlenir. Tasarım kararlarında güncel CAD / tedarikçi verisiyle teyit edilmelidir.");
+h = h.replace(footOld, "Sonuçlar 6 serbestlik dereceli rijit gövde ve üç eksenli lineer yay matematiğine dayanır; model içi tutarlılık kontrolleriyle denetlenir.");
 
 // ── 6) Append offline KaTeX engine + auto-render just before </body> ────────
 const katexBoot = '<script>@@KATEX_JS@@</script>\n'

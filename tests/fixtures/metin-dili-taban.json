@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 446,
+ "sayi": 434,
  "dosyalar": {
   "candbc/index.html": {
    "228c80a72a": "Elinizde dosya yoksa: üretilmiş bir gösteri veritabanı ve kaydı yükler",
@@ -57,8 +57,7 @@
   "js/components.js": {
    "04d2bc493e": "Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi",
    "3f186e2927": "Önerilen şanzıman",
-   "d03fc594a5": "Önerilen konvertör",
-   "d420113de2": "Bu bileşen gerçek CAD dosyasıyla çalışmaya ayrıldı. Model Görünümler bileşeninde"
+   "d03fc594a5": "Önerilen konvertör"
   },
   "js/context-menus.js": {
    "54745ae534": "Motor'un aksesuar giriş portları sabittir (Klima / Alternatör / Hava Komp.).",
@@ -105,19 +104,6 @@
    "725120fe92": "Peak tork: ‹› N·m @ ‹› rpm Governed: ‹› rpm Pump düşüm: TC'ye bağlı",
    "d74080134e": "C10: Motor torku (‹› Nm) > Şanzıman giriş tork limiti (‹› Nm)",
    "fa81d9d4ba": "Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetl"
-  },
-  "js/cp-mount-report.js": {
-   "0d1eb3470c": "Önce modeli çözün: Çözücü → Hesapla.",
-   "0f2f08c472": "Model eksenleri asal eksenlerle çakışık değildir. Dış bir yazılımın (Adams/CATIA",
-   "173f29d1ea": "ÜZERİNDEDİR (fateş/froll = ‹› < 2) — %50 kriterini karşılamıyor; takoz dinamik r",
-   "290c5794b9": "Takoz yerleşimi (hardpoint), kütle dağılımı veya eksen başına farklı oranda yumu",
-   "340e06552e": "Çözülmüş sonuç yok — Çözücü → Hesapla.",
-   "58f2690f34": "(maks tork için tahrik kinematiği girin)",
-   "5bcc0a590c": "Rapor son çözümü anlatır; model o zamandan beri değişti. Güncel sayılar için Çöz",
-   "e4e8db5b3a": "Ateşleme frekansı fateş = (N/60)·(z/2). Kriter 1 modların TAMAMINI sınar — en yü",
-   "e74700820f": "Üç görünüş neden gerekli: her dönme ekseni farklı düzlemde görünür. Roll ( \\( \\t",
-   "fb49c0c7e5": "Bir veya daha fazla kriter sağlanmıyor / kontrol gerektiriyor; ilgili satırları ",
-   "fdfcc1d549": "‹› mod sıfıra yakın frekansta olduğu için kapı dışında bırakıldı (bkz. §8.7 serb"
   },
   "js/cp-mount.js": {
    "55c21624b0": "bayat",
