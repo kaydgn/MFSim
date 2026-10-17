@@ -82,8 +82,9 @@ eval(loadSource('ft-performance.js'));
 
 ## Bilinen açık ayrışmalar — yeni iş açmadan önce oku
 
-Modülde bugün duran, kapatılmamış üç tutarsızlık var (RK45'in iki kopyası,
-eşleştirme panelinin lineer okuması, takoz kütüphane kartının ayrı çekirdeği).
+Modülde bugün duran, kapatılmamış dört tutarsızlık var (RK45'in iki kopyası,
+eşleştirme panelinin lineer okuması, takoz kütüphane kartının ayrı çekirdeği,
+Coast-Down'ın Crr'sinin Tam Gaz çözücüsüne ulaşmaması).
 Bunlardan birine yakın bir iş yapıyorsan **önce oku** — yoksa aynı bulguyu
 üçüncü kez keşfedersin.
 

@@ -256,3 +256,73 @@ describe('yardımcılar', () => {
     finally { global.veMountCore = asil; }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe('kılavuzun sesi ve yapısı (aşama 14)', () => {
+  const duz = DOC.replace(/<(script|style|svg)\b[\s\S]*?<\/\1>/g, ' ').replace(/<[^>]+>/g, ' ')
+    .replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ');
+  const oku = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const kesme = (x) => x.replace(/[’']/g, "'");
+
+  test('ikinci kişi ve yazılım anlatısı yok', () => {
+    // eski: "Neyi siz verirsiniz", "kurduğunuz", "Aradığınız", "bu programın en çok
+    // kaçındığı hata sınıfıdır", "Bu belgedeki sayılar ölçülmüştür"
+    const SIZ = /(?<![\p{L}])(?:siz|sizin|size|sizi)(?![\p{L}])|\p{L}+(?:sınız|siniz|sunuz|sünüz|ınız|iniz|unuz|ünüz)\p{L}{0,4}(?![\p{L}])/giu;
+    const YASAK = /(?<![\p{L}])(bu programın|bilinçli\p{L}*|testi vardır|bayatla\p{L}*|ölçüldü|ölçülmüş\p{L}*|önerilen)(?![\p{L}])/giu;
+    const bul = (re) => [...duz.matchAll(re)].map((m) => duz.slice(Math.max(0, m.index - 40), m.index + 40));
+    expect(bul(SIZ)).toEqual([]);
+    expect(bul(YASAK)).toEqual([]);
+  });
+
+  test('bayat anlatım yok: durum şeridi, aşım sayacı, "rölanti devrini bilmez"', () => {
+    // Takoz penceresi sonuç göstermez (CLAUDE.md); aşım ve çekme raporun satırlarında.
+    expect(duz).not.toContain('durum şeridi');
+    expect(duz).not.toContain('aralık aşıldı');
+    expect(duz).not.toContain('rölanti devrini bilmez');   // Rapor penceresi rölanti devrini alır
+  });
+
+  test('başlangıç sayfasının kapıları ve raporun satırları programdakiyle aynı adla', () => {
+    const bas = kesme(oku('js/cp-mount-baslangic.js'));
+    const kapi = [...bas.matchAll(/\{ ey: '[a-z]+', ikon: '[a-z]+', ad: '((?:[^'\\]|\\.)+)'/g)]
+      .map((m) => m[1].replace(/\\'/g, "'"));
+    expect(kapi.length).toBe(3);
+    kapi.forEach((ad) => expect(kesme(duz)).toContain(ad));
+    const rapor = oku('js/cp-mount-report.js');
+    ['Lineerlik (±10 mm)', 'Çekme / lift-off'].forEach((satir) => {
+      expect(rapor).toContain("row('" + satir + "'");
+      expect(duz).toContain('Raporun ' + satir);
+    });
+    expect(oku('js/cp-mount.js')).toContain("_mntBolum('Tutarlılık uyarıları'");
+    expect(duz).toContain('Tutarlılık uyarıları');
+  });
+
+  test('alt bölüm numarası bölümünün numarasıyla başlar', () => {
+    const sapan = [];
+    let bolum = null, alt = 0;
+    for (const m of DOC.matchAll(/<h2\b[^>]*><span class="no">([^<]+)<\/span>|<h([34])>(\d+(?:\.\d+)+)\s/g)) {
+      if (m[1] !== undefined) { bolum = m[1].trim(); continue; }
+      alt++;
+      if (m[3].split('.')[0] !== bolum) sapan.push(bolum + ' içinde ' + m[3]);
+    }
+    expect(sapan).toEqual([]);
+    expect(alt).toBeGreaterThan(15);
+  });
+
+  test('kılavuzun kendi bölüm göndermeleri var olan başlığa gider; § yalnız rapora', () => {
+    const var_ = new Set();
+    for (const m of DOC.matchAll(/<span class="no">(\d+)<\/span>|<h[34]>(\d+(?:\.\d+)+)\s/g)) var_.add(m[1] || m[2]);
+    const yok = [];
+    let bakilan = 0;
+    for (const m of duz.matchAll(/(Bölüm|bölüm)\s(\d+(?:\.\d+)*)/g)) {
+      bakilan++;
+      if (!var_.has(m[2])) yok.push(m[0] + ' ← ' + duz.slice(Math.max(0, m.index - 40), m.index + 20));
+    }
+    expect(yok).toEqual([]);
+    expect(bakilan).toBeGreaterThan(15);
+    expect(duz).not.toMatch(/bölüm \d/);    // gönderme tek yazımla: "Bölüm N"
+    // § işareti raporun bölümüdür: hemen önünde "raporun" yazar
+    const para = [...duz.matchAll(/§\s?\d+(?:\.\d+)*/g)];
+    expect(para.length).toBeGreaterThan(0);
+    para.forEach((m) => expect(duz.slice(Math.max(0, m.index - 12), m.index)).toMatch(/raporun\s*$/));
+  });
+});

@@ -190,4 +190,18 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
     expect(cp.veMntKanvasBos()).toEqual([]);
     expect(global.nodes.filter((n) => n.type === 'mnt-solver')).toHaveLength(1);
   });
+
+  test('Boş kanvas bildirimsiz ortamda da kurduğunu döndürür', () => {
+    // Aşama 6 bildirimi silerken koşulunu bırakmıştı: `if(typeof showToast…)`
+    // dönüş satırını yönetiyordu — bildirimsiz ortamda dönüş undefined, başlangıç
+    // sayfasının `veMntKanvasBos().length` çağrısı patlıyordu.
+    const asil = global.showToast;
+    delete global.showToast;
+    try {
+      global.nodes = global.nodes.filter((n) => cp.VE_MNT_ARAC_TIPLERI.indexOf(n.type) < 0);
+      const kurulan = cp.veMntKanvasBos();
+      expect(Array.isArray(kurulan)).toBe(true);
+      expect(kurulan.length).toBe(cp.VE_MNT_ARAC_TIPLERI.length);
+    } finally { global.showToast = asil; }
+  });
 });

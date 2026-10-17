@@ -40,12 +40,21 @@ describe('kayıt defteri', () => {
 
   test('her kayıt zorunlu alanların hepsini taşıyor', () => {
     KIT.VE_GUIDE_KIT.forEach((k) => {
-      ['id', 'modul', 'baslik', 'ozet', 'uret', 'dosya'].forEach((alan) => {
+      ['id', 'modul', 'baslik', 'uret', 'dosya'].forEach((alan) => {
         expect(typeof k[alan]).toBe('string');
         expect(k[alan].length).toBeGreaterThan(0);
       });
       // Dosya adı indirmede kullanılıyor: yol ayırıcı ya da boşluk olmamalı.
       expect(k.dosya).toMatch(/^[\w.-]+$/);
+    });
+  });
+
+  test('kayıt açıklama yuvası taşımaz — kart yalnız ad ve durum basar', () => {
+    // ARAYÜZ ANLATMAZ: kalıp bir açıklama alanı açarsa her kullanan onu doldurur.
+    // Eski `ozet` alanı üç kartta üç açıklama cümlesi basıyordu ("Sonunda uçtan
+    // uca işlenmiş bir örnek.").
+    KIT.VE_GUIDE_KIT.forEach((k) => {
+      ['ozet', 'not', 'alt', 'aciklama'].forEach((alan) => expect(k[alan]).toBeUndefined());
     });
   });
 
@@ -270,15 +279,17 @@ describe('pencere kartı', () => {
     // Kayıt defterindeki `uret` yalnız bir AD; o adı taşıyan fonksiyon yoksa
     // (bu testte veGuideMountHTML tanımlı değil) kart düğme çizmemeli.
     const kart = KIT._gkKart(KIT.veGuideKitOf('mount'));
-    expect(kart).toContain('HAZIRLANIYOR');
-    expect(kart).toContain('henüz yazılmadı');
+    expect(kart).toContain('>Hazırlanıyor<');
+    // Rozet durumu söyler; ikinci bir cümle aynı şeyi tekrar etmez.
+    expect(kart).not.toContain('henüz yazılmadı');
     expect(kart).not.toContain('veGuideOpen(');
   });
 
   test('hazır kılavuz Aç ve İndir düğmelerini çizer', () => {
     global.veGuideFeadHTML = () => '<html></html>';
     const kart = KIT._gkKart(KIT.veGuideKitOf('fead'));
-    expect(kart).toContain('>HAZIR<');
+    expect(kart).toContain('>Hazır<');
+    expect(kart).toContain('>FEAD — Kayış-kasnak sistemi<');
     expect(kart).toContain("veGuideOpen('fead')");
     expect(kart).toContain("veGuideDownload('fead')");
   });

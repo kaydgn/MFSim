@@ -594,7 +594,6 @@ function veMntKanvasBos(){
   _mntSecimiBirak();
   if(typeof updateAllConnections==='function') updateAllConnections();
   if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
-  if(typeof showToast==='function')
   return created;
 }
 
