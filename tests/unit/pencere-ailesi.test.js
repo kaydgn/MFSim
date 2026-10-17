@@ -102,8 +102,9 @@ describe('başlık TEK bileşen', () => {
   test('ortak başlığı kuran her pencere', () => {
     for (const f of ['js/shortcuts-help.js', 'js/guide-kit.js', 'js/cp-programlar.js',
       'js/tablo-pencere.js', 'js/solver-pro.js',
-      // küçük pencereler (karar 10·B, aşama 3): BMC hesap raporu · TXT yazarı · diyagram künyesi
-      'js/graphics.js', 'js/results.js', 'js/sensors.js']) {
+      // küçük pencereler (karar 10·B, aşama 3): BMC hesap raporu · TXT yazarı
+      // (diyagram künyesi 2026-10-17'de kalktı: eksenler satırın ipucunda)
+      'js/graphics.js', 'js/results.js']) {
       expect([f, /ve-settings-header/.test(KAYNAK[f])]).toEqual([f, true]);
     }
     // Eski lacivert degrade (başlık bandı + eylem düğmesi) kalmadı — üç küçük
@@ -120,8 +121,9 @@ describe('başlık TEK bileşen', () => {
     // her biri kendi bandını (5–11 px dolgu, kalın başlık, çerçeveli ✕) ya da
     // bandsız 16 px başlığını çiziyordu.
     const kuran = [...new Set(perdeler().map((p) => p.f))];
-    // Bilgi penceresi ("hakkında") 2026-10-17'de kalktı: açıklama kılavuzda.
-    expect(kuran.length).toBeGreaterThanOrEqual(9);
+    // Bilgi penceresi ("hakkında") ve diyagram künyesi 2026-10-17'de kalktı:
+    // açıklama kılavuzda, eksenler satırın ipucunda.
+    expect(kuran.length).toBeGreaterThanOrEqual(8);
     expect(kuran.filter((f) => !/ve-settings-header/.test(KAYNAK[f]))).toEqual([]);
     // eski büyük pencere bandı ve çerçeveli kapat kalmadı
     const ESKI_BANT = 'padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
@@ -134,7 +136,7 @@ describe('başlık TEK bileşen', () => {
     // (%50 · %60 · %72 · %82 · %85) ve altısında bulanıklık; altı pencerenin
     // kabuğu temadan habersiz sabit gölgeyle (0 20px 60px rgba(0,0,0,.6)).
     const p = perdeler();
-    expect(p.length).toBeGreaterThanOrEqual(12);
+    expect(p.length).toBeGreaterThanOrEqual(11);
     expect(p.filter((x) => !/background:\s*var\(--scrim\)/.test(x.satir) || /backdrop-filter/.test(x.satir))
       .map((x) => x.f + ':' + (x.i + 1))).toEqual([]);
     // Kabuk: perdenin çevresinde kurulan köşesi --radius-lg olan kutu.

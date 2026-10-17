@@ -35,7 +35,7 @@ function getSolverPropertiesHTML(node) {
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Çözüm kümesi</div>';
   html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
   html += '<input type="checkbox" id="ve-solver-perfanalysis-' + node.id + '" ' + (perfAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
-  html += '<div><div style="font-weight:600;">Performans analizi</div><div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">Tam gaz hızlanma, 0-100 km/h, elastik hızlanma, gradeability</div></div>';
+  html += '<div><div style="font-weight:600;">Performans analizi</div></div>';
   html += '</label>';
 
   // Yol bileşeninin eğim modunu kontrol et
@@ -47,7 +47,7 @@ function getSolverPropertiesHTML(node) {
   if(roadNode && roadEgimMode === 'manuel') {
     html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
     html += '<input type="checkbox" id="ve-solver-manualgrade-' + node.id + '" ' + (manualGradeAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
-    html += '<div><div style="font-weight:600;">Kullanıcı girişli eğim analizi</div><div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">Manuel eğim değerleri ile hızlanma/yavaşlama analizi</div></div>';
+    html += '<div><div style="font-weight:600;">Kullanıcı girişli eğim analizi</div></div>';
     html += '</label>';
   }
 
@@ -58,7 +58,7 @@ function getSolverPropertiesHTML(node) {
   if(hasRoadSegs && roadEgimMode === 'segment') {
     html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
     html += '<input type="checkbox" id="ve-solver-acceldecel-' + node.id + '" ' + (accelDecel ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
-    html += '<div><div style="font-weight:600;">Hızlanma-yavaşlama</div><div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
+    html += '<div><div style="font-weight:600;">Hızlanma-yavaşlama</div></div>';
     html += '</label>';
 
     // Rapor zaman adımı (Hızlanma-Yavaşlama checkbox açıkken göster)
@@ -83,7 +83,7 @@ function getSolverPropertiesHTML(node) {
   if(obsNode) {
     html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
     html += '<input type="checkbox" id="ve-solver-obscross-' + node.id + '" ' + (obsCrossAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
-    html += '<div><div style="font-weight:600;">Engel atlama analizi</div><div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">Engel geçme kabiliyeti analizi — hendek, rampa ve dikey engel hesaplamaları</div></div>';
+    html += '<div><div style="font-weight:600;">Engel atlama analizi</div></div>';
     html += '</label>';
 
     // Log kaydı aralığı (Engel Atlama checkbox açıkken göster)
@@ -92,11 +92,11 @@ function getSolverPropertiesHTML(node) {
     html += '<label style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; align-items:center; gap:6px;">';
     html += 'Log kaydı:';
     html += '<select id="ve-solver-obslog-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="padding:3px 6px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-    html += '<option value="0.001"' + (obsLogInterval == 0.001 ? ' selected' : '') + '>1 ms (cok detayli)</option>';
+    html += '<option value="0.001"' + (obsLogInterval == 0.001 ? ' selected' : '') + '>1 ms</option>';
     html += '<option value="0.005"' + (obsLogInterval == 0.005 ? ' selected' : '') + '>5 ms</option>';
-    html += '<option value="0.01"' + (obsLogInterval == 0.01 ? ' selected' : '') + '>10 ms (varsayilan)</option>';
+    html += '<option value="0.01"' + (obsLogInterval == 0.01 ? ' selected' : '') + '>10 ms (varsayılan)</option>';
     html += '<option value="0.05"' + (obsLogInterval == 0.05 ? ' selected' : '') + '>50 ms</option>';
-    html += '<option value="0.1"' + (obsLogInterval == 0.1 ? ' selected' : '') + '>100 ms (ozet)</option>';
+    html += '<option value="0.1"' + (obsLogInterval == 0.1 ? ' selected' : '') + '>100 ms</option>';
     html += '</select>';
     html += '</label>';
     html += '</div>';
@@ -112,7 +112,6 @@ function getSolverPropertiesHTML(node) {
   var method = d.method || 'rk4';
   var isAdaptive = method === 'rk45';
   html += '<tr style="border-bottom:1px solid var(--border-color);"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="euler"' + (method==='euler'?' selected':'') + '>Euler (1. derece)</option><option value="heun"' + (method==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (method==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (method==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (method==='rk45'?' selected':'') + '><span class="mf-ico mf-ico-zap"></span> RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, düşük doğruluk. <b>Heun</b>: İyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk (önerilen). <b>RK45</b>: Adaptif adım — otomatik hassasiyet kontrolü.</td></tr>';
 
   // Sabit adım büyüklüğü (RK45 dışında)
   var ftDt = d.ftDt || 0.01;
@@ -124,13 +123,12 @@ function getSolverPropertiesHTML(node) {
   var ftRtol = d.ftRtol !== undefined ? d.ftRtol : 1e-4;
   var showFtTol = method === 'rk45';
   html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" inputmode="decimal" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" inputmode="decimal" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
-  html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
   
   // Güvenlik limiti — GÖRÜNÜR ve düzenlenebilir. Koşu bu süreye ulaşırsa
   // kesilir; kesilen koşu üst hızı olduğundan düşük raporlar, bu yüzden
   // değerin gizli kalmaması gerekiyor.
   html += '<tr style="border-bottom:1px solid var(--border-color);"><th class="lbl" style="background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Güvenlik limiti [s]</th><td style="background:var(--bg-tertiary);"><input type="text" inputmode="decimal" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" min="1" step="10" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;"></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Simülasyon en fazla bu kadar sürer. Koşu limite dayanırsa üst hıza ulaşılmadan kesilir — sonuç olduğundan düşük çıkar. Varsayılan ' + veSayi(VE_DEFAULT_MAX_SIM_TIME) + ' s.</td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="font-size:var(--fs-micro); color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Varsayılan ' + veSayi(VE_DEFAULT_MAX_SIM_TIME) + ' s.</td></tr>';
 
   html += '</table>';
   html += '</div>';                                   // ve-cp-col--in kapat (girdi)
@@ -161,7 +159,7 @@ function getSolverPropertiesHTML(node) {
     });
     html += '</div>';
   } else {
-    html += '<span style="color:var(--ink-warning); font-size:var(--fs-micro);">Bağlantılardan zincir oluşturulamadı. Bileşenleri bağlayın.</span>';
+    html += '<span style="color:var(--ink-warning); font-size:var(--fs-micro);">Zincir kurulamadı: bağlantı eksik.</span>';
   }
   
   html += '</div></div>';
@@ -228,10 +226,8 @@ function onVESolverParamChange(nodeId) {
     // FT modu: Δt satırı ve RK45 tolerans satırlarının görünürlüğü
     var ftDtRow = el('ve-solver-ftdt-row-' + nodeId);
     var ftTolRow = el('ve-solver-fttol-row-' + nodeId);
-    var ftTolDesc = el('ve-solver-fttol-desc-' + nodeId);
     if(ftDtRow) ftDtRow.style.display = isAdaptive ? 'none' : '';
     if(ftTolRow) ftTolRow.style.display = isAdaptive ? '' : 'none';
-    if(ftTolDesc) ftTolDesc.style.display = isAdaptive ? '' : 'none';
   }
   
   // RK45 tolerans parametreleri (MF modu)
@@ -347,7 +343,7 @@ function getGearShiftPropertiesHTML(node) {
 
   // Governed RPM yoksa uyarı
   if (governed <= 0) {
-    html += '<div style="background:var(--accent-danger); color:var(--on-danger); border-radius:var(--radius-md); padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor Governed RPM tanımlı değil. Eşik hesaplamaları yapılamaz.</div>';
+    html += '<div style="background:var(--accent-danger); color:var(--on-danger); border-radius:var(--radius-md); padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor governed devri yok: eşikler hesaplanamıyor.</div>';
     html += '</div>';
     return html;
   }
@@ -358,7 +354,7 @@ function getGearShiftPropertiesHTML(node) {
   // ── 2. Converter-Mod Geçişleri ──
   html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Converter-mod geçişleri</div>';
-  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Converter modda şanzıman çıkış devri (N<sub>out</sub>) belirli eşiklere ulaştığında geçiş tetiklenir.</p>';
+  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Koşul: N<sub>out</sub> ≥ eşik · iSCAAN çapraz doğrulama, ±0,5 / ±6–12 rpm</p>';
 
   html += '<table class="ve-pnl-tbl ve-pnl-tbl--tiny ve-pnl-tbl--framed">';
   html += '<thead><tr style="background:var(--bg-secondary);">';
@@ -433,7 +429,7 @@ function getGearShiftPropertiesHTML(node) {
   // ── 3. Lockup-Mod Upshift Tablosu ──
   html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Lockup-mod Upshift eşikleri</div>';
-  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Lockup modda: N<sub>out</sub> = N<sub>engine</sub> / i<sub>gear</sub> (SR = 1,0). Geçiş koşulu: N<sub>out</sub> ≥ a × ESL + b</p>';
+  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">N<sub>out</sub> = N<sub>engine</sub> / i<sub>gear</sub> (SR = 1,0) · koşul: N<sub>out</sub> ≥ a × ESL + b</p>';
 
   var luShifts = spData.lockupShifts;
   if (luShifts) {
@@ -494,7 +490,7 @@ function getGearShiftPropertiesHTML(node) {
     }
     html += '</tbody></table></div>';
   } else {
-    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center; padding:8px;">Bu profilde per-gear lockup shift verisi tanımlı değil. Sabit ofset kullanılır: N<sub>engine</sub> ≥ N<sub>ref</sub> − ' + veSayi(lockupOffset) + '</div>';
+    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center; padding:8px;">Vites başına lockup yok: N<sub>engine</sub> ≥ N<sub>ref</sub> − ' + veSayi(lockupOffset) + ' rpm</div>';
   }
   html += '</div>';
 
@@ -503,7 +499,7 @@ function getGearShiftPropertiesHTML(node) {
   html += '<div class="ve-cp-col">';                   // SAĞ sütun: downshift + matematik + algoritma
   html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:4px;">Downshift eşikleri</div>';
-  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Downshift koşulu: N<sub>out</sub> &lt; eşik → alt vitese düş. Histerezis = upshift eşiği − downshift eşiği.</p>';
+  html += '<p style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Koşul: N<sub>out</sub> &lt; eşik · histerezis = upshift − downshift eşiği</p>';
 
   var dsThresholds = spData.downshiftThresholds;
   if (dsThresholds) {
@@ -571,80 +567,17 @@ function getGearShiftPropertiesHTML(node) {
     }
     html += '</tbody></table></div>';
   } else {
-    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center; padding:8px;">Bu profilde downshift eşikleri tanımlı değil (sadece upshift).</div>';
+    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); text-align:center; padding:8px;">Downshift eşiği yok.</div>';
   }
   html += '</div>';
 
-  // ── 5. Matematik Özeti ──
+  // ── 6. Shift sırası ──
   html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Matematiksel modeller</div>';
+  html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Shift sırası</div>';
 
-  var mathStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.8; color:var(--text-secondary); margin-bottom:6px;';
-
-  html += '<div style="' + mathStyle + '">';
-  html += '<span style="color:var(--ink-accent); font-weight:600;">Lineer model:</span><br>';
-  html += '  N<sub>out</sub> = a × ESL + b<br>';
-  html += '  a ≈ 1/i<sub>gear</sub> (eğim, vites oranının tersi)<br>';
-  html += '  b = zamanlama ofseti (+ erken, − geç)<br>';
-  html += '  ESL = Engine Speed Limit (governed RPM)';
-  html += '</div>';
-
-  html += '<div style="' + mathStyle + '">';
-  html += '<span style="color:var(--ink-warning); font-weight:600;">minCap koruması:</span><br>';
-  html += '  thr = max(a × ESL + b, minCap)<br>';
-  html += '  Düşük ESL\'de formül çok düşük çıkarsa minCap devreye girer';
-  html += '</div>';
-
-  html += '<div style="' + mathStyle + '">';
-  html += '<span style="color:var(--ink-danger); font-weight:600;">Parçalı lineer (piecewise):</span><br>';
-  html += '  ESL ≤ breakpoint → a<sub>low</sub> × ESL + b<sub>low</sub><br>';
-  html += '  ESL &gt; breakpoint → a<sub>high</sub> × ESL + b<sub>high</sub>';
-  html += '</div>';
-
-  html += '<div style="' + mathStyle + '">';
-  html += '<span style="color:var(--text-heading); font-weight:600;">Segmentli model:</span><br>';
-  html += '  [ESL ≤ maxESL₁] → cap veya a₁ × ESL + b₁<br>';
-  html += '  [ESL ≤ maxESL₂] → a₂ × ESL + b₂<br>';
-  html += '  [ESL &gt; maxESL₂] → a₃ × ESL + b₃';
-  html += '</div>';
-
-  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:8px 10px; font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">';
-  html += 'Tüm katsayılar iSCAAN çapraz validasyondan türetilmiştir. Tipik max hata: ±0,5 rpm (lineer), ±6-12 rpm (nonlineer bölgeler).';
-  html += '</div>';
-  html += '</div>';
-
-  // ── 6. Shift Mantığı Akışı ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-md); padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Vites geçiş algoritması</div>';
-
-  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
+  var codeStyle = 'background:var(--bg-input); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border-color); font-size:var(--fs-micro); line-height:1.7; color:var(--text-secondary); white-space:pre-wrap;';
 
   html += '<div style="' + codeStyle + '">';
-  html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, i_gear, current_gear, mode</span>\n';
-  html += '<span style="color:var(--text-muted);">ESL = ' + veSayi(shiftRefRPM) + ' rpm (Shift Referans)</span>\n\n';
-
-  html += '<span style="color:var(--ink-warning); font-weight:600;">── CONVERTER MODU ──</span>\n\n';
-  html += '<span style="color:var(--ink-accent);">1C → 2C (F1 → F2, converter):</span>\n';
-  html += '  N_out = N_engine × SR / i_F1\n';
-  html += '  Koşul: N_out ≥ ' + thr1C2C + ' rpm\n\n';
-  html += '<span style="color:var(--ink-accent);">2C → 2L (lockup kilitleme):</span>\n';
-  html += '  N_out = N_engine × SR / i_F2\n';
-  html += '  Koşul: N_out ≥ ' + thr2C2L + ' rpm\n\n';
-
-  html += '<span style="color:var(--ink-warning); font-weight:600;">── LOCKUP MODU ──</span>\n\n';
-  html += '<span style="color:var(--ink-accent);">Upshift (2L → 3L → ... → 6L):</span>\n';
-  html += '  N_out = N_engine / i_gear  (SR = 1,0)\n';
-  html += '  Koşul: N_out ≥ a × ESL + b\n';
-  html += '  Shift sonrası: N_eng_yeni = N_eng × (i_eski / i_yeni)\n\n';
-
-  if (dsThresholds) {
-    html += '<span style="color:var(--ink-danger);">Downshift (6 → 5 → ... → 2 → 1C):</span>\n';
-    html += '  N_out = N_engine / i_gear\n';
-    html += '  Koşul: N_out &lt; downshift eşiği\n';
-    html += '  2L → 1C: Converter moduna geri dön\n\n';
-  }
-
-  html += '<span style="color:var(--ink-warning); font-weight:600;">── SHIFT SIRASI ──</span>\n\n';
   html += '<span style="color:var(--ink-accent); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>';
   if (dsThresholds) {
     html += '\n<span style="color:var(--ink-danger); font-weight:600;">6L → 5L → 4L → 3L → 2L → 1C</span> (yavaşlama)';

@@ -9,17 +9,12 @@ var SENSOR_PACKAGES = [
   {
     id: 'performance', name: 'Performans eğrileri', icon: '<span class="mf-ico mf-ico-flag"></span>', priority: 'essential',
     solverTab: 'performance',
-    description: 'Temel hızlanma performansı: hız-zaman, mesafe-zaman, ivme eğrileri',
     requires: ['vehicle'],
     diagrams: [
-      { id:'v-t', name:'Araç hızı – Zaman', xAxis:'Zaman (s)', yAxis:'Hız (km/h)',
-        significance:'0→100 km/h süresi doğrudan okunur. Eğrinin eğimi ivmeyi, düzleştiği nokta max hızı verir.' },
-      { id:'s-t', name:'Mesafe – Zaman', xAxis:'Zaman (s)', yAxis:'Mesafe (m)',
-        significance:'400m veya 1/4 mile süresi gibi standart metrikleri elde etmek için. Eğrinin eğimi anlık hıza eşittir.' },
-      { id:'a-v', name:'İvme – Araç hızı', xAxis:'Hız (km/h)', yAxis:'İvme (m/s²)',
-        significance:'Hangi hız aralığında aracın en güçlü/zayıf ivmelendiğini gösterir. Vites geçişleri anlık düşüş olarak görünür.' },
-      { id:'a-t', name:'İvme – Zaman', xAxis:'Zaman (s)', yAxis:'İvme (m/s²)',
-        significance:'Zamana bağlı ivme profili. Sürücü konforu ve yük güvenliği analizi için — ani ivme değişimleri yük kaymasına neden olabilir.' }
+      { id:'v-t', name:'Araç hızı – Zaman', xAxis:'Zaman (s)', yAxis:'Hız (km/h)' },
+      { id:'s-t', name:'Mesafe – Zaman', xAxis:'Zaman (s)', yAxis:'Mesafe (m)' },
+      { id:'a-v', name:'İvme – Araç hızı', xAxis:'Hız (km/h)', yAxis:'İvme (m/s²)' },
+      { id:'a-t', name:'İvme – Zaman', xAxis:'Zaman (s)', yAxis:'İvme (m/s²)' }
     ],
     sensors: [
       { target:'vehicle', attachment:'component', signal:'v_speed', label:'Araç → Araç hızı (km/h)' },
@@ -30,17 +25,12 @@ var SENSOR_PACKAGES = [
   {
     id: 'engine-analysis', name: 'Motor çalışma analizi', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'essential',
     solverTab: 'performance',
-    description: 'Motor devri, tork ve güç eğrileri — motorun hızlanma boyunca nasıl çalıştığını gösterir',
     requires: ['engine'],
     diagrams: [
-      { id:'rpm-v', name:'Motor devri – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Motor devri (rpm)',
-        significance:'Her viteste motorun hangi devir aralığında çalıştığını gösterir. Vites geçişlerinde testere dişi deseni oluşur.' },
-      { id:'rpm-t', name:'Motor devri – Zaman', xAxis:'Zaman (s)', yAxis:'Motor devri (rpm)',
-        significance:'Zamana bağlı devir profili. Testere dişi şeklinde yükselen pattern: her vites tırmanır → shift → düşer → tekrar tırmanır.' },
-      { id:'torque-v', name:'Motor torku – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Motor torku (Nm)',
-        significance:'Motorun tam gaz tork eğrisinin hangi bölümünde çalıştığını gösterir. Fan ve AC kayıplarının etkisi görülür.' },
-      { id:'power-v', name:'Motor gücü – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Motor gücü (kW)',
-        significance:'Hıza bağlı efektif güç çıktısı. Fan/AC gibi aksesuarların ne kadar güç çaldığını gösterir.' }
+      { id:'rpm-v', name:'Motor devri – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Motor devri (rpm)' },
+      { id:'rpm-t', name:'Motor devri – Zaman', xAxis:'Zaman (s)', yAxis:'Motor devri (rpm)' },
+      { id:'torque-v', name:'Motor torku – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Motor torku (Nm)' },
+      { id:'power-v', name:'Motor gücü – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Motor gücü (kW)' }
     ],
     sensors: [
       { target:'engine', attachment:'output', signal:'rpm', label:'Motor çıkışı → Devir (rpm)' },
@@ -51,19 +41,13 @@ var SENSOR_PACKAGES = [
   {
     id: 'tc-analysis', name: 'Tork konvertör analizi', icon: '<span class="mf-ico mf-ico-disc"></span>', priority: 'recommended',
     solverTab: 'performance',
-    description: 'TC çalışma noktası, tork çarpanı, verim ve kayma analizi',
     requires: ['torque-converter'],
     diagrams: [
-      { id:'sr-v', name:'Hız oranı (SR) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Speed Ratio (SR)',
-        significance:'TC çalışma noktası. SR=0 stall, SR≈0.85-0.90 coupling point, SR=1.0 lockup. Converter→lockup geçişi SR\'nin aniden 1.0\'a sıçraması olarak görülür.' },
-      { id:'tr-v', name:'Tork oranı (TR) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Torque Ratio (TR)',
-        significance:'TC tork çarpanı. Stall\'da en yüksek (tipik 2.0–3.5×), coupling point\'te 1.0\'a düşer. Lockup\'ta TR tam 1.0 olur.' },
-      { id:'eta-tc-v', name:'TC verimi – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Verim η (%)',
-        significance:'Stall\'da η≈0 (tüm enerji ısıya), coupling point\'te peak (~85-88%), lockup\'ta η=100%. TC\'nin ne kadar verimsiz çalıştığını gösterir.' },
-      { id:'tc-slip-v', name:'TC kayma – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Kayma (%)',
-        significance:'Kayma = (1 - SR) × 100. Stall\'da %100 kayma, lockup\'ta %0. Enerji kaybı ve ısınma profilinin girdisi.' },
-      { id:'tc-io-torque', name:'TC giriş/çıkış torku – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
-        significance:'Pump ve türbin torkları. Aradaki fark TC tork çarpım etkisi. Düşük hızlarda türbin torku pump\'tan çok yüksek (TR > 1).' }
+      { id:'sr-v', name:'Hız oranı (SR) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Speed Ratio (SR)' },
+      { id:'tr-v', name:'Tork oranı (TR) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Torque Ratio (TR)' },
+      { id:'eta-tc-v', name:'TC verimi – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Verim η (%)' },
+      { id:'tc-slip-v', name:'TC kayma – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Kayma (%)' },
+      { id:'tc-io-torque', name:'TC giriş/çıkış torku – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)' }
     ],
     sensors: [
       { target:'torque-converter', attachment:'component', signal:'speed_ratio', label:'TC → Hız oranı (SR)' },
@@ -77,17 +61,12 @@ var SENSOR_PACKAGES = [
   {
     id: 'traction-analysis', name: 'Çekiş kuvveti analizi', icon: '<span class="mf-ico mf-ico-activity"></span>', priority: 'essential',
     solverTab: 'performance',
-    description: 'Tekerlekte çekiş kuvveti, direnç kuvvetleri ve net çekiş gücü',
     requires: ['vehicle'],
     diagrams: [
-      { id:'te-v', name:'Çekiş kuvveti (TE) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Çekiş kuvveti (kN)',
-        significance:'İSCAAN temel diyagramı. Her vites ayrı eğri. Converter mod düz, lockup dik iniş. Zarf eğrisi aracın gerçek çekiş kapasitesi.' },
-      { id:'dp-v', name:'Net çekiş (DP) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Drawbar Pull (kN)',
-        significance:'DP = TE − F_direnç. Sıfıra düştüğü nokta max hız. Gradeability tablosunun doğrudan kaynağı.' },
-      { id:'resistances-v', name:'Direnç kuvvetleri – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Kuvvet (kN)',
-        significance:'Yuvarlanma direnci (sabit), hava direnci (V² ile artar), toplam direnç. Düşük hızlarda yuvarlanma, yüksek hızlarda aero baskın.' },
-      { id:'power-balance-v', name:'Güç dengesi – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Güç (kW)',
-        significance:'Motor gücü, tekerlekte güç, direnç gücü. Aradaki farklar TC kaybı, şanzıman kaybı olarak görülür. Drivetrain verimliliği analizi.' }
+      { id:'te-v', name:'Çekiş kuvveti (TE) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Çekiş kuvveti (kN)' },
+      { id:'dp-v', name:'Net çekiş (DP) – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Drawbar Pull (kN)' },
+      { id:'resistances-v', name:'Direnç kuvvetleri – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Kuvvet (kN)' },
+      { id:'power-balance-v', name:'Güç dengesi – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Güç (kW)' }
     ],
     sensors: [
       { target:'solver', attachment:'component', signal:'tractive_effort', label:'Çözücü → Çekiş kuvveti TE (kN)' },
@@ -102,17 +81,12 @@ var SENSOR_PACKAGES = [
   {
     id: 'shift-analysis', name: 'Vites geçiş analizi', icon: '<span class="mf-ico mf-ico-refresh"></span>', priority: 'recommended',
     solverTab: 'performance',
-    description: 'Vites değişim noktaları, şanzıman çıkış parametreleri ve shift kalitesi',
     requires: ['gearbox', 'shift-controller'],
     diagrams: [
-      { id:'gear-t', name:'Aktif vites – Zaman', xAxis:'Zaman (s)', yAxis:'Vites numarası',
-        significance:'Adım fonksiyonu: 1C→2C→2L→3L→… Her adımın genişliği o viteste geçirilen süre. C→L geçişleri de görünür.' },
-      { id:'gear-v', name:'Aktif vites – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Vites numarası',
-        significance:'Hangi hızda hangi vitese geçildiğini gösterir. Shift hız eşiklerini doğrulamak için kullanılır.' },
-      { id:'trans-out-v', name:'Şanzıman çıkış torku – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Çıkış torku (Nm)',
-        significance:'TC tork çarpımı + dişli oranı sonrası net tork. Her vites geçişinde ani değişim görülür.' },
-      { id:'shift-rpm-t', name:'Vites geçiş RPM profili – Zaman', xAxis:'Zaman (s)', yAxis:'Motor devri + vites',
-        significance:'Testere dişi devir profilinin her tepesi shift-up noktasıdır; shift kalibrasyonu buradan doğrulanır.' }
+      { id:'gear-t', name:'Aktif vites – Zaman', xAxis:'Zaman (s)', yAxis:'Vites numarası' },
+      { id:'gear-v', name:'Aktif vites – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Vites numarası' },
+      { id:'trans-out-v', name:'Şanzıman çıkış torku – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Çıkış torku (Nm)' },
+      { id:'shift-rpm-t', name:'Vites geçiş RPM profili – Zaman', xAxis:'Zaman (s)', yAxis:'Motor devri + vites' }
     ],
     sensors: [
       { target:'shift-controller', attachment:'component', signal:'current_gear', label:'Şanzıman Kontrol → Aktif vites' },
@@ -123,19 +97,13 @@ var SENSOR_PACKAGES = [
   {
     id: 'gearbox-analysis', name: 'Şanzıman detay analizi', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'recommended',
     solverTab: 'performance',
-    description: 'Şanzıman giriş/çıkış devir-tork, güç kaybı, verim ve vites oranı profilleri',
     requires: ['gearbox'],
     diagrams: [
-      { id:'gb-io-torque', name:'Şanzıman giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
-        significance:'Giriş ve çıkış torku farkı → şanzıman dişli kayıpları. Her vites geçişinde tork çarpanı değişimi görülür.' },
-      { id:'gb-io-rpm', name:'Şanzıman giriş/çıkış devri – Hız', xAxis:'Hız (km/h)', yAxis:'Devir (rpm)',
-        significance:'Giriş devri (TC çıkışı) ve çıkış devri (propşaft). Oranları aktif vites oranını verir.' },
-      { id:'gb-power-loss', name:'Şanzıman güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)',
-        significance:'Dişli, rulman ve yağ kayıpları toplamı. Yüksek torkta ve yüksek devirdeki kayıp artışı net olarak görülür.' },
-      { id:'gb-efficiency', name:'Şanzıman verimi – Hız', xAxis:'Hız (km/h)', yAxis:'Verim (%)',
-        significance:'Vites bazında verim profili. Converter modda daha düşük, lockup modda daha yüksek verim beklenir.' },
-      { id:'gb-ratio-t', name:'Vites oranı – Zaman', xAxis:'Zaman (s)', yAxis:'Vites oranı (−)',
-        significance:'Anlık vites oranı profili. Basamak fonksiyonu şeklinde değişir, her shift noktası net görülür.' }
+      { id:'gb-io-torque', name:'Şanzıman giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)' },
+      { id:'gb-io-rpm', name:'Şanzıman giriş/çıkış devri – Hız', xAxis:'Hız (km/h)', yAxis:'Devir (rpm)' },
+      { id:'gb-power-loss', name:'Şanzıman güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)' },
+      { id:'gb-efficiency', name:'Şanzıman verimi – Hız', xAxis:'Hız (km/h)', yAxis:'Verim (%)' },
+      { id:'gb-ratio-t', name:'Vites oranı – Zaman', xAxis:'Zaman (s)', yAxis:'Vites oranı (−)' }
     ],
     sensors: [
       { target:'gearbox', attachment:'input', signal:'rpm_in', label:'Şanzıman girişi → Giriş devri (rpm)' },
@@ -152,13 +120,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'transfer-analysis', name: 'Transfer Kutusu analizi', icon: '<span class="mf-ico mf-ico-shuffle"></span>', priority: 'recommended',
     solverTab: 'performance',
-    description: 'Transfer kutusu giriş/çıkış devir-tork ve güç kaybı profilleri',
     requires: ['transfer'],
     diagrams: [
-      { id:'tf-io-torque', name:'Transfer giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
-        significance:'Kademe oranına bağlı tork çarpanı. Hi/Lo kademe geçişlerinde tork değişimi görülür.' },
-      { id:'tf-power-loss', name:'Transfer güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)',
-        significance:'Transfer kutusu dişli ve rulman kayıpları. Yüksek tork bölgelerinde artan kayıp profili.' }
+      { id:'tf-io-torque', name:'Transfer giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)' },
+      { id:'tf-power-loss', name:'Transfer güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)' }
     ],
     sensors: [
       { target:'transfer', attachment:'input', signal:'rpm_in', label:'Transfer girişi → Giriş devri (rpm)' },
@@ -173,13 +138,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'propshaft-analysis', name: 'Propşaft analizi', icon: '<span class="mf-ico mf-ico-nut"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'Propşaft devir-tork ve güç iletim kaybı profilleri',
     requires: ['propshaft'],
     diagrams: [
-      { id:'ps-io-torque', name:'Propşaft giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
-        significance:'Propşaft boyunca tork iletim kaybı. Burulma ve rulman kayıpları farktan okunur.' },
-      { id:'ps-power-loss', name:'Propşaft güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)',
-        significance:'Propşaft mekanik kayıpları — genellikle küçük ama yüksek devirlerde artabilir.' }
+      { id:'ps-io-torque', name:'Propşaft giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)' },
+      { id:'ps-power-loss', name:'Propşaft güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)' }
     ],
     sensors: [
       { target:'propshaft', attachment:'input', signal:'rpm_in', label:'Propşaft girişi → Giriş devri (rpm)' },
@@ -194,13 +156,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'diff-analysis', name: 'Diferansiyel analizi', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'Diferansiyel giriş/çıkış devir-tork ve güç kaybı profilleri',
     requires: ['differential'],
     diagrams: [
-      { id:'diff-io-torque', name:'Diferansiyel giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
-        significance:'Diferansiyel oranı ve kayıpları sonrası yarım aks torku. Son kademe tork çarpanı görülür.' },
-      { id:'diff-power-loss', name:'Diferansiyel güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)',
-        significance:'Konik dişli ve rulman kayıpları — genellikle yüksek hız ve yüksek torkta artar.' }
+      { id:'diff-io-torque', name:'Diferansiyel giriş/çıkış torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)' },
+      { id:'diff-power-loss', name:'Diferansiyel güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)' }
     ],
     sensors: [
       { target:'differential', attachment:'input', signal:'rpm_in', label:'Diferansiyel girişi → Giriş devri (rpm)' },
@@ -215,17 +174,12 @@ var SENSOR_PACKAGES = [
   {
     id: 'wheel-analysis', name: 'Tekerlek analizi', icon: '<span class="mf-ico mf-ico-wheel"></span>', priority: 'recommended',
     solverTab: 'performance',
-    description: 'Tekerlek devri, torku, çekiş kuvveti ve eğim kapasitesi profilleri',
     requires: ['wheel'],
     diagrams: [
-      { id:'wh-force-v', name:'Tekerlek çekiş kuvveti – Hız', xAxis:'Hız (km/h)', yAxis:'Kuvvet (N)',
-        significance:'Tekerlek yüzeyindeki net çekiş kuvveti. Lastik-zemin etkileşiminin doğrudan göstergesi.' },
-      { id:'wh-torque-v', name:'Tekerlek torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
-        significance:'Tekerleğe ulaşan net tork. Tüm drivetrain kayıpları sonrası nihai tork değeri.' },
-      { id:'wh-te-dp-v', name:'TE ve DP – Hız', xAxis:'Hız (km/h)', yAxis:'Kuvvet (kN)',
-        significance:'Çekiş Kuvveti (TE) ve Drawbar Pull (DP) tekerlekten ölçüm. DP = TE − direnç, sıfır noktası max hız.' },
-      { id:'wh-grade-v', name:'Eğim kapasitesi – Hız', xAxis:'Hız (km/h)', yAxis:'Eğim (%)',
-        significance:'Her hızda aracın tırmanabildiği maksimum eğim yüzdesi. Düşük hızda yüksek, yüksek hızda düşen profil.' }
+      { id:'wh-force-v', name:'Tekerlek çekiş kuvveti – Hız', xAxis:'Hız (km/h)', yAxis:'Kuvvet (N)' },
+      { id:'wh-torque-v', name:'Tekerlek torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)' },
+      { id:'wh-te-dp-v', name:'TE ve DP – Hız', xAxis:'Hız (km/h)', yAxis:'Kuvvet (kN)' },
+      { id:'wh-grade-v', name:'Eğim kapasitesi – Hız', xAxis:'Hız (km/h)', yAxis:'Eğim (%)' }
     ],
     sensors: [
       { target:'wheel', attachment:'component', signal:'rpm_in', label:'Tekerlek → Devir (rpm)' },
@@ -241,13 +195,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'vehicle-extended', name: 'Araç ek sinyaller', icon: '<span class="mf-ico mf-ico-car"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'Kinetik enerji, yavaşlama (g) ve eşdeğer kütle profilleri',
     requires: ['vehicle'],
     diagrams: [
-      { id:'ve-ke-v', name:'Kinetik enerji – Hız', xAxis:'Hız (km/h)', yAxis:'Kinetik enerji (kJ)',
-        significance:'Araç kinetik enerjisinin hızla ilişkisi. Fren enerji geri kazanımı ve çarpışma güvenliği analizlerinin girdisi.' },
-      { id:'ve-decel-v', name:'Yavaşlama (g) – Hız', xAxis:'Hız (km/h)', yAxis:'Yavaşlama (g)',
-        significance:'Aracın g cinsinden yavaşlama kapasitesi. Sürücü konforu ve yük güvenliği sınırlarının kontrolü.' }
+      { id:'ve-ke-v', name:'Kinetik enerji – Hız', xAxis:'Hız (km/h)', yAxis:'Kinetik enerji (kJ)' },
+      { id:'ve-decel-v', name:'Yavaşlama (g) – Hız', xAxis:'Hız (km/h)', yAxis:'Yavaşlama (g)' }
     ],
     sensors: [
       { target:'vehicle', attachment:'component', signal:'v_accel_g', label:'Araç → İvme (g)' },
@@ -259,11 +210,9 @@ var SENSOR_PACKAGES = [
   {
     id: 'road-extended', name: 'Yol ek sinyaller', icon: '<span class="mf-ico mf-ico-route"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'Anlık eğim yüzdesi ve aktif segment numarası profilleri',
     requires: ['road'],
     diagrams: [
-      { id:'rd-grade-t', name:'Anlık eğim – Zaman', xAxis:'Zaman (s)', yAxis:'Eğim (%)',
-        significance:'Zamana bağlı eğim profili. Sabit eğimli simülasyonda düz çizgi, segment bazlı simülasyonda basamak fonksiyonu.' }
+      { id:'rd-grade-t', name:'Anlık eğim – Zaman', xAxis:'Zaman (s)', yAxis:'Eğim (%)' }
     ],
     sensors: [
       { target:'road', attachment:'component', signal:'r_current_grade', label:'Yol → Anlık eğim (%)' },
@@ -273,13 +222,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'tc-extended', name: 'TC ek sinyaller', icon: '<span class="mf-ico mf-ico-disc"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'TC devir, güç ve K-Factor profilleri',
     requires: ['torque-converter'],
     diagrams: [
-      { id:'tc-kfactor-v', name:'K-Factor – Hız', xAxis:'Hız (km/h)', yAxis:'K-Factor (rpm/√Nm)',
-        significance:'Tork konvertörün K-Factor eğrisi. Stall K-factor, motor-TC eşleşmesinin belirleyici parametresidir.' },
-      { id:'tc-power-loss-v', name:'TC güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)',
-        significance:'Tork konvertörde kaybedilen güç. Stall\'da en yüksek, lockup\'ta sıfıra yakın.' }
+      { id:'tc-kfactor-v', name:'K-Factor – Hız', xAxis:'Hız (km/h)', yAxis:'K-Factor (rpm/√Nm)' },
+      { id:'tc-power-loss-v', name:'TC güç kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç kaybı (kW)' }
     ],
     sensors: [
       { target:'torque-converter', attachment:'input', signal:'rpm_in', label:'TC girişi → Pompa devri (rpm)' },
@@ -293,11 +239,9 @@ var SENSOR_PACKAGES = [
   {
     id: 'engine-extended', name: 'Motor ek sinyaller', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'Motor açısal hız profili',
     requires: ['engine'],
     diagrams: [
-      { id:'eng-angvel-t', name:'Açısal hız – Zaman', xAxis:'Zaman (s)', yAxis:'Açısal hız (rad/s)',
-        significance:'Motorun açısal hız profili (rad/s). Atalet ve titreşim analizlerinin girdisi.' }
+      { id:'eng-angvel-t', name:'Açısal hız – Zaman', xAxis:'Zaman (s)', yAxis:'Açısal hız (rad/s)' }
     ],
     sensors: [
       { target:'engine', attachment:'output', signal:'angular_vel', label:'Motor çıkışı → Açısal hız (rad/s)' }
@@ -306,13 +250,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'shift-ctrl-extended', name: 'Vites kontrol ek sinyaller', icon: '<span class="mf-ico mf-ico-refresh"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'Lockup durumu, şanzıman çıkış devri ve devir oranı profilleri',
     requires: ['shift-controller'],
     diagrams: [
-      { id:'sc-lockup-t', name:'Lockup durumu – Zaman', xAxis:'Zaman (s)', yAxis:'Lockup (0/1)',
-        significance:'TC lockup clutch durumu. 0=converter modu (kaymalı), 1=lockup modu (kilitli). Geçiş noktaları kritik.' },
-      { id:'sc-nout-t', name:'Şanzıman çıkış devri – Zaman', xAxis:'Zaman (s)', yAxis:'Çıkış devri (rpm)',
-        significance:'Şanzıman çıkış devri profili. Shift kalibrasyon ve vites oranı doğrulaması için kullanılır.' }
+      { id:'sc-lockup-t', name:'Lockup durumu – Zaman', xAxis:'Zaman (s)', yAxis:'Lockup (0/1)' },
+      { id:'sc-nout-t', name:'Şanzıman çıkış devri – Zaman', xAxis:'Zaman (s)', yAxis:'Çıkış devri (rpm)' }
     ],
     sensors: [
       { target:'shift-controller', attachment:'component', signal:'gear_mode', label:'Vites kontrol → Vites modu' },
@@ -324,13 +265,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'solver-extended', name: 'Çözücü ek sinyaller', icon: '<span class="mf-ico mf-ico-ruler"></span>', priority: 'optional',
     solverTab: 'performance',
-    description: 'Eğim kapasitesi ve toplam ısı reddi profilleri',
     requires: ['solver'],
     diagrams: [
-      { id:'sol-grade-v', name:'Net eğim kapasitesi – Hız', xAxis:'Hız (km/h)', yAxis:'Eğim (%)',
-        significance:'Her hızda aracın tırmanabildiği maksimum eğim. Gradeability tablosunun diyagram karşılığı.' },
-      { id:'sol-heat-v', name:'Toplam ısı reddi – Hız', xAxis:'Hız (km/h)', yAxis:'Isı reddi (kW)',
-        significance:'Tüm bileşenlerden toplam ısı reddi. Soğutma sistemi boyutlandırma girdisi.' }
+      { id:'sol-grade-v', name:'Net eğim kapasitesi – Hız', xAxis:'Hız (km/h)', yAxis:'Eğim (%)' },
+      { id:'sol-heat-v', name:'Toplam ısı reddi – Hız', xAxis:'Hız (km/h)', yAxis:'Isı reddi (kW)' }
     ],
     sensors: [
       { target:'solver', attachment:'component', signal:'net_grade', label:'Çözücü → Eğim kapasitesi (%)' },
@@ -340,19 +278,14 @@ var SENSOR_PACKAGES = [
   {
     id: 'comparison', name: 'Karşılaştırma diyagramları', icon: '<span class="mf-ico mf-ico-contrast"></span>', priority: 'advanced',
     solverTab: 'performance',
-    description: 'Transfer kademe karşılaştırması, verimlilik zinciri ve ileri analizler',
     requires: ['vehicle', 'engine', 'torque-converter'],
     dependsOn: ['performance', 'engine-analysis', 'tc-analysis', 'traction-analysis'],
     diagrams: [
       { id:'transfer-compare', name:'Yüksek / düşük kademe hız karşılaştırması', xAxis:'Zaman (s)', yAxis:'Hız (km/h)',
-        significance:'İki transfer kademe V(t) eğrilerinin üst üste bindirilmesi. Kesişim noktası taktik karar sınırı.',
         note:'İki ayrı simülasyon gerektirir.' },
-      { id:'efficiency-chain', name:'Güç aktarma verim zinciri – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Verim (%)',
-        significance:'Her bileşenin verimi ayrı eğri: TC η, şanzıman η, toplam η. Enerji kayıp analizinin girdisi.' },
-      { id:'te-envelope', name:'TE zarf eğrisi – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Çekiş kuvveti (kN)',
-        significance:'Tüm viteslerin TE eğrileri + zarf eğrisi. Vites aralıklarının uygunluğunu gösterir.' },
+      { id:'efficiency-chain', name:'Güç aktarma verim zinciri – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Verim (%)' },
+      { id:'te-envelope', name:'TE zarf eğrisi – Araç hızı', xAxis:'Hız (km/h)', yAxis:'Çekiş kuvveti (kN)' },
       { id:'bsfc-map', name:'Motor BSFC çalışma haritası', xAxis:'Motor devri (rpm)', yAxis:'Motor torku (Nm)',
-        significance:'Verimlilik haritası üzerine çalışma noktası yörüngesi. Motorun ne kadar verimli kullanıldığını gösterir.',
         note:'Arka plan BSFC kontur haritası motor veritabanından gelir.' }
     ],
     sensors: []
@@ -364,15 +297,11 @@ var SENSOR_PACKAGES = [
   {
     id: 'sd-speed-profile', name: 'Hız ve mesafe profili', icon: '<span class="mf-ico mf-ico-route"></span>', priority: 'essential',
     solverTab: 'accel-decel',
-    description: 'Segment bazlı hız, mesafe ve ivme profilleri — sürüş çevriminin genel görünümü',
     requires: ['vehicle'],
     diagrams: [
-      { id:'sd-v-t', name:'Araç hızı – Zaman', xAxis:'Zaman (s)', yAxis:'Hız (km/h)',
-        significance:'Sürüş çevriminin ana profili. Tam gaz segmentlerinde hız yükselir, serbest segmentlerde düşer. Segment sınırları kırılma noktaları olarak görünür.' },
-      { id:'sd-s-t', name:'Mesafe – Zaman', xAxis:'Zaman (s)', yAxis:'Mesafe (m)',
-        significance:'Toplam kat edilen mesafe. Eğimi hıza eşit. Tam gaz bölümlerinde dik, serbest bölümlerde düzleşir. Segment mesafelerini doğrulamak için kullanılır.' },
-      { id:'sd-a-t', name:'İvme – Zaman', xAxis:'Zaman (s)', yAxis:'İvme (m/s²)',
-        significance:'Segment geçişlerinde ani ivme değişimleri, yük güvenliği ve sürücü konforu analizi. Negatif değerler yavaşlama fazlarını gösterir.' }
+      { id:'sd-v-t', name:'Araç hızı – Zaman', xAxis:'Zaman (s)', yAxis:'Hız (km/h)' },
+      { id:'sd-s-t', name:'Mesafe – Zaman', xAxis:'Zaman (s)', yAxis:'Mesafe (m)' },
+      { id:'sd-a-t', name:'İvme – Zaman', xAxis:'Zaman (s)', yAxis:'İvme (m/s²)' }
     ],
     sensors: [
       { target:'vehicle', attachment:'component', signal:'v_speed', label:'Araç → Araç hızı (km/h)' },
@@ -383,15 +312,11 @@ var SENSOR_PACKAGES = [
   {
     id: 'sd-forces', name: 'Kuvvet ve direnç analizi', icon: '<span class="mf-ico mf-ico-zap"></span>', priority: 'essential',
     solverTab: 'accel-decel',
-    description: 'Segment bazlı çekiş, direnç ve eğim kuvvetleri — arazi etkisini gösterir',
     requires: ['vehicle', 'engine'],
     diagrams: [
-      { id:'sd-fnet-t', name:'Net kuvvet – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
-        significance:'Pozitif değerler hızlanma, negatif değerler yavaşlama. Eğim değişimlerinde ani sıçrama görülür. Serbest segmentlerde motor freni etkisi.' },
-      { id:'sd-forces-t', name:'Kuvvet bileşenleri – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
-        significance:'Eğim, yuvarlanma ve aero dirençlerinin zamana bağlı profili. Eğimli segmentlerde F_grade baskın, yüksek hızda F_aero baskın.' },
-      { id:'sd-grade-t', name:'Eğim kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
-        significance:'Her segmentteki eğimin yarattığı kuvvet. Pozitif değer yokuş yukarı, negatif yokuş aşağı. Segment geçişlerinde basamak değişimi.' }
+      { id:'sd-fnet-t', name:'Net kuvvet – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)' },
+      { id:'sd-forces-t', name:'Kuvvet bileşenleri – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)' },
+      { id:'sd-grade-t', name:'Eğim kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)' }
     ],
     sensors: [
       { target:'road', attachment:'component', signal:'r_rolling_force', label:'Yol → Yuvarlanma direnci (N)' },
@@ -403,17 +328,12 @@ var SENSOR_PACKAGES = [
   {
     id: 'sd-powertrain', name: 'Güç aktarma profili', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'recommended',
     solverTab: 'accel-decel',
-    description: 'Motor devri, tork, güç ve vites değişimleri — segment bazlı güç aktarma davranışı',
     requires: ['engine', 'gearbox'],
     diagrams: [
-      { id:'sd-rpm-t', name:'Motor devri – Zaman', xAxis:'Zaman (s)', yAxis:'Motor devri (rpm)',
-        significance:'Serbest fazda devir düşer, tam gaz fazında tırmanır. Segment geçişlerinde devir profili yeniden şekillenir. Motorun hangi bölgede çalıştığını gösterir.' },
-      { id:'sd-power-t', name:'Motor ve tekerlek gücü – Zaman', xAxis:'Zaman (s)', yAxis:'Güç (kW)',
-        significance:'Tam gaz segmentlerinde motor tam güçte, serbest segmentlerde güç düşer. İkisi arası fark drivetrain kaybı.' },
-      { id:'sd-gear-t', name:'Vites profili – Zaman', xAxis:'Zaman (s)', yAxis:'Vites',
-        significance:'Segment bazlı vites değişim profili. Yavaşlama sonrası düşük vitese iniş, tekrar hızlanmada adım adım yükseliş.' },
-      { id:'sd-te-t', name:'Çekiş kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Çekiş kuvveti (kN)',
-        significance:'Tam gaz segmentlerinde yüksek TE, serbest segmentlerde sıfıra yakın veya negatif (motor freni). Segment sınırlarında ani değişim.' }
+      { id:'sd-rpm-t', name:'Motor devri – Zaman', xAxis:'Zaman (s)', yAxis:'Motor devri (rpm)' },
+      { id:'sd-power-t', name:'Motor ve tekerlek gücü – Zaman', xAxis:'Zaman (s)', yAxis:'Güç (kW)' },
+      { id:'sd-gear-t', name:'Vites profili – Zaman', xAxis:'Zaman (s)', yAxis:'Vites' },
+      { id:'sd-te-t', name:'Çekiş kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Çekiş kuvveti (kN)' }
     ],
     sensors: [
       { target:'engine', attachment:'output', signal:'rpm', label:'Motor → Devir (rpm)' },
@@ -425,13 +345,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'sd-thermal', name: 'Isı reddi ve verimlilik', icon: '<span class="mf-ico mf-ico-thermometer"></span>', priority: 'advanced',
     solverTab: 'accel-decel',
-    description: 'TC ısı kaybı ve motor fren kuvveti — termal yük ve enerji dağılımı',
     requires: ['torque-converter', 'engine'],
     diagrams: [
-      { id:'sd-heat-t', name:'TC ısı reddi – Zaman', xAxis:'Zaman (s)', yAxis:'Isı reddi (kW)',
-        significance:'Tork konvertördeki enerji kaybının termal profili. Düşük hızlarda ve serbest fazlarda yüksek ısı üretimi. Soğutma sistemi tasarımı için kritik.' },
-      { id:'sd-edrag-t', name:'Motor fren kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
-        significance:'Serbest (coast) fazında motorun yarattığı fren kuvveti. Motor frenli yokuş iniş analizinin girdisi.' }
+      { id:'sd-heat-t', name:'TC ısı reddi – Zaman', xAxis:'Zaman (s)', yAxis:'Isı reddi (kW)' },
+      { id:'sd-edrag-t', name:'Motor fren kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)' }
     ],
     sensors: [
       { target:'torque-converter', attachment:'component', signal:'heat_rejection', label:'TC → Isı reddi (kW)' },
@@ -445,13 +362,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'obs-torque', name: 'Tork ve kuvvet analizi', icon: '<span class="mf-ico mf-ico-barrier"></span>', priority: 'essential',
     solverTab: 'obstacle',
-    description: 'Engel atlama için gerekli tork, mevcut tork kapasitesi ve güvenlik marjı',
     requires: ['vehicle', 'engine', 'torque-converter'],
     diagrams: [
-      { id:'obs-match-torque', name:'Motor-TC eşleşme tork profili', xAxis:'Hız oranı (SR)', yAxis:'Tork (Nm)',
-        significance:'SR=0 (stall) → SR=1.0 (lockup) aralığında motor torku, pump torku, türbin torku ve tekerlek torku. Stall noktasındaki tekerlek torku engel atlama kapasitesini belirler.' },
-      { id:'obs-match-power', name:'Motor-TC eşleşme güç profili', xAxis:'Hız oranı (SR)', yAxis:'Güç (kW)',
-        significance:'Motor gücü ve türbin gücünün SR\'ye bağlı değişimi. Stall\'da güç sıfır (v=0), artan SR ile güç yükselir. TC verim kaybı iki eğri arası fark.' }
+      { id:'obs-match-torque', name:'Motor-TC eşleşme tork profili', xAxis:'Hız oranı (SR)', yAxis:'Tork (Nm)' },
+      { id:'obs-match-power', name:'Motor-TC eşleşme güç profili', xAxis:'Hız oranı (SR)', yAxis:'Güç (kW)' }
     ],
     sensors: [
       { target:'engine', attachment:'output', signal:'torque', label:'Motor → Tork (Nm)' },
@@ -462,13 +376,10 @@ var SENSOR_PACKAGES = [
   {
     id: 'obs-thermal', name: 'Termal ve verimlilik analizi', icon: '<span class="mf-ico mf-ico-thermometer"></span>', priority: 'recommended',
     solverTab: 'obstacle',
-    description: 'Engel atlama sırasında TC ısı üretimi, verim ve kayma profilleri',
     requires: ['torque-converter'],
     diagrams: [
-      { id:'obs-match-heat', name:'TC ısı reddi – Hız oranı', xAxis:'Hız oranı (SR)', yAxis:'Isı reddi (kW)',
-        significance:'Stall\'da tüm enerji ısıya dönüşür. SR arttıkça ısı azalır. Engel atlama genelde düşük SR bölgesinde gerçekleşir — soğutma kapasitesi kritik.' },
-      { id:'obs-match-eta', name:'TC verimi – Hız oranı', xAxis:'Hız oranı (SR)', yAxis:'Verim (%)',
-        significance:'TC verimi engel atlama bölgesinde (SR<0.3) çok düşük. Enerji kaybının büyüklüğünü gösterir. Soğutma sistemi boyutlandırma girdisi.' }
+      { id:'obs-match-heat', name:'TC ısı reddi – Hız oranı', xAxis:'Hız oranı (SR)', yAxis:'Isı reddi (kW)' },
+      { id:'obs-match-eta', name:'TC verimi – Hız oranı', xAxis:'Hız oranı (SR)', yAxis:'Verim (%)' }
     ],
     sensors: [
       { target:'torque-converter', attachment:'component', signal:'efficiency', label:'TC → Verim (%)' },
@@ -482,21 +393,14 @@ var SENSOR_PACKAGES = [
   {
     id: '3d-perf', name: '3D performans diyagramları', icon: '<span class="mf-ico mf-ico-box"></span>', priority: 'advanced',
     solverTab: 'performance',
-    description: '3 boyutlu diyagramlar: motor haritası, çekiş kuvveti, TC verimi, güç akışı, direnç ve ivme',
     requires: ['vehicle', 'engine'],
     diagrams: [
-      { id:'3d-engine-map', name:'Motor çalışma haritası (3B)', xAxis:'RPM', yAxis:'Tork (Nm)', zAxis:'Güç (kW)',
-        significance:'Motor devri × tork × güç yüzeyini 3 boyutlu gösterir. Maksimum güç bölgesi heatmap üzerinden okunur.' },
-      { id:'3d-te-gear', name:'Çekiş kuvveti yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Vites', zAxis:'TE (kN)',
-        significance:'Her viteste hıza bağlı çekiş kuvveti — gradeability ve tırmanma kapasitesi analizi. Vites geçiş bölgeleri renk geçişi olarak görülür.' },
-      { id:'3d-tc-eff', name:'TC verim yüzeyi (3B)', xAxis:'Hız oranı (SR)', yAxis:'Pump torku (Nm)', zAxis:'Verim (%)',
-        significance:'Tork konvertörün hangi SR-tork bölgesinde ne kadar verimli olduğu. Lockup stratejisi belirlemek için kritik yüzey.' },
-      { id:'3d-power-flow', name:'Güç akışı yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Motor Gücü (kW)',
-        significance:'Motor gücünün hız ve zamana göre dağılımı — drivetrain kayıp haritası. Yüksek güç bölgeleri kırmızı, düşük bölgeler mavi.' },
-      { id:'3d-resist-map', name:'Direnç dağılım yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Toplam Direnç (N)',
-        significance:'Yuvarlanma + aero + eğim dirençlerinin hız ve zamana göre evrimi. Aerodinamik baskınlık bölgesi net olarak görülür.' },
-      { id:'3d-accel-rpm', name:'İvme-hız-RPM haritası (3B)', xAxis:'Hız (km/h)', yAxis:'Motor devri (rpm)', zAxis:'İvme (m/s²)',
-        significance:'Hangi hız-devir kombinasyonunda ne kadar ivme alındığı — vites geçiş noktası optimizasyonunun yüzeyi.' }
+      { id:'3d-engine-map', name:'Motor çalışma haritası (3B)', xAxis:'RPM', yAxis:'Tork (Nm)', zAxis:'Güç (kW)' },
+      { id:'3d-te-gear', name:'Çekiş kuvveti yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Vites', zAxis:'TE (kN)' },
+      { id:'3d-tc-eff', name:'TC verim yüzeyi (3B)', xAxis:'Hız oranı (SR)', yAxis:'Pump torku (Nm)', zAxis:'Verim (%)' },
+      { id:'3d-power-flow', name:'Güç akışı yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Motor Gücü (kW)' },
+      { id:'3d-resist-map', name:'Direnç dağılım yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Toplam Direnç (N)' },
+      { id:'3d-accel-rpm', name:'İvme-hız-RPM haritası (3B)', xAxis:'Hız (km/h)', yAxis:'Motor devri (rpm)', zAxis:'İvme (m/s²)' }
     ],
     sensors: []
   },
@@ -507,19 +411,13 @@ var SENSOR_PACKAGES = [
   {
     id: '3d-sd', name: '3D segment diyagramları', icon: '<span class="mf-ico mf-ico-box"></span>', priority: 'advanced',
     solverTab: 'accel-decel',
-    description: '3 boyutlu diyagramlar: hız-mesafe-eğim, kuvvet, ısı, güç-devir, çekiş-direnç',
     requires: ['vehicle', 'engine'],
     diagrams: [
-      { id:'3d-sd-speed-grade', name:'Hız-mesafe-eğim profili (3B)', xAxis:'Mesafe (m)', yAxis:'Eğim kuvveti (N)', zAxis:'Hız (km/h)',
-        significance:'Yol profilinde eğime bağlı hız gelişimi. Segment geçişlerinde hız düşüşü/artışı renk değişimi olarak görülür.' },
-      { id:'3d-sd-force-grade', name:'Kuvvet-hız-eğim yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Eğim kuvveti (N)', zAxis:'Net Kuvvet (N)',
-        significance:'Farklı eğimlerde mevcut net kuvvet — tırmanamama sınırını gösteren kritik yüzey. Sıfır geçişi kırmızıdan maviye geçiş noktasıdır.' },
-      { id:'3d-sd-heat', name:'TC ısı reddi haritası (3B)', xAxis:'Zaman (s)', yAxis:'Hız (km/h)', zAxis:'TC Isı Reddi (kW)',
-        significance:'Hızlanma-yavaşlama çevrimlerinde TC termal yüklenme haritası. Yoğun ısı bölgeleri soğutma sistemi boyutlandırma girdisi.' },
-      { id:'3d-sd-power-rpm', name:'Güç-RPM-vites yüzeyi (3B)', xAxis:'Motor devri (rpm)', yAxis:'Vites', zAxis:'Motor Gücü (kW)',
-        significance:'Her viteste motor devrinin güç üretimine etkisi. Shift kalibrasyon doğrulama — vites geçişlerinde güç kaybı görünür.' },
-      { id:'3d-sd-te-resist', name:'Çekiş-direnç yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'Çekiş kuvveti (kN)', zAxis:'Toplam Direnç (N)',
-        significance:'Çekiş kuvveti ile direncin zamanla ilişkisi. Hızlanma/yavaşlama geçiş anları renk kontrastı olarak görülür.' }
+      { id:'3d-sd-speed-grade', name:'Hız-mesafe-eğim profili (3B)', xAxis:'Mesafe (m)', yAxis:'Eğim kuvveti (N)', zAxis:'Hız (km/h)' },
+      { id:'3d-sd-force-grade', name:'Kuvvet-hız-eğim yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Eğim kuvveti (N)', zAxis:'Net Kuvvet (N)' },
+      { id:'3d-sd-heat', name:'TC ısı reddi haritası (3B)', xAxis:'Zaman (s)', yAxis:'Hız (km/h)', zAxis:'TC Isı Reddi (kW)' },
+      { id:'3d-sd-power-rpm', name:'Güç-RPM-vites yüzeyi (3B)', xAxis:'Motor devri (rpm)', yAxis:'Vites', zAxis:'Motor Gücü (kW)' },
+      { id:'3d-sd-te-resist', name:'Çekiş-direnç yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'Çekiş kuvveti (kN)', zAxis:'Toplam Direnç (N)' }
     ],
     sensors: []
   },
@@ -530,19 +428,13 @@ var SENSOR_PACKAGES = [
   {
     id: '3d-obs', name: '3D engel atlama diyagramları', icon: '<span class="mf-ico mf-ico-box"></span>', priority: 'advanced',
     solverTab: 'obstacle',
-    description: '3 boyutlu diyagramlar: tork eşleme, kuvvet-açı, enerji, güç-verim, itme-reaksiyon',
     requires: ['torque-converter'],
     diagrams: [
-      { id:'3d-obs-torque', name:'Tork eşleme yüzeyi (3B)', xAxis:'Hız oranı (SR)', yAxis:'Motor torku (Nm)', zAxis:'Tekerlek Torku (Nm)',
-        significance:'Stall→lockup aralığında motor-tekerlek tork transferi. Engel aşma kapasitesinin temeli — yüksek tekerlek torku bölgeleri kırmızı renkte.' },
-      { id:'3d-obs-force-angle', name:'Kuvvet-açı-zaman (3B)', xAxis:'Zaman (s)', yAxis:'Tekerlek açısı (°)', zAxis:'Net Kuvvet (N)',
-        significance:'Engel üzerinde ilerlerken kuvvetlerin açı ve zamanla değişimi. Kritik temas noktası ve kuvvet dağılımı buradan okunur.' },
-      { id:'3d-obs-energy', name:'Enerji-hız-açı (3B)', xAxis:'Tekerlek açısı (°)', yAxis:'Hız (m/s)', zAxis:'Kinetik Enerji (J)',
-        significance:'Engel tırmanırken kinetik enerji dağılımı. Momentum kaybının nerede gerçekleştiğini gösterir.' },
-      { id:'3d-obs-power-eff', name:'Güç-SR-verim yüzeyi (3B)', xAxis:'Hız oranı (SR)', yAxis:'Motor gücü (kW)', zAxis:'TC Verimi (−)',
-        significance:'Hız oranına göre güç ve verim ilişkisi. Çalışma noktası seçiminin yüzeyi.' },
-      { id:'3d-obs-push-react', name:'İtme-engel kuvveti yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'İtme kuvveti (N)', zAxis:'Engel Reaksiyon (N)',
-        significance:'Lastik itme kuvveti vs engel direnci. Aşma/aşamama sınırı renk geçişi olarak görülür.' }
+      { id:'3d-obs-torque', name:'Tork eşleme yüzeyi (3B)', xAxis:'Hız oranı (SR)', yAxis:'Motor torku (Nm)', zAxis:'Tekerlek Torku (Nm)' },
+      { id:'3d-obs-force-angle', name:'Kuvvet-açı-zaman (3B)', xAxis:'Zaman (s)', yAxis:'Tekerlek açısı (°)', zAxis:'Net Kuvvet (N)' },
+      { id:'3d-obs-energy', name:'Enerji-hız-açı (3B)', xAxis:'Tekerlek açısı (°)', yAxis:'Hız (m/s)', zAxis:'Kinetik Enerji (J)' },
+      { id:'3d-obs-power-eff', name:'Güç-SR-verim yüzeyi (3B)', xAxis:'Hız oranı (SR)', yAxis:'Motor gücü (kW)', zAxis:'TC Verimi (−)' },
+      { id:'3d-obs-push-react', name:'İtme-engel kuvveti yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'İtme kuvveti (N)', zAxis:'Engel Reaksiyon (N)' }
     ],
     sensors: []
   }
@@ -962,35 +854,11 @@ function swTogglePkg(pkgId) {
   if(wizNode) showNodeProperties(wizNode);
 }
 
-function swShowDiagramInfo(pkgId, diagIdx) {
-  var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
-  if(!pkg || !pkg.diagrams[diagIdx]) return;
-  var d = pkg.diagrams[diagIdx];
-  var ov = document.getElementById('sw-info-overlay');
-  if(!ov) {
-    ov = document.createElement('div');
-    ov.id = 'sw-info-overlay';
-    ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:var(--scrim);z-index:99999;display:flex;align-items:center;justify-content:center;';
-    document.body.appendChild(ov);
-  }
-  // Pencere ailesinin başlığı (.ve-settings-header) — eskiden kendi satır içi
-  // başlığı ve yazı karakteriyle ✕'i vardı.
-  var html = '<div class="ve-mini-pencere" role="dialog" aria-label="Diyagram künyesi" style="max-width:440px;width:90%;">';
-  var diagIcon = veIkon(d.zAxis ? 'package' : 'trending-up');
-  html += '<div class="ve-settings-header"><span>' + diagIcon + ' ' + d.name + '</span>';
-  html += '<button class="ve-settings-close" type="button" title="Kapat" aria-label="Kapat" onclick="document.getElementById(\'sw-info-overlay\').remove()">' + veIkon('x') + '</button>';
-  html += '</div>';
-  html += '<div style="padding:14px 16px;">';
-  var axisInfo = '<b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis);
-  if(d.zAxis) axisInfo += ' &nbsp; <b>Z (renk):</b> ' + d.zAxis;
-  html += '<div style="font-size:var(--fs-body);color:var(--text-secondary);margin-bottom:8px;">' + axisInfo + '</div>';
-  html += '<div style="font-size:var(--fs-body);line-height:1.5;color:var(--text-primary);border-top:1px solid var(--border-color);padding-top:10px;">' + d.significance + '</div>';
-  if(d.note) {
-    html += '<div style="font-size:var(--fs-body);color:var(--ink-warning);margin-top:8px;padding:6px 8px;background:color-mix(in srgb, var(--accent-warning) 8%, transparent);border-radius:var(--radius-sm);">' + veIkon('alert-triangle') + ' ' + d.note + '</div>';
-  }
-  html += '</div></div>';
-  ov.innerHTML = html;
-  ov.onclick = function(e) { if(e.target === ov) ov.remove(); };
+// Diyagramın künyesi — eksenler ve (varsa) not; satırın ipucunda (title).
+function swDiagramKunye(d) {
+  var k = 'X: ' + d.xAxis + ' · Y: ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis);
+  if(d.zAxis) k += ' · Z: ' + d.zAxis;
+  return d.note ? k + ' · ' + d.note : k;
 }
 
 var swActiveTab = 'performance';
@@ -1054,7 +922,7 @@ function getSensorWizardPropertiesHTML(node) {
     html += '<button class="sw-btn sw-btn-primary" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);">Sensörleri kur</button>';
   } else {
     html += '<button class="sw-btn sw-btn-danger" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swRemoveSensors(w);">Kaldır</button>';
-    html += '<button class="sw-btn sw-btn-outline" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);" title="Topoloji değişikliği sonrası yeniden kur">Yeniden kur</button>';
+    html += '<button class="sw-btn sw-btn-outline" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);">Yeniden kur</button>';
   }
   html += '</div>';
 
@@ -1093,8 +961,8 @@ function getSensorWizardPropertiesHTML(node) {
     html += '<button class="sw-tab' + (isActive ? ' active' : '') + (disabled ? ' disabled' : '') + '"';
     if(disabled) {
       // aria-disabled, disabled DEĞİL: devre dışı düğme ipucunu göstermiyor ve
-      // ipucu kümenin nasıl açılacağını söyleyen TEK yer.
-      html += ' aria-disabled="true" title="Çözücü bileşeninden bu çözüm kümesini etkinleştirin"';
+      // ipucu kümenin NEREDE kapalı olduğunu söyleyen TEK yer (yer verisi, tarif değil).
+      html += ' aria-disabled="true" title="Çözücü\'de kapalı"';
     } else {
       html += ' onclick="swSwitchTab(\'' + st.id + '\')"';
     }
@@ -1161,7 +1029,6 @@ function getSensorWizardPropertiesHTML(node) {
     // Genişletilmiş içerik
     if(expanded) {
       html += '<div class="sw-pkg-body">';
-      html += '<div class="sw-pkg-desc">' + pkg.description + '</div>';
 
       // Sensörler
       if(pkg.sensors.length > 0) {
@@ -1174,17 +1041,16 @@ function getSensorWizardPropertiesHTML(node) {
           html += '</div>';
         });
       } else if(pkg.dependsOn) {
-        html += '<div class="sw-pkg-desc" style="font-style:italic;">Ek sensör gerektirmez — diğer paketlerin verilerini kullanır.</div>';
+        html += '<div class="sw-pkg-desc" style="font-style:italic;">Ek sensör gerekmez</div>';
       }
 
       // Diyagramlar
       html += '<div class="sw-pkg-sub">Diyagramlar</div>';
-      pkg.diagrams.forEach(function(d, dIdx) {
+      pkg.diagrams.forEach(function(d) {
         var ready = pkgInstalled || ((pkgTotal === 0 && pkg.dependsOn) ? false : (pkgMatched === pkgTotal && pkgTotal > 0));
         html += '<div class="sw-diag-row">';
         html += '<span class="sw-dot ' + (ready ? 'green' : 'gray') + '"></span>';
-        html += '<span style="flex:1;' + (ready ? '' : 'color:var(--text-muted);') + '">' + d.name + '</span>';
-        html += '<button class="sw-info-btn" onclick="event.stopPropagation();swShowDiagramInfo(\'' + pkg.id + '\',' + dIdx + ')" title="Diyagram bilgisi">i</button>';
+        html += '<span style="flex:1;' + (ready ? '' : 'color:var(--text-muted);') + '" title="' + escapeHTML(swDiagramKunye(d)) + '">' + d.name + '</span>';
         html += '</div>';
       });
 
@@ -1195,17 +1061,6 @@ function getSensorWizardPropertiesHTML(node) {
   });
 
   html += '</div>'; // sw-section
-
-  // ── Alt bilgi ──
-  if(isInstalled) {
-    html += '<div class="sw-footer">';
-    html += 'Diyagramlar, simülasyon sonrasında <b>Sonuçlar</b> sekmesindeki Sihirbaz Diyagramları ağacında listelenir.';
-    html += '</div>';
-  } else {
-    html += '<div class="sw-footer">';
-    html += 'Sensörler topoloji üzerinde görünmez — sihirbaz bileşeni içinde yönetilir.';
-    html += '</div>';
-  }
 
   // Yenile
   html += '<div style="text-align:center;margin-top:6px;">';

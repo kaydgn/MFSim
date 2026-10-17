@@ -2266,7 +2266,10 @@ alma kanıtı ve kalanlar tek rapor sayfasında toplanır. Taramanın görmediğ
 sınıf (işaretsiz tekrar bildirimi, adı tekrarlayan ipucu) aşamanın kendi
 kapısıyla tutulur — kabuk için `tests/unit/kabuk-metin.test.js`.
 
-**Uygulananlar (tahtasız):** aşama 7 → kaydgn/MFSim#1144 (Araç Performans
+**Uygulananlar (tahtasız):** aşama 8 → kaydgn/MFSim#1145 (çözücü ve sensörler;
+kapı `cozucu-metin.test.js`; sensör paketlerinin açıklama alanları ve diyagram
+bilgi penceresi kalktı, günlüğün açıklama yuvası kapandı) · aşama 7 →
+kaydgn/MFSim#1144 (Araç Performans
 pencereleri; kapı `arac-metin.test.js`; "hakkında" açıklama pencereleri kalktı —
 açıklama kılavuzda; örnek künyeleri kimlik ve kaynak; sayılar değişmedi,
 kalibrasyon kapısı yeşil) · aşama 6 → kaydgn/MFSim#1143 (Takoz pencereleri,
