@@ -95,7 +95,9 @@ function olcucu(page, liste, sayilar) {
 // yerine geçmez: her biri turunda HÂLÂ gerçekleşiyor mu ölçülür, karar
 // uygulanınca eskiyen muafiyet testi kırar (sessizce kalmasın).
 const MUAF = [
-  { tur: 'FEAD', re: /^fead-layout(\/\w+)? · çizimde küçük yazı /,
+  // Etiket: pencerenin tipi ve — kaydırılan uzun gövdede — sayfası ("fead-layout ↓2",
+  // tests/e2e/helpers/yuzey-turu.js). Sekmeli dönemde "fead-layout/<sekme>"ydi.
+  { tur: 'FEAD', re: /^fead-layout(?: ↓\d+)? · çizimde küçük yazı /,
     neden: 'S12 — Kayış Yolu penceresinin şeması kartın küçük resmi: yazı ölçeği kanvas kartıyla ortak '
       + '(7–9 birim, 1:1). 1,4 kat büyütme denendi: çizim küçülüyor, üç etiket çifti çakışıyor.' },
 ];
