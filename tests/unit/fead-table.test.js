@@ -1024,6 +1024,36 @@ describe('yeni yüzeyin işlevleri', () => {
     expect(fead.veFeadMarkSelectedRow()).toBe(0);
   });
 
+  // PENCERE SEÇİM BOŞALINCA DA AÇIK KALIR (map.js, kullanıcı isteği
+  // 2026-10-16). İşaret "hangi kasnağın penceresi açık" sorusunun cevabı:
+  // seçim boşalınca pencerenin KONUSUNDA kalır, pencere kapanınca söner.
+  test('seçim boşken işaret AÇIK pencerenin kasnağında; pencere kapalıysa işaret yok', () => {
+    const { ns } = kurOrnek();
+    document.body.innerHTML = '<div class="' + fead.VE_FEAD_PAFTA_CLASS + '">' + paftaHTML() + '</div>';
+    const isaretli = () => [...document.querySelectorAll('tr.is-sel')].map((tr) => tr.getAttribute('data-ve-node'));
+    const konu = ns.filter((n) => n.id === 'ex-ALT')[0];
+    let pencereAcik = true;
+    global.veMufettisAcik = () => pencereAcik;
+    global.veMufettisKonusu = () => konu;
+    try {
+      global.selectedNodes = [];
+      fead.veFeadMarkSelectedRow();
+      expect(isaretli()).toEqual(['ex-ALT']);
+      // Seçim pencereden ÖNCE gelir: seçili kasnak işaretlidir.
+      global.selectedNodes = [ns.filter((n) => n.id === 'ex-TEN')[0]];
+      fead.veFeadMarkSelectedRow();
+      expect(isaretli()).toEqual(['ex-TEN']);
+      global.selectedNodes = [];
+      pencereAcik = false;
+      fead.veFeadMarkSelectedRow();
+      expect(isaretli()).toEqual([]);
+    } finally {
+      delete global.veMufettisAcik;
+      delete global.veMufettisKonusu;
+      global.selectedNodes = [];
+    }
+  });
+
   test('SEÇİM KAPISI cp-core\'un iki merkezinden de çağrılıyor', () => {
     const fs = require('fs');
     const path = require('path');

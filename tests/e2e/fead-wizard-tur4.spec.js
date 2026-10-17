@@ -147,7 +147,7 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
     const ov = document.getElementById('ve-fw-ang');
     const svg = ov.querySelector('svg');
     return { gorunur: getComputedStyle(ov).display !== 'none', svg: !!svg,
-             eksen: (ov.textContent.match(/-?\d+°/g) || []).slice(0, 6),
+             eksen: (ov.textContent.match(/−?\d+°/g) || []).slice(0, 6),
              kutu: !!document.getElementById('ve-fw-ang-in'),
              baslangic: document.getElementById('ve-fw-ang-in').value };
   });
@@ -176,7 +176,7 @@ test('tur4 — gergi satırı · taşıma · virgül · açı seçici · nispi a
   expect(cizim.okUcu).toBe(true);
   expect(cizim.okRengi).not.toBe('');
   // Kasnak ADI yok — yalnız eksen etiketleri ve açı sayısı.
-  cizim.yazi.forEach(t => expect(t).toMatch(/^-?\d+(,\d+)?°$/));   // Türkçe sayı (7·C)
+  cizim.yazi.forEach(t => expect(t).toMatch(/^−?\d+(,\d+)?°$/));   // Türkçe sayı (7·C) · gerçek eksi (S4·B)
   expect(cizim.zoomDugme).toBe(3);
 
   // YAKINLAŞTIRMA gerçek tıkla ölçeği büyütüyor

@@ -132,6 +132,8 @@ function addToSelection(node) {
 }
 
 function clearSelection() {
+  // Onaylanmamış girdi, seçim HÂLÂ eski bileşendeyken yazılır (map.js).
+  if(typeof _veMufettisGirdiyiYaz === 'function') _veMufettisGirdiyiYaz();
   selectedNodes.forEach(function(n) {
     var el = document.getElementById(n.id);
     if(el) el.classList.remove('selected');
@@ -205,20 +207,57 @@ var VE_COMPACT_PANEL_TYPES = ['mount-analysis', 'mnt-report',
   'fead-wizard',
   'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
 
-// Son gösterilen bileşen — pencere konumunu sıfırlamak için. Başka bileşene
-// geçince pencere ortalanır; aynı bileşenin yerinde yenilenmesinde korunur.
+// Son gösterilen bileşen = PENCERENİN KONUSU (map.js → veMufettisKonusu).
+// Başka bileşene geçince pencere ortalanır ve en üstten açılır; aynı
+// bileşenin yerinde yenilenmesinde konum ve kaydırma korunur.
 var _veLastPropNodeId = null;
+// İçerik, sütuna sığmayan bir bileşenin sütundaki KARTI mı (map.js).
+var _veMufettisKart = false;
 
-function showNodeProperties(node) {
+// SÜTUNA SIĞMAYAN BİLEŞENİN SÜTUNDAKİ KARTI. Sütun açıkken böyle bir bileşene
+// tek tık, geniş penceresini perdeyle açsaydı tek tık tuvali örterdi; kart
+// sütunu yerinde bırakır (map.js → veMufettisGenisAc). Kart yalnız düğmedir:
+// bileşenin adı başlıkta, açıklama arayüzde yazılmaz (CLAUDE.md → ARAYÜZ ANLATMAZ).
+function _veMufettisKartHTML() {
+  return '<div class="ve-prop-genis">'
+    + '<button type="button" class="sw-btn sw-btn-primary" onclick="veMufettisGenisAc()">'
+    + (typeof veIkon === 'function' ? veIkon('maximize') : '') + 'Pencerede aç</button>'
+    + '</div>';
+}
+
+// Pencerenin çöp kutusu pencerenin KONUSUNU siler, seçimi değil: pencere seçim
+// boşalınca da açık kalıyor; seçime bakan düğme hiçbir şey silmezdi.
+function veMufettisSil(id) {
+  var n = (typeof nodes !== 'undefined' && nodes) ? nodes.find(function(x) { return x && x.id === id; }) : null;
+  if(!n) return;
+  if(!(selectedNodes.length === 1 && selectedNodes[0] === n)) { clearSelection(); addToSelection(n); }
+  deleteSelectedNodes();
+}
+
+// opt.kip: 'kart' · 'tam' — sütuna sığmayan bileşenin hangi hâlde kurulacağı.
+// Verilmezse: açık sütunda başka bir bileşene geçiş kart, aynı bileşenin
+// yenilenmesi o anki hâli korur, kapalı pencere tam içerik.
+function showNodeProperties(node, opt) {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
+  opt = opt || {};
+  var degisti = _veLastPropNodeId !== (node && node.id);
+  // Yazılmış ama onaylanmamış girdi ESKİ bileşene yazılır — içerik değişmeden.
+  if(degisti && typeof _veMufettisGirdiyiYaz === 'function') _veMufettisGirdiyiYaz();
   // Başka bir bileşen açıldığında pencereyi ORTALA — önceki bileşenin
   // sürüklenmiş konumunu miras alma. Aynı bileşenin içeriği yerinde
   // yenilenirken (sekme/profil değişimi) konumu koru → sürüklediğin yer bozulmaz.
   if(typeof VEWindowDrag !== 'undefined' && VEWindowDrag && typeof VEWindowDrag.resetToCenter === 'function') {
-    if(_veLastPropNodeId !== (node && node.id)) VEWindowDrag.resetToCenter();
+    if(degisti) VEWindowDrag.resetToCenter();
   }
   _veLastPropNodeId = (node && node.id) || null;
+  var kart = false;
+  if(VE_SUTUNA_SIGMAYAN.indexOf(node.type) >= 0 && typeof veMufettisSutunKipi === 'function' && veMufettisSutunKipi()) {
+    if(opt.kip === 'kart') kart = true;
+    else if(opt.kip !== 'tam' && typeof veMufettisAcik === 'function' && veMufettisAcik())
+      kart = degisti ? true : _veMufettisKart;
+  }
+  _veMufettisKart = kart;
   // Modal başlığında bileşenin adı ve sembolü görünür
   var titleEl = document.getElementById('ve-properties-title');
   if(titleEl) {
@@ -248,11 +287,13 @@ function showNodeProperties(node) {
   // Silinmez tip (componentDefs.noDelete — FEAD kayışı) çöp kutusu göstermez:
   // basılınca yalnız "silinmez" diyecek bir düğme, dinlenmede bir yalandır.
   if(!(componentDefs[node.type] || {}).noDelete)
-    html += '<button class="ve-prop-del" onclick="deleteSelectedNodes()" title="Bileşeni sil"><span class="mf-ico mf-ico-trash"></span></button>';
+    html += '<button class="ve-prop-del" onclick="veMufettisSil(\'' + node.id + '\')" title="Bileşeni sil"><span class="mf-ico mf-ico-trash"></span></button>';
   html += '</div>';  // ve-prop-identity
-  
+
   // Node tipine göre özel içerik
-  if(node.type === 'engine') {
+  if(kart) {
+    html += _veMufettisKartHTML();
+  } else if(node.type === 'engine') {
     html += getEnginePropertiesHTML(node);
   } else if(node.type === 'gearbox') {
     html += getGearboxPropertiesHTML(node);
@@ -349,6 +390,14 @@ function showNodeProperties(node) {
   
   
   content.innerHTML = html;
+  // Başka bileşenin penceresi EN ÜSTTEN açılır: kaydırıcı aynı öğe, değeri
+  // önceki bileşenden kalıyordu.
+  if(degisti) content.scrollTop = 0;
+  if(kart) {
+    if(typeof _veMufettisSinifSifirla === 'function') _veMufettisSinifSifirla();
+    if(typeof veMufettisIsaretle === 'function') veMufettisIsaretle();
+    return;
+  }
   var _propWin = document.getElementById('ve-properties');
   // Sütuna sığmayan pencere MODAL açılır (VE_SUTUNA_SIGMAYAN, ölçülmüş liste).
   if(_propWin) _propWin.classList.toggle('ve-properties--modal', VE_SUTUNA_SIGMAYAN.indexOf(node.type) >= 0);
@@ -386,6 +435,7 @@ function showNodeProperties(node) {
   // Eşzamanlı: bir kare bile geniş tablo sütunda görünmesin. Panel kapalıysa
   // genişlik 0'dır ve karar gözlemciye kalır (açılınca verilir).
   if(typeof veTabloKatla === 'function') veTabloKatla(content);
+  if(typeof veMufettisIsaretle === 'function') veMufettisIsaretle();
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 

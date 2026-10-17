@@ -525,6 +525,18 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   değişen tek şey eylemin hazırlığı (`data-cozum-durumu`: Çözücü'nün notu, Rapor'un
   çözüm durumu). Kapı: `pencere-kabuk.test.js` → *ÇÖZÜMDEN BAĞIMSIZ*; gerekçe
   `docs/decisions/ortak-yuzeyler.md`.
+- **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
+  boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
+  kalır ve tuvalde kesikli kenarla işaretlenir; başka bileşene tık içeriği
+  YERİNDE değiştirir. Kapatan yalnız ✕ · Esc · bağlam değişimi
+  (`veMufettisKapat`: proje sekmesi, modüle giriş/çıkış, yeni proje). İçerik
+  değişmeden önce odak bırakılır (yazılmış değer eski bileşene yazılsın).
+  Sütuna sığmayan bileşen açık sütunda KART olur, geniş pencere çift tıkla ya
+  da karttan açılır ve kapanınca karta döner. Çöp kutusu konuyu siler, seçimi
+  değil. Öteki sayfalarda pencere gizlenir, kapanmaz. Sütunu açan çağrı konuyu
+  sütunun altında bırakmaz: kamera yalnız yatayda, gereken kadar kayar (ölçek
+  değişmez). Kapı: `mufettis-kalir.test.js` + `mufettis-sutun.spec.js` →
+  *KALIR* · *KADRAJ*.
 - **PENCERE AİLESİ TEK** (`.ve-settings-header` + `.ve-settings-close`). Her
   pencere bu başlığı taşır: bant `--bant-h`, başlık yazısı kabuk bandınınki
   (12 px/600), kapat 22 px çizgi ikon (`.mf-ico-x` — ✕ yazı karakteri ya da

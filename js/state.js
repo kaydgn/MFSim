@@ -519,6 +519,9 @@ function _veRestoreStateNodes(state) {
   updateAllConnections();
   updateNodeCount();
   clearSelection();
+  // Açık pencere konusunun YENİ düğümüyle kurulur: geri-al düğüm nesnelerini
+  // yeniden yaratıyor, eski içerik geri alınan değeri göstermeye devam ederdi.
+  if(typeof veMufettisTazele === 'function') veMufettisTazele();
 
   // Motor aksesuar modelini canlı bağlantılara göre uzlaştır — yükleme/geri-al
   // yolu createConnection'ı atlar; kayıtlı node.data.accessories bayat/orphan
