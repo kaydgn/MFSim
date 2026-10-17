@@ -328,7 +328,7 @@ describe('gergi tarafı hükmü', () => {
     const s = kur('AG00976_GATES_2025', false);
     const R = coz(s);
     expect(R.tensionerSide.ok).toBe(true);
-    expect(R.warnings.join(' ')).not.toMatch(/GERGİN tarafında/);
+    expect(R.warnings.join(' ')).not.toMatch(/gergin tarafta/);
   });
 
   test('TERS yönde gergi GERGİN tarafta — sebep ADIYLA yazılıyor', () => {
@@ -339,11 +339,9 @@ describe('gergi tarafı hükmü', () => {
     expect(R.tensionerSide.negative).toBe(true);
     expect(R.tensionerSide.deficitN).toBeGreaterThan(500);
     const w = R.warnings.join(' ');
-    expect(w).toMatch(/GERGİN tarafında/);
-    expect(w).toMatch(/GEVŞEK/);
-    // ULAŞILAMAZ ÇARE YASAK: tasarım gerginliği bir alan DEĞİL.
-    expect(w).not.toMatch(/gerginliği yükselt/i);
-    expect(w).toMatch(/yükseltilemez/);
+    expect(w).toMatch(/Gergi gergin tarafta: \d+ span < ankraj/);
+    // ULAŞILAMAZ ÇARE YASAK: tasarım gerginliği bir alan DEĞİL; çare kılavuzda.
+    expect(w).not.toMatch(/gerginliği yükselt|çevirin|alın\./i);
   });
 
   test('uyarı ÜST SEVİYEYE yükseliyor — raporlar yalnız oraya bakıyor', () => {

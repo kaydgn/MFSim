@@ -2226,7 +2226,10 @@ alma kanıtı ve kalanlar tek rapor sayfasında toplanır. Taramanın görmediğ
 sınıf (işaretsiz tekrar bildirimi, adı tekrarlayan ipucu) aşamanın kendi
 kapısıyla tutulur — kabuk için `tests/unit/kabuk-metin.test.js`.
 
-**Uygulananlar (tahtasız):** aşama 4 → kaydgn/MFSim#1141 (sihirbaz, STEP, 3B;
+**Uygulananlar (tahtasız):** aşama 5 → kaydgn/MFSim#PRNO (köprünün iletileri,
+`fead-model.js`; kapı `fead-metin.test.js` → *FEAD köprüsünün iletileri* ve
+sihirbazın metinden adım eşlemesi `fead-wizard.test.js` → *köprünün bütün
+iletileri adımına düşüyor*) · aşama 4 → kaydgn/MFSim#1141 (sihirbaz, STEP, 3B;
 kapı `fead-metin.test.js` → *FEAD sihirbazı ve STEP*; açının tanımı anahtar
 biçiminde kaldı — `fead-wizard.test.js` → *açının tanımı*) · aşama 3 →
 kaydgn/MFSim#1137 (kapı

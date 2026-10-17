@@ -296,7 +296,7 @@ describe('durdurucu varsayılanı YALNIZ DARALTIR', () => {
     expect(build.sys.tensioner.loadStopRelDeg).toBeUndefined();
     expect(alan(build, /load stop/i)).toHaveLength(0);
     // ve kenetlenme uyarısı KORUNUYOR — asıl kapı bu
-    expect((build.warnings || []).join(' ')).toMatch(/aralığın dışında|kenetlendi/);
+    expect((build.warnings || []).join(' ')).toMatch(/aralık dışında|konumunda/);
   });
 
   test('künyede stop varsa varsayılan hiç devreye girmez', () => {

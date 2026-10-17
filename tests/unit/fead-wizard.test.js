@@ -645,11 +645,62 @@ describe('adım eşlemesi ve yüzeyler', () => {
     // (Kayış Yolu adımı kaldırıldı, yeteneği tabloya taşındı). Hata mesajının
     // kullanıcıyı GÖTÜRECEĞİ yer, çarenin bulunduğu yerdir.
     expect(wiz.veFeadWizStepOf('Kayış yolu kapanmıyor: …')).toBe(1);
+    // KÖPRÜNÜN GERÇEK METNİ de oraya düşer. "KAPANMIYOR" büyük harfle
+    // yazılıyordu ve JS'in /i bayrağı I'yı ı'ya katlamaz: uyarı Özet'e
+    // düşüyordu (metin temizliği aşama 5).
+    expect(wiz.veFeadWizStepOf(M.veFeadViolationText({ type: 'wrapSum', signedWrapDeg: 350, deltaDeg: -10 }))).toBe(1);
     expect(wiz.veFeadWizStepOf('Gergi kol boyu girilmedi.')).toBe(2);
     expect(wiz.veFeadWizStepOf('Kayış kanal (kaburga) sayısı girilmedi.')).toBe(3);
     // Eşleşmeyen mesaj ÖZET adımında toplanıyor: bilinmeyen bir hatayı
     // gizlemek, yanlış yere koymaktan kötüdür.
     expect(wiz.veFeadWizStepOf('bilinmeyen bir şey oldu')).toBe(wiz.VE_FW_STEPS.length - 1);
+  });
+
+  // Eşleme METİNDEN: köprünün bir iletisi yeniden yazılınca adımı sessizce
+  // Özet'e düşer. Ölçüldü (metin temizliği aşama 5): sınır metninin dört
+  // biçimi ve "Kayış hızı sıfır" adımını kaybetmişti; "Bir kasnağın konumu",
+  // "Kayış kasnağın içinden geçiyor", "Teğet çözülemedi" ve "Sürücünün elle
+  // gücü" eski yazımlarından beri Özet'teydi.
+  test('köprünün bütün iletileri adımına düşüyor (hata haritası · sınır · ihlal · kurulum)', () => {
+    const OZET = wiz.VE_FW_STEPS.length - 1;
+    const beklenen = [
+      [/kapanmıyor/, 1], [/içinden geçiyor/, 1], [/Teğet/, 1], [/En az 3/, 1], [/[Ss]ürücü kasnak/, 1],
+      [/^Gergi/, 2], [/^Birden fazla gergi/, 2], [/Tasarım gerginliği/, 2], [/dış çapı|konumu/, 1],
+      [/Kayış (efektif boyu|profil)|kayış profilinde/i, 3], [/Kayış hızı/, 1], [/elle gücü/, 4],
+    ];
+    M.VE_FEAD_ERROR_MAP.forEach(([, m]) => {
+      const b = beklenen.find(([re]) => re.test(m));
+      expect([m, b ? b[1] : 'tablo dışı']).toEqual([m, wiz.veFeadWizStepOf(m)]);
+    });
+    [{ kind: 'arm', target: 120, rangeMax: 60, achieved: 60 },
+     { kind: 'belt', target: 1500, achieved: 1495, rangeMin: 1490, rangeMax: 1495, relMaxDeg: 60, resolvedAt: 'nominalArm', suggestedBeltMm: 1492 },
+     { kind: 'belt', target: 1480, achieved: 1490, rangeMin: 1490, rangeMax: 1495, relMaxDeg: 60, side: 'stop', degenerate: true, takeupRatio: 0.05 },
+     { kind: 'tension', target: 500, rangeMin: 300, rangeMax: 450, relMaxDeg: 60 }]
+      .forEach((al) => expect(wiz.veFeadWizStepOf(M.veFeadAtLimitText(al))).toBe(2));
+    [{ type: 'wrapSum', signedWrapDeg: 350, deltaDeg: -10 },
+     { type: 'clearance', items: [{ span: 'ALT → AVA', pulley: 'Klima', clearanceMm: -2 }] }]
+      .forEach((v) => expect(wiz.veFeadWizStepOf(M.veFeadViolationText(v))).toBe(1));
+    // Kurulumun düz iletileri (`_feadBuildSystem`): her biri bir adıma düşer.
+    // Özet'te kalanların sebebi: çekirdek yok · sihirbaz kayışı her zaman
+    // kurar · atalet sihirbazda sorulmuyor.
+    const parser = require('@babel/parser');
+    const src = fs.readFileSync(path.join(__dirname, '../../js/fead-model.js'), 'utf8');
+    const govde = src.slice(src.indexOf('function _feadBuildSystem('), src.indexOf('\nfunction ', src.indexOf('function _feadBuildSystem(') + 10));
+    const iletiler = [];
+    (function yuru(n) {
+      if (!n || typeof n.type !== 'string') return;
+      if (n.type === 'CallExpression' && n.callee.property && n.callee.property.name === 'push'
+          && n.callee.object.property && /^(errors|warnings)$/.test(n.callee.object.property.name)) {
+        const parca = (x) => (x.type === 'BinaryExpression' && x.operator === '+' ? parca(x.left) + parca(x.right)
+          : x.type === 'StringLiteral' ? x.value : '‹›');
+        const m = parca(n.arguments[0]);
+        if (/\p{L}{3}/u.test(m)) iletiler.push(m);
+      }
+      for (const k in n) { if (k === 'loc') continue; const v = n[k]; if (Array.isArray(v)) v.forEach(yuru); else if (v && typeof v.type === 'string') yuru(v); }
+    })(parser.parse(govde, { sourceType: 'script', errorRecovery: true }).program);
+    expect(iletiler.length).toBeGreaterThan(20);
+    const OZETTE = [/^Hesap çekirdeği yüklenmedi\.$/, /^Kayış tanımı yok\.$/, /^"‹›" ataleti: ‹›$/];
+    expect(iletiler.filter((m) => wiz.veFeadWizStepOf(m) === OZET && !OZETTE.some((re) => re.test(m)))).toEqual([]);
   });
 
   test('altı adımın altısı da patlamadan çiziliyor (boş durumda bile)', () => {

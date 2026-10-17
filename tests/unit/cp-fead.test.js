@@ -1072,7 +1072,7 @@ describe('Kayış Yolu kanvas kartı', () => {
     const saglam = fead.veFeadLayoutCardHTML(lay);
     expect(saglam).toMatch(/data-ve="belt"/);
     expect(saglam).toMatch(ROZET_OK);
-    expect(saglam).not.toMatch(/KAPANMIYOR|İÇİNDEN/);
+    expect(saglam).not.toMatch(/kapanmıyor|içinden geçiyor/);
 
     crk.data.contact = 'back';
     const html = fead.veFeadLayoutCardHTML(lay);
@@ -2357,7 +2357,7 @@ describe('serbest kipte türetilen boyun KÖKENİ', () => {
     });
     const panel = duz(fead.getFeadBeltPropertiesHTML(belt));
     expect(panel).toMatch(/Uyarılar/);
-    expect(panel).toMatch(/aralığın dışında|kenetlendi/);
+    expect(panel).toMatch(/aralık dışında|konumunda/);
   });
 
   test('çözülemeyen modelde sayı UYDURULMAZ', () => {

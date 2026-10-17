@@ -269,7 +269,7 @@ describe('GİDİŞ-DÖNÜŞ — sihirbaz ↔ düğüm', () => {
     });
     const bmc = M.veFeadExampleOf('BMC_FEAD_2026');
     expect(bmc.solver.serviceFact).toBe(1.3);
-    expect(bmc.note).toMatch(/servis faktörü 1\.3/);
+    expect(bmc.note).toMatch(/servis faktörü 1,3/);
     anahtar.filter((k) => !/_GATES_/.test(k) && k !== 'BMC_FEAD_2026')
       .forEach((k) => expect([k, (M.veFeadExampleOf(k).solver || {}).serviceFact]).toEqual([k, undefined]));
   });

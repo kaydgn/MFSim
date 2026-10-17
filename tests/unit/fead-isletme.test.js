@@ -101,7 +101,7 @@ describe('köprü — TEK hazırlık kaynağı (build.isletme)', () => {
                                    [], null, [{ rpm: 880 }]);
     expect(r.eksik.map((e) => e.ad)).toEqual([
       'governed devri (rölantiden büyük olmalı)',
-      'tahrik oranı (ara kademede krank ve kademe kasnağı çapı)'
+      'tahrik oranı (ara kademe çapları)'
     ]);
   });
 

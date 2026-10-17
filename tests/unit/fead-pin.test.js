@@ -149,7 +149,7 @@ describe('pim künyesi UYDURULMUYOR', () => {
     expect(p.ok).toBe(false);
     expect(p.part).toBe('T38624');
     expect(p.reason).toMatch(/T38624/);
-    expect(p.reason).toMatch(/UYDURULMAZ/);
+    expect(p.reason).toMatch(/parça çizimi yok\.$/);
   });
 
   test('kol açısı çözülmemişse sayı değil sebep döner', () => {

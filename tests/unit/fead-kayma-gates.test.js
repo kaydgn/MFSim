@@ -227,7 +227,7 @@ describe('ROL — yük taşıma rolden gelir, oran eşiğinden değil', () => {
     const idr = R.analysis.duty[0].slip.find((s) => /^Avara/.test(s.name));
     expect(M.veFeadSlipYukTasir(idr)).toBe(true);
     expect(yukluMin(R)).toBeLessThan(1);                       // eski hükümle aynı: kayıyor
-    expect(R.limits.join(' ')).toMatch(/Avara güç çekmeyen bir kasnak ama çevrimde gücü yazılı/);
+    expect(R.limits.join(' ')).toMatch(/Kayma emniyeti: Avara \(güç çekmeyen\) çevrim gücüyle katıldı\./);
     // Gergiye yazılı 0,01 kW sürtünmenin kendisi — not ona düşmez.
     expect(R.limits.join(' ')).not.toMatch(/Otomatik Gergi[^.]*gücü yazılı/);
   });

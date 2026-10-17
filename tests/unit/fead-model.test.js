@@ -146,7 +146,7 @@ describe('hata çevirisi — çekirdeğin teşhis dili kullanıcı diline', () =
   test('sarım değişmezi hatası "ne yapmalıyım"a çevrilir', () => {
     const t = veFeadTranslateError(
       'FEADCore/geometri: isaretli sarim toplami 0.00 (360 olmali). Kasnak sirasi...');
-    expect(t).toMatch(/bağlantı sırası/i);
+    expect(t).toMatch(/kasnak sırası · temas tarafı/);
     expect(t).toMatch(/temas tarafı/i);
     expect(t).not.toMatch(/FEADCore/);
   });
@@ -194,7 +194,7 @@ describe('veFeadBuildSystem — eksik girdide İSTİSNA ATMAZ, sayar', () => {
     const a = nd('fead-crank', { od: 180, x: 0, y: 0, driver: true });
     const b = nd('fead-fan', { od: 150, x: 200, y: 0, driver: true });
     const r = veFeadBuildSystem([a, b, nd('fead-tensioner', { od: 75 })]);
-    expect(r.errors.join(' ')).toMatch(/Birden fazla kasnak "Sürücü"/);
+    expect(r.errors.join(' ')).toMatch(/Birden fazla sürücü kasnak işaretli/);
   });
 });
 
@@ -340,7 +340,7 @@ describe('uçtan uca: AG00686 kanvas düğümlerinden Gates sayıları', () => {
 
     expect(r.ok).toBe(true);                 // sayılar üretiliyor
     expect(r.geomValid).toBe(false);         // ama YOL geçersiz ve bu YAZILI
-    expect(r.warnings.join(' ')).toMatch(/KAPANMIYOR|içinden geçiyor/i);
+    expect(r.warnings.join(' ')).toMatch(/kapanmıyor|içinden geçiyor/);
 
     // Değişmez gerçekten ısırıyor: Σ işaretli sarım 360'tan uzak.
     const g = F.geometryAt(r.sys, r.relDeg);
@@ -544,11 +544,11 @@ describe('duty cycle → çekirdek: AG00686 gerilme tablosu', () => {
     // serbestlik dereceli kol modu veriyordu. Artık çok serbestlik dereceli
     // model var; sınır "karşılaştırılamaz" değil, "aynı güven düzeyinde değil".
     expect(t).toMatch(/[Bb]urulma/);
-    expect(t).toMatch(/deterministik değildir/);
+    expect(t).toMatch(/RMS ~%8/);
     expect(t).toMatch(/yarı-statik/);
     // Kol modu hâlâ karşılaştırılamaz — ayrımın kaybolmaması gerekiyor.
-    expect(t).toMatch(/KOL MODU/);
-    expect(t).toMatch(/karşılaştırılamaz/);
+    expect(t).toMatch(/kol modu/);
+    expect(t).toMatch(/karşılığı burulma modelinin 1\. elastik modu/);
   });
 
   test('boş çevrimde analiz patlamaz, uyarı verir', () => {
@@ -1244,10 +1244,10 @@ describe('gergi serpantin konumu — uyarı', () => {
     const r = kur(['a', 'c', 'd', 'b']);          // gergi kayış sırasında 4/4
     expect(gergiUyarisi(r).length).toBe(1);
     expect(gergiUyarisi(r)[0]).toMatch(/4\/4/);              // konumu YAZIYOR (kayış sırasında)
-    expect(gergiUyarisi(r)[0]).toMatch(/ÇIKAN \(gevşek\) açıklığında/);  // konvansiyonu yazıyor
     // ÇARE UYDURULMUYOR: sayıların etkilenmediği aynı cümlede duruyor, yoksa
     // okuyucu bunu bir hesap hatası sanar ve olmayan bir şeyi düzeltmeye çalışır.
-    expect(gergiUyarisi(r)[0]).toMatch(/Sayılar bundan etkilenmiyor/);
+    expect(gergiUyarisi(r)[0]).toMatch(/sayılar etkilenmez\.$/);
+    expect(gergiUyarisi(r)[0]).not.toMatch(/Gates tablolarında|kayış sırasında krankın hemen ardında/);   // gerekçe kılavuzda
     // HÜKÜM ALAN OLARAK DA TAŞINIR — yüzeyler metni ayrıştırmasın diye.
     // `index` kayış sırasında (0 tabanlı), `last` çekirdek (tablo) sırasında.
     expect(r.tensionerOrder).toEqual({ index: 3, count: 4, afterDriver: false, last: false });

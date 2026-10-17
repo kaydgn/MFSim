@@ -178,7 +178,7 @@ describe('bileşen sözleşmesi — araçlar KUTUSUZ, pencere onlara BAĞLANIR',
       .map((n) => Object.assign({ def: componentDefs[n.type] || {} }, JSON.parse(JSON.stringify(n))));
     const hata = M.veFeadBuildSystem(ns).errors.join(' ');
     expect(hata).toMatch(/Gergi yok/);
-    expect(hata).toMatch(/＋ Kasnak ekle/);
+    expect(hata).not.toMatch(/Bileşenler/);
     expect(hata).not.toMatch(/palet/i);
   });
 

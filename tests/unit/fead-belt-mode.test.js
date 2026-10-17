@@ -161,7 +161,7 @@ describe('nominal kol açısı — yay künyesinden, geometriden DEĞİL', () =>
   test('çalışma momenti ön yükten küçükse not düşülür (erken dönüşte de)', () => {
     const m = M.veFeadSpringSetup({ preload: 22.07, kArm: 0.48, meanLoad: 8.60 });
     expect(m.relMeanDeg).toBeLessThan(0);
-    expect(m.notes.join(' ')).toMatch(/ön yükten KÜÇÜK/);
+    expect(m.notes.join(' ')).toMatch(/ön yükten küçük/);
   });
 
   // UÇTAN UCA: direct kipte serbest kayış artık nominale oturuyor.
@@ -294,7 +294,7 @@ describe('HOŞGÖRÜLÜ GEOMETRİ — çözülemeyen küme kalmadı', () => {
     const b = veFeadBuildSystem(bozukSira().list);
     expect(b.ok).toBe(true);
     expect(b.geomValid).toBe(false);
-    expect(b.warnings.join(' ')).toMatch(/KAPANMIYOR/);
+    expect(b.warnings.join(' ')).toMatch(/kapanmıyor/);
     const g = F.geometryAt(b.sys, b.relDeg);
     expect(g.violations.map((v) => v.type)).toContain('wrapSum');
   });
@@ -304,7 +304,7 @@ describe('HOŞGÖRÜLÜ GEOMETRİ — çözülemeyen küme kalmadı', () => {
     const g = F.geometryAt(b.sys, b.relDeg);
     expect(g.violations.map((v) => v.type)).toContain('clearance');
     expect(veFeadViolationText(g.violations.find((v) => v.type === 'clearance')))
-      .toMatch(/İÇİNDEN geçiyor/);
+      .toMatch(/içinden geçiyor/);
   });
 
   // ÇEKİRDEĞİN VARSAYILANI DEĞİŞMEDİ. 2095 referans değerli doğrulama kapısı
@@ -379,7 +379,7 @@ describe('DEJENERELİK ÖLÇÜTÜ take-up, sarım DEĞİL', () => {
       expect(c.atLimit.wrapDeg).toBeGreaterThan(100);   // sarım KOCAMAN
       expect(c.atLimit.takeupRatio).toBeLessThan(VE_FEAD_MIN_TAKEUP_RATIO);
       expect(c.atLimit.degenerate).toBe(true);          // ama dejenere
-      expect(veFeadAtLimitText(c.atLimit)).toMatch(/FİZİKSEL DEĞİL/);
+      expect(veFeadAtLimitText(c.atLimit)).toMatch(/fiziksel değil/);
     }
     expect(hi).toBeGreaterThan(0);
   });
