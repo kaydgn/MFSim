@@ -528,8 +528,7 @@ var componentDefs = {
     name: '3D Görüntüleyici',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linejoin="round"/></svg>',
     // YER TUTUCU (kullanıcı kararı 2026-10-16): "Klasik 3B" ilerleyen zamanda
-    // gerçek CAD dosyasıyla işlenecek; pencere bu notu gösterir ve aile
-    // kapısı tek sekmesini yalnız bu beyanla bağışlar (pencere-kabuk.test.js).
+    // gerçek CAD dosyasıyla işlenecek; pencere yalnız bu notu gösterir.
     yerTutucu: 'Bu bileşen gerçek CAD dosyasıyla çalışmaya ayrıldı. Model Görünümler bileşeninde döndürülür.',
     inputs: 0, outputs: 0, isMountViewer: true, defaultWidth: 60, defaultHeight: 56
   },
@@ -547,10 +546,6 @@ var componentDefs = {
   // bağlanmaz. Panel: cp-mount.js, çizici mount-akso.js.
   'mnt-2dview': {
     name: 'Görünümler',
-    // TEK SEKME (kullanıcı kararı 2026-10-16: "Aksonometrik ve İşaretler …
-    // birleştirelim, ayrı olmasına gerek yok"). Aile kuralı ≥ 2 kategori
-    // ister; tek sekmeyi bu beyan bağışlar (pencere-kabuk.test.js).
-    tekSekme: 'Çizim ve işaretler tek görünümde',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M16 25 A40 15 0 0 1 80 20" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linecap="round"/><path d="M84 13 L84 26 L72 22 Z" fill="var(--accent-primary, #a8502b)"/><path d="M20 44 L50 33 L80 44 L50 55 Z" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><path d="M20 44 V70 L50 81 L80 70 V44 M50 55 V81" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="63" r="7" fill="var(--bg-input, #ffffff)" stroke="var(--accent-danger, #9a3b3b)" stroke-width="3.5"/><rect x="12" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/><rect x="76" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/></svg>',
     inputs: 0, outputs: 0, isMount2DView: true, defaultWidth: 60, defaultHeight: 56
   },

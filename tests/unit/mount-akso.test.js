@@ -31,7 +31,7 @@
  *   · İŞARET BOYU — takoz, G, gövde CG'si ve nokta kütle pencerede ×1,5,
  *     geniş çizimde √2 kata dek daha, yakınlaştırmayla √yakın (0,75–1,75);
  *     ölçü olan (kuvvet okunun boyu) büyümez; rapor ve karolar birebir eski
- *   · KLASİK 3B — 3D Görüntüleyici yer tutucu: tek sekme, tipin beyan ettiği
+ *   · KLASİK 3B — 3D Görüntüleyici yer tutucu: tek kategori, tipin beyan ettiği
  *     not; tuval, düğme ve çizim yok, tazeleyicisi yok (2026-10-16)
  */
 const fs = require('fs');
@@ -314,10 +314,11 @@ describe('PENCERE — Görünümler: tek görünüm, başlıkta görünüm düğ
   // ekran butonunu uygun bir yere alalım." Ölçülen önce (main 35b98c8): iki
   // sekme, açı yazısı, dört bölüm (Görünüş · Katmanlar · Uygunluk ·
   // Etkileşim), tam ekran çizimin altında ayrı eylem satırında.
-  test('tek sekme: çizim + gösterge + işaretlerin föyü; açı yazısı, bölümler ve sağ sütun yok', () => {
+  test('tek kategori: çizim + gösterge + işaretlerin föyü; açı yazısı, bölümler ve sağ sütun yok', () => {
     yukle('tulga');
     const d = dom(pencere());
-    expect([...d.querySelectorAll('#ve-fp-tabs-d2 .ve-fp-tab-ad')].map((x) => x.textContent)).toEqual(['Aksonometrik']);
+    expect([...d.querySelectorAll('#ve-fp-panes-d2 > .ve-fp-kat')].map((x) => x.getAttribute('aria-label'))).toEqual(['Aksonometrik']);
+    expect(d.querySelector('.ve-fp-tab')).toBeNull();
     expect(d.querySelector('.ve-fp-side')).toBeNull();
     expect(d.querySelector('.ve-fp-split.ve-fp-split--tek')).not.toBeNull();
     const p = d.querySelector('#ve-fp-panes-d2 > [data-k="akso"]');
@@ -733,15 +734,15 @@ describe('İŞARET BOYU — takoz, G, gövde CG\'si ve nokta kütle büyür; öl
 // KLASİK 3B YALNIZ AD (kullanıcı kararı 2026-10-16: "Klasik 3B'yi kaldıralım …
 // sadece isim olarak kalabilir, ama içeriğini kaldıralım" — ilerleyen zamanda
 // gerçek CAD dosyasıyla işlenecek). Ölçüldü (main 2f43cda): pencere açılınca
-// 1 WebGL bağlamı kuruluyordu, her tazelemede bir yenisi; sekmede 1 tuval + 6
+// 1 WebGL bağlamı kuruluyordu, her tazelemede bir yenisi; pencerede 1 tuval + 6
 // düğme + gösterge vardı. Aynı gün aksonometri Görünümler'e taşındı: 3D
-// Görüntüleyici bir YER TUTUCU — tek sekme, notu tipin beyanından.
+// Görüntüleyici bir YER TUTUCU — tek kategori, notu tipin beyanından.
 describe('KLASİK 3B — 3D Görüntüleyici yer tutucu', () => {
-  test('tek sekme "Klasik 3B"; bölmesinde tuval, düğme ve çizim yok, yalnız tipin notu', () => {
+  test('tek kategori "Klasik 3B"; gövdede tuval, düğme ve çizim yok, yalnız tipin notu', () => {
     yukle('tulga'); coz();
     const d = document.createElement('div');
     d.innerHTML = cp.getMntViewerPropertiesHTML({ id: 'v5', type: 'mnt-viewer', data: {} });
-    expect([...d.querySelectorAll('#ve-fp-tabs-v5 .ve-fp-tab .ve-fp-tab-ad')].map((x) => x.textContent)).toEqual(['Klasik 3B']);
+    expect([...d.querySelectorAll('#ve-fp-panes-v5 > .ve-fp-kat')].map((x) => x.getAttribute('aria-label'))).toEqual(['Klasik 3B']);
     const p = d.querySelector('#ve-fp-panes-v5 > [data-k="sahne"]');
     expect({ tuval: d.querySelectorAll('canvas').length, dugme: p.querySelectorAll('button').length, svg: d.querySelectorAll('svg').length })
       .toEqual({ tuval: 0, dugme: 0, svg: 0 });

@@ -8,16 +8,16 @@
 // pencereler şeklinde yapmamız gerekiyor. Kullanıcı çok daha kolay bu
 // tabloları doldurur."*
 //
-// Ölçüldü (380 px'lik müfettiş sütunu, üç modülün bütün pencereleri, her
-// sekme): çalışma çevrimi tablosunun doğal genişliği 1162 px, görünen 359 px
-// — tablonun üçte ikisi yatay kaydırmanın arkasındaydı.
+// Ölçüldü (380 px'lik müfettiş sütunu, üç modülün bütün pencereleri):
+// çalışma çevrimi tablosunun doğal genişliği 1162 px, görünen 359 px —
+// tablonun üçte ikisi yatay kaydırmanın arkasındaydı.
 //
 // KURAL, LİSTE DEĞİL. Panel, tabloyu ve ONUN düğmelerini tek bir BİRİM
 // olarak işaretler (`data-ve-tablo`). Birim çizildikten sonra ÖLÇÜLÜR:
 // tablosu kabına sığmıyorsa yerinde bir özet kartı kalır ve "Tabloyu aç"
 // birimi küçük bir pencereye taşır. Sığıyorsa (geniş modal, az sütun) hiçbir
-// şey değişmez. Ölçüm bir `ResizeObserver`dan: sekme açılınca, pencere
-// sütun ↔ modal değişince, ekran daralınca aynı karar yeniden verilir.
+// şey değişmez. Ölçüm bir `ResizeObserver`dan: pencere sütun ↔ modal
+// değişince, ekran daralınca aynı karar yeniden verilir.
 //
 // TABLO KOPYALANMAZ, TAŞINIR. Hücrelerin olay işleyicileri satır içi ve
 // düğüm kimliğini taşıyor (`onchange="veFeadDutySet('comp-10',…)"`); aynı DOM
@@ -50,8 +50,8 @@ function _veTabloEsc(t){
 
 // Birimin tablosu kabına SIĞIYOR MU. Tablo kendi kaydırma kabının içindeyse
 // genişliği doğal genişliğidir (`width:100%` yalnız sığdığında geçerli), yani
-// iki sayı yan yana konunca cevap çıkar. Gizli sekmede (genişlik 0) soru
-// sorulmaz — karar sekme açılınca verilir.
+// iki sayı yan yana konunca cevap çıkar. Görünmeyen birimde (genişlik 0 —
+// kapalı panel) soru sorulmaz — karar görünür olunca gözlemciden verilir.
 function _veTabloOlc(birim){
   if(!birim || !birim.parentElement) return;
   if(birim.closest && birim.closest('.ve-tablo-pencere')) return;     // pencerede
@@ -113,19 +113,6 @@ function _veTabloKart(birim){
   birim.parentElement.insertBefore(kart, birim);
   birim._veKart = kart;
   return kart;
-}
-
-// SEKME AÇILINCA KARAR AYNI KAREDE (2026-09-25). Gizli sekmedeki birim
-// ölçülemiyor (genişlik 0) ve kararı gözlemcinin bir SONRAKİ karesine
-// kalıyordu: sekmeye geçince geniş tablo en az bir kare yatay kaydırmayla
-// görünüyordu. Yazı bir basamak büyüyünce bu, yük altında 60 ms'yi aştı
-// (mufettis-sigma.spec, FEAD Çözücü "Çevrim": 1217/359 px). Sekmeyi açan
-// kod bunu çağırır; gözlemci sonraki genişlik değişimleri için kalır.
-function veTabloOlcIcinde(kok){
-  if(typeof document === 'undefined' || !kok) return;
-  Array.prototype.forEach.call(kok.querySelectorAll('[data-ve-tablo]'), function(birim){
-    if(birim._veTabloHazir) _veTabloOlc(birim);
-  });
 }
 
 // Panel çizildikten sonra çağrılır (cp-core.js → showNodeProperties).
@@ -232,5 +219,5 @@ function veTabloAcikMi(){ return !!_veTabloAcik; }
 
 if(typeof module !== 'undefined' && module.exports){
   module.exports = { veTabloKatla: veTabloKatla, veTabloAc: veTabloAc, veTabloKapat: veTabloKapat,
-    veTabloAcikMi: veTabloAcikMi, veTabloOlcIcinde: veTabloOlcIcinde, _veTabloOlc: _veTabloOlc };
+    veTabloAcikMi: veTabloAcikMi, _veTabloOlc: _veTabloOlc };
 }

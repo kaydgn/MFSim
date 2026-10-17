@@ -217,6 +217,16 @@ describe('kılavuz ↔ program', () => {
     expect(KIT.veGuideKitReady(kayit)).toBe(true);
   });
 
+  // 2026-10-16: pencerelerde sekme yok (js/pencere-kabuk.js — kategoriler tek
+  // gövdede alt alta). Kılavuzda kalan "X sekmesi" kullanıcıyı olmayan bir
+  // sekmeyi aramaya gönderir; bölüm adlarının kendisi pencere-kabuk.test.js'te
+  // programın başlıklarına karşı ölçülüyor.
+  test('PENCERELERDE SEKME YOK — kılavuz bileşen penceresini sekmeyle anlatmıyor', () => {
+    const metin = DOC.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' ');
+    const bulgu = (metin.match(/[^.]{0,60}sekme\w*[^.]{0,40}/gi) || []).map((x) => x.replace(/\s+/g, ' ').trim());
+    expect(bulgu).toEqual([]);
+  });
+
   test('index.html kılavuzu KİTTEN SONRA yüklüyor', () => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     const kit = html.indexOf('js/guide-kit.js');

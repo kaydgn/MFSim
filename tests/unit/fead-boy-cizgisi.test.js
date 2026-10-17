@@ -254,7 +254,7 @@ describe('Boy çizgileri kartı ve sağ sütun AYNI okumadan', () => {
     const et = [...d.querySelectorAll('.ve-fp-l')].map((e) => e.innerHTML);
     expect(et.length).toBeGreaterThan(5);
     expect(et.filter((e) => /<sub>|[α-ω]/.test(e))).toEqual([]);
-    // figür Boy sekmesinde
+    // figür Boy kategorisinde
     expect(d.querySelectorAll('svg [data-ve="kesit-db"]').length).toBe(1);
   });
 });

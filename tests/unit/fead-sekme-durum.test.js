@@ -1,24 +1,27 @@
 /**
- * fead-sekme-durum.test.js — DURUMLU SEKMELER (FEAD pencereleri)
+ * fead-sekme-durum.test.js — KATEGORİ DURUMU VE EKSİK BANDI (FEAD pencereleri)
  *
  * Kullanıcı isteği (2026-09-26, ekran görüntüsüyle): *"kullanıcı bu kısmı
  * görmeyebilir ve eksik bilgi girebilir. Bu kısmın daha görünür olmasını
- * istiyorum."* Tasarım tezgâhından **B · Durumlu Sekmeler** seçildi: her
- * sekme adının altında bir durum satırı, eksik varsa şeridin altında sonucu
- * ve oraya giden bağlantıyı yazan bir bant.
+ * istiyorum."* Tasarım tezgâhından **B · Durumlu Sekmeler** seçilmişti: her
+ * sekme adının altında bir durum satırı, eksik varsa sonucu ve oraya giden
+ * bağlantıyı yazan bir bant. 2026-10-16'dan beri sekme YOK (kullanıcı: *"Tek
+ * bir pencerede hepsi sığar"*): hiçbir kategori gizli değil; durum kategori
+ * kabında (`data-d` — eksik kategori kenarında işaretli), sonucu ve bağlantısı
+ * gövdenin üstündeki bantta.
  *
  * Bu dosyanın asıl kapısı ANLAŞMA. Sekme durumu köprünün yüklemlerinden
  * okunuyor ama yine de ayrı bir yerde yazılı — köprüye yeni bir zorunlu alan
  * eklenir de buraya eklenmezse sekme "tamam" der, model çözülmez, ve bu
  * SESSİZDİR. Bu yüzden her zorunlu alan GERÇEK bir modelde (AG00976) tek tek
  * boşaltılıyor ve iki taraf birlikte ölçülüyor: köprü hatasını/uyarısını
- * veriyor MU, sekme 'eksik' diyor MU. Biri olup öteki olmazsa kırmızı.
+ * veriyor MU, kategori 'eksik' diyor MU. Biri olup öteki olmazsa kırmızı.
  *
  * Kurallar (cp-fead.js → veFeadSekmeDurumlari):
  *   ok · eksik (boşluğun bir SONUCU var) · bos (isteğe bağlı) · yok (hiçbir
  *   hesap okumuyor)
- * Sürücünün dört sekmesi (motor · devir · eğri · çevrim) 2026-09-28'den beri
- * DEPODAN okur (`veFeadIsletmeDeposu` — çözücü düğümü).
+ * Sürücünün dört kategorisi (geometri · rol · motor · çevrim) 2026-09-28'den
+ * beri işletme verisini DEPODAN okur (`veFeadIsletmeDeposu` — çözücü düğümü).
  */
 const fs = require('fs');
 const path = require('path');
@@ -372,23 +375,24 @@ describe('ÇÖZÜCÜ — yalnız yöntem, model ve sonuç; GİRDİ SORMAZ', () =
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('ŞERİT VE BANT — pencerede', () => {
+describe('KATEGORİ DURUMU VE BANT — pencerede', () => {
   const ciz = (html) => { const k = document.createElement('div'); k.innerHTML = html; return k; };
 
-  test('her sekme adının altında durum satırı; düğmede aynı durum', () => {
+  test('her kategori kabı durumunu taşır; sekme ve durum yazısı YOK', () => {
     ornek();
     const kap = ciz(getFeadPulleyPropertiesHTML(dugum('ex-A_C')));
-    const sek = [...kap.querySelectorAll('.ve-fp-tab')];
-    expect(sek.map((b) => b.getAttribute('data-k'))).toEqual(['geo', 'rol', 'dev', 'egr']);
-    expect(sek.map((b) => b.querySelector('.ve-fp-tab-d').textContent))
-      .toEqual(['tamam', 'tamam', '0/3 girildi', 'isteğe bağlı']);
-    sek.forEach((b) => expect(b.getAttribute('data-d'))
-      .toBe(b.querySelector('.ve-fp-tab-d').getAttribute('data-d')));
-    // Ad ayrı bir elemanda: sekme adı okunurken durum ona karışmıyor.
-    expect(sek[2].querySelector('.ve-fp-tab-ad').textContent).toBe('Devir sınırları');
+    const kat = [...kap.querySelectorAll('.ve-fp-govde > .ve-fp-kat')];
+    expect(kat.map((b) => b.getAttribute('data-k'))).toEqual(['geo', 'rol', 'dev', 'egr']);
+    expect(kat.map((b) => b.getAttribute('data-d'))).toEqual(['ok', 'ok', 'eksik', 'bos']);
+    // Kabın durumu köprünün hükmü (yazısı bantta ve köprüde, pencerede değil).
+    const D = durum('ex-A_C');
+    kat.forEach((b) => expect(b.getAttribute('data-d')).toBe(D[b.getAttribute('data-k')].d));
+    expect(D.dev.yazi).toBe('0/3 girildi');
+    expect(kat[2].getAttribute('aria-label')).toBe('Devir sınırları');
+    expect(kap.querySelectorAll('.ve-fp-tab, .ve-fp-tab-d').length).toBe(0);
   });
 
-  test('eksik varken bant: sekmenin ADI, SONUCU ve bağlantısı; yokken bant YOK', () => {
+  test('eksik varken bant: kategorinin ADI, SONUCU ve bağlantısı; yokken bant YOK', () => {
     ornek();
     let kap = ciz(getFeadPulleyPropertiesHTML(dugum('ex-A_C')));
     const bant = kap.querySelector('.ve-fp-eksik');
@@ -397,29 +401,32 @@ describe('ŞERİT VE BANT — pencerede', () => {
     expect(bant.textContent).toMatch(/Devir sınırları/);
     expect(bant.textContent).toMatch(/devir sınırı denetlenmiyor/);
     expect(bant.querySelector('button').getAttribute('onclick')).toMatch(/veFeadEksikGit\('ex-A_C','dev'\)/);
-    // Bant sekme gövdelerinin DIŞINDA — hangi sekme açık olursa olsun görünür.
-    expect(kap.querySelector('[id^="ve-fp-panes-"]').contains(bant)).toBe(false);
+    // Bant gövdenin DIŞINDA ve hemen ÜSTÜNDE — pencere açılınca ilk görünen.
+    const gov = kap.querySelector('[id^="ve-fp-panes-"]');
+    expect(gov.contains(bant)).toBe(false);
+    expect(bant.nextElementSibling).toBe(gov);
     kap = ciz(getFeadPulleyPropertiesHTML(dugum('ex-ALT')));
     expect(kap.querySelector('.ve-fp-eksik')).toBeNull();
   });
 
-  test('araç penceresinde durum satırı da bant da yok, şerit yine var', () => {
+  test('araç penceresinde durum da bant da yok; kategoriler yine tek gövdede', () => {
     ornek();
     const kap = ciz(veFeadPanelShell(dugum('ex-report'),
       [{ k: 'a', ad: 'A', govde: 'x' }, { k: 'b', ad: 'B', govde: 'y' }], { html: '' }));
-    expect(kap.querySelectorAll('.ve-fp-tab').length).toBe(2);
-    expect(kap.querySelectorAll('.ve-fp-tab-d').length).toBe(0);
+    const kat = [...kap.querySelectorAll('.ve-fp-govde > .ve-fp-kat')];
+    expect(kat.map((b) => b.textContent)).toEqual(['x', 'y']);
+    expect(kat.filter((b) => b.hasAttribute('data-d')).length).toBe(0);
     expect(kap.querySelector('.ve-fp-eksik')).toBeNull();
   });
 
-  test('ROZET KALKTI (kural 26): ne şeritte ne kaynakta', () => {
+  test('ROZET KALKTI (kural 26): ne pencerede ne kaynakta', () => {
     ornek();
     const kap = ciz(getFeadPulleyPropertiesHTML(dugum('ex-FAN')));
-    expect(kap.querySelectorAll('.ve-fp-tab b').length).toBe(0);
+    expect(kap.querySelectorAll('.ve-fp-kat > b').length).toBe(0);
     expect(SRC).not.toMatch(/s\.rozet|rozetD/);
-    expect(CSS).not.toMatch(/\.ve-fp-tab b\b/);
-    // Satır sayısı durum satırında — çevrim artık sürücünün penceresinde.
-    expect(kap.querySelector('.ve-fp-tab[data-k="cev"] .ve-fp-tab-d').textContent).toBe('12 satır');
+    // Satır sayısı kategorinin durumunda — çevrim artık sürücünün penceresinde.
+    expect(durum('ex-FAN').cev.yazi).toBe('12 satır');
+    expect(kap.querySelector('.ve-fp-kat[data-k="cev"]').getAttribute('data-d')).toBe('ok');
   });
 });
 
@@ -434,14 +441,13 @@ describe('YERİNDE TAZELEME — panel kurulmadan, odak düşmeden', () => {
     // veFeadSet'in yaptığı: alanı yazar, paneli KURMAZ.
     Object.assign(dugum('ex-A_C').data, { optimumRpm: 6000, maxContRpm: 8000, maxPeakRpm: 12000 });
     expect(veFeadSekmeTazele()).toBe(1);
-    const d = document.querySelector('.ve-fp-tab[data-k="dev"]');
+    const d = document.querySelector('.ve-fp-kat[data-k="dev"]');
     expect(d.getAttribute('data-d')).toBe('ok');
-    expect(d.querySelector('.ve-fp-tab-d').textContent).toBe('tamam');
     expect(document.querySelector('.ve-fp-eksik')).toBeNull();
     expect(document.getElementById('ve-fead-optimumRpm-ex-A_C')).toBe(giris);   // yeniden KURULMADI
   });
 
-  test('ters yön de: alan boşalınca bant GERİ gelir, şeridin hemen altına', () => {
+  test('ters yön de: alan boşalınca bant GERİ gelir, gövdenin hemen üstüne', () => {
     ornek();
     document.body.innerHTML = getFeadPulleyPropertiesHTML(dugum('ex-ALT'));
     expect(document.querySelector('.ve-fp-eksik')).toBeNull();
@@ -449,8 +455,9 @@ describe('YERİNDE TAZELEME — panel kurulmadan, odak düşmeden', () => {
     veFeadSekmeTazele();
     const bant = document.querySelector('.ve-fp-eksik');
     expect(bant).toBeTruthy();
-    expect(bant.previousElementSibling.classList.contains('ve-fp-tabs')).toBe(true);
+    expect(bant.nextElementSibling.id).toBe('ve-fp-panes-ex-ALT');
     expect(bant.textContent).toMatch(/1 devir sınırı boş/);
+    expect(document.querySelector('.ve-fp-kat[data-k="dev"]').getAttribute('data-d')).toBe('eksik');
   });
 
   test('saveState TAZELER — "girdi değişti" olayının tek kaynağı', () => {
@@ -466,21 +473,20 @@ describe('YERİNDE TAZELEME — panel kurulmadan, odak düşmeden', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('BANTTAN GİT — sekmeyi açar, ilk BOŞ girişe odaklanır', () => {
-  test('Doldur → devir sekmesi açık ve imleç optimumda', () => {
+describe('BANTTAN GİT — kategoriye gider, ilk BOŞ girişe odaklanır', () => {
+  test('Doldur → imleç devir sınırlarının ilk boş alanında (optimum)', () => {
     ornek();
     document.body.innerHTML = getFeadPulleyPropertiesHTML(dugum('ex-A_C'));
     expect(veFeadEksikGit('ex-A_C', 'dev')).toBe(true);
-    expect(document.querySelector('.ve-fp-tab[data-k="dev"]').getAttribute('aria-selected')).toBe('true');
     expect(document.activeElement).toBe(document.getElementById('ve-fead-optimumRpm-ex-A_C'));
   });
 
-  test('boş girişi olmayan sekmede odak SEKMENİN KENDİSİNE', () => {
+  test('boş girişi olmayan kategoride odak KATEGORİNİN KABINA', () => {
     ornek();
     window.veFeadResults = { ok: false, solvedNodeId: 'ex-solver' };
     document.body.innerHTML = getFeadSolverPropertiesHTML(dugum('ex-solver'));
     expect(veFeadEksikGit('ex-solver', 'son')).toBe(true);
-    expect(document.activeElement).toBe(document.querySelector('.ve-fp-tab[data-k="son"]'));
+    expect(document.activeElement).toBe(document.querySelector('.ve-fp-kat[data-k="son"]'));
   });
 });
 
@@ -492,19 +498,19 @@ describe('GÖRÜNÜM CSS\'TE, JETONDAN', () => {
     const i = CSS.indexOf('\n' + sec + '{');
     return i < 0 ? '' : CSS.slice(i, CSS.indexOf('}', i));
   };
-  test('bant bir denetim: zemin + çerçeve jetondan, dar kapta sarar', () => {
-    const r = kural('.ve-fp-tabs');
-    expect(r).toMatch(/background:var\(--bg-tertiary\)/);
-    expect(r).toMatch(/border:1px solid var\(--border-color\)/);
-    expect(r).toMatch(/flex-wrap:wrap/);
+  test('bant bir uyarı kutusu: zemin + çerçeve kehribar jetondan', () => {
+    const r = kural('.ve-fp-eksik');
+    expect(r).toMatch(/background:color-mix\(in srgb, var\(--accent-warning\)/);
+    expect(r).toMatch(/border:1px solid color-mix\(in srgb, var\(--accent-warning\)/);
   });
-  test('durum rengi ANLAMDAN (--ink-*), biçim renksiz de ayırıyor', () => {
-    expect(kural('.ve-fp-tab-d[data-d="ok"]')).toMatch(/var\(--ink-success\)/);
-    expect(kural('.ve-fp-tab-d[data-d="eksik"]')).toMatch(/var\(--ink-warning\)/);
-    expect(kural('.ve-fp-tab-d[data-d="bos"] i')).toMatch(/background:none/);
-    expect(kural('.ve-fp-tab-d[data-d="yok"] i')).toMatch(/display:none/);
+  test('eksik kategori kenarında işaretli — renk jetondan, içerik hizası değişmez', () => {
+    const r = kural('.ve-fp-kat[data-d="eksik"]');
+    expect(r).toMatch(/border-left:2px solid var\(--accent-warning\)/);
+    // Çizgi kabın dolgusuna oturur: −10 px kayma = 8 px dolgu + 2 px çizgi.
+    expect(r).toMatch(/margin-left:-10px; padding-left:8px;/);
+    expect(CSS).not.toMatch(/\.ve-fp-tab/);                      // şeridin kuralları kalktı
     // Pencere HTML'i durum rengi YAZMIYOR.
     ornek();
-    expect(getFeadPulleyPropertiesHTML(dugum('ex-A_C'))).not.toMatch(/ve-fp-tab-d[^>]*style=/);
+    expect(getFeadPulleyPropertiesHTML(dugum('ex-A_C'))).not.toMatch(/ve-fp-kat[^>]*style=/);
   });
 });

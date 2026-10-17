@@ -39,8 +39,14 @@ async function bootApp(page, { modul = 'arac-performans', tema = 'acik', kur, ka
   await page.waitForTimeout(400);
 }
 
-// Modeldeki her bileşen tipinin penceresi, her sekmesiyle (`yalniz`: yalnız bu tipler).
-const SEKME = '[role="tab"]:not(.ve-fp-tab), .ve-tab-btn, .ve-panel-tab, .ve-mnt-tab';
+// Modeldeki her bileşen tipinin penceresi, BAŞTAN SONA (`yalniz`: yalnız bu tipler).
+// FEAD ve Takoz pencereleri 2026-10-16'dan beri TEK GÖVDE (kategoriler sekme
+// değil, alt alta): ölçerler yalnız ekrandaki yazıyı sayar, bu yüzden pencere
+// SAYFA SAYFA kaydırılarak ölçülür — sekme gezmenin yerine. Kaydırmadan
+// ölçülseydi uzun pencerenin (kayış · çözücü) alt yarısı sessizce ölçü dışı
+// kalırdı. Öteki programların sekmeleri (görüntüleyici, motor) yine gezilir.
+const SEKME = '[role="tab"], .ve-tab-btn, .ve-panel-tab, .ve-mnt-tab';
+const SAYFA_BINDIRME = 40;      // px — sayfa sınırında kesilen satır iki sayfada da ölçülür
 async function pencereler(page, olc, yalniz) {
   const tipler = yalniz || await page.evaluate(() =>
     [...new Set(nodes.filter((n) => !(componentDefs[n.type] || {}).isSubsystem).map((n) => n.type))]);
@@ -51,19 +57,26 @@ async function pencereler(page, olc, yalniz) {
       clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
       await new Promise((r) => setTimeout(r, 450));
       const ic = document.querySelector('.ve-properties-content');
-      if (!ic) return { id: n.id, fead: [], diger: 0 };
-      return {
-        id: n.id,
-        fead: [...ic.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')),
-        diger: ic.querySelectorAll(S).length,
-      };
+      if (!ic) return { id: n.id, diger: 0 };
+      return { id: n.id, diger: ic.querySelectorAll(S).length };
     }, [tip, SEKME]);
-    olculen += (await olc('#ve-properties', tip)).olculen;
-    for (const k of sekme.fead.slice(1)) {
-      await page.evaluate(([id, kk]) => veFeadPanelTab(id, kk), [sekme.id, k]);
-      await page.waitForTimeout(100);
-      olculen += (await olc('#ve-properties', tip + '/' + k)).olculen;
+    const sayfa = await page.evaluate((B) => {
+      const ic = document.querySelector('.ve-properties-content');
+      if (!ic) return 1;
+      ic.scrollTop = 0;
+      return Math.max(1, Math.ceil((ic.scrollHeight - B) / Math.max(1, ic.clientHeight - B)));
+    }, SAYFA_BINDIRME);
+    for (let p = 0; p < sayfa; p++) {
+      if (p) {
+        await page.evaluate(([pp, B]) => {
+          const ic = document.querySelector('.ve-properties-content');
+          ic.scrollTop = pp * (ic.clientHeight - B);
+        }, [p, SAYFA_BINDIRME]);
+        await page.waitForTimeout(100);
+      }
+      olculen += (await olc('#ve-properties', tip + (p ? ' ↓' + (p + 1) : ''))).olculen;
     }
+    await page.evaluate(() => { const ic = document.querySelector('.ve-properties-content'); if (ic) ic.scrollTop = 0; });
     for (let i = 1; i < sekme.diger; i++) {
       await page.evaluate(([j, S]) => {
         const l = document.querySelector('.ve-properties-content').querySelectorAll(S);

@@ -781,12 +781,13 @@ describe('3D Görüntüleyici bileşeni', () => {
   // YER TUTUCU (kullanıcı kararları 2026-10-16): "Klasik 3B" gerçek CAD
   // dosyasıyla çalışmaya ayrıldı, döndürülebilir aksonometri Görünümler'e
   // taşındı. Kapının tamamı mount-akso.test.js → KLASİK 3B.
-  test('panel: tek sekme "Klasik 3B", tipin beyan ettiği not; çizim, three.js ve eski kalıntılar yok', () => {
+  test('panel: tek kategori "Klasik 3B", tipin beyan ettiği not; çizim, three.js ve eski kalıntılar yok', () => {
     global.componentDefs = { 'mnt-viewer': { yerTutucu: 'Yer tutucunun notu.' } };
     try {
       const html = cp.getMntViewerPropertiesHTML({ id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} });
       const d = document.createElement('div'); d.innerHTML = html;
-      expect([...d.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'))).toEqual(['sahne']);
+      expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('data-k'))).toEqual(['sahne']);
+      expect(d.querySelector('.ve-fp-tab')).toBeNull();                 // sekme şeridi yok (2026-10-16)
       expect(d.querySelector('#ve-fp-panes-vw1 > [data-k="sahne"]').textContent).toBe('Yer tutucunun notu.');
       ['ve-mnt-akso', 'veMntAkso3BTamEkran()', 've-mnt-inline-viewer-canvas', 'veMntViewerRefresh()', 'veMountViewerToggle',
         'veMountViewerReset()', 'veMntViewerFullscreen()', 'Sahne göstergesi', 'veMntViewerExpand', 'resize:vertical', 'Aktif tema ile uyumlu']
@@ -798,11 +799,11 @@ describe('3D Görüntüleyici bileşeni', () => {
 describe('Görünümler bileşeni (eski 2D Görünüm)', () => {
   afterEach(() => { delete global.nodes; });
   // 2026-10-16: döndürülebilir aksonometri (3D Görüntüleyici'den taşındı) ve
-  // işaretlerin föyü — aynı gün ikinci turda TEK sekme (kullanıcı: "ayrı
-  // olmasına gerek yok"), tam ekran çizimin başlığında. Düz görünüş sekmeleri
-  // ve tam ekranın düz görünüşleri kalktı. Kapının tamamı mount-akso.test.js
-  // → PENCERE.
-  test('panel: tek sekme — Aksonometrik (serbest kamera) + İşaretler (föy) · tam ekran; düz görünüş yok', () => {
+  // işaretlerin föyü — aynı gün ikinci turda TEK kategori (kullanıcı: "ayrı
+  // olmasına gerek yok"), tam ekran çizimin başlığında. Düz görünüşler ve tam
+  // ekranın düz görünüşleri kalktı. Kapının tamamı mount-akso.test.js →
+  // PENCERE.
+  test('panel: tek kategori — Aksonometrik (serbest kamera) + İşaretler (föy) · tam ekran; düz görünüş yok', () => {
     global.nodes = [
       { id: 'a', type: 'mnt-motor', def: { isMountBody: true }, customName: 'Motor', data: { mass: 100, cgx: 0, cgy: 0, cgz: 100 } },
       { id: 'm', type: 'mnt-mount', def: { isMount: true }, customName: 'Ön Takoz', data: { x: -50, y: 20, z: 30 } }
@@ -811,9 +812,9 @@ describe('Görünümler bileşeni (eski 2D Görünüm)', () => {
     let html;
     try { html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} }); } finally { delete global.veMntAkso; }
     const d = document.createElement('div'); d.innerHTML = html;
-    expect([...d.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'))).toEqual(['akso']);
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('data-k'))).toEqual(['akso']);
     expect(d.querySelector('#ve-fp-panes-d1 > [data-k="akso"] #ve-mnt-akso3b-d1')).not.toBeNull();
-    expect(html).toMatch(/<td>T1<\/td><td class="sol" title="Ön Takoz">Ön Takoz<\/td>/);   // föy çizimle aynı sekmede
+    expect(html).toMatch(/<td>T1<\/td><td class="sol" title="Ön Takoz">Ön Takoz<\/td>/);   // föy çizimle aynı gövdede
     expect(d.querySelector('#ve-fp-panes-d1 > [data-k="akso"]').innerHTML).toContain('<td>T1</td>');
     expect(html).toContain('veMntAkso3BTamEkran()');
     ['data-mnt2d="ust"', 've-mnt2d-gorunus', 've-mnt2d-fig', 'veMnt2DTamEkran', 'veMnt2DViewRefresh()']
@@ -973,7 +974,7 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
   });
 
   // Eğri düzenleyicisi aç/kapa düğmesinin arkasında değil: Kuvvet–sehim
-  // sekmesinde doğrudan — eğri yoksa tanımlama eylemi.
+  // kategorisinde doğrudan — eğri yoksa tanımlama eylemi.
   test('kütüphane paneli: eğrisiz özel takozda z-eğrisi tanımlama eylemi', () => {
     const html = cp.getMntLibraryPropertiesHTML(libNode());
     expect(html).toContain("veMntLibCurveEnable('lib1','k1')");

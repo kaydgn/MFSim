@@ -4736,7 +4736,7 @@ function _fwStepKayis(b){
       + '</b></div>'
     + '</div>'
     );
-  // SERVİS FAKTÖRÜ c₂ — kayış penceresinin Tasarım sekmesiyle AYNI üretici ve
+  // SERVİS FAKTÖRÜ c₂ — kayış penceresinin Tasarım kategorisiyle AYNI üretici ve
   // aynı köprü yazıcısı (kural 24 · 48); değer durumun çözücü alanına yazılır,
   // kurulumda depoya taşınır (`veFeadWizNodes`).
   if(typeof veFeadServisTabloHTML === 'function')

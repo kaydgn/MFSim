@@ -143,39 +143,33 @@ test('etiket, denetiminin yaslandığı KENARA yaslanıyor', async ({ page }) =>
 // Ölçülen şey oran değil KIRPILMANIN KENDİSİ.
 test('açılır listenin metni kırpılmıyor', async ({ page }) => {
   await kasnakPaneliAc(page);
-  // HER SEKME GEZİLİR, YALNIZ GÖRÜNEN LİSTE ÖLÇÜLÜR: gizli sekmedeki listenin
-  // genişliği 0 ve "alan −41" diye kırpık SAYILIYORDU (ölçüldü: sürücünün
-  // Motor ve Çevrim sekmeleri 2026-09-28'de gelince üç sahte bulgu). Açılış
-  // sekmesini ölçmek de yetmezdi — yeni sekmelerin listeleri hiç ölçülmezdi.
+  // BÜTÜN KATEGORİLER TEK GÖVDEDE (2026-10-16), YALNIZ GÖRÜNEN LİSTE ÖLÇÜLÜR:
+  // görünmeyen listenin genişliği 0 ve "alan −41" diye kırpık SAYILIRDI
+  // (sekmeli dönemde ölçüldü: gizli Motor ve Çevrim sekmelerinden üç sahte bulgu).
   const r = await page.evaluate(async () => {
     const out = [];
     let olculen = 0;
-    const kap = document.querySelector('#ve-properties-overlay .ve-fp-tabs[id^="ve-fp-tabs-"]');
-    const id = kap.id.slice('ve-fp-tabs-'.length);
-    const sekmeler = [...kap.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k'));
-    for (const k of sekmeler) {
-      veFeadPanelTab(id, k);
-      await new Promise((ok) => setTimeout(ok, 60));
-      document.querySelectorAll('#ve-properties-overlay .ve-fp-sel').forEach((s) => {
-        if (!s.offsetWidth) return;
-        olculen++;
-        // seçili seçeneğin metnini ölç: kabın içine sığıyor mu
-        const ol = document.createElement('span');
-        const cs = getComputedStyle(s);
-        ol.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;'
-          + 'font:' + cs.font;
-        ol.textContent = s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : '';
-        document.body.appendChild(ol);
-        const gerek = ol.getBoundingClientRect().width;
-        ol.remove();
-        const alan = s.getBoundingClientRect().width
-          - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 18; // ok payı
-        if (gerek > alan) out.push(`${k}: "${ol.textContent}" gerek ${Math.round(gerek)} / alan ${Math.round(alan)}`);
-      });
-    }
-    return { out, olculen, sekme: sekmeler.length };
+    const kat = [...document.querySelectorAll('#ve-properties-overlay .ve-fp-govde > .ve-fp-kat')];
+    document.querySelectorAll('#ve-properties-overlay .ve-fp-sel').forEach((s) => {
+      if (!s.offsetWidth) return;
+      olculen++;
+      // seçili seçeneğin metnini ölç: kabın içine sığıyor mu
+      const ol = document.createElement('span');
+      const cs = getComputedStyle(s);
+      ol.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;'
+        + 'font:' + cs.font;
+      ol.textContent = s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : '';
+      document.body.appendChild(ol);
+      const gerek = ol.getBoundingClientRect().width;
+      ol.remove();
+      const alan = s.getBoundingClientRect().width
+        - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 18; // ok payı
+      const kk = (s.closest('.ve-fp-kat') || { getAttribute: () => '?' }).getAttribute('data-k');
+      if (gerek > alan) out.push(`${kk}: "${ol.textContent}" gerek ${Math.round(gerek)} / alan ${Math.round(alan)}`);
+    });
+    return { out, olculen, kategori: kat.map((x) => x.getAttribute('data-k')) };
   });
-  expect(r.sekme).toBe(4);                        // sürücü: Geometri · Rol · Motor · Çevrim
+  expect(r.kategori).toEqual(['geo', 'rol', 'mot', 'cev']);    // sürücü: Geometri · Rol · Motor · Çevrim
   expect(r.olculen).toBeGreaterThanOrEqual(4);    // temas · motor · düzen · çevrim kaydı
   expect(r.out).toEqual([]);
 });
@@ -189,30 +183,26 @@ test('açılır listenin metni kırpılmıyor', async ({ page }) => {
 // kararıyla KALKTI — yokluğunun kapısı fead-pencere-ailesi.test.js.)
 // ═══════════════════════════════════════════════════════════════════════════
 
-test('TEK SOL KENAR — bütün sekmelerde etiket denetiminin sol kenarında başlıyor', async ({ page }) => {
+test('TEK SOL KENAR — bütün kategorilerde etiket denetiminin sol kenarında başlıyor', async ({ page }) => {
   await kasnakPaneliAc(page);
   const r = await page.evaluate(() => {
     const out = []; let olculen = 0;
     const kok = document.querySelector('#ve-properties-overlay');
-    const sekmeler = [...kok.querySelectorAll('.ve-fp-tab')];
-    const id = (kok.querySelector('[id^="ve-fp-tabs-"]') || { id: '' }).id.replace('ve-fp-tabs-', '');
-    sekmeler.forEach((b) => {
-      veFeadPanelTab(id, b.getAttribute('data-k'));
-      kok.querySelectorAll('.ve-fp-f').forEach((f) => {
-        if (f.closest('[hidden]')) return;
-        const l = f.querySelector('.ve-fp-l'), d = f.querySelector('.ve-fp-inp, .ve-fp-sel');
-        if (!l || !d) return;
-        const rg = document.createRange(); rg.selectNodeContents(l);
-        const m = rg.getBoundingClientRect();
-        if (!m.width) return;
-        olculen++;
-        const dx = m.left - d.getBoundingClientRect().left;
-        if (Math.abs(dx) > 1.5) out.push(l.textContent.trim().slice(0, 20) + ' ' + Math.round(dx) + ' px');
-      });
+    const kat = [...kok.querySelectorAll('.ve-fp-govde > .ve-fp-kat')];
+    kok.querySelectorAll('.ve-fp-f').forEach((f) => {
+      if (f.closest('[hidden]')) return;
+      const l = f.querySelector('.ve-fp-l'), d = f.querySelector('.ve-fp-inp, .ve-fp-sel');
+      if (!l || !d) return;
+      const rg = document.createRange(); rg.selectNodeContents(l);
+      const m = rg.getBoundingClientRect();
+      if (!m.width) return;
+      olculen++;
+      const dx = m.left - d.getBoundingClientRect().left;
+      if (Math.abs(dx) > 1.5) out.push(l.textContent.trim().slice(0, 20) + ' ' + Math.round(dx) + ' px');
     });
-    return { out, olculen, sekme: sekmeler.length };
+    return { out, olculen, kategori: kat.length };
   });
-  expect(r.sekme).toBeGreaterThanOrEqual(2);
+  expect(r.kategori).toBeGreaterThanOrEqual(2);
   expect(r.olculen).toBeGreaterThan(10);          // BOŞA ÇALIŞMIYOR
   // Eski hâl: sayı alanlarının etiketi SAĞA yaslıydı — "Dış çap (OD) 52 px".
   expect(r.out).toEqual([]);
@@ -265,7 +255,7 @@ test('c₂ tablosu kayış penceresinde ve sihirbazda AYNI çiziliyor', async ({
   const pencere = await page.evaluate(async () => {
     veFeadKayisAc();
     await new Promise((r) => setTimeout(r, 400));
-    veFeadPanelTab(nodes.find((n) => n.type === 'fead-belt').id, 'tas');
+    vePencereKategoriGit(nodes.find((n) => n.type === 'fead-belt').id, 'tas');   // tasarım gövdede: oraya kaydırılır
     await new Promise((r) => setTimeout(r, 150));
     return window.__c2Olc(document.querySelector('#ve-properties-overlay'));
   });
@@ -323,7 +313,7 @@ test('sürtünme seçicisi kayış penceresinde ve sihirbazda AYNI çiziliyor; E
   const pencere = await page.evaluate(async () => {
     veFeadKayisAc();
     await new Promise((r) => setTimeout(r, 400));
-    veFeadPanelTab(nodes.find((n) => n.type === 'fead-belt').id, 'tas');
+    vePencereKategoriGit(nodes.find((n) => n.type === 'fead-belt').id, 'tas');   // tasarım gövdede: oraya kaydırılır
     await new Promise((r) => setTimeout(r, 150));
     return window.__muOlc(document.querySelector('#ve-properties-overlay'));
   });

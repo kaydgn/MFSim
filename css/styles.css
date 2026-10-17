@@ -9423,10 +9423,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fead-mu-durum b{ color:var(--text-heading); }
 .ve-fead-mu-durum[data-uyari]{ color:var(--ink-warning); }
 
-/* ── SEKMELER + SABİT SAĞ SÜTUN (seçilen tasarım: B + C) ─────────────────
-   Sekme panelin UZUNLUĞUNU çözüyor, sağ sütun sekmenin ALDIĞI BAĞLAMI geri
-   veriyor: solda ne düzenlenirse düzenlensin sağda "bunun sonucu ne" duruyor.
-   Sağ sütun sekme değişince YENİDEN KURULMAZ (js: yalnız `hidden` çevrilir). */
+/* ── TEK GÖVDE + SAĞ SÜTUN ──────────────────────────────────────────────────
+   Gövde pencerenin bütün kategorilerini alt alta taşır (sekme yok, 2026-10-16);
+   sağ sütun bağlamı, uygunluğu ve pencerenin tek eylemini: solda ne
+   düzenlenirse düzenlensin sağda "bunun sonucu ne" duruyor. */
 .ve-fp-split{ display:grid; grid-template-columns:minmax(0,1fr) 296px; gap:18px; align-items:start; }
 .ve-fp-main, .ve-fp-side{ min-width:0; }
 /* Sağ sütunu boş pencere (js/pencere-kabuk.js — Takoz'da sonuç yok, bağlamı ya
@@ -9440,7 +9440,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    aldı ve DÜZENLENEN sütuna 356 − 18 − 296 = 42 px kaldı. Sekmeler alt alta
    kaydı (sol "ray" görüntüsü buydu), açıklamalar kelime kelime kırıldı,
    girdiler parmak ucu kadar oldu. Soru artık kapsayıcıya soruluyor.
-   Sıra: önce düzenlenen (sekmeler + alanlar), sonra cevabı (özet). */
+   Sıra: önce düzenlenen (gövde), sonra cevabı (özet). */
 .ve-properties-content{ container-type:inline-size; container-name:vepanel; }
 @container vepanel (max-width:640px){
   /* Tek sütunda IZGARA DEĞİL ESNEK SÜTUN: ızgara öğesinin kapsayan bloğu
@@ -9454,10 +9454,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
      arasında. (İkisi de ekran görüntüsünde görüldü, sonra ölçüldü.) */
   .ve-fp-main{ margin-bottom:16px; }
   .ve-fp-split--tek > .ve-fp-main{ margin-bottom:0; }
-  /* Kategori sekmeleri kaydırırken ÜSTTE kalır — uzun bir sekmenin dibinde
-     öteki kategoriye geçmek için yukarı dönmek gerekmesin. Kapsama yeri
-     `.ve-fp-main`: özete gelince sekme de çekilir (özet sekmeden bağımsız). */
-  .ve-fp-tabs{ position:sticky; top:0; z-index:1; }
   /* HESAPLA DÜĞMESİ ALTA YAPIŞIR. İki sütunda düğme özet sütunundaydı ve
      sekme ne olursa olsun görünüyordu (tasarımın gerekçesi buydu). Tek
      sütunda özet ALTA indi ve düğme panelin en dibine düştü — çevrimi
@@ -9474,49 +9470,22 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   .ve-fp-side > .ve-fp-solve{ position:sticky; bottom:-10px; z-index:1; box-shadow:0 -6px 14px -6px var(--shadow-color); }
 }
 
-/* SEKME ŞERİDİ — DOLU BİR BANT, DURUMLU SEKMELER (2026-09-26, kullanıcı:
-   *"kullanıcı bu kısmı görmeyebilir ve eksik bilgi girebilir"* → tasarım B).
-   Ölçülen eski hâl: 29 px, 11 px yazı, zeminsiz — pasif sekmenin kontrastı
-   yeterliydi (5,0:1 / 5,9:1), sorun okunmak değil FARK EDİLMEKTİ ve altındaki
-   büyük harfli renkli bölüm başlığı şeritten yüksek sesle konuşuyordu. Bant
-   zemini ve çerçevesiyle bir DENETİM gibi durur; her sekme adının altında
-   durumunu taşır (`.ve-fp-tab-d`). Sarma AÇIK: dar kapta sığmayan sekme alt
-   satıra iner, yatay kaydırma doğmaz. */
-.ve-fp-tabs{
-  display:flex; flex-wrap:wrap; align-items:stretch; gap:0 2px;
-  margin:0 0 12px; padding:0 6px;
-  background:var(--bg-tertiary); border:1px solid var(--border-color);
-  border-radius:var(--radius-md);
-}
-.ve-fp-tab{
-  font:inherit; cursor:pointer; text-align:left;
-  display:flex; flex-direction:column; justify-content:center; gap:2px;
-  min-height:36px; padding:6px 8px 5px;
-  background:transparent; border:none; border-bottom:3px solid transparent;
-  margin-bottom:-1px;
-}
-.ve-fp-tab-ad{ font-size:var(--fs-body); font-weight:600; color:var(--text-secondary); white-space:nowrap; }
-.ve-fp-tab:hover .ve-fp-tab-ad{ color:var(--text-heading); }
-.ve-fp-tab[aria-selected="true"]{ border-bottom-color:var(--accent-primary); }
-.ve-fp-tab[aria-selected="true"] .ve-fp-tab-ad{ color:var(--text-heading); }
-.ve-fp-tab:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
-/* Durum satırı: renk ANLAMDAN (`--ink-*`), biçim renksiz de ayırır — dolu
-   nokta · kesikli halka · nokta yok. */
-.ve-fp-tab-d{
-  display:flex; align-items:center; gap:4px; white-space:nowrap;
-  font-size:var(--fs-micro); font-weight:600; color:var(--text-muted);
-}
-.ve-fp-tab-d i{ width:6px; height:6px; border-radius:50%; background:currentColor; flex:none; }
-.ve-fp-tab-d[data-d="ok"]{ color:var(--ink-success); }
-.ve-fp-tab-d[data-d="eksik"]{ color:var(--ink-warning); }
-.ve-fp-tab-d[data-d="bos"] i{ background:none; box-shadow:inset 0 0 0 1px currentColor; }
-.ve-fp-tab-d[data-d="yok"] i{ display:none; }
-.ve-fp-tab[data-d="yok"] .ve-fp-tab-ad{ color:var(--text-muted); }
+/* KATEGORİLER ALT ALTA (2026-10-16, kullanıcı: *"Tek bir pencerede hepsi sığar
+   … Kullanışlı ve kompakt bir tasarım olsun."*). Sekme şeridi kalktı;
+   kategoriler kartların ritmiyle (14 px) alt alta durur ve bölümü kartın kendi
+   başlığı adlandırır — ikinci bir başlık katmanı yok. Kategorinin durumu
+   kabında (`data-d`); EKSİK kategori sol kenarında kehribar bir çizgi taşır:
+   kaydırınca da görünür, yer kaplamaz (çizgi kaydırma kabının 10 px'lik
+   dolgusuna oturur, içerik hizası değişmez). */
+.ve-fp-kat + .ve-fp-kat{ margin-top:14px; }
+.ve-fp-kat:focus{ outline:none; }
+.ve-fp-kat:focus-visible{ box-shadow:var(--focus-ring); border-radius:var(--radius-xs); }
+.ve-fp-kat[data-d="eksik"]{ margin-left:-10px; padding-left:8px; border-left:2px solid var(--accent-warning); }
 
-/* EKSİK BANDI — şeridin altında, yalnız eksik varken: sonucu ve oraya giden
+/* EKSİK BANDI — gövdenin üstünde, yalnız eksik varken: sonucu ve oraya giden
    bağlantı. Sonuç eskiden yalnız sağ sütunun dibinde yazıyordu. */
 .ve-fp-eksik{
-  display:flex; flex-direction:column; gap:6px; margin:-4px 0 12px; padding:8px 10px;
+  display:flex; flex-direction:column; gap:6px; margin:0 0 12px; padding:8px 10px;
   border-radius:var(--radius-md); font-size:var(--fs-tiny); color:var(--text-primary);
   background:color-mix(in srgb, var(--accent-warning) 12%, var(--bg-secondary));
   border:1px solid color-mix(in srgb, var(--accent-warning) 50%, var(--border-color));
@@ -9532,7 +9501,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fp-eksik-s button:hover{ text-decoration:underline; }
 .ve-fp-eksik-s button:focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-xs); }
 
-/* Sürücüde kullanılmayan sekmenin gövdesi — alan sormaz, sebebini yazar. */
+/* Bu düğümde kullanılmayan kategorinin gövdesi — alan sormaz, sebebini yazar. */
 .ve-fp-olu{
   padding:10px 12px; border:1px dashed var(--border-hover); border-radius:var(--radius-md);
   color:var(--text-secondary); font-size:var(--fs-tiny); line-height:1.5;

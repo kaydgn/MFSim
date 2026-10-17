@@ -42,7 +42,7 @@ const BOZULAN = () => {
   return out;
 };
 
-test('FEAD pencereleri: birim ve Yunan harfi büyük harfe dönmüyor — bütün tipler, bütün sekmeler', async ({ page }) => {
+test('FEAD pencereleri: birim ve Yunan harfi büyük harfe dönmüyor — bütün tipler, bütün kategoriler', async ({ page }) => {
   test.setTimeout(120000);
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('fead-analysis', 400, 300); veFeadOpenEditor(n.id); });
@@ -61,14 +61,10 @@ test('FEAD pencereleri: birim ve Yunan harfi büyük harfe dönmüyor — bütü
       gor.add(k);
       clearSelection(); addToSelection(n); veTogglePropertiesPanel(true);
       await new Promise((r) => setTimeout(r, 300));
-      const ic = document.querySelector('.ve-properties-content');
-      const sek = ic ? [...ic.querySelectorAll('.ve-fp-tab')].map((t) => t.getAttribute('data-k')) : [];
-      for (const s of (sek.length ? sek : [null])) {
-        if (s) { veFeadPanelTab(n.id, s); await new Promise((r) => setTimeout(r, 80)); }
-        etiket += [...document.querySelectorAll('.ve-fp-l')].filter((l) => l.offsetWidth).length;
-        birim += [...document.querySelectorAll('.ve-fp-l u')].filter((l) => l.offsetWidth).length;
-        bozulan().forEach((b) => out.push(n.type + ': ' + b));
-      }
+      // Kategoriler tek gövdede (2026-10-16): pencerenin bütün alanları tek seferde ölçülür.
+      etiket += [...document.querySelectorAll('.ve-fp-l')].filter((l) => l.offsetWidth).length;
+      birim += [...document.querySelectorAll('.ve-fp-l u')].filter((l) => l.offsetWidth).length;
+      bozulan().forEach((b) => out.push(n.type + ': ' + b));
       veTogglePropertiesPanel(false);
       await new Promise((r) => setTimeout(r, 150));
     }

@@ -864,15 +864,15 @@ describe('çözücü paneli: birinci kademe ve motor künyesi', () => {
   // İki alt-kapı: (1) canlı alanlar ölü ilan EDİLMİYOR, (2) sayısal etki
   // gerçekten var — ikincisi `fead-example.test.js`'te, burada yalnız metin.
   // MOTOR KARTI SÜRÜCÜNÜN PENCERESİNDE (2026-09-28). Krank mili ataleti
-  // Rol sekmesine geçti ve DEĞERİYLE yazılı (kaynağı 'i'de); kartın
+  // Rol kategorisine geçti ve DEĞERİYLE yazılı (kaynağı 'i'de); kartın
   // açıklama paragrafı kullanıcı isteğiyle kalktı — kalan kapı kural 25'in
   // ikinci yarısı: canlı bir alan hiçbir metinde "hesaba katmaz" diye
   // ilan edilmiyor.
-  test('motor kartı alanları ölü İLAN ETMİYOR; krank ataleti sürücünün Rol sekmesinde', () => {
+  test('motor kartı alanları ölü İLAN ETMİYOR; krank ataleti sürücünün Rol kategorisinde', () => {
     const html = fead.veFeadEngineCard(kasnak('fead-solver', {}));
     ['cylinders', 'accelRpmS', 'decelRpmS'].forEach((k) =>
       expect(html).toMatch(new RegExp("veFeadSet\\('[^']+','" + k + "'")));
-    // SERVİS FAKTÖRÜ MOTOR KARTINDA DEĞİL (kural 48): kayışın Tasarım sekmesinde
+    // SERVİS FAKTÖRÜ MOTOR KARTINDA DEĞİL (kural 48): kayışın Tasarım kategorisinde
     // tablo olarak — serbest sayı alanı tablonun dışında bir değer yazdırırdı.
     expect(html).not.toMatch(/serviceFact/);
     expect(html).not.toMatch(/hesaba katmaz/);

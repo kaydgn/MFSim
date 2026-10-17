@@ -1,19 +1,24 @@
 /**
- * fead-sekme-durum.spec.js — DURUMLU SEKMELER, GERÇEK TARAYICIDA
+ * fead-sekme-durum.spec.js — KATEGORİ DURUMU VE EKSİK BANDI, GERÇEK TARAYICIDA
  *
+ * Pencereler tek gövde (2026-10-16): kategoriler sekme değil, alt alta. Durum
+ * kategorinin kabında (`data-d`), eksiğin sonucu gövdenin üstündeki bantta.
  * Birim testleri kuralları ve köprüyle ANLAŞMAYI tutuyor
  * (tests/unit/fead-sekme-durum.test.js). Burada Node'da hiç koşmayan halkalar:
  *
  *   • GERÇEK KLAVYE: sayı yazıp Sekme'ye basmak `onchange` → `veFeadSet` →
- *     `saveState` → `veFeadSekmeTazele` zincirini koşturuyor mu — ve panel
+ *     `saveState` → `veFeadSekmeTazele` zincirini koşturuyor mu — ve pencere
  *     yeniden KURULMADAN (kurulsaydı Sekme ile geçilen alan sökülür, ikinci
  *     sayı yazılamazdı).
- *   • Şeridin 380 px'lik müfettiş sütununa TEK SATIRDA sığması (yazı genişliği
- *     yalnız yerleşim motorunda var).
- *   • Durum yazısının bant zemini üstünde İKİ TEMADA da okunur olması.
+ *   • Bandın bağlantısı uzun gövdede alanı GÖRÜŞ ALANINA alıyor mu.
+ *   • KAYDIRMA: başka bileşen baştan açılır, aynı bileşenin yeniden kurulması
+ *     yerinde kalır (cp-core.js `showNodeProperties`).
+ *   • Bandın yazısı iki temada okunur; eksik kategorinin kenar çizgisi içerik
+ *     hizasını oynatmaz, kaydırma kabının içinde kalır.
  */
 const { test, expect } = require('@playwright/test');
 const { motorluOrnekler } = require('./helpers/fead-motor');
+const { kontrastKur, kontrastOzet } = require('../helpers/kontrast-olcu.js');
 test.setTimeout(180000);
 
 async function bootApp(page, motor = true) {
@@ -50,32 +55,47 @@ const pencereAc = (page, tip) => page.evaluate((t) => {
   return n.id;
 }, tip);
 
-test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "tamam" — panel kurulmadan', async ({ page }) => {
+// Kategorilerin kimliği ve durumu, gövdedeki sırayla ("dev:eksik").
+const durumlar = (page, id) => page.evaluate((i) =>
+  [...document.querySelectorAll('#ve-fp-panes-' + i + ' > .ve-fp-kat')]
+    .map((k) => k.getAttribute('data-k') + ':' + (k.getAttribute('data-d') || '')), id);
+
+// Odaktaki öğe kaydırma kabının görünen dilimi içinde mi?
+const odak = (page) => page.evaluate(() => {
+  const a = document.activeElement, kap = document.querySelector('.ve-properties-content');
+  if (!a || !kap) return { id: '', gorunur: false };
+  const r = a.getBoundingClientRect(), k = kap.getBoundingClientRect();
+  return { id: a.id, gorunur: r.top >= k.top - 1 && r.bottom <= k.bottom + 1 };
+});
+
+test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "ok" — pencere kurulmadan', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await ornekYukle(page);
   const id = await pencereAc(page, 'fead-ac');
-  await page.waitForSelector('#ve-fp-tabs-' + id);
+  await page.waitForSelector('#ve-fp-panes-' + id);
 
-  const once = await page.evaluate((i) => {
-    const kap = document.getElementById('ve-fp-tabs-' + i);
+  // Dört kategori TEK gövdede, hiçbiri gizli değil; sekme şeridi yok.
+  expect(await durumlar(page, id)).toEqual(['geo:ok', 'rol:ok', 'dev:eksik', 'egr:bos']);
+  const govde = await page.evaluate((i) => {
+    const kok = document.querySelector('.ve-properties-content');
     return {
-      yuk: Math.round(kap.getBoundingClientRect().height),
-      durum: [...kap.querySelectorAll('.ve-fp-tab-d')].map((d) => d.textContent),
+      gizli: [...document.querySelectorAll('#ve-fp-panes-' + i + ' > .ve-fp-kat')]
+        .filter((k) => k.hidden || !k.getBoundingClientRect().height).length,
+      sekme: kok.querySelectorAll('[role="tab"], [role="tablist"], .ve-fp-tabs').length,
       bant: (document.getElementById('ve-fp-eksik-' + i) || { textContent: '' }).textContent,
     };
   }, id);
-  expect(once.yuk).toBeGreaterThanOrEqual(36);                  // eskisi 29 px
-  expect(once.durum).toEqual(['tamam', 'tamam', '0/3 girildi', 'isteğe bağlı']);
-  expect(once.bant).toMatch(/Devir sınırları/);
+  expect(govde.gizli).toBe(0);
+  expect(govde.sekme).toBe(0);
+  expect(govde.bant).toMatch(/Devir sınırları/);
 
-  // GERÇEK TIKLAMA: bant sekmeyi açar ve imleci ilk boş alana koyar.
+  // GERÇEK TIKLAMA: bant kategoriye gider ve imleci ilk boş alana koyar.
   await page.click('#ve-fp-eksik-' + id + ' button');
-  const odak = await page.evaluate(() => document.activeElement && document.activeElement.id);
-  expect(odak).toBe('ve-fead-optimumRpm-' + id);
+  expect(await odak(page)).toEqual({ id: 've-fead-optimumRpm-' + id, gorunur: true });
 
-  // Girişlere iz: panel yeniden kurulursa iz kaybolur.
+  // Girişlere iz: pencere yeniden kurulursa iz kaybolur.
   await page.evaluate((i) => {
     ['optimumRpm', 'maxContRpm', 'maxPeakRpm'].forEach((k) => {
       document.getElementById('ve-fead-' + k + '-' + i).dataset.iz = '1';
@@ -86,10 +106,8 @@ test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "tamam
   await page.keyboard.type('12000'); await page.keyboard.press('Tab');
 
   const sonra = await page.evaluate((i) => {
-    const d = document.querySelector('#ve-fp-tabs-' + i + ' .ve-fp-tab[data-k="dev"]');
     const node = window.nodes.filter((n) => n.id === i)[0];
     return {
-      d: d.getAttribute('data-d'), yazi: d.querySelector('.ve-fp-tab-d').textContent,
       bant: !!document.getElementById('ve-fp-eksik-' + i),
       iz: ['optimumRpm', 'maxContRpm', 'maxPeakRpm'].map((k) =>
         (document.getElementById('ve-fead-' + k + '-' + i) || { dataset: {} }).dataset.iz || ''),
@@ -97,10 +115,9 @@ test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "tamam
     };
   }, id);
   expect(sonra.veri).toEqual(['6000', '8000', '12000']);          // üç sayı da YAZILDI
-  expect(sonra.d).toBe('ok');
-  expect(sonra.yazi).toBe('tamam');
+  expect(await durumlar(page, id)).toEqual(['geo:ok', 'rol:ok', 'dev:ok', 'egr:bos']);
   expect(sonra.bant).toBe(false);
-  expect(sonra.iz).toEqual(['1', '1', '1']);                      // panel KURULMADI
+  expect(sonra.iz).toEqual(['1', '1', '1']);                      // pencere KURULMADI
   expect(hatalar).toEqual([]);
 });
 
@@ -108,25 +125,21 @@ test('eksik görünür, bağlantı götürür, klavyeyle doldurunca durum "tamam
 // çalışma çevrimi Çözücü'den sürücü kasnağın penceresine geldi; veri çözücü
 // düğümünde (işletme deposu). Node'da koşmayan halka: GERÇEK klavyeyle
 // yazılan sayının pencerenin düğümüne değil DEPOYA gitmesi ve sürücünün
-// şeridinin panel kurulmadan tazelenmesi.
-test('sürücüde dört sekme; devir sınırları klavyeyle DEPOYA yazılır — panel kurulmadan', async ({ page }) => {
+// durumunun pencere kurulmadan tazelenmesi.
+test('sürücüde dört kategori; devir sınırları klavyeyle DEPOYA yazılır — pencere kurulmadan', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page, false);                                     // motorsuz örnek
   await ornekYukle(page);
   const id = await pencereAc(page, 'fead-fan');
-  await page.waitForSelector('#ve-fp-tabs-' + id);
-  const serit = (i) => page.evaluate((x) =>
-    [...document.querySelectorAll('#ve-fp-tabs-' + x + ' .ve-fp-tab')].map((b) =>
-      b.getAttribute('data-k') + ':' + b.querySelector('.ve-fp-tab-d').textContent), i);
-  expect(await serit(id)).toEqual(['geo:tamam', 'rol:tamam', 'mot:0/3 devir', 'cev:12 satır']);
+  await page.waitForSelector('#ve-fp-panes-' + id);
+  expect(await durumlar(page, id)).toEqual(['geo:ok', 'rol:ok', 'mot:eksik', 'cev:ok']);
 
   const sv = await page.evaluate(() => window.nodes.find((n) => n.type === 'fead-solver').id);
-  // "Doldur" rölantiye gider — Motor sekmesinin ilk boş alanına (servis
-  // faktörü, isteğe bağlı) değil.
+  // "Doldur" rölantiye gider — Motor bölümünün ilk boş alanına (servis
+  // faktörü, isteğe bağlı) değil — ve uzun gövdede onu görüş alanına alır.
   await page.click('#ve-fp-eksik-' + id + ' button');
-  expect(await page.evaluate(() => document.activeElement && document.activeElement.id))
-    .toBe('ve-fead-idleRpm-' + sv);
+  expect(await odak(page)).toEqual({ id: 've-fead-idleRpm-' + sv, gorunur: true });
   const K = ['idleRpm', 'governedRpm', 'overspeedRpm'];
   await page.evaluate(([s, k]) => k.forEach((a) => {
     document.getElementById('ve-fead-' + a + '-' + s).dataset.iz = '1'; }), [sv, K]);
@@ -142,43 +155,85 @@ test('sürücüde dört sekme; devir sınırları klavyeyle DEPOYA yazılır —
   }, [sv, id, K]);
   expect(sonra.depo).toEqual(['700', '2100', '2900']);           // depoya yazıldı
   expect(sonra.kasnak).toEqual([]);                               // kasnağa DEĞİL
-  expect(sonra.iz).toEqual(['1', '1', '1']);                      // panel KURULMADI
-  expect((await serit(id))[2]).toBe('mot:tamam');
+  expect(sonra.iz).toEqual(['1', '1', '1']);                      // pencere KURULMADI
+  expect((await durumlar(page, id))[2]).toBe('mot:ok');
   expect(hatalar).toEqual([]);
 });
 
-test('şerit dar müfettişte TEK SATIR, taşmıyor; durum yazısı iki temada okunur', async ({ page }) => {
+// KAYDIRMA — tek gövde uzun (Kayış penceresi ~1170 px kayıyor) ve kap,
+// içeriği değişince kaydırmasını TUTUYOR: Kayış'ta 700 px aşağıdayken
+// Çözücü'ye geçen kullanıcı onu 700 px aşağıdan açıyordu (ölçüldü). Aynı
+// bileşenin yeniden kurulması ise yerinde kalmalı (katalog seçimi, onay kutusu).
+test('KAYDIRMA — başka bileşen baştan açılır, aynı bileşenin yeniden kurulması yerinde kalır', async ({ page }) => {
   await bootApp(page);
   await ornekYukle(page);
-  const olc = () => page.evaluate(() => {
-    const lum = (rgb) => {
-      const a = rgb.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => {
-        v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-      });
-      return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
-    };
-    const oran = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-    const kap = document.querySelector('.ve-fp-tabs[id^="ve-fp-tabs-"]');
-    const zemin = getComputedStyle(kap).backgroundColor;
-    const sek = [...kap.querySelectorAll('.ve-fp-tab')];
-    return {
-      tasma: kap.scrollWidth - kap.clientWidth,
-      satir: new Set(sek.map((b) => Math.round(b.getBoundingClientRect().top))).size,
-      enDusuk: Math.min(...[...kap.querySelectorAll('.ve-fp-tab-d')]
-        .map((d) => oran(getComputedStyle(d).color, zemin))),
-    };
-  });
+  const belt = await pencereAc(page, 'fead-belt');
+  await page.waitForSelector('#ve-fp-panes-' + belt);
+  await page.waitForTimeout(250);
+  const r = await page.evaluate(async (b) => {
+    const kap = document.querySelector('.ve-properties-content');
+    const bekle = (ms) => new Promise((x) => setTimeout(x, ms));
+    const maks = kap.scrollHeight - kap.clientHeight;
+    kap.scrollTop = Math.round(maks * 0.6);
+    await bekle(50);
+    const once = kap.scrollTop;
+    // Aynı bileşen: gövdeye iz koy — yeniden KURULDUĞU ölçülsün (kurulmasaydı
+    // kaydırmanın korunması kendiliğinden olurdu, kapı boş geçerdi).
+    document.getElementById('ve-fp-panes-' + b).dataset.iz = '1';
+    showNodeProperties(window.nodes.find((n) => n.id === b));
+    await bekle(100);
+    const ayni = { ust: kap.scrollTop, kuruldu: !document.getElementById('ve-fp-panes-' + b).dataset.iz };
+    // Başka bileşen — çizimdeki tıklamanın yolu.
+    const sv = window.nodes.find((n) => n.type === 'fead-solver');
+    veFeadTableOpen(sv.id);
+    await bekle(100);
+    return { maks, once, ayni, baska: kap.scrollTop, baskaMaks: kap.scrollHeight - kap.clientHeight,
+             acik: !!document.getElementById('ve-fp-panes-' + sv.id) };
+  }, belt);
+  expect(r.maks).toBeGreaterThan(300);                            // gerçekten uzun
+  expect(r.once).toBeGreaterThan(200);
+  expect(r.ayni.kuruldu).toBe(true);
+  expect(Math.abs(r.ayni.ust - r.once)).toBeLessThanOrEqual(1);   // yerinde kaldı
+  expect(r.acik).toBe(true);
+  expect(r.baskaMaks).toBeGreaterThan(r.once);                    // devralabilirdi…
+  expect(r.baska).toBe(0);                                        // …ama baştan açıldı
+});
+
+test('bant iki temada okunur; eksik kategorinin çizgisi hizayı oynatmaz ve kabın içinde', async ({ page }) => {
+  await bootApp(page, false);                                     // motorsuz: sürücüde eksik var
+  await ornekYukle(page);
+  await kontrastKur(page);
+  const kotu = [];
   for (const tema of ['acik', 'koyu']) {
     await page.evaluate((t) => changeTheme(t), tema);
-    // fead-fan: AG00976'nın SÜRÜCÜSÜ. Motor, devir sınırları ve güç eğrisi
-    // AYNI sekmede: ayrı sekmelerle şerit burada iki satıra kırılıyordu
-    // (ölçüldü: altı sekme 458 px, şeridin içi 345 px).
-    for (const tip of ['fead-ac', 'fead-tensioner', 'fead-belt', 'fead-solver', 'fead-fan']) {
-      await pencereAc(page, tip);
-      await page.waitForTimeout(250);
-      const m = await olc();
-      expect({ tema, tip, tasma: m.tasma <= 1, satir: m.satir }).toEqual({ tema, tip, tasma: true, satir: 1 });
-      expect(m.enDusuk).toBeGreaterThanOrEqual(4.5);
-    }
+    const id = await pencereAc(page, 'fead-fan');
+    await page.waitForSelector('#ve-fp-eksik-' + id);
+    await page.waitForTimeout(250);
+    const k = await page.evaluate((i) => window.__kontrast('#ve-fp-eksik-' + i), id);
+    expect(k.olculen).toBeGreaterThanOrEqual(2);                  // ad + sonuç + bağlantı
+    k.kotu.forEach((x) => kotu.push(Object.assign({ yer: tema }, x)));
+
+    const m = await page.evaluate((i) => {
+      const kap = document.querySelector('.ve-properties-content');
+      const kats = [...document.querySelectorAll('#ve-fp-panes-' + i + ' > .ve-fp-kat')];
+      const sol = (kat) => {
+        const s = kat.querySelector('.ve-fp-sect');
+        return s ? s.getBoundingClientRect().left : NaN;
+      };
+      const eks = kats.find((x) => x.getAttribute('data-d') === 'eksik');
+      const ok = kats.find((x) => x.getAttribute('data-d') === 'ok');
+      const cs = getComputedStyle(eks);
+      return {
+        cizgi: cs.borderLeftStyle + ' ' + cs.borderLeftWidth,
+        kayma: Math.abs(sol(eks) - sol(ok)),                      // kart sol kenarı aynı
+        icinde: eks.getBoundingClientRect().left >= kap.getBoundingClientRect().left - 0.5,
+        tasma: kap.scrollWidth - kap.clientWidth,
+      };
+    }, id);
+    expect(m.cizgi).toBe('solid 2px');
+    expect(m.kayma).toBeLessThanOrEqual(0.5);
+    expect(m.icinde).toBe(true);
+    expect(m.tasma).toBeLessThanOrEqual(1);
   }
+  expect(kontrastOzet(kotu)).toEqual([]);
 });

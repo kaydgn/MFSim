@@ -1405,10 +1405,11 @@ eski `main`de düşüyor (4 test).
 **Yol üstünde çıkan iki kural.** (1) `.ve-cp-grid` iki sütunu ekrana değil
 PENCEREYE sorar (`@container vepanel`, ≤ 640 px → tek sütun): yazı büyüyünce
 Çözücü penceresinin girdileri 380 px'lik sütunda 57 → 53 px'e indi (taban 56).
-(2) Sekmeyi açan kod tablo kararını AYNI karede ister (`veTabloOlcIcinde`):
+(2) Sekmeyi açan kod tablo kararını AYNI karede isterdi (`veTabloOlcIcinde`):
 gözlemciye kalınca geniş tablo sekme açılır açılmaz yatay kaydırmayla
-görünüyordu. Kapı: `mufettis-sigma.spec.js` + `tablo-pencere.test.js` +
-`fead-panel-dili.test.js`.
+görünüyordu. **2026-10-16'da emekli** — pencerelerde sekme yok, karar pencere
+kurulurken verilir (`veTabloKatla`, aşağıdaki *Pencerede sekme yok*). Kapı:
+`mufettis-sigma.spec.js` + `tablo-pencere.test.js` + `fead-panel-dili.test.js`.
 
 ## Panel grafiklerinin ekseni yuvarlak adımla bölünür (2026-09-26)
 
@@ -2048,10 +2049,10 @@ birleşme"*.
 ## Bileşen penceresinin kabuğu TEK üreticiden — FEAD ile Takoz aynı iskelet (2026-10-16)
 
 **Hüküm:** FEAD ve Takoz'un bütün bileşen pencereleri kabuğunu
-`js/pencere-kabuk.js`'ten alır (`vePencereKabuk`): kimlik satırı → KATEGORİ
-SEKMELERİ (≥ 2) → eksik bandı → gövdeler; sağ sütun sekmeden bağımsız
-bağlam → Uygunluk → pencerenin cevabı (`.ve-fp-durum`) → TEK eylem.
-Sekmelerin üstünde hiçbir şey durmaz. Durum notu FEAD'in soluk satırı
+`js/pencere-kabuk.js`'ten alır (`vePencereKabuk`): kimlik satırı → eksik
+bandı → kategoriler (aynı gün akşamdan beri TEK GÖVDEDE — aşağıdaki *Pencerede
+sekme yok*); sağ sütun bağlam → Uygunluk → pencerenin cevabı (`.ve-fp-durum`)
+→ TEK eylem. Gövdenin üstünde banttan başka bir şey durmaz. Durum notu FEAD'in soluk satırı
 (`.ve-fp-not` = `.ve-fead-not`); açıklama pencerede değil kılavuzda (FEAD
 kural 45). FEAD'de karşılığı olan pencere FEAD'inkiyle aynı genişlik sınıfında
 (Rapor kompakt).
@@ -2067,20 +2068,59 @@ başında (FEAD'in bağlam sütunu), seçici Takoz Özellikleri'nin ilk sekmesin
 
 **İstisna — YER TUTUCU (2026-10-16):** içeriği bilerek boş bırakılmış bir
 bileşen (ilk kullanıcısı 3D Görüntüleyici: "Klasik 3B" gerçek CAD dosyasına
-ayrıldı, çizimi Görünümler'e taşındı) tek sekme taşır. Bağış kuralın kendisi
-değil TİPİN BEYANI (`componentDefs[t].yerTutucu` = pencerenin notu, "kendini
-beyan eder" kalıbı): beyansız tek sekmeli pencere ailenin dışında kalır ve kapı
-onu adıyla söyler.
+ayrıldı, çizimi Görünümler'e taşındı) tek ve BAŞLIKSIZ kategori taşır. Bağış
+kuralın kendisi değil TİPİN BEYANI (`componentDefs[t].yerTutucu` = pencerenin
+notu, "kendini beyan eder" kalıbı): beyansız başlıksız kategori ailenin dışında
+kalır ve kapı onu adıyla söyler.
 
-**İstisna — TEK SEKME (2026-10-16, ikinci tur):** Görünümler'in çizimi ve
-işaretlerin föyü tek görünümde (kullanıcı: *"ayrı olmasına gerek yok"*);
-beyan `componentDefs['mnt-2dview'].tekSekme` = sebep.
+**İstisna — TEK SEKME (2026-10-16, ikinci tur) — EMEKLİ, aynı gün:**
+Görünümler'in çizimi ve işaretlerin föyü tek görünümde (kullanıcı: *"ayrı
+olmasına gerek yok"*) ve `componentDefs['mnt-2dview'].tekSekme` bunu beyan
+ediyordu. Tek gövdede tek kategori bir istisna değil; beyan kalktı.
 
 **Kapı:** `pencere-kabuk.test.js` (iki modülün bütün pencereleri AYNI aile
-denetimi, tipler `componentDefs`ten · kabuk işaretlemesi yalnız kitte · tek
-sekmeyi yalnız beyan bağışlar) +
+denetimi, tipler `componentDefs`ten · kabuk işaretlemesi yalnız kitte ·
+başlıksız kategoriyi yalnız beyan bağışlar) +
 `fead-pencere-ailesi.test.js` + `mount-sutun.test.js` → *"FEAD karşılığıyla
 aynı genişlik sınıfı"*.
+
+
+## Pencerede sekme yok — kategoriler tek gövdede (2026-10-16)
+
+**Hüküm:** Bileşen penceresi kategorilerini SEKMELERE bölmez: kimlik → eksik
+bandı → kategoriler tek gövdede alt alta, hiçbiri gizli değil. Bölümü kartın
+kendi başlığı adlandırır; her kategori başlıklı bir bölüm taşır (başlıksızı
+yalnız `componentDefs.yerTutucu` bağışlar). Kategori VERİ olarak kalır: ad
+(bant ve `aria-label`) ve durum (`data-d`); eksik kategori sol kenarında
+kehribar çizgi taşır, sonucu ve **Doldur** bağlantısı bantta. Durum yerinde
+tazelenir (`vePencereDurumTazele`). Aynı bileşen yeniden kurulunca kaydırma
+korunur, başka bileşen baştan açılır (`showNodeProperties`): kap içerik
+değişince kaydırmasını tutuyordu — Kayış'ta 700 px aşağıdayken Çözücü 700
+px'ten açılıyordu. Kılavuzlar pencereyi bölüm başlığıyla anlatır.
+
+**Gerekçe:** kullanıcı (*"bir bileşen özelinde tek bir pencerede tamamı
+sığacak içerikleri genel olarak iki pencereye ayırmışız. Örneğin 'xxx takoz'
+bileşeninin iki ayrı penceresi var, 'Tip ve rijitlik' ve 'Konum' … Tek bir
+pencerede hepsi sığar … Kullanışlı ve kompakt bir tasarım olsun."*). Ölçüldü
+(main 8a88b49, gerçek tarayıcı, Tulga + AG00976, 379 × 974 px müfettiş
+sütunu): 33 pencerenin 31'i 2–4 sekmeye bölünmüştü (88 sekme; iki pencerede
+tek sekmeli şerit), aynı anda 57 kategori gizliydi — hepsini görmek 57 tık.
+Sonra 0 sekme, 0 gizli kategori; 14 pencere kaydırmasız sığıyor (Takoz
+penceresi dâhil), en uzunu Kayış 2.141 px ve Çözücü 2.127 px (2,2 ekran).
+
+**Emekli:** sekme şeridi ve hafızası (`VE_FEAD_PANEL_TAB` — FEAD kural 31),
+işleyiciler (`veFeadPanelTab` · `veMntPencereSekme` · `vePencereSekme`),
+`tekSekme` beyanı, `veTabloOlcIcinde`. FEAD'deki gerekçesi
+`.claude/skills/fead/references/emekli-yonler.md` → *Sekmeli pencere*.
+
+**Kapı:** `pencere-kabuk.test.js` → *AİLE* (tek gövde, gövdenin üstünde yalnız
+bant, sekme ve gizli kategori yok, başlıksız kategori yalnız beyanla) ·
+*KILAVUZ* (Takoz kılavuzunun alan haritasındaki kalın bölüm adları programın
+başlıkları) · kitin davranışı; `fead-sekme-durum.spec.js` → gerçek klavye,
+bandın bağlantısı, *KAYDIRMA*, iki temada bant; `guide-fead.test.js` +
+`guide-mount.test.js` → *PENCERELERDE SEKME YOK*. Yüzey turu
+(`tests/e2e/helpers/yuzey-turu.js`) uzun pencereyi sayfa sayfa kaydırarak
+ölçer — kontrast ve yerleşim ölçerleri yalnız ekrandaki yazıyı sayıyor.
 
 
 ## Takoz penceresi SONUÇ GÖSTERMEZ — sonuç yalnız ayrıntılı raporda (2026-10-16)

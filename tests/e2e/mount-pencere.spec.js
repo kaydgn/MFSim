@@ -149,17 +149,17 @@ test('Görünümler · Aksonometrik: sürükle-döndür, tekerlek, kaydır; her 
     await page.waitForTimeout(900);
     await page.evaluate(Y.KAYNAK);
     const ilk = await page.evaluate(() => {
-      const t = document.querySelector('#ve-properties .ve-fp-tab[aria-selected="true"]');
+      const kat = [...document.querySelectorAll('#ve-properties .ve-fp-govde > .ve-fp-kat')];
       const kap = document.querySelector('#ve-properties .ve-mnt-akso-kap'), svg = kap && kap.querySelector('svg.ve-mnt2d-akso');
       // İŞARETİN EKRANDAKİ BOYU (CSS px): takoz küpü ve G'nin kutusunun uzun kenarı
       const k = svg ? svg.getBoundingClientRect().width / svg.viewBox.baseVal.width : 0;
       const boy = (sel) => [...svg.querySelectorAll(sel)].map((e) => { const r = e.getBBox(); return Math.max(r.width, r.height) * k; });
-      return { sekme: t && t.getAttribute('data-k'), sekmeler: [...document.querySelectorAll('#ve-properties .ve-fp-tab')].map((x) => x.getAttribute('data-k')),
+      return { kategoriler: kat.map((x) => x.getAttribute('data-k')), sekme: document.querySelectorAll('#ve-properties .ve-fp-tab').length,
         id: kap && kap.id, vb: svg && svg.viewBox.baseVal.width, en: svg && svg.getBoundingClientRect().width,
         sahne: !!window._veMountViewer, takoz: Math.min(...boy('.ve-ak-t')), G: Math.max(...boy('.ve-ak-gam')) };
     });
-    expect(ilk.sekme).toBe('akso');
-    expect(ilk.sekmeler).toEqual(['akso']);                        // tek görünüm: çizim + işaretler
+    expect(ilk.kategoriler).toEqual(['akso']);                     // tek görünüm: çizim + işaretler
+    expect(ilk.sekme).toBe(0);                                     // sekme şeridi yok (2026-10-16)
     expect(ilk.sahne).toBe(false);                                 // three.js sahnesi kurulmadı
     expect(Math.abs(ilk.vb - ilk.en)).toBeLessThan(1.5);          // 1:1 — yazı küçülmez
     expect(ilk.takoz).toBeGreaterThan(17);                         // önce 12 px
@@ -236,7 +236,7 @@ test('Görünümler · Aksonometrik: sürükle-döndür, tekerlek, kaydır; her 
       await page.keyboard.press('0');
       const sifir = await durum();
       expect([sifir.ad, await page.evaluate((i) => _mntAksoGor[i].yakin, id)]).toEqual(['Dimetrik', 1]);
-      // İŞARETLER föyü çizimle AYNI sekmede (2026-10-16): yerleşim temiz
+      // İŞARETLER föyü çizimle AYNI gövdede (2026-10-16): yerleşim temiz
       const nid = await page.evaluate(() => nodes.find((x) => x.type === 'mnt-2dview').id);
       expect(await page.evaluate((n) => document.querySelectorAll('#ve-fp-panes-' + n + ' > [data-k="akso"] tbody tr').length, nid)).toBe(14);
       await page.evaluate((n) => document.querySelector('#ve-fp-panes-' + n + ' > [data-k="akso"] table').scrollIntoView({ block: 'center' }), nid);
@@ -311,17 +311,17 @@ test('Güç grubundaki yeri: aksonometrik, bileşen işaretli ve görünür; yer
 });
 
 // 3D GÖRÜNTÜLEYİCİ YER TUTUCU (kullanıcı kararları 2026-10-16): "Klasik 3B"
-// gerçek CAD dosyasına ayrıldı, çizim Görünümler'e taşındı. Tek sekme, tipin
-// notu; tuval, düğme ve çizim yok, pencere açılınca three.js sahnesi kurulmaz.
-test('3D Görüntüleyici: yer tutucu — tek sekme, not, sahne ve çizim yok; yerleşim temiz', async ({ page }) => {
+// gerçek CAD dosyasına ayrıldı, çizim Görünümler'e taşındı. Tek kategori,
+// tipin notu; tuval, düğme ve çizim yok, pencere açılınca three.js sahnesi kurulmaz.
+test('3D Görüntüleyici: yer tutucu — tek kategori, not, sahne ve çizim yok; yerleşim temiz', async ({ page }) => {
   await bootApp(page);
   await ornek(page, 'tulga', 'Ön Takoz Braketi');
   await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
   await page.waitForTimeout(800);
   await page.evaluate(Y.KAYNAK);
   const r = await page.evaluate(() => {
-    const p = document.querySelector('#ve-properties [role="tabpanel"]');
-    return { sekme: [...document.querySelectorAll('#ve-properties .ve-fp-tab .ve-fp-tab-ad')].map((x) => x.textContent),
+    const p = document.querySelector('#ve-properties .ve-fp-govde > .ve-fp-kat');
+    return { sekme: [...document.querySelectorAll('#ve-properties .ve-fp-govde > .ve-fp-kat')].map((x) => x.getAttribute('aria-label')),
       tuval: document.querySelectorAll('#ve-properties canvas').length, cizim: document.querySelectorAll('#ve-properties svg.ve-mnt2d-akso').length,
       dugme: p.querySelectorAll('button').length, not: p.textContent.trim() === componentDefs['mnt-viewer'].yerTutucu, sahne: !!window._veMountViewer,
       yer: window.__yerlesim('#ve-properties') };

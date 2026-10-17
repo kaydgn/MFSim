@@ -89,7 +89,7 @@ test('çalışma çevrimi otomatik gelir — sihirbaz ve panel', async ({ page }
     return k.id;
   });
   await page.waitForTimeout(600);
-  await page.click('.ve-fp-tab[data-k="cev"]');
+  // Çevrim sürücünün gövdesinde (2026-10-16'dan beri sekme değil): görünür olmalı.
   const p1 = await page.evaluate((id) => {
     const s = window.nodes.find((x) => x.type === 'fead-solver');
     const panel = document.getElementById('ve-fp-panes-' + id) || document.body;

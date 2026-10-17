@@ -180,7 +180,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Parametrik Analiz — grup, aday ve kısıt föyleri.
   'mnt-parametric',
-  // Çözücü artık sekmeli bir pencere (yük kitabı · modlar · ayarlar) — FEAD
+  // Çözücü çok bölümlü bir pencere (yük kitabı · yöntem · şok darbesi) — FEAD
   // çözücüsü gibi geniş; dar "eylem kartı" listesinden çıktı.
   'mnt-solver',
   // FEAD — kayış yolu şeması ve çok alanlı kasnak/gergi panelleri.
@@ -214,9 +214,10 @@ function showNodeProperties(node) {
   if(!content) return;
   // Başka bir bileşen açıldığında pencereyi ORTALA — önceki bileşenin
   // sürüklenmiş konumunu miras alma. Aynı bileşenin içeriği yerinde
-  // yenilenirken (sekme/profil değişimi) konumu koru → sürüklediğin yer bozulmaz.
+  // yenilenirken (profil, katalog seçimi) konumu koru → sürüklediğin yer bozulmaz.
+  var _ayniBilesen = (_veLastPropNodeId === (node && node.id));
   if(typeof VEWindowDrag !== 'undefined' && VEWindowDrag && typeof VEWindowDrag.resetToCenter === 'function') {
-    if(_veLastPropNodeId !== (node && node.id)) VEWindowDrag.resetToCenter();
+    if(!_ayniBilesen) VEWindowDrag.resetToCenter();
   }
   _veLastPropNodeId = (node && node.id) || null;
   // Modal başlığında bileşenin adı ve sembolü görünür
@@ -348,7 +349,15 @@ function showNodeProperties(node) {
   }
   
   
+  // BAŞKA BİLEŞEN BAŞTAN AÇILIR, aynı bileşenin yenilenmesi yerinde kalır.
+  // Pencereler tek gövde (2026-10-16 — kategoriler sekme değil, alt alta) ve
+  // içerik değişince kap kaydırmasını TUTUYOR: Kayış penceresinde 700 px
+  // aşağıdayken çizimde Çözücü'ye geçen kullanıcı onu 700 px aşağıdan açıyordu
+  // (ölçüldü). Aynı bileşenin yeniden kurulması (katalog seçimi, onay kutusu)
+  // kaydırmayı korur. Kapı: fead-sekme-durum.spec.js → "KAYDIRMA".
+  var _ust = _ayniBilesen ? content.scrollTop : 0;
   content.innerHTML = html;
+  content.scrollTop = _ust;
   var _propWin = document.getElementById('ve-properties');
   // Sütuna sığmayan pencere MODAL açılır (VE_SUTUNA_SIGMAYAN, ölçülmüş liste).
   if(_propWin) _propWin.classList.toggle('ve-properties--modal', VE_SUTUNA_SIGMAYAN.indexOf(node.type) >= 0);
