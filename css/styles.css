@@ -9901,10 +9901,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 
 /* ── GÜÇ GRUBUNDAKİ YERİ — KROKİ ──────────────────────────────────────────
-   2026-10-16'dan beri AKSONOMETRİK: Görünümler'in çizicisi (`.ve-ak-*`,
-   aşağıda), bu bileşen `[data-sec]` ile işaretli. Kap (`.ve-mnt-kroki`) ve
-   başlık bandı (`.ve-mnt-kroki-bas`) Takoz Özellikleri'nin grafik
-   çerçevesiyle ortak. */
+   2026-10-16'dan beri Görünümler'in serbest kameralı bileşeni (`.ve-mnt-akso3b`,
+   çizim `.ve-ak-*`, aşağıda); bu bileşen perdenin üstünde, `[data-sec]` ile
+   işaretli. Başlık bandı (`.ve-mnt-kroki-bas`) ve kap (`.ve-mnt-kroki`)
+   Takoz Özellikleri'nin grafik çerçevesiyle ortak. */
 .ve-mnt-kroki{
   margin:0 0 10px; border:1px solid var(--border-color); border-radius:var(--radius-md);
   background:var(--bg-primary); overflow:hidden;
@@ -10176,6 +10176,13 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-t[data-sec] path{ stroke:var(--accent-primary); stroke-width:1.2; }
 .ve-ak-sec-hale{ fill:none; stroke:var(--accent-primary); stroke-width:1.8; }
 .ve-ak-cip.sec-cip rect{ stroke:var(--accent-primary); stroke-width:1.4; }
+/* PERDE (o.perde): seçili parça aydınlık, kalan model gölgede — perde
+   tema-nötr karartmadan (--scrim, %45'i), çizimin yazıları altında da AA
+   (iki temada hesaplı: mount-akso.test.js → PERDE). Fare olayları perdeden
+   geçer: öteki işaretlerin bilgisi fare üstünde. */
+.ve-ak-perde{ fill:color-mix(in srgb, var(--scrim) 45%, transparent); pointer-events:none; }
+/* Föyün satırı çizimdeki parçasını aydınlatır (cp-mount.js → _mntAksoOdak). */
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr[data-ak]:hover td{ background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-input)); }
 .ve-ak-lj-sec{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--bg-input)); stroke:var(--accent-primary); stroke-width:1.2; }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);

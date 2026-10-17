@@ -231,37 +231,69 @@ describe('SEKME DURUMU — boş alan çözücüde 0 ya da ret demek', () => {
   });
 });
 
-describe('KROKİ — güç grubundaki yeri (aksonometrik, 2026-10-16)', () => {
+describe('KROKİ — güç grubundaki yeri: Görünümler\'in bileşeni, bileşen perdenin üstünde (2026-10-16)', () => {
   // Kullanıcı: "Diğer bileşen pencerelerinin içinde de 'Güç grubundaki yeri'
-  // kısmında aksonometrik görünümün görünmesini istiyorum." Kroki Görünümler'in
-  // çizicisi ve kurucusu — canlı modelden, çözümsüz; bu bileşen işaretli ve
-  // adıyla. Eskiden kendi 2B çizimiydi (daire + kare, üstten / yandan).
+  // kısmında aksonometrik görünümün görünmesini istiyorum." İkinci tur: "o 3B
+  // olmamış. Aynı 'Görünümler' bileşenindeki gibi olacak. Bileşene göre parçayı
+  // belirgin gösterecek." Kroki Görünümler'in serbest kameralı bileşeni (başlık,
+  // görünüm düğmeleri, sürükle-döndür, tam ekran; açı ortak), canlı modelden,
+  // çözümsüz; bu bileşen perdenin ÜSTÜNDE (aydınlık), kalan model altında.
+  // Önce: sabit dimetrik, etkileşimsiz, yalnız bileşenin adı.
   const yazilar = (svg) => [...svg.querySelectorAll('text')].map((t) => t.textContent)
     .filter((t) => !/^(X arka|Y sağ|Z)$/.test(t)).sort();
-  test('Görünümler\'in çizicisi ve modeli: bu gövde işaretli ve adıyla; öteki adlar yazılmaz', () => {
+  const kroki = (node, M) => dom(cp._mntKrokiHTML(node, M || cp._mntCanliModel())).querySelector('.ve-mnt-yer');
+  const akSet = (els) => new Set(els.flatMap((e) => [...(e.matches && e.matches('[data-ak]') ? [e] : []), ...e.querySelectorAll('[data-ak]')])
+    .map((x) => x.getAttribute('data-ak')));
+  afterEach(() => { cp.veMntAksoAyar('yok', 'sifirla'); });
+
+  test('Görünümler\'in bileşeni: başlık, dört görünüm düğmesi, tam ekran bileşenle açılır; açı Görünümler\'le ORTAK', () => {
     tulga();
-    const m = cp._mntAksoModel();
-    const svg = dom(cp._mntKrokiHTML(motor(), cp._mntCanliModel())).querySelector('.ve-mnt-yer svg.ve-mnt2d-akso');
-    expect(svg).not.toBeNull();
-    expect(svg.querySelectorAll('.ve-ak-g').length).toBe(m.govde.filter((g) => g.kutu).length);
-    expect(svg.querySelectorAll('.ve-ak-t').length).toBe(m.takoz.length);
-    const k = m.govde.find((g) => g.id === motor().id).k;
-    expect(new Set([...svg.querySelectorAll('[data-sec]')].map((e) => e.getAttribute('data-ak')))).toEqual(new Set([k]));
-    expect(svg.querySelector('.ve-ak-g[data-sec]')).not.toBeNull();
-    expect(yazilar(svg)).toEqual(['G', 'Motor']);
-    expect(svg.getAttribute('aria-label')).toContain('Güç grubundaki yeri: Motor');
+    const k = kroki(motor()), kap = k.querySelector('.ve-mnt-akso-kap');
+    expect(kap.getAttribute('data-sec')).toBe(String(motor().id));
+    expect(kap.getAttribute('data-w')).toBe('296');              // hep aynı genişlik (tazeleme kuralı)
+    expect(k.querySelector('.ve-mnt-akso3b svg.ve-mnt2d-akso[tabindex="0"]')).not.toBeNull();
+    const dg = [...k.querySelectorAll('.ve-mnt2d-zoomctl button')];
+    expect(dg.map((b) => b.getAttribute('aria-label'))).toEqual(['Yakınlaştır', 'Uzaklaştır', 'Sıfırla — dimetrik bakış', 'Tam ekran']);
+    expect(dg[3].getAttribute('onclick')).toBe("veMntAkso3BTamEkran('" + motor().id + "')");
+    expect(k.querySelector('[data-ak3b-ad]').textContent).toBe('Dimetrik');
+    const once = k.querySelector('svg').outerHTML;
+    cp.VE_MNT_AKSO3B.az = 200; cp.VE_MNT_AKSO3B.el = 30;           // Görünümler'de döndürüldü
+    const sonra = kroki(motor());
+    expect(sonra.querySelector('svg').outerHTML).not.toBe(once);
+    expect(sonra.querySelector('[data-ak3b-ad]').textContent).toBe('Serbest bakış');
   });
 
-  test('takoz ve nokta kütle: işaret halkası EN ÜSTTE — önündeki bir küpün altında kalmaz', () => {
+  test('bu gövde perdenin ÜSTÜNDE, adıyla; öteki gövdeler, takozlar, G ve yazıları perdenin ALTINDA', () => {
+    tulga();
+    const m = cp._mntAksoModel(), k = m.govde.find((g) => g.id === motor().id).k;
+    const svg = kroki(motor()).querySelector('svg.ve-mnt2d-akso'), kids = [...svg.children];
+    const perde = svg.querySelector(':scope > rect.ve-ak-perde'), odak = svg.querySelector(':scope > g.ve-ak-odak');
+    expect(perde).not.toBeNull();
+    expect(kids.indexOf(odak)).toBe(kids.indexOf(perde) + 1);
+    expect(kids.indexOf(odak)).toBe(kids.length - 1);             // en üstte
+    expect(akSet([odak])).toEqual(new Set([k]));
+    expect(odak.querySelector('.ve-ak-g[data-sec]')).not.toBeNull();
+    expect(odak.querySelector('.ve-ak-cip.sec-cip').textContent).toBe('Motor');
+    const alt = akSet(kids.slice(0, kids.indexOf(perde)));
+    m.takoz.forEach((t) => expect(alt.has(t.k)).toBe(true));
+    m.govde.filter((g) => g.k !== k).forEach((g) => expect(alt.has(g.k)).toBe(true));
+    expect(alt.has('G')).toBe(true);
+    // Görünümler'in yazıları: öteki ana gövdeler adıyla, takozlar numarasıyla
+    expect(yazilar(svg)).toEqual(expect.arrayContaining(['Şanzıman', 'Transfer Kutusu', 'T1', 'T2', 'T3', 'T4', 'T5', 'G', 'Motor']));
+    expect(svg.getAttribute('aria-label')).toBe('Güç grubundaki yeri: Motor');
+  });
+
+  test('takoz ve nokta kütle: halka perdenin üstünde, işaretten sonra — önündeki bir küpün altında kalmaz', () => {
     tulga();
     const M = cp._mntCanliModel();
-    const t = dom(cp._mntKrokiHTML(onTakoz(), M)).querySelector('svg.ve-mnt2d-akso');
-    expect(yazilar(t)).toEqual(['G', 'T1 Ön Takoz']);
-    // Tulga'nın arka braketi (nokta kütle) T3 küpünün arkasında: halka katmanın SON öğesi
+    const t = kroki(onTakoz(), M).querySelector('svg.ve-mnt2d-akso .ve-ak-odak');
+    expect(t.querySelector('.ve-ak-t[data-sec]')).not.toBeNull();
+    expect(t.querySelector('.ve-ak-cip.sec-cip').textContent).toBe('T1 Ön Takoz');
+    // Tulga'nın arka braketi (nokta kütle) T3 küpünün arkasında
     const braket = bul((n) => n.type === 'mnt-bracket' && n.data.pointMass && Number(n.data.cgx) > 1300 && Number(n.data.cgy) > 0);
-    const b = dom(cp._mntKrokiHTML(braket, M)).querySelector('svg.ve-mnt2d-akso .ve-ak-hareket');
-    const son = [...b.children].filter((e) => e.tagName.toLowerCase() !== 'g' || true).pop();
-    expect(son.getAttribute('class')).toBe('ve-ak-sec-hale');
+    const b = kroki(braket, M).querySelector('svg.ve-mnt2d-akso .ve-ak-odak');
+    const sira = [...b.children].map((e) => e.getAttribute('class'));
+    expect(sira.indexOf('ve-ak-sec-hale')).toBeGreaterThan(sira.indexOf('ve-ak-nokta'));
     expect(b.querySelector('.ve-ak-nokta[data-sec]')).not.toBeNull();
   });
 
@@ -272,6 +304,17 @@ describe('KROKİ — güç grubundaki yeri (aksonometrik, 2026-10-16)', () => {
     coz();
     expect(ciz()).toBe(once);
     expect(once).not.toMatch(/Statik yük|sehim/);
+  });
+
+  test('yerinde tazeleme krokiyi YENİDEN YAZMAZ: kroki hep aynı genişlikte kurulur, bırakınca kurulum dış HTML\'i değiştirmez', () => {
+    tulga();
+    const m = motor();
+    document.body.innerHTML = '<div class="ve-properties-content">' + cp.getMntMassPropertiesHTML(m) + '</div>';
+    const bolum = document.getElementById('ve-mnt-kroki-' + m.id), once = bolum.outerHTML;
+    expect(cp._mntAksoKur('ve-mnt-yer-' + m.id)).toBe(true);     // sürükle bırak · düğme · tam ekrandan dönüş
+    expect(document.getElementById('ve-mnt-kroki-' + m.id).outerHTML).toBe(once);
+    cp.veMntPencereTazele();
+    expect(document.getElementById('ve-mnt-kroki-' + m.id)).toBe(bolum);
   });
 
   test('model boşsa kroki çizmez, söyler', () => {
