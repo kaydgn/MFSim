@@ -14,11 +14,15 @@
  * `.ve-welcome-logo` ise bağlamadan sonra tanımlı olduğu için KAZANIYORDU.
  * `0.5px` eski SANS marka yazısından kalmaydı.
  *
- * 2026-09-23'ten beri marka serif değil — tek yüz, Inter. Aynı gün açılış
- * ekranı AMBLEM'e geçti: açılışta marka BÜYÜK (--fs-amblem), karşılamada
+ * 2026-09-23'ten beri marka serif değil — tek yüz, Inter. Aynı gün açılışta
+ * marka BÜYÜDÜ (2026-10-18'den beri sinema bandında, --fs-sinema), karşılamada
  * kartın logosu (--fs-h2). Kural "aynı boy" değil "aynı aile, aynı ağırlık,
  * aynı em-iz" oldu — küçültülmüş açılış markası logonun KENDİSİ olmalı,
  * yoksa uçuş inişte genleyen ya da daralan bir markaya döner.
+ *
+ * RENK de iniş karesinde hedefinki (2026-10-18): siyah bantta marka açık,
+ * açık temanın kartında logo koyu. Uçuş rengi taşımasaydı klon açık renkle
+ * iner, kalkınca logo bir karede koyuya sıçrardı.
  *
  * Üçüncü halka bunu ÇİZİMDE ölçüyor ve ölçülmüş ikinci bir kusuru da
  * kapatıyor: eski uçuş hedefi karşılamanın giriş koreografisi BAŞLADIKTAN
@@ -69,8 +73,8 @@ test('marka açılışta ve karşılamada AYNI aile, ağırlık ve em-iz ile çi
   const govde = await page.evaluate(() => getComputedStyle(document.body).fontFamily.split(',')[0].replace(/"/g, '').trim());
   expect(a.yuz).toBe(govde);
   expect(a.izEm).toBe(-0.01);                        // bağlamadan, iki ekranda da
-  // Boy BİLEREK farklı: açılışta amblem, karşılamada logo.
-  expect([aBoy, kBoy]).toEqual(['80px', '20px']);
+  // Boy BİLEREK farklı: açılışta bandın markası, karşılamada logo.
+  expect([aBoy, kBoy]).toEqual(['52px', '20px']);
 });
 
 test('markanın GENİŞLİĞİ tracking farkını gösterecek kadar duyarlı', async ({ page }) => {
@@ -104,7 +108,7 @@ test('devir teslimde marka logonun ÜSTÜNE iniyor — kalkışta kaynakta, ini�
   const r = await page.evaluate(() => {
     const k = (e) => {
       const q = e.getBoundingClientRect();
-      return { x: q.left, cy: q.top + q.height / 2, w: q.width };
+      return { x: q.left, cy: q.top + q.height / 2, w: q.width, renk: getComputedStyle(e).color };
     };
     const ad = document.querySelector('body > .mfsim-loading-logo');
     const cark = document.querySelector('body > .mfsim-loading-logo-ico');
@@ -131,12 +135,16 @@ test('devir teslimde marka logonun ÜSTÜNE iniyor — kalkışta kaynakta, ini�
   });
 
   expect(r.sayi).toBe(2);                            // ad ve çark AYRI uçuyor
+  // Varsayılan tema AÇIK: bantta açık marka, kartta koyu logo — renk
+  // gerçekten yol boyunca değişiyor (eşitlik kendiliğinden sağlanmıyor).
+  expect(r.kalkis.ad.renk).not.toBe(r.inis.adHedef.renk);
   const ustUste = (a, b) => {
     // Sol kenar, dikey orta, genişlik: üçü birlikte "aynı yerde aynı boyda".
     // Genişlik, iz ya da ağırlık ayrışırsa inişte markanın genlemesini yakalar.
     expect(Math.abs(a.x - b.x)).toBeLessThan(0.5);
     expect(Math.abs(a.cy - b.cy)).toBeLessThan(0.5);
     expect(Math.abs(a.w - b.w)).toBeLessThan(0.5);
+    expect(a.renk).toBe(b.renk);                     // ve aynı renkte
   };
   ustUste(r.kalkis.ad, r.kalkis.adKaynak);           // kalkışta sıçrama yok
   ustUste(r.kalkis.cark, r.kalkis.carkKaynak);

@@ -1185,26 +1185,33 @@ eşitliği tek başına, ölçülen şeyin görünür bir fark olduğunu söylem
 Üç düşme de ölçüldü.
 
 
-## Açılış AMBLEM'e geçti — marka büyük, logoya iner (2026-09-23)
+## Açılış SİNEMA — siyah bantlar, örtüsüz fotoğraf (2026-10-18)
 
-**Hüküm.** Açılış ekranında kart yok: tam ekran fotoğraf, temanın zemininden
-türeyen sol perde, büyük marka (`--fs-amblem`), 12 bölmeli cetvel, o anki
-öbek, o anki modül; yüzde yok. Yukarıdaki kural "aynı boy"dan **"aynı aile,
-aynı ağırlık, aynı em-iz"**e genişledi: boy bilerek farklı ve devir teslimde
-ad ile çark ayrı ayrı, TAM ORANLA (`--fs-h2 / --fs-amblem`) küçülerek
-logoya iner. Modül giriş ekranı KARTLI kaldı — karşılama kartından doğuyor.
+**Hüküm.** Açılışta fotoğraf tam ekran ve ÖRTÜSÜZ; üstte ve altta iki siyah
+bant. Alt bandın üst kenarı 12 bölmeli cetvel; bantta solda marka
+(`--fs-sinema`), sağda o anki öbek ve durum; üst bantta sürüm künyesi ve
+atlama uyarısı. Bandın renkleri temadan bağımsız `--sinema-*` jetonları,
+palette BİR kez. Kapanışta bantlar ekrandan çıkar (süre = `FADE_OUT_MS`),
+ekran sönmez, yalnız fotoğraf katmanı söner. Marka logoya aynı aile, aynı
+ağırlık, aynı em-izle, TAM ORANLA (`--fs-h2 / --fs-sinema`) küçülerek iner
+ve rengi hedefinkine geçer. AMBLEM'in (2026-09-23) temadan türeyen sol
+perdesi emekli. Modül giriş ekranı KARTLI kaldı — karşılama kartından doğuyor.
 
-**Gerekçe.** Küçültülmüş açılış markası logonun kendisi olmalı: iz ya da
-ağırlık ayrışırsa uçuş inişte genleyen ya da daralan bir markaya döner.
-Hedef, karşılamanın giriş koreografisinden ÖNCE ölçülür — koreografi kartı
-`translateX(-16px)`, logoyu `translateY(14px)`'ten başlatıyor ve sonra
-ölçülen hedef logonun duracağı yer değil o anki yeri olur.
+**Gerekçe.** Kullanıcı: *"beyaz geçiş çok amatör … resmin renklerinin çok
+daha göründüğü"*. Bantta yazının zemini sabit, kontrast kareden bağımsız.
+Bant rengi temaya bağlanamaz: taban kural (`.mfsim-loading-logo`) tema
+başlığını yazar ve açık temada koyu marka siyah bantta görünmez olur.
+Küçültülmüş açılış markası logonun kendisi olmalı: iz ya da ağırlık
+ayrışırsa uçuş inişte genleyen ya da daralan bir markaya döner. Hedef,
+karşılamanın giriş koreografisinden ÖNCE ölçülür — koreografi kartı
+`translateX(-16px)`, logoyu `translateY(14px)`'ten başlatıyor.
 
-**Kapı.** `tests/e2e/marka-tutarli.spec.js` uçuşu dondurup iki ucunu ÇİZİMDE
-ölçer; `source-hygiene.test.js` bölüm 12 bileşik seçiciyi de tarar
-(`.mfsim-loading-logo.mfsim-amblem-ad`'a yazılan iz eski kapıdan
-geçiyordu); perdenin tek rengi `--bg-primary` (`loader-splash.test.js` —
-tema-nötr siyah, çıplak renk kapısından geçer).
+**Kapı.** `loader-splash.test.js` → *SİNEMA* (renk yalnız jetondan, jeton
+palette bir kez, banda karşı AA, kapanışın yönü ve süresi, ekran sönmez,
+perde yok, bant içeriği kartın kenarında) · `marka-tutarli.spec.js` (uçuşun
+iki ucunda konum, genişlik VE renk) · `karsilama-kenar.spec.js` ·
+`source-hygiene.test.js` bölüm 12 (bileşik seçici
+`.mfsim-loading-logo.mfsim-sinema-ad` da taranır).
 
 ## Panel veri tablosu sunumu sınıftan alır (2026-09-22)
 

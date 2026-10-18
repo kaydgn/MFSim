@@ -12,7 +12,7 @@
  *
  * ÜÇÜNCÜ BİR PENCERE DİLİ KURULMADI. Sınıfların hepsi `.mfsim-loading-*`
  * ailesi: karşılama kartının ikizi olan panel, kademe çubuğu, öbek listesi.
- * Açılış ekranı 2026-09-23'te kartsız AMBLEM'e geçti; bu ekran KARTLI kaldı,
+ * Açılış ekranı kartsız (2026-10-18'den beri SİNEMA); bu ekran KARTLI kaldı,
  * çünkü karşılama KARTINDAN doğuyor ve onun yerinde beliriyor. Yeni olan tek
  * şey `.mfsim-module-loading` — o da yalnız fotoğrafsız zemini ve
  * iniş/çıkış koreografisini ekliyor.

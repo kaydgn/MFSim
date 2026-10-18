@@ -67,7 +67,7 @@ async function ilerlet(ms, adim = 50) {
   }
 }
 
-// O anki öbeğin etiketi: Roma rakamı + ad (AMBLEM'de liste yok).
+// O anki öbeğin etiketi: Roma rakamı + ad (listesi yok — yalnız o anki öbek).
 function bolum() {
   const el = document.getElementById('mfsim-loading-bolum');
   return {
@@ -304,8 +304,8 @@ describe('tema ilk karede', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // KADEMELİ İLERLEME. Ölçüldü: ilerleme 85 modülün her birinde kımıldıyordu,
 // yani adım %1,2 ve adımlar 150 ms arayla — 180 ms'lik geçişler üst üste
-// binince göz sürekli bir KAYMA görüyordu. AMBLEM'de ilerlemeyi 12 bölmeli
-// CETVEL söylüyor ve yüzde görünmüyor. Üç sessiz kırılma sınıfı var:
+// binince göz sürekli bir KAYMA görüyordu. İlerlemeyi 12 bölmeli CETVEL
+// söylüyor (SİNEMA'da alt bandın üst kenarı) ve yüzde görünmüyor. Üç sessiz kırılma sınıfı var:
 //   • bölme sayısı CSS ile JS'te AYRI yazılırsa bölmeler sütunlara oturmaz;
 //   • son kademe atlanırsa cetvel hiç dolmaz;
 //   • vurgulu uç bitişte kalırsa "hâlâ yükleniyor" gibi durur.
@@ -316,7 +316,7 @@ describe('kademeli ilerleme — cetvel', () => {
     expect(CSS).toMatch(/--mfsim-kademe:\s*\d+/);
     expect(LOADER_SRC).toContain("getPropertyValue('--mfsim-kademe')");
     // Cetvelin ızgarası da aynı jetondan: bölmeleri JS kuruyor, sütunları CSS.
-    expect(CSS).toMatch(/\.mfsim-amblem-cetvel\{[^}]*grid-template-columns:repeat\(var\(--mfsim-kademe\)/);
+    expect(CSS).toMatch(/\.mfsim-sinema-cetvel\{[^}]*grid-template-columns:repeat\(var\(--mfsim-kademe\)/);
   });
 
   test('cetvel kademe başına BİR bölme kuruyor', async () => {
@@ -406,10 +406,11 @@ describe('kademeli ilerleme — cetvel', () => {
   });
 });
 
-// AMBLEM'in iki görünüm kuralı — ikisi de "program yine açılır" cinsinden
-// sessiz kırılma: perde temadan kopunca açık temada yazı okunmaz olur, kapanış
-// kayarsa uçan marka ile amblem aynı anda iki yöne gider.
-describe('amblem — perde ve kapanış', () => {
+// SİNEMA'nın görünüm kuralları — hepsi "program yine açılır" cinsinden
+// sessiz kırılma: bandın bir rengi temaya bağlanırsa açık temada marka siyah
+// bantta görünmez olur (taban kural tema başlığını, yani KOYU rengi yazıyor);
+// kapanış söner ya da süresi yükleyiciden ayrılırsa bantlar yarıda kesilir.
+describe('SİNEMA — bantlar ve kapanış', () => {
   const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
   // Seçici listesinde `anahtar` geçen İLK kuralın gövdesi (yorumlar ayıklanmış).
   function kural(anahtar) {
@@ -421,29 +422,114 @@ describe('amblem — perde ve kapanış', () => {
     }
     return null;
   }
+  const JETON = ['sinema-bant', 'sinema-yazi', 'sinema-yazi-2', 'sinema-vurgu',
+    'sinema-vurgu-yazi', 'sinema-uyari'];
 
-  // Tema-nötr siyah bir perde (rgba(0,0,0,…)) çıplak renk kapısından GEÇER —
-  // o kapı siyahı meşru sayıyor. Ama açık temada yazı koyu: siyah perde onu
-  // koyu zemine oturturdu. Perdenin tek rengi temanın kendi zemini.
-  test('perde TEMANIN ZEMİNİNDEN — başka renk yok', () => {
-    const b = kural('.mfsim-amblem-perde');
+  // Bandın üstünde rengi olan her kural. Listede olup renk bildirmeyen kural
+  // da kırmızı: marka rengini bırakırsa taban kuralın tema başlığına düşer.
+  const RENKLI = [
+    '.mfsim-sinema-bant',
+    '.mfsim-sinema-cetvel > span',
+    '.mfsim-sinema-cetvel > span.is-gecti',
+    '.mfsim-sinema-cetvel > span.is-gecti.is-son',
+    '.mfsim-loading-logo-ico',
+    '.mfsim-loading-logo.mfsim-sinema-ad',
+    '.mfsim-sinema-ayrac',
+    '.mfsim-sinema-kunye',
+    '.mfsim-sinema-no',
+    '.mfsim-sinema-bolum.is-atlandi .mfsim-sinema-no',
+    '.mfsim-sinema-mesaj',
+    '.mfsim-loading-skips',
+    '.mfsim-loading-stamp'
+  ];
+  test.each(RENKLI)('%s — rengi yalnız --sinema-* jetonundan', (sec) => {
+    const b = kural(sec);
     expect(b).not.toBeNull();
-    const renkler = (b.match(/var\(--[a-z0-9-]+\)/g) || []);
-    expect(renkler.length).toBeGreaterThanOrEqual(4);
-    expect(new Set(renkler)).toEqual(new Set(['var(--bg-primary)']));
-    expect(b).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
+    const bildirim = b.split(';').map((d) => d.trim())
+      .filter((d) => /^(color|background|background-color)\s*:/.test(d));
+    expect(bildirim.length).toBeGreaterThan(0);
+    bildirim.forEach((d) => {
+      const deger = d.slice(d.indexOf(':') + 1);
+      expect(deger).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
+      const jetonlar = deger.match(/var\(--[a-z0-9-]+\)/g) || [];
+      expect(jetonlar.length).toBeGreaterThan(0);
+      jetonlar.forEach((j) => expect(j).toMatch(/^var\(--sinema-/));
+    });
   });
 
-  test('fotoğraf yoksa perde de yok — kâğıdın üstünde ikinci kâğıt olmasın', () => {
-    expect(kural('.mfsim-loading-screen:not(.mfsim-has-photo) .mfsim-amblem-perde'))
-      .toMatch(/display:\s*none/);
+  test('taban kural tema başlığını yazıyor — marka onu bileşik seçiciyle eziyor', () => {
+    expect(kural('.mfsim-loading-logo')).toContain('color:var(--text-heading)');
+    expect(kural('.mfsim-loading-logo.mfsim-sinema-ad')).toContain('color:var(--sinema-yazi)');
   });
 
-  test('kapanışta amblem KAYMIYOR — yalnız opaklık', () => {
-    const b = kural('.mfsim-loading-screen.mfsim-fading-out .mfsim-amblem');
-    expect(b).not.toBeNull();
-    expect(b).toContain('opacity:0');
-    expect(b).not.toMatch(/transform|translate/);
+  // Temadan bağımsızlık bir kopya disiplini değil: jeton TEK yerde. Koyu blok
+  // bir değer yazsaydı iki temada iki ayrı bant olurdu.
+  test('jetonlar palette BİR KEZ, :root ile ortak açık blokta', () => {
+    const acik = (CSS.match(/:root, \[data-theme="acik"\] \{([\s\S]*?)\n {4}\}/) || [])[1] || '';
+    expect(acik).toContain('--bg-primary');
+    JETON.forEach((j) => {
+      const tanim = CSS.match(new RegExp('--' + j + ':\\s*#[0-9a-fA-F]{6};', 'g')) || [];
+      expect([j, tanim.length]).toEqual([j, 1]);
+      expect(acik).toMatch(new RegExp('--' + j + ':\\s*#[0-9a-fA-F]{6};'));
+    });
+  });
+
+  test('bandın yazıları banda karşı AA (≥ 4,5:1), vurgu ≥ 3:1', () => {
+    const deger = (j) => CSS.match(new RegExp('--' + j + ':\\s*(#[0-9a-fA-F]{6});'))[1];
+    const lin = (c) => { const x = c / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+    const lum = (h) => [1, 3, 5].map((i) => lin(parseInt(h.slice(i, i + 2), 16)))
+      .reduce((t, c, i) => t + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const oran = (a, b) => {
+      const L = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (L[0] + 0.05) / (L[1] + 0.05);
+    };
+    const bant = deger('sinema-bant');
+    const dusen = [];
+    ['sinema-yazi', 'sinema-yazi-2', 'sinema-vurgu-yazi', 'sinema-uyari'].forEach((j) => {
+      if (oran(deger(j), bant) < 4.5) dusen.push(j);
+    });
+    if (oran(deger('sinema-vurgu'), bant) < 3) dusen.push('sinema-vurgu');
+    expect(dusen).toEqual([]);
+  });
+
+  // KAPANIŞ: perde açılır. Bantlar SÖNMEZ (sert kalır), ekrandan çıkar; süre
+  // yükleyicinin display:none beklemesiyle AYNI.
+  test('kapanışta bantlar ekrandan ÇIKIYOR — üstteki yukarı, alttaki aşağı', () => {
+    expect(kural('.mfsim-loading-screen.mfsim-fading-out .mfsim-sinema-ust'))
+      .toMatch(/transform:\s*translateY\(-100%\)/);
+    expect(kural('.mfsim-loading-screen.mfsim-fading-out .mfsim-sinema-alt'))
+      .toMatch(/transform:\s*translateY\(100%\)/);
+  });
+
+  test('bantların geçişi js/loader.js › FADE_OUT_MS ile AYNI süre', () => {
+    const ms = +(LOADER_SRC.match(/var FADE_OUT_MS = (\d+);/) || [])[1];
+    expect(ms).toBeGreaterThan(0);
+    const g = (kural('.mfsim-sinema-bant') || '').match(/transition:\s*transform\s+([\d.]+)(m?s)/);
+    expect(g).not.toBeNull();
+    expect(g[2] === 'ms' ? +g[1] : Math.round(+g[1] * 1000)).toBe(ms);
+  });
+
+  test('ekran SÖNMÜYOR — yalnız fotoğraf katmanı, bantlardan önce', () => {
+    const ekran = kural('.mfsim-loading-screen.mfsim-fading-out');
+    expect(ekran).not.toBeNull();
+    expect(ekran).not.toMatch(/opacity/);
+    const foto = kural('.mfsim-loading-screen.mfsim-fading-out .mfsim-loading-photo');
+    expect(foto).toContain('opacity:0');
+    const g = foto.match(/transition:\s*opacity\s+([\d.]+)s/);
+    const ms = +(LOADER_SRC.match(/var FADE_OUT_MS = (\d+);/) || [])[1];
+    expect(g).not.toBeNull();
+    expect(Math.round(+g[1] * 1000)).toBeLessThanOrEqual(ms);
+  });
+
+  test('perde YOK — fotoğrafın üstünde bantlardan başka katman yok', () => {
+    const govde = splashMarkup();
+    expect(govde).not.toMatch(/perde/);
+    // Fotoğraf + iki bant: ekranın doğrudan çocukları.
+    document.body.innerHTML = govde;
+    const cocuk = Array.from(document.getElementById('mfsim-loading-screen').children)
+      .map((e) => e.id || e.className);
+    expect(cocuk).toEqual(['mfsim-loading-photo',
+      'mfsim-sinema-bant mfsim-sinema-ust', 'mfsim-sinema-bant mfsim-sinema-alt']);
   });
 });
 
@@ -478,10 +564,11 @@ describe('modül giriş paneli karşılama kartının İKİZİ', () => {
     expect(blok('.ve-welcome-id')).toContain(deger);
   });
 
-  // Amblem de kartın SOL KENARINDA duruyor: devir teslimde marka kartın
-  // kenarından içeri iniyor, yandan gelmiyor.
-  test('amblem karşılama kartıyla aynı sol kenarda', () => {
-    expect(blok('.mfsim-amblem')).toContain('left:56px');
+  // Bantların içeriği de kartın SOL KENARINDA başlıyor: devir teslimde marka
+  // kartın kenarından içeri iniyor, yandan gelmiyor.
+  test('bantların içeriği karşılama kartıyla aynı sol kenarda', () => {
+    expect(blok('.mfsim-sinema-satir')).toContain('left:56px');
+    expect(blok('.mfsim-sinema-ust-satir')).toContain('left:56px');
   });
 });
 
@@ -512,7 +599,7 @@ describe('index.html aşama işaretleri', () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // O ANKİ ÖBEK. Eskiden bütün öbekler sayaçlarıyla alt alta duruyordu; hiçbiri
-// okunmuyor ama hepsi okunmayı bekliyormuş gibi duruyordu. AMBLEM'de yalnız
+// okunmuyor ama hepsi okunmayı bekliyormuş gibi duruyordu. Artık yalnız
 // o anki öbek var, Roma rakamıyla. Rakam index.html'deki sıradan TÜRER —
 // öbek eklenince ya da yer değiştirince burada güncellenecek bir sayı yok.
 describe('o anki öbek', () => {

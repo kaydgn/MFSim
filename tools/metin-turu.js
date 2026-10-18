@@ -156,7 +156,7 @@ const ASAMALAR = {
       { ad: 'Açılış ekranı', kok: '#mfsim-loading-screen', ac: async (p) => {
         await p.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
         await p.waitForFunction(() => {
-          const t = document.querySelector('#mfsim-loading-bolum .mfsim-amblem-bolum-ad');
+          const t = document.querySelector('#mfsim-loading-bolum .mfsim-sinema-bolum-ad');
           return t && t.textContent.trim().length > 0;
         }, null, { timeout: 60000 });
         await bekle(p, 600);

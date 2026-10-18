@@ -19,9 +19,9 @@
  * kullanıcı: "pencere sınırları hizasız" — ve karşılamaya özel kural gereksiz
  * kaldı. Tuvalin kenara yapışıklığı artık kabuk-sutun.spec.js'te.)
  *
- * 2026-09-23'ten beri açılışta KART YOK (AMBLEM): ölçülen şey amblemin sol
- * kenarı — karşılama kartı onun yerinde, aynı kenarda beliriyor ve marka
- * kartın logosuna içeriden iniyor.
+ * 2026-09-23'ten beri açılışta KART YOK (2026-10-18'den beri SİNEMA
+ * bantları): ölçülen şey bandın markasının sol kenarı — karşılama kartı aynı
+ * kenarda beliriyor ve marka kartın logosuna içeriden iniyor.
  *
  * Node'da koşamaz: jsdom yerleşim hesaplamaz, `getBoundingClientRect` hep 0.
  */
@@ -41,16 +41,16 @@ const kutu = (sel) => {
   return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
 };
 
-test('karşılama fotoğrafı TAM KENAR ve kartı amblemin kenarında', async ({ page }) => {
+test('karşılama fotoğrafı TAM KENAR ve kartı açılış markasının kenarında', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto('file://' + BUILD);
   await page.fill('#mfsim-login-password', 'mfsim2024');
   await page.press('#mfsim-login-password', 'Enter');
   // AÇILIŞ EKRANI — yükleme sürerken ölç
-  await page.waitForSelector('#mfsim-loading-screen .mfsim-amblem', { state: 'visible', timeout: 30000 });
+  await page.waitForSelector('#mfsim-loading-screen .mfsim-sinema-marka', { state: 'visible', timeout: 30000 });
   const acilis = {
     foto: await page.evaluate(kutu, '#mfsim-loading-photo'),
-    amblem: await page.evaluate(kutu, '#mfsim-loading-screen .mfsim-amblem'),
+    marka: await page.evaluate(kutu, '#mfsim-loading-screen .mfsim-sinema-marka'),
   };
   await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
   await page.waitForTimeout(800);
@@ -62,9 +62,9 @@ test('karşılama fotoğrafı TAM KENAR ve kartı amblemin kenarında', async ({
   // Fotoğraf ekranın TAMAMI — çerçeve yok
   expect(karsilama.foto).toEqual({ x: 0, y: 0, w: 1600, h: 900 });
   expect(karsilama.foto).toEqual(acilis.foto);
-  // Kart amblemin SOL KENARINDA beliriyor — ÇİZİMDE aynı x
-  // (genişlik ve yükseklik bilerek farklı: amblem bir kart değil)
-  expect(karsilama.kart.x).toBe(acilis.amblem.x);
+  // Kart açılış markasının SOL KENARINDA beliriyor — ÇİZİMDE aynı x
+  // (genişlik ve yükseklik bilerek farklı: marka bir kart değil)
+  expect(karsilama.kart.x).toBe(acilis.marka.x);
 
   // Köşe de yok: kaplamanın kabı yuvarlatılmış olsaydı fotoğraf köşeden kırpılırdı
   const kose = await page.evaluate(() => getComputedStyle(document.querySelector('.ve-canvas-wrapper')).borderTopLeftRadius);
