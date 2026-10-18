@@ -904,6 +904,80 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
   });
 });
 
+// AYDINLIK (kullanıcı 2026-10-18: "isim aydınlık fakat parça da aydınlık
+// olmalı"): seçili parçanın HER yüzü perdenin altındaki zeminden ve gölgedeki
+// aynı tür parçanın her yüzünden açık — iki temada, renkler CSS'ten. Takozun
+// kendi yeşili (en koyu yüz L 0,065) ve nokta kütlenin kahvesi (0,158)
+// gölgedeki zeminden (0,408) koyuydu; gövde yalnız kendi tonuyla geçiyordu.
+// Gerçek tarayıcıdaki hesaplanmış renk: mount-pencere.spec.js → Güç grubundaki yeri.
+describe('AYDINLIK — seçili parça gölgedeki zeminden ve aynı tür parçadan açık', () => {
+  const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
+  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  const kural = (secici, oz) => {
+    const m = new RegExp('(?:^|\\n)' + secici.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}').exec(css);
+    if (!m) throw new Error('kural yok: ' + secici);
+    const d = new RegExp('(?:^|[;\\s])' + oz + ':([^;]+);').exec(m[1]);
+    if (!d) throw new Error(secici + ' → ' + oz + ' yok');
+    return d[1].trim();
+  };
+  const renk = (blok, ifade) => {
+    let m = /^var\(--([\w-]+)\)$/.exec(ifade);
+    if (m) {
+      const h = new RegExp('--' + m[1] + ':\\s*(#[0-9a-fA-F]{6})').exec(blok);
+      if (!h) throw new Error('jeton yok: --' + m[1]);
+      return hex(h[1]);
+    }
+    m = /^color-mix\(in srgb, (.+?) (\d+)%, (.+)\)$/.exec(ifade);
+    if (m) { const a = renk(blok, m[1]), b = renk(blok, m[3]), p = Number(m[2]) / 100; return a.map((v, i) => v * p + b[i] * (1 - p)); }
+    throw new Error('çözülemeyen renk: ' + ifade);
+  };
+  const scrim = /--scrim:\s*rgba\(0,\s*0,\s*0,\s*([\d.]+)\)/.exec(css);
+  const pay = /\.ve-ak-perde\{\s*fill:color-mix\(in srgb, var\(--scrim\) (\d+)%, transparent\)/.exec(css);
+  const alfa = Number(scrim[1]) * Number(pay[1]) / 100, kar = (c) => c.map((v) => v * (1 - alfa));
+  const TUR = {
+    'gövde': ['.ve-ak-g', ['.f-ust', '.f-y', '.f-x', '.f-alt']],
+    'takoz': ['.ve-ak-t', ['.t-z', '.t-y', '.t-x']],
+    'nokta kütle': ['.ve-ak-nokta', ['']],
+  };
+  test('iki temada her tür: seçilinin en koyu yüzü > gölgedeki zemin ve aynı türün en açık yüzü', () => {
+    const sorun = [], olcu = [];
+    [['acik', /:root, \[data-theme="acik"\]\s*\{([^}]*)\}/], ['koyu', /\[data-theme="koyu"\]\s*\{([^}]*)\}/]].forEach(([ad, re]) => {
+      const blok = re.exec(css)[1];
+      const zemin = lum(kar(renk(blok, kural('.ve-mnt-2d', 'background'))));
+      Object.entries(TUR).forEach(([tur, [kok, yuzler]]) => {
+        const isik = yuzler.map((y) => lum(renk(blok, kural(y ? kok + '[data-sec] ' + y : kok + '[data-sec]', 'fill'))));
+        const golge = yuzler.map((y) => lum(kar(renk(blok, kural(y ? kok + ' ' + y : kok, 'fill')))));
+        const esik = Math.max(zemin, ...golge), en = Math.min(...isik);
+        olcu.push(`${ad}/${tur}: ${en.toFixed(3)} > ${esik.toFixed(3)}`);
+        if (!(en > esik)) sorun.push(`${ad}/${tur}: en koyu yüz L ${en.toFixed(3)} ≤ gölgede ${esik.toFixed(3)}`);
+      });
+    });
+    expect(olcu.length).toBe(6);
+    expect(sorun).toEqual([]);
+  });
+  test('CSS\'in seçicisi çizimin işaretlemesine oturuyor: odakta seçili gövde, takoz ve nokta kütle data-sec ve yüz sınıflarıyla', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), br = m.govde.find((g) => !g.ana && !g.kutu), ana = m.govde.find((g) => g.ana);
+    const odak = (k) => {
+      const r = AK.ciz(m, { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS, etiket: 'ad', secili: k, perde: true });
+      document.body.innerHTML = r.svg;
+      return document.querySelector('.ve-ak-odak');
+    };
+    const g = odak(ana.k).querySelector('g.ve-ak-g[data-sec]');
+    expect(g && [...g.querySelectorAll('path')].every((p) => /^f-(ust|alt|x|y)$/.test(p.getAttribute('class')))).toBe(true);
+    const t = odak('T1').querySelector('g.ve-ak-t[data-sec]');
+    expect(t && [...t.querySelectorAll('path')].map((p) => p.getAttribute('class')).sort()).toEqual(['t-x', 't-y', 't-z']);
+    const n = odak(br.k).querySelector('circle.ve-ak-nokta[data-sec]');
+    expect(n).toBeTruthy();
+    // seçili nokta kütle büyük: aydınlık dolgusu vurgu kenarının içinde görünür
+    const oteki = document.querySelector('circle.ve-ak-nokta:not([data-sec])');
+    expect(Number(n.getAttribute('r'))).toBeGreaterThan(1.4 * Number(oteki.getAttribute('r')));
+    document.body.innerHTML = '';
+  });
+});
+
 // PENCERE (jsdom): sürüklerken çizilen kare YAZILI ve yapışkan; föyün satırı
 // çizimdeki parçayı perdenin üstüne alır, satırdan çıkınca son çizim AYNEN
 // geri gelir. Gerçek fare ve tam ekranın ölçüsü mount-pencere.spec.js'te.

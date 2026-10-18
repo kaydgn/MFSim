@@ -84,6 +84,11 @@
       --eksen-x: #ef4444;
       --eksen-y: #22c55e;
       --eksen-z: #3b82f6;
+      /* AYDINLIK YÜZEY — Takoz çiziminde seçili parçanın tonları bundan
+         türer (vurgu ile karışım). İki temada da AÇIK: koyu temada zemin
+         jetonuyla karışan ton gölgedeki parçalardan koyu kalıyordu.
+         Kapı: mount-akso.test.js → AYDINLIK. */
+      --isik: #ffffff;
     }
 
     /* ── KOYU ────────────────────────────────────────────────────────────── */
@@ -121,6 +126,7 @@
       --eksen-x: #ef4444;
       --eksen-y: #22c55e;
       --eksen-z: #3b82f6;
+      --isik: #f7f2e9;
     }
 
     /* ── ORTA KALINLIK WINDOWS'TA YARI KALIN (2026-09-26, kullanıcı kararı 5·B) ──
@@ -10202,16 +10208,24 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-pd-lj-o{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .ve-pd-lj-s{ flex:0 0 auto; overflow:visible; }
 .ve-pd-lj-s .ve-pd-bolge{ stroke:color-mix(in srgb, var(--text-muted) 40%, transparent); stroke-width:.8; }
-/* GÜÇ GRUBUNDAKİ YERİ — bu bileşen (çizicinin o.secili → data-sec): vurgu
-   renginde kenar ve hafif vurgu dolgusu; nokta kütle ve takozda halka, adı
-   vurgu kenarlı çipte. Yazı vurgu rengine boyanmaz (kontrast kuralı). */
+/* GÜÇ GRUBUNDAKİ YERİ — bu bileşen (çizicinin o.secili → data-sec): AYDINLIK
+   (kullanıcı 2026-10-18: "parça da aydınlık olmalı"). Gövde, takoz ve nokta
+   kütle göstergenin "bu bileşen" tonlarında (vurgu + --isik), vurgu kenarlı:
+   her yüzü perdenin altındaki zeminden ve gölgedeki aynı tür parçadan açık
+   (mount-akso.test.js → AYDINLIK). Takozun kendi yeşili ve nokta kütlenin
+   kahvesi gölgedeki zeminden koyuydu. Nokta kütle ve takozda halka, adı
+   vurgu kenarlı çipte. Yazı vurgu rengine boyanmaz. */
 .ve-ak-g[data-sec] path{ stroke:var(--accent-primary); stroke-width:1.6; }
-.ve-ak-g[data-sec] .f-ust{ fill:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input)); }
-.ve-ak-g[data-sec] .f-y{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--bg-input)); }
-.ve-ak-g[data-sec] .f-x{ fill:color-mix(in srgb, var(--accent-primary) 40%, var(--bg-input)); }
-.ve-ak-g[data-sec] .f-alt{ fill:color-mix(in srgb, var(--accent-primary) 48%, var(--bg-input)); }
+.ve-ak-g[data-sec] .f-ust{ fill:color-mix(in srgb, var(--accent-primary) 16%, var(--isik)); }
+.ve-ak-g[data-sec] .f-y{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); }
+.ve-ak-g[data-sec] .f-x{ fill:color-mix(in srgb, var(--accent-primary) 40%, var(--isik)); }
+.ve-ak-g[data-sec] .f-alt{ fill:color-mix(in srgb, var(--accent-primary) 48%, var(--isik)); }
 .ve-ak-gol[data-sec]{ fill:color-mix(in srgb, var(--accent-primary) 22%, transparent); }
 .ve-ak-t[data-sec] path{ stroke:var(--accent-primary); stroke-width:1.2; }
+.ve-ak-t[data-sec] .t-z{ fill:color-mix(in srgb, var(--accent-primary) 16%, var(--isik)); }
+.ve-ak-t[data-sec] .t-y{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); }
+.ve-ak-t[data-sec] .t-x{ fill:color-mix(in srgb, var(--accent-primary) 40%, var(--isik)); }
+.ve-ak-nokta[data-sec]{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); stroke:var(--accent-primary); stroke-width:1.2; }
 .ve-ak-sec-hale{ fill:none; stroke:var(--accent-primary); stroke-width:1.8; }
 .ve-ak-cip.sec-cip rect{ stroke:var(--accent-primary); stroke-width:1.4; }
 /* PERDE (o.perde): seçili parça aydınlık, kalan model gölgede — perde
@@ -10221,7 +10235,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-perde{ fill:color-mix(in srgb, var(--scrim) 45%, transparent); pointer-events:none; }
 /* Föyün satırı çizimdeki parçasını aydınlatır (cp-mount.js → _mntAksoOdak). */
 .ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr[data-ak]:hover td{ background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-input)); }
-.ve-ak-lj-sec{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--bg-input)); stroke:var(--accent-primary); stroke-width:1.2; }
+.ve-ak-lj-sec{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); stroke:var(--accent-primary); stroke-width:1.2; }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);
    kuralları onunla birlikte gitti (kural 26). */

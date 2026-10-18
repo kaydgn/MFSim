@@ -267,7 +267,7 @@ test('Görünümler · Aksonometrik: sürükle-döndür, tekerlek, kaydır; her 
 // üstünde ve EKRANDA görünür (halkası öndeki bir küpün altında değil), yazılar
 // okunur ve çakışmaz; gerçek sürükleme döndürür ve her açıda yerleşim temiz;
 // fare üstünde bilgi kutusu açılır; tam ekran bileşenle açılır.
-test('Güç grubundaki yeri: Görünümler\'in bileşeni, bileşen perdenin üstünde; sürükleyince döner; yerleşim temiz; fare üstü bilgi', async ({ page }) => {
+test('Güç grubundaki yeri: Görünümler\'in bileşeni, bileşen perdenin üstünde ve AYDINLIK; sürükleyince döner; yerleşim temiz; fare üstü bilgi', async ({ page }) => {
   await bootApp(page);
   await ornek(page, 'tulga', 'Ön Takoz Braketi');
   await page.evaluate(Y.KAYNAK);
@@ -288,7 +288,23 @@ test('Güç grubundaki yeri: Görünümler\'in bileşeni, bileşen perdenin üst
       const e = document.elementFromPoint(b.left + b.width / 2, b.top + 1);
       ustte = e && (e === hale || !!e.closest('[data-sec]'));
     }
-    return { sec: svg.querySelectorAll('[data-sec]').length, hale: !!hale, ustte,
+    // AYDINLIK (kullanıcı 2026-10-18: "parça da aydınlık olmalı"): seçilinin
+    // HESAPLANMIŞ her yüzü perdenin altındaki zeminden ve gölgedeki aynı tür
+    // parçanın her yüzünden açık. Takoz yeşili ve nokta kütle kahvesi
+    // zeminden koyuydu (T1: 0,065 < 0,408).
+    const renk = (c) => { const s = String(c); let m = s.replace(/^color\(srgb/, '').match(/[\d.]+/g).map(Number); if (/^color\(srgb/.test(s)) m = m.map((v, i) => (i < 3 ? v * 255 : v)); return m; };
+    const lum = (m) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+    const pr = svg.querySelector(':scope > rect.ve-ak-perde'), pc = pr ? renk(getComputedStyle(pr).fill) : [0, 0, 0, 0], pa = pc.length > 3 ? pc[3] : 1;
+    const kar = (m) => m.slice(0, 3).map((v, i) => v * (1 - pa) + pc[i] * pa);
+    let z = svg, zem = null;
+    while (z && !zem) { const bg = getComputedStyle(z).backgroundColor; if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) zem = renk(bg); z = z.parentElement; }
+    const secili = svg.querySelector('.ve-ak-odak [data-sec]');
+    const tur = !secili ? null : secili.classList.contains('ve-ak-t') ? '.ve-ak-t' : secili.classList.contains('ve-ak-nokta') ? '.ve-ak-nokta' : '.ve-ak-g';
+    const yuz = (e) => (e.matches('circle') ? [e] : [...e.querySelectorAll('path')]);
+    const aydinlik = !secili ? null : {
+      en: Math.min(...yuz(secili).map((e) => lum(renk(getComputedStyle(e).fill)))),
+      esik: Math.max(lum(kar(zem)), ...[...svg.querySelectorAll(tur)].filter((e) => !e.closest('.ve-ak-odak')).flatMap(yuz).map((e) => lum(kar(renk(getComputedStyle(e).fill))))) };
+    return { sec: svg.querySelectorAll('[data-sec]').length, hale: !!hale, ustte, aydinlik,
       perde: !!svg.querySelector(':scope > rect.ve-ak-perde'), odak: [...new Set([...svg.querySelectorAll('.ve-ak-odak [data-ak]')].map((e) => e.getAttribute('data-ak')))],
       cip: (svg.querySelector('.ve-ak-odak .ve-ak-cip.sec-cip') || {}).textContent || '',
       ad: kok.querySelector('[data-ak3b-ad]').textContent, dugme: kok.querySelectorAll('.ve-mnt2d-zoomctl button').length,
@@ -301,6 +317,7 @@ test('Güç grubundaki yeri: Görünümler\'in bileşeni, bileşen perdenin üst
     if (r.hale && !r.ustte) out.push(ad + ': seçim halkası örtülü');
     if (!r.cip) out.push(ad + ': adı yazılı değil');
     if (!r.perde || r.odak.length !== 1) out.push(ad + ': perde ' + r.perde + ' · odak ' + r.odak.join(','));
+    if (!r.aydinlik || !(r.aydinlik.en > r.aydinlik.esik)) out.push(ad + ': parça aydınlık değil — en koyu yüz L ' + (r.aydinlik ? r.aydinlik.en.toFixed(3) + ' ≤ gölgede ' + r.aydinlik.esik.toFixed(3) : '?'));
     if (r.dugme !== 4) out.push(ad + ': görünüm düğmesi ' + r.dugme);
     if (r.yazi < 9.5) out.push(ad + ': yazı ' + r.yazi.toFixed(1) + ' px');
     Y.yerlesimOzet(r.yer, 'tulga · ' + ad).forEach((x) => out.push(x));
