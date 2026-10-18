@@ -140,6 +140,7 @@ var veMntParamCiz = (function(){
   // L: [{ s (sınıf), sekil: nokta | cizgi | kesik | halka | karo | alan, ad, n? }]
   function ornek(e){
     var s = e.s, ic = e.sekil === 'cizgi' || e.sekil === 'kesik' ? '<line class="' + s + '" x1="1" y1="5" x2="15" y2="5"/>'
+      : e.sekil === 'dik' ? '<line class="' + s + '" x1="8" y1="0.5" x2="8" y2="9.5"/>'
       : e.sekil === 'halka' ? '<circle class="' + s + '" cx="8" cy="5" r="3.6"/>'
       : e.sekil === 'karo' ? '<path class="' + s + '" d="M8 .8 12.2 5 8 9.2 3.8 5Z"/>'
       : e.sekil === 'alan' ? '<rect class="' + s + '" x="2" y="1" width="12" height="8"/>'
@@ -653,10 +654,123 @@ var veMntParamCiz = (function(){
     return { svg:s + Y.ciz() + '</svg>', h:H };
   }
 
+  // ══ SONUÇ'UN İKİ SADE GRAFİĞİ (kullanıcı kararı 2026-10-18: "Tablo + iki
+  // sade grafik") — pencerede her zaman çizilir; kısıtlar kodsuz, eksenler adıyla.
+
+  // ── MODLAR — mevcut ve öneri, çentik başına bir mod ──────────────────────
+  // V: { satir:[{ ad, f:[Hz], kotu:[bool], ip:[metin], kose:{ a:[Hz], b:[Hz] }|null, vurgu }],
+  //      bolge:[[Hz, Hz]] (sınır dışı; üst ucu Infinity olabilir), bant:[8, 10],
+  //      k1a (Hz; daha yakın iki mod köprülenir), ozel:[Hz] (sınırın işareti), xMax }
+  function modSerit(V, o){
+    var W = o.W, px = o.fs.k, sat = 28;
+    var adG = Math.max.apply(null, V.satir.map(function(r){ return gen(r.ad, px, r.vurgu); })) + 16;
+    var F = { l:adG, r:W - 12, t:px + 10, b:px + 10 + V.satir.length * sat };
+    var H = F.b + 2 * px + 16;
+    var Ix = ust(0, V.xMax, Math.max(3, Math.floor((F.r - F.l) / (px * 7))));
+    var xM = Ix.v[Ix.v.length - 1], X = olcek(0, xM, F.l, F.r), Y = katman(W, H), s = svgAc(W, H, 'Modlar');
+    var dilim = function(a, b){ var x0 = X(Math.max(0, a)), x1 = X(Math.min(b, xM)); return x1 > x0 ? [x0, x1] : null; };
+    (V.bolge || []).concat([V.bant]).forEach(function(b){
+      var d = dilim(b[0], b[1]);
+      if(d) s += '<rect class="ve-pd-bolge" x="' + R(d[0]) + '" y="' + F.t + '" width="' + R(d[1] - d[0]) + '" height="' + (F.b - F.t) + '"/>';
+    });
+    var db = dilim(V.bant[0], V.bant[1]);
+    if(db) Y.ekle((db[0] + db[1]) / 2, F.t - 5, sayi(V.bant[0], 0) + '–' + sayi(V.bant[1], 0), px, { a:'middle', s:'s', pri:6 });
+    var ozel = {};
+    (V.ozel || []).forEach(function(v){ if(v > 0 && v < xM){ ozel[v] = 3; if(Ix.v.indexOf(v) < 0) Ix.v.push(v); } });
+    Ix.v.sort(function(a, b){ return a - b; });
+    if((V.ozel || []).some(function(v){ return v % 1; })) Ix.b = Math.max(Ix.b, 1);
+    s += xEksen(F, Ix, X, px, Y, ozel);
+    V.satir.forEach(function(r, j){
+      var y = F.t + (j + 0.5) * sat;
+      if(j) s += cizgi(F.l, F.t + j * sat, F.r, F.t + j * sat, 've-pd-izg');
+      Y.ekle(F.l - 8, y + px * 0.35, r.ad, px, { a:'end', s:r.vurgu ? 'b' : '', kalin:!!r.vurgu, pri:7 });
+      if(r.kose) r.f.forEach(function(f, i){
+        var a = X(r.kose.a[i]), b = X(r.kose.b[i]);
+        if(Number.isFinite(a) && Number.isFinite(b)) s += cizgi(Math.max(F.l, Math.min(a, b)), y, Math.min(F.r, Math.max(a, b)), y, 've-pd-kose');
+      });
+      var f = r.f.slice().sort(function(a, b){ return a - b; });
+      for(var i = 1; i < f.length; i++) if(f[i] - f[i - 1] <= V.k1a && X(f[i - 1]) < F.r)
+        s += cizgi(X(f[i - 1]), y + 12, Math.min(F.r, X(f[i])), y + 12, 've-pd-yakin');
+      r.f.forEach(function(fi, i){
+        var x = X(fi);
+        if(!(x >= F.l && x <= F.r)) return;
+        s += cizgi(x, y - 9, x, y + 9, 've-pd-tik' + (r.kotu && r.kotu[i] ? ' k' : ''))
+          + '<rect class="ve-pd-hit" x="' + R(x - 4) + '" y="' + R(y - 11) + '" width="8" height="22"' + ip(r.ip && r.ip[i]) + '/>';
+      });
+    });
+    Y.ekle((F.l + F.r) / 2, H - 6, 'Frekans [Hz]', px, { a:'middle', pri:9 });
+    return { svg:s + Y.ciz() + '</svg>', h:H };
+  }
+
+  // ── STATİK SEHİM VE İLETİLEBİLİRLİK — mevcut → öneri, yakın seçenekler ───
+  // V: { mevcut:{ x (mm), y (%), ip }|null, oneri:{ x, y, i, ad }|null,
+  //      yakin:[{ x, y, i }], e1, e2 (mm|null; aralarındaki bant gölgeli), k2 (%) }
+  function sehimT(V, o){
+    var W = o.W, px = o.fs.k;
+    var H = o.H || Math.round(Math.max(200, Math.min(300, W * 0.58)));
+    var P = [V.mevcut, V.oneri].concat(V.yakin || []).filter(Boolean);
+    var xm = Math.max.apply(null, P.map(function(p){ return p.x; }).concat([V.e1 || 0, V.e2 || 0, 1]));
+    var ym = Math.max.apply(null, P.map(function(p){ return p.y; }).concat([5]));
+    var F = { l:0, r:W - 14, t:px + 16, b:H - 2 * px - 18 };
+    var Iy = ust(0, ym * 1.15, Math.max(3, Math.floor((F.b - F.t) / 34)));
+    F.l = solPay(Iy, px);
+    var Ix = ust(0, xm * 1.12, Math.max(3, Math.floor((F.r - F.l) / (px * 6))));
+    var xM = Ix.v[Ix.v.length - 1], yM = Iy.v[Iy.v.length - 1];
+    var X = olcek(0, xM, F.l, F.r), Yo = olcek(0, yM, F.b, F.t), Y = katman(W, H);
+    var s = svgAc(W, H, 'Statik sehim ve iletilebilirlik');
+    if(V.e1 != null || V.e2 != null){
+      var a = X(V.e1 != null ? V.e1 : 0), b = X(V.e2 != null ? Math.min(V.e2, xM) : xM);
+      if(b > a) s += '<rect class="ve-pd-kabul" x="' + R(a) + '" y="' + F.t + '" width="' + R(b - a) + '" height="' + (F.b - F.t) + '"/>';
+    }
+    s += xEksen(F, Ix, X, px, Y) + yEksen(F, Iy, Yo, px, Y);
+    if(V.k2 != null && V.k2 <= yM){
+      s += cizgi(F.l, Yo(V.k2), F.r, Yo(V.k2), 've-pd-sinir');
+      Y.ekle(F.r - 4, Yo(V.k2) - 5, '%' + sayi(V.k2, 0), px, { a:'end', pri:5 });
+    }
+    (V.yakin || []).forEach(function(p){
+      s += '<circle class="ve-pd-yk" cx="' + R(X(p.x)) + '" cy="' + R(Yo(p.y)) + '" r="3.6" data-i="' + p.i + '"/>';
+    });
+    var adlar = [], engel = [];
+    var m = V.mevcut ? [X(V.mevcut.x), Yo(V.mevcut.y)] : null, u = V.oneri ? [X(V.oneri.x), Yo(V.oneri.y)] : null;
+    // ok: mevcuttan öneriye; uçlar işaretlerin dışında, ucu dolu üçgen
+    if(m && u){
+      var dx = u[0] - m[0], dy = u[1] - m[1], L = Math.sqrt(dx * dx + dy * dy);
+      if(L > 30){
+        var ux = dx / L, uy = dy / L, tx = u[0] - ux * 10, ty = u[1] - uy * 10, bx = tx - ux * 7, by = ty - uy * 7;
+        s += cizgi(m[0] + ux * 9, m[1] + uy * 9, bx, by, 've-pd-ok')
+          + '<path class="ve-pd-ok-uc" d="M' + R(tx) + ' ' + R(ty) + 'L' + R(bx - uy * 3.6) + ' ' + R(by + ux * 3.6)
+          + 'L' + R(bx + uy * 3.6) + ' ' + R(by - ux * 3.6) + 'Z"/>';
+      }
+    }
+    if(m){
+      s += '<path class="ve-pd-mev" d="M' + R(m[0]) + ' ' + R(m[1] - 6.5) + 'L' + R(m[0] + 6.5) + ' ' + R(m[1]) + 'L' + R(m[0]) + ' ' + R(m[1] + 6.5)
+        + 'L' + R(m[0] - 6.5) + ' ' + R(m[1]) + 'Z"' + ip(V.mevcut.ip) + '/>';
+      adlar.push([m[0], m[1], 7, 'Mevcut']);
+      engel.push({ l:m[0] - 7, r:m[0] + 7, t:m[1] - 7, b:m[1] + 7 });
+    }
+    if(u){
+      s += '<circle class="ve-pd-n3" cx="' + R(u[0]) + '" cy="' + R(u[1]) + '" r="3.6" data-i="' + V.oneri.i + '"/>'
+        + '<circle class="ve-pd-uz" cx="' + R(u[0]) + '" cy="' + R(u[1]) + '" r="7.5" data-i="' + V.oneri.i + '"/>';
+      adlar.unshift([u[0], u[1], 8.5, V.oneri.ad || 'Öneri']);
+      engel.push({ l:u[0] - 8.5, r:u[0] + 8.5, t:u[1] - 8.5, b:u[1] + 8.5 });
+    }
+    Y.ekle(4, px + 4, 'İletilebilirlik [%]', px, { a:'start', pri:9 });
+    Y.ekle((F.l + F.r) / 2, H - 6, 'Statik sehim [mm]', px, { a:'middle', pri:9 });
+    var yer = Y.kutular().concat(engel);
+    adlar.forEach(function(q){
+      var p = adYeri(q[0], q[1], q[2], q[3], o.fs.o, yer, F);
+      if(!p) return;
+      yer.push(p.k);
+      Y.ekle(p.x, p.y, q[3], o.fs.o, { a:p.a, s:'b', kalin:true, pri:8 });
+    });
+    return { svg:s + Y.ciz() + '</svg>', h:H };
+  }
+
   return {
     R:R, esc:esc, gen:gen, kutu:kutu, kesis:kesis, isaretler:isaretler, adim:adim, gosterge:gosterge,
     pareto:pareto, modlar:modlar, baglayici:baglayici, duyarlilik:duyarlilik, basamak:basamak, anaEtki:anaEtki,
-    haritalar:haritalar, tHaritasi:tHaritasi, sinirYolu:sinirYolu, T_SINIF:T_SINIF, uc:uc, ucKamera:ucKamera
+    haritalar:haritalar, tHaritasi:tHaritasi, sinirYolu:sinirYolu, T_SINIF:T_SINIF, uc:uc, ucKamera:ucKamera,
+    modSerit:modSerit, sehimT:sehimT
   };
 })();
 

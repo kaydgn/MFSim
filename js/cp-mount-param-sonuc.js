@@ -1,24 +1,30 @@
 // ════════════════════════════════════════════════════════════════════════════
-//  TAKOZ — PARAMETRİK ANALİZ · SONUÇ kategorisi (taramanın diyagramları)
+//  TAKOZ — PARAMETRİK ANALİZ · SONUÇ kategorisi
 // ════════════════════════════════════════════════════════════════════════════
 // Kullanıcı kararı (2026-10-18): "Önerilerini uygulayalım. Bir bakalım
 // kullanışlı mı. Bileşen penceresinin içine entegre edersin." Takoz
 // pencerelerinin SONUÇ GÖSTERMEZ kuralının (2026-10-16) TEK istisnası bu
-// pencere: tarama bitince Sonuç kategorisi uzlaşı çözümünü ve diyagramları
-// taşır; ayrıntılı rapor yine ayrı belgede.
+// pencere; ayrıntılı rapor yine ayrı belgede.
+//
+// SADE SONUÇ (kullanıcı kararı 2026-10-18: "Tablo + iki sade grafik, diğer
+// diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"): Öneri ·
+// Kriterler · Modlar · Statik sehim ve iletilebilirlik · Yakın seçenekler ·
+// Eleme · Diyagramlar. Kısıtlar ADIYLA (Kısıtlar kategorisinin adları; kod
+// yok). On diyagram pencerede çizilmez: Diyagramlar listesinden tam ekranın
+// galerisinde açılır ve ancak açılınca çizilir.
 //
 // DEPO BELLEKTE, MODELDE DEĞİL: tarama düğüm başına `_MNT_PARAM_SONUC`ta durur
 // — proje dosyasına ve geri-al yığınına girmez. Sınır, açıklık ve ağırlık
 // değişince özet depodan yeniden kurulur (veMntKatalog.ozet — kapı:
 // mount-katalog.test.js → CANLI); model, aday, sabit grup, tolerans ya da
-// sürünme değişince tarama ESKİR (imza) ve diyagramlar çizilmez.
+// sürünme değişince tarama ESKİR (imza) ve Sonuç yalnız durumu yazar.
 //
 // ÇİZİM GERÇEK GENİŞLİKTE: gövdenin genişliği pencere açılınca ölçülür
-// (veMntParamCizKur, cp-core.js), diyagram o genişlikte 1:1 kurulur.
+// (veMntParamCizKur, cp-core.js), grafik o genişlikte 1:1 kurulur.
 // Çizici DOM'suz: js/mount-param-ciz.js.
 // ════════════════════════════════════════════════════════════════════════════
 
-var _MNT_PARAM_SONUC = {};      // düğüm → { D, imza, M, O, mevcut, kose:{}, Ok:{}, bellek, html, kart }
+var _MNT_PARAM_SONUC = {};      // düğüm → { D, imza, M, O, mevcut, olc:{}, kose:{}, Ok:{}, bellek, html }
 var _MNT_PARAM_GEN = {};        // düğüm → çizimin genişliği (gövdenin son ölçüsü)
 
 // İMZA — taramanın ölçüsünü değiştiren her girdi: model (kütle, takoz,
@@ -35,7 +41,7 @@ function _mntParamSonucKaydet(nodeId, H, O, D){
   var nl=H.M.G.map(function(){ return null; }), o1=null, o2=null;
   try { o1=O.olc1(nl); o2=o1 ? O.olc2(nl) : null; } catch(e){}
   _MNT_PARAM_SONUC[nodeId]={ D:D, imza:_mntParamImza(H), M:H.M, O:O, mevcut:{ o1:o1, o2:o2 },
-                             kose:{}, Ok:{}, bellek:null, html:null, kart:null };
+                             olc:{}, kose:{}, Ok:{}, bellek:null, html:null };
 }
 // Proje değişince (topology.js → veResetSubtopoNav) bütün taramalar ve
 // görünüm seçimleri unutulur — kimlikler yeni projede yeniden kullanılır.
@@ -114,7 +120,7 @@ function _mntPrmV11(ent, S, Hk, c){
   var m1=ent.mevcut.o1;
   return {
     nokta:nok, cephe:cephe, biyik:biyik, dis:dis, xMax:xMax, yMax:yMax, say:say,
-    uzlasi:bir ? { x:D.d[bir.idx], y:D.T[bir.idx]*100, i:bir.idx, ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1' } : null,
+    uzlasi:bir ? { x:D.d[bir.idx], y:D.T[bir.idx]*100, i:bir.idx, ad:_mntPrmAd(S) } : null,
     mevcut:m1 ? { x:_mntPrmSehim(m1), y:m1.T*100, ip:'Mevcut tasarım\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' } : null,
     e1:c.acik.sehimAlt ? c.s.sehimAlt : null, e2:c.acik.sehim ? c.s.sehimUst : null, k2:veMntKatalog.K2_T*100
   };
@@ -153,7 +159,7 @@ function _mntPrmV7(ent, S, c, Hk){
   };
   ekle('Mevcut', -1);
   S.sira.slice(0, 5).forEach(function(r, k){
-    ekle(S.uygunN ? (k===0 ? 'Uzlaşı' : 'Sıra '+(k+1)) : 'Sıra '+(k+1)+' · '+_mntPrmBozuk(Hk, r.idx), r.idx, k===0);
+    ekle((k===0 ? _mntPrmAd(S) : 'Sıra '+(k+1))+(S.uygunN ? '' : ' · '+_mntPrmBozuk(Hk, r.idx)), r.idx, k===0);
   });
   if(S.uygunN && S.uygunN<5) _mntPrmYakin(ent, Hk, 5-S.uygunN).forEach(function(x, k){ ekle('Yakın '+(k+1)+' · '+_mntPrmBozuk(Hk, x), x); });
   var k1=K.K1_ORAN*c.fAtes, fm=k1;
@@ -265,9 +271,6 @@ function veMntParamKesit(nodeId, alan, deger){
   var st=_MNT_PARAM_KESIT[nodeId] || (_MNT_PARAM_KESIT[nodeId]={});
   if(alan==='cift'){ var p=String(deger).split(',').map(Number); st.a=p[0]; st.b=p[1]; }
   else { st.sabit=Object.assign({}, st.sabit || {}); st.sabit[alan]=Number(deger); }
-  var ent=_MNT_PARAM_SONUC[nodeId];
-  if(ent) ent.html=null;
-  if(typeof veMntPencereTazele==='function') veMntPencereTazele();
   if(_MNT_PARAM_TAM && _MNT_PARAM_TAM.nodeId===nodeId) _MNT_PARAM_TAM.kur();
 }
 // D5 · Kısıt haritaları: açık kısıt başına bir harita ve kesişimi.
@@ -357,7 +360,7 @@ function _mntPrmV2(ent, Z, c, kam){
   var isaret=[], bir=S.sira[0], m1=ent.mevcut.o1;
   if(m1) isaret.push({ p:[_mntPrmSehim(m1), Math.max.apply(null, m1.f), m1.T*100], s:'ve-pd-mev', ad:'Mevcut', r:6.5,
                        ip:'Mevcut tasarım\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' });
-  if(bir) isaret.push({ p:[D.d[bir.idx], D.fMax[bir.idx], D.T[bir.idx]*100], s:'ve-pd-uz', ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1', r:7, i:bir.idx });
+  if(bir) isaret.push({ p:[D.d[bir.idx], D.fMax[bir.idx], D.T[bir.idx]*100], s:'ve-pd-uz', ad:_mntPrmAd(S), r:7, i:bir.idx });
   return {
     ad:'Kısıt penceresi', kam:kam, say:say, nokta:nok, isaret:isaret,
     eks:[_mntPrmEks('δ_s [mm]', 0, xM), _mntPrmEks('f_maks [Hz]', yA, yB), _mntPrmEks('T [%]', 0, zM)],
@@ -393,7 +396,7 @@ function _mntPrmV3(ent, Z, K, nic, kam){
     if(veMntKatalog.uygunMu(D, Hk, x2)) nok.push({ p:[q2%n, Math.floor(q2/n), z[q2]], s:'ve-pd-n3', r:3, i:x2 });
     else if(!(Hk.m[x2] & kb)) nok.push({ p:[q2%n, Math.floor(q2/n), z[q2]], s:'ve-pd-kesin', r:2.4, i:x2 });
   }
-  var isaret=K.uz ? [{ p:[K.uz[0], K.uz[1], z[K.uz[1]*n+K.uz[0]]], s:'ve-pd-uz', ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1', r:7, i:S.sira[0].idx }] : [];
+  var isaret=K.uz ? [{ p:[K.uz[0], K.uz[1], z[K.uz[1]*n+K.uz[0]]], s:'ve-pd-uz', ad:_mntPrmAd(S), r:7, i:S.sira[0].idx }] : [];
   return {
     ad:'Tepki yüzeyi', kam:kam, dortgen:dort, nokta:nok, isaret:isaret, duzlem:ref!=null ? { z:ref } : null,
     eks:[_mntPrmKatEks(K.xNo+' · k_z', K.kz), _mntPrmKatEks(K.yNo+' · k_z', K.kz), _mntPrmEks(_MNT_PRM_D3[nic][0], lo, hi)]
@@ -426,7 +429,7 @@ function _mntPrmV1(nodeId, ent, Z, K, kam){
     nok.push({ p:[t[0], t[1], t[2]], s:SN[t[3]][0], r:SN[t[3]][1], i:t[4] });
   });
   var isaret=[], u=S.sira[0].idx;
-  tumu.forEach(function(t){ if(t[4]===u) isaret.push({ p:[t[0], t[1], t[2]], s:'ve-pd-uz', ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1', r:7, i:u }); });
+  tumu.forEach(function(t){ if(t[4]===u) isaret.push({ p:[t[0], t[1], t[2]], s:'ve-pd-uz', ad:_mntPrmAd(S), r:7, i:u }); });
   var no=function(k){ return ent.M.G[D.taranan[k]].no; };
   return { ad:'Tasarım uzayı', kam:kam, nokta:nok, isaret:isaret, say:say,
            eks:[_mntPrmKatEks(no(ek[0])+' · k_z', K.kz), _mntPrmKatEks(no(ek[1])+' · k_z', K.kz), _mntPrmKatEks(no(ek[2])+' · k_z', K.kz)] };
@@ -434,9 +437,6 @@ function _mntPrmV1(nodeId, ent, Z, K, kam){
 function veMntParamSec(nodeId, alan, deger){
   var sec=_mntPrmSecim(nodeId);
   sec[alan]=deger;
-  var ent=_MNT_PARAM_SONUC[nodeId];
-  if(ent) ent.html=null;
-  if(typeof veMntPencereTazele==='function') veMntPencereTazele();
   if(_MNT_PARAM_TAM && _MNT_PARAM_TAM.nodeId===nodeId) _MNT_PARAM_TAM.kur();
 }
 
@@ -450,15 +450,15 @@ function _mntParamSonucKat(node, H){
   return { k:'sonuc', ad:'Sonuç', sonuc:true, durum:{ d:'ok' }, govde:_mntParamSonucHTML(node, H, T.ent) };
 }
 
-// DİYAGRAMLAR — pencerede kabın genişliğinde, tam ekranda büyük; ikisi de
-// AYNI çağrıdan (_mntPrmCiz). Sıra: genel bakış → tasarımın modları → neyin
-// bağladığı → sınırın etkisi → tip değişiminin etkisi.
+// DİYAGRAMLAR — yalnız tam ekranın galerisinde (veMntParamTamEkran), açılınca
+// çizilir. Sıra: genel bakış → tasarımın modları → neyin bağladığı → sınırın
+// etkisi → tip değişiminin etkisi. `o.arac`: 3B'nin araç satırına (sıfırla).
 var _MNT_PRM_DIYAGRAM = [['d11', 'Pareto cephesi'], ['d7', 'Mod yerleşimi'], ['d9', 'Bağlayıcı kısıtlar'],
                          ['d10', 'Sınır duyarlılığı'], ['d8', 'Ana etkiler'], ['d5', 'Kısıt haritaları'],
                          ['d4', 'İletilebilirlik haritası'], ['d2', 'Kısıt penceresi'], ['d3', 'Tepki yüzeyi'],
                          ['d1', 'Tasarım uzayı']];
 var _MNT_PRM_3B = { d2:true, d3:true, d1:true };
-var _MNT_PARAM_TAM = null;      // açık tam ekran: { nodeId, pd, kur }
+var _MNT_PARAM_TAM = null;      // açık galeri: { nodeId, pd, kur, sec }
 function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
   var C=veMntParamCiz, S=Z.S, Hk=Z.Hk, tol='±%'+_mntS(c.s.tolerans*100, 0)+' rijitlik';
   if(pd==='d11'){
@@ -466,7 +466,7 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
     return { svg:C.pareto(v, o).svg, lj:C.gosterge([
       { s:'ve-pd-n0', ad:'Kesin kriterde elenen', n:v.say[0], r:2 }, { s:'ve-pd-n1', ad:'Ek kısıtta elenen', n:v.say[1], r:2.5 },
       { s:'ve-pd-n2', ad:'Uygun', n:v.say[2] }, { s:'ve-pd-cephe', sekil:'cizgi', ad:'Pareto cephesi', n:S.paretoN },
-      { s:'ve-pd-uz', sekil:'halka', ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1' }, { s:'ve-pd-mev', sekil:'karo', ad:'Mevcut' },
+      { s:'ve-pd-uz', sekil:'halka', ad:_mntPrmAd(S) }, { s:'ve-pd-mev', sekil:'karo', ad:'Mevcut' },
       { s:'ve-pd-biyik', sekil:'cizgi', ad:tol }]) };
   }
   if(pd==='d7'){
@@ -486,7 +486,7 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
     if(!v8) return { not:'Çözülen kombinasyon yok' };
     return { svg:C.anaEtki(v8, o).svg, lj:C.gosterge(v8.seri.map(function(q, j){
       return { s:'ve-pd-etki ve-pd-s'+Math.min(j+1, 5), sekil:'cizgi', ad:q.no+' · '+q.ad };
-    }).concat([{ s:'ve-pd-im dolu', ad:'Uygun' }, { s:'ve-pd-im', ad:'Elenen' }, { s:'ve-pd-uz', sekil:'halka', ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1' }])) };
+    }).concat([{ s:'ve-pd-im dolu', ad:'Uygun' }, { s:'ve-pd-im', ad:'Elenen' }, { s:'ve-pd-uz', sekil:'halka', ad:_mntPrmAd(S) }])) };
   }
   if(pd==='d5' || pd==='d4'){
     var K=_mntPrmKesit(nodeId, ent, S);
@@ -496,18 +496,18 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
       var v5=_mntPrmV5(ent, Z, K);
       return { ust:ust, svg:C.haritalar(v5, o).svg, lj:(v5.bos.length ? _mntNot('Kesitin her hücresinde sağlanan · '+v5.bos.join(' · '), '') : '')+C.gosterge([
       { s:'ve-pd-gec', sekil:'alan', ad:'Sağlıyor' }, { s:'ve-pd-cerceve', sekil:'alan', ad:'Bozuyor' },
-      { s:'ve-pd-cozme', sekil:'alan', ad:'Çözülemedi' }, { s:'ve-pd-uz', sekil:'halka', ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1' }]) };
+      { s:'ve-pd-cozme', sekil:'alan', ad:'Çözülemedi' }, { s:'ve-pd-uz', sekil:'halka', ad:_mntPrmAd(S) }]) };
     }
     var v4=_mntPrmV4(ent, Z, K), T=C.T_SINIF, lj=[];
     for(var k=0;k<=T.length;k++) lj.push({ s:'ve-pd-t'+k, sekil:'alan', ad:k===0 ? 'T < %'+T[0] : k===T.length ? 'T ≥ %'+T[k-1] : '%'+T[k-1]+'–'+T[k] });
     v4.sinir.forEach(function(b){ lj.push({ s:'ve-pd-sh '+b.s, sekil:'kesik', ad:b.ad }); });
-    lj.push({ s:'ve-pd-kesin', ad:'Kesin kriterler' }, { s:'ve-pd-n3', ad:'Uygun' }, { s:'ve-pd-uz', sekil:'halka', ad:S.uygunN ? 'Uzlaşı' : 'Sıra 1' });
+    lj.push({ s:'ve-pd-kesin', ad:'Kesin kriterler' }, { s:'ve-pd-n3', ad:'Uygun' }, { s:'ve-pd-uz', sekil:'halka', ad:_mntPrmAd(S) });
     return { ust:ust, svg:C.tHaritasi(v4, o).svg, lj:C.gosterge(lj) };
   }
-  var kam=_mntPrmKam(nodeId, pd), tolj=S.uygunN ? 'Uzlaşı' : 'Sıra 1';
+  var kam=_mntPrmKam(nodeId, pd), tolj=_mntPrmAd(S);
   if(pd==='d2'){
     var v2=_mntPrmV2(ent, Z, c, kam);
-    return { svg:C.uc(v2, o).svg, lj:C.gosterge([
+    return { ust:o.arac ? '<div class="ve-pd-arac">'+o.arac+'</div>' : '', svg:C.uc(v2, o).svg, lj:C.gosterge([
       { s:'ve-pd-n0', ad:'Kesin kriterde elenen', n:v2.say[0], r:2 }, { s:'ve-pd-n1', ad:'Ek kısıtta elenen', n:v2.say[1], r:2.5 },
       { s:'ve-pd-n2', ad:'Uygun', n:v2.say[2] }, { s:'ve-pd-kutu', sekil:'kesik', ad:'E1–E2 · K1 · K2' },
       { s:'ve-pd-uz', sekil:'halka', ad:tolj }, { s:'ve-pd-mev', sekil:'karo', ad:'Mevcut' }]) };
@@ -525,7 +525,7 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
       }).join('')+'</div>';
       var lj3=[];
       for(var t=0;t<=5;t++) lj3.push({ s:'ve-pd-t'+t, sekil:'alan', ad:sec.d3==='T' ? (t===0 ? 'T < %10' : t===5 ? 'T ≥ %50' : '%'+(t*10)+'–'+(t*10+10)) : String(t+1) });
-      return { ust:_mntPrmKesitSecici(nodeId, ent, K3)+'<div class="ve-pd-arac">'+seg+'</div>', svg:C.uc(v3, o).svg,
+      return { ust:_mntPrmKesitSecici(nodeId, ent, K3)+'<div class="ve-pd-arac">'+seg+(o.arac || '')+'</div>', svg:C.uc(v3, o).svg,
                lj:C.gosterge(lj3.concat([{ s:'ve-pd-kutu', sekil:'kesik', ad:sec.d3==='T' ? 'K2' : sec.d3==='d' ? 'E2' : 'K1' },
                  { s:'ve-pd-kesin', ad:'Kesin kriterler' }, { s:'ve-pd-n3', ad:'Uygun' }, { s:'ve-pd-uz', sekil:'halka', ad:tolj }])) };
     }
@@ -533,7 +533,7 @@ function _mntPrmCiz(pd, ent, Z, c, o, nodeId){
     if(!v1) return null;
     var kut='<label class="ve-pd-sec"><input type="checkbox"'+(sec.d1k1 ? ' checked' : '')
       + ' onchange="veMntParamSec(\''+nodeId+'\',\'d1k1\',this.checked)"> K1\'de elenen · '+_mntS(v1.say[0], 0)+'</label>';
-    return { ust:_mntPrmKesitSecici(nodeId, ent, K3)+'<div class="ve-pd-arac">'+kut+'</div>', svg:C.uc(v1, o).svg, lj:C.gosterge([
+    return { ust:_mntPrmKesitSecici(nodeId, ent, K3)+'<div class="ve-pd-arac">'+kut+(o.arac || '')+'</div>', svg:C.uc(v1, o).svg, lj:C.gosterge([
       { s:'ve-pd-n0', ad:'K1\'de elenen', n:v1.say[0], r:2 }, { s:'ve-pd-n0 k', ad:'Öteki kesin kriterde elenen', n:v1.say[1], r:2.2 },
       { s:'ve-pd-n1', ad:'Ek kısıtta elenen', n:v1.say[2], r:2.5 }, { s:'ve-pd-n2', ad:'Uygun', n:v1.say[3] },
       { s:'ve-pd-uz', sekil:'halka', ad:tolj }]) };
@@ -545,72 +545,313 @@ function _mntPrmKap(nodeId, pd, svg){
   return '<div class="ve-pd-kap" data-pd="'+pd+'" data-dugum="'+nodeId+'"'+(uc ? ' data-3b' : '')+'>'
     + (uc ? svg.replace(/^<svg /, '<svg tabindex="0" ') : svg)+'</div>';
 }
-function _mntPrmKart(nodeId, pd, ad, r){
-  var dg=!r.svg ? '' : (_MNT_PRM_3B[pd] ? '<button type="button" class="ve-pd-tam" title="Sıfırla" aria-label="Sıfırla · '+ad+'"'
-      + ' onclick="veMntParam3bSifirla(\''+nodeId+'\',\''+pd+'\')">'+veIkon('rotate-ccw')+'</button>' : '')
-    + '<button type="button" class="ve-pd-tam" title="Tam ekran" aria-label="Tam ekran · '+ad+'"'
-    + ' onclick="veMntParamTamEkran(\''+nodeId+'\',\''+pd+'\')">'+veIkon('maximize')+'</button>';
-  return '<section class="ve-fp-card"><div class="ve-fp-sect"><b>'+ad+'</b>'+dg+'</div>'+(r.ust || '')
-    + (r.svg ? _mntPrmKap(nodeId, pd, r.svg)+(r.lj || '') : _mntNot(r.not, ''))+'</section>';
+
+// ── SADE SONUÇ — öneri, kriterler, iki grafik, yakın seçenekler, eleme ──────
+// Önerinin adı: uygun kombinasyon yoksa sıranın birincisi en az ihlalli olandır.
+function _mntPrmAd(S){ return S.uygunN ? 'Öneri' : 'En az ihlalli'; }
+// Kombinasyonun birinci aşama ölçümü (modlar; tolerans açıksa köşeleri) —
+// taramanın ölçücüsüyle, kombinasyon başına bir kez; −1 mevcut tasarım.
+function _mntPrmOlc(ent, idx){
+  if(idx<0) return ent.mevcut.o1;
+  if(!(idx in ent.olc)){
+    var o=null;
+    try { o=ent.O.olc1(ent.D.tipler(idx)); } catch(e){ o=null; }
+    ent.olc[idx]=o;
+  }
+  return ent.olc[idx];
 }
+// Değer sınırla aynı görünmesin: yuvarlanınca sınıra eşit çıkan değerin
+// ondalığı uzar (4,996 mm "5,0" değil "4,996" — hüküm "≤ 5 mm" ihlal).
+function _mntPrmYaz(v, lim, d){
+  if(!Number.isFinite(v)) return '—';
+  var k=d, p=function(x){ return Math.round(x*Math.pow(10, k)); };
+  while(k<d+3 && Number.isFinite(lim) && v!==lim && p(v)===p(lim)) k++;
+  return _mntS(v, k);
+}
+// Sınır kendi ondalığıyla (3 → "3", 2,5 → "2,5").
+function _mntPrmSin(v){
+  var d=0;
+  while(d<3 && Math.abs(v*Math.pow(10, d)-Math.round(v*Math.pow(10, d)))>1e-9) d++;
+  return _mntS(v, d);
+}
+function _mntPrmSinirYazi(k, c){
+  var K=veMntKatalog, s=c.s, b='&nbsp;';
+  var Y={
+    k1:'&lt;'+b+_mntS(K.K1_ORAN*c.fAtes, 1)+b+'Hz', k1a:'&gt;'+b+_mntS(K.K1A_HZ, 1)+b+'Hz',
+    k1b:_mntS(K.K1B[0], 0)+'–'+_mntS(K.K1B[1], 0)+b+'Hz dışı', k2:'&lt;'+b+'%'+_mntS(K.K2_T*100, 0),
+    altMod:'≥'+b+_mntPrmSin(s.altMod)+b+'Hz', kapasite:'≤'+b+'%'+_mntPrmSin(s.kapasite*100),
+    ayrisma:'≥'+b+'%'+_mntPrmSin(s.ayrisma*100), isletme:'≤'+b+_mntPrmSin(s.isletmeUst)+b+'mm',
+    durdurucu:'≤'+b+_mntPrmSin(s.durdurucuUst)+b+'mm', cekme:'Yok', darbe:'≤'+b+'%'+_mntPrmSin(s.darbe*100)
+  };
+  return Y[k] || '';
+}
+// Bandın içindeki mod (anma ya da tolerans köşesi): yaylandırılmamış kütle bandının değeri.
+function _mntPrmBantta(o){
+  var B=veMntKatalog.K1B, f=null;
+  [o].concat(o && o.sert ? [o.sert, o.yumusak] : []).forEach(function(x){
+    ((x && x.f) || []).forEach(function(v){ if(f===null && v>=B[0] && v<=B[1]) f=v; });
+  });
+  return f===null ? 'Bantta' : _mntS(f, 1)+' Hz';
+}
+// KRİTERLER — açık kısıtlar KISITLAR sırasıyla; statik sehimin iki sınırı TEK
+// satır. Hüküm: mevcut tasarımda hepsi() (taramanın ölçücüsünün ölçümü),
+// öneride deponun ölçüsü — huninin ve sıranın kullandığı hükmün aynısı.
+// Satır: { k, ad, sinir, m, o }; m · o: { v (yazı), ok (true · false · null: değerlendirilmedi) }.
+function _mntPrmKriterler(ent, Z, c){
+  var K=veMntKatalog, D=ent.D, bir=Z.S.sira[0], idx=bir ? bir.idx : -1, s=c.s, sat=[];
+  var hm=ent.mevcut.o1 ? K.hepsi(ent.mevcut.o1, ent.mevcut.o2, c).sonuc : {}, ho={};
+  if(idx>=0) K.KISITLAR.forEach(function(Q){
+    if(c.acik[Q.k] && (Q.asama===1 || D.d2[idx]===1)) ho[Q.k]=K.hukum(Q.k, D.X[Q.k][idx], c);
+  });
+  var om={ o:_mntPrmOlc(ent, -1), d:ent.mevcut.o1 ? _mntPrmSehim(ent.mevcut.o1) : NaN };
+  var oo={ o:idx>=0 ? _mntPrmOlc(ent, idx) : null, d:idx>=0 ? D.d[idx] : NaN };
+  var hucre=function(k, h, x){
+    if(!h || h.na) return { v:'—', ok:null };
+    var v=h.deger, t;
+    if(k==='k1' || k==='altMod') t=_mntPrmYaz(v, h.sinir, 1)+' Hz';
+    else if(k==='k1a') t=_mntPrmYaz(v, h.sinir, 2)+' Hz';
+    else if(k==='k1b') t=h.ok ? 'Dışında' : _mntPrmBantta(x.o);
+    else if(k==='cekme') t=v>0 ? _mntS(v, 2)+' mm' : 'Yok';
+    else if(k==='k2' || k==='kapasite' || k==='ayrisma' || k==='darbe') t='%'+_mntPrmYaz(v*100, h.sinir*100, 1);
+    else t=_mntPrmYaz(v, h.sinir, 1)+' mm';
+    return { v:t, ok:!!h.ok };
+  };
+  var acA=!!c.acik.sehimAlt, acU=!!c.acik.sehim;
+  var sehim=function(h, x){
+    var a=acA ? h.sehimAlt : null, u=acU ? h.sehim : null;
+    if((acA && !a) || (acU && !u)) return { v:'—', ok:null };
+    var boz=(a && !a.ok) ? a : (u && !u.ok) ? u : null;
+    return { v:_mntPrmYaz(boz ? boz.deger : x.d, boz ? boz.sinir : (u || a).sinir, 2)+' mm', ok:!boz };
+  };
+  K.KISITLAR.forEach(function(Q){
+    if(!c.acik[Q.k] || (Q.k==='sehim' && acA)) return;
+    if(Q.k==='sehimAlt' || Q.k==='sehim'){
+      var ikisi=acA && acU, b='&nbsp;';
+      sat.push({ k:'sehim', ad:ikisi ? 'Statik sehim' : Q.ad,
+        sinir:ikisi ? _mntPrmSin(s.sehimAlt)+'–'+_mntPrmSin(s.sehimUst)+b+'mm'
+             : (acA ? '≥'+b+_mntPrmSin(s.sehimAlt) : '≤'+b+_mntPrmSin(s.sehimUst))+b+'mm',
+        m:sehim(hm, om), o:sehim(ho, oo) });
+      return;
+    }
+    sat.push({ k:Q.k, ad:Q.ad, sinir:_mntPrmSinirYazi(Q.k, c), m:hucre(Q.k, hm[Q.k], om), o:hucre(Q.k, ho[Q.k], oo) });
+  });
+  return sat;
+}
+// MODLAR — mevcut ve önerinin modları; sınırı bozan mod (Kriter 1 · 1a · 1b,
+// en düşük mod) kırmızı. Tolerans açıksa köşeler de sınanır ve bıyık çizilir.
+function _mntPrmModV(ent, Z, c){
+  var K=veMntKatalog, S=Z.S, bir=S.sira[0], k1=K.K1_ORAN*c.fAtes, fm=k1, kopru=false, satir=[];
+  var ekle=function(ad, o, vurgu){
+    if(!o || !o.f || !o.f.length) return;
+    var kotu=o.f.map(function(){ return false; });
+    [o].concat(o.sert && o.yumusak ? [o.sert, o.yumusak] : []).forEach(function(x){
+      var f=(x.f || []).map(function(v, i){ return [v, i]; }).sort(function(p, q){ return p[0]-q[0]; });
+      f.forEach(function(p, j){
+        if(p[0]>=k1 || (c.acik.altMod && p[0]<c.s.altMod) || (p[0]>=K.K1B[0] && p[0]<=K.K1B[1])) kotu[p[1]]=true;
+        if(j && p[0]-f[j-1][0]<=K.K1A_HZ){ kotu[p[1]]=kotu[f[j-1][1]]=true; if(x===o) kopru=true; }
+        if(p[0]>fm) fm=p[0];
+      });
+    });
+    var lab=(o.modes || []).map(function(m){ return m.label; });
+    satir.push({ ad:ad, f:o.f, kotu:kotu, vurgu:!!vurgu,
+      ip:o.f.map(function(f, i){ return ad+' · '+(i+1)+'. mod\n'+_mntS(f, 2)+' Hz'+(lab[i] ? ' · '+_mntPrmModAdi(lab[i]) : ''); }),
+      kose:(o.sert && o.yumusak) ? { a:o.yumusak.f, b:o.sert.f } : null });
+  };
+  ekle('Mevcut', _mntPrmOlc(ent, -1));
+  if(bir) ekle(_mntPrmAd(S), _mntPrmOlc(ent, bir.idx), true);
+  var bolge=[[k1, Infinity]];
+  if(c.acik.altMod) bolge.unshift([0, c.s.altMod]);
+  return { satir:satir, bolge:bolge, bant:K.K1B, k1a:K.K1A_HZ, kopru:kopru,
+           ozel:[k1].concat(c.acik.altMod ? [c.s.altMod] : []), xMax:Math.max(k1*1.25, fm*1.06) };
+}
+// STATİK SEHİM VE İLETİLEBİLİRLİK — mevcut → öneri ve yakın seçenekler; bant statik sehim sınırları.
+function _mntPrmDagV(ent, Z, c, L){
+  var D=ent.D, S=Z.S, bir=S.sira[0], m1=ent.mevcut.o1;
+  return {
+    mevcut:m1 ? { x:_mntPrmSehim(m1), y:m1.T*100, ip:'Mevcut\nT %'+_mntS(m1.T*100, 1)+' · δs '+_mntS(_mntPrmSehim(m1), 2)+' mm' } : null,
+    oneri:bir ? { x:D.d[bir.idx], y:D.T[bir.idx]*100, i:bir.idx, ad:_mntPrmAd(S) } : null,
+    yakin:L.map(function(x){ return { x:D.d[x], y:D.T[x]*100, i:x }; }),
+    e1:c.acik.sehimAlt ? c.s.sehimAlt : null, e2:c.acik.sehim ? c.s.sehimUst : null, k2:veMntKatalog.K2_T*100
+  };
+}
+// YAKIN SEÇENEKLER — sıranın 2.–6. kombinasyonu; uygun beşten azsa en az
+// ihlalli uygun olmayanlarla tamamlanır.
+function _mntPrmYakinL(ent, Z){
+  var S=Z.S, L=S.sira.slice(1, 6).map(function(r){ return r.idx; });
+  if(L.length<5 && S.uygunN) _mntPrmYakin(ent, Z.Hk, 5-L.length).forEach(function(x){ L.push(x); });
+  return L;
+}
+
+function _mntParamOneriHTML(node, ent, Z){
+  var S=Z.S, bir=S.sira[0], D=ent.D, M=ent.M, ad=_mntPrmAd(S);
+  if(!bir) return _mntBolum(ad, '', _mntNot('Çözülen kombinasyon yok', 'warn'));
+  var t=D.tipler(bir.idx), h='<div class="ve-prm-og">';
+  M.G.forEach(function(g, i){
+    var mev=(g.tip && M.lib[g.tip]) ? M.lib[g.tip].name : '—', yeni=t[i] ? ((M.lib[t[i]] || {}).name || t[i]) : null, tip;
+    if(!yeni) tip='<span class="ayni">'+_mntEsc(mev)+'</span><em>Sabit</em>';
+    else if(t[i]===g.tip) tip='<span class="ayni">'+_mntEsc(yeni)+'</span><em>Aynı</em>';
+    else tip='<s>'+_mntEsc(mev)+'</s><b>'+veIkon('arrow-right')+_mntEsc(yeni)+'</b>';
+    h+='<div class="ve-prm-og-s"><span class="ve-prm-og-g">'+_mntEsc(g.ad)+'</span><span class="ve-prm-og-t">'+tip+'</span></div>';
+  });
+  var m1=ent.mevcut.o1;
+  h+='</div>'+_mntIzgara(2, _mntOku('İletilebilirlik', (m1 ? '%'+_mntS(m1.T*100, 1) : '—')+' → %'+_mntS(D.T[bir.idx]*100, 1))
+      + _mntOku('Statik sehim <u>[mm]</u>', (m1 ? _mntS(_mntPrmSehim(m1), 2) : '—')+' → '+_mntS(D.d[bir.idx], 2)))
+    + '<div class="ve-fp-eylem ve-prm-eylem"><button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
+    + veIkon('download')+' Raporu indir</button></div>';
+  return _mntBolum(ad, '', h);
+}
+function _mntParamKriterHTML(ent, Z, c){
+  var R=_mntPrmKriterler(ent, Z, c), ad=_mntPrmAd(Z.S), nm=0, no=0;
+  var td=function(x){
+    return '<td'+(x.ok===false ? ' class="kr"' : '')+' title="'+_mntEsc(x.v)+'">'+x.v+(x.ok===null ? '' : veDurumIkon(x.ok ? 'ok' : 'err'))+'</td>';
+  };
+  var h=_mntFoyAc([{ b:'Kriter', gen:'34%', sinif:'sol' }, { b:'Sınır', gen:'22%' }, { b:'Mevcut', gen:'22%' }, { b:ad, gen:'22%' }],
+                  'Kriterler', 've-mnt-foy--sar ve-prm-kriter');
+  R.forEach(function(r){
+    if(r.m.ok===false) nm++;
+    if(r.o.ok===false) no++;
+    h+='<tr data-k="'+r.k+'"><td class="sol">'+_mntEsc(r.ad)+'</td><td class="sf">'+r.sinir+'</td>'+td(r.m)+td(r.o)+'</tr>';
+  });
+  return _mntBolum('Kriterler', 'Mevcut '+_mntS(nm, 0)+' ihlal · '+ad+' '+_mntS(no, 0)+' ihlal', h+_MNT_FOY_KAPA);
+}
+function _mntParamModHTML(node, ent, Z, c, o){
+  var V=_mntPrmModV(ent, Z, c);
+  if(!V.satir.length) return '';
+  var lj=[{ s:'ve-pd-bolge', sekil:'alan', ad:'Sınır dışı' }, { s:'ve-pd-tik k', sekil:'dik', ad:'Sınırı bozan mod' }];
+  if(V.kopru) lj.push({ s:'ve-pd-yakin', sekil:'cizgi', ad:'Aralık ≤ '+_mntS(V.k1a, 1)+' Hz' });
+  if(V.satir.some(function(r){ return r.kose; })) lj.push({ s:'ve-pd-kose', sekil:'cizgi', ad:'±%'+_mntS(c.s.tolerans*100, 0)+' rijitlik' });
+  return _mntBolum('Modlar', '', '<div class="ve-pd-kap" data-pd="mod" data-dugum="'+node.id+'">'+veMntParamCiz.modSerit(V, o).svg+'</div>'
+    + veMntParamCiz.gosterge(lj));
+}
+function _mntParamDagHTML(node, ent, Z, c, o, L){
+  var V=_mntPrmDagV(ent, Z, c, L);
+  if(!V.mevcut && !V.oneri) return '';
+  var lj=[];
+  if(V.mevcut) lj.push({ s:'ve-pd-mev', sekil:'karo', ad:'Mevcut' });
+  if(V.oneri) lj.push({ s:'ve-pd-uz', sekil:'halka', ad:V.oneri.ad });
+  if(V.yakin.length) lj.push({ s:'ve-pd-yk', ad:'Yakın seçenekler' });
+  if((V.e1!=null || V.e2!=null) && !(V.e1!=null && V.e2!=null && V.e2<=V.e1)) lj.push({ s:'ve-pd-kabul', sekil:'alan', ad:'Statik sehim '+(V.e1!=null && V.e2!=null
+    ? _mntPrmSin(V.e1)+'–'+_mntPrmSin(V.e2) : V.e1!=null ? '≥ '+_mntPrmSin(V.e1) : '≤ '+_mntPrmSin(V.e2))+' mm' });
+  return _mntBolum('Statik sehim ve iletilebilirlik', '', '<div class="ve-pd-kap" data-pd="dag" data-dugum="'+node.id+'">'
+    + veMntParamCiz.sehimT(V, o).svg+'</div>'+veMntParamCiz.gosterge(lj));
+}
+function _mntParamYakinHTML(ent, Z, L){
+  var S=Z.S, D=ent.D, M=ent.M, Hk=Z.Hk, bir=S.sira[0];
+  if(!bir || !L.length) return '';
+  var t0=D.tipler(bir.idx), h='<ol class="ve-prm-yakin">';
+  L.forEach(function(x, k){
+    var t=D.tipler(x), boz=[];
+    veMntKatalog.KISITLAR.forEach(function(Q, i){ if(Hk.m[x] & (1<<i)) boz.push(Q.ad); });
+    var tip=M.G.map(function(g, i){
+      var nm=t[i] ? ((M.lib[t[i]] || {}).name || t[i]) : ((g.tip && M.lib[g.tip]) ? M.lib[g.tip].name : '—');
+      return '<li'+(t[i]===t0[i] ? ' class="ayni"' : '')+' title="'+_mntEsc(g.ad+' · '+nm)+'">'+_mntEsc(nm)+'</li>';
+    }).join('');
+    h+='<li><span class="ve-prm-no">'+_mntS(k+2, 0)+'</span><div class="ve-prm-y"><ul>'+tip+'</ul><div class="ve-prm-y-o">'
+      + '<span>%'+_mntS(D.T[x]*100, 1)+' · '+_mntS(D.d[x], 2)+' mm</span>'
+      + (boz.length ? '<span class="ve-prm-y-boz">'+veDurumIkon('err')+_mntEsc(boz.slice(0, 2).join(' · ')+(boz.length>2 ? ' …' : ''))+'</span>'
+                    : '<span class="ve-prm-y-ok">'+veDurumIkon('ok')+'Uygun</span>')
+      + '</div></div></li>';
+  });
+  return _mntBolum('Yakın seçenekler', '', h+'</ol>');
+}
+function _mntParamElemeHTML(Z){
+  var S=Z.S, ad={}, onceki=S.N;
+  veMntKatalog.KISITLAR.forEach(function(Q){ ad[Q.k]=Q.ad; });
+  var h=_mntFoyAc([{ b:'Kısıt', gen:'74%', sinif:'sol' }, { b:'Kalan', gen:'26%' }], 'Eleme', 've-prm-eleme')
+    + '<tr><td class="sol">Taranan</td><td>'+_mntS(S.N, 0)+'</td></tr>';
+  S.huni.forEach(function(x){
+    if(x.kalan===onceki) return;
+    h+='<tr><td class="sol">'+(x.k==='cozulen' ? 'Çözülen' : _mntEsc(ad[x.k]))+'</td><td>'+_mntS(x.kalan, 0)+'</td></tr>';
+    onceki=x.kalan;
+  });
+  return _mntBolum('Eleme', '', h+_MNT_FOY_KAPA);
+}
+// Galerinin listesi: çizilebilen diyagramlar (kesit iki, tasarım uzayı üç taranan grup ister).
+function _mntPrmGaleri(ent){
+  var n=ent.D.taranan.length;
+  return _MNT_PRM_DIYAGRAM.filter(function(d){
+    return d[0]==='d1' ? n>=3 : (d[0]==='d5' || d[0]==='d4' || d[0]==='d3') ? n>=2 : true;
+  });
+}
+function _mntParamDiyagramHTML(node, ent){
+  return _mntBolum('Diyagramlar', '', '<div class="ve-prm-dg-l">'+_mntPrmGaleri(ent).map(function(d){
+    return '<button type="button" class="ve-prm-dg" data-pd="'+d[0]+'" onclick="veMntParamTamEkran(\''+node.id+'\',\''+d[0]+'\')">'
+      + veIkon('maximize')+'<span>'+d[1]+'</span></button>';
+  }).join('')+'</div>');
+}
+
 // Bölümün bağlamı: sınırlar, özet (bellekten), çizim ölçüsü, bellek anahtarı.
-// Seçim varsayılanıyla okunur (_mntPrmSecim): çizim onu tembel kuruyordu ve
-// çizimden ÖNCEKİ anahtar (null) sonrakini tutmuyordu — ilk kurulumdan sonra
-// bellek bir kez boşa düşüyordu.
 function _mntParamSonucBaglam(node, H, ent){
   var c=veMntKatalog.baglam(H.ctx), Z=_mntParamOzet(ent, c);
   var W=_MNT_PARAM_GEN[node.id] || 600, o={ W:W, fs:{ k:_mnt2DFs('micro'), o:_mnt2DFs('tiny') } };
-  var anahtar=Z.anahtar+'|'+W+'|'+o.fs.k+'|'+o.fs.o+'|'+JSON.stringify([_MNT_PARAM_KESIT[node.id] || null, _mntPrmSecim(node.id),
-    ['d2', 'd3', 'd1'].map(function(pd){ return _mntPrmKam(node.id, pd); })]);
-  return { c:c, Z:Z, o:o, anahtar:anahtar };
-}
-// DİYAGRAM KARTI bölümle AYNI anahtarla belleğe alınır: tarama bitince koşucu
-// kartları ayrı dilimlerde kurar (_mntParamSonucIsitici), pencere kurulumu
-// yalnız birleştirir — on kart tek parçada ~90 ms'ydi (ASFAT).
-function _mntParamSonucKart(node, ent, B, d){
-  var k=(ent.kart && ent.kart.anahtar===B.anahtar) ? ent.kart : (ent.kart={ anahtar:B.anahtar, v:{} });
-  if(!(d[0] in k.v)){
-    var r=_mntPrmCiz(d[0], ent, B.Z, B.c, B.o, node.id);
-    k.v[d[0]]=r ? _mntPrmKart(node.id, d[0], d[1], r) : '';
-  }
-  return k.v[d[0]];
+  return { c:c, Z:Z, o:o, anahtar:Z.anahtar+'|'+W+'|'+o.fs.k+'|'+o.fs.o };
 }
 function _mntParamSonucHTML(node, H, ent){
   var B=_mntParamSonucBaglam(node, H, ent);
   if(ent.html && ent.html.anahtar===B.anahtar) return ent.html.v;
-  var h=_mntParamUzlasiHTML(node, ent, B.Z.S, B.c);
-  _MNT_PRM_DIYAGRAM.forEach(function(d){ h+=_mntParamSonucKart(node, ent, B, d); });
+  var Z=B.Z, c=B.c, L=_mntPrmYakinL(ent, Z);
+  var h=_mntParamOneriHTML(node, ent, Z)+_mntParamKriterHTML(ent, Z, c)+_mntParamModHTML(node, ent, Z, c, B.o)
+    + _mntParamDagHTML(node, ent, Z, c, B.o, L)+_mntParamYakinHTML(ent, Z, L)+_mntParamElemeHTML(Z)+_mntParamDiyagramHTML(node, ent);
   var v='<div id="ve-mnt-prm-sonuc-'+node.id+'" data-tazele>'+h+'</div>';
   ent.html={ anahtar:B.anahtar, v:v };
   return v;
 }
-// Isıtıcının adımları (koşucu her birini ayrı dilimde çağırır): özet, sonra
-// her diyagram kartı. Sonuç bölümünün kendisi aynı belleği okur.
+// Isıtıcının adımları (koşucu her birini ayrı dilimde çağırır): özet,
+// önerinin ölçümü, bölüm. Pencere kurulumu aynı belleği okur.
 function _mntParamSonucIsitici(node, H, ent){
-  var B=null, L=[function(){ B=_mntParamSonucBaglam(node, H, ent); }];
-  _MNT_PRM_DIYAGRAM.forEach(function(d){ L.push(function(){ if(B) _mntParamSonucKart(node, ent, B, d); }); });
-  return L;
+  var B=null;
+  return [
+    function(){ B=_mntParamSonucBaglam(node, H, ent); },
+    function(){ if(B && B.Z.S.sira[0]) _mntPrmOlc(ent, B.Z.S.sira[0].idx); },
+    function(){ if(B) _mntParamSonucHTML(node, H, ent); }
+  ];
 }
 
-// TAM EKRAN — aynı diyagram ekranın genişliğinde; pencere boyu değişince yeniden kurulur.
+// GALERİ — on diyagram tam ekranda, solda listesi; seçilen diyagram yalnız
+// açılınca ve ekranın genişliğinde çizilir, pencere boyu değişince yeniden.
+// Kesit, büyüklük ve kamera seçimi galeride. Diyagramlar kısıtı KODUYLA
+// yazar (dar çizimde ad sığmaz): açık kısıtların kodu ve adı rayın altında.
+function _mntPrmKodlar(c){
+  return '<div class="ve-pd-ray-b">Kısıtlar</div><dl class="ve-pd-kod">'+veMntKatalog.KISITLAR.filter(function(Q){ return c.acik[Q.k]; }).map(function(Q){
+    return '<dt>'+_mntPrmNo(Q)+'</dt><dd>'+_mntEsc(Q.ad)+'</dd>';
+  }).join('')+'</dl>';
+}
 function veMntParamTamEkran(nodeId, pd){
   var ent=_MNT_PARAM_SONUC[nodeId], node=_mntDugum(nodeId);
   if(!ent || !node || typeof document==='undefined') return;
-  var ad=(_MNT_PRM_DIYAGRAM.filter(function(d){ return d[0]===pd; })[0] || [pd, pd])[1], gozcu=null;
-  _mntFsOverlay(ad, '<div class="ve-pd-fs" id="ve-mnt-prm-fs"></div>', function(){
-    var kap=document.getElementById('ve-mnt-prm-fs');
-    if(!kap) return;
+  var L=_mntPrmGaleri(ent);
+  if(!L.length) return;
+  if(!L.some(function(d){ return d[0]===pd; })) pd=L[0][0];
+  if(_MNT_PARAM_TAM && _MNT_PARAM_TAM.nodeId===nodeId && document.getElementById('ve-mnt-prm-fs')){ _MNT_PARAM_TAM.sec(pd); return; }
+  var ad=function(p){ return (L.filter(function(d){ return d[0]===p; })[0] || [p, p])[1]; }, gozcu=null;
+  var ray='<nav class="ve-pd-ray" aria-label="Diyagramlar">'+L.map(function(d){
+    return '<button type="button" data-pd="'+d[0]+'" aria-pressed="'+(d[0]===pd)+'" onclick="veMntParamTamEkran(\''+nodeId+'\',\''+d[0]+'\')">'+d[1]+'</button>';
+  }).join('')+_mntPrmKodlar(veMntKatalog.baglam(_mntParamHazirlik(node).ctx))+'</nav>';
+  _mntFsOverlay(ad(pd), '<div class="ve-pd-galeri">'+ray+'<div class="ve-pd-fs" id="ve-mnt-prm-fs"></div></div>', function(){
+    var kap=document.getElementById('ve-mnt-prm-fs'), ov=document.getElementById('ve-mnt-fs');
+    if(!kap || !ov) return;
     _mntParamHoverBagla(kap, nodeId);
     _mntPrm3bBagla(kap);
     var kur=function(){
-      var H=_mntParamHazirlik(node);
+      var p=_MNT_PARAM_TAM.pd, H=_mntParamHazirlik(node);
       if(_mntParamImza(H)!==ent.imza){ kap.innerHTML=_mntNot('Taramadan sonra girdi değişti', 'warn'); return; }
       var c=veMntKatalog.baglam(H.ctx), W=Math.floor(kap.clientWidth)-26;
-      var r=_mntPrmCiz(pd, ent, _mntParamOzet(ent, c), c, { W:W, H:Math.max(320, Math.floor(kap.clientHeight)-(pd==='d5' || pd==='d4' ? 170 : 110)), tam:true,
-                                                            fs:{ k:_mnt2DFs('tiny'), o:_mnt2DFs('body') } }, nodeId);
-      kap.innerHTML=(r && r.svg) ? (r.ust || '')+_mntPrmKap(nodeId, pd, r.svg)+(r.lj || '') : _mntNot(r ? r.not : '', '');
+      var arac=_MNT_PRM_3B[p] ? '<button type="button" class="ve-fp-dugme ve-pd-sifirla" onclick="veMntParam3bSifirla(\''+nodeId+'\',\''+p+'\')">'
+        + veIkon('rotate-ccw')+' Sıfırla</button>' : '';
+      var r=_mntPrmCiz(p, ent, _mntParamOzet(ent, c), c, { W:W, H:Math.max(320, Math.floor(kap.clientHeight)-(p==='d5' || p==='d4' || p==='d3' || p==='d1' ? 170 : 110)),
+                                                         tam:true, arac:arac, fs:{ k:_mnt2DFs('tiny'), o:_mnt2DFs('body') } }, nodeId);
+      kap.innerHTML=(r && r.svg) ? (r.ust || '')+_mntPrmKap(nodeId, p, r.svg)+(r.lj || '') : _mntNot(r ? r.not : 'Çözülen kombinasyon yok', '');
     };
-    _MNT_PARAM_TAM={ nodeId:nodeId, pd:pd, kur:kur };
+    var sec=function(p){
+      _MNT_PARAM_TAM.pd=p;
+      ov.querySelectorAll('.ve-pd-ray button[data-pd]').forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-pd')===p)); });
+      var bas=ov.querySelector('.ve-settings-header > span'), kutu=ov.querySelector('[role="dialog"]');
+      if(bas) bas.innerHTML=veIkon('maximize')+' '+ad(p);
+      if(kutu) kutu.setAttribute('aria-label', ad(p));
+      kap.scrollTop=0;
+      kur();
+    };
+    _MNT_PARAM_TAM={ nodeId:nodeId, pd:pd, kur:kur, sec:sec };
     kur();
     if(typeof ResizeObserver!=='undefined'){
       var raf=0, son=[kap.clientWidth, kap.clientHeight];
@@ -625,29 +866,7 @@ function veMntParamTamEkran(nodeId, pd){
   }, function(){ if(gozcu) gozcu.disconnect(); _MNT_PARAM_TAM=null; });
 }
 
-// Uzlaşı çözümü (uygun yoksa sıranın birincisi): grup başına tip, amaçlar, rapor.
-function _mntParamUzlasiHTML(node, ent, S, c){
-  var bir=S.sira[0], D=ent.D, M=ent.M;
-  var ad=S.uygunN ? 'Uzlaşı çözümü' : 'En az ihlalli';
-  if(!bir) return _mntBolum(ad, '', _mntNot('Çözülen kombinasyon yok', 'warn'));
-  var t=D.tipler(bir.idx);
-  var h=_mntFoyAc([{ b:'No', gen:'9%' }, { b:'Tip', gen:'45%', sinif:'sol' }, { b:_mntSym('k<sub>z</sub>')+' stat. <u>[N/mm]</u>', gen:'18%' },
-                   { b:'Mevcut tip', gen:'28%', sinif:'sol' }], ad, 've-mnt-foy--sar');
-  M.G.forEach(function(g, i){
-    var e=t[i] ? M.lib[t[i]] : null, m=(g.tip && M.lib[g.tip]) ? M.lib[g.tip].name : '—';
-    var tip=e ? e.name : 'Sabit';
-    h+='<tr><td>'+g.no+'</td><td class="sol" title="'+_mntEsc(tip)+'">'+_mntEsc(tip)+'</td><td>'+(e ? _mntS(_mntNum(e.sz, NaN), 0) : '—')+'</td>'
-     + '<td class="sol" title="'+_mntEsc(m)+'">'+_mntEsc(m)+'</td></tr>';
-  });
-  h+=_MNT_FOY_KAPA;
-  h+=_mntIzgara(4, _mntOku('T', '%'+_mntS(D.T[bir.idx]*100, 1)) + _mntOku(_mntSym('δ<sub>s</sub>')+' <u>[mm]</u>', _mntS(D.d[bir.idx], 2))
-    + _mntOku('Uygun', _mntS(S.uygunN, 0)+' / '+_mntS(S.N, 0)) + _mntOku('Süre <u>[s]</u>', _mntS(S.sure/1000, 1)));
-  h+='<div class="ve-fp-eylem"><button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
-   + veIkon('download')+' Raporu indir</button></div>';
-  return _mntBolum(ad, '', h);
-}
-
-// ── ARAÇ İPUCU — noktanın kombinasyonu: grup başına tip, amaçlar, hüküm ─────
+// ── ARAÇ İPUCU — noktanın kombinasyonu: grup başına tip, amaçlar, bozduğu kısıtların adı ─
 function _mntParamIpucu(nodeId, idx){
   var ent=_MNT_PARAM_SONUC[nodeId], node=_mntDugum(nodeId);
   if(!ent || !node || !(idx>=0 && idx<ent.D.N)) return '';
@@ -657,8 +876,8 @@ function _mntParamIpucu(nodeId, idx){
   if(D.d1[idx]!==1) return sat.concat(['Çözülemedi']).join('\n');
   sat.push('T %'+_mntS(D.T[idx]*100, 1)+' · δs '+_mntS(D.d[idx], 2)+' mm');
   var m=Z.Hk.m[idx], boz=[];
-  veMntKatalog.KISITLAR.forEach(function(Q, i){ if(m & (1<<i)) boz.push(_mntPrmNo(Q)); });
-  sat.push(boz.length ? boz.join(' · ') : (D.d2[idx]===1 ? 'Uygun' : 'İkinci aşama çözülemedi'));
+  veMntKatalog.KISITLAR.forEach(function(Q, i){ if(m & (1<<i)) boz.push(Q.ad); });
+  sat.push(boz.length ? boz.join('\n') : (D.d2[idx]===1 ? 'Uygun' : 'İkinci aşama çözülemedi'));
   return sat.join('\n');
 }
 function _mntParamHoverBagla(gov, nodeId){
@@ -721,7 +940,6 @@ function _mntPrm3bBagla(kok){
       if(!s) return;
       _MNT_PRM_SURUKLE=null;
       document.documentElement.classList.remove('ve-pd-surukle');
-      if(s.d && s.d.ent) s.d.ent.html=null;               // pencerenin belleği yeni açıyla kurulsun
     });
   }
   kok.addEventListener('pointerdown', function(e){
@@ -741,21 +959,17 @@ function _mntPrm3bBagla(kok){
     var key=_mntPrm3bAnahtar(kap), k=_MNT_PARAM_KAM[key] || _MNT_PRM_KAM0;
     _MNT_PARAM_KAM[key]=veMntParamCiz.ucKamera({ az:k.az+ok[0], el:k.el+ok[1] });
     e.preventDefault();
-    var d=_mntPrm3bDurum(kap);
-    _mntPrm3bCizKap(kap, d);
-    if(d) d.ent.html=null;
+    _mntPrm3bCizKap(kap, _mntPrm3bDurum(kap));
   });
 }
 function veMntParam3bSifirla(nodeId, pd){
   delete _MNT_PARAM_KAM[nodeId+'|'+pd];
-  var ent=_MNT_PARAM_SONUC[nodeId];
-  if(ent) ent.html=null;
-  if(typeof veMntPencereTazele==='function') veMntPencereTazele();
   if(_MNT_PARAM_TAM && _MNT_PARAM_TAM.nodeId===nodeId && _MNT_PARAM_TAM.pd===pd) _MNT_PARAM_TAM.kur();
 }
 
 // Pencere açılınca (cp-core.js): gövdenin genişliğini ölç, değiştiyse Sonuç
-// o genişlikte yerinde yeniden kurulur; araç ipucu gövdeye bir kez bağlanır.
+// o genişlikte yerinde yeniden kurulur; araç ipucu gövdeye bir kez bağlanır
+// (3B yalnız galeride).
 function veMntParamCizKur(){
   if(typeof document==='undefined') return false;
   var kok=document.querySelector('.ve-properties-content [data-mnt-pencere]');
@@ -764,7 +978,6 @@ function veMntParamCizKur(){
   var gov=document.getElementById('ve-fp-panes-'+node.id);
   if(!gov) return false;
   _mntParamHoverBagla(gov, node.id);
-  _mntPrm3bBagla(gov);
   var W=Math.floor(gov.clientWidth)-2;                   // çizimin kenarlığı 2 × 1
   if(!(W>200) || W===_MNT_PARAM_GEN[node.id]) return false;
   _MNT_PARAM_GEN[node.id]=W;
@@ -803,6 +1016,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntPrmV2: _mntPrmV2, _mntPrmV3: _mntPrmV3, _mntPrmV1: _mntPrmV1, _MNT_PARAM_KAM: _MNT_PARAM_KAM,
     _mntPrmV11: _mntPrmV11, _mntPrmV7: _mntPrmV7, _mntPrmV9: _mntPrmV9, _mntPrmV10: _mntPrmV10, _mntPrmV8: _mntPrmV8,
     veMntParamCizKur: veMntParamCizKur, veMntParamRapor: veMntParamRapor, veMntParamUnut: veMntParamUnut,
-    _mntParamSonucBaglam: _mntParamSonucBaglam, _mntParamSonucIsitici: _mntParamSonucIsitici
+    _mntParamSonucBaglam: _mntParamSonucBaglam, _mntParamSonucIsitici: _mntParamSonucIsitici,
+    _mntPrmKriterler: _mntPrmKriterler, _mntPrmModV: _mntPrmModV, _mntPrmDagV: _mntPrmDagV, _mntPrmYakinL: _mntPrmYakinL,
+    _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz
   };
 }

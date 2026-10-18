@@ -301,9 +301,10 @@ async function takozTuru(page, olc) {
     await page.waitForTimeout(800);
     await olc('#ve-canvas', 'topoloji · ' + k);
   }
-  // PARAMETRİK ANALİZ'İN SONUÇ'U (kullanıcı kararı 2026-10-18): ASFAT, üç grup ×
-  // altı aday (216 kombinasyon) — uzlaşı ve on diyagram sütunun genişliğinde;
-  // tam ekranda bir 2B ve bir 3B diyagram.
+  // PARAMETRİK ANALİZ'İN SONUÇ'U (kullanıcı kararları 2026-10-18): ASFAT, üç
+  // grup × altı aday (216 kombinasyon) — öneri, kriterler ve iki grafik sütunun
+  // genişliğinde; galeride (tam ekran, soldaki liste ve kısıt kodları) bir 2B,
+  // bir 3B ve bir kesit diyagramı.
   const pid = await page.evaluate(() => {
     const tut = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
     const n = createNode('mnt-parametric', 900, 120);
@@ -313,7 +314,7 @@ async function takozTuru(page, olc) {
   });
   await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], pid, { timeout: 60000 });
   await pencereler(page, olc, ['mnt-parametric']);
-  for (const pd of ['d11', 'd2']) {
+  for (const pd of ['d11', 'd2', 'd4']) {
     await page.evaluate(([i, d]) => veMntParamTamEkran(i, d), [pid, pd]);
     await page.waitForTimeout(400);
     await olc('#ve-mnt-fs', 'parametrik tam ekran · ' + pd);

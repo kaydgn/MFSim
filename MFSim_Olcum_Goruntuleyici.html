@@ -10431,6 +10431,103 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-pd-lj-o{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .ve-pd-lj-s{ flex:0 0 auto; overflow:visible; }
 .ve-pd-lj-s .ve-pd-bolge{ stroke:color-mix(in srgb, var(--text-muted) 40%, transparent); stroke-width:.8; }
+
+/* SADE SONUÇ (kullanıcı kararı 2026-10-18: "Tablo + iki sade grafik, diğer
+   diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin"). İki grafiğin
+   işaretleri: mod çentiği (sınırı bozan kırmızı), yakın seçenek halkası,
+   mevcut → öneri oku, statik sehim bandı. */
+.ve-pd-tik{ stroke:var(--text-primary); stroke-width:2.2; stroke-linecap:round; }
+.ve-pd-tik.k{ stroke:var(--ink-danger); }
+.ve-pd-kabul{ fill:color-mix(in srgb, var(--accent-success) 13%, transparent); }
+.ve-pd-lj-s .ve-pd-kabul{ stroke:color-mix(in srgb, var(--accent-success) 45%, transparent); stroke-width:.8; }
+.ve-pd-yk{ fill:var(--bg-input); stroke:var(--text-secondary); stroke-width:1.3; }
+.ve-pd-ok{ stroke:var(--text-secondary); stroke-width:1.4; stroke-dasharray:4 3; }
+.ve-pd-ok-uc{ fill:var(--text-secondary); }
+/* Öneri: grup başına satır — grubun adı solda; mevcut tip üstü çizili, öneri
+   kalın; aynı ya da sabit tip düz yazı ve etiketi. */
+.ve-prm-og{ display:flex; flex-direction:column; margin:0 0 10px; }
+.ve-prm-og-s{
+  display:grid; grid-template-columns:minmax(64px, 30%) minmax(0, 1fr); column-gap:10px;
+  padding:6px 0; border-bottom:1px solid var(--border-light); font-size:var(--fs-tiny);
+}
+.ve-prm-og-s:first-child{ padding-top:0; }
+.ve-prm-og-g{ min-width:0; color:var(--text-secondary); font-weight:600; }
+.ve-prm-og-t{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.ve-prm-og-t s{ color:var(--text-muted); text-decoration-color:color-mix(in srgb, var(--text-muted) 70%, transparent); }
+.ve-prm-og-t b{ display:flex; align-items:baseline; gap:4px; font-weight:600; color:var(--text-heading); }
+.ve-prm-og-t b .mf-ico{ flex:none; align-self:center; width:11px; height:11px; color:var(--text-secondary); }
+.ve-prm-og-t .ayni{ color:var(--text-primary); }
+.ve-prm-og-t em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); }
+.ve-fp-eylem.ve-prm-eylem{ justify-content:flex-end; margin-bottom:0; }
+.ve-prm-eylem .ve-fp-dugme{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; }
+.ve-prm-eylem .ve-fp-dugme .mf-ico{ width:13px; height:13px; }
+/* Kriterler: adın ve sınırın sütunu sarar; ihlal hücresi kırmızı zeminde. */
+.ve-properties-content .ve-mnt-foy.ve-prm-kriter td{ vertical-align:top; }
+.ve-properties-content .ve-mnt-foy.ve-prm-kriter td:first-child,
+.ve-properties-content .ve-mnt-foy.ve-prm-kriter td.sf{ white-space:normal; }
+.ve-properties-content .ve-mnt-foy.ve-prm-kriter td.kr{ background:var(--danger-tint-8); }
+.ve-mnt-foy.ve-prm-kriter .ve-durum{ width:11px; height:11px; margin-left:3px; vertical-align:-1px; }
+/* Yakın seçenekler: sıra numarası, grup başına tip (önerininkiyle aynısı
+   soluk), amaçlar ve hüküm. */
+.ve-prm-yakin{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.ve-prm-yakin > li{
+  display:grid; grid-template-columns:18px minmax(0, 1fr); gap:8px;
+  padding:7px 0; border-bottom:1px solid var(--border-light);
+}
+.ve-prm-yakin > li:first-child{ padding-top:0; }
+.ve-prm-yakin > li:last-child{ border-bottom:0; }
+.ve-prm-no{
+  width:18px; height:18px; display:grid; place-items:center; border:1px solid var(--border-hover);
+  border-radius:var(--radius-pill); font-size:var(--fs-micro); font-weight:700; color:var(--text-secondary);
+  font-variant-numeric:tabular-nums;
+}
+.ve-prm-y{ min-width:0; }
+.ve-prm-y ul{ list-style:none; margin:0; padding:0; font-size:var(--fs-tiny); }
+.ve-prm-y li{ font-weight:600; color:var(--text-heading); }
+.ve-prm-y li.ayni{ font-weight:400; color:var(--text-muted); }
+.ve-prm-y-o{
+  display:flex; flex-wrap:wrap; gap:2px 10px; margin-top:3px;
+  font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums;
+}
+.ve-prm-y-boz{ color:var(--ink-danger); }
+.ve-prm-y-ok{ color:var(--ink-success); }
+.ve-prm-y-o .ve-durum{ width:11px; height:11px; margin-right:3px; vertical-align:-1px; }
+/* Diyagramlar: galeriyi açan liste (iki sütun). */
+.ve-prm-dg-l{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
+.ve-prm-dg{
+  display:flex; align-items:center; gap:7px; min-width:0; padding:5px 8px; cursor:pointer;
+  font:inherit; font-size:var(--fs-tiny); text-align:left; color:var(--text-primary);
+  background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+}
+.ve-prm-dg .mf-ico{ flex:none; width:12px; height:12px; color:var(--text-muted); }
+.ve-prm-dg span{ min-width:0; }
+.ve-prm-dg:hover{ border-color:var(--accent-primary); }
+.ve-prm-dg:hover .mf-ico{ color:var(--ink-accent); }
+.ve-prm-dg:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+/* GALERİ — on diyagram tam ekranda: solda liste ve kısıtların kodu, sağda çizim. */
+.ve-pd-galeri{ flex:1; min-height:0; display:flex; }
+.ve-pd-galeri .ve-pd-fs{ min-width:0; }
+.ve-pd-ray{
+  flex:0 0 212px; display:flex; flex-direction:column; gap:2px; padding:10px 8px; overflow:auto;
+  background:var(--bg-primary); border-right:1px solid var(--border-color);
+}
+.ve-pd-ray button{
+  display:block; width:100%; padding:6px 10px; cursor:pointer; text-align:left;
+  font:inherit; font-size:var(--fs-body); color:var(--text-secondary);
+  background:none; border:1px solid transparent; border-radius:var(--radius-sm);
+}
+.ve-pd-ray button:hover{ color:var(--text-primary); background:var(--bg-tertiary); }
+.ve-pd-ray button[aria-pressed="true"]{ font-weight:600; color:var(--text-heading); background:var(--bg-input); border-color:var(--border-color); }
+.ve-pd-ray button:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-pd-ray-b{
+  margin:14px 10px 4px; font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide);
+  text-transform:uppercase; color:var(--text-muted);
+}
+.ve-pd-kod{ display:grid; grid-template-columns:auto minmax(0, 1fr); gap:3px 8px; margin:0 10px; font-size:var(--fs-tiny); }
+.ve-pd-kod dt{ font-weight:700; color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+.ve-pd-kod dd{ margin:0; color:var(--text-secondary); }
+.ve-pd-arac .ve-pd-sifirla{ flex:0 0 auto; margin-left:auto; display:inline-flex; align-items:center; gap:6px; }
+.ve-pd-arac .ve-pd-sifirla .mf-ico{ width:13px; height:13px; }
 /* GÜÇ GRUBUNDAKİ YERİ — bu bileşen (çizicinin o.secili → data-sec): AYDINLIK
    (kullanıcı 2026-10-18: "parça da aydınlık olmalı"). Gövde, takoz ve nokta
    kütle göstergenin "bu bileşen" tonlarında (vurgu + --isik), vurgu kenarlı:
