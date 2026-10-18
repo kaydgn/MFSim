@@ -575,10 +575,11 @@ olurdu.
     `componentDefs`ten, kurucuyu `cp-core.js`'in dağıtımından okur. **Tek sütuna geçişi PANELİN genişliği
     söyler** (`@container vepanel`, ≤ 640 px) — ekran sorgusu 380 px'lik
     müfettiş sütununda hiç tetiklenmiyordu ve düzenlenen sütuna 42 px
-    kalıyordu. Dar kapta sağ sütun gövdenin altına iner, pencerenin EYLEMİ (`.ve-fp-solve`:
-    Hesapla · Raporu Oluştur) kaydırma alanının dibine yapışır — `bottom`
+    kalıyordu. Dar kapta sağ sütun gövdenin altına iner, pencerenin EYLEM SATIRI
+    (kit `vePencereEylem`: durum notu + `.ve-fp-solve` — Hesapla · Raporu Oluştur;
+    2026-10-18'den beri kompakt düğme) kaydırma alanının dibine yapışır — `bottom`
     kabın dolgusu kadar EKSİ: yapışkan konum dolguya saygı gösterir, 0'da
-    düğmenin altında 10 px'lik şerit kalıp kayan yazı oradan görünüyordu
+    satırın altında 10 px'lik şerit kalıp kayan yazı oradan görünüyordu
     (`yerlesim.spec.js`). Kapı:
     `tests/e2e/mufettis-sigma.spec.js` (okunurluk: düzenlenen sütun · girdi ·
     etiket · başlık · yatay kaydırma; bütün kategoriler aynı anda çizili) + `cp-fead-report.test.js`.

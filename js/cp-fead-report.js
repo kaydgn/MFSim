@@ -147,11 +147,11 @@ function getFeadReportPropertiesHTML(node){
       + (R.pulleyNames || []).length + ' kasnak · ' + (R.duty || []).length
       + ' devir noktası.</div>'
     : '<div class="ve-fp-durum" data-d="warn"><b>Model çözülmedi.</b></div>';
-  var eylem = '<button type="button" class="ve-fp-solve"'
+  var eylem = vePencereEylem('<button type="button" class="ve-fp-solve"'
     + (solved ? ' onclick="veFeadGenerateReport(\'' + node.id + '\')"' : ' disabled') + '>'
     + '<span class="mf-ico mf-ico-download" aria-hidden="true"></span> '
-    + (solved ? kAd + ' Oluştur ve İndir' : 'Raporu Oluştur ve İndir') + '</button>'
-    + '<div id="ve-fead-report-status" class="ve-fp-durum-not"></div>';
+    + (solved ? kAd + ' Oluştur ve İndir' : 'Raporu Oluştur ve İndir') + '</button>',
+    '<div id="ve-fead-report-status" class="ve-fp-durum-not"></div>');
 
   var yan = veFeadToolSide(node, null, null, null, durum + eylem);
   return veFeadPanelShell(node, [{ k:'tur', ad:'Tür',   govde: _frKindPicker(node, kind) },

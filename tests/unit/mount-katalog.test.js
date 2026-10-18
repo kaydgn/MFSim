@@ -382,6 +382,43 @@ describe('DEPO — ölçü saklanır, hüküm sınırdan yeniden kurulur', () =>
     b.S.cephe.forEach((x) => expect(b.S.nokta.some((p) => p.pareto && p.T === b.D.T[x] && p.d === b.D.d[x])).toBe(true));
   });
 
+  // TEK GEÇİŞ (2026-10-18): tam taramada kombinasyonun ikinci aşaması
+  // birincisinin HEMEN ardından ölçülür — ölçücü aynı kombinasyonun hazırlığını
+  // paylaşır (cp-mount-param.js) ve ilerleme tek sayıdır. Depo iki geçişli
+  // hakemin (önce bütün olc1, sonra çözülenlerde olc2) aynısı.
+  test('TEK GEÇİŞ: olc2 aynı kombinasyonun olc1\'inin hemen ardından; ilerleme i / N tekdüze; depo iki geçişli hakemle birebir', () => {
+    const iz = [];
+    const it = K.tarayici(kur({ tam: true,
+      olc1: (t) => { iz.push('1|' + t.join(',')); return olc1(t); },
+      olc2: (t) => { iz.push('2|' + t.join(',')); return olc2(t); } }));
+    let once = 0, r;
+    do {
+      r = it.adim(7);
+      expect([r.asama, r.n]).toEqual([0, it.N]);
+      expect(r.i).toBeGreaterThanOrEqual(once);
+      once = r.i;
+    } while (!r.bitti);
+    expect(r.i).toBe(it.N);
+    iz.forEach((e, j) => { if (e[0] === '2') expect(iz[j - 1]).toBe('1|' + e.slice(2)); });
+    const D = it.depo();
+    let cozulen = 0;
+    for (let x = 0; x < D.N; x++) {
+      const t = D.tipler(x), o1 = olc1(t);
+      expect(D.d1[x]).toBe(o1 ? 1 : 0);
+      if (!o1) { expect(D.d2[x]).toBe(0); continue; }
+      cozulen++;
+      const o2 = olc2(t);
+      expect(D.d2[x]).toBe(o2 ? 1 : -1);
+      expect([D.T[x], D.fMin[x], D.fMax[x], D.d[x]]).toEqual([o1.T, Math.min(...o1.f), Math.max(...o1.f), Math.max(...o1.dz.map(Math.abs))]);
+      K.KISITLAR.forEach((Q) => {
+        const o = Q.asama === 1 ? o1 : o2;
+        expect([Q.k, D.X[Q.k][x]]).toEqual([Q.k, o ? K.olcu(Q.k, o) : NaN]);
+      });
+    }
+    expect(iz.filter((e) => e[0] === '2').length).toBe(cozulen);
+    expect(cozulen).toBeLessThan(D.N);                                          // çözülemeyen de var: sınama boş geçmiyor
+  });
+
   test('CANLI: sınır, açıklık ve ağırlık değişince depodan özet = o sınırlarla YENİ tarama', () => {
     const { D } = tara({ tam: true });
     const degisik = [

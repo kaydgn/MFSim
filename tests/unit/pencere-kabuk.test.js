@@ -42,6 +42,15 @@
  * bölümü kartın başlığı adlandırır, her kategori başlıklı bir bölüm taşır
  * (yer tutucu hariç).
  *
+ * EYLEM SATIRI (kullanıcı 2026-10-18: *"butonu çok geniş ve büyük. Onu da
+ * estetik hale getirelim"*): eylem sütunun tam eninde 40 px'lik bir şeritti
+ * (379 px'lik sütunda 359 × 40) ve durum notu ALTINDA, dar kapta kaydırma
+ * alanının sonunda kalıyordu — tarama sürerken ilerleme 830 px aşağıdaydı.
+ * Şimdi sağ sütunun SONU kitin satırı (`vePencereEylem`): solda durum ya da
+ * süren işin çubuğu (`vePencereIlerleme`), sağda kompakt düğme; dar kapta
+ * satır bütünüyle yapışır. Geometri gerçek tarayıcıda:
+ * tests/e2e/mount-param-sonuc.spec.js → *EYLEM SATIRI*.
+ *
  * Kapı bir LİSTE değil bir KURAL: tipler `componentDefs`ten, her tipin
  * penceresini kuran işlev `cp-core.js`'in panel dağıtımından OKUNUR (FEAD'in
  * aile kapısının, fead-pencere-ailesi.test.js, kalıbı). Yeni bir FEAD ya da
@@ -158,8 +167,11 @@ function aile(d, t, bagis = true) {
   } else if (!yan) b.push('sağ sütun yok');
   else if (!uygunlukVar(yan)) b.push('sağ sütunda Uygunluk yok');
   if (d.querySelector('.ve-mnt-not')) b.push('eski not kutusu (.ve-mnt-not)');
-  const eylem = d.querySelectorAll('.ve-fp-solve').length;
-  if (eylem > 1 || eylem !== d.querySelectorAll('.ve-fp-side > .ve-fp-solve').length) b.push('eylem sağ sütunda ve tek değil');
+  // EYLEM SATIRI: tek eylem, sağ sütunun SONUNDAKİ satırda (dar kapta o satır
+  // yapışır — gövdeye ya da sütunun ortasına düşen eylem uzun pencerede aranır).
+  const eylem = d.querySelectorAll('.ve-fp-solve').length, satir = d.querySelectorAll('.ve-fp-yurut');
+  if (eylem > 1 || eylem !== d.querySelectorAll('.ve-fp-side > .ve-fp-yurut > .ve-fp-solve').length) b.push('eylem sağ sütunun eylem satırında ve tek değil');
+  if (satir.length !== eylem || (eylem && yan.lastElementChild !== satir[0])) b.push('eylem satırı sağ sütunun sonunda değil');
   if (d.querySelectorAll('.ve-fp-durum').length !== d.querySelectorAll('.ve-fp-side .ve-fp-durum').length) b.push('cevap kutusu sağ sütunda değil');
   return b;
 }
@@ -226,6 +238,16 @@ describe('TEK ÜRETİCİ — iki modülün kabuğu ortak kitten', () => {
     expect([PK.VE_PENCERE_SEKME, PK.vePencereSekme, PK.vePencereSekmeOf, cp.VE_MNT_PENCERE_SEKME,
       cp.veMntPencereSekme, fead.veFeadPanelTab, fead.veFeadPanelTabState]).toEqual(Array(7).fill(undefined));
     expect(oku('js/cp-fead.js') + oku('js/cp-mount.js') + oku('js/pencere-kabuk.js')).not.toMatch(/ve-fp-tabs-|\.ve-fp-tab\b/);
+  });
+
+  // EYLEM SATIRI da kitin işaretlemesi: elle yazılan bir satır (ya da çubuk)
+  // durum yuvasını, yapışkanlığı ve ilerlemenin `data-is` sözleşmesini atlardı.
+  test('eylem satırı ve ilerleme çubuğu YALNIZ js/pencere-kabuk.js\'te basılıyor', () => {
+    const bas = fs.readdirSync(path.join(KOK, 'js')).filter((f) => /\.js$/.test(f)).filter((f) => {
+      const s = oku('js/' + f).split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+      return /class="ve-fp-yurut|class="ve-fp-ilerleme/.test(s);
+    });
+    expect(bas).toEqual(['pencere-kabuk.js']);
   });
 
   test('tarayıcıda kit iki modülden ÖNCE yükleniyor', () => {
@@ -442,6 +464,59 @@ describe('KİT — kabuğun davranışı', () => {
     expect(document.activeElement.id).toBe('f-a');                    // hedefsiz: ilk BOŞ girdi
     expect(PK.vePencereEksikGit('n2', 'c')).toBe(true);
     expect(document.activeElement).toBe(document.querySelector('.ve-fp-kat[data-k="c"]'));   // boş girdi yok: kap
+  });
+
+  test('eylem satırı: solda durum yuvası, sağda düğme; süren iş satırı işaretler ve çubuğu yuvanın başına koyar', () => {
+    const d = dom(PK.vePencereEylem('<button class="ve-fp-solve">Hesapla</button>', '<div class="ve-fp-durum-not">not</div>'));
+    const satir = d.querySelector('.ve-fp-yurut');
+    expect([...satir.children].map((e) => e.className)).toEqual(['ve-fp-yurut-d', 've-fp-solve']);
+    expect(satir.hasAttribute('data-is')).toBe(false);
+    expect(satir.querySelector('.ve-fp-yurut-d').textContent).toBe('not');
+    expect(dom(PK.vePencereEylem('<button class="ve-fp-solve">A</button>')).querySelector('.ve-fp-yurut-d').innerHTML).toBe('');
+    const is = dom(PK.vePencereEylem('<button class="ve-fp-solve">D</button>', '<div class="ve-fp-durum-not"></div>',
+      { ad: 'Tarama', metin: 'Kombinasyon 3 / 8', oran: 3 / 8 })).querySelector('.ve-fp-yurut');
+    expect(is.getAttribute('data-is')).toBe('1');
+    expect([...is.querySelector('.ve-fp-yurut-d').children].map((e) => e.className)).toEqual(['ve-fp-ilerleme', 've-fp-durum-not']);
+  });
+
+  test('ilerleme çubuğu: oran VERİ (aria · --ilerleme), yüzde aşağı yuvarlanır ve sınırlı; aynı öğe tazelenir, null kaldırır', () => {
+    global.veIkon = global.veIkon || (() => '');
+    document.body.innerHTML = PK.vePencereEylem('<button class="ve-fp-solve" id="b">Hesapla</button>', '<div class="ve-fp-durum-not">not</div>');
+    const b = document.getElementById('b');
+    const il = PK.vePencereIlerleme(b, { ad: 'Hesap', metin: '1 / 3 · Statik', oran: 1 / 3 });
+    const satir = document.querySelector('.ve-fp-yurut');
+    expect(satir.getAttribute('data-is')).toBe('1');
+    expect([il.getAttribute('role'), il.getAttribute('aria-label'), il.getAttribute('aria-valuenow')]).toEqual(['progressbar', 'Hesap', '33']);
+    expect(il.style.getPropertyValue('--ilerleme')).toBe('33%');
+    expect(il.querySelector('.ve-fp-ilerleme-y').textContent).toBe('1 / 3 · Statik%33');
+    // Kimlikle de bulur ve AYNI öğeyi tazeler (genişlik geçişi kesilmez).
+    expect(PK.vePencereIlerleme('b', { ad: 'Hesap', metin: '2 / 3 · Fren', oran: 0.999 })).toBe(il);
+    expect([il.getAttribute('aria-valuenow'), il.querySelector('b').textContent]).toEqual(['99', '%99']);    // %100 yalnız iş bitince
+    expect(il.querySelector('span').getAttribute('title')).toBe('2 / 3 · Fren');
+    PK.vePencereIlerleme(b, { metin: 'x', oran: 7 });
+    expect(il.getAttribute('aria-valuenow')).toBe('100');
+    PK.vePencereIlerleme(b, { metin: 'x', oran: -1 });
+    expect(il.getAttribute('aria-valuenow')).toBe('0');
+    expect(document.querySelectorAll('.ve-fp-ilerleme').length).toBe(1);
+    expect(PK.vePencereIlerleme(b, null)).toBeNull();
+    expect(document.querySelector('.ve-fp-ilerleme')).toBeNull();
+    expect(satir.hasAttribute('data-is')).toBe(false);
+    expect(document.querySelector('.ve-fp-durum-not').textContent).toBe('not');                  // not yerinde
+    expect(PK.vePencereIlerleme('yok', { oran: 0.5 })).toBeNull();                                // satırsız öğe
+    expect(PK.vePencereIlerlemeHTML({ ad: 'a"<', metin: '<b>', oran: 0.5 })).not.toMatch(/<b>&|"<"/);
+  });
+
+  // Görünüm CSS'te — sözleşme satırları (geometri: e2e → EYLEM SATIRI).
+  test('CSS: iş sürerken yalnız çubuk; dar kapta YAPIŞAN satırdır (düğme değil); düğme sütunun eninde değil', () => {
+    const css = oku('css/styles.css');
+    expect(css).toMatch(/\.ve-fp-yurut\[data-is\] \.ve-fp-yurut-d > :not\(\.ve-fp-ilerleme\)\{ display:none; \}/);
+    const dar = css.slice(css.indexOf('@container vepanel (max-width:640px){'));
+    expect(dar).toMatch(/\.ve-fp-side > \.ve-fp-yurut\{\s*position:sticky; bottom:-10px;/);
+    expect(css).not.toMatch(/\.ve-fp-side > \.ve-fp-solve\{[^}]*sticky/);
+    const dugme = css.match(/\n\.ve-fp-solve\{[^}]*\}/)[0];
+    expect(dugme).not.toMatch(/width:100%/);
+    expect(dugme).toMatch(/flex:none/);
+    expect(css).toMatch(/\.ve-fp-ilerleme-c::before\{[^}]*width:var\(--ilerleme, 0%\)/);
   });
 
   test('durum YERİNDE tazelenir: kabın data-d\'si ve bant; girdiler aynı nesne, söylenmeyen durum yerinde', () => {

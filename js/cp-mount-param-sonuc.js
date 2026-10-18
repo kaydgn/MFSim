@@ -18,7 +18,7 @@
 // Çizici DOM'suz: js/mount-param-ciz.js.
 // ════════════════════════════════════════════════════════════════════════════
 
-var _MNT_PARAM_SONUC = {};      // düğüm → { D, imza, M, O, mevcut, kose:{}, Ok:{}, bellek, html }
+var _MNT_PARAM_SONUC = {};      // düğüm → { D, imza, M, O, mevcut, kose:{}, Ok:{}, bellek, html, kart }
 var _MNT_PARAM_GEN = {};        // düğüm → çizimin genişliği (gövdenin son ölçüsü)
 
 // İMZA — taramanın ölçüsünü değiştiren her girdi: model (kütle, takoz,
@@ -35,11 +35,12 @@ function _mntParamSonucKaydet(nodeId, H, O, D){
   var nl=H.M.G.map(function(){ return null; }), o1=null, o2=null;
   try { o1=O.olc1(nl); o2=o1 ? O.olc2(nl) : null; } catch(e){}
   _MNT_PARAM_SONUC[nodeId]={ D:D, imza:_mntParamImza(H), M:H.M, O:O, mevcut:{ o1:o1, o2:o2 },
-                             kose:{}, Ok:{}, bellek:null, html:null };
+                             kose:{}, Ok:{}, bellek:null, html:null, kart:null };
 }
 // Proje değişince (topology.js → veResetSubtopoNav) bütün taramalar ve
 // görünüm seçimleri unutulur — kimlikler yeni projede yeniden kullanılır.
 function veMntParamUnut(){
+  if(typeof veMntParamDurdur==='function') veMntParamDurdur();      // süren tarama eski projenin
   [_MNT_PARAM_SONUC, _MNT_PARAM_GEN, _MNT_PARAM_KESIT, _MNT_PARAM_SECIM, _MNT_PARAM_KAM].forEach(function(o){
     Object.keys(o).forEach(function(k){ delete o[k]; });
   });
@@ -552,20 +553,43 @@ function _mntPrmKart(nodeId, pd, ad, r){
   return '<section class="ve-fp-card"><div class="ve-fp-sect"><b>'+ad+'</b>'+dg+'</div>'+(r.ust || '')
     + (r.svg ? _mntPrmKap(nodeId, pd, r.svg)+(r.lj || '') : _mntNot(r.not, ''))+'</section>';
 }
-function _mntParamSonucHTML(node, H, ent){
+// Bölümün bağlamı: sınırlar, özet (bellekten), çizim ölçüsü, bellek anahtarı.
+// Seçim varsayılanıyla okunur (_mntPrmSecim): çizim onu tembel kuruyordu ve
+// çizimden ÖNCEKİ anahtar (null) sonrakini tutmuyordu — ilk kurulumdan sonra
+// bellek bir kez boşa düşüyordu.
+function _mntParamSonucBaglam(node, H, ent){
   var c=veMntKatalog.baglam(H.ctx), Z=_mntParamOzet(ent, c);
   var W=_MNT_PARAM_GEN[node.id] || 600, o={ W:W, fs:{ k:_mnt2DFs('micro'), o:_mnt2DFs('tiny') } };
-  var anahtar=Z.anahtar+'|'+W+'|'+o.fs.k+'|'+o.fs.o+'|'+JSON.stringify([_MNT_PARAM_KESIT[node.id] || null, _MNT_PARAM_SECIM[node.id] || null,
+  var anahtar=Z.anahtar+'|'+W+'|'+o.fs.k+'|'+o.fs.o+'|'+JSON.stringify([_MNT_PARAM_KESIT[node.id] || null, _mntPrmSecim(node.id),
     ['d2', 'd3', 'd1'].map(function(pd){ return _mntPrmKam(node.id, pd); })]);
-  if(ent.html && ent.html.anahtar===anahtar) return ent.html.v;
-  var h=_mntParamUzlasiHTML(node, ent, Z.S, c);
-  _MNT_PRM_DIYAGRAM.forEach(function(d){
-    var r=_mntPrmCiz(d[0], ent, Z, c, o, node.id);
-    if(r) h+=_mntPrmKart(node.id, d[0], d[1], r);
-  });
+  return { c:c, Z:Z, o:o, anahtar:anahtar };
+}
+// DİYAGRAM KARTI bölümle AYNI anahtarla belleğe alınır: tarama bitince koşucu
+// kartları ayrı dilimlerde kurar (_mntParamSonucIsitici), pencere kurulumu
+// yalnız birleştirir — on kart tek parçada ~90 ms'ydi (ASFAT).
+function _mntParamSonucKart(node, ent, B, d){
+  var k=(ent.kart && ent.kart.anahtar===B.anahtar) ? ent.kart : (ent.kart={ anahtar:B.anahtar, v:{} });
+  if(!(d[0] in k.v)){
+    var r=_mntPrmCiz(d[0], ent, B.Z, B.c, B.o, node.id);
+    k.v[d[0]]=r ? _mntPrmKart(node.id, d[0], d[1], r) : '';
+  }
+  return k.v[d[0]];
+}
+function _mntParamSonucHTML(node, H, ent){
+  var B=_mntParamSonucBaglam(node, H, ent);
+  if(ent.html && ent.html.anahtar===B.anahtar) return ent.html.v;
+  var h=_mntParamUzlasiHTML(node, ent, B.Z.S, B.c);
+  _MNT_PRM_DIYAGRAM.forEach(function(d){ h+=_mntParamSonucKart(node, ent, B, d); });
   var v='<div id="ve-mnt-prm-sonuc-'+node.id+'" data-tazele>'+h+'</div>';
-  ent.html={ anahtar:anahtar, v:v };
+  ent.html={ anahtar:B.anahtar, v:v };
   return v;
+}
+// Isıtıcının adımları (koşucu her birini ayrı dilimde çağırır): özet, sonra
+// her diyagram kartı. Sonuç bölümünün kendisi aynı belleği okur.
+function _mntParamSonucIsitici(node, H, ent){
+  var B=null, L=[function(){ B=_mntParamSonucBaglam(node, H, ent); }];
+  _MNT_PRM_DIYAGRAM.forEach(function(d){ L.push(function(){ if(B) _mntParamSonucKart(node, ent, B, d); }); });
+  return L;
 }
 
 // TAM EKRAN — aynı diyagram ekranın genişliğinde; pencere boyu değişince yeniden kurulur.
@@ -778,6 +802,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntParamKesit: veMntParamKesit, veMntParamSec: veMntParamSec, veMntParam3bSifirla: veMntParam3bSifirla,
     _mntPrmV2: _mntPrmV2, _mntPrmV3: _mntPrmV3, _mntPrmV1: _mntPrmV1, _MNT_PARAM_KAM: _MNT_PARAM_KAM,
     _mntPrmV11: _mntPrmV11, _mntPrmV7: _mntPrmV7, _mntPrmV9: _mntPrmV9, _mntPrmV10: _mntPrmV10, _mntPrmV8: _mntPrmV8,
-    veMntParamCizKur: veMntParamCizKur, veMntParamRapor: veMntParamRapor, veMntParamUnut: veMntParamUnut
+    veMntParamCizKur: veMntParamCizKur, veMntParamRapor: veMntParamRapor, veMntParamUnut: veMntParamUnut,
+    _mntParamSonucBaglam: _mntParamSonucBaglam, _mntParamSonucIsitici: _mntParamSonucIsitici
   };
 }

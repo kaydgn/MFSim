@@ -17,9 +17,9 @@
 //
 // İSKELET — her pencere:
 //   kimlik satırı (cp-core.js) → eksik bandı → kategoriler (alt alta)
-//   sağ sütun: bağlam · uygunluk · pencerenin TEK eylemi
+//   sağ sütun: bağlam · uygunluk · EYLEM SATIRI (durum + pencerenin TEK eylemi)
 // Dar kapta (≤ 640 px, `@container vepanel`) sağ sütun gövdenin altına iner
-// ve eylem kaydırma alanının dibine yapışır (css).
+// ve eylem satırı kaydırma alanının dibine yapışır (css).
 //
 // KİT YALNIZ KABUĞU KURAR. Kategorilerin içeriğini, durumlarını, eksik
 // bandının bağlantısının nereye gittiğini ve sağ sütunu modül verir. DOM
@@ -122,6 +122,62 @@ function vePencereKabuk(node, kategoriler, yan, o){
     + '</div>' + (tek ? '' : '<div class="ve-fp-side">' + yan + '</div>') + '</div></div>';
 }
 
+// EYLEM SATIRI — sağ sütunun sonu: solda eylemin durumu (not ya da süren
+// işin ilerlemesi), sağda kompakt düğme. Kullanıcı (2026-10-18): *"butonu
+// çok geniş ve büyük. Onu da estetik hale getirelim"* — düğme sütunun tam
+// eninde, 40 px'lik bir şeritti; durum notu düğmenin ALTINDA, dar kapta
+// kaydırma alanının sonundaydı ve tarama sürerken görünmüyordu (ölçüldü:
+// 830 px aşağıda). Satır dar kapta bütünüyle yapışır (css), not ve ilerleme
+// düğmeyle birlikte görünür. `ilerleme` (ops.): süren iş — satır onu
+// kurulurken taşır (pencere iş sürerken yeniden kurulabilir).
+function vePencereEylem(dugme, durum, ilerleme){
+  return '<div class="ve-fp-yurut"' + (ilerleme ? ' data-is="1"' : '') + '><div class="ve-fp-yurut-d">'
+    + (ilerleme ? vePencereIlerlemeHTML(ilerleme) : '') + (durum || '') + '</div>' + (dugme || '') + '</div>';
+}
+
+// İLERLEME — süren işin adı (`ad`, çubuğun erişilebilir adı), verisi
+// (`metin`) ve oranı (`oran`, 0–1). Oran VERİ olarak yazılır (`--ilerleme`),
+// görünüm CSS'te (`.ve-fp-ilerleme`); yüzde aşağı yuvarlanır — %100 yalnız
+// iş bitince.
+function _vePencereYuzde(o){ return Math.max(0, Math.min(100, Math.floor(100 * (+(o && o.oran) || 0) + 1e-9))); }
+function vePencereIlerlemeHTML(o){
+  o = o || {};
+  var p = _vePencereYuzde(o), m = vePencereEsc(o.metin || '');
+  return '<div class="ve-fp-ilerleme" role="progressbar" aria-label="' + vePencereEsc(o.ad || '') + '"'
+    + ' aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + p + '" style="--ilerleme:' + p + '%">'
+    + '<div class="ve-fp-ilerleme-y"><span title="' + m + '">' + m + '</span><b>%' + p + '</b></div>'
+    + '<div class="ve-fp-ilerleme-c"></div></div>';
+}
+// Satırın ilerlemesini YERİNDE yazar: `o` verilirse çubuğu kurar ya da aynı
+// öğeyi tazeler (genişlik geçişi kesilmez), `null` kaldırır. `el`: satırın
+// içindeki bir öğe ya da kimliği (düğme). Satır iş sürerken `data-is` taşır;
+// durum notu o sürede gizli (css). Dönüş: çubuk öğesi | null.
+function vePencereIlerleme(el, o){
+  if(typeof document === 'undefined') return null;
+  if(typeof el === 'string') el = document.getElementById(el);
+  var satir = (el && el.closest) ? el.closest('.ve-fp-yurut') : null;
+  var d = satir && satir.querySelector('.ve-fp-yurut-d');
+  if(!d) return null;
+  var il = d.querySelector('.ve-fp-ilerleme');
+  if(!o){
+    if(il) il.remove();
+    satir.removeAttribute('data-is');
+    return null;
+  }
+  satir.setAttribute('data-is', '1');
+  if(!il){
+    d.insertAdjacentHTML('afterbegin', vePencereIlerlemeHTML(o));
+    return d.querySelector('.ve-fp-ilerleme');
+  }
+  var p = _vePencereYuzde(o), m = String(o.metin || '');
+  il.setAttribute('aria-valuenow', String(p));
+  il.style.setProperty('--ilerleme', p + '%');
+  var y = il.querySelector('.ve-fp-ilerleme-y span'), b = il.querySelector('.ve-fp-ilerleme-y b');
+  if(y && y.textContent !== m){ y.textContent = m; y.setAttribute('title', m); }
+  if(b) b.textContent = '%' + p;
+  return il;
+}
+
 // DURUM YERİNDE TAZELENİR, PENCERE KURULMAZ: sayı alanları pencereyi yeniden
 // kurmuyor (kursaydı Sekme ile geçilen alanın odağı düşerdi), ama kategori
 // durumu ve bant o zaman bir düzenleme geride kalırdı. Modül yeni durumları
@@ -155,6 +211,8 @@ if(typeof module !== 'undefined' && module.exports){
     vePencereEsc: vePencereEsc, vePencereKategori: vePencereKategori,
     vePencereKategoriGit: vePencereKategoriGit, vePencereEksikBandi: vePencereEksikBandi,
     vePencereEksikGit: vePencereEksikGit, vePencereGovdeHTML: vePencereGovdeHTML,
-    vePencereKabuk: vePencereKabuk, vePencereDurumTazele: vePencereDurumTazele
+    vePencereKabuk: vePencereKabuk, vePencereDurumTazele: vePencereDurumTazele,
+    vePencereEylem: vePencereEylem, vePencereIlerlemeHTML: vePencereIlerlemeHTML,
+    vePencereIlerleme: vePencereIlerleme
   };
 }

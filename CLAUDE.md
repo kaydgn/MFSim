@@ -101,8 +101,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (1 · 1a · 1b · 2) + kaynaklı ek kısıtlar (E1–E9), Pareto ve uzlaşı. Ayrıntılı rapor
   AYRI belgede, ana rapora eklenmez. Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar
   (tam tarama: ikinci aşama her kombinasyonda), sınır değişince yalnız hüküm yeniden
-  kurulur. Kapı: `mount-katalog.test.js` (→ *DEPO* · *CANLI* · *TAM*) +
-  `mount-param.test.js` (→ *TEK YOL* · *AYNI HÜKÜM* · *SONUÇ*).
+  kurulur; tam tarama TEK GEÇİŞ (kombinasyonun iki aşaması ardışık, ölçücü
+  hazırlığı paylaşır). Kapı: `mount-katalog.test.js` (→ *DEPO* · *CANLI* · *TAM* ·
+  *TEK GEÇİŞ*) + `mount-param.test.js` (→ *TEK YOL* · *AYNI HÜKÜM* · *SONUÇ* · *KOŞUCU*).
 - `js/mount-param-ciz.js` + `js/cp-mount-param-sonuc.js` — Parametrik Analiz'in
   **Sonuç** kategorisi (kullanıcı kararı 2026-10-18): uzlaşı çözümü ve on diyagram
   (2B · kesit · 3B), DOM'suz SVG çizici, sütunun gerçek genişliğinde, tam ekran
@@ -531,14 +532,25 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   yalnız tipin beyanı bağışlar: `componentDefs.yerTutucu`). Kategorinin durumu
   kabında (`data-d`); eksiğin sonucunu bant yazar, eksik kategori kenarında
   çizgi taşır. Sağ sütunda bağlam → Uygunluk (FEAD) → cevap (`.ve-fp-durum`) →
-  tek eylem; BOŞ sağ sütun çizilmez (`.ve-fp-split--tek`). Gövdenin ÜSTÜNDE
+  EYLEM SATIRI (`vePencereEylem`: solda durum notu ya da süren işin çubuğu,
+  sağda içeriği kadar düğme; dar kapta yapışan SATIRDIR — kullanıcı 2026-10-18:
+  *"butonu çok geniş ve büyük"*); BOŞ sağ sütun çizilmez (`.ve-fp-split--tek`). Gövdenin ÜSTÜNDE
   banttan başka bir şey yok; durum notu FEAD'in satırı (`.ve-fp-not`), açıklama
   kılavuzda — kılavuz da pencereyi bölüm başlığıyla anlatır, sekmeyle değil.
   Aynı bileşenin yeniden kurulması kaydırmayı korur, başka bileşen baştan açılır
   (`showNodeProperties`). Kabuk işaretlemesi yalnız kitte (ikinci yazım Takoz'da
-  17/17 pencereyi aileden düşürmüştü). Kapı: `pencere-kabuk.test.js` (→ *AİLE* ·
-  *KILAVUZ*) + `fead-sekme-durum.spec.js` (→ *KAYDIRMA*) + iki kılavuz testi (→
-  *PENCERELERDE SEKME YOK*); gerekçe `docs/decisions/ortak-yuzeyler.md`.
+  17/17 pencereyi aileden düşürmüştü) — eylem satırı ve çubuk da. Kapı:
+  `pencere-kabuk.test.js` (→ *AİLE* · *KİT* · *KILAVUZ*) + `fead-sekme-durum.spec.js`
+  (→ *KAYDIRMA*) + `mount-param-sonuc.spec.js` (→ *EYLEM SATIRI*) + iki kılavuz
+  testi (→ *PENCERELERDE SEKME YOK*); gerekçe `docs/decisions/ortak-yuzeyler.md`.
+- **UZUN İŞ ARAYÜZÜ KİLİTLEMEZ** (kullanıcı 2026-10-18: *"Tara … dediğimde
+  program kasıyor"*). Pencerenin eylemiyle başlayan yinelemeli iş ana iş
+  parçacığını dilim dilim bırakır ve ilerlemesini eylem satırında söyler
+  (`vePencereIlerleme`): parametrik tarama ≤ 10 ms'lik dilimler, dönüş
+  MessageChannel'la (iç içe `setTimeout(0)` 4 ms'ye kenetlenir); Hesapla yük
+  durumu başına. Taramanın 50 ms'lik parçası ana iş parçacığını kesintisiz
+  tutuyordu. Kapı: `mount-param.test.js` → *KOŞUCU* (dilim bütçesi) +
+  `mount-param-sonuc.spec.js` → *EYLEM SATIRI* (tarama boyunca uzun görev yok).
 - **TAKOZ PENCERESİ SONUÇ GÖSTERMEZ** (kullanıcı kararı 2026-10-16: *"kullanıcı
   sadece detaylı sonuç raporu ile yetinecek"*): hiçbir Takoz penceresi (sihirbaz
   dâhil) Uygunluk, sehim, yük, mod, kuvvet taşımaz — sonuç yalnız raporda. Çözümle
