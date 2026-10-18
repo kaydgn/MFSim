@@ -459,7 +459,9 @@ var veMntAkso = (function(){
     sira.forEach(function(it){
       if(it.g){
         var gq=Ph([it.g.x, it.g.y, it.g.z]);
-        koy(it.g.k, '<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(2.4*ik)+'"/>');
+        // Seçili nokta kütle büyür: aydınlık dolgusu (CSS) 2,4·ik'lik noktada
+        // vurgu kenarının içinde kayboluyordu.
+        koy(it.g.k, '<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R((it.g.k===_secili ? 3.6 : 2.4)*ik)+'"/>');
         if(it.g.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(6.5*ik)+'"/>';
         var ne=sec(it.g.k) ? 8*ik : 3*ik;
         engel.push({ l:gq[0]-ne, t:gq[1]-ne, r:gq[0]+ne, b:gq[1]+ne });
