@@ -985,7 +985,7 @@ describe('pencere kabukları jeton konuşur', () => {
 // giren bir eleman tracking'ini bağlamadan alır.
 //
 // BİLEŞİK SEÇİCİ DE SAYILIR (2026-09-23): açılış markası artık büyük
-// (`.mfsim-loading-logo.mfsim-amblem-ad`) ve boyunu bileşik bir seçiciden
+// (`.mfsim-loading-logo.mfsim-sinema-ad`) ve boyunu bileşik bir seçiciden
 // alıyor. Kapı eskiden yalnız TAM eşleşen dalı tarıyordu; o kurala yazılacak
 // bir iz bağlamayı ezer, uçuşun ölçeğini bozar (inişte marka geniş ya da dar
 // kalır) ve kapıdan geçerdi. Dalın SON bileşiği bağlı sınıfı taşıyorsa o

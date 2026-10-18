@@ -65,9 +65,10 @@
 // isaretlenmis tum modulleri sirayla yukler, splash overlay'inde ilerlemeyi
 // gosterir, bitince karsilama ekranina erir.
 //
-// NE GOSTERILIR (AMBLEM, 2026-09-23): liste de yuzde de yok. Ilerlemeyi
-// 12 bolmeli CETVEL gosteriyor, altinda yalniz O ANKI OBEK Roma rakamiyla
-// (I CEKIRDEK, II ARAC PERFORMANS...) ve asamanin durum satiri. Modulun tam
+// NE GOSTERILIR (SINEMA, 2026-10-18): liste de yuzde de yok. Ilerlemeyi
+// alt bandin ust kenarindaki 12 bolmeli CETVEL gosteriyor; bandin saginda
+// yalniz O ANKI OBEK Roma rakamiyla (I CEKIRDEK, II ARAC PERFORMANS...) ve
+// asamanin durum satiri. Modulun tam
 // adi (data-mfsim-label) ve ipucu satiri 2026-10-16'da kalkti (ARAYUZ
 // ANLATMAZ — 106 dosya adi kademe kademe akiyordu). Eskiden
 // obeklerin hepsi sayaclariyla alt alta duruyordu; hicbiri okunmuyor ama
@@ -102,8 +103,8 @@
   // uygulamayi baslatilamaz hale getiremez. Tum kutuphaneler artik yerel
   // (vendor/) oldugu icin normal kosulda bu sinir hic devreye girmez.
   var MODULE_TIMEOUT_MS = 15000;
-  // Kapanis: zemin 0.34 s'de eriyor (css/styles.css) — DOM'dan cekilmesi o
-  // sureyi beklemek zorunda, yoksa gecis yarida kesilir.
+  // Kapanis: bantlar 0.34 s'de ekrandan cikiyor (css/styles.css) — DOM'dan
+  // cekilmesi o sureyi beklemek zorunda, yoksa gecis yarida kesilir.
   var FADE_OUT_MS = 340;
 
   var started = false;
