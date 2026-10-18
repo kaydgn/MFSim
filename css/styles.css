@@ -10175,16 +10175,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    genişliğinde 1:1 kurulur (yazı ekrandaki boyunda). Yazı zeminin renginde
    hâle taşır: altından geçen çizgi yazının çevresinde kesilir. */
 .ve-pd-kap{ min-width:0; }
-.ve-fp-sect .ve-pd-tam{
-  margin-left:auto; align-self:center; width:22px; height:20px; padding:0; flex:none;
-  display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
-  background:var(--bg-tertiary); color:var(--text-primary);
-  border:1px solid var(--border-color); border-radius:var(--radius-sm);
-}
-.ve-fp-sect .ve-pd-tam + .ve-pd-tam{ margin-left:4px; }
-.ve-fp-sect .ve-pd-tam .mf-ico{ width:13px; height:13px; }
-.ve-fp-sect .ve-pd-tam:hover{ background:var(--bg-input); border-color:var(--accent-primary); }
-.ve-fp-sect .ve-pd-tam:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-pd-fs{ flex:1; min-height:0; overflow:auto; padding:12px; }
 .ve-pd{ display:block; width:100%; height:auto; font-family:inherit; border:1px solid var(--border-color); border-radius:var(--radius-sm); }
 .ve-pd-zem{ fill:var(--bg-input); }
