@@ -30,6 +30,12 @@ describe('GRUP — sağ/sol çift, konum grubu', () => {
     expect(G.every((g) => g.cift)).toBe(true);
   });
 
+  test('grubun adı tek boşlukla (ASFAT: "Ön Sol   · 57RS313774" — ekran birleştirir, ipucu birleştirmez)', () => {
+    const G = K.gruplar([tk('a', 'Ön Sol   · 57RS313774', -900, -50, 370), tk('b', 'Ön Sağ   · 57RS313774', -900, 50, 370),
+                         tk('c', '  Orta  takoz ', 0, 0, 300)]);
+    expect(G.map((g) => g.ad)).toEqual(['Ön Sağ/Sol · 57RS313774', 'Orta takoz']);
+  });
+
   test('orta hattaki "Ön Takoz", çiftin kalan adıyla AYNI olsa da tek başına grup (TULGA)', () => {
     const G = K.gruplar([
       tk('o', 'Ön Takoz', -196, 0.047, 180), tk('r', 'Sağ Ön Takoz', 440, 356, 500),
@@ -149,7 +155,7 @@ describe('KÖŞE ve EK KISIT — tolerans, alt sınırlar, darbe', () => {
     expect([ok('sehim', anma).ok, ok('sehim', x).ok]).toEqual([true, false]);        // yumuşak köşe 5,1 > 5
     expect(ok('sehimAlt', x).deger).toBe(3.5);                                       // alt sınır sert köşede
     expect(ok('altMod', x).deger).toBe(5.1);
-    expect(ok('k1b', x).deger).toBe(2);                                              // anma 8,5 ve sert 9,1 bantta
+    expect(ok('k1b', x).deger).toBeCloseTo(0.501 + 0.901, 12);                       // anma 8,5 ve sert 9,1 bantta (derinlik)
   });
 
   test('statik sehim bandı: alt sınır en büyük sehime, iki uç dâhil', () => {
@@ -294,6 +300,147 @@ describe('TARAYICI', () => {
 
   test('f_ateş yoksa tarayıcı kurulmaz (Kriter 1 ve 2 tanımsız)', () => {
     expect(() => K.tarayici(kur({ ctx: {} }))).toThrow();
+  });
+});
+
+describe('DEPO — ölçü saklanır, hüküm sınırdan yeniden kurulur', () => {
+  // Zengin sentetik model: bütün kısıtların ölçüsü var (KED, kapasite, sürünmüş
+  // sehim, darbe) ve her kısıt bazı kombinasyonlarda ihlal ediyor.
+  const G = K.gruplar([tk('a', 'Sağ Ön', 0, 300, 0), tk('b', 'Sol Ön', 0, -300, 0),
+                       tk('c', 'Sağ Arka', 800, 300, 0), tk('d', 'Sol Arka', 800, -300, 0), tk('e', 'Orta', 400, 0, 0)]);
+  const A = [1, 2, 3, 4, 5, 6].map((k) => ({ key: 'k' + k, name: 'Tip ' + k }));
+  const kN = (t) => (t ? Number(t.slice(1)) : 3);
+  // Tiplerden belirlenimci, ölçü başına bağımsız sayı (0–1; murmur3 karıştırıcısı).
+  const u = (t, s) => {
+    let h = (0x9e3779b9 ^ Math.imul(s + 1, 0x85ebca6b)) >>> 0;
+    t.forEach((x, i) => { h = Math.imul(h ^ (kN(x) + 16 * i), 0xcc9e2d51); h = (h << 15) | (h >>> 17); h = Math.imul(h, 0x1b873593); });
+    h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+  const olc1 = (t) => {
+    if (u(t, 0) < 0.03) return null;                                             // çözülemeyen
+    return { f: [2.6 + 2 * u(t, 1), 4 + 2 * u(t, 2), 5.5 + 2 * u(t, 3), 7 + 0.8 * u(t, 4), 9.6 + 2 * u(t, 5), 13 + 8 * u(t, 6)],
+             T: 0.15 + 0.4 * u(t, 7), dz: [-(1.6 + 6 * u(t, 8)), -1.2, -1], pay: [100, 100, 100],
+             kap: [100 / (0.6 + 0.6 * u(t, 9)), null, 140], ked: { bounce: 0.6 + 0.4 * u(t, 10), roll: 0.7 + 0.3 * u(t, 11) } };
+  };
+  const olc2 = (t) => {
+    if (u(t, 17) < 0.04) return null;                                            // ikinci aşamada çözülemeyen
+    return { dIsl: [5 + 9 * u(t, 12), 4, 3], dSur: [6 + 10 * u(t, 13), 5, 4], cekmeMm: u(t, 14) < 0.1 ? 0.3 : 0,
+             darbeOran: u(t, 15) < 0.15 ? null : 0.4 + u(t, 16) };
+  };
+  const ctx0 = { fAtes: 40, s: { sehimAlt: 2.5, sehimUst: 7, altMod: 2.8, kapasite: 1.1, isletmeUst: 12, durdurucuUst: 14, darbe: 1.2 } };
+  const kur = (ek) => Object.assign({ G, adaylar: A, sabit: {}, ctx: ctx0, olc1, olc2, enIyi: 12 }, ek || {});
+  const tara = (ek) => { const it = K.tarayici(kur(ek)); it.adim(Infinity); return { S: it.sonuc(), D: it.depo() }; };
+  const sade = (S) => JSON.stringify(Object.assign({}, S, { sure: 0, olc: null, ctx: null }));
+
+  test('kombinasyon numarası ↔ aday sıraları: ilk taranan grup en anlamlı basamak, gidiş-dönüş birebir', () => {
+    const { D } = tara({ sabit: { [G[1].anahtar]: true } });
+    expect(D.N).toBe(36);
+    for (let x = 0; x < D.N; x++) expect(D.indeks(D.kod(x))).toBe(x);
+    expect(D.kod(7)).toEqual([1, 1]);
+    expect(D.tipler(7)).toEqual(['k2', null, 'k2']);
+  });
+
+  test('depodaki hüküm kombinasyon başına degerlendir\'in AYNISI (bit, ihlal toplamı; iki aşama)', () => {
+    const { D } = tara({ tam: true });
+    const c = K.baglam(Object.assign({}, ctx0, { acik: { ayrisma: true } }));
+    const H = K.hukumler(D, c);
+    let ihlal = 0;
+    for (let x = 0; x < D.N; x++) {
+      const t = D.tipler(x), o1 = olc1(t);
+      if (!o1) { expect(D.d1[x]).toBe(0); continue; }
+      const a = K.degerlendir(o1, c, 1), o2 = olc2(t);
+      const b = o2 ? K.degerlendir(o2, c, 2) : null;
+      let bit = 0;
+      K.KISITLAR.forEach((Q, i) => { const r = (Q.asama === 1 ? a : b || { sonuc: {} }).sonuc[Q.k]; if (r && !r.ok) bit |= 1 << i; });
+      expect(H.m[x]).toBe(bit);
+      expect(H.v1[x]).toBe(a.v);
+      if (b) expect(H.v2[x]).toBe(b.v); else expect(D.d2[x]).toBe(-1);
+      if (bit) ihlal++;
+    }
+    expect(ihlal).toBeGreaterThan(D.N / 3);                                       // sınama boş geçmiyor
+    K.KISITLAR.forEach((Q, i) => expect(Array.from(H.m).some((m) => m & (1 << i))).toBe(true));
+  });
+
+  test('TAM: ikinci aşama her kombinasyonda koşar; özet aynı, ikinci aşamanın bağımsız ihlali bütün ölçülenlerde', () => {
+    let n2 = 0;
+    const say = (t) => { n2++; return olc2(t); };
+    const a = tara({ olc2: say });
+    const yalniz = n2; n2 = 0;
+    const b = tara({ olc2: say, tam: true });
+    expect(n2).toBe(b.S.N - b.S.hata);                                            // çözülen her kombinasyon bir kez
+    expect(yalniz).toBe(a.S.ikinciN);
+    const redsiz = (S) => sade(Object.assign({}, S, { red: null, tam: null }));
+    expect(redsiz(b.S)).toBe(redsiz(a.S));
+    K.KISITLAR.filter((Q) => a.S.red[Q.k] !== undefined).forEach((Q) => {
+      if (Q.asama === 1) expect(b.S.red[Q.k]).toBe(a.S.red[Q.k]);
+      else expect(b.S.red[Q.k]).toBeGreaterThanOrEqual(a.S.red[Q.k]);
+    });
+    expect(K.KISITLAR.some((Q) => Q.asama === 2 && b.S.red[Q.k] > a.S.red[Q.k])).toBe(true);
+    expect(a.S.uygunN).toBeGreaterThan(5);
+    expect(b.S.cephe.length).toBe(b.S.paretoN);
+    b.S.cephe.forEach((x) => expect(b.S.nokta.some((p) => p.pareto && p.T === b.D.T[x] && p.d === b.D.d[x])).toBe(true));
+  });
+
+  test('CANLI: sınır, açıklık ve ağırlık değişince depodan özet = o sınırlarla YENİ tarama', () => {
+    const { D } = tara({ tam: true });
+    const degisik = [
+      { s: { sehimUst: 5.2 } }, { s: { sehimAlt: 3.4, altMod: 3.3 } }, { s: { durdurucuUst: 9 } },
+      { s: { isletmeUst: 8.5, darbe: 2.5 } }, { s: { agirlik: 0.15 } },
+      { acik: { ayrisma: true }, s: { ayrisma: 0.85 } }, { acik: { cekme: false, kapasite: false } },
+      { s: { sehimUst: 1 } }                                                       // uygun yok → en az ihlalli
+    ];
+    degisik.forEach((d) => {
+      const ctx = { fAtes: 40, s: Object.assign({}, ctx0.s, d.s || {}), acik: d.acik || {} };
+      expect(sade(K.ozet(D, K.baglam(ctx)))).toBe(sade(tara({ ctx, tam: true }).S));
+    });
+  });
+
+  test('tam olmayan depo yeni sınırla özetlenmez — ölçülmemiş ikinci aşama sessizce geçilmez', () => {
+    const { D } = tara();
+    expect(() => K.ozet(D, K.baglam({ fAtes: 40, s: Object.assign({}, ctx0.s, { sehimUst: 50 }) }))).toThrow();
+  });
+
+  test('BAĞLAYICI: bağımsız ihlal ve tek engel kaba kuvvetle; uygun sayısı özetinkiyle aynı', () => {
+    const { D, S } = tara({ tam: true });
+    const c = K.baglam(ctx0), B = K.baglayici(D, c);
+    const hak = {};
+    let n = 0, uyg = 0;
+    for (let x = 0; x < D.N; x++) {
+      const t = D.tipler(x), o1 = olc1(t), o2 = o1 && olc2(t);
+      if (!o1) continue;
+      // bağımsız ihlal: aşamanın ölçüldüğü her kombinasyonda
+      const r = K.hepsi(o1, o2, ctx0), boz = Object.keys(r.sonuc).filter((k) => !r.sonuc[k].ok);
+      boz.forEach((k) => { hak[k] = hak[k] || { red: 0, tek: 0 }; hak[k].red++; });
+      if (!o2) continue;
+      n++;
+      if (!boz.length) uyg++;
+      if (boz.length === 1) hak[boz[0]].tek++;
+    }
+    expect(B.n).toBe(n);
+    expect(B.uygun).toBe(uyg);
+    expect(B.uygun).toBe(S.uygunN);
+    B.kisit.forEach((q) => expect([q.k, q.red, q.tek]).toEqual([q.k, (hak[q.k] || {}).red || 0, (hak[q.k] || {}).tek || 0]));
+    B.kisit.forEach((q) => expect(q.red).toBe(S.red[q.k]));                       // raporun eleme tablosuyla aynı
+    expect(B.kisit.map((q) => q.k)).toEqual(K.KISITLAR.filter((Q) => c.acik[Q.k]).map((Q) => Q.k));
+    expect(B.kisit.some((q) => q.tek > 0)).toBe(true);
+  });
+
+  test('DUYARLILIK: bugünkü sınırda uygun sayısı; başka sınırda o sınırla yeni taramanın uygun sayısı', () => {
+    const { D, S } = tara({ tam: true });
+    const c = K.baglam(ctx0);
+    const yeniden = (key, L) => tara({ ctx: { fAtes: 40, s: Object.assign({}, ctx0.s, { [key]: L }) } }).S.uygunN;
+    [['sehimAlt', [1.5, 2.8, 3.5]], ['sehim', [4.5, 6, 9.4]], ['altMod', [2, 3.1, 4]], ['kapasite', [0.5, 0.9, 2]],
+     ['isletme', [7, 9, 20]], ['durdurucu', [9.5, 11.4, 40]], ['darbe', [0.8, 1.6, 3.5]]].forEach(([k, Ls]) => {
+      const d = K.duyarlilik(D, c, k);
+      expect(d.sayi(d.sinir)).toBe(S.uygunN);
+      // sınır tam bir ölçünün üstünde: eşitlik sağlıyor (≤ · ≥ iki uç dâhil)
+      const uc = [d.deger[0], d.deger[d.deger.length >> 1], d.deger[d.deger.length - 1]];
+      const anahtar = { sehim: 'sehimUst', isletme: 'isletmeUst', durdurucu: 'durdurucuUst' }[k] || k;
+      Ls.concat(uc).forEach((L) => expect([k, L, d.sayi(L)]).toEqual([k, L, yeniden(anahtar, L)]));
+    });
+    expect(K.duyarlilik(D, c, 'cekme')).toBeNull();                                // sınırı yok
+    expect(K.duyarlilik(D, c, 'k1')).toBeNull();                                   // kesin kriter
   });
 });
 

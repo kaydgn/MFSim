@@ -400,6 +400,9 @@ function veResetSubtopoNav() {
   // temizlenmezse yeni projede — FEAD modülü hiç olmasa bile — önceki
   // projenin gerilme/ömür tabloları çözücü panelinde durur.
   if(typeof _feadForgetResults === 'function') _feadForgetResults();
+  // Parametrik Analiz'in taramaları da oturumluk (düğüm kimliğiyle): yeni
+  // projede aynı kimlikli düğüm öncekinin taramasını "eskimiş" diye taşırdı.
+  if(typeof veMntParamUnut === 'function') veMntParamUnut();
   // Breadcrumb çipleri stack boşalınca kendini kaldırır; sidebar kapsamı köke döner.
   if(typeof veAracUpdateBreadcrumb === 'function') veAracUpdateBreadcrumb();
   if(typeof veMntUpdateBreadcrumb === 'function') veMntUpdateBreadcrumb();

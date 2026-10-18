@@ -446,6 +446,13 @@ function showNodeProperties(node, opt) {
     }, 120);
   }
 
+  // Takoz Parametrik Analiz: Sonuç diyagramları gövdenin gerçek genişliğinde
+  if(node.type === 'mnt-parametric') {
+    setTimeout(function() {
+      if(typeof veMntParamCizKur === 'function') veMntParamCizKur();
+    }, 120);
+  }
+
   // Takoz Örnek: mevcut model uyarılarını göster (yükleme öncesi durum)
   if(node.type === 'mnt-example') {
     setTimeout(function() {

@@ -5090,6 +5090,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntAksoHTML: _mntAksoHTML,
     _mntAksoKur: _mntAksoKur, _mntAkso3bHizli: _mntAkso3bHizli, _mntAksoOdak: _mntAksoOdak, _mntFoyOdak: _mntFoyOdak,
     _mntAksoTamH: _mntAksoTamH, veMntAksoTazele: veMntAksoTazele, veMntAkso3BTamEkran: veMntAkso3BTamEkran,
+    _mnt2DFs: _mnt2DFs,
     _mntAksoCizim: _mntAksoCizim, _mntAksoGorus: _mntAksoGorus,
     _mntAksoIsaret: _mntAksoIsaret,
     veMnt2DViewRefresh: veMnt2DViewRefresh,
