@@ -1939,10 +1939,11 @@ function _veWelcomeSplashKopya(el, r) {
 // ve logoyu translateY(14px)'ten başlatıyor; sonra ölçülen hedef, logonun
 // DURACAĞI yer değil o anki yeri olurdu.
 //
-// ÖLÇEK TAM ORAN: açılış markası --fs-amblem, karşılama logosu --fs-h2 ile
+// ÖLÇEK TAM ORAN: açılış markası --fs-sinema, karşılama logosu --fs-h2 ile
 // çiziliyor; aile, ağırlık ve em-iz AYNI (başlık bağlaması). Yani küçültülmüş
 // açılış markası logonun kendisi — oran boylardan okunur, kutulardan değil
-// (kutu yuvarlanmış px taşır). Dikey hiza yazı kutularının ORTASINDAN:
+// (kutu yuvarlanmış px taşır). RENK de hedefe geçer: siyah bantta marka açık,
+// açık temanın kartında logo koyu — geçmeseydi klon inişte renk değiştirirdi. Dikey hiza yazı kutularının ORTASINDAN:
 // satır yüksekliği iki yerde farklı ama boşluk simetrik, orta nokta ile taban
 // çizgisi arasındaki mesafe boyla orantılı — ortalar örtüşünce taban
 // çizgileri de örtüşür.
@@ -1965,8 +1966,7 @@ function _veWelcomeSplashPlan(splashEl) {
       el: ad, r: S, olcek: o,
       dx: T.left - S.left - (Y.left - S.left) * o,
       dy: (T.top + T.height / 2) - S.top - ((Y.top - S.top) + Y.height / 2) * o,
-      // Hale yalnız fotoğrafın üstünde anlamlı; kartın camına iniyor.
-      hale: getComputedStyle(ad).textShadow
+      renk: getComputedStyle(ad).color, hRenk: getComputedStyle(hedef).color
     }]
   };
   // Çark AYRI uçar: açılışta adın ÜSTÜNDE, karşılamada SOLUNDA duruyor.
@@ -1975,7 +1975,8 @@ function _veWelcomeSplashPlan(splashEl) {
   var C = cark ? cark.getBoundingClientRect() : null, H = hCark ? hCark.getBoundingClientRect() : null;
   if(C && H && C.width && H.width) {
     plan.gizle.push(cark);
-    plan.ucanlar.push({ el: cark, r: C, olcek: H.width / C.width, dx: H.left - C.left, dy: H.top - C.top });
+    plan.ucanlar.push({ el: cark, r: C, olcek: H.width / C.width, dx: H.left - C.left, dy: H.top - C.top,
+      renk: getComputedStyle(cark).color, hRenk: getComputedStyle(hCark).color });
   }
   return plan;
 }
@@ -1989,13 +1990,13 @@ function _veWelcomeSplashUc(plan) {
     _veWelcomeSplashKlon.push(klon);
     var bas = { transform: 'translate(0px, 0px) scale(1)' };
     var son = { transform: 'translate(' + u.dx + 'px, ' + u.dy + 'px) scale(' + u.olcek + ')' };
-    if(u.hale && u.hale !== 'none') { bas.textShadow = u.hale; son.textShadow = 'none'; }
+    if(u.renk && u.hRenk && u.renk !== u.hRenk) { bas.color = u.renk; son.color = u.hRenk; }
     try {
       sonAnim = klon.animate([bas, son],
         { duration: sure, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
     } catch(e) {}
   });
-  // İki marka aynı pikselde durmasın (amblem 160 ms daha görünür).
+  // İki marka aynı pikselde durmasın (alt bant 340 ms daha görünür).
   // visibility — display:none satırı toplar, hedef dikdörtgeni geçersizleşirdi.
   plan.gizle.forEach(function(el) {
     if(el && el.style) { el.style.visibility = 'hidden'; _veWelcomeSplashGizli.push(el); }
@@ -2006,8 +2007,8 @@ function _veWelcomeSplashUc(plan) {
 
 // Açılış markası → karşılama markası. js/loader.js hideSplash içinden, splash
 // SÖNMEDEN önce çağırır; klonlar body'de yaşar (splash 340 ms'de display:none
-// olur, uçuş ondan uzun sürer). Açılışta marka BÜYÜK (amblem), karşılamada
-// kartın logosu: ad ve çark ayrı ayrı küçülerek yerine iner.
+// olur, uçuş ondan uzun sürer). Açılışta marka BÜYÜK (sinema bandı),
+// karşılamada kartın logosu: ad ve çark ayrı ayrı küçülerek yerine iner.
 function veWelcomeAdoptSplashLogo(splashEl) {
   if(typeof document === 'undefined' || !splashEl) return;
   _veWelcomeSplashRestore();                     // ikinci çağrı: önceki uçuşu topla
