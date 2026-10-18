@@ -98,9 +98,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
   Çözücü'nün YOLUNDAN geçer — ayrı bir tarama çözümü yazılmaz; dört kesin kriter
-  (1 · 1a · 1b · 2) + kaynaklı ek kısıtlar (E1–E9), Pareto ve uzlaşı. Pencere yalnız
-  girdi; sonuç AYRI raporda, ana rapora eklenmez. Kapı: `mount-katalog.test.js` +
-  `mount-param.test.js` (→ *TEK YOL* · *AYNI HÜKÜM*).
+  (1 · 1a · 1b · 2) + kaynaklı ek kısıtlar (E1–E9), Pareto ve uzlaşı. Ayrıntılı rapor
+  AYRI belgede, ana rapora eklenmez. Kısıt ÖLÇÜ ↔ HÜKÜM ayrı: tarama ölçüyü saklar
+  (tam tarama: ikinci aşama her kombinasyonda), sınır değişince yalnız hüküm yeniden
+  kurulur. Kapı: `mount-katalog.test.js` (→ *DEPO* · *CANLI* · *TAM*) +
+  `mount-param.test.js` (→ *TEK YOL* · *AYNI HÜKÜM* · *SONUÇ*).
+- `js/mount-param-ciz.js` + `js/cp-mount-param-sonuc.js` — Parametrik Analiz'in
+  **Sonuç** kategorisi (kullanıcı kararı 2026-10-18): uzlaşı çözümü ve on diyagram
+  (2B · kesit · 3B), DOM'suz SVG çizici, sütunun gerçek genişliğinde, tam ekran
+  düğmesiyle. Tarama sonucu düğüm başına BELLEKTE (modelde değil); girdi değişince
+  imzayla eskir. Kapı: `mount-param-ciz.test.js` + `mount-param.test.js` → *SONUÇ*.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık
@@ -537,7 +544,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   dâhil) Uygunluk, sehim, yük, mod, kuvvet taşımaz — sonuç yalnız raporda. Çözümle
   değişen tek şey eylemin hazırlığı (`data-cozum-durumu`: Çözücü'nün notu, Rapor'un
   çözüm durumu). Kapı: `pencere-kabuk.test.js` → *ÇÖZÜMDEN BAĞIMSIZ*; gerekçe
-  `docs/decisions/ortak-yuzeyler.md`.
+  `docs/decisions/ortak-yuzeyler.md`. **TEK İSTİSNA** (kullanıcı kararı 2026-10-18:
+  *"Önerilerini uygulayalım … Bileşen penceresinin içine entegre edersin"*):
+  Parametrik Analiz'in **Sonuç** kategorisi — yalnız TARAMANIN sonucu (uzlaşı ve
+  diyagramlar), Çözücü'nün çözümü değil; başka pencereye genişletilmez. Kapı:
+  `mount-param.test.js` → *SONUÇ*.
 - **BİLEŞEN PENCERESİ AÇIK KALIR** (kullanıcı isteği 2026-10-16). Seçimin
   boşalması pencereyi KAPATMAZ: konusu (son gösterilen bileşen, `veMufettisKonusu`)
   kalır ve tuvalde kesikli kenarla işaretlenir; başka bileşene tık içeriği

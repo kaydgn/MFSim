@@ -7,9 +7,14 @@
  *               taramanın ölçtüğünün AYNISI (ayrı bir "tarama için" çözüm yok)
  *   AYNI HÜKÜM — Kriter 1 · 1a · 1b · 2 için taramanın hükmü raporun uygunluk
  *               tablosunun (veMntUygunluk) hükmüyle aynı, örneklenen her kombinasyonda
- *   PENCERE   — girdiler, durumlar (eksik · sınır), sonuç taşımaz
+ *   PENCERE   — girdiler, durumlar (eksik · sınır); taramadan önce sonuç yok
  *   RAPOR     — ayrı belge: bölümler, Türkçe sayı, sayısız alan yok
- *   KOŞUCU    — parça parça koşar, durdurulur, bitince bir kez indirir
+ *   KOŞUCU    — parça parça koşar, durdurulur, bitince Sonuç kategorisi kurulur
+ *   SONUÇ     — kullanıcı kararı 2026-10-18 (Takoz pencerelerinin "sonuç
+ *               göstermez" kuralının bu pencereye özgü istisnası): uzlaşı ve
+ *               diyagramlar; sınır değişince tarama YİNELENMEDEN yeni sınırla
+ *               taramanın aynısı; model/aday/sabit/tolerans/sürünme değişince
+ *               ESKİR; görünüm seçimi modelde değil; rapor bugünkü sınırlarla
  */
 const H = require('../helpers/takoz-dogrulama.js');
 
@@ -21,6 +26,11 @@ const P = require('../../js/cp-mount-param.js');
 const RP = require('../../js/cp-mount-param-rapor.js');
 Object.keys(P).forEach((k) => { if (global[k] === undefined) global[k] = P[k]; });
 global.veMntParamRaporHTML = RP.veMntParamRaporHTML;
+global.veSayi = global.veSayi || require('../../js/sayi.js').veSayi;
+global.veMntAkso = global.veMntAkso || require('../../js/mount-akso.js');
+global.veMntParamCiz = require('../../js/mount-param-ciz.js');
+const PS = require('../../js/cp-mount-param-sonuc.js');
+Object.keys(PS).forEach((k) => { if (global[k] === undefined) global[k] = PS[k]; });
 global.veIkon = global.veIkon || ((ad) => '<i class="mf-ico mf-ico-' + ad + '"></i>');
 require('../../js/mount-report-template.js');
 require('../../js/mount-report-assets.js');
@@ -357,20 +367,175 @@ describe('KOŞUCU', () => {
     const indir = jest.fn();
     global._mntReportDownload = indir;
     global._mntReportEnsureAssets = (cb) => cb(true);
+    delete PS._MNT_PARAM_SONUC.pa;
     P.veMntParamTara('pa');
     expect(document.getElementById('ve-mnt-param-btn-pa').textContent).toMatch(/Durdur/);
     jest.advanceTimersByTime(0);
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^Aşama [12] · [\d.]+ \/ [\d.]+$/);
     jest.runAllTimers();
+    // tarama indirmez; depo saklanır, Sonuç kategorisi kurulur
+    expect(indir).not.toHaveBeenCalled();
+    const ent = PS._MNT_PARAM_SONUC.pa;
+    expect(ent && ent.D.tam).toBe(true);
+    expect(ent.D.N).toBe(729);
+    expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^Tarandı \([\d.,]+ s\)$/);
+    expect(document.getElementById('ve-mnt-param-btn-pa').textContent.trim()).toBe('Tara');
+    const d = document.createElement('div'); d.innerHTML = P.getMntParamPropertiesHTML(n);
+    expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kısıtlar', 'Sonuç']);
+    // rapor Sonuç'taki düğmeyle, bir kez
+    PS.veMntParamRapor('pa');
     expect(indir).toHaveBeenCalledTimes(1);
     expect(indir.mock.calls[0][1]).toBe('takoz_katalogdan_secim.html');
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^İndirildi \([\d.]+ KB\)$/);
-    expect(document.getElementById('ve-mnt-param-btn-pa').textContent).toMatch(/Tara ve raporu indir/);
-    // durdurma
+    // durdurma: yarıda kalan tarama saklanmaz, öncekinin yerine geçmez
     P.veMntParamTara('pa');
     P.veMntParamTara('pa');
     jest.runAllTimers();
-    expect(indir).toHaveBeenCalledTimes(1);
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toBe('Durduruldu');
+    expect(PS._MNT_PARAM_SONUC.pa).toBe(ent);
+  });
+});
+
+describe('SONUÇ — taramanın diyagramları (kullanıcı kararı 2026-10-18)', () => {
+  // ASFAT, altı aday: 3 grup × 6 tip = 216 kombinasyon (uzlaşı tipleri aday).
+  const ADAY = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116', '57RS313774-sr116', 'bmc-mount1-40sh'];
+  const dom = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
+  function kur() {
+    modelKur('asfat');
+    const n = { id: 'pa', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => ADAY.indexOf(k) < 0) } };
+    global.nodes.push(n);
+    return n;
+  }
+  function taraSakla(n, say) {
+    const Hz = P._mntParamHazirlik(n);
+    const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
+    const olc1 = say ? (t) => { say.n++; return O.olc1(t); } : O.olc1;
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1, olc2: O.olc2, enIyi: 25, tam: true });
+    it.adim(Infinity);
+    PS._mntParamSonucKaydet(n.id, Hz, O, it.depo());
+    return { Hz, S: it.sonuc() };
+  }
+  const basliklar = (d) => [...d.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b')].map((b) => b.textContent);
+
+  test('uzlaşı çözümü ve on bir bölüm; her diyagramda çizim, tam ekran; 3B\'de sıfırla', () => {
+    const n = kur(), { S } = taraSakla(n);
+    expect(S.N).toBe(216);
+    expect(S.uygunN).toBeGreaterThan(0);
+    const d = dom(P.getMntParamPropertiesHTML(n));
+    expect(basliklar(d)).toEqual(['Uzlaşı çözümü', 'Pareto cephesi', 'Mod yerleşimi', 'Bağlayıcı kısıtlar', 'Sınır duyarlılığı',
+      'Ana etkiler', 'Kısıt haritaları', 'İletilebilirlik haritası', 'Kısıt penceresi', 'Tepki yüzeyi', 'Tasarım uzayı']);
+    const kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
+    expect(kat.getAttribute('data-d')).toBe('ok');
+    expect(kat.querySelectorAll('.ve-pd-kap svg.ve-pd').length).toBe(10);
+    expect(kat.querySelectorAll('.ve-pd-tam[aria-label^="Tam ekran"]').length).toBe(10);
+    expect([...kat.querySelectorAll('.ve-pd-kap[data-3b]')].map((k) => k.getAttribute('data-pd'))).toEqual(['d2', 'd3', 'd1']);
+    expect(kat.querySelectorAll('.ve-pd-tam[aria-label^="Sıfırla"]').length).toBe(3);
+    expect(d.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Uygun ' + S.uygunN + ' / 216');
+    // uzlaşı tablosu sıranın birincisinin tipleri
+    const ent = PS._MNT_PARAM_SONUC.pa, ilk = ent.D.tipler(S.sira[0].idx);
+    const satir = [...kat.querySelector('.ve-fp-card').querySelectorAll('tbody tr')].map((r) => r.children[1].textContent);
+    expect(satir).toEqual(ilk.map((k) => ent.M.lib[k].name));
+    expect(kat.innerHTML).not.toMatch(/NaN|undefined|Infinity/);
+  });
+
+  test('CANLI: sınır, açıklık ve ağırlık değişince tarama yinelenmez; Sonuç o sınırlarla YENİ taramanın aynısı', () => {
+    const n = kur(), say = { n: 0 };
+    taraSakla(n, say);
+    const once = say.n;
+    expect(once).toBe(216);
+    const ilk = dom(P.getMntParamPropertiesHTML(n));                       // bugünkü sınırlarla bir kez çizildi (bellekte)
+    expect(ilk.querySelector('#ve-mnt-param-durum-pa').textContent).toMatch(/^Uygun \d+ \/ 216$/);
+    P.veMntParamSinir('pa', 'sehimUst', '6');
+    P.veMntParamAcik('pa', 'ayrisma', true);
+    P.veMntParamSinir('pa', 'agirlik', '0,2');
+    const d = dom(P.getMntParamPropertiesHTML(n));
+    expect(say.n).toBe(once);                                              // tarama yinelenmedi
+    const canli = PS._mntParamOzet(PS._MNT_PARAM_SONUC.pa, K.baglam(P._mntParamHazirlik(n).ctx)).S;
+    const yeni = (() => { const Hz = P._mntParamHazirlik(n), O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx));
+      const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: true });
+      it.adim(Infinity); return it.sonuc(); })();
+    const sade = (S) => JSON.stringify(Object.assign({}, S, { sure: 0, olc: null, ctx: null }));
+    expect(sade(canli)).toBe(sade(yeni));
+    expect(yeni.red.ayrisma).toBeGreaterThanOrEqual(0);                     // açılan kısıt özette
+    expect(d.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Uygun ' + yeni.uygunN + ' / 216');
+    // sınır sıkılaşınca cevap da değişir (bellek sınırla anahtarlı)
+    P.veMntParamSinir('pa', 'sehimUst', '1');
+    const d2 = dom(P.getMntParamPropertiesHTML(n));
+    expect(d2.querySelector('#ve-mnt-param-durum-pa').textContent).toBe('Uygun 0 / 216');
+  });
+
+  test('ESKİME: model · aday · sabit grup · tolerans · sürünme eskitir; sınır · açıklık · ağırlık · kapalı toleransın değeri · çözüm eskitmez', () => {
+    const taze = (n) => PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze;
+    const dene = (fn, beklenen) => { const n = kur(); taraSakla(n); fn(n); return [beklenen, taze(n)]; };
+    const sonuc = [
+      dene(() => { global.nodes.find((x) => x.type === 'mnt-mount').data.x += 5; }, false),
+      dene(() => { global.nodes.find((x) => x.type === 'mnt-motor').data.mass += 1; }, false),
+      dene((n) => { P.veMntParamAday('pa', ADAY[5], false); }, false),
+      dene((n) => { P.veMntParamSabit('pa', 1, true); }, false),
+      dene(() => { P.veMntParamAcik('pa', 'tolerans', true); }, false),
+      dene(() => { P.veMntParamSinir('pa', 'surunme', '20'); }, false),
+      dene(() => { P.veMntParamSinir('pa', 'sehimUst', '7'); P.veMntParamSinir('pa', 'isletmeUst', '9'); }, true),
+      dene(() => { P.veMntParamAcik('pa', 'cekme', false); }, true),
+      dene(() => { P.veMntParamSinir('pa', 'agirlik', '0,9'); }, true),
+      dene(() => { P.veMntParamSinir('pa', 'tolerans', '25'); }, true),           // tolerans kapalıyken değeri taramaya girmez
+      dene(() => { const s = global.nodes.find((x) => x.type === 'mnt-solver'); global._veMntLast = cp._mntComputeResults(s.id); }, true)
+    ];
+    sonuc.forEach((x, i) => expect([i, x[1]]).toEqual([i, x[0]]));
+    // eskimiş tarama: Sonuç yalnız durumu yazar, eksik bandında
+    const n = kur(); taraSakla(n); P.veMntParamAcik('pa', 'tolerans', true);
+    const d = dom(P.getMntParamPropertiesHTML(n));
+    const kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
+    expect(kat.getAttribute('data-d')).toBe('eksik');
+    expect(kat.querySelector('svg')).toBeNull();
+    expect(kat.textContent).toContain('Taramadan sonra girdi değişti');
+    expect(d.querySelector('.ve-fp-eksik').textContent).toContain('Taramadan sonra girdi değişti');
+  });
+
+  test('görünüm seçimi (kesit, büyüklük, K1, kamera) modelde DEĞİL: geri-al yığınına ve düğüme yazılmaz', () => {
+    const n = kur(); taraSakla(n);
+    document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
+    const veri = JSON.stringify(global.nodes.map((x) => x.data));
+    global.saveState = jest.fn();
+    PS.veMntParamKesit('pa', 'cift', '0,1');
+    PS.veMntParamKesit('pa', '2', '3');
+    PS.veMntParamSec('pa', 'd3', 'f');
+    PS.veMntParamSec('pa', 'd1k1', true);
+    PS._MNT_PARAM_KAM['pa|d2'] = { az: 100, el: 50 };
+    PS.veMntParam3bSifirla('pa', 'd2');
+    expect(global.saveState).not.toHaveBeenCalled();
+    expect(JSON.stringify(global.nodes.map((x) => x.data))).toBe(veri);
+    expect(PS._MNT_PARAM_KAM['pa|d2']).toBeUndefined();
+    // seçim çizime yansıdı: kesitin eksenleri 1 × 2, Tepki yüzeyi f maks
+    const kat = document.querySelector('.ve-fp-kat[data-k="sonuc"]');
+    expect(kat.querySelector('.ve-pd-kesit select').value).toBe('0,1');
+    expect(kat.querySelector('.ve-mnt-seg button[aria-pressed="true"]').textContent).toBe('f maks');
+  });
+
+  test('proje değişince taramalar ve görünüm seçimleri unutulur (topology.js → veResetSubtopoNav)', () => {
+    const n = kur(); taraSakla(n);
+    PS.veMntParamKesit('pa', 'cift', '0,1');
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n))).not.toBeNull();
+    PS.veMntParamUnut();
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n))).toBeNull();
+    expect(PS._MNT_PARAM_KESIT.pa).toBeUndefined();
+    const src = require('fs').readFileSync(require.resolve('../../js/topology.js'), 'utf8');
+    const fn = src.slice(src.indexOf('function veResetSubtopoNav('), src.indexOf('\n}', src.indexOf('function veResetSubtopoNav(')));
+    expect(fn).toContain('veMntParamUnut()');
+  });
+
+  test('RAPOR: Sonuç düğmesi bugünkü sınırlarla indirir; eskimiş taramada indirmez', () => {
+    const n = kur(); taraSakla(n);
+    const indir = jest.fn();
+    global._mntReportDownload = indir;
+    global._mntReportEnsureAssets = (cb) => cb(true);
+    expect(PS._mntParamOzet(PS._MNT_PARAM_SONUC.pa, K.baglam(P._mntParamHazirlik(n).ctx)).S.uygunN).toBeGreaterThan(0);
+    P.veMntParamSinir('pa', 'sehimUst', '1');                              // hiçbir kombinasyon sağlamaz
+    PS.veMntParamRapor('pa');
+    expect(indir).toHaveBeenCalledTimes(1);
+    expect(indir.mock.calls[0][0]).toContain(' · uygun 0 · ');
+    expect(indir.mock.calls[0][0]).toContain('<span class="t">Uygun kombinasyon yok</span>');
+    P.veMntParamAcik('pa', 'tolerans', true);
+    PS.veMntParamRapor('pa');
+    expect(indir).toHaveBeenCalledTimes(1);
   });
 });

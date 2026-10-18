@@ -2,11 +2,13 @@
 //  TAKOZ — PARAMETRİK ANALİZ penceresi ve katalog taraması koşucusu
 // ════════════════════════════════════════════════════════════════════════════
 // Bileşen 'mnt-parametric' (js/components.js), ilk analizi "Katalogdan seçim"
-// (kullanıcı isteği 2026-10-16). Pencere yalnız GİRDİ taşır — gruplar, aday
-// tipler, kısıt sınırları, amaç ağırlığı. Tek eylemi taramayı koşturur ve
-// sonucu AYRI bir raporda indirir (js/cp-mount-param-rapor.js): Takoz
-// pencereleri sonuç göstermez (kullanıcı kararı 2026-10-16) ve ana rapora
-// eklemek onu uzatırdı (kullanıcı: "Rapor kısmına eklersek çok uzun olabilir").
+// (kullanıcı isteği 2026-10-16). Girdi kategorileri: gruplar, aday tipler,
+// kısıt sınırları, amaç ağırlığı. Tek eylemi taramayı koşturur; tarama
+// bitince Sonuç kategorisi uzlaşı çözümünü ve diyagramları taşır (kullanıcı
+// kararı 2026-10-18 — Takoz pencerelerinin "sonuç göstermez" kuralının bu
+// pencereye özgü istisnası; js/cp-mount-param-sonuc.js). Ayrıntılı rapor AYRI
+// belgede (js/cp-mount-param-rapor.js): ana rapora eklemek onu uzatırdı
+// (kullanıcı: "Rapor kısmına eklersek çok uzun olabilir").
 //
 // ÇÖZÜM YOLU UYGULAMANINKİ: her kombinasyon Çözücü'nün yolundan geçer
 // (_mntPrepareFrom → solveOne → solveModes; çözüm modu ve ζ Çözücü'den,
@@ -200,9 +202,10 @@ function _mntParamOlcucu(M, ctx){
 }
 
 // ── PENCERE ─────────────────────────────────────────────────────────────────
-// Üç kategori, gövdede alt alta: GRUPLAR (model taraması, sabit tutulan
+// Kategoriler, gövdede alt alta: GRUPLAR (model taraması, sabit tutulan
 // grup) · ADAYLAR (kütüphane) · KISITLAR (dört kesin kriter, ek kısıtlar,
-// amaç ağırlığı). Sağ sütun: analizin adı ve büyüklüğü → cevap → eylem.
+// amaç ağırlığı) · SONUÇ (yalnız taramadan sonra). Sağ sütun: analizin adı
+// ve büyüklüğü → cevap → eylem.
 function getMntParamPropertiesHTML(node){
   if(!node.data) node.data={};
   var H=_mntParamHazirlik(node);
@@ -211,6 +214,8 @@ function getMntParamPropertiesHTML(node){
     { k:'aday', ad:'Adaylar', govde:_mntParamAdayHTML(node, H) },
     { k:'kisit', ad:'Kısıtlar', govde:_mntParamKisitHTML(node, H) }
   ];
+  var son=(typeof _mntParamSonucKat==='function') ? _mntParamSonucKat(node, H) : null;
+  if(son) kategoriler.push(son);
   return _mntPencereKabuk(node, kategoriler, _mntParamYanHTML(node, H));
 }
 
@@ -219,14 +224,20 @@ function _mntParamYanHTML(node, H){
     _mntIzgara(3, _mntOku('Grup', String(H.M.G.length)) + _mntOku('Tip', String(H.aday.length))
                + _mntOku('Kombinasyon', _mntS(H.N, 0))),
     { id:'ve-mnt-param-ozet-'+node.id, tazele:true });
-  var durum='<div id="ve-mnt-param-durum-'+node.id+'" data-tazele>'
-    + (H.eksik ? _mntDurumKutu('<b>'+H.eksik+'</b>', 'warn') : _mntDurumKutu('<b>Taramaya hazır</b>', 'ok'))+'</div>';
+  // Cevap: eksik → sebebi; taze tarama → bugünkü sınırlarla uygun sayısı.
+  var T=(!H.eksik && typeof _mntParamSonucDurum==='function') ? _mntParamSonucDurum(node.id, H) : null, cevap;
+  if(H.eksik) cevap=_mntDurumKutu('<b>'+H.eksik+'</b>', 'warn');
+  else if(T && T.taze){
+    var S=_mntParamOzet(T.ent, veMntKatalog.baglam(H.ctx)).S;
+    cevap=_mntDurumKutu('<b>Uygun '+_mntS(S.uygunN, 0)+' / '+_mntS(S.N, 0)+'</b>', S.uygunN ? 'ok' : 'warn');
+  } else cevap=_mntDurumKutu('<b>Taramaya hazır</b>', 'ok');
+  var durum='<div id="ve-mnt-param-durum-'+node.id+'" data-tazele>'+cevap+'</div>';
   var is=!!(_MNT_PARAM_IS && _MNT_PARAM_IS.nodeId===node.id);
   // Düğme de yerinde tazelenir (`data-tazele`): aday kalmayınca ya da bütün
   // gruplar sabitlenince pencere yeniden kurulmadan kapanır.
   var eylem='<button type="button" class="ve-fp-solve" id="ve-mnt-param-btn-'+node.id+'" data-tazele'
     + ((H.eksik && !is) ? ' disabled' : ' onclick="veMntParamTara(\''+node.id+'\')"')+'>'
-    + (is ? veIkon('square')+' Durdur' : veIkon('play')+' Tara ve raporu indir')+'</button>'
+    + (is ? veIkon('square')+' Durdur' : veIkon('play')+' Tara')+'</button>'
     + '<div class="ve-fp-durum-not" id="ve-mnt-param-st-'+node.id+'"></div>';
   return ozet+durum+eylem;
 }
@@ -369,7 +380,9 @@ function veMntParamAcik(nodeId, k, acik){
 
 // ── KOŞUCU ──────────────────────────────────────────────────────────────────
 // Parça parça (her parça ≤ 200 kombinasyon ve ≤ 50 ms): pencere ve tuval
-// tarama sürerken yanıt verir. İkinci tıklama durdurur. Bitince rapor indirilir.
+// tarama sürerken yanıt verir. İkinci tıklama durdurur. Tarama TAM koşar
+// (ikinci aşama çözülen her kombinasyonda — sınır değişince yeniden tarama
+// gerekmesin); bitince depo saklanır ve pencere Sonuç kategorisiyle kurulur.
 function _mntParamYaz(nodeId, metin, d){
   if(typeof document==='undefined') return;
   var st=document.getElementById('ve-mnt-param-st-'+nodeId);
@@ -380,7 +393,7 @@ function _mntParamDugme(nodeId){
   var b=document.getElementById('ve-mnt-param-btn-'+nodeId);
   if(!b) return;
   var is=!!(_MNT_PARAM_IS && _MNT_PARAM_IS.nodeId===nodeId);
-  b.innerHTML=is ? veIkon('square')+' Durdur' : veIkon('play')+' Tara ve raporu indir';
+  b.innerHTML=is ? veIkon('square')+' Durdur' : veIkon('play')+' Tara';
 }
 // Raporun satırları: sıranın ve mevcut tasarımın TAM ölçümü (iki aşama + darbe).
 function _mntParamZenginlestir(S, H, O){
@@ -402,7 +415,7 @@ function veMntParamTara(nodeId){
   if(H.eksik){ _mntParamYaz(nodeId, H.eksik, 'warn'); return; }
   var O=_mntParamOlcucu(H.M, veMntKatalog.baglam(H.ctx));
   var it=veMntKatalog.tarayici({ G:H.M.G, adaylar:H.aday, sabit:H.sabit, ctx:H.ctx,
-                                 olc1:O.olc1, olc2:O.olc2, enIyi:25 });
+                                 olc1:O.olc1, olc2:O.olc2, enIyi:25, tam:true });
   _MNT_PARAM_IS={ nodeId:nodeId, dur:false };
   _mntParamDugme(nodeId);
   var bitir=function(metin, d){
@@ -416,17 +429,15 @@ function veMntParamTara(nodeId){
     do { r=it.adim(10); n+=10; } while(!r.bitti && n<200 && Date.now()-bas<50);
     _mntParamYaz(nodeId, 'Aşama '+r.asama+' · '+_mntS(r.i, 0)+' / '+_mntS(r.n, 0));
     if(!r.bitti){ setTimeout(parca, 0); return; }
-    var E;
-    try { E=_mntParamZenginlestir(it.sonuc(), H, O); }
+    try { _mntParamSonucKaydet(nodeId, H, O, it.depo()); }
     catch(e){ bitir('Hata: '+e.message, 'no'); return; }
-    _mntReportEnsureAssets(function(ok){
-      if(!ok){ bitir('Rapor varlıkları yüklenemedi', 'no'); return; }
-      try {
-        var html=veMntParamRaporHTML(E);
-        _mntReportDownload(html, 'takoz_katalogdan_secim.html');
-        bitir('İndirildi ('+_mntS(html.length/1024, 0)+' KB)', 'ok');
-      } catch(e){ bitir('Hata: '+e.message, 'no'); }
-    });
+    _MNT_PARAM_IS=null;
+    var acik=(typeof document!=='undefined') && document.querySelector('.ve-properties-content [data-mnt-pencere="'+nodeId+'"]');
+    if(acik && typeof showNodeProperties==='function'){
+      showNodeProperties(node);
+      setTimeout(function(){ if(typeof vePencereKategoriGit==='function') vePencereKategoriGit(nodeId, 'sonuc'); }, 160);
+    }
+    bitir('Tarandı ('+_mntS(it.depo().sure/1000, 1)+' s)', 'ok');
   };
   setTimeout(parca, 0);
 }
@@ -436,7 +447,8 @@ if(typeof module!=='undefined' && module.exports){
     getMntParamPropertiesHTML: getMntParamPropertiesHTML,
     _mntParamModel: _mntParamModel, _mntParamAdaylar: _mntParamAdaylar, _mntParamCtx: _mntParamCtx,
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,
-    _mntParamZenginlestir: _mntParamZenginlestir,
+    _mntParamZenginlestir: _mntParamZenginlestir, _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,
+    _MNT_PARAM_EK: _MNT_PARAM_EK, _MNT_PARAM_YUZDE: _MNT_PARAM_YUZDE,
     veMntParamSabit: veMntParamSabit, veMntParamAday: veMntParamAday, veMntParamAdayHepsi: veMntParamAdayHepsi,
     veMntParamSinir: veMntParamSinir, veMntParamAcik: veMntParamAcik, veMntParamTara: veMntParamTara
   };
