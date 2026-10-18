@@ -484,7 +484,7 @@ function veMntParamTara(nodeId){
     _mntParamYaz(nodeId, metin, d);
   };
   // Sonuç: depo saklanır; açık pencerenin Sonuç bölümü önce dilim dilim
-  // belleğe alınır (özet, diyagram kartları — _mntParamSonucIsitici), sonra
+  // belleğe alınır (özet, önerinin ölçümü, bölüm — _mntParamSonucIsitici), sonra
   // pencere kurulur ve yalnız birleştirir. Isınırken durdurma beklenmez:
   // tarama bitti, depo saklandı.
   var acik=function(){

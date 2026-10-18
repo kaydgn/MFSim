@@ -15,6 +15,8 @@
  *     hücrelerin arasında
  *   · 3B — dönerken ölçek değişmez (kübü çevreleyen küreden sığdırma): her
  *     açıda bütün köşeler ve noktalar çizimin içinde
+ *   · SADE GRAFİKLER — Sonuç'un modlar şeridi ve statik sehim–iletilebilirlik
+ *     çizimi: kırmızı çentik görünüm modelinin bayrağı, ok mevcuttan öneriye
  * Gerçek taramayla pencere: mount-param.test.js → SONUÇ.
  */
 global.veSayi = require('../../js/sayi.js').veSayi;
@@ -92,6 +94,15 @@ const kesitV = (n) => {
     kesin: gec((i, j) => i + j < 6), uygun: gec((i, j) => i === Math.floor(n * 0.8) && j === 2), xAd: '1 · k_z [N/mm]', yAd: '3 · k_z [N/mm]'
   };
 };
+// Sonuç'un iki sade grafiği (kullanıcı kararı 2026-10-18: "Tablo + iki sade grafik")
+const VM = () => ({ satir: [
+  { ad: 'Mevcut', f: [5.9, 6.6, 7.3, 11.3, 13.3, 19.2], kotu: [false, false, false, false, false, true], ip: ['a', 'b', 'c', 'd', 'e', 'f'], kose: null },
+  { ad: 'Öneri', vurgu: true, f: [5.2, 7.87, 10.4, 10.8, 13.99, 14.6], kotu: [false, false, true, true, false, false], ip: [],
+    kose: { a: [4.8, 7.3, 9.7, 10, 13, 13.5], b: [5.6, 8.4, 11.1, 11.6, 15, 15.65] } }],
+  bolge: [[0, 5], [15, Infinity]], bant: [8, 10], k1a: 0.5, ozel: [15, 5], xMax: 21 });
+const VD = () => ({ mevcut: { x: 2, y: 21.9, ip: 'Mevcut' }, oneri: { x: 4.9, y: 14.1, i: 3, ad: 'Öneri' },
+  yakin: [{ x: 4.79, y: 13.4, i: 4 }, { x: 4.92, y: 13.3, i: 5 }, { x: 5.06, y: 13.9, i: 6 }, { x: 4.28, y: 14.8, i: 7 }, { x: 4.64, y: 14.1, i: 8 }],
+  e1: 3, e2: 5, k2: 50 });
 const V3B = (az, el) => {
   const nokta = [];
   for (let i = 0; i < 400; i++) nokta.push({ p: [1 + 12 * rnd(), 8 + 30 * rnd(), 60 * rnd()], s: 've-pd-n1', r: 2, i });
@@ -108,7 +119,8 @@ describe('YAZI — her diyagram pencerede ve tam ekranda', () => {
     'Pareto cephesi': (o) => C.pareto(V11(), o), 'Mod yerleşimi': (o) => C.modlar(V7(), o),
     'Bağlayıcı kısıtlar': (o) => C.baglayici(V9(), o), 'Sınır duyarlılığı': (o) => C.duyarlilik(V10(), o),
     'Ana etkiler': (o) => C.anaEtki(V8(), o), 'Kısıt haritaları': (o) => C.haritalar(kesitV(27), o),
-    'İletilebilirlik haritası': (o) => C.tHaritasi(kesitV(27), o), 'Kısıt penceresi': (o) => C.uc(V3B(235, 24), o)
+    'İletilebilirlik haritası': (o) => C.tHaritasi(kesitV(27), o), 'Kısıt penceresi': (o) => C.uc(V3B(235, 24), o),
+    'Sonuç · Modlar': (o) => C.modSerit(VM(), o), 'Sonuç · Statik sehim ve iletilebilirlik': (o) => C.sehimT(VD(), o)
   };
   Object.keys(ciz).forEach((ad) => {
     test(ad, () => {
@@ -142,7 +154,55 @@ describe('YAZI — her diyagram pencerede ve tam ekranda', () => {
       expect(yazi(C.duyarlilik(V10(), o).svg).filter((t) => /^E\d · /.test(t)).length).toBe(3);
       expect(yazi(C.tHaritasi(kesitV(27), o).svg)).toEqual(expect.arrayContaining(['1 · kz [N/mm]', '3 · kz [N/mm]']));
       expect(yazi(C.uc(V3B(235, 24), o).svg)).toEqual(expect.arrayContaining(['δs [mm]', 'fmaks [Hz]', 'T [%]']));
+      expect(yazi(C.modSerit(VM(), o).svg)).toEqual(expect.arrayContaining(['Frekans [Hz]', 'Mevcut', 'Öneri', '8–10']));
+      expect(yazi(C.sehimT(VD(), o).svg)).toEqual(expect.arrayContaining(['Statik sehim [mm]', 'İletilebilirlik [%]', 'Mevcut', 'Öneri']));
     });
+  });
+});
+
+describe('SADE GRAFİKLER — Sonuç\'un modlar şeridi ile statik sehim–iletilebilirlik çizimi', () => {
+  // Kırmızı çentik görünüm modelinin bayrağının kendisi (hükmü pencere kurar:
+  // mount-param.test.js → MODLAR); çentik frekansın yerinde, köprü 0,5 Hz'ten
+  // yakın iki modun altında.
+  test('modlar: çentik başına bir mod, sınıfı bayrağından; sıra frekansla; köprü yakın çiftin altında', () => {
+    [300, 357, 640].forEach((W) => {
+      const V = VM(), s = svgDom(C.modSerit(V, { W, fs: FS }).svg);
+      const tik = [...s.querySelectorAll('line')].filter((l) => /\bve-pd-tik\b/.test(l.getAttribute('class')));
+      expect(tik.length).toBe(V.satir[0].f.length + V.satir[1].f.length);
+      const bayrak = V.satir.flatMap((r) => r.kotu);
+      expect(tik.map((l) => /\bk\b/.test(l.getAttribute('class')))).toEqual(bayrak);
+      V.satir.forEach((r, j) => {
+        const x = tik.slice(j * 6, j * 6 + 6).map((l) => Number(l.getAttribute('x1')));
+        const sira = r.f.map((f, i) => [f, x[i]]).sort((p, q) => p[0] - q[0]);
+        sira.forEach((p, i) => { if (i) expect(p[1]).toBeGreaterThan(sira[i - 1][1]); });
+      });
+      expect(s.querySelectorAll('line.ve-pd-yakin').length).toBe(1);        // 10,4 ↔ 10,8 Hz
+      expect(s.querySelectorAll('line.ve-pd-kose').length).toBe(6);         // önerinin tolerans bıyıkları
+      expect(s.querySelectorAll('rect.ve-pd-hit[data-ip]').length).toBe(6); // mevcudun ipuçları
+    });
+  });
+  // Ok mevcuttan öneriye; işaretler verinin yerinde (öneri daha büyük sehim,
+  // daha küçük T); bant statik sehim sınırlarının arası.
+  test('statik sehim ve iletilebilirlik: ok mevcuttan öneriye, bant sınırların arası, yakın seçenek başına bir halka', () => {
+    [300, 357, 640].forEach((W) => {
+      const V = VD(), s = svgDom(C.sehimT(V, { W, fs: FS }).svg);
+      const karo = s.querySelector('path.ve-pd-mev'), uz = s.querySelector('circle.ve-pd-uz');
+      const km = karo.getAttribute('d').match(/-?[\d.]+/g).map(Number), m = [km[0], km[1] + 6.5], u = [Number(uz.getAttribute('cx')), Number(uz.getAttribute('cy'))];
+      expect(u[0]).toBeGreaterThan(m[0]);                                     // 4,9 mm > 2 mm
+      expect(u[1]).toBeGreaterThan(m[1]);                                     // %14,1 < %21,9 (aşağıda)
+      const ok = s.querySelector('line.ve-pd-ok'), a = [Number(ok.getAttribute('x1')), Number(ok.getAttribute('y1'))], b = [Number(ok.getAttribute('x2')), Number(ok.getAttribute('y2'))];
+      const uz2 = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+      expect(uz2(a, m)).toBeLessThan(uz2(a, u));
+      expect(uz2(b, u)).toBeLessThan(uz2(b, m));
+      expect(s.querySelector('path.ve-pd-ok-uc')).not.toBeNull();
+      const bant = s.querySelector('rect.ve-pd-kabul'), bx = Number(bant.getAttribute('x')), bw = Number(bant.getAttribute('width'));
+      expect(u[0] > bx && u[0] < bx + bw).toBe(true);                         // 3 ≤ 4,9 ≤ 5
+      expect(m[0] < bx).toBe(true);                                           // 2 < 3
+      expect(s.querySelectorAll('circle.ve-pd-yk[data-i]').length).toBe(V.yakin.length);
+    });
+    // mevcut ile öneri üst üste: ok çizilmez
+    const V = VD(); V.oneri.x = 2.02; V.oneri.y = 21.8;
+    expect(svgDom(C.sehimT(V, { W: 357, fs: FS }).svg).querySelector('line.ve-pd-ok')).toBeNull();
   });
 });
 

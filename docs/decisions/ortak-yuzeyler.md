@@ -2243,12 +2243,24 @@ ve kapı boşa ölçer) + *AİLE* (Takoz'da Uygunluk yasak) +
 **İstisna — Parametrik Analiz'in Sonuç kategorisi (2026-10-18).** Kullanıcı
 (*"Önerilerini uygulayalım. Bir bakalım kullanışlı mı. Bileşen penceresinin
 içine entegre edersin."*): diyagram kataloğundaki önerilerin pencereye
-girmesi. İstisna dar: pencere TARAMANIN sonucunu gösterir (uzlaşı ve on
-diyagram), Çözücü'nün çözümünü değil — çözüm pencereyi yine değiştirmez
+girmesi. İstisna dar: pencere TARAMANIN sonucunu gösterir (öneri, kriterler,
+iki grafik; on diyagram galeride), Çözücü'nün çözümünü değil — çözüm pencereyi yine değiştirmez
 (*ÇÖZÜMDEN BAĞIMSIZ* aynen geçer; tarama imzası Çözücü'nün yalnız girdisini,
 çözüm modu ve ζ'yı okur). Tarama düğüm başına bellekte durur: proje dosyasına
 ve geri-al yığınına girmez; sınır değişince depodan yeniden kurulur, model ya
 da aday değişince eskir. Kapı: `mount-param.test.js` → *SONUÇ*.
+
+**Sade Sonuç (2026-10-18).** Kullanıcı: *"Diyagramlar, yapılan işler falan
+bana çok karışık geldi"*; karar tahtasında B'yi seçti: *"Tablo + iki sade
+grafik, diğer diyagramlar kalsın fakat kullanıcı istediği zaman açabilsin."*
+Hüküm: Sonuç'ta Öneri · Kriterler · Modlar · Statik sehim ve iletilebilirlik ·
+Yakın seçenekler · Eleme · Diyagramlar; kısıtlar adıyla (girdinin Kısıtlar
+kategorisi kodsuzdu, diyagramlar kodluydu); on diyagram yalnız tam ekranın
+galerisinde ve açılınca çizilir — kodlarının anahtarı galerinin listesinde.
+Kriter tablosunun hükmü huninin ve sıranın hükmüdür (öneride deponun ölçüsü);
+sınıra yuvarlanan değer ondalığını uzatır ("≤ 5 mm" satırında ✗ ile "5,0"
+yazmaz). Kapı: `mount-param.test.js` → *SADE* · *KRİTERLER* · *MODLAR* ·
+*GALERİ* + `mount-param-ciz.test.js` → *SADE GRAFİKLER* + `mount-param-sonuc.spec.js`.
 
 ## Arayüz anlatmaz — ekranda ve belgede yalnız ad, veri, durum (2026-10-16)
 

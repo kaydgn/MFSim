@@ -359,7 +359,8 @@ describe('KILAVUZ — Takoz kılavuzunun alan haritası programın bölüm başl
     const govde = global.nodes.find((n) => n.type === 'mnt-motor');
     const nk = govde.data.pointMass; govde.data.pointMass = true; topla(takozPencere('mnt-motor')); govde.data.pointMass = nk;
     // Parametrik Analiz'in Sonuç bölümleri yalnız taramadan sonra: ASFAT, üç
-    // grup × dört aday (64 kombinasyon) — uzlaşı ve on diyagram.
+    // grup × dört aday (64 kombinasyon) — öneri, kriterler, iki grafik, yakın
+    // seçenekler, eleme ve diyagramların listesi (diyagramlar galeride).
     global.nodes = JSON.parse(oku('assets/examples/asfat_topoloji.json')).nodes.map((n) => Object.assign(n, { def: componentDefs[n.type] }));
     const tutulan = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116'];
     const pn = { id: 'pa-k', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => tutulan.indexOf(k) < 0) } };
@@ -369,7 +370,7 @@ describe('KILAVUZ — Takoz kılavuzunun alan haritası programın bölüm başl
     it.adim(Infinity);
     ps._mntParamSonucKaydet(pn.id, Hz, O, it.depo());
     const sonuc = dom(getMntParamPropertiesHTML(pn));
-    expect(sonuc.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b').length).toBe(11);
+    expect(sonuc.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b').length).toBe(7);
     topla(sonuc);
     expect(basliklar.size).toBeGreaterThan(40);                       // tarama gerçekten taradı
 
