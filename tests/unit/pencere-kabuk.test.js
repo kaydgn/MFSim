@@ -93,6 +93,9 @@ Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k];
 global.veMntKatalog = require('../../js/mount-katalog.js');
 const pa = require('../../js/cp-mount-param.js');
 Object.keys(pa).forEach((k) => { if (global[k] === undefined) global[k] = pa[k]; });
+global.veMntParamCiz = require('../../js/mount-param-ciz.js');
+const ps = require('../../js/cp-mount-param-sonuc.js');
+Object.keys(ps).forEach((k) => { if (global[k] === undefined) global[k] = ps[k]; });
 
 const PK = require('../../js/pencere-kabuk.js');
 
@@ -333,7 +336,20 @@ describe('KILAVUZ — Takoz kılavuzunun alan haritası programın bölüm başl
     TAKOZ_TIP.forEach((t) => topla(takozPencere(t)));
     const govde = global.nodes.find((n) => n.type === 'mnt-motor');
     const nk = govde.data.pointMass; govde.data.pointMass = true; topla(takozPencere('mnt-motor')); govde.data.pointMass = nk;
-    expect(basliklar.size).toBeGreaterThan(30);                       // tarama gerçekten taradı
+    // Parametrik Analiz'in Sonuç bölümleri yalnız taramadan sonra: ASFAT, üç
+    // grup × dört aday (64 kombinasyon) — uzlaşı ve on diyagram.
+    global.nodes = JSON.parse(oku('assets/examples/asfat_topoloji.json')).nodes.map((n) => Object.assign(n, { def: componentDefs[n.type] }));
+    const tutulan = ['57RS313773', 'amc137731', 'bmc-mount1-55sh', '57RS313773-sr116'];
+    const pn = { id: 'pa-k', type: 'mnt-parametric', data: { haric: Object.keys(cp.veMntGetLibraryMap()).filter((k) => tutulan.indexOf(k) < 0) } };
+    global.nodes.push(pn);
+    const Hz = pa._mntParamHazirlik(pn), O = pa._mntParamOlcucu(Hz.M, global.veMntKatalog.baglam(Hz.ctx));
+    const it = global.veMntKatalog.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, tam: true });
+    it.adim(Infinity);
+    ps._mntParamSonucKaydet(pn.id, Hz, O, it.depo());
+    const sonuc = dom(getMntParamPropertiesHTML(pn));
+    expect(sonuc.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b').length).toBe(11);
+    topla(sonuc);
+    expect(basliklar.size).toBeGreaterThan(40);                       // tarama gerçekten taradı
 
     const src = oku('js/guide-mount.js');
     const ekA = src.slice(src.indexOf('function _gmEkA('), src.indexOf('BELGE MONTAJI'));

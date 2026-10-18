@@ -97,8 +97,10 @@ var veMntKatalog = (function() {
       gor[i] = true;
       var uy = [i];
       if(es[i] >= 0){ uy.push(es[i]); gor[es[i]] = true; }
-      var ad = uy.length === 1 ? String(T[i].name == null ? '' : T[i].name)
-        : adla[i] ? ciftAdi(ay[i]) : T[uy[0]].name + ' + ' + T[uy[1]].name;
+      // Ad tek boşlukla: ekran art arda boşluğu birleştirir, ipucu (title) birleştirmez
+      // (ASFAT: "Ön Sol   · 57RS313774").
+      var ad = (uy.length === 1 ? String(T[i].name == null ? '' : T[i].name)
+        : adla[i] ? ciftAdi(ay[i]) : T[uy[0]].name + ' + ' + T[uy[1]].name).replace(/\s+/g, ' ').trim();
       var tipler = uy.map(function(k){ return T[k].libKey || ''; });
       G.push({
         anahtar: uy.map(function(k){ return String(T[k].id); }).sort().join('|'),
@@ -133,9 +135,13 @@ var veMntKatalog = (function() {
   // Ek kısıtlar (E1–E9) literatüre ve üretici verisine dayanır; sınırı
   // değiştirilir, kapatılır. Dayanakları raporun §3'ünde (cp-mount-param-rapor.js).
   //
-  // Her değerlendirme { ok, v, deger, sinir, na } döner: v ≥ 0 normalleştirilmiş
-  // ihlal (0 = sağlanıyor), en az ihlalli sıralamada toplanır. na: veri yok —
-  // kısıt değerlendirilmedi (kütüphane girdisinde kapasite yoksa E4 · E9).
+  // Her kısıt İKİ ADIMDIR: ÖLÇÜ (OLCU — köşelerin kötüsü, sınırdan bağımsız)
+  // ve HÜKÜM (HUKUM — ölçü ↔ sınır). Tarama ölçüyü kombinasyon başına saklar
+  // (tarayıcının deposu); sınır, açıklık ve ağırlık değişince yalnız hüküm
+  // yeniden kurulur — tarama yinelenmez (pencerenin canlı değerlendirmesi).
+  // Hüküm { ok, v, deger, sinir, na } döner: v ≥ 0 normalleştirilmiş ihlal
+  // (0 = sağlanıyor), en az ihlalli sıralamada toplanır. na: veri yok — kısıt
+  // değerlendirilmedi (kütüphane girdisinde kapasite yoksa E4 · E9); ölçüsü NaN.
   //
   // TOLERANS (seçenek): üretimde takoz rijitliği ±%15 saçılır (Shen 2024;
   // Torgal 2015). Açıksa ölçüm köşeleriyle gelir — anma (o), bütün takozlar
@@ -183,73 +189,66 @@ var veMntKatalog = (function() {
   // o (aşama 2): { dIsl:[mm] (işletme durumlarında en büyük |δ|), dSur:[mm] (aynısı,
   //                sürünmüş çalışma noktasında), cekmeMm, darbeOran (darbe yükü /
   //                kapasite) | null, yumusak? }
-  var DEG = {
-    k1: function(o, c){
-      var lim = K1_ORAN * c.fAtes, fm = _max(_kose(o).map(function(x){ return _max(x.f); }));
-      var ok = fm < lim;
-      return { ok:ok, v:_ihlal(ok, (fm - lim) / lim), deger:fm, sinir:lim };
-    },
-    k1a: function(o){
-      var g = _min(_kose(o).map(function(x){ return _aralik(x.f); })), ok = g > K1A_HZ;
-      return { ok:ok, v:_ihlal(ok, (K1A_HZ - g) / K1A_HZ), deger:g, sinir:K1A_HZ };
-    },
+  // ÖLÇÜ — köşelerin kötüsü: üst sınırlı büyüklükte en büyük, alt sınırlıda en
+  // küçük; bant ve aralık her köşede. NaN: veri yok.
+  var OLCU = {
+    k1: function(o){ return _max(_kose(o).map(function(x){ return _max(x.f); })); },
+    k1a: function(o){ return _min(_kose(o).map(function(x){ return _aralik(x.f); })); },
+    // Bant içindeki modların derinliği: Σ (uca uzaklık + 10⁻³) / yarım bant;
+    // 0 = bantta mod yok (bant ucundaki mod da > 0 — iki uç dâhil).
     k1b: function(o){
-      var lo = K1B[0], hi = K1B[1], v = 0, n = 0;
+      var lo = K1B[0], hi = K1B[1], v = 0;
       _kose(o).forEach(function(x){
         (x.f || []).forEach(function(f){
-          if(f >= lo && f <= hi){ n++; v += (Math.min(f - lo, hi - f) + 1e-3) / ((hi - lo) / 2); }
+          if(f >= lo && f <= hi) v += (Math.min(f - lo, hi - f) + 1e-3) / ((hi - lo) / 2);
         });
       });
-      return { ok:n === 0, v:_ihlal(n === 0, v), deger:n, sinir:0 };
+      return v;
     },
-    k2: function(o){
-      var T = _max(_kose(o).map(function(x){ return x.T; })), ok = T < K2_T;
-      return { ok:ok, v:_ihlal(ok, Number.isFinite(T) ? (T - K2_T) / K2_T : 1e3), deger:T, sinir:K2_T };
-    },
-    sehimAlt: function(o, c){
-      var d = _min(_kose(o).map(_sehim)), a = c.s.sehimAlt, ok = d >= a;
-      return { ok:ok, v:_ihlal(ok, (a - d) / a), deger:d, sinir:a };
-    },
-    sehim: function(o, c){
-      var d = _max(_kose(o).map(_sehim)), u = c.s.sehimUst, ok = d <= u;
-      return { ok:ok, v:_ihlal(ok, (d - u) / u), deger:d, sinir:u };
-    },
-    altMod: function(o, c){
-      var f = _min(_kose(o).map(function(x){ return _min(x.f); })), a = c.s.altMod, ok = f >= a;
-      return { ok:ok, v:_ihlal(ok, (a - f) / a), deger:f, sinir:a };
-    },
-    kapasite: function(o, c){
+    k2: function(o){ return _max(_kose(o).map(function(x){ return x.T; })); },
+    sehimAlt: function(o){ return _min(_kose(o).map(_sehim)); },
+    sehim: function(o){ return _max(_kose(o).map(_sehim)); },
+    altMod: function(o){ return _min(_kose(o).map(function(x){ return _min(x.f); })); },
+    kapasite: function(o){
       var u = -Infinity;
       (o.pay || []).forEach(function(p, i){ var k = (o.kap || [])[i]; if(k > 0) u = Math.max(u, p / k); });
-      if(u === -Infinity) return { ok:true, v:0, deger:NaN, sinir:c.s.kapasite, na:true };
-      var ok = u <= c.s.kapasite;
-      return { ok:ok, v:_ihlal(ok, (u - c.s.kapasite) / c.s.kapasite), deger:u, sinir:c.s.kapasite };
+      return u === -Infinity ? NaN : u;
     },
-    ayrisma: function(o, c){
-      var k = o.ked;
-      if(!k) return { ok:true, v:0, deger:NaN, sinir:c.s.ayrisma, na:true };
-      var m = Math.min(k.bounce, k.roll), ok = m >= c.s.ayrisma;
-      return { ok:ok, v:_ihlal(ok, (c.s.ayrisma - m) / c.s.ayrisma), deger:m, sinir:c.s.ayrisma };
-    },
-    isletme: function(o, c){
-      var d = _max(_kose(o).map(function(x){ return _max(x.dIsl); })), u = c.s.isletmeUst, ok = d <= u;
-      return { ok:ok, v:_ihlal(ok, (d - u) / u), deger:d, sinir:u };
-    },
-    durdurucu: function(o, c){
-      var d = _max(_kose(o).map(function(x){ return _max(x.dSur); })), u = c.s.durdurucuUst, ok = d <= u;
-      return { ok:ok, v:_ihlal(ok, (d - u) / u), deger:d, sinir:u };
-    },
-    cekme: function(o){
-      var d = _max(_kose(o).map(function(x){ return x.cekmeMm > 0 ? x.cekmeMm : 0; })), ok = !(d > 0);
-      return { ok:ok, v:_ihlal(ok, d), deger:d, sinir:0 };
-    },
-    darbe: function(o, c){
+    ayrisma: function(o){ return o.ked ? Math.min(o.ked.bounce, o.ked.roll) : NaN; },
+    isletme: function(o){ return _max(_kose(o).map(function(x){ return _max(x.dIsl); })); },
+    durdurucu: function(o){ return _max(_kose(o).map(function(x){ return _max(x.dSur); })); },
+    cekme: function(o){ return _max(_kose(o).map(function(x){ return x.cekmeMm > 0 ? x.cekmeMm : 0; })); },
+    darbe: function(o){
       var r = _max(_kose(o).map(function(x){ return x.darbeOran == null ? -Infinity : x.darbeOran; }));
-      if(r === -Infinity) return { ok:true, v:0, deger:NaN, sinir:c.s.darbe, na:true };
-      var ok = r <= c.s.darbe;
-      return { ok:ok, v:_ihlal(ok, (r - c.s.darbe) / c.s.darbe), deger:r, sinir:c.s.darbe };
+      return r === -Infinity ? NaN : r;
     }
   };
+  // HÜKÜM — ölçü ↔ sınır. Kesin kriterlerin sınırı sabit (Kriter 1'inki f_ateş'ten).
+  function _h(ok, v, x, s){ return { ok:ok, v:_ihlal(ok, v), deger:x, sinir:s }; }
+  function _na(s){ return { ok:true, v:0, deger:NaN, sinir:s, na:true }; }
+  function _ust(x, u){ return _h(x <= u, (x - u) / u, x, u); }
+  function _alt(x, a){ return _h(x >= a, (a - x) / a, x, a); }
+  var HUKUM = {
+    k1: function(x, c){ var lim = K1_ORAN * c.fAtes; return _h(x < lim, (x - lim) / lim, x, lim); },
+    k1a: function(x){ return _h(x > K1A_HZ, (K1A_HZ - x) / K1A_HZ, x, K1A_HZ); },
+    k1b: function(x){ return _h(!(x > 0), x, x, 0); },
+    k2: function(x){ return _h(x < K2_T, Number.isFinite(x) ? (x - K2_T) / K2_T : 1e3, x, K2_T); },
+    sehimAlt: function(x, c){ return _alt(x, c.s.sehimAlt); },
+    sehim: function(x, c){ return _ust(x, c.s.sehimUst); },
+    altMod: function(x, c){ return _alt(x, c.s.altMod); },
+    kapasite: function(x, c){ return x !== x ? _na(c.s.kapasite) : _ust(x, c.s.kapasite); },
+    ayrisma: function(x, c){ return x !== x ? _na(c.s.ayrisma) : _alt(x, c.s.ayrisma); },
+    isletme: function(x, c){ return _ust(x, c.s.isletmeUst); },
+    durdurucu: function(x, c){ return _ust(x, c.s.durdurucuUst); },
+    cekme: function(x){ return _h(!(x > 0), x, x, 0); },
+    darbe: function(x, c){ return x !== x ? _na(c.s.darbe) : _ust(x, c.s.darbe); }
+  };
+  function olcu(k, o){ return OLCU[k](o || {}); }
+  function hukum(k, x, c){ return HUKUM[k](x, c); }
+  // Sınırı değişen ek kısıtın yönü ve sınır anahtarı (sınır duyarlılığı).
+  var YON = { sehimAlt:['alt', 'sehimAlt'], sehim:['ust', 'sehimUst'], altMod:['alt', 'altMod'],
+              kapasite:['ust', 'kapasite'], ayrisma:['alt', 'ayrisma'], isletme:['ust', 'isletmeUst'],
+              durdurucu:['ust', 'durdurucuUst'], darbe:['ust', 'darbe'] };
 
   // İŞLETME yük durumu: 1 g düşey ile birlikte en çok 1 g yatay ivme, tork
   // durumları dâhil (statik, fren, hızlanma, viraj, fren + viraj, tahrik torku,
@@ -281,7 +280,7 @@ var veMntKatalog = (function() {
     var r = { sonuc: {}, v: 0, ok: true };
     KISITLAR.forEach(function(K){
       if(K.asama !== asama || !c.acik[K.k]) return;
-      var x = DEG[K.k](o, c);
+      var x = hukum(K.k, OLCU[K.k](o), c);
       r.sonuc[K.k] = x;
       if(!x.ok){ r.ok = false; r.v += x.v; }
     });
@@ -321,11 +320,153 @@ var veMntKatalog = (function() {
     return { uz: P.map(olc), olc: olc, araliT: Tn, araliD: dn };
   }
 
-  // ── 4) TARAYICI ───────────────────────────────────────────────────────────
+  // ── 4) TARAYICI ve DEPO ────────────────────────────────────────────────────
   // P = { G, adaylar:[{key, name}], sabit:{anahtar:true}, ctx (baglam girdisi),
-  //       olc1(tipler) → o | null, olc2(tipler) → o2 | null, enIyi (25) }
+  //       olc1(tipler) → o | null, olc2(tipler) → o2 | null, enIyi (25), tam }
   // tipler: grup başına kütüphane anahtarı ya da null (sabit grup: model olduğu gibi).
-  // Dönüş: { adim(n) → { bitti, asama, i, n }, sonuc() }
+  // Dönüş: { N, adim(n) → { bitti, asama, i, n }, sonuc() → S, depo() → D }
+  //
+  // DEPO (D): kombinasyon başına anma T, δ_s, en küçük ve en büyük mod ve
+  // BÜTÜN kısıtların ölçüsü (açık ya da kapalı). Kombinasyon numarası taranan
+  // grupların aday sıralarıdır, ilk taranan grup en anlamlı basamak.
+  // TAM (seçenek): ikinci aşama çözülen bütün kombinasyonlarda koşar — sınır
+  // değişince (ozet(D, c)) birinci aşamayı yeni geçen kombinasyonun da ikinci
+  // aşama ölçüsü hazırdır. Tam olmayan tarama ikinci aşamayı yalnız birinci
+  // aşamayı geçenlerde (yoksa en az ihlalli `enIyi` kombinasyonda) koşar;
+  // ikisinin özeti AYNIDIR (kapı: mount-katalog.test.js → TAM).
+  function depo(G, A, taranan, N, tam, enIyi){
+    var nA = A.length, D = {
+      N: N, nA: nA, taranan: taranan, adaylar: A, tam: tam, enIyi: enIyi, sure: 0,
+      T: new Float64Array(N), d: new Float64Array(N), fMin: new Float64Array(N), fMax: new Float64Array(N),
+      d1: new Int8Array(N),       // 1 çözüldü · 0 çözülemedi
+      d2: new Int8Array(N),       // 1 ölçüldü · 0 koşmadı · −1 çözülemedi
+      X: {}
+    };
+    KISITLAR.forEach(function(K){ D.X[K.k] = new Float64Array(N).fill(NaN); });
+    D.kod = function(idx){
+      var k = [];
+      for(var j = taranan.length - 1; j >= 0; j--){ k[j] = idx % nA; idx = Math.floor(idx / nA); }
+      return k;
+    };
+    D.indeks = function(kod){ var idx = 0; for(var j = 0; j < taranan.length; j++) idx = idx * nA + kod[j]; return idx; };
+    D.tipler = function(idx){
+      var t = G.map(function(){ return null; }), k = D.kod(idx);
+      taranan.forEach(function(g, j){ t[g] = A[k[j]].key; });
+      return t;
+    };
+    return D;
+  }
+
+  // Açık kısıtların hükmü, kombinasyon başına: m (bit b = KISITLAR[b] ihlal),
+  // v1 · v2 (aşama başına ihlal toplamı, KISITLAR sırasıyla). Çözülemeyen
+  // kombinasyonda m = 0 ve v NaN; ikinci aşaması ölçülmemişte o aşamanın biti yok.
+  function hukumler(D, c){
+    var N = D.N, m = new Uint32Array(N), v1 = new Float64Array(N), v2 = new Float64Array(N), L = [];
+    KISITLAR.forEach(function(K, b){ if(c.acik[K.k]) L.push({ k:K.k, a:K.asama, bit:(1 << b) >>> 0, X:D.X[K.k] }); });
+    for(var x = 0; x < N; x++){
+      if(D.d1[x] !== 1){ v1[x] = v2[x] = NaN; continue; }
+      var b = 0, s1 = 0, s2 = 0, iki = D.d2[x] === 1;
+      for(var j = 0; j < L.length; j++){
+        var q = L[j];
+        if(q.a === 2 && !iki) continue;
+        var h = HUKUM[q.k](q.X[x], c);
+        if(!h.ok){ b |= q.bit; if(q.a === 1) s1 += h.v; else s2 += h.v; }
+      }
+      m[x] = b >>> 0; v1[x] = s1; v2[x] = iki ? s2 : NaN;
+    }
+    return { m:m, v1:v1, v2:v2 };
+  }
+  function _bitler(c){
+    var B = { b1:0, b2:0, K1:[], K2:[] };
+    KISITLAR.forEach(function(K, b){
+      if(!c.acik[K.k]) return;
+      var bit = (1 << b) >>> 0;
+      if(K.asama === 1){ B.K1.push([K, bit]); B.b1 |= bit; } else { B.K2.push([K, bit]); B.b2 |= bit; }
+    });
+    return B;
+  }
+  // İkinci aşamanın kombinasyonları: birinci aşamayı geçenler; hiçbiri geçmezse
+  // en az ihlalli `enIyi` kombinasyon.
+  function _ikinci(D, H, b1){
+    var L = [], x;
+    for(x = 0; x < D.N; x++) if(D.d1[x] === 1 && !(H.m[x] & b1)) L.push(x);
+    if(!L.length){
+      for(x = 0; x < D.N; x++) if(D.d1[x] === 1 && (H.m[x] & b1)) L.push(x);
+      L.sort(function(a, b){ return H.v1[a] - H.v1[b] || a - b; });
+      L = L.slice(0, D.enIyi);
+    }
+    return L;
+  }
+
+  // ÖZET (S) — huni, bağımsız red, uygun küme, Pareto, uzlaşı sırası, tip
+  // sıklığı ve dağılım. Tarama sonunda ve sınır değişince AYNI işlevden.
+  function ozet(D, c, H){
+    H = H || hukumler(D, c);
+    var N = D.N, B = _bitler(c), ikinci = _ikinci(D, H, B.b1), x;
+    ikinci.forEach(function(x){ if(D.d2[x] === 0) throw new Error('ikinci aşama ölçülmedi'); });
+    var iki = function(x){ return D.d2[x] === 1; };
+    // Ardışık eleme (huni) — kısıt sırası KISITLAR'ın sırası.
+    var huni = [], kalan = [];
+    for(x = 0; x < N; x++) if(D.d1[x] === 1) kalan.push(x);
+    huni.push({ k:'cozulen', kalan:kalan.length });
+    B.K1.forEach(function(p){
+      kalan = kalan.filter(function(x){ return !(H.m[x] & p[1]); });
+      huni.push({ k:p[0].k, kalan:kalan.length });
+    });
+    B.K2.forEach(function(p){
+      kalan = kalan.filter(function(x){ return iki(x) && !(H.m[x] & p[1]); });
+      huni.push({ k:p[0].k, kalan:kalan.length });
+    });
+    // Bağımsız red sayısı — aşamanın ölçüldüğü bütün kombinasyonlarda (tam
+    // taramada ikinci aşama da çözülen her kombinasyonda).
+    var red = _red(D, H, B);
+
+    var uygun = ikinci.filter(function(x){ return !(H.m[x] & B.b1) && iki(x) && !(H.m[x] & B.b2); });
+    var P2 = uygun.map(function(x){ return { T:D.T[x], d:D.d[x] }; });
+    var par = pareto(P2), U = uzlasi(P2, c.s.agirlik);
+    var cephe = uygun.filter(function(x, k){ return par[k]; });
+    cephe.sort(function(a, b){ return D.T[a] - D.T[b] || D.d[a] - D.d[b] || a - b; });
+    var sira;
+    if(uygun.length){
+      sira = uygun.map(function(x, k){ return { idx:x, uz:U.uz[k], pareto:par[k] }; });
+      sira.sort(function(a, b){ return a.uz - b.uz || D.T[a.idx] - D.T[b.idx] || D.d[a.idx] - D.d[b.idx] || a.idx - b.idx; });
+    } else {
+      sira = ikinci.filter(iki).map(function(x){ return { idx:x, v:H.v1[x] + H.v2[x], uz:NaN, pareto:false }; });
+      sira.sort(function(a, b){ return a.v - b.v || D.T[a.idx] - D.T[b.idx] || a.idx - b.idx; });
+    }
+    // Grup başına tip sıklığı (uygun kümede).
+    var siklik = (D.G || []).map(function(){ return {}; });
+    uygun.forEach(function(x){ D.tipler(x).forEach(function(t, g){ if(t) siklik[g][t] = (siklik[g][t] || 0) + 1; }); });
+    // Dağılım (rapor çizimi): çözülen bütün kombinasyonlar en çok ~2500 noktayla,
+    // uygunlar en çok ~1500 noktayla — fazlası eşit adımla seyreltilir; cephe her zaman.
+    var uyg = {}, nok = [], adm = Math.max(1, Math.ceil(N / 2500)), admU = Math.max(1, Math.ceil(uygun.length / 1500));
+    uygun.forEach(function(x, k){ uyg[x] = { k:k, p:par[k] }; });
+    for(x = 0; x < N; x++){
+      if(D.d1[x] !== 1) continue;
+      var u = uyg[x];
+      if(u ? (u.p || u.k % admU === 0) : (x % adm === 0))
+        nok.push({ T:D.T[x], d:D.d[x], uygun:!!u, pareto:!!(u && u.p) });
+    }
+    var hata = 0;
+    for(x = 0; x < N; x++) if(D.d1[x] !== 1) hata++;
+    return {
+      N:N, nAday:D.nA, taranan:D.taranan, hata:hata, ikinciN:ikinci.length, uygunN:uygun.length,
+      huni:huni, red:red, sira:sira.slice(0, D.enIyi).map(function(s, k){
+        return { no:k + 1, idx:s.idx, tipler:D.tipler(s.idx), uz:s.uz, pareto:s.pareto, v:s.v }; }),
+      paretoN:cephe.length, cephe:cephe, nokta:nok, seyrek:adm, seyrekU:admU, siklik:siklik,
+      araliT:U.araliT, araliD:U.araliD, olc:U.olc, ctx:c, sure:D.sure, tam:D.tam
+    };
+  }
+  function _red(D, H, B){
+    var red = {};
+    B.K1.concat(B.K2).forEach(function(p){
+      var s = 0, a = p[0].asama;
+      for(var x = 0; x < D.N; x++) if((a === 1 ? D.d1[x] === 1 : D.d2[x] === 1) && (H.m[x] & p[1])) s++;
+      red[p[0].k] = s;
+    });
+    return red;
+  }
+
   function tarayici(P){
     var G = P.G || [], A = P.adaylar || [], c = baglam(P.ctx), sabit = P.sabit || {};
     var enIyi = P.enIyi > 0 ? P.enIyi : 25;
@@ -333,95 +474,33 @@ var veMntKatalog = (function() {
     var taranan = [];
     G.forEach(function(g, i){ if(!sabit[g.anahtar]) taranan.push(i); });
     var nA = A.length, N = (taranan.length && nA) ? Math.pow(nA, taranan.length) : 0;
-    var tipler = function(idx){
-      var t = G.map(function(){ return null; });
-      for(var k = taranan.length - 1; k >= 0; k--){ t[taranan[k]] = A[idx % nA].key; idx = Math.floor(idx / nA); }
-      return t;
-    };
-    var K1 = KISITLAR.filter(function(K){ return K.asama === 1 && c.acik[K.k]; });
-    var K2 = KISITLAR.filter(function(K){ return K.asama === 2 && c.acik[K.k]; });
-    var T1 = new Float64Array(N), D1 = new Float64Array(N), V1 = new Float64Array(N);
-    var M1 = new Int32Array(N);          // birinci aşama ihlal maskesi (bit = K1 sırası)
-    var hata = 0, asama = 1, i = 0, ikinci = null, j = 0, R2 = {}, bitti = !N, S = null;
+    var D = depo(G, A, taranan, N, !!P.tam, enIyi);
+    D.G = G; D.c = c;
+    var K1 = KISITLAR.filter(function(K){ return K.asama === 1; });
+    var K2 = KISITLAR.filter(function(K){ return K.asama === 2; });
+    var asama = 1, i = 0, liste = null, j = 0, bitti = !N, S = null;
     var t0 = Date.now();
 
     function adim1(idx){
       var o = null;
-      try { o = P.olc1(tipler(idx)); } catch(e){ o = null; }
-      if(!o){ hata++; T1[idx] = D1[idx] = V1[idx] = NaN; M1[idx] = -1; return; }
-      var r = degerlendir(o, c, 1), m = 0;
-      K1.forEach(function(K, b){ if(r.sonuc[K.k] && !r.sonuc[K.k].ok) m |= (1 << b); });
-      T1[idx] = o.T; D1[idx] = _sehim(o); V1[idx] = r.v; M1[idx] = m;
-    }
-    function ikinciListe(){
-      var L = [];
-      for(var k = 0; k < N; k++) if(M1[k] === 0) L.push(k);
-      if(!L.length){
-        for(k = 0; k < N; k++) if(M1[k] > 0) L.push(k);
-        L.sort(function(a, b){ return V1[a] - V1[b] || a - b; });
-        L = L.slice(0, enIyi);
-      }
-      return L;
+      try { o = P.olc1(D.tipler(idx)); } catch(e){ o = null; }
+      if(!o){ D.T[idx] = D.d[idx] = D.fMin[idx] = D.fMax[idx] = NaN; return; }
+      D.d1[idx] = 1;
+      D.T[idx] = o.T; D.d[idx] = _sehim(o); D.fMin[idx] = _min(o.f); D.fMax[idx] = _max(o.f);
+      K1.forEach(function(K){ D.X[K.k][idx] = OLCU[K.k](o); });
     }
     function adim2(idx){
       var o = null;
-      try { o = P.olc2(tipler(idx)); } catch(e){ o = null; }
-      if(!o){ R2[idx] = { hata:true }; return; }
-      var r = degerlendir(o, c, 2), m = 0;
-      K2.forEach(function(K, b){ if(r.sonuc[K.k] && !r.sonuc[K.k].ok) m |= (1 << b); });
-      R2[idx] = { v:r.v, m:m };
+      try { o = P.olc2(D.tipler(idx)); } catch(e){ o = null; }
+      if(!o){ D.d2[idx] = -1; return; }
+      D.d2[idx] = 1;
+      K2.forEach(function(K){ D.X[K.k][idx] = OLCU[K.k](o); });
     }
-    function kapat(){
-      var ad = function(K){ return K.k; };
-      // Ardışık eleme (huni) — kısıt sırası KISITLAR'ın sırası.
-      var huni = [], kalan = [];
-      for(var k = 0; k < N; k++) if(M1[k] >= 0) kalan.push(k);
-      huni.push({ k:'cozulen', kalan:kalan.length });
-      K1.forEach(function(K, b){
-        kalan = kalan.filter(function(x){ return !(M1[x] & (1 << b)); });
-        huni.push({ k:ad(K), kalan:kalan.length });
-      });
-      K2.forEach(function(K, b){
-        kalan = kalan.filter(function(x){ var r = R2[x]; return r && !r.hata && !(r.m & (1 << b)); });
-        huni.push({ k:ad(K), kalan:kalan.length });
-      });
-      // Bağımsız red sayısı — birinci aşama hepsinde, ikinci aşama koşulduğu yerde.
-      var red = {};
-      K1.forEach(function(K, b){ var s = 0; for(var x = 0; x < N; x++) if(M1[x] > 0 && (M1[x] & (1 << b))) s++; red[K.k] = s; });
-      K2.forEach(function(K, b){ var s = 0; ikinci.forEach(function(x){ var r = R2[x]; if(r && !r.hata && (r.m & (1 << b))) s++; }); red[K.k] = s; });
-
-      var uygun = ikinci.filter(function(x){ var r = R2[x]; return M1[x] === 0 && r && !r.hata && r.m === 0; });
-      var P2 = uygun.map(function(x){ return { T:T1[x], d:D1[x] }; });
-      var par = pareto(P2), U = uzlasi(P2, c.s.agirlik);
-      var sira;
-      if(uygun.length){
-        sira = uygun.map(function(x, k){ return { idx:x, uz:U.uz[k], pareto:par[k] }; });
-        sira.sort(function(a, b){ return a.uz - b.uz || T1[a.idx] - T1[b.idx] || D1[a.idx] - D1[b.idx] || a.idx - b.idx; });
-      } else {
-        sira = ikinci.filter(function(x){ var r = R2[x]; return r && !r.hata; })
-          .map(function(x){ return { idx:x, v:V1[x] + R2[x].v, uz:NaN, pareto:false }; });
-        sira.sort(function(a, b){ return a.v - b.v || T1[a.idx] - T1[b.idx] || a.idx - b.idx; });
-      }
-      // Grup başına tip sıklığı (uygun kümede).
-      var siklik = G.map(function(){ return {}; });
-      uygun.forEach(function(x){ tipler(x).forEach(function(t, g){ if(t) siklik[g][t] = (siklik[g][t] || 0) + 1; }); });
-      // Dağılım (rapor çizimi): çözülen bütün kombinasyonlar en çok ~2500 noktayla,
-      // uygunlar en çok ~1500 noktayla — fazlası eşit adımla seyreltilir; cephe her zaman.
-      var uyg = {}, nok = [], adm = Math.max(1, Math.ceil(N / 2500)), admU = Math.max(1, Math.ceil(uygun.length / 1500));
-      uygun.forEach(function(x, k){ uyg[x] = { k:k, p:par[k] }; });
-      for(var x = 0; x < N; x++){
-        if(M1[x] < 0) continue;
-        var u = uyg[x];
-        if(u ? (u.p || u.k % admU === 0) : (x % adm === 0))
-          nok.push({ T:T1[x], d:D1[x], uygun:!!u, pareto:!!(u && u.p) });
-      }
-      S = {
-        N:N, nAday:nA, taranan:taranan, hata:hata, ikinciN:ikinci.length, uygunN:uygun.length,
-        huni:huni, red:red, sira:sira.slice(0, enIyi).map(function(s, k){
-          return { no:k + 1, tipler:tipler(s.idx), uz:s.uz, pareto:s.pareto, v:s.v }; }),
-        paretoN:par.filter(Boolean).length, nokta:nok, seyrek:adm, seyrekU:admU, siklik:siklik,
-        araliT:U.araliT, araliD:U.araliD, olc:U.olc, ctx:c, sure:Date.now() - t0
-      };
+    function ikinciListe(){
+      if(!D.tam) return _ikinci(D, hukumler(D, c), _bitler(c).b1);
+      var L = [];
+      for(var x = 0; x < N; x++) if(D.d1[x] === 1) L.push(x);
+      return L;
     }
 
     return {
@@ -431,15 +510,64 @@ var veMntKatalog = (function() {
         while(!bitti && son-- > 0){
           if(asama === 1){
             adim1(i++);
-            if(i >= N){ asama = 2; ikinci = ikinciListe(); j = 0; }
-          } else if(j < ikinci.length){
-            adim2(ikinci[j++]);
+            if(i >= N){ asama = 2; liste = ikinciListe(); j = 0; }
+          } else if(j < liste.length){
+            adim2(liste[j++]);
           }
-          if(asama === 2 && j >= ikinci.length){ kapat(); bitti = true; }
+          if(asama === 2 && j >= liste.length){ D.sure = Date.now() - t0; S = ozet(D, c); bitti = true; }
         }
-        return { bitti:bitti, asama:asama, i:(asama === 1 ? i : j), n:(asama === 1 ? N : (ikinci ? ikinci.length : 0)) };
+        return { bitti:bitti, asama:asama, i:(asama === 1 ? i : j), n:(asama === 1 ? N : (liste ? liste.length : 0)) };
       },
-      sonuc: function(){ return S; }
+      sonuc: function(){ return S; },
+      depo: function(){ return bitti ? D : null; }
+    };
+  }
+
+  // UYGUN: çözülmüş, ikinci aşaması ölçülmüş ve bütün açık kısıtları sağlayan
+  // kombinasyon. Tam depoda bu küme özetin uygun kümesinin AYNISIDIR (birinci
+  // aşamayı geçen varsa hepsi ikinci aşamada; yoksa ikisi de boş).
+  function _uygunMu(D, H, x){ return D.d1[x] === 1 && D.d2[x] === 1 && H.m[x] === 0; }
+
+  // BAĞLAYICI KISITLAR — açık kısıt başına bağımsız ihlal (`red`, özetinkinin
+  // aynısı) ve TEK ENGEL olduğu kombinasyon sayısı (`tek`: öteki bütün açık
+  // kısıtları sağlıyor, yalnız bu kısıtı ihlal ediyor — kısıt gevşese uygun
+  // olacak kombinasyonlar; iki aşaması da ölçülmüş kombinasyonlarda, tam depo).
+  function baglayici(D, c, H){
+    H = H || hukumler(D, c);
+    var B = _bitler(c), red = _red(D, H, B), L = [], n = 0, uygun = 0;
+    B.K1.concat(B.K2).forEach(function(p){ L.push({ k:p[0].k, bit:p[1], tek:0 }); });
+    for(var x = 0; x < D.N; x++){
+      if(D.d1[x] !== 1 || D.d2[x] !== 1) continue;
+      n++;
+      var m = H.m[x];
+      if(!m){ uygun++; continue; }
+      L.forEach(function(q){ if(m === q.bit) q.tek++; });
+    }
+    L.sort(function(a, b){ return _sira(a.k) - _sira(b.k); });
+    return { n:n, uygun:uygun, kisit:L.map(function(q){ return { k:q.k, red:red[q.k], tek:q.tek }; }) };
+  }
+  function _sira(k){ for(var i = 0; i < KISITLAR.length; i++) if(KISITLAR[i].k === k) return i; return -1; }
+
+  // SINIR DUYARLILIĞI — ek kısıt k'nin sınırı L olsaydı uygun kombinasyon
+  // sayısı; öteki açık kısıtlar bugünkü sınırında. Dönüş: { k, yon, sinir,
+  // deger (artan ölçüler), na (veri yok — her sınırda sağlar), sayi(L) }.
+  // sayi(bugünkü sınır) k açıksa uygun sayısının aynısıdır.
+  function duyarlilik(D, c, k, H){
+    var Y = YON[k];
+    if(!Y) return null;
+    H = H || hukumler(D, c);
+    var b = KISITLAR.map(function(K){ return K.k; }).indexOf(k), bit = (1 << b) >>> 0, X = D.X[k], v = [], na = 0;
+    for(var x = 0; x < D.N; x++){
+      if(D.d1[x] !== 1 || D.d2[x] !== 1 || (H.m[x] & ~bit)) continue;
+      if(X[x] !== X[x]) na++; else v.push(X[x]);
+    }
+    v.sort(function(p, q){ return p - q; });
+    var ilk = function(f){ var lo = 0, hi = v.length; while(lo < hi){ var m = (lo + hi) >> 1; if(f(v[m])) hi = m; else lo = m + 1; } return lo; };
+    return {
+      k:k, yon:Y[0], sinir:c.s[Y[1]], deger:v, na:na,
+      sayi: function(L){
+        return na + (Y[0] === 'ust' ? ilk(function(a){ return a > L; }) : v.length - ilk(function(a){ return a >= L; }));
+      }
     };
   }
 
@@ -471,7 +599,9 @@ var veMntKatalog = (function() {
     K1_ORAN: K1_ORAN, K1A_HZ: K1A_HZ, K1B: K1B, K2_T: K2_T,
     yanAyir: yanAyir, gruplar: gruplar, kombinasyonSayisi: kombinasyonSayisi,
     baglam: baglam, degerlendir: degerlendir, hepsi: hepsi, isletmeMi: isletmeMi,
-    pareto: pareto, uzlasi: uzlasi, tarayici: tarayici, ked: ked
+    pareto: pareto, uzlasi: uzlasi, tarayici: tarayici, ked: ked,
+    olcu: olcu, hukum: hukum, hukumler: hukumler, ozet: ozet, baglayici: baglayici, duyarlilik: duyarlilik,
+    uygunMu: _uygunMu
   };
 })();
 

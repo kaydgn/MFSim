@@ -120,8 +120,12 @@ function _mntPrmYontem(E){
       .map(function(x){ return x.no+' '+x.ad.toLocaleLowerCase('tr'); }).join(', ');
   };
   h+='<p><strong>Birinci aşama</strong> — statik denge (1 g) ve modal analiz, bütün kombinasyonlarda: '+asama(1)+'. '
-   + '<strong>İkinci aşama</strong> — işletme ve darbe yük durumları, yalnız birinci aşamayı sağlayan kombinasyonlarda: '+asama(2)+'. '
-   + 'Hiçbir kombinasyon birinci aşamayı sağlamazsa ikinci aşama en az ihlalli kombinasyonlarda yürür.</p>';
+   + (E.S.tam
+      ? '<strong>İkinci aşama</strong> — işletme ve darbe yük durumları, çözülen bütün kombinasyonlarda: '+asama(2)+'. '
+        + 'Uygun küme iki aşamanın bütün açık kısıtlarını sağlayan kombinasyonlardır. Hiçbir kombinasyon birinci aşamayı '
+        + 'sağlamazsa sıra birinci aşamada en az ihlalli kombinasyonlardan kurulur.</p>'
+      : '<strong>İkinci aşama</strong> — işletme ve darbe yük durumları, yalnız birinci aşamayı sağlayan kombinasyonlarda: '+asama(2)+'. '
+        + 'Hiçbir kombinasyon birinci aşamayı sağlamazsa ikinci aşama en az ihlalli kombinasyonlarda yürür.</p>');
   h+='<p><strong>Amaç.</strong> İki büyüklük birlikte küçültülür: rölanti iletilebilirliği T (Kriter 2’nin tanımı; düşey zıplama frekansı tabanında tek serbestlikli kestirim) '
    + 've 1 g statik düşey sehimin takozlar üzerindeki en büyük mutlak değeri δ<sub>s</sub>. Yumuşak takoz T’yi düşürür, sehimi büyütür; '
    + 'iki amaç birbirine karşı çalışır.</p>';
@@ -206,8 +210,10 @@ function _mntPrmEleme(E){
     once=x.kalan;
   });
   h+='</table>';
-  h+='<p>Kombinasyon '+_rF(S.N, 0)+' · çözülemeyen '+_rF(S.hata, 0)+' · ikinci aşamaya geçen '+_rF(S.ikinciN, 0)
-   + ' · uygun '+_rF(S.uygunN, 0)+' · Pareto cephesi '+_rF(S.paretoN, 0)+'. Tek başına ihlal sayısı ikinci aşama kısıtlarında yalnız ikinci aşamada çözülen kombinasyonları sayar.</p>';
+  h+='<p>Kombinasyon '+_rF(S.N, 0)+' · çözülemeyen '+_rF(S.hata, 0)+' · birinci aşamayı geçen '+_rF(S.ikinciN, 0)
+   + ' · uygun '+_rF(S.uygunN, 0)+' · Pareto cephesi '+_rF(S.paretoN, 0)+'. '
+   + (S.tam ? 'İkinci aşama çözülen bütün kombinasyonlarda koşar; tek başına ihlal sayısı her aşamada o aşaması çözülen kombinasyonları sayar.'
+            : 'Tek başına ihlal sayısı ikinci aşama kısıtlarında yalnız ikinci aşamada çözülen kombinasyonları sayar.')+'</p>';
   return h;
 }
 

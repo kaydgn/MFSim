@@ -2187,6 +2187,16 @@ Rapor'da ve gerçekten değişiyor; model önce TAM kurulur, yoksa çözüm redd
 ve kapı boşa ölçer) + *AİLE* (Takoz'da Uygunluk yasak) +
 `mount-sihirbaz-doku.test.js` → *"SONUÇ YOK"*.
 
+**İstisna — Parametrik Analiz'in Sonuç kategorisi (2026-10-18).** Kullanıcı
+(*"Önerilerini uygulayalım. Bir bakalım kullanışlı mı. Bileşen penceresinin
+içine entegre edersin."*): diyagram kataloğundaki önerilerin pencereye
+girmesi. İstisna dar: pencere TARAMANIN sonucunu gösterir (uzlaşı ve on
+diyagram), Çözücü'nün çözümünü değil — çözüm pencereyi yine değiştirmez
+(*ÇÖZÜMDEN BAĞIMSIZ* aynen geçer; tarama imzası Çözücü'nün yalnız girdisini,
+çözüm modu ve ζ'yı okur). Tarama düğüm başına bellekte durur: proje dosyasına
+ve geri-al yığınına girmez; sınır değişince depodan yeniden kurulur, model ya
+da aday değişince eskir. Kapı: `mount-param.test.js` → *SONUÇ*.
+
 ## Arayüz anlatmaz — ekranda ve belgede yalnız ad, veri, durum (2026-10-16)
 
 **Hüküm:** ekranda ve indirilen/basılan belgede duran metin ad, veri ya da
