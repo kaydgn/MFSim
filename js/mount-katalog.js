@@ -334,6 +334,10 @@ var veMntKatalog = (function() {
   // aşama ölçüsü hazırdır. Tam olmayan tarama ikinci aşamayı yalnız birinci
   // aşamayı geçenlerde (yoksa en az ihlalli `enIyi` kombinasyonda) koşar;
   // ikisinin özeti AYNIDIR (kapı: mount-katalog.test.js → TAM).
+  // TAM TARAMA TEK GEÇİŞ: kombinasyonun ikinci aşaması birincisinin hemen
+  // ardından ölçülür — ölçücü aynı kombinasyonun hazırlığını paylaşır
+  // (cp-mount-param.js) ve ilerleme tek sayıdır (i / N, `asama` 0). Depo iki
+  // geçişinkinin aynısı (kapı: → TEK GEÇİŞ).
   function depo(G, A, taranan, N, tam, enIyi){
     var nA = A.length, D = {
       N: N, nA: nA, taranan: taranan, adaylar: A, tam: tam, enIyi: enIyi, sure: 0,
@@ -507,6 +511,14 @@ var veMntKatalog = (function() {
       N: N,
       adim: function(n){
         var son = n > 0 ? n : Infinity;
+        if(D.tam){
+          while(!bitti && son-- > 0){
+            adim1(i);
+            if(D.d1[i] === 1) adim2(i);
+            if(++i >= N){ D.sure = Date.now() - t0; S = ozet(D, c); bitti = true; }
+          }
+          return { bitti:bitti, asama:0, i:i, n:N };
+        }
         while(!bitti && son-- > 0){
           if(asama === 1){
             adim1(i++);

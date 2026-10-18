@@ -456,8 +456,8 @@ function getMntModulePropertiesHTML(node){
   } else {
     model = _mntBolum('Model', '', _mntNot('Model kurulmadı.', ''));
   }
-  var yan = '<button type="button" class="ve-fp-solve" onclick="veMntOpenEditor(\''+node.id+'\')">'
-    + veIkon('folder-open')+' Alt topolojiyi aç</button>';
+  var yan = vePencereEylem('<button type="button" class="ve-fp-solve" onclick="veMntOpenEditor(\''+node.id+'\')">'
+    + veIkon('folder-open')+' Alt topolojiyi aç</button>');
   return _mntPencereKabuk(node, [{ k:'ic', ad:'İçerik', govde:icerik }, { k:'mod', ad:'Model', govde:model }], yan);
 }
 
@@ -1973,13 +1973,14 @@ function getMntExamplePropertiesHTML(node){
     + (diagram ? '<figure class="ve-mnt-ex-sema">'+diagram+'<figcaption>Kanvasa kurulacak topoloji</figcaption></figure>' : ''));
   var kapilar=_mntExampleKapilarHTML();
   var baslangic=_mntBolum('Modeli kur', '', kapilar || _mntNot('Başlangıç kiti yüklenmedi.', 'warn'));
-  // Sağ sütun FEAD'in sırasıyla: pencerenin cevabı (tutarlılık) → eylem →
-  // eylemin notu → ikincil eylem. Uygunluk yok — sonuç yalnız raporda.
+  // Sağ sütun FEAD'in sırasıyla: pencerenin cevabı (tutarlılık) → ikincil
+  // eylem → eylem satırı (sütunun sonu, dar kapta yapışık). Uygunluk yok —
+  // sonuç yalnız raporda.
   var yan=_mntBolum('Tutarlılık uyarıları', 'kanvastaki model', '<div id="ve-mnt-example-report">'+_mntExampleDenetimIc(_mntExampleValidate(), true)+'</div>')
-    + '<button type="button" class="ve-fp-solve" onclick="veMntLoadExample(\''+nid+'\')">'+veIkon('play')+' Örneği aktar</button>'
     + '<div class="ve-fp-eylem"><button type="button" class="ve-fp-dugme" onclick="veMntExportTopology()"'
     + '>'
-    + veIkon('download')+' İç topolojiyi JSON dışa aktar</button></div>';
+    + veIkon('download')+' İç topolojiyi JSON dışa aktar</button></div>'
+    + vePencereEylem('<button type="button" class="ve-fp-solve" onclick="veMntLoadExample(\''+nid+'\')">'+veIkon('play')+' Örneği aktar</button>');
   return _mntPencereKabuk(node, [{ k:'ornek', ad:'Örnek', govde:ornek },
                                  { k:'bas', ad:'Başlangıç', govde:baslangic }], yan);
 }
@@ -4661,9 +4662,9 @@ function getMntSolverPropertiesHTML(node){
   // Sağ sütun FEAD'in sırasıyla: pencerenin cevabı (ön denetim) → eylem →
   // eylemin notu (son hesabın hazırlığı). Uygunluk yok — sonuç raporda.
   var yan=_mntOnDenetimHTML(node)
-    + '<button type="button" class="ve-fp-solve" id="ve-mnt-hesapla-'+node.id+'" onclick="veMntSolverCompute(\''+node.id+'\')">'
-    + veIkon('play')+' Hesapla</button>'
-    + '<div class="ve-fp-solve-not" id="ve-mnt-cnot-'+node.id+'" data-tazele data-cozum-durumu>'+_mntEsc(_mntCozucuNotu(node, veMntSonucDurumu()))+'</div>';
+    + vePencereEylem('<button type="button" class="ve-fp-solve" id="ve-mnt-hesapla-'+node.id+'" onclick="veMntSolverCompute(\''+node.id+'\')">'
+        + veIkon('play')+' Hesapla</button>',
+      '<div class="ve-fp-solve-not" id="ve-mnt-cnot-'+node.id+'" data-tazele data-cozum-durumu>'+_mntEsc(_mntCozucuNotu(node, veMntSonucDurumu()))+'</div>');
   return _mntPencereKabuk(node, kategoriler, yan);
 }
 
@@ -4708,13 +4709,13 @@ function getMntReportPropertiesHTML(node){
           + _mntIzgara(1, _mntOku('Çözüm yolu', _mntCozumModuEtiketi(R)))
         : _mntNot('Hesaplanmadı.', ''),
       { id:'ve-mnt-rap-ic-'+node.id, tazele:true, cozum:true });
-  var eylem='<button type="button" class="ve-fp-solve" data-cozum-durumu'
-    + (cozuldu ? ' onclick="veMntGenerateReport(\''+node.id+'\')"' : ' disabled')+'>'
-    + veIkon('download')+' Raporu oluştur ve indir</button>'
-    // Eylemin notu FEAD Rapor'unun satırı (`.ve-fp-durum-not`, kutusuz):
-    // yalnız üretimin durumu (veMntGenerateReport → data-d) — çözümün durumu
-    // hemen üstteki cevapta, ikinci kez yazılmaz.
-    + '<div class="ve-fp-durum-not" id="ve-mnt-report-status" data-cozum-durumu></div>';
+  // Eylemin notu FEAD Rapor'unun satırı (`.ve-fp-durum-not`, kutusuz):
+  // yalnız üretimin durumu (veMntGenerateReport → data-d) — çözümün durumu
+  // hemen üstteki cevapta, ikinci kez yazılmaz.
+  var eylem=vePencereEylem('<button type="button" class="ve-fp-solve" data-cozum-durumu'
+      + (cozuldu ? ' onclick="veMntGenerateReport(\''+node.id+'\')"' : ' disabled')+'>'
+      + veIkon('download')+' Raporu oluştur ve indir</button>',
+    '<div class="ve-fp-durum-not" id="ve-mnt-report-status" data-cozum-durumu></div>');
   return _mntPencereKabuk(node, [{ k:'ic', ad:'İçerik', govde:icerik },
                                  { k:'gir', ad:'Girdiler', govde:_mntRaporFrekansHTML(node) }],
                           durum+eylem);
@@ -4966,24 +4967,19 @@ function _mntCaseIterLabel(rc, prep){
   }
   return 'lineer'+((ck.clampCount>0)?(' · '+ck.clampCount+' durdurucu'):'');
 }
-// İLERLEME DÜĞMENİN İÇİNDE. Eskiden ayrı bir kutu #ve-mnt-results'a
-// basılıyordu; müfettiş sütununda Hesapla alta yapışık ve her zaman
-// görünürken kutu içeriğin dibine düşüyor ve kaydırmadan görünmüyordu.
-// Oran `--ilerleme` ile VERİ olarak yazılır, görünüm CSS'te
-// (`.ve-fp-solve[aria-busy]`). total=0 düğmeyi bırakır.
+// İLERLEME EYLEM SATIRINDA (pencere kitinin çubuğu, vePencereIlerleme):
+// sayı, çözülen durum ve oran; düğme meşgul (`aria-busy` — çift tık koşan
+// hesabı yinelemez). Eskiden düğmenin İÇİNDE bir dolguydu; kompakt düğmede
+// yazısıyla birlikte eni değişirdi. total=0 düğmeyi ve satırı bırakır.
 function _mntHesaplaIlerleme(btn, done, total, label){
   if(!btn) return;
+  var yaz=(typeof vePencereIlerleme==='function') ? vePencereIlerleme : function(){};
   if(total>0){
-    var pct=Math.max(0, Math.min(100, Math.round(100*done/total)));
     btn.setAttribute('aria-busy', 'true');
-    btn.style.setProperty('--ilerleme', pct+'%');
-    btn.innerHTML=veIkon('play')+' Çözülüyor · '+done+' / '+total;
-    if(label) btn.title=label;
+    yaz(btn, { ad:'Hesap', metin:_mntS(done, 0)+' / '+_mntS(total, 0)+(label ? ' · '+label : ''), oran:done/total });
   } else {
     btn.removeAttribute('aria-busy');
-    btn.style.removeProperty('--ilerleme');
-    btn.removeAttribute('title');
-    btn.innerHTML=veIkon('play')+' Hesapla';
+    yaz(btn, null);
   }
 }
 

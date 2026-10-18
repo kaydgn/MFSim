@@ -184,7 +184,8 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
   test('pencerenin EYLEMİ sağ sütunda ve tek', () => {
     kur('AG00976_GATES_2025');
     // Eylemi olan pencereler: düğmesi gövdeye gömülseydi uzun pencerede
-    // aranırdı; sağ sütunda dar kapta kaydırma alanının dibine yapışır.
+    // aranırdı; sağ sütunun EYLEM SATIRINDA (kit: vePencereEylem), dar kapta
+    // kaydırma alanının dibine yapışır.
     // (Dönüş Yönü penceresi 2026-09-28'de kalktı — yön FEAD araçları
     // penceresinin bölümü; tipi yok, kapı `cp-fead.test.js`.)
     const eylemli = ['fead-analysis', 'fead-solver', 'fead-report', 'fead-wizard'];
@@ -198,7 +199,7 @@ describe('HER FEAD PENCERESİ KRANK KASNAĞI AİLESİNDE', () => {
       const d = document.createElement('div');
       d.innerHTML = global[KURUCU[t]](n);
       const hepsi = d.querySelectorAll('.ve-fp-solve');
-      const sutunda = d.querySelectorAll('.ve-fp-side > .ve-fp-solve');
+      const sutunda = d.querySelectorAll('.ve-fp-side > .ve-fp-yurut > .ve-fp-solve');
       if (hepsi.length !== 1 || sutunda.length !== 1) sorun.push(t + ': ' + hepsi.length + ' eylem, sütunda ' + sutunda.length);
     });
     expect(sorun).toEqual([]);

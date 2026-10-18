@@ -131,3 +131,65 @@ test('Tara → Sonuç: gerçek genişlik, 3B döner, ipucu, canlı sınır, tam 
 
   expect(hata).toEqual([]);
 });
+
+// EYLEM SATIRI (kullanıcı 2026-10-18: *"Tara … dediğimde program kasıyor. Ona
+// bir progress bar tarzı bir şey oluşturalım. Ayrıca … butonu çok geniş ve
+// büyük"*). Ölçülen önce (main 46465f1, ASFAT, 379 px'lik sütun): düğme
+// 359 × 40, ilerleme yazısı kaydırma alanının 830 px altında, 19.683
+// kombinasyonluk taramada 114–131 uzun görev (> 50 ms; parça 50 ms ve 200
+// kombinasyondu). Burada 729 kombinasyon: eski parçayla ~8 uzun görev.
+test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür ve ilerler, tarama dilimli — uzun görev yok', async ({ page }) => {
+  const hata = [];
+  page.on('pageerror', (e) => hata.push(String(e)));
+  const id = await kur(page);
+  await page.evaluate((i) => {                                   // bütün adaylar, bir grup sabit: 27 × 27
+    const n = nodes.find((x) => x.id === i), G = _mntParamModel().G;
+    n.data = { sabit: { [G[1].anahtar]: true } };
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
+  }, id);
+  await page.waitForTimeout(600);
+  const geo = () => page.evaluate((i) => {
+    const ic = document.querySelector('.ve-properties-content'), s = document.querySelector('.ve-properties-content .ve-fp-yurut');
+    const b = document.getElementById('ve-mnt-param-btn-' + i), il = s.querySelector('.ve-fp-ilerleme');
+    const r = (e) => e.getBoundingClientRect(), q = r(ic), rs = r(s), rb = r(b);
+    return { tasar: ic.scrollHeight > ic.clientHeight + 40, dip: Math.round(q.bottom - rs.bottom), sw: rs.width, bw: rb.width, bh: rb.height,
+      sag: Math.round(rs.right - rb.right), metin: b.textContent.trim(),
+      il: il ? { gorus: r(il).top >= q.top && r(il).bottom <= q.bottom + 1, y: il.querySelector('span').textContent, v: +il.getAttribute('aria-valuenow') } : null };
+  }, id);
+  const g0 = await geo();
+  expect(g0.tasar).toBe(true);                                  // içerik taşıyor — satır yapışık olmalı
+  expect(Math.abs(g0.dip)).toBeLessThanOrEqual(1);              // satır kaydırma alanının dibinde
+  expect(g0.bh).toBeLessThanOrEqual(32);                        // kompakt: eskisi 40 px ve sütunun eninde
+  expect(g0.bw).toBeLessThan(0.4 * g0.sw);
+  expect(g0.sag).toBeGreaterThanOrEqual(8);                     // sağa yaslı, satırın dolgusuyla
+  expect(g0.sag).toBeLessThanOrEqual(12);
+  expect(g0.metin).toBe('Tara');
+  expect(g0.il).toBeNull();
+
+  await page.evaluate((i) => {
+    window.__uzun = []; window.__son = Infinity; window.__deger = [];
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__uzun.push([e.startTime, e.duration]))).observe({ type: 'longtask' });
+    const k = window._mntParamSonucKaydet;
+    window._mntParamSonucKaydet = function () { window.__son = performance.now(); return k.apply(this, arguments); };
+    new MutationObserver(() => { const il = document.querySelector('.ve-fp-yurut[data-is] .ve-fp-ilerleme'); if (il) window.__deger.push(+il.getAttribute('aria-valuenow')); })
+      .observe(document.querySelector('.ve-properties-content'), { subtree: true, attributes: true, childList: true, attributeFilter: ['aria-valuenow'] });
+  }, id);
+  await page.click('#ve-mnt-param-btn-' + id);
+  const g1 = await geo();
+  expect(g1.metin).toBe('Durdur');
+  expect(g1.il && g1.il.gorus).toBe(true);                      // ilerleme düğmenin yanında, görüşte
+  expect(g1.il.y).toMatch(/^Kombinasyon [\d.]+ \/ 729$/);
+  await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 120000 });
+  await page.waitForTimeout(400);
+  const S = await page.evaluate(() => ({ uzun: window.__uzun.filter((u) => u[0] < window.__son).map((u) => Math.round(u[1])), son: window.__son, deger: window.__deger }));
+  expect(Number.isFinite(S.son)).toBe(true);
+  expect(S.uzun.length).toBeLessThanOrEqual(1);                 // tarama boyunca (bitiş evresi hariç) — tek bir GC payı
+  const ara = S.deger.filter((v) => v > 0 && v < 100);
+  expect(new Set(ara).size).toBeGreaterThanOrEqual(2);          // çubuk gerçekten ilerliyor
+  S.deger.forEach((v, k) => { if (k) expect(v).toBeGreaterThanOrEqual(S.deger[k - 1]); });
+  const g2 = await geo();
+  expect(g2.metin).toBe('Tara');
+  expect(g2.il).toBeNull();
+  expect(await page.evaluate((i) => document.getElementById('ve-mnt-param-st-' + i).textContent, id)).toMatch(/^Tarandı \([\d,]+ s\)$/);
+  expect(hata).toEqual([]);
+});

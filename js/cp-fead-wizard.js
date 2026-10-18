@@ -5864,9 +5864,9 @@ function getFeadWizardPropertiesHTML(node){
         return '<li><b>' + _fwEsc(s.ad) + '</b> — ' + _fwEsc(s.ipucu) + '</li>';
       }).join('') + '</ol>');
 
-  var eylem = '<button type="button" class="ve-fp-solve" onclick="veFeadWizOpen(\''
+  var eylem = vePencereEylem('<button type="button" class="ve-fp-solve" onclick="veFeadWizOpen(\''
     + node.id + '\')"><span class="mf-ico mf-ico-wand" aria-hidden="true"></span>'
-    + ' Sihirbazı Aç</button>';
+    + ' Sihirbazı Aç</button>');
   var yan = veFeadToolSide(node, null, null, null, eylem);
   return veFeadPanelShell(node, [{ k:'tas', ad:'Taslak',  govde: taslak },
                                  { k:'adm', ad:'Adımlar', govde: adimlar }], yan);

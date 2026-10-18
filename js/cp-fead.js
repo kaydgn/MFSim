@@ -131,8 +131,8 @@ function getFeadModulePropertiesHTML(node){
         : _feadHint('Kasnak yok.'));
 
   var yan = { html: _feadSideGates(build, T)
-      + '<button type="button" class="ve-fp-solve" onclick="veFeadOpenEditor(\'' + node.id + '\')">'
-      + '<span class="mf-ico mf-ico-folder-open" aria-hidden="true"></span> Alt topolojiyi aç</button>' };
+      + vePencereEylem('<button type="button" class="ve-fp-solve" onclick="veFeadOpenEditor(\'' + node.id + '\')">'
+      + '<span class="mf-ico mf-ico-folder-open" aria-hidden="true"></span> Alt topolojiyi aç</button>') };
   return veFeadPanelShell(node, [{ k:'ic',  ad:'İçerik', govde: icerik },
                                  { k:'mod', ad:'Model',  govde: model }], yan);
 }
@@ -8644,9 +8644,9 @@ function getFeadSolverPropertiesHTML(node){
   // tek kaynağından — FEAD araçları penceresiyle AYNI hüküm ve aynı cümle.
   var islOk = !(build.isletme && !build.isletme.ok);
   var hazir = build.ok && satirSay > 0 && islOk;
-  var dugme = '<button type="button" class="ve-fp-solve"' + (hazir ? '' : ' disabled')
-    + ' onclick="veFeadSolve(\'' + node.id + '\')">' + veIkon('play') + ' Hesapla</button>'
-    + (hazir ? '' : '<div class="ve-fp-solve-not">'
+  var dugme = vePencereEylem('<button type="button" class="ve-fp-solve"' + (hazir ? '' : ' disabled')
+    + ' onclick="veFeadSolve(\'' + node.id + '\')">' + veIkon('play') + ' Hesapla</button>',
+    hazir ? '' : '<div class="ve-fp-solve-not">'
         + (!build.ok ? 'Kasnak konumları eksik.'
            : !(satirSay > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çalışma çevrimi'
            : _feadEsc(veFeadIsletmeMetni(build.isletme)) + '.') + '</div>');

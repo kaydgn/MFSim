@@ -433,15 +433,23 @@ describe('PENCERE DİLİ — görünüm CSS\'te, durum işareti tek sözleşmede
     expect(html).toMatch(/<div class="ve-fp-kat" data-k="konum" data-d="ok" tabindex="-1" aria-label="Konum">/);
   });
 
-  test('Hesapla ilerlemesi düğmenin içinde; bitince düğme bırakılır', () => {
-    document.body.innerHTML = '<button id="b"></button>';
+  // İlerleme 2026-10-18'den beri eylem satırının çubuğunda (pencere kiti);
+  // eskiden düğmenin içinde bir dolguydu — kompakt düğmede eni değişirdi.
+  test('Hesapla ilerlemesi eylem satırının çubuğunda; düğme meşgul ve yazısı aynı; bitince satır bırakılır', () => {
+    const PK = require('../../js/pencere-kabuk.js');
+    global.vePencereIlerleme = PK.vePencereIlerleme;
+    global.vePencereIlerlemeHTML = PK.vePencereIlerlemeHTML;
+    document.body.innerHTML = PK.vePencereEylem('<button class="ve-fp-solve" id="b">Hesapla</button>', '<div class="ve-fp-solve-not">not</div>');
     const b = document.getElementById('b');
     cp._mntHesaplaIlerleme(b, 3, 12, 'Frenleme');
     expect(b.getAttribute('aria-busy')).toBe('true');
-    expect(b.style.getPropertyValue('--ilerleme')).toBe('25%');
-    expect(b.textContent).toContain('Çözülüyor · 3 / 12');
+    expect(b.textContent).toBe('Hesapla');
+    const il = document.querySelector('.ve-fp-yurut[data-is] .ve-fp-ilerleme');
+    expect(il.getAttribute('aria-valuenow')).toBe('25');
+    expect(il.querySelector('.ve-fp-ilerleme-y span').textContent).toBe('3 / 12 · Frenleme');
     cp._mntHesaplaIlerleme(b, 0, 0, null);
     expect(b.hasAttribute('aria-busy')).toBe(false);
-    expect(b.textContent).toContain('Hesapla');
+    expect(document.querySelector('.ve-fp-ilerleme')).toBeNull();
+    expect(document.querySelector('.ve-fp-yurut').hasAttribute('data-is')).toBe(false);
   });
 });

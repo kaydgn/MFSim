@@ -445,8 +445,9 @@ function _gmSec9(){
       + 'varsayılan değerleriyle durur (yanındaki <em>i</em> kaynağını söyler).',
     'Sönüm oranı yalnız şok ve izolasyon hesabına girer, sehime girmez; her takozun viskoz sönüm '
       + 'katsayısı ondan türer: c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>).',
-    '<strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin içinde akar.',
-    'Hesapla’nın altındaki satır toplam kütleyi, gövde ve takoz sayısını ve son hesabın '
+    '<strong>Hesapla</strong> düğmesine basın — ilerleme düğmenin solundaki çubukta akar: çözülen yük '
+      + 'durumu, sırası ve oranı.',
+    'Hesapla’nın solundaki not toplam kütleyi, gövde ve takoz sayısını ve son hesabın '
       + 'güncel olup olmadığını söyler; sonucu <strong>Rapor</strong> bileşeninden okuyun.'
   ]);
   h += _gmUyari('Çekme, durdurucu ve yakınsamama raporda bir hükümdür',
@@ -856,8 +857,10 @@ function _gmSec15(){
     'Motor bileşenine rölanti devri ve silindir sayısı girilir: Kriter 1 ve 2 ateşleme frekansından türer.',
     '<strong>Gruplar</strong> ve <strong>Adaylar</strong> bölümlerinde taranacaklar işaretlenir; '
       + 'sağ sütundaki kombinasyon sayısı tarama süresinin ölçüsüdür (kombinasyon başına yaklaşık 0,5 ms).',
-    '<strong>Tara</strong>: birinci aşama bütün kombinasyonlarda statik denge ve modal analiz, ikinci aşama '
-      + 'çözülen bütün kombinasyonlarda işletme ve darbe yükleri. Düğme tarama sürerken <strong>Durdur</strong>dur.',
+    '<strong>Tara</strong>: her kombinasyonda önce statik denge ve modal analiz (birinci aşama), kombinasyon '
+      + 'çözülürse ardından işletme ve darbe yükleri (ikinci aşama). Düğmenin solundaki çubuk taranan '
+      + 'kombinasyon sayısını ve oranı gösterir; düğme tarama sürerken <strong>Durdur</strong>dur. Tarama '
+      + 'sürerken pencere ve tuval kullanılabilir.',
     'Pencerenin <strong>Sonuç</strong> bölümü açılır: uzlaşı çözümü (uygun kombinasyon yoksa en az ihlalli '
       + 'kombinasyon) ve diyagramlar.',
     '<strong>Raporu indir</strong> (Sonuç bölümünde): kapsam, yöntem, kısıtlar, eleme, sonuç (uzlaşı çözümü ve '

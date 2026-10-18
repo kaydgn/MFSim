@@ -276,7 +276,7 @@ describe('MODÜL KARTI — kayıtlı listenin modeli ve son çözümü', () => {
     expect(alan('Takoz')).toBe('5');
     expect(alan('Bağlantı')).toBe('2');
     expect(alan('Toplam kütle')).toBe('788,4');
-    expect(h).toMatch(/<div class="ve-fp-side"><button type="button" class="ve-fp-solve" onclick="veMntOpenEditor\('kart'\)">/);
+    expect(h).toMatch(/<div class="ve-fp-side"><div class="ve-fp-yurut"><div class="ve-fp-yurut-d"><\/div><button type="button" class="ve-fp-solve" onclick="veMntOpenEditor\('kart'\)">/);
   });
 
   test('kart sonuç göstermez: çözümden önce, sonra ve kayıtlı model değişince yalnız modelin sayıları değişir', () => {

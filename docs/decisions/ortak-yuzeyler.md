@@ -2122,6 +2122,52 @@ başlıksız kategoriyi yalnız beyan bağışlar) +
 aynı genişlik sınıfı"*.
 
 
+## Eylem satırı — kompakt düğme, durum ve ilerleme yanında (2026-10-18)
+
+**Hüküm:** Pencerenin tek eylemi sağ sütunun SONUNDAKİ kit satırındadır
+(`vePencereEylem` · `.ve-fp-yurut`): solda durum notu ya da süren işin çubuğu
+(`vePencereIlerleme` · `.ve-fp-ilerleme`: ad · veri · oran, yüzde aşağı
+yuvarlanır), sağda içeriği kadar düğme (`.ve-fp-solve`, 28 px). Dar kapta
+yapışan düğme değil SATIRDIR — not ve çubuk düğmeyle birlikte görünür. Süren
+iş satırı işaretler (`data-is`), not o sürede gizli. Durduran düğme ikincil
+görünümdedir (`data-durdur`). Satır ve çubuk yalnız kitte basılır.
+
+**Gerekçe:** kullanıcı (*"'Tara ve raporu indir' butonu çok geniş ve büyük.
+Onu da estetik hale getirelim"* · *"Ona bir progress bar tarzı bir şey
+oluşturalım"*). Düğme sütunun tam eninde 40 px'lik bir şeritti ve durum notu
+ALTINDA kalıyordu: dar kapta not kaydırma alanının sonundaydı, taramanın
+ilerlemesi görünmüyordu. Şikâyet tek düğmede geldi, sınıf ailenin tek eylemi —
+kural sınıfa yazıldı (FEAD ve Takoz'un bütün pencereleri). Takoz Hesapla'nın
+düğme içi ilerlemesi de çubuğa geçti: kompakt düğmede yazısıyla birlikte eni
+değişirdi.
+
+**Kapı:** `pencere-kabuk.test.js` (→ *AİLE*: eylem sağ sütunun son satırında ve
+tek · *KİT*: satır, çubuk ve CSS sözleşmesi · *TEK ÜRETİCİ*: satır yalnız
+kitte) + `fead-pencere-ailesi.test.js` + `mount-param-sonuc.spec.js` → *EYLEM
+SATIRI* (geometri, ilerleme, uzun görev).
+
+
+## Uzun iş arayüzü kilitlemez — dilimli koşu (2026-10-18)
+
+**Hüküm:** Pencerenin eylemiyle başlayan yinelemeli iş ana iş parçacığını
+dilim dilim bırakır. Parametrik tarama ≤ 10 ms'lik dilimlerle koşar
+(kombinasyon başına saat okunur), dilimler arasında MessageChannel'la olay
+döngüsüne döner; bitince Sonuç bölümünün kartları da dilim dilim belleğe
+alınır, pencere yalnız birleştirir. Tam tarama tek geçiştir: kombinasyonun
+ikinci aşaması birincisinin ardından, ölçücü aynı hazırlığı ve statik çözümü
+paylaşır (depo iki geçişinkiyle bit bit aynı).
+
+**Gerekçe:** kullanıcı (*"Tara … dediğimde program kasıyor"*). Önceki parça
+50 ms ve 200 kombinasyondu, sonu setTimeout(0): iş parçacığı neredeyse hiç
+boşalmıyordu. İç içe setTimeout(0) 4 ms'ye kenetlenir — 10 ms'lik dilimin
+yanında boşta bekleme olurdu.
+
+**Kapı:** `mount-param.test.js` → *KOŞUCU* (dilim bütçesi · durdurma · proje
+değişince durur) · *HAZIRLIK PAYLAŞILIR* · *ISITICI*; `mount-katalog.test.js` →
+*TEK GEÇİŞ*; `mount-param-sonuc.spec.js` → *EYLEM SATIRI* (tarama boyunca uzun
+görev yok).
+
+
 ## Pencerede sekme yok — kategoriler tek gövdede (2026-10-16)
 
 **Hüküm:** Bileşen penceresi kategorilerini SEKMELERE bölmez: kimlik → eksik

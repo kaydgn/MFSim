@@ -9,7 +9,9 @@
  *               tablosunun (veMntUygunluk) hükmüyle aynı, örneklenen her kombinasyonda
  *   PENCERE   — girdiler, durumlar (eksik · sınır); taramadan önce sonuç yok
  *   RAPOR     — ayrı belge: bölümler, Türkçe sayı, sayısız alan yok
- *   KOŞUCU    — parça parça koşar, durdurulur, bitince Sonuç kategorisi kurulur
+ *   KOŞUCU    — dilim dilim koşar (≤ 10 ms; kullanıcı 2026-10-18: "program
+ *               kasıyor"), ilerleme eylem satırında, durdurulur, bitince
+ *               Sonuç kategorisi kurulur
  *   SONUÇ     — kullanıcı kararı 2026-10-18 (Takoz pencerelerinin "sonuç
  *               göstermez" kuralının bu pencereye özgü istisnası): uzlaşı ve
  *               diyagramlar; sınır değişince tarama YİNELENMEDEN yeni sınırla
@@ -109,6 +111,29 @@ describe('TEK YOL — taramanın ölçtüğü, Çözücü\'nün bulduğu', () =>
     }
     expect(say.gecen).toBeGreaterThan(20);                 // kapı iki yönü de görüyor
     expect(say.kalan).toBeGreaterThan(20);
+  });
+
+  // HAZIRLIK PAYLAŞILIR (2026-10-18): tam tarama bir kombinasyonun iki
+  // aşamasını ardışık ölçer; ikinci aşama birincinin hazırlığını ve statik
+  // çözümünü kullanır (Çözücü de tek hazırlıkla çözer). Sonuç paylaşımsız
+  // ölçümle BİT BİT aynı — hazırlık başka bir çözüm üretmez.
+  test('HAZIRLIK PAYLAŞILIR: iki aşama tek hazırlıkla (toleransla ölçek başına bir); sonuç paylaşımsız ölçümün aynısı', () => {
+    const A = Hz.aday;
+    const nl = Hz.M.G.map((g, i) => (i ? 'TK035' : 'TK040'));                 // nonlineer (Newton) yol da
+    [[A[3].key, A[11].key], nl].forEach((tipler) => {
+      [false, true].forEach((tol) => {
+        const ctx = K.baglam(Object.assign({}, Hz.ctx, { acik: Object.assign({}, Hz.ctx.acik, { tolerans: tol }) }));
+        const say = jest.spyOn(global, '_mntPrepareFrom');
+        const Op = P._mntParamOlcucu(Hz.M, ctx);
+        const o1 = Op.olc1(tipler), o2 = Op.olc2(tipler);
+        expect([tipler.join(), tol, say.mock.calls.length]).toEqual([tipler.join(), tol, tol ? 3 : 1]);
+        say.mockRestore();
+        expect(o1 && o2).toBeTruthy();
+        const r1 = P._mntParamOlcucu(Hz.M, ctx).olc1(tipler), r2 = P._mntParamOlcucu(Hz.M, ctx).olc2(tipler);
+        expect(JSON.stringify(o1)).toBe(JSON.stringify(r1));
+        expect(JSON.stringify(o2)).toBe(JSON.stringify(r2));
+      });
+    });
   });
 });
 
@@ -357,29 +382,50 @@ describe('RAPOR — ayrı belge', () => {
 
 describe('KOŞUCU', () => {
   beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
-
-  test('parça parça koşar, durumu yazar, bitince BİR kez indirir; ikinci tıklama durdurur', () => {
+  // Yarıda kalan bir test taramayı açık bırakmasın (sonrakiler başlayamazdı).
+  afterEach(() => { if (P.veMntParamDurdur()) jest.runAllTimers(); jest.restoreAllMocks(); jest.useRealTimers(); });
+  const kurPencere = () => {
     modelKur('kamyon');
     const n = { id: 'pa', type: 'mnt-parametric', data: {} };
     global.nodes.push(n);
+    const PK = require('../../js/pencere-kabuk.js');
+    global.vePencereEylem = PK.vePencereEylem;
+    global.vePencereIlerleme = PK.vePencereIlerleme;
+    global.vePencereIlerlemeHTML = PK.vePencereIlerlemeHTML;
     document.body.innerHTML = '<div class="ve-properties-content">' + P.getMntParamPropertiesHTML(n) + '</div>';
+    delete PS._MNT_PARAM_SONUC.pa;
+    return n;
+  };
+  const cubuk = () => document.querySelector('.ve-fp-yurut[data-is] .ve-fp-ilerleme');
+
+  test('dilim dilim koşar, ilerlemeyi eylem satırına yazar, bitince Sonuç kategorisi kurulur; tarama indirmez; ikinci tıklama durdurur', () => {
+    const n = kurPencere();
     const indir = jest.fn();
     global._mntReportDownload = indir;
     global._mntReportEnsureAssets = (cb) => cb(true);
-    delete PS._MNT_PARAM_SONUC.pa;
     P.veMntParamTara('pa');
-    expect(document.getElementById('ve-mnt-param-btn-pa').textContent).toMatch(/Durdur/);
-    jest.advanceTimersByTime(0);
-    expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^Aşama [12] · [\d.]+ \/ [\d.]+$/);
+    const btn = () => document.getElementById('ve-mnt-param-btn-pa');
+    expect(btn().textContent).toMatch(/Durdur/);
+    expect(btn().hasAttribute('data-durdur')).toBe(true);
+    expect(cubuk().getAttribute('aria-valuenow')).toBe('0');
+    jest.advanceTimersByTime(0);                    // ilk dilim (saat durgun: dilim kombinasyon tavanında biter)
+    expect(cubuk().querySelector('span').textContent).toMatch(/^Kombinasyon [\d.]+ \/ 729$/);
+    const p0 = +cubuk().getAttribute('aria-valuenow');
+    expect(p0).toBeGreaterThan(0);
+    expect(p0).toBeLessThan(100);
+    // pencere tarama sürerken yeniden kurulsa da ilerleme ve Durdur yerinde
+    document.querySelector('.ve-properties-content').innerHTML = P.getMntParamPropertiesHTML(n);
+    expect(+cubuk().getAttribute('aria-valuenow')).toBe(p0);
+    expect(btn().textContent).toMatch(/Durdur/);
     jest.runAllTimers();
-    // tarama indirmez; depo saklanır, Sonuç kategorisi kurulur
     expect(indir).not.toHaveBeenCalled();
     const ent = PS._MNT_PARAM_SONUC.pa;
     expect(ent && ent.D.tam).toBe(true);
     expect(ent.D.N).toBe(729);
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^Tarandı \([\d.,]+ s\)$/);
-    expect(document.getElementById('ve-mnt-param-btn-pa').textContent.trim()).toBe('Tara');
+    expect(btn().textContent.trim()).toBe('Tara');
+    expect(btn().hasAttribute('data-durdur')).toBe(false);
+    expect(document.querySelector('.ve-fp-ilerleme, .ve-fp-yurut[data-is]')).toBeNull();
     const d = document.createElement('div'); d.innerHTML = P.getMntParamPropertiesHTML(n);
     expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kısıtlar', 'Sonuç']);
     // rapor Sonuç'taki düğmeyle, bir kez
@@ -389,10 +435,50 @@ describe('KOŞUCU', () => {
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^İndirildi \([\d.]+ KB\)$/);
     // durdurma: yarıda kalan tarama saklanmaz, öncekinin yerine geçmez
     P.veMntParamTara('pa');
+    jest.advanceTimersByTime(0);
     P.veMntParamTara('pa');
     jest.runAllTimers();
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toBe('Durduruldu');
+    expect(cubuk()).toBeNull();
     expect(PS._MNT_PARAM_SONUC.pa).toBe(ent);
+  });
+
+  // DİLİM BÜTÇESİ (kullanıcı 2026-10-18: "program kasıyor"): eski parça 50 ms ve
+  // 200 kombinasyona kadar koşuyordu. Saat her okumada 1 ms ilerler — dilim
+  // bütçesini (10 ms) aşan hiçbir dilim yok, iş olay döngüsüne dönerek ilerler.
+  test('dilim bütçesi: bir dilim ~10 ms (saat okuması başına 1 ms) — 729 kombinasyon ≥ 70 dilimde', () => {
+    kurPencere();
+    let t = 0;
+    jest.spyOn(performance, 'now').mockImplementation(() => (t += 1));
+    const T0 = global.veMntKatalog.tarayici;
+    let n = 0;
+    const sar = jest.spyOn(global.veMntKatalog, 'tarayici').mockImplementation((Pp) => {
+      const it = T0(Pp), a = it.adim;
+      it.adim = (k) => { n += (k === Infinity ? 1e9 : k); return a(k); };
+      return it;
+    });
+    P.veMntParamTara('pa');
+    const dilim = [];
+    for (let g = 0; g < 2000 && document.getElementById('ve-mnt-param-btn-pa').hasAttribute('data-durdur'); g++) {
+      n = 0; jest.advanceTimersToNextTimer();
+      if (n) dilim.push(n);
+    }
+    jest.runAllTimers();
+    expect(sar).toHaveBeenCalledTimes(1);
+    expect(dilim.reduce((a, x) => a + x, 0)).toBe(729);
+    expect(Math.max(...dilim)).toBeLessThanOrEqual(10);
+    expect(dilim.length).toBeGreaterThanOrEqual(70);
+    expect(PS._MNT_PARAM_SONUC.pa.D.N).toBe(729);
+  });
+
+  test('proje değişince süren tarama durur ve sonucu saklanmaz', () => {
+    kurPencere();
+    P.veMntParamTara('pa');
+    jest.advanceTimersByTime(0);
+    PS.veMntParamUnut();
+    jest.runAllTimers();
+    expect(PS._MNT_PARAM_SONUC.pa).toBeUndefined();
+    expect(document.getElementById('ve-mnt-param-st-pa').textContent).toBe('Durduruldu');
   });
 });
 
@@ -416,6 +502,30 @@ describe('SONUÇ — taramanın diyagramları (kullanıcı kararı 2026-10-18)',
     return { Hz, S: it.sonuc() };
   }
   const basliklar = (d) => [...d.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b')].map((b) => b.textContent);
+
+  // ISITICI (2026-10-18): tarama bitince kartlar ayrı dilimlerde belleğe alınır
+  // (koşucu), pencere kurulumu yalnız birleştirir — on kart tek parçada ~90 ms'ydi.
+  // Anahtar seçimin VARSAYILANIYLA okunur: çizim seçimi tembel kuruyordu ve
+  // çizimden önceki anahtar (null) sonrakini tutmuyordu — ısıtma boşa giderdi.
+  test('ISITICI: adımlar on kartı belleğe alır; pencere kurulumu hiçbir diyagramı yeniden çizmez; anahtar çizimden önce ve sonra aynı', () => {
+    PS.veMntParamUnut();                                                        // seçim durumu boş — ilk tarama
+    const n = kur(), { Hz } = taraSakla(n), ent = PS._MNT_PARAM_SONUC.pa;
+    const once = PS._mntParamSonucBaglam(n, Hz, ent).anahtar;
+    const L = PS._mntParamSonucIsitici(n, Hz, ent);
+    expect(L.length).toBe(1 + PS._MNT_PRM_DIYAGRAM.length);
+    L.forEach((f) => f());
+    expect(PS._mntParamSonucBaglam(n, Hz, ent).anahtar).toBe(once);
+    const C = global.veMntParamCiz, asil = {}, say = [];
+    Object.keys(C).filter((k) => typeof C[k] === 'function').forEach((k) => {
+      asil[k] = C[k];
+      C[k] = function () { say.push(k); return asil[k].apply(this, arguments); };
+    });
+    try {
+      const d = dom(P.getMntParamPropertiesHTML(n));
+      expect(d.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-pd-kap svg.ve-pd').length).toBe(10);
+    } finally { Object.keys(asil).forEach((k) => { C[k] = asil[k]; }); }
+    expect(say).toEqual([]);
+  });
 
   test('uzlaşı çözümü ve on bir bölüm; her diyagramda çizim, tam ekran; 3B\'de sıfırla', () => {
     const n = kur(), { S } = taraSakla(n);
