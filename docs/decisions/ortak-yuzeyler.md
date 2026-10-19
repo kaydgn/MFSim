@@ -2336,8 +2336,9 @@ aşama 2 → https://claude.ai/artifact/3qGwTRv3om6LayaJrBXdCj (uygulandı, kayd
 **Aşama 3'ten sonra tahta yok** (kullanıcı kararı, 2026-10-16: *"Senin
 önerilerin gayet güzel. Sen adım adım hepsini yap. Sonra tüm yaptıklarını tek
 bir artifaktta detaylı olarak raporlarsın"*). Yöntemin 3. adımı düşer: öneriler
-doğrudan uygulanır, her aşama yine ayrı PR'dır ve önce/sonra sayıları, geri
-alma kanıtı ve kalanlar tek rapor sayfasında toplanır. Taramanın görmediği
+doğrudan uygulanır, her aşama yine ayrı PR'dır ve önce/sonra sayıları ile
+kalanlar tek rapor sayfasında toplanır; geri alma kanıtı PR gövdesinde kalır
+(kullanıcı kararı 2026-10-19). Taramanın görmediği
 sınıf (işaretsiz tekrar bildirimi, adı tekrarlayan ipucu) aşamanın kendi
 kapısıyla tutulur — kabuk için `tests/unit/kabuk-metin.test.js`.
 
