@@ -79,15 +79,23 @@ describe('İÇERİK — kapılar ve örnekler', () => {
     expect(kapi[0]).toContain('ve-bas-kapi birincil');
   });
   // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): üst satır,
-  // başlık, alt metin, kapı notu, rozet, bölüm notları ve dipnot YOK; karonun
-  // ipucu gövde adlarını (VERİ) taşır, "— yükle" komutunu değil.
-  test('ARAYÜZ ANLATMAZ — yalnız kapı adları, bölüm adları ve karonun künyesi', () => {
+  // serbest başlık, alt metin, kapı notu, rozet, bölüm notları ve dipnot YOK;
+  // karonun ipucu gövde adlarını (VERİ) taşır, "— yükle" komutunu değil.
+  // 2026-10-19 (*"çok sade olmuş … profesyonel dursun"*): eklenenler AD ve
+  // VERİ — tek h1 modülün adı, kapının künyesi kısa adlar.
+  test('ARAYÜZ ANLATMAZ — ad, veri ve künye; açıklama yuvası yok', () => {
     const d = document.createElement('div');
     d.innerHTML = html;
-    expect(d.querySelector('h1, p, .ve-bas-ust, .ve-bas-alt, .ve-bas-not, .ve-bas-kapi-t > span, .ve-bas-kapi-t b i, .ve-bas-baslik span'))
+    expect(d.querySelector('p, .ve-bas-ust, .ve-bas-alt, .ve-bas-not, .ve-bas-kapi-t > span:not(.ve-bas-kapi-k), .ve-bas-kapi-t b i, .ve-bas-baslik span'))
       .toBeNull();
-    expect([...d.querySelectorAll('.ve-bas-kapi')].map((b) => b.textContent.trim()))
+    expect([...d.querySelectorAll('h1')].map((h) => !!h.closest('.ve-bas-kimlik') && h.textContent))
+      .toEqual([componentDefs['mount-analysis'].name]);
+    expect([...d.querySelectorAll('.ve-bas-kapi b')].map((b) => b.textContent))
       .toEqual(['Sihirbazla kur', 'STEP\'ten başla', 'Boş kanvas']);
+    // Künye ve bandın adları VERİ: kısa ad, cümle noktalaması yok (uzantı dışında).
+    const kisa = (t) => { expect(t).toMatch(/^(\.[a-z0-9]+|[^.!?:;…]+)$/); expect(t.split(/\s+/).length).toBeLessThanOrEqual(4); };
+    d.querySelectorAll('.ve-bas-kapi-k > span').forEach((k) => kisa(k.textContent));
+    d.querySelectorAll('.ve-bas-veri dt, .ve-bas-yetenek li').forEach((x) => kisa(x.textContent));
     const liste = BS.veMntBaslangicOrnekler();
     d.querySelectorAll('.ve-bas-karo').forEach((b) => {
       const o = liste.find((x) => x.key === b.getAttribute('data-v'));
@@ -163,6 +171,91 @@ describe('KÜÇÜK RESİM — Görünümler\'in aksonometrisi, örneğin kendi m
       expect(m.modlar).toBeNull();
       expect(m.takoz.every((t) => t.f === null)).toBe(true);
     });
+  });
+});
+
+// KİMLİK VE VERİ (kullanıcı isteği 2026-10-19: *"çok sade olmuş … Bir şeyler
+// ekleyelim … profesyonel dursun."*). Sayfaya eklenen her şey AD ya da VERİ ve
+// hepsinin bir kaynağı var: analizin adı programın kendi adı, sayı kaynağından
+// ölçülür, kapının künyesi sihirbazın adımları ve dosya seçicinin kabul
+// listesi. Elle yazılmış bir sayı kütüphane büyüyünce sessizce bayatlardı;
+// uydurulmuş bir analiz adı programda karşılığı olmayan bir vaat olurdu.
+describe('KİMLİK VE VERİ — adlar programdan, sayılar kaynağından', () => {
+  const W = require('../../js/cp-mount-wizard.js');
+  const n = (x) => veSayi(x, 0);
+  test('kimlik: modülün componentDefs adı ve ikonu', () => {
+    const k = BS.veMntBaslangicKimlik();
+    expect(k.ad).toBe(componentDefs['mount-analysis'].name);
+    expect(k.ikon).toBe(componentDefs['mount-analysis'].svg);
+    expect(k.yetenekler).toBe(BS.VE_MNT_BAS_YETENEK);
+  });
+  test('her analiz adı programın kendi adı: raporun adımı, Sonuçlar\'ın kümesi, Parametrik Analiz\'in bölümü', () => {
+    const tr = (s) => s.toLocaleLowerCase('tr');
+    const adlar = [];
+    for (const m of loadSource('cp-mount-report.js').matchAll(/Adım \d+ — ([^<(]+)/g)) adlar.push(m[1].trim());
+    for (const m of loadSource('mount-signals.js').matchAll(/name: '([^']+)'/g)) adlar.push(m[1]);
+    for (const m of loadSource('cp-mount-param.js').matchAll(/_mntBolum\('([^']+)'/g)) adlar.push(m[1]);
+    expect(adlar.length).toBeGreaterThan(10);
+    expect(BS.VE_MNT_BAS_YETENEK.filter((y) => !adlar.some((a) => tr(a).includes(tr(y))))).toEqual([]);
+  });
+  test('bandın her sayısı kaynağından; hiçbir satır düşmez', () => {
+    const lib = cp.VE_MOUNT_LIBRARY;
+    const yasa = Object.keys(lib).filter((k) => lib[k].fits || lib[k].curves);
+    const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    const bek = {
+      'Takoz tipi': Object.keys(lib).length,
+      'Kuvvet–sehim yasası': yasa.length,
+      'Gövde tipi': W.VE_MW_GOVDE_TIPLERI.length,
+      'Örnek model': core.getMountExampleList().length,
+      'Serbestlik derecesi': core.buildM6(1, I3).length       // kütle matrisinin boyutu
+    };
+    const v = BS.veMntBaslangicVeri();
+    expect(v.map((x) => x.ad)).toEqual(Object.keys(bek));
+    v.forEach((x) => expect(x.deger).toBe(n(bek[x.ad])));
+    expect(v[1].title).toBe(yasa.map((k) => lib[k].name).join(' · '));
+    expect(v[2].title).toBe(W.VE_MW_GOVDE_TIPLERI.map((t) => componentDefs[t].name).join(' · '));
+    // HTML'de de: <dl> satırı başına bir değer
+    const d = document.createElement('div');
+    d.innerHTML = BS.veMntBaslangicHTML();
+    expect([...d.querySelectorAll('.ve-bas-veri dd')].map((x) => x.textContent))
+      .toEqual(Object.keys(bek).map((k) => n(bek[k])));
+  });
+  // Tarayıcıda sabit `window[ad]`dan okunur. `const`/`let` ile bildirilmiş
+  // üst seviye ad pencereye yazılmaz; Node'da `require` yolu çalıştığı için
+  // birim testi bunu görmezdi ve bant o satırı SESSİZCE düşürürdü.
+  test('okunan her sabit tarayıcıda da var: üst seviye `var` ya da `function`', () => {
+    const okunan = [...loadSource('cp-mount-baslangic.js').matchAll(/_mntBasG\('([A-Za-z_]+)', '\.\/([a-z0-9-]+\.js)'\)/g)];
+    expect(okunan.length).toBeGreaterThanOrEqual(6);
+    okunan.forEach(([, ad, dosya]) => {
+      expect(loadSource(dosya)).toMatch(new RegExp('^(var|function) ' + ad + '\\b', 'm'));
+    });
+  });
+  test('kapı künyesi: sihirbazın adımları · STEP\'in biçimi · boş kanvasın araçları', () => {
+    const [sih, step, bos] = BS.veMntBaslangicKapilar();
+    expect(W.VE_MW_STEPS[0].key).toBe('kaynak');              // ilk adım bu sayfanın kendisi
+    expect(sih.kunye).toEqual(W.VE_MW_STEPS.slice(1).map((s) => s.ad));
+    const kabul = loadSource('cp-mount-wizard.js').match(/ve-mw-stp-file" accept="([^"]+)"/)[1].split(',');
+    expect(step.kunye.filter((t) => t[0] === '.')).toEqual(kabul);
+    // Standardın adı okuyucunun başlık denetiminde (dosyadaki yazımı tireli).
+    step.kunye.filter((t) => t[0] !== '.')
+      .forEach((t) => expect(loadSource('step-p21.js')).toContain('\'' + t.replace(' ', '-') + '\''));
+    expect(bos.kunye).toEqual([cp.VE_MNT_ARAC_TIPLERI.length + ' araç']);
+    expect(bos.title).toBe(cp.VE_MNT_ARAC_TIPLERI.map((t) => componentDefs[t].name).join(' · '));
+  });
+  test('Kılavuz: üretici yüklüyse düğme basılır ve tık modülün kılavuzunu açar', () => {
+    const GK = require('../../js/guide-kit.js');
+    const uret = GK.veGuideKitOf('mount').uret;
+    expect(BS.veMntBaslangicKimlik().kilavuz).toBe('');      // yüklü değil → düğme yok
+    expect(BS.veMntBaslangicHTML()).not.toContain('ve-bas-kilavuz');
+    global[uret] = () => '';
+    try {
+      expect(BS.veMntBaslangicKimlik().kilavuz).toBe('mount');
+      BS.veMntBaslangicKapsam('mount-analysis');
+      casus('veGuideOpen', () => {}, (f) => {
+        document.querySelector('#' + BS.VE_MNT_BAS_ID + ' .ve-bas-kilavuz').click();
+        expect(f).toHaveBeenCalledWith('mount');
+      });
+    } finally { delete global[uret]; }
   });
 });
 
@@ -249,6 +342,13 @@ describe('ORTAK KİT — "aynı" ekran TEK üreticiden', () => {
       .forEach((m) => expect(h).not.toContain(m));
     expect(h).toContain('<b>Kapı</b>');
     expect(h).toContain('<h2>Bölüm</h2>');
+    // Kimlik ve veri yuvaları da yalnız ad ve veri alır (2026-10-19).
+    const h2 = K.veBasSayfaHTML({
+      kimlik: { ad: 'Modül', alt: 'KİMLİKALT', aciklama: 'KİMLİKAÇIKLAMA', not: 'KİMLİKNOTU', yetenekler: ['Analiz'] },
+      veriler: [{ ad: 'Tip', deger: '3', not: 'VERİNOTU', alt: 'VERİALT' }, { ad: 'Boş', deger: '' }] });
+    ['KİMLİKALT', 'KİMLİKAÇIKLAMA', 'KİMLİKNOTU', 'VERİNOTU', 'VERİALT', 'Boş'].forEach((m) => expect(h2).not.toContain(m));
+    expect(h2).toContain('<h1>Modül</h1>');
+    expect(h2).toContain('<dt>Tip</dt><dd>3</dd>');
     // Karo ipucu yalnız verilirse ve komut eki olmadan.
     expect(h).not.toContain('title=');
     const karo = K.veBasKaroHTML({ ey: 'k', v: '1', baslik: 'Motor · Şanzıman' });

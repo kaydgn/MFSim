@@ -11639,10 +11639,64 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   box-sizing:border-box; max-width:1120px; margin:0 auto;
   padding:28px 48px 28px; display:flex; flex-direction:column;
 }
+/* KİMLİK — modülün ikonu, adı ve analizlerinin adları; sağda Kılavuz.
+   VERİ BANDI — kataloğun ölçülen sayıları (sayı üstte, ölçünün adı altta).
+   İkisi de AD ya da VERİ (ARAYÜZ ANLATMAZ; kullanıcı isteği 2026-10-19:
+   *"çok sade olmuş … profesyonel dursun"*). Bant hücreleri 1 px aralıkla
+   çizgi zemininin üstünde: satır sararsa da çift çizgi çıkmaz, son satır
+   genişliği doldurur. */
+.ve-bas-kimlik{ display:flex; align-items:center; gap:14px; margin:0 0 16px; }
+.ve-bas-kimlik-ik{
+  flex:none; width:52px; height:52px; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+}
+.ve-bas-kimlik-ik svg{ display:block; width:40px; height:40px; }
+.ve-bas-kimlik-t{ display:flex; flex-direction:column; gap:5px; min-width:0; flex:1 1 auto; }
+.ve-bas-kimlik h1{
+  margin:0; font-size:var(--fs-h2); font-weight:700; line-height:var(--leading-tight);
+  letter-spacing:-0.01em; color:var(--text-heading);
+}
+/* Ad listeleri (analizler, kapının künyesi): her ad bölünmez bir öğe, ayraç
+   aralığa ASILI — öğenin solunda mutlak konumlu, kap taşanı kırpar. Satır
+   sararsa yeni satırın ilk adının ayracı kabın dışında kalır: satır "·" ile
+   başlamaz. */
+.ve-bas-yetenek{
+  list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; column-gap:17px; row-gap:2px;
+  overflow:hidden; font-size:var(--fs-md); color:var(--text-secondary);
+}
+.ve-bas-yetenek li{ position:relative; white-space:nowrap; }
+.ve-bas-yetenek li + li::before{ content:"·"; position:absolute; right:100%; margin-right:6px; color:var(--text-muted); }
+.ve-bas-kilavuz{
+  flex:none; align-self:flex-start; display:inline-flex; align-items:center; gap:6px;
+  height:30px; padding:0 12px; box-sizing:border-box; cursor:pointer;
+  font-family:inherit; font-size:var(--fs-body); font-weight:600; color:var(--text-primary);
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md);
+  transition:border-color var(--dur-base) var(--ease-out);
+}
+.ve-bas-kilavuz:hover{ border-color:var(--border-hover); }
+.ve-bas-kilavuz:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-bas-kilavuz .mf-ico{ width:15px; height:15px; }
+.ve-bas-veri{
+  display:flex; flex-wrap:wrap; gap:1px; margin:0 0 18px; overflow:hidden;
+  background:var(--border-color); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+}
+.ve-bas-veri > div{
+  flex:1 1 120px; min-width:0; display:flex; flex-direction:column-reverse; justify-content:flex-end; gap:2px;
+  padding:10px 14px 11px; background:var(--bg-secondary);
+}
+.ve-bas-veri dd{
+  margin:0; font-size:var(--fs-h2); font-weight:700; line-height:var(--leading-tight);
+  color:var(--text-heading); font-variant-numeric:tabular-nums;
+}
+.ve-bas-veri dt{ font-size:var(--fs-tiny); color:var(--text-muted); }
 /* KAPILAR — üç eşit sütun; dar tuvalde alt alta. Birincil kapı aksan zeminli.
-   Kapı yalnız ikon + ad taşır (ARAYÜZ ANLATMAZ, 2026-10-16): not satırı ve
-   "önerilen" rozeti kalktı, sayfanın üst satırı · başlığı · alt metni de. */
-.ve-bas-kapilar{
+   Kapı ikon + ad + KÜNYE taşır (VERİ: adımların adı, dosya biçimi). Not
+   satırı ve "önerilen" rozeti YOK (ARAYÜZ ANLATMAZ, 2026-10-16).
+   KAROLAR AYNI IZGARADA (sütun kuralı ve aralık ortak): az karolu bölüm
+   (Takoz'un üçlü grupları) kapıların sütunlarına oturur, boş sütun
+   bırakmaz; çok karolu bölüm (FEAD'in 17 raporu) aynı kuralla dörde böler. */
+.ve-bas-kapilar,
+.ve-bas-raporlar{
   display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
   gap:16px;
 }
@@ -11662,18 +11716,23 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 }
 .ve-bas-kapi-ik .mf-ico{ width:18px; height:18px; }
 .ve-bas-kapi.birincil .ve-bas-kapi-ik{ background:var(--accent-primary); color:var(--on-accent); }
-.ve-bas-kapi-t{ display:flex; min-width:0; }
+.ve-bas-kapi-t{ display:flex; flex-direction:column; gap:3px; min-width:0; }
 .ve-bas-kapi-t b{ font-size:var(--fs-lg); font-weight:600; color:var(--text-heading); }
+/* Künye bir AD LİSTESİ: analiz listesinin kuralı (asılı ayraç) — ad satırla
+   birlikte sarar, cümle gibi okunmaz. */
+.ve-bas-kapi-k{
+  display:flex; flex-wrap:wrap; column-gap:13px; row-gap:1px; overflow:hidden;
+  font-size:var(--fs-tiny); line-height:1.4; color:var(--text-secondary);
+}
+.ve-bas-kapi-k > span{ position:relative; white-space:nowrap; }
+.ve-bas-kapi-k > span + span::before{ content:"·"; position:absolute; right:100%; margin-right:5px; color:var(--text-muted); }
 
 /* KAROLAR — FEAD'de Gates arşivinin kayış yolları, Takoz'da örnek modellerin
    aksonometrisi (Görünümler'in çizicisi); ikisi de modülün KENDİ
    çizicisinden, gerçek oranda. */
 .ve-bas-baslik{ display:flex; align-items:baseline; margin-top:26px; }
 .ve-bas-baslik h2{ margin:0; font-size:var(--fs-md); font-weight:700; color:var(--text-heading); }
-.ve-bas-raporlar{
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
-  gap:14px; margin-top:12px; font-variant-numeric:tabular-nums;
-}
+.ve-bas-raporlar{ margin-top:12px; font-variant-numeric:tabular-nums; }
 .ve-bas-karo{
   display:flex; flex-direction:column; min-width:0; padding:0; font-family:inherit; color:inherit;
   text-align:left; cursor:pointer; overflow:hidden;
@@ -11684,7 +11743,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-bas-karo:focus-visible{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
 .ve-bas-resim{
   position:relative; display:flex; align-items:center; justify-content:center;
-  height:96px; box-sizing:border-box; padding:8px;
+  aspect-ratio:5 / 2; box-sizing:border-box; padding:8px;
   background:var(--bg-secondary); border-bottom:1px solid var(--border-color);
 }
 .ve-bas-resim svg{ display:block; width:100%; height:100%; }

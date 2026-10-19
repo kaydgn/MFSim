@@ -70,8 +70,22 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
       kapi: document.querySelectorAll('#ve-fead-baslangic .ve-bas-kapi').length,
       karo: document.querySelectorAll('#ve-fead-baslangic .ve-bas-karo').length,
       cizim: document.querySelectorAll('#ve-fead-baslangic .ve-bas-resim [data-ve="belt"]').length,
-      ornek: veFeadExampleKeys().length };
+      ornek: veFeadExampleKeys().length,
+      // KİMLİK VE VERİ tarayıcıda: kataloglar `window`dan okunur — Node'un
+      // `require` yolu bunu göremez; bir satır düşerse ancak burada görünür.
+      baslik: (document.querySelector('#ve-fead-baslangic .ve-bas-kimlik h1') || {}).textContent,
+      veri: [...document.querySelectorAll('#ve-fead-baslangic .ve-bas-veri dd')].map((e) => e.textContent),
+      canli: [VE_FEAD_BELT_PROFILES.length,
+        Object.keys(VE_FEAD_BELT_STOCK).reduce((t, k) => t + VE_FEAD_BELT_STOCK[k].length, 0),
+        VE_FEAD_TENSIONER_DB.length, VE_FEAD_ENGINE_DB.length, VE_FEAD_ACC_DB.length,
+        VE_FEAD_DUTY_DB.length].map((x) => veSayi(x, 0)),
+      kunye: [...document.querySelectorAll('#ve-fead-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
+      kilavuz: document.querySelector('#ve-fead-baslangic .ve-bas-kilavuz')?.getAttribute('data-v') };
   });
+  expect(o.baslik).toBe('FEAD');
+  expect(o.veri).toEqual(o.canli);
+  expect(o.kunye).toEqual([5, 5, 2]);
+  expect(o.kilavuz).toBe('fead');
   // Sayfa tuvalin TAMAMINI örter (ölçü kabınki).
   expect(Math.round(o.sayfa.w)).toBe(Math.round(o.kap.w));
   expect(Math.round(o.sayfa.h)).toBe(Math.round(o.kap.h));

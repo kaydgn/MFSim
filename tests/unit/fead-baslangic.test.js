@@ -150,14 +150,21 @@ describe('SAYFANIN HTML\'İ', () => {
   });
 
   // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): sayfada üst
-  // satır, başlık ("Nereden başlayalım?"), alt metin, kapı notu, "önerilen"
-  // rozeti, bölüm notu, dipnot ve karo ipucu YOK. Kalan metin yalnız ad ve künye.
-  test('ARAYÜZ ANLATMAZ — yalnız kapı adları, bölüm adı ve karonun künyesi', () => {
+  // satır, serbest başlık ("Nereden başlayalım?"), alt metin, kapı notu,
+  // "önerilen" rozeti, bölüm notu, dipnot ve karo ipucu YOK. 2026-10-19'da
+  // eklenenler (kullanıcı: *"çok sade olmuş … profesyonel dursun"*) AD ve
+  // VERİ: tek h1 modülün adı, kapının künyesi kısa adlar.
+  test('ARAYÜZ ANLATMAZ — ad, veri ve künye; açıklama yuvası yok', () => {
     const d = kur();
-    expect(d.querySelector('h1, p, .ve-bas-ust, .ve-bas-alt, .ve-bas-not, .ve-bas-kapi-t > span, .ve-bas-kapi-t b i, .ve-bas-baslik span'))
+    expect(d.querySelector('p, .ve-bas-ust, .ve-bas-alt, .ve-bas-not, .ve-bas-kapi-t > span:not(.ve-bas-kapi-k), .ve-bas-kapi-t b i, .ve-bas-baslik span'))
       .toBeNull();
-    expect([...d.querySelectorAll('.ve-bas-kapi')].map((b) => b.textContent.trim()))
+    expect([...d.querySelectorAll('h1')].map((h) => !!h.closest('.ve-bas-kimlik') && h.textContent))
+      .toEqual([componentDefs['fead-analysis'].name]);
+    expect([...d.querySelectorAll('.ve-bas-kapi b')].map((b) => b.textContent))
       .toEqual(['Sihirbazla kur', 'STEP\'ten başla', 'Boş çizim masası']);
+    // Künye ve bandın adları VERİ: kısa ad, cümle noktalaması yok (uzantı dışında).
+    const kisa = (t) => { expect(t).toMatch(/^(\.[a-z0-9]+|[^.!?:;…]+)$/); expect(t.split(/\s+/).length).toBeLessThanOrEqual(4); };
+    d.querySelectorAll('.ve-bas-kapi-k > span, .ve-bas-veri dt, .ve-bas-yetenek li').forEach((x) => kisa(x.textContent));
     expect([...d.querySelectorAll('.ve-bas-baslik')].map((b) => b.textContent.trim()))
       .toEqual(['Gates raporlarından başla']);
     d.querySelectorAll('.ve-bas-karo').forEach((b) => expect(b.hasAttribute('title')).toBe(false));
@@ -179,6 +186,95 @@ describe('SAYFANIN HTML\'İ', () => {
     d.querySelectorAll('.ve-bas-kapi-ik').forEach((ik) => {
       expect(ik.querySelector('.mf-ico')).not.toBeNull();
     });
+  });
+});
+
+// KİMLİK VE VERİ (kullanıcı isteği 2026-10-19: *"çok sade olmuş … Bir şeyler
+// ekleyelim … profesyonel dursun."*). Eklenen her şey AD ya da VERİ ve bir
+// kaynağı var: analizin adı kartın ve Sonuçlar'ın hazır diyagramlarının adı,
+// sayı kataloğun KENDİSİNDEN, kapının künyesi sihirbazın rayı ve dosya
+// seçicinin kabul listesi. Elle yazılmış sayı katalog büyüyünce sessizce
+// bayatlardı (CLAUDE.md'deki "244 stok boy" gibi).
+describe('KİMLİK VE VERİ — adlar programdan, sayılar kataloğun kendisinden', () => {
+  const W = require('../../js/cp-fead-wizard.js');
+  const n = (x) => veSayi(x, 0);
+  test('kimlik: modülün componentDefs adı ve ikonu', () => {
+    const k = BS.veFeadBaslangicKimlik();
+    expect(k.ad).toBe(componentDefs['fead-analysis'].name);
+    expect(k.ikon).toBe(componentDefs['fead-analysis'].svg);
+    expect(k.yetenekler).toBe(BS.VE_FEAD_BAS_YETENEK);
+  });
+  test('her analiz adı programın kendi adı: Kayış Yolu kartı ve Sonuçlar\'ın hazır diyagramları', () => {
+    const kume = (k, ch) => ({ sensorId: '~fead-' + k, channels: ch.map((id) => ({ id })) });
+    const hazir = global.veFeadSignals.presets([
+      kume('cevrim', ['a.T', 'sfmin', 'a.hub', 'a.dir', 'pkw', 'a.nm', 'a.rpm']),
+      kume('campbell', ['f1']),
+      kume('kol', ['T', 'hub', 'tk', 'phi']),
+      kume('senaryo', ['rpm', 'a.T', 'fire'])
+    ]).map((p) => p.ad);
+    expect(hazir.length).toBeGreaterThanOrEqual(5);
+    const adlar = [componentDefs['fead-layout'].name].concat(hazir);
+    expect(BS.VE_FEAD_BAS_YETENEK.filter((y) => adlar.indexOf(y) < 0)).toEqual([]);
+  });
+  test('bandın her sayısı kataloğun kendisinden; hiçbir satır düşmez', () => {
+    const B = require('../../js/fead-belts.js');
+    const aks = require('../../js/fead-accessories.js').VE_FEAD_ACC_DB;
+    const bek = {
+      'Kayış profili': B.VE_FEAD_BELT_PROFILES.length,
+      'Stok kayış boyu': Object.keys(B.VE_FEAD_BELT_STOCK).reduce((s, p) => s + B.VE_FEAD_BELT_STOCK[p].length, 0),
+      'Otomatik gergi': require('../../js/fead-tensioners.js').VE_FEAD_TENSIONER_DB.length,
+      'Motor': require('../../js/fead-engines.js').VE_FEAD_ENGINE_DB.length,
+      'Aksesuar': aks.length,
+      'Çalışma çevrimi': require('../../js/fead-duty.js').VE_FEAD_DUTY_DB.length
+    };
+    const v = BS.veFeadBaslangicVeri();
+    expect(v.map((x) => x.ad)).toEqual(Object.keys(bek));
+    v.forEach((x) => expect(x.deger).toBe(n(bek[x.ad])));
+    expect(v[0].title).toBe(B.VE_FEAD_BELT_PROFILES.join(' · '));
+    // Aksesuarın türleri kayıtların `tip` alanından; her kayıt bir türe girer.
+    const tur = v[4].title.split(' · ').map((s) => Number(s.split(' ')[0]));
+    expect(tur.reduce((a, b) => a + b, 0)).toBe(aks.length);
+    const d = document.createElement('div');
+    d.innerHTML = BS.veFeadBaslangicHTML();
+    expect([...d.querySelectorAll('.ve-bas-veri dd')].map((x) => x.textContent))
+      .toEqual(Object.keys(bek).map((k) => n(bek[k])));
+  });
+  // Tarayıcıda sabit `window[ad]`dan okunur: `const`/`let` ile bildirilmiş
+  // üst seviye ad pencereye yazılmaz; Node'da `require` yolu çalıştığı için
+  // birim testi bunu görmezdi ve bant o satırı SESSİZCE düşürürdü.
+  test('okunan her sabit tarayıcıda da var: üst seviye `var` ya da `function`', () => {
+    const okunan = [...loadSource('cp-fead-baslangic.js').matchAll(/_feadBasG\('([A-Za-z_]+)', '\.\/([a-z0-9-]+\.js)'\)/g)];
+    expect(okunan.length).toBeGreaterThanOrEqual(8);
+    okunan.forEach(([, ad, dosya]) => {
+      expect(loadSource(dosya)).toMatch(new RegExp('^(var|function) ' + ad + '\\b', 'm'));
+    });
+  });
+  test('kapı künyesi: sihirbazın adımları · STEP\'in biçimi · boş masanın yüzeyleri', () => {
+    const [sih, step, bos] = BS.veFeadBaslangicKapilar();
+    expect(W.VE_FW_STEPS[0].key).toBe('kaynak');              // ilk adım bu sayfanın kendisi
+    expect(sih.kunye).toEqual(W.VE_FW_STEPS.slice(1).map((s) => s.ad));
+    const kabul = loadSource('cp-fead-wizard.js').match(/class="ve-fw-stp-file" accept="([^"]+)"/)[1].split(',');
+    expect(step.kunye.filter((t) => t[0] === '.')).toEqual(kabul);
+    step.kunye.filter((t) => t[0] !== '.')
+      .forEach((t) => expect(loadSource('step-p21.js')).toContain('\'' + t.replace(' ', '-') + '\''));
+    // Boş çizim masası bir Kayış Yolu kartı kurar ve kartın açılış ön ayarı
+    // tabloyu (Pafta) açık getirir.
+    expect(bos.kunye).toEqual([componentDefs['fead-layout'].name + ' kartı', 'Kayış Tablosu']);
+    expect(fead.veFeadTabloAcik(dugum('fead-layout'))).toBe(true);
+  });
+  test('Kılavuz: üretici yüklüyse düğme basılır ve tık modülün kılavuzunu açar', () => {
+    const GK = require('../../js/guide-kit.js');
+    const uret = GK.veGuideKitOf('fead').uret;
+    expect(BS.veFeadBaslangicKimlik().kilavuz).toBe('');      // yüklü değil → düğme yok
+    expect(BS.veFeadBaslangicHTML()).not.toContain('ve-bas-kilavuz');
+    global[uret] = () => '';
+    const c = casus('veGuideOpen', () => {});
+    try {
+      expect(BS.veFeadBaslangicKimlik().kilavuz).toBe('fead');
+      expect(BS.veFeadBaslangicEylem('kilavuz', 'fead')).toBe(true);
+      expect(c.c).toHaveBeenCalledWith('fead');
+      expect(BS.veFeadBaslangicHTML()).toContain('class="ve-bas-kilavuz" data-ey="kilavuz" data-v="fead"');
+    } finally { c.geri(); delete global[uret]; }
   });
 });
 

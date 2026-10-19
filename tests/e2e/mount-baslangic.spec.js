@@ -65,7 +65,15 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
       kapi: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi')].map((b) => b.getAttribute('data-ey')),
       karo: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-karo').length,
       cizim: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-resim svg.ve-mnt2d-akso').length,
-      ornek: veMountCore.getMountExampleList().length };
+      ornek: veMountCore.getMountExampleList().length,
+      // KİMLİK VE VERİ tarayıcıda: sabitler `window`dan okunur — Node'un
+      // `require` yolu bunu göremez; bir satır düşerse ancak burada görünür.
+      baslik: (document.querySelector('#ve-mnt-baslangic .ve-bas-kimlik h1') || {}).textContent,
+      veri: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-veri dd')].map((e) => e.textContent),
+      canli: [Object.keys(VE_MOUNT_LIBRARY).length, VE_MW_GOVDE_TIPLERI.length,
+        veMountCore.getMountExampleList().length].map((x) => veSayi(x, 0)),
+      kunye: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
+      kilavuz: document.querySelector('#ve-mnt-baslangic .ve-bas-kilavuz')?.getAttribute('data-v') };
   });
   expect(Math.round(o.sayfa.w)).toBe(Math.round(o.kap.w));
   expect(Math.round(o.sayfa.h)).toBe(Math.round(o.kap.h));
@@ -73,6 +81,16 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
   expect(o.kapi).toEqual(['sihirbaz', 'step', 'bos']);
   expect(o.karo).toBe(o.ornek);
   expect(o.cizim).toBe(o.ornek);
+  expect(o.baslik).toBe('Takoz Çökme-Titreşim');
+  expect(o.veri).toHaveLength(5);
+  expect([o.veri[0], o.veri[2], o.veri[3]]).toEqual(o.canli);
+  expect(o.kunye).toEqual([4, 5, 1]);
+  expect(o.kilavuz).toBe('mount');
+  // Kılavuz düğmesi modülün kılavuzunu açar (pencere açmak yerine çağrı yakalanır).
+  await page.evaluate(() => { window.veGuideOpen = (id) => { window.__kilavuz = id; }; });
+  await page.click('#ve-mnt-baslangic .ve-bas-kilavuz');
+  expect(await page.evaluate(() => window.__kilavuz)).toBe('mount');
+  expect(await page.evaluate(() => veMntBaslangicAcik())).toBe(true);   // sayfa yerinde
   expect(hatalar).toEqual([]);
 });
 
