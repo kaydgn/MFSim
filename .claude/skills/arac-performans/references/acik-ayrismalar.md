@@ -93,6 +93,27 @@ Kılavuz bugünkü davranışı yazar (§9.3).
 
 ---
 
+## 5 · Parametrik Analiz yarım — paletten kaldırıldı
+
+**Hüküm (kullanıcı kararı 2026-10-19):** `parametric` paletten kaldırıldı;
+özellik kurulana kadar tuvale konamaz. Tanım (`componentDefs.parametric`),
+pencere (`getParametricPropertiesHTML`) ve kayıt yolu (`map.js`) DURUR — eski
+kayıttaki düğüm açılır.
+
+**Gerekçe:** parametre ekleme düğmesi programın hiçbir sürümünde yazılmadı
+(`veAddParametricParam` "ⓟ butonundan çağrılır" diyor, çağıranı yok) ve
+eklenen parametreleri koşturan hesap yok; pencere hep "Parametre yok"
+gösteriyordu. Metin Ekleme araştırmasında (karar 6) bir metin eksiği sanıldı,
+incelenince yarım bir özellik çıktı. Komut paleti bileşen listesini paletten
+okur: palet girişi iki yolun tek kapısı.
+
+**Kapı:** `tests/unit/arac-parametrik.test.js`. Özellik kurulacaksa Takoz'un
+Parametrik Analiz'i (`js/cp-mount-param.js` · `js/mount-katalog.js`) örnek:
+tarama Çözücü'nün yolundan geçer, ayrı çözüm yazılmaz; hangi alanların
+taranacağı ve hangi sonuçların karşılaştırılacağı kullanıcının kararı.
+
+---
+
 ## Küçük bulgular (aynı taramadan)
 
 - `js/ft-performance.js` `lerpTable` — hiçbir yerden çağrılmıyor, yalnız dışa
