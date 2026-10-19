@@ -56,6 +56,14 @@ function _feadBasKit(){
 function _feadBasTip(n){
   return (typeof componentDefs !== 'undefined' && n && componentDefs[n.type]) || (n && n.def) || {};
 }
+// Sabit tarayıcıda global, Node'da kendi dosyasının dışa aktarımı — kitin yolu.
+function _feadBasG(ad, dosya){
+  if(typeof window !== 'undefined' && window[ad] !== undefined) return window[ad];
+  if(typeof require === 'function'){
+    try { return require(dosya)[ad]; } catch(e){ return undefined; }
+  }
+  return undefined;
+}
 
 // ── GÖRÜNÜRLÜK — SAF: yalnız modeli okur ───────────────────────────────────
 // Liste verilmezse canlı `nodes`. Kasnak (gergi dâhil — `isFeadPulley`) ya da
@@ -129,19 +137,73 @@ function veFeadBaslangicResim(key){
   return svg;
 }
 
+// ── KİMLİK VE VERİ — sayfanın üst şeridi (kullanıcı isteği 2026-10-19) ─────
+// Analizlerin adı PROGRAMDAKİ adıdır: kartın adı (Kayış Yolu) ve Sonuçlar'ın
+// hazır diyagramları (js/fead-signals.js → presets). Sayılar katalogların
+// KENDİSİNDEN ölçülür (kayış · gergi · motor · aksesuar · çevrim) — elle
+// yazılmış bir sayı katalog büyüyünce sessizce bayatlardı. Kapı:
+// fead-baslangic.test.js → KİMLİK VE VERİ.
+var VE_FEAD_BAS_YETENEK = ['Kayış Yolu', 'Gerginlik ve kayma', 'Hubload', 'Campbell diyagramı',
+                           'Gergi kolu', 'Motor çevrimi'];
+var VE_FEAD_BAS_AKSESUAR = { alternator: 'alternatör', ac: 'klima kompresörü' };
+
+function veFeadBaslangicKimlik(){
+  var def = (typeof componentDefs !== 'undefined' && componentDefs['fead-analysis']) || {};
+  var kitOf = _feadBasG('veGuideKitOf', './guide-kit.js'), hazir = _feadBasG('veGuideKitReady', './guide-kit.js');
+  var kilavuz = (typeof kitOf === 'function' && typeof hazir === 'function' && hazir(kitOf('fead'))) ? 'fead' : '';
+  return { ad: def.name || 'FEAD', ikon: def.svg || '', yetenekler: VE_FEAD_BAS_YETENEK, kilavuz: kilavuz };
+}
+
+function veFeadBaslangicVeri(){
+  var n = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(x); };
+  var profil = _feadBasG('VE_FEAD_BELT_PROFILES', './fead-belts.js') || [];
+  var stok = _feadBasG('VE_FEAD_BELT_STOCK', './fead-belts.js') || {};
+  var boy = 0;
+  Object.keys(stok).forEach(function(p){ if(Array.isArray(stok[p])) boy += stok[p].length; });
+  var gergi = _feadBasG('VE_FEAD_TENSIONER_DB', './fead-tensioners.js') || [];
+  var motor = _feadBasG('VE_FEAD_ENGINE_DB', './fead-engines.js') || [];
+  var aks = _feadBasG('VE_FEAD_ACC_DB', './fead-accessories.js') || [];
+  var cevrim = _feadBasG('VE_FEAD_DUTY_DB', './fead-duty.js') || [];
+  var aksTur = {};
+  aks.forEach(function(a){ var t = a && a.tip; if(t) aksTur[t] = (aksTur[t] || 0) + 1; });
+  return [
+    { deger: n(profil.length), ad: 'Kayış profili', title: profil.join(' · ') },
+    { deger: n(boy), ad: 'Stok kayış boyu' },
+    { deger: n(gergi.length), ad: 'Otomatik gergi' },
+    { deger: n(motor.length), ad: 'Motor' },
+    { deger: n(aks.length), ad: 'Aksesuar',
+      title: Object.keys(aksTur).map(function(t){ return aksTur[t] + ' ' + (VE_FEAD_BAS_AKSESUAR[t] || t); }).join(' · ') },
+    { deger: n(cevrim.length), ad: 'Çalışma çevrimi' }
+  ].filter(function(x){ return x.deger !== '0'; });
+}
+
+// Kapıların künyesi — sihirbazın adımları RAYIN KENDİ ADLARIYLA (ilk adım
+// "Başlangıç" bu sayfanın ta kendisi, listede yok), STEP'in biçimi okuyucunun
+// başlığı ve dosya seçicinin uzantıları, boş çizim masasının kurduğu yüzeyler.
+var VE_FEAD_BAS_STEP = ['ISO 10303-21', '.stp', '.step', '.stpz', '.p21'];
+function veFeadBaslangicKapilar(){
+  var adim = (_feadBasG('VE_FW_STEPS', './cp-fead-wizard.js') || []).slice(1)
+    .map(function(s){ return s.ad; });
+  var kart = (typeof componentDefs !== 'undefined' && componentDefs['fead-layout'] && componentDefs['fead-layout'].name) || 'Kayış Yolu';
+  return [
+    { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true, kunye: adim },
+    { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla', kunye: VE_FEAD_BAS_STEP },
+    { ey: 'bos', ikon: 'ruler', ad: 'Boş çizim masası', kunye: [kart + ' kartı', 'Kayış Tablosu'] }
+  ];
+}
+
 // ── HTML — SAF: yalnız sabitlerden ve örnek kaydından ─────────────────────
 // Sayfanın İSKELETİ kitin (veBasSayfaHTML); buradaki iş içeriği söylemek:
-// kapıların adı ve raporların künyesi. Karo ipucu taşımaz — künye karoda.
+// kimlik, kataloğun sayıları, kapılar ve raporların künyesi. Karo ipucu
+// taşımaz — künye karoda.
 function veFeadBaslangicHTML(){
   var raporlar = veFeadBaslangicRaporlar();
   var K = _feadBasKit();
   if(!K) return '';
   return K.sayfa({
-    kapilar: [
-      { ey: 'sihirbaz', ikon: 'wand', ad: 'Sihirbazla kur', birincil: true },
-      { ey: 'step', ikon: 'box', ad: 'STEP\'ten başla' },
-      { ey: 'bos', ikon: 'ruler', ad: 'Boş çizim masası' }
-    ],
+    kimlik: veFeadBaslangicKimlik(),
+    veriler: veFeadBaslangicVeri(),
+    kapilar: veFeadBaslangicKapilar(),
     bolum: {
       baslik: 'Gates raporlarından başla',
       karolar: raporlar.map(function(r){
@@ -173,6 +235,11 @@ function veFeadBaslangicEylem(ad, v){
   if(ad === 'rapor'){
     if(!v || typeof veFeadLoadExample !== 'function') return false;
     return !!veFeadLoadExample(v);
+  }
+  if(ad === 'kilavuz'){
+    if(!v || typeof veGuideOpen !== 'function') return false;
+    veGuideOpen(v);
+    return true;
   }
   return false;
 }
@@ -207,7 +274,10 @@ if(typeof module !== 'undefined' && module.exports){
     veFeadBaslangicResim: veFeadBaslangicResim, veFeadBaslangicHTML: veFeadBaslangicHTML,
     veFeadBaslangicEylem: veFeadBaslangicEylem, veFeadBaslangicKur: veFeadBaslangicKur,
     veFeadBaslangicTazele: veFeadBaslangicTazele, veFeadBaslangicAcik: veFeadBaslangicAcik,
+    veFeadBaslangicKimlik: veFeadBaslangicKimlik, veFeadBaslangicVeri: veFeadBaslangicVeri,
+    veFeadBaslangicKapilar: veFeadBaslangicKapilar,
     VE_FEAD_BAS_ID: VE_FEAD_BAS_ID, VE_FEAD_BAS_RESIM: VE_FEAD_BAS_RESIM,
+    VE_FEAD_BAS_YETENEK: VE_FEAD_BAS_YETENEK, VE_FEAD_BAS_STEP: VE_FEAD_BAS_STEP,
     _feadBasSifirla: function(){ _feadBasResimler = {}; }
   };
 }
