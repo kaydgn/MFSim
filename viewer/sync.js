@@ -56,12 +56,12 @@ var TRACE_PATCHES = [
   {
     ad: 'boş durum metni — burada çözücü yok',
     from:
-      "  var noSim = !window.veSimResults && !hasImport && !mntOnly;\n" +
+      "  var noSim = veTrVeriYok();\n" +
       "  var h = '';\n" +
       "\n" +
       "  if(noSim) {",
     to:
-      "  var noSim = !window.veSimResults && !hasImport && !mntOnly;\n" +
+      "  var noSim = veTrVeriYok();\n" +
       "  var h = '';\n" +
       "\n" +
       "  // VIEWER FARKI: burada çözücü YOK. MFSim'in \"Çözüm sonucu yok / Çözücüyü Aç\"\n" +

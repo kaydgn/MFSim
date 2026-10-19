@@ -2468,4 +2468,19 @@ taşıyor; Rapor'un çözümsüz ve bayat hâli Çözücü'nün Hesapla'sını g
 "Çözücü yok." Bileşenler'i; sihirbazın boş gövde ve takoz listesi ekleyiciyi, boş
 başlangıç masası örneği ve STEP'i. "Olası çift sayım" ve şok yanıtının "sayısal
 olarak güvenilmez" notu bilerek yönlendirmesiz: biri olasılık söylüyor (ikisi
-birlikte doğru da olabilir), ötekinin tek doğru çaresi yok.
+birlikte doğru da olabilir), ötekinin tek doğru çaresi yok. → kaydgn/MFSim#1173 ·
+E5 → Ölçüm Görüntüleyici ve CAN Çözümleyici: görüntüleyicinin boş veri tablosu Veri
+Gezgini'ni gösteriyor (MFSim'le aynı cümle); CAN'ın boş diyagramı, Sinyal
+Gezgini'nin DBC'siz ve kayıtsız hâli, kayıtsız Kareler ve Mesaj İstatistiği, DBC
+uyarısı ve grafiksiz dışa aktarma yolu söylüyor (`cdbYon`, statik HTML'de
+`data-ve-yon`). Süpürmede bir yanlış durum çıktı: yalnız DBC açıkken varsayılan
+"Kayıtta" süzgeci her mesajı eliyor ve ağaç "Yüklü DBC'deki hiçbir mesaj kayıtta
+geçmiyor." diyordu — kayıt hiç yokken bir uyuşmazlık; artık "CAN kaydı
+yüklenmedi.". İkinci süpürme bulgusu iki programda birden: çizilecek veri yokken
+(çözüm, ölçüm ve modül sonucu yok) Sonuçlar'ın Tablo ve 3B kipi kendi boş
+durumunu basıyor ve boş Veri Gezgini'ne yolluyordu; iz kipi aynı hâlde Çözücüyü
+aç · Ölçüm verisi içe aktar düğmelerini gösteriyor. İki kip artık aynı sorudan
+geçer (`veTrVeriYok`, karar `veTrApplyMode`'da) ve veri yokken iz kipinin boş
+durumu görünür.
+"Dosyada çözülen CAN karesi yok." bilerek yönlendirmesiz: sebebi kayıt biçimi de
+olabilir dosyanın kendisi de.

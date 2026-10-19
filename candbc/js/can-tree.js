@@ -61,7 +61,7 @@ function cdbRefreshTree() {
   var db = cdbState.db, st = cdbState.store;
 
   if (!db) {
-    host.innerHTML = '<div class="vsig-empty">DBC yüklenmedi.</div>';
+    host.innerHTML = '<div class="vsig-empty">DBC yüklenmedi. ' + cdbYon('DBC ile .dbc dosyası açın.') + '</div>';
     cdbUpdateTreeCount();
     return;
   }
@@ -140,7 +140,10 @@ function cdbRefreshTree() {
   }
 
   if (!shownMsgs) {
-    html = '<div class="vsig-empty">' + (q ? 'Aramaya uyan mesaj/sinyal yok.' :
+    // "Kayıtta" süzgeci kayıt yokken her mesajı eler: durum uyuşmazlık değil, kayıtsızlık.
+    html = '<div class="vsig-empty">' +
+      (cdbTree.filter === 'log' && !st ? 'CAN kaydı yüklenmedi. ' + cdbYon('Kayıt ile dosya açın.') :
+      q ? 'Aramaya uyan mesaj/sinyal yok.' :
       cdbTree.filter === 'log' ? 'Yüklü DBC\'deki hiçbir mesaj kayıtta geçmiyor.' :
       'Gösterilecek mesaj yok.') + '</div>';
   }

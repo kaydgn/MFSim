@@ -129,6 +129,9 @@ npx playwright test tests/e2e/viewer.spec.js      # uçtan uca, file:// üzerind
 - `tests/unit/ayri-program-metin.test.js` — arayüz metni yalnız ad, veri, durum
   (CLAUDE.md → ARAYÜZ ANLATMAZ): üst bantta açıklama yok, boş ölçüm penceresi
   (`sync.js`'in yerel farkı) tarif taşımaz; CAN Çözümleyici ile ortak kapı.
+- `tests/unit/ayri-program-yon.test.js` — yönlendirme yuvası: boş veri tablosu
+  Veri Gezgini'ni gösterir (MFSim'le aynı cümle), yuva `js/yon.js` panodan önce
+  yüklenir; CAN Çözümleyici ile ortak kapı.
 - `tests/e2e/viewer.spec.js` — **üretilen tek dosyayı** `file://` üzerinden
   test eder (modüler kaynağı değil): gerçek `.xlsx` baytları → gerçek şeritler,
   tuvale gerçekten çizim, sıfır ağ isteği.
