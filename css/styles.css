@@ -9881,6 +9881,13 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-properties-content .ve-mnt-foy--sik td:first-child{ padding-left:6px !important; }
 /* Sütun başı uzun ad taşıyorsa (parça adları) kırpılmaz, alt satıra iner. */
 .ve-properties-content .ve-mnt-foy--sar th{ white-space:normal; vertical-align:bottom; overflow-wrap:anywhere; }
+/* AD HÜCRESİ SARAR (`td.sar`): tip adının ayırt eden kısmı sonda ("… · BMC
+   8x8 çalışma noktası") — kırpılınca iki tip aynı görünüyordu. Kod bölünmez
+   (`.ve-mnt-nw`); sarılan satırda hücreler üstten hizalı (`--ad`). */
+.ve-properties-content .ve-mnt-foy td.sar{ white-space:normal; }
+.ve-properties-content .ve-mnt-foy--ad td{ vertical-align:top; }
+.ve-mnt-nw{ white-space:nowrap; }
+.ve-mnt-ek{ display:inline-block; }
 .ve-properties-content .ve-mnt-foy td.kr{ color:var(--ink-danger); font-weight:700; }
 /* ZORUNLU VE BOŞ — kutu girdiye değil HÜCREYE: veri ızgarasında girdi
    dinlenmede kutusuz kalır (kullanıcı kararı 13·B). */
@@ -10332,6 +10339,11 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-prm-y-boz{ color:var(--ink-danger); }
 .ve-prm-y-ok{ color:var(--ink-success); }
 .ve-prm-y-o .ve-durum{ width:11px; height:11px; margin-right:3px; vertical-align:-1px; }
+/* Seçeneğin Uygula düğmesi amaç satırının sağında, içeriği kadar. */
+.ve-prm-y-o .ve-fp-dugme{
+  flex:0 0 auto; margin-left:auto; display:inline-flex; align-items:center; gap:4px; padding:1px 8px;
+}
+.ve-prm-y-o .ve-fp-dugme .mf-ico{ width:11px; height:11px; }
 /* Diyagramlar: galeriyi açan liste (iki sütun). */
 .ve-prm-dg-l{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
 .ve-prm-dg{

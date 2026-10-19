@@ -318,7 +318,8 @@ function _gmSec6(){
   h += _gmAdimlar([
     'Takoza çift tıklayın.',
     '<strong>Takoz tipi</strong> listesinden hazır bir künye seçin — konum hariç bütün '
-      + 'alanlar dolar (Bölüm 7). Altındaki durum satırı değerlerin kaçının künyeyle aynı kaldığını söyler.',
+      + 'alanlar dolar (Bölüm 7). Altındaki durum satırı değerlerin kaçının künyeyle aynı kaldığını söyler. '
+      + 'Altı rijitliği bir künyeyle birebir aynı olan takozda liste o künyeyi gösterir.',
     '<strong>Konum</strong> föyüne takozun x / y / z koordinatını yazın (mm, modelin '
       + 'ortak çerçevesinde).',
     'Künye kütüphanede yoksa <strong>Rijitlik</strong> föyüne üç eksenin statik ve dinamik '
@@ -369,7 +370,7 @@ function _gmSec7(){
       + 'girilmiş olabilir'],
     ['Yasa', 'Seçilen eksenin kuvvet–sehim grafiği (X · Y · Z) ve üç eksenin yasası',
       'Gömülü takoz lineerdir; z-eğrisinin noktaları yalnız özel takozda girilir'],
-    ['Kullanım (yan sütun)', 'Bu tipi taşıyan takozlar',
+    ['Kullanım (yan sütun)', 'Bu tipi taşıyan takozlar: tipi seçilmiş ya da altı rijitliği tiple aynı',
       'Tipinden sapan takozu <strong>n değer farklı</strong> diye gösterir (aşağıdaki not)']
   ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
   h += _gmNot('Künye kopya olarak gider',
@@ -791,7 +792,7 @@ function _gmSec15(){
     + 'karşılaştırmasını ve iki grafiği taşır; taramanın on diyagramı tam ekranda açılır; ayrıntılı rapor ayrı '
     + 'bir belgedir (<em>takoz_katalogdan_secim.html</em>).</p>';
   h += _gmAlanTablo('Parametrik Analiz penceresi', [
-    ['<strong>Gruplar</strong>', 'Sağ/sol çiftler ve tek takozlar, x konumu, mevcut tip',
+    ['<strong>Gruplar</strong>', 'Sağ/sol çiftler ve tek takozlar, x konumu, mevcut tip (Takoz penceresinin listesindeki tip)',
       '“Tara” işareti kalkan grup modeldeki takoz verisiyle kalır'],
     ['<strong>Adaylar</strong>', 'Kütüphanenin bütün tipleri: gömülü, değiştirilmiş, özel',
       'İşareti kalkan tip hiçbir gruba takılmaz'],
@@ -800,7 +801,7 @@ function _gmSec15(){
     ['<strong>Katalogdan seçim</strong>', 'Grup · tip · kombinasyon sayısı',
       'Kombinasyon = tip sayısı ^ taranan grup sayısı; üst sınır ' + _gmF(K.MAKS_KOMB, 0)],
     ['Sonuç', 'Öneri, kriterler, modlar, statik sehim ve iletilebilirlik, yakın seçenekler, eleme, '
-      + 'diyagramların listesi; raporun indirilmesi', 'Yalnız taramadan sonra (Bölüm 15.5)']
+      + 'diyagramların listesi; seçimin modele uygulanması, raporun indirilmesi', 'Yalnız taramadan sonra (Bölüm 15.5)']
   ], ['Kısım', 'Ne', 'Not']);
   h += '<h3>15.1 Gruplar</h3>';
   h += '<p>Bir grubun takozları aynı tiptir. Adında tek bir yan sözcüğü (<em>sağ</em> ya da <em>sol</em>) bulunan '
@@ -864,12 +865,17 @@ function _gmSec15(){
       + 'sürerken pencere ve tuval kullanılabilir.',
     'Pencerenin <strong>Sonuç</strong> bölümü açılır: öneri (uygun kombinasyon yoksa en az ihlalli '
       + 'kombinasyon), kriterler ve iki grafik.',
+    '<strong>Modele uygula</strong> (<strong>Öneri</strong> bölümünde) ya da yakın seçeneğin <strong>Uygula</strong>sı: '
+      + 'kombinasyonun tipleri taranan grupların takozlarına yazılır (Bölüm 15.5). Ardından Çözücü’de '
+      + '<strong>Hesapla</strong> ve ana rapor: Çözücü taramanın ölçtüğü modları ve sehimleri bulur.',
     '<strong>Raporu indir</strong> (<strong>Öneri</strong> bölümünde): kapsam, yöntem, kısıtlar, eleme, sonuç '
       + '(uzlaşı çözümü ve mevcut tasarım yan yana, Pareto şekli), sıralama, varsayımlar ve kaynaklar.'
   ]);
   h += '<p>Kısıtların sınırı, açık/kapalı durumu ve amaç ağırlığı değişince Sonuç bölümü taramanın sakladığı '
     + 'ölçülerden yeniden kurulur; tarama yinelenmez. Model, adaylar, sabit gruplar, tolerans ya da sürünme payı '
-    + 'değişince tarama eskir ve Sonuç bölümü yalnız bu durumu yazar. Tarama proje dosyasına kaydedilmez.</p>';
+    + 'değişince tarama eskir ve Sonuç bölümü yalnız bu durumu yazar. Taranan bir grubun takoz tipi değişince '
+    + 'tarama eskimez; mevcut tasarım yeniden ölçülür. '
+    + 'Tarama proje dosyasına kaydedilmez.</p>';
   h += '<h3>15.5 Sonuç ve diyagramlar</h3>';
   h += '<p><strong>Öneri</strong> uzlaşı çözümüdür (Bölüm 15.3); uygun kombinasyon yoksa sıranın birincisi, en az '
     + 'ihlalli kombinasyondur ve bölümün, kriter sütununun ve grafiklerdeki işaretin adı <strong>En az ihlalli</strong>dir. '
@@ -878,7 +884,7 @@ function _gmSec15(){
   h += _gmAlanTablo('Sonuç bölümü', [
     ['<strong>Öneri</strong>', 'Grup başına tip: değişen grupta mevcut tip üstü çizili, önerinin tipi kalın; '
       + 'tipi aynı kalan grup <em>Aynı</em>, taranmayan grup <em>Sabit</em>. İletilebilirlik ve statik sehim: '
-      + 'mevcut → öneri', '<strong>Raporu indir</strong> bu bölümde'],
+      + 'mevcut → öneri', '<strong>Modele uygula</strong> ve <strong>Raporu indir</strong> bu bölümde'],
     ['<strong>Kriterler</strong>', 'Açık kısıt başına satır: sınır, mevcut tasarımın ve önerinin değeri; ✓ sağlıyor, '
       + '✗ sağlamıyor (hücre kırmızı). Statik sehimin alt ve üst sınırı tek satırdır',
       'Değeri olmayan kısıt (kapasitesi tanımsız tip) —; değer sınıra yuvarlanıyorsa ondalığı uzar'],
@@ -889,7 +895,7 @@ function _gmSec15(){
     ['<strong>Statik sehim ve iletilebilirlik</strong>', 'Karo mevcut tasarım, halka öneri, boş daireler yakın '
       + 'seçenekler; ok mevcut tasarımdan öneriye. Yeşil bant statik sehimin sınırları', ''],
     ['<strong>Yakın seçenekler</strong>', 'Sıranın ikinci–altıncı kombinasyonu: grup başına tip (önerininkiyle '
-      + 'aynı olan soluk), iletilebilirlik ve statik sehim; uygun değilse sağlamadığı kısıtlar',
+      + 'aynı olan soluk), iletilebilirlik ve statik sehim; uygun değilse sağlamadığı kısıtlar; <strong>Uygula</strong>',
       'Uygun kombinasyon beşten azsa en az ihlalli uygun olmayanlarla tamamlanır'],
     ['<strong>Eleme</strong>', 'Kısıtlar sırayla uygulanınca kalan kombinasyon sayısı; yalnız eleyen kısıtlar',
       'Son satır uygun kombinasyon sayısı'],
@@ -932,6 +938,13 @@ function _gmSec15(){
     + 'taranan grubu eksenlere koyar (tipler statik düşey rijitlik sırasıyla); öteki taranan gruplar seçilen tipte '
     + 'durur, varsayılan sıranın birincisinin tipidir. <em>Eksenler</em> ve <em>Grup</em> seçimi dört diyagramda '
     + 'ortaktır. Tek grup taranıyorsa kesit diyagramları çizilmez; Tasarım uzayı üç taranan grup ister.</p>';
+  h += _gmNot('Seçimi modele uygulamak',
+      '<strong>Modele uygula</strong> önerinin tiplerini, yakın seçeneğin <strong>Uygula</strong>sı o seçeneğin '
+    + 'tiplerini taranan grupların takozlarına yazar; yazım Takoz penceresinin <strong>Takoz tipi</strong> '
+    + 'listesindeki seçimin aynısıdır (rijitlik, kapasite, yasa). Bütün takozlar tek geri-al adımıdır (Ctrl+Z). '
+    + 'Sabit grup değişmez. Tarama eskimez: uygulanan kombinasyon mevcut tasarım olur, <strong>Öneri</strong> '
+    + 'her grupta <em>Aynı</em> yazar ve <strong>Kriterler</strong>’in iki sütunu eşitlenir. Kombinasyon zaten '
+    + 'modeldeyse düğme kapalıdır.');
   h += _gmNot('Etkileşim',
       '<strong>Diyagramlar</strong> bölümündeki ad diyagramı tam ekranda açar; soldaki listeden öteki diyagrama '
     + 'geçilir. 3B diyagramlar sol tık + sürükle ile döner; çizim odaktayken oklar döndürür; <em>Sıfırla</em> '
@@ -970,6 +983,7 @@ function _gmEkA(){
       ['Ek kısıtların sınırı, sürünme, tolerans, amaç ağırlığı', 'Parametrik Analiz',
         '<strong>Ek kısıtlar</strong> · <strong>Değerlendirme</strong> · <strong>Amaç</strong>'],
       ['Taramanın sonucu', 'Parametrik Analiz', '<strong>Öneri</strong> · <strong>Kriterler</strong> · <strong>Modlar</strong> · <strong>Statik sehim ve iletilebilirlik</strong>'],
+      ['Seçimin takozlara uygulanması', 'Parametrik Analiz', '<strong>Öneri</strong> (Modele uygula) · <strong>Yakın seçenekler</strong> (Uygula)'],
       ['Yakın kombinasyonlar ve eleme', 'Parametrik Analiz', '<strong>Yakın seçenekler</strong> · <strong>Eleme</strong>'],
       ['Taramanın on diyagramı (tam ekran)', 'Parametrik Analiz', '<strong>Diyagramlar</strong>: Pareto cephesi · Mod yerleşimi · Bağlayıcı kısıtlar · Sınır duyarlılığı · Ana etkiler · Kısıt haritaları · İletilebilirlik haritası · Kısıt penceresi · Tepki yüzeyi · Tasarım uzayı']
     ], ['l', 'c', 'l']);

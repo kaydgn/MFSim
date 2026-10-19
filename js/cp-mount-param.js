@@ -258,15 +258,30 @@ function _mntParamYanHTML(node, H){
   return ozet+durum+eylem;
 }
 
+// Grubun ve tipin adı hücrede SARAR (`td.sar`): kırpılan ad kütüphanede iki
+// tipe birden uyuyordu ("Cone 67 50Sh (AMC 1…" · "57RS313774…"). Sondaki
+// parantezli künye tek blok (`.ve-mnt-ek`): sığmazsa bütünüyle alt satıra
+// iner. Kod satır sonunda bölünmez (`.ve-mnt-nw`): tireli ya da eğik çizgili
+// ("ASR-SR-116", "Sağ/Sol") ve büyük harfli önek + numara ("AMC 137731").
+function _mntParamAd(ad){
+  var s=String(ad==null ? '' : ad), m=/^(.*\S)\s+(\([^()]*\))$/.exec(s);
+  var kod=function(x){
+    return _mntEsc(x).replace(/(^|[^\p{L}\p{N}])(\p{Lu}{2,} \d\S*)|\S*[-–/]\S*/gu, function(t, on, k){
+      return k ? on+'<span class="ve-mnt-nw">'+k+'</span>' : '<span class="ve-mnt-nw">'+t+'</span>';
+    });
+  };
+  return m ? kod(m[1])+' <span class="ve-mnt-ek">'+kod(m[2])+'</span>' : kod(s);
+}
+
 function _mntParamGrupHTML(node, H){
   var G=H.M.G;
   if(!G.length) return _mntBolum('Gruplar', '', _mntNot('Takoz yok', 'warn'));
-  var h=_mntFoyAc([{ b:'No', gen:'9%' }, { b:'Grup', gen:'37%', sinif:'sol' }, { b:'x <u>[mm]</u>', gen:'15%' },
-                   { b:'Mevcut tip', gen:'26%', sinif:'sol' }, { b:'Tara', gen:'13%', sinif:'ve-mnt-sec' }], 'Takoz grupları', 've-mnt-foy--sar');
+  var h=_mntFoyAc([{ b:'No', gen:'8%' }, { b:'Grup', gen:'31%', sinif:'sol' }, { b:'x <u>[mm]</u>', gen:'15%' },
+                   { b:'Mevcut tip', gen:'33%', sinif:'sol' }, { b:'Tara', gen:'13%', sinif:'ve-mnt-sec' }], 'Takoz grupları', 've-mnt-foy--sar ve-mnt-foy--ad');
   G.forEach(function(g){
     var tip=(g.tip && H.M.lib[g.tip]) ? H.M.lib[g.tip].name : '—';
-    h+='<tr><td>'+g.no+'</td><td class="sol" title="'+_mntEsc(g.ad)+'">'+_mntEsc(g.ad)+'</td><td>'+_mntS(g.x, 0)+'</td>'
-     + '<td class="sol" title="'+_mntEsc(tip)+'">'+_mntEsc(tip)+'</td>'
+    h+='<tr><td>'+g.no+'</td><td class="sol sar">'+_mntParamAd(g.ad)+'</td><td>'+_mntS(g.x, 0)+'</td>'
+     + '<td class="sol sar">'+_mntParamAd(tip)+'</td>'
      + '<td class="ve-mnt-sec"><input type="checkbox"'+(H.sabit[g.anahtar] ? '' : ' checked')
      + ' aria-label="'+_mntEsc('Tara · '+g.ad)+'" onchange="veMntParamSabit(\''+node.id+'\','+g.no+',!this.checked)"></td></tr>';
   });
@@ -277,16 +292,16 @@ function _mntParamAdayHTML(node, H){
   var A=H.A, n=H.aday.length;
   var h=_mntFoyAc([{ b:'<input type="checkbox"'+(n===A.length ? ' checked' : '')+' aria-label="Tüm tipler"'
                        + ' onchange="veMntParamAdayHepsi(\''+node.id+'\',this.checked)">', gen:'8%', sinif:'ve-mnt-sec' },
-                   { b:'Tip', gen:'40%', sinif:'sol' },
+                   { b:'Tip', gen:'42%', sinif:'sol' },
                    { b:_mntSym('k<sub>z</sub>')+' stat. <u>[N/mm]</u>', gen:'16%' },
                    { b:_mntSym('k<sub>z</sub>')+' din. <u>[N/mm]</u>', gen:'16%' },
-                   { b:'Yasa', gen:'20%', sinif:'sol' }], 'Aday tipler', 've-mnt-foy--sar');
+                   { b:'Yasa', gen:'18%', sinif:'sol' }], 'Aday tipler', 've-mnt-foy--sar ve-mnt-foy--ad');
   A.forEach(function(a){
     h+='<tr><td class="ve-mnt-sec"><input type="checkbox"'+(a.dahil ? ' checked' : '')
      + ' aria-label="'+_mntEsc(a.name)+'" onchange="veMntParamAday(\''+node.id+'\',\''+_mntEsc(a.key)+'\',this.checked)"></td>'
-     + '<td class="sol" title="'+_mntEsc(a.name)+'">'+_mntEsc(a.name)+'</td>'
+     + '<td class="sol sar">'+_mntParamAd(a.name)+'</td>'
      + '<td>'+_mntS(_mntNum(a.e.sz, NaN), 0)+'</td><td>'+_mntS(_mntNum(a.e.dz, NaN), 0)+'</td>'
-     + '<td class="sol">'+(_mntEntryHasLaw(a.e) ? 'eğri' : 'doğrusal')+'</td></tr>';   // sütun 20 %: "doğrusal" sığar
+     + '<td class="sol">'+(_mntEntryHasLaw(a.e) ? 'eğri' : 'doğrusal')+'</td></tr>';   // sütun 18 %: "doğrusal" sığar
   });
   return _mntBolum('Adaylar', n+' / '+A.length, h+_MNT_FOY_KAPA, { emId:'ve-mnt-param-aday-em-'+node.id });
 }
@@ -537,7 +552,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntParamHazirlik: _mntParamHazirlik, _mntParamOlcucu: _mntParamOlcucu,
     _mntParamZenginlestir: _mntParamZenginlestir, _mntParamYaz: _mntParamYaz, _mntParamDugum: _mntParamDugum,
     _mntParamIlerleme: _mntParamIlerleme, _mntParamSonraki: _mntParamSonraki, veMntParamDurdur: veMntParamDurdur,
-    _MNT_PARAM_EK: _MNT_PARAM_EK, _MNT_PARAM_YUZDE: _MNT_PARAM_YUZDE,
+    _MNT_PARAM_EK: _MNT_PARAM_EK, _MNT_PARAM_YUZDE: _MNT_PARAM_YUZDE, _mntParamAd: _mntParamAd,
     veMntParamSabit: veMntParamSabit, veMntParamAday: veMntParamAday, veMntParamAdayHepsi: veMntParamAdayHepsi,
     veMntParamSinir: veMntParamSinir, veMntParamAcik: veMntParamAcik, veMntParamTara: veMntParamTara
   };

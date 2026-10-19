@@ -64,6 +64,24 @@ function stepYukle() {
 }
 const dugumi = (s, ad) => s.sonuc.agac.filter((d) => d.ad === ad)[0].i;
 
+// KATALOG LİSTESİ = TAKOZ PENCERESİNİN EŞLEŞMESİ (kullanıcı turu 2026-10-19):
+// örnekten doldurulan satır bağsız gelir; liste "— katalogdan seç —" derken
+// satırın altı rijitliği bir tiple birebir aynıydı (ASFAT'ta 6/6 satır).
+describe('KATALOG LİSTESİ — örnekten doldurulan satır tipini gösterir', () => {
+  test('ASFAT: altı satırın listesi Takoz penceresinin eşleşmesi; bir değer değişince boş seçim', () => {
+    const fs = require('fs'), path = require('path');
+    const T = JSON.parse(fs.readFileSync(path.join(__dirname, '../../assets/examples/asfat_topoloji.json'), 'utf8'));
+    const st = W.veMntWizFromNodes(T.nodes);
+    expect(st.takozlar.length).toBe(6);
+    expect(st.takozlar.every((t) => !t.libKey)).toBe(true);
+    const sec = (t) => { const d = document.createElement('div'); d.innerHTML = W._mwKatalogSecHTML(t); return d.querySelector('select').value; };
+    expect(st.takozlar.map(sec)).toEqual(st.takozlar.map((t) => cp._mntKutuphaneEslesme({ data: t }).e.key));
+    expect([...new Set(st.takozlar.map(sec))].sort()).toEqual(['57RS313773-sr116', '57RS313774-sr116']);
+    st.takozlar[0].kzs = 999;
+    expect(sec(st.takozlar[0])).toBe('');
+  });
+});
+
 describe('PENCERE — FEAD sihirbazının kabuğu', () => {
   test('boş topolojide açılır: ray VE_MW_STEPS, 1. adımda STEP kartı ve örnek seçici', () => {
     expect(W.veMntWizAc()).toBe(true);

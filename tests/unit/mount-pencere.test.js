@@ -221,6 +221,49 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
     expect(cp._mntCozucuDurumlari(cozucu()).dur.yazi).toBe('çözülemez');
   });
 
+  // TİP LİSTESİ = NOTUN EŞLEŞMESİ (kullanıcı turu 2026-10-19: "Örnek modelin
+  // takozlarında tip listesi '— elle gir —' gösteriyor; tipin hangisi olduğunu
+  // ancak altındaki nottan anlıyorum"). Örneklerin takozları bağsız
+  // kaydedilmişti: liste "— elle gir —" derken not tipi adlandırıyor, Takoz
+  // Özellikleri'nin Kullanım'ı hiçbirini saymıyordu. Kural, liste değil: her
+  // örneğin her takozu.
+  test('TİP LİSTESİ: her örnekte her takozun listesi ve Kullanım\'ı notun eşleşmesinden (17 tipli, 11 tipsiz takoz)', () => {
+    const dir = path.join(__dirname, '../../assets/examples');
+    let tipli = 0, tipsiz = 0, bagli = 0;
+    fs.readdirSync(dir).filter((f) => /_topoloji\.json$/.test(f) && !/^ap_/.test(f)).forEach((f) => {
+      const T = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+      global.nodes = T.nodes.map((n) => Object.assign(n, { def: componentDefs[n.type] }));
+      const say = {};
+      global.nodes.filter((n) => n.type === 'mnt-mount').forEach((n) => {
+        if (n.data.libKey) bagli++;
+        const E = cp._mntKutuphaneEslesme(n), bek = E ? E.e.key : '';
+        const d = dom(cp._mntTakozTipGovde(n));
+        expect([f, n.id, d.querySelector('select').value]).toEqual([f, n.id, bek]);
+        if (bek) {
+          tipli++; say[bek] = (say[bek] || 0) + 1;
+          expect(d.querySelector('[id^="ve-mnt-libnot-"]').textContent).toContain(E.e.name + ' ile 6/6 değer aynı');
+        } else tipsiz++;
+      });
+      cp.veMntGetLibraryList().forEach((e) => {
+        const n = dom(cp._mntLibKullanimHTML({ id: 'x' }, e)).querySelectorAll('tbody tr').length;
+        expect([f, e.key, n]).toEqual([f, e.key, say[e.key] || 0]);
+      });
+    });
+    expect([tipli, tipsiz, bagli]).toEqual([17, 11, 0]);
+  });
+
+  test('TİP LİSTESİ: bağ seçilen tipi gösterir; bağsız takozda bir değer değişince "— elle gir —"', () => {
+    tulga();
+    const t = onTakoz(), sec = () => dom(cp._mntTakozTipGovde(t)).querySelector('select').value;
+    expect(sec()).toBe('TK050');
+    t.data.kzs = '300';
+    expect(sec()).toBe('');
+    t.data.libKey = 'TK050';                                               // bağlı ve değeri sapmış: bağın tipi
+    expect(sec()).toBe('TK050');
+    t.data.libKey = 'yok-boyle-tip';
+    expect(sec()).toBe('');
+  });
+
   test('"— elle gir —" seçimi kütüphane BAĞINI kaldırır, değerlere dokunmaz', () => {
     tulga();
     const t = onTakoz();

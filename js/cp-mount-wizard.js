@@ -1233,7 +1233,11 @@ function _mwTakozListeHTML(c){
 function _mwKatalogSecHTML(t){
   var lib = (typeof veMntGetLibraryList === 'function') ? veMntGetLibraryList() : [];
   var b = lib.filter(function(e){ return e.builtin; }), o = lib.filter(function(e){ return !e.builtin; });
-  var opt = function(e){ return '<option value="' + _mwEsc(e.key) + '"' + (t.libKey === e.key ? ' selected' : '') + '>' + _mwEsc(e.name) + '</option>'; };
+  // Seçili tip Takoz penceresinin eşleşmesinden: örnekten doldurulan satır
+  // bağsız gelir ama altı değeri bir tiple aynıdır.
+  var E = (typeof _mntKutuphaneEslesme === 'function') ? _mntKutuphaneEslesme({ data:t }) : null;
+  var secili = E ? E.e.key : '';
+  var opt = function(e){ return '<option value="' + _mwEsc(e.key) + '"' + (secili === e.key ? ' selected' : '') + '>' + _mwEsc(e.name) + '</option>'; };
   var h = '<select class="ve-fw-inp" onchange="veMntWizTakozKatalog(\'' + t.key + '\', this.value)" aria-label="Katalog">'
     + '<option value="">— katalogdan seç —</option>';
   if(b.length) h += '<optgroup label="Gömülü">' + b.map(opt).join('') + '</optgroup>';
@@ -1722,6 +1726,7 @@ if(typeof module !== 'undefined' && module.exports){
     _mwMasaPay: _mwMasaPay, VE_MW_OZET_PANEL: VE_MW_OZET_PANEL, _mwStepOzet: _mwStepOzet,
     _mwStepTork: _mwStepTork, _mwTakozListeHTML: _mwTakozListeHTML, veMntWizNavHTML: veMntWizNavHTML,
     _mwOrnekModelden: _mwOrnekModelden, _mwKurulumPlani: _mwKurulumPlani, _mwTorkZincirSVG: _mwTorkZincirSVG,
+    _mwKatalogSecHTML: _mwKatalogSecHTML,
     veMntWizStp: veMntWizStp, veMntWizStpOku: veMntWizStpOku, veMntWizStpBayt: veMntWizStpBayt,
     veMntWizStpRol: veMntWizStpRol, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
     veMntWizStpDenetim: veMntWizStpDenetim, veMntWizStpAktar: veMntWizStpAktar, veMntWizStpKapat: veMntWizStpKapat,

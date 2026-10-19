@@ -112,8 +112,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yok. On diyagram (2B · kesit · 3B) pencerede ÇİZİLMEZ: listeden tam ekranın
   galerisinde açılır (soldaki liste, kısıt kodlarının anahtarı). DOM'suz SVG çizici,
   sütunun gerçek genişliğinde. Tarama sonucu düğüm başına BELLEKTE (modelde değil);
-  girdi değişince imzayla eskir. Kapı: `mount-param-ciz.test.js` (→ *SADE
-  GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* + `mount-param-sonuc.spec.js`.
+  girdi değişince imzayla eskir. **Modele uygula** (Öneri) ve yakın seçeneğin
+  **Uygula**sı kombinasyonu taranan grupların takozlarına Takoz penceresinin
+  yazıcısıyla (`_mntLibUygula`) yazar, TEK geri-al adımı; taranan grubun tipi
+  imzada YOK (her kombinasyon onu kütüphaneden takar): uygulamak taramayı
+  eskitmez, mevcut tasarım yeniden ölçülür. Kapı: `mount-param-ciz.test.js` (→ *SADE
+  GRAFİKLER*) + `mount-param.test.js` → *SONUÇ* · *UYGULA* · *İMZA* + `mount-param-sonuc.spec.js`.
 - `js/cp-fead-araclar.js` — **FEAD araçları penceresi** (Sihirbaz · Hesapla ·
   Ayarlar · Rapor · Yön · Not), topolojideki araç kutularının yerine. Ayar TUTMAZ —
   kutusuz çözücü/rapor/sihirbaz düğümlerine bağlanır; yer ve katlılık

@@ -19,6 +19,11 @@
 // mount-katalog.test.js → CANLI); model, aday, sabit grup, tolerans ya da
 // sürünme değişince tarama ESKİR (imza) ve Sonuç yalnız durumu yazar.
 //
+// MODELE UYGULA (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran bir düğme
+// yok; altı takozun tipini tek tek değiştirdim"): öneri ya da yakın seçenek
+// taranan grupların takozlarına yazılır (veMntParamUygula). Taranan grubun
+// tipi imzada yok: Sonuç yerinde kalır, uygulanan kombinasyon "Mevcut" olur.
+//
 // ÇİZİM GERÇEK GENİŞLİKTE: gövdenin genişliği pencere açılınca ölçülür
 // (veMntParamCizKur, cp-core.js), grafik o genişlikte 1:1 kurulur.
 // Çizici DOM'suz: js/mount-param-ciz.js.
@@ -30,18 +35,39 @@ var _MNT_PARAM_GEN = {};        // düğüm → çizimin genişliği (gövdenin 
 // İMZA — taramanın ölçüsünü değiştiren her girdi: model (kütle, takoz,
 // tork), çözüm modu ve ζ, f_ateş, adaylar ve kütüphane girdileri, sabit
 // gruplar, tolerans ve sürünme. Sınır, açıklık ve ağırlık imzada YOK: onlar
-// yalnız hükmü değiştirir.
+// yalnız hükmü değiştirir. TARANAN grubun takozlarının tip alanları da YOK
+// (rijitlik, kapasite, yasa): her kombinasyon onları kütüphaneden yazar
+// (_mntLibGirdiYaz), imzaya o takozların adı ve konumu girer. Tipi
+// değiştirmek (Modele uygula, Takoz penceresinde tip) taramayı eskitmez,
+// mevcut tasarımı yeniden ölçtürür (_mntParamMevcutTazele).
 function _mntParamImza(H){
-  var c=veMntKatalog.baglam(H.ctx), sv=H.M.solver || { data:{} };
-  return JSON.stringify([H.M.gather, (sv.data && sv.data.solveMode) || 'auto', _mntZetaOf(sv), H.M.fAtes,
-    H.aday.map(function(a){ return [a.key, a.e]; }), Object.keys(H.sabit || {}).sort(),
+  var c=veMntKatalog.baglam(H.ctx), sv=H.M.solver || { data:{} }, g=H.M.gather, s=H.sabit || {}, tara={};
+  H.M.G.forEach(function(gr){ if(!s[gr.anahtar]) gr.uyeler.forEach(function(i){ tara[i]=true; }); });
+  var tk=g.mounts.map(function(m, i){ return tara[i] ? { id:m.id, name:m.name, x:m.x, y:m.y, z:m.z } : m; });
+  return JSON.stringify([{ components:g.components, mounts:tk, torque:g.torque }, (sv.data && sv.data.solveMode) || 'auto',
+    _mntZetaOf(sv), H.M.fAtes, H.aday.map(function(a){ return [a.key, a.e]; }), Object.keys(s).sort(),
     c.acik.tolerans ? c.s.tolerans : 0, c.s.surunme]);
 }
-function _mntParamSonucKaydet(nodeId, H, O, D){
-  var nl=H.M.G.map(function(){ return null; }), o1=null, o2=null;
+// Mevcut tasarım: taranan grupların bugünkü tipleriyle iki aşama.
+function _mntParamMevcutOlc(O, M){
+  var nl=M.G.map(function(){ return null; }), o1=null, o2=null;
   try { o1=O.olc1(nl); o2=o1 ? O.olc2(nl) : null; } catch(e){}
-  _MNT_PARAM_SONUC[nodeId]={ D:D, imza:_mntParamImza(H), M:H.M, O:O, mevcut:{ o1:o1, o2:o2 },
-                             olc:{}, kose:{}, Ok:{}, bellek:null, html:null };
+  return { o1:o1, o2:o2 };
+}
+function _mntParamSonucKaydet(nodeId, H, O, D){
+  _MNT_PARAM_SONUC[nodeId]={ D:D, imza:_mntParamImza(H), M:H.M, O:O, mevcut:_mntParamMevcutOlc(O, H.M),
+                             mev:JSON.stringify(H.M.gather.mounts), olc:{}, kose:{}, Ok:{}, bellek:null, html:null };
+}
+// Taze taramada takozlar değiştiyse (yalnız taranan grubun tipi — öteki her
+// değişiklik imzayı bozar) model, ölçücü ve mevcut tasarım yeniden; depo ve
+// kombinasyonların ölçümü olduğu gibi kalır. Dönüş: yenilendi mi.
+function _mntParamMevcutTazele(ent, H){
+  var k=JSON.stringify(H.M.gather.mounts);
+  if(ent.mev===k) return false;
+  var O=_mntParamOlcucu(H.M, veMntKatalog.baglam(H.ctx));
+  ent.M=H.M; ent.O=O; ent.mevcut=_mntParamMevcutOlc(O, H.M); ent.mev=k;
+  ent.kose={}; ent.Ok={}; ent.html=null;
+  return true;
 }
 // Proje değişince (topology.js → veResetSubtopoNav) bütün taramalar ve
 // görünüm seçimleri unutulur — kimlikler yeni projede yeniden kullanılır.
@@ -51,10 +77,14 @@ function veMntParamUnut(){
     Object.keys(o).forEach(function(k){ delete o[k]; });
   });
 }
-// Düğümün taraması: { ent, taze } | null.
+// Düğümün taraması: { ent, taze } | null. Taze taramanın mevcut tasarımı
+// bugünkü modelden (bütün okumalar buradan geçer).
 function _mntParamSonucDurum(nodeId, H){
   var ent=_MNT_PARAM_SONUC[nodeId];
-  return ent ? { ent:ent, taze:_mntParamImza(H)===ent.imza } : null;
+  if(!ent) return null;
+  var taze=_mntParamImza(H)===ent.imza;
+  if(taze) _mntParamMevcutTazele(ent, H);
+  return { ent:ent, taze:taze };
 }
 
 // Özet ve hüküm bugünkü sınırlarla — sınırlar değişmedikçe bellekten.
@@ -696,9 +726,22 @@ function _mntParamOneriHTML(node, ent, Z){
   var m1=ent.mevcut.o1;
   h+='</div>'+_mntIzgara(2, _mntOku('İletilebilirlik', (m1 ? '%'+_mntS(m1.T*100, 1) : '—')+' → %'+_mntS(D.T[bir.idx]*100, 1))
       + _mntOku('Statik sehim <u>[mm]</u>', (m1 ? _mntS(_mntPrmSehim(m1), 2) : '—')+' → '+_mntS(D.d[bir.idx], 2)))
-    + '<div class="ve-fp-eylem ve-prm-eylem"><button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
+    + '<div class="ve-fp-eylem ve-prm-eylem">'+_mntPrmUygulaDugme(node.id, ent, bir.idx, ad, 'Modele uygula')
+    + '<button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
     + veIkon('download')+' Raporu indir</button></div>';
   return _mntBolum(ad, '', h);
+}
+// Kombinasyon modelde mi: taranan her grubun bugünkü tipi kombinasyonunki.
+function _mntPrmModelde(ent, idx){
+  var t=ent.D.tipler(idx);
+  return ent.M.G.every(function(g, i){ return !t[i] || t[i]===g.tip; });
+}
+// Uygula düğmesi; kombinasyon modeldeyse kapalı, sebebi ipucunda.
+function _mntPrmUygulaDugme(nodeId, ent, idx, ad, yazi){
+  var ici=_mntPrmModelde(ent, idx);
+  return '<button type="button" class="ve-fp-dugme" data-uygula="'+idx+'"'
+    + (ici ? ' aria-disabled="true" title="'+_mntEsc(ad)+' modelde."' : ' onclick="veMntParamUygula(\''+nodeId+'\','+idx+')"')
+    + '>'+veIkon('check')+' '+yazi+'</button>';
 }
 function _mntParamKriterHTML(ent, Z, c){
   var R=_mntPrmKriterler(ent, Z, c), ad=_mntPrmAd(Z.S), nm=0, no=0;
@@ -735,7 +778,7 @@ function _mntParamDagHTML(node, ent, Z, c, o, L){
   return _mntBolum('Statik sehim ve iletilebilirlik', '', '<div class="ve-pd-kap" data-pd="dag" data-dugum="'+node.id+'">'
     + veMntParamCiz.sehimT(V, o).svg+'</div>'+veMntParamCiz.gosterge(lj));
 }
-function _mntParamYakinHTML(ent, Z, L){
+function _mntParamYakinHTML(node, ent, Z, L){
   var S=Z.S, D=ent.D, M=ent.M, Hk=Z.Hk, bir=S.sira[0];
   if(!bir || !L.length) return '';
   var t0=D.tipler(bir.idx), h='<ol class="ve-prm-yakin">';
@@ -750,6 +793,7 @@ function _mntParamYakinHTML(ent, Z, L){
       + '<span>%'+_mntS(D.T[x]*100, 1)+' · '+_mntS(D.d[x], 2)+' mm</span>'
       + (boz.length ? '<span class="ve-prm-y-boz">'+veDurumIkon('err')+_mntEsc(boz.slice(0, 2).join(' · ')+(boz.length>2 ? ' …' : ''))+'</span>'
                     : '<span class="ve-prm-y-ok">'+veDurumIkon('ok')+'Uygun</span>')
+      + _mntPrmUygulaDugme(node.id, ent, x, 'Seçenek', 'Uygula')
       + '</div></div></li>';
   });
   return _mntBolum('Yakın seçenekler', '', h+'</ol>');
@@ -791,7 +835,7 @@ function _mntParamSonucHTML(node, H, ent){
   if(ent.html && ent.html.anahtar===B.anahtar) return ent.html.v;
   var Z=B.Z, c=B.c, L=_mntPrmYakinL(ent, Z);
   var h=_mntParamOneriHTML(node, ent, Z)+_mntParamKriterHTML(ent, Z, c)+_mntParamModHTML(node, ent, Z, c, B.o)
-    + _mntParamDagHTML(node, ent, Z, c, B.o, L)+_mntParamYakinHTML(ent, Z, L)+_mntParamElemeHTML(Z)+_mntParamDiyagramHTML(node, ent);
+    + _mntParamDagHTML(node, ent, Z, c, B.o, L)+_mntParamYakinHTML(node, ent, Z, L)+_mntParamElemeHTML(Z)+_mntParamDiyagramHTML(node, ent);
   var v='<div id="ve-mnt-prm-sonuc-'+node.id+'" data-tazele>'+h+'</div>';
   ent.html={ anahtar:B.anahtar, v:v };
   return v;
@@ -834,7 +878,7 @@ function veMntParamTamEkran(nodeId, pd){
     _mntPrm3bBagla(kap);
     var kur=function(){
       var p=_MNT_PARAM_TAM.pd, H=_mntParamHazirlik(node);
-      if(_mntParamImza(H)!==ent.imza){ kap.innerHTML=_mntNot('Taramadan sonra girdi değişti', 'warn'); return; }
+      if(!_mntParamSonucDurum(nodeId, H).taze){ kap.innerHTML=_mntNot('Taramadan sonra girdi değişti', 'warn'); return; }
       var c=veMntKatalog.baglam(H.ctx), W=Math.floor(kap.clientWidth)-26;
       var arac=_MNT_PRM_3B[p] ? '<button type="button" class="ve-fp-dugme ve-pd-sifirla" onclick="veMntParam3bSifirla(\''+nodeId+'\',\''+p+'\')">'
         + veIkon('rotate-ccw')+' Sıfırla</button>' : '';
@@ -907,7 +951,7 @@ function _mntPrm3bDurum(kap){
   var nodeId=kap.getAttribute('data-dugum'), ent=_MNT_PARAM_SONUC[nodeId], node=_mntDugum(nodeId);
   if(!ent || !node) return null;
   var H=_mntParamHazirlik(node);
-  if(_mntParamImza(H)!==ent.imza) return null;
+  if(!_mntParamSonucDurum(nodeId, H).taze) return null;
   var c=veMntKatalog.baglam(H.ctx);
   return { nodeId:nodeId, pd:kap.getAttribute('data-pd'), ent:ent, c:c, Z:_mntParamOzet(ent, c), tam:!!kap.closest('#ve-mnt-prm-fs') };
 }
@@ -985,12 +1029,40 @@ function veMntParamCizKur(){
   return true;
 }
 
+// MODELE UYGULA — kombinasyonun tiplerini taranan grupların takozlarına
+// yazar (Takoz penceresinin yazıcısı _mntLibUygula), bütün takozlar TEK
+// geri-al adımı. Tarama eskimez (imza taranan grubun tipini içermez): Sonuç
+// yerinde kalır, uygulanan kombinasyon "Mevcut" olur. Dönüş: değişen takoz.
+function veMntParamUygula(nodeId, idx){
+  var node=_mntParamDugum(nodeId), ent=_MNT_PARAM_SONUC[nodeId];
+  if(!node || !ent) return 0;
+  var H=_mntParamHazirlik(node);
+  if(!_mntParamSonucDurum(nodeId, H).taze){ _mntParamYaz(nodeId, 'Taramadan sonra girdi değişti', 'warn'); return 0; }
+  if(!(idx>=0 && idx<ent.D.N)) return 0;
+  var t=ent.D.tipler(idx), n=0;
+  ent.M.G.forEach(function(g, i){
+    if(!t[i]) return;
+    g.idler.forEach(function(id){
+      var tk=_mntDugum(id);
+      if(!tk) return;
+      if(!tk.data) tk.data={};
+      var once=JSON.stringify(tk.data);
+      if(_mntLibUygula(tk.data, t[i]) && JSON.stringify(tk.data)!==once) n++;
+    });
+  });
+  if(!n) return 0;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+  _mntParamYaz(nodeId, 'Uygulandı ('+_mntS(n, 0)+' takoz)', 'ok');
+  return n;
+}
+
 // Raporu bugünkü sınırlarla indirir (tarama yinelenmez).
 function veMntParamRapor(nodeId){
   var node=_mntParamDugum(nodeId), ent=_MNT_PARAM_SONUC[nodeId];
   if(!node || !ent) return;
   var H=_mntParamHazirlik(node);
-  if(_mntParamImza(H)!==ent.imza){ _mntParamYaz(nodeId, 'Taramadan sonra girdi değişti', 'warn'); return; }
+  if(!_mntParamSonucDurum(nodeId, H).taze){ _mntParamYaz(nodeId, 'Taramadan sonra girdi değişti', 'warn'); return; }
   var E;
   try { E=_mntParamZenginlestir(_mntParamOzet(ent, veMntKatalog.baglam(H.ctx)).S, H, ent.O); }
   catch(e){ _mntParamYaz(nodeId, 'Hata: '+e.message, 'no'); return; }
@@ -1016,6 +1088,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntPrmV2: _mntPrmV2, _mntPrmV3: _mntPrmV3, _mntPrmV1: _mntPrmV1, _MNT_PARAM_KAM: _MNT_PARAM_KAM,
     _mntPrmV11: _mntPrmV11, _mntPrmV7: _mntPrmV7, _mntPrmV9: _mntPrmV9, _mntPrmV10: _mntPrmV10, _mntPrmV8: _mntPrmV8,
     veMntParamCizKur: veMntParamCizKur, veMntParamRapor: veMntParamRapor, veMntParamUnut: veMntParamUnut,
+    veMntParamUygula: veMntParamUygula, _mntPrmModelde: _mntPrmModelde, _mntParamMevcutTazele: _mntParamMevcutTazele,
     _mntParamSonucBaglam: _mntParamSonucBaglam, _mntParamSonucIsitici: _mntParamSonucIsitici,
     _mntPrmKriterler: _mntPrmKriterler, _mntPrmModV: _mntPrmModV, _mntPrmDagV: _mntPrmDagV, _mntPrmYakinL: _mntPrmYakinL,
     _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz

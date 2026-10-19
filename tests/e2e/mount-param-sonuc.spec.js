@@ -11,6 +11,7 @@
  *   · Diyagramlar listesi galeriyi açar; soldaki listeden geçiş aynı katmanda;
  *     3B gerçek fareyle ve oklarla döner; kesit seçicisi haritayı değiştirir;
  *     ✕ kapatır, pencere yerinde kalır
+ *   · Modele uygula gerçek tıkla takozlara yazar, tek geri-al adımı, Ctrl+Z
  * Yerleşim ve kontrast ölçüsü yüzey turunda (yuzey-turu.js → takozTuru).
  */
 const { test, expect } = require('@playwright/test');
@@ -163,6 +164,67 @@ test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; gale
 // 359 × 40, ilerleme yazısı kaydırma alanının 830 px altında, 19.683
 // kombinasyonluk taramada 114–131 uzun görev (> 50 ms; parça 50 ms ve 200
 // kombinasyondu). Burada 729 kombinasyon: eski parçayla ~8 uzun görev.
+// MODELE UYGULA ve AD (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran
+// bir düğme yok" · "Cone 67 50Sh (AMC 1…" iki ayrı tipte aynı görünüyordu).
+// Node'da koşmayan halkalar: gerçek tık takozlara yazar ve TEK geri-al
+// adımıdır; pencere yeniden kurulur, Sonuç yerinde kalır (tarama eskimez);
+// Takoz penceresinin listesi uygulanan tipi gösterir; Ctrl+Z geri alır.
+// Gruplar ve Adaylar'da hiçbir ad kırpılmaz (önce 6 + 17 hücre).
+test('MODELE UYGULA: gerçek tık tek geri-al adımı, Sonuç yerinde, Takoz listesi tipi gösterir, Ctrl+Z; adlar kırpılmaz', async ({ page }) => {
+  const hata = [];
+  page.on('pageerror', (e) => hata.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') hata.push(m.text()); });
+  const id = await kur(page);
+  await page.waitForTimeout(500);
+  const ad = await page.evaluate(() => {
+    const td = [...document.querySelectorAll('.ve-fp-kat[data-k="grup"] td.sar, .ve-fp-kat[data-k="aday"] td.sar')];
+    return { n: td.length, kesik: td.filter((x) => x.scrollWidth > x.clientWidth + 1).map((x) => x.textContent) };
+  });
+  expect(ad).toEqual({ n: 3 * 2 + 27, kesik: [] });
+  await page.click('#ve-mnt-param-btn-' + id);
+  await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 60000 });
+  await page.waitForTimeout(600);
+  const durum = () => page.evaluate((i) => {
+    const kat = document.querySelector('.ve-fp-kat[data-k="sonuc"]'), tk = nodes.filter((n) => n.type === 'mnt-mount');
+    const b = kat.querySelector('.ve-prm-eylem button[data-uygula]');
+    return {
+      adim: undoStack.length, veri: JSON.stringify(tk.map((n) => n.data)), tip: tk.map((n) => n.data.libKey || null),
+      kat: kat.getAttribute('data-d'), em: [...kat.querySelectorAll('.ve-prm-og-s em')].map((e) => e.textContent),
+      krit: [...kat.querySelectorAll('table.ve-prm-kriter tbody tr')].map((r) => [r.children[2].textContent, r.children[3].textContent]),
+      dugme: { idx: Number(b.getAttribute('data-uygula')), kapali: b.getAttribute('aria-disabled'), title: b.getAttribute('title') },
+      not: document.getElementById('ve-mnt-param-st-' + i).textContent
+    };
+  }, id);
+  const once = await durum();
+  expect(once.dugme.kapali).toBeNull();
+  const uyeTip = await page.evaluate(([i, x]) => {
+    const e = _MNT_PARAM_SONUC[i], t = e.D.tipler(x), m = {};
+    e.M.G.forEach((g, gi) => g.idler.forEach((d) => { m[d] = t[gi]; }));
+    return nodes.filter((n) => n.type === 'mnt-mount').map((n) => m[n.id] || null);
+  }, [id, once.dugme.idx]);
+  const dugme = page.locator('.ve-fp-kat[data-k="sonuc"] .ve-prm-eylem button[data-uygula]');
+  await dugme.scrollIntoViewIfNeeded();
+  await dugme.click();
+  await page.waitForTimeout(500);
+  const sonra = await durum();
+  expect(sonra.adim - once.adim).toBe(1);
+  expect(sonra.tip).toEqual(uyeTip);
+  expect(sonra.kat).toBe('ok');
+  expect(sonra.em).toEqual(['Aynı', 'Aynı', 'Aynı']);
+  sonra.krit.forEach((r) => expect(r[0]).toBe(r[1]));
+  expect(sonra.dugme).toEqual({ idx: once.dugme.idx, kapali: 'true', title: 'Öneri modelde.' });
+  expect(sonra.not).toBe('Uygulandı (6 takoz)');
+  const tid = await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-mount');
+    clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); return n.id; });
+  await page.waitForTimeout(400);
+  expect(await page.evaluate((i) => document.getElementById('ve-mnt-libKey-' + i).value, tid)).toBe(uyeTip[0]);
+  await page.evaluate(() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); });
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => JSON.stringify(nodes.filter((n) => n.type === 'mnt-mount').map((n) => n.data)))).toBe(once.veri);
+  expect(hata).toEqual([]);
+});
+
 test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür ve ilerler, tarama dilimli — uzun görev yok', async ({ page }) => {
   const hata = [];
   page.on('pageerror', (e) => hata.push(String(e)));
