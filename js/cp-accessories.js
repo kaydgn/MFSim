@@ -558,9 +558,11 @@ function veAccDrawChart(nodeId){
                               : (curveEmptied ? '– eğri boş' : '– model seçilmedi');
     badge.className = 'sw-pkg-badge ' + (model ? 'ok' : 'miss');   // yoklukta yeşil okunuyordu
   }
+  // Rozet ve grafik durumu söylüyor; açıklama satırı bir sonraki adımı
+  // (yönlendirme yuvası — boş durum).
   var emptyMsg = curveEmptied
     ? 'Eğri tablosu boş.'
-    : 'Model seçilmedi.';
+    : veYon('Model listesinden bir model seçin.');
   var desc = document.getElementById('ve-acc-desc-' + nodeId);
   if(desc){
     desc.textContent = model
@@ -790,7 +792,7 @@ function onVEAccCurveFill(nodeId){
   if(!node) return;
   var lib = veAccPresetLib(node.type);
   var p = node.data && node.data.accPreset && lib[node.data.accPreset];
-  if(!p){ if(typeof showToast === 'function') showToast('Model seçilmedi.', 'warning'); return; }
+  if(!p){ if(typeof showToast === 'function') showToast('Model seçilmedi. ' + veYon('Model listesinden bir model seçin.'), 'warning'); return; }
   if(node.data.accCurveDirty && typeof confirm === 'function' &&
      !confirm('Tablo preset eğrisiyle değiştirilecek. Devam edilsin mi?')) return;
   node.data.accCurve = p.curve.slice();

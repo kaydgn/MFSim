@@ -95,7 +95,7 @@ function runECMatchingAnalysis(nodeId) {
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
 
   if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Bağlı motor ya da tork verisi yok.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Bağlı motor ya da tork verisi yok. ' + veYon('Girişi Motor çıkışına bağlayın.') + '</div>';
     return;
   }
   
@@ -827,14 +827,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Bağlı motoru bul
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Motor bağlı değil.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-danger);">' + veIkon('alert-triangle') + ' Motor bağlı değil. ' + veYon('Girişi Motor çıkışına bağlayın.') + '</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
   if(torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Motor tork verisi yok.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--ink-warning);">' + veIkon('alert-triangle') + ' Motor tork verisi yok. ' + veYon('Motor penceresinde Tork & güç verilerini doldurun.') + '</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
@@ -1050,7 +1050,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 function egmSelectGearbox(egmNodeId, gbPresetKey) {
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
   if(!gbNode) {
-    showToast('Şanzıman bileşeni yok.', 'warning');
+    showToast('Şanzıman bileşeni yok. ' + veYon('Bileşenler’den ekleyin.'), 'warning');
     return;
   }
 
@@ -1081,7 +1081,7 @@ function egmSelectGearbox(egmNodeId, gbPresetKey) {
 function ecmSelectConverter(ecmNodeId, tcPresetKey) {
   var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
   if(!tcNode) {
-    showToast('Tork Konvertörü bileşeni yok.', 'warning');
+    showToast('Tork Konvertörü bileşeni yok. ' + veYon('Bileşenler’den ekleyin.'), 'warning');
     return;
   }
   // TC bileşenine preset yükle
@@ -1207,7 +1207,7 @@ function ecmExpandChart(nodeId) {
   
   // Motor verisini bağlantı üzerinden bul
   var engineNode = findConnectedEngine(nodeId);
-  if(!engineNode) { showToast('Motor bileşeni bağlı değil.', 'warning'); return; }
+  if(!engineNode) { showToast('Motor bileşeni bağlı değil. ' + veYon('Girişi Motor çıkışına bağlayın.'), 'warning'); return; }
   
   var torqueData = engineNode.data.torqueData || [];
   var motorSpecs = engineNode.data.motorSpecs || {};

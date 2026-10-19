@@ -35,9 +35,9 @@ function getTorqueConverterPropertiesHTML(node) {
     var hasECM = nodes.some(function(n) { return n.type === 'ec-matching'; });
     html += '<div style="margin-bottom:10px;">';
     if(hasECM) {
-      html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;"><span class="mf-ico mf-ico-lock"></span> Konvertör Motor-Konvertör Eşleştirme\'den seçili.</div>';
+      html += '<div class="sw-chain-bar fail" id="ve-tc-kilit-' + node.id + '" style="margin-bottom:6px;"><span class="mf-ico mf-ico-lock"></span> Konvertör Motor-Konvertör Eşleştirme\'den seçili.</div>';
     }
-    html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:var(--fs-body); padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
+    html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled aria-describedby="ve-tc-kilit-' + node.id + '"' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:var(--fs-body); padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">— Konvertör —</option>';
     
     if(!_gbFamily) {
@@ -747,7 +747,7 @@ function veRefreshTCDropdownForFamily() {
     var currentTC = (tcNode.data || {}).tcPresetKey || '';
     if(currentTC && currentTC !== 'manual' && VE_FT_TC_PRESETS[currentTC]) {
       if(VE_FT_TC_PRESETS[currentTC].family !== newFamily) {
-        showToast('Seçili konvertör (' + VE_FT_TC_PRESETS[currentTC].name + ') yeni şanzıman ailesiyle uyumsuz.', 'warning');
+        showToast('Seçili konvertör (' + VE_FT_TC_PRESETS[currentTC].name + ') yeni şanzıman ailesiyle uyumsuz. ' + veYon('Konvertörü yeniden seçin.'), 'warning');
       }
     }
   }

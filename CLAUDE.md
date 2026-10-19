@@ -334,7 +334,9 @@ cümle, aşağıda). Başka hiçbir şey yazılmaz:
   yüzeyleri yolsuz bıraktı (araştırma turu: 74 tekil boş durum, 12 sebepsiz
   kapalı denetim, 1 adsız düğme). Beş yuva: **boş durum** (nasıl başlanır) ·
   **durum + çare** · **gizli etkileşim** (sağ tık, sürükle-bırak) · **kapalı
-  denetimin sebebi** (`title`'da) · **adsız denetimin adı**. Biçim: tek cümle,
+  denetimin sebebi** (`title`'da; sebep yanında görünür yazıyorsa denetim ona
+  `aria-describedby` ile bağlanır — ipucuna kopyalamak tekrar olur) ·
+  **adsız denetimin adı**. Biçim: tek cümle,
   ≤ 10 sözcük, nokta, "-in/-ın/-un/-ün" emri; "-ınız", "lütfen", çıplak
   "tıklayın" ve yön sözcüğü (sağdaki, aşağıdaki) yok — sürükle-bırak alanında
   "buraya bırakın" olur. Önce yer, sonra eylem; denetim ekrandaki adıyla
