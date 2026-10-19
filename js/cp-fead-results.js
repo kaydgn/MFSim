@@ -106,11 +106,12 @@ function _feadResBolunmez(s) {
   });
 }
 
-// Bayat sonucun uyarısı — durum ve sebebi (çare kılavuzda).
+// Bayat sonucun uyarısı — durum, sebebi ve yolu (Hesapla Topoloji'de).
 function _feadResStaleNote(st) {
   if(!st) return '';
   if(st.k === 'bayat')
-    return '<div class="ve-fr-note" data-d="warn"><b>Model çözümden sonra değişti.</b> Sayılar son çözümden.</div>';
+    return '<div class="ve-fr-note" data-d="warn"><b>Model çözümden sonra değişti.</b> Sayılar son çözümden. '
+      + veYon('FEAD araçları’nda Hesapla ile yeniden çözün.') + '</div>';
   if(st.k === 'kayip')
     return '<div class="ve-fr-note" data-d="off">FEAD kartı silinmiş ya da başka sekmede.</div>';
   return '';
@@ -123,7 +124,9 @@ function veFeadResTreeTopHTML() {
   var st = _feadResState(R);
   return '<div class="ve-fr-tree-top">'
     + '<div class="ve-fr-tree-row">' + veFeadResChipHTML(st)
-    + '<span class="ve-fr-tree-meta">' + _feadResEsc(_feadResMeta(R)) + '</span>'
+    // Künye satırı dar gezginde üç noktayla kısalır (çip "Model değişti"
+    // olunca): tam metni ipucunda.
+    + '<span class="ve-fr-tree-meta" title="' + _feadResEsc(_feadResMeta(R)) + '">' + _feadResEsc(_feadResMeta(R)) + '</span>'
     + '<button type="button" class="ve-trace-btn ve-fr-tree-btn" onclick="veFeadResSummaryOpen()"'
     + '>'
     + '<span class="mf-ico mf-ico-clipboard"></span>Özet</button></div>'
@@ -224,7 +227,7 @@ function veFeadResPreset(k) {
 // ── SONUÇLAR'DA AÇ — çözücü penceresinden ──────────────────────────────────
 function veFeadOpenResults() {
   if(!_feadResSets().length) {
-    if(typeof showToast === 'function') showToast('FEAD sonucu yok.', 'warning');
+    if(typeof showToast === 'function') showToast('FEAD sonucu yok. ' + veYon('FEAD araçları’nda Hesapla ile çözün.'), 'warning');
     return false;
   }
   // Müfettiş penceresi topoloji sayfasının yüzü; açık kalırsa Sonuçlar'da
@@ -248,7 +251,7 @@ function veFeadResSummaryOpen() {
   var R = _feadResR();
   if(!overlay) return false;
   if(!R || !R.ok) {
-    if(typeof showToast === 'function') showToast('FEAD sonucu yok.', 'warning');
+    if(typeof showToast === 'function') showToast('FEAD sonucu yok. ' + veYon('FEAD araçları’nda Hesapla ile çözün.'), 'warning');
     return false;
   }
   var bant = (typeof veRepHeadHTML === 'function') ? veRepHeadHTML({

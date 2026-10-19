@@ -194,8 +194,8 @@ describe('üç yüzey AYNI hükmü verir — çözüm · pencere · panel', () =
   test('çözücü paneli: Hesapla disabled ve notu AYNI metin', () => {
     kur();
     const h = fead.getFeadSolverPropertiesHTML(sv());
-    expect(h).toMatch(/<button type="button" class="ve-fp-solve" disabled/);
-    expect(h).toContain('<div class="ve-fp-solve-not">Motor künyesi eksik: rölanti devri · governed devri.</div>');
+    expect(h).toMatch(/<button type="button" class="ve-fp-solve" disabled aria-describedby="ve-fead-cnot-[^"]+"/);
+    expect(h).toContain('<div class="ve-fp-solve-not" id="ve-fead-cnot-' + sv().id + '">Motor künyesi eksik: rölanti devri · governed devri.</div>');
     motorTamamla(sv().data);
     expect(fead.getFeadSolverPropertiesHTML(sv())).not.toMatch(/class="ve-fp-solve" disabled/);
   });

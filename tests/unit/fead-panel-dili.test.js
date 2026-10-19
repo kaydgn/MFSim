@@ -341,9 +341,12 @@ describe('KAPSAM — yalnız kasnak değil, BÜTÜN FEAD panelleri', () => {
     expect(kap.querySelector('.ve-fp-side').contains(dugme)).toBe(true);
     expect(kap.querySelector('[id^="ve-fp-panes-"]').contains(dugme)).toBe(false);
     // Model de çevrim de yokken KAPALI ve sebebi YAZILI — sessiz bir kapalı
-    // düğme, kullanıcıya neyi eksik bıraktığını söylemiyordu.
+    // düğme, kullanıcıya neyi eksik bıraktığını söylemiyordu. Düğme o yazıya
+    // bağlı (aria-describedby): ekran okuyucu sebebi düğmeyle okur.
     expect(dugme.hasAttribute('disabled')).toBe(true);
-    expect(kap.querySelector('.ve-fp-solve-not').textContent).toMatch(/eksik|boş/i);
+    const not = kap.querySelector('.ve-fp-solve-not');
+    expect(not.textContent).toBe('Kasnak yok.');
+    expect(dugme.getAttribute('aria-describedby')).toBe(not.id);
   });
 
   test('KATALOG SEÇİCİLERİ de ortak satırda — P1\'in son iki kopyası', () => {

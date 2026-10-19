@@ -21,7 +21,7 @@ const oku = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 // Ekranda görünmeyen sonuçlar: başka sekmedeki silme, kurulan örnek, sayısı
 // görünmeyen toplu doldurma, doldurulamama sebebi.
 const IZIN = [/^Çevrimdeki ‹› elle kW silindi\.$/, /^‹› kuruldu\.$/, /^‹› hücre katalogdan dolduruldu$/,
-  /^Katalog modeli seçili aksesuar yok$/];
+  /^Katalog modeli seçili aksesuar yok\.$/];   // arkasındaki yönlendirme yuvası ölçüye girmez
 
 describe('FEAD bilgi bildirimi yalnız görünmeyen sonucu söyler', () => {
   test.each(['js/cp-fead.js', 'js/cp-fead-araclar.js'])('%s', (dosya) => {

@@ -379,11 +379,14 @@ describe('pafta HTML\'i', () => {
     const k = dom(paftaHTML());
     expect(k.querySelector('.ve-fead-pf-bas .ve-fead-ek[data-ve="add-pulley"]')).toBeTruthy();
     expect(k.querySelectorAll('[data-ve="add-pulley"]')).toHaveLength(1);
-    // Boş tablo yalnız durumunu söyler; ekleyiciyi tarif etmez (ARAYÜZ ANLATMAZ).
+    // Boş tablo durumunu ve TEK yönlendirmeyi söyler: ekleyici adıyla, yönle
+    // değil (ARAYÜZ ANLATMAZ → yönlendirme yuvası, 2026-10-19).
     global.nodes = []; global.connections = [];
     const b = paftaHTML();
-    expect(b).toContain('<b>Tablo boş.</b></td>');
+    expect(b).toContain('<b>Tablo boş.</b> Kasnak ekle’den ilk kasnağı seçin.</td>');
     expect(b).not.toMatch(/Yukarıdaki|Aşağıdaki/);
+    // Yönlendirmedeki ad ekleyicinin ekrandaki adı
+    expect(k.querySelector('.ve-fead-ek-dugme').textContent.trim()).toBe('Kasnak ekle');
   });
 
   // ── SÜRÜCÜ SATIRIN KENDİSİNDE ─────────────────────────────────────────

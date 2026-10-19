@@ -1160,12 +1160,21 @@ olurdu.
     (`js/guide-fead.js`); aynı sayıyı ikinci kez söyleyen not da açıklamadır
     (ölçüldü: 12 örneğin pencerelerinde 590 not → 135). Kapı: kural 26'nın
     kapıları + `fead-pencere-ailesi.test.js`.
-    **Durumun tarif kuyruğu yok, çare önerilmez** (2026-10-16, kökteki *ARAYÜZ
-    ANLATMAZ*): "— … sekmesinden girin" yerine eksiğin YERİ bir yol verisidir
-    (`· Sürücü kasnak › Çalışma çevrimi` — yolun sonu pencerenin bölüm BAŞLIĞI,
-    `fead-isletme.test.js` başlıklarda arar); hüküm ("gergi gergin tarafta") sayısıyla
-    durur, çaresi kılavuzda. Ekranda görünen sonucu tekrarlayan bildirim ve
-    katman satırının açıklama yuvası (`ip`) yok. Kapı: `fead-metin.test.js`.
+    **Durumun tarif kuyruğu yok; çare yalnız YUVASINDA** (2026-10-16 →
+    2026-10-19, kökteki *ARAYÜZ ANLATMAZ* → yönlendirme yuvası): eksiğin YERİ
+    bir yol verisidir (`· Sürücü kasnak › Çalışma çevrimi` — yolun sonu
+    pencerenin bölüm BAŞLIĞI, `fead-isletme.test.js` başlıklarda arar). Çare
+    bariz değilse durumun arkasına TEK `veYon` cümlesi gelir ve **yalnız
+    sunumda**: köprünün iletisi DEĞİŞMEZ (sihirbaz onu adımına metinden
+    eşliyor), eşleme `veFeadHataYonu` · `veFeadKapiYonu` (cp-fead.js), çaresi
+    tek olmayan ileti eşleşmez. Çare ulaşılabilir olmalı: "gergi gergin
+    tarafta"nın yolu Yön anahtarı ya da tablonun okudur, girdi olmayan tasarım
+    gerginliği değil. Kapalı düğme görünür sebebine `aria-describedby` ile
+    bağlanır (Çözücü · Rapor), sıra okunun sebebi ipucunda
+    (`veFeadSiraKilitSebebi`, tablo ve sihirbaz). Ekranda görünen sonucu
+    tekrarlayan bildirim ve katman satırının açıklama yuvası (`ip`) yok.
+    Kapılar: `fead-metin.test.js` + `fead-yon.test.js` (ileti köprünün
+    kendisinden üretilir — cümlesi kayarsa çare sessizce düşerdi).
     **Sihirbazın açı seçicisinde açının TANIMI durur** (kullanıcı bildirimi
     2026-09-22: *"açı tanımları … kafa karıştırıyor"*) — paragraf değil,
     gösterge anahtarı: "Kol yönü: merkez → gövde · 0° +X · CCW + · −180…+180"
