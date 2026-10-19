@@ -35,6 +35,13 @@
 //  • KOORDİNAT DOSYANINKİ (mm, montajın ekseni) — taşınmaz, döndürülmez.
 
 var VE_MNT_STP_SURUM = '1.0.0';
+// ÜÇGEN İNCELİĞİ — TEK YER: 3B görüntüleyici, sihirbazın hesabı ve bu dosyanın
+// kendi üçgenlemesi bunu okur (iki incelik iki ayrı ağırlık merkezi verirdi).
+// Takoz'un STEP'i bütün güç grubudur: 0,1 mm'lik FEAD inceliği 400 MB'lık
+// analiz geometrisinde tarayıcı sekmesinin 4 GB'lık sınırını aşıyor; 0,5 mm'de
+// motor, şanzıman ve transferin ağırlık merkezi 0,1 mm'lik ağdan 0,2 mm'den az
+// ayrışıyor (ölçüldü — 10 mm'lik CG hatası sehimi 0,16 mm değiştiriyor).
+var VE_MNT_STP_UCGEN = { kiris: 0.5, aci: 20 };
 // Rol verilebilen tipler — kütle gövdeleri ve takoz. Sık olanlar ÇİP, kalanı
 // "Diğer" listesinde (3B görüntüleyici); ikisinin birleşimi TEK liste.
 var VE_MNT_STP_ROLLER = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount',
@@ -156,7 +163,7 @@ function veMntStpAgOzellik(agler){
 function veMntStpParcaAgi(sonuc, pi, baglam){
   var U = _mstUcgen(), g = sonuc && sonuc._geo && sonuc._geo[pi];
   if(!U || !g || !g.yuzler || !g.yuzler.length) return null;
-  var B = baglam || U.Baglam(sonuc._model);
+  var B = baglam || U.Baglam(sonuc._model, VE_MNT_STP_UCGEN);
   return U.Parca(B, g.yuzler, g.M, g.birim);
 }
 
@@ -177,7 +184,7 @@ function veMntStpCoz(sonuc, roller, opt){
     var a = (typeof opt.ag === 'function') ? opt.ag(pi) : null;
     if(a) return a;
     if(!U) return null;
-    if(!B) B = U.Baglam(sonuc._model);
+    if(!B) B = U.Baglam(sonuc._model, VE_MNT_STP_UCGEN);
     return veMntStpParcaAgi(sonuc, pi, B);
   };
   birimler.forEach(function(b){
@@ -241,7 +248,8 @@ function veMntStpKayit(coz, kutle){
 
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
-    VE_MNT_STP_SURUM: VE_MNT_STP_SURUM, VE_MNT_STP_ROLLER: VE_MNT_STP_ROLLER, VE_MNT_STP_CIP: VE_MNT_STP_CIP,
+    VE_MNT_STP_SURUM: VE_MNT_STP_SURUM, VE_MNT_STP_UCGEN: VE_MNT_STP_UCGEN,
+    VE_MNT_STP_ROLLER: VE_MNT_STP_ROLLER, VE_MNT_STP_CIP: VE_MNT_STP_CIP,
     veMntStpOku: veMntStpOku, veMntStpBirimler: veMntStpBirimler, veMntStpAgOzellik: veMntStpAgOzellik,
     veMntStpParcaAgi: veMntStpParcaAgi, veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit
   };

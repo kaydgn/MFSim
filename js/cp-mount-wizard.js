@@ -869,7 +869,7 @@ function _mwStpCoz(s){
   return veMntStpCoz(s.sonuc, s.roller, { ag:function(pi){
     if(!s.ag) s.ag = [];
     if(!s.ag[pi]){
-      if(!B && typeof veStepUcgenBaglam === 'function') B = veStepUcgenBaglam(s.sonuc._model);
+      if(!B && typeof veStepUcgenBaglam === 'function') B = veStepUcgenBaglam(s.sonuc._model, VE_MNT_STP_UCGEN);
       s.ag[pi] = veMntStpParcaAgi(s.sonuc, pi, B) || null;
     }
     return s.ag[pi];

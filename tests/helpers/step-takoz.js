@@ -56,6 +56,58 @@ function kutuYuzleri(yz, a, b, c) {
   });
 }
 
+// Yerel eksende orijin merkezli ŞİŞKİN KUTU — döküm yüzeyinin kalıbı: altı
+// yüzün her biri bikübik B-spline (n × n kontrol noktası, kelepçeli düğüm),
+// kenarlar kutunun 12 doğrusu (paylaşılan), iç noktalar dış normal boyunca
+// h·sin(πu)·sin(πv) kadar şişkin. Kelepçeli düğümde parametre yay boyuna
+// düzgün dağılmaz: kenar boyunca eşit aralıklı kontrol noktaları kenarın
+// uçlarına yakın sıkışan bir parametre verir (üçgenleyicinin tuzağı).
+function bsKutuYuzleri(yz, a, b, c, n = 10, h = 5) {
+  const hh = [a / 2, b / 2, c / 2];
+  const P = {};
+  const V = {};
+  [0, 1].forEach((i) => [0, 1].forEach((j) => [0, 1].forEach((k) => {
+    const id = '' + i + j + k;
+    P[id] = [(i ? 1 : -1) * hh[0], (j ? 1 : -1) * hh[1], (k ? 1 : -1) * hh[2]];
+    V[id] = yz.tepe(P[id]);
+  })));
+  const kenar = {};
+  const kenarAl = (p, q) => {
+    const k = p < q ? p + q : q + p;
+    if (!kenar[k]) {
+      const [s, e] = p < q ? [p, q] : [q, p];
+      kenar[k] = { bas: s, ec: yz.kenarEgri(V[s], V[e], yz._cizgi(P[s], P[e])) };
+    }
+    return yz.yonlu(kenar[k].ec, kenar[k].bas === p);
+  };
+  const yuzTanim = [
+    [[1, 0, 0], ['100', '110', '111', '101']], [[-1, 0, 0], ['000', '001', '011', '010']],
+    [[0, 1, 0], ['010', '011', '111', '110']], [[0, -1, 0], ['000', '100', '101', '001']],
+    [[0, 0, 1], ['001', '101', '111', '011']], [[0, 0, -1], ['000', '010', '110', '100']]
+  ];
+  const kat = [4].concat(Array(n - 4).fill(1)).concat([4]).join(',');
+  const dugum = Array.from({ length: n - 2 }, (_, i) => i + '.').join(',');
+  return yuzTanim.map(([nrm, kose]) => {
+    const e1 = fark(P[kose[1]], P[kose[0]]), e2 = fark(P[kose[2]], P[kose[1]]);
+    const sira = nok(cros(e1, e2), nrm) > 0 ? kose : kose.slice().reverse();
+    const K = sira.map((x) => P[x]);
+    // S(u,v) çift doğrusal: K0 → K1 u yönü, K0 → K3 v yönü; ∂u × ∂v dış normal
+    const satirlar = [];
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1), satir = [];
+      for (let j = 0; j < n; j++) {
+        const v = j / (n - 1), w = h * Math.sin(PI * u) * Math.sin(PI * v);
+        satir.push('#' + yz.nokta([0, 1, 2].map((d) => (1 - u) * (1 - v) * K[0][d] + u * (1 - v) * K[1][d]
+          + u * v * K[2][d] + (1 - u) * v * K[3][d] + nrm[d] * w)));
+      }
+      satirlar.push('(' + satir.join(',') + ')');
+    }
+    const yuzey = yz.ekle("B_SPLINE_SURFACE_WITH_KNOTS('',3,3,(" + satirlar.join(',') + '),.UNSPECIFIED.,.F.,.F.,.F.,('
+      + kat + '),(' + kat + '),(' + dugum + '),(' + dugum + '),.UNSPECIFIED.)');
+    return yz.yuz(yuzey, sira.map((p, i) => kenarAl(p, sira[(i + 1) % 4])));
+  });
+}
+
 // Yerel eksende z boyunca, orijin MERKEZLİ silindir (step-ucgen.test.js'in
 // silindirKati'si, alt disk −L/2'de): iki yarım yan yüz + iki disk.
 function silindirYuzleri(yz, r, L) {
@@ -133,4 +185,4 @@ function gucGrubu(opt = {}) {
   return guçGrubuStep(p, Object.assign({ altMontajlar: [{ id: GUC.braket.id, ad: GUC.braket.ad, konum: GUC.braket.konum }] }, opt));
 }
 
-module.exports = { kutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC };
+module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC };

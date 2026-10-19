@@ -185,7 +185,7 @@ function _mw3bAgKur(){
       var g = geo[q.i];
       if(!g || !g.yuzler || !g.yuzler.length){ q.i++; continue; }
       if(s.ag[q.i]){ _mw3bParcaEkle(q.i, s.ag[q.i]); q.yuz += g.yuzler.length; q.i++; continue; }
-      if(!q.B) q.B = veStepUcgenBaglam(s.sonuc._model);
+      if(!q.B) q.B = veStepUcgenBaglam(s.sonuc._model, VE_MNT_STP_UCGEN);
       if(!q.topla){ q.topla = veStepUcgenTopla(q.B, g.M, g.birim); q.j = 0; }
       while(q.j < g.yuzler.length && Date.now() - t0 < VE_MW_3B_BUTCE){ q.topla.ekle(g.yuzler[q.j]); q.j++; q.yuz++; }
       if(q.j >= g.yuzler.length){
