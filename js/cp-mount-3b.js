@@ -411,11 +411,11 @@ function veMntWiz3bAltHTML(s, secili){
         + '<option value="-" data-ve-3b-rol=""' + (rol ? '' : ' disabled') + '>Rolü kaldır</option></select>';
     }
     h += '</div>';
-  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok</span>';
+  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok. ' + veYon('Modelde bir parça seçin.') + '</span>';
   h += '</div>';
   var coz = s.coz, rolEngel = typeof _mwStpRolDenetim === 'function' ? _mwStpRolDenetim(s) : [];
   h += '<div class="ve-fw-3b-eylem" data-ve-3b-hesapbar="1">'
-    + '<button type="button" class="ve-fw-3b-hap" id="ve-mw-3b-hesapla"' + (rolEngel.length ? ' disabled' : '')
+    + '<button type="button" class="ve-fw-3b-hap" id="ve-mw-3b-hesapla"' + (rolEngel.length ? ' disabled title="' + _mwEsc(rolEngel[0]) + '"' : '')
     + ' onclick="veMntWiz3bHesapla()">' + _mwIkon('play') + ' ' + (coz ? 'Yeniden hesapla' : 'Konumları hesapla') + '</button>';
   if(coz && coz.ok)
     h += '<button type="button" class="ve-fw-3b-hap ve-fw-3b-hap-vurgu" id="ve-mw-3b-aktar" onclick="veMntWiz3bAktar()">'

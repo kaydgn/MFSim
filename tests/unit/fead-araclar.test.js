@@ -384,7 +384,7 @@ describe('eylemler — hepsi modülün var olan çağrılarına gider', () => {
     try {
       expect(AR.veFeadAracEylem('indir')).toBe(false);
       expect(r.c).not.toHaveBeenCalled();
-      expect(stubs.showToast).toHaveBeenCalledWith('Rapor için çözüm yok.', 'warning');
+      expect(stubs.showToast).toHaveBeenCalledWith('Rapor için çözüm yok. Hesapla ile çözün.', 'warning');
       global.veFeadResults = { ok: true, solvedNodeId: tip('fead-solver').id };
       expect(AR.veFeadAracEylem('indir')).toBe(true);
       expect(r.c).toHaveBeenCalledWith(tip('fead-report').id);

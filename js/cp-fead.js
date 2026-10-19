@@ -1086,7 +1086,7 @@ function veFeadToggleSpin(){
     // çevrildi" diyordu; FEAD'de bağlantı YOK (on iki tipin on ikisinde de
     // inputs:0/outputs:0), yani kullanıcıya hiç var olmamış bir şeyin sayısı
     // veriliyordu.
-    if(!k) showToast('Yön çevrilemez: en az üç kasnak gerekir.', 'warning');
+    if(!k) showToast('Yön çevrilemez: en az üç kasnak gerekir. ' + veYon('Kasnak ekle’den bir kasnak seçin.'), 'warning');
   }
   return k;
 }
@@ -1478,7 +1478,7 @@ function _feadSideGates(build, T){
 
   function kapi(ad, K, bos){
     var d = (K && K.durum) ? K.durum : 'wait';
-    var not = (K && K.note) ? K.note : bos;
+    var not = (K && K.note) ? veFeadKapiNotu(K.note) : bos;
     var yazi = (d === 'ok') ? 'uygun' : (d === 'warn') ? 'sınırda'
              : (d === 'no') ? 'kontrol' : 'değerlendirilemedi';
     return '<div class="ve-fp-gate" data-d="' + _feadEsc(d === 'wait' ? 'wait' : d) + '"'
@@ -7526,9 +7526,9 @@ function veFeadTableCardHTML(node, opt){
     // ve o yol kutular kalktığından beri SESSİZ. Bugünkü yol yazılı.
     // DURUM TEKRARLANMAZ: "henüz kasnak yok" hemen üstteki çizimin boş hâlinde
     // yazılı (2026-09-29'da iki satır aynı cümleyi alt alta basıyordu); tablo
-    // yalnız KENDİ işini söyler.
+    // yalnız KENDİ işini söyler — ve boş durumun yolunu: ekleyici başlıkta.
     h += '<tbody><tr class="ve-fead-pf-bos"><td colspan="' + cols.length + '">'
-      + '<b>Tablo boş.</b></td></tr></tbody></table></div>';
+      + '<b>Tablo boş.</b> ' + veYon('Kasnak ekle’den ilk kasnağı seçin.') + '</td></tr></tbody></table></div>';
     return h;
   }
 
@@ -7564,8 +7564,10 @@ function veFeadTableCardHTML(node, opt){
           + (r.driver ? ' title="Sürücü · satır kilitli"'
              : (r.tensioner ? ' title="Otomatik gergi"' : '')) + '>'
           + r.index + '</span><span class="ve-fead-pf-mv">'
-          + _feadTblMove(r.id, -1, k <= 1 || (gergiSonda && r.tensioner))
-          + _feadTblMove(r.id, +1, son || k === 0 || (gergiSonda && k === N - 2))
+          + _feadTblMove(r.id, -1, k <= 1 || (gergiSonda && r.tensioner),
+              veFeadSiraKilitSebebi(-1, k, N, r.tensioner, gergiSonda))
+          + _feadTblMove(r.id, +1, son || k === 0 || (gergiSonda && k === N - 2),
+              veFeadSiraKilitSebebi(+1, k, N, r.tensioner, gergiSonda))
           + '</span></td>';
       } else if(c.k === 'ad'){
         // AD: tıklanınca bileşenin PANELİ açılır — "gerekirse tıklayarak bileşen
@@ -7611,14 +7613,26 @@ function veFeadTableCardHTML(node, opt){
 
 // Sıra oku. Pasif hâl `disabled` — eskiden ok yerine soluk bir <span> basılıyordu
 // ve o, klavyeyle gezinen için hiç var olmayan bir düğmeydi; `disabled` ise
-// "burada bir düğme var ama şu an kullanılamaz" diyor.
-function _feadTblMove(id, delta, pasif){
+// "burada bir düğme var ama şu an kullanılamaz" diyor. Pasifken ipucu SEBEBİ
+// söyler, eylemi değil.
+function _feadTblMove(id, delta, pasif, sebep){
   var g = veIkon(delta < 0 ? 'arrow-up' : 'arrow-down');   // sihirbazın sıra oklarıyla aynı ikon
   return '<button type="button" class="ve-fead-tbl-mv"' + (pasif ? ' disabled' : '')
     + ' onmousedown="event.stopPropagation();"'
     + ' onclick="veFeadTableMove(\'' + _feadEsc(id) + '\',' + delta + ')"'
-    + ' title="Kayış sırasında ' + (delta < 0 ? 'yukarı' : 'aşağı') + ' taşı">'
+    + ' title="' + (pasif && sebep ? sebep : 'Kayış sırasında ' + (delta < 0 ? 'yukarı' : 'aşağı') + ' taşı') + '">'
     + g + '</button>';
+}
+// KAPALI SIRA OKUNUN SEBEBİ — tablo ve sihirbaz aynı cümleyi yazar. Sıra
+// sürücüden başlar (satırı kilitli, ikinci satır onun önüne geçemez); gergi
+// sondaysa orada kilitli ve sondan bir önceki satır onun arkasına geçemez.
+function veFeadSiraKilitSebebi(yon, k, N, gergi, gergiSonda){
+  var S = 'Sürücü ilk satırda kilitli.', G = 'Gergi son satırda kilitli.';
+  if(yon < 0) return (gergi && k === N - 1) ? G : (k <= 1 ? S : '');
+  if(k === 0) return S;
+  if(gergi && k === N - 1) return G;
+  if(gergiSonda && k === N - 2) return G;
+  return k === N - 1 ? 'Son satır.' : '';
 }
 
 // ── TABLODAN YAZMA ─────────────────────────────────────────────────────────
@@ -8538,6 +8552,44 @@ function veFeadGeometryTable(build, mode){
       + 'Σsarım ' + _feadFmt(geom.signedWrapDeg,2) + '°'));
 }
 
+// ── YÖNLENDİRME: KÖPRÜNÜN İLETİSİNE ÇARE (kökteki ARAYÜZ ANLATMAZ) ──────────
+// Köprünün iletisi bir DURUMDUR ve değişmez: sihirbaz onu adımına METİNDEN
+// eşliyor (VE_FW_ERR_STEP). Çare yalnız burada, sunumda eklenir ve yalnız
+// editörün yüzeylerinde — sihirbazda aynı eksiğin yeri bir adımdır, pencere
+// değil. Çaresi tek olmayan ileti (kapanmayan yol, ulaşamayan kol, kasnak
+// çakışması) eşleşmez ve olduğu gibi kalır.
+function veFeadHataYonu(metin){
+  var m = String(metin || '');
+  var T = [
+    [/^Kayış (?:efektif boyu|kanal \(kaburga\) sayısı) girilmedi\.$/, veYon('Kayış Özellikleri’nden girin.')],
+    [/^Gergi yok\.$/, veYon('Kasnak ekle’den Gergi’yi seçin.')],
+    [/^En az 3 kasnak gerekli/, veYon('Kasnak ekle’den bir kasnak seçin.')],
+    [/kasnağının konumu \(X \/ Y\) girilmedi\.$|^Gergi avarasının merkez koordinatı \(X \/ Y\) girilmedi\.$/,
+     veYon('Kayış Tablosu’nda X ve Y’yi girin.')],
+    [/^Gergi (?:kol boyu|kolunun çalışma açısı|yay ön yük momenti|yay katsayısı)|^Yay çalışma momenti/,
+     veYon('Gergi penceresinde girin.')]
+  ];
+  for(var i = 0; i < T.length; i++) if(T[i][0].test(m)) return T[i][1];
+  return '';
+}
+function veFeadHataYonlu(metin){
+  var y = veFeadHataYonu(metin);
+  return y ? metin + ' ' + y : String(metin || '');
+}
+// Uygunluk kapısının notuna çare — yalnız çaresi tek olan iki not. Sihirbazda
+// aynı eksik Motor ve çevrim adımının aksesuar kartında yazılı.
+function veFeadKapiYonu(note){
+  var m = String(note || '');
+  if(m === 'Devir penceresi bilinen aksesuar yok.')
+    return veYon('Aksesuar kasnaklarının Devir sınırları’nı doldurun.');
+  if(/^Motorun .+ devri girilmedi/.test(m)) return veYon('Sürücü kasnağın Motor bölümünde girin.');
+  return '';
+}
+function veFeadKapiNotu(note){
+  var y = veFeadKapiYonu(note);
+  return y ? note + ' ' + y : String(note || '');
+}
+
 // Çözülemeyen model: NE EKSİK olduğunu say. Yanlış bir şema, doğru bir
 // uyarıdan kötüdür — bu yüzden hata varken hiç çizmiyoruz.
 function veFeadProblemBox(build){
@@ -8644,10 +8696,14 @@ function getFeadSolverPropertiesHTML(node){
   // tek kaynağından — FEAD araçları penceresiyle AYNI hüküm ve aynı cümle.
   var islOk = !(build.isletme && !build.isletme.ok);
   var hazir = build.ok && satirSay > 0 && islOk;
-  var dugme = vePencereEylem('<button type="button" class="ve-fp-solve"' + (hazir ? '' : ' disabled')
+  // SEBEP KÖPRÜNÜN İLK İLETİSİ: eskiden her çözülemeyen model "Kasnak
+  // konumları eksik." diyordu — eksik kayış kanalı ya da gergi künyesi de.
+  var dugme = vePencereEylem('<button type="button" class="ve-fp-solve"'
+    + (hazir ? '' : ' disabled aria-describedby="ve-fead-cnot-' + node.id + '"')
     + ' onclick="veFeadSolve(\'' + node.id + '\')">' + veIkon('play') + ' Hesapla</button>',
-    hazir ? '' : '<div class="ve-fp-solve-not">'
-        + (!build.ok ? 'Kasnak konumları eksik.'
+    hazir ? '' : '<div class="ve-fp-solve-not" id="ve-fead-cnot-' + node.id + '">'
+        + (!build.ok ? (!(build.order && build.order.length) ? 'Kasnak yok.'
+             : _feadEsc(veFeadHataYonlu((build.errors && build.errors[0]) || 'Model çözülemiyor.')))
            : !(satirSay > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çalışma çevrimi'
            : _feadEsc(veFeadIsletmeMetni(build.isletme)) + '.') + '</div>');
 
@@ -8730,7 +8786,7 @@ function veFeadChecksCard(node, build){
   // 1 — merkez mesafesi
   var c = R.centerDistance;
   h += baslik('Kasnak merkez mesafesi', c.durum,
-        '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)' + (c.note ? ' — ' + _feadEsc(c.note) : ''));
+        '0,7·(d₁+d₂) ≤ a ≤ 2·(d₁+d₂)' + (c.note ? ' — ' + _feadEsc(veFeadKapiNotu(c.note)) : ''));
   if(c.rows.length){
     var t = '<tr><th' + TD + '>çift</th><th' + TDR + '>alt</th><th' + TDR + '>a</th>'
           + '<th' + TDR + '>üst</th><th' + TDR + '>pay</th></tr>';
@@ -8748,7 +8804,7 @@ function veFeadChecksCard(node, build){
   var w = R.ratioWindow;
   h += baslik('Çevrim oranı penceresi', w.durum,
         (w.governedRpm > 0 ? 'governed ' + _feadFmt(w.governedRpm, 0) + ' d/dk' : '')
-        + (w.note ? ' — ' + _feadEsc(w.note) : ''));
+        + (w.note ? ' — ' + _feadEsc(veFeadKapiNotu(w.note)) : ''));
   if(w.rows.length){
     var t2 = '<tr><th' + TD + '>aksesuar</th><th' + TDR + '>optimum</th><th' + TDR + '>devir</th>'
            + '<th' + TDR + '>sürekli</th><th' + TD + '>hüküm</th></tr>';
@@ -8766,7 +8822,7 @@ function veFeadChecksCard(node, build){
   // 3 — devir sınırı
   var s = R.speedLimit;
   h += baslik('Aksesuar devir sınırı', s.durum,
-        'sürekli ve anlık maksimum' + (s.note ? ' — ' + _feadEsc(s.note) : ''));
+        'sürekli ve anlık maksimum' + (s.note ? ' — ' + _feadEsc(veFeadKapiNotu(s.note)) : ''));
   if(s.rows.length){
     var t3 = '<tr><th' + TD + '>aksesuar</th><th' + TD + '>nokta</th><th' + TDR + '>devir</th>'
            + '<th' + TDR + '>sınır</th><th' + TDR + '>pay</th></tr>';
@@ -9520,7 +9576,8 @@ function veFeadDutyFillCatalog(nodeId){
     });
   });
   if(typeof showToast === 'function')
-    showToast(say ? say + ' hücre katalogdan dolduruldu' : 'Katalog modeli seçili aksesuar yok', say ? 'success' : 'info');
+    showToast(say ? say + ' hücre katalogdan dolduruldu'
+      : 'Katalog modeli seçili aksesuar yok. ' + veYon('Aksesuar kasnaklarında Katalog modeli seçin.'), say ? 'success' : 'info');
   _feadRedraw(n);
 }
 
@@ -9699,7 +9756,7 @@ function veFeadResultCard(R, node){
   if(typeof veFeadResKpiHTML === 'function') h += veFeadResKpiHTML(R);
   var kume = (R.signals && R.signals.length) || 0;
   h += '<button type="button" class="ve-fr-ac" onclick="veFeadOpenResults()"'
-    + (kume ? '' : ' disabled') + '>'
+    + (kume ? '' : ' disabled title="Veri kümesi yok."') + '>'
     + '<span class="mf-ico mf-ico-trending-up"></span>Sonuçlar\'da aç</button>';
   return _feadCard('Sonuç', kume ? kume + ' veri kümesi' : '', 'var(--accent-primary)', h);
 }
@@ -9911,6 +9968,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veFeadPositionTable: veFeadPositionTable,
     veFeadGeometryTable: veFeadGeometryTable,
     veFeadProblemBox: veFeadProblemBox,
+    veFeadHataYonu: veFeadHataYonu, veFeadHataYonlu: veFeadHataYonlu, veFeadSiraKilitSebebi: veFeadSiraKilitSebebi,
+    veFeadKapiYonu: veFeadKapiYonu, veFeadKapiNotu: veFeadKapiNotu,
     veFeadWarningBox: veFeadWarningBox, veFeadDefaultsBox: veFeadDefaultsBox,
     veFeadDutyEditor: veFeadDutyEditor, veFeadSolve: veFeadSolve,
     veFeadResultState: veFeadResultState, veFeadLiveModelNodes: veFeadLiveModelNodes,

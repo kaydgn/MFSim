@@ -2447,4 +2447,16 @@ governed devri ve diferansiyel oranı, aksesuarın model yönlendirmesi, kilitli
 şanzıman/konvertör seçicisinin sebebe `aria-describedby` ile bağlanması, yavaşlama
 sihirbazının satır düğmesine ad. Sertlik uyarısı ve "süre kısa" iletisi bilerek
 yönlendirmesiz: birinin tek doğru çaresi yok, ötekinin gösterdiği denetim
-pencerede yok.
+pencerede yok. → kaydgn/MFSim#1168 · E3 → FEAD: çözülemeyen modelin sebebi köprünün
+ilk iletisi (eskiden her hâlde "Kasnak konumları eksik."), çaresi yalnız sunumda
+(`veFeadHataYonu` — köprünün cümlesi değişmez, sihirbaz onu metinden eşliyor);
+Çözücü'nün ve Rapor'un kapalı düğmesi görünür sebebe bağlı; Kayış Tablosu'nun boş
+hâli ekleyiciyi, Sonuçlar'ın bayat notu ve sonuçsuz bildirimler Hesapla'yı
+gösteriyor; "gergi gergin tarafta" hükmünün iki ulaşılabilir kolu (Yön · tablonun
+oku); sıra oklarının kapalı hâli sebebini söylüyor (tablo ve sihirbaz aynı
+cümle); sihirbazın boş masası adıma göre yol veriyor; STEP kartı bırakma alanı
+olduğunu, 3B "Modelde bir parça seçin."i söylüyor (FEAD ve Takoz), iki Hesapla
+rol yokken sebebini ipucunda taşıyor. "Sürücü kasnak seçilmedi." ve "Kayış
+tanımı yok." ulaşılamaz (sürücü tipten ya da ilk kasnaktan çözülüyor, kayış her
+topolojide var); tek çap, motor seçilmedi ve kayma emniyeti bilerek
+yönlendirmesiz.

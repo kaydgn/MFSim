@@ -467,12 +467,12 @@ function veFeadWiz3bAltHTML(s, secili){
         + '<option value="-" data-ve-3b-rol=""' + (rol ? '' : ' disabled') + '>Rolü kaldır</option></select>';
     }
     h += '</div>';
-  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok</span>';
+  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok. ' + veYon('Modelde bir parça seçin.') + '</span>';
   h += '</div>';
   // ── TEK DÜĞME (2026-09-30): rollü bütün birimler birlikte ──
   var coz = s.coz, rolEngel = typeof _fwStpRolDenetim === 'function' ? _fwStpRolDenetim(s) : [];
   h += '<div class="ve-fw-3b-eylem" data-ve-3b-hesapbar="1">'
-    + '<button type="button" class="ve-fw-3b-hap" id="ve-fw-3b-hesapla"' + (rolEngel.length ? ' disabled' : '')
+    + '<button type="button" class="ve-fw-3b-hap" id="ve-fw-3b-hesapla"' + (rolEngel.length ? ' disabled title="' + _fwEsc(rolEngel[0]) + '"' : '')
     + ' onclick="veFeadWiz3bHesapla()">' + veIkon('play') + ' ' + (coz ? 'Yeniden hesapla' : 'Tüm kasnakları hesapla') + '</button>';
   if(coz && coz.ok)
     h += '<button type="button" class="ve-fw-3b-hap ve-fw-3b-hap-vurgu" id="ve-fw-3b-aktar" onclick="veFeadWiz3bAktar()">'

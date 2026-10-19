@@ -146,9 +146,12 @@ function getFeadReportPropertiesHTML(node){
     ? '<div class="ve-fp-durum" data-d="ok"><b>Model çözüldü</b> — '
       + (R.pulleyNames || []).length + ' kasnak · ' + (R.duty || []).length
       + ' devir noktası.</div>'
-    : '<div class="ve-fp-durum" data-d="warn"><b>Model çözülmedi.</b></div>';
+    : '<div class="ve-fp-durum" data-d="warn" id="ve-fead-rapor-durum-' + node.id + '"><b>Model çözülmedi.</b> '
+      + veYon('FEAD araçları’nda Hesapla ile çözün.') + '</div>';
+  // Kapalı düğmenin sebebi hemen üstündeki durum yazısı: ona bağlı.
   var eylem = vePencereEylem('<button type="button" class="ve-fp-solve"'
-    + (solved ? ' onclick="veFeadGenerateReport(\'' + node.id + '\')"' : ' disabled') + '>'
+    + (solved ? ' onclick="veFeadGenerateReport(\'' + node.id + '\')"'
+              : ' disabled aria-describedby="ve-fead-rapor-durum-' + node.id + '"') + '>'
     + '<span class="mf-ico mf-ico-download" aria-hidden="true"></span> '
     + (solved ? kAd + ' Oluştur ve İndir' : 'Raporu Oluştur ve İndir') + '</button>',
     '<div id="ve-fead-report-status" class="ve-fp-durum-not"></div>');
@@ -269,8 +272,9 @@ function veFeadGenerateReport(nodeId, turSec){
   // "rapor üretildi" izlenimi verip içinde hiçbir sayı olmayan bir dosya
   // bırakırdı — sessiz başarısızlığın ders kitabı hâli.
   if(!R || !R.ok){
-    _frStatus('Rapor üretilemedi: model çözülmemiş.', 'var(--ink-warning)');
-    if(typeof showToast === 'function') showToast('Rapor üretilemedi: model çözülmemiş.', 'warning');
+    var _yok = 'Rapor üretilemedi: model çözülmemiş. ' + veYon('FEAD araçları’nda Hesapla ile çözün.');
+    _frStatus(_yok, 'var(--ink-warning)');
+    if(typeof showToast === 'function') showToast(_yok, 'warning');
     return null;
   }
   // BAYAT SONUÇTAN RAPOR — üretilir ama SÖYLENİR. Rapor bilerek ÇÖZÜLEN

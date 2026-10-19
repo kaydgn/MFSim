@@ -2599,6 +2599,8 @@ function _fwStpKartHTML(){
   h += '</div>';
 
   if(!s){
+    // Kart bir bırakma alanı (data-ve-dropzone): bunu söyleyen tek satır.
+    h += '<p class="ve-fw-dim ve-fw-stp-yon">' + veYon('STEP dosyasını seçin ya da buraya bırakın.') + '</p>';
     // Önceki aktarımın izi (kart oturumluk; durum kalıcı).
     if(st.stepKaynak)
       h += '<div class="ve-fw-seeded">' + veIkon('check') + ' <b>' + _fwEsc(st.stepKaynak.dosya) + '</b> aktarılmıştı'
@@ -2686,7 +2688,7 @@ function _fwStpKartHTML(){
   var rolEngel = _fwStpRolDenetim(s);
   h += '<div class="ve-fw-rowbtns">'
     + '<button type="button" id="ve-fw-stp-hesapla" class="ve-fw-btn"'
-    + (rolEngel.length ? ' disabled' : '') + ' onclick="veFeadWizStpHesapla()">'
+    + (rolEngel.length ? ' disabled title="' + _fwEsc(rolEngel[0]) + '"' : '') + ' onclick="veFeadWizStpHesapla()">'
     + (coz ? 'Yeniden hesapla' : 'Çap ve merkezleri hesapla') + '</button>'
     + '<span class="ve-fw-dim">' + (coz
         ? (coz.ok ? veIkon('check') + ' ' + coz.kasnaklar.length + ' kasnak' + (coz.duzlem ? ' · düzlem sapması '
@@ -2787,11 +2789,17 @@ function _fwKasnakOpt(xf, ek, W, H){
 // girdilerin sembolik çizimi (`sembolik` → `_feadSembolikSVG`); eksikler
 // çipte ve rayda. Kasnak hiç yoksa çizilecek bir şey yok.
 var VE_FW_KASNAK_YOK = 'Kasnak yok.';
+// Boş masanın yolu adıma göre: Kasnaklar adımında ekleyici formda, öteki
+// adımlarda kasnağın yeri Kasnaklar adımı.
+function _fwKasnakYok(k){
+  return _fwMasaBos(VE_FW_KASNAK_YOK + ' ' + (k === 'kasnak'
+    ? veYon('Kasnak ekle’den bir kasnak seçin.') : veYon('Kasnaklar adımında kasnak ekleyin.')));
+}
 function _fwKasnakMasa(b, W, H){
-  if(typeof veFeadLayoutSVG !== 'function') return _fwMasaBos(VE_FW_KASNAK_YOK);
+  if(typeof veFeadLayoutSVG !== 'function') return _fwKasnakYok('kasnak');
   // Yakınlık ve kaydırma görünüm katmanında (`_fwLayout`), bütün adımlarla ortak.
   var svg = _fwLayout(b, W, H, _fwKasnakOpt(null, function(T){ return _fwKasnakKatman(T); }, W, H));
-  return svg || _fwMasaBos(VE_FW_KASNAK_YOK);
+  return svg || _fwKasnakYok('kasnak');
 }
 function _fwSecIndex(order){
   var id = _fwSecId();
@@ -3003,11 +3011,15 @@ function _fwSiraDugmeleri(key, i, n, gergiSonda, silinir){
   var ten = (key === '__ten__');
   var ustKapali = ten ? (i === 0 || i === n - 1) : (i <= 1);
   var altKapali = ten ? (i >= n - 1) : (i === 0 || i >= n - 1 - (gergiSonda ? 1 : 0));
+  // KAPALI OKUN SEBEBİ İPUCUNDA — Kayış Tablosu'nun okuyla aynı cümle.
+  var sebep = function(yon){
+    return (typeof veFeadSiraKilitSebebi === 'function') ? veFeadSiraKilitSebebi(yon, i, n, ten, gergiSonda) : '';
+  };
+  var ustSebep = sebep(-1), altSebep = sebep(1);
   return '<div class="ve-fw-ed-ops">'
-    + '<button type="button" class="ve-fw-btn"' + (ustKapali ? ' disabled' : '')
-      + (ten && i === n - 1 ? ' title="Gergi son satırda kilitli."' : '')
+    + '<button type="button" class="ve-fw-btn"' + (ustKapali ? ' disabled' + (ustSebep ? ' title="' + ustSebep + '"' : '') : '')
       + ' onclick="veFeadWizPulleyMove(\'' + key + '\',-1)">' + veIkon('arrow-up') + ' Sırada öne</button>'
-    + '<button type="button" class="ve-fw-btn"' + (altKapali ? ' disabled' : '')
+    + '<button type="button" class="ve-fw-btn"' + (altKapali ? ' disabled' + (altSebep ? ' title="' + altSebep + '"' : '') : '')
       + ' onclick="veFeadWizPulleyMove(\'' + key + '\',1)">' + veIkon('arrow-down') + ' Arkaya</button>'
     // GERGİ SİLİNEMEZ — ama düğme YOK DEĞİL, KAPALI: kilit sessiz olmasın,
     // sebebi ipucunda (çekirdek her modelde tam bir gergi istiyor).
@@ -3065,7 +3077,7 @@ function _fwKasnakEditorHTML(b, sira, byKey){
           function(v){ return 'veFeadWizTenTemas(\'' + v + '\')'; }, kilit))
       + alan('J', sayi(t.inertia, 'veFeadWizTenSet(\'inertia\', this.value)', '—'))
       + '<label class="ve-fw-check" title="Gergi sürücü olamaz.">'
-        + '<input type="radio" disabled><span>Sürücü kasnak</span></label>'
+        + '<input type="radio" disabled title="Gergi sürücü olamaz."><span>Sürücü kasnak</span></label>'
       + '<div class="ve-fw-rowbtns">'
         + '<button type="button" class="ve-fw-btn" onclick="veFeadWizGoto(' + (_fwAdimNo('gergi') - 1) + ')">'
         + 'Kol ve yay: ' + _fwEsc(VE_FW_STEPS[_fwAdimNo('gergi') - 1].ad) + ' ' + veIkon('arrow-right') + '</button></div>'
@@ -3190,7 +3202,7 @@ function _fwKaynakMasa(b, W, H){
   if(s && s.durum === 'okunuyor') return _fwMasaBos('STEP dosyası okunuyor…');
   if(s && s.durum === 'hazir')
     return _fwMasaBos(s.coz && !s.coz.ok ? 'Kasnak bulunamadı.' : 'Kasnak çizimi hesaptan sonra.');
-  return _fwMasaBos('Kasnak yok.');
+  return _fwMasaBos('Kasnak yok. ' + veYon('Örnek ya da STEP dosyası seçin.'));
 }
 
 // ── 3 · OTOMATİK GERGİ — YAKIN ÇİZİM ───────────────────────────────────────
@@ -3212,13 +3224,13 @@ function _fwGergiVeri(b){
   return { pv: b.sys.tensioner.pivot, by: by, st: st, rP: rP, rows: rows };
 }
 function _fwGergiMasa(b, W, H){
-  if(typeof veFeadLayoutSVG !== 'function') return _fwMasaBos(VE_FW_KASNAK_YOK);
+  if(typeof veFeadLayoutSVG !== 'function') return _fwKasnakYok();
   // Gergiye yakın görünüm çekirdeğin konum tablosundan; çözülmeyen modelde
   // tablo yok — tam yolun sembolik çizimi (avara · kol · montaj noktası).
   if(_fwGergiGor === 'yol' || !(b && b.ok)){
     return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'all', compass: true, pivot: true,
       arrows: true, frame: false, sembolik: true, kenarPay: _fwNefes({ ust: _fwPx(VE_FW_MASA_PAY.ust) }, W, H) })
-      || _fwMasaBos(VE_FW_KASNAK_YOK);
+      || _fwKasnakYok();
   }
   var v = _fwGergiVeri(b);
   if(!v || !v.pv || !v.by.mean) return _fwMasaBos('Gerginin konum tablosu çözülemedi.');
@@ -3421,11 +3433,11 @@ function _fwYayGrafikHTML(t, b){
 // Adımın konusu kayışın kendisi: yol, açıklık boyları (mm) ve sonuç çipinde
 // gereken boy. Kasnak adları kısa.
 function _fwKayisMasa(b, W, H){
-  if(typeof veFeadLayoutSVG !== 'function') return _fwMasaBos(VE_FW_KASNAK_YOK);
+  if(typeof veFeadLayoutSVG !== 'function') return _fwKasnakYok();
   return _fwLayout(b, W, H, { inline: true, kunye: false, posMode: 'mean', compass: false, pivot: false,
     arrows: true, nameLabels: true, shortNames: true, wrapLabels: false, frame: false, sembolik: true,
     kenarPay: _fwNefes({ ust: _fwPx(VE_FW_MASA_PAY.ust), alt: _fwPx(VE_FW_MASA_PAY.alt) }, W, H),
-    ek: function(T){ return _fwAciklikKatman(T); } }) || _fwMasaBos(VE_FW_KASNAK_YOK);
+    ek: function(T){ return _fwAciklikKatman(T); } }) || _fwKasnakYok();
 }
 // Açıklık boyları (mm) — çekirdeğin açıklık uzunluğu (`span.L`), orta
 // noktadan DIŞA doğru (kümenin ağırlık merkezinin tersine).
@@ -3469,7 +3481,7 @@ function _fwOzetKapilar(b){
   try { return veFeadChecks(b, veFeadCheckOpt(s, s.duty || [])); } catch(e){ return null; }
 }
 function _fwOzetMasa(b, W, H){
-  if(typeof veFeadLayoutSVG !== 'function') return _fwMasaBos(VE_FW_KASNAK_YOK);
+  if(typeof veFeadLayoutSVG !== 'function') return _fwKasnakYok();
   var R = _fwOzetKapilar(b);
   // Panel masanın sağında yüzüyor (ekran px); geniş masada çizim onun
   // soluna sığdırılır. Dar gövdede panel alta iner (CSS), pay gerekmez.
@@ -3481,7 +3493,7 @@ function _fwOzetMasa(b, W, H){
     kenarPay: _fwNefes(pay, W, H),
     ek: function(T){ return _fwAciklikKatman(T) + _fwMerkezKatman(T, R); },
     engel: function(T){ return _fwMerkezSatirlar(T, R).map(function(m){ return [m.ax, m.ay, m.bx, m.by]; }); } })
-    || _fwMasaBos(VE_FW_KASNAK_YOK);
+    || _fwKasnakYok();
 }
 // Sınırdaki merkez mesafesi satırları ekran koordinatında — katman da,
 // çiziciye giden engel de buradan okur (çizgi adın/açının üstünden geçmesin).
@@ -5441,7 +5453,8 @@ function _fwStepOzet(b){
   else {
     // ÇÖZÜLMEYEN MODELİN KURULUMU söylenerek yapılır: ne olacağı kurulmadan
     // ÖNCE yazılı (kapı bu yüzden kapalı değil, bkz. veFeadWizCanCreate).
-    if(kur.not) kh2 += '<div class="ve-fw-issue ve-fw-issue-warn">' + _fwSorunIkon('warn') + ' ' + _fwEsc(kur.not) + '</div>';
+    if(kur.not) kh2 += '<div class="ve-fw-issue ve-fw-issue-warn">' + _fwSorunIkon('warn') + ' ' + _fwEsc(kur.not)
+      + ' ' + veYon('Otomatik Gergi adımında girin.') + '</div>';
     if(!ok) kh2 += '<div class="ve-fw-issue ve-fw-issue-warn" data-ve-fw-kur-sembolik="1">' + _fwSorunIkon('warn')
       + ' Kayış yolu çözülmüyor (' + ((b && b.errors) || []).length + ' eksik).</div>';
   }

@@ -433,9 +433,12 @@ describe('Yön yüzeyi — FEAD araçları penceresi (rozetin ve panelin yerine)
     expect(metin).toContain(veSayi(R.tensionerSide.minN, 1) + ' N');
     expect(metin).toContain(veSayi(R.tensionerSide.deficitN, 1) + ' N');
     expect(metin).not.toMatch(/undefined|NaN|\[object/);
-    // ÇARE YAZILMAZ (ARAYÜZ ANLATMAZ): hüküm durumu söyler; ulaşılamaz çare de yok.
+    // ULAŞILAMAZ ÇARE YOK: tasarım gerginliği girdi değil (türetiliyor). Hükmün
+    // arkasında TEK yönlendirme ve iki ulaşılabilir kolu var — Yön anahtarı aynı
+    // bölümde, gerginin satırı tablonun okuyla taşınır (yönlendirme yuvası).
     expect(metin).not.toMatch(/gerginliği yükselt/i);
-    expect(metin).not.toMatch(/çevirin|alın\b/);
+    expect(metin).toMatch(/altında\. Yönü çevirin ya da gergiyi Kayış Tablosu’nun sonuna alın\.$/);
+    expect(yon().querySelector('[role="radiogroup"][aria-label="Kayış dönüş yönü"]')).toBeTruthy();
   });
 
   test('ÇÖZDÜKTEN SONRA hüküm tazelenir — bir çözüm GERİDE kalmaz', () => {

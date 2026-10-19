@@ -161,8 +161,12 @@ function veFeadAraclarDurum(){
   // TEK kaynağından: pencere, bildirim ve çözücü paneli aynı cümleyi yazar.
   var isl = build && build.isletme;
   var islOk = !(isl && !isl.ok);
+  // SEBEP KÖPRÜNÜN İLK İLETİSİ ve (varsa) çaresi — eskiden kasnağı olan her
+  // çözülemeyen model "Kasnak konumları eksik." diyordu, eksik kayış kanalı ya
+  // da gergi künyesi de. Kasnak yokken Sihirbaz düğmesi birincil.
+  var _ilk = (build && build.errors && build.errors[0]) || 'Model çözülemiyor.';
   var neden = !solver ? 'Çözücü yok.'
-    : !modelOk ? (kasnak ? 'Kasnak konumları eksik.' : 'Kasnak yok.')
+    : !modelOk ? (kasnak ? (typeof veFeadHataYonlu === 'function' ? veFeadHataYonlu(_ilk) : _ilk) : 'Kasnak yok.')
     : !(satir > 0) ? 'Çalışma çevrimi boş · Sürücü kasnak › Çalışma çevrimi'
     : !islOk ? veFeadIsletmeMetni(isl) + _feadAracIsletmeYeri(isl)
     : '';
@@ -205,6 +209,9 @@ function _feadAracDugme(ey, ikon, yazi, sinif, ek){
   return '<button type="button" class="' + (sinif || 've-fead-arac-btn') + '" data-ey="' + ey + '"'
     + (ek || '') + '>' + (ikon ? _feadAracIkon(ikon) : '') + (yazi ? '<span>' + yazi + '</span>' : '') + '</button>';
 }
+
+// Rapor İndir kapalıyken sebebi ve yolu: Hesapla aynı pencerede.
+function _feadAracCozumYok(){ return 'Çözüm yok. ' + veYon('Hesapla ile çözün.'); }
 
 function _feadAracYonAd(s){
   var l = (typeof veFeadSpinLabel === 'function') ? veFeadSpinLabel(s) : null;
@@ -289,7 +296,7 @@ function veFeadAraclarGovdeHTML(d){
     // alanlar (Rapor penceresi → Künye) başka hiçbir yoldan açılmıyor.
     + '<div class="ve-fead-arac-sat ve-fead-arac-alt">'
     + _feadAracDugme('indir', 'download', 'İndir', 've-fead-arac-btn',
-        d.sonucVar ? '' : ' aria-disabled="true" title="Çözüm yok."')
+        d.sonucVar ? '' : ' aria-disabled="true" title="' + _feadAracCozumYok() + '"')
     + '<span class="bos"></span>'
     + _feadAracDugme('rapor', 'edit', 'Künye', 've-fead-arac-bag',
         ' title="Rapor penceresi"')
@@ -310,7 +317,7 @@ function veFeadAraclarGovdeHTML(d){
         + (typeof veSayi === 'function' ? veSayi(d.taraf.minN, 1) : String(d.taraf.minN)) + ' N ('
         + _feadAracEsc(d.taraf.minName || '—') + '), ankrajın '
         + (typeof veSayi === 'function' ? veSayi(d.taraf.deficitN, 1) : String(d.taraf.deficitN))
-        + ' N altında.</span></p>';
+        + ' N altında. ' + veYon('Yönü çevirin ya da gergiyi Kayış Tablosu’nun sonuna alın.') + '</span></p>';
   }
   h += '</section>';
 
@@ -337,7 +344,7 @@ function veFeadAraclarRayHTML(d){
     + _feadAracDugme('hesapla', 'play', '', 've-fead-arac-ray-btn birincil',
         d.hazir ? ' title="Hesapla" aria-label="Hesapla"' : ' aria-disabled="true" title="' + _feadAracEsc(d.neden) + '" aria-label="Hesapla"')
     + _feadAracDugme('indir', 'download', '', 've-fead-arac-ray-btn',
-        d.sonucVar ? ' title="Raporu indir" aria-label="Raporu indir"' : ' aria-disabled="true" title="Çözüm yok." aria-label="Raporu indir"')
+        d.sonucVar ? ' title="Raporu indir" aria-label="Raporu indir"' : ' aria-disabled="true" title="' + _feadAracCozumYok() + '" aria-label="Raporu indir"')
     + _feadAracDugme('yon', 'refresh', '', 've-fead-arac-ray-btn', ' title="Yönü çevir" aria-label="Yönü çevir" data-v="cevir"')
     + _feadAracDugme('sihirbaz', 'wand', '', 've-fead-arac-ray-btn', ' title="Başlangıç Sihirbazı" aria-label="Başlangıç Sihirbazı"');
 }
@@ -391,7 +398,7 @@ function veFeadAracEylem(ad, v){
     return true;
   }
   if(ad === 'indir'){
-    if(!d.sonucVar){ if(typeof showToast === 'function') showToast('Rapor için çözüm yok.', 'warning'); return false; }
+    if(!d.sonucVar){ if(typeof showToast === 'function') showToast('Rapor için çözüm yok. ' + veYon('Hesapla ile çözün.'), 'warning'); return false; }
     if(typeof veFeadGenerateReport === 'function') veFeadGenerateReport(d.raporId);
     return true;
   }

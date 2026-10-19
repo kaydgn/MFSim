@@ -1056,6 +1056,8 @@ function _mwStpKartHTML(){
   h += '</div>';
 
   if(!s){
+    // Kart bir bırakma alanı (data-ve-dropzone): bunu söyleyen tek satır.
+    h += '<p class="ve-fw-dim ve-fw-stp-yon">' + veYon('STEP dosyasını seçin ya da buraya bırakın.') + '</p>';
     if(st.stepKaynak)
       h += '<div class="ve-fw-seeded">' + _mwIkon('check') + ' <b>' + _mwEsc(st.stepKaynak.dosya) + '</b> aktarılmıştı'
         + ' <em>' + st.stepKaynak.govde + ' gövde · ' + st.stepKaynak.takoz + ' takoz</em></div>';
@@ -1112,7 +1114,7 @@ function _mwStpKartHTML(){
   var rolEngel = _mwStpRolDenetim(s);
   h += '<div class="ve-fw-rowbtns">'
     + '<button type="button" id="ve-mw-stp-hesapla" class="ve-fw-btn"'
-    + (rolEngel.length ? ' disabled' : '') + ' onclick="veMntWizStpHesapla()">'
+    + (rolEngel.length ? ' disabled title="' + _mwEsc(rolEngel[0]) + '"' : '') + ' onclick="veMntWizStpHesapla()">'
     + (coz ? 'Yeniden hesapla' : 'Konumları hesapla') + '</button>'
     + '<span class="ve-fw-dim">' + (coz
         ? (coz.ok ? _mwIkon('check') + ' ' + _mwStpSayim(coz) : _mwIkon('x') + ' ölçülemedi')
