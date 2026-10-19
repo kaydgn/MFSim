@@ -14,12 +14,16 @@
  * Yerleşim ve kontrast ölçüsü yüzey turunda (yuzey-turu.js → takozTuru).
  */
 const { test, expect } = require('@playwright/test');
+const { githubFikstur } = require('./helpers/github-fikstur');
 test.setTimeout(180000);
 test.use({ serviceWorkers: 'block' });
 
 async function kur(page) {
   await page.setViewportSize({ width: 1600, height: 1000 });
   page.on('dialog', (d) => d.accept());
+  // GitHub API'si fikstürden: canlı API CI'da oran sınırına takılıp 403
+  // döndürdü ve konsol hatası ilk testi düşürdü (koşu 1428).
+  await githubFikstur(page);
   await page.goto('/index.html');
   await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
   await page.waitForFunction(() => typeof window.createNode === 'function' && typeof window.veMntLoadExample === 'function'
@@ -188,6 +192,15 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
   expect(g0.il).toBeNull();
 
   await page.evaluate((i) => {
+    // ADIMIN SÜRESİ SABİT: çubuk ~100 ms'de bir yazılıyor ve hızlı makinede 729
+    // kombinasyon 100 ms dolmadan bitip tek ara değer bırakıyordu (koşu 1428).
+    // Tarama en az 400 ms sürer — sonuç makinenin hızından bağımsız.
+    const tar = veMntKatalog.tarayici;
+    veMntKatalog.tarayici = function () {
+      const it = tar.apply(this, arguments), adim = it.adim, pay = 400 / Math.max(1, it.N);
+      it.adim = function () { const s = performance.now(); while (performance.now() - s < pay); return adim.apply(this, arguments); };
+      return it;
+    };
     window.__uzun = []; window.__son = Infinity; window.__deger = [];
     new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__uzun.push([e.startTime, e.duration]))).observe({ type: 'longtask' });
     const k = window._mntParamSonucKaydet;
