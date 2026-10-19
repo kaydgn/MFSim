@@ -475,7 +475,7 @@ function veUpdateResultsTree() {
       if(unbound.length > 0 && !veSigState.query) {
         html += '<div class="vsig-orphan-head">Bağlı olmayan · ' + unbound.length + '</div>';
         unbound.forEach(function(sn) {
-          html += '<div class="vsig-orphan" title="Bağlı değil: veri yok">' +
+          html += '<div class="vsig-orphan" title="Bağlı değil: veri yok. ' + veYon('Topolojide sensör portunu bir bağlantının orta noktasına bağlayın.') + '">' +
                   escapeHTML(sn.customName || 'Sensör') + '</div>';
         });
       }

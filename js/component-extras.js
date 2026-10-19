@@ -35,7 +35,7 @@ function getSensorPropertiesHTML(node) {
   if(!conn && !compNode) {
     // Bağlı değil
     html += '<tr><td style="padding:10px; text-align:center; background:var(--bg-tertiary); color:var(--text-muted); font-size:var(--fs-tiny);">';
-    html += '<span class="mf-ico mf-ico-radio"></span> Sensör bağlı değil.';
+    html += '<span class="mf-ico mf-ico-radio"></span> Sensör bağlı değil. ' + veYon('Sensör portunu bir bağlantının orta noktasına bağlayın.');
     html += '</td></tr>';
   } else if(compNode) {
     // Doğrudan bileşene bağlı
@@ -875,7 +875,7 @@ function cdwAddRow() {
   var spanStyle = 'font-size:var(--fs-md); color:var(--text-muted);';
   var tdInp = 'padding:4px 3px; text-align:center;';
   var tdCalc = 'padding:4px 10px; text-align:center;';
-  tr.innerHTML = '<td style="padding:4px 3px; text-align:center; width:22px;"><button onclick="this.closest(\'tr\').remove()" style="background:none; border:none; color:var(--ink-danger); cursor:pointer; font-size:var(--fs-body); padding:0; opacity:0.4;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.4\'">' + veIkon('x') + '</button></td>' +
+  tr.innerHTML = '<td style="padding:4px 3px; text-align:center; width:22px;"><button type="button" title="Satırı sil" aria-label="Satırı sil" onclick="this.closest(\'tr\').remove()" style="background:none; border:none; color:var(--ink-danger); cursor:pointer; font-size:var(--fs-body); padding:0; opacity:0.4;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.4\'">' + veIkon('x') + '</button></td>' +
     '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.1" class="cdw-v1" style="' + inpStyle + '"></td>' +
     '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.1" class="cdw-v2" style="' + inpStyle + '"></td>' +
     '<td style="' + tdInp + '"><input type="text" inputmode="decimal" step="0.01" class="cdw-dt" style="' + inpStyle + '"></td>' +
@@ -1227,7 +1227,7 @@ function veRenderWarningsPanel(items, opts) {
     // yokken bile "Topoloji hazır" yazıyordu ve Çalıştır aynı anda reddediyordu.
     var msg = (opts.source === 'dogrulama')
       ? '<span style="color:var(--ink-success);">' + veIkon('check') + ' Hesaplamaya hazır.</span>'
-      : 'Doğrulama çalıştırılmadı.';
+      : 'Doğrulama çalıştırılmadı. ' + veYon('Doğrula ile çalıştırın.');
     body.innerHTML = '<div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">' + msg + '</div>';
     return;
   }
@@ -1926,7 +1926,7 @@ function onVEFTVehicleParamChange(nodeId) {
     prev.cd     !== nrm(node.data.ftCd, 0.900) ||
     prev.rho    !== nrm(node.data.ftRho, 1.225);
   if(changed && typeof veInvalidateStaleSimResults === 'function') {
-    veInvalidateStaleSimResults('Araç parametresi değişti; sonuçlar temizlendi.');
+    veInvalidateStaleSimResults('Araç parametresi değişti; sonuçlar temizlendi. ' + veYon('Çözücü penceresinde Hesapla ile yeniden çözün.'));
   }
 }
 
@@ -2211,7 +2211,7 @@ function veManualSegTransfer(nodeId) {
   }
   var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
   if(!scenarioNode) {
-    showToast('Senaryolar bileşeni yok.', 'warning'); return;
+    showToast('Senaryolar bileşeni yok. ' + veYon('Bileşenler’den ekleyin.'), 'warning'); return;
   }
   if(!scenarioNode.data) scenarioNode.data = {};
   scenarioNode.data.roadSegments = node.data.routeSegments.slice();

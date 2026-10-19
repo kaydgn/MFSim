@@ -2396,7 +2396,7 @@ happened and tell them how to fix it"*), Microsoft Türkçe stil kılavuzu
 | Boş durum | nasıl başlanır | "Ölçüm penceresi boş · Veri Gezgini’nden sinyal seçin." |
 | Durum + çare | çare bariz değilse tek düzeltme | "Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün." |
 | Gizli etkileşim | sağ tık, sürükle-bırak, tık | "Rakım profilinde sağ tıklayarak ekleyin." |
-| Kapalı denetim | sebebi, `title`'da | "En az iki şerit gerekli." |
+| Kapalı denetim | sebebi, `title`'da; yanında görünür yazıyorsa `aria-describedby` ile o yazıya bağlı | "En az iki sinyal gerekli." |
 | Adsız denetim | erişilebilir ad (`aria-label` + `title`) | "Satırı sil" |
 
 **Biçim** (`tools/metin-dili.js` → `yonBicim`): tek cümle, ≤ 10 sözcük,
@@ -2439,4 +2439,12 @@ penceresinin listesinden tek kısayol taşıyor; port, tablo, X ekseni, rapor,
 ölçüm şeridi bildirimleri durum + çare; ölçüm penceresinin, veri tablosunun ve
 3B dağılımın boş durumu Veri Gezgini'ni gösteriyor; Ayır/Birleştir ve
 "Diyagramlara aktar" kapalıyken sebebini ipucunda taşıyor; radyonun boş
-Favoriler'i yıldızı gösteriyor.
+Favoriler'i yıldızı gösteriyor. → kaydgn/MFSim#1167 · E2 → Araç Performans: Güzergah
+Haritası, rakım profili, referans noktası ve eğim çizgisinin gizli etkileşimi
+(referans noktası rotaya tıklanarak — araştırmanın "sağ tık" önerisi koda uymuyordu),
+eşleştirme ve sonlandırıcının bağlantı iletileri, sensörün bağlanması, eksik
+governed devri ve diferansiyel oranı, aksesuarın model yönlendirmesi, kilitli
+şanzıman/konvertör seçicisinin sebebe `aria-describedby` ile bağlanması, yavaşlama
+sihirbazının satır düğmesine ad. Sertlik uyarısı ve "süre kısa" iletisi bilerek
+yönlendirmesiz: birinin tek doğru çaresi yok, ötekinin gösterdiği denetim
+pencerede yok.

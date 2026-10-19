@@ -492,7 +492,7 @@ function veSolverRunProfessional() {
         log('  Frontal alan    : ' + veSayi(h * w, 2) + ' m² (' + veSayi(h) + '×' + veSayi(w) + ')', 'dim');
         log('  Hava yoğunluğu  : ' + veSayi(rho) + ' kg/m³', 'dim');
         log('  Başlangıç hızı  : 0 km/h (sabit — tam gaz kalkış)', 'dim');
-        if(!mass || mass <= 0) log('  ✗ Araç ağırlığı (GVW) girişi gerekli!', 'err');
+        if(!mass || mass <= 0) log('  ✗ Araç ağırlığı (GVW) girişi gerekli. ' + veYon('Araç penceresinde Toplam kütle (GVW) girin.'), 'err');
       } else {
         // Diğer mod alanları
         var mass = parseFloat(vd.mass);

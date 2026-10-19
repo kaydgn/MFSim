@@ -367,7 +367,7 @@ function veSolverRun() {
 
   if(!solverNode) {
     if(typeof showToast === 'function') {
-      showToast('Çözücü bileşeni yok.', 'error');
+      showToast('Çözücü bileşeni yok. ' + veYon('Bileşenler’den ekleyin.'), 'error');
     }
     return;
   }
