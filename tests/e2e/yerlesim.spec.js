@@ -41,11 +41,17 @@
  * taramasında 11. Gerçek eksi "%"den sonra satır kırabiliyor (UAX #14: tire
  * HY, eksi PR sınıfı) — yerleşim ölçeri FEAD çözücüsünde "%|−2,9"u yakaladı.
  *
+ * YÖNLENDİRME YUVALARI da aynı turda (2026-10-19, ARAYÜZ ANLATMAZ'ın dördüncü
+ * türü): adı olmayan düğme ve sebebini ipucunda taşımayan kapalı denetim
+ * (tests/helpers/yon-olcu.js). Araştırma turunda 1 adsız düğme, 12 tekil
+ * sebepsiz kapalı denetim. Yazılmamış cümleyi kaynak taraması göremez.
+ *
  * Node'da koşamaz: jsdom yerleşim hesaplamaz.
  */
 const { test, expect } = require('@playwright/test');
 const { yerlesimKur, yerlesimOzet } = require('../helpers/yerlesim-olcu.js');
 const { tara } = require('../helpers/sayi-olcu.js');
+const { yonOlcKur, yonOzet } = require('../helpers/yon-olcu.js');
 const T = require('./helpers/yuzey-turu');
 
 test.describe.configure({ timeout: 300000 });
@@ -53,7 +59,7 @@ test.describe.configure({ timeout: 300000 });
 // istek route'a uğramaz.
 test.use({ serviceWorkers: 'block' });
 
-function olcucu(page, liste, sayilar) {
+function olcucu(page, liste, sayilar, yonlar) {
   return async (kok, yer) => {
     const r = await page.evaluate((k) => {
       const el = document.querySelector(k);
@@ -61,6 +67,7 @@ function olcucu(page, liste, sayilar) {
       return window.__yerlesim(k);
     }, kok);
     yerlesimOzet(r, yer).forEach((x) => liste.push(x));
+    yonOzet(await page.evaluate((k) => window.__yon(k), kok), yer).forEach((x) => { if (!yonlar.includes(x)) yonlar.push(x); });
     // Sayı yazımı: ölçülen kökün yazısı + bir önceki ölçümden beri tuvale çizilen yazı
     const metin = await page.evaluate((k) => {
       const el = document.querySelector(k), parca = [];
@@ -102,6 +109,25 @@ const MUAF = [
       + '(7–9 birim, 1:1). 1,4 kat büyütme denendi: çizim küçülüyor, üç etiket çifti çakışıyor.' },
 ];
 
+// YÖNLENDİRME YUVALARI — boşluğu bilinen ve onarımı sırada olan (BEKLEYEN,
+// aşaması yazılı) ya da sebebi konumunun kendisi olan (MUAF). İkisi de turunda
+// HÂLÂ gerçekleşiyor mu ölçülür: onarılan BEKLEYEN satırı kalırsa test kırılır.
+const YON_BEKLEYEN = [
+  { tur: 'kabuk', asama: 'E1', re: /^ölçüm içe aktarma · sebepsiz kapalı "Diyagramlara aktar"/ },
+  { tur: 'Araç Performans', asama: 'E1', re: /^sonuçlar · (?:boş )?pano · sebepsiz kapalı "(?:Ayır|Birleştir)"/ },
+  { tur: 'Takoz', asama: 'E1', re: /^sonuçlar · (?:boş )?pano · sebepsiz kapalı "(?:Ayır|Birleştir)"/ },
+  { tur: 'Araç Performans', asama: 'E2', re: /^yavaşlama sihirbazı · adsız düğme/ },
+  { tur: 'Araç Performans', asama: 'E2', re: /^(?:torque-converter|gearbox)(?: ↓\d+)? · sebepsiz kapalı/ },
+  { tur: 'FEAD', asama: 'E3', re: /^fead-report(?: ↓\d+)? · sebepsiz kapalı "Raporu Oluştur ve İndir"/ },
+  { tur: 'FEAD', asama: 'E3', re: /^sihirbaz\/\d+ · sebepsiz kapalı "(?:Sırada öne|Arkaya)"/ },
+  { tur: 'Takoz', asama: 'E4', re: /^mnt-library(?: ↓\d+)? · sebepsiz kapalı "Fabrika"/ },
+  { tur: 'Takoz', asama: 'E4', re: /^mnt-parametric(?: ↓\d+)? · sebepsiz kapalı "Tara"/ },
+];
+const YON_MUAF = [
+  { tur: 'FEAD', re: /^sihirbaz\/1 · sebepsiz kapalı "Geri"/, neden: 'ilk adımda Geri' },
+  { tur: 'Takoz', re: /^sihirbaz(?: \(boş\))?\/1 · sebepsiz kapalı "Geri"/, neden: 'ilk adımda Geri' },
+];
+
 const TURLAR = [
   ['kabuk', 'arac-performans', T.kabukTuru],
   ['Araç Performans', 'arac-performans', T.apTuru],
@@ -111,18 +137,24 @@ const TURLAR = [
 
 for (const [ad, modul, tur] of TURLAR) {
   test(`${ad}: yazı kutusuna sığıyor — kesik, kırık sözcük, yatay kaydırma, küçük yazı, yetim, yapışkan şerit, çizimde çakışma ve çizgi yok; sayılar Türkçe`, async ({ page }) => {
-    const liste = [], sayilar = [];
-    const olc = olcucu(page, liste, sayilar);
+    const liste = [], sayilar = [], yonlar = [];
+    const olc = olcucu(page, liste, sayilar, yonlar);
     await page.addInitScript(() => {
       window.__sayiFill = [];
       const f = CanvasRenderingContext2D.prototype.fillText;
       CanvasRenderingContext2D.prototype.fillText = function (s) { window.__sayiFill.push(String(s)); return f.apply(this, arguments); };
     });
-    await T.bootApp(page, { modul, kur: yerlesimKur, w: 1920, h: 952,
+    await T.bootApp(page, { modul, kur: async (p) => { await yerlesimKur(p); await yonOlcKur(p); }, w: 1920, h: 952,
       karsilama: ad === 'kabuk' ? () => olc('#ve-module-overlay', 'karşılama') : null });
     await tur(page, olc);
-    if (process.env.YERLESIM_DOKUM) require('fs').writeFileSync(process.env.YERLESIM_DOKUM + '-' + ad.replace(/\s+/g, '_') + '.txt', liste.join('\n'));
+    if (process.env.YERLESIM_DOKUM) {
+      require('fs').writeFileSync(process.env.YERLESIM_DOKUM + '-' + ad.replace(/\s+/g, '_') + '.txt', liste.join('\n'));
+      require('fs').writeFileSync(process.env.YERLESIM_DOKUM + '-' + ad.replace(/\s+/g, '_') + '-yon.txt', yonlar.join('\n'));
+    }
     expect.soft(sayilar).toEqual([]);   // ayrı liste: yerleşim düşse de sayı bulgusu basılır
+    const yonBilinen = YON_BEKLEYEN.concat(YON_MUAF).filter((m) => m.tur === ad);
+    expect.soft(yonlar.filter((x) => !yonBilinen.some((m) => m.re.test(x)))).toEqual([]);
+    expect.soft(yonBilinen.filter((m) => !yonlar.some((x) => m.re.test(x))).map((m) => `eskidi: ${m.re}`)).toEqual([]);
     const muaf = MUAF.filter((m) => m.tur === ad);
     expect(liste.filter((x) => !muaf.some((m) => m.re.test(x)))).toEqual([]);
     muaf.forEach((m) => expect(`${m.neden.slice(0, 40)}: ${liste.some((x) => m.re.test(x))}`).toBe(`${m.neden.slice(0, 40)}: true`));

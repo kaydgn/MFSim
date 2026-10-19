@@ -76,11 +76,13 @@ describe('FEAD araçları penceresi', () => {
 
 // ── Aşama 4 · sihirbaz, STEP okuyucusu, 3B görüntüleyici ─────────────────
 const parser = require('@babel/parser');
+const { yonYuvasi } = require('../helpers/yon-yuvasi.js');
 function dizgeler(dosya) {
   const ast = parser.parse(oku(dosya), { sourceType: 'script', errorRecovery: true });
   const out = [];
   (function yuru(n) {
     if (!n || typeof n.type !== 'string') return;
+    if (yonYuvasi(n)) return;           // yönlendirme yuvası (veYon) — biçimini metin-dili ölçer
     if (n.type === 'StringLiteral') out.push({ satir: n.loc.start.line, metin: n.value });
     for (const k in n) {
       if (k === 'loc' || k === 'start' || k === 'end') continue;

@@ -170,6 +170,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `tools/ikonlar.js` + `tools/ikonlar.json` — **`css/icons.css` ÜRETECİ** (ad → SVG gövdesi;
   kabuk üreteçte tek yerde). `css/icons.css` elle düzenlenmez: `node tools/ikonlar.js`.
   `tools/ikon-dili.js` — ikon işi gören sembol karakterinin tarayıcısı (karar 10·B).
+- `js/yon.js` — **yönlendirme yuvası** (`veYon`, ARAYÜZ ANLATMAZ'ın dördüncü
+  türü): metni değiştirmez, tarayıcı yuvayı çağrıdan tanır ve biçimini ölçer.
 - `js/sayi.js` — **tek sayı yazıcısı** (`veSayi` · `veSayiOku`, karar 7·C);
   `tools/sayi-dili.js` işaretsiz `toFixed`'in tarayıcısı. `js/sayi-alan.js` —
   **Türkçe sayı alanı**: `inputmode="decimal"` alanı 1716,25 gösterir, `.value`
@@ -296,7 +298,7 @@ uyarlaması sırasındaki tek işaret hatası "testten geçen ama yanlış" bir 
 
 ## Proje geneli kurallar
 
-### ARAYÜZ ANLATMAZ — ekranda ve belgede yalnız ad, veri, durum
+### ARAYÜZ ANLATMAZ — ekranda ve belgede yalnız ad, veri, durum, yönlendirme
 
 Kullanıcı kararı (2026-10-16): *"Pencerede hemen hemen her yerde birer
 açıklama var … programa AŞIRI BİR AMATÖRLÜK KATIYOR."* Aynı şikâyet dördüncü
@@ -305,23 +307,41 @@ kuralına yazıldı ve kalıp her yeni ekranda geri geldi; bu kural programın
 tamamı içindir: kabuk, pencereler, sihirbazlar, Sonuçlar, raporlar, kılavuz,
 görüntüleyici ve CAN Çözümleyici.
 
-Ekranda ve indirilen ya da basılan belgede duran her metin üç türden biridir:
+Ekranda ve indirilen ya da basılan belgede duran her metin dört türden biridir:
 **ad** (denetimin, bölümün, sütunun adı), **veri** (sayı, birim, künye,
 kaynak), **durum** (hata, uyarı, eksik girdi, yapılamayan işlemin kısa
-sebebi). Başka hiçbir şey yazılmaz:
+sebebi) ve yalnız yuvasında **yönlendirme** (bir sonraki adımı söyleyen TEK
+cümle, aşağıda). Başka hiçbir şey yazılmaz:
 
 | Yazılmaz | Örnek |
 |----------|-------|
 | Açıklama: denetimin ne yaptığı, sayfanın nasıl çalıştığı | "Seçtiğin kapı modeli kurar ve bu sayfa çekilir" |
-| Tarif: kullanıcıya adım söylemek | "Kayış Yolu kartını boş kur; kasnakları … ekle" |
+| Tarif: yuvası dışında adım söylemek ya da birden çok adım | "Kayış Yolu kartını boş kur; kasnakları … ekle" |
 | Sohbet sesi: başlayalım · seçtiğin · sen · istersen · önerilen · lütfen | "Nereden başlayalım?" |
 | Kendini anlatma: bu sayfa / pencere / tablo · aşağıdaki · burada | "Sayısal karşılığı aşağıdaki tablodadır" |
 | Tasarım gerekçesi: programın neden böyle davrandığı | raporda "Neden ayrıca sorulmuyor: …" |
 | Geliştirme dili: kapı · çekilir · ölçüldü · bayat · büyük harfle vurgu | "Bu bir SEÇİCİ değil, bir KAPIDIR" |
 | Tekrar: ekranda zaten yazanı ikinci kez söylemek | aynı sayfada iki kez "bu sayfa çekilir" |
 
-- **Durum metni olanı söyler, tarif vermez:** "Ara kademenin çapları eksik."
-  Arkasına "… girin" ya da "… ile yeniden çözün" eklenmez.
+- **Durum metni olanı söyler; çare bariz değilse arkasına TEK yönlendirme
+  gelir:** "Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün." Çare
+  ekranda zaten görünüyorsa (alanın kendisi işaretli) yazılmaz.
+- **YÖNLENDİRME YALNIZ YUVASINDA** (kullanıcı kararı 2026-10-19: *"daha basit,
+  daha yönlendirici ve açıklama cümle yapısına uygun şeyler"*). Temizlik bazı
+  yüzeyleri yolsuz bıraktı (araştırma turu: 74 tekil boş durum, 12 sebepsiz
+  kapalı denetim, 1 adsız düğme). Beş yuva: **boş durum** (nasıl başlanır) ·
+  **durum + çare** · **gizli etkileşim** (sağ tık, sürükle-bırak) · **kapalı
+  denetimin sebebi** (`title`'da) · **adsız denetimin adı**. Biçim: tek cümle,
+  ≤ 10 sözcük, nokta, "-in/-ın/-un/-ün" emri; "-ınız", "lütfen", çıplak
+  "tıklayın" ve yön sözcüğü (sağdaki, aşağıdaki) yok — sürükle-bırak alanında
+  "buraya bırakın" olur. Önce yer, sonra eylem; denetim ekrandaki adıyla
+  ("Veri Gezgini’nden sinyal seçin."). Yüzey başına tek yönlendirme; ipucu
+  görünen adı tekrarlamaz. **Yazım:** JS'te `veYon('…')` (`js/yon.js`, metni
+  değiştirmez — tarayıcı yuvayı çağrıdan tanır), CAN Çözümleyici'de `cdbYon`,
+  statik HTML'de `data-ve-yon`; çağrısız emir cümlesi `tarif` sayılır. Kapı:
+  `metin-dili.test.js` → *YÖNLENDİRME* (biçim) + `yerlesim.spec.js` (adsız
+  düğme, sebepsiz kapalı denetim — `tests/helpers/yon-olcu.js`). Kaynaklar ve
+  yuvaların tablosu `docs/decisions/ortak-yuzeyler.md` → *Yönlendirme yuvası*.
 - **Açıklamanın tek yeri kılavuzdur** (`js/guide-*.js`). Orada da sohbet sesi,
   geliştirme dili ve tasarım gerekçesi yoktur.
 - **Belgede** (rapor, A3 pano, TXT) mühendislik içeriği kalır: yöntem,
@@ -331,7 +351,9 @@ sebebi). Başka hiçbir şey yazılmaz:
   `alt` ya da `aciklama` alanı açarsa her kullanan onu doldurur: başlangıç
   kitinin beş yuvası iki modülde 15 açıklama üretti.
 - **Silinen bir bloğun yerine yönlendirme cümlesi konmaz.** 2026-08-31'de
-  "Katalog Önerisi" kalkınca yerine böyle bir satır kondu.
+  "Katalog Önerisi" kalkınca yerine böyle bir satır kondu. Yönlendirme
+  yuvanın içeriğidir, kalkan bir bölümün yerini tutan not değil: yuvası yoksa
+  yazılmaz.
 - **Kapı:** `tests/unit/metin-dili.test.js` (sözlüğün görmediği işaretsiz
   sınıflar — tekrar bildirimi, adı tekrarlayan ipucu — aşamanın kendi
   kapısında: kabuk `kabuk-metin.test.js`). Kural ve sözlük tek yerde:
@@ -667,11 +689,11 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
-dosyası olarak dağıtılıyor. `viewer/js/` altındaki ON dosya `js/`'ten
+dosyası olarak dağıtılıyor. `viewer/js/` altındaki ON BİR dosya `js/`'ten
 **birebir kopya** (`trace-view.js`'te iki işaretli fark hariç). Bu yüzden:
 
 **İçe aktarma / şerit diyagramı / tablo tarafında bir düzeltme yaparsan
-(`sayi.js`, `sayi-alan.js`, `xlsx-read.js`, `measure-import*.js`, `measure-core.js`,
+(`sayi.js`, `sayi-alan.js`, `yon.js`, `xlsx-read.js`, `measure-import*.js`, `measure-core.js`,
 `signal-tree.js`, `trace-view.js`, `measure-dropzone.js`, `sonuc-tablo.js`), düzeltmeyi
 `viewer/js/` altına da taşı:**
 
@@ -919,7 +941,7 @@ npm run test:urun           # CI'nın e2e-urun işinin kendisi (liste package.js
 npm test                    # tüm birim testleri (sessiz) — 96 sn
 npm run test:ci             # tüm birim testleri (--verbose --ci) — CI logları için
 npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
-npm run sync:viewer         # js/ → viewer/js/ (yedi kopya + iki yerel fark)
+npm run sync:viewer         # js/ → viewer/js/ (on kopya + iki yerel fark)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
 npm run build:can           # MFSim_CAN_Cozumleyici.html üret (CAN Çözümleyici)
 npm run build:all           # üçü birden (monolit + görüntüleyici + CAN Çözümleyici)

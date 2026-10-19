@@ -2374,3 +2374,60 @@ sonucu söyler, katman ve ön ayar açıklama yuvası taşımaz, araç düğmesi
 ipucu ad). Tarayıcı etkileşim ipucunu ("tıkla: …", "sürükle: …") kısayol
 penceresinin dilinde bir ad sayar — tarif ve uzunluk sayımından düşer
 (`ETKILESIM`, `tools/metin-dili.js`).
+
+## Yönlendirme yuvası — dördüncü metin türü (2026-10-19)
+
+**Hüküm:** ad, veri ve durumun yanında dördüncü bir tür durur: bir sonraki
+adımı söyleyen TEK cümle. Yalnız beş yuvada yazılır, yazımı işaretlidir
+(`veYon` · `cdbYon` · `data-ve-yon`) ve biçimi ölçülür. Kural metni
+CLAUDE.md → *ARAYÜZ ANLATMAZ*.
+
+**Gerekçe:** kullanıcı (*"Açıklamaları kaldırınca da bazı yerlerde olmamış …
+daha basit, daha yönlendirici ve açıklama cümle yapısına uygun şeyler"*).
+Temizlik tarifi yasaklarken çareyi de götürdü: araştırma turu 173 noktada 74
+tekil boş durum, 12 sebepsiz kapalı denetim ve 1 adsız düğme ölçtü; boş
+tuvalde hiç metin yoktu. Kaynaklar aynı yönde: NN/g (hata iletisi — *"Merely
+stating the problem is also not enough"*), GOV.UK (*"Describe what has
+happened and tell them how to fix it"*), Microsoft Türkçe stil kılavuzu
+("-ın" emri, "-ınız" değil; "Seçin", "Tıklayın" değil).
+
+| Yuva | Ne söyler | Örnek |
+|------|-----------|-------|
+| Boş durum | nasıl başlanır | "Ölçüm penceresi boş · Veri Gezgini’nden sinyal seçin." |
+| Durum + çare | çare bariz değilse tek düzeltme | "Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün." |
+| Gizli etkileşim | sağ tık, sürükle-bırak, tık | "Rakım profilinde sağ tıklayarak ekleyin." |
+| Kapalı denetim | sebebi, `title`'da | "En az iki şerit gerekli." |
+| Adsız denetim | erişilebilir ad (`aria-label` + `title`) | "Satırı sil" |
+
+**Biçim** (`tools/metin-dili.js` → `yonBicim`): tek cümle, ≤ 10 sözcük,
+nokta, "-in/-ın/-un/-ün" emri; "-ınız", "lütfen", çıplak "tıklayın" yok
+("sağ tıklayarak" olur); yön sözcüğü yok, sürükle-bırak alanında "buraya
+bırakın" olur. Önce yer, sonra eylem; denetim ekrandaki adıyla. Yüzey başına
+tek yönlendirme; ipucu görünen adı tekrarlamaz. Kısayol penceresinin
+dilindeki etkileşim ipucu ("Tekerlek: yakınlaştır") ad sayılmaya devam eder.
+
+**Kararlar** (kullanıcı, *"Sen ne dersen o"*): D1 dördüncü tür · D2 boş durum
+başlangıcı söyler · D3 boş tuval kısayol satırıyla · D4 emir "-in/-ın" · D5
+kapalı denetimin sebebi ipucunda · D6 Araç Performans Parametrik Analiz'in
+ölü parametre ekleme yolu ayrı PR'da onarılır.
+
+**Kapı:** biçim `tests/unit/metin-dili.test.js` → *YÖNLENDİRME* (yuvayı
+çağrıdan ve `data-ve-yon`dan tanır; sohbet, kendini anlatma ve gerekçe
+yasakları yuvada da geçerli; çağrısız aynı cümle `tarif`); aşama kapılarının
+tarif ve bilgi bildirimi taramaları yuvayı atlar (`tests/helpers/yon-yuvasi.js`).
+Ekrandaki boşluk
+`tests/e2e/yerlesim.spec.js` → `tests/helpers/yon-olcu.js` (adsız düğme ·
+sebepsiz kapalı denetim): `YON_BEKLEYEN` aşamasının PR'ında boşalır,
+`YON_MUAF` sınırdaki kapalı gezinme düğmesidir.
+
+**Aşamalar** (araştırma: https://claude.ai/artifact/9Ek76YS5tuJu1e365bEJGt,
+63 kart; her aşama modülün öteki boş durumlarını ve iletilerini de süpürür):
+
+| # | Aşama | Kart |
+|---|-------|------|
+| E0 | Kural, `veYon`, tarayıcı profili, tur kapısı | — |
+| E1 | Kabuk ve Sonuçlar | 11 |
+| E2 | Araç Performans | 20 |
+| E3 | FEAD | 17 |
+| E4 | Takoz | 9 |
+| E5 | Ölçüm Görüntüleyici ve CAN Çözümleyici | 6 |

@@ -77,6 +77,13 @@ global.loadCanSource = function loadCanSource(file) {
   global.veSayiOku = SY.veSayiOku;
 }
 
+// YÖNLENDİRME YUVASI (js/yon.js) GERÇEK sürümüyle — aynı gerekçe: yükleyiciden
+// önce yüklenir, bir sonraki adımı yazan her modül onu çağırır.
+{
+  const YN = require(path.join(JS_DIR, 'yon.js'));
+  global.veYon = YN.veYon;
+}
+
 // BİLEŞEN PENCERESİNİN KABUĞU (js/pencere-kabuk.js) GERÇEK sürümüyle — aynı
 // gerekçe: FEAD ve Takoz pencerelerinin TEK üreticisi; testte eval edilen bir
 // modül onu göremeseydi ReferenceError alırdı, bir stub ise kabuk kapılarını

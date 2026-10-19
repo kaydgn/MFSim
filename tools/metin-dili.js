@@ -19,6 +19,13 @@
  *   gelistirme ölçüldü · kapı · çekilir · sessizce · cümle içinde BÜYÜK HARFLE vurgu
  *   tarif      ≥ 4 sözcüklü metinde emir kipi (ekle · seçin · sürükle · oku)
  *   uzun       ≥ ESIK sözcüklü düz yazı
+ *   yon        yönlendirme yuvasındaki metnin BİÇİMİ bozuk (yonBicim)
+ *
+ * YÖNLENDİRME (dördüncü tür, kullanıcı kararı 2026-10-19): bir sonraki adımı
+ * söyleyen tek cümle yalnız YUVASINDA yazılır — JS'te veYon('…') (CAN'da
+ * cdbYon) çağrısının içinde, HTML'de data-ve-yon taşıyan öğede. Yuvadaki
+ * metin tarif sayılmaz; biçimi ölçülür: tek cümle, en çok YON_ESIK sözcük,
+ * "-in/-ın" emriyle biter; "-ınız", düz "tıklayın", sohbet, yön sözcüğü yok.
  *
  * PROFİL: kılavuz (js/guide-*.js) açıklamanın yeridir — orada yalnız sohbet,
  * gerekçe ve geliştirme dili sayılır. Belge gövdesi (sınırı ikon kapısıyla
@@ -102,8 +109,28 @@ const AD_BUYUK = new Set(['KİRPİ', 'ŞİMŞEK', 'GÜÇ', 'SİPER']);
 const PROFIL_ISARET = {
   arayuz: ['sohbet', 'kendi', 'gerekce', 'gelistirme', 'tarif', 'uzun'],
   belge: ['sohbet', 'gerekce', 'gelistirme', 'tarif'],
-  kilavuz: ['sohbet', 'gerekce', 'gelistirme']
+  kilavuz: ['sohbet', 'gerekce', 'gelistirme'],
+  yon: ['sohbet', 'kendi', 'gerekce', 'gelistirme', 'yon']
 };
+
+// ── YÖNLENDİRME YUVASI ─────────────────────────────────────────────────────
+const YON_CAGRI = /^(?:veYon|cdbYon)$/;
+const YON_ESIK = 10;
+// Biçimin bozulduğu yerler; boş liste = geçer. Emir son sözcükte aranır
+// ("-in/-ın/-un/-ün"); "-ınız" emrin kibar biçimi, "tıklayın" girdiye bağlı
+// genel fiil (girdinin kendisi bilgi ise "sağ tıklayarak" yazılır).
+function yonBicim(metin) {
+  const t = String(metin).trim(), out = [];
+  if (!/\.$/.test(t)) out.push('nokta');
+  if (/[.!?…]\s+\p{Lu}/u.test(t.slice(0, -1))) out.push('tek-cumle');
+  if (sozcukSay(t) > YON_ESIK) out.push('uzun');
+  const kucuk = t.toLocaleLowerCase('tr');
+  const son = (kucuk.replace(/[.\s]+$/, '').match(/[\p{L}]+$/u) || [''])[0];
+  if (!/\p{L}[ıiuü]n$/u.test(son)) out.push('emir');
+  if (/(?<![\p{L}])\p{L}+[ıiuü]n[ıiuü]z(?![\p{L}])/u.test(kucuk)) out.push('iniz');
+  if (/(?<![\p{L}])tıklayın(?![\p{L}])/u.test(kucuk)) out.push('tiklayin');
+  return out;
+}
 
 function sozcukSay(t) {
   return t.split(/[\s/]+/).map((p) => p.replace(/^[(“"'‘«]+|[.,;:!?…)”"'’»]+$/g, ''))
@@ -122,6 +149,7 @@ function isaretle(metin, profil) {
   const n = sozcukSay(metin), ns = sozcukSay(sade), out = [];
   for (const k of PROFIL_ISARET[profil]) {
     if (k === 'uzun') { if (ns >= ESIK) out.push(k); continue; }
+    if (k === 'yon') { if (yonBicim(metin).length) out.push(k); continue; }
     if (k === 'tarif' && ns < 4) continue;
     const res = SOZLUK[k];
     const hedef = (k === 'tarif') ? sade : kucuk;
@@ -227,6 +255,7 @@ function baglamBul(n, ust) {
   if (!ust) return { baglam: 'metin' };
   if (ust.type === 'CallExpression') {
     const ad = cagriAdi(ust.callee);
+    if (YON_CAGRI.test(ad)) return { baglam: 'yon', cagri: ad };
     if (BILDIRIM.test(ad)) return { baglam: 'bildirim', cagri: ad };
     if (ad === 'setAttribute' && ust.arguments[1] === n && ust.arguments[0] && ust.arguments[0].type === 'StringLiteral')
       return { baglam: ust.arguments[0].value.toLowerCase() };
@@ -276,8 +305,9 @@ function jsMetinleri(dosya, ham) {
     if (!n || typeof n.type !== 'string') return;
     if (metinDugumu(n) && !(ust && ust.type === 'BinaryExpression' && ust.operator === '+' && metinDugumu(ust))) {
       if (dizeVar(n) && !kodMu(n, ust, ata)) {
-        const profil = kilavuz ? 'kilavuz' : belge(n.start) ? 'belge' : 'arayuz';
-        out.push(...ogeler(dosya, zincir(n), n.loc.start.line, profil, baglamBul(n, ust)));
+        const kok = baglamBul(n, ust);
+        const profil = kok.baglam === 'yon' ? 'yon' : kilavuz ? 'kilavuz' : belge(n.start) ? 'belge' : 'arayuz';
+        out.push(...ogeler(dosya, zincir(n), n.loc.start.line, profil, kok));
       }
     }
     for (const k of Object.keys(n)) {
@@ -308,8 +338,12 @@ function htmlMetinleri(dosya, ham) {
     const metin = sade(m[1]);
     const n = sozcukSay(metin);
     if (!n) continue;
-    out.push({ id: kimlik(dosya, metin, 'metin'), dosya, satir: satirNo(m.index + 1), profil: 'arayuz', baglam: 'metin',
-      sozcuk: n, metin, isaret: isaretle(metin, 'arayuz') });
+    // Yönlendirme yuvası: metni açan etiket data-ve-yon taşıyor.
+    const etiket = ici.slice(ici.lastIndexOf('<', m.index), m.index + 1);
+    const yon = /^<[a-zA-Z][^>]*\sdata-ve-yon\b/.test(etiket);
+    const baglam = yon ? 'yon' : 'metin', profil = yon ? 'yon' : 'arayuz';
+    out.push({ id: kimlik(dosya, metin, baglam), dosya, satir: satirNo(m.index + 1), profil, baglam,
+      sozcuk: n, metin, isaret: isaretle(metin, profil) });
   }
   const etiketRe = /<[a-zA-Z][^<>]*>/g;
   while ((m = etiketRe.exec(ici))) {
@@ -381,7 +415,7 @@ function tabanYaz(liste, kabul) {
 }
 
 module.exports = { kapsam, metinler, isaretliler, isaretle, sozcukSay, bolutle, tabanOku, tabanYaz,
-  SOZLUK, PROFIL_ISARET, ESIK, ISTISNA, TABAN, KILAVUZ };
+  yonBicim, SOZLUK, PROFIL_ISARET, ESIK, YON_ESIK, YON_CAGRI, ISTISNA, TABAN, KILAVUZ };
 
 if (require.main === module) {
   const arg = process.argv.slice(2);

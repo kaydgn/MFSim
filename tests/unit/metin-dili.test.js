@@ -118,6 +118,95 @@ describe('çıkarma', () => {
   });
 });
 
+describe('YÖNLENDİRME — dördüncü tür, yalnız yuvasında (kullanıcı kararı 2026-10-19)', () => {
+  const gecici = (ad, icerik) => {
+    const f = path.join('tests/fixtures', '_metin-dili-yon-' + ad);
+    fs.writeFileSync(path.join(KOK, f), icerik);
+    return f;
+  };
+  afterAll(() => {
+    fs.readdirSync(path.join(KOK, 'tests/fixtures')).filter((f) => f.startsWith('_metin-dili-yon-'))
+      .forEach((f) => fs.unlinkSync(path.join(KOK, 'tests/fixtures', f)));
+  });
+
+  test.each([
+    'Veri Gezgini’nden sinyal seçin.',
+    'Çözücü penceresinde Hesapla ile çözün.',
+    'Rakım profilinde sağ tıklayarak ekleyin.',
+    'STEP dosyasını seçin ya da buraya bırakın.',
+    'Tabloyu CSV ile indirin.',
+    'Dönüş yönünü çevirin ya da gergiyi sürücünün önüne alın.'
+  ])('%p biçime uyar', (metin) => {
+    expect(T.yonBicim(metin)).toEqual([]);
+    expect(T.isaretle(metin, 'yon')).toEqual([]);
+  });
+
+  test.each([
+    ['Hesapla ile çözün', 'nokta'],
+    ['Model değişti. Hesapla ile yeniden çözün.', 'tek-cumle'],
+    ['Çözücü penceresini açıp Hesapla düğmesiyle modeli yeniden ve baştan sona kadar çözün.', 'uzun'],
+    ['Hesapla ile çözülür.', 'emir'],
+    ['Veri Gezgini’nden sinyal seçiniz.', 'iniz'],
+    ['Kaydet düğmesine tıklayın.', 'tiklayin']
+  ])('%p → %s', (metin, neden) => {
+    expect(T.yonBicim(metin)).toContain(neden);
+    expect(T.isaretle(metin, 'yon')).toContain('yon');
+  });
+
+  test.each([
+    ['Lütfen Hesapla ile çözün.', 'sohbet'],
+    ['Sağdaki listeden sinyal seçin.', 'kendi'],
+    ['Aşağıdaki tablodan kasnak seçin.', 'kendi'],
+    ['Yeniden çözün, çünkü sonuç ESKİ modele ait.', 'gerekce']
+  ])('yuvada da yasak: %p → %s', (metin, isaret) => {
+    expect(T.isaretle(metin, 'yon')).toContain(isaret);
+  });
+
+  test('veYon çağrısı yuvadır: metin "yon" bağlamında, tarif sayılmaz; çağrısız aynı cümle tariftir', () => {
+    const f = gecici('a.js', [
+      "showToast('Rapor verisi yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warning');",
+      "showToast('Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün.', 'warning');",
+      "h += '<div class=\"bos\">' + cdbYon('Sinyal Gezgini’nden bir sinyal işaretleyin.') + '</div>';"
+    ].join('\n'));
+    const m = T.metinler(f).map((x) => [x.baglam, x.profil, x.metin, x.isaret]);
+    expect(m).toEqual(expect.arrayContaining([
+      ['bildirim', 'arayuz', 'Rapor verisi yok. ‹›', []],
+      ['yon', 'yon', 'Çözücü penceresinde Hesapla ile çözün.', []],
+      ['yon', 'yon', 'Sinyal Gezgini’nden bir sinyal işaretleyin.', []]
+    ]));
+    const cagrisiz = m.find((x) => x[2] === 'Rapor verisi yok. Çözücü penceresinde Hesapla ile çözün.');
+    expect(cagrisiz[3]).toContain('tarif');
+  });
+
+  test('HTML yuvası data-ve-yon: öğenin metni "yon" bağlamında ölçülür', () => {
+    const f = gecici('b.html', '<div class="bos"><div class="t">Henüz çizili sinyal yok</div>'
+      + '<div class="s" data-ve-yon>Sinyal Gezgini’nden bir sinyal işaretleyin.</div>'
+      + '<div class="s" data-ve-yon>Lütfen bir sinyal işaretleyiniz</div></div>');
+    const m = T.metinler(f).map((x) => [x.baglam, x.metin, x.isaret]);
+    expect(m).toEqual([
+      ['metin', 'Henüz çizili sinyal yok', []],
+      ['yon', 'Sinyal Gezgini’nden bir sinyal işaretleyin.', []],
+      ['yon', 'Lütfen bir sinyal işaretleyiniz', expect.arrayContaining(['sohbet', 'yon'])]
+    ]);
+  });
+
+  test('aşama kapıları yuvayı tanır: tarif taraması ve bilgi bildirimi onu dışarıda bırakır', () => {
+    const { yonYuvasi } = require('../helpers/yon-yuvasi.js');
+    const { metinleri } = require('../helpers/bildirim-olcu.js');
+    const ifade = (k) => require('@babel/parser').parseExpression(k);
+    expect(yonYuvasi(ifade("veYon('Tabloyu CSV ile indirin.')"))).toBe(true);
+    expect(yonYuvasi(ifade("cdbYon('Tanı sekmesini açın.')"))).toBe(true);
+    expect(yonYuvasi(ifade("showToast('Tabloyu CSV ile indirin.')"))).toBe(false);
+    expect(metinleri(ifade("'Pano kullanılamıyor. ' + veYon('Tabloyu CSV ile indirin.')")).map((m) => m.trim()))
+      .toEqual(['Pano kullanılamıyor.']);
+  });
+
+  test('veYon metni değiştirmez (js/yon.js)', () => {
+    const { veYon } = require('../../js/yon.js');
+    expect(veYon('Tabloyu CSV ile indirin.')).toBe('Tabloyu CSV ile indirin.');
+  });
+});
+
 describe('kapsam', () => {
   test('istisna listesindeki her dosya diskte var; js/ altındaki öteki her dosya kapsamda', () => {
     Object.keys(T.ISTISNA).forEach((f) => expect(fs.existsSync(path.join(KOK, f))).toBe(true));
