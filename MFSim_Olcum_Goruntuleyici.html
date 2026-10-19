@@ -11769,6 +11769,23 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-fw-tbl-stp.ve-mw-tbl-stp th:nth-child(1), .ve-fw-tbl-stp.ve-mw-tbl-stp td:nth-child(1){ width:38%; }
 .ve-fw-tbl-stp.ve-mw-tbl-stp th:nth-child(2), .ve-fw-tbl-stp.ve-mw-tbl-stp td:nth-child(2){ width:28%; }
 .ve-fw-tbl-stp.ve-mw-tbl-stp th:nth-child(3), .ve-fw-tbl-stp.ve-mw-tbl-stp td:nth-child(3){ width:34%; font-variant-numeric:tabular-nums; }
+/* AĞAÇ DAL DAL (_mwStpSatirlar): düğmenin ikonu dalın durumu; yaprakta aynı
+   enlikte boşluk — adlar hizalı kalır. "… düğüm daha" dalın sonraki sayfası. */
+.ve-mw-stp-ac, .ve-mw-stp-yaprak{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:16px; height:16px; margin:0 3px 0 -3px; padding:0; vertical-align:-3px;
+}
+.ve-mw-stp-ac{ border:none; background:none; color:var(--text-muted); cursor:pointer; border-radius:var(--radius-xs); }
+.ve-mw-stp-ac:hover{ color:var(--ink-accent); }
+.ve-mw-stp-ac:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-mw-stp-ac .mf-ico{ width:12px; height:12px; }
+.ve-mw-stp-dahabtn{
+  display:inline-flex; align-items:center; gap:4px; padding:1px 0; cursor:pointer;
+  font:inherit; font-size:var(--fs-tiny); color:var(--ink-accent); background:none; border:none;
+}
+.ve-mw-stp-dahabtn .mf-ico{ width:12px; height:12px; }
+.ve-mw-stp-dahabtn:hover{ text-decoration:underline; }
+.ve-mw-stp-dahabtn:focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-xs); }
 .ve-mw-tbl-kutle th:nth-child(1), .ve-mw-tbl-kutle td:nth-child(1){ width:36%; }
 .ve-mw-tbl-kutle th:nth-child(2), .ve-mw-tbl-kutle td:nth-child(2){ width:18%; text-align:right; }
 .ve-mw-tbl-kutle th:nth-child(3), .ve-mw-tbl-kutle td:nth-child(3){ width:22%; }

@@ -210,7 +210,9 @@ function _mw3bAgKur(){
     _mw3bSonucKur();
     _mw3bCiz();
   }
-  adim();
+  // İlk dilim de ayrı görevde: açılışın görevi (bağlam, sahne, panel) ile tek
+  // görevde 50 ms'yi aşıyordu (ölçüldü).
+  V.kuyrukZaman = setTimeout(adim, 0);
 }
 function _mw3bParcaEkle(i, a){
   var V = _mw3b;
