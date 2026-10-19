@@ -70,9 +70,9 @@ describe('TEK YOL — taramanın ölçtüğü, Çözücü\'nün bulduğu', () =>
   const topo = modelKur('kamyon');
   const { Hz, O, S } = tara({ id: 'pa', type: 'mnt-parametric', data: {} });
 
-  test('kamyon: 2 grup × 27 tip = 729 kombinasyon taranıyor', () => {
+  test('kamyon: 2 grup × 24 tip = 576 kombinasyon taranıyor', () => {
     expect(Hz.M.G.map((g) => g.ad)).toEqual(['Sağ/Sol Ön Takoz', 'Sağ/Sol Arka Takoz']);
-    expect(S.N).toBe(729);
+    expect(S.N).toBe(576);
     expect(S.hata).toBe(0);
   });
 
@@ -97,12 +97,12 @@ describe('TEK YOL — taramanın ölçtüğü, Çözücü\'nün bulduğu', () =>
     });
   });
 
-  test('AYNI HÜKÜM: Kriter 1 · 1a · 1b · 2 taramada ve raporun uygunluk tablosunda aynı (37 kombinasyon)', () => {
+  test('AYNI HÜKÜM: Kriter 1 · 1a · 1b · 2 taramada ve raporun uygunluk tablosunda aynı (36 kombinasyon)', () => {
     const NO = { k1: '1', k1a: '1a', k1b: '1b', k2: '2' };
     const c = K.baglam(Hz.ctx), A = Hz.aday;
     const say = { gecen: 0, kalan: 0 };
-    for (let i = 0; i < 729; i += 20) {
-      const tipler = [A[Math.floor(i / 27)].key, A[i % 27].key];
+    for (let i = 0; i < 576; i += 16) {
+      const tipler = [A[Math.floor(i / 24)].key, A[i % 24].key];
       const tarama = K.degerlendir(O.olc1(tipler), c, 1).sonuc;
       const R = uygulaCoz(topo, Hz, tipler);
       const U = rp.veMntUygunluk(R, rp.veMntRaporOpts());
@@ -238,7 +238,7 @@ describe('PENCERE — yalnız girdi', () => {
     expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('aria-label'))).toEqual(['Gruplar', 'Adaylar', 'Kısıtlar']);
     expect(d.querySelector('.ve-fp-tab')).toBeNull();                       // tek gövde (2026-10-16)
     expect(d.querySelector('.ve-fp-side .ve-fp-sect b').textContent).toBe('Katalogdan seçim');
-    expect([...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value)).toEqual(['2', '27', '729']);
+    expect([...d.querySelectorAll('.ve-fp-side input')].map((i) => i.value)).toEqual(['2', '24', '576']);
     expect(d.querySelector('.ve-fp-side .ve-fp-durum').textContent).toBe('Taramaya hazır');
     expect(d.querySelectorAll('.ve-fp-solve').length).toBe(1);
     expect(d.querySelector('[data-cozum-durumu]')).toBeNull();
@@ -248,12 +248,12 @@ describe('PENCERE — yalnız girdi', () => {
     modelKur('kamyon');
     const n = node();
     P.veMntParamSabit('pa', 1, true);
-    expect(P._mntParamHazirlik(n).N).toBe(27);
+    expect(P._mntParamHazirlik(n).N).toBe(24);
     P.veMntParamSabit('pa', 1, false);
     expect(n.data.sabit).toBeUndefined();
     P.veMntParamAday('pa', 'TK035', false);
     P.veMntParamAday('pa', 'TK040', false);
-    expect(P._mntParamHazirlik(n).N).toBe(625);
+    expect(P._mntParamHazirlik(n).N).toBe(484);
     P.veMntParamAdayHepsi('pa', true);
     expect(n.data.haric).toBeUndefined();
     P.veMntParamAdayHepsi('pa', false);
@@ -305,7 +305,8 @@ describe('PENCERE — yalnız girdi', () => {
   // kırpılıyordu). Ad hücrenin yazısıdır (ipucu değil), sarar; sondaki
   // parantezli künye tek blok, kod bölünmez. Satır kırılımı tarayıcıda
   // ölçülür (mount-param-sonuc.spec.js → MODELE UYGULA · yerleşim turu).
-  test('AD SARAR: ad hücresi tam adı taşır, ipucu yok; künye tek blok; tireli kod ve önek + numara bölünmez', () => {
+  // Sertlik de bölünmez (2026-10-19, resmi adlar: "Cone 38 60 ShA (AMC 137963)").
+  test('AD SARAR: ad hücresi tam adı taşır, ipucu yok; künye tek blok; tireli kod, önek + numara ve sertlik bölünmez', () => {
     modelKur('asfat');
     const d = dom(P.getMntParamPropertiesHTML(node()));
     const lib = cp.veMntGetLibraryMap(), keys = Object.keys(lib);
@@ -318,12 +319,15 @@ describe('PENCERE — yalnız girdi', () => {
       expect([td.textContent, td.classList.contains('sar'), td.hasAttribute('title')]).toEqual([td.textContent, true, false]);
     });
     const ek = (k) => (aday[keys.indexOf(k)].querySelector('.ve-mnt-ek') || {}).textContent;
-    expect(ek('amc137731-calc')).toBe('(AMC 137731 · BMC 8x8 çalışma noktası)');
+    expect(ek('amc137731')).toBe('(AMC 137731)');
     expect(ek('57RS313773-sr116')).toBe('(ASR-SR-116)');
-    expect(aday[keys.indexOf('amc55sha')].querySelector('.ve-mnt-ek')).toBeNull();
+    expect(aday[keys.indexOf('amc55sha')].querySelector('.ve-mnt-ek')).toBeNull();     // LMT-1433-37 55 ShA: künyesiz
     const nw = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] .ve-mnt-nw, .ve-fp-kat[data-k="grup"] .ve-mnt-nw')].map((e) => e.textContent);
-    ['(ASR-SR-116)', 'AMC 137731)', 'AMC 137731', 'BMC 8x8', 'LMT-1433-00', 'Sağ/Sol', 'AMC 55'].forEach((k) => expect([k, nw.includes(k)]).toEqual([k, true]));
+    ['(ASR-SR-116)', 'AMC 137731)', 'LMT-1433-00', 'LMT-1433-37', 'Sağ/Sol', '60 ShA', 'NG 55 ShA', '45 ShA'].forEach((k) => expect([k, nw.includes(k)]).toEqual([k, true]));
     expect(P._mntParamAd('A&B-1 <x>')).toBe('<span class="ve-mnt-nw">A&amp;B-1</span> &lt;x&gt;');
+    expect(P._mntParamAd('Cone 121 NG 55 ShA (AMC 137830)'))
+      .toBe('Cone 121 <span class="ve-mnt-nw">NG 55 ShA</span> <span class="ve-mnt-ek">(<span class="ve-mnt-nw">AMC 137830)</span></span>');
+    expect(P._mntParamAd('Mount 1 40 ShA')).toBe('Mount 1 <span class="ve-mnt-nw">40 ShA</span>');
   });
 
   test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit · kombinasyon sınırı', () => {
@@ -337,7 +341,7 @@ describe('PENCERE — yalnız girdi', () => {
     expect(P._mntParamHazirlik(n).eksik).toBe('Taranacak grup yok');
     const dom1 = dom(P.getMntParamPropertiesHTML(n));
     expect(dom1.querySelector('.ve-fp-solve').disabled).toBe(true);
-    // dört grup → 27⁴ = 531.441 > sınır
+    // dört grup → 24⁴ = 331.776 > sınır
     modelKur('kamyon');
     const m = global.nodes.find((x) => x.type === 'mnt-mount');
     [[1, 'Sağ Orta'], [2, 'Sol Orta']].forEach(([k, ad]) => global.nodes.push(Object.assign(JSON.parse(JSON.stringify(m)),
@@ -346,7 +350,7 @@ describe('PENCERE — yalnız girdi', () => {
       { id: 'ek' + k, customName: ad, data: Object.assign({}, m.data, { x: 1500, y: k === 3 ? 350 : -350, z: 500 }) })));
     const H4 = P._mntParamHazirlik(node());
     expect(H4.M.G.length).toBe(4);
-    expect(H4.N).toBe(531441);
+    expect(H4.N).toBe(331776);
     expect(H4.eksik).toMatch(/^Kombinasyon sayısı 200\.000 üstünde$/);
   });
 });
@@ -355,7 +359,7 @@ describe('RAPOR — ayrı belge', () => {
   test('bölümler, uzlaşı tablosu ve şekil; Türkçe sayı; NaN · undefined · {,} gövdede yok', () => {
     modelKur('asfat');
     const node = { id: 'pa', type: 'mnt-parametric', data: { sabit: {} } };
-    // Hızlı: ön grup sabit (2 grup × 27 = 729).
+    // Hızlı: ön grup sabit (2 grup × 24 = 576).
     const Hz0 = P._mntParamHazirlik(node);
     node.data.sabit[Hz0.M.G[0].anahtar] = true;
     const { Hz, O, S } = tara(node, 5);
@@ -438,7 +442,7 @@ describe('KOŞUCU', () => {
     expect(btn().hasAttribute('data-durdur')).toBe(true);
     expect(cubuk().getAttribute('aria-valuenow')).toBe('0');
     jest.advanceTimersByTime(0);                    // ilk dilim (saat durgun: dilim kombinasyon tavanında biter)
-    expect(cubuk().querySelector('span').textContent).toMatch(/^Kombinasyon [\d.]+ \/ 729$/);
+    expect(cubuk().querySelector('span').textContent).toMatch(/^Kombinasyon [\d.]+ \/ 576$/);
     const p0 = +cubuk().getAttribute('aria-valuenow');
     expect(p0).toBeGreaterThan(0);
     expect(p0).toBeLessThan(100);
@@ -450,7 +454,7 @@ describe('KOŞUCU', () => {
     expect(indir).not.toHaveBeenCalled();
     const ent = PS._MNT_PARAM_SONUC.pa;
     expect(ent && ent.D.tam).toBe(true);
-    expect(ent.D.N).toBe(729);
+    expect(ent.D.N).toBe(576);
     expect(document.getElementById('ve-mnt-param-st-pa').textContent).toMatch(/^Tarandı \([\d.,]+ s\)$/);
     expect(btn().textContent.trim()).toBe('Tara');
     expect(btn().hasAttribute('data-durdur')).toBe(false);
@@ -475,7 +479,7 @@ describe('KOŞUCU', () => {
   // DİLİM BÜTÇESİ (kullanıcı 2026-10-18: "program kasıyor"): eski parça 50 ms ve
   // 200 kombinasyona kadar koşuyordu. Saat her okumada 1 ms ilerler — dilim
   // bütçesini (10 ms) aşan hiçbir dilim yok, iş olay döngüsüne dönerek ilerler.
-  test('dilim bütçesi: bir dilim ~10 ms (saat okuması başına 1 ms) — 729 kombinasyon ≥ 70 dilimde', () => {
+  test('dilim bütçesi: bir dilim ~10 ms (saat okuması başına 1 ms) — 576 kombinasyon ≥ 55 dilimde', () => {
     kurPencere();
     let t = 0;
     jest.spyOn(performance, 'now').mockImplementation(() => (t += 1));
@@ -494,10 +498,10 @@ describe('KOŞUCU', () => {
     }
     jest.runAllTimers();
     expect(sar).toHaveBeenCalledTimes(1);
-    expect(dilim.reduce((a, x) => a + x, 0)).toBe(729);
+    expect(dilim.reduce((a, x) => a + x, 0)).toBe(576);
     expect(Math.max(...dilim)).toBeLessThanOrEqual(10);
-    expect(dilim.length).toBeGreaterThanOrEqual(70);
-    expect(PS._MNT_PARAM_SONUC.pa.D.N).toBe(729);
+    expect(dilim.length).toBeGreaterThanOrEqual(55);
+    expect(PS._MNT_PARAM_SONUC.pa.D.N).toBe(576);
   });
 
   test('proje değişince süren tarama durur ve sonucu saklanmaz', () => {

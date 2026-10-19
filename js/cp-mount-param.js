@@ -269,11 +269,12 @@ function _mntParamYanHTML(node, H){
 // tipe birden uyuyordu ("Cone 67 50Sh (AMC 1…" · "57RS313774…"). Sondaki
 // parantezli künye tek blok (`.ve-mnt-ek`): sığmazsa bütünüyle alt satıra
 // iner. Kod satır sonunda bölünmez (`.ve-mnt-nw`): tireli ya da eğik çizgili
-// ("ASR-SR-116", "Sağ/Sol") ve büyük harfli önek + numara ("AMC 137731").
+// ("ASR-SR-116", "Sağ/Sol"), büyük harfli önek + numara ("NG 55") ve sertlik
+// ("60 ShA").
 function _mntParamAd(ad){
   var s=String(ad==null ? '' : ad), m=/^(.*\S)\s+(\([^()]*\))$/.exec(s);
   var kod=function(x){
-    return _mntEsc(x).replace(/(^|[^\p{L}\p{N}])(\p{Lu}{2,} \d\S*)|\S*[-–/]\S*/gu, function(t, on, k){
+    return _mntEsc(x).replace(/(^|[^\p{L}\p{N}])(\p{Lu}{2,} \d\S*(?: ShA)?|\d+ ShA)|\S*[-–/]\S*/gu, function(t, on, k){
       return k ? on+'<span class="ve-mnt-nw">'+k+'</span>' : '<span class="ve-mnt-nw">'+t+'</span>';
     });
   };
