@@ -1537,7 +1537,12 @@ function _mntTakozTipGovde(node){
   var d=node.data||{};
   var lib=veMntGetLibraryList();
   var B=lib.filter(function(e){ return e.builtin; }), Cu=lib.filter(function(e){ return !e.builtin; });
-  var opt=function(e){ return '<option value="'+_mntEsc(e.key)+'"'+(d.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
+  // Seçili tip notun eşleşmesinden (_mntKutuphaneEslesme): bağsız ama altı
+  // değeri bir tiple aynı takoz o tipi gösterir. Örnek modellerin takozları
+  // bağsız kaydedilmişti; liste "— elle gir —" derken not tipi adlandırıyordu
+  // (ASFAT 6/6, Siper 6/6, Tulga 5/5 takoz).
+  var E=_mntKutuphaneEslesme(node), secili=E ? E.e.key : '';
+  var opt=function(e){ return '<option value="'+_mntEsc(e.key)+'"'+(secili===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
   var sel='<select class="ve-fp-sel" id="ve-mnt-libKey-'+node.id+'" onchange="veMntApplyLib(\''+node.id+'\',this.value)">'
     + '<option value="">— elle gir —</option>';
   if(B.length) sel+='<optgroup label="Gömülü">'+B.map(opt).join('')+'</optgroup>';
@@ -3959,9 +3964,14 @@ function _mntLibDurumlari(node, e){
 // KULLANIM — bu tip modelde hangi takozlarda. Takoz uygulandığı anın
 // değerlerini KOPYALAR (veMntApplyLib → _mntLibUygula); tip sonradan
 // değişince takoz eskisinde kalır ve bunu yalnız bu karşılaştırma gösterir.
+// Takozun tipi Takoz penceresinin eşleşmesinden (bağ ya da altı değeri aynı tek tip).
 function _mntLibKullanimHTML(node, e){
   var list=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : [];
-  var tk=list.filter(function(n){ return n && n.type==='mnt-mount' && n.data && n.data.libKey===e.key; });
+  var tk=list.filter(function(n){
+    if(!n || n.type!=='mnt-mount' || !n.data) return false;
+    var E=_mntKutuphaneEslesme(n);
+    return !!E && E.e.key===e.key;
+  });
   var h, em='bu modelde';
   if(!tk.length){
     h=_mntNot('Bu tip modeldeki hiçbir takoza uygulanmamış.', '');
@@ -5106,7 +5116,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntAtalet: _mntAtalet,
     _mntOranYayilim: _mntOranYayilim,
     _MNT_ORAN_YAYILIM_SINIR: _MNT_ORAN_YAYILIM_SINIR,
-    _mntKutuphaneEslesme: _mntKutuphaneEslesme,
+    _mntKutuphaneEslesme: _mntKutuphaneEslesme, _mntTakozTipGovde: _mntTakozTipGovde, _mntLibKullanimHTML: _mntLibKullanimHTML,
     _mntGatherTorqueKaynakli: _mntGatherTorqueKaynakli,
     _mntGolgelenen: _mntGolgelenen,
     _mntMotorSapma: _mntMotorSapma,

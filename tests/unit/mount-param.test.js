@@ -300,6 +300,32 @@ describe('PENCERE — yalnız girdi', () => {
     expect(dugme().disabled).toBe(false);
   });
 
+  // AD SARAR (kullanıcı turu 2026-10-19: "Cone 67 50Sh (AMC 1…" iki ayrı tipte
+  // aynı görünüyordu — Adaylar'da 27 adın 17'si, Gruplar'da 6 hücrenin 6'sı
+  // kırpılıyordu). Ad hücrenin yazısıdır (ipucu değil), sarar; sondaki
+  // parantezli künye tek blok, kod bölünmez. Satır kırılımı tarayıcıda
+  // ölçülür (mount-param-sonuc.spec.js → MODELE UYGULA · yerleşim turu).
+  test('AD SARAR: ad hücresi tam adı taşır, ipucu yok; künye tek blok; tireli kod ve önek + numara bölünmez', () => {
+    modelKur('asfat');
+    const d = dom(P.getMntParamPropertiesHTML(node()));
+    const lib = cp.veMntGetLibraryMap(), keys = Object.keys(lib);
+    const aday = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] tbody tr')].map((r) => r.children[1]);
+    const grup = [...d.querySelectorAll('.ve-fp-kat[data-k="grup"] tbody tr')].flatMap((r) => [r.children[1], r.children[3]]);
+    expect(aday.map((td) => td.textContent)).toEqual(keys.map((k) => lib[k].name));
+    const G = P._mntParamModel().G;
+    expect(grup.map((td) => td.textContent)).toEqual(G.flatMap((g) => [g.ad, lib[g.tip].name]));
+    aday.concat(grup).forEach((td) => {
+      expect([td.textContent, td.classList.contains('sar'), td.hasAttribute('title')]).toEqual([td.textContent, true, false]);
+    });
+    const ek = (k) => (aday[keys.indexOf(k)].querySelector('.ve-mnt-ek') || {}).textContent;
+    expect(ek('amc137731-calc')).toBe('(AMC 137731 · BMC 8x8 çalışma noktası)');
+    expect(ek('57RS313773-sr116')).toBe('(ASR-SR-116)');
+    expect(aday[keys.indexOf('amc55sha')].querySelector('.ve-mnt-ek')).toBeNull();
+    const nw = [...d.querySelectorAll('.ve-fp-kat[data-k="aday"] .ve-mnt-nw, .ve-fp-kat[data-k="grup"] .ve-mnt-nw')].map((e) => e.textContent);
+    ['(ASR-SR-116)', 'AMC 137731)', 'AMC 137731', 'BMC 8x8', 'LMT-1433-00', 'Sağ/Sol', 'AMC 55'].forEach((k) => expect([k, nw.includes(k)]).toEqual([k, true]));
+    expect(P._mntParamAd('A&B-1 <x>')).toBe('<span class="ve-mnt-nw">A&amp;B-1</span> &lt;x&gt;');
+  });
+
   test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit · kombinasyon sınırı', () => {
     global.nodes = [];
     expect(P._mntParamHazirlik(node()).eksik).toBe('Takoz yok');
@@ -834,5 +860,85 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     P.veMntParamAcik('pa', 'tolerans', true);
     PS.veMntParamRapor('pa');
     expect(indir).toHaveBeenCalledTimes(1);
+  });
+
+  // MODELE UYGULA (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran bir
+  // düğme yok; altı takozun tipini tek tek değiştirdim"). Öneri ya da yakın
+  // seçenek tek tıkla taranan grupların takozlarına — Takoz penceresinin
+  // yazıcısıyla, TEK geri-al adımında; sabit grup yerinde. Tarama eskimez:
+  // uygulanan kombinasyon "Mevcut" olur.
+  test('UYGULA: Takoz penceresinin yazımı, tek geri-al adımı, sabit grup yerinde; tarama taze, Mevcut = öneri, düğme kapalı ve sebebi ipucunda', () => {
+    const n = kur();
+    P.veMntParamSabit('pa', 3, true);
+    const { S } = taraSakla(n), ent = PS._MNT_PARAM_SONUC.pa, idx = S.sira[0].idx, t = ent.D.tipler(idx), G = ent.M.G;
+    expect(t[2]).toBeNull();
+    const tk = () => global.nodes.filter((x) => x.type === 'mnt-mount');
+    const veri = () => JSON.stringify(tk().map((x) => x.data));
+    const once = veri(), mev0 = JSON.stringify(ent.mevcut);
+    const kopya = JSON.parse(JSON.stringify(global.nodes));                // beklenen: Takoz penceresinin yazıcısı
+    G.forEach((g, i) => { if (t[i]) g.idler.forEach((id) => cp._mntLibUygula(kopya.find((x) => x.id === id).data, t[i])); });
+    const bek = JSON.stringify(kopya.filter((x) => x.type === 'mnt-mount').map((x) => x.data));
+    expect(bek).not.toBe(once);
+    const sabit0 = G[2].idler.map((id) => JSON.stringify(global.nodes.find((x) => x.id === id).data));
+    global.saveState = jest.fn(); global.showNodeProperties = jest.fn();
+    expect(PS.veMntParamUygula('pa', idx)).toBe(4);                         // iki taranan grup × iki takoz
+    expect(veri()).toBe(bek);
+    expect(G[2].idler.map((id) => JSON.stringify(global.nodes.find((x) => x.id === id).data))).toEqual(sabit0);
+    expect(global.saveState).toHaveBeenCalledTimes(1);
+    expect(global.showNodeProperties).toHaveBeenCalledWith(n);
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
+    expect(PS._MNT_PARAM_SONUC.pa).toBe(ent);
+    expect(JSON.stringify(ent.mevcut.o1.f)).toBe(JSON.stringify(ent.O.olc1(t).f));   // mevcut = önerinin ölçümü
+    const d = dom(P.getMntParamPropertiesHTML(n)), kat = d.querySelector('.ve-fp-kat[data-k="sonuc"]');
+    expect(kat.getAttribute('data-d')).toBe('ok');
+    expect([...kat.querySelectorAll('.ve-prm-og-s em')].map((e) => e.textContent)).toEqual(['Aynı', 'Aynı', 'Sabit']);
+    const hucre = (td) => [td.textContent, td.className];
+    [...kat.querySelectorAll('table.ve-prm-kriter tbody tr')].forEach((r) => expect(hucre(r.children[2])).toEqual(hucre(r.children[3])));
+    const b = kat.querySelector('.ve-prm-eylem button[data-uygula="' + idx + '"]');
+    expect(basliklar(d)[0]).toBe(S.uygunN ? 'Öneri' : 'En az ihlalli');      // sabit arka grupla uygun yok
+    expect([b.getAttribute('aria-disabled'), b.getAttribute('title'), b.getAttribute('onclick')]).toEqual(['true', basliklar(d)[0] + ' modelde.', null]);
+    expect(PS.veMntParamUygula('pa', idx)).toBe(0);                         // modeldeki kombinasyon: değişen yok, adım yok
+    expect(global.saveState).toHaveBeenCalledTimes(1);
+    // yakın seçenek: kendi kombinasyonu; öneri düğmesi yeniden açık
+    const x = PS._mntPrmYakinL(ent, PS._mntParamOzet(ent, K.baglam(P._mntParamHazirlik(n).ctx)))[0];
+    expect(PS.veMntParamUygula('pa', x)).toBeGreaterThan(0);
+    const d2 = dom(P.getMntParamPropertiesHTML(n));
+    expect(d2.querySelector('.ve-prm-eylem button[data-uygula="' + idx + '"]').getAttribute('aria-disabled')).toBeNull();
+    expect(d2.querySelector('.ve-prm-yakin button[data-uygula="' + x + '"]').getAttribute('title')).toBe('Seçenek modelde.');
+    // geri-al: model eski hâline dönünce mevcut da döner
+    const eski = JSON.parse(once);
+    tk().forEach((m, i) => { m.data = eski[i]; });
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
+    expect(JSON.stringify(ent.mevcut)).toBe(mev0);
+    // eskimiş taramada uygulanmaz
+    P.veMntParamAcik('pa', 'tolerans', true);
+    expect(PS.veMntParamUygula('pa', idx)).toBe(0);
+    expect(veri()).toBe(once);
+  });
+
+  // İMZA: taranan grubun tipi taramanın ölçüsüne girmez — her kombinasyon onu
+  // kütüphaneden takar (_mntLibGirdiYaz). Değişince depo, aynı girdiyle YENİ
+  // taramanın bit bit aynısı ve mevcut tasarım yeniden ölçülür. Sabit grubun
+  // tipi her kombinasyona girer: eskitir.
+  test('İMZA: taranan grubun tipi eskitmez — depo yeni taramanın aynısı, mevcut bugünkü model; sabit grubun tipi eskitir', () => {
+    const n = kur(); taraSakla(n);
+    const ent = PS._MNT_PARAM_SONUC.pa, D0 = ent.D, G = ent.M.G;
+    const tk = (gi, j) => global.nodes.find((x) => x.id === G[gi].idler[j || 0]);
+    cp._mntLibUygula(tk(0).data, 'amc137731');
+    cp._mntLibUygula(tk(1, 1).data, 'TK040');                               // yasalı (nonlineer) tip, çiftin tek üyesi
+    const Hz = P._mntParamHazirlik(n);
+    expect(PS._mntParamSonucDurum('pa', Hz).taze).toBe(true);
+    const O = P._mntParamOlcucu(Hz.M, K.baglam(Hz.ctx)), nl = Hz.M.G.map(() => null);
+    expect(JSON.stringify(ent.mevcut)).toBe(JSON.stringify({ o1: O.olc1(nl), o2: O.olc2(nl) }));
+    expect(ent.M).toBe(Hz.M);
+    const it = K.tarayici({ G: Hz.M.G, adaylar: Hz.aday, sabit: Hz.sabit, ctx: Hz.ctx, olc1: O.olc1, olc2: O.olc2, enIyi: 25, tam: true });
+    it.adim(Infinity);
+    const imza = (D) => JSON.stringify(['T', 'd', 'fMin', 'fMax', 'd1', 'd2'].map((k) => Array.from(D[k]))
+      .concat(K.KISITLAR.map((Q) => Array.from(D.X[Q.k]))));
+    expect(imza(it.depo())).toBe(imza(D0));
+    P.veMntParamSabit('pa', 3, true); taraSakla(n);
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
+    cp._mntLibUygula(tk(2).data, 'amc137731');
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(false);
   });
 });
