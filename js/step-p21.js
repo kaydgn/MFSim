@@ -71,7 +71,7 @@ function _stpSimdi(){
 // dizelere bıraktığı ham bayt: dosyadaki bütün dizeler geçerli UTF-8 ise
 // UTF-8, değilse ISO 8859-1 okunur (karar dosya başına, taramada).
 var _STP_KARMASIK = 1;
-var _STP_IMZA = [73, 83, 79, 45, 49, 48, 51, 48, 51, 45, 50, 49];   // ISO-10303-21
+var _STP_IMZA = 'ISO-10303-21';
 var _STP_K_HEADER = [72, 69, 65, 68, 69, 82], _STP_K_ENDSEC = [69, 78, 68, 83, 69, 67],
     _STP_K_DATA = [68, 65, 84, 65], _STP_K_DATA_P = [68, 65, 84, 65, 40];
 
@@ -116,11 +116,10 @@ function _stpMetinBayt(s){
 // İmza dosyanın başında aranır (ilk 64 KiB) — STEP olmayan büyük bir dosya
 // sonuna kadar taranmaz.
 function _stpImzaVar(b){
-  var son = Math.min(b.length, 65536) - _STP_IMZA.length;
+  var L = _STP_IMZA.length, son = Math.min(b.length, 65536) - L;
   for(var i = 0; i <= son; i++){
-    if(b[i] !== 73) continue;
-    for(var k = 1; k < _STP_IMZA.length && b[i + k] === _STP_IMZA[k]; k++);
-    if(k === _STP_IMZA.length) return true;
+    for(var k = 0; k < L && b[i + k] === _STP_IMZA.charCodeAt(k); k++);
+    if(k === L) return true;
   }
   return false;
 }
