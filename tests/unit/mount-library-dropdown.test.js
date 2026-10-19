@@ -158,7 +158,7 @@ describe('arama filtresi', () => {
     el.trigger.click();
     el.search.value = 'amc137982';                       // ad değil, kütüphane anahtarı
     cp.veMntLibFilter('lib1');
-    expect(visibleOpts(el.list).map((o) => o.textContent).join()).toContain('AMC 137982');
+    expect(visibleOpts(el.list).map((o) => o.textContent).join()).toContain('Cone 39 50 ShA (AMC 137982)');
     el.search.value = 'on sasi';                         // aksansız yazım
     cp.veMntLibFilter('lib1');
     expect(visibleOpts(el.list).map((o) => o.textContent).join()).toContain('Ön Şasi Takozu');

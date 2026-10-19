@@ -331,7 +331,7 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
   test('Takoz: not satırı FEAD\'in dili — soluk satır, hüküm kalın sözcükte', () => {
     takozKur();
     const h = takozPencere('mnt-mount').innerHTML;
-    expect(h).toMatch(/<div class="ve-fp-not"><b>TK050 \(57RS326612M\)<\/b> ile 6\/6 değer aynı/);
+    expect(h).toMatch(/<div class="ve-fp-not"><b>TK050 50 ShA \(57RS326612M\)<\/b> ile 6\/6 değer aynı/);
     expect(cp._mntNot('Ateşleme frekansı yok', 'warn')).toBe('<div class="ve-fp-not" data-d="warn"><b>Ateşleme frekansı yok</b></div>');
     const css = oku('css/styles.css');
     expect(css).toMatch(/\.ve-fp-not, \.ve-fead-not\{/);           // FEAD'in satırıyla TEK kural

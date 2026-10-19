@@ -159,9 +159,11 @@ describe('"Mount 1" girdileri', () => {
     });
   });
 
-  test('adı parça numarasının OLMADIĞINI söylüyor — sessizce uydurulmasın', () => {
-    Object.keys(M1).forEach((k) =>
-      expect(cp.VE_MOUNT_LIBRARY[k].name).toContain('parça no yok'));
+  // Ad kaynaktaki etiket + sertlik (AD KURALI, 2026-10-19): not ada girmez;
+  // parça numarası uydurulmaz.
+  test('adı kaynaktaki etiket ve sertlik — numara uydurulmadı', () => {
+    Object.entries(M1).forEach(([k, v]) =>
+      expect(cp.VE_MOUNT_LIBRARY[k].name).toBe('Mount 1 ' + v.sh + ' ShA'));
   });
 
   test('radyal ANİZOTROPİK (sx > sy > sz) — LMT-1433-00 ile karışmaz', () => {
@@ -218,7 +220,6 @@ describe('Kaynak sınırları kayıt altında', () => {
     const L = cp.VE_MOUNT_LIBRARY;
     expect([L['amc55sha'].sx, L['amc55sha'].sy, L['amc55sha'].sz]).toEqual([1252, 1252, 640]);
     expect([L['amc137963'].sx, L['amc137963'].sy, L['amc137963'].sz]).toEqual([1800, 1210, 1150]);
-    expect(L['amc137963-calc'].sx).toBe(2670);
   });
 
   test('anahtar ve adlar hâlâ tekil', () => {
