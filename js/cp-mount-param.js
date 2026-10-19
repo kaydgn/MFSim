@@ -233,6 +233,13 @@ function getMntParamPropertiesHTML(node){
   return _mntPencereKabuk(node, kategoriler, _mntParamYanHTML(node, H));
 }
 
+// Taramanın eksiğine çare — yalnız yolu pencerenin DIŞINDA olan iki eksik;
+// aday, sabit grup ve kombinasyon sınırı aynı pencerede.
+function _mntParamEksikYonu(eksik){
+  if(eksik === 'Rölanti devri ve silindir sayısı yok') return veYon('Motor penceresinde girin.');
+  if(eksik === 'Takoz yok') return veYon('Bileşenler’den takoz ekleyin.');
+  return '';
+}
 function _mntParamYanHTML(node, H){
   var ozet=_mntBolum('Katalogdan seçim', '',
     _mntIzgara(3, _mntOku('Grup', String(H.M.G.length)) + _mntOku('Tip', String(H.aday.length))
@@ -240,7 +247,7 @@ function _mntParamYanHTML(node, H){
     { id:'ve-mnt-param-ozet-'+node.id, tazele:true });
   // Cevap: eksik → sebebi; taze tarama → bugünkü sınırlarla uygun sayısı.
   var T=(!H.eksik && typeof _mntParamSonucDurum==='function') ? _mntParamSonucDurum(node.id, H) : null, cevap;
-  if(H.eksik) cevap=_mntDurumKutu('<b>'+H.eksik+'</b>', 'warn');
+  if(H.eksik) cevap=_mntDurumKutu('<b>'+H.eksik+'</b>'+(_mntParamEksikYonu(H.eksik) ? '. '+_mntParamEksikYonu(H.eksik) : ''), 'warn');
   else if(T && T.taze){
     var S=_mntParamOzet(T.ent, veMntKatalog.baglam(H.ctx)).S;
     cevap=_mntDurumKutu('<b>Uygun '+_mntS(S.uygunN, 0)+' / '+_mntS(S.N, 0)+'</b>', S.uygunN ? 'ok' : 'warn');
@@ -251,7 +258,7 @@ function _mntParamYanHTML(node, H){
   // gruplar sabitlenince pencere yeniden kurulmadan kapanır. Süren tarama
   // pencere yeniden kurulsa da ilerlemesiyle çizilir.
   var dugme='<button type="button" class="ve-fp-solve" id="ve-mnt-param-btn-'+node.id+'" data-tazele'
-    + ((H.eksik && !is) ? ' disabled' : ' onclick="veMntParamTara(\''+node.id+'\')"')+(is ? ' data-durdur' : '')+'>'
+    + ((H.eksik && !is) ? ' disabled aria-describedby="ve-mnt-param-durum-'+node.id+'"' : ' onclick="veMntParamTara(\''+node.id+'\')"')+(is ? ' data-durdur' : '')+'>'
     + (is ? veIkon('square')+' Durdur' : veIkon('play')+' Tara')+'</button>';
   var eylem=vePencereEylem(dugme, '<div class="ve-fp-durum-not" id="ve-mnt-param-st-'+node.id+'"></div>',
                            _mntParamIlerleme(node.id));

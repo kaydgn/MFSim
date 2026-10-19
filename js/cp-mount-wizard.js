@@ -1154,7 +1154,7 @@ function _mwGovdeDurum(g){
 }
 function _mwGovdeListeHTML(c){
   var st = _mwState;
-  if(!st.govdeler.length) return '<div class="ve-fw-dim">Gövde yok.</div>';
+  if(!st.govdeler.length) return '<div class="ve-fw-dim">Gövde yok. ' + veYon('Gövde ekle’den bir gövde seçin.') + '</div>';
   var h = '';
   st.govdeler.forEach(function(g, i){
     var on = (_mwSec.govde === g.key), d = _mwGovdeDurum(g);
@@ -1218,7 +1218,7 @@ function _mwTakozDurum(t){
 }
 function _mwTakozListeHTML(c){
   var st = _mwState;
-  if(!st.takozlar.length) return '<div class="ve-fw-dim">Takoz yok.</div>';
+  if(!st.takozlar.length) return '<div class="ve-fw-dim">Takoz yok. ' + veYon('Takoz ekle ile ilk takozu ekleyin.') + '</div>';
   var h = '';
   st.takozlar.forEach(function(t, i){
     var on = (_mwSec.takoz === t.key), d = _mwTakozDurum(t);
@@ -1490,7 +1490,7 @@ function _mwMasaCiz(c){
     ? veMnt2DGorunusSVG(f.veri, o.w, o.h, { gorunus:_mwGorunus, secili:f.secili, secim:true, pay:_mwMasaPay(o, k) }) : '';
   if(!svg){
     el.innerHTML = '<div class="ve-fw-masa-bos">' + (k === 'kaynak'
-      ? 'Model boş.'
+      ? 'Model boş. ' + veYon('Örnek ya da STEP dosyası seçin.')
       : 'Konumlu gövde ya da takoz yok.') + '</div>';
     return;
   }

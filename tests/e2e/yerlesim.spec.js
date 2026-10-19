@@ -112,10 +112,7 @@ const MUAF = [
 // YÖNLENDİRME YUVALARI — boşluğu bilinen ve onarımı sırada olan (BEKLEYEN,
 // aşaması yazılı) ya da sebebi konumunun kendisi olan (MUAF). İkisi de turunda
 // HÂLÂ gerçekleşiyor mu ölçülür: onarılan BEKLEYEN satırı kalırsa test kırılır.
-const YON_BEKLEYEN = [
-  { tur: 'Takoz', asama: 'E4', re: /^mnt-library(?: ↓\d+)? · sebepsiz kapalı "Fabrika"/ },
-  { tur: 'Takoz', asama: 'E4', re: /^mnt-parametric(?: ↓\d+)? · sebepsiz kapalı "Tara"/ },
-];
+const YON_BEKLEYEN = [];
 const YON_MUAF = [
   { tur: 'FEAD', re: /^sihirbaz\/1 · sebepsiz kapalı "Geri"/, neden: 'ilk adımda Geri' },
   { tur: 'Takoz', re: /^sihirbaz(?: \(boş\))?\/1 · sebepsiz kapalı "Geri"/, neden: 'ilk adımda Geri' },

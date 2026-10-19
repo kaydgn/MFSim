@@ -2459,4 +2459,13 @@ olduğunu, 3B "Modelde bir parça seçin."i söylüyor (FEAD ve Takoz), iki Hesa
 rol yokken sebebini ipucunda taşıyor. "Sürücü kasnak seçilmedi." ve "Kayış
 tanımı yok." ulaşılamaz (sürücü tipten ya da ilk kasnaktan çözülüyor, kayış her
 topolojide var); tek çap, motor seçilmedi ve kayma emniyeti bilerek
-yönlendirmesiz.
+yönlendirmesiz. → kaydgn/MFSim#1172 · E4 → Takoz: Parametrik Analiz'in Tara'sı ve
+Rapor'un düğmesi kapalıyken görünür sebebe `aria-describedby` ile bağlı (Tara'nın
+yolu pencerenin dışındaysa — rölanti ve silindir: Motor penceresi; takoz:
+Bileşenler — sebebin arkasında yönlendirme; aday, sabit grup ve kombinasyon sınırı
+aynı pencerede, yönlendirmesiz); Kütüphane'nin Fabrika'sı sebebini ipucunda
+taşıyor; Rapor'un çözümsüz ve bayat hâli Çözücü'nün Hesapla'sını gösteriyor;
+"Çözücü yok." Bileşenler'i; sihirbazın boş gövde ve takoz listesi ekleyiciyi, boş
+başlangıç masası örneği ve STEP'i. "Olası çift sayım" ve şok yanıtının "sayısal
+olarak güvenilmez" notu bilerek yönlendirmesiz: biri olasılık söylüyor (ikisi
+birlikte doğru da olabilir), ötekinin tek doğru çaresi yok.
