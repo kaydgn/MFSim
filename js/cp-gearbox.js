@@ -87,7 +87,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '<div class="sw-pkg-desc">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + veSayi(shiftRefRPM) + ' − ' + veSayi(lockupOffset) + ' = <b>' + veSayi(N_shift_lockup) + ' rpm</b></div>';
   
   if(governed <= 0) {
-    html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Governed speed tanımlı değil.</div>';
+    html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Governed speed tanımlı değil. ' + veYon('Motor penceresinde Governed Speed girin.') + '</div>';
   } else {
     // Lockup destekli ileri vitesler (F2 ve üstü lockup shift yapabilir).
     // İleri vites ayrımı veIsForwardGear'dan — 'F' ön eki tek adlandırma değil.
@@ -126,7 +126,7 @@ function getShiftControllerPropertiesHTML(node) {
     
     // Bilgilendirme
     if(!diffNode || (i_diff <= 1.01 && !diffData.diffRatio)) {
-      html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Diferansiyel oranı tanımlı değil (i_diff = ' + veSayi(i_diff, 3) + ').</div>';
+      html += '<div class="sw-chain-bar fail">' + veIkon('alert-triangle') + ' Diferansiyel oranı tanımlı değil (i_diff = ' + veSayi(i_diff, 3) + '). ' + veYon('Diferansiyel penceresinde oranı girin.') + '</div>';
     }
   }
   
@@ -403,7 +403,7 @@ function getGearboxPropertiesHTML(node) {
     var ftGBPreset = nodeData.ftGBPreset || '';
     var hasEGM = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
     html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-    html += '<select id="ve-ft-gb-preset-' + node.id + '"' + (hasEGM ? ' disabled' : '') + ' onchange="onVEFTGBPresetSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasEGM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
+    html += '<select id="ve-ft-gb-preset-' + node.id + '"' + (hasEGM ? ' disabled aria-describedby="ve-ft-gb-kilit-' + node.id + '"' : '') + ' onchange="onVEFTGBPresetSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasEGM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">-- Şanzıman Preset (' + Object.keys(VE_GEARBOX_PRESETS).length + ') --</option>';
     Object.keys(VE_GEARBOX_PRESETS).forEach(function(gk) {
       var gp = VE_GEARBOX_PRESETS[gk];
@@ -416,7 +416,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</div>';
     html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--ink-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--ink-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
     if(hasEGM) {
-      html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman Motor-Şanzıman Eşleştirme\'den seçili.</div>';
+      html += '<div class="sw-chain-bar fail" id="ve-ft-gb-kilit-' + node.id + '"><span class="mf-ico mf-ico-lock"></span> Şanzıman Motor-Şanzıman Eşleştirme\'den seçili.</div>';
     }
 
     // Şanzıman limitleri bilgi kutusu
@@ -680,7 +680,7 @@ function getGearboxPropertiesHTML(node) {
   // Şanzıman Seçici
   var _hasEGM2 = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
   html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-  html += '<select id="ve-gearbox-select-' + node.id + '"' + (_hasEGM2 ? ' disabled' : '') + ' onchange="onVEGearboxSelectChange(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (_hasEGM2 ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
+  html += '<select id="ve-gearbox-select-' + node.id + '"' + (_hasEGM2 ? ' disabled aria-describedby="ve-gearbox-kilit-' + node.id + '"' : '') + ' onchange="onVEGearboxSelectChange(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (_hasEGM2 ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
   html += '<option value="">— Şanzıman (' + Object.keys(VE_GEARBOX_PRESETS).length + ' preset) —</option>';
   Object.keys(VE_GEARBOX_PRESETS).forEach(function(key) {
     var gp = VE_GEARBOX_PRESETS[key];
@@ -694,7 +694,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</div>';
   html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--ink-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--ink-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';   // metin: lejant — seçenek metnindeki işaretin kendisi
   if(_hasEGM2) {
-    html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman Motor-Şanzıman Eşleştirme\'den seçili.</div>';
+    html += '<div class="sw-chain-bar fail" id="ve-gearbox-kilit-' + node.id + '"><span class="mf-ico mf-ico-lock"></span> Şanzıman Motor-Şanzıman Eşleştirme\'den seçili.</div>';
   }
 
   // Veri alanı

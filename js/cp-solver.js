@@ -159,7 +159,7 @@ function getSolverPropertiesHTML(node) {
     });
     html += '</div>';
   } else {
-    html += '<span style="color:var(--ink-warning); font-size:var(--fs-micro);">Zincir kurulamadı: bağlantı eksik.</span>';
+    html += '<span style="color:var(--ink-warning); font-size:var(--fs-micro);">Zincir kurulamadı: bağlantı eksik. ' + veYon('Bileşenleri motordan tekerleğe bağlayın.') + '</span>';
   }
   
   html += '</div></div>';
@@ -343,7 +343,7 @@ function getGearShiftPropertiesHTML(node) {
 
   // Governed RPM yoksa uyarı
   if (governed <= 0) {
-    html += '<div style="background:var(--accent-danger); color:var(--on-danger); border-radius:var(--radius-md); padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor governed devri yok: eşikler hesaplanamıyor.</div>';
+    html += '<div style="background:var(--accent-danger); color:var(--on-danger); border-radius:var(--radius-md); padding:10px; margin-bottom:10px; font-size:var(--fs-body); text-align:center;">Motor governed devri yok: eşikler hesaplanamıyor. ' + veYon('Motor penceresinde Governed Speed girin.') + '</div>';
     html += '</div>';
     return html;
   }

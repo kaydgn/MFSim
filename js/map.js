@@ -47,7 +47,7 @@ function veExpandRoadMap(nodeId) {
     '<button onclick="veSearchLocation(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-primary);color:var(--on-accent);"><span class="mf-ico mf-ico-search"></span> Konum ara</button>' +
     '<button onclick="veClearRoute(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-danger);color:var(--on-danger);"><span class="mf-ico mf-ico-trash"></span> Temizle</button>' +
     '<span style="flex:1;"></span>' +
-    '<span id="ve-map-modal-info" style="font-size:var(--fs-tiny); color:var(--text-muted);">Nokta yok</span>';
+    '<span id="ve-map-modal-info" style="font-size:var(--fs-tiny); color:var(--text-muted);">' + veYon('Haritaya tıklayarak nokta ekleyin.') + '</span>';
   modal.appendChild(toolbar);
   
   // Harita alanı
@@ -129,7 +129,7 @@ function veExpandRoadMap(nodeId) {
     var info = document.getElementById('ve-map-modal-info');
     if(!info) return;
     var mc = (veRoadMarkers[nodeId] || []).length;
-    info.textContent = mc === 0 ? 'Nokta yok' : mc + ' nokta seçildi';
+    info.textContent = mc === 0 ? veYon('Haritaya tıklayarak nokta ekleyin.') : mc + ' nokta seçildi';
   }, 400);
   
   // ESC handler
@@ -462,7 +462,7 @@ function veUpdateRoutePolyline(nodeId) {
 
 function veCalcRouteAndProfiles(nodeId) {
   var markers = veRoadMarkers[nodeId] || [];
-  if(markers.length < 2) { showToast('En az 2 nokta gerekli', 'warning'); return; }
+  if(markers.length < 2) { showToast('En az 2 nokta gerekli. ' + veYon('Haritaya tıklayarak nokta ekleyin.'), 'warning'); return; }
 
   var map = veRoadMaps[nodeId];
   if(!map) return;
@@ -516,7 +516,7 @@ function veCalcRouteAndProfiles(nodeId) {
 
 function veCalcRouteOSRM(nodeId) {
   var markers = veRoadMarkers[nodeId] || [];
-  if(markers.length < 2) { showToast('En az 2 nokta gerekli', 'warning'); return; }
+  if(markers.length < 2) { showToast('En az 2 nokta gerekli. ' + veYon('Haritaya tıklayarak nokta ekleyin.'), 'warning'); return; }
   
   var map = veRoadMaps[nodeId];
   if(!map) return;
@@ -820,7 +820,7 @@ function veCalcElevation(nodeId, onComplete) {
   } else {
     // Marker'lardan noktalar
     var markers = veRoadMarkers[nodeId] || [];
-    if(markers.length < 2) { showToast('En az 2 nokta veya OSRM rotası gerekli', 'warning'); return; }
+    if(markers.length < 2) { showToast('En az 2 nokta veya OSRM rotası gerekli. ' + veYon('Haritaya tıklayarak nokta ekleyin.'), 'warning'); return; }
     markers.forEach(function(m) { var ll = m.getLatLng(); coords.push({lat: ll.lat, lng: ll.lng}); });
   }
 
@@ -1117,7 +1117,7 @@ function veCalcAirDensityRoad(nodeId) {
 function veUpdateProfiles(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node || !node.data || !node.data.routeCoords || node.data.routeCoords.length < 2) {
-    showToast('Rota yok.', 'warning');
+    showToast('Rota yok. ' + veYon('Güzergah Haritası’nda Rota hesapla ile oluşturun.'), 'warning');
     return;
   }
   showToast('Profil güncelleniyor…');
@@ -1130,7 +1130,7 @@ function veUpdateProfiles(nodeId) {
 function veUpdateProfilesExpanded(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node || !node.data || !node.data.routeCoords || node.data.routeCoords.length < 2) {
-    showToast('Rota verisi yok.', 'warning'); return;
+    showToast('Rota verisi yok. ' + veYon('Güzergah Haritası’nda Rota hesapla ile oluşturun.'), 'warning'); return;
   }
   showToast('Profil güncelleniyor…');
   veCalcElevation(nodeId, function() {
@@ -1183,7 +1183,7 @@ function veToggleDistGradeProfile(nodeId) {
 function veCalcDistGradeProfile(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node || !node.data || !node.data.gpsSamples || node.data.gpsSamples.length < 2) {
-    showToast('Rota yok.', 'warning');
+    showToast('Rota yok. ' + veYon('Güzergah Haritası’nda Rota hesapla ile oluşturun.'), 'warning');
     return;
   }
 
@@ -1195,7 +1195,7 @@ function veCalcDistGradeProfile(nodeId) {
   // Profil HTML şablonu (sadece Rakım Profili GPS)
   function _buildProfileHTML(canvasId) {
     var altCanvasId = canvasId.replace('distgrade', 'altitude');
-    if(!gpsSamples) return '<div style="color:var(--text-muted); font-size:var(--fs-tiny); padding:8px;">GPS verisi yok.</div>';
+    if(!gpsSamples) return '<div style="color:var(--text-muted); font-size:var(--fs-tiny); padding:8px;">GPS verisi yok. ' + veYon('Güzergah Haritası’nda Rota hesapla ile oluşturun.') + '</div>';
     return '<div style="position:relative; margin-bottom:8px;">' +
       '<canvas id="' + altCanvasId + '" style="width:100%; cursor:crosshair; border-radius:var(--radius-sm);"></canvas>' +
       '<div id="' + altCanvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
@@ -1754,7 +1754,7 @@ function _veAttachRouteClickForWaypoint(nodeId) {
     L.DomEvent.stopPropagation(e); // Harita click'ini engelle
     var node = nodes.find(function(n) { return n.id === nodeId; });
     if(!node || !node.data || !node.data.gpsSamples || node.data.gpsSamples.length < 2) {
-      showToast('Rota yok.', 'warning'); return;
+      showToast('Rota yok. ' + veYon('Güzergah Haritası’nda Rota hesapla ile oluşturun.'), 'warning'); return;
     }
     // Tıklanan noktanın rota üzerindeki en yakın mesafesini bul
     var clickLatLng = e.latlng;
@@ -1862,7 +1862,7 @@ function _veWaypointUpdateList(nodeId) {
   if(!listEl) return;
   var wps = _veRouteWaypoints[nodeId] || [];
   if(wps.length === 0) {
-    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Referans noktası yok.</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Referans noktası yok. ' + veYon('Güzergah Haritası’nda rotaya tıklayarak ekleyin.') + '</div>';
     return;
   }
   var html = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse;">';
@@ -2312,7 +2312,7 @@ function _veAltUpdateLineList(nodeId) {
   if(!listEl) return;
   var lines = _veAltGradeLines[nodeId] || [];
   if(lines.length === 0) {
-    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Eğim çizgisi yok.</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:var(--fs-micro); padding:4px 0;">Eğim çizgisi yok. ' + veYon('Rakım profilinde iki noktaya tıklayarak çizin.') + '</div>';
     return;
   }
   var html = '<table style="width:100%; font-size:var(--fs-micro); border-collapse:collapse;">';
@@ -2360,14 +2360,14 @@ function _veAltRedrawAll(nodeId) {
 function veTransferSegmentsToScenario(roadNodeId) {
   var lines = _veAltGradeLines[roadNodeId] || [];
   if(lines.length === 0) {
-    showToast('Aktarılacak eğim çizgisi yok.', 'warning');
+    showToast('Aktarılacak eğim çizgisi yok. ' + veYon('Rakım profilinde iki noktaya tıklayarak çizin.'), 'warning');
     return;
   }
 
   // Topolojideki scenario node'u bul
   var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
   if(!scenarioNode) {
-    showToast('Senaryolar bileşeni yok.', 'warning');
+    showToast('Senaryolar bileşeni yok. ' + veYon('Bileşenler’den ekleyin.'), 'warning');
     return;
   }
   if(!scenarioNode.data) scenarioNode.data = {};
@@ -2569,11 +2569,11 @@ function veAltReverseDirection(nodeId) {
 // ═══ Profil grafiği büyütme modalı ═══
 function veExpandProfileChart(nodeId, chartType) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
-  if(!node || !node.data) { showToast('Profil verisi yok.', 'warning'); return; }
+  if(!node || !node.data) { showToast('Profil verisi yok. ' + veYon('Güzergah Haritası’nda Rota hesapla ile oluşturun.'), 'warning'); return; }
 
   var isAlt = true; // Sadece rakım profili destekleniyor
   if(!node.data.gpsSamples || node.data.gpsSamples.length < 2) {
-    showToast('GPS rakım verisi yok.', 'warning'); return;
+    showToast('GPS rakım verisi yok. ' + veYon('Güzergah Haritası’nda Rota hesapla ile oluşturun.'), 'warning'); return;
   }
 
   // Alttaki Özellikler modalı bu büyük chart'ın altında kalmasın → otomatik kapan
@@ -2813,7 +2813,8 @@ function getTerminatorPropertiesHTML(node) {
   
   if(!inConn) {
     html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:12px; text-align:center;">';
-    html += '<div style="font-size:var(--fs-md); color:var(--text-muted);">' + veIkon('alert-triangle') + ' Bağlı değil</div>';
+    html += '<div style="font-size:var(--fs-md); color:var(--text-muted);">' + veIkon('alert-triangle') + ' Bağlı değil.</div>';
+    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); margin-top:4px;">' + veYon('Girişi bir bileşenin çıkışına bağlayın.') + '</div>';
     html += '</div>';
   } else {
     // Upstream zinciri bul
