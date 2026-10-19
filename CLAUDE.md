@@ -172,6 +172,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `tools/ikon-dili.js` — ikon işi gören sembol karakterinin tarayıcısı (karar 10·B).
 - `js/yon.js` — **yönlendirme yuvası** (`veYon`, ARAYÜZ ANLATMAZ'ın dördüncü
   türü): metni değiştirmez, tarayıcı yuvayı çağrıdan tanır ve biçimini ölçer.
+- `js/bos-tuval.js` — **boş tuval**: topolojinin boş durumu (durum + tek
+  yönlendirme; kökte "? Klavye kısayolları"). Görünürlük kapsamdan ve modelden
+  türer; FEAD'de yok (başlangıç sayfası). Kapı: `bos-tuval.test.js`.
 - `js/sayi.js` — **tek sayı yazıcısı** (`veSayi` · `veSayiOku`, karar 7·C);
   `tools/sayi-dili.js` işaretsiz `toFixed`'in tarayıcısı. `js/sayi-alan.js` —
   **Türkçe sayı alanı**: `inputmode="decimal"` alanı 1716,25 gösterir, `.value`

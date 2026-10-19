@@ -3651,7 +3651,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .ve-help-row:last-child{ border-bottom:none; }
 .ve-help-label{ font-size:var(--fs-lg); color:var(--text-secondary); }
 .ve-help-keys{ display:flex; align-items:center; gap:4px; flex:none; }
-.ve-help-keys kbd, .ve-help-foot kbd{
+.ve-help-keys kbd, .ve-help-foot kbd, .ve-bos-tuval-tus kbd{
   font-size:var(--fs-body); font-weight:600;
   color:var(--text-primary); background:var(--bg-tertiary,var(--bg-primary));
   border:1px solid var(--border-color); border-bottom-width:2px;
@@ -3688,6 +3688,23 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .ve-align-btn:hover:not([disabled]){ background:var(--accent-primary); color:var(--on-accent); border-color:var(--accent-primary); }
 .ve-align-btn:active:not([disabled]){ transform:translateY(1px); }
 .ve-align-btn[disabled]{ opacity:.4; cursor:not-allowed; }
+
+/* ── Boş tuval (yönlendirme yuvası, js/bos-tuval.js) ────────────────────────
+   Durum + tek yönlendirme cümlesi; kökte kısayol satırı. Tuvale bırakmayı
+   engellemez (pointer-events yok); düğüm varken (örnek kartı, analiz
+   araçları) alta iner. */
+.ve-bos-tuval{
+  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+  z-index:6; pointer-events:none; user-select:none;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:0 16px; text-align:center;
+}
+.ve-bos-tuval[hidden], body.ve-no-module .ve-bos-tuval{ display:none; }
+.ve-bos-tuval--alt{ top:auto; bottom:56px; transform:none; }
+.ve-bos-tuval-durum{ font-size:var(--fs-title); font-weight:600; color:var(--text-secondary); }
+.ve-bos-tuval-yon{ font-size:var(--fs-lg); color:var(--text-muted); }
+.ve-bos-tuval-kisayol{ display:flex; gap:16px; margin-top:6px; font-size:var(--fs-body); color:var(--text-muted); }
+.ve-bos-tuval-tus{ display:inline-flex; align-items:center; gap:6px; }
 
 .ve-canvas-wrapper.panning{
   cursor:grabbing;

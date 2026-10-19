@@ -333,7 +333,7 @@ function veWarnXAxisMismatch(wantedXAxis) {
   var b = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
   var cur = (b && b.xAxis && b.xAxis.name) ? b.xAxis.name : 'Zaman [s]';
   var want = (wantedXAxis && wantedXAxis.name) ? wantedXAxis.name : 'farklı bir eksen';
-  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '.', 'warning');
+  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '. ' + veYon('X ekseni listesinden değiştirin.'), 'warning');
 }
 
 // ── Şerit ekleme / çıkarma ────────────────────────────────────────────────

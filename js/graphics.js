@@ -557,7 +557,7 @@ function veExportResults() {
 function veShowRaporModal() {
   var r = window.veSimResults;
   if(!r || !r.time || r.time.length === 0) {
-    showToast('Rapor için sonuç yok.', 'warning');
+    showToast('Rapor için sonuç yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warning');
     return;
   }
   
@@ -625,7 +625,7 @@ function veCloseRaporModal() {
 function veGenerateReport() {
   var r = window.veSimResults;
   if(!r || !r.time || r.time.length === 0) {
-    showToast('Sonuç yok', 'warning'); return;
+    showToast('Rapor için sonuç yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warning'); return;
   }
   
   var zamanAdimi = parseFloat(document.getElementById('ve-rapor-zaman-adimi').value) || 0.5;

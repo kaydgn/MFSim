@@ -238,6 +238,8 @@ function veSyncSidebarScope() {
   // TAKOZ BAŞLANGIÇ SAYFASI da kapsamı görmeli (js/cp-mount-baslangic.js):
   // yalnız Takoz alt topolojisinde, model boşken açılır. Aynı gerekçe.
   if(typeof veMntBaslangicKapsam === 'function') veMntBaslangicKapsam(scope);
+  // BOŞ TUVAL de kapsamı görmeli (js/bos-tuval.js): yazısı kapsama göre.
+  if(typeof veBosTuvalTazele === 'function') veBosTuvalTazele();
 }
 
 // PALETSİZ KAPSAM KENDİNİ BEYAN EDER (`componentDefs[scope].noPalette`).

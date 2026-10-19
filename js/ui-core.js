@@ -970,8 +970,8 @@ function veTryConnectPorts(fromNodeId, fromPort, toNodeId, toPort) {
   if(!fOut && tOut) { createConnection(toNodeId, fromNodeId, toPort, fromPort); return true; }
   if(typeof showToast === 'function')
     showToast(fOut
-      ? 'İki çıkış portu birbirine bağlanmaz.'
-      : 'İki giriş portu birbirine bağlanmaz.',
+      ? 'İki çıkış portu birbirine bağlanmaz. ' + veYon('Çıkışı bir giriş portuna bağlayın.')
+      : 'İki giriş portu birbirine bağlanmaz. ' + veYon('Girişi bir çıkış portuna bağlayın.'),
       'warning');
   return false;
 }

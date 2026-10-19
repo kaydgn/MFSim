@@ -575,7 +575,7 @@
                '</div>';
       }).join('');
       if (!rows) rows = (sel === CAT_FAV)
-        ? '<div class="mf-radio-empty">Favori yok.</div>'
+        ? '<div class="mf-radio-empty">Favori yok. ' + veYon('Tümü listesinde yıldızla ekleyin.') + '</div>'
         : '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
       body = '<div class="mf-radio-list">' + rows + '</div>' +
         '<div class="mf-radio-add">' +
