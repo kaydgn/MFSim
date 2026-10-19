@@ -2473,7 +2473,9 @@ E5 → Ölçüm Görüntüleyici ve CAN Çözümleyici: görüntüleyicinin boş
 Gezgini'ni gösteriyor (MFSim'le aynı cümle); CAN'ın boş diyagramı, Sinyal
 Gezgini'nin DBC'siz ve kayıtsız hâli, kayıtsız Kareler ve Mesaj İstatistiği, DBC
 uyarısı ve grafiksiz dışa aktarma yolu söylüyor (`cdbYon`, statik HTML'de
-`data-ve-yon`). Süpürmede bir yanlış durum çıktı: yalnız DBC açıkken varsayılan
+`data-ve-yon`); sıfır kareli kaydın bildirimi de Tanı'ya gönderiyor — biçimi
+ve çözülemeyen satır sayısını söyleyen önceki bildirim aynı kutuya art arda
+yazıldığı için hiç görünmüyordu. Süpürmede bir yanlış durum çıktı: yalnız DBC açıkken varsayılan
 "Kayıtta" süzgeci her mesajı eliyor ve ağaç "Yüklü DBC'deki hiçbir mesaj kayıtta
 geçmiyor." diyordu — kayıt hiç yokken bir uyuşmazlık; artık "CAN kaydı
 yüklenmedi.". İkinci süpürme bulgusu iki programda birden: çizilecek veri yokken
@@ -2482,5 +2484,3 @@ durumunu basıyor ve boş Veri Gezgini'ne yolluyordu; iz kipi aynı hâlde Çöz
 aç · Ölçüm verisi içe aktar düğmelerini gösteriyor. İki kip artık aynı sorudan
 geçer (`veTrVeriYok`, karar `veTrApplyMode`'da) ve veri yokken iz kipinin boş
 durumu görünür.
-"Dosyada çözülen CAN karesi yok." bilerek yönlendirmesiz: sebebi kayıt biçimi de
-olabilir dosyanın kendisi de.
