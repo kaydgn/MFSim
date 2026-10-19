@@ -2316,15 +2316,22 @@ function veTrRenderNote(lanes, force) {
 // sinyal işaretlemenin faydası yok — çizilecek veri yok; kullanıcıyı sinyal
 // listesine yollamak onu boş bir şeride götürür. Çözüm varsa asıl eksik
 // gerçekten sinyal seçimidir.
-function veTrEmptyHTML() {
+//
+// Çizilecek veri yok mu — iz kipinin boş durumu ve tablo/3B kipinin kararı
+// (veTrApplyMode) AYNI sorudan geçer.
+function veTrVeriYok() {
   // İçe aktarılmış ölçüm de çizilecek veridir: varsa "önce çözümü çalıştırın"
   // demek yanlış olur — kullanıcının verisi zaten var, eksik olan sinyal seçimi.
   var hasImport = (typeof veImpAny === 'function') && veImpAny();
   // Modül sekmeleri (Takoz · FEAD) ARAÇ çözümünden bağımsız beslenir:
   // yalnız o modeli çözmüş kullanıcıya "çözüm sonucu yok" demek yanlış
   // olurdu — verisi var, eksik olan sinyal seçimi.
+  var mntOnly = !!((typeof veResActiveSource === 'function') && veResActiveSource());
+  return !window.veSimResults && !hasImport && !mntOnly;
+}
+
+function veTrEmptyHTML() {
   var _modSrc = (typeof veResActiveSource === 'function') ? veResActiveSource() : null;
-  var mntOnly = !!_modSrc;
   // Modülün KENDİ başlangıç kartı varsa (FEAD: özet + hazır diyagramlar) boş
   // pano onu gösterir: sinyal listesine yollamaktan önce sorulacak soru
   // "tasarım tutuyor mu", cevabı da çözümde hazır.
@@ -2332,7 +2339,7 @@ function veTrEmptyHTML() {
     var _modH = _modSrc.emptyHTML();
     if(_modH) return _modH;
   }
-  var noSim = !window.veSimResults && !hasImport && !mntOnly;
+  var noSim = veTrVeriYok();
   var h = '';
 
   // VIEWER FARKI: burada çözücü YOK. MFSim'in "Çözüm sonucu yok / Çözücüyü Aç"
@@ -2670,7 +2677,11 @@ function veTrApplyMode() {
   var alt = document.getElementById('ve-rslot-body-0');
   if(!graph || !alt) return;
 
-  if(mode === 'line') {
+  // Çizilecek veri yokken tablo ve 3B de iz kipinin boş durumunu gösterir:
+  // düğmeleri (Çözücüyü aç · Ölçüm verisi içe aktar) orada, kendi boş durumu
+  // ise boş Veri Gezgini'ne yollardı.
+  var veriYok = mode !== 'line' && !(slot.sensors || []).length && veTrVeriYok();
+  if(mode === 'line' || veriYok) {
     graph.style.display = '';
     alt.style.display = 'none';
     alt.innerHTML = '';

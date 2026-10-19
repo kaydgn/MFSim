@@ -102,7 +102,7 @@ function cdbApplyDbc(db, name) {
   for (var i = 0; i < db.messages.length; i++) sigs += db.messages[i].signals.length;
   cdbSetChip('cdb-chip-dbc', name + ' · ' + db.messages.length + ' mesaj / ' + sigs + ' sinyal');
   if (!db.messages.length) cdbToast('DBC dosyasında mesaj tanımı yok.', 'err');
-  else if (db.warnings.length) cdbToast(db.messages.length + ' mesaj okundu · ' + db.warnings.length + ' uyarı.', 'warn');
+  else if (db.warnings.length) cdbToast(db.messages.length + ' mesaj okundu · ' + db.warnings.length + ' uyarı. ' + cdbYon('Tanı sekmesini açın.'), 'warn');
   else cdbToast(db.messages.length + ' mesaj, ' + sigs + ' sinyal okundu.');
   cdbRefreshTree();
   cdbRenderTab();
@@ -250,7 +250,7 @@ var CDB_PAGE = 200;
 
 function cdbRenderFrames() {
   var st = cdbState.store, db = cdbState.db;
-  if (!st || !st.n) return cdbAltEmpty('CAN kaydı yüklenmedi.');
+  if (!st || !st.n) return cdbAltEmpty('CAN kaydı yüklenmedi. ' + cdbYon('Kayıt ile dosya açın.'));
 
   // Mesaj seçici — kayıtta GERÇEKTEN geçen kimlikler, kare sayısına göre.
   var opts = '<option value="">Tüm kareler (' + cdbThousands(st.n) + ')</option>';
@@ -321,7 +321,7 @@ function cdbRenderFrames() {
 
 function cdbRenderStats() {
   var st = cdbState.store, db = cdbState.db;
-  if (!st || !st.n) return cdbAltEmpty('CAN kaydı yüklenmedi.');
+  if (!st || !st.n) return cdbAltEmpty('CAN kaydı yüklenmedi. ' + cdbYon('Kayıt ile dosya açın.'));
   var keys = Object.keys(st.counts).sort(function(a, b) { return st.counts[b] - st.counts[a]; });
   var h = '<div class="cdb-alt-bar"><span class="cdb-alt-lbl">' + keys.length +
           ' ayrı kimlik · ' + cdbThousands(st.n) + ' kare · ' +
@@ -495,7 +495,7 @@ function cdbDownload(name, blob) {
 // olmayan ölçüm noktaları uydurmak olurdu. Bu yüzden CSV UZUN BİÇİMDEdir:
 // her satır bir ölçüm — zaman, sinyal, değer.
 function cdbExportCsv() {
-  if (!cdbChart.lanes.length) { cdbToast('Grafikte sinyal yok.', 'err'); return; }
+  if (!cdbChart.lanes.length) { cdbToast('Grafikte sinyal yok. ' + cdbYon('Sinyal Gezgini’nden sinyal işaretleyin.'), 'err'); return; }
   var rows = ['zaman_s;mesaj;sinyal;deger;birim;metin'];
   var n = 0;
   for (var li = 0; li < cdbChart.lanes.length; li++) {
@@ -526,7 +526,7 @@ function cdbExportCsv() {
 function cdbExportPng() {
   var cv = document.getElementById('cdb-canvas');
   var ax = document.getElementById('cdb-axis');
-  if (!cdbChart.lanes.length) { cdbToast('Grafikte sinyal yok.', 'err'); return; }
+  if (!cdbChart.lanes.length) { cdbToast('Grafikte sinyal yok. ' + cdbYon('Sinyal Gezgini’nden sinyal işaretleyin.'), 'err'); return; }
   var out = document.createElement('canvas');
   out.width = cv.width;
   out.height = cv.height + ax.height;

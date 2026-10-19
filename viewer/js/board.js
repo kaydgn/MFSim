@@ -473,7 +473,7 @@ function veRenderSlot(slotIdx) {
       '<div class="ve-trace-empty" style="display:flex;">' +
       '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-clipboard"></span></div>' +
       '<div class="ve-trace-empty-title">Veri tablosu boş</div>' +
-      '<div class="ve-trace-empty-sub">Sinyal seçilmedi.</div></div>';
+      '<div class="ve-trace-empty-sub">' + veYon('Veri Gezgini’nden sinyal seçin.') + '</div></div>';
     return;
   }
 
