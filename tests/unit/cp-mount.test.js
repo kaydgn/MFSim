@@ -72,7 +72,7 @@ describe('Panel üreticileri', () => {
     const html = cp.getMntMountPropertiesHTML(node);
     expect(html).toContain('ve-mnt-x-m1');
     expect(html).toContain('ve-mnt-kzs-m1');
-    expect(html).toContain('AMC 55 ShA');
+    expect(html).toContain('LMT-1433-37 55 ShA');
     expect(html).toContain("veMntApplyLib('m1'");
   });
   test('Çözücü paneli: Hesapla + sonuç kabı', () => {
@@ -107,7 +107,7 @@ describe('Otomatik yük durumları (kullanıcı girişi yok)', () => {
 });
 
 describe('Takoz kütüphanesi', () => {
-  test('AMC 55 ShA doğru rijitlikler', () => {
+  test('LMT-1433-37 55 ShA doğru rijitlikler', () => {
     const m = cp.VE_MOUNT_LIBRARY['amc55sha'];
     expect([m.sx, m.sy, m.sz]).toEqual([1252, 1252, 640]);
     expect([m.dx, m.dy, m.dz]).toEqual([2055, 2055, 977]);
@@ -174,7 +174,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     const html = cp.getMntLibraryPropertiesHTML(lib);
     expect(html).toContain("veMntLibAdd('lib1')");
     expect(html).toContain('Gömülü Katalog');
-    expect(html).toContain('AMC 55 ShA');               // gömülü satır (salt-okunur)
+    expect(html).toContain('LMT-1433-37 55 ShA');               // gömülü satır (salt-okunur)
     expect(html).toContain('value="Deneme"');           // özel satır ad girdisi
     expect(html).toContain("veMntLibRemove('lib1','k1')");
     expect(html).toContain("veMntLibSet('lib1','k1','sz'");
@@ -200,17 +200,17 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
     global.nodes = [lib];
     cp.veMntLibSetBuiltin('lib1', 'amc55sha', 'sz', '999');
-    cp.veMntLibSetBuiltin('lib1', 'amc55sha', 'name', 'AMC 55 ShA (özel)');
+    cp.veMntLibSetBuiltin('lib1', 'amc55sha', 'name', 'LMT-1433-37 55 ShA (özel)');
     // override node'da alan-bazlı saklanır
     expect(lib.data.overrides.amc55sha.sz).toBe(999);
-    expect(lib.data.overrides.amc55sha.name).toBe('AMC 55 ShA (özel)');
+    expect(lib.data.overrides.amc55sha.name).toBe('LMT-1433-37 55 ShA (özel)');
     // fabrika sabiti DEĞİŞMEZ
     expect(cp.VE_MOUNT_LIBRARY['amc55sha'].sz).toBe(640);
-    expect(cp.VE_MOUNT_LIBRARY['amc55sha'].name).toBe('AMC 55 ShA');
+    expect(cp.VE_MOUNT_LIBRARY['amc55sha'].name).toBe('LMT-1433-37 55 ShA');
     // birleşik harita override'ı yansıtır; düzenlenmemiş alanlar fabrikayı izler
     const m = cp.veMntGetLibraryMap()['amc55sha'];
     expect(m.sz).toBe(999);
-    expect(m.name).toBe('AMC 55 ShA (özel)');
+    expect(m.name).toBe('LMT-1433-37 55 ShA (özel)');
     expect(m.sx).toBe(1252);       // düzenlenmemiş → fabrika
     expect(m.builtin).toBe(true);
     expect(m.overridden).toBe(true);
@@ -244,7 +244,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     const html = cp.getMntLibraryPropertiesHTML(lib);
     expect(html).toContain("veMntLibSetBuiltin('lib1','amc55sha','sz'");
     expect(html).toContain("veMntLibResetBuiltin('lib1','amc55sha')");
-    expect(html).toContain('value="AMC 55 ShA"');   // gömülü ad artık input değeri
+    expect(html).toContain('value="LMT-1433-37 55 ShA"');   // gömülü ad artık input değeri
   });
 
   // ── Gömülü 3-eksen analitik fitli katalog (TK035/40/50) ──

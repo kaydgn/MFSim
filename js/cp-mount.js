@@ -37,6 +37,13 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // orijin eğimi = statik Cx/Cy; eksenel fit orijin eğimi (~k0≈360) tablo Cz'den (192)
 // yüksektir (rasyonel form uç-noktaya oturtulmuş) — daha iyi fit gelirse güncellenir.
 //
+// ── AD KURALI (kullanıcı kararı 2026-10-19: "Takoz adları genel ve resmi olsun")
+// Ad = ürün tipi + sertlik + (parça no), üreticinin kataloğundaki adla; üretici
+// kodu üreticisiyle yazılır: "Cone 38 60 ShA (AMC 137963)" — tek başına altı
+// haneli kod ekranda binliksiz sayı okunur. Proje, rapor ve not ada girmez —
+// köken bu yorumda. Aynı parça TEK girdidir; tek istisna aşağıdaki 57RS
+// çiftleri. Kapı: tests/unit/mount-library-adlar.test.js.
+//
 // ── AYNI PARÇA KODU, FARKLI TAKOZ ────────────────────────────────────────────
 // 57RS313773 ve 57RS313774 kodları İKİ AYRI kaynakta, İKİ AYRI takoz için
 // geçiyor (kullanıcı teyidi: kodlar aynı olsa da farklı takozlardır). Bu yüzden
@@ -66,7 +73,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // kaynak '-sr116' sonekiyle eklenir. Yalnız görünen ad kaynağı belirtir.
 //
 // ── AMC MECANOCAUCHO® KONİK TAKOZLAR ────────────────────────────────────────
-// İKİ AYRI VERİ TABANI VAR; İKİSİ DE DOĞRU, AMA AYNI ŞEY DEĞİL:
+// İKİ VERİ TABANI VAR; İKİSİ DE DOĞRU, AMA AYNI ŞEY DEĞİL:
 //
 //   (A) NOMİNAL KATALOG — üreticinin ürün verisi. Yüksüz, küçük-sehim rijitliği.
 //       Takozun KENDİ özelliğidir, hangi araca takıldığından bağımsızdır.
@@ -74,16 +81,20 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //       içinden geri çözülen EFEKTİF rijitlik. Takozun o montajdaki ön yükü
 //       altındaki sekant değeridir; araca özgüdür.
 //
-// (A) gömülü katalog girdileridir (anahtar: 'amcNNNNNN'). (B) yalnız o dört
-// AMC raporunu birebir yeniden üretmek için '-calc' sonekiyle AYRI girdi olarak
-// durur. Farkı görmezden gelmeyin: Cone 38'de sx 1800 (nominal) ↔ 2670 (çalışma
-// noktası) — %48. Nedeni fiziksel, bkz. "NEDEN FARKLILAR" başlığı.
+// Kütüphanede (A) durur (anahtar 'amcNNNNNN'): aynı parça tek girdidir (AD
+// KURALI). (B)'nin '-calc' girdileri 2026-10-19'da kütüphaneden çıktı; değerleri
+// o dört AMC raporunu yeniden üreten testin verisidir
+// (tests/unit/mount-library-amc-cone.test.js). Tek istisna Cone 121 NP (137829):
+// nominal verisi yayımlanmadı, girdisi (B) değerlerini taşır. Farkı görmezden
+// gelmeyin: Cone 38'de sx 1800 (nominal) ↔ 2670 (çalışma noktası) — %48.
+// Nedeni fiziksel, bkz. "NEDEN FARKLILAR" başlığı.
 //
 // ── (A) NOMİNAL KATALOG ─────────────────────────────────────────────────────
 // Kaynak: AMC ürün karşılaştırma aracı (amceodev.amcsa.es/curves_comparative.aspx,
 // 24.11.2025 dökümü) + Cone 67 için AMC teknik departmanından yazılı bildirim
 // (Okan Tandoğan) + SOLID CONE / CONE WITH CUTOUTS katalogları (kod, sertlik,
-// maks. yük, sıkma torku).
+// maks. yük, sıkma torku) + AMC genel kataloğu "Cauchometal" (EN): ürün adları
+// (CONE TYPE 38 · 39 · NG/NP CONE TYPE 121 · HYDRAULIC CONE MOUNTS 72).
 //
 //   kod    | tip         | kauçuk| Sh | maks. yük | kx    | ky    | kz   | cdyn/cstat
 //   -------|-------------|-------|----|-----------|-------|-------|------|-----------
@@ -95,7 +106,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //   137983 | Cone 39     |  NR   | 60 |   900 kg  | 2490  | 2490  | 1400 | 1,6 ⚠
 //   137830 | Cone 121 NG |  NR   | 55 |  1750 kg  | 4000  | 4000  | 1350 | 1,5
 //   137833 | Cone 121 NG |  NR   | 65 |  2000 kg  | 5800  | 5800  | 2500 | 1,7
-//   177296 | (tip adı kaynakta yok)| — |  900 kg  | 1090  | 1090  |  650 | 2,0
+//   177296 | Hydr. C. 72 |  —    | 60 |   900 kg  | 1090  | 1090  |  650 | 2,0
 //                                                     [kx,ky,kz = N/mm, statik]
 //   dx/dy/dz = sx/sy/sz × cdyn/cstat (üreticinin verdiği yöntem).
 //
@@ -112,7 +123,8 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //
 //   EKSİK: 137984 (Cone 39 70Sh, 1100 kg) kataloğda var ama rijitlik verisi
 //   verilmedi → girdi AÇILMADI. 137829 (Cone 121 NP 55Sh, 1200 kg) için de
-//   nominal veri gelmedi → o girdi yalnız (B) tabanını taşır, adında yazılıdır.
+//   nominal veri gelmedi (yayımlanmış veri yok, 2026-10-19) → o girdi yalnız
+//   (B) tabanını taşır.
 //
 // RADYAL ANİZOTROPİ KASITLIDIR — sx ≠ sy yazım hatası değildir:
 //   Cone 38 ve Cone 67 "CONE WITH CUTOUTS" ailesinden. AMC kataloğu birebir
@@ -124,7 +136,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //   Cone 39 ve Cone 121 NG "SOLID CONE" — eksenel simetrik, kx = ky (üreticinin
 //   tablosu da öyle veriyor; uydurma değil, ölçüm).
 //
-// ── (B) BMC 8x8 ÇALIŞMA NOKTASI ('-calc' sonekli girdiler) ──────────────────
+// ── (B) BMC 8x8 ÇALIŞMA NOKTASI (test verisi; kütüphanede yalnız 137829) ────
 // Kaynak: AMC Technical Assistance Service çok-gövdeli titreşim analizi raporları,
 // müşteri 79724 BMC Otomotiv, proje 3066 "8x8 Armored Carrier Truck – Powertrain",
 // hesaplar 13440 / 13948 / 13955 / 13957. Dört rapor AYNI güç grubunu (Motor
@@ -134,7 +146,7 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //     sehim+kuvvet çiftlerine (1g) en küçük kareler uyumu;
 //   • dinamik ← "Natural Frequencies" tablolarındaki 24 özdeğere 6 SD rijit gövde
 //     özdeğer probleminin uyumu.
-// Bu girdilerle MFSim çekirdeği dört raporun TAMAMINI yeniden üretir: statik
+// Bu değerlerle MFSim çekirdeği dört raporun TAMAMINI yeniden üretir: statik
 // sehim ≤ 0,03 mm · takoz kuvveti ≤ 0,005 kN · 24 doğal frekansın 22'si ≤ 0,07 Hz.
 // (Tek belirgin artık hesap 13948'in 4.–5. modu, ≤ 0,47 Hz: o raporda Cone 121 NP
 // %65–67 yüklü, AMC'nin nonlineer basma eğrisinin çalışma noktası teğetiyle
@@ -151,9 +163,9 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //     2670 (+%48), Cone 67'de 3090 → 3550 (+%15), buna karşılık yumuşak eksen
 //     (y) ve eksenel (z) neredeyse değişmiyor (≤ %12 / ≤ %3).
 // ÖLÇÜLDÜ: nominal değerlerle dört rapor çözülünce sapma Δf 2,92 Hz'e, Δδz
-// 0,70 mm'ye çıkıyor; '-calc' değerleriyle 0,47 Hz / 0,03 mm. Yani hangi tabanı
-// seçtiğiniz sonucu değiştirir — GENEL ÜRÜN SEÇİMİ için nominal (A), BU ARACIN
-// AMC raporlarını yeniden üretmek için (B) kullanın.
+// 0,70 mm'ye çıkıyor; (B) değerleriyle 0,47 Hz / 0,03 mm. Yani hangi tabanı
+// seçtiğiniz sonucu değiştirir — kütüphane genel ürün seçimi içindir (A); bu
+// aracın AMC raporlarını yeniden üretmek (B)'nin işidir ve testte durur.
 //
 // ── LMT-1433-00 (AMC DEĞİL — BMC güç grubu FEA raporlarının takozu) ─────────
 // Kaynak: BMC R&D FEA raporları — "BMC Engine Mount (8x8 Ttar)" (Onur GÖR,
@@ -209,13 +221,18 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // rapordaki 2100 yuvarlanmış olmalı. Döndürme bulgusu önemlidir: MFSim'de takoz
 // düğümünün AÇI ALANI YOKTUR, döndürülmüş montaj sx ↔ sy takas edilerek girilir.
 //
+// ── LMT-1433-37 — 'amc55sha' girdisi ────────────────────────────────────────
+// mount-core.js SIPER_EXAMPLE'ın kaynağı ("takoz kataloğu LMT-1433-37 (55 ShA)");
+// değerler (1252/1252/640 · 2055/2055/977) A26 aracından. Aracın verdiği ad
+// "AMC 55 ShA" bir AMC ürün adı değil (AMC kodu altı hanelidir) → 2026-10-19'da
+// "LMT-1433-37 55 ShA" oldu. Anahtar kaldı.
+//
 // EKLENMEYENLER (veri yok):
 //   • LMT-1433-20 — TTAR ölçüm raporunda ön takoz olarak geçiyor ("X yönü
 //     yumuşatılmış" varyant), rijitlik verisi hiçbir dokümanda yok.
-//   • LMT-1433-37 — mount-core.js SIPER_EXAMPLE'ın kaynağı; kütüphanedeki
-//     'amc55sha' girdisi (1252/1252/640) odur. DİKKAT: o girdinin adı "AMC 55 ShA"
-//     ama parça LMT-1433 ailesinden, yani muhtemelen AMC değil A+P — ad yanıltıcı
-//     olabilir. Teyit gelmeden DEĞİŞTİRİLMEDİ.
+//
+// İnternette bulunmayanlar (2026-10-19): 57RS…, TK035/040/050, LMT-1433 ve
+// "Mount 1" firma içi numaralar — adları kaynak belgelerdeki gibi.
 // ── maxLoad — TAŞIMA KAPASİTESİ [kg], opsiyonel ─────────────────────────────
 // Üretici kataloğunun verdiği en büyük statik EKSENEL (basma, z) yük. Birim
 // KİLOGRAM'dır: AMC, Angst+Pfister ve benzeri kataloglar kapasiteyi kg olarak
@@ -232,27 +249,27 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // tanımsızken sütun, çizgi ve cümle hiç görünmez. Kullanıcı datasheet'ten
 // okuduğu değeri Takoz panelinden ya da Takoz Özellikleri'nden girer.
 var VE_MOUNT_LIBRARY = {
-  'amc55sha':         { name:'AMC 55 ShA',                       sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
+  'amc55sha':         { name:'LMT-1433-37 55 ShA',               sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773':       { name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
   '57RS313774':       { name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
   '57RS313773-sr116': { name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
   '57RS313774-sr116': { name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
   // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
-  'TK035': { name:'TK035 (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
+  'TK035': { name:'TK035 35 ShA (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
       x:{ form:'poly', k0:415, c3:-2.44, c5:0.0201 },
       y:{ form:'poly', k0:210, c3:-1.28, c5:0.0169 },
       z:{ form:'asym', comp:{k0:367, xmax:5.60}, ext:{k0:361, c3:2.20} }   // basma sert (rasyonel), geri-gelme kübik
     } },
   // TK040 · 57RS329001M · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
-  'TK040': { name:'TK040 (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
+  'TK040': { name:'TK040 45 ShA (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
     fits:{
       x:{ form:'poly', k0:515, c3:-3.29, c5:0.0311 },
       y:{ form:'poly', k0:260, c3:-2.78, c5:0.0269 },
       z:{ form:'asym', comp:{k0:387, xmax:5.66}, ext:{k0:400, c3:2.06} }
     } },
   // TK050 · 57RS326612M · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
-  'TK050': { name:'TK050 (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
+  'TK050': { name:'TK050 50 ShA (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
     fits:{
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
@@ -261,24 +278,18 @@ var VE_MOUNT_LIBRARY = {
   // ── (A) AMC MECANOCAUCHO® konik takozlar — NOMİNAL KATALOG ───────────────
   // dx/dy/dz = sx/sy/sz × cdyn/cstat. Oyuklu konide sx ≠ sy KASITLI (oyuk ekseni
   // = yumuşak eksen y); masif konide kx = ky (üreticinin tablosu da öyle).
-  'amc137963': { name:'Cone 38 60Sh (AMC 137963)',      sx:1800, sy:1210, sz:1150, dx:2880, dy:1936, dz:1840 },  // ×1,6
-  'amc137964': { name:'Cone 38 70Sh (AMC 137964)',      sx:2770, sy:1990, sz:1900, dx:4986, dy:3582, dz:3420 },  // ×1,8
-  'amc137731': { name:'Cone 67 50Sh (AMC 137731)',      sx:3090, sy:2150, sz:1325, dx:4326, dy:3010, dz:1855 },  // ×1,4
-  'amc137981': { name:'Cone 39 40Sh (AMC 137981)',      sx:1340, sy:1340, sz:720,  dx:1608, dy:1608, dz:864  },  // ×1,2 ⚠türetilmiş oran
-  'amc137982': { name:'Cone 39 50Sh (AMC 137982)',      sx:2200, sy:2200, sz:1150, dx:3080, dy:3080, dz:1610 },  // ×1,4 ⚠türetilmiş oran
-  'amc137983': { name:'Cone 39 60Sh (AMC 137983)',      sx:2490, sy:2490, sz:1400, dx:3984, dy:3984, dz:2240 },  // ×1,6 ⚠türetilmiş oran
-  'amc137830': { name:'Cone 121 NG 55Sh (AMC 137830)',  sx:4000, sy:4000, sz:1350, dx:6000, dy:6000, dz:2025 },  // ×1,5
-  'amc137833': { name:'Cone 121 NG 65Sh (AMC 137833)',  sx:5800, sy:5800, sz:2500, dx:9860, dy:9860, dz:4250 },  // ×1,7
-  'amc177296': { name:'AMC 177296',                     sx:1090, sy:1090, sz:650,  dx:2180, dy:2180, dz:1300 },  // ×2,0 (tip adı kaynakta yok)
-  // ── (B) BMC 8x8 ÇALIŞMA NOKTASI — AMC hesaplarından geri çözüm ───────────
-  // Ön yük altındaki EFEKTİF sekant rijitlik; yalnız o dört raporu (13440/13948/
-  // 13955/13957) yeniden üretmek için. Genel ürün seçiminde (A)'yı kullanın.
-  'amc137963-calc': { name:'Cone 38 60Sh (AMC 137963 · BMC 8x8 çalışma noktası)',     sx:2670, sy:1065, sz:1180, dx:4265, dy:1690, dz:1715 },
-  'amc137731-calc': { name:'Cone 67 50Sh (AMC 137731 · BMC 8x8 çalışma noktası)',     sx:3550, sy:2115, sz:1280, dx:4630, dy:2785, dz:1625 },
-  'amc137830-calc': { name:'Cone 121 NG 55Sh (AMC 137830 · BMC 8x8 çalışma noktası)', sx:4405, sy:4405, sz:1530, dx:6380, dy:6380, dz:2080 },
-  // Cone 121 NP 55Sh için nominal veri GELMEDİ — bu girdi yalnız çalışma noktası
-  // tabanını taşır. Anahtar değişmedi (kayıtlı projelerin bağı kopmasın).
-  'amc137829': { name:'Cone 121 NP 55Sh (AMC 137829 · BMC 8x8 çalışma noktası)', sx:3150, sy:3150, sz:1075, dx:4605, dy:4605, dz:1755 },
+  'amc137963': { name:'Cone 38 60 ShA (AMC 137963)',             sx:1800, sy:1210, sz:1150, dx:2880, dy:1936, dz:1840 },  // ×1,6
+  'amc137964': { name:'Cone 38 70 ShA (AMC 137964)',             sx:2770, sy:1990, sz:1900, dx:4986, dy:3582, dz:3420 },  // ×1,8
+  'amc137731': { name:'Cone 67 50 ShA (AMC 137731)',             sx:3090, sy:2150, sz:1325, dx:4326, dy:3010, dz:1855 },  // ×1,4
+  'amc137981': { name:'Cone 39 40 ShA (AMC 137981)',             sx:1340, sy:1340, sz:720,  dx:1608, dy:1608, dz:864  },  // ×1,2 ⚠türetilmiş oran
+  'amc137982': { name:'Cone 39 50 ShA (AMC 137982)',             sx:2200, sy:2200, sz:1150, dx:3080, dy:3080, dz:1610 },  // ×1,4 ⚠türetilmiş oran
+  'amc137983': { name:'Cone 39 60 ShA (AMC 137983)',             sx:2490, sy:2490, sz:1400, dx:3984, dy:3984, dz:2240 },  // ×1,6 ⚠türetilmiş oran
+  'amc137830': { name:'Cone 121 NG 55 ShA (AMC 137830)',         sx:4000, sy:4000, sz:1350, dx:6000, dy:6000, dz:2025 },  // ×1,5
+  'amc137833': { name:'Cone 121 NG 65 ShA (AMC 137833)',         sx:5800, sy:5800, sz:2500, dx:9860, dy:9860, dz:4250 },  // ×1,7
+  'amc177296': { name:'Hydraulic Cone 72 60 ShA (AMC 177296)',   sx:1090, sy:1090, sz:650,  dx:2180, dy:2180, dz:1300 },  // ×2,0
+  // Cone 121 NP 55 ShA için nominal veri YOK — bu girdi (B) BMC 8x8 çalışma
+  // noktası değerlerini taşır (AMC hesap 13948'den geri çözüm, %65–67 yükte).
+  'amc137829': { name:'Cone 121 NP 55 ShA (AMC 137829)',         sx:3150, sy:3150, sz:1075, dx:4605, dy:4605, dz:1755 },
   // ── LMT-1433-00 — BMC güç grubu FEA raporlarının takozu ─────────────────
   // TEK RİJİTLİK TABANI: kaynak statik/dinamik AYRIMI YAPMIYOR → sx = dx.
   // Nedeni ve ölçümü için aşağıdaki "LMT-1433-00" blok yorumuna bakın.
@@ -289,9 +300,9 @@ var VE_MOUNT_LIBRARY = {
   // Ad kaynaktaki etiketin kendisidir ("Mount 1"); numara bulununca girdi adı
   // düzeltilmeli (anahtarlar kalır). LMT-1433-00'dan farklı olarak radyal
   // ANİZOTROPİK: sx > sy. Tek taban (sx = dx), gerekçesi LMT-1433-00 ile aynı.
-  'bmc-mount1-40sh': { name:'Mount 1 40 ShA (BMC FEA · parça no yok)', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
-  'bmc-mount1-55sh': { name:'Mount 1 55 ShA (BMC FEA · parça no yok)', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
-  'bmc-mount1-70sh': { name:'Mount 1 70 ShA (BMC FEA · parça no yok)', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
+  'bmc-mount1-40sh': { name:'Mount 1 40 ShA', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
+  'bmc-mount1-55sh': { name:'Mount 1 55 ShA', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
+  'bmc-mount1-70sh': { name:'Mount 1 70 ShA', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
 };
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────

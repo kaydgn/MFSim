@@ -163,7 +163,7 @@ test('Tara → Sonuç: yedi bölüm, iki grafik 1:1, ipucu, canlı sınır; gale
 // büyük"*). Ölçülen önce (main 46465f1, ASFAT, 379 px'lik sütun): düğme
 // 359 × 40, ilerleme yazısı kaydırma alanının 830 px altında, 19.683
 // kombinasyonluk taramada 114–131 uzun görev (> 50 ms; parça 50 ms ve 200
-// kombinasyondu). Burada 729 kombinasyon: eski parçayla ~8 uzun görev.
+// kombinasyondu). Burada 576 kombinasyon (24 tip × 24).
 // MODELE UYGULA ve AD (kullanıcı turu 2026-10-19: "Öneriyi modele aktaran
 // bir düğme yok" · "Cone 67 50Sh (AMC 1…" iki ayrı tipte aynı görünüyordu).
 // Node'da koşmayan halkalar: gerçek tık takozlara yazar ve TEK geri-al
@@ -180,7 +180,7 @@ test('MODELE UYGULA: gerçek tık tek geri-al adımı, Sonuç yerinde, Takoz lis
     const td = [...document.querySelectorAll('.ve-fp-kat[data-k="grup"] td.sar, .ve-fp-kat[data-k="aday"] td.sar')];
     return { n: td.length, kesik: td.filter((x) => x.scrollWidth > x.clientWidth + 1).map((x) => x.textContent) };
   });
-  expect(ad).toEqual({ n: 3 * 2 + 27, kesik: [] });
+  expect(ad).toEqual({ n: 3 * 2 + 24, kesik: [] });
   await page.click('#ve-mnt-param-btn-' + id);
   await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 60000 });
   await page.waitForTimeout(600);
@@ -229,7 +229,7 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
   const hata = [];
   page.on('pageerror', (e) => hata.push(String(e)));
   const id = await kur(page);
-  await page.evaluate((i) => {                                   // bütün adaylar, bir grup sabit: 27 × 27
+  await page.evaluate((i) => {                                   // bütün adaylar, bir grup sabit: 24 × 24
     const n = nodes.find((x) => x.id === i), G = _mntParamModel().G;
     n.data = { sabit: { [G[1].anahtar]: true } };
     clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); showNodeProperties(n);
@@ -274,7 +274,7 @@ test('EYLEM SATIRI: kompakt düğme, satır alta yapışık, ilerleme görünür
   const g1 = await geo();
   expect(g1.metin).toBe('Durdur');
   expect(g1.il && g1.il.gorus).toBe(true);                      // ilerleme düğmenin yanında, görüşte
-  expect(g1.il.y).toMatch(/^Kombinasyon [\d.]+ \/ 729$/);
+  expect(g1.il.y).toMatch(/^Kombinasyon [\d.]+ \/ 576$/);
   await page.waitForFunction((i) => !_MNT_PARAM_IS && !!_MNT_PARAM_SONUC[i], id, { timeout: 120000 });
   await page.waitForTimeout(400);
   const S = await page.evaluate(() => ({ uzun: window.__uzun.filter((u) => u[0] < window.__son).map((u) => Math.round(u[1])), son: window.__son, deger: window.__deger }));

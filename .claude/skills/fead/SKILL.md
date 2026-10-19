@@ -79,6 +79,14 @@ olurdu.
    açılıyordu; ölçüldü: ekranın %77'si, ilk karede "7 eksik/çelişkili girdi".
    Sayfa (`js/cp-fead-baslangic.js`) tuvali örter: üç kapı (Sihirbazla kur ·
    STEP'ten başla · Boş çizim masası) + Gates raporlarının kayış yolları.
+   • **Üstü AD ve VERİ** (2026-10-19, kullanıcı: *"çok sade olmuş …
+     profesyonel dursun"*): modülün adı, analizlerin programdaki adları
+     (Kayış Yolu + Sonuçlar'ın hazır diyagramları), kataloğun SAYILARI
+     (profil · stok boy · gergi · motor · aksesuar · çevrim — kataloğun
+     kendisinden; elle yazılan sayı katalogla bayatlar) ve kapının künyesi
+     (sihirbazın rayı, dosya seçicinin kabul listesi). Okunan sabit üst
+     seviye `var` olmak zorunda — tarayıcı `window`dan okur, `const` satırı
+     SESSİZCE düşürür. Kapı: `fead-baslangic.test.js` → *KİMLİK VE VERİ*.
    • **Görünüm ve DOM ORTAK KİTTEN** (`js/baslangic-sayfa.js` · `.ve-bas*`,
      2026-10-14): Takoz aynı sayfayı kurar; FEAD'e özgü sınıf ailesi YOK
      (`.ve-fead-bas*` kalktı, kimlik `#ve-fead-baslangic` duruyor). Burada
