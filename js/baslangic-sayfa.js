@@ -30,19 +30,62 @@ function veBasEsc(s){
 }
 function _veBasIkon(ad){ return (typeof veIkon === 'function') ? veIkon(ad) : ''; }
 
+// ── KİMLİK, VERİ, KÜNYE — sayfanın AD ve VERİ yuvaları (2026-10-19) ─────────
+// Kullanıcı isteği: *"… çok sade olmuş. Güzel durmuyor. Bir şeyler ekleyelim
+// … profesyonel dursun."* Eklenen her yuva YAPILI: modülün adı, analizlerinin
+// programdaki ADLARI, kataloğun ölçülen SAYILARI, kapının künyesi (adımların
+// adı, dosya biçimi). Yuva bir ad listesi ya da {ad, deger} çifti alır, cümle
+// almaz — serbest metin yuvası (üst satır, alt metin, not, rozet) YİNE YOK.
+// Kapı: mount-baslangic.test.js → KİMLİK VE VERİ.
+
+// i: { ad, ikon (SVG — modülün componentDefs ikonu), yetenekler:[ad…],
+//      kilavuz (kılavuz kimliği; verilmezse düğme yok) }
+function veBasKimlikHTML(i){
+  if(!i || !i.ad) return '';
+  var y = (i.yetenekler || []).filter(Boolean);
+  return '<header class="ve-bas-kimlik">'
+    + (i.ikon ? '<span class="ve-bas-kimlik-ik" aria-hidden="true">' + i.ikon + '</span>' : '')
+    + '<div class="ve-bas-kimlik-t"><h1>' + veBasEsc(i.ad) + '</h1>'
+    + (y.length ? '<ul class="ve-bas-yetenek" aria-label="Analizler">'
+        + y.map(function(a){ return '<li>' + veBasEsc(a) + '</li>'; }).join('') + '</ul>' : '')
+    + '</div>'
+    + (i.kilavuz ? '<button type="button" class="ve-bas-kilavuz" data-ey="kilavuz" data-v="' + veBasEsc(i.kilavuz) + '">'
+        + _veBasIkon('file-text') + '<span>Kılavuz</span></button>' : '')
+    + '</header>';
+}
+
+// v: [{ deger, ad, title }] — sayı yazıcısından geçmiş değer, ölçünün adı.
+// Değeri boş satır basılmaz.
+function veBasVeriHTML(v){
+  v = (v || []).filter(function(x){ return x && x.ad && x.deger != null && x.deger !== ''; });
+  if(!v.length) return '';
+  return '<dl class="ve-bas-veri">' + v.map(function(x){
+    return '<div' + (x.title ? ' title="' + veBasEsc(x.title) + '"' : '') + '>'
+      + '<dt>' + veBasEsc(x.ad) + '</dt><dd>' + veBasEsc(x.deger) + '</dd></div>';
+  }).join('') + '</dl>';
+}
+
 // ── KAPI — sayfanın birincil eylemleri ─────────────────────────────────────
-// k: { ey, ikon, ad, birincil, onclick }. `ey` kapının eylem anahtarı —
-// sayfanın tek tıklama dinleyicisi onu modülün eylemine verir. `onclick`
-// yalnız sayfanın DIŞINDA basılan kapı için (bir bileşen penceresi aynı
-// kapıyı gösterir, dinleyicisi yoktur).
+// k: { ey, ikon, ad, kunye:[ad…], title, birincil, onclick }. `ey` kapının
+// eylem anahtarı — sayfanın tek tıklama dinleyicisi onu modülün eylemine
+// verir. `onclick` yalnız sayfanın DIŞINDA basılan kapı için (bir bileşen
+// penceresi aynı kapıyı gösterir, dinleyicisi yoktur). `kunye` VERİ: ad ve
+// biçim listesi — her ad kendi öğesinde, ayraç CSS'ten (" · " ile birleşmiş
+// bir dize cümle gibi okunur ve metin tarayıcısı onu uzun metin sayar);
+// `title` künyede yazmayan veri.
 // AÇIKLAMA YUVASI YOK (ARAYÜZ ANLATMAZ, kök CLAUDE.md): kapının not satırı ve
 // "önerilen" rozeti iki modülde altı açıklama üretmişti.
 function veBasKapiHTML(k){
   k = k || {};
+  var ky = (k.kunye || []).filter(Boolean);
   return '<button type="button" class="ve-bas-kapi' + (k.birincil ? ' birincil' : '') + '" data-ey="' + veBasEsc(k.ey) + '"'
+    + (k.title ? ' title="' + veBasEsc(k.title) + '"' : '')
     + (k.onclick ? ' onclick="' + veBasEsc(k.onclick) + '"' : '') + '>'
     + '<span class="ve-bas-kapi-ik">' + _veBasIkon(k.ikon) + '</span>'
-    + '<span class="ve-bas-kapi-t"><b>' + veBasEsc(k.ad) + '</b></span></button>';
+    + '<span class="ve-bas-kapi-t"><b>' + veBasEsc(k.ad) + '</b>'
+    + (ky.length ? '<span class="ve-bas-kapi-k">'
+        + ky.map(function(a){ return '<span>' + veBasEsc(a) + '</span>'; }).join('') + '</span>' : '')
+    + '</span></button>';
 }
 
 // ── KARO — örnek / rapor kartı ─────────────────────────────────────────────
@@ -63,16 +106,19 @@ function veBasKaroHTML(k){
     + '</span></button>';
 }
 
-// ── SAYFA — kapılar · karolar ──────────────────────────────────────────────
-// s: { kapilar:[kapı…], bolumler:[{ baslik, karolar:[karo…] }] }
+// ── SAYFA — kimlik · veri · kapılar · karolar ──────────────────────────────
+// s: { kimlik, veriler:[…], kapilar:[kapı…], bolumler:[{ baslik, karolar:[karo…] }] }
 // Tek bölüm `bolum` olarak da verilebilir (FEAD). Karosuz bölüm basılmaz.
-// Sayfanın üst satırı, başlığı, alt metni, bölüm notu ve dipnotu YOK
-// (2026-10-16, kullanıcı kararı — metin temizliği aşama 1): beş yuva iki
-// modülde on beş açıklama üretmişti ("Nereden başlayalım?" · "Seçtiğin kapı
-// modeli kurar ve bu sayfa çekilir …").
+// Sayfanın üst satırı, serbest başlığı (`baslik`), alt metni, bölüm notu ve
+// dipnotu YOK (2026-10-16, kullanıcı kararı — metin temizliği aşama 1): beş
+// yuva iki modülde on beş açıklama üretmişti ("Nereden başlayalım?" ·
+// "Seçtiğin kapı modeli kurar ve bu sayfa çekilir …"). Başlık artık modülün
+// ADI (`kimlik.ad`), cümle değil.
 function veBasSayfaHTML(s){
   s = s || {};
   var h = '<div class="ve-bas-ic">'
+    + veBasKimlikHTML(s.kimlik)
+    + veBasVeriHTML(s.veriler)
     + '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>';
   (s.bolumler || (s.bolum ? [s.bolum] : [])).forEach(function(b){
     if(!b || !b.karolar || !b.karolar.length) return;
@@ -140,6 +186,7 @@ function veBasAcik(id){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     veBasEsc: veBasEsc, veBasKapiHTML: veBasKapiHTML, veBasKaroHTML: veBasKaroHTML,
+    veBasKimlikHTML: veBasKimlikHTML, veBasVeriHTML: veBasVeriHTML,
     veBasSayfaHTML: veBasSayfaHTML, veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik
   };
 }
