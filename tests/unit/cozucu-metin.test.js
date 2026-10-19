@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const parser = require('@babel/parser');
+const { yonYuvasi } = require('../helpers/yon-yuvasi.js');
 
 const ROOT = path.join(__dirname, '../..');
 const oku = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -23,6 +24,7 @@ function dizgeler(dosya) {
   const out = [];
   (function yuru(n) {
     if (!n || typeof n.type !== 'string') return;
+    if (yonYuvasi(n)) return;           // yönlendirme yuvası (veYon) — biçimini metin-dili ölçer
     if (n.type === 'StringLiteral') out.push({ satir: n.loc.start.line, metin: n.value });
     for (const k in n) {
       if (k === 'loc' || k === 'start' || k === 'end') continue;

@@ -4,16 +4,20 @@
  * ARAYÜZ ANLATMAZ kapılarının (kabuk-metin, fead-metin) ortak ölçüsü:
  * `showToast(…)` çağrısının ikinci argümanı 'warning' / 'error' değilse ilk
  * argümanın olası metinleri. `+` zinciri birleşir, koşulun iki kolu ayrı
- * sayılır, değişken parça ‹› olur ("Proje yüklendi: ‹› sekme").
+ * sayılır, değişken parça ‹› olur ("Proje yüklendi: ‹› sekme"). Yönlendirme
+ * yuvası (`veYon(…)`) bildirimin durum metnine katılmaz — biçimini
+ * tools/metin-dili.js ölçer.
  */
 const fs = require('fs');
 const path = require('path');
 const parser = require('@babel/parser');
+const { yonYuvasi } = require('./yon-yuvasi.js');
 
 const KOK = path.join(__dirname, '../..');
 
 function metinleri(x) {
   if (!x) return ['‹›'];
+  if (yonYuvasi(x)) return [''];
   if (x.type === 'StringLiteral') return [x.value];
   if (x.type === 'TemplateLiteral') return [x.quasis.map((q) => q.value.cooked).join('‹›')];
   if (x.type === 'BinaryExpression' && x.operator === '+') {
@@ -40,7 +44,7 @@ function bilgiBildirimleri(dosya, yerel) {
         const tur = n.arguments[1];
         const uyari = tur && tur.type === 'StringLiteral' && /^(warning|error)$/.test(tur.value);
         if (!uyari) {
-          metinleri(n.arguments[0]).filter((m) => /\p{L}/u.test(m))
+          metinleri(n.arguments[0]).map((m) => m.trim()).filter((m) => /\p{L}/u.test(m))
             .forEach((m) => out.push({ satir: n.loc.start.line, metin: m }));
         }
       }

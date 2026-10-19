@@ -38,7 +38,10 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 
 | Dosya | Durum |
 |---|---|
-| `js/xlsx-read.js` | **MFSim'den birebir kopya** |
+| `js/sayi.js` | **MFSim'den birebir kopya** (tek sayı yazıcısı) |
+| `js/sayi-alan.js` | **birebir kopya** (Türkçe sayı alanı) |
+| `js/yon.js` | **birebir kopya** (yönlendirme yuvası) |
+| `js/xlsx-read.js` | **birebir kopya** |
 | `js/measure-core.js` | **birebir kopya** |
 | `js/measure-import.js` | **birebir kopya** |
 | `js/measure-import-ui.js` | **birebir kopya** |
@@ -55,7 +58,7 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 
 ## MFSim'den düzeltme taşıma
 
-Tek komut — on dosyanın hepsini `js/`'ten alır, `trace-view.js`'in iki yerel
+Tek komut — on bir dosyanın hepsini `js/`'ten alır, `trace-view.js`'in iki yerel
 farkını yeniden uygular:
 
 ```bash

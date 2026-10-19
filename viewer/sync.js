@@ -8,7 +8,7 @@
  *
  * NEDEN VAR
  *
- * `viewer/js/` altındaki ON dosya MFSim'in `js/` klasöründen kopyadır. Dokuzu
+ * `viewer/js/` altındaki ON BİR dosya MFSim'in `js/` klasöründen kopyadır. Onu
  * BİREBİR; `trace-view.js` iki yerel farkla. Bu adım README'de "elle uzlaştır"
  * diye yazılıydı ve elle uzlaştırma bir kez YANLIŞ yapıldı: bellekten yeniden
  * yazılan boş-durum bloğu, var olmayan bir DOM düğümüne innerHTML atıyordu.
@@ -33,6 +33,9 @@ var CHECK = process.argv.indexOf('--check') !== -1;
 var VERBATIM = [
   'sayi.js',
   'sayi-alan.js',
+  // Yönlendirme yuvası (ARAYÜZ ANLATMAZ'ın dördüncü türü, 2026-10-19): boş
+  // durum ve durum iletisinin bir sonraki adımı; kopyalanan modüller çağırır.
+  'yon.js',
   'xlsx-read.js',
   'measure-core.js',
   'measure-import.js',

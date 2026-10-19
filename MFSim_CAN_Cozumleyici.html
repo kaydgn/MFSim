@@ -14664,6 +14664,13 @@ function cdbToast(msg, kind) {
   cdbToast._t = setTimeout(function() { host.className = 'cdb-toast'; }, 5200);
 }
 
+// Yönlendirme yuvası — MFSim'in veYon'unun eşi (js/yon.js; bu program js/'ten
+// dosya almaz). Bir sonraki adımı söyleyen TEK cümle; metni değiştirmez,
+// tarayıcı (tools/metin-dili.js) yuvayı bu çağrıdan tanır ve biçimini ölçer.
+function cdbYon(metin) {
+  return metin;
+}
+
 function cdbBytesHuman(n) {
   if (n < 1024) return n + ' B';
   if (n < 1024 * 1024) return cdbSayi(n / 1024, 1) + ' KB';
