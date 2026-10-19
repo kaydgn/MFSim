@@ -11,6 +11,10 @@ MFSim_Code.html
 # Ekran görüntüleri (öncesi/sonrası) — üretilir, commit edilmez.
 .shots/
 
+# Büyük deneme STEP'leri (400 MB'a kadar) — üretilir, commit edilmez.
+# `npm run step:deneme` üretir, `npm run step:olcum` ölçer.
+.step-deneme/
+
 # Karşılama kare seçicisi — üretilir, commit edilmez (28 kare gömülü ~3,5 MB
 # ve klasör her değiştiğinde bayatlar). Kaynağı tools/karsilama-secici.*
 # + tools/karsilama-kunye.json; `npm run karsilama:secici` üretir.

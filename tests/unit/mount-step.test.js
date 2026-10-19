@@ -60,9 +60,12 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
     b.konum.forEach((v, i) => expect(Math.abs(v - S.GUC.motor.konum[i])).toBeLessThan(1e-6));
   });
 
-  test('silindir (şanzıman, ekseni x): hacim kiriş payı kadar, merkez birebir', () => {
+  // İç teğet çokgenin alan açığı (4/3)·s/R — s Takoz'un kiriş payı (0,5 mm)
+  const PAY_S = (4 / 3) * M.VE_MNT_STP_UCGEN.kiris / 260;
+
+  test('silindir (şanzıman, ekseni x): hacim kiriş payının açığı kadar, merkez birebir', () => {
     const b = birim('Şanzıman gövdesi');
-    yakin(b.V, Math.PI * 260 * 260 * 700, 2e-3);
+    yakin(b.V, Math.PI * 260 * 260 * 700, PAY_S);
     b.konum.forEach((v, i) => expect(Math.abs(v - S.GUC.sanziman.konum[i])).toBeLessThan(1e-3));
   });
 
@@ -80,7 +83,7 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
     expect(M.veMntStpBirimler(son, R).filter((x) => x.ad === 'Arka braket')[0].parcalar).toHaveLength(2);
   });
 
-  test('kayıt: kütle verilince atalet homojen yoğunlukla — kutu birebir, silindir ≤ %0,2', () => {
+  test('kayıt: kütle verilince atalet homojen yoğunlukla — kutu birebir, silindir kiriş payının açığı kadar', () => {
     const k = M.veMntStpKayit(coz, { [birim('Motor bloğu').dugum]: 400, [birim('Şanzıman gövdesi').dugum]: '150' });
     const g = (ad) => k.liste.filter((n) => n.customName === ad)[0];
     const mot = g('Motor bloğu').data;
@@ -92,8 +95,8 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
     [mot.Ixy, mot.Ixz, mot.Iyz].forEach((v) => expect(Math.abs(v)).toBeLessThan(1e-4));
     const san = g('Şanzıman gövdesi').data;            // eksen x: Ixx = m r²/2
     expect(san.mass).toBe(150);
-    yakin(san.Ixx, 150 * 0.26 * 0.26 / 2, 2e-3);
-    yakin(san.Iyy, 150 * (3 * 0.26 * 0.26 + 0.7 * 0.7) / 12, 2e-3);
+    yakin(san.Ixx, 150 * 0.26 * 0.26 / 2, PAY_S);
+    yakin(san.Iyy, 150 * (3 * 0.26 * 0.26 + 0.7 * 0.7) / 12, PAY_S);
     yakin(san.Izz, san.Iyy, 1e-3);
   });
 
@@ -112,6 +115,33 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
     k.liste.forEach((n) => Object.values(n.data).forEach((v) => {
       expect(Math.abs(v * 1000 - Math.round(v * 1000))).toBeLessThan(1e-6);
     }));
+  });
+});
+
+// Takoz'un STEP'i bütün güç grubu: üçgen inceliği TEK sabitten (0,5 mm) — hesap,
+// sihirbaz ve 3B görüntüleyici aynı ağı görmezse aynı birim iki ayrı ağırlık
+// merkezi verir. FEAD'in görüntüleyicisi varsayılan 0,1 mm'de kalır.
+describe('ÜÇGEN İNCELİĞİ TEK YERDEN', () => {
+  const U = require('../../js/step-ucgen.js');
+  const kaynak = (f) => require('fs').readFileSync(require('path').join(__dirname, '../../js', f), 'utf8');
+  test('hesabın kendi üçgenlemesi sabitin ağını kullanır, varsayılanınkini değil', () => {
+    expect(M.VE_MNT_STP_UCGEN).toEqual({ kiris: 0.5, aci: 20 });
+    const son = oku(S.gucGrubu());
+    const R = roller(son, { 'Şanzıman gövdesi': 'mnt-gearbox' });
+    const agla = (B) => ({ ag: (pi) => M.veMntStpParcaAgi(son, pi, B) });
+    const kendi = M.veMntStpCoz(son, R).birimler[0];
+    const sabit = M.veMntStpCoz(son, R, agla(U.veStepUcgenBaglam(son._model, M.VE_MNT_STP_UCGEN))).birimler[0];
+    const ince = M.veMntStpCoz(son, R, agla(U.veStepUcgenBaglam(son._model))).birimler[0];
+    expect(kendi.V).toBe(sabit.V);
+    expect(kendi.V).not.toBe(ince.V);
+  });
+  test('sihirbazın hesabı ve 3B görüntüleyici aynı sabiti geçer; FEAD varsayılanda', () => {
+    ['cp-mount-3b.js', 'cp-mount-wizard.js'].forEach((f) => {
+      const c = kaynak(f).match(/veStepUcgenBaglam\([^)]*\)/g) || [];
+      expect({ f, n: c.length }).toEqual({ f, n: 1 });
+      expect(c[0]).toMatch(/VE_MNT_STP_UCGEN/);
+    });
+    expect(kaynak('cp-fead-3b.js')).toMatch(/veStepUcgenBaglam\(s\.sonuc\._model\)/);
   });
 });
 

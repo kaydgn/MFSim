@@ -19,6 +19,11 @@ const U = require('../../js/step-ucgen.js');
 const Y = require('../helpers/step-yaz.js');
 
 const PI = Math.PI;
+// Gerçek kiriş hatasının payı: inceltme üçgen başına dört noktaya bakar
+// (ağırlık merkezi · kenar ortaları); aradaki noktada ölçülen uzaklık kirişi
+// %2'ye kadar aşabiliyor (şişkin B-spline kutu: 0,1017). Kapı %5 tanır —
+// yalnız kenar ortasına bakan eski kural torda 0,108 veriyordu.
+const PAY = 1.05;
 
 // Tek parçalı dosya → bağlam + parça ağı (B.iz: yüz başına halka ve uv)
 function ucgenle(yz, yuzler, secenek = {}, tur = 'kabuk') {
@@ -311,6 +316,45 @@ describe('B-SPLINE, DÖNEL VE SÜPÜRME YÜZEY', () => {
   });
 });
 
+// Kelepçeli düğümlü B-spline'da parametre yay boyuna düzgün dağılmaz: parametre
+// ortasının yüzey noktası kirişin ortasından yüzey BOYUNCA da kayar. Hata o
+// kaymayı saydığında inceltme yakınsamıyordu (ölçüldü: şişkin yama başına 40
+// turun hepsi, ~2.600 köşe, kalan "hata" 13 mm — gerçek sapma ~0). Hata
+// üçgenin düzlemine dik ölçülür; yalnız kenar ortasına bakan hata ise simetrik
+// şişkinliği göremiyor, yamayı dört üçgende bırakıyordu (ağırlık merkezi de
+// sorulur). Döküm gövdelerinin yüzeyleri bu sınıftan (Takoz'un STEP'i).
+describe('KELEPÇELİ B-SPLINE: inceltme yakınsar ve pay tutar', () => {
+  const T = require('../helpers/step-takoz.js');
+  // Üçgenin ağırlık merkezi ve kenar ortalarında GERÇEK uzaklık: düzlemdeki nokta
+  // yüzeye ters çevrilir (yüzeyin kendi Newton'u, ipucu barisentrik uv)
+  function gercekHata(o, f) {
+    const y = o.yuz(f), [uu, vv] = y._uv;
+    const S = U._suYuzey(o.B, P.veStepP21Varlik(o.B.model, f).a[2].ref, o.p.birim.mm, o.p.birim.derece);
+    let enCok = 0;
+    for (let t = 0; t < y.ucg.length; t += 3) {
+      const id = [y.ucg[t], y.ucg[t + 1], y.ucg[t + 2]];
+      [[1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]].forEach((w) => {
+        const q = [0, 1, 2].map((k) => w[0] * y.uc[id[0] * 3 + k] + w[1] * y.uc[id[1] * 3 + k] + w[2] * y.uc[id[2] * 3 + k]);
+        const ip = [w[0] * uu[id[0]] + w[1] * uu[id[1]] + w[2] * uu[id[2]], w[0] * vv[id[0]] + w[1] * vv[id[1]] + w[2] * vv[id[2]]];
+        const uv = S.ters(q, ip);
+        enCok = Math.max(enCok, uv ? Math.hypot(...S.P(uv[0], uv[1]).map((x, k) => x - q[k])) : Infinity);
+      });
+    }
+    return { kose: y.uc.length / 3, hata: enCok };
+  }
+  test('şişkin kutu: yüz başına köşe sınırlı, her üçgen payın içinde, katı su geçirmez', () => {
+    const yz = new Y.StepYaz();
+    const yuzler = T.bsKutuYuzleri(yz, 150, 120, 100, 10, 5);
+    const o = ucgenle(yz, yuzler, { kiris: 0.1 }, 'kati');
+    expect(o.r.kenarYuz).toBe(0);
+    const sg = suGecirmez(o.r);
+    expect([sg.acik, sg.cok]).toEqual([0, 0]);
+    const olc = yuzler.map((f) => gercekHata(o, f));
+    expect(Math.max(...olc.map((x) => x.kose))).toBeLessThan(300);      // ölçülen 149; eski kural ~2.600
+    expect(Math.max(...olc.map((x) => x.hata))).toBeLessThanOrEqual(0.1 * PAY);
+  });
+});
+
 describe('ÖLÇÜLMÜŞ KUSURLARIN KAPILARI (kullanıcının dosyası)', () => {
   // Yelpaze: kulak kırpma dikdörtgen bir şeritte tek köşeden yelpaze kurar ve
   // yelpazenin uzun kenarları inceltmeyi patlatıyordu (dosyada 3,78 milyon
@@ -346,8 +390,11 @@ describe('ÖLÇÜLMÜŞ KUSURLARIN KAPILARI (kullanıcının dosyası)', () => {
   // bölme iki yeni uzun kenar doğurur. Dosyadaki yüz yeniden kuruldu (tor
   // R 73,15 · r 0,35, v ±1,2217, döngü üst kenardan ters başlıyor): hiç çevirme
   // yokken 3.508–4.925 köşe (dosyada 5.120), yalnız baştaki Delaunay'la 157,
-  // bölme sonrası yasallaştırmayla 119.
-  test('dosyadaki kaburga tepesi yarım yüzü: çevirmeli inceltme < 140 köşe', () => {
+  // bölme sonrası yasallaştırmayla 119. O 119 köşe payı TUTMUYORDU: yalnız
+  // kenar ortası sorulduğu için 154 üçgenin 114'ü 0,1 mm'yi aşıyordu (en çok
+  // 0,108). Üçgenin ağırlık merkezi de sorulunca 199 köşe, aşan üçgen 0 —
+  // kapı hem yelpazeyi hem payı ölçer.
+  test('dosyadaki kaburga tepesi yarım yüzü: çevirmeli inceltme < 220 köşe ve her üçgen payın içinde', () => {
     const R = 73.15, rk = 0.35, vt = 1.2217, z = [0, 0, 1], x = [1, 0, 0];
     const Q = (u, v) => [(R + rk * Math.cos(v)) * Math.cos(u), (R + rk * Math.cos(v)) * Math.sin(u), rk * Math.sin(v)];
     for (let don = 0; don < 4; don++) {
@@ -361,8 +408,19 @@ describe('ÖLÇÜLMÜŞ KUSURLARIN KAPILARI (kullanıcının dosyası)', () => {
         yz.yonlu(yz.kenarEgri(d, c, cem(vt)), false), yz.yonlu(yz.kenarEgri(a, d, kucuk(0)), false)];
       const f = yz.yuz(tor, dongu.slice(don).concat(dongu.slice(0, don)));
       const o = ucgenle(yz, [f], { kiris: 0.1 });
-      expect(o.yuz(f).uc.length / 3).toBeLessThan(140);
+      expect(o.yuz(f).uc.length / 3).toBeLessThan(220);
       expect(kaplama(o.yuz(f)).sinirEksik).toBe(0);
+      // Gerçek kiriş hatası: üçgenin düzlemindeki noktanın tora uzaklığı (analitik)
+      const y = o.yuz(f), torUzak = (p) => Math.abs(Math.hypot(Math.hypot(p[0], p[1]) - R, p[2]) - rk);
+      let enCok = 0;
+      for (let t = 0; t < y.ucg.length; t += 3) {
+        const V = [0, 1, 2].map((j) => y.uc.slice(y.ucg[t + j] * 3, y.ucg[t + j] * 3 + 3));
+        for (let i = 0; i <= 4; i++) for (let j = 0; i + j <= 4; j++) {
+          const w = [i / 4, j / 4, 1 - i / 4 - j / 4];
+          enCok = Math.max(enCok, torUzak([0, 1, 2].map((k) => w[0] * V[0][k] + w[1] * V[1][k] + w[2] * V[2][k])));
+        }
+      }
+      expect(enCok).toBeLessThanOrEqual(0.1 * PAY);
     }
   });
   // İnce halka: 0,017 mm genişliğindeki düzlem halkada iki çemberin 0,1 mm

@@ -794,7 +794,10 @@ function _suAg(K, X, Y, T){
   function anahtar(a, b){ return a < b ? a * KAT + b : b * KAT + a; }
   function ekle(a, b, t){ var key = anahtar(a, b), l = kenar.get(key); if(l) l.push(t); else kenar.set(key, [t]); }
   function sil(a, b, t){ var key = anahtar(a, b), l = kenar.get(key); if(!l) return; var j = l.indexOf(t); if(j >= 0) l.splice(j, 1); if(!l.length) kenar.delete(key); }
-  function ucgenEkle(ti){ var t = T[ti]; ekle(t[0], t[1], ti); ekle(t[1], t[2], ti); ekle(t[2], t[0], ti); }
+  // tn[ti]: üçgenin düzlem normali ve ağırlık merkezindeki hatası (incelt) —
+  // üçgen her değiştiğinde ucgenEkle'den geçer ve önbelleği orada düşer
+  var tn = [];
+  function ucgenEkle(ti){ var t = T[ti]; tn[ti] = null; ekle(t[0], t[1], ti); ekle(t[1], t[2], ti); ekle(t[2], t[0], ti); }
   function ucgenSil(ti){ var t = T[ti]; sil(t[0], t[1], ti); sil(t[1], t[2], ti); sil(t[2], t[0], ti); }
   T.forEach(function(t, ti){ ucgenEkle(ti); });
   function alan(a, b, c){ return (X[b] - X[a]) * (Y[c] - Y[a]) - (Y[b] - Y[a]) * (X[c] - X[a]); }
@@ -837,12 +840,39 @@ function _suAg(K, X, Y, T){
   return {
     delaunay: function(){ var yigin = []; kenar.forEach(function(l, key){ if(l.length === 2) yigin.push(key); }); yasalla(yigin); },
     incelt: function(S, tol, enCok, ol){
+      // Hata YÜZEYİN kendi noktalarıyla (sınır köşesinin çizilen konumu kenar
+      // eğrisinden gelir ve yüzeyden kiriş payı kadar ayrık olabilir) ve
+      // ÜÇGENİN DÜZLEMİNE DİK ölçülür. Parametresi yay boyuna düzgün dağılmayan
+      // yüzeyde (kelepçeli düğümlü B-spline) parametre ortasının yüzey noktası
+      // kirişin ortasından yüzey BOYUNCA da kayar; o kayma hata sayılınca
+      // inceltme yakınsamıyordu (ölçüldü: şişkin yama, 40 turun hepsi, yüz
+      // başına ~4.600 üçgen, kalan "hata" 13 mm — gerçek sapma ~0). Kenar
+      // ortası yalnız kenar boyunca bakar: simetrik bir şişkinlikte kenar
+      // ortaları tam isabet edip yamayı dört üçgende bırakıyordu — üçgenin
+      // ağırlık merkezi de sorulur ve kenarın hatası komşu üçgenlerinkini taşır.
+      function ucgenHata(ti){
+        if(tn[ti]) return tn[ti];
+        var t = T[ti], s0 = K.s[t[0]], s1 = K.s[t[1]], s2 = K.s[t[2]];
+        var n = _suV(_suC(s1, s0), _suC(s2, s0)), L = _suU(n);
+        n = L > 1e-12 ? [n[0] / L, n[1] / L, n[2] / L] : null;
+        var pc = S.P((K.u[t[0]] + K.u[t[1]] + K.u[t[2]]) / 3, (K.v[t[0]] + K.v[t[1]] + K.v[t[2]]) / 3);
+        var d = [pc[0] - (s0[0] + s1[0] + s2[0]) / 3, pc[1] - (s0[1] + s1[1] + s2[1]) / 3, pc[2] - (s0[2] + s1[2] + s2[2]) / 3];
+        tn[ti] = { n: n, e: n ? Math.abs(_suN(d, n)) : _suU(d) };
+        return tn[ti];
+      }
       function hata(key){
         var a = Math.floor(key / KAT), b = key - a * KAT;
         var pm = S.P((K.u[a] + K.u[b]) / 2, (K.v[a] + K.v[b]) / 2);
-        // Hata YÜZEYİN kendi noktalarıyla: sınır köşesinin çizilen konumu kenar
-        // eğrisinden gelir ve yüzeyden kiriş payı kadar ayrık olabilir.
-        return _suM(pm, _suOrta(K.s[a], K.s[b]));
+        var d = _suC(pm, _suOrta(K.s[a], K.s[b])), l = kenar.get(key), n = null, e = 0;
+        for(var q = 0; l && q < l.length; q++){
+          var h = ucgenHata(l[q]);
+          if(h.e > e) e = h.e;
+          if(!h.n) continue;
+          if(!n) n = h.n.slice();
+          else { var y = _suN(n, h.n) < 0 ? -1 : 1; n = [n[0] + y * h.n[0], n[1] + y * h.n[1], n[2] + y * h.n[2]]; }
+        }
+        var Ln = n ? _suU(n) : 0;
+        return Math.max(e, Ln > 1e-12 ? Math.abs(_suN(d, n)) / Ln : _suU(d));
       }
       for(var tur = 0; tur < 40 && K.u.length < enCok; tur++){
         var aday = [];
@@ -1147,6 +1177,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veStepUcgenParca: veStepUcgenParca,
     veStepUcgenAlan: veStepUcgenAlan,
     _suYuz: _suYuz,
+    _suYuzey: _suYuzey,
     _suKulak: _suKulak,
     _suAg: _suAg,
     _suGecerli: _suGecerli,

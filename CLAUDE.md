@@ -65,8 +65,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici: FEAD sihirbazının
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). STEP'te kütle
-  yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Kapı:
-  `mount-step.test.js` + `mount-wizard.test.js`.
+  yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Üçgen
+  inceliği TEK sabitten (`VE_MNT_STP_UCGEN`, 0,5 mm — bütün güç grubu; FEAD 0,1).
+  Kapı: `mount-step.test.js` + `mount-wizard.test.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle
@@ -164,6 +165,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   tıkla → rol). `js/step-ucgen.js` yüzleri **yalnız görüntü için** üçgenler —
   ölçüm analitik kalır.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
+- `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
+  güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
+  süresi · sekme belleği · 3B ağı örneklemi, `npm run step:olcum -- <dosya>`). Takoz STEP
+  adımlarının önce/sonra sayıları bunlarla alınır; üretilen dosya git'e dâhil değil.
 - `tools/metin-dili.js` + `tools/metin-turu.js` — *ARAYÜZ ANLATMAZ* kuralının tarayıcısı
   (kaynaktaki her arayüz metni, aday işaretleri, cırcır tabanı) ve **ekran turu**
   (bir temizlik aşamasının yüzeylerini gerçek tarayıcıda açar, görünen metni yeri ve

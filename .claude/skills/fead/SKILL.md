@@ -888,6 +888,14 @@ olurdu.
       iki tane, ikisi de aynı çemberin yayı ile kirişi arasında ≈ 0 alanlı.
     • B-spline ters çevirmesi düğüm aralığı başına 3 ızgara noktasından başlar
       (sabit 40×40 uzun bir yüzeyde yanlış yerel en küçüğe iniyordu).
+    • **İnceltme hatası üçgenin DÜZLEMİNE DİK, kenar ortasında VE ağırlık
+      merkezinde** (2026-10-19): kelepçeli düğümlü B-spline'da parametre
+      ortası kirişin ortasından yüzey boyunca kayar; o kayma hata sayılınca
+      inceltme yakınsamıyordu (yüz başına 40 tur, ~2.600 köşe). Yalnız kenar
+      ortası simetrik şişkinliği ve tor şeridinin içini görmüyordu (kaburga
+      tepesinde 154 üçgenin 114'ü payı aşıyordu). Takoz'un inceliği 0,5 mm
+      (`VE_MNT_STP_UCGEN`, js/mount-step.js); FEAD varsayılanda (0,1).
+      Kapı: `step-ucgen.test.js` → *KELEPÇELİ B-SPLINE* + *kaburga tepesi*.
     Kapılar: `tests/unit/fead-step.test.js` (sentetik dosyalar
     `tests/helpers/step-yaz.js` + `step-ornek.js`, gerçek dosyanın kalıbında;
     rolü TEST verir) — en değerlisi Gates AG00686'nın STEP → köprü zinciri
