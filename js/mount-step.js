@@ -5,7 +5,8 @@
 // Kullanıcı isteği (2026-10-14): Takoz modülüne "STEP dosyadan başlama" —
 // FEAD'in "STEP'ten başla" kapısının aynısı.
 //
-// ZİNCİR: metin → veStepP21Agac (js/step-p21.js: ağaç + yüzler, ANLAMSIZ) →
+// ZİNCİR: baytlar → veStepP21AgacDilimli (js/step-p21.js: ağaç, ANLAMSIZ;
+// tarayıcıda dilim dilim) →
 // kullanıcı düğümlere rol verir (Motor · Şanzıman · … · Takoz) → veMntStpCoz
 // (yalnız rollü birimler) → veMntStpKayit (sihirbazın düğüm listesi) →
 // sihirbaz onu örnek gibi yükler (veMntWizFromNodes — ikinci bir kurulum yolu
@@ -50,8 +51,11 @@ var VE_MNT_STP_CIP = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket',
 
 function _mstOkuyucu(){
   if(typeof veStepP21Agac === 'function')
-    return { Agac: veStepP21Agac };
-  if(typeof require === 'function'){ try { var m = require('./step-p21.js'); return { Agac: m.veStepP21Agac }; } catch(e){ return null; } }
+    return { Agac: veStepP21Agac, Dilimli: (typeof veStepP21AgacDilimli === 'function') ? veStepP21AgacDilimli : null };
+  if(typeof require === 'function'){
+    try { var m = require('./step-p21.js'); return { Agac: m.veStepP21Agac, Dilimli: m.veStepP21AgacDilimli }; }
+    catch(e){ return null; }
+  }
   return null;
 }
 function _mstUcgen(){
@@ -60,10 +64,22 @@ function _mstUcgen(){
   return null;
 }
 
-function veMntStpOku(metin){
+// OKUMA YÜZ TANIMI ÇIKARMAZ (`yuz: false`): Takoz parçayı üçgen ağından
+// ölçer, analitik yüz tanımlarını okumuyor — 420 MB'ta okumanın en uzun
+// evresiydi (7,4 sn). Girdi metin ya da bayt.
+var VE_MNT_STP_OKUMA = { yuz: false };
+function veMntStpOku(girdi){
   var P = _mstOkuyucu();
   if(!P || !P.Agac) return { ok: false, hatalar: ['STEP okuyucusu yüklenmemiş.'], uyarilar: [], agac: [], parcalar: [] };
-  return P.Agac(metin);
+  return P.Agac(girdi, VE_MNT_STP_OKUMA);
+}
+// Tarayıcıda, arayüzü kilitlemeden (js/step-p21.js → veStepP21AgacDilimli):
+// baytlar (düz ya da sıkıştırılmış) → { sonuc: Promise<sonuç | null>, vazgec() };
+// `ilerleme(o)` her dilimden sonra. Dilimli okuyucu yoksa null.
+function veMntStpOkuDilimli(bayt, ilerleme){
+  var P = _mstOkuyucu();
+  if(!P || !P.Dilimli) return null;
+  return P.Dilimli(bayt, { yuz: VE_MNT_STP_OKUMA.yuz, ilerleme: ilerleme });
 }
 
 // ── BİRİMLER — rollü düğümler; parça en yakın rollü ataya ait ─────────────
@@ -249,8 +265,9 @@ function veMntStpKayit(coz, kutle){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     VE_MNT_STP_SURUM: VE_MNT_STP_SURUM, VE_MNT_STP_UCGEN: VE_MNT_STP_UCGEN,
-    VE_MNT_STP_ROLLER: VE_MNT_STP_ROLLER, VE_MNT_STP_CIP: VE_MNT_STP_CIP,
-    veMntStpOku: veMntStpOku, veMntStpBirimler: veMntStpBirimler, veMntStpAgOzellik: veMntStpAgOzellik,
+    VE_MNT_STP_ROLLER: VE_MNT_STP_ROLLER, VE_MNT_STP_CIP: VE_MNT_STP_CIP, VE_MNT_STP_OKUMA: VE_MNT_STP_OKUMA,
+    veMntStpOku: veMntStpOku, veMntStpOkuDilimli: veMntStpOkuDilimli,
+    veMntStpBirimler: veMntStpBirimler, veMntStpAgOzellik: veMntStpAgOzellik,
     veMntStpParcaAgi: veMntStpParcaAgi, veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit
   };
 }

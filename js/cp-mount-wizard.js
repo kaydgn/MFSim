@@ -374,6 +374,7 @@ function veMntWizAcik(){
 }
 function veMntWizKapat(kaydet){
   if(typeof document === 'undefined') return;
+  _mwStpBirak();                                       // süren STEP okuması bırakılır
   if(typeof veMntWiz3bKapat === 'function') veMntWiz3bKapat();
   var ov = document.getElementById('ve-mntwiz-overlay');
   if(ov) ov.style.display = 'none';
@@ -790,52 +791,127 @@ var _mwStp = null;
 function veMntWizStp(){ return _mwStp; }
 var VE_MW_STP_KUTLE_NOT = 'STEP dosyasında kütle yok.';
 
-// Dosya → metin → okuma. Okuma asenkron (File API); ayrıştırma bir kare SONRA
-// — "okunuyor" durumu çizilmeden donmuş bir düğme görünmesin (FEAD'de ölçüldü:
-// 8 MB'lık dosya ana iş parçacığını ~0,5 sn tutuyor).
+// Dosya → baytlar → okuma, ARAYÜZ KİLİTLENMEDEN (js/mount-step.js →
+// veMntStpOkuDilimli): okunurken kart ilerlemeyi ve Vazgeç'i taşır. Tek
+// görevlik okuma 420 MB'ta arayüzü 34 sn donduruyordu (ölçüldü). Başka dosya
+// seçmek, Vazgeç ve sihirbazı kapatmak süren okumayı bırakır; kartın durumu
+// her adımda sorulur (`_mwStp !== s`: okuma bırakılmış).
 function veMntWizStpDosya(dosya){
   if(!dosya) return null;
+  _mwStpBirak();
   var ad = dosya.name || 'STEP';
-  _mwStp = { dosya:ad, durum:'okunuyor', modul:_mwModulId() };
+  var s = _mwStp = { dosya:ad, durum:'okunuyor', modul:_mwModulId(), ilerleme:{ evre:'dosya', oran:0, bayt:0, toplam:dosya.size || 0 } };
   veMntWizRender();
-  var oku = (typeof dosya.arrayBuffer === 'function') ? dosya.arrayBuffer()
-    : new Promise(function(ok, red){
-        var fr = new FileReader();
-        fr.onload = function(){ ok(fr.result); };
-        fr.onerror = function(){ red(fr.error || new Error('okunamadı')); };
-        fr.readAsArrayBuffer(dosya);
-      });
-  return oku.then(function(buf){
-    return new Promise(function(ok){ setTimeout(function(){ ok(veMntWizStpBayt(buf, ad)); }, 20); });
-  }, function(e){
-    _mwStp = { dosya:ad, durum:'hata', hata:'Dosya okunamadı: ' + ((e && e.message) || e), modul:_mwModulId() };
+  return _mwStpDosyaBayt(dosya, s).then(function(buf){
+    if(_mwStp !== s || !buf) return null;
+    var is = (typeof veMntStpOkuDilimli === 'function') ? veMntStpOkuDilimli(buf, function(o){ _mwStpIlerleme(s, o); }) : null;
+    if(!is) return veMntWizStpBayt(buf, ad);
+    s.is = is;
+    return is.sonuc.then(function(sonuc){
+      if(_mwStp !== s || !sonuc) return null;
+      return _mwStpKur(sonuc, ad, sonuc.kap);
+    });
+  }).then(null, function(e){
+    if(_mwStp !== s) return null;
+    _mwStp = { dosya:ad, durum:'hata', hata:(e && e.message) || String(e), modul:_mwModulId() };
     veMntWizRender();
     return _mwStp;
   });
 }
+// Dosyanın baytları. Gerçek dosya (Blob) VE_MW_STP_DOSYA_DILIM'lik dilimlerle
+// okunur: tek okumanın sonucu (400 MB) tek görevde kopyalanıyordu (50 ms);
+// dilimde kopya ~2 ms ve okunan bayt ilerlemeye yazılır.
+var VE_MW_STP_DOSYA_DILIM = 16777216;
+function _mwStpDosyaBayt(dosya, s){
+  var hata = function(e){ throw new Error('Dosya okunamadı: ' + ((e && e.message) || e || 'okunamadı')); };
+  if(!(typeof Blob === 'function' && dosya instanceof Blob && typeof dosya.slice === 'function'))
+    return dosya.arrayBuffer().then(null, hata);
+  var n = dosya.size, out = new Uint8Array(n), p = 0;
+  function sonraki(){
+    if(_mwStp !== s) return null;
+    if(p >= n) return out.buffer;
+    var q = Math.min(n, p + VE_MW_STP_DOSYA_DILIM);
+    return dosya.slice(p, q).arrayBuffer().then(function(ab){
+      out.set(new Uint8Array(ab), p);
+      p = q;
+      _mwStpIlerleme(s, { evre:'dosya', bayt:p, toplam:n });
+      return sonraki();
+    });
+  }
+  return Promise.resolve().then(sonraki).then(null, hata);
+}
+// Süren okumayı bırakır (Vazgeç · başka dosya · sihirbaz kapanır)
+function _mwStpBirak(){
+  var s = _mwStp;
+  if(!s || s.durum !== 'okunuyor') return false;
+  if(s.is) s.is.vazgec();
+  _mwStp = null;
+  return true;
+}
+function veMntWizStpVazgec(){
+  if(!_mwStpBirak()) return false;
+  veMntWizRender();
+  return true;
+}
+// ÇUBUK: dosyanın okunması ilk %8 (kayıtların taranmasından çok kısa),
+// okumanın kendi oranı (açma · tarama · montaj · ağaç) kalanı.
+var VE_MW_STP_DOSYA_PAY = 0.08;
+function _mwStpIlerleme(s, o){
+  if(_mwStp !== s) return;
+  var p = VE_MW_STP_DOSYA_PAY;
+  s.ilerleme = { evre:o.evre, bayt:o.bayt || 0, toplam:o.toplam || 0, parca:o.parca || 0, parcaToplam:o.parcaToplam || 0,
+                 oran:o.evre === 'dosya' ? p * (o.toplam ? o.bayt / o.toplam : 0) : p + (1 - p) * (o.oran || 0) };
+  if(typeof vePencereIlerleme === 'function') vePencereIlerleme('ve-mw-stp-vazgec', _mwStpIlerlemeVeri(s));
+}
+// Çubuğun verisi: evrenin adı ve sayısı
+function _mwStpIlerlemeVeri(s){
+  var o = s.ilerleme || {}, ondalik = (o.toplam || 0) < 10485760 ? 1 : 0;
+  var mb = function(x){ return veSayi((x || 0) / 1048576, ondalik); };
+  var metin = o.evre === 'dosya' ? 'Dosya ' + mb(o.bayt) + ' / ' + mb(o.toplam) + ' MB'
+    : o.evre === 'ac' ? 'Açma ' + mb(o.bayt) + ' / ' + mb(o.toplam) + ' MB'
+    : o.evre === 'tara' ? 'Kayıtlar ' + mb(o.bayt) + ' / ' + mb(o.toplam) + ' MB'
+    : o.evre === 'montaj' ? 'Montaj ağacı'
+    : 'Parçalar ' + veSayi(o.parca, 0) + ' / ' + veSayi(o.parcaToplam, 0);
+  return { ad:'STEP okuma', metin:metin, oran:o.oran || 0 };
+}
+function _mwStpIlerlemeHTML(s){
+  var dugme = '<button type="button" class="ve-fp-solve" data-durdur id="ve-mw-stp-vazgec" onclick="veMntWizStpVazgec()">'
+    + _mwIkon('x') + ' Vazgeç</button>';
+  return typeof vePencereEylem === 'function' ? vePencereEylem(dugme, '', _mwStpIlerlemeVeri(s))
+    : '<div class="ve-fw-rowbtns">' + dugme + '</div>';
+}
+// Tek görevlik yol (dilimli okuyucu yok): baytlar → açılmış baytlar → kart
 function veMntWizStpBayt(bayt, ad){
-  var m;
+  var a;
   try {
-    if(typeof veStepP21Metin !== 'function') throw new Error('STEP okuyucusu yüklenmedi.');
-    m = veStepP21Metin(bayt);
+    if(typeof veStepP21Ac !== 'function') throw new Error('STEP okuyucusu yüklenmedi.');
+    a = veStepP21Ac(bayt);
   } catch(e){
     _mwStp = { dosya:ad, durum:'hata', hata:(e && e.message) || String(e), modul:_mwModulId() };
     veMntWizRender();
     return _mwStp;
   }
-  return veMntWizStpOku(m.metin, ad, m.kap);
+  return veMntWizStpOku(a.bayt, ad, a.kap);
 }
-// DOM'suz çekirdek: metin → kart durumu. Roller BOŞ açılır — ad hiçbir şeye
-// karar vermez (FEAD kural 34); dosya okununca 3B görüntüleyici açılır.
-function veMntWizStpOku(metin, ad, kap){
-  var sonuc = (typeof veMntStpOku === 'function') ? veMntStpOku(metin)
+// DOM'suz çekirdek: metin ya da bayt → kart durumu. Roller BOŞ açılır — ad
+// hiçbir şeye karar vermez (FEAD kural 34); dosya okununca 3B görüntüleyici
+// açılır (sihirbaz açıksa).
+function veMntWizStpOku(girdi, ad, kap){
+  var sonuc = (typeof veMntStpOku === 'function') ? veMntStpOku(girdi)
     : { ok:false, hatalar:['Takoz STEP tanıyıcısı yüklenmemiş.'], agac:[], parcalar:[] };
+  return _mwStpKur(sonuc, ad, kap);
+}
+function _mwStpKur(sonuc, ad, kap){
   var s = { dosya:ad || 'STEP', kap:kap || 'duz', durum:sonuc.ok ? 'hazir' : 'hata', sonuc:sonuc,
-            roller:(sonuc.agac || []).map(function(){ return null; }), coz:null, kutle:{}, ag:[], modul:_mwModulId() };
+            roller:(sonuc.agac || []).map(function(){ return null; }), coz:null, kutle:{}, ag:[], modul:_mwModulId(),
+            acik:_mwStpAcilis(sonuc) };
   if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosya okunamadı.';
   _mwStp = s;
+  // 3B açılırsa kart onun altında: kart BİR SONRAKİ görevde çizilir — ikisi
+  // tek görevde 50 ms'yi aşıyordu (ölçüldü: 174 ms).
+  var uc = s.durum === 'hazir' && typeof veMntWiz3bAc === 'function' && typeof document !== 'undefined' && veMntWizAcik();
+  if(uc && veMntWiz3bAc()){ setTimeout(function(){ if(_mwStp === s) veMntWizRender(); }, 0); return s; }
   veMntWizRender();
-  if(s.durum === 'hazir' && typeof veMntWiz3bAc === 'function') veMntWiz3bAc();
   return s;
 }
 function veMntWizStpDrop(e){
@@ -857,9 +933,72 @@ function veMntWizStpSurukle(el, giris){
   el.setAttribute('data-surukle', String(n));
   el.classList.toggle('ve-fw-stp-on', n > 0);
 }
-// Tablonun satırları: kök (bütün montaj) çocuğu varsa rol almaz.
+// TABLONUN SATIRLARI — kök (bütün montaj) çocuğu varsa rol almaz. Ağaç DAL
+// DAL açılır (`s.acik`: düğüm → gösterilen çocuk sayısı): küçük montaj tam
+// açık gelir; büyüğünde üst düzeyler — dal, BÜTÜN çocukları satırlar
+// VE_MW_STP_SATIR'a sığdıkça açık gelir. Açılan dal çocuklarını
+// VE_MW_STP_SAYFA'lık sayfalarla verir ("… daha" satırı). Rol verilen düğüm
+// ve ataları dal kapalıyken de görünür. Gerekçe ölçüldü (11.694 parçalık
+// montaj): her satırı rol listesiyle çizmek kartı 6,6 sn donduruyordu ve
+// kart her rol değişiminde yeniden kuruluyor; satır başına ~0,5 ms.
+var VE_MW_STP_SATIR = 120, VE_MW_STP_SAYFA = 50;
+function _mwStpAcilis(sonuc){
+  var a = sonuc.agac || [], acik = {}, gorunen = 0, kuyruk = [];
+  if(a.length <= VE_MW_STP_SATIR + 1){
+    a.forEach(function(d){ if(d.cocuklar.length) acik[d.i] = d.cocuklar.length; });
+    return acik;
+  }
+  var ac = function(d, n){
+    acik[d.i] = n;
+    gorunen += n + (n < d.cocuklar.length ? 1 : 0);
+    for(var k = 0; k < n; k++) kuyruk.push(a[d.cocuklar[k]]);
+  };
+  // Kökün çocukları her zaman (ilk sayfa); sonra genişlik öncelikli
+  a.forEach(function(d){
+    if(d.ebeveyn >= 0) return;
+    if(d.cocuklar.length) ac(d, Math.min(d.cocuklar.length, VE_MW_STP_SAYFA)); else gorunen++;
+  });
+  for(var q = 0; q < kuyruk.length; q++){
+    var d = kuyruk[q], n = d.cocuklar.length;
+    if(n && n <= VE_MW_STP_SAYFA && gorunen + n <= VE_MW_STP_SATIR) ac(d, n);
+  }
+  return acik;
+}
+// Rol verilen düğümler ve ataları
+function _mwStpRolYolu(s){
+  var a = s.sonuc.agac, yol = {};
+  s.roller.forEach(function(r, i){ if(r) for(var e = i; e >= 0 && !yol[e]; e = a[e].ebeveyn) yol[e] = 1; });
+  return yol;
+}
+// Görünen satırlar, ağaç sırasıyla; sayfası bitmemiş dalın sonunda
+// { daha: true, ebeveyn, kalan, derinlik }.
 function _mwStpSatirlar(s){
-  return s.sonuc.agac.filter(function(d){ return !(d.ebeveyn < 0 && d.cocuklar.length); });
+  var a = s.sonuc.agac, out = [], ac = s.acik || null, rol = ac ? _mwStpRolYolu(s) : null;
+  function gez(i, goster){
+    var d = a[i], cc = d.cocuklar, n = ac ? (ac[i] || 0) : cc.length;
+    if(goster) out.push(d);
+    for(var k = 0; k < cc.length; k++) if(k < n || rol[cc[k]]) gez(cc[k], true);
+    if(n && n < cc.length) out.push({ daha: true, ebeveyn: i, kalan: cc.length - n, derinlik: d.derinlik + 1 });
+  }
+  a.forEach(function(d){ if(d.ebeveyn < 0) gez(d.i, !d.cocuklar.length); });
+  return out;
+}
+// Dalı aç/kapat · dalın sonraki sayfası
+function veMntWizStpAc(i){
+  var s = _mwStp;
+  if(!s || s.durum !== 'hazir' || !s.sonuc.agac[i] || !s.sonuc.agac[i].cocuklar.length) return false;
+  if(!s.acik) s.acik = {};
+  if(s.acik[i]) delete s.acik[i];
+  else s.acik[i] = Math.min(s.sonuc.agac[i].cocuklar.length, VE_MW_STP_SAYFA);
+  veMntWizRender();
+  return true;
+}
+function veMntWizStpDaha(i){
+  var s = _mwStp, d = s && s.sonuc && s.sonuc.agac[i];
+  if(!d || !s.acik || !s.acik[i]) return false;
+  s.acik[i] = Math.min(d.cocuklar.length, s.acik[i] + VE_MW_STP_SAYFA);
+  veMntWizRender();
+  return true;
 }
 function _mwStpImza(s){ return JSON.stringify(s.roller); }
 // Parçanın ağı — 3B görüntüleyiciyle ORTAK önbellek (s.ag): hesap ve görüntü
@@ -895,6 +1034,7 @@ function veMntWizStpRol(i, tip){
   return true;
 }
 function veMntWizStpKapat(){
+  _mwStpBirak();
   _mwStp = null;
   veMntWizRender();
 }
@@ -1064,13 +1204,14 @@ function _mwStpKartHTML(){
     return h + '</div>';
   }
   if(s.durum === 'okunuyor')
-    return h + '<div class="ve-fw-seeded ve-fw-stp-wait">' + _mwIkon('clock') + ' <b>' + _mwEsc(s.dosya) + '</b> okunuyor…</div></div>';
+    return h + '<div class="ve-fw-seeded ve-fw-stp-wait">' + _mwIkon('clock') + ' <b>' + _mwEsc(s.dosya) + '</b> okunuyor…</div>'
+      + _mwStpIlerlemeHTML(s) + '</div>';
   if(s.durum === 'hata')
     return h + '<div class="ve-fw-issues"><div class="ve-fw-issue ve-fw-issue-err">' + _mwIkon('x') + ' <b>'
       + _mwEsc(s.dosya) + '</b> — ' + _mwEsc(s.hata) + '</div></div></div>';
 
   var so = s.sonuc, sm = so.sureMs || {}, bas = so.baslik || {};
-  var sure = ((sm.oku || 0) + (sm.montaj || 0) + (sm.yuz || 0)) / 1000;
+  var sure = (sm.toplam !== undefined ? sm.toplam : (sm.oku || 0) + (sm.montaj || 0) + (sm.yuz || 0)) / 1000;
   h += '<div class="ve-fw-seeded">' + _mwIkon('check') + ' <b>' + _mwEsc(s.dosya) + '</b> okundu <em>'
     + _mwEsc([bas.sistem || bas.onisleyici || '',
               s.kap !== 'duz' ? 'sıkıştırılmış (' + s.kap + ')' : '',
@@ -1084,6 +1225,12 @@ function _mwStpKartHTML(){
   var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-tbl-stp ve-mw-tbl-stp"><thead><tr>'
     + '<th>Parça</th><th>Rol</th><th>Konum<em>mm</em></th></tr></thead><tbody>';
   satirlar.forEach(function(d){
+    if(d.daha){
+      t += '<tr class="ve-fw-stp-r ve-mw-stp-daha"><td colspan="3" style="--stp-d:' + Math.max(0, d.derinlik - taban) + ';">'
+        + '<button type="button" class="ve-mw-stp-dahabtn" onclick="veMntWizStpDaha(' + d.ebeveyn + ')">'
+        + _mwIkon('chevron-down') + ' ' + veSayi(d.kalan, 0) + ' düğüm daha</button></td></tr>';
+      return;
+    }
     var rol = s.roller[d.i] || '', ata = -1;
     for(var e = d.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     // `tanim` DÜZ METİN, `onEk` HTML (ikon): hücre ikisinden kurulur (FEAD'de
@@ -1098,9 +1245,15 @@ function _mwStpKartHTML(){
       } else { tanim = 'ölçülemedi'; sinif = ' ve-fw-stp-warn'; }
     }
     else if(!rol) sinif = ' ve-fw-stp-off';
+    // Dal düğmesi: ikon dalın durumu; yaprakta aynı enlikte boşluk (adlar hizalı)
+    var dal = !d.cocuklar.length ? '<span class="ve-mw-stp-yaprak"></span>'
+      : s.acik && s.acik[d.i] ? '<button type="button" class="ve-mw-stp-ac" aria-expanded="true" aria-label="Kapat — ' + _mwEsc(d.ad)
+          + '" onclick="veMntWizStpAc(' + d.i + ')">' + _mwIkon('chevron-down') + '</button>'
+      : '<button type="button" class="ve-mw-stp-ac" aria-expanded="false" aria-label="Aç — ' + _mwEsc(d.ad)
+          + '" onclick="veMntWizStpAc(' + d.i + ')">' + _mwIkon('chevron-right') + '</button>';
     t += '<tr class="ve-fw-stp-r' + sinif + '" data-ve-stp="' + d.i + '">'
       + '<td title="' + _mwEsc(d.ornek || d.id || '') + '" style="--stp-d:' + Math.max(0, d.derinlik - taban) + ';">'
-      + _mwEsc(d.ad) + '</td>'
+      + (s.acik ? dal : '') + _mwEsc(d.ad) + '</td>'
       + '<td><select class="ve-fw-inp" aria-label="Rol — ' + _mwEsc(d.ad) + '" onchange="veMntWizStpRol(' + d.i + ', this.value)">'
       + sec.map(function(o){
           return '<option value="' + o[0] + '"' + (o[0] === rol ? ' selected' : '') + '>' + _mwEsc(o[1]) + '</option>'; }).join('')
@@ -1730,6 +1883,9 @@ if(typeof module !== 'undefined' && module.exports){
     _mwOrnekModelden: _mwOrnekModelden, _mwKurulumPlani: _mwKurulumPlani, _mwTorkZincirSVG: _mwTorkZincirSVG,
     _mwKatalogSecHTML: _mwKatalogSecHTML,
     veMntWizStp: veMntWizStp, veMntWizStpOku: veMntWizStpOku, veMntWizStpBayt: veMntWizStpBayt,
+    veMntWizStpDosya: veMntWizStpDosya, veMntWizStpVazgec: veMntWizStpVazgec, _mwStpIlerlemeVeri: _mwStpIlerlemeVeri,
+    veMntWizStpAc: veMntWizStpAc, veMntWizStpDaha: veMntWizStpDaha, _mwStpSatirlar: _mwStpSatirlar, _mwStpAcilis: _mwStpAcilis,
+    VE_MW_STP_SATIR: VE_MW_STP_SATIR, VE_MW_STP_SAYFA: VE_MW_STP_SAYFA,
     veMntWizStpRol: veMntWizStpRol, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
     veMntWizStpDenetim: veMntWizStpDenetim, veMntWizStpAktar: veMntWizStpAktar, veMntWizStpKapat: veMntWizStpKapat,
     veMntWizStpDrop: veMntWizStpDrop, _mwStpKartHTML: _mwStpKartHTML, _mwStpOnizleme: _mwStpOnizleme,

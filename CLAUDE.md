@@ -69,7 +69,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). STEP'te kütle
   yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Üçgen
   inceliği TEK sabitten (`VE_MNT_STP_UCGEN`, 0,5 mm — bütün güç grubu; FEAD 0,1).
-  Kapı: `mount-step.test.js` + `mount-wizard.test.js`.
+  **Okuma dilimli** (`veMntStpOkuDilimli`, yüz tanımı çıkarmaz): kart okunurken
+  çubuk + Vazgeç; Vazgeç, başka dosya ve sihirbazın kapanması okumayı bırakır.
+  **Parça tablosu dal dal** (`VE_MW_STP_SATIR` · `VE_MW_STP_SAYFA`; rollü düğüm dal
+  kapalıyken de görünür): kart her rol değişiminde yeniden kuruluyor ve 11.694
+  satır onu 6,6 sn donduruyordu. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
+  (→ *STEP OKUMASI* · *AĞAÇ DAL DAL*) + `mount-step-okuma.spec.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle
@@ -165,11 +170,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yükler; arayüzü sihirbazın 1. adımındaki **"STEP'ten başla"** kartı ve
   dosya okununca açılan **3B görüntüleyici** (`js/cp-fead-3b.js`: parçaya
   tıkla → rol). `js/step-ucgen.js` yüzleri **yalnız görüntü için** üçgenler —
-  ölçüm analitik kalır.
+  ölçüm analitik kalır. **Okuyucu dosyayı BAYT tutar, metne çevirmez** (V8'in tek
+  metin sınırı ~512 MiB; 420 MB'ta yığın 1,7 GB'tı) ve **okuma bir İŞtir**: senkron
+  `veStepP21Agac` (FEAD) ile dilimli `veStepP21AgacDilimli` (Takoz; ≤ 10 ms dilim,
+  sıkıştırılmış dosya `DecompressionStream`'le parça parça) aynı evreleri koşar.
+  Kapı: `step-p21.test.js`.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
-  süresi · sekme belleği · 3B ağı örneklemi, `npm run step:olcum -- <dosya>`). Takoz STEP
+  süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
+  step:olcum -- <dosya>`; `--orneklem 0` yalnız okuma). Takoz STEP
   adımlarının önce/sonra sayıları bunlarla alınır; üretilen dosya git'e dâhil değil.
 - `tools/metin-dili.js` + `tools/metin-turu.js` — *ARAYÜZ ANLATMAZ* kuralının tarayıcısı
   (kaynaktaki her arayüz metni, aday işaretleri, cırcır tabanı) ve **ekran turu**

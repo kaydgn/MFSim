@@ -1,9 +1,9 @@
 // ============================================================================
 //  STEP (ISO 10303-21) OKUYUCUSU — DOM'suz, saf JS
 // ============================================================================
-// Bir STEP dosyasını METİN olarak okur, varlıkları kimliğiyle tutar ve yalnız
-// sorulanı çözer. Montaj ağacını, parçaların montajdaki konumunu ve bir yüzün
-// analitik tanımını (eksen · yarıçap · sınır çemberleri) verir. Anlam
+// Bir STEP dosyasını BAYT olarak okur, varlıkları kimliğiyle dizine alır ve
+// yalnız sorulanı çözer. Montaj ağacını, parçaların montajdaki konumunu ve bir
+// yüzün analitik tanımını (eksen · yarıçap · sınır çemberleri) verir. Anlam
 // yüklemez: "bu parça kasnak mı" sorusunun yeri js/fead-step.js.
 //
 // ── NEDEN OCCT DEĞİL ──────────────────────────────────────────────────────
@@ -15,10 +15,23 @@
 // edilmesi gerekiyordu. Kasnak bir torna parçası; yüzleri silindir, koni, tor
 // ve düzlem. Ölçülecek her sayı dosyada zaten yazılı — okumak yeterli.
 //
-// ── TEMBEL ÇÖZÜM ─────────────────────────────────────────────────────────
-// Kayıtlar ham metin olarak tutulur, argümanlar ilk sorulduğunda ayrıştırılıp
-// önbelleğe alınır. Büyük dosyanın gövdesi B-spline kontrol noktalarıdır;
-// FEAD onlara hiç dokunmaz.
+// ── DOSYA BAYT OLARAK DURUR, METNE ÇEVRİLMEZ ─────────────────────────────
+// Dosya tek bir Uint8Array; kayıt dizini tipli dizilerde (kimlik · gövdenin
+// başı · sonu · tip kodu — kayıt başına 14 bayt). Varlık ilk sorulduğunda
+// baytlarından ayrıştırılır. Büyük dosyanın gövdesi B-spline kontrol
+// noktalarıdır; FEAD onlara hiç dokunmaz. Gerekçe ölçüldü (420 MB'lık deneme
+// montajı): dosyayı metin olarak tutmak okumadan sonra JS yığınında 1,7 GB
+// demekti ve V8'in tek metin sınırı (~512 MiB) daha büyük dosyayı hiç
+// açtırmıyordu ("Invalid string length").
+// Ayrıştırılmış varlıkların önbelleği SINIRLI (iki nesil, VE_STEP_P21_ONBELLEK):
+// sınırsız önbellek 3B kurulurken bütün kontrol noktalarını yığında tutuyordu.
+//
+// ── OKUMA BİR İŞTİR — DİLİMLENİR ─────────────────────────────────────────
+// Tarama · dizin · montaj · ağaç evreleri kaldığı yerden sürer
+// (veStepP21AgacIs). Senkron API (veStepP21Agac) işi sonuna kadar koşar;
+// tarayıcıda veStepP21AgacDilimli ≤ VE_STEP_P21_DILIM ms'lik dilimlerle koşar
+// ve arayüz donmaz (kökteki CLAUDE.md → UZUN İŞ ARAYÜZÜ KİLİTLEMEZ). Tek
+// görevde okuma 420 MB'ta arayüzü 34 sn donduruyordu.
 //
 // ── BİRİM TAHMİN EDİLMEZ ─────────────────────────────────────────────────
 // Uzunluk ve düzlem açısı birimi temsilin kendi bağlamından
@@ -36,177 +49,470 @@
 // montaj DESTEKLENMİYOR ve bu SESSİZ geçilmez: uyarı listesine yazılır.
 // ============================================================================
 
-var VE_STEP_P21_SURUM = '1.0.0';
+var VE_STEP_P21_SURUM = '2.0.0';
+var VE_STEP_P21_ONBELLEK = 65536;      // ayrıştırılmış varlık önbelleğinin nesli (kayıt)
+var VE_STEP_P21_DILIM = 10;            // ms — tarayıcıda dilimin bütçesi
 
-// ── 1 · KAYITLAR ──────────────────────────────────────────────────────────
-// Metni ';' ile biten ifadelere böler; dize ('...') ve yorum (/* */) içindeki
-// karakterler ayırıcı sayılmaz. HEADER ifadeleri adıyla, DATA kayıtları
-// kimliğiyle tutulur.
-function veStepP21Oku(metin){
-  var s = String(metin == null ? '' : metin);
-  var model = { kayit: {}, onbellek: {}, baslik: {}, adet: 0, enBuyukId: 0, hatalar: [] };
-  if(s.indexOf('ISO-10303-21') < 0){
-    model.hatalar.push('Dosya bir STEP dosyası değil (ISO-10303-21 başlığı yok).');
-    return model;
+function _stpSimdi(){
+  return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+}
+
+// ── 1 · KAYIT DİZİNİ ─────────────────────────────────────────────────────
+// Baytlar ';' ile biten ifadelere bölünür; dize ('...') ve yorum (/* */)
+// içindeki karakterler ayırıcı sayılmaz. DATA kayıtları dizine girer (gövde
+// metne çevrilmez); HEADER ifadeleri tarama bitince ayrıştırılır — dizelerin
+// kodlaması (aşağıda) ancak o zaman bilinir.
+//   model: { bayt, adet, enBuyukId, hatalar[], baslik{}, utf8,
+//            kim · bas · son: Uint32Array, tip: Uint16Array (kayıt sırasıyla),
+//            tipAd[] (kod → ad; 0 '' · 1 'COMPLEX'), yer (kimlik → sıra + 1) }
+//
+// KODLAMA: Part 21'in temel alfabesi ASCII, ASCII dışı karakter \X2\ ile
+// kaçışlanır (3DEXPERIENCE böyle yazıyor). Standarda uymayan bir yazıcının
+// dizelere bıraktığı ham bayt: dosyadaki bütün dizeler geçerli UTF-8 ise
+// UTF-8, değilse ISO 8859-1 okunur (karar dosya başına, taramada).
+var _STP_KARMASIK = 1;
+var _STP_IMZA = 'ISO-10303-21';
+var _STP_K_HEADER = [72, 69, 65, 68, 69, 82], _STP_K_ENDSEC = [69, 78, 68, 83, 69, 67],
+    _STP_K_DATA = [68, 65, 84, 65], _STP_K_DATA_P = [68, 65, 84, 65, 40];
+
+function _stpModel(bayt){
+  return { bayt: bayt, adet: 0, enBuyukId: 0, hatalar: [], baslik: {}, utf8: true,
+           kim: null, bas: null, son: null, tip: null, tipAd: ['', 'COMPLEX'], yer: null, yerMap: null,
+           _ob1: new Map(), _ob2: null };
+}
+
+// Girdi: Uint8Array (ve her bayt görünümü) · ArrayBuffer · metin. Metin UTF-8
+// baytlarına çevrilir; dizeleri UTF-8 okunur, yani çözülmüş bir metin aynen
+// geri gelir (js/fead-step.js metinle okur).
+function _stpGirdiBayt(girdi){
+  if(girdi && ArrayBuffer.isView(girdi)) return new Uint8Array(girdi.buffer, girdi.byteOffset, girdi.byteLength);
+  if(Object.prototype.toString.call(girdi) === '[object ArrayBuffer]') return new Uint8Array(girdi);
+  return _stpMetinBayt(String(girdi == null ? '' : girdi));
+}
+function _stpMetinBayt(s){
+  var n = s.length, i, c;
+  for(i = 0; i < n; i++) if(s.charCodeAt(i) > 127) break;
+  if(i === n){
+    var a = new Uint8Array(n);
+    for(i = 0; i < n; i++) a[i] = s.charCodeAt(i);
+    return a;
   }
-  var n = s.length, i = 0, parcaBas = 0, parcalar = [], dize = false, bolum = '';
-  while(i < n){
-    var c = s.charCodeAt(i);
-    if(dize){
-      if(c === 39){ if(s.charCodeAt(i + 1) === 39){ i += 2; continue; } dize = false; }
-      i++; continue;
+  var b = new Uint8Array(n * 3), k = 0;
+  for(i = 0; i < n; i++){
+    c = s.charCodeAt(i);
+    if(c < 0x80) b[k++] = c;
+    else if(c < 0x800){ b[k++] = 0xC0 | (c >> 6); b[k++] = 0x80 | (c & 63); }
+    else if(c >= 0xD800 && c < 0xDC00 && i + 1 < n && (s.charCodeAt(i + 1) & 0xFC00) === 0xDC00){
+      var cp = 0x10000 + ((c - 0xD800) << 10) + (s.charCodeAt(++i) - 0xDC00);
+      b[k++] = 0xF0 | (cp >> 18); b[k++] = 0x80 | ((cp >> 12) & 63); b[k++] = 0x80 | ((cp >> 6) & 63); b[k++] = 0x80 | (cp & 63);
+    } else {
+      if(c >= 0xD800 && c < 0xE000) c = 0xFFFD;                  // eşsiz vekil
+      b[k++] = 0xE0 | (c >> 12); b[k++] = 0x80 | ((c >> 6) & 63); b[k++] = 0x80 | (c & 63);
     }
-    if(c === 39){ dize = true; i++; continue; }
-    if(c === 47 && s.charCodeAt(i + 1) === 42){               // /* yorum */
-      parcalar.push(s.slice(parcaBas, i));
-      var son = s.indexOf('*/', i + 2);
-      i = son < 0 ? n : son + 2;
-      parcaBas = i;
+  }
+  return b.subarray(0, k);
+}
+
+// İmza dosyanın başında aranır (ilk 64 KiB) — STEP olmayan büyük bir dosya
+// sonuna kadar taranmaz.
+function _stpImzaVar(b){
+  var L = _STP_IMZA.length, son = Math.min(b.length, 65536) - L;
+  for(var i = 0; i <= son; i++){
+    for(var k = 0; k < L && b[i + k] === _STP_IMZA.charCodeAt(k); k++);
+    if(k === L) return true;
+  }
+  return false;
+}
+
+// TARAMA DURUMU — bir dilim `sinir` bayta kadar ilerler; ifadenin ortasında
+// durabilir (kaldığı yer `i`, ifadenin ilk anlamlı baytı `bas`).
+function _stpTarama(model){
+  var kap = Math.max(1024, Math.ceil(model.bayt.length / 56));
+  model.kim = new Uint32Array(kap); model.bas = new Uint32Array(kap);
+  model.son = new Uint32Array(kap); model.tip = new Uint16Array(kap);
+  return { model: model, b: model.bayt, i: 0, bas: -1, bolum: 0, kap: kap, baslik: [], tipKod: new Map() };
+}
+function _stpTaraDilim(D, sinir){
+  var b = D.b, n = b.length, i = D.i, bas = D.bas, son = sinir < n ? sinir : n, c;
+  while(i < son){
+    c = b[i];
+    if(c === 39){                                             // ' dize: kapanışa kadar
+      if(bas < 0) bas = i;
+      i = _stpDizeSonu(D, b, i + 1, n);
       continue;
     }
     if(c === 59){                                             // ;
-      parcalar.push(s.slice(parcaBas, i));
-      var ifade = (parcalar.length === 1 ? parcalar[0] : parcalar.join('')).trim();
-      parcalar = [];
-      parcaBas = i + 1;
-      bolum = _stpIfade(model, ifade, bolum);
+      if(bas >= 0) _stpIfade(D, bas, i);
+      bas = -1; i++;
+      continue;
     }
+    if(c === 47 && b[i + 1] === 42){ i = _stpYorumSonu(b, i + 2, n); continue; }   // /* yorum */
+    if(bas < 0 && c !== 32 && c !== 10 && c !== 13 && c !== 9) bas = i;
     i++;
   }
-  return model;
+  D.i = i; D.bas = bas;
+  return i >= n;
+}
+// Dizenin kapanışından sonraki konum; '' kaçışlanmış tırnaktır. ASCII dışı
+// bayt UTF-8 olarak sınanır (dosyanın kodlama kararı).
+function _stpDizeSonu(D, b, j, n){
+  for(;;){
+    if(j >= n) return n;                                      // kapanmayan dize: ifade bitmez
+    var c = b[j];
+    if(c === 39){ if(b[j + 1] === 39){ j += 2; continue; } return j + 1; }
+    if(c > 127 && D.model.utf8){
+      var u = _stpUtf8Boy(b, j, n);
+      if(u < 0){ D.model.utf8 = false; j++; } else j += u;
+      continue;
+    }
+    j++;
+  }
+}
+function _stpYorumSonu(b, j, n){
+  for(; j + 1 < n; j++) if(b[j] === 42 && b[j + 1] === 47) return j + 2;
+  return n;
+}
+// Boşluk ve yorum atlanır
+function _stpAtla(b, j, son){
+  while(j < son){
+    var c = b[j];
+    if(c === 32 || c === 10 || c === 13 || c === 9){ j++; continue; }
+    if(c === 47 && j + 1 < son && b[j + 1] === 42){ j = _stpYorumSonu(b, j + 2, son); continue; }
+    break;
+  }
+  return j;
+}
+function _stpEsitB(b, bas, son, k){
+  if(son - bas !== k.length) return false;
+  for(var i = 0; i < k.length; i++) if(b[bas + i] !== k[i]) return false;
+  return true;
+}
+function _stpOnekB(b, bas, son, k){
+  if(son - bas < k.length) return false;
+  for(var i = 0; i < k.length; i++) if(b[bas + i] !== k[i]) return false;
+  return true;
+}
+// Bir ifade [bas, son): bölüm anahtarı · başlık ifadesi · DATA kaydı
+function _stpIfade(D, bas, son){
+  var b = D.b, c;
+  while(son > bas){ c = b[son - 1]; if(c === 32 || c === 10 || c === 13 || c === 9) son--; else break; }
+  if(b[bas] === 35){                                          // #kimlik = gövde
+    if(D.bolum !== 2) return;
+    var j = bas + 1, id = 0, rakam = 0;
+    while(j < son){ c = b[j]; if(c >= 48 && c <= 57){ id = id * 10 + (c - 48); j++; rakam++; } else break; }
+    j = _stpAtla(b, j, son);
+    if(!rakam || b[j] !== 61 || !(id > 0) || id > 4294967295) return;
+    _stpKayitEkle(D, id, _stpAtla(b, j + 1, son), son);
+    return;
+  }
+  if(_stpEsitB(b, bas, son, _STP_K_HEADER)){ D.bolum = 1; return; }
+  if(_stpEsitB(b, bas, son, _STP_K_ENDSEC)){ D.bolum = 0; return; }
+  if(_stpEsitB(b, bas, son, _STP_K_DATA) || _stpOnekB(b, bas, son, _STP_K_DATA_P)){ D.bolum = 2; return; }
+  if(D.bolum === 1) D.baslik.push(bas, son);
+}
+function _stpKayitEkle(D, id, bas, son){
+  var M = D.model, k = M.adet;
+  if(k >= D.kap){
+    var kap = Math.ceil(D.kap * 1.5) + 1024, buyut = function(a, T){ var y = new T(kap); y.set(a); return y; };
+    M.kim = buyut(M.kim, Uint32Array); M.bas = buyut(M.bas, Uint32Array);
+    M.son = buyut(M.son, Uint32Array); M.tip = buyut(M.tip, Uint16Array);
+    D.kap = kap;
+  }
+  M.kim[k] = id; M.bas[k] = bas; M.son[k] = son; M.tip[k] = _stpTipKodu(D, bas, son);
+  M.adet = k + 1;
+  if(id > M.enBuyukId) M.enBuyukId = id;
+}
+// Tip adı kayıttan bir kez okunur ve koda çevrilir (özet + ad sınaması —
+// özet çakışırsa sonraki yuva). Gövde '(' ile başlıyorsa karmaşık varlık.
+function _stpTipKodu(D, bas, son){
+  var b = D.b, c = b[bas];
+  if(c === 40) return _STP_KARMASIK;
+  var h = 0x811c9dc5 | 0, k = bas;
+  while(k < son){
+    c = b[k];
+    if(c >= 97 && c <= 122) c -= 32;
+    else if(!((c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95)) break;
+    h = Math.imul(h ^ c, 16777619);
+    k++;
+  }
+  var L = k - bas, ad = D.model.tipAd, kod;
+  if(!L) return 0;
+  for(;;){
+    kod = D.tipKod.get(h);
+    if(kod === undefined) break;
+    if(_stpAdEsit(ad[kod], b, bas, L)) return kod;
+    h = (h + 1) | 0;
+  }
+  if(ad.length > 65535) return 0;
+  kod = ad.length;
+  ad.push(_stpAscii(b, bas, bas + L).toUpperCase());
+  D.tipKod.set(h, kod);
+  return kod;
+}
+function _stpAdEsit(ad, b, bas, L){
+  if(ad.length !== L) return false;
+  for(var k = 0; k < L; k++){
+    var c = b[bas + k];
+    if(c >= 97 && c <= 122) c -= 32;
+    if(ad.charCodeAt(k) !== c) return false;
+  }
+  return true;
+}
+// Kimlik → kayıt sırası. Kimlikler sıkışıksa düz dizi, seyrekse Map.
+// Aynı kimlik iki kez yazılmışsa sonuncusu geçer.
+function _stpDizinKur(D, bitis){
+  var M = D.model, N = M.adet;
+  if(D.k === undefined){
+    D.k = 0;
+    if(M.enBuyukId <= 4 * N + 1024) M.yer = new Int32Array(M.enBuyukId + 1);
+    else M.yerMap = new Map();
+  }
+  while(D.k < N){
+    var son = Math.min(N, D.k + 262144);
+    if(M.yer) for(var k = D.k; k < son; k++) M.yer[M.kim[k]] = k + 1;
+    else for(var q = D.k; q < son; q++) M.yerMap.set(M.kim[q], q + 1);
+    D.k = son;
+    if(_stpSimdi() > bitis) break;
+  }
+  return D.k >= N;
+}
+function _stpSira(m, id){
+  if(m.yer){ var s = m.yer[id]; return s ? s - 1 : -1; }
+  if(m.yerMap){ var t = m.yerMap.get(+id); return t ? t - 1 : -1; }
+  return -1;
+}
+// Başlık ifadeleri: AD(argümanlar) — tarama bittikten sonra
+function _stpBaslikKur(D){
+  var M = D.model, b = M.bayt, L = D.baslik;
+  for(var q = 0; q < L.length; q += 2){
+    var bas = L[q], son = L[q + 1], p = bas;
+    while(p < son && b[p] !== 40) p++;
+    if(p >= son || p === bas) continue;
+    var ad = _stpAscii(b, bas, p).trim().toUpperCase();
+    try { M.baslik[ad] = _stpArg(M, p, son); } catch(e) { M.baslik[ad] = null; }
+  }
 }
 
-function _stpIfade(model, ifade, bolum){
-  if(!ifade) return bolum;
-  if(ifade === 'HEADER') return 'baslik';
-  if(ifade === 'ENDSEC') return '';
-  if(ifade === 'DATA' || ifade.indexOf('DATA(') === 0) return 'veri';
-  if(bolum === 'veri'){
-    if(ifade.charCodeAt(0) !== 35) return bolum;              // # ile başlamayan
-    var esit = ifade.indexOf('=');
-    if(esit < 0) return bolum;
-    var id = +ifade.slice(1, esit);
-    if(!(id > 0)) return bolum;
-    model.kayit[id] = ifade.slice(esit + 1).trim();
-    model.adet++;
-    if(id > model.enBuyukId) model.enBuyukId = id;
-    return bolum;
+// SENKRON: metin ya da bayt → model (dizin kurulmuş)
+function veStepP21Oku(girdi){
+  var model = _stpModel(_stpGirdiBayt(girdi));
+  if(!_stpImzaVar(model.bayt)){
+    model.hatalar.push('Dosya bir STEP dosyası değil (ISO-10303-21 başlığı yok).');
+    return model;
   }
-  if(bolum === 'baslik'){
-    var p = ifade.indexOf('(');
-    if(p > 0){
-      var ad = ifade.slice(0, p).trim().toUpperCase();
-      try { model.baslik[ad] = _stpArgumanlar(ifade.slice(p)); } catch(e) { model.baslik[ad] = null; }
-    }
-  }
-  return bolum;
+  var D = _stpTarama(model);
+  _stpTaraDilim(D, Infinity);
+  _stpDizinKur(D, Infinity);
+  _stpBaslikKur(D);
+  return model;
 }
 
 // ── 2 · ARGÜMANLAR ─────────────────────────────────────────────────────────
 // Dönen biçim: sayı · {s: dize} · {ref: kimlik} · {e: numaralandırma} ·
 // {tip: 'LENGTH_MEASURE', a: [...]} (tipli parametre) · [liste] · null ($ ve *)
-function _stpArgumanlar(src){
-  var i = 0, n = src.length;
-  function bosluk(){
-    while(i < n){ var c = src.charCodeAt(i); if(c === 32 || c === 9 || c === 10 || c === 13) i++; else break; }
+// Ayrıştırıcının durumu modül düzeyinde (çağrı başına kapanış kurulmaz);
+// bayt dizisine tutunmaz — dönüşte bırakılır. Sonun konumu `_stpPi`de kalır.
+var _stpPb = null, _stpPi = 0, _stpPs = 0, _stpPm = null;
+function _stpArg(m, bas, son){
+  _stpPb = m.bayt; _stpPi = bas; _stpPs = son; _stpPm = m;
+  try { return _stpDeger(); }
+  finally { _stpPb = null; _stpPm = null; }
+}
+function _stpBosluk(){
+  var b = _stpPb, i = _stpPi, s = _stpPs;
+  while(i < s){
+    var c = b[i];
+    if(c === 32 || c === 9 || c === 10 || c === 13){ i++; continue; }
+    if(c === 47 && i + 1 < s && b[i + 1] === 42){ i = _stpYorumSonu(b, i + 2, s); continue; }
+    break;
   }
-  function deger(){
-    bosluk();
-    var c = src.charCodeAt(i), j;
-    if(c === 40){                                             // (
-      i++;
-      var liste = [];
-      bosluk();
-      if(src.charCodeAt(i) === 41){ i++; return liste; }
-      for(;;){
-        liste.push(deger());
-        bosluk();
-        var d = src.charCodeAt(i);
-        if(d === 44){ i++; continue; }
-        if(d === 41){ i++; return liste; }
-        throw new Error('STEP: listede beklenmeyen karakter "' + src.charAt(i) + '"');
-      }
+  _stpPi = i;
+}
+function _stpKarakter(c){ return c < 0 ? '' : String.fromCharCode(c); }
+function _stpDeger(){
+  _stpBosluk();
+  var b = _stpPb, i = _stpPi, s = _stpPs, c = i < s ? b[i] : -1, j, v;
+  if(c === 40){                                               // (
+    _stpPi = i + 1;
+    var liste = [];
+    _stpBosluk();
+    if(_stpPi < s && b[_stpPi] === 41){ _stpPi++; return liste; }
+    for(;;){
+      liste.push(_stpDeger());
+      _stpBosluk();
+      var d = _stpPi < s ? b[_stpPi] : -1;
+      if(d === 44){ _stpPi++; continue; }
+      if(d === 41){ _stpPi++; return liste; }
+      throw new Error('STEP: listede beklenmeyen karakter "' + _stpKarakter(d) + '"');
     }
-    if(c === 39){                                             // '...'
-      var ham = '';
-      j = i + 1;
-      for(;;){
-        var k = src.indexOf("'", j);
-        if(k < 0) throw new Error('STEP: kapanmayan dize');
-        ham += src.slice(j, k);
-        if(src.charCodeAt(k + 1) === 39){ ham += "'"; j = k + 2; continue; }
-        i = k + 1;
-        break;
-      }
-      return { s: veStepP21Coz(ham) };
-    }
-    if(c === 35){                                             // #kimlik
-      j = i + 1;
-      while(j < n){ var q = src.charCodeAt(j); if(q >= 48 && q <= 57) j++; else break; }
-      var ref = +src.slice(i + 1, j);
-      i = j;
-      return { ref: ref };
-    }
-    if(c === 46){                                             // .ENUM.
-      j = src.indexOf('.', i + 1);
-      var e = src.slice(i + 1, j);
-      i = j + 1;
-      return { e: e.toUpperCase() };
-    }
-    if(c === 36 || c === 42){ i++; return null; }             // $ ve *
-    if(c === 34){                                             // "ikili"
-      j = src.indexOf('"', i + 1);
-      var b = src.slice(i + 1, j);
-      i = j + 1;
-      return { b: b };
-    }
-    if(c === 45 || c === 43 || (c >= 48 && c <= 57)){        // sayı
-      j = i + 1;
-      while(j < n){
-        var r = src.charCodeAt(j);
-        if((r >= 48 && r <= 57) || r === 46 || r === 69 || r === 101 || r === 45 || r === 43) j++; else break;
-      }
-      var v = parseFloat(src.slice(i, j));
-      i = j;
-      return v;
-    }
-    if((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95){   // TİP(...)
-      j = i;
-      while(j < n){
-        var t = src.charCodeAt(j);
-        if((t >= 65 && t <= 90) || (t >= 97 && t <= 122) || (t >= 48 && t <= 57) || t === 95) j++; else break;
-      }
-      var tip = src.slice(i, j).toUpperCase();
-      i = j;
-      bosluk();
-      if(src.charCodeAt(i) === 40) return { tip: tip, a: deger() };
-      return { tip: tip, a: null };
-    }
-    throw new Error('STEP: beklenmeyen karakter "' + src.charAt(i) + '"');
   }
-  return deger();
+  if(c === 39) return { s: veStepP21Coz(_stpDize()) };        // '...'
+  if(c === 35){                                               // #kimlik
+    j = i + 1; v = 0;
+    while(j < s){ var q = b[j]; if(q >= 48 && q <= 57){ v = v * 10 + (q - 48); j++; } else break; }
+    _stpPi = j;
+    return { ref: v };
+  }
+  if(c === 46){                                               // .ENUM.
+    j = i + 1;
+    while(j < s && b[j] !== 46) j++;
+    if(j >= s) throw new Error('STEP: kapanmayan numaralandırma');
+    _stpPi = j + 1;
+    return { e: _stpAscii(b, i + 1, j).toUpperCase() };
+  }
+  if(c === 36 || c === 42){ _stpPi = i + 1; return null; }    // $ ve *
+  if(c === 34){                                               // "ikili"
+    j = i + 1;
+    while(j < s && b[j] !== 34) j++;
+    _stpPi = j + 1;
+    return { b: _stpAscii(b, i + 1, j) };
+  }
+  if(c === 45 || c === 43 || (c >= 48 && c <= 57)){          // sayı
+    j = i + 1;
+    while(j < s){
+      var r = b[j];
+      if((r >= 48 && r <= 57) || r === 46 || r === 69 || r === 101 || r === 45 || r === 43) j++; else break;
+    }
+    _stpPi = j;
+    return _stpSayi(b, i, j);
+  }
+  if((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95){   // TİP(...)
+    j = i;
+    while(j < s){
+      var t = b[j];
+      if((t >= 65 && t <= 90) || (t >= 97 && t <= 122) || (t >= 48 && t <= 57) || t === 95) j++; else break;
+    }
+    var tip = _stpAscii(b, i, j).toUpperCase();
+    _stpPi = j;
+    _stpBosluk();
+    if(_stpPi < s && b[_stpPi] === 40) return { tip: tip, a: _stpDeger() };
+    return { tip: tip, a: null };
+  }
+  throw new Error('STEP: beklenmeyen karakter "' + _stpKarakter(c) + '"');
+}
+
+// SAYI — hızlı yol KESİN: en çok 2^53'lük tam sayı mantis ve |üs| ≤ 22'de
+// tek çarpma/bölme doğru yuvarlanır (Clinger), yani parseFloat'ın verdiği
+// sayının aynısı. Öteki her biçim parseFloat'a gider.
+var _STP_ON = [1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15,
+  1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22];
+function _stpSayi(b, i, j){
+  var k = i, c = b[k], eksi = false;
+  if(c === 45){ eksi = true; k++; } else if(c === 43) k++;
+  var m = 0, us = 0, rakam = 0, nokta = false;
+  for(; k < j; k++){
+    c = b[k];
+    if(c >= 48 && c <= 57){
+      if(m > 900719925474099) return _stpSayiYavas(b, i, j);
+      m = m * 10 + (c - 48); rakam++;
+      if(nokta) us--;
+      continue;
+    }
+    if(c === 46 && !nokta){ nokta = true; continue; }
+    break;
+  }
+  if(!rakam) return _stpSayiYavas(b, i, j);
+  if(k < j){
+    if(c !== 69 && c !== 101) return _stpSayiYavas(b, i, j);
+    k++;
+    var ueksi = false, e = 0, er = 0;
+    if(k < j && (b[k] === 45 || b[k] === 43)){ ueksi = b[k] === 45; k++; }
+    for(; k < j; k++){
+      c = b[k];
+      if(c < 48 || c > 57 || e > 400) return _stpSayiYavas(b, i, j);
+      e = e * 10 + (c - 48); er++;
+    }
+    if(!er) return _stpSayiYavas(b, i, j);
+    us += ueksi ? -e : e;
+  }
+  var v;
+  if(us === 0) v = m;
+  else if(us > 0 && us <= 22) v = m * _STP_ON[us];
+  else if(us < 0 && us >= -22) v = m / _STP_ON[-us];
+  else return _stpSayiYavas(b, i, j);
+  return eksi ? -v : v;
+}
+function _stpSayiYavas(b, i, j){ return parseFloat(_stpAscii(b, i, j)); }
+
+// Baytlar → metin, bir bayt bir karakter (ISO 8859-1)
+function _stpAscii(b, i, j){
+  if(j - i === 1) return String.fromCharCode(b[i]);
+  if(j - i <= 4096) return String.fromCharCode.apply(null, b.subarray(i, j));
+  var s = '';
+  for(var k = i; k < j; k += 4096) s += String.fromCharCode.apply(null, b.subarray(k, Math.min(j, k + 4096)));
+  return s;
+}
+// '...' → ham içerik ('' tek tırnak olur; kaçış çözümü veStepP21Coz'da)
+function _stpDize(){
+  var b = _stpPb, s = _stpPs, i = _stpPi + 1, bas = i, parca = null;
+  for(;;){
+    if(i >= s) throw new Error('STEP: kapanmayan dize');
+    var c = b[i];
+    if(c === 39){
+      if(i + 1 < s && b[i + 1] === 39){ parca = (parca || '') + _stpDizeCoz(b, bas, i) + "'"; i += 2; bas = i; continue; }
+      break;
+    }
+    i++;
+  }
+  _stpPi = i + 1;
+  var son = _stpDizeCoz(b, bas, i);
+  return parca === null ? son : parca + son;
+}
+function _stpDizeCoz(b, i, j){
+  if(i === j) return '';
+  if(_stpPm && _stpPm.utf8) for(var k = i; k < j; k++) if(b[k] > 127) return _stpUtf8Coz(b, i, j);
+  return _stpAscii(b, i, j);
+}
+// Geçerli UTF-8 dizisinin bayt sayısı; geçersizse −1 (aşırı uzun ve aralık
+// dışı kod noktası geçersiz)
+function _stpUtf8Boy(b, i, n){
+  var c = b[i], cp, ek;
+  if(c >= 0xC2 && c < 0xE0){ cp = c & 0x1F; ek = 1; }
+  else if(c >= 0xE0 && c < 0xF0){ cp = c & 0x0F; ek = 2; }
+  else if(c >= 0xF0 && c < 0xF5){ cp = c & 0x07; ek = 3; }
+  else return -1;
+  if(i + ek >= n) return -1;
+  for(var k = 1; k <= ek; k++){
+    var d = b[i + k];
+    if((d & 0xC0) !== 0x80) return -1;
+    cp = (cp << 6) | (d & 0x3F);
+  }
+  if((ek === 2 && cp < 0x800) || (ek === 3 && (cp < 0x10000 || cp > 0x10FFFF))) return -1;
+  return ek + 1;
+}
+function _stpUtf8Coz(b, i, j){
+  var out = '', k = i;
+  while(k < j){
+    var c = b[k];
+    if(c < 0x80){ out += String.fromCharCode(c); k++; continue; }
+    var u = _stpUtf8Boy(b, k, j);
+    if(u < 0){ out += String.fromCharCode(c); k++; continue; }
+    var cp = u === 2 ? c & 0x1F : u === 3 ? c & 0x0F : c & 0x07;
+    for(var q = 1; q < u; q++) cp = (cp << 6) | (b[k + q] & 0x3F);
+    if(cp > 0xFFFF){ cp -= 0x10000; out += String.fromCharCode(0xD800 + (cp >> 10), 0xDC00 + (cp & 0x3FF)); }
+    else out += String.fromCharCode(cp);
+    k += u;
+  }
+  return out;
 }
 
 // Karmaşık varlık: (A(...) B(...) C()) → [{t, a}, ...]
-function _stpKarmasik(ham){
-  var parcalar = [], i = 1, n = ham.length;
-  while(i < n){
-    while(i < n && /[\s)]/.test(ham.charAt(i))) i++;
-    if(i >= n) break;
-    var p = ham.indexOf('(', i);
-    if(p < 0) break;
-    var ad = ham.slice(i, p).trim().toUpperCase();
-    // eşleşen kapanışı bul (dize duyarlı)
-    var derinlik = 0, j = p, dize = false;
-    for(; j < n; j++){
-      var c = ham.charCodeAt(j);
-      if(dize){ if(c === 39){ if(ham.charCodeAt(j + 1) === 39) j++; else dize = false; } continue; }
-      if(c === 39){ dize = true; continue; }
-      if(c === 40) derinlik++;
-      else if(c === 41){ derinlik--; if(derinlik === 0) break; }
+function _stpKarmasik(m, bas, son){
+  var b = m.bayt, parcalar = [], i = bas + 1;
+  while(i < son){
+    for(;;){
+      var c = i < son ? b[i] : -1;
+      if(c === 41 || c === 32 || c === 9 || c === 10 || c === 13 || c === 11 || c === 12){ i++; continue; }
+      if(c === 47 && i + 1 < son && b[i + 1] === 42){ i = _stpYorumSonu(b, i + 2, son); continue; }
+      break;
     }
-    parcalar.push({ t: ad, a: _stpArgumanlar(ham.slice(p, j + 1)) });
-    i = j + 1;
+    if(i >= son) break;
+    var p = i;
+    while(p < son && b[p] !== 40) p++;
+    if(p >= son) break;
+    var ad = _stpAscii(b, i, p).trim().toUpperCase();
+    parcalar.push({ t: ad, a: _stpArg(m, p, son) });
+    i = _stpPi;
   }
   return parcalar;
 }
@@ -251,26 +557,36 @@ function veStepP21Coz(ham){
 
 // ── 4 · VARLIK ERİŞİMİ ────────────────────────────────────────────────────
 function veStepP21Tip(model, id){
-  var r = model.kayit[id];
-  if(r === undefined) return null;
-  if(r.charCodeAt(0) === 40) return 'COMPLEX';
-  var p = r.indexOf('(');
-  return (p < 0 ? r : r.slice(0, p)).trim().toUpperCase();
+  var s = _stpSira(model, id);
+  return s < 0 ? null : model.tipAd[model.tip[s]];
 }
 
-// {t, a} — karmaşık varlıkta {t:'COMPLEX', parca:[{t, a}, ...]}
+// {t, a} — karmaşık varlıkta {t:'COMPLEX', parca:[{t, a}, ...]}.
+// ÖNBELLEK İKİ NESİL: sorulan varlık yeni nesle yazılır; nesil dolunca eskisi
+// atılır, eski nesilde bulunan yeniye taşınır (sık sorulan birim, bağlam,
+// yerleşim kalır; bir kez sorulan kontrol noktası gider).
 function veStepP21Varlik(model, id){
-  var v = model.onbellek[id];
+  var k = +id, v = model._ob1.get(k);
   if(v !== undefined) return v;
-  var r = model.kayit[id];
-  if(r === undefined) return null;
-  if(r.charCodeAt(0) === 40) v = { t: 'COMPLEX', parca: _stpKarmasik(r) };
-  else {
-    var p = r.indexOf('(');
-    v = { t: r.slice(0, p).trim().toUpperCase(), a: _stpArgumanlar(r.slice(p)) };
+  if(model._ob2){
+    v = model._ob2.get(k);
+    if(v !== undefined){ _stpOnbellekYaz(model, k, v); return v; }
   }
-  model.onbellek[id] = v;
+  var s = _stpSira(model, k);
+  if(s < 0) return null;
+  var bas = model.bas[s], son = model.son[s], kod = model.tip[s];
+  if(kod === _STP_KARMASIK) v = { t: 'COMPLEX', parca: _stpKarmasik(model, bas, son) };
+  else {
+    var b = model.bayt, p = bas;
+    while(p < son && b[p] !== 40) p++;
+    v = { t: model.tipAd[kod], a: p < son ? _stpArg(model, p, son) : null };
+  }
+  _stpOnbellekYaz(model, k, v);
   return v;
+}
+function _stpOnbellekYaz(model, k, v){
+  if(model._ob1.size >= VE_STEP_P21_ONBELLEK){ model._ob2 = model._ob1; model._ob1 = new Map(); }
+  model._ob1.set(k, v);
 }
 
 // Karmaşık varlığın adıyla istenen parçası
@@ -385,70 +701,114 @@ function _stpBirimVek(a){ var L = Math.sqrt(_stpNokta(a, a)); return L > 0 ? _st
 // ayrı dünya dönüşümü. Döner:
 //   { parcalar: [{ pd, urun:{id, ad, aciklama}, ornek, yol, M, sr, birim,
 //                  yuzler:[kimlik], egriler:[kimlik] }], uyarilar: [] }
+// İŞ İKİ EVRE: kayıtlar KİMLİK SIRASIYLA taranır (ilgili tipler koduyla
+// seçilir, gövdeye bakılmaz), sonra ağaç yığınla yürünür — çocuğun konumu
+// sırası gelince çözülür, yani parçaların ve uyarıların sırası özyinelemeli
+// yürüyüşünkiyle aynı.
+var _STP_MONTAJ_TIP = { PRODUCT_DEFINITION: 1, NEXT_ASSEMBLY_USAGE_OCCURRENCE: 2, ASSEMBLY_COMPONENT_USAGE: 2,
+  SHAPE_DEFINITION_REPRESENTATION: 3, CONTEXT_DEPENDENT_SHAPE_REPRESENTATION: 4,
+  SHAPE_REPRESENTATION_RELATIONSHIP: 5, MAPPED_ITEM: 6 };
 function veStepP21Montaj(model){
-  var out = { parcalar: [], uyarilar: [] };
-  var pdUrun = {}, pdSr = {}, cocuklar = {}, cocukMu = {}, nauoCdsr = {}, srrKomsu = {};
-  var tipler = {};
-  Object.keys(model.kayit).forEach(function(k){
-    var id = +k, t = veStepP21Tip(model, id);
-    if(t === 'PRODUCT_DEFINITION') pdUrun[id] = 1;
-    else if(t === 'NEXT_ASSEMBLY_USAGE_OCCURRENCE' || t === 'ASSEMBLY_COMPONENT_USAGE'){
-      var a = veStepP21Varlik(model, id).a;
-      var ebeveyn = a[3].ref, cocuk = a[4].ref;
-      (cocuklar[ebeveyn] = cocuklar[ebeveyn] || []).push({ nauo: id, pd: cocuk, ad: a[0] && a[0].s });
-      cocukMu[cocuk] = 1;
-    }
-    else if(t === 'SHAPE_DEFINITION_REPRESENTATION'){
-      var sd = veStepP21Varlik(model, id).a;
-      var pds = veStepP21Varlik(model, sd[0].ref);
-      if(pds && pds.a[2] && veStepP21Tip(model, pds.a[2].ref) === 'PRODUCT_DEFINITION')
-        pdSr[pds.a[2].ref] = sd[1].ref;
-    }
-    else if(t === 'CONTEXT_DEPENDENT_SHAPE_REPRESENTATION'){
-      var cd = veStepP21Varlik(model, id).a;
-      var pds2 = veStepP21Varlik(model, cd[1].ref);
-      if(pds2 && pds2.a[2]) nauoCdsr[pds2.a[2].ref] = cd[0].ref;
-    }
-    else if(t === 'SHAPE_REPRESENTATION_RELATIONSHIP'){
-      var rr = veStepP21Varlik(model, id).a;
-      (srrKomsu[rr[2].ref] = srrKomsu[rr[2].ref] || []).push(rr[3].ref);
-      (srrKomsu[rr[3].ref] = srrKomsu[rr[3].ref] || []).push(rr[2].ref);
-    }
-    else if(t === 'MAPPED_ITEM') tipler.MAPPED_ITEM = (tipler.MAPPED_ITEM || 0) + 1;
-  });
-  if(tipler.MAPPED_ITEM)
-    out.uyarilar.push('Dosyada ' + tipler.MAPPED_ITEM + ' MAPPED_ITEM var; bu kalıpla konumlandırılmış '
-      + 'parçalar okunmaz.');
-
-  var kokler = Object.keys(pdUrun).map(Number).filter(function(pd){ return !cocukMu[pd]; });
-  var ziyaret = 0;
-  // `atalar`: kökten bu parçaya kadar alt montajların ürünleri. Tedarikçi
-  // gergiyi çoğu zaman alt montaj olarak verir (kol · gövde · kasnak ayrı
-  // parça); "bu parça gergiye ait" bilgisi o zaman yalnız atanın adında durur.
-  function gez(pd, M, yol, atalar){
-    if(++ziyaret > 100000) return;
-    var sr = pdSr[pd];
-    var geo = sr ? _stpGeometri(model, sr, srrKomsu, out.uyarilar) : { yuzler: [], egriler: [] };
-    var cc = cocuklar[pd] || [];
-    var urun = _stpUrun(model, pd);
-    if(geo.yuzler.length || geo.egriler.length || !cc.length){
-      out.parcalar.push({ pd: pd, urun: urun, ornek: yol.length ? yol[yol.length - 1] : urun.id,
-        yol: yol.slice(), atalar: atalar.slice(), M: M, sr: sr || null,
-        birim: sr ? _stpSrBirim(model, sr) : { mm: NaN, derece: NaN },
-        yuzler: geo.yuzler, egriler: geo.egriler, altMontaj: cc.length > 0 });
-    }
-    cc.forEach(function(c){
-      var rrwt = nauoCdsr[c.nauo];
-      var yerel = rrwt ? _stpYerelDonusum(model, rrwt, pdSr[c.pd], out.uyarilar) : null;
-      if(!yerel){
-        out.uyarilar.push('"' + (c.ad || ('#' + c.nauo)) + '" örneğinin konumu okunamadı; parça atlandı.');
-        return;
-      }
-      gez(c.pd, veStepP21Bilesik(M, yerel), yol.concat([c.ad || ('#' + c.nauo)]), atalar.concat([urun]));
-    });
+  var J = _stpMontajIs(model);
+  while(!_stpMontajAdim(J, Infinity));
+  return J.out;
+}
+function _stpMontajIs(model){
+  var ilgi = new Uint8Array(model.tipAd.length);
+  model.tipAd.forEach(function(ad, kod){ ilgi[kod] = _STP_MONTAJ_TIP.hasOwnProperty(ad) ? _STP_MONTAJ_TIP[ad] : 0; });
+  return { model: model, out: { parcalar: [], uyarilar: [] }, evre: 0, k: model.yer ? 1 : 0, sirali: null, ilgi: ilgi,
+           pdler: [], pdSr: {}, cocuklar: {}, cocukMu: {}, nauoCdsr: {}, srrKomsu: {}, mapped: 0, ornekSay: 0,
+           yigin: null, ziyaret: 0, toplam: 1 };
+}
+// Bir dilim; iş bittiyse true. `bitis`: saat (_stpSimdi) sınırı.
+function _stpMontajAdim(J, bitis){
+  if(J.evre === 0){
+    if(!_stpMontajKayitlar(J, bitis)) return false;
+    if(J.mapped)
+      J.out.uyarilar.push('Dosyada ' + J.mapped + ' MAPPED_ITEM var; bu kalıpla konumlandırılmış '
+        + 'parçalar okunmaz.');
+    var kokler = J.pdler.filter(function(pd){ return !J.cocukMu[pd]; });
+    J.yigin = [];
+    for(var q = kokler.length - 1; q >= 0; q--) J.yigin.push({ pd: kokler[q], M: VE_STEP_P21_BIRIM, yol: [], atalar: [] });
+    J.toplam = Math.max(1, kokler.length + J.ornekSay);
+    J.evre = 1;
+    if(_stpSimdi() > bitis) return false;
   }
-  kokler.forEach(function(pd){ gez(pd, VE_STEP_P21_BIRIM, [], []); });
-  return out;
+  return _stpMontajYuru(J, bitis);
+}
+function _stpMontajKayitlar(J, bitis){
+  var m = J.model, ilgi = J.ilgi, tip = m.tip, enb = m.enBuyukId, adim = 0, id, s, g;
+  if(!m.yer && !J.sirali)                                   // seyrek kimlikler: sıralı liste
+    J.sirali = Array.from(m.yerMap.keys()).sort(function(a, b){ return a - b; });
+  for(;;){
+    if(m.yer){
+      if(J.k > enb) return true;
+      id = J.k++; s = m.yer[id] - 1;
+    } else {
+      if(J.k >= J.sirali.length) return true;
+      id = J.sirali[J.k++]; s = m.yerMap.get(id) - 1;
+    }
+    if(s >= 0 && (g = ilgi[tip[s]])) _stpMontajKayit(J, id, g);
+    if(++adim >= 4096){ adim = 0; if(_stpSimdi() > bitis) return false; }
+  }
+}
+function _stpMontajKayit(J, id, g){
+  var m = J.model;
+  if(g === 1) J.pdler.push(id);
+  else if(g === 2){
+    var a = veStepP21Varlik(m, id).a;
+    var ebeveyn = a[3].ref, cocuk = a[4].ref;
+    (J.cocuklar[ebeveyn] = J.cocuklar[ebeveyn] || []).push({ nauo: id, pd: cocuk, ad: a[0] && a[0].s });
+    J.cocukMu[cocuk] = 1;
+    J.ornekSay++;
+  }
+  else if(g === 3){
+    var sd = veStepP21Varlik(m, id).a;
+    var pds = veStepP21Varlik(m, sd[0].ref);
+    if(pds && pds.a[2] && veStepP21Tip(m, pds.a[2].ref) === 'PRODUCT_DEFINITION')
+      J.pdSr[pds.a[2].ref] = sd[1].ref;
+  }
+  else if(g === 4){
+    var cd = veStepP21Varlik(m, id).a;
+    var pds2 = veStepP21Varlik(m, cd[1].ref);
+    if(pds2 && pds2.a[2]) J.nauoCdsr[pds2.a[2].ref] = cd[0].ref;
+  }
+  else if(g === 5){
+    var rr = veStepP21Varlik(m, id).a;
+    (J.srrKomsu[rr[2].ref] = J.srrKomsu[rr[2].ref] || []).push(rr[3].ref);
+    (J.srrKomsu[rr[3].ref] = J.srrKomsu[rr[3].ref] || []).push(rr[2].ref);
+  }
+  else if(g === 6) J.mapped++;
+}
+// `atalar`: kökten bu parçaya kadar alt montajların ürünleri. Tedarikçi
+// gergiyi çoğu zaman alt montaj olarak verir (kol · gövde · kasnak ayrı
+// parça); "bu parça gergiye ait" bilgisi o zaman yalnız atanın adında durur.
+function _stpMontajYuru(J, bitis){
+  var m = J.model, out = J.out, Y = J.yigin, adim = 0;
+  while(Y.length){
+    var e = Y.pop();
+    if(e.c){                                                  // çocuk: konumu sırası gelince
+      var c = e.c, rrwt = J.nauoCdsr[c.nauo];
+      var yerel = rrwt ? _stpYerelDonusum(m, rrwt, J.pdSr[c.pd], out.uyarilar) : null;
+      if(!yerel) out.uyarilar.push('"' + (c.ad || ('#' + c.nauo)) + '" örneğinin konumu okunamadı; parça atlandı.');
+      else Y.push({ pd: c.pd, M: veStepP21Bilesik(e.M, yerel), yol: e.yol.concat([c.ad || ('#' + c.nauo)]),
+                    atalar: e.atalar.concat([e.urun]) });
+    } else if(++J.ziyaret <= 100000){
+      var pd = e.pd, sr = J.pdSr[pd];
+      var geo = sr ? _stpGeometri(m, sr, J.srrKomsu, out.uyarilar) : { yuzler: [], egriler: [] };
+      var cc = J.cocuklar[pd] || [];
+      var urun = _stpUrun(m, pd);
+      if(geo.yuzler.length || geo.egriler.length || !cc.length){
+        out.parcalar.push({ pd: pd, urun: urun, ornek: e.yol.length ? e.yol[e.yol.length - 1] : urun.id,
+          yol: e.yol.slice(), atalar: e.atalar.slice(), M: e.M, sr: sr || null,
+          birim: sr ? _stpSrBirim(m, sr) : { mm: NaN, derece: NaN },
+          yuzler: geo.yuzler, egriler: geo.egriler, altMontaj: cc.length > 0 });
+      }
+      for(var q = cc.length - 1; q >= 0; q--) Y.push({ c: cc[q], M: e.M, yol: e.yol, atalar: e.atalar, urun: urun });
+    }
+    if(++adim >= 4){ adim = 0; if(_stpSimdi() > bitis) return false; }
+  }
+  return true;
 }
 
 function _stpUrun(model, pd){
@@ -493,6 +853,12 @@ function _stpSrOlcek(model, sr){
 // Temsilin geometrisi: yüzler ve (geometrik setlerdeki) eğriler. Dönüşümsüz
 // SHAPE_REPRESENTATION_RELATIONSHIP ile bağlı temsiller de dahil (CATIA V5
 // geometriyi ayrı bir ADVANCED_BREP_SHAPE_REPRESENTATION'a koyar).
+// Yalnız KAP tipleri (kabuk · katı · küme) ayrıştırılır: alt montajın temsili
+// her çocuğun yerleşimini listeler (motor: ~9.000 öğe) ve hepsini ayrıştırmak
+// tek düğümde 30 ms'yi aşıyordu (ölçüldü).
+var _STP_GEO_KAP = { SHELL_BASED_SURFACE_MODEL: 1, GEOMETRIC_SET: 1, GEOMETRIC_CURVE_SET: 1, OPEN_SHELL: 1,
+  CLOSED_SHELL: 1, CONNECTED_FACE_SET: 1, ORIENTED_CLOSED_SHELL: 1, ORIENTED_OPEN_SHELL: 1,
+  MANIFOLD_SOLID_BREP: 1, FACETED_BREP: 1, BREP_WITH_VOIDS: 1 };
 function _stpGeometri(model, sr, srrKomsu, uyarilar){
   var yuzler = [], egriler = [], gor = {}, temsilGor = {};
   function oge(id){
@@ -502,14 +868,14 @@ function _stpGeometri(model, sr, srrKomsu, uyarilar){
     if(t === 'ADVANCED_FACE' || t === 'FACE_SURFACE'){ yuzler.push(id); return; }
     if(t === 'COMPOSITE_CURVE' || t === 'TRIMMED_CURVE' || t === 'CIRCLE' || t === 'LINE'
        || t === 'POLYLINE' || t === 'B_SPLINE_CURVE_WITH_KNOTS'){ egriler.push(id); return; }
-    var a = t === 'COMPLEX' ? null : veStepP21Varlik(model, id).a;
+    if(!_STP_GEO_KAP.hasOwnProperty(t)) return;           // yerleşim · MAPPED_ITEM (Montaj'da topluca uyarıldı) …
+    var a = veStepP21Varlik(model, id).a;
     if(!a) return;
     if(t === 'SHELL_BASED_SURFACE_MODEL' || t === 'GEOMETRIC_SET' || t === 'GEOMETRIC_CURVE_SET'
        || t === 'OPEN_SHELL' || t === 'CLOSED_SHELL' || t === 'CONNECTED_FACE_SET'){ _stpRefler(a[1]).forEach(oge); return; }
     if(t === 'ORIENTED_CLOSED_SHELL' || t === 'ORIENTED_OPEN_SHELL'){ if(a[2] && a[2].ref) oge(a[2].ref); return; }
     if(t === 'MANIFOLD_SOLID_BREP' || t === 'FACETED_BREP'){ if(a[1] && a[1].ref) oge(a[1].ref); return; }
-    if(t === 'BREP_WITH_VOIDS'){ if(a[1] && a[1].ref) oge(a[1].ref); _stpRefler(a[2]).forEach(oge); return; }
-    if(t === 'MAPPED_ITEM') return;                       // Montaj'da topluca uyarıldı
+    if(t === 'BREP_WITH_VOIDS'){ if(a[1] && a[1].ref) oge(a[1].ref); _stpRefler(a[2]).forEach(oge); }
   }
   function temsil(r){
     if(temsilGor[r]) return;
@@ -647,19 +1013,17 @@ function veStepP21Baslik(model){
   return { dosya: dz(fn[0]), tarih: dz(fn[1]), onisleyici: dz(fn[4]), sistem: dz(fn[5]), sema: sema };
 }
 
-// ── 10 · BAYT → METİN (.stp · .step · .stpZ) ───────────────────────────────
+// ── 10 · KAP: .stp · .step · .stpZ ─────────────────────────────────────────
 // Dosya seçicisinden gelen baytlar. Kap UZANTIDAN değil İMZADAN tanınır —
 // aynı `.stpZ` uzantısıyla gzip de zip de yazılıyor:
 //   1F 8B        gzip (RFC 1952)
 //   50 4B 03 04  zip; içindeki ilk .stp/.step/.p21 girişi (yoksa ilk giriş)
 //   diğer        düz metin
-// Açıcı ölçüm içe aktarmanın saf JS inflate'i (js/xlsx-read.js): tarayıcının
-// DecompressionStream'i asenkron ve jsdom'da yok — iki ayrı kod yolu olurdu.
-//
-// KODLAMA: Part 21'in temel alfabesi ASCII, ASCII dışı karakter \X2\ ile
-// kaçışlanır (3DEXPERIENCE böyle yazıyor). Standarda uymayan bir yazıcının
-// bıraktığı ham bayt önce UTF-8 (geçerliyse), değilse ISO 8859-1 okunur;
-// ikisinde de ASCII kısım birebir aynı kalır.
+// İKİ AÇICI, TEK HAM VERİ: `_stpKap` deflate akışının yerini bulur. Senkron
+// yol ölçüm içe aktarmanın saf JS inflate'i (js/xlsx-read.js); dilimli yol
+// tarayıcının DecompressionStream'i — parça parça açar, arayüz donmaz (saf JS
+// açıcı 420 MB'lık açılmış dosyada arayüzü tek görevde tutuyordu). Akış
+// yoksa ya da hata verirse (bozuk kuyruk) senkron açıcı.
 function _stpAcici(){
   if(typeof veXlsInflateRaw === 'function')
     return { inflate: veXlsInflateRaw, zip: (typeof veXlsZipRead === 'function') ? veXlsZipRead : null };
@@ -669,7 +1033,55 @@ function _stpAcici(){
   }
   return null;
 }
+function _stpU32(b, p){ return (b[p] | (b[p + 1] << 8) | (b[p + 2] << 16)) + b[p + 3] * 16777216; }
+// Döner: { kap, icerik?, yontem (0 saklı · 8 deflate), ham, akis (gzip'te
+// kuyruksuz deflate), boy (açılmış boy, bilinmiyorsa 0) }
+function _stpKap(b){
+  if(b.length >= 2 && b[0] === 0x1F && b[1] === 0x8B){
+    if(b.length < 18 || b[2] !== 8) throw new Error('gzip: desteklenmeyen sıkıştırma yöntemi ya da yarım dosya.');
+    var flg = b[3], p = 10, n = b.length;
+    if(flg & 4) p += 2 + (b[p] | (b[p + 1] << 8));              // FEXTRA
+    if(flg & 8){ while(p < n && b[p] !== 0) p++; p++; }          // FNAME
+    if(flg & 16){ while(p < n && b[p] !== 0) p++; p++; }         // FCOMMENT
+    if(flg & 2) p += 2;                                          // FHCRC
+    return { kap: 'gzip', yontem: 8, ham: b.subarray(p), akis: b.subarray(p, Math.max(p, n - 8)), boy: _stpU32(b, n - 4) };
+  }
+  if(b.length >= 4 && b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04){
+    var ac = _stpAcici();
+    if(!ac || !ac.zip) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı yüklenmemiş.');
+    var zip = ac.zip(b);
+    var adlar = zip.names.filter(function(a){ return !/\/$/.test(a); });
+    var ad = adlar.filter(function(a){ return /\.(stp|step|p21)$/i.test(a); })[0] || adlar[0];
+    if(!ad) throw new Error('zip: arşivde dosya yok.');
+    var en = zip.entries[ad], lo = en.localOff;
+    if(lo + 30 > b.length || _stpU32(b, lo) !== 0x04034b50) throw new Error('ZIP: yerel başlık bozuk — ' + ad);
+    if(en.method !== 0 && en.method !== 8) throw new Error('ZIP: desteklenmeyen sıkıştırma yöntemi (' + en.method + ')');
+    // Veri konumu YEREL başlıktan (ad/ek alan uzunlukları merkezi dizindekinden farklı olabilir)
+    var bas = lo + 30 + (b[lo + 26] | (b[lo + 27] << 8)) + (b[lo + 28] | (b[lo + 29] << 8));
+    var ham = b.subarray(bas, bas + en.compSize);
+    var boy = (b[lo + 6] & 8) ? 0 : _stpU32(b, lo + 22);         // veri tanımlayıcılı girişte boy sonda
+    return { kap: 'zip', icerik: ad, yontem: en.method, ham: ham, akis: ham, boy: boy === 0xFFFFFFFF ? 0 : boy };
+  }
+  return { kap: 'duz', yontem: 0, ham: b, akis: b, boy: b.length };
+}
 
+// SENKRON: baytlar → açılmış baytlar { bayt, kap: 'duz'|'gzip'|'zip', icerik? } —
+// açılamayan kap ADRESLİ bir hata atar (sessiz boş dosya değil).
+function veStepP21Ac(bayt){
+  var k = _stpKap(_stpGirdiBayt(bayt || new Uint8Array(0)));
+  var r = { bayt: k.ham, kap: k.kap };
+  if(k.icerik !== undefined) r.icerik = k.icerik;
+  if(k.yontem === 8){
+    var ac = _stpAcici();
+    if(!ac || !ac.inflate) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı yüklenmemiş.');
+    r.bayt = ac.inflate(k.ham);
+  }
+  return r;
+}
+
+// Baytlar → METİN (FEAD'in yolu: dosya küçük, tanıyıcı metinle okur). Ham
+// bayt önce UTF-8 (geçerliyse), değilse ISO 8859-1 okunur; ikisinde de ASCII
+// kısım birebir aynı kalır. Döner: { metin, kap, icerik? }
 function _stpUtf8(b){
   var out = [], parca = '', i = 0, n = b.length;
   while(i < n){
@@ -693,14 +1105,12 @@ function _stpUtf8(b){
   }
   return parca + String.fromCharCode.apply(null, out);
 }
-
 function _stpLatin1(b){
   var s = '';
   for(var i = 0; i < b.length; i += 8192)
     s += String.fromCharCode.apply(null, b.subarray(i, Math.min(b.length, i + 8192)));
   return s;
 }
-
 function _stpBaytMetin(b){
   var i = 0;
   while(i < b.length && b[i] < 0x80) i++;
@@ -708,33 +1118,10 @@ function _stpBaytMetin(b){
   var u = _stpUtf8(b);
   return u === null ? _stpLatin1(b) : u;
 }
-
-// `bayt`: Uint8Array ya da ArrayBuffer. Döner: { metin, kap: 'duz'|'gzip'|'zip',
-// icerik? } — açılamayan kap ADRESLİ bir hata atar (sessiz boş metin değil).
 function veStepP21Metin(bayt){
-  var b = (bayt instanceof Uint8Array) ? bayt : new Uint8Array(bayt || []);
-  var ac;
-  if(b.length >= 2 && b[0] === 0x1F && b[1] === 0x8B){
-    if(b.length < 18 || b[2] !== 8) throw new Error('gzip: desteklenmeyen sıkıştırma yöntemi ya da yarım dosya.');
-    var flg = b[3], p = 10;
-    if(flg & 4) p += 2 + (b[p] | (b[p + 1] << 8));              // FEXTRA
-    if(flg & 8){ while(p < b.length && b[p] !== 0) p++; p++; }   // FNAME
-    if(flg & 16){ while(p < b.length && b[p] !== 0) p++; p++; }  // FCOMMENT
-    if(flg & 2) p += 2;                                          // FHCRC
-    ac = _stpAcici();
-    if(!ac || !ac.inflate) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı yüklenmemiş.');
-    return { metin: _stpBaytMetin(ac.inflate(b.subarray(p))), kap: 'gzip' };
-  }
-  if(b.length >= 4 && b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04){
-    ac = _stpAcici();
-    if(!ac || !ac.zip) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı yüklenmemiş.');
-    var zip = ac.zip(b);
-    var adlar = zip.names.filter(function(a){ return !/\/$/.test(a); });
-    var ad = adlar.filter(function(a){ return /\.(stp|step|p21)$/i.test(a); })[0] || adlar[0];
-    if(!ad) throw new Error('zip: arşivde dosya yok.');
-    return { metin: _stpBaytMetin(zip.read(ad)), kap: 'zip', icerik: ad };
-  }
-  return { metin: _stpBaytMetin(b), kap: 'duz' };
+  var a = veStepP21Ac(bayt), r = { metin: _stpBaytMetin(a.bayt), kap: a.kap };
+  if(a.icerik !== undefined) r.icerik = a.icerik;
+  return r;
 }
 
 // ── 11 · AĞAÇ — montajın düğümleri ve parçaların yüzleri (ANLAMSIZ) ──────
@@ -747,65 +1134,246 @@ function veStepP21Metin(bayt){
 // Döner (asla fırlatmaz):
 //   { ok, hatalar[], uyarilar[], baslik, sureMs{oku,montaj,yuz}, agac[], parcalar[],
 //     _yuz[] (parça başına yüz tanımları), _model, _geo[] (üçgenleyicinin girdisi) }
+// `secenek.yuz === false`: parça başına yüz tanımı çıkarılmaz — `_yuz` boş,
+// `yuzSayisi` yüz KİMLİĞİ sayısı. Takoz onları okumuyor; 420 MB'ta okumanın
+// en uzun evresiydi (7,4 sn).
 function _stpAd(s){ return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
-function veStepP21Agac(metin){
-  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: {}, agac: [], parcalar: [], _yuz: [], _model: null, _geo: [] };
-  var t0 = Date.now(), model, mt;
-  try { model = veStepP21Oku(metin); } catch(e){ out.hatalar.push('Dosya okunamadı: ' + e.message); return out; }
-  if(model.hatalar.length){ out.hatalar = model.hatalar.slice(); return out; }
-  out.baslik = veStepP21Baslik(model);
-  out._model = model;
-  out.sureMs.oku = Date.now() - t0;
-  var t1 = Date.now();
-  try { mt = veStepP21Montaj(model); } catch(e2){ out.hatalar.push('Montaj ağacı okunamadı: ' + e2.message); return out; }
-  out.uyarilar = out.uyarilar.concat(mt.uyarilar);
-  out.sureMs.montaj = Date.now() - t1;
+function veStepP21Agac(girdi, secenek){
+  var is = veStepP21AgacIs(girdi, secenek);
+  while(!is.adim(Infinity));
+  return is.sonuc;
+}
 
-  var anahtar = {};
-  function dugum(yol, urun, ebeveyn){
-    var k = yol.join('\u0001');
-    if(anahtar[k] !== undefined) return anahtar[k];
-    var i = out.agac.length;
-    out.agac.push({ i: i, ad: _stpAd(urun.aciklama || urun.ad || urun.id || yol[yol.length - 1] || ''),
-      id: urun.id || '', ornek: yol.length ? yol[yol.length - 1] : '', derinlik: yol.length,
-      ebeveyn: ebeveyn, cocuklar: [], parcalar: [] });
-    anahtar[k] = i;
-    if(ebeveyn >= 0) out.agac[ebeveyn].cocuklar.push(i);
-    return i;
-  }
-  var t2 = Date.now(), toplamYuz = 0;
-  mt.parcalar.forEach(function(p){
-    var e = -1;
+function _stpDugum(A, out, yol, urun, ebeveyn){
+  var k = yol.join('\u0001');
+  if(A.anahtar[k] !== undefined) return A.anahtar[k];
+  var i = out.agac.length;
+  out.agac.push({ i: i, ad: _stpAd(urun.aciklama || urun.ad || urun.id || yol[yol.length - 1] || ''),
+    id: urun.id || '', ornek: yol.length ? yol[yol.length - 1] : '', derinlik: yol.length,
+    ebeveyn: ebeveyn, cocuklar: [], parcalar: [] });
+  A.anahtar[k] = i;
+  if(ebeveyn >= 0) out.agac[ebeveyn].cocuklar.push(i);
+  return i;
+}
+function _stpAgacAdim(A, out, model, bitis){
+  var P = A.mt.parcalar;
+  while(A.k < P.length){
+    var p = P[A.k], e = -1;
     for(var k = 0; k < p.yol.length; k++)
-      e = dugum(p.yol.slice(0, k), p.atalar[k] || { id: '', ad: '', aciklama: '' }, e);
-    var d = dugum(p.yol, p.urun, e);
+      e = _stpDugum(A, out, p.yol.slice(0, k), p.atalar[k] || { id: '', ad: '', aciklama: '' }, e);
+    var d = _stpDugum(A, out, p.yol, p.urun, e);
     var ad = out.agac[d].ad;
-    var yuzler = [];
+    var yuzler = [], sayi = 0;
     if(p.yuzler.length && !(p.birim.mm > 0))
       out.uyarilar.push('"' + ad + '" parçasının uzunluk birimi okunamadı; mm varsayılmadı, parça atlandı.');
-    else {
+    else if(A.yuz){
       try { p.yuzler.forEach(function(f){ yuzler.push(veStepP21Yuz(model, f, p.M, p.birim)); }); }
       catch(e3){ out.uyarilar.push('"' + ad + '" parçasının yüzleri okunamadı: ' + e3.message); }
-    }
-    toplamYuz += yuzler.length;
+      sayi = yuzler.length;
+    } else sayi = p.yuzler.length;
+    A.toplamYuz += sayi;
     var pi = out.parcalar.length;
-    out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: yuzler.length });
-    out._yuz.push(yuzler);
-    out._geo.push({ yuzler: yuzler.length ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [] });
+    out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: sayi });
+    if(A.yuz) out._yuz.push(yuzler);
+    out._geo.push({ yuzler: sayi ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [] });
     for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
-  });
-  out.sureMs.yuz = Date.now() - t2;
-  if(!toplamYuz){
-    out.hatalar.push('Okunabilir yüz yok; geometri üçgen (tessellated) olabilir.');
-    return out;
+    A.k++;
+    if(_stpSimdi() > bitis) break;
   }
-  out.ok = true;
-  return out;
+  return A.k >= P.length;
+}
+
+// ── 12 · OKUMA İŞİ ───────────────────────────────────────────────────────
+// Evreler: tara (baytlar → dizin) → montaj (kayıtlar · yürüyüş) → ağaç
+// (düğümler; istenirse parça başına yüzler). `adim(ms)` en çok o kadar
+// çalışır (her çağrıda en az bir parça iş) ve iş bittiyse true döner. Sonuç
+// `is.sonuc` (veStepP21Agac'ın biçimi — hata `hatalar`a yazılır, fırlatılmaz);
+// `is.ilerleme()` → { evre, oran (0–1), bayt, toplam, parca, parcaToplam }.
+// Evrenin çubuktaki payı ölçülmüş sürelerinden (420 MB'lık deneme montajı).
+var _STP_EVRE_PAY = { tara: [0, 0.6], montaj: [0.6, 0.85], agac: [0.85, 1] };
+var _STP_EVRE_PAY_YUZ = { tara: [0, 0.35], montaj: [0.35, 0.5], agac: [0.5, 1] };
+function veStepP21AgacIs(girdi, secenek){
+  var yuz = !(secenek && secenek.yuz === false);
+  var out = { ok: false, hatalar: [], uyarilar: [], baslik: null, sureMs: { oku: 0, montaj: 0, yuz: 0 },
+              agac: [], parcalar: [], _yuz: [], _model: null, _geo: [] };
+  var is = { sonuc: out, bitti: false, evre: 'tara' };
+  var pay = yuz ? _STP_EVRE_PAY_YUZ : _STP_EVRE_PAY;
+  var model = null, D = null, J = null, A = null, dizin = false;
+  try {
+    model = _stpModel(_stpGirdiBayt(girdi));
+    if(!_stpImzaVar(model.bayt)){ out.hatalar.push('Dosya bir STEP dosyası değil (ISO-10303-21 başlığı yok).'); is.bitti = true; }
+    else D = _stpTarama(model);
+  } catch(e){ out.hatalar.push('Dosya okunamadı: ' + e.message); is.bitti = true; }
+
+  function evreTara(bitis){
+    while(!dizin){
+      if(_stpTaraDilim(D, D.i + 262144)){ dizin = true; break; }
+      if(_stpSimdi() > bitis) return false;
+    }
+    if(!_stpDizinKur(D, bitis)) return false;
+    _stpBaslikKur(D);
+    out.baslik = veStepP21Baslik(model);
+    out._model = model;
+    J = _stpMontajIs(model);
+    return true;
+  }
+  is.adim = function(butce){
+    if(is.bitti) return true;
+    var t0 = _stpSimdi(), bitis = t0 + (butce > 0 ? butce : 0), t, tamam;
+    try {
+      for(;;){
+        t = _stpSimdi();
+        if(is.evre === 'tara'){
+          tamam = evreTara(bitis);
+          out.sureMs.oku += _stpSimdi() - t;
+          if(tamam) is.evre = 'montaj';
+        } else if(is.evre === 'montaj'){
+          try { tamam = _stpMontajAdim(J, bitis); }
+          catch(e2){ out.hatalar.push('Montaj ağacı okunamadı: ' + e2.message); is.bitti = true; return true; }
+          out.sureMs.montaj += _stpSimdi() - t;
+          if(tamam){
+            out.uyarilar = out.uyarilar.concat(J.out.uyarilar);
+            A = { mt: J.out, k: 0, anahtar: {}, toplamYuz: 0, yuz: yuz };
+            is.evre = 'agac';
+          }
+        } else {
+          tamam = _stpAgacAdim(A, out, model, bitis);
+          out.sureMs.yuz += _stpSimdi() - t;
+          if(tamam){
+            if(!A.toplamYuz) out.hatalar.push('Okunabilir yüz yok; geometri üçgen (tessellated) olabilir.');
+            else out.ok = true;
+            is.bitti = true;
+            return true;
+          }
+        }
+        if(_stpSimdi() > bitis) return false;
+      }
+    } catch(e){
+      out.hatalar.push('Dosya okunamadı: ' + e.message);
+      is.bitti = true;
+      return true;
+    }
+  };
+  is.ilerleme = function(){
+    var p = pay[is.evre] || [1, 1], f = 0;
+    if(is.evre === 'tara' && D) f = dizin ? 1 : D.i / Math.max(1, D.b.length);
+    else if(is.evre === 'montaj' && J)
+      f = J.evre === 0 ? 0.25 * J.k / Math.max(1, J.sirali ? J.sirali.length : model.enBuyukId)
+        : 0.25 + 0.75 * Math.min(1, J.ziyaret / J.toplam);
+    else if(is.evre === 'agac' && A) f = A.k / Math.max(1, A.mt.parcalar.length);
+    return { evre: is.evre, oran: is.bitti ? 1 : p[0] + (p[1] - p[0]) * f,
+             bayt: D ? D.i : 0, toplam: model ? model.bayt.length : 0,
+             parca: A ? A.k : 0, parcaToplam: A ? A.mt.parcalar.length : (J ? J.out.parcalar.length : 0) };
+  };
+  return is;
+}
+
+// ── 13 · TARAYICIDA: DİLİMLİ OKUMA ─────────────────────────────────────────
+// Baytlar (düz ya da sıkıştırılmış) → veStepP21Agac'ın sonucu, ARAYÜZÜ
+// KİLİTLEMEDEN: açma akışla, iş ≤ VE_STEP_P21_DILIM ms'lik dilimlerle; dönüş
+// MessageChannel'la (iç içe setTimeout(0) 4 ms'ye kenetlenir).
+// `secenek`: veStepP21AgacIs'inki + `ilerleme(o)` — { evre: 'ac' | 'tara' |
+// 'montaj' | 'agac', oran (0–1, bütün iş), bayt, toplam, parca, parcaToplam }.
+// Döner: { sonuc: Promise<sonuç | null (vazgeçildi)>, vazgec() }. Sonuç kabı
+// (`kap`, `icerik`) ve açma dâhil toplam süreyi (`sureMs.toplam`) taşır;
+// açılamayan kap Promise'i ADRESLİ hatayla reddeder.
+var _stpKanal = null, _stpKuyruk = [];
+function _stpSonraki(fn){
+  if(typeof MessageChannel !== 'function'){ setTimeout(fn, 0); return; }
+  if(!_stpKanal){
+    _stpKanal = new MessageChannel();
+    _stpKanal.port1.onmessage = function(){ var f = _stpKuyruk.shift(); if(f) f(); };
+  }
+  _stpKuyruk.push(fn);
+  _stpKanal.port2.postMessage(0);
+}
+function _stpAcDilimli(b, D, bildir){
+  var k = _stpKap(b);
+  var bitir = function(bayt){ var r = { bayt: bayt, kap: k.kap }; if(k.icerik !== undefined) r.icerik = k.icerik; return r; };
+  var senkron = function(){
+    var ac = _stpAcici();
+    if(!ac || !ac.inflate) throw new Error('Sıkıştırılmış STEP açılamadı: açıcı yüklenmemiş.');
+    return bitir(ac.inflate(k.ham));
+  };
+  if(k.yontem !== 8) return Promise.resolve(bitir(k.ham));
+  // Girdi 256 KB'lık parçalarla ve İSTENDİKÇE verilir; okuyan döngü bütçe
+  // dolunca olay döngüsüne döner. Tek parça verilen akış 403 MB'ı tek görevde
+  // açıyordu (ölçüldü: 1,2 sn).
+  var akis = null, ham = k.akis, p = 0;
+  try {
+    if(typeof DecompressionStream === 'function' && typeof ReadableStream === 'function')
+      akis = new ReadableStream({ pull: function(c){
+        if(p >= ham.length){ c.close(); return; }
+        var q = Math.min(ham.length, p + 262144);
+        c.enqueue(ham.subarray(p, q));
+        p = q;
+      } }, { highWaterMark: 0 }).pipeThrough(new DecompressionStream('deflate-raw'));
+  } catch(e){ akis = null; }
+  if(!akis) return new Promise(function(ok){ ok(senkron()); });
+  var okuyucu = D.okuyucu = akis.getReader();
+  var tahmin = k.boy > 0 ? k.boy : k.ham.length * 6, out = new Uint8Array(Math.max(65536, tahmin)), n = 0;
+  var t0 = _stpSimdi();
+  function oku(){
+    return okuyucu.read().then(function(r){
+      if(D.vazgec) return null;
+      if(r.done){
+        D.okuyucu = null;
+        return bitir(n === out.length || n > 0.75 * out.length ? out.subarray(0, n) : out.slice(0, n));
+      }
+      var parca = r.value;
+      if(n + parca.length > out.length){
+        var y = new Uint8Array(Math.max(Math.ceil(out.length * 1.5), n + parca.length));
+        y.set(out.subarray(0, n));
+        out = y;
+      }
+      out.set(parca, n);
+      n += parca.length;
+      if(_stpSimdi() - t0 < VE_STEP_P21_DILIM) return oku();
+      bildir({ evre: 'ac', bayt: n, toplam: Math.max(n, tahmin) });
+      return new Promise(function(ok){ _stpSonraki(function(){ t0 = _stpSimdi(); ok(oku()); }); });
+    });
+  }
+  return oku().then(null, function(){ return D.vazgec ? null : senkron(); });
+}
+function veStepP21AgacDilimli(bayt, secenek){
+  secenek = secenek || {};
+  var D = { vazgec: false, okuyucu: null }, t0 = _stpSimdi();
+  var bildir = function(o){ if(!D.vazgec && typeof secenek.ilerleme === 'function') secenek.ilerleme(o); };
+  var sonuc = new Promise(function(ok){ ok(_stpGirdiBayt(bayt)); }).then(function(b){
+    var sikisik = b.length >= 2 && ((b[0] === 0x1F && b[1] === 0x8B) || (b[0] === 0x50 && b[1] === 0x4B));
+    var acPay = sikisik ? 0.2 : 0;
+    return _stpAcDilimli(b, D, function(o){ o.oran = acPay * Math.min(1, o.bayt / Math.max(1, o.toplam)); bildir(o); })
+      .then(function(acik){
+        if(D.vazgec || !acik) return null;
+        var is = veStepP21AgacIs(acik.bayt, secenek);
+        return new Promise(function(ok){
+          (function dilim(){
+            if(D.vazgec){ ok(null); return; }
+            var bitti = is.adim(VE_STEP_P21_DILIM), o = is.ilerleme();
+            o.oran = acPay + (1 - acPay) * o.oran;
+            bildir(o);
+            if(!bitti){ _stpSonraki(dilim); return; }
+            var s = is.sonuc;
+            s.kap = acik.kap;
+            if(acik.icerik !== undefined) s.icerik = acik.icerik;
+            s.sureMs.toplam = _stpSimdi() - t0;
+            ok(s);
+          })();
+        });
+      });
+  });
+  return { sonuc: sonuc, vazgec: function(){
+    D.vazgec = true;
+    if(D.okuyucu){ try { D.okuyucu.cancel(); } catch(e){} D.okuyucu = null; }
+  } };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_STEP_P21_SURUM: VE_STEP_P21_SURUM,
+    VE_STEP_P21_ONBELLEK: VE_STEP_P21_ONBELLEK,
+    VE_STEP_P21_DILIM: VE_STEP_P21_DILIM,
+    veStepP21Ac: veStepP21Ac,
     veStepP21Metin: veStepP21Metin,
     VE_STEP_P21_BIRIM: VE_STEP_P21_BIRIM,
     veStepP21Oku: veStepP21Oku,
@@ -824,6 +1392,8 @@ if (typeof module !== 'undefined' && module.exports) {
     veStepP21Montaj: veStepP21Montaj,
     veStepP21Yuz: veStepP21Yuz,
     veStepP21Baslik: veStepP21Baslik,
-    veStepP21Agac: veStepP21Agac
+    veStepP21Agac: veStepP21Agac,
+    veStepP21AgacIs: veStepP21AgacIs,
+    veStepP21AgacDilimli: veStepP21AgacDilimli
   };
 }

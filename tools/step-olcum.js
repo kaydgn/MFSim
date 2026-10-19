@@ -5,10 +5,13 @@
  * Kullanım:
  *   npm run build && npm run step:olcum -- .step-deneme/deneme-420.stp
  *   npm run step:olcum -- <dosya.stp> --orneklem 50 --incelik takoz,0.1 --program <html>
+ *   npm run step:olcum -- <dosya.stp> --orneklem 0      (yalnız okuma; 3B örneklemi yok)
  *
  * NE ÖLÇER — programın KENDİ yolu, Takoz → "STEP'ten başla":
  *   1 · okuma + montaj ağacı: dosya seçiminden kartın hazır olmasına kadar
- *       süre, sekmenin JS belleği (sınırıyla), çizici sürecin tepe belleği
+ *       süre ve evreleri, ARAYÜZÜN DONMASI (50 ms'yi aşan görevler, toplam
+ *       engel süresi, en uzun kare boşluğu), sekmenin JS belleği (sınırıyla),
+ *       dosyanın JS yığını DIŞINDAKİ baytları, çizici sürecin tepe belleği
  *   2 · 3B ağı: her N'inci parça programın üçgenleyicisiyle; süre, üçgen ve
  *       bellek bütüne ORANLANIR (bugünkü kodla 400 MB'lık montajın tamamı
  *       yarım saati buluyor; örneklem dakikada biter). Bağlam ölçüm boyunca
@@ -33,7 +36,7 @@ function arguman(ad, yedek) {
 }
 var DOSYA = process.argv[2] && process.argv[2].indexOf('--') !== 0 ? path.resolve(process.argv[2]) : null;
 var PROGRAM = path.resolve(arguman('program', path.join(ROOT, 'MFSim_Code.html')));
-var ADIM = Math.max(1, +arguman('orneklem', 50) || 50);
+var ADIM = Math.max(0, +arguman('orneklem', 50));   // 0: 3B örneklemi yok
 var INCELIK = String(arguman('incelik', 'takoz')).split(',');
 if (!DOSYA || !fs.existsSync(DOSYA)) { console.error('STEP dosyası bulunamadı. Kullanım: npm run step:olcum -- <dosya.stp>'); process.exit(2); }
 if (!fs.existsSync(PROGRAM)) { console.error(PROGRAM + ' yok. Önce: npm run build'); process.exit(2); }
@@ -74,6 +77,33 @@ function cizicRss() {
 
   // ── 1 · okuma + montaj ağacı ──
   var secici = await Promise.all([sayfa.waitForEvent('filechooser'), sayfa.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="step"]')]);
+  // Donma ölçüsü sayfanın içinde: 50 ms'yi aşan görevler (longtask) ve kare
+  // boşluğu (rAF). Okumanın sonu kartın kurulmaya başladığı an (`_mwStpKur`;
+  // eski programda yok — orada okuma zaten tek görev, sonu 'hazir'ın İLK
+  // karesi): sonrasında açılan 3B görüntüleyicinin işi okumaya sayılmaz,
+  // ayrıca `sonra3B` olarak yazılır. Saat geri çağrının İÇİNDEN: rAF'ın
+  // verdiği damga karenin planlandığı an — uzun görev o damgadan SONRA
+  // koşunca boşluk bir sonraki kareye yazılıyordu (ölçüldü).
+  await sayfa.evaluate(function () {
+    var o = window.__olc = { uzun: [], bosluk: 0, son: performance.now(), bas: performance.now(), hazir: null, kur: null };
+    try {
+      new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { o.uzun.push([e.startTime, e.duration]); }); })
+        .observe({ type: 'longtask' });
+    } catch (e) { o.uzunYok = true; }
+    if (typeof window._mwStpKur === 'function') {
+      var kur = window._mwStpKur;
+      window._mwStpKur = function () { if (o.kur === null) o.kur = performance.now(); return kur.apply(this, arguments); };
+    }
+    (function kare() {
+      if (o.hazir !== null) return;
+      var t = performance.now();
+      if (o.kur === null && t - o.son > o.bosluk) o.bosluk = t - o.son;
+      o.son = t;
+      var s = veMntWizStp();
+      if (s && (s.durum === 'hazir' || s.durum === 'hata')) o.hazir = t;
+      requestAnimationFrame(kare);
+    })();
+  });
   var t0 = Date.now();
   await secici[0].setFiles(DOSYA);
   var durum = null;
@@ -90,16 +120,32 @@ function cizicRss() {
   var sn1 = (Date.now() - t0) / 1000;
   // Dosya okununca 3B görüntüleyici BÜTÜN montajı çizmeye başlar — ölçümü
   // örneklemle ayrıca yapmak için hemen kapatılır.
+  // Okumanın bittiği kare çizilsin (donmuş okumada o kare okumanın sonudur)
+  await sayfa.waitForFunction(function () { return window.__olc.hazir !== null; }, null, { timeout: 600000 });
   var a1 = await sayfa.evaluate(function () {
     if (typeof veMntWiz3bKapat === 'function') veMntWiz3bKapat();
     if (window.gc) gc();
-    var s = veMntWizStp(), so = s.sonuc || { parcalar: [] };
-    return { durum: s.durum, hata: s.hata || null, parca: so.parcalar.length,
-      yuz: so.parcalar.reduce(function (t, p) { return t + p.yuzSayisi; }, 0), heap: performance.memory.usedJSHeapSize };
+    var s = veMntWizStp(), so = s.sonuc || { parcalar: [] }, o = window.__olc;
+    var sinir = o.kur !== null ? o.kur : o.hazir;
+    var uz = o.uzun.filter(function (e) { return e[0] < sinir; });
+    var uc = o.uzun.filter(function (e) { return e[0] >= sinir; });
+    // Dosyanın JS yığını DIŞINDA duran baytları (ArrayBuffer): yeni okuyucu
+    // dosyayı bayt dizisi olarak tutar; eski okuyucuda dosya yığındaki metindi.
+    var dis = 0, m = so._model || {};
+    Object.keys(m).forEach(function (k) { var v = m[k]; if (v && ArrayBuffer.isView(v)) dis += v.byteLength; });
+    return { durum: s.durum, hata: s.hata || null, parca: so.parcalar.length, sureMs: so.sureMs || {},
+      yuz: so.parcalar.reduce(function (t, p) { return t + p.yuzSayisi; }, 0), heap: performance.memory.usedJSHeapSize,
+      dis: dis, okumaMs: sinir - o.bas, uzunGorev: o.uzunYok ? null : uz.length,
+      sonra3B: uc.map(function (e) { return Math.round(e[1]); }),
+      enUzunGorevMs: uz.reduce(function (t, e) { return Math.max(t, e[1]); }, 0),
+      engelMs: uz.reduce(function (t, e) { return t + Math.max(0, e[1] - 50); }, 0), enUzunKareMs: o.bosluk };
   });
-  yaz({ adim: 'okundu + montaj ağacı', sn: sn1, durum: a1.durum, hata: a1.hata, parca: a1.parca, yuz: a1.yuz,
-    heapMB: MB(a1.heap), tepeCizicMB: MB(tepe) });
-  if (a1.durum !== 'hazir') { clearInterval(orneklem); await tarayici.close(); process.exit(1); }
+  yaz({ adim: 'okundu + montaj ağacı', sn: +(a1.okumaMs / 1000).toFixed(1), durum: a1.durum, hata: a1.hata,
+    parca: a1.parca, yuz: a1.yuz, evreMs: a1.sureMs,
+    donma: { uzunGorev: a1.uzunGorev, enUzunGorevMs: Math.round(a1.enUzunGorevMs), engelSn: +(a1.engelMs / 1000).toFixed(1),
+      enUzunKareMs: Math.round(a1.enUzunKareMs) }, sonra3BUzunGorevMs: a1.sonra3B,
+    heapMB: MB(a1.heap), yiginDisiMB: MB(a1.dis), tepeCizicMB: MB(tepe), beklemeSn: sn1 });
+  if (a1.durum !== 'hazir' || !ADIM) { clearInterval(orneklem); await tarayici.close(); process.exit(a1.durum === 'hazir' ? 0 : 1); }
 
   // ── 2 · 3B ağı, örneklem ──
   for (var i = 0; i < INCELIK.length; i++) {

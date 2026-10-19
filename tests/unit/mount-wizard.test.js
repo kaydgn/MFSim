@@ -183,6 +183,203 @@ describe('STEP KARTI — rol → hesap → kütle → aktar', () => {
   });
 });
 
+// OKUMA ARAYÜZÜ KİLİTLEMEZ (kökteki kural; Takoz STEP adım 2): kart okunurken
+// ilerlemeyi ve Vazgeç'i taşır; Vazgeç, başka dosya ve sihirbazın kapanması
+// süren okumayı bırakır. Okumanın dilimleri js/step-p21.js'te
+// (tests/unit/step-p21.test.js → DİLİMLİ).
+describe('STEP OKUMASI — çubuk, Vazgeç, bırakma', () => {
+  const PK = require('../../js/pencere-kabuk.js');
+  beforeAll(() => {
+    global.vePencereEylem = PK.vePencereEylem;
+    global.vePencereIlerleme = PK.vePencereIlerleme;
+    global.vePencereIlerlemeHTML = PK.vePencereIlerlemeHTML;
+    global.veSayi = global.veSayi || require('../../js/sayi.js').veSayi;
+  });
+  afterAll(() => { delete global.vePencereEylem; delete global.vePencereIlerleme; delete global.vePencereIlerlemeHTML; });
+  // Baytları sonradan verilen dosya (okunurken durum gözlenebilsin)
+  const bekleyen = (ad, metin) => {
+    let ver;
+    const p = new Promise((ok) => { ver = () => ok(Uint8Array.from(Buffer.from(metin, 'utf8')).buffer); });
+    return { dosya: { name: ad, arrayBuffer: () => p }, ver };
+  };
+  const kart = () => { const d = document.createElement('div'); d.innerHTML = W._mwStpKartHTML(); return d; };
+
+  test('okunurken: çubuk + Vazgeç, kart dosyayı adıyla söyler; bitince parça tablosu ve toplam süre', async () => {
+    W.veMntWizAc();
+    const f = bekleyen('guc.stp', S.gucGrubu());
+    const bitis = W.veMntWizStpDosya(f.dosya);
+    expect(W.veMntWizStp().durum).toBe('okunuyor');
+    let k = kart();
+    expect(k.querySelector('.ve-fw-stp-wait b').textContent).toBe('guc.stp');
+    const cubuk = k.querySelector('.ve-fp-yurut[data-is] .ve-fp-ilerleme[role="progressbar"]');
+    expect(cubuk).not.toBeNull();
+    expect(cubuk.getAttribute('aria-label')).toBe('STEP okuma');
+    expect(k.querySelector('#ve-mw-stp-vazgec').textContent.trim()).toBe('Vazgeç');
+    f.ver();
+    const s = await bitis;
+    expect(s.durum).toBe('hazir');
+    expect(W.veMntWizStp()).toBe(s);
+    expect(s.sonuc.sureMs.toplam).toBeGreaterThanOrEqual(0);
+    k = kart();
+    expect(k.querySelector('#ve-mw-stp-vazgec')).toBeNull();
+    expect(k.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(s.sonuc.agac.length - 1);
+  });
+
+  test('çubuğun verisi evreden: dosya · açma · kayıtlar (MB) · montaj ağacı · parçalar', () => {
+    const v = (o) => W._mwStpIlerlemeVeri({ ilerleme: o }).metin;
+    const MB = 1048576;
+    expect(v({ evre: 'dosya', bayt: 212 * MB, toplam: 403 * MB })).toBe('Dosya 212 / 403 MB');
+    expect(v({ evre: 'ac', bayt: 120 * MB, toplam: 403 * MB })).toBe('Açma 120 / 403 MB');
+    expect(v({ evre: 'tara', bayt: 1.5 * MB, toplam: 3 * MB })).toBe('Kayıtlar 1,5 / 3,0 MB');
+    expect(v({ evre: 'montaj' })).toBe('Montaj ağacı');
+    expect(v({ evre: 'agac', parca: 4512, parcaToplam: 11694 })).toBe('Parçalar 4.512 / 11.694');
+  });
+
+  test('Vazgeç: kart boşalır; dosya sonradan okunsa da sonuç yazılmaz', async () => {
+    W.veMntWizAc();
+    const f = bekleyen('guc.stp', S.gucGrubu());
+    const bitis = W.veMntWizStpDosya(f.dosya);
+    expect(W.veMntWizStpVazgec()).toBe(true);
+    expect(W.veMntWizStp()).toBeNull();
+    expect(W._mwStpKartHTML()).toMatch(/STEP dosyası seç/);
+    f.ver();
+    expect(await bitis).toBeNull();
+    expect(W.veMntWizStp()).toBeNull();
+    expect(W.veMntWizStpVazgec()).toBe(false);                 // süren okuma yok
+  });
+
+  // Saat her okumada 1 ms ilerler: okuma kesin olarak birçok dilim sürer;
+  // Vazgeç ilk ilerlemede basılır.
+  test('okuma sürerken: Vazgeç işi bırakır (okuyucunun vazgec\'i çağrılır, ilerleme durur)', async () => {
+    W.veMntWizAc();
+    let t = 0;
+    jest.spyOn(performance, 'now').mockImplementation(() => (t += 1));
+    const asil = global.veMntStpOkuDilimli;
+    let is = null, il = 0;
+    global.veMntStpOkuDilimli = (b, bildir) => {
+      is = asil(b, (o) => { il++; bildir(o); if (il === 1) W.veMntWizStpVazgec(); });
+      jest.spyOn(is, 'vazgec');
+      return is;
+    };
+    try {
+      const f = bekleyen('guc.stp', S.gucGrubu());
+      const bitis = W.veMntWizStpDosya(f.dosya);
+      f.ver();
+      expect(await bitis).toBeNull();
+      expect(is.vazgec).toHaveBeenCalledTimes(1);
+      expect(il).toBe(1);
+      expect(W.veMntWizStp()).toBeNull();
+    } finally { global.veMntStpOkuDilimli = asil; jest.restoreAllMocks(); }
+  });
+
+  test('başka dosya seçmek süren okumayı bırakır; son seçilen okunur, eskisi hiç ayrıştırılmaz', async () => {
+    W.veMntWizAc();
+    const asil = global.veMntStpOkuDilimli, oku = jest.fn(asil);
+    global.veMntStpOkuDilimli = oku;
+    try {
+      const a = bekleyen('eski.stp', S.gucGrubu());
+      const b = bekleyen('yeni.stp', S.gucGrubu());
+      const ba = W.veMntWizStpDosya(a.dosya);
+      const bb = W.veMntWizStpDosya(b.dosya);
+      b.ver(); a.ver();
+      expect(await ba).toBeNull();
+      expect((await bb).dosya).toBe('yeni.stp');
+      expect(W.veMntWizStp().dosya).toBe('yeni.stp');
+      expect(oku).toHaveBeenCalledTimes(1);
+    } finally { global.veMntStpOkuDilimli = asil; }
+  });
+
+  test('sihirbaz kapanınca süren okuma bırakılır', async () => {
+    W.veMntWizAc();
+    const f = bekleyen('guc.stp', S.gucGrubu());
+    const bitis = W.veMntWizStpDosya(f.dosya);
+    W.veMntWizKapat(false);
+    expect(W.veMntWizStp()).toBeNull();
+    f.ver();
+    expect(await bitis).toBeNull();
+    expect(W.veMntWizStp()).toBeNull();
+  });
+
+  test('okunamayan dosya: kart hata durumunda, sebep adresli', async () => {
+    W.veMntWizAc();
+    const s = await W.veMntWizStpDosya({ name: 'kotu.stp', arrayBuffer: () => Promise.reject(new Error('izin yok')) });
+    expect(s.durum).toBe('hata');
+    expect(s.hata).toBe('Dosya okunamadı: izin yok');
+    const z = await W.veMntWizStpDosya({ name: 'yarim.stpZ', arrayBuffer: () => Promise.resolve(Uint8Array.from([0x1f, 0x8b, 8, 0, 0]).buffer) });
+    expect(z.durum).toBe('hata');
+    expect(z.hata).toMatch(/gzip/);
+  });
+});
+
+// AĞAÇ DAL DAL (kullanıcının montajı ~11.700 parça): her satırı rol listesiyle
+// çizmek kartı 6,6 sn donduruyordu ve kart her rol değişiminde yeniden
+// kuruluyor (ölçüldü). Küçük montaj eskisi gibi tam açık gelir.
+describe('AĞAÇ DAL DAL — büyük montajda üst düzeyler, sayfa sayfa', () => {
+  // kök → A (300 parça) · B (10 parça) · iki kök parçası: 315 satır > sınır
+  function buyuk() {
+    const alt = [{ id: 'ALT_A', ad: 'Alt montaj A', konum: [0, 0, 0] }, { id: 'ALT_B', ad: 'Alt montaj B', konum: [2000, 0, 0] }];
+    const p = [];
+    for (let i = 0; i < 300; i++) p.push({ id: 'A' + i, ad: 'A parça ' + i, sekil: 'kutu', olcu: [20, 20, 20], konum: [i * 30, 0, 0], alt: 'ALT_A' });
+    for (let i = 0; i < 10; i++) p.push({ id: 'B' + i, ad: 'B parça ' + i, sekil: 'kutu', olcu: [20, 20, 20], konum: [i * 30, 0, 0], alt: 'ALT_B' });
+    p.push({ id: 'K1', ad: 'Kök parçası 1', sekil: 'kutu', olcu: [10, 10, 10], konum: [0, 500, 0] });
+    p.push({ id: 'K2', ad: 'Kök parçası 2', sekil: 'kutu', olcu: [10, 10, 10], konum: [0, 600, 0] });
+    return S.guçGrubuStep(p, { altMontajlar: alt });
+  }
+  let s, METIN;
+  beforeAll(() => { METIN = buyuk(); });
+  beforeEach(() => { W.veMntWizAc(); s = W.veMntWizStpOku(METIN, 'buyuk.stp', 'duz'); });
+  const satir = () => W._mwStpSatirlar(s);
+  const adlar = () => satir().map((d) => (d.daha ? '+' + d.kalan : d.ad));
+  const dug = (ad) => s.sonuc.agac.filter((d) => d.ad === ad)[0].i;
+
+  test('varsayılan: kökün çocukları; bütün çocukları sığan dal açık, sığmayan kapalı', () => {
+    expect(s.sonuc.agac.length - 1).toBeGreaterThan(W.VE_MW_STP_SATIR);
+    const a = adlar();
+    expect(a).toContain('Alt montaj A');
+    expect(a.filter((x) => /^A parça/.test(x))).toHaveLength(0);
+    expect(a.filter((x) => /^B parça/.test(x))).toHaveLength(10);
+    expect(a.length).toBe(2 + 10 + 2);
+    const k = document.createElement('div'); k.innerHTML = W._mwStpKartHTML();
+    expect(k.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(14);
+    const ac = k.querySelector('tr[data-ve-stp="' + dug('Alt montaj A') + '"] .ve-mw-stp-ac');
+    expect(ac.getAttribute('aria-expanded')).toBe('false');
+    expect(ac.getAttribute('aria-label')).toBe('Aç — Alt montaj A');
+    expect(k.querySelectorAll('.ve-mw-stp-yaprak').length).toBe(12);
+  });
+
+  test('dal açılır: ilk sayfa + "… düğüm daha"; daha → bir sayfa daha; kapat', () => {
+    const A = dug('Alt montaj A');
+    W.veMntWizStpAc(A);
+    expect(adlar().filter((x) => /^A parça/.test(x))).toHaveLength(W.VE_MW_STP_SAYFA);
+    expect(adlar()).toContain('+' + (300 - W.VE_MW_STP_SAYFA));
+    let k = document.createElement('div'); k.innerHTML = W._mwStpKartHTML();
+    expect(k.querySelector('.ve-mw-stp-dahabtn').textContent.trim()).toBe('250 düğüm daha');
+    W.veMntWizStpDaha(A);
+    expect(adlar().filter((x) => /^A parça/.test(x))).toHaveLength(2 * W.VE_MW_STP_SAYFA);
+    W.veMntWizStpAc(A);
+    expect(adlar().filter((x) => /^A parça/.test(x))).toHaveLength(0);
+    // satır sırası ağacın sırası: A'nın parçaları A'dan sonra, B'den önce
+    W.veMntWizStpAc(A);
+    const a = adlar();
+    expect(a.indexOf('A parça 0')).toBe(a.indexOf('Alt montaj A') + 1);
+    expect(a.indexOf('Alt montaj B')).toBeGreaterThan(a.indexOf('+250'));
+  });
+
+  test('rol verilen düğüm dal kapalıyken de görünür (ve sırası ağaçtaki yeri)', () => {
+    W.veMntWizStpRol(dug('A parça 250'), 'mnt-mount');
+    const a = adlar();
+    expect(a).toContain('A parça 250');
+    expect(a.indexOf('A parça 250')).toBe(a.indexOf('Alt montaj A') + 1);
+    expect(a.filter((x) => /^A parça/.test(x))).toHaveLength(1);
+  });
+
+  test('küçük montaj tam açık gelir (eski davranış)', () => {
+    const k = W.veMntWizStpOku(S.gucGrubu(), 'guc.stp', 'duz');
+    expect(W._mwStpSatirlar(k).filter((d) => !d.daha)).toHaveLength(k.sonuc.agac.length - 1);
+    expect(W._mwStpSatirlar(k).some((d) => d.daha)).toBe(false);
+  });
+});
+
 describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
   test('"Modeli kur": gövdeler, takozlar ve eksik araçlar TEK veStateBatch içinde', () => {
     W.veMntWizAc();

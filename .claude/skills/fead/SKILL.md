@@ -782,7 +782,16 @@ olurdu.
       yuvarlanır — dönüşüm gürültüsü alanlara yazılıyordu; ikinci gergi rolü
       aktarılmaz (ötekinin üstüne yazılırdı).
     • **Kap imzadan** (gzip · zip · düz), uzantıdan değil — `.stpZ` iki türlü
-      de yazılıyor; açıcı `js/xlsx-read.js`'in inflate'i (tek kod yolu).
+      de yazılıyor; deflate akışının yeri tek yerden (`_stpKap`). Senkron yol
+      (FEAD) `js/xlsx-read.js`'in inflate'i; dilimli yol (Takoz) tarayıcının
+      `DecompressionStream`'i, girdi 256 KB'lık parçalarla — tek parça 403 MB'ı
+      tek görevde açıyordu (1,2 sn). Akış yoksa ya da hata verirse inflate.
+    • **Okuyucu BAYT tutar, FEAD metinle okur** (2026-10-19, Takoz adım 2):
+      dosya tek `Uint8Array`, kayıtlar tipli dizilerde; metin girdisi UTF-8
+      baytlarına çevrilip aynı yoldan okunur — FEAD'in çıktısı birebir (bütün
+      varlıklar eski okuyucuyla karşılaştırıldı). Dizelerin kodlaması dosya
+      başına, yalnız DİZE baytlarından (yorumdaki ISO 8859-1 baytı artık geçerli
+      UTF-8 adları bozmaz). Kapı: `step-p21.test.js` → *BAYT ↔ METİN* · *KODLAMA*.
     **Sihirbaz kartı** (`js/cp-fead-wizard.js`, açıklama paragrafı YOK):
     • Tanıyıcının çıktısı OTURUMLUK (`_fwStp`), `node.data.wiz`e yazılmaz;
       durumda yalnız iz kalır (`stepKaynak`, `siraKaynagi`).
