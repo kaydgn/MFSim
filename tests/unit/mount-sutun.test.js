@@ -252,8 +252,9 @@ describe('RAPOR — kaynak, bayat çözüm, eylem', () => {
   test('çözüm yokken eylem kapalı ve sebebi yazılı', () => {
     tulga();
     const h = cp.getMntReportPropertiesHTML(dugum('mnt-report'));
-    expect(h).toMatch(/<button type="button" class="ve-fp-solve" data-cozum-durumu disabled>/);
-    expect(h).toContain('<b>Model çözülmedi.</b>');
+    // Kapalı düğme sebebin yazısına bağlı (aria-describedby); yazı yolu da söyler.
+    expect(h).toMatch(/<button type="button" class="ve-fp-solve" data-cozum-durumu disabled aria-describedby="ve-mnt-rap-coz-[^"]+">/);
+    expect(h).toContain('<b>Model çözülmedi.</b> Çözücü penceresinde Hesapla ile çözün.');
     expect(h).toContain('id="ve-mnt-report-status" data-cozum-durumu></div>');
   });
 });

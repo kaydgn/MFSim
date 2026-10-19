@@ -2018,7 +2018,7 @@ function _mntExampleValidate(){
   var pc=_mntPtoConflict();
   if(pc) out.push({level:'warn', msg:'Olası çift sayım: PTO Toplam ('+pc.groups.length+') + PTO/Pompa ('+pc.parts.length+')'});
   var hasSolver = (typeof nodes!=='undefined') && nodes.some(function(n){ return (_mntDef(n)||{}).isMountSolver; });
-  if(!hasSolver) out.push({level:'warn', msg:'Çözücü yok.'});
+  if(!hasSolver) out.push({level:'warn', msg:'Çözücü yok. '+veYon('Bileşenler’den ekleyin.')});
   return out;
 }
 
@@ -4006,7 +4006,7 @@ function _mntLibKimlikHTML(node, e, setter){
   var eylem=(!e.builtin)
     ? '<button type="button" class="ve-fp-dugme" onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">'+veIkon('trash')+' Sil</button>'
     : '<button type="button" class="ve-fp-dugme" onclick="veMntLibResetBuiltin(\''+node.id+'\',\''+_mntEsc(e.key)+'\')"'
-      + (e.overridden ? '' : ' aria-disabled="true"')+'>'+veIkon('rotate-ccw')+' Fabrika</button>';
+      + (e.overridden ? '' : ' aria-disabled="true" title="Fabrika değerlerinde."')+'>'+veIkon('rotate-ccw')+' Fabrika</button>';
   return '<div class="ve-mnt-lib-kim">'
     + '<input class="ve-fp-inp ve-fp-inp--text" type="text" id="ve-mnt-lib-name-'+node.id+'" value="'+_mntEsc(e.name)+'"'
     + ' aria-label="Takoz tipinin adı" onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\'name\',this.value)">'
@@ -4705,9 +4705,9 @@ function getMntReportPropertiesHTML(node){
   // PENCERENİN CEVABI — FEAD'in Rapor penceresi gibi sağ sütunda, eylemin
   // üstünde (`.ve-fp-durum`). Eskiden tek bölmenin başında bir kutuydu.
   var durum = '<div id="ve-mnt-rap-coz-'+node.id+'" data-tazele data-cozum-durumu>'+(!cozuldu
-    ? _mntDurumKutu('<b>Model çözülmedi.</b>', 'warn')
+    ? _mntDurumKutu('<b>Model çözülmedi.</b> '+veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warn')
     : bayat
-      ? _mntDurumKutu('<b>Model son hesaptan sonra değişti</b> — '+ozet+'.', 'warn')
+      ? _mntDurumKutu('<b>Model son hesaptan sonra değişti</b> — '+ozet+'. '+veYon('Çözücü penceresinde Hesapla ile yeniden çözün.'), 'warn')
       : _mntDurumKutu('<b>Model çözüldü</b> — '+ozet+'.', 'ok'))+'</div>';
   // İKİ KATEGORİ (FEAD: Tür · Künye): İÇERİK (raporun hangi çözümden
   // üretileceği — hazırlık, sonuç değil) · GİRDİLER (§8.8'in değerleri ve
@@ -4723,7 +4723,7 @@ function getMntReportPropertiesHTML(node){
   // yalnız üretimin durumu (veMntGenerateReport → data-d) — çözümün durumu
   // hemen üstteki cevapta, ikinci kez yazılmaz.
   var eylem=vePencereEylem('<button type="button" class="ve-fp-solve" data-cozum-durumu'
-      + (cozuldu ? ' onclick="veMntGenerateReport(\''+node.id+'\')"' : ' disabled')+'>'
+      + (cozuldu ? ' onclick="veMntGenerateReport(\''+node.id+'\')"' : ' disabled aria-describedby="ve-mnt-rap-coz-'+node.id+'"')+'>'
       + veIkon('download')+' Raporu oluştur ve indir</button>',
     '<div class="ve-fp-durum-not" id="ve-mnt-report-status" data-cozum-durumu></div>');
   return _mntPencereKabuk(node, [{ k:'ic', ad:'İçerik', govde:icerik },

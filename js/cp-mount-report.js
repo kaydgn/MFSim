@@ -239,7 +239,7 @@ function veMntGenerateReport(nodeId){
   // Durumun tonu CSS'ten (`data-d`): satır içi renk ikinci bir görünüm kaynağıydı.
   function setStatus(m,d){ if(st){ st.textContent=m; if(d) st.setAttribute('data-d', d); else st.removeAttribute('data-d'); } }
   if(typeof _veMntLast==='undefined' || !_veMntLast || _veMntLast.error){
-    if(typeof showToast==='function') showToast('Rapor üretilemedi: model çözülmemiş.','warning');
+    if(typeof showToast==='function') showToast('Rapor üretilemedi: model çözülmemiş. '+veYon('Çözücü penceresinde Hesapla ile çözün.'),'warning');
     setStatus('Çözülmüş sonuç yok.','warn');
     return;
   }
