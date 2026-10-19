@@ -150,7 +150,7 @@ function cdbApplyStore(store, name, detect) {
   if (store.skipped) msg += ' ' + cdbThousands(store.skipped) + ' satır çözülemedi.';
   if (!store.timeMonotonic) msg += ' Zaman damgaları artan sırada değil.';
   cdbToast(msg, store.skipped ? 'warn' : '');
-  if (!store.n) cdbToast('Dosyada çözülen CAN karesi yok.', 'err');
+  if (!store.n) cdbToast('Dosyada çözülen CAN karesi yok. ' + cdbYon('Tanı sekmesini açın.'), 'err');
 }
 
 function cdbSetChip(id, text) {

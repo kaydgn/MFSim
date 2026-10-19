@@ -78,6 +78,30 @@ describe('CAN Çözümleyici — Sinyal Gezgini’nin durumu', () => {
   });
 });
 
+describe('CAN Çözümleyici — sıfır kare', () => {
+  // Biçim elle yanlış seçilince kayıt sıfır kareyle açılır. İki bildirim AYNI
+  // kutuya art arda yazılır: biçimi ve çözülemeyen satır sayısını söyleyen ilki
+  // hiç görünmez, ekranda kalan sonuncusudur. Biçim algılaması ve çözülemeyen
+  // satırların örnekleri Tanı sekmesinde.
+  eval(loadCanSource('can-app.js'));
+  var cdbChartFitAll = () => {};
+  var cdbChartLayout = () => {};
+  var cdbRefreshTree = () => {};
+  var cdbRenderTab = () => {};
+  var cdbThousands = (n) => String(n);
+  beforeEach(() => { jest.useFakeTimers(); document.body.innerHTML = '<div id="cdb-toast"></div>'; });
+  afterEach(() => { jest.useRealTimers(); });
+
+  test('ekranda kalan bildirim Tanı sekmesine gönderir', () => {
+    cdbApplyStore({ n: 0, counts: {}, skipped: 3080, timeMonotonic: true, formatName: 'candump -L' }, 'ornek.log', null);
+    expect(document.getElementById('cdb-toast').textContent).toBe('Dosyada çözülen CAN karesi yok. Tanı sekmesini açın.');
+  });
+  test('kare varsa okunan sayı ve biçim görünür, yönlendirme yok', () => {
+    cdbApplyStore({ n: 12, counts: {}, skipped: 0, timeMonotonic: true, formatName: 'candump' }, 'ornek.log', null);
+    expect(document.getElementById('cdb-toast').textContent).toBe('12 kare okundu (candump).');
+  });
+});
+
 describe('CAN Çözümleyici', () => {
   const html = oku('candbc/index.html');
   test('boş diyagram: tek yönlendirme, etkileşim satırı kalır', () => {
