@@ -41,6 +41,7 @@ beforeEach(() => resetStubs(stubs));
 | Yol eğimi, dinamik | `simulation-engine-grade` |
 | Girdi doğrulama, NaN kapıları | `arac-performans-nan-guard` |
 | Rapor üreticileri | `arac-performans-calc-trace-report` · `-notc-report` |
+| Palet (Parametrik Analiz kaldırıldı, açık ayrışma 5) | `arac-parametrik` |
 
 **Çözücünün sayısını değiştiren her şeyde `arac-example-calibration` beklenen
 sonuçtur** — 13 araç, stall devri, tavan hız, 0-20/40/60/80 çıpaları,
