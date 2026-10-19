@@ -1053,16 +1053,19 @@ renklerden çok sıkıldım."*): koyu tema bloğu (`prefers-color-scheme: dark`,
 `[data-theme="dark"]`) yazılmaz; `:root` açık paleti ve `color-scheme: light`
 taşır.
 
-Sayfa **ne yapıldığını değil ne ÖLÇÜLDÜĞÜNÜ** taşır — bu deponun her yerindeki
-kural: hüküm + gerekçe + kapı. Asgarî içerik:
+Sayfa **ne yapıldığını değil ne ÖLÇÜLDÜĞÜNÜ** taşır. Asgarî içerik:
 
 | Ne | Nereden |
 |----|---------|
 | Bulunan her kusur: önce → sonra **sayısı** | turun ölçümleri |
 | Düzeltmenin tek satır gerekçesi | commit gövdesi |
-| Kapı testi ve **düşebildiğinin kanıtı** | düzeltme geri alınıp koşturularak |
-| Değişen dosyalar + satır sayısı | `git show --stat` |
 | Hata sanılıp kasıtlı çıkanlar | dokunulmayanlar da bir sonuçtur |
+
+**Sayfa geliştirme ayrıntısı TAŞIMAZ** (kullanıcı kararı 2026-10-19:
+*"Kapıları, değişen dosyaları yazmana gerek yok. Zaten anlamıyorum ne
+olduğunu."*): kapı testi ve düşebildiğinin kanıtı, değişen dosyalar ve satır
+sayısı, kod adları (dosya yolu, işlev, dal) yazılmaz; kusur programda görünen
+adıyla anlatılır. Kapının kanıtı yine alınır — yeri PR gövdesi.
 
 Ölçüm YOKSA artifact da yoktur: "iyileştirdim" diyen ama önce/sonra sayısı
 olmayan bir sayfa, bu dosyanın 6.052 satıra çıkmasına yol açan biçim
