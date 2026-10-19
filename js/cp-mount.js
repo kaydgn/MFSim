@@ -38,10 +38,11 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // yüksektir (rasyonel form uç-noktaya oturtulmuş) — daha iyi fit gelirse güncellenir.
 //
 // ── AD KURALI (kullanıcı kararı 2026-10-19: "Takoz adları genel ve resmi olsun")
-// Ad = üretici + ürün tipi + sertlik + (parça no), üreticinin kataloğundaki
-// adla: "Cone 38 60 ShA (AMC 137963)". Proje, rapor ve not ada girmez — köken
-// bu yorumda. Aynı parça TEK girdidir; tek istisna aşağıdaki 57RS çiftleri.
-// Kapı: tests/unit/mount-library-adlar.test.js.
+// Ad = ürün tipi + sertlik + (parça no), üreticinin kataloğundaki adla; üretici
+// kodu üreticisiyle yazılır: "Cone 38 60 ShA (AMC 137963)" — tek başına altı
+// haneli kod ekranda binliksiz sayı okunur. Proje, rapor ve not ada girmez —
+// köken bu yorumda. Aynı parça TEK girdidir; tek istisna aşağıdaki 57RS
+// çiftleri. Kapı: tests/unit/mount-library-adlar.test.js.
 //
 // ── AYNI PARÇA KODU, FARKLI TAKOZ ────────────────────────────────────────────
 // 57RS313773 ve 57RS313774 kodları İKİ AYRI kaynakta, İKİ AYRI takoz için
