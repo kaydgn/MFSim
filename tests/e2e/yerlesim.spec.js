@@ -113,9 +113,6 @@ const MUAF = [
 // aşaması yazılı) ya da sebebi konumunun kendisi olan (MUAF). İkisi de turunda
 // HÂLÂ gerçekleşiyor mu ölçülür: onarılan BEKLEYEN satırı kalırsa test kırılır.
 const YON_BEKLEYEN = [
-  { tur: 'kabuk', asama: 'E1', re: /^ölçüm içe aktarma · sebepsiz kapalı "Diyagramlara aktar"/ },
-  { tur: 'Araç Performans', asama: 'E1', re: /^sonuçlar · (?:boş )?pano · sebepsiz kapalı "(?:Ayır|Birleştir)"/ },
-  { tur: 'Takoz', asama: 'E1', re: /^sonuçlar · (?:boş )?pano · sebepsiz kapalı "(?:Ayır|Birleştir)"/ },
   { tur: 'Araç Performans', asama: 'E2', re: /^yavaşlama sihirbazı · adsız düğme/ },
   { tur: 'Araç Performans', asama: 'E2', re: /^(?:torque-converter|gearbox)(?: ↓\d+)? · sebepsiz kapalı/ },
   { tur: 'FEAD', asama: 'E3', re: /^fead-report(?: ↓\d+)? · sebepsiz kapalı "Raporu Oluştur ve İndir"/ },

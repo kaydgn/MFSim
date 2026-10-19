@@ -435,13 +435,15 @@ function veImpSetQuery(v) {
   if(s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
 }
 
-// "Diyagramlara aktar" yalnızca seçim varken etkin.
+// "Diyagramlara aktar" yalnızca seçim varken etkin; kapalıyken sebebi ipucunda.
 function veImpSyncFooter() {
   var btn = document.getElementById('ve-import-apply');
   if(!btn) return;
   var n = 0;
   Object.keys(veImpUI.ySel).forEach(function(k) { if(veImpUI.ySel[k]) n++; });
   btn.disabled = !veImpUI.rows || n === 0;
+  if(btn.disabled) btn.title = !veImpUI.rows ? 'Dosya seçilmedi.' : 'Y ekseni sütunu seçilmedi.';
+  else btn.removeAttribute('title');
   btn.textContent = n > 0 ? ('Diyagramlara aktar (' + n + ')') : 'Diyagramlara aktar';
 }
 

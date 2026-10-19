@@ -2431,3 +2431,12 @@ sebepsiz kapalı denetim): `YON_BEKLEYEN` aşamasının PR'ında boşalır,
 | E3 | FEAD | 17 |
 | E4 | Takoz | 9 |
 | E5 | Ölçüm Görüntüleyici ve CAN Çözümleyici | 6 |
+
+**Uygulananlar:** E0 → kaydgn/MFSim#1166 (kural, `veYon`, tarayıcı profili,
+aşama kapıları yuvayı atlar, tur kapısı) · E1 → kabuk ve Sonuçlar: boş tuval
+(kök · Araç Performans · Takoz'un Boş kanvas'ı) yeniden yazılı ve kısayol
+penceresinin listesinden tek kısayol taşıyor; port, tablo, X ekseni, rapor,
+ölçüm şeridi bildirimleri durum + çare; ölçüm penceresinin, veri tablosunun ve
+3B dağılımın boş durumu Veri Gezgini'ni gösteriyor; Ayır/Birleştir ve
+"Diyagramlara aktar" kapalıyken sebebini ipucunda taşıyor; radyonun boş
+Favoriler'i yıldızı gösteriyor.

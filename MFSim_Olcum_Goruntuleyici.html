@@ -3651,7 +3651,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .ve-help-row:last-child{ border-bottom:none; }
 .ve-help-label{ font-size:var(--fs-lg); color:var(--text-secondary); }
 .ve-help-keys{ display:flex; align-items:center; gap:4px; flex:none; }
-.ve-help-keys kbd, .ve-help-foot kbd{
+.ve-help-keys kbd, .ve-help-foot kbd, .ve-bos-tuval-tus kbd{
   font-size:var(--fs-body); font-weight:600;
   color:var(--text-primary); background:var(--bg-tertiary,var(--bg-primary));
   border:1px solid var(--border-color); border-bottom-width:2px;
@@ -3688,6 +3688,23 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 .ve-align-btn:hover:not([disabled]){ background:var(--accent-primary); color:var(--on-accent); border-color:var(--accent-primary); }
 .ve-align-btn:active:not([disabled]){ transform:translateY(1px); }
 .ve-align-btn[disabled]{ opacity:.4; cursor:not-allowed; }
+
+/* ── Boş tuval (yönlendirme yuvası, js/bos-tuval.js) ────────────────────────
+   Durum + tek yönlendirme cümlesi; kökte kısayol satırı. Tuvale bırakmayı
+   engellemez (pointer-events yok); düğüm varken (örnek kartı, analiz
+   araçları) alta iner. */
+.ve-bos-tuval{
+  position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+  z-index:6; pointer-events:none; user-select:none;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:0 16px; text-align:center;
+}
+.ve-bos-tuval[hidden], body.ve-no-module .ve-bos-tuval{ display:none; }
+.ve-bos-tuval--alt{ top:auto; bottom:56px; transform:none; }
+.ve-bos-tuval-durum{ font-size:var(--fs-title); font-weight:600; color:var(--text-secondary); }
+.ve-bos-tuval-yon{ font-size:var(--fs-lg); color:var(--text-muted); }
+.ve-bos-tuval-kisayol{ display:flex; gap:16px; margin-top:6px; font-size:var(--fs-body); color:var(--text-muted); }
+.ve-bos-tuval-tus{ display:inline-flex; align-items:center; gap:6px; }
 
 .ve-canvas-wrapper.panning{
   cursor:grabbing;
@@ -11870,7 +11887,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
     <div class="ve-imp-footer">
       <span class="ve-imp-hint">X ekseni varsayılan olarak ilk sütundur.</span>
       <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
-      <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara aktar</button>
+      <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled title="Dosya seçilmedi.">Diyagramlara aktar</button>
     </div>
   </div>
 </div>
@@ -15165,11 +15182,11 @@ function _veFoyEskiPano(metin) {
 
 function veFoyKopyala() {
   var m = _veFoySimdiki();
-  if(!m) { _veFoyUyar('Kopyalanacak tablo yok.'); return; }
+  if(!m) { _veFoyUyar('Kopyalanacak tablo yok. ' + veYon('Veri Gezgini’nden sinyal seçin.')); return; }
   var metin = veFoyMetin(m, 'pano');
   var n = m.x.veri.length;
   var bildir = function(ok) {
-    if(!ok) { _veFoyUyar('Pano kullanılamıyor.'); return; }
+    if(!ok) { _veFoyUyar('Pano kullanılamıyor. ' + veYon('Tabloyu CSV ile indirin.')); return; }
     if(typeof showToast === 'function') {
       showToast(veSayi(n, 0) + ' satır panoya kopyalandı.', 'success');
     }
@@ -15186,7 +15203,7 @@ function veFoyKopyala() {
 
 function veFoyCsvIndir() {
   var m = _veFoySimdiki();
-  if(!m) { _veFoyUyar('Dışa aktarılacak tablo yok.'); return; }
+  if(!m) { _veFoyUyar('Dışa aktarılacak tablo yok. ' + veYon('Veri Gezgini’nden sinyal seçin.')); return; }
   // BOM: Excel UTF-8'i ancak onunla tanır (başlıkta →, ·, ü var)
   var blob = new Blob(['﻿' + veFoyMetin(m, 'csv')], { type: 'text/csv;charset=utf-8' });
   var url = URL.createObjectURL(blob);
@@ -15555,7 +15572,7 @@ function veWarnXAxisMismatch(wantedXAxis) {
   var b = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
   var cur = (b && b.xAxis && b.xAxis.name) ? b.xAxis.name : 'Zaman [s]';
   var want = (wantedXAxis && wantedXAxis.name) ? wantedXAxis.name : 'farklı bir eksen';
-  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '.', 'warning');
+  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '. ' + veYon('X ekseni listesinden değiştirin.'), 'warning');
 }
 
 // ── Şerit ekleme / çıkarma ────────────────────────────────────────────────
@@ -18309,6 +18326,7 @@ function veTrEmptyHTML() {
 
   h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-trending-up"></span></div>';
   h += '<div class="ve-trace-empty-title">Ölçüm penceresi boş</div>';
+  h += '<div class="ve-trace-empty-sub">' + veYon('Veri Gezgini’nden sinyal seçin.') + '</div>';
   return h;
 }
 
@@ -18403,10 +18421,10 @@ function veTrIzAraclari(slot, n, zoomed) {
   }
 
   h += '<span class="ve-trace-sep"></span>';
-  h += '<button type="button" class="ve-trace-btn" data-act="split-all"' +
-       (n > 1 ? '' : ' disabled') + '>Ayır</button>';
-  h += '<button type="button" class="ve-trace-btn" data-act="merge-all"' +
-       (n > 1 ? '' : ' disabled') + '>Birleştir</button>';
+  // Kapalıyken sebebi ipucunda (yönlendirme yuvası: kapalı denetim)
+  var tekSinyal = n > 1 ? '' : ' disabled title="En az iki sinyal gerekli."';
+  h += '<button type="button" class="ve-trace-btn" data-act="split-all"' + tekSinyal + '>Ayır</button>';
+  h += '<button type="button" class="ve-trace-btn" data-act="merge-all"' + tekSinyal + '>Birleştir</button>';
 
   return h;
 }
@@ -19950,13 +19968,15 @@ function veImpSetQuery(v) {
   if(s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
 }
 
-// "Diyagramlara aktar" yalnızca seçim varken etkin.
+// "Diyagramlara aktar" yalnızca seçim varken etkin; kapalıyken sebebi ipucunda.
 function veImpSyncFooter() {
   var btn = document.getElementById('ve-import-apply');
   if(!btn) return;
   var n = 0;
   Object.keys(veImpUI.ySel).forEach(function(k) { if(veImpUI.ySel[k]) n++; });
   btn.disabled = !veImpUI.rows || n === 0;
+  if(btn.disabled) btn.title = !veImpUI.rows ? 'Dosya seçilmedi.' : 'Y ekseni sütunu seçilmedi.';
+  else btn.removeAttribute('title');
   btn.textContent = n > 0 ? ('Diyagramlara aktar (' + n + ')') : 'Diyagramlara aktar';
 }
 

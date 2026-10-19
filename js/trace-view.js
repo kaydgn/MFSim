@@ -2356,6 +2356,7 @@ function veTrEmptyHTML() {
 
   h += '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-trending-up"></span></div>';
   h += '<div class="ve-trace-empty-title">Ölçüm penceresi boş</div>';
+  h += '<div class="ve-trace-empty-sub">' + veYon('Veri Gezgini’nden sinyal seçin.') + '</div>';
   return h;
 }
 
@@ -2447,10 +2448,10 @@ function veTrIzAraclari(slot, n, zoomed) {
   }
 
   h += '<span class="ve-trace-sep"></span>';
-  h += '<button type="button" class="ve-trace-btn" data-act="split-all"' +
-       (n > 1 ? '' : ' disabled') + '>Ayır</button>';
-  h += '<button type="button" class="ve-trace-btn" data-act="merge-all"' +
-       (n > 1 ? '' : ' disabled') + '>Birleştir</button>';
+  // Kapalıyken sebebi ipucunda (yönlendirme yuvası: kapalı denetim)
+  var tekSinyal = n > 1 ? '' : ' disabled title="En az iki sinyal gerekli."';
+  h += '<button type="button" class="ve-trace-btn" data-act="split-all"' + tekSinyal + '>Ayır</button>';
+  h += '<button type="button" class="ve-trace-btn" data-act="merge-all"' + tekSinyal + '>Birleştir</button>';
 
   return h;
 }

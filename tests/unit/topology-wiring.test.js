@@ -69,14 +69,15 @@ describe('port çifti — kurar ya da SEBEBİNİ SÖYLER', () => {
     expect(veTryConnectPorts('a', 'output', 'b', 'output')).toBe(false);
     expect(connections.length).toBe(0);
     expect(stubs.showToast).toHaveBeenCalledTimes(1);
-    expect(stubs.showToast.mock.calls[0][0]).toBe('İki çıkış portu birbirine bağlanmaz.');
+    // Durum + çare (yönlendirme yuvası, 2026-10-19): hangi porta bağlanacağı yazılı
+    expect(stubs.showToast.mock.calls[0][0]).toBe('İki çıkış portu birbirine bağlanmaz. Çıkışı bir giriş portuna bağlayın.');
     expect(stubs.showToast.mock.calls[0][1]).toBe('warning');
   });
 
   test('giriş → GİRİŞ: bağlantı yok, uyarı var', () => {
     expect(veTryConnectPorts('a', 'input', 'b', 'input')).toBe(false);
     expect(connections.length).toBe(0);
-    expect(stubs.showToast.mock.calls[0][0]).toBe('İki giriş portu birbirine bağlanmaz.');
+    expect(stubs.showToast.mock.calls[0][0]).toBe('İki giriş portu birbirine bağlanmaz. Girişi bir çıkış portuna bağlayın.');
   });
 
   test('bileşen kendisine bağlanamaz ve bunu yazar', () => {

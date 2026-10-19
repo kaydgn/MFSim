@@ -299,11 +299,11 @@ function _veFoyEskiPano(metin) {
 
 function veFoyKopyala() {
   var m = _veFoySimdiki();
-  if(!m) { _veFoyUyar('Kopyalanacak tablo yok.'); return; }
+  if(!m) { _veFoyUyar('Kopyalanacak tablo yok. ' + veYon('Veri Gezgini’nden sinyal seçin.')); return; }
   var metin = veFoyMetin(m, 'pano');
   var n = m.x.veri.length;
   var bildir = function(ok) {
-    if(!ok) { _veFoyUyar('Pano kullanılamıyor.'); return; }
+    if(!ok) { _veFoyUyar('Pano kullanılamıyor. ' + veYon('Tabloyu CSV ile indirin.')); return; }
     if(typeof showToast === 'function') {
       showToast(veSayi(n, 0) + ' satır panoya kopyalandı.', 'success');
     }
@@ -320,7 +320,7 @@ function veFoyKopyala() {
 
 function veFoyCsvIndir() {
   var m = _veFoySimdiki();
-  if(!m) { _veFoyUyar('Dışa aktarılacak tablo yok.'); return; }
+  if(!m) { _veFoyUyar('Dışa aktarılacak tablo yok. ' + veYon('Veri Gezgini’nden sinyal seçin.')); return; }
   // BOM: Excel UTF-8'i ancak onunla tanır (başlıkta →, ·, ü var)
   var blob = new Blob(['﻿' + veFoyMetin(m, 'csv')], { type: 'text/csv;charset=utf-8' });
   var url = URL.createObjectURL(blob);

@@ -849,7 +849,7 @@ function veRenderDetailedReport(filter) {
   
   var sim = window.veSimResults;
   if(!sim || !sim.reportSnapshot) {
-    showToast('Rapor verisi yok.', 'warning');
+    showToast('Rapor verisi yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warning');
     return;
   }
   var R = sim.reportSnapshot;
@@ -2592,7 +2592,7 @@ function veRenderTXTReport(reportType) {
 
   var sim = window.veSimResults;
   if(!sim || !sim.time || sim.time.length === 0) {
-    showToast('Rapor verisi yok.', 'warning');
+    showToast('Rapor verisi yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warning');
     return;
   }
 
@@ -4102,7 +4102,7 @@ function veDownloadReportHTML() {
   var sim = window.veSimResults;
   var R = sim && sim.reportSnapshot;
   if(!R) {
-    if(typeof showToast === 'function') showToast('Rapor verisi yok.', 'warning');
+    if(typeof showToast === 'function') showToast('Rapor verisi yok. ' + veYon('Çözücü penceresinde Hesapla ile çözün.'), 'warning');
     return;
   }
 
@@ -5032,7 +5032,7 @@ function veEnterResults() {
   if(typeof veImpPruneSlots === 'function') {
     var dropped = veImpPruneSlots(veResultSlots);
     if(dropped > 0 && typeof showToast === 'function') {
-      showToast(dropped + ' ölçüm şeridi kaldırıldı: veri oturumda yok.', 'info');
+      showToast(dropped + ' ölçüm şeridi kaldırıldı: veri oturumda yok. ' + veYon('Ölçüm dosyasını yeniden içe aktarın.'), 'info');
     }
   }
   veUpdateResultsTree();
@@ -5186,7 +5186,7 @@ function veWarnXAxisMismatch(wantedXAxis) {
   var b = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
   var cur = (b && b.xAxis && b.xAxis.name) ? b.xAxis.name : 'Zaman [s]';
   var want = (wantedXAxis && wantedXAxis.name) ? wantedXAxis.name : 'farklı bir eksen';
-  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '.', 'warning');
+  showToast('X ekseni uyuşmuyor: pano ' + cur + ', öğe ' + want + '. ' + veYon('X ekseni listesinden değiştirin.'), 'warning');
 }
 
 // İçe aktarılan ölçüm panosuna simülasyon sinyali giremez.
@@ -5639,8 +5639,8 @@ function veRenderSlot(slotIdx) {
   if(sensors.length === 0) {
     var emptyName = (type === 'scatter3d') ? '3B dağılım' : 'Veri tablosu';
     var emptyHint = (type === 'scatter3d')
-      ? 'En az 2 sinyal gerekli (X, Y).'
-      : 'Sinyal seçilmedi.';
+      ? veYon('Veri Gezgini’nden X ve Y sinyali seçin.')
+      : veYon('Veri Gezgini’nden sinyal seçin.');
     body.innerHTML =
       '<div class="ve-trace-empty" style="display:flex;">' +
       '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-' +
@@ -5658,7 +5658,7 @@ function veRenderSlot(slotIdx) {
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:var(--fs-md); text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:var(--fs-h1); margin-bottom:6px;"><span class="mf-ico mf-ico-package"></span></div>';
     html += (sensors.length < 2)
-      ? 'En az 2 sinyal gerekli (X, Y).'
+      ? veYon('Veri Gezgini’nden Y sinyalini seçin.')
       : 'Simülasyon sonucu yok.';
     html += '</div>';
 

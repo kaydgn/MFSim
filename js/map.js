@@ -3282,5 +3282,7 @@ function updateNodeCount() {
   // Takoz başlangıç sayfası düğüm kümesinden türer (js/cp-mount-baslangic.js):
   // ekleme, silme, geri yükleme ve sekme yükleme hep buradan geçer.
   if(typeof veMntBaslangicTazele === 'function') veMntBaslangicTazele();
+  // Boş tuvalin yönlendirmesi de düğüm kümesinden türer (js/bos-tuval.js).
+  if(typeof veBosTuvalTazele === 'function') veBosTuvalTazele();
 }
 
