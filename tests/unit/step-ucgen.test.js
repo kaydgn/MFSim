@@ -589,4 +589,29 @@ describe('PARÇA TOPLAYICISI', () => {
     expect(r2.uc[0]).toBeCloseTo(-p0[1] + 100, 4);
     expect(r2.uc[1]).toBeCloseTo(p0[0], 4);
   });
+  // Takoz'un ağ işi bağlamı parça başına bırakır (420 MB'lık montajda yığın
+  // 3,2 GB'tı) ve aynı parçanın öteki örneklerini YEREL AĞDAN taşır: taşınan
+  // ağ doğrudan üçgenlemeyle bit bit aynı olmalı, yoksa bir örnek ötekinden
+  // sessizce ayrışır.
+  test('yerel ağdan taşınan örnek doğrudan üçgenlemeyle BİT BİT aynı; bırakılan bağlam aynı ağı yeniden kurar', () => {
+    const yz = new Y.StepYaz();
+    const yuzler = Y.profilYuzleri(yz, Y.eksen(), Y.kanalliProfil({ od: 120, n: 6 }));
+    const o = ucgenle(yz, yuzler, { kiris: 0.1 });
+    const M2 = { R: [[0.6, 0, 0.8], [0, 1, 0], [-0.8, 0, 0.6]], t: [-250.5, 33.25, 1000] };
+    const t = U.veStepUcgenTopla(o.B, o.p.M, o.p.birim);
+    o.p.yuzler.forEach(t.ekle);
+    const r = t.bitir({ yerel: true });
+    expect(r.yerel.uc).toBeInstanceOf(Float64Array);
+    const tasinan = U.veStepUcgenTasi(r.yerel, M2);
+    const B2 = U.veStepUcgenBaglam(o.B.model, { kiris: 0.1 });
+    const dogrudan = U.veStepUcgenParca(B2, o.p.yuzler, M2, o.p.birim);
+    const bayt = (a) => Buffer.from(a.buffer, a.byteOffset, a.byteLength);
+    const ayni = (a, b) => ['uc', 'normal', 'ucgen', 'cizgi'].forEach((k) => expect({ k, esit: bayt(a[k]).equals(bayt(b[k])) }).toEqual({ k, esit: true }));
+    ayni(tasinan, dogrudan);
+    expect(tasinan.kutu).toEqual(dogrudan.kutu);
+    expect(tasinan.ucgen).toBe(r.yerel.ucgen);                 // üçgen dizisi ortak
+    U.veStepUcgenBirak(B2);
+    expect(['egri', 'kenar', 'yuzey', 'yuz'].map((k) => Object.keys(B2[k]).length)).toEqual([0, 0, 0, 0]);
+    ayni(U.veStepUcgenParca(B2, o.p.yuzler, M2, o.p.birim), dogrudan);
+  });
 });

@@ -185,4 +185,27 @@ function gucGrubu(opt = {}) {
   return guçGrubuStep(p, Object.assign({ altMontajlar: [{ id: GUC.braket.id, ad: GUC.braket.ad, konum: GUC.braket.konum }] }, opt));
 }
 
-module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC };
+// AYNI PARÇA BİRDEN ÇOK KEZ TAKILI (cıvata, braket gibi): şişkin kutu braket üç
+// örnekle (üç ayrı dünya dönüşümü, AYNI temsil) + tek örnekli bir gövde. Ağ işi
+// aynı şekli bir kez üçgenleyip örneklere taşımalı (js/mount-step.js).
+function tekrarliMontaj(opt = {}) {
+  const yz = new Y.StepYaz({ uzunluk: opt.uzunluk });
+  const kok = yz.urun('MONTAJ', 'TEKRARLI MONTAJ');
+  const brk = yz.urun('BRK', 'Braket');
+  yz.govde(brk, bsKutuYuzleri(yz, 120, 60, 40, 8, 4), 'kati');
+  yz.temsil(brk);
+  const tek = yz.urun('GOVDE', 'Gövde');
+  yz.govde(tek, kutuYuzleri(yz, 400, 300, 200), 'kati');
+  yz.temsil(tek);
+  const taklar = [
+    yz.tak(kok, brk, 'BRK.1', [0, 0, 0], [0, 0, 1], [1, 0, 0]),
+    yz.tak(kok, tek, 'GOVDE.1', [500, 0, 0], [0, 0, 1], [1, 0, 0]),
+    yz.tak(kok, brk, 'BRK.2', [0, 300, 50], [0, 0.6, 0.8], [1, 0, 0]),
+    yz.tak(kok, brk, 'BRK.3', [-200, -100, 300], [0.6, 0, 0.8], [0, 1, 0])
+  ];
+  yz.temsil(kok);
+  taklar.forEach((t) => yz.bagla(t));
+  return yz.metin();
+}
+
+module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj };

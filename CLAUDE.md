@@ -73,8 +73,14 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   çubuk + Vazgeç; Vazgeç, başka dosya ve sihirbazın kapanması okumayı bırakır.
   **Parça tablosu dal dal** (`VE_MW_STP_SATIR` · `VE_MW_STP_SAYFA`; rollü düğüm dal
   kapalıyken de görünür): kart her rol değişiminde yeniden kuruluyor ve 11.694
-  satır onu 6,6 sn donduruyordu. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
-  (→ *STEP OKUMASI* · *AĞAÇ DAL DAL*) + `mount-step-okuma.spec.js`.
+  satır onu 6,6 sn donduruyordu. **Ağları TEK İŞ üretir** (`veMntStpAgIs`: 3B
+  bütün montajı, hesap rollü birimlerin parçalarını ister; bağlam parça başına
+  bırakılır, aynı temsil bir kez üçgenlenir — tek bağlam yığını 3,2 GB'a
+  çıkarıyordu). 3B montajı kurulurken gösterir, ÇİZİM KÜMELERDE (parça başına
+  nesne kurulmaz: 23.388 çizim çağrısıydı), Durdur · Devam; eksik ağı büyük
+  hesap kartta çubukla bekler. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
+  (→ *STEP OKUMASI* · *AĞAÇ DAL DAL* · *HESAP BEKLER*) + `mount-3b.test.js` +
+  `mount-step-okuma.spec.js` + `mount-3b.spec.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle

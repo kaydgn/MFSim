@@ -420,3 +420,114 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
     } finally { global.showToast = asil; }
   });
 });
+
+// ── HESAP BEKLER (2026-10-20, Takoz adım 3) ──────────────────────────────
+// 3B kurulumu durdurulabiliyor: rol verilen birimin parçalarının ağı henüz
+// yoksa eşzamanlı hesap büyük montajda arayüzü dakikalarca dondururdu (420
+// MB'lık montajda motor %55). Eksik ağ eşiği aşınca hesap BEKLER — kartta
+// çubuk ve Vazgeç — ağı ORTAK İŞ üretir, bitince hesap kendiliğinden yapılır.
+describe('HESAP BEKLER — eksik ağ büyükse kart çubukla bekler, sonra kendiliğinden hesaplar', () => {
+  const PK = require('../../js/pencere-kabuk.js');
+  beforeAll(() => {
+    global.vePencereEylem = PK.vePencereEylem;
+    global.vePencereIlerleme = PK.vePencereIlerleme;
+    global.vePencereIlerlemeHTML = PK.vePencereIlerlemeHTML;
+    global.veSayi = global.veSayi || require('../../js/sayi.js').veSayi;
+  });
+  afterAll(() => { delete global.vePencereEylem; delete global.vePencereIlerleme; delete global.vePencereIlerlemeHTML; });
+  const esik = W.VE_MW_STP_AG.eszaman;
+  afterEach(() => { W.VE_MW_STP_AG.eszaman = esik; });
+  const kart = () => { const d = document.createElement('div'); d.innerHTML = W._mwStpKartHTML(); return d; };
+  const bekle = async (f) => { for (let i = 0; i < 400 && !f(); i++) await new Promise((r) => setTimeout(r, 0)); };
+  const oku = () => W.veMntWizStpOku(S.gucGrubu(), 'guc.stp', 'duz');
+
+  test('eşiğin altında eski davranış: eşzamanlı, bekleme yok', () => {
+    W.veMntWizAc();
+    const s = oku();
+    W.veMntWizStpRol(dugumi(s, 'Motor bloğu'), 'mnt-motor');
+    const coz = W.veMntWizStpHesapla();
+    expect(coz && coz.ok).toBe(true);
+    expect(s.hesapBekliyor || null).toBeNull();
+  });
+
+  test('eşik aşılınca: hesap null döner, kartta çubuk + Vazgeç; ağlar bitince sonuç eşzamanlıyla aynı', async () => {
+    W.veMntWizAc();
+    const ref = oku();
+    W.veMntWizStpRol(dugumi(ref, 'Motor bloğu'), 'mnt-motor');
+    W.veMntWizStpRol(dugumi(ref, 'Arka braket'), 'mnt-bracket');
+    const beklenen = W.veMntWizStpHesapla();
+    W.VE_MW_STP_AG.eszaman = 0;
+    const s = oku();
+    W.veMntWizStpRol(dugumi(s, 'Motor bloğu'), 'mnt-motor');
+    W.veMntWizStpRol(dugumi(s, 'Arka braket'), 'mnt-bracket');
+    expect(W.veMntWizStpHesapla()).toBeNull();
+    expect(s.hesapBekliyor).toBeTruthy();
+    expect(s.hesapBekliyor.toplam).toBe(3);                       // motor + braketin iki parçası
+    const k = kart();
+    expect(k.querySelector('#ve-mw-stp-hesapla')).toBeNull();
+    expect(k.querySelector('.ve-fp-yurut[data-is] .ve-fp-ilerleme').getAttribute('aria-label')).toBe('Hesap');
+    expect(k.querySelector('#ve-mw-stp-hesap-vazgec').textContent.trim()).toBe('Vazgeç');
+    expect(W._mwStpHesapVeri(s).metin).toMatch(/^Parça \d \/ 3$/);
+    expect(W.veMntWizStpHesapla()).toBeNull();                    // beklerken ikinci istek yok sayılır
+    await bekle(() => !!s.coz);
+    expect(s.hesapBekliyor).toBeNull();
+    expect(s.coz.ok).toBe(true);
+    expect(s.coz.birimler.map((b) => [b.ad, b.konum])).toEqual(beklenen.birimler.map((b) => [b.ad, b.konum]));
+    expect(kart().querySelector('#ve-mw-stp-hesapla')).not.toBeNull();
+  });
+
+  test('Vazgeç: bekleyen hesap düşer, iş öncelikli listeyi bırakır, sonuç yazılmaz', async () => {
+    W.VE_MW_STP_AG.eszaman = 0;
+    W.veMntWizAc();
+    const s = oku();
+    W.veMntWizStpRol(dugumi(s, 'Motor bloğu'), 'mnt-motor');
+    expect(W.veMntWizStpHesapla()).toBeNull();
+    expect(W.veMntWizStpHesapVazgec()).toBe(true);
+    expect(s.hesapBekliyor).toBeNull();
+    expect(s.agIs.oncelik).toEqual([]);
+    await bekle(() => !s.agDongu);
+    expect(s.coz).toBeNull();
+    expect(W.veMntWizStpHesapVazgec()).toBe(false);
+  });
+
+  test('rol değişince bekleyen hesap düşer; yeni rollerin hesabı bekler ve yapılır', async () => {
+    W.VE_MW_STP_AG.eszaman = 0;
+    W.veMntWizAc();
+    const s = oku();
+    W.veMntWizStpRol(dugumi(s, 'Motor bloğu'), 'mnt-motor');
+    W.veMntWizStpHesapla();
+    const ilk = s.hesapBekliyor;
+    W.veMntWizStpRol(dugumi(s, 'Şanzıman gövdesi'), 'mnt-gearbox');
+    expect(s.hesapBekliyor).not.toBe(ilk);
+    expect(s.hesapBekliyor.toplam).toBeGreaterThan(0);
+    await bekle(() => !!s.coz);
+    expect(s.coz.birimler.map((b) => b.ad).sort()).toEqual(['Motor bloğu', 'Şanzıman gövdesi']);
+  });
+
+  test('bütün roller kalkınca bekleyen hesap düşer, sonuç yazılmaz', async () => {
+    W.VE_MW_STP_AG.eszaman = 0;
+    W.veMntWizAc();
+    const s = oku();
+    const m = dugumi(s, 'Motor bloğu');
+    W.veMntWizStpRol(m, 'mnt-motor');
+    W.veMntWizStpHesapla();
+    expect(s.hesapBekliyor).toBeTruthy();
+    W.veMntWizStpRol(m, '');
+    expect(s.hesapBekliyor).toBeNull();
+    await bekle(() => !s.agDongu);
+    expect(s.coz).toBeNull();
+  });
+
+  test('3B görüntüleyicinin isteği: bütün montaj üretilir, istek kalkınca iş durur', async () => {
+    W.veMntWizAc();
+    const s = oku();
+    expect(W.veMntWizStpAgTum(true)).toBe(true);
+    await bekle(() => !s.agDongu);
+    expect(s.ag.filter(Boolean)).toHaveLength(s.sonuc.parcalar.length);
+    const s2 = oku();
+    W.veMntWizStpAgTum(true);
+    W.veMntWizStpAgTum(false);
+    await bekle(() => !s2.agDongu);
+    expect(s2.ag.filter(Boolean).length).toBeLessThan(s2.sonuc.parcalar.length);
+  });
+});

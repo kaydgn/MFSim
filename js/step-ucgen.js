@@ -73,6 +73,15 @@ function veStepUcgenBaglam(model, secenek){
     sayac: { yuz: 0, ucgenli: 0, kenarYuz: 0, ucgen: 0, zorla: 0, fermuar: 0, nedenler: {} }
   };
 }
+// Bağlamın ara verisini (eğri · kenar · yüzey · yüz) bırakır; sayaç kalır.
+// PARÇALAR ARASINDA çağrılır — kenarlar bir parçanın yüzleri arasında
+// paylaşılır (su geçirmezlik), parçalar arasında değil. Bütün montajı tek
+// bağlamla üçgenlemek 420 MB'lık dosyada yığını 3,2 GB'a çıkarıyordu (sınır
+// 4 GB); aynı parçanın öteki örnekleri için yerel ağ taşınır (veStepUcgenTasi).
+function veStepUcgenBirak(B){
+  if(!B) return;
+  B.egri = {}; B.kenar = {}; B.yuzey = {}; B.yuz = {};
+}
 
 function _suNokta(B, id, k){
   var a = B.P.Varlik(B.model, id).a[1];
@@ -497,18 +506,28 @@ function _suBsYuzey(B, id, k, t){
   // uzun bir yüzeyde ilk noktayı yanlış yerel en küçüğe indiriyordu (ölçüldü).
   var Gu = Math.min(240, Math.max(10, 3 * _suAralikSay(U, u0, u1))), Gv = Math.min(240, Math.max(10, 3 * _suAralikSay(V, v0, v1)));
   while(Gu * Gv > 12000){ if(Gu > Gv) Gu = Math.ceil(Gu * 0.8); else Gv = Math.ceil(Gv * 0.8); }
+  // Izgara tipli dizide, nokta başına (u, v, x, y, z): dizi dizisi nokta başına
+  // ~176 bayt tutuyordu ve bağlamın en büyük kalemiydi (ölçüldü: 420 MB'lık
+  // montajda yüzeylerin önbelleği ~2,1 GB).
   var izgara = null;
   function izgaradan(p){
+    var q;
     if(!izgara){
-      izgara = [];
+      izgara = new Float64Array((Gu + 1) * (Gv + 1) * 5);
+      q = 0;
       for(var a3 = 0; a3 <= Gu; a3++) for(var b3 = 0; b3 <= Gv; b3++){
-        var uu = u0 + (u1 - u0) * a3 / Gu, vv = v0 + (v1 - v0) * b3 / Gv;
-        izgara.push([uu, vv, S.P(uu, vv)]);
+        var uu = u0 + (u1 - u0) * a3 / Gu, vv = v0 + (v1 - v0) * b3 / Gv, s3 = S.P(uu, vv);
+        izgara[q] = uu; izgara[q + 1] = vv; izgara[q + 2] = s3[0]; izgara[q + 3] = s3[1]; izgara[q + 4] = s3[2];
+        q += 5;
       }
     }
-    var en = izgara[0], enD = Infinity;
-    for(var i3 = 0; i3 < izgara.length; i3++){ var dd = _suM(izgara[i3][2], p); if(dd < enD){ enD = dd; en = izgara[i3]; } }
-    return [en[0], en[1]];
+    var en = 0, enD = Infinity;
+    for(q = 0; q < izgara.length; q += 5){
+      var dx = izgara[q + 2] - p[0], dy = izgara[q + 3] - p[1], dz = izgara[q + 4] - p[2];
+      var dd = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if(dd < enD){ enD = dd; en = q; }
+    }
+    return [izgara[en], izgara[en + 1]];
   }
   function newton(p, uv){
     var u = uv[0], v = uv[1];
@@ -1100,20 +1119,13 @@ function _suAlan(B, S, H, yon){
 // bitir() döner: { uc, normal: Float32Array, ucgen: Uint32Array, cizgi: Float32Array
 //   (kenar parçaları, uç uca), kutu: [xmin, ymin, zmin, xmax, ymax, zmax],
 //   yuz, ucgenli, kenarYuz }
+// bitir({ yerel: true }) ayrıca `yerel`i taşır: parçanın dönüşümsüz ağı (Float64)
+// — aynı parçanın öteki örnekleri veStepUcgenTasi ile ondan kurulur, bit bit
+// aynı sonuçla (dönüşüm aynı çift duyarlıklı sayılara aynı sırayla uygulanır).
 function veStepUcgenTopla(B, M, birim){
   var k = birim && birim.mm > 0 ? birim.mm : 1;
   var dk = birim && birim.derece > 0 ? birim.derece : 180 / Math.PI;
-  var R = M ? M.R : [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t = M ? M.t : [0, 0, 0];
   var uc = [], nor = [], ucg = [], cizgi = [], gor = {}, out = { yuz: 0, ucgenli: 0, kenarYuz: 0 };
-  var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
-  function nokta(p, dizi){
-    var x = R[0][0] * p[0] + R[0][1] * p[1] + R[0][2] * p[2] + t[0];
-    var y = R[1][0] * p[0] + R[1][1] * p[1] + R[1][2] * p[2] + t[1];
-    var z = R[2][0] * p[0] + R[2][1] * p[1] + R[2][2] * p[2] + t[2];
-    dizi.push(x, y, z);
-    if(x < kutu[0]) kutu[0] = x; if(y < kutu[1]) kutu[1] = y; if(z < kutu[2]) kutu[2] = z;
-    if(x > kutu[3]) kutu[3] = x; if(y > kutu[4]) kutu[4] = y; if(z > kutu[5]) kutu[5] = z;
-  }
   return {
     ekle: function(fid){
       var y = _suYuz(B, fid, k, dk);
@@ -1125,11 +1137,8 @@ function veStepUcgenTopla(B, M, birim){
         B.sayac.nedenler[sb] = (B.sayac.nedenler[sb] || 0) + 1;
       }
       var taban = uc.length / 3, i;
-      for(i = 0; i < y.uc.length; i += 3) nokta([y.uc[i], y.uc[i + 1], y.uc[i + 2]], uc);
-      for(i = 0; i < y.nor.length; i += 3){
-        var n0 = y.nor[i], n1 = y.nor[i + 1], n2 = y.nor[i + 2];
-        nor.push(R[0][0] * n0 + R[0][1] * n1 + R[0][2] * n2, R[1][0] * n0 + R[1][1] * n1 + R[1][2] * n2, R[2][0] * n0 + R[2][1] * n1 + R[2][2] * n2);
-      }
+      for(i = 0; i < y.uc.length; i++) uc.push(y.uc[i]);
+      for(i = 0; i < y.nor.length; i++) nor.push(y.nor[i]);
       for(i = 0; i < y.ucg.length; i++) ucg.push(taban + y.ucg[i]);
       B.sayac.ucgen += y.ucg.length / 3;
       y.kenarlar.forEach(function(eid){
@@ -1137,18 +1146,51 @@ function veStepUcgenTopla(B, M, birim){
         gor[eid] = 1;
         var pts = B.kenar[eid + '@' + k];
         if(!pts) return;
-        for(var j = 1; j < pts.length; j++){ nokta(pts[j - 1], cizgi); nokta(pts[j], cizgi); }
+        for(var j = 1; j < pts.length; j++){
+          var a = pts[j - 1], b = pts[j];
+          cizgi.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+        }
       });
     },
-    bitir: function(){
-      out.uc = new Float32Array(uc);
-      out.normal = new Float32Array(nor);
-      out.ucgen = new Uint32Array(ucg);
-      out.cizgi = new Float32Array(cizgi);
-      out.kutu = kutu;
-      return out;
+    bitir: function(secenek){
+      var yerel = { uc: uc, nor: nor, ucgen: new Uint32Array(ucg), cizgi: cizgi,
+                    yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
+      var r = veStepUcgenTasi(yerel, M);
+      if(secenek && secenek.yerel)
+        r.yerel = { uc: new Float64Array(uc), nor: new Float64Array(nor), ucgen: yerel.ucgen, cizgi: new Float64Array(cizgi),
+                    yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
+      return r;
     }
   };
+}
+// Yerel ağ (dönüşümsüz) → bir örneğin dünya ağı. Üçgen dizisi ORTAKTIR (aynı
+// Uint32Array): örnekler yalnız konumda ayrışır. Kutu kenar noktalarını da sayar.
+function veStepUcgenTasi(y, M){
+  var R = M ? M.R : [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t = M ? M.t : [0, 0, 0];
+  var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+  function nokta(p, dizi){
+    var n = p.length, d = new Float32Array(n);
+    for(var i = 0; i < n; i += 3){
+      var p0 = p[i], p1 = p[i + 1], p2 = p[i + 2];
+      var x = R[0][0] * p0 + R[0][1] * p1 + R[0][2] * p2 + t[0];
+      var y2 = R[1][0] * p0 + R[1][1] * p1 + R[1][2] * p2 + t[1];
+      var z = R[2][0] * p0 + R[2][1] * p1 + R[2][2] * p2 + t[2];
+      d[i] = x; d[i + 1] = y2; d[i + 2] = z;
+      if(x < kutu[0]) kutu[0] = x; if(y2 < kutu[1]) kutu[1] = y2; if(z < kutu[2]) kutu[2] = z;
+      if(x > kutu[3]) kutu[3] = x; if(y2 > kutu[4]) kutu[4] = y2; if(z > kutu[5]) kutu[5] = z;
+    }
+    return d;
+  }
+  var nn = y.nor.length, nor = new Float32Array(nn);
+  for(var i = 0; i < nn; i += 3){
+    var n0 = y.nor[i], n1 = y.nor[i + 1], n2 = y.nor[i + 2];
+    nor[i] = R[0][0] * n0 + R[0][1] * n1 + R[0][2] * n2;
+    nor[i + 1] = R[1][0] * n0 + R[1][1] * n1 + R[1][2] * n2;
+    nor[i + 2] = R[2][0] * n0 + R[2][1] * n1 + R[2][2] * n2;
+  }
+  var uc = nokta(y.uc), cizgi = nokta(y.cizgi);
+  return { yuz: y.yuz, ucgenli: y.ucgenli, kenarYuz: y.kenarYuz,
+           uc: uc, normal: nor, ucgen: y.ucgen, cizgi: cizgi, kutu: kutu };
 }
 function veStepUcgenParca(B, yuzler, M, birim){
   var t = veStepUcgenTopla(B, M, birim);
@@ -1173,7 +1215,9 @@ if (typeof module !== 'undefined' && module.exports) {
     VE_STEP_UCGEN_SURUM: VE_STEP_UCGEN_SURUM,
     VE_STEP_UCGEN_VARSAYILAN: VE_STEP_UCGEN_VARSAYILAN,
     veStepUcgenBaglam: veStepUcgenBaglam,
+    veStepUcgenBirak: veStepUcgenBirak,
     veStepUcgenTopla: veStepUcgenTopla,
+    veStepUcgenTasi: veStepUcgenTasi,
     veStepUcgenParca: veStepUcgenParca,
     veStepUcgenAlan: veStepUcgenAlan,
     _suYuz: _suYuz,

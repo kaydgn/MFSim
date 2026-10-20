@@ -8871,6 +8871,14 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-ilerleme{ position:absolute; left:10px; bottom:8px; font-size:var(--fs-tiny);
   color:var(--text-secondary); pointer-events:none; font-variant-numeric:tabular-nums; }
 .ve-fw-3b-ilerleme:empty{ display:none; }
+/* Takoz: KURULUMUN KUTUSU (js/cp-mount-3b.js → _mw3bKurYaz) — tuvalin sol
+   üstünde yüzen eylem satırı: çubuk + Durdur, durunca durum + Devam. Satırın
+   pencere içindeki ayracı (üst çizgi, boşluk) burada yok: kutunun kendisi. */
+.ve-mw-3b-kur{ position:absolute; left:12px; top:12px; width:300px; max-width:calc(100% - 24px); box-sizing:border-box;
+  padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  box-shadow:0 1px 2px var(--shadow-color), 0 6px 18px var(--shadow-color); }
+.ve-mw-3b-kur[hidden]{ display:none; }
+.ve-mw-3b-kur .ve-fp-yurut{ margin:0; padding:0; border-top:0; }
 .ve-fw-3b-ipucu{ position:absolute; pointer-events:none; padding:3px 8px; white-space:nowrap;
   font-size:var(--fs-tiny); color:var(--text-primary); background:var(--bg-primary);
   border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 2px 8px var(--shadow-color); }
