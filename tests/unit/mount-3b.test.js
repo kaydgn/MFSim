@@ -143,6 +143,26 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     expect(d.querySelector('[data-ve-3b-govdeler] tbody tr td:nth-child(2)').textContent).toBe('125,0; 0,1; 750,0');
   });
 
+  test('gövde tablosunda kütle: elle → alan; malzeme ya da dosya → türetilen değer + "S" (dayanağı ipucunda)', () => {
+    const k = veMntStpOku(S.kutleKalibi());
+    const j = (ad) => k.agac.findIndex((d) => d.ad === ad);
+    const s = { sonuc: k, roller: k.agac.map(() => null), coz: null, kutle: {}, nokta: {}, yogunluk: {} };
+    s.roller[j('Motor')] = 'mnt-motor'; s.roller[j('Şanzıman')] = 'mnt-gearbox'; s.roller[j('Arka braket')] = 'mnt-bracket';
+    s.kutle[j('Motor')] = 418;
+    s.yogunluk[j('Şanzıman')] = 'dosya'; s.yogunluk[j('Arka braket')] = 'celik';
+    s.coz = veMntStpCoz(k, s.roller, { yogunluk: s.yogunluk });
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bPanelHTML(s, -1);
+    const hucre = (ad) => d.querySelector('[data-ve-3b-govdeler] tr[data-ve-3b-birim="' + j(ad) + '"] td:nth-child(3)');
+    expect(hucre('Motor').querySelector('input[data-mw-stp-kutle]').value).toBe('418');
+    expect(hucre('Şanzıman').textContent).toBe('654,8S');
+    expect(hucre('Arka braket').querySelector('[data-mw-stp-kutle-deger]').textContent).toBe('22,6');
+    expect(hucre('Arka braket').querySelector('sup.ve-fw-kun').getAttribute('title')).toBe('STEP geometrisinden · Çelik · 7.850 kg/m³');
+    // açık parçalı motorun satırı uyarılı; başlıkta yoğunluğun durumu yok (dosyada var)
+    expect(d.querySelector('[data-ve-3b-govdeler] tr[data-ve-3b-birim="' + j('Motor') + '"]').hasAttribute('data-uyari')).toBe(true);
+    expect(d.querySelectorAll('[data-ve-3b-govdeler] th')[2].getAttribute('title')).toBe(null);
+  });
+
   test('ekran izdüşümü: kameranın önündeki nokta piksele, arkasındaki null', () => {
     // Birim izdüşüm (sütun düzeni): x, y doğrudan NDC; w = −z
     const e = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0];

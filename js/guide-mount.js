@@ -147,7 +147,13 @@ function _gmSec2(){
       + 'güç grubunun STEP dosyasını açar, parçalara 3B\'de ya da parça ağacında rol verir ve rol verilen '
       + 'birimlerin konumunu ölçer. Takozun noktası üst bağlantı yüzeyinin merkezidir: dosyada yazılı '
       + 'dairenin merkezi, CATIA\'daki ölçümün aynısı; program onu takozun ekseninden önerir, 3B\'de '
-      + '<em>Daireden nokta</em> ile takozun başka bir dairesel kenarı seçilir. Roller ve seçilen daireler '
+      + '<em>Daireden nokta</em> ile takozun başka bir dairesel kenarı seçilir. Gövdenin ağırlık merkezi '
+      + 've ataleti parçaların hacminden toplanır; ağı kapalı olmayan parça hacme katılmaz ve uyarıda '
+      + 'adıyla, yüzey payıyla söylenir. Dosya CATIA\'nın doğrulama özelliklerini (hacim, ağırlık merkezi) '
+      + 'taşıyorsa parçanın hacmi ve merkezi oradan alınır. Kütlenin kaynağı gövde başına seçilir: '
+      + '<em>Elle</em> (veri sayfasındaki değer), malzeme (çelik, dökme demir, sfero döküm, alüminyum, '
+      + 'magnezyum: kütle = yoğunluk × hacim) ya da <em>Dosyadan</em> (parçaların dosyadaki yoğunlukları; '
+      + 'ağırlık merkezi kütleyle ağırlıklı). Roller, kütle kaynakları ve seçilen daireler '
       + 'projeyle kaydedilir, STEP dosyası kaydedilmez; aynı dosya '
       + 'yeniden açılınca roller geri gelir. Sihirbazın “STEP\'ten başla” kartı aynı dosyayı ve rolleri gösterir',
       'Hesaba girmez'],

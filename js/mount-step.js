@@ -23,6 +23,17 @@
 //    yazmazsa atalet de yazılmaz — uydurulmuş bir kütleden türemiş atalet
 //    sessizce yanlış olurdu. Geometriden gelen her alan sihirbazda "S" işareti
 //    taşır; ölçülen değer yazılınca düşer.
+//  • KÜTLE KAYNAĞI (2026-10-20, Takoz adım 6): elle (varsayılan) · malzeme
+//    (VE_MNT_STP_MALZEME: kütle = yoğunluk × hacim) · dosyadan (parçaların
+//    dosyadaki yoğunlukları — ağırlık merkezi ve atalet KÜTLEYLE ağırlıklı).
+//  • PARÇA PARÇA (veMntStpParcaOzellik): hacim, merkez ve tensör her parça
+//    için ayrı; birim onların toplamı. Ağı kapalı olmayan parça hacme KATILMAZ
+//    ve adıyla, yüzey payıyla söylenir — eskiden tek açık parça bütün birimi
+//    kutunun merkezine düşürüyordu (ölçüldü: 7 parçalı motorda 45 mm).
+//    Dosya parçanın hacmini ve merkezini yazıyorsa (CAx-IF doğrulama
+//    özellikleri, js/step-p21.js → veStepP21Ozellikler) o sayılar ağınkinin
+//    yerine geçer: CATIA'nın kendi hesabı; ağı açık parça da böyle katılır
+//    (tensörü yok — nokta kütle).
 //  • HACİM ÜÇGEN AĞINDAN (diverjans teoremi; ağ js/step-ucgen.js'in): ağ su
 //    geçirmez ve yüzün bayrağıyla yönlü ("KAPALI KATI", step-ucgen.test.js),
 //    kiriş payı 0,1 mm. KAPALILIK ÖLÇÜLÜR, varsayılmaz: üçgenlenemeyen yüz
@@ -49,16 +60,38 @@ var VE_MNT_STP_UCGEN = { kiris: 0.5, aci: 20 };
 var VE_MNT_STP_ROLLER = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount',
                          'mnt-shaft', 'mnt-pto', 'mnt-pump', 'mnt-pto-group'];
 var VE_MNT_STP_CIP = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount'];
+// MALZEMELER — kütleyi hacimden türetmek için (yoğunluk kg/m³; el kitabı
+// değerleri: çelik · EN-GJL · EN-GJS · alüminyum döküm · magnezyum döküm).
+// Sıra seçicinin sırası; anahtar kayda yazılır.
+var VE_MNT_STP_MALZEME = [
+  { k: 'celik', ad: 'Çelik', rho: 7850 },
+  { k: 'dokme', ad: 'Dökme demir', rho: 7200 },
+  { k: 'sfero', ad: 'Sfero döküm', rho: 7100 },
+  { k: 'aluminyum', ad: 'Alüminyum', rho: 2700 },
+  { k: 'magnezyum', ad: 'Magnezyum', rho: 1800 }
+];
+function veMntStpMalzeme(k){
+  for(var i = 0; i < VE_MNT_STP_MALZEME.length; i++) if(VE_MNT_STP_MALZEME[i].k === k) return VE_MNT_STP_MALZEME[i];
+  return null;
+}
+// Ekrana giden sayı tek yazıcıdan (js/sayi.js, karar 7·C)
+function _mstSayi(x, d){
+  if(typeof veSayi === 'function') return veSayi(x, d);
+  if(typeof require === 'function'){ try { return require('./sayi.js').veSayi(x, d); } catch(e){} }
+  return String(x);
+}
 
 function _mstOkuyucu(){
   if(typeof veStepP21Agac === 'function')
     return { Agac: veStepP21Agac, Dilimli: (typeof veStepP21AgacDilimli === 'function') ? veStepP21AgacDilimli : null,
              Yuz: (typeof veStepP21Yuz === 'function') ? veStepP21Yuz : null,
-             Kenar: (typeof veStepP21KenarCemberi === 'function') ? veStepP21KenarCemberi : null };
+             Kenar: (typeof veStepP21KenarCemberi === 'function') ? veStepP21KenarCemberi : null,
+             Ozellik: (typeof veStepP21Ozellikler === 'function') ? veStepP21Ozellikler : null };
   if(typeof require === 'function'){
     try {
       var m = require('./step-p21.js');
-      return { Agac: m.veStepP21Agac, Dilimli: m.veStepP21AgacDilimli, Yuz: m.veStepP21Yuz, Kenar: m.veStepP21KenarCemberi };
+      return { Agac: m.veStepP21Agac, Dilimli: m.veStepP21AgacDilimli, Yuz: m.veStepP21Yuz, Kenar: m.veStepP21KenarCemberi,
+               Ozellik: m.veStepP21Ozellikler };
     } catch(e){ return null; }
   }
   return null;
@@ -122,22 +155,41 @@ function veMntStpBirimler(sonuc, roller){
 //     kutu, kapali (üçgenlenemeyen yüz yok, açık kenar yok ve V > 0), kenarYuz, acik, ucgen }
 // Açık kenar: köşeler konumdan kaynaştırılır (paylaşılan kenarın noktaları
 // üçgenleyicide bit bit aynı — "KAPALI KATI"), bir kez kullanılan kenar sayılır.
+// Köşe ve kenar sayısal karma tablolarda (açık adresleme): metin anahtarlı
+// eşleme 420 MB'lık denemenin 4,5 milyon üçgeninde 8,5 sn sürüyordu.
 function _mstAcikKenar(a){
-  var u = a.uc, t = a.ucgen, q = 1e-6, harita = {}, id = [], n = 0, say = {}, acik = 0;
-  for(var i = 0; i < u.length; i += 3){
-    var k = Math.round(u[i] / q) + ',' + Math.round(u[i + 1] / q) + ',' + Math.round(u[i + 2] / q);
-    if(harita[k] === undefined) harita[k] = n++;
-    id.push(harita[k]);
+  var u = a.uc, t = a.ucgen, q = 1e-6, nu = u.length / 3;
+  var boy = 16; while(boy < nu * 2) boy *= 2;
+  var maske = boy - 1, yuva = new Int32Array(boy).fill(-1), Q = new Float64Array(nu * 3), id = new Int32Array(nu), n = 0;
+  for(var v = 0; v < nu; v++){
+    var x = Math.round(u[v * 3] / q), y = Math.round(u[v * 3 + 1] / q), z = Math.round(u[v * 3 + 2] / q);
+    var h = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(z | 0, 83492791)) & maske;
+    for(;;){
+      var s = yuva[h];
+      if(s < 0){ yuva[h] = n; Q[n * 3] = x; Q[n * 3 + 1] = y; Q[n * 3 + 2] = z; id[v] = n++; break; }
+      if(Q[s * 3] === x && Q[s * 3 + 1] === y && Q[s * 3 + 2] === z){ id[v] = s; break; }
+      h = (h + 1) & maske;
+    }
   }
+  var eb = 16; while(eb < t.length * 2) eb *= 2;
+  var em = eb - 1, anahtar = new Float64Array(eb).fill(-1), say = new Uint32Array(eb);
   for(var j = 0; j < t.length; j += 3){
     var A = id[t[j]], B = id[t[j + 1]], C = id[t[j + 2]];
     if(A === B || B === C || A === C) continue;
-    [[A, B], [B, C], [C, A]].forEach(function(e){
-      var key = Math.min(e[0], e[1]) + ':' + Math.max(e[0], e[1]);
-      say[key] = (say[key] || 0) + 1;
-    });
+    for(var e = 0; e < 3; e++){
+      var p = e === 0 ? A : (e === 1 ? B : C), r = e === 0 ? B : (e === 1 ? C : A);
+      var mn = p < r ? p : r, mx = p < r ? r : p, k = mn * n + mx;
+      var g = (Math.imul(mn, 0x9E3779B1) ^ mx) & em;
+      for(;;){
+        var w = anahtar[g];
+        if(w === -1){ anahtar[g] = k; say[g] = 1; break; }
+        if(w === k){ say[g]++; break; }
+        g = (g + 1) & em;
+      }
+    }
   }
-  for(var key in say) if(say[key] === 1) acik++;
+  var acik = 0;
+  for(var i = 0; i < eb; i++) if(say[i] === 1) acik++;
   return acik;
 }
 function veMntStpAgOzellik(agler){
@@ -189,6 +241,70 @@ function veMntStpAgOzellik(agler){
            kenarYuz: kenarYuz, acik: acik, ucgen: ucgenSay };
 }
 
+// ── PARÇA PARÇA — kütle özelliği ve birimin toplamı (Takoz adım 6) ────────
+// Dosyanın parça özellikleri (doğrulama · yoğunluk · malzeme): bir kez, sonuçta saklı
+function veMntStpDosyaOzellik(sonuc){
+  if(sonuc && sonuc._ozellik) return sonuc._ozellik;
+  var P = _mstOkuyucu(), o = {};
+  if(P && P.Ozellik && sonuc && sonuc._model){ try { o = P.Ozellik(sonuc._model) || {}; } catch(e){ o = {}; } }
+  if(sonuc && sonuc.ok) sonuc._ozellik = o;
+  return o;
+}
+function _mstAgAlan(a){
+  if(!a || !a.uc || !a.ucgen) return 0;
+  var u = a.uc, t = a.ucgen, A = 0;
+  for(var k = 0; k < t.length; k += 3){
+    var i = t[k] * 3, j = t[k + 1] * 3, m = t[k + 2] * 3;
+    var ax = u[j] - u[i], ay = u[j + 1] - u[i + 1], az = u[j + 2] - u[i + 2];
+    var bx = u[m] - u[i], by = u[m + 1] - u[i + 1], bz = u[m + 2] - u[i + 2];
+    var cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
+    A += Math.sqrt(cx * cx + cy * cy + cz * cz) / 2;
+  }
+  return A;
+}
+// Parçanın kütle özelliği, birim yoğunlukla: { pi, ad, V, c, J (kendi merkezi
+// etrafında, mm⁵), alan, kutu, kaynak: 'ag' | 'dosya' | 'acik', nokta (hacim
+// dosyadan, ağı açık: tensörü yok), rho?, malzeme?, sapma?: { c (mm), V (oran) }
+// — dosyanın hacmi/merkezi ile kapalı ağınki }
+function veMntStpParcaOzellik(sonuc, pi, ag){
+  var oz = veMntStpAgOzellik(ag ? [ag] : []);
+  var g = sonuc._geo && sonuc._geo[pi], f = g && g.pd ? veMntStpDosyaOzellik(sonuc)[g.pd] : null;
+  var r = { pi: pi, ad: sonuc.parcalar[pi].ad, V: 0, c: null, J: null, alan: _mstAgAlan(ag), kutu: oz.kutu, kaynak: 'acik',
+            acikKenar: oz.acik, kenarYuz: oz.kenarYuz, ucgen: oz.ucgen };
+  if(oz.kapali){ r.kaynak = 'ag'; r.V = oz.V; r.c = oz.c; r.J = oz.J; }
+  if(f && f.hacim > 0 && f.merkez && g.M){
+    var R = g.M.R, t = g.M.t, q = f.merkez;
+    var cw = [0, 1, 2].map(function(i){ return R[i][0] * q[0] + R[i][1] * q[1] + R[i][2] * q[2] + t[i]; });
+    if(oz.kapali) r.sapma = { c: _mstUz(oz.c, cw), V: Math.abs(oz.V - f.hacim) / f.hacim };
+    else r.nokta = true;
+    r.kaynak = 'dosya'; r.V = f.hacim; r.c = cw;
+  }
+  if(f && f.yogunluk > 0) r.rho = f.yogunluk;
+  if(f && f.malzeme) r.malzeme = f.malzeme;
+  return r;
+}
+// Parçaların toplamı (ağırlık w = ρ·V): merkez Σw·c / Σw, tensör
+// Σρ·(J + V·(|d|²·E − d·dᵀ)), d = c − merkez — J'nin işaret kuralıyla
+// (Ixy = −∫xy). ρ = 1: hacim (mm³), hacim merkezi, birim yoğunluk tensörü
+// (mm⁵); ρ kg/mm³: kütle (kg), kütle merkezi, tensör (kg·mm²).
+function _mstTopla(parcalar, rho){
+  var W = 0, s = [0, 0, 0];
+  parcalar.forEach(function(p){
+    if(!(p.V > 0)) return;
+    var w = rho(p) * p.V;
+    W += w; s[0] += w * p.c[0]; s[1] += w * p.c[1]; s[2] += w * p.c[2];
+  });
+  if(!(W > 0)) return null;
+  var c = [s[0] / W, s[1] / W, s[2] / W], T = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  parcalar.forEach(function(p){
+    if(!(p.V > 0)) return;
+    var q = rho(p), d = [p.c[0] - c[0], p.c[1] - c[1], p.c[2] - c[2]], dd = _mstNok(d, d);
+    for(var i = 0; i < 3; i++) for(var j = 0; j < 3; j++)
+      T[i][j] += q * ((p.J ? p.J[i][j] : 0) + p.V * ((i === j ? dd : 0) - d[i] * d[j]));
+  });
+  return { W: W, c: c, T: T };
+}
+
 // Bir parçanın görüntü ağı — üçgenleyici (önbellek çağıranın: opt.ag).
 function veMntStpParcaAgi(sonuc, pi, baglam){
   var U = _mstUcgen(), g = sonuc && sonuc._geo && sonuc._geo[pi];
@@ -206,7 +322,8 @@ function veMntStpParcaAgi(sonuc, pi, baglam){
 //    bütün montajda birikince 420 MB'lık dosyada yığın 3,2 GB'a çıkıyordu.
 //  • Aynı temsilin (`sr`) birden çok örneği varsa yerel ağı BİR KEZ üçgenlenir,
 //    kalan örneklere taşınır (bit bit aynı) ve son örnekle bırakılır.
-//  • `bitti(i, a)` her parça bitince (görüntüleyici çizimine ekler).
+//  • `bitti(i, a)` her parça bitince (görüntüleyici çizimine ekler); `oz`
+//    verilirse parçanın kütle özelliği de (veMntStpParcaOzellik) aynı dilimde.
 // İş: { iste(liste), uret(liste), tum (bool), adim(bitis), eksik(liste), say, sonraki() }
 function _mstSekil(g){
   return g && g.sr ? g.sr + '@' + g.birim.mm + '@' + g.birim.derece : null;
@@ -215,7 +332,7 @@ function _mstYuzlu(g){ return !!(g && g.yuzler && g.yuzler.length && g.birim && 
 function veMntStpAgIs(sonuc, ag, secenek){
   var U = _mstUcgen(), geo = (sonuc && sonuc._geo) || [];
   var J = { sonuc: sonuc, ag: ag, U: U, B: null, tum: false, imlec: 0, oncelik: [], oi: 0, cur: null,
-            paylas: {}, kalan: {}, bitti: (secenek && secenek.bitti) || null,
+            paylas: {}, kalan: {}, bitti: (secenek && secenek.bitti) || null, oz: (secenek && secenek.oz) || null,
             say: { parca: 0, yuz: 0, ucgen: 0, parcaToplam: 0, yuzToplam: 0 } };
   geo.forEach(function(g, i){
     if(!_mstYuzlu(g)) return;
@@ -262,6 +379,9 @@ function _mstAgKoy(J, i, a, key){
   J.ag[i] = a;
   if(key && J.kalan[key] !== undefined && --J.kalan[key] <= 0){ delete J.kalan[key]; delete J.paylas[key]; }
   J.say.parca++; J.say.yuz += g.yuzler.length; J.say.ucgen += a.ucgen.length / 3;
+  // Parçanın kütle özelliği ağıyla AYNI dilimde (secenek.oz — hesabın önbelleği):
+  // hesap ağlar bitince yalnız toplar (420 MB'lık denemede ilk hesap 961 ms'ydi)
+  if(J.oz && !J.oz[i]) J.oz[i] = veMntStpParcaOzellik(J.sonuc, i, a);
   if(J.bitti) J.bitti(i, a);
 }
 function _mstAgAdim(J, bitis){
@@ -363,10 +483,11 @@ function veMntStpImza(sonuc){
   if(sonuc && sonuc.ok) sonuc._imza = imza;
   return imza;
 }
-// Kayıt: { surum, dosya, bayt, imza, parca, roller:[{ yol, rol, ad, kg?, nokta? }] } — ağaç sırasıyla.
+// Kayıt: { surum, dosya, bayt, imza, parca, roller:[{ yol, rol, ad, kg?, yog?, nokta? }] } — ağaç sırasıyla.
+// `yog` (gövde): kütle kaynağı — 'dosya' ya da malzeme anahtarı (elle: yok).
 // `nokta` (takoz): 3B'de seçilen daire — parçasının örnek yolu, merkezi, yarıçapı.
-function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta){
-  kunye = kunye || {}; kutle = kutle || {}; nokta = nokta || {};
+function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk){
+  kunye = kunye || {}; kutle = kutle || {}; nokta = nokta || {}; yogunluk = yogunluk || {};
   var out = { surum: VE_MNT_STP_KAYIT_SURUM, dosya: kunye.dosya || '', bayt: kunye.bayt > 0 ? kunye.bayt : null,
               imza: veMntStpImza(sonuc), parca: ((sonuc && sonuc.parcalar) || []).length, roller: [] };
   ((sonuc && sonuc.agac) || []).forEach(function(d){
@@ -374,12 +495,14 @@ function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta){
     if(!tip) return;
     var r = { yol: veMntStpYol(sonuc, d.i), rol: tip, ad: d.ad };
     if(+kutle[d.i] > 0) r.kg = +kutle[d.i];
+    if(tip !== 'mnt-mount' && _mstYogGecerli(yogunluk[d.i])) r.yog = yogunluk[d.i];
     var n = tip === 'mnt-mount' ? _mstNoktaGecerli(nokta[d.i]) : null;
     if(n) r.nokta = n;
     out.roller.push(r);
   });
   return out;
 }
+function _mstYogGecerli(y){ return y === 'dosya' || !!veMntStpMalzeme(y); }
 // Seçilen dairenin kaydı: { yol:[örnek adları], c:[3], r } ya da null (bozuk)
 function _mstNoktaGecerli(n){
   if(!n || !Array.isArray(n.yol) || !Array.isArray(n.c) || n.c.length !== 3) return null;
@@ -388,13 +511,13 @@ function _mstNoktaGecerli(n){
   return { yol: n.yol.map(String), c: c, r: r };
 }
 // Kaydı bu dosyaya uygular. Döner: { roller (ağaç boyu), kutle:{düğüm: kg},
-// nokta:{düğüm: seçilen daire}, eslesen, toplam, eksik:[bulunamayan kayıt
-// satırı], ayni (imza aynı) }. Rol veriliş kuralı oturumunki (veMntStpRolVer)
+// yogunluk:{düğüm: kaynak}, nokta:{düğüm: seçilen daire}, eslesen, toplam,
+// eksik:[bulunamayan kayıt satırı], ayni (imza aynı) }. Rol veriliş kuralı oturumunki (veMntStpRolVer)
 // — kayıt sırası ağaç sırası. Dairenin bu dosyada olup olmadığına hesap bakar
 // (veMntStpCoz → veMntStpDaireBul).
 function veMntStpRolKaydiUygula(sonuc, kayit){
-  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {}, nokta = {};
-  var out = { roller: roller, kutle: kutle, nokta: nokta, eslesen: 0, toplam: 0, eksik: [], ayni: false };
+  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {}, nokta = {}, yog = {};
+  var out = { roller: roller, kutle: kutle, yogunluk: yog, nokta: nokta, eslesen: 0, toplam: 0, eksik: [], ayni: false };
   if(!kayit || !Array.isArray(kayit.roller)) return out;
   out.toplam = kayit.roller.length;
   out.ayni = kayit.imza === veMntStpImza(sonuc);
@@ -403,11 +526,13 @@ function veMntStpRolKaydiUygula(sonuc, kayit){
     var d = (r && Array.isArray(r.yol)) ? dizin[r.yol.join('\u0001')] : undefined;
     if(d === undefined || !veMntStpRolVer(sonuc, roller, d, r.rol)){ out.eksik.push(r); return; }
     if(+r.kg > 0) kutle[d] = +r.kg;
+    if(r.rol !== 'mnt-mount' && _mstYogGecerli(r.yog)) yog[d] = r.yog;
     var n = r.rol === 'mnt-mount' ? _mstNoktaGecerli(r.nokta) : null;
     if(n) nokta[d] = n;
   });
-  // rolü sonra düşen düğümün kütlesi ve noktası gider
+  // rolü sonra düşen düğümün kütlesi, kaynağı ve noktası gider
   Object.keys(kutle).forEach(function(d){ if(!roller[d]) delete kutle[d]; });
+  Object.keys(yog).forEach(function(d){ if(!roller[d] || roller[d] === 'mnt-mount') delete yog[d]; });
   Object.keys(nokta).forEach(function(d){ if(roller[d] !== 'mnt-mount') delete nokta[d]; });
   out.eslesen = roller.filter(Boolean).length;
   return out;
@@ -576,12 +701,51 @@ function veMntStpKenarDaire(sonuc, pi, kenar){
 // ── ÇÖZÜM — yalnız rol verilen birimler ───────────────────────────────────
 // opt.ag(pi) → parçanın ağı ya da null (3B görüntüleyicinin önbelleği);
 // verilmezse ağ burada üçgenlenir. opt.nokta: { takozun düğümü: seçilen daire
-// ({ yol, c, r }) }. Döner (asla fırlatmaz):
-//   { ok, hatalar[], uyarilar[], birimler:[{ dugum, tip, ad, V, c, J, kutu, kapali, konum, kaynak, nokta? }] }
-// `konum` gövdenin noktası: kapalı ağda hacim merkezi, değilse kutunun merkezi
-// (`kaynak`: 'hacim' | 'kutu'). Takozun noktası üst bağlantı yüzeyinin merkezi:
-// seçilen daire ('kenar') ya da öneri ('eksen'); ikisi de yoksa gövdeninki gibi.
-// `nokta`: noktanın dairesi { c, n, r } (3B halkası).
+// ({ yol, c, r }) }. opt.yogunluk: { düğüm: 'dosya' | malzeme anahtarı } —
+// 'dosya' ağırlık merkezini kütleyle ağırlıklar. opt.oz: parça özelliklerinin
+// önbelleği ({ parça: veMntStpParcaOzellik }, çağıranın). Döner (fırlatmaz):
+//   { ok, hatalar[], uyarilar[], birimler:[{ dugum, tip, ad, V, c, J, kutu, kapali,
+//     konum, kaynak, nokta?, say, yogSay, acikParca, acikPay, dosya?, sapma? }] }
+// V · c · J: hacme katılan parçaların toplamı (birim yoğunluk); `kapali`: hacmi
+// ölçülen en az bir parça var. `say`: { ag, dosya, nokta, acik } parça sayısı;
+// `yogSay`: hacme katılan parçalardan yoğunluğu dosyada yazılı olanlar.
+// `dosya`: bütün katılan parçaların dosyada yoğunluğu varsa { m (kg), c,
+// I (kg·mm²), malzeme[] }. `sapma`: dosyanın merkezi/hacmi ile kapalı ağınki
+// arasındaki en büyük fark { c (mm), V (oran) }.
+// `konum` gövdenin noktası: hacim merkezi ('dosya' seçiliyse kütle merkezi);
+// hiçbir parçanın hacmi yoksa kutunun merkezi (`kaynak`: 'hacim' | 'kutu').
+// Takozun noktası üst bağlantı yüzeyinin merkezi: seçilen daire ('kenar') ya
+// da öneri ('eksen'); ikisi de yoksa gövdeninki gibi. `nokta`: noktanın
+// dairesi { c, n, r } (3B halkası).
+// Birimin toplamı: hacme katılan parçalar (ağı kapalı ya da dosyada hacmi
+// olan) — açık parçalar adıyla ve yüzey payıyla ayrı
+function _mstBirim(b, P){
+  var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity], alan = 0, acikAlan = 0;
+  var r = { dugum: b.dugum, tip: b.tip, ad: b.ad, V: 0, c: null, J: null, kutu: null, kapali: false,
+            say: { ag: 0, dosya: 0, nokta: 0, acik: 0 }, yogSay: 0, acikParca: [], acikPay: 0, acik: 0, kenarYuz: 0, ucgen: 0 };
+  var dahil = [], sapma = null;
+  P.forEach(function(p){
+    if(p.kutu) for(var i = 0; i < 3; i++){ kutu[i] = Math.min(kutu[i], p.kutu[i]); kutu[i + 3] = Math.max(kutu[i + 3], p.kutu[i + 3]); }
+    alan += p.alan; r.acik += p.acikKenar || 0; r.kenarYuz += p.kenarYuz || 0; r.ucgen += p.ucgen || 0;
+    if(p.kaynak === 'acik'){ r.say.acik++; r.acikParca.push({ pi: p.pi, ad: p.ad }); acikAlan += p.alan; return; }
+    if(p.nokta) r.say.nokta++; else r.say[p.kaynak]++;
+    dahil.push(p);
+    if(p.sapma) sapma = { c: Math.max(sapma ? sapma.c : 0, p.sapma.c), V: Math.max(sapma ? sapma.V : 0, p.sapma.V) };
+  });
+  if(kutu[3] >= kutu[0]) r.kutu = kutu;
+  r.acikPay = alan > 0 ? acikAlan / alan : 0;
+  if(sapma) r.sapma = sapma;
+  r.yogSay = dahil.filter(function(p){ return p.rho > 0; }).length;
+  var H = _mstTopla(dahil, function(){ return 1; });
+  if(!H) return r;
+  r.V = H.W; r.c = H.c; r.J = H.T; r.kapali = true;
+  if(r.yogSay === dahil.length){
+    var D = _mstTopla(dahil, function(p){ return p.rho * 1e-9; }), ad = {};
+    dahil.forEach(function(p){ if(p.malzeme) ad[p.malzeme] = 1; });
+    r.dosya = { m: D.W, c: D.c, I: D.T, malzeme: Object.keys(ad) };
+  }
+  return r;
+}
 function veMntStpCoz(sonuc, roller, opt){
   opt = opt || {};
   var out = { ok: false, hatalar: [], uyarilar: [], birimler: [] };
@@ -599,11 +763,18 @@ function veMntStpCoz(sonuc, roller, opt){
     U.Birak(B);
     return a;
   };
+  var onb = opt.oz || null, yog = opt.yogunluk || {};
   birimler.forEach(function(b){
-    var agler = b.parcalar.map(agAl).filter(Boolean);
-    var oz = veMntStpAgOzellik(agler);
-    var r = { dugum: b.dugum, tip: b.tip, ad: b.ad, V: oz.V, c: oz.c, J: oz.J, kutu: oz.kutu,
-              kapali: oz.kapali, kenarYuz: oz.kenarYuz, acik: oz.acik, ucgen: oz.ucgen };
+    var agler = [], P = [];
+    b.parcalar.forEach(function(pi){
+      var a = agAl(pi);
+      if(a) agler.push(a);
+      var p = onb && onb[pi];
+      if(!p){ p = veMntStpParcaOzellik(sonuc, pi, a); if(onb && a) onb[pi] = p; }
+      P.push(p);
+    });
+    var r = _mstBirim(b, P);
+    var oz = { kapali: r.kapali, c: r.c, kutu: r.kutu };
     if(b.tip === 'mnt-mount' && oz.kutu){
       var sec = opt.nokta && opt.nokta[b.dugum], d = null, neden = '';
       if(sec){
@@ -622,11 +793,17 @@ function veMntStpCoz(sonuc, roller, opt){
       }
       out.uyarilar.push('"' + b.ad + '": takoz ekseni bulunamadı (' + neden + '); nokta ' + (oz.kapali && oz.c ? 'hacim' : 'kutu') + ' merkezi.');
     }
-    if(oz.kapali && oz.c){ r.konum = oz.c.slice(); r.kaynak = 'hacim'; }
-    else if(oz.kutu){
+    if(oz.kapali && oz.c){
+      r.konum = (yog[b.dugum] === 'dosya' && r.dosya ? r.dosya.c : oz.c).slice();
+      r.kaynak = 'hacim';
+      if(r.acikParca.length)
+        out.uyarilar.push('"' + b.ad + '": ' + r.acikParca.length + ' parça kapalı değil, hacme katılmadı ('
+          + r.acikParca.slice(0, 3).map(function(x){ return x.ad; }).join(', ') + (r.acikParca.length > 3 ? ', …' : '')
+          + '); yüzey payı %' + _mstSayi(r.acikPay * 100, 1) + '.');
+    } else if(oz.kutu){
       r.konum = [(oz.kutu[0] + oz.kutu[3]) / 2, (oz.kutu[1] + oz.kutu[4]) / 2, (oz.kutu[2] + oz.kutu[5]) / 2];
       r.kaynak = 'kutu';
-      out.uyarilar.push('"' + b.ad + '": ağ kapalı değil (' + (oz.kenarYuz ? oz.kenarYuz + ' yüz üçgenlenemedi' : oz.acik + ' açık kenar')
+      out.uyarilar.push('"' + b.ad + '": ağ kapalı değil (' + (r.kenarYuz ? r.kenarYuz + ' yüz üçgenlenemedi' : r.acik + ' açık kenar')
         + '): kutu merkezi, atalet yok.');
     } else {
       out.uyarilar.push('"' + b.ad + '": çizilebilir yüz yok, birim atlandı.');
@@ -639,14 +816,43 @@ function veMntStpCoz(sonuc, roller, opt){
   return out;
 }
 
+// ── KÜTLE — birimin kütlesi ve tensörü, kaynağıyla ────────────────────────
+// kg: elle yazılan kütle; yog: 'dosya' | malzeme anahtarı | yok (elle).
+// Döner: { m (kg) | NaN, I (kg·m², tensör) | null, kaynak: 'elle' | 'malzeme' |
+//   'dosya', not } — `not` "S" işaretinin ipucu (kütlenin ve tensörün dayanağı).
+// Elle ve malzemede yoğunluk HOMOJEN (I = ρ·J); dosyada parça parça.
+function veMntStpKutle(b, kg, yog){
+  var out = { m: NaN, I: null, kaynak: 'elle', not: 'homojen yoğunluk' };
+  if(!b) return out;
+  var tensor = function(T, k){ return T ? T.map(function(sat){ return sat.map(function(v){ return v * k; }); }) : null; };
+  if(yog === 'dosya' && b.dosya){
+    out.kaynak = 'dosya'; out.m = b.dosya.m; out.I = tensor(b.dosya.I, 1e-6);   // kg·mm² → kg·m²
+    out.not = 'dosyanın yoğunlukları' + (b.dosya.malzeme.length ? ' (' + b.dosya.malzeme.join(', ') + ')' : '');
+    return out;
+  }
+  var mz = veMntStpMalzeme(yog);
+  if(mz && b.kapali && b.V > 0){
+    out.kaynak = 'malzeme'; out.m = mz.rho * b.V * 1e-9;
+    out.not = mz.ad + ' · ' + _mstSayi(mz.rho, 0) + ' kg/m³';
+  } else {
+    var m = Number(typeof kg === 'string' ? String(kg).replace(',', '.') : kg);
+    out.m = m > 0 ? m : NaN;
+  }
+  // I = ρ·J, ρ = m / V [kg/mm³]; kg·mm² → kg·m²
+  if(out.m > 0 && b.kapali && b.J && b.V > 0) out.I = tensor(b.J, out.m / b.V * 1e-6);
+  return out;
+}
+
 // ── KAYIT — sihirbazın düğüm listesi ──────────────────────────────────────
-// kutle: { dugum: kg } (kullanıcının yazdığı). Kayıt µm'ye ve 0,0001 kg·m²'ye
-// yuvarlanır — dönüşüm gürültüsü alanlara yazılmasın (FEAD'in kuralı).
-// Döner: { liste:[{type, customName, data}], kaynak:[{ cg, I, mass, konum }] } —
-// kaynak dizisi listeyle aynı sırada (sihirbaz "S" işaretini buradan alır).
+// kutle: { dugum: kg } (kullanıcının yazdığı) · yogunluk: { dugum: kaynak }
+// (veMntStpKutle). Kayıt µm'ye, gramına ve 0,0001 kg·m²'ye yuvarlanır —
+// dönüşüm gürültüsü alanlara yazılmasın (FEAD'in kuralı).
+// Döner: { liste:[{type, customName, data}], kaynak:[{ cg, I, mass, konum, not }] } —
+// kaynak dizisi listeyle aynı sırada (sihirbaz "S" işaretini buradan alır;
+// `mass` yalnız kütle geometriden türediyse — malzeme ya da dosya).
 function _mstYuv(x, k){ return Math.round(x * k) / k + 0; }
-function veMntStpKayit(coz, kutle){
-  kutle = kutle || {};
+function veMntStpKayit(coz, kutle, yogunluk){
+  kutle = kutle || {}; yogunluk = yogunluk || {};
   var liste = [], kaynak = [];
   ((coz && coz.birimler) || []).forEach(function(b){
     if(!b.konum) return;
@@ -657,15 +863,14 @@ function veMntStpKayit(coz, kutle){
       return;
     }
     var d = { cgx: p[0], cgy: p[1], cgz: p[2] };
-    var iz = { cg: true };
-    var m = Number(typeof kutle[b.dugum] === 'string' ? String(kutle[b.dugum]).replace(',', '.') : kutle[b.dugum]);
-    if(m > 0){
-      d.mass = m;
-      if(b.kapali && b.J && b.V > 0){
-        // I = ρ·J, ρ = m / V [kg/mm³]; kg·mm² → kg·m²
-        var k = m / b.V * 1e-6;
-        d.Ixx = _mstYuv(b.J[0][0] * k, 1e4); d.Iyy = _mstYuv(b.J[1][1] * k, 1e4); d.Izz = _mstYuv(b.J[2][2] * k, 1e4);
-        d.Ixy = _mstYuv(b.J[0][1] * k, 1e4); d.Ixz = _mstYuv(b.J[0][2] * k, 1e4); d.Iyz = _mstYuv(b.J[1][2] * k, 1e4);
+    var K = veMntStpKutle(b, kutle[b.dugum], yogunluk[b.dugum]);
+    var iz = { cg: true, not: K.not };
+    if(K.m > 0){
+      d.mass = K.kaynak === 'elle' ? K.m : _mstYuv(K.m, 1000);
+      if(K.kaynak !== 'elle') iz.mass = true;
+      if(K.I){
+        d.Ixx = _mstYuv(K.I[0][0], 1e4); d.Iyy = _mstYuv(K.I[1][1], 1e4); d.Izz = _mstYuv(K.I[2][2], 1e4);
+        d.Ixy = _mstYuv(K.I[0][1], 1e4); d.Ixz = _mstYuv(K.I[0][2], 1e4); d.Iyz = _mstYuv(K.I[1][2], 1e4);
         d.pointMass = false;
         iz.I = true;
       }
@@ -688,6 +893,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntStpYol: veMntStpYol, veMntStpImza: veMntStpImza,
     veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula,
     VE_MNT_STP_NOKTA: VE_MNT_STP_NOKTA, veMntStpYuzler: veMntStpYuzler, veMntStpTakozNoktasi: veMntStpTakozNoktasi,
+    VE_MNT_STP_MALZEME: VE_MNT_STP_MALZEME, veMntStpMalzeme: veMntStpMalzeme, veMntStpKutle: veMntStpKutle,
+    veMntStpDosyaOzellik: veMntStpDosyaOzellik, veMntStpParcaOzellik: veMntStpParcaOzellik,
     veMntStpDaireBul: veMntStpDaireBul, veMntStpKenarDaire: veMntStpKenarDaire
   };
 }

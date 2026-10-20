@@ -131,8 +131,12 @@ function silindirYuzleri(yz, r, L) {
   ];
 }
 
-// Parça tanımı: { id, ad, sekil:'kutu'|'silindir', olcu:[a,b,c] | [r, L],
-//   konum:[x,y,z], z?:[..], x?:[..] (yerel eksenin dünyadaki yönü), alt?: 'MONTAJ_ID' }
+// Parça tanımı: { id, ad, sekil:'kutu'|'silindir'|'acik-kutu', olcu:[a,b,c] | [r, L],
+//   konum:[x,y,z], z?:[..], x?:[..] (yerel eksenin dünyadaki yönü), alt?: 'MONTAJ_ID',
+//   dogrulama?: true | { …veri, opt } (CAx-IF doğrulama özellikleri — analitik
+//   hacim, alan, merkez; veri verilirse o yazılır), yogunluk?: kg/m³,
+//   malzeme?: ad, yogunlukBirim?: 'g/cm3' | 'kg/m3' | 'kg/mm3' }
+// 'acik-kutu': kutunun ÜST yüzü yok — açık kabuk (yüzey modeli), ağı kapalı değil.
 // Alt montaj: { id, ad, konum, z?, x? } — parçalar `alt` ile ona takılır.
 function guçGrubuStep(parcalar, opt = {}) {
   const yz = new Y.StepYaz({ uzunluk: opt.uzunluk });
@@ -143,8 +147,11 @@ function guçGrubuStep(parcalar, opt = {}) {
   for (const p of parcalar) {
     const u = yz.urun(p.id, p.ad);
     const yuzler = p.sekil === 'silindir' ? silindirYuzleri(yz, p.olcu[0], p.olcu[1]) : kutuYuzleri(yz, p.olcu[0], p.olcu[1], p.olcu[2]);
-    yz.govde(u, yuzler, 'kati');
+    if (p.sekil === 'acik-kutu') yz.govde(u, yuzler.filter((_, i) => i !== 4), 'kabuk');     // üst yüz (+z) yok
+    else yz.govde(u, yuzler, 'kati');
     yz.temsil(u);
+    if (p.dogrulama) yz.dogrulama(u, Object.assign(analitik(p), p.dogrulama === true ? {} : p.dogrulama));
+    if (p.yogunluk) yz.yogunluk(u, p.yogunluk, { malzeme: p.malzeme, birim: p.yogunlukBirim });
     const ebe = p.alt ? altlar[p.alt] : null;
     const t = yz.tak(ebe ? ebe.urun : kok, u, p.ornek || (p.id + '.1'), p.konum, p.z || [0, 0, 1], p.x || [1, 0, 0]);
     (ebe ? ebe.taklar : kokTak).push(t);
@@ -158,6 +165,17 @@ function guçGrubuStep(parcalar, opt = {}) {
   Object.keys(altlar).forEach((k) => altlar[k].taklar.forEach((t) => yz.bagla(t)));
   kokTak.forEach((t) => yz.bagla(t));
   return yz.metin();
+}
+
+// Parçanın analitik hacmi, yüzey alanı ve merkezi (kendi ekseninde, mm) —
+// doğrulama özelliğinin yazdığı CATIA sayısının yerine
+function analitik(p) {
+  if (p.sekil === 'silindir') {
+    const [r, L] = p.olcu;
+    return { hacim: PI * r * r * L, alan: 2 * PI * r * r + 2 * PI * r * L, merkez: [0, 0, 0] };
+  }
+  const [a, b, c] = p.olcu;
+  return { hacim: a * b * c, alan: 2 * (a * b + b * c + c * a), merkez: [0, 0, 0] };
 }
 
 // Varsayılan güç grubu: motor (kutu) + şanzıman (silindir, eksen x) + dört
@@ -267,5 +285,43 @@ function tulgaKalibi(opt = {}) {
   return guçGrubuStep(parcalar, { altMontajlar: altlar });
 }
 
+// ── KÜTLE KALIBI (Takoz adım 6 — kütle, ağırlık merkezi, atalet) ──────────
+// Motor: yedi parça — altı kapalı katı ve bir AÇIK kabuk (kayış kapağı, üst
+// yüzü yok: üçgenlenemeyen yüzün kalıbı). Şanzıman: iki malzeme (dökme demir
+// gövde + alüminyum çan), dosyada yoğunluk ve malzemenin adı. Braket: iki
+// plaka (alt montaj). opt.dogrulama: motor parçalarında CAx-IF doğrulama
+// özellikleri (analitik hacim, alan, merkez — CATIA'nın yazdığı sayıların
+// yerine); opt.yogunlukBirim · opt.uzunluk.
+const KUTLE = {
+  motor: [
+    { id: 'BLOK', ad: 'Motor blok', sekil: 'kutu', olcu: [600, 400, 450], konum: [100, 0, 500] },
+    { id: 'KAFA', ad: 'Silindir kafası', sekil: 'kutu', olcu: [580, 300, 150], konum: [110, 0, 800] },
+    { id: 'KARTER', ad: 'Karter', sekil: 'kutu', olcu: [500, 350, 120], konum: [80, 0, 215] },
+    { id: 'VOLAN', ad: 'Volan muhafazası', sekil: 'silindir', olcu: [250, 150], konum: [480, 0, 450], z: [1, 0, 0], x: [0, 1, 0] },
+    { id: 'ALT', ad: 'Alternatör', sekil: 'kutu', olcu: [180, 160, 160], konum: [-260, 230, 600] },
+    { id: 'KOMP', ad: 'Klima kompresörü', sekil: 'kutu', olcu: [200, 150, 150], konum: [-250, -220, 420] },
+    { id: 'KAPAK', ad: 'Kayış kapağı', sekil: 'acik-kutu', olcu: [60, 500, 400], konum: [-330, 0, 650] }
+  ],
+  sanziman: [
+    { id: 'GOVDE', ad: 'Şanzıman gövdesi', sekil: 'kutu', olcu: [500, 380, 380], konum: [814, 40, 365], yogunluk: 7200, malzeme: 'EN-GJL-250' },
+    { id: 'CAN', ad: 'Çan', sekil: 'kutu', olcu: [200, 500, 500], konum: [480, 40, 400], yogunluk: 2700, malzeme: 'EN AC-46000' }
+  ],
+  braket: [
+    { id: 'BRK-UST', ad: 'Braket üst', sekil: 'kutu', olcu: [120, 600, 20], konum: [0, 0, 40] },
+    { id: 'BRK-ALT', ad: 'Braket alt', sekil: 'kutu', olcu: [120, 600, 20], konum: [0, 0, -40] }
+  ],
+  montaj: [
+    { id: 'MOTOR_ASM', ad: 'Motor', konum: [0, 0, 0] },
+    { id: 'SANZ_ASM', ad: 'Şanzıman', konum: [0, 0, 0] },
+    { id: 'BRAKET_ASM', ad: 'Arka braket', konum: [1300, 0, 300] }
+  ]
+};
+function kutleKalibi(opt = {}) {
+  const p = KUTLE.motor.map((x) => Object.assign({ alt: 'MOTOR_ASM' }, x, opt.dogrulama ? { dogrulama: true } : {}))
+    .concat(KUTLE.sanziman.map((x) => Object.assign({ alt: 'SANZ_ASM' }, x, opt.yogunlukBirim ? { yogunlukBirim: opt.yogunlukBirim } : {})))
+    .concat(KUTLE.braket.map((x) => Object.assign({ alt: 'BRAKET_ASM' }, x)));
+  return guçGrubuStep(p, { altMontajlar: KUTLE.montaj, uzunluk: opt.uzunluk });
+}
+
 module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
-  TULGA_TAKOZ, TAKOZ_DILIM, tulgaKalibi };
+  TULGA_TAKOZ, TAKOZ_DILIM, tulgaKalibi, analitik, KUTLE, kutleKalibi };

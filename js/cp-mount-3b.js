@@ -589,17 +589,17 @@ function veMntWiz3bPanelHTML(s, secili){
         + _mwEsc(b.ad) + '</button>';
     };
     if(gs.length){
+      // Kütle: elle → alan; malzeme ya da dosya → türetilen değer + "S" (kaynak
+      // sütunu kartta ve pencerede, js/cp-mount-wizard.js → _mwStpKutleHTML)
+      var yd = _mwStpYogDurum(s);
       h += '<table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-3b-tbl ve-mw-3b-tbl" data-ve-3b-govdeler="1"><thead><tr>'
-        + '<th>Gövde</th><th>CG<em>mm</em></th><th title="' + _mwEsc(VE_MW_STP_KUTLE_NOT) + '">Kütle<em>kg</em></th>'
+        + '<th>Gövde</th><th>CG<em>mm</em></th><th' + (yd ? ' title="' + _mwEsc(yd) + '"' : '') + '>Kütle<em>kg</em></th>'
         + '</tr></thead><tbody>';
       gs.forEach(function(b){
-        var m = s.kutle[b.dugum];
         h += '<tr data-ve-3b-birim="' + b.dugum + '"' + (b.dugum === birimSec ? ' class="on"' : '')
           + (veMntWizStpKonumUyari(b) ? ' data-uyari="1"' : '') + '><td>' + ad(b) + '</td>'
           + '<td class="ve-fw-num">' + _mwStpKonum(b.konum) + '</td>'
-          + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" data-mw-stp-kutle="' + b.dugum + '"'
-          + ' value="' + (m !== undefined ? _mwEsc(m) : '') + '" aria-label="Kütle — ' + _mwEsc(b.ad) + '"'
-          + ' oninput="veMntWizStpKutle(' + b.dugum + ', this.value)"></td></tr>';
+          + '<td>' + _mwStpKutleHucre(s, b, _mwStpKutleK(s, b), true) + '</td></tr>';
       });
       h += '</tbody></table>';
     }
