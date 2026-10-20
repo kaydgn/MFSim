@@ -111,7 +111,7 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
     const k = M.veMntStpKayit(coz, {});
     const i = k.liste.findIndex((n) => n.customName === 'Arka braket');
     expect(k.liste[i].data).toEqual({ cgx: 700, cgy: 0, cgz: 450 });
-    expect(k.kaynak[i]).toEqual({ cg: true });
+    expect(k.kaynak[i]).toEqual({ cg: true, not: 'homojen yoğunluk' });
     const t = k.liste.findIndex((n) => n.type === 'mnt-mount');
     expect(Object.keys(k.liste[t].data).sort()).toEqual(['x', 'y', 'z']);
     expect(k.kaynak[t]).toEqual({ konum: true });
@@ -201,7 +201,7 @@ describe('KAPALI OLMAYAN AĞ ve HATA YOLLARI', () => {
     const k = M.veMntStpKayit(coz, { [b.dugum]: 50 });
     expect(k.liste[0].data.mass).toBe(50);
     expect(k.liste[0].data.Ixx).toBeUndefined();
-    expect(k.kaynak[0]).toEqual({ cg: true });
+    expect(k.kaynak[0]).toEqual({ cg: true, not: 'homojen yoğunluk' });
   });
 
   test('rol yoksa hesap yok — sebebiyle', () => {

@@ -624,13 +624,17 @@ function veStepP21Birim(model, baglamId){
 function _stpBirimTuru(model, u){
   if(veStepP21Parca(model, u, 'LENGTH_UNIT')) return 'uzunluk';
   if(veStepP21Parca(model, u, 'PLANE_ANGLE_UNIT')) return 'aci';
+  if(veStepP21Parca(model, u, 'MASS_UNIT')) return 'kutle';
   var v = veStepP21Varlik(model, u);
   if(v && v.t === 'LENGTH_UNIT') return 'uzunluk';
   if(v && v.t === 'PLANE_ANGLE_UNIT') return 'aci';
+  if(v && v.t === 'MASS_UNIT') return 'kutle';
   return null;
 }
 
-// SI_UNIT(önek, ad) ya da CONVERSION_BASED_UNIT(ad, ölçü_ile_birim)
+// SI_UNIT(önek, ad) ya da CONVERSION_BASED_UNIT(ad, ölçü_ile_birim).
+// tur: 'uzunluk' → mm · 'aci' → derece · 'kutle' → kg · 'hacim' → mm³ · 'alan' → mm²
+// (SI_UNIT'te önek tabana uygulanır, sonra üs: MILLI CUBIC_METRE = mm³).
 function _stpBirimCarpan(model, u, tur, derinlik){
   if((derinlik || 0) > 4) return NaN;
   var si = veStepP21Parca(model, u, 'SI_UNIT');
@@ -639,6 +643,9 @@ function _stpBirimCarpan(model, u, tur, derinlik){
     var ad = si.a[1] && si.a[1].e;
     if(tur === 'uzunluk' && ad === 'METRE') return onek * 1000;
     if(tur === 'aci' && ad === 'RADIAN') return onek * 180 / Math.PI;
+    if(tur === 'kutle' && ad === 'GRAM') return onek * 1e-3;
+    if(tur === 'hacim' && ad === 'CUBIC_METRE') return Math.pow(onek * 1000, 3);
+    if(tur === 'alan' && ad === 'SQUARE_METRE') return Math.pow(onek * 1000, 2);
     return NaN;
   }
   var cb = veStepP21Parca(model, u, 'CONVERSION_BASED_UNIT');
@@ -1015,6 +1022,104 @@ function _stpKenarCemberi(model, kenarId, M, k){
   return { c: veStepP21NoktaUygula(M, f.o), n: _stpBirimVek(veStepP21YonUygula(M, f.z)), r: c[2] * k };
 }
 
+// ── 8c · ÖZELLİKLER — doğrulama özellikleri, yoğunluk, malzeme ───────────
+// Dosyanın PARÇA düzeyinde yazdığı özellikler (CAx-IF önerileri): geometrik
+// doğrulama özelliği PROPERTY_DEFINITION('geometric validation property', …,
+// ürünün şekli) → PROPERTY_DEFINITION_REPRESENTATION → REPRESENTATION öğeleri:
+// 'volume measure' (VOLUME_MEASURE) · 'centre point' (CARTESIAN_POINT, parçanın
+// kendi ekseninde) · 'surface area measure' / 'wetted area measure' (CATIA).
+// Yoğunluk adında 'density' geçen ölçü öğesi (birimi kütle · uzunluk⁻³),
+// malzemenin adı MATERIAL_DESIGNATION. Okuyucu anlam yüklemez: değerleri
+// birimleriyle çevirip ürünün tanımına (PRODUCT_DEFINITION) bağlar; birimi
+// okunamayan değer ATLANIR — tahmin edilmez. Geometri düzeyindeki
+// (SHAPE_ASPECT) özellikler okunmaz: öneri onları parça düzeyinde de ister.
+// Döner: { [PRODUCT_DEFINITION kimliği]: { hacim (mm³), merkez ([mm], parçanın
+//   ekseni), alan (mm²), yogunluk (kg/m³), malzeme } }
+function veStepP21Ozellikler(model){
+  var out = {}, kod = {};
+  model.tipAd.forEach(function(ad, k){ if(ad === 'PROPERTY_DEFINITION_REPRESENTATION' || ad === 'MATERIAL_DESIGNATION') kod[k] = ad; });
+  var al = function(pd){ return out[pd] || (out[pd] = {}); };
+  for(var k = 0; k < model.adet; k++){
+    var t = kod[model.tip[k]];
+    if(!t) continue;
+    var v = veStepP21Varlik(model, model.kim[k]);
+    if(!v || !v.a) continue;
+    if(t === 'MATERIAL_DESIGNATION'){                         // (ad, tanımlar)
+      var ad = v.a[0] && v.a[0].s;
+      if(ad) _stpRefler(v.a[1]).forEach(function(d){ var pd = _stpUrunTanimi(model, d); if(pd) al(pd).malzeme = ad; });
+      continue;
+    }
+    var tanim = v.a[0] && v.a[0].ref ? veStepP21Varlik(model, v.a[0].ref) : null;   // PROPERTY_DEFINITION(ad, açıklama, tanım)
+    var rep = v.a[1] && v.a[1].ref ? veStepP21Varlik(model, v.a[1].ref) : null;     // REPRESENTATION(ad, öğeler, bağlam)
+    if(!tanim || !tanim.a || !rep || rep.t === 'COMPLEX' || !rep.a) continue;
+    var pd = tanim.a[2] && tanim.a[2].ref ? _stpUrunTanimi(model, tanim.a[2].ref) : null;
+    if(!pd) continue;
+    var dogrulama = /geometric[ _]validation[ _]property/i.test((tanim.a[0] && tanim.a[0].s) || '');
+    var mm = NaN;
+    _stpRefler(rep.a[1]).forEach(function(oid){
+      var o = veStepP21Varlik(model, oid);
+      if(!o || !o.a) return;
+      var oad = String((o.a[0] && o.a[0].s) || '').toLowerCase();
+      if(o.t === 'CARTESIAN_POINT'){
+        if(!dogrulama || (oad !== 'centre point' && oad !== 'center point')) return;
+        if(isNaN(mm)) mm = rep.a[2] && rep.a[2].ref ? veStepP21Birim(model, rep.a[2].ref).mm : NaN;
+        var c = o.a[1];
+        if(mm > 0 && Array.isArray(c)) al(pd).merkez = [c[0] * mm, c[1] * mm, (c.length > 2 ? c[2] : 0) * mm];
+        return;
+      }
+      if(o.t !== 'MEASURE_REPRESENTATION_ITEM') return;
+      var deger = o.a[1] && o.a[1].tip ? o.a[1].a[0] : o.a[1], birim = o.a[2] && o.a[2].ref;
+      if(typeof deger !== 'number' || !birim) return;
+      if(/density/.test(oad)){
+        var f = _stpOlcuCarpan(model, birim, 'yogunluk');
+        if(f > 0) al(pd).yogunluk = deger * f;
+      } else if(dogrulama && /volume/.test(oad)){
+        var fv = _stpOlcuCarpan(model, birim, 'hacim');
+        if(fv > 0) al(pd).hacim = deger * fv;
+      } else if(dogrulama && /area/.test(oad)){
+        var fa = _stpOlcuCarpan(model, birim, 'alan');
+        if(fa > 0) al(pd).alan = deger * fa;
+      }
+    });
+  }
+  return out;
+}
+// Ürünün şekli (PRODUCT_DEFINITION_SHAPE) ya da ürünün tanımı → PRODUCT_DEFINITION kimliği
+function _stpUrunTanimi(model, id){
+  var t = veStepP21Tip(model, id);
+  if(t === 'PRODUCT_DEFINITION') return id;
+  if(t === 'PRODUCT_DEFINITION_SHAPE'){
+    var a = veStepP21Varlik(model, id).a;
+    return a[2] && a[2].ref && veStepP21Tip(model, a[2].ref) === 'PRODUCT_DEFINITION' ? a[2].ref : null;
+  }
+  return null;
+}
+// Ölçünün birimi → çarpan: 'hacim' → mm³ · 'alan' → mm² · 'yogunluk' → kg/m³.
+// Adlı birim (SI_UNIT · CONVERSION_BASED_UNIT) ya da DERIVED_UNIT (öğeleri
+// uzunluk ve kütle, üsleriyle); boyutu tutmayan birim NaN.
+function _stpOlcuCarpan(model, u, tur){
+  var v = veStepP21Varlik(model, u);
+  if(!v) return NaN;
+  if(v.t === 'DERIVED_UNIT'){
+    var mm = 1, kg = 1, L = 0, Mk = 0, ok = true;
+    _stpRefler(v.a[0]).forEach(function(e){
+      var d = veStepP21Varlik(model, e);
+      if(!ok || !d || !d.a || !d.a[0] || !d.a[0].ref){ ok = false; return; }
+      var b = d.a[0].ref, n = +d.a[1], bt = _stpBirimTuru(model, b);
+      var f = (bt === 'uzunluk' || bt === 'kutle') ? _stpBirimCarpan(model, b, bt) : NaN;
+      if(!(f > 0) || !isFinite(n)){ ok = false; return; }
+      if(bt === 'uzunluk'){ mm *= Math.pow(f, n); L += n; } else { kg *= Math.pow(f, n); Mk += n; }
+    });
+    if(!ok) return NaN;
+    if(tur === 'hacim' && L === 3 && Mk === 0) return mm;
+    if(tur === 'alan' && L === 2 && Mk === 0) return mm;
+    if(tur === 'yogunluk' && L === -3 && Mk === 1) return kg * mm * 1e9;     // kg/mm³ → kg/m³
+    return NaN;
+  }
+  if(tur === 'hacim' || tur === 'alan') return _stpBirimCarpan(model, u, tur);
+  return NaN;
+}
+
 // ── 9 · BAŞLIK ────────────────────────────────────────────────────────────
 function veStepP21Baslik(model){
   var fn = model.baslik.FILE_NAME || [], fs = model.baslik.FILE_SCHEMA || [];
@@ -1187,7 +1292,7 @@ function _stpAgacAdim(A, out, model, bitis){
     out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: sayi });
     if(A.yuz) out._yuz.push(yuzler);
     // `sr`: şeklin temsili — aynı temsili taşıyan örnekler aynı yerel ağı paylaşır
-    out._geo.push({ yuzler: sayi ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [], sr: p.sr || null });
+    out._geo.push({ yuzler: sayi ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [], sr: p.sr || null, pd: p.pd });
     for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
     A.k++;
     if(_stpSimdi() > bitis) break;
@@ -1404,6 +1509,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veStepP21Montaj: veStepP21Montaj,
     veStepP21Yuz: veStepP21Yuz,
     veStepP21KenarCemberi: veStepP21KenarCemberi,
+    veStepP21Ozellikler: veStepP21Ozellikler,
     veStepP21Baslik: veStepP21Baslik,
     veStepP21Agac: veStepP21Agac,
     veStepP21AgacIs: veStepP21AgacIs,

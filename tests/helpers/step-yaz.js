@@ -55,6 +55,7 @@ class StepYaz {
       const olcu = this.ekle('PLANE_ANGLE_MEASURE_WITH_UNIT(PLANE_ANGLE_MEASURE(0.0174532925199433),#' + rad + ')');
       ang = this.ekle("(CONVERSION_BASED_UNIT('DEGREE',#" + olcu + ')NAMED_UNIT(#' + dim + ')PLANE_ANGLE_UNIT())');
     }
+    this.uzunlukBirim = len;
     const sr = this.ekle('(NAMED_UNIT(*)SI_UNIT($,.STERADIAN.)SOLID_ANGLE_UNIT())');
     const unc = this.ekle("UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(0.001),#" + len + ",'distance_accuracy_value','')");
     return this.ekle('(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#' + unc
@@ -189,6 +190,50 @@ class StepYaz {
     }
     u.ogeler.push(oge);
     return oge;
+  }
+
+  // ── parça düzeyinde özellikler (Takoz adım 6) ─────────────────────────────
+  // CAx-IF geometrik doğrulama özellikleri (Rec. Prac. GVP v4.2, 4.3 · 4.6):
+  // PROPERTY_DEFINITION('geometric validation property', …, ürünün şekli) →
+  // PDR → REPRESENTATION('volume' | 'surface area' | 'centroid' | '' (birleşik)).
+  // Değerler mm (merkez parçanın kendi ekseninde); dosya birimine çevrilerek
+  // yazılır. opt.birlesik: üçü tek temsilde (öneri, şekil 11); opt.alanAd:
+  // CATIA 'wetted area measure' yazar; opt.hacimBirim: 'si' | 'turetilmis'.
+  dogrulama(u, { hacim, alan, merkez, birlesik = false, alanAd = 'surface area measure', hacimBirim = 'si' } = {}) {
+    const k = this.k, ogeler = [];
+    const hb = hacimBirim === 'si' && this.uzunluk === 'mm'
+      ? this.ekle('(NAMED_UNIT(*)SI_UNIT(.MILLI.,.CUBIC_METRE.)VOLUME_UNIT())')
+      : this.ekle('DERIVED_UNIT((#' + this.ekle('DERIVED_UNIT_ELEMENT(#' + this.uzunlukBirim + ',3.)') + '))');
+    const ab = this.uzunluk === 'mm'
+      ? this.ekle('(AREA_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.SQUARE_METRE.))')
+      : this.ekle('DERIVED_UNIT((#' + this.ekle('DERIVED_UNIT_ELEMENT(#' + this.uzunlukBirim + ',2.)') + '))');
+    if (hacim !== undefined) ogeler.push(['volume', this.ekle("MEASURE_REPRESENTATION_ITEM('volume measure',VOLUME_MEASURE(" + f(hacim * k * k * k) + '),#' + hb + ')')]);
+    if (alan !== undefined) ogeler.push(['surface area', this.ekle("MEASURE_REPRESENTATION_ITEM('" + alanAd + "',AREA_MEASURE(" + f(alan * k * k) + '),#' + ab + ')')]);
+    if (merkez) ogeler.push(['centroid', this.ekle("CARTESIAN_POINT('centre point',(" + merkez.map((v) => f(this.L(v))).join(',') + '))')]);
+    const bagla = (ad, liste) => {
+      const r = this.ekle("REPRESENTATION('" + ad + "',(" + liste.map((x) => '#' + x).join(',') + '),#' + this.baglam + ')');
+      const pd = this.ekle("PROPERTY_DEFINITION('geometric validation property','" + ad + " of " + u.pd + "',#" + u.pds + ')');
+      this.ekle('PROPERTY_DEFINITION_REPRESENTATION(#' + pd + ',#' + r + ')');
+    };
+    if (birlesik) bagla('', ogeler.map((o) => o[1]));
+    else ogeler.forEach((o) => bagla(o[0], [o[1]]));
+  }
+  // Malzeme ve yoğunluk (kg/m³). Birim kütle · uzunluk⁻³ türetilmiş birimle:
+  // 'g/cm3' (CATIA'nın görüntülediği) · 'kg/m3' · 'kg/mm3'. opt.ad: ölçü öğesinin
+  // adı ('density' · 'density measure' — iki yazım da görüldü).
+  yogunluk(u, rho, { malzeme, birim = 'g/cm3', ad = 'density' } = {}) {
+    const B = {
+      'g/cm3': ['(MASS_UNIT()NAMED_UNIT(*)SI_UNIT($,.GRAM.))', '(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.CENTI.,.METRE.))', rho / 1000],
+      'kg/m3': ['(MASS_UNIT()NAMED_UNIT(*)SI_UNIT(.KILO.,.GRAM.))', '(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT($,.METRE.))', rho],
+      'kg/mm3': ['(MASS_UNIT()NAMED_UNIT(*)SI_UNIT(.KILO.,.GRAM.))', '(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.))', rho * 1e-9]
+    }[birim];
+    const du = this.ekle('DERIVED_UNIT((#' + this.ekle('DERIVED_UNIT_ELEMENT(#' + this.ekle(B[0]) + ',1.)') + ',#'
+      + this.ekle('DERIVED_UNIT_ELEMENT(#' + this.ekle(B[1]) + ',-3.)') + '))');
+    const mri = this.ekle("MEASURE_REPRESENTATION_ITEM('" + ad + "',POSITIVE_RATIO_MEASURE(" + f(B[2]) + '),#' + du + ')');
+    const r = this.ekle("REPRESENTATION('density',(#" + mri + '),#' + this.baglam + ')');
+    const pd = this.ekle("PROPERTY_DEFINITION('material property','density',#" + u.pds + ')');
+    this.ekle('PROPERTY_DEFINITION_REPRESENTATION(#' + pd + ',#' + r + ')');
+    if (malzeme) this.ekle("MATERIAL_DESIGNATION('" + X2(malzeme) + "',(#" + u.pds + '))');
   }
 
   // Eskiz (geometrik küme) — kullanıcının dosyasındaki kalıp: GEOMETRIC_SET →

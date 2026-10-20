@@ -145,13 +145,13 @@ describe('STEP KARTI — rol → hesap → kütle → aktar', () => {
     expect(st.takozlar).toHaveLength(4);
     const mot = st.govdeler[0];
     expect(mot.mass).toBe(400);
-    expect(mot.kaynak).toEqual({ cg: true, I: true });
-    expect(st.govdeler[1].kaynak).toEqual({ cg: true });          // kütle yok → atalet yok
+    expect(mot.kaynak).toEqual({ cg: true, I: true, not: 'homojen yoğunluk' });
+    expect(st.govdeler[1].kaynak).toEqual({ cg: true, not: 'homojen yoğunluk' });   // kütle yok → atalet yok
     expect(st.takozlar[0].kaynak).toEqual({ konum: true });
     expect(W._mwStpOnizleme()).toBe(false);                      // aktarıldı: masa durumu çizer
     // Elle yazılan değer geometriden geleni geçer: işaret düşer
     W._mwSet('govde.' + mot.key + '.cgx', '-310');
-    expect(W.veMntWizState().govdeler[0].kaynak).toEqual({ I: true });
+    expect(W.veMntWizState().govdeler[0].kaynak).toEqual({ I: true, not: 'homojen yoğunluk' });
   });
 
   test('kart: dosya, parça tablosu, hesap ve aktar düğmeleri; az takoz UYARI (engel değil)', () => {

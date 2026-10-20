@@ -66,8 +66,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz
   **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici: FEAD sihirbazının
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir). **İlk hâl** —
-  ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). STEP'te kütle
-  yok: atalet yalnız kullanıcı kütle yazarsa ve ağ KAPALIYSA türetilir. Üçgen
+  ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
+  kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
+  yoğunlukları, ağırlık merkezi kütleyle) — kütle yoksa atalet de yok. **Hacim parça
+  parça** (`veMntStpParcaOzellik`): ağı kapalı olmayan parça hacme KATILMAZ, uyarıda
+  adıyla ve yüzey payıyla söylenir (tek açık parça birimi kutunun merkezine
+  düşürüyordu); dosyanın CAx-IF doğrulama özellikleri (hacim · merkez,
+  `veStepP21Ozellikler`) ağınkinin yerine geçer. Parçanın kütle özelliği ağ
+  işinin dilimlerinde üretilir (`veMntStpAgIs` → `oz`), hesap yalnız toplar —
+  eşzamanlı hesap 420 MB'lık denemede 7,7 sn donduruyordu. Üçgen
   inceliği TEK sabitten (`VE_MNT_STP_UCGEN`, 0,5 mm — bütün güç grubu; FEAD 0,1).
   **Okuma dilimli** (`veMntStpOkuDilimli`, yüz tanımı çıkarmaz): kart okunurken
   çubuk + Vazgeç; Vazgeç, başka dosya ve sihirbazın kapanması okumayı bırakır.
@@ -84,8 +91,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (`veMntStpKenarDaire`; ağ yalnız `daire` dizinini taşır); seçilen daire rol
   kaydına yolu ve merkeziyle girer. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
   (→ *STEP OKUMASI* · *AĞAÇ DAL DAL* · *HESAP BEKLER*) + `mount-3b.test.js` +
-  `mount-nokta.test.js` + `mount-step-okuma.spec.js` + `mount-3b.spec.js` +
-  `mount-nokta.spec.js`.
+  `mount-nokta.test.js` + `mount-kutle.test.js` + `mount-step-okuma.spec.js` +
+  `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle

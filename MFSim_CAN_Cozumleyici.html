@@ -11865,13 +11865,17 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-properties-content .ve-fw-tbl td{ padding:2px 4px !important; }
 .ve-properties-content .ve-fw-tbl-stp td:first-child{ padding-left:calc(4px + var(--stp-d, 0) * 14px) !important; }
 .ve-properties-content .ve-fw-tbl select.ve-fw-inp{ text-align:left; padding:0 6px; }
-.ve-mw-tbl-kutle th:nth-child(1), .ve-mw-tbl-kutle td:nth-child(1){ width:36%; }
-.ve-mw-tbl-kutle th:nth-child(2), .ve-mw-tbl-kutle td:nth-child(2){ width:18%; text-align:right; }
-.ve-mw-tbl-kutle th:nth-child(3), .ve-mw-tbl-kutle td:nth-child(3){ width:22%; }
-.ve-mw-tbl-kutle th:nth-child(4), .ve-mw-tbl-kutle td:nth-child(4){ width:24%; }
+/* KÜTLE TABLOSU (js/cp-mount-wizard.js → _mwStpKutleHTML): gövde · hacim ·
+   kaynak (elle · dosya · malzeme) · kütle (alan ya da türetilen değer) · atalet */
+.ve-mw-tbl-kutle th:nth-child(1), .ve-mw-tbl-kutle td:nth-child(1){ width:26%; }
+.ve-mw-tbl-kutle th:nth-child(2), .ve-mw-tbl-kutle td:nth-child(2){ width:14%; text-align:right; }
+.ve-mw-tbl-kutle th:nth-child(3), .ve-mw-tbl-kutle td:nth-child(3){ width:32%; }
+.ve-mw-tbl-kutle th:nth-child(4), .ve-mw-tbl-kutle td:nth-child(4){ width:15%; text-align:right; }
+.ve-mw-tbl-kutle th:nth-child(5), .ve-mw-tbl-kutle td:nth-child(5){ width:13%; text-align:center; }
 .ve-mw-tbl-kutle .ve-fw-num{ font-variant-numeric:tabular-nums; }
-.ve-mw-tbl-kutle td:nth-child(4){ white-space:nowrap; }
-.ve-mw-tbl-kutle td:nth-child(4) .mf-ico{ width:12px; height:12px; vertical-align:-2px; }
+.ve-mw-tbl-kutle td:nth-child(5){ white-space:nowrap; }
+.ve-mw-tbl-kutle td:nth-child(5) .mf-ico{ width:12px; height:12px; vertical-align:-2px; }
+.ve-mw-stp-kg{ white-space:nowrap; }
 /* 3B KARTININ BİRİM TABLOLARI (js/cp-mount-3b.js) — sabit düzen: ad · konum
    (· kütle). FEAD tablosunun esnek ilk hücresi sabit düzende sütunları
    bozardı; burada hücre hücre kalır, ad kısalır. Uyarılı satır (ağ kapalı

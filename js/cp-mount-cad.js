@@ -98,6 +98,14 @@ function _mntCadDosyaHTML(s, k){
     + ' onclick="veMntWizStpKapat()">' + _mntCadIkon('x') + '</button></div>';
   return h + '</div>';
 }
+// Kütle hücresi: yazılan kütle ya da kaynağı (malzeme · dosya — kütle dosyanın
+// hacminden, dosya açılınca)
+function _mntCadKutle(r){
+  var mz = (r.yog && typeof veMntStpMalzeme === 'function') ? veMntStpMalzeme(r.yog) : null;
+  if(mz) return '<td title="' + _mntCadEsc(mz.ad + ' · ' + veSayi(mz.rho, 0) + ' kg/m³') + '">' + _mntCadEsc(mz.ad) + '</td>';
+  if(r.yog === 'dosya') return '<td>Dosyadan</td>';
+  return '<td>' + (+r.kg > 0 ? veSayi(+r.kg, 1) : '—') + '</td>';
+}
 // Kayıtlı roller — dosya açık değilken: parça, rolü, kütlesi, takozun seçilen dairesi
 function _mntCadKayitHTML(k){
   var t = _mntFoyAc([{ b:'Parça', gen:'40%' }, { b:'Rol', gen:'26%', sinif:'sol' }, { b:'Kütle <u>[kg]</u>', gen:'16%' },
@@ -107,7 +115,7 @@ function _mntCadKayitHTML(k){
     var n = r.nokta && Array.isArray(r.nokta.c) && +r.nokta.r > 0 ? r.nokta : null;
     t += '<tr><td title="' + _mntCadEsc(yol) + '">' + _mntCadEsc(r.ad || (r.yol && r.yol[r.yol.length - 1]) || '—') + '</td>'
       + '<td class="sol">' + _mntCadEsc(_mntCadAd(r.rol)) + '</td>'
-      + '<td>' + (+r.kg > 0 ? veSayi(+r.kg, 1) : '—') + '</td>'
+      + _mntCadKutle(r)
       + '<td' + (n ? ' title="' + _mntCadEsc(n.c.map(function(v){ return veSayi(Math.round(v * 1000) / 1000, 3); }).join('; ')) + '"' : '') + '>'
       + (n ? 'Ø ' + veSayi(2 * n.r, 1) : '—') + '</td></tr>';
   });
