@@ -39,6 +39,15 @@
 // 2026-10-20, Takoz adım 4). Görüntüleyici tek: biri açılınca öteki kapanır,
 // WebGL bağlamı bırakılır. "Sihirbaza aktar" yalnız sihirbazın içinde.
 // THREE yoksa (Node testi) açılmaz. Çizim İSTEK ÜZERİNE, sürekli döngü yok.
+//
+// TAKOZ NOKTASI (2026-10-20, Takoz adım 5): takoz seçiliyken "Daireden nokta"
+// kipinde fare dairesel kenarın üstüne gelince halka çizilir, tıklayınca
+// takozun noktası o dairenin MERKEZİ olur — CATIA'daki ölçümün aynısı. Merkez
+// ağdan değil dosyadan (js/mount-step.js → veMntStpKenarDaire): ağ yalnız hangi
+// kenarın tıklandığını söyler (`daire` dizini, js/step-ucgen.js). Aday kenar
+// ekranda farenin VE_MW_3B_DAIRE.px yakınında ve tıklanan yüzün arkasında
+// değil. Hesaptan sonra her takozun dairesi halka olarak çizilir (öneri de
+// seçilen de).
 // ============================================================================
 
 var _mw3b = null;
@@ -69,6 +78,11 @@ var VE_MW_3B_KURULUM_KARE = 200, VE_MW_3B_KARE_PAY = 9, VE_MW_3B_SIGDIR_ARA = 50
 var VE_MW_3B_SOLUK = 1, VE_MW_3B_SECIK = 2, VE_MW_3B_FARE = 4;
 // Çizgi saydamlığı (0–255): olağan · soluk
 var VE_MW_3B_CIZGI_A = [82, 15];
+// Daireden nokta: farenin kenara en büyük uzaklığı (px), bakılan en çok parça,
+// kenarın tıklanan yüzün arkasında sayılmadığı derinlik payı (mm)
+var VE_MW_3B_DAIRE = { px: 10, aday: 40, derinlik: 1 };
+// Hesap noktalarının ekrandaki yarıçapı (px): takoz · gövde
+var VE_MW_3B_ISARET = { takoz: 6, govde: 8 };
 
 // ── 1 · SAF YARDIMCILAR (testli) ──────────────────────────────────────────
 // Parçanın birimi: rollü ata (parçanın kendisi dâhil) — yoksa -1.
@@ -129,7 +143,7 @@ function veMntWiz3bAc(yer){
     + '<div class="ve-fw-3b-alt" id="ve-mw-3b-alt"></div></div>';
   var kap = document.getElementById('ve-mw-3b-tuval');
   var V = { kap: kap, s: s, yer: yer, ov: ov, perde: perde, kume: [], ckume: [], parca: [], ekli: [], kutular: [], islenen: 0, yuz: 0, toplam: 0, yuzToplam: 0,
-            sokucu: [], secili: -1, fare: -1, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
+            sokucu: [], secili: -1, fare: -1, nokta: -1, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
             kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0 };
   var w = Math.max(1, kap.clientWidth), h = Math.max(1, kap.clientHeight);
   try {
@@ -218,7 +232,7 @@ function _mw3bEsc(V){
   var f = function(e){
     if(e.key !== 'Escape' || _mw3b !== V) return;
     e.stopImmediatePropagation(); e.preventDefault();
-    veMntWiz3bKapat();
+    if(!veMntWiz3bNoktaBitir()) veMntWiz3bKapat();
   };
   document.addEventListener('keydown', f, true);
   V.sokucu.push(function(){ document.removeEventListener('keydown', f, true); });
@@ -237,6 +251,7 @@ function veMntWiz3bTazele(){
   // Dosya karttan kaldırıldı ya da başka bir dosya okundu: pencere o dosyanındı
   if(!s || s !== V.s || s.durum !== 'hazir'){ veMntWiz3bKapat(); return; }
   if(V.secili >= s.sonuc.agac.length) V.secili = -1;
+  if(V.nokta >= 0 && s.roller[V.nokta] !== 'mnt-mount') _mw3bNoktaKip(-1);
   _mw3bPanel();
   if(!V.scene) return;
   _mw3bBoya();
@@ -530,6 +545,7 @@ function veMntWiz3bSec(dugum){
   var V = _mw3b;
   if(!V) return false;
   V.secili = (dugum >= 0 && dugum < V.s.sonuc.agac.length) ? dugum : -1;
+  if(V.nokta >= 0 && _mw3bSeciliBirim(V.s, V.secili) !== V.nokta) _mw3bNoktaKip(-1);
   _mw3bPanel(); _mw3bBoya(); _mw3bCiz(true);
   return true;
 }
@@ -555,7 +571,7 @@ function _mw3bPanel(){
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
   }
   var alt = document.getElementById('ve-mw-3b-alt');
-  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { aktar: V.yer === 'sihirbaz' });
+  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { aktar: V.yer === 'sihirbaz', nokta: V.nokta >= 0 });
 }
 // Saf: durum + seçili düğüm → sağdaki yüzen KART (testli). Sıra: ölçülen
 // birimler (gövdeler kütle alanıyla · takozlar) · seçili yol · rol verilenler.
@@ -569,7 +585,7 @@ function veMntWiz3bPanelHTML(s, secili){
     var gs = _mwStpGovdeler(s), ts = _mwStpTakozlar(s);
     var ad = function(b){
       return _mw3bRenkNokta(b.tip) + '<button type="button" class="ve-fw-3b-yolb" onclick="veMntWiz3bSec(' + b.dugum + ')"'
-        + ' title="' + _mwEsc(_mwAd(b.tip)) + (b.kaynak !== 'hacim' ? ' — ağ kapalı değil, kutunun merkezi' : '') + '">'
+        + ' title="' + _mwEsc(_mwAd(b.tip)) + (b.kaynak === 'kutu' ? ' — ağ kapalı değil, kutunun merkezi' : '') + '">'
         + _mwEsc(b.ad) + '</button>';
     };
     if(gs.length){
@@ -579,7 +595,7 @@ function veMntWiz3bPanelHTML(s, secili){
       gs.forEach(function(b){
         var m = s.kutle[b.dugum];
         h += '<tr data-ve-3b-birim="' + b.dugum + '"' + (b.dugum === birimSec ? ' class="on"' : '')
-          + (b.kaynak !== 'hacim' ? ' data-uyari="1"' : '') + '><td>' + ad(b) + '</td>'
+          + (veMntWizStpKonumUyari(b) ? ' data-uyari="1"' : '') + '><td>' + ad(b) + '</td>'
           + '<td class="ve-fw-num">' + _mwStpKonum(b.konum) + '</td>'
           + '<td><input type="text" inputmode="decimal" class="ve-fw-inp" data-mw-stp-kutle="' + b.dugum + '"'
           + ' value="' + (m !== undefined ? _mwEsc(m) : '') + '" aria-label="Kütle — ' + _mwEsc(b.ad) + '"'
@@ -589,11 +605,12 @@ function veMntWiz3bPanelHTML(s, secili){
     }
     if(ts.length){
       h += '<table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-3b-tbl ve-mw-3b-tbl ve-mw-3b-tbl-takoz" data-ve-3b-takozlar="1"><thead><tr>'
-        + '<th>Takoz</th><th>Konum<em>mm</em></th></tr></thead><tbody>';
+        + '<th>Takoz</th><th>Konum<em>mm</em></th><th>Nokta</th></tr></thead><tbody>';
       ts.forEach(function(b){
-        h += '<tr data-ve-3b-birim="' + b.dugum + '"' + (b.dugum === birimSec ? ' class="on"' : '')
-          + (b.kaynak !== 'hacim' ? ' data-uyari="1"' : '') + '><td>' + ad(b) + '</td>'
-          + '<td class="ve-fw-num">' + _mwStpKonum(b.konum) + '</td></tr>';
+        var nk = veMntWizStpNoktaKaynak(b);
+        h += '<tr data-ve-3b-birim="' + b.dugum + '" data-ve-3b-nokta="' + _mwEsc(b.kaynak) + '"' + (b.dugum === birimSec ? ' class="on"' : '')
+          + (veMntWizStpKonumUyari(b) ? ' data-uyari="1"' : '') + '><td>' + ad(b) + '</td>'
+          + '<td class="ve-fw-num">' + _mwStpKonum(b.konum, 3) + '</td><td title="' + _mwEsc(nk) + '">' + _mwEsc(nk) + '</td></tr>';
       });
       h += '</tbody></table>';
     }
@@ -668,6 +685,19 @@ function veMntWiz3bAltHTML(s, secili, opt){
         + '<option value="-" data-ve-3b-rol=""' + (rol ? '' : ' disabled') + '>Rolü kaldır</option></select>';
     }
     h += '</div>';
+    // Takozun noktası: seçili düğümün birimi takozsa — daireden seçim kipi ve öneriye dönüş
+    var birim = _mw3bSeciliBirim(s, secili);
+    if(birim >= 0 && s.roller[birim] === 'mnt-mount'){
+      var kip = !!(opt && opt.nokta);
+      h += '<div class="ve-fw-3b-roller ve-mw-3b-nokta" role="group" aria-label="Takoz noktası — ' + _mwEsc(so.agac[birim].ad) + '">'
+        + '<button type="button" class="ve-fw-3b-rol" id="ve-mw-3b-nokta" aria-pressed="' + (kip ? 'true' : 'false') + '"'
+        + ' onclick="veMntWiz3bNoktaSec()">' + _mwIkon('crosshair') + ' Daireden nokta</button>';
+      if(s.nokta && s.nokta[birim])
+        h += '<button type="button" class="ve-fw-3b-rol" id="ve-mw-3b-nokta-oneri" onclick="veMntWizStpNokta(' + birim + ', null)">'
+          + _mwIkon('rotate-ccw') + ' Öneriye dön</button>';
+      if(kip) h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">' + veYon('Takozun dairesel kenarını seçin.') + '</span>';
+      h += '</div>';
+    }
   } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok. ' + veYon('Modelde bir parça seçin.') + '</span>';
   h += '</div>';
   var coz = s.coz, rolEngel = typeof _mwStpRolDenetim === 'function' ? _mwStpRolDenetim(s) : [];
@@ -702,6 +732,8 @@ function veMntWiz3bAktar(){
 // Birim başına bir NOKTA (takozun konumu · gövdenin ağırlık merkezi), başlık
 // tonunda ve derinlik sınaması kapalı: parçanın İÇİNDE kalan nokta (ağırlık
 // merkezi hep içeride) görünmezdi. Yazısı etiket katmanında (_mw3bEtiketle).
+// Nokta EKRANDA sabit boyda (VE_MW_3B_ISARET px, her karede _mw3bIsaretOlcek):
+// montaja göre boyutlanan küre takoza yakınlaşınca dairesini örtüyordu.
 function _mw3bSonucKur(){
   var V = _mw3b;
   if(!V || !V.scene) return;
@@ -710,25 +742,203 @@ function _mw3bSonucKur(){
     V.sonucGrubu.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); });
     V.sonucGrubu = null;
   }
-  var coz = V.s.coz;
-  if(!coz || !coz.ok) return;
-  var G = new THREE.Group();
-  G.userData.nokta = 0;
-  var R = V.kutu ? V.kutu.getSize(new THREE.Vector3()).length() : 1000;
-  var renk = _mw3bRenk('--text-heading', '#1b1a17');
-  coz.birimler.forEach(function(b){
-    if(!b.konum) return;
-    var takoz = b.tip === 'mnt-mount';
-    var geo = takoz ? new THREE.SphereGeometry(Math.max(2, R * 0.006), 16, 12)
-                    : new THREE.OctahedronGeometry(Math.max(3, R * 0.009));
-    var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: renk, depthTest: false, transparent: true, opacity: 0.92 }));
-    m.position.set(b.konum[0], b.konum[1], b.konum[2]);
-    m.renderOrder = 10;
-    G.add(m);
-    G.userData.nokta++;
+  var coz = V.s.coz, G = new THREE.Group();
+  G.userData.nokta = 0; G.userData.halka = 0;
+  var takozRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-mount'), '#2f7d4f');
+  if(coz && coz.ok){
+    var renk = _mw3bRenk('--text-heading', '#1b1a17');
+    coz.birimler.forEach(function(b){
+      if(!b.konum) return;
+      var takoz = b.tip === 'mnt-mount';
+      var geo = takoz ? new THREE.SphereGeometry(1, 16, 12) : new THREE.OctahedronGeometry(1);
+      var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: renk, depthTest: false, transparent: true, opacity: 0.92 }));
+      m.position.set(b.konum[0], b.konum[1], b.konum[2]);
+      m.userData.px = takoz ? VE_MW_3B_ISARET.takoz : VE_MW_3B_ISARET.govde;
+      m.renderOrder = 10;
+      G.add(m);
+      G.userData.nokta++;
+      if(takoz && b.nokta){ G.add(_mw3bHalka(b.nokta, takozRenk)); G.userData.halka++; }
+    });
+  } else Object.keys(V.s.nokta || {}).forEach(function(d){
+    // Hesaptan önce seçilen daireler (yönü bilinenler)
+    var n = V.s.nokta[d];
+    if(n && n.n){ G.add(_mw3bHalka(n, takozRenk)); G.userData.halka++; }
   });
+  if(!G.children.length) return;
   V.sonucGrubu = G;
   V.scene.add(G);
+}
+// Noktalar her karede ekranda sabit boya ölçeklenir (kameranın uzaklığından)
+function _mw3bIsaretOlcek(){
+  var V = _mw3b, G = V.sonucGrubu;
+  if(!G || !V.camera) return;
+  var h = V.kap.clientHeight || 1, tan = Math.tan(V.camera.fov * Math.PI / 360), cp = V.camera.position;
+  G.children.forEach(function(m){
+    if(!m.userData.px) return;
+    var k = m.userData.px * 2 * cp.distanceTo(m.position) * tan / h;
+    m.scale.set(k, k, k);
+  });
+}
+// HALKA: dairenin çevresinde ince bir simit (çizgi WebGL'de 1 px — görünmüyordu);
+// kalınlığı dairenin yarıçapıyla, derinlik sınaması kapalı
+function _mw3bHalka(d, renk){
+  var tup = Math.max(0.25, Math.min(3, d.r * 0.035));
+  var g = new THREE.TorusGeometry(d.r, tup, 8, 96);
+  var m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: renk, depthTest: false, transparent: true, opacity: 0.95 }));
+  var n = new THREE.Vector3(d.n[0], d.n[1], d.n[2]).normalize();
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+  m.position.set(d.c[0], d.c[1], d.c[2]);
+  m.renderOrder = 11;
+  return m;
+}
+
+// ── 6b · TAKOZ NOKTASI: DAİREDEN SEÇİM ───────────────────────────────────
+// Kip bir TAKOZ BİRİMİNE açılır (seçili düğümün birimi); kapanır: daire
+// tıklanınca, Esc, seçim başka birime geçince, birimin rolü düşünce. Açılınca
+// seçim birimin kendisi olur (kalan parçalar SOLAR) ve kamera birime sığar:
+// takoz montajın içinde küçük ve çoğu bakışta motorun arkasında. Aday kenar
+// ve onu örten yüz yalnız birimin parçalarından — soluk parça görünmüyor.
+function veMntWiz3bNoktaSec(){
+  var V = _mw3b;
+  if(!V || !V.scene) return false;
+  var b = _mw3bSeciliBirim(V.s, V.secili);
+  if(b < 0 || V.s.roller[b] !== 'mnt-mount') return false;
+  var ac = V.nokta !== b;
+  _mw3bNoktaKip(ac ? b : -1);
+  if(ac){ V.secili = b; _mw3bBoya(); _mw3bOdakla(b); }
+  _mw3bPanel();
+  _mw3bCiz(true);
+  return true;
+}
+// Kamera düğümün parçalarına sığar (bakış yönü kalır)
+function _mw3bOdakla(dugum){
+  var V = _mw3b, kutu = null, pts = [];
+  veMntWiz3bParcalar(V.s, dugum).forEach(function(i){
+    var a = V.s.ag[i];
+    if(!a || !a.kutu || !isFinite(a.kutu[0]) || !V.parca[i]) return;
+    var k = a.kutu, b = new THREE.Box3(new THREE.Vector3(k[0], k[1], k[2]), new THREE.Vector3(k[3], k[4], k[5]));
+    if(!kutu) kutu = b; else kutu.union(b);
+    var n = a.uc.length / 3, adim = Math.max(1, Math.floor(n / 500));
+    for(var q = 0; q < n; q += adim) pts.push(new THREE.Vector3(a.uc[q * 3], a.uc[q * 3 + 1], a.uc[q * 3 + 2]));
+  });
+  if(!kutu) return false;
+  V.eldegdi = true;
+  _mw3bSigdir(kutu, pts);
+  return true;
+}
+// Kip açıksa kapatır (Esc) — döner: kapattı mı
+function veMntWiz3bNoktaBitir(){
+  var V = _mw3b;
+  if(!V || V.nokta < 0) return false;
+  _mw3bNoktaKip(-1);
+  _mw3bPanel();
+  _mw3bCiz(true);
+  return true;
+}
+function _mw3bNoktaKip(b){
+  var V = _mw3b;
+  V.nokta = b;
+  V.aday = null;
+  _mw3bAdayHalka(null);
+  if(V.kap && V.kap.classList) V.kap.classList.toggle('ve-mw-3b-nokta-kip', b >= 0);
+  if(typeof document !== 'undefined') _mw3bIpucu(null);
+}
+function _mw3bAdayHalka(daire){
+  var V = _mw3b;
+  if(!V || !V.scene) return;
+  if(V.halka){
+    V.scene.remove(V.halka);
+    V.halka.geometry.dispose(); V.halka.material.dispose();
+    V.halka = null;
+  }
+  if(daire){ V.halka = _mw3bHalka(daire, _mw3bRenk('--accent-primary', '#a8502b')); V.scene.add(V.halka); }
+}
+// Dünya noktası → ekran (kabın pikseli); kameranın arkasındaysa null
+function _mw3bEkran(e, x, y, z, w, h){
+  var cw = e[3] * x + e[7] * y + e[11] * z + e[15];
+  if(!(cw > 1e-9)) return null;
+  return [((e[0] * x + e[4] * y + e[8] * z + e[12]) / cw + 1) / 2 * w, (1 - (e[1] * x + e[5] * y + e[9] * z + e[13]) / cw) / 2 * h];
+}
+// Farenin altındaki dairesel kenar: kutusu fareyi px payıyla kesen parçaların
+// çember parçaları ekranda sorulur; tıklanan yüzün arkasındaki kenar sayılmaz.
+// Döner: { parca, kenar, daire: { yol, c, n, r } } | null
+function _mw3bDaireAra(cx, cy){
+  var V = _mw3b, D = VE_MW_3B_DAIRE;
+  if(!V || !V.camera || !V.ekli.length || typeof veMntStpKenarDaire !== 'function') return null;
+  var R = V.renderer.domElement.getBoundingClientRect(), w = R.width || 1, h = R.height || 1;
+  var mx = cx - R.left, my = cy - R.top;
+  V.camera.updateMatrixWorld();
+  V.ray.setFromCamera(new THREE.Vector2(mx / w * 2 - 1, -(my / h) * 2 + 1), V.camera);
+  var birim = null;
+  if(V.nokta >= 0){ birim = {}; veMntWiz3bParcalar(V.s, V.nokta).forEach(function(i){ birim[i] = 1; }); }
+  var o = V.ray.ray.origin, d = V.ray.ray.direction, vur = _mw3bIsabetIsin(o, d, birim);
+  var tol = isFinite(vur.t) ? Math.max(2 * D.derinlik, vur.t * 0.003) : Infinity;
+  var tan = Math.tan(V.camera.fov * Math.PI / 360), cp = V.camera.position, K = V.kutular, aday = [];
+  for(var e = 0; e < V.ekli.length; e++){
+    var a = V.s.ag[V.ekli[e]], j = e * 6;
+    if(!a || !a.daire || !a.daire.length || (birim && !birim[V.ekli[e]])) continue;
+    var uz = Math.sqrt(Math.pow((K[j] + K[j + 3]) / 2 - cp.x, 2) + Math.pow((K[j + 1] + K[j + 4]) / 2 - cp.y, 2) + Math.pow((K[j + 2] + K[j + 5]) / 2 - cp.z, 2));
+    var pay = D.px * 2 * uz * tan / h, t = _mw3bKutuKes(o, d, K, j, pay);
+    if(t < 0 || t > vur.t + tol + pay) continue;
+    aday.push([t, V.ekli[e]]);
+  }
+  aday.sort(function(x, y){ return x[0] - y[0]; });
+  var PM = new THREE.Matrix4().multiplyMatrices(V.camera.projectionMatrix, V.camera.matrixWorldInverse).elements, en = null;
+  for(var c = 0; c < aday.length && c < D.aday; c++){
+    var i = aday[c][1], ag = V.s.ag[i], L = ag.cizgi, Dz = ag.daire;
+    for(var q = 0; q < Dz.length; q += 3){
+      for(var sg = Dz[q + 1], son = Dz[q + 1] + Dz[q + 2]; sg < son; sg++){
+        var k = sg * 6, p = _mw3bEkran(PM, L[k], L[k + 1], L[k + 2], w, h), r2 = _mw3bEkran(PM, L[k + 3], L[k + 4], L[k + 5], w, h);
+        if(!p || !r2) continue;
+        var dx = r2[0] - p[0], dy = r2[1] - p[1], l2 = dx * dx + dy * dy;
+        var u = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p[0]) * dx + (my - p[1]) * dy) / l2)) : 0;
+        var ex = p[0] + u * dx - mx, ey = p[1] + u * dy - my, dd = Math.sqrt(ex * ex + ey * ey);
+        if(dd > D.px) continue;
+        var der = (L[k] + u * (L[k + 3] - L[k]) - o.x) * d.x + (L[k + 1] + u * (L[k + 4] - L[k + 1]) - o.y) * d.y
+          + (L[k + 2] + u * (L[k + 5] - L[k + 2]) - o.z) * d.z;
+        if(der > vur.t + tol) continue;                          // tıklanan yüzün arkasında
+        if(!en || dd < en.dd - 1.5 || (Math.abs(dd - en.dd) <= 1.5 && der < en.der)) en = { parca: i, kenar: Dz[q], dd: dd, der: der };
+      }
+    }
+  }
+  if(!en) return null;
+  var daire = veMntStpKenarDaire(V.s.sonuc, en.parca, en.kenar);
+  return daire ? { parca: en.parca, kenar: en.kenar, daire: daire } : null;
+}
+function _mw3bDaireFare(e){
+  var V = _mw3b;
+  V.fareSon = e;
+  if(V.fareIstek) return;
+  V.fareIstek = requestAnimationFrame(function(){
+    V.fareIstek = 0;
+    if(_mw3b !== V || V.nokta < 0) return;
+    var ev = V.fareSon, a = _mw3bDaireAra(ev.clientX, ev.clientY);
+    if(!(a && V.aday && a.parca === V.aday.parca && a.kenar === V.aday.kenar)){
+      V.aday = a;
+      _mw3bAdayHalka(a ? a.daire : null);
+      _mw3bCiz(true);
+    }
+    _mw3bDaireIpucu(ev, a, false);
+  });
+}
+// Tık: daire bulunduysa takozun noktası olur ve kip kapanır; bulunmadıysa sebep
+function _mw3bDaireTik(e){
+  var V = _mw3b, a = _mw3bDaireAra(e.clientX, e.clientY);
+  if(!a){ _mw3bDaireIpucu(e, null, true); return false; }
+  var b = V.nokta;
+  _mw3bNoktaKip(-1);
+  veMntWizStpNokta(b, a.daire);
+  return true;
+}
+function _mw3bDaireIpucu(e, a, yok){
+  var V = _mw3b, el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-ipucu');
+  if(!el) return;
+  if(!a && !yok){ el.hidden = true; return; }
+  el.textContent = a ? 'Ø ' + _mwSayi(2 * a.daire.r, 1) + ' mm · ' + _mwStpKonum(a.daire.c, 3) : 'Dairesel kenar yok.';
+  var r = V.kap.getBoundingClientRect();
+  el.style.left = Math.min(r.width - 12, e.clientX - r.left + 14) + 'px';
+  el.style.top = Math.max(4, e.clientY - r.top - 28) + 'px';
+  el.hidden = false;
 }
 
 // ── 7 · KAMERA ────────────────────────────────────────────────────────────
@@ -848,18 +1058,22 @@ function _mw3bDinle(V){
       _mw3bKamera(); _mw3bCiz(true);
       return;
     }
-    _mw3bFare(e);
+    if(V.nokta >= 0) _mw3bDaireFare(e); else _mw3bFare(e);
   });
   dinle(cv, 'pointerup', function(e){
     var b = bas;
     bas = null;
     V.kap.classList.remove('surukle');
     if(b && !b.oynadi && b.tus === 0){
+      if(V.nokta >= 0){ _mw3bDaireTik(e); return; }
       var i = _mw3bIsabet(e.clientX, e.clientY);
       veMntWiz3bSec(i >= 0 ? V.s.sonuc.parcalar[i].dugum : -1);
     }
   });
-  dinle(cv, 'pointerleave', function(){ if(V.fare >= 0){ V.fare = -1; _mw3bIpucu(null); _mw3bBoya(); _mw3bCiz(true); } });
+  dinle(cv, 'pointerleave', function(){
+    if(V.aday){ V.aday = null; _mw3bAdayHalka(null); _mw3bIpucu(null); _mw3bCiz(true); }
+    if(V.fare >= 0){ V.fare = -1; _mw3bIpucu(null); _mw3bBoya(); _mw3bCiz(true); }
+  });
   dinle(cv, 'wheel', function(e){
     e.preventDefault();
     V.eldegdi = true;
@@ -876,8 +1090,14 @@ function _mw3bIsabet(cx, cy){
   var r = V.renderer.domElement.getBoundingClientRect();
   var nd = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
   V.ray.setFromCamera(nd, V.camera);
-  var o = V.ray.ray.origin, d = V.ray.ray.direction, K = V.kutular, aday = [];
+  return _mw3bIsabetIsin(V.ray.ray.origin, V.ray.ray.direction).i;
+}
+// Işının ilk çarptığı parça ve uzaklığı: { i, t } (çarpmazsa i = -1, t = ∞).
+// `kume` ({parça: 1}) verilirse yalnız onun parçaları
+function _mw3bIsabetIsin(o, d, kume){
+  var V = _mw3b, K = V.kutular, aday = [];
   for(var e = 0; e < V.ekli.length; e++){
+    if(kume && !kume[V.ekli[e]]) continue;
     var t = _mw3bKutuKes(o, d, K, e * 6);
     if(t >= 0) aday.push([t, V.ekli[e]]);
   }
@@ -887,13 +1107,14 @@ function _mw3bIsabet(cx, cy){
     var t2 = _mw3bUcgenKes(o, d, V.s.ag[aday[c][1]], en);
     if(t2 < en){ en = t2; enI = aday[c][1]; }
   }
-  return enI;
+  return { i: enI, t: en };
 }
-// Işın ↔ kutu (dilim yöntemi): giriş uzaklığı (≥ 0) ya da -1
-function _mw3bKutuKes(o, d, K, j){
-  var t0 = 0, t1 = Infinity, ox = [o.x, o.y, o.z], dx = [d.x, d.y, d.z];
+// Işın ↔ kutu (dilim yöntemi): giriş uzaklığı (≥ 0) ya da -1. `pay`: kutu her
+// yönde o kadar büyütülür (daireden seçimin piksel payı)
+function _mw3bKutuKes(o, d, K, j, pay){
+  var t0 = 0, t1 = Infinity, ox = [o.x, o.y, o.z], dx = [d.x, d.y, d.z], p = pay > 0 ? pay : 0;
   for(var a = 0; a < 3; a++){
-    var lo = K[j + a], hi = K[j + 3 + a];
+    var lo = K[j + a] - p, hi = K[j + 3 + a] + p;
     if(Math.abs(dx[a]) < 1e-12){ if(ox[a] < lo || ox[a] > hi) return -1; continue; }
     var ta = (lo - ox[a]) / dx[a], tb = (hi - ox[a]) / dx[a];
     if(ta > tb){ var x = ta; ta = tb; tb = x; }
@@ -974,6 +1195,7 @@ function _mw3bCiz(hemen){
     if(_mw3b !== V) return;
     var t0 = _mwSimdi();
     _mw3bYukle();
+    _mw3bIsaretOlcek();
     V.renderer.render(V.scene, V.camera);
     V.sonCiz = t0;
     _mw3bEtiketle();
@@ -1005,7 +1227,7 @@ function _mw3bEtiketle(){
     var lx = q.x + yx * 34, ly = q.y + yy * 14;
     cs += '<line x1="' + q.x.toFixed(1) + '" y1="' + q.y.toFixed(1) + '" x2="' + lx.toFixed(1) + '" y2="' + ly.toFixed(1) + '"/>';   // makine: SVG yol verisi
     hs += '<div class="ve-fw-3b-etk' + (sagda ? '' : ' sol') + '" data-ve-3b-etiket="' + i + '" style="left:' + lx.toFixed(1) + 'px;top:' + ly.toFixed(1) + 'px">'   // makine: CSS konumu
-      + '<b>' + _mwEsc(q.b.ad) + '</b><span>' + (q.b.tip === 'mnt-mount' ? '' : 'CG ') + _mwStpKonum(q.b.konum) + '</span></div>';
+      + '<b>' + _mwEsc(q.b.ad) + '</b><span>' + (q.b.tip === 'mnt-mount' ? _mwStpKonum(q.b.konum, 3) : 'CG ' + _mwStpKonum(q.b.konum)) + '</span></div>';
   });
   cz.innerHTML = cs; kat.innerHTML = hs;
 }
@@ -1028,13 +1250,38 @@ function veMntWiz3bIsabetNoktasi(i){
   }
   return null;
 }
+// Daireye TIKLAMAK için: parçanın yarıçapı r olan çember kenarının bir
+// noktası — tuval orada görünür (kart örtmüyor) ve daireden seçim orada o
+// kenarı buluyorsa.
+function veMntWiz3bDaireNoktasi(i, r){
+  var V = _mw3b, a = V && V.s.ag && V.s.ag[i];
+  if(!a || !a.daire || !V.camera) return null;
+  V.camera.updateMatrixWorld();
+  var R = V.renderer.domElement.getBoundingClientRect();
+  var PM = new THREE.Matrix4().multiplyMatrices(V.camera.projectionMatrix, V.camera.matrixWorldInverse).elements;
+  for(var q = 0; q < a.daire.length; q += 3){
+    var d = veMntStpKenarDaire(V.s.sonuc, i, a.daire[q]);
+    if(!d || Math.abs(d.r - r) > 1e-6 * Math.max(1, r)) continue;
+    for(var sg = a.daire[q + 1]; sg < a.daire[q + 1] + a.daire[q + 2]; sg++){
+      var k = sg * 6, L = a.cizgi;
+      var p = _mw3bEkran(PM, (L[k] + L[k + 3]) / 2, (L[k + 1] + L[k + 4]) / 2, (L[k + 2] + L[k + 5]) / 2, R.width, R.height);
+      if(!p) continue;
+      var x = R.left + p[0], y = R.top + p[1];
+      if(document.elementFromPoint(x, y) !== V.renderer.domElement) continue;
+      var b = _mw3bDaireAra(x, y);
+      if(b && b.parca === i && b.kenar === a.daire[q]) return { x: x, y: y };
+    }
+  }
+  return null;
+}
 function veMntWiz3bDurum(){
   var V = _mw3b;
   if(!V) return null;
   return { durum: V.kap.getAttribute('data-durum'), parca: V.ekli.length, islenen: V.islenen, toplam: V.toplam,
     kume: V.kume.length, cizgiKume: V.ckume.length, cagri: V.renderer && V.renderer.info ? V.renderer.info.render.calls : 0,
     etiket: document.querySelectorAll('#ve-mw-3b-etiket [data-ve-3b-etiket]').length,
-    nokta: V.sonucGrubu ? V.sonucGrubu.userData.nokta : 0, secili: V.secili, fare: V.fare };
+    nokta: V.sonucGrubu ? V.sonucGrubu.userData.nokta : 0, halka: V.sonucGrubu ? V.sonucGrubu.userData.halka : 0,
+    secili: V.secili, fare: V.fare, kip: V.nokta, aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire.r } : null, adayHalka: !!V.halka };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -1044,6 +1291,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veMntWiz3bRolJeton: veMntWiz3bRolJeton, veMntWiz3bPanelHTML: veMntWiz3bPanelHTML,
     veMntWiz3bAltHTML: veMntWiz3bAltHTML, _mw3bSeciliBirim: _mw3bSeciliBirim, veMntWiz3bTazele: veMntWiz3bTazele,
     _mw3bKutuKes: _mw3bKutuKes, _mw3bUcgenKes: _mw3bUcgenKes, _mw3bKurVeri: _mw3bKurVeri,
-    VE_MW_3B_YER: VE_MW_3B_YER, veMntWiz3bYer: veMntWiz3bYer, veMntWiz3bAcik: veMntWiz3bAcik
+    VE_MW_3B_YER: VE_MW_3B_YER, veMntWiz3bYer: veMntWiz3bYer, veMntWiz3bAcik: veMntWiz3bAcik,
+    VE_MW_3B_DAIRE: VE_MW_3B_DAIRE, _mw3bEkran: _mw3bEkran, veMntWiz3bNoktaBitir: veMntWiz3bNoktaBitir
   };
 }

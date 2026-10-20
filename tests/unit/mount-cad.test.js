@@ -297,7 +297,7 @@ describe('PENCERE — kitin bölümleri, tek eylem, sihirbazla AYNI üreticiler'
     expect(kat(d)).toEqual(['dosya', 'kayit']);
     expect(d.querySelector('[data-mnt-cad-kayit]').textContent).toMatch(/tulga\.stp\s+11\.694 parça · 2 rol · 420 MB/);
     const satir = [...d.querySelectorAll('.ve-fp-kat[data-k="kayit"] tbody tr')].map((r) => [...r.cells].map((c) => c.textContent));
-    expect(satir).toEqual([['Motor', 'Motor', '1.120,0'], ['Sağ ön', 'Takoz', '—']]);
+    expect(satir).toEqual([['Motor', 'Motor', '1.120,0', '—'], ['Sağ ön', 'Takoz', '—', '—']]);   // Daire: adım 5
     expect(d.textContent).toMatch(/Rollerin STEP dosyasını seçin ya da buraya bırakın\./);
   });
 

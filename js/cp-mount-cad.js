@@ -13,8 +13,9 @@
 // da hesap ağı beklerken çubuk + Vazgeç, dosya hazırken "3B'de aç".
 //
 // ROLLER PROJEYLE, DOSYA DEĞİL: bileşenin verisi `data.cad` rol verilen
-// düğümlerin örnek yolunu, rolünü ve kütlesini taşır (js/mount-step.js →
-// veMntStpRolKaydi; oturum her değişimde yazar). Dosya açık değilken pencere
+// düğümlerin örnek yolunu, rolünü, kütlesini ve takozun 3B'de seçilen
+// dairesini taşır (js/mount-step.js → veMntStpRolKaydi; oturum her değişimde
+// yazar). Dosya açık değilken pencere
 // kaydı "Kayıtlı roller" föyünde gösterir; aynı dosya okununca roller yoldan
 // geri gelir. Tip tek kopya (`maxInstances: 1`): modülün CAD'i tek.
 //
@@ -97,14 +98,18 @@ function _mntCadDosyaHTML(s, k){
     + ' onclick="veMntWizStpKapat()">' + _mntCadIkon('x') + '</button></div>';
   return h + '</div>';
 }
-// Kayıtlı roller — dosya açık değilken: parça, rolü, kütlesi
+// Kayıtlı roller — dosya açık değilken: parça, rolü, kütlesi, takozun seçilen dairesi
 function _mntCadKayitHTML(k){
-  var t = _mntFoyAc([{ b:'Parça', gen:'50%' }, { b:'Rol', gen:'32%', sinif:'sol' }, { b:'Kütle <u>[kg]</u>', gen:'18%' }], 'Kayıtlı roller', 've-mnt-cad-kayit');
+  var t = _mntFoyAc([{ b:'Parça', gen:'40%' }, { b:'Rol', gen:'26%', sinif:'sol' }, { b:'Kütle <u>[kg]</u>', gen:'16%' },
+                     { b:'Daire <u>[mm]</u>', gen:'18%' }], 'Kayıtlı roller', 've-mnt-cad-kayit');
   k.roller.forEach(function(r){
     var yol = Array.isArray(r.yol) ? r.yol.join(' › ') : '';
+    var n = r.nokta && Array.isArray(r.nokta.c) && +r.nokta.r > 0 ? r.nokta : null;
     t += '<tr><td title="' + _mntCadEsc(yol) + '">' + _mntCadEsc(r.ad || (r.yol && r.yol[r.yol.length - 1]) || '—') + '</td>'
       + '<td class="sol">' + _mntCadEsc(_mntCadAd(r.rol)) + '</td>'
-      + '<td>' + (+r.kg > 0 ? veSayi(+r.kg, 1) : '—') + '</td></tr>';
+      + '<td>' + (+r.kg > 0 ? veSayi(+r.kg, 1) : '—') + '</td>'
+      + '<td' + (n ? ' title="' + _mntCadEsc(n.c.map(function(v){ return veSayi(Math.round(v * 1000) / 1000, 3); }).join('; ')) + '"' : '') + '>'
+      + (n ? 'Ø ' + veSayi(2 * n.r, 1) : '—') + '</td></tr>';
   });
   return t + _MNT_FOY_KAPA;
 }

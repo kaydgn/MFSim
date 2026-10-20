@@ -11704,7 +11704,11 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-tbl th:nth-child(1), .ve-mw-3b-tbl td:nth-child(1){ width:36%; }
 .ve-mw-3b-tbl th:nth-child(2), .ve-mw-3b-tbl td:nth-child(2){ width:40%; text-align:right; }
 .ve-mw-3b-tbl th:nth-child(3), .ve-mw-3b-tbl td:nth-child(3){ width:24%; }
-.ve-mw-3b-tbl.ve-mw-3b-tbl-takoz th:nth-child(1), .ve-mw-3b-tbl.ve-mw-3b-tbl-takoz td:nth-child(1){ width:52%; }
-.ve-mw-3b-tbl.ve-mw-3b-tbl-takoz th:nth-child(2), .ve-mw-3b-tbl.ve-mw-3b-tbl-takoz td:nth-child(2){ width:48%; }
+.ve-mw-3b-tbl.ve-mw-3b-tbl-takoz th:nth-child(1), .ve-mw-3b-tbl.ve-mw-3b-tbl-takoz td:nth-child(1){ width:30%; }
+.ve-mw-3b-tbl.ve-mw-3b-tbl-takoz th:nth-child(2), .ve-mw-3b-tbl.ve-mw-3b-tbl-takoz td:nth-child(2){ width:46%; }
+.ve-mw-3b-tbl.ve-mw-3b-tbl-takoz th:nth-child(3), .ve-mw-3b-tbl.ve-mw-3b-tbl-takoz td:nth-child(3){ width:24%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-secondary); }
 .ve-mw-3b-tbl tr[data-uyari] td:nth-child(2){ color:var(--ink-warning); }
 .ve-mw-3b-tbl + .ve-mw-3b-tbl{ margin-top:10px; }
+/* TAKOZ NOKTASI — daireden seçim kipinde tuvalin imleci artı (js/cp-mount-3b.js) */
+.ve-mw-3b-nokta-kip:not(.surukle) canvas{ cursor:crosshair; }

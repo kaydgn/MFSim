@@ -248,6 +248,7 @@ function _suKenar(B, id, k){
   var p1 = _suTepe(B, a[1].ref, k), p2 = _suTepe(B, a[2].ref, k);
   var e = a[3] && a[3].ref ? _suEgri(B, a[3].ref, k) : null;
   c = _suKenarOrnek(B, e, p1, p2, _suBayrak(a[4]), a[1].ref === a[2].ref);
+  if(e && e.tip === 'CIRCLE') c.daire = true;          // ağın çember dizini (veStepUcgenTopla)
   B.kenar[key] = c;
   return c;
 }
@@ -1117,15 +1118,18 @@ function _suAlan(B, S, H, yon){
 // montaj 1,7 sn; tek başına gergi 0,9 sn).
 //   B: veStepUcgenBaglam(model) · M: dünya dönüşümü {R, t} · birim: {mm, derece}
 // bitir() döner: { uc, normal: Float32Array, ucgen: Uint32Array, cizgi: Float32Array
-//   (kenar parçaları, uç uca), kutu: [xmin, ymin, zmin, xmax, ymax, zmax],
+//   (kenar parçaları, uç uca), daire: Uint32Array, kutu: [xmin, ymin, zmin, xmax, ymax, zmax],
 //   yuz, ucgenli, kenarYuz }
+// `daire`: çember kenarların dizini, kenar başına üçlü [EDGE_CURVE kimliği,
+// ilk parçası, parça sayısı] — çizgideki parça hangi çemberin: Takoz'un 3B'si
+// tıklanan kenarın merkezini okuyucudan alır (veStepP21KenarCemberi).
 // bitir({ yerel: true }) ayrıca `yerel`i taşır: parçanın dönüşümsüz ağı (Float64)
 // — aynı parçanın öteki örnekleri veStepUcgenTasi ile ondan kurulur, bit bit
 // aynı sonuçla (dönüşüm aynı çift duyarlıklı sayılara aynı sırayla uygulanır).
 function veStepUcgenTopla(B, M, birim){
   var k = birim && birim.mm > 0 ? birim.mm : 1;
   var dk = birim && birim.derece > 0 ? birim.derece : 180 / Math.PI;
-  var uc = [], nor = [], ucg = [], cizgi = [], gor = {}, out = { yuz: 0, ucgenli: 0, kenarYuz: 0 };
+  var uc = [], nor = [], ucg = [], cizgi = [], daire = [], gor = {}, out = { yuz: 0, ucgenli: 0, kenarYuz: 0 };
   return {
     ekle: function(fid){
       var y = _suYuz(B, fid, k, dk);
@@ -1146,6 +1150,7 @@ function veStepUcgenTopla(B, M, birim){
         gor[eid] = 1;
         var pts = B.kenar[eid + '@' + k];
         if(!pts) return;
+        if(pts.daire && pts.length > 1) daire.push(eid, cizgi.length / 6, pts.length - 1);
         for(var j = 1; j < pts.length; j++){
           var a = pts[j - 1], b = pts[j];
           cizgi.push(a[0], a[1], a[2], b[0], b[1], b[2]);
@@ -1153,18 +1158,19 @@ function veStepUcgenTopla(B, M, birim){
       });
     },
     bitir: function(secenek){
-      var yerel = { uc: uc, nor: nor, ucgen: new Uint32Array(ucg), cizgi: cizgi,
+      var yerel = { uc: uc, nor: nor, ucgen: new Uint32Array(ucg), cizgi: cizgi, daire: new Uint32Array(daire),
                     yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
       var r = veStepUcgenTasi(yerel, M);
       if(secenek && secenek.yerel)
         r.yerel = { uc: new Float64Array(uc), nor: new Float64Array(nor), ucgen: yerel.ucgen, cizgi: new Float64Array(cizgi),
-                    yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
+                    daire: yerel.daire, yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
       return r;
     }
   };
 }
-// Yerel ağ (dönüşümsüz) → bir örneğin dünya ağı. Üçgen dizisi ORTAKTIR (aynı
-// Uint32Array): örnekler yalnız konumda ayrışır. Kutu kenar noktalarını da sayar.
+// Yerel ağ (dönüşümsüz) → bir örneğin dünya ağı. Üçgen ve çember dizisi
+// ORTAKTIR (aynı Uint32Array): örnekler yalnız konumda ayrışır. Kutu kenar
+// noktalarını da sayar.
 function veStepUcgenTasi(y, M){
   var R = M ? M.R : [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t = M ? M.t : [0, 0, 0];
   var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
@@ -1190,7 +1196,7 @@ function veStepUcgenTasi(y, M){
   }
   var uc = nokta(y.uc), cizgi = nokta(y.cizgi);
   return { yuz: y.yuz, ucgenli: y.ucgenli, kenarYuz: y.kenarYuz,
-           uc: uc, normal: nor, ucgen: y.ucgen, cizgi: cizgi, kutu: kutu };
+           uc: uc, normal: nor, ucgen: y.ucgen, cizgi: cizgi, daire: y.daire || new Uint32Array(0), kutu: kutu };
 }
 function veStepUcgenParca(B, yuzler, M, birim){
   var t = veStepUcgenTopla(B, M, birim);

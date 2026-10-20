@@ -891,13 +891,15 @@ function _stpGeometri(model, sr, srrKomsu, uyarilar){
 // ── 8 · YÜZ ─────────────────────────────────────────────────────────────
 // Bir yüzün dünya koordinatında analitik tanımı ve sınır çemberleri. Yalnız
 // FEAD'in ihtiyaç duyduğu yüzey tipleri çözülür; diğerleri tipiyle döner.
-//   { id, tip, o, z, r, yariAci, R, rk, cemberler: [{c, n, r}] }
+// `ayni`: yüzün yönü yüzeyinkiyle aynı mı (yüzün normali = ayni ? z : −z;
+// düzlemde dışa bakan normal). Çemberin `kenar`ı EDGE_CURVE kimliği.
+//   { id, tip, ayni, o, z, r, yariAci, R, rk, cemberler: [{c, n, r, kenar}] }
 function veStepP21Yuz(model, yuzId, M, birim){
   var k = birim && birim.mm > 0 ? birim.mm : 1;
   var dk = birim && birim.derece > 0 ? birim.derece : 180 / Math.PI;
   var a = veStepP21Varlik(model, yuzId).a;              // ADVANCED_FACE(ad, sınırlar, yüzey, aynı_yön)
   var sid = a[2].ref, st = veStepP21Tip(model, sid);
-  var out = { id: yuzId, tip: st, cemberler: [] };
+  var out = { id: yuzId, tip: st, ayni: !(a[3] && a[3].e === 'F'), cemberler: [] };
   if(st === 'CYLINDRICAL_SURFACE' || st === 'CONICAL_SURFACE' || st === 'TOROIDAL_SURFACE'
      || st === 'SPHERICAL_SURFACE' || st === 'PLANE'){
     var s = veStepP21Varlik(model, sid).a;
@@ -916,7 +918,7 @@ function veStepP21Yuz(model, yuzId, M, birim){
     _stpRefler(dongu.a[1]).forEach(function(oe){
       var kenar = veStepP21Varlik(model, oe).a[3];           // ORIENTED_EDGE(ad, *, *, kenar, yön)
       var c = kenar && kenar.ref ? _stpKenarCemberi(model, kenar.ref, M, k) : null;
-      if(c) out.cemberler.push(c);
+      if(c){ c.kenar = kenar.ref; out.cemberler.push(c); }
     });
   });
   return out;
@@ -991,6 +993,14 @@ function _stpKirpik(model, id, M, k){
   return { tip: bt, L: NaN };
 }
 
+// Bir kenarın çemberi (dünya, mm) — kenar çember değilse null. Takoz'un 3B
+// seçimi buradan okur: dairenin merkezi dosyada yazılı sayıdır, ağdan değil.
+//   { c, n, r }
+function veStepP21KenarCemberi(model, kenarId, M, birim){
+  var t = kenarId ? veStepP21Tip(model, kenarId) : '';
+  if(t !== 'EDGE_CURVE') return null;
+  return _stpKenarCemberi(model, kenarId, M, birim && birim.mm > 0 ? birim.mm : 1);
+}
 function _stpKenarCemberi(model, kenarId, M, k){
   var e = veStepP21Varlik(model, kenarId);
   if(!e || e.t !== 'EDGE_CURVE') return null;
@@ -1393,6 +1403,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veStepP21YonUygula: veStepP21YonUygula,
     veStepP21Montaj: veStepP21Montaj,
     veStepP21Yuz: veStepP21Yuz,
+    veStepP21KenarCemberi: veStepP21KenarCemberi,
     veStepP21Baslik: veStepP21Baslik,
     veStepP21Agac: veStepP21Agac,
     veStepP21AgacIs: veStepP21AgacIs,

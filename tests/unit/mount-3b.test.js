@@ -92,3 +92,62 @@ describe('ALT DİZİ — aktarım yalnız sihirbazın 3B\'sinde', () => {
     expect(veMntWiz3bAltHTML(st, -1, { aktar: false })).toMatch(/id="ve-mw-3b-hesapla"/);
   });
 });
+
+// ── TAKOZ NOKTASI — daireden seçim (Takoz adım 5) ─────────────────────────
+// Kip ve kenar araması WebGL ister (tests/e2e/mount-nokta.spec.js); burada
+// kipin düğmeleri, takoz tablosunun Nokta sütunu ve ekran izdüşümü.
+describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
+  const S = require('../helpers/step-takoz.js');
+  const son = veMntStpOku(S.tulgaKalibi({}));
+  const i = (ad) => son.agac.findIndex((d) => d.ad === ad);
+  const st = () => {
+    const s = { sonuc: son, roller: son.agac.map(() => null), coz: null, kutle: {}, nokta: {} };
+    s.roller[i('Sol ön takoz')] = 'mnt-mount';
+    s.roller[i('Motor bloğu')] = 'mnt-motor';
+    return s;
+  };
+  const alt = (s, sec, opt) => { const d = document.createElement('div'); d.innerHTML = veMntWiz3bAltHTML(s, sec, opt); return d; };
+
+  test('düğme yalnız seçimin birimi takozken; parçası seçilince de (birim ata)', () => {
+    const s = st();
+    expect(alt(s, i('Sol ön takoz')).querySelector('#ve-mw-3b-nokta')).not.toBe(null);
+    expect(alt(s, i('Sol ön takoz taban flanşı')).querySelector('#ve-mw-3b-nokta')).not.toBe(null);
+    expect(alt(s, i('Motor bloğu')).querySelector('#ve-mw-3b-nokta')).toBe(null);
+    expect(alt(s, i('Ön takoz')).querySelector('#ve-mw-3b-nokta')).toBe(null);          // rolsüz
+    expect(alt(s, -1).querySelector('#ve-mw-3b-nokta')).toBe(null);
+  });
+
+  test('kip basılı ve yönlendirmesi yalnız kipte; "Öneriye dön" yalnız seçilmiş dairede', () => {
+    const s = st(), d0 = alt(s, i('Sol ön takoz'));
+    expect(d0.querySelector('#ve-mw-3b-nokta').getAttribute('aria-pressed')).toBe('false');
+    expect(d0.querySelector('.ve-mw-3b-nokta .ve-fw-3b-dizi-ad')).toBe(null);
+    expect(d0.querySelector('#ve-mw-3b-nokta-oneri')).toBe(null);
+    const d1 = alt(s, i('Sol ön takoz'), { nokta: true });
+    expect(d1.querySelector('#ve-mw-3b-nokta').getAttribute('aria-pressed')).toBe('true');
+    expect(d1.querySelector('.ve-mw-3b-nokta .ve-fw-3b-dizi-ad').textContent).toBe('Takozun dairesel kenarını seçin.');
+    s.nokta[i('Sol ön takoz')] = { yol: ['A.1'], c: [0, 0, 0], r: 5 };
+    const d2 = alt(s, i('Sol ön takoz taban flanşı'));
+    expect(d2.querySelector('#ve-mw-3b-nokta-oneri').getAttribute('onclick')).toBe('veMntWizStpNokta(' + i('Sol ön takoz') + ', null)');
+  });
+
+  test('takoz tablosu: konum 0,001 mm, Nokta sütunu kaynağı; gövde 0,1 mm', () => {
+    const s = st();
+    s.coz = veMntStpCoz(son, s.roller);
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bPanelHTML(s, -1);
+    const tr = d.querySelector('[data-ve-3b-takozlar] tbody tr');
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-takozlar] th')).map((x) => x.firstChild.textContent)).toEqual(['Takoz', 'Konum', 'Nokta']);
+    expect(Array.from(tr.cells).map((c) => c.textContent.trim())).toEqual(['Sol ön takoz', '439,957; −355,957; 499,855', 'Üst yüz Ø 70,0']);
+    expect(tr.getAttribute('data-ve-3b-nokta')).toBe('eksen');
+    expect(tr.hasAttribute('data-uyari')).toBe(false);
+    expect(d.querySelector('[data-ve-3b-govdeler] tbody tr td:nth-child(2)').textContent).toBe('125,0; 0,1; 750,0');
+  });
+
+  test('ekran izdüşümü: kameranın önündeki nokta piksele, arkasındaki null', () => {
+    // Birim izdüşüm (sütun düzeni): x, y doğrudan NDC; w = −z
+    const e = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0];
+    expect(_mw3bEkran(e, 0, 0, -1, 200, 100)).toEqual([100, 50]);
+    expect(_mw3bEkran(e, 0.5, -0.5, -1, 200, 100)).toEqual([150, 75]);
+    expect(_mw3bEkran(e, 0, 0, 1, 200, 100)).toBe(null);
+  });
+});
