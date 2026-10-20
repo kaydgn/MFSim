@@ -19,7 +19,7 @@
  *   · 6 pencerenin sağ sütununda Uygunluk yok (modül kartı, Örnek, Takoz
  *     Özellikleri, 2D, 3D Görüntüleyici, Koordinat)
  *   (2026-10-16: 2D Görünüm'ün adı Görünümler; 3D Görüntüleyici tek sekmeli
- *   YER TUTUCU — bağışı tipin beyanından, aşağıdaki `yerTutucu`.)
+ *   YER TUTUCUydu — 2026-10-20'de CAD'in evi oldu, bağışı da kalktı.)
  *
  * PENCERE SONUÇ GÖSTERMEZ (kullanıcı kararı 2026-10-16, Takoz): *"TÜM
  * BİLEŞENLERİN İÇİNDE sonuç ile alakalı bir bilgi, bir sonuç vs olmayacak …
@@ -105,6 +105,8 @@ Object.keys(pa).forEach((k) => { if (global[k] === undefined) global[k] = pa[k];
 global.veMntParamCiz = require('../../js/mount-param-ciz.js');
 const ps = require('../../js/cp-mount-param-sonuc.js');
 Object.keys(ps).forEach((k) => { if (global[k] === undefined) global[k] = ps[k]; });
+const cad = require('../../js/cp-mount-cad.js');
+Object.keys(cad).forEach((k) => { if (global[k] === undefined) global[k] = cad[k]; });
 
 const PK = require('../../js/pencere-kabuk.js');
 
@@ -130,17 +132,14 @@ function dom(html) { const d = document.createElement('div'); d.innerHTML = html
 // AİLE DENETİMİ — iki modüle AYNI soru. Döner: bulgu listesi (boşsa ailede).
 // TEK GÖVDE: gövdenin üstünde eksik bandından başka bir şey yok, sekme şeridi
 // ve gizli kategori yok. Her kategori BAŞLIKLI bir bölüm taşır — tek gövdede
-// başlıksız kategori sahipsiz bir not olurdu (sekme adı bunu örtüyordu);
-// bunu yalnız tipin BEYANI bağışlar: YER TUTUCU (componentDefs[t].yerTutucu =
-// notun metni; 3D Görüntüleyici — "Klasik 3B" gerçek CAD dosyasına ayrıldı).
-// `bagis` false: beyan yok sayılır (bağışın gerçekten beyandan geldiğini
-// ölçmek için).
+// başlıksız kategori sahipsiz bir not olurdu (sekme adı bunu örtüyordu).
+// Bağış YOK: tek bağışlanan 3D Görüntüleyici'nin yer tutucusuydu ve
+// 2026-10-20'de kalktı (CAD'in evi, js/cp-mount-cad.js).
 // SAĞ SÜTUN: FEAD'de Uygunluk taşır; Takoz'da Uygunluk YASAK (sonuç yalnız
 // raporda) ve sütun içeriği varsa çizilir — yoksa kabuk tek sütun.
-const yerTutucu = (t) => !!(t && componentDefs[t] && componentDefs[t].yerTutucu);
 const takozTipi = (t) => !!t && (/^mnt-/.test(t) || t === 'mount-analysis');
 const uygunlukVar = (el) => [...el.querySelectorAll('.ve-fp-sect b')].some((x) => x.textContent.trim() === 'Uygunluk');
-function aile(d, t, bagis = true) {
+function aile(d, t) {
   const b = [];
   const fp = d.querySelector('.ve-fp');
   if (!fp) return ['kabuk yok'];
@@ -156,9 +155,7 @@ function aile(d, t, bagis = true) {
   if (!kat.length) b.push('kategori yok');
   kat.filter((k) => !k.classList.contains('ve-fp-kat')).forEach((k) => b.push('kategorisiz gövde öğesi ' + (k.className || k.tagName)));
   kat.filter((k) => k.hidden).forEach((k) => b.push('gizli kategori ' + k.getAttribute('data-k')));
-  if (!(bagis && yerTutucu(t))) {
-    kat.filter((k) => !k.querySelector('.ve-fp-sect > b')).forEach((k) => b.push('başlıksız kategori ' + k.getAttribute('data-k')));
-  }
+  kat.filter((k) => !k.querySelector('.ve-fp-sect > b')).forEach((k) => b.push('başlıksız kategori ' + k.getAttribute('data-k')));
   const yan = fp.querySelector('.ve-fp-split > .ve-fp-side');
   if (takozTipi(t)) {
     if (uygunlukVar(d)) b.push('Uygunluk (sonuç) pencerede');
@@ -294,16 +291,22 @@ describe('AİLE — iki modülün bütün pencereleri AYNI iskelet', () => {
     expect(disarida).toEqual([]);
   });
 
-  // Bağış kural değil İSTİSNA: başlıksız kategoriyi yalnız YER TUTUCU beyanı
-  // bağışlar (pencerenin tek içeriği tipin notu); beyansız okunursa aynı
-  // pencere ailenin dışında kalır.
-  test('başlıksız kategoriyi yalnız tipin YER TUTUCU beyanı bağışlar; Görünümler çizim + işaretleri tek kategoride', () => {
+  // YER TUTUCU KALKTI (2026-10-20): hiçbir tip başlıksız kategori beyan etmez;
+  // 3D Görüntüleyici dosyasız da, kayıtlı rollerle de başlıklı bölümlerle ve
+  // tek eylemle ailede (dosyalı hâller: mount-cad.test.js).
+  test('yer tutucu beyanı yok; 3D Görüntüleyici iki hâlde ailede; Görünümler çizim + işaretleri tek kategoride', () => {
     takozKur();
-    expect(FEAD_TIP.concat(TAKOZ_TIP).filter(yerTutucu)).toEqual(['mnt-viewer']);
-    expect(Object.keys(componentDefs).filter((t) => componentDefs[t].tekSekme)).toEqual([]);   // tek sekme beyanı kalktı
+    expect(Object.keys(componentDefs).filter((t) => componentDefs[t].yerTutucu || componentDefs[t].tekSekme)).toEqual([]);
     const v = takozPencere('mnt-viewer');
-    expect(aile(v, 'mnt-viewer', false)).toEqual(['başlıksız kategori sahne']);   // beyansız okunursa ailenin dışında
-    expect(v.querySelector('.ve-fp-govde > .ve-fp-kat').textContent.trim()).toBe(componentDefs['mnt-viewer'].yerTutucu);
+    expect(aile(v, 'mnt-viewer')).toEqual([]);
+    expect([...v.querySelectorAll('.ve-fp-govde > .ve-fp-kat')].map((k) => k.getAttribute('data-k'))).toEqual(['dosya']);
+    const n = global.nodes.find((x) => x.type === 'mnt-viewer');
+    n.data.cad = { surum: 1, dosya: 'g.stp', bayt: 1024, imza: 'x', parca: 3, roller: [{ yol: ['MOTOR.1'], rol: 'mnt-motor', ad: 'Motor', kg: 412 }] };
+    try {
+      const k = takozPencere('mnt-viewer');
+      expect(aile(k, 'mnt-viewer')).toEqual([]);
+      expect([...k.querySelectorAll('.ve-fp-govde > .ve-fp-kat')].map((x) => x.getAttribute('data-k'))).toEqual(['dosya', 'kayit']);
+    } finally { delete n.data.cad; }
     const g = takozPencere('mnt-2dview').querySelector('.ve-fp-govde > .ve-fp-kat');
     expect(g.querySelector('.ve-mnt-akso-kap svg.ve-mnt2d-akso')).not.toBeNull();
     expect([...g.querySelectorAll('.ve-fp-sect b')].map((x) => x.textContent)).toEqual(['İşaretler']);

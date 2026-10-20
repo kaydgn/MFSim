@@ -31,6 +31,8 @@ eval(fs.readFileSync(path.join(__dirname, '../../js/components.js'), 'utf8'));
 global.componentDefs = componentDefs;
 global.veMntBrief = require('../../js/mount-brief.js');
 const cp = require('../../js/cp-mount.js');
+Object.keys(cp).forEach((k) => { if (global[k] === undefined) global[k] = cp[k]; });
+const cad = require('../../js/cp-mount-cad.js');
 const rep = require('../../js/cp-mount-report.js');
 ['veMntUygunluk', 'veMntRaporOpts', '_mntRepCaseTr', '_mntRepIsolation', '_mntRepEngine', '_mntRepZeta']
   .forEach((k) => { global[k] = rep[k]; });
@@ -60,7 +62,7 @@ function pencere(n) {
   if (n.type === 'mnt-solver') return cp.getMntSolverPropertiesHTML(n);
   if (n.type === 'mnt-library') return cp.getMntLibraryPropertiesHTML(n);
   if (n.type === 'mnt-example') return cp.getMntExamplePropertiesHTML(n);
-  if (n.type === 'mnt-viewer') return cp.getMntViewerPropertiesHTML(n);
+  if (n.type === 'mnt-viewer') return cad.getMntViewerPropertiesHTML(n);
   if (n.type === 'mnt-coordframe') return cp.getMntCoordFramePropertiesHTML(n);
   if (n.type === 'mnt-2dview') return cp.getMnt2DViewPropertiesHTML(n);
   if (n.type === 'mnt-report') return cp.getMntReportPropertiesHTML(n);

@@ -403,6 +403,9 @@ function veResetSubtopoNav() {
   // Parametrik Analiz'in taramaları da oturumluk (düğüm kimliğiyle): yeni
   // projede aynı kimlikli düğüm öncekinin taramasını "eskimiş" diye taşırdı.
   if(typeof veMntParamUnut === 'function') veMntParamUnut();
+  // Takoz'un STEP oturumu da (dosya + roller, modül kimliğiyle): yeni projede
+  // aynı kimlikli modül öncekinin dosyasını ve rollerini gösteriyordu.
+  if(typeof veMntWizStpUnut === 'function') veMntWizStpUnut();
   // Breadcrumb çipleri stack boşalınca kendini kaldırır; sidebar kapsamı köke döner.
   if(typeof veAracUpdateBreadcrumb === 'function') veAracUpdateBreadcrumb();
   if(typeof veMntUpdateBreadcrumb === 'function') veMntUpdateBreadcrumb();
