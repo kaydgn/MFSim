@@ -59,9 +59,18 @@ function _mstOkuyucu(){
   return null;
 }
 function _mstUcgen(){
-  if(typeof veStepUcgenBaglam === 'function') return { Baglam: veStepUcgenBaglam, Parca: veStepUcgenParca };
-  if(typeof require === 'function'){ try { var m = require('./step-ucgen.js'); return { Baglam: m.veStepUcgenBaglam, Parca: m.veStepUcgenParca }; } catch(e){ return null; } }
+  if(typeof veStepUcgenBaglam === 'function')
+    return { Baglam: veStepUcgenBaglam, Parca: veStepUcgenParca, Topla: veStepUcgenTopla, Tasi: veStepUcgenTasi, Birak: veStepUcgenBirak };
+  if(typeof require === 'function'){
+    try {
+      var m = require('./step-ucgen.js');
+      return { Baglam: m.veStepUcgenBaglam, Parca: m.veStepUcgenParca, Topla: m.veStepUcgenTopla, Tasi: m.veStepUcgenTasi, Birak: m.veStepUcgenBirak };
+    } catch(e){ return null; }
+  }
   return null;
+}
+function _mstSimdi(){
+  return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
 }
 
 // OKUMA YÜZ TANIMI ÇIKARMAZ (`yuz: false`): Takoz parçayı üçgen ağından
@@ -183,6 +192,111 @@ function veMntStpParcaAgi(sonuc, pi, baglam){
   return U.Parca(B, g.yuzler, g.M, g.birim);
 }
 
+// ── AĞ İŞİ — parçaların görüntü ağı, parça parça ─────────────────────────
+// TEK ÜRETİCİ: 3B görüntüleyici bütün montajı (`tum`), hesap rol verilen
+// birimlerin parçalarını (`iste`, öne alınır) ister; ikisi de aynı önbelleğe
+// (`ag` — sihirbazın s.ag'si) yazar. İş yüz yüze ilerler ve her yüzden sonra
+// saati sorar: `adim(bitis)` saat `bitis`i geçince döner (true: istenen kalmadı).
+//  • Bağlamın ara verisi PARÇA BİTİNCE bırakılır (veStepUcgenBirak): tek bağlam
+//    bütün montajda birikince 420 MB'lık dosyada yığın 3,2 GB'a çıkıyordu.
+//  • Aynı temsilin (`sr`) birden çok örneği varsa yerel ağı BİR KEZ üçgenlenir,
+//    kalan örneklere taşınır (bit bit aynı) ve son örnekle bırakılır.
+//  • `bitti(i, a)` her parça bitince (görüntüleyici çizimine ekler).
+// İş: { iste(liste), uret(liste), tum (bool), adim(bitis), eksik(liste), say, sonraki() }
+function _mstSekil(g){
+  return g && g.sr ? g.sr + '@' + g.birim.mm + '@' + g.birim.derece : null;
+}
+function _mstYuzlu(g){ return !!(g && g.yuzler && g.yuzler.length && g.birim && g.birim.mm > 0); }
+function veMntStpAgIs(sonuc, ag, secenek){
+  var U = _mstUcgen(), geo = (sonuc && sonuc._geo) || [];
+  var J = { sonuc: sonuc, ag: ag, U: U, B: null, tum: false, imlec: 0, oncelik: [], oi: 0, cur: null,
+            paylas: {}, kalan: {}, bitti: (secenek && secenek.bitti) || null,
+            say: { parca: 0, yuz: 0, ucgen: 0, parcaToplam: 0, yuzToplam: 0 } };
+  geo.forEach(function(g, i){
+    if(!_mstYuzlu(g)) return;
+    J.say.parcaToplam++; J.say.yuzToplam += g.yuzler.length;
+    if(ag[i]){ J.say.parca++; J.say.yuz += g.yuzler.length; return; }
+    var key = _mstSekil(g);
+    if(key) J.kalan[key] = (J.kalan[key] || 0) + 1;
+  });
+  // Öncelikli istek (hesap) — öncekinin yerine geçer; [] isteği düşürür
+  J.iste = function(liste){ J.oncelik = (liste || []).slice(); J.oi = 0; };
+  // Listedeki eksik ağları EŞZAMANLI üretir; süren istekler (bütün montaj,
+  // öncelikli liste) sonra kaldığı yerden sürer
+  J.uret = function(liste){
+    var tum = J.tum, onc = J.oncelik, oi = J.oi;
+    J.tum = false; J.oncelik = (liste || []).slice(); J.oi = 0;
+    while(!_mstAgAdim(J, Infinity));
+    J.tum = tum; J.oncelik = onc; J.oi = oi;
+  };
+  J.eksik = function(liste){
+    var n = 0;
+    (liste || []).forEach(function(i){ if(!J.ag[i] && _mstYuzlu(geo[i])) n++; });
+    return n;
+  };
+  // Sıradaki parça: önce istenenler, sonra (bütün montaj isteniyorsa) ağaç sırası
+  J.sonraki = function(){
+    var i;
+    while(J.oi < J.oncelik.length){
+      i = J.oncelik[J.oi++];
+      if(!J.ag[i] && _mstYuzlu(geo[i])) return i;
+    }
+    if(J.oi) { J.oncelik = []; J.oi = 0; }
+    if(!J.tum) return -1;
+    while(J.imlec < geo.length){
+      i = J.imlec++;
+      if(!J.ag[i] && _mstYuzlu(geo[i])) return i;
+    }
+    return -1;
+  };
+  J.adim = function(bitis){ return _mstAgAdim(J, bitis); };
+  return J;
+}
+function _mstAgKoy(J, i, a, key){
+  var g = J.sonuc._geo[i];
+  J.ag[i] = a;
+  if(key && J.kalan[key] !== undefined && --J.kalan[key] <= 0){ delete J.kalan[key]; delete J.paylas[key]; }
+  J.say.parca++; J.say.yuz += g.yuzler.length; J.say.ucgen += a.ucgen.length / 3;
+  if(J.bitti) J.bitti(i, a);
+}
+function _mstAgAdim(J, bitis){
+  var geo = J.sonuc._geo, U = J.U;
+  if(!U) return true;
+  for(;;){
+    if(!J.cur){
+      var i = J.sonraki();
+      if(i < 0) return true;
+      var g = geo[i], key = _mstSekil(g);
+      if(key && J.paylas[key]){                    // aynı şeklin örneği: taşınır
+        _mstAgKoy(J, i, U.Tasi(J.paylas[key], g.M), key);
+        if(_mstSimdi() > bitis) return false;
+        continue;
+      }
+      if(!J.B) J.B = U.Baglam(J.sonuc._model, VE_MNT_STP_UCGEN);
+      J.cur = { i: i, key: key, topla: U.Topla(J.B, g.M, g.birim), j: 0 };
+    }
+    var c = J.cur, yz = geo[c.i].yuzler;
+    while(c.j < yz.length){
+      c.topla.ekle(yz[c.j++]);
+      if(c.j < yz.length && _mstSimdi() > bitis) return false;
+    }
+    var tut = !!(c.key && J.kalan[c.key] > 1);
+    var a = c.topla.bitir({ yerel: tut });
+    if(tut) J.paylas[c.key] = a.yerel;
+    delete a.yerel;
+    U.Birak(J.B);
+    J.cur = null;
+    _mstAgKoy(J, c.i, a, c.key);
+    if(_mstSimdi() > bitis) return false;
+  }
+}
+// Eksik ağları EŞZAMANLI üretir (dilimsiz yol: küçük montaj, testler) — aynı
+// iş, ayrı örnek: bağlam parça başına bırakılır, şekil paylaşılır.
+function veMntStpAgUret(sonuc, ag, liste){
+  veMntStpAgIs(sonuc, ag).uret(liste);
+  return ag;
+}
+
 // ── ÇÖZÜM — yalnız rol verilen birimler ───────────────────────────────────
 // opt.ag(pi) → parçanın ağı ya da null (3B görüntüleyicinin önbelleği);
 // verilmezse ağ burada üçgenlenir. Döner (asla fırlatmaz):
@@ -196,12 +310,15 @@ function veMntStpCoz(sonuc, roller, opt){
   var birimler = veMntStpBirimler(sonuc, roller || []);
   if(!birimler.length){ out.hatalar.push('Rol verilmiş parça yok.'); return out; }
   var U = _mstUcgen(), B = null;
+  // Önbellek yoksa (testler) parça burada üçgenlenir — bağlam parça başına bırakılır
   var agAl = function(pi){
     var a = (typeof opt.ag === 'function') ? opt.ag(pi) : null;
     if(a) return a;
     if(!U) return null;
     if(!B) B = U.Baglam(sonuc._model, VE_MNT_STP_UCGEN);
-    return veMntStpParcaAgi(sonuc, pi, B);
+    a = veMntStpParcaAgi(sonuc, pi, B);
+    U.Birak(B);
+    return a;
   };
   birimler.forEach(function(b){
     var agler = b.parcalar.map(agAl).filter(Boolean);
@@ -268,6 +385,7 @@ if(typeof module !== 'undefined' && module.exports){
     VE_MNT_STP_ROLLER: VE_MNT_STP_ROLLER, VE_MNT_STP_CIP: VE_MNT_STP_CIP, VE_MNT_STP_OKUMA: VE_MNT_STP_OKUMA,
     veMntStpOku: veMntStpOku, veMntStpOkuDilimli: veMntStpOkuDilimli,
     veMntStpBirimler: veMntStpBirimler, veMntStpAgOzellik: veMntStpAgOzellik,
-    veMntStpParcaAgi: veMntStpParcaAgi, veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit
+    veMntStpParcaAgi: veMntStpParcaAgi, veMntStpAgIs: veMntStpAgIs, veMntStpAgUret: veMntStpAgUret,
+    veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit
   };
 }

@@ -135,12 +135,15 @@ describe('ÜÇGEN İNCELİĞİ TEK YERDEN', () => {
     expect(kendi.V).toBe(sabit.V);
     expect(kendi.V).not.toBe(ince.V);
   });
-  test('sihirbazın hesabı ve 3B görüntüleyici aynı sabiti geçer; FEAD varsayılanda', () => {
+  // Bağlamı yalnız mount-step.js kurar (ortak ağ işi · hesap) ve hep sabitle:
+  // 3B görüntüleyici ve sihirbaz ağı ortak işten alır, kendi bağlamını kurmaz.
+  test('Takoz bağlamı yalnız ortak işte kurulur ve sabitin ağını kullanır; FEAD varsayılanda', () => {
     ['cp-mount-3b.js', 'cp-mount-wizard.js'].forEach((f) => {
-      const c = kaynak(f).match(/veStepUcgenBaglam\([^)]*\)/g) || [];
-      expect({ f, n: c.length }).toEqual({ f, n: 1 });
-      expect(c[0]).toMatch(/VE_MNT_STP_UCGEN/);
+      expect({ f, n: (kaynak(f).match(/veStepUcgenBaglam\(/g) || []).length }).toEqual({ f, n: 0 });
     });
+    const c = kaynak('mount-step.js').match(/\.Baglam\([^)]*\)/g) || [];
+    expect(c.length).toBeGreaterThanOrEqual(3);
+    c.forEach((x) => expect(x).toMatch(/VE_MNT_STP_UCGEN/));
     expect(kaynak('cp-fead-3b.js')).toMatch(/veStepUcgenBaglam\(s\.sonuc\._model\)/);
   });
 });
@@ -211,5 +214,126 @@ describe('KAPALI OLMAYAN AĞ ve HATA YOLLARI', () => {
     M.VE_MNT_STP_CIP.forEach((t) => expect(M.VE_MNT_STP_ROLLER).toContain(t));
     M.VE_MNT_STP_ROLLER.forEach((t) => expect(t).toMatch(/^mnt-/));
     expect(M.VE_MNT_STP_ROLLER).toContain('mnt-mount');
+  });
+});
+
+// ── AĞ İŞİ — 3B ve hesap için TEK üretici (2026-10-20, Takoz adım 3) ─────
+// Ölçülen kusurlar: tek bağlam bütün montajda birikiyordu (420 MB'lık
+// montajda yığın tepesi 3,2 GB, sınır 4 GB); aynı parçanın örnekleri bağlamın
+// önbelleğiyle yeniden kullanılıyordu — bağlam bırakılınca yeniden
+// üçgenlenmesinler diye yerel ağ taşınır. Kapılar: bırakma her parçada,
+// taşınan örnek BİT BİT doğrudan üçgenlemeyle aynı, iş yüz yüze saati sorar,
+// öncelik ve durdurma.
+describe('AĞ İŞİ — parça parça, bağlam bırakılır, aynı şekil bir kez (veMntStpAgIs)', () => {
+  const U = require('../../js/step-ucgen.js');
+  const son = oku(S.tekrarliMontaj());
+  const geo = son._geo;
+  const brk = son.parcalar.filter((p) => p.ad === 'Braket').map((p) => p.i);
+  const govde = son.parcalar.filter((p) => p.ad === 'Gövde')[0].i;
+  const bayt = (a) => Buffer.from(a.buffer, a.byteOffset, a.byteLength);
+  const ayni = (a, b) => {
+    ['uc', 'normal', 'ucgen', 'cizgi'].forEach((k) => expect({ k, esit: bayt(a[k]).equals(bayt(b[k])) }).toEqual({ k, esit: true }));
+    expect(a.kutu).toEqual(b.kutu);
+  };
+  // Ölçü: tek bağlamla, her örnek kendi dönüşümüyle doğrudan üçgenleme
+  const dogrudan = (i) => U.veStepUcgenParca(U.veStepUcgenBaglam(son._model, M.VE_MNT_STP_UCGEN), geo[i].yuzler, geo[i].M, geo[i].birim);
+  const sahteSaat = () => { let t = 0; jest.spyOn(performance, 'now').mockImplementation(() => (t += 1)); return () => t; };
+  afterEach(() => { if (performance.now.mockRestore) performance.now.mockRestore(); });
+
+  test('montaj: braketin üç örneği aynı temsilde, gövde ayrı', () => {
+    expect(brk).toHaveLength(3);
+    expect(new Set(brk.map((i) => geo[i].sr)).size).toBe(1);
+    expect(geo[govde].sr).not.toBe(geo[brk[0]].sr);
+  });
+
+  test('her parça bittiğinde bağlamın ara verisi (eğri · kenar · yüzey · yüz) bırakılmış', () => {
+    const ag = [], izler = [];
+    const J = M.veMntStpAgIs(son, ag, { bitti: (i) => izler.push([i, ['egri', 'kenar', 'yuzey', 'yuz'].map((k) => Object.keys(J.B[k]).length)]) });
+    J.tum = true;
+    expect(J.adim(Infinity)).toBe(true);
+    expect(izler.map((x) => x[0]).sort()).toEqual(son.parcalar.map((p) => p.i).sort());
+    izler.forEach((x) => expect(x[1]).toEqual([0, 0, 0, 0]));
+  });
+
+  test('aynı şekil BİR KEZ üçgenlenir; örnekler doğrudan üçgenlemeyle bit bit aynı, üçgen dizisi ortak', () => {
+    const ag = [];
+    const J = M.veMntStpAgIs(son, ag);
+    J.tum = true;
+    J.adim(Infinity);
+    expect(J.B.sayac.yuz).toBe(geo[brk[0]].yuzler.length + geo[govde].yuzler.length);
+    brk.concat([govde]).forEach((i) => ayni(ag[i], dogrudan(i)));
+    expect(ag[brk[1]].ucgen).toBe(ag[brk[0]].ucgen);
+    expect(ag[brk[2]].ucgen).toBe(ag[brk[0]].ucgen);
+    expect(Object.keys(J.paylas)).toEqual([]);                 // son örnekle bırakıldı
+    expect(J.say).toMatchObject({ parca: 4, parcaToplam: 4, yuzToplam: 3 * geo[brk[0]].yuzler.length + geo[govde].yuzler.length });
+  });
+
+  test('SAAT: iş her yüzden sonra saati sorar — dilimi en çok bir yüz aşar', () => {
+    const saat = sahteSaat();
+    const ag = [];
+    const J = M.veMntStpAgIs(son, ag);
+    J.tum = true;
+    let dilim = 0, onceki = 0, enCok = 0;
+    while (!J.adim(saat() + 4)) {
+      const yuz = J.B ? J.B.sayac.yuz : 0;
+      enCok = Math.max(enCok, yuz - onceki);
+      onceki = yuz;
+      if (++dilim > 500) break;
+    }
+    expect(enCok).toBeLessThanOrEqual(5);
+    expect(dilim).toBeGreaterThanOrEqual(2);
+    expect(ag.filter(Boolean)).toHaveLength(4);
+  });
+
+  test('ÖNCELİK: hesabın listesi önce; boş istek düşürür; uret eşzamanlı ve süren isteği bozmaz', () => {
+    const sira = [];
+    const J = M.veMntStpAgIs(son, [], { bitti: (i) => sira.push(i) });
+    J.tum = true;
+    J.iste([govde]);
+    J.adim(Infinity);
+    expect(sira[0]).toBe(govde);
+    expect(sira).toHaveLength(4);
+
+    const sira2 = [], ag2 = [];
+    const J2 = M.veMntStpAgIs(son, ag2, { bitti: (i) => sira2.push(i) });
+    J2.iste([govde]);
+    J2.iste([]);
+    expect(J2.adim(Infinity)).toBe(true);
+    expect(sira2).toEqual([]);
+    J2.tum = true;
+    J2.iste([brk[2]]);
+    J2.uret([govde]);
+    expect(sira2).toEqual([govde]);
+    expect(J2.tum).toBe(true);
+    J2.adim(Infinity);
+    expect(sira2[1]).toBe(brk[2]);
+    expect(sira2).toHaveLength(4);
+    expect(J2.eksik(son.parcalar.map((p) => p.i))).toBe(0);
+  });
+
+  test('DURDUR: istek kalkınca yarım parça biter, yenisine başlanmaz', () => {
+    const saat = sahteSaat();
+    const ag = [];
+    const J = M.veMntStpAgIs(son, ag);
+    J.tum = true;
+    expect(J.adim(saat() + 2)).toBe(false);
+    expect(J.cur).not.toBeNull();
+    const yarim = J.cur.i;
+    J.tum = false;
+    expect(J.adim(Infinity)).toBe(true);
+    expect(ag[yarim]).toBeTruthy();
+    expect(ag.filter(Boolean)).toHaveLength(1);
+  });
+
+  test('eşzamanlı yol (veMntStpAgUret) yalnız listeyi üretir; hesap bağlamı da parça başına bırakır', () => {
+    const ag = M.veMntStpAgUret(son, [], [govde]);
+    expect(ag.filter(Boolean)).toHaveLength(1);
+    ayni(ag[govde], dogrudan(govde));
+    const B = U.veStepUcgenBaglam(son._model, M.VE_MNT_STP_UCGEN);
+    U.veStepUcgenParca(B, geo[brk[0]].yuzler, geo[brk[0]].M, geo[brk[0]].birim);
+    expect(Object.keys(B.yuzey).length).toBeGreaterThan(0);
+    U.veStepUcgenBirak(B);
+    expect(['egri', 'kenar', 'yuzey', 'yuz'].map((k) => Object.keys(B[k]).length)).toEqual([0, 0, 0, 0]);
+    expect(B.sayac.yuz).toBe(geo[brk[0]].yuzler.length);       // sayaç kalır
   });
 });

@@ -1133,7 +1133,8 @@ function veStepP21Metin(bayt){
 // aynı okumayı istediğinde ikinci bir kopya yerine buraya taşındı.)
 // Döner (asla fırlatmaz):
 //   { ok, hatalar[], uyarilar[], baslik, sureMs{oku,montaj,yuz}, agac[], parcalar[],
-//     _yuz[] (parça başına yüz tanımları), _model, _geo[] (üçgenleyicinin girdisi) }
+//     _yuz[] (parça başına yüz tanımları), _model,
+//     _geo[] (üçgenleyicinin girdisi: { yuzler, M, birim, egriler, sr }) }
 // `secenek.yuz === false`: parça başına yüz tanımı çıkarılmaz — `_yuz` boş,
 // `yuzSayisi` yüz KİMLİĞİ sayısı. Takoz onları okumuyor; 420 MB'ta okumanın
 // en uzun evresiydi (7,4 sn).
@@ -1175,7 +1176,8 @@ function _stpAgacAdim(A, out, model, bitis){
     var pi = out.parcalar.length;
     out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: sayi });
     if(A.yuz) out._yuz.push(yuzler);
-    out._geo.push({ yuzler: sayi ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [] });
+    // `sr`: şeklin temsili — aynı temsili taşıyan örnekler aynı yerel ağı paylaşır
+    out._geo.push({ yuzler: sayi ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [], sr: p.sr || null });
     for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
     A.k++;
     if(_stpSimdi() > bitis) break;

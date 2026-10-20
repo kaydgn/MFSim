@@ -913,6 +913,15 @@ olurdu.
       tepesinde 154 üçgenin 114'ü payı aşıyordu). Takoz'un inceliği 0,5 mm
       (`VE_MNT_STP_UCGEN`, js/mount-step.js); FEAD varsayılanda (0,1).
       Kapı: `step-ucgen.test.js` → *KELEPÇELİ B-SPLINE* + *kaburga tepesi*.
+    • **Bağlam parçalar arasında bırakılabilir** (`veStepUcgenBirak`, Takoz
+      adım 3): kenar bir parçanın yüzleri arasında paylaşılır, parçalar
+      arasında değil — tek bağlam 420 MB'lık montajda yığını 3,2 GB'a
+      çıkarıyordu. Aynı parçanın öteki örneği YEREL AĞDAN taşınır
+      (`bitir({ yerel })` → `veStepUcgenTasi`, bit bit aynı, üçgen dizisi
+      ortak). Ters çevirme ızgarası tipli dizide (nokta başına 40 bayt; dizi
+      dizisi ~176 bayttı). FEAD tek bağlamla sürer (dosyası küçük). Kapı:
+      `step-ucgen.test.js` → *PARÇA TOPLAYICISI* (taşınan örnek) +
+      `mount-step.test.js` → *AĞ İŞİ*.
     Kapılar: `tests/unit/fead-step.test.js` (sentetik dosyalar
     `tests/helpers/step-yaz.js` + `step-ornek.js`, gerçek dosyanın kalıbında;
     rolü TEST verir) — en değerlisi Gates AG00686'nın STEP → köprü zinciri

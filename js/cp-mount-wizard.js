@@ -907,10 +907,19 @@ function _mwStpKur(sonuc, ad, kap){
             acik:_mwStpAcilis(sonuc) };
   if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosya okunamadı.';
   _mwStp = s;
-  // 3B açılırsa kart onun altında: kart BİR SONRAKİ görevde çizilir — ikisi
-  // tek görevde 50 ms'yi aşıyordu (ölçüldü: 174 ms).
+  // 3B açılırsa kart onun altında. Okumanın son görevi, 3B'nin açılışı ve kart
+  // AYRI görevlerde: kart + 3B tek görevde 174 ms'ydi; 3B'nin açılışı da
+  // okumanın son göreviyle 50 ms'yi aşıyordu (ölçüldü: 52–54 ms — ekran kartı
+  // yokken çizici iki kez kuruluyor, js/cp-mount-3b.js → _mw3bCizici).
   var uc = s.durum === 'hazir' && typeof veMntWiz3bAc === 'function' && typeof document !== 'undefined' && veMntWizAcik();
-  if(uc && veMntWiz3bAc()){ setTimeout(function(){ if(_mwStp === s) veMntWizRender(); }, 0); return s; }
+  if(uc){
+    _mwSonraki(function(){
+      if(_mwStp !== s) return;
+      if(veMntWizAcik()) veMntWiz3bAc();
+      _mwSonraki(function(){ if(_mwStp === s) veMntWizRender(); });
+    });
+    return s;
+  }
   veMntWizRender();
   return s;
 }
@@ -1002,17 +1011,106 @@ function veMntWizStpDaha(i){
 }
 function _mwStpImza(s){ return JSON.stringify(s.roller); }
 // Parçanın ağı — 3B görüntüleyiciyle ORTAK önbellek (s.ag): hesap ve görüntü
-// aynı üçgenleri kullanır, ikisi de bir kez üçgenler.
+// aynı üçgenleri kullanır, ikisi de bir kez üçgenler. Eksik ağ ORTAK İŞTEN
+// (aşağıda) eşzamanlı üretilir; büyük eksik hesabı bekletir (_mwStpHesapBekle).
 function _mwStpCoz(s){
-  var B = null;
-  return veMntStpCoz(s.sonuc, s.roller, { ag:function(pi){
-    if(!s.ag) s.ag = [];
-    if(!s.ag[pi]){
-      if(!B && typeof veStepUcgenBaglam === 'function') B = veStepUcgenBaglam(s.sonuc._model, VE_MNT_STP_UCGEN);
-      s.ag[pi] = veMntStpParcaAgi(s.sonuc, pi, B) || null;
-    }
-    return s.ag[pi];
+  var J = _mwStpAgIs(s);
+  if(J) J.uret(_mwStpGerekli(s));
+  return veMntStpCoz(s.sonuc, s.roller, { ag:function(pi){ return (s.ag && s.ag[pi]) || null; } });
+}
+// Hesabın parçaları: rol verilen birimlerin parçaları
+function _mwStpGerekli(s){
+  var out = [];
+  veMntStpBirimler(s.sonuc, s.roller).forEach(function(b){ for(var k = 0; k < b.parcalar.length; k++) out.push(b.parcalar[k]); });
+  return out;
+}
+
+// ── PARÇALARIN AĞI — 3B VE HESAP İÇİN TEK İŞ (js/mount-step.js → veMntStpAgIs) ──
+// Görüntüleyici bütün montajı ister (veMntWizStpAgTum), hesap rol verilen
+// birimlerin parçalarını (öne alınır). İş `dilim` ms'lik dilimlerle koşar,
+// dönüş MessageChannel'la (UZUN İŞ ARAYÜZÜ KİLİTLEMEZ); kart değişince
+// (başka dosya · kaldır) döngü kendiliğinden biter. Hesabın eksik ağı `eszaman`
+// yüzü aşıyorsa hesap BEKLER — kartta çubuk ve Vazgeç — ve ağlar tamamlanınca
+// kendiliğinden yapılır; azsa eşzamanlı (yüz başına ~0,5 ms: 200 yüz ~0,1 sn).
+var VE_MW_STP_AG = { dilim: 10, eszaman: 200 };
+var _mwKanal = null, _mwKuyruk = [];
+function _mwSonraki(fn){
+  if(typeof MessageChannel !== 'function'){ setTimeout(fn, 0); return; }
+  if(!_mwKanal){
+    _mwKanal = new MessageChannel();
+    _mwKanal.port1.onmessage = function(){ var f = _mwKuyruk.shift(); if(f) f(); };
+  }
+  _mwKuyruk.push(fn);
+  _mwKanal.port2.postMessage(0);
+}
+function _mwSimdi(){ return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
+function _mwStpAgIs(s){
+  if(!s || s.durum !== 'hazir' || typeof veMntStpAgIs !== 'function') return null;
+  if(!s.agIs) s.agIs = veMntStpAgIs(s.sonuc, s.ag, { bitti:function(i, a){
+    if(_mwStp === s && typeof veMntWiz3bParca === 'function') veMntWiz3bParca(i, a);
   } });
+  return s.agIs;
+}
+// Görüntüleyicinin isteği: bütün montaj (açılış · Devam) ya da yok (kapanış · Durdur)
+function veMntWizStpAgTum(acik){
+  var s = _mwStp, J = _mwStpAgIs(s);
+  if(!J) return false;
+  J.tum = !!acik;
+  if(J.tum) _mwStpAgSur(s);
+  return true;
+}
+function _mwStpAgSur(s){
+  if(s.agDongu) return;
+  s.agDongu = true;
+  _mwSonraki(function dongu(){
+    if(_mwStp !== s){ s.agDongu = false; return; }
+    var bos = s.agIs.adim(_mwSimdi() + VE_MW_STP_AG.dilim);
+    if(s.hesapBekliyor) _mwStpHesapIlerleme(s, bos);
+    if(typeof veMntWiz3bIlerle === 'function') veMntWiz3bIlerle(bos);
+    if(!bos){ _mwSonraki(dongu); return; }
+    s.agDongu = false;
+    var h = s.hesapBekliyor;
+    if(h && !s.agIs.eksik(h.liste)){
+      s.hesapBekliyor = null;
+      s.coz = _mwStpCoz(s);
+      veMntWizRender();
+    }
+  });
+}
+// Hesabın eksik ağı büyükse bekler: true döner, iş başlar
+function _mwStpHesapBekle(s){
+  var J = _mwStpAgIs(s);
+  if(!J) return false;
+  var liste = _mwStpGerekli(s), geo = s.sonuc._geo || [], yuz = 0;
+  liste.forEach(function(i){ var g = geo[i]; if(!s.ag[i] && g && g.yuzler) yuz += g.yuzler.length; });
+  if(yuz <= VE_MW_STP_AG.eszaman) return false;
+  s.hesapBekliyor = { liste:liste, toplam:J.eksik(liste), son:0 };
+  J.iste(liste);
+  _mwStpAgSur(s);
+  return true;
+}
+function _mwStpHesapVazgec(s){
+  if(!s) return;
+  s.hesapBekliyor = null;
+  if(s.agIs) s.agIs.iste([]);
+}
+function veMntWizStpHesapVazgec(){
+  var s = _mwStp;
+  if(!s || !s.hesapBekliyor) return false;
+  _mwStpHesapVazgec(s);
+  veMntWizRender();
+  return true;
+}
+// Bekleyen hesabın çubuğu (kartın eylem satırı): ağı hazır parçalar / gereken
+function _mwStpHesapVeri(s){
+  var h = s.hesapBekliyor, n = h ? h.toplam : 0, kalan = (h && s.agIs) ? s.agIs.eksik(h.liste) : 0;
+  return { ad:'Hesap', metin:'Parça ' + veSayi(n - kalan, 0) + ' / ' + veSayi(n, 0), oran:n ? (n - kalan) / n : 0 };
+}
+function _mwStpHesapIlerleme(s, hemen){
+  var h = s.hesapBekliyor, t = _mwSimdi();
+  if(!h || (!hemen && t - h.son < 100)) return;
+  h.son = t;
+  if(typeof vePencereIlerleme === 'function') vePencereIlerleme('ve-mw-stp-hesap-vazgec', _mwStpHesapVeri(s));
 }
 // ROL DÜĞÜME VERİLİR ve bir parça TEK birime aittir: düğümün atalarının ve
 // torunlarının rolü düşer (motor alt montajına rol verilince parçalarının ayrı
@@ -1027,9 +1125,10 @@ function veMntWizStpRol(i, tip){
     (function sil(d){ a[d].cocuklar.forEach(function(c){ s.roller[c] = null; sil(c); }); })(i);
   }
   s.roller[i] = tip || null;
-  var vardi = !!s.coz;
+  var vardi = !!s.coz || !!s.hesapBekliyor;
   s.coz = null;
-  if(vardi && !_mwStpRolDenetim(s).length) s.coz = _mwStpCoz(s);
+  _mwStpHesapVazgec(s);                        // bekleyen hesap eski rollerindi
+  if(vardi && !_mwStpRolDenetim(s).length && !_mwStpHesapBekle(s)) s.coz = _mwStpCoz(s);
   veMntWizRender();
   return true;
 }
@@ -1050,6 +1149,8 @@ function veMntWizStpHesapla(){
     if(typeof showToast === 'function') showToast(d[0], 'warning');
     return null;
   }
+  if(s.hesapBekliyor) return null;
+  if(_mwStpHesapBekle(s)){ veMntWizRender(); return null; }
   s.coz = _mwStpCoz(s);
   veMntWizRender();
   return s.coz;
@@ -1265,7 +1366,11 @@ function _mwStpKartHTML(){
   // ── HESAPLA ─────────────────────────────────────────────────────────────
   var d = veMntWizStpDenetim(s);
   var rolEngel = _mwStpRolDenetim(s);
-  h += '<div class="ve-fw-rowbtns">'
+  // Bekleyen hesap: parçaların ağı hazırlanıyor — çubuk ve Vazgeç (kit)
+  if(s.hesapBekliyor && typeof vePencereEylem === 'function')
+    h += vePencereEylem('<button type="button" class="ve-fp-solve" data-durdur id="ve-mw-stp-hesap-vazgec"'
+      + ' onclick="veMntWizStpHesapVazgec()">' + _mwIkon('x') + ' Vazgeç</button>', '', _mwStpHesapVeri(s));
+  else h += '<div class="ve-fw-rowbtns">'
     + '<button type="button" id="ve-mw-stp-hesapla" class="ve-fw-btn"'
     + (rolEngel.length ? ' disabled title="' + _mwEsc(rolEngel[0]) + '"' : '') + ' onclick="veMntWizStpHesapla()">'
     + (coz ? 'Yeniden hesapla' : 'Konumları hesapla') + '</button>'
@@ -1884,6 +1989,8 @@ if(typeof module !== 'undefined' && module.exports){
     _mwKatalogSecHTML: _mwKatalogSecHTML,
     veMntWizStp: veMntWizStp, veMntWizStpOku: veMntWizStpOku, veMntWizStpBayt: veMntWizStpBayt,
     veMntWizStpDosya: veMntWizStpDosya, veMntWizStpVazgec: veMntWizStpVazgec, _mwStpIlerlemeVeri: _mwStpIlerlemeVeri,
+    VE_MW_STP_AG: VE_MW_STP_AG, veMntWizStpHesapVazgec: veMntWizStpHesapVazgec, _mwStpHesapVeri: _mwStpHesapVeri,
+    veMntWizStpAgTum: veMntWizStpAgTum,
     veMntWizStpAc: veMntWizStpAc, veMntWizStpDaha: veMntWizStpDaha, _mwStpSatirlar: _mwStpSatirlar, _mwStpAcilis: _mwStpAcilis,
     VE_MW_STP_SATIR: VE_MW_STP_SATIR, VE_MW_STP_SAYFA: VE_MW_STP_SAYFA,
     veMntWizStpRol: veMntWizStpRol, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,

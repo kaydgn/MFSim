@@ -6,6 +6,7 @@
  *   npm run build && npm run step:olcum -- .step-deneme/deneme-420.stp
  *   npm run step:olcum -- <dosya.stp> --orneklem 50 --incelik takoz,0.1 --program <html>
  *   npm run step:olcum -- <dosya.stp> --orneklem 0      (yalnız okuma; 3B örneklemi yok)
+ *   npm run step:olcum -- <dosya.stp> --tam             (okuma + TAM 3B kurulumu)
  *
  * NE ÖLÇER — programın KENDİ yolu, Takoz → "STEP'ten başla":
  *   1 · okuma + montaj ağacı: dosya seçiminden kartın hazır olmasına kadar
@@ -13,9 +14,14 @@
  *       engel süresi, en uzun kare boşluğu), sekmenin JS belleği (sınırıyla),
  *       dosyanın JS yığını DIŞINDAKİ baytları, çizici sürecin tepe belleği
  *   2 · 3B ağı: her N'inci parça programın üçgenleyicisiyle; süre, üçgen ve
- *       bellek bütüne ORANLANIR (bugünkü kodla 400 MB'lık montajın tamamı
- *       yarım saati buluyor; örneklem dakikada biter). Bağlam ölçüm boyunca
- *       canlı tutulur — görüntüleyici de kurulum bitene dek tutuyor.
+ *       bellek bütüne ORANLANIR. Bağlam programdaki gibi: parça başına
+ *       bırakılır (veStepUcgenBirak — yoksa eski program: tek bağlam).
+ *   3 · `--tam`: görüntüleyici açık kalır ve BÜTÜN montajı kurar — seçimden
+ *       3B'nin hazır olmasına süre, ilk görüntü, kurulum boyunca uzun görevler
+ *       ve ortak işin en uzun dilimi (yeni programda), yığın ve çizici süreç
+ *       tepesi; kurulumdan sonra döndürme karesinin JS süresi, çizim çağrısı ve
+ *       üçgen sayısı. Ekran kartı olmayan makinede (başsız Chromium) karenin
+ *       kendisi işlemcide çizilir: uzun görevlerin büyüğü odur.
  * İncelik `takoz`: programın Takoz sabiti (VE_MNT_STP_UCGEN; eski programda
  * yoksa varsayılan) · sayı: o kiriş payı (mm), FEAD'in varsayılanı 0.1.
  *
@@ -38,6 +44,7 @@ var DOSYA = process.argv[2] && process.argv[2].indexOf('--') !== 0 ? path.resolv
 var PROGRAM = path.resolve(arguman('program', path.join(ROOT, 'MFSim_Code.html')));
 var ADIM = Math.max(0, +arguman('orneklem', 50));   // 0: 3B örneklemi yok
 var INCELIK = String(arguman('incelik', 'takoz')).split(',');
+var TAM = process.argv.indexOf('--tam') >= 0;
 if (!DOSYA || !fs.existsSync(DOSYA)) { console.error('STEP dosyası bulunamadı. Kullanım: npm run step:olcum -- <dosya.stp>'); process.exit(2); }
 if (!fs.existsSync(PROGRAM)) { console.error(PROGRAM + ' yok. Önce: npm run build'); process.exit(2); }
 
@@ -85,7 +92,32 @@ function cizicRss() {
   // verdiği damga karenin planlandığı an — uzun görev o damgadan SONRA
   // koşunca boşluk bir sonraki kareye yazılıyordu (ölçüldü).
   await sayfa.evaluate(function () {
-    var o = window.__olc = { uzun: [], bosluk: 0, son: performance.now(), bas: performance.now(), hazir: null, kur: null };
+    var o = window.__olc = { uzun: [], bosluk: 0, son: performance.now(), bas: performance.now(), hazir: null, kur: null,
+      hazir3b: null, ilk: null, adim: [], tepeHeap: 0 };
+    new MutationObserver(function () {
+      var k = document.getElementById('ve-mw-3b-tuval');
+      if (o.hazir3b === null && k && k.getAttribute('data-durum') === 'hazir') o.hazir3b = performance.now();
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-durum'] });
+    setInterval(function () { var h = performance.memory.usedJSHeapSize; if (h > o.tepeHeap) o.tepeHeap = h; }, 250);
+    if (typeof window.veMntStpAgIs === 'function') {
+      var J0 = window.veMntStpAgIs;
+      window.veMntStpAgIs = function () {
+        var J = J0.apply(this, arguments), ad = J.adim;
+        J.adim = function (b) { var t = performance.now(), r = ad(b); o.adim.push(performance.now() - t); return r; };
+        return J;
+      };
+    }
+    if (typeof window.veMntWiz3bAc === 'function') {
+      var ac = window.veMntWiz3bAc;
+      window.veMntWiz3bAc = function () {
+        var r = ac.apply(this, arguments), V = window._mw3b;
+        if (V && V.renderer) {
+          var ro = V.renderer.render.bind(V.renderer);
+          V.renderer.render = function (sh, c) { ro(sh, c); if (o.ilk === null && V.renderer.info.render.triangles > 0) o.ilk = performance.now(); };
+        }
+        return r;
+      };
+    }
     try {
       new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { o.uzun.push([e.startTime, e.duration]); }); })
         .observe({ type: 'longtask' });
@@ -122,9 +154,9 @@ function cizicRss() {
   // örneklemle ayrıca yapmak için hemen kapatılır.
   // Okumanın bittiği kare çizilsin (donmuş okumada o kare okumanın sonudur)
   await sayfa.waitForFunction(function () { return window.__olc.hazir !== null; }, null, { timeout: 600000 });
-  var a1 = await sayfa.evaluate(function () {
-    if (typeof veMntWiz3bKapat === 'function') veMntWiz3bKapat();
-    if (window.gc) gc();
+  var a1 = await sayfa.evaluate(function (tam) {
+    if (!tam && typeof veMntWiz3bKapat === 'function') veMntWiz3bKapat();
+    if (!tam && window.gc) gc();
     var s = veMntWizStp(), so = s.sonuc || { parcalar: [] }, o = window.__olc;
     var sinir = o.kur !== null ? o.kur : o.hazir;
     var uz = o.uzun.filter(function (e) { return e[0] < sinir; });
@@ -139,12 +171,39 @@ function cizicRss() {
       sonra3B: uc.map(function (e) { return Math.round(e[1]); }),
       enUzunGorevMs: uz.reduce(function (t, e) { return Math.max(t, e[1]); }, 0),
       engelMs: uz.reduce(function (t, e) { return t + Math.max(0, e[1] - 50); }, 0), enUzunKareMs: o.bosluk };
-  });
+  }, TAM);
   yaz({ adim: 'okundu + montaj ağacı', sn: +(a1.okumaMs / 1000).toFixed(1), durum: a1.durum, hata: a1.hata,
     parca: a1.parca, yuz: a1.yuz, evreMs: a1.sureMs,
     donma: { uzunGorev: a1.uzunGorev, enUzunGorevMs: Math.round(a1.enUzunGorevMs), engelSn: +(a1.engelMs / 1000).toFixed(1),
       enUzunKareMs: Math.round(a1.enUzunKareMs) }, sonra3BUzunGorevMs: a1.sonra3B,
     heapMB: MB(a1.heap), yiginDisiMB: MB(a1.dis), tepeCizicMB: MB(tepe), beklemeSn: sn1 });
+  if (TAM && a1.durum === 'hazir') {
+    // ── 3 · TAM 3B kurulumu ──
+    var t3 = Date.now();
+    try {
+      await sayfa.waitForFunction(function () { var k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; },
+        null, { timeout: 1800000, polling: 1000 });
+    } catch (e) { yaz({ adim: '3B bitmedi', hata: String(e).slice(0, 200) }); }
+    await new Promise(function (ok) { setTimeout(ok, 3000); });
+    var a3 = coktu ? null : await sayfa.evaluate(function () {
+      var o = window.__olc, V = window._mw3b, sinir = o.kur !== null ? o.kur : o.hazir;
+      var uz = o.uzun.filter(function (e) { return e[0] >= sinir; }).map(function (e) { return Math.round(e[1]); }).sort(function (a, b) { return b - a; });
+      var r = { hazirMs: o.hazir3b !== null ? Math.round(o.hazir3b - o.bas) : null, ilkGoruntuMs: o.ilk !== null ? Math.round(o.ilk - o.bas) : null,
+        uzunGorev: uz.length, enUzun: uz.slice(0, 6), engelSn: +(uz.reduce(function (t, d) { return t + Math.max(0, d - 50); }, 0) / 1000).toFixed(1),
+        isDilimiEnUzunMs: o.adim.length ? Math.round(Math.max.apply(null, o.adim)) : null, tepeHeapMB: Math.round(o.tepeHeap / 1048576) };
+      if (window.gc) gc();
+      r.sonHeapMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
+      if (V && V.renderer) {
+        var cpu = [];
+        for (var k = 0; k < 9; k++) { V.ctrl.theta += 0.05; _mw3bKamera(); var t = performance.now(); V.renderer.render(V.scene, V.camera); cpu.push(performance.now() - t); }
+        cpu.sort(function (a, b) { return a - b; });
+        r.kare = { jsMs: Math.round(cpu[4] * 10) / 10, cagri: V.renderer.info.render.calls, ucgen: V.renderer.info.render.triangles };
+      }
+      return r;
+    });
+    yaz({ adim: 'tam 3B', sn: a3 && a3.hazirMs !== null ? +(a3.hazirMs / 1000).toFixed(1) : (Date.now() - t3) / 1000, coktu: coktu, sonuc: a3, tepeCizicMB: MB(tepe) });
+    clearInterval(orneklem); await tarayici.close(); process.exit(coktu ? 1 : 0);
+  }
   if (a1.durum !== 'hazir' || !ADIM) { clearInterval(orneklem); await tarayici.close(); process.exit(a1.durum === 'hazir' ? 0 : 1); }
 
   // ── 2 · 3B ağı, örneklem ──
@@ -162,6 +221,7 @@ function cizicRss() {
         var top = veStepUcgenTopla(B, geo.M, geo.birim);
         geo.yuzler.forEach(function (f) { top.ekle(f); });
         var a = top.bitir();
+        if (typeof veStepUcgenBirak === 'function') veStepUcgenBirak(B);
         ag.push(a); parca++; yuz += geo.yuzler.length; ucgen += a.ucgen.length / 3;
       }
       var ms = performance.now() - t;
