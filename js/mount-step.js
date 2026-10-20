@@ -16,8 +16,9 @@
 //  • ÖNCE ROL, SONRA ANALİZ (FEAD kural 34'ün kuralı): ad hiçbir şeye karar
 //    vermez, rol geometriden tahmin edilmez. Rol bir DÜĞÜME verilir (parça ya
 //    da alt montaj); bir parça en yakın rollü atasının birimidir.
-//  • ÖLÇÜLEN ŞEY GEOMETRİ: takozun konumu biriminin hacim merkezi; gövdenin
-//    hacim merkezi ağırlık merkezi diye ÖNERİLİR (homojen yoğunluk varsayımı).
+//  • ÖLÇÜLEN ŞEY GEOMETRİ: takozun noktası ÜST BAĞLANTI YÜZEYİNİN MERKEZİ
+//    (aşağıda, TAKOZ NOKTASI); gövdenin hacim merkezi ağırlık merkezi diye
+//    ÖNERİLİR (homojen yoğunluk varsayımı).
 //    Kütle STEP'te YOK: kullanıcı yazarsa atalet aynı varsayımla türetilir,
 //    yazmazsa atalet de yazılmaz — uydurulmuş bir kütleden türemiş atalet
 //    sessizce yanlış olurdu. Geometriden gelen her alan sihirbazda "S" işareti
@@ -51,10 +52,14 @@ var VE_MNT_STP_CIP = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket',
 
 function _mstOkuyucu(){
   if(typeof veStepP21Agac === 'function')
-    return { Agac: veStepP21Agac, Dilimli: (typeof veStepP21AgacDilimli === 'function') ? veStepP21AgacDilimli : null };
+    return { Agac: veStepP21Agac, Dilimli: (typeof veStepP21AgacDilimli === 'function') ? veStepP21AgacDilimli : null,
+             Yuz: (typeof veStepP21Yuz === 'function') ? veStepP21Yuz : null,
+             Kenar: (typeof veStepP21KenarCemberi === 'function') ? veStepP21KenarCemberi : null };
   if(typeof require === 'function'){
-    try { var m = require('./step-p21.js'); return { Agac: m.veStepP21Agac, Dilimli: m.veStepP21AgacDilimli }; }
-    catch(e){ return null; }
+    try {
+      var m = require('./step-p21.js');
+      return { Agac: m.veStepP21Agac, Dilimli: m.veStepP21AgacDilimli, Yuz: m.veStepP21Yuz, Kenar: m.veStepP21KenarCemberi };
+    } catch(e){ return null; }
   }
   return null;
 }
@@ -335,6 +340,14 @@ function _mstYolAnahtarlari(sonuc){
   }
   return k;
 }
+// Yol → düğüm dizini (ilk eşleşen); okumanın ağacı değişmez, sonuçta saklanır
+function _mstYolDizin(sonuc){
+  if(sonuc && sonuc._yolDizin) return sonuc._yolDizin;
+  var anahtar = _mstYolAnahtarlari(sonuc), dizin = {};
+  for(var i = 0; i < anahtar.length; i++) if(dizin[anahtar[i]] === undefined) dizin[anahtar[i]] = i;
+  if(sonuc && sonuc.ok) sonuc._yolDizin = dizin;
+  return dizin;
+}
 function _mstFnv(s, h){
   for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   return h >>> 0;
@@ -350,9 +363,10 @@ function veMntStpImza(sonuc){
   if(sonuc && sonuc.ok) sonuc._imza = imza;
   return imza;
 }
-// Kayıt: { surum, dosya, bayt, imza, parca, roller:[{ yol, rol, ad, kg? }] } — ağaç sırasıyla
-function veMntStpRolKaydi(sonuc, roller, kutle, kunye){
-  kunye = kunye || {}; kutle = kutle || {};
+// Kayıt: { surum, dosya, bayt, imza, parca, roller:[{ yol, rol, ad, kg?, nokta? }] } — ağaç sırasıyla.
+// `nokta` (takoz): 3B'de seçilen daire — parçasının örnek yolu, merkezi, yarıçapı.
+function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta){
+  kunye = kunye || {}; kutle = kutle || {}; nokta = nokta || {};
   var out = { surum: VE_MNT_STP_KAYIT_SURUM, dosya: kunye.dosya || '', bayt: kunye.bayt > 0 ? kunye.bayt : null,
               imza: veMntStpImza(sonuc), parca: ((sonuc && sonuc.parcalar) || []).length, roller: [] };
   ((sonuc && sonuc.agac) || []).forEach(function(d){
@@ -360,37 +374,214 @@ function veMntStpRolKaydi(sonuc, roller, kutle, kunye){
     if(!tip) return;
     var r = { yol: veMntStpYol(sonuc, d.i), rol: tip, ad: d.ad };
     if(+kutle[d.i] > 0) r.kg = +kutle[d.i];
+    var n = tip === 'mnt-mount' ? _mstNoktaGecerli(nokta[d.i]) : null;
+    if(n) r.nokta = n;
     out.roller.push(r);
   });
   return out;
 }
+// Seçilen dairenin kaydı: { yol:[örnek adları], c:[3], r } ya da null (bozuk)
+function _mstNoktaGecerli(n){
+  if(!n || !Array.isArray(n.yol) || !Array.isArray(n.c) || n.c.length !== 3) return null;
+  var c = n.c.map(Number), r = +n.r;
+  if(!c.every(isFinite) || !(r > 0)) return null;
+  return { yol: n.yol.map(String), c: c, r: r };
+}
 // Kaydı bu dosyaya uygular. Döner: { roller (ağaç boyu), kutle:{düğüm: kg},
-// eslesen, toplam, eksik:[bulunamayan kayıt satırı], ayni (imza aynı) }.
-// Rol veriliş kuralı oturumunki (veMntStpRolVer) — kayıt sırası ağaç sırası.
+// nokta:{düğüm: seçilen daire}, eslesen, toplam, eksik:[bulunamayan kayıt
+// satırı], ayni (imza aynı) }. Rol veriliş kuralı oturumunki (veMntStpRolVer)
+// — kayıt sırası ağaç sırası. Dairenin bu dosyada olup olmadığına hesap bakar
+// (veMntStpCoz → veMntStpDaireBul).
 function veMntStpRolKaydiUygula(sonuc, kayit){
-  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {};
-  var out = { roller: roller, kutle: kutle, eslesen: 0, toplam: 0, eksik: [], ayni: false };
+  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {}, nokta = {};
+  var out = { roller: roller, kutle: kutle, nokta: nokta, eslesen: 0, toplam: 0, eksik: [], ayni: false };
   if(!kayit || !Array.isArray(kayit.roller)) return out;
   out.toplam = kayit.roller.length;
   out.ayni = kayit.imza === veMntStpImza(sonuc);
-  var anahtar = _mstYolAnahtarlari(sonuc), dizin = {};
-  for(var i = 0; i < anahtar.length; i++) if(dizin[anahtar[i]] === undefined) dizin[anahtar[i]] = i;
+  var dizin = _mstYolDizin(sonuc);
   kayit.roller.forEach(function(r){
     var d = (r && Array.isArray(r.yol)) ? dizin[r.yol.join('\u0001')] : undefined;
     if(d === undefined || !veMntStpRolVer(sonuc, roller, d, r.rol)){ out.eksik.push(r); return; }
     if(+r.kg > 0) kutle[d] = +r.kg;
+    var n = r.rol === 'mnt-mount' ? _mstNoktaGecerli(r.nokta) : null;
+    if(n) nokta[d] = n;
   });
-  Object.keys(kutle).forEach(function(d){ if(!roller[d]) delete kutle[d]; });   // rolü sonra düşen düğümün kütlesi gider
+  // rolü sonra düşen düğümün kütlesi ve noktası gider
+  Object.keys(kutle).forEach(function(d){ if(!roller[d]) delete kutle[d]; });
+  Object.keys(nokta).forEach(function(d){ if(roller[d] !== 'mnt-mount') delete nokta[d]; });
   out.eslesen = roller.filter(Boolean).length;
   return out;
 }
 
+// ── TAKOZ NOKTASI — üst bağlantı yüzeyinin merkezi (2026-10-20, Takoz adım 5) ──
+// Kural (kullanıcının onayı): takozun noktası ÜST BAĞLANTI YÜZEYİNİN MERKEZİ —
+// analizcinin CATIA'da ölçtüğü dairenin merkezi. Nokta DOSYADA YAZILI SAYIDIR
+// (dairenin CIRCLE kaydı, js/step-p21.js), ağdan değil — FEAD'in "ölçüm
+// analitik" kuralı. Hacim merkezi bu noktanın ~38 mm altına düşüyordu ve Tulga
+// modelinde statik sehimi 1,15 mm değiştiriyordu (ölçüldü).
+//  • ÖNERİ (veMntStpTakozNoktasi): EKSEN birimin dairelerinin çoğunun ortak
+//    ekseni, dosyanın +z'sine yönlü; ADAY eksene dik ve sınırında eksen
+//    üstünde bir daire taşıyan düzlem yüz. Bağlantı yüzü BOYNUN TABANI:
+//    üstündeki dilimde (bir sonraki dik düzleme kadar) yalnız saplama/cıvata
+//    var (en geniş yarıçap yüzünkinin `boyun` katı ve cıvata boyunda) ya da
+//    dilim boş ve üstünde pul/somun var. Boyun yoksa en üstteki aday.
+//    Saplamanın, pulun ve somunun üst yüzü böylece seçilmez; konik takozun
+//    göbeği (kauçuğun üstünde 20 mm yarıçaplı sütun) saplama sayılmaz.
+//  • SEÇİLEN (3B'de dairesel kenar, veStepP21KenarCemberi): kayıtta parçanın
+//    örnek yolu, merkezi ve yarıçapı; dosya yeniden okununca aynı parçada aynı
+//    daire aranır (veMntStpDaireBul) — yoksa öneriye düşülür ve söylenir.
+// aci: normal paralelliği (derece) · eksen: merkezin eksen doğrusuna uzaklığı
+// (mm) · boyun: boyundaki en geniş yarıçap / yüzün yarıçapı (pulun dış
+// yarıçapı saplamanınkinin 2 katı: 0,5 pulun üstündeki saplamayı boyun sayardı)
+// · civata: boyundaki en geniş yarıçapın üst sınırı (mm; M24 saplama 12 —
+// oran tek başına konik takozun göbeğini, 20 / 50 = 0,4, saplama sayıyordu)
+// · dusey: eksenin düşeyle en büyük açısı (derece) · dilim: dilimin kenar payı (mm)
+var VE_MNT_STP_NOKTA = { aci: 0.5, eksen: 0.05, boyun: 0.45, civata: 12.5, dusey: 45, dilim: 0.01 };
+function _mstNok(a, b){ return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+function _mstUz(a, b){ var x = a[0] - b[0], y = a[1] - b[1], z = a[2] - b[2]; return Math.sqrt(x * x + y * y + z * z); }
+// Bir parçanın analitik yüzleri (dünya, mm); düzlemde dışa bakan normal `nd`.
+// Okuma yüz tanımı çıkarmıyor (VE_MNT_STP_OKUMA): yüzler istenince modelden.
+function veMntStpYuzler(sonuc, pi){
+  var P = _mstOkuyucu(), g = sonuc && sonuc._geo && sonuc._geo[pi];
+  if(!P || !P.Yuz || !sonuc._model || !g || !g.yuzler || !g.yuzler.length || !(g.birim && g.birim.mm > 0)) return [];
+  var out = [];
+  g.yuzler.forEach(function(f){
+    var y;
+    try { y = P.Yuz(sonuc._model, f, g.M, g.birim); } catch(e){ return; }
+    if(y.tip === 'PLANE' && y.z) y.nd = y.ayni ? y.z.slice() : [-y.z[0], -y.z[1], -y.z[2]];
+    y.parca = pi;
+    out.push(y);
+  });
+  return out;
+}
+// Eksen: dairelerin (geometriye göre tekil) normal kümelerinin en kalabalığı,
+// eksen doğrusu o kümenin merkez izlerinin en kalabalığı. Döner: { a, p } | null
+function _mstEksen(daireler){
+  var T = VE_MNT_STP_NOKTA, cosT = Math.cos(T.aci * Math.PI / 180), gor = {}, tekil = [];
+  daireler.forEach(function(d){
+    var k = Math.round(d.r * 1e4) + ':' + d.c.map(function(v){ return Math.round(v * 1e4); }).join(',');
+    if(gor[k]) return;
+    gor[k] = 1; tekil.push(d);
+  });
+  var kume = [];
+  tekil.forEach(function(d){
+    for(var i = 0; i < kume.length; i++) if(Math.abs(_mstNok(kume[i].n, d.n)) >= cosT){ kume[i].l.push(d); kume[i].top += d.r; return; }
+    kume.push({ n: d.n, l: [d], top: d.r });
+  });
+  kume.sort(function(x, y){ return y.l.length - x.l.length || y.top - x.top; });
+  if(!kume.length) return null;
+  var a = kume[0].n.slice();
+  if(a[2] < 0 || (a[2] === 0 && (a[0] < 0 || (a[0] === 0 && a[1] < 0)))) a = [-a[0], -a[1], -a[2]];
+  var hat = [];
+  kume[0].l.forEach(function(d){
+    var h = _mstNok(d.c, a), q = [d.c[0] - h * a[0], d.c[1] - h * a[1], d.c[2] - h * a[2]];
+    for(var i = 0; i < hat.length; i++) if(_mstUz(hat[i].q, q) <= T.eksen){ hat[i].l.push(q); hat[i].en = Math.max(hat[i].en, d.r); return; }
+    hat.push({ q: q, l: [q], en: d.r });
+  });
+  hat.sort(function(x, y){ return y.l.length - x.l.length || y.en - x.en; });
+  var p = [0, 0, 0];
+  hat[0].l.forEach(function(q){ for(var j = 0; j < 3; j++) p[j] += q[j] / hat[0].l.length; });
+  return { a: a, p: p };
+}
+// Noktanın eksen doğrusuna uzaklığı
+function _mstEksenUz(E, c){
+  var v = [c[0] - E.p[0], c[1] - E.p[1], c[2] - E.p[2]], h = _mstNok(v, E.a);
+  return Math.sqrt(Math.max(0, _mstNok(v, v) - h * h));
+}
+// Öneri. parcalar: birimin parça indisleri; agler: aynı parçaların ağları.
+// Döner: { ok, c, n, r, parca, kenar, yuz, h, eksen } | { ok:false, neden }
+function veMntStpTakozNoktasi(sonuc, parcalar, agler){
+  var T = VE_MNT_STP_NOKTA, cosT = Math.cos(T.aci * Math.PI / 180);
+  var yuzler = [];
+  (parcalar || []).forEach(function(pi){ yuzler = yuzler.concat(veMntStpYuzler(sonuc, pi)); });
+  var daireler = [];
+  yuzler.forEach(function(y){ y.cemberler.forEach(function(c){ daireler.push(c); }); });
+  if(!daireler.length) return { ok: false, neden: 'dairesel kenar yok' };
+  var E = _mstEksen(daireler);
+  if(!E || E.a[2] < Math.cos(T.dusey * Math.PI / 180)) return { ok: false, neden: 'eksen düşey değil' };
+  // Adaylar ve dik düzlemlerin yükseklikleri. Aşağı bakan yüz ayıklanmaz: katısı
+  // onun ÜSTÜNDE — ne en üstte ne boyun tabanında olabilir (dilimi katının kendisi)
+  var aday = [], duzlem = [];
+  yuzler.forEach(function(y){
+    if(!y.nd || Math.abs(_mstNok(y.nd, E.a)) < cosT) return;
+    duzlem.push(_mstNok(y.o, E.a));
+    var en = null;
+    y.cemberler.forEach(function(c){
+      if(Math.abs(_mstNok(c.n, E.a)) < cosT || _mstEksenUz(E, c.c) > T.eksen) return;
+      if(!en || c.r > en.r) en = c;
+    });
+    if(en) aday.push({ h: _mstNok(en.c, E.a), R: en.r, d: en, parca: y.parca, yuz: y.id });
+  });
+  if(!aday.length) return { ok: false, neden: 'üst yüz yok' };
+  // Ağın üçgenleri: yükseklik aralığı ve eksenden en büyük uzaklık
+  var U = [], tepe = -Infinity;
+  (agler || []).forEach(function(ag){
+    if(!ag || !ag.uc || !ag.ucgen) return;
+    var u = ag.uc, t = ag.ucgen;
+    for(var k = 0; k < t.length; k += 3){
+      var h0 = Infinity, h1 = -Infinity, r = 0;
+      for(var j = 0; j < 3; j++){
+        var q = [u[t[k + j] * 3], u[t[k + j] * 3 + 1], u[t[k + j] * 3 + 2]], h = _mstNok(q, E.a);
+        if(h < h0) h0 = h; if(h > h1) h1 = h;
+        var rq = _mstEksenUz(E, q); if(rq > r) r = rq;
+      }
+      U.push(h0, h1, r);
+      if(h1 > tepe) tepe = h1;
+    }
+  });
+  duzlem.sort(function(x, y){ return x - y; });
+  var boyun = function(g){
+    var e = T.dilim, hn = Infinity;
+    for(var i = 0; i < duzlem.length; i++) if(duzlem[i] > g.h + e){ hn = duzlem[i]; break; }
+    if(hn === Infinity) hn = tepe;
+    if(!(hn > g.h + e)) return false;                         // üstünde bir şey yok
+    var n = 0, r = 0;
+    for(var k = 0; k < U.length; k += 3){
+      if(U[k + 1] <= g.h + e || U[k] >= hn - e) continue;
+      n++; if(U[k + 2] > r) r = U[k + 2];
+    }
+    return n ? r <= Math.min(T.boyun * g.R, T.civata) : tepe > hn + e;   // boş dilim: üstünde pul/somun varsa
+  };
+  var sec = function(l){ return l.reduce(function(x, y){ return (y.h > x.h + T.dilim || (Math.abs(y.h - x.h) <= T.dilim && y.R > x.R)) ? y : x; }); };
+  var boyunlu = aday.filter(boyun), g = sec(boyunlu.length ? boyunlu : aday);
+  return { ok: true, c: g.d.c.slice(), n: E.a.slice(), r: g.d.r, parca: g.parca, kenar: g.d.kenar, yuz: g.yuz, h: g.h, eksen: E };
+}
+// Seçilen dairenin bu dosyadaki karşılığı: örnek yolundaki düğümün parçalarında
+// aynı yarıçap (1e-6) ve aynı merkez (1 µm). Döner: { c, n, r, parca, kenar } | null
+function veMntStpDaireBul(sonuc, yol, c, r){
+  var d = Array.isArray(yol) ? _mstYolDizin(sonuc)[yol.join('\u0001')] : undefined;
+  if(d === undefined || !Array.isArray(c) || !(r > 0)) return null;
+  var en = null, enU = Infinity;
+  sonuc.agac[d].parcalar.forEach(function(pi){
+    veMntStpYuzler(sonuc, pi).forEach(function(y){
+      y.cemberler.forEach(function(cm){
+        if(Math.abs(cm.r - r) > 1e-6 * Math.max(1, r)) return;
+        var u = _mstUz(cm.c, c);
+        if(u < enU){ enU = u; en = { c: cm.c.slice(), n: cm.n.slice(), r: cm.r, parca: pi, kenar: cm.kenar }; }
+      });
+    });
+  });
+  return en && enU <= 1e-3 ? en : null;
+}
+// 3B'de tıklanan kenar → seçim kaydı: { yol, c, n, r, parca, kenar } | null (çember değil)
+function veMntStpKenarDaire(sonuc, pi, kenar){
+  var P = _mstOkuyucu(), g = sonuc && sonuc._geo && sonuc._geo[pi];
+  if(!P || !P.Kenar || !g || !sonuc._model) return null;
+  var c = null;
+  try { c = P.Kenar(sonuc._model, kenar, g.M, g.birim); } catch(e){ c = null; }
+  if(!c) return null;
+  return { yol: veMntStpYol(sonuc, sonuc.parcalar[pi].dugum), c: c.c, n: c.n, r: c.r, parca: pi, kenar: kenar };
+}
+
 // ── ÇÖZÜM — yalnız rol verilen birimler ───────────────────────────────────
 // opt.ag(pi) → parçanın ağı ya da null (3B görüntüleyicinin önbelleği);
-// verilmezse ağ burada üçgenlenir. Döner (asla fırlatmaz):
-//   { ok, hatalar[], uyarilar[], birimler:[{ dugum, tip, ad, V, c, J, kutu, kapali, konum, kaynak }] }
-// `konum` takozun/gövdenin noktası: kapalı ağda hacim merkezi, değilse kutunun
-// merkezi (`kaynak`: 'hacim' | 'kutu').
+// verilmezse ağ burada üçgenlenir. opt.nokta: { takozun düğümü: seçilen daire
+// ({ yol, c, r }) }. Döner (asla fırlatmaz):
+//   { ok, hatalar[], uyarilar[], birimler:[{ dugum, tip, ad, V, c, J, kutu, kapali, konum, kaynak, nokta? }] }
+// `konum` gövdenin noktası: kapalı ağda hacim merkezi, değilse kutunun merkezi
+// (`kaynak`: 'hacim' | 'kutu'). Takozun noktası üst bağlantı yüzeyinin merkezi:
+// seçilen daire ('kenar') ya da öneri ('eksen'); ikisi de yoksa gövdeninki gibi.
+// `nokta`: noktanın dairesi { c, n, r } (3B halkası).
 function veMntStpCoz(sonuc, roller, opt){
   opt = opt || {};
   var out = { ok: false, hatalar: [], uyarilar: [], birimler: [] };
@@ -413,6 +604,24 @@ function veMntStpCoz(sonuc, roller, opt){
     var oz = veMntStpAgOzellik(agler);
     var r = { dugum: b.dugum, tip: b.tip, ad: b.ad, V: oz.V, c: oz.c, J: oz.J, kutu: oz.kutu,
               kapali: oz.kapali, kenarYuz: oz.kenarYuz, acik: oz.acik, ucgen: oz.ucgen };
+    if(b.tip === 'mnt-mount' && oz.kutu){
+      var sec = opt.nokta && opt.nokta[b.dugum], d = null, neden = '';
+      if(sec){
+        d = veMntStpDaireBul(sonuc, sec.yol, sec.c, sec.r);
+        if(d){ r.kaynak = 'kenar'; }
+        else out.uyarilar.push('"' + b.ad + '": seçilen daire bu dosyada yok; öneri kullanıldı.');
+      }
+      if(!d){
+        d = veMntStpTakozNoktasi(sonuc, b.parcalar, agler);
+        if(d.ok) r.kaynak = 'eksen'; else { neden = d.neden; d = null; }
+      }
+      if(d){
+        r.konum = d.c.slice(); r.nokta = { c: d.c.slice(), n: d.n.slice(), r: d.r };
+        out.birimler.push(r);
+        return;
+      }
+      out.uyarilar.push('"' + b.ad + '": takoz ekseni bulunamadı (' + neden + '); nokta ' + (oz.kapali && oz.c ? 'hacim' : 'kutu') + ' merkezi.');
+    }
     if(oz.kapali && oz.c){ r.konum = oz.c.slice(); r.kaynak = 'hacim'; }
     else if(oz.kutu){
       r.konum = [(oz.kutu[0] + oz.kutu[3]) / 2, (oz.kutu[1] + oz.kutu[4]) / 2, (oz.kutu[2] + oz.kutu[5]) / 2];
@@ -477,6 +686,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit,
     veMntStpRolVer: veMntStpRolVer, VE_MNT_STP_KAYIT_SURUM: VE_MNT_STP_KAYIT_SURUM,
     veMntStpYol: veMntStpYol, veMntStpImza: veMntStpImza,
-    veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula
+    veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula,
+    VE_MNT_STP_NOKTA: VE_MNT_STP_NOKTA, veMntStpYuzler: veMntStpYuzler, veMntStpTakozNoktasi: veMntStpTakozNoktasi,
+    veMntStpDaireBul: veMntStpDaireBul, veMntStpKenarDaire: veMntStpKenarDaire
   };
 }

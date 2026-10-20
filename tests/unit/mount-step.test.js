@@ -51,7 +51,10 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
     expect(coz.hatalar).toEqual([]);
     expect(coz.birimler.map((b) => b.ad).sort()).toEqual(['Arka braket', 'Motor bloğu', 'Sağ arka takoz',
       'Sağ ön takoz', 'Sol arka takoz', 'Sol ön takoz', 'Şanzıman gövdesi'].sort());
-    coz.birimler.forEach((b) => { expect(b.kapali).toBe(true); expect(b.kaynak).toBe('hacim'); });
+    coz.birimler.forEach((b) => {
+      expect(b.kapali).toBe(true);
+      expect(b.kaynak).toBe(b.tip === 'mnt-mount' ? 'eksen' : 'hacim');
+    });
   });
 
   test('kutu (motor): hacim ve merkez BİREBİR', () => {
@@ -69,9 +72,13 @@ describe('GÜÇ GRUBU — analitik cevaplı katılar', () => {
     b.konum.forEach((v, i) => expect(Math.abs(v - S.GUC.sanziman.konum[i])).toBeLessThan(1e-3));
   });
 
-  test('takoz konumu = biriminin hacim merkezi (dört takoz, iki ayna çift)', () => {
+  // Kural: üst bağlantı yüzeyinin merkezi (2026-10-20, adım 5) — silindir takozda
+  // üst disk, merkezin L/2 üstü; ayrıntılı kapılar mount-nokta.test.js'te
+  test('takoz noktası = üst bağlantı yüzeyinin merkezi (dört takoz, iki ayna çift)', () => {
     S.GUC.takozlar.forEach((t) => {
-      birim(t.ad).konum.forEach((v, i) => expect(Math.abs(v - t.konum[i])).toBeLessThan(1e-3));
+      const b = birim(t.ad);
+      [t.konum[0], t.konum[1], t.konum[2] + t.olcu[1] / 2].forEach((v, i) => expect(Math.abs(b.konum[i] - v)).toBeLessThan(1e-9));
+      expect(b.nokta.r).toBe(t.olcu[0]);
     });
   });
 

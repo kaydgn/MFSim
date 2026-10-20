@@ -394,7 +394,7 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
     ['mnt-motor', 'mnt-gearbox', 'mnt-bracket'].forEach((t) => expect(tipler).toContain(t));
     cp.VE_MNT_ARAC_TIPLERI.forEach((t) => expect(tipler.filter((x) => x === t)).toHaveLength(1));
     const takoz = global.nodes.filter((n) => n.type === 'mnt-mount')[0];
-    expect([takoz.data.x, takoz.data.y, takoz.data.z]).toEqual([-650, 380, 420]);
+    expect([takoz.data.x, takoz.data.y, takoz.data.z]).toEqual([-650, 380, 450]);   // üst yüzün merkezi (adım 5)
     expect(W.veMntWizAcik()).toBe(false);
   });
 

@@ -78,9 +78,14 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   bırakılır, aynı temsil bir kez üçgenlenir — tek bağlam yığını 3,2 GB'a
   çıkarıyordu). 3B montajı kurulurken gösterir, ÇİZİM KÜMELERDE (parça başına
   nesne kurulmaz: 23.388 çizim çağrısıydı), Durdur · Devam; eksik ağı büyük
-  hesap kartta çubukla bekler. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
+  hesap kartta çubukla bekler. **Takoz noktası ÜST BAĞLANTI YÜZEYİNİN MERKEZİ**
+  (kullanıcı kuralı): dosyada yazılı dairenin merkezi, ağdan değil — öneri
+  eksenden (`veMntStpTakozNoktasi`), 3B'de "Daireden nokta" kenarı seçer
+  (`veMntStpKenarDaire`; ağ yalnız `daire` dizinini taşır); seçilen daire rol
+  kaydına yolu ve merkeziyle girer. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
   (→ *STEP OKUMASI* · *AĞAÇ DAL DAL* · *HESAP BEKLER*) + `mount-3b.test.js` +
-  `mount-step-okuma.spec.js` + `mount-3b.spec.js`.
+  `mount-nokta.test.js` + `mount-step-okuma.spec.js` + `mount-3b.spec.js` +
+  `mount-nokta.spec.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle

@@ -208,4 +208,64 @@ function tekrarliMontaj(opt = {}) {
   return yz.metin();
 }
 
-module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj };
+// ── TAKOZ KALIPLARI (Takoz adım 5 — takoz noktası) ───────────────────────
+// Tulga sunusundaki beş takoz noktası (CATIA ölçümü: takozun üst bağlantı
+// yüzeyindeki dairenin merkezi). Kalıp bu noktaya ÜST PLAKANIN ÜST YÜZÜ gelecek
+// biçimde dört silindirden kurulur: taban flanşı · kauçuk · üst plaka ·
+// saplama; `somun` varyantında saplamanın üstünde 12 mm'lik braket boşluğu,
+// pul ve somun (braket birimin dışında — dosyada hiç yok). Hacim merkezi bu
+// noktanın 37,97 mm (somunluda 37,44 mm) altına düşüyordu (ölçüldü).
+const TULGA_TAKOZ = [
+  ['TK-ON', 'Ön takoz', [-196.034, 0.047, 179.682]],
+  ['TK-SAG-ON', 'Sağ ön takoz', [439.961, 356.042, 499.855]],
+  ['TK-SOL-ON', 'Sol ön takoz', [439.957, -355.957, 499.855]],
+  ['TK-SAG-ARKA', 'Sağ arka takoz', [1381.672, 305.873, 43.452]],
+  ['TK-SOL-ARKA', 'Sol arka takoz', [1381.671, -304.131, 51.439]]
+];
+// Dilimler: s alt montajın ekseninde, üst plakanın üstü s = 0
+const TAKOZ_DILIM = {
+  duz: [
+    { k: 'FLANS', ad: 'taban flanşı', r: 60, s0: -68, s1: -58 },
+    { k: 'KAUCUK', ad: 'kauçuk', r: 45, s0: -58, s1: -8 },
+    { k: 'PLAKA', ad: 'üst plaka', r: 35, s0: -8, s1: 0 },
+    { k: 'SAPLAMA', ad: 'saplama', r: 6, s0: 0, s1: 35 }
+  ],
+  somun: [
+    { k: 'PUL', ad: 'pul', r: 12, s0: 12, s1: 15 },
+    { k: 'SOMUN', ad: 'somun', r: 10, s0: 15, s1: 25 }
+  ],
+  // Konik takoz kalıbı: geniş flanş altta, üstte dar göbek (saplamasız)
+  konik: [
+    { k: 'FLANS', ad: 'flanş', r: 70, s0: -72, s1: -60 },
+    { k: 'KAUCUK', ad: 'kauçuk', r: 50, s0: -60, s1: -20 },
+    { k: 'GOBEK', ad: 'göbek', r: 20, s0: -20, s1: 0 }
+  ]
+};
+// opt: { varyant: 'duz'|'somun'|'konik', z, x (alt montajın yönü), govde (motor
+// vb. kutular, varsayılan var), civata (flanşta eksen dışı iki cıvata — dosyada
+// takozun dilimlerinden ÖNCE), saplama (false: saplama yok — braket boşluğu
+// boş kalır) }
+function tulgaKalibi(opt = {}) {
+  const v = opt.varyant || 'duz';
+  const parcalar = opt.govde === false ? [] : [
+    { id: 'MOTOR', ad: 'Motor bloğu', sekil: 'kutu', olcu: [600, 500, 600], konum: [124.96, 0.05, 750.03] },
+    { id: 'SANZ', ad: 'Şanzıman gövdesi', sekil: 'kutu', olcu: [400, 300, 300], konum: [814.55, 40.817, 365.138] },
+    { id: 'TC', ad: 'Transfer gövdesi', sekil: 'kutu', olcu: [300, 300, 200], konum: [1431.449, 54.419, 302.336] }
+  ];
+  const dilim = (v === 'konik' ? TAKOZ_DILIM.konik : TAKOZ_DILIM.duz.concat(v === 'somun' ? TAKOZ_DILIM.somun : []))
+    .filter((d) => !(opt.saplama === false && d.k === 'SAPLAMA'));
+  const altlar = [];
+  TULGA_TAKOZ.forEach(([id, ad, p]) => {
+    altlar.push({ id: id + '_ASM', ad, konum: p, z: opt.z, x: opt.x });
+    // cıvata: true (30 mm) ya da boyu — flanşın üstünde durur
+    const L = opt.civata === true ? 30 : opt.civata, f = (v === 'konik' ? TAKOZ_DILIM.konik : TAKOZ_DILIM.duz)[0].s1;
+    if (opt.civata) [-1, 1].forEach((y, k) => parcalar.push({ id: id + '-CIVATA' + k, ad: ad + ' cıvata ' + (k + 1), sekil: 'silindir',
+      olcu: [5, L], konum: [0, y * 52, f + L / 2], alt: id + '_ASM' }));
+    dilim.forEach((d) => parcalar.push({ id: id + '-' + d.k, ad: ad + ' ' + d.ad, sekil: 'silindir', olcu: [d.r, d.s1 - d.s0],
+      konum: [0, 0, (d.s0 + d.s1) / 2], alt: id + '_ASM' }));
+  });
+  return guçGrubuStep(parcalar, { altMontajlar: altlar });
+}
+
+module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
+  TULGA_TAKOZ, TAKOZ_DILIM, tulgaKalibi };

@@ -393,6 +393,7 @@ function veMntWizKapat(kaydet){
 }
 function veMntWizKey(e){
   if(!e) return;
+  if(e.key === 'Escape' && typeof veMntWiz3bNoktaBitir === 'function' && veMntWiz3bNoktaBitir()) return;
   if(e.key === 'Escape' && typeof veMntWiz3bAcik === 'function' && veMntWiz3bAcik()){ veMntWiz3bKapat(); return; }
   if(e.key === 'Escape'){ veMntWizKapat(true); return; }
   if(e.altKey && e.key === 'ArrowRight'){ e.preventDefault(); veMntWizGo(1); }
@@ -841,7 +842,7 @@ function _mwStpKayitYaz(s){
   var n = _mwStpEv(s);
   if(!n) return false;
   if(!n.data) n.data = {};
-  n.data.cad = veMntStpRolKaydi(s.sonuc, s.roller, s.kutle, { dosya: s.dosya, bayt: s.bayt });
+  n.data.cad = veMntStpRolKaydi(s.sonuc, s.roller, s.kutle, { dosya: s.dosya, bayt: s.bayt }, s.nokta);
   return true;
 }
 // Geri-al / ileri-al / sekme ve modül geçişi düğüm verisini yeniden kurar:
@@ -854,7 +855,7 @@ function _mwStpKayittanAl(s){
   if(!k || !Array.isArray(k.roller) || !k.roller.length || typeof veMntStpRolKaydiUygula !== 'function') return null;
   var u = veMntStpRolKaydiUygula(s.sonuc, k);
   s.kayit = { dosya: k.dosya || '', toplam: u.toplam, eslesen: u.eslesen, eksik: u.eksik.length, ayni: u.ayni };
-  if(u.eslesen){ s.roller = u.roller; s.kutle = u.kutle; }
+  if(u.eslesen){ s.roller = u.roller; s.kutle = u.kutle; s.nokta = u.nokta || {}; }
   s.kayitSahibi = !u.eksik.length;
   return s.kayit;
 }
@@ -988,7 +989,7 @@ function veMntWizStpOku(girdi, ad, kap, o){
 function _mwStpKur(sonuc, ad, kap, o){
   o = o || {};
   var s = { dosya:ad || 'STEP', kap:kap || 'duz', durum:sonuc.ok ? 'hazir' : 'hata', sonuc:sonuc,
-            roller:(sonuc.agac || []).map(function(){ return null; }), coz:null, kutle:{}, ag:[], modul:_mwStpAnahtar(),
+            roller:(sonuc.agac || []).map(function(){ return null; }), coz:null, kutle:{}, nokta:{}, ag:[], modul:_mwStpAnahtar(),
             yer:o.yer || (veMntWizAcik() ? 'sihirbaz' : 'pencere'), bayt:o.bayt || 0, acik:_mwStpAcilis(sonuc) };
   if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosya okunamadı.';
   else _mwStpKayittanAl(s);
@@ -1096,14 +1097,14 @@ function veMntWizStpDaha(i){
   _mwStpTazele();
   return true;
 }
-function _mwStpImza(s){ return JSON.stringify(s.roller); }
+function _mwStpImza(s){ return JSON.stringify([s.roller, s.nokta || {}]); }
 // Parçanın ağı — 3B görüntüleyiciyle ORTAK önbellek (s.ag): hesap ve görüntü
 // aynı üçgenleri kullanır, ikisi de bir kez üçgenler. Eksik ağ ORTAK İŞTEN
 // (aşağıda) eşzamanlı üretilir; büyük eksik hesabı bekletir (_mwStpHesapBekle).
 function _mwStpCoz(s){
   var J = _mwStpAgIs(s);
   if(J) J.uret(_mwStpGerekli(s));
-  return veMntStpCoz(s.sonuc, s.roller, { ag:function(pi){ return (s.ag && s.ag[pi]) || null; } });
+  return veMntStpCoz(s.sonuc, s.roller, { ag:function(pi){ return (s.ag && s.ag[pi]) || null; }, nokta:s.nokta });
 }
 // Hesabın parçaları: rol verilen birimlerin parçaları
 function _mwStpGerekli(s){
@@ -1208,12 +1209,32 @@ function veMntWizStpRol(i, tip){
   if(!s || s.durum !== 'hazir' || !(i >= 0 && i < s.roller.length)) return false;
   if(!veMntStpRolVer(s.sonuc, s.roller, i, tip)) return false;
   Object.keys(s.kutle).forEach(function(d){ if(!s.roller[d]) delete s.kutle[d]; });
+  Object.keys(s.nokta || {}).forEach(function(d){ if(s.roller[d] !== 'mnt-mount') delete s.nokta[d]; });
   s.kayitSahibi = true;
   _mwStpKayitYaz(s);
   var vardi = !!s.coz || !!s.hesapBekliyor;
   s.coz = null;
   _mwStpHesapVazgec(s);                        // bekleyen hesap eski rollerindi
   if(vardi && !_mwStpRolDenetim(s).length && !_mwStpHesapBekle(s)) s.coz = _mwStpCoz(s);
+  _mwStpTazele();
+  return true;
+}
+// TAKOZ NOKTASI — 3B'de seçilen daire (js/mount-step.js → veMntStpKenarDaire)
+// ya da null (öneriye dön). Rol gibi modülün kaydına yazılır, geri-al adımı
+// değil; hesap varsa yeniden yapılır.
+function veMntWizStpNokta(dugum, secim){
+  var s = _mwStp;
+  if(!s || s.durum !== 'hazir' || s.roller[dugum] !== 'mnt-mount') return false;
+  if(!s.nokta) s.nokta = {};
+  if(secim && secim.c && secim.r > 0){
+    s.nokta[dugum] = { yol:secim.yol.slice(), c:secim.c.slice(), r:secim.r };
+    if(secim.n) s.nokta[dugum].n = secim.n.slice();
+  }
+  else if(s.nokta[dugum]) delete s.nokta[dugum];
+  else return false;
+  s.kayitSahibi = true;
+  _mwStpKayitYaz(s);
+  if(s.coz && !s.hesapBekliyor) s.coz = _mwStpCoz(s);
   _mwStpTazele();
   return true;
 }
@@ -1254,9 +1275,24 @@ function _mwStpBirim(s, dugum){
   for(var i = 0; i < l.length; i++) if(l[i].dugum === dugum) return l[i];
   return null;
 }
-// Koordinat üçlüsü ekranda 0,1 mm'ye, ayraç `; ` (karar 7·C)
-function _mwStpKonum(p){
-  return (p || []).map(function(v){ return _mwSayi(Math.round(v * 10) / 10); }).join('; ');
+// Konum kuralın dışında mı: gövdede ağ kapalı değil (kutu merkezi), takozda
+// üst bağlantı yüzeyi bulunamadı (hacim ya da kutu merkezi)
+function veMntWizStpKonumUyari(b){
+  return !!b && (b.kaynak === 'kutu' || (b.tip === 'mnt-mount' && b.kaynak !== 'eksen' && b.kaynak !== 'kenar'));
+}
+// Takoz noktasının kaynağı (kart · pencere · 3B aynı metni basar)
+function veMntWizStpNoktaKaynak(b){
+  if(!b || b.tip !== 'mnt-mount') return '';
+  if(b.kaynak === 'kenar') return 'Daire Ø ' + _mwSayi(2 * b.nokta.r, 1);
+  if(b.kaynak === 'eksen') return 'Üst yüz Ø ' + _mwSayi(2 * b.nokta.r, 1);
+  return b.kaynak === 'hacim' ? 'Hacim merkezi' : 'Kutu merkezi';
+}
+// Koordinat üçlüsü, ayraç `; ` (karar 7·C). Varsayılan 0,1 mm (geometriden
+// tahmin: ağırlık merkezi); takoz noktası `hane` 3 — dosyada yazılı sayı,
+// CATIA'nın ölçüsüyle aynı hane.
+function _mwStpKonum(p, hane){
+  var k = Math.pow(10, hane > 0 ? hane : 1);
+  return (p || []).map(function(v){ return _mwSayi(Math.round(v * k) / k, hane > 0 ? hane : 1); }).join('; ');
 }
 // Hacim litre (dm³) — büyüklüğe göre hane
 function _mwStpHacim(V){
@@ -1400,13 +1436,14 @@ function _mwStpAgacHTML(s){
     for(var e = d.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     // `tanim` DÜZ METİN, `onEk` HTML (ikon): hücre ikisinden kurulur (FEAD'de
     // ikon metne eklenip birlikte kaçışlanıyordu — ham `<span>` basılıyordu).
-    var tanim = '—', onEk = '', sinif = '';
+    var tanim = '—', onEk = '', sinif = '', kaynak = '';
     if(ata >= 0){ onEk = _mwIkon('corner-down-right') + ' '; tanim = _mwAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
     else if(rol && coz){
       var b = _mwStpBirim(s, d.i);
       if(b && b.konum){
-        tanim = _mwStpKonum(b.konum);
-        if(b.kaynak !== 'hacim') sinif = ' ve-fw-stp-warn';
+        tanim = _mwStpKonum(b.konum, b.tip === 'mnt-mount' ? 3 : 1);
+        kaynak = veMntWizStpNoktaKaynak(b);
+        if(veMntWizStpKonumUyari(b)) sinif = ' ve-fw-stp-warn';
       } else { tanim = 'ölçülemedi'; sinif = ' ve-fw-stp-warn'; }
     }
     else if(!rol) sinif = ' ve-fw-stp-off';
@@ -1423,7 +1460,7 @@ function _mwStpAgacHTML(s){
       + sec.map(function(o){
           return '<option value="' + o[0] + '"' + (o[0] === rol ? ' selected' : '') + '>' + _mwEsc(o[1]) + '</option>'; }).join('')
       + '</select></td>'
-      + '<td>' + onEk + _mwEsc(tanim) + '</td></tr>';
+      + '<td' + (kaynak ? ' title="' + _mwEsc(tanim + ' · ' + kaynak) + '"' : '') + '>' + onEk + _mwEsc(tanim) + '</td></tr>';
   });
   return t + '</tbody></table></div>';
 }
@@ -2108,6 +2145,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizStpRol: veMntWizStpRol, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
     veMntWizStpDenetim: veMntWizStpDenetim, veMntWizStpAktar: veMntWizStpAktar, veMntWizStpKapat: veMntWizStpKapat,
     veMntWizStpDrop: veMntWizStpDrop, _mwStpKartHTML: _mwStpKartHTML, _mwStpOnizleme: _mwStpOnizleme,
+    veMntWizStpNokta: veMntWizStpNokta, veMntWizStpNoktaKaynak: veMntWizStpNoktaKaynak, veMntWizKey: veMntWizKey,
+    veMntWizStpKonumUyari: veMntWizStpKonumUyari, _mwStpKonum: _mwStpKonum, _mwStpImza: _mwStpImza,
     _mwTaslakSifirla: function(){ _mwTaslaklar = {}; },
     _mwStpSifirla: function(){ _mwStp = null; }
   };

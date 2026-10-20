@@ -145,7 +145,10 @@ function _gmSec2(){
       + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir (föyün satırının '
       + 'üstüne gelince o parça çizimde aydınlanır, modelin geri kalanı gölgeye düşer); 3D Görüntüleyici '
       + 'güç grubunun STEP dosyasını açar, parçalara 3B\'de ya da parça ağacında rol verir ve rol verilen '
-      + 'birimlerin konumunu ölçer — roller projeyle kaydedilir, STEP dosyası kaydedilmez; aynı dosya '
+      + 'birimlerin konumunu ölçer. Takozun noktası üst bağlantı yüzeyinin merkezidir: dosyada yazılı '
+      + 'dairenin merkezi, CATIA\'daki ölçümün aynısı; program onu takozun ekseninden önerir, 3B\'de '
+      + '<em>Daireden nokta</em> ile takozun başka bir dairesel kenarı seçilir. Roller ve seçilen daireler '
+      + 'projeyle kaydedilir, STEP dosyası kaydedilmez; aynı dosya '
       + 'yeniden açılınca roller geri gelir. Sihirbazın “STEP\'ten başla” kartı aynı dosyayı ve rolleri gösterir',
       'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12'],
