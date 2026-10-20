@@ -2547,18 +2547,8 @@ function _mntVwrIpucu(satirlar){
 function _mntSahneHTML(wrapId, canvasId){
   return '<div class="ve-mnt-sahne" id="'+wrapId+'"><canvas id="'+canvasId+'"></canvas></div>';
 }
-// 3D GÖRÜNTÜLEYİCİ — YER TUTUCU (kullanıcı kararları 2026-10-16): "Klasik 3B"
-// ilerleyen zamanda gerçek CAD dosyasıyla işlenecek ("sadece isim olarak
-// kalabilir"); döndürülebilir aksonometri Görünümler bileşenine taşındı.
-// Pencere TEK kategori ve başlıksız: aile kuralı her kategoriye bir bölüm
-// başlığı ister, başlıksız yer tutucuyu tipin kendisi beyan eder
-// (componentDefs['mnt-viewer'].yerTutucu = notun metni) ve aile kapısı
-// (pencere-kabuk.test.js) yalnız beyan edeni bağışlar.
-function getMntViewerPropertiesHTML(node){
-  if(!node.data) node.data={};
-  var d=(typeof componentDefs!=='undefined' && componentDefs['mnt-viewer']) || {};
-  return _mntPencereKabuk(node, [{ k:'sahne', ad:'Klasik 3B', govde:'<div class="ve-mnt-kroki-bos">'+_mntEsc(d.yerTutucu || '')+'</div>' }], '');
-}
+// 3D GÖRÜNTÜLEYİCİ — CAD'in evi: penceresi js/cp-mount-cad.js'te
+// (getMntViewerPropertiesHTML; 2026-10-20'ye dek yer tutucuydu).
 // Görünümler'in aksonometrisi tam ekranda (düğmesi çizimin başlığında):
 // aynı çizim, işaretler adlarıyla. Kapanınca pencerenin çizimi aynı bakışa
 // (tercih ortak) yeniden kurulur.
@@ -5165,7 +5155,6 @@ if(typeof module!=='undefined' && module.exports){
     veMntSolverCompute: veMntSolverCompute,
     _mntForgetResults: _mntForgetResults,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
-    getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
     getMntCoordFramePropertiesHTML: getMntCoordFramePropertiesHTML,
     getMnt2DViewPropertiesHTML: getMnt2DViewPropertiesHTML,
     _mnt2DGather: _mnt2DGather,

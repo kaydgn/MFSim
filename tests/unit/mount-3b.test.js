@@ -77,3 +77,18 @@ describe('KURULUMUN KUTUSU ve BEKLEYEN HESAP', () => {
     expect(d.querySelector('#ve-mw-3b-hesapla').disabled).toBe(false);
   });
 });
+
+// İKİ YER (2026-10-20, Takoz adım 4): 3B sihirbazın içinde ya da 3D
+// Görüntüleyici penceresinin kendi perdesinde açılır; "Sihirbaza aktar"
+// yalnız sihirbazın içinde — pencereden açılan 3B'de sihirbaz yok.
+describe('ALT DİZİ — aktarım yalnız sihirbazın 3B\'sinde', () => {
+  test('hesap sonrası aktarım düğmesi: varsayılan ve sihirbazda var, pencerede yok', () => {
+    const s = veMntStpOku(require('../helpers/step-takoz.js').gucGrubu());
+    const st = { sonuc: s, roller: s.agac.map(() => null), coz: { ok: true, birimler: [] } };
+    st.roller[1] = 'mnt-motor';
+    expect(veMntWiz3bAltHTML(st, -1)).toMatch(/id="ve-mw-3b-aktar"/);
+    expect(veMntWiz3bAltHTML(st, -1, { aktar: true })).toMatch(/id="ve-mw-3b-aktar"/);
+    expect(veMntWiz3bAltHTML(st, -1, { aktar: false })).not.toMatch(/ve-mw-3b-aktar/);
+    expect(veMntWiz3bAltHTML(st, -1, { aktar: false })).toMatch(/id="ve-mw-3b-hesapla"/);
+  });
+});

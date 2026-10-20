@@ -1167,6 +1167,7 @@
 <script type="text/x-mfsim-defer" src="js/cp-fead-wizard.js"></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-3b.js"></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-3b.js"></script>
+<script type="text/x-mfsim-defer" src="js/cp-mount-cad.js"></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-report.js"></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-summary.js"></script>
 <script type="text/x-mfsim-defer" src="js/cp-fead-pano.js"></script>
@@ -1352,6 +1353,14 @@
     <!-- STEP'İN 3B GÖRÜNTÜLEYİCİSİ (js/cp-mount-3b.js) — sihirbazın içinde bir
          kaplama; sihirbaz kapanınca WebGL bağlamı da bırakılır. -->
     <div id="ve-mw-3b" class="ve-fw-3b" style="display:none;"></div>
+  </div>
+</div>
+<!-- 3D GÖRÜNTÜLEYİCİ'NİN 3B'Sİ (js/cp-mount-3b.js · js/cp-mount-cad.js) — STEP
+     3D Görüntüleyici penceresinden açılınca: sihirbazınkiyle AYNI görüntüleyici,
+     kendi perdesinde (başlığı ve kapatı görüntüleyici kurar). -->
+<div id="ve-mnt-3b-overlay" class="ve-settings-overlay ve-fw-3b-genis" style="display:none;" onmousedown="if(event.target===this) veMntWiz3bKapat()">
+  <div class="ve-settings-modal ve-fw-modal" role="dialog" aria-label="3B görüntüleyici">
+    <div id="ve-mnt-3b" class="ve-fw-3b" style="display:none;"></div>
   </div>
 </div>
 

@@ -521,6 +521,10 @@ function _veRestoreStateNodes(state) {
   clearSelection();
   // Açık pencere konusunun YENİ düğümüyle kurulur: geri-al düğüm nesnelerini
   // yeniden yaratıyor, eski içerik geri alınan değeri göstermeye devam ederdi.
+  // Takoz'un STEP rolleri oturumdadır ve geri-al adımı değildir: geri
+  // yüklenen 3D Görüntüleyici verisi canlı oturumdan yeniden yazılır (yoksa
+  // eski anlık görüntünün rolleri sonraki kayda giderdi). Pencereden ÖNCE.
+  if(typeof veMntWizStpKayitTazele === 'function') veMntWizStpKayitTazele();
   if(typeof veMufettisTazele === 'function') veMufettisTazele();
 
   // Motor aksesuar modelini canlı bağlantılara göre uzlaştır — yükleme/geri-al

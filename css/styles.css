@@ -11676,6 +11676,18 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-stp-dahabtn .mf-ico{ width:12px; height:12px; }
 .ve-mw-stp-dahabtn:hover{ text-decoration:underline; }
 .ve-mw-stp-dahabtn:focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-xs); }
+/* 3D GÖRÜNTÜLEYİCİ PENCERESİ (js/cp-mount-cad.js) — sihirbazın STEP tabloları
+   pencerede de sihirbazdaki gibi: genel pencere tablosu kuralı (`th, td
+   {padding:5px 8px !important}`, zeminli ve kenarlıklı başlık) ağacın
+   girintisini eziyordu (alt montajın parçaları ebeveyniyle aynı hizada).
+   Genel kural `!important` olduğu için istisna da öyle; kapsamı bu tablolar. */
+.ve-properties-content .ve-fw-tbl th{
+  padding:0 6px 5px !important; font-weight:600; color:var(--text-heading);
+  background:var(--bg-secondary); border-right:0; border-bottom:1px solid var(--text-muted);
+}
+.ve-properties-content .ve-fw-tbl td{ padding:2px 4px !important; }
+.ve-properties-content .ve-fw-tbl-stp td:first-child{ padding-left:calc(4px + var(--stp-d, 0) * 14px) !important; }
+.ve-properties-content .ve-fw-tbl select.ve-fw-inp{ text-align:left; padding:0 6px; }
 .ve-mw-tbl-kutle th:nth-child(1), .ve-mw-tbl-kutle td:nth-child(1){ width:36%; }
 .ve-mw-tbl-kutle th:nth-child(2), .ve-mw-tbl-kutle td:nth-child(2){ width:18%; text-align:right; }
 .ve-mw-tbl-kutle th:nth-child(3), .ve-mw-tbl-kutle td:nth-child(3){ width:22%; }

@@ -94,13 +94,6 @@ describe('künye ve yer tutucu yuvası açıklama taşımaz', () => {
     const sapan = kaynaklar.filter((k) => /[;.]/.test(k) || k.split(/\s+/).length > 5);
     expect(sapan).toEqual([]);
   });
-
-  test('3B görüntüleyicinin yer tutucusu durum söyler: kendini anlatma ve yönlendirme yok', () => {
-    const src = oku('js/components.js');
-    const m = /yerTutucu: '([^']*)'/.exec(src);
-    expect(m).toBeTruthy();
-    expect(m[1]).not.toMatch(/Bu bileşen|bileşeninde|döndürülür/);
-  });
 });
 
 describe('aynı durum aynı pencerede bir kez', () => {

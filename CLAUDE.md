@@ -100,14 +100,26 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   bileşen perdenin üstünde. Tam ekran kabın yüksekliğini doldurur. Başlangıç sayfasının örnek karoları sade
   kipi (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
   görünüş, çözümün girdisinden — `veMntAksoCozumModel`); ikisi de katsız.
-  **3D Görüntüleyici YER TUTUCU** (`componentDefs['mnt-viewer'].yerTutucu`): "Klasik
-  3B" yalnız yer tutucu notu, ilerleyen zamanda gerçek CAD dosyasıyla işlenecek;
-  `js/cp-mount-viewer.js` yalnız Koordinat Düzlemi'nin sahnesi. Kapı:
+  3D Görüntüleyici CAD'in evi (aşağıda); `js/cp-mount-viewer.js` yalnız Koordinat
+  Düzlemi'nin sahnesi. Kapı:
   `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *YAPIŞKAN
   YER* · *PERDE* · *AYDINLIK* · *RAPOR* · *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* +
   `mount-pencere.spec.js` → *Görünümler* · *Güç grubundaki yeri* · *tam ekran* ·
   *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
+- `js/cp-mount-cad.js` — Takoz **3D Görüntüleyici: CAD'in evi** (2026-10-20, adım 4; yer
+  tutucu kalktı). Modülün STEP oturumu TEK ve sihirbazın kartıyla ORTAK (`_mwStp`,
+  anahtarı sekme + modül; proje değişince düşer): dosya iki yerden açılır, rol
+  birinde verilince ötekinde görünür, pencere kartın üreticilerini kitin
+  bölümlerine koyar, tek eylemi durumdan (seçici · çubuk + Vazgeç · "3B'de aç").
+  3B pencereden açılınca kendi perdesinde (`#ve-mnt-3b-overlay`), aktarım yalnız
+  sihirbazda. **Dosya projeye GİRMEZ, roller girer**: rol ve kütle bileşenin
+  `data.cad`ına örnek yoluyla (`veMntStpRolKaydi`) yazılır, aynı dosya okununca
+  yoldan geri gelir; başka dosyanın kaydı rol verilene dek korunur. Rol değişimi
+  geri-al adımı DEĞİL: geri yüklenen veri oturumdan yeniden yazılır
+  (`restoreState` → `veMntWizStpKayitTazele`). Tip tek kopya. Kapı:
+  `mount-cad.test.js` (→ *KAYIT* · *OTURUM ↔ KAYIT* · *PENCERE* · *GERİ-AL*) +
+  `mount-3b.test.js` → *ALT DİZİ* + `mount-cad.spec.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları

@@ -6,10 +6,9 @@
 // soluk çizgileri, üç yarı saydam düzlem, yön etiketleri.
 //
 // 3D Görüntüleyici'nin three.js sahnesi ("model" kipi: takoz küpleri, CG
-// küreleri, fare ipucu, kendi tam ekranı) 2026-10-16'da KALDIRILDI —
-// kullanıcı kararı: "Klasik 3B" sekmesi yalnız ad olarak kalır, ilerleyen
-// zamanda gerçek CAD dosyasıyla işlenecek. Model Görünümler bileşeninde
-// döndürülüyor (js/mount-akso.js).
+// küreleri, fare ipucu, kendi tam ekranı) 2026-10-16'da KALDIRILDI; model
+// Görünümler bileşeninde döndürülüyor (js/mount-akso.js). 3D Görüntüleyici
+// 2026-10-20'den beri gerçek CAD dosyasının evi (js/cp-mount-cad.js).
 //
 // Koordinat: kullanıcı girişi X=fore/aft, Y=left/right, Z=up (mm).
 // Three.js Y-up → (x,y,z)_giriş = (x, z, y)_dünya (A26 konvansiyonu).

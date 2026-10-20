@@ -297,6 +297,94 @@ function veMntStpAgUret(sonuc, ag, liste){
   return ag;
 }
 
+// ── ROL VERMEK — rol bir DÜĞÜME verilir, parça TEK birime aittir ──────────
+// Düğümün atalarının ve torunlarının rolü düşer (motor alt montajına rol
+// verilince parçalarının ayrı rolü kalmaz). Oturumun rolü ve kaydın geri
+// gelişi aynı kuralla (aşağıda). `roller` yerinde değişir; döner: true.
+function veMntStpRolVer(sonuc, roller, i, tip){
+  var a = sonuc && sonuc.agac;
+  if(!a || !(i >= 0 && i < a.length) || (tip && VE_MNT_STP_ROLLER.indexOf(tip) < 0)) return false;
+  if(tip){
+    for(var e = a[i].ebeveyn; e >= 0; e = a[e].ebeveyn) roller[e] = null;
+    (function sil(d){ a[d].cocuklar.forEach(function(c){ roller[c] = null; sil(c); }); })(i);
+  }
+  roller[i] = tip || null;
+  return true;
+}
+
+// ── ROL KAYDI — roller projeyle, STEP'siz (2026-10-20, Takoz adım 4) ─────
+// Proje STEP'i TAŞIMAZ (gerçek dosya 400 MB): 3D Görüntüleyici'nin verisine
+// yalnız rol verilen düğümlerin ÖRNEK YOLU (kökten düğüme örnek adları —
+// CATIA'nın "Motor.1"leri), rolü, adı ve kütlesi yazılır. Aynı dosya
+// açılınca roller YOLDAN geri gelir: indis değil yol, çünkü yeniden dışa
+// aktarılan dosyada varlık kimlikleri ve sıra değişir, örnek adları kalır.
+// İMZA ağacın biçimidir (örnek adı · ürün kimliği · ebeveyn · parça sayısı):
+// aynı imza aynı montaj.
+var VE_MNT_STP_KAYIT_SURUM = 1;
+function veMntStpYol(sonuc, i){
+  var a = sonuc.agac, yol = [];
+  for(var d = i; d >= 0 && a[d]; d = a[d].ebeveyn) if(a[d].derinlik > 0) yol.unshift(a[d].ornek);
+  return yol;
+}
+// Düğüm başına yol anahtarı (kökten aşağı; okuyucunun anahtarıyla aynı ayraç)
+function _mstYolAnahtarlari(sonuc){
+  var a = sonuc.agac, k = new Array(a.length);
+  for(var i = 0; i < a.length; i++){
+    var d = a[i];
+    k[i] = d.ebeveyn >= 0 ? (a[d.ebeveyn].derinlik > 0 ? k[d.ebeveyn] + '\u0001' : '') + d.ornek : (d.derinlik > 0 ? d.ornek : '');
+  }
+  return k;
+}
+function _mstFnv(s, h){
+  for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h >>> 0;
+}
+// Okumanın ağacı değişmez: imza sonuca bir kez yazılır (kayıt her rol
+// değişiminde yazılıyor — imza her seferinde bütün ağacı dolaşmasın).
+function veMntStpImza(sonuc){
+  if(sonuc && sonuc._imza) return sonuc._imza;
+  var a = (sonuc && sonuc.agac) || [], h = 0x811c9dc5;
+  for(var i = 0; i < a.length; i++)
+    h = _mstFnv(a[i].ornek + '\u0001' + a[i].id + '\u0001' + a[i].ebeveyn + '\u0001' + a[i].parcalar.length + '\u0002', h);
+  var imza = ('0000000' + h.toString(16)).slice(-8) + '-' + a.length + '-' + ((sonuc && sonuc.parcalar) || []).length;
+  if(sonuc && sonuc.ok) sonuc._imza = imza;
+  return imza;
+}
+// Kayıt: { surum, dosya, bayt, imza, parca, roller:[{ yol, rol, ad, kg? }] } — ağaç sırasıyla
+function veMntStpRolKaydi(sonuc, roller, kutle, kunye){
+  kunye = kunye || {}; kutle = kutle || {};
+  var out = { surum: VE_MNT_STP_KAYIT_SURUM, dosya: kunye.dosya || '', bayt: kunye.bayt > 0 ? kunye.bayt : null,
+              imza: veMntStpImza(sonuc), parca: ((sonuc && sonuc.parcalar) || []).length, roller: [] };
+  ((sonuc && sonuc.agac) || []).forEach(function(d){
+    var tip = roller[d.i];
+    if(!tip) return;
+    var r = { yol: veMntStpYol(sonuc, d.i), rol: tip, ad: d.ad };
+    if(+kutle[d.i] > 0) r.kg = +kutle[d.i];
+    out.roller.push(r);
+  });
+  return out;
+}
+// Kaydı bu dosyaya uygular. Döner: { roller (ağaç boyu), kutle:{düğüm: kg},
+// eslesen, toplam, eksik:[bulunamayan kayıt satırı], ayni (imza aynı) }.
+// Rol veriliş kuralı oturumunki (veMntStpRolVer) — kayıt sırası ağaç sırası.
+function veMntStpRolKaydiUygula(sonuc, kayit){
+  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {};
+  var out = { roller: roller, kutle: kutle, eslesen: 0, toplam: 0, eksik: [], ayni: false };
+  if(!kayit || !Array.isArray(kayit.roller)) return out;
+  out.toplam = kayit.roller.length;
+  out.ayni = kayit.imza === veMntStpImza(sonuc);
+  var anahtar = _mstYolAnahtarlari(sonuc), dizin = {};
+  for(var i = 0; i < anahtar.length; i++) if(dizin[anahtar[i]] === undefined) dizin[anahtar[i]] = i;
+  kayit.roller.forEach(function(r){
+    var d = (r && Array.isArray(r.yol)) ? dizin[r.yol.join('\u0001')] : undefined;
+    if(d === undefined || !veMntStpRolVer(sonuc, roller, d, r.rol)){ out.eksik.push(r); return; }
+    if(+r.kg > 0) kutle[d] = +r.kg;
+  });
+  Object.keys(kutle).forEach(function(d){ if(!roller[d]) delete kutle[d]; });   // rolü sonra düşen düğümün kütlesi gider
+  out.eslesen = roller.filter(Boolean).length;
+  return out;
+}
+
 // ── ÇÖZÜM — yalnız rol verilen birimler ───────────────────────────────────
 // opt.ag(pi) → parçanın ağı ya da null (3B görüntüleyicinin önbelleği);
 // verilmezse ağ burada üçgenlenir. Döner (asla fırlatmaz):
@@ -386,6 +474,9 @@ if(typeof module !== 'undefined' && module.exports){
     veMntStpOku: veMntStpOku, veMntStpOkuDilimli: veMntStpOkuDilimli,
     veMntStpBirimler: veMntStpBirimler, veMntStpAgOzellik: veMntStpAgOzellik,
     veMntStpParcaAgi: veMntStpParcaAgi, veMntStpAgIs: veMntStpAgIs, veMntStpAgUret: veMntStpAgUret,
-    veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit
+    veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit,
+    veMntStpRolVer: veMntStpRolVer, VE_MNT_STP_KAYIT_SURUM: VE_MNT_STP_KAYIT_SURUM,
+    veMntStpYol: veMntStpYol, veMntStpImza: veMntStpImza,
+    veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula
   };
 }

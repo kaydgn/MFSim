@@ -54,6 +54,10 @@ function veNewProject() {
   
   var doNew = function() {
     if(veSplitMode) veCloseSplit();
+    // Proje yüklemesinin sıfırlaması (gezinme yolu + oturumluk sonuçlar ve
+    // Takoz'un STEP oturumu): compCounter sıfırlandığı için yeni projenin ilk
+    // modülü öncekinin kimliğini alıyor.
+    if(typeof veResetSubtopoNav === 'function') veResetSubtopoNav();
     veClearCanvasDOM();
     veTabs = [];
     veActiveTabIdx = 0;
@@ -345,6 +349,10 @@ function veBuildCleanTabState(tabState, opts) {
 }
 
 function veSaveTopology() {
+  // Takoz'un STEP rolleri 3D Görüntüleyici'nin verisinde (dosya projeye
+  // girmez): canlı oturum kaydı sekme yazılmadan önce tazeler — bileşen
+  // oturum sürerken yeniden kurulduysa (örnek yükleme) kayıt boş kalırdı.
+  if(typeof veMntWizStpKayitTazele === 'function') veMntWizStpKayitTazele();
   // Aktif sekmeyi kaydet (alt-topolojideysek kullanıcıyı yerinden etme)
   if(typeof veSaveActiveTabStateKeepView === 'function') veSaveActiveTabStateKeepView();
   else veSaveActiveTabState();
@@ -363,13 +371,6 @@ function veSaveTopology() {
       };
     })
   };
-
-  // STEP kaynağını YALNIZ BURADA (dosya yolunda) enjekte et. node.data'da
-  // taşınmıyor çünkü her `saveState()` onu derin kopyalayıp 50 adımlık undo
-  // yığınına bindiriyordu (ÖLÇÜLDÜ: 140 KB dosyada saveState 0,03 → 2,17 ms,
-  // 20 adımlık yığın 22 KB → 3,14 MB). Otomatik localStorage yedeği de aynı
-  // temizleyiciden geçiyor (js/settings.js, kota ~5-10 MB) — oraya YAZMIYORUZ,
-  // `simResults`'ın oraya yazılmama gerekçesinin aynısı.
 
   // Girintisiz (compact) JSON: girintili yazım milyonlarca sayıyı ~2.5×
   // şişirir. Yükleme JSON.parse ile yapıldığından biçim fark etmez.

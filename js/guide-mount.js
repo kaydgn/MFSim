@@ -144,7 +144,10 @@ function _gmSec2(){
       + 'başlıktaki düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar), '
       + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir (föyün satırının '
       + 'üstüne gelince o parça çizimde aydınlanır, modelin geri kalanı gölgeye düşer); 3D Görüntüleyici '
-      + 'gerçek CAD dosyasıyla çalışmaya ayrıldı', 'Hesaba girmez'],
+      + 'güç grubunun STEP dosyasını açar, parçalara 3B\'de ya da parça ağacında rol verir ve rol verilen '
+      + 'birimlerin konumunu ölçer — roller projeyle kaydedilir, STEP dosyası kaydedilmez; aynı dosya '
+      + 'yeniden açılınca roller geri gelir. Sihirbazın “STEP\'ten başla” kartı aynı dosyayı ve rolleri gösterir',
+      'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12'],
     ['<strong>Parametrik Analiz</strong>', 'Katalogdan seçim: takoz gruplarına kütüphanedeki '
       + 'tipler, kısıtlar, iletilebilirlik–sehim dengesi; öneri, kriterler ve iki grafik pencerenin '

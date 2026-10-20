@@ -1054,22 +1054,9 @@ describe('PENCERE — sürüklerken yazılı kare; föyün satırı çizimdeki p
   });
 });
 
-// Görüntüleyici bir YER TUTUCU — tek kategori, notu tipin beyanından.
-describe('KLASİK 3B — 3D Görüntüleyici yer tutucu', () => {
-  test('tek kategori "Klasik 3B"; gövdede tuval, düğme ve çizim yok, yalnız tipin notu', () => {
-    yukle('tulga'); coz();
-    const d = document.createElement('div');
-    d.innerHTML = cp.getMntViewerPropertiesHTML({ id: 'v5', type: 'mnt-viewer', data: {} });
-    expect([...d.querySelectorAll('#ve-fp-panes-v5 > .ve-fp-kat')].map((x) => x.getAttribute('aria-label'))).toEqual(['Klasik 3B']);
-    const p = d.querySelector('#ve-fp-panes-v5 > [data-k="sahne"]');
-    expect({ tuval: d.querySelectorAll('canvas').length, dugme: p.querySelectorAll('button').length, svg: d.querySelectorAll('svg').length })
-      .toEqual({ tuval: 0, dugme: 0, svg: 0 });
-    expect(p.textContent).toBe(componentDefs['mnt-viewer'].yerTutucu);
-    expect(p.textContent).toMatch(/gerçek CAD dosyasıyla/i);
-    expect(p.textContent).not.toMatch(/Görünümler|Bu bileşen/);    // durum söyler; yönlendirme ve kendini anlatma yok
-    expect(d.innerHTML).not.toMatch(/veMountViewer|veMntViewerFullscreen|Sahne göstergesi|ve-mnt-akso|veMntAkso3BTamEkran/);
-  });
-
+// 3D Görüntüleyici'nin penceresi CAD'in evi (2026-10-20; kapıları
+// mount-cad.test.js): açılışında sahne kurulmaz, 3B yalnız eylemiyle açılır.
+describe('KLASİK 3B — 3D Görüntüleyici açılışta sahne kurmaz', () => {
   test('tazeleyicisi yok: açılışta hiçbir şey kurulmaz; Görünümler\'in tazelemesi three.js sahnesi kurmaz', () => {
     expect(cp.veMntViewerRefresh).toBeUndefined();
     const CORE = fs.readFileSync(path.join(KOK, 'js/cp-core.js'), 'utf8');

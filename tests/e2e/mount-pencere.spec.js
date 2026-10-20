@@ -13,7 +13,8 @@
  *   · 2026-10-16: döndürülebilir aksonometri 3D Görüntüleyici'den 2D
  *     Görünüm'e taşındı, bileşenin adı Görünümler; düz görünüşler (üç sekme ve
  *     tam ekranın altı) kalktı, işaretler büyüdü (pencerede takoz 12 → 18 px,
- *     G 13 → 19,6 px). 3D Görüntüleyici yer tutucu.
+ *     G 13 → 19,6 px). 3D Görüntüleyici yer tutucu (2026-10-20'den beri
+ *     CAD'in evi: STEP dosyası ve roller — tests/e2e/mount-cad.spec.js).
  *   · 2026-10-16 (ikinci tur, kullanıcı kararı): Görünümler TEK görünüm
  *     (çizim + işaretler), açı yazısı ve bölümleri yok, tam ekran çizimin
  *     başlığında; pencere SONUÇ GÖSTERMEZ (kuvvet, sehim, mod katmanı ve
@@ -462,19 +463,18 @@ test('Görünümler tam ekran: çizim kabın yüksekliğini doldurur; pencere bo
 // 3D GÖRÜNTÜLEYİCİ YER TUTUCU (kullanıcı kararları 2026-10-16): "Klasik 3B"
 // gerçek CAD dosyasına ayrıldı, çizim Görünümler'e taşındı. Tek kategori,
 // tipin notu; tuval, düğme ve çizim yok, pencere açılınca three.js sahnesi kurulmaz.
-test('3D Görüntüleyici: yer tutucu — tek kategori, not, sahne ve çizim yok; yerleşim temiz', async ({ page }) => {
+test('3D Görüntüleyici: CAD\'in evi — dosyasızken STEP bölümü ve dosya seçici; sahne ve çizim yok; yerleşim temiz', async ({ page }) => {
   await bootApp(page);
   await ornek(page, 'tulga', 'Ön Takoz Braketi');
   await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
   await page.waitForTimeout(800);
   await page.evaluate(Y.KAYNAK);
-  const r = await page.evaluate(() => {
-    const p = document.querySelector('#ve-properties .ve-fp-govde > .ve-fp-kat');
-    return { sekme: [...document.querySelectorAll('#ve-properties .ve-fp-govde > .ve-fp-kat')].map((x) => x.getAttribute('aria-label')),
-      tuval: document.querySelectorAll('#ve-properties canvas').length, cizim: document.querySelectorAll('#ve-properties svg.ve-mnt2d-akso').length,
-      dugme: p.querySelectorAll('button').length, not: p.textContent.trim() === componentDefs['mnt-viewer'].yerTutucu, sahne: !!window._veMountViewer,
-      yer: window.__yerlesim('#ve-properties') };
-  });
-  expect([r.sekme, r.tuval, r.cizim, r.dugme, r.not, r.sahne]).toEqual([['Klasik 3B'], 0, 0, 0, true, false]);
+  const r = await page.evaluate(() => ({
+    kat: [...document.querySelectorAll('#ve-properties .ve-fp-govde > .ve-fp-kat')].map((x) => x.getAttribute('aria-label')),
+    tuval: document.querySelectorAll('#ve-properties canvas').length, cizim: document.querySelectorAll('#ve-properties svg.ve-mnt2d-akso').length,
+    eylem: [...document.querySelectorAll('#ve-properties .ve-fp-solve')].map((e) => e.textContent.trim()),
+    dosya: document.querySelectorAll('#ve-properties input[type="file"]').length, sahne: !!window._veMountViewer,
+    yer: window.__yerlesim('#ve-properties') }));
+  expect([r.kat, r.tuval, r.cizim, r.eylem, r.dosya, r.sahne]).toEqual([['STEP dosyası'], 0, 0, ['STEP dosyası seç…'], 0, false]);
   expect(Y.yerlesimOzet(r.yer, 'tulga · 3D Görüntüleyici')).toEqual([]);
 });

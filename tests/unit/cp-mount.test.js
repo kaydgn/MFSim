@@ -777,25 +777,6 @@ describe('Örnek JSON topolojisi (dışa aktar + çözümleme)', () => {
   });
 });
 
-describe('3D Görüntüleyici bileşeni', () => {
-  // YER TUTUCU (kullanıcı kararları 2026-10-16): "Klasik 3B" gerçek CAD
-  // dosyasıyla çalışmaya ayrıldı, döndürülebilir aksonometri Görünümler'e
-  // taşındı. Kapının tamamı mount-akso.test.js → KLASİK 3B.
-  test('panel: tek kategori "Klasik 3B", tipin beyan ettiği not; çizim, three.js ve eski kalıntılar yok', () => {
-    global.componentDefs = { 'mnt-viewer': { yerTutucu: 'Yer tutucunun notu.' } };
-    try {
-      const html = cp.getMntViewerPropertiesHTML({ id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} });
-      const d = document.createElement('div'); d.innerHTML = html;
-      expect([...d.querySelectorAll('.ve-fp-kat')].map((t) => t.getAttribute('data-k'))).toEqual(['sahne']);
-      expect(d.querySelector('.ve-fp-tab')).toBeNull();                 // sekme şeridi yok (2026-10-16)
-      expect(d.querySelector('#ve-fp-panes-vw1 > [data-k="sahne"]').textContent).toBe('Yer tutucunun notu.');
-      ['ve-mnt-akso', 'veMntAkso3BTamEkran()', 've-mnt-inline-viewer-canvas', 'veMntViewerRefresh()', 'veMountViewerToggle',
-        'veMountViewerReset()', 'veMntViewerFullscreen()', 'Sahne göstergesi', 'veMntViewerExpand', 'resize:vertical', 'Aktif tema ile uyumlu']
-        .forEach((x) => expect({ x, var: html.includes(x) }).toEqual({ x, var: false }));
-    } finally { delete global.componentDefs; }
-  });
-});
-
 describe('Görünümler bileşeni (eski 2D Görünüm)', () => {
   afterEach(() => { delete global.nodes; });
   // 2026-10-16: döndürülebilir aksonometri (3D Görüntüleyici'den taşındı) ve
