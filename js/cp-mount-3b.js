@@ -640,7 +640,7 @@ function veMntWiz3bPanelHTML(s, secili){
     });
     h += '</div>';
     var ata = -1;
-    for(var e = so.agac[secili].ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
+    if(!s.roller[secili]) for(var e = so.agac[secili].ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var n = so.agac[secili].parcalar.length;
     h += '<p class="ve-fw-dim">' + n + ' parça' + (ata >= 0 ? ' · ' + _mwEsc(so.agac[ata].ad) + ' biriminin içinde ('
       + _mwEsc(_mwAd(s.roller[ata])) + ')' : '') + '</p></section>';

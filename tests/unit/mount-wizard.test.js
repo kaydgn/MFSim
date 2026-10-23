@@ -115,17 +115,30 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
 });
 
 describe('STEP KARTI — rol → hesap → kütle → aktar', () => {
-  test('roller BOŞ açılır; ata/torun rolü düşer (bir parça tek birime ait)', () => {
+  test('roller BOŞ açılır; AYNI rol iç içe olmaz, başka rol iç içe kalır — parça en yakın rollü atanın biriminde', () => {
     W.veMntWizAc();
     const s = W.veMntWizStpOku(S.gucGrubu(), 'guc.stp', 'duz');
     expect(s.durum).toBe('hazir');
     expect(s.roller.every((r) => r === null)).toBe(true);
-    const asm = dugumi(s, 'Arka braket'), ust = dugumi(s, 'Braket üst');
+    const asm = dugumi(s, 'Arka braket'), ust = dugumi(s, 'Braket üst'), alt = dugumi(s, 'Braket alt');
     W.veMntWizStpRol(ust, 'mnt-bracket');
     W.veMntWizStpRol(asm, 'mnt-bracket');
     expect(s.roller[ust]).toBe(null);
     expect(s.roller[asm]).toBe('mnt-bracket');
     expect(W.veMntWizStpRol(asm, 'fead-crank')).toBe(false);     // Takoz rolü değil
+    // gerçek dosyanın kalıbı: takoz motor alt montajının İÇİNDE
+    W.veMntWizStpRol(ust, 'mnt-mount');
+    expect([s.roller[asm], s.roller[ust]]).toEqual(['mnt-bracket', 'mnt-mount']);
+    const B = STP.veMntStpBirimler(s.sonuc, s.roller), ad = (pi) => s.sonuc.parcalar[pi].ad;
+    expect(B.map((b) => [b.tip, b.parcalar.map(ad)])).toEqual([['mnt-bracket', ['Braket alt']], ['mnt-mount', ['Braket üst']]]);
+    expect(s.sonuc.agac[alt].parcalar.map(ad)).toEqual(['Braket alt']);
+    // ağaçta kendi rolü olan düğüm atasının "birimi" sayılmaz
+    const d = document.createElement('div');
+    d.innerHTML = W._mwStpAgacHTML(s);
+    const satir = Array.from(d.querySelectorAll('tr[data-ve-stp]')).find((x) => x.cells[0].textContent.trim() === 'Braket üst');
+    expect([satir.cells[2].textContent.trim(), satir.classList.contains('ve-fw-stp-off')]).toEqual(['—', false]);
+    W.veMntWizStpRol(asm, 'mnt-mount');                           // aynı rol: içteki düşer
+    expect([s.roller[asm], s.roller[ust]]).toEqual(['mnt-mount', null]);
   });
 
   test('hesap → kütle → aktar: sihirbaz STEP\'in durumuyla dolar, "S" işaretleri taşınır', () => {

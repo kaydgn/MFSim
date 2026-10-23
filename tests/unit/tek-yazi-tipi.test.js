@@ -43,8 +43,11 @@ const maskele = (css) => css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n
 function kurallar(css) {
   const out = [];
   const re = /([^{}]+)\{([^{}]*)\}/g;
+  // Maske TEK kez: döngüde her kural için yeniden kurulunca her eşleşme kendi
+  // 590 KB'lık kopyasını tutuyordu (3.242 kural · 2 GB yığın taşıyordu).
+  const maskeli = maskele(css);
   let m;
-  while ((m = re.exec(maskele(css)))) {
+  while ((m = re.exec(maskeli))) {
     const sec = m[1].trim().replace(/\s+/g, ' ');
     // @font-face bir stil kuralı değil YÜZ TANIMI: içindeki `font-family` ve
     // `font-weight: 100 499` tanımlayıcıdır, bildirim değil. Yüzlerin kendi

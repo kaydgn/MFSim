@@ -484,6 +484,102 @@ describe('ÖLÇÜLMÜŞ KUSURLARIN KAPILARI (kullanıcının dosyası)', () => {
   });
 });
 
+describe('DELİK KÖPRÜSÜ: ışın önceki köprüye çarpar (Tulga takozunun flanşı)', () => {
+  // Gerçek dosyada takozun beş delikli flanş yüzü: büyük deliğin köprüsü köşeye
+  // çapraz gidiyor, köşedeki cıvata deliğinin ışını o köprüye çarpıyor. Köprü
+  // aynı doğruda zıt yönlü iki kenar; aşağı gidenine bağlanan delik köprünün
+  // öbür yanına düşüyordu (333 sınır kenarının 69'u üçgensiz, alan 3,1 katı).
+  // Kalıp: dış beşgen (sağ kenar x = 46, köşesi (46; −4)) · büyük delik
+  // (0; −45) r 40 → köprü (40; −45) → (46; −4) · cıvata deliği (33; −4,5) r 6 →
+  // ışını y = −4,5'te köprüyü x = 45,93'te keser, sağ kenardan (46) önce.
+  const DIS = [[-60, -95], [46, -95], [46, -4], [40, 6], [-60, 6]];
+  const CEMBER = [[0, -45, 40, 48], [33, -4.5, 6, 24]];
+  const alan2 = (X, V, h) => { let A = 0; for (let i = 0; i < h.length; i++) { const a = h[i], b = h[(i + 1) % h.length]; A += X[a] * V[b] - X[b] * V[a]; } return A / 2; };
+
+  // İkinci kalıp: cıvata deliğinin en sağ köşesi köprünün ucuyla AYNI yükseklikte
+  // (y = −4) — ışın köprünün ucuna çarpar; o noktada iki köşe var ve deliğe
+  // bakan açı yalnız birininki (_suIcte).
+  test.each([[-4.5, 'ışın köprüyü keser'], [-4, 'ışın köprünün ucuna çarpar']])(
+    'kulak kırpma (cıvata deliği y = %d: %s): her sınır kenarı tam bir üçgende, alan dış − delikler, zorlama yok', (cy) => {
+    const X = [], V = [], halkalar = [];
+    const halka = (pts) => { const h = pts.map(([x, y]) => { X.push(x); V.push(y); return X.length - 1; }); halkalar.push(h); return h; };
+    halka(DIS);
+    [CEMBER[0], [CEMBER[1][0], cy, CEMBER[1][2], CEMBER[1][3]]].forEach(([cx, cy2, r, n]) =>
+      halka(Array.from({ length: n }, (_, k) => [cx + r * Math.cos(-2 * PI * k / n), cy2 + r * Math.sin(-2 * PI * k / n)])));
+    const sayac = { zorla: 0 };
+    const T = U._suKulak(X, V, halkalar[0], halkalar.slice(1), sayac);
+    expect(U._suGecerli(halkalar, T)).toBe(true);
+    expect(sayac.zorla).toBe(0);
+    expect(T.length).toBe(X.length + 2 * 2 - 2);                     // n + 2·delik − 2
+    let A = 0, ters = 0;
+    T.forEach(([a, b, c]) => { const s = ((X[b] - X[a]) * (V[c] - V[a]) - (V[b] - V[a]) * (X[c] - X[a])) / 2; A += s; if (s <= 0) ters++; });
+    const hedef = halkalar.reduce((s, h) => s + alan2(X, V, h), 0);
+    expect(ters).toBe(0);
+    expect(Math.abs(A - hedef) / hedef).toBeLessThan(1e-12);
+  });
+
+  test('STEP yüzü (doğru kenarlı dış · iki çember delik): kaplama TAM', () => {
+    const yz = new Y.StepYaz(), z = [0, 0, 1], x = [1, 0, 0];
+    const D = DIS.map(([a, b]) => [a, b, 0]), V = D.map((p) => yz.tepe(p));
+    const dis = D.map((p, i) => yz.yonlu(yz.kenarEgri(V[i], V[(i + 1) % D.length], yz._cizgi(p, D[(i + 1) % D.length]))));
+    const delikler = CEMBER.map(([cx, cy, r]) => [yz.yonlu(cemberKenar(yz, [cx, cy, 0], z, x, r), false)]);
+    const f = yz.yuz(yuzey(yz, 'PLANE', [0, 0, 0], z, x), dis, delikler);
+    const o = ucgenle(yz, [f], { kiris: 0.5 });
+    expect(o.B.sayac.zorla).toBe(0);
+    const k = kaplama(o.yuz(f));
+    expect(k.sinirEksik).toBe(0);
+    expect(k.tekYon).toBe(0);
+    expect(Math.abs(k.kapla - k.alan) / k.alan).toBeLessThan(1e-9);
+  });
+});
+
+describe('EŞDOĞRUSAL GÜRÜLTÜ: aynı doğrudaki sınır noktaları kırpmayı katlamaz', () => {
+  // Gerçek dosyada motor bloğunun bir silindiri: çemberin noktaları uv'de v = 0
+  // doğrusunda olmalı ama ters çevirmenin gürültüsüyle (±2·10⁻¹¹) iki yana
+  // dağılıyor. Kırpmanın sonunda kalan "doğru" zincirde gürültünün dışbükey
+  // gösterdiği uç, öbür uçla kulak sayılıyor ve aradaki noktalar (gürültüyle
+  // kutunun dışında) engel olmuyordu: ters ve tek başına üçgen, gövde açık.
+  // Kalıp: o kalan durumun kendisi — düzgün dalgalı gürültülü zincir.
+  test('192 zincir: her sınır kenarı tek, her iç kenar iki üçgende (eskisi 154\'ünde bozuktu)', () => {
+    let bozuk = 0, toplam = 0;
+    for (const n of [8, 15, 31]) for (const A of [5e-12, 2e-11]) for (const per of [7, 11, 19, 29]) for (let f = 0; f < 8; f++) {
+      const X = [], V = [];
+      for (let i = 0; i < n; i++) { X.push(-10 - 8 * i / (n - 1)); V.push(A * (Math.sin(2 * PI * i / per + f) - 0.6)); }
+      const T = U._suKulak(X, V, X.map((_, i) => i), [], { zorla: 0 });
+      const say = new Map(), k = (a, b) => Math.min(a, b) + ':' + Math.max(a, b);
+      T.forEach(([a, b, c]) => [[a, b], [b, c], [c, a]].forEach(([x, y]) => say.set(k(x, y), (say.get(k(x, y)) || 0) + 1)));
+      const sinir = new Set(X.map((_, i) => k(i, (i + 1) % n)));
+      let hata = 0;
+      sinir.forEach((e) => { if (say.get(e) !== 1) hata++; });
+      say.forEach((m, e) => { if (!sinir.has(e) && m !== 2) hata++; });
+      toplam++;
+      if (hata) bozuk++;
+    }
+    expect(toplam).toBe(192);
+    expect(bozuk).toBe(0);
+  });
+});
+
+describe('TOPLAYICI: ters yüz ve yüz başına üçgen aralığı (Takoz hacmi)', () => {
+  test('ekle(f, true) yüzü ters sarar (boşluk kabuğu): kapalı kutu −V; yuzUcgen yüz yüze, son eleman üçgen sayısı', () => {
+    const yz = new Y.StepYaz();
+    const yuzler = require('../helpers/step-takoz.js').kutuYuzleri(yz, 40, 30, 20);
+    const o = ucgenle(yz, yuzler, {}, 'kati');
+    const hacim = (r) => suGecirmez(r).V;
+    expect(hacim(o.r)).toBeCloseTo(24000, 6);
+    const t = U.veStepUcgenTopla(o.B, o.p.M, o.p.birim);
+    o.p.yuzler.forEach((f) => t.ekle(f, true));
+    const r = t.bitir();
+    expect(hacim(r)).toBeCloseTo(-24000, 6);
+    expect(Array.from(o.r.yuzUcgen)).toEqual([0, 2, 4, 6, 8, 10, 12]);
+    expect(r.yuzUcgen.length).toBe(yuzler.length + 1);
+    // forEach(t.ekle): sıra ikinci argüman — bayrak sayılmaz (yalnız tam true)
+    const t2 = U.veStepUcgenTopla(o.B, o.p.M, o.p.birim);
+    o.p.yuzler.forEach(t2.ekle);
+    expect(hacim(t2.bitir())).toBeCloseTo(24000, 6);
+  });
+});
+
 describe('BAŞTAKİ DELAUNAY: kırpmanın çıktısı çevrilir', () => {
   // Düzlem yüz inceltilmez; üçgenleri kırpmanın ve baştaki çevirmenin çıktısı.
   // Eğri yüzde bölme sonrası yasallaştırma kısmen telafi ediyor ama tamamen

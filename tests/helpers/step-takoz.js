@@ -18,15 +18,16 @@ const cros = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[
 const fark = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const nok = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
-// Yerel eksende, orijin merkezli kutu: 8 köşe, 12 doğru kenar (paylaşılan),
-// 6 düzlem yüz — döngü dış normalin çevresinde saat yönünün tersine.
-function kutuYuzleri(yz, a, b, c) {
+// Yerel eksende, `m` merkezli (varsayılan orijin) kutu: 8 köşe, 12 doğru kenar
+// (paylaşılan), 6 düzlem yüz — döngü dış normalin çevresinde saat yönünün
+// tersine. Yüz sırası: +x, −x, +y, −y, +z, −z.
+function kutuYuzleri(yz, a, b, c, m = [0, 0, 0]) {
   const h = [a / 2, b / 2, c / 2];
   const P = {};
   const V = {};
   [0, 1].forEach((i) => [0, 1].forEach((j) => [0, 1].forEach((k) => {
     const id = '' + i + j + k;
-    P[id] = [(i ? 1 : -1) * h[0], (j ? 1 : -1) * h[1], (k ? 1 : -1) * h[2]];
+    P[id] = [m[0] + (i ? 1 : -1) * h[0], m[1] + (j ? 1 : -1) * h[1], m[2] + (k ? 1 : -1) * h[2]];
     V[id] = yz.tepe(P[id]);
   })));
   const kenar = {};
@@ -48,7 +49,7 @@ function kutuYuzleri(yz, a, b, c) {
     // Sıra dış normalin çevresinde saat tersine değilse çevir
     const e1 = fark(P[kose[1]], P[kose[0]]), e2 = fark(P[kose[2]], P[kose[1]]);
     const sira = nok(cros(e1, e2), n) > 0 ? kose : kose.slice().reverse();
-    const merkez = [n[0] * h[0], n[1] * h[1], n[2] * h[2]];
+    const merkez = [m[0] + n[0] * h[0], m[1] + n[1] * h[1], m[2] + n[2] * h[2]];
     const xd = Math.abs(n[0]) > 0.5 ? [0, 1, 0] : [1, 0, 0];
     const yuzey = yz.ekle("PLANE('',#" + yz.cerceve(merkez, n, xd) + ')');
     const dongu = sira.map((p, i) => kenarAl(p, sira[(i + 1) % 4]));
@@ -323,5 +324,42 @@ function kutleKalibi(opt = {}) {
   return guçGrubuStep(p, { altMontajlar: KUTLE.montaj, uzunluk: opt.uzunluk });
 }
 
+// ÇOK GÖVDELİ PARÇA (gerçek dosyanın kalıbı, 2026-10-20): motor TEK parçada
+// yüzlerce katı + açık yüzey kabuğu + boşluklu katı. Parça "Motor ISB" (yerel
+// eksende, montaja `konum`la takılı) ve geometrisiz "Motor yağı" (dosyada
+// yalnız ürün) aynı alt montajda:
+//   A · kapalı kutu 400×300×200, merkez (0; 0; 0)
+//   B · 1000×100×100 kutu, merkez (0; 400; 0), +x ucu YOK — yaması kendi
+//       yüzeyinin %2,4'ü: katılır, yama düzlem olduğu için hacim birebir
+//   C · 100³ küp, merkez (0; −400; 0), +x yüzü YOK — yama %20: katılmaz
+//   D · 200³ kutu, merkez (−700; 0; 0), içinde 100³ BOŞLUK, merkez (−650; 0; 0)
+//   E · açık yüzey kabuğu (tek düzlem yüz, z = 500): hacme ve paya girmez
+const COK_GOVDE = {
+  konum: [100, 0, 500],
+  A: { olcu: [400, 300, 200], m: [0, 0, 0] }, B: { olcu: [1000, 100, 100], m: [0, 400, 0] },
+  C: { olcu: [100, 100, 100], m: [0, -400, 0] }, D: { olcu: [200, 200, 200], m: [-700, 0, 0] },
+  bosluk: { olcu: [100, 100, 100], m: [-650, 0, 0] }, E: { olcu: [300, 300, 1], m: [0, 0, 500] }
+};
+function cokGovdeKalibi({ bosluksuz = false } = {}) {
+  const yz = new Y.StepYaz(), G = COK_GOVDE;
+  const kok = yz.urun('GUC_GRUBU', 'GÜÇ GRUBU'), asm = yz.urun('MOTOR_ASM', 'Motor');
+  const mot = yz.urun('ISB', 'Motor ISB'), yag = yz.urun('YAG', 'Motor yağı');
+  const k = (g) => kutuYuzleri(yz, g.olcu[0], g.olcu[1], g.olcu[2], g.m);
+  yz.govde(mot, k(G.A), 'kati');
+  yz.govde(mot, k(G.B).slice(1), 'kati');                     // +x yüzü yok
+  yz.govde(mot, k(G.C).slice(1), 'kati');
+  if (bosluksuz) yz.govde(mot, k(G.D), 'kati');
+  else yz.govdeBosluklu(mot, k(G.D), [k(G.bosluk)]);
+  yz.govde(mot, k(G.E).slice(4, 5), 'kabuk');                 // tek yüz (+z)
+  yz.temsil(mot);
+  yz.temsil(yag);                                             // geometrisiz
+  const t1 = yz.tak(asm, mot, 'ISB.1', G.konum), t2 = yz.tak(asm, yag, 'YAG.1', [0, 0, 0]);
+  yz.temsil(asm);
+  const t3 = yz.tak(kok, asm, 'MOTOR_ASM.1', [0, 0, 0]);
+  yz.temsil(kok);
+  [t1, t2, t3].forEach((t) => yz.bagla(t));
+  return yz.metin();
+}
+
 module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
-  TULGA_TAKOZ, TAKOZ_DILIM, tulgaKalibi, analitik, KUTLE, kutleKalibi };
+  TULGA_TAKOZ, TAKOZ_DILIM, tulgaKalibi, analitik, KUTLE, kutleKalibi, COK_GOVDE, cokGovdeKalibi };

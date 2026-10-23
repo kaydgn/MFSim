@@ -68,11 +68,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
-  yoğunlukları, ağırlık merkezi kütleyle) — kütle yoksa atalet de yok. **Hacim parça
-  parça** (`veMntStpParcaOzellik`): ağı kapalı olmayan parça hacme KATILMAZ, uyarıda
-  adıyla ve yüzey payıyla söylenir (tek açık parça birimi kutunun merkezine
-  düşürüyordu); dosyanın CAx-IF doğrulama özellikleri (hacim · merkez,
-  `veStepP21Ozellikler`) ağınkinin yerine geçer. Parçanın kütle özelliği ağ
+  yoğunlukları, ağırlık merkezi kütleyle) — kütle yoksa atalet de yok. **Hacim gövde
+  gövde** (`veMntStpParcaOzellik`; okuyucunun `govde` · `ters`i): katı gövde ayrı
+  ölçülür, yüzey kabuğu hacme girmez, boşluk kabuğu (.F.) ters okunur; açık katı
+  gövde YAMALANIR ve yaması kendi yüzeyinin %10'unu (`VE_MNT_STP_YAMA`) aşmıyorsa
+  katılır — gerçek dosyada motor, şanzıman ve transfer TEK parçada yüzlerce katı,
+  tek çatlak bütün parçayı düşürüyordu. Katısız parçanın açık ağı katılmaz;
+  katılmayan parça ve gövde adıyla ve yüzey payıyla söylenir, geometrisiz parça
+  (yağ) sayılmaz. Dosyanın CAx-IF doğrulama özellikleri (hacim · merkez,
+  `veStepP21Ozellikler`) ağınkinin yerine geçer. **Roller iç içe**
+  (`veMntStpRolVer`): parça en yakın rollü atanın biriminde, AYNI rol iç içe
+  olmaz (gerçek dosyada takozlar motor alt montajının içinde). Parçanın kütle özelliği ağ
   işinin dilimlerinde üretilir (`veMntStpAgIs` → `oz`), hesap yalnız toplar —
   eşzamanlı hesap 420 MB'lık denemede 7,7 sn donduruyordu. Üçgen
   inceliği TEK sabitten (`VE_MNT_STP_UCGEN`, 0,5 mm — bütün güç grubu; FEAD 0,1).
@@ -91,7 +97,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (`veMntStpKenarDaire`; ağ yalnız `daire` dizinini taşır); seçilen daire rol
   kaydına yolu ve merkeziyle girer. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
   (→ *STEP OKUMASI* · *AĞAÇ DAL DAL* · *HESAP BEKLER*) + `mount-3b.test.js` +
-  `mount-nokta.test.js` + `mount-kutle.test.js` + `mount-step-okuma.spec.js` +
+  `mount-nokta.test.js` + `mount-kutle.test.js` (→ *GÖVDE GÖVDE*) + `step-ucgen.test.js`
+  (→ *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ* · *TOPLAYICI*) + `mount-step-okuma.spec.js` +
   `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada

@@ -802,14 +802,14 @@ function _stpMontajYuru(J, bitis){
                     atalar: e.atalar.concat([e.urun]) });
     } else if(++J.ziyaret <= 100000){
       var pd = e.pd, sr = J.pdSr[pd];
-      var geo = sr ? _stpGeometri(m, sr, J.srrKomsu, out.uyarilar) : { yuzler: [], egriler: [] };
+      var geo = sr ? _stpGeometri(m, sr, J.srrKomsu, out.uyarilar) : { yuzler: [], egriler: [], govde: null, ters: null };
       var cc = J.cocuklar[pd] || [];
       var urun = _stpUrun(m, pd);
       if(geo.yuzler.length || geo.egriler.length || !cc.length){
         out.parcalar.push({ pd: pd, urun: urun, ornek: e.yol.length ? e.yol[e.yol.length - 1] : urun.id,
           yol: e.yol.slice(), atalar: e.atalar.slice(), M: e.M, sr: sr || null,
           birim: sr ? _stpSrBirim(m, sr) : { mm: NaN, derece: NaN },
-          yuzler: geo.yuzler, egriler: geo.egriler, altMontaj: cc.length > 0 });
+          yuzler: geo.yuzler, egriler: geo.egriler, govde: geo.govde, ters: geo.ters, altMontaj: cc.length > 0 });
       }
       for(var q = cc.length - 1; q >= 0; q--) Y.push({ c: cc[q], M: e.M, yol: e.yol, atalar: e.atalar, urun: urun });
     }
@@ -866,13 +866,18 @@ function _stpSrOlcek(model, sr){
 var _STP_GEO_KAP = { SHELL_BASED_SURFACE_MODEL: 1, GEOMETRIC_SET: 1, GEOMETRIC_CURVE_SET: 1, OPEN_SHELL: 1,
   CLOSED_SHELL: 1, CONNECTED_FACE_SET: 1, ORIENTED_CLOSED_SHELL: 1, ORIENTED_OPEN_SHELL: 1,
   MANIFOLD_SOLID_BREP: 1, FACETED_BREP: 1, BREP_WITH_VOIDS: 1 };
+// Katı gövde (Takoz'un hacmi): `govde[i]` yuzler[i]'nin katısı (0, 1, …;
+// −1: yüzey gövdesi · küme), katı yoksa null; `ters`: yönü ters okunacak
+// yüzlerin sırası (ORIENTED_*_SHELL .F. — boşluk kabuğu), yoksa null.
+// Gerçek dosyada motor TEK parçada yüzlerce katı ve açık yüzey kabuğu
+// taşıyor; 36 boşluk kabuğunun hepsi .F. (okunmayınca hacme EKLENİYORDU).
 function _stpGeometri(model, sr, srrKomsu, uyarilar){
-  var yuzler = [], egriler = [], gor = {}, temsilGor = {};
+  var yuzler = [], egriler = [], gor = {}, temsilGor = {}, govde = [], ters = [], g = -1, tr = false, kati = 0;
   function oge(id){
     if(gor[id]) return;
     gor[id] = 1;
     var t = veStepP21Tip(model, id);
-    if(t === 'ADVANCED_FACE' || t === 'FACE_SURFACE'){ yuzler.push(id); return; }
+    if(t === 'ADVANCED_FACE' || t === 'FACE_SURFACE'){ if(tr) ters.push(yuzler.length); yuzler.push(id); govde.push(g); return; }
     if(t === 'COMPOSITE_CURVE' || t === 'TRIMMED_CURVE' || t === 'CIRCLE' || t === 'LINE'
        || t === 'POLYLINE' || t === 'B_SPLINE_CURVE_WITH_KNOTS'){ egriler.push(id); return; }
     if(!_STP_GEO_KAP.hasOwnProperty(t)) return;           // yerleşim · MAPPED_ITEM (Montaj'da topluca uyarıldı) …
@@ -880,9 +885,17 @@ function _stpGeometri(model, sr, srrKomsu, uyarilar){
     if(!a) return;
     if(t === 'SHELL_BASED_SURFACE_MODEL' || t === 'GEOMETRIC_SET' || t === 'GEOMETRIC_CURVE_SET'
        || t === 'OPEN_SHELL' || t === 'CLOSED_SHELL' || t === 'CONNECTED_FACE_SET'){ _stpRefler(a[1]).forEach(oge); return; }
-    if(t === 'ORIENTED_CLOSED_SHELL' || t === 'ORIENTED_OPEN_SHELL'){ if(a[2] && a[2].ref) oge(a[2].ref); return; }
-    if(t === 'MANIFOLD_SOLID_BREP' || t === 'FACETED_BREP'){ if(a[1] && a[1].ref) oge(a[1].ref); return; }
-    if(t === 'BREP_WITH_VOIDS'){ if(a[1] && a[1].ref) oge(a[1].ref); _stpRefler(a[2]).forEach(oge); }
+    if(t === 'ORIENTED_CLOSED_SHELL' || t === 'ORIENTED_OPEN_SHELL'){
+      if(a[2] && a[2].ref){ var otr = tr; tr = tr !== !!(a[3] && a[3].e === 'F'); oge(a[2].ref); tr = otr; }
+      return;
+    }
+    if(t === 'MANIFOLD_SOLID_BREP' || t === 'FACETED_BREP' || t === 'BREP_WITH_VOIDS'){
+      var og = g;
+      g = kati++;
+      if(a[1] && a[1].ref) oge(a[1].ref);
+      if(t === 'BREP_WITH_VOIDS') _stpRefler(a[2]).forEach(oge);
+      g = og;
+    }
   }
   function temsil(r){
     if(temsilGor[r]) return;
@@ -892,7 +905,7 @@ function _stpGeometri(model, sr, srrKomsu, uyarilar){
     (srrKomsu[r] || []).forEach(temsil);
   }
   temsil(sr);
-  return { yuzler: yuzler, egriler: egriler };
+  return { yuzler: yuzler, egriler: egriler, govde: kati ? govde : null, ters: ters.length ? ters : null };
 }
 
 // ── 8 · YÜZ ─────────────────────────────────────────────────────────────
@@ -1249,7 +1262,7 @@ function veStepP21Metin(bayt){
 // Döner (asla fırlatmaz):
 //   { ok, hatalar[], uyarilar[], baslik, sureMs{oku,montaj,yuz}, agac[], parcalar[],
 //     _yuz[] (parça başına yüz tanımları), _model,
-//     _geo[] (üçgenleyicinin girdisi: { yuzler, M, birim, egriler, sr }) }
+//     _geo[] (üçgenleyicinin girdisi: { yuzler, M, birim, egriler, sr, pd, govde, ters }) }
 // `secenek.yuz === false`: parça başına yüz tanımı çıkarılmaz — `_yuz` boş,
 // `yuzSayisi` yüz KİMLİĞİ sayısı. Takoz onları okumuyor; 420 MB'ta okumanın
 // en uzun evresiydi (7,4 sn).
@@ -1292,7 +1305,8 @@ function _stpAgacAdim(A, out, model, bitis){
     out.parcalar.push({ i: pi, ad: ad, id: p.urun.id, ornek: p.ornek, dugum: d, yuzSayisi: sayi });
     if(A.yuz) out._yuz.push(yuzler);
     // `sr`: şeklin temsili — aynı temsili taşıyan örnekler aynı yerel ağı paylaşır
-    out._geo.push({ yuzler: sayi ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [], sr: p.sr || null, pd: p.pd });
+    out._geo.push({ yuzler: sayi ? p.yuzler : [], M: p.M, birim: p.birim, egriler: p.egriler || [], sr: p.sr || null, pd: p.pd,
+                    govde: sayi ? p.govde || null : null, ters: sayi ? p.ters || null : null });
     for(var a = d; a >= 0; a = out.agac[a].ebeveyn) out.agac[a].parcalar.push(pi);
     A.k++;
     if(_stpSimdi() > bitis) break;

@@ -1179,7 +1179,7 @@ function _mwStpHesapBekle(s){
   var J = _mwStpAgIs(s);
   if(!J) return false;
   var liste = _mwStpGerekli(s), geo = s.sonuc._geo || [], yuz = 0;
-  liste.forEach(function(i){ var g = geo[i]; if(!s.ag[i] && g && g.yuzler) yuz += g.yuzler.length; });
+  liste.forEach(function(i){ var g = geo[i]; if((!s.ag[i] || !s.oz[i]) && g && g.yuzler) yuz += g.yuzler.length; });
   if(yuz <= VE_MW_STP_AG.eszaman) return false;
   s.hesapBekliyor = { liste:liste, toplam:J.eksik(liste), son:0 };
   J.iste(liste);
@@ -1209,8 +1209,8 @@ function _mwStpHesapIlerleme(s, hemen){
   h.son = t;
   _mwStpIlerlemeYaz('data-mw-stp-hesap-vazgec', _mwStpHesapVeri(s));
 }
-// ROL DÜĞÜME VERİLİR ve bir parça TEK birime aittir (js/mount-step.js →
-// veMntStpRolVer: düğümün atalarının ve torunlarının rolü düşer). İlk
+// ROL DÜĞÜME VERİLİR ve bir parça TEK birime aittir — en yakın rollü atası
+// (js/mount-step.js → veMntStpRolVer: aynı rol iç içe olmaz). İlk
 // hesaptan sonra sonuç rolleri izler (FEAD'in kuralı). Rol modülün kaydına
 // yazılır; rolü düşen düğümün kütlesi ve kütle kaynağı da gider.
 function veMntWizStpRol(i, tip){
@@ -1286,11 +1286,11 @@ function _mwStpBirim(s, dugum){
   return null;
 }
 // Konum kuralın dışında mı: gövdede ağ kapalı değil (kutu merkezi) ya da açık
-// parça hacme katılmadı, takozda üst bağlantı yüzeyi bulunamadı (hacim ya da
-// kutu merkezi)
+// parça / açık katı gövde hacme katılmadı, takozda üst bağlantı yüzeyi
+// bulunamadı (hacim ya da kutu merkezi)
 function veMntWizStpKonumUyari(b){
   return !!b && (b.kaynak === 'kutu' || (b.tip === 'mnt-mount' ? (b.kaynak !== 'eksen' && b.kaynak !== 'kenar')
-    : !!(b.acikParca && b.acikParca.length)));
+    : !!((b.acikParca && b.acikParca.length) || (b.acikGovde && b.acikGovde.length))));
 }
 // Takoz noktasının kaynağı (kart · pencere · 3B aynı metni basar)
 function veMntWizStpNoktaKaynak(b){
@@ -1512,7 +1512,7 @@ function _mwStpAgacHTML(s){
     // `tanim` DÜZ METİN, `onEk` HTML (ikon): hücre ikisinden kurulur (FEAD'de
     // ikon metne eklenip birlikte kaçışlanıyordu — ham `<span>` basılıyordu).
     var tanim = '—', onEk = '', sinif = '', kaynak = '';
-    if(ata >= 0){ onEk = _mwIkon('corner-down-right') + ' '; tanim = _mwAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
+    if(ata >= 0 && !rol){ onEk = _mwIkon('corner-down-right') + ' '; tanim = _mwAd(s.roller[ata]) + ' birimi'; sinif = ' ve-fw-stp-off'; }
     else if(rol && coz){
       var b = _mwStpBirim(s, d.i);
       if(b && b.konum){

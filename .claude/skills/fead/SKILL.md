@@ -903,6 +903,18 @@ olurdu.
       kenara bakar (dosyada baştaki çevirme olmadan %12 fazla üçgen).
     • Üçgen vermeyen yüz kenarlarıyla çizilir ve sayılır (`kenarYuz`) — dosyada
       iki tane, ikisi de aynı çemberin yayı ile kirişi arasında ≈ 0 alanlı.
+    • **Delik köprüsünün ucu deliğe bakan açısıyla seçilir** (`_suIcte` ·
+      `_suSektor`, earcut'ın kuralı): önceki köprünün iki ucu aynı noktada iki
+      köşe; yanlışına bağlanan delik kırpmayı katlıyordu (Takoz'un gerçek
+      dosyası, beş delikli flanş: 333 sınır kenarının 69'u üçgensiz).
+      **Kırpmanın sınamaları payla** (1e-10·L²): eğri yüzde aynı doğrudaki
+      sınır noktaları ters çevirmenin gürültüsüyle iki yana dağılıyor, payı
+      yok sınama üst üste binen kulak kesiyordu. Kapı: `step-ucgen.test.js` →
+      *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ*.
+    • Toplayıcı yüz başına üçgen aralığını tutar (`yuzUcgen`), `ekle(f, true)`
+      yüzü ters sarar; okuyucu yüzün katı gövdesini (`govde`) ve ters okunacak
+      boşluk kabuğu yüzlerini (`ters`) verir — Takoz'un hacmi için, FEAD
+      okumaz. Bayrak yalnız tam `true` (`forEach(t.ekle)` sırayı geçirir).
     • B-spline ters çevirmesi düğüm aralığı başına 3 ızgara noktasından başlar
       (sabit 40×40 uzun bir yüzeyde yanlış yerel en küçüğe iniyordu).
     • **İnceltme hatası üçgenin DÜZLEMİNE DİK, kenar ortasında VE ağırlık

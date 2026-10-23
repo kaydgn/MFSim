@@ -192,6 +192,20 @@ class StepYaz {
     return oge;
   }
 
+  // Boşluklu katı (BREP_WITH_VOIDS): dış kabuk + her boşluk kendi kapalı kabuğu
+  // (yüzleri boşluktan DIŞA bakar) ve onu çeviren ORIENTED_CLOSED_SHELL(.F.) —
+  // ISO 10303-42'nin kuralı; CATIA'nın gerçek dosyada yazdığı biçim.
+  govdeBosluklu(u, dis, bosluklar) {
+    const kabuk = this.ekle("CLOSED_SHELL('',(" + dis.map((y) => '#' + y).join(',') + '))');
+    const ic = bosluklar.map((b) => {
+      const cs = this.ekle("CLOSED_SHELL('',(" + b.map((y) => '#' + y).join(',') + '))');
+      return this.ekle("ORIENTED_CLOSED_SHELL('',*,#" + cs + ',.F.)');
+    });
+    const oge = this.ekle("BREP_WITH_VOIDS('PartBody',#" + kabuk + ',(' + ic.map((x) => '#' + x).join(',') + '))');
+    u.ogeler.push(oge);
+    return oge;
+  }
+
   // ── parça düzeyinde özellikler (Takoz adım 6) ─────────────────────────────
   // CAx-IF geometrik doğrulama özellikleri (Rec. Prac. GVP v4.2, 4.3 · 4.6):
   // PROPERTY_DEFINITION('geometric validation property', …, ürünün şekli) →
