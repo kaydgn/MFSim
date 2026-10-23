@@ -56,7 +56,9 @@ test('karşılama fotoğrafı TAM KENAR ve kartı açılış markasının kenar�
   await page.waitForTimeout(800);
   const karsilama = {
     foto: await page.evaluate(kutu, '#ve-welcome-slayt'),
-    kart: await page.evaluate(kutu, '.ve-welcome-id'),
+    // Kesiğin içeriğinin kenarı: markanın kutusu (sütunun kutusu, bağlantıların
+    // taşma payı kadar solda başlıyor — 2026-10-23).
+    kart: await page.evaluate(kutu, '.ve-welcome-logo'),
   };
 
   // Fotoğraf ekranın TAMAMI — çerçeve yok
@@ -70,3 +72,60 @@ test('karşılama fotoğrafı TAM KENAR ve kartı açılış markasının kenar�
   const kose = await page.evaluate(() => getComputedStyle(document.querySelector('.ve-canvas-wrapper')).borderTopLeftRadius);
   expect(kose).toBe('0px');
 });
+
+// ── KESİK (2026-10-23, kullanıcı kararı "6d · İnce") ─────────────────────
+// İçerik siyah kesiğin İÇİNDE durmalı: eğik kenar aşağı indikçe daralıyor ve
+// clip-path taşan her şeyi SESSİZCE kırpıyor — yazı yarım görünür, hiçbir
+// şey kırılmaz. Kesiğin bir kutunun DİBİNDEKİ genişliği, o kutu için en dar
+// yerdir; her kutu orada kenardan en az 12 px içeride olmalı. Üç boy:
+// kullanıcının ekranı ve penceresi, bir de kısa pencere (sıkı düzen).
+for (const [w, h] of [[1600, 900], [998, 946], [1366, 650]]) {
+  test(`kesiğin içeriği eğik kenara değmiyor — ${w}×${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('file://' + BUILD);
+    await page.fill('#mfsim-login-password', 'mfsim2024');
+    await page.press('#mfsim-login-password', 'Enter');
+    await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 90000 });
+    // Giriş koreografisi bitsin: kutular DURACAKLARI yerde ölçülür.
+    await page.waitForFunction(() => document.getAnimations()
+      // slaytın yakınlaşması hiç bitmez (18 sn) — beklenen yalnız giriş hareketi
+      .filter((a) => !(a.effect && a.effect.target && a.effect.target.classList
+        && a.effect.target.classList.contains('ve-welcome-kare')))
+      .every((a) => a.playState !== 'running'),
+      null, { timeout: 15000 });
+
+    const r = await page.evaluate(() => {
+      const K = document.querySelector('.ve-welcome .ve-kesik').getBoundingClientRect();
+      const alt = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kesik-alt'));
+      const kenar = (y) => K.left + K.width - (K.width - alt) * (y - K.top) / K.height;
+      const sec = '.ve-welcome-logo > span, .ve-welcome-tagline, .ve-welcome-cetvel, .ve-welcome-eyebrow, '
+        + '.ve-module-card, .ve-welcome-panel-title, .ve-welcome-change, .ve-welcome-kunye, '
+        + '.ve-welcome-open, .ve-welcome-link';
+      const kutular = [...document.querySelectorAll('.ve-welcome-id :is(' + sec + ')')]
+        .filter((e) => getComputedStyle(e).display !== 'none')
+        .map((e) => ({ e, q: e.getBoundingClientRect() }))
+        .filter(({ q }) => q.width > 0 && q.height > 0);
+      const pay = kutular.map(({ e, q }) => ({
+        ad: (e.className || '').toString().split(' ')[0],
+        pay: Math.round(kenar(q.bottom) - q.right),
+        icinde: q.top >= K.top && q.bottom <= K.bottom,
+      }));
+      const id = document.querySelector('.ve-welcome-id');
+      return {
+        say: pay.length,
+        enDar: pay.reduce((a, b) => (b.pay < a.pay ? b : a)),
+        disarida: pay.filter((p) => !p.icinde).map((p) => p.ad),
+        kayarX: id.scrollWidth > id.clientWidth,
+        kayarY: id.scrollHeight > id.clientHeight,
+        cizgi: getComputedStyle(document.querySelector('.ve-welcome .ve-kesik-cizgi')).clipPath,
+      };
+    });
+
+    expect(r.say).toBeGreaterThanOrEqual(15);             // ölçüm boşa koşmuyor (kısa boyda 2 kayıt)
+    expect(r.enDar.pay).toBeGreaterThanOrEqual(12);       // en dar yerde bile kenardan içeride
+    expect(r.disarida).toEqual([]);                       // dikeyde de kesiğin içinde
+    expect(r.kayarX).toBe(false);
+    expect(r.kayarY).toBe(false);                         // sütun bu boylarda kaymadan sığıyor
+    expect(r.cizgi).toMatch(/^polygon\(/);                // bakır çizgi çiziliyor
+  });
+}

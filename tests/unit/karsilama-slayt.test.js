@@ -60,7 +60,8 @@ function setupDOM() {
     '  <div class="ve-module-overlay" id="ve-module-overlay">' +
     '    <div class="ve-welcome">' +
     '      <div class="ve-welcome-slayt" id="ve-welcome-slayt"></div>' +
-    '      <div class="ve-welcome-id"></div>' +
+    '      <div class="ve-kesik-cizgi"></div>' +
+    '      <div class="ve-kesik"><div class="ve-welcome-id ve-kesik-ic"></div></div>' +
     '    </div>' +
     '  </div>' +
     '</div></div>';
@@ -378,74 +379,34 @@ describe('CSS — okunurluk ve kırpma', () => {
     expect(blok).toMatch(/overflow:\s*hidden/);
   });
 
-  test('kart slaytın ÜSTÜNDE ve akıştan ÇIKMIŞ (Vitrin)', () => {
-    const blok = CSS.slice(CSS.indexOf('.ve-welcome-id{'), CSS.indexOf('.ve-welcome-logo{'));
-    expect(blok).toMatch(/z-index:\s*1/);
-    expect(blok).toMatch(/position:\s*absolute/);
+  // Kesik (2026-10-23, "6d · İnce") ve bakır çizgisi slaytın ÜSTÜNDE, akışın
+  // DIŞINDA: karşılamanın in-flow çocuğu yok, fotoğraf ikisinin de altından
+  // geçiyor. Çizgi tıklamayı yutmaz (ekranın tamamını kaplayan bir katman).
+  test('kesik ve çizgi slaytın ÜSTÜNDE ve akıştan ÇIKMIŞ', () => {
+    ['.ve-kesik{', '.ve-kesik-cizgi{'].forEach((sec) => {
+      const blok = yorumsuz(CSS.slice(CSS.indexOf(sec), CSS.indexOf('}', CSS.indexOf(sec))));
+      expect(blok).toMatch(/z-index:\s*1/);
+      expect(blok).toMatch(/position:\s*absolute/);
+    });
+    const cizgi = CSS.slice(CSS.indexOf('.ve-kesik-cizgi{'), CSS.indexOf('}', CSS.indexOf('.ve-kesik-cizgi{')));
+    expect(cizgi).toMatch(/pointer-events:\s*none/);
   });
 
-  // Kart TRANSFORM'la ortalanamaz: giriş koreografisi
-  // (.ve-welcome-enter .ve-welcome-id) transform'u kullanıyor ve `both`
-  // doldurmasıyla bitiş karesini kalıcı kılıp ortalamayı eziyor. Ölçüldü:
-  // üst kenar y=450 çıkıyordu, olması gereken 134. Sessiz — kart yalnızca
-  // aşağı kayıyor, hata yok.
-  test('kart MARJLA ortalanıyor, transform ile DEĞİL', () => {
-    const blok = yorumsuz(CSS.slice(CSS.indexOf('.ve-welcome-id{'), CSS.indexOf('.ve-welcome-logo{')));
-    expect(blok).toMatch(/margin-top:\s*auto/);
-    expect(blok).toMatch(/margin-bottom:\s*auto/);
-    expect(blok).not.toMatch(/transform:/);
-  });
-
-  // Kısa pencerede (ör. 1440×620) kart ekrandan taşıyor ve alttaki
-  // "Kayıtlı proje aç" / Kılavuzlar / Ayarlar / künye ULAŞILAMAZ kalıyordu:
-  // kaplamanın kaydırması kartın DIŞINDA. Kaydırma kartın içine indi.
-  test('kart pencereye sığmazsa KENDİ İÇİNDE kayıyor', () => {
-    const blok = yorumsuz(CSS.slice(CSS.indexOf('.ve-welcome-id{'), CSS.indexOf('.ve-welcome-logo{')));
-    expect(blok).toMatch(/max-height:\s*calc\(100% -/);
-    expect(blok).toMatch(/overflow:\s*auto/);
-  });
-
-  // Reçete (kullanıcı, 2026-09-08): "örtü %0 · resim %100 · keskin ·
-  // cam %25 / net". Dördü de tek jetondan sürülüyor; biri elle ezilirse
-  // ekran yine açılır, yalnız başka bir ekran olur.
-  test('reçete jetonları: örtü 0, resim tam, keskin, cam %14 / 8 px, köşe 4', () => {
+  // Reçete (kullanıcı, 2026-09-08): "örtü %0 · resim %100 · keskin". Üçü de
+  // tek jetondan sürülüyor; biri elle ezilirse ekran yine açılır, yalnız
+  // başka bir ekran olur. (Cam kartın jetonları 2026-10-23'te kesikle gitti.)
+  test('reçete jetonları: örtü 0, resim tam, keskin', () => {
     // Satır başına ÇİVİLİ + noktalı virgülle biter: gevşek desen aynı adı
     // geçiren bir YORUMU da yakalıyor ve kapı sessizce kapanıyordu.
     expect(CSS).toMatch(/^\s*--slayt-ortu:\s*0%;/m);
     expect(CSS).toMatch(/^\s*--slayt-opaklik:\s*1;/m);
     expect(CSS).toMatch(/^\s*--slayt-bulanik:\s*0px;/m);
-    expect(CSS).toMatch(/^\s*--karsilama-cam:\s*14%;/m);
-    expect(CSS).toMatch(/^\s*--karsilama-cam-blur:\s*8px;/m);
-    expect(CSS).toMatch(/^\s*--karsilama-kart-r:\s*4px;/m);
-    expect(CSS).toMatch(/^\s*--karsilama-perde:\s*0%;/m);
   });
 
-  test('kart camı: OPAK yedek ÖNCE, cam payı sonra; bulanıklık jetondan', () => {
-    const blok = CSS.slice(CSS.indexOf('.ve-welcome-id{'), CSS.indexOf('.ve-welcome-logo{'));
-    // color-mix desteklenmeyen tarayıcıda kart opak kalmalı — yoksa metin
-    // fotoğrafın üstünde çıplak kalır.
-    const yedek = blok.indexOf('background:var(--bg-secondary);');
-    const cam = blok.indexOf('background:color-mix(');
-    expect(yedek).toBeGreaterThan(-1);
-    expect(cam).toBeGreaterThan(yedek);
-    expect(blok).toContain('var(--karsilama-cam)');
-    // Buzlu cam Vitrin'in kendisi. Ölçüldü: durgun bir yüzeyde bedeli küçük
-    // (ortanca kare süresi 16,9 → 20,6 ms), feConvolveMatrix'in ~295 ms'i değil.
-    // Satır başına ÇİVİLİ: gevşek desen `-webkit-backdrop-filter`in içine de
-    // uyuyor ve standart bildirim silinince kapı sessizce açık kalıyordu.
-    expect(blok).toMatch(/(^|\n)\s*backdrop-filter:blur\(var\(--karsilama-cam-blur\)\)/);
-    expect(blok).toMatch(/(^|\n)\s*-webkit-backdrop-filter:blur\(/);   // Safari
-    expect(CSS).toMatch(/^\s*--karsilama-cam-blur:\s*\d+px;/m);
-  });
-
-  // Kart fotoğrafın üstünde yüzüyor: gölge her iki temada da KOYU olmalı.
-  // --shadow-color açık temalarda 0,06 alfa — kâğıt üstünde doğru, fotoğraf
-  // üstünde gölge diye okunmuyor.
-  test('kart gölgesi kendi jetonundan — tema gölgesine bağlı DEĞİL', () => {
-    const blok = yorumsuz(CSS.slice(CSS.indexOf('.ve-welcome-id{'), CSS.indexOf('.ve-welcome-logo{')));
-    expect(blok).toContain('box-shadow:var(--karsilama-kart-golge)');
-    expect(blok).not.toContain('var(--shadow-color)');
-    expect(CSS).toMatch(/^\s*--karsilama-kart-golge:\s*[^;]+rgba\(0, ?0, ?0/m);
+  // Kesiğin sol perdesi YOK: kartın arkasındaki kadrajı sabitlemek içindi,
+  // kesik opak.
+  test('slaytın sol perdesi kalktı — yalnız örtü katmanı var', () => {
+    expect(CSS).not.toContain('.ve-welcome-slayt::before');
   });
 
   test('örtü TEMA JETONUNDAN türer — sabit renk yazılmaz', () => {
