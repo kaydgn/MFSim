@@ -934,6 +934,17 @@ olurdu.
       dizisi ~176 bayttı). FEAD tek bağlamla sürer (dosyası küçük). Kapı:
       `step-ucgen.test.js` → *PARÇA TOPLAYICISI* (taşınan örnek) +
       `mount-step.test.js` → *AĞ İŞİ*.
+    • **Yüz bir İŞ** (`_suYuzIs(...).adim(bitis)`, Takoz adım 8): kenar ·
+      ters çevirme · köşe · köprü · kırpma · çevirme · bölme · çıktı öbekleri
+      arasında saat dolunca döner, yarım iş kapanışta saklı; toplayıcı
+      `ekleAdim` · `bitirAdim`. Takoz'un gerçek dosyasında tek yüz arayüzü
+      0,8 sn, parçanın sonu 0,8 sn tutuyordu. **Üreteç (`function*`) DEĞİL**:
+      üreteçli yazım küçük temizlikte %55 fazla nesneyi eskiye taşıyıp toplam
+      süreyi %10 uzatıyordu; iş bitince ara veriye bağını bırakır. Kulak
+      sınaması **Z-SIRALI** (earcut'ın isEarHashed'i, > 80 köşe): Morton kodu
+      iki eksende tekdüze, sonuç tam taramayla bit bit aynı. FEAD'in 3B'si
+      eşzamanlı yolu sürer (`ekle` · `bitir`). Kapı: `step-ucgen-dilim.test.js`
+      → *AYNI ÇIKTI* · *BIRAKIR* · *Z-SIRASI* · *AĞ İŞİ*.
     Kapılar: `tests/unit/fead-step.test.js` (sentetik dosyalar
     `tests/helpers/step-yaz.js` + `step-ornek.js`, gerçek dosyanın kalıbında;
     rolü TEST verir) — en değerlisi Gates AG00686'nın STEP → köprü zinciri

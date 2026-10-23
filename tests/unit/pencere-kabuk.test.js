@@ -376,6 +376,23 @@ describe('KILAVUZ — Takoz kılavuzunun alan haritası programın bölüm başl
     expect(sonuc.querySelectorAll('.ve-fp-kat[data-k="sonuc"] .ve-fp-sect > b').length).toBe(7);
     topla(sonuc);
     expect(basliklar.size).toBeGreaterThan(40);                       // tarama gerçekten taradı
+    // 3D Görüntüleyici'nin dosyalı bölümleri (Parçalar · Kütle · Model): güç
+    // grubu, roller ve hesap — dosyasız pencere yalnız "STEP dosyası"nı taşır
+    const STP = require('../../js/mount-step.js');
+    Object.keys(STP).forEach((k) => { if (global[k] === undefined) global[k] = STP[k]; });
+    const W = require('../../js/cp-mount-wizard.js');
+    Object.keys(W).forEach((k) => { if (global[k] === undefined) global[k] = W[k]; });
+    global.nodes = JSON.parse(JSON.stringify(TULGA.nodes)).map((n) => Object.assign(n, { def: componentDefs[n.type] }));
+    const ses = W.veMntWizStpOku(require('../helpers/step-takoz.js').gucGrubu(), 'guc.stp', 'duz');
+    ses.sonuc.agac.forEach((d) => {
+      if (d.ad === 'Motor bloğu') W.veMntWizStpRol(d.i, 'mnt-motor');
+      if (/takoz$/.test(d.ad)) W.veMntWizStpRol(d.i, 'mnt-mount');
+    });
+    W.veMntWizStpHesapla();
+    const goruntuleyici = takozPencere('mnt-viewer');
+    expect([...goruntuleyici.querySelectorAll('.ve-fp-sect > b')].map((b) => b.textContent.trim()))
+      .toEqual(['STEP dosyası', 'Parçalar', 'Kütle', 'Model']);
+    topla(goruntuleyici);
 
     const src = oku('js/guide-mount.js');
     const ekA = src.slice(src.indexOf('function _gmEkA('), src.indexOf('BELGE MONTAJI'));

@@ -567,11 +567,29 @@ function _suBsYuzey(B, id, k, t){
 // ── 8 · DÖNGÜ → PARAMETRE UZAYI ───────────────────────────────────────────
 // Her nokta (u, v)'ye çevrilir; periyodik yön bir öncekine göre açılır.
 // Tekil nokta (kutup · tepe) u'suz kalır ve sonra iki komşusunun u'suna açılır.
-function _suHalkaUV(S, xyz){
-  var n = xyz.length, uv = new Array(n), onceki = null, i;
-  for(i = 0; i < n; i++){
+// İş: adim(bitis) → true bitince; `h` halkanın (u, v)'si (çevrilemezse null)
+function _suHalkaUVIs(S, xyz){
+  var n = xyz.length, uv = new Array(n), d = { onceki: null }, i = 0, is = { h: null };
+  is.adim = function(bitis){
+    for(;;){
+      if(i >= n){ is.h = _suHalkaAc(S, xyz, uv); break; }
+      var e = Math.min(n, i + VE_STEP_UCGEN_ADIM.ters);    // ters çevirme nokta başına Newton
+      if(!_suHalkaTers(S, xyz, uv, d, i, e)) break;
+      i = e;
+      if(_suGecti(bitis)) return false;
+    }
+    S = xyz = uv = d = null;
+    is.adim = function(){ return true; };
+    return true;
+  };
+  return is;
+}
+// Noktalar [i0, i1) parametreye; d.onceki bir öncekinin (u, v)'si. false: çevrilemedi
+function _suHalkaTers(S, xyz, uv, d, i0, i1){
+  var onceki = d.onceki;
+  for(var i = i0; i < i1; i++){
     var q = S.ters(xyz[i], onceki);
-    if(!q || !isFinite(q[0]) || !isFinite(q[1])) return null;
+    if(!q || !isFinite(q[0]) || !isFinite(q[1])) return false;
     if(onceki){
       if(S.perU && !q[2]) q[0] += S.perU * Math.round((onceki[0] - q[0]) / S.perU);
       if(S.perV) q[1] += S.perV * Math.round((onceki[1] - q[1]) / S.perV);
@@ -580,6 +598,11 @@ function _suHalkaUV(S, xyz){
     if(!q[2]) onceki = uv[i];
     else if(onceki) onceki = [onceki[0], q[1]];
   }
+  d.onceki = onceki;
+  return true;
+}
+function _suHalkaAc(S, xyz, uv){
+  var n = xyz.length, i;
   var ilk = -1, son = -1;
   for(i = 0; i < n; i++) if(isFinite(uv[i][0])){ if(ilk < 0) ilk = i; son = i; }
   var sarU = 0, sarV = 0;
@@ -655,15 +678,45 @@ function _suBantKes(h, ax, per, c){
 // ── 9 · ÜÇGENLEME (kulak kırpma) ─────────────────────────────────────────
 // X, Y: ölçekli parametre koordinatı (köşe indisiyle). `dis` saat yönünün
 // tersine, `delikler` saat yönünde. Döner: [[a, b, c], ...] (saat yönünün tersine)
+// ÜÇGENLEME DİLİM DİLİM: yüzün işi (_suYuzIs) ve parçaları (köprü, kulak,
+// çevirme, bölme) birer İŞtir — adim(bitis) saat `bitis`i geçince yarım işi
+// saklayıp false döner, sonraki çağrıda sürer; eşzamanlı yol adim(Infinity).
+// Tek yüz arayüzü 0,8 sn tutuyordu (gerçek motor bloğu: 9.345 köşeli düz yüz).
+// Üreteç (function*) DEĞİL: aynı işin üreteçli yazımı küçük temizlikte %55
+// fazla nesne eskiye taşıyor, toplam süreyi %10 uzatıyordu (ölçüldü).
+// Bırakma aralıkları (iş birimi): kenar · ters çevrilen nokta · köşe · kırpma
+// turu · çevrilen kenar · bölme adayı · bölme
+var VE_STEP_UCGEN_ADIM = { kenar: 32, ters: 64, kose: 256, kulak: 256, cevir: 256, aday: 256, bol: 64 };
+function _suSimdi(){ return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
+function _suGecti(bitis){ return bitis < Infinity && _suSimdi() > bitis; }
 function _suKulak(X, Y, dis, delikler, sayac){
+  var is = _suKulakIs(X, Y, dis, delikler, sayac);
+  is.adim(Infinity);
+  return is.T;
+}
+function _suKulakIs(X, Y, dis, delikler, sayac){
   var halka = dis.slice();
   var dl = delikler.map(function(h){
     var mi = 0;
     for(var i = 1; i < h.length; i++) if(X[h[i]] > X[h[mi]] || (X[h[i]] === X[h[mi]] && Y[h[i]] < Y[h[mi]])) mi = i;
     return { h: h, mi: mi };
   }).sort(function(a, b){ return X[b.h[b.mi]] - X[a.h[a.mi]]; });
-  dl.forEach(function(d){ var y = _suKopru(X, Y, halka, d.h, d.mi); if(y) halka = y; else sayac.zorla++; });
-  return _suKirp(X, Y, halka, sayac);
+  var j = 0, kirp = null, is = { T: null };
+  is.adim = function(bitis){
+    while(j < dl.length){                                // köprü başına halkanın kopyası: delik delik
+      var y = _suKopru(X, Y, halka, dl[j].h, dl[j].mi);
+      if(y) halka = y; else sayac.zorla++;
+      j++;
+      if(_suGecti(bitis)) return false;
+    }
+    if(!kirp) kirp = _suKirpIs(X, Y, halka, sayac);
+    if(!kirp.adim(bitis)) return false;
+    is.T = kirp.T;
+    X = Y = halka = dl = kirp = null;
+    is.adim = function(){ return true; };
+    return true;
+  };
+  return is;
 }
 // Köprü (Eberly; earcut'ın findHoleBridge'inin aynası, ışın +x yönünde):
 // deliğin en sağ köşesinden sağa giden ışının çarptığı ilk kenarın en sağ
@@ -722,9 +775,21 @@ function _suUcgende(ax, ay, bx, by, cx, cy, px, py){
   if(s < 0){ var tx = bx, ty = by; bx = cx; by = cy; cx = tx; cy = ty; }
   return _suAlanUc(ax, ay, bx, by, px, py) >= 0 && _suAlanUc(bx, by, cx, cy, px, py) >= 0 && _suAlanUc(cx, cy, ax, ay, px, py) >= 0;
 }
-function _suKirp(X, Y, halka, sayac){
-  var n = halka.length, out = [];
-  if(n < 3) return out;
+// Z-SIRASI (earcut'ın isEarHashed'i): kulak sınaması yalnız üçgenin kutusunun
+// Z aralığındaki köşelere bakar. Morton kodu iki eksende de tekdüze — kutudaki
+// her köşe aralıktadır, sonuç tam taramanınkiyle bit bit aynı; tarama halka
+// başına O(n²)'den kutudaki birkaç köşeye iner (gerçek motor bloğunun 9.345
+// köşeli düz yüzünde kulak sınaması 0,3 sn'ydi).
+var VE_STEP_UCGEN_ZSIRA = 80;                  // bundan çok köşeli halkada
+function _suZ(x, y, x0, y0, k){
+  x = (x - x0) * k | 0; y = (y - y0) * k | 0;
+  x = (x | (x << 8)) & 0x00FF00FF; x = (x | (x << 4)) & 0x0F0F0F0F; x = (x | (x << 2)) & 0x33333333; x = (x | (x << 1)) & 0x55555555;
+  y = (y | (y << 8)) & 0x00FF00FF; y = (y | (y << 4)) & 0x0F0F0F0F; y = (y | (y << 2)) & 0x33333333; y = (y | (y << 1)) & 0x55555555;
+  return x | (y << 1);
+}
+function _suKirpIs(X, Y, halka, sayac){
+  var n = halka.length, out = [], is = { T: out };
+  if(n < 3){ is.adim = function(){ return true; }; return is; }
   var onc = new Int32Array(n), son = new Int32Array(n), i;
   for(i = 0; i < n; i++){ onc[i] = (i + n - 1) % n; son[i] = (i + 1) % n; }
   var xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
@@ -735,57 +800,94 @@ function _suKirp(X, Y, halka, sayac){
   // üste binen kulak kesiyordu (ölçüldü: Tulga motor bloğunun bir silindiri,
   // ters ve tek başına üçgen — gövde açık).
   var pay = 1e-10 * ((xmax - xmin) * (xmax - xmin) + (ymax - ymin) * (ymax - ymin));
+  // Z listesi: kalan köşeler Morton koduna göre sıralı, iki yönlü bağlı
+  var zA = null, zO = null, zS = null, zk = 0;
+  if(n > VE_STEP_UCGEN_ZSIRA){
+    var zw = Math.max(xmax - xmin, ymax - ymin), sira = new Array(n);
+    zk = zw > 0 ? 32767 / zw : 0;
+    zA = new Int32Array(n); zO = new Int32Array(n); zS = new Int32Array(n);
+    for(i = 0; i < n; i++){ zA[i] = _suZ(X[halka[i]], Y[halka[i]], xmin, ymin, zk); sira[i] = i; }
+    sira.sort(function(a, b){ return zA[a] - zA[b]; });
+    for(i = 0; i < n; i++){ zO[sira[i]] = i ? sira[i - 1] : -1; zS[sira[i]] = i < n - 1 ? sira[i + 1] : -1; }
+  }
+  function zCikar(q){
+    if(!zA) return;
+    var a = zO[q], b = zS[q];
+    if(a >= 0) zS[a] = b;
+    if(b >= 0) zO[b] = a;
+  }
   function alan(p){ var a = halka[onc[p]], b = halka[p], c = halka[son[p]]; return _suAlanUc(X[a], Y[a], X[b], Y[b], X[c], Y[c]); }
   function kulak(p){
     if(alan(p) <= pay) return false;
-    var a = halka[onc[p]], b = halka[p], c = halka[son[p]];
-    var x1 = Math.min(X[a], X[b], X[c]), x2 = Math.max(X[a], X[b], X[c]), y1 = Math.min(Y[a], Y[b], Y[c]), y2 = Math.max(Y[a], Y[b], Y[c]);
-    for(var q = son[son[p]]; q !== onc[p]; q = son[q]){
+    var o = onc[p], s = son[p], a = halka[o], b = halka[p], c = halka[s];
+    var ax = X[a], ay = Y[a], bx = X[b], by = Y[b], cx = X[c], cy = Y[c];
+    var x1 = Math.min(ax, bx, cx), x2 = Math.max(ax, bx, cx), y1 = Math.min(ay, by, cy), y2 = Math.max(ay, by, cy);
+    // Taranan köşeler: Z listesinde kutunun aralığı (başından sonuna), yoksa halkanın kalanı
+    var q, z2 = 0;
+    if(zA){
+      var z1 = _suZ(x1, y1, xmin, ymin, zk);
+      z2 = _suZ(x2, y2, xmin, ymin, zk);
+      for(q = p; zO[q] >= 0 && zA[zO[q]] >= z1; q = zO[q]);
+    } else q = son[s];
+    for(; zA ? q >= 0 && zA[q] <= z2 : q !== o; q = zA ? zS[q] : son[q]){
+      if(q === p || q === o || q === s) continue;
       var v = halka[q];
       if(v === a || v === b || v === c) continue;
       var px = X[v], py = Y[v];
       if(px < x1 || px > x2 || py < y1 || py > y2) continue;
-      if((px === X[a] && py === Y[a]) || (px === X[b] && py === Y[b]) || (px === X[c] && py === Y[c])) continue;
-      if(_suAlanUc(X[a], Y[a], X[b], Y[b], px, py) >= -pay && _suAlanUc(X[b], Y[b], X[c], Y[c], px, py) >= -pay
-         && _suAlanUc(X[c], Y[c], X[a], Y[a], px, py) >= -pay) return false;
+      if((px === ax && py === ay) || (px === bx && py === by) || (px === cx && py === cy)) continue;
+      if(_suAlanUc(ax, ay, bx, by, px, py) >= -pay && _suAlanUc(bx, by, cx, cy, px, py) >= -pay
+         && _suAlanUc(cx, cy, ax, ay, px, py) >= -pay) return false;
     }
     return true;
   }
   var kalan = n, p = 0, deneme = 0;
-  while(kalan > 3){
-    if(kulak(p)){
-      var o = onc[p], s = son[p];
-      out.push([halka[o], halka[p], halka[s]]);
-      son[o] = s; onc[s] = o; kalan--;
-      // Bir SONRAKİNİ atla (earcut'ın kuralı: daha az şerit üçgen). Yelpazeye
-      // karşı asıl kapı sonraki Delaunay çevirmesidir (bkz. _suAg).
-      p = son[s]; deneme = 0;
-      continue;
-    }
-    p = son[p];
-    if(++deneme > kalan){
-      // Tıkandı: en büyük alanlı köşeyi zorla kırp. Hiçbiri pozitif değilse
-      // kalanlar bir doğru üstündedir: en küçük |alan|lı köşe DEJENERE üçgen
-      // olarak yazılır — sınır kenarı üçgensiz kalmasın (Delaunay çevirmesi
-      // onu sonra gerçek bir üçgene çevirir).
-      var en = -1, enA = -Infinity, sifir = p, sifirA = Infinity, q2 = p;
-      for(var c2 = 0; c2 < kalan; c2++, q2 = son[q2]){
-        var A2 = alan(q2);
-        if(A2 > enA){ enA = A2; en = q2; }
-        if(Math.abs(A2) < sifirA){ sifirA = Math.abs(A2); sifir = q2; }
+  // En çok `adim` kırpma turu (iş turların arasında bırakır)
+  function dongu(adim){
+    while(kalan > 3 && adim-- > 0){
+      if(kulak(p)){
+        var o = onc[p], s = son[p];
+        out.push([halka[o], halka[p], halka[s]]);
+        son[o] = s; onc[s] = o; kalan--; zCikar(p);
+        // Bir SONRAKİNİ atla (earcut'ın kuralı: daha az şerit üçgen). Yelpazeye
+        // karşı asıl kapı sonraki Delaunay çevirmesidir (bkz. _suAg).
+        p = son[s]; deneme = 0;
+        continue;
       }
-      var sec = enA > pay ? en : sifir;
-      if(enA > pay || sifirA <= 1e3 * pay) out.push([halka[onc[sec]], halka[sec], halka[son[sec]]]);
-      son[onc[sec]] = son[sec]; onc[son[sec]] = onc[sec]; kalan--;
-      p = onc[sec]; deneme = 0;
-      if(enA > pay) sayac.zorla++;
+      p = son[p];
+      if(++deneme > kalan){
+        // Tıkandı: en büyük alanlı köşeyi zorla kırp. Hiçbiri pozitif değilse
+        // kalanlar bir doğru üstündedir: en küçük |alan|lı köşe DEJENERE üçgen
+        // olarak yazılır — sınır kenarı üçgensiz kalmasın (Delaunay çevirmesi
+        // onu sonra gerçek bir üçgene çevirir).
+        var en = -1, enA = -Infinity, sifir = p, sifirA = Infinity, q2 = p;
+        for(var c2 = 0; c2 < kalan; c2++, q2 = son[q2]){
+          var A2 = alan(q2);
+          if(A2 > enA){ enA = A2; en = q2; }
+          if(Math.abs(A2) < sifirA){ sifirA = Math.abs(A2); sifir = q2; }
+        }
+        var sec = enA > pay ? en : sifir;
+        if(enA > pay || sifirA <= 1e3 * pay) out.push([halka[onc[sec]], halka[sec], halka[son[sec]]]);
+        son[onc[sec]] = son[sec]; onc[son[sec]] = onc[sec]; kalan--; zCikar(sec);
+        p = onc[sec]; deneme = 0;
+        if(enA > pay) sayac.zorla++;
+      }
     }
   }
-  // Son üçgen bir doğru üstünde olsa da yazılır: parametre uzayında düz olan
-  // sınır, eğri yüzeyde bir YAYDIR ve o üçgen yay ile kirişi arasındaki şerittir
-  // (ölçüldü: 42 köşeli bir silindir yüzünde bir sınır kenarı üçgensiz kalıyordu).
-  if(alan(p) > -pay) out.push([halka[onc[p]], halka[p], halka[son[p]]]);
-  return out;
+  is.adim = function(bitis){
+    while(kalan > 3){
+      dongu(VE_STEP_UCGEN_ADIM.kulak);
+      if(kalan > 3 && _suGecti(bitis)) return false;
+    }
+    // Son üçgen bir doğru üstünde olsa da yazılır: parametre uzayında düz olan
+    // sınır, eğri yüzeyde bir YAYDIR ve o üçgen yay ile kirişi arasındaki şerittir
+    // (ölçüldü: 42 köşeli bir silindir yüzünde bir sınır kenarı üçgensiz kalıyordu).
+    if(alan(p) > -pay) out.push([halka[onc[p]], halka[p], halka[son[p]]]);
+    X = Y = halka = onc = son = zA = zO = zS = null;
+    is.adim = function(){ return true; };
+    return true;
+  };
+  return is;
 }
 
 // Döngünün her kenarı tam bir üçgende, hiçbir kenar ikiden çok üçgende
@@ -873,74 +975,126 @@ function _suAg(K, X, Y, T){
     ucgenEkle(y[4]); ucgenEkle(y[5]);
     return true;
   }
-  function yasalla(yigin){
-    var sinir = 64 * (T.length + 16);
-    while(yigin.length && sinir-- > 0){
-      var key = yigin.pop(), y = yanlar(key);
-      if(!y || !cevir(key)) continue;
-      yigin.push(anahtar(y[0], y[3]), anahtar(y[3], y[1]), anahtar(y[1], y[2]), anahtar(y[2], y[0]));
+  // Yığından bir kenar: çevrilirse dört komşu kenarı yığına
+  function yasallaBir(yigin){
+    var key = yigin.pop(), y = yanlar(key);
+    if(!y || !cevir(key)) return;
+    yigin.push(anahtar(y[0], y[3]), anahtar(y[3], y[1]), anahtar(y[1], y[2]), anahtar(y[2], y[0]));
+  }
+  // Yığın boşalana (ya da `d.sinir` bitene) dek, en çok n kenar
+  function yasallaN(yigin, d, n){ while(n-- > 0 && yigin.length && d.sinir-- > 0) yasallaBir(yigin); }
+  function yasalla(yigin){ yasallaN(yigin, { sinir: 64 * (T.length + 16) }, Infinity); }
+  // İş: bütün iç kenarlar yığından çevrilir
+  function delaunayIs(){
+    var yigin = [], d = null, is = {};
+    is.adim = function(bitis){
+      if(!d){
+        kenar.forEach(function(l, key){ if(l.length === 2) yigin.push(key); });
+        d = { sinir: 64 * (T.length + 16) };
+      }
+      for(;;){
+        yasallaN(yigin, d, VE_STEP_UCGEN_ADIM.cevir);
+        if(!yigin.length || d.sinir < 0){ yigin = []; return true; }
+        if(_suGecti(bitis)) return false;
+      }
+    };
+    return is;
+  }
+  // İş: payı aşan iç kenarlar turlar hâlinde ortasından bölünür
+  function inceltIs(S, tol, enCok, ol){
+    // Hata YÜZEYİN kendi noktalarıyla (sınır köşesinin çizilen konumu kenar
+    // eğrisinden gelir ve yüzeyden kiriş payı kadar ayrık olabilir) ve
+    // ÜÇGENİN DÜZLEMİNE DİK ölçülür. Parametresi yay boyuna düzgün dağılmayan
+    // yüzeyde (kelepçeli düğümlü B-spline) parametre ortasının yüzey noktası
+    // kirişin ortasından yüzey BOYUNCA da kayar; o kayma hata sayılınca
+    // inceltme yakınsamıyordu (ölçüldü: şişkin yama, 40 turun hepsi, yüz
+    // başına ~4.600 üçgen, kalan "hata" 13 mm — gerçek sapma ~0). Kenar
+    // ortası yalnız kenar boyunca bakar: simetrik bir şişkinlikte kenar
+    // ortaları tam isabet edip yamayı dört üçgende bırakıyordu — üçgenin
+    // ağırlık merkezi de sorulur ve kenarın hatası komşu üçgenlerinkini taşır.
+    function ucgenHata(ti){
+      if(tn[ti]) return tn[ti];
+      var t = T[ti], s0 = K.s[t[0]], s1 = K.s[t[1]], s2 = K.s[t[2]];
+      var n = _suV(_suC(s1, s0), _suC(s2, s0)), L = _suU(n);
+      n = L > 1e-12 ? [n[0] / L, n[1] / L, n[2] / L] : null;
+      var pc = S.P((K.u[t[0]] + K.u[t[1]] + K.u[t[2]]) / 3, (K.v[t[0]] + K.v[t[1]] + K.v[t[2]]) / 3);
+      var d = [pc[0] - (s0[0] + s1[0] + s2[0]) / 3, pc[1] - (s0[1] + s1[1] + s2[1]) / 3, pc[2] - (s0[2] + s1[2] + s2[2]) / 3];
+      tn[ti] = { n: n, e: n ? Math.abs(_suN(d, n)) : _suU(d) };
+      return tn[ti];
     }
+    function hata(key){
+      var a = Math.floor(key / KAT), b = key - a * KAT;
+      var pm = S.P((K.u[a] + K.u[b]) / 2, (K.v[a] + K.v[b]) / 2);
+      var d = _suC(pm, _suOrta(K.s[a], K.s[b])), l = kenar.get(key), n = null, e = 0;
+      for(var q = 0; l && q < l.length; q++){
+        var h = ucgenHata(l[q]);
+        if(h.e > e) e = h.e;
+        if(!h.n) continue;
+        if(!n) n = h.n.slice();
+        else { var y = _suN(n, h.n) < 0 ? -1 : 1; n = [n[0] + y * h.n[0], n[1] + y * h.n[1], n[2] + y * h.n[2]]; }
+      }
+      var Ln = n ? _suU(n) : 0;
+      return Math.max(e, Ln > 1e-12 ? Math.abs(_suN(d, n)) / Ln : _suU(d));
+    }
+    // İç kenarlar [q0, q1): payı aşan adaya
+    function adayla(ic, aday, q0, q1){
+      for(var q = q0; q < q1; q++){ var h = hata(ic[q]); if(h > tol) aday.push([h, ic[q]]); }
+    }
+    // Adaylar [i0, i1) ortasından bölünür (dd.bolundu sayar); döner: kalınan sıra
+    function bol(aday, dd, i0, i1){
+      for(var i = i0; i < i1 && K.u.length < enCok; i++){
+        var key = aday[i][1], y = yanlar(key);
+        if(!y || hata(key) <= tol) continue;
+        var A = y[0], Bv = y[1], c = y[2], d = y[3], ti = y[4], tj = y[5];
+        var um = (K.u[A] + K.u[Bv]) / 2, vm = (K.v[A] + K.v[Bv]) / 2, m = K.u.length, ps = S.P(um, vm);
+        K.u.push(um); K.v.push(vm); K.p.push(ps); K.s.push(ps);
+        X.push(um * ol[0]); Y.push(vm * ol[1]);
+        ucgenSil(ti); ucgenSil(tj);
+        var t3 = T.length, t4 = t3 + 1;
+        T[ti] = [A, m, c]; T[tj] = [Bv, m, d]; T.push([m, Bv, c], [m, A, d]);
+        ucgenEkle(ti); ucgenEkle(tj); ucgenEkle(t3); ucgenEkle(t4);
+        yasalla([anahtar(A, c), anahtar(c, Bv), anahtar(Bv, d), anahtar(d, A)]);
+        dd.bolundu++;
+      }
+      return i;
+    }
+    var AD = VE_STEP_UCGEN_ADIM, tur = 0, evre = 0, aday = null, ic = null, q = 0, i = 0, sayac = null, is = {};
+    is.adim = function(bitis){
+      for(;;){
+        if(evre === 0){                                  // turun başı: iç kenarlar
+          if(!(tur < 40 && K.u.length < enCok)) break;
+          aday = []; ic = []; q = 0; i = 0; sayac = { bolundu: 0 };
+          kenar.forEach(function(l, key){ if(l.length === 2) ic.push(key); });
+          evre = 1;
+        }
+        if(evre === 1){                                  // payı aşanlar
+          while(q < ic.length){
+            var son = Math.min(ic.length, q + AD.aday);
+            adayla(ic, aday, q, son); q = son;
+            if(_suGecti(bitis)) return false;
+          }
+          if(!aday.length) break;
+          aday.sort(function(a, b){ return b[0] - a[0]; });
+          evre = 2;
+        }
+        while(i < aday.length && K.u.length < enCok){     // bölme
+          i = bol(aday, sayac, i, Math.min(aday.length, i + AD.bol));
+          if(_suGecti(bitis)) return false;
+        }
+        if(!sayac.bolundu) break;
+        tur++; evre = 0;
+      }
+      aday = ic = null;
+      is.adim = function(){ return true; };
+      return true;
+    };
+    return is;
   }
   return {
-    delaunay: function(){ var yigin = []; kenar.forEach(function(l, key){ if(l.length === 2) yigin.push(key); }); yasalla(yigin); },
-    incelt: function(S, tol, enCok, ol){
-      // Hata YÜZEYİN kendi noktalarıyla (sınır köşesinin çizilen konumu kenar
-      // eğrisinden gelir ve yüzeyden kiriş payı kadar ayrık olabilir) ve
-      // ÜÇGENİN DÜZLEMİNE DİK ölçülür. Parametresi yay boyuna düzgün dağılmayan
-      // yüzeyde (kelepçeli düğümlü B-spline) parametre ortasının yüzey noktası
-      // kirişin ortasından yüzey BOYUNCA da kayar; o kayma hata sayılınca
-      // inceltme yakınsamıyordu (ölçüldü: şişkin yama, 40 turun hepsi, yüz
-      // başına ~4.600 üçgen, kalan "hata" 13 mm — gerçek sapma ~0). Kenar
-      // ortası yalnız kenar boyunca bakar: simetrik bir şişkinlikte kenar
-      // ortaları tam isabet edip yamayı dört üçgende bırakıyordu — üçgenin
-      // ağırlık merkezi de sorulur ve kenarın hatası komşu üçgenlerinkini taşır.
-      function ucgenHata(ti){
-        if(tn[ti]) return tn[ti];
-        var t = T[ti], s0 = K.s[t[0]], s1 = K.s[t[1]], s2 = K.s[t[2]];
-        var n = _suV(_suC(s1, s0), _suC(s2, s0)), L = _suU(n);
-        n = L > 1e-12 ? [n[0] / L, n[1] / L, n[2] / L] : null;
-        var pc = S.P((K.u[t[0]] + K.u[t[1]] + K.u[t[2]]) / 3, (K.v[t[0]] + K.v[t[1]] + K.v[t[2]]) / 3);
-        var d = [pc[0] - (s0[0] + s1[0] + s2[0]) / 3, pc[1] - (s0[1] + s1[1] + s2[1]) / 3, pc[2] - (s0[2] + s1[2] + s2[2]) / 3];
-        tn[ti] = { n: n, e: n ? Math.abs(_suN(d, n)) : _suU(d) };
-        return tn[ti];
-      }
-      function hata(key){
-        var a = Math.floor(key / KAT), b = key - a * KAT;
-        var pm = S.P((K.u[a] + K.u[b]) / 2, (K.v[a] + K.v[b]) / 2);
-        var d = _suC(pm, _suOrta(K.s[a], K.s[b])), l = kenar.get(key), n = null, e = 0;
-        for(var q = 0; l && q < l.length; q++){
-          var h = ucgenHata(l[q]);
-          if(h.e > e) e = h.e;
-          if(!h.n) continue;
-          if(!n) n = h.n.slice();
-          else { var y = _suN(n, h.n) < 0 ? -1 : 1; n = [n[0] + y * h.n[0], n[1] + y * h.n[1], n[2] + y * h.n[2]]; }
-        }
-        var Ln = n ? _suU(n) : 0;
-        return Math.max(e, Ln > 1e-12 ? Math.abs(_suN(d, n)) / Ln : _suU(d));
-      }
-      for(var tur = 0; tur < 40 && K.u.length < enCok; tur++){
-        var aday = [];
-        kenar.forEach(function(l, key){ if(l.length === 2){ var h = hata(key); if(h > tol) aday.push([h, key]); } });
-        if(!aday.length) break;
-        aday.sort(function(p, q){ return q[0] - p[0]; });
-        var bolundu = 0;
-        for(var i = 0; i < aday.length && K.u.length < enCok; i++){
-          var key = aday[i][1], y = yanlar(key);
-          if(!y || hata(key) <= tol) continue;
-          var A = y[0], Bv = y[1], c = y[2], d = y[3], ti = y[4], tj = y[5];
-          var um = (K.u[A] + K.u[Bv]) / 2, vm = (K.v[A] + K.v[Bv]) / 2, m = K.u.length, ps = S.P(um, vm);
-          K.u.push(um); K.v.push(vm); K.p.push(ps); K.s.push(ps);
-          X.push(um * ol[0]); Y.push(vm * ol[1]);
-          ucgenSil(ti); ucgenSil(tj);
-          var t3 = T.length, t4 = t3 + 1;
-          T[ti] = [A, m, c]; T[tj] = [Bv, m, d]; T.push([m, Bv, c], [m, A, d]);
-          ucgenEkle(ti); ucgenEkle(tj); ucgenEkle(t3); ucgenEkle(t4);
-          yasalla([anahtar(A, c), anahtar(c, Bv), anahtar(Bv, d), anahtar(d, A)]);
-          bolundu++;
-        }
-        if(!bolundu) break;
-      }
-    }
+    delaunay: function(){ delaunayIs().adim(Infinity); },
+    delaunayIs: delaunayIs,
+    incelt: function(S, tol, enCok, ol){ inceltIs(S, tol, enCok, ol).adim(Infinity); },
+    inceltIs: inceltIs
   };
 }
 
@@ -958,107 +1112,209 @@ function _suSanal(S, a, b, tol, derin, out){
 // ── 11 · YÜZ ──────────────────────────────────────────────────────────────
 // Yerel mm üçgenler + kullandığı kenarlar. Önbellekli.
 function _suYuz(B, id, k, dk){
-  var key = id + '@' + k;
-  if(B.yuz[key]) return B.yuz[key];
-  var r = { tip: '?', durum: 'kenar', neden: '', uc: [], nor: [], ucg: [], kenarlar: [] };
-  try { _suYuzKur(B, id, k, dk, r); }
-  catch(x){ r.durum = 'kenar'; r.neden = 'hata: ' + (x && x.message); r.uc = []; r.nor = []; r.ucg = []; }
-  B.yuz[key] = r;
-  return r;
+  var is = _suYuzIs(B, id, k, dk);
+  is.adim(Infinity);
+  return is.r;
 }
-function _suYuzKur(B, id, k, dk, r){
-  var P = B.P, m = B.model, a = P.Varlik(m, id).a;      // ADVANCED_FACE(ad, sınırlar, yüzey, aynı_yön)
-  r.tip = P.Tip(m, a[2].ref);
-  var yon = _suBayrak(a[3]) ? 1 : -1;
-  // ── döngüler (3B) ──
-  var donguler = [], kopuk = false;
-  _suRefler(a[1]).forEach(function(bid){
-    var fb = P.Varlik(m, bid);                            // FACE_(OUTER_)BOUND(ad, döngü, yön)
-    var lp = P.Varlik(m, fb.a[1].ref);
-    if(!lp || lp.t !== 'EDGE_LOOP') return;
-    var pts = [];
-    _suRefler(lp.a[1]).forEach(function(oid){
-      var oe = P.Varlik(m, oid).a;                        // ORIENTED_EDGE(ad, *, *, kenar, yön)
-      var eid = oe[3].ref;
-      r.kenarlar.push(eid);
-      var seg = _suKenar(B, eid, k);
-      if(!_suBayrak(oe[4])) seg = seg.slice().reverse();
-      if(pts.length){
-        if(_suM(pts[pts.length - 1], seg[0]) > Math.max(1e-3, B.kiris)) kopuk = true;
-        for(var i = 1; i < seg.length; i++) pts.push(seg[i]);
-      } else for(var i2 = 0; i2 < seg.length; i2++) pts.push(seg[i2]);
-    });
-    if(pts.length > 1){
-      if(_suM(pts[0], pts[pts.length - 1]) > Math.max(1e-3, B.kiris)) kopuk = true;
-      pts.pop();
-    }
-    if(!_suBayrak(fb.a[2])) pts.reverse();
-    if(pts.length >= 2) donguler.push({ xyz: pts, dis: fb.t === 'FACE_OUTER_BOUND' });
-  });
-  if(kopuk){ r.neden = 'döngü kopuk'; return; }
-  var S = _suYuzey(B, a[2].ref, k, dk);
-  if(!S){ r.neden = 'yüzey ' + r.tip; return; }
-  if(!donguler.length){ r.neden = 'sınırsız yüz'; return; }
-
-  // ── parametre uzayı ──
-  var H = [];
-  for(var d = 0; d < donguler.length; d++){
-    var h = _suHalkaUV(S, donguler[d].xyz);
-    if(!h){ r.neden = 'ters çevrilemedi'; return; }
-    h.dis = donguler[d].dis;
-    H.push(h);
+// Yüzün işi: adim(bitis) saat `bitis`i geçince döner; true: yüz hazır (`r`,
+// önbellekte).
+function _suYuzIs(B, id, k, dk){
+  var key = id + '@' + k, r = B.yuz[key];
+  if(r) return { r: r, adim: function(){ return true; } };
+  r = { tip: '?', durum: 'kenar', neden: '', uc: [], nor: [], ucg: [], kenarlar: [] };
+  var y = _suYuzKur(B, id, k, dk, r);
+  return { r: r, adim: function(bitis){
+    if(!y) return true;
+    try { if(!y.adim(bitis)) return false; }
+    catch(x){ r.durum = 'kenar'; r.neden = 'hata: ' + (x && x.message); r.uc = []; r.nor = []; r.ucg = []; }
+    y = null;
+    B.yuz[key] = r;
+    return true;
+  } };
+}
+// Yüz işinin düz parçaları — sıcak döngüler; iş yalnız sırayı ve saati tutar
+// Döngünün [i0, i1) kenarları noktalara; true: kopuk
+function _suDonguKenar(B, k, r, yonlu, i0, i1, pts){
+  var P = B.P, m = B.model, kopuk = false;
+  for(var oi = i0; oi < i1; oi++){
+    var oe = P.Varlik(m, yonlu[oi]).a;                    // ORIENTED_EDGE(ad, *, *, kenar, yön)
+    var eid = oe[3].ref;
+    r.kenarlar.push(eid);
+    var seg = _suKenar(B, eid, k);
+    if(!_suBayrak(oe[4])) seg = seg.slice().reverse();
+    if(pts.length){
+      if(_suM(pts[pts.length - 1], seg[0]) > Math.max(1e-3, B.kiris)) kopuk = true;
+      for(var i = 1; i < seg.length; i++) pts.push(seg[i]);
+    } else for(var i2 = 0; i2 < seg.length; i2++) pts.push(seg[i2]);
   }
-  var alanKur = _suAlan(B, S, H, yon);
-  if(!alanKur){ r.neden = 'alan kurulamadı'; return; }
-
-  // ── köşeler ──
-  // p: çizilen konum (sınırda kenarın kendi noktası), s: yüzeydeki konum
-  var K = { u: [], v: [], p: [], s: [] }, halkalar = [];
-  alanKur.halkalar.forEach(function(hh){
-    var idx = [];
-    for(var i = 0; i < hh.uv.length; i++){
-      idx.push(K.u.length);
-      var ps = S.P(hh.uv[i][0], hh.uv[i][1]);
-      K.u.push(hh.uv[i][0]); K.v.push(hh.uv[i][1]);
-      K.p.push(hh.xyz[i] || ps); K.s.push(ps);
-    }
-    halkalar.push(idx);
-  });
-  // Ölçek: yay uzunluğu × √eğrilik — o uzayda eşit uzunluk eşit kiriş hatası
-  // demek, Delaunay üçgenleri eğriliğe göre uzar (torda u boyunca uzun, v boyunca
-  // kısa). Eşyönlü ölçek en sıkı yöne göre küçülüyordu ve uzun sınır kenarının
-  // yanında yatık üçgen ("Schwarz feneri") alanı şişiriyordu (ölçüldü: yarım bir
-  // kaburga tepesi torunda 4.779 köşe, alan +%0,86). Oran en çok 10:1.
-  var kt = _suKutu(alanKur.halkalar[0].uv), uc0 = (kt[0] + kt[2]) / 2, vc0 = (kt[1] + kt[3]) / 2;
-  var ol = S.olcek(uc0, vc0);
-  if(S.egrilik){
-    var eg = S.egrilik(uc0, vc0), km = Math.max(eg[0], eg[1]);
-    if(km > 0) ol = [ol[0] * Math.sqrt(Math.max(eg[0], km / 100)), ol[1] * Math.sqrt(Math.max(eg[1], km / 100))];
+  return kopuk;
+}
+// Halkanın [i0, i1) noktaları köşe olarak
+function _suKoseKur(S, hh, K, idx, i0, i1){
+  for(var i = i0; i < i1; i++){
+    idx.push(K.u.length);
+    var ps = S.P(hh.uv[i][0], hh.uv[i][1]);
+    K.u.push(hh.uv[i][0]); K.v.push(hh.uv[i][1]);
+    K.p.push(hh.xyz[i] || ps); K.s.push(ps);
   }
-  var X = K.u.map(function(u){ return u * ol[0]; }), Y = K.v.map(function(v){ return v * ol[1]; });
-  var T = _suKulak(X, Y, halkalar[0], halkalar.slice(1), B.sayac);
-  // Döngünün her kenarı TAM BİR üçgende olmalı. Olmuyorsa iki döngülü yüz
-  // fermuarla örülür: kiriş payından ince bir halkada (ölçüldü: 0,017 mm) iki
-  // çemberin çokgenleri birbirini keser ve kulak kırpma kenar düşürür.
-  if(!_suGecerli(halkalar, T) && halkalar.length === 2){
-    var F = _suFermuar(X, Y, halkalar[0], halkalar[1]);
-    if(F.length) T = F;
-    B.sayac.fermuar = (B.sayac.fermuar || 0) + 1;
-  }
-  if(!T.length){ r.neden = 'üçgen çıkmadı'; return; }
-  var ag = _suAg(K, X, Y, T);
-  ag.delaunay();
-  if(!S.duz) ag.incelt(S, B.kiris, B.enCokUc, ol);
-
-  if(B.iz){ r._halkalar = halkalar; r._uv = [K.u.slice(), K.v.slice()]; }
-  // ── çıktı ──
-  for(var i = 0; i < K.u.length; i++){
+}
+// Köşeler [i0, i1) çıktıya (konum + yüzeyin normali)
+function _suCikti(S, K, r, yon, i0, i1){
+  for(var i = i0; i < i1; i++){
     var p = K.p[i], nn = S.N(K.u[i], K.v[i]);
     r.uc.push(p[0], p[1], p[2]);
     r.nor.push(yon * nn[0], yon * nn[1], yon * nn[2]);
   }
-  T.forEach(function(t){ if(yon > 0) r.ucg.push(t[0], t[1], t[2]); else r.ucg.push(t[0], t[2], t[1]); });
-  r.durum = 'tamam';
+}
+// Yüzün evreleri: döngüler (kenar kenar) → parametre → köşeler → kulak kırpma →
+// Delaunay → inceltme → çıktı. Evre false döner: saat doldu, yarım iş saklı.
+// Evre yüzü sebebiyle bitirebilir (kes): r.durum 'kenar' kalır.
+function _suYuzKur(B, id, k, dk, r){
+  var P = B.P, m = B.model, AD = VE_STEP_UCGEN_ADIM, kesik = false;
+  var a, yon, sinirlar, si = 0, fb = null, pts = null, yonlu = null, oi = 0, donguler = [], kopuk = false;
+  var S = null, H = [], di = 0, uvIs = null, alanKur = null;
+  var K = null, halkalar = [], hi = 0, idx = null, ki = 0, ol = null, X = null, Y = null;
+  var kulakIs = null, T = null, ag = null, agIs = null, ci = 0;
+  function kes(neden){ r.neden = neden; kesik = true; return true; }
+  function basla(){
+    a = P.Varlik(m, id).a;                                // ADVANCED_FACE(ad, sınırlar, yüzey, aynı_yön)
+    r.tip = P.Tip(m, a[2].ref);
+    yon = _suBayrak(a[3]) ? 1 : -1;
+    sinirlar = _suRefler(a[1]);
+    return true;
+  }
+  // ── döngüler (3B) ──
+  function dongu(bitis){
+    while(si < sinirlar.length){
+      if(!yonlu){
+        fb = P.Varlik(m, sinirlar[si]);                   // FACE_(OUTER_)BOUND(ad, döngü, yön)
+        var lp = P.Varlik(m, fb.a[1].ref);
+        if(!lp || lp.t !== 'EDGE_LOOP'){ si++; continue; }
+        pts = []; yonlu = _suRefler(lp.a[1]); oi = 0;
+      }
+      while(oi < yonlu.length){
+        var son = Math.min(yonlu.length, oi + AD.kenar);
+        if(_suDonguKenar(B, k, r, yonlu, oi, son, pts)) kopuk = true;
+        oi = son;
+        if(_suGecti(bitis)) return false;
+      }
+      if(pts.length > 1){
+        if(_suM(pts[0], pts[pts.length - 1]) > Math.max(1e-3, B.kiris)) kopuk = true;
+        pts.pop();
+      }
+      if(!_suBayrak(fb.a[2])) pts.reverse();
+      if(pts.length >= 2) donguler.push({ xyz: pts, dis: fb.t === 'FACE_OUTER_BOUND' });
+      yonlu = pts = null; si++;
+    }
+    if(kopuk) return kes('döngü kopuk');
+    S = _suYuzey(B, a[2].ref, k, dk);
+    if(!S) return kes('yüzey ' + r.tip);
+    if(!donguler.length) return kes('sınırsız yüz');
+    return true;
+  }
+  // ── parametre uzayı ──
+  function parametre(bitis){
+    while(di < donguler.length){
+      if(!uvIs) uvIs = _suHalkaUVIs(S, donguler[di].xyz);
+      if(!uvIs.adim(bitis)) return false;
+      var h = uvIs.h;
+      uvIs = null;
+      if(!h) return kes('ters çevrilemedi');
+      h.dis = donguler[di].dis;
+      H.push(h);
+      di++;
+      if(_suGecti(bitis)) return false;
+    }
+    alanKur = _suAlan(B, S, H, yon);
+    if(!alanKur) return kes('alan kurulamadı');
+    return true;
+  }
+  // ── köşeler ──
+  // p: çizilen konum (sınırda kenarın kendi noktası), s: yüzeydeki konum
+  function kose(bitis){
+    if(!K) K = { u: [], v: [], p: [], s: [] };
+    while(hi < alanKur.halkalar.length){
+      var hh = alanKur.halkalar[hi];
+      if(!idx){ idx = []; ki = 0; }
+      while(ki < hh.uv.length){
+        var son = Math.min(hh.uv.length, ki + AD.kose);
+        _suKoseKur(S, hh, K, idx, ki, son); ki = son;
+        if(_suGecti(bitis)) return false;
+      }
+      halkalar.push(idx); idx = null; hi++;
+    }
+    // Ölçek: yay uzunluğu × √eğrilik — o uzayda eşit uzunluk eşit kiriş hatası
+    // demek, Delaunay üçgenleri eğriliğe göre uzar (torda u boyunca uzun, v boyunca
+    // kısa). Eşyönlü ölçek en sıkı yöne göre küçülüyordu ve uzun sınır kenarının
+    // yanında yatık üçgen ("Schwarz feneri") alanı şişiriyordu (ölçüldü: yarım bir
+    // kaburga tepesi torunda 4.779 köşe, alan +%0,86). Oran en çok 10:1.
+    var kt = _suKutu(alanKur.halkalar[0].uv), uc0 = (kt[0] + kt[2]) / 2, vc0 = (kt[1] + kt[3]) / 2;
+    ol = S.olcek(uc0, vc0);
+    if(S.egrilik){
+      var eg = S.egrilik(uc0, vc0), km = Math.max(eg[0], eg[1]);
+      if(km > 0) ol = [ol[0] * Math.sqrt(Math.max(eg[0], km / 100)), ol[1] * Math.sqrt(Math.max(eg[1], km / 100))];
+    }
+    X = K.u.map(function(u){ return u * ol[0]; }); Y = K.v.map(function(v){ return v * ol[1]; });
+    donguler = H = alanKur = null;
+    return true;
+  }
+  // ── kulak kırpma ──
+  function kulak(bitis){
+    if(!kulakIs) kulakIs = _suKulakIs(X, Y, halkalar[0], halkalar.slice(1), B.sayac);
+    if(!kulakIs.adim(bitis)) return false;
+    T = kulakIs.T; kulakIs = null;
+    // Döngünün her kenarı TAM BİR üçgende olmalı. Olmuyorsa iki döngülü yüz
+    // fermuarla örülür: kiriş payından ince bir halkada (ölçüldü: 0,017 mm) iki
+    // çemberin çokgenleri birbirini keser ve kulak kırpma kenar düşürür.
+    if(!_suGecerli(halkalar, T) && halkalar.length === 2){
+      var F = _suFermuar(X, Y, halkalar[0], halkalar[1]);
+      if(F.length) T = F;
+      B.sayac.fermuar = (B.sayac.fermuar || 0) + 1;
+    }
+    if(!T.length) return kes('üçgen çıkmadı');
+    ag = _suAg(K, X, Y, T);
+    return true;
+  }
+  function delaunay(bitis){
+    if(!agIs) agIs = ag.delaunayIs();
+    if(!agIs.adim(bitis)) return false;
+    agIs = null;
+    return true;
+  }
+  function incelt(bitis){
+    if(!S.duz){
+      if(!agIs) agIs = ag.inceltIs(S, B.kiris, B.enCokUc, ol);
+      if(!agIs.adim(bitis)) return false;
+      agIs = null;
+    }
+    ag = X = Y = null;
+    if(B.iz){ r._halkalar = halkalar; r._uv = [K.u.slice(), K.v.slice()]; }
+    return true;
+  }
+  // ── çıktı ──
+  function cikti(bitis){
+    while(ci < K.u.length){
+      var son = Math.min(K.u.length, ci + AD.kose);
+      _suCikti(S, K, r, yon, ci, son); ci = son;
+      if(ci < K.u.length && _suGecti(bitis)) return false;
+    }
+    T.forEach(function(t){ if(yon > 0) r.ucg.push(t[0], t[1], t[2]); else r.ucg.push(t[0], t[2], t[1]); });
+    r.durum = 'tamam';
+    return true;
+  }
+  var evreler = [basla, dongu, parametre, kose, kulak, delaunay, incelt, cikti], ev = 0;
+  return { adim: function(bitis){
+    while(ev < evreler.length && !kesik){
+      if(!evreler[ev](bitis)) return false;
+      ev++;
+      if(ev < evreler.length && !kesik && _suGecti(bitis)) return false;
+    }
+    // İşin kapsamı eskiye taşınmış olabilir: ara veriye bağı kalırsa küçük
+    // temizlikler onu da taşıyor (ölçüldü: taşınan +%35)
+    a = sinirlar = fb = pts = yonlu = donguler = S = H = uvIs = alanKur = K = halkalar = idx = ol = X = Y = null;
+    kulakIs = T = ag = agIs = null;
+    return true;
+  } };
 }
 
 // Alan: dış halka (saat yönünün tersine) + delikler (saat yönünde).
@@ -1153,55 +1409,129 @@ function _suAlan(B, S, H, yon){
 // `yuzUcgen`: yüz başına ilk üçgenin sırası (ekleme sırasıyla, son eleman
 // üçgen sayısı) — Takoz hacmi katı gövde gövde toplar. ekle(fid, ters):
 // yönü ters okunan yüz (boşluk kabuğu) ters sarılır, normali eksi.
+// ekleAdim(fid, ters, bitis) · bitirAdim(bitis, secenek): aynı iş dilim dilim —
+// ne tek yüz ne parçanın sonu bir dilimi aşar (Takoz'un ağ işi).
 function veStepUcgenTopla(B, M, birim){
   var k = birim && birim.mm > 0 ? birim.mm : 1;
   var dk = birim && birim.derece > 0 ? birim.derece : 180 / Math.PI;
   var uc = [], nor = [], ucg = [], cizgi = [], daire = [], gor = {}, yb = [], out = { yuz: 0, ucgenli: 0, kenarYuz: 0 };
-  return {
-    ekle: function(fid, ters){
-      var y = _suYuz(B, fid, k, dk);
-      out.yuz++; B.sayac.yuz++;
-      if(y.durum === 'tamam'){ out.ucgenli++; B.sayac.ucgenli++; }
-      else {
-        out.kenarYuz++; B.sayac.kenarYuz++;
-        var sb = (y.tip || '?') + ': ' + (y.neden || '?');
-        B.sayac.nedenler[sb] = (B.sayac.nedenler[sb] || 0) + 1;
+  var bekleyen = null, son = null;
+  function koy(y, ters){
+    out.yuz++; B.sayac.yuz++;
+    if(y.durum === 'tamam'){ out.ucgenli++; B.sayac.ucgenli++; }
+    else {
+      out.kenarYuz++; B.sayac.kenarYuz++;
+      var sb = (y.tip || '?') + ': ' + (y.neden || '?');
+      B.sayac.nedenler[sb] = (B.sayac.nedenler[sb] || 0) + 1;
+    }
+    var taban = uc.length / 3, i;
+    yb.push(ucg.length / 3);
+    for(i = 0; i < y.uc.length; i++) uc.push(y.uc[i]);
+    if(ters === true){                               // forEach(t.ekle)'nin sırası bayrak sayılmasın
+      for(i = 0; i < y.nor.length; i++) nor.push(-y.nor[i]);
+      for(i = 0; i < y.ucg.length; i += 3) ucg.push(taban + y.ucg[i], taban + y.ucg[i + 2], taban + y.ucg[i + 1]);
+    } else {
+      for(i = 0; i < y.nor.length; i++) nor.push(y.nor[i]);
+      for(i = 0; i < y.ucg.length; i++) ucg.push(taban + y.ucg[i]);
+    }
+    B.sayac.ucgen += y.ucg.length / 3;
+    y.kenarlar.forEach(function(eid){
+      if(gor[eid]) return;
+      gor[eid] = 1;
+      var pts = B.kenar[eid + '@' + k];
+      if(!pts) return;
+      if(pts.daire && pts.length > 1) daire.push(eid, cizgi.length / 6, pts.length - 1);
+      for(var j = 1; j < pts.length; j++){
+        var a = pts[j - 1], b = pts[j];
+        cizgi.push(a[0], a[1], a[2], b[0], b[1], b[2]);
       }
-      var taban = uc.length / 3, i;
-      yb.push(ucg.length / 3);
-      for(i = 0; i < y.uc.length; i++) uc.push(y.uc[i]);
-      if(ters === true){                               // forEach(t.ekle)'nin sırası bayrak sayılmasın
-        for(i = 0; i < y.nor.length; i++) nor.push(-y.nor[i]);
-        for(i = 0; i < y.ucg.length; i += 3) ucg.push(taban + y.ucg[i], taban + y.ucg[i + 2], taban + y.ucg[i + 1]);
-      } else {
-        for(i = 0; i < y.nor.length; i++) nor.push(y.nor[i]);
-        for(i = 0; i < y.ucg.length; i++) ucg.push(taban + y.ucg[i]);
+    });
+  }
+  // Sonun işi: tipli diziler, dünya dönüşümü (veStepUcgenTasi'nin aynısı, aynı
+  // sırayla: normal, köşe, kenar) ve yerel kopya parça parça — tek seferde
+  // gerçek motor bloğunda (914.595 üçgen) bir dilimi 0,1–0,8 sn tutuyordu.
+  function sonIs(secenek){
+    yb.push(ucg.length / 3);
+    var R = M ? M.R : [[1, 0, 0], [0, 1, 0], [0, 0, 1]], t = M ? M.t : [0, 0, 0];
+    var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
+    var U = new Uint32Array(ucg.length), D = new Uint32Array(daire), YB = new Uint32Array(yb);
+    var Wn = new Float32Array(nor.length), Wu = new Float32Array(uc.length), Wc = new Float32Array(cizgi.length);
+    function nokta(p, d, a, b){
+      for(var i = a; i < b; i += 3){
+        var p0 = p[i], p1 = p[i + 1], p2 = p[i + 2];
+        var x = R[0][0] * p0 + R[0][1] * p1 + R[0][2] * p2 + t[0];
+        var y2 = R[1][0] * p0 + R[1][1] * p1 + R[1][2] * p2 + t[1];
+        var z = R[2][0] * p0 + R[2][1] * p1 + R[2][2] * p2 + t[2];
+        d[i] = x; d[i + 1] = y2; d[i + 2] = z;
+        if(x < kutu[0]) kutu[0] = x; if(y2 < kutu[1]) kutu[1] = y2; if(z < kutu[2]) kutu[2] = z;
+        if(x > kutu[3]) kutu[3] = x; if(y2 > kutu[4]) kutu[4] = y2; if(z > kutu[5]) kutu[5] = z;
       }
-      B.sayac.ucgen += y.ucg.length / 3;
-      y.kenarlar.forEach(function(eid){
-        if(gor[eid]) return;
-        gor[eid] = 1;
-        var pts = B.kenar[eid + '@' + k];
-        if(!pts) return;
-        if(pts.daire && pts.length > 1) daire.push(eid, cizgi.length / 6, pts.length - 1);
-        for(var j = 1; j < pts.length; j++){
-          var a = pts[j - 1], b = pts[j];
-          cizgi.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+    }
+    function kopya(p, d, a, b){ for(var i = a; i < b; i++) d[i] = p[i]; }
+    var evre = [
+      [ucg.length, function(a, b){ kopya(ucg, U, a, b); }],
+      [nor.length, function(a, b){
+        for(var i = a; i < b; i += 3){
+          var n0 = nor[i], n1 = nor[i + 1], n2 = nor[i + 2];
+          Wn[i] = R[0][0] * n0 + R[0][1] * n1 + R[0][2] * n2;
+          Wn[i + 1] = R[1][0] * n0 + R[1][1] * n1 + R[1][2] * n2;
+          Wn[i + 2] = R[2][0] * n0 + R[2][1] * n1 + R[2][2] * n2;
         }
-      });
+      }],
+      [uc.length, function(a, b){ nokta(uc, Wu, a, b); }],
+      [cizgi.length, function(a, b){ nokta(cizgi, Wc, a, b); }]
+    ];
+    var L = null;
+    if(secenek && secenek.yerel){
+      L = { uc: new Float64Array(uc.length), nor: new Float64Array(nor.length), cizgi: new Float64Array(cizgi.length) };
+      evre.push([uc.length, function(a, b){ kopya(uc, L.uc, a, b); }], [nor.length, function(a, b){ kopya(nor, L.nor, a, b); }],
+                [cizgi.length, function(a, b){ kopya(cizgi, L.cizgi, a, b); }]);
+    }
+    var e = 0, i = 0, is = { r: null };
+    is.adim = function(bitis){
+      while(e < evre.length){
+        var n = evre[e][0], b = Math.min(n, i + VE_STEP_UCGEN_SON_ADIM);
+        evre[e][1](i, b);
+        i = b;
+        if(i >= n){ e++; i = 0; }
+        if(e < evre.length && bitis < Infinity && _suSimdi() > bitis) return false;
+      }
+      if(!is.r){
+        is.r = { yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz, yuzUcgen: YB,
+                 uc: Wu, normal: Wn, ucgen: U, cizgi: Wc, daire: D, kutu: kutu };
+        if(L) is.r.yerel = { uc: L.uc, nor: L.nor, ucgen: U, cizgi: L.cizgi, daire: D, yuzUcgen: YB,
+                             yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
+      }
+      return true;
+    };
+    return is;
+  }
+  return {
+    ekle: function(fid, ters){ koy(_suYuz(B, fid, k, dk), ters); },
+    // Dilimli yol: yüz saat `bitis`ten önce bitmezse false döner, yarım iş
+    // saklanır; aynı yüzle yeniden çağrılınca kaldığı yerden sürer.
+    ekleAdim: function(fid, ters, bitis){
+      if(!bekleyen || bekleyen.fid !== fid) bekleyen = { fid: fid, is: _suYuzIs(B, fid, k, dk) };
+      if(!bekleyen.is.adim(bitis)) return false;
+      var y = bekleyen.is.r;
+      bekleyen = null;
+      koy(y, ters);
+      return true;
+    },
+    // Sonu dilim dilim: saat `bitis`i geçince null; bitince bitir()'in sonucu
+    bitirAdim: function(bitis, secenek){
+      if(!son) son = sonIs(secenek);
+      return son.adim(bitis) ? son.r : null;
     },
     bitir: function(secenek){
-      yb.push(ucg.length / 3);
-      var yerel = { uc: uc, nor: nor, ucgen: new Uint32Array(ucg), cizgi: cizgi, daire: new Uint32Array(daire),
-                    yuzUcgen: new Uint32Array(yb), yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
-      var r = veStepUcgenTasi(yerel, M);
-      if(secenek && secenek.yerel)
-        r.yerel = { uc: new Float64Array(uc), nor: new Float64Array(nor), ucgen: yerel.ucgen, cizgi: new Float64Array(cizgi),
-                    daire: yerel.daire, yuzUcgen: yerel.yuzUcgen, yuz: out.yuz, ucgenli: out.ucgenli, kenarYuz: out.kenarYuz };
-      return r;
+      if(!son) son = sonIs(secenek);
+      son.adim(Infinity);
+      return son.r;
     }
   };
 }
+// bitirAdim'in saate bakmadan işlediği dizi elemanı (3'ün katı: nokta üçlüleri)
+var VE_STEP_UCGEN_SON_ADIM = 3 * 16384;
 // Yerel ağ (dönüşümsüz) → bir örneğin dünya ağı. Üçgen ve çember dizisi
 // ORTAKTIR (aynı Uint32Array): örnekler yalnız konumda ayrışır. Kutu kenar
 // noktalarını da sayar.
@@ -1263,6 +1593,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veStepUcgenParca: veStepUcgenParca,
     veStepUcgenAlan: veStepUcgenAlan,
     _suYuz: _suYuz,
+    _suYuzIs: _suYuzIs,
     _suYuzey: _suYuzey,
     _suKulak: _suKulak,
     _suAg: _suAg,
