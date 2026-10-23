@@ -1172,8 +1172,9 @@ zararsız, ama bağlama değiştiği gün sessizce ayrışacak ikinci bir kaynak
 **Kardeş kural:** açılış kartı ile karşılama kartının geometrisi zaten **1
 px'e kadar** kilitli (`loader-splash.test.js`); gerekçesi aynı — devir
 teslimde hiçbir şey yerinden oynamamalı. Marka o kartın İÇİNDEKİ yazı ve
-aynı korumayı hak ediyordu. (2026-09-23'ten beri açılışta kart yok — aşağıya
-bak; geometri kilidi modül giriş panelinde sürüyor.)
+aynı korumayı hak ediyordu. (2026-09-23'ten beri açılışta, 2026-10-23'ten beri
+karşılamada da kart yok — aşağıya bak; modül giriş ekranı karşılamanın kesiğini
+aynı sınıflarla taşır, geometri tek yerde.)
 
 **Kapı ÇİFT.** `source-hygiene.test.js` bölüm 12 kuralı statik tutar ve
 **bağlama listesini elle kopyalamaz, kaynaktan okur** — liste bulunamazsa
@@ -1192,10 +1193,10 @@ bant. Alt bandın üst kenarı 12 bölmeli cetvel; bantta solda marka
 (`--fs-sinema`), sağda o anki öbek ve durum; üst bantta sürüm künyesi ve
 atlama uyarısı. Bandın renkleri temadan bağımsız `--sinema-*` jetonları,
 palette BİR kez. Kapanışta bantlar ekrandan çıkar (süre = `FADE_OUT_MS`),
-ekran sönmez, yalnız fotoğraf katmanı söner. Marka logoya aynı aile, aynı
-ağırlık, aynı em-izle, TAM ORANLA (`--fs-h2 / --fs-sinema`) küçülerek iner
-ve rengi hedefinkine geçer. AMBLEM'in (2026-09-23) temadan türeyen sol
-perdesi emekli. Modül giriş ekranı KARTLI kaldı — karşılama kartından doğuyor.
+ekran sönmez, yalnız fotoğraf katmanı söner. Marka karşılamanın markasına aynı
+aile, aynı ağırlık, aynı em-izle, TAM ORANLA iner ve rengi hedefinkine geçer
+(2026-10-23'ten beri oran 1, renk aynı — bkz. *Karşılama KESİK*). AMBLEM'in
+(2026-09-23) temadan türeyen sol perdesi emekli.
 
 **Gerekçe.** Kullanıcı: *"beyaz geçiş çok amatör … resmin renklerinin çok
 daha göründüğü"*. Bantta yazının zemini sabit, kontrast kareden bağımsız.
@@ -1208,10 +1209,27 @@ karşılamanın giriş koreografisinden ÖNCE ölçülür — koreografi kartı
 
 **Kapı.** `loader-splash.test.js` → *SİNEMA* (renk yalnız jetondan, jeton
 palette bir kez, banda karşı AA, kapanışın yönü ve süresi, ekran sönmez,
-perde yok, bant içeriği kartın kenarında) · `marka-tutarli.spec.js` (uçuşun
+perde yok, bant içeriği kesiğin içeriğinin kenarında) · `marka-tutarli.spec.js` (uçuşun
 iki ucunda konum, genişlik VE renk) · `karsilama-kenar.spec.js` ·
 `source-hygiene.test.js` bölüm 12 (bileşik seçici
 `.mfsim-loading-logo.mfsim-sinema-ad` da taranır).
+
+## Karşılama KESİK — boydan boya siyah sütun (2026-10-23)
+
+**Hüküm.** Karşılamada asılı cam kart yok: solda ekranı boydan boya kesen
+siyah bir sütun (`--kesik-ust` / `--kesik-alt`), eğik kenarına paralel bakır
+çizgi. İçinde marka (açılışınkiyle aynı boy), 12 bölmeli cetvel (modülün
+üstüne gelince o modülün dört bölmesi), modül satırları, son değişikliklerin
+ilk üçü, güncellik + sürüm künyesi, eylemler. Renkler `--sinema-*`. Modül giriş
+ekranı aynı kesiği, çizgiyi ve sütunu AYNI sınıflarla taşır (`.ve-kesik` ·
+`.ve-kesik-cizgi` · `.ve-kesik-ic`): tıklanınca kesik kımıldamaz.
+
+**Gerekçe.** Kullanıcı tasarım tuvalinde "6d · İnce"yi seçti ve son
+değişikliklerin kesiğin içinde durmasını istedi.
+
+**Kapı.** `welcome-screen.test.js` → *KESİK* · `loader-splash.test.js` →
+*KESİĞİNDE* · `karsilama-kenar.spec.js` (üç boyda eğik kenara ≥ 12 px) ·
+`modul-giris.spec.js` · `marka-tutarli.spec.js`.
 
 ## Panel veri tablosu sunumu sınıftan alır (2026-09-22)
 

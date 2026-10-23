@@ -5,17 +5,16 @@
  * sonra, direk program içine giriyor, yani güzel bir yükleme ekranı olur, ne
  * bileyim daha profesyonel bir görüntü olur."*
  *
- * İKİ İŞ, BİR YÜZEY. Karşılama kartına tıklamak eskiden yalnız ana tuvale bir
- * kart bırakıyordu; içeri girmek için o karta AYRICA çift tıklamak
+ * İKİ İŞ, BİR YÜZEY. Karşılamada bir modüle tıklamak eskiden yalnız ana
+ * tuvale bir kart bırakıyordu; içeri girmek için o karta AYRICA çift tıklamak
  * gerekiyordu ve bunu söyleyen hiçbir şey yoktu. Artık tıklama modülün
  * içine kadar götürüyor, ve aradaki iş bu ekranın altında akıyor.
  *
- * ÜÇÜNCÜ BİR PENCERE DİLİ KURULMADI. Sınıfların hepsi `.mfsim-loading-*`
- * ailesi: karşılama kartının ikizi olan panel, kademe çubuğu, öbek listesi.
- * Açılış ekranı kartsız (2026-10-18'den beri SİNEMA); bu ekran KARTLI kaldı,
- * çünkü karşılama KARTINDAN doğuyor ve onun yerinde beliriyor. Yeni olan tek
- * şey `.mfsim-module-loading` — o da yalnız fotoğrafsız zemini ve
- * iniş/çıkış koreografisini ekliyor.
+ * ÜÇÜNCÜ BİR PENCERE DİLİ KURULMADI. Ekran karşılamanın kesiğini AYNI
+ * sınıflarla taşır (.ve-kesik · .ve-kesik-cizgi · .ve-kesik-ic): siyah sütun
+ * kımıldamaz, yalnız içi değişir. İçi `.mfsim-loading-*` ailesi — kademe
+ * çubuğu, öbek listesi. Yeni olan tek şey `.mfsim-module-loading`: o da
+ * yalnız fotoğrafsız zemini ve iniş/çıkış koreografisini ekliyor.
  *
  * ADIMLAR SAHTE DEĞİL. Her adımın `is()`i GERÇEK işi yapıyor (kabuğu
  * kurmak, düğümü yerleştirmek, iç topolojiyi açmak) ve adım o iş dönünce
@@ -185,8 +184,9 @@ function veModuleLoaderRun(kimlik, adimlar, bitince){
   adimlar.forEach(function(a){ a.bitti = false; });
 
   var ico = _veModLoadEl('ico');
-  // Sembol `componentDefs`ten geliyor — karşılama kartıyla AYNI kaynak;
-  // ikinci bir kopya tutmak yeniden adlandırmada sessizce eskirdi.
+  // Sembol tıklanan satırın kendisinden ya da `componentDefs`ten geliyor
+  // (veStartModule); ikinci bir kopya tutmak yeniden adlandırmada sessizce
+  // eskirdi.
   if(ico) ico.innerHTML = kimlik.svg || '';
   var ad = _veModLoadEl('ad');
   if(ad) ad.textContent = kimlik.ad || '';

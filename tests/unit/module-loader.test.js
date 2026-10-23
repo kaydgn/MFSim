@@ -287,14 +287,15 @@ describe('KABUK VE KURALLAR', () => {
     expect(IDX).toContain('js/module-loader.js');
   });
 
-  test('AİLENİN DİLİ — .mfsim-loading-* sınıfları kullanılıyor', () => {
-    // Üçüncü bir pencere dili kurmanın karşılığı yok: panel (karşılama
-    // kartının ikizi), kademe çubuğu ve öbek listesi .mfsim-loading-*
-    // ailesinin sınıfları. Açılış ekranı kartsız (2026-10-18'den beri
-    // sinema bantları); kartlı panel bu ekranda yaşıyor.
-    ['mfsim-loading-panel', 'mfsim-loading-stages', 'mfsim-loading-bar',
-     'mfsim-loading-bar-notches', 'mfsim-loading-sep'].forEach((c) => {
-      expect(IDX).toContain('class="' + c + '"');
+  test('AİLENİN DİLİ — kesik karşılamanınki, içi .mfsim-loading-* ailesi', () => {
+    // Üçüncü bir pencere dili kurmanın karşılığı yok: ekran karşılamanın
+    // kesiğini taşır (2026-10-23'ten beri; geometrisi loader-splash.test.js
+    // → KESİĞİNDE), içi kademe çubuğu ve öbek listesiyle .mfsim-loading-*
+    // ailesinin sınıfları.
+    const ekran = IDX.slice(IDX.indexOf('id="mfsim-module-loading"'));
+    ['ve-kesik', 've-kesik-cizgi', 've-kesik-ic', 'mfsim-loading-panel', 'mfsim-loading-stages',
+     'mfsim-loading-bar', 'mfsim-loading-bar-notches', 'mfsim-loading-sep'].forEach((c) => {
+      expect(ekran).toMatch(new RegExp('class="(?:[^"]* )?' + c + '(?: [^"]*)?"'));
     });
   });
 

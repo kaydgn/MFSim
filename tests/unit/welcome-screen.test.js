@@ -34,6 +34,12 @@
  *     yanıtlamaz, bu yüzden 'local' durumu "Güncel" DEMEZ.
  *  5) Açılış koreografisi CSS'te, tetikleyicisi JS'te — ikisi ayrı dosya.
  *  6) Uçuş ve marka devri DEKOR: eksikliği modül açılışını engellemez.
+ *
+ * ─── KESİK (2026-10-23, kullanıcı kararı "6d · İnce") ───────────────────────
+ * Asılı cam kart yerine ekranı boydan boya kesen siyah bir sütun; eğik
+ * kenarına paralel bakır çizgi. Kesik açılış sinemasının jetonlarıyla çizilir
+ * (temadan bağımsız) — tema rengi sızarsa açık temada koyu yazı siyah kesikte
+ * kaybolur ve hiçbir şey kırılmaz. Kapılar aşağıda (→ KESİK).
  */
 
 const fs = require('fs');
@@ -234,73 +240,232 @@ describe('Karşılama ekranı — markup sözleşmesi', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// KESİK (2026-10-23, kullanıcı kararı "6d · İnce") — geometri, renk, yapı.
+//    Hepsi SESSİZ: bozulunca ekran yine açılır, yalnız başka bir ekran olur.
+// ═══════════════════════════════════════════════════════════════════════════
+// Seçicinin İLK kuralının gövdesi (yorumlar ayıklanmış). Seçici listesinde
+// TAM AD olarak aranır: `.ve-kesik` `.ve-kesik-ic`in alt dizesi.
+function kural(css, sec) {
+  const govde = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(govde))) {
+    if (m[1].split(',').some((s) => s.trim() === sec)) return m[2];
+  }
+  return null;
+}
+// :root jetonunun değeri — satır başına çivili (yorumdaki ad yakalanmasın).
+function jeton(ad) {
+  const m = CSS.match(new RegExp('^\\s*' + ad + ':\\s*([^;]+);', 'm'));
+  return m ? m[1].trim() : null;
+}
+// Bir bildirimdeki polygon(...)'un köşeleri: [{x: ifade, y: ifade}]. calc()
+// virgül taşımıyor, köşeler virgülle ayrık.
+function koseler(govde) {
+  const i = govde.indexOf('polygon(') + 8;
+  let d = 1, j = i;
+  while (j < govde.length && d > 0) { if (govde[j] === '(') d++; else if (govde[j] === ')') d--; j++; }
+  return govde.slice(i, j - 1).split(',').map((p) => {
+    const m = p.trim().match(/^([\s\S]*\S)\s+(\S+)$/);
+    return { x: m[1], y: m[2] };
+  });
+}
+// calc(var(--a) + var(--b)) → sayı (jetonlar px).
+function hesap(ifade) {
+  const s = ifade.replace(/var\((--[a-z0-9-]+)\)/g, (_, j) => String(parseFloat(jeton(j))))
+    .replace(/calc/g, '').replace(/px/g, '');
+  // eslint-disable-next-line no-new-func
+  return Function('return (' + s + ')')();
+}
+const hex = (ad) => {
+  const v = jeton(ad);
+  expect(v).toMatch(/^#[0-9a-fA-F]{6}$/);
+  return [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16));
+};
+const lum = (c) => c.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; })
+  .reduce((t, x, i) => t + x * [0.2126, 0.7152, 0.0722][i], 0);
+const oran = (a, b) => { const L = [lum(a), lum(b)].sort((x, y) => y - x); return (L[0] + 0.05) / (L[1] + 0.05); };
+const karis = (a, b, p) => a.map((x, i) => Math.round(x * p + b[i] * (1 - p)));
+
+describe('KESİK — geometri (kullanıcının onayladığı ölçüler)', () => {
+  test('jetonlar: üst 440, alt 360; çizgi 16 px dışarıda, 3 px', () => {
+    expect([jeton('--kesik-ust'), jeton('--kesik-alt'), jeton('--kesik-cizgi-ara'), jeton('--kesik-cizgi')])
+      .toEqual(['440px', '360px', '16px', '3px']);
+  });
+
+  test('kesik ekranı boydan boya keser; eğik kenar üst genişlikten alta iner', () => {
+    const k = kural(CSS_WELCOME, '.ve-kesik');
+    ['left:0', 'top:0', 'bottom:0', 'width:var(--kesik-ust)'].forEach((b) => expect(k).toContain(b));
+    expect(koseler(k)).toEqual([
+      { x: '0', y: '0' }, { x: '100%', y: '0' }, { x: 'var(--kesik-alt)', y: '100%' }, { x: '0', y: '100%' }
+    ]);
+  });
+
+  // Çizgi kenara PARALEL: dört köşesi kesiğin iki jetonundan aynı paylarla
+  // türer. Biri elle yazılsa çizgi, pencere boyu değişince kenardan ayrışır.
+  test('bakır çizgi eğik kenara paralel — tepede ve dipte aynı pay, aynı kalınlık', () => {
+    const k = koseler(kural(CSS_WELCOME, '.ve-kesik-cizgi'));
+    expect(k.map((p) => p.y)).toEqual(['0', '0', '100%', '100%']);
+    const [a, b, c, d] = k.map((p) => hesap(p.x));
+    const ust = parseFloat(jeton('--kesik-ust')), alt = parseFloat(jeton('--kesik-alt'));
+    expect([a - ust, d - alt]).toEqual([16, 16]);   // kenardan pay: tepede = dipte
+    expect([b - a, c - d]).toEqual([3, 3]);         // kalınlık: tepede = dipte
+  });
+
+  test('sütun ve birincil düğme kesiğin İÇİNDE — eğik kenara değmiyor', () => {
+    const ic = kural(CSS_WELCOME, '.ve-kesik-ic');
+    // İçeriğin kenarı `left`; kutunun soldaki taşma payı (eksi pay + iç pay)
+    // genişliğin içinde — içerik genişliği = width − padding-left.
+    const sol = parseFloat(ic.match(/(?:^|;|\s)left:(\d+)px/)[1]);
+    const pay = parseFloat((ic.match(/padding-left:(\d+)px/) || [0, '0'])[1]);
+    expect(ic).toContain('margin-left:-' + pay + 'px');
+    const gen = parseFloat(ic.match(/(?:^|;|\s)width:(\d+)px/)[1]) - pay;
+    expect(gen).toBe(320);
+    const ust = parseFloat(jeton('--kesik-ust')), alt = parseFloat(jeton('--kesik-alt'));
+    expect(ust - (sol + gen)).toBeGreaterThanOrEqual(56);          // tepede pay
+    const ac = parseFloat(kural(CSS_WELCOME, '.ve-welcome-open').match(/width:(\d+)px/)[1]);
+    expect(alt - (sol + ac)).toBeGreaterThanOrEqual(16);           // dipte pay
+  });
+
+  test('sütun konumla yerleşir, transform ile DEĞİL; sığmazsa kendi içinde kayar', () => {
+    // Giriş koreografisi sütunda transform kullanıyor (`both` dolgu): konum
+    // transform'la yazılsaydı koreografi onu ezerdi — sessizce kayık sütun.
+    const ic = kural(CSS_WELCOME, '.ve-kesik-ic');
+    expect(ic).not.toMatch(/transform:/);
+    expect(ic).toMatch(/overflow-y:auto/);
+  });
+});
+
+describe('KESİK — renk temadan bağımsız', () => {
+  // Kesik iki temada da siyah: üstündeki her renk --sinema-* ya da ondan
+  // türeyen --kesik-* jetonundan. Tema rengi (--text-heading) açık temada
+  // koyudur ve siyah kesikte görünmez olurdu.
+  const RENKLI = [
+    '.ve-kesik', '.ve-kesik-cizgi', '.ve-welcome-logo', '.ve-welcome-logo-ico', '.ve-welcome-tagline',
+    '.ve-welcome-cetvel > span', '.ve-welcome-eyebrow', '.ve-module-overlay-grid', '.ve-module-card',
+    '.ve-module-card:hover', '.ve-module-card-icon', '.ve-module-card-name', '.ve-module-card-arrow',
+    '.ve-module-card:hover .ve-module-card-arrow', '.ve-welcome-change-k', '.ve-welcome-change-v',
+    '.ve-welcome-kunye', '.ve-welcome-fresh', '.ve-welcome-fresh-dot', '.ve-welcome-stamp',
+    '.ve-welcome-stamp:hover', '.ve-welcome-open', '.ve-welcome-open:hover', '.ve-welcome-link',
+    '.ve-welcome-link:hover', '.ve-welcome-flyer'
+  ];
+  test.each(RENKLI)('%s — rengi yalnız --sinema-* / --kesik-* jetonundan', (sec) => {
+    // Karşılama bölümünde aranır: dosyanın başındaki başlık bağlaması da
+    // `.ve-welcome-logo`yu sayıyor ve yalnız iz yazıyor.
+    const b = kural(CSS_WELCOME, sec);
+    expect(b).not.toBeNull();
+    const bildirim = b.split(';').map((d) => d.trim())
+      .filter((d) => /^(color|background|background-color|border|border-top|border-bottom)\s*:/.test(d));
+    expect(bildirim.length).toBeGreaterThan(0);
+    bildirim.forEach((d) => {
+      const deger = d.slice(d.indexOf(':') + 1);
+      expect(deger).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
+      (deger.match(/var\(--[a-z0-9-]+\)/g) || []).forEach((j) => expect(j).toMatch(/^var\(--(sinema|kesik)-/));
+    });
+  });
+
+  test('--kesik-* renk jetonları yalnız --sinema-* jetonlarından türer', () => {
+    ['--kesik-ayrac', '--kesik-kabar'].forEach((j) => {
+      const v = jeton(j);
+      expect(v).toMatch(/^color-mix\(/);
+      expect(v).not.toMatch(/#|rgba?\(/);
+      (v.match(/var\(--[a-z0-9-]+\)/g) || []).forEach((x) => expect(x).toMatch(/^var\(--sinema-/));
+    });
+  });
+
+  test('birincil düğme: kesiğin rengi vurgu zemininde ≥ 4,5:1 — duruşta da üstüne gelince de', () => {
+    expect(kural(CSS_WELCOME, '.ve-welcome-open')).toContain('color:var(--sinema-bant)');
+    expect(kural(CSS_WELCOME, '.ve-welcome-open')).toContain('background:var(--sinema-vurgu)');
+    expect(kural(CSS_WELCOME, '.ve-welcome-open:hover')).toContain('background-color:var(--sinema-vurgu-yazi)');
+    const bant = hex('--sinema-bant');
+    expect(oran(bant, hex('--sinema-vurgu'))).toBeGreaterThanOrEqual(4.5);
+    expect(oran(bant, hex('--sinema-vurgu-yazi'))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('üstüne gelinen satırın zemininde yazı ≥ 4,5:1', () => {
+    // --kesik-kabar = yazının %7'si + kesik; jetonun kendisinden okunur.
+    const p = parseFloat(jeton('--kesik-kabar').match(/(\d+(?:\.\d+)?)%/)[1]) / 100;
+    const kabar = karis(hex('--sinema-yazi'), hex('--sinema-bant'), p);
+    expect(oran(hex('--sinema-yazi'), kabar)).toBeGreaterThanOrEqual(4.5);
+    expect(oran(hex('--sinema-yazi-2'), kabar)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe('KESİK — yapı', () => {
+  beforeEach(setupDOM);
+
+  test('içerik kesiğin İÇİNDE, bakır çizgi DIŞINDA (clip-path kutusundakini kırpar)', () => {
+    // Yazının zemini atadan okunur (kontrast ölçeri de öyle okuyor): içerik
+    // kesiğin çocuğu olmasaydı yazının zemini sayfanın kâğıdı sayılırdı.
+    expect(document.querySelector('.ve-welcome > .ve-kesik > .ve-welcome-id.ve-kesik-ic')).toBeTruthy();
+    expect(document.querySelector('.ve-welcome > .ve-kesik-cizgi')).toBeTruthy();
+    expect(document.querySelector('.ve-kesik .ve-kesik-cizgi')).toBeNull();
+  });
+
+  test('cetvel on iki bölme; her modül sırasıyla kendi dört bölmesini vurgular', () => {
+    expect(document.querySelectorAll('.ve-welcome-cetvel > span').length).toBe(12);
+    expect(kural(CSS_WELCOME, '.ve-welcome-cetvel')).toContain('grid-template-columns:repeat(12,');
+    const tipler = [...document.querySelectorAll('.ve-module-card')].map((k) => k.getAttribute('data-module'));
+    const araliklar = [':nth-child(-n+4)', ':nth-child(n+5):nth-child(-n+8)', ':nth-child(n+9)'];
+    expect(tipler.length).toBe(araliklar.length);
+    tipler.forEach((t, i) => {
+      expect(CSS_WELCOME).toContain('.ve-welcome-id:has(.ve-module-card[data-module="' + t
+        + '"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span' + araliklar[i]);
+    });
+  });
+
+  test('satırın vurgusu zemin + ok + cetvel; sözde eleman ve imleç ışığı YOK', () => {
+    expect(kural(CSS_WELCOME, '.ve-module-card:hover')).toContain('background-color:var(--kesik-kabar)');
+    expect(kural(CSS_WELCOME, '.ve-module-card:hover .ve-module-card-arrow')).toContain('color:var(--sinema-vurgu)');
+    expect(CSS_WELCOME).not.toMatch(/\.ve-module-card::(before|after)/);
+    expect(loadSource('components.js')).not.toContain('_veWelcomeInstallCardSheen');
+  });
+
+  test('oklar ve klasör ikon ailesinden (çizgi ikon)', () => {
+    expect(document.querySelectorAll('.ve-module-card-arrow .mf-ico-arrow-right').length).toBe(3);
+    expect(document.querySelector('.ve-welcome-open .mf-ico-folder-open')).toBeTruthy();
+    expect(document.querySelector('.ve-welcome-open .mf-ico-arrow-right')).toBeTruthy();
+  });
+
+  test('cam kartın jetonları KALKTI — ölü jeton kalmadı', () => {
+    ['--karsilama-cam', '--karsilama-cam-blur', '--karsilama-kart-r', '--karsilama-kart-golge', '--karsilama-perde']
+      .forEach((j) => expect(CSS).not.toContain(j));
+  });
+});
+
+// Kullanıcı: "yazılar bir garip olmuş, butona çok yakın, başlık aşağıda."
+// (2026-09-09, cam kart) — iki hata vardı ve İKİSİ DE SESSİZDİ: 0 px düğmeyi
+// güncellik satırına, 2 px bölüm etiketini ilk modül satırına yapıştırıyordu.
+// Kesikte aynı iki kural duruyor.
+describe('Kesik — dikey ritim', () => {
+  const px = (sec, ozellik) => {
+    const m = kural(CSS_WELCOME, sec);
+    expect(m).toBeTruthy();
+    const d = m.match(new RegExp(ozellik + ':\\s*([-\\d]+)px'));
+    return d ? parseInt(d[1], 10) : null;
+  };
+
+  test('birincil düğme üstündeki satıra YAPIŞMIYOR — boşluğun tabanı ≥ 16 px', () => {
+    const d = kural(CSS_WELCOME, '.ve-welcome-spacer').match(/flex:\s*1\s+0\s+(\d+)px/);
+    expect(d).toBeTruthy();
+    expect(parseInt(d[1], 10)).toBeGreaterThanOrEqual(16);
+  });
+
+  test('künye ADINA yakın, gövdeye uzak (yakınlık kuralı)', () => {
+    expect(px('.ve-welcome-tagline', 'margin-top')).toBeLessThan(px('.ve-welcome-cetvel', 'margin'));
+  });
+
+  test('başlık kilidini cetvel kapatıyor; logonun alt çizgisi yok', () => {
+    expect(kural(CSS_WELCOME, '.ve-welcome-logo')).not.toMatch(/border-bottom/);
+    expect(kural(CSS_WELCOME, '.ve-welcome-cetvel')).not.toMatch(/display:\s*none/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 1) ZEMİN — kâğıt dokusu (ızgara kalktı)
 //    Izgara geri gelse ekran yine açılır: hata sessizdir, yalnız karşılama
 //    tuvalin diliyle konuşmaya döner.
 // ═══════════════════════════════════════════════════════════════════════════
-// KART İÇİ İŞÇİLİK (kullanıcı reçetesi, 2026-09-09) — ikisi de SESSİZ
-describe('Vitrin kartı — dikey ritim', () => {
-  // Kullanıcı: "yazılar bir garip olmuş, butona çok yakın, başlık aşağıda."
-  // Gerçek tarayıcıda ölçülen açıklıklar (px, yukarıdan aşağı):
-  //   ESKİ  31 · 10 · 18 ·  2 · 16 · 8 · 12 ·  0 · 8 · 16
-  //   YENİ  33 ·  6 · 20 · 18 · 10 · 22 · 8 · 14 · 22 · 6 · 18
-  // İki tanesi hataydı ve İKİSİ DE SESSİZ: 0 px düğmeyi güncellik satırına,
-  // 2 px bölüm etiketini ilk modül satırına yapıştırıyordu. Kural bozulunca
-  // ekran yine açılır, yalnız sıkışık görünür.
-  const px = (sec, ozellik) => {
-    const m = CSS_WELCOME.match(new RegExp(sec.replace('.', '\\.') + '\\{[^}]*\\}'));
-    expect(m).toBeTruthy();
-    const d = m[0].match(new RegExp(ozellik + ':\\s*([-\\d]+)px'));
-    return d ? parseInt(d[1], 10) : null;
-  };
-
-  test('birincil düğme üstündeki satıra YAPIŞMIYOR', () => {
-    // .ve-welcome-spacer kalkınca aradaki tek pay da kalkmıştı.
-    expect(px('.ve-welcome-open', 'margin-top')).toBeGreaterThanOrEqual(16);
-  });
-
-  test('künye ADINA yakın, gövdeye uzak (yakınlık kuralı)', () => {
-    // Ayraç logonun ALTINA konunca künye adından kopup gövdeye yapışıyordu.
-    const kunye = px('.ve-welcome-tagline', 'margin-top');
-    const ayrac = px('.ve-welcome-sep', 'margin');       // "20px 0 18px" → 20
-    expect(kunye).toBeLessThan(ayrac);
-    expect(kunye).toBeLessThanOrEqual(8);
-  });
-
-  test('başlık kilidini ayraç BÖLMÜYOR (logo alt çizgisi yok)', () => {
-    const m = CSS_WELCOME.match(/\.ve-welcome-logo\{[^}]*\}/);
-    expect(m).toBeTruthy();
-    expect(m[0]).not.toMatch(/border-bottom/);
-    // Ayraç kendi elemanında ve GÖRÜNÜR — display:none'a düşerse başlıkla
-    // gövde arasındaki tek sınır kaybolur.
-    const sep = CSS_WELCOME.match(/\.ve-welcome-sep\{[^}]*\}/);
-    expect(sep[0]).not.toMatch(/display:\s*none/);
-  });
-});
-
-describe('Vitrin kartı — düğme ve satır vurgusu', () => {
-  test('birincil düğme aksanın ÜSTÜNDE okunacak jetondan boyanır', () => {
-    // Dolu düğmede metin rengi düz beyaz yazılırsa kehribar/amber gibi açık
-    // aksanlı temalarda kontrast 2,3:1'e iniyor — bu yüzden --on-accent var.
-    const m = CSS_WELCOME.match(/\.ve-welcome-open\{[^}]*\}/);
-    expect(m).toBeTruthy();
-    expect(m[0]).toContain('color:var(--on-accent)');
-    expect(m[0]).toContain('background:var(--accent-primary)');
-    expect(m[0]).not.toMatch(/color:\s*#/);
-  });
-
-  test('vurgu şeridi ::after — ::before imleç ışığında KULLANILIYOR', () => {
-    // İkisi aynı sözde-elemana yazılırsa biri ötekini sessizce siler: ışık
-    // ya da şerit kaybolur, hata çıkmaz.
-    expect(CSS_WELCOME).toMatch(/\.ve-module-card::before\{[^}]*radial-gradient/);
-    const bar = CSS_WELCOME.match(/\.ve-module-card::after\{[^}]*\}/);
-    expect(bar).toBeTruthy();
-    expect(bar[0]).toContain('background:var(--accent-primary)');
-    expect(bar[0]).toMatch(/opacity:\s*0/);
-    expect(CSS_WELCOME).toMatch(/\.ve-module-card:hover::after,\s*\n\.ve-module-card:focus-visible::after\{[^}]*opacity:\s*1/);
-  });
-});
-
 describe('Karşılama zemini — kâğıt dokusu', () => {
   test('.ve-module-overlay ızgara gradyanı TANIMLAMIYOR', () => {
     expect(CSS_WELCOME).not.toMatch(/repeating-linear-gradient/);
@@ -360,9 +525,9 @@ describe('Karşılama tipografisi — tek yazı tipi', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 3) SON DEĞİŞİKLİKLER PANELİ — veFillWelcomeChanges
+// 3) SON DEĞİŞİKLİKLER — veFillWelcomeChanges
 //    Commit başlığı SERBEST METİN: kaçış düşerse panel ham HTML çalıştırır.
-describe('Son değişiklikler paneli — veFillWelcomeChanges', () => {
+describe('Son değişiklikler — veFillWelcomeChanges', () => {
   beforeEach(() => { setupDOM(); delete window.__MFSIM_BUILD; });
 
   const panel = () => document.getElementById('ve-welcome-changes');
@@ -370,6 +535,14 @@ describe('Son değişiklikler paneli — veFillWelcomeChanges', () => {
     Array.from(document.querySelectorAll('#ve-welcome-changes-list .ve-welcome-change'));
   const anahtar = (i) => satirlar()[i].querySelector('.ve-welcome-change-k').textContent;
   const govde = (i) => satirlar()[i].querySelector('.ve-welcome-change-v');
+  const SAYI = parseInt(fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8')
+    .match(/var VE_WELCOME_CHANGE_SAYI = (\d+);/)[1], 10);
+  const kayitlar = (n) => {
+    window.__MFSIM_BUILD = {
+      changes: Array.from({ length: n }, (_, i) => ({ sha: 'sha' + (i + 1), title: 'başlık ' + (i + 1) }))
+    };
+    veFillWelcomeChanges();
+  };
 
   test('künye yoksa panel GİZLİ kalır (boş panel "bilmiyorum"u bilgi gibi gösterirdi)', () => {
     expect(veFillWelcomeChanges()).toBe(true);
@@ -383,98 +556,36 @@ describe('Son değişiklikler paneli — veFillWelcomeChanges', () => {
     expect(panel().hidden).toBe(true);
   });
 
-  const dugme = () => document.getElementById('ve-welcome-changes-toggle');
-  const gorunur = () => satirlar().filter((el) => !el.hidden);
-  const besKayit = () => {
-    window.__MFSIM_BUILD = {
-      changes: [1, 2, 3, 4, 5].map((n) => ({ sha: 'sha' + n, title: 'başlık ' + n }))
-    };
-    veFillWelcomeChanges();
-  };
-
-  // Vitrin düzeninde (2026-09-09) kart ekranın üstünde ASILI duruyor ve boyunu
-  // içeriği belirliyor: on kayıt onu ekrandan taşırıyordu. Kayıtlar KAPALI
-  // başlıyor — hepsi DOM'da, hepsi düğmenin arkasında.
-  // Liste AÇIK doğar (kullanıcı kararı, 2026-09-09: "açık bir halde gelsin,
-  // yani uzunca olsun"). Düğme artık kapatmak için duruyor.
-  test('duruşta liste AÇIK gelir — hepsi görünür', () => {
-    besKayit();
+  // Kullanıcının onayladığı tasarım (2026-10-23, "6d · İnce"): kesikte ilk
+  // ÜÇ kayıt; listenin tamamı Program Durumu'nda.
+  test('kesikte ilk ÜÇ kayıt, en yeniden eskiye', () => {
+    expect(SAYI).toBe(3);
+    kayitlar(10);
     expect(panel().hidden).toBe(false);
-    expect(satirlar().length).toBe(5);
-    expect(gorunur().length).toBe(5);
-    expect(dugme().getAttribute('aria-expanded')).toBe('true');
-    expect(dugme().textContent).toBe('Daha az');
-    expect([anahtar(0), anahtar(1), anahtar(2)]).toEqual(['sha1', 'sha2', 'sha3']);
+    expect(satirlar().map((_, i) => anahtar(i))).toEqual(['sha1', 'sha2', 'sha3']);
   });
 
-  // Düğme PENCERE AÇMAZ (kullanıcı isteği): kalanlar aynı listenin altına gelir.
-  test('düğme listeyi kapatır, ikinci tıkta YERİNDE geri açar', () => {
-    besKayit();
-    expect(dugme().hidden).toBe(false);
-    expect(panel().classList.contains('is-open')).toBe(true);
-
-    veToggleWelcomeChanges();                     // kapat
-    expect(gorunur().length).toBe(0);
-    expect(dugme().getAttribute('aria-expanded')).toBe('false');
-    // Etiket duruma göre: hiçbiri açık değilken "daha eskiler" YANLIŞ olurdu.
-    expect(dugme().textContent).toBe('Hepsi · 5');
-    expect(panel().classList.contains('is-open')).toBe(false);
-
-    veToggleWelcomeChanges();                     // yeniden aç
-    expect(gorunur().length).toBe(5);
-    expect(dugme().textContent).toBe('Daha az');
-    expect(panel().classList.contains('is-open')).toBe(true);
+  test('üçten az kayıt varsa hepsi', () => {
+    kayitlar(2);
+    expect(satirlar().map((_, i) => anahtar(i))).toEqual(['sha1', 'sha2']);
   });
 
-  // Etiket VE_WELCOME_CHANGE_ILK'ten türer, elle yazılmaz: sayı 3'e dönerse
-  // "Hepsi" yalan olur, 0'da "Daha eskiler" yalan olur. İkisi de sessiz.
-  test('düğme etiketi açık kayıt sayısıyla tutarlı (kapalı duruşta)', () => {
-    const src = fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8');
-    const ilk = parseInt(src.match(/var VE_WELCOME_CHANGE_ILK = (\d+);/)[1], 10);
-    besKayit();
-    veToggleWelcomeChanges();                     // açık doğuyor → kapat
-    expect(gorunur().length).toBe(ilk);
-    expect(dugme().textContent).toBe((ilk > 0 ? 'Daha eskiler · ' : 'Hepsi · ') + (5 - ilk));
+  test('liste KATLANMIYOR: aç/kapa düğmesi yok, gizli satır yok', () => {
+    kayitlar(10);
+    expect(document.getElementById('ve-welcome-changes-toggle')).toBeNull();
+    expect(WELCOME).not.toContain('ve-welcome-more');
+    expect(satirlar().every((el) => !el.hidden)).toBe(true);
   });
 
-  // Açık duruşu TEK yer kurar: veFillWelcomeChanges kendi eliyle hidden/aria/
-  // etiket yazsaydı ikinci bir doğruluk kaynağı doğar ve biri unutulurdu.
-  test('açık duruş toggle üzerinden kurulur — kopya yazım yok', () => {
-    const src = fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8');
-    expect(src).toMatch(/var VE_WELCOME_CHANGE_ACIK = true;/);
-    expect(src).toMatch(/if\(VE_WELCOME_CHANGE_ACIK\) veToggleWelcomeChanges\(\);/);
+  test('listenin tamamına giden yol: sürüm künyesi Program Durumu\'nu açar', () => {
+    expect(document.getElementById('ve-welcome-stamp').getAttribute('onclick')).toContain('veOpenStatusModal');
   });
 
-  test('düğme pencere açan komuta BAĞLI DEĞİL (onclick yerinde açar)', () => {
-    besKayit();
-    // index.html'deki markup'ta artık veOpenStatusModal çağrısı yok; kanca JS'te.
-    expect(dugme().getAttribute('onclick')).toBeNull();
-    expect(typeof dugme().onclick).toBe('function');
-  });
-
-  test('kayıt yoksa düğme HİÇ görünmez (boş düğme tıklanacak bir şey vaat ederdi)', () => {
-    window.__MFSIM_BUILD = { changes: [] };
-    veFillWelcomeChanges();
-    expect(dugme().hidden).toBe(true);
-    expect(gorunur().length).toBe(0);
-  });
-
-  test('yeniden çizim listeyi DURUŞ hâline döndürür', () => {
-    besKayit();
-    veToggleWelcomeChanges();                     // kapat
-    expect(gorunur().length).toBe(0);
-    veFillWelcomeChanges();                       // ör. künye yeniden okundu
-    expect(gorunur().length).toBe(5);             // duruş AÇIK
-    expect(dugme().getAttribute('aria-expanded')).toBe('true');
-    expect(panel().classList.contains('is-open')).toBe(true);
-  });
-
-  // SESSİZ HATA SINIFI: .ve-welcome-change display:flex, .ve-welcome-more
-  // inline-block bildiriyor — [hidden] bunları EZEMEZ. Kural düşerse "gizli"
-  // satırlar görünür kalır ve panel hep açık görünür.
-  test('CSS [hidden] kuralı duruyor (display bildirimi hidden\'ı ezmesin)', () => {
-    expect(CSS).toMatch(/\.ve-welcome-change\[hidden\][\s\S]{0,80}display:\s*none/);
-    expect(CSS).toMatch(/\.ve-welcome-more\[hidden\][\s\S]{0,80}display:\s*none/);
+  test('künye satırı: güncellik de sürüm de gizliyse satır (ve çizgisi) da gizli', () => {
+    expect(CSS_WELCOME).toMatch(/\.ve-welcome-kunye:not\(:has\(> :not\(\[hidden\]\)\)\)\{\s*display:none/);
+    expect(CSS_WELCOME).toMatch(/\.ve-welcome-stamp\[hidden\]\{\s*display:none/);
+    const kunye = document.querySelector('.ve-welcome-kunye');
+    expect([...kunye.children].map((c) => c.id)).toEqual(['ve-welcome-fresh', 've-welcome-stamp']);
   });
 
   test('ikinci çağrı listeyi ÇOĞALTMAZ', () => {
@@ -680,8 +791,22 @@ describe('Açılış koreografisi', () => {
       .toBeGreaterThan(CSS_WELCOME.indexOf('.ve-module-card:nth-child(2)'));
   });
 
+  // Kesik açılış bantlarının ALTINDA hazır durur: kımıldasaydı devir
+  // teslimde siyah sütun yerinden oynardı. Çizgi tepeden dibe çizilir —
+  // başlangıç karesinin dört köşesi de çizginin tepesinde.
+  test('bakır çizgi yukarıdan aşağı çizilir; kesik KIMILDAMAZ', () => {
+    expect(kural(CSS_WELCOME, '.ve-welcome-enter .ve-kesik-cizgi')).toMatch(/animation:ve-kesik-cizgi\s/);
+    expect(kural(CSS_WELCOME, '.ve-welcome-enter .ve-kesik')).toBeNull();
+    const kf = CSS_WELCOME.match(/@keyframes ve-kesik-cizgi\{\s*from\{([\s\S]*?)\}\s*\}/);
+    expect(kf).toBeTruthy();
+    const k = koseler(kf[1]);
+    expect(k.map((x) => x.y)).toEqual(['0', '0', '0', '0']);
+    expect([k[2].x, k[3].x]).toEqual([k[1].x, k[0].x]);
+  });
+
   test('reduced-motion bloğu koreografiyi, kabuk inişini ve uçuşu durdurur', () => {
     const blok = CSS_WELCOME.slice(CSS_WELCOME.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+    expect(blok).toContain('.ve-welcome-enter .ve-kesik-cizgi');
     expect(blok).toContain('.ve-welcome-enter .ve-module-card');
     expect(blok).toContain('body.ve-chrome-enter #ve-ribbon');
     expect(blok).toMatch(/\.ve-welcome-flyer\{\s*transition:none/);

@@ -15,6 +15,8 @@
  *      eskiden kanvasta bir kart bırakıyor ve orada kalıyordu.
  *   2) Geçiş ekranı gerçekten görünüyor ve gerçekten kapanıyor.
  *   3) Doğrudan girişi OLMAYAN modülde davranış BİREBİR eski hâlinde.
+ *   4) Kesik KIMILDAMIYOR (2026-10-23): giriş ekranının siyah kesiği ve bakır
+ *      çizgisi karşılamanınkiyle aynı yerde, aynı biçimde — yalnız içi değişir.
  */
 const { test, expect } = require('@playwright/test');
 test.setTimeout(180000);
@@ -38,6 +40,22 @@ test('FEAD kartı: geçiş ekranı görünüyor ve modülün İÇİNE giriliyor'
   const hata = [];
   page.on('pageerror', (e) => hata.push(e.message));
   await acilis(page);
+  // Karşılamanın kesiği — tıklamadan ÖNCE, koreografi bittikten sonra.
+  await page.waitForFunction(() => document.getAnimations()
+      // slaytın yakınlaşması hiç bitmez (18 sn) — beklenen yalnız giriş hareketi
+      .filter((a) => !(a.effect && a.effect.target && a.effect.target.classList
+        && a.effect.target.classList.contains('ve-welcome-kare')))
+      .every((a) => a.playState !== 'running'),
+    null, { timeout: 15000 });
+  const kesik = (kok) => page.evaluate((k) => {
+    const o = (sec) => {
+      const e = document.querySelector(k + ' ' + sec);
+      const q = e.getBoundingClientRect();
+      return { x: q.left, y: q.top, w: q.width, h: q.height, clip: getComputedStyle(e).clipPath };
+    };
+    return { kesik: o('.ve-kesik'), cizgi: o('.ve-kesik-cizgi'), sutun: o('.ve-kesik-ic') };
+  }, kok);
+  const karsilamaKesigi = await kesik('.ve-welcome');
 
   await page.click('.ve-module-card[data-module="fead-analysis"]');
 
@@ -62,6 +80,13 @@ test('FEAD kartı: geçiş ekranı görünüyor ve modülün İÇİNE giriliyor'
   expect(ilk.foto).toMatch(/url\(/);
   // Uçuş --z-widget, ekran --z-boot+1: görünmeyen bir animasyon kurulmuyor.
   expect(ilk.ucus).toBe(0);
+  // Kesik ve çizgi karşılamanınkinin TAM üstünde; sütun da aynı kenarda
+  // (dikeyi panelin giriş hareketi sürerken ölçülemez — translateY).
+  const girisKesigi = await kesik('#mfsim-module-loading');
+  expect(girisKesigi.kesik).toEqual(karsilamaKesigi.kesik);
+  expect(girisKesigi.cizgi).toEqual(karsilamaKesigi.cizgi);
+  expect({ x: girisKesigi.sutun.x, w: girisKesigi.sutun.w })
+    .toEqual({ x: karsilamaKesigi.sutun.x, w: karsilamaKesigi.sutun.w });
 
   // ── KAPANIYOR VE İÇERİDEYİZ ────────────────────────────────────────────
   await expect(ekran).toBeHidden({ timeout: 15000 });

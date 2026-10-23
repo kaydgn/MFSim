@@ -24,6 +24,11 @@
  * açık temanın kartında logo koyu. Uçuş rengi taşımasaydı klon açık renkle
  * iner, kalkınca logo bir karede koyuya sıçrardı.
  *
+ * 2026-10-23'ten beri karşılamada kart yok, KESİK var: markası açılışınkiyle
+ * AYNI boy (--fs-sinema) ve AYNI renk (ikisi de siyah zeminde, temadan
+ * bağımsız). Uçuş yalnız yer değiştiriyor; kapılar aynı kaldı, beklenen
+ * değerler döndü (boy eşit, renk eşit).
+ *
  * Üçüncü halka bunu ÇİZİMDE ölçüyor ve ölçülmüş ikinci bir kusuru da
  * kapatıyor: eski uçuş hedefi karşılamanın giriş koreografisi BAŞLADIKTAN
  * sonra ölçüyordu — kart o an translateX(-16px), logo translateY(14px)'te —
@@ -73,8 +78,8 @@ test('marka açılışta ve karşılamada AYNI aile, ağırlık ve em-iz ile çi
   const govde = await page.evaluate(() => getComputedStyle(document.body).fontFamily.split(',')[0].replace(/"/g, '').trim());
   expect(a.yuz).toBe(govde);
   expect(a.izEm).toBe(-0.01);                        // bağlamadan, iki ekranda da
-  // Boy BİLEREK farklı: açılışta bandın markası, karşılamada logo.
-  expect([aBoy, kBoy]).toEqual(['52px', '20px']);
+  // Boy AYNI (2026-10-23): kesiğin markası açılışınki — marka küçülmeden iner.
+  expect([aBoy, kBoy]).toEqual(['52px', '52px']);
 });
 
 test('markanın GENİŞLİĞİ tracking farkını gösterecek kadar duyarlı', async ({ page }) => {
@@ -135,9 +140,10 @@ test('devir teslimde marka logonun ÜSTÜNE iniyor — kalkışta kaynakta, ini�
   });
 
   expect(r.sayi).toBe(2);                            // ad ve çark AYRI uçuyor
-  // Varsayılan tema AÇIK: bantta açık marka, kartta koyu logo — renk
-  // gerçekten yol boyunca değişiyor (eşitlik kendiliğinden sağlanmıyor).
-  expect(r.kalkis.ad.renk).not.toBe(r.inis.adHedef.renk);
+  // Varsayılan tema AÇIK ve kesik temadan bağımsız siyah: bantta da kesikte
+  // de marka AYNI açık renk. Kesiğe tema rengi sızsaydı (açık temada koyu
+  // başlık rengi) iki uç burada ayrışırdı.
+  expect(r.kalkis.ad.renk).toBe(r.inis.adHedef.renk);
   const ustUste = (a, b) => {
     // Sol kenar, dikey orta, genişlik: üçü birlikte "aynı yerde aynı boyda".
     // Genişlik, iz ya da ağırlık ayrışırsa inişte markanın genlemesini yakalar.

@@ -423,7 +423,7 @@ describe('SİNEMA — bantlar ve kapanış', () => {
     return null;
   }
   const JETON = ['sinema-bant', 'sinema-yazi', 'sinema-yazi-2', 'sinema-vurgu',
-    'sinema-vurgu-yazi', 'sinema-uyari'];
+    'sinema-vurgu-yazi', 'sinema-uyari', 'sinema-iyi'];
 
   // Bandın üstünde rengi olan her kural. Listede olup renk bildirmeyen kural
   // da kırmızı: marka rengini bırakırsa taban kuralın tema başlığına düşer.
@@ -485,7 +485,7 @@ describe('SİNEMA — bantlar ve kapanış', () => {
     };
     const bant = deger('sinema-bant');
     const dusen = [];
-    ['sinema-yazi', 'sinema-yazi-2', 'sinema-vurgu-yazi', 'sinema-uyari'].forEach((j) => {
+    ['sinema-yazi', 'sinema-yazi-2', 'sinema-vurgu-yazi', 'sinema-uyari', 'sinema-iyi'].forEach((j) => {
       if (oran(deger(j), bant) < 4.5) dusen.push(j);
     });
     if (oran(deger('sinema-vurgu'), bant) < 3) dusen.push('sinema-vurgu');
@@ -536,7 +536,7 @@ describe('SİNEMA — bantlar ve kapanış', () => {
 // Modül giriş ekranı (js/module-loader.js) kartlı kaldı: tıklanan karşılama
 // kartının YERİNDE beliriyor. Açılış ekranı 2026-09-23'e kadar bu paneli
 // kullanıyordu; kural o günden beri modül girişinin.
-describe('modül giriş paneli karşılama kartının İKİZİ', () => {
+describe('modül giriş ekranı karşılamanın KESİĞİNDE', () => {
   const CSS = fs.readFileSync(path.join(ROOT, 'css/styles.css'), 'utf8');
   // Seçici SATIR BAŞINDAN aranıyor: düz indexOf, `.mfsim-loading-panel{`i
   // bileşik seçicinin kuyruğunda da bulur ve yanlış bloğu ölçerdi.
@@ -547,26 +547,32 @@ describe('modül giriş paneli karşılama kartının İKİZİ', () => {
     const i = m.index + m[0].length;
     return CSS.slice(i, CSS.indexOf('}', i));
   }
+  const belge = new DOMParser().parseFromString(INDEX, 'text/html');
 
-  // Bu değerlerin AYNI olması bir benzetme değil koşul: panel kartın yerinde
-  // belirirken 1 px'lik fark "kart yerinden oynadı" olarak görülüyor.
-  // Karşılama kartında biri değişirse bu test kırmızıya döner ve ikisi
-  // birlikte taşınır.
-  test.each([
-    ['left:56px'],
-    ['width:clamp(320px, 29%, 380px)'],
-    ['var(--karsilama-kart-r)'],
-    ['var(--karsilama-cam)'],
-    ['var(--karsilama-cam-blur)'],
-    ['var(--karsilama-kart-golge)']
-  ])('%s — iki kartta da geçiyor', (deger) => {
-    expect(blok('.mfsim-loading-panel')).toContain(deger);
-    expect(blok('.ve-welcome-id')).toContain(deger);
+  // Tıklanınca kesik KIMILDAMAMALI: giriş ekranı karşılamanın kesiğini, bakır
+  // çizgisini ve içerik sütununu AYNI sınıflarla taşır — geometri tek yerde,
+  // ikinci bir kopya yok. (Cam kart döneminde iki kartın değerleri ayrı ayrı
+  // yazılıp burada eşitleniyordu.)
+  test('iki ekran da kesiği, çizgiyi ve sütunu AYNI sınıflarla taşıyor', () => {
+    expect(belge.querySelector('.ve-welcome > .ve-kesik > .ve-welcome-id.ve-kesik-ic')).not.toBeNull();
+    expect(belge.querySelector('.ve-welcome > .ve-kesik-cizgi')).not.toBeNull();
+    expect(belge.querySelector('#mfsim-module-loading > .ve-kesik > .mfsim-loading-panel.ve-kesik-ic')).not.toBeNull();
+    expect(belge.querySelector('#mfsim-module-loading > .ve-kesik-cizgi')).not.toBeNull();
   });
 
-  // Bantların içeriği de kartın SOL KENARINDA başlıyor: devir teslimde marka
-  // kartın kenarından içeri iniyor, yandan gelmiyor.
-  test('bantların içeriği karşılama kartıyla aynı sol kenarda', () => {
+  test('panelin kendi geometrisi YOK — konum ve ölçü yalnız .ve-kesik-ic\'de', () => {
+    ['.mfsim-loading-panel', '.ve-welcome-id'].forEach((sec) => {
+      const re = new RegExp('^\\s*' + sec.replace('.', '\\.') + '\\s*\\{([^}]*)\\}', 'gm');
+      let m;
+      while ((m = re.exec(CSS))) expect(m[1]).not.toMatch(/(^|;|\s)(position|left|top|bottom|width)\s*:/);
+    });
+    expect(blok('.ve-kesik-ic')).toMatch(/position:absolute/);
+  });
+
+  // Bantların içeriği de kesiğin içeriğiyle AYNI sol kenarda: devir teslimde
+  // marka sütunun kenarına iner, yandan gelmez.
+  test('bantların içeriği kesiğin içeriğiyle aynı sol kenarda', () => {
+    expect(blok('.ve-kesik-ic')).toContain('left:56px');
     expect(blok('.mfsim-sinema-satir')).toContain('left:56px');
     expect(blok('.mfsim-sinema-ust-satir')).toContain('left:56px');
   });

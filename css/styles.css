@@ -100,6 +100,7 @@
       --sinema-vurgu: #d9763f;
       --sinema-vurgu-yazi: #e08a56;
       --sinema-uyari: #d9ae52;
+      --sinema-iyi: #7cbf8e;
     }
 
     /* ── KOYU ────────────────────────────────────────────────────────────── */
@@ -303,8 +304,8 @@
       --slayt-opaklik: 1;         /* resim tam payla çiziliyor (kullanıcı kararı) */
       --slayt-bulanik: 0px;       /* bulanıklık KAPALI: kareyi siliyordu */
       --slayt-ortu: 0%;           /* ÖRTÜ KAPALI (kullanıcı reçetesi): fotoğrafın üstünde
-                                     perde yok. Okunurluğu artık ÖRTÜ değil, sol panelin
-                                     camı taşıyor — sağ tarafta zaten metin kalmadı. */
+                                     perde yok. Yazının zemini soldaki siyah kesik —
+                                     sağ tarafta metin yok. */
       /* AÇILIŞ İLERLEMESİ — kaç KADEMEDE çıkacağı. Çubuk da dişli de bu sayıya
          göre adımlar ve js/loader.js bu jetonu CSS'ten OKUR: tek kaynak, iki
          yerde yazılı bir 12 yok. Ölçüldü: 85 modül doğrudan gösterilince adım
@@ -314,16 +315,16 @@
       --mfsim-kademe: 12;
       --mfsim-kademe-sure: 260ms;
       --mfsim-kademe-egri: cubic-bezier(0.22, 0.85, 0.25, 1);
-      --karsilama-cam: 14%;       /* asılı kartın SAYDAMLIK payı: 0 = opak, 100 = yalnız kenarlık */
-      --karsilama-cam-blur: 8px;  /* camın ARKASINI bulandırma yarıçapı */
-      --karsilama-kart-r: 4px;    /* kartın köşe yarıçapı */
-      /* Kart fotoğrafın üstünde YÜZÜYOR, temanın kâğıdının değil: gölge her iki
-         temada da koyu olmak zorunda. --shadow-color açık temalarda 0,06 alfa —
-         kâğıt üstünde doğru, fotoğraf üstünde gölge diye okunmuyor. */
-      --karsilama-kart-golge: 0 26px 64px rgba(0,0,0,.42);
-      /* Kartın SOLUNDAKİ perde. Kart %86 opak olduğu için kenarı zaten sabit
-         duruyor; jeton kalıyor, kadraj gerekirse tek satırdan geri açılır. */
-      --karsilama-perde: 0%;
+      /* KARŞILAMA KESİĞİ (kullanıcı kararı 2026-10-23, tasarım "6d · İnce"):
+         ekranı boydan boya kesen siyah sütunun üst ve alt genişliği — eğik
+         kenar ikisinin farkı. Bakır çizgi kenara paralel, aradaki pay kadar
+         dışarıda. Modül giriş ekranı AYNI kesiği çizer. */
+      --kesik-ust: 440px;
+      --kesik-alt: 360px;
+      --kesik-cizgi-ara: 16px;
+      --kesik-cizgi: 3px;
+      --kesik-ayrac: color-mix(in srgb, var(--sinema-yazi) 14%, transparent);  /* satır çizgisi */
+      --kesik-kabar: color-mix(in srgb, var(--sinema-yazi) 7%, var(--sinema-bant));  /* üstüne gelinen satır */
       --dur-step:   70ms;
       --dur-fly:   460ms;
       --ease-fly: cubic-bezier(.4, 0, .2, 1);
@@ -1019,19 +1020,16 @@
     .mfsim-loading-screen.mfsim-fading-out .mfsim-sinema-ust{ transform:translateY(-100%); }
     .mfsim-loading-screen.mfsim-fading-out .mfsim-sinema-alt{ transform:translateY(100%); }
 
-    /* Dar pencere: karşılama kartı 1100 px'in altında tepede geniş bir bant
-       ve kenarı 22 px — markanın kenarı onu izler. 880 px'in altında alt
+    /* Dar pencere: karşılamanın kesiği 640 px'e dek aynı kalır ve içeriği
+       56 px'te başlar — markanın kenarı onu izler. 880 px'in altında alt
        yazı ve ayraç kalkar (marka + durum tek satıra sığsın); telefon boyunda
-       satır alt alta iner ve bant içeriği kadar uzar. */
-    @media (max-width:1100px){
-      .mfsim-sinema-satir,
-      .mfsim-sinema-ust-satir{ left:22px; right:22px; }
-    }
+       kenar 22 px'e iner, satır alt alta iner ve bant içeriği kadar uzar. */
     @media (max-width:880px){
       .mfsim-sinema-ayrac,
       .mfsim-sinema-kunye{ display:none; }
     }
     @media (max-width:640px){
+      .mfsim-sinema-ust-satir{ left:22px; right:22px; }
       .mfsim-sinema-alt{ height:auto; }
       .mfsim-sinema-satir{
         position:static;
@@ -1043,33 +1041,18 @@
     }
 
     /* ── MODÜL GİRİŞ PANELİ ───────────────────────────────────────────────
-       .ve-welcome-id ILE AYNI GEOMETRI. Bu bir benzetme degil kopya: panel
-       tıklanan karşılama kartının YERİNDE beliriyor ve 1 px'lik fark bile
-       "kart yerinden oynadı" olarak goruluyor. Oradaki bir deger degisirse
-       burasi da degisir — tests/unit/loader-splash.test.js ikisini bagliyor.
-       (Açılış ekranı 2026-09-23'e kadar bu paneli kullanıyordu.) */
+       KARŞILAMANIN KESİĞİNDE: giriş ekranı karşılamanın kesiğini, bakır
+       çizgisini ve içerik sütununu AYNI sınıflarla taşır (.ve-kesik ·
+       .ve-kesik-cizgi · .ve-kesik-ic) — tıklanınca siyah sütun kımıldamaz,
+       yalnız içi değişir. Geometri o sınıflarda, tek yerde (karşılama
+       bölümü); burası yalnız panelin yazısı. Renkler temadan bağımsız
+       --sinema-* jetonları: kesik iki temada da siyah. */
     .mfsim-loading-panel{
-      position:absolute;
-      left:56px;
-      top:0; bottom:0; height:fit-content;
-      margin-top:auto; margin-bottom:auto;   /* dikey ortalama MARJLA (transform koreografiye ait) */
-      width:clamp(320px, 29%, 380px);
-      max-height:calc(100% - 64px);
-      overflow:auto;
-      padding:24px 24px 20px;
-      border-radius:var(--karsilama-kart-r);
-      /* Taban: color-mix desteklenmeyen tarayicida kart OPAK kalir */
-      background:var(--bg-secondary);
-      background:color-mix(in srgb, var(--bg-secondary) calc(100% - var(--karsilama-cam)), transparent);
-      -webkit-backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
-      backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
-      border:1px solid var(--border-light);
-      border-color:color-mix(in srgb, var(--border-light) 70%, transparent);
-      box-shadow:var(--karsilama-kart-golge);
+      color:var(--sinema-yazi);
     }
-    /* Hero de karsilamanin ikizi: logo SOLA yasli, punto --fs-h2, ikon kutusu
-       sabit. Açılış markası da bu sınıfı taşıyor (başlık bağlaması onu
-       buradan buluyor); boyu ve rengi yukarıda .mfsim-sinema-ad ezer. */
+    /* Logo taban kuralı: açılış markası da bu sınıfı taşıyor (başlık
+       bağlaması onu buradan buluyor); boyu ve rengi yukarıda .mfsim-sinema-ad
+       ezer, panelde modülün adı aşağıda. */
     .mfsim-loading-logo{
       display:flex;
       align-items:center;
@@ -1078,17 +1061,27 @@
       color:var(--text-heading);
       /* tracking başlık bağlamasından (-0.01em) */
     }
-    .mfsim-loading-subtitle{
-      margin-top:5px;
-      font-size:var(--fs-body);
-      color:var(--text-muted);
-      letter-spacing:0.4px;
+    .mfsim-loading-panel .mfsim-loading-logo{
+      gap:14px;
+      font-size:var(--fs-h1);
+      line-height:1.15;
+      color:var(--sinema-yazi);
     }
+    .mfsim-loading-subtitle{
+      margin-top:12px;
+      font-size:var(--fs-md);
+      font-weight:500;
+      letter-spacing:0.03em;
+      color:var(--sinema-yazi-2);
+    }
+    /* Ayraç: karşılamanın cetveli — on iki bölme, kesikte aynı yerde. */
     .mfsim-loading-sep{
-      height:1px;
-      background:var(--border-color);
-      background:color-mix(in srgb, var(--border-color) 75%, transparent);
-      margin:14px 0 12px;
+      width:300px; max-width:100%;
+      height:4px;
+      margin:26px 0 28px;
+      background:repeating-linear-gradient(90deg,
+        var(--sinema-yazi) 0 calc(100% / 12 - 3px),
+        transparent calc(100% / 12 - 3px) calc(100% / 12));
     }
 
     /* ── Adım listesi ─────────────────────────────────────────────────────
@@ -1101,8 +1094,8 @@
     .mfsim-loading-stage{
       display:grid; grid-template-columns:14px 1fr auto;
       align-items:center; gap:9px;
-      line-height:22px;
-      color:var(--text-muted);
+      line-height:24px;
+      color:var(--sinema-yazi-2);
     }
     .mfsim-loading-stage-nm{
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -1111,81 +1104,60 @@
       text-align:center;
       font-size:var(--fs-body);
     }
-    .mfsim-loading-stage.is-done{ color:var(--text-secondary); }
-    .mfsim-loading-stage.is-done .mfsim-loading-stage-mk{ color:var(--accent-success); }
-    .mfsim-loading-stage.is-active{ color:var(--text-heading); }
-    .mfsim-loading-stage.is-active .mfsim-loading-stage-mk{ color:var(--accent-primary); }
+    .mfsim-loading-stage.is-done,
+    .mfsim-loading-stage.is-active{ color:var(--sinema-yazi); }
+    .mfsim-loading-stage.is-done .mfsim-loading-stage-mk,
+    .mfsim-loading-stage.is-active .mfsim-loading-stage-mk{ color:var(--sinema-vurgu-yazi); }
 
     .mfsim-loading-message{
       margin-top:12px;
       min-height:16px;
       font-size:var(--fs-body);
-      color:var(--text-secondary);
-      letter-spacing:0.3px;
+      color:var(--sinema-yazi);
+      letter-spacing:0.03em;
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
-    /* 4 → 6 px: ağırlık kalınlıkta da var. Pill yarıçapı da düştü — çentikli
-       bir ray yuvarlak uçlarla ölçü aleti değil şeker gibi duruyordu. */
+    /* Çubuk açılış cetvelinin dilinde: dört piksel, köşesiz; boş ray yazının
+       soluk tonu, dolgu vurgu. Kesikler dolgunun ÜSTÜNDE ve kesiğin renginde
+       — çizgi değil, açılmış boşluk; boş rayı da bölmelere ayırırlar. */
     .mfsim-loading-bar-wrap{
       position:relative;
-      width:100%; height:6px;
-      background-color:var(--bg-input);
-      /* Boş rayda AYRI bir durak deseni YOK. Denendi ve ölçüldü: ray da
-         çentikleniyordu ama dolgunun üstündeki kesikler (aşağıdaki katman)
-         tam aynı geometride olduğu için durakların üstüne biniyor ve onları
-         örtüyordu — iki katman aynı yere çizip biri ötekini siliyordu.
-         Tek katman kaldı: kesikler dolgunun üstünde görünür, boş rayda
-         (aynı renk olduğu için) görünmez. */
-      border:1px solid var(--border-color);
-      border-radius:var(--radius-sm);
+      width:300px; max-width:100%;
+      height:4px;
+      background-color:color-mix(in srgb, var(--sinema-yazi) 16%, transparent);
       overflow:hidden;
-      margin:10px 0;
+      margin:14px 0 10px;
     }
     .mfsim-loading-bar{
       position:absolute; top:0; left:0; bottom:0;
       width:0%;
-      background:var(--accent-primary);
+      background:var(--sinema-vurgu);
       transition:width var(--mfsim-kademe-sure) var(--mfsim-kademe-egri);
     }
-    /* Dolgunun ÜSTÜNDEKİ kesikler: dolan kısım da kademeli görünür. Renk kart
-       yüzeyinin kendisi — çizgi değil, dolguda açılmış boşluk. */
     .mfsim-loading-bar-notches{
       position:absolute; inset:0; pointer-events:none;
       background:repeating-linear-gradient(90deg,
-        transparent 0 calc(100% / var(--mfsim-kademe) - 2px),
-        var(--bg-secondary) calc(100% / var(--mfsim-kademe) - 2px) calc(100% / var(--mfsim-kademe)));
+        transparent 0 calc(100% / var(--mfsim-kademe) - 3px),
+        var(--sinema-bant) calc(100% / var(--mfsim-kademe) - 3px) calc(100% / var(--mfsim-kademe)));
     }
     .mfsim-loading-meta{
       display:flex; align-items:baseline; justify-content:space-between;
       gap:12px;
+      width:300px; max-width:100%;
       font-size:var(--fs-tiny);
-      letter-spacing:0.3px;
+      letter-spacing:0.03em;
     }
     .mfsim-loading-tip{
       flex:1; min-width:0;
-      color:var(--text-muted);
+      color:var(--sinema-yazi-2);
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
     .mfsim-loading-percent{
-      color:var(--accent-primary);
+      color:var(--sinema-vurgu-yazi);
       font-weight:600;
       font-variant-numeric:tabular-nums;
       min-width:40px;
       text-align:right;
-    }
-
-    /* Dar pencere: karsilama kartinin AYNI kurali — kart ortada asili bir
-       sutun degil, TEPEDE genis bir bant (bkz. @media (max-width:1100px)
-       › .ve-welcome-id). Mutlak konum korunuyor: panel `display:flex`i JS
-       satir ici yaziyor, statige donmek `!important` gerektirirdi. */
-    @media (max-width:1100px){
-      .mfsim-loading-panel{
-        left:22px; right:22px; top:22px; bottom:auto;
-        width:auto;
-        margin:0;
-        max-height:calc(100% - 44px);
-        padding:22px 24px 18px;
-      }
     }
 
     /* Hareket azaltma: dişlinin çentiği, cetvelin geçişi, öbek etiketinin
@@ -1232,11 +1204,12 @@
       from{ opacity:1; }
       to{ opacity:0; }
     }
-    /* Sembol componentDefs'ten geliyor (karşılama kartıyla aynı kaynak),
-       yani ikon FONTU değil gerçek bir SVG. */
+    /* Sembol tıklanan satırın tek renkli SVG'si (veStartModule) — ikon FONTU
+       değil; kesikte satırdaki gibi vurgu renginde. */
     .mfsim-modload-ico{
       display:inline-flex; align-items:center; justify-content:center;
       width:34px; height:34px; flex:none;
+      color:var(--sinema-vurgu);
     }
     .mfsim-modload-ico svg{ width:100%; height:100%; display:block; }
     @media (prefers-reduced-motion: reduce){
@@ -2520,177 +2493,181 @@ body.ve-no-module #ve-ribbon{ display:none; }
   to{ opacity:1; transform:translateY(0); }
 }
 
-/* ── Sol sütun: kimlik + proje yolları ─────────────────────────────────── */
-/* VİTRİN (kullanıcı reçetesi "T6 · Vitrin"): panel ekranın kenarına yapışık bir
-   sütun değil, fotoğrafın üstünde ASILI buzlu bir kart. Akıştan çıkıyor
-   (absolute) — karşılamanın in-flow çocuğu kalmıyor, slayt da mutlak.
-   max-height + overflow ŞART: kısa pencerede (ör. 1280×620) kart ekrandan
-   taşar ve alttaki eylemler ULAŞILAMAZ olurdu; kaydırma kartın içine indi. */
-.ve-welcome-id{
+/* ── Kesik: kimlik, modüller ve eylemler fotoğrafın SOLUNDA ──────────────
+   Kullanıcı kararı (2026-10-23, tasarım "6d · İnce"): asılı cam kart yerine
+   ekranı boydan boya kesen siyah bir sütun, eğik kenarına paralel bakır bir
+   çizgi. Renkler açılış sinemasının jetonlarından (--sinema-*): kesik iki
+   temada da siyah, yazı onun üstünde açık. Ölçüler --kesik-* jetonlarından.
+
+   Kesik İÇERİĞİN KABI: yazının zemini onun kendisi — kontrast ölçeri zemini
+   atalardan okuyor, kardeş bir katmandan değil. Eğik kenar clip-path; bakır
+   çizgi kesiğin DIŞINDA ayrı bir eleman, çünkü clip-path kutusundaki her
+   şeyi kırpar.
+
+   Modül giriş ekranı (#mfsim-module-loading) AYNI üç sınıfı taşır: tıklanınca
+   siyah sütun kımıldamaz, yalnız içi değişir. Geometri burada, tek yerde. */
+.ve-kesik{
   position:absolute;
-  left:56px;
-  /* Dikey ortalama MARJLA, transform'la DEĞİL: giriş koreografisi
-     (.ve-welcome-enter .ve-welcome-id) transform'u kullanıyor ve `both`
-     doldurmasıyla bitiş karesini kalıcı kılıp translateY(-50%)'yi eziyordu —
-     kart ekranın ortasından AŞAĞI kayıyordu (ölçüldü: üst kenar y=450,
-     olması gereken 134). Marj ortalaması animasyonla çakışmaz. */
+  left:0;
   top:0;
   bottom:0;
-  height:fit-content;
-  margin-top:auto;
-  margin-bottom:auto;
+  width:var(--kesik-ust);
   z-index:1;
-  width:clamp(320px, 29%, 380px);
-  max-height:calc(100% - 64px);
-  overflow:auto;
+  background:var(--sinema-bant);
+  color:var(--sinema-yazi);
+  clip-path:polygon(0 0, 100% 0, var(--kesik-alt) 100%, 0 100%);
+}
+.ve-kesik-cizgi{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:var(--sinema-vurgu);
+  clip-path:polygon(
+    calc(var(--kesik-ust) + var(--kesik-cizgi-ara)) 0,
+    calc(var(--kesik-ust) + var(--kesik-cizgi-ara) + var(--kesik-cizgi)) 0,
+    calc(var(--kesik-alt) + var(--kesik-cizgi-ara) + var(--kesik-cizgi)) 100%,
+    calc(var(--kesik-alt) + var(--kesik-cizgi-ara)) 100%);
+}
+/* İçerik sütunu: kesiğin içinde, eğik kenara değmeden. Sığmazsa (kısa
+   pencere) KENDİ İÇİNDE kayar — alttaki eylemler ulaşılamaz kalmasın.
+   Kaydırma kabı yatayda da KIRPAR: kutu içeriğin kenarından 10 px solda
+   başlar (eksi pay + iç pay), yoksa bağlantıların üstüne gelme zemini ve
+   odak halkası soldan kesilirdi. İçeriğin kenarı `left`, genişliği 320. */
+.ve-kesik-ic{
+  position:absolute;
+  left:56px;
+  margin-left:-10px;
+  padding-left:10px;
+  top:60px;
+  bottom:44px;
+  width:330px;
   display:flex;
   flex-direction:column;
-  /* SIKI DEFTER (kullanıcı reçetesi, 2026-09-09): liste açık gelince kart
-     1057 px'e çıkmıştı; punto bir kademe, boşluklar üçte bir kısıldı.
-     Puntoların dördü de MEVCUT tipografi merdiveninde bir basamak aşağı
-     iniyor — h1→h2, md→body, lg→md, body→tiny; yeni jeton doğmuyor. */
-  padding:24px 24px 20px;
-  border-radius:var(--karsilama-kart-r);
-  /* Taban: color-mix desteklenmeyen tarayıcıda kart OPAK kalır (metin okunur
-     olmaktan çıkmasın); ikinci bildirim onu cam payıyla ezer. */
-  background:var(--bg-secondary);
-  background:color-mix(in srgb, var(--bg-secondary) calc(100% - var(--karsilama-cam)), transparent);
-  /* Camın ARKASI bulanır. Kart DURGUN bir yüzey; arkasında yalnız slayt oynuyor. */
-  -webkit-backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
-  backdrop-filter:blur(var(--karsilama-cam-blur)) saturate(1.18);
-  border:1px solid var(--border-light);
-  border-color:color-mix(in srgb, var(--border-light) 70%, transparent);
-  box-shadow:var(--karsilama-kart-golge);
+  overflow-x:hidden;
+  overflow-y:auto;
 }
-/* Başlık KİLİDİ: ad + künye tek blok, ayraç ikisinin ALTINDA. Çizgi logonun
-   altına konunca künyeyi kendi adından ayırıyordu — ölçüldü: ada 10 px,
-   sonraki bölüm etiketine 18 px kalıyordu, yani künye adına değil gövdeye
-   yapışıyordu. */
+.ve-kesik-ic::-webkit-scrollbar-track{ background:transparent; }
+.ve-kesik-ic::-webkit-scrollbar-thumb{
+  background:color-mix(in srgb, var(--sinema-yazi) 24%, transparent);
+}
+/* Marka: açılış markasıyla AYNI boy, aile, ağırlık ve em-iz (başlık
+   bağlaması) — devir teslimde marka küçülmeden iner, yalnız yer değiştirir.
+   Çarkın boyu da açılıştakinin oranı. */
 .ve-welcome-logo{
+  flex:none;
   display:flex;
   align-items:center;
-  gap:10px;
-  font-size:var(--fs-h2);
+  gap:14px;
+  font-size:var(--fs-sinema);
   font-weight:700;
-  /* tracking başlık bağlamasından (-0.01em).
-     Burada `0.5px` yazmak bağlamayı EZİYORDU (bu kural sonra geliyor):
-     açılış ekranıyla karşılama ekranı AYNI markayı ayrı tracking'le
-     çiziyordu, saniyeler arayla. */
-  color:var(--text-heading);
+  line-height:1;
+  /* tracking başlık bağlamasından (-0.01em) */
+  color:var(--sinema-yazi);
 }
 .ve-welcome-logo-ico{
-  width:1.15em;
-  height:1.15em;
-  color:var(--accent-primary);
+  width:0.54em;
+  height:0.54em;
+  color:var(--sinema-vurgu);
 }
 .ve-welcome-tagline{
-  margin-top:5px;
-  font-size:var(--fs-body);
-  letter-spacing:0.4px;
-  color:var(--text-muted);
+  flex:none;
+  margin-top:12px;
+  font-size:var(--fs-md);
+  font-weight:500;
+  line-height:1.25;
+  letter-spacing:0.03em;
+  color:var(--sinema-yazi-2);
 }
-/* Ayraç başlık kilidini KAPATIR: üstünde ad+künye, altında gövde. */
-.ve-welcome-sep{
-  height:1px;
-  background:var(--border-color);
-  background:color-mix(in srgb, var(--border-color) 75%, transparent);
-  margin:14px 0 12px;
+/* Cetvel: açılış ekranının kademe cetvelinin dili — on iki bölme, dar ve
+   durgun. Bir modülün üstüne gelince o modülün dört bölmesi vurguya döner
+   (üç modül × dört bölme; sıra satırların sırası). */
+.ve-welcome-cetvel{
+  flex:none;
+  width:300px;
+  max-width:100%;
+  margin:26px 0 28px;
+  display:grid;
+  grid-template-columns:repeat(12, minmax(0, 1fr));
+  gap:3px;
 }
-
-/* ── Son değişiklikler paneli + güncellik satırı ────────────────────────
-   Şerit bu ekranda gizli olduğu için "elimdeki kopya ne?" sorusunun cevabı
-   yalnız burada duruyor. İçeriği js/components.js doldurur
-   (veFillWelcomeChanges / veSyncWelcomeFreshness). */
-/* Kartta yalnız BAŞLIK + düğme duruyor, kayıtlar KAPALI açılıyor: on kayıt
-   kartı boyundan uzun yapıyordu. Düğme onları YERİNDE açar (pencere açmaz);
-   etiketi ve kaç kaydın gizli olduğunu js/components.js yazar. */
-.ve-welcome-panel{
-  margin-top:16px;
+.ve-welcome-cetvel > span{
+  height:4px;
+  background-color:var(--sinema-yazi);
+  transition:background-color var(--dur-base) var(--ease-out);
 }
+.ve-welcome-id:has(.ve-module-card[data-module="arac-performans"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span:nth-child(-n+4),
+.ve-welcome-id:has(.ve-module-card[data-module="mount-analysis"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span:nth-child(n+5):nth-child(-n+8),
+.ve-welcome-id:has(.ve-module-card[data-module="fead-analysis"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span:nth-child(n+9){
+  background-color:var(--sinema-vurgu);
+}
+/* Bölüm etiketleri açılış öbek etiketinin dilinde: büyük harf, geniş iz. */
+.ve-welcome-eyebrow,
 .ve-welcome-panel-title{
+  flex:none;
+  margin:0 0 10px;
   font-size:var(--fs-tiny);
   font-weight:600;
+  line-height:1.2;
+  letter-spacing:0.24em;
   text-transform:uppercase;
-  letter-spacing:0.08em;
-  color:var(--text-muted);
+  color:var(--sinema-yazi-2);
+}
+
+/* ── Son değişiklikler + künye satırı ───────────────────────────────────
+   Şerit bu ekranda gizli olduğu için "elimdeki kopya ne?" sorusunun cevabı
+   yalnız burada. İçeriği js/components.js doldurur (veFillWelcomeChanges ·
+   veSyncWelcomeFreshness · veFillWelcomeStamp); cevap yoksa gizli kalır.
+   Listenin tamamı Program Durumu'nda — girişi sürüm künyesi. */
+.ve-welcome-panel{
+  flex:none;
+  margin-top:32px;
 }
 .ve-welcome-change{
-  display:flex;
+  display:grid;
+  grid-template-columns:62px minmax(0, 1fr);
   align-items:baseline;
-  gap:10px;
-  padding:4px 0;
-  border-top:1px solid var(--border-light);
+  width:300px;
+  max-width:100%;
+  font-size:var(--fs-body);
+  line-height:17px;
 }
-.ve-welcome-change:first-child{ margin-top:4px; }
+.ve-welcome-change + .ve-welcome-change{ margin-top:10px; }
 .ve-welcome-change-k{
-  flex:0 0 66px;
-  font-size:var(--fs-micro);
   letter-spacing:0.04em;
   font-variant-numeric:tabular-nums;
-  color:var(--text-muted);
+  color:var(--sinema-yazi-2);
 }
-/* Uzun başlık satırı boyu uzatmasın: iki satırda kesilir. */
 .ve-welcome-change-v{
   min-width:0;
-  font-size:var(--fs-tiny);
-  line-height:1.5;
-  color:var(--text-primary);
-  display:-webkit-box;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:2;
-  overflow:hidden;
+  color:var(--sinema-yazi);
 }
-.ve-welcome-more{
-  display:inline-block;
-  margin-top:8px;
-  padding:0;
-  font-family:var(--font-sans);
-  font-size:var(--fs-tiny);
-  color:var(--text-muted);
-  background:none;
-  border:none;
-  text-decoration:none;
-  cursor:pointer;
-  transition:color var(--dur-base) var(--ease-out);
+/* Künye satırı: güncellik solda, sürüm künyesi sağda. İkisi de gizliyse
+   satır (ve çizgisi) da yok. */
+.ve-welcome-kunye{
+  flex:none;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  width:300px;
+  max-width:100%;
+  margin-top:14px;
+  padding-top:10px;
+  border-top:1px solid var(--kesik-ayrac);
 }
-.ve-welcome-more:hover,
-.ve-welcome-more:focus-visible{ color:var(--text-heading); }
-/* [hidden] display bildirimini EZEMEZ: satır flex, düğme inline-block olduğu
-   için ikisine de açık kural gerekiyor — yoksa "gizli" kayıtlar görünür kalır. */
-.ve-welcome-change[hidden],
-.ve-welcome-more[hidden]{ display:none; }
-/* Yön oku düğmenin ne yapacağını söyler; açıkken ters döner. Çizgi ikon
-   (karar 10·B) — sözde öğenin '▾' karakteri yazı tipinden çiziliyordu. */
-.ve-welcome-more-ok{
-  margin-left:5px;
-  transition:transform var(--dur-base) var(--ease-out);
-}
-.ve-welcome-more[aria-expanded="true"] .ve-welcome-more-ok{ transform:rotate(180deg); }
-/* Açılan kayıtlar sırayla belirir — sıra, listenin uzadığını okutur. */
-.ve-welcome-panel.is-open .ve-welcome-change--extra{
-  animation:ve-welcome-change-in var(--dur-base) var(--ease-out) both;
-  animation-delay:calc(var(--i, 0) * 28ms);
-}
-@keyframes ve-welcome-change-in{
-  from{ opacity:0; transform:translateY(-4px); }
-  to{ opacity:1; transform:none; }
-}
-@media (prefers-reduced-motion: reduce){
-  .ve-welcome-panel.is-open .ve-welcome-change--extra{ animation:none; }
-  .ve-welcome-more::after{ transition:none; }
-}
-/* Güncellik satırı — gömülü künye YALNIZ elimizdeki kopyayı söyler; "yayın
-   güncel mi" sorusunu yanıtlamaz (bkz. js/deploy-status.js). Bu yüzden yeşil
-   nokta yalnız `ok` durumuna ait; çevrimdışı kopya nötr kalır. */
+.ve-welcome-kunye:not(:has(> :not([hidden]))){ display:none; }
+/* Güncellik — gömülü künye YALNIZ elimizdeki kopyayı söyler; "yayın güncel
+   mi" sorusunu yanıtlamaz (bkz. js/deploy-status.js). Bu yüzden yeşil yalnız
+   `ok` durumuna ait; çevrimdışı kopya nötr kalır. */
 .ve-welcome-fresh{
   display:flex;
   align-items:center;
-  gap:7px;
-  margin-top:10px;
-  padding-top:8px;
-  border-top:1px solid var(--border-light);
-  font-size:var(--fs-micro);
-  color:var(--text-muted);
+  gap:8px;
+  min-width:0;
+  font-size:var(--fs-tiny);
+  font-weight:500;
+  letter-spacing:0.04em;
+  color:var(--sinema-yazi-2);
 }
 /* display:flex, tarayıcının [hidden]{display:none} kuralını YENER — satır
    gizlenmiş sayılırken boş bir çizgi olarak kalıyordu. */
@@ -2699,144 +2676,127 @@ body.ve-no-module #ve-ribbon{ display:none; }
   flex:0 0 auto;
   width:7px;
   height:7px;
-  border-radius:var(--radius-pill);
-  background:var(--text-muted);
+  background:var(--sinema-yazi-2);
 }
-.ve-welcome-fresh-text{
-  min-width:0;
-  color:var(--text-muted);
-}
-.ve-welcome-fresh[data-state="ok"] .ve-welcome-fresh-dot{ background:var(--accent-success); }
-.ve-welcome-fresh[data-state="ok"] .ve-welcome-fresh-text{ color:var(--ink-success); }
-.ve-welcome-fresh[data-state="update"] .ve-welcome-fresh-dot{ background:var(--accent-warning); }
-.ve-welcome-fresh[data-state="update"] .ve-welcome-fresh-text{ color:var(--ink-warning); }
-.ve-welcome-fresh[data-state="pending"] .ve-welcome-fresh-dot{ background:var(--accent-primary); }
-.ve-welcome-fresh[data-state="pending"] .ve-welcome-fresh-text{ color:var(--ink-accent); }
-/* local ve unknown: nötr — "Çevrimdışı kopya" bir başarı bildirimi DEĞİL. */
-.ve-welcome-fresh[data-state="local"] .ve-welcome-fresh-dot,
-.ve-welcome-fresh[data-state="unknown"] .ve-welcome-fresh-dot{
-  background:var(--text-muted);
-  opacity:0.75;
-}
-.ve-welcome-fresh[data-state="local"] .ve-welcome-fresh-text,
-.ve-welcome-fresh[data-state="unknown"] .ve-welcome-fresh-text{ color:var(--text-muted); }
-
-/* Kimliği yukarıda, eylemleri aşağıda tutan boşluk. Dar pencerede sütunlar
-   üst üste bindiği için kapatılır (aşağıdaki medya kuralı). */
-/* Esneme payı KALKTI: kart artık ekranı boydan boya doldurmuyor, boyunu
-   içeriği belirliyor. Blok markup'ta duruyor (koreografi ve dar yerleşim
-   ona göre yazılmış), yalnız yer kaplamıyor. */
-.ve-welcome-spacer{
-  display:none;
-}
-.ve-welcome-open{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  /* ÜST PAY ŞART: esneme payı (.ve-welcome-spacer) kalkınca düğme güncellik
-     satırına YAPIŞIYORDU — ölçülen açıklık 0 px. */
-  margin-top:16px;
-  padding:10px 14px;
+.ve-welcome-fresh-text{ min-width:0; }
+.ve-welcome-fresh[data-state="ok"]{ color:var(--sinema-iyi); }
+.ve-welcome-fresh[data-state="ok"] .ve-welcome-fresh-dot{ background:var(--sinema-iyi); }
+.ve-welcome-fresh[data-state="update"]{ color:var(--sinema-uyari); }
+.ve-welcome-fresh[data-state="update"] .ve-welcome-fresh-dot{ background:var(--sinema-uyari); }
+.ve-welcome-fresh[data-state="pending"]{ color:var(--sinema-vurgu-yazi); }
+.ve-welcome-fresh[data-state="pending"] .ve-welcome-fresh-dot{ background:var(--sinema-vurgu); }
+/* Sürüm künyesi — şerit bu ekranda gizli olduğu için Program Durumu'na TEK
+   giriş. Künye yoksa (modüler index.html) düğme `hidden` kalır. TEK YAZI
+   TİPİ: rakam hizası mono'dan değil tabular-nums'tan. */
+.ve-welcome-stamp{
+  flex:none;
+  margin:0 -6px 0 auto;
+  padding:3px 6px;
   font-family:var(--font-sans);
-  font-size:var(--fs-md);
-  font-weight:500;
-  /* DOLU düğme (kullanıcı reçetesi): kartın tek birincil eylemi, aksan
-     zemininde. --on-accent aksanın ÜSTÜNDE okunacak renk — beyaz her
-     temada yetmiyor, o yüzden jeton. */
-  color:var(--on-accent);
-  background:var(--accent-primary);
-  border:1px solid var(--accent-primary);
-  border-radius:var(--radius-sm);
+  font-size:var(--fs-tiny);
+  font-weight:600;
+  letter-spacing:0.12em;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  color:var(--sinema-yazi-2);
+  background:transparent;
+  border:none;
+  border-radius:0;
   cursor:pointer;
   transition:color var(--dur-base) var(--ease-out),
-             border-color var(--dur-base) var(--ease-out),
-             background var(--dur-base) var(--ease-out);
+             background-color var(--dur-base) var(--ease-out);
+}
+.ve-welcome-stamp:hover,
+.ve-welcome-stamp:focus-visible{
+  color:var(--sinema-yazi);
+  background-color:var(--kesik-kabar);
+}
+.ve-welcome-stamp[hidden]{ display:none; }
+
+/* Kimliği yukarıda, eylemleri aşağıda tutan boşluk. */
+.ve-welcome-spacer{
+  flex:1 0 16px;
+}
+/* Birincil eylem: kesiğin tek dolu yüzeyi — vurgu zemininde kesiğin
+   renginde yazı (iki temada aynı). */
+.ve-welcome-open{
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:280px;
+  max-width:100%;
+  height:52px;
+  padding:0 18px 0 20px;
+  font-family:var(--font-sans);
+  font-size:var(--fs-lg);
+  font-weight:600;
+  color:var(--sinema-bant);
+  background:var(--sinema-vurgu);
+  border:none;
+  border-radius:0;
+  cursor:pointer;
+  transition:background-color var(--dur-base) var(--ease-out);
 }
 .ve-welcome-open:hover,
-.ve-welcome-open:focus-visible{
-  color:var(--on-accent);
-  border-color:color-mix(in srgb, var(--accent-primary) 80%, var(--text-heading));
-  background:color-mix(in srgb, var(--accent-primary) 88%, var(--text-heading));
+.ve-welcome-open:focus-visible{ background-color:var(--sinema-vurgu-yazi); }
+.ve-welcome-open-ad{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 .ve-welcome-open .mf-ico{
-  width:0.95rem;
-  height:0.95rem;
-  opacity:0.85;
+  width:19px;
+  height:19px;
 }
 .ve-welcome-links{
+  flex:none;
   display:flex;
-  justify-content:center;
   gap:2px;
-  margin-top:6px;
+  margin:12px 0 0 -10px;
 }
 .ve-welcome-link{
   display:inline-flex;
   align-items:center;
-  gap:6px;
-  padding:6px 9px;
+  gap:7px;
+  padding:6px 10px;
   font-family:var(--font-sans);
   font-size:var(--fs-body);
-  color:var(--text-muted);
+  color:var(--sinema-yazi-2);
   background:transparent;
-  border:1px solid transparent;
-  border-radius:var(--radius-sm);
+  border:none;
+  border-radius:0;
   cursor:pointer;
   transition:color var(--dur-base) var(--ease-out),
-             border-color var(--dur-base) var(--ease-out),
-             background var(--dur-base) var(--ease-out);
+             background-color var(--dur-base) var(--ease-out);
 }
 .ve-welcome-link:hover,
 .ve-welcome-link:focus-visible{
-  color:var(--text-heading);
-  border-color:var(--border-color);
-  background:var(--bg-tertiary);
+  color:var(--sinema-yazi);
+  background-color:var(--kesik-kabar);
 }
 .ve-welcome-link .mf-ico{
-  width:0.85rem;
-  height:0.85rem;
-  opacity:0.85;
+  width:14px;
+  height:14px;
 }
-/* Sürüm künyesi — şerit bu ekranda gizli olduğu için Program Durumu'na TEK
-   giriş. Künye yoksa (modüler index.html) düğme `hidden` kalır. */
-.ve-welcome-meta{
-  margin-top:12px;
-  padding-top:9px;
-  text-align:center;
-  border-top:1px solid var(--border-color);
-  border-top-color:color-mix(in srgb, var(--border-color) 70%, transparent);
+/* Odak halkası kesiğin dilinde: köşesiz, vurgu renginde, kutunun İÇİNDE
+   (sütun yatayda kırpıyor). Dolu düğmede açık renkte ve dışarıda. */
+.ve-module-card:focus-visible,
+.ve-welcome-stamp:focus-visible,
+.ve-welcome-link:focus-visible{
+  outline:2px solid var(--sinema-vurgu);
+  outline-offset:-2px;
 }
-/* TEK YAZI TİPİ: bu ekranda mono yok. Künyenin rakam hizası mono'dan değil
-   tabular-nums'tan gelir (açılış künyesiyle aynı çare). */
-.ve-welcome-stamp{
-  padding:3px 7px;
-  margin-left:-7px;
-  font-family:var(--font-sans);
-  font-size:var(--fs-micro);
-  font-weight:500;
-  letter-spacing:0.09em;
-  font-variant-numeric:tabular-nums;
-  color:var(--text-muted);
-  background:transparent;
-  border:1px solid transparent;
-  border-radius:var(--radius-sm);
-  cursor:pointer;
-  transition:color var(--dur-base) var(--ease-out),
-             border-color var(--dur-base) var(--ease-out);
+.ve-welcome-open:focus-visible{
+  outline:2px solid var(--sinema-yazi);
+  outline-offset:2px;
 }
-.ve-welcome-stamp:hover,
-.ve-welcome-stamp:focus-visible{
-  color:var(--text-secondary);
-  border-color:var(--border-color);
-}
-.ve-welcome-stamp[hidden]{ display:none; }
 
 /* ── Fotoğraf: karşılamanın TAMAMININ zemini ──────────────────────────────
-   Sağ sütun (.ve-welcome-work) KALKTI — modüller sol panele indi ve sağ taraf
-   baştan sona fotoğraf oldu. Slayt bu yüzden .ve-welcome'ın doğrudan çocuğu:
-   panelin de altından geçiyor, panel onu camla örtüyor.
-   Örtü artık KAPALI (bkz. --slayt-ortu jetonu): sağ tarafta örtülecek metin
-   kalmadı, soldaki metnin zemini de panelin kendisi. */
+   Slayt .ve-welcome'ın doğrudan çocuğu: kesiğin de altından geçiyor, kesik
+   kenarında fotoğraf kesintisiz sürüyor. Örtü KAPALI (bkz. --slayt-ortu
+   jetonu): sağ tarafta örtülecek metin yok, soldaki metnin zemini kesik. */
 .ve-welcome-slayt{
   position:absolute;
   inset:0;
@@ -2886,21 +2846,9 @@ body.ve-no-module #ve-ribbon{ display:none; }
   from{ transform:scale(1); }
   to{ transform:scale(1.06); }
 }
-/* Kartın SOLUNDAKİ perde. Kart cam olduğu için arkasındaki kadraj ne kadar
-   parlaksa kenarı o kadar kayboluyordu; bu yumuşak geçiş kartın oturduğu
-   yeri sabitliyor. Örtüden (::after) AYRI: o ekranın tamamına, bu yalnız
-   sola. */
-.ve-welcome-slayt::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  background:linear-gradient(90deg,
-    color-mix(in srgb, var(--bg-primary) var(--karsilama-perde, 0%), transparent) 0%,
-    transparent 46%);
-}
-/* Örtü TEK jetondan sürülür ve bugün SIFIR: yönlü gradyan, resmi panelin
-   dibinden silmek içindi — P4'te panel zaten saydam, silinecek yer yok.
-   Jeton kalıyor ki tema/kadraj gerekirse tek satırdan geri açılsın. */
+/* Örtü TEK jetondan sürülür ve bugün SIFIR: metnin zemini kesiğin kendisi,
+   fotoğrafta silinecek yer yok. Jeton kalıyor ki tema/kadraj gerekirse tek
+   satırdan geri açılsın. */
 .ve-welcome-slayt::after{
   content:'';
   position:absolute;
@@ -2911,43 +2859,27 @@ body.ve-no-module #ve-ribbon{ display:none; }
   .ve-welcome-kare{ transition:none; }
   .ve-welcome-kare.is-on{ animation:none; transform:none; }
 }
-/* Etiket artık panelin İÇİNDE: kendi çipini taşımasına gerek yok, zemini
-   panelin camı. Panelin öteki bölüm başlığıyla (.ve-welcome-panel-title) aynı
-   dili konuşur. */
-.ve-welcome-eyebrow{
-  margin:0 0 7px;
-  font-size:var(--fs-micro);
-  font-weight:600;
-  letter-spacing:var(--tracking-wider);
-  text-transform:uppercase;
-  color:var(--text-muted);
-}
-/* Adı "grid" ama artık TEK SÜTUN liste (M6). Sınıf korunuyor: imleç ışığını
-   kuran dinleyici (js/components.js › _veWelcomeInstallCardSheen) buraya
-   bağlanıyor ve kart başına dinleyici açmamanın tek yolu bu ortak kap. */
+/* Adı "grid" ama TEK SÜTUN liste. Sınıf korunuyor: E2E testleri satırları
+   bu kabın içinden tıklıyor. */
 .ve-module-overlay-grid{
+  flex:none;
   display:flex;
   flex-direction:column;
-  gap:1px;
+  border-top:1px solid var(--kesik-ayrac);
 }
-/* Modül SATIRI — kutu değil: simge · ad · ok. Kendi zemini, kenarlığı ve
-   AYRACI yok (kullanıcı reçetesi "boşluk"): satırları ayıran şey çizgi değil
-   aralarındaki boşluk. */
+/* Modül SATIRI: simge · ad · ok; satırları ince bir çizgi ayırır. Vurgu
+   satırın zemini, okun rengi ve cetveldeki bölmeler — satır kaymıyor. */
 .ve-module-card{
   display:flex;
   flex-direction:row;
   align-items:center;
-  gap:12px;
-  padding:6px 4px;
-  background:none;
-  border:none;
-  border-radius:0;
+  gap:14px;
+  height:58px;
+  padding:0 12px 0 8px;
+  border-bottom:1px solid var(--kesik-ayrac);
   cursor:pointer;
   text-align:left;
-  /* isolation: ışık katmanı (::before) kartın KENDİ yığın bağlamında kalsın —
-     yoksa z-index:-1 kartın zemininin de altına düşer ve hiç görünmez. */
-  position:relative;
-  isolation:isolate;
+  transition:background-color var(--dur-base) var(--ease-out);
   /* fill-mode BACKWARDS, `both` DEĞİL: `both` bitiş karesini (transform:none)
      kalıcı kılıyor ve CSS animasyonu normal bildirimleri yendiği için hover'ın
      kaydırması hiç görünmüyordu. `backwards` yalnız gecikme boyunca giriş
@@ -2960,51 +2892,18 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-module-card:nth-child(2){ animation-delay:var(--dur-step); }
 .ve-module-card:nth-child(3){ animation-delay:calc(var(--dur-step) * 2); }
 .ve-module-card:nth-child(4){ animation-delay:calc(var(--dur-step) * 3); }
-/* İmleç ışığı: --mx/--my kart üzerinde JS'ten gelir; gelmezse ışık kartın
-   ortasında durur (hover yine çalışır). */
-.ve-module-card::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  z-index:-1;
-  pointer-events:none;
-  opacity:0;
-  background:radial-gradient(170px 70px at var(--mx, 50%) var(--my, 50%),
-    color-mix(in srgb, var(--accent-primary) 15%, transparent),
-    transparent 72%);
-  transition:opacity 220ms var(--ease-out);
-}
-.ve-module-card:hover::before,
-.ve-module-card:focus-visible::before{ opacity:1; }
-/* Vurgu SOL ŞERİT (kullanıcı reçetesi): satır kaymıyor, adı da renk
-   değiştirmiyor — solunda ince bir aksan çubuğu beliriyor. ::before imleç
-   ışığında kullanıldığı için çubuk ::after. */
-.ve-module-card::after{
-  content:'';
-  position:absolute;
-  left:-12px;
-  top:5px;
-  bottom:5px;
-  width:2px;
-  border-radius:var(--radius-xs);
-  background:var(--accent-primary);
-  opacity:0;
-  transition:opacity var(--dur-base) var(--ease-out);
-}
-.ve-module-card:hover::after,
-.ve-module-card:focus-visible::after{ opacity:1; }
 .ve-module-card:hover,
-.ve-module-card:focus-visible{ outline:none; }
-/* Simge kiremidi KALKTI: panelin camı zaten bir yüzey, kutu içinde kutu
-   üçüncü bir yüzey olurdu. Kalan tek şey aksan renkli çizim. */
+.ve-module-card:focus-visible{ background-color:var(--kesik-kabar); }
+/* Simge kiremidi yok: kesik zaten bir yüzey, kalan tek şey vurgu renkli
+   çizim. */
 .ve-module-card-icon{
   flex-shrink:0;
-  width:28px;
-  height:28px;
+  width:32px;
+  height:32px;
   display:flex;
   align-items:center;
   justify-content:center;
-  color:var(--accent-primary);
+  color:var(--sinema-vurgu);
 }
 /* Simgeler markup'ta 38px genişlik/yükseklik NİTELİĞİYLE geliyor (kutu
    ölçüsü buradan sürülür, dosyadan değil). */
@@ -3015,36 +2914,39 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-module-card-text{
   display:flex;
   flex-direction:column;
-  gap:2px;
   min-width:0;
 }
 .ve-module-card-name{
   display:block;
-  font-size:var(--fs-md);
+  font-size:var(--fs-title);
   font-weight:600;
-  color:var(--text-heading);
-  letter-spacing:-0.01em;
-  transition:color var(--dur-base) var(--ease-out);
+  color:var(--sinema-yazi);
 }
 .ve-module-card-arrow{
   flex-shrink:0;
   margin-left:auto;
   display:flex;
   align-items:center;
-  color:var(--text-muted);
+  color:var(--sinema-yazi-2);
   transition:color var(--dur-base) var(--ease-out),
              transform var(--dur-base) var(--ease-out);
 }
+.ve-module-card-arrow .mf-ico{
+  width:18px;
+  height:18px;
+}
 .ve-module-card:hover .ve-module-card-arrow,
 .ve-module-card:focus-visible .ve-module-card-arrow{
-  color:var(--accent-primary);
-  transform:translateX(4px);
+  color:var(--sinema-vurgu);
+  transform:translateX(3px);
 }
 
 /* ═══ AÇILIŞ KOREOGRAFİSİ ═══
    Sınıfı js/components.js › veWelcomeEnterReplay ekler ve bitince alır; tek
    seferlik bir perdedir. Omurga iki jeton: --dur-enter (perde) ve --dur-step
-   (kart temposu); ara gecikmeler o omurganın üstüne okunur.
+   (kart temposu); ara gecikmeler o omurganın üstüne okunur. Kesik
+   KIMILDAMAZ (açılış bantları onun üstünden çekilir): bakır çizgi yukarıdan
+   aşağı çizilir, içerik sırayla belirir.
    Kurallar kart bloğundan SONRA duruyor — `.ve-module-card:nth-child(n)`
    ile aynı özgüllükte olsalardı kaynak sırası kazanır ve gecikmeler eskiye
    döner (sessiz: animasyon yine oynar, yalnız yanlış anda). */
@@ -3064,8 +2966,23 @@ body.ve-no-module #ve-ribbon{ display:none; }
   from{ opacity:0; transform:scaleX(0); }
   to{ opacity:1; transform:scaleX(1); }
 }
+/* Çizginin alt köşeleri üst köşelerinden başlar ve çizgi boyunca iner:
+   clip-path köşe köşe ara değerlenir, yani çizgi her karede eğik kenara
+   paralel. Bitiş karesi kuralın kendi clip-path'i. */
+@keyframes ve-kesik-cizgi{
+  from{
+    clip-path:polygon(
+      calc(var(--kesik-ust) + var(--kesik-cizgi-ara)) 0,
+      calc(var(--kesik-ust) + var(--kesik-cizgi-ara) + var(--kesik-cizgi)) 0,
+      calc(var(--kesik-ust) + var(--kesik-cizgi-ara) + var(--kesik-cizgi)) 0,
+      calc(var(--kesik-ust) + var(--kesik-cizgi-ara)) 0);
+  }
+}
 /* Perde koreografiden gelir; kabın kendi kısa fade'i iki kez oynamasın. */
 .ve-welcome.ve-welcome-enter{ animation:none; }
+.ve-welcome-enter .ve-kesik-cizgi{
+  animation:ve-kesik-cizgi 520ms var(--ease-out) both;
+}
 .ve-welcome-enter .ve-welcome-id{
   animation:ve-welcome-slide 380ms var(--ease-out) both;
 }
@@ -3078,12 +2995,9 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-welcome-enter .ve-welcome-tagline{
   animation:ve-welcome-rise 460ms var(--ease-out) 180ms both;
 }
-.ve-welcome-enter .ve-welcome-sep{
+.ve-welcome-enter .ve-welcome-cetvel{
   transform-origin:left center;
   animation:ve-welcome-draw 320ms var(--ease-out) 260ms both;
-}
-.ve-welcome-enter .ve-welcome-panel{
-  animation:ve-welcome-rise 380ms var(--ease-out) 340ms both;
 }
 .ve-welcome-enter .ve-welcome-eyebrow{
   animation:ve-welcome-rise 380ms var(--ease-out) 360ms both;
@@ -3100,14 +3014,17 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-welcome-enter .ve-module-card:nth-child(4){
   animation-delay:calc(var(--dur-enter) + 3 * var(--dur-step));
 }
+.ve-welcome-enter .ve-welcome-panel{
+  animation:ve-welcome-rise 380ms var(--ease-out) 600ms both;
+}
 .ve-welcome-enter .ve-welcome-open{
   animation:ve-welcome-rise 320ms var(--ease-out) 640ms both;
 }
+.ve-welcome-enter .ve-welcome-kunye{
+  animation:ve-welcome-rise 320ms var(--ease-out) 660ms both;
+}
 .ve-welcome-enter .ve-welcome-links{
   animation:ve-welcome-rise 320ms var(--ease-out) 700ms both;
-}
-.ve-welcome-enter .ve-welcome-meta{
-  animation:ve-welcome-rise 320ms var(--ease-out) 760ms both;
 }
 
 /* ═══ MODÜLE GEÇİŞ ═══
@@ -3125,18 +3042,17 @@ body.ve-chrome-enter .ve-doc-dock{
   animation:ve-chrome-drop var(--dur-enter) var(--ease-out) both;
 }
 
-/* Uçan kart kopyası: karşılama kartından yeni düğüme. body çocuğudur ve
+/* Uçan kart kopyası: karşılama satırından yeni düğüme. body çocuğudur ve
    position:fixed — tuvalin transform'lu uzayına girerse hesap tutmaz.
    Kalıtsal `ve-welcome-rise` bastırılır (klon gecikmesiz yeniden koşar ve
-   uçarken yerinden zıplardı); pointer-events yok, yoksa tıklamayı yutar. */
-/* Satır düzeninde (M6) kartın kendi zemini yok; uçarken gölge taşıyan
-   saydam bir şerit "havada asılı yazı" gibi görünüyordu. Klon bu yüzden
-   kalkışta bir yüzey giyer. */
+   uçarken yerinden zıplardı); pointer-events yok, yoksa tıklamayı yutar.
+   Satırın kendi zemini yok: klon kalkışta kesiğin bir parçasını giyer —
+   siyah, vurgu kenarlı, köşesiz. */
 .ve-welcome-flyer{
-  background:var(--bg-secondary);
-  border:1px solid var(--accent-primary);
-  border-radius:var(--radius-lg);
-  padding:10px 12px;
+  background:var(--sinema-bant);
+  border:1px solid var(--sinema-vurgu);
+  border-radius:0;
+  padding:0 12px 0 8px;
   position:fixed;
   /* İnen şeridin (krom, 1000) ÜSTÜNDE, pencerelerin (modal, 4000) altında. */
   z-index:var(--z-widget);
@@ -3149,8 +3065,6 @@ body.ve-chrome-enter .ve-doc-dock{
   transition:transform var(--dur-fly) var(--ease-fly),
              opacity var(--dur-fly) var(--ease-fly);
 }
-/* Klondaki imleç ışığı kalkışta sıçrama üretir — sönük doğar. */
-.ve-welcome-flyer::before{ animation:none; opacity:0; }
 
 /* Marka devamlılığı: açılış markasının (ad + çark) body'ye taşınan
    kopyaları. Splash'in İÇİNDE değiller (orada alt bantla birlikte ekrandan
@@ -3161,72 +3075,53 @@ body > .mfsim-loading-logo,
 body > .mfsim-loading-logo-ico{ pointer-events:none; }
 body > .mfsim-loading-logo-ico{ transition:none; }
 
-/* Dar pencere: iki sütun üst üste. Sol panel bir başlık bandına dönüşür;
-   açıklama metni ve boşluk kalkar, eylemler ve künye kalır. */
-@media (max-width:1100px){
-  .ve-welcome{ flex-direction:column; }
-  /* Kart ASILI kalır ama artık ortada değil, tepede geniş bir banttır:
-     mutlak konum kaldırılmazsa dar pencerede fotoğrafın ortasını kapatır. */
-  .ve-welcome-id{
-    position:static;
-    transform:none;
-    width:auto;
-    max-height:none;
-    overflow:visible;
-    margin:22px 22px 0;
-    padding:22px 24px 18px;
-  }
-
-  /* Panelin GÖVDESİ kalkar, GÜNCELLİK SATIRI kalır: değişiklik listesi burada
-     sol sütunu uzatıp modül ızgarasını ekrandan aşağı iterdi (overlay
-     kaydırılabilir olduğu için hata "kırılma" değil sessiz uzama olurdu),
-     ama "elimdeki kopya ne?" satırının başka yeri yok. */
-  .ve-welcome-panel-title,
-  .ve-welcome-change,
-  .ve-welcome-more{ display:none; }
-  .ve-welcome-panel{ margin-top:12px; }
-  /* Alt boşluk ŞART: dar yerleşimde esneme payı (.ve-welcome-spacer) kalkıyor
-     ve satır "Kayıtlı proje aç" düğmesine yapışıp onun alt yazısı gibi
-     okunuyordu. */
-  .ve-welcome-fresh{ margin:0 0 14px; padding-top:0; border-top:none; }
-  .ve-welcome-sep{ margin:16px 0 14px; }
-  .ve-welcome-open{ align-self:flex-start; }
-  .ve-welcome-meta{ margin-top:14px; padding-top:10px; }
-  /* Panel bir üst banda döndü: dört modül alt alta dursa bant fotoğrafı
-     yerinden ederdi — iki sütuna açılır. */
-  .ve-module-overlay-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    column-gap:20px;
-  }
-  .ve-module-card:nth-child(2){ border-top:none; }
+/* Kısa pencere: dikey paylar ve satır boyu kısılır (1366×768 ekranda
+   tarayıcının bıraktığı yükseklik); daha kısasında üçüncü kayıt düşer.
+   Yine sığmayan sütun kendi içinde kayar. */
+@media (max-height:800px){
+  .ve-kesik-ic{ top:32px; bottom:24px; }
+  .ve-welcome-cetvel{ margin:18px 0 20px; }
+  .ve-module-card{ height:48px; }
+  .ve-welcome-panel{ margin-top:24px; }
 }
+@media (max-height:680px){
+  .ve-welcome-change:nth-child(n+3){ display:none; }
+}
+/* Telefon boyu: eğik kenar ekrana sığmıyor — kesik ekranın tamamı, çizgi
+   yok, sütun iki yandan 22 px (açılış bandının dar kenarı). */
 @media (max-width:640px){
-  .ve-module-overlay-grid{ grid-template-columns:1fr; }
-  .ve-module-card:nth-child(2){ border-top:1px solid color-mix(in srgb, var(--border-color) 70%, transparent); }
+  .ve-kesik{ width:100%; clip-path:none; }
+  .ve-kesik-cizgi{ display:none; }
+  .ve-kesik-ic{ left:22px; right:22px; width:auto; }
 }
-/* Hareket azaltma: koreografi, kabuk inişi, uçuş ve imleç ışığı DURUR —
-   bilgi ve hover vurgusu kalır, kapatılan yalnız hareket. */
+/* Hareket azaltma: koreografi, kabuk inişi, uçuş ve vurgu geçişleri DURUR —
+   bilgi ve vurgunun kendisi kalır, kapatılan yalnız hareket. */
 @media (prefers-reduced-motion: reduce){
   .ve-welcome,
   .ve-module-card,
+  .ve-welcome-enter .ve-kesik-cizgi,
   .ve-welcome-enter .ve-welcome-id,
   .ve-welcome-enter .ve-welcome-logo,
   .ve-welcome-enter .ve-welcome-logo-ico,
   .ve-welcome-enter .ve-welcome-tagline,
-  .ve-welcome-enter .ve-welcome-sep,
-  .ve-welcome-enter .ve-welcome-panel,
+  .ve-welcome-enter .ve-welcome-cetvel,
   .ve-welcome-enter .ve-welcome-eyebrow,
   .ve-welcome-enter .ve-module-card,
+  .ve-welcome-enter .ve-welcome-panel,
   .ve-welcome-enter .ve-welcome-open,
+  .ve-welcome-enter .ve-welcome-kunye,
   .ve-welcome-enter .ve-welcome-links,
-  .ve-welcome-enter .ve-welcome-meta,
   body.ve-chrome-enter #ve-ribbon,
   body.ve-chrome-enter .ve-doc-dock{ animation:none; }
   /* Uçuş JS'te hiç başlatılmıyor (js/components.js matchMedia kapısı); bu
      satır klon yine de doğarsa asılı kalmasın diye emniyet. */
   .ve-welcome-flyer{ transition:none; }
-  .ve-module-card::before{ transition:none; }
+  .ve-welcome-cetvel > span,
+  .ve-module-card,
+  .ve-module-card-arrow,
+  .ve-welcome-stamp,
+  .ve-welcome-open,
+  .ve-welcome-link{ transition:none; }
 }
 
 .ve-canvas-wrapper{

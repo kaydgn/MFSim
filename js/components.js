@@ -165,8 +165,14 @@ function veStartModule(type) {
   // işin yapıldığını sanmanın bir yolu olurdu.
   if(acici && typeof veModuleLoaderRun === 'function') {
     var kurulan = null;
+    // Simge tıklanan SATIRDAN: kesikte tek renkli, vurgu renginde çiziliyor.
+    // componentDefs'in sembolü temanın renkleriyle çizili ve açık temanın
+    // koyu tonları siyah kesikte kaybolurdu; satır yoksa (karşılama dışı
+    // çağrı) o sembol.
+    var ikon = (kart && typeof kart.querySelector === 'function')
+      ? kart.querySelector('.ve-module-card-icon svg') : null;
     veModuleLoaderRun(
-      { ad: def.name || type, alt: def.moduleSubtitle || '', svg: def.svg || '' },
+      { ad: def.name || type, alt: def.moduleSubtitle || '', svg: ikon ? ikon.outerHTML : (def.svg || '') },
       [
         { ad: 'Çalışma alanı hazırlanıyor',
           is: function() { _veModuleShellSetup(type); } },
@@ -594,7 +600,7 @@ var componentDefs = {
     isSubsystem: true,
     isMountModule: true,
     // DOĞRUDAN GİRİŞ (2026-10-14, kullanıcı: *"Aynı FEAD modülünün başlangıcı
-    // nasılsa, aynısını istiyorum"*): karşılama kartı modülün İÇİNE kadar
+    // nasılsa, aynısını istiyorum"*): karşılamadaki satırı modülün İÇİNE kadar
     // götürür ve boş topolojiyi başlangıç sayfası karşılar
     // (js/cp-mount-baslangic.js). Kayıt tipte — `_veModuleEnterFn`.
     moduleEnter: 'veMntOpenEditor',
@@ -615,7 +621,7 @@ var componentDefs = {
     outputs: 0,
     isSubsystem: true,
     isFeadModule: true,
-    // DOĞRUDAN GİRİŞ: karşılama kartına tıklamak modülün İÇİNE kadar götürür
+    // DOĞRUDAN GİRİŞ: karşılamada modüle tıklamak onun İÇİNE kadar götürür
     // (js/components.js › _veModuleEnterFn). Diğer iki modül beyan etmiyor,
     // dolayısıyla onlarda eski yol birebir duruyor.
     moduleEnter: 'veFeadOpenEditor',
@@ -1564,40 +1570,26 @@ function _veWelcomeDur(ad, varsayilan) {
   return varsayilan;
 }
 
-// Son değişiklikler paneli (en fazla 3 kayıt). Kaynak künyeyle AYNI:
-// window.__MFSIM_BUILD — satır içi veri, yükleme sırasından bağımsız.
-// Künye ya da changes yoksa panel HIDDEN kalır: boş bir panel "bilmiyorum"u
-// bilgi gibi gösterirdi. Commit başlığı SERBEST METİN → textContent ile konur.
-// Karşılamada duran kayıt sayısı; kalanı YERİNDE açılır. Pencere açmak bir
-// satır listeyi görmek için fazla bir tören — kullanıcı isteği (2026-09-08).
-// Kartta KAÇ kayıt DÜĞMESİZ durur. 0 = hepsi düğmenin arkasında; düğme
-// onları YERİNDE açar (pencere açmaz).
-var VE_WELCOME_CHANGE_ILK = 0;
-// Liste AÇIK mı doğar? Kullanıcı kararı (2026-09-09): "son değişiklikler açık
-// bir halde gelsin, yani uzunca olsun". Kart uzuyor; sığmazsa kendi içinde
-// kayıyor (bkz. css .ve-welcome-id max-height + overflow).
-var VE_WELCOME_CHANGE_ACIK = true;
+// Son değişiklikler. Kaynak künyeyle AYNI: window.__MFSIM_BUILD — satır içi
+// veri, yükleme sırasından bağımsız. Künye ya da changes yoksa panel HIDDEN
+// kalır: boş bir panel "bilmiyorum"u bilgi gibi gösterirdi. Commit başlığı
+// SERBEST METİN → textContent ile konur.
+// Kesikte duran kayıt sayısı (kullanıcı kararı 2026-10-23, tasarım "6d ·
+// İnce"): ilk üçü. Listenin tamamı Program Durumu'nda — girişi sürüm künyesi.
+var VE_WELCOME_CHANGE_SAYI = 3;
 
 function veFillWelcomeChanges() {
   if(typeof document === 'undefined') return false;
   var panel = document.getElementById('ve-welcome-changes');
   var liste = document.getElementById('ve-welcome-changes-list');
   if(!panel || !liste) return false;             // markup henüz yok — çağıran tekrar dener
-  var dugme = document.getElementById('ve-welcome-changes-toggle');
   var b = (typeof window !== 'undefined') ? window.__MFSIM_BUILD : null;
   var kayitlar = (b && b.changes && b.changes.length) ? b.changes : [];
   liste.innerHTML = '';
-  panel.classList.remove('is-open');
-  if(dugme) { dugme.hidden = true; dugme.setAttribute('aria-expanded', 'false'); }
   if(!kayitlar.length) { panel.hidden = true; return true; }
-  kayitlar.forEach(function(c, i) {
-    var fazla = i >= VE_WELCOME_CHANGE_ILK;
+  kayitlar.slice(0, VE_WELCOME_CHANGE_SAYI).forEach(function(c) {
     var satir = document.createElement('div');
-    satir.className = 've-welcome-change' + (fazla ? ' ve-welcome-change--extra' : '');
-    if(fazla) {
-      satir.hidden = true;
-      satir.style.setProperty('--i', i - VE_WELCOME_CHANGE_ILK);   // sırayla belirsinler
-    }
+    satir.className = 've-welcome-change';
     var k = document.createElement('span');
     k.className = 've-welcome-change-k';
     k.textContent = c.sha || c.shortSha || '';
@@ -1608,17 +1600,6 @@ function veFillWelcomeChanges() {
     satir.appendChild(v);
     liste.appendChild(satir);
   });
-  var gizli = kayitlar.length - VE_WELCOME_CHANGE_ILK;
-  if(dugme && gizli > 0) {
-    dugme.hidden = false;
-    // Etiket duruma göre: hiç kayıt açık değilse "daha eskiler" yanlış olurdu,
-    // gizli olanlar listenin TAMAMI.
-    _veWelcomeMoreEtiket(dugme, (VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + gizli);
-    dugme.onclick = veToggleWelcomeChanges;      // her çizimde aynı işlev — çoğalmaz
-    // Duruş açıksa listeyi HEMEN aç. Açma işini toggle yapıyor: etiket,
-    // aria-expanded ve is-open tek yerden yazılsın, ikinci bir kopya doğmasın.
-    if(VE_WELCOME_CHANGE_ACIK) veToggleWelcomeChanges();
-  }
   panel.hidden = false;
   return true;
 }
@@ -1655,9 +1636,9 @@ function _veSlaytKarilmis() {
     var t = liste[i]; liste[i] = liste[j]; liste[j] = t;
   }
   // AÇILIŞ KARESİ BAŞA. Yükleme ekranı tam ekran bir kareyle açılıyor
-  // (js/loader.js › paintPhoto) ve karşılama kartı onun üstünde beliriyor:
+  // (js/loader.js › paintPhoto) ve karşılamanın kesiği onun üstünde beliriyor:
   // slayt BAŞKA bir kareyle başlarsa devir teslimde fotoğraf değişir ve
-  // "kart eridi, sahne durdu" etkisi bozulur. Kare listede yoksa (klasör
+  // "perde açıldı, sahne durdu" etkisi bozulur. Kare listede yoksa (klasör
   // değişmiş) sıra olduğu gibi kalır — karışık başlamak yanlış kareyle
   // başlamaktan iyidir.
   var ilk = (typeof window !== 'undefined') ? window.__MFSIM_ACILIS_KARE : null;
@@ -1716,30 +1697,6 @@ function veWelcomeSlaytBaslat() {
     onYukle(kareler[(i + 1) % kareler.length]);
   }, VE_SLAYT_BEKLEME);
   return true;
-}
-
-// Düğmenin etiketi + yön oku (çizgi ikon; açıkken CSS ters çevirir).
-function _veWelcomeMoreEtiket(dugme, metin) {
-  dugme.textContent = metin;
-  dugme.insertAdjacentHTML('beforeend', veIkon('chevron-down', 've-welcome-more-ok'));
-}
-
-// Kalan kayıtları yerinde açar/kapatır. Etiket iki durumu da söyler;
-// aria-expanded aynı şeyi ekran okuyucuya bildirir.
-function veToggleWelcomeChanges() {
-  if(typeof document === 'undefined') return false;
-  var panel = document.getElementById('ve-welcome-changes');
-  var dugme = document.getElementById('ve-welcome-changes-toggle');
-  if(!panel || !dugme) return false;
-  var acik = dugme.getAttribute('aria-expanded') === 'true';
-  var fazlalar = panel.querySelectorAll('.ve-welcome-change--extra');
-  Array.prototype.forEach.call(fazlalar, function(el) { el.hidden = acik; });
-  dugme.setAttribute('aria-expanded', acik ? 'false' : 'true');
-  _veWelcomeMoreEtiket(dugme, acik
-    ? ((VE_WELCOME_CHANGE_ILK > 0 ? 'Daha eskiler \u00b7 ' : 'Hepsi \u00b7 ') + fazlalar.length)
-    : 'Daha az');
-  panel.classList.toggle('is-open', !acik);
-  return !acik;
 }
 
 // Yayın noktasının sınıfı → karşılama güncellik satırı. DÜRÜSTLÜK: gömülü künye
@@ -1814,38 +1771,6 @@ function veWelcomeEnterReplay() {
   w.classList.remove('ve-welcome-enter');
   void w.offsetWidth;
   w.classList.add('ve-welcome-enter');
-}
-
-// Kart yüzeyi — imleç ışığı. Konum kartın KENDİ kutusuna göre yüzdeyle
-// --mx/--my'ye yazılır; yazma rAF'a kısılır (her mousemove'da stil yazmak dört
-// kartı birden yeniden boyatırdı). Dinleyici ızgaraya BİR KEZ kurulur.
-function _veWelcomeInstallCardSheen() {
-  if(typeof document === 'undefined' || typeof document.querySelector !== 'function') return false;
-  if(_veWelcomeReducedMotion()) return true;     // hareket kapalı → ışık da yok
-  var grid = document.querySelector('.ve-module-overlay-grid');
-  if(!grid || typeof grid.addEventListener !== 'function') return false;
-  if(grid.getAttribute('data-ve-sheen')) return true;
-  grid.setAttribute('data-ve-sheen', '1');
-  var bekleyen = null, kare = 0;
-  grid.addEventListener('mousemove', function(e) {
-    var kart = (e.target && typeof e.target.closest === 'function') ? e.target.closest('.ve-module-card') : null;
-    if(!kart) return;
-    bekleyen = { kart: kart, x: e.clientX, y: e.clientY };
-    if(kare) return;
-    kare = 1;
-    var boya = function() {
-      kare = 0;
-      var b = bekleyen;
-      bekleyen = null;
-      if(!b) return;
-      var r = b.kart.getBoundingClientRect();
-      if(!r.width || !r.height) return;
-      b.kart.style.setProperty('--mx', (((b.x - r.left) / r.width) * 100).toFixed(1) + '%');   // makine: CSS değişkeni
-      b.kart.style.setProperty('--my', (((b.y - r.top) / r.height) * 100).toFixed(1) + '%');   // makine: CSS değişkeni
-    };
-    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(boya); else setTimeout(boya, 16);
-  });
-  return true;
 }
 
 // Uçan kart kopyası. Klon body'ye eklenir: #ve-canvas'ın transform'u
@@ -1938,18 +1863,17 @@ function _veWelcomeSplashKopya(el, r) {
 }
 
 // Uçuş planı: kaynak ve hedef ÖLÇÜLÜR, hiçbir şey kıpırdatılmaz. Karşılamanın
-// giriş koreografisi BAŞLAMADAN çağrılmalı — koreografi kartı translateX(-16px)
+// giriş koreografisi BAŞLAMADAN çağrılmalı — koreografi sütunu translateX(-16px)
 // ve logoyu translateY(14px)'ten başlatıyor; sonra ölçülen hedef, logonun
 // DURACAĞI yer değil o anki yeri olurdu.
 //
-// ÖLÇEK TAM ORAN: açılış markası --fs-sinema, karşılama logosu --fs-h2 ile
-// çiziliyor; aile, ağırlık ve em-iz AYNI (başlık bağlaması). Yani küçültülmüş
-// açılış markası logonun kendisi — oran boylardan okunur, kutulardan değil
-// (kutu yuvarlanmış px taşır). RENK de hedefe geçer: siyah bantta marka açık,
-// açık temanın kartında logo koyu — geçmeseydi klon inişte renk değiştirirdi. Dikey hiza yazı kutularının ORTASINDAN:
-// satır yüksekliği iki yerde farklı ama boşluk simetrik, orta nokta ile taban
-// çizgisi arasındaki mesafe boyla orantılı — ortalar örtüşünce taban
-// çizgileri de örtüşür.
+// ÖLÇEK TAM ORAN: aile, ağırlık ve em-iz iki markada AYNI (başlık bağlaması);
+// oran boylardan okunur, kutulardan değil (kutu yuvarlanmış px taşır).
+// 2026-10-23'ten beri kesiğin markası açılışınkiyle AYNI boyda (--fs-sinema)
+// ve aynı renkte (ikisi de siyah zeminde) — oran 1, renk geçişi yok; hesap
+// yine genel kalıyor ki boylar ayrışırsa iniş sıçramasın. Dikey hiza yazı
+// kutularının ORTASINDAN: satır yüksekliği iki yerde farklı olsa da boşluk
+// simetrik, ortalar örtüşünce taban çizgileri de örtüşür.
 function _veWelcomeSplashPlan(splashEl) {
   var ad = (typeof splashEl.querySelector === 'function')
     ? splashEl.querySelector('.mfsim-loading-logo') : null;
@@ -2010,8 +1934,8 @@ function _veWelcomeSplashUc(plan) {
 
 // Açılış markası → karşılama markası. js/loader.js hideSplash içinden, splash
 // SÖNMEDEN önce çağırır; klonlar body'de yaşar (splash 340 ms'de display:none
-// olur, uçuş ondan uzun sürer). Açılışta marka BÜYÜK (sinema bandı),
-// karşılamada kartın logosu: ad ve çark ayrı ayrı küçülerek yerine iner.
+// olur, uçuş ondan uzun sürer). Marka alt banttan kesiğin tepesine iner; ad
+// ve çark ayrı ayrı uçar.
 function veWelcomeAdoptSplashLogo(splashEl) {
   if(typeof document === 'undefined' || !splashEl) return;
   _veWelcomeSplashRestore();                     // ikinci çağrı: önceki uçuşu topla
@@ -2038,7 +1962,6 @@ if(typeof window !== 'undefined') window.veWelcomeAdoptSplashLogo = veWelcomeAdo
     veSyncModuleShell();
     veFillWelcomeStamp();
     veFillWelcomeChanges();
-    _veWelcomeInstallCardSheen();
     _veWelcomeWatchDeployDot();          // güncellik satırı: nokta yazılınca senkronlanır
     new MutationObserver(veSyncModuleShell).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
   }
