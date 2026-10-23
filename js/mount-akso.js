@@ -25,7 +25,8 @@
 //
 // KAMERA paralel izdüşüm: P model (mm) → ekran (sağ, aşağı); d izdüşüm
 // yönü (izleyiciden sahneye). Görünen yüz n · d < 0; boyama sırası uzaktan
-// yakına. Bakış işareti izleyicinin yeri: x −1 önden · +1 arkadan, y −1
+// yakına — katı çizimde takoz ve nokta kütle kutularla AYNI sırada (GİZLİ
+// YÜZEY: arkada kalan örtülü ve yazısız; X-ışını cam). Bakış işareti izleyicinin yeri: x −1 önden · +1 arkadan, y −1
 // soldan · +1 sağdan, z +1 yukarıdan · −1 alttan. Modelin ekseni: +X arka,
 // +Y sağ, +Z yukarı (Koordinat Düzlemi'yle aynı).
 //
@@ -158,6 +159,34 @@ var veMntAkso = (function(){
     return out;
   }
   function yuzSinif(f){ return f.eks===2 ? (f.s>0 ? 'f-ust' : 'f-alt') : (f.eks===0 ? 'f-x' : 'f-y'); }
+  // ── GİZLİ YÜZEY: nokta (takoz, nokta kütle) ↔ eksen hizalı kutu {c, h} ──
+  // Önde: noktanın dışında kaldığı yüzlerden biri izleyiciye dönük. Kutunun
+  // İÇİNDEKİ nokta en yakın yüzünde sayılır (yuzey); gövde yüzeyi için katı.
+  function kutuIci(p, q){ return Math.abs(p[0]-q.c[0])<q.h[0] && Math.abs(p[1]-q.c[1])<q.h[1] && Math.abs(p[2]-q.c[2])<q.h[2]; }
+  function yakinYuz(p, q){
+    var en=0, ed=Infinity;
+    for(var i=0;i<3;i++){ var dd=q.h[i]-Math.abs(p[i]-q.c[i]); if(dd<ed){ ed=dd; en=i; } }
+    var n=[0, 0, 0]; n[en]=(p[en]-q.c[en])>=0 ? 1 : -1; return n;
+  }
+  function kutuOnunde(K, p, q){
+    if(kutuIci(p, q)) return K.gorunur(yakinYuz(p, q));
+    for(var i=0;i<3;i++) for(var s=-1;s<=1;s+=2){
+      if(s*(p[i]-q.c[i])-q.h[i]>0){ var n=[0, 0, 0]; n[i]=s; if(K.gorunur(n)) return true; }
+    }
+    return false;
+  }
+  // q, p'yi izleyiciden saklıyor mu: p'den izleyiciye ışın kutuya giriyor mu.
+  function kutuOrter(K, p, q, yuzey){
+    if(kutuIci(p, q)) return yuzey ? !K.gorunur(yakinYuz(p, q)) : true;
+    var t0=0, t1=Infinity;
+    for(var i=0;i<3;i++){
+      var w=-K.d[i], lo=q.c[i]-q.h[i]-p[i], hi=q.c[i]+q.h[i]-p[i];
+      if(Math.abs(w)<1e-12){ if(lo>0 || hi<0) return false; continue; }
+      var a=lo/w, c=hi/w; if(a>c){ var x=a; a=c; c=x; }
+      if(a>t0) t0=a; if(c<t1) t1=c;
+    }
+    return t1>t0+1e-9;
+  }
 
   // ── Çizim parçaları ─────────────────────────────────────────────────────
   function cz(x1, y1, x2, y2, c){ return '<line class="'+c+'" x1="'+R(x1)+'" y1="'+R(y1)+'" x2="'+R(x2)+'" y2="'+R(y2)+'"/>'; }
@@ -450,13 +479,70 @@ var veMntAkso = (function(){
     // içinden geçmesin (yazı kuralı): seçilinin kutusu ve halkasının çevresi
     // yazılara TAM engel (sec). Zemindeki izi perdenin altında kalır.
     var odak=(_secili!=null && !!o.perde), odakSvg='';
-    var engel=[], govdeSvg='', secSvg='';
+    var engel=[], govdeSvg='', secSvg='', takozSvg='', hm=4.4*ik/sc;
     var koy=function(k, svg){ if(odak && k===_secili) odakSvg+=svg; else govdeSvg+=svg; };
     var sec=function(k){ return odak && k===_secili; };
-    var sira=kut.map(function(q){ return { q:q, d:K.derin(q.c) }; })
-      .concat(nok.map(function(g){ return { g:g, d:K.derin([g.x, g.y, g.z]) }; }))
-      .sort(function(a, c){ return a.d-c.d; });
-    sira.forEach(function(it){
+    // GİZLİ YÜZEY (kullanıcı 2026-10-23: "arkadaki komponentlerin görülmemesi
+    // lazım"): katı çizimde takoz ve nokta kütle kutularla AYNI ressam
+    // sırasında — önünde durduğu kutudan SONRA, arkasında kaldığı kutudan
+    // ÖNCE çizilir (izdüşümleri değişen çiftler için). Takozlar bütün
+    // gövdelerden sonra çiziliyordu (her açıda üstte); nokta kütle merkez
+    // derinliğiyle sıralanıyordu. Kutunun içindeki işaret (eşdeğer kutu
+    // gerçek gövdeden büyük olabilir) en yakın yüzünde sayılır. Arkada
+    // kalanın (merkezi örtülü) ve bütünüyle örtülü gövdenin yazısı yok;
+    // seçili (perde) yine önde, G bir işaret olarak üstte. X-ışını (rapor)
+    // camdır: sıra eskisi gibi.
+    var kati=(stil!=='xray'), gizliK={};
+    var sar=function(sp){ return { l:Math.min.apply(null, sp.map(function(v){ return v[0]; })), t:Math.min.apply(null, sp.map(function(v){ return v[1]; })),
+      r:Math.max.apply(null, sp.map(function(v){ return v[0]; })), b:Math.max.apply(null, sp.map(function(v){ return v[1]; })) }; };
+    var kutu2B=function(c, h){ var sp=[]; yuzler(c, h).forEach(function(f){ f.pts.forEach(function(p){ sp.push(P(p)); }); }); return sar(sp); };
+    var ortusur=function(a, c){ return a.l<c.r && c.l<a.r && a.t<c.b && c.t<a.b; };
+    var kutSira=kut.slice().sort(function(a, c){ return K.derin(a.c)-K.derin(c.c); });
+    var isaret=nok.map(function(g){ return { g:g, k:g.k, p:[g.x, g.y, g.z] }; })
+      .concat(m.takoz.map(function(t){ return { t:t, k:t.k, p:[t.x, t.y, t.z] }; }));
+    var liste;
+    if(kati){
+      var kb=kutSira.map(function(q){ return kutu2B(q.c, q.h); });
+      isaret.forEach(function(s){
+        var r=3.6*ik, q2=P(s.p), iz=s.g ? { l:q2[0]-r, t:q2[1]-r, r:q2[0]+r, b:q2[1]+r } : kutu2B(s.p, [hm, hm, hm]);
+        var lo=-1, hi=kutSira.length, taban=0, d=K.derin(s.p);
+        s.gizli=kutSira.some(function(q){ return kutuOrter(K, s.p, q, true); });
+        kutSira.forEach(function(q, j){
+          if(K.derin(q.c)<d) taban++;
+          if(!ortusur(iz, kb[j])) return;
+          if(kutuOnunde(K, s.p, q)) lo=Math.max(lo, j); else hi=Math.min(hi, j);
+        });
+        // çelişkide ışın karar verir: örtülüyse arkasında kaldığı ilk kutudan
+        // önce, değilse önünde durduğu son kutudan sonra (sınır kutularının
+        // örtüşmesi kaba: Asfat'ta öndeki takozu örttürüyordu)
+        s.yer=lo<hi ? Math.max(lo+1, Math.min(hi, taban)) : (s.gizli ? hi : lo+1);
+        if(s.gizli) gizliK[s.k]=true;
+      });
+      // bütünüyle örtülü gövde: görünen yüzlerinin 5×5 ızgarası başka kutuların ardında
+      // (kenardaki ince şerit de görünür sayılır: Tulga'da Şanzıman önden %11)
+      var IZG=[0.02, 0.26, 0.5, 0.74, 0.98];
+      kutSira.forEach(function(q){
+        var orn=[];
+        yuzler(q.c, q.h).filter(function(f){ return K.gorunur(f.n); }).forEach(function(f){
+          IZG.forEach(function(a){ IZG.forEach(function(e){
+            orn.push([0, 1, 2].map(function(i){ return f.pts[0][i]+(f.pts[1][i]-f.pts[0][i])*a+(f.pts[3][i]-f.pts[0][i])*e; }));
+          }); });
+        });
+        if(orn.every(function(p){ return kutSira.some(function(r){ return r!==q && kutuOrter(K, p, r, false); }); })) gizliK[q.g.k]=true;
+      });
+      liste=[];
+      for(var j=0;j<=kutSira.length;j++){
+        isaret.filter(function(s){ return s.yer===j; }).sort(function(a, c){ return K.derin(a.p)-K.derin(c.p); })
+          .forEach(function(s){ liste.push(s); });
+        if(j<kutSira.length) liste.push({ q:kutSira[j] });
+      }
+    } else {
+      liste=kut.map(function(q){ return { q:q, d:K.derin(q.c) }; })
+        .concat(isaret.filter(function(s){ return s.g; }).map(function(s){ s.d=K.derin(s.p); return s; }))
+        .sort(function(a, c){ return a.d-c.d; })
+        .concat(isaret.filter(function(s){ return s.t; }).sort(function(a, c){ return K.derin(a.p)-K.derin(c.p); }));
+    }
+    liste.forEach(function(it){
       if(it.g){
         var gq=Ph([it.g.x, it.g.y, it.g.z]);
         // Seçili nokta kütle büyür: aydınlık dolgusu (CSS) 2,4·ik'lik noktada
@@ -464,7 +550,17 @@ var veMntAkso = (function(){
         koy(it.g.k, '<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R((it.g.k===_secili ? 3.6 : 2.4)*ik)+'"/>');
         if(it.g.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(6.5*ik)+'"/>';
         var ne=sec(it.g.k) ? 8*ik : 3*ik;
-        engel.push({ l:gq[0]-ne, t:gq[1]-ne, r:gq[0]+ne, b:gq[1]+ne });
+        if(!it.gizli || sec(it.g.k)) engel.push({ l:gq[0]-ne, t:gq[1]-ne, r:gq[0]+ne, b:gq[1]+ne });
+        return;
+      }
+      if(it.t){
+        // Takoz: küçük küp (izdüşümün kendi ekseniyle).
+        var t=it.t, tc=hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z];
+        var TY=yuzler(tc, [hm, hm, hm]).filter(function(f){ return K.gorunur(f.n); });
+        koy(t.k, '<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+TY.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>');
+        var tq=P(tc), te=sec(t.k) ? 12*ik : 7*ik;
+        if(!it.gizli || sec(t.k)) engel.push({ l:tq[0]-te, t:tq[1]-te, r:tq[0]+te, b:tq[1]+te });
+        if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(tq[0])+'" cy="'+R(tq[1])+'" r="'+R(10*ik)+'"/>';
         return;
       }
       var q=it.q, g=q.g, Y=yuzler(q.c, q.h);
@@ -479,8 +575,8 @@ var veMntAkso = (function(){
       } else gor.forEach(function(f){ h+='<path class="'+yuzSinif(f)+'" d="M'+yol(f.pts, Ph)+' Z"/>'; });
       koy(g.k, h+'</g>');
       var sp=[]; Y.forEach(function(f){ f.pts.forEach(function(p){ sp.push(P(p)); }); });
-      engel.push({ l:Math.min.apply(null, sp.map(function(v){ return v[0]; })), t:Math.min.apply(null, sp.map(function(v){ return v[1]; })),
-                   r:Math.max.apply(null, sp.map(function(v){ return v[0]; })), b:Math.max.apply(null, sp.map(function(v){ return v[1]; })), a:sec(g.k) ? 1 : 0.012 });
+      var kk=sar(sp); kk.a=sec(g.k) ? 1 : 0.012;
+      engel.push(kk);
       if(stil==='xray'){
         var am=Ph(q.c);
         var ar=2.6*ik, ac=4.5*ik;
@@ -489,17 +585,6 @@ var veMntAkso = (function(){
         // çiziminde "G · z 798" ASFAT motorunun işaretinin üstüne düşüyordu).
         engel.push({ l:am[0]-5*ik, t:am[1]-5*ik, r:am[0]+5*ik, b:am[1]+5*ik });
       }
-    });
-    // Takozlar: küçük küp (izdüşümün kendi ekseniyle), gövdelerin üstünde.
-    var takozSvg='', hm=4.4*ik/sc;
-    m.takoz.slice().sort(function(a, c){ return K.derin([a.x, a.y, a.z])-K.derin([c.x, c.y, c.z]); }).forEach(function(t){
-      var c=hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z];
-      var Y=yuzler(c, [hm, hm, hm]).filter(function(f){ return K.gorunur(f.n); });
-      var ts='<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+Y.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>';
-      if(odak && t.k===_secili) odakSvg+=ts; else takozSvg+=ts;
-      var q=P(c), te=sec(t.k) ? 12*ik : 7*ik;
-      engel.push({ l:q[0]-te, t:q[1]-te, r:q[0]+te, b:q[1]+te });
-      if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(q[0])+'" cy="'+R(q[1])+'" r="'+R(10*ik)+'"/>';
     });
     // G — düşey izi (yukarıdan bakışta, gölge ya da direk açıkken) ve işareti.
     var gSvg='', gq=null, g3=null;
@@ -707,6 +792,7 @@ var veMntAkso = (function(){
       kut.concat(nok.map(function(g){ return { g:g, c:[g.x, g.y, g.z], h:[0, 0, 0] }; })).forEach(function(q){
         var g=q.g, sec=(_secili!=null && g.k===_secili);
         if(yalniz ? !sec : !(sec || g.ana || etk==='genis')) return;
+        if(!sec && gizliK[g.k]) return;
         var ust=P([q.c[0], q.c[1], q.c[2]+(b.z>0 ? q.h[2] : -q.h[2])]);
         if(sec) ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:g.kutu ? 3 : 6.5*ik, m1:kisalt(g.ad), fs:FB, kalin:true,
           cip:true, sinif:'sec-cip', pri:10, yon:yukari }, olc));
@@ -716,6 +802,7 @@ var veMntAkso = (function(){
       if(!kat.kuvvet) m.takoz.forEach(function(t){
         var sec=(_secili!=null && t.k===_secili);
         if(yalniz && !sec) return;
+        if(!sec && gizliK[t.k]) return;
         var q=P(hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z]);
         var m1=etk==='genis' ? t.no+' '+t.ad : (sec ? t.no+' '+kisalt(t.ad) : (kat.direk ? t.no+' · z '+sayi(t.z, 0) : t.no));
         ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:(sec ? 10 : 6)*ik, m1:m1, fs:FK, kalin:true, cip:true,

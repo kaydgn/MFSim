@@ -321,8 +321,11 @@ describe('KROKİ — güç grubundaki yeri: Görünümler\'in bileşeni, bileşe
     m.takoz.forEach((t) => expect(alt.has(t.k)).toBe(true));
     m.govde.filter((g) => g.k !== k).forEach((g) => expect(alt.has(g.k)).toBe(true));
     expect(alt.has('G')).toBe(true);
-    // Görünümler'in yazıları: öteki ana gövdeler adıyla, takozlar numarasıyla
-    expect(yazilar(svg)).toEqual(expect.arrayContaining(['Şanzıman', 'Transfer Kutusu', 'T1', 'T2', 'T3', 'T4', 'T5', 'G', 'Motor']));
+    // Görünümler'in yazıları: öteki ana gövdeler adıyla, takozlar numarasıyla —
+    // kutunun arkasında kalan takoz yazısız (dimetrikte T2 ve T3; kural:
+    // mount-akso.test.js → GİZLİ YÜZEY)
+    expect(yazilar(svg)).toEqual(expect.arrayContaining(['Şanzıman', 'Transfer Kutusu', 'T1', 'T4', 'T5', 'G', 'Motor']));
+    expect(yazilar(svg).filter((t) => t === 'T2' || t === 'T3')).toEqual([]);
     expect(svg.getAttribute('aria-label')).toBe('Güç grubundaki yeri: Motor');
   });
 

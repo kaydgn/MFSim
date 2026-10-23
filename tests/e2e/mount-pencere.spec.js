@@ -383,10 +383,15 @@ test('Görünümler: sürüklerken yazılar yerinde ve bilgi kutusu kapalı; fö
   await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-2dview'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
   await page.waitForTimeout(900);
   const sel = '#ve-properties .ve-mnt-akso-kap svg.ve-mnt2d-akso';
+  // hızlı kare, aynı açının tam çiziminin yazılarını taşır (arkada kalan
+  // takozun yazısı dönerken gelip gider: kural mount-akso.test.js → GİZLİ YÜZEY)
   const durum = () => page.evaluate((q) => { const sv = document.querySelector(q), ip = document.getElementById('ve-mnt-2d-tip');
-    return { yazi: sv.querySelectorAll('text').length, cip: sv.querySelectorAll('.ve-ak-cip').length, ip: !!ip && ip.style.display !== 'none' }; }, sel);
+    const c = _mntAksoCizim[sv.closest('.ve-mnt-akso-kap').id], tam = document.createElement('div');
+    tam.innerHTML = veMntAkso.ciz(c.m, Object.assign({}, c.o, { kam: { az: VE_MNT_AKSO3B.az, el: VE_MNT_AKSO3B.el } })).svg;
+    return { yazi: sv.querySelectorAll('text').length, cip: sv.querySelectorAll('.ve-ak-cip').length, ip: !!ip && ip.style.display !== 'none',
+      tamYazi: tam.querySelectorAll('text').length, tamCip: tam.querySelectorAll('.ve-ak-cip').length }; }, sel);
   const dinlenme = await durum();
-  expect(dinlenme.yazi).toBeGreaterThanOrEqual(15);
+  expect(dinlenme.yazi).toBeGreaterThanOrEqual(12);                // eksen adları 3
   // imleç bir gövdenin üstünde (bilgi kutusu açık), sonra sürükle
   const g = await (await page.$(sel + ' .ve-ak-g[data-ak="g2"]')).boundingBox();
   await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
@@ -399,8 +404,9 @@ test('Görünümler: sürüklerken yazılar yerinde ve bilgi kutusu kapalı; fö
   for (let i = 1; i <= 12; i++) { await page.mouse.move(g.x + g.width / 2 + i * 8, g.y + g.height / 2 + i * 2); await page.waitForTimeout(25); if (i % 4 === 0) ara.push(await durum()); }
   await page.mouse.up();
   await page.waitForTimeout(300);
-  ara.forEach((d) => { expect(d.yazi).toBe(dinlenme.yazi); expect(d.cip).toBe(dinlenme.cip); expect(d.ip).toBe(false); });
-  expect((await durum()).yazi).toBe(dinlenme.yazi);
+  ara.forEach((d) => { expect(d.yazi).toBe(d.tamYazi); expect(d.cip).toBe(d.tamCip); expect(d.ip).toBe(false); });
+  const son = await durum();
+  expect(son.yazi).toBe(son.tamYazi);
   // FÖYÜN SATIRI — gerçek fare
   await page.evaluate(() => document.querySelector('#ve-properties .ve-mnt-foy-odak').scrollIntoView({ block: 'end' }));
   await page.mouse.move(4, 4);
@@ -418,6 +424,59 @@ test('Görünümler: sürüklerken yazılar yerinde ve bilgi kutusu kapalı; fö
   await page.mouse.move(4, 4);
   await page.waitForTimeout(200);
   expect(await page.evaluate((q) => document.querySelector(q).outerHTML, sel)).toBe(once);
+  await page.evaluate(AKSO3B_SIFIR);
+});
+
+// GİZLİ YÜZEY (kullanıcı 2026-10-23: "kutuların arkasında komponentler
+// görülebiliyor … arkadaki komponentlerin görülmemesi lazım"): gerçek
+// tarayıcının isabeti (takozun merkezinde en üstteki öğe) 3B ışınla aynı —
+// arkada kalan takozun merkezinde bir gövde yüzü, öndekinde değil; arkada
+// kalanın yazısı yok. Asfat'ın dört takozu eşdeğer kutunun içinde: en yakın
+// yüzü dönükse görünür. Önce: 140°/30°'de Tulga'nın T4 ve T5'i gövdelerin
+// üstünde çiziliyordu (kullanıcının ekran görüntüsü).
+test('Görünümler: kutunun arkasındaki takoz örtülü — tarayıcının isabeti 3B ışınla aynı, yazısı yok', async ({ page }) => {
+  await bootApp(page);
+  const sonuc = [], hata = [];
+  for (const [ad, isaret, acilar] of [['tulga', 'Ön Takoz Braketi', [[249.3, 19.5], [140, 30], [60, -30]]], ['asfat', '57RS', [[100, -60], [160, -50], [20, 20]]]]) {
+    await ornek(page, ad, isaret);
+    await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-2dview') || createNode('mnt-2dview', 100, 40); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
+    await page.waitForTimeout(700);
+    for (const [az, el] of acilar) {
+      await page.evaluate(([az, el]) => { VE_MNT_AKSO3B.az = az; VE_MNT_AKSO3B.el = el; veMntAksoTazele(); }, [az, el]);
+      await page.waitForTimeout(250);
+      await page.evaluate(() => document.querySelector('#ve-properties .ve-mnt-akso-kap').scrollIntoView({ block: 'center' }));
+      await page.mouse.move(2, 2);
+      await page.waitForTimeout(150);
+      const r = await page.evaluate(([az, el]) => {
+        const sv = document.querySelector('#ve-properties .ve-mnt-akso-kap svg.ve-mnt2d-akso'), c = _mntAksoCizim[sv.closest('.ve-mnt-akso-kap').id];
+        const K = veMntAkso.kamera('dim', null, veMntAkso.kamYon({ az, el })), w = K.d.map((v) => -v);
+        const B = c.m.govde.filter((g) => g.kutu).map((g) => ({ c: [g.x, g.y, g.z], h: g.kutu.map((v) => v / 2) }));
+        const ic = (p, b) => [0, 1, 2].every((i) => Math.abs(p[i] - b.c[i]) < b.h[i] - 0.01);
+        const isin = (p, b) => { let t0 = 0, t1 = Infinity; for (let i = 0; i < 3; i++) { const lo = b.c[i] - b.h[i] - p[i], hi = b.c[i] + b.h[i] - p[i]; if (Math.abs(w[i]) < 1e-12) { if (lo > 0 || hi < 0) return false; continue; } let a = lo / w[i], d = hi / w[i]; if (a > d) [a, d] = [d, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, d); } return t1 - t0 > 0.5; };
+        const yakin = (p, b) => { let en = 0, ed = Infinity; for (let i = 0; i < 3; i++) { const dd = b.h[i] - Math.abs(p[i] - b.c[i]); if (dd < ed) { ed = dd; en = i; } } const n = [0, 0, 0]; n[en] = (p[en] - b.c[en]) >= 0 ? 1 : -1; return n; };
+        const sakli = (p) => B.some((b) => (ic(p, b) ? !(yakin(p, b).reduce((s, v, i) => s + v * K.d[i], 0) < 0) : isin(p, b)));
+        const yuz = [...sv.querySelectorAll('.ve-ak-hareket g.ve-ak-g path')].map((x) => { const v = x.getAttribute('d').replace(/[MLZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); return o; });
+        const kenarda = (q) => yuz.some((P) => P.some((u, i) => { const v = P[(i + 1) % P.length], dx = v[0] - u[0], dy = v[1] - u[1], L = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((q[0] - u[0]) * dx + (q[1] - u[1]) * dy) / L)); return (u[0] + t * dx - q[0]) ** 2 + (u[1] + t * dy - q[1]) ** 2 < 2.25; }));
+        const M = sv.getScreenCTM();
+        return c.m.takoz.map((t) => {
+          const p = [t.x, t.y, t.z], pp = K.P(p), q = [c.F.ox + pp[0] * c.F.sc, c.F.oy + pp[1] * c.F.sc];
+          if (kenarda(q)) return null;
+          const pt = sv.createSVGPoint(); pt.x = q[0]; pt.y = q[1]; const s = pt.matrixTransform(M);
+          const e = document.elementFromPoint(s.x, s.y);
+          return { k: t.k, sakli: sakli(p), govde: !!(e && e.closest('.ve-ak-hareket g.ve-ak-g')), yazi: !!sv.querySelector('.ve-ak-cip[data-ak="' + t.k + '"]') };
+        }).filter(Boolean);
+      }, [az, el]);
+      r.forEach((x) => {
+        sonuc.push(x);
+        if (x.sakli !== x.govde) hata.push(`${ad} ${x.k} @${az}/${el}: ${x.sakli ? 'arkada ama görünüyor' : 'önde ama örtülü'}`);
+        if (x.sakli === x.yazi) hata.push(`${ad} ${x.k} @${az}/${el}: ${x.sakli ? 'arkada ama yazılı' : 'önde ama yazısız'}`);
+      });
+    }
+  }
+  expect(hata).toEqual([]);
+  // kapı boşa ölçmüyor: iki yönde de karar var
+  expect(sonuc.filter((x) => x.sakli).length).toBeGreaterThan(5);
+  expect(sonuc.filter((x) => !x.sakli).length).toBeGreaterThan(5);
   await page.evaluate(AKSO3B_SIFIR);
 });
 
