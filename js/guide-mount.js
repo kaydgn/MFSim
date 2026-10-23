@@ -159,7 +159,12 @@ function _gmSec2(){
       + 'magnezyum: kütle = yoğunluk × hacim) ya da <em>Dosyadan</em> (parçaların dosyadaki yoğunlukları; '
       + 'ağırlık merkezi kütleyle ağırlıklı). Roller, kütle kaynakları ve seçilen daireler '
       + 'projeyle kaydedilir, STEP dosyası kaydedilmez; aynı dosya '
-      + 'yeniden açılınca roller geri gelir. Sihirbazın “STEP\'ten başla” kartı aynı dosyayı ve rolleri gösterir',
+      + 'yeniden açılınca roller geri gelir. <em>Model</em> bölümü birimleri tuvaldeki bileşenlerle eşler '
+      + 've farkı yazar; dosya ile model arasındaki öteleme takozlardan bulunur. Seçilen satırlar '
+      + '<em>Modele uygula</em> ile tek geri-al adımında modelin sistemine yazılır (takozlar seçili gelir, '
+      + 'gövdeler gelmez); <em>Dosyanın sistemine taşı</em> modelin bütün konumlarını ötelemeyle kaydırır. '
+      + '3B\'de modelin noktaları tel kafes olarak çizilir. Sihirbazın “STEP\'ten başla” kartı aynı dosyayı, '
+      + 'rolleri ve aynı föyü gösterir; tuvalden açılan sihirbazda aktarım mevcut bileşenlere yazar',
       'Hesaba girmez'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12'],
     ['<strong>Parametrik Analiz</strong>', 'Katalogdan seçim: takoz gruplarına kütüphanedeki '

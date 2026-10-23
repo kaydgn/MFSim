@@ -121,6 +121,19 @@ function _mntCadKayitHTML(k){
   });
   return t + _MNT_FOY_KAPA;
 }
+// MODEL ↔ CAD (Takoz adım 7): föy sihirbazınkiyle AYNI üreticiden
+// (_mwStpModelHTML), modeli tuval; bölümün düğmeleri uygulama ve taşıma —
+// ikisi de TEK geri-al adımı (js/cp-mount-wizard.js).
+function _mntCadModelHTML(s, K){
+  if(!K.satirlar.some(function(r){ return r.id !== null; }))
+    return '<p class="ve-fw-dim">Modelde eşleşen gövde ya da takoz yok. ' + veYon('Sihirbaz’da STEP’ten modeli kurun.') + '</p>';
+  var n = _mwStpSeciliSay(K), tasi = !!(K.T[0] || K.T[1] || K.T[2]);
+  return _mwStpModelHTML(s, 'tuval', K) + '<div class="ve-fw-rowbtns">'
+    + '<button type="button" class="ve-fw-btn" id="ve-mnt-cad-uygula" onclick="veMntWizStpModeleUygula()"'
+    + (n ? '' : ' disabled title="Seçili satır yok."') + '>Modele uygula</button>'
+    + (tasi ? '<button type="button" class="ve-fw-btn" id="ve-mnt-cad-tasi" onclick="veMntWizStpSistemeTasi()">Dosyanın sistemine taşı</button>' : '')
+    + '<span class="ve-fw-dim">' + veSayi(n, 0) + ' seçili</span></div>';
+}
 // EYLEM SATIRI — pencerenin TEK eylemi, oturumun durumuna göre
 function _mntCadEylem(s){
   if(typeof vePencereEylem !== 'function') return '';
@@ -145,7 +158,15 @@ function getMntViewerPropertiesHTML(node){
     var d = (typeof veMntWizStpDenetim === 'function') ? veMntWizStpDenetim(s) : { engel:[], uyari:[] };
     kat.push({ k:'parca', ad:'Parçalar', govde:_mntBolum('Parçalar', veSayi(rollu, 0) + ' rol',
       _mwStpAgacHTML(s) + _mwStpHesapHTML(s, true) + _mwStpSorunHTML(d)) });
-    if(s.coz && s.coz.ok) kat.push({ k:'kutle', ad:'Kütle', govde:_mntBolum('Kütle', '', _mwStpKutleHTML(s)) });
+    if(s.coz && s.coz.ok){
+      kat.push({ k:'kutle', ad:'Kütle', govde:_mntBolum('Kütle', '', _mwStpKutleHTML(s)) });
+      var K = veMntWizStpKarsilastirma(s, 'tuval');
+      if(K){
+        var es = K.satirlar.filter(function(r){ return r.id !== null; }).length;
+        kat.push({ k:'model', ad:'Model', govde:_mntBolum('Model', veSayi(es, 0) + ' / ' + veSayi(K.satirlar.length, 0) + ' birim',
+          _mntCadModelHTML(s, K)) });
+      }
+    }
   } else if(k && k.roller.length){
     kat.push({ k:'kayit', ad:'Kayıtlı roller', govde:_mntBolum('Kayıtlı roller', veSayi(k.roller.length, 0) + ' rol', _mntCadKayitHTML(k)) });
   }
@@ -174,6 +195,7 @@ if(typeof module !== 'undefined' && module.exports){
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML, veMntCadPencereAcik: veMntCadPencereAcik,
     veMntCadPencereTazele: veMntCadPencereTazele, veMntCad3bAc: veMntCad3bAc, veMntCadDrop: veMntCadDrop,
     veMntCadSec: veMntCadSec, VE_MNT_CAD_UZANTI: VE_MNT_CAD_UZANTI,
-    _mntCadKayitHTML: _mntCadKayitHTML, _mntCadEylem: _mntCadEylem, _mntCadDosyaHTML: _mntCadDosyaHTML
+    _mntCadKayitHTML: _mntCadKayitHTML, _mntCadEylem: _mntCadEylem, _mntCadDosyaHTML: _mntCadDosyaHTML,
+    _mntCadModelHTML: _mntCadModelHTML
   };
 }

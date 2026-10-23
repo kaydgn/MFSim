@@ -263,19 +263,23 @@ const TAKOZ_DILIM = {
 // opt: { varyant: 'duz'|'somun'|'konik', z, x (alt montajın yönü), govde (motor
 // vb. kutular, varsayılan var), civata (flanşta eksen dışı iki cıvata — dosyada
 // takozun dilimlerinden ÖNCE), saplama (false: saplama yok — braket boşluğu
-// boş kalır) }
+// boş kalır), oteleme (bütün montajın ötelemesi — gerçek dosyanın sistemi:
+// sunu = dosya − (0; 39,976; 28,596)), onFark (ön takozun noktasına eklenen —
+// gerçek dosyada sununun ön takozu 2 mm yukarıda: [0, 0, −2]) }
+const TULGA_OTELEME = [0, 39.976, 28.596];
 function tulgaKalibi(opt = {}) {
-  const v = opt.varyant || 'duz';
+  const v = opt.varyant || 'duz', T = opt.oteleme || [0, 0, 0];
+  const t = (p, f) => p.map((x, i) => x + T[i] + (f ? f[i] : 0));
   const parcalar = opt.govde === false ? [] : [
-    { id: 'MOTOR', ad: 'Motor bloğu', sekil: 'kutu', olcu: [600, 500, 600], konum: [124.96, 0.05, 750.03] },
-    { id: 'SANZ', ad: 'Şanzıman gövdesi', sekil: 'kutu', olcu: [400, 300, 300], konum: [814.55, 40.817, 365.138] },
-    { id: 'TC', ad: 'Transfer gövdesi', sekil: 'kutu', olcu: [300, 300, 200], konum: [1431.449, 54.419, 302.336] }
+    { id: 'MOTOR', ad: 'Motor bloğu', sekil: 'kutu', olcu: [600, 500, 600], konum: t([124.96, 0.05, 750.03]) },
+    { id: 'SANZ', ad: 'Şanzıman gövdesi', sekil: 'kutu', olcu: [400, 300, 300], konum: t([814.55, 40.817, 365.138]) },
+    { id: 'TC', ad: 'Transfer gövdesi', sekil: 'kutu', olcu: [300, 300, 200], konum: t([1431.449, 54.419, 302.336]) }
   ];
   const dilim = (v === 'konik' ? TAKOZ_DILIM.konik : TAKOZ_DILIM.duz.concat(v === 'somun' ? TAKOZ_DILIM.somun : []))
     .filter((d) => !(opt.saplama === false && d.k === 'SAPLAMA'));
   const altlar = [];
   TULGA_TAKOZ.forEach(([id, ad, p]) => {
-    altlar.push({ id: id + '_ASM', ad, konum: p, z: opt.z, x: opt.x });
+    altlar.push({ id: id + '_ASM', ad, konum: t(p, id === 'TK-ON' ? opt.onFark : null), z: opt.z, x: opt.x });
     // cıvata: true (30 mm) ya da boyu — flanşın üstünde durur
     const L = opt.civata === true ? 30 : opt.civata, f = (v === 'konik' ? TAKOZ_DILIM.konik : TAKOZ_DILIM.duz)[0].s1;
     if (opt.civata) [-1, 1].forEach((y, k) => parcalar.push({ id: id + '-CIVATA' + k, ad: ad + ' cıvata ' + (k + 1), sekil: 'silindir',
@@ -362,4 +366,4 @@ function cokGovdeKalibi({ bosluksuz = false } = {}) {
 }
 
 module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
-  TULGA_TAKOZ, TAKOZ_DILIM, tulgaKalibi, analitik, KUTLE, kutleKalibi, COK_GOVDE, cokGovdeKalibi };
+  TULGA_TAKOZ, TAKOZ_DILIM, TULGA_OTELEME, tulgaKalibi, analitik, KUTLE, kutleKalibi, COK_GOVDE, cokGovdeKalibi };
