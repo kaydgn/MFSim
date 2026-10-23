@@ -61,6 +61,8 @@ const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cm
   'Euler', 'Newton', 'Raphson', 'Newmark', 'Heun', 'Ralston', 'Runge', 'Kutta', 'Dormand', 'Prince', 'Campbell',
   'Rayleigh', 'Hermite', 'Fritsch', 'Carlson', 'Coulomb', 'Fourier', 'Bode', 'Nyquist', 'Kelvin', 'Voigt',
   'Info', 'Log', 'K-Factor', 'Drawbar', 'Pull', 'Ratio', 'Cr', 'Retarder', 'No',
+  // CATIA'nın STEP ayarlarındaki seçenek adları (Takoz kılavuzu, Bölüm 16)
+  'Validation', 'Properties', 'Geometric',
   // araç model adları (örneklerin `vehicle` alanı: "BMC Siper")
   'Siper']);
 const KISALTMA = new Set(['Ort', 'Ağ', 'Ag', 'Ör', 'Örn', 'Maks', 'Min', 'Max', 'vb', 'vs', 'No', 'Nr', 'Ref',

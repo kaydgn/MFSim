@@ -72,6 +72,7 @@ var VE_GUIDE_MOUNT_SECTIONS = [
   ['m13', '13',   'Sık yapılan hatalar'],
   ['m14', '14',   'Sayısal örnek: BMC Siper'],
   ['m15', '15',   'Parametrik analiz: katalogdan seçim'],
+  ['m16', '16',   'CAD dosyasından model: 3D Görüntüleyici'],
   ['mEk', 'Ek A', 'Alan → pencere hızlı başvurusu']
 ];
 
@@ -138,36 +139,17 @@ function _gmSec2(){
       + 'yasası, kapasite', 'Katalogdan seçip takoza uygulamak için'],
     ['<strong>Çözücü</strong>', 'Çözüm modu, sönüm, şok', 'Tuvalde bir tane'],
     ['<strong>Başlangıç ve Örnekler</strong>', 'Kayıtlı gerçek modeller', 'Bölüm 3'],
-    ['<strong>Görünümler · Koordinat Düzlemi · 3D Görüntüleyici</strong>',
+    ['<strong>Görünümler · Koordinat Düzlemi</strong>',
       'Modeli gözle denetleme yüzeyleri; Görünümler modeli aksonometrik çizer ve serbestçe '
       + 'döndürür (sol tık + sürükle: döndür, tekerlek: yakınlaştır, sağ tık: kaydır; '
       + 'başlıktaki düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar), '
       + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir (föyün satırının '
       + 'üstüne gelince o parça çizimde aydınlanır, modelin geri kalanı gölgeye düşer). Bir gövdenin '
       + 'arkasında kalan takoz ve nokta kütle çizimde görünmez ve yazısızdır; föyün satırı onu yine '
-      + 'gösterir. Gövde kutusunun içinde duran işaret, kutunun en yakın yüzünde sayılır; 3D Görüntüleyici '
-      + 'güç grubunun STEP dosyasını açar, parçalara 3B\'de ya da parça ağacında rol verir ve rol verilen '
-      + 'birimlerin konumunu ölçer. Roller iç içe verilebilir: motor alt montajının içindeki takoz kendi '
-      + 'biriminde sayılır, parça en yakın rollü atasının birimine girer; aynı rol iç içe verilmez. '
-      + 'Takozun noktası üst bağlantı yüzeyinin merkezidir: dosyada yazılı '
-      + 'dairenin merkezi, CATIA\'daki ölçümün aynısı; program onu takozun ekseninden önerir, 3B\'de '
-      + '<em>Daireden nokta</em> ile takozun başka bir dairesel kenarı seçilir. Gövdenin ağırlık merkezi '
-      + 've ataleti parçaların katı gövdelerinin hacminden toplanır; yüzey gövdeleri hacme girmez. Ağı '
-      + 'kapalı olmayan katı gövdenin açıklığı kapatılır ve kapatılan yüzey gövdenin yüzeyinin %10\'unu '
-      + 'aşmıyorsa gövde hacme katılır; aşan gövde ve katısı olmayan açık parça hacme katılmaz, uyarıda '
-      + 'adıyla ve yüzey payıyla söylenir. Dosya CATIA\'nın doğrulama özelliklerini (hacim, ağırlık merkezi) '
-      + 'taşıyorsa parçanın hacmi ve merkezi oradan alınır. Kütlenin kaynağı gövde başına seçilir: '
-      + '<em>Elle</em> (veri sayfasındaki değer), malzeme (çelik, dökme demir, sfero döküm, alüminyum, '
-      + 'magnezyum: kütle = yoğunluk × hacim) ya da <em>Dosyadan</em> (parçaların dosyadaki yoğunlukları; '
-      + 'ağırlık merkezi kütleyle ağırlıklı). Roller, kütle kaynakları ve seçilen daireler '
-      + 'projeyle kaydedilir, STEP dosyası kaydedilmez; aynı dosya '
-      + 'yeniden açılınca roller geri gelir. <em>Model</em> bölümü birimleri tuvaldeki bileşenlerle eşler '
-      + 've farkı yazar; dosya ile model arasındaki öteleme takozlardan bulunur. Seçilen satırlar '
-      + '<em>Modele uygula</em> ile tek geri-al adımında modelin sistemine yazılır (takozlar seçili gelir, '
-      + 'gövdeler gelmez); <em>Dosyanın sistemine taşı</em> modelin bütün konumlarını ötelemeyle kaydırır. '
-      + '3B\'de modelin noktaları tel kafes olarak çizilir. Sihirbazın “STEP\'ten başla” kartı aynı dosyayı, '
-      + 'rolleri ve aynı föyü gösterir; tuvalden açılan sihirbazda aktarım mevcut bileşenlere yazar',
+      + 'gösterir. Gövde kutusunun içinde duran işaret, kutunun en yakın yüzünde sayılır',
       'Hesaba girmez'],
+    ['<strong>3D Görüntüleyici</strong>', 'Güç grubunun STEP dosyası: parçaların rolleri, takoz noktaları, '
+      + 'gövdelerin hacmi, ağırlık merkezi ve ataleti; modelle karşılaştırma ve modele uygulama', 'Bölüm 16'],
     ['<strong>Rapor</strong>', 'Çevrimdışı HTML rapor', 'Bölüm 12'],
     ['<strong>Parametrik Analiz</strong>', 'Katalogdan seçim: takoz gruplarına kütüphanedeki '
       + 'tipler, kısıtlar, iletilebilirlik–sehim dengesi; öneri, kriterler ve iki grafik pencerenin '
@@ -976,8 +958,87 @@ function _gmSec15(){
   return h;
 }
 
-function _gmEkA(){
+function _gmSec16(){
   var h = _gmH2(15);
+  h += '<p><strong>3D Görüntüleyici</strong> güç grubunun STEP dosyasını açar (CATIA çıktısı, AP214 ya da AP242; '
+    + '.stp, .step, sıkıştırılmış .stpZ). Parçalara rol verilir; rol verilen birimlerin konumu, hacmi, ağırlık '
+    + 'merkezi ve ataleti dosyanın geometrisinden ölçülür ve modelle karşılaştırılır. Sihirbazın '
+    + '<em>STEP’ten başla</em> kartı aynı dosyayı, aynı rolleri ve aynı tabloları gösterir: dosya iki yerden '
+    + 'açılır, rol birinde verilince ötekinde görünür.</p>';
+  h += '<h3>16.1 Dosyayı açmak</h3>';
+  h += _gmAdimlar([
+    'Tuvaldeki <strong>3D Görüntüleyici</strong>’ye tıklayın; penceresinde <strong>STEP dosyası seç…</strong>’e '
+      + 'basın ya da dosyayı <strong>STEP dosyası</strong> bölümüne bırakın.',
+    'Okunurken eylem satırında çubuk ve <strong>Vazgeç</strong> durur; okuma ekranı dondurmaz.',
+    'Dosya okununca 3B kendi perdesinde açılır; parça ağacı <strong>Parçalar</strong> bölümündedir. '
+      + 'Esc yalnız 3B’yi kapatır, <strong>3B’de aç</strong> yeniden açar.'
+  ]);
+  h += _gmAlanTablo('3D Görüntüleyici penceresi — bölümler', [
+    ['<strong>STEP dosyası</strong>', 'Dosyanın künyesi: yazan sistem, parça sayısı, okuma süresi; kayıtlı '
+      + 'rollerin durumu', 'Dosya açık değilken <strong>Kayıtlı roller</strong> föyü'],
+    ['<strong>Parçalar</strong>', 'Parça ağacı ve rolleri; <strong>Konumları hesapla</strong>; uyarılar',
+      'Ağaç dal dal açılır; rollü düğüm dal kapalıyken de görünür'],
+    ['<strong>Kütle</strong>', 'Gövde başına hacim, kütlenin kaynağı, kütle ve atalet', 'Hesaptan sonra'],
+    ['<strong>Model</strong>', 'Birimlerin modeldeki karşılığı, fark, kütle; öteleme; '
+      + '<strong>Modele uygula</strong> · <strong>Dosyanın sistemine taşı</strong>', 'Hesaptan sonra']
+  ], ['Bölüm', 'Ne', 'Not']);
+  h += '<h3>16.2 Roller</h3>';
+  h += '<p>Rol bir düğüme verilir: 3B’de parçaya tıklayıp çipten ya da ağaçtaki satırın <strong>Rol</strong> '
+    + 'listesinden. Alt montaja verilen rol bütün parçalarına geçer. Roller iç içe verilebilir: motor alt '
+    + 'montajının içindeki takoz kendi biriminde sayılır, parça en yakın rollü atasının birimine girer; aynı '
+    + 'rol iç içe verilmez. <strong>Konumları hesapla</strong> yalnız rol verilen birimleri ölçer; rol değişince '
+    + 'hesap yenilenir.</p>';
+  h += '<h3>16.3 Takoz noktası</h3>';
+  h += '<p>Takozun noktası <strong>üst bağlantı yüzeyinin merkezidir</strong>: dosyada yazılı dairenin merkezi, '
+    + 'CATIA’daki ölçümün aynısı. Program onu takozun ekseninden önerir. 3B’de takoz seçiliyken '
+    + '<em>Daireden nokta</em> açılır; fare dairesel bir kenara gelince halka belirir, tıklanan dairenin '
+    + 'merkezi takozun noktası olur. <em>Öneriye dön</em> seçimi kaldırır. Ağaçtaki <strong>Konum</strong> '
+    + 'hücresinin ipucu kaynağı söyler: <em>Üst yüz</em> (öneri) ya da <em>Daire</em> (seçim).</p>';
+  h += '<h3>16.4 Kütle, ağırlık merkezi ve atalet</h3>';
+  h += '<p>Gövdenin hacmi, ağırlık merkezi ve ataleti parçaların <strong>katı gövdelerinden</strong> toplanır; '
+    + 'yüzey gövdeleri hacme girmez, döküm içindeki boşluklar hacimden çıkar. Ağı kapalı olmayan katı gövdenin '
+    + 'açıklığı kapatılır; kapatılan yüzey gövdenin yüzeyinin %10’unu aşmıyorsa gövde hacme katılır. Aşan gövde '
+    + 've katısı olmayan açık parça hacme katılmaz; uyarı satırı adını ve yüzey payını yazar. Dosya CATIA’nın '
+    + 'doğrulama özelliklerini taşıyorsa parçanın hacmi ve ağırlık merkezi oradan alınır.</p>';
+  h += _gmAlanTablo('Kütlenin kaynağı', [
+    ['<em>Elle</em>', 'Veri sayfasındaki kütle', 'Ağırlık merkezi hacimden; atalet kütle yazılınca türer'],
+    ['Malzeme', 'Çelik · Dökme demir · Sfero döküm · Alüminyum · Magnezyum: kütle = yoğunluk × hacim',
+      'Tek malzemeli parça (braket) için'],
+    ['<em>Dosyadan</em>', 'Parçaların dosyadaki yoğunlukları; ağırlık merkezi kütleyle ağırlıklı',
+      'Gövdenin bütün parçalarında yoğunluk varsa seçilir']
+  ], ['Kaynak', 'Kütle', 'Not']);
+  h += _gmNot('CATIA’da doğrulama özellikleri',
+      'STEP ayarlarında <em>Validation Properties</em> açılıp <em>Geometric Validation Properties</em> '
+    + 'işaretlenince dosya her katının hacmini, alanını ve ağırlık merkezini taşır; program parçanın hacmini '
+    + 've ağırlık merkezini bu sayılardan alır. Parçalara malzeme atanmışsa ve dışa aktarım yoğunluğu da '
+    + 'yazıyorsa <em>Dosyadan</em> kaynağı açılır.');
+  h += '<h3>16.5 Model ile karşılaştırmak</h3>';
+  h += '<p><strong>Model</strong> bölümü her birimi modeldeki karşılığıyla aynı satıra koyar: bileşenin adı, '
+    + 'konum farkı (takozda nokta, gövdede ağırlık merkezi) ve kütle. Eşleme tip içinde, en yakın bileşenle '
+    + 'yapılır. Dosyanın ve modelin referansı farklıysa aradaki <strong>öteleme</strong> takozlardan '
+    + 'bulunur ve bölümün başında yazar; fark modelin sisteminde ölçülür.</p>';
+  h += _gmAdimlar([
+    'Uygulanacak satırları işaretleyin: takozlar işaretli gelir, eşi olan gövdeler gelmez.',
+    '<strong>Modele uygula</strong>’ya basın: seçili satırların değerleri modelin sisteminde bileşenlere '
+      + 'yazılır, değeri aynı olan alan değişmez. Ctrl+Z bütün uygulamayı tek adımda geri alır.',
+    'Model dosyanın sistemine geçirilecekse <strong>Dosyanın sistemine taşı</strong>’ya basın: modelin bütün '
+      + 'takoz noktaları ve ağırlık merkezleri öteleme kadar kayar. Göreli konumlar aynı kaldığı için çözüm '
+      + 'değişmez.'
+  ]);
+  h += '<p>3B’de modelin noktaları CAD’in üstünde tel kafes işaretle çizilir: CAD noktası dolu, modelinki '
+    + 'onun çevresinde. Sihirbazın kartında aynı tablo durur; tuvaldeki modelden açılan sihirbazda '
+    + '<strong>Sihirbaza aktar</strong> mevcut bileşenlere yazar (rijitlik, braketler ve adlar yerinde), '
+    + 'modelde olmayan birimi ekler. Sihirbaz STEP’ten kurulmuşsa aktarım durumu baştan kurar.</p>';
+  h += '<h3>16.6 Kayıt</h3>';
+  h += '<p>Roller, kütle kaynakları ve seçilen daireler projeyle kaydedilir; STEP dosyası kaydedilmez. Proje '
+    + 'yeniden açılınca pencere kayıtlı rolleri <strong>Kayıtlı roller</strong> föyünde gösterir; aynı dosya '
+    + 'seçilince roller parça yolundan geri gelir. Başka bir dosyanın kaydı, o dosyada rol verilene dek '
+    + 'korunur.</p>';
+  return h;
+}
+
+function _gmEkA(){
+  var h = _gmH2(16);
   h += '<p>Pencereler bölümlerini tek gövdede alt alta taşır; kalın yazılan bölüm adları '
     + 'programdaki başlıklarla birebir aynıdır.</p>';
   h += _gmTablo('Alan → pencere eşlemesi',
@@ -999,6 +1060,10 @@ function _gmEkA(){
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Şok darbesi', 'Çözücü', '<strong>Şok darbesi</strong>'],
       ['Örnek modeller', 'Başlangıç sayfası · Başlangıç ve Örnekler', 'Karolar · <strong>Örnek model</strong> · <strong>Modeli kur</strong>'],
+      ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
+      ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
+      ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],
+      ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],
       ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü',
         'Rapor penceresinin <strong>Frekans yerleşimi ve izolasyon</strong> bölümü kaynağını gösterir'],
       ['Takoz grupları, taranan grup', 'Parametrik Analiz', '<strong>Gruplar</strong>'],
@@ -1040,7 +1105,7 @@ function veGuideMountHTML(){
   govde += veGuideToc(VE_GUIDE_MOUNT_SECTIONS);
   govde += _gmSec1() + _gmSec2() + _gmSec3() + _gmSec4() + _gmSec5() + _gmSec6()
          + _gmSec7() + _gmSec8() + _gmSec9() + _gmSec10() + _gmSec11() + _gmSec12()
-         + _gmSec13() + _gmSec14() + _gmSec15() + _gmEkA();
+         + _gmSec13() + _gmSec14() + _gmSec15() + _gmSec16() + _gmEkA();
 
   return veGuideDocHTML({
     title: 'MFSim — Takoz Çökme-Titreşim kılavuzu',

@@ -27,8 +27,11 @@ const BUYUK = path.join(DIZIN, 'deneme-30.stp');
 const PROJE = path.join(DIZIN, 'proje.json');
 // Gerçek Tulga dosyasının ilişkisi: dosya = sunu + (0; 39,976; 28,596), ön takoz 2 mm aşağıda
 const TULGA = path.join(DIZIN, 'tulga-oteleme.stp');
+// Motorun içinde 256 delikli plaka yüzü (~5.400 köşe): kulak kırpmanın ağır yüzü
+const AGIR = path.join(DIZIN, 'agir-yuz.stp');
 test.beforeAll(() => {
   fs.writeFileSync(GUC, STEP.gucGrubu());
+  fs.writeFileSync(AGIR, STEP.agirYuzKalibi({ n: 16, m: 200 }));
   fs.writeFileSync(TULGA, STEP.tulgaKalibi({ oteleme: STEP.TULGA_OTELEME, onFark: [0, 0, -2] }));
   execFileSync(process.execPath, [path.join(__dirname, '../../tools/step-deneme.js'), '--mb', '30', '--cikti', BUYUK]);
 });
@@ -285,5 +288,41 @@ test('MODEL · SİHİRBAZ: tuvaldeki Tulga\'dan açılan sihirbazda aynı föy; 
     return { seed: s.seededFrom, govde: s.govdeler.length, takoz: s.takozlar.length, z: on.z, kxs: on.kxs, dugum: on._dugum };
   });
   expect(st).toEqual({ seed: 'tuval', govde: 8, takoz: 5, z: 177.682, kxs: f.once.kxs, dugum: f.once._dugum });
+  expect(hatalar).toEqual([]);
+});
+
+// UZUN İŞ ARAYÜZÜ KİLİTLEMEZ (Takoz adım 8): gerçek dosyada "Konumları hesapla"
+// 41 uzun görev, en uzunu 419 ms (tek düz yüz); yüz ve parçanın sonu artık
+// dilim dilim (eski üçgenleyiciyle bu dosyada 347 ms'lik görev). 3B açılmaz
+// (başsız tarayıcıda çizim işlemcide: kendi uzun görevleri) ve hesap
+// eşzamanlı kısayolu kullanmaz — bütün ağ hesabın işi.
+test('HESAP DİLİM DİLİM: ağır yüzlü dosyada Konumları hesapla boyunca 100 ms\'yi aşan görev yok', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await modulVeOrnek(page);
+  await pencereAc(page);
+  await page.evaluate(() => { window.veMntWiz3bAc = () => false; VE_MW_STP_AG.eszaman = 0; });
+  await pencereden(page, AGIR);
+  await page.waitForFunction(() => { const s = veMntWizStp(); return s && s.durum === 'hazir'; }, null, { timeout: 120000 });
+  await page.evaluate(() => {
+    const s = veMntWizStp(), T = ['Sağ ön takoz', 'Sol ön takoz', 'Sağ arka takoz', 'Sol arka takoz'];
+    s.sonuc.agac.forEach((d) => { if (T.includes(d.ad)) veMntWizStpRol(d.i, 'mnt-mount'); if (d.ad === 'Motor bloğu') veMntWizStpRol(d.i, 'mnt-motor'); });
+    window.__uzun = [];
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__uzun.push(Math.round(e.duration)))).observe({ type: 'longtask' });
+  });
+  const t0 = Date.now();
+  await page.click('#ve-properties #ve-mnt-cad-hesapla');
+  await page.waitForFunction(() => { const s = veMntWizStp(); return s.coz && s.coz.ok; }, null, { timeout: 120000 });
+  const sure = Date.now() - t0;
+  const o = await page.evaluate(() => {
+    const s = veMntWizStp(), motor = s.sonuc.agac.find((d) => d.ad === 'Motor bloğu');
+    const ucgen = veMntStpBirimler(s.sonuc, s.roller).find((b) => b.dugum === motor.i).parcalar
+      .reduce((t, pi) => t + (s.ag[pi] ? s.ag[pi].ucgen.length / 3 : 0), 0);
+    return { uzun: window.__uzun, ucgen };
+  });
+  expect(o.ucgen).toBeGreaterThan(5000);              // plakanın ağı hesapta kuruldu
+  expect(sure).toBeGreaterThan(200);                  // iş gerçekten sürdü
+  expect(Math.max(0, ...o.uzun)).toBeLessThan(100);
   expect(hatalar).toEqual([]);
 });

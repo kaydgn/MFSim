@@ -611,12 +611,15 @@ function _mstAgAdim(J, bitis){
     }
     var c = J.cur, yz = geo[c.i].yuzler;
     while(c.j < yz.length){
-      c.topla.ekle(yz[c.j], !!(c.ters && c.ters[c.j]));
+      // Yüz de, parçanın sonu da dilim dilim (ekleAdim · bitirAdim): yarım
+      // kalan iş sonraki dilimde sürer — tek yüz bir dilimi 0,8 sn tutuyordu
+      if(!c.topla.ekleAdim(yz[c.j], !!(c.ters && c.ters[c.j]), bitis)) return false;
       c.j++;
       if(c.j < yz.length && _mstSimdi() > bitis) return false;
     }
     var tut = !!(c.key && J.kalan[c.key] > 1);
-    var a = c.topla.bitir({ yerel: tut });
+    var a = c.topla.bitirAdim(bitis, { yerel: tut });
+    if(!a) return false;
     if(tut) J.paylas[c.key] = a.yerel;
     delete a.yerel;
     U.Birak(J.B);

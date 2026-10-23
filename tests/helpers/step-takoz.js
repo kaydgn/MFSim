@@ -132,11 +132,37 @@ function silindirYuzleri(yz, r, L) {
   ];
 }
 
+// Delikli plaka (yerel z = 0 düzlemi): n × n çember delik, dış kenar kenar
+// başına `m` doğru parçası — kulak kırpmanın AĞIR yüzü (gerçek dosyada motor
+// bloğunun 9.345 köşeli düz yüzü tek görevde 0,8 sn). Döner: [yüz]
+function delikliPlaka(yz, { n = 8, m = 60, L = 200, r = 4 } = {}) {
+  const h = L / 2, kose = [[-h, -h], [h, -h], [h, h], [-h, h]], nokta = [];
+  kose.forEach((a, i) => {
+    const b = kose[(i + 1) % 4];
+    for (let j = 0; j < m; j++) nokta.push([a[0] + (b[0] - a[0]) * j / m, a[1] + (b[1] - a[1]) * j / m, 0]);
+  });
+  const tepe = nokta.map((p) => yz.tepe(p));
+  const dis = nokta.map((p, i) => yz.yonlu(yz.kenarEgri(tepe[i], tepe[(i + 1) % nokta.length], yz._cizgi(p, nokta[(i + 1) % nokta.length]))));
+  const delikler = [];
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const c = [-h + L * (i + 0.5) / n, -h + L * (j + 0.5) / n, 0];
+    const v = yz.tepe([c[0] + r, c[1], 0]);
+    delikler.push([yz.yonlu(yz.kenarEgri(v, v, yz._cember(Y.eksen(c), 0, r)), false)]);
+  }
+  return [yz.yuz(yz.ekle("PLANE('',#" + yz.cerceve([0, 0, 0]) + ')'), dis, delikler)];
+}
+// Ağır yüzlü güç grubu: motorun içinde delikli plaka yüzey kabuğu (hacme girmez)
+function agirYuzKalibi(plaka = {}) {
+  const motor = Object.assign({}, GUC.motor, { ekKabuk: (yz) => delikliPlaka(yz, plaka) });
+  return guçGrubuStep([motor, GUC.sanziman].concat(GUC.takozlar));
+}
+
 // Parça tanımı: { id, ad, sekil:'kutu'|'silindir'|'acik-kutu', olcu:[a,b,c] | [r, L],
 //   konum:[x,y,z], z?:[..], x?:[..] (yerel eksenin dünyadaki yönü), alt?: 'MONTAJ_ID',
 //   dogrulama?: true | { …veri, opt } (CAx-IF doğrulama özellikleri — analitik
 //   hacim, alan, merkez; veri verilirse o yazılır), yogunluk?: kg/m³,
-//   malzeme?: ad, yogunlukBirim?: 'g/cm3' | 'kg/m3' | 'kg/mm3' }
+//   malzeme?: ad, yogunlukBirim?: 'g/cm3' | 'kg/m3' | 'kg/mm3',
+//   ekKabuk?: (yz) => yüzler — parçaya ikinci gövde (yüzey kabuğu) }
 // 'acik-kutu': kutunun ÜST yüzü yok — açık kabuk (yüzey modeli), ağı kapalı değil.
 // Alt montaj: { id, ad, konum, z?, x? } — parçalar `alt` ile ona takılır.
 function guçGrubuStep(parcalar, opt = {}) {
@@ -150,6 +176,7 @@ function guçGrubuStep(parcalar, opt = {}) {
     const yuzler = p.sekil === 'silindir' ? silindirYuzleri(yz, p.olcu[0], p.olcu[1]) : kutuYuzleri(yz, p.olcu[0], p.olcu[1], p.olcu[2]);
     if (p.sekil === 'acik-kutu') yz.govde(u, yuzler.filter((_, i) => i !== 4), 'kabuk');     // üst yüz (+z) yok
     else yz.govde(u, yuzler, 'kati');
+    if (p.ekKabuk) yz.govde(u, p.ekKabuk(yz), 'kabuk');
     yz.temsil(u);
     if (p.dogrulama) yz.dogrulama(u, Object.assign(analitik(p), p.dogrulama === true ? {} : p.dogrulama));
     if (p.yogunluk) yz.yogunluk(u, p.yogunluk, { malzeme: p.malzeme, birim: p.yogunlukBirim });
@@ -365,5 +392,5 @@ function cokGovdeKalibi({ bosluksuz = false } = {}) {
   return yz.metin();
 }
 
-module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
+module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, delikliPlaka, agirYuzKalibi, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
   TULGA_TAKOZ, TAKOZ_DILIM, TULGA_OTELEME, tulgaKalibi, analitik, KUTLE, kutleKalibi, COK_GOVDE, cokGovdeKalibi };

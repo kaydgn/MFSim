@@ -89,15 +89,20 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   satır onu 6,6 sn donduruyordu. **Ağları TEK İŞ üretir** (`veMntStpAgIs`: 3B
   bütün montajı, hesap rollü birimlerin parçalarını ister; bağlam parça başına
   bırakılır, aynı temsil bir kez üçgenlenir — tek bağlam yığını 3,2 GB'a
-  çıkarıyordu). 3B montajı kurulurken gösterir, ÇİZİM KÜMELERDE (parça başına
-  nesne kurulmaz: 23.388 çizim çağrısıydı), Durdur · Devam; eksik ağı büyük
-  hesap kartta çubukla bekler. **Takoz noktası ÜST BAĞLANTI YÜZEYİNİN MERKEZİ**
-  (kullanıcı kuralı): dosyada yazılı dairenin merkezi, ağdan değil — öneri
+  çıkarıyordu); **yüz ve parçanın sonu da dilim dilim** (`_suYuzIs` · `ekleAdim` ·
+  `bitirAdim`: tek yüz 0,8 sn tutuyordu), iş kapanışla — üreteç (`function*`)
+  DEĞİL, toplam süreyi %10 uzatıyordu. 3B montajı kurulurken gösterir, ÇİZİM
+  KÜMELERDE (parça başına nesne kurulmaz: 23.388 çizim çağrısıydı), Durdur ·
+  Devam; eksik ağı büyük hesap kartta çubukla bekler. **Takoz noktası ÜST
+  BAĞLANTI YÜZEYİNİN MERKEZİ** (kullanıcı kuralı): dosyada yazılı dairenin
+  merkezi, ağdan değil — öneri
   eksenden (`veMntStpTakozNoktasi`), 3B'de "Daireden nokta" kenarı seçer
   (`veMntStpKenarDaire`; ağ yalnız `daire` dizinini taşır); seçilen daire rol
   kaydına yolu ve merkeziyle girer. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
   (→ *STEP OKUMASI* · *AĞAÇ DAL DAL* · *HESAP BEKLER*) + `mount-3b.test.js` +
-  `mount-nokta.test.js` + `mount-kutle.test.js` (→ *GÖVDE GÖVDE*) + `step-ucgen.test.js`
+  `mount-nokta.test.js` + `mount-kutle.test.js` (→ *GÖVDE GÖVDE*) + `step-ucgen-dilim.test.js`
+  (→ *AYNI ÇIKTI* · *BIRAKIR* · *Z-SIRASI* · *AĞ İŞİ*) + `mount-cad.spec.js` → *HESAP DİLİM
+  DİLİM* + `step-ucgen.test.js`
   (→ *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ* · *TOPLAYICI*) + `mount-step-okuma.spec.js` +
   `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
