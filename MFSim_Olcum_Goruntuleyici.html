@@ -11876,6 +11876,16 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-tbl-kutle td:nth-child(5){ white-space:nowrap; }
 .ve-mw-tbl-kutle td:nth-child(5) .mf-ico{ width:12px; height:12px; vertical-align:-2px; }
 .ve-mw-stp-kg{ white-space:nowrap; }
+/* MODEL ↔ CAD (js/cp-mount-wizard.js → _mwStpModelHTML): uygula · birim ·
+   bileşen · fark · kütle — pencere ve sihirbaz aynı tablo */
+.ve-mw-tbl-model th:nth-child(1), .ve-mw-tbl-model td:nth-child(1){ width:8%; text-align:center; }
+.ve-mw-tbl-model th:nth-child(2), .ve-mw-tbl-model td:nth-child(2){ width:34%; }
+.ve-mw-tbl-model th:nth-child(3), .ve-mw-tbl-model td:nth-child(3){ width:26%; }
+.ve-mw-tbl-model th:nth-child(4), .ve-mw-tbl-model td:nth-child(4){ width:15%; text-align:right; }
+.ve-mw-tbl-model th:nth-child(5), .ve-mw-tbl-model td:nth-child(5){ width:17%; text-align:right; }
+.ve-mw-tbl-model .ve-fw-num{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ve-mw-tbl-model th:nth-child(1) .mf-ico{ width:12px; height:12px; vertical-align:-2px; }
+.ve-mw-tbl-model input[type="checkbox"]{ margin:0; vertical-align:middle; }
 /* 3B KARTININ BİRİM TABLOLARI (js/cp-mount-3b.js) — sabit düzen: ad · konum
    (· kütle). FEAD tablosunun esnek ilk hücresi sabit düzende sütunları
    bozardı; burada hücre hücre kalır, ad kısalır. Uyarılı satır (ağ kapalı

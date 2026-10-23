@@ -330,7 +330,7 @@ describe('PENCERE — kitin bölümleri, tek eylem, sihirbazla AYNI üreticiler'
     expect(d.querySelector('#ve-mw-stp-aktar')).toBeNull();        // aktarım sihirbazın işi
     W.veMntWizStpHesapla();
     d = dom();
-    expect(kat(d)).toEqual(['dosya', 'parca', 'kutle']);
+    expect(kat(d)).toEqual(['dosya', 'parca', 'kutle', 'model']);
     expect(d.querySelectorAll('input[data-mw-stp-kutle]')).toHaveLength(3);
     expect(d.querySelector('[data-mw-stp-kayit]')).toBeNull();       // kayıt bu oturumdan: durum satırı yok
   });

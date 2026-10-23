@@ -1102,7 +1102,7 @@ function veMntWizStpDaha(i){
   _mwStpTazele();
   return true;
 }
-function _mwStpImza(s){ return JSON.stringify([s.roller, s.nokta || {}, s.yogunluk || {}]); }
+function _mwStpImza(s){ return JSON.stringify([s.roller, s.nokta || {}, s.yogunluk || {}, s.secim || {}]); }
 // Parçanın ağı — 3B görüntüleyiciyle ORTAK önbellek (s.ag): hesap ve görüntü
 // aynı üçgenleri kullanır, ikisi de bir kez üçgenler. Eksik ağ ORTAK İŞTEN
 // (aşağıda) eşzamanlı üretilir; büyük eksik hesabı bekletir (_mwStpHesapBekle).
@@ -1445,9 +1445,186 @@ function veMntWizStpDenetim(s){
   return out;
 }
 
-// AKTAR: kayıt → sihirbaz durumu, örnek tohumunun yolundan. Aktarım bir
-// BAŞLANGIÇ eylemidir (örnek seçmek gibi): durumu baştan kurar. Geometriden
-// gelen alanlar "S" işareti taşır (kaydın `kaynak` dizisi, listeyle aynı sıra).
+// ── MODEL ↔ CAD (Takoz adım 7) ───────────────────────────────────────────
+// Karşılaştırmanın modeli YÜZEYİN modelidir: 3D Görüntüleyici penceresinde
+// tuval, sihirbazda sihirbazın durumu. Eşleme ve öteleme DOM'suz
+// (js/mount-step.js → veMntStpKarsilastir). Seçim oturumun (`s.secim`: düğüm →
+// true/false, yalnız kullanıcının değiştirdiği); varsayılan takoz SEÇİLİ
+// (nokta dosyada yazılı geometri), eşi olan gövde SEÇİLİ DEĞİL (hacmin
+// merkezi homojen yoğunluk tahmini; motor, şanzıman ve transferin ağırlık
+// merkezi başka yoldan gelir — kullanıcı, 2026-10-23), eşi olmayan satır
+// sihirbazda seçili (eklenir), tuvalde uygulanmaz. Sihirbaz STEP'ten
+// kurulmuşsa ya da boşsa model boş sayılır: aktarım durumu baştan kurar.
+function _mwStpBirlestir(st){
+  return !!st && (st.govdeler.length + st.takozlar.length) > 0 && st.seededFrom !== 'step';
+}
+function _mwStpModelOgeleri(yer){
+  var out = [];
+  var p3 = function(a, b, c){ var p = [_mwNum(a), _mwNum(b), _mwNum(c)]; return p.every(Number.isFinite) ? p : null; };
+  if(yer === 'sihirbaz'){
+    var st = _mwState;
+    if(!_mwStpBirlestir(st)) return out;
+    st.govdeler.forEach(function(g){ out.push({ id:g.key, tip:g.type, ad:g.ad || _mwAd(g.type), p:p3(g.cgx, g.cgy, g.cgz), m:_mwNum(g.mass) }); });
+    st.takozlar.forEach(function(t){ out.push({ id:t.key, tip:'mnt-mount', ad:t.ad || 'Takoz', p:p3(t.x, t.y, t.z), m:NaN }); });
+    return out;
+  }
+  _mwTuvalModeli().forEach(function(n){
+    var d = n.data || {}, takoz = !!_mwDef(n).isMount;
+    out.push({ id:n.id, tip:n.type, ad:n.customName || _mwAd(n.type),
+               p:takoz ? p3(d.x, d.y, d.z) : p3(d.cgx, d.cgy, d.cgz), m:takoz ? NaN : _mwNum(d.mass) });
+  });
+  return out;
+}
+// `yer`: 'tuval' · 'sihirbaz'. Döner: karşılaştırma + satır başına `uygulanir`
+// (sihirbazda her satır, tuvalde eşi olan) ve `secili`; hesap yoksa null.
+function veMntWizStpKarsilastirma(s, yer){
+  if(!s || !s.coz || !s.coz.ok || typeof veMntStpKarsilastir !== 'function') return null;
+  var K = veMntStpKarsilastir(s.coz.birimler, _mwStpModelOgeleri(yer)), sec = s.secim || {};
+  K.yer = yer;
+  K.satirlar.forEach(function(r){
+    r.uygulanir = yer === 'sihirbaz' || r.id !== null;
+    var v = sec[r.dugum];
+    r.secili = r.uygulanir && (v !== undefined ? !!v : (r.id === null || r.tip === 'mnt-mount'));
+  });
+  return K;
+}
+function veMntWizStpSec(dugum, acik){
+  var s = _mwStp;
+  if(!s || !_mwStpBirim(s, dugum)) return false;
+  if(!s.secim) s.secim = {};
+  s.secim[dugum] = !!acik;
+  _mwStpTazele();
+  return true;
+}
+// Föy — pencere ve sihirbaz AYNI üreticiden. Fark modelin sisteminde
+// (CAD − T): takoz µm, gövde 0,1 mm; kütle CAD'inki (yazılan · malzeme · dosya).
+function _mwStpModelHTML(s, yer, K){
+  K = K || veMntWizStpKarsilastirma(s, yer);
+  if(!K) return '';
+  var h = '', T = K.T, tasi = !!(T[0] || T[1] || T[2]);
+  if(tasi || K.uyusan >= VE_MNT_STP_ESLE.en)
+    h += '<div class="ve-fw-seeded" data-mw-stp-oteleme="' + (tasi ? 'var' : 'yok') + '">' + _mwIkon(tasi ? 'move' : 'check') + ' '
+      + (tasi ? 'Öteleme <b>(' + _mwStpKonum(T, 3) + ') mm</b>' : 'Öteleme yok')
+      + ' <em>' + veSayi(K.uyusan, 0) + ' / ' + veSayi(K.takoz, 0) + ' takoz</em></div>';
+  var t = '<div class="ve-fw-tblwrap"><table class="ve-fw-tbl ve-fw-tbl-fixed ve-mw-tbl-model" data-mw-stp-model="' + yer + '"><thead><tr>'
+    + '<th title="Uygula">' + _mwIkon('check') + '</th><th>Birim</th><th>Bileşen</th><th>Fark<em>mm</em></th><th>Kütle<em>kg</em></th>'
+    + '</tr></thead><tbody>';
+  K.satirlar.forEach(function(r){
+    var takoz = r.tip === 'mnt-mount', b = _mwStpBirim(s, r.dugum);
+    var Km = (!takoz && b) ? _mwStpKutleK(s, b) : null, m = Km && Km.m > 0 ? Km.m : NaN;
+    var cad = r.cad.map(function(v, i){ return v - T[i]; });
+    var bilesen = r.id !== null ? r.modelAd : (yer === 'sihirbaz' ? 'Yeni' : '—');
+    t += '<tr data-mw-stp-satir="' + r.dugum + '"' + (r.uygulanir ? '' : ' class="ve-fw-stp-off"') + '>'
+      + '<td><input type="checkbox" data-mw-stp-uygula="' + r.dugum + '"' + (r.secili ? ' checked' : '')
+      + (r.uygulanir ? '' : ' disabled title="Modelde karşılığı yok."')
+      + ' aria-label="Uygula — ' + _mwEsc(r.ad) + '" onchange="veMntWizStpSec(' + r.dugum + ', this.checked)"></td>'
+      + '<td title="' + _mwEsc(r.ad + ' · ' + _mwAd(r.tip)) + '">' + _mwEsc(r.ad) + '</td>'
+      + '<td title="' + _mwEsc(bilesen) + '">' + _mwEsc(bilesen) + '</td>'
+      + '<td class="ve-fw-num" title="' + _mwEsc('CAD (' + _mwStpKonum(cad, 3) + ')' + (r.model ? ' · Model (' + _mwStpKonum(r.model, 3) + ')' : '')) + '">'
+      + (r.fark === null ? '—' : _mwSayi(r.fark, takoz ? 3 : 1)) + '</td>'
+      + '<td class="ve-fw-num"' + (Number.isFinite(r.mModel) ? ' title="Model ' + _mwEsc(_mwSayi(r.mModel, 1)) + ' kg"' : '') + '>'
+      + (Number.isFinite(m) ? _mwSayi(m, m < 10 ? 2 : 1) : '—') + '</td></tr>';
+  });
+  return h + t + '</tbody></table></div>';
+}
+function _mwStpSeciliSay(K){ return K ? K.satirlar.filter(function(r){ return r.secili; }).length : 0; }
+// MODELE UYGULA (3D Görüntüleyici penceresi): seçili satırlar tuvaldeki
+// eşlerine, modelin sisteminde (CAD − T) — TEK geri-al adımı. Değerler
+// aktarımın kaydından (veMntStpKayit): takozda nokta; gövdede ağırlık merkezi,
+// kütle ve atalet yalnız kaynağı varsa. Sonuç föyde görünür (fark sıfır):
+// bildirim yok. Döner: değişen bileşen sayısı.
+function veMntWizStpModeleUygula(){
+  var s = veMntWizStpBurada(), K = veMntWizStpKarsilastirma(s, 'tuval');
+  if(!K) return 0;
+  var kayit = veMntStpKayit(s.coz, s.kutle, s.yogunluk, K.T), veri = {}, tuval = {}, n = 0;
+  kayit.liste.forEach(function(k){ veri[k.dugum] = k.data; });
+  _mwTuvalModeli().forEach(function(x){ tuval[x.id] = x; });
+  K.satirlar.forEach(function(r){
+    var node = r.secili && tuval[r.id], v = veri[r.dugum];
+    if(!node || !v) return;
+    // Değeri AYNI olan alan yazılmaz: örneklerin alanları metin ("-196.034"),
+    // kaydınki sayı — aynı sayıyı yeniden yazmak bileşeni değişmiş sayardı
+    var d = node.data || (node.data = {}), degisti = false;
+    Object.keys(v).forEach(function(a){
+      var ayni = typeof v[a] === 'number' ? _mwNum(d[a]) === v[a] : d[a] === v[a];
+      if(!ayni){ d[a] = v[a]; degisti = true; }
+    });
+    if(degisti) n++;
+  });
+  if(!n) return 0;
+  if(typeof saveState === 'function') saveState();
+  _mwStpTazele();
+  return n;
+}
+// DOSYANIN SİSTEMİNE TAŞI: modelin bütün konumları (takoz noktası, ağırlık
+// merkezi) T kadar — model dosyanın sistemine geçer, göreli konumlar aynı
+// kalır (çözüm değişmez). TEK geri-al adımı. Döner: taşınan bileşen sayısı.
+function veMntWizStpSistemeTasi(){
+  var s = veMntWizStpBurada(), K = veMntWizStpKarsilastirma(s, 'tuval');
+  if(!K || !(K.T[0] || K.T[1] || K.T[2])) return 0;
+  var n = 0;
+  _mwTuvalModeli().forEach(function(node){
+    var d = node.data || {}, al = _mwDef(node).isMount ? ['x', 'y', 'z'] : ['cgx', 'cgy', 'cgz'];
+    if(!al.every(function(a){ return _mwVar(d[a]); })) return;
+    al.forEach(function(a, i){ d[a] = Math.round((_mwNum(d[a]) + K.T[i]) * 1000) / 1000 + 0; });
+    n++;
+  });
+  if(!n) return 0;
+  if(typeof saveState === 'function') saveState();
+  _mwStpTazele();
+  return n;
+}
+// Modelin noktaları DOSYANIN sisteminde (3B): eşi olsun olmasın her bileşen
+function veMntWizStpModelNoktalari(s, yer){
+  var K = veMntWizStpKarsilastirma(s, yer);
+  if(!K) return [];
+  return _mwStpModelOgeleri(yer).filter(function(o){ return !!o.p; }).map(function(o){
+    return { tip:o.tip, ad:o.ad, p:[o.p[0] + K.T[0], o.p[1] + K.T[1], o.p[2] + K.T[2]] };
+  });
+}
+
+// AKTARIMIN DURUMU — aktarım ve masanın önizlemesi AYNI işlevden. Sihirbaz
+// tuvalden ya da örnekten kurulmuşsa seçili satırlar MEVCUT durumun eşlerine
+// yazılır (rijitlik, ad, tork yerinde kalır), eşi olmayan seçili birim
+// eklenir; boşsa ya da STEP'ten kurulmuşsa durum baştan kurulur (örnek
+// tohumunun yolu). Geometriden gelen alanlar "S" işareti taşır.
+// Döner: { st (yeni durum; mevcut değişmez), kayit, birlestir }
+function _mwStpAktarDurumu(s){
+  var K = veMntWizStpKarsilastirma(s, 'sihirbaz');
+  var kayit = veMntStpKayit(s.coz, s.kutle, s.yogunluk, K ? K.T : null), sec = {}, liste = [], kaynak = [];
+  (K ? K.satirlar : []).forEach(function(r){ if(r.secili) sec[r.dugum] = r; });
+  kayit.liste.forEach(function(n, k){ if(sec[n.dugum]){ liste.push(n); kaynak.push(kayit.kaynak[k]); } });
+  var birlestir = _mwStpBirlestir(_mwState), st, say = { govde:0, takoz:0 };
+  if(birlestir){
+    st = _mwKopya(_mwState);
+    liste.forEach(function(n, k){
+      var r = sec[n.dugum], takoz = n.type === 'mnt-mount', dizi = takoz ? st.takozlar : st.govdeler;
+      var hedef = r.id !== null ? dizi.filter(function(x){ return x.key === r.id; })[0] : null;
+      if(!hedef){
+        hedef = takoz ? _mwTakozYeni(n.customName) : _mwGovdeYeni(n.type);
+        hedef.ad = n.customName;
+        dizi.push(hedef);
+      }
+      Object.keys(n.data).forEach(function(a){ hedef[a] = n.data[a]; });
+      var iz = Object.assign({}, hedef.kaynak || {}, kaynak[k]);
+      if(n.data.mass !== undefined && !kaynak[k].mass) delete iz.mass;   // yazılan kütle "S" değil
+      hedef.kaynak = iz;
+      say[takoz ? 'takoz' : 'govde']++;
+    });
+  } else {
+    st = veMntWizFromNodes(liste);
+    var gi = 0, ti = 0;
+    liste.forEach(function(n, k){
+      var r = (n.type === 'mnt-mount') ? st.takozlar[ti++] : st.govdeler[gi++];
+      if(r) r.kaynak = _mwKopya(kaynak[k]);
+    });
+    st.seededFrom = 'step';
+    say = { govde:st.govdeler.length, takoz:st.takozlar.length };
+  }
+  st.stepKaynak = { dosya:s.dosya, govde:say.govde, takoz:say.takoz };
+  return { st:st, kayit:{ liste:liste, kaynak:kaynak }, birlestir:birlestir };
+}
+// AKTAR: seçili satırlar sihirbazın durumuna (_mwStpAktarDurumu)
 function veMntWizStpAktar(){
   var s = _mwStp;
   var d = veMntWizStpDenetim(s);
@@ -1455,21 +1632,17 @@ function veMntWizStpAktar(){
     if(typeof showToast === 'function') showToast(d.engel[0], 'warning');
     return null;
   }
-  var kayit = veMntStpKayit(s.coz, s.kutle, s.yogunluk);
-  var st = veMntWizFromNodes(kayit.liste);
-  var gi = 0, ti = 0;
-  kayit.liste.forEach(function(n, k){
-    var r = (n.type === 'mnt-mount') ? st.takozlar[ti++] : st.govdeler[gi++];
-    if(r) r.kaynak = _mwKopya(kayit.kaynak[k]);
-  });
-  st.seededFrom = 'step';
-  st.stepKaynak = { dosya:s.dosya, govde:st.govdeler.length, takoz:st.takozlar.length };
-  _mwState = st;
-  _mwSec = { govde:null, takoz:null }; _mwGor = {};
+  var A = _mwStpAktarDurumu(s);
+  if(!A.kayit.liste.length){
+    if(typeof showToast === 'function') showToast('Seçili satır yok.', 'warning');
+    return null;
+  }
+  _mwState = A.st;
+  if(!A.birlestir){ _mwSec = { govde:null, takoz:null }; _mwGor = {}; }
   _mwStep = 0;
   s.aktarim = _mwStpImza(s);
   veMntWizRender();
-  return kayit;
+  return A.kayit;
 }
 // Masanın STEP önizlemesi: hesaplanmış ama (bu rollerle) aktarılmamış birimler.
 function _mwStpOnizleme(){
@@ -1607,13 +1780,14 @@ function _mwStpKartHTML(){
   h += _mwStpKunyeHTML(s) + _mwStpAgacHTML(s) + _mwStpHesapHTML(s);
   var coz = s.coz, d = veMntWizStpDenetim(s);
   if(coz && coz.ok){
-    // ── KÜTLE + AKTAR ─────────────────────────────────────────────────────
-    h += _mwStpKutleHTML(s);
+    // ── KÜTLE + MODEL ↔ CAD + AKTAR ───────────────────────────────────────
+    var K = veMntWizStpKarsilastirma(s, 'sihirbaz'), nSec = _mwStpSeciliSay(K);
+    h += _mwStpKutleHTML(s) + _mwStpModelHTML(s, 'sihirbaz', K);
     var aktarildi = !!(st.stepKaynak && s.aktarim);
     var degisti = aktarildi && s.aktarim !== _mwStpImza(s);
     h += '<div class="ve-fw-rowbtns">'
       + '<button type="button" id="ve-mw-stp-aktar" class="ve-fw-btn"'
-      + (d.engel.length ? ' disabled' : '') + ' onclick="veMntWizStpAktar()">'
+      + (d.engel.length ? ' disabled' : (nSec ? '' : ' disabled title="Seçili satır yok."')) + ' onclick="veMntWizStpAktar()">'
       + (aktarildi ? 'Yeniden aktar' : 'Sihirbaza aktar') + '</button></div>';
     if(aktarildi && !degisti)
       h += '<div class="ve-fw-seeded">' + _mwIkon('check') + ' <b>' + st.stepKaynak.govde + ' gövde · ' + st.stepKaynak.takoz
@@ -1936,10 +2110,10 @@ function _mwGorDurum(){ var k = _mwGorAnahtar(); return _mwGor[k] || (_mwGor[k] 
 function _mwFigurVeri(c){
   var v = c.veri || { comps:[], mounts:[], cg:null };
   var st = _mwState || veMntWizDefault(), k = VE_MW_STEPS[_mwStep].key;
-  // STEP ÖNİZLEMESİ (1. adım): masa aktarımın YAZACAĞI kaydı çizer — sayılar
-  // kaydın kendisinden (veMntStpKayit), ikinci bir dönüşümden değil.
+  // STEP ÖNİZLEMESİ (1. adım): masa aktarımın YAZACAĞI durumu çizer — aktarımla
+  // aynı işlevden (_mwStpAktarDurumu), ikinci bir dönüşümden değil.
   if(k === 'kaynak' && _mwStpOnizleme() && typeof _mnt2DGather === 'function')
-    return { veri:_mnt2DGather(veMntStpKayit(_mwStp.coz, _mwStp.kutle, _mwStp.yogunluk).liste), secili:null };
+    return { veri:_mnt2DGather(veMntWizNodes(_mwStpAktarDurumu(_mwStp).st)), secili:null };
   // Seçim: satır anahtarı → 2B veri dizisindeki konum (yalnız konumu tam olanlar çizilir).
   var secili = null;
   if(k === 'govde' && _mwSec.govde){
@@ -2224,6 +2398,10 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizStpKonumUyari: veMntWizStpKonumUyari, _mwStpKonum: _mwStpKonum, _mwStpImza: _mwStpImza,
     veMntWizStpYogunluk: veMntWizStpYogunluk, _mwStpKutleK: _mwStpKutleK, _mwStpKaynak: _mwStpKaynak,
     _mwStpYogDurum: _mwStpYogDurum, _mwStpKutleHucre: _mwStpKutleHucre, _mwKaynakIsaret: _mwKaynakIsaret,
+    veMntWizStpKarsilastirma: veMntWizStpKarsilastirma, veMntWizStpSec: veMntWizStpSec, _mwStpModelHTML: _mwStpModelHTML,
+    _mwStpSeciliSay: _mwStpSeciliSay, veMntWizStpModeleUygula: veMntWizStpModeleUygula,
+    veMntWizStpSistemeTasi: veMntWizStpSistemeTasi, veMntWizStpModelNoktalari: veMntWizStpModelNoktalari,
+    _mwStpAktarDurumu: _mwStpAktarDurumu, _mwStpBirlestir: _mwStpBirlestir,
     _mwTaslakSifirla: function(){ _mwTaslaklar = {}; },
     _mwStpSifirla: function(){ _mwStp = null; }
   };

@@ -1074,18 +1074,19 @@ function veMntStpKutle(b, kg, yog){
 // kutle: { dugum: kg } (kullanıcının yazdığı) · yogunluk: { dugum: kaynak }
 // (veMntStpKutle). Kayıt µm'ye, gramına ve 0,0001 kg·m²'ye yuvarlanır —
 // dönüşüm gürültüsü alanlara yazılmasın (FEAD'in kuralı).
-// Döner: { liste:[{type, customName, data}], kaynak:[{ cg, I, mass, konum, not }] } —
+// Döner: { liste:[{type, customName, data, dugum}], kaynak:[{ cg, I, mass, konum, not }] } —
 // kaynak dizisi listeyle aynı sırada (sihirbaz "S" işaretini buradan alır;
-// `mass` yalnız kütle geometriden türediyse — malzeme ya da dosya).
+// `mass` yalnız kütle geometriden türediyse — malzeme ya da dosya). `T`:
+// öteleme (dosya − model, veMntStpKarsilastir) — konumlar modelin sistemine.
 function _mstYuv(x, k){ return Math.round(x * k) / k + 0; }
-function veMntStpKayit(coz, kutle, yogunluk){
-  kutle = kutle || {}; yogunluk = yogunluk || {};
+function veMntStpKayit(coz, kutle, yogunluk, T){
+  kutle = kutle || {}; yogunluk = yogunluk || {}; T = T || [0, 0, 0];
   var liste = [], kaynak = [];
   ((coz && coz.birimler) || []).forEach(function(b){
     if(!b.konum) return;
-    var p = b.konum.map(function(v){ return _mstYuv(v, 1000); });
+    var p = b.konum.map(function(v, i){ return _mstYuv(v - T[i], 1000); });
     if(b.tip === 'mnt-mount'){
-      liste.push({ type: 'mnt-mount', customName: b.ad, data: { x: p[0], y: p[1], z: p[2] } });
+      liste.push({ type: 'mnt-mount', customName: b.ad, data: { x: p[0], y: p[1], z: p[2] }, dugum: b.dugum });
       kaynak.push({ konum: true });
       return;
     }
@@ -1102,10 +1103,73 @@ function veMntStpKayit(coz, kutle, yogunluk){
         iz.I = true;
       }
     }
-    liste.push({ type: b.tip, customName: b.ad, data: d });
+    liste.push({ type: b.tip, customName: b.ad, data: d, dugum: b.dugum });
     kaynak.push(iz);
   });
   return { liste: liste, kaynak: kaynak };
+}
+
+// ── KARŞILAŞTIRMA — CAD birimleri ↔ modelin bileşenleri (Takoz adım 7) ────
+// `model`: [{ id, tip, ad, p: [x, y, z] | null, m: kg }] — tuvalin ya da
+// sihirbazın satırları (çağıran kurar). ÖTELEME T = dosya − model: modelin
+// takozları dosyanınkilerden aynı ötelemeyle ayrılabilir — gerçek Tulga'da
+// sunu başka bir referansla ölçülmüş, beş takozun dördü (0; 39,976; 28,596)
+// ile 0,001 mm'de oturuyor. Aday her (CAD takozu, model takozu) farkı ve sıfır;
+// en çok takozu `pay` içinde oturtan aday, eşitlikte sıfır; T uyuşan çiftlerin
+// ortancası. `en` takozdan azı uyuşursa T sıfır. Eşleme tip içinde, T altında
+// en yakın çift önce, iki taraf da bir kez.
+// Döner: { T, uyusan, takoz, satirlar: [{ dugum, tip, ad, cad, id, modelAd, model,
+// fark, mModel }] } — satır birim sırasında; eşi olmayanın `id`si null.
+var VE_MNT_STP_ESLE = { pay: 0.5, en: 2 };
+function veMntStpKarsilastir(birimler, model){
+  birimler = (birimler || []).filter(function(b){ return b && b.konum; });
+  model = (model || []).filter(function(o){ return o && o.id != null; });
+  var fark = function(a, b){ return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; };
+  var P = birimler.filter(function(b){ return b.tip === 'mnt-mount'; }).map(function(b){ return b.konum; });
+  var Q = model.filter(function(o){ return o.tip === 'mnt-mount' && o.p; }).map(function(o){ return o.p; });
+  var oturan = function(T){
+    var ciftler = [];
+    P.forEach(function(p){
+      var en = null, d = VE_MNT_STP_ESLE.pay;
+      Q.forEach(function(q){ var u = _mstUz(fark(p, T), q); if(u <= d){ d = u; en = q; } });
+      if(en) ciftler.push(fark(p, en));
+    });
+    return ciftler;
+  };
+  var T = [0, 0, 0], C = oturan(T);
+  P.forEach(function(p){
+    Q.forEach(function(q){
+      var t = fark(p, q), c = oturan(t);
+      if(c.length > C.length){ T = t; C = c; }
+    });
+  });
+  if(C.length < VE_MNT_STP_ESLE.en) C = oturan(T = [0, 0, 0]);
+  else if(T[0] || T[1] || T[2]){
+    T = [0, 1, 2].map(function(k){                     // µm'ye: konumlar da µm'de yazılıyor
+      var a = C.map(function(f){ return f[k]; }).sort(function(x, y){ return x - y; }), m = a.length >> 1;
+      return _mstYuv(a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2, 1000);
+    });
+  }
+  var es = {}, kul = {};
+  birimler.map(function(b){ return b.tip; }).filter(function(t, i, a){ return a.indexOf(t) === i; }).forEach(function(tip){
+    var ciftler = [];
+    birimler.forEach(function(b){
+      if(b.tip !== tip) return;
+      model.forEach(function(o){
+        if(o.tip === tip) ciftler.push({ b: b, o: o, d: o.p ? _mstUz(fark(b.konum, T), o.p) : Infinity });
+      });
+    });
+    ciftler.sort(function(x, y){ return x.d - y.d; });
+    ciftler.forEach(function(x){
+      if(es[x.b.dugum] || kul[x.o.id]) return;
+      es[x.b.dugum] = x; kul[x.o.id] = 1;
+    });
+  });
+  return { T: T, uyusan: C.length, takoz: P.length, satirlar: birimler.map(function(b){
+    var x = es[b.dugum];
+    return { dugum: b.dugum, tip: b.tip, ad: b.ad, cad: b.konum.slice(), id: x ? x.o.id : null, modelAd: x ? x.o.ad || '' : '',
+             model: x && x.o.p ? x.o.p.slice() : null, fark: x && isFinite(x.d) ? x.d : null, mModel: x ? x.o.m : NaN };
+  }) };
 }
 
 if(typeof module !== 'undefined' && module.exports){
@@ -1116,6 +1180,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntStpBirimler: veMntStpBirimler, veMntStpAgOzellik: veMntStpAgOzellik,
     veMntStpParcaAgi: veMntStpParcaAgi, veMntStpAgIs: veMntStpAgIs, veMntStpAgUret: veMntStpAgUret,
     veMntStpCoz: veMntStpCoz, veMntStpKayit: veMntStpKayit,
+    VE_MNT_STP_ESLE: VE_MNT_STP_ESLE, veMntStpKarsilastir: veMntStpKarsilastir,
     veMntStpRolVer: veMntStpRolVer, VE_MNT_STP_KAYIT_SURUM: VE_MNT_STP_KAYIT_SURUM,
     veMntStpYol: veMntStpYol, veMntStpImza: veMntStpImza,
     veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula,

@@ -25,8 +25,11 @@ const DIZIN = fs.mkdtempSync(path.join(os.tmpdir(), 'mfsim-cad-'));
 const GUC = path.join(DIZIN, 'guc.stp');
 const BUYUK = path.join(DIZIN, 'deneme-30.stp');
 const PROJE = path.join(DIZIN, 'proje.json');
+// Gerçek Tulga dosyasının ilişkisi: dosya = sunu + (0; 39,976; 28,596), ön takoz 2 mm aşağıda
+const TULGA = path.join(DIZIN, 'tulga-oteleme.stp');
 test.beforeAll(() => {
   fs.writeFileSync(GUC, STEP.gucGrubu());
+  fs.writeFileSync(TULGA, STEP.tulgaKalibi({ oteleme: STEP.TULGA_OTELEME, onFark: [0, 0, -2] }));
   execFileSync(process.execPath, [path.join(__dirname, '../../tools/step-deneme.js'), '--mb', '30', '--cikti', BUYUK]);
 });
 test.afterAll(() => { fs.rmSync(DIZIN, { recursive: true, force: true }); });
@@ -183,5 +186,104 @@ test('KAYIT: rolleri kaydet → sayfa yeniden → projeyi aç → aynı dosya �
       durum: document.querySelector('#ve-properties [data-mw-stp-kayit]').textContent.trim() };
   });
   expect(sonra).toEqual({ roller: once, kg: 412, durum: 'Kayıtlı roller: 7 / 7' });
+  expect(hatalar).toEqual([]);
+});
+
+// ── MODEL ↔ CAD (Takoz adım 7, 2026-10-23) ──────────────────────────────────
+// Node'da HİÇ koşmayan halkalar: gerçek tıklamayla uygula ve taşı, gerçek
+// Ctrl+Z'nin TEK adımda geri alması, föyün pencerede sığması (yerleşim
+// kapısı), 3B'de modelin noktalarının çizilmesi (WebGL). Birim tarafı:
+// mount-karsilastir.test.js.
+test('MODEL: Tulga tuvalde, dosya ötelenmiş → öteleme ve föy; Modele uygula TEK adım (Ctrl+Z); dosyanın sistemine taşı; 3B\'de modelin noktaları', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
+  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"][data-v="tulga"]');
+  await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
+  await pencereAc(page);
+  await pencereden(page, TULGA);
+  await ucHazir(page);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => {
+    const s = veMntWizStp(), T = ['Ön takoz', 'Sağ ön takoz', 'Sol ön takoz', 'Sağ arka takoz', 'Sol arka takoz'];
+    const G = { 'Motor bloğu': 'mnt-motor', 'Şanzıman gövdesi': 'mnt-gearbox', 'Transfer gövdesi': 'mnt-transfer' };
+    s.sonuc.agac.forEach((d) => { if (T.includes(d.ad)) veMntWizStpRol(d.i, 'mnt-mount'); if (G[d.ad]) veMntWizStpRol(d.i, G[d.ad]); });
+  });
+  await page.click('#ve-properties #ve-mnt-cad-hesapla');
+  await page.waitForSelector('#ve-properties .ve-fp-kat[data-k="model"] table.ve-mw-tbl-model');
+  const satirlar = () => page.evaluate(() => [...document.querySelectorAll('#ve-properties .ve-fp-kat[data-k="model"] tr[data-mw-stp-satir]')]
+    .map((r) => ({ ad: r.cells[1].textContent, fark: r.cells[3].textContent, secili: r.querySelector('input').checked })));
+  const m = await page.evaluate(() => {
+    const k = document.querySelector('#ve-properties .ve-fp-kat[data-k="model"]');
+    return { em: k.querySelector('.ve-fp-sect em').textContent,
+      oteleme: k.querySelector('[data-mw-stp-oteleme]').textContent.replace(/\s+/g, ' ').trim() };
+  });
+  expect(m).toEqual({ em: '8 / 8 birim', oteleme: 'Öteleme (0,000; 39,976; 28,596) mm 4 / 5 takoz' });
+  let s = await satirlar();
+  expect(s.filter((r) => r.secili).map((r) => r.ad)).toEqual(['Ön takoz', 'Sağ ön takoz', 'Sol ön takoz', 'Sağ arka takoz', 'Sol arka takoz']);
+  expect(s.find((r) => r.ad === 'Ön takoz').fark).toBe('2,000');
+  // Föy pencereye sığıyor: kesik yazı, kırık sözcük, yatay kaydırma yok
+  await page.evaluate(Y.KAYNAK);
+  const yer = await page.evaluate(() => ({ yer: window.__yerlesim('#ve-properties'),
+    kaydirma: document.querySelector('#ve-properties .ve-properties-content').scrollWidth - document.querySelector('#ve-properties .ve-properties-content').clientWidth }));
+  expect(Y.yerlesimOzet(yer.yer, '3D Görüntüleyici · model')).toEqual([]);
+  expect(yer.kaydirma).toBe(0);
+  // Gerçek tıklama: ön takoz 2 mm iner, fark sıfır
+  const z = () => page.evaluate(() => nodes.find((n) => n.customName === 'Ön Takoz').data.z);
+  const z0 = await z();
+  await page.click('#ve-properties #ve-mnt-cad-uygula');
+  expect(+(await z())).toBe(177.682);
+  s = await satirlar();
+  expect(s.find((r) => r.ad === 'Ön takoz').fark).toBe('0,000');
+  // TEK adım: Ctrl+Z ön takozu geri getirir, föy yeniden 2 mm der
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(400);
+  expect(await z()).toBe(z0);
+  // Dosyanın sistemine taşı: bütün model öteleme kadar, öteleme kalkar
+  await page.click('#ve-properties #ve-mnt-cad-tasi');
+  expect(+(await z())).toBeCloseTo(179.682 + 28.596, 6);
+  expect(await page.evaluate(() => [!!document.querySelector('#ve-properties #ve-mnt-cad-tasi'),
+    document.querySelector('#ve-properties [data-mw-stp-oteleme]').textContent.replace(/\s+/g, ' ').trim()]))
+    .toEqual([false, 'Öteleme yok 4 / 5 takoz']);
+  // 3B: modelin 13 noktası (5 takoz · 3 gövde · 5 braket) tel kafes
+  await page.click('#ve-properties #ve-mnt-cad-3b');
+  await ucHazir(page);
+  expect(await page.evaluate(() => [veMntWiz3bDurum().nokta, veMntWiz3bDurum().model])).toEqual([8, 13]);
+  expect(hatalar).toEqual([]);
+});
+
+test('MODEL · SİHİRBAZ: tuvaldeki Tulga\'dan açılan sihirbazda aynı föy; Sihirbaza aktar birleştirir (rijitlik yerinde)', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
+  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"][data-v="tulga"]');
+  await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
+  await page.evaluate(() => veMntWizAc());
+  await page.setInputFiles('#ve-mw-body .ve-mw-stp-file', TULGA);
+  await ucHazir(page);
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => {
+    const s = veMntWizStp(), T = ['Ön takoz', 'Sağ ön takoz', 'Sol ön takoz', 'Sağ arka takoz', 'Sol arka takoz'];
+    s.sonuc.agac.forEach((d) => { if (T.includes(d.ad)) veMntWizStpRol(d.i, 'mnt-mount'); });
+  });
+  await page.click('#ve-mw-stp-hesapla');
+  await page.waitForSelector('#ve-mw-body table.ve-mw-tbl-model[data-mw-stp-model="sihirbaz"]');
+  const f = await page.evaluate(() => {
+    const t = document.querySelector('#ve-mw-body table.ve-mw-tbl-model');
+    return { satir: t.querySelectorAll('tr[data-mw-stp-satir]').length, secili: t.querySelectorAll('input:checked').length,
+      once: veMntWizState().takozlar.find((x) => x.ad === 'Ön Takoz') };
+  });
+  expect([f.satir, f.secili]).toEqual([5, 5]);
+  await page.evaluate(Y.KAYNAK);
+  expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-mw-body')), 'Sihirbaz · model')).toEqual([]);
+  await page.click('#ve-mw-stp-aktar');
+  const st = await page.evaluate(() => {
+    const s = veMntWizState(), on = s.takozlar.find((x) => x.ad === 'Ön Takoz');
+    return { seed: s.seededFrom, govde: s.govdeler.length, takoz: s.takozlar.length, z: on.z, kxs: on.kxs, dugum: on._dugum };
+  });
+  expect(st).toEqual({ seed: 'tuval', govde: 8, takoz: 5, z: 177.682, kxs: f.once.kxs, dugum: f.once._dugum });
   expect(hatalar).toEqual([]);
 });

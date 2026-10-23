@@ -136,9 +136,18 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `data.cad`ına örnek yoluyla (`veMntStpRolKaydi`) yazılır, aynı dosya okununca
   yoldan geri gelir; başka dosyanın kaydı rol verilene dek korunur. Rol değişimi
   geri-al adımı DEĞİL: geri yüklenen veri oturumdan yeniden yazılır
-  (`restoreState` → `veMntWizStpKayitTazele`). Tip tek kopya. Kapı:
+  (`restoreState` → `veMntWizStpKayitTazele`). Tip tek kopya. **MODEL ↔ CAD**
+  (adım 7, `veMntStpKarsilastir`): birimler modelin bileşenleriyle eşlenir,
+  ÖTELEME (dosya − model) takozlardan bulunur (gerçek Tulga: sunu başka
+  referansla ölçülmüş). Föy pencere ve sihirbazda tek üreticiden
+  (`_mwStpModelHTML`); takoz varsayılan seçili, gövde DEĞİL (motor, şanzıman,
+  transferin ağırlık merkezi başka yoldan gelir — kullanıcı). "Modele uygula"
+  ve "Dosyanın sistemine taşı" TEK geri-al adımı; değeri aynı alan yazılmaz.
+  Sihirbazın aktarımı tuvalden kurulan durumu BİRLEŞTİRİR (rijitlik, braket,
+  düğüm bağı yerinde), STEP'ten kurulanı baştan kurar. Kapı:
   `mount-cad.test.js` (→ *KAYIT* · *OTURUM ↔ KAYIT* · *PENCERE* · *GERİ-AL*) +
-  `mount-3b.test.js` → *ALT DİZİ* + `mount-cad.spec.js`.
+  `mount-karsilastir.test.js` (→ *ÖTELEME* · *PENCERE* · *SİHİRBAZ* · *ADAMS
+  ÖLÇÜTÜ*) + `mount-3b.test.js` → *ALT DİZİ* + `mount-cad.spec.js` (→ *MODEL*).
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları

@@ -81,8 +81,9 @@ var VE_MW_3B_CIZGI_A = [82, 15];
 // Daireden nokta: farenin kenara en büyük uzaklığı (px), bakılan en çok parça,
 // kenarın tıklanan yüzün arkasında sayılmadığı derinlik payı (mm)
 var VE_MW_3B_DAIRE = { px: 10, aday: 40, derinlik: 1 };
-// Hesap noktalarının ekrandaki yarıçapı (px): takoz · gövde
-var VE_MW_3B_ISARET = { takoz: 6, govde: 8 };
+// Hesap noktalarının ekrandaki yarıçapı (px): takoz · gövde; modelin noktası
+// (tel kafes) bunun VE_MW_3B_MODEL katı — üst üste binen CAD noktası içinde görünür
+var VE_MW_3B_ISARET = { takoz: 6, govde: 8 }, VE_MW_3B_MODEL = 1.6;
 
 // ── 1 · SAF YARDIMCILAR (testli) ──────────────────────────────────────────
 // Parçanın birimi: rollü ata (parçanın kendisi dâhil) — yoksa -1.
@@ -759,6 +760,21 @@ function _mw3bSonucKur(){
       G.userData.nokta++;
       if(takoz && b.nokta){ G.add(_mw3bHalka(b.nokta, takozRenk)); G.userData.halka++; }
     });
+    // MODELİN NOKTALARI (Takoz adım 7): yüzeyin modeli — pencerede tuval,
+    // sihirbazda sihirbazın durumu — dosyanın sisteminde (T ile), TEL kafes:
+    // CAD noktasıyla üst üste binince ikisi de seçilir
+    var yer = V.yer === 'sihirbaz' ? 'sihirbaz' : 'tuval', mr = _mw3bRenk('--accent-primary', '#a8502b');
+    G.userData.model = 0;
+    (typeof veMntWizStpModelNoktalari === 'function' ? veMntWizStpModelNoktalari(V.s, yer) : []).forEach(function(o){
+      var takoz = o.tip === 'mnt-mount';
+      var m = new THREE.Mesh(takoz ? new THREE.SphereGeometry(1, 12, 8) : new THREE.OctahedronGeometry(1),
+        new THREE.MeshBasicMaterial({ color: mr, wireframe: true, depthTest: false, transparent: true, opacity: 0.95 }));
+      m.position.set(o.p[0], o.p[1], o.p[2]);
+      m.userData.px = (takoz ? VE_MW_3B_ISARET.takoz : VE_MW_3B_ISARET.govde) * VE_MW_3B_MODEL;
+      m.renderOrder = 12;
+      G.add(m);
+      G.userData.model++;
+    });
   } else Object.keys(V.s.nokta || {}).forEach(function(d){
     // Hesaptan önce seçilen daireler (yönü bilinenler)
     var n = V.s.nokta[d];
@@ -1281,6 +1297,7 @@ function veMntWiz3bDurum(){
     kume: V.kume.length, cizgiKume: V.ckume.length, cagri: V.renderer && V.renderer.info ? V.renderer.info.render.calls : 0,
     etiket: document.querySelectorAll('#ve-mw-3b-etiket [data-ve-3b-etiket]').length,
     nokta: V.sonucGrubu ? V.sonucGrubu.userData.nokta : 0, halka: V.sonucGrubu ? V.sonucGrubu.userData.halka : 0,
+    model: V.sonucGrubu ? V.sonucGrubu.userData.model || 0 : 0,
     secili: V.secili, fare: V.fare, kip: V.nokta, aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire.r } : null, adayHalka: !!V.halka };
 }
 
