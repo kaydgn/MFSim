@@ -298,12 +298,17 @@ describe('KAYIT — seçilen daire rolle birlikte projeye', () => {
     expect(JSON.parse(JSON.stringify(k))).toEqual(k);
   });
 
-  test('kayıtta SONRAKİ satır takozun parçasına rol verirse takoz birimi düşer, seçimi de gider', () => {
+  test('kayıtta SONRAKİ satır takozun parçasına takoz rolü verirse takoz birimi düşer, seçimi de gider; başka rol iç içe kalır', () => {
     const k = STP.veMntStpRolKaydi(son, r, {}, {}, { [dug]: sec });
-    k.roller.push({ yol: ['TK-SOL-ON_ASM.1', 'TK-SOL-ON-FLANS.1'], rol: 'mnt-bracket', ad: 'flanş' });
+    const k2 = JSON.parse(JSON.stringify(k));
+    k.roller.push({ yol: ['TK-SOL-ON_ASM.1', 'TK-SOL-ON-FLANS.1'], rol: 'mnt-mount', ad: 'flanş' });
     const u = STP.veMntStpRolKaydiUygula(son, k);
     expect(u.roller[dug]).toBe(null);
     expect(u.nokta).toEqual({});
+    k2.roller.push({ yol: ['TK-SOL-ON_ASM.1', 'TK-SOL-ON-FLANS.1'], rol: 'mnt-bracket', ad: 'flanş' });
+    const u2 = STP.veMntStpRolKaydiUygula(son, k2);
+    expect(u2.roller[dug]).toBe('mnt-mount');
+    expect(Object.keys(u2.nokta)).toEqual([String(dug)]);
   });
 
   test('aynı dosyada geri gelir; rolü düşen düğümün seçimi gider; bozuk satırın seçimi okunmaz', () => {

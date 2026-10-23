@@ -306,6 +306,115 @@ describe('PARÇA PARÇA — birim parçaların toplamı; açık parça ayrı', (
 });
 
 // ── KÜTLE KAYNAĞI ──────────────────────────────────────────────────────────
+// ── GÖVDE GÖVDE (gerçek dosya, 2026-10-20) ────────────────────────────────
+// Gerçek Tulga dosyasında motor, şanzıman ve transfer TEK parçada yüzlerce
+// katı gövde + açık yüzey kabuğu + boşluklu katı: parça tek gövde sayılınca
+// tek çatlak bütün parçayı hacimden düşürüyordu (transfer birimi kutunun
+// merkezine düşüp sunudaki ağırlık merkezinden 39,9 mm uzakta kalıyordu;
+// gövde gövde ve yamayla 0,05 mm). Kalıp: tests/helpers/step-takoz.js →
+// cokGovdeKalibi (analitik cevaplar kalıbın tanımından).
+describe('GÖVDE GÖVDE — çok gövdeli parça: katılar ayrı, yüzey kabuğu dışarıda, boşluk çıkar, açıklık yamalanır', () => {
+  const G = S.COK_GOVDE, K = G.konum;
+  const kutu = ([a, b, h], m, isaret = 1) => {
+    const V = isaret * a * b * h;
+    return { V, c: m.map((x, i) => x + K[i]), J: [[V * (b * b + h * h) / 12, 0, 0], [0, V * (a * a + h * h) / 12, 0], [0, 0, V * (a * a + b * b) / 12]] };
+  };
+  // Katılan: A + B + (D − boşluk); C katılmaz
+  const BEKLENEN = topla([kutu(G.A.olcu, G.A.m), kutu(G.B.olcu, G.B.m), kutu(G.D.olcu, G.D.m), kutu(G.bosluk.olcu, G.bosluk.m, -1)]);
+  const oku = (opt) => {
+    const son = STP.veMntStpOku(S.cokGovdeKalibi(opt));
+    const pi = son.parcalar.findIndex((p) => p.ad === 'Motor ISB'), ag = [];
+    STP.veMntStpAgUret(son, ag, [pi]);
+    return { son, pi, ag, g: son._geo[pi] };
+  };
+  const motorRol = (son) => { const r = son.agac.map(() => null); r[dugum(son, 'Motor')] = 'mnt-motor'; return r; };
+
+  test('okuyucu: yüzün katısı (−1 yüzey kabuğu), boşluk kabuğunun yüzleri TERS; katısız parçada gövde bilgisi yok', () => {
+    const { son, g } = oku();
+    expect(g.govde).toEqual([0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, -1]);
+    expect(g.ters).toEqual([22, 23, 24, 25, 26, 27]);
+    const yag = son._geo[son.parcalar.findIndex((p) => p.ad === 'Motor yağı')];
+    expect([yag.yuzler.length, yag.govde, yag.ters]).toEqual([0, null, null]);
+    const kapak = STP.veMntStpOku(S.kutleKalibi());
+    expect(kapak._geo[kapak.parcalar.findIndex((p) => p.ad === 'Kayış kapağı')].govde).toBe(null);
+  });
+
+  test('ÖNCE ÖLÇÜLEN: parça tek gövde sayılınca birim kutunun merkezine düşüyordu — katıların merkezinden 224,67 mm', () => {
+    const { son, g } = oku();
+    delete g.govde;                                            // eski yol: bütün ağ tek gövde
+    const c = STP.veMntStpCoz(son, motorRol(son));
+    const b = c.birimler[0];
+    expect(b.kaynak).toBe('kutu');
+    // kutu: x D'nin −x yüzü (−800) … B'nin ucu (500), y C ve B (±450), z A (−100) … E (500,5)
+    const merkez = [(-800 + 500) / 2 + K[0], 0 + K[1], (-100 + 500.5) / 2 + K[2]];
+    expect(uz(b.konum, merkez)).toBeLessThan(1e-6);
+    expect(uz(merkez, BEKLENEN.c)).toBeCloseTo(224.67, 2);
+  });
+
+  // Eşik (VE_MNT_STP_YAMA = %10) iki gövdenin arasında: B %2,4 katılır, C %20 katılmaz
+  test('hacim, merkez ve tensör analitik: açık küp (yama %20) dışarıda, ucu açık kutu (yama %2,4) düzlem yamayla BİREBİR', () => {
+    const { son, pi, ag } = oku();
+    const p = STP.veMntStpParcaOzellik(son, pi, ag[pi]);
+    expect(p.kaynak).toBe('ag');
+    expect(Math.abs(p.V / BEKLENEN.W - 1)).toBeLessThan(1e-9);
+    expect(uz(p.c, BEKLENEN.c)).toBeLessThan(1e-6);
+    expect(tfark(p.J, BEKLENEN.T)).toBeLessThan(1e-9);
+    expect([p.govde, p.acikGovde, p.yamaGovde]).toEqual([4, 1, 1]);
+    expect(p.acikAlan).toBeCloseTo(5 * 100 * 100, 6);                   // küpün beş yüzü
+    expect(p.yamaAlan).toBeCloseTo(100 * 100, 6);                       // kutunun eksik ucu
+    // alan katılarınki (yüzey kabuğu yok): A + B'nin beş yüzü + C'nin beş yüzü + D + boşluk
+    expect(p.alan).toBeCloseTo(520000 + 410000 + 50000 + 240000 + 60000, 4);
+  });
+
+  // DİLİMLİ İŞ: gerçek dosyada tek parça 915 bin üçgen ve gövde gövde hesap tek
+  // görevde 0,5–0,7 sn sürüyordu (main'in tek geçişli hesabı da öyle)
+  test('kütle özelliği DİLİMLİ İŞ: dilim dilim sonuç tek çağrıyla birebir; ağ işi özellik bitene dek parçayı eksik sayar', () => {
+    const { son, pi, ag } = oku();
+    const tek = STP.veMntStpParcaOzellik(son, pi, ag[pi]);
+    const is = STP.veMntStpParcaOzellikIs(son, pi, ag[pi], 1);         // saat her üçgende sorulur
+    let dilim = 0;
+    while (!is.adim(-Infinity)) dilim++;
+    expect(dilim).toBeGreaterThan(50);
+    expect(is.sonuc).toEqual(tek);
+    const oz = {}, ag2 = [], J = STP.veMntStpAgIs(son, ag2, { oz });
+    J.iste([pi]);
+    let bekleyen = 0;
+    while (!J.adim(-Infinity)) if (ag2[pi] && !oz[pi]) { bekleyen++; expect(J.eksik([pi])).toBe(1); }
+    expect(bekleyen).toBeGreaterThan(0);                                  // ağ önce, özellik sonra
+    expect(oz[pi]).toEqual(tek);
+    expect(J.eksik([pi])).toBe(0);
+    // ağı olup özelliği olmayan parçanın özelliği iş yeniden sürünce üretilir (yeniden üçgenlenmeden)
+    const oz3 = {}, J3 = STP.veMntStpAgIs(son, ag2, { oz: oz3 });
+    expect(J3.eksik([pi])).toBe(1);
+    J3.uret([pi]);
+    expect(oz3[pi]).toEqual(tek);
+  });
+
+  test('boşluk kabuğunun .F.\'i okunmazsa hacim 2·V_boşluk FAZLA (gerçek dosyada 36 boşluk kabuğunun hepsi .F.)', () => {
+    const { son, pi, g } = oku();
+    delete g.ters;
+    const ag = [];
+    STP.veMntStpAgUret(son, ag, [pi]);
+    expect(STP.veMntStpParcaOzellik(son, pi, ag[pi]).V - BEKLENEN.W).toBeCloseTo(2 * 100 * 100 * 100, 3);
+  });
+
+  test('birim: açık gövde adıyla ve payıyla, yamalı gövde ayrı; geometrisiz parça "kapalı değil" sayılmaz', () => {
+    const { son } = oku();
+    const c = STP.veMntStpCoz(son, motorRol(son));
+    const b = c.birimler[0];
+    expect(b.kaynak).toBe('hacim');
+    expect(uz(b.konum, BEKLENEN.c)).toBeLessThan(1e-6);
+    expect(b.acikParca).toEqual([]);
+    expect(b.acikGovde.map((x) => [x.ad, x.n, x.govde])).toEqual([['Motor ISB', 1, 4]]);
+    expect([b.say, b.yamaGovde]).toEqual([{ ag: 1, dosya: 0, nokta: 0, acik: 0 }, 1]);
+    expect(b.acikPay).toBeCloseTo(50000 / 1280000, 12);
+    expect(b.yamaPay).toBeCloseTo(10000 / 1280000, 12);
+    expect(c.uyarilar).toEqual(['"Motor": 1 gövde kapalı değil, hacme katılmadı (Motor ISB); yüzey payı %3,9.',
+      '"Motor": 1 gövdenin açıklığı kapatıldı; yüzey payı %0,78.']);
+    expect(W.veMntWizStpKonumUyari(b)).toBe(true);
+  });
+});
+
 describe('KÜTLE KAYNAĞI — elle · malzeme · dosyadan', () => {
   test('ÖNCE ÖLÇÜLEN: iki malzemeli şanzımanın hacim merkezi kütle merkezinden 68,18 mm uzakta', () => {
     expect(uz(SANZ_HACIM.c, SANZ_KUTLE.c)).toBeCloseTo(68.18, 2);
@@ -404,13 +513,16 @@ describe('KAYIT — "S" işaretinin dayanağı; kaynak rolle birlikte projeye', 
     expect(STP.veMntStpRolKaydi(son, r2, {}, {}, {}, { [brk]: 'sfero' }).roller.find((x) => x.ad === 'Arka braket').yog).toBeUndefined();
   });
 
-  test('kayıtta SONRAKİ satır gövdenin parçasına rol verirse gövde düşer, kaynağı da gider; bozuk anahtar okunmaz', () => {
+  test('kayıtta SONRAKİ satır gövdenin parçasına AYNI rolü verirse gövde düşer, kaynağı da gider (başka rol iç içe kalır); bozuk anahtar okunmaz', () => {
     const son = STP.veMntStpOku(S.kutleKalibi());
     const san = dugum(son, 'Şanzıman');
     const k = STP.veMntStpRolKaydi(son, roller(son), {}, {}, {}, { [san]: 'dosya' });
     const k2 = JSON.parse(JSON.stringify(k));
-    k2.roller.push({ yol: ['SANZ_ASM.1', 'GOVDE.1'], rol: 'mnt-pump', ad: 'Şanzıman gövdesi' });
+    k2.roller.push({ yol: ['SANZ_ASM.1', 'GOVDE.1'], rol: 'mnt-gearbox', ad: 'Şanzıman gövdesi' });
     expect(STP.veMntStpRolKaydiUygula(son, k2).yogunluk).toEqual({});
+    const k4 = JSON.parse(JSON.stringify(k));
+    k4.roller.push({ yol: ['SANZ_ASM.1', 'GOVDE.1'], rol: 'mnt-pump', ad: 'Şanzıman gövdesi' });
+    expect(STP.veMntStpRolKaydiUygula(son, k4).yogunluk).toEqual({ [san]: 'dosya' });
     const k3 = JSON.parse(JSON.stringify(k));
     k3.roller.find((x) => x.yog).yog = 'altin';
     expect(STP.veMntStpRolKaydiUygula(son, k3).yogunluk).toEqual({});

@@ -137,7 +137,7 @@ describe('KAYIT — roller projeye örnek yoluyla', () => {
     expect(u.kutle).toEqual({ [i('Motor bloğu')]: 412 });
   });
 
-  test('bilinmeyen rol ve bozuk satır eksik; ata ile torun ikisi de kayıtlıysa sonraki kazanır, düşenin kütlesi gider', () => {
+  test('bilinmeyen rol ve bozuk satır eksik; ata ile torun AYNI rolle kayıtlıysa sonraki kazanır, düşenin kütlesi gider', () => {
     const p = P();
     const i = (a) => p.agac.filter((d) => d.ad === a)[0].i;
     const u = STP.veMntStpRolKaydiUygula(p, { roller: [

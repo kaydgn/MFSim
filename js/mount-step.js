@@ -157,20 +157,24 @@ function veMntStpBirimler(sonuc, roller){
 // üçgenleyicide bit bit aynı — "KAPALI KATI"), bir kez kullanılan kenar sayılır.
 // Köşe ve kenar sayısal karma tablolarda (açık adresleme): metin anahtarlı
 // eşleme 420 MB'lık denemenin 4,5 milyon üçgeninde 8,5 sn sürüyordu.
-function _mstAcikKenar(a){
-  var u = a.uc, t = a.ucgen, q = 1e-6, nu = u.length / 3;
+function _mstKaynak(u){
+  var q = 1e-6, nu = u.length / 3;
   var boy = 16; while(boy < nu * 2) boy *= 2;
-  var maske = boy - 1, yuva = new Int32Array(boy).fill(-1), Q = new Float64Array(nu * 3), id = new Int32Array(nu), n = 0;
+  var maske = boy - 1, yuva = new Int32Array(boy).fill(-1), Q = new Float64Array(nu * 3), id = new Int32Array(nu), ilk = new Int32Array(nu), n = 0;
   for(var v = 0; v < nu; v++){
     var x = Math.round(u[v * 3] / q), y = Math.round(u[v * 3 + 1] / q), z = Math.round(u[v * 3 + 2] / q);
     var h = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(z | 0, 83492791)) & maske;
     for(;;){
       var s = yuva[h];
-      if(s < 0){ yuva[h] = n; Q[n * 3] = x; Q[n * 3 + 1] = y; Q[n * 3 + 2] = z; id[v] = n++; break; }
+      if(s < 0){ yuva[h] = n; Q[n * 3] = x; Q[n * 3 + 1] = y; Q[n * 3 + 2] = z; ilk[n] = v; id[v] = n++; break; }
       if(Q[s * 3] === x && Q[s * 3 + 1] === y && Q[s * 3 + 2] === z){ id[v] = s; break; }
       h = (h + 1) & maske;
     }
   }
+  return { id: id, n: n, ilk: ilk };              // ilk: kaynaşan köşenin ilk örneği (konumu)
+}
+function _mstAcikSay(K, t){
+  var id = K.id, n = K.n;
   var eb = 16; while(eb < t.length * 2) eb *= 2;
   var em = eb - 1, anahtar = new Float64Array(eb).fill(-1), say = new Uint32Array(eb);
   for(var j = 0; j < t.length; j += 3){
@@ -192,6 +196,43 @@ function _mstAcikKenar(a){
   for(var i = 0; i < eb; i++) if(say[i] === 1) acik++;
   return acik;
 }
+function _mstAcikKenar(a){ return _mstAcikSay(_mstKaynak(a.uc), a.ucgen); }
+// Tetrahedron toplamı S'ye (O' etrafında): [V, Sx, Sy, Sz, xx, yy, zz, xy, xz, yz]
+// — köşeler O', a, b, c (O'ya göre)
+function _mstTetra(S, ax, ay, az, bx, by, bz, cx, cy, cz){
+  var v = (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx)) / 6;
+  S[0] += v;
+  S[1] += v * (ax + bx + cx) / 4; S[2] += v * (ay + by + cy) / 4; S[3] += v * (az + bz + cz) / 4;
+  // ∫ xᵢxⱼ dV = v/20 · [Σ aᵢaⱼ + (Σ aᵢ)(Σ aⱼ)]
+  var Sx = ax + bx + cx, Sy = ay + by + cy, Sz = az + bz + cz;
+  S[4] += v / 20 * (ax * ax + bx * bx + cx * cx + Sx * Sx);
+  S[5] += v / 20 * (ay * ay + by * by + cy * cy + Sy * Sy);
+  S[6] += v / 20 * (az * az + bz * bz + cz * cz + Sz * Sz);
+  S[7] += v / 20 * (ax * ay + bx * by + cx * cy + Sx * Sy);
+  S[8] += v / 20 * (ax * az + bx * bz + cx * cz + Sx * Sz);
+  S[9] += v / 20 * (ay * az + by * bz + cy * cz + Sy * Sz);
+}
+function _mstIntegral(u, t, o, S){
+  for(var k = 0; k < t.length; k += 3){
+    var i = t[k] * 3, j = t[k + 1] * 3, m = t[k + 2] * 3;
+    _mstTetra(S, u[i] - o[0], u[i + 1] - o[1], u[i + 2] - o[2], u[j] - o[0], u[j + 1] - o[1], u[j + 2] - o[2],
+              u[m] - o[0], u[m + 1] - o[1], u[m + 2] - o[2]);
+  }
+  return S;
+}
+// Yön: kapalı ve doğru yönlü ağda V > 0. Ters yönlüde bütün integraller
+// birlikte işaret değiştirir — ölçek işaretle düzeltilir. Döner { V, c, J } (V ≤ 0: c, J null)
+function _mstHacimSonuc(S, o){
+  var isaret = S[0] < 0 ? -1 : 1, V = S[0] * isaret;
+  if(!(V > 1e-9)) return { V: V, c: null, J: null };
+  var cl = [S[1] * isaret / V, S[2] * isaret / V, S[3] * isaret / V];
+  var xx = S[4] * isaret, yy = S[5] * isaret, zz = S[6] * isaret, xy = S[7] * isaret, xz = S[8] * isaret, yz = S[9] * isaret;
+  // Merkez etrafında (paralel eksen): ∫ xᵢxⱼ − V cᵢcⱼ
+  var Mxx = xx - V * cl[0] * cl[0], Myy = yy - V * cl[1] * cl[1], Mzz = zz - V * cl[2] * cl[2];
+  var Mxy = xy - V * cl[0] * cl[1], Mxz = xz - V * cl[0] * cl[2], Myz = yz - V * cl[1] * cl[2];
+  return { V: V, c: [cl[0] + o[0], cl[1] + o[1], cl[2] + o[2]],
+           J: [[Myy + Mzz, -Mxy, -Mxz], [-Mxy, Mxx + Mzz, -Myz], [-Mxz, -Myz, Mxx + Myy]] };
+}
 function veMntStpAgOzellik(agler){
   var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity], kenarYuz = 0, ucgenSay = 0, acik = 0;
   (agler || []).forEach(function(a){
@@ -201,43 +242,14 @@ function veMntStpAgOzellik(agler){
     if(a.uc && a.ucgen) acik += _mstAcikKenar(a);
   });
   if(!(kutu[3] >= kutu[0])) return { V: 0, c: null, J: null, kutu: null, kapali: false, kenarYuz: kenarYuz, acik: acik, ucgen: 0 };
-  var o = [(kutu[0] + kutu[3]) / 2, (kutu[1] + kutu[4]) / 2, (kutu[2] + kutu[5]) / 2];
-  var V = 0, sx = 0, sy = 0, sz = 0, xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0;
+  var o = [(kutu[0] + kutu[3]) / 2, (kutu[1] + kutu[4]) / 2, (kutu[2] + kutu[5]) / 2], S = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
   (agler || []).forEach(function(a){
     if(!a || !a.ucgen) return;
-    var u = a.uc, t = a.ucgen;
-    for(var k = 0; k < t.length; k += 3){
-      var i = t[k] * 3, j = t[k + 1] * 3, m = t[k + 2] * 3;
-      var ax = u[i] - o[0], ay = u[i + 1] - o[1], az = u[i + 2] - o[2];
-      var bx = u[j] - o[0], by = u[j + 1] - o[1], bz = u[j + 2] - o[2];
-      var cx = u[m] - o[0], cy = u[m + 1] - o[1], cz = u[m + 2] - o[2];
-      var v = (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx)) / 6;
-      V += v;
-      sx += v * (ax + bx + cx) / 4; sy += v * (ay + by + cy) / 4; sz += v * (az + bz + cz) / 4;
-      // ∫ xᵢxⱼ dV = v/20 · [Σ aᵢaⱼ + (Σ aᵢ)(Σ aⱼ)] — köşeler O', a, b, c
-      var Sx = ax + bx + cx, Sy = ay + by + cy, Sz = az + bz + cz;
-      xx += v / 20 * (ax * ax + bx * bx + cx * cx + Sx * Sx);
-      yy += v / 20 * (ay * ay + by * by + cy * cy + Sy * Sy);
-      zz += v / 20 * (az * az + bz * bz + cz * cz + Sz * Sz);
-      xy += v / 20 * (ax * ay + bx * by + cx * cy + Sx * Sy);
-      xz += v / 20 * (ax * az + bx * bz + cx * cz + Sx * Sz);
-      yz += v / 20 * (ay * az + by * bz + cy * cz + Sy * Sz);
-      ucgenSay++;
-    }
+    _mstIntegral(a.uc, a.ucgen, o, S);
+    ucgenSay += a.ucgen.length / 3;
   });
-  // Yön: kapalı ve doğru yönlü ağda V > 0. Ters yönlüde bütün integraller
-  // birlikte işaret değiştirir — ölçek işaretle düzeltilir.
-  var isaret = V < 0 ? -1 : 1;
-  V *= isaret; sx *= isaret; sy *= isaret; sz *= isaret;
-  xx *= isaret; yy *= isaret; zz *= isaret; xy *= isaret; xz *= isaret; yz *= isaret;
-  var kapali = (kenarYuz === 0) && (acik === 0) && V > 1e-9;
-  if(!(V > 1e-9)) return { V: V, c: null, J: null, kutu: kutu, kapali: false, kenarYuz: kenarYuz, acik: acik, ucgen: ucgenSay };
-  var cl = [sx / V, sy / V, sz / V];
-  // Merkez etrafında (paralel eksen): ∫ xᵢxⱼ − V cᵢcⱼ
-  var Mxx = xx - V * cl[0] * cl[0], Myy = yy - V * cl[1] * cl[1], Mzz = zz - V * cl[2] * cl[2];
-  var Mxy = xy - V * cl[0] * cl[1], Mxz = xz - V * cl[0] * cl[2], Myz = yz - V * cl[1] * cl[2];
-  var J = [[Myy + Mzz, -Mxy, -Mxz], [-Mxy, Mxx + Mzz, -Myz], [-Mxz, -Myz, Mxx + Myy]];
-  return { V: V, c: [cl[0] + o[0], cl[1] + o[1], cl[2] + o[2]], J: J, kutu: kutu, kapali: kapali,
+  var H = _mstHacimSonuc(S, o);
+  return { V: H.V, c: H.c, J: H.J, kutu: kutu, kapali: (kenarYuz === 0) && (acik === 0) && !!H.c,
            kenarYuz: kenarYuz, acik: acik, ucgen: ucgenSay };
 }
 
@@ -250,9 +262,8 @@ function veMntStpDosyaOzellik(sonuc){
   if(sonuc && sonuc.ok) sonuc._ozellik = o;
   return o;
 }
-function _mstAgAlan(a){
-  if(!a || !a.uc || !a.ucgen) return 0;
-  var u = a.uc, t = a.ucgen, A = 0;
+function _mstAlan(u, t){
+  var A = 0;
   for(var k = 0; k < t.length; k += 3){
     var i = t[k] * 3, j = t[k + 1] * 3, m = t[k + 2] * 3;
     var ax = u[j] - u[i], ay = u[j + 1] - u[i + 1], az = u[j + 2] - u[i + 2];
@@ -262,21 +273,207 @@ function _mstAgAlan(a){
   }
   return A;
 }
+function _mstAgAlan(a){ return (a && a.uc && a.ucgen) ? _mstAlan(a.uc, a.ucgen) : 0; }
+// GÖVDE GÖVDE: parçanın katı gövdeleri ayrı ölçülür (okuyucunun `govde`si ·
+// toplayıcının `yuzUcgen`i); yüzey gövdesi (−1) hacme ve paya girmez. Gerçek
+// dosyada motor, şanzıman ve transfer TEK parçada yüzlerce katı ve açık
+// yüzey kabuğu: tek çatlak bütün parçayı düşürüyordu. Açık katı gövde
+// YAMALANIR (_mstYamaKur) ve yamanın alanı gövde alanının VE_MNT_STP_YAMA
+// payını aşmıyorsa hacme katılır; aşan gövde dışarıda, alanıyla. Katısız
+// parçada (gövde bilgisi yok) bütün ağ tek gövde, yamasız.
+// Eşik: dosyada 240 yüz üçgen vermiyor, 215'inin kutusu 10 mm'den küçük (çoğu
+// sıfır alanlı döngü) — yama onları birebir kapatır; gövdeyi dışarıda bırakmak
+// hacminin tamamını kaybetmektir. Yaması kendi yüzeyinin %10'unu aşan gövde
+// (ters çevrilemeyen hortum yüzeyi: %85–%490) dışarıda.
+var VE_MNT_STP_YAMA = 0.1;
+// Yama: katı gövde dosyada KAPALIDIR, ağındaki açıklık üçgenlemenin kusuru
+// (çatlak · üçgen vermeyen yüz). Kenarların NET yönlü sayısı ağın sınırıdır
+// ve her köşede giren = çıkan (üçgen kümesinin sınırı bir döngüdür): sınır,
+// yama yönünde ve çokluğuyla `kenar`da ([s, d, s, d, …]); halkalara dizilir,
+// her halka ağırlık merkezinden yelpazeyle kapatılır ve S'ye eklenir.
+// Döner: yamanın alanı.
+function _mstYamaKur(u, K, kenar, o, S){
+  var cik = new Map(), alan = 0, i;
+  for(i = 0; i < kenar.length; i += 2) (cik.get(kenar[i]) || cik.set(kenar[i], []).get(kenar[i])).push(kenar[i + 1]);
+  var P = function(v){ var j = K.ilk[v] * 3; return [u[j] - o[0], u[j + 1] - o[1], u[j + 2] - o[2]]; };
+  cik.forEach(function(l, bas){
+    while(l.length){
+      var halka = [bas], v = l.pop();
+      while(v !== bas){ halka.push(v); var l2 = cik.get(v); if(!l2 || !l2.length) break; v = l2.pop(); }
+      var c = [0, 0, 0], pts = halka.map(P);
+      pts.forEach(function(p){ c[0] += p[0] / pts.length; c[1] += p[1] / pts.length; c[2] += p[2] / pts.length; });
+      for(var k = 0; k < pts.length; k++){
+        var p = pts[k], q = pts[(k + 1) % pts.length];
+        _mstTetra(S, c[0], c[1], c[2], p[0], p[1], p[2], q[0], q[1], q[2]);
+        var ux = p[0] - c[0], uy = p[1] - c[1], uz = p[2] - c[2], wx = q[0] - c[0], wy = q[1] - c[1], wz = q[2] - c[2];
+        var nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx;
+        alan += Math.sqrt(nx * nx + ny * ny + nz * nz) / 2;
+      }
+    }
+  });
+  return alan;
+}
+
+// ── PARÇANIN KÜTLE ÖZELLİĞİ — DİLİMLİ İŞ ─────────────────────────────────
+// UZUN İŞ ARAYÜZÜ KİLİTLEMEZ: ağ işinin diliminde koşar (veMntStpAgIs). Gerçek
+// dosyada tek parça 915 bin üçgen (şanzıman) ve gövde gövde hesap tek seferde
+// 846 ms sürüyordu. Evreler: köşe kaynağı → gövde gövde (integral · alan · net
+// yönlü kenar) → sınırın taranması ve yama → toplam. adim(bitis): saat
+// bitis'i geçince döner; iş bitince true (sonuç is.sonuc). adimBoy: saatin
+// sorulma aralığı (üçgen · köşe; varsayılan VE_MNT_STP_OZ_ADIM) — her çağrı en
+// az o kadar öğe işler, saat geçmiş olsa da (yoksa iş ilerlemez).
+var VE_MNT_STP_OZ_ADIM = 2048;
+function veMntStpParcaOzellikIs(sonuc, pi, ag, adimBoy){
+  var is = { pi: pi, sonuc: null }, ADIM = adimBoy > 0 ? adimBoy : VE_MNT_STP_OZ_ADIM;
+  var g = sonuc._geo && sonuc._geo[pi], u = ag && ag.uc, t = ag && ag.ucgen;
+  if(!u || !t || !ag.kutu){
+    is.adim = function(){ is.sonuc = _mstParcaSonuc(sonuc, pi, ag, null, null); return true; };
+    return is;
+  }
+  var G = g && g.govde, Y = ag.yuzUcgen, n = 0, f, b;
+  var govdeli = !!(G && Y && Y.length === G.length + 1);
+  if(govdeli){ for(f = 0; f < G.length; f++) if(G[f] + 1 > n) n = G[f] + 1; govdeli = n > 0; }
+  // Gövdenin yüzleri (katısızda tek gövde: bütün üçgenler, yüz listesi yok)
+  var yuz = [], tri = [], bos = [];
+  if(govdeli){
+    var say = new Int32Array(n);
+    for(f = 0; f < G.length; f++) if(G[f] >= 0) say[G[f]]++;
+    for(b = 0; b < n; b++){ yuz.push(new Int32Array(say[b])); tri.push(0); bos.push(0); say[b] = 0; }
+    for(f = 0; f < G.length; f++){
+      if((b = G[f]) < 0) continue;
+      yuz[b][say[b]++] = f;
+      tri[b] += Y[f + 1] - Y[f];
+      if(Y[f + 1] === Y[f]) bos[b]++;                     // üçgen vermeyen yüz
+    }
+  } else { n = 1; tri.push(t.length / 3); bos.push(ag.kenarYuz || 0); }
+  var k = ag.kutu, o = [(k[0] + k[3]) / 2, (k[1] + k[4]) / 2, (k[2] + k[5]) / 2];
+  var nu = u.length / 3, boy = 16; while(boy < nu * 2) boy *= 2;
+  var K = { id: new Int32Array(nu), ilk: new Int32Array(nu), n: 0 };
+  var kyuva = new Int32Array(boy).fill(-1), kQ = new Float64Array(nu * 3), kmaske = boy - 1, kv = 0;
+  var evre = 'kaynak', sonuclar = [], B = null;
+  function govdeBasla(b){
+    var eb = 16; while(eb < tri[b] * 3) eb *= 2;
+    B = { b: b, S: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], alan: 0, yi: 0, ti: 0, te: 0,
+          anahtar: new Float64Array(eb).fill(-1), net: new Int32Array(eb), maske: eb - 1, tara: 0, kenar: [] };
+    if(!govdeli){ B.ti = 0; B.te = t.length; }
+  }
+  function kenarEkle(a, c){
+    if(a === c) return;
+    var mn = a < c ? a : c, mx = a < c ? c : a, key = mn * K.n + mx, h = (Math.imul(mn, 0x9E3779B1) ^ mx) & B.maske;
+    for(;;){
+      var w = B.anahtar[h];
+      if(w === -1){ B.anahtar[h] = key; B.net[h] = a < c ? 1 : -1; return; }
+      if(w === key){ B.net[h] += a < c ? 1 : -1; return; }
+      h = (h + 1) & B.maske;
+    }
+  }
+  is.adim = function(bitis){
+    var q = 1e-6, sayac = 0, i;
+    for(;;){
+      if(evre === 'kaynak'){
+        for(; kv < nu; kv++){
+          if(sayac++ >= ADIM){ sayac = 1; if(_mstSimdi() > bitis) return false; }
+          var x = Math.round(u[kv * 3] / q), y = Math.round(u[kv * 3 + 1] / q), z = Math.round(u[kv * 3 + 2] / q);
+          var h = (Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663) ^ Math.imul(z | 0, 83492791)) & kmaske;
+          for(;;){
+            var s0 = kyuva[h];
+            if(s0 < 0){ kyuva[h] = K.n; kQ[K.n * 3] = x; kQ[K.n * 3 + 1] = y; kQ[K.n * 3 + 2] = z; K.ilk[K.n] = kv; K.id[kv] = K.n++; break; }
+            if(kQ[s0 * 3] === x && kQ[s0 * 3 + 1] === y && kQ[s0 * 3 + 2] === z){ K.id[kv] = s0; break; }
+            h = (h + 1) & kmaske;
+          }
+        }
+        kyuva = kQ = null;
+        evre = 'govde';
+        govdeBasla(0);
+      }
+      if(evre === 'govde'){
+        // gövdenin üçgenleri: integral, alan, net yönlü kenar
+        for(;;){
+          if(B.ti >= B.te){
+            if(!govdeli || B.yi >= yuz[B.b].length) break;
+            f = yuz[B.b][B.yi++];
+            B.ti = Y[f] * 3; B.te = Y[f + 1] * 3;
+            continue;
+          }
+          if(sayac++ >= ADIM){ sayac = 1; if(_mstSimdi() > bitis) return false; }
+          var i0 = t[B.ti], i1 = t[B.ti + 1], i2 = t[B.ti + 2];
+          B.ti += 3;
+          var a0 = i0 * 3, a1 = i1 * 3, a2 = i2 * 3;
+          var ax = u[a0] - o[0], ay = u[a0 + 1] - o[1], az = u[a0 + 2] - o[2];
+          var bx = u[a1] - o[0], by = u[a1 + 1] - o[1], bz = u[a1 + 2] - o[2];
+          var cx = u[a2] - o[0], cy = u[a2 + 1] - o[1], cz = u[a2 + 2] - o[2];
+          _mstTetra(B.S, ax, ay, az, bx, by, bz, cx, cy, cz);
+          var ex = bx - ax, ey = by - ay, ez = bz - az, fx = cx - ax, fy = cy - ay, fz = cz - az;
+          var nx = ey * fz - ez * fy, ny = ez * fx - ex * fz, nz = ex * fy - ey * fx;
+          B.alan += Math.sqrt(nx * nx + ny * ny + nz * nz) / 2;
+          var k0 = K.id[i0], k1 = K.id[i1], k2 = K.id[i2];
+          kenarEkle(k0, k1); kenarEkle(k1, k2); kenarEkle(k2, k0);
+        }
+        evre = 'tara';
+      }
+      if(evre === 'tara'){
+        // sınır: net ≠ 0 kenarlar, yama yönünde (üçgeninkinin tersi) ve çokluğuyla
+        for(; B.tara < B.anahtar.length; B.tara++){
+          if(sayac++ >= ADIM * 8){ sayac = 1; if(_mstSimdi() > bitis) return false; }
+          var m = B.net[B.tara];
+          if(!m || B.anahtar[B.tara] === -1) continue;
+          var key = B.anahtar[B.tara], mn = Math.floor(key / K.n), mx = key - mn * K.n;
+          for(var c2 = Math.abs(m); c2 > 0; c2--){ if(m > 0) B.kenar.push(mx, mn); else B.kenar.push(mn, mx); }
+        }
+        var yama = 0;
+        if(govdeli && (B.kenar.length || bos[B.b])) yama = _mstYamaKur(u, K, B.kenar, o, B.S);
+        var H = _mstHacimSonuc(B.S, o);
+        var r = { V: H.V, c: H.c, J: H.J, acik: B.kenar.length / 2, kenarYuz: bos[B.b], alan: B.alan, yama: yama };
+        r.kapali = !r.kenarYuz && !r.acik && !!H.c;
+        r.dahil = !!H.c && (r.kapali || (govdeli && r.yama <= VE_MNT_STP_YAMA * r.alan));
+        sonuclar.push(r);
+        if(B.b + 1 < n){ govdeBasla(B.b + 1); evre = 'govde'; continue; }
+        B = null;
+        is.sonuc = _mstParcaSonuc(sonuc, pi, ag, sonuclar, govdeli);
+        return true;
+      }
+    }
+  };
+  return is;
+}
 // Parçanın kütle özelliği, birim yoğunlukla: { pi, ad, V, c, J (kendi merkezi
 // etrafında, mm⁵), alan, kutu, kaynak: 'ag' | 'dosya' | 'acik', nokta (hacim
 // dosyadan, ağı açık: tensörü yok), rho?, malzeme?, sapma?: { c (mm), V (oran) }
-// — dosyanın hacmi/merkezi ile kapalı ağınki }
+// — dosyanın hacmi/merkezi ile kapalı ağınki; gövdeli parçada govde (katı
+// sayısı), acikGovde · acikAlan (hacme katılmayan gövdeler ve alanları; `alan`
+// katılarınki), yamaGovde · yamaAlan (yamayla katılanlar) }. Dilimli işin
+// (veMntStpParcaOzellikIs) tek çağrıda koşusu.
 function veMntStpParcaOzellik(sonuc, pi, ag){
-  var oz = veMntStpAgOzellik(ag ? [ag] : []);
+  var is = veMntStpParcaOzellikIs(sonuc, pi, ag);
+  while(!is.adim(Infinity));
+  return is.sonuc;
+}
+// G: gövdelerin sonuçları (katısızda tek gövde) ya da null (ağ yok)
+function _mstParcaSonuc(sonuc, pi, ag, G, govdeli){
   var g = sonuc._geo && sonuc._geo[pi], f = g && g.pd ? veMntStpDosyaOzellik(sonuc)[g.pd] : null;
-  var r = { pi: pi, ad: sonuc.parcalar[pi].ad, V: 0, c: null, J: null, alan: _mstAgAlan(ag), kutu: oz.kutu, kaynak: 'acik',
-            acikKenar: oz.acik, kenarYuz: oz.kenarYuz, ucgen: oz.ucgen };
-  if(oz.kapali){ r.kaynak = 'ag'; r.V = oz.V; r.c = oz.c; r.J = oz.J; }
+  var r = { pi: pi, ad: sonuc.parcalar[pi].ad, V: 0, c: null, J: null, kutu: (ag && ag.kutu) || null, kaynak: 'acik',
+            alan: 0, acikKenar: 0, kenarYuz: (ag && ag.kenarYuz) || 0, ucgen: ag && ag.ucgen ? ag.ucgen.length / 3 : 0 };
+  var kapali = false, oz = null;
+  if(G){
+    var dahil = G.filter(function(x){ return x.dahil; }), H = _mstTopla(dahil, function(){ return 1; });
+    kapali = !!H && G.every(function(x){ return x.kapali; });
+    r.alan = G.reduce(function(s, x){ return s + x.alan; }, 0);
+    r.acikKenar = G.reduce(function(s, x){ return s + x.acik; }, 0);
+    r.kenarYuz = G.reduce(function(s, x){ return s + x.kenarYuz; }, 0);
+    if(govdeli){
+      r.govde = G.length;
+      r.acikGovde = G.filter(function(x){ return !x.dahil; }).length;
+      r.acikAlan = G.reduce(function(s, x){ return s + (x.dahil ? 0 : x.alan); }, 0);
+      r.yamaGovde = G.filter(function(x){ return x.dahil && !x.kapali; }).length;
+      r.yamaAlan = G.reduce(function(s, x){ return s + (x.dahil ? x.yama : 0); }, 0);
+    }
+    if(H){ r.kaynak = 'ag'; r.V = H.W; r.c = H.c; r.J = H.T; oz = H; }
+  }
   if(f && f.hacim > 0 && f.merkez && g.M){
     var R = g.M.R, t = g.M.t, q = f.merkez;
     var cw = [0, 1, 2].map(function(i){ return R[i][0] * q[0] + R[i][1] * q[1] + R[i][2] * q[2] + t[i]; });
-    if(oz.kapali) r.sapma = { c: _mstUz(oz.c, cw), V: Math.abs(oz.V - f.hacim) / f.hacim };
-    else r.nokta = true;
+    if(kapali) r.sapma = { c: _mstUz(oz.c, cw), V: Math.abs(oz.W - f.hacim) / f.hacim };
+    else { r.nokta = true; r.J = null; }                  // açık gövdeli ağın tensörü dosyanın hacmini tutmaz
     r.kaynak = 'dosya'; r.V = f.hacim; r.c = cw;
   }
   if(f && f.yogunluk > 0) r.rho = f.yogunluk;
@@ -310,7 +507,7 @@ function veMntStpParcaAgi(sonuc, pi, baglam){
   var U = _mstUcgen(), g = sonuc && sonuc._geo && sonuc._geo[pi];
   if(!U || !g || !g.yuzler || !g.yuzler.length) return null;
   var B = baglam || U.Baglam(sonuc._model, VE_MNT_STP_UCGEN);
-  return U.Parca(B, g.yuzler, g.M, g.birim);
+  return U.Parca(B, g.yuzler, g.M, g.birim, g.ters);
 }
 
 // ── AĞ İŞİ — parçaların görüntü ağı, parça parça ─────────────────────────
@@ -351,9 +548,11 @@ function veMntStpAgIs(sonuc, ag, secenek){
     while(!_mstAgAdim(J, Infinity));
     J.tum = tum; J.oncelik = onc; J.oi = oi;
   };
+  // Eksik: ağı ya da (istenmişse) kütle özelliği henüz olmayan parça
+  var lazim = function(i){ return _mstYuzlu(geo[i]) && (!J.ag[i] || (J.oz && !J.oz[i])); };
   J.eksik = function(liste){
     var n = 0;
-    (liste || []).forEach(function(i){ if(!J.ag[i] && _mstYuzlu(geo[i])) n++; });
+    (liste || []).forEach(function(i){ if(lazim(i)) n++; });
     return n;
   };
   // Sıradaki parça: önce istenenler, sonra (bütün montaj isteniyorsa) ağaç sırası
@@ -361,13 +560,13 @@ function veMntStpAgIs(sonuc, ag, secenek){
     var i;
     while(J.oi < J.oncelik.length){
       i = J.oncelik[J.oi++];
-      if(!J.ag[i] && _mstYuzlu(geo[i])) return i;
+      if(lazim(i)) return i;
     }
     if(J.oi) { J.oncelik = []; J.oi = 0; }
     if(!J.tum) return -1;
     while(J.imlec < geo.length){
       i = J.imlec++;
-      if(!J.ag[i] && _mstYuzlu(geo[i])) return i;
+      if(lazim(i)) return i;
     }
     return -1;
   };
@@ -379,18 +578,27 @@ function _mstAgKoy(J, i, a, key){
   J.ag[i] = a;
   if(key && J.kalan[key] !== undefined && --J.kalan[key] <= 0){ delete J.kalan[key]; delete J.paylas[key]; }
   J.say.parca++; J.say.yuz += g.yuzler.length; J.say.ucgen += a.ucgen.length / 3;
-  // Parçanın kütle özelliği ağıyla AYNI dilimde (secenek.oz — hesabın önbelleği):
-  // hesap ağlar bitince yalnız toplar (420 MB'lık denemede ilk hesap 961 ms'ydi)
-  if(J.oz && !J.oz[i]) J.oz[i] = veMntStpParcaOzellik(J.sonuc, i, a);
+  // Parçanın kütle özelliği ağıyla AYNI işte, dilim dilim (secenek.oz — hesabın
+  // önbelleği): hesap ağlar bitince yalnız toplar (420 MB'lık denemede ilk hesap
+  // 961 ms'ydi); ağ önce 3B'ye gider
+  if(J.oz && !J.oz[i]) J.ozIs = veMntStpParcaOzellikIs(J.sonuc, i, a);
   if(J.bitti) J.bitti(i, a);
 }
 function _mstAgAdim(J, bitis){
   var geo = J.sonuc._geo, U = J.U;
   if(!U) return true;
   for(;;){
+    if(J.ozIs){
+      if(!J.ozIs.adim(bitis)) return false;
+      J.oz[J.ozIs.pi] = J.ozIs.sonuc;
+      J.ozIs = null;
+      if(_mstSimdi() > bitis) return false;
+      continue;
+    }
     if(!J.cur){
       var i = J.sonraki();
       if(i < 0) return true;
+      if(J.ag[i]){ J.ozIs = veMntStpParcaOzellikIs(J.sonuc, i, J.ag[i]); continue; }   // ağı var, özelliği yok
       var g = geo[i], key = _mstSekil(g);
       if(key && J.paylas[key]){                    // aynı şeklin örneği: taşınır
         _mstAgKoy(J, i, U.Tasi(J.paylas[key], g.M), key);
@@ -398,11 +606,13 @@ function _mstAgAdim(J, bitis){
         continue;
       }
       if(!J.B) J.B = U.Baglam(J.sonuc._model, VE_MNT_STP_UCGEN);
-      J.cur = { i: i, key: key, topla: U.Topla(J.B, g.M, g.birim), j: 0 };
+      J.cur = { i: i, key: key, topla: U.Topla(J.B, g.M, g.birim), j: 0, ters: null };
+      if(g.ters){ J.cur.ters = new Uint8Array(g.yuzler.length); g.ters.forEach(function(k){ J.cur.ters[k] = 1; }); }
     }
     var c = J.cur, yz = geo[c.i].yuzler;
     while(c.j < yz.length){
-      c.topla.ekle(yz[c.j++]);
+      c.topla.ekle(yz[c.j], !!(c.ters && c.ters[c.j]));
+      c.j++;
       if(c.j < yz.length && _mstSimdi() > bitis) return false;
     }
     var tut = !!(c.key && J.kalan[c.key] > 1);
@@ -423,15 +633,18 @@ function veMntStpAgUret(sonuc, ag, liste){
 }
 
 // ── ROL VERMEK — rol bir DÜĞÜME verilir, parça TEK birime aittir ──────────
-// Düğümün atalarının ve torunlarının rolü düşer (motor alt montajına rol
-// verilince parçalarının ayrı rolü kalmaz). Oturumun rolü ve kaydın geri
-// gelişi aynı kuralla (aşağıda). `roller` yerinde değişir; döner: true.
+// Roller iç içe olabilir: parça EN YAKIN rollü atasının birimindedir
+// (veMntStpBirimler) — gerçek dosyada takozlar ve transfer braketleri motor
+// alt montajının içinde. AYNI rol iç içe olmaz: düğümün atalarındaki ve
+// torunlarındaki aynı rol düşer (motor alt montajına motor verilince
+// parçasının ayrı motor rolü kalmaz). Oturumun rolü ve kaydın geri gelişi
+// aynı kuralla (aşağıda). `roller` yerinde değişir; döner: true.
 function veMntStpRolVer(sonuc, roller, i, tip){
   var a = sonuc && sonuc.agac;
   if(!a || !(i >= 0 && i < a.length) || (tip && VE_MNT_STP_ROLLER.indexOf(tip) < 0)) return false;
   if(tip){
-    for(var e = a[i].ebeveyn; e >= 0; e = a[e].ebeveyn) roller[e] = null;
-    (function sil(d){ a[d].cocuklar.forEach(function(c){ roller[c] = null; sil(c); }); })(i);
+    for(var e = a[i].ebeveyn; e >= 0; e = a[e].ebeveyn) if(roller[e] === tip) roller[e] = null;
+    (function sil(d){ a[d].cocuklar.forEach(function(c){ if(roller[c] === tip) roller[c] = null; sil(c); }); })(i);
   }
   roller[i] = tip || null;
   return true;
@@ -718,22 +931,29 @@ function veMntStpKenarDaire(sonuc, pi, kenar){
 // da öneri ('eksen'); ikisi de yoksa gövdeninki gibi. `nokta`: noktanın
 // dairesi { c, n, r } (3B halkası).
 // Birimin toplamı: hacme katılan parçalar (ağı kapalı ya da dosyada hacmi
-// olan) — açık parçalar adıyla ve yüzey payıyla ayrı
+// olan) — açık parçalar ve açık gövdeler (acikGovde: parça başına sayı)
+// adıyla ve yüzey payıyla ayrı
 function _mstBirim(b, P){
   var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity], alan = 0, acikAlan = 0;
   var r = { dugum: b.dugum, tip: b.tip, ad: b.ad, V: 0, c: null, J: null, kutu: null, kapali: false,
-            say: { ag: 0, dosya: 0, nokta: 0, acik: 0 }, yogSay: 0, acikParca: [], acikPay: 0, acik: 0, kenarYuz: 0, ucgen: 0 };
+            say: { ag: 0, dosya: 0, nokta: 0, acik: 0 }, yogSay: 0, acikParca: [], acikGovde: [], acikPay: 0, acik: 0, kenarYuz: 0, ucgen: 0,
+            yamaGovde: 0, yamaPay: 0 };
+  var yamaAlan = 0;
   var dahil = [], sapma = null;
   P.forEach(function(p){
+    if(p.kaynak === 'acik' && !p.kutu) return;             // geometrisiz parça (dosyada yalnız ürün: yağ, etiket)
     if(p.kutu) for(var i = 0; i < 3; i++){ kutu[i] = Math.min(kutu[i], p.kutu[i]); kutu[i + 3] = Math.max(kutu[i + 3], p.kutu[i + 3]); }
     alan += p.alan; r.acik += p.acikKenar || 0; r.kenarYuz += p.kenarYuz || 0; r.ucgen += p.ucgen || 0;
     if(p.kaynak === 'acik'){ r.say.acik++; r.acikParca.push({ pi: p.pi, ad: p.ad }); acikAlan += p.alan; return; }
+    if(p.kaynak === 'ag' && p.acikGovde){ r.acikGovde.push({ pi: p.pi, ad: p.ad, n: p.acikGovde, govde: p.govde }); acikAlan += p.acikAlan; }
+    if(p.kaynak === 'ag' && p.yamaGovde){ r.yamaGovde += p.yamaGovde; yamaAlan += p.yamaAlan; }
     if(p.nokta) r.say.nokta++; else r.say[p.kaynak]++;
     dahil.push(p);
     if(p.sapma) sapma = { c: Math.max(sapma ? sapma.c : 0, p.sapma.c), V: Math.max(sapma ? sapma.V : 0, p.sapma.V) };
   });
   if(kutu[3] >= kutu[0]) r.kutu = kutu;
   r.acikPay = alan > 0 ? acikAlan / alan : 0;
+  r.yamaPay = alan > 0 ? yamaAlan / alan : 0;
   if(sapma) r.sapma = sapma;
   r.yogSay = dahil.filter(function(p){ return p.rho > 0; }).length;
   var H = _mstTopla(dahil, function(){ return 1; });
@@ -796,10 +1016,17 @@ function veMntStpCoz(sonuc, roller, opt){
     if(oz.kapali && oz.c){
       r.konum = (yog[b.dugum] === 'dosya' && r.dosya ? r.dosya.c : oz.c).slice();
       r.kaynak = 'hacim';
-      if(r.acikParca.length)
-        out.uyarilar.push('"' + b.ad + '": ' + r.acikParca.length + ' parça kapalı değil, hacme katılmadı ('
-          + r.acikParca.slice(0, 3).map(function(x){ return x.ad; }).join(', ') + (r.acikParca.length > 3 ? ', …' : '')
+      var kisim = [], adlar = r.acikParca.concat(r.acikGovde).map(function(x){ return x.ad; });
+      var ng = r.acikGovde.reduce(function(t, x){ return t + x.n; }, 0);
+      if(r.acikParca.length) kisim.push(r.acikParca.length + ' parça');
+      if(ng) kisim.push(ng + ' gövde');
+      if(kisim.length)
+        out.uyarilar.push('"' + b.ad + '": ' + kisim.join(' ve ') + ' kapalı değil, hacme katılmadı ('
+          + adlar.slice(0, 3).join(', ') + (adlar.length > 3 ? ', …' : '')
           + '); yüzey payı %' + _mstSayi(r.acikPay * 100, 1) + '.');
+      if(r.yamaGovde)
+        out.uyarilar.push('"' + b.ad + '": ' + r.yamaGovde + ' gövdenin açıklığı kapatıldı; yüzey payı %'
+          + _mstSayi(r.yamaPay * 100, r.yamaPay < 0.001 ? 3 : 2) + '.');
     } else if(oz.kutu){
       r.konum = [(oz.kutu[0] + oz.kutu[3]) / 2, (oz.kutu[1] + oz.kutu[4]) / 2, (oz.kutu[2] + oz.kutu[5]) / 2];
       r.kaynak = 'kutu';
@@ -893,8 +1120,8 @@ if(typeof module !== 'undefined' && module.exports){
     veMntStpYol: veMntStpYol, veMntStpImza: veMntStpImza,
     veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula,
     VE_MNT_STP_NOKTA: VE_MNT_STP_NOKTA, veMntStpYuzler: veMntStpYuzler, veMntStpTakozNoktasi: veMntStpTakozNoktasi,
-    VE_MNT_STP_MALZEME: VE_MNT_STP_MALZEME, veMntStpMalzeme: veMntStpMalzeme, veMntStpKutle: veMntStpKutle,
-    veMntStpDosyaOzellik: veMntStpDosyaOzellik, veMntStpParcaOzellik: veMntStpParcaOzellik,
+    VE_MNT_STP_MALZEME: VE_MNT_STP_MALZEME, VE_MNT_STP_YAMA: VE_MNT_STP_YAMA, veMntStpMalzeme: veMntStpMalzeme, veMntStpKutle: veMntStpKutle,
+    veMntStpDosyaOzellik: veMntStpDosyaOzellik, veMntStpParcaOzellik: veMntStpParcaOzellik, veMntStpParcaOzellikIs: veMntStpParcaOzellikIs,
     veMntStpDaireBul: veMntStpDaireBul, veMntStpKenarDaire: veMntStpKenarDaire
   };
 }

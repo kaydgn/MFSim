@@ -117,6 +117,17 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     expect(alt(s, -1).querySelector('#ve-mw-3b-nokta')).toBe(null);
   });
 
+  test('iç içe rol: kendi rolü olan düğüm atasının biriminde sayılmaz (panel · alt dizi)', () => {
+    const s = st(), fl = i('Sol ön takoz taban flanşı'), d = document.createElement('div');
+    s.roller[fl] = 'mnt-bracket';
+    d.innerHTML = veMntWiz3bPanelHTML(s, fl);
+    expect(d.textContent).not.toContain('biriminin içinde');
+    expect(alt(s, fl).querySelector('#ve-mw-3b-nokta')).toBe(null);                    // birimi braket
+    s.roller[fl] = null;
+    d.innerHTML = veMntWiz3bPanelHTML(s, fl);
+    expect(d.textContent).toContain('Sol ön takoz biriminin içinde');
+  });
+
   test('kip basılı ve yönlendirmesi yalnız kipte; "Öneriye dön" yalnız seçilmiş dairede', () => {
     const s = st(), d0 = alt(s, i('Sol ön takoz'));
     expect(d0.querySelector('#ve-mw-3b-nokta').getAttribute('aria-pressed')).toBe('false');
