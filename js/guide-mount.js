@@ -144,7 +144,9 @@ function _gmSec2(){
       + 'döndürür (sol tık + sürükle: döndür, tekerlek: yakınlaştır, sağ tık: kaydır; '
       + 'başlıktaki düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar), '
       + 'işaretlerin adlarını ve konumlarını çizimin altındaki föyde verir (föyün satırının '
-      + 'üstüne gelince o parça çizimde aydınlanır, modelin geri kalanı gölgeye düşer)',
+      + 'üstüne gelince o parça çizimde aydınlanır, modelin geri kalanı gölgeye düşer). Bir gövdenin '
+      + 'arkasında kalan takoz ve nokta kütle çizimde görünmez ve yazısızdır; föyün satırı onu yine '
+      + 'gösterir. Gövde kutusunun içinde duran işaret, kutunun en yakın yüzünde sayılır',
       'Hesaba girmez'],
     ['<strong>3D Görüntüleyici</strong>', 'Güç grubunun STEP dosyası: parçaların rolleri, takoz noktaları, '
       + 'gövdelerin hacmi, ağırlık merkezi ve ataleti; modelle karşılaştırma ve modele uygulama', 'Bölüm 16'],

@@ -760,7 +760,7 @@ describe('YAPIŞKAN YER — döndürürken yazılar işaretiyle yürür', () => 
     }
     return { oran: sicra / n, binen, disari };
   };
-  test('üç örnek, pencere ve tam ekran genişliği: sıçrama en az yarıya iner ve %4\'ün altında; yazı yazıya binmez', () => {
+  test('üç örnek, pencere ve tam ekran genişliği: sıçrama en az yarıya iner (yapışkansızı %2\'yi aşıyorsa) ve %4\'ün altında; yazı yazıya binmez', () => {
     const sorun = [];
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -768,7 +768,9 @@ describe('YAPIŞKAN YER — döndürürken yazılar işaretiyle yürür', () => 
       [354, 1500].forEach((W) => {
         const a = tur(m, W, false), b = tur(m, W, true), yer = k + '@' + W;
         if (!(b.oran <= 0.04)) sorun.push(`${yer}: yapışkan %${(b.oran * 100).toFixed(1)}`);
-        if (!(b.oran <= a.oran / 2)) sorun.push(`${yer}: %${(a.oran * 100).toFixed(1)} → %${(b.oran * 100).toFixed(1)} (yarısı değil)`);
+        // yapışkansız sıçrama %2'nin altındaysa (arkada kalan takozun yazısı yok:
+        // Asfat'ta %0,8) yarıya inme şartı gürültüdür; yapışkan yine artmaz
+        if (a.oran >= 0.02 ? !(b.oran <= a.oran / 2) : !(b.oran <= a.oran)) sorun.push(`${yer}: %${(a.oran * 100).toFixed(1)} → %${(b.oran * 100).toFixed(1)} (yarısı değil)`);
         if (b.binen > a.binen) sorun.push(`${yer}: binen ${a.binen} → ${b.binen}`);
         if (b.disari) sorun.push(`${yer}: çizimin dışında ${b.disari}`);
       });
@@ -904,6 +906,124 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
   });
 });
 
+// GİZLİ YÜZEY (kullanıcı 2026-10-23: "kutuların arkasında komponentler
+// görülebiliyor … normal CAD programları gibi değil … arkadaki komponentlerin
+// görülmemesi lazım"): katı çizimde takoz ve nokta kütlenin görünürlüğü 3B
+// IŞINLA (izleyiciye giden ışın bir kutuya giriyor mu; kutunun içindeki işaret
+// en yakın yüzünde) ve ÇİZİMİN BOYAMA SIRASIYLA (merkezi, kendinden sonra
+// çizilen bir kutu yüzünün içinde mi) ayrı ayrı ölçülür ve aynı çıkmalı.
+// Önce: takozlar bütün gövdelerden sonra çiziliyordu — 504 bakışta Tulga 633,
+// Siper 729, Asfat 1.562 işaret arkada kaldığı hâlde görünüyordu (Asfat'ın
+// dört takozu eşdeğer kutunun içinde). Gerçek tarayıcı: mount-pencere.spec.js.
+describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtülü', () => {
+  const kutular = (m) => m.govde.filter((g) => g.kutu).map((g) => ({ k: g.k, c: [g.x, g.y, g.z], h: g.kutu.map((v) => v / 2) }));
+  const icinde = (p, b, e) => [0, 1, 2].every((i) => Math.abs(p[i] - b.c[i]) < b.h[i] - e);
+  const orter = (p, b, w, e) => {
+    let t0 = 0, t1 = Infinity;
+    for (let i = 0; i < 3; i++) {
+      const lo = b.c[i] - b.h[i] - p[i], hi = b.c[i] + b.h[i] - p[i];
+      if (Math.abs(w[i]) < 1e-12) { if (lo > 0 || hi < 0) return false; continue; }
+      let a = lo / w[i], c = hi / w[i]; if (a > c) [a, c] = [c, a];
+      t0 = Math.max(t0, a); t1 = Math.min(t1, c);
+    }
+    return t1 - t0 > e;
+  };
+  const yakin = (p, b) => { let en = 0, ed = Infinity; for (let i = 0; i < 3; i++) { const dd = b.h[i] - Math.abs(p[i] - b.c[i]); if (dd < ed) { ed = dd; en = i; } } const n = [0, 0, 0]; n[en] = (p[en] - b.c[en]) >= 0 ? 1 : -1; return n; };
+  const cokgen = (d) => { const v = d.replace(/[MLZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); return o; };
+  const icte = (q, P) => { let a = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if (((yi > q[1]) !== (yj > q[1])) && (q[0] < (xj - xi) * (q[1] - yi) / (yj - yi) + xi)) a = !a; } return a; };
+  const kenarda = (q, P, e) => P.some((u, i) => { const v = P[(i + 1) % P.length], dx = v[0] - u[0], dy = v[1] - u[1], L = dx * dx + dy * dy || 1; const t = Math.max(0, Math.min(1, ((q[0] - u[0]) * dx + (q[1] - u[1]) * dy) / L)); return (u[0] + t * dx - q[0]) ** 2 + (u[1] + t * dy - q[1]) ** 2 < e * e; });
+  const BAK = []; for (let el = -60; el <= 60; el += 20) for (let az = 0; az < 360; az += 20) BAK.push({ az, el });
+  const ciz = (m, kam, ek) => AK.ciz(m, Object.assign({ W: 354, H: 326, kam, kure: true, kat: { golge: true }, fs: FS, etiket: 'ad' }, ek || {}));
+  // kâhin: işaretin izleyiciden saklı olup olmadığı (3B, çizimden bağımsız)
+  const sakli = (p, B, K) => { const w = K.d.map((v) => -v), dn = (n) => n[0] * K.d[0] + n[1] * K.d[1] + n[2] * K.d[2] < 0;
+    return B.some((b) => (icinde(p, b, 0.01) ? !dn(yakin(p, b)) : orter(p, b, w, 0.5))); };
+
+  test('üç örnek × 126 bakış: çizimdeki görünürlük ışınla aynı; arkada kalanın yazısı yok, öndekinin var', () => {
+    const hata = [], say = { durum: 0, sakli: 0 }, icerideki = {};
+    ['tulga', 'siper', 'asfat'].forEach((ad) => {
+      yukle(ad);
+      const m = cp._mntAksoModel(), B = kutular(m);
+      const isaret = [...m.takoz.map((t) => ({ k: t.k, p: [t.x, t.y, t.z], takoz: true })), ...m.govde.filter((g) => !g.kutu).map((g) => ({ k: g.k, p: [g.x, g.y, g.z] }))];
+      BAK.forEach((kam) => {
+        const K = AK.kamera('dim', null, AK.kamYon(kam)), r = ciz(m, kam);
+        document.body.innerHTML = r.svg;
+        const sira = [...document.querySelector('.ve-ak-hareket').querySelectorAll('g.ve-ak-g, g.ve-ak-t[data-ak], circle.ve-ak-nokta')];
+        const yuz = sira.map((e) => (e.matches('g.ve-ak-g') ? [...e.querySelectorAll('path')].map((x) => cokgen(x.getAttribute('d'))) : null));
+        isaret.forEach((s) => {
+          if (B.some((b) => [0, 1, 2].every((i) => Math.abs(s.p[i] - b.c[i]) <= b.h[i] + 0.01) && !icinde(s.p, b, 0.01))) return;   // tam yüzeyde
+          const ix = sira.findIndex((e) => e.getAttribute('data-ak') === s.k && !e.matches('g.ve-ak-g'));
+          const pp = K.P(s.p), q = [r.F.ox + pp[0] * r.F.sc, r.F.oy + pp[1] * r.F.sc];
+          let ustte = true, belirsiz = false;
+          for (let j = ix + 1; j < sira.length; j++) (yuz[j] || []).forEach((P) => { if (icte(q, P)) { if (kenarda(q, P, 0.6)) belirsiz = true; else ustte = false; } });
+          if (ustte && belirsiz) return;
+          const gizli = sakli(s.p, B, K);
+          say.durum++; if (gizli) say.sakli++;
+          if (B.some((b) => icinde(s.p, b, 0.01))) (icerideki[ad + ' ' + s.k] = icerideki[ad + ' ' + s.k] || new Set()).add(gizli);
+          if (gizli && ustte) hata.push(`${ad} ${s.k} @${kam.az}/${kam.el}: arkada ama görünüyor`);
+          if (!gizli && !ustte) hata.push(`${ad} ${s.k} @${kam.az}/${kam.el}: önde ama örtülü`);
+          if (s.takoz) {
+            const yazili = !!document.querySelector(`.ve-ak-cip[data-ak="${s.k}"]`);
+            if (gizli && yazili) hata.push(`${ad} ${s.k} @${kam.az}/${kam.el}: arkada ama yazılı`);
+            if (!gizli && !yazili) hata.push(`${ad} ${s.k} @${kam.az}/${kam.el}: önde ama yazısız`);
+          }
+        });
+      });
+    });
+    expect(hata.slice(0, 8)).toEqual([]);
+    // kapı boşa ölçmüyor: binlerce karar, yüzlercesi arkada
+    expect(say.durum).toBeGreaterThan(2500);
+    expect(say.sakli).toBeGreaterThan(400);
+    // kutunun İÇİNDEKİ işaret (Asfat'ın dört takozu) her açıda gizli DEĞİL: en yakın yüzü dönükse görünür
+    expect(Object.keys(icerideki).filter((k) => /^asfat T/.test(k)).length).toBe(4);
+    Object.entries(icerideki).forEach(([k, v]) => expect({ k, iki: v.size }).toEqual({ k, iki: 2 }));
+  });
+
+  test('bütünüyle örtülü gövdenin adı yazılmaz, görünen ana gövdeninki yazılır (ince şerit kararsız)', () => {
+    const hata = []; let gizliSay = 0;
+    ['tulga', 'siper', 'asfat'].forEach((ad) => {
+      yukle(ad);
+      const m = cp._mntAksoModel(), B = kutular(m);
+      BAK.forEach((kam) => {
+        const K = AK.kamera('dim', null, AK.kamYon(kam)), w = K.d.map((v) => -v);
+        document.body.innerHTML = ciz(m, kam).svg;
+        m.govde.filter((g) => g.kutu && g.ana).forEach((g) => {
+          const b = B.find((x) => x.k === g.k), orn = [];
+          AK.yuzler(b.c, b.h).filter((f) => K.gorunur(f.n)).forEach((f) => {
+            for (let a = 0.02; a < 1; a += 0.12) for (let e = 0.02; e < 1; e += 0.12) orn.push([0, 1, 2].map((i) => f.pts[0][i] + (f.pts[1][i] - f.pts[0][i]) * a + (f.pts[3][i] - f.pts[0][i]) * e));
+          });
+          const gor = orn.filter((q) => !B.some((x) => x !== b && (icinde(q, x, 0) || orter(q, x, w, 0.01)))).length / orn.length;
+          if (gor > 0 && gor < 0.15) return;
+          const yazili = [...document.querySelectorAll(`[data-ak="${g.k}"]`)].some((e) => !e.closest('.ve-ak-hareket') && e.querySelector('text'));
+          if (gor === 0) gizliSay++;
+          if (gor === 0 && yazili) hata.push(`${ad} ${g.ad} @${kam.az}/${kam.el}: örtülü ama yazılı`);
+          if (gor > 0 && !yazili) hata.push(`${ad} ${g.ad} @${kam.az}/${kam.el}: görünür ama yazısız`);
+        });
+      });
+    });
+    expect(hata.slice(0, 8)).toEqual([]);
+    expect(gizliSay).toBeGreaterThan(0);
+  });
+
+  test('perdede seçili parça arkada kalsa da önde ve adıyla; X-ışını (rapor) camdır — takozlar gövdelerden sonra', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), B = kutular(m);
+    // T5'in arkada kaldığı bir bakış (kâhinden)
+    const kam = BAK.find((k) => sakli([m.takoz[4].x, m.takoz[4].y, m.takoz[4].z], B, AK.kamera('dim', null, AK.kamYon(k))));
+    expect(kam).toBeTruthy();
+    const t5 = m.takoz[4].k;
+    document.body.innerHTML = ciz(m, kam).svg;
+    expect(document.querySelector(`.ve-ak-cip[data-ak="${t5}"]`)).toBeNull();
+    document.body.innerHTML = ciz(m, kam, { secili: t5, perde: true }).svg;
+    expect(document.querySelector(`.ve-ak-odak g.ve-ak-t[data-ak="${t5}"]`)).toBeTruthy();
+    expect(document.querySelector(`.ve-ak-odak .ve-ak-cip[data-ak="${t5}"]`)).toBeTruthy();
+    // X-ışını: eski sıra — bütün takozlar bütün gövdelerden sonra
+    document.body.innerHTML = ciz(m, kam, { stil: 'xray' }).svg;
+    const sira = [...document.querySelectorAll('.ve-ak-hareket g.ve-ak-g, .ve-ak-hareket g.ve-ak-t')].map((e) => (e.matches('.ve-ak-t') ? 't' : 'g')).join('');
+    expect(sira).toMatch(/^g+t+$/);
+    document.body.innerHTML = '';
+  });
+});
+
 // AYDINLIK (kullanıcı 2026-10-18: "isim aydınlık fakat parça da aydınlık
 // olmalı"): seçili parçanın HER yüzü perdenin altındaki zeminden ve gölgedeki
 // aynı tür parçanın her yüzünden açık — iki temada, renkler CSS'ten. Takozun
@@ -1008,7 +1128,7 @@ describe('PENCERE — sürüklerken yazılı kare; föyün satırı çizimdeki p
     yukle('tulga');
     const kap = kur('h1'), A = cp.VE_MNT_AKSO3B;
     const dinlenme = yazi(kap);
-    expect(dinlenme.length).toBeGreaterThanOrEqual(15);
+    expect(dinlenme.length).toBeGreaterThanOrEqual(12);           // eksen adları 3; arkada kalan takoz yazısız
     A.az = (A.az + 6) % 360;                                       // 12 px sürükleme
     expect(cp._mntAkso3bHizli(kap.id)).toBe(true);
     expect(yazi(kap).sort()).toEqual(dinlenme.slice().sort());

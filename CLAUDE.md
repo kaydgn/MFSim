@@ -119,7 +119,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   parçasını **perdenin** üstüne alır (`o.secili` + `o.perde`: parça aydınlık, kalan
   model gölgede). Seçili parça — gövde, takoz, nokta kütle — "bu bileşen"
   tonlarında (vurgu + `--isik`): her yüzü gölgedeki zeminden ve aynı tür
-  parçadan açık, iki temada. Bileşen pencerelerinin **"Güç grubundaki yeri"** Görünümler'in
+  parçadan açık, iki temada. Katı çizimde takoz ve nokta kütle kutularla AYNI
+  ressam sırasında (CAD gibi): kutunun arkasında kalan örtülü ve yazısız,
+  kutunun içindeki en yakın yüzünde sayılır; bütünüyle örtülü gövde yazısız;
+  seçili (perde) yine önde, G işaret olarak üstte, X-ışını (rapor) cam. Bileşen pencerelerinin **"Güç grubundaki yeri"** Görünümler'in
   AYNI bileşeni (açı ortak, sabit genişlik `data-w` — yerinde tazelemede değişmesin),
   bileşen perdenin üstünde. Tam ekran kabın yüksekliğini doldurur. Başlangıç sayfasının örnek karoları sade
   kipi (`veMntAksoOrnekModel`), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
@@ -127,8 +130,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   3D Görüntüleyici CAD'in evi (aşağıda); `js/cp-mount-viewer.js` yalnız Koordinat
   Düzlemi'nin sahnesi. Kapı:
   `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *YAPIŞKAN
-  YER* · *PERDE* · *AYDINLIK* · *RAPOR* · *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* +
-  `mount-pencere.spec.js` → *Görünümler* · *Güç grubundaki yeri* · *tam ekran* ·
+  YER* · *PERDE* · *AYDINLIK* · *GİZLİ YÜZEY* · *RAPOR* · *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* +
+  `mount-pencere.spec.js` → *Görünümler* · *Güç grubundaki yeri* · *kutunun arkasındaki* · *tam ekran* ·
   *3D Görüntüleyici* ·
   `mount-baslangic.test.js` → *KÜÇÜK RESİM* · `mount-rapor.spec.js`.
 - `js/cp-mount-cad.js` — Takoz **3D Görüntüleyici: CAD'in evi** (2026-10-20, adım 4; yer
