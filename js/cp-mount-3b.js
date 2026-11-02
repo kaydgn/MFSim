@@ -94,6 +94,9 @@ var VE_MW_3B_ALT_PAY = 124;
 var VE_MW_3B_BUTCE = 10;
 // AÇILIŞ BAKIŞI: önden-sağdan-yukarıdan (araç ekseni: x arkaya, y sağa, z yukarı)
 var VE_MW_3B_ACILIS = { theta: 0.75 * Math.PI, phi: 0.42, doluluk: 0.8 };
+// Yükselişin sınırı (rad): tam düşeyin binde biri altı — Üst ve Alt görünüşler
+// tam tepeden bakar, sürükleme de oraya dek döner (eskiden ±1,5: ~86°)
+var VE_MW_3B_PHI = Math.PI / 2 - 1e-3;
 // ÇİZİM KÜMESİ: köşe ve çizgi köşesi kapasitesi; daha büyük parça kendi kümesini alır
 var VE_MW_3B_KUME = { uc: 1 << 20, ucgen: 1 << 21, cizgi: 1 << 20 };
 // Kurulum sürerken kare aralığı: en az VE_MW_3B_KURULUM_KARE ms, ve karenin
@@ -183,6 +186,7 @@ function veMntWiz3bAc(yer){
       + '<div class="ve-fw-3b-etiketler" id="ve-mw-3b-etiket"></div>'
       + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
       + '<div class="ve-mw-3b-kur" id="ve-mw-3b-kur" hidden></div>'
+      + '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-mw-3b-ipucu" hidden></div></div>'
     + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-agac-bas"><h4>Ürün ağacı</h4>'
       + '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"></span></div>'
@@ -230,6 +234,7 @@ function veMntWiz3bAc(yer){
   var dosya = document.getElementById('ve-mw-3b-dosya');
   if(dosya) dosya.textContent = s.dosya + ' · ' + s.sonuc.parcalar.length + ' parça';
   _mw3bPanel();
+  if(typeof _mw3bAracYaz === 'function') _mw3bAracYaz();
   _mw3bAgKur();
   return true;
 }
@@ -1107,6 +1112,9 @@ function _mw3bDaireAra(cx, cy){
         var u = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p[0]) * dx + (my - p[1]) * dy) / l2)) : 0;
         var ex = p[0] + u * dx - mx, ey = p[1] + u * dy - my, dd = Math.sqrt(ex * ex + ey * ey);
         if(dd > D.px) continue;
+        var KK = V.kesitK;
+        if(KK && KK[0] * (L[k] + u * (L[k + 3] - L[k])) + KK[1] * (L[k + 1] + u * (L[k + 4] - L[k + 1]))
+           + KK[2] * (L[k + 2] + u * (L[k + 5] - L[k + 2])) + KK[3] < -1e-9) continue;   // kesilen yanda
         var der = (L[k] + u * (L[k + 3] - L[k]) - o.x) * d.x + (L[k + 1] + u * (L[k + 4] - L[k + 1]) - o.y) * d.y
           + (L[k + 2] + u * (L[k + 5] - L[k + 2]) - o.z) * d.z;
         if(der > vur.t + tol) continue;                          // tıklanan yüzün arkasında
@@ -1200,7 +1208,7 @@ function _mw3bYuzAra(cx, cy){
   aday.sort(function(a, b){ return a[0] - b[0]; });
   var en = { t: Infinity, k: -1, i: -1 };
   for(var c = 0; c < aday.length && aday[c][0] <= en.t; c++){
-    var q = _mw3bUcgenKesK(o, d, V.s.ag[aday[c][1]], en.t);
+    var q = _mw3bUcgenKesK(o, d, V.s.ag[aday[c][1]], en.t, V.kesitK);
     if(q.t < en.t) en = { t: q.t, k: q.k, i: aday[c][1] };
   }
   if(en.i < 0) return null;
@@ -1212,7 +1220,7 @@ function _mw3bYuzAra(cx, cy){
   return duz ? { parca: en.i, p: p, duzlem: duz } : null;
 }
 // Işın ↔ parçanın üçgenleri, üçgenin yeriyle: { t, k } (k: üçgen dizisindeki konum)
-function _mw3bUcgenKesK(o, d, a, sinir){
+function _mw3bUcgenKesK(o, d, a, sinir, kes){
   var en = { t: sinir, k: -1 };
   if(!a || !a.ucgen) return en;
   var u = a.uc, T = a.ucgen, ox = o.x, oy = o.y, oz = o.z, dx = d.x, dy = d.y, dz = d.z;
@@ -1230,7 +1238,7 @@ function _mw3bUcgenKesK(o, d, a, sinir){
     var vv = (dx * qx + dy * qy + dz * qz) * inv;
     if(vv < 0 || uu + vv > 1) continue;
     var t = (e2x * qx + e2y * qy + e2z * qz) * inv;
-    if(t > 1e-6 && t < en.t) en = { t: t, k: k };
+    if(t > 1e-6 && t < en.t && !(kes && kes[0] * (ox + t * dx) + kes[1] * (oy + t * dy) + kes[2] * (oz + t * dz) + kes[3] < -1e-9)) en = { t: t, k: k };
   }
   return en;
 }
@@ -1324,12 +1332,14 @@ function _mw3bOrnekNoktalar(){
 }
 // Kartın, ağacın ve alttaki dizinin ÖRTTÜĞÜ şerit (px) — sığdırma geri kalan alana oturur.
 function _mw3bSerbest(){
-  var V = _mw3b, out = { sag: 0, alt: 0, sol: 0 };
+  var V = _mw3b, out = { sag: 0, alt: 0, sol: 0, ust: 0 };
   if(!V || typeof document === 'undefined') return out;
   var r = V.kap.getBoundingClientRect(), yan = document.getElementById('ve-mw-3b-yan'), alt = document.getElementById('ve-mw-3b-alt');
   var agac = document.getElementById('ve-mw-3b-agac');
   if(yan && yan.offsetWidth){ var y = yan.getBoundingClientRect(); var sg = r.right - y.left; if(sg > 0 && sg < r.width * 0.5) out.sag = sg; }
   if(agac && agac.offsetWidth){ var g = agac.getBoundingClientRect(); var sl = g.right - r.left; if(sl > 0 && sl < r.width * 0.4) out.sol = sl; }
+  var arac = document.getElementById('ve-mw-3b-arac');
+  if(arac && arac.lastElementChild){ var c = arac.lastElementChild.getBoundingClientRect(); var us = c.bottom - r.top; if(us > 0 && us < r.height * 0.3) out.ust = us; }
   if(alt && alt.offsetHeight){ var a = alt.getBoundingClientRect(); var ak = Math.max(VE_MW_3B_ALT_PAY, r.bottom - a.top); if(ak < r.height * 0.4) out.alt = ak; }
   return out;
 }
@@ -1365,7 +1375,7 @@ function _mw3bSigdir(kutu, noktalar, bekle){
     });
     if(!isFinite(x0)) break;
     var h = V.kap.clientHeight || 1, w = V.kap.clientWidth || 1, F = _mw3bSerbest();
-    var ax = (w - F.sag - F.sol) / w, ay = (h - F.alt) / h, cx = (F.sol - F.sag) / w, cy = F.alt / h;
+    var ax = (w - F.sag - F.sol) / w, ay = (h - F.alt - F.ust) / h, cx = (F.sol - F.sag) / w, cy = (F.alt - F.ust) / h;
     _mw3bKaydir(-((x0 + x1) / 2 - cx) * w / 2, ((y0 + y1) / 2 - cy) * h / 2);
     var en = Math.max((x1 - x0) / 2 / ax, (y1 - y0) / 2 / ay);
     if(!(en > 0)) break;
@@ -1411,7 +1421,7 @@ function _mw3bDinle(V){
       V.eldegdi = true;
       V.kap.classList.add('surukle');
       if(bas.kay) _mw3bKaydir(dx, dy);
-      else { V.ctrl.theta -= dx * 0.008; V.ctrl.phi = Math.max(-1.5, Math.min(1.5, V.ctrl.phi + dy * 0.008)); }
+      else { V.ctrl.theta -= dx * 0.008; V.ctrl.phi = Math.max(-VE_MW_3B_PHI, Math.min(VE_MW_3B_PHI, V.ctrl.phi + dy * 0.008)); }
       bas.x = e.clientX; bas.y = e.clientY;
       _mw3bKamera(); _mw3bCiz(true);
       return;
@@ -1463,7 +1473,7 @@ function _mw3bIsabetIsin(o, d, kume){
   aday.sort(function(a, b){ return a[0] - b[0]; });
   var en = Infinity, enI = -1;
   for(var c = 0; c < aday.length && aday[c][0] <= en; c++){
-    var t2 = _mw3bUcgenKes(o, d, V.s.ag[aday[c][1]], en);
+    var t2 = _mw3bUcgenKes(o, d, V.s.ag[aday[c][1]], en, V.kesitK);
     if(t2 < en){ en = t2; enI = aday[c][1]; }
   }
   return { i: enI, t: en };
@@ -1483,8 +1493,9 @@ function _mw3bKutuKes(o, d, K, j, pay){
   }
   return t0;
 }
-// Işın ↔ parçanın üçgenleri (Möller–Trumbore, iki yüzlü): en yakın t < sinir
-function _mw3bUcgenKes(o, d, a, sinir){
+// Işın ↔ parçanın üçgenleri (Möller–Trumbore, iki yüzlü): en yakın t < sinir.
+// `kes` ([nx, ny, nz, c] — kesit): n·p + c < 0 yandaki (kesilen, çizilmeyen) isabet sayılmaz
+function _mw3bUcgenKes(o, d, a, sinir, kes){
   if(!a || !a.ucgen) return Infinity;
   var u = a.uc, T = a.ucgen, en = sinir, ox = o.x, oy = o.y, oz = o.z, dx = d.x, dy = d.y, dz = d.z;
   for(var k = 0; k < T.length; k += 3){
@@ -1501,7 +1512,7 @@ function _mw3bUcgenKes(o, d, a, sinir){
     var vv = (dx * qx + dy * qy + dz * qz) * inv;
     if(vv < 0 || uu + vv > 1) continue;
     var t = (e2x * qx + e2y * qy + e2z * qz) * inv;
-    if(t > 1e-6 && t < en) en = t;
+    if(t > 1e-6 && t < en && !(kes && kes[0] * (ox + t * dx) + kes[1] * (oy + t * dy) + kes[2] * (oz + t * dz) + kes[3] < -1e-9)) en = t;
   }
   return en;
 }
@@ -1704,10 +1715,26 @@ function veMntWiz3bEksenSVG(me){
         + '" dominant-baseline="' + bas + '">' + metin + '</text>';
     };
     // Bakana (ya da tersine) dönük eksen: iki uç ortada üst üste binerdi — yalnız
-    // bakana dönük ucun yazısı, orijinin sağ üstünde
+    // bakana dönük ucun yazısı, orijinin çevresinde öteki eksenlerin iki ucuna da
+    // en uzak yönde (on altı aday)
     if(boy < 0.25){
-      yazi += '<text class="ad ' + (a.d >= 0 ? 'ad-' + x : 'eksi') + '" x="' + f(cx + 7) + '" y="' + f(c - 7)
-        + '" text-anchor="start" dominant-baseline="auto" data-arka="1">' + a.ad[a.d >= 0 ? 1 : 2] + '</text>';
+      var yon = [], en = null;
+      for(var j = 0; j < 16; j++) yon.push([Math.cos(j * Math.PI / 8), Math.sin(j * Math.PI / 8)]);
+      yon.forEach(function(q){
+        var puan = Infinity;
+        ax.forEach(function(b2){
+          if(b2 === a) return;
+          var l2 = Math.sqrt(b2.sx * b2.sx + b2.sy * b2.sy);
+          if(l2 < 1e-6) return;
+          var dt = (q[0] * b2.sx - q[1] * b2.sy) / l2;           // ekranda y aşağı
+          puan = Math.min(puan, 1 - Math.abs(dt));
+        });
+        if(!en || puan > en.p) en = { q: q, p: puan };
+      });
+      var qx = en.q[0], qy = en.q[1];
+      yazi += '<text class="ad ' + (a.d >= 0 ? 'ad-' + x : 'eksi') + '" x="' + f(cx + qx * 10) + '" y="' + f(c + qy * 10)
+        + '" text-anchor="' + (qx > 0.3 ? 'start' : qx < -0.3 ? 'end' : 'middle') + '" dominant-baseline="' + (qy < -0.3 ? 'auto' : qy > 0.3 ? 'hanging' : 'central') + '" data-arka="1">'
+        + a.ad[a.d >= 0 ? 1 : 2] + '</text>';
       return;
     }
     yer(tx, ty, ux, uy, 6, a.ad[1], 'ad ad-' + x);
