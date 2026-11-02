@@ -155,7 +155,10 @@ test('SİHİRBAZ KAPISI: pencere FEAD sihirbazının kabuğuyla açılır, Esc k
   await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
 });
 
-test('STEP KAPISI: dosya seçici AYNI tıklamada açılır, okunan montaj kartta', async ({ page }) => {
+// STEP KAPISI (kullanıcı kararı 2026-11-02: "Stepten başla butonuna tıkladığım
+// zaman, ilk baştaki yükleme sihirbazı üzerinden okuyor. Bunu istemiyorum." →
+// "3B açılsın, sonra sihirbaz"). Önce (main 8f83e73): kapı sihirbazı açıyordu.
+test('STEP KAPISI: seçici AYNI tıklamada; sihirbaz açılmaz, dosya 3B\'nin perdesinde okunur; Sihirbaza aktar sihirbazı açar', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);
   await takozGir(page);
@@ -163,11 +166,28 @@ test('STEP KAPISI: dosya seçici AYNI tıklamada açılır, okunan montaj kartta
     page.waitForEvent('filechooser', { timeout: 5000 }),
     page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="step"]'),
   ]);
-  await expect(page.locator('#ve-mntwiz-overlay')).toBeVisible();
+  await expect(page.locator('#ve-mntwiz-overlay')).toBeHidden();
   await fc.setFiles({ name: 'guc.stp', mimeType: 'application/octet-stream', buffer: Buffer.from(STEP.gucGrubu()) });
-  await page.waitForFunction(() => { const s = veMntWizStp(); return s && s.durum === 'hazir'; }, null, { timeout: 30000 });
-  // 3B görüntüleyici dosya okununca açılır (WebGL varsa); kart onun altında.
-  await page.evaluate(() => { if (typeof veMntWiz3bKapat === 'function') veMntWiz3bKapat(); });
+  await expect(page.locator('#ve-mnt-3b-overlay')).toBeVisible();
+  await page.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; },
+    null, { timeout: 60000 });
+  await expect(page.locator('#ve-mntwiz-overlay')).toBeHidden();
+  expect(await page.evaluate(() => [veMntWiz3bYer(), veMntWizStp().yer])).toEqual(['pencere', 'pencere']);
+  // tuvalde araç şeridi — rollerin evi 3D Görüntüleyici dâhil; başlangıç sayfası çekildi
+  expect(await page.evaluate(() => nodes.filter((n) => n.type === 'mnt-viewer').length)).toBe(1);
+  await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
+  // rol ve hesap 3B'de; rol rollerin evine yazılır
+  await page.evaluate(() => {
+    const s = veMntWizStp();
+    s.sonuc.agac.forEach((d) => { if (d.ad === 'Motor bloğu') veMntWizStpRol(d.i, 'mnt-motor'); if (/takoz$/.test(d.ad)) veMntWizStpRol(d.i, 'mnt-mount'); });
+  });
+  expect(await page.evaluate(() => nodes.find((n) => n.type === 'mnt-viewer').data.cad.roller.length)).toBe(5);
+  await page.click('#ve-mw-3b-hesapla');
+  await page.waitForFunction(() => { const s = veMntWizStp(); return s.coz && s.coz.ok; }, null, { timeout: 60000 });
+  // aktarım kendi perdesindeki 3B'de de: sihirbaz açılır, 3B kapanır
+  await page.click('#ve-mw-3b-aktar');
+  await expect(page.locator('#ve-mntwiz-overlay')).toBeVisible();
+  await expect(page.locator('#ve-mnt-3b-overlay')).toBeHidden();
+  expect(await page.evaluate(() => !!veMntWizStp().aktarim)).toBe(true);
   await expect(page.locator('#ve-mw-body .ve-fw-stp .ve-fw-seeded b').first()).toHaveText('guc.stp');
-  expect(await page.locator('#ve-mw-body table.ve-mw-tbl-stp tbody tr').count()).toBe(9);
 });

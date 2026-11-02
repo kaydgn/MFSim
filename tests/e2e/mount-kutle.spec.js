@@ -65,8 +65,10 @@ test('KART (1366×768): kaynak seçicisi sığar; dosyadan kütle merkezi, malze
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page, 1366, 768);
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
+  // Sihirbazın kendi STEP kartı (başlangıç sayfasının kapısı 2026-11-02'den beri 3B'de okur)
+  await page.evaluate(() => veMntWizAc());
   const [fc] = await Promise.all([page.waitForEvent('filechooser', { timeout: 5000 }),
-    page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="step"]')]);
+    page.click('#ve-mw-body .ve-fw-stp-sec')]);
   await fc.setFiles(KALIP);
   await page.waitForFunction(() => { const s = veMntWizStp(); return s && s.durum === 'hazir'; }, null, { timeout: 60000 });
   await page.waitForFunction(() => typeof veMntWiz3bAcik === 'function' && veMntWiz3bAcik(), null, { timeout: 10000 }).catch(() => {});

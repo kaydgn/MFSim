@@ -22,6 +22,7 @@ Object.keys(STP).forEach((k) => { global[k] = STP[k]; });
 eval(loadSource('cp-mount-wizard.js'));
 eval(loadSource('cp-mount-3b.js'));
 eval(loadSource('cp-mount-3b-agac.js'));
+const CAD = require('../../js/cp-mount-cad.js');
 beforeEach(() => resetStubs(stubs));
 
 const v = (x, y, z) => ({ x, y, z });
@@ -82,8 +83,11 @@ describe('KURULUMUN KUTUSU ve BEKLEYEN HESAP', () => {
 // İKİ YER (2026-10-20, Takoz adım 4): 3B sihirbazın içinde ya da 3D
 // Görüntüleyici penceresinin kendi perdesinde açılır; "Sihirbaza aktar"
 // yalnız sihirbazın içinde — pencereden açılan 3B'de sihirbaz yok.
-describe('ALT DİZİ — aktarım yalnız sihirbazın 3B\'sinde', () => {
-  test('hesap sonrası aktarım düğmesi: varsayılan ve sihirbazda var, pencerede yok', () => {
+// 2026-11-02'ye dek aktarım yalnız sihirbazın 3B'sindeydi; "STEP'ten başla" dosyayı
+// 3B'nin kendi perdesinde okuduğundan (kullanıcı kararı: "3B açılsın, sonra
+// sihirbaz") aktarım iki yerde de var — pencereden sihirbazı açar.
+describe('ALT DİZİ — aktarım iki yerde de', () => {
+  test('hesap sonrası aktarım düğmesi: varsayılan var; gizleme seçeneği yalnız açıkça istenince', () => {
     const s = veMntStpOku(require('../helpers/step-takoz.js').gucGrubu());
     const st = { sonuc: s, roller: s.agac.map(() => null), coz: { ok: true, birimler: [] } };
     st.roller[1] = 'mnt-motor';
@@ -346,10 +350,17 @@ describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner'
     for (let k = 1; k < okSira.length; k++) expect(okSira[k]).toBeGreaterThanOrEqual(okSira[k - 1]);
   });
 
-  test('üstten bakış: Z bakana doğru — ok başı yok, yazısı soluk işaretli', () => {
-    const s = kur(kamera(0.75 * Math.PI, 1.5));
+  test('üstten bakış: Z bakana doğru — ok başı yok; yalnız bakana dönük ucun yazısı, soluk ve orijinin yanında', () => {
+    const s = kur(kamera(0.75 * Math.PI, 1.5)), E = VE_MW_3B_EKSEN;
     expect(s.querySelector('polygon.uc-z')).toBe(null);
-    expect(s.querySelector('text.ad-z').getAttribute('data-arka')).toBe('1');
+    const z = s.querySelectorAll('text.ad-z');
+    expect(z.length).toBe(1);
+    expect(z[0].textContent).toBe('+Z · Yukarı');
+    expect(z[0].getAttribute('data-arka')).toBe('1');
+    expect(+z[0].getAttribute('x')).toBeGreaterThan(E.w / 2);          // orijinin sağında: X'in "Ön"üyle binmez
+    // iki uç ortada üst üste binerdi (kurulurken ölçüldü: "Ör+ZAşağıarı")
+    expect(Array.from(s.querySelectorAll('text')).map((t) => t.textContent)).not.toContain('Aşağı');
+    expect(s.querySelectorAll('text').length).toBe(5);
     expect(s.querySelector('text.ad-x').hasAttribute('data-arka')).toBe(false);
   });
 });
@@ -473,6 +484,38 @@ describe('ÇOKLU SEÇİM — rol seçimin hepsine, tek hesap', () => {
     const Y = veMntWiz3bEtiketYerlesim([{ x: 360, y: 100, gen: 120 }, { x: 800, y: 100, gen: 50 }], 1200, 700, 0, 300);
     expect(Y[0].sol).toBe(false);
     expect(veMntWiz3bEtiketYerlesim([{ x: 360, y: 100, gen: 120 }, { x: 800, y: 100, gen: 50 }], 1200, 700, 0, 0)[0].sol).toBe(true);
+  });
+});
+
+// ── STEP'TEN BAŞLA (2026-11-02) ─────────────────────────────────────────────
+// Kullanıcı: "Stepten başla butonuna tıkladığım zaman, ilk baştaki yükleme
+// sihirbazı üzerinden okuyor. Bunu istemiyorum." → "3B açılsın, sonra sihirbaz".
+// Önce (main 8f83e73): kapı sihirbazı açıp dosyayı kartında okuyordu.
+describe('STEP\'TEN BAŞLA — dosya 3B\'nin perdesinde, sihirbazsız', () => {
+  test('dosya seçilince sıra: araç şeridi (rollerin evi) → okuma pencerede → 3B; sihirbaz açılmaz', () => {
+    const sira = [], ad = ['veMntKanvasBos', 'veMntWizStpDosya', 'veMntWiz3bAc', 'veMntWizAc'];
+    const eski = ad.map((k) => global[k]);
+    global.veMntKanvasBos = () => { sira.push('kanvas'); return [{}]; };
+    global.veMntWizStpDosya = (f, yer) => { sira.push('oku:' + yer); };
+    global.veMntWiz3bAc = (yer) => { sira.push('3b:' + yer); return true; };
+    global.veMntWizAc = () => { sira.push('SİHİRBAZ'); return true; };
+    try {
+      expect(CAD.veMntCadStepBasla({ name: 'guc.stp' })).toBe(true);
+      expect(sira).toEqual(['kanvas', 'oku:pencere', '3b:pencere']);
+      expect(CAD.veMntCadStepBasla(null)).toBe(false);
+    } finally { ad.forEach((k, i) => { if (eski[i] === undefined) delete global[k]; else global[k] = eski[i]; }); }
+  });
+
+  test('okuma kartı: dosyanın adı ve okumanın eylem satırı (Vazgeç); hata durumunda sebebi', () => {
+    const d = document.createElement('div');
+    d.innerHTML = _mw3bOkumaHTML({ dosya: 'guc.stp', durum: 'okunuyor', bayt: 100, ilerleme: { evre: 'dosya', oran: 0, bayt: 0, toplam: 100 } });
+    expect(d.querySelector('.ve-mw-3b-okuma-ad b').textContent).toBe('guc.stp');
+    const v = d.querySelector('button[data-mw-stp-vazgec]');
+    expect(v.id).toBe('ve-mw-3b-okuma-vazgec');
+    expect(v.getAttribute('onclick')).toBe('veMntWizStpVazgec()');
+    d.innerHTML = _mw3bOkumaHTML({ dosya: 'bozuk.stp', durum: 'hata', hata: 'ISO-10303-21 başlığı yok' });
+    expect(d.querySelector('.ve-fw-issue-err').textContent).toBe(' bozuk.stp — ISO-10303-21 başlığı yok');
+    expect(d.querySelector('[data-mw-stp-vazgec]')).toBe(null);
   });
 });
 

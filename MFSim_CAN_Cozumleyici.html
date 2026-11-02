@@ -8949,6 +8949,14 @@ span.ve-fw-ro{ display:inline-block; }
   padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
   box-shadow:0 1px 2px var(--shadow-color), 0 6px 18px var(--shadow-color); }
 .ve-mw-3b-kur[hidden]{ display:none; }
+/* OKUMA KARTI — STEP'ten başla: dosya 3B'nin perdesinde okunurken tuvalin
+   ortasında dosyanın adı ve okumanın eylem satırı (çubuk + Vazgeç) */
+.ve-mw-3b-okuma{ position:absolute; left:50%; top:42%; transform:translate(-50%, -50%); width:min(460px, calc(100% - 32px));
+  box-sizing:border-box; padding:14px 16px; display:flex; flex-direction:column; gap:10px; background:var(--bg-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 1px 2px var(--shadow-color), 0 10px 30px var(--shadow-color); }
+.ve-mw-3b-okuma-ad{ margin:0; display:flex; align-items:center; gap:6px; color:var(--text-secondary); min-width:0; }
+.ve-mw-3b-okuma-ad b{ color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-mw-3b-okuma .ve-fp-yurut{ margin:0; padding:0; border-top:0; }
 .ve-mw-3b-kur .ve-fp-yurut{ margin:0; padding:0; border-top:0; }
 .ve-fw-3b-ipucu{ position:absolute; pointer-events:none; padding:3px 8px; white-space:nowrap;
   font-size:var(--fs-tiny); color:var(--text-primary); background:var(--bg-primary);

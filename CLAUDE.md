@@ -57,7 +57,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   FEAD ile Takoz pencereleri AYNI üreticiden basar (kullanıcı: *"tüm programda tek
   tip bir kozmetik yapı"*). Kural aşağıda (ortak yüzeyler); kapı `pencere-kabuk.test.js`.
 - `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
-  başla · Boş kanvas + örnek karoları). Görünürlük modelden: yalnız "Başlangıç ve
+  başla · Boş kanvas + örnek karoları). **STEP'ten başla sihirbazı AÇMAZ** (kullanıcı
+  kararı 2026-11-02): araç şeridi kurulur, dosya 3B'nin perdesinde okunur
+  (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız "Başlangıç ve
   Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
   (`moduleEnter`). **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
   AYRI grupta ("Doğrulama örnekleri — kurgu") durur; kart metni künyedir, sonuç
@@ -144,8 +146,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   anahtarı sekme + modül; proje değişince düşer): dosya iki yerden açılır, rol
   birinde verilince ötekinde görünür, pencere kartın üreticilerini kitin
   bölümlerine koyar, tek eylemi durumdan (seçici · çubuk + Vazgeç · "3B'de aç").
-  3B pencereden açılınca kendi perdesinde (`#ve-mnt-3b-overlay`), aktarım yalnız
-  sihirbazda. **Dosya projeye GİRMEZ, roller girer**: rol ve kütle bileşenin
+  3B pencereden açılınca kendi perdesinde (`#ve-mnt-3b-overlay`); aktarım iki yerde
+  de (perdeden sihirbazı açar, 2026-11-02). **Dosya projeye GİRMEZ, roller girer**: rol ve kütle bileşenin
   `data.cad`ına örnek yoluyla (`veMntStpRolKaydi`) yazılır, aynı dosya okununca
   yoldan geri gelir; başka dosyanın kaydı rol verilene dek korunur. Rol değişimi
   geri-al adımı DEĞİL: geri yüklenen veri oturumdan yeniden yazılır

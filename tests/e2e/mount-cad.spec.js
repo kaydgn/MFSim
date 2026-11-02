@@ -90,7 +90,7 @@ test('PENCERE: seçici → çubuk + Vazgeç; dosya → kendi perdesinde 3B; rol;
   await page.click('#ve-properties #ve-mnt-cad-vazgec');
   expect(await page.evaluate(() => veMntWizStp())).toBe(null);
   await page.waitForSelector('#ve-properties #ve-mnt-cad-sec');
-  // Güç grubu: okununca 3B pencerenin perdesinde açılır, aktarım yok
+  // Güç grubu: okununca 3B pencerenin perdesinde açılır; aktarım hesaptan sonra (2026-11-02'den beri iki yerde de)
   await pencereden(page, GUC);
   await ucHazir(page);
   const uc = await page.evaluate(() => ({

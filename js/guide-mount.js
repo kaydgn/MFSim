@@ -978,6 +978,9 @@ function _gmSec16(){
     + '<em>STEP’ten başla</em> kartı aynı dosyayı, aynı rolleri ve aynı tabloları gösterir: dosya iki yerden '
     + 'açılır, rol birinde verilince ötekinde görünür.</p>';
   h += '<h3>16.1 Dosyayı açmak</h3>';
+  h += '<p>Boş bir modelde başlangıç sayfasındaki <strong>STEP’ten başla</strong> dosyayı doğrudan 3B’de '
+    + 'okur: tuvale araçlar (3D Görüntüleyici dâhil) kurulur, 3B tam ekran açılır, okuma çubuğu 3B’nin ortasındadır. '
+    + 'Roller ve hesap 3B’de verilir; <strong>Sihirbaza aktar</strong> sihirbazı takoz tipleri ve yükler için açar.</p>';
   h += _gmAdimlar([
     'Tuvaldeki <strong>3D Görüntüleyici</strong>’ye tıklayın; penceresinde <strong>STEP dosyası seç…</strong>’e '
       + 'basın ya da dosyayı <strong>STEP dosyası</strong> bölümüne bırakın.',

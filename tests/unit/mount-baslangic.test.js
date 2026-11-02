@@ -260,12 +260,19 @@ describe('KİMLİK VE VERİ — adlar programdan, sayılar kaynağından', () =>
 });
 
 describe('KAPILAR — modülün kendi çağrıları', () => {
-  test('sihirbaz → veMntWizAc · step → veMntWizAcStep', () => {
+  // STEP kapısı sihirbazı AÇMAZ (kullanıcı kararı 2026-11-02): dosya 3B'nin kendi perdesinde okunur
+  test('sihirbaz → veMntWizAc · step → veMntCadAcStep (sihirbaz açılmaz)', () => {
     casus('veMntWizAc', () => true, (f) => {
       expect(BS.veMntBaslangicEylem('sihirbaz')).toBe(true);
       expect(f).toHaveBeenCalledTimes(1);
     });
-    casus('veMntWizAcStep', () => true, (f) => {
+    casus('veMntWizAcStep', () => { throw new Error('sihirbazın kapısı'); }, () => {
+      casus('veMntCadAcStep', () => true, (f) => {
+        expect(BS.veMntBaslangicEylem('step')).toBe(true);
+        expect(f).toHaveBeenCalledTimes(1);
+      });
+    });
+    casus('veMntCadAcStep', () => true, (f) => {
       expect(BS.veMntBaslangicEylem('step')).toBe(true);
       expect(f).toHaveBeenCalledTimes(1);
     });
