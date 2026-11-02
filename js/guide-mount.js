@@ -1008,6 +1008,16 @@ function _gmSec16(){
     + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '
     + 'sığar. <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: kaydırıcı düzlemi taşır, <strong>Ters</strong> '
     + 'öteki yanı bırakır; kesilen yan çizilmez ve seçilmez.</p>';
+  h += _gmAlanTablo('3B görüntüleyici — seçim ve ölçü', [
+    ['<strong>Parça</strong>', 'Tık parçayı seçer; rol ve ağaç bu seçimle', 'Olağan süzgeç'],
+    ['<strong>Yüzey</strong>', 'Fare altındaki yüz açık vurgulanır, tık yüzü seçer; kartta yüzün tipi '
+      + '(düzlem, silindir, koni, küre, tor), ölçüsü, normali ya da ekseni ve alanı', 'Tanım dosyadan, alan '
+      + 'üçgen ağından (≈); parçanın seçimi değişmez'],
+    ['<strong>Ölçü</strong>', 'İki tık arası uzaklık ve Δx · Δy · Δz; üçüncü tık yeni ölçü', 'Dairesel kenarda '
+      + 'dairenin merkezi, yüzün köşesinde köşe, başka yerde yüzeydeki nokta']
+  ], ['Araç', 'Ne', 'Not']);
+  h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
+    + '<strong>Ürün ağacı</strong>ndan seçilir.</p>';
   h += '<p>Seçilen parça kendi renginde, kenarları koyu çizilir; öteki parçalar tek kat soluk kalır. Etiket '
     + 'birimin adını ve konumunu taşır; işarete bakan kenarı birimin rol rengindedir.</p>';
   h += '<h3>16.2 Roller</h3>';

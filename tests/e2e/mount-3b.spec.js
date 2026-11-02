@@ -319,3 +319,110 @@ test('BAKIŞ · KESİT: hazır bakışlar kamerayı çevirir; kesit dört malzem
   await expect(page.locator('#ve-mw-3b-kesit-d')).toHaveCount(0);
 });
 
+
+// 4b (2026-11-02): "Modelde yüzey seçme özelliğini de getirelim." · "Ölçümler…"
+test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; ölçü daireden merkeze, köşeden köşeye yapışır', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await dosyaSec(page, GUC);
+  await hazir(page);
+  const ekran = (p) => page.evaluate((p) => {
+    const V = window._mw3b, r = V.renderer.domElement.getBoundingClientRect();
+    V.camera.updateMatrixWorld();
+    const q = new THREE.Vector3(p[0], p[1], p[2]).project(V.camera);
+    return { x: r.left + (q.x + 1) / 2 * r.width, y: r.top + (1 - q.y) / 2 * r.height };
+  }, p);
+  await page.click('#ve-mw-3b-arac [data-ve-3b-bakis="ust"]');
+  const motor = await page.evaluate(() => veMntWizStp().sonuc.parcalar.filter((p) => p.ad === 'Motor bloğu')[0]);
+
+  // — YÜZEY: fare altı önden seçilir, tık yüzü seçer —
+  await page.click('#ve-mw-3b-arac [data-ve-3b-suzgec="yuz"]');
+  await expect(page.locator('#ve-mw-3b-arac [data-ve-3b-suzgec="yuz"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-yuz]')).toContainText('Modelde bir yüz seçin.');
+  const m = await ekran([-300, 5, 1250]);                        // motorun üst yüzünün ortası
+  await page.mouse.move(m.x, m.y);
+  await expect.poll(async () => ((await durum(page)).yuzOn || {}).parca).toBe(motor.i);
+  await expect(page.locator('#ve-mw-3b-ipucu')).toHaveText('Düzlem · z = 1.250,0 mm');
+  expect((await durum(page)).fare).toBe(-1);                      // parçanın fare vurgusu yok
+  await page.mouse.click(m.x, m.y);
+  await expect.poll(async () => (await durum(page)).yuz).toMatchObject({ parca: motor.i, tip: 'PLANE' });
+  expect((await durum(page)).secim).toEqual([]);
+  const yb = page.locator('#ve-mw-3b-yan [data-ve-3b-yuz]');
+  await expect(yb).toContainText('Motor bloğu');
+  await expect(yb).toContainText('z = 1.250,000 mm');
+  await expect(yb).toContainText('≈ 630.000 mm²');
+  // Seçili yüzün üstünde gezinmek kare çizdirmez (yüz değişmedikçe tanım okunmaz)
+  const kare = () => page.evaluate(() => window._mw3b.renderer.info.render.frame);
+  await page.mouse.move(m.x + 2, m.y + 1);
+  await expect.poll(async () => ((await durum(page)).yuzOn)).toBe(null);
+  const k0 = await kare();
+  for (let i = 1; i <= 6; i++) { await page.mouse.move(m.x + 2 + i * 3, m.y + 1 + i * 2); await page.waitForTimeout(40); }
+  expect(await kare() - k0).toBeLessThanOrEqual(1);
+  // Vurgu sahnede ve kesitle kırpılır
+  const vurgu = () => page.evaluate(() => { const V = window._mw3b; return V.yuzG ? (V.yuzG.material.clippingPlanes || []).length : -1; });
+  expect(await vurgu()).toBe(0);
+  await page.click('#ve-mw-3b-kesit');
+  expect(await vurgu()).toBe(1);
+  await page.click('#ve-mw-3b-kesit');
+  // Boşluğa tık yüzü bırakır
+  const kap = await page.locator('#ve-mw-3b-tuval').boundingBox();
+  await page.mouse.click(kap.x + kap.width / 2, kap.y + kap.height - 70);
+  await expect.poll(async () => (await durum(page)).yuz).toBe(null);
+  // Esc: süzgeç Parça'ya döner, görüntüleyici açık kalır
+  await page.mouse.click(m.x, m.y);
+  await expect.poll(async () => (await durum(page)).yuz).not.toBe(null);
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await durum(page)).suzgec).toBe('parca');
+  expect((await durum(page)).yuz).toBe(null);
+  expect(await page.evaluate(() => !!window._mw3b.yuzG)).toBe(false);
+  await expect(yb).toHaveCount(0);
+  expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
+
+  // — ÖLÇÜ (alttan: takozların alt kapağı ve motorun alt yüzü en yakında) —
+  // dairesel kenar → merkez; iki takozun alt merkezi 760 mm
+  await page.click('#ve-mw-3b-arac [data-ve-3b-bakis="alt"]');
+  await page.click('#ve-mw-3b-olcu');
+  await expect(page.locator('#ve-mw-3b-olcu')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-olcu]')).toContainText('Modelde iki nokta seçin.');
+  const a = await ekran([-650, 425, 390]);                        // sağ ön takozun alt çemberi
+  await page.mouse.move(a.x, a.y);
+  await expect.poll(async () => ((await durum(page)).olcu || {}).aday).toBe('daire');
+  await expect(page.locator('#ve-mw-3b-ipucu')).toHaveText('Daire merkezi · Ø 90,0 mm');
+  await expect(page.locator('#ve-mw-3b-etiket-cizgi polyline.ve-mw-3b-olcu-a')).toHaveCount(1);
+  await page.mouse.click(a.x, a.y);
+  const b = await ekran([-650, -425, 390]);                       // sol ön takozun alt çemberi
+  await page.mouse.click(b.x, b.y);
+  await expect.poll(async () => (await durum(page)).olcu).toMatchObject({ a: 'daire', b: 'daire' });
+  const dd = page.locator('#ve-mw-3b-yan [data-ve-3b-olcu-d]');
+  await expect(dd).toHaveAttribute('data-ve-3b-olcu-d', '760');
+  await expect(dd).toContainText('760,000 mm');
+  await expect(page.locator('#ve-mw-3b-etiket-cizgi [data-ve-3b-olcu-yazi] text')).toHaveText('760,0 mm');
+  await expect(page.locator('#ve-mw-3b-etiket-cizgi [data-ve-3b-olcu-n]')).toHaveCount(2);
+  // Üçüncü tık yeni ölçü; motorun alt yüzünün iki köşesi 700 mm (Δy)
+  // köşenin 4 px içi (yüzün merkezine doğru): ışın yüze çarpar, köşeye yapışır
+  const mz = await ekran([-300, 5, 450]);
+  const ic = async (p) => { const k = await ekran(p), l = Math.hypot(mz.x - k.x, mz.y - k.y); return { x: k.x + (mz.x - k.x) / l * 4, y: k.y + (mz.y - k.y) / l * 4 }; };
+  const k1 = await ic([150, -345, 450]), k2 = await ic([150, 355, 450]);
+  await page.mouse.move(k1.x, k1.y);
+  await expect.poll(async () => ((await durum(page)).olcu || {}).aday).toBe('kose');
+  await expect(page.locator('#ve-mw-3b-ipucu')).toHaveText('Köşe');
+  await page.mouse.click(k1.x, k1.y);
+  await expect.poll(async () => (await durum(page)).olcu).toMatchObject({ a: 'kose', b: '' });
+  await expect(dd).toHaveCount(0);
+  await page.mouse.click(k2.x, k2.y);
+  await expect(dd).toHaveAttribute('data-ve-3b-olcu-d', '700');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-olcu]')).toContainText('Δy700,000 mm');
+  // Kamera dönünce çizim izdüşümden yeniden kurulur
+  const x1 = await page.locator('#ve-mw-3b-etiket-cizgi line.ve-mw-3b-olcu-c').getAttribute('x1');
+  await page.click('#ve-mw-3b-arac [data-ve-3b-bakis="izo"]');
+  await expect.poll(() => page.locator('#ve-mw-3b-etiket-cizgi line.ve-mw-3b-olcu-c').getAttribute('x1')).not.toBe(x1);
+  // Esc ölçüyü kapatır, görüntüleyici açık kalır
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#ve-mw-3b-olcu')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-olcu]')).toHaveCount(0);
+  await expect(page.locator('#ve-mw-3b-etiket-cizgi [data-ve-3b-olcu-n]')).toHaveCount(0);
+  expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
+  expect(hatalar).toEqual([]);
+});

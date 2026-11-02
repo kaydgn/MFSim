@@ -603,3 +603,146 @@ describe('KESİT — düzlem, aralık, çubuk, kesilen yanda seçilmez', () => {
   });
 });
 
+
+// 4b (2026-11-02): "Modelde yüzey seçme özelliğini de getirelim." · "Ölçümler…"
+// Yüz tıklanan üçgenin ağdaki yüz aralığından, tanımı ve köşeleri DOSYADAN;
+// ölçü iki nokta arası. Fareyle seçim ve yapışma gerçek tarayıcıda:
+// tests/e2e/mount-3b.spec.js → YÜZEY · ÖLÇÜ.
+describe('YÜZEY SEÇİMİ — tıklanan üçgenin yüzü, tanımı ve köşeleri dosyadan', () => {
+  const P21 = require('../../js/step-p21.js');
+  beforeAll(() => { Object.assign(global, P21); });              // veStepP21Yuz · Varlik · NoktaUygula
+  const son = veMntStpOku(require('../helpers/step-takoz.js').gucGrubu());
+  const ag = veMntStpAgUret(son, [], son.parcalar.map((p) => p.i));
+  const s = { sonuc: son, ag };
+  const parca = (ad) => son.parcalar.filter((p) => p.ad === ad)[0].i;
+  const yuvarla = (P) => P.map((p) => p.map((x) => Math.round(x * 1000) / 1000)).sort();
+
+  test('üçgenin yüzü ikili aramayla: aralığın başı dâhil, sonu hariç; boş yüz atlanır', () => {
+    const Y = [0, 2, 5, 9];
+    expect([0, 1, 2, 4, 5, 8].map((t) => veMntWiz3bYuzSira(Y, t))).toEqual([0, 0, 1, 1, 2, 2]);
+    expect([9, -1, NaN].map((t) => veMntWiz3bYuzSira(Y, t))).toEqual([-1, -1, -1]);
+    expect(veMntWiz3bYuzSira([0], 0)).toBe(-1);
+    expect(veMntWiz3bYuzSira(null, 0)).toBe(-1);
+    expect(veMntWiz3bYuzSira([0, 3, 3, 6], 3)).toBe(2);
+  });
+
+  test('motor kutusu: altı düzlem, normal dışa, alan ve dört köşe dosyadaki ölçüyle', () => {
+    const pi = parca('Motor bloğu'), a = ag[pi], g = son._geo[pi];
+    expect(a.yuzUcgen.length).toBe(7);
+    const B = [0, 1, 2, 3, 4, 5].map((f) => veMntWiz3bYuzBilgi(s, pi, (a.yuzUcgen[f] + 1) * 3));   // yüzün ikinci üçgeni
+    expect(B.map((b) => [b.f, b.tip])).toEqual([0, 1, 2, 3, 4, 5].map((f) => [f, 'PLANE']));
+    // Kutu 900 × 700 × 800, merkezi (−300; 5; 850): her yüz kendi yanına bakar
+    B.forEach((b) => {
+      const j = b.n.findIndex((x) => Math.abs(x) === 1), c = [-300, 5, 850][j], yari = [450, 350, 400][j];
+      expect(b.o[j]).toBeCloseTo(c + b.n[j] * yari, 9);
+      expect(b.alan).toBeCloseTo(900 * 700 * 800 / (2 * yari), 6);     // hacim / o eksendeki boy
+    });
+    const ust = B.filter((b) => b.n[2] === 1)[0];
+    expect(veMntWiz3bYuzYazi(ust)).toBe('Düzlem · z = 1.250,0 mm');
+    expect(ust.aralik).toEqual([a.yuzUcgen[ust.f], a.yuzUcgen[ust.f + 1]]);
+    expect(yuvarla(veMntWiz3bYuzKoseler(son._model, g.yuzler[ust.f], g.M, g.birim)))
+      .toEqual(yuvarla([[-750, -345, 1250], [150, -345, 1250], [150, 355, 1250], [-750, 355, 1250]]));
+  });
+
+  test('silindir: Ø ve eksen dosyadan, alan ağdan (≈, iç teğet çokgen); köşeler dikişte', () => {
+    const pi = parca('Sağ ön takoz'), a = ag[pi], g = son._geo[pi];
+    const b = veMntWiz3bYuzBilgi(s, pi, a.yuzUcgen[0] * 3);
+    expect(b.tip).toBe('CYLINDRICAL_SURFACE');
+    expect(b.r).toBeCloseTo(45, 9);
+    expect(Math.abs(b.eksen[2])).toBeCloseTo(1, 9);
+    expect(b.n).toBeUndefined();
+    expect(veMntWiz3bYuzYazi(b)).toBe('Silindir · Ø 90,0 mm');
+    const tam = Math.PI * 45 * 60;                                  // yarım silindir, 60 mm boy
+    expect(b.alan).toBeLessThan(tam);
+    expect(b.alan).toBeGreaterThan(0.99 * tam);
+    const L = veMntWiz3bYuzSatirlar(b);
+    expect(L.map((r) => r[0])).toEqual(['Tip', 'Ø', 'Eksen', 'Eksen noktası', 'Alan']);
+    expect(L[1][1]).toBe('90,000 mm');
+    expect(L[4][1]).toMatch(/^≈ \d{1,3}(\.\d{3})* mm²$/);
+    // Üst kapak: tek dikiş köşesi üst çemberin üstünde, z = 450
+    const kapak = [0, 1, 2, 3].map((f) => veMntWiz3bYuzBilgi(s, pi, a.yuzUcgen[f] * 3)).filter((x) => x.tip === 'PLANE' && x.n[2] === 1)[0];
+    const K = veMntWiz3bYuzKoseler(son._model, g.yuzler[kapak.f], g.M, g.birim);
+    K.forEach((q) => {
+      expect(q[2]).toBeCloseTo(450, 9);
+      expect(Math.hypot(q[0] + 650, q[1] - 380)).toBeCloseTo(45, 9);
+    });
+  });
+
+  test('düzlemin normali dışa: yüzün yönü yüzeyinkine ters ise (.F.) normal de ters', () => {
+    const pi = parca('Motor bloğu'), asil = global.veStepP21Yuz;
+    try {
+      global.veStepP21Yuz = () => ({ tip: 'PLANE', ayni: false, o: [0, 0, 5], z: [0, 0, 1] });
+      expect(veMntWiz3bYuzBilgi(s, pi, 0).n.map((x) => x + 0)).toEqual([0, 0, -1]);
+      global.veStepP21Yuz = () => ({ tip: 'PLANE', ayni: true, o: [0, 0, 5], z: [0, 0, 1] });
+      expect(veMntWiz3bYuzBilgi(s, pi, 0).n).toEqual([0, 0, 1]);
+      global.veStepP21Yuz = () => { throw new Error('okunamadı'); };
+      expect(veMntWiz3bYuzBilgi(s, pi, 0)).toMatchObject({ tip: '', ad: 'Serbest yüz' });
+    } finally { global.veStepP21Yuz = asil; }
+  });
+
+  test('yüz yok: ağsız parça, dizinin dışı, yüz aralığı taşımayan ağ → null; okuyucusuz köşe yok', () => {
+    const pi = parca('Motor bloğu');
+    expect(veMntWiz3bYuzBilgi({ sonuc: son, ag: [] }, pi, 0)).toBe(null);
+    expect(veMntWiz3bYuzBilgi(s, pi, ag[pi].ucgen.length)).toBe(null);
+    const yalin = Object.assign({}, ag[pi]);
+    delete yalin.yuzUcgen;
+    const ag2 = ag.slice();
+    ag2[pi] = yalin;
+    expect(veMntWiz3bYuzBilgi({ sonuc: son, ag: ag2 }, pi, 0)).toBe(null);
+    expect(veMntWiz3bYuzKoseler(null, 1, null, null)).toEqual([]);
+  });
+
+  test('ölçü: uzaklık ve bileşenleri', () => {
+    expect(veMntWiz3bOlcuDeger([0, 0, 0], [3, 4, 12])).toEqual({ d: 13, dx: 3, dy: 4, dz: 12 });
+    expect(veMntWiz3bOlcuDeger(null, [1, 2, 3])).toBe(null);
+  });
+
+  test('kart: ölçü ve yüzey bölümleri; boşken bölümün tek yönlendirmesi', () => {
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bAracKartHTML({ olcu: { a: null, b: null }, suzgec: 'parca' });
+    expect(d.querySelector('[data-ve-3b-olcu] h4').textContent).toBe('Ölçü');
+    expect(d.querySelector('[data-ve-3b-olcu] .ve-fw-dim').textContent).toBe('Modelde iki nokta seçin.');
+    expect(d.querySelector('[data-ve-3b-yuz]')).toBe(null);
+    d.innerHTML = veMntWiz3bAracKartHTML({ olcu: { a: { p: [-650, 380, 450], tur: 'daire', r: 45 }, b: null }, suzgec: 'parca' });
+    expect(d.querySelector('[data-ve-3b-olcu-d]')).toBe(null);
+    expect(d.textContent).toContain('Daire merkezi · Ø 90,000 mm');
+    d.innerHTML = veMntWiz3bAracKartHTML({ olcu: { a: { p: [-650, 380, 450], tur: 'daire', r: 45 }, b: { p: [-650, -380, 450], tur: 'kose' } } });
+    const u = d.querySelector('[data-ve-3b-olcu-d]');
+    expect(+u.getAttribute('data-ve-3b-olcu-d')).toBe(760);
+    expect(u.textContent).toBe('Uzaklık760,000 mm');
+    const satir = Array.from(d.querySelectorAll('tr')).map((r) => Array.from(r.cells).map((c) => c.textContent));
+    expect(satir).toContainEqual(['2', 'Köşe']);
+    expect(satir).toContainEqual(['', '(−650,000; −380,000; 450,000)']);
+    expect(satir).toContainEqual(['Δy', '−760,000 mm']);
+    // Yüzey süzgeci: yüz yok → yönlendirme; yüz seçili → parça ve yüzün tablosu
+    d.innerHTML = veMntWiz3bAracKartHTML({ olcu: null, suzgec: 'yuz', yuz: null });
+    expect(d.querySelector('[data-ve-3b-olcu]')).toBe(null);
+    expect(d.querySelector('[data-ve-3b-yuz] .ve-fw-dim').textContent).toBe('Modelde bir yüz seçin.');
+    const pi = parca('Motor bloğu'), a = ag[pi];
+    const ust = [0, 1, 2, 3, 4, 5].map((f) => veMntWiz3bYuzBilgi(s, pi, a.yuzUcgen[f] * 3)).filter((b) => b.n[2] === 1)[0];
+    d.innerHTML = veMntWiz3bAracKartHTML({ suzgec: 'yuz', yuz: ust, parcaAd: 'Motor bloğu' });
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-yuz] tr')).map((r) => Array.from(r.cells).map((c) => c.textContent))).toEqual([
+      ['Parça', 'Motor bloğu'], ['Tip', 'Düzlem'], ['Konum', 'z = 1.250,000 mm'], ['Normal', '(0,000; 0,000; 1,000)'], ['Alan', '≈ 630.000 mm²']
+    ]);
+    expect(d.querySelector('[data-ve-3b-yuz]').getAttribute('data-ve-3b-yuz')).toBe(String(ust.f));
+  });
+
+  test('alt dizi: ölçü ya da yüzey süzgecinde parça ağaçtan seçilir — yönlendirme onu söyler', () => {
+    const st = { sonuc: son, roller: son.agac.map(() => null), coz: null };
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bAltHTML(st, -1, {});
+    expect(d.querySelector('.ve-fw-3b-dizi-ad').textContent).toBe('Seçili parça yok. Modelde bir parça seçin.');
+    d.innerHTML = veMntWiz3bAltHTML(st, -1, { agactan: true });
+    expect(d.querySelector('.ve-fw-3b-dizi-ad').textContent).toBe('Seçili parça yok. Ürün ağacından bir parça seçin.');
+  });
+
+  test('çubuk: Parça · Yüzey süzgeci ve Ölçü; basılılık durumdan', () => {
+    const d = document.createElement('div'), bas = () => ['[data-ve-3b-suzgec="parca"]', '[data-ve-3b-suzgec="yuz"]', '#ve-mw-3b-olcu']
+      .map((q) => d.querySelector(q).getAttribute('aria-pressed'));
+    d.innerHTML = veMntWiz3bAracHTML({ kesit: null });
+    expect(bas()).toEqual(['true', 'false', 'false']);
+    d.innerHTML = veMntWiz3bAracHTML({ kesit: null, suzgec: 'yuz', olcu: true });
+    expect(bas()).toEqual(['false', 'true', 'true']);
+    expect(d.querySelector('[role="group"][aria-label="Seçim"]').querySelectorAll('button').length).toBe(2);
+  });
+});

@@ -185,8 +185,8 @@ function veMntWiz3bAc(yer){
       + '<svg class="ve-fw-3b-etiket-cizgi" id="ve-mw-3b-etiket-cizgi" aria-hidden="true"></svg>'
       + '<div class="ve-fw-3b-etiketler" id="ve-mw-3b-etiket"></div>'
       + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
-      + '<div class="ve-mw-3b-kur" id="ve-mw-3b-kur" hidden></div>'
-      + '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"></div>'
+      + '<div class="ve-mw-3b-ust"><div class="ve-mw-3b-arac" id="ve-mw-3b-arac"></div>'
+        + '<div class="ve-mw-3b-kur" id="ve-mw-3b-kur" hidden></div></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-mw-3b-ipucu" hidden></div></div>'
     + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-agac-bas"><h4>Ürün ağacı</h4>'
       + '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"></span></div>'
@@ -196,6 +196,7 @@ function veMntWiz3bAc(yer){
   var kap = document.getElementById('ve-mw-3b-tuval');
   var V = { kap: kap, s: s, yer: yer, ov: ov, perde: perde, kume: [], ckume: [], parca: [], ekli: [], kutular: [], islenen: 0, yuz: 0, toplam: 0, yuzToplam: 0,
             sokucu: [], secili: -1, secim: [], fare: -1, fareDugum: -1, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
+            suzgec: 'parca', olcu: null, yuzSec: null, yuzOn: null, yuzG: null, yuzOnG: null,
             kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0 };
   var w = Math.max(1, kap.clientWidth), h = Math.max(1, kap.clientHeight);
   try {
@@ -729,13 +730,15 @@ function _mw3bPanel(goster){
   // için odak (ve imleç) aynı alanın yenisine geri verilir.
   var aktif = document.activeElement, odak = aktif && aktif.getAttribute && aktif.getAttribute('data-mw-stp-kutle');
   var imlec = (odak !== null && odak !== undefined && aktif.selectionStart !== undefined) ? aktif.selectionStart : null;
-  yan.innerHTML = veMntWiz3bPanelHTML(V.s, V.secili, V.secim);
+  yan.innerHTML = (typeof veMntWiz3bAracKartHTML === 'function' ? veMntWiz3bAracKartHTML(_mw3bAracKartVeri()) : '')
+    + veMntWiz3bPanelHTML(V.s, V.secili, V.secim);
   if(odak !== null && odak !== undefined && yan.contains && !yan.contains(aktif)){
     var yeni = yan.querySelector('input[data-mw-stp-kutle="' + odak + '"]');
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
   }
   var alt = document.getElementById('ve-mw-3b-alt');
-  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '', secim: V.secim });
+  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '', secim: V.secim,
+                                                            agactan: !!V.olcu || V.suzgec === 'yuz' });
 }
 // Saf: durum + seçili düğüm → sağdaki yüzen KART (testli). Sıra: ölçülen
 // birimler (gövdeler kütle alanıyla · takozlar) · seçili yol · rol verilenler.
@@ -848,6 +851,7 @@ function veMntWiz3bPanelHTML(s, secili, secim){
 // `opt.aktar === false`: aktarım düğmesi yok (3D Görüntüleyici'den açılan 3B).
 // `opt.secim`: çoklu seçimde rol HEPSİNE verilir; çip yalnız hepsi o roldeyse
 // basılı. Takoz noktası ve veri sayfası tek düğümün işi — çoklu seçimde yok.
+// `opt.agactan`: modeldeki tık parça seçmiyor (ölçü · yüzey süzgeci) — parça ağaçtan.
 function veMntWiz3bAltHTML(s, secili, opt){
   var so = s.sonuc, h = '<div class="ve-fw-3b-dizi" data-ve-3b-roller="1">';
   var secim = (opt && opt.secim && opt.secim.length) ? opt.secim : (secili >= 0 ? [secili] : []), cok = secim.length > 1;
@@ -900,7 +904,8 @@ function veMntWiz3bAltHTML(s, secili, opt){
       if(vs && rk) h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">' + (rk === 'yuz' ? veYon('Düzlem yüzü seçin.') : veYon('Eksenin dairesel kenarını seçin.')) + '</span>';
       h += '</div>';
     }
-  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok. ' + veYon('Modelde bir parça seçin.') + '</span>';
+  } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok. '
+    + (opt && opt.agactan ? veYon('Ürün ağacından bir parça seçin.') : veYon('Modelde bir parça seçin.')) + '</span>';
   h += '</div>';
   var coz = s.coz, rolEngel = typeof _mwStpRolDenetim === 'function' ? _mwStpRolDenetim(s) : [];
   // Bekleyen hesap (parçaların ağı hazırlanıyor): düğme kapalı, sebebi ipucunda
@@ -1021,6 +1026,7 @@ function veMntWiz3bNoktaSec(){
   if(b < 0 || V.s.roller[b] !== 'mnt-mount') return false;
   var ac = V.nokta !== b;
   if(V.ref) _mw3bRefKip(null);
+  if(ac && typeof _mw3bOlcuKapat === 'function') _mw3bOlcuKapat();
   _mw3bNoktaKip(ac ? b : -1);
   if(ac){ V.secili = b; V.secim = [b]; _mw3bBoya(); _mw3bOdakla(b); }
   _mw3bPanel();
@@ -1046,7 +1052,8 @@ function _mw3bOdakla(dugum){
 // Kip açıksa kapatır (Esc; takozun noktası ya da gövdenin referansı) — döner: kapattı mı
 function veMntWiz3bNoktaBitir(){
   var V = _mw3b;
-  if(!V || (V.nokta < 0 && !V.ref)) return false;
+  if(!V) return false;
+  if(V.nokta < 0 && !V.ref) return typeof veMntWiz3bAracBitir === 'function' ? veMntWiz3bAracBitir() : false;
   _mw3bNoktaKip(-1);
   _mw3bRefKip(null);
   _mw3bPanel();
@@ -1174,6 +1181,7 @@ function veMntWiz3bRefSec(tur){
   if(b < 0 || !veMntStpVs((V.s.yogunluk || {})[b], V.s.roller[b])) return false;
   var ac = !(V.ref && V.ref.birim === b && V.ref.tur === tur);
   if(V.nokta >= 0) _mw3bNoktaKip(-1);
+  if(ac && typeof _mw3bOlcuKapat === 'function') _mw3bOlcuKapat();
   _mw3bRefKip(ac ? { birim: b, tur: tur } : null);
   if(ac && tur === 'yuz'){ V.secili = b; V.secim = [b]; _mw3bBoya(); _mw3bOdakla(b); }
   _mw3bPanel();
@@ -1426,7 +1434,8 @@ function _mw3bDinle(V){
       _mw3bKamera(); _mw3bCiz(true);
       return;
     }
-    if(V.nokta >= 0) _mw3bDaireFare(e); else if(V.ref) _mw3bRefFare(e); else _mw3bFare(e);
+    if(V.nokta >= 0) _mw3bDaireFare(e); else if(V.ref) _mw3bRefFare(e);
+    else if(V.olcu) _mw3bOlcuFare(e); else if(V.suzgec === 'yuz') _mw3bYuzFare(e); else _mw3bFare(e);
   });
   dinle(cv, 'pointerup', function(e){
     var b = bas;
@@ -1435,6 +1444,8 @@ function _mw3bDinle(V){
     if(b && !b.oynadi && b.tus === 0){
       if(V.nokta >= 0){ _mw3bDaireTik(e); return; }
       if(V.ref){ _mw3bRefTik(e); return; }
+      if(V.olcu){ _mw3bOlcuTik(e); return; }
+      if(V.suzgec === 'yuz'){ _mw3bYuzTik(e); return; }
       var i = _mw3bIsabet(e.clientX, e.clientY);
       veMntWiz3bSec(i >= 0 ? V.s.sonuc.parcalar[i].dugum : -1, e.ctrlKey || e.metaKey);
     }
@@ -1442,6 +1453,7 @@ function _mw3bDinle(V){
   dinle(cv, 'pointerleave', function(){
     if(V.aday){ V.aday = null; _mw3bAdayHalka(null); _mw3bIpucu(null); _mw3bCiz(true); }
     if(V.fare >= 0){ V.fare = -1; _mw3bIpucu(null); _mw3bBoya(); _mw3bCiz(true); }
+    if(typeof _mw3bAracCikis === 'function') _mw3bAracCikis();
   });
   dinle(cv, 'wheel', function(e){
     e.preventDefault();
@@ -1650,8 +1662,8 @@ function veMntWiz3bEtiketYerlesim(Q, w, h, sag, solPay){
 function _mw3bEtiketle(){
   var V = _mw3b, kat = document.getElementById('ve-mw-3b-etiket'), cz = document.getElementById('ve-mw-3b-etiket-cizgi');
   if(!V || !kat || !cz) return;
-  var coz = V.s.coz;
-  if(!coz || !coz.ok || !V.grup.visible || !V.isaret || !V.isaret.length){ kat.innerHTML = ''; cz.innerHTML = ''; return; }
+  var coz = V.s.coz, ek = typeof _mw3bAracSVG === 'function' ? _mw3bAracSVG() : '';   // ölçü (araç çubuğu)
+  if(!coz || !coz.ok || !V.grup.visible || !V.isaret || !V.isaret.length){ kat.innerHTML = ''; cz.innerHTML = ek; return; }
   var w = V.kap.clientWidth || 1, h = V.kap.clientHeight || 1, F = _mw3bSerbest(), E = VE_MW_3B_ETK;
   V.camera.updateMatrixWorld();
   var Q = [];
@@ -1679,7 +1691,7 @@ function _mw3bEtiketle(){
       + 'px;top:' + _mw3bYuvarla(o.y) + 'px;--renk:var(' + veMntWiz3bRolJeton(q.b.tip) + ')">'
       + '<b>' + _mwEsc(q.b.ad) + '</b><span>' + _mwEsc(q.k) + '</span></div>';
   });
-  cz.innerHTML = cs + is; kat.innerHTML = hs;
+  cz.innerHTML = cs + is + ek; kat.innerHTML = hs;
 }
 // KOORDİNAT EKSENİ (saf, testli) — Koordinat Düzlemi'nin dili: oklar --eksen-*
 // renginde, eksi yarılar soluk, üç soluk düzlem, orijin. `me`: kameranın dünya
@@ -1830,7 +1842,9 @@ function veMntWiz3bDurum(){
     eksen: document.querySelectorAll('#ve-mw-3b-eksen text').length,
     secili: V.secili, secim: V.secim.slice(), fareDugum: V.fareDugum, fare: V.fare, kip: V.nokta, ref: V.ref ? V.ref.tur : '',
     aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire ? V.aday.daire.r : (V.aday.halka ? V.aday.halka.r : 0), tur: V.aday.tur || 'nokta' } : null,
-    adayHalka: !!V.halka };
+    adayHalka: !!V.halka, suzgec: V.suzgec, yuz: V.yuzSec ? { parca: V.yuzSec.parca, f: V.yuzSec.f, tip: V.yuzSec.tip } : null,
+    yuzOn: V.yuzOn ? { parca: V.yuzOn.parca, f: V.yuzOn.f } : null,
+    olcu: V.olcu ? { a: V.olcu.a ? V.olcu.a.tur : '', b: V.olcu.b ? V.olcu.b.tur : '', aday: V.olcu.aday ? V.olcu.aday.tur : '' } : null };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
