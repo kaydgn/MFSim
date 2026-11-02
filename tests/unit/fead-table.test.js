@@ -908,7 +908,15 @@ describe('görünüm CSS\'te, satır içinde değil', () => {
   const fs = require('fs');
   const path = require('path');
   const CSS = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
-  const blok = () => CSS.slice(CSS.indexOf('.ve-fead-pafta{'), CSS.indexOf('/* ═══ KOMUTA PENCERESİ'));
+  // Pafta bloğu bir sonraki BÖLÜM BAŞLIĞINA kadar. Komşu bölümün adıyla
+  // kesiliyordu: o bölüm kalkınca çapa -1 döndü, dilim 13.564 → 53.333
+  // karaktere uzadı ve testler yine geçti. Çapa yoksa artık sessiz kalmaz.
+  const blok = () => {
+    const i = CSS.indexOf('.ve-fead-pafta{');
+    const j = CSS.indexOf('/* ═══', i);
+    if (i < 0 || j < 0) throw new Error('pafta bloğunun çapası bulunamadı');
+    return CSS.slice(i, j);
+  };
   const kural = (sec) => {
     const i = CSS.indexOf(sec + '{');
     return i < 0 ? '' : CSS.slice(i, CSS.indexOf('}', i));

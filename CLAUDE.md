@@ -329,17 +329,6 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Bu yüzden pencere arşivin yanında olup olmadığını `programlar/arsiv-var.js`'i
   **script etiketiyle yoklayarak ÖLÇER** (`file://` üzerinde `fetch` var/yok
   ayrımı yapmıyor); o dosya bir yoklama hedefidir, veri konmaz.
-- `js/cp-komuta.js` — **Komuta Penceresi** (Araçlar → Komuta, ayrı şifre). İki işi
-  var: elindeki kopyanın durumunu ÖLÇMEK ve buradan bir **sipariş fişi** yazmak.
-  Pencere hiçbir şeyi DEĞİŞTİRMEZ. Tezgâhlar elle yazılmış özet TUTMAZ, canlı
-  veri yapısını okur — elle yazılan özet sessizce bayatlar (bu dosyanın kendi
-  6.052 satırlık dersi). Fiş, tezgâhın ölçtüğü içeriğin ÖZETİNİ taşır ve
-  `npm run komuta:dogrula` onu çalışma ağacından yeniden hesaplar.
-  **Yeni tezgâh eklerken:** `olc(veri)` SAF olmak zorunda (global okumaz) ve
-  tezgâh ölçtüğü kaynağı İKİ YERDEN beyan eder — tarayıcı için `kaynak()`,
-  Node için `dosya` + `disaAktarim`. İkisinin AYNI sayıyı ölçtüğü
-  `tests/e2e/komuta.spec.js`'te kapılı: ayrışma SESSİZDİR — pencere kendinden
-  emin biçimde "0 kayıt" gösterir, hiçbir şey patlamaz.
 - `.claude/skills/` — modüllere özgü karar kayıtları (koşullu yüklenir; aşağıya bak)
 - `docs/decisions/` — ortak yüzey kararları + tam test dosyası tablosu
 
@@ -376,7 +365,6 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 |-------|-------|-------------------|
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
-| Komuta Penceresi / sipariş fişi | `komuta` | Kullanıcı `MFSIM-SIPARIS` başlıklı bir metin YAPIŞTIRDIĞINDA, ya da `js/cp-komuta.js`, `tools/komuta-dogrula.js`, komuta testlerine dokunmadan **ÖNCE** |
 | Kullanım masası / geri bildirim | `kullanim` | Kullanıcı programı "kullan, geri bildirim ver" dediğinde, ya da `tools/kullanim*`, `tests/unit/kullanim-masa.test.js`'e dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
@@ -585,7 +573,7 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
 - **ETİKETLER CÜMLE DÜZENİNDE** (kullanıcı kararı 9·B). Çok kelimeli etikette
   yalnız ilk kelime büyük harfle başlar ("Klavye kısayolları"). Özel adlar
   kalır: bileşen adları (`componentDefs.name`), yüzey adları (Kayış Tablosu,
-  Komuta Penceresi, Program Durumu…), ürün adı, kısaltma, tuş, marka, İngilizce
+  Program Durumu…), ürün adı, kısaltma, tuş, marka, İngilizce
   terim (8·A). Kural TEK kaynakta: `tools/cumle-duzeni.js` (`node
   tools/cumle-duzeni.js <dosya>` sapmaları listeler). Kılavuz panel kartını
   BAŞLIĞIYLA arar — kart adı iki tarafta birlikte değişir. Kapı:
@@ -1145,19 +1133,6 @@ yolunu izledi ve sıçramaların hepsi gömülen WASM'lardandı (OCCT STEP okuyu
 TetGen, boolean'lı OCCT çekirdeği); Yapısal Analiz kaldırılınca ikisi de gitti
 ve dosya **17,1 MB**'a düştü. Sebepsiz bir büyüme bir regresyon işaretidir;
 sayıyı çıplak basmak onu gizler.
-
-## SİPARİŞ FİŞİ geldiğinde — DOĞRULAMADAN uygulama
-
-Kullanıcı Komuta Penceresi'nden `MFSIM-SIPARIS` başlıklı bir metin
-yapıştırabilir. **Asla doğrulamadan uygulama:**
-
-```bash
-npm run komuta:dogrula -- <fis-dosyasi>     # ya da: ... | npm run komuta:dogrula -- -
-```
-
-Çıkış kodu 0 değilse uygulama, kullanıcıya sor. Gerekçesi, fiil sözlüğü ve
-fişin hedef dosyasının hangi BAŞKA skill'i tetiklediği **`komuta` skill'inde** —
-fiş geldiğinde onu çağır.
 
 ## Teslim Akışı — PR + merge OTOMATİK, **CI BEKLENMEZ**
 

@@ -27,7 +27,7 @@ const ADLAR = new Set(Object.keys(U.ikonlar()));
 // Sonuçlar'ın ağacının kopyası — onunla birlikte aşama 3'te.
 const ASAMA1 = ['index.html', 'css/styles.css', 'viewer/index.html', 'viewer/js/app.js',
   'js/ikon.js', 'js/ribbon.js', 'js/command-palette.js', 'js/context-menus.js', 'js/settings.js',
-  'js/status.js', 'js/shortcuts-help.js', 'js/toolbar.js', 'js/cp-komuta.js', 'js/guide-kit.js',
+  'js/status.js', 'js/shortcuts-help.js', 'js/toolbar.js', 'js/guide-kit.js',
   'js/kimlik.js', 'js/cp-programlar.js', 'js/tablo-pencere.js', 'js/solver-pro.js', 'js/trace-view.js',
   'js/measure-import-ui.js', 'js/signal-tree.js', 'js/deploy-status.js', 'js/topology.js',
   'js/ui-core.js', 'js/components.js', 'js/state.js', 'js/loader.js', 'js/module-loader.js',

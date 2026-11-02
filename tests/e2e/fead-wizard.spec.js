@@ -475,9 +475,9 @@ test.describe('FEAD Başlangıç Sihirbazı', () => {
       // ÇİZİM MASASI (2026-09-29): gövdede adım başlığı YOK — adın tek yeri
       // ray; masa bandın hemen altından başlar.
       const bas = r('.ve-settings-header'), masa = r('#ve-fw-masa');
-      // Öteki dört pencere AYNI sınıfı paylaşıyor: sihirbaza özel bir başlık
+      // Öteki üç pencere AYNI sınıfı paylaşıyor: sihirbaza özel bir başlık
       // üçüncü bir pencere dili olurdu.
-      const oteki = ['ve-status-overlay', 've-komuta-overlay', 've-import-overlay', 've-settings-overlay'].map((id) => {
+      const oteki = ['ve-status-overlay', 've-import-overlay', 've-settings-overlay'].map((id) => {
         const o = document.getElementById(id);
         const d = o.style.display; o.style.display = 'flex';
         const h = o.querySelector('.ve-settings-header').getBoundingClientRect().height;

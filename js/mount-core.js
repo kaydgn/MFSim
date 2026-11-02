@@ -2176,11 +2176,9 @@ var veMountCore = (function() {
   // model.components[i].at / model.mounts[i].at = [lx,ly]  (ops.) → görseldeki
   //   yerleşimi birebir eşlemek için elle yerel-piksel konum; verilmezse
   //   otomatik yerleşim (orta sıra kütleler, alt/üst sıra takozlar) uygulanır.
-  // Kartta görünen özet sayıları Türkçe yazılır (karar 7·C). Defter modül
-  // YÜKLENİRKEN kuruluyor ve dosya Node'da da require ediliyor (komuta
-  // doğrulayıcısı) — orada veSayi global değil, yanındaki dosyadan alınır.
-  const _sayi = (typeof veSayi === 'function') ? veSayi : require('./sayi.js').veSayi;
-  const _sayiUstel = (typeof veSayiUstel === 'function') ? veSayiUstel : require('./sayi.js').veSayiUstel;
+  // Kartta görünen özet sayıları Türkçe yazılır (karar 7·C).
+  const _sayi = veSayi;
+  const _sayiUstel = veSayiUstel;
   const _toplamKg = (ex) => _sayi(ex.components.reduce(function(s,c){ return s + (c.mass||0); }, 0), 1) + ' kg';
   const _aralik = (z) => { const lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
     return lo === hi ? _sayi(lo) : _sayi(lo) + ' – ' + _sayi(hi); };

@@ -660,9 +660,9 @@
     /* KABUK BANDIYLA AYNI ÖLÇÜ (--bant-h): içerik 27 px iken 39 px'lik başlıkta
        12 px boştu — kullanıcı: "başlığın olduğu header kısmı boyuna çok büyük".
        Dikey pay 1 px: kapat düğmesi bant düğmeleriyle tek boy (22 px), 22 +
-       2·1 + çizgi = 25 ≤ 26. Beş
+       2·1 + çizgi = 25 ≤ 26. Dört
        pencere bu sınıfı paylaşıyor (Ayarlar · İçe Aktarma · Program Durumu ·
-       Komuta · FEAD sihirbazı), yani beşi de aynı bantta; zemin de bandın
+       FEAD sihirbazı), yani dördü de aynı bantta; zemin de bandın
        (--bant-zemin), çünkü jetonu kullanan her kural kabuğun bandıdır.
        PENCERE AİLESİ (doku haritası K6): uygulamanın bütün pencereleri bu
        başlığı taşır — Kısayollar · Kılavuzlar · Program Arşivi · Çözücü ·
@@ -1465,8 +1465,7 @@
     .mfsim-login-title,
     .mfsim-loading-logo,
     .ve-welcome-logo,
-    .ve-settings-section-title,
-    .ve-komuta-giris-baslik {
+    .ve-settings-section-title {
       letter-spacing: -0.01em;
     }
 
@@ -11062,117 +11061,6 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 /* ÇİZİMDEKİ BALON — satırın numarası kasnağın göbeğinde (tablo açıkken). */
 [data-ve="sira-no"].is-hov > circle, [data-ve="sira-no"].is-sel > circle{ stroke-width:2; }
 
-/* ═══ KOMUTA PENCERESİ (js/cp-komuta.js) ═══════════════════════════════════
-   Kabuk Ayarlar/Durum modalleriyle ORTAK (.ve-settings-overlay/-modal);
-   burada yalnız İÇERİK dili var. Görünüm satır içine yazılmıyor: kartın
-   :hover/:focus-visible/seçili durumları satır içi stille ifade EDİLEMEZ —
-   Kayış Tablosu'nda bir kez ölçüldü, tablo donuk görünüyordu (CLAUDE.md). */
-.ve-komuta-modal{ max-width:1080px; }
-/* Kaydıran şey IZGARA — künye şeridi üstte, sipariş fişi altta SABİT kalır.
-   Gerçek tarayıcıda ölçüldü: gövdeyi bütün olarak kaydırınca fiş (pencerenin
-   asıl ürünü) 28 karenin altına düşüyor ve her işaretten sonra oraya kadar
-   kaydırmak gerekiyordu. */
-.ve-komuta-body{ display:flex; flex-direction:column; height:min(80vh,880px);
-  overflow:hidden; padding:16px 20px 18px; }
-.ve-komuta-kaydir{ flex:1 1 auto; min-height:120px; overflow-y:auto; overflow-x:hidden;
-  margin:0 -20px; padding:0 20px; }
-
-/* ── giriş (kapak) ── */
-.ve-komuta-giris{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:48px 20px 56px; text-align:center; }
-.ve-komuta-giris-baslik{ font-size:var(--fs-title); font-weight:600; color:var(--text-heading); }
-.ve-komuta-sifre{ width:240px; padding:9px 12px; border-radius:var(--radius-md); font-size:var(--fs-lg);
-  background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
-.ve-komuta-sifre:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
-.ve-komuta-hata{ min-height:16px; font-size:var(--fs-md); color:var(--ink-danger); }
-
-/* ── künye şeridi ── */
-.ve-komuta-kunye{ display:flex; align-items:center; gap:9px; flex-wrap:wrap;
-  padding:9px 12px; border-radius:var(--radius-lg); margin-bottom:14px;
-  background:var(--accent-tint-8); border:1px solid var(--accent-tint-20); }
-.ve-komuta-kunye-metin{ font-size:var(--fs-md);
-  font-weight:600; color:var(--text-heading); }
-
-/* ── tezgâh sekmeleri ── */
-.ve-komuta-tezgahlar{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
-.ve-komuta-tezgah{ display:inline-flex; align-items:center; gap:7px; padding:6px 12px;
-  border-radius:var(--radius-md); font-size:var(--fs-md); cursor:pointer;
-  background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-secondary); }
-.ve-komuta-tezgah:hover{ border-color:var(--border-hover); color:var(--text-primary); }
-.ve-komuta-tezgah:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
-.ve-komuta-tezgah.etkin{ background:var(--accent-tint-15); border-color:var(--accent-tint-35); color:var(--text-heading); font-weight:600; }
-.ve-komuta-adet{ font-size:var(--fs-body); padding:1px 6px; border-radius:var(--radius-xl);
-  background:var(--bg-primary); color:var(--text-muted); }
-
-.ve-komuta-satir{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
-.ve-komuta-dosya{ font-size:var(--fs-body);
-  padding:2px 7px; border-radius:var(--radius-sm); margin-left:auto;
-  background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-muted); }
-
-/* ── kayıt ızgarası ── */
-.ve-komuta-izgara{ display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:10px; padding-bottom:6px; }
-.ve-komuta-kart{ position:relative; display:flex; flex-direction:column; gap:3px;
-  padding:7px 7px 9px; border-radius:var(--radius-lg); cursor:pointer; text-align:left; font:inherit;
-  background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);
-  transition:border-color .12s ease, background .12s ease; }
-.ve-komuta-kart:hover{ border-color:var(--border-hover); background:var(--accent-tint-6); }
-.ve-komuta-kart:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
-.ve-komuta-kare{ width:100%; aspect-ratio:16/10; object-fit:cover; border-radius:var(--radius-md);
-  background:var(--bg-input); display:block; }
-.ve-komuta-no{ position:absolute; top:11px; left:11px; padding:1px 6px; border-radius:var(--radius-sm);
-  font-size:var(--fs-body); font-weight:700;
-  background:var(--scrim); color:#fff; }
-.ve-komuta-ad{ font-size:var(--fs-body); line-height:1.35; color:var(--text-primary); margin-top:4px; }
-.ve-komuta-meta{ font-size:var(--fs-tiny); color:var(--text-muted); }
-/* "kaldırılacak" işareti yalnız seçiliyken görünür — boş kartta yer kaplamaz */
-.ve-komuta-isaret{ display:none; font-size:var(--fs-tiny); font-weight:700; letter-spacing:.03em;
-  text-transform:uppercase; color:var(--ink-danger); }
-.ve-komuta-kart.secili{ border-color:var(--ink-danger);
-  background:color-mix(in srgb, var(--ink-danger) 12%, transparent); }
-.ve-komuta-kart.secili .ve-komuta-kare{ opacity:.42; }
-.ve-komuta-kart.secili .ve-komuta-isaret{ display:block; }
-
-/* ── LİSTE düzeni (görselsiz tezgâhlar) ──
-   Izgara 148 px'lik kutulara bölüyor; "../MFSim_Olcum_Goruntuleyici.html" gibi
-   uzun bir anahtar orada okunmuyor. Metin tezgâhları tek sütunda, ad ile meta
-   aynı satırda. Kart sınıfı ORTAK — durum kuralları (:hover/.secili/halka)
-   ikinci kez yazılmıyor. */
-.ve-komuta-liste{ grid-template-columns:1fr; gap:4px; }
-.ve-komuta-kart.satir{ flex-direction:row; align-items:baseline; gap:10px;
-  padding:7px 11px; border-radius:var(--radius-md); }
-.ve-komuta-kart.satir .ve-komuta-no{ position:static; flex:0 0 auto; order:3;
-  margin-left:auto; background:var(--bg-input); color:var(--text-muted);
-  max-width:44%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ve-komuta-kart.satir .ve-komuta-ad{ margin-top:0; flex:0 1 auto; font-weight:500;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ve-komuta-kart.satir .ve-komuta-meta{ flex:1 1 auto; overflow:hidden;
-  text-overflow:ellipsis; white-space:nowrap; }
-.ve-komuta-kart.satir .ve-komuta-isaret{ order:4; flex:0 0 auto; }
-.ve-komuta-kart.satir.secili .ve-komuta-no{ background:transparent; }
-
-/* ── sipariş fişi ── */
-.ve-komuta-fis-kap{ flex:0 0 auto; border-top:1px solid var(--border-color);
-  padding-top:12px; margin-top:12px; }
-.ve-komuta-fis-bas{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
-.ve-komuta-fis-baslik{ font-size:var(--fs-lg); font-weight:600; color:var(--text-heading); }
-.ve-komuta-fiil{ padding:4px 8px; border-radius:var(--radius-md); font-size:var(--fs-md); cursor:pointer;
-  background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
-.ve-komuta-fiil:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
-.ve-komuta-sayac{ font-size:var(--fs-body); color:var(--text-muted); margin-right:auto; }
-.ve-komuta-sayac.dolu{ color:var(--ink-danger); font-weight:600; }
-.ve-komuta-btn{ padding:6px 12px; border-radius:var(--radius-md); font-size:var(--fs-md); cursor:pointer;
-  background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-secondary); }
-.ve-komuta-btn:hover{ border-color:var(--border-hover); color:var(--text-primary); }
-.ve-komuta-btn:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
-.ve-komuta-btn-birincil{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
-.ve-komuta-btn-birincil:hover{ background:var(--ink-accent); border-color:var(--ink-accent); color:var(--on-accent); }
-.ve-komuta-not{ width:100%; padding:7px 10px; border-radius:var(--radius-md); font-size:var(--fs-md); margin-bottom:8px;
-  background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
-.ve-komuta-not:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
-.ve-komuta-fis{ width:100%; resize:none; padding:10px 12px; border-radius:var(--radius-md);
-  font-size:var(--fs-md); line-height:1.6;
-  background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); }
-.ve-komuta-fis:focus{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
-
 /* ═══ FEAD — SONUÇLAR SEKMESİ (js/cp-fead-results.js) ═════════════════════
    Başlangıç kartı (boş pano) · Veri Gezgini satırları · Sonuç Özeti
    penceresi · çözücü penceresinin sonuç kartı. Görünüm BURADA, satır içinde
@@ -15184,8 +15072,8 @@ function _veFoyUyar(m) {
   if(typeof showToast === 'function') showToast(m, 'warning');
 }
 
-// file:// üzerinde navigator.clipboard çoğu tarayıcıda YOK (güvenli bağlam
-// değil — js/cp-komuta.js'teki ölçüm). Yedek yol: gizli metin alanı + copy.
+// navigator.clipboard güvenli bağlam ve izin ister; yoksa ya da reddederse
+// yedek yol: gizli metin alanı + copy.
 function _veFoyEskiPano(metin) {
   var ok = false;
   try {
