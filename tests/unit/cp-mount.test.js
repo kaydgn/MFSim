@@ -464,7 +464,7 @@ describe('Örnek bileşeni', () => {
     expect(m.components).toHaveLength(5);
     expect(m.mounts).toHaveLength(6);
     // toplam kütle ADAMS referansı (2294.482) ile birebir
-    expect(m.components.reduce((s, c) => s + c.mass, 0)).toBeCloseTo(2294.52, 1);
+    expect(m.components.reduce((s, c) => s + c.mass, 0)).toBeCloseTo(2294.482, 3);
     // bileşen adları → yükleyicinin kuracağı kanvas tipleri
     expect(m.components.map(c => cp._mntExampleBodyType(c.name)))
       .toEqual(['mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-bracket']);
@@ -503,14 +503,16 @@ describe('Örnek bileşeni', () => {
     // her gövde/takoz at:[lx,ly] taşır → önizleme ile kurulan kanvas örtüşür
     expect(m.components.every(c => Array.isArray(c.at) && c.at.length === 2)).toBe(true);
     expect(m.mounts.every(x => Array.isArray(x.at) && x.at.length === 2)).toBe(true);
-    // tork durumları elle yazılmadı: Tx = −T_shaft (ileri negatif, geri pozitif)
+    // tork durumları elle yazılmadı; işaret Çözücü'nün tork yönünden — Tulga'nın
+    // Adams'ı +X: Tx = +T_shaft (ileri pozitif, geri negatif)
+    expect(m.solver).toEqual({ ileri: '-x', torkYon: '+x' });
     const t = m.torque, chain = d => t.Te * t.Rstall * d.iGear * t.iTransfer * d.phiAxle * t.derate;
     const fwd = m.loadCases.find(c => c.name === 'Forward Torque');
     const rev = m.loadCases.find(c => c.name === 'Reverse Torque');
-    expect(fwd.T[0]).toBeCloseTo(-chain(t.fwd), 6);
-    expect(rev.T[0]).toBeCloseTo(-chain(t.rev), 6);
-    expect(fwd.T[0]).toBeLessThan(0);
-    expect(rev.T[0]).toBeGreaterThan(0);
+    expect(fwd.T[0]).toBeCloseTo(chain(t.fwd), 6);
+    expect(rev.T[0]).toBeCloseTo(chain(t.rev), 6);
+    expect(fwd.T[0]).toBeGreaterThan(0);
+    expect(rev.T[0]).toBeLessThan(0);
     // tork dışı durumlar defaultLoadCases ile aynı kalır (mutasyon yok)
     expect(m.loadCases.find(c => c.name === 'Static').T).toEqual([0, 0, 0]);
     expect(core.defaultLoadCases().find(c => c.name === 'Forward Torque').T).toEqual([0, 0, 0]);

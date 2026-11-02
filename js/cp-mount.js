@@ -405,6 +405,48 @@ var MNT_AUTO_CASES = [
   { name:'Max Rebound',       n:[ 0,    0,    1  ], T:[0,0,0] }  // droop / negatif-g (ekstansiyon)
 ];
 
+// ── ARACIN İLERİ YÖNÜ · KALDIRIM DARBESİ · TORK YÖNÜ — Çözücü'nün ayarı ──
+// (2026-11-02). MNT_AUTO_CASES gövdeye etkiyen yükün yönüdür ve aracın İLERİSİ
+// −X, SAĞI +Y olan eksende yazılı (Tulga'nın CAD ekseni). İleri +X olan modelde
+// (TTAR) n_x ve n_y çevrilir (Z etrafında 180°); yoksa fren ve viraj yükü ters
+// uygulanır. Kaldırım darbesi analize göre: varsayılan 1,55 g virajın tersi
+// yönde; TTAR'ın Adams'ı 3,5 g virajla aynı yönde.
+// TORK YÖNÜ İLERİ YÖNDEN TÜRETİLMEZ: reaksiyon krankın modeldeki dönüş
+// yönünden ve aktarmanın dönüşü çevirip çevirmediğinden gelir. Krank önden
+// saat yönünde, motorun önü −X'te, çıkış krankla aynı yönde → Tx = −T_shaft
+// (varsayılan: SPEC T5, analitik B1, TTAR'ın Adams'ı). Tulga'nın Adams'ı +X
+// (güç grubundaki transfer kutusu dönüşü çeviriyorsa fiziksel karşılığı bu).
+// Kapı: mount-arac-ekseni.test.js · mount-adams-tulga.test.js · mount-adams-ttar.test.js.
+var MNT_ILERI = '-x', MNT_KALDIRIM_G = 1.55, MNT_KALDIRIM_YON = 'ters', MNT_TORK_YON = '-x';
+function _mntYonAyari(d){
+  d = d || {};
+  var g = _mntNum(d.kaldirimG, NaN);
+  var xx = function(v, vars){ return (v==='+x' || v==='-x') ? v : vars; };
+  return { ileri: xx(d.ileri, MNT_ILERI),
+           kaldirimG: (Number.isFinite(g) && g>0) ? g : MNT_KALDIRIM_G,
+           kaldirimYon: (d.kaldirimYon==='ayni' || d.kaldirimYon==='ters') ? d.kaldirimYon : MNT_KALDIRIM_YON,
+           torkYon: xx(d.torkYon, MNT_TORK_YON) };
+}
+// Aracın ekseninde (ileri −X) yazılı yük n → modelin ekseni
+function _mntYonN(n, yon){
+  return (yon && yon.ileri==='+x') ? [-n[0], -n[1], n[2]] : [n[0], n[1], n[2]];
+}
+// Tork reaksiyonunun işareti: Tx = s · T_shaft (ileri vites momentinin yönü)
+function _mntTorkIsareti(yon){ return (yon && yon.torkYon==='+x') ? 1 : -1; }
+// TEK ÜRETİCİ — çözücünün yük kitabı: g-durumları (kaldırım ayarlı, yön
+// çevrilmiş) + tork durumları. Rapor, Çözücü'nün tablosu, parametrik analiz ve
+// sihirbaz hep buradan okur.
+function _mntYukDurumlari(gather){
+  var yon=(gather && gather.yon) || _mntYonAyari();
+  var kL=(yon.kaldirimYon==='ayni' ? 1 : -1)*yon.kaldirimG;
+  return MNT_AUTO_CASES.map(function(c){
+    var n=c.n;
+    if(c.name==='Kerb Strike L') n=[n[0], kL, n[2]];
+    else if(c.name==='Kerb Strike R') n=[n[0], -kL, n[2]];
+    return { name:c.name, n:_mntYonN(n, yon), T:c.T.slice() };
+  }).concat(_mntTorqueCases(gather && gather.torque, yon));
+}
+
 // ── Şok darbesi varsayılanı ─────────────────────────────────────────────────
 // AMC Mecanocaucho raporlarının kullandığı darbe: 3 g tepe, 20 ms süre.
 // Yük durumlarından FARKLI bir şeydir — onlar yarı-statik ivme katsayısı,
@@ -767,7 +809,7 @@ function _mntDugum(id){
   return null;
 }
 // Yük durumunun penceredeki KISA adı — dar sütunda raporun uzun adı
-// ("Yanal bordür darbesi — sol (1,55g)") kırpılıyordu; tam adı `title`da.
+// ("Frenlemeli viraj — sol") kırpılıyordu; tam adı `title`da.
 var _MNT_DURUM_KISA = {
   'Static':'Statik', 'Max Bump':'Tümsek 3,5g', 'Braking':'Frenleme', 'Acceleration':'Hızlanma',
   'Cornering Left':'Viraj sol', 'Cornering Right':'Viraj sağ',
@@ -1152,8 +1194,8 @@ function _mntTorkZinciri(){
   var G=_mntGatherTorqueKaynakli(), t=G.t;
   var fwd=null, rev=null;
   _mntTorqueCases(t).forEach(function(c){
-    if(c.name==='Forward Torque') fwd=-c.T[0];
-    if(c.name==='Reverse Torque') rev=-c.T[0];
+    if(c.name==='Forward Torque') fwd=c.Tshaft;
+    if(c.name==='Reverse Torque') rev=c.Tshaft;
   });
   return { t:t, kaynak:G.kaynak, ileri:fwd, geri:rev };
 }
@@ -2526,7 +2568,11 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
       n.data=Object.assign(n.data||{}, { mass:c.mass, cgx:c.cg[0], cgy:c.cg[1], cgz:c.cg[2], Ixx:c.Ixx, Iyy:c.Iyy, Izz:c.Izz, Ixy:c.Ixy, Ixz:c.Ixz, Iyz:c.Iyz, pointMass:!!c.pointMass });
       // Tork zinciri: Motor→Te; Şanzıman→vites/stall + transfer/aks payı
       // (örnekte ayrı Transfer gövdesi yok → değerler Şanzıman'da tutulur).
-      if(kind==='mnt-motor'){ n.data.Te=tq.Te; }
+      if(kind==='mnt-motor'){
+        n.data.Te=tq.Te;
+        if(tq.idleRpm) n.data.idleRpm=tq.idleRpm;
+        if(tq.cylinders) n.data.cylinders=tq.cylinders;
+      }
       else if(kind==='mnt-gearbox' && tq.fwd){
         n.data.g1=tq.fwd.iGear; n.data.gR=(tq.rev||{}).iGear; n.data.Rstall=tq.Rstall;
         n.data.iTransfer=tq.iTransfer; n.data.phiFwd=tq.fwd.phiAxle; n.data.phiRev=(tq.rev||{}).phiAxle; n.data.derate=tq.derate;
@@ -2549,9 +2595,19 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
   // Takoz/cradle destek bağlantılarını (görsel) otomatik kur.
   _mntWireSupportLinks(placed);
 
-  // Çözücü yoksa ekle (starter'daki sağ-üst konuma).
-  if(!nodes.some(function(n){ return (_mntDef(n)||{}).isMountSolver; })){
+  // Çözücü yoksa ekle (starter'daki sağ-üst konuma). Aracın ileri yönü, tork
+  // yönü ve kaldırım darbesi örneğin ayarı: örnekte yoksa varsayılan (alan silinir).
+  var cz=nodes.filter(function(n){ return (_mntDef(n)||{}).isMountSolver; })[0];
+  if(!cz){
+    var once=nodes.length;
     createNode('mnt-solver', base.x + 640, base.y + 20);
+    if(nodes.length>once) cz=nodes[nodes.length-1];
+  }
+  if(cz){
+    cz.data=cz.data||{};
+    ['ileri','torkYon','kaldirimG','kaldirimYon'].forEach(function(k){
+      if(EX.solver && EX.solver[k]!=null) cz.data[k]=EX.solver[k]; else delete cz.data[k];
+    });
   }
   if(typeof saveState==='function') saveState();
   if(typeof updateAllConnections==='function') updateAllConnections();
@@ -4387,9 +4443,12 @@ function _mntGatherTorque(liste){ return _mntGatherTorqueKaynakli(liste).t; }
 // `id` düğüm kimliğidir ve SI'ya, oradan R.mounts'a taşınır: pencere takozun
 // sonucunu SIRAYLA değil KİMLİKLE bulur (sıra, silinen ya da sonradan eklenen
 // bir takozla kayar ve başka takozun sehimi sessizce gösterilirdi).
+// Aracın ileri yönü Çözücü'nün ayarı: çözücü verilmezse listedeki çözücüden.
 function _mntGatherForSolver(solver, liste){
   var masses=[], mounts=[];
-  (liste || (typeof nodes!=='undefined' && Array.isArray(nodes)?nodes:[])).forEach(function(n){
+  var L=liste || (typeof nodes!=='undefined' && Array.isArray(nodes)?nodes:[]);
+  if(!solver) solver=L.filter(function(n){ return n && (_mntDef(n)||{}).isMountSolver; })[0] || null;
+  L.forEach(function(n){
     if(!n) return;
     var def=_mntDef(n)||{};
     if(def.isMountBody){
@@ -4405,14 +4464,16 @@ function _mntGatherForSolver(solver, liste){
                     curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
     }
   });
-  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste) };
+  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(solver && solver.data) };
 }
 // Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
 // İleri = 1. vites (en yüksek redüksiyon), geri = Geri vites. T_shaft çekirdeğin
-// torqueChain'i ile hesaplanır; Tx = −T_shaft (SPEC T5 işaret düzeni).
-function _mntTorqueCases(torque){
+// torqueChain'i ile hesaplanır; Tx = s·T_shaft, s Çözücü'nün tork yönünden
+// (_mntTorkIsareti: varsayılan −1, SPEC T5 işaret düzeni). Mil torku `Tshaft`
+// olarak taşınır — pencereler ve rapor onu Tx'in işaretinden geri çıkarmaz.
+function _mntTorqueCases(torque, yon){
   var C=veMountCore; if(!C || !C.torqueChain) return [];
-  var tq=torque||{};
+  var tq=torque||{}, s=_mntTorkIsareti(yon);
   var Te=_mntNum(tq.Te,0), Rstall=_mntNum(tq.Rstall,0), g1=_mntNum(tq.g1,0), gR=_mntNum(tq.gR,0);
   var iTr=_mntNum(tq.iTransfer,1); if(iTr===0) iTr=1;
   var phiF=_mntNum(tq.phiFwd,1); if(phiF===0) phiF=1;
@@ -4421,10 +4482,10 @@ function _mntTorqueCases(torque){
   if(!(Te>0 && Rstall>0 && g1!==0)) return [];
   var cases=[];
   var Tfwd=C.torqueChain({Te:Te, Rstall:Rstall, iGear:g1, iTransfer:iTr, phiAxle:phiF, derate:der});
-  cases.push({name:'Forward Torque', n:[0,0,-1], T:[-Tfwd,0,0]});
+  cases.push({name:'Forward Torque', n:[0,0,-1], T:[s*Tfwd,0,0], Tshaft:Tfwd});
   if(gR!==0){
     var Trev=C.torqueChain({Te:Te, Rstall:Rstall, iGear:gR, iTransfer:iTr, phiAxle:phiR, derate:der});
-    cases.push({name:'Reverse Torque', n:[0,0,-1], T:[-Trev,0,0]});
+    cases.push({name:'Reverse Torque', n:[0,0,-1], T:[s*Trev,0,0], Tshaft:Trev});
   }
   return cases;
 }
@@ -4434,9 +4495,10 @@ function _mntTorqueCases(torque){
 // geri için ayrı durumlar döndürür. Kütle/rijitlik sabit, yalnız T_shaft vites
 // oranıyla ölçeklenir → yüksek vites daha düşük kuvvet (1. vites bağlayıcıdır).
 // Dönüş öğeleri gearLabel/ratio/Tshaft meta verisini taşır (rapor §8.9 tablosu).
-function _mntGearTorqueCases(torque){
+// İşaret _mntTorqueCases'inkiyle aynı (Çözücü'nün tork yönü).
+function _mntGearTorqueCases(torque, yon){
   var C=veMountCore; if(!C || !C.torqueChain) return [];
-  var tq=torque||{};
+  var tq=torque||{}, s=_mntTorkIsareti(yon);
   var Te=_mntNum(tq.Te,0), Rstall=_mntNum(tq.Rstall,0);
   var iTr=_mntNum(tq.iTransfer,1); if(iTr===0) iTr=1;
   var phiF=_mntNum(tq.phiFwd,1); if(phiF===0) phiF=1;
@@ -4447,12 +4509,12 @@ function _mntGearTorqueCases(torque){
   ['g1','g2','g3','g4','g5','g6'].forEach(function(k,i){
     var gr=_mntNum(tq[k],0); if(gr===0) return;
     var Ts=C.torqueChain({Te:Te, Rstall:Rstall, iGear:gr, iTransfer:iTr, phiAxle:phiF, derate:der});
-    out.push({name:(i+1)+'. Vites', gearLabel:(i+1)+'. Vites', ratio:gr, Tshaft:Ts, n:[0,0,-1], T:[-Ts,0,0]});
+    out.push({name:(i+1)+'. Vites', gearLabel:(i+1)+'. Vites', ratio:gr, Tshaft:Ts, n:[0,0,-1], T:[s*Ts,0,0]});
   });
   var gR=_mntNum(tq.gR,0);
   if(gR!==0){
     var Tr=C.torqueChain({Te:Te, Rstall:Rstall, iGear:gR, iTransfer:iTr, phiAxle:phiR, derate:der});
-    out.push({name:'Geri Vites', gearLabel:'Geri', ratio:gR, Tshaft:Tr, n:[0,0,-1], T:[-Tr,0,0]});
+    out.push({name:'Geri Vites', gearLabel:'Geri', ratio:gR, Tshaft:Tr, n:[0,0,-1], T:[s*Tr,0,0]});
   }
   return out;
 }
@@ -4492,7 +4554,7 @@ function _mntToSI(gather, g){
       if(Object.keys(fits).length) mnt.fits=fits;
       if(Object.keys(curves).length) mnt.curves=curves;
       return mnt; }),
-    loadCases: MNT_AUTO_CASES.concat(_mntTorqueCases(gather.torque))
+    loadCases: _mntYukDurumlari(gather)
   };
 }
 
@@ -4538,7 +4600,8 @@ function _mntImza(si, torque, sd){
     c:(si.components||[]).map(function(c){ return [c.id||'', c.mass, c.cg, c.pointMass?0:c.I, c.pointMass?1:0]; }),
     m:(si.mounts||[]).map(function(m){ return [m.id||'', m.pos, m.kstat, m.kdyn, m.fCap||0, m.fits||0, m.curves||0]; }),
     t:Object.keys(t).sort().map(function(k){ return [k, _mntNum(t[k], null)]; }),
-    s:[d.solveMode||'auto', _mntZetaOf({ data:d }), _mntNum(d.shockG, MNT_SHOCK_G), _mntNum(d.shockMs, MNT_SHOCK_MS)]
+    s:[d.solveMode||'auto', _mntZetaOf({ data:d }), _mntNum(d.shockG, MNT_SHOCK_G), _mntNum(d.shockMs, MNT_SHOCK_MS)],
+    y:(function(Y){ return [Y.ileri, Y.kaldirimG, Y.kaldirimYon, Y.torkYon]; })(_mntYonAyari(d))
   };
   var s=JSON.stringify(v), h=5381;
   for(var i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))|0;
@@ -4675,7 +4738,30 @@ function _mntCozucuDurumGovde(node){
       + '<td'+(T[0]===0 ? ' class="sf"' : '')+'>'+(T[0]===0 ? '0' : _mntS(T[0]/1000,1))+'</td></tr>';
   });
   var em=(satirlar.length-tork)+' otomatik durum'+(tork ? ' + '+tork+' tork' : ' · tork girdisi yok');
-  return '<div id="ve-mnt-cdur-'+node.id+'" data-tazele>'+_mntBolum('Yük kitabı', em, f+_MNT_FOY_KAPA)+'</div>';
+  return _mntCozucuYonGovde(node)
+    + '<div id="ve-mnt-cdur-'+node.id+'" data-tazele>'+_mntBolum('Yük kitabı', em, f+_MNT_FOY_KAPA)+'</div>';
+}
+// ARACIN İLERİ YÖNÜ · KALDIRIM DARBESİ · TORK YÖNÜ — yük kitabının girdisi
+// (_mntYonAyari); kitap hemen altında değeri izler. Varsayılan seçim alan yazmaz.
+function _mntCozucuYonGovde(node){
+  var Y=_mntYonAyari(node.data);
+  var secici=function(alan, etiket, deger, secenekler, degis){
+    var h='<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">'+etiket+'</span>'
+      + '<select class="ve-fp-sel" id="ve-mnt-'+alan+'-'+node.id+'" onchange="'+degis+'">';
+    secenekler.forEach(function(o){ h+='<option value="'+o[0]+'"'+(deger===o[0] ? ' selected' : '')+'>'+o[1]+'</option>'; });
+    return h+'</select></label>';
+  };
+  var eksen=[['-x','−X'], ['+x','+X']];
+  return _mntBolum('Araç ekseni', '',
+      _mntIzgara(2,
+        secici('ileri', 'İleri yön', Y.ileri, eksen, 'veMntSetYon(\''+node.id+'\',\'ileri\',this.value)')
+      + secici('torkYon', 'Tork yönü', Y.torkYon, eksen, 'veMntSetYon(\''+node.id+'\',\'torkYon\',this.value)')))
+    + _mntBolum('Kaldırım darbesi', 'yanal',
+      _mntIzgara(2,
+        _mntVarsayilanAlan(node, 'kaldirimG', 'İvme <u>[g]</u>', MNT_KALDIRIM_G, 'genel araç yük kitabı',
+          'veMntSetYon(\''+node.id+'\',\'kaldirimG\',this.value)')
+      + secici('kaldirimYon', 'Yön', Y.kaldirimYon, [['ters','Virajın tersi'], ['ayni','Virajla aynı']],
+          'veMntSetYon(\''+node.id+'\',\'kaldirimYon\',this.value)')));
 }
 
 function _mntCozucuAyarGovde(node){
@@ -4840,6 +4926,27 @@ function veMntSetShock(nodeId, key, val){
   if(typeof saveState==='function') saveState();
 }
 
+// Aracın ileri yönü, tork momentinin yönü ('-x' varsayılan · '+x'), kaldırım
+// darbesinin ivmesi [g] (boş/geçersiz → varsayılan) ve yönü ('ters' varsayılan
+// · 'ayni'). Varsayılan değer alan yazmaz; değer bir sonraki ▶ Hesapla'da
+// uygulanır, yük kitabı hemen tazelenir.
+function veMntSetYon(nodeId, key, val){
+  if(key!=='ileri' && key!=='torkYon' && key!=='kaldirimG' && key!=='kaldirimYon') return;
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  if(key==='ileri' || key==='torkYon'){
+    if(val==='+x') node.data[key]='+x'; else delete node.data[key];
+  } else if(key==='kaldirimYon'){
+    if(val==='ayni') node.data.kaldirimYon='ayni'; else delete node.data.kaldirimYon;
+  } else {
+    var s=(typeof val==='string')?val.trim():val;
+    var v=_mntNum(s, NaN);
+    if(s===''||s==null||!Number.isFinite(v)||!(v>0)) delete node.data.kaldirimG;
+    else node.data.kaldirimG=v;
+  }
+  if(typeof saveState==='function') saveState();
+}
+
 // Çözüm modu seç (auto/nonlinear/linear). Yeniden çizme YOK — sonuç korunur;
 // seçim bir sonraki ▶ Hesapla'da uygulanır (hesap butona kilitli).
 function veMntSetSolveMode(nodeId, val){
@@ -4904,10 +5011,11 @@ function _mntPrepareFrom(gather, solver){
     C:C, solver:solver, gather:gather, si:si, mp:mp, mode:mode, mounts:mounts,
     solvedNL:solvedNL, nlNoCurve:(mode==='nonlinear' && !solvedNL),
     zeta:_mntZetaOf(solver),               // şirket kabulü — tüm montaja tek değer
-    loadCases:si.loadCases, gearDefs:_mntGearTorqueCases(gather.torque),
+    loadCases:si.loadCases, gearDefs:_mntGearTorqueCases(gather.torque, gather.yon),
     designDefs:[ {name:'3,5g Düşey',       n:[ 0,0,-3.5], T:[0,0,0]},
                  {name:'1g Yanal',         n:[ 0,1,-1  ], T:[0,0,0]},
-                 {name:'1g Boyuna (fren)', n:[-1,0,-1  ], T:[0,0,0]} ]
+                 {name:'1g Boyuna (fren)', n:[-1,0,-1  ], T:[0,0,0]} ].map(function(c){
+                   return { name:c.name, n:_mntYonN(c.n, gather.yon), T:c.T }; })
   };
   // Tek yük durumu çözücüsü — solveAllCases yönlendirmesiyle AYNI: solvedNL → Newton
   // (solveCaseNL), değilse metal-metal durdurucu (solveCaseStop). onIter (ops.) yalnız
@@ -4954,6 +5062,8 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
           matrixMode:((prep.solver.data&&prep.solver.data.matrixMode)||'delta'), solveMode:prep.mode,
           solvedNL:prep.solvedNL, nlNoCurve:prep.nlNoCurve, solverId:prep.solver.id,
           zeta:prep.zeta,
+          // Aracın ileri yönü ve kaldırım darbesi (Sonuçlar'ın ivme süpürmesi okur)
+          yon:prep.gather.yon || _mntYonAyari(),
           // Çözümün HANGİ modele ait olduğu (veMntSonucDurumu). Hazırlık
           // anının girdisi: hesap sürerken yapılan düzenleme sonucu bayatlatır.
           imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data) };
@@ -5243,6 +5353,11 @@ if(typeof module!=='undefined' && module.exports){
     _mntLibTrigger: _mntLibTrigger,
     _mntLibDropdown: _mntLibDropdown,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
+    // Aracın ileri yönü ve kaldırım darbesi (2026-11-02)
+    MNT_ILERI: MNT_ILERI, MNT_KALDIRIM_G: MNT_KALDIRIM_G, MNT_KALDIRIM_YON: MNT_KALDIRIM_YON, MNT_TORK_YON: MNT_TORK_YON,
+    _mntYonAyari: _mntYonAyari, _mntYonN: _mntYonN, _mntTorkIsareti: _mntTorkIsareti,
+    _mntYukDurumlari: _mntYukDurumlari, _mntCozucuYonGovde: _mntCozucuYonGovde,
+    veMntSetYon: veMntSetYon,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
     veMntPopulateStarter: veMntPopulateStarter,
     veMntExportTopology: veMntExportTopology,
@@ -5251,6 +5366,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntTopoState: _mntTopoState,
     _mntResolveTopology: _mntResolveTopology,
     _mntLoadExampleFromJSON: _mntLoadExampleFromJSON,
+    _mntLoadExampleFromModel: _mntLoadExampleFromModel,
     _mntExampleReg: _mntExampleReg,
     _mntExampleList: _mntExampleList,
     _mntExampleLayout: _mntExampleLayout,

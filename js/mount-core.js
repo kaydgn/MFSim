@@ -2010,7 +2010,7 @@ var veMountCore = (function() {
   const SIPER_EXAMPLE = {
     g: 9.81,
     components: [
-      {name:'Motor',      mass:1386.3,   cg:[-321.36,    4.89,  859.33 ], Ixx:110.7, Iyy:260.2, Izz:205.9, Ixy:0,      Ixz:0,     Iyz:0,      pointMass:false, at:[335,260]},
+      {name:'Motor',      mass:1386.26,  cg:[-321.36,    4.89,  859.33 ], Ixx:110.7, Iyy:260.2, Izz:205.9, Ixy:0,      Ixz:0,     Iyz:0,      pointMass:false, at:[335,260]},
       {name:'Şanzıman',   mass:778.3,    cg:[ 905.815,  11.17,  683.81 ], Ixx:16.43, Iyy:68.15, Izz:64.91, Ixy:0,      Ixz:0,     Iyz:0,      pointMass:false, at:[440,265]},
       {name:'Şaft payı',  mass:50.65,    cg:[3041.582,   0.00, -168.419], Ixx:0,     Iyy:0,     Izz:0,     Ixy:0,      Ixz:0,     Iyz:0,      pointMass:true,  at:[545,265]},
       {name:'Sol cradle', mass:39.635,   cg:[2158.356,-274.782, -39.54 ], Ixx:0.237, Iyy:3.851, Izz:3.727, Ixy:-0.170, Ixz:0.257, Iyz:-0.033, pointMass:false, at:[375,360]},
@@ -2026,7 +2026,10 @@ var veMountCore = (function() {
     ],
     torque: { Te:3000, Rstall:1.62, iTransfer:1.407,
               fwd:{iGear:3.51, phiAxle:1/3.6}, rev:{iGear:-4.8, phiAxle:2.6/3.6},
-              derate:1 },
+              derate:1, idleRpm:700, cylinders:6 },
+    // Aracın ekseni: ileri +X, sol +Y (CAD). Kaldırım darbesi 3,5 g virajla aynı
+    // yönde — ADAMS .BMC_TTAR_2031'in yük kitabı (tests/fixtures/adams-ttar.js).
+    solver: { ileri:'+x', kaldirimG:3.5, kaldirimYon:'ayni' },
     // Shaft_Tork(1)=6667.07 N·m (ileri), Shaft_Tork(2)=-23705.14 N·m (geri) → Tx=-T_shaft.
     loadCases: [
       {name:'Static',         n:[ 0, 0,-1], T:[0,0,0]},
@@ -2064,7 +2067,7 @@ var veMountCore = (function() {
   // tests/unit/mount-example-names.test.js).
   const TULGA_TORQUE = { Te:760, Rstall:1.58, iTransfer:3.428,
                          fwd:{iGear:3.10, phiAxle:1}, rev:{iGear:-4.49, phiAxle:1},
-                         derate:1 };
+                         derate:1, idleRpm:800, cylinders:4 };
   const TULGA_EXAMPLE = {
     g: 9.81,
     components: [
@@ -2085,16 +2088,19 @@ var veMountCore = (function() {
       {name:'Sol Arka Takoz', pos:[1381.672,-304.131,  51.439], kstat:[415,210,192], kdyn:[ 535,250,230], at:[600,485]}
     ],
     torque: TULGA_TORQUE,
+    // Aracın ekseni: ileri −X, sağ +Y. Tork momenti +X — Tulga'nın Adams'ı
+    // (tests/fixtures/adams-tulga.js → TORK YÖNÜ); varsayılanın (T5) tersi.
+    solver: { ileri:'-x', torkYon:'+x' },
     // Tork durumları tork zincirinden (torqueChain) TÜRETİLİR — elle yazılmaz ki
-    // TULGA_TORQUE değişince sessizce eskimesin. İşaret kuralı T5 ile aynı:
-    // Tx = −T_shaft (ileri viteste negatif, geri viteste pozitif).
-    //   ileri: 760 × 1.58 × 3.10 × 3.428 × 1 =  12760.66 N·m → Tx = −12760.66
-    //   geri : 760 × 1.58 × (−4.49) × 3.428 × 1 = −18482.38 N·m → Tx = +18482.38
+    // TULGA_TORQUE değişince sessizce eskimesin. İşaret Çözücü'nün tork yönünden
+    // (solver.torkYon +X): Tx = +T_shaft (ileri viteste pozitif, geri viteste negatif).
+    //   ileri: 760 × 1.58 × 3.10 × 3.428 × 1 =  12760.66 N·m → Tx = +12760.66
+    //   geri : 760 × 1.58 × (−4.49) × 3.428 × 1 = −18482.38 N·m → Tx = −18482.38
     loadCases: (function(){
       const t = TULGA_TORQUE;
       const chain = d => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:d.iGear,
                                        iTransfer:t.iTransfer, phiAxle:d.phiAxle, derate:t.derate });
-      const T = { 'Forward Torque': -chain(t.fwd), 'Reverse Torque': -chain(t.rev) };
+      const T = { 'Forward Torque': chain(t.fwd), 'Reverse Torque': chain(t.rev) };
       return defaultLoadCases().map(c => (c.name in T) ? Object.assign({}, c, { T:[T[c.name],0,0] }) : c);
     })()
   };

@@ -587,7 +587,8 @@ function _mntRepCaseTr(name){
     'Cornering Left':'Viraj — sol (0,6g)', 'Cornering Right':'Viraj — sağ (0,6g)',
     'Brake in Turn L':'Frenlemeli viraj — sol', 'Brake in Turn R':'Frenlemeli viraj — sağ',
     'Pothole Braking':'Çukur + fren (3,5g)',
-    'Kerb Strike L':'Yanal bordür darbesi — sol (1,55g)', 'Kerb Strike R':'Yanal bordür darbesi — sağ (1,55g)',
+    // bordürün ivmesi Çözücü'nün ayarı (§8.5'in cümlesi): adda sabit değer yok
+    'Kerb Strike L':'Yanal bordür darbesi — sol', 'Kerb Strike R':'Yanal bordür darbesi — sağ',
     'Max Rebound':'Azami geri esneme (droop)',
     'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork',
     // eski adlar (geriye dönük uyumluluk):
@@ -977,6 +978,14 @@ function _mntRepLoadBar(R){
   return '<figure>'+svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Statik durumda takozların şasiye ilettiği düşey kuvvet (|f<sub>z</sub>|) dağılımı.</figcaption></figure>';
 }
 
+// Mil torku — yük durumunun taşıdığı T_shaft (Tx'in işareti Çözücü'nün tork
+// yönünden, js/cp-mount.js _mntTorkIsareti); eski çözümde Tx = −T_shaft.
+function _mntRepTshaft(c){
+  var lc = c && c.loadCase;
+  if(!lc) return NaN;
+  if(Number.isFinite(lc.Tshaft)) return lc.Tshaft;
+  return lc.T ? -lc.T[0] : NaN;
+}
 // §8.4 — tork süperpozisyonu
 function _mntRepStep4Torque(R){
   var fwd=_mntRepFindCase(R,'Forward Torque');
@@ -986,7 +995,7 @@ function _mntRepStep4Torque(R){
     h+='<p>Tork yük durumu yok: kinematik girdiler (motor torku, stall oranı, vites) boş. Statik ve g-tabanlı yük durumları geçerlidir.</p>';
     return h;
   }
-  var Ts = fwd.loadCase && fwd.loadCase.T ? -fwd.loadCase.T[0] : NaN;
+  var Ts = _mntRepTshaft(fwd);
   h+='<p>Tahrik hattı torku, güç grubuna X ekseni etrafında reaksiyon momenti olarak etkir (6.3). İleri vites için şaft torku \\( T_s='+_rTeX(_rF(Ts,1))+' \\) N·m; bu reaksiyon tek başına çözülüp statik çözümle toplanır (lineer süperpozisyon):</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Süperpozisyon: İleri (Forward) yük durumu, düşey sehimler [mm]</caption>';
   h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
@@ -1002,7 +1011,7 @@ function _mntRepStep4Torque(R){
   // Geri tork (tanımlıysa) — aynı süperpozisyon.
   var rev=_mntRepFindCase(R,'Reverse Torque');
   if(rev && rev.res){
-    var Tr = rev.loadCase && rev.loadCase.T ? -rev.loadCase.T[0] : NaN;
+    var Tr = _mntRepTshaft(rev);
     h+='<p>Geri vites reaksiyonu \\( T_s='+_rTeX(_rFs(Tr,1))+' \\) N·m (yön ters) için aynı süperpozisyon:</p>';
     h+='<table><caption>Tablo '+_rTbl()+' — Süperpozisyon: Geri (Reverse) yük durumu, düşey sehimler [mm]</caption>';
     h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
@@ -1018,11 +1027,22 @@ function _mntRepStep4Torque(R){
   return h;
 }
 
+// Yük durumlarının eksen varsayımı — Çözücü'nün ayarı (R.yon): aracın ileri
+// yönü, ileri vites tork momentinin yönü, bordür darbesinin ivmesi ve yönü.
+// Eski çözümde (R.yon yok) varsayılanlar: ileri −X, moment −X, 1,55 g, ters.
+function _mntRepYonCumle(R){
+  var Y=(R && R.yon) || {};
+  var eks=function(v){ return v==='+x' ? '+X' : '−X'; };
+  var g=Number(Y.kaldirimG); if(!(Number.isFinite(g) && g>0)) g=1.55;
+  return '<p>Araç ekseni: ileri yön '+eks(Y.ileri)+'; ileri vites tork momenti '+eks(Y.torkYon)
+    + '; yanal bordür darbesi '+_rF(g, 2)+' g, '+(Y.kaldirimYon==='ayni' ? 'virajla aynı yönde' : 'virajın tersi yönde')+'.</p>';
+}
 // §8.5 — TÜM yük durumları (sehim matrisi) ───────────────────────────────────
 function _mntRepLoadCaseMatrix(R){
   var mounts=R.mounts||[];
   var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey sehim δ<sub>z</sub>)</h3>';
   h+='<p>Yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> sehim. Her hücre takozun δ<sub>z</sub>\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç eksen (δ<sub>x</sub>/δ<sub>y</sub>/δ<sub>z</sub>): §8.6.</p>';
+  h+=_mntRepYonCumle(R);
   h+='<table><caption>Tablo '+_rTbl()+' — Yük durumu × takoz düşey sehim matrisi [mm]</caption>';
   h+='<tr><th>Yük durumu</th>';
   mounts.forEach(function(m){ h+='<th title="'+_rEsc(m.name)+'">'+_rEsc(_mntRepShort(m.name,8))+'</th>'; });
@@ -2444,6 +2464,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepFRF: _mntRepFRF,
     _mntRepFRFChart: _mntRepFRFChart,
     _mntRepEngine: _mntRepEngine,
+    _mntRepTshaft: _mntRepTshaft, _mntRepYonCumle: _mntRepYonCumle,
     _mntRepFindCase: _mntRepFindCase,
     _mntRepCritical: _mntRepCritical,
     _mntRepCaseTr: _mntRepCaseTr,

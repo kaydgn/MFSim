@@ -9,11 +9,14 @@
  *      dağılımı ve k_stat bu satırla doğrulanmış sayılır. Bu sayı büyürse
  *      çözücünün ya da modelin statik tarafında bir şey bozulmuştur.
  *
- *   2. İKİ AÇIK MODEL FARKI — Adams'ta olup MFSim'de olmayan iki şey:
- *      yanal (±12 mm) durdurucu ve tork yalpa işareti. Bunlar kapatılırsa
- *      buradaki testler kırmızıya döner ve defterin güncellenmesini ister.
- *      Tork farkı YALNIZ yöndür: tork ters çevrilince iki satırın farkı
- *      17,28 mm'den 0,489 mm'ye iniyor.
+ *   2. AÇIK MODEL FARKI — Adams'ta olup MFSim'de olmayan yanal (±12 mm)
+ *      durdurucu. Kapatılırsa buradaki test kırmızıya döner ve defterin
+ *      güncellenmesini ister.
+ *
+ *   2a. TORK YÖNÜ — Adams'ın tork momenti +X (Tx = +T_shaft), programın
+ *      varsayılanının (T5, −X) tersi. 2026-11-02'den beri Çözücü'nün ayarı
+ *      (torkYon) ve örnek +X ile geliyor: iki tork satırı 0,489 mm; varsayılan
+ *      yönde 17,28 mm. Fark YALNIZ yön.
  *
  *   3. KAPANMAMIŞ MODAL SORUSU — sevk edilen örnek kataloğa göre düzeltildi
  *      (TK040 dinamik X↔Z takası), ama Adams TAKASLI hâle daha yakın:
@@ -46,14 +49,10 @@ const TOPO = JSON.parse(fs.readFileSync(
 beforeEach(() => { resetStubs(stubs); });
 
 // ── Modeli koş: 'katalog' = sevk edilen örnek, 'adams' = fikstürdeki girdi,
-// 'katalog-tork' = örnek, tork ters yönde (vites oranlarının işareti çevrilir;
-// programın işaret düzeni değişmez) ──
+// 'tork-varsayilan' = örnek, Çözücü'nün tork yönü varsayılanda (−X) ──
 function solve(variant) {
   const t = JSON.parse(JSON.stringify(TOPO));
-  if (variant === 'katalog-tork') {
-    const g = t.nodes.find((n) => n.type === 'mnt-gearbox').data;
-    g.g1 = String(-(+g.g1)); g.gR = String(-(+g.gR));
-  }
+  if (variant === 'tork-varsayilan') delete t.nodes.find((n) => n.type === 'mnt-solver').data.torkYon;
   if (variant === 'adams') {
     const D = REF.INPUT_DELTA;
     t.nodes.forEach((n) => {
@@ -74,9 +73,9 @@ function solve(variant) {
     expect(i).toBeGreaterThanOrEqual(0);       // sütun eşlemesi çürüdüyse burada patlar
     return i;
   });
-  // TR: tek serbestlik iletilebilirlik, ateşleme frekansında (rölanti örnekte
-  // 800 d/dk; silindir sayısı örnekte yok — ISB4.5: 4), ζ çözücünün
-  const iso = rep._mntRepIsolation(R, { cylinders: 4 });
+  // TR: tek serbestlik iletilebilirlik, ateşleme frekansında (örnekte rölanti
+  // 800 d/dk, ISB4.5: 4 silindir), ζ çözücünün
+  const iso = rep._mntRepIsolation(R, {});
   return {
     tr: iso.T * 100,
     modes: R.modes.map((m) => m.f_Hz),
@@ -90,7 +89,7 @@ function solve(variant) {
 
 const KAT = solve('katalog');
 const ADA = solve('adams');
-const KAT_TORK = solve('katalog-tork');
+const VARS = solve('tork-varsayilan');
 
 // Bir satır kümesinin Tablo 1'e göre hata istatistiği
 function stats(sol, rowFilter) {
@@ -108,6 +107,13 @@ const CLEAN = (r) => !r.gap;
 const modalRms = (m) => Math.sqrt(m.reduce((s, f, i) => s + (f - REF.TABLE1_MODES[i]) ** 2, 0) / 6);
 
 describe('fikstür bütünlüğü — karşılaştırma neyi karşılaştırdığını bilmeli', () => {
+  test('örneğin Çözücü ayarı: ileri −X, tork yönü +X (Adams); motor 800 d/dk · 4 silindir', () => {
+    const cz = TOPO.nodes.find((n) => n.type === 'mnt-solver').data;
+    expect(cp._mntYonAyari(cz)).toEqual({ ileri: '-x', kaldirimG: 1.55, kaldirimYon: 'ters', torkYon: '+x' });
+    const m = TOPO.nodes.find((n) => n.type === 'mnt-motor').data;
+    expect([+m.idleRpm, +m.cylinders]).toEqual([800, 4]);
+  });
+
   test('sevk edilen örnek KATALOG değerini taşıyor', () => {
     const D = REF.INPUT_DELTA;
     const tk = TOPO.nodes.filter((n) => n.type === 'mnt-mount' &&
@@ -177,34 +183,39 @@ describe('2) açık model farkı — Adams\'ta var, MFSim\'de yok', () => {
       });
     });
   });
+});
 
-  test('tork işareti: Y ve Z ters, X tutuyor', () => {
+describe('2a) tork yönü — örnek Adams\'ın yönüyle (+X); fark yalnız yön', () => {
+  const tork = (r) => r.gap === 'tork-isareti';
+  test('örnek (+X): iki tork satırı tablo mertebesinde', () => {
+    // Kalan fark düşey durdurucuda (Adams ±15,0'de kesiyor, MFSim 15,2–15,9'a
+    // çıkıyor) ve ön takozun yanal sehiminde.
+    const s = stats(KAT, tork);
+    expect(s.n).toBe(30);
+    expect(s.rms).toBeLessThan(0.6);             // ölçülen 0,489 mm
+    expect(s.max).toBeLessThan(1.3);             // ölçülen 1,17 mm
+  });
+
+  test('varsayılan (−X): Y ve Z ters, X tutuyor', () => {
     ['Forward (3.49)', 'Reserve (-5.03)'].forEach((rowName) => {
       const ri = REF.ROWS.findIndex((r) => r.row === rowName);
       let flipped = 0, xok = 0;
       for (let c = 0; c < 5; c++) {
         [1, 2].forEach((a) => {
-          const m = KAT.d[ri][c][a], t = REF.TABLE1[ri][c][a];
+          const m = VARS.d[ri][c][a], t = REF.TABLE1[ri][c][a];
           if (Math.abs(m) > 1 && Math.abs(t) > 1 && Math.sign(m) !== Math.sign(t)) flipped++;
         });
-        const mx = KAT.d[ri][c][0], tx = REF.TABLE1[ri][c][0];
+        const mx = VARS.d[ri][c][0], tx = REF.TABLE1[ri][c][0];
         if (Math.abs(mx) < 1 || Math.abs(tx) < 1 || Math.sign(mx) === Math.sign(tx)) xok++;
       }
       expect(flipped).toBeGreaterThanOrEqual(9);   // 10 Y/Z değerinin neredeyse hepsi ters
       expect(xok).toBeGreaterThanOrEqual(3);
     });
+    expect(stats(VARS, tork).rms).toBeGreaterThan(15);   // ölçülen 17,28 mm
   });
 
-  test('tork farkı YALNIZ yön: tork ters çevrilince iki satır tablo mertebesine iniyor', () => {
-    // Kalan fark düşey durdurucuda (Adams ±15,0'de kesiyor, MFSim 15,2–15,9'a
-    // çıkıyor) ve ön takozun yanal sehiminde.
-    const tork = (r) => r.gap === 'tork-isareti';
-    const once = stats(KAT, tork), sonra = stats(KAT_TORK, tork);
-    expect(once.rms).toBeGreaterThan(15);        // ölçülen 17,28 mm
-    expect(sonra.rms).toBeLessThan(0.6);         // ölçülen 0,489 mm
-    expect(sonra.max).toBeLessThan(1.3);         // ölçülen 1,17 mm
-    // Tork yalnız tork durumlarına girer: temiz satırlar birebir aynı
-    expect(stats(KAT_TORK, CLEAN).rms).toBeCloseTo(stats(KAT, CLEAN).rms, 9);
+  test('tork yönü yalnız tork durumlarına girer: temiz satırlar birebir aynı', () => {
+    expect(stats(VARS, CLEAN).rms).toBeCloseTo(stats(KAT, CLEAN).rms, 9);
   });
 });
 

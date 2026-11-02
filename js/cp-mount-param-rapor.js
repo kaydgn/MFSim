@@ -188,7 +188,7 @@ function _mntPrmKisitlar(E){
    + '<tr><td class="l">Rijitlik toleransı</td><td>±%'+_rF(c.s.tolerans*100, 0)+'</td><td class="c">'+(c.acik.tolerans ? 'açık' : 'kapalı')+'</td><td class="c">'+_mntPrmRef('shen', 'torgal')+'</td></tr>'
    + '<tr><td class="l">İletilebilirlik ağırlığı w</td><td>'+_rF(c.s.agirlik, 2)+'</td><td class="c">—</td><td class="c">—</td></tr></table>';
   h+='<p><strong>İşletme yükleri</strong>: 1 g düşey ile birlikte en çok 1 g yatay ivme ve tahrik torku — statik, frenleme, hızlanma, viraj, fren + viraj, '
-   + 'ileri ve geri tork, vites başına tork, 1 g yanal ve 1 g boyuna. <strong>Darbe yükleri</strong>: 3,5 g düşey, çukur + fren, 1,55 g bordür, geri esneme; '
+   + 'ileri ve geri tork, vites başına tork, 1 g yanal ve 1 g boyuna. <strong>Darbe yükleri</strong>: 3,5 g düşey, çukur + fren, bordür darbesi, geri esneme; '
    + 'metal–metal durdurucuyla sınırlanır '+_mntPrmRef('bmc')+'. Kapasite (E4, E9) girdisi tanımlı tiplerde değerlendirilir; kapasitesiz tipte sağlanmış sayılır.</p>';
   var fd=function(d){ return _rF(Math.sqrt(9810/d)/(2*Math.PI), 1); };
   h+='<p>Statik sehim ile düşey doğal frekans arasındaki bağ (doğrusal yay, f = (1/2π)·√(g/δ)): δ = '+_rF(c.s.sehimAlt, 1)+' mm → '+fd(c.s.sehimAlt)

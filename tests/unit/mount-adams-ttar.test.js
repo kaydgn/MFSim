@@ -4,25 +4,22 @@
  * Bu dosya bir doğruluk kapısı DEĞİL, bir DEFTERDİR (Tulga'nın eşi:
  * mount-adams-tulga.test.js). Ölçülmüş dört şeyi sayıyla dondurur:
  *
- *   1. GİRDİ — sevk edilen Siper örneği kitapla birebir; tek fark motor
- *      kütlesi (1.386,3 ↔ 1.386,26 kg), toplamda 0,04 kg.
+ *   1. GİRDİ — sevk edilen Siper örneği kitapla birebir (motor 1.386,26 kg,
+ *      X15: 700 d/dk, 6 silindir); toplam kütle Adams'ınkiyle aynı.
  *
  *   2. MODLAR — altı mod Adams'la 0,025 Hz içinde (RMS 0,009 Hz).
  *
- *   3. ARAÇ EKSENİ — programın ivme yük durumları Tulga'nın eksenine göre
- *      yazılı (ileri −X); TTAR'da ileri +X. Bugün boyuna ve yanal yük
- *      durumları TERS yönde: satır başına 2,6–10,7 mm. n_x ve n_y çevrilince
- *      (kaldırım 3,5 g) 13 satırın 230 değerinde RMS 0,175 mm. Tork ve saf
- *      düşey durumlar çevirmeden tutuyor (tork işareti TTAR'ın eksenine göre).
- *      Adams'ın X/Y'si Z etrafında 180° döndürülmüş eksende: karşılaştırma
- *      onları çevirir.
+ *   3. ARAÇ EKSENİ — programın ivme yük durumları ileri −X eksende yazılı;
+ *      TTAR'da ileri +X. Örnek Çözücü'de ileri +X ve 3,5 g virajla aynı yönde
+ *      kaldırım darbesiyle gelir: 13 satırın 230 değerinde RMS 0,175 mm.
+ *      Varsayılan ayarla (ileri −X) boyuna ve yanal yük durumları TERS:
+ *      satır başına 2,6–10,7 mm. Tork ve saf düşey durumlar yük yönünden
+ *      bağımsız (tork yönü varsayılan −X, TTAR'ın Adams'ı). Adams'ın X/Y'si
+ *      Z etrafında 180° döndürülmüş eksende: karşılaştırma onları çevirir.
  *
- *   4. TR — program %5,66 (X15: 700 d/dk, 6 silindir; ζ çözücünün),
- *      Adams %5,2.
+ *   4. TR — program %5,66 (ζ çözücünün), Adams %5,2.
  *
- * Araç ekseni programda bir ayar olunca 3. madde kırmızıya döner ve defterin
- * güncellenmesini ister. Gerekçe ve kitabın tutarsız hücreleri fikstürün
- * başlığında.
+ * Gerekçe ve kitabın tutarsız hücreleri fikstürün başlığında.
  */
 
 const fs = require('fs');
@@ -43,50 +40,41 @@ const TOPO = JSON.parse(fs.readFileSync(
 
 beforeEach(() => { resetStubs(stubs); });
 
-// ── Yük durumlarını geçici olarak değiştir: 'arac' = n_x ve n_y ters (ileri
-// +X), 'arac-kaldirim' = ayrıca kaldırım KERB_G, virajla aynı yönde ──
-function yukDurumlari(variant, fn) {
-  const C = cp.MNT_AUTO_CASES, kayit = C.map((c) => c.n.slice());
-  try {
-    if (variant === 'arac-kaldirim') {
-      C.find((c) => c.name === 'Kerb Strike L').n = [0, REF.KERB_G, -1];
-      C.find((c) => c.name === 'Kerb Strike R').n = [0, -REF.KERB_G, -1];
-    }
-    if (variant !== 'program') C.forEach((c) => { c.n = [-c.n[0], -c.n[1], c.n[2]]; });
-    return fn();
-  } finally { C.forEach((c, i) => { c.n = kayit[i]; }); }
-}
-
+// ── Modeli koş: 'ornek' = sevk edilen örnek (ileri +X, kaldırım 3,5 g virajla
+// aynı), 'varsayilan' = Çözücü'nün yön ayarları varsayılanda (ileri −X,
+// kaldırım 1,55 g virajın tersi), 'kaldirim-varsayilan' = ileri +X, kaldırım
+// varsayılanda ──
 function solve(variant) {
-  return yukDurumlari(variant, () => {
-    const t = JSON.parse(JSON.stringify(TOPO));
-    global.nodes = t.nodes; global.connections = t.connections;
-    global.veUpdateResultsTree = jest.fn();
-    const R = cp._mntComputeResults(t.nodes.find((n) => n.type === 'mnt-solver').id);
-    expect(R.error).toBeUndefined();
-    const names = R.mounts.map((m) => m.name);
-    const idx = REF.COLUMNS.map((c) => {
-      const i = names.indexOf(c.mount);
-      expect(i).toBeGreaterThanOrEqual(0);         // sütun eşlemesi çürüdüyse burada patlar
-      return i;
-    });
-    const iso = rep._mntRepIsolation(R, { idleRpm: REF.ENGINE.idleRpm, cylinders: REF.ENGINE.cylinders });
-    return {
-      m: R.mp.m, cg: R.mp.cg.map((v) => v * 1000), tr: iso.T,
-      modes: R.modes.map((md) => md.f_Hz),
-      d: REF.ROWS.map((r) => {
-        const c = R.allCases.find((x) => x.name === r.lc);
-        expect(c && c.res).toBeTruthy();            // yük durumu adı çürüdüyse burada patlar
-        return idx.map((i) => c.res.perMount[i].delta.map((v) => v * 1000));
-      }),
-      nodes: t.nodes,
-    };
+  const t = JSON.parse(JSON.stringify(TOPO));
+  const cz = t.nodes.find((n) => n.type === 'mnt-solver').data;
+  if (variant === 'varsayilan') ['ileri', 'kaldirimG', 'kaldirimYon'].forEach((k) => delete cz[k]);
+  if (variant === 'kaldirim-varsayilan') ['kaldirimG', 'kaldirimYon'].forEach((k) => delete cz[k]);
+  global.nodes = t.nodes; global.connections = t.connections;
+  global.veUpdateResultsTree = jest.fn();
+  const R = cp._mntComputeResults(t.nodes.find((n) => n.type === 'mnt-solver').id);
+  expect(R.error).toBeUndefined();
+  const names = R.mounts.map((m) => m.name);
+  const idx = REF.COLUMNS.map((c) => {
+    const i = names.indexOf(c.mount);
+    expect(i).toBeGreaterThanOrEqual(0);         // sütun eşlemesi çürüdüyse burada patlar
+    return i;
   });
+  const iso = rep._mntRepIsolation(R, {});       // rölanti ve silindir örneğin Motor'undan
+  return {
+    m: R.mp.m, cg: R.mp.cg.map((v) => v * 1000), tr: iso.T,
+    modes: R.modes.map((md) => md.f_Hz),
+    d: REF.ROWS.map((r) => {
+      const c = R.allCases.find((x) => x.name === r.lc);
+      expect(c && c.res).toBeTruthy();            // yük durumu adı çürüdüyse burada patlar
+      return idx.map((i) => c.res.perMount[i].delta.map((v) => v * 1000));
+    }),
+    nodes: t.nodes,
+  };
 }
 
-const PRG = solve('program');
-const ARC = solve('arac');
-const ARK = solve('arac-kaldirim');
+const ORN = solve('ornek');
+const VARS = solve('varsayilan');
+const KVARS = solve('kaldirim-varsayilan');
 
 const ri = (row) => REF.ROWS.findIndex((r) => r.row === row);
 const ci = (col) => REF.COLUMNS.findIndex((c) => c.col === col);
@@ -115,14 +103,21 @@ const KALDIRIM = ['Rim Lateral Kerb Strike (L)', 'Rim Lateral Kerb Strike (R)'];
 const KARSILASTIRILAN = REF.ROWS.filter((r) => r.gap !== 'yer-tutucu').map((r) => r.row);
 
 describe('1) girdi — Siper örneği kitapla birebir', () => {
-  test('gövdeler: kütle, ağırlık merkezi, atalet; tek fark motor kütlesi', () => {
-    const govde = PRG.nodes.filter((n) => (componentDefs[n.type] || {}).isMountBody);
+  test('örneğin Çözücü ayarı: ileri +X, kaldırım 3,5 g virajla aynı, tork yönü varsayılan (−X)', () => {
+    const cz = TOPO.nodes.find((n) => n.type === 'mnt-solver').data;
+    expect(cp._mntYonAyari(cz)).toEqual({ ileri: '+x', kaldirimG: REF.KERB_G, kaldirimYon: 'ayni', torkYon: '-x' });
+    const mo = TOPO.nodes.find((n) => n.type === 'mnt-motor').data;
+    expect([+mo.idleRpm, +mo.cylinders]).toEqual([REF.ENGINE.idleRpm, REF.ENGINE.cylinders]);
+  });
+
+  test('gövdeler: kütle, ağırlık merkezi, atalet', () => {
+    const govde = ORN.nodes.filter((n) => (componentDefs[n.type] || {}).isMountBody);
     expect(govde).toHaveLength(REF.INPUT.bodies.length);
     REF.INPUT.bodies.forEach((b) => {
       const n = govde.find((x) => x.customName === b.name);
       expect(n).toBeTruthy();
-      const d = n.data, dm = Math.abs(+d.mass - b.mass);
-      if (b.name === 'Motor') expect(dm).toBeCloseTo(0.04, 6); else expect(dm).toBeLessThan(1e-9);
+      const d = n.data;
+      expect(Math.abs(+d.mass - b.mass)).toBeLessThan(1e-9);
       [+d.cgx, +d.cgy, +d.cgz].forEach((v, k) => expect(Math.abs(v - b.cg[k])).toBeLessThan(0.002));
       if (b.I && b.name !== 'Sağ cradle') [+d.Ixx, +d.Iyy, +d.Izz].forEach((v, k) => expect(v).toBeCloseTo(b.I[k], 6));
     });
@@ -132,14 +127,14 @@ describe('1) girdi — Siper örneği kitapla birebir', () => {
   });
 
   test('takozlar ve tork zinciri birebir', () => {
-    const tk = PRG.nodes.filter((n) => n.type === 'mnt-mount');
+    const tk = ORN.nodes.filter((n) => n.type === 'mnt-mount');
     REF.COLUMNS.forEach((c, k) => {
       const d = tk.find((x) => x.customName === c.mount).data;
       expect([+d.x, +d.y, +d.z]).toEqual(REF.INPUT.mounts[k]);
       expect([+d.kxs, +d.kys, +d.kzs]).toEqual(REF.INPUT.kstat);
       expect([+d.kxd, +d.kyd, +d.kzd]).toEqual(REF.INPUT.kdyn);
     });
-    const g = PRG.nodes.find((n) => n.type === 'mnt-gearbox').data, mo = PRG.nodes.find((n) => n.type === 'mnt-motor').data;
+    const g = ORN.nodes.find((n) => n.type === 'mnt-gearbox').data, mo = ORN.nodes.find((n) => n.type === 'mnt-motor').data;
     const T = REF.INPUT.torque;
     expect(+mo.Te).toBe(T.Te);
     expect([+g.Rstall, +g.iTransfer, +g.g1, +g.gR]).toEqual([T.Rstall, T.iTransfer, T.g1, T.gR]);
@@ -148,50 +143,50 @@ describe('1) girdi — Siper örneği kitapla birebir', () => {
   });
 
   test('toplam kütle ve ağırlık merkezi Adams\'ınkiyle', () => {
-    expect(PRG.m - REF.MASS.m).toBeCloseTo(0.04, 3);          // yalnız motorun 0,04 kg'ı
-    PRG.cg.forEach((v, k) => expect(Math.abs(v - REF.MASS.cg[k])).toBeLessThan(0.02));
+    expect(Math.abs(ORN.m - REF.MASS.m)).toBeLessThan(1e-6);
+    ORN.cg.forEach((v, k) => expect(Math.abs(v - REF.MASS.cg[k])).toBeLessThan(0.02));
   });
 });
 
 describe('2) modlar — Adams\'la 0,025 Hz içinde', () => {
   test('mod başına ve karesel ortalama', () => {
-    const e = PRG.modes.map((f, i) => f - REF.MODES[i]);
+    const e = ORN.modes.map((f, i) => f - REF.MODES[i]);
     e.forEach((v) => expect(Math.abs(v)).toBeLessThan(0.025));   // en büyüğü 6. mod: +0,021 Hz
     expect(Math.sqrt(e.reduce((s, v) => s + v * v, 0) / 6)).toBeLessThan(0.012);   // ölçülen 0,009 Hz
   });
   test('yük yönü modlara girmez', () => {
-    ARC.modes.forEach((f, i) => expect(f).toBeCloseTo(PRG.modes[i], 9));
+    VARS.modes.forEach((f, i) => expect(f).toBeCloseTo(ORN.modes[i], 9));
   });
 });
 
-describe('3) araç ekseni — yük durumları TTAR\'da ters yönde', () => {
+describe('3) araç ekseni — TTAR\'da ileri +X', () => {
   test('Adams\'ın X/Y\'si döndürülmüş eksende: saf düşey ve tork satırlarında yalnız çevrilince tutuyor', () => {
     const xy = (c, a) => a < 2;
-    const olduguGibi = stats(PRG, DUSEY.concat(TORK), { cevir: false, hucre: xy });
-    const cevrik = stats(PRG, DUSEY.concat(TORK), { hucre: xy });
+    const olduguGibi = stats(ORN, DUSEY.concat(TORK), { cevir: false, hucre: xy });
+    const cevrik = stats(ORN, DUSEY.concat(TORK), { hucre: xy });
     expect(olduguGibi.rms).toBeGreaterThan(1.0);                 // ölçülen 1,44 mm
     expect(cevrik.rms).toBeLessThan(0.15);                       // ölçülen 0,098 mm
   });
 
-  test('bugün: boyuna ve yanal yük durumları ters yönde', () => {
+  test('örnek (ileri +X): boyuna ve yanal yük durumları tablo mertebesinde', () => {
     BOYUNA_YANAL.forEach((row) => {
-      expect(stats(PRG, [row]).rms).toBeGreaterThan(2.5);        // ölçülen 2,6–10,7 mm
+      expect(stats(ORN, [row]).rms).toBeLessThan(0.3);           // ölçülen 0,07–0,29 mm
     });
-  });
-
-  test('n_x ve n_y çevrilince tablo mertebesine iniyor', () => {
-    BOYUNA_YANAL.forEach((row) => {
-      expect(stats(ARC, [row]).rms).toBeLessThan(0.3);           // ölçülen 0,07–0,29 mm
-    });
-    const s = stats(ARK, KARSILASTIRILAN);
+    const s = stats(ORN, KARSILASTIRILAN);
     expect(s.n).toBe(230);
     expect(s.rms).toBeLessThan(0.2);                             // ölçülen 0,175 mm
     expect(s.max).toBeLessThan(1.0);                             // ölçülen 0,95 mm
   });
 
+  test('varsayılan (ileri −X): boyuna ve yanal yük durumları ters yönde', () => {
+    BOYUNA_YANAL.forEach((row) => {
+      expect(stats(VARS, [row]).rms).toBeGreaterThan(2.5);       // ölçülen 2,6–10,7 mm
+    });
+  });
+
   test('saf düşey ve tork durumları yük yönünden bağımsız ve çevirmeden tutuyor', () => {
     DUSEY.concat(TORK).forEach((row) => {
-      const a = stats(PRG, [row]), b = stats(ARC, [row]);
+      const a = stats(ORN, [row]), b = stats(VARS, [row]);
       expect(a.rms).toBeCloseTo(b.rms, 9);
       expect(a.rms).toBeLessThan(0.25);                          // ölçülen 0,04–0,19 mm
     });
@@ -199,20 +194,20 @@ describe('3) araç ekseni — yük durumları TTAR\'da ters yönde', () => {
 });
 
 describe('kaldırım darbesi — kitabın tanımı 3,5 g, virajla aynı yönde', () => {
-  test('3,5 g ile ön takozlar 0,1 mm içinde, iki satır 0,3 mm içinde', () => {
-    const on = stats(ARK, KALDIRIM, { hucre: (c, a) => c < 2 && a > 0 });
+  test('örnek: ön takozlar 0,1 mm içinde, iki satır 0,3 mm içinde', () => {
+    const on = stats(ORN, KALDIRIM, { hucre: (c, a) => c < 2 && a > 0 });
     expect(on.rms).toBeLessThan(0.1);                            // ölçülen 0,06 mm
-    KALDIRIM.forEach((row) => expect(stats(ARK, [row]).rms).toBeLessThan(0.3));
+    KALDIRIM.forEach((row) => expect(stats(ORN, [row]).rms).toBeLessThan(0.3));
   });
-  test('programın 1,55 g\'si (virajın tersi) tutmuyor', () => {
-    KALDIRIM.forEach((row) => expect(stats(ARC, [row]).rms).toBeGreaterThan(4));
+  test('varsayılan 1,55 g (virajın tersi) tutmuyor', () => {
+    KALDIRIM.forEach((row) => expect(stats(KVARS, [row]).rms).toBeGreaterThan(4));
   });
 });
 
 describe('4) TR — ateşleme frekansında iletilebilirlik', () => {
   test('program %5,66, Adams %5,2', () => {
-    expect(PRG.tr * 100).toBeCloseTo(5.66, 1);
-    expect(Math.abs(PRG.tr - REF.TR)).toBeLessThan(0.006);
+    expect(ORN.tr * 100).toBeCloseTo(5.66, 1);
+    expect(Math.abs(ORN.tr - REF.TR)).toBeLessThan(0.006);
   });
 });
 
@@ -220,7 +215,7 @@ describe('kitaptaki tutarsızlıklar — karşılaştırma dışı, kayıtlı', 
   test('dört hücre programdan > 2 mm uzak, tutarlı karşılığı 0,5 mm içinde', () => {
     REF.SUPHELI.forEach((s) => {
       const r = ri(s.row), c = ci(s.col), kr = ri(s.karsi.row), kc = ci(s.karsi.col);
-      const p = adamsta(ARK, r, c)[s.axis], pk = adamsta(ARK, kr, kc)[s.axis];
+      const p = adamsta(ORN, r, c)[s.axis], pk = adamsta(ORN, kr, kc)[s.axis];
       expect(Math.abs(p - REF.TABLE[r][c][s.axis])).toBeGreaterThan(2);
       expect(Math.abs(pk - REF.TABLE[kr][kc][s.axis])).toBeLessThan(0.5);
     });
