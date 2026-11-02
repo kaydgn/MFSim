@@ -11796,6 +11796,49 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-secondary); }
 .ve-mw-3b-tbl tr[data-uyari] td:nth-child(2){ color:var(--ink-warning); }
 .ve-mw-3b-tbl + .ve-mw-3b-tbl{ margin-top:10px; }
+/* Adın düğmesi hücrede kısalır (düğme bütün olarak üç noktaya dönüyordu);
+   tam adı ipucunda */
+.ve-mw-3b-tbl td:first-child .ve-fw-3b-yolb{ display:inline-block; max-width:calc(100% - 16px); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+/* TAKOZ 3B — İŞARETLER, ETİKETLER, KOORDİNAT EKSENİ (js/cp-mount-3b.js,
+   2026-11-02). Ağırlık merkezi CAD simgesi: dörde bölünmüş daire, iki tonu
+   (zemin · başlık) her zeminde okunur. Takoz noktası rolünün renginde artılı
+   halka; modelin noktası kesikli halka; veri sayfasının referansı eşkenar
+   dörtgen. Etiketin işarete bakan kenarı birimin rol renginde (`--renk`). */
+.ve-mw-3b-is .z{ fill:var(--bg-primary); }
+.ve-mw-3b-is-govde .d{ fill:var(--text-heading); }
+.ve-mw-3b-is-govde .c{ fill:none; stroke:var(--text-heading); stroke-width:1.5; }
+.ve-mw-3b-is-takoz .hl{ fill:none; stroke:var(--bg-primary); stroke-width:5; }
+.ve-mw-3b-is-takoz .ha{ fill:none; stroke:var(--bg-primary); stroke-width:4; stroke-linecap:round; }
+.ve-mw-3b-is-takoz .z{ fill-opacity:.9; stroke:var(--accent-success); stroke-width:2.25; }
+.ve-mw-3b-is-takoz .a{ fill:none; stroke:var(--text-heading); stroke-width:1.5; stroke-linecap:round; }
+.ve-mw-3b-is-takoz .m{ fill:var(--text-heading); }
+.ve-mw-3b-is-model .h{ fill:none; stroke:var(--accent-primary); stroke-width:1.5; stroke-dasharray:4 3; }
+.ve-mw-3b-is-ref .r{ fill:var(--accent-primary); stroke:var(--bg-primary); stroke-width:1.5; }
+.ve-mw-3b .ve-fw-3b-etk{ border-left:3px solid var(--renk, var(--text-muted)); }
+.ve-mw-3b .ve-fw-3b-etk.sol{ border-left:0; border-right:3px solid var(--renk, var(--text-muted)); }
+/* Koordinat ekseni: tuvalin sol altında, tıklamayı geçirir. Alttaki dizi
+   eksenin sağından başlar. */
+.ve-mw-3b-eksen{ position:absolute; left:12px; bottom:12px; overflow:visible; pointer-events:none; }
+.ve-mw-3b .ve-fw-3b-alt{ left:216px; }
+.ve-mw-3b-eksen .zm{ fill:var(--bg-secondary); fill-opacity:.72; }
+.ve-mw-3b-eksen .dz{ fill-opacity:.09; stroke-opacity:.35; stroke-width:1; }
+.ve-mw-3b-eksen .dz-x{ fill:var(--eksen-x); stroke:var(--eksen-x); }
+.ve-mw-3b-eksen .dz-y{ fill:var(--eksen-y); stroke:var(--eksen-y); }
+.ve-mw-3b-eksen .dz-z{ fill:var(--eksen-z); stroke:var(--eksen-z); }
+.ve-mw-3b-eksen .ek{ stroke-width:2.25; stroke-linecap:round; }
+.ve-mw-3b-eksen .ek.eksi{ stroke-width:1.5; stroke-opacity:.45; }
+.ve-mw-3b-eksen .ek-x{ stroke:var(--eksen-x); }
+.ve-mw-3b-eksen .ek-y{ stroke:var(--eksen-y); }
+.ve-mw-3b-eksen .ek-z{ stroke:var(--eksen-z); }
+.ve-mw-3b-eksen .uc-x{ fill:var(--eksen-x); }
+.ve-mw-3b-eksen .uc-y{ fill:var(--eksen-y); }
+.ve-mw-3b-eksen .uc-z{ fill:var(--eksen-z); }
+.ve-mw-3b-eksen .o{ fill:var(--text-heading); }
+.ve-mw-3b-eksen text{ font-size:var(--fs-tiny); font-weight:600; fill:var(--text-primary); font-variant-numeric:tabular-nums;
+  paint-order:stroke; stroke:var(--bg-secondary); stroke-width:3px; stroke-linejoin:round; }
+.ve-mw-3b-eksen text.eksi{ font-weight:400; fill:var(--text-secondary); }
+.ve-mw-3b-eksen text[data-arka]{ fill:var(--text-muted); }
 /* TAKOZ NOKTASI — daireden seçim kipinde tuvalin imleci artı (js/cp-mount-3b.js) */
 .ve-mw-3b-nokta-kip:not(.surukle) canvas{ cursor:crosshair; }
 

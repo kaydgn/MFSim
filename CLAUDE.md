@@ -96,7 +96,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Devam; eksik ağı büyük hesap kartta çubukla bekler. **Takoz noktası ÜST
   BAĞLANTI YÜZEYİNİN MERKEZİ** (kullanıcı kuralı): dosyada yazılı dairenin
   merkezi, ağdan değil — öneri
-  eksenden (`veMntStpTakozNoktasi`), 3B'de "Daireden nokta" kenarı seçer
+  eksenden (`veMntStpTakozNoktasi`; eksen yoksa dış ölçülerin merkezi, ağırlık
+  merkezi DEĞİL — 2026-11-02), 3B'de "Daireden nokta" kenarı seçer
   (`veMntStpKenarDaire`; ağ yalnız `daire` dizinini taşır); seçilen daire rol
   kaydına yolu ve merkeziyle girer. Kapı: `mount-step.test.js` + `mount-wizard.test.js`
   (→ *STEP OKUMASI* · *AĞAÇ DAL DAL* · *HESAP BEKLER*) + `mount-3b.test.js` +

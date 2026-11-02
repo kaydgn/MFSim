@@ -97,15 +97,17 @@ test('DAİREDEN NOKTA: öneri sunudaki sayı; kip takoza sığar; kenara gel →
   expect([kip.kip, kip.secili, kip.sinif, kip.basili]).toEqual([true, true, true, 'true']);
   expect(kip.cap).toBeGreaterThan(150);                                      // montajın içinde ~10 px'ti
   // Nokta işareti ekranda SABİT boyda: montaja göre boyutlanan küre yakında
-  // daireyi örtüyordu. İki uzaklıkta ölçülür (kare çizildikten sonra).
+  // daireyi örtüyordu. İki uzaklıkta ölçülür (kare çizildikten sonra). İşaret
+  // 2026-11-02'den beri SVG (artılı halka): halkanın yarıçapı, noktanın izdüşümünde.
   const isaretPx = () => page.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(() => {
     const V = _mw3b, R = document.querySelector('#ve-mw-3b-tuval canvas').getBoundingClientRect();
-    const hedefN = new THREE.Vector3(439.957, -355.957, 499.855);
-    const m = V.sonucGrubu.children.filter((o) => o.geometry && o.geometry.type === 'SphereGeometry')
-      .sort((a, b) => a.position.distanceTo(hedefN) - b.position.distanceTo(hedefN))[0];
-    const sag = new THREE.Vector3().setFromMatrixColumn(V.camera.matrixWorld, 0).multiplyScalar(m.scale.x);
-    const a = m.position.clone().project(V.camera), b = m.position.clone().add(sag).project(V.camera);
-    ok(Math.hypot((b.x - a.x) / 2 * R.width, (b.y - a.y) / 2 * R.height));
+    const p = new THREE.Vector3(439.957, -355.957, 499.855).project(V.camera);
+    const x = R.left + (p.x + 1) / 2 * R.width, y = R.top + (1 - p.y) / 2 * R.height;
+    const g = Array.from(document.querySelectorAll('#ve-mw-3b-etiket-cizgi [data-ve-3b-isaret="takoz"] circle.z')).map((c) => {
+      const r = c.getBoundingClientRect();
+      return { u: Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y), r: r.width / 2 };
+    }).sort((a, b) => a.u - b.u)[0];
+    ok(g && g.u < 1.5 ? g.r : -1);
   }))));
   const yakin = await isaretPx();
   await page.evaluate(() => { _mw3b.ctrl.r *= 4; _mw3bKamera(); _mw3bCiz(true); });

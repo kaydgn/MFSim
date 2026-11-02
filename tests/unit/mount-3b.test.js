@@ -182,3 +182,173 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     expect(_mw3bEkran(e, 0, 0, 1, 200, 100)).toBe(null);
   });
 });
+
+// ── GÖRÜNÜM (2026-11-02) ────────────────────────────────────────────────────
+// Kullanıcı: "3D parçaları seçtiğimiz zaman görselleştirme güzel değil" ·
+// "Ağırlık merkezi ve orta nokta görselleştirmesi güzel değil". Ölçülen önce
+// (deneme montajı, 151 parça, şanzıman seçili): tül her soluk yüzeyi üst üste
+// karıştırıyordu — ışın başına en çok 12, ortanca 3 katman; sonuçta yedi
+// etiketten iki çift üst üste; ağırlık merkezi ve takoz noktası aynı koyu
+// noktaydı; takoz tablosunda adın yerinde yalnız "…".
+const ucMat = () => {
+  class Color { constructor(c){ this.c = c; this.r = 0.5; this.g = 0.5; this.b = 0.5; } lerp(){ return this; } clone(){ return new Color(this.c); } }
+  class Mat { constructor(o){ Object.assign(this, o || {}); } }
+  return { Color, MeshStandardMaterial: Mat, MeshBasicMaterial: Mat, DoubleSide: 2 };
+};
+const V0 = 'void main() {\n#include <begin_vertex>\n#include <project_vertex>\n}';
+const F0 = 'void main() {\n#include <emissivemap_fragment>\n}';
+const derle = (m) => { const sh = { uniforms: {}, vertexShader: V0, fragmentShader: F0 }; m.onBeforeCompile(sh); return sh; };
+
+describe('SEÇİM GÖRÜNÜMÜ — tek kat tül, köşede ayıklama', () => {
+  let M;
+  beforeAll(() => { global.THREE = ucMat(); M = { opak: _mw3bMalzeme('opak'), tul: _mw3bMalzeme('soluk'), on: _mw3bMalzeme('derinlik') }; });
+  afterAll(() => { delete global.THREE; });
+
+  test('ön geçiş renk yazmaz, derinlik yazar, tülün bir birim gerisinde; tül derinlik yazmaz', () => {
+    expect(M.on.colorWrite).toBe(false);
+    expect(M.on.depthWrite).not.toBe(false);
+    expect(M.on.polygonOffsetUnits).toBeGreaterThan(M.tul.polygonOffsetUnits);
+    expect(M.on.polygonOffsetFactor).toBe(M.tul.polygonOffsetFactor);
+    expect(M.tul.transparent).toBe(true);
+    expect(M.tul.depthWrite).toBe(false);
+    expect(M.tul.opacity).toBe(VE_MW_3B_TUL.a);
+    expect(M.opak.transparent).toBeFalsy();
+  });
+
+  test('her geçiş köşeyi durumuna göre kırpma alanının dışına atar; parça içinde discard yok', () => {
+    const sh = { opak: derle(M.opak), tul: derle(M.tul), on: derle(M.on) };
+    expect(sh.opak.vertexShader).toContain('if(mod(mwD, 2.0) > 0.5) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);');   // soluk köşe opakta yok
+    expect(sh.tul.vertexShader).toContain('if(mod(mwD, 2.0) < 0.5) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);');    // soluk olmayan tülde yok
+    expect(sh.on.vertexShader).toContain('if(mod(mwD, 2.0) < 0.5) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);');
+    // ayıklama izdüşümden SONRA (gl_Position'ı project_vertex yazar)
+    expect(sh.opak.vertexShader.indexOf('#include <project_vertex>')).toBeLessThan(sh.opak.vertexShader.indexOf('gl_Position = vec4(2.0'));
+    Object.values(sh).forEach((s) => expect(s.fragmentShader).not.toContain('discard'));
+    expect(['mw3b-opak', 'mw3b-tul', 'mw3b-derinlik']).toEqual([M.opak, M.tul, M.on].map((m) => m.customProgramCacheKey()));
+  });
+
+  test('parça içi durum yuvarlanarak okunur — aradeğerlenen 1,9999 seçimi düşürmüyor (kumlanma)', () => {
+    [derle(M.opak), derle(M.tul)].forEach((s) => {
+      expect(s.fragmentShader).toContain('float mwD = floor(vDurum + 0.5)');
+      expect(s.fragmentShader).not.toMatch(/floor\(vDurum \/ 2\.0\)/);
+    });
+  });
+
+  test('görünüş: seçili kenar başlık tonunda tam; rolsüz seçili parça vurgu tonunda; tülde kenar soluk', () => {
+    const R = { bos: [1, 1, 1], bosSec: [2, 2, 2], cizgi: [3, 3, 3], cizgiSec: [4, 4, 4], cizgiFare: [5, 5, 5] }, rol = [9, 9, 9], A = VE_MW_3B_CIZGI_A;
+    expect(veMntWiz3bGorunus(0, rol, R)).toEqual({ yuz: rol, cizgi: R.cizgi, a: A.olagan });
+    expect(veMntWiz3bGorunus(VE_MW_3B_SECIK, rol, R)).toEqual({ yuz: rol, cizgi: R.cizgiSec, a: A.secili });
+    expect(veMntWiz3bGorunus(VE_MW_3B_SECIK, R.bos, R).yuz).toBe(R.bosSec);
+    expect(veMntWiz3bGorunus(VE_MW_3B_SOLUK, rol, R)).toEqual({ yuz: rol, cizgi: R.cizgi, a: A.soluk });
+    expect(veMntWiz3bGorunus(VE_MW_3B_SOLUK | VE_MW_3B_FARE, rol, R).a).toBe(A.olagan);
+    expect(veMntWiz3bGorunus(VE_MW_3B_FARE, rol, R)).toEqual({ yuz: rol, cizgi: R.cizgiFare, a: A.fare });
+    expect(A.secili).toBeGreaterThan(A.fare);
+    expect(A.fare).toBeGreaterThan(A.olagan);
+    expect(A.olagan).toBeGreaterThan(A.soluk);
+  });
+});
+
+describe('İŞARETLER — ağırlık merkezi CAD simgesi; takoz noktası ağırlık merkezi DEĞİL', () => {
+  const svg = (t) => { const d = document.createElement('div'); d.innerHTML = '<svg>' + veMntWiz3bIsaretSVG(t, 10.04, 20) + '</svg>'; return d.querySelector('g'); };
+
+  test('ağırlık merkezi dörde bölünmüş daire: iki koyu çeyrek (sağ üst · sol alt) ve çevre', () => {
+    const g = svg('govde'), r = VE_MW_3B_ISARET.govde;
+    expect(g.getAttribute('data-ve-3b-isaret')).toBe('govde');
+    expect(g.getAttribute('transform')).toBe('translate(10 20)');
+    expect(g.querySelector('path.d').getAttribute('d')).toBe('M0 0H' + r + 'A' + r + ' ' + r + ' 0 0 0 0 ' + (-r) + 'ZM0 0H' + (-r) + 'A' + r + ' ' + r + ' 0 0 0 0 ' + r + 'Z');
+    expect(g.querySelectorAll('circle').length).toBe(2);
+  });
+
+  test('takoz noktası artılı halka: çeyrek yok, artı ve merkez; hâlesi zemin tonunda', () => {
+    const g = svg('takoz');
+    expect(g.querySelector('path.d')).toBe(null);
+    expect(g.querySelector('path.a').getAttribute('d')).toMatch(/^M-\d+ 0H/);
+    expect(g.querySelector('path.ha').getAttribute('d')).toBe(g.querySelector('path.a').getAttribute('d'));
+    expect(g.querySelector('circle.m')).not.toBe(null);
+  });
+
+  test('modelin noktası kesikli halka, ağırlık merkezinden büyük; referans eşkenar dörtgen', () => {
+    expect(+svg('model').querySelector('circle.h').getAttribute('r')).toBeGreaterThan(VE_MW_3B_ISARET.govde);
+    expect(svg('ref').querySelector('path.r').getAttribute('d')).toBe('M0 -5L5 0L0 5L-5 0Z');
+  });
+
+  test('stiller: iki tonlu simge ve rol renginde halka jetondan; satır içi sabit renk yok', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mw-3b-is-govde \.d\{ fill:var\(--text-heading\); \}/);
+    expect(css).toMatch(/\.ve-mw-3b-is-takoz \.z\{[^}]*stroke:var\(--accent-success\)/);
+    expect(['govde', 'takoz', 'model', 'ref'].map((t) => veMntWiz3bIsaretSVG(t, 0, 0)).join('')).not.toMatch(/#[0-9a-f]{3,6}|style=/i);
+  });
+});
+
+describe('ETİKET YERLEŞİMİ — üst üste binmez, kartın altına girmez', () => {
+  const E = VE_MW_3B_ETK;
+  const kesisir = (a, b) => a.sol === b.sol && Math.abs(a.y - b.y) < E.h + E.ara - 1e-9;
+
+  test('aynı yere yığılan beş işaret: aynı yandaki etiketler arasında en az kutu boyu + ara', () => {
+    const Q = [[400, 300], [402, 301], [398, 299], [401, 298], [399, 302]].map(([x, y]) => ({ x, y, gen: 120 }));
+    const Y = veMntWiz3bEtiketYerlesim(Q, 1000, 700, 0);
+    for (let i = 0; i < Y.length; i++) for (let j = i + 1; j < Y.length; j++) expect(kesisir(Y[i], Y[j])).toBe(false);
+    Y.forEach((o) => { expect(o.y).toBeGreaterThanOrEqual(E.pay + E.h / 2); expect(o.y).toBeLessThanOrEqual(700 - E.pay - E.h / 2); });
+  });
+
+  test('dibe yığılan dizi birlikte yukarı kayar; kabın içinde kalır', () => {
+    const Q = [0, 1, 2, 3].map((k) => ({ x: 600, y: 690 - k, gen: 80 }));
+    const Y = veMntWiz3bEtiketYerlesim(Q, 1000, 700, 0);
+    Y.forEach((o) => expect(o.y).toBeLessThanOrEqual(700 - E.pay - E.h / 2 + 1e-9));
+    const sirali = Y.map((o) => o.y).sort((a, b) => a - b);
+    for (let k = 1; k < sirali.length; k++) expect(sirali[k] - sirali[k - 1]).toBeGreaterThanOrEqual(E.h + E.ara - 1e-9);
+  });
+
+  test('sağdaki kartın şeridine taşan etiket sola geçer; sola sığmayan sağda kalır', () => {
+    const Y = veMntWiz3bEtiketYerlesim([{ x: 500, y: 100, gen: 50 }, { x: 900, y: 200, gen: 150 }], 1000, 700, 300);
+    expect(Y[1].sol).toBe(true);
+    expect(Y[1].x).toBe(900 - E.dx);
+    const Z = veMntWiz3bEtiketYerlesim([{ x: 30, y: 100, gen: 150 }, { x: 600, y: 100, gen: 50 }], 1000, 700, 0);
+    expect(Z[0].sol).toBe(false);
+    expect(veMntWiz3bEtiketYerlesim([], 100, 100, 0)).toEqual([]);
+  });
+});
+
+describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner', () => {
+  // Görüntüleyicinin yörünge kamerası (z yukarı): dünya matrisinin sütunları sağ · yukarı · geri
+  const kamera = (theta, phi) => {
+    const b = [Math.cos(phi) * Math.cos(theta), Math.cos(phi) * Math.sin(theta), Math.sin(phi)];
+    let r = [-b[1], b[0], 0]; const l = Math.hypot(r[0], r[1]); r = r.map((v) => v / l);
+    const u = [b[1] * r[2] - b[2] * r[1], b[2] * r[0] - b[0] * r[2], b[0] * r[1] - b[1] * r[0]];
+    return [r[0], r[1], r[2], 0, u[0], u[1], u[2], 0, b[0], b[1], b[2], 0, 0, 0, 0, 1];
+  };
+  const kur = (me) => { const d = document.createElement('div'); d.innerHTML = '<svg>' + veMntWiz3bEksenSVG(me) + '</svg>'; return d.querySelector('svg'); };
+
+  test('açılış bakışında +Z yukarı; üç ok, üç eksi yarı, üç düzlem, altı yazı', () => {
+    const s = kur(kamera(VE_MW_3B_ACILIS.theta, VE_MW_3B_ACILIS.phi)), E = VE_MW_3B_EKSEN;
+    expect(Array.from(s.querySelectorAll('text.ad')).map((t) => t.textContent).sort())
+      .toEqual(['+X · Arka', '+Y · Sağ', '+Z · Yukarı', 'Aşağı', 'Ön', 'Sol'].sort());
+    expect(s.querySelectorAll('polygon.dz').length).toBe(3);
+    expect(s.querySelectorAll('line.ek:not(.eksi)').length).toBe(3);
+    expect(s.querySelectorAll('line.ek.eksi').length).toBe(3);
+    expect(s.querySelectorAll('polygon.uc').length).toBe(3);
+    const z = s.querySelector('line.ek-z:not(.eksi)');
+    expect(+z.getAttribute('y2')).toBeLessThan(E.h / 2 - E.L * 0.5);      // yukarı (ekranda y azalır)
+    expect(Math.abs(+z.getAttribute('x2') - E.w / 2)).toBeLessThan(1e-6);  // düşey
+    expect(s.querySelector('text.ad-z').getAttribute('dominant-baseline')).toBe('auto');
+  });
+
+  test('düzlemler ve oklar önce, yazılar en son (zemin hâlesi altındaki çizgiyi örter); oklar arkadan öne', () => {
+    const s = kur(kamera(0.3, 0.5)), cocuk = Array.from(s.children);
+    const ilkYazi = cocuk.findIndex((c) => c.tagName === 'text');
+    expect(cocuk.slice(ilkYazi).every((c) => c.tagName === 'text')).toBe(true);
+    // geri sütunu: x ekseninin derinliği me[8] — pozitif uç öne
+    const me = kamera(0.3, 0.5), d = [me[8], me[9], me[10]];
+    const okSira = cocuk.filter((c) => c.tagName === 'line').map((c) => {
+      const i = 'xyz'.indexOf(c.getAttribute('class').match(/ek-([xyz])/)[1]);
+      return c.classList.contains('eksi') ? -d[i] : d[i];
+    });
+    for (let k = 1; k < okSira.length; k++) expect(okSira[k]).toBeGreaterThanOrEqual(okSira[k - 1]);
+  });
+
+  test('üstten bakış: Z bakana doğru — ok başı yok, yazısı soluk işaretli', () => {
+    const s = kur(kamera(0.75 * Math.PI, 1.5));
+    expect(s.querySelector('polygon.uc-z')).toBe(null);
+    expect(s.querySelector('text.ad-z').getAttribute('data-arka')).toBe('1');
+    expect(s.querySelector('text.ad-x').hasAttribute('data-arka')).toBe(false);
+  });
+});

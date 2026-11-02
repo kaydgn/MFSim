@@ -56,6 +56,24 @@
 // eksen kipinde dairesel kenar (takozun kipiyle aynı arama, bütün parçalarda:
 // krank kasnağı motor biriminin dışında olabilir). Hesaptan sonra eksenin
 // dairesi halka, referans noktası işaret.
+//
+// GÖRÜNÜM (2026-11-02, kullanıcı: "3D parçaları seçtiğimiz zaman görselleştirme
+// güzel değil" · "Ağırlık merkezi ve orta nokta görselleştirmesi güzel değil"):
+//   · Seçimin dışı TEK KAT tül: derinlik ön geçişi yalnız en öndeki soluk yüzü
+//     karıştırır — eskiden her katman üst üste biniyordu (deneme montajında
+//     şanzıman seçiliyken ışın başına en çok 12, ortanca 3 katman). Tül nötr,
+//     rolün rengi az.
+//   · Seçili parçanın kenarı başlık tonunda, silüeti aydınlık; rolsüz seçili
+//     parça vurgu tonunda. Fare altı birimin silüeti vurgu tonunda.
+//   · Hangi köşenin hangi geçişte çizileceğine KÖŞE karar verir (gölgelendirici
+//     eki köşeyi kırpma alanının dışına atar): parçayı ayıklamak parça
+//     başına çizim istemez, parça içinde ayıklama yok.
+//   · Ağırlık merkezi CAD simgesi (dörde bölünmüş daire), takoz noktası artılı
+//     halka, modelin noktası kesikli halka — ekranda sabit boyda SVG; etiketler
+//     birbirinin üstüne binmez.
+//   · KOORDİNAT EKSENİ tuvalin sol altında, Koordinat Düzlemi'nin dili
+//     (js/cp-mount-viewer.js): +X Arka · +Y Sağ · +Z Yukarı, eksi yönler soluk,
+//     üç soluk düzlem; kamerayla döner.
 // ============================================================================
 
 var _mw3b = null;
@@ -84,14 +102,25 @@ var VE_MW_3B_KUME = { uc: 1 << 20, ucgen: 1 << 21, cizgi: 1 << 20 };
 var VE_MW_3B_KURULUM_KARE = 200, VE_MW_3B_KARE_PAY = 9, VE_MW_3B_SIGDIR_ARA = 500;
 // Köşe durumu bitleri (gölgelendirici eki aynı değerleri okur)
 var VE_MW_3B_SOLUK = 1, VE_MW_3B_SECIK = 2, VE_MW_3B_FARE = 4;
-// Çizgi saydamlığı (0–255): olağan · soluk
-var VE_MW_3B_CIZGI_A = [82, 15];
+// Kenar çizgisinin saydamlığı (0–255) duruma göre
+var VE_MW_3B_CIZGI_A = { olagan: 82, soluk: 22, secili: 235, fare: 150 };
+// Tül: saydamlık · rol renginin payı. Rolsüz seçili parçada vurgunun payı.
+var VE_MW_3B_TUL = { a: 0.22, ton: 0.18 }, VE_MW_3B_SECIM_TON = 0.6;
 // Daireden nokta: farenin kenara en büyük uzaklığı (px), bakılan en çok parça,
 // kenarın tıklanan yüzün arkasında sayılmadığı derinlik payı (mm)
 var VE_MW_3B_DAIRE = { px: 10, aday: 40, derinlik: 1 };
-// Hesap noktalarının ekrandaki yarıçapı (px): takoz · gövde; modelin noktası
-// (tel kafes) bunun VE_MW_3B_MODEL katı — üst üste binen CAD noktası içinde görünür
-var VE_MW_3B_ISARET = { takoz: 6, govde: 8 }, VE_MW_3B_MODEL = 1.6;
+// İşaretlerin ekrandaki yarıçapı (px): takoz noktası · ağırlık merkezi · veri
+// sayfasının referansı; modelin noktası (kesikli halka) ağırlık merkezinin
+// VE_MW_3B_MODEL katı — üst üste binen CAD işareti içinde görünür
+var VE_MW_3B_ISARET = { takoz: 6, govde: 8, ref: 5 }, VE_MW_3B_MODEL = 1.6;
+// Etiket: işaretten uzaklık (px, yatay · düşey), kutunun tahmini yüksekliği,
+// iki etiket arası, harf başına genişlik, kabın kenarına en az uzaklık
+var VE_MW_3B_ETK = { dx: 24, dy: 12, h: 32, ara: 4, harf: 6.4, pay: 10 };
+// Koordinat ekseni: kutunun eni · boyu · okun boyu (px) · eksi yarının ve
+// düzlemin payı · ok başı · zemin dairesinin yarıçapı (px). Kutu yazıların
+// sığacağı kadar geniş: ok sola bakınca "+X · Arka" okun ucundan sola uzanır.
+var VE_MW_3B_EKSEN = { w: 196, h: 140, L: 38, eksi: 0.55, duzlem: 0.55, uc: 8, zemin: 54 };
+var VE_MW_3B_EKSEN_AD = [['x', '+X · Arka', 'Ön'], ['y', '+Y · Sağ', 'Sol'], ['z', '+Z · Yukarı', 'Aşağı']];
 
 // ── 1 · SAF YARDIMCILAR (testli) ──────────────────────────────────────────
 // Parçanın birimi: rollü ata (parçanın kendisi dâhil) — yoksa -1.
@@ -146,6 +175,7 @@ function veMntWiz3bAc(yer){
     + '<div class="ve-fw-3b-tuval" id="ve-mw-3b-tuval" data-durum="kuruluyor">'
       + '<svg class="ve-fw-3b-etiket-cizgi" id="ve-mw-3b-etiket-cizgi" aria-hidden="true"></svg>'
       + '<div class="ve-fw-3b-etiketler" id="ve-mw-3b-etiket"></div>'
+      + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
       + '<div class="ve-mw-3b-kur" id="ve-mw-3b-kur" hidden></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-mw-3b-ipucu" hidden></div></div>'
     + '<aside class="ve-fw-3b-yan" id="ve-mw-3b-yan" aria-label="Gövdeler ve takozlar"></aside>'
@@ -175,8 +205,8 @@ function veMntWiz3bAc(yer){
   V.scene.add(new THREE.HemisphereLight(0xffffff, 0x807868, 0.75));
   V.isik = new THREE.DirectionalLight(0xffffff, 0.75);
   V.scene.add(V.isik); V.scene.add(V.isik.target);
-  V.malzeme = { opak: _mw3bMalzeme(false), soluk: _mw3bMalzeme(true),
-                cizgi: new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, color: _mw3bRenk('--text-primary', '#26241f') }) };
+  V.malzeme = { opak: _mw3bMalzeme('opak'), soluk: _mw3bMalzeme('soluk'), derinlik: _mw3bMalzeme('derinlik'),
+                cizgi: new THREE.LineBasicMaterial({ vertexColors: true, transparent: true }) };
   V.grup = new THREE.Group();
   V.scene.add(V.grup);
   V.ctrl = { theta: VE_MW_3B_ACILIS.theta, phi: VE_MW_3B_ACILIS.phi, r: 1000, hedef: new THREE.Vector3() };
@@ -363,26 +393,58 @@ function _mw3bKurYaz(){
 
 // ── 4 · ÇİZİM KÜMELERİ, RENK VE SEÇİM ─────────────────────────────────────
 // Küme: büyük bir ağ (konum · normal · renk · durum · üçgen) ve aynı geometriyi
-// çizen iki nesne — opak (soluk olmayan köşeler) ve soluk (seçimin dışı,
-// saydam, derinlik yazmaz). Kapasite VE_MW_3B_KUME'ye kadar katlanarak büyür:
-// küçük montaja büyük dizi ayrılmaz. Eklenen aralık ve değişen renk/durum
-// GPU'ya yalnız o aralıkla yüklenir (updateRange).
-function _mw3bMalzeme(soluk){
+// çizen üç nesne — opak (soluk olmayan köşeler), derinlik (soluk köşelerin ön
+// geçişi: renk yazmaz, derinlik yazar) ve tül (soluk köşeler, saydam; ön geçişin
+// derinliğine eşit olan yalnız en öndeki yüz geçer). Kapasite VE_MW_3B_KUME'ye
+// kadar katlanarak büyür: küçük montaja büyük dizi ayrılmaz. Eklenen aralık ve
+// değişen renk/durum GPU'ya yalnız o aralıkla yüklenir (updateRange).
+//
+// AYIKLAMA KÖŞEDE: geçişin çizmediği köşe kırpma alanının dışına atılır (üç
+// köşesi aynı dışarıdaki noktaya düşen üçgen çizilmez). Parçanın bütün
+// köşeleri aynı durumu taşır, üçgen hiç bölünmez. Parça içi `discard` yok.
+// Ön geçiş tülden bir derinlik birimi geride (polygonOffsetUnits 2 ↔ 1): iki
+// ayrı programın derinliği bit bit aynı olmayabilir, en öndeki yüz yine geçer.
+var VE_MW_3B_DISARI = 'gl_Position = vec4(2.0, 2.0, 2.0, 1.0);';
+function _mw3bKoseAyikla(sh, soluk, varying){
+  sh.vertexShader = 'attribute float durum;\n' + (varying ? 'varying float vDurum;\n' : '')
+    + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n'
+    + '\tfloat mwD = floor(durum + 0.5);\n' + (varying ? '\tvDurum = mwD;\n' : '')
+    + '\tif(mod(mwD, 2.0) ' + (soluk ? '<' : '>') + ' 0.5) ' + VE_MW_3B_DISARI);
+}
+function _mw3bMalzeme(tur){
+  if(tur === 'derinlik'){
+    var d = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, colorWrite: false,
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 2 });
+    d.onBeforeCompile = function(sh){ _mw3bKoseAyikla(sh, true, false); };
+    d.customProgramCacheKey = function(){ return 'mw3b-derinlik'; };
+    return d;
+  }
+  var soluk = tur === 'soluk';
   var m = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.05, roughness: 0.6, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
-  if(soluk){ m.transparent = true; m.opacity = 0.22; m.depthWrite = false; }
-  var vurgu = _mw3bRenk('--accent-primary', '#a8502b');
+  if(soluk){ m.transparent = true; m.opacity = VE_MW_3B_TUL.a; m.depthWrite = false; }
+  var vurgu = _mw3bRenk('--accent-primary', '#a8502b'), isik = _mw3bRenk('--isik', '#f7f2e9');
+  var tul = _mw3bRenk('--text-muted', '#676055').lerp(_mw3bRenk('--bg-secondary', '#faf8f4'), 0.2);
+  // Silüet: yüzün bakışa dik kaldığı yer (normal · bakış → 0) — yalnız seçili
+  // ve fare altındaki yüzde hesaplanır. Durum üçgen içinde aradeğerlenir
+  // (2 → 1,9999): yuvarlanmadan okunursa yüz kumlanıyordu
+  var sil = '\tfloat mwD = floor(vDurum + 0.5), mwSec = mod(floor(mwD / 2.0), 2.0), mwFare = mwD > 3.5 ? 1.0 : 0.0;\n'
+    + '\tfloat mwS = 0.0;\n'
+    + '\tif(mwSec + mwFare > 0.5) mwS = pow(1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0), 2.0);\n';
+  var renk = soluk
+    ? '\tdiffuseColor.rgb = mix(uTul, diffuseColor.rgb, ' + VE_MW_3B_TUL.ton.toFixed(3) + ');\n'   // makine: GLSL sabiti
+      + '\tif(mwFare > 0.5){ diffuseColor.a = min(1.0, diffuseColor.a * 2.0); totalEmissiveRadiance += uVurgu * 0.3 * mwS; }\n'
+    : '\tif(mwSec > 0.5) totalEmissiveRadiance += uIsik * (0.08 + 0.42 * mwS);\n'
+      + '\telse if(mwFare > 0.5) totalEmissiveRadiance += uVurgu * 0.35 * mwS + diffuseColor.rgb * 0.1;\n';
   m.onBeforeCompile = function(sh){
     sh.uniforms.uVurgu = { value: vurgu };
-    sh.vertexShader = 'attribute float durum;\nvarying float vDurum;\n'
-      + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvDurum = durum;');
-    sh.fragmentShader = 'varying float vDurum;\nuniform vec3 uVurgu;\n'
-      + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n'
-      + '\tfloat dD = floor(vDurum + 0.5);\n'
-      + '\tif(mod(dD, 2.0) ' + (soluk ? '<' : '>') + ' 0.5) discard;\n'
-      + '\ttotalEmissiveRadiance += mod(floor(dD / 2.0), 2.0) > 0.5 ? uVurgu * 0.28 : (dD > 3.5 ? diffuseColor.rgb * 0.22 : vec3(0.0));');
+    sh.uniforms.uIsik = { value: isik };
+    sh.uniforms.uTul = { value: tul };
+    _mw3bKoseAyikla(sh, soluk, true);
+    sh.fragmentShader = 'varying float vDurum;\nuniform vec3 uVurgu;\nuniform vec3 uIsik;\nuniform vec3 uTul;\n'
+      + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' + sil + renk);
   };
-  m.customProgramCacheKey = function(){ return soluk ? 'mw3b-soluk' : 'mw3b-opak'; };
+  m.customProgramCacheKey = function(){ return soluk ? 'mw3b-tul' : 'mw3b-opak'; };
   return m;
 }
 function _mw3bOz(dizi, boyut, normal){
@@ -406,9 +468,13 @@ function _mw3bKume(nv, ni){
   g.setIndex(K.a.idx);
   g.setDrawRange(0, 0);
   K.opak = new THREE.Mesh(g, V.malzeme.opak);
+  K.derin = new THREE.Mesh(g, V.malzeme.derinlik);
   K.soluk = new THREE.Mesh(g, V.malzeme.soluk);
-  K.soluk.visible = V.solukVar;
-  [K.opak, K.soluk].forEach(function(o){ o.frustumCulled = false; o.matrixAutoUpdate = false; V.grup.add(o); });
+  // Sıra: opak → ön geçiş (opak listesinde, opaktan sonra: arkadaki seçili
+  // parçayı örtmez) → tül → kenarlar (tülün üstünde net)
+  K.derin.renderOrder = 1; K.soluk.renderOrder = 1;
+  K.derin.visible = K.soluk.visible = V.solukVar;
+  [K.opak, K.derin, K.soluk].forEach(function(o){ o.frustumCulled = false; o.matrixAutoUpdate = false; V.grup.add(o); });
   V.kume.push(K);
   return K;
 }
@@ -422,7 +488,7 @@ function _mw3bCizgiKume(nl){
   g.setAttribute('position', C.a.poz); g.setAttribute('color', C.a.renk);
   g.setDrawRange(0, 0);
   C.cizgi = new THREE.LineSegments(g, V.malzeme.cizgi);
-  C.cizgi.frustumCulled = false; C.cizgi.matrixAutoUpdate = false;
+  C.cizgi.frustumCulled = false; C.cizgi.matrixAutoUpdate = false; C.cizgi.renderOrder = 2;
   V.grup.add(C.cizgi);
   V.ckume.push(C);
   return C;
@@ -472,15 +538,14 @@ function _mw3bParcaEkle(i){
   a.uc = K.poz.subarray(o * 3, (o + nv) * 3);
   a.normal = K.nor.subarray(o * 3, (o + nv) * 3);
   _mw3bKirli(K, 'uc', o, o + nv); _mw3bKirli(K, 'idx', m0, m0 + ni);
-  var P = { b: K.no, o: o, n: nv, renk: -1, durum: -1, lb: -1, lo: 0, ln: 0 };
+  var P = { b: K.no, o: o, n: nv, renk: -1, durum: -1, cizgi: -1, lb: -1, lo: 0, ln: 0 };
   if(nl){
     var C = _mw3bCizgiKume(nl), lo = C.n;
     C.poz.set(a.cizgi, lo * 3);
     C.n += nl;
     a.cizgi = C.poz.subarray(lo * 3, (lo + nl) * 3);
-    for(q = lo * 4; q < (lo + nl) * 4; q += 4){ C.renk[q] = 255; C.renk[q + 1] = 255; C.renk[q + 2] = 255; }
-    _mw3bKirli(C, 'uc', lo, lo + nl); _mw3bKirli(C, 'renk', lo, lo + nl);
-    P.lb = C.no; P.lo = lo; P.ln = nl;
+    _mw3bKirli(C, 'uc', lo, lo + nl);
+    P.lb = C.no; P.lo = lo; P.ln = nl;      // rengi ve saydamlığı boyama yazar
   }
   V.parca[i] = P;
   V.ekli.push(i);
@@ -511,10 +576,23 @@ function _mw3bBoyaBaglam(){
   if(V.secili >= 0){ sec = {}; veMntWiz3bParcalar(s, V.secili).forEach(function(p){ sec[p] = 1; }); }
   var rol = {};
   Object.keys(VE_MW_3B_ROL_RENK).forEach(function(t){ rol[t] = _mw3bBayt(_mw3bRenk(veMntWiz3bRolJeton(t), '#888888')); });
-  V.baglam = { surum: V.boyaSurum, sec: sec, rol: rol,
-    bos: _mw3bBayt(_mw3bRenk('--text-muted', '#676055').lerp(_mw3bRenk('--bg-secondary', '#faf8f4'), 0.4)),
+  var bos = _mw3bRenk('--text-muted', '#676055').lerp(_mw3bRenk('--bg-secondary', '#faf8f4'), 0.4);
+  V.baglam = { surum: V.boyaSurum, sec: sec, rol: rol, bos: _mw3bBayt(bos),
+    bosSec: _mw3bBayt(bos.clone().lerp(_mw3bRenk('--accent-primary', '#a8502b'), VE_MW_3B_SECIM_TON)),
+    cizgi: _mw3bBayt(_mw3bRenk('--text-primary', '#26241f')), cizgiSec: _mw3bBayt(_mw3bRenk('--text-heading', '#14120f')),
+    cizgiFare: _mw3bBayt(_mw3bRenk('--accent-primary', '#a8502b')),
     fareBirim: V.fare >= 0 ? veMntWiz3bBirim(s, V.fare) : -1 };
   return V.baglam;
+}
+// Parçanın görünüşü durumundan (saf, testli): yüzün rengi ve kenarın rengi +
+// saydamlığı. Rolsüz seçili parça vurgu tonunda; kenar seçilide başlık tonunda,
+// fare altında vurgu tonunda, tülde soluk.
+function veMntWiz3bGorunus(d, c, R){
+  var A = VE_MW_3B_CIZGI_A, yuz = c, cz = R.cizgi, a = A.olagan;
+  if(d & VE_MW_3B_SECIK){ cz = R.cizgiSec; a = A.secili; if(c === R.bos) yuz = R.bosSec; }
+  else if(d & VE_MW_3B_SOLUK) a = (d & VE_MW_3B_FARE) ? A.olagan : A.soluk;
+  else if(d & VE_MW_3B_FARE){ cz = R.cizgiFare; a = A.fare; }
+  return { yuz: yuz, cizgi: cz, a: a };
 }
 function _mw3bParcaBoya(i, R){
   var V = _mw3b, P = V.parca[i];
@@ -523,22 +601,24 @@ function _mw3bParcaBoya(i, R){
   var d = 0;
   if(R.sec) d |= R.sec[i] ? VE_MW_3B_SECIK : VE_MW_3B_SOLUK;
   if(V.fare === i || (R.fareBirim >= 0 && R.fareBirim === b)) d |= VE_MW_3B_FARE;
-  var K = V.kume[P.b], q, rk = (c[0] << 16) | (c[1] << 8) | c[2];
+  var G = veMntWiz3bGorunus(d, c, R), y = G.yuz;
+  var K = V.kume[P.b], q, rk = (y[0] << 16) | (y[1] << 8) | y[2];
   if(P.renk !== rk){
-    for(q = P.o * 3; q < (P.o + P.n) * 3; q += 3){ K.renk[q] = c[0]; K.renk[q + 1] = c[1]; K.renk[q + 2] = c[2]; }
+    for(q = P.o * 3; q < (P.o + P.n) * 3; q += 3){ K.renk[q] = y[0]; K.renk[q + 1] = y[1]; K.renk[q + 2] = y[2]; }
     P.renk = rk;
     _mw3bKirli(K, 'renk', P.o, P.o + P.n);
   }
   if(P.durum !== d){
-    var solukDegisti = P.durum < 0 || ((P.durum ^ d) & VE_MW_3B_SOLUK);
     K.durum.fill(d, P.o, P.o + P.n);
     P.durum = d;
     _mw3bKirli(K, 'durum', P.o, P.o + P.n);
-    if(solukDegisti && P.lb >= 0){
-      var C = V.ckume[P.lb], al = VE_MW_3B_CIZGI_A[d & VE_MW_3B_SOLUK ? 1 : 0];
-      for(q = P.lo * 4 + 3; q < (P.lo + P.ln) * 4; q += 4) C.renk[q] = al;
-      _mw3bKirli(C, 'renk', P.lo, P.lo + P.ln);
-    }
+  }
+  var lk = G.cizgi[0] * 16777216 + ((G.cizgi[1] << 16) | (G.cizgi[2] << 8) | G.a);
+  if(P.lb >= 0 && P.cizgi !== lk){
+    var C = V.ckume[P.lb], z = G.cizgi;
+    for(q = P.lo * 4; q < (P.lo + P.ln) * 4; q += 4){ C.renk[q] = z[0]; C.renk[q + 1] = z[1]; C.renk[q + 2] = z[2]; C.renk[q + 3] = G.a; }
+    P.cizgi = lk;
+    _mw3bKirli(C, 'renk', P.lo, P.lo + P.ln);
   }
 }
 // Bütün parçalar (rol · seçim · fare değişince): yalnız değişen aralık yazılır
@@ -549,7 +629,7 @@ function _mw3bBoya(){
   var R = _mw3bBoyaBaglam();
   for(var k = 0; k < V.ekli.length; k++) _mw3bParcaBoya(V.ekli[k], R);
   V.solukVar = !!R.sec;
-  V.kume.forEach(function(K){ K.soluk.visible = V.solukVar; });
+  V.kume.forEach(function(K){ K.soluk.visible = K.derin.visible = V.solukVar; });
 }
 function veMntWiz3bSec(dugum){
   var V = _mw3b;
@@ -594,9 +674,10 @@ function veMntWiz3bPanelHTML(s, secili){
     + (coz ? (coz.ok ? _mwIkon('check') + ' ' + _mwStpSayim(coz) : _mwIkon('x') + ' ölçülemedi') : 'hesaplanmadı') + '</span></div>';
   if(coz && coz.ok){
     var gs = _mwStpGovdeler(s), ts = _mwStpTakozlar(s);
+    // Ad hücrede kısalır; tam adı ipucunda (rolü ve gövdede kaynağın durumu)
     var ad = function(b){
       return _mw3bRenkNokta(b.tip) + '<button type="button" class="ve-fw-3b-yolb" onclick="veMntWiz3bSec(' + b.dugum + ')"'
-        + ' title="' + _mwEsc(_mwAd(b.tip)) + (b.kaynak === 'kutu' ? ' — ağ kapalı değil, kutunun merkezi' : '') + '">'
+        + ' title="' + _mwEsc(b.ad + ' · ' + _mwAd(b.tip)) + (b.kaynak === 'kutu' && b.tip !== 'mnt-mount' ? ' — ağ kapalı değil, kutunun merkezi' : '') + '">'
         + _mwEsc(b.ad) + '</button>';
     };
     if(gs.length){
@@ -758,11 +839,12 @@ function veMntWiz3bAktar(){
 }
 
 // ── 6 · HESAP SONUCU 3B'DE ────────────────────────────────────────────────
-// Birim başına bir NOKTA (takozun konumu · gövdenin ağırlık merkezi), başlık
-// tonunda ve derinlik sınaması kapalı: parçanın İÇİNDE kalan nokta (ağırlık
-// merkezi hep içeride) görünmezdi. Yazısı etiket katmanında (_mw3bEtiketle).
-// Nokta EKRANDA sabit boyda (VE_MW_3B_ISARET px, her karede _mw3bIsaretOlcek):
-// montaja göre boyutlanan küre takoza yakınlaşınca dairesini örtüyordu.
+// Birim başına bir İŞARET (gövdenin ağırlık merkezi · takozun noktası), ekranda
+// sabit boyda SVG ve her şeyin üstünde: ağırlık merkezi hep parçanın içinde,
+// derinlik sınamalı bir işaret görünmezdi. Takoz noktası ağırlık merkezi
+// DEĞİL (kullanıcı kararı 2026-11-02) — simgesi de ayrı: artılı halka
+// (_mw3bIsaretSVG). Halkalar (dairenin kendisi) 3B'de; işaretlerin ve
+// etiketlerin yeri her karede kameranın izdüşümünden (_mw3bEtiketle).
 function _mw3bSonucKur(){
   var V = _mw3b;
   if(!V || !V.scene) return;
@@ -772,47 +854,32 @@ function _mw3bSonucKur(){
     V.sonucGrubu = null;
   }
   var coz = V.s.coz, G = new THREE.Group();
-  G.userData.nokta = 0; G.userData.halka = 0;
+  G.userData.halka = 0;
+  V.isaret = [];
+  V.isaretSay = { nokta: 0, model: 0, referans: 0 };
   var takozRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-mount'), '#2f7d4f');
   var veriRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-motor'), '#a8502b');
   if(coz && coz.ok){
-    var renk = _mw3bRenk('--text-heading', '#1b1a17');
     coz.birimler.forEach(function(b){
       if(!b.konum) return;
       var takoz = b.tip === 'mnt-mount';
-      var geo = takoz ? new THREE.SphereGeometry(1, 16, 12) : new THREE.OctahedronGeometry(1);
-      var m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: renk, depthTest: false, transparent: true, opacity: 0.92 }));
-      m.position.set(b.konum[0], b.konum[1], b.konum[2]);
-      m.userData.px = takoz ? VE_MW_3B_ISARET.takoz : VE_MW_3B_ISARET.govde;
-      m.renderOrder = 10;
-      G.add(m);
-      G.userData.nokta++;
+      V.isaret.push({ t: takoz ? 'takoz' : 'govde', p: b.konum, b: b });
+      V.isaretSay.nokta++;
       if(takoz && b.nokta){ G.add(_mw3bHalka(b.nokta, takozRenk)); G.userData.halka++; }
       // Veri sayfası: eksenin dairesi ve referans noktası (eksen ∩ yüz)
       if(!takoz && b.veri){
         if(b.veri.eksen){ G.add(_mw3bHalka(b.veri.eksen, veriRenk)); G.userData.halka++; }
-        var rn = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshBasicMaterial({ color: veriRenk, depthTest: false, transparent: true, opacity: 0.95 }));
-        rn.position.set(b.veri.R[0], b.veri.R[1], b.veri.R[2]);
-        rn.userData.px = VE_MW_3B_ISARET.takoz;
-        rn.renderOrder = 11;
-        G.add(rn);
-        G.userData.referans = (G.userData.referans || 0) + 1;
+        V.isaret.push({ t: 'ref', p: b.veri.R });
+        V.isaretSay.referans++;
       }
     });
     // MODELİN NOKTALARI (Takoz adım 7): yüzeyin modeli — pencerede tuval,
-    // sihirbazda sihirbazın durumu — dosyanın sisteminde (T ile), TEL kafes:
-    // CAD noktasıyla üst üste binince ikisi de seçilir
-    var yer = V.yer === 'sihirbaz' ? 'sihirbaz' : 'tuval', mr = _mw3bRenk('--accent-primary', '#a8502b');
-    G.userData.model = 0;
+    // sihirbazda sihirbazın durumu — dosyanın sisteminde (T ile), kesikli
+    // halka: CAD noktasıyla üst üste binince ikisi de seçilir
+    var yer = V.yer === 'sihirbaz' ? 'sihirbaz' : 'tuval';
     (typeof veMntWizStpModelNoktalari === 'function' ? veMntWizStpModelNoktalari(V.s, yer) : []).forEach(function(o){
-      var takoz = o.tip === 'mnt-mount';
-      var m = new THREE.Mesh(takoz ? new THREE.SphereGeometry(1, 12, 8) : new THREE.OctahedronGeometry(1),
-        new THREE.MeshBasicMaterial({ color: mr, wireframe: true, depthTest: false, transparent: true, opacity: 0.95 }));
-      m.position.set(o.p[0], o.p[1], o.p[2]);
-      m.userData.px = (takoz ? VE_MW_3B_ISARET.takoz : VE_MW_3B_ISARET.govde) * VE_MW_3B_MODEL;
-      m.renderOrder = 12;
-      G.add(m);
-      G.userData.model++;
+      V.isaret.push({ t: 'model', p: o.p });
+      V.isaretSay.model++;
     });
   } else {
     Object.keys(V.s.nokta || {}).forEach(function(d){
@@ -828,17 +895,6 @@ function _mw3bSonucKur(){
   if(!G.children.length) return;
   V.sonucGrubu = G;
   V.scene.add(G);
-}
-// Noktalar her karede ekranda sabit boya ölçeklenir (kameranın uzaklığından)
-function _mw3bIsaretOlcek(){
-  var V = _mw3b, G = V.sonucGrubu;
-  if(!G || !V.camera) return;
-  var h = V.kap.clientHeight || 1, tan = Math.tan(V.camera.fov * Math.PI / 360), cp = V.camera.position;
-  G.children.forEach(function(m){
-    if(!m.userData.px) return;
-    var k = m.userData.px * 2 * cp.distanceTo(m.position) * tan / h;
-    m.scale.set(k, k, k);
-  });
 }
 // HALKA: dairenin çevresinde ince bir simit (çizgi WebGL'de 1 px — görünmüyordu);
 // kalınlığı dairenin yarıçapıyla, derinlik sınaması kapalı
@@ -1402,41 +1458,154 @@ function _mw3bCiz(hemen){
     if(_mw3b !== V) return;
     var t0 = _mwSimdi();
     _mw3bYukle();
-    _mw3bIsaretOlcek();
     V.renderer.render(V.scene, V.camera);
     V.sonCiz = t0;
     _mw3bEtiketle();
+    _mw3bEksen();
     // Karenin süresi: sunum (kare çizildikten sonra) dâhil — sıradaki görevde ölçülür
     _mwSonraki(function(){ var t = _mwSimdi(); V.kareMs = t - t0; V.sonCiz = t; });
   });
 }
-// ETİKETLER: hesaptan sonra her birimin yanında adı ve konumu (gövdede ağırlık
-// merkezi); kılavuz çizgisi noktadan. Konum her karede kameranın izdüşümünden
-// — sayı kartın tablosuyla aynı kaynaktan (çözüm). Etiket montajın merkezinden
-// DIŞARI açılır; montajın arkasında kalan nokta etiketlenmez.
+// ETİKETLER VE İŞARETLER: hesaptan sonra her birimin işareti (gövdede ağırlık
+// merkezi, takozda noktası) ve yanında adı ve konumu; kılavuz çizgisi işaretin
+// kenarından. Konum her karede kameranın izdüşümünden — sayı kartın tablosuyla
+// aynı kaynaktan (çözüm). Etiket montajın ortasından DIŞARI açılır, aynı yandaki
+// etiketler üst üste binmez (veMntWiz3bEtiketYerlesim); kameranın arkasında
+// kalan işaret çizilmez.
+function _mw3bYuvarla(n){ return Math.round(n * 10) / 10; }
+// İşaretin SVG'si (saf, testli). `t`: govde (ağırlık merkezi: dörde bölünmüş
+// daire) · takoz (artılı halka) · model (kesikli halka) · ref (eşkenar dörtgen)
+function veMntWiz3bIsaretSVG(t, x, y){
+  var I = VE_MW_3B_ISARET, r;
+  var g = '<g class="ve-mw-3b-is ve-mw-3b-is-' + t + '" data-ve-3b-isaret="' + t + '" transform="translate('
+    + _mw3bYuvarla(x) + ' ' + _mw3bYuvarla(y) + ')">';
+  if(t === 'govde'){
+    r = I.govde;
+    return g + '<circle class="z" r="' + r + '"/><path class="d" d="M0 0H' + r + 'A' + r + ' ' + r + ' 0 0 0 0 ' + (-r)
+      + 'ZM0 0H' + (-r) + 'A' + r + ' ' + r + ' 0 0 0 0 ' + r + 'Z"/><circle class="c" r="' + r + '"/></g>';
+  }
+  if(t === 'takoz'){
+    // Hâle (zemin tonu) halkayı ve artıyı rolün kendi rengindeki takozdan ayırır
+    r = I.takoz;
+    var u = r + 4, v = r - 3, arti = 'M' + (-u) + ' 0H' + (-v) + 'M' + v + ' 0H' + u + 'M0 ' + (-u) + 'V' + (-v) + 'M0 ' + v + 'V' + u;
+    return g + '<path class="ha" d="' + arti + '"/><circle class="hl" r="' + r + '"/><circle class="z" r="' + r + '"/>'
+      + '<path class="a" d="' + arti + '"/><circle class="m" r="1.75"/></g>';
+  }
+  if(t === 'model'){
+    r = Math.round(I.govde * VE_MW_3B_MODEL);
+    return g + '<circle class="h" r="' + r + '"/></g>';
+  }
+  r = I.ref;
+  return g + '<path class="r" d="M0 ' + (-r) + 'L' + r + ' 0L0 ' + r + 'L' + (-r) + ' 0Z"/></g>';
+}
+// ETİKET YERLEŞİMİ (saf, testli). Q: [{ x, y, gen }] (işaretin ekrandaki yeri,
+// etiketin tahmini genişliği) · w, h: kap · sag: sağdaki kartın örttüğü şerit.
+// Döner: [{ x, y, sol }] — etiket kutusunun işarete bakan kenarının ortası.
+// Yan montajın ortasına göre seçilir; kartın altına ya da kabın dışına taşan
+// etiket öteki yana geçer. Aynı yandakiler yukarıdan aşağı dizilir, arada
+// VE_MW_3B_ETK.ara; dizi kabın altını aşarsa birlikte yukarı kayar.
+function veMntWiz3bEtiketYerlesim(Q, w, h, sag){
+  var E = VE_MW_3B_ETK, n = Q.length, ox = 0, oy = 0;
+  if(!n) return [];
+  Q.forEach(function(q){ ox += q.x / n; oy += q.y / n; });
+  var sagSinir = w - (sag || 0) - E.pay;
+  var out = Q.map(function(q){
+    var sol = q.x < ox;
+    if(!sol && q.x + E.dx + q.gen > sagSinir && q.x - E.dx - q.gen >= E.pay) sol = true;
+    else if(sol && q.x - E.dx - q.gen < E.pay && q.x + E.dx + q.gen <= sagSinir) sol = false;
+    return { x: q.x + (sol ? -E.dx : E.dx), y: q.y + (q.y >= oy ? E.dy : -E.dy), sol: sol };
+  });
+  [true, false].forEach(function(yan){
+    var L = out.filter(function(o){ return o.sol === yan; }).sort(function(a, b){ return a.y - b.y; });
+    var ust = E.pay + E.h / 2, alt = h - E.pay - E.h / 2;
+    L.forEach(function(o, k){
+      if(o.y < ust) o.y = ust;
+      if(k && o.y < L[k - 1].y + E.h + E.ara) o.y = L[k - 1].y + E.h + E.ara;
+    });
+    var tas = L.length ? L[L.length - 1].y - alt : 0;
+    if(tas > 0) L.forEach(function(o){ o.y = Math.max(ust, o.y - tas); });
+  });
+  return out;
+}
 function _mw3bEtiketle(){
   var V = _mw3b, kat = document.getElementById('ve-mw-3b-etiket'), cz = document.getElementById('ve-mw-3b-etiket-cizgi');
   if(!V || !kat || !cz) return;
   var coz = V.s.coz;
-  if(!coz || !coz.ok || !V.grup.visible){ kat.innerHTML = ''; cz.innerHTML = ''; return; }
-  var w = V.kap.clientWidth || 1, h = V.kap.clientHeight || 1;
+  if(!coz || !coz.ok || !V.grup.visible || !V.isaret || !V.isaret.length){ kat.innerHTML = ''; cz.innerHTML = ''; return; }
+  var w = V.kap.clientWidth || 1, h = V.kap.clientHeight || 1, sag = _mw3bSerbest().sag, E = VE_MW_3B_ETK;
   V.camera.updateMatrixWorld();
-  var B = coz.birimler.filter(function(b){ return !!b.konum; }).map(function(b){
-    var p = new THREE.Vector3(b.konum[0], b.konum[1], b.konum[2]).project(V.camera);
-    return { b: b, x: (p.x + 1) / 2 * w, y: (1 - p.y) / 2 * h, on: p.z < 1 };
+  var Q = [];
+  V.isaret.forEach(function(m){
+    var p = new THREE.Vector3(m.p[0], m.p[1], m.p[2]).project(V.camera);
+    if(!(p.z < 1 && p.z > -1)) return;
+    var x = (p.x + 1) / 2 * w, y = (1 - p.y) / 2 * h;
+    if(x < -20 || x > w + 20 || y < -20 || y > h + 20) return;
+    Q.push({ m: m, x: x, y: y });
   });
-  var ox = 0, oy = 0;
-  B.forEach(function(q){ ox += q.x / B.length; oy += q.y / B.length; });
-  var hs = '', cs = '';
+  // Altta modelin halkası, üstte birimin işareti
+  var sira = { model: 0, ref: 1, govde: 2, takoz: 3 }, is = '';
+  Q.slice().sort(function(a, b){ return sira[a.m.t] - sira[b.m.t]; }).forEach(function(q){ is += veMntWiz3bIsaretSVG(q.m.t, q.x, q.y); });
+  var B = Q.filter(function(q){ return q.m.b; }).map(function(q){
+    var b = q.m.b, k = b.tip === 'mnt-mount' ? _mwStpKonum(b.konum, 3) : 'CG ' + _mwStpKonum(b.konum);
+    return { b: b, x: q.x, y: q.y, k: k, gen: Math.max(b.ad.length, k.length) * E.harf + 20 };
+  });
+  var Y = veMntWiz3bEtiketYerlesim(B, w, h, sag), cs = '', hs = '';
   B.forEach(function(q, i){
-    if(!q.on) return;
-    var sagda = q.x >= ox, yx = sagda ? 1 : -1, yy = q.y >= oy ? 1 : -1;
-    var lx = q.x + yx * 34, ly = q.y + yy * 14;
-    cs += '<line x1="' + q.x.toFixed(1) + '" y1="' + q.y.toFixed(1) + '" x2="' + lx.toFixed(1) + '" y2="' + ly.toFixed(1) + '"/>';   // makine: SVG yol verisi
-    hs += '<div class="ve-fw-3b-etk' + (sagda ? '' : ' sol') + '" data-ve-3b-etiket="' + i + '" style="left:' + lx.toFixed(1) + 'px;top:' + ly.toFixed(1) + 'px">'   // makine: CSS konumu
-      + '<b>' + _mwEsc(q.b.ad) + '</b><span>' + (q.b.tip === 'mnt-mount' ? _mwStpKonum(q.b.konum, 3) : 'CG ' + _mwStpKonum(q.b.konum)) + '</span></div>';
+    var o = Y[i], dx = o.x - q.x, dy = o.y - q.y, l = Math.sqrt(dx * dx + dy * dy) || 1;
+    var r = (q.b.tip === 'mnt-mount' ? VE_MW_3B_ISARET.takoz : VE_MW_3B_ISARET.govde) + 2;
+    cs += '<line x1="' + _mw3bYuvarla(q.x + dx / l * r) + '" y1="' + _mw3bYuvarla(q.y + dy / l * r)
+      + '" x2="' + _mw3bYuvarla(o.x) + '" y2="' + _mw3bYuvarla(o.y) + '"/>';
+    hs += '<div class="ve-fw-3b-etk' + (o.sol ? ' sol' : '') + '" data-ve-3b-etiket="' + i + '" style="left:' + _mw3bYuvarla(o.x)
+      + 'px;top:' + _mw3bYuvarla(o.y) + 'px;--renk:var(' + veMntWiz3bRolJeton(q.b.tip) + ')">'
+      + '<b>' + _mwEsc(q.b.ad) + '</b><span>' + _mwEsc(q.k) + '</span></div>';
   });
-  cz.innerHTML = cs; kat.innerHTML = hs;
+  cz.innerHTML = cs + is; kat.innerHTML = hs;
+}
+// KOORDİNAT EKSENİ (saf, testli) — Koordinat Düzlemi'nin dili: oklar --eksen-*
+// renginde, eksi yarılar soluk, üç soluk düzlem, orijin. `me`: kameranın dünya
+// matrisi (sütun sütun): eksen i'nin ekrandaki yönü sağ (me[i]) ve yukarı
+// (me[4 + i]) sütunlarının, derinliği geri sütununun (me[8 + i]) bileşeni. Önce
+// düzlemler, sonra arkadan öne oklar, en son yazılar — yazının zemin hâlesi
+// altındaki çizgiyi örter. Döner: SVG içeriği.
+function veMntWiz3bEksenSVG(me){
+  var E = VE_MW_3B_EKSEN, cx = E.w / 2, c = E.h / 2, L = E.L, f = _mw3bYuvarla;
+  var ax = [0, 1, 2].map(function(i){ return { i: i, ad: VE_MW_3B_EKSEN_AD[i], sx: me[i], sy: me[4 + i], d: me[8 + i] }; });
+  var out = '<circle class="zm" cx="' + cx + '" cy="' + c + '" r="' + E.zemin + '"/>';
+  [[0, 1, 2], [0, 2, 1], [1, 2, 0]].forEach(function(t){
+    var a = ax[t[0]], b = ax[t[1]], k = E.duzlem * L, p = [];
+    [[1, 1], [-1, 1], [-1, -1], [1, -1]].forEach(function(s){
+      p.push(f(cx + (a.sx * s[0] + b.sx * s[1]) * k) + ',' + f(c - (a.sy * s[0] + b.sy * s[1]) * k));
+    });
+    out += '<polygon class="dz dz-' + VE_MW_3B_EKSEN_AD[t[2]][0] + '" points="' + p.join(' ') + '"/>';
+  });
+  var parca = [], yazi = '';
+  ax.forEach(function(a){
+    var boy = Math.sqrt(a.sx * a.sx + a.sy * a.sy), ux = boy > 1e-6 ? a.sx / boy : 0, uy = boy > 1e-6 ? -a.sy / boy : 0;
+    var x = a.ad[0], uc = E.uc * Math.min(1, boy * 1.6);
+    parca.push({ d: -a.d, s: '<line class="ek ek-' + x + ' eksi" x1="' + cx + '" y1="' + c + '" x2="' + f(cx - a.sx * E.eksi * L)
+      + '" y2="' + f(c + a.sy * E.eksi * L) + '"/>' });
+    var tx = cx + a.sx * L, ty = c - a.sy * L, bx = tx - ux * uc, by = ty - uy * uc;
+    var s = '<line class="ek ek-' + x + '" x1="' + cx + '" y1="' + c + '" x2="' + f(bx) + '" y2="' + f(by) + '"/>';
+    if(uc > 1) s += '<polygon class="uc uc-' + x + '" points="' + f(tx) + ',' + f(ty) + ' ' + f(bx - uy * uc * 0.45) + ',' + f(by + ux * uc * 0.45)
+      + ' ' + f(bx + uy * uc * 0.45) + ',' + f(by - ux * uc * 0.45) + '"/>';
+    parca.push({ d: a.d, s: s });
+    var yer = function(px, py, vx, vy, k, metin, sinif){
+      var anc = vx > 0.35 ? 'start' : vx < -0.35 ? 'end' : 'middle', bas = vy > 0.35 ? 'hanging' : vy < -0.35 ? 'auto' : 'central';
+      yazi += '<text class="' + sinif + '" x="' + f(px + vx * k) + '" y="' + f(py + vy * k) + '" text-anchor="' + anc
+        + '" dominant-baseline="' + bas + '"' + (boy < 0.25 ? ' data-arka="1"' : '') + '>' + metin + '</text>';
+    };
+    yer(tx, ty, ux, uy, 6, a.ad[1], 'ad ad-' + x);
+    yer(cx - a.sx * E.eksi * L, c + a.sy * E.eksi * L, -ux, -uy, 5, a.ad[2], 'ad eksi');
+  });
+  parca.sort(function(p, q){ return p.d - q.d; }).forEach(function(p){ out += p.s; });
+  out += '<circle class="o" cx="' + cx + '" cy="' + c + '" r="2.5"/>';
+  return out + yazi;
+}
+function _mw3bEksen(){
+  var V = _mw3b, el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-eksen');
+  if(!V || !el || !V.camera) return;
+  V.camera.updateMatrixWorld();
+  el.innerHTML = veMntWiz3bEksenSVG(V.camera.matrixWorld.elements);
 }
 
 // ── 9 · TEST KANCASI ──────────────────────────────────────────────────────
@@ -1511,9 +1680,10 @@ function veMntWiz3bDurum(){
   return { durum: V.kap.getAttribute('data-durum'), parca: V.ekli.length, islenen: V.islenen, toplam: V.toplam,
     kume: V.kume.length, cizgiKume: V.ckume.length, cagri: V.renderer && V.renderer.info ? V.renderer.info.render.calls : 0,
     etiket: document.querySelectorAll('#ve-mw-3b-etiket [data-ve-3b-etiket]').length,
-    nokta: V.sonucGrubu ? V.sonucGrubu.userData.nokta : 0, halka: V.sonucGrubu ? V.sonucGrubu.userData.halka : 0,
-    model: V.sonucGrubu ? V.sonucGrubu.userData.model || 0 : 0,
-    referans: V.sonucGrubu ? V.sonucGrubu.userData.referans || 0 : 0,
+    nokta: V.isaretSay ? V.isaretSay.nokta : 0, halka: V.sonucGrubu ? V.sonucGrubu.userData.halka : 0,
+    model: V.isaretSay ? V.isaretSay.model : 0,
+    referans: V.isaretSay ? V.isaretSay.referans : 0,
+    eksen: document.querySelectorAll('#ve-mw-3b-eksen text').length,
     secili: V.secili, fare: V.fare, kip: V.nokta, ref: V.ref ? V.ref.tur : '',
     aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire ? V.aday.daire.r : (V.aday.halka ? V.aday.halka.r : 0), tur: V.aday.tur || 'nokta' } : null,
     adayHalka: !!V.halka };
@@ -1527,6 +1697,10 @@ if (typeof module !== 'undefined' && module.exports) {
     veMntWiz3bAltHTML: veMntWiz3bAltHTML, _mw3bSeciliBirim: _mw3bSeciliBirim, veMntWiz3bTazele: veMntWiz3bTazele,
     _mw3bKutuKes: _mw3bKutuKes, _mw3bUcgenKes: _mw3bUcgenKes, _mw3bKurVeri: _mw3bKurVeri,
     VE_MW_3B_YER: VE_MW_3B_YER, veMntWiz3bYer: veMntWiz3bYer, veMntWiz3bAcik: veMntWiz3bAcik,
-    VE_MW_3B_DAIRE: VE_MW_3B_DAIRE, _mw3bEkran: _mw3bEkran, veMntWiz3bNoktaBitir: veMntWiz3bNoktaBitir
+    VE_MW_3B_DAIRE: VE_MW_3B_DAIRE, _mw3bEkran: _mw3bEkran, veMntWiz3bNoktaBitir: veMntWiz3bNoktaBitir,
+    veMntWiz3bGorunus: veMntWiz3bGorunus, VE_MW_3B_CIZGI_A: VE_MW_3B_CIZGI_A, VE_MW_3B_SECIK: VE_MW_3B_SECIK,
+    VE_MW_3B_SOLUK: VE_MW_3B_SOLUK, VE_MW_3B_FARE: VE_MW_3B_FARE, veMntWiz3bIsaretSVG: veMntWiz3bIsaretSVG,
+    veMntWiz3bEtiketYerlesim: veMntWiz3bEtiketYerlesim, VE_MW_3B_ETK: VE_MW_3B_ETK,
+    veMntWiz3bEksenSVG: veMntWiz3bEksenSVG, VE_MW_3B_EKSEN: VE_MW_3B_EKSEN, VE_MW_3B_EKSEN_AD: VE_MW_3B_EKSEN_AD
   };
 }
