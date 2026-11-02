@@ -170,9 +170,19 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   düzlemleri bir kez, `veMntStpDuzlemler`: yüzleri her fare hareketinde çıkarmak
   gerçek motor parçasında 0,65 sn'ydi) ve eksenin dairesi (bütün parçalarda: kasnak
   birimin dışında olabilir). R = eksen ∩ yüz; uzaklık ve atalet birimin
-  eksenlerinde; kütle ıslak ya da yazılan; referans eksikse hacimden ve uyarıyla.
+  eksenlerinde; kütle ıslak, YAZILMAZ (aksesuarlar ayrı bileşen); referans eksikse
+  hacimden ve uyarıyla.
   Kapı: `mount-veri-sayfasi.test.js` (→ *KATALOG* · *REFERANS* · *DÜZLEM* · *HESAP* ·
   *KAYIT* · *OTURUM* · *3B DİZİSİ*) + `mount-veri-sayfasi.spec.js`.
+  **Motorun aksesuarları** (kullanıcı 2026-11-02; liste kullanıcının Ağırlık Merkezi
+  Hesaplama Programı'nın motor parçaları): Alternatör · Alternatör Braketi · Klima
+  Kompresörü · Isı Sacı — her biri AYRI tip (`isMountAksesuar`; tek "Aksesuar"
+  bileşeni YOK), motorun taşıdığı nokta kütle. Ağırlık merkezi teknik resimden;
+  yoksa ORTA NOKTA — STEP'te parçanın dış ölçülerinin (kutunun) merkezi
+  (`kaynak` 'orta'), hacim merkezi değil. Kütle elle · malzeme · dosya · kayıtlı
+  aksesuar (`veMntStpAksKatalog`: FEAD aksesuar kataloğunun `kg`'si, üreticinin
+  belgesinden; bilinmeyen `null`). Kapı: `mount-aksesuar.test.js` (→ *TİPLER* ·
+  *TAŞIYICI* · *ÇÖZÜCÜ* · *ORTA NOKTA* · *KATALOG*).
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
@@ -214,7 +224,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/fead-accessories.js` — FEAD **aksesuar kataloğu** (10 alternatör + 4 klima
   kompresörü). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
   getirdiği asıl şey **devir sınırları** (optimum · maksimum sürekli · anlık
-  maksimum) — aşağıdaki iki kapı onlarsız kurulamaz.
+  maksimum) — aşağıdaki iki kapı onlarsız kurulamaz. Kütle (`kg` + `kgKaynak`,
+  üreticinin belgesinden; klima kompresöründe kavramalı) Takoz'un aksesuarı için;
+  FEAD okumaz.
 - `js/fead-transient.js` — FEAD **geçici rejim**: motor çevrimi senaryosu
   (durgun → marş → ateşleme → rölanti → hızlanma → yavaşlama → stop). DOM'suz;
   çekirdeğe dokunmaz. **Devir geçmişi DAYATILIR, simüle edilmez** — MFSim'de

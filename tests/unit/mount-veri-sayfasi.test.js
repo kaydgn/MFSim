@@ -261,9 +261,10 @@ describe('HESAP — veri sayfası ve referans: sununun motor ağırlık merkezi'
     expect(uz(b.konum, topla(SUNU_CG, KAY))).toBeLessThan(1e-6);
     expect(uz(b.veri.R, topla([S.TULGA_KRANK.yuz, S.TULGA_KRANK.eksen[0], S.TULGA_KRANK.eksen[1]], KAY))).toBeLessThan(1e-6);
     expect(c.uyarilar.filter((m) => m.indexOf('Motor bloğu') >= 0)).toEqual([]);
-    // kütle: ıslak (yazılmazsa) ya da yazılan; atalet veri sayfasının
+    // kütle: sayfanın ıslak kütlesi, yazılan kütle SAYILMAZ (aksesuarlar ayrı
+    // bileşen — kullanıcı 2026-11-02); atalet veri sayfasının
     expect(STP.veMntStpKutle(b, undefined, ISB)).toMatchObject({ kaynak: 'veri', m: 512, I: [[19.2, 0, 0], [0, 49.6, 0], [0, 0, 42.9]] });
-    expect(STP.veMntStpKutle(b, '418', ISB).m).toBe(418);
+    expect(STP.veMntStpKutle(b, '418', ISB).m).toBe(512);
   });
 
   test('referans eksik: hacimden ve uyarıyla; kütle yine veri sayfasının, atalet homojen', () => {
@@ -314,13 +315,13 @@ describe('KAYIT — kaynak ve referans projeyle', () => {
     expect(uz(c.birimler.filter((x) => x.dugum === motor)[0].konum, topla(SUNU_CG, KAY))).toBeLessThan(1e-6);
   });
 
-  test('dosya açık değilken "Kayıtlı roller": kütle hücresinde model (yazılan kütleyle), daire hücresinde eksen', () => {
+  test('dosya açık değilken "Kayıtlı roller": kütle hücresinde model ve ıslak kütlesi, daire hücresinde eksen', () => {
     const r = referans(son);
     const k = STP.veMntStpRolKaydi(son, roller, { [motor]: 418 }, {}, {}, { [motor]: ISB }, { [motor]: r });
     const el = document.createElement('div');
     el.innerHTML = CAD._mntCadKayitHTML(k);
     const satir = Array.from(el.querySelectorAll('tr')).filter((tr) => tr.cells[0] && tr.cells[0].textContent === 'Motor bloğu')[0];
-    expect([satir.cells[2].textContent, satir.cells[3].textContent]).toEqual(['ISB6.7 360 · 418,0', 'Ø 157,0']);
+    expect([satir.cells[2].textContent, satir.cells[3].textContent]).toEqual(['ISB6.7 360 · 512', 'Ø 157,0']);
   });
 
   test('bozuk referans kaydı yazılmaz ve okunmaz', () => {
@@ -381,7 +382,7 @@ describe('OTURUM — hesaptan önce seçim, föy, modele uygula', () => {
     expect(s.referans[motor]).toBeUndefined();
   });
 
-  test('föy: veri sayfalı gövde SEÇİLİ, öteki gövdeler değil; modele uygula kütleyi ve ataleti yazar', () => {
+  test('föy: veri sayfalı gövde SEÇİLİ, öteki gövdeler değil; modele uygula sayfanın kütlesini ve ataletini yazar', () => {
     const s = oturum(), motor = s.sonuc.agac.findIndex((d) => d.ad === 'Motor bloğu');
     W.veMntWizStpYogunluk(motor, ISB);
     const r = referans(s.sonuc);
@@ -398,11 +399,11 @@ describe('OTURUM — hesaptan önce seçim, föy, modele uygula', () => {
     W.veMntWizStpModeleUygula();
     const m = global.nodes.filter((n) => n.type === 'mnt-motor')[0].data;
     expect([+m.cgx, +m.cgy, +m.cgz]).toEqual(SUNU_CG);
-    expect(+m.mass).toBe(418);
+    expect(+m.mass).toBe(512);                                                 // yazılan 418 sayılmaz
     expect([+m.Ixx, +m.Iyy, +m.Izz]).toEqual([19.2, 49.6, 42.9]);
   });
 
-  test('kütle tablosu: veri sayfası listede (motor), alanın yer tutucusu ıslak kütle; şanzımanda veri sayfası yok', () => {
+  test('kütle tablosu: veri sayfası listede (motor), kütle sayfanın ıslak kütlesi ve yazılmaz; şanzımanda veri sayfası yok', () => {
     const s = oturum(), motor = s.sonuc.agac.findIndex((d) => d.ad === 'Motor bloğu');
     W.veMntWizStpHesapla();
     W.veMntWizStpYogunluk(motor, ISB);
@@ -410,16 +411,16 @@ describe('OTURUM — hesaptan önce seçim, föy, modele uygula', () => {
     el.innerHTML = W._mwStpKutleHTML ? W._mwStpKutleHTML(s) : _mwStpKutleHTML(s);
     const sec = el.querySelector('select[data-mw-stp-yog="' + motor + '"]');
     expect(sec.querySelector('optgroup[label="Veri sayfası"] option[value="' + ISB + '"]').selected).toBe(true);
-    const alan = el.querySelector('input[data-mw-stp-kutle="' + motor + '"]');
-    expect(alan.getAttribute('placeholder')).toBe('512');
-    expect(alan.getAttribute('title')).toBe('Islak 512 kg · kuru 485 kg');
+    expect(el.querySelector('input[data-mw-stp-kutle="' + motor + '"]')).toBe(null);   // alan yok
+    const alan = el.querySelector('[data-mw-stp-kutle-deger="' + motor + '"]');
+    expect([alan.textContent, alan.getAttribute('title')]).toEqual(['512,0', 'Islak 512 kg · kuru 485 kg']);
     expect(Array.from(sec.querySelectorAll('optgroup[label="Veri sayfası"] option')).map((o) => o.textContent))
       .toEqual(VS.veMntVeriSayfalari('mnt-motor').map((v) => v.ad));
     // X12: veri sayfası kuru kütleyi vermiyor
     W.veMntWizStpYogunluk(motor, 'cummins-x12');
     el.innerHTML = _mwStpKutleHTML(s);
-    const x12 = el.querySelector('input[data-mw-stp-kutle="' + motor + '"]');
-    expect([x12.getAttribute('placeholder'), x12.getAttribute('title')]).toEqual(['860', 'Islak 860 kg']);
+    const x12 = el.querySelector('[data-mw-stp-kutle-deger="' + motor + '"]');
+    expect([x12.textContent, x12.getAttribute('title')]).toEqual(['860,0', 'Islak 860 kg']);
     const sanz = s.sonuc.agac.findIndex((d) => d.ad === 'Şanzıman gövdesi');
     expect(el.querySelector('select[data-mw-stp-yog="' + sanz + '"] optgroup')).toBe(null);
   });

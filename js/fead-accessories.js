@@ -33,6 +33,28 @@
 // defterin kendi INDEX/MATCH'i de numarayla çalışıyor. Etiket ikisini birden
 // gösterir ki listede ayırt edilebilsinler.
 
+// ── KÜTLE (2026-11-02 — Takoz'un motor aksesuarları) ────────────────────────
+// `kg`: aksesuarın motora takılı kütlesi — klima kompresöründe KAVRAMALI
+// (kasnak kavramanın üstünde). `kgKaynak`: üreticinin belgesi. Defterde kütle
+// yok; değerler üreticinin yayımladığı belgelerden (kullanıcı isteği: kayıtlı
+// aksesuarlar için internetteki kataloglar). Bulunamayan `null` — FEAD
+// tarafında kullanılmaz, Takoz'un "Kayıtlı aksesuar" listesi yalnız dolu
+// olanı gösterir (js/cp-mount.js · js/mount-step.js).
+//   TM21: teknik özellikler (2011) 8,1 kg kavramalı; servis kılavuzu gövde
+//     5,1 + kavrama ≈ 3,0 kg — tutarlı.
+//   TM31: teknik özellikler (2011) 15,5 kg kavramalı; servis kılavuzu (2017)
+//     gövde 9,5 (yağsız) + kavrama ≈ 4,5 kg = 14,0 — iki belge 1,5 kg ayrışıyor,
+//     kavramalı toplamı veren belge alındı.
+//   SD7H15: Sanden SD servis rehberi (2008) HD 15,2 lb = 6,9 kg (tablonun kg
+//     sütunu "(2.4)" diye yanlış basılmış; 4,5 + 2,4); SHD kavramayla 8,0 kg.
+//   ALTERNATÖR: defter yalnız marka + akım veriyor; Prestolite'ta aynı akımın
+//     kütlesi aileye göre 2,5 kat değişiyor (24 V 180 A: AVi150 8,9–9,8 kg ·
+//     AC203RA ≈ 24 kg). Kütle yalnız BMC numarası Prestolite parçasına
+//     bağlanabilen kayıtta: 57RS309348 → 1277A730 (Prestolite Bus & Coach
+//     kataloğu PP4042 çapraz referansı), 16.182 g satıcı kataloğunda (TecDoc;
+//     üretici kütle yayımlamıyor). Ötekiler hiçbir kaynakta parça numarasına
+//     bağlanmadı — null; Tepaş 350 A için kütle yayımlanmamış.
+
 var VE_FEAD_ACC_LIB_VERSION = '1.0.0';
 
 var VE_FEAD_ACC_LIB_SOURCE =
@@ -73,6 +95,7 @@ var VE_FEAD_ACC_DB = [
                 {rpm:3500,kw:4.08}, {rpm:4000,kw:4.13}, {rpm:4500,kw:4.16}, {rpm:5000,kw:4.19},
                 {rpm:5500,kw:4.25}, {rpm:6000,kw:4.28}, {rpm:7000,kw:4.28}, {rpm:8000,kw:4.28}] },
   { key: '57RS309348', ad: 'Prestolite 155A', tip: 'alternator',
+    kg: 16.18, kgKaynak: 'Prestolite · 1277A730, satıcı kataloğu (TecDoc)',
     optimumRpm: 6000, maxContRpm: 8000, maxPeakRpm: 12000,
       curve: [{rpm:1000,kw:0}, {rpm:1200,kw:1.71}, {rpm:1400,kw:2.42}, {rpm:1600,kw:2.85},
                 {rpm:1800,kw:3.14}, {rpm:2000,kw:3.42}, {rpm:2500,kw:3.85}, {rpm:3000,kw:3.99},
@@ -106,19 +129,23 @@ var VE_FEAD_ACC_DB = [
                 {rpm:3500,kw:11.5}, {rpm:4000,kw:11.6}, {rpm:4500,kw:11.7}, {rpm:5000,kw:11.8},
                 {rpm:5500,kw:11.9}, {rpm:6000,kw:11.8}, {rpm:7000,kw:11.8}, {rpm:8000,kw:11.8}] },
   { key: '57RS321633', ad: 'Valeo TM21', tip: 'ac',
+    kg: 8.1, kgKaynak: 'Valeo · TM21 teknik özellikler (2011), kavramalı',
     optimumRpm: 1000, maxContRpm: 3000, maxPeakRpm: 6000,
       curve: [{rpm:800,kw:1.2}, {rpm:1000,kw:1.9}, {rpm:1500,kw:3.05}, {rpm:2000,kw:4.2},
                 {rpm:2500,kw:5.2}, {rpm:3000,kw:6.2}, {rpm:3500,kw:6.85}, {rpm:4000,kw:7.5},
                 {rpm:4500,kw:8.25}, {rpm:5000,kw:9}, {rpm:6000,kw:9}] },
   { key: '55100000130', ad: 'Valeo TM31', tip: 'ac',
+    kg: 15.5, kgKaynak: 'Valeo · TM31 teknik özellikler (2011), kavramalı',
     optimumRpm: 1000, maxContRpm: 3000, maxPeakRpm: 6000,
       curve: [{rpm:800,kw:0.8}, {rpm:1000,kw:2}, {rpm:1500,kw:3.5}, {rpm:2000,kw:5.5},
                 {rpm:3000,kw:8.3}, {rpm:4000,kw:10.6}, {rpm:5000,kw:12.4}] },
   { key: '57RS319930', ad: 'Sanden 7H15', tip: 'ac',
+    kg: 6.9, kgKaynak: 'Sanden · SD servis rehberi (2008), SD7H15 HD kavramalı',
     optimumRpm: 1000, maxContRpm: 3000, maxPeakRpm: 6000,
       curve: [{rpm:1000,kw:1.5}, {rpm:1500,kw:2.25}, {rpm:2000,kw:3}, {rpm:2500,kw:3.75},
                 {rpm:3000,kw:4.5}] },
   { key: '57RS322530', ad: 'Valeo TM31', tip: 'ac',
+    kg: 15.5, kgKaynak: 'Valeo · TM31 teknik özellikler (2011), kavramalı',
     optimumRpm: 1000, maxContRpm: 3000, maxPeakRpm: 6000,
       curve: [{rpm:800,kw:0.8}, {rpm:1000,kw:2}, {rpm:1500,kw:3.5}, {rpm:2000,kw:5.5},
                 {rpm:3000,kw:8.3}, {rpm:4000,kw:10.6}, {rpm:5000,kw:12.4}] },

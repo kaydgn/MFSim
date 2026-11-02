@@ -99,11 +99,14 @@ function _mntCadDosyaHTML(s, k){
   return h + '</div>';
 }
 // Kütle hücresi: yazılan kütle ya da kaynağı (malzeme · dosya — kütle dosyanın
-// hacminden, dosya açılınca · veri sayfasının modeli, yazılan kütleyle)
+// hacminden, dosya açılınca · veri sayfasının modeli ve ıslak kütlesi)
 function _mntCadKutle(r){
   var vs = (r.yog && typeof veMntStpVs === 'function') ? veMntStpVs(r.yog, r.rol) : null;
   if(vs) return '<td title="' + _mntCadEsc(vs.uretici + ' ' + vs.ad + ' · veri sayfası') + '">' + _mntCadEsc(vs.ad)
-    + (+r.kg > 0 ? ' · ' + veSayi(+r.kg, 1) : '') + '</td>';
+    + ' · ' + veSayi(vs.kutle.islak, 0) + '</td>';
+  // Kayıtlı aksesuar (Alternatör · Klima Kompresörü): model ve kütlesi
+  var ak = (r.yog && typeof veMntStpAks === 'function') ? veMntStpAks(r.yog, r.rol) : null;
+  if(ak) return '<td title="' + _mntCadEsc(ak.kgKaynak || '') + '">' + _mntCadEsc(ak.ad) + ' · ' + veSayi(ak.kg, 1) + '</td>';
   var mz = (r.yog && typeof veMntStpMalzeme === 'function') ? veMntStpMalzeme(r.yog) : null;
   if(mz) return '<td title="' + _mntCadEsc(mz.ad + ' · ' + veSayi(mz.rho, 0) + ' kg/m³') + '">' + _mntCadEsc(mz.ad) + '</td>';
   if(r.yog === 'dosya') return '<td>Dosyadan</td>';

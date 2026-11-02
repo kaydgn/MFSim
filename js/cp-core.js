@@ -113,6 +113,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // listenin yorumlarında kesme işareti YAZILMAZ: source-hygiene listeyi
   // tırnak eşleştirerek okuyor.)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
+  'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield',
   'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Parametrik Analiz — grup, aday ve kısıt föyleri.
   'mnt-parametric',
@@ -258,7 +259,9 @@ function showNodeProperties(node, opt) {
   } else if(node.type === 'obstacle-crossing') {
     html += getObstacleCrossingPropertiesHTML(node);
   } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-transfer'
-         || node.type === 'mnt-pto' || node.type === 'mnt-pump' || node.type === 'mnt-pto-group') {
+         || node.type === 'mnt-pto' || node.type === 'mnt-pump' || node.type === 'mnt-pto-group'
+         || node.type === 'mnt-alternator' || node.type === 'mnt-alt-bracket' || node.type === 'mnt-ac'
+         || node.type === 'mnt-heat-shield') {
     html += getMntMassPropertiesHTML(node);
   } else if(node.type === 'mnt-mount') {
     html += getMntMountPropertiesHTML(node);
