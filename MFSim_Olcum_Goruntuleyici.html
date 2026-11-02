@@ -8945,27 +8945,41 @@ span.ve-fw-ro{ display:inline-block; }
 /* Takoz: KURULUMUN KUTUSU (js/cp-mount-3b.js → _mw3bKurYaz) — tuvalin sol
    üstünde yüzen eylem satırı: çubuk + Durdur, durunca durum + Devam. Satırın
    pencere içindeki ayracı (üst çizgi, boşluk) burada yok: kutunun kendisi. */
-.ve-mw-3b-kur{ position:absolute; left:calc(var(--mw3b-agac, 0px) + 24px); top:58px; width:300px; max-width:calc(100% - 24px); box-sizing:border-box;
+.ve-mw-3b-kur{ width:300px; max-width:100%; box-sizing:border-box; pointer-events:auto;
   padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
   box-shadow:0 1px 2px var(--shadow-color), 0 6px 18px var(--shadow-color); }
 .ve-mw-3b-kur[hidden]{ display:none; }
 /* TAKOZ 3B — CAD ARAÇ ÇUBUĞU (js/cp-mount-3b-arac.js, 2026-11-02): tuvalin
    üstünde, ağaç ile kartın arasında ortada; kesit açıkken altında kesitin
-   satırı. Kap tıklamayı geçirir, satırlar almaz. Kurulumun kutusu altında. */
-.ve-mw-3b-arac{ position:absolute; top:12px; left:calc(var(--mw3b-agac, 0px) + 24px); right:calc(var(--fw3b-kart, 420px) + 24px);
+   satırı, en altta kurulumun kutusu — aynı sütunda: çubuk dar ekranda iki
+   satıra kırılınca kutu da aşağı iner. Kap tıklamayı geçirir, satırlar almaz. */
+.ve-mw-3b-ust{ position:absolute; top:12px; left:calc(var(--mw3b-agac, 0px) + 24px); right:calc(var(--fw3b-kart, 420px) + 24px);
   display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none; }
+.ve-mw-3b-arac{ display:flex; flex-direction:column; align-items:center; gap:6px; max-width:100%; }
 .ve-mw-3b-arac:empty{ display:none; }
 .ve-mw-3b-arac-sira{ pointer-events:auto; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; max-width:100%;
   box-sizing:border-box; padding:4px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
   box-shadow:0 1px 2px var(--shadow-color), 0 6px 18px var(--shadow-color); }
 .ve-mw-3b-arac-grup{ display:flex; flex-wrap:wrap; gap:2px; }
-.ve-mw-3b-arac-b{ display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 9px; border:0; border-radius:var(--radius-sm);
+.ve-mw-3b-arac-b{ display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 7px; border:0; border-radius:var(--radius-sm);
   background:none; font:inherit; font-size:var(--fs-tiny); color:var(--text-primary); cursor:pointer; white-space:nowrap; }
 .ve-mw-3b-arac-b:hover{ background:var(--bg-tertiary); }
 .ve-mw-3b-arac-b[aria-pressed="true"]{ background:var(--accent-tint-10); color:var(--text-heading); box-shadow:inset 0 0 0 1px var(--accent-primary); }
 .ve-mw-3b-arac-b:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-mw-3b-kesit-d{ width:220px; max-width:40vw; accent-color:var(--accent-primary); }
 .ve-mw-3b-kesit-deger{ min-width:104px; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+.ve-mw-3b-arac-ayrac{ width:1px; height:18px; background:var(--border-color); }
+/* ÖLÇÜ (js/cp-mount-3b-arac.js → _mw3bAracSVG): iki nokta, aralarında çizgi,
+   ortada zeminli uzaklık; yapışan aday (dairenin izdüşümü + merkez · köşe).
+   Her çizginin altında zemin renginde hâle — modelin üstünde okunur. */
+.ve-fw-3b-etiket-cizgi .ve-mw-3b-olcu-ch{ stroke:var(--bg-primary); stroke-width:4; stroke-linecap:round; }
+.ve-fw-3b-etiket-cizgi .ve-mw-3b-olcu-c{ stroke:var(--accent-primary); stroke-width:1.5; }
+.ve-fw-3b-etiket-cizgi .ve-mw-3b-olcu-n{ fill:var(--accent-primary); stroke:var(--bg-primary); stroke-width:1.5; }
+.ve-fw-3b-etiket-cizgi .ve-mw-3b-olcu-ah{ fill:none; stroke:var(--bg-primary); stroke-width:3.5; stroke-linejoin:round; }
+.ve-fw-3b-etiket-cizgi .ve-mw-3b-olcu-a{ fill:none; stroke:var(--accent-primary); stroke-width:1.5; stroke-linejoin:round; }
+.ve-mw-3b-olcu-y rect{ fill:var(--bg-primary); stroke:var(--accent-primary); stroke-width:1; }
+.ve-mw-3b-olcu-y text{ fill:var(--text-heading); font-size:var(--fs-tiny); font-weight:600; font-variant-numeric:tabular-nums; }
+.ve-mw-3b-olcu-d td{ font-weight:600; color:var(--text-heading); }
 /* OKUMA KARTI — STEP'ten başla: dosya 3B'nin perdesinde okunurken tuvalin
    ortasında dosyanın adı ve okumanın eylem satırı (çubuk + Vazgeç) */
 .ve-mw-3b-okuma{ position:absolute; left:50%; top:42%; transform:translate(-50%, -50%); width:min(460px, calc(100% - 32px));

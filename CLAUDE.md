@@ -112,6 +112,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol
   seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`). Kapı: `mount-3b.test.js` → *ÜRÜN
   AĞACI* · *ÇOKLU SEÇİM* + `mount-3b.spec.js` → *AĞAÇ · CTRL*.
+- `js/cp-mount-3b-arac.js` — Takoz 3B'nin **CAD araç çubuğu** (kullanıcı 2026-11-02): hazır
+  bakışlar · seçim süzgeci (Parça · **Yüzey**) · **Ölçü** · **Kesit**. Yüz tıklanan üçgenin
+  ağdaki yüz aralığından (`yuzUcgen`, dosyanın yüz sırası), tanımı ve köşeleri DOSYADAN, alanı
+  ağdan (≈); parçanın seçimi değişmez. Ölçü dairesel kenarda dairenin MERKEZİNE, yüzün köşesine
+  (VERTEX_POINT) yapışır; fare hareketi yalnız SVG katını yeniler. Kesilen yan çizilmez ve
+  seçilmez. Kapı: `mount-3b.test.js` → *BAKIŞLAR* · *KESİT* · *YÜZEY SEÇİMİ* + `mount-3b.spec.js`
+  → *BAKIŞ · KESİT* · *YÜZEY · ÖLÇÜ*.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle
