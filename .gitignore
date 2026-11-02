@@ -30,3 +30,7 @@ karsilama-aday-secici-uretilen.html
 # commit edilmez. `node tools/metin-turu.js --asama <no>` üretir.
 metin-turu-*/
 metin-envanteri.json
+
+# Kullanım masası (tools/kullanim.js): tarayıcı profili, adım görüntüleri,
+# indirilenler, günlük ve bulgular — üretilir, commit edilmez.
+.kullanim/
