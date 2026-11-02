@@ -1016,16 +1016,19 @@ function _gmSec16(){
     + 'yazıyorsa <em>Dosyadan</em> kaynağı açılır.');
   h += '<h3>16.5 Veri sayfası: motor ve şanzıman</h3>';
   h += '<p>Motorun ve şanzımanın veri sayfası ağırlık merkezini bir <strong>referanstan</strong> verir: motorda '
-    + 'bloğun ön yüzünden krank ekseni boyunca geriye ve krank ekseninin üstüne. Referansın yeri STEP '
-    + 'dosyasından alınır: referans noktası krank ekseninin ön yüzün düzlemini kestiği noktadır, ağırlık '
-    + 'merkezi bu noktaya veri sayfasındaki iki uzaklık eklenerek bulunur. Uzaklıklar ve atalet (roll, pitch, '
-    + 'yaw) motorun kendi eksenlerindedir; motor eğik takılıysa ağırlık merkezi ve atalet tensörü o açıyla '
-    + 'döner.</p>';
+    + 'bloğun ön yüzünden (X12’de arka yüzünden) krank ekseni boyunca ve krank ekseninin üstüne. Referansın '
+    + 'yeri STEP dosyasından alınır: referans noktası krank ekseninin referans yüzünün düzlemini kestiği '
+    + 'noktadır, ağırlık merkezi bu noktaya veri sayfasındaki uzaklıklar eklenerek bulunur. Boy, seçilen '
+    + 'yüzden birimin içine doğru ölçülür: yüzün dışa bakan tarafı veri sayfasının yüzü olmalıdır (ön yüz öne, '
+    + 'arka yüz arkaya bakar). Veri sayfası yanal kaçıklık veriyorsa artı yönü motorun sağıdır, önden bakınca. '
+    + 'Uzaklıklar ve atalet (roll, pitch, yaw) motorun kendi eksenlerindedir; motor eğik takılıysa ağırlık '
+    + 'merkezi ve atalet tensörü o açıyla döner.</p>';
   h += _gmAdimlar([
     '3B’de motor birimini seçin; alttaki dizide <strong>Veri sayfası</strong> listesinden modeli seçin. Aynı '
       + 'liste <strong>Kütle</strong> bölümünün <strong>Kaynak</strong> sütunundadır.',
-    '<em>Bloğun ön yüzü</em>’ne basın ve düzlem yüzü tıklayın: fare düzlem bir yüze gelince halka ve yüzün '
-      + 'konumu belirir. Seçim yalnız birimin parçalarındadır; kamera birime sığar.',
+    'Referans yüzünün düğmesine (<em>Bloğun ön yüzü</em> ya da <em>Bloğun arka yüzü</em>) basın ve düzlem '
+      + 'yüzü tıklayın: fare düzlem bir yüze gelince halka ve yüzün konumu belirir. Seçim yalnız birimin '
+      + 'parçalarındadır; kamera birime sığar.',
     '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli dairesel bir kenarı (krank kasnağı, volan '
       + 'muhafazası) tıklayın. Bu seçim bütün parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
     '<strong>Konumları hesapla</strong>: ağırlık merkezi ve atalet veri sayfasından, kütle ıslak kütleden. '
@@ -1037,8 +1040,10 @@ function _gmSec16(){
   var kat = typeof VE_MNT_VERI_SAYFASI !== 'undefined' ? VE_MNT_VERI_SAYFASI : [];
   if(kat.length) h += _gmAlanTablo('Veri sayfaları', kat.map(function(v){
     return [v.uretici + ' ' + v.ad + ' <em>' + _gmE(v.konfig) + '</em>',
-      _gmF(v.kutle.kuru, 0) + ' / ' + _gmF(v.kutle.islak, 0) + ' kg (kuru / ıslak) · ' + _gmE(v.ref.yuz) + ': '
-        + _gmF(v.cg.boy, 0) + ' mm · ' + _gmE(v.ref.eksen) + ': ' + _gmF(v.cg.yukari, 0) + ' mm üstü · atalet '
+      (v.kutle.kuru != null ? _gmF(v.kutle.kuru, 0) + ' / ' + _gmF(v.kutle.islak, 0) + ' kg (kuru / ıslak)'
+        : _gmF(v.kutle.islak, 0) + ' kg (ıslak)') + ' · ' + _gmE(v.ref.yuz) + ': '
+        + _gmF(v.cg.boy, 0) + ' mm · ' + _gmE(v.ref.eksen) + ': ' + _gmF(v.cg.yukari, 0) + ' mm üstü'
+        + (v.cg.yan != null ? ' · yanal ' + _gmF(v.cg.yan, 0) + ' mm' : '') + ' · atalet '
         + _gmF(v.atalet.x, 1) + ' / ' + _gmF(v.atalet.y, 1) + ' / ' + _gmF(v.atalet.z, 1) + ' kg·m²',
       _gmE(v.kaynak)];
   }), ['Model', 'Değerler', 'Kaynak']);
@@ -1095,7 +1100,7 @@ function _gmEkA(){
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
       ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],
-      ['Motor modeli, veri sayfasının referansı', '3D Görüntüleyici (3B)', '<em>Bloğun ön yüzü</em> · <em>Krank ekseni</em>'],
+      ['Motor modeli, veri sayfasının referansı', '3D Görüntüleyici (3B)', '<em>Bloğun ön yüzü</em> (X12: <em>Bloğun arka yüzü</em>) · <em>Krank ekseni</em>'],
       ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],
       ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü',
         'Rapor penceresinin <strong>Frekans yerleşimi ve izolasyon</strong> bölümü kaynağını gösterir'],

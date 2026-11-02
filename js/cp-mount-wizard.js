@@ -1375,7 +1375,7 @@ function _mwStpKutleHucre(s, b, K, isaret){
     return '<input type="text" inputmode="decimal" class="ve-fw-inp" data-mw-stp-kutle="' + b.dugum + '"'
       + ' value="' + (m !== undefined ? _mwEsc(m) : '') + '"'
       + (vs ? ' placeholder="' + _mwEsc(_mwSayi(vs.kutle.islak, 0)) + '" title="' + _mwEsc('Islak ' + _mwSayi(vs.kutle.islak, 0)
-        + ' kg · kuru ' + _mwSayi(vs.kutle.kuru, 0) + ' kg') + '"' : '')
+        + ' kg' + (vs.kutle.kuru != null ? ' · kuru ' + _mwSayi(vs.kutle.kuru, 0) + ' kg' : '')) + '"' : '')
       + ' aria-label="Kütle — ' + _mwEsc(b.ad) + '"'
       + ' oninput="veMntWizStpKutle(' + b.dugum + ', this.value)">';
   }
