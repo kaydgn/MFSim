@@ -1004,6 +1004,10 @@ function _gmSec16(){
     ['Referans noktası', 'Eşkenar dörtgen', 'Veri sayfasının referansı (16.5)'],
     ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner']
   ], ['İşaret', 'Görünüş', 'Ne']);
+  h += '<p>Üstteki araç çubuğunda hazır bakışlar: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
+    + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '
+    + 'sığar. <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: kaydırıcı düzlemi taşır, <strong>Ters</strong> '
+    + 'öteki yanı bırakır; kesilen yan çizilmez ve seçilmez.</p>';
   h += '<p>Seçilen parça kendi renginde, kenarları koyu çizilir; öteki parçalar tek kat soluk kalır. Etiket '
     + 'birimin adını ve konumunu taşır; işarete bakan kenarı birimin rol rengindedir.</p>';
   h += '<h3>16.2 Roller</h3>';

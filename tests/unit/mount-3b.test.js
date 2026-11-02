@@ -22,6 +22,7 @@ Object.keys(STP).forEach((k) => { global[k] = STP[k]; });
 eval(loadSource('cp-mount-wizard.js'));
 eval(loadSource('cp-mount-3b.js'));
 eval(loadSource('cp-mount-3b-agac.js'));
+eval(loadSource('cp-mount-3b-arac.js'));
 const CAD = require('../../js/cp-mount-cad.js');
 beforeEach(() => resetStubs(stubs));
 
@@ -357,7 +358,13 @@ describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner'
     expect(z.length).toBe(1);
     expect(z[0].textContent).toBe('+Z · Yukarı');
     expect(z[0].getAttribute('data-arka')).toBe('1');
-    expect(+z[0].getAttribute('x')).toBeGreaterThan(E.w / 2);          // orijinin sağında: X'in "Ön"üyle binmez
+    // köşegende, öteki eksenlerin iki ucundan da uzak: açıların en küçüğü ≥ 40°
+    const zx = +z[0].getAttribute('x') - E.w / 2, zy = +z[0].getAttribute('y') - E.h / 2;
+    const me = kamera(0.75 * Math.PI, 1.5);
+    [0, 1].forEach((i) => {
+      const ux = me[i], uy = -me[4 + i], l = Math.hypot(ux, uy), cos = Math.abs(zx * ux + zy * uy) / (l * Math.hypot(zx, zy));
+      expect(cos).toBeLessThan(Math.cos(40 * Math.PI / 180));
+    });
     // iki uç ortada üst üste binerdi (kurulurken ölçüldü: "Ör+ZAşağıarı")
     expect(Array.from(s.querySelectorAll('text')).map((t) => t.textContent)).not.toContain('Aşağı');
     expect(s.querySelectorAll('text').length).toBe(5);
@@ -516,6 +523,83 @@ describe('STEP\'TEN BAŞLA — dosya 3B\'nin perdesinde, sihirbazsız', () => {
     d.innerHTML = _mw3bOkumaHTML({ dosya: 'bozuk.stp', durum: 'hata', hata: 'ISO-10303-21 başlığı yok' });
     expect(d.querySelector('.ve-fw-issue-err').textContent).toBe(' bozuk.stp — ISO-10303-21 başlığı yok');
     expect(d.querySelector('[data-mw-stp-vazgec]')).toBe(null);
+  });
+});
+
+// ── CAD ARAÇLARI: GÖRÜNÜŞLER VE KESİT (2026-11-02) ──────────────────────────
+// Kullanıcı: "3D görüntüleyici tıpkı bir CAD programı gibi olmalı. Ölçümler,
+// kesit alma vb. kullanışlı özellikleri ekleyeceğiz." Önce (main 6d04652):
+// hazır bakış yoktu (yalnız Sığdır, yükseliş en çok ±1,5 rad), kesit yoktu.
+describe('BAKIŞLAR — araç ekseninde hazır görünüşler', () => {
+  // Görüntüleyicinin yörünge kamerası: geri = (cosφcosθ, cosφsinθ, sinφ), sağ = z × geri
+  const taban = (g) => {
+    const b = [Math.cos(g.phi) * Math.cos(g.theta), Math.cos(g.phi) * Math.sin(g.theta), Math.sin(g.phi)];
+    let r = [-b[1], b[0], 0]; const l = Math.hypot(r[0], r[1]); r = r.map((v) => v / l);
+    const u = [b[1] * r[2] - b[2] * r[1], b[2] * r[0] - b[0] * r[2], b[0] * r[1] - b[1] * r[0]];
+    return { geri: b, sag: r, ust: u };
+  };
+  const yakin = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 2e-3);
+  test('yedi bakış: Ön −X\'ten, Arka +X\'ten, Sol −Y\'den, Sağ +Y\'den, Üst ve Alt tam düşey, İzometrik eşit kısalma', () => {
+    expect(VE_MW_3B_BAKIS.map((g) => g.ad)).toEqual(['Ön', 'Arka', 'Sol', 'Sağ', 'Üst', 'Alt', 'İzometrik']);
+    const T = (k) => taban(veMntWiz3bBakisBul(k));
+    expect(yakin(T('on').geri, [-1, 0, 0])).toBe(true);
+    expect(yakin(T('on').sag, [0, -1, 0])).toBe(true);           // önden bakınca aracın sağı solda
+    expect(yakin(T('arka').geri, [1, 0, 0])).toBe(true);
+    expect(yakin(T('sol').geri, [0, -1, 0])).toBe(true);
+    expect(yakin(T('sag').geri, [0, 1, 0])).toBe(true);
+    expect(T('ust').geri[2]).toBeGreaterThan(0.99999);
+    expect(T('alt').geri[2]).toBeLessThan(-0.99999);
+    expect(T('ust').ust[0]).toBeGreaterThan(0.99);                // üstten: arka yukarıda
+    const iz = T('izo').geri.map(Math.abs);
+    expect(Math.max(...iz) - Math.min(...iz)).toBeLessThan(1e-12); // üç eksen eşit kısalır
+    expect(VE_MW_3B_PHI).toBeGreaterThan(1.5);                    // sürükleme de tam düşeye dek
+    expect(VE_MW_3B_PHI).toBeLessThan(Math.PI / 2);
+  });
+});
+
+describe('KESİT — düzlem, aralık, çubuk, kesilen yanda seçilmez', () => {
+  test('düzlem: eksenin küçük yanı kalır, Ters büyük yanı', () => {
+    expect(veMntWiz3bKesitDuzlem({ eksen: 0, d: 100, ters: false })).toEqual([-1, 0, 0, 100]);
+    expect(veMntWiz3bKesitDuzlem({ eksen: 2, d: -40, ters: true })).toEqual([0, 0, 1, 40]);
+    const K = veMntWiz3bKesitDuzlem({ eksen: 1, d: 10, ters: false });
+    expect(veMntWiz3bKesitKalir(K, 0, 9.9, 0)).toBe(true);
+    expect(veMntWiz3bKesitKalir(K, 0, 10.1, 0)).toBe(false);
+    expect(veMntWiz3bKesitKalir(null, 0, 1e9, 0)).toBe(true);
+    expect(veMntWiz3bKesitDuzlem(null)).toBe(null);
+    expect(veMntWiz3bKesitDuzlem({ eksen: 3, d: 0 })).toBe(null);
+  });
+
+  test('aralık montajın o eksendeki boyu, iki yanda %1 pay', () => {
+    const kutu = { min: { x: 0, y: -50, z: 10 }, max: { x: 1000, y: 50, z: 10 } };
+    expect(veMntWiz3bKesitAralik(kutu, 0)).toEqual([-10, 1010]);
+    expect(veMntWiz3bKesitAralik(kutu, 1)).toEqual([-51, 51]);
+    expect(veMntWiz3bKesitAralik(kutu, 2)).toEqual([9, 11]);       // sıfır boyda 1 mm pay
+  });
+
+  test('çubuk: yedi bakış ve Kesit; kesit açıkken eksen, kaydırıcı ve Ters', () => {
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bAracHTML({ kesit: null });
+    expect(d.querySelectorAll('[data-ve-3b-bakis]').length).toBe(7);
+    expect(d.querySelector('#ve-mw-3b-kesit').getAttribute('aria-pressed')).toBe('false');
+    expect(d.querySelector('.ve-mw-3b-kesit')).toBe(null);
+    d.innerHTML = veMntWiz3bAracHTML({ kesit: { eksen: 1, d: 12.34, ters: true }, aralik: [-51, 51] });
+    expect(d.querySelector('#ve-mw-3b-kesit').getAttribute('aria-pressed')).toBe('true');
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-kesit-eksen]')).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+    const r = d.querySelector('#ve-mw-3b-kesit-d');
+    expect([r.type, r.min, r.max, r.value]).toEqual(['range', '-51', '51', '12.34']);
+    expect(d.querySelector('#ve-mw-3b-kesit-deger').textContent).toBe('y = 12,3 mm');
+    expect(d.querySelector('#ve-mw-3b-kesit-ters').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  test('ışın kesilen yandaki üçgeni atlar, kalan yandakini bulur', () => {
+    // x = 5 düzleminde bir üçgen; ışın −x'ten +x'e
+    const ag = { uc: new Float32Array([5, -1, -1, 5, 1, -1, 5, 0, 2]), ucgen: new Uint32Array([0, 1, 2]) };
+    const o = v(0, 0, 0), dir = v(1, 0, 0);
+    expect(_mw3bUcgenKes(o, dir, ag, Infinity)).toBeCloseTo(5, 9);
+    expect(_mw3bUcgenKes(o, dir, ag, Infinity, veMntWiz3bKesitDuzlem({ eksen: 0, d: 4, ters: false }))).toBe(Infinity);
+    expect(_mw3bUcgenKes(o, dir, ag, Infinity, veMntWiz3bKesitDuzlem({ eksen: 0, d: 4, ters: true }))).toBeCloseTo(5, 9);
+    expect(_mw3bUcgenKesK(o, dir, ag, Infinity, veMntWiz3bKesitDuzlem({ eksen: 0, d: 4, ters: false })).k).toBe(-1);
+    expect(_mw3bUcgenKesK(o, dir, ag, Infinity, veMntWiz3bKesitDuzlem({ eksen: 0, d: 6, ters: false })).k).toBe(0);
   });
 });
 

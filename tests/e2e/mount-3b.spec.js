@@ -282,3 +282,40 @@ test('AĞAÇ · CTRL: Ctrl+tık seçime ekler, rol hepsine; 3B\'de seçilen sat�
   expect(odak.r).toBeLessThan(once);
 });
 
+// CAD ARAÇLARI (2026-11-02, kullanıcı: "3D görüntüleyici tıpkı bir CAD programı gibi
+// olmalı. Ölçümler, kesit alma vb."). Önce (main 6d04652): hazır bakış ve kesit yoktu.
+test('BAKIŞ · KESİT: hazır bakışlar kamerayı çevirir; kesit dört malzemeyi kırpar, kesilen yan seçilmez', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await dosyaSec(page, GUC);
+  await hazir(page);
+  const yon = () => page.evaluate(() => { const d = new THREE.Vector3(); window._mw3b.camera.getWorldDirection(d); return [d.x, d.y, d.z]; });
+  await page.click('#ve-mw-3b-arac [data-ve-3b-bakis="ust"]');
+  expect((await yon())[2]).toBeLessThan(-0.999);
+  await page.click('#ve-mw-3b-arac [data-ve-3b-bakis="on"]');
+  expect((await yon())[0]).toBeGreaterThan(0.999);
+  await page.click('#ve-mw-3b-arac [data-ve-3b-bakis="izo"]');
+  const motor = await page.evaluate(() => veMntWizStp().sonuc.parcalar.filter((p) => p.ad === 'Motor bloğu')[0]);
+  const q = await page.evaluate((i) => veMntWiz3bIsabetNoktasi(i), motor.i);
+  expect(q).not.toBeNull();
+  await page.click('#ve-mw-3b-kesit');
+  const kesik = () => page.evaluate(() => {
+    const V = window._mw3b, M = V.malzeme;
+    return { lc: V.renderer.localClippingEnabled, n: [M.opak, M.soluk, M.derinlik, M.cizgi].map((x) => (x.clippingPlanes || []).length), gorsel: !!V.kesitG };
+  });
+  expect(await kesik()).toEqual({ lc: true, n: [1, 1, 1, 1], gorsel: true });
+  await expect(page.locator('#ve-mw-3b-kesit-d')).toBeVisible();
+  // Düzlem montajın en küçük x'ine: bütün montaj kesilen yanda — motora tık bir şey seçmez
+  await page.evaluate(() => { const r = document.getElementById('ve-mw-3b-kesit-d'); r.value = r.min; r.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.mouse.click(q.x, q.y);
+  expect((await durum(page)).secim).toEqual([]);
+  // Ters: kalan yan değişir, motor yine seçilir
+  await page.click('#ve-mw-3b-kesit-ters');
+  await page.mouse.click(q.x, q.y);
+  await expect.poll(async () => (await durum(page)).secim).toEqual([motor.dugum]);
+  // Kesit kapanınca kırpma ve düzlemin görseli kalkar
+  await page.click('#ve-mw-3b-kesit');
+  expect(await kesik()).toEqual({ lc: true, n: [0, 0, 0, 0], gorsel: false });
+  await expect(page.locator('#ve-mw-3b-kesit-d')).toHaveCount(0);
+});
+
