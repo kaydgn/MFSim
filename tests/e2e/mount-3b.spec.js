@@ -203,3 +203,70 @@ test('İŞARET · ETİKET · EKSEN: etiketler üst üste binmez, takoz noktası 
   expect(o.cagri).toBe(o.kume + 2);
 });
 
+// ÜRÜN AĞACI VE Ctrl (2026-11-02, kullanıcı: "Ürün ağacının tıpkı 3D Experience
+// programı gibi sol tarafta gösterilmesini istiyorum." · "tek tek seçmek yerine
+// CTRL tuşunu aktif edelim"). Önce (main a8dd3a4): 3B'de ağaç yok, seçim tek düğüm.
+test('AĞAÇ · CTRL: Ctrl+tık seçime ekler, rol hepsine; 3B\'de seçilen satır ağaçta görünür, satırın üstü 3B\'de vurgulanır', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await dosyaSec(page, DENEME);
+  await hazir(page);
+  const ilk = await page.evaluate(() => {
+    const s = veMntWizStp(), A = s.sonuc.agac, kok = A.filter((d) => d.ebeveyn < 0)[0];
+    const satir = [...document.querySelectorAll('#ve-mw-3b-agac-l [data-ve-3b-agac]')].map((r) => +r.getAttribute('data-ve-3b-agac'));
+    const tk = A.filter((d) => d.ad === 'Takozlar')[0];
+    // Ekranda tıklanabilen üç braket ya da takoz parçası (küçük cıvatalar bu bakışta başka parçanın arkasında)
+    const aday = A.filter((d) => d.ad === 'Braketler' || d.ad === 'Takozlar').reduce((L, d) => L.concat(d.cocuklar), [])
+      .map((c) => ({ i: c, p: A[c].parcalar[0], q: veMntWiz3bIsabetNoktasi(A[c].parcalar[0]) })).filter((t) => t.q).slice(0, 3);
+    return { satir, kokCocuk: kok.cocuklar, sec: aday, tkI: tk.i };
+  });
+  expect(ilk.kokCocuk.every((c) => ilk.satir.includes(c))).toBe(true);
+  expect(ilk.sec.length).toBe(3);
+  // Ctrl + gerçek fare, 3B'de üç parça
+  await page.keyboard.down('Control');
+  for (const t of ilk.sec) await page.mouse.click(t.q.x, t.q.y);
+  await page.keyboard.up('Control');
+  await expect.poll(async () => (await durum(page)).secim).toEqual(ilk.sec.map((t) => t.i));
+  expect(await page.$$eval('#ve-mw-3b-agac-l .ve-mw-3b-agac-r.on', (r) => r.length)).toBe(3);
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-secili="3"]')).toBeVisible();
+  // Ctrl ile boşluğa tık seçimi bozmaz
+  await page.keyboard.down('Control');
+  await page.mouse.click(700, 120);
+  await page.keyboard.up('Control');
+  expect((await durum(page)).secim.length).toBe(3);
+  await page.click('#ve-mw-3b-alt [data-ve-3b-rol="mnt-bracket"]');
+  await expect.poll(() => page.evaluate((L) => L.map((i) => veMntWizStp().roller[i]), ilk.sec.map((t) => t.i)))
+    .toEqual(['mnt-bracket', 'mnt-bracket', 'mnt-bracket']);
+  // Ctrl'süz tık seçimi o parçaya indirir; derindeki satır ağaçta görünür olur
+  const m = await page.evaluate(() => {
+    const s = veMntWizStp(), A = s.sonuc.agac, d = A.filter((x) => x.ad === 'Motor')[0], c = A[d.cocuklar[d.cocuklar.length - 3]];
+    return { i: c.i, p: c.parcalar[0] };
+  });
+  const q = await page.evaluate((p) => veMntWiz3bIsabetNoktasi(p), m.p);
+  expect(q).not.toBeNull();
+  await page.mouse.click(q.x, q.y);
+  await expect.poll(async () => (await durum(page)).secim).toEqual([m.i]);
+  const gor = await page.evaluate((i) => {
+    const r = document.querySelector('#ve-mw-3b-agac-l [data-ve-3b-agac="' + i + '"]'), l = document.getElementById('ve-mw-3b-agac-l').getBoundingClientRect();
+    if (!r) return null;
+    const b = r.getBoundingClientRect();
+    return { on: r.classList.contains('on'), icinde: b.top >= l.top - 1 && b.bottom <= l.bottom + 1 };
+  }, m.i);
+  expect(gor).toEqual({ on: true, icinde: true });
+  // Ağaçta satır: tık seçer, Ctrl+tık ekler; üstüne gelmek 3B'de düğümün parçalarını vurgular
+  const tkSatir = page.locator('#ve-mw-3b-agac-l [data-ve-3b-agac="' + ilk.tkI + '"] .ve-mw-3b-agac-ad');
+  await tkSatir.click();
+  await expect.poll(async () => (await durum(page)).secim).toEqual([ilk.tkI]);
+  await page.locator('#ve-mw-3b-agac-l [data-ve-3b-agac="' + m.i + '"] .ve-mw-3b-agac-ad').click({ modifiers: ['Control'] });
+  await expect.poll(async () => (await durum(page)).secim).toEqual([ilk.tkI, m.i]);
+  await tkSatir.hover();
+  await expect.poll(async () => (await durum(page)).fareDugum).toBe(ilk.tkI);
+  const fare = await page.evaluate((i) => {
+    const V = window._mw3b, P = V.parca[veMntWizStp().sonuc.agac[i].parcalar[0]];
+    return (V.kume[P.b].durum[P.o] & 4) !== 0;
+  }, ilk.tkI);
+  expect(fare).toBe(true);
+  await page.mouse.move(700, 450);
+  await expect.poll(async () => (await durum(page)).fareDugum).toBe(-1);
+});
+

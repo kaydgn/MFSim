@@ -181,11 +181,14 @@ function veMntWiz3bAc(yer){
       + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
       + '<div class="ve-mw-3b-kur" id="ve-mw-3b-kur" hidden></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-mw-3b-ipucu" hidden></div></div>'
+    + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-agac-bas"><h4>Ürün ağacı</h4>'
+      + '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"></span></div>'
+      + '<div class="ve-mw-3b-agac-l" id="ve-mw-3b-agac-l" role="tree" aria-label="Ürün ağacı" aria-multiselectable="true"></div></aside>'
     + '<aside class="ve-fw-3b-yan" id="ve-mw-3b-yan" aria-label="Gövdeler ve takozlar"></aside>'
     + '<div class="ve-fw-3b-alt" id="ve-mw-3b-alt"></div></div>';
   var kap = document.getElementById('ve-mw-3b-tuval');
   var V = { kap: kap, s: s, yer: yer, ov: ov, perde: perde, kume: [], ckume: [], parca: [], ekli: [], kutular: [], islenen: 0, yuz: 0, toplam: 0, yuzToplam: 0,
-            sokucu: [], secili: -1, fare: -1, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
+            sokucu: [], secili: -1, secim: [], fare: -1, fareDugum: -1, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
             kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0 };
   var w = Math.max(1, kap.clientWidth), h = Math.max(1, kap.clientHeight);
   try {
@@ -292,7 +295,8 @@ function veMntWiz3bTazele(){
   var s = typeof veMntWizStp === 'function' ? veMntWizStp() : null;
   // Dosya karttan kaldırıldı ya da başka bir dosya okundu: pencere o dosyanındı
   if(!s || s !== V.s || s.durum !== 'hazir'){ veMntWiz3bKapat(); return; }
-  if(V.secili >= s.sonuc.agac.length) V.secili = -1;
+  V.secim = V.secim.filter(function(d){ return d >= 0 && d < s.sonuc.agac.length; });
+  V.secili = V.secim.length ? V.secim[V.secim.length - 1] : -1;
   if(V.nokta >= 0 && s.roller[V.nokta] !== 'mnt-mount') _mw3bNoktaKip(-1);
   if(V.ref && !veMntStpVs((s.yogunluk || {})[V.ref.birim], s.roller[V.ref.birim])) _mw3bRefKip(null);
   _mw3bPanel();
@@ -574,9 +578,13 @@ function _mw3bBayt(c){ return [Math.round(c.r * 255), Math.round(c.g * 255), Mat
 // boyamada bir kez kurulur (tema jetonları getComputedStyle'dan); kurulum
 // sürerken eklenen parçalar aynı bağlamla boyanır.
 function _mw3bBoyaBaglam(){
-  var V = _mw3b, s = V.s, sec = null;
+  var V = _mw3b, s = V.s, sec = null, fareSet = null;
   if(V.baglam && V.baglam.surum === V.boyaSurum) return V.baglam;
-  if(V.secili >= 0){ sec = {}; veMntWiz3bParcalar(s, V.secili).forEach(function(p){ sec[p] = 1; }); }
+  if(V.secim.length){
+    sec = {};
+    V.secim.forEach(function(d){ veMntWiz3bParcalar(s, d).forEach(function(p){ sec[p] = 1; }); });
+  }
+  if(V.fareDugum >= 0){ fareSet = {}; veMntWiz3bParcalar(s, V.fareDugum).forEach(function(p){ fareSet[p] = 1; }); }
   var rol = {};
   Object.keys(VE_MW_3B_ROL_RENK).forEach(function(t){ rol[t] = _mw3bBayt(_mw3bRenk(veMntWiz3bRolJeton(t), '#888888')); });
   var bos = _mw3bRenk('--text-muted', '#676055').lerp(_mw3bRenk('--bg-secondary', '#faf8f4'), 0.4);
@@ -584,7 +592,7 @@ function _mw3bBoyaBaglam(){
     bosSec: _mw3bBayt(bos.clone().lerp(_mw3bRenk('--accent-primary', '#a8502b'), VE_MW_3B_SECIM_TON)),
     cizgi: _mw3bBayt(_mw3bRenk('--text-primary', '#26241f')), cizgiSec: _mw3bBayt(_mw3bRenk('--text-heading', '#14120f')),
     cizgiFare: _mw3bBayt(_mw3bRenk('--accent-primary', '#a8502b')),
-    fareBirim: V.fare >= 0 ? veMntWiz3bBirim(s, V.fare) : -1 };
+    fareBirim: V.fare >= 0 ? veMntWiz3bBirim(s, V.fare) : -1, fareSet: fareSet };
   return V.baglam;
 }
 // Parçanın görünüşü durumundan (saf, testli): yüzün rengi ve kenarın rengi +
@@ -603,7 +611,7 @@ function _mw3bParcaBoya(i, R){
   var b = veMntWiz3bBirim(V.s, i), c = b >= 0 ? (R.rol[V.s.roller[b]] || R.bos) : R.bos;
   var d = 0;
   if(R.sec) d |= R.sec[i] ? VE_MW_3B_SECIK : VE_MW_3B_SOLUK;
-  if(V.fare === i || (R.fareBirim >= 0 && R.fareBirim === b)) d |= VE_MW_3B_FARE;
+  if(V.fare === i || (R.fareBirim >= 0 && R.fareBirim === b) || (R.fareSet && R.fareSet[i])) d |= VE_MW_3B_FARE;
   var G = veMntWiz3bGorunus(d, c, R), y = G.yuz;
   var K = V.kume[P.b], q, rk = (y[0] << 16) | (y[1] << 8) | y[2];
   if(P.renk !== rk){
@@ -634,44 +642,61 @@ function _mw3bBoya(){
   V.solukVar = !!R.sec;
   V.kume.forEach(function(K){ K.soluk.visible = K.derin.visible = V.solukVar; });
 }
-function veMntWiz3bSec(dugum){
+// SEÇİM (2026-11-02, kullanıcı: "tek tek seçmek yerine CTRL tuşunu aktif
+// edelim"): `ek` (Ctrl/⌘) düğümü seçime ekler ya da çıkarır, boşluğa Ctrl ile
+// tık seçimi bozmaz; ekisiz tık seçimi o düğüme indirir. Son eklenen düğüm
+// seçimin YÜZÜ (V.secili): yol, takoz noktası ve veri sayfası onun. `kaynak`
+// 'agac': satır ağaçta zaten görünür (dal açılmaz, kaydırma yerinde kalır).
+function veMntWiz3bSec(dugum, ek, kaynak){
   var V = _mw3b;
   if(!V) return false;
-  V.secili = (dugum >= 0 && dugum < V.s.sonuc.agac.length) ? dugum : -1;
-  if(V.nokta >= 0 && _mw3bSeciliBirim(V.s, V.secili) !== V.nokta) _mw3bNoktaKip(-1);
-  if(V.ref && _mw3bSeciliBirim(V.s, V.secili) !== V.ref.birim) _mw3bRefKip(null);
-  _mw3bPanel(); _mw3bBoya(); _mw3bCiz(true);
+  var d = (dugum >= 0 && dugum < V.s.sonuc.agac.length) ? dugum : -1;
+  if(ek){
+    if(d < 0) return false;
+    var k = V.secim.indexOf(d);
+    if(k >= 0) V.secim.splice(k, 1); else V.secim.push(d);
+  } else V.secim = d >= 0 ? [d] : [];
+  V.secili = V.secim.length ? V.secim[V.secim.length - 1] : -1;
+  var tek = V.secim.length === 1 ? _mw3bSeciliBirim(V.s, V.secili) : -2;
+  if(V.nokta >= 0 && tek !== V.nokta) _mw3bNoktaKip(-1);
+  if(V.ref && tek !== V.ref.birim) _mw3bRefKip(null);
+  _mw3bPanel(kaynak === 'agac' ? -1 : V.secili); _mw3bBoya(); _mw3bCiz(true);
   return true;
 }
+// Rol seçimin HEPSİNE: tek tazeleme, tek hesap (js/cp-mount-wizard.js → veMntWizStpRolCok)
 function veMntWiz3bRol(tip){
   var V = _mw3b;
-  if(!V || V.secili < 0 || typeof veMntWizStpRol !== 'function') return false;
-  veMntWizStpRol(V.secili, tip || '');       // kartın işlevi: ata/torun rolü düşer, sonuç rolleri izler
+  if(!V || !V.secim.length) return false;
+  if(V.secim.length > 1 && typeof veMntWizStpRolCok === 'function') veMntWizStpRolCok(V.secim.slice(), tip || '');
+  else if(typeof veMntWizStpRol === 'function') veMntWizStpRol(V.secili, tip || '');   // ata/torun rolü düşer, sonuç rolleri izler
+  else return false;
   return true;
 }
 
 // ── 5 · YAN KART VE ALT DİZİ ──────────────────────────────────────────────
-function _mw3bPanel(){
+function _mw3bPanel(goster){
   var V = _mw3b;
   var yan = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-yan');
   if(!V || !yan) return;
+  if(typeof _mw3bAgac === 'function') _mw3bAgac(goster >= 0 ? goster : -1);
   // Yazılan kütle alanının odağı korunur: kart yeniden basılırken alan söküldüğü
   // için odak (ve imleç) aynı alanın yenisine geri verilir.
   var aktif = document.activeElement, odak = aktif && aktif.getAttribute && aktif.getAttribute('data-mw-stp-kutle');
   var imlec = (odak !== null && odak !== undefined && aktif.selectionStart !== undefined) ? aktif.selectionStart : null;
-  yan.innerHTML = veMntWiz3bPanelHTML(V.s, V.secili);
+  yan.innerHTML = veMntWiz3bPanelHTML(V.s, V.secili, V.secim);
   if(odak !== null && odak !== undefined && yan.contains && !yan.contains(aktif)){
     var yeni = yan.querySelector('input[data-mw-stp-kutle="' + odak + '"]');
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
   }
   var alt = document.getElementById('ve-mw-3b-alt');
-  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { aktar: V.yer === 'sihirbaz', nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '' });
+  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { aktar: V.yer === 'sihirbaz', nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '', secim: V.secim });
 }
 // Saf: durum + seçili düğüm → sağdaki yüzen KART (testli). Sıra: ölçülen
 // birimler (gövdeler kütle alanıyla · takozlar) · seçili yol · rol verilenler.
-function veMntWiz3bPanelHTML(s, secili){
+// `secim` (isteğe bağlı): çoklu seçimin düğümleri — "Seçili" bölümü listeyi taşır.
+function veMntWiz3bPanelHTML(s, secili, secim){
   var so = s.sonuc, h = '', coz = s.coz;
-  var birimSec = _mw3bSeciliBirim(s, secili);
+  var birimSec = _mw3bSeciliBirim(s, secili), cok = !!(secim && secim.length > 1);
   h += '<section class="ve-fw-3b-bolum" data-ve-3b-sonuc="1"><div class="ve-fw-3b-kbas"><h4>Ölçülen birimler</h4>'
     + '<span class="ve-fw-3b-hdurum" data-ve-3b-hesap-durum="1" data-ok="' + (coz ? (coz.ok ? '1' : '0') : '') + '">'
     + (coz ? (coz.ok ? _mwIkon('check') + ' ' + _mwStpSayim(coz) : _mwIkon('x') + ' ölçülemedi') : 'hesaplanmadı') + '</span></div>';
@@ -721,8 +746,22 @@ function veMntWiz3bPanelHTML(s, secili){
     h += '</div>';
   }
   h += '</section>';
-  // ── SEÇİLİ: yol (alt montaja rol yoldan verilir) ──
-  if(secili >= 0){
+  // ── SEÇİLİ: çoklu seçimde düğümler ve parça sayısı; tekte yol (alt montaja
+  // rol yoldan verilir) ──
+  if(cok){
+    var ps = {};
+    secim.forEach(function(d){ so.agac[d].parcalar.forEach(function(p){ ps[p] = 1; }); });
+    h += '<section class="ve-fw-3b-bolum" data-ve-3b-secili="' + secim.length + '"><h4>Seçili <span class="ve-fw-dim">' + secim.length
+      + '</span></h4><ul class="ve-fw-3b-atanan">';
+    secim.forEach(function(d){
+      h += '<li' + (d === secili ? ' class="on"' : '') + '>' + _mw3bRenkNokta(s.roller[d] || '')
+        + '<button type="button" class="ve-fw-3b-yolb" onclick="veMntWiz3bSec(' + d + ')">' + _mwEsc(so.agac[d].ad) + '</button>'
+        + '<span class="ve-fw-dim">' + _mwEsc(s.roller[d] ? _mwAd(s.roller[d]) : '—') + '</span>'
+        + '<button type="button" class="ve-fw-mini" title="Seçimden çıkar" aria-label="Seçimden çıkar" onclick="veMntWiz3bSec(' + d + ', true)">'
+        + _mwIkon('x') + '</button></li>';
+    });
+    h += '</ul><p class="ve-fw-dim">' + veSayi(Object.keys(ps).length, 0) + ' parça</p></section>';
+  } else if(secili >= 0){
     var yol = veMntWiz3bYol(s, secili), kok = so.agac[yol[0]];
     var kokGizli = kok.ebeveyn < 0 && kok.cocuklar.length && yol.length > 1;
     h += '<section class="ve-fw-3b-bolum" data-ve-3b-secili="1"><h4>Seçili</h4><div class="ve-fw-3b-yol">';
@@ -761,11 +800,15 @@ function veMntWiz3bPanelHTML(s, secili){
 // olanlar) + "Diğer" listesi; alt sıra TEK hesap düğmesi ve aktarım.
 // Liste TEK kaynaktan (VE_MNT_STP_ROLLER); bölme yalnız sunum.
 // `opt.aktar === false`: aktarım düğmesi yok (3D Görüntüleyici'den açılan 3B).
+// `opt.secim`: çoklu seçimde rol HEPSİNE verilir; çip yalnız hepsi o roldeyse
+// basılı. Takoz noktası ve veri sayfası tek düğümün işi — çoklu seçimde yok.
 function veMntWiz3bAltHTML(s, secili, opt){
   var so = s.sonuc, h = '<div class="ve-fw-3b-dizi" data-ve-3b-roller="1">';
-  if(secili >= 0){
-    var rol = s.roller[secili] || '';
-    h += '<div class="ve-fw-3b-roller" role="group" aria-label="Rol — ' + _mwEsc(so.agac[secili].ad) + '">';
+  var secim = (opt && opt.secim && opt.secim.length) ? opt.secim : (secili >= 0 ? [secili] : []), cok = secim.length > 1;
+  if(secili >= 0 && secim.length){
+    var rs = secim.map(function(d){ return s.roller[d] || ''; });
+    var rol = rs.every(function(r){ return r === rs[0]; }) ? rs[0] : null, rolVar = rs.some(function(r){ return !!r; });
+    h += '<div class="ve-fw-3b-roller" role="group" aria-label="Rol — ' + (cok ? veSayi(secim.length, 0) + ' düğüm' : _mwEsc(so.agac[secili].ad)) + '">';
     var cip = VE_MNT_STP_CIP.filter(function(t){ return VE_MNT_STP_ROLLER.indexOf(t) >= 0; });
     var diger = VE_MNT_STP_ROLLER.filter(function(t){ return cip.indexOf(t) < 0; });
     cip.forEach(function(t){
@@ -777,11 +820,11 @@ function veMntWiz3bAltHTML(s, secili, opt){
       h += '<select class="ve-fw-3b-rol ve-fw-3b-diger" data-ve-3b-diger="1" aria-label="Diğer roller"' + (dSec ? ' aria-pressed="true"' : '')
         + ' onchange="veMntWiz3bRol(this.value === \'-\' ? \'\' : this.value)"><option value="" disabled' + (dSec ? '' : ' selected') + '>Diğer…</option>'
         + diger.map(function(t){ return '<option value="' + t + '" data-ve-3b-rol="' + t + '"' + (rol === t ? ' selected' : '') + '>' + _mwEsc(_mwAd(t)) + '</option>'; }).join('')
-        + '<option value="-" data-ve-3b-rol=""' + (rol ? '' : ' disabled') + '>Rolü kaldır</option></select>';
+        + '<option value="-" data-ve-3b-rol=""' + (rolVar ? '' : ' disabled') + '>Rolü kaldır</option></select>';
     }
     h += '</div>';
     // Takozun noktası: seçili düğümün birimi takozsa — daireden seçim kipi ve öneriye dönüş
-    var birim = _mw3bSeciliBirim(s, secili);
+    var birim = cok ? -1 : _mw3bSeciliBirim(s, secili);
     if(birim >= 0 && s.roller[birim] === 'mnt-mount'){
       var kip = !!(opt && opt.nokta);
       h += '<div class="ve-fw-3b-roller ve-mw-3b-nokta" role="group" aria-label="Takoz noktası — ' + _mwEsc(so.agac[birim].ad) + '">'
@@ -829,7 +872,7 @@ function veMntWiz3bAltHTML(s, secili, opt){
 // sonuç (işaretler) bütün birimlerde okunur olmalı
 function veMntWiz3bHesapla(){
   if(typeof veMntWizStpHesapla !== 'function') return null;
-  if(_mw3b) _mw3b.secili = -1;
+  if(_mw3b){ _mw3b.secili = -1; _mw3b.secim = []; }
   return veMntWizStpHesapla();
 }
 // Aktarım kartın işlevidir; başarılıysa pencere kapanır — sıradaki iş
@@ -926,7 +969,7 @@ function veMntWiz3bNoktaSec(){
   var ac = V.nokta !== b;
   if(V.ref) _mw3bRefKip(null);
   _mw3bNoktaKip(ac ? b : -1);
-  if(ac){ V.secili = b; _mw3bBoya(); _mw3bOdakla(b); }
+  if(ac){ V.secili = b; V.secim = [b]; _mw3bBoya(); _mw3bOdakla(b); }
   _mw3bPanel();
   _mw3bCiz(true);
   return true;
@@ -1076,7 +1119,7 @@ function veMntWiz3bRefSec(tur){
   var ac = !(V.ref && V.ref.birim === b && V.ref.tur === tur);
   if(V.nokta >= 0) _mw3bNoktaKip(-1);
   _mw3bRefKip(ac ? { birim: b, tur: tur } : null);
-  if(ac && tur === 'yuz'){ V.secili = b; _mw3bBoya(); _mw3bOdakla(b); }
+  if(ac && tur === 'yuz'){ V.secili = b; V.secim = [b]; _mw3bBoya(); _mw3bOdakla(b); }
   _mw3bPanel();
   _mw3bCiz(true);
   return true;
@@ -1231,12 +1274,14 @@ function _mw3bOrnekNoktalar(){
   });
   return out;
 }
-// Kartın ve alttaki dizinin ÖRTTÜĞÜ şerit (px) — sığdırma geri kalan alana oturur.
+// Kartın, ağacın ve alttaki dizinin ÖRTTÜĞÜ şerit (px) — sığdırma geri kalan alana oturur.
 function _mw3bSerbest(){
-  var V = _mw3b, out = { sag: 0, alt: 0 };
+  var V = _mw3b, out = { sag: 0, alt: 0, sol: 0 };
   if(!V || typeof document === 'undefined') return out;
   var r = V.kap.getBoundingClientRect(), yan = document.getElementById('ve-mw-3b-yan'), alt = document.getElementById('ve-mw-3b-alt');
+  var agac = document.getElementById('ve-mw-3b-agac');
   if(yan && yan.offsetWidth){ var y = yan.getBoundingClientRect(); var sg = r.right - y.left; if(sg > 0 && sg < r.width * 0.5) out.sag = sg; }
+  if(agac && agac.offsetWidth){ var g = agac.getBoundingClientRect(); var sl = g.right - r.left; if(sl > 0 && sl < r.width * 0.4) out.sol = sl; }
   if(alt && alt.offsetHeight){ var a = alt.getBoundingClientRect(); var ak = Math.max(VE_MW_3B_ALT_PAY, r.bottom - a.top); if(ak < r.height * 0.4) out.alt = ak; }
   return out;
 }
@@ -1272,7 +1317,7 @@ function _mw3bSigdir(kutu, noktalar, bekle){
     });
     if(!isFinite(x0)) break;
     var h = V.kap.clientHeight || 1, w = V.kap.clientWidth || 1, F = _mw3bSerbest();
-    var ax = (w - F.sag) / w, ay = (h - F.alt) / h, cx = -F.sag / w, cy = F.alt / h;
+    var ax = (w - F.sag - F.sol) / w, ay = (h - F.alt) / h, cx = (F.sol - F.sag) / w, cy = F.alt / h;
     _mw3bKaydir(-((x0 + x1) / 2 - cx) * w / 2, ((y0 + y1) / 2 - cy) * h / 2);
     var en = Math.max((x1 - x0) / 2 / ax, (y1 - y0) / 2 / ay);
     if(!(en > 0)) break;
@@ -1333,7 +1378,7 @@ function _mw3bDinle(V){
       if(V.nokta >= 0){ _mw3bDaireTik(e); return; }
       if(V.ref){ _mw3bRefTik(e); return; }
       var i = _mw3bIsabet(e.clientX, e.clientY);
-      veMntWiz3bSec(i >= 0 ? V.s.sonuc.parcalar[i].dugum : -1);
+      veMntWiz3bSec(i >= 0 ? V.s.sonuc.parcalar[i].dugum : -1, e.ctrlKey || e.metaKey);
     }
   });
   dinle(cv, 'pointerleave', function(){
@@ -1502,32 +1547,45 @@ function veMntWiz3bIsaretSVG(t, x, y){
   return g + '<path class="r" d="M0 ' + (-r) + 'L' + r + ' 0L0 ' + r + 'L' + (-r) + ' 0Z"/></g>';
 }
 // ETİKET YERLEŞİMİ (saf, testli). Q: [{ x, y, gen }] (işaretin ekrandaki yeri,
-// etiketin tahmini genişliği) · w, h: kap · sag: sağdaki kartın örttüğü şerit.
+// etiketin tahmini genişliği) · w, h: kap · sag · solPay: sağdaki kartın ve
+// soldaki ağacın örttüğü şerit.
 // Döner: [{ x, y, sol }] — etiket kutusunun işarete bakan kenarının ortası.
-// Yan montajın ortasına göre seçilir; kartın altına ya da kabın dışına taşan
-// etiket öteki yana geçer. Aynı yandakiler yukarıdan aşağı dizilir, arada
-// VE_MW_3B_ETK.ara; dizi kabın altını aşarsa birlikte yukarı kayar.
-function veMntWiz3bEtiketYerlesim(Q, w, h, sag){
+// Yan montajın ortasına göre seçilir; kartın, ağacın altına ya da kabın dışına
+// taşan etiket öteki yana geçer. Çakışma İKİ YANDA birden aranır: öteki yana
+// geçen etiket karşı yandan gelenle ortada buluşabiliyordu (yatayda örtüşen
+// kutular). Yukarıdan aşağı dizilir, arada VE_MW_3B_ETK.ara; kabın altını aşan
+// zincir aşağıdan yukarı geri itilir.
+function veMntWiz3bEtiketYerlesim(Q, w, h, sag, solPay){
   var E = VE_MW_3B_ETK, n = Q.length, ox = 0, oy = 0;
   if(!n) return [];
   Q.forEach(function(q){ ox += q.x / n; oy += q.y / n; });
-  var sagSinir = w - (sag || 0) - E.pay;
+  var sagSinir = w - (sag || 0) - E.pay, solSinir = (solPay || 0) + E.pay;
   var out = Q.map(function(q){
     var sol = q.x < ox;
-    if(!sol && q.x + E.dx + q.gen > sagSinir && q.x - E.dx - q.gen >= E.pay) sol = true;
-    else if(sol && q.x - E.dx - q.gen < E.pay && q.x + E.dx + q.gen <= sagSinir) sol = false;
-    return { x: q.x + (sol ? -E.dx : E.dx), y: q.y + (q.y >= oy ? E.dy : -E.dy), sol: sol };
+    if(!sol && q.x + E.dx + q.gen > sagSinir && q.x - E.dx - q.gen >= solSinir) sol = true;
+    else if(sol && q.x - E.dx - q.gen < solSinir && q.x + E.dx + q.gen <= sagSinir) sol = false;
+    var x = q.x + (sol ? -E.dx : E.dx);
+    return { x: x, y: q.y + (q.y >= oy ? E.dy : -E.dy), sol: sol, x0: sol ? x - q.gen : x, x1: sol ? x : x + q.gen };
   });
-  [true, false].forEach(function(yan){
-    var L = out.filter(function(o){ return o.sol === yan; }).sort(function(a, b){ return a.y - b.y; });
-    var ust = E.pay + E.h / 2, alt = h - E.pay - E.h / 2;
+  var ust = E.pay + E.h / 2, alt = h - E.pay - E.h / 2, aralik = E.h + E.ara;
+  var yatay = function(a, b){ return a.x0 < b.x1 && b.x0 < a.x1; };
+  var L = out.slice().sort(function(a, b){ return a.y - b.y; });
+  L.forEach(function(o, k){
+    if(o.y < ust) o.y = ust;
+    for(var tekrar = true; tekrar;){
+      tekrar = false;
+      for(var j = 0; j < k; j++) if(yatay(o, L[j]) && Math.abs(o.y - L[j].y) < aralik - 1e-9){ o.y = L[j].y + aralik; tekrar = true; }
+    }
+  });
+  if(L.some(function(o){ return o.y > alt; })){
+    L.sort(function(a, b){ return b.y - a.y; });
     L.forEach(function(o, k){
+      if(o.y > alt) o.y = alt;
+      for(var j = 0; j < k; j++) if(yatay(o, L[j]) && o.y > L[j].y - aralik) o.y = L[j].y - aralik;
       if(o.y < ust) o.y = ust;
-      if(k && o.y < L[k - 1].y + E.h + E.ara) o.y = L[k - 1].y + E.h + E.ara;
     });
-    var tas = L.length ? L[L.length - 1].y - alt : 0;
-    if(tas > 0) L.forEach(function(o){ o.y = Math.max(ust, o.y - tas); });
-  });
+  }
+  out.forEach(function(o){ delete o.x0; delete o.x1; });
   return out;
 }
 function _mw3bEtiketle(){
@@ -1535,7 +1593,7 @@ function _mw3bEtiketle(){
   if(!V || !kat || !cz) return;
   var coz = V.s.coz;
   if(!coz || !coz.ok || !V.grup.visible || !V.isaret || !V.isaret.length){ kat.innerHTML = ''; cz.innerHTML = ''; return; }
-  var w = V.kap.clientWidth || 1, h = V.kap.clientHeight || 1, sag = _mw3bSerbest().sag, E = VE_MW_3B_ETK;
+  var w = V.kap.clientWidth || 1, h = V.kap.clientHeight || 1, F = _mw3bSerbest(), E = VE_MW_3B_ETK;
   V.camera.updateMatrixWorld();
   var Q = [];
   V.isaret.forEach(function(m){
@@ -1552,7 +1610,7 @@ function _mw3bEtiketle(){
     var b = q.m.b, k = b.tip === 'mnt-mount' ? _mwStpKonum(b.konum, 3) : 'CG ' + _mwStpKonum(b.konum);
     return { b: b, x: q.x, y: q.y, k: k, gen: Math.max(b.ad.length, k.length) * E.harf + 20 };
   });
-  var Y = veMntWiz3bEtiketYerlesim(B, w, h, sag), cs = '', hs = '';
+  var Y = veMntWiz3bEtiketYerlesim(B, w, h, F.sag, F.sol), cs = '', hs = '';
   B.forEach(function(q, i){
     var o = Y[i], dx = o.x - q.x, dy = o.y - q.y, l = Math.sqrt(dx * dx + dy * dy) || 1;
     var r = (q.b.tip === 'mnt-mount' ? VE_MW_3B_ISARET.takoz : VE_MW_3B_ISARET.govde) + 2;
@@ -1687,7 +1745,7 @@ function veMntWiz3bDurum(){
     model: V.isaretSay ? V.isaretSay.model : 0,
     referans: V.isaretSay ? V.isaretSay.referans : 0,
     eksen: document.querySelectorAll('#ve-mw-3b-eksen text').length,
-    secili: V.secili, fare: V.fare, kip: V.nokta, ref: V.ref ? V.ref.tur : '',
+    secili: V.secili, secim: V.secim.slice(), fareDugum: V.fareDugum, fare: V.fare, kip: V.nokta, ref: V.ref ? V.ref.tur : '',
     aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire ? V.aday.daire.r : (V.aday.halka ? V.aday.halka.r : 0), tur: V.aday.tur || 'nokta' } : null,
     adayHalka: !!V.halka };
 }

@@ -8945,7 +8945,7 @@ span.ve-fw-ro{ display:inline-block; }
 /* Takoz: KURULUMUN KUTUSU (js/cp-mount-3b.js → _mw3bKurYaz) — tuvalin sol
    üstünde yüzen eylem satırı: çubuk + Durdur, durunca durum + Devam. Satırın
    pencere içindeki ayracı (üst çizgi, boşluk) burada yok: kutunun kendisi. */
-.ve-mw-3b-kur{ position:absolute; left:12px; top:12px; width:300px; max-width:calc(100% - 24px); box-sizing:border-box;
+.ve-mw-3b-kur{ position:absolute; left:calc(var(--mw3b-agac, 0px) + 24px); top:12px; width:300px; max-width:calc(100% - 24px); box-sizing:border-box;
   padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
   box-shadow:0 1px 2px var(--shadow-color), 0 6px 18px var(--shadow-color); }
 .ve-mw-3b-kur[hidden]{ display:none; }
@@ -11727,6 +11727,38 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   paint-order:stroke; stroke:var(--bg-secondary); stroke-width:3px; stroke-linejoin:round; }
 .ve-mw-3b-eksen text.eksi{ font-weight:400; fill:var(--text-secondary); }
 .ve-mw-3b-eksen text[data-arka]{ fill:var(--text-muted); }
+/* TAKOZ 3B — ÜRÜN AĞACI (js/cp-mount-3b-agac.js, 2026-11-02). Tuvalin sol
+   üstünde yüzen kart, altında koordinat ekseni. Satır 24 px, girinti 14 px;
+   girintinin her düzeyinde dal çizgisi. Rol çipi rol renginde nokta + ad;
+   rollü birimin içindeki düğüm birimin rengini soluk noktayla taşır. */
+.ve-mw-3b{ --mw3b-agac:300px; }
+.ve-mw-3b-agac{ position:absolute; top:12px; left:12px; width:var(--mw3b-agac); max-height:calc(100% - 176px);
+  display:flex; flex-direction:column; box-sizing:border-box; background:var(--bg-primary);
+  border:1px solid var(--border-color); border-radius:var(--radius-xl);
+  box-shadow:0 1px 2px var(--shadow-color), 0 10px 30px var(--shadow-color); }
+.ve-mw-3b-agac[hidden]{ display:none; }
+.ve-mw-3b-agac-bas{ flex:none; display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:12px 14px 8px; }
+.ve-mw-3b-agac-bas h4{ margin:0; font-size:var(--fs-tiny); font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--text-secondary); }
+.ve-mw-3b-agac-l{ flex:1; min-height:0; overflow:auto; padding:0 6px 8px; }
+.ve-mw-3b-agac-r{ display:flex; align-items:center; gap:4px; height:24px; box-sizing:border-box;
+  padding-left:calc(var(--d, 0) * 14px + 2px); padding-right:6px; border-radius:var(--radius-sm);
+  background-image:repeating-linear-gradient(to right, var(--border-light) 0 1px, transparent 1px 14px);
+  background-size:calc(var(--d, 0) * 14px) 100%; background-repeat:no-repeat; background-position:9px 0; }
+.ve-mw-3b-agac-r:hover{ background-color:var(--bg-tertiary); }
+.ve-mw-3b-agac-r.on{ background-color:var(--accent-tint-10); }
+.ve-mw-3b-agac-dal{ flex:none; width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center;
+  padding:0; border:0; background:none; color:var(--text-muted); cursor:pointer; }
+.ve-mw-3b-agac-r > .mf-ico{ flex:none; width:13px; height:13px; color:var(--text-secondary); }
+.ve-mw-3b-agac-ad{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left;
+  padding:0 2px; border:0; background:none; font:inherit; font-size:var(--fs-tiny); color:var(--text-primary); cursor:pointer; }
+.ve-mw-3b-agac-r.on .ve-mw-3b-agac-ad{ color:var(--text-heading); font-weight:600; }
+.ve-mw-3b-agac-r.ic .ve-mw-3b-agac-ad{ color:var(--text-secondary); }
+.ve-mw-3b-agac-ad:focus-visible, .ve-mw-3b-agac-dal:focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:var(--radius-sm); }
+.ve-mw-3b-agac-rol{ flex:none; display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-micro); color:var(--text-secondary); white-space:nowrap; }
+.ve-mw-3b-agac-rol::before{ content:""; width:8px; height:8px; border-radius:50%; background:var(--renk, var(--text-muted)); box-shadow:0 0 0 1px var(--border-color); }
+.ve-mw-3b-agac-ata{ flex:none; width:6px; height:6px; border-radius:50%; background:var(--renk, var(--text-muted)); opacity:.55; }
+.ve-mw-3b-agac-dahab{ display:inline-flex; align-items:center; gap:4px; padding:0 2px; border:0; background:none; font:inherit;
+  font-size:var(--fs-micro); color:var(--ink-accent); cursor:pointer; }
 /* TAKOZ NOKTASI — daireden seçim kipinde tuvalin imleci artı (js/cp-mount-3b.js) */
 .ve-mw-3b-nokta-kip:not(.surukle) canvas{ cursor:crosshair; }
 

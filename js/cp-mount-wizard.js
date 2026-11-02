@@ -1219,6 +1219,24 @@ function veMntWizStpRol(i, tip){
   var s = _mwStp;
   if(!s || s.durum !== 'hazir' || !(i >= 0 && i < s.roller.length)) return false;
   if(!veMntStpRolVer(s.sonuc, s.roller, i, tip)) return false;
+  _mwStpRolSonrasi(s);
+  return true;
+}
+// ÇOKLU SEÇİM (3B'de Ctrl, 2026-11-02): rol listenin HEPSİNE, sonra tek
+// temizlik · tek kayıt · tek hesap · tek tazeleme. Aynı rol iç içe olmaz
+// (veMntStpRolVer): listede ata ve torun varsa sonra gelen kalır.
+function veMntWizStpRolCok(liste, tip){
+  var s = _mwStp;
+  if(!s || s.durum !== 'hazir' || !Array.isArray(liste)) return false;
+  var ok = false;
+  liste.forEach(function(i){ if(i >= 0 && i < s.roller.length && veMntStpRolVer(s.sonuc, s.roller, i, tip)) ok = true; });
+  if(!ok) return false;
+  _mwStpRolSonrasi(s);
+  return true;
+}
+// Rol değişiminin ardı: rolsüz düğümün kütlesi/kaynağı/noktası/referansı düşer,
+// kayıt yazılır, hesap varsa yeni rollerle yenilenir
+function _mwStpRolSonrasi(s){
   Object.keys(s.kutle).forEach(function(d){ if(!s.roller[d]) delete s.kutle[d]; });
   Object.keys(s.yogunluk || {}).forEach(function(d){
     var k = s.yogunluk[d], r = s.roller[d];
@@ -1234,7 +1252,6 @@ function veMntWizStpRol(i, tip){
   _mwStpHesapVazgec(s);                        // bekleyen hesap eski rollerindi
   if(vardi && !_mwStpRolDenetim(s).length && !_mwStpHesapBekle(s)) s.coz = _mwStpCoz(s);
   _mwStpTazele();
-  return true;
 }
 // TAKOZ NOKTASI — 3B'de seçilen daire (js/mount-step.js → veMntStpKenarDaire)
 // ya da null (öneriye dön). Rol gibi modülün kaydına yazılır, geri-al adımı
@@ -2442,7 +2459,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizStpAgTum: veMntWizStpAgTum,
     veMntWizStpAc: veMntWizStpAc, veMntWizStpDaha: veMntWizStpDaha, _mwStpSatirlar: _mwStpSatirlar, _mwStpAcilis: _mwStpAcilis,
     VE_MW_STP_SATIR: VE_MW_STP_SATIR, VE_MW_STP_SAYFA: VE_MW_STP_SAYFA,
-    veMntWizStpRol: veMntWizStpRol, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
+    veMntWizStpRol: veMntWizStpRol, veMntWizStpRolCok: veMntWizStpRolCok, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
     veMntWizStpDenetim: veMntWizStpDenetim, veMntWizStpAktar: veMntWizStpAktar, veMntWizStpKapat: veMntWizStpKapat,
     veMntWizStpDrop: veMntWizStpDrop, _mwStpKartHTML: _mwStpKartHTML, _mwStpOnizleme: _mwStpOnizleme,
     veMntWizStpNokta: veMntWizStpNokta, veMntWizStpNoktaKaynak: veMntWizStpNoktaKaynak, veMntWizKey: veMntWizKey,
