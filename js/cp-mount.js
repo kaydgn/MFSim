@@ -1394,7 +1394,7 @@ function _mntAksSection(node){
   var sel='<select class="ve-fp-sel" id="ve-mnt-aks-'+node.id+'" onchange="veMntAksUygula(\''+node.id+'\',this.value)">'
     + '<option value="">— elle gir —</option>'+L.map(opt).join('')+'</select>';
   var h=_mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kayıtlı aksesuar</span>'+sel+'</label>');
-  if(sec) h+=_mntIzgara(1, _mntOku('Kütlenin kaynağı', sec.kgKaynak || '—'));
+  if(sec) h+=_mntIzgara(1, _mntOku('Kütlenin kaynağı', sec.kgKaynak || '—', { ipucu:sec.kgKaynak || '' }));
   return _mntBolum('Kayıtlı aksesuar', L.length+' kayıt', h);
 }
 function _mntAksDurumu(node){

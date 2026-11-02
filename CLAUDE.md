@@ -225,8 +225,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kompresörü). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
   getirdiği asıl şey **devir sınırları** (optimum · maksimum sürekli · anlık
   maksimum) — aşağıdaki iki kapı onlarsız kurulamaz. Kütle (`kg` + `kgKaynak`,
-  üreticinin belgesinden; klima kompresöründe kavramalı) Takoz'un aksesuarı için;
-  FEAD okumaz.
+  üreticinin belgesinden; klima kompresöründe kavramalı; alternatörde AYNI AKIM AYNI
+  ALTERNATÖR — kullanıcı kararı, aynı adlı kayıtlar aynı kütle) Takoz'un aksesuarı
+  için; FEAD okumaz.
 - `js/fead-transient.js` — FEAD **geçici rejim**: motor çevrimi senaryosu
   (durgun → marş → ateşleme → rölanti → hızlanma → yavaşlama → stop). DOM'suz;
   çekirdeğe dokunmaz. **Devir geçmişi DAYATILIR, simüle edilmez** — MFSim'de
