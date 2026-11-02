@@ -1116,8 +1116,8 @@ function veMntStpDuzlemBul(sonuc, yol, o, n){
 // `konum` gövdenin noktası: hacim merkezi ('dosya' seçiliyse kütle merkezi);
 // hiçbir parçanın hacmi yoksa kutunun merkezi (`kaynak`: 'hacim' | 'kutu').
 // Takozun noktası üst bağlantı yüzeyinin merkezi: seçilen daire ('kenar') ya
-// da öneri ('eksen'); ikisi de yoksa gövdeninki gibi. `nokta`: noktanın
-// dairesi { c, n, r } (3B halkası).
+// da öneri ('eksen'); ikisi de yoksa dış ölçülerin merkezi ('kutu') — hacim
+// merkezi (ağırlık merkezi) değil. `nokta`: noktanın dairesi { c, n, r } (3B halkası).
 // Birimin toplamı: hacme katılan parçalar (ağı kapalı ya da dosyada hacmi
 // olan) — açık parçalar ve açık gövdeler (acikGovde: parça başına sayı)
 // adıyla ve yüzey payıyla ayrı
@@ -1218,7 +1218,14 @@ function veMntStpCoz(sonuc, roller, opt){
         out.birimler.push(r);
         return;
       }
-      out.uyarilar.push('"' + b.ad + '": takoz ekseni bulunamadı (' + neden + '); nokta ' + (oz.kapali && oz.c ? 'hacim' : 'kutu') + ' merkezi.');
+      // Takozun noktası ağırlık merkezi DEĞİL (kullanıcı kararı 2026-11-02):
+      // eksen yoksa dış ölçülerin (kutunun) merkezi — hacim merkezine düşmez
+      var k = oz.kutu;
+      r.konum = [(k[0] + k[3]) / 2, (k[1] + k[4]) / 2, (k[2] + k[5]) / 2];
+      r.kaynak = 'kutu';
+      out.uyarilar.push('"' + b.ad + '": takoz ekseni bulunamadı (' + neden + '); nokta dış ölçülerin merkezi.');
+      out.birimler.push(r);
+      return;
     }
     if(oz.kapali && oz.c){
       r.konum = (yog[b.dugum] === 'dosya' && r.dosya ? r.dosya.c : oz.c).slice();

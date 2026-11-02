@@ -375,7 +375,9 @@ describe('3B — iki yer (aktarımın kapısı: mount-3b.test.js → ALT DİZİ)
     const html = oku('index.html');
     const i = html.indexOf('id="ve-mnt-3b-overlay"');
     expect(i).toBeGreaterThan(0);
-    expect(html.slice(i, html.indexOf('</div>\n</div>', i))).toMatch(/id="ve-mnt-3b" class="ve-fw-3b"/);
+    // FEAD'in 3B görünüşü (`ve-fw-3b`) + Takoz'un kapsamı (`ve-mw-3b`: işaretler, eksen) — iki yerde de
+    expect(html.slice(i, html.indexOf('</div>\n</div>', i))).toMatch(/id="ve-mnt-3b" class="ve-fw-3b ve-mw-3b"/);
+    expect(html).toMatch(/id="ve-mw-3b" class="ve-fw-3b ve-mw-3b"/);
     expect(html.indexOf('src="js/cp-mount-cad.js"')).toBeGreaterThan(html.indexOf('src="js/cp-mount-3b.js"'));
   });
 });

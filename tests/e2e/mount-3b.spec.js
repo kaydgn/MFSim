@@ -141,8 +141,8 @@ test('SEÇ · ROL · HESAP: tıklanan parça seçilir ve öteki parçalar solar;
   expect(q).not.toBeNull();
   await page.mouse.click(q.x, q.y);
   await expect.poll(async () => (await durum(page)).secili).toBe(motor.dugum);
-  // Seçim dışı soluk: kümelerin soluk çizimi açık (çağrı kadar artar)
-  const soluk = await page.evaluate(() => { const V = window._mw3b; return V.kume.every((K) => K.soluk.visible); });
+  // Seçim dışı TEK KAT tül: ön geçiş (derinlik) ve tül birlikte açık
+  const soluk = await page.evaluate(() => { const V = window._mw3b; return V.kume.every((K) => K.soluk.visible && K.derin.visible); });
   expect(soluk).toBe(true);
   await page.click('#ve-mw-3b-alt [data-ve-3b-rol="mnt-motor"]');
   await expect.poll(() => page.evaluate((d) => veMntWizStp().roller[d], motor.dugum)).toBe('mnt-motor');
@@ -151,3 +151,55 @@ test('SEÇ · ROL · HESAP: tıklanan parça seçilir ve öteki parçalar solar;
   const coz = await page.evaluate(() => { const c = veMntWizStp().coz; return c && c.birimler.map((b) => [b.ad, b.kaynak]); });
   expect(coz).toEqual([['Motor bloğu', 'hacim']]);
 });
+
+// GÖRÜNÜM (2026-11-02, kullanıcı: "Ağırlık merkezi ve orta nokta görselleştirmesi
+// güzel değil" · "Takozların orta noktasını alıyoruz. Ağırlık merkezini değil").
+// Ölçülen önce (main 7c94ad5, bu montaj ve bu roller): yedi etiketten iki çift üst
+// üste; ağırlık merkezi ile takoz noktası aynı koyu nokta (3B ağında, yedi ayrı
+// çizim çağrısı); ekseni bulunamayan takoz hacim merkezinde; koordinat ekseni yok.
+test('İŞARET · ETİKET · EKSEN: etiketler üst üste binmez, takoz noktası ağırlık merkezi simgesi değil', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await dosyaSec(page, DENEME);
+  await hazir(page);
+  // Kamerayla dönen koordinat ekseni: Koordinat Düzlemi'nin altı yazısı
+  const eksen = await page.$$eval('#ve-mw-3b-eksen text', (t) => t.map((x) => x.textContent).sort());
+  expect(eksen).toEqual(['+X · Arka', '+Y · Sağ', '+Z · Yukarı', 'Aşağı', 'Ön', 'Sol'].sort());
+  await page.evaluate(() => {
+    const s = veMntWizStp(), A = s.sonuc.agac, bul = (ad) => A.filter((d) => d.ad === ad)[0];
+    const ata = { 'Motor': 'mnt-motor', 'Şanzıman': 'mnt-gearbox', 'Transfer kutusu': 'mnt-transfer', 'Braketler': 'mnt-bracket' };
+    Object.keys(ata).forEach((ad) => veMntWizStpRol(bul(ad).i, ata[ad]));
+    bul('Takozlar').cocuklar.forEach((c) => veMntWizStpRol(c, 'mnt-mount'));
+  });
+  await page.click('#ve-mw-3b-hesapla');
+  await expect.poll(async () => (await durum(page)).nokta).toBe(7);
+  await page.evaluate(() => veMntWiz3bSigdir());
+  await expect.poll(async () => (await durum(page)).etiket).toBe(7);
+  const o = await page.evaluate(() => {
+    const R = [...document.querySelectorAll('#ve-mw-3b-etiket .ve-fw-3b-etk')].map((e) => e.getBoundingClientRect());
+    let cakisan = 0;
+    for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++)
+      if (R[i].left < R[j].right && R[j].left < R[i].right && R[i].top < R[j].bottom && R[j].top < R[i].bottom) cakisan++;
+    const yan = document.getElementById('ve-mw-3b-yan').getBoundingClientRect();
+    const say = (t) => document.querySelectorAll('#ve-mw-3b-etiket-cizgi [data-ve-3b-isaret="' + t + '"]').length;
+    const tk = veMntWizStp().coz.birimler.filter((b) => b.ad === 'Takozlar civata 22')[0];
+    const satir = document.querySelector('[data-ve-3b-takozlar] tr[data-ve-3b-birim="' + tk.dugum + '"]');
+    const ad = satir.querySelector('td:first-child button');
+    return { cakisan, kartAltinda: R.filter((r) => r.right > yan.left && r.top < yan.bottom).length,
+             govde: say('govde'), takoz: say('takoz'), kaynak: tk.kaynak, nokta: satir.cells[2].textContent,
+             adTitle: ad.getAttribute('title'), adSigar: ad.getBoundingClientRect().right <= satir.cells[0].getBoundingClientRect().right + 0.5,
+             cagri: window._mw3b.renderer.info.render.calls, kume: window._mw3b.kume.length + window._mw3b.ckume.length };
+  });
+  expect(o.cakisan).toBe(0);
+  expect(o.kartAltinda).toBe(0);
+  expect([o.govde, o.takoz]).toEqual([4, 3]);
+  // Ekseni bulunamayan takoz (dairesel kenarı yok): dış ölçülerin merkezi
+  expect(o.kaynak).toBe('kutu');
+  expect(o.nokta).toBe('Dış ölçü merkezi');
+  // Ad hücrede kısalır, tam adı ipucunda (eskiden düğme bütün olarak "…" oluyordu)
+  expect(o.adTitle).toBe('Takozlar civata 22 · Takoz');
+  expect(o.adSigar).toBe(true);
+  // İşaretler SVG'de: çizim çağrısı yalnız kümeler ve iki halka
+  expect(o.cagri).toBe(o.kume + 2);
+});
+

@@ -994,6 +994,15 @@ function _gmSec16(){
     ['<strong>Model</strong>', 'Birimlerin modeldeki karşılığı, fark, kütle; öteleme; '
       + '<strong>Modele uygula</strong> · <strong>Dosyanın sistemine taşı</strong>', 'Hesaptan sonra']
   ], ['Bölüm', 'Ne', 'Not']);
+  h += _gmAlanTablo('3B görüntüleyici — işaretler', [
+    ['Ağırlık merkezi', 'Dörde bölünmüş daire', 'Gövdenin ağırlık merkezi; parçanın içinde kalsa da görünür'],
+    ['Takoz noktası', 'Takozun renginde artılı halka', 'Üst bağlantı yüzeyinin merkezi (16.3)'],
+    ['Modelin noktası', 'Kesikli halka', 'Tuvaldeki modelde aynı birim (16.6)'],
+    ['Referans noktası', 'Eşkenar dörtgen', 'Veri sayfasının referansı (16.5)'],
+    ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner']
+  ], ['İşaret', 'Görünüş', 'Ne']);
+  h += '<p>Seçilen parça kendi renginde, kenarları koyu çizilir; öteki parçalar tek kat soluk kalır. Etiket '
+    + 'birimin adını ve konumunu taşır; işarete bakan kenarı birimin rol rengindedir.</p>';
   h += '<h3>16.2 Roller</h3>';
   h += '<p>Rol bir düğüme verilir: 3B’de parçaya tıklayıp çipten ya da ağaçtaki satırın <strong>Rol</strong> '
     + 'listesinden. Alt montaja verilen rol bütün parçalarına geçer. Roller iç içe verilebilir: motor alt '
@@ -1004,8 +1013,10 @@ function _gmSec16(){
   h += '<p>Takozun noktası <strong>üst bağlantı yüzeyinin merkezidir</strong>: dosyada yazılı dairenin merkezi, '
     + 'CATIA’daki ölçümün aynısı. Program onu takozun ekseninden önerir. 3B’de takoz seçiliyken '
     + '<em>Daireden nokta</em> açılır; fare dairesel bir kenara gelince halka belirir, tıklanan dairenin '
-    + 'merkezi takozun noktası olur. <em>Öneriye dön</em> seçimi kaldırır. Ağaçtaki <strong>Konum</strong> '
-    + 'hücresinin ipucu kaynağı söyler: <em>Üst yüz</em> (öneri) ya da <em>Daire</em> (seçim).</p>';
+    + 'merkezi takozun noktası olur. <em>Öneriye dön</em> seçimi kaldırır. Takozun ekseni bulunamazsa (dairesel '
+    + 'kenar yok ya da eksen düşey değil) nokta takozun <strong>dış ölçülerinin merkezidir</strong>; ağırlık merkezi '
+    + 'kullanılmaz, uyarı satırı sebebi söyler. Ağaçtaki <strong>Konum</strong> hücresinin ipucu kaynağı söyler: '
+    + '<em>Üst yüz</em> (öneri), <em>Daire</em> (seçim) ya da <em>Dış ölçü merkezi</em>.</p>';
   h += '<h3>16.4 Kütle, ağırlık merkezi ve atalet</h3>';
   h += '<p>Gövdenin hacmi, ağırlık merkezi ve ataleti parçaların <strong>katı gövdelerinden</strong> toplanır; '
     + 'yüzey gövdeleri hacme girmez, döküm içindeki boşluklar hacimden çıkar. Ağı kapalı olmayan katı gövdenin '

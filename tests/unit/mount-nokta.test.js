@@ -217,18 +217,27 @@ describe('ÖNERİ — eksenden üst bağlantı yüzeyinin merkezi', () => {
     });
   });
 
-  test('YATAY EKSEN: öneri yok, sebebi söylenir; nokta hacim merkezi', () => {
+  // Kullanıcı kararı (2026-11-02): "Takozların orta noktasını alıyoruz. Ağırlık
+  // merkezini değil." Önce: eksen bulunamayınca nokta birimin hacim merkezine
+  // (homojen yoğunlukta ağırlık merkezine) düşüyordu.
+  test('YATAY EKSEN: öneri yok, sebebi söylenir; nokta dış ölçülerin merkezi, hacim merkezi değil', () => {
     const { c } = coz({ z: [0, 1, 0], x: [1, 0, 0] });
     const b = birim(c, 'Ön takoz');
-    expect(b.kaynak).toBe('hacim');
+    expect(b.kaynak).toBe('kutu');
     expect(b.nokta).toBeUndefined();
-    expect(c.uyarilar).toContain('"Ön takoz": takoz ekseni bulunamadı (eksen düşey değil); nokta hacim merkezi.');
+    const k = b.kutu, orta = [(k[0] + k[3]) / 2, (k[1] + k[4]) / 2, (k[2] + k[5]) / 2];
+    expect(uz(b.konum, orta)).toBeLessThan(1e-9);
+    expect(b.kapali).toBe(true);                          // hacim merkezi vardı ve
+    expect(uz(b.konum, b.c)).toBeGreaterThan(1);           // nokta ona düşmüyor
+    expect(c.uyarilar).toContain('"Ön takoz": takoz ekseni bulunamadı (eksen düşey değil); nokta dış ölçülerin merkezi.');
+    expect(W.veMntWizStpNoktaKaynak(b)).toBe('Dış ölçü merkezi');
+    expect(W.veMntWizStpKonumUyari(b)).toBe(true);
   });
 
   test('DAİRESİZ (kutu) takoz: öneri yok, sebebi söylenir', () => {
     const son = STP.veMntStpOku(S.gucGrubu());
     const c2 = STP.veMntStpCoz(son, rolle(son, ['Motor bloğu']));
-    expect(c2.birimler[0].kaynak).toBe('hacim');
+    expect(c2.birimler[0].kaynak).toBe('kutu');
     const t = STP.veMntStpTakozNoktasi(son, son.agac.find((d) => d.ad === 'Motor bloğu').parcalar, []);
     expect(t).toEqual({ ok: false, neden: 'dairesel kenar yok' });
   });

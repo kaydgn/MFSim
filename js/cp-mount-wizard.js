@@ -1324,7 +1324,7 @@ function veMntWizStpNoktaKaynak(b){
   if(!b || b.tip !== 'mnt-mount') return '';
   if(b.kaynak === 'kenar') return 'Daire Ø ' + _mwSayi(2 * b.nokta.r, 1);
   if(b.kaynak === 'eksen') return 'Üst yüz Ø ' + _mwSayi(2 * b.nokta.r, 1);
-  return b.kaynak === 'hacim' ? 'Hacim merkezi' : 'Kutu merkezi';
+  return 'Dış ölçü merkezi';
 }
 // Koordinat üçlüsü, ayraç `; ` (karar 7·C). Varsayılan 0,1 mm (geometriden
 // tahmin: ağırlık merkezi); takoz noktası `hane` 3 — dosyada yazılı sayı,
