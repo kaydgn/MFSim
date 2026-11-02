@@ -20,7 +20,8 @@
 //    sayfa geri gelir. Bayrak olsaydı kaydedilmek zorunda kalırdı ve geri-al
 //    ile ayrışırdı.
 //  • KAPILAR MODÜLÜN ÇAĞRILARI, sayfa düğüm KURMAZ: Sihirbaz `veMntWizAc`,
-//    STEP sihirbazın 1. adımının dosya seçicisi (AYNI tıklamada), Boş kanvas
+//    STEP `veMntCadAcStep` (dosya seçici AYNI tıklamada; dosya 3B'de okunur,
+//    sihirbaz açılmaz — kullanıcı kararı 2026-11-02), Boş kanvas
 //    `veMntKanvasBos`, örnek `veMntOrnekYukle`. İkinci bir kurucu, iki yolun
 //    sessizce ayrışması demekti.
 //  • KÜÇÜK RESİM Görünümler'in çizicisinden (`veMntAkso.ciz`,
@@ -210,7 +211,7 @@ function veMntBaslangicEylem(ad, v){
   if(ad === 'sihirbaz')
     return !!(typeof veMntWizAc === 'function' && veMntWizAc());
   if(ad === 'step')
-    return !!(typeof veMntWizAcStep === 'function' && veMntWizAcStep());
+    return !!(typeof veMntCadAcStep === 'function' && veMntCadAcStep());
   if(ad === 'bos')
     return !!(typeof veMntKanvasBos === 'function' && veMntKanvasBos().length);
   if(ad === 'ornek'){

@@ -77,7 +77,9 @@ test('PARÇA PARÇA: kurulurken montaj görünür, çizim kümelerde, ortak işi
     };
     const ac = window.veMntWiz3bAc;
     window.veMntWiz3bAc = function () {
-      const r = ac.apply(this, arguments), V = window._mw3b, ro = V.renderer.render.bind(V.renderer);
+      const r = ac.apply(this, arguments), V = window._mw3b;
+      if (!V || !V.renderer) return r;      // okuma kartı (STEP'ten başla): çizici okuma bitince kurulur
+      const ro = V.renderer.render.bind(V.renderer);
       V.renderer.render = function (s, c) {
         ro(s, c);
         if (V.kap.getAttribute('data-durum') === 'kuruluyor' && V.renderer.info.render.triangles > 0) o.araKare++;

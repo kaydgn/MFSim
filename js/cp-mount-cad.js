@@ -54,6 +54,31 @@ function veMntCadSec(){
   g.click();
   return true;
 }
+// STEP'TEN BAŞLA (kullanıcı kararı 2026-11-02: "Stepten başla butonuna tıkladığım
+// zaman, ilk baştaki yükleme sihirbazı üzerinden okuyor. Bunu istemiyorum." →
+// "3B açılsın, sonra sihirbaz"): başlangıç sayfasının kapısı dosya seçiciyi AYNI
+// tıklamada açar; dosya seçilince "Boş kanvas"ın araç şeridi kurulur (rollerin
+// evi 3D Görüntüleyici dâhil, TEK geri-al adımı) ve dosya 3B görüntüleyicinin
+// kendi perdesinde okunur. Sihirbaz yalnız "Sihirbaza aktar"la, kalan adımlar için.
+function veMntCadAcStep(){
+  if(typeof document === 'undefined') return false;
+  var g = document.createElement('input');
+  g.type = 'file';
+  g.accept = VE_MNT_CAD_UZANTI;
+  g.addEventListener('change', function(){
+    var f = g.files && g.files[0];
+    if(f) veMntCadStepBasla(f);
+  });
+  g.click();
+  return true;
+}
+function veMntCadStepBasla(f){
+  if(!f || typeof veMntWizStpDosya !== 'function') return false;
+  if(typeof veMntKanvasBos === 'function') veMntKanvasBos();
+  veMntWizStpDosya(f, 'pencere');
+  if(typeof veMntWiz3bAc === 'function') veMntWiz3bAc('pencere');
+  return true;
+}
 function veMntCadDrop(e){
   if(!e) return false;
   if(e.preventDefault) e.preventDefault();
@@ -201,7 +226,7 @@ if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML, veMntCadPencereAcik: veMntCadPencereAcik,
     veMntCadPencereTazele: veMntCadPencereTazele, veMntCad3bAc: veMntCad3bAc, veMntCadDrop: veMntCadDrop,
-    veMntCadSec: veMntCadSec, VE_MNT_CAD_UZANTI: VE_MNT_CAD_UZANTI,
+    veMntCadSec: veMntCadSec, VE_MNT_CAD_UZANTI: VE_MNT_CAD_UZANTI, veMntCadAcStep: veMntCadAcStep, veMntCadStepBasla: veMntCadStepBasla,
     _mntCadKayitHTML: _mntCadKayitHTML, _mntCadEylem: _mntCadEylem, _mntCadDosyaHTML: _mntCadDosyaHTML,
     _mntCadModelHTML: _mntCadModelHTML
   };

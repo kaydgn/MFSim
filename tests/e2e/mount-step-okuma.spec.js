@@ -51,11 +51,13 @@ async function bootApp(page) {
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
   await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
 }
-// STEP kapısı: dosya seçici aynı tıklamada açılır
+// Sihirbazın STEP kartı: dosya seçici aynı tıklamada açılır (başlangıç sayfasının
+// kapısı 2026-11-02'den beri dosyayı 3B'nin perdesinde okur — mount-baslangic.spec.js)
 async function secici(page) {
+  await page.evaluate(() => veMntWizAc());
   const [fc] = await Promise.all([
     page.waitForEvent('filechooser', { timeout: 5000 }),
-    page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="step"]'),
+    page.click('#ve-mw-body .ve-fw-stp-sec'),
   ]);
   return fc;
 }

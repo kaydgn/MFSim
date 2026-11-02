@@ -157,12 +157,15 @@ function _mw3bSeciliBirim(s, secili){
 var VE_MW_3B_YER = { sihirbaz: { kap: 've-mw-3b', perde: null }, pencere: { kap: 've-mnt-3b', perde: 've-mnt-3b-overlay' } };
 function veMntWiz3bAcik(){ return !!_mw3b; }
 function veMntWiz3bYer(){ return _mw3b ? _mw3b.yer : null; }
-// `yer`: 'sihirbaz' | 'pencere' — verilmezse sihirbaz açıksa sihirbaz
+// `yer`: 'sihirbaz' | 'pencere' — verilmezse sihirbaz açıksa sihirbaz.
+// Pencerede dosya OKUNURKEN de açılır (STEP'ten başla, 2026-11-02): okuma
+// kartı (çubuk + Vazgeç), okuma bitince görüntüleyici kurulur (veMntWiz3bTazele).
 function veMntWiz3bAc(yer){
   if(typeof document === 'undefined' || typeof THREE === 'undefined') return false;
   var s = typeof veMntWizStp === 'function' ? veMntWizStp() : null;
-  if(!s || s.durum !== 'hazir' || !s.sonuc || !s.sonuc._model) return false;
   if(!VE_MW_3B_YER[yer]) yer = (typeof veMntWizAcik === 'function' && veMntWizAcik()) ? 'sihirbaz' : 'pencere';
+  if(s && s.durum === 'okunuyor' && yer === 'pencere') return _mw3bOkumaAc(s);
+  if(!s || s.durum !== 'hazir' || !s.sonuc || !s.sonuc._model) return false;
   var Y = VE_MW_3B_YER[yer], ov = document.getElementById(Y.kap), perde = Y.perde ? document.getElementById(Y.perde) : null;
   if(!ov || (Y.perde && !perde)) return false;
   if(_mw3b) veMntWiz3bKapat();
@@ -218,6 +221,7 @@ function veMntWiz3bAc(yer){
   V.ctrl = { theta: VE_MW_3B_ACILIS.theta, phi: VE_MW_3B_ACILIS.phi, r: 1000, hedef: new THREE.Vector3() };
   V.ray = new THREE.Raycaster();
   _mw3b = V;
+  _mw3bKamera();          // açılış bakışı ilk sığdırmadan önce de (eksen kurulurken doğru yönü gösterir)
   _mw3bEsc(V);
   _mw3bDinle(V);
   if(typeof ResizeObserver !== 'undefined'){
@@ -228,6 +232,34 @@ function veMntWiz3bAc(yer){
   _mw3bPanel();
   _mw3bAgKur();
   return true;
+}
+// OKUMA KARTI: başlık ve kapat görüntüleyicininki; gövdede dosyanın adı ve
+// okumanın çubuğu (sihirbazın kartıyla AYNI üretici — çubuk düğmenin niteliğiyle
+// bulunur, her yüzeyde birlikte ilerler)
+function _mw3bOkumaAc(s){
+  var Y = VE_MW_3B_YER.pencere, ov = document.getElementById(Y.kap), perde = document.getElementById(Y.perde);
+  if(!ov || !perde) return false;
+  if(_mw3b) veMntWiz3bKapat();
+  perde.style.display = 'flex';
+  ov.style.display = 'flex';
+  ov.innerHTML = '<div class="ve-settings-header ve-fw-3b-bas">'
+    + '<span><span class="mf-ico mf-ico-box"></span> 3B görüntüleyici <span class="ve-fw-dim" id="ve-mw-3b-dosya">' + _mwEsc(s.dosya) + '</span></span>'
+    + '<button type="button" class="ve-settings-close" onclick="veMntWiz3bKapat()" title="Kapat (Esc)" aria-label="Kapat">'
+      + '<span class="mf-ico mf-ico-x"></span></button>'
+    + '</div><div class="ve-fw-3b-govde"><div class="ve-fw-3b-tuval" id="ve-mw-3b-tuval" data-durum="okunuyor">'
+    + '<div class="ve-mw-3b-okuma" id="ve-mw-3b-okuma">' + _mw3bOkumaHTML(s) + '</div></div></div>';
+  var V = { okuma: true, s: s, yer: 'pencere', ov: ov, perde: perde, kap: document.getElementById('ve-mw-3b-tuval'),
+            sokucu: [], secim: [], secili: -1, nokta: -1, ref: null };
+  _mw3b = V;
+  _mw3bEsc(V);
+  return true;
+}
+function _mw3bOkumaHTML(s){
+  if(s.durum === 'hata')
+    return '<div class="ve-fw-issues"><div class="ve-fw-issue ve-fw-issue-err">' + _mwIkon('x') + ' <b>' + _mwEsc(s.dosya)
+      + '</b> — ' + _mwEsc(s.hata) + '</div></div>';
+  return '<p class="ve-mw-3b-okuma-ad">' + _mwIkon('clock') + ' <b>' + _mwEsc(s.dosya) + '</b> okunuyor…</p>'
+    + (typeof _mwStpIlerlemeHTML === 'function' ? _mwStpIlerlemeHTML(s, 've-mw-3b-okuma-vazgec') : '');
 }
 // ÇİZİCİ: ekran kartında kenar yumuşatmalı; yazılımsal GL'de (ekran kartı yok,
 // uzak masaüstü) yumuşatmasız — orada kareyi 2,3–3,3 kat pahalılaştırıyordu
@@ -293,6 +325,15 @@ function veMntWiz3bTazele(){
   var V = _mw3b;
   if(!V) return;
   var s = typeof veMntWizStp === 'function' ? veMntWizStp() : null;
+  // Okuma kartı: okuma bitince görüntüleyici kurulur; Vazgeç ya da başka modül → kapanır; hata kartta
+  if(V.okuma){
+    if(s && s.durum === 'hazir'){ veMntWiz3bKapat(); veMntWiz3bAc('pencere'); return; }
+    if(!s || s.durum === 'yok'){ veMntWiz3bKapat(); return; }
+    V.s = s;
+    var ok = document.getElementById('ve-mw-3b-okuma');
+    if(ok && s.durum === 'hata') ok.innerHTML = _mw3bOkumaHTML(s);
+    return;
+  }
   // Dosya karttan kaldırıldı ya da başka bir dosya okundu: pencere o dosyanındı
   if(!s || s !== V.s || s.durum !== 'hazir'){ veMntWiz3bKapat(); return; }
   V.secim = V.secim.filter(function(d){ return d >= 0 && d < s.sonuc.agac.length; });
@@ -689,7 +730,7 @@ function _mw3bPanel(goster){
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
   }
   var alt = document.getElementById('ve-mw-3b-alt');
-  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { aktar: V.yer === 'sihirbaz', nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '', secim: V.secim });
+  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '', secim: V.secim });
 }
 // Saf: durum + seçili düğüm → sağdaki yüzen KART (testli). Sıra: ölçülen
 // birimler (gövdeler kütle alanıyla · takozlar) · seçili yol · rol verilenler.
@@ -876,9 +917,16 @@ function veMntWiz3bHesapla(){
   return veMntWizStpHesapla();
 }
 // Aktarım kartın işlevidir; başarılıysa pencere kapanır — sıradaki iş
-// sihirbazın adımlarında
+// sihirbazın adımlarında. Kendi perdesindeki 3B'den (STEP'ten başla, 3D
+// Görüntüleyici) önce sihirbaz açılır; engel varsa açılmaz, sebebi bildirimde.
 function veMntWiz3bAktar(){
   if(typeof veMntWizStpAktar !== 'function') return null;
+  var V = _mw3b;
+  if(V && V.yer === 'pencere' && typeof veMntWizAc === 'function' && !(typeof veMntWizAcik === 'function' && veMntWizAcik())){
+    var d = typeof veMntWizStpDenetim === 'function' ? veMntWizStpDenetim(V.s) : { engel: [] };
+    if(d.engel.length){ if(typeof showToast === 'function') showToast(d.engel[0], 'warning'); return null; }
+    veMntWizAc();
+  }
   var k = veMntWizStpAktar();
   if(k) veMntWiz3bKapat();
   return k;
@@ -1653,8 +1701,15 @@ function veMntWiz3bEksenSVG(me){
     var yer = function(px, py, vx, vy, k, metin, sinif){
       var anc = vx > 0.35 ? 'start' : vx < -0.35 ? 'end' : 'middle', bas = vy > 0.35 ? 'hanging' : vy < -0.35 ? 'auto' : 'central';
       yazi += '<text class="' + sinif + '" x="' + f(px + vx * k) + '" y="' + f(py + vy * k) + '" text-anchor="' + anc
-        + '" dominant-baseline="' + bas + '"' + (boy < 0.25 ? ' data-arka="1"' : '') + '>' + metin + '</text>';
+        + '" dominant-baseline="' + bas + '">' + metin + '</text>';
     };
+    // Bakana (ya da tersine) dönük eksen: iki uç ortada üst üste binerdi — yalnız
+    // bakana dönük ucun yazısı, orijinin sağ üstünde
+    if(boy < 0.25){
+      yazi += '<text class="ad ' + (a.d >= 0 ? 'ad-' + x : 'eksi') + '" x="' + f(cx + 7) + '" y="' + f(c - 7)
+        + '" text-anchor="start" dominant-baseline="auto" data-arka="1">' + a.ad[a.d >= 0 ? 1 : 2] + '</text>';
+      return;
+    }
     yer(tx, ty, ux, uy, 6, a.ad[1], 'ad ad-' + x);
     yer(cx - a.sx * E.eksi * L, c + a.sy * E.eksi * L, -ux, -uy, 5, a.ad[2], 'ad eksi');
   });
@@ -1738,6 +1793,7 @@ function veMntWiz3bYuzNoktasi(i, n, o){
 function veMntWiz3bDurum(){
   var V = _mw3b;
   if(!V) return null;
+  if(V.okuma) return { durum: V.kap.getAttribute('data-durum'), okuma: true, yer: V.yer };
   return { durum: V.kap.getAttribute('data-durum'), parca: V.ekli.length, islenen: V.islenen, toplam: V.toplam,
     kume: V.kume.length, cizgiKume: V.ckume.length, cagri: V.renderer && V.renderer.info ? V.renderer.info.render.calls : 0,
     etiket: document.querySelectorAll('#ve-mw-3b-etiket [data-ve-3b-etiket]').length,
