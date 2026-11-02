@@ -12,11 +12,14 @@
  *   2. İKİ AÇIK MODEL FARKI — Adams'ta olup MFSim'de olmayan iki şey:
  *      yanal (±12 mm) durdurucu ve tork yalpa işareti. Bunlar kapatılırsa
  *      buradaki testler kırmızıya döner ve defterin güncellenmesini ister.
+ *      Tork farkı YALNIZ yöndür: tork ters çevrilince iki satırın farkı
+ *      17,28 mm'den 0,489 mm'ye iniyor.
  *
  *   3. KAPANMAMIŞ MODAL SORUSU — sevk edilen örnek kataloğa göre düzeltildi
  *      (TK040 dinamik X↔Z takası), ama Adams TAKASLI hâle daha yakın:
- *      modal RMS 0,539 Hz (takaslı) < 1,010 Hz (katalog). Yani Adams'ın
- *      girdisi de büyük olasılıkla takaslı. Bu iki sayı burada durur ki
+ *      modal RMS 0,539 Hz (takaslı) < 1,010 Hz (katalog). TR de aynı yönde:
+ *      %12,42 (takaslı) ve %7,98 (katalog), Adams %11,00. Yani Adams'ın
+ *      girdisi de büyük olasılıkla takaslı. Bu sayılar burada durur ki
  *      MLMT-0216-33-TK040 raporu ya da Adams girdi dosyası geldiğinde
  *      hangi tarafın oynayacağı belli olsun. Gerekçe fikstürün başlığında.
  *
@@ -34,6 +37,7 @@ const stubs = stubGlobals({ saveState: jest.fn(), showToast: jest.fn(), showNode
 eval(fs.readFileSync(path.join(__dirname, '../../js/components.js'), 'utf8'));
 global.componentDefs = componentDefs;
 const cp = require('../../js/cp-mount.js');
+const rep = require('../../js/cp-mount-report.js');
 const REF = require('../fixtures/adams-tulga.js');
 
 const TOPO = JSON.parse(fs.readFileSync(
@@ -41,9 +45,15 @@ const TOPO = JSON.parse(fs.readFileSync(
 
 beforeEach(() => { resetStubs(stubs); });
 
-// ── Modeli koş: 'katalog' = sevk edilen örnek, 'adams' = fikstürdeki girdi ──
+// ── Modeli koş: 'katalog' = sevk edilen örnek, 'adams' = fikstürdeki girdi,
+// 'katalog-tork' = örnek, tork ters yönde (vites oranlarının işareti çevrilir;
+// programın işaret düzeni değişmez) ──
 function solve(variant) {
   const t = JSON.parse(JSON.stringify(TOPO));
+  if (variant === 'katalog-tork') {
+    const g = t.nodes.find((n) => n.type === 'mnt-gearbox').data;
+    g.g1 = String(-(+g.g1)); g.gR = String(-(+g.gR));
+  }
   if (variant === 'adams') {
     const D = REF.INPUT_DELTA;
     t.nodes.forEach((n) => {
@@ -64,7 +74,11 @@ function solve(variant) {
     expect(i).toBeGreaterThanOrEqual(0);       // sütun eşlemesi çürüdüyse burada patlar
     return i;
   });
+  // TR: tek serbestlik iletilebilirlik, ateşleme frekansında (rölanti örnekte
+  // 800 d/dk; silindir sayısı örnekte yok — ISB4.5: 4), ζ çözücünün
+  const iso = rep._mntRepIsolation(R, { cylinders: 4 });
   return {
+    tr: iso.T * 100,
     modes: R.modes.map((m) => m.f_Hz),
     d: REF.ROWS.map((r) => {
       const c = R.allCases.find((x) => x.name === r.lc);
@@ -76,6 +90,7 @@ function solve(variant) {
 
 const KAT = solve('katalog');
 const ADA = solve('adams');
+const KAT_TORK = solve('katalog-tork');
 
 // Bir satır kümesinin Tablo 1'e göre hata istatistiği
 function stats(sol, rowFilter) {
@@ -179,6 +194,18 @@ describe('2) açık model farkı — Adams\'ta var, MFSim\'de yok', () => {
       expect(xok).toBeGreaterThanOrEqual(3);
     });
   });
+
+  test('tork farkı YALNIZ yön: tork ters çevrilince iki satır tablo mertebesine iniyor', () => {
+    // Kalan fark düşey durdurucuda (Adams ±15,0'de kesiyor, MFSim 15,2–15,9'a
+    // çıkıyor) ve ön takozun yanal sehiminde.
+    const tork = (r) => r.gap === 'tork-isareti';
+    const once = stats(KAT, tork), sonra = stats(KAT_TORK, tork);
+    expect(once.rms).toBeGreaterThan(15);        // ölçülen 17,28 mm
+    expect(sonra.rms).toBeLessThan(0.6);         // ölçülen 0,489 mm
+    expect(sonra.max).toBeLessThan(1.3);         // ölçülen 1,17 mm
+    // Tork yalnız tork durumlarına girer: temiz satırlar birebir aynı
+    expect(stats(KAT_TORK, CLEAN).rms).toBeCloseTo(stats(KAT, CLEAN).rms, 9);
+  });
 });
 
 describe('3) kapanmamış soru — modal', () => {
@@ -197,6 +224,14 @@ describe('3) kapanmamış soru — modal', () => {
     expect(dev.filter((d) => d < 0.025)).toHaveLength(4);
     expect(dev[1]).toBeGreaterThan(0.10);   // mod 2 (yanal) ~%12 düşük
     expect(dev[4]).toBeGreaterThan(0.05);   // mod 5 ~%7,5 düşük
+  });
+
+  test('TR de takaslı girdiye daha yakın (Adams %11,00)', () => {
+    // Adams'ın TR'yi hangi bağıntıyla hesapladığı belli değil; yön modal
+    // kanıtla aynı. Statik taraf TR'ye girmez, k_dyn girer.
+    expect(Math.abs(ADA.tr - REF.TABLE1_TR_PCT)).toBeLessThan(Math.abs(KAT.tr - REF.TABLE1_TR_PCT));
+    expect(KAT.tr).toBeCloseTo(7.98, 1);         // katalog  (sevk edilen örnek)
+    expect(ADA.tr).toBeCloseTo(12.42, 1);        // takaslı  (Adams'ın muhtemel girdisi)
   });
 
   test('reddedilen Tablo 2 hâlâ daha uzak — seçim gerekçesi kayıtlı', () => {
