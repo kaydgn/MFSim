@@ -1005,20 +1005,51 @@ function _gmSec16(){
     ['Malzeme', 'Çelik · Dökme demir · Sfero döküm · Alüminyum · Magnezyum: kütle = yoğunluk × hacim',
       'Tek malzemeli parça (braket) için'],
     ['<em>Dosyadan</em>', 'Parçaların dosyadaki yoğunlukları; ağırlık merkezi kütleyle ağırlıklı',
-      'Gövdenin bütün parçalarında yoğunluk varsa seçilir']
+      'Gövdenin bütün parçalarında yoğunluk varsa seçilir'],
+    ['Veri sayfası', 'Modelin ıslak kütlesi; yazılan kütle onun yerine geçer',
+      'Ağırlık merkezi ve atalet veri sayfasından (16.5)']
   ], ['Kaynak', 'Kütle', 'Not']);
   h += _gmNot('CATIA’da doğrulama özellikleri',
       'STEP ayarlarında <em>Validation Properties</em> açılıp <em>Geometric Validation Properties</em> '
     + 'işaretlenince dosya her katının hacmini, alanını ve ağırlık merkezini taşır; program parçanın hacmini '
     + 've ağırlık merkezini bu sayılardan alır. Parçalara malzeme atanmışsa ve dışa aktarım yoğunluğu da '
     + 'yazıyorsa <em>Dosyadan</em> kaynağı açılır.');
-  h += '<h3>16.5 Model ile karşılaştırmak</h3>';
+  h += '<h3>16.5 Veri sayfası: motor ve şanzıman</h3>';
+  h += '<p>Motorun ve şanzımanın veri sayfası ağırlık merkezini bir <strong>referanstan</strong> verir: motorda '
+    + 'bloğun ön yüzünden krank ekseni boyunca geriye ve krank ekseninin üstüne. Referansın yeri STEP '
+    + 'dosyasından alınır: referans noktası krank ekseninin ön yüzün düzlemini kestiği noktadır, ağırlık '
+    + 'merkezi bu noktaya veri sayfasındaki iki uzaklık eklenerek bulunur. Uzaklıklar ve atalet (roll, pitch, '
+    + 'yaw) motorun kendi eksenlerindedir; motor eğik takılıysa ağırlık merkezi ve atalet tensörü o açıyla '
+    + 'döner.</p>';
+  h += _gmAdimlar([
+    '3B’de motor birimini seçin; alttaki dizide <strong>Veri sayfası</strong> listesinden modeli seçin. Aynı '
+      + 'liste <strong>Kütle</strong> bölümünün <strong>Kaynak</strong> sütunundadır.',
+    '<em>Bloğun ön yüzü</em>’ne basın ve düzlem yüzü tıklayın: fare düzlem bir yüze gelince halka ve yüzün '
+      + 'konumu belirir. Seçim yalnız birimin parçalarındadır; kamera birime sığar.',
+    '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli dairesel bir kenarı (krank kasnağı, volan '
+      + 'muhafazası) tıklayın. Bu seçim bütün parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
+    '<strong>Konumları hesapla</strong>: ağırlık merkezi ve atalet veri sayfasından, kütle ıslak kütleden. '
+      + 'Aksesuarlar dâhil kütle gibi başka bir değer <strong>Kütle</strong> sütununa yazılır.'
+  ]);
+  h += '<p>İki referanstan biri eksikse ağırlık merkezi hacimden bulunur ve uyarı satırı eksik referansın adını '
+    + 'yazar. Hesaptan sonra 3B’de eksenin dairesi halka, referans noktası işaret olarak çizilir. Ağırlık '
+    + 'merkezi veri sayfasından gelen gövde <strong>Model</strong> bölümünde işaretli gelir.</p>';
+  var kat = typeof VE_MNT_VERI_SAYFASI !== 'undefined' ? VE_MNT_VERI_SAYFASI : [];
+  if(kat.length) h += _gmAlanTablo('Veri sayfaları', kat.map(function(v){
+    return [v.uretici + ' ' + v.ad + ' <em>' + _gmE(v.konfig) + '</em>',
+      _gmF(v.kutle.kuru, 0) + ' / ' + _gmF(v.kutle.islak, 0) + ' kg (kuru / ıslak) · ' + _gmE(v.ref.yuz) + ': '
+        + _gmF(v.cg.boy, 0) + ' mm · ' + _gmE(v.ref.eksen) + ': ' + _gmF(v.cg.yukari, 0) + ' mm üstü · atalet '
+        + _gmF(v.atalet.x, 1) + ' / ' + _gmF(v.atalet.y, 1) + ' / ' + _gmF(v.atalet.z, 1) + ' kg·m²',
+      _gmE(v.kaynak)];
+  }), ['Model', 'Değerler', 'Kaynak']);
+  h += '<h3>16.6 Model ile karşılaştırmak</h3>';
   h += '<p><strong>Model</strong> bölümü her birimi modeldeki karşılığıyla aynı satıra koyar: bileşenin adı, '
     + 'konum farkı (takozda nokta, gövdede ağırlık merkezi) ve kütle. Eşleme tip içinde, en yakın bileşenle '
     + 'yapılır. Dosyanın ve modelin referansı farklıysa aradaki <strong>öteleme</strong> takozlardan '
     + 'bulunur ve bölümün başında yazar; fark modelin sisteminde ölçülür.</p>';
   h += _gmAdimlar([
-    'Uygulanacak satırları işaretleyin: takozlar işaretli gelir, eşi olan gövdeler gelmez.',
+    'Uygulanacak satırları işaretleyin: takozlar ve ağırlık merkezi veri sayfasından gelen gövdeler işaretli '
+      + 'gelir, öteki gövdeler gelmez.',
     '<strong>Modele uygula</strong>’ya basın: seçili satırların değerleri modelin sisteminde bileşenlere '
       + 'yazılır, değeri aynı olan alan değişmez. Ctrl+Z bütün uygulamayı tek adımda geri alır.',
     'Model dosyanın sistemine geçirilecekse <strong>Dosyanın sistemine taşı</strong>’ya basın: modelin bütün '
@@ -1029,8 +1060,9 @@ function _gmSec16(){
     + 'onun çevresinde. Sihirbazın kartında aynı tablo durur; tuvaldeki modelden açılan sihirbazda '
     + '<strong>Sihirbaza aktar</strong> mevcut bileşenlere yazar (rijitlik, braketler ve adlar yerinde), '
     + 'modelde olmayan birimi ekler. Sihirbaz STEP’ten kurulmuşsa aktarım durumu baştan kurar.</p>';
-  h += '<h3>16.6 Kayıt</h3>';
-  h += '<p>Roller, kütle kaynakları ve seçilen daireler projeyle kaydedilir; STEP dosyası kaydedilmez. Proje '
+  h += '<h3>16.7 Kayıt</h3>';
+  h += '<p>Roller, kütle kaynakları, seçilen daireler ve veri sayfasının referansları projeyle kaydedilir; STEP '
+    + 'dosyası kaydedilmez. Proje '
     + 'yeniden açılınca pencere kayıtlı rolleri <strong>Kayıtlı roller</strong> föyünde gösterir; aynı dosya '
     + 'seçilince roller parça yolundan geri gelir. Başka bir dosyanın kaydı, o dosyada rol verilene dek '
     + 'korunur.</p>';
@@ -1063,6 +1095,7 @@ function _gmEkA(){
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
       ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],
+      ['Motor modeli, veri sayfasının referansı', '3D Görüntüleyici (3B)', '<em>Bloğun ön yüzü</em> · <em>Krank ekseni</em>'],
       ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],
       ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü',
         'Rapor penceresinin <strong>Frekans yerleşimi ve izolasyon</strong> bölümü kaynağını gösterir'],

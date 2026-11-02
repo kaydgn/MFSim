@@ -48,6 +48,14 @@
 // ekranda farenin VE_MW_3B_DAIRE.px yakınında ve tıklanan yüzün arkasında
 // değil. Hesaptan sonra her takozun dairesi halka olarak çizilir (öneri de
 // seçilen de).
+//
+// VERİ SAYFASI (2026-11-02): motor ya da şanzıman biriminin dizisinde modeli
+// (js/mount-veri-sayfasi.js) ve referansının iki seçim kipi — veri sayfasının
+// adıyla ("Bloğun ön yüzü" · "Krank ekseni"). Yüz kipinde tıklanan üçgenin
+// düzlemi DOSYADAKİ düzlem yüze oturur (js/mount-step.js → veMntStpDuzlemSec),
+// eksen kipinde dairesel kenar (takozun kipiyle aynı arama, bütün parçalarda:
+// krank kasnağı motor biriminin dışında olabilir). Hesaptan sonra eksenin
+// dairesi halka, referans noktası işaret.
 // ============================================================================
 
 var _mw3b = null;
@@ -144,7 +152,7 @@ function veMntWiz3bAc(yer){
     + '<div class="ve-fw-3b-alt" id="ve-mw-3b-alt"></div></div>';
   var kap = document.getElementById('ve-mw-3b-tuval');
   var V = { kap: kap, s: s, yer: yer, ov: ov, perde: perde, kume: [], ckume: [], parca: [], ekli: [], kutular: [], islenen: 0, yuz: 0, toplam: 0, yuzToplam: 0,
-            sokucu: [], secili: -1, fare: -1, nokta: -1, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
+            sokucu: [], secili: -1, fare: -1, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
             kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0 };
   var w = Math.max(1, kap.clientWidth), h = Math.max(1, kap.clientHeight);
   try {
@@ -253,6 +261,7 @@ function veMntWiz3bTazele(){
   if(!s || s !== V.s || s.durum !== 'hazir'){ veMntWiz3bKapat(); return; }
   if(V.secili >= s.sonuc.agac.length) V.secili = -1;
   if(V.nokta >= 0 && s.roller[V.nokta] !== 'mnt-mount') _mw3bNoktaKip(-1);
+  if(V.ref && !veMntStpVs((s.yogunluk || {})[V.ref.birim], s.roller[V.ref.birim])) _mw3bRefKip(null);
   _mw3bPanel();
   if(!V.scene) return;
   _mw3bBoya();
@@ -547,6 +556,7 @@ function veMntWiz3bSec(dugum){
   if(!V) return false;
   V.secili = (dugum >= 0 && dugum < V.s.sonuc.agac.length) ? dugum : -1;
   if(V.nokta >= 0 && _mw3bSeciliBirim(V.s, V.secili) !== V.nokta) _mw3bNoktaKip(-1);
+  if(V.ref && _mw3bSeciliBirim(V.s, V.secili) !== V.ref.birim) _mw3bRefKip(null);
   _mw3bPanel(); _mw3bBoya(); _mw3bCiz(true);
   return true;
 }
@@ -572,7 +582,7 @@ function _mw3bPanel(){
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
   }
   var alt = document.getElementById('ve-mw-3b-alt');
-  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { aktar: V.yer === 'sihirbaz', nokta: V.nokta >= 0 });
+  if(alt) alt.innerHTML = veMntWiz3bAltHTML(V.s, V.secili, { aktar: V.yer === 'sihirbaz', nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '' });
 }
 // Saf: durum + seçili düğüm → sağdaki yüzen KART (testli). Sıra: ölçülen
 // birimler (gövdeler kütle alanıyla · takozlar) · seçili yol · rol verilenler.
@@ -699,6 +709,24 @@ function veMntWiz3bAltHTML(s, secili, opt){
       if(kip) h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">' + veYon('Takozun dairesel kenarını seçin.') + '</span>';
       h += '</div>';
     }
+    // Gövdenin veri sayfası: model ve referansın iki seçim kipi (rolün modeli varsa)
+    var vsl = (birim >= 0 && s.roller[birim] !== 'mnt-mount' && typeof _mwStpVeriSayfalari === 'function')
+      ? _mwStpVeriSayfalari(s.roller[birim]) : [];
+    if(vsl.length){
+      var vs = veMntStpVs((s.yogunluk || {})[birim], s.roller[birim]), rf = (s.referans || {})[birim] || {}, rk = (opt && opt.ref) || '';
+      h += '<div class="ve-fw-3b-roller ve-mw-3b-veri" role="group" aria-label="Veri sayfası — ' + _mwEsc(so.agac[birim].ad) + '">'
+        + '<select class="ve-fw-3b-rol" id="ve-mw-3b-veri" aria-label="Veri sayfası" onchange="veMntWizStpYogunluk(' + birim + ', this.value)">'
+        + '<option value=""' + (vs ? '' : ' selected') + '>—</option>'
+        + vsl.map(function(v){ return '<option value="' + _mwEsc(v.k) + '"' + (vs && vs.k === v.k ? ' selected' : '') + '>' + _mwEsc(v.ad) + '</option>'; }).join('')
+        + '</select>';
+      if(vs) ['yuz', 'eksen'].forEach(function(t){
+        h += '<button type="button" class="ve-fw-3b-rol" data-ve-3b-ref="' + t + '" aria-pressed="' + (rk === t ? 'true' : 'false') + '"'
+          + (rf[t] ? ' data-secildi="1"' : '') + ' onclick="veMntWiz3bRefSec(\'' + t + '\')">'
+          + _mwIkon(rf[t] ? 'check' : (t === 'yuz' ? 'square' : 'disc')) + ' ' + _mwEsc(vs.ref[t]) + '</button>';
+      });
+      if(vs && rk) h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">' + (rk === 'yuz' ? veYon('Düzlem yüzü seçin.') : veYon('Eksenin dairesel kenarını seçin.')) + '</span>';
+      h += '</div>';
+    }
   } else h += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">Seçili parça yok. ' + veYon('Modelde bir parça seçin.') + '</span>';
   h += '</div>';
   var coz = s.coz, rolEngel = typeof _mwStpRolDenetim === 'function' ? _mwStpRolDenetim(s) : [];
@@ -746,6 +774,7 @@ function _mw3bSonucKur(){
   var coz = V.s.coz, G = new THREE.Group();
   G.userData.nokta = 0; G.userData.halka = 0;
   var takozRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-mount'), '#2f7d4f');
+  var veriRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-motor'), '#a8502b');
   if(coz && coz.ok){
     var renk = _mw3bRenk('--text-heading', '#1b1a17');
     coz.birimler.forEach(function(b){
@@ -759,6 +788,16 @@ function _mw3bSonucKur(){
       G.add(m);
       G.userData.nokta++;
       if(takoz && b.nokta){ G.add(_mw3bHalka(b.nokta, takozRenk)); G.userData.halka++; }
+      // Veri sayfası: eksenin dairesi ve referans noktası (eksen ∩ yüz)
+      if(!takoz && b.veri){
+        if(b.veri.eksen){ G.add(_mw3bHalka(b.veri.eksen, veriRenk)); G.userData.halka++; }
+        var rn = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshBasicMaterial({ color: veriRenk, depthTest: false, transparent: true, opacity: 0.95 }));
+        rn.position.set(b.veri.R[0], b.veri.R[1], b.veri.R[2]);
+        rn.userData.px = VE_MW_3B_ISARET.takoz;
+        rn.renderOrder = 11;
+        G.add(rn);
+        G.userData.referans = (G.userData.referans || 0) + 1;
+      }
     });
     // MODELİN NOKTALARI (Takoz adım 7): yüzeyin modeli — pencerede tuval,
     // sihirbazda sihirbazın durumu — dosyanın sisteminde (T ile), TEL kafes:
@@ -775,11 +814,17 @@ function _mw3bSonucKur(){
       G.add(m);
       G.userData.model++;
     });
-  } else Object.keys(V.s.nokta || {}).forEach(function(d){
-    // Hesaptan önce seçilen daireler (yönü bilinenler)
-    var n = V.s.nokta[d];
-    if(n && n.n){ G.add(_mw3bHalka(n, takozRenk)); G.userData.halka++; }
-  });
+  } else {
+    Object.keys(V.s.nokta || {}).forEach(function(d){
+      // Hesaptan önce seçilen daireler (yönü bilinenler)
+      var n = V.s.nokta[d];
+      if(n && n.n){ G.add(_mw3bHalka(n, takozRenk)); G.userData.halka++; }
+    });
+    Object.keys(V.s.referans || {}).forEach(function(d){
+      var e = V.s.referans[d].eksen;
+      if(e && e.n){ G.add(_mw3bHalka(e, _mw3bRenk(veMntWiz3bRolJeton('mnt-motor'), '#a8502b'))); G.userData.halka++; }
+    });
+  }
   if(!G.children.length) return;
   V.sonucGrubu = G;
   V.scene.add(G);
@@ -820,6 +865,7 @@ function veMntWiz3bNoktaSec(){
   var b = _mw3bSeciliBirim(V.s, V.secili);
   if(b < 0 || V.s.roller[b] !== 'mnt-mount') return false;
   var ac = V.nokta !== b;
+  if(V.ref) _mw3bRefKip(null);
   _mw3bNoktaKip(ac ? b : -1);
   if(ac){ V.secili = b; _mw3bBoya(); _mw3bOdakla(b); }
   _mw3bPanel();
@@ -842,11 +888,12 @@ function _mw3bOdakla(dugum){
   _mw3bSigdir(kutu, pts);
   return true;
 }
-// Kip açıksa kapatır (Esc) — döner: kapattı mı
+// Kip açıksa kapatır (Esc; takozun noktası ya da gövdenin referansı) — döner: kapattı mı
 function veMntWiz3bNoktaBitir(){
   var V = _mw3b;
-  if(!V || V.nokta < 0) return false;
+  if(!V || (V.nokta < 0 && !V.ref)) return false;
   _mw3bNoktaKip(-1);
+  _mw3bRefKip(null);
   _mw3bPanel();
   _mw3bCiz(true);
   return true;
@@ -951,6 +998,149 @@ function _mw3bDaireIpucu(e, a, yok){
   if(!el) return;
   if(!a && !yok){ el.hidden = true; return; }
   el.textContent = a ? 'Ø ' + _mwSayi(2 * a.daire.r, 1) + ' mm · ' + _mwStpKonum(a.daire.c, 3) : 'Dairesel kenar yok.';
+  var r = V.kap.getBoundingClientRect();
+  el.style.left = Math.min(r.width - 12, e.clientX - r.left + 14) + 'px';
+  el.style.top = Math.max(4, e.clientY - r.top - 28) + 'px';
+  el.hidden = false;
+}
+
+// ── 6c · VERİ SAYFASININ REFERANSI: YÜZ VE EKSEN ─────────────────────────
+// Kip seçili GÖVDE birimine açılır (veri sayfası seçiliyse); kapanır: seçim
+// yapılınca, Esc, seçim başka birime geçince, veri sayfası kalkınca. Yüz kipinde
+// kamera birime sığar ve aday yalnız birimin parçalarında; eksen kipinde bütün
+// parçalarda (krank kasnağı birimin dışında olabilir).
+function veMntWiz3bRefSec(tur){
+  var V = _mw3b;
+  if(!V || !V.scene || (tur !== 'yuz' && tur !== 'eksen')) return false;
+  var b = _mw3bSeciliBirim(V.s, V.secili);
+  if(b < 0 || !veMntStpVs((V.s.yogunluk || {})[b], V.s.roller[b])) return false;
+  var ac = !(V.ref && V.ref.birim === b && V.ref.tur === tur);
+  if(V.nokta >= 0) _mw3bNoktaKip(-1);
+  _mw3bRefKip(ac ? { birim: b, tur: tur } : null);
+  if(ac && tur === 'yuz'){ V.secili = b; _mw3bBoya(); _mw3bOdakla(b); }
+  _mw3bPanel();
+  _mw3bCiz(true);
+  return true;
+}
+function _mw3bRefKip(ref){
+  var V = _mw3b;
+  V.ref = ref;
+  V.aday = null;
+  _mw3bAdayHalka(null);
+  if(V.kap && V.kap.classList) V.kap.classList.toggle('ve-mw-3b-nokta-kip', !!ref || V.nokta >= 0);
+  if(typeof document !== 'undefined') _mw3bIpucu(null);
+}
+// Farenin altındaki düzlem yüz: birimin parçalarında ışının ilk üçgeni → dosyanın
+// düzlemi (parçanın düzlemleri fare ilk geldiğinde bir kez çıkar — gerçek motor
+// biriminin hepsi kip açılırken 0,4 sn'ydi). Döner: { parca, p, duzlem: { yol, o, n, parca } } | null
+function _mw3bYuzAra(cx, cy){
+  var V = _mw3b;
+  if(!V || !V.camera || !V.ekli.length || typeof veMntStpDuzlemSec !== 'function') return null;
+  var R = V.renderer.domElement.getBoundingClientRect(), w = R.width || 1, h = R.height || 1;
+  V.camera.updateMatrixWorld();
+  V.ray.setFromCamera(new THREE.Vector2((cx - R.left) / w * 2 - 1, -((cy - R.top) / h) * 2 + 1), V.camera);
+  var birim = {};
+  veMntWiz3bParcalar(V.s, V.ref.birim).forEach(function(i){ birim[i] = 1; });
+  var o = V.ray.ray.origin, d = V.ray.ray.direction, K = V.kutular, aday = [];
+  for(var e = 0; e < V.ekli.length; e++){
+    if(!birim[V.ekli[e]]) continue;
+    var t = _mw3bKutuKes(o, d, K, e * 6);
+    if(t >= 0) aday.push([t, V.ekli[e]]);
+  }
+  aday.sort(function(a, b){ return a[0] - b[0]; });
+  var en = { t: Infinity, k: -1, i: -1 };
+  for(var c = 0; c < aday.length && aday[c][0] <= en.t; c++){
+    var q = _mw3bUcgenKesK(o, d, V.s.ag[aday[c][1]], en.t);
+    if(q.t < en.t) en = { t: q.t, k: q.k, i: aday[c][1] };
+  }
+  if(en.i < 0) return null;
+  var a = V.s.ag[en.i], u = a.uc, T = a.ucgen, i0 = T[en.k] * 3, i1 = T[en.k + 1] * 3, i2 = T[en.k + 2] * 3;
+  var e1 = [u[i1] - u[i0], u[i1 + 1] - u[i0 + 1], u[i1 + 2] - u[i0 + 2]], e2 = [u[i2] - u[i0], u[i2 + 1] - u[i0 + 1], u[i2 + 2] - u[i0 + 2]];
+  var nt = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+  var p = [o.x + en.t * d.x, o.y + en.t * d.y, o.z + en.t * d.z];
+  var duz = veMntStpDuzlemSec(V.s.sonuc, en.i, p, nt);
+  return duz ? { parca: en.i, p: p, duzlem: duz } : null;
+}
+// Işın ↔ parçanın üçgenleri, üçgenin yeriyle: { t, k } (k: üçgen dizisindeki konum)
+function _mw3bUcgenKesK(o, d, a, sinir){
+  var en = { t: sinir, k: -1 };
+  if(!a || !a.ucgen) return en;
+  var u = a.uc, T = a.ucgen, ox = o.x, oy = o.y, oz = o.z, dx = d.x, dy = d.y, dz = d.z;
+  for(var k = 0; k < T.length; k += 3){
+    var i0 = T[k] * 3, i1 = T[k + 1] * 3, i2 = T[k + 2] * 3;
+    var e1x = u[i1] - u[i0], e1y = u[i1 + 1] - u[i0 + 1], e1z = u[i1 + 2] - u[i0 + 2];
+    var e2x = u[i2] - u[i0], e2y = u[i2 + 1] - u[i0 + 1], e2z = u[i2 + 2] - u[i0 + 2];
+    var px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x;
+    var det = e1x * px + e1y * py + e1z * pz;
+    if(Math.abs(det) < 1e-12) continue;
+    var inv = 1 / det, sx = ox - u[i0], sy = oy - u[i0 + 1], sz = oz - u[i0 + 2];
+    var uu = (sx * px + sy * py + sz * pz) * inv;
+    if(uu < 0 || uu > 1) continue;
+    var qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+    var vv = (dx * qx + dy * qy + dz * qz) * inv;
+    if(vv < 0 || uu + vv > 1) continue;
+    var t = (e2x * qx + e2y * qy + e2z * qz) * inv;
+    if(t > 1e-6 && t < en.t) en = { t: t, k: k };
+  }
+  return en;
+}
+// Aynı düzlem mi (aday değişmedi: çizim yenilenmez — ekran kartı olmayan
+// makinede montajın bir karesi saniyeler sürüyor)
+function _mw3bAyniDuzlem(a, b){
+  if(!a || !b || a.tur !== 'yuz' || b.tur !== 'yuz' || a.parca !== b.parca) return false;
+  var n = a.secim.n, m = b.secim.n, o = a.secim.o, q = b.secim.o;
+  return n[0] * m[0] + n[1] * m[1] + n[2] * m[2] > 1 - 1e-9
+    && Math.abs(n[0] * (q[0] - o[0]) + n[1] * (q[1] - o[1]) + n[2] * (q[2] - o[2])) < 1e-3;
+}
+// Aday: { tur, secim, halka: { c, n, r }, metin }
+function _mw3bRefAday(cx, cy){
+  var V = _mw3b;
+  if(!V || !V.ref) return null;
+  if(V.ref.tur === 'eksen'){
+    var a = _mw3bDaireAra(cx, cy);
+    return a ? { tur: 'eksen', parca: a.parca, kenar: a.kenar, secim: a.daire, halka: a.daire,
+                 metin: 'Ø ' + _mwSayi(2 * a.daire.r, 1) + ' mm · ' + _mwStpKonum(a.daire.c, 3) } : null;
+  }
+  var y = _mw3bYuzAra(cx, cy);
+  if(!y) return null;
+  // Halka ekranda ~24 px: tıklanan noktada, düzlemin normaliyle
+  var h = V.kap.clientHeight || 1, uz = V.camera.position.distanceTo(new THREE.Vector3(y.p[0], y.p[1], y.p[2]));
+  var r = 24 * 2 * uz * Math.tan(V.camera.fov * Math.PI / 360) / h, n = y.duzlem.n, x = -1;
+  for(var j = 0; j < 3; j++) if(Math.abs(n[j]) > 0.9999) x = j;
+  return { tur: 'yuz', parca: y.parca, kenar: -1, secim: y.duzlem, halka: { c: y.duzlem.o, n: n, r: r },
+           metin: 'Düzlem · ' + (x >= 0 ? 'xyz'.charAt(x) + ' = ' + _mwSayi(y.duzlem.o[x], 3) + ' mm' : _mwStpKonum(y.duzlem.o, 3)) };
+}
+function _mw3bRefFare(e){
+  var V = _mw3b;
+  V.fareSon = e;
+  if(V.fareIstek) return;
+  V.fareIstek = requestAnimationFrame(function(){
+    V.fareIstek = 0;
+    if(_mw3b !== V || !V.ref) return;
+    var ev = V.fareSon, a = _mw3bRefAday(ev.clientX, ev.clientY);
+    var ayni = a && V.aday && (a.tur === 'eksen' ? a.parca === V.aday.parca && a.kenar === V.aday.kenar : _mw3bAyniDuzlem(a, V.aday));
+    if(!ayni){
+      V.aday = a;
+      _mw3bAdayHalka(a ? a.halka : null);
+      _mw3bCiz(true);
+    }
+    _mw3bIpucuYaz(ev, a ? a.metin : '');
+  });
+}
+// Tık: aday varsa birimin referansı olur ve kip kapanır; yoksa sebep
+function _mw3bRefTik(e){
+  var V = _mw3b, a = _mw3bRefAday(e.clientX, e.clientY);
+  if(!a){ _mw3bIpucuYaz(e, V.ref.tur === 'yuz' ? 'Düzlem yüz yok.' : 'Dairesel kenar yok.'); return false; }
+  var r = V.ref;
+  _mw3bRefKip(null);
+  veMntWizStpReferans(r.birim, r.tur, a.secim);
+  return true;
+}
+function _mw3bIpucuYaz(e, metin){
+  var V = _mw3b, el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-ipucu');
+  if(!el) return;
+  if(!metin){ el.hidden = true; return; }
+  el.textContent = metin;
   var r = V.kap.getBoundingClientRect();
   el.style.left = Math.min(r.width - 12, e.clientX - r.left + 14) + 'px';
   el.style.top = Math.max(4, e.clientY - r.top - 28) + 'px';
@@ -1074,7 +1264,7 @@ function _mw3bDinle(V){
       _mw3bKamera(); _mw3bCiz(true);
       return;
     }
-    if(V.nokta >= 0) _mw3bDaireFare(e); else _mw3bFare(e);
+    if(V.nokta >= 0) _mw3bDaireFare(e); else if(V.ref) _mw3bRefFare(e); else _mw3bFare(e);
   });
   dinle(cv, 'pointerup', function(e){
     var b = bas;
@@ -1082,6 +1272,7 @@ function _mw3bDinle(V){
     V.kap.classList.remove('surukle');
     if(b && !b.oynadi && b.tus === 0){
       if(V.nokta >= 0){ _mw3bDaireTik(e); return; }
+      if(V.ref){ _mw3bRefTik(e); return; }
       var i = _mw3bIsabet(e.clientX, e.clientY);
       veMntWiz3bSec(i >= 0 ? V.s.sonuc.parcalar[i].dugum : -1);
     }
@@ -1290,6 +1481,30 @@ function veMntWiz3bDaireNoktasi(i, r){
   }
   return null;
 }
+// Düzlem yüze TIKLAMAK için (yüz kipi açıkken): parçanın normali TAM `n` olan
+// (ve `o` verilirse o noktadan geçen) bir üçgeninin ağırlık merkezi — tuval orada
+// görünür ve kip orada o düzlemi buluyorsa.
+function veMntWiz3bYuzNoktasi(i, n, o){
+  var V = _mw3b, a = V && V.s.ag && V.s.ag[i];
+  if(!a || !V.camera || !V.ref) return null;
+  V.camera.updateMatrixWorld();
+  var R = V.renderer.domElement.getBoundingClientRect(), u = a.uc, T = a.ucgen;
+  for(var k = 0; k < T.length; k += 3){
+    var i0 = T[k] * 3, i1 = T[k + 1] * 3, i2 = T[k + 2] * 3;
+    var e1 = [u[i1] - u[i0], u[i1 + 1] - u[i0 + 1], u[i1 + 2] - u[i0 + 2]], e2 = [u[i2] - u[i0], u[i2 + 1] - u[i0 + 1], u[i2 + 2] - u[i0 + 2]];
+    var c = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]], L = Math.hypot(c[0], c[1], c[2]);
+    if(!(L > 0) || (c[0] * n[0] + c[1] * n[1] + c[2] * n[2]) / L < 1 - 1e-9) continue;
+    if(o && Math.abs((u[i0] - o[0]) * n[0] + (u[i0 + 1] - o[1]) * n[1] + (u[i0 + 2] - o[2]) * n[2]) > 0.05) continue;
+    var p = new THREE.Vector3((u[i0] + u[i1] + u[i2]) / 3, (u[i0 + 1] + u[i1 + 1] + u[i2 + 1]) / 3, (u[i0 + 2] + u[i1 + 2] + u[i2 + 2]) / 3).project(V.camera);
+    if(Math.abs(p.x) > 0.95 || Math.abs(p.y) > 0.95 || p.z > 1) continue;
+    var x = R.left + (p.x + 1) / 2 * R.width, y = R.top + (1 - p.y) / 2 * R.height;
+    if(document.elementFromPoint(x, y) !== V.renderer.domElement) continue;
+    var b = _mw3bYuzAra(x, y);
+    if(b && b.parca === i && b.duzlem.n[0] * n[0] + b.duzlem.n[1] * n[1] + b.duzlem.n[2] * n[2] > 1 - 1e-9
+       && !(o && Math.abs((b.duzlem.o[0] - o[0]) * n[0] + (b.duzlem.o[1] - o[1]) * n[1] + (b.duzlem.o[2] - o[2]) * n[2]) > 0.05)) return { x: x, y: y };
+  }
+  return null;
+}
 function veMntWiz3bDurum(){
   var V = _mw3b;
   if(!V) return null;
@@ -1298,7 +1513,10 @@ function veMntWiz3bDurum(){
     etiket: document.querySelectorAll('#ve-mw-3b-etiket [data-ve-3b-etiket]').length,
     nokta: V.sonucGrubu ? V.sonucGrubu.userData.nokta : 0, halka: V.sonucGrubu ? V.sonucGrubu.userData.halka : 0,
     model: V.sonucGrubu ? V.sonucGrubu.userData.model || 0 : 0,
-    secili: V.secili, fare: V.fare, kip: V.nokta, aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire.r } : null, adayHalka: !!V.halka };
+    referans: V.sonucGrubu ? V.sonucGrubu.userData.referans || 0 : 0,
+    secili: V.secili, fare: V.fare, kip: V.nokta, ref: V.ref ? V.ref.tur : '',
+    aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire ? V.aday.daire.r : (V.aday.halka ? V.aday.halka.r : 0), tur: V.aday.tur || 'nokta' } : null,
+    adayHalka: !!V.halka };
 }
 
 if (typeof module !== 'undefined' && module.exports) {

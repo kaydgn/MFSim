@@ -149,13 +149,28 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   ÖTELEME (dosya − model) takozlardan bulunur (gerçek Tulga: sunu başka
   referansla ölçülmüş). Föy pencere ve sihirbazda tek üreticiden
   (`_mwStpModelHTML`); takoz varsayılan seçili, gövde DEĞİL (motor, şanzıman,
-  transferin ağırlık merkezi başka yoldan gelir — kullanıcı). "Modele uygula"
+  transferin ağırlık merkezi başka yoldan gelir — kullanıcı) — ağırlık merkezi
+  veri sayfasından gelen gövde seçili. "Modele uygula"
   ve "Dosyanın sistemine taşı" TEK geri-al adımı; değeri aynı alan yazılmaz.
   Sihirbazın aktarımı tuvalden kurulan durumu BİRLEŞTİRİR (rijitlik, braket,
   düğüm bağı yerinde), STEP'ten kurulanı baştan kurar. Kapı:
   `mount-cad.test.js` (→ *KAYIT* · *OTURUM ↔ KAYIT* · *PENCERE* · *GERİ-AL*) +
   `mount-karsilastir.test.js` (→ *ÖTELEME* · *PENCERE* · *SİHİRBAZ* · *ADAMS
   ÖLÇÜTÜ*) + `mount-3b.test.js` → *ALT DİZİ* + `mount-cad.spec.js` (→ *MODEL*).
+- `js/mount-veri-sayfasi.js` — Takoz **veri sayfası kataloğu** (motor · şanzıman; ilk
+  kayıt Cummins ISB6.7 360). DOM'suz saf veri: kütle (kuru · ıslak), ağırlık
+  merkezinin REFERANSTAN uzaklığı (motor: bloğun ön yüzünden geriye, krank
+  ekseninin üstüne), atalet (roll · pitch · yaw). Değerler programın içinde
+  (kullanıcı kararı 2026-11-02; belgelerin gizlilik damgası soruldu); anahtar (`k`)
+  projeye yazılır, değişmez. **Motor ve şanzımanın ağırlık merkezi veri
+  sayfasından** (kullanıcının yöntemi, `veMntStpVeriKonum`): kaynak listesinde model,
+  referans 3B'de seçilen düzlem yüz (dosyanın düzlemi — `veMntStpDuzlemSec`; parçanın
+  düzlemleri bir kez, `veMntStpDuzlemler`: yüzleri her fare hareketinde çıkarmak
+  gerçek motor parçasında 0,65 sn'ydi) ve eksenin dairesi (bütün parçalarda: kasnak
+  birimin dışında olabilir). R = eksen ∩ yüz; uzaklık ve atalet birimin
+  eksenlerinde; kütle ıslak ya da yazılan; referans eksikse hacimden ve uyarıyla.
+  Kapı: `mount-veri-sayfasi.test.js` (→ *KATALOG* · *REFERANS* · *DÜZLEM* · *HESAP* ·
+  *KAYIT* · *OTURUM* · *3B DİZİSİ*) + `mount-veri-sayfasi.spec.js`.
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları

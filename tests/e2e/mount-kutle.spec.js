@@ -77,8 +77,10 @@ test('KART (1366×768): kaynak seçicisi sığar; dosyadan kütle merkezi, malze
   const KOK = '#ve-mw-body';
   // Gerçek seçim: şanzıman dosyadan (iki malzeme), braket çelik
   const sec = (ad) => KOK + ' select[aria-label="Kütle kaynağı — ' + ad + '"]';
+  // motorun listesinde veri sayfası grubu da var (js/mount-veri-sayfasi.js); şanzımanda yok
   expect(await page.locator(sec('Motor') + ' option').allTextContents())
-    .toEqual(['Elle', 'Çelik', 'Dökme demir', 'Sfero döküm', 'Alüminyum', 'Magnezyum']);
+    .toEqual(['Elle', 'Çelik', 'Dökme demir', 'Sfero döküm', 'Alüminyum', 'Magnezyum', 'ISB6.7 360']);
+  expect(await page.locator(sec('Şanzıman') + ' optgroup').count()).toBe(0);
   await page.selectOption(sec('Şanzıman'), 'dosya');
   await page.selectOption(sec('Arka braket'), 'celik');
   await page.fill(KOK + ' input[data-mw-stp-kutle]', '418');
