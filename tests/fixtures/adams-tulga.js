@@ -32,8 +32,9 @@
  * Adams'ın koştuğu model, ölçülen kanıta göre, X ile Z'si takas edilmiş hâli
  * taşıyor: 335 · 355 · 740.
  *
- * KANIT — takas edilmiş hâl Tablo 1'e DAHA YAKIN (modal RMS 0,539 < 1,010 Hz),
- * yani Adams'ın girdisi büyük olasılıkla takaslı. Ama takaslı hâl fiziksel
+ * KANIT — takas edilmiş hâl Tablo 1'e DAHA YAKIN (modal RMS 0,539 < 1,010 Hz;
+ * TR %12,42 ve %7,98 — Adams %11,00), yani Adams'ın girdisi büyük olasılıkla
+ * takaslı. Ama takaslı hâl fiziksel
  * olarak imkânsız (dx/sx = 0,65; dinamik rijitlik statiğin altına inmez) ve
  * kütüphanedeki 27 girdinin hiçbiri böyle değil. Bu yüzden sevk edilen örnek
  * KATALOĞA göre düzeltildi ve Adams girdisi buraya, fikstüre kondu.
@@ -52,6 +53,9 @@
  *      arka takozlara yük dağılmıyor (Adams ~9,7 mm, MFSim ~7,5 mm).
  *   2. TORK İŞARETİ — Forward/Reserve satırlarında Y ve Z sistematik ters
  *      (X tutuyor). MFSim Tx = −T_shaft uygular; Adams ters yalpa yönünde.
+ *      Fark YALNIZ yön: tork ters çevrilince iki satırın RMS'i 17,28 mm'den
+ *      0,489 mm'ye iniyor; kalanı düşey durdurucuda (Adams ±15,0'de kesiyor,
+ *      MFSim 15,2–15,9'a çıkıyor).
  *
  * SÜTUN ↔ TAKOZ eşlemesi (Adams sütun adı → örnekteki takoz adı) aşağıda.
  * Değerler mm; tablo 0,1 mm'e yuvarlı, dolayısıyla |fark| ≤ 0,05 mm "birebir".
