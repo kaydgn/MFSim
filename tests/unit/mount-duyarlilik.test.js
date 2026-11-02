@@ -291,9 +291,12 @@ describe('rapor §8.17 — kriter kaldıraçları çekirdeğin aramasıyla AYNI 
     const md = core.modesWithSpringScale(Rx.mounts, Rx.mp.cg, M6(Rx), Rx.kBasis, K[0].b.i, K[0].b.ax, 0.1);
     expect(maks(md)).toBeGreaterThan(15);
   });
-  test('SİPER: rölanti girdisi yok — Kriter 1 bekliyor, kaldıraç aranmıyor', () => {
-    const K = rp._mntRepKaldiraclar(R.siper, {});
+  test('rölanti girdisi yok — Kriter 1 bekliyor, kaldıraç aranmıyor (SİPER, rölanti silinmiş)', () => {
+    const t = H.ornek('siper');
+    t.nodes.find((n) => n.type === 'mnt-motor').data.idleRpm = '';
+    const K = rp._mntRepKaldiraclar(H.coz(t), {});
     expect(K[0]).toMatchObject({ no: '1', durum: 'wait', b: null });
+    expect(rp._mntRepKaldiraclar(R.siper, {})[0].durum).not.toBe('wait');   // örnek: 700 d/dk · 6 silindir
   });
 });
 

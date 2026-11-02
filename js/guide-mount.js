@@ -427,32 +427,75 @@ function _gmSec8(){
   h += '<p>Bir yük durumu iki şeyden oluşur: bir <strong>ivme vektörü</strong> (g cinsinden, '
     + 'x/y/z) ve bir <strong>tork</strong> (N·m, x/y/z). Program bunlardan güç grubuna etki '
     + 'eden kuvvet ve momenti kurar, sonra sehimi çözer.</p>';
-  h += _gmTablo('Standart yük durumları',
+  h += _gmTablo('Standart yük durumları (ileri yön −X)',
     ['Durum', 'İvme n = [x, y, z]', 'Ne anlatıyor'],
     [
       ['Static', '[0, 0, −1]', 'Yalnız ağırlık — sehimin temel hâli'],
-      ['Max Bump', '[0, 0, −3]', 'Düşey darbe (3 g)'],
-      ['Acceleration', '[+1, 0, −1]', 'Boyuna hızlanma'],
+      ['Max Bump', '[0, 0, −3,5]', 'Düşey darbe (3,5 g)'],
       ['Braking', '[−1, 0, −1]', 'Fren'],
+      ['Acceleration', '[+1, 0, −1]', 'Boyuna hızlanma'],
       ['Cornering L / R', '[0, ±0,6, −1]', 'Yanal viraj'],
+      ['Brake in Turn L / R', '[−0,4, ±0,4, −1]', 'Virajda fren'],
+      ['Pothole Braking', '[−3, 0, −3,5]', 'Çukurda fren'],
+      ['Kerb Strike L / R', '[0, ∓1,55, −1]', 'Yanal kaldırım darbesi (varsayılan: virajın tersi yönde)'],
+      ['Max Rebound', '[0, 0, +1]', 'Düşey geri sıçrama'],
       ['Forward / Reverse Torque', '[0, 0, −1] + T', 'Tahrik tepki torku']
     ], ['l', 'c', 'l']);
   h += '<p>Bunlara ek olarak <strong>vites tork durumları</strong> (her vites için ayrı) ve '
     + 'üç <strong>tasarım yük durumu</strong> (3,5 g düşey · 1 g yanal · 1 g boyuna fren) '
     + 'kendiliğinden kurulur.</p>';
   h += _gmNot('İvme işareti',
-      'Düşey bileşen <strong>−1</strong>’dir: yerçekimi aşağı yöndedir; “3 g düşey” '
-    + 'n<sub>z</sub> = −3 demektir. Yanal ve boyuna bileşenler ise aracın ivmesidir ve '
-    + 'gövdeye <strong>ters yönde</strong> atalet kuvveti uygular; çeviri hesapta yapılır.');
+      'n, güç grubuna etkiyen yükün yönüdür (g cinsinden). Düşey bileşen <strong>−1</strong>’dir: '
+    + 'ağırlık aşağı yöndedir; “3,5 g düşey” n<sub>z</sub> = −3,5 demektir. Fren güç grubunu '
+    + '<strong>ileri</strong> iter: ileri yön −X iken fren durumunda n<sub>x</sub> = −1; sol viraj '
+    + 'onu sağa iter: n<sub>y</sub> = +0,6.');
+  h += '<h3>8.1 Aracın ileri yönü</h3>';
+  h += '<p>Tablo, aracın ileri yönü modelin <strong>−X</strong> ekseni olan bir CAD düzenine '
+    + 'göre yazılıdır (sağ +Y). Modelin ekseninde araç <strong>+X</strong>’e gidiyorsa '
+    + 'Çözücü’de <strong>Araç ekseni → İleri yön</strong> +X seçilir: program boyuna ve yanal '
+    + 'bileşenleri çevirir (n<sub>x</sub> → −n<sub>x</sub>, n<sub>y</sub> → −n<sub>y</sub>; '
+    + 'düşey aynı). Yanlış yön fren ve viraj yükünü ters uygular — sayı makul görünür, '
+    + 'ama başka bir yük durumunun sonucudur.</p>';
+  h += _gmAlanTablo('İleri yönün etkisi', [
+    ['Fren · hızlanma · viraj · kaldırım', 'n<sub>x</sub> ve n<sub>y</sub> çevrilir',
+      'Yük kitabının sütunlarında görünür'],
+    ['Tasarım yük durumları ve ivme süpürmeleri', 'Aynı çeviri', 'Rapor ve Sonuçlar'],
+    ['Tork durumları', 'Değişmez — tork yönü ayrı ayardır', 'Bölüm 8.3']
+  ], ['Ne', 'Nasıl', 'Nerede görünür']);
+  h += '<h3>8.2 Kaldırım darbesi</h3>';
+  h += '<p>Kerb Strike L / R tekerleğin kaldırıma yandan çarpmasıdır. Büyüklüğü ve yönü '
+    + 'yük kitabına göre değişir; Çözücü’nün <strong>Kaldırım darbesi</strong> bölümü ikisini '
+    + 'ayrı tutar: <strong>İvme</strong> (varsayılan 1,55 g) ve <strong>Yön</strong> — '
+    + '<em>Virajın tersi</em> (Kerb Strike L, Cornering Left’in ters işaretinde; varsayılan) ya '
+    + 'da <em>Virajla aynı</em>.</p>';
+  h += '<h3>8.3 Tork yönü</h3>';
+  h += '<p>Tahrik torku güç grubuna X ekseni etrafında bir <strong>reaksiyon momenti</strong> '
+    + 'olarak etkir: T<sub>x</sub> = ±T<sub>mil</sub>. İşareti aracın gidiş yönünden değil, '
+    + '<strong>krankın modeldeki dönüş yönünden</strong> ve aktarmanın dönüşü çevirip '
+    + 'çevirmediğinden gelir. Çözücü’nün <strong>Tork yönü</strong> ayarı ileri vites '
+    + 'momentinin yönüdür; geri viteste moment kendiliğinden ters döner.</p>';
+  h += _gmAlanTablo('Tork yönü', [
+    ['−X (varsayılan)', 'Krank önden bakınca saat yönünde, motorun önü −X’te, çıkış krankla aynı yönde',
+      'İleri viteste +Y tarafındaki takozlar basar'],
+    ['+X', 'Motorun önü +X’te ya da güç grubundaki aktarma (iki dişlili transfer) dönüşü çeviriyor',
+      'İleri viteste −Y tarafındaki takozlar basar']
+  ], ['Seçim', 'Ne zaman', 'Etkisi']);
+  h += _gmNot('Örneklerin ayarı',
+      'Tulga örneği ileri −X, tork yönü +X ve varsayılan kaldırım darbesiyle; BMC SİPER örneği '
+    + 'ileri +X, tork yönü −X ve 3,5 g virajla aynı yönde kaldırım darbesiyle gelir: ikisi de '
+    + 'kendi Adams analizinin yük kitabıdır.');
   return h;
 }
 
 function _gmSec9(){
   var h = _gmH2(8);
-  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencere üç bölümü alt alta taşır; '
+  h += '<p><strong>Çözücü</strong> bileşenine çift tıklayın. Pencere beş bölümü alt alta taşır; '
     + 'sağ sütunda ön denetim ve <strong>Hesapla</strong> düğmesi. Pencere sonucu göstermez — '
     + 'sonuç raporda (Bölüm 12).</p>';
   h += _gmAlanTablo('Çözücü penceresi — bölümler', [
+    ['Araç ekseni', 'İleri yön ve tork yönü: −X · +X', 'Yük kitabı hemen değişir (Bölüm 8.1 · 8.3)'],
+    ['Kaldırım darbesi', 'Yanal ivme (g) ve yönü: virajın tersi · virajla aynı',
+      'Kerb Strike L / R satırları (Bölüm 8.2)'],
     ['Yük kitabı', 'Çözülecek durumlar, ivme (n) ve tork (T)',
       'Modelin girdisinden; tork durumları tork girildiyse'],
     ['Yöntem', 'Çözüm modu, sönüm oranı ζ', 'Bir sonraki Hesapla’da uygulanır'],
@@ -859,7 +902,7 @@ function _gmSec15(){
   ], ['l', 'c', 'l']);
   h += '<p><strong>İşletme yükleri</strong> 1 g düşey ile birlikte en çok 1 g yatay ivme ve tahrik torkudur: statik, '
     + 'frenleme, hızlanma, viraj, fren + viraj, ileri ve geri tork, vites başına tork, 1 g yanal ve 1 g boyuna. '
-    + '<strong>Darbe yükleri</strong> (3,5 g düşey, çukur + fren, 1,55 g bordür, geri esneme) ±15 mm metal–metal '
+    + '<strong>Darbe yükleri</strong> (3,5 g düşey, çukur + fren, bordür darbesi, geri esneme) ±15 mm metal–metal '
     + 'durdurucuyla sınırlanır; raporda yalnız en büyük sehimleri ve durdurucuya oturan takoz sayısı yazılır.</p>';
   h += '<h3>15.3 Amaç ve sıra</h3>';
   h += '<p>İki büyüklük birlikte küçültülür: rölanti iletilebilirliği <strong>T</strong> (Kriter 2’nin tanımı) ve '
@@ -1138,6 +1181,7 @@ function _gmEkA(){
       ['Takoz tipleri (künyeler)', 'Takoz Özellikleri', '<strong>Takoz tipi</strong> · <strong>Rijitlik</strong> · <strong>Yasa</strong>'],
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Şok darbesi', 'Çözücü', '<strong>Şok darbesi</strong>'],
+      ['Aracın ileri yönü, tork yönü, kaldırım darbesi', 'Çözücü', '<strong>Araç ekseni</strong> · <strong>Kaldırım darbesi</strong>'],
       ['Örnek modeller', 'Başlangıç sayfası · Başlangıç ve Örnekler', 'Karolar · <strong>Örnek model</strong> · <strong>Modeli kur</strong>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],

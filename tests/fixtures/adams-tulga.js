@@ -44,18 +44,23 @@
  * raporun ilgili sayfası ya da Adams modelinin girdi dosyasıdır. Cevap
  * geldiğinde: doğrulanırsa bu fikstür güncellenir, çürütülürse katalog.
  *
- * ── ADAMS'TA OLUP MFSim'DE OLMAYAN İKİ ŞEY ──────────────────────────────────
- * Bunlar girdi farkı değil MODEL farkı; iki Adams tablosu da hemfikir:
- *   1. YANAL DURDURUCU — Kerb Strike satırlarında ön takozların Y'si ~12 mm'de
+ * ── ADAMS'TA OLUP MFSim'DE OLMAYAN ŞEY ──────────────────────────────────────
+ * Girdi farkı değil MODEL farkı; iki Adams tablosu da hemfikir:
+ *   YANAL DURDURUCU — Kerb Strike satırlarında ön takozların Y'si ~12 mm'de
  *      duruyor: Tablo 1'de dört hücrenin üçü tam ±12,0, biri 11,9; Tablo 2'de
  *      dördü de tam ±12,0. MFSim'de yalnız düşey (±15 mm) durdurucu olduğu için
  *      o değerleri aşıyor (12,05 … 12,56) ve ön takozlar dibe oturmadığı için
  *      arka takozlara yük dağılmıyor (Adams ~9,7 mm, MFSim ~7,5 mm).
- *   2. TORK İŞARETİ — Forward/Reserve satırlarında Y ve Z sistematik ters
- *      (X tutuyor). MFSim Tx = −T_shaft uygular; Adams ters yalpa yönünde.
- *      Fark YALNIZ yön: tork ters çevrilince iki satırın RMS'i 17,28 mm'den
- *      0,489 mm'ye iniyor; kalanı düşey durdurucuda (Adams ±15,0'de kesiyor,
- *      MFSim 15,2–15,9'a çıkıyor).
+ *
+ * ── TORK YÖNÜ — Çözücü'nün ayarı, örnek +X ─────────────────────────────────
+ * Adams'ın tork momenti +X (Tx = +T_shaft); programın varsayılanı −X (T5:
+ * krank önden saat yönünde, motorun önü −X'te, çıkış krankla aynı yönde).
+ * Varsayılan yönde Forward/Reserve satırlarında Y ve Z sistematik ters, X
+ * tutuyor; fark YALNIZ yön: +X ile iki satırın RMS'i 17,28 mm'den 0,489 mm'ye
+ * iniyor; kalanı düşey durdurucuda (Adams ±15,0'de kesiyor, MFSim 15,2–15,9'a
+ * çıkıyor). Örnek +X ile gelir (assets/examples/tulga_topoloji.json → Çözücü
+ * torkYon). Fiziksel karşılığı güç grubundaki transfer kutusunun dönüşü
+ * çevirmesi olurdu — transferin iç düzeni doğrulanmadı.
  *
  * SÜTUN ↔ TAKOZ eşlemesi (Adams sütun adı → örnekteki takoz adı) aşağıda.
  * Değerler mm; tablo 0,1 mm'e yuvarlı, dolayısıyla |fark| ≤ 0,05 mm "birebir".

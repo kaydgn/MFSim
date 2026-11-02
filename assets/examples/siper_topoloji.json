@@ -29,7 +29,7 @@
       "isMasterWheel": false,
       "isMasterDiff": false,
       "data": {
-        "mass": 1386.3,
+        "mass": 1386.26,
         "cgx": -321.36,
         "cgy": 4.89,
         "cgz": 859.33,
@@ -41,6 +41,8 @@
         "Iyz": 0,
         "pointMass": false,
         "Te": 3000,
+        "idleRpm": 700,
+        "cylinders": 6,
         "portPositions": {
           "input-0": {
             "side": "bottom"
@@ -372,7 +374,10 @@
       "isMasterWheel": false,
       "isMasterDiff": false,
       "data": {
-        "matrixMode": "delta"
+        "matrixMode": "delta",
+        "ileri": "+x",
+        "kaldirimG": 3.5,
+        "kaldirimYon": "ayni"
       }
     },
     {

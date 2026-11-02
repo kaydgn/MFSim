@@ -333,7 +333,8 @@ describe('PENCERE — yalnız girdi', () => {
   test('durumlar: takoz yok · f_ateş yok · bütün gruplar sabit · kombinasyon sınırı', () => {
     global.nodes = [];
     expect(P._mntParamHazirlik(node()).eksik).toBe('Takoz yok');
-    modelKur('tulga');                                     // örnekte rölanti devri ve silindir sayısı yok
+    modelKur('tulga');
+    global.nodes.find((x) => x.type === 'mnt-motor').data.cylinders = '';   // silindir sayısı yok
     expect(P._mntParamHazirlik(node()).eksik).toBe('Rölanti devri ve silindir sayısı yok');
     modelKur('kamyon');
     const n = node();
@@ -944,5 +945,17 @@ describe('SONUÇ — öneri, kriterler, iki grafik; diyagramlar galeride (kullan
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
     cp._mntLibUygula(tk(2).data, 'amc137731');
     expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(false);
+  });
+
+  // Aracın ileri yönü yük durumlarını çevirir (Çözücü'nün ayarı, 2026-11-02):
+  // taramanın ölçüsü değişir, tarama eskir; geri alınınca yine taze.
+  test('İMZA: Çözücü\'nün ileri yönü eskitir', () => {
+    const n = kur(); taraSakla(n);
+    const cz = global.nodes.find((x) => x.type === 'mnt-solver');
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
+    cz.data.ileri = '+x';
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(false);
+    delete cz.data.ileri;
+    expect(PS._mntParamSonucDurum('pa', P._mntParamHazirlik(n)).taze).toBe(true);
   });
 });

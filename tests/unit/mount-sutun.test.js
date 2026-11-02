@@ -233,8 +233,9 @@ describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve kullanım', () => {
 describe('RAPOR — kaynak, bayat çözüm, eylem', () => {
   test('değer Motor\'dan gelir; Motor\'da yoksa eski projenin Rapor düğümündeki yedek "Rapor (eski)"', () => {
     tulga(); coz();
+    dugum('mnt-motor').data.cylinders = '';                      // Motor'da silindir yok
     const r = dugum('mnt-report');
-    r.data = { cylinders: 6 };                                   // TULGA motoru silindir taşımıyor
+    r.data = { cylinders: 6 };                                   // eski projenin Rapor düğümü
     const h = cp.getMntReportPropertiesHTML(r);
     expect(h).toMatch(/Rölanti devri<\/td><td>800 d\/dk<\/td><td class="sol">Motor<\/td>/);
     expect(h).toMatch(/Silindir sayısı<\/td><td>6<\/td><td class="sol">Rapor \(eski\)<\/td>/);

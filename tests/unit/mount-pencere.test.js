@@ -149,11 +149,12 @@ describe('TEK KAYNAK — pencere raporun ve çekirdeğin sayısını okur', () =
     expect(cp._mntKutleDurumu(motor()).yazi).toBe('CG eksik');
   });
 
-  test('mil torku çözücünün ileri tork durumundan (T = −T_x) — ayrı çarpım yok', () => {
+  test('mil torku çözücünün ileri tork durumundan (T_shaft) — ayrı çarpım yok', () => {
     tulga();
     const Z = cp._mntTorkZinciri();
     const fwd = cp._mntToSI(cp._mntGatherForSolver(), 9.81).loadCases.find((c) => c.name === 'Forward Torque');
-    expect(Z.ileri).toBeCloseTo(-fwd.T[0], 9);
+    expect(Z.ileri).toBeCloseTo(fwd.Tshaft, 9);
+    expect(Math.abs(fwd.T[0])).toBeCloseTo(Z.ileri, 9);   // Tx'in işareti Çözücü'nün tork yönünden
     expect(Math.round(Z.ileri)).toBe(12761);          // 760 · 1,58 · 3,10 · 3,428
     // Boş transfer oranı çözücüde 1'dir: zincir onu kullanır, Tahrik kategorisi eksik der
     bul((n) => n.type === 'mnt-transfer').data.iTransfer = '';
@@ -208,6 +209,7 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
 
   test('motor: silindir sayısı boş → eksik (Kriter 1 ve 2); dolunca tamam', () => {
     tulga();
+    motor().data.cylinders = '';
     expect(cp._mntMotorDurumu(motor()).neden).toContain('Silindir sayısı boş');
     motor().data.cylinders = 6;
     expect(cp._mntMotorDurumu(motor()).d).toBe('ok');
@@ -395,6 +397,7 @@ describe('YERİNDE TAZELEME — pencere kurulmaz, odak kalır', () => {
   test('silindir girilince kategori durumu "tamam"a döner ve eksik bandı kalkar', () => {
     tulga();
     const m = motor();
+    m.data.cylinders = '';
     ac(m);
     const kat = document.querySelector('#ve-fp-panes-' + m.id + ' > .ve-fp-kat[data-k="motor"]');
     expect(kat.getAttribute('data-d')).toBe('eksik');

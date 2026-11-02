@@ -41,7 +41,8 @@
         "TeRpm": "1500",
         "Pmax": "156.6",
         "PmaxRpm": "2300",
-        "idleRpm": "800"
+        "idleRpm": "800",
+        "cylinders": "4"
       }
     },
     {
@@ -338,7 +339,9 @@
       "isMasterWheel": false,
       "isMasterDiff": false,
       "data": {
-        "matrixMode": "delta"
+        "matrixMode": "delta",
+        "ileri": "-x",
+        "torkYon": "+x"
       }
     },
     {

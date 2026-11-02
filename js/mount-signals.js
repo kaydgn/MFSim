@@ -287,6 +287,12 @@ var veMntSignals = (function() {
       xName: 'Boyuna ivme', vec: function(a) { return [-a, 0, -1]; } }
   ];
 
+  // Süpürme vektörleri aracın ileri −X ekseninde (MNT_AUTO_CASES gibi); ileri
+  // +X olan modelde n_x ve n_y çevrilir (R.yon, js/cp-mount.js _mntYonN).
+  function _yonVec(R, v) {
+    return (R && R.yon && R.yon.ileri === '+x') ? [-v[0], -v[1], v[2]] : v;
+  }
+
   function _gSweepSet(R, solveOne, def) {
     if(typeof solveOne !== 'function') return null;
     if(!R || !R.mounts || !R.mounts.length) return null;
@@ -301,7 +307,7 @@ var veMntSignals = (function() {
       x.push(a);
       var rc = null;
       try {
-        rc = solveOne({ name: def.key + '@' + a.toFixed(3), n: def.vec(a), T: [0, 0, 0] });   // makine: çözücünün iç durum adı
+        rc = solveOne({ name: def.key + '@' + a.toFixed(3), n: _yonVec(R, def.vec(a)), T: [0, 0, 0] });   // makine: çözücünün iç durum adı
       } catch(e) { rc = null; }
       var res = (rc && rc.res) ? rc.res : null;
       var pm = (res && res.perMount) ? res.perMount : null;

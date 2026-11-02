@@ -12,16 +12,17 @@
  * ── ÜÇ BULGU ────────────────────────────────────────────────────────────────
  *   1. ARAÇ EKSENİ TERS. TTAR'ın CAD ekseninde araç İLERİ +X, SOL +Y; Tulga'da
  *      ileri −X, sağ +Y (Z etrafında 180°). Programın ivme yük durumları
- *      (MNT_AUTO_CASES) Tulga'nın eksenine göre yazılı: TTAR'da boyuna ve yanal
- *      yükler TERS yönde uygulanıyor. n_x ve n_y çevrilince fark tablo
- *      mertebesine iniyor. Tork işareti (Tx = −T_shaft) ise TTAR'ın eksenine
- *      göre: TTAR'da tutuyor, Tulga'da ters (adams-tulga.js → TORK İŞARETİ).
- *      Programın iki kuralı iki ayrı eksen takımına göre yazılı.
+ *      (MNT_AUTO_CASES) ileri −X eksende yazılı; 2026-11-02'den beri Çözücü'nün
+ *      ayarı (ileri) n_x ve n_y'yi çevirir ve örnek ileri +X ile gelir.
+ *      Varsayılan yönde boyuna ve yanal yükler TERS uygulanır. Tork yönü ayrı
+ *      ayardır (torkYon): TTAR'ın Adams'ı varsayılanla (−X) tutuyor — motorun
+ *      önü −X'te, aktarma güç grubunda dönüşü çevirmiyor.
  *   2. ADAMS TABLOSUNUN X/Y'Sİ DÖNDÜRÜLMÜŞ EKSENDE. Saf düşey yükte bile δx ve
  *      δy'nin işareti CAD ekseninin tersi, δz aynı (Z etrafında 180°): takozun
  *      raporladığı eksen takımı. Karşılaştırma Adams'ın X ve Y'sini çevirir.
- *   3. KALDIRIM DARBESİ 3,5 g, VİRAJLA AYNI YÖNDE. Programınki (Tulga'nın
- *      Adams'ı) 1,55 g ve virajın tersi yönde; iki analizin tanımı farklı.
+ *   3. KALDIRIM DARBESİ 3,5 g, VİRAJLA AYNI YÖNDE. Programın varsayılanı
+ *      (Tulga'nın Adams'ı) 1,55 g ve virajın tersi yönde; iki analizin tanımı
+ *      farklı. Örnek Çözücü'de 3,5 g · virajla aynı ile gelir.
  *
  * ── KİTAPTAKİ TUTARSIZLIKLAR (karşılaştırma dışı) ───────────────────────────
  *   • Acceleration satırı: altı takozda birebir aynı (3; 0; −6) — yer tutucu.
@@ -117,7 +118,7 @@ const INPUT = {
 };
 
 // TR için motor: ataleti Cummins X15 veri sayfasıyla birebir; rölanti ve silindir
-// programın FEAD motor kataloğundan (X15E3 600 · 57RS303308)
+// programın FEAD motor kataloğundan (X15E3 600 · 57RS303308) — örneğin Motor'unda
 const ENGINE = { ad: 'Cummins X15', idleRpm: 700, cylinders: 6 };
 
 // Bulgu 3: kitabın kaldırım darbesi (yanal g, virajla aynı yönde)

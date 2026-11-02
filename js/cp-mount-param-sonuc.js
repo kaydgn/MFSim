@@ -44,7 +44,7 @@ function _mntParamImza(H){
   var c=veMntKatalog.baglam(H.ctx), sv=H.M.solver || { data:{} }, g=H.M.gather, s=H.sabit || {}, tara={};
   H.M.G.forEach(function(gr){ if(!s[gr.anahtar]) gr.uyeler.forEach(function(i){ tara[i]=true; }); });
   var tk=g.mounts.map(function(m, i){ return tara[i] ? { id:m.id, name:m.name, x:m.x, y:m.y, z:m.z } : m; });
-  return JSON.stringify([{ components:g.components, mounts:tk, torque:g.torque }, (sv.data && sv.data.solveMode) || 'auto',
+  return JSON.stringify([{ components:g.components, mounts:tk, torque:g.torque, yon:g.yon }, (sv.data && sv.data.solveMode) || 'auto',
     _mntZetaOf(sv), H.M.fAtes, H.aday.map(function(a){ return [a.key, a.e]; }), Object.keys(s).sort(),
     c.acik.tolerans ? c.s.tolerans : 0, c.s.surunme]);
 }
