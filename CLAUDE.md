@@ -70,7 +70,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
-  yoğunlukları, ağırlık merkezi kütleyle) — kütle yoksa atalet de yok. **Hacim gövde
+  yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.
+  **Malzeme bir DÜĞÜME atanır** (kullanıcı 2026-11-02, CAD'in malzeme veritabanı; 3B'nin
+  alttaki dizisi): parça birimin İÇİNDEKİ en yakın atamayı alır (`veMntStpParcaMalzemesi`),
+  birimin kendi malzemesi kütle kaynağıdır; atama yoksa sonuç atamasız hesabın aynısı.
+  Kataloğun (`VE_MNT_STP_MALZEME`) ilk beşinin anahtarı ve yoğunluğu DEĞİŞMEZ (kayıtlı
+  projeler). Kapı: `mount-malzeme.test.js` + `mount-kutle.spec.js` → *MALZEME*. **Hacim gövde
   gövde** (`veMntStpParcaOzellik`; okuyucunun `govde` · `ters`i): katı gövde ayrı
   ölçülür, yüzey kabuğu hacme girmez, boşluk kabuğu (.F.) ters okunur; açık katı
   gövde YAMALANIR ve yaması kendi yüzeyinin %10'unu (`VE_MNT_STP_YAMA`) aşmıyorsa

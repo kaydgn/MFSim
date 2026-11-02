@@ -66,18 +66,40 @@ var VE_MNT_STP_ROLLER = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracke
 // (kutunun) merkezi (`kaynak` 'orta'). Atalet yok: nokta kütle.
 var VE_MNT_STP_AKSESUAR = ['mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield'];
 var VE_MNT_STP_CIP = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount'];
-// MALZEMELER — kütleyi hacimden türetmek için (yoğunluk kg/m³; el kitabı
-// değerleri: çelik · EN-GJL · EN-GJS · alüminyum döküm · magnezyum döküm).
-// Sıra seçicinin sırası; anahtar kayda yazılır.
+// MALZEMELER — CAD'in malzeme kütüphanesi gibi (kullanıcı 2026-11-02: "tıpkı
+// CAD programlarında olduğu gibi basit bir malzeme veritabanı"): yoğunluk
+// kg/m³ (el kitabı değeri), `sinif` değerin ait olduğu sınıf. Sıra seçicinin
+// sırası; anahtar kayda yazılır. Paslanmaz çelik (7.900) ve alüminyum döküm
+// (2.750) ayrı kayıt değil: yoğunlukları çelikten ve alüminyumdan %2'den az
+// ayrılıyor, adları pencerenin dar kaynak sütununa sığmıyordu (96 px · 76 px). İLK BEŞİN değeri adım 6'dan (2026-10-20) beri
+// kayıtlı projelerde — DEĞİŞMEZ (değişirse kayıtlı birimin kütlesi sessizce değişir).
+// Malzeme bir DÜĞÜME verilir: birimin kendisi kütle kaynağıyla (`yogunluk`),
+// içindeki parça ve alt montaj atamayla (`malzeme`, veMntStpParcaMalzemesi).
 var VE_MNT_STP_MALZEME = [
-  { k: 'celik', ad: 'Çelik', rho: 7850 },
-  { k: 'dokme', ad: 'Dökme demir', rho: 7200 },
-  { k: 'sfero', ad: 'Sfero döküm', rho: 7100 },
-  { k: 'aluminyum', ad: 'Alüminyum', rho: 2700 },
-  { k: 'magnezyum', ad: 'Magnezyum', rho: 1800 }
+  { k: 'celik', ad: 'Çelik', rho: 7850, sinif: 'S235–S355' },
+  { k: 'dokme', ad: 'Dökme demir', rho: 7200, sinif: 'EN-GJL-250' },
+  { k: 'sfero', ad: 'Sfero döküm', rho: 7100, sinif: 'EN-GJS-400' },
+  { k: 'aluminyum', ad: 'Alüminyum', rho: 2700, sinif: 'EN AW-6061' },
+  { k: 'magnezyum', ad: 'Magnezyum', rho: 1800, sinif: 'AZ91' },
+  { k: 'bakir', ad: 'Bakır', rho: 8930, sinif: 'Cu-ETP' },
+  { k: 'pirinc', ad: 'Pirinç', rho: 8470, sinif: 'CW614N' },
+  { k: 'pa66gf30', ad: 'PA66-GF30', rho: 1360, sinif: 'PA66 + %30 cam elyaf' }
 ];
 function veMntStpMalzeme(k){
   for(var i = 0; i < VE_MNT_STP_MALZEME.length; i++) if(VE_MNT_STP_MALZEME[i].k === k) return VE_MNT_STP_MALZEME[i];
+  return null;
+}
+// Parçanın atanan malzemesi: parçanın düğümünden yukarı EN YAKIN atama
+// (`malzeme`: { düğüm: anahtar }). `ust` verilirse arama ondan ÖNCE durur —
+// birimin kendi malzemesi kütle kaynağıdır (`yogunluk`), birimin dışındaki
+// atama birimin parçasına geçmez. Döner: { k, mz, dugum } | null
+function veMntStpParcaMalzemesi(sonuc, malzeme, pi, ust){
+  var a = sonuc && sonuc.agac, p = sonuc && sonuc.parcalar && sonuc.parcalar[pi];
+  if(!a || !p || !malzeme) return null;
+  for(var d = p.dugum; d >= 0 && d !== ust; d = a[d].ebeveyn){
+    var mz = malzeme[d] ? veMntStpMalzeme(malzeme[d]) : null;
+    if(mz) return { k: mz.k, mz: mz, dugum: d };
+  }
   return null;
 }
 // Ekrana giden sayı tek yazıcıdan (js/sayi.js, karar 7·C)
@@ -708,13 +730,15 @@ function veMntStpImza(sonuc){
   if(sonuc && sonuc.ok) sonuc._imza = imza;
   return imza;
 }
-// Kayıt: { surum, dosya, bayt, imza, parca, roller:[{ yol, rol, ad, kg?, yog?, nokta?, ref? }] } — ağaç sırasıyla.
-// `yog` (gövde): kütle kaynağı — 'dosya', malzeme ya da rolün veri sayfası
-// anahtarı (elle: yok). `nokta` (takoz): 3B'de seçilen daire — parçasının örnek
+// Kayıt: { surum, dosya, bayt, imza, parca, roller:[{ yol, rol, ad, kg?, yog?, nokta?, ref? }],
+// malzeme?:[{ yol, k }] } — ağaç sırasıyla.
+// `yog` (gövde): kütle kaynağı — 'dosya', 'atanan', malzeme ya da rolün veri
+// sayfası anahtarı (elle: yok). `nokta` (takoz): 3B'de seçilen daire — parçasının örnek
 // yolu, merkezi, yarıçapı. `ref` (gövde): veri sayfasının referansı — 3B'de
-// seçilen yüz { yol, o, n } ve eksenin dairesi { yol, c, n, r }.
-function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans){
-  kunye = kunye || {}; kutle = kutle || {}; nokta = nokta || {}; yogunluk = yogunluk || {}; referans = referans || {};
+// seçilen yüz { yol, o, n } ve eksenin dairesi { yol, c, n, r }. `malzeme`:
+// rolsüz düğümlere atanan malzemeler (birimin kendi malzemesi `yog`ta).
+function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans, malzeme){
+  kunye = kunye || {}; kutle = kutle || {}; nokta = nokta || {}; yogunluk = yogunluk || {}; referans = referans || {}; malzeme = malzeme || {};
   var out = { surum: VE_MNT_STP_KAYIT_SURUM, dosya: kunye.dosya || '', bayt: kunye.bayt > 0 ? kunye.bayt : null,
               imza: veMntStpImza(sonuc), parca: ((sonuc && sonuc.parcalar) || []).length, roller: [] };
   ((sonuc && sonuc.agac) || []).forEach(function(d){
@@ -729,9 +753,14 @@ function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans
     if(rf) r.ref = rf;
     out.roller.push(r);
   });
+  var mzl = [];
+  ((sonuc && sonuc.agac) || []).forEach(function(d){
+    if(!roller[d.i] && veMntStpMalzeme(malzeme[d.i])) mzl.push({ yol: veMntStpYol(sonuc, d.i), k: malzeme[d.i] });
+  });
+  if(mzl.length) out.malzeme = mzl;
   return out;
 }
-function _mstYogGecerli(y, tip){ return y === 'dosya' || !!veMntStpMalzeme(y) || !!veMntStpVs(y, tip) || !!veMntStpAks(y, tip); }
+function _mstYogGecerli(y, tip){ return y === 'dosya' || y === 'atanan' || !!veMntStpMalzeme(y) || !!veMntStpVs(y, tip) || !!veMntStpAks(y, tip); }
 // Seçilen dairenin kaydı: { yol:[örnek adları], c:[3], r } ya da null (bozuk)
 function _mstNoktaGecerli(n){
   if(!n || !Array.isArray(n.yol) || !Array.isArray(n.c) || n.c.length !== 3) return null;
@@ -750,13 +779,14 @@ function _mstRefGecerli(rf){
 }
 // Kaydı bu dosyaya uygular. Döner: { roller (ağaç boyu), kutle:{düğüm: kg},
 // yogunluk:{düğüm: kaynak}, nokta:{düğüm: seçilen daire}, referans:{düğüm:
-// veri sayfasının referansı}, eslesen, toplam,
+// veri sayfasının referansı}, malzeme:{düğüm: anahtar} (rolsüz düğüm;
+// bilinmeyen anahtar ve bulunamayan yol düşer), eslesen, toplam,
 // eksik:[bulunamayan kayıt satırı], ayni (imza aynı) }. Rol veriliş kuralı oturumunki (veMntStpRolVer)
 // — kayıt sırası ağaç sırası. Dairenin bu dosyada olup olmadığına hesap bakar
 // (veMntStpCoz → veMntStpDaireBul).
 function veMntStpRolKaydiUygula(sonuc, kayit){
-  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {}, nokta = {}, yog = {}, ref = {};
-  var out = { roller: roller, kutle: kutle, yogunluk: yog, nokta: nokta, referans: ref, eslesen: 0, toplam: 0, eksik: [], ayni: false };
+  var a = (sonuc && sonuc.agac) || [], roller = a.map(function(){ return null; }), kutle = {}, nokta = {}, yog = {}, ref = {}, mzl = {};
+  var out = { roller: roller, kutle: kutle, yogunluk: yog, nokta: nokta, referans: ref, malzeme: mzl, eslesen: 0, toplam: 0, eksik: [], ayni: false };
   if(!kayit || !Array.isArray(kayit.roller)) return out;
   out.toplam = kayit.roller.length;
   out.ayni = kayit.imza === veMntStpImza(sonuc);
@@ -776,6 +806,10 @@ function veMntStpRolKaydiUygula(sonuc, kayit){
   Object.keys(yog).forEach(function(d){ if(!roller[d] || roller[d] === 'mnt-mount') delete yog[d]; });
   Object.keys(nokta).forEach(function(d){ if(roller[d] !== 'mnt-mount') delete nokta[d]; });
   Object.keys(ref).forEach(function(d){ if(!roller[d] || roller[d] === 'mnt-mount') delete ref[d]; });
+  (Array.isArray(kayit.malzeme) ? kayit.malzeme : []).forEach(function(m){
+    var d = (m && Array.isArray(m.yol)) ? dizin[m.yol.join('\u0001')] : undefined;
+    if(d !== undefined && !roller[d] && veMntStpMalzeme(m.k)) mzl[d] = m.k;
+  });
   out.eslesen = roller.filter(Boolean).length;
   return out;
 }
@@ -1120,8 +1154,11 @@ function veMntStpDuzlemBul(sonuc, yol, o, n){
 // merkezi (ağırlık merkezi) değil. `nokta`: noktanın dairesi { c, n, r } (3B halkası).
 // Birimin toplamı: hacme katılan parçalar (ağı kapalı ya da dosyada hacmi
 // olan) — açık parçalar ve açık gövdeler (acikGovde: parça başına sayı)
-// adıyla ve yüzey payıyla ayrı
-function _mstBirim(b, P){
+// adıyla ve yüzey payıyla ayrı. `ata`: { parça: veMntStpParcaMalzemesi } —
+// atanan malzeme parçanın yoğunluğudur; atanmamış parçada birimin kaynağı
+// (`kaynak`: malzeme anahtarı → onun yoğunluğu, 'dosya' → dosyanınki).
+// Atama yoksa sonuç atamasız hesabın BİREBİR aynısı.
+function _mstBirim(b, P, ata, kaynak){
   var kutu = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity], alan = 0, acikAlan = 0;
   var r = { dugum: b.dugum, tip: b.tip, ad: b.ad, V: 0, c: null, J: null, kutu: null, kapali: false,
             say: { ag: 0, dosya: 0, nokta: 0, acik: 0 }, yogSay: 0, acikParca: [], acikGovde: [], acikPay: 0, acik: 0, kenarYuz: 0, ucgen: 0,
@@ -1143,14 +1180,38 @@ function _mstBirim(b, P){
   r.acikPay = alan > 0 ? acikAlan / alan : 0;
   r.yamaPay = alan > 0 ? yamaAlan / alan : 0;
   if(sapma) r.sapma = sapma;
+  ata = ata || {};
+  var atali = dahil.filter(function(p){ return !!ata[p.pi]; });
   r.yogSay = dahil.filter(function(p){ return p.rho > 0; }).length;
+  r.ataSay = atali.length;
+  // Dosyanın yoğunluğu da atama da olmayan parça: 'dosya' kaynağı onu bekler;
+  // `ataYogsuz`: atamasıyla tamamlanan (dosyada yoğunluğu olmayan) parça
+  r.yogEksik = dahil.filter(function(p){ return !ata[p.pi] && !(p.rho > 0); }).length;
+  r.ataYogsuz = dahil.filter(function(p){ return ata[p.pi] && !(p.rho > 0); }).length;
   var H = _mstTopla(dahil, function(){ return 1; });
   if(!H) return r;
   r.V = H.W; r.c = H.c; r.J = H.T; r.kapali = true;
-  if(r.yogSay === dahil.length){
-    var D = _mstTopla(dahil, function(p){ return p.rho * 1e-9; }), ad = {};
-    dahil.forEach(function(p){ if(p.malzeme) ad[p.malzeme] = 1; });
-    r.dosya = { m: D.W, c: D.c, I: D.T, malzeme: Object.keys(ad) };
+  var adlar = function(liste, dosyadan){
+    var ad = {};
+    liste.forEach(function(p){ if(ata[p.pi]) ad[ata[p.pi].mz.ad] = 1; else if(dosyadan && p.malzeme) ad[p.malzeme] = 1; });
+    return Object.keys(ad);
+  };
+  // "Dosyadan": dosyada yoğunluğu olan parça var ve kalanı atama tamamlıyor
+  // (hiç yoğunluk yoksa atamaların toplamı "Parçalardan"dır, dosyadan değil)
+  if(r.yogSay > 0 && !r.yogEksik){
+    var D = _mstTopla(dahil, function(p){ return (ata[p.pi] ? ata[p.pi].mz.rho : p.rho) * 1e-9; });
+    r.dosya = { m: D.W, c: D.c, I: D.T, malzeme: adlar(dahil, true) };
+  }
+  // Bütün parçalar atanmış: birimin kaynağı "parçaların malzemesi" ('atanan')
+  if(atali.length === dahil.length){
+    var A = _mstTopla(dahil, function(p){ return ata[p.pi].mz.rho * 1e-9; });
+    r.atanan = { m: A.W, c: A.c, I: A.T, malzeme: adlar(dahil, false) };
+  }
+  // Birimin malzemesi + içindeki atamalar: ağırlıklı (atama yoksa homojen yol)
+  var mz = veMntStpMalzeme(kaynak);
+  if(mz && atali.length){
+    var Z = _mstTopla(dahil, function(p){ return (ata[p.pi] ? ata[p.pi].mz.rho : mz.rho) * 1e-9; });
+    r.mz = { k: mz.k, m: Z.W, c: Z.c, I: Z.T, ata: atali.length, malzeme: adlar(atali, false) };
   }
   return r;
 }
@@ -1171,17 +1232,19 @@ function veMntStpCoz(sonuc, roller, opt){
     U.Birak(B);
     return a;
   };
-  var onb = opt.oz || null, yog = opt.yogunluk || {};
+  var onb = opt.oz || null, yog = opt.yogunluk || {}, mzAta = opt.malzeme || {};
   birimler.forEach(function(b){
-    var agler = [], P = [];
+    var agler = [], P = [], ata = {};
     b.parcalar.forEach(function(pi){
       var a = agAl(pi);
       if(a) agler.push(a);
       var p = onb && onb[pi];
       if(!p){ p = veMntStpParcaOzellik(sonuc, pi, a); if(onb && a) onb[pi] = p; }
       P.push(p);
+      var m = veMntStpParcaMalzemesi(sonuc, mzAta, pi, b.dugum);
+      if(m) ata[pi] = m;
     });
-    var r = _mstBirim(b, P);
+    var r = _mstBirim(b, P, ata, yog[b.dugum]);
     var oz = { kapali: r.kapali, c: r.c, kutu: r.kutu };
     // Veri sayfası: ağırlık merkezi referanstan; referans eksikse hacimden
     var vs = b.tip !== 'mnt-mount' ? veMntStpVs(yog[b.dugum], b.tip) : null;
@@ -1228,7 +1291,10 @@ function veMntStpCoz(sonuc, roller, opt){
       return;
     }
     if(oz.kapali && oz.c){
-      r.konum = (yog[b.dugum] === 'dosya' && r.dosya ? r.dosya.c : oz.c).slice();
+      // Ağırlık merkezi: kaynak yoğunluk dağılımı veriyorsa kütle merkezi, yoksa hacim merkezi
+      var yk = yog[b.dugum];
+      r.konum = (yk === 'dosya' && r.dosya ? r.dosya.c : yk === 'atanan' && r.atanan ? r.atanan.c
+        : r.mz ? r.mz.c : oz.c).slice();
       r.kaynak = 'hacim';
       var kisim = [], adlar = r.acikParca.concat(r.acikGovde).map(function(x){ return x.ad; });
       var ng = r.acikGovde.reduce(function(t, x){ return t + x.n; }, 0);
@@ -1258,8 +1324,9 @@ function veMntStpCoz(sonuc, roller, opt){
 }
 
 // ── KÜTLE — birimin kütlesi ve tensörü, kaynağıyla ────────────────────────
-// kg: elle yazılan kütle; yog: 'dosya' | malzeme anahtarı | veri sayfası
-// anahtarı | yok (elle).
+// kg: elle yazılan kütle; yog: 'dosya' | 'atanan' (parçaların malzemesi) |
+// malzeme anahtarı | veri sayfası anahtarı | yok (elle). Malzemede birimin
+// içinde atanan parça varsa yoğunluk parça parça (b.mz), yoksa homojen.
 // Döner: { m (kg) | NaN, I (kg·m², tensör) | null, kaynak: 'elle' | 'malzeme' |
 //   'dosya' | 'veri', not } — `not` "S" işaretinin ipucu (kütlenin ve tensörün
 // dayanağı). Elle ve malzemede yoğunluk HOMOJEN (I = ρ·J); dosyada parça parça.
@@ -1290,9 +1357,21 @@ function veMntStpKutle(b, kg, yog){
   if(yog === 'dosya' && b.dosya){
     out.kaynak = 'dosya'; out.m = b.dosya.m; out.I = aks ? null : tensor(b.dosya.I, 1e-6);   // kg·mm² → kg·m²
     out.not = 'dosyanın yoğunlukları' + (b.dosya.malzeme.length ? ' (' + b.dosya.malzeme.join(', ') + ')' : '');
+    if(b.ataSay) out.not += ' · ' + _mstSayi(b.ataSay, 0) + ' parça atanan malzemeyle';
+    return out;
+  }
+  if(yog === 'atanan' && b.atanan){
+    out.kaynak = 'malzeme'; out.m = b.atanan.m; out.I = aks ? null : tensor(b.atanan.I, 1e-6);
+    out.not = 'parçaların malzemesi (' + b.atanan.malzeme.join(', ') + ')';
     return out;
   }
   var mz = veMntStpMalzeme(yog);
+  if(mz && b.mz && b.mz.k === mz.k){
+    out.kaynak = 'malzeme'; out.m = b.mz.m; out.I = aks ? null : tensor(b.mz.I, 1e-6);
+    out.not = mz.ad + ' · ' + _mstSayi(mz.rho, 0) + ' kg/m³ · ' + _mstSayi(b.mz.ata, 0) + ' parça atanan malzemeyle ('
+      + b.mz.malzeme.join(', ') + ')';
+    return out;
+  }
   if(mz && b.kapali && b.V > 0){
     out.kaynak = 'malzeme'; out.m = mz.rho * b.V * 1e-9;
     out.not = mz.ad + ' · ' + _mstSayi(mz.rho, 0) + ' kg/m³';
@@ -1429,6 +1508,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula,
     VE_MNT_STP_NOKTA: VE_MNT_STP_NOKTA, veMntStpYuzler: veMntStpYuzler, veMntStpTakozNoktasi: veMntStpTakozNoktasi,
     VE_MNT_STP_MALZEME: VE_MNT_STP_MALZEME, VE_MNT_STP_YAMA: VE_MNT_STP_YAMA, veMntStpMalzeme: veMntStpMalzeme, veMntStpKutle: veMntStpKutle,
+    veMntStpParcaMalzemesi: veMntStpParcaMalzemesi,
     veMntStpDosyaOzellik: veMntStpDosyaOzellik, veMntStpParcaOzellik: veMntStpParcaOzellik, veMntStpParcaOzellikIs: veMntStpParcaOzellikIs,
     veMntStpDaireBul: veMntStpDaireBul, veMntStpKenarDaire: veMntStpKenarDaire,
     VE_MNT_STP_VERI: VE_MNT_STP_VERI, veMntStpVs: veMntStpVs, veMntStpVeriKonum: veMntStpVeriKonum,

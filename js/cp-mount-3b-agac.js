@@ -8,8 +8,8 @@
 //     (s.acik · js/cp-mount-wizard.js → _mwStpSatirlar): dal birinde açılınca
 //     ötekinde de açık; satır sayısı kartın sınırıyla (VE_MW_STP_SATIR ·
 //     VE_MW_STP_SAYFA) — 11.694 satır kartı 6,6 sn donduruyordu.
-//   · Satır: dal düğmesi · simge (alt montaj · parça) · ad · rol çipi. Rollü
-//     birimin içindeki düğüm birimin rengini soluk noktayla taşır.
+//   · Satır: dal düğmesi · simge (alt montaj · parça) · ad · atanan malzeme ·
+//     rol çipi. Rollü birimin içindeki düğüm birimin rengini soluk noktayla taşır.
 //   · Tık seçer; Ctrl (Mac'te ⌘) + tık seçime ekler ya da çıkarır — 3B'de de.
 //     Rol alttaki diziden SEÇİMİN HEPSİNE verilir: tek tazeleme, tek hesap
 //     (veMntWizStpRolCok).
@@ -32,6 +32,8 @@ function veMntWiz3bAgacHTML(s, secim){
       return;
     }
     var rol = s.roller[d.i] || '', ata = -1;
+    // Rolsüz düğümün kendi malzemesi (birimin malzemesi kartın kaynak sütununda)
+    var mz = !rol && s.malzeme && typeof veMntStpMalzeme === 'function' ? veMntStpMalzeme(s.malzeme[d.i]) : null;
     if(!rol) for(var e = d.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var acik = !!(s.acik ? s.acik[d.i] : d.cocuklar.length), dal = d.cocuklar.length && s.acik;
     h += '<div class="ve-mw-3b-agac-r' + (sec[d.i] ? ' on' : '') + (ata >= 0 ? ' ic' : '') + '" role="treeitem"'
@@ -45,6 +47,8 @@ function veMntWiz3bAgacHTML(s, secim){
       + '<button type="button" class="ve-mw-3b-agac-ad" title="' + _mwEsc(d.ad + (d.ornek && d.ornek !== d.ad ? ' · ' + d.ornek : '')) + '"'
       + ' onclick="veMntWiz3bAgacTik(' + d.i + ', event)" ondblclick="veMntWiz3bAgacOdak(' + d.i + ')"'
       + ' onpointerenter="veMntWiz3bAgacFare(' + d.i + ')" onpointerleave="veMntWiz3bAgacFare(-1)">' + _mwEsc(d.ad) + '</button>'
+      + (mz ? '<span class="ve-mw-3b-agac-mz" title="' + _mwEsc(mz.ad + ' · ' + mz.sinif + ' · ' + veSayi(mz.rho, 0) + ' kg/m³') + '">'
+             + _mwEsc(mz.ad) + '</span>' : '')
       + (rol ? '<span class="ve-mw-3b-agac-rol" style="--renk:var(' + veMntWiz3bRolJeton(rol) + ')">' + _mwEsc(_mwAd(rol)) + '</span>'
              : ata >= 0 ? '<span class="ve-mw-3b-agac-ata" title="' + _mwEsc(so.agac[ata].ad) + '" style="--renk:var(' + veMntWiz3bRolJeton(s.roller[ata]) + ')"></span>' : '')
       + '</div>';

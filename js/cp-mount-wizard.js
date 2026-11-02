@@ -847,7 +847,7 @@ function _mwStpKayitYaz(s){
   var n = _mwStpEv(s);
   if(!n) return false;
   if(!n.data) n.data = {};
-  n.data.cad = veMntStpRolKaydi(s.sonuc, s.roller, s.kutle, { dosya: s.dosya, bayt: s.bayt }, s.nokta, s.yogunluk, s.referans);
+  n.data.cad = veMntStpRolKaydi(s.sonuc, s.roller, s.kutle, { dosya: s.dosya, bayt: s.bayt }, s.nokta, s.yogunluk, s.referans, s.malzeme);
   return true;
 }
 // Geri-al / ileri-al / sekme ve modül geçişi düğüm verisini yeniden kurar:
@@ -857,10 +857,12 @@ function veMntWizStpKayitTazele(){ return _mwStpKayitYaz(_mwStp); }
 function _mwStpKayittanAl(s){
   var n = _mwStpEv(s), k = n && n.data && n.data.cad;
   s.kayit = null; s.kayitSahibi = false;
-  if(!k || !Array.isArray(k.roller) || !k.roller.length || typeof veMntStpRolKaydiUygula !== 'function') return null;
+  var mzVar = !!(k && Array.isArray(k.malzeme) && k.malzeme.length);
+  if(!k || !Array.isArray(k.roller) || (!k.roller.length && !mzVar) || typeof veMntStpRolKaydiUygula !== 'function') return null;
   var u = veMntStpRolKaydiUygula(s.sonuc, k);
   s.kayit = { dosya: k.dosya || '', toplam: u.toplam, eslesen: u.eslesen, eksik: u.eksik.length, ayni: u.ayni };
   if(u.eslesen){ s.roller = u.roller; s.kutle = u.kutle; s.yogunluk = u.yogunluk || {}; s.nokta = u.nokta || {}; s.referans = u.referans || {}; }
+  if(u.eslesen || Object.keys(u.malzeme || {}).length) s.malzeme = u.malzeme || {};
   s.kayitSahibi = !u.eksik.length;
   return s.kayit;
 }
@@ -994,7 +996,7 @@ function veMntWizStpOku(girdi, ad, kap, o){
 function _mwStpKur(sonuc, ad, kap, o){
   o = o || {};
   var s = { dosya:ad || 'STEP', kap:kap || 'duz', durum:sonuc.ok ? 'hazir' : 'hata', sonuc:sonuc,
-            roller:(sonuc.agac || []).map(function(){ return null; }), coz:null, kutle:{}, yogunluk:{}, nokta:{}, referans:{}, oz:{}, ag:[],
+            roller:(sonuc.agac || []).map(function(){ return null; }), coz:null, kutle:{}, yogunluk:{}, nokta:{}, referans:{}, malzeme:{}, oz:{}, ag:[],
             modul:_mwStpAnahtar(),
             yer:o.yer || (veMntWizAcik() ? 'sihirbaz' : 'pencere'), bayt:o.bayt || 0, acik:_mwStpAcilis(sonuc) };
   if(!sonuc.ok) s.hata = (sonuc.hatalar || []).join(' ') || 'Dosya okunamadı.';
@@ -1103,7 +1105,7 @@ function veMntWizStpDaha(i){
   _mwStpTazele();
   return true;
 }
-function _mwStpImza(s){ return JSON.stringify([s.roller, s.nokta || {}, s.yogunluk || {}, s.referans || {}, s.secim || {}]); }
+function _mwStpImza(s){ return JSON.stringify([s.roller, s.nokta || {}, s.yogunluk || {}, s.referans || {}, s.secim || {}, s.malzeme || {}]); }
 // Parçanın ağı — 3B görüntüleyiciyle ORTAK önbellek (s.ag): hesap ve görüntü
 // aynı üçgenleri kullanır, ikisi de bir kez üçgenler. Eksik ağ ORTAK İŞTEN
 // (aşağıda) eşzamanlı üretilir; büyük eksik hesabı bekletir (_mwStpHesapBekle).
@@ -1113,7 +1115,7 @@ function _mwStpCoz(s){
   if(J) J.uret(_mwStpGerekli(s));
   if(!s.oz) s.oz = {};
   return veMntStpCoz(s.sonuc, s.roller, { ag:function(pi){ return (s.ag && s.ag[pi]) || null; }, nokta:s.nokta,
-                                          yogunluk:s.yogunluk, referans:s.referans, oz:s.oz });
+                                          yogunluk:s.yogunluk, referans:s.referans, malzeme:s.malzeme, oz:s.oz });
 }
 // Hesabın parçaları: rol verilen birimlerin parçaları
 function _mwStpGerekli(s){
@@ -1237,6 +1239,15 @@ function veMntWizStpRolCok(liste, tip){
 // Rol değişiminin ardı: rolsüz düğümün kütlesi/kaynağı/noktası/referansı düşer,
 // kayıt yazılır, hesap varsa yeni rollerle yenilenir
 function _mwStpRolSonrasi(s){
+  // Malzeme düğümde kalır: rol alan düğümün ataması kütle kaynağı olur (kaynağı
+  // yoksa), rolü düşen düğümün malzeme kaynağı ataması olur
+  if(!s.malzeme) s.malzeme = {};
+  if(!s.yogunluk) s.yogunluk = {};
+  Object.keys(s.malzeme).forEach(function(d){
+    var r = s.roller[d];
+    if(r && r !== 'mnt-mount'){ if(!s.yogunluk[d]) s.yogunluk[d] = s.malzeme[d]; delete s.malzeme[d]; }
+  });
+  Object.keys(s.yogunluk).forEach(function(d){ if(!s.roller[d] && veMntStpMalzeme(s.yogunluk[d])) s.malzeme[d] = s.yogunluk[d]; });
   Object.keys(s.kutle).forEach(function(d){ if(!s.roller[d]) delete s.kutle[d]; });
   Object.keys(s.yogunluk || {}).forEach(function(d){
     var k = s.yogunluk[d], r = s.roller[d];
@@ -1374,7 +1385,9 @@ function _mwStpYogDurum(s){
 function _mwStpKaynakSecHTML(s, b, y){
   var sec = [['', 'Elle']], neden = '';
   if(b.dosya) sec.push(['dosya', 'Dosyadan']);
-  else if(b.yogSay > 0) neden = veSayi(b.say.ag + b.say.dosya + b.say.nokta - b.yogSay, 0) + ' parçada yoğunluk yok.';
+  else if(b.yogSay > 0) neden = veSayi(b.say.ag + b.say.dosya + b.say.nokta - b.yogSay - (b.ataYogsuz || 0), 0) + ' parçada yoğunluk yok.';
+  // Bütün parçalarına malzeme atanmış birim (3B'de, parça ya da alt montaja)
+  if(b.atanan) sec.push(['atanan', 'Parçalardan']);
   if(b.kapali && b.V > 0) VE_MNT_STP_MALZEME.forEach(function(m){ sec.push([m.k, m.ad]); });
   // Kayıtlı aksesuarlar (Alternatör · Klima Kompresörü): kütlesi bilinenler
   var vs = _mwStpVeriSayfalari(b.tip), ak = veMntStpAksKatalog(b.tip), tek = sec.length + vs.length + ak.length < 2;
@@ -1474,7 +1487,7 @@ function veMntWizStpYogunluk(dugum, k){
   k = k || '';
   if(k && !veMntStpVs(k, tip) && !veMntStpAks(k, tip)){
     var b = _mwStpBirim(s, dugum);
-    if(!b || (k === 'dosya' ? !b.dosya : !(veMntStpMalzeme(k) && b.kapali && b.V > 0))) return false;
+    if(!b || (k === 'dosya' ? !b.dosya : k === 'atanan' ? !b.atanan : !(veMntStpMalzeme(k) && b.kapali && b.V > 0))) return false;
   }
   if(!s.yogunluk) s.yogunluk = {};
   if((s.yogunluk[dugum] || '') === k) return false;
@@ -1484,6 +1497,56 @@ function veMntWizStpYogunluk(dugum, k){
   if(s.coz && !s.hesapBekliyor) s.coz = _mwStpCoz(s);
   _mwStpTazele();
   return true;
+}
+// MALZEME ATAMASI (kullanıcı 2026-11-02: "tıpkı CAD programlarında olduğu gibi
+// basit bir malzeme veritabanı"): listenin düğümlerine `k` (boş: kaldır).
+// Birimin kendisinde malzeme KÜTLE KAYNAĞIDIR (kartın seçicisiyle aynı alan;
+// kaldırmak yalnız malzeme kaynağını kaldırır), rolsüz düğümde atama
+// (s.malzeme) — parça birimin içindeki en yakın atamayı alır (js/mount-step.js
+// → veMntStpParcaMalzemesi). Takozun kütlesi yok. Rol gibi modülün kaydına
+// yazılır; tek kayıt, tek hesap, tek tazeleme.
+function veMntWizStpMalzeme(liste, k){
+  var s = _mwStp;
+  if(!s || s.durum !== 'hazir' || !Array.isArray(liste)) return false;
+  k = k || '';
+  if(k && !veMntStpMalzeme(k)) return false;
+  if(!s.malzeme) s.malzeme = {};
+  if(!s.yogunluk) s.yogunluk = {};
+  var degisti = false;
+  liste.forEach(function(i){
+    if(!(i >= 0 && i < s.roller.length) || s.roller[i] === 'mnt-mount') return;
+    if(s.roller[i]){
+      var y = s.yogunluk[i] || '';
+      if(k && y !== k){ s.yogunluk[i] = k; degisti = true; }
+      else if(!k && veMntStpMalzeme(y)){ delete s.yogunluk[i]; degisti = true; }
+      return;
+    }
+    if((s.malzeme[i] || '') === k) return;
+    if(k) s.malzeme[i] = k; else delete s.malzeme[i];
+    degisti = true;
+  });
+  if(!degisti) return false;
+  s.kayitSahibi = true;
+  _mwStpKayitYaz(s);
+  if(s.coz && !s.hesapBekliyor) s.coz = _mwStpCoz(s);
+  _mwStpTazele();
+  return true;
+}
+// Düğümün malzemesi (3B'nin seçicisi, ağaç): { k: kendi anahtarı | '',
+// ust: { k, dugum, birim } | null } — birimde kendi malzemesi kütle kaynağı
+// (malzemeyse); rolsüz düğümde kendi ataması, `ust` en yakın atamalı ata ya da
+// (birimin içinde ataması yoksa) birimin malzeme kaynağı (`birim`: true)
+function veMntWizStpMalzemeDurum(s, d){
+  var a = s && s.sonuc && s.sonuc.agac, out = { k: '', ust: null };
+  if(!a || !a[d]) return out;
+  var mz = s.malzeme || {}, yog = s.yogunluk || {};
+  if(s.roller[d]){ out.k = veMntStpMalzeme(yog[d]) ? yog[d] : ''; return out; }
+  out.k = veMntStpMalzeme(mz[d]) ? mz[d] : '';
+  for(var e = a[d].ebeveyn; e >= 0; e = a[e].ebeveyn){
+    if(s.roller[e]){ if(veMntStpMalzeme(yog[e])) out.ust = { k: yog[e], dugum: e, birim: true }; break; }
+    if(veMntStpMalzeme(mz[e])){ out.ust = { k: mz[e], dugum: e, birim: false }; break; }
+  }
+  return out;
 }
 function _mwStpSayim(coz){
   var g = 0, t = 0;
@@ -2466,6 +2529,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizStpReferans: veMntWizStpReferans, _mwStpVeriSayfalari: _mwStpVeriSayfalari,
     veMntWizStpKonumUyari: veMntWizStpKonumUyari, _mwStpKonum: _mwStpKonum, _mwStpImza: _mwStpImza,
     veMntWizStpYogunluk: veMntWizStpYogunluk, _mwStpKutleK: _mwStpKutleK, _mwStpKaynak: _mwStpKaynak,
+    veMntWizStpMalzeme: veMntWizStpMalzeme, veMntWizStpMalzemeDurum: veMntWizStpMalzemeDurum,
     _mwStpYogDurum: _mwStpYogDurum, _mwStpKutleHucre: _mwStpKutleHucre, _mwKaynakIsaret: _mwKaynakIsaret,
     veMntWizStpKarsilastirma: veMntWizStpKarsilastirma, veMntWizStpSec: veMntWizStpSec, _mwStpModelHTML: _mwStpModelHTML,
     _mwStpSeciliSay: _mwStpSeciliSay, veMntWizStpModeleUygula: veMntWizStpModeleUygula,

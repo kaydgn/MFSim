@@ -447,7 +447,9 @@ describe('KÜTLE KAYNAĞI — elle · malzeme · dosyadan', () => {
     expect(K.m).toBeCloseTo(22.608, 12);
     expect(tfark(K.I, BRAKET_H.T.map((r) => r.map((v) => v * 7850e-9 * 1e-6)))).toBeLessThan(1e-9);
     expect(K.not).toBe('Çelik · 7.850 kg/m³');
-    expect(STP.VE_MNT_STP_MALZEME.map((m) => m.k)).toEqual(['celik', 'dokme', 'sfero', 'aluminyum', 'magnezyum']);
+    // İlk beşin anahtarı ve yoğunluğu kayıtlı projelerde (adım 6) — DEĞİŞMEZ; katalog büyüyebilir (adım 5, 2026-11-02)
+    expect(STP.VE_MNT_STP_MALZEME.slice(0, 5).map((m) => [m.k, m.rho])).toEqual([
+      ['celik', 7850], ['dokme', 7200], ['sfero', 7100], ['aluminyum', 2700], ['magnezyum', 1800]]);
     STP.VE_MNT_STP_MALZEME.forEach((m) => expect(STP.veMntStpKutle(b, 0, m.k).m).toBeCloseTo(m.rho * BRAKET_H.W * 1e-9, 12));
   });
 
@@ -609,7 +611,7 @@ describe('OTURUM — kaynak seçicisi, hesap, aktarım', () => {
     expect(Array.from(d.querySelectorAll('thead th')).map((t) => t.firstChild.textContent)).toEqual(['Gövde', 'Hacim', 'Kaynak', 'Kütle', 'Atalet']);
     const sec = (ad) => Array.from(d.querySelectorAll('select[data-mw-stp-yog]')).find((x) => x.getAttribute('aria-label') === 'Kütle kaynağı — ' + ad);
     const se = (ad) => Array.from(sec(ad).options).map((o) => o.textContent);
-    const MZ = ['Çelik', 'Dökme demir', 'Sfero döküm', 'Alüminyum', 'Magnezyum'];
+    const MZ = STP.VE_MNT_STP_MALZEME.map((m) => m.ad);
     expect(se('Motor')).toEqual(['Elle'].concat(MZ));
     expect(se('Şanzıman')).toEqual(['Elle', 'Dosyadan'].concat(MZ));
     expect(sec('Arka braket').value).toBe('dokme');

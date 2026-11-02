@@ -1088,13 +1088,24 @@ function _gmSec16(){
     + 'doğrulama özelliklerini taşıyorsa parçanın hacmi ve ağırlık merkezi oradan alınır.</p>';
   h += _gmAlanTablo('Kütlenin kaynağı', [
     ['<em>Elle</em>', 'Veri sayfasındaki kütle', 'Ağırlık merkezi hacimden; atalet kütle yazılınca türer'],
-    ['Malzeme', 'Çelik · Dökme demir · Sfero döküm · Alüminyum · Magnezyum: kütle = yoğunluk × hacim',
-      'Tek malzemeli parça (braket) için'],
+    ['Malzeme', 'Birimin malzemesi (aşağıdaki liste): kütle = yoğunluk × hacim',
+      'İçindeki parçaya başka malzeme atanmışsa o parça kendi yoğunluğuyla'],
     ['<em>Dosyadan</em>', 'Parçaların dosyadaki yoğunlukları; ağırlık merkezi kütleyle ağırlıklı',
-      'Gövdenin bütün parçalarında yoğunluk varsa seçilir'],
+      'Dosyada yoğunluk varsa seçilir; yoğunluğu olmayan parçayı atanan malzeme tamamlar, atanan malzeme dosyanınkinin yerine geçer'],
+    ['<em>Parçalardan</em>', 'Parçalara atanan malzemeler; ağırlık merkezi kütleyle ağırlıklı',
+      'Bütün parçalara malzeme atanmışsa seçilir'],
     ['Veri sayfası', 'Modelin ıslak kütlesi',
       'Ağırlık merkezi ve atalet veri sayfasından (16.5)']
   ], ['Kaynak', 'Kütle', 'Not']);
+  h += '<p><strong>Malzeme ataması.</strong> 3B’de parça ya da alt montaj seçiliyken alttaki dizinin '
+    + '<strong>Malzeme</strong> listesi malzemeyi seçimin hepsine verir; parça birimin içindeki en yakın atamayı '
+    + 'alır, ataması yoksa birimin malzemesini. Listenin ilk satırı devralınanı yazar: <em>Üstten</em> (atanmış '
+    + 'alt montaj), <em>Birimden</em> (birimin kaynağı). Birim seçiliyken liste birimin kütle kaynağını yazar. '
+    + 'Atanan malzeme ürün ağacında satırın yanında görünür ve rollerle birlikte projeye kaydedilir; rol '
+    + 'değişince düğümün malzemesi kalır.</p>';
+  h += _gmAlanTablo('Malzemeler', (typeof VE_MNT_STP_MALZEME !== 'undefined' ? VE_MNT_STP_MALZEME : []).map(function(m){
+    return [m.ad, m.sinif, veSayi(m.rho, 0)];
+  }), ['Malzeme', 'Sınıf', 'Yoğunluk [kg/m³]']);
   h += _gmNot('CATIA’da doğrulama özellikleri',
       'STEP ayarlarında <em>Validation Properties</em> açılıp <em>Geometric Validation Properties</em> '
     + 'işaretlenince dosya her katının hacmini, alanını ve ağırlık merkezini taşır; program parçanın hacmini '
