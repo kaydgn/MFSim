@@ -1640,7 +1640,7 @@ adıyla sayarak düşüyor).
 **Hüküm.** Çok kelimeli bir arayüz etiketinde yalnız ilk kelime (ve "—",
 "·", ":" sonrasındaki bölütün ilk kelimesi) büyük harfle başlar. Özel adlar
 olduğu gibi kalır: bileşen adları (`componentDefs[*].name`, kapı onları
-OKUR), yüzey adları (Araç Performans, Takoz Çökme-Titreşim, Komuta Penceresi,
+OKUR), yüzey adları (Araç Performans, Takoz Çökme-Titreşim,
 Program Arşivi, Program Durumu, Kayış Tablosu, Kayış Yolu, Çizim Masası, Veri
 Gezgini, Sonuç Özeti, Ölçüm Görüntüleyici, CAN Çözümleyici), ürünün adı ve
 künyesi, kısaltmalar, tuşlar, markalar ve İngilizce terimler (karar 8·A).
@@ -1891,12 +1891,6 @@ dokuz kopyası) ve elle yazılmış özet kaynak taramasına görünmez.
 Kapının kendi sayımı: 2b yapısında 371 bulgu (araç 311 · FEAD 41 · takoz 19),
 2c'de 0.
 
-**Yüklenirken yazılan özet Node'da da yüklenir.** Takoz örnek defterinin
-özet satırları (`mount-core.js` → `MOUNT_EXAMPLES.specs`) modül yüklenirken
-kuruluyor ve komuta doğrulayıcısı dosyayı çıplak Node'da `require` ediyor —
-orada `veSayi` global değil; jest'te `setup.js` onu kurduğu için birim test
-bunu görmez. Yazıcı yanındaki `sayi.js`'ten alınır.
-
 **Ekrandaki yazı sayıya geri okunmaz.** İki okuyucu vardı: sahil testi
 sihirbazı Crr ortalamasını kendi hücresinin YAZISINDAN `parseFloat` ile
 aktarıyordu ("0,00650" → 0 aktarılırdı, sessiz) ve yol haritasının segment
@@ -1911,8 +1905,7 @@ pencere kendiliğinden kapsamda) + "ekrandaki YAZI sayıya geri okunmaz"
 (kaynak kuralı + Crr'nin davranış testi) + `sayi-pencere.spec.js` (her
 modülün her penceresi açılır, ekran ölçülür; ad sınıfına girmeyen her
 eşleşme penceresiyle birlikte söylenir) + seçenek METNİ kuralı (`<option>`
-elle yazılır, `toFixed` taşımaz) + `komuta-dogrula.test.js` → *"her tezgâh
-çıplak Node'da ölçülür"*.
+elle yazılır, `toFixed` taşımaz).
 
 ### Aşama 3a — Araç Performans belgeleri (2026-09-27)
 

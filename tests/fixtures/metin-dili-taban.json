@@ -1,6 +1,6 @@
 {
  "kural": "ARAYÜZ ANLATMAZ (CLAUDE.md). Kuraldan önce yazılmış, henüz temizlenmemiş işaretli metinler. Yalnız küçülür: node tools/metin-dili.js --taban",
- "sayi": 112,
+ "sayi": 111,
  "dosyalar": {
   "candbc/js/can-dbc.js": {
    "337310b05e": "‹›: çoklanmış sinyal var ama çoklayıcı (M) sinyali yok — o sinyaller çözülemez.",
@@ -14,7 +14,6 @@
    "4e8ec03cdb": "candump (SocketCAN, ID#VERİ)"
   },
   "js/command-palette.js": {
-   "2c93dfd87c": "komuta sipariş fiş durum ölç",
    "76c232c89b": "çalıştır run simüle çözücü solve aç",
    "e696b2f7ee": "excel csv import içe aktar ölçüm canoe vector sütun grafik xlsx"
   },

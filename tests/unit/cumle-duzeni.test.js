@@ -8,7 +8,7 @@
  *
  * Kapsam aşama aşama büyür:
  *   1 — kabuk: şerit, komut paleti, sağ tık, Ayarlar, Program Durumu,
- *       Kısayollar, Komuta, palet kategorileri, pencere başlıkları, Sonuçlar
+ *       Kısayollar, palet kategorileri, pencere başlıkları, Sonuçlar
  *       kabuğu, içe aktarma, görüntüleyici
  *   2 — bileşen panelleri: cp-*.js (rapor üreticileri hariç), yardımcı
  *       bileşenler, güzergâh haritası, çözücü ve üç modül kılavuzu (kılavuz
@@ -28,7 +28,7 @@ const { cumle, etiketler, sinyalAdlari, BIRLESTIRME, BILESEN, YUZEY, DEFTER, AD 
 const KOK = path.join(__dirname, '../..');
 const ASAMA1 = ['index.html', 'viewer/index.html', 'js/ribbon.js', 'js/command-palette.js',
   'js/context-menus.js', 'js/settings.js', 'js/status.js', 'js/shortcuts-help.js', 'js/toolbar.js',
-  'js/cp-komuta.js', 'js/guide-kit.js', 'js/kimlik.js', 'js/cp-programlar.js', 'js/tablo-pencere.js',
+  'js/guide-kit.js', 'js/kimlik.js', 'js/cp-programlar.js', 'js/tablo-pencere.js',
   'js/solver-pro.js', 'js/trace-view.js', 'js/measure-import-ui.js', 'js/signal-tree.js',
   'viewer/js/board.js', 'js/deploy-status.js', 'js/topology.js', 'js/ui-core.js', 'js/components.js'];
 // Aşama 2: bileşen panelleri. Rapor üreticileri (cp-*-report, cp-fead-summary,

@@ -280,8 +280,8 @@ function _veFoyUyar(m) {
   if(typeof showToast === 'function') showToast(m, 'warning');
 }
 
-// file:// üzerinde navigator.clipboard çoğu tarayıcıda YOK (güvenli bağlam
-// değil — js/cp-komuta.js'teki ölçüm). Yedek yol: gizli metin alanı + copy.
+// navigator.clipboard güvenli bağlam ve izin ister; yoksa ya da reddederse
+// yedek yol: gizli metin alanı + copy.
 function _veFoyEskiPano(metin) {
   var ok = false;
   try {

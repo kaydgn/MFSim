@@ -105,7 +105,6 @@ function _cmdkStaticCommands() {
     // 11'i palette YOKTU. Kapı: tests/unit/komut-kapsami.test.js
     { sec:'Görünüm', label:'Sınırı göster / gizle',     kw:'sınır boundary çerçeve frame', icon:_cmdkIco('frame'),      run:function(){ _cmdkCall('veToggleBoundary'); } },
     { sec:'Görünüm', label:'Sınır opaklığı',            kw:'sınır boundary opaklık opacity kontrast', icon:_cmdkIco('contrast'), run:function(){ _cmdkCall('veCycleBoundaryOpacity'); } },
-    { sec:'Panel',   label:'Komuta Penceresi',          kw:'komuta sipariş fiş durum ölç', icon:_cmdkIco('lock'),       run:function(){ _cmdkCall('veKomutaAc'); } },
     { sec:'Panel',   label:'Radyo',                     kw:'radyo müzik çalar radio',      icon:_cmdkIco('radio'),      run:function(){ _cmdkCall('veToggleRadio'); } },
     { sec:'Genel',   label:'Kılavuz kiti',              kw:'kılavuz guide yardım belge indir', icon:_cmdkIco('clipboard'), run:function(){ _cmdkCall('veGuideKitOpen'); } },
     { sec:'Genel',   label:'Bu modülün kılavuzu',       kw:'kılavuz guide modül yardım',   icon:_cmdkIco('file-text'),  run:function(){ _cmdkCall('veGuideOpenCurrent'); } },

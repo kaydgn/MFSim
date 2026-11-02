@@ -110,8 +110,9 @@ describe('başlık TEK bileşen', () => {
     // Eski lacivert degrade (başlık bandı + eylem düğmesi) kalmadı — üç küçük
     // pencere onu kendi satır içi stiliyle ve yazı karakteriyle ✕'le çiziyordu.
     expect(Object.keys(KAYNAK).filter((f) => /#1a365d/i.test(KAYNAK[f]))).toEqual([]);
-    // Altıncı: Takoz Başlangıç Sihirbazı (FEAD sihirbazının kabuğu, aynı başlık)
-    expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(6);
+    // Beşinci: Takoz Başlangıç Sihirbazı (FEAD sihirbazının kabuğu, aynı başlık).
+    // Komuta Penceresi 2026-11-02'de kaldırıldı (6 → 5).
+    expect(HTML.match(/class="ve-settings-header"/g)).toHaveLength(5);
   });
 
   test('pencere KURAN her dosya ortak başlığı taşır — liste değil kural', () => {
@@ -188,7 +189,6 @@ describe('başlık ikonu onu açan şerit girişinin ikonu', () => {
   const PENCERE = [
     ['Ayarlar', 'index.html', 'id="ve-settings-title"', 'veOpenSettings'],
     ['Program Durumu', 'index.html', 'id="ve-status-title"', 'veOpenStatusModal'],
-    ['Komuta', 'index.html', 'id="ve-komuta-title"', 'veKomutaAc'],
     ['İçe Aktarma', 'index.html', 'id="ve-import-title"', 'veImpOpenPicker'],
     ['Özellikler', 'index.html', 'id="ve-properties-title"', 'veTogglePropertiesPanel'],
     ['Özellikler (açılışta yeniden yazılan)', 'js/cp-core.js', "getElementById('ve-properties-title')", 'veTogglePropertiesPanel'],
@@ -204,7 +204,7 @@ describe('başlık ikonu onu açan şerit girişinin ikonu', () => {
 
   test('her başlık bir çizgi ikonla başlar (emoji yok)', () => {
     const basliklar = HTML.match(/<div class="ve-settings-header">\s*<span[^>]*>[^<]*<?/g) || [];
-    expect(basliklar).toHaveLength(6);
+    expect(basliklar).toHaveLength(5);
     basliklar.forEach((b) => expect(b).toMatch(/<span[^>]*>\s*<$/));
     expect(HTML).toMatch(/id="ve-fw-title"><span class="mf-ico mf-ico-wand"><\/span>/);
     expect(HTML).toMatch(/id="ve-mw-title"><span class="mf-ico mf-ico-wand"><\/span>/);
