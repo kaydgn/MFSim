@@ -106,6 +106,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   DİLİM* + `step-ucgen.test.js`
   (→ *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ* · *TOPLAYICI*) + `mount-step-okuma.spec.js` +
   `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
+- `js/cp-mount-3b-agac.js` — Takoz 3B'nin **ürün ağacı** (solda, 3DEXPERIENCE gibi) ve
+  **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol
+  seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`). Kapı: `mount-3b.test.js` → *ÜRÜN
+  AĞACI* · *ÇOKLU SEÇİM* + `mount-3b.spec.js` → *AĞAÇ · CTRL*.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle

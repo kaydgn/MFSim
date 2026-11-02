@@ -21,6 +21,7 @@ const STP = require('../../js/mount-step.js');
 Object.keys(STP).forEach((k) => { global[k] = STP[k]; });
 eval(loadSource('cp-mount-wizard.js'));
 eval(loadSource('cp-mount-3b.js'));
+eval(loadSource('cp-mount-3b-agac.js'));
 beforeEach(() => resetStubs(stubs));
 
 const v = (x, y, z) => ({ x, y, z });
@@ -352,3 +353,126 @@ describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner'
     expect(s.querySelector('text.ad-x').hasAttribute('data-arka')).toBe(false);
   });
 });
+
+// ── ÜRÜN AĞACI VE ÇOKLU SEÇİM (2026-11-02) ─────────────────────────────────
+// Kullanıcı: "Ürün ağacının tıpkı 3D Experience programı gibi sol tarafta
+// gösterilmesini istiyorum." · "Modelde birden fazla braket, birden fazla
+// takoz olduğu için tek tek seçmek yerine CTRL tuşunu aktif edelim."
+// Önce (main a8dd3a4): 3B'de ağaç yoktu, seçim tek düğümdü — dört takoza rol
+// dört ayrı seçim + dört ayrı tık, her tıkta hesap yeniden koşuyordu.
+const STK = require('../helpers/step-takoz.js');
+const oturum = () => { _mwStp = null; return veMntWizStpOku(STK.gucGrubu(), 'guc.stp', 'duz'); };
+const ad2i = (s, ad) => s.sonuc.agac.find((d) => d.ad === ad).i;
+const takozlar = (s) => s.sonuc.agac.filter((d) => /takoz$/.test(d.ad)).map((d) => d.i);
+
+describe('ÜRÜN AĞACI — kartla ortak açıklık, rol çipi, seçili satırlar', () => {
+  test('satırlar kartın satırları; seçim işaretli, rol çipi rol renginde, rollü birimin içi soluk noktayla', () => {
+    const s = oturum(), asm = ad2i(s, 'Arka braket'), ust = ad2i(s, 'Braket üst'), tk = takozlar(s);
+    veMntWizStpRol(asm, 'mnt-bracket');
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bAgacHTML(s, [tk[0], tk[1]]);
+    const satir = Array.from(d.querySelectorAll('[data-ve-3b-agac]')).map((r) => +r.getAttribute('data-ve-3b-agac'));
+    expect(satir).toEqual(_mwStpSatirlar(s).filter((x) => !x.daha).map((x) => x.i));
+    expect(Array.from(d.querySelectorAll('[aria-selected="true"]')).map((r) => +r.getAttribute('data-ve-3b-agac'))).toEqual([tk[0], tk[1]]);
+    expect(d.querySelectorAll('.ve-mw-3b-agac-r.on').length).toBe(2);
+    const cip = d.querySelector('[data-ve-3b-agac="' + asm + '"] .ve-mw-3b-agac-rol');
+    expect(cip.textContent).toBe('Braket');
+    expect(cip.getAttribute('style')).toBe('--renk:var(' + VE_MW_3B_ROL_RENK['mnt-bracket'] + ')');
+    const ic = d.querySelector('[data-ve-3b-agac="' + ust + '"]');
+    expect(ic.classList.contains('ic')).toBe(true);
+    expect(ic.querySelector('.ve-mw-3b-agac-ata').getAttribute('title')).toBe('Arka braket');
+    // alt montaj simgesi paket, parça kutu; dal düğmesi açıklığı söyler
+    const asmR = d.querySelector('[data-ve-3b-agac="' + asm + '"]');
+    expect(asmR.getAttribute('aria-expanded')).toBe('true');
+    expect(asmR.querySelector('.mf-ico-package')).not.toBe(null);
+    expect(ic.querySelector('.mf-ico-box')).not.toBe(null);
+  });
+
+  test('sayfası bitmeyen dal "… düğüm daha" satırıyla biter; satırın tıkı seçime, Ctrl ekler', () => {
+    const s = oturum(), kok = s.sonuc.agac.find((x) => x.ebeveyn < 0);
+    s.acik[kok.i] = 1;
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bAgacHTML(s, []);
+    expect(d.querySelector('.ve-mw-3b-agac-daha').textContent).toBe(' ' + veSayi(kok.cocuklar.length - 1, 0) + ' düğüm daha');
+    expect(d.querySelector('.ve-mw-3b-agac-ad').getAttribute('onclick')).toMatch(/^veMntWiz3bAgacTik\(\d+, event\)$/);
+  });
+
+  test('3B\'de seçilen düğüm için açılacak dallar: her ata, yoldaki çocuğun sayfasına kadar', () => {
+    const s = oturum(), ust = ad2i(s, 'Braket üst'), asm = ad2i(s, 'Arka braket');
+    Object.keys(s.acik).forEach((k) => delete s.acik[k]);
+    const ac = veMntWiz3bAgacAcilacak(s, ust);
+    const atalar = []; for (let e = s.sonuc.agac[ust].ebeveyn; e >= 0; e = s.sonuc.agac[e].ebeveyn) atalar.push(String(e));
+    expect(Object.keys(ac).sort()).toEqual(atalar.sort());
+    expect(ac[asm]).toBe(Math.min(s.sonuc.agac[asm].cocuklar.length, VE_MW_STP_SAYFA));
+    // zaten açık dal yeniden açılmaz; sayfanın ötesindeki çocuk sayfasını ister
+    s.acik[asm] = s.sonuc.agac[asm].cocuklar.length;
+    expect(veMntWiz3bAgacAcilacak(s, ust)[asm]).toBeUndefined();
+    const sahte = { acik: { 0: 50 }, sonuc: { agac: [{ i: 0, ebeveyn: -1, cocuklar: Array.from({ length: 200 }, (_, k) => k + 1) }]
+      .concat(Array.from({ length: 200 }, (_, k) => ({ i: k + 1, ebeveyn: 0, cocuklar: [] }))) } };
+    expect(veMntWiz3bAgacAcilacak(sahte, 121)).toEqual({ 0: 150 });
+    expect(veMntWiz3bAgacAcilacak(sahte, 30)).toEqual({});
+  });
+});
+
+describe('ÇOKLU SEÇİM — rol seçimin hepsine, tek hesap', () => {
+  test('dört takoz tek çağrıda: hepsi takoz, hesap BİR kez koşar (tek tek dört kez)', () => {
+    const s = oturum(), tk = takozlar(s);
+    veMntWizStpRol(ad2i(s, 'Motor bloğu'), 'mnt-motor');
+    veMntWizStpHesapla();
+    expect(s.coz && s.coz.ok).toBe(true);
+    const asil = global.veMntStpCoz, say = { n: 0 };
+    global.veMntStpCoz = function(){ say.n++; return asil.apply(this, arguments); };
+    try {
+      expect(veMntWizStpRolCok(tk, 'mnt-mount')).toBe(true);
+      expect(tk.map((i) => s.roller[i])).toEqual(tk.map(() => 'mnt-mount'));
+      expect(say.n).toBe(1);
+      expect(s.coz.birimler.filter((b) => b.tip === 'mnt-mount').length).toBe(tk.length);
+      say.n = 0;
+      tk.forEach((i) => veMntWizStpRol(i, ''));
+      expect(say.n).toBe(tk.length);
+    } finally { global.veMntStpCoz = asil; }
+    expect(veMntWizStpRolCok([], 'mnt-mount')).toBe(false);
+    expect(veMntWizStpRolCok(tk, 'fead-crank')).toBe(false);
+  });
+
+  test('alttaki dizi: "Rol — N düğüm", çip yalnız hepsi o roldeyse basılı; takoz noktası ve veri sayfası yok', () => {
+    const s = oturum(), tk = takozlar(s);
+    veMntWizStpRol(tk[0], 'mnt-mount');
+    const kur = (secim) => { const d = document.createElement('div'); d.innerHTML = veMntWiz3bAltHTML(s, secim[secim.length - 1], { secim }); return d; };
+    let d = kur([tk[0], tk[1]]);
+    expect(d.querySelector('.ve-fw-3b-roller').getAttribute('aria-label')).toBe('Rol — 2 düğüm');
+    expect(d.querySelector('[data-ve-3b-rol="mnt-mount"]').getAttribute('aria-pressed')).toBe('false');
+    expect(d.querySelector('option[value="-"]').disabled).toBe(false);          // birinin rolü var
+    // karışık seçimde son eklenen rollü olsa da çip basılı değil
+    expect(kur([tk[1], tk[0]]).querySelector('[data-ve-3b-rol="mnt-mount"]').getAttribute('aria-pressed')).toBe('false');
+    veMntWizStpRol(tk[1], 'mnt-mount');
+    d = kur([tk[0], tk[1]]);
+    expect(d.querySelector('[data-ve-3b-rol="mnt-mount"]').getAttribute('aria-pressed')).toBe('true');
+    expect(d.querySelector('#ve-mw-3b-nokta')).toBe(null);
+    expect(kur([tk[1]]).querySelector('#ve-mw-3b-nokta')).not.toBe(null);      // tek takozda var
+  });
+
+  test('sağdaki kart: "Seçili N", düğümler ve birleşik parça sayısı; satırdan seçimden çıkarılır', () => {
+    const s = oturum(), tk = takozlar(s);
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bPanelHTML(s, tk[2], [tk[0], tk[2]]);
+    const b = d.querySelector('[data-ve-3b-secili]');
+    expect(b.getAttribute('data-ve-3b-secili')).toBe('2');
+    expect(b.querySelectorAll('li').length).toBe(2);
+    expect(b.querySelector('li.on .ve-fw-3b-yolb').textContent).toBe(s.sonuc.agac[tk[2]].ad);
+    const ps = new Set(s.sonuc.agac[tk[0]].parcalar.concat(s.sonuc.agac[tk[2]].parcalar));
+    expect(b.querySelector('p').textContent).toBe(veSayi(ps.size, 0) + ' parça');
+    expect(b.querySelector('li .ve-fw-mini').getAttribute('onclick')).toBe('veMntWiz3bSec(' + tk[0] + ', true)');
+    // tek seçimde yol (eski görünüş)
+    d.innerHTML = veMntWiz3bPanelHTML(s, tk[2], [tk[2]]);
+    expect(d.querySelector('[data-ve-3b-secili]').getAttribute('data-ve-3b-secili')).toBe('1');
+    expect(d.querySelector('.ve-fw-3b-yol')).not.toBe(null);
+  });
+
+  test('etiket soldaki ağacın şeridine girmez: sola taşan etiket sağa geçer', () => {
+    const Y = veMntWiz3bEtiketYerlesim([{ x: 360, y: 100, gen: 120 }, { x: 800, y: 100, gen: 50 }], 1200, 700, 0, 300);
+    expect(Y[0].sol).toBe(false);
+    expect(veMntWiz3bEtiketYerlesim([{ x: 360, y: 100, gen: 120 }, { x: 800, y: 100, gen: 50 }], 1200, 700, 0, 0)[0].sol).toBe(true);
+  });
+});
+

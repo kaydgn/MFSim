@@ -146,7 +146,11 @@ test('DAİREDEN NOKTA: öneri sunudaki sayı; kip takoza sığar; kenara gel →
   expect((await satirlar(page))[2]).toEqual(['Sol ön takoz', '439,957; −355,957; ' + (secildi.konum[2] > 435 ? '441' : '431') + ',855', 'Daire Ø 120,0']);
   // Kipte boşluğa tıklamak: sebebi ipucunda, kip sürer
   await page.click('#ve-mw-3b-nokta');
-  const R = await page.evaluate(() => { const r = document.querySelector('#ve-mw-3b-tuval canvas').getBoundingClientRect(); return [r.left, r.top]; });
+  // boş tuval: sol üst köşe ürün ağacının altında (2026-11-02) — ağacın sağı
+  const R = await page.evaluate(() => {
+    const r = document.querySelector('#ve-mw-3b-tuval canvas').getBoundingClientRect(), a = document.getElementById('ve-mw-3b-agac').getBoundingClientRect();
+    return [a.right, r.top];
+  });
   await page.mouse.click(R[0] + 30, R[1] + 30);
   expect(await page.evaluate(() => [document.getElementById('ve-mw-3b-ipucu').textContent, veMntWiz3bDurum().kip >= 0]))
     .toEqual(['Dairesel kenar yok.', true]);

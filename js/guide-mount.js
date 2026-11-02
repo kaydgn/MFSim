@@ -1004,11 +1004,14 @@ function _gmSec16(){
   h += '<p>Seçilen parça kendi renginde, kenarları koyu çizilir; öteki parçalar tek kat soluk kalır. Etiket '
     + 'birimin adını ve konumunu taşır; işarete bakan kenarı birimin rol rengindedir.</p>';
   h += '<h3>16.2 Roller</h3>';
-  h += '<p>Rol bir düğüme verilir: 3B’de parçaya tıklayıp çipten ya da ağaçtaki satırın <strong>Rol</strong> '
-    + 'listesinden. Alt montaja verilen rol bütün parçalarına geçer. Roller iç içe verilebilir: motor alt '
-    + 'montajının içindeki takoz kendi biriminde sayılır, parça en yakın rollü atasının birimine girer; aynı '
-    + 'rol iç içe verilmez. <strong>Konumları hesapla</strong> yalnız rol verilen birimleri ölçer; rol değişince '
-    + 'hesap yenilenir.</p>';
+  h += '<p>Rol bir düğüme verilir: 3B’de parçaya ya da soldaki <strong>Ürün ağacı</strong>nda satıra tıklayıp alttaki '
+    + 'çipten, ya da pencerenin ağacındaki satırın <strong>Rol</strong> listesinden. Ctrl (Mac’te ⌘) ile tıklanan '
+    + 'düğüm seçime eklenir ya da seçimden çıkar; çip rolü seçimin hepsine verir. Alt montaja verilen rol bütün '
+    + 'parçalarına geçer. Roller iç içe verilebilir: motor alt montajının içindeki takoz kendi biriminde sayılır, '
+    + 'parça en yakın rollü atasının birimine girer; aynı rol iç içe verilmez. <strong>Konumları hesapla</strong> '
+    + 'yalnız rol verilen birimleri ölçer; rol değişince hesap yenilenir.</p>';
+  h += '<p>Ürün ağacı pencerenin ağacıyla aynı dalları açık tutar. 3B’de seçilen parçanın dalı açılır ve satırı '
+    + 'görünür olur; satırın üstüne gelince düğümün parçaları 3B’de vurgulanır, çift tık kamerayı düğüme sığdırır.</p>';
   h += '<h3>16.3 Takoz noktası</h3>';
   h += '<p>Takozun noktası <strong>üst bağlantı yüzeyinin merkezidir</strong>: dosyada yazılı dairenin merkezi, '
     + 'CATIA’daki ölçümün aynısı. Program onu takozun ekseninden önerir. 3B’de takoz seçiliyken '
