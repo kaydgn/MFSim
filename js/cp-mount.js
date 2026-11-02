@@ -724,7 +724,10 @@ function veMntUpdateBreadcrumb(){
 // yalnız kütle+CG verir) → nokta kütle. Grubun ataleti parçaların CG yayılımından
 // paralel-eksen teoremiyle zaten doğar. 'PTO Toplam' ise grup ataletini TAŞIR
 // (ASR-SR-116 Tablo 3) → nokta kütle DEĞİL.
-var _MNT_POINTMASS_DEFAULT = { 'mnt-shaft':1, 'mnt-pto':1, 'mnt-pump':1 };
+// Motorun aksesuarları da (Alternatör … Isı Sacı): teknik resim kütle ve
+// ağırlık merkezi verir, atalet vermez.
+var _MNT_POINTMASS_DEFAULT = { 'mnt-shaft':1, 'mnt-pto':1, 'mnt-pump':1,
+  'mnt-alternator':1, 'mnt-alt-bracket':1, 'mnt-ac':1, 'mnt-heat-shield':1 };
 function _mntEnsureMassData(node){
   if(!node.data) node.data = {};
   if(node.data.pointMass===undefined) node.data.pointMass = !!_MNT_POINTMASS_DEFAULT[node.type];
@@ -1369,6 +1372,53 @@ function _mntPtoDurumu(node){
   return _mntDurum('ok', node.type==='mnt-pto-group' ? 'toplu' : 'ayrıntılı');
 }
 
+// ─── MOTORUN AKSESUARLARI — kayıtlı aksesuarın kütlesi (2026-11-02) ─────────
+// Alternatör ve Klima Kompresörü programın aksesuar kataloğundan seçilir
+// (js/fead-accessories.js — FEAD kasnağının künyesi, anahtar BMC parça
+// numarası): seçim kütleyi yazar, kaynağı künyede. Ağırlık merkezi teknik
+// resimden; resimde yoksa aksesuarın orta noktası (STEP'te dış ölçülerin
+// merkezi — js/mount-step.js). "— elle gir —" yalnız bağı çözer (takoz
+// kütüphanesiyle aynı kural). Liste ve aile eşlemesi TEK yerde: STEP'in kütle
+// kaynağıyla aynı çağrı (veMntStpAksKatalog).
+function _mntAksKatalog(tip){
+  return (typeof veMntStpAksKatalog==='function') ? veMntStpAksKatalog(tip) : [];
+}
+function _mntAksSecili(node){
+  var k=(node.data||{}).aksKatalog;
+  return k ? (_mntAksKatalog(node.type).filter(function(a){ return a.key===k; })[0] || null) : null;
+}
+function _mntAksSection(node){
+  var L=_mntAksKatalog(node.type), sec=_mntAksSecili(node);
+  var opt=function(a){ return '<option value="'+_mntEsc(a.key)+'"'+(sec===a?' selected':'')+'>'
+    + _mntEsc(a.ad+' · '+a.key+' · '+_mntS(a.kg,1)+' kg')+'</option>'; };
+  var sel='<select class="ve-fp-sel" id="ve-mnt-aks-'+node.id+'" onchange="veMntAksUygula(\''+node.id+'\',this.value)">'
+    + '<option value="">— elle gir —</option>'+L.map(opt).join('')+'</select>';
+  var h=_mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kayıtlı aksesuar</span>'+sel+'</label>');
+  if(sec) h+=_mntIzgara(1, _mntOku('Kütlenin kaynağı', sec.kgKaynak || '—', { ipucu:sec.kgKaynak || '' }));
+  return _mntBolum('Kayıtlı aksesuar', L.length+' kayıt', h);
+}
+function _mntAksDurumu(node){
+  var sec=_mntAksSecili(node), d=node.data||{};
+  if(!sec) return _mntDurum('ok', 'elle');
+  return _mntNum(d.mass,NaN)===sec.kg ? _mntDurum('ok', 'katalog') : _mntDurum('ok', 'elle değişti');
+}
+function veMntAksUygula(nodeId, key){
+  var node=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes.find(function(n){return n.id===nodeId;}) : null;
+  if(!node) return false;
+  var d=node.data||(node.data={});
+  if(!key){
+    if(d.aksKatalog===undefined) return false;
+    delete d.aksKatalog;
+  } else {
+    var a=_mntAksKatalog(node.type).filter(function(x){ return x.key===key; })[0];
+    if(!a) return false;
+    d.aksKatalog=a.key; d.mass=a.kg;
+  }
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+  return true;
+}
+
 // ── KÜTLE VE ATALET ─────────────────────────────────────────────────────────
 var _MNT_EKSEN = [['X','X · boyuna'], ['Y','Y · yanal'], ['Z','Z · düşey']];
 function _mntNoktaKutle(node){
@@ -1483,6 +1533,7 @@ function getMntMassPropertiesHTML(node){
   else if(node.type==='mnt-gearbox') kategoriler.push({ k:'vites', ad:'Vitesler', govde:_mntGearboxSection(node), durum:_mntVitesDurumu(node) });
   else if(node.type==='mnt-transfer') kategoriler.push({ k:'tahrik', ad:'Tahrik', govde:_mntTransferSection(node), durum:_mntTahrikDurumu(node) });
   else if(_MNT_PTO_REF[node.type]) kategoriler.push({ k:'pto', ad:'PTO grubu', govde:_mntPtoSection(node), durum:_mntPtoDurumu(node) });
+  else if(_mntAksKatalog(node.type).length) kategoriler.push({ k:'katalog', ad:'Katalog', govde:_mntAksSection(node), durum:_mntAksDurumu(node) });
   return _mntPencereKabuk(node, kategoriler, _mntKrokiHTML(node, M));
 }
 
@@ -2189,7 +2240,12 @@ function _mntComputeSupportLinks(items){
   // Liste burada YEREL: bu fonksiyon saf kalsın diye global componentDefs'e
   // (isMountCarried) bakmaz — girdisi düğüm değil {id,kind,lx,ly} verisidir.
   var CARRIED = { 'mnt-pto':1, 'mnt-pump':1, 'mnt-pto-group':1 };
+  // Motorun aksesuarları motora civatalanır: taşıyıcıları en yakın MOTOR
+  // (motor yoksa en yakın ana gövde)
+  var AKSESUAR = { 'mnt-alternator':1, 'mnt-alt-bracket':1, 'mnt-ac':1, 'mnt-heat-shield':1 };
+  Object.keys(AKSESUAR).forEach(function(k){ CARRIED[k] = 1; });
   var pureBodies = items.filter(function(it){ return BODY[it.kind]; });
+  var motors = pureBodies.filter(function(it){ return it.kind==='mnt-motor'; });
   var cradles    = items.filter(function(it){ return it.kind==='mnt-bracket'; });
   var carried    = items.filter(function(it){ return CARRIED[it.kind]; });
   var mounts     = items.filter(function(it){ return it.kind==='mnt-mount'; });
@@ -2216,7 +2272,7 @@ function _mntComputeSupportLinks(items){
   function addRaw(src, tgt){ if(src&&tgt) (byTarget[tgt.id]=byTarget[tgt.id]||[]).push(src); }
   mounts.forEach(function(m){ addRaw(m, nearest(m, supportTargets)); });
   cradles.forEach(function(c){ addRaw(c, nearest(c, pureBodies)); });
-  carried.forEach(function(p){ addRaw(p, nearest(p, pureBodies)); });   // PTO/Pompa → taşıyıcı gövde
+  carried.forEach(function(p){ addRaw(p, nearest(p, (AKSESUAR[p.kind] && motors.length) ? motors : pureBodies)); });   // PTO/Pompa → taşıyıcı gövde, aksesuar → motor
 
   // 2. Her hedefte gelenleri AYRI giriş portlarına dağıt; hem kaynağın çıkışını hem
   //    hedefin o portunu KARŞILIKLI birbirine baktır (per-instance portPositions).
@@ -5088,6 +5144,8 @@ function _mntFsOverlay(title, innerHTML, onMount, onClose){
 // Node/Jest için dışa aç
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
+    _mntAksKatalog: _mntAksKatalog, _mntAksSection: _mntAksSection, veMntAksUygula: veMntAksUygula,
+    _MNT_POINTMASS_DEFAULT: _MNT_POINTMASS_DEFAULT,
     getMntModulePropertiesHTML: getMntModulePropertiesHTML,
     getMntReportPropertiesHTML: getMntReportPropertiesHTML,
     _mnt2DPencereVeri: _mnt2DPencereVeri,

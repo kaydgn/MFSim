@@ -83,7 +83,10 @@ var _mw3b = null;
 var VE_MW_3B_ROL_RENK = {
   'mnt-motor': '--accent-primary', 'mnt-gearbox': '--seri-1', 'mnt-transfer': '--seri-2',
   'mnt-bracket': '--seri-3', 'mnt-mount': '--accent-success', 'mnt-shaft': '--seri-4',
-  'mnt-pto': '--accent-warning', 'mnt-pump': '--accent-danger', 'mnt-pto-group': '--ink-accent'
+  'mnt-pto': '--accent-warning', 'mnt-pump': '--accent-danger', 'mnt-pto-group': '--ink-accent',
+  // Motorun aksesuarları: motorun tonu (taşıyıcısı), ayrı ayrı seçilir
+  'mnt-alternator': '--accent-warning', 'mnt-alt-bracket': '--seri-3', 'mnt-ac': '--seri-1',
+  'mnt-heat-shield': '--seri-2'
 };
 // Sığdırmanın dizi için ayırdığı en az pay (px) — FEAD'inkiyle aynı gerekçe
 var VE_MW_3B_ALT_PAY = 124;

@@ -134,6 +134,8 @@ function _gmSec2(){
     ['<strong>Kütle gövdeleri</strong>', 'Motor · Şanzıman · Şaft · Braket · Transfer · '
       + 'PTO · Pompa · PTO grubu', 'Hepsi aynı “Kütle”, “Ağırlık merkezi” ve “Atalet” bölümlerini '
       + 'taşır; farkları altlarındaki tipe özel bölümlerde'],
+    ['<strong>Motorun aksesuarları</strong>', 'Alternatör · Alternatör Braketi · Klima Kompresörü · '
+      + 'Isı Sacı', 'Motora civatalı kütleler; her biri kendi bileşeni, nokta kütle'],
     ['<strong>Takoz</strong>', 'Konum ve üç eksenli rijitlik', 'En az 3, tipik olarak 3–4'],
     ['<strong>Takoz Özellikleri</strong>', 'Takoz tiplerinin kataloğu: rijitlik, kuvvet–sehim '
       + 'yasası, kapasite', 'Katalogdan seçip takoza uygulamak için'],
@@ -293,8 +295,18 @@ function _gmSec5(){
     ['Transfer Kutusu', '<strong>Oran ve aks payı</strong> (transfer oranı, aks payı φ), '
       + '<strong>Mil torku</strong>', 'Transfer künyesi'],
     ['PTO · Pompa · PTO grubu', '<strong>Giriş yolu</strong> ve <strong>ASR-SR-116 referansı</strong>',
-      'Toplu ya da parça parça — <strong>ikisi birden değil</strong>']
+      'Toplu ya da parça parça — <strong>ikisi birden değil</strong>'],
+    ['Alternatör · Klima Kompresörü', '<strong>Kayıtlı aksesuar</strong> (kütle)',
+      'Programın aksesuar kataloğu']
   ], ['Gövde', 'Bölümler', 'Nereden']);
+  h += '<p>Motorun aksesuarları (alternatör, alternatör braketi, klima kompresörü, ısı sacı) her biri kendi '
+    + 'bileşenidir: motora civatalı kütle olarak güç grubunun '
+    + 'kütlesine katılır, takoza oturmaz. Kütle ve ağırlık merkezi aksesuarın teknik resminden girilir; '
+    + 'teknik resim ağırlık merkezini vermiyorsa aksesuarın <strong>orta noktası</strong> alınır. Atalet '
+    + 'girilmez: aksesuar nokta kütledir ve toplam atalete paralel eksen teoremiyle katılır. Alternatör '
+    + 've klima kompresörünün kütlesi programda kayıtlı modellerden de seçilir '
+    + '(<strong>Kayıtlı aksesuar</strong>). Motorun kütlesi veri sayfasından geliyorsa aksesuarlar '
+    + 'onun içinde değildir.</p>';
   h += '<p>Motorun <strong>Tork zinciri</strong> föyü, mil torkunu oluşturan her çarpanın '
     + 'hangi gövdeden okunduğunu yazar. Aynı alan iki gövdede birden doluysa çözücü ilkini '
     + 'okur; pencerenin üstündeki bant bunu <strong>çakışma</strong> olarak, hangi gövdenin '
@@ -1017,7 +1029,7 @@ function _gmSec16(){
       'Tek malzemeli parça (braket) için'],
     ['<em>Dosyadan</em>', 'Parçaların dosyadaki yoğunlukları; ağırlık merkezi kütleyle ağırlıklı',
       'Gövdenin bütün parçalarında yoğunluk varsa seçilir'],
-    ['Veri sayfası', 'Modelin ıslak kütlesi; yazılan kütle onun yerine geçer',
+    ['Veri sayfası', 'Modelin ıslak kütlesi',
       'Ağırlık merkezi ve atalet veri sayfasından (16.5)']
   ], ['Kaynak', 'Kütle', 'Not']);
   h += _gmNot('CATIA’da doğrulama özellikleri',
@@ -1042,8 +1054,8 @@ function _gmSec16(){
       + 'parçalarındadır; kamera birime sığar.',
     '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli dairesel bir kenarı (krank kasnağı, volan '
       + 'muhafazası) tıklayın. Bu seçim bütün parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
-    '<strong>Konumları hesapla</strong>: ağırlık merkezi ve atalet veri sayfasından, kütle ıslak kütleden. '
-      + 'Aksesuarlar dâhil kütle gibi başka bir değer <strong>Kütle</strong> sütununa yazılır.'
+    '<strong>Konumları hesapla</strong>: ağırlık merkezi, atalet ve kütle (ıslak) veri sayfasından. '
+      + 'Motorun aksesuarları ayrı bileşen olarak girilir (16.6).'
   ]);
   h += '<p>İki referanstan biri eksikse ağırlık merkezi hacimden bulunur ve uyarı satırı eksik referansın adını '
     + 'yazar. Hesaptan sonra 3B’de eksenin dairesi halka, referans noktası işaret olarak çizilir. Ağırlık '
@@ -1058,7 +1070,15 @@ function _gmSec16(){
         + _gmF(v.atalet.x, 1) + ' / ' + _gmF(v.atalet.y, 1) + ' / ' + _gmF(v.atalet.z, 1) + ' kg·m²',
       _gmE(v.kaynak)];
   }), ['Model', 'Değerler', 'Kaynak']);
-  h += '<h3>16.6 Model ile karşılaştırmak</h3>';
+  h += '<h3>16.6 Motorun aksesuarları</h3>';
+  h += '<p>Aksesuar parçasına 3B’de kendi rolü verilir (<strong>Diğer…</strong> listesi: Alternatör, Alternatör '
+    + 'Braketi, Klima Kompresörü, Isı Sacı). Motor montajının '
+    + 'içindeki parça kendi rolünü alınca motorun biriminden çıkar. Ağırlık merkezi parçanın <strong>orta '
+    + 'noktasıdır</strong>: dosyadaki dış ölçülerinin merkezi. Kütle <strong>Kütle</strong> bölümünde '
+    + 'yazılır, malzemeden bulunur ya da alternatör ve klima kompresöründe <strong>Katalog</strong> '
+    + 'grubundan seçilir; atalet hesaplanmaz (nokta kütle). Teknik resim ağırlık merkezini veriyorsa '
+    + 'değer modele uygulandıktan sonra bileşenin penceresinde yazılır.</p>';
+  h += '<h3>16.7 Model ile karşılaştırmak</h3>';
   h += '<p><strong>Model</strong> bölümü her birimi modeldeki karşılığıyla aynı satıra koyar: bileşenin adı, '
     + 'konum farkı (takozda nokta, gövdede ağırlık merkezi) ve kütle. Eşleme tip içinde, en yakın bileşenle '
     + 'yapılır. Dosyanın ve modelin referansı farklıysa aradaki <strong>öteleme</strong> takozlardan '
@@ -1076,7 +1096,7 @@ function _gmSec16(){
     + 'onun çevresinde. Sihirbazın kartında aynı tablo durur; tuvaldeki modelden açılan sihirbazda '
     + '<strong>Sihirbaza aktar</strong> mevcut bileşenlere yazar (rijitlik, braketler ve adlar yerinde), '
     + 'modelde olmayan birimi ekler. Sihirbaz STEP’ten kurulmuşsa aktarım durumu baştan kurar.</p>';
-  h += '<h3>16.7 Kayıt</h3>';
+  h += '<h3>16.8 Kayıt</h3>';
   h += '<p>Roller, kütle kaynakları, seçilen daireler ve veri sayfasının referansları projeyle kaydedilir; STEP '
     + 'dosyası kaydedilmez. Proje '
     + 'yeniden açılınca pencere kayıtlı rolleri <strong>Kayıtlı roller</strong> föyünde gösterir; aynı dosya '
@@ -1100,6 +1120,7 @@ function _gmEkA(){
       ['Vites oranları', 'Şanzıman', '<strong>Vites oranları</strong>'],
       ['Transfer oranı', 'Transfer Kutusu', '<strong>Oran ve aks payı</strong>'],
       ['PTO giriş yolu', 'PTO grubu', '<strong>Giriş yolu</strong>'],
+      ['Aksesuarın kayıtlı modeli', 'Alternatör · Klima Kompresörü', '<strong>Kayıtlı aksesuar</strong>'],
       ['Takoz konumu', 'Takoz', '<strong>Konum</strong>'],
       ['Statik ve dinamik rijitlik', 'Takoz', '<strong>Rijitlik</strong>'],
       ['Taşıma kapasitesi', 'Takoz', '<strong>Kapasite</strong>'],

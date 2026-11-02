@@ -32,7 +32,7 @@ const oku = (f) => fs.readFileSync(path.join(KOK, f), 'utf8');
 // YALNIZ componentDefs adları (`  'tip': {\n    name: '…'`) — sinyal adları
 // (`name:'Motor Devri'`) bileşen adı değil, onlar da cümle düzenine uyar.
 const BILESEN = [...oku('js/components.js').matchAll(/^  '[a-z0-9-]+':\s*\{\s*\n\s+name:\s*'([^']+)'/gm)].map((m) => m[1]);
-const YUZEY = ['Araç Performans', 'Takoz Çökme-Titreşim', 'Komuta Penceresi', 'Program Arşivi',
+const YUZEY = ['Araç Performans', 'Takoz Çökme-Titreşim', 'Program Arşivi',
   'Program Durumu', 'Kayış Tablosu', 'Kayış Yolu', 'Çizim Masası', 'Veri Gezgini', 'Sonuç Özeti',
   'Ölçüm Görüntüleyici', 'CAN Çözümleyici', 'Çalışma Noktası'];
 const YER = ['Bolu Tüneli', 'Güç Grubu Müdürlüğü', 'Güç Aktarma Organları Mühendisliği'];   // yer ve birim adları

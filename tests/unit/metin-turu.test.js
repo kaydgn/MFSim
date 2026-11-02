@@ -59,7 +59,7 @@ describe('bayraklar ve aşamalar', () => {
     const y = T.ASAMALAR[2].yuzeyler;
     expect(y.length).toBeGreaterThanOrEqual(25);
     expect(new Set(y.map((x) => x.ad)).size).toBe(y.length);
-    ['Şerit · Giriş', 'Komut paleti', 'Ayarlar · Hakkında', 'Program Arşivi', 'Komuta · tezgâh'].forEach((ad) => {
+    ['Şerit · Giriş', 'Komut paleti', 'Ayarlar · Hakkında', 'Program Arşivi'].forEach((ad) => {
       expect(y.map((x) => x.ad)).toContain(ad);
     });
     y.forEach((x) => { expect(typeof x.kok).toBe('string'); expect(typeof x.ac).toBe('function'); });

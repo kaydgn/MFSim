@@ -46,7 +46,7 @@ describe('palet ipucu yalnız ad', () => {
 });
 
 // Kabuğun dosyaları (aşama 2). Modül dosyaları kendi aşamasında.
-const KABUK = ['js/ribbon.js', 'js/settings.js', 'js/command-palette.js', 'js/status.js', 'js/cp-komuta.js',
+const KABUK = ['js/ribbon.js', 'js/settings.js', 'js/command-palette.js', 'js/status.js',
   'js/cp-programlar.js', 'js/context-menus.js', 'js/toolbar.js', 'js/topology.js', 'js/ui-core.js',
   'js/connections.js', 'js/align-nodes.js', 'js/auth.js', 'js/deploy-status.js', 'js/minimap.js',
   'js/annotations.js', 'js/state.js', 'js/kimlik.js', 'js/tidy-layout.js', 'js/window-drag.js',
@@ -127,12 +127,6 @@ describe('açıklama yuvası yok', () => {
   test('Ayarlar ve Program Durumu açıklama paragrafı basmaz', () => {
     ['js/settings.js', 'js/status.js'].forEach((f) => expect(oku(f)).not.toMatch(/ve-settings-desc/));
     expect(/\.ve-settings-desc\b/.test(oku('css/styles.css'))).toBe(false);   // dosyayı dökmesin
-  });
-
-  test('Komuta tezgâhı ipucu, fiil açıklama taşımaz', () => {
-    const K = require('../../js/cp-komuta.js');
-    K.VE_KOMUTA_TEZGAHLAR.forEach((t) => expect({ id: t.id, ipucu: t.ipucu }).toEqual({ id: t.id, ipucu: undefined }));
-    expect(oku('js/cp-komuta.js')).not.toMatch(/ve-komuta-(ipucu|fiil-aciklama|kunye-not|giris-alt|fis-alt)/);
   });
 
   test('hesap menüsünün kimlik bloğu yalnız adı taşır', () => {

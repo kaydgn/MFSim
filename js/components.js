@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','mnt-parametric','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-alternator','mnt-alt-bracket','mnt-ac','mnt-heat-shield','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','mnt-parametric','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -499,6 +499,40 @@ var componentDefs = {
     name: 'PTO Toplam',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M58 7 H42 L51 14.5 L42 22 H58" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="7" y="28" width="86" height="57" rx="10" fill="var(--accent-primary, #a8502b)" fill-opacity="0.10" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-dasharray="9 6"/><line x1="41" y1="56" x2="50" y2="56" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><line x1="66" y1="56" x2="72" y2="56" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="56" r="14" fill="var(--accent-primary, #a8502b)" opacity="0.9"/><circle cx="28" cy="56" r="4.5" fill="#fff"/><circle cx="58" cy="56" r="10" fill="var(--accent-primary, #a8502b)" opacity="0.6"/><circle cx="79" cy="56" r="8" fill="var(--accent-primary, #a8502b)" opacity="0.42"/></svg>',
     inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, defaultWidth: 60, defaultHeight: 50,
+    portLayout: { inputs: ['bottom'], outputs: ['left'] }
+  },
+  // ── MOTORUN AKSESUARLARI (kullanıcı 2026-11-02) ─────────────────────────
+  // Her aksesuar KENDİ tipi (tek bir "Aksesuar" bileşeni değil). Liste
+  // kullanıcının Ağırlık Merkezi Hesaplama Programı'nın motor parçaları:
+  // Alternatör · Alternatör Braketi · Klima Kompresörü · Isı Sacı. Motora
+  // CIVATALANAN kütleler: PTO grubu gibi taşınır (isMountCarried — çıkışı
+  // taşıyan gövdeye, burada motora), takoza oturmaz. Kütle ve ağırlık merkezi
+  // teknik resimden; resimde ağırlık merkezi yoksa aksesuarın orta noktası
+  // (STEP'te parçanın dış ölçülerinin merkezi, js/mount-step.js). Atalet
+  // verisi genelde yok → nokta kütle varsayılan (_MNT_POINTMASS_DEFAULT).
+  // isMountAksesuar: aksesuar ailesinin işareti — listeler bundan türer.
+  'mnt-alternator': {
+    name: 'Alternatör',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="45" width="18" height="10" rx="4" fill="var(--text-secondary, #544e44)"/><circle cx="58" cy="50" r="30" fill="var(--accent-primary, #a8502b)" opacity="0.85"/><path d="M62 28 L46 54 L57 54 L52 72 L70 45 L59 45 Z" fill="#fff"/></svg>',
+    inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, isMountAksesuar: true, defaultWidth: 50, defaultHeight: 46,
+    portLayout: { inputs: ['bottom'], outputs: ['left'] }
+  },
+  'mnt-alt-bracket': {
+    name: 'Alternatör Braketi',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M16 18 H44 V60 H86 V86 H16 Z" fill="var(--accent-primary, #a8502b)" opacity="0.85"/><circle cx="30" cy="33" r="6" fill="#fff"/><circle cx="71" cy="73" r="6" fill="#fff"/></svg>',
+    inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, isMountAksesuar: true, defaultWidth: 50, defaultHeight: 46,
+    portLayout: { inputs: ['bottom'], outputs: ['left'] }
+  },
+  'mnt-ac': {
+    name: 'Klima Kompresörü',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="45" width="16" height="10" rx="4" fill="var(--text-secondary, #544e44)"/><rect x="22" y="24" width="68" height="52" rx="12" fill="var(--accent-primary, #a8502b)" opacity="0.85"/><g stroke="#fff" stroke-width="5" stroke-linecap="round"><line x1="56" y1="34" x2="56" y2="66"/><line x1="42" y1="42" x2="70" y2="58"/><line x1="70" y1="42" x2="42" y2="58"/></g></svg>',
+    inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, isMountAksesuar: true, defaultWidth: 50, defaultHeight: 46,
+    portLayout: { inputs: ['bottom'], outputs: ['left'] }
+  },
+  'mnt-heat-shield': {
+    name: 'Isı Sacı',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M10 62 Q22 50 34 62 T58 62 T82 62 L90 62 L90 80 L10 80 Z" fill="var(--accent-primary, #a8502b)" opacity="0.85"/><g fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"><path d="M30 14 q-6 7 0 13 t0 13"/><path d="M50 10 q-6 7 0 13 t0 13"/><path d="M70 14 q-6 7 0 13 t0 13"/></g></svg>',
+    inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, isMountAksesuar: true, defaultWidth: 50, defaultHeight: 46,
     portLayout: { inputs: ['bottom'], outputs: ['left'] }
   },
   'mnt-mount': {

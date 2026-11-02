@@ -305,14 +305,7 @@ const ASAMALAR = {
       })),
       { ad: 'Program Durumu', kok: '#ve-status-overlay .ve-settings-modal', ac: async (p) => { await p.evaluate(() => { veCloseSettings(); veOpenStatusModal(); }); await bekle(p, 800); } },
       { ad: 'Program Arşivi', kok: '#ve-programlar .ve-help-panel', ac: async (p) => { await p.evaluate(() => { veCloseStatusModal(); veProgramArsiviOpen(); }); await bekle(p, 1200); } },
-      { ad: 'Komuta · giriş', kok: '#ve-komuta-overlay .ve-settings-modal', ac: async (p) => { await p.evaluate(() => { veProgramArsiviClose(); veKomutaAc(); }); await bekle(p, 600); } },
-      // İçerik: tur sayfanın kendi anahtarıyla oturumu yetkili sayar (şifre
-      // sayfada sha-256 olarak duruyor; kapı bir erişim denetimi değil).
-      { ad: 'Komuta · tezgâh', kok: '#ve-komuta-overlay .ve-settings-modal', ac: async (p) => {
-        await p.evaluate(() => { sessionStorage.setItem(VE_KOMUTA_KEY, VE_KOMUTA_HASH); veKomutaKapat(); veKomutaAc(); });
-        await bekle(p, 1200);
-      } },
-      { ad: 'Radyo', kok: '#mf-radio', ac: async (p) => { await p.evaluate(() => { veKomutaKapat(); veToggleRadio(); }); await bekle(p, 600); } },
+      { ad: 'Radyo', kok: '#mf-radio', ac: async (p) => { await p.evaluate(() => { veProgramArsiviClose(); veToggleRadio(); }); await bekle(p, 600); } },
       { ad: '2048', kok: '#mf2048 .mf2048-panel', ac: async (p) => { await p.evaluate(() => { veToggleRadio(); veGame2048Open(); }); await bekle(p, 600); } },
       { ad: 'Deniz Harp Okulu', kok: '#mf-dho .mf-dho-panel', ac: async (p) => { await p.evaluate(() => { veGame2048Close(); veDenizHarpOpen(); }); await bekle(p, 800); } }
     ]
