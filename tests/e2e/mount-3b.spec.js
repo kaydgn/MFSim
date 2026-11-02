@@ -268,5 +268,15 @@ test('AĞAÇ · CTRL: Ctrl+tık seçime ekler, rol hepsine; 3B\'de seçilen sat�
   expect(fare).toBe(true);
   await page.mouse.move(700, 450);
   await expect.poll(async () => (await durum(page)).fareDugum).toBe(-1);
+  // Çift tık: kamera düğümün parçalarına sığar (hedef düğümün kutusunun ortası)
+  const once = await page.evaluate(() => window._mw3b.ctrl.r);
+  await tkSatir.dblclick();
+  const odak = await page.evaluate((i) => {
+    const V = window._mw3b, s = veMntWizStp(), kutu = new THREE.Box3();
+    veMntWiz3bParcalar(s, i).forEach((p) => { const k = s.ag[p] && s.ag[p].kutu; if (k) kutu.union(new THREE.Box3(new THREE.Vector3(k[0], k[1], k[2]), new THREE.Vector3(k[3], k[4], k[5]))); });
+    return { r: V.ctrl.r, ic: kutu.expandByScalar(1).containsPoint(V.ctrl.hedef) };
+  }, ilk.tkI);
+  expect(odak.ic).toBe(true);
+  expect(odak.r).toBeLessThan(once);
 });
 
