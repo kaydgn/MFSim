@@ -710,6 +710,36 @@ function veMntWiz3bSec(dugum, ek, kaynak){
   _mw3bPanel(kaynak === 'agac' ? -1 : V.secili); _mw3bBoya(); _mw3bCiz(true);
   return true;
 }
+// MALZEME (2026-11-02, CAD'in malzeme uygulaması gibi): seçimin HEPSİNE; birimde
+// kütle kaynağı, rolsüz düğümde atama (js/cp-mount-wizard.js → veMntWizStpMalzeme).
+// Seçicinin boş seçeneği devralınanı söyler: "Üstten · Çelik" (en yakın atamalı
+// ata) · "Birimden · Çelik" (birimin malzeme kaynağı) · "Karışık" (çoklu seçim).
+function _mw3bMalzemeHTML(s, secim, cok, secili){
+  if(typeof veMntWizStpMalzemeDurum !== 'function' || typeof VE_MNT_STP_MALZEME === 'undefined') return '';
+  var liste = secim.filter(function(d){ return s.roller[d] !== 'mnt-mount'; });
+  if(!liste.length) return '';
+  var D = liste.map(function(d){ return veMntWizStpMalzemeDurum(s, d); });
+  var kend = D.every(function(x){ return x.k === D[0].k; }) ? D[0].k : null;          // null: karışık
+  var ust = !cok && D[0].ust ? veMntStpMalzeme(D[0].ust.k) : null, etkin = veMntStpMalzeme(kend) || (kend === '' ? ust : null);
+  var bos = kend === null ? 'Karışık' : ust ? (D[0].ust.birim ? 'Birimden' : 'Üstten') + ' · ' + ust.ad : '—';
+  var varMi = D.some(function(x){ return !!x.k; });
+  return '<div class="ve-fw-3b-roller ve-mw-3b-malzeme" role="group" aria-label="Malzeme — '
+    + (cok ? veSayi(liste.length, 0) + ' düğüm' : _mwEsc(s.sonuc.agac[secili].ad)) + '">'
+    + '<span class="ve-fw-3b-dizi-ad">Malzeme</span>'
+    + '<select class="ve-fw-3b-rol" id="ve-mw-3b-malzeme" aria-label="Malzeme"'
+    + (etkin ? ' title="' + _mwEsc(etkin.ad + ' · ' + etkin.sinif + ' · ' + veSayi(etkin.rho, 0) + ' kg/m³') + '"' : '')
+    + ' onchange="veMntWiz3bMalzeme(this.value === \'-\' ? \'\' : this.value)">'
+    + '<option value=""' + (kend ? '' : ' selected') + '>' + _mwEsc(bos) + '</option>'
+    + VE_MNT_STP_MALZEME.map(function(m){
+        return '<option value="' + m.k + '"' + (kend === m.k ? ' selected' : '') + '>' + _mwEsc(m.ad) + '</option>';
+      }).join('')
+    + '<option value="-"' + (varMi ? '' : ' disabled') + '>Malzemeyi kaldır</option></select></div>';
+}
+function veMntWiz3bMalzeme(k){
+  var V = _mw3b;
+  if(!V || !V.secim.length || typeof veMntWizStpMalzeme !== 'function') return false;
+  return veMntWizStpMalzeme(V.secim.slice(), k || '');
+}
 // Rol seçimin HEPSİNE: tek tazeleme, tek hesap (js/cp-mount-wizard.js → veMntWizStpRolCok)
 function veMntWiz3bRol(tip){
   var V = _mw3b;
@@ -873,6 +903,7 @@ function veMntWiz3bAltHTML(s, secili, opt){
         + '<option value="-" data-ve-3b-rol=""' + (rolVar ? '' : ' disabled') + '>Rolü kaldır</option></select>';
     }
     h += '</div>';
+    h += _mw3bMalzemeHTML(s, secim, cok, secili);
     // Takozun noktası: seçili düğümün birimi takozsa — daireden seçim kipi ve öneriye dönüş
     var birim = cok ? -1 : _mw3bSeciliBirim(s, secili);
     if(birim >= 0 && s.roller[birim] === 'mnt-mount'){
@@ -1856,6 +1887,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _mw3bKutuKes: _mw3bKutuKes, _mw3bUcgenKes: _mw3bUcgenKes, _mw3bKurVeri: _mw3bKurVeri,
     VE_MW_3B_YER: VE_MW_3B_YER, veMntWiz3bYer: veMntWiz3bYer, veMntWiz3bAcik: veMntWiz3bAcik,
     VE_MW_3B_DAIRE: VE_MW_3B_DAIRE, _mw3bEkran: _mw3bEkran, veMntWiz3bNoktaBitir: veMntWiz3bNoktaBitir,
+    _mw3bMalzemeHTML: _mw3bMalzemeHTML, veMntWiz3bMalzeme: veMntWiz3bMalzeme,
     veMntWiz3bGorunus: veMntWiz3bGorunus, VE_MW_3B_CIZGI_A: VE_MW_3B_CIZGI_A, VE_MW_3B_SECIK: VE_MW_3B_SECIK,
     VE_MW_3B_SOLUK: VE_MW_3B_SOLUK, VE_MW_3B_FARE: VE_MW_3B_FARE, veMntWiz3bIsaretSVG: veMntWiz3bIsaretSVG,
     veMntWiz3bEtiketYerlesim: veMntWiz3bEtiketYerlesim, VE_MW_3B_ETK: VE_MW_3B_ETK,

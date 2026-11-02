@@ -11619,6 +11619,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-agac-rol{ flex:none; display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-micro); color:var(--text-secondary); white-space:nowrap; }
 .ve-mw-3b-agac-rol::before{ content:""; width:8px; height:8px; border-radius:50%; background:var(--renk, var(--text-muted)); box-shadow:0 0 0 1px var(--border-color); }
 .ve-mw-3b-agac-ata{ flex:none; width:6px; height:6px; border-radius:50%; background:var(--renk, var(--text-muted)); opacity:.55; }
+.ve-mw-3b-agac-mz{ flex:none; max-width:84px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-micro); color:var(--text-secondary); }
 .ve-mw-3b-agac-dahab{ display:inline-flex; align-items:center; gap:4px; padding:0 2px; border:0; background:none; font:inherit;
   font-size:var(--fs-micro); color:var(--ink-accent); cursor:pointer; }
 /* TAKOZ NOKTASI — daireden seçim kipinde tuvalin imleci artı (js/cp-mount-3b.js) */

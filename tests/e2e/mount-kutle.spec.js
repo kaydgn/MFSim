@@ -81,7 +81,7 @@ test('KART (1366×768): kaynak seçicisi sığar; dosyadan kütle merkezi, malze
   const sec = (ad) => KOK + ' select[aria-label="Kütle kaynağı — ' + ad + '"]';
   // motorun listesinde veri sayfası grubu da var (js/mount-veri-sayfasi.js); şanzımanda yok
   expect(await page.locator(sec('Motor') + ' option').allTextContents())
-    .toEqual(['Elle', 'Çelik', 'Dökme demir', 'Sfero döküm', 'Alüminyum', 'Magnezyum']
+    .toEqual(['Elle'].concat(await page.evaluate(() => VE_MNT_STP_MALZEME.map((m) => m.ad)))
       .concat(await page.evaluate(() => veMntVeriSayfalari('mnt-motor').map((v) => v.ad))));
   expect(await page.locator(sec('Şanzıman') + ' optgroup').count()).toBe(0);
   await page.selectOption(sec('Şanzıman'), 'dosya');
@@ -188,5 +188,89 @@ test('KAYIT: kaynak → kaydet → sayfa yeniden → föyde kaynak → aynı dos
   });
   expect(geri).toEqual({ c: [745.14, 40, 372.22], sec: 'sfero' });
   expect(await kutleHucre(yeni, KOK, 'Arka braket')).toBe('20,4');
+  expect(hatalar).toEqual([]);
+});
+
+// Adım 5 (2026-11-02): "tıpkı CAD programlarında olduğu gibi basit bir malzeme veritabanı"
+test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağaçta etiket; kaydet → aç → atama geri', async ({ page, context }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
+  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"]');
+  await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
+  const pencereAc = async (p) => {
+    await p.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
+    await p.waitForFunction(() => typeof veMntCadPencereAcik === 'function' && veMntCadPencereAcik());
+  };
+  const hazir3b = (p) => p.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; },
+    null, { timeout: 120000 });
+  const dosyaAc = async (p) => {
+    const [fc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 5000 }), p.click('#ve-properties #ve-mnt-cad-sec')]);
+    await fc.setFiles(KALIP);
+    await hazir3b(p);
+    await p.keyboard.press('Escape');
+  };
+  await pencereAc(page);
+  await dosyaAc(page);
+  await rolVer(page);
+  await page.click('#ve-properties #ve-mnt-cad-hesapla');
+  await page.waitForSelector('#ve-properties .ve-fp-kat[data-k="kutle"] select[data-mw-stp-yog]');
+  const KOK = '#ve-properties';
+  await page.selectOption(KOK + ' select[aria-label="Kütle kaynağı — Arka braket"]', 'celik');
+  expect(await kutleHucre(page, KOK, 'Arka braket')).toBe('22,6');
+  // 3B: üst levhaya tık → alttaki dizide Malzeme, birimin malzemesi devralınmış
+  await page.click('#ve-properties #ve-mnt-cad-3b');
+  await hazir3b(page);
+  const ust = await page.evaluate(() => {
+    const s = veMntWizStp(), p = s.sonuc.parcalar.find((x) => x.ad === 'Braket üst');
+    return { pi: p.i, dugum: p.dugum, q: veMntWiz3bIsabetNoktasi(p.i) };
+  });
+  expect(ust.q).not.toBeNull();
+  await page.mouse.click(ust.q.x, ust.q.y);
+  await expect.poll(async () => (await page.evaluate(() => veMntWiz3bDurum())).secim).toEqual([ust.dugum]);
+  const mz = page.locator('#ve-mw-3b-alt #ve-mw-3b-malzeme');
+  await expect(mz.locator('option').first()).toHaveText('Birimden · Çelik');
+  await page.selectOption('#ve-mw-3b-alt #ve-mw-3b-malzeme', 'aluminyum');
+  // Birimin kütlesi parça parça: (2.700 + 7.850) · 120 · 600 · 20 mm³ = 15,2 kg
+  await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-govdeler] tbody tr')]
+    .map((tr) => tr.cells[2].textContent.trim()))).toEqual(['', '', '15,2S']);
+  const kg = await page.evaluate(() => {
+    const s = veMntWizStp(), b = s.coz.birimler.find((x) => x.ad === 'Arka braket');
+    return Math.round(_mwStpKutleK(s, b).m * 1000) / 1000;
+  });
+  expect(kg).toBeCloseTo((2700 + 7850) * 120 * 600 * 20 * 1e-9, 3);
+  await expect(page.locator('#ve-mw-3b-alt #ve-mw-3b-malzeme')).toHaveValue('aluminyum');
+  await expect(page.locator('#ve-mw-3b-agac-l [data-ve-3b-agac="' + ust.dugum + '"] .ve-mw-3b-agac-mz')).toHaveText('Alüminyum');
+  await page.keyboard.press('Escape');
+  expect(await kutleHucre(page, KOK, 'Arka braket')).toBe('15,2');
+  // İki levha da atanınca kaynakta "Parçalardan" — yazısı kutusuna sığar
+  await page.evaluate(() => { const s = veMntWizStp(); veMntWizStpMalzeme([s.sonuc.agac.findIndex((x) => x.ad === 'Braket alt')], 'celik'); });
+  expect(await page.locator(KOK + ' select[aria-label="Kütle kaynağı — Arka braket"] option[value="atanan"]').textContent()).toBe('Parçalardan');
+  expect(await secicilerSigar(page, KOK)).toEqual([]);
+  // Programın kendi kaydı → yeni sayfa → açış → atama geri
+  const json = await page.evaluate(async () => {
+    let blob = null;
+    const asil = window.veShowSaveDialog;
+    window.veShowSaveDialog = (ad, b) => { blob = b; };
+    try { veSaveTopology(); } finally { window.veShowSaveDialog = asil; }
+    return blob.text();
+  });
+  fs.writeFileSync(PROJE, json);
+  const yeni = await context.newPage();
+  yeni.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(yeni);
+  const [fc] = await Promise.all([yeni.waitForEvent('filechooser'), yeni.evaluate(() => veLoadTopology())]);
+  await fc.setFiles(PROJE);
+  await yeni.waitForFunction(() => nodes.some((n) => n.type === 'mount-analysis'));
+  await yeni.evaluate(() => veMntOpenEditor(nodes.find((x) => x.type === 'mount-analysis').id));
+  await yeni.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
+  await pencereAc(yeni);
+  await expect(yeni.locator('#ve-properties [data-ve-mnt-cad-malzeme]')).toHaveText('Atanan malzeme · 2 düğüm');
+  await dosyaAc(yeni);
+  await yeni.click('#ve-properties #ve-mnt-cad-hesapla');
+  await yeni.waitForFunction(() => { const s = veMntWizStp(); return s.coz && s.coz.ok; });
+  expect(await yeni.evaluate(() => Object.values(veMntWizStp().malzeme))).toEqual(['aluminyum', 'celik']);
+  expect(await kutleHucre(yeni, KOK, 'Arka braket')).toBe('15,2');
   expect(hatalar).toEqual([]);
 });

@@ -135,6 +135,7 @@ function _mntCadKutle(r){
   var mz = (r.yog && typeof veMntStpMalzeme === 'function') ? veMntStpMalzeme(r.yog) : null;
   if(mz) return '<td title="' + _mntCadEsc(mz.ad + ' · ' + veSayi(mz.rho, 0) + ' kg/m³') + '">' + _mntCadEsc(mz.ad) + '</td>';
   if(r.yog === 'dosya') return '<td>Dosyadan</td>';
+  if(r.yog === 'atanan') return '<td>Parçalardan</td>';             // parçalara atanan malzemeler
   return '<td>' + (+r.kg > 0 ? veSayi(+r.kg, 1) : '—') + '</td>';
 }
 // Kayıtlı roller — dosya açık değilken: parça, rolü, kütlesi, takozun seçilen dairesi
@@ -151,7 +152,11 @@ function _mntCadKayitHTML(k){
       + '<td' + (n ? ' title="' + _mntCadEsc(n.c.map(function(v){ return veSayi(Math.round(v * 1000) / 1000, 3); }).join('; ')) + '"' : '') + '>'
       + (n ? 'Ø ' + veSayi(2 * n.r, 1) : '—') + '</td></tr>';
   });
-  return t + _MNT_FOY_KAPA;
+  t += _MNT_FOY_KAPA;
+  // Rolsüz düğümlere atanan malzemeler (3B'de): sayısı
+  var mz = Array.isArray(k.malzeme) ? k.malzeme.length : 0;
+  if(mz) t += '<p class="ve-fw-dim" data-ve-mnt-cad-malzeme="' + mz + '">Atanan malzeme · ' + veSayi(mz, 0) + ' düğüm</p>';
+  return t;
 }
 // MODEL ↔ CAD (Takoz adım 7): föy sihirbazınkiyle AYNI üreticiden
 // (_mwStpModelHTML), modeli tuval; bölümün düğmeleri uygulama ve taşıma —
