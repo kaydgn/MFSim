@@ -79,7 +79,8 @@ test('KART (1366×768): kaynak seçicisi sığar; dosyadan kütle merkezi, malze
   const sec = (ad) => KOK + ' select[aria-label="Kütle kaynağı — ' + ad + '"]';
   // motorun listesinde veri sayfası grubu da var (js/mount-veri-sayfasi.js); şanzımanda yok
   expect(await page.locator(sec('Motor') + ' option').allTextContents())
-    .toEqual(['Elle', 'Çelik', 'Dökme demir', 'Sfero döküm', 'Alüminyum', 'Magnezyum', 'ISB6.7 360']);
+    .toEqual(['Elle', 'Çelik', 'Dökme demir', 'Sfero döküm', 'Alüminyum', 'Magnezyum']
+      .concat(await page.evaluate(() => veMntVeriSayfalari('mnt-motor').map((v) => v.ad))));
   expect(await page.locator(sec('Şanzıman') + ' optgroup').count()).toBe(0);
   await page.selectOption(sec('Şanzıman'), 'dosya');
   await page.selectOption(sec('Arka braket'), 'celik');

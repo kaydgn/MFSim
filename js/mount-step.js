@@ -943,13 +943,14 @@ function veMntStpKenarDaire(sonuc, pi, kenar){
 
 // ── VERİ SAYFASI — ağırlık merkezi referanstan (2026-11-02) ───────────────
 // Kullanıcının yöntemi: veri sayfası ağırlık merkezini bir referanstan verir
-// (js/mount-veri-sayfasi.js; ISB6.7 360: bloğun ön yüzünden 402 mm, krank
-// ekseninin 144 mm üstü), referansın yeri DOSYADAN — 3B'de seçilen düzlem yüz
+// (js/mount-veri-sayfasi.js; ISB4.5E5: bloğun ön yüzünden 271 mm, krank
+// ekseninin 158 mm üstü; X12: arka yüzünden), referansın yeri DOSYADAN — 3B'de seçilen düzlem yüz
 // ve dairesel kenar (eksen: dairenin merkezi ve normali). R = eksen ∩ yüzün
 // düzlemi; boy yönü yüzün DIŞA bakan normalinin tersi (birimin içine), yukarı
 // dosyanın +z'sinin eksene dik bileşeni: motor eğik takılıysa uzaklıklar ve
-// atalet onun eksenlerinde. Gerçek Tulga'da sunudaki motor ağırlık merkezi
-// krank ekseninin düşey düzleminde (0,005 mm) — yöntem dosyayla tutarlı.
+// atalet onun eksenlerinde. Gerçek Tulga'da (ISB4.5E5) sunudaki motor ağırlık
+// merkezi ön yüzden 271 mm (0,001 mm) ve krank ekseninin düşey düzleminde
+// (0,005 mm); yüksekliği veri sayfasından 27,2 mm fazla (185,2 ↔ 158).
 // aci: yüz normali ile eksen arasındaki en büyük açı (derece) · dusey: eksenin
 // düşeyle en küçük açısı (derece) · duzlem: tıklanan noktanın düzleme en büyük
 // uzaklığı (mm; düzlem yüzün ağı düzlemin üstünde) · paralel: tıklanan üçgenin
@@ -970,8 +971,11 @@ function _mstCapraz(a, b){ return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0]
 function _mstKucuk(s){ return s.charAt(0).toLocaleLowerCase('tr-TR') + s.slice(1); }
 // vs: katalog kaydı; ref: { yuz: { o, n (dışa) }, eksen: { c, n } } (dosyanın
 // sistemi, mm). Döner: { ok, c (ağırlık merkezi), R (referans noktası), a (boy:
-// birimin içine), v (yukarı), w (yanal), I (kg·m², ağırlık merkezinde) } |
-// { ok: false, neden }
+// birimin içine), v (yukarı), w (yanal), s (motorun sağı, önden bakınca),
+// I (kg·m², ağırlık merkezinde) } | { ok: false, neden }
+// Yanal kaçıklık (cg.yan, X12) önden bakanın sağına: motorun önü ön yüz
+// referansında yüzün dışı (−a), arka yüz referansında (ref.arka) boy yönü (a);
+// önden bakan −ön yönüne bakar, sağı (−ön) × v = v × ön.
 function veMntStpVeriKonum(vs, ref){
   var T = VE_MNT_STP_VERI;
   if(!vs || !vs.cg) return { ok: false, neden: 'veri sayfası yok' };
@@ -988,10 +992,11 @@ function veMntStpVeriKonum(vs, ref){
   var v = _mstBirimVek([-a[2] * a[0], -a[2] * a[1], 1 - a[2] * a[2]]), w = _mstCapraz(v, a);
   var c0 = ref.eksen.c, o = ref.yuz.o, t = _mstNok([o[0] - c0[0], o[1] - c0[1], o[2] - c0[2]], n) / en;
   var R = [c0[0] + t * e[0], c0[1] + t * e[1], c0[2] + t * e[2]];
-  var c = [0, 1, 2].map(function(k){ return R[k] + vs.cg.boy * a[k] + vs.cg.yukari * v[k]; });
+  var on = vs.ref && vs.ref.arka ? a : [-a[0], -a[1], -a[2]], s = _mstCapraz(v, on), yan = +vs.cg.yan || 0;
+  var c = [0, 1, 2].map(function(k){ return R[k] + vs.cg.boy * a[k] + vs.cg.yukari * v[k] + yan * s[k]; });
   var A = vs.atalet, I = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
   for(var i = 0; i < 3; i++) for(var j = 0; j < 3; j++) I[i][j] = A.x * a[i] * a[j] + A.y * w[i] * w[j] + A.z * v[i] * v[j];
-  return { ok: true, c: c, R: R, a: a, v: v, w: w, I: I };
+  return { ok: true, c: c, R: R, a: a, v: v, w: w, s: s, I: I };
 }
 // Parçanın DÜZLEM yüzleri (dünya, mm; `nd` dışa): sonuçta parça başına bir kez.
 // Kenarlar dolaşılmaz — veMntStpYuzler gerçek motor parçasında (15.390 yüz)

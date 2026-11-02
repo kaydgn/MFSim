@@ -157,10 +157,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `mount-cad.test.js` (→ *KAYIT* · *OTURUM ↔ KAYIT* · *PENCERE* · *GERİ-AL*) +
   `mount-karsilastir.test.js` (→ *ÖTELEME* · *PENCERE* · *SİHİRBAZ* · *ADAMS
   ÖLÇÜTÜ*) + `mount-3b.test.js` → *ALT DİZİ* + `mount-cad.spec.js` (→ *MODEL*).
-- `js/mount-veri-sayfasi.js` — Takoz **veri sayfası kataloğu** (motor · şanzıman; ilk
-  kayıt Cummins ISB6.7 360). DOM'suz saf veri: kütle (kuru · ıslak), ağırlık
-  merkezinin REFERANSTAN uzaklığı (motor: bloğun ön yüzünden geriye, krank
-  ekseninin üstüne), atalet (roll · pitch · yaw). Değerler programın içinde
+- `js/mount-veri-sayfasi.js` — Takoz **veri sayfası kataloğu** (motor · şanzıman; yedi
+  Cummins motoru, şanzıman sayfası henüz yok). DOM'suz saf veri: kütle (kuru · ıslak;
+  sayfa vermiyorsa kuru `null`), ağırlık merkezinin REFERANSTAN uzaklığı (motor:
+  bloğun ön yüzünden — X12'de arka yüzünden, `ref.arka` — krank ekseninin üstüne;
+  yanal alan yalnız sayfa verirse, + motorun sağı önden bakınca), atalet (roll ·
+  pitch · yaw). Değerler programın içinde
   (kullanıcı kararı 2026-11-02; belgelerin gizlilik damgası soruldu); anahtar (`k`)
   projeye yazılır, değişmez. **Motor ve şanzımanın ağırlık merkezi veri
   sayfasından** (kullanıcının yöntemi, `veMntStpVeriKonum`): kaynak listesinde model,
