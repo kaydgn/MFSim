@@ -58,7 +58,13 @@ var VE_MNT_STP_UCGEN = { kiris: 0.5, aci: 20 };
 // Rol verilebilen tipler — kütle gövdeleri ve takoz. Sık olanlar ÇİP, kalanı
 // "Diğer" listesinde (3B görüntüleyici); ikisinin birleşimi TEK liste.
 var VE_MNT_STP_ROLLER = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount',
-                         'mnt-shaft', 'mnt-pto', 'mnt-pump', 'mnt-pto-group'];
+                         'mnt-shaft', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
+                         'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield'];
+// Motorun aksesuarları (kullanıcı 2026-11-02; liste kullanıcının Ağırlık Merkezi
+// Hesaplama Programı'nın motor parçaları): ağırlık merkezi teknik resimden;
+// resimde yoksa aksesuarın ORTA NOKTASI — dosyada parçanın dış ölçülerinin
+// (kutunun) merkezi (`kaynak` 'orta'). Atalet yok: nokta kütle.
+var VE_MNT_STP_AKSESUAR = ['mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield'];
 var VE_MNT_STP_CIP = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket', 'mnt-mount'];
 // MALZEMELER — kütleyi hacimden türetmek için (yoğunluk kg/m³; el kitabı
 // değerleri: çelik · EN-GJL · EN-GJS · alüminyum döküm · magnezyum döküm).
@@ -725,7 +731,7 @@ function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans
   });
   return out;
 }
-function _mstYogGecerli(y, tip){ return y === 'dosya' || !!veMntStpMalzeme(y) || !!veMntStpVs(y, tip); }
+function _mstYogGecerli(y, tip){ return y === 'dosya' || !!veMntStpMalzeme(y) || !!veMntStpVs(y, tip) || !!veMntStpAks(y, tip); }
 // Seçilen dairenin kaydı: { yol:[örnek adları], c:[3], r } ya da null (bozuk)
 function _mstNoktaGecerli(n){
   if(!n || !Array.isArray(n.yol) || !Array.isArray(n.c) || n.c.length !== 3) return null;
@@ -961,6 +967,28 @@ function _mstVs(k){
   if(typeof require === 'function'){ try { return require('./mount-veri-sayfasi.js').veMntVeriSayfasi(k); } catch(e){} }
   return null;
 }
+// ── AKSESUAR — orta nokta ve kayıtlı aksesuarın kütlesi (2026-11-02) ──────
+function veMntStpAksesuar(tip){ return VE_MNT_STP_AKSESUAR.indexOf(tip) >= 0; }
+// Kayıtlı aksesuar: programın aksesuar kataloğu (js/fead-accessories.js — FEAD
+// kasnağının künyesi, anahtar BMC parça numarası), kütlesi bilinenler. Aile
+// tipten: Alternatör ↔ alternator, Klima Kompresörü ↔ ac.
+var VE_MNT_STP_AKS_AILE = { 'mnt-alternator': 'alternator', 'mnt-ac': 'ac' };
+function _mstAksDb(){
+  if(typeof VE_FEAD_ACC_DB !== 'undefined') return VE_FEAD_ACC_DB;
+  if(typeof require === 'function'){ try { return require('./fead-accessories.js').VE_FEAD_ACC_DB; } catch(e){} }
+  return [];
+}
+function veMntStpAksKatalog(tip){
+  var aile = VE_MNT_STP_AKS_AILE[tip];
+  return aile ? _mstAksDb().filter(function(a){ return a.tip === aile && a.kg > 0; }) : [];
+}
+// Kaynağın anahtarı rolün kayıtlı aksesuarı mı: kayıt ya da null
+function veMntStpAks(k, tip){
+  if(typeof k !== 'string' || !k) return null;
+  var L = veMntStpAksKatalog(tip);
+  for(var i = 0; i < L.length; i++) if(L[i].key === k) return L[i];
+  return null;
+}
 // Kaynağın anahtarı rolün veri sayfası mı: kayıt ya da null
 function veMntStpVs(k, tip){
   var v = (typeof k === 'string' && k) ? _mstVs(k) : null;
@@ -1167,6 +1195,13 @@ function veMntStpCoz(sonuc, roller, opt){
       }
       out.uyarilar.push('"' + b.ad + '": ' + V.neden + '.');
     }
+    // Aksesuar: orta nokta — dış ölçülerin (kutunun) merkezi; hacim aranmaz
+    if(veMntStpAksesuar(b.tip) && oz.kutu){
+      r.konum = [(oz.kutu[0] + oz.kutu[3]) / 2, (oz.kutu[1] + oz.kutu[4]) / 2, (oz.kutu[2] + oz.kutu[5]) / 2];
+      r.kaynak = 'orta';
+      out.birimler.push(r);
+      return;
+    }
     if(b.tip === 'mnt-mount' && oz.kutu){
       var sec = opt.nokta && opt.nokta[b.dugum], d = null, neden = '';
       if(sec){
@@ -1229,16 +1264,24 @@ function veMntStpKutle(b, kg, yog){
   var tensor = function(T, k){ return T ? T.map(function(sat){ return sat.map(function(v){ return v * k; }); }) : null; };
   var vs = b.tip !== 'mnt-mount' ? veMntStpVs(yog, b.tip) : null;
   if(vs){
-    var mk = Number(typeof kg === 'string' ? String(kg).replace(',', '.') : kg);
+    // Kütle sayfanın ıslak kütlesi; yazılan kütle sayılmaz (aksesuarlar ayrı bileşen)
     out.kaynak = 'veri'; out.vs = vs;
-    out.m = mk > 0 ? mk : vs.kutle.islak;
+    out.m = vs.kutle.islak;
     out.not = vs.ad + ' · veri sayfası';
     if(b.veri) out.I = b.veri.I.map(function(s){ return s.slice(); });
     else if(b.kapali && b.J && b.V > 0){ out.I = tensor(b.J, out.m / b.V * 1e-6); out.Inot = 'homojen yoğunluk'; }
     return out;
   }
+  // Aksesuar: kütle kayıtlı aksesuardan ya da elle/malzeme/dosya; atalet yok
+  // (nokta kütle — teknik resim ataleti vermez)
+  var aks = veMntStpAksesuar(b.tip), ak = aks ? veMntStpAks(yog, b.tip) : null;
+  if(ak){
+    out.kaynak = 'katalog'; out.ak = ak; out.m = ak.kg;
+    out.not = ak.ad + ' · ' + ak.key;
+    return out;
+  }
   if(yog === 'dosya' && b.dosya){
-    out.kaynak = 'dosya'; out.m = b.dosya.m; out.I = tensor(b.dosya.I, 1e-6);   // kg·mm² → kg·m²
+    out.kaynak = 'dosya'; out.m = b.dosya.m; out.I = aks ? null : tensor(b.dosya.I, 1e-6);   // kg·mm² → kg·m²
     out.not = 'dosyanın yoğunlukları' + (b.dosya.malzeme.length ? ' (' + b.dosya.malzeme.join(', ') + ')' : '');
     return out;
   }
@@ -1251,7 +1294,7 @@ function veMntStpKutle(b, kg, yog){
     out.m = m > 0 ? m : NaN;
   }
   // I = ρ·J, ρ = m / V [kg/mm³]; kg·mm² → kg·m²
-  if(out.m > 0 && b.kapali && b.J && b.V > 0) out.I = tensor(b.J, out.m / b.V * 1e-6);
+  if(!aks && out.m > 0 && b.kapali && b.J && b.V > 0) out.I = tensor(b.J, out.m / b.V * 1e-6);
   return out;
 }
 
@@ -1278,8 +1321,12 @@ function veMntStpKayit(coz, kutle, yogunluk, T){
     var d = { cgx: p[0], cgy: p[1], cgz: p[2] };
     var K = veMntStpKutle(b, kutle[b.dugum], yogunluk[b.dugum]);
     // Veri sayfasından gelen alan "S" (geometriden) değil
-    var veri = b.kaynak === 'veri', yazilan = K.kaynak === 'elle' || K.kaynak === 'veri';
+    var veri = b.kaynak === 'veri', yazilan = K.kaynak === 'elle' || K.kaynak === 'veri' || K.kaynak === 'katalog';
     var iz = veri ? { not: K.not } : { cg: true, not: K.Inot || K.not };
+    if(b.kaynak === 'orta'){
+      d.pointMass = true;
+      iz.not = 'orta nokta' + (K.kaynak === 'malzeme' || K.kaynak === 'dosya' ? ' · ' + K.not : '');
+    }
     if(K.m > 0){
       d.mass = yazilan ? K.m : _mstYuv(K.m, 1000);
       if(!yazilan) iz.mass = true;
@@ -1362,6 +1409,8 @@ function veMntStpKarsilastir(birimler, model){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     VE_MNT_STP_SURUM: VE_MNT_STP_SURUM, VE_MNT_STP_UCGEN: VE_MNT_STP_UCGEN,
+    VE_MNT_STP_AKSESUAR: VE_MNT_STP_AKSESUAR, VE_MNT_STP_AKS_AILE: VE_MNT_STP_AKS_AILE, veMntStpAksesuar: veMntStpAksesuar,
+    veMntStpAksKatalog: veMntStpAksKatalog, veMntStpAks: veMntStpAks,
     VE_MNT_STP_ROLLER: VE_MNT_STP_ROLLER, VE_MNT_STP_CIP: VE_MNT_STP_CIP, VE_MNT_STP_OKUMA: VE_MNT_STP_OKUMA,
     veMntStpOku: veMntStpOku, veMntStpOkuDilimli: veMntStpOkuDilimli,
     veMntStpBirimler: veMntStpBirimler, veMntStpAgOzellik: veMntStpAgOzellik,
