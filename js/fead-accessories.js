@@ -47,13 +47,20 @@
 //     kavramalı toplamı veren belge alındı.
 //   SD7H15: Sanden SD servis rehberi (2008) HD 15,2 lb = 6,9 kg (tablonun kg
 //     sütunu "(2.4)" diye yanlış basılmış; 4,5 + 2,4); SHD kavramayla 8,0 kg.
-//   ALTERNATÖR: defter yalnız marka + akım veriyor; Prestolite'ta aynı akımın
-//     kütlesi aileye göre 2,5 kat değişiyor (24 V 180 A: AVi150 8,9–9,8 kg ·
-//     AC203RA ≈ 24 kg). Kütle yalnız BMC numarası Prestolite parçasına
-//     bağlanabilen kayıtta: 57RS309348 → 1277A730 (Prestolite Bus & Coach
-//     kataloğu PP4042 çapraz referansı), 16.182 g satıcı kataloğunda (TecDoc;
-//     üretici kütle yayımlamıyor). Ötekiler hiçbir kaynakta parça numarasına
-//     bağlanmadı — null; Tepaş 350 A için kütle yayımlanmamış.
+//   ALTERNATÖR: defter yalnız marka + akım veriyor. AYNI AKIM AYNI ALTERNATÖR
+//     (kullanıcı 2026-11-02: "hepsi 180A ise aynıdır. Fark yoktur.") — aynı
+//     adlı kayıtların kütlesi aynı. Kütle akımın Prestolite 24 V ailesinden:
+//       120 A  IdlePro 24 V (AVi147) broşürü (2018) 18 lb = 8,16 kg
+//       155 A  57RS309348 → 1277A730 (Prestolite Bus & Coach kataloğu PP4042
+//              çapraz referansı); 16.182 g satıcı kataloğunda (TecDoc) —
+//              üretici kütle yayımlamıyor
+//       180 A  AVi150, ABD kataloğu PP-1184 (2018) "Approx. weight 9.8 kg";
+//              IdlePro 24 V broşürü 19,6 lb (8,9 kg) — katalogdaki alındı
+//       250 A  IdlePro Extreme 24 V, teknik broşür (2021) 39 lb / 17,7 kg (bir
+//              broşürde 37 lb / 16,8 kg)
+//       600 A  IdlePro Extreme 24 V 600 A broşürü (2019) 42 kg
+//     140 A null: iki aile (AC172RA · Leece-Neville BLD/BLP), üretici kütle
+//     yayımlamıyor. Tepaş 350 A null: kütle yayımlanmamış.
 
 var VE_FEAD_ACC_LIB_VERSION = '1.0.0';
 
@@ -65,6 +72,7 @@ var VE_FEAD_ACC_LIB_SOURCE =
 //        'ac' ↔ fead-ac. Eşleme VE_FEAD_ACC_TYPE'ta, tek kaynak.
 var VE_FEAD_ACC_DB = [
   { key: '57RS317093', ad: 'Prestolite 180A', tip: 'alternator',
+    kg: 9.8, kgKaynak: 'Prestolite · AVi150 24 V 180 A, ABD kataloğu (2018)',
     optimumRpm: 6000, maxContRpm: 9000, maxPeakRpm: 12000,
       curve: [{rpm:1500,kw:0.5}, {rpm:2000,kw:3.3508}, {rpm:2500,kw:4.9738},
                 {rpm:3000,kw:5.9686}, {rpm:3500,kw:6.7801}, {rpm:4000,kw:7.1204},
@@ -80,6 +88,7 @@ var VE_FEAD_ACC_DB = [
                 {rpm:6500,kw:14.95}, {rpm:7000,kw:15.3927}, {rpm:7500,kw:15.65},
                 {rpm:8000,kw:15.9162}] },
   { key: '57RS309791', ad: 'Prestolite 120A', tip: 'alternator',
+    kg: 8.16, kgKaynak: 'Prestolite · IdlePro 24 V 120 A (AVi147) broşürü (2018)',
     optimumRpm: 6000, maxContRpm: 9000, maxPeakRpm: 12000,
       curve: [] },
   { key: '57RS317557', ad: 'Prestolite 140A', tip: 'alternator',
@@ -89,6 +98,7 @@ var VE_FEAD_ACC_DB = [
                 {rpm:5000,kw:8.5}, {rpm:5500,kw:9.15}, {rpm:6000,kw:9.8}, {rpm:7000,kw:9.8},
                 {rpm:8000,kw:9.8}, {rpm:9000,kw:9.8}] },
   { key: '57RS309036', ad: 'Prestolite 155A', tip: 'alternator',
+    kg: 16.18, kgKaynak: 'Prestolite · 1277A730, satıcı kataloğu (TecDoc)',
     optimumRpm: 6000, maxContRpm: 8000, maxPeakRpm: 12000,
       curve: [{rpm:1000,kw:0}, {rpm:1200,kw:1.71}, {rpm:1400,kw:2.42}, {rpm:1600,kw:2.85},
                 {rpm:1800,kw:3.14}, {rpm:2000,kw:3.42}, {rpm:2500,kw:3.85}, {rpm:3000,kw:3.99},
@@ -102,6 +112,7 @@ var VE_FEAD_ACC_DB = [
                 {rpm:3500,kw:4.08}, {rpm:4000,kw:4.13}, {rpm:4500,kw:4.16}, {rpm:5000,kw:4.19},
                 {rpm:5500,kw:4.25}, {rpm:6000,kw:4.28}, {rpm:7000,kw:4.28}, {rpm:8000,kw:4.28}] },
   { key: '57RS318932', ad: 'Prestolite 180A', tip: 'alternator',
+    kg: 9.8, kgKaynak: 'Prestolite · AVi150 24 V 180 A, ABD kataloğu (2018)',
     optimumRpm: 6000, maxContRpm: 9000, maxPeakRpm: 12000,
       curve: [{rpm:1500,kw:0.5}, {rpm:2000,kw:3.3508}, {rpm:2500,kw:4.9738},
                 {rpm:3000,kw:5.9686}, {rpm:3500,kw:6.7801}, {rpm:4000,kw:7.1204},
@@ -110,6 +121,7 @@ var VE_FEAD_ACC_DB = [
                 {rpm:7500,kw:9.4241}, {rpm:8000,kw:9.6335}, {rpm:8500,kw:10.2356},
                 {rpm:9000,kw:10.3665}] },
   { key: '57RS320300', ad: 'Prestolite 180A', tip: 'alternator',
+    kg: 9.8, kgKaynak: 'Prestolite · AVi150 24 V 180 A, ABD kataloğu (2018)',
     optimumRpm: 6000, maxContRpm: 9000, maxPeakRpm: 12000,
       curve: [{rpm:1500,kw:0.5}, {rpm:2000,kw:3.3508}, {rpm:2500,kw:4.9738},
                 {rpm:3000,kw:5.9686}, {rpm:3500,kw:6.7801}, {rpm:4000,kw:7.1204},
@@ -118,12 +130,14 @@ var VE_FEAD_ACC_DB = [
                 {rpm:7500,kw:9.4241}, {rpm:8000,kw:9.6335}, {rpm:8500,kw:10.2356},
                 {rpm:9000,kw:10.3665}] },
   { key: '54100000001', ad: 'Prestolite 250A', tip: 'alternator',
+    kg: 17.7, kgKaynak: 'Prestolite · IdlePro Extreme 24 V 250 A broşürü (2021)',
     optimumRpm: 6000, maxContRpm: 8000, maxPeakRpm: 12000,
       curve: [{rpm:1500,kw:1.5}, {rpm:2000,kw:7}, {rpm:2500,kw:9.5}, {rpm:3000,kw:12},
                 {rpm:3500,kw:12.5}, {rpm:4000,kw:13}, {rpm:4500,kw:14}, {rpm:5000,kw:15},
                 {rpm:5500,kw:16}, {rpm:6000,kw:17}, {rpm:6500,kw:17.5}, {rpm:7000,kw:18},
                 {rpm:7500,kw:18.5}, {rpm:8000,kw:19}] },
   { key: '57RS322565', ad: 'Prestolite 600A', tip: 'alternator',
+    kg: 42, kgKaynak: 'Prestolite · IdlePro Extreme 24 V 600 A broşürü (2019)',
     optimumRpm: 6000, maxContRpm: 8000, maxPeakRpm: 12000,
       curve: [{rpm:1500,kw:0}, {rpm:2000,kw:6.5}, {rpm:2500,kw:9}, {rpm:3000,kw:10.5},
                 {rpm:3500,kw:11.5}, {rpm:4000,kw:11.6}, {rpm:4500,kw:11.7}, {rpm:5000,kw:11.8},

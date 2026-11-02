@@ -216,10 +216,28 @@ describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
     STP.veMntStpAksKatalog('mnt-ac').forEach((a) => expect(a.kgKaynak).toMatch(/^(Valeo|Sanden) · .*kavramalı$/));
   });
 
-  test('alternatör: yalnız Prestolite parçasına bağlanan kayıt (57RS309348 → 1277A730) kütleli; öteki dokuzu boş', () => {
-    expect(STP.veMntStpAksKatalog('mnt-alternator').map((a) => [a.key, a.ad, a.kg, a.kgKaynak]))
-      .toEqual([['57RS309348', 'Prestolite 155A', 16.18, 'Prestolite · 1277A730, satıcı kataloğu (TecDoc)']]);
-    expect(ACC.VE_FEAD_ACC_DB.filter((a) => a.tip === 'alternator' && !(a.kg > 0)).length).toBe(9);
+  // Alternatör: AYNI AKIM AYNI ALTERNATÖR (kullanıcı: "hepsi 180A ise aynıdır.
+  // Fark yoktur."); kütle akımın Prestolite 24 V ailesinden
+  const ALT = [['57RS317093', 'Prestolite 180A', 9.8], ['57RS309791', 'Prestolite 120A', 8.16],
+               ['57RS309036', 'Prestolite 155A', 16.18], ['57RS309348', 'Prestolite 155A', 16.18],
+               ['57RS318932', 'Prestolite 180A', 9.8], ['57RS320300', 'Prestolite 180A', 9.8],
+               ['54100000001', 'Prestolite 250A', 17.7], ['57RS322565', 'Prestolite 600A', 42]];
+  test('alternatör: sekiz kayıt kütleli (Prestolite 24 V aileleri); 140 A ve Tepaş 350 A boş', () => {
+    expect(STP.veMntStpAksKatalog('mnt-alternator').map((a) => [a.key, a.ad, a.kg])).toEqual(ALT);
+    expect(ACC.VE_FEAD_ACC_DB.filter((a) => a.tip === 'alternator' && !(a.kg > 0)).map((a) => a.ad))
+      .toEqual(['Tepaş 350A', 'Prestolite 140A']);
+    STP.veMntStpAksKatalog('mnt-alternator').forEach((a) => expect(a.kgKaynak).toMatch(/^Prestolite · /));
+  });
+
+  test('AYNI AD AYNI KÜTLE: aynı akımdaki (aynı adlı) kayıtların kütlesi ve kaynağı aynı', () => {
+    const grup = {};
+    ACC.VE_FEAD_ACC_DB.forEach((a) => { (grup[a.ad] = grup[a.ad] || []).push(a); });
+    Object.keys(grup).forEach((ad) => {
+      const L = grup[ad];
+      expect({ ad, kg: [...new Set(L.map((a) => a.kg == null ? null : a.kg))] }).toEqual({ ad, kg: [L[0].kg == null ? null : L[0].kg] });
+      expect({ ad, kaynak: [...new Set(L.map((a) => a.kgKaynak || null))].length }).toEqual({ ad, kaynak: 1 });
+    });
+    expect(grup['Prestolite 180A'].length).toBe(3);
   });
 
   test('kütlesi bilinmeyen kayıt listede yok; kütle ya null ya pozitif; yalnız iki aile', () => {

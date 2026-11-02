@@ -77,6 +77,14 @@ test('PALET VE PENCERE: "Motor aksesuarları" grubu; Klima Kompresörü kütlesi
   await page.evaluate(() => { if (typeof undo === 'function') undo(); });
   expect(await page.evaluate((i) => { const n = nodes.find((x) => x.id === i); return n ? [n.data.mass, n.data.aksKatalog] : null; }, id))
     .toEqual([undefined, undefined]);
+  // Alternatör: sekiz kayıt (aynı akım aynı alternatör); en uzun kaynak metniyle yerleşim
+  const al = await page.evaluate(() => { const n = createNode('mnt-alternator', 900, 650); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); return n.id; });
+  await page.waitForSelector('#ve-mnt-aks-' + al);
+  expect(await page.locator('#ve-mnt-aks-' + al + ' option').count()).toBe(9);
+  await page.selectOption('#ve-mnt-aks-' + al, '57RS309791');
+  await page.waitForFunction((i) => { const n = nodes.find((x) => x.id === i); return n && n.data.mass === 8.16; }, al);
+  await page.evaluate(Y.KAYNAK);
+  expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-properties')), 'Alternatör penceresi')).toEqual([]);
   expect(hatalar).toEqual([]);
 });
 
