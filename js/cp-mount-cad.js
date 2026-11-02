@@ -99,8 +99,11 @@ function _mntCadDosyaHTML(s, k){
   return h + '</div>';
 }
 // Kütle hücresi: yazılan kütle ya da kaynağı (malzeme · dosya — kütle dosyanın
-// hacminden, dosya açılınca)
+// hacminden, dosya açılınca · veri sayfasının modeli, yazılan kütleyle)
 function _mntCadKutle(r){
+  var vs = (r.yog && typeof veMntStpVs === 'function') ? veMntStpVs(r.yog, r.rol) : null;
+  if(vs) return '<td title="' + _mntCadEsc(vs.uretici + ' ' + vs.ad + ' · veri sayfası') + '">' + _mntCadEsc(vs.ad)
+    + (+r.kg > 0 ? ' · ' + veSayi(+r.kg, 1) : '') + '</td>';
   var mz = (r.yog && typeof veMntStpMalzeme === 'function') ? veMntStpMalzeme(r.yog) : null;
   if(mz) return '<td title="' + _mntCadEsc(mz.ad + ' · ' + veSayi(mz.rho, 0) + ' kg/m³') + '">' + _mntCadEsc(mz.ad) + '</td>';
   if(r.yog === 'dosya') return '<td>Dosyadan</td>';
@@ -112,7 +115,8 @@ function _mntCadKayitHTML(k){
                      { b:'Daire <u>[mm]</u>', gen:'18%' }], 'Kayıtlı roller', 've-mnt-cad-kayit');
   k.roller.forEach(function(r){
     var yol = Array.isArray(r.yol) ? r.yol.join(' › ') : '';
-    var n = r.nokta && Array.isArray(r.nokta.c) && +r.nokta.r > 0 ? r.nokta : null;
+    // takozun seçilen dairesi ya da veri sayfasının ekseni
+    var d = r.nokta || (r.ref && r.ref.eksen), n = d && Array.isArray(d.c) && +d.r > 0 ? d : null;
     t += '<tr><td title="' + _mntCadEsc(yol) + '">' + _mntCadEsc(r.ad || (r.yol && r.yol[r.yol.length - 1]) || '—') + '</td>'
       + '<td class="sol">' + _mntCadEsc(_mntCadAd(r.rol)) + '</td>'
       + _mntCadKutle(r)

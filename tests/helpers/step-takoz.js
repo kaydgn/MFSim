@@ -287,8 +287,15 @@ const TAKOZ_DILIM = {
     { k: 'GOBEK', ad: 'göbek', r: 20, s0: -20, s1: 0 }
   ]
 };
+// VERİ SAYFASI KALIBI (2026-11-02): motor bloğunun ön yüzü ve krank kasnağı
+// (Ø157, ekseni x — gerçek dosyadaki "KRANK KASNAK-Ø157 8PK"). Sentetik: ön yüz
+// ve eksen, ISB6.7 360'ın uzaklıklarıyla (ön yüzden 402 mm, eksenin 144 mm
+// üstü) ağırlık merkezi sununun motor ağırlık merkezine (124,96; 0,05; 550,03)
+// oturacak yerde — sunu koordinatı.
+const TULGA_KRANK = { yuz: 124.96 - 402, eksen: [0.05, 550.03 - 144], r: 78.5, L: 40 };
 // opt: { varyant: 'duz'|'somun'|'konik', z, x (alt montajın yönü), govde (motor
-// vb. kutular, varsayılan var), civata (flanşta eksen dışı iki cıvata — dosyada
+// vb. kutular, varsayılan var), krank (motor bloğunun ön yüzü TULGA_KRANK.yuz'da
+// ve önünde krank kasnağı), civata (flanşta eksen dışı iki cıvata — dosyada
 // takozun dilimlerinden ÖNCE), saplama (false: saplama yok — braket boşluğu
 // boş kalır), oteleme (bütün montajın ötelemesi — gerçek dosyanın sistemi:
 // sunu = dosya − (0; 39,976; 28,596)), onFark (ön takozun noktasına eklenen —
@@ -297,11 +304,15 @@ const TULGA_OTELEME = [0, 39.976, 28.596];
 function tulgaKalibi(opt = {}) {
   const v = opt.varyant || 'duz', T = opt.oteleme || [0, 0, 0];
   const t = (p, f) => p.map((x, i) => x + T[i] + (f ? f[i] : 0));
+  const K = TULGA_KRANK;
   const parcalar = opt.govde === false ? [] : [
-    { id: 'MOTOR', ad: 'Motor bloğu', sekil: 'kutu', olcu: [600, 500, 600], konum: t([124.96, 0.05, 750.03]) },
+    opt.krank ? { id: 'MOTOR', ad: 'Motor bloğu', sekil: 'kutu', olcu: [700, 500, 600], konum: t([K.yuz + 350, 0.05, 650]) }
+      : { id: 'MOTOR', ad: 'Motor bloğu', sekil: 'kutu', olcu: [600, 500, 600], konum: t([124.96, 0.05, 750.03]) },
     { id: 'SANZ', ad: 'Şanzıman gövdesi', sekil: 'kutu', olcu: [400, 300, 300], konum: t([814.55, 40.817, 365.138]) },
     { id: 'TC', ad: 'Transfer gövdesi', sekil: 'kutu', olcu: [300, 300, 200], konum: t([1431.449, 54.419, 302.336]) }
   ];
+  if (opt.krank && opt.govde !== false) parcalar.push({ id: 'KASNAK', ad: 'Krank kasnağı', sekil: 'silindir', olcu: [K.r, K.L],
+    konum: t([K.yuz - K.L / 2, K.eksen[0], K.eksen[1]]), z: [1, 0, 0], x: [0, 1, 0] });
   const dilim = (v === 'konik' ? TAKOZ_DILIM.konik : TAKOZ_DILIM.duz.concat(v === 'somun' ? TAKOZ_DILIM.somun : []))
     .filter((d) => !(opt.saplama === false && d.k === 'SAPLAMA'));
   const altlar = [];
@@ -392,5 +403,5 @@ function cokGovdeKalibi({ bosluksuz = false } = {}) {
   return yz.metin();
 }
 
-module.exports = { kutuYuzleri, bsKutuYuzleri, silindirYuzleri, delikliPlaka, agirYuzKalibi, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
+module.exports = { TULGA_KRANK, kutuYuzleri, bsKutuYuzleri, silindirYuzleri, delikliPlaka, agirYuzKalibi, guçGrubuStep, gucGrubu, GUC, tekrarliMontaj,
   TULGA_TAKOZ, TAKOZ_DILIM, TULGA_OTELEME, tulgaKalibi, analitik, KUTLE, kutleKalibi, COK_GOVDE, cokGovdeKalibi };
