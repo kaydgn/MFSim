@@ -107,7 +107,10 @@ jobs:
   # MFSim_Olcum_Goruntuleyici.html). Tüm E2E takımı yerel bir araç olarak kalıyor
   # (npm run test:e2e); buradaki iş "dağıtılan şey açılıyor mu" sorusu.
   e2e-urun:
-    runs-on: ubuntu-latest
+    # 24.04'e SABİT: ubuntu-latest 26.04'e geçti ve Playwright 1.58.2 orada
+    # Chromium kurmuyor ("does not support chromium on ubuntu26.04-x64",
+    # 2026-11-02 main koşusu) — test gövdesine varmadan kırmızı, deploy atlanıyor.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20          # ölçülen süre: 3 dk 06 sn
     steps:
       - uses: actions/checkout@v4
