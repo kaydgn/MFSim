@@ -357,6 +357,7 @@ function veMntWiz3bSuzgec(k){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
   if(!V || !V.scene) return false;
   V.suzgec = k === 'yuz' ? 'yuz' : 'parca';
+  V.yuzFare = null;
   _mw3bYuzOn(null);
   if(V.suzgec !== 'yuz') _mw3bYuzSec(null);
   if(V.fare >= 0){ V.fare = -1; _mw3bBoya(); }
@@ -371,6 +372,7 @@ function veMntWiz3bOlcu(){
   else {
     if(V.nokta >= 0) _mw3bNoktaKip(-1);
     if(V.ref) _mw3bRefKip(null);
+    V.yuzFare = null;
     _mw3bYuzOn(null);
     if(V.fare >= 0){ V.fare = -1; _mw3bBoya(); }
     _mw3bIpucu(null);
@@ -403,7 +405,11 @@ function veMntWiz3bAracBitir(){
 function _mw3bAracCikis(){
   var V = _mw3b;
   if(V.olcu && V.olcu.aday){ V.olcu.aday = null; _mw3bIpucu(null); _mw3bEtiketle(); }
-  if(V.yuzOn){ _mw3bYuzOn(null); _mw3bIpucu(null); _mw3bCiz(true); }
+  if(V.yuzFare || V.yuzOn){
+    var ciz = !!V.yuzOn;
+    V.yuzFare = null; _mw3bYuzOn(null); _mw3bIpucu(null);
+    if(ciz) _mw3bCiz(true);
+  }
 }
 // Ekrandan ışın: ilk çarpılan parça, üçgeni ve noktası (kesitin kalan yanında)
 // { i, k, t, p } | null
@@ -432,15 +438,23 @@ function _mw3bYuzFare(e){
   V.fareIstek = requestAnimationFrame(function(){
     V.fareIstek = 0;
     if(_mw3b !== V || V.suzgec !== 'yuz' || V.olcu) return;
-    var ev = V.fareSon, h = _mw3bIsinK(ev.clientX, ev.clientY), b = h ? veMntWiz3bYuzBilgi(V.s, h.i, h.k) : null;
-    var ayni = b && V.yuzOn ? b.parca === V.yuzOn.parca && b.f === V.yuzOn.f : !b && !V.yuzOn;
-    if(!ayni){ _mw3bYuzOn(b); _mw3bCiz(true); }
-    _mw3bIpucuYaz(ev, b ? veMntWiz3bYuzYazi(b) : '');
+    var ev = V.fareSon, h = _mw3bIsinK(ev.clientX, ev.clientY), a = h && V.s.ag[h.i];
+    var f = a && a.yuzUcgen ? veMntWiz3bYuzSira(a.yuzUcgen, Math.floor(h.k / 3)) : -1, anahtar = f >= 0 ? h.i + ':' + f : '';
+    // Yüz değişmedikçe tanım okunmaz ve kare çizilmez (seçili yüzün üstünde
+    // önden seçim yok: kayıt aynı kalır); ipucu her karede farenin yanına
+    if(!V.yuzFare || V.yuzFare.anahtar !== anahtar){
+      var b = anahtar ? veMntWiz3bYuzBilgi(V.s, h.i, h.k) : null, onceki = !!V.yuzOn;
+      V.yuzFare = { anahtar: anahtar, yazi: b ? veMntWiz3bYuzYazi(b) : '' };
+      _mw3bYuzOn(b);
+      if(onceki || V.yuzOn) _mw3bCiz(true);
+    }
+    _mw3bIpucuYaz(ev, V.yuzFare.yazi);
   });
 }
 function _mw3bYuzTik(e){
   var V = _mw3b, h = _mw3bIsinK(e.clientX, e.clientY);
   _mw3bYuzSec(h ? veMntWiz3bYuzBilgi(V.s, h.i, h.k) : null);
+  V.yuzFare = null; _mw3bYuzOn(null);
   _mw3bPanel(); _mw3bCiz(true);
   return true;
 }
@@ -521,7 +535,8 @@ function _mw3bOlcuFare(e){
     V.fareIstek = 0;
     if(_mw3b !== V || !V.olcu) return;
     var ev = V.fareSon, c = _mw3bOlcuAday(ev.clientX, ev.clientY), o = V.olcu.aday;
-    if((c ? c.anahtar : '') !== (o ? o.anahtar : '') || (c && c.tur === 'yuz')){ V.olcu.aday = c; _mw3bEtiketle(); }
+    V.olcu.aday = c;
+    if((c ? c.anahtar : '') !== (o ? o.anahtar : '')) _mw3bEtiketle();   // yüzeydeki nokta işaret çizmez
     _mw3bIpucuYaz(ev, c && c.tur !== 'yuz' ? VE_MW_3B_OLCU_AD[c.tur] + (c.tur === 'daire' ? ' · Ø ' + _mw3bSay(2 * c.r, 1) + ' mm' : '') : '');
   });
 }

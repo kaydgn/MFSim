@@ -342,6 +342,15 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
   await expect(page.locator('#ve-mw-3b-arac [data-ve-3b-suzgec="yuz"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-yuz]')).toContainText('Modelde bir yüz seçin.');
   const m = await ekran([-300, 5, 1250]);                        // motorun üst yüzünün ortası
+  // Boş nokta tuvalin kendisine sorulur: ışın hiçbir parçaya çarpmıyor, üstünde kart, ağaç, alt dizi yok
+  const bos = await page.evaluate(() => {
+    const V = window._mw3b, cv = V.renderer.domElement, r = cv.getBoundingClientRect();
+    for (let y = r.top + r.height * 0.3; y < r.bottom - 20; y += 23)
+      for (let x = r.left + 20; x < r.right - 20; x += 29)
+        if (document.elementFromPoint(x, y) === cv && !_mw3bIsinK(x, y)) return { x, y };
+    return null;
+  });
+  expect(bos).not.toBeNull();
   await page.mouse.move(m.x, m.y);
   await expect.poll(async () => ((await durum(page)).yuzOn || {}).parca).toBe(motor.i);
   await expect(page.locator('#ve-mw-3b-ipucu')).toHaveText('Düzlem · z = 1.250,0 mm');
@@ -353,13 +362,18 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
   await expect(yb).toContainText('Motor bloğu');
   await expect(yb).toContainText('z = 1.250,000 mm');
   await expect(yb).toContainText('≈ 630.000 mm²');
-  // Seçili yüzün üstünde gezinmek kare çizdirmez (yüz değişmedikçe tanım okunmaz)
+  // Seçili yüzün üstünde önden seçim yok (iki kat vurgu olmaz); yüzden çıkıp
+  // dönünce gezinmek kare çizdirmez — yüz değişmedikçe tanım okunmaz
   const kare = () => page.evaluate(() => window._mw3b.renderer.info.render.frame);
   await page.mouse.move(m.x + 2, m.y + 1);
   await expect.poll(async () => ((await durum(page)).yuzOn)).toBe(null);
+  await page.mouse.move(bos.x, bos.y);
+  await page.mouse.move(m.x + 2, m.y + 1);
+  await page.waitForTimeout(150);
   const k0 = await kare();
   for (let i = 1; i <= 6; i++) { await page.mouse.move(m.x + 2 + i * 3, m.y + 1 + i * 2); await page.waitForTimeout(40); }
   expect(await kare() - k0).toBeLessThanOrEqual(1);
+  expect((await durum(page)).yuzOn).toBe(null);
   // Vurgu sahnede ve kesitle kırpılır
   const vurgu = () => page.evaluate(() => { const V = window._mw3b; return V.yuzG ? (V.yuzG.material.clippingPlanes || []).length : -1; });
   expect(await vurgu()).toBe(0);
@@ -367,8 +381,7 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
   expect(await vurgu()).toBe(1);
   await page.click('#ve-mw-3b-kesit');
   // Boşluğa tık yüzü bırakır
-  const kap = await page.locator('#ve-mw-3b-tuval').boundingBox();
-  await page.mouse.click(kap.x + kap.width / 2, kap.y + kap.height - 70);
+  await page.mouse.click(bos.x, bos.y);
   await expect.poll(async () => (await durum(page)).yuz).toBe(null);
   // Esc: süzgeç Parça'ya döner, görüntüleyici açık kalır
   await page.mouse.click(m.x, m.y);
