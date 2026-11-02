@@ -1196,7 +1196,9 @@ function _mstBirim(b, P, ata, kaynak){
     liste.forEach(function(p){ if(ata[p.pi]) ad[ata[p.pi].mz.ad] = 1; else if(dosyadan && p.malzeme) ad[p.malzeme] = 1; });
     return Object.keys(ad);
   };
-  if(!r.yogEksik){
+  // "Dosyadan": dosyada yoğunluğu olan parça var ve kalanı atama tamamlıyor
+  // (hiç yoğunluk yoksa atamaların toplamı "Parçalardan"dır, dosyadan değil)
+  if(r.yogSay > 0 && !r.yogEksik){
     var D = _mstTopla(dahil, function(p){ return (ata[p.pi] ? ata[p.pi].mz.rho : p.rho) * 1e-9; });
     r.dosya = { m: D.W, c: D.c, I: D.T, malzeme: adlar(dahil, true) };
   }

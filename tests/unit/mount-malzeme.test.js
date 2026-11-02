@@ -159,11 +159,14 @@ describe('HESAP — atanan parça kendi yoğunluğuyla; ağırlık merkezi ve te
     expect(K.m).toBeCloseTo(H.W, 12);
     expect(uz(b.konum, H.c)).toBeLessThan(1e-9);
     expect(K.not).toBe('dosyanın yoğunlukları (EN-GJL-250, Çelik) · 1 parça atanan malzemeyle');
-    // braketin dosyada yoğunluğu yok: iki levha atanınca "Dosyadan" da açılır
+    // başka malzeme de aynı yoldan: çana atanan bakır dosyanın 2.700'ünün yerine
+    const yalniz = birim(coz({ 'Şanzıman': 'dosya' }, { 'Çan': 'bakir' }), 'Şanzıman');
+    expect(yalniz.dosya.m).toBeCloseTo(topla(SANZ, (p) => (p.ad === 'Çan' ? 8930 : p.rho) * 1e-9).W, 12);
+    // braketin dosyada hiç yoğunluğu yok: iki levha atanınca "Dosyadan" AÇILMAZ — o "Parçalardan"
     expect(birim(coz(), 'Arka braket').dosya).toBeUndefined();
     const brk = birim(coz({}, { 'Braket üst': 'celik', 'Braket alt': 'celik' }), 'Arka braket');
-    expect([brk.yogEksik, brk.ataYogsuz]).toEqual([0, 2]);
-    expect(brk.dosya.m).toBeCloseTo(7850 * 2 * 120 * 600 * 20 * 1e-9, 12);
+    expect([brk.yogEksik, brk.ataYogsuz, brk.dosya]).toEqual([0, 2, undefined]);
+    expect(brk.atanan.m).toBeCloseTo(7850 * 2 * 120 * 600 * 20 * 1e-9, 12);
   });
 });
 
@@ -256,7 +259,7 @@ describe('OTURUM — atama hesabı yeniler; birimde kütle kaynağı; rol deği�
     W.veMntWizStpMalzeme([ust], 'celik');
     expect(sec()).not.toContain('atanan');
     W.veMntWizStpMalzeme([alt], 'celik');
-    expect(sec().slice(0, 3)).toEqual(['', 'dosya', 'atanan']);          // iki levha atanınca "Dosyadan" da tam
+    expect(sec().slice(0, 2)).toEqual(['', 'atanan']);                  // dosyada yoğunluk yok: "Dosyadan" değil
   });
 
   test('kayıt → yeniden okuma: atamalar ve "Parçaların malzemesi" geri gelir', () => {

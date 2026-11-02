@@ -1091,7 +1091,7 @@ function _gmSec16(){
     ['Malzeme', 'Birimin malzemesi (aşağıdaki liste): kütle = yoğunluk × hacim',
       'İçindeki parçaya başka malzeme atanmışsa o parça kendi yoğunluğuyla'],
     ['<em>Dosyadan</em>', 'Parçaların dosyadaki yoğunlukları; ağırlık merkezi kütleyle ağırlıklı',
-      'Bütün parçalarda yoğunluk ya da atanan malzeme varsa seçilir; atanan malzeme dosyanınkinin yerine'],
+      'Dosyada yoğunluk varsa seçilir; yoğunluğu olmayan parçayı atanan malzeme tamamlar, atanan malzeme dosyanınkinin yerine geçer'],
     ['<em>Parçalardan</em>', 'Parçalara atanan malzemeler; ağırlık merkezi kütleyle ağırlıklı',
       'Bütün parçalara malzeme atanmışsa seçilir'],
     ['Veri sayfası', 'Modelin ıslak kütlesi',
