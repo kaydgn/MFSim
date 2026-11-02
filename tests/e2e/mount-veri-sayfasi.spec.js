@@ -120,18 +120,21 @@ test('VERİ SAYFASI: 3B\'de model, ön yüz ve krank ekseni gerçek fareyle; ağ
   expect(sonuc.kayit.yog).toBe('cummins-isb67-360');
   expect(Object.keys(sonuc.kayit.ref).sort()).toEqual(['eksen', 'yuz']);
 
-  // Pencerenin föyü: motor satırı seçili, fark 0,0; kütle tablosunda model ve ıslak kütlenin yer tutucusu
+  // Pencerenin föyü: motor satırı seçili, fark 0,0; kütle tablosunda model ve
+  // sayfanın ıslak kütlesi (yazılmaz — aksesuarlar ayrı bileşen)
   await page.evaluate(() => veMntWiz3bKapat());
   const foy = await page.evaluate(() => {
     const k = document.querySelector('#ve-properties .ve-fp-kat[data-k="model"]');
     const tr = [...k.querySelectorAll('tr[data-mw-stp-satir]')].map((r) => ({ birim: r.cells[1].textContent, fark: r.cells[3].textContent, secili: r.querySelector('input').checked }));
-    const sec = document.querySelector('#ve-properties select[data-mw-stp-yog]');
-    const kg = document.querySelector('#ve-properties input[data-mw-stp-kutle]');
-    return { tr, kaynak: sec.options[sec.selectedIndex].textContent, ph: kg.getAttribute('placeholder') };
+    const motor = veMntWizStp().sonuc.agac.findIndex((x) => x.ad === 'Motor bloğu');
+    const sec = document.querySelector('#ve-properties select[data-mw-stp-yog="' + motor + '"]');
+    const kg = document.querySelector('#ve-properties [data-mw-stp-kutle-deger="' + motor + '"]');
+    return { tr, kaynak: sec.options[sec.selectedIndex].textContent, kg: kg && kg.textContent,
+      alan: !!document.querySelector('#ve-properties input[data-mw-stp-kutle="' + motor + '"]') };
   });
   expect(foy.tr.find((r) => r.birim === 'Motor bloğu')).toEqual({ birim: 'Motor bloğu', fark: '0,0', secili: true });
   expect(foy.tr.find((r) => r.birim === 'Şanzıman gövdesi').secili).toBe(false);
-  expect([foy.kaynak, foy.ph]).toEqual(['ISB6.7 360', '512']);
+  expect([foy.kaynak, foy.kg, foy.alan]).toEqual(['ISB6.7 360', '512,0', false]);
   await page.evaluate(Y.KAYNAK);
   expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-properties')), '3D Görüntüleyici · veri sayfası')).toEqual([]);
   expect(hatalar).toEqual([]);

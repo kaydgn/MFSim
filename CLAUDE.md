@@ -170,9 +170,19 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   düzlemleri bir kez, `veMntStpDuzlemler`: yüzleri her fare hareketinde çıkarmak
   gerçek motor parçasında 0,65 sn'ydi) ve eksenin dairesi (bütün parçalarda: kasnak
   birimin dışında olabilir). R = eksen ∩ yüz; uzaklık ve atalet birimin
-  eksenlerinde; kütle ıslak ya da yazılan; referans eksikse hacimden ve uyarıyla.
+  eksenlerinde; kütle ıslak, YAZILMAZ (aksesuarlar ayrı bileşen); referans eksikse
+  hacimden ve uyarıyla.
   Kapı: `mount-veri-sayfasi.test.js` (→ *KATALOG* · *REFERANS* · *DÜZLEM* · *HESAP* ·
   *KAYIT* · *OTURUM* · *3B DİZİSİ*) + `mount-veri-sayfasi.spec.js`.
+  **Motorun aksesuarları** (kullanıcı 2026-11-02; liste kullanıcının Ağırlık Merkezi
+  Hesaplama Programı'nın motor parçaları): Alternatör · Alternatör Braketi · Klima
+  Kompresörü · Isı Sacı — her biri AYRI tip (`isMountAksesuar`; tek "Aksesuar"
+  bileşeni YOK), motorun taşıdığı nokta kütle. Ağırlık merkezi teknik resimden;
+  yoksa ORTA NOKTA — STEP'te parçanın dış ölçülerinin (kutunun) merkezi
+  (`kaynak` 'orta'), hacim merkezi değil. Kütle elle · malzeme · dosya · kayıtlı
+  aksesuar (`veMntStpAksKatalog`: FEAD aksesuar kataloğunun `kg`'si, üreticinin
+  belgesinden; bilinmeyen `null`). Kapı: `mount-aksesuar.test.js` (→ *TİPLER* ·
+  *TAŞIYICI* · *ÇÖZÜCÜ* · *ORTA NOKTA* · *KATALOG*).
 - `js/mount-katalog.js` + `js/cp-mount-param.js` + `js/cp-mount-param-rapor.js` — Takoz
   **Parametrik Analiz** (`mnt-parametric`), ilk analizi **Katalogdan seçim** (kullanıcı
   isteği 2026-10-16): grup (sağ/sol çift aynı tip) × kütüphane tipi kombinasyonları
@@ -214,7 +224,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/fead-accessories.js` — FEAD **aksesuar kataloğu** (10 alternatör + 4 klima
   kompresörü). DOM'suz saf veri; güç eğrisi MFSim'de zaten vardı, bu kataloğun
   getirdiği asıl şey **devir sınırları** (optimum · maksimum sürekli · anlık
-  maksimum) — aşağıdaki iki kapı onlarsız kurulamaz.
+  maksimum) — aşağıdaki iki kapı onlarsız kurulamaz. Kütle (`kg` + `kgKaynak`,
+  üreticinin belgesinden; klima kompresöründe kavramalı; alternatörde AYNI AKIM AYNI
+  ALTERNATÖR — kullanıcı kararı, aynı adlı kayıtlar aynı kütle) Takoz'un aksesuarı
+  için; FEAD okumaz.
 - `js/fead-transient.js` — FEAD **geçici rejim**: motor çevrimi senaryosu
   (durgun → marş → ateşleme → rölanti → hızlanma → yavaşlama → stop). DOM'suz;
   çekirdeğe dokunmaz. **Devir geçmişi DAYATILIR, simüle edilmez** — MFSim'de
@@ -247,6 +260,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   sıkıştırılmış dosya `DecompressionStream`'le parça parça) aynı evreleri koşar.
   Kapı: `step-p21.test.js`.
 - `tools/shot.js` — Ekran görüntüsü aracı (İSTEĞE BAĞLI — yalnız kullanıcı isteyince; `npm run shot -- --help`)
+- `tools/kullanim.js` + `tools/kullanim-tahta.{js,html}` — **kullanım masası**: programı kullanıcının
+  koşulunda (tek dosya, çevrimdışı, insan açılışı) gerçek girdiyle kullanan kalıcı tarayıcı ve
+  bulguların **karar tahtası** (Artifact `db`). Çıktı `.kullanim/` (git'e dâhil değil). Protokol: skill `kullanim`.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
   süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
@@ -349,6 +365,7 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 |-------|-------|-------------------|
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
+| Kullanım masası / geri bildirim | `kullanim` | Kullanıcı programı "kullan, geri bildirim ver" dediğinde, ya da `tools/kullanim*`, `tests/unit/kullanim-masa.test.js`'e dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan

@@ -41,7 +41,8 @@ var VE_MW_STEPS = [
 // Kütle gövdesi tipleri — Bileşenler'in "Takoz alt bileşenleri" ve "PTO
 // grubu" sırasıyla. Ad componentDefs'ten okunur.
 var VE_MW_GOVDE_TIPLERI = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft', 'mnt-bracket',
-                           'mnt-pto', 'mnt-pump', 'mnt-pto-group'];
+                           'mnt-pto', 'mnt-pump', 'mnt-pto-group',
+                           'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield'];
 var VE_MW_GOVDE_ALAN = ['mass', 'cgx', 'cgy', 'cgz', 'Ixx', 'Iyy', 'Izz', 'Ixy', 'Ixz', 'Iyz', 'pointMass'];
 var VE_MW_TAKOZ_ALAN = ['x', 'y', 'z', 'kxs', 'kys', 'kzs', 'kxd', 'kyd', 'kzd', 'maxLoad', 'libKey',
                         'fitX', 'fitY', 'fitZ', 'curveX', 'curveY', 'curveZ'];
@@ -1221,7 +1222,8 @@ function veMntWizStpRol(i, tip){
   Object.keys(s.kutle).forEach(function(d){ if(!s.roller[d]) delete s.kutle[d]; });
   Object.keys(s.yogunluk || {}).forEach(function(d){
     var k = s.yogunluk[d], r = s.roller[d];
-    if(!r || r === 'mnt-mount' || (veMntStpVs(k) && !veMntStpVs(k, r))) delete s.yogunluk[d];
+    var aksK = VE_MNT_STP_AKSESUAR.some(function(t){ return !!veMntStpAks(k, t); });
+    if(!r || r === 'mnt-mount' || (veMntStpVs(k) && !veMntStpVs(k, r)) || (aksK && !veMntStpAks(k, r))) delete s.yogunluk[d];
   });
   Object.keys(s.nokta || {}).forEach(function(d){ if(s.roller[d] !== 'mnt-mount') delete s.nokta[d]; });
   Object.keys(s.referans || {}).forEach(function(d){ if(!s.roller[d] || s.roller[d] === 'mnt-mount') delete s.referans[d]; });
@@ -1343,7 +1345,8 @@ function _mwStpHacim(V){
 function _mwStpKutleK(s, b){ return veMntStpKutle(b, s.kutle[b.dugum], (s.yogunluk || {})[b.dugum]); }
 function _mwStpKaynak(s, b, K){
   K = K || _mwStpKutleK(s, b);
-  return K.kaynak === 'dosya' ? 'dosya' : ((K.kaynak === 'malzeme' || K.kaynak === 'veri') ? s.yogunluk[b.dugum] : '');
+  return K.kaynak === 'dosya' ? 'dosya'
+    : ((K.kaynak === 'malzeme' || K.kaynak === 'veri' || K.kaynak === 'katalog') ? s.yogunluk[b.dugum] : '');
 }
 // Rolün veri sayfaları (katalog yüklü değilse boş)
 function _mwStpVeriSayfalari(tip){ return typeof veMntVeriSayfalari === 'function' ? veMntVeriSayfalari(tip) : []; }
@@ -1356,30 +1359,34 @@ function _mwStpKaynakSecHTML(s, b, y){
   if(b.dosya) sec.push(['dosya', 'Dosyadan']);
   else if(b.yogSay > 0) neden = veSayi(b.say.ag + b.say.dosya + b.say.nokta - b.yogSay, 0) + ' parçada yoğunluk yok.';
   if(b.kapali && b.V > 0) VE_MNT_STP_MALZEME.forEach(function(m){ sec.push([m.k, m.ad]); });
-  var vs = _mwStpVeriSayfalari(b.tip), tek = sec.length + vs.length < 2;
-  if(sec.length < 2 && !vs.length) neden = 'Hacim ölçülemedi.';
+  // Kayıtlı aksesuarlar (Alternatör · Klima Kompresörü): kütlesi bilinenler
+  var vs = _mwStpVeriSayfalari(b.tip), ak = veMntStpAksKatalog(b.tip), tek = sec.length + vs.length + ak.length < 2;
+  if(sec.length < 2 && !vs.length && !ak.length) neden = 'Hacim ölçülemedi.';
   var se = function(o){ return '<option value="' + o[0] + '"' + (o[0] === y ? ' selected' : '') + '>' + _mwEsc(o[1]) + '</option>'; };
   return '<select class="ve-fw-inp" data-mw-stp-yog="' + b.dugum + '" aria-label="Kütle kaynağı — ' + _mwEsc(b.ad) + '"'
     + (neden ? ' title="' + _mwEsc(neden) + '"' : '') + (tek ? ' disabled' : '')
     + ' onchange="veMntWizStpYogunluk(' + b.dugum + ', this.value)">'
     + sec.map(se).join('')
     + (vs.length ? '<optgroup label="Veri sayfası">' + vs.map(function(v){ return se([v.k, v.ad]); }).join('') + '</optgroup>' : '')
+    + (ak.length ? '<optgroup label="Katalog">' + ak.map(function(a){ return se([a.key, a.ad + ' · ' + a.key]); }).join('') + '</optgroup>' : '')
     + '</select>';
 }
-// Kütle hücresi: elle → alan; veri sayfası → alan, boşken ıslak kütle (yazılan
-// kütle onun yerine geçer — örneğin aksesuarlar dâhil); malzeme ya da dosya →
-// türetilen değer (`isaret`: "S" — kaynak sütunu olmayan yüzey, 3B)
+// Kütle hücresi: elle → alan; veri sayfası → sayfanın ıslak kütlesi, YAZILMAZ
+// (kullanıcı 2026-11-02: motor datasheet'teki gibi; aksesuarlar ayrı bileşen);
+// malzeme ya da dosya → türetilen değer (`isaret`: "S" — kaynak sütunu olmayan
+// yüzey, 3B)
 function _mwStpKutleHucre(s, b, K, isaret){
-  if(K.kaynak === 'elle' || K.kaynak === 'veri'){
-    var m = s.kutle[b.dugum], vs = K.kaynak === 'veri' ? K.vs : null;
+  if(K.kaynak === 'elle'){
+    var m = s.kutle[b.dugum];
     return '<input type="text" inputmode="decimal" class="ve-fw-inp" data-mw-stp-kutle="' + b.dugum + '"'
       + ' value="' + (m !== undefined ? _mwEsc(m) : '') + '"'
-      + (vs ? ' placeholder="' + _mwEsc(_mwSayi(vs.kutle.islak, 0)) + '" title="' + _mwEsc('Islak ' + _mwSayi(vs.kutle.islak, 0)
-        + ' kg' + (vs.kutle.kuru != null ? ' · kuru ' + _mwSayi(vs.kutle.kuru, 0) + ' kg' : '')) + '"' : '')
       + ' aria-label="Kütle — ' + _mwEsc(b.ad) + '"'
       + ' oninput="veMntWizStpKutle(' + b.dugum + ', this.value)">';
   }
-  return '<span class="ve-fw-num ve-mw-stp-kg" data-mw-stp-kutle-deger="' + b.dugum + '" title="' + _mwEsc(K.not) + '">'
+  var vs = K.kaynak === 'veri' ? K.vs : null;
+  var t = vs ? 'Islak ' + _mwSayi(vs.kutle.islak, 0) + ' kg' + (vs.kutle.kuru != null ? ' · kuru ' + _mwSayi(vs.kutle.kuru, 0) + ' kg' : '')
+    : K.not;
+  return '<span class="ve-fw-num ve-mw-stp-kg" data-mw-stp-kutle-deger="' + b.dugum + '" title="' + _mwEsc(t) + '">'
     + _mwSayi(K.m, K.m < 10 ? 2 : 1) + '</span>'
     + (isaret ? '<sup class="ve-fw-kun" title="' + _mwEsc(VE_MW_STEP_NOT + ' · ' + K.not) + '">S</sup>' : '');
 }
@@ -1448,7 +1455,7 @@ function veMntWizStpYogunluk(dugum, k){
   var s = _mwStp, tip = s && s.durum === 'hazir' ? s.roller[dugum] : null;
   if(!tip || tip === 'mnt-mount') return false;
   k = k || '';
-  if(k && !veMntStpVs(k, tip)){
+  if(k && !veMntStpVs(k, tip) && !veMntStpAks(k, tip)){
     var b = _mwStpBirim(s, dugum);
     if(!b || (k === 'dosya' ? !b.dosya : !(veMntStpMalzeme(k) && b.kapali && b.V > 0))) return false;
   }

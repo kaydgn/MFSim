@@ -78,8 +78,10 @@ describe('LİSTE — Takoz\'un hiçbir penceresi modal değil', () => {
     return (new Function('return ' + m[1]))();
   };
 
-  test('tarama gerçekten tarıyor: on yedi Takoz tipi', () => {
-    expect(TAKOZ_TIPLERI.length).toBe(17);
+  test('tarama gerçekten tarıyor: yirmi bir Takoz tipi (dördü motorun aksesuarı)', () => {
+    expect(TAKOZ_TIPLERI.length).toBe(21);
+    expect(TAKOZ_TIPLERI.filter((t) => componentDefs[t].isMountAksesuar))
+      .toEqual(['mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield']);
   });
 
   test('VE_SUTUNA_SIGMAYAN\'da Takoz tipi yok', () => {

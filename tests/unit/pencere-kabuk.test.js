@@ -91,6 +91,9 @@ Object.keys(FK).forEach((k) => { global[k] = FK[k]; });
   .forEach((m) => Object.keys(m).forEach((k) => { if (global[k] === undefined) global[k] = m[k]; }));
 
 // ── Takoz (mount-sutun.test.js'in kurulumu) ──
+// STEP okuyucusunun kataloğu (aksesuarın "Kayıtlı aksesuar" bölümü onu okur)
+const _stp = require('../../js/mount-step.js');
+['veMntStpAksKatalog', 'veMntStpAks'].forEach((k) => { if (global[k] === undefined) global[k] = _stp[k]; });
 global.veMountCore = require('../../js/mount-core.js');
 global.veMntBrief = require('../../js/mount-brief.js');
 global.veMntAkso = require('../../js/mount-akso.js');
@@ -211,7 +214,7 @@ function coz() {
 describe('TEK ÜRETİCİ — iki modülün kabuğu ortak kitten', () => {
   test('dağıtım iki modülün her tipini bir kurucuya bağlıyor (tarama gerçekten tarıyor)', () => {
     expect(FEAD_TIP.length).toBeGreaterThanOrEqual(15);
-    expect(TAKOZ_TIP.length).toBe(18);
+    expect(TAKOZ_TIP.length).toBe(22);                                     // dördü motorun aksesuarı
     expect(FEAD_TIP.concat(TAKOZ_TIP).filter((t) => typeof global[KURUCU[t]] !== 'function')).toEqual([]);
   });
 
