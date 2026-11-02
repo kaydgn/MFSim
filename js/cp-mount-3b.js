@@ -1732,7 +1732,7 @@ function veMntWiz3bEksenSVG(me){
         if(!en || puan > en.p) en = { q: q, p: puan };
       });
       var qx = en.q[0], qy = en.q[1];
-      yazi += '<text class="ad ' + (a.d >= 0 ? 'ad-' + x : 'eksi') + '" x="' + f(cx + qx * 10) + '" y="' + f(c + qy * 10)
+      yazi += '<text class="ad ' + (a.d >= 0 ? 'ad-' + x : 'eksi') + '" x="' + f(cx + qx * 14) + '" y="' + f(c + qy * 14)
         + '" text-anchor="' + (qx > 0.3 ? 'start' : qx < -0.3 ? 'end' : 'middle') + '" dominant-baseline="' + (qy < -0.3 ? 'auto' : qy > 0.3 ? 'hanging' : 'central') + '" data-arka="1">'
         + a.ad[a.d >= 0 ? 1 : 2] + '</text>';
       return;
