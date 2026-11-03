@@ -278,9 +278,9 @@
     {
       "id": "n8",
       "type": "mnt-example",
-      "x": 1265,
+      "x": 1263,
       "y": 163,
-      "width": 56,
+      "width": 60,
       "height": 56,
       "customName": "",
       "data": {
@@ -306,10 +306,10 @@
     {
       "id": "n10",
       "type": "mnt-solver",
-      "x": 1155.5,
-      "y": 161,
-      "width": 65,
-      "height": 60,
+      "x": 1158,
+      "y": 163,
+      "width": 60,
+      "height": 56,
       "customName": "",
       "data": {
         "matrixMode": "delta",
@@ -336,9 +336,9 @@
       "id": "n12",
       "type": "mnt-library",
       "x": 1053,
-      "y": 164,
+      "y": 163,
       "width": 60,
-      "height": 54,
+      "height": 56,
       "customName": "",
       "data": {
         "mounts": []

@@ -22,7 +22,17 @@ function veMasterRozet(tip) {
 // tek sefer baglanan dinleyiciler bu state uzerinden calisir. Undo/redo veya
 // yeni node olusturmanin dinleyici yigmasini engeller.
 // ═══════════════════════════════════════════════════════════════════════════
-var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
+var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 }, tik: null };
+// TEK TIKLA AÇILAN ARAÇ (componentDefs.tekTik, kullanım notu T20): aracın işi
+// penceresi — sürüklemesiz tek tık pencereyi açar; öteki bileşenlerde tek tık
+// yalnız seçer, pencere çift tıkla. Sürükleme eşiği (px):
+var VE_TEK_TIK_ESIK = 4;
+function veTekTikAcar(node, e, bas) {
+  var d = node && (node.def || (typeof componentDefs !== 'undefined' && componentDefs[node.type]));
+  if(!d || !d.tekTik || !bas || bas.ctrl || (e && (e.ctrlKey || e.metaKey || e.shiftKey))) return false;
+  if(Math.abs(e.clientX - bas.x) + Math.abs(e.clientY - bas.y) >= VE_TEK_TIK_ESIK) return false;
+  return typeof selectedNodes === 'undefined' || (selectedNodes.length === 1 && selectedNodes[0] === node);
+}
 
 function veAttachNodeDrag(nodeEl, node) {
   // Çift tık → Özellikler modal'ını aç (tek tık sadece seçim yapar).
@@ -57,6 +67,7 @@ function veAttachNodeDrag(nodeEl, node) {
 
     if(!e.ctrlKey && selectedNodes.indexOf(node) === -1) clearSelection();
     addToSelection(node);
+    _veNodeDrag.tik = { node: node, x: e.clientX, y: e.clientY, ctrl: !!(e.ctrlKey || e.metaKey) };
     e.stopPropagation();
   });
 }
@@ -114,12 +125,15 @@ function veAttachNodeDrag(nodeEl, node) {
     if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
   });
 
-  document.addEventListener('mouseup', function() {
+  document.addEventListener('mouseup', function(e) {
     if(!_veNodeDrag.active) return;
     if(typeof showAlignmentGuides === 'function') showAlignmentGuides(null);
     if(typeof saveState === 'function') saveState();
     _veNodeDrag.active = false;
     _veNodeDrag.anchor = null;
+    var t = _veNodeDrag.tik;
+    _veNodeDrag.tik = null;
+    if(t && veTekTikAcar(t.node, e, t) && typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
 })();
 

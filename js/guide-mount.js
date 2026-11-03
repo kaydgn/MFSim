@@ -1084,14 +1084,15 @@ function _gmSec16(){
   h += '<p>Gövdenin hacmi, ağırlık merkezi ve ataleti parçaların <strong>katı gövdelerinden</strong> toplanır; '
     + 'yüzey gövdeleri hacme girmez, döküm içindeki boşluklar hacimden çıkar. Ağı kapalı olmayan katı gövdenin '
     + 'açıklığı kapatılır; kapatılan yüzey gövdenin yüzeyinin %10’unu aşmıyorsa gövde hacme katılır. Aşan gövde '
-    + 've katısı olmayan açık parça hacme katılmaz; uyarı satırı adını ve yüzey payını yazar. Dosya CATIA’nın '
+    + 've katısı olmayan açık parça (açık yüzey) hacme katılmaz; uyarı satırı adını, sebebini ve birim yüzeyindeki '
+    + 'payını yazar. Dosya CATIA’nın '
     + 'doğrulama özelliklerini taşıyorsa parçanın hacmi ve ağırlık merkezi oradan alınır.</p>';
   h += _gmAlanTablo('Kütlenin kaynağı', [
     ['<em>Elle</em>', 'Veri sayfasındaki kütle', 'Ağırlık merkezi hacimden; atalet kütle yazılınca türer'],
     ['Malzeme', 'Birimin malzemesi (aşağıdaki liste): kütle = yoğunluk × hacim',
       'İçindeki parçaya başka malzeme atanmışsa o parça kendi yoğunluğuyla'],
     ['<em>Dosyadan</em>', 'Parçaların dosyadaki yoğunlukları; ağırlık merkezi kütleyle ağırlıklı',
-      'Dosyada yoğunluk varsa seçilir; yoğunluğu olmayan parçayı atanan malzeme tamamlar, atanan malzeme dosyanınkinin yerine geçer'],
+      'Parçaların yoğunluğu dosyadaysa seçili gelir; yoğunluğu olmayan parçayı atanan malzeme tamamlar, atanan malzeme dosyanınkinin yerine geçer'],
     ['<em>Parçalardan</em>', 'Parçalara atanan malzemeler; ağırlık merkezi kütleyle ağırlıklı',
       'Bütün parçalara malzeme atanmışsa seçilir'],
     ['Veri sayfası', 'Modelin ıslak kütlesi',

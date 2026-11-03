@@ -39,8 +39,16 @@
        HTTP 404) ve kurulan kisayol her acilista 404 sayfasi gosteriyordu.
        Ikonlar da manifest'e goredir: icon.svg dogru yerde. Olmayan
        icon-192.png / icon-512.png referanslari kaldirildi — 404 veren bir
-       ikon, hic ikon vermemekten kotudur. Kapi: tests/unit/pwa.test.js -->
-  <link rel="manifest" href="pwa/manifest.json" />
+       ikon, hic ikon vermemekten kotudur. Kapi: tests/unit/pwa.test.js
+       Baglanti YALNIZ http(s) uzerinden eklenir: dosyadan (file://) acilista
+       tarayici manifest'i okuyamiyor ve her acilista konsola iki CORS hatasi
+       yaziyordu (kullanim notu A02, 11 acilisin 11'i). -->
+  <script>(function () {
+    if (!/^https?:$/.test(location.protocol)) return;
+    var l = document.createElement('link');
+    l.rel = 'manifest'; l.href = 'pwa/manifest.json';
+    document.head.appendChild(l);
+  })();</script>
   <!-- Tarayıcı kabuğunun tonu üst ŞERİDİN zeminidir (--bg-tertiary,
        varsayılan kimlik `acik`). Kabuk ile şerit ayrışırsa mobilde
        pencerenin üstünde başka renkte bir bant kalır. -->

@@ -497,6 +497,8 @@ function _mstParcaSonuc(sonuc, pi, ag, G, govdeli){
       r.acikAlan = G.reduce(function(s, x){ return s + (x.dahil ? 0 : x.alan); }, 0);
       r.yamaGovde = G.filter(function(x){ return x.dahil && !x.kapali; }).length;
       r.yamaAlan = G.reduce(function(s, x){ return s + (x.dahil ? x.yama : 0); }, 0);
+      // açıklığı sınırın (VE_MNT_STP_YAMA) üstünde olduğu için katılmayan gövdeler
+      r.acikEsik = G.filter(function(x){ return !x.dahil && x.yama > VE_MNT_STP_YAMA * x.alan; }).length;
     }
     if(H){ r.kaynak = 'ag'; r.V = H.W; r.c = H.c; r.J = H.T; oz = H; }
   }
@@ -760,7 +762,7 @@ function veMntStpRolKaydi(sonuc, roller, kutle, kunye, nokta, yogunluk, referans
   if(mzl.length) out.malzeme = mzl;
   return out;
 }
-function _mstYogGecerli(y, tip){ return y === 'dosya' || y === 'atanan' || !!veMntStpMalzeme(y) || !!veMntStpVs(y, tip) || !!veMntStpAks(y, tip); }
+function _mstYogGecerli(y, tip){ return y === 'elle' || y === 'dosya' || y === 'atanan' || !!veMntStpMalzeme(y) || !!veMntStpVs(y, tip) || !!veMntStpAks(y, tip); }
 // Seçilen dairenin kaydı: { yol:[örnek adları], c:[3], r } ya da null (bozuk)
 function _mstNoktaGecerli(n){
   if(!n || !Array.isArray(n.yol) || !Array.isArray(n.c) || n.c.length !== 3) return null;
@@ -1169,8 +1171,17 @@ function _mstBirim(b, P, ata, kaynak){
     if(p.kaynak === 'acik' && !p.kutu) return;             // geometrisiz parça (dosyada yalnız ürün: yağ, etiket)
     if(p.kutu) for(var i = 0; i < 3; i++){ kutu[i] = Math.min(kutu[i], p.kutu[i]); kutu[i + 3] = Math.max(kutu[i + 3], p.kutu[i + 3]); }
     alan += p.alan; r.acik += p.acikKenar || 0; r.kenarYuz += p.kenarYuz || 0; r.ucgen += p.ucgen || 0;
-    if(p.kaynak === 'acik'){ r.say.acik++; r.acikParca.push({ pi: p.pi, ad: p.ad }); acikAlan += p.alan; return; }
-    if(p.kaynak === 'ag' && p.acikGovde){ r.acikGovde.push({ pi: p.pi, ad: p.ad, n: p.acikGovde, govde: p.govde }); acikAlan += p.acikAlan; }
+    // katisiz: katı gövdesi olmayan açık yüzey (yamalanmaz) · esik: açıklığı sınırın üstündeki gövde sayısı
+    if(p.kaynak === 'acik'){
+      r.say.acik++;
+      r.acikParca.push({ pi: p.pi, ad: p.ad, katisiz: !p.govde, n: p.govde ? p.acikGovde : 0, esik: p.acikEsik || 0, alan: p.alan });
+      acikAlan += p.alan;
+      return;
+    }
+    if(p.kaynak === 'ag' && p.acikGovde){
+      r.acikGovde.push({ pi: p.pi, ad: p.ad, n: p.acikGovde, govde: p.govde, esik: p.acikEsik || 0, alan: p.acikAlan });
+      acikAlan += p.acikAlan;
+    }
     if(p.kaynak === 'ag' && p.yamaGovde){ r.yamaGovde += p.yamaGovde; yamaAlan += p.yamaAlan; }
     if(p.nokta) r.say.nokta++; else r.say[p.kaynak]++;
     dahil.push(p);
@@ -1178,6 +1189,7 @@ function _mstBirim(b, P, ata, kaynak){
   });
   if(kutu[3] >= kutu[0]) r.kutu = kutu;
   r.acikPay = alan > 0 ? acikAlan / alan : 0;
+  r.acikParca.concat(r.acikGovde).forEach(function(x){ x.pay = alan > 0 ? x.alan / alan : 0; });
   r.yamaPay = alan > 0 ? yamaAlan / alan : 0;
   if(sapma) r.sapma = sapma;
   ata = ata || {};
@@ -1217,7 +1229,7 @@ function _mstBirim(b, P, ata, kaynak){
 }
 function veMntStpCoz(sonuc, roller, opt){
   opt = opt || {};
-  var out = { ok: false, hatalar: [], uyarilar: [], birimler: [] };
+  var out = { ok: false, hatalar: [], uyarilar: [], birimler: [], refEksik: [] };
   if(!sonuc || !sonuc.ok){ out.hatalar.push('STEP dosyası okunmadı.'); return out; }
   var birimler = veMntStpBirimler(sonuc, roller || []);
   if(!birimler.length){ out.hatalar.push('Rol verilmiş parça yok.'); return out; }
@@ -1257,6 +1269,7 @@ function veMntStpCoz(sonuc, roller, opt){
         return;
       }
       out.uyarilar.push('"' + b.ad + '": ' + V.neden + '.');
+      out.refEksik.push(out.uyarilar[out.uyarilar.length - 1]);   // çaresi 3B'de (yüzey yönlendirir)
     }
     // Aksesuar: orta nokta — dış ölçülerin (kutunun) merkezi; hacim aranmaz
     if(veMntStpAksesuar(b.tip) && oz.kutu){
@@ -1292,20 +1305,33 @@ function veMntStpCoz(sonuc, roller, opt){
     }
     if(oz.kapali && oz.c){
       // Ağırlık merkezi: kaynak yoğunluk dağılımı veriyorsa kütle merkezi, yoksa hacim merkezi
-      var yk = yog[b.dugum];
+      var yk = veMntStpYogEtkin(r, yog[b.dugum]);
       r.konum = (yk === 'dosya' && r.dosya ? r.dosya.c : yk === 'atanan' && r.atanan ? r.atanan.c
         : r.mz ? r.mz.c : oz.c).slice();
       r.kaynak = 'hacim';
-      var kisim = [], adlar = r.acikParca.concat(r.acikGovde).map(function(x){ return x.ad; });
-      var ng = r.acikGovde.reduce(function(t, x){ return t + x.n; }, 0);
-      if(r.acikParca.length) kisim.push(r.acikParca.length + ' parça');
-      if(ng) kisim.push(ng + ' gövde');
-      if(kisim.length)
-        out.uyarilar.push('"' + b.ad + '": ' + kisim.join(' ve ') + ' kapalı değil, hacme katılmadı ('
-          + adlar.slice(0, 3).join(', ') + (adlar.length > 3 ? ', …' : '')
-          + '); yüzey payı %' + _mstSayi(r.acikPay * 100, 1) + '.');
+      // Hacme katılmayan sebebiyle (kullanım notu T09: birimin yüzey payı gövdenin
+      // açıklık sınırıyla karışıyordu): açık yüzey (katı gövdesi yok) · açıklığı
+      // sınırın üstündeki katı gövde · kapalı olmayan katı gövde. Pay: birimin
+      // yüzeyindeki payı.
+      var adYaz = function(l){
+        var a = l.map(function(x){ return x.ad; });
+        return ' (' + a.slice(0, 3).join(', ') + (a.length > 3 ? ', …' : '') + ')';
+      };
+      var pay = function(l){
+        return '; birim yüzeyindeki payı %' + _mstSayi(l.reduce(function(t, x){ return t + x.pay; }, 0) * 100, 1) + '.';
+      };
+      var yuzey = r.acikParca.filter(function(x){ return x.katisiz; });
+      var katilar = r.acikParca.filter(function(x){ return !x.katisiz; }).concat(r.acikGovde);
+      var ng = katilar.reduce(function(t, x){ return t + x.n; }, 0);
+      var esik = katilar.reduce(function(t, x){ return t + x.esik; }, 0);
+      if(yuzey.length)
+        out.uyarilar.push('"' + b.ad + '": ' + yuzey.length + ' parça açık yüzey, hacme katılmadı' + adYaz(yuzey) + pay(yuzey));
+      if(ng)
+        out.uyarilar.push('"' + b.ad + '": ' + ng + (esik === ng
+          ? ' gövdede açıklık %' + _mstSayi(VE_MNT_STP_YAMA * 100, 0) + ' sınırının üstünde'
+          : ' gövde kapalı değil') + ', hacme katılmadı' + adYaz(katilar) + pay(katilar));
       if(r.yamaGovde)
-        out.uyarilar.push('"' + b.ad + '": ' + r.yamaGovde + ' gövdenin açıklığı kapatıldı; yüzey payı %'
+        out.uyarilar.push('"' + b.ad + '": ' + r.yamaGovde + ' gövdenin açıklığı kapatıldı; birim yüzeyindeki payı %'
           + _mstSayi(r.yamaPay * 100, r.yamaPay < 0.001 ? 3 : 2) + '.');
     } else if(oz.kutu){
       r.konum = [(oz.kutu[0] + oz.kutu[3]) / 2, (oz.kutu[1] + oz.kutu[4]) / 2, (oz.kutu[2] + oz.kutu[5]) / 2];
@@ -1332,9 +1358,19 @@ function veMntStpCoz(sonuc, roller, opt){
 // dayanağı). Elle ve malzemede yoğunluk HOMOJEN (I = ρ·J); dosyada parça parça.
 // Veri sayfasında kütle yazılan ya da ıslak kütle, tensör veri sayfasının
 // ataleti (referans seçilmişse; yoksa homojen yoğunlukla, `Inot`).
+// KAYNAĞIN VARSAYILANI (kullanım notu T06): seçilmemiş gövdede bütün parçaların
+// yoğunluğu dosyadaysa 'dosya' — CATIA'nın dışa aktardığı malzeme. Kullanıcının
+// "Elle" seçimi 'elle' olarak yazılır ve varsayılanın üstünde kalır. Döner:
+// geçerli kaynak ('' = elle).
+function veMntStpYogEtkin(b, y){
+  if(y === 'elle') return '';
+  if(y) return y;
+  return (b && b.tip !== 'mnt-mount' && b.dosya) ? 'dosya' : '';
+}
 function veMntStpKutle(b, kg, yog){
   var out = { m: NaN, I: null, kaynak: 'elle', not: 'homojen yoğunluk' };
   if(!b) return out;
+  yog = veMntStpYogEtkin(b, yog);
   var tensor = function(T, k){ return T ? T.map(function(sat){ return sat.map(function(v){ return v * k; }); }) : null; };
   var vs = b.tip !== 'mnt-mount' ? veMntStpVs(yog, b.tip) : null;
   if(vs){
@@ -1507,7 +1543,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntStpYol: veMntStpYol, veMntStpImza: veMntStpImza,
     veMntStpRolKaydi: veMntStpRolKaydi, veMntStpRolKaydiUygula: veMntStpRolKaydiUygula,
     VE_MNT_STP_NOKTA: VE_MNT_STP_NOKTA, veMntStpYuzler: veMntStpYuzler, veMntStpTakozNoktasi: veMntStpTakozNoktasi,
-    VE_MNT_STP_MALZEME: VE_MNT_STP_MALZEME, VE_MNT_STP_YAMA: VE_MNT_STP_YAMA, veMntStpMalzeme: veMntStpMalzeme, veMntStpKutle: veMntStpKutle,
+    VE_MNT_STP_MALZEME: VE_MNT_STP_MALZEME, VE_MNT_STP_YAMA: VE_MNT_STP_YAMA, veMntStpMalzeme: veMntStpMalzeme, veMntStpKutle: veMntStpKutle, veMntStpYogEtkin: veMntStpYogEtkin,
     veMntStpParcaMalzemesi: veMntStpParcaMalzemesi,
     veMntStpDosyaOzellik: veMntStpDosyaOzellik, veMntStpParcaOzellik: veMntStpParcaOzellik, veMntStpParcaOzellikIs: veMntStpParcaOzellikIs,
     veMntStpDaireBul: veMntStpDaireBul, veMntStpKenarDaire: veMntStpKenarDaire,

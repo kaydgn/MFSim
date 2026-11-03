@@ -81,14 +81,20 @@ function veMntWiz3bAracHTML(D){
   });
   h += '</div><input type="range" class="ve-mw-3b-kesit-d" id="ve-mw-3b-kesit-d" aria-label="Kesit konumu"'
     + ' min="' + A[0] + '" max="' + A[1] + '" step="' + adim + '" value="' + k.d + '" oninput="veMntWiz3bKesitD(this.value)">'
-    + '<span class="ve-mw-3b-kesit-deger" id="ve-mw-3b-kesit-deger">' + veMntWiz3bKesitYazi(k) + '</span>'
+    // Değer yazılır (kullanım notu T12: bilinen bir düzlem tam değerle kesilemiyordu;
+    // kaydırıcının adımı montajın boyunun binde biri) — kaydırıcı onu izler
+    + '<label class="ve-mw-3b-kesit-deger" id="ve-mw-3b-kesit-deger"><span id="ve-mw-3b-kesit-harf">'
+    + VE_MW_3B_EKSEN_HARF[k.eksen].toLowerCase() + ' =</span>'
+    + '<input type="text" inputmode="decimal" class="ve-mw-3b-kesit-gir" id="ve-mw-3b-kesit-gir" aria-label="Kesit konumu [mm]"'
+    + ' value="' + veMntWiz3bKesitMakine(k.d) + '" onchange="veMntWiz3bKesitD(this.value, true)"'
+    + ' onkeydown="if(event.key === \'Enter\'){ event.preventDefault(); veMntWiz3bKesitD(this.value, true); }">'
+    + '<span>mm</span></label>'
     + '<button type="button" class="ve-mw-3b-arac-b" id="ve-mw-3b-kesit-ters" aria-pressed="' + (k.ters ? 'true' : 'false') + '"'
     + ' onclick="veMntWiz3bKesitTers()">Ters</button></div>';
   return h;
 }
-function veMntWiz3bKesitYazi(k){
-  return VE_MW_3B_EKSEN_HARF[k.eksen].toLowerCase() + ' = ' + _mwSayi(Math.round(k.d * 10) / 10, 1) + ' mm';
-}
+// Kesit alanının değeri: 0,1 mm'ye, makine biçiminde (alan Türkçe gösterir — js/sayi-alan.js)
+function veMntWiz3bKesitMakine(d){ return (Math.round(d * 10) / 10).toFixed(1); }   // makine: sayı alanının değeri
 
 // ── EYLEMLER (görüntüleyici açıkken) ──────────────────────────────────────
 function veMntWiz3bBakis(k){
@@ -118,11 +124,13 @@ function veMntWiz3bKesitEksen(i){
   _mw3bKesitUygula(true);
   return true;
 }
-function veMntWiz3bKesitD(v){
+// `yazildi`: değer alandan (kaydırıcı onu izler); yoksa kaydırıcıdan (alan izler)
+function veMntWiz3bKesitD(v, yazildi){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null, d = parseFloat(v);
   if(!V || !V.kesit || !isFinite(d)) return false;
+  if(yazildi && Math.abs(d - V.kesit.d) < 1e-9) return false;
   V.kesit.d = d;
-  _mw3bKesitUygula(false);
+  _mw3bKesitUygula(false, yazildi);
   return true;
 }
 function veMntWiz3bKesitTers(){
@@ -134,7 +142,7 @@ function veMntWiz3bKesitTers(){
 }
 // Düzlemi malzemelere ve ışına uygular; `cubuk`: çubuk yeniden kurulur (kaydırıcı
 // sürüklenirken kurulmaz — odak ve sürükleme kaybolurdu, yalnız yazı tazelenir)
-function _mw3bKesitUygula(cubuk){
+function _mw3bKesitUygula(cubuk, yazildi){
   var V = _mw3b, K = veMntWiz3bKesitDuzlem(V.kesit);
   V.kesitK = K;
   var M = V.malzeme, liste = [M.opak, M.soluk, M.derinlik, M.cizgi];
@@ -150,9 +158,10 @@ function _mw3bKesitUygula(cubuk){
   }
   _mw3bKesitGorsel();
   if(cubuk) _mw3bAracYaz();
-  else {
-    var y = document.getElementById('ve-mw-3b-kesit-deger');
-    if(y && V.kesit) y.textContent = veMntWiz3bKesitYazi(V.kesit);
+  else if(V.kesit){
+    var g = document.getElementById('ve-mw-3b-kesit-gir'), r = document.getElementById('ve-mw-3b-kesit-d');
+    if(g && !yazildi) g.value = veMntWiz3bKesitMakine(V.kesit.d);           // kaydırıcı sürer, alan izler
+    if(r && yazildi) r.value = String(V.kesit.d);
   }
   _mw3bCiz(true);
 }
@@ -592,7 +601,7 @@ if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     VE_MW_3B_BAKIS: VE_MW_3B_BAKIS, veMntWiz3bBakisBul: veMntWiz3bBakisBul, veMntWiz3bKesitDuzlem: veMntWiz3bKesitDuzlem,
     veMntWiz3bKesitKalir: veMntWiz3bKesitKalir, veMntWiz3bKesitAralik: veMntWiz3bKesitAralik, veMntWiz3bAracHTML: veMntWiz3bAracHTML,
-    veMntWiz3bKesitYazi: veMntWiz3bKesitYazi, veMntWiz3bYuzSira: veMntWiz3bYuzSira, veMntWiz3bYuzAlan: veMntWiz3bYuzAlan,
+    veMntWiz3bKesitMakine: veMntWiz3bKesitMakine, veMntWiz3bYuzSira: veMntWiz3bYuzSira, veMntWiz3bYuzAlan: veMntWiz3bYuzAlan,
     veMntWiz3bYuzKoseler: veMntWiz3bYuzKoseler, veMntWiz3bYuzBilgi: veMntWiz3bYuzBilgi, veMntWiz3bYuzYazi: veMntWiz3bYuzYazi,
     veMntWiz3bYuzSatirlar: veMntWiz3bYuzSatirlar, veMntWiz3bOlcuDeger: veMntWiz3bOlcuDeger, veMntWiz3bAracKartHTML: veMntWiz3bAracKartHTML
   };

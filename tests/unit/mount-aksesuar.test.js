@@ -186,6 +186,19 @@ describe('ORTA NOKTA — STEP\'te aksesuarın ağırlık merkezi dış ölçüle
     expect(STP.veMntStpKutle(birim('Motor bloğu'), '385', '').I).not.toBe(null);
   });
 
+  // Kütlesi girilmiş aksesuarın atalet hücresi "Kütle bekliyor." diyordu (kullanım notu T07)
+  test('atalet hücresi: aksesuar nokta kütle — kütlesi girilmiş de olsa "Nokta kütle."; motor türetilir', () => {
+    const a = son.agac.findIndex((d) => d.ad === 'Alternatör'), m = son.agac.findIndex((d) => d.ad === 'Motor bloğu');
+    const ipucu = (st, b) => {
+      const el = document.createElement('div');
+      el.innerHTML = _mwStpAtaletHTML(st, b);
+      return el.querySelector('.ve-mw-stp-atalet').getAttribute('title');
+    };
+    expect(ipucu({ kutle: { [a]: 9 }, yogunluk: {} }, birim('Alternatör'))).toBe('Nokta kütle.');
+    expect(ipucu({ kutle: {}, yogunluk: {} }, birim('Isı sacı'))).toBe('Nokta kütle.');           // açık kabuk da
+    expect(ipucu({ kutle: { [m]: 385 }, yogunluk: {} }, birim('Motor bloğu'))).toMatch(/^Atalet tensörü türetilir/);
+  });
+
   test('kayıt: aksesuar nokta kütle, ağırlık merkezi "S" notu "orta nokta"; yazılan kütle "S" değil', () => {
     const a = son.agac.findIndex((d) => d.ad === 'Alternatör'), m = son.agac.findIndex((d) => d.ad === 'Isı sacı');
     const k = STP.veMntStpKayit(coz, { [a]: 9, [m]: 1.358 }, {});
@@ -289,6 +302,42 @@ describe('KATALOG — kayıtlı aksesuarın kütlesi', () => {
   });
 });
 
+// ── 3B DİZİSİ — aksesuarın kayıtlı kütlesi (kullanım notu T19) ──────────────
+// Motor seçiliyken dizide veri sayfası listesi vardı; alternatör ya da
+// kompresör seçiliyken katalog için pencerenin Kütle bölümüne gitmek gerekiyordu.
+describe('3B DİZİSİ — kayıtlı aksesuarın listesi', () => {
+  const stp = S.guçGrubuStep([
+    { id: 'MOTOR', ad: 'Motor bloğu', sekil: 'kutu', olcu: [700, 500, 600], konum: [0, 0, 600] },
+    { id: 'ALT', ad: 'Alternatör', sekil: 'kutu', olcu: [160, 150, 170], konum: [-420, 260, 760] },
+    { id: 'KLIMA', ad: 'Klima kompresörü', sekil: 'kutu', olcu: [180, 140, 140], konum: [400, 260, 760] },
+    { id: 'BRK', ad: 'Alternatör braketi', sekil: 'kutu', olcu: [60, 40, 120], konum: [-300, 220, 700] }
+  ]);
+  const ROL = { 'Motor bloğu': 'mnt-motor', 'Alternatör': 'mnt-alternator', 'Klima kompresörü': 'mnt-ac', 'Alternatör braketi': 'mnt-alt-bracket' };
+  beforeEach(() => {
+    global.veMntStack = [{ id: 'ana' }];
+    global.nodes = [];
+  });
+  afterEach(() => { delete global.veMntStack; });
+
+  test('alternatör ve klima kompresörü: listede kayıtlı aksesuarlar, seçilen işaretli; seçmek kütle kaynağını yazar; braket ve motorda liste yok', () => {
+    const s = W.veMntWizStpOku(stp, 'aks.stp');
+    const d = (ad) => s.sonuc.agac.findIndex((x) => x.ad === ad);
+    Object.keys(ROL).forEach((ad) => W.veMntWizStpRol(d(ad), ROL[ad]));
+    const dizi = (i) => { const el = document.createElement('div'); el.innerHTML = M3.veMntWiz3bAltHTML(s, i, {}); return el; };
+    const liste = (i) => Array.from(dizi(i).querySelectorAll('#ve-mw-3b-katalog option')).map((o) => o.textContent);
+    const ALT = STP.veMntStpAksKatalog('mnt-alternator'), KL = STP.veMntStpAksKatalog('mnt-ac');
+    expect(liste(d('Alternatör'))).toEqual(['—'].concat(ALT.map((a) => a.ad + ' · ' + a.key)));
+    expect(liste(d('Klima kompresörü'))).toEqual(['—'].concat(KL.map((a) => a.ad + ' · ' + a.key)));
+    expect(dizi(d('Alternatör braketi')).querySelector('#ve-mw-3b-katalog')).toBe(null);
+    expect(dizi(d('Motor bloğu')).querySelector('#ve-mw-3b-katalog')).toBe(null);
+    // seçim pencerenin seçicisiyle AYNI yoldan: kaynak yazılır, kütle katalogdan
+    expect(W.veMntWizStpYogunluk(d('Klima kompresörü'), KL[0].key)).toBe(true);
+    expect(dizi(d('Klima kompresörü')).querySelector('#ve-mw-3b-katalog').value).toBe(KL[0].key);
+    expect(dizi(d('Klima kompresörü')).querySelector('#ve-mw-3b-katalog').getAttribute('onchange'))
+      .toBe('veMntWizStpYogunluk(' + d('Klima kompresörü') + ', this.value)');
+  });
+});
+
 // ── KAYITLI ROLLER — dosya açık değilken kaynağı okunur ──────────────────
 describe('KAYITLI ROLLER — kayıtlı aksesuarın modeli ve kütlesi', () => {
   test('rol kaydında klima kompresörünün kaynağı katalog anahtarı: hücre model · kütle; başka rolde yazılmaz', () => {
@@ -302,7 +351,7 @@ describe('KAYITLI ROLLER — kayıtlı aksesuarın modeli ve kütlesi', () => {
     const el = document.createElement('div');
     el.innerHTML = CAD._mntCadKayitHTML(k);
     const satir = Array.from(el.querySelectorAll('tr')).filter((tr) => tr.cells[0] && tr.cells[0].textContent === 'Klima kompresörü')[0];
-    expect(satir.cells[2].textContent).toBe('Valeo TM21 · 8,1');
+    expect([satir.cells[2].firstChild.textContent, satir.cells[2].querySelector('.ve-mnt-cad-kaynak').textContent]).toEqual(['8,1', 'Valeo TM21']);
     // alternatör rolünde klima anahtarı geçersiz: kayda girmez
     const roller2 = son.agac.map((d, j) => (j === i ? 'mnt-alternator' : null));
     const k2 = STP.veMntStpRolKaydi(son, roller2, {}, {}, {}, { [i]: '57RS321633' }, {});

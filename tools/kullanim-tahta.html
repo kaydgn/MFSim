@@ -196,6 +196,11 @@ h3 {
 .metin p + p { margin-top: .4em; }
 .olcum p { font-family: var(--veri); font-size: var(--fs-1); font-variant-numeric: tabular-nums; }
 .kural { padding: 8px 10px; background: var(--amber-zemin); border: 1px solid var(--cizgi); }
+.sonra { padding: 8px 10px; background: var(--yesil-zemin); border: 1px solid var(--cizgi); display: grid; gap: 8px; }
+.sonra h3 { color: var(--yesil); }
+.sonra p { font-family: var(--veri); font-size: var(--fs-1); font-variant-numeric: tabular-nums; }
+.sonra .sonra-gorsel { display: grid; gap: 10px; }
+.etiketler .duzeldi { color: var(--yesil); font-weight: 600; }
 .kural h3 { color: var(--amber); }
 details { font-size: var(--fs-1); }
 summary { cursor: pointer; font-family: var(--dar); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--soluk); font-size: var(--fs-0); }
@@ -346,6 +351,13 @@ function paftaHTML(b) {
   var bolum = function (ad, deger, sinif) {
     return deger ? '<section' + (sinif ? ' class="' + sinif + '"' : '') + '><h3>' + ad + '</h3>' + paragraflar(deger) + '</section>' : '';
   };
+  var sg = (b.sonra && b.sonra.gorseller) || [];
+  var sonra = b.sonra ? '<section class="sonra"><h3>Sonra</h3>' + paragraflar(b.sonra.olcum) +
+    (sg.length ? '<div class="sonra-gorsel">' + sg.map(function (x, i) {
+      return '<figure><button class="buyut" type="button" data-s="1" data-i="' + i + '" aria-label="Büyüt">' +
+        '<img src="' + x.src + '" width="' + x.w + '" height="' + x.h + '" alt="' + kac(b.baslik) + '" loading="lazy"></button>' +
+        (x.not ? '<figcaption>' + kac(x.not) + '</figcaption>' : '') + '</figure>';
+    }).join('') + '</div>' : '') + '</section>' : '';
   var adimlar = (b.adimlar && b.adimlar.length)
     ? '<details><summary>Adımlar</summary><ol>' + b.adimlar.map(function (a) { return '<li>' + kac(a) + '</li>'; }).join('') + '</ol></details>'
     : '';
@@ -360,6 +372,7 @@ function paftaHTML(b) {
         '<span class="tur t-' + b.tur + '"><i class="nokta"></i>' + TURLER[b.tur] + '</span>' +
         '<span>' + ONEMLER[b.onem] + '</span>' +
         '<span>' + kac(b.yuzey) + '</span>' +
+        (b.sonra ? '<span class="duzeldi">Düzeltildi</span>' : '') +
       '</div>' +
     '</div>' +
     '<div class="pafta-govde' + (g.length ? '' : ' tek') + '">' +
@@ -368,6 +381,7 @@ function paftaHTML(b) {
         bolum('Gözlem', b.gozlem) +
         bolum('Beklenti', b.beklenti) +
         bolum('Ölçüm', b.olcum, 'olcum') +
+        sonra +
         bolum('Öneri', b.oneri) +
         bolum('Kayıtlı karar', b.kural, 'kural') +
         adimlar +
@@ -493,7 +507,8 @@ document.addEventListener('click', function (e) {
   if (bb) {
     var pid = bb.closest('.pafta').getAttribute('data-id');
     var bul = bulgular().filter(function (x) { return x.id === pid; })[0];
-    var g = bul && bul.gorseller[+bb.getAttribute('data-i')];
+    var liste = bul && (bb.hasAttribute('data-s') ? (bul.sonra && bul.sonra.gorseller) : bul.gorseller);
+    var g = liste && liste[+bb.getAttribute('data-i')];
     if (g) { E('buyutec-img').src = g.src; E('buyutec').showModal(); }
     return;
   }

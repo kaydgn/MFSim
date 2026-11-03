@@ -84,7 +84,8 @@ test('KART (1366×768): kaynak seçicisi sığar; dosyadan kütle merkezi, malze
     .toEqual(['Elle'].concat(await page.evaluate(() => VE_MNT_STP_MALZEME.map((m) => m.ad)))
       .concat(await page.evaluate(() => veMntVeriSayfalari('mnt-motor').map((v) => v.ad))));
   expect(await page.locator(sec('Şanzıman') + ' optgroup').count()).toBe(0);
-  await page.selectOption(sec('Şanzıman'), 'dosya');
+  // şanzımanın yoğunlukları dosyada: kaynak "Dosyadan" seçili gelir (kullanım notu T06)
+  expect(await page.locator(sec('Şanzıman')).inputValue()).toBe('dosya');
   await page.selectOption(sec('Arka braket'), 'celik');
   await page.fill(KOK + ' input[data-mw-stp-kutle]', '418');
   expect([await kutleHucre(page, KOK, 'Motor'), await kutleHucre(page, KOK, 'Şanzıman'), await kutleHucre(page, KOK, 'Arka braket')])
@@ -100,9 +101,9 @@ test('KART (1366×768): kaynak seçicisi sığar; dosyadan kütle merkezi, malze
   expect(await secicilerSigar(page, KOK)).toEqual([]);
   await page.evaluate(Y.KAYNAK);
   expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-mw-yan')), 'sihirbaz · kütle')).toEqual([]);
-  // Açık parça: uyarı adıyla ve payıyla
+  // Açık parça: uyarı adıyla, sebebiyle ve birim yüzeyindeki payıyla
   expect(await page.locator(KOK + ' .ve-fw-issue').allTextContents())
-    .toContain(' "Motor": 1 parça kapalı değil, hacme katılmadı (Kayış kapağı); yüzey payı %12,0.');
+    .toContain(' "Motor": 1 parça açık yüzey, hacme katılmadı (Kayış kapağı); birim yüzeyindeki payı %12,0.');
   // Aktar: braketin kütlesi malzemeden — sihirbazda "S" ve dayanağı
   await page.click(KOK + ' #ve-mw-stp-aktar');
   const g = await page.evaluate(() => {
@@ -234,7 +235,7 @@ test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağa�
   await page.selectOption('#ve-mw-3b-alt #ve-mw-3b-malzeme', 'aluminyum');
   // Birimin kütlesi parça parça: (2.700 + 7.850) · 120 · 600 · 20 mm³ = 15,2 kg
   await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-govdeler] tbody tr')]
-    .map((tr) => tr.cells[2].textContent.trim()))).toEqual(['', '', '15,2S']);
+    .map((tr) => tr.cells[2].textContent.trim()))).toEqual(['', '654,8S', '15,2S']);   // şanzıman: varsayılan "Dosyadan"
   const kg = await page.evaluate(() => {
     const s = veMntWizStp(), b = s.coz.birimler.find((x) => x.ad === 'Arka braket');
     return Math.round(_mwStpKutleK(s, b).m * 1000) / 1000;

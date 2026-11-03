@@ -9,7 +9,10 @@
 //   top              hiç düğüm yok
 //   arac-performans  yalnız "Başlangıç ve Örnekler" (ap-example)
 //   mount-analysis   başlangıç sayfası kapalı; kütle gövdesi ve takoz yok
-//                    (Boş kanvas yalnız analiz araçlarını kurar)
+//                    (Boş kanvas yalnız analiz araçlarını kurar). Modülün
+//                    STEP oturumu açıksa yönlendirme oturuma götürür
+//                    (kullanım notu T01: STEP'ten başladıktan sonra elle
+//                    kurmaya yönlendiriyordu)
 //   fead-analysis    yok — başlangıç sayfası ve çizim masası kendi yolunu taşır
 // Tuvalde düğüm varsa yazı alta iner (kart ortada durur). pointer-events yok:
 // tuvale bırakmayı engellemez. Kamera dönüşümünün dışında, kabın çocuğu.
@@ -23,16 +26,17 @@ var VE_BOS_TUVAL = {
   'top': { durum: 'Tuval boş', yon: veYon('Bileşenler’den bir modülü tuvale sürükleyin.'),
            kisayol: ['Klavye kısayolları'] },
   'arac-performans': { durum: 'Model boş', yon: veYon('Bileşenler’den bileşen sürükleyin.') },
-  'mount-analysis': { durum: 'Model boş', yon: veYon('Bileşenler’den kütle gövdesi ve takoz sürükleyin.') }
+  'mount-analysis': { durum: 'Model boş', yon: veYon('Bileşenler’den kütle gövdesi ve takoz sürükleyin.') },
+  'mount-analysis-step': { durum: 'Model boş', yon: veYon('3D Görüntüleyici’de parçalara rol verin.') }
 };
 
 function _veBosTip(n) {
   return (typeof componentDefs !== 'undefined' && n && componentDefs[n.type]) || {};
 }
 
-// SAF: kapsam + düğüm listesi (+ Takoz başlangıç sayfasının açıklığı) →
-// gösterilecek kaydın anahtarı ya da null.
-function veBosTuvalKapsami(scope, liste, mntBaslangicAcik) {
+// SAF: kapsam + düğüm listesi (+ Takoz başlangıç sayfasının açıklığı, modülün
+// STEP oturumu) → gösterilecek kaydın anahtarı ya da null.
+function veBosTuvalKapsami(scope, liste, mntBaslangicAcik, mntStep) {
   liste = liste || [];
   if(scope === 'top') return liste.length === 0 ? 'top' : null;
   if(scope === 'arac-performans') {
@@ -43,7 +47,7 @@ function veBosTuvalKapsami(scope, liste, mntBaslangicAcik) {
     var arac = (typeof VE_MNT_ARAC_TIPLERI !== 'undefined') ? VE_MNT_ARAC_TIPLERI : [];
     return liste.every(function(n) {
       return arac.indexOf(n.type) >= 0 || _veBosTip(n).isMountExample;
-    }) ? scope : null;
+    }) ? (mntStep ? 'mount-analysis-step' : scope) : null;
   }
   return null;
 }
@@ -79,7 +83,8 @@ function veBosTuvalTazele() {
   var scope = (typeof veSidebarScope !== 'undefined') ? veSidebarScope : 'top';
   var liste = (typeof nodes !== 'undefined' && nodes) ? nodes : [];
   var acik = (typeof veMntBaslangicAcik === 'function') && veMntBaslangicAcik();
-  var anahtar = veBosTuvalKapsami(scope, liste, acik);
+  var stp = (typeof veMntWizStpBurada === 'function') && veMntWizStpBurada();
+  var anahtar = veBosTuvalKapsami(scope, liste, acik, !!(stp && stp.durum !== 'hata'));
   var el = document.getElementById(VE_BOS_TUVAL_ID);
   if(!anahtar) { if(el) el.hidden = true; return null; }
   if(!el) {

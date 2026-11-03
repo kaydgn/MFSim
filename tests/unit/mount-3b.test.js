@@ -285,6 +285,116 @@ describe('İŞARETLER — ağırlık merkezi CAD simgesi; takoz noktası ağırl
   });
 });
 
+// ── GEZİNME — tekerlek imlecin altını tutar (kullanım notu T04) ───────────
+// Önce tekerlek bakışın merkezine yakınlaşıyordu: iki arka takozun ortası 6
+// adımda 626 px kayıp görüntüden çıkıyordu.
+describe('İMLECİN ALTINDA YAKINLAŞMA — kamera P\'ye giden ışında kalır', () => {
+  const ekle = (a, b, k = 1) => a.map((x, i) => x + k * b[i]);
+  const fark = (a, b) => a.map((x, i) => x - b[i]);
+  test('bakış yönü sabit; yeni kamera P\'ye aynı doğrultuda, uzaklık k katı', () => {
+    const hedef = [100, -40, 300], u = [0.6, 0.48, 0.64], r = 2500, P = [380, 120, 410];
+    [0.5, 0.887, 1.2].forEach((k) => {
+      const h2 = veMntWiz3bYakinHedef(hedef, P, k);
+      const c1 = ekle(hedef, u, r), c2 = ekle(h2, u, r * k);
+      const a = fark(P, c1), b = fark(P, c2);
+      // aynı doğrultu: çapraz çarpım sıfır, yön aynı, boy k katı
+      const x = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+      expect(Math.hypot(...x) / (Math.hypot(...a) * Math.hypot(...b))).toBeLessThan(1e-12);
+      expect(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).toBeGreaterThan(0);
+      expect(Math.hypot(...b) / Math.hypot(...a)).toBeCloseTo(k, 12);
+    });
+    // P hedefin kendisiyse hedef yerinde (eski davranış: bakışın merkezi)
+    expect(veMntWiz3bYakinHedef(hedef, hedef, 0.5)).toEqual(hedef);
+  });
+});
+
+// ── SEÇİM KİPİNDE ODAK (kullanım notu T05) ────────────────────────────────
+describe('SEÇİM KİPİNDE ODAK — yalnız kipteki birimin işaretleri', () => {
+  const I = [{ t: 'govde', u: 3 }, { t: 'ref', u: 3 }, { t: 'govde', u: 7 }, { t: 'takoz', u: 9 }, { t: 'model' }];
+  test('referans ve daire kipinde birim, ölçüde hiçbiri, kip yokken hepsi', () => {
+    expect(_mw3bSecimOdak({ ref: { birim: 3, tur: 'yuz' }, nokta: -1 })).toBe(3);
+    expect(_mw3bSecimOdak({ ref: null, nokta: 9 })).toBe(9);
+    expect(_mw3bSecimOdak({ ref: null, nokta: -1, olcu: { a: null } })).toBe(-1);
+    expect(_mw3bSecimOdak({ ref: null, nokta: -1, olcu: null })).toBe(null);
+    expect(veMntWiz3bOdakIsaret(I, 3).map((m) => m.t)).toEqual(['govde', 'ref']);
+    expect(veMntWiz3bOdakIsaret(I, 9).map((m) => m.t)).toEqual(['takoz']);
+    expect(veMntWiz3bOdakIsaret(I, -1)).toEqual([]);
+    expect(veMntWiz3bOdakIsaret(I, null)).toBe(I);
+  });
+});
+
+// ── HAREKET VEKİLİ (kullanım notu T15) ────────────────────────────────────
+describe('HAREKET VEKİLİ — yavaş karede sürüklerken parçaların kutuları', () => {
+  test('kutu başına 12 kenar, köşeler kutunun köşeleri; sonlu olmayan kutu atlanır', () => {
+    const K = [0, 0, 0, 1, 2, 3, NaN, 0, 0, 1, 1, 1, -1, -1, -1, 1, 1, 1];
+    const L = veMntWiz3bKutuCizgi(K, 3);
+    expect(L.length).toBe(2 * 72);
+    const kose = new Set();
+    for (let i = 0; i < 72; i += 3) kose.add([L[i], L[i + 1], L[i + 2]].join(','));
+    expect([...kose].sort()).toEqual(['0,0,0', '0,0,3', '0,2,0', '0,2,3', '1,0,0', '1,0,3', '1,2,0', '1,2,3']);
+    // her kenar tek eksende değişir, boyu o eksenin boyu
+    for (let i = 0; i < 72; i += 6) {
+      const d = [L[i + 3] - L[i], L[i + 4] - L[i + 1], L[i + 5] - L[i + 2]].map(Math.abs);
+      expect(d.filter((x) => x > 0).length).toBe(1);
+    }
+    expect(VE_MW_3B_VEKIL.ms).toBeGreaterThanOrEqual(100);         // ekran kartlı karede (≤ 30 ms) vekil kurulmaz
+  });
+});
+
+// ── ROL RENKLERİ — her rol ayrı renk, iki temada (kullanım notu T03) ────────
+// Önce: klima kompresörü = şanzıman, ısı sacı = transfer kutusu, alternatör
+// braketi = braket (aynı jeton), alternatör = PTO; mil = takoz ve pompa =
+// transfer aynı hex. Ölçüt OKLab ΔE (×100): paletin kendi en yakın çifti
+// (motor ↔ transfer, açık temada 6,6) eşiğin üstünde kalır.
+describe('ROL RENKLERİ — her rolün rengi ötekilerden ayrı, iki temada', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+  const tema = (bas) => {
+    const i = css.indexOf(bas), j = css.indexOf('}', i), t = {};
+    const re = /--([\w-]+):\s*([^;]+);/g;
+    let m;
+    while ((m = re.exec(css.slice(i, j))) !== null) t[m[1]] = m[2].trim();
+    return t;
+  };
+  const TEMA = { acik: tema(':root, [data-theme="acik"] {'), koyu: tema('[data-theme="koyu"] {') };
+  const coz = (t, k) => { const v = t[k]; const m = v && v.match(/^var\(--([\w-]+)\)$/); return m ? coz(t, m[1]) : v; };
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const oklab = (h) => {
+    const [r, g, b] = rgb(h).map(lin);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const q = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * q, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * q,
+      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * q];
+  };
+  const dE = (a, b) => { const A = oklab(a), B = oklab(b); return 100 * Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); };
+  const lum = (h) => { const [r, g, b] = rgb(h).map(lin); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const oran = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const ROLLER = Object.keys(VE_MW_3B_ROL_RENK);
+
+  test('her rol ayrı jeton; her jeton iki temada 6 haneli hex', () => {
+    expect(ROLLER.length).toBe(13);
+    expect(new Set(ROLLER.map((r) => VE_MW_3B_ROL_RENK[r])).size).toBe(ROLLER.length);
+    Object.keys(TEMA).forEach((t) => ROLLER.forEach((r) => {
+      expect([t, r, coz(TEMA[t], VE_MW_3B_ROL_RENK[r].slice(2))]).toEqual([t, r, expect.stringMatching(/^#[0-9a-f]{6}$/i)]);
+    }));
+  });
+
+  test('iki temada her çift OKLab ΔE ≥ 6,5; her renk zeminde ≥ 3:1', () => {
+    Object.keys(TEMA).forEach((t) => {
+      const T = TEMA[t], h = (r) => coz(T, VE_MW_3B_ROL_RENK[r].slice(2));
+      const yakin = [];
+      ROLLER.forEach((a, i) => ROLLER.slice(i + 1).forEach((b) => { if (dE(h(a), h(b)) < 6.5) yakin.push([t, a, b, +dE(h(a), h(b)).toFixed(1)]); }));
+      expect(yakin).toEqual([]);
+      ROLLER.forEach((r) => {
+        expect([t, r, Math.min(oran(h(r), T['bg-primary']), oran(h(r), T['bg-secondary'])) >= 3]).toEqual([t, r, true]);
+      });
+    });
+  });
+});
+
 describe('ETİKET YERLEŞİMİ — üst üste binmez, kartın altına girmez', () => {
   const E = VE_MW_3B_ETK;
   const kesisir = (a, b) => a.sol === b.sol && Math.abs(a.y - b.y) < E.h + E.ara - 1e-9;
@@ -349,6 +459,49 @@ describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner'
       return c.classList.contains('eksi') ? -d[i] : d[i];
     });
     for (let k = 1; k < okSira.length; k++) expect(okSira[k]).toBeGreaterThanOrEqual(okSira[k - 1]);
+  });
+
+  // Kullanım notu T11: X bakışa dik gelince "+X · Arka" ile "Sol" aynı yere, "Ön"
+  // Y'nin çizgisinin üstüne yazılıyordu. Bütün bakışlar taranır (5° adım).
+  test('YAZILAR ÜST ÜSTE BİNMEZ: her bakışta iki yazının kutusu çakışmaz, eksi uç öteki eksenin çizgisine binmez', () => {
+    const E = VE_MW_3B_EKSEN, cx = E.w / 2, c = E.h / 2;
+    const kutu = (t) => _mw3bEksenKutu(+t.getAttribute('x'), +t.getAttribute('y'), t.getAttribute('text-anchor'),
+      t.getAttribute('dominant-baseline'), t.textContent);
+    let once = 0, sonra = 0, cizgide = 0, bakis = 0;
+    for (let th = 0; th < 360; th += 5) {
+      for (let ph = -85; ph <= 85; ph += 5) {
+        const me = kamera(th * Math.PI / 180, ph * Math.PI / 180);
+        bakis++;
+        // ÖNCE: yazılar yerinde (ucun 6 · 5 px dışında), bakana dönük eksen ayrı
+        const eski = [];
+        [0, 1, 2].forEach((i) => {
+          const sx = me[i], sy = me[4 + i], boy = Math.hypot(sx, sy);
+          if (boy < 0.25) return;
+          const ux = sx / boy, uy = -sy / boy, ad = VE_MW_3B_EKSEN_AD[i];
+          const yer = (px, py, vx, vy, k, m) => eski.push(_mw3bEksenKutu(px + vx * k, py + vy * k,
+            vx > 0.35 ? 'start' : vx < -0.35 ? 'end' : 'middle', vy > 0.35 ? 'hanging' : vy < -0.35 ? 'auto' : 'central', m));
+          yer(cx + sx * E.L, c - sy * E.L, ux, uy, 6, ad[1]);
+          yer(cx - sx * E.eksi * E.L, c + sy * E.eksi * E.L, -ux, -uy, 5, ad[2]);
+        });
+        eski.forEach((a, i) => eski.slice(i + 1).forEach((b) => { if (_mw3bKutuCakisir(a, b)) once++; }));
+        const s = kur(me), yazi = Array.from(s.querySelectorAll('text')), K = yazi.map(kutu);
+        K.forEach((a, i) => K.slice(i + 1).forEach((b) => { if (_mw3bKutuCakisir(a, b)) sonra++; }));
+        yazi.forEach((t, i) => {
+          if (t.hasAttribute('data-arka')) return;                        // orijinin yanında, eksenlerden uzak yönde
+          const ad0 = t.textContent;
+          if (!t.classList.contains('eksi') && !VE_MW_3B_EKSEN_AD.some((x) => x[1] === ad0)) return;
+          const ad = t.textContent, e = VE_MW_3B_EKSEN_AD.findIndex((x) => x[2] === ad || x[1] === ad);
+          Array.from(s.querySelectorAll('line.ek:not(.eksi)')).forEach((l) => {
+            const j = 'xyz'.indexOf(l.getAttribute('class').match(/ek-([xyz])/)[1]);
+            if (j === e) return;
+            if (_mw3bKutuCizgi(K[i], { x1: cx, y1: c, x2: +l.getAttribute('x2'), y2: +l.getAttribute('y2') })) cizgide++;
+          });
+        });
+      }
+    }
+    expect(bakis).toBe(72 * 35);
+    expect(once).toBeGreaterThan(100);                   // önce: yüzlerce bakışta iki yazı üst üste
+    expect([sonra, cizgide]).toEqual([0, 0]);                       // pozitif uçlar da öteki eksenin çizgisinde değil
   });
 
   test('üstten bakış: Z bakana doğru — ok başı yok; yalnız bakana dönük ucun yazısı, soluk ve orijinin yanında', () => {
@@ -587,7 +740,12 @@ describe('KESİT — düzlem, aralık, çubuk, kesilen yanda seçilmez', () => {
     expect(Array.from(d.querySelectorAll('[data-ve-3b-kesit-eksen]')).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
     const r = d.querySelector('#ve-mw-3b-kesit-d');
     expect([r.type, r.min, r.max, r.value]).toEqual(['range', '-51', '51', '12.34']);
-    expect(d.querySelector('#ve-mw-3b-kesit-deger').textContent).toBe('y = 12,3 mm');
+    // değer yazılır (kullanım notu T12): sayı alanı, makine biçiminde, 0,1 mm
+    const g = d.querySelector('#ve-mw-3b-kesit-gir');
+    expect([g.type, g.getAttribute('inputmode'), g.getAttribute('value'), g.getAttribute('aria-label')])
+      .toEqual(['text', 'decimal', '12.3', 'Kesit konumu [mm]']);
+    expect(d.querySelector('#ve-mw-3b-kesit-deger').textContent).toBe('y =mm');
+    expect(veMntWiz3bKesitMakine(-81.94)).toBe('-81.9');
     expect(d.querySelector('#ve-mw-3b-kesit-ters').getAttribute('aria-pressed')).toBe('true');
   });
 
