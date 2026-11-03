@@ -58,7 +58,7 @@ button, textarea { font: inherit; color: inherit; }
 /* ── antet ─────────────────────────────────────────────────────────────── */
 .antet {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: max-content minmax(0, 1fr);
   border: 1.5px solid var(--murekkep);
   background: var(--pafta);
 }
@@ -83,7 +83,7 @@ h1 {
 .kunye {
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(4, auto);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border-left: 1.5px solid var(--murekkep);
 }
 .kunye div { padding: 8px 14px; border-bottom: 1px solid var(--cizgi); border-right: 1px solid var(--cizgi); min-width: 0; }
@@ -97,7 +97,7 @@ h1 {
   text-transform: uppercase;
   color: var(--soluk);
 }
-.kunye dd { margin: 0; font-family: var(--veri); font-size: var(--fs-1); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kunye dd { margin: 0; font-family: var(--veri); font-size: var(--fs-1); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .durum { font-family: var(--veri); font-size: var(--fs-1); }
 .durum[data-d="kayitli"] { color: var(--yesil); }
 .durum[data-d="yaziliyor"] { color: var(--amber); }

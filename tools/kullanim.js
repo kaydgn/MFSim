@@ -718,8 +718,10 @@ async function istek(S, req, res) {
       if (yol === '/adim') {
         const Y = yardimcilar(S);
         const adlar = ['page', 'ctx'].concat(Object.keys(Y));
+        // Kod kendi bloğunda: yardımcıyla aynı adlı değişken (`const ipucu`)
+        // yardımcıyı gölgeler, adımı reddettirmez (iki kez "already declared").
         let fn;
-        try { fn = new AsyncFunction(...adlar, g.kod); } catch (e) {
+        try { fn = new AsyncFunction(...adlar, '{\n' + g.kod + '\n}'); } catch (e) {
           return { no: 0, ad: g.ad, sure: 0, hata: 'kod derlenemedi: ' + e.message, olaylar: [], olcu: {} };
         }
         return adimKos(S, g, () => fn(S.aktif, S.ctx, ...Object.keys(Y).map((k) => Y[k])));
