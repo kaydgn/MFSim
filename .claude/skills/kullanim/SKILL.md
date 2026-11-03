@@ -46,6 +46,9 @@ JS
   (yalnız görünenler, tam eşleşme) ya da CSS. Birden çok eşleşme HATA verir —
   hedefi daralt, `.first()` ile susturma.
 - Adımı kullanıcının niyetiyle adlandır; numara ve görüntü adı ondan türer.
+  Kod kendi bloğunda koşar: yardımcıyla aynı adlı değişken onu gölgeler.
+- Arka planda koşturulan masa Bash'in süre sınırında kapanır: `baslat`'ı
+  `run_in_background` + `timeout: 7200000` ile başlat (profil korunur).
   Görüntüye bakmadan hüküm verme: `Read .kullanim/goruntu/<no>-<ad>.png`.
 - Ayrıntı: `buyut --kutu x,y,g,y --kat 3` (1× piksel, yumuşatmasız) ·
   `adim … --secici <css>` (yalnız o yüzey) · `pdf(ad)` (baskı önizlemesi;

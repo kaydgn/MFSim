@@ -117,12 +117,17 @@ async function gorselIsle({ b64, tip, kirp, isaret, dpr, genislik, kalite }) {
   g.imageSmoothingQuality = 'high';
   g.drawImage(img, kx, ky, kw, kh, 0, 0, c.width, c.height);
   const KIRMIZI = '#b3302a';
-  const kalin = Math.max(2, 2.6 * Math.max(olcek * s, 0.75));
+  const sinir = (v, a, b) => Math.min(b, Math.max(a, v));
   // Revizyon bulutu: dikdörtgenin her kenarı dışa bakan yaylarla çizilir.
+  // Ölçüsü işaretin kısa kenarından: küçük işarette bulut da küçük kalır
+  // (ilk sürümde 20 px'lik satır işaretleri birbirinin üstüne taşıyordu).
+  let kalin = 2;
   const bulut = (x, y, w, hh) => {
-    const pay = 6 * Math.max(olcek * s, 0.75);
+    const kisa = Math.min(w, hh);
+    const pay = sinir(kisa * 0.25, 3, 8);
+    kalin = sinir(kisa * 0.09, 1.6, 3);
     x -= pay; y -= pay; w += 2 * pay; hh += 2 * pay;
-    const r0 = Math.max(6, 11 * Math.max(olcek * s, 0.75));
+    const r0 = sinir(kisa * 0.35, 4, 12);
     const kenar = (x1, y1, x2, y2, bas, son) => {
       const uz = Math.hypot(x2 - x1, y2 - y1);
       const n = Math.max(2, Math.round(uz / (2 * r0)));
@@ -148,7 +153,7 @@ async function gorselIsle({ b64, tip, kirp, isaret, dpr, genislik, kalite }) {
     const W = k[2] * s * olcek, H = k[3] * s * olcek;
     const kose = bulut(X, Y, W, H);
     if (isaret.length > 1) {
-      const r = Math.max(9, 12 * Math.max(olcek * s, 0.75));
+      const r = sinir(Math.min(W, H) * 0.35, 7, 12);
       // Rozet görselin içinde kalır (kenara dayalı işaretin köşesi dışarıda).
       kose.x = Math.min(Math.max(kose.x, r + 2), c.width - r - 2);
       kose.y = Math.min(Math.max(kose.y, r + 2), c.height - r - 2);
