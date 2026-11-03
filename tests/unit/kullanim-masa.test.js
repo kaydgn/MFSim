@@ -143,7 +143,7 @@ describe('tahta: şablon', () => {
     expect(sablon).toContain("collection('karar').onSnapshot(");
     expect(sablon).toMatch(/duzelt: 'Düzelt', kalsin: 'Kalsın', sonra: 'Sonra'/);
     // önce/sonra: "Sonra" bölümü ve büyüteci (data-s) aynı karttan
-    expect(sablon).toContain('<section class="sonra"><h3>Sonra</h3>');
+    expect(sablon).toContain('<section class="sonra"><h3>Düzeltme sonrası</h3>');
     expect(sablon).toContain("bb.hasAttribute('data-s')");
   });
 });
