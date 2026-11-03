@@ -352,7 +352,7 @@ function paftaHTML(b) {
     return deger ? '<section' + (sinif ? ' class="' + sinif + '"' : '') + '><h3>' + ad + '</h3>' + paragraflar(deger) + '</section>' : '';
   };
   var sg = (b.sonra && b.sonra.gorseller) || [];
-  var sonra = b.sonra ? '<section class="sonra"><h3>Sonra</h3>' + paragraflar(b.sonra.olcum) +
+  var sonra = b.sonra ? '<section class="sonra"><h3>Düzeltme sonrası</h3>' + paragraflar(b.sonra.olcum) +
     (sg.length ? '<div class="sonra-gorsel">' + sg.map(function (x, i) {
       return '<figure><button class="buyut" type="button" data-s="1" data-i="' + i + '" aria-label="Büyüt">' +
         '<img src="' + x.src + '" width="' + x.w + '" height="' + x.h + '" alt="' + kac(b.baslik) + '" loading="lazy"></button>' +
