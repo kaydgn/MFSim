@@ -4,10 +4,12 @@
 // Kullanıcı isteği (2026-11-02): "3D görüntüleyici tıpkı bir CAD programı gibi
 // olmalı. Ölçümler, kesit alma vb. kullanışlı özellikleri ekleyeceğiz." ·
 // "Modelde yüzey seçme özelliğini de getirelim."
-//   · ARAÇ ÇUBUĞU tuvalin üstünde, ağaç ile kartın arasında ortada.
-//   · GÖRÜNÜŞLER araç ekseninde (+X arka, +Y sağ, +Z yukarı): Ön (önden,
+//   · KOMUT ÇUBUĞU (çalışma masası, 2026-11-03) başlığın altında: Bakış ·
+//     Görünüş listeleri, süzgeç, Ölçü, Kesit; sağında eylem (js/cp-mount-3b.js).
+//   · BAKIŞLAR araç ekseninde (+X arka, +Y sağ, +Z yukarı): Ön (önden,
 //     −X'ten) · Arka · Sol (−Y'den) · Sağ · Üst · Alt · İzometrik (eşit
-//     kısalma: yükseliş atan(1/√2)); seçilen bakışta model sığar.
+//     kısalma: yükseliş atan(1/√2)); seçilen bakışta model sığar. Listeden ya
+//     da görünüm küpünün yüzünden.
 //   · SEÇİM SÜZGECİ: Parça (rol, ağaç — olağan) · Yüzey (aşağıda, 4b).
 //   · ÖLÇÜ: iki nokta arası (aşağıda, 4b).
 //   · KESİT: X · Y · Z düzlemi, kaydırıcıyla konumu (mm), Ters. Kesilen yan
@@ -51,18 +53,25 @@ function veMntWiz3bKesitAralik(kutu, eksen){
   return [lo - p, hi + p];
 }
 
-// Araç çubuğu (saf, testli). D: { kesit: { eksen, d, ters } | null, aralik: [lo, hi],
-// suzgec: 'parca' | 'yuz', olcu: ölçü açık mı }
+// Komut çubuğu (saf, testli). D: { kesit: { eksen, d, ters } | null, aralik: [lo, hi],
+// suzgec: 'parca' | 'yuz', olcu: ölçü açık mı, gorunus: VE_MW_3B_GORUNUS'un anahtarı }.
+// ÇALIŞMA MASASI (2026-11-03): çubuk başlığın altında, tuvalin üstünde yüzmez.
+// Bakış bir LİSTE: seçilen bakış uygulanır, liste adına ("Bakış") döner — aynı
+// bakış yeniden seçilebilsin; bakış küpün yüzünden de seçilir. Görünüş listesi
+// geçerli kipi gösterir.
 function veMntWiz3bAracHTML(D){
   var k = D && D.kesit, yuz = !!(D && D.suzgec === 'yuz'), bas = function(b){ return ' aria-pressed="' + (b ? 'true' : 'false') + '"'; };
-  var ayrac = '<span class="ve-mw-3b-arac-ayrac" aria-hidden="true"></span>';
+  var ayrac = '<span class="ve-mw-3b-arac-ayrac" aria-hidden="true"></span>', gr = (D && D.gorunus) || 'kenar';
   var h = '<div class="ve-mw-3b-arac-sira" role="toolbar" aria-label="3B araçları">'
-    + '<div class="ve-mw-3b-arac-grup" role="group" aria-label="Bakış">';
-  VE_MW_3B_BAKIS.forEach(function(g){
-    h += '<button type="button" class="ve-mw-3b-arac-b" data-ve-3b-bakis="' + g.k + '" onclick="veMntWiz3bBakis(\'' + g.k + '\')">'
-      + g.ad + '</button>';
-  });
-  h += '</div>' + ayrac + '<div class="ve-mw-3b-arac-grup" role="group" aria-label="Seçim">'
+    + '<label class="ve-mw-3b-sec">' + _mwIkon('box') + '<select id="ve-mw-3b-bakis" aria-label="Bakış" onchange="veMntWiz3bBakisSec(this)">'
+    + '<option value="" selected disabled>Bakış</option>';
+  VE_MW_3B_BAKIS.forEach(function(g){ h += '<option value="' + g.k + '" data-ve-3b-bakis="' + g.k + '">' + g.ad + '</option>'; });
+  h += '</select></label>';
+  if(typeof VE_MW_3B_GORUNUS !== 'undefined')
+    h += '<label class="ve-mw-3b-sec">' + _mwIkon('contrast') + '<select id="ve-mw-3b-gorunus" aria-label="Görünüş" onchange="veMntWiz3bGorunusSec(this.value)">'
+      + VE_MW_3B_GORUNUS.map(function(g){ return '<option value="' + g.k + '"' + (g.k === gr ? ' selected' : '') + '>' + g.ad + '</option>'; }).join('')
+      + '</select></label>';
+  h += ayrac + '<div class="ve-mw-3b-arac-grup ve-mw-3b-bolme" role="group" aria-label="Seçim">'
     + '<button type="button" class="ve-mw-3b-arac-b" data-ve-3b-suzgec="parca"' + bas(!yuz) + ' onclick="veMntWiz3bSuzgec(\'parca\')">'
       + _mwIkon('box') + ' Parça</button>'
     + '<button type="button" class="ve-mw-3b-arac-b" data-ve-3b-suzgec="yuz"' + bas(yuz) + ' onclick="veMntWiz3bSuzgec(\'yuz\')">'
@@ -97,6 +106,12 @@ function veMntWiz3bAracHTML(D){
 function veMntWiz3bKesitMakine(d){ return (Math.round(d * 10) / 10).toFixed(1); }   // makine: sayı alanının değeri
 
 // ── EYLEMLER (görüntüleyici açıkken) ──────────────────────────────────────
+// Bakış listesi: seçilen bakış, liste adına döner
+function veMntWiz3bBakisSec(el){
+  var k = el && el.value;
+  if(el) el.selectedIndex = 0;
+  return k ? veMntWiz3bBakis(k) : false;
+}
 function veMntWiz3bBakis(k){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null, g = veMntWiz3bBakisBul(k);
   if(!V || !V.scene || !g || !V.kutu) return false;
@@ -194,7 +209,7 @@ function _mw3bAracYaz(){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null, el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-arac');
   if(!V || !el) return;
   el.innerHTML = veMntWiz3bAracHTML({ kesit: V.kesit, aralik: V.kesit && V.kutu ? veMntWiz3bKesitAralik(V.kutu, V.kesit.eksen) : null,
-                                      suzgec: V.suzgec, olcu: !!V.olcu });
+                                      suzgec: V.suzgec, olcu: !!V.olcu, gorunus: V.gorunus });
 }
 
 // ── 4b · SEÇİM SÜZGECİ (parça · yüzey) VE ÖLÇÜ (2026-11-02) ────────────────
@@ -408,6 +423,13 @@ function veMntWiz3bAracBitir(){
   if(!V || !V.scene) return false;
   if(V.olcu){ _mw3bOlcuKapat(); _mw3bPanel(); _mw3bCiz(true); return true; }
   if(V.suzgec === 'yuz'){ veMntWiz3bSuzgec('parca'); return true; }
+  // Ağaçta arama: Esc aramayı temizler (alan ve ağaç), görüntüleyiciyi kapatmaz
+  if(V.ara && typeof veMntWiz3bAra === 'function'){
+    var g = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-ara');
+    if(g) g.value = '';
+    veMntWiz3bAra('');
+    return true;
+  }
   return false;
 }
 // Fare tuvalden çıktı: ölçünün adayı ve fare altındaki yüz düşer
@@ -603,6 +625,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWiz3bKesitKalir: veMntWiz3bKesitKalir, veMntWiz3bKesitAralik: veMntWiz3bKesitAralik, veMntWiz3bAracHTML: veMntWiz3bAracHTML,
     veMntWiz3bKesitMakine: veMntWiz3bKesitMakine, veMntWiz3bYuzSira: veMntWiz3bYuzSira, veMntWiz3bYuzAlan: veMntWiz3bYuzAlan,
     veMntWiz3bYuzKoseler: veMntWiz3bYuzKoseler, veMntWiz3bYuzBilgi: veMntWiz3bYuzBilgi, veMntWiz3bYuzYazi: veMntWiz3bYuzYazi,
-    veMntWiz3bYuzSatirlar: veMntWiz3bYuzSatirlar, veMntWiz3bOlcuDeger: veMntWiz3bOlcuDeger, veMntWiz3bAracKartHTML: veMntWiz3bAracKartHTML
+    veMntWiz3bYuzSatirlar: veMntWiz3bYuzSatirlar, veMntWiz3bOlcuDeger: veMntWiz3bOlcuDeger, veMntWiz3bAracKartHTML: veMntWiz3bAracKartHTML,
+    veMntWiz3bBakisSec: veMntWiz3bBakisSec
   };
 }

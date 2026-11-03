@@ -1040,6 +1040,17 @@ function _gmSec16(){
     ['<strong>Model</strong>', 'Birimlerin modeldeki karşılığı, fark, kütle; öteleme; '
       + '<strong>Modele uygula</strong> · <strong>Dosyanın sistemine taşı</strong>', 'Hesaptan sonra']
   ], ['Bölüm', 'Ne', 'Not']);
+  h += _gmAlanTablo('3B görüntüleyici — düzen', [
+    ['Komut çubuğu', '<strong>Bakış</strong> · <strong>Görünüş</strong> listeleri, <strong>Parça</strong> · '
+      + '<strong>Yüzey</strong> süzgeci, <strong>Ölçü</strong>, <strong>Kesit</strong>; sağda '
+      + '<strong>Konumları hesapla</strong> ve <strong>Sihirbaza aktar</strong>', 'Sıradaki adımın düğmesi dolu renkte'],
+    ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
+    ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, <strong>Rol</strong>, <strong>Malzeme</strong>, '
+      + 'takozun noktası, veri sayfası, birimin kütlesi ve CG’si, <strong>Ölçülen birimler</strong>, rol verilenler',
+      'Bölümler seçime göre'],
+    ['Görünüm küpü', 'Tuvalin sağ üstünde, kamerayla döner; yüzüne tık o bakışa geçer', 'Altında Sığdır, yakınlaştır, uzaklaştır'],
+    ['Durum çubuğu', 'İmlecin altındaki noktanın koordinatı; çizim yazılımsalsa durumu; birimler', 'mm · kg']
+  ], ['Yer', 'Ne', 'Not']);
   h += _gmAlanTablo('3B görüntüleyici — işaretler', [
     ['Ağırlık merkezi', 'Dörde bölünmüş daire', 'Gövdenin ağırlık merkezi; parçanın içinde kalsa da görünür'],
     ['Takoz noktası', 'Takozun renginde artılı halka', 'Üst bağlantı yüzeyinin merkezi (16.3)'],
@@ -1047,10 +1058,12 @@ function _gmSec16(){
     ['Referans noktası', 'Eşkenar dörtgen', 'Veri sayfasının referansı (16.5)'],
     ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner']
   ], ['İşaret', 'Görünüş', 'Ne']);
-  h += '<p>Üstteki araç çubuğunda hazır bakışlar: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
+  h += '<p><strong>Bakış</strong> listesinde hazır bakışlar: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
     + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '
-    + 'sığar. <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: kaydırıcı düzlemi taşır, <strong>Ters</strong> '
-    + 'öteki yanı bırakır; kesilen yan çizilmez ve seçilmez.</p>';
+    + 'sığar. Görünüm küpünün yüzü de o yüzün bakışına geçer. <strong>Görünüş</strong>: <em>Gölgeli ve kenar</em>, '
+    + '<em>Gölgeli</em> (kenar çizgisi yok), <em>X-ışını</em> (seçimin dışındaki parçalar saydam; içteki parçalar '
+    + 'dıştakilerin arkasından görünür). <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: kaydırıcı düzlemi '
+    + 'taşır, <strong>Ters</strong> öteki yanı bırakır; kesilen yan çizilmez ve seçilmez.</p>';
   h += _gmAlanTablo('3B görüntüleyici — seçim ve ölçü', [
     ['<strong>Parça</strong>', 'Tık parçayı seçer; rol ve ağaç bu seçimle', 'Olağan süzgeç'],
     ['<strong>Yüzey</strong>', 'Fare altındaki yüz açık vurgulanır, tık yüzü seçer; kartta yüzün tipi '
@@ -1059,19 +1072,23 @@ function _gmSec16(){
     ['<strong>Ölçü</strong>', 'İki tık arası uzaklık ve Δx · Δy · Δz; üçüncü tık yeni ölçü', 'Dairesel kenarda '
       + 'dairenin merkezi, yüzün köşesinde köşe, başka yerde yüzeydeki nokta']
   ], ['Araç', 'Ne', 'Not']);
-  h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
+  h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini, sonra ağaçtaki aramayı kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
     + '<strong>Ürün ağacı</strong>ndan seçilir.</p>';
   h += '<p>Seçilen parça kendi renginde, kenarları koyu çizilir; öteki parçalar tek kat soluk kalır. Etiket '
-    + 'birimin adını ve konumunu taşır; işarete bakan kenarı birimin rol rengindedir.</p>';
+    + 'birimin adını ve konumunu taşır; adın önündeki nokta birimin rol rengindedir, seçili birimin etiketi vurgu '
+    + 'renginde dolu.</p>';
   h += '<h3>16.2 Roller</h3>';
-  h += '<p>Rol bir düğüme verilir: 3B’de parçaya ya da soldaki <strong>Ürün ağacı</strong>nda satıra tıklayıp alttaki '
-    + 'çipten, ya da pencerenin ağacındaki satırın <strong>Rol</strong> listesinden. Ctrl (Mac’te ⌘) ile tıklanan '
+  h += '<p>Rol bir düğüme verilir: 3B’de parçaya ya da soldaki <strong>Ürün ağacı</strong>nda satıra tıklayıp '
+    + '<strong>Özellikler</strong>’in <strong>Rol</strong> bölümündeki çipten, ya da pencerenin ağacındaki satırın '
+    + '<strong>Rol</strong> listesinden. Ctrl (Mac’te ⌘) ile tıklanan '
     + 'düğüm seçime eklenir ya da seçimden çıkar; çip rolü seçimin hepsine verir. Alt montaja verilen rol bütün '
     + 'parçalarına geçer. Roller iç içe verilebilir: motor alt montajının içindeki takoz kendi biriminde sayılır, '
     + 'parça en yakın rollü atasının birimine girer; aynı rol iç içe verilmez. <strong>Konumları hesapla</strong> '
     + 'yalnız rol verilen birimleri ölçer; rol değişince hesap yenilenir.</p>';
   h += '<p>Ürün ağacı pencerenin ağacıyla aynı dalları açık tutar. 3B’de seçilen parçanın dalı açılır ve satırı '
-    + 'görünür olur; satırın üstüne gelince düğümün parçaları 3B’de vurgulanır, çift tık kamerayı düğüme sığdırır.</p>';
+    + 'görünür olur; satırın üstüne gelince düğümün parçaları 3B’de vurgulanır, çift tık kamerayı düğüme sığdırır. '
+    + 'Arama alanı bütün ağaçta adı ya da örnek adı arar (büyük-küçük harf ayırmaz); sonuç satırı düğümün atasını '
+    + 'da yazar, tık düğümü seçer. Arama boşalınca seçili düğümün dalı açılır.</p>';
   h += '<h3>16.3 Takoz noktası</h3>';
   h += '<p>Takozun noktası <strong>üst bağlantı yüzeyinin merkezidir</strong>: dosyada yazılı dairenin merkezi, '
     + 'CATIA’daki ölçümün aynısı. Program onu takozun ekseninden önerir. 3B’de takoz seçiliyken '
@@ -1098,7 +1115,11 @@ function _gmSec16(){
     ['Veri sayfası', 'Modelin ıslak kütlesi',
       'Ağırlık merkezi ve atalet veri sayfasından (16.5)']
   ], ['Kaynak', 'Kütle', 'Not']);
-  h += '<p><strong>Malzeme ataması.</strong> 3B’de parça ya da alt montaj seçiliyken alttaki dizinin '
+  h += '<p>3B’de gövde seçiliyken <strong>Özellikler</strong>’in <strong>Kütle ve ağırlık merkezi</strong> bölümü '
+    + 'kaynağı, kütleyi (<em>Elle</em> ise yazılır) ve CG’yi gösterir; takoz seçiliyken noktasını ve kaynağını. '
+    + '<strong>Ölçülen birimler</strong> tablosu gövdelerin kütlesini ve CG’sini, bütün gövdelerin kütlesi '
+    + 'biliniyorsa toplam kütleyi ve ortak CG’yi taşır; kütlesi eksik gövde varken toplam yazılmaz.</p>';
+  h += '<p><strong>Malzeme ataması.</strong> 3B’de parça ya da alt montaj seçiliyken <strong>Özellikler</strong>’in '
     + '<strong>Malzeme</strong> listesi malzemeyi seçimin hepsine verir; parça birimin içindeki en yakın atamayı '
     + 'alır, ataması yoksa birimin malzemesini. Listenin ilk satırı devralınanı yazar: <em>Üstten</em> (atanmış '
     + 'alt montaj), <em>Birimden</em> (birimin kaynağı). Birim seçiliyken liste birimin kütle kaynağını yazar. '
@@ -1122,7 +1143,7 @@ function _gmSec16(){
     + 'Uzaklıklar ve atalet (roll, pitch, yaw) motorun kendi eksenlerindedir; motor eğik takılıysa ağırlık '
     + 'merkezi ve atalet tensörü o açıyla döner.</p>';
   h += _gmAdimlar([
-    '3B’de motor birimini seçin; alttaki dizide <strong>Veri sayfası</strong> listesinden modeli seçin. Aynı '
+    '3B’de motor birimini seçin; <strong>Özellikler</strong>’in <strong>Veri sayfası</strong> listesinden modeli seçin. Aynı '
       + 'liste <strong>Kütle</strong> bölümünün <strong>Kaynak</strong> sütunundadır.',
     'Referans yüzünün düğmesine (<em>Bloğun ön yüzü</em> ya da <em>Bloğun arka yüzü</em>) basın ve düzlem '
       + 'yüzü tıklayın: fare düzlem bir yüze gelince halka ve yüzün konumu belirir. Seçim yalnız birimin '

@@ -1,6 +1,8 @@
 // ============================================================================
 //  TAKOZ 3B — ÜRÜN AĞACI (solda, 3DEXPERIENCE gibi) VE ÇOKLU SEÇİM
 // ============================================================================
+// Çalışma masasında (2026-11-03) ağaç tuvalin solundaki PANEL (yüzen kart değil),
+// başında arama alanı (veMntWiz3bAra).
 // Kullanıcı isteği (2026-11-02): "Ürün ağacının tıpkı 3D Experience programı
 // gibi sol tarafta gösterilmesini istiyorum." · "Modelde birden fazla braket,
 // birden fazla takoz olduğu için tek tek seçmek yerine CTRL tuşunu aktif edelim."
@@ -55,6 +57,55 @@ function veMntWiz3bAgacHTML(s, secim){
   });
   return h;
 }
+// AĞAÇTA ARA (çalışma masası, 2026-11-03): adı ya da örnek adı aranan metni taşıyan
+// düğümler — BÜTÜN ağaçta (açık dallarla sınırlı değil), ağacın sırasıyla; en çok
+// VE_MW_3B_ARA_EN satır, fazlası "… sonuç daha" satırı. Büyük-küçük harf Türkçe
+// eşdeğer (İ ↔ i, I ↔ ı). Satır ağacın satırının olaylarını taşır (tık seçer, Ctrl
+// ekler, çift tık sığdırır), adın altında atasının adı. Esc aramayı temizler
+// (js/cp-mount-3b-arac.js → veMntWiz3bAracBitir).
+var VE_MW_3B_ARA_EN = 200;
+function _mw3bKucuk(t){ return String(t || '').toLocaleLowerCase('tr'); }
+// Eşleşen düğümler (saf, testli): ağacın sırasıyla indisler. Küçük harfli adlar
+// sonucun yanında bir kez kurulur (her tuşta 11.694 dönüşüm yapılmasın).
+function veMntWiz3bAraBul(s, q){
+  var so = s && s.sonuc, a = so && so.agac, k = _mw3bKucuk(q).trim(), out = [];
+  if(!a || !k) return out;
+  if(!so._araAd || so._araAd.length !== a.length)
+    so._araAd = a.map(function(d){ return _mw3bKucuk(d.ad) + (d.ornek && d.ornek !== d.ad ? '\n' + _mw3bKucuk(d.ornek) : ''); });
+  for(var i = 0; i < a.length; i++) if(so._araAd[i].indexOf(k) >= 0) out.push(i);
+  return out;
+}
+function veMntWiz3bAraHTML(s, q, secim){
+  var so = s.sonuc, L = veMntWiz3bAraBul(s, q), sec = {}, h = '';
+  (secim || []).forEach(function(i){ sec[i] = 1; });
+  if(!L.length) return '<p class="ve-mw-3b-ara-yok">Sonuç yok.</p>';
+  L.slice(0, VE_MW_3B_ARA_EN).forEach(function(i){
+    var d = so.agac[i], rol = s.roller[i] || '', e = d.ebeveyn;
+    h += '<div class="ve-mw-3b-agac-r ve-mw-3b-ara-r' + (sec[i] ? ' on' : '') + '" role="treeitem" aria-level="1"'
+      + ' aria-selected="' + (sec[i] ? 'true' : 'false') + '" data-ve-3b-agac="' + i + '">'
+      + _mwIkon(d.cocuklar.length ? 'package' : 'box')
+      + '<button type="button" class="ve-mw-3b-agac-ad" title="' + _mwEsc(d.ad + (d.ornek && d.ornek !== d.ad ? ' · ' + d.ornek : '')) + '"'
+      + ' onclick="veMntWiz3bAgacTik(' + i + ', event)" ondblclick="veMntWiz3bAgacOdak(' + i + ')"'
+      + ' onpointerenter="veMntWiz3bAgacFare(' + i + ')" onpointerleave="veMntWiz3bAgacFare(-1)"><span>' + _mwEsc(d.ad) + '</span>'
+      + (e >= 0 ? '<span class="ve-mw-3b-ara-yol">' + _mwEsc(so.agac[e].ad) + '</span>' : '') + '</button>'
+      + (rol ? '<span class="ve-mw-3b-agac-rol" style="--renk:var(' + veMntWiz3bRolJeton(rol) + ')">' + _mwEsc(_mwAd(rol)) + '</span>' : '')
+      + '</div>';
+  });
+  if(L.length > VE_MW_3B_ARA_EN)
+    h += '<div class="ve-mw-3b-agac-r ve-mw-3b-agac-daha"><span class="ve-mw-3b-ara-daha">' + veSayi(L.length - VE_MW_3B_ARA_EN, 0) + ' sonuç daha</span></div>';
+  return h;
+}
+// Aramanın alanı (oninput): metin değişince ağaç ya da sonuçlar; arama boşalınca
+// seçili düğümün dalı açılır ve satırı görünür
+function veMntWiz3bAra(q){
+  var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
+  if(!V || V.okuma) return false;
+  var eski = V.ara;
+  V.ara = String(q || '');
+  if(eski === V.ara) return false;
+  _mw3bAgac(!V.ara.trim() && V.secili >= 0 ? V.secili : -1);
+  return true;
+}
 // Düğümün ağaçta görünmesi için açılacak dallar (saf, testli): ataların her
 // biri, yoldaki çocuğun sayfasına kadar. Döner: { ata: sayfa } (değişenler).
 function veMntWiz3bAgacAcilacak(s, dugum){
@@ -89,11 +140,20 @@ function veMntWiz3bAgacFare(i){
   _mw3bBoya(); _mw3bCiz(true);
   return true;
 }
-// Ağacı kurar; `goster`: satırı görünür olacak düğüm (3B'de seçilen)
+// Ağacı kurar; `goster`: satırı görünür olacak düğüm (3B'de seçilen). Arama
+// açıkken ağacın yerinde sonuçlar, başlıkta sonuç sayısı.
 function _mw3bAgac(goster){
   var V = _mw3b, el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-agac-l');
   if(!V || !el) return;
-  var s = V.s;
+  var s = V.s, ara = (V.ara || '').trim();
+  var say = document.getElementById('ve-mw-3b-agac-say');
+  if(ara){
+    var ustA = el.scrollTop;
+    el.innerHTML = veMntWiz3bAraHTML(s, ara, V.secim);
+    el.scrollTop = ustA;
+    if(say) say.textContent = veSayi(veMntWiz3bAraBul(s, ara).length, 0) + ' sonuç';
+    return;
+  }
   if(goster >= 0){
     var ac = veMntWiz3bAgacAcilacak(s, goster);
     Object.keys(ac).forEach(function(k){ s.acik[k] = ac[k]; });
@@ -101,7 +161,6 @@ function _mw3bAgac(goster){
   var ust = el.scrollTop;
   el.innerHTML = veMntWiz3bAgacHTML(s, V.secim);
   el.scrollTop = ust;
-  var say = document.getElementById('ve-mw-3b-agac-say');
   if(say) say.textContent = veSayi(s.sonuc.parcalar.length, 0) + ' parça';
   if(goster >= 0){
     var r = el.querySelector('[data-ve-3b-agac="' + goster + '"]');
@@ -112,6 +171,7 @@ function _mw3bAgac(goster){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     veMntWiz3bAgacHTML: veMntWiz3bAgacHTML, veMntWiz3bAgacAcilacak: veMntWiz3bAgacAcilacak,
-    veMntWiz3bAgacTik: veMntWiz3bAgacTik, veMntWiz3bAgacFare: veMntWiz3bAgacFare, veMntWiz3bAgacOdak: veMntWiz3bAgacOdak
+    veMntWiz3bAgacTik: veMntWiz3bAgacTik, veMntWiz3bAgacFare: veMntWiz3bAgacFare, veMntWiz3bAgacOdak: veMntWiz3bAgacOdak,
+    veMntWiz3bAraBul: veMntWiz3bAraBul, veMntWiz3bAraHTML: veMntWiz3bAraHTML, veMntWiz3bAra: veMntWiz3bAra, VE_MW_3B_ARA_EN: VE_MW_3B_ARA_EN
   };
 }

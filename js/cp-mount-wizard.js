@@ -1490,6 +1490,8 @@ function veMntWizStpKutle(dugum, v){
     Array.prototype.forEach.call(document.querySelectorAll('input[data-mw-stp-kutle="' + dugum + '"]'), function(el){
       if(el !== document.activeElement) el.value = (s.kutle[dugum] !== undefined) ? String(s.kutle[dugum]) : '';
     });
+    // 3B'nin ölçülen birimler tablosu (kütle okunur, toplamıyla) — alanın bölümü yerinde
+    if(typeof veMntWiz3bKutleTazele === 'function') veMntWiz3bKutleTazele();
     if(_mwState && VE_MW_STEPS[_mwStep].key === 'kaynak') _mwMasaCiz(_mwCoz || veMntWizCoz(_mwState));
   }
   return true;

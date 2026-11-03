@@ -143,7 +143,8 @@ describe('Takoz terimleri tek: CG ve sehim (S1·C · S2·C)', () => {
     const w = fs.readFileSync(path.join(KOK, 'js/cp-mount-wizard.js'), 'utf8');
     expect(w).toContain('</i>Gövde CG</span>');
     expect(w).toContain('</i>Birleşik CG</span>');
-    expect(fs.readFileSync(path.join(KOK, 'js/cp-mount-3b.js'), 'utf8')).toContain('<th>CG<em>mm</em></th>');
+    // 3B'nin gövde tablosu (çalışma masası, 2026-11-03): CG başlığı x · y · z sütunlarının üstünde
+    expect(fs.readFileSync(path.join(KOK, 'js/cp-mount-3b.js'), 'utf8')).toContain('<th colspan="3">CG<em>mm</em></th>');
     global.nodes = IKI_GOVDE();
     global.veMntAkso = require('../../js/mount-akso.js');
     try {
