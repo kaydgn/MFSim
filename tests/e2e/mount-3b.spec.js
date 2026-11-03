@@ -305,8 +305,18 @@ test('BAKIŞ · KESİT: hazır bakışlar kamerayı çevirir; kesit dört malzem
   });
   expect(await kesik()).toEqual({ lc: true, n: [1, 1, 1, 1], gorsel: true });
   await expect(page.locator('#ve-mw-3b-kesit-d')).toBeVisible();
+  // Değer YAZILIR (kullanım notu T12): alan Türkçe, kaydırıcı izler
+  const orta = await page.evaluate(() => { const r = document.getElementById('ve-mw-3b-kesit-d'); return Math.round((+r.min + +r.max) / 2 * 10 + 3) / 10; });
+  await page.fill('#ve-mw-3b-kesit-gir', String(orta).replace('.', ','));
+  await page.press('#ve-mw-3b-kesit-gir', 'Enter');
+  const yaz = await page.evaluate(() => { const r = document.getElementById('ve-mw-3b-kesit-d'); return { d: window._mw3b.kesit.d, r: +r.value, adim: +r.step }; });
+  expect(yaz.d).toBe(orta);
+  expect(Math.abs(yaz.r - orta)).toBeLessThanOrEqual(yaz.adim);
   // Düzlem montajın en küçük x'ine: bütün montaj kesilen yanda — motora tık bir şey seçmez
   await page.evaluate(() => { const r = document.getElementById('ve-mw-3b-kesit-d'); r.value = r.min; r.dispatchEvent(new Event('input', { bubbles: true })); });
+  // kaydırıcıyı alan izler
+  expect(await page.evaluate(() => +document.getElementById('ve-mw-3b-kesit-gir').value))
+    .toBeCloseTo(await page.evaluate(() => +document.getElementById('ve-mw-3b-kesit-d').min), 1);
   await page.mouse.click(q.x, q.y);
   expect((await durum(page)).secim).toEqual([]);
   // Ters: kalan yan değişir, motor yine seçilir

@@ -127,30 +127,35 @@ function _mntCadDosyaHTML(s, k){
 // hacminden, dosya açılınca · veri sayfasının modeli ve ıslak kütlesi)
 function _mntCadKutle(r){
   var vs = (r.yog && typeof veMntStpVs === 'function') ? veMntStpVs(r.yog, r.rol) : null;
-  if(vs) return '<td title="' + _mntCadEsc(vs.uretici + ' ' + vs.ad + ' · veri sayfası') + '">' + _mntCadEsc(vs.ad)
-    + ' · ' + veSayi(vs.kutle.islak, 0) + '</td>';
+  // Sayı önce (sütun kütlenin), kaynağı altında soluk — "Prestolite 180A ·" satır
+  // sonunda kalıp sayı alt satıra yalnız düşüyordu
+  var kaynakli = function(kg, ad, title){
+    return '<td title="' + _mntCadEsc(title) + '">' + kg + '<span class="ve-mnt-cad-kaynak">' + _mntCadEsc(ad) + '</span></td>';
+  };
+  if(vs) return kaynakli(veSayi(vs.kutle.islak, 0), vs.ad, vs.uretici + ' ' + vs.ad + ' · veri sayfası');
   // Kayıtlı aksesuar (Alternatör · Klima Kompresörü): model ve kütlesi
   var ak = (r.yog && typeof veMntStpAks === 'function') ? veMntStpAks(r.yog, r.rol) : null;
-  if(ak) return '<td title="' + _mntCadEsc(ak.kgKaynak || '') + '">' + _mntCadEsc(ak.ad) + ' · ' + veSayi(ak.kg, 1) + '</td>';
+  if(ak) return kaynakli(veSayi(ak.kg, 1), ak.ad, ak.kgKaynak || '');
   var mz = (r.yog && typeof veMntStpMalzeme === 'function') ? veMntStpMalzeme(r.yog) : null;
   if(mz) return '<td title="' + _mntCadEsc(mz.ad + ' · ' + veSayi(mz.rho, 0) + ' kg/m³') + '">' + _mntCadEsc(mz.ad) + '</td>';
   if(r.yog === 'dosya') return '<td>Dosyadan</td>';
   if(r.yog === 'atanan') return '<td>Parçalardan</td>';             // parçalara atanan malzemeler
   return '<td>' + (+r.kg > 0 ? veSayi(+r.kg, 1) : '—') + '</td>';
 }
-// Kayıtlı roller — dosya açık değilken: parça, rolü, kütlesi, takozun seçilen dairesi
+// Kayıtlı roller — dosya açık değilken: parça, rolü (takozun seçilen dairesi ya
+// da veri sayfasının ekseni rolün yanında), kütlesi. Üç sütun, hücre kısaltılmaz
+// (kullanım notu T14: dört sütunda 13 satırın 6'sı ve iki başlık kısaltılıyordu).
 function _mntCadKayitHTML(k){
-  var t = _mntFoyAc([{ b:'Parça', gen:'40%' }, { b:'Rol', gen:'26%', sinif:'sol' }, { b:'Kütle <u>[kg]</u>', gen:'16%' },
-                     { b:'Daire <u>[mm]</u>', gen:'18%' }], 'Kayıtlı roller', 've-mnt-cad-kayit');
+  var t = _mntFoyAc([{ b:'Parça', gen:'38%' }, { b:'Rol', gen:'32%', sinif:'sol' }, { b:'Kütle <u>[kg]</u>', gen:'30%' }],
+                    'Kayıtlı roller', 've-mnt-cad-kayit');
   k.roller.forEach(function(r){
     var yol = Array.isArray(r.yol) ? r.yol.join(' › ') : '';
-    // takozun seçilen dairesi ya da veri sayfasının ekseni
     var d = r.nokta || (r.ref && r.ref.eksen), n = d && Array.isArray(d.c) && +d.r > 0 ? d : null;
     t += '<tr><td title="' + _mntCadEsc(yol) + '">' + _mntCadEsc(r.ad || (r.yol && r.yol[r.yol.length - 1]) || '—') + '</td>'
-      + '<td class="sol">' + _mntCadEsc(_mntCadAd(r.rol)) + '</td>'
-      + _mntCadKutle(r)
-      + '<td' + (n ? ' title="' + _mntCadEsc(n.c.map(function(v){ return veSayi(Math.round(v * 1000) / 1000, 3); }).join('; ')) + '"' : '') + '>'
-      + (n ? 'Ø ' + veSayi(2 * n.r, 1) : '—') + '</td></tr>';
+      + '<td class="sol">' + _mntCadEsc(_mntCadAd(r.rol))
+      + (n ? ' <span class="ve-mnt-cad-daire" title="' + _mntCadEsc(n.c.map(function(v){ return veSayi(Math.round(v * 1000) / 1000, 3); }).join('; ')) + '">'
+        + 'Ø ' + veSayi(2 * n.r, 1) + '</span>' : '') + '</td>'
+      + _mntCadKutle(r) + '</tr>';
   });
   t += _MNT_FOY_KAPA;
   // Rolsüz düğümlere atanan malzemeler (3B'de): sayısı

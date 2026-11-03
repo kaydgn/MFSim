@@ -98,9 +98,9 @@ function shield(js, label) {
 // İndirilen tek dosyanın yanında pwa/ klasörü OLMAZ. Ölçüldü (gerçek Chrome,
 // file://): pwa/icon.svg → net::ERR_FILE_NOT_FOUND + konsol hatası, her
 // açılışta. Gömülünce hem indirilen dosyanın hem Pages kopyasının ikonu olur.
-// (manifest LİNKİ dokunulmadan kalır: aynı ölçümde file:// üzerinde HİÇ
-// istenmedi — ne başsız ne başlı tarayıcıda — ve Pages'te PWA kurulumu ona
-// bağlı.)
+// (manifest bağlantısını index.html YALNIZ http(s) üzerinden ekler: güncel
+// Chromium file:// üzerinde onu istiyor ve CORS hatası yazıyordu — 2026-11-03;
+// Pages'te PWA kurulumu ona bağlı.)
 var ICON_PATH = path.join(ROOT, 'pwa', 'icon.svg');
 if (fs.existsSync(ICON_PATH)) {
   var iconB64 = fs.readFileSync(ICON_PATH).toString('base64');

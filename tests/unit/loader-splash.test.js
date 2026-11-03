@@ -18,6 +18,11 @@ const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 const INDEX = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const LOADER_SRC = loadSource('loader.js');
+// Adım ve en az süre KAYNAKTAN okunur: değer kullanıcının kararıyla değişir
+// (2026-11-03: 150 → 25 ms, 6,5 → 5 sn), testler sabitin kendisini izler.
+const ADIM_MS = +/STEP_DELAY_MS = OTOMASYON \? 0 : (\d+)/.exec(LOADER_SRC)[1];
+const EN_AZ_MS = +/MIN_TOTAL_DURATION_MS = OTOMASYON \? 0 : (\d+)/.exec(LOADER_SRC)[1];
+
 
 // index.html'deki açılış ekranı gövdesi — `<script src="js/loader.js">`
 // etiketine kadar olan blok.
@@ -65,6 +70,13 @@ async function ilerlet(ms, adim = 50) {
     await Promise.resolve();
     await Promise.resolve();
   }
+}
+
+// n. modül bitene dek (1 ms adımla) ilerlet, sonra yarım adım: iki bitişin
+// ortası — süre adım sabitinden bağımsız (kullanıcı kararıyla değişebilir).
+async function modulBekle(n) {
+  for (let t = 0; t < 10000 && (window.__yuklendi || 0) < n; t++) await ilerlet(1, 1);
+  await ilerlet(Math.max(1, Math.round(ADIM_MS / 2)), 1);
 }
 
 // O anki öbeğin etiketi: Roma rakamı + ad (listesi yok — yalnız o anki öbek).
@@ -334,9 +346,9 @@ describe('kademeli ilerleme — cetvel', () => {
     baslat();
     await ilerlet(10);
     expect(cetvel()).toMatchObject({ gecti: 0, son: -1, aria: '0' });
-    await ilerlet(200);            // 1 modül bitti → 1/24, kademe hâlâ 0
+    await modulBekle(1);           // 1 modül bitti → 1/24, kademe hâlâ 0
     expect(cetvel()).toMatchObject({ gecti: 0, son: -1, aria: '0' });
-    await ilerlet(200);            // 2 modül → kademe 1/12
+    await modulBekle(2);           // 2 modül → kademe 1/12
     // Son geçilen bölme VURGU taşıyor — ilerlemenin ucu.
     expect(cetvel()).toMatchObject({ gecti: 1, son: 0, aria: '8' });
   });
@@ -368,7 +380,7 @@ describe('kademeli ilerleme — cetvel', () => {
     await ilerlet(10);
     const ico = document.getElementById('mfsim-loading-logo-ico');
     expect(ico.style.transform).toBe('rotate(0.0deg)');
-    await ilerlet(400);                       // 2 modül → 1/12
+    await modulBekle(2);                      // 2 modül → 1/12
     expect(ico.style.transform).toBe('rotate(30.0deg)');
     await ilerlet(20000);
     // Tam tur: devir teslimde dişli DİK durur, karşılama logosuna uçarken
@@ -389,7 +401,7 @@ describe('kademeli ilerleme — cetvel', () => {
     baslat();
     const msg = () => document.getElementById('mfsim-loading-message').textContent;
     const gorulen = new Set();
-    for (let t = 0; t < 24; t++) { await ilerlet(150); gorulen.add(msg()); }
+    for (let t = 0; t < 24; t++) { await ilerlet(ADIM_MS); gorulen.add(msg()); }
     await ilerlet(8000);
     gorulen.add(msg());
     const DURUM = ['Modüller hazırlanıyor…', 'Son hazırlıklar…', 'Tamamlandı'];
@@ -620,9 +632,9 @@ describe('o anki öbek', () => {
     baslat();
     await ilerlet(10);
     expect(bolum()).toMatchObject({ no: 'I', ad: 'Çekirdek' });
-    await ilerlet(400);            // iki modül bitti — işaretsiz ikisi hâlâ Çekirdek'te
+    await modulBekle(2);           // iki modül bitti — işaretsiz ikisi hâlâ Çekirdek'te
     expect(bolum()).toMatchObject({ no: 'I', ad: 'Çekirdek' });
-    await ilerlet(100);            // üçüncü bitti → sıradaki öbek
+    await modulBekle(3);           // üçüncü bitti → sıradaki öbek
     expect(bolum()).toMatchObject({ no: 'II', ad: 'Takoz' });
   });
 
@@ -640,7 +652,7 @@ describe('o anki öbek', () => {
     baslat();
     const gorulen = [];
     for (let i = 0; i < 14; i++) {
-      await ilerlet(i === 0 ? 10 : 150);
+      await ilerlet(i === 0 ? 10 : ADIM_MS);
       gorulen.push(bolum().no);
     }
     expect(gorulen).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X',
@@ -657,9 +669,9 @@ describe('o anki öbek', () => {
     await ilerlet(10);
     const ilk = bolum().belir;
     expect(['a', 'b']).toContain(ilk);
-    await ilerlet(200);            // öbek içinde bir modül ilerledi
+    await modulBekle(1);           // öbek içinde bir modül ilerledi
     expect(bolum().belir).toBe(ilk);
-    await ilerlet(200);            // öbek değişti → animasyon adı değişir, bir kez oynar
+    await modulBekle(2);           // öbek değişti → animasyon adı değişir, bir kez oynar
     expect(bolum().no).toBe('II');
     expect(bolum().belir).not.toBe(ilk);
   });
@@ -673,7 +685,7 @@ describe('o anki öbek', () => {
     baslat();
     await ilerlet(10);
     expect(bolum()).toMatchObject({ no: 'I', ad: 'Çekirdek' });
-    await ilerlet(400);
+    await modulBekle(2);
     expect(bolum()).toMatchObject({ no: 'II', ad: 'FEAD' });
 
     // Üçüncü modül + minimum toplam süre + kapanış
@@ -706,9 +718,9 @@ describe('atlanan modül', () => {
     expect(bolum()).toMatchObject({ no: 'II', ad: 'Takoz' });
     expect(bolum().sinif).not.toContain('is-atlandi');
 
-    // MODULE_TIMEOUT_MS = 15000 — iki adımdan (2 × 150 ms) sonra başlayan
-    // bekleme 15 300'de dolar, kaynak atlanır; sıradaki modül 150 ms sonra
-    await ilerlet(350);
+    // MODULE_TIMEOUT_MS = 15000 — iki adımdan (2 × ADIM_MS) sonra başlayan
+    // bekleme 15000 + 2·ADIM_MS'de dolar, kaynak atlanır; sıradaki modül ADIM_MS sonra
+    await ilerlet(2 * ADIM_MS + 50);
     expect(uyari.hidden).toBe(false);
     // Durumu söyler, tarif vermez: dosyanın ADI + "yüklenemedi" (aşama 1
     // kararı — "ayrıntı tarayıcı konsolunda" bir geliştirici tarifiydi).
@@ -825,12 +837,11 @@ describe('genel hata yakalayıcı', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// OTOMASYONDA SÜS BEKLEMESİ YOK (2026-10-16). Adım gecikmesi (150 ms) ve en az
-// toplam süre (6,5 sn) ilerlemenin GÖZLE izlenmesi içindir; 106 modülde her
-// e2e açılışına 15,9 sn ekliyordu ve ürün kapısı (e2e-urun) 20 dk sınırını
-// aştı. Kapı iki yönü birden tutar: otomasyonda bekleme yok, insanın açılışı
-// birebir eski.
-describe('otomasyon: süs beklemesi yok, insanın açılışı aynı', () => {
+// OTOMASYONDA SÜS BEKLEMESİ YOK (2026-10-16). Adım gecikmesi ve en az toplam
+// süre ilerlemenin GÖZLE izlenmesi içindir; otomasyonda izleyen göz yok.
+// İNSANIN BEKLEMESİ KISA (kullanıcı kararı 2026-11-03): 150 ms ve 6,5 sn her
+// açılışı 19,4–21,2 sn tutuyordu; 25 ms ve 5 sn. Kapı iki yönü birden tutar.
+describe('otomasyon: süs beklemesi yok; insanın beklemesi kısa', () => {
   const ON = Array.from({ length: 10 }, () => ({}));
   const perde = () => document.getElementById('mfsim-loading-screen').style.display;
   afterEach(() => { delete window.navigator.webdriver; });
@@ -845,15 +856,21 @@ describe('otomasyon: süs beklemesi yok, insanın açılışı aynı', () => {
     expect(perde()).toBe('none');
   });
 
-  test('insan: adım başına 150 ms ve en az 6,5 sn — eskisinin aynısı', async () => {
+  test('insan: adım başına 25 ms ve en az 5 sn — açılış ~20 sn değil', async () => {
+    expect(ADIM_MS).toBe(25);
+    expect(EN_AZ_MS).toBe(5000);
+    // 106 modül × adım ≤ 3 sn: süs beklemesi toplamı gerçek yüklemenin altında
+    expect(106 * ADIM_MS).toBeLessThanOrEqual(3000);
     kur(ON);
     baslat();
-    await ilerlet(30, 1);
+    await ilerlet(10, 1);
     expect(window.__yuklendi).toBeLessThan(2);
-    await ilerlet(1600);                      // 10 × 150 ms: hepsi yüklendi…
+    const t0 = Date.now();
+    await modulBekle(10);                     // 10 × adım: hepsi yüklendi…
     expect(window.__yuklendi).toBe(10);
+    expect(Date.now() - t0).toBeLessThanOrEqual(10 * ADIM_MS + 60);
     expect(perde()).not.toBe('none');         // …ama en az süre dolmadı
-    await ilerlet(6500);
+    await ilerlet(EN_AZ_MS + 1000);           // en az süre + "Tamamlandı" 400 ms + söneme 340 ms
     expect(perde()).toBe('none');
   });
 });

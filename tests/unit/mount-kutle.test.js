@@ -215,7 +215,9 @@ describe('PARÇA PARÇA — birim parçaların toplamı; açık parça ayrı', (
     // kapağın yüzey payı: beş yüzü / bütün parçaların yüzü (volanın ağı kirişli)
     const kapak = 2 * (60 * 500 + 500 * 400 + 60 * 400) - 60 * 500;
     expect(b.acikPay).toBeCloseTo(kapak / 3983719, 3);
-    expect(c.uyarilar).toContain('"Motor": 1 parça kapalı değil, hacme katılmadı (Kayış kapağı); yüzey payı %12,0.');
+    // sebebi (katı gövdesi yok) ve payın neyin payı olduğu (birimin yüzeyi — gövdenin
+    // %10 açıklık sınırıyla karışıyordu, kullanım notu T09)
+    expect(c.uyarilar).toContain('"Motor": 1 parça açık yüzey, hacme katılmadı (Kayış kapağı); birim yüzeyindeki payı %12,0.');
     expect(tfark(b.J, MOTOR_KAPALI.T)).toBeLessThan(0.01);
   });
 
@@ -409,8 +411,9 @@ describe('GÖVDE GÖVDE — çok gövdeli parça: katılar ayrı, yüzey kabuğu
     expect([b.say, b.yamaGovde]).toEqual([{ ag: 1, dosya: 0, nokta: 0, acik: 0 }, 1]);
     expect(b.acikPay).toBeCloseTo(50000 / 1280000, 12);
     expect(b.yamaPay).toBeCloseTo(10000 / 1280000, 12);
-    expect(c.uyarilar).toEqual(['"Motor": 1 gövde kapalı değil, hacme katılmadı (Motor ISB); yüzey payı %3,9.',
-      '"Motor": 1 gövdenin açıklığı kapatıldı; yüzey payı %0,78.']);
+    expect(c.uyarilar).toEqual(['"Motor": 1 gövdede açıklık %10 sınırının üstünde, hacme katılmadı (Motor ISB); birim yüzeyindeki payı %3,9.',
+      '"Motor": 1 gövdenin açıklığı kapatıldı; birim yüzeyindeki payı %0,78.']);
+    expect(b.acikGovde.map((x) => [x.esik, x.pay])).toEqual([[1, 50000 / 1280000]]);
     expect(W.veMntWizStpKonumUyari(b)).toBe(true);
   });
 });
@@ -418,8 +421,26 @@ describe('GÖVDE GÖVDE — çok gövdeli parça: katılar ayrı, yüzey kabuğu
 describe('KÜTLE KAYNAĞI — elle · malzeme · dosyadan', () => {
   test('ÖNCE ÖLÇÜLEN: iki malzemeli şanzımanın hacim merkezi kütle merkezinden 68,18 mm uzakta', () => {
     expect(uz(SANZ_HACIM.c, SANZ_KUTLE.c)).toBeCloseTo(68.18, 2);
+    const { c } = coz({}, { yogunluk: { 'Şanzıman': 'elle' } });
+    expect(uz(birim(c, 'Şanzıman').konum, SANZ_HACIM.c)).toBeLessThan(1e-9);    // "Elle": hacim merkezi
+  });
+
+  // KAYNAĞIN VARSAYILANI (kullanım notu T06): dosyada yoğunluk varken kaynak
+  // "Elle" geliyor, ağırlık merkezi hacimden düşüyordu (gerçek şanzımanda 72 mm)
+  test('VARSAYILAN: yoğunluk dosyada tamsa seçilmemiş gövdenin kaynağı "Dosyadan"; "Elle" açık seçim olarak kalır', () => {
     const { c } = coz();
-    expect(uz(birim(c, 'Şanzıman').konum, SANZ_HACIM.c)).toBeLessThan(1e-9);    // seçilmezse hacim merkezi
+    const b = birim(c, 'Şanzıman');
+    expect(uz(b.konum, SANZ_KUTLE.c)).toBeLessThan(1e-9);                     // kütle merkezi
+    expect(STP.veMntStpYogEtkin(b, undefined)).toBe('dosya');
+    expect(STP.veMntStpKutle(b, 418, undefined)).toMatchObject({ kaynak: 'dosya' });
+    expect(STP.veMntStpKutle(b, 418, undefined).m).toBeCloseTo(SANZ_KUTLE.W, 9);
+    expect(STP.veMntStpYogEtkin(b, 'elle')).toBe('');
+    expect(STP.veMntStpKutle(b, 418, 'elle')).toMatchObject({ kaynak: 'elle', m: 418 });
+    // yoğunluğu dosyada olmayan gövde (braket) ve takoz: varsayılan elle
+    const br = birim(c, 'Arka braket');
+    expect(br.dosya).toBeUndefined();
+    expect(STP.veMntStpYogEtkin(br, undefined)).toBe('');
+    expect(STP.veMntStpYogEtkin({ tip: 'mnt-mount', dosya: { m: 1 } }, undefined)).toBe('');
   });
 
   test('DOSYADAN: kütle, kütle merkezi ve tensör parçaların yoğunluklarıyla — birebir', () => {
@@ -555,20 +576,27 @@ describe('OTURUM — kaynak seçicisi, hesap, aktarım', () => {
     return d;
   };
 
-  test('seçici: hesap yenilenir, kayda yazılır; "dosya" ağırlık merkezini kütleyle ağırlıklar; aynı değer ve geçersiz seçim false', () => {
+  test('seçici: hesap yenilenir, kayda yazılır; varsayılan "Dosyadan" ağırlık merkezini kütleyle ağırlıklar; "Elle" açık seçim; aynı değer ve geçersiz seçim false', () => {
     const s = ac(), san = dugum(s.sonuc, 'Şanzıman'), brk = dugum(s.sonuc, 'Arka braket'), mot = dugum(s.sonuc, 'Motor');
-    expect(uz(b(s, 'Şanzıman').konum, SANZ_HACIM.c)).toBeLessThan(1e-9);
-    expect(W.veMntWizStpYogunluk(san, 'dosya')).toBe(true);
-    expect(uz(b(s, 'Şanzıman').konum, SANZ_KUTLE.c)).toBeLessThan(1e-9);
-    expect(ev.data.cad.roller.find((x) => x.ad === 'Şanzıman').yog).toBe('dosya');
-    expect(W.veMntWizStpYogunluk(san, 'dosya')).toBe(false);              // değişmedi
+    const yog = (ad) => ev.data.cad.roller.find((x) => x.ad === ad).yog;
+    expect(uz(b(s, 'Şanzıman').konum, SANZ_KUTLE.c)).toBeLessThan(1e-9);  // varsayılan: dosyanın yoğunlukları
+    expect(W.veMntWizStpYogunluk(san, 'dosya')).toBe(false);              // zaten etkin
+    expect(s.yogunluk[san]).toBeUndefined();
+    expect(yog('Şanzıman')).toBe('dosya');                                 // kayda etkin değeriyle (föy söyler)
     expect(W.veMntWizStpYogunluk(mot, 'dosya')).toBe(false);              // motorda yoğunluk yok
     expect(W.veMntWizStpYogunluk(brk, 'titanyum')).toBe(false);
     expect(W.veMntWizStpYogunluk(brk, 'aluminyum')).toBe(true);
     expect(W._mwStpKutleK(s, b(s, 'Arka braket')).m).toBeCloseTo(2700 * BRAKET_H.W * 1e-9, 12);
-    expect(W.veMntWizStpYogunluk(san, '')).toBe(true);                   // elle
+    expect(W.veMntWizStpYogunluk(san, '')).toBe(true);                   // elle: varsayılanın üstünde
     expect(uz(b(s, 'Şanzıman').konum, SANZ_HACIM.c)).toBeLessThan(1e-9);
-    expect(ev.data.cad.roller.find((x) => x.ad === 'Şanzıman').yog).toBeUndefined();
+    expect(yog('Şanzıman')).toBe('elle');
+    expect(W.veMntWizStpYogunluk(san, '')).toBe(false);                  // değişmedi
+    expect(W.veMntWizStpYogunluk(san, 'dosya')).toBe(true);
+    expect(uz(b(s, 'Şanzıman').konum, SANZ_KUTLE.c)).toBeLessThan(1e-9);
+    expect(yog('Şanzıman')).toBe('dosya');
+    // yoğunluğu dosyada olmayan birimde "Elle" varsayılanın kendisi: kayıttan düşer
+    expect(W.veMntWizStpYogunluk(brk, '')).toBe(true);
+    expect(yog('Arka braket')).toBeUndefined();
   });
 
   test('oturumun ağ işi parçanın kütle özelliğini hesabın önbelleğine yazar: hesap yalnız toplar', () => {
@@ -594,19 +622,39 @@ describe('OTURUM — kaynak seçicisi, hesap, aktarım', () => {
   test('aynı dosya yeniden okununca kaynak kayıttan gelir; aktarım imzası kaynağı içerir', () => {
     const s = ac(), san = dugum(s.sonuc, 'Şanzıman');
     const i0 = W._mwStpImza(s);
-    W.veMntWizStpYogunluk(san, 'dosya');
+    W.veMntWizStpYogunluk(san, '');                                        // varsayılan "Dosyadan"ın üstüne "Elle"
     expect(W._mwStpImza(s)).not.toBe(i0);
     W.veMntWizStpKapat();
     const s2 = W.veMntWizStpOku(S.kutleKalibi(), 'kutle.stp');
-    expect(s2.yogunluk).toEqual({ [san]: 'dosya' });
+    expect(s2.yogunluk).toEqual({ [san]: 'elle' });
     W.veMntWizStpHesapla();
-    expect(uz(b(s2, 'Şanzıman').konum, SANZ_KUTLE.c)).toBeLessThan(1e-9);
+    expect(uz(b(s2, 'Şanzıman').konum, SANZ_HACIM.c)).toBeLessThan(1e-9);
+  });
+
+  // Kayıttan gelen rollerle konumlar için bir tık daha gerekiyordu (kullanım notu T18)
+  test('aynı dosya yeniden okununca konumlar KENDİLİĞİNDEN hesaplanır — okumanın görevinde değil; kayıtsız dosyada hesap yok', async () => {
+    const s = ac();
+    const konum = s.coz.birimler.map((x) => [x.ad, x.konum]);
+    W.veMntWizStpKapat();
+    const s2 = W.veMntWizStpOku(S.kutleKalibi(), 'kutle.stp');
+    expect(s2.coz).toBe(null);
+    for (let i = 0; i < 20 && !s2.coz; i++) await new Promise((r) => setTimeout(r, 0));
+    expect(s2.coz && s2.coz.ok).toBe(true);
+    expect(s2.coz.birimler.map((x) => [x.ad, x.konum])).toEqual(konum);
+    W.veMntWizStpKapat();
+    delete ev.data.cad;
+    const s3 = W.veMntWizStpOku(S.kutleKalibi(), 'kutle.stp');
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+    expect(s3.coz).toBe(null);
   });
 
   test('KÜTLE TABLOSU: kaynak sütunu (Dosyadan yalnız yoğunluğu tam birimde), türetilen kütle değer, atalet ikonu ve sebebi', () => {
-    const s = ac(), brk = dugum(s.sonuc, 'Arka braket');
+    const s = ac(), brk = dugum(s.sonuc, 'Arka braket'), san = dugum(s.sonuc, 'Şanzıman');
     W.veMntWizStpKutle(dugum(s.sonuc, 'Motor'), '418');
     W.veMntWizStpYogunluk(brk, 'dokme');
+    // varsayılan: yoğunluğu dosyada tam birimde "Dosyadan" seçili gelir
+    expect(tablo(s).querySelector('select[aria-label="Kütle kaynağı — Şanzıman"]').value).toBe('dosya');
+    W.veMntWizStpYogunluk(san, '');
     const d = tablo(s);
     expect(Array.from(d.querySelectorAll('thead th')).map((t) => t.firstChild.textContent)).toEqual(['Gövde', 'Hacim', 'Kaynak', 'Kütle', 'Atalet']);
     const sec = (ad) => Array.from(d.querySelectorAll('select[data-mw-stp-yog]')).find((x) => x.getAttribute('aria-label') === 'Kütle kaynağı — ' + ad);
@@ -615,6 +663,7 @@ describe('OTURUM — kaynak seçicisi, hesap, aktarım', () => {
     expect(se('Motor')).toEqual(['Elle'].concat(MZ));
     expect(se('Şanzıman')).toEqual(['Elle', 'Dosyadan'].concat(MZ));
     expect(sec('Arka braket').value).toBe('dokme');
+    expect(sec('Şanzıman').value).toBe('');
     expect(sec('Motor').getAttribute('title')).toBe(null);
     // kütle hücresi: elle → alan; malzeme → değer, ipucunda dayanağı
     const satir = (ad) => d.querySelector('tr[data-mw-stp-govde="' + b(s, ad).dugum + '"]');

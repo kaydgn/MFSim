@@ -411,6 +411,54 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
     expect(W.veMntWizAcik()).toBe(false);
   });
 
+  // Kullanım notu T02: STEP'ten başla şeridi kurmuştu; model başka tabana kurulup
+  // iki takoz Takoz Özellikleri'nin ve Çözücü'nün üstüne düşüyordu
+  test('"Modeli kur": tuvaldeki araç şeridinin TABANINA kurar — hiçbir kutu şeridin kutusuna binmez', () => {
+    const SER = cp.VE_MNT_STARTER_LAYOUT.filter((it) => it.ly === 20);
+    const taban = { x: 5137, y: 4211 };
+    SER.forEach((it) => global.createNode(it.type, taban.x + it.lx, taban.y + it.ly));
+    const once = global.nodes.length;
+    W.veMntWizAc();
+    stepYukle();
+    W.veMntWizStpHesapla();
+    W.veMntWizStpAktar();
+    expect(W.veMntWizKur()).not.toBeNull();
+    const yeni = global.nodes.slice(once), arac = global.nodes.slice(0, once);
+    expect(yeni.length).toBeGreaterThan(5);
+    expect(global.nodes.length - yeni.length).toBe(SER.length);                     // şerit ikinci kez kurulmaz
+    const kutu = (n) => { const d = veNodeDefaultSize(n.type); return [n.x, n.y, n.x + d.w, n.y + d.h + 20]; };   // +20: ad
+    const ciftler = [];
+    yeni.forEach((a) => arac.forEach((b) => {
+      const A = kutu(a), B = kutu(b);
+      if (A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3]) ciftler.push(a.type + ' ↔ ' + b.type);
+    }));
+    expect(ciftler).toEqual([]);
+    // sıralar şeridin tabanından: takozlar ly 190/450, gövdeler 320
+    yeni.forEach((n) => expect([190, 320, 450]).toContain(n.y - taban.y));
+    // yan sıradaki takozun adı yanda, dışa doğru (bağlantı çizgisi adın içinden geçmesin)
+    const yan = yeni.filter((n) => n.type === 'mnt-mount' && n.y - taban.y !== 320).sort((a, b) => a.y - b.y || a.x - b.x);
+    expect(yan.map((n) => n.data.labelPos)).toEqual(['left', 'right', 'left', 'right'].slice(0, yan.length));
+  });
+
+  test('ADLAR BİRBİRİNE GİRMEZ: uzun STEP adlarıyla aynı sıradaki iki adın arası ≥ 4 px', () => {
+    const st = W.veMntWizDefault();
+    st.govdeler = [
+      { key: 'a', type: 'mnt-motor', ad: 'MOTOR ISB6.7', cgx: 0, cgy: 0, cgz: 600 },
+      { key: 'b', type: 'mnt-alternator', ad: 'ALTERNATOR 24V 150A', cgx: 100, cgy: 0, cgz: 700 },
+      { key: 'c', type: 'mnt-alt-bracket', ad: 'ALTERNATOR BRAKETI', cgx: 130, cgy: 0, cgz: 690 },
+      { key: 'd', type: 'mnt-ac', ad: 'KLIMA KOMPRESORU', cgx: 160, cgy: 0, cgz: 720 },
+      { key: 'e', type: 'mnt-gearbox', ad: 'SANZIMAN', cgx: 1200, cgy: 0, cgz: 450 }
+    ];
+    st.takozlar = [];
+    const L = W.veMntWizNodes(st).filter((n) => n.ly === 320).sort((p, q) => p.lx - q.lx);
+    const gen = (ad) => ad.length * 7.2;                                    // 12 px Inter büyük harf ortalaması (ölçüldü ≤ 7,2)
+    for (let i = 1; i < L.length; i++) {
+      const a = L[i - 1], b = L[i];
+      const bosluk = (b.lx + 30 - gen(b.customName) / 2) - (a.lx + 30 + gen(a.customName) / 2);
+      expect([a.customName, b.customName, bosluk >= 4]).toEqual([a.customName, b.customName, true]);
+    }
+  });
+
   test('Boş kanvas: araçlar tek adımda; ikinci çağrı ikinci Çözücü KURMAZ', () => {
     const ilk = cp.veMntKanvasBos();
     expect(global.veStateBatch).toHaveBeenCalledTimes(1);

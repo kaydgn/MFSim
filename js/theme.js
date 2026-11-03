@@ -193,6 +193,10 @@ function veThemeFontFaceCss() {
       }
     }
   } catch (e) {}
+  // Bağlamsal alternatif kapalı: Inter rakam-x-rakam dizisini çarpıya
+  // çeviriyor ("M10x30" → "M10×30"); parça kodu dosyadaki gibi kalmalı
+  // (kullanım notu T16). Arayüzdeki karşılığı css/styles.css → html.
+  if (out.length) out.push('html{font-variant-ligatures:no-contextual}');
   return out.join('\n');
 }
 

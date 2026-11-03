@@ -227,7 +227,7 @@ test('KAYIT: seçilen daire → kaydet → sayfa yeniden → aç → föyde çap
   // Dosya açık değil: föyde takozun seçilen dairesi
   const foy = await yeni.evaluate(() => [...document.querySelectorAll('#ve-properties .ve-fp-kat[data-k="kayit"] tbody tr')]
     .map((tr) => [...tr.cells].map((c) => c.textContent.trim())).find((r) => r[0] === 'Sağ arka takoz'));
-  expect(foy).toEqual(['Sağ arka takoz', 'Takoz', '—', 'Ø 90,0']);
+  expect(foy).toEqual(['Sağ arka takoz', 'Takoz Ø 90,0', '—']);                  // üç sütun: çap rolün yanında
   await dosyaAc(yeni);
   await yeni.keyboard.press('Escape');
   await yeni.click('#ve-properties #ve-mnt-cad-hesapla');

@@ -77,20 +77,32 @@ function dogrula(v, varMi) {
     if (metinMi(b.onem) && !ONEMLER[b.onem]) h.push(yer + ': önem ' + Object.keys(ONEMLER).join(' | ') + ' olmalı');
     ['olcum', 'oneri', 'kural'].forEach((k) => { if (b[k] !== undefined && !metinMi(b[k])) h.push(yer + ': ' + k + ' boş olamaz (alanı kaldırın)'); });
     if (b.adimlar !== undefined && !(Array.isArray(b.adimlar) && b.adimlar.length && b.adimlar.every(metinMi))) h.push(yer + ': adimlar boş olmayan metin listesi olmalı');
+    const gorseller = (liste, on) => {
+      if (!Array.isArray(liste)) { h.push(on + ': gorseller liste olmalı'); return false; }
+      liste.forEach((x, j) => {
+        const gy = on + ' görsel ' + (j + 1);
+        const yol = typeof x === 'string' ? x : x && x.yol;
+        if (!metinMi(yol)) { h.push(gy + ': yol eksik'); return; }
+        if (!varMi(yol)) h.push(gy + ': dosya yok: ' + yol);
+        if (typeof x === 'object') {
+          if (x.kirp !== undefined && !dortSayi(x.kirp)) h.push(gy + ': kirp [x, y, g, y] olmalı');
+          if (x.isaret !== undefined && !(Array.isArray(x.isaret) && x.isaret.every(dortSayi))) h.push(gy + ': isaret [[x, y, g, y], …] olmalı');
+          if (x.not !== undefined && !metinMi(x.not)) h.push(gy + ': not boş olamaz');
+        }
+      });
+      return true;
+    };
     const g = b.gorseller === undefined ? [] : b.gorseller;
-    if (!Array.isArray(g)) { h.push(yer + ': gorseller liste olmalı'); return; }
+    if (!gorseller(g, yer)) return;
     if (!g.length && !metinMi(b.olcum)) h.push(yer + ': kanıt yok (görsel ya da ölçüm)');
-    g.forEach((x, j) => {
-      const gy = yer + ' görsel ' + (j + 1);
-      const yol = typeof x === 'string' ? x : x && x.yol;
-      if (!metinMi(yol)) { h.push(gy + ': yol eksik'); return; }
-      if (!varMi(yol)) h.push(gy + ': dosya yok: ' + yol);
-      if (typeof x === 'object') {
-        if (x.kirp !== undefined && !dortSayi(x.kirp)) h.push(gy + ': kirp [x, y, g, y] olmalı');
-        if (x.isaret !== undefined && !(Array.isArray(x.isaret) && x.isaret.every(dortSayi))) h.push(gy + ': isaret [[x, y, g, y], …] olmalı');
-        if (x.not !== undefined && !metinMi(x.not)) h.push(gy + ': not boş olamaz');
+    // SONRA (düzeltme uygulandıysa): ölçümü şart — önce/sonra sayısıyla
+    if (b.sonra !== undefined) {
+      if (!b.sonra || typeof b.sonra !== 'object' || Array.isArray(b.sonra)) h.push(yer + ': sonra bir nesne olmalı');
+      else {
+        if (!metinMi(b.sonra.olcum)) h.push(yer + ': sonra.olcum eksik');
+        if (b.sonra.gorseller !== undefined) gorseller(b.sonra.gorseller, yer + ' sonra');
       }
-    });
+    }
   });
   return h;
 }
@@ -196,19 +208,24 @@ async function main() {
   await sayfa.goto('about:blank');
   const cikti = Object.assign({}, veri, { bulgular: [] });
   let gorselSayisi = 0;
+  const isle = async (b, liste) => {
+    const out = [];
+    for (const x of (liste || [])) {
+      const g = typeof x === 'string' ? { yol: x } : x;
+      const tam = coz(g.yol);
+      const r = await sayfa.evaluate(gorselIsle, {
+        b64: fs.readFileSync(tam).toString('base64'), tip: TIPLER[path.extname(tam).toLowerCase()],
+        kirp: g.kirp || null, isaret: g.isaret || null, dpr: veri.dpr || 1, genislik: o.genislik, kalite: o.kalite
+      }).catch((e) => { throw new Error(b.id + ' · ' + g.yol + ': ' + e.message); });
+      out.push({ src: r.src, w: r.w, h: r.h, not: g.not || '' });
+      gorselSayisi++;
+    }
+    return out;
+  };
   try {
     for (const b of veri.bulgular) {
-      const yeni = Object.assign({}, b, { gorseller: [] });
-      for (const x of (b.gorseller || [])) {
-        const g = typeof x === 'string' ? { yol: x } : x;
-        const tam = coz(g.yol);
-        const r = await sayfa.evaluate(gorselIsle, {
-          b64: fs.readFileSync(tam).toString('base64'), tip: TIPLER[path.extname(tam).toLowerCase()],
-          kirp: g.kirp || null, isaret: g.isaret || null, dpr: veri.dpr || 1, genislik: o.genislik, kalite: o.kalite
-        }).catch((e) => { throw new Error(b.id + ' · ' + g.yol + ': ' + e.message); });
-        yeni.gorseller.push({ src: r.src, w: r.w, h: r.h, not: g.not || '' });
-        gorselSayisi++;
-      }
+      const yeni = Object.assign({}, b, { gorseller: await isle(b, b.gorseller) });
+      if (b.sonra) yeni.sonra = Object.assign({}, b.sonra, { gorseller: await isle(b, b.sonra.gorseller) });
       cikti.bulgular.push(yeni);
     }
   } finally {
@@ -223,7 +240,7 @@ async function main() {
   fs.mkdirSync(path.dirname(o.cikti), { recursive: true });
   fs.writeFileSync(o.cikti, html);
   const say = (alan, k) => veri.bulgular.filter((b) => b[alan] === k).length;
-  console.log(veri.bulgular.length + ' bulgu · ' + gorselSayisi + ' görsel · ' +
+  console.log(veri.bulgular.length + ' bulgu (' + veri.bulgular.filter((b) => b.sonra).length + ' sonralı) · ' + gorselSayisi + ' görsel · ' +
     Object.keys(ONEMLER).map((k) => ONEMLER[k].toLocaleLowerCase('tr') + ' ' + say('onem', k)).join(' · '));
   console.log(path.relative(KOK, o.cikti) + ' · ' + mb.toFixed(2) + ' MB · yayın: capabilities {db: {}}');
 }

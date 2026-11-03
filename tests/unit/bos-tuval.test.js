@@ -42,6 +42,16 @@ describe('görünürlük kapsamdan ve modelden', () => {
     expect(B.veBosTuvalKapsami('mount-analysis', araclar.concat(d('mnt-mount')), false)).toBeNull();
     expect(B.veBosTuvalKapsami('mount-analysis', [], true)).toBeNull();
   });
+  // Kullanım notu T01: STEP okunup 3B'de açıldıktan sonra tuval paletten elle kurmayı gösteriyordu
+  test('Takoz: modülün STEP oturumu açıkken yönlendirme oturuma — 3D Görüntüleyici’de rol', () => {
+    const araclar = [d('mnt-solver'), d('mnt-report')];
+    expect(B.veBosTuvalKapsami('mount-analysis', araclar, false, true)).toBe('mount-analysis-step');
+    expect(B.veBosTuvalKapsami('mount-analysis', araclar, false, false)).toBe('mount-analysis');
+    expect(B.veBosTuvalKapsami('mount-analysis', araclar.concat(d('mnt-motor')), false, true)).toBeNull();
+    expect(B.veBosTuvalKapsami('mount-analysis', araclar, true, true)).toBeNull();
+    expect(B.veBosTuvalHTML('mount-analysis-step')).toContain('3D Görüntüleyici’de parçalara rol verin.');
+    expect(B.veBosTuvalKapsami('top', [], false, true)).toBe('top');           // yalnız Takoz kapsamında
+  });
   test('FEAD: hiçbir zaman — başlangıç sayfası ve çizim masası kendi yolunu taşır', () => {
     expect(B.veBosTuvalKapsami('fead-analysis', [])).toBeNull();
     expect(B.veBosTuvalKapsami('fead-analysis', [d('fead-layout')])).toBeNull();

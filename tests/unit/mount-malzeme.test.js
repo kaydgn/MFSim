@@ -231,9 +231,10 @@ describe('OTURUM — atama hesabı yeniler; birimde kütle kaynağı; rol deği�
     expect(W.veMntWizStpMalzeme([brk], 'sfero')).toBe(true);
     expect([s.yogunluk[brk], s.malzeme[brk]]).toEqual(['sfero', undefined]);
     expect(W._mwStpKutleK(s, b(s, 'Arka braket')).kaynak).toBe('malzeme');
-    expect(W.veMntWizStpYogunluk(san, 'dosya')).toBe(true);
+    expect(W.veMntWizStpYogunluk(san, 'dosya')).toBe(false);                     // varsayılan zaten "Dosyadan"
     expect(W.veMntWizStpMalzeme([brk, san], '')).toBe(true);
-    expect([s.yogunluk[brk], s.yogunluk[san]]).toEqual([undefined, 'dosya']);   // dosya kaynağı kalır
+    expect([s.yogunluk[brk], s.yogunluk[san]]).toEqual([undefined, undefined]);
+    expect(W._mwStpKutleK(s, b(s, 'Şanzıman')).kaynak).toBe('dosya');           // dosya kaynağı kalır
   });
 
   test('rol değişince malzeme düğümde kalır: rol alan düğümün ataması kütle kaynağı, rolü düşenin kaynağı atama olur', () => {

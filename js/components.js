@@ -547,12 +547,16 @@ var componentDefs = {
   'mnt-library': {
     name: 'Takoz Özellikleri',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="16" y="12" width="68" height="76" rx="6" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="5"/><path d="M40 30 Q34 35 43 39 Q34 43 43 47 Q34 51 40 55" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="54" y1="34" x2="74" y2="34" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linecap="round"/><line x1="54" y1="44" x2="74" y2="44" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="68" x2="74" y2="68" stroke="var(--text-muted, #676055)" stroke-width="3.5" stroke-linecap="round"/><line x1="26" y1="78" x2="60" y2="78" stroke="var(--text-muted, #676055)" stroke-width="3.5" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isMountLibrary: true, maxInstances: 1, defaultWidth: 60, defaultHeight: 54
+    // Takoz'un araç şeridi TEK ölçü (kullanım notu T13: 60×54 · 65×60 · 56×56 ·
+    // 60×56 yan yana duruyordu, adlar 6 px'e kadar farklı yükseklikte).
+    // `tekTik`: aracın işi penceresi — tek tık (sürüklemesiz) pencereyi açar
+    // (kullanım notu T20; js/ui-core.js → veAttachNodeDrag)
+    inputs: 0, outputs: 0, isMountLibrary: true, maxInstances: 1, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   'mnt-solver': {
     name: 'Çözücü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #9a3b3b)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #9a3b3b)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #8a6a12)"/></svg>',
-    inputs: 0, outputs: 0, isMountSolver: true
+    inputs: 0, outputs: 0, isMountSolver: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   // Araç Performans "Başlangıç ve Örnekler" — mnt-example'ın güç aktarma karşılığı.
   // Kayıt defteri ve panel js/cp-arac-example.js içinde.
@@ -564,7 +568,7 @@ var componentDefs = {
   'mnt-example': {
     name: 'Başlangıç ve Örnekler',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #8a6a12)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isMountExample: true, defaultWidth: 56, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountExample: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   'mnt-viewer': {
     name: '3D Görüntüleyici',
@@ -573,7 +577,7 @@ var componentDefs = {
     // açılır, rolleri burada (ve sihirbazın kartında) verilir ve bileşenin
     // verisine (`data.cad`) yazılır — dosya projeye girmez. Modülün CAD'i tek:
     // maxInstances 1. Pencere: js/cp-mount-cad.js.
-    inputs: 0, outputs: 0, isMountViewer: true, maxInstances: 1, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountViewer: true, maxInstances: 1, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   // Koordinat Düzlemi — koordinat sistemini (X/Y/Z eksenleri + düzlemler) 3B
   // gösterir; kullanıcı konum/CG değerlerini hangi eksene göre girdiğini görür.
@@ -581,7 +585,7 @@ var componentDefs = {
   'mnt-coordframe': {
     name: 'Koordinat Düzlemi',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #676055)" opacity="0.18" stroke="var(--text-muted, #676055)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #9a3b3b)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #9a3b3b)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #2f6b45)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #2f6b45)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #a8502b)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #a8502b)"/></svg>',
-    inputs: 0, outputs: 0, isMountCoordFrame: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountCoordFrame: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   // Görünümler (eski adıyla 2D Görünüm, 2026-10-16) — güç grubunun döndürülebilir
   // aksonometrisi: gövdeler eşdeğer kutularıyla, takozlar, gövde ağırlık
@@ -590,7 +594,7 @@ var componentDefs = {
   'mnt-2dview': {
     name: 'Görünümler',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M16 25 A40 15 0 0 1 80 20" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="4" stroke-linecap="round"/><path d="M84 13 L84 26 L72 22 Z" fill="var(--accent-primary, #a8502b)"/><path d="M20 44 L50 33 L80 44 L50 55 Z" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><path d="M20 44 V70 L50 81 L80 70 V44 M50 55 V81" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="63" r="7" fill="var(--bg-input, #ffffff)" stroke="var(--accent-danger, #9a3b3b)" stroke-width="3.5"/><rect x="12" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/><rect x="76" y="68" width="12" height="12" rx="2" fill="var(--accent-success, #2f6b45)"/></svg>',
-    inputs: 0, outputs: 0, isMount2DView: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMount2DView: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   // Rapor — Çözücü'nün 6 SD sonuçlarını akademik, tamamen çevrimdışı bir HTML
   // rapora döker (teori + bu modelin sayısal örneği). Çözülmemişse uyarır.
@@ -598,7 +602,7 @@ var componentDefs = {
   'mnt-report': {
     name: 'Rapor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #a8502b)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #a8502b)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #a8502b)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #a8502b)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #676055)" stroke-width="4" stroke-linecap="round"/></svg>',
-    inputs: 0, outputs: 0, isMountReport: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountReport: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   // Parametrik Analiz — ilk analizi "Katalogdan seçim": takoz gruplarına
   // kütüphanedeki tipleri takıp her kombinasyonu Çözücü'nün yolundan geçirir;
@@ -607,7 +611,7 @@ var componentDefs = {
   'mnt-parametric': {
     name: 'Parametrik Analiz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M18 14 V82 H88" fill="none" stroke="var(--text-secondary, #544e44)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 24 Q38 62 82 72" fill="none" stroke="var(--accent-success, #2f6b45)" stroke-width="4" stroke-linecap="round"/><circle cx="58" cy="36" r="4.5" fill="var(--text-muted, #676055)"/><circle cx="74" cy="50" r="4.5" fill="var(--text-muted, #676055)"/><circle cx="30" cy="24" r="5" fill="var(--accent-success, #2f6b45)"/><circle cx="82" cy="72" r="5" fill="var(--accent-success, #2f6b45)"/><circle cx="44" cy="55" r="7.5" fill="var(--accent-primary, #a8502b)"/></svg>',
-    inputs: 0, outputs: 0, isMountParametric: true, defaultWidth: 60, defaultHeight: 56
+    inputs: 0, outputs: 0, isMountParametric: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
   // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
   // Sürüklenebilir composite düğüm: ana canvas'ta tek blok; çift tıklanınca

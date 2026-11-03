@@ -321,7 +321,9 @@ describe('KAYIT — kaynak ve referans projeyle', () => {
     const el = document.createElement('div');
     el.innerHTML = CAD._mntCadKayitHTML(k);
     const satir = Array.from(el.querySelectorAll('tr')).filter((tr) => tr.cells[0] && tr.cells[0].textContent === 'Motor bloğu')[0];
-    expect([satir.cells[2].textContent, satir.cells[3].textContent]).toEqual(['ISB6.7 360 · 512', 'Ø 157,0']);
+    expect([satir.cells[1].textContent, satir.cells[2].firstChild.textContent, satir.cells[2].querySelector('.ve-mnt-cad-kaynak').textContent])
+      .toEqual(['Motor Ø 157,0', '512', 'ISB6.7 360']);
+    expect(satir.cells.length).toBe(3);
   });
 
   test('bozuk referans kaydı yazılmaz ve okunmaz', () => {
@@ -423,6 +425,34 @@ describe('OTURUM — hesaptan önce seçim, föy, modele uygula', () => {
     expect([x12.textContent, x12.getAttribute('title')]).toEqual(['860,0', 'Islak 860 kg']);
     const sanz = s.sonuc.agac.findIndex((d) => d.ad === 'Şanzıman gövdesi');
     expect(el.querySelector('select[data-mw-stp-yog="' + sanz + '"] optgroup')).toBe(null);
+  });
+});
+
+// ── EKSİK REFERANS — durum + TEK yönlendirme (kullanım notu T08) ───────────
+// Pencerede "Bloğun ön yüzü ve krank ekseni seçilmedi." çaresinin yerini
+// söylemiyordu: seçim yalnız 3B'de, birim seçiliyken.
+describe('EKSİK REFERANS — uyarının arkasında 3B\'nin yönlendirmesi', () => {
+  beforeEach(() => { resetStubs(stubs); tulgaTuval(); });
+
+  test('referanssız veri sayfası: uyarı satırında TEK yönlendirme; referanslar seçilince yönlendirme yok', () => {
+    const s = oturum(), motor = s.sonuc.agac.findIndex((d) => d.ad === 'Motor bloğu');
+    W.veMntWizStpYogunluk(motor, ISB);
+    W.veMntWizStpHesapla();
+    const d = W.veMntWizStpDenetim(s);
+    expect(d.refEksik).toEqual(['"Motor bloğu": Bloğun ön yüzü ve krank ekseni seçilmedi.']);
+    const el = document.createElement('div');
+    el.innerHTML = W._mwStpSorunHTML(d);
+    const satir = Array.from(el.querySelectorAll('.ve-fw-issue')).map((x) => x.textContent.trim());
+    expect(satir.filter((m) => m.indexOf('3B’de birimi seçip referansları gösterin.') >= 0))
+      .toEqual(['"Motor bloğu": Bloğun ön yüzü ve krank ekseni seçilmedi. 3B’de birimi seçip referansları gösterin.']);
+    const r = referans(s.sonuc);
+    W.veMntWizStpReferans(motor, 'yuz', r.yuz);
+    W.veMntWizStpReferans(motor, 'eksen', r.eksen);
+    W.veMntWizStpHesapla();
+    const d2 = W.veMntWizStpDenetim(s);
+    expect(d2.refEksik).toEqual([]);
+    el.innerHTML = W._mwStpSorunHTML(d2);
+    expect(el.textContent).not.toContain('referansları gösterin');
   });
 });
 

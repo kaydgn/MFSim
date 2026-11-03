@@ -427,8 +427,9 @@ describe('PENCERE — kayıtlı roller föyünde seçilen daire', () => {
     const d = document.createElement('div');
     d.innerHTML = CAD._mntCadKayitHTML(k);
     const satir = Array.from(d.querySelectorAll('tbody tr')).map((tr) => Array.from(tr.cells).map((c) => c.textContent.trim()));
-    expect(satir).toEqual([['Sol ön takoz', 'Takoz', '—', 'Ø 120,0'], ['Motor bloğu', 'Motor', '418,0', '—']]);
-    expect(d.querySelector('tbody tr td:nth-child(4)').getAttribute('title')).toBe('439,957; −355,957; 441,855');
+    // üç sütun (kullanım notu T14): çap rolün yanında, merkezi çapın ipucunda
+    expect(satir).toEqual([['Sol ön takoz', 'Takoz Ø 120,0', '—'], ['Motor bloğu', 'Motor', '418,0']]);
+    expect(d.querySelector('tbody tr td:nth-child(2) .ve-mnt-cad-daire').getAttribute('title')).toBe('439,957; −355,957; 441,855');
   });
 });
 

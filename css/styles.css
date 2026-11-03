@@ -77,6 +77,18 @@
       --seri-2: #9a3b3b;
       --seri-3: #6b4fa0;
       --seri-4: #2f6b45;
+      /* STEP 3B'NİN ROL RENKLERİ (js/cp-mount-3b.js → VE_MW_3B_ROL_RENK) —
+         dizi paletinin dördü ve aksanlar on üç role yetmiyordu: aksesuarlar
+         şanzıman, transfer, braket ve PTO'nun rengini, mil takozun, pompa
+         transferin rengini taşıyordu (kullanım notu T03). Her biri öteki
+         rollerden OKLab ΔE ≥ 9,7, zeminde ≥ 3:1; ton iki temada aynı. */
+      --rol-alternator: #0c8d8c;
+      --rol-klima: #71264e;
+      --rol-alt-braket: #5f9049;
+      --rol-isi-saci: #6e645d;
+      --rol-mil: #2c3a43;
+      --rol-pompa: #1c3381;
+      --rol-pto-grup: #6e4403;
       /* 3B SAHNENİN EKSEN OKLARI — cp-mount-viewer.js'te three.js sabit
          renkleri (0xef4444 · 0x22c55e · 0x3b82f6); Koordinat penceresinin
          föyündeki örnek işaret onları izler. İki temada aynı: sahnedeki ok
@@ -135,6 +147,13 @@
       --seri-2: #e08585;
       --seri-3: #b39ddb;
       --seri-4: #6cbb87;
+      --rol-alternator: #65dad8;
+      --rol-klima: #fdb7d7;
+      --rol-alt-braket: #a0d48a;
+      --rol-isi-saci: #978d86;
+      --rol-mil: #c4d5df;
+      --rol-pompa: #6889df;
+      --rol-pto-grup: #ffcd95;
       --eksen-x: #ef4444;
       --eksen-y: #22c55e;
       --eksen-z: #3b82f6;
@@ -1268,6 +1287,11 @@
          okunur. Eskiden bu iş sayıyı eş aralıklı bir yüze geçirerek yapılıyordu
          ve arayüzde ikinci bir aile doğuruyordu. */
       font-variant-numeric: tabular-nums;
+      /* Bağlamsal alternatif kapalı: Inter rakam-x-rakam dizisini çarpıya
+         çeviriyor ("M10x30" → "M10×30"); parça kodu ve ad dosyadaki gibi
+         görünür (kullanım notu T16). Belgelerdeki karşılığı
+         js/theme.js → veThemeFontFaceCss. */
+      font-variant-ligatures: no-contextual;
       min-height: 100vh;
       margin: 0;
       overflow: hidden;
@@ -8721,6 +8745,7 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-tbl-stp .ve-fw-stp-no{ display:inline-flex; width:16px; height:16px; margin-right:4px; vertical-align:-3px; }
 /* Ağaç girintisi VERİDEN (`--stp-d` = düğümün derinliği), görünüm burada. */
 .ve-fw-tbl-stp td:first-child{ padding-left:calc(4px + var(--stp-d, 0) * 14px); }
+.ve-fw-tbl-stp td:first-child:has(> .ve-mw-stp-ac, > .ve-mw-stp-yaprak){ padding-left:calc(20px + var(--stp-d, 0) * 14px); }
 /* KAYIŞ DÜZLEMİ ÇİZİMİ — hesaptan hemen sonra, MASADA; kasnaklar dış
    çaplarıyla. Çizgi kalınlığı viewBox ölçeğinden BAĞIMSIZ (non-scaling-stroke):
    çizim mm cinsinden, küçük düzende kalın, büyükte kaybolan çizgi olmasın. */
@@ -8790,7 +8815,10 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-arac-b[aria-pressed="true"]{ background:var(--accent-tint-10); color:var(--text-heading); box-shadow:inset 0 0 0 1px var(--accent-primary); }
 .ve-mw-3b-arac-b:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-mw-3b-kesit-d{ width:220px; max-width:40vw; accent-color:var(--accent-primary); }
-.ve-mw-3b-kesit-deger{ min-width:104px; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+.ve-mw-3b-kesit-deger{ display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ve-mw-3b-kesit-gir{ width:72px; height:22px; padding:0 6px; font:inherit; font-size:var(--fs-tiny); text-align:right; font-variant-numeric:tabular-nums;
+  color:var(--text-primary); background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-xs); }
+.ve-mw-3b-kesit-gir:focus-visible{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
 .ve-mw-3b-arac-ayrac{ width:1px; height:18px; background:var(--border-color); }
 /* ÖLÇÜ (js/cp-mount-3b-arac.js → _mw3bAracSVG): iki nokta, aralarında çizgi,
    ortada zeminli uzaklık; yapışan aday (dairenin izdüşümü + merkez · köşe).
@@ -9805,6 +9833,11 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    dolgu 4 = başlığın 6 px'i. Izgaranın `td:has(> input)` istisnası (3 px)
    daha özgül olduğu için seçici bu tabloyla nitelendi. */
 .ve-properties-content table.ve-mnt-foy.ve-izgara td.gir{ padding:1px !important; }
+/* KAYITLI ROLLER (js/cp-mount-cad.js → _mntCadKayitHTML): hücre kısaltılmaz,
+   sözcük sınırında kırılır (kullanım notu T14); dairenin çapı rolün yanında. */
+.ve-properties-content .ve-mnt-foy.ve-mnt-cad-kayit td{ white-space:normal; text-overflow:clip; vertical-align:top; }
+.ve-mnt-cad-daire{ color:var(--text-muted); white-space:nowrap; }
+.ve-mnt-cad-kaynak{ display:block; color:var(--text-muted); }
 .ve-properties-content table.ve-mnt-foy td input[type="text"]{ padding:2px 4px; }
 .ve-properties-content .ve-mnt-foy td.cz,
 .ve-properties-content .ve-mnt-foy th.cz{ background:var(--bg-tertiary); color:var(--text-secondary); }
@@ -11509,6 +11542,12 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 }
 .ve-properties-content .ve-fw-tbl td{ padding:2px 4px !important; }
 .ve-properties-content .ve-fw-tbl-stp td:first-child{ padding-left:calc(4px + var(--stp-d, 0) * 14px) !important; }
+/* Kırılan ad girintisinde kalır (kullanım notu T10): dal düğmesi ASILI
+   girinti — ikinci satır adın hizasında, düğmenin altında değil. */
+.ve-fw-tbl-stp td:first-child:has(> .ve-mw-stp-ac, > .ve-mw-stp-yaprak){ text-indent:-16px; }
+.ve-properties-content .ve-fw-tbl-stp td:first-child:has(> .ve-mw-stp-ac, > .ve-mw-stp-yaprak){
+  padding-left:calc(20px + var(--stp-d, 0) * 14px) !important;
+}
 .ve-properties-content .ve-fw-tbl select.ve-fw-inp{ text-align:left; padding:0 6px; }
 /* KÜTLE TABLOSU (js/cp-mount-wizard.js → _mwStpKutleHTML): gövde · hacim ·
    kaynak (elle · dosya · malzeme) · kütle (alan ya da türetilen değer) · atalet */

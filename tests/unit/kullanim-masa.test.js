@@ -103,6 +103,18 @@ describe('tahta: doğrulama', () => {
     expect(h).toMatch(/dosya yok: a\.png/);
   });
 
+  test('SONRA: düzeltilen bulgu önce/sonra taşır — ölçümü şart, görselleri aynı kurala', () => {
+    const v = gecerli();
+    v.bulgular[0].sonra = { olcum: '2 → 0 çakışma', gorseller: [{ yol: 'b.png', kirp: [0, 0, 5, 5] }] };
+    expect(T.dogrula(v, var_)).toEqual([]);
+    v.bulgular[0].sonra = { gorseller: [{ yol: 'b.png', kirp: [0, 0, -1, 5] }] };
+    const h = T.dogrula(v, var_).join('\n');
+    expect(h).toMatch(/sonra\.olcum eksik/);
+    expect(h).toMatch(/sonra görsel 1: kirp/);
+    v.bulgular[0].sonra = 'düzeldi';
+    expect(T.dogrula(v, var_).join()).toMatch(/sonra bir nesne olmalı/);
+  });
+
   test('bozuk kırpma ve eksik üst alan', () => {
     const v = gecerli();
     v.bulgular[0].gorseller[0].kirp = [0, 0, -1, 4];
@@ -130,5 +142,8 @@ describe('tahta: şablon', () => {
     expect(sablon).toContain("db.doc('karar/' + id).set(");
     expect(sablon).toContain("collection('karar').onSnapshot(");
     expect(sablon).toMatch(/duzelt: 'Düzelt', kalsin: 'Kalsın', sonra: 'Sonra'/);
+    // önce/sonra: "Sonra" bölümü ve büyüteci (data-s) aynı karttan
+    expect(sablon).toContain('<section class="sonra"><h3>Sonra</h3>');
+    expect(sablon).toContain("bb.hasAttribute('data-s')");
   });
 });
