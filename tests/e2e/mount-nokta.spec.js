@@ -56,8 +56,9 @@ async function rolVer(page) {
       .concat(T.map((a) => [a, 'mnt-mount'])).forEach(([a, t]) => veMntWizStpRol(i(a), t));
   }, TAKOZ);
 }
+// Satır: ad · konum (x · y · z hücreleri, üçlünün yazısıyla) · noktanın kaynağı (satırın ipucu)
 const satirlar = (page) => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-takozlar] tbody tr')]
-  .map((tr) => [...tr.cells].map((c) => c.textContent.trim())));
+  .map((tr) => { const c = [...tr.cells].map((x) => x.textContent.trim()); return [c[0], c.slice(1).join('; '), tr.getAttribute('title')]; }));
 
 test('DAİREDEN NOKTA: öneri sunudaki sayı; kip takoza sığar; kenara gel → halka; tıkla → merkez; Öneriye dön; Esc yalnız kip', async ({ page }) => {
   const hatalar = [];

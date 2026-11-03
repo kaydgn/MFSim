@@ -64,20 +64,22 @@ describe('KURULUMUN KUTUSU ve BEKLEYEN HESAP', () => {
       .toEqual({ ad: '3B kurulumu', metin: 'Parça 4.512 / 11.694', oran: 0.25 });
     expect(_mw3bKurVeri({ islenen: 0, toplam: 0, yuz: 0, yuzToplam: 0 }).oran).toBe(0);
   });
-  test('hesap beklerken alttaki düğme kapalı, meşgul ve sebebi ipucunda', () => {
+  test('hesap beklerken komut çubuğunun düğmesi kapalı, meşgul ve sebebi ipucunda', () => {
     const s = veMntStpOku(require('../helpers/step-takoz.js').gucGrubu());
     const st = { sonuc: s, roller: s.agac.map(() => null), coz: null, hesapBekliyor: { liste: [0], toplam: 1 } };
     st.roller[1] = 'mnt-motor';
     const d = document.createElement('div');
-    d.innerHTML = veMntWiz3bAltHTML(st, -1);
+    d.innerHTML = veMntWiz3bEylemHTML(st);
     const b = d.querySelector('#ve-mw-3b-hesapla');
     expect(b.disabled).toBe(true);
     expect(b.getAttribute('aria-busy')).toBe('true');
     expect(b.getAttribute('title')).toBe('Parçaların ağı hazırlanıyor.');
     expect(b.textContent.trim()).toBe('Hesaplanıyor…');
     delete st.hesapBekliyor;
-    d.innerHTML = veMntWiz3bAltHTML(st, -1);
+    d.innerHTML = veMntWiz3bEylemHTML(st);
     expect(d.querySelector('#ve-mw-3b-hesapla').disabled).toBe(false);
+    // Seçimin bölümleri hesabı ve aktarımı taşımaz (komut çubuğunda)
+    expect(veMntWiz3bAltHTML(st, -1)).not.toMatch(/ve-mw-3b-hesapla|ve-mw-3b-aktar/);
   });
 });
 
@@ -87,15 +89,15 @@ describe('KURULUMUN KUTUSU ve BEKLEYEN HESAP', () => {
 // 2026-11-02'ye dek aktarım yalnız sihirbazın 3B'sindeydi; "STEP'ten başla" dosyayı
 // 3B'nin kendi perdesinde okuduğundan (kullanıcı kararı: "3B açılsın, sonra
 // sihirbaz") aktarım iki yerde de var — pencereden sihirbazı açar.
-describe('ALT DİZİ — aktarım iki yerde de', () => {
+describe('EYLEM — aktarım iki yerde de', () => {
   test('hesap sonrası aktarım düğmesi: varsayılan var; gizleme seçeneği yalnız açıkça istenince', () => {
     const s = veMntStpOku(require('../helpers/step-takoz.js').gucGrubu());
     const st = { sonuc: s, roller: s.agac.map(() => null), coz: { ok: true, birimler: [] } };
     st.roller[1] = 'mnt-motor';
-    expect(veMntWiz3bAltHTML(st, -1)).toMatch(/id="ve-mw-3b-aktar"/);
-    expect(veMntWiz3bAltHTML(st, -1, { aktar: true })).toMatch(/id="ve-mw-3b-aktar"/);
-    expect(veMntWiz3bAltHTML(st, -1, { aktar: false })).not.toMatch(/ve-mw-3b-aktar/);
-    expect(veMntWiz3bAltHTML(st, -1, { aktar: false })).toMatch(/id="ve-mw-3b-hesapla"/);
+    expect(veMntWiz3bEylemHTML(st)).toMatch(/id="ve-mw-3b-aktar"/);
+    expect(veMntWiz3bEylemHTML(st, { aktar: true })).toMatch(/id="ve-mw-3b-aktar"/);
+    expect(veMntWiz3bEylemHTML(st, { aktar: false })).not.toMatch(/ve-mw-3b-aktar/);
+    expect(veMntWiz3bEylemHTML(st, { aktar: false })).toMatch(/id="ve-mw-3b-hesapla"/);
   });
 });
 
@@ -123,14 +125,14 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     expect(alt(s, -1).querySelector('#ve-mw-3b-nokta')).toBe(null);
   });
 
-  test('iç içe rol: kendi rolü olan düğüm atasının biriminde sayılmaz (panel · alt dizi)', () => {
+  test('iç içe rol: kendi rolü olan düğüm atasının biriminde sayılmaz (kimlik · bölümler)', () => {
     const s = st(), fl = i('Sol ön takoz taban flanşı'), d = document.createElement('div');
     s.roller[fl] = 'mnt-bracket';
-    d.innerHTML = veMntWiz3bPanelHTML(s, fl);
+    d.innerHTML = veMntWiz3bKimlikHTML(s, fl);
     expect(d.textContent).not.toContain('biriminin içinde');
     expect(alt(s, fl).querySelector('#ve-mw-3b-nokta')).toBe(null);                    // birimi braket
     s.roller[fl] = null;
-    d.innerHTML = veMntWiz3bPanelHTML(s, fl);
+    d.innerHTML = veMntWiz3bKimlikHTML(s, fl);
     expect(d.textContent).toContain('Sol ön takoz biriminin içinde');
   });
 
@@ -147,20 +149,22 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     expect(d2.querySelector('#ve-mw-3b-nokta-oneri').getAttribute('onclick')).toBe('veMntWizStpNokta(' + i('Sol ön takoz') + ', null)');
   });
 
-  test('takoz tablosu: konum 0,001 mm, Nokta sütunu kaynağı; gövde 0,1 mm', () => {
+  test('takoz tablosu: x · y · z 0,001 mm, noktanın kaynağı satırın ipucunda; gövde 0,1 mm', () => {
     const s = st();
     s.coz = veMntStpCoz(son, s.roller);
     const d = document.createElement('div');
     d.innerHTML = veMntWiz3bPanelHTML(s, -1);
     const tr = d.querySelector('[data-ve-3b-takozlar] tbody tr');
-    expect(Array.from(d.querySelectorAll('[data-ve-3b-takozlar] th')).map((x) => x.firstChild.textContent)).toEqual(['Takoz', 'Konum', 'Nokta']);
-    expect(Array.from(tr.cells).map((c) => c.textContent.trim())).toEqual(['Sol ön takoz', '439,957; −355,957; 499,855', 'Üst yüz Ø 70,0']);
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-takozlar] th')).map((x) => x.firstChild.textContent)).toEqual(['Takoz', 'Konum', 'x', 'y', 'z']);
+    expect(Array.from(tr.cells).map((c) => c.textContent.trim())).toEqual(['Sol ön takoz', '439,957', '−355,957', '499,855']);
+    expect(tr.getAttribute('title')).toBe('Üst yüz Ø 70,0');
     expect(tr.getAttribute('data-ve-3b-nokta')).toBe('eksen');
     expect(tr.hasAttribute('data-uyari')).toBe(false);
-    expect(d.querySelector('[data-ve-3b-govdeler] tbody tr td:nth-child(2)').textContent).toBe('125,0; 0,1; 750,0');
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-govdeler] thead th')).map((x) => x.firstChild.textContent)).toEqual(['Gövde', 'Kütle', 'CG', 'x', 'y', 'z']);
+    expect(Array.from(d.querySelector('[data-ve-3b-govdeler] tbody tr').cells).slice(2).map((c) => c.textContent)).toEqual(['125,0', '0,1', '750,0']);
   });
 
-  test('gövde tablosunda kütle: elle → alan; malzeme ya da dosya → türetilen değer + "S" (dayanağı ipucunda)', () => {
+  test('gövde tablosunda kütle OKUNUR: elle → değer, türetilmiş → değer + "S" (dayanağı ipucunda); alan seçili birimin bölümünde', () => {
     const k = veMntStpOku(S.kutleKalibi());
     const j = (ad) => k.agac.findIndex((d) => d.ad === ad);
     const s = { sonuc: k, roller: k.agac.map(() => null), coz: null, kutle: {}, nokta: {}, yogunluk: {} };
@@ -170,14 +174,22 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     s.coz = veMntStpCoz(k, s.roller, { yogunluk: s.yogunluk });
     const d = document.createElement('div');
     d.innerHTML = veMntWiz3bPanelHTML(s, -1);
-    const hucre = (ad) => d.querySelector('[data-ve-3b-govdeler] tr[data-ve-3b-birim="' + j(ad) + '"] td:nth-child(3)');
-    expect(hucre('Motor').querySelector('input[data-mw-stp-kutle]').value).toBe('418');
+    const hucre = (ad) => d.querySelector('[data-ve-3b-govdeler] tr[data-ve-3b-birim="' + j(ad) + '"] td:nth-child(2)');
+    expect(hucre('Motor').textContent).toBe('418,0');
+    expect(d.querySelector('[data-ve-3b-govdeler] input')).toBe(null);
     expect(hucre('Şanzıman').textContent).toBe('654,8S');
-    expect(hucre('Arka braket').querySelector('[data-mw-stp-kutle-deger]').textContent).toBe('22,6');
+    expect(hucre('Arka braket').textContent).toBe('22,6S');
     expect(hucre('Arka braket').querySelector('sup.ve-fw-kun').getAttribute('title')).toBe('STEP geometrisinden · Çelik · 7.850 kg/m³');
+    // Kütlenin alanı seçili birimin bölümünde (kartın ve pencerenin alanıyla aynı nitelik)
+    const b = document.createElement('div');
+    b.innerHTML = veMntWiz3bBirimKutleHTML(s, j('Motor'));
+    expect(b.querySelector('input[data-mw-stp-kutle="' + j('Motor') + '"]').value).toBe('418');
+    b.innerHTML = veMntWiz3bBirimKutleHTML(s, j('Arka braket'));
+    expect(b.querySelector('input')).toBe(null);
+    expect(b.querySelector('[data-mw-stp-kutle-deger]').textContent).toBe('22,6');
     // açık parçalı motorun satırı uyarılı; başlıkta yoğunluğun durumu yok (dosyada var)
     expect(d.querySelector('[data-ve-3b-govdeler] tr[data-ve-3b-birim="' + j('Motor') + '"]').hasAttribute('data-uyari')).toBe(true);
-    expect(d.querySelectorAll('[data-ve-3b-govdeler] th')[2].getAttribute('title')).toBe(null);
+    expect(d.querySelectorAll('[data-ve-3b-govdeler] th')[1].getAttribute('title')).toBe(null);
   });
 
   test('ekran izdüşümü: kameranın önündeki nokta piksele, arkasındaki null', () => {
@@ -623,19 +635,20 @@ describe('ÇOKLU SEÇİM — rol seçimin hepsine, tek hesap', () => {
     expect(kur([tk[1]]).querySelector('#ve-mw-3b-nokta')).not.toBe(null);      // tek takozda var
   });
 
-  test('sağdaki kart: "Seçili N", düğümler ve birleşik parça sayısı; satırdan seçimden çıkarılır', () => {
+  test('kimlik: "N düğüm", düğümler ve birleşik parça sayısı; satırdan seçimden çıkarılır', () => {
     const s = oturum(), tk = takozlar(s);
     const d = document.createElement('div');
-    d.innerHTML = veMntWiz3bPanelHTML(s, tk[2], [tk[0], tk[2]]);
+    d.innerHTML = veMntWiz3bKimlikHTML(s, tk[2], [tk[0], tk[2]]);
     const b = d.querySelector('[data-ve-3b-secili]');
     expect(b.getAttribute('data-ve-3b-secili')).toBe('2');
     expect(b.querySelectorAll('li').length).toBe(2);
     expect(b.querySelector('li.on .ve-fw-3b-yolb').textContent).toBe(s.sonuc.agac[tk[2]].ad);
     const ps = new Set(s.sonuc.agac[tk[0]].parcalar.concat(s.sonuc.agac[tk[2]].parcalar));
-    expect(b.querySelector('p').textContent).toBe(veSayi(ps.size, 0) + ' parça');
+    expect(b.querySelector('.ve-mw-3b-kimlik-ad b').textContent).toBe('2 düğüm');
+    expect(b.querySelector('.ve-mw-3b-kimlik-ad .ve-fw-dim').textContent).toBe(veSayi(ps.size, 0) + ' parça');
     expect(b.querySelector('li .ve-fw-mini').getAttribute('onclick')).toBe('veMntWiz3bSec(' + tk[0] + ', true)');
-    // tek seçimde yol (eski görünüş)
-    d.innerHTML = veMntWiz3bPanelHTML(s, tk[2], [tk[2]]);
+    // tek seçimde ad, tür ve yol
+    d.innerHTML = veMntWiz3bKimlikHTML(s, tk[2], [tk[2]]);
     expect(d.querySelector('[data-ve-3b-secili]').getAttribute('data-ve-3b-secili')).toBe('1');
     expect(d.querySelector('.ve-fw-3b-yol')).not.toBe(null);
   });
@@ -902,5 +915,200 @@ describe('YÜZEY SEÇİMİ — tıklanan üçgenin yüzü, tanımı ve köşeler
     d.innerHTML = veMntWiz3bAracHTML({ kesit: null, suzgec: 'yuz', olcu: true });
     expect(bas()).toEqual(['false', 'true', 'true']);
     expect(d.querySelector('[role="group"][aria-label="Seçim"]').querySelectorAll('button').length).toBe(2);
+  });
+});
+
+// ── ÇALIŞMA MASASI (2026-11-03) ──────────────────────────────────────────────
+// Kullanıcı: "3B görüntüleyicinin arayüzü, kullanımı, görünümü çok çok amatör
+// seviyede" → tasarım tuvalinden "Çalışma masası" seçildi. Önce (main f84be2e):
+// ağaç, kart ve rol dizisi tuvalin ÜSTÜNDE yüzüyordu; görünüş tek, bakış yalnız
+// düğme sırası, ağaçta arama yok; birimin kütlesi kaynağıyla yalnız pencerede,
+// toplam yok. Ölçümler PR gövdesinde; gerçek tarayıcı: tests/e2e/mount-3b.spec.js
+// → *ÇALIŞMA MASASI*.
+describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle, küp, görünüş, arama', () => {
+  const fs = require('fs'), path = require('path');
+  const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+  const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? null : css.slice(i + 1, css.indexOf('}', i)); };
+  const kutleDurumu = () => {
+    const k = veMntStpOku(STK.kutleKalibi());
+    const j = (ad) => k.agac.findIndex((d) => d.ad === ad);
+    const s = { sonuc: k, roller: k.agac.map(() => null), coz: null, kutle: {}, nokta: {}, yogunluk: {} };
+    s.roller[j('Motor')] = 'mnt-motor'; s.roller[j('Şanzıman')] = 'mnt-gearbox'; s.roller[j('Arka braket')] = 'mnt-bracket';
+    s.kutle[j('Motor')] = 418;
+    s.yogunluk[j('Şanzıman')] = 'dosya'; s.yogunluk[j('Arka braket')] = 'celik';
+    s.coz = veMntStpCoz(k, s.roller, { yogunluk: s.yogunluk });
+    return { s, j };
+  };
+  const kur = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
+
+  test('yerleşim: tuval ile iki panel tek ızgarada, tuval göreli, paneller yüzmez — FEAD\'in ortak kuralları yüzen kartta', () => {
+    expect(kural('.ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa')).toMatch(/display:grid; grid-template-columns:var\(--mw3b-agac\) minmax\(0, 1fr\) var\(--mw3b-yan\)/);
+    expect(kural('.ve-mw-3b-masa > .ve-fw-3b-tuval')).toMatch(/position:relative; inset:auto/);
+    expect(kural('.ve-mw-3b-yan')).not.toMatch(/position:\s*absolute/);
+    expect(kural('.ve-mw-3b-agac')).not.toMatch(/position:\s*absolute/);
+    expect(kural('.ve-mw-3b-komut')).not.toMatch(/position:\s*absolute/);
+    // Dar pencere kararı pencereye sorulur; değişkenler kabın kendisine değil ızgaraya yazılır
+    expect(css).toMatch(/@container vefw3b \(max-width: 1120px\)\{\n  \.ve-mw-3b > \.ve-fw-3b-govde\.ve-mw-3b-masa\{ --mw3b-agac/);
+    expect(kural('.ve-fw-3b-tuval')).toMatch(/position:absolute; inset:0/);
+    expect(kural('.ve-fw-3b-yan')).toMatch(/position:absolute/);
+  });
+
+  test('eylem: SIRADAKİ adım vurgulu — hesaptan önce hesapla, sonra aktar; ölçülemeyince yine hesap; rolsüzken kapalı ve sebebi ipucunda', () => {
+    const S = veMntStpOku(STK.gucGrubu());
+    const st = { sonuc: S, roller: S.agac.map(() => null), coz: null };
+    const ana = (d, id) => d.querySelector(id).classList.contains('ve-mw-3b-hap-ana');
+    let d = kur(veMntWiz3bEylemHTML(st));
+    expect(d.querySelector('#ve-mw-3b-hesapla').disabled).toBe(true);
+    expect(d.querySelector('#ve-mw-3b-hesapla').getAttribute('title')).toBe('Hiçbir parçaya rol verilmedi.');
+    st.roller[1] = 'mnt-motor';
+    d = kur(veMntWiz3bEylemHTML(st));
+    expect([ana(d, '#ve-mw-3b-hesapla'), d.querySelector('#ve-mw-3b-aktar')]).toEqual([true, null]);
+    st.coz = { ok: true, birimler: [] };
+    d = kur(veMntWiz3bEylemHTML(st));
+    expect([ana(d, '#ve-mw-3b-hesapla'), ana(d, '#ve-mw-3b-aktar')]).toEqual([false, true]);
+    expect(d.querySelector('#ve-mw-3b-hesapla').textContent.trim()).toBe('Yeniden hesapla');
+    st.coz = { ok: false, birimler: [] };
+    d = kur(veMntWiz3bEylemHTML(st));
+    expect([ana(d, '#ve-mw-3b-hesapla'), d.querySelector('#ve-mw-3b-aktar')]).toEqual([true, null]);
+  });
+
+  test('kimlik: alt montajda tür ve parça sayısı, parçada "Parça", yol atayı seçer; seçimsiz boş', () => {
+    const s = oturum(), asm = ad2i(s, 'Arka braket'), ust = ad2i(s, 'Braket üst');
+    let d = kur(veMntWiz3bKimlikHTML(s, asm, [asm]));
+    expect(d.querySelector('.ve-mw-3b-kimlik-ad b').textContent).toBe('Arka braket');
+    expect(d.querySelector('.ve-mw-3b-kimlik-ad .ve-fw-dim').textContent)
+      .toBe('Alt montaj · ' + veSayi(s.sonuc.agac[asm].parcalar.length, 0) + ' parça');
+    expect(d.querySelector('.ve-mw-3b-kimlik-ik .mf-ico-package')).not.toBe(null);
+    d = kur(veMntWiz3bKimlikHTML(s, ust, [ust]));
+    expect(d.querySelector('.ve-mw-3b-kimlik-ad .ve-fw-dim').textContent).toBe('Parça');
+    expect(d.querySelector('.ve-mw-3b-kimlik-ik .mf-ico-box')).not.toBe(null);
+    expect(d.querySelector('[data-ve-3b-yol="' + asm + '"]').getAttribute('onclick')).toBe('veMntWiz3bSec(' + asm + ')');
+    expect(veMntWiz3bKimlikHTML(s, -1, [])).toBe('');
+  });
+
+  test('birimin kütlesi: gövdede kaynak · kütle · ağırlık merkezi (üç hücre); takozda nokta ve konum; çoklu seçimde ve hesapsız yok', () => {
+    const { s, j } = kutleDurumu();
+    let d = kur(veMntWiz3bBirimKutleHTML(s, j('Şanzıman')));
+    expect(Array.from(d.querySelectorAll('.ve-mw-3b-alan-ad')).map((x) => x.textContent)).toEqual(['Kaynak', 'Kütle', 'Ağırlık merkezi']);
+    expect(d.querySelector('.ve-mw-3b-kaynak').textContent).toBe('Dosyadan');
+    const b = s.coz.birimler.find((x) => x.ad === 'Şanzıman');
+    expect(Array.from(d.querySelectorAll('.ve-mw-3b-xyz-h')).map((x) => x.lastChild.textContent))
+      .toEqual(b.konum.map((v) => veSayi(Math.round(v * 10) / 10, 1)));
+    d = kur(veMntWiz3bBirimKutleHTML(s, j('Motor')));
+    expect(d.querySelector('.ve-mw-3b-kaynak').textContent).toBe('Elle');
+    expect(veMntWiz3bBirimKutleHTML(s, j('Motor'), [j('Motor'), j('Şanzıman')])).toBe('');
+    s.coz = null;
+    expect(veMntWiz3bBirimKutleHTML(s, j('Motor'))).toBe('');
+    // Takoz: noktanın kaynağı ve konumu 0,001 mm
+    const son = veMntStpOku(STK.tulgaKalibi({})), i = (ad) => son.agac.findIndex((x) => x.ad === ad);
+    const t = { sonuc: son, roller: son.agac.map(() => null), coz: null, kutle: {}, nokta: {} };
+    t.roller[i('Sol ön takoz')] = 'mnt-mount';
+    t.coz = veMntStpCoz(son, t.roller);
+    d = kur(veMntWiz3bBirimKutleHTML(t, i('Sol ön takoz taban flanşı')));
+    expect(d.querySelector('h4').textContent).toBe('Konum');
+    expect(d.textContent).toContain('Üst yüz Ø 70,0');
+    expect(Array.from(d.querySelectorAll('.ve-mw-3b-xyz-h')).map((x) => x.lastChild.textContent)).toEqual(['439,957', '−355,957', '499,855']);
+  });
+
+  test('toplam: bütün gövdelerin kütlesi biliniyorsa kütle ve ortak ağırlık merkezi; biri eksikse yok, satırı işaretli', () => {
+    const { s, j } = kutleDurumu(), gs = _mwStpGovdeler(s);
+    const K = gs.map((b) => _mwStpKutleK(s, b)), m = K.reduce((a, k) => a + k.m, 0);
+    const T = veMntWiz3bToplam(s, gs);
+    expect(T.m).toBeCloseTo(m, 9);
+    [0, 1, 2].forEach((a) => expect(T.p[a]).toBeCloseTo(gs.reduce((t, b, k) => t + K[k].m * b.konum[a], 0) / m, 9));
+    let d = kur(veMntWiz3bPanelHTML(s, -1));
+    const top = d.querySelector('[data-ve-3b-toplam]');
+    expect(Array.from(top.cells).map((c) => c.textContent)).toEqual(['Toplam', veSayi(Math.round(m * 10) / 10, 1)]
+      .concat(T.p.map((v) => veSayi(Math.round(v * 10) / 10, 1))));
+    delete s.kutle[j('Motor')];
+    expect(veMntWiz3bToplam(s, gs)).toBe(null);
+    d = kur(veMntWiz3bPanelHTML(s, -1));
+    expect(d.querySelector('[data-ve-3b-toplam]')).toBe(null);
+    expect(d.querySelector('[data-ve-3b-govdeler] tr[data-eksik]').getAttribute('data-ve-3b-birim')).toBe(String(j('Motor')));
+  });
+
+  test('bölümler başlıklı: takozda Rol · Takoz noktası, gövdede Rol · Malzeme', () => {
+    const son = veMntStpOku(STK.tulgaKalibi({})), i = (ad) => son.agac.findIndex((x) => x.ad === ad);
+    const t = { sonuc: son, roller: son.agac.map(() => null), coz: null, kutle: {}, nokta: {} };
+    t.roller[i('Sol ön takoz')] = 'mnt-mount'; t.roller[i('Motor bloğu')] = 'mnt-motor';
+    const kb = (sec) => Array.from(kur(veMntWiz3bAltHTML(t, sec, {})).querySelectorAll('.ve-mw-3b-kb')).map((x) => x.textContent);
+    expect(kb(i('Sol ön takoz'))).toEqual(['Rol', 'Takoz noktası']);
+    expect(kb(i('Motor bloğu')).slice(0, 2)).toEqual(['Rol', 'Malzeme']);
+  });
+
+  // Kameranın dünya matrisi (sütun sütun): sağ · yukarı · geri — yörünge kamerasının tabanı
+  const me = (g) => {
+    const b = [Math.cos(g.phi) * Math.cos(g.theta), Math.cos(g.phi) * Math.sin(g.theta), Math.sin(g.phi)];
+    let r = [-b[1], b[0], 0]; const l = Math.hypot(r[0], r[1]); r = r.map((v) => v / l);
+    const u = [b[1] * r[2] - b[2] * r[1], b[2] * r[0] - b[0] * r[2], b[0] * r[1] - b[1] * r[0]];
+    return [r[0], r[1], r[2], 0, u[0], u[1], u[2], 0, b[0], b[1], b[2], 0, 0, 0, 0, 1];
+  };
+  const kup = (g) => kur('<svg>' + veMntWiz3bKupSVG(me(g)) + '</svg>');
+  const yuzler = (d) => Array.from(d.querySelectorAll('[data-ve-3b-kup]')).map((p) => p.getAttribute('data-ve-3b-kup')).sort();
+  test('görünüm küpü: açılışta Ön · Sağ · Üst, üstten yalnız Üst; her yüz bir bakış ve o bakışta en dönük; yan duranın adı ipucunda', () => {
+    let d = kup(VE_MW_3B_ACILIS);
+    expect(yuzler(d)).toEqual(['on', 'sag', 'ust']);
+    expect(Array.from(d.querySelectorAll('text.yz-ad')).map((t) => t.textContent).sort()).toEqual(['Ön', 'Sağ', 'Üst'].sort());
+    d = kup(veMntWiz3bBakisBul('ust'));
+    expect(yuzler(d)).toEqual(['ust']);
+    VE_MW_3B_KUP_YUZ.forEach((Y) => {
+      const g = veMntWiz3bBakisBul(Y.k);
+      expect(g).not.toBe(null);
+      expect(kup(g).querySelector('.yz-1').getAttribute('data-ve-3b-kup')).toBe(Y.k);
+    });
+    // Önden, az yukarıdan: Üst yan duruyor — yazısı yok, adı ipucunda; Ön yazılı
+    d = kup({ theta: Math.PI, phi: 0.3 });
+    expect(yuzler(d)).toEqual(['on', 'ust']);
+    expect(d.querySelector('[data-ve-3b-kup="ust"] title').textContent).toBe('Üst');
+    expect(Array.from(d.querySelectorAll('text.yz-ad')).map((t) => t.textContent)).toEqual(['Ön']);
+    expect(d.querySelector('[data-ve-3b-kup="on"] title')).toBe(null);
+    // Küpün yazısı tıklamayı geçirir; yüz tıklanır
+    expect(kural('.ve-mw-3b-kup .yz-ad')).toMatch(/pointer-events:none/);
+    expect(kural('.ve-mw-3b-kup .yz')).toMatch(/cursor:pointer/);
+  });
+
+  test('görünüş: x-ışınında seçimsiz her parça tül, seçimde dışı; kenar x-ışınında belirgin; listeler', () => {
+    expect(VE_MW_3B_GORUNUS.map((g) => g.k)).toEqual(['kenar', 'golge', 'xray']);
+    expect(veMntWiz3bDurumBiti({ sec: null }, 3)).toBe(0);
+    expect(veMntWiz3bDurumBiti({ sec: null, xray: true }, 3)).toBe(VE_MW_3B_SOLUK);
+    expect(veMntWiz3bDurumBiti({ sec: { 3: 1 }, xray: true }, 3)).toBe(VE_MW_3B_SECIK);
+    expect(veMntWiz3bDurumBiti({ sec: { 3: 1 } }, 4)).toBe(VE_MW_3B_SOLUK);
+    const R = { cizgi: [1, 1, 1], cizgiSec: [2, 2, 2], cizgiFare: [3, 3, 3], bos: [9, 9, 9], bosSec: [8, 8, 8] };
+    expect(veMntWiz3bGorunus(VE_MW_3B_SOLUK, [5, 5, 5], R).a).toBe(VE_MW_3B_CIZGI_A.soluk);
+    expect(veMntWiz3bGorunus(VE_MW_3B_SOLUK, [5, 5, 5], Object.assign({ xray: true }, R)).a).toBe(VE_MW_3B_CIZGI_A.xray);
+    expect(VE_MW_3B_CIZGI_A.xray).toBeGreaterThan(VE_MW_3B_CIZGI_A.soluk);
+    expect(VE_MW_3B_CIZGI_A.xray).toBeLessThan(VE_MW_3B_CIZGI_A.olagan);
+    const d = kur(veMntWiz3bAracHTML({ kesit: null, gorunus: 'xray' }));
+    expect(d.querySelector('#ve-mw-3b-gorunus').value).toBe('xray');
+    const bk = d.querySelector('#ve-mw-3b-bakis');
+    expect([bk.options[0].disabled, bk.options[0].textContent]).toEqual([true, 'Bakış']);
+    expect(Array.from(bk.options).slice(1).map((o) => o.value)).toEqual(VE_MW_3B_BAKIS.map((g) => g.k));
+    // Seçilen bakış uygulanır (görüntüleyici kapalı: uygulanmaz), liste adına döner
+    bk.value = 'ust';
+    expect(veMntWiz3bBakisSec(bk)).toBe(false);
+    expect(bk.selectedIndex).toBe(0);
+  });
+
+  test('ağaçta ara: ad ya da örnek adı, Türkçe büyük-küçük harf; atanın adı, rol çipi; en çok VE_MW_3B_ARA_EN satır; sonuçsuz durum', () => {
+    const a = [{ i: 0, ad: 'KÖK', ebeveyn: -1, cocuklar: [1, 2, 3], parcalar: [] },
+      { i: 1, ad: 'İç gövde', ebeveyn: 0, cocuklar: [], parcalar: [0] },
+      { i: 2, ad: 'Islak kasnak', ornek: 'KASNAK_A.1', ebeveyn: 0, cocuklar: [], parcalar: [1] },
+      { i: 3, ad: 'Takoz', ebeveyn: 0, cocuklar: [], parcalar: [2] }];
+    const s = { sonuc: { agac: a }, roller: [null, null, 'mnt-mount', null] };
+    expect(veMntWiz3bAraBul(s, 'iç')).toEqual([1]);
+    expect(veMntWiz3bAraBul(s, 'ISL')).toEqual([2]);
+    expect(veMntWiz3bAraBul(s, 'kasnak_a')).toEqual([2]);
+    expect(veMntWiz3bAraBul(s, '  ')).toEqual([]);
+    let d = kur(veMntWiz3bAraHTML(s, 'k', [3]));
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-agac]')).map((r) => +r.getAttribute('data-ve-3b-agac'))).toEqual([0, 2, 3]);
+    expect(d.querySelector('[data-ve-3b-agac="2"] .ve-mw-3b-ara-yol').textContent).toBe('KÖK');
+    expect(d.querySelector('[data-ve-3b-agac="2"] .ve-mw-3b-agac-rol').textContent).toBe(_mwAd('mnt-mount'));
+    expect(d.querySelector('[data-ve-3b-agac="3"]').getAttribute('aria-selected')).toBe('true');
+    expect(d.querySelector('[data-ve-3b-agac="2"] .ve-mw-3b-agac-ad').getAttribute('onclick')).toBe('veMntWiz3bAgacTik(2, event)');
+    expect(kur(veMntWiz3bAraHTML(s, 'yok', [])).textContent).toBe('Sonuç yok.');
+    const cok = { sonuc: { agac: Array.from({ length: VE_MW_3B_ARA_EN + 50 }, (_, k) => ({ i: k, ad: 'Parça ' + k, ebeveyn: -1, cocuklar: [], parcalar: [k] })) }, roller: [] };
+    d = kur(veMntWiz3bAraHTML(cok, 'parça', []));
+    expect(d.querySelectorAll('[data-ve-3b-agac]').length).toBe(VE_MW_3B_ARA_EN);
+    expect(d.querySelector('.ve-mw-3b-ara-daha').textContent).toBe('50 sonuç daha');
   });
 });
