@@ -24,9 +24,11 @@
 //    sihirbaz açılmaz — kullanıcı kararı 2026-11-02), Boş kanvas
 //    `veMntKanvasBos`, örnek `veMntOrnekYukle`. İkinci bir kurucu, iki yolun
 //    sessizce ayrışması demekti.
-//  • KÜÇÜK RESİM Görünümler'in çizicisinden (`veMntAkso.ciz`,
-//    sade kip) ve kurucusundan (`veMntAksoOrnekModel`), örneğin KENDİ
-//    modelinden — sunum kendi geometrisini kurmaz.
+//  • KÜÇÜK RESİM VE ÖNİZLEME Görünümler'in çizicisinden (`veMntAkso.ciz` —
+//    karoda sade kip, önizlemede yazılı kip, kutunun ölçüsünde) ve
+//    kurucusundan (`veMntAksoOrnekModel`), örneğin KENDİ modelinden — sunum
+//    kendi geometrisini kurmaz. Düzen ÇALIŞMA MASASI (kit): karo seçer,
+//    önizlemenin Yükle'si ya da çift tık `veMntOrnekYukle`.
 //  • Paletten sayfanın üstüne bırakılan bileşen tuvale kurulur (kit
 //    sürükle-bırakı sızdırır) ve sayfa çekilir: dördüncü kapı.
 //  • Tazeleme iki noktadan: kapsam değişimi (`veSyncSidebarScope` →
@@ -34,22 +36,23 @@
 //    `veMntBaslangicTazele` — ekleme, silme, geri yükleme, sekme yükleme).
 
 var VE_MNT_BAS_ID = 've-mnt-baslangic';
-// Küçük resmin tuvali (kullanıcı birimi) — karonun resim kutusunun oranı
-// (1440 px'te 228 × 79 px). FEAD'in 330 × 150'si aksonometride yüksekliği
-// sınırlıyordu: çizim kutunun eninin %76'sında kalıyordu (Siper'de ölçek
-// 0,033 → 0,043 px/mm).
-var VE_MNT_BAS_RESIM = { w: 330, h: 114 };
+// Küçük resmin tuvali (kullanıcı birimi) — karonun resim kutusunun oranı.
+// Çalışma masasının karosu (2026-11-04) resim kutusunu 9:5 çiziyor; çizim o
+// orana kurulur ki kutunun boşluğu dolsun (330 × 114'te kutunun yarısı boştu).
+var VE_MNT_BAS_RESIM = { w: 360, h: 200 };
 var _mntBasResimler = {};        // anahtar → SVG (örnekler durağan: oturumluk önbellek)
 var _mntBasKapsam = false;       // Takoz alt topolojisinde miyiz (veSyncSidebarScope yazar)
 
 // Kit global'de (index.html onu bu dosyadan ÖNCE yükler); Node'da modül.
 function _mntBasKit(){
   if(typeof veBasSayfaHTML === 'function')
-    return { sayfa: veBasSayfaHTML, kur: veBasKur, tazele: veBasTazele, acik: veBasAcik };
+    return { sayfa: veBasSayfaHTML, kur: veBasKur, tazele: veBasTazele, acik: veBasAcik,
+             secili: (typeof veBasSecili === 'function') ? veBasSecili : null };
   if(typeof require === 'function'){
     try {
       var K = require('./baslangic-sayfa.js');
-      return { sayfa: K.veBasSayfaHTML, kur: K.veBasKur, tazele: K.veBasTazele, acik: K.veBasAcik };
+      return { sayfa: K.veBasSayfaHTML, kur: K.veBasKur, tazele: K.veBasTazele, acik: K.veBasAcik,
+               secili: K.veBasSecili };
     } catch(e){ return null; }
   }
   return null;
@@ -121,6 +124,22 @@ function veMntBaslangicResim(key){
   return svg;
 }
 
+// ÖNİZLEMENİN ÇİZİMİ — aynı çizici ve kurucu, YAZILI kip (gövde adları ve
+// kütleleri, takozların ve G'nin işareti; Görünümler'in penceresi gibi) ve
+// kutunun ÖLÇÜSÜNDE (W × H px): yazı arayüz ölçeğinde kalır. Eksen üçlüsü yok
+// (sabit bakış), işaret boyu pencereninki. Çizilemezse boş.
+function veMntBaslangicOnizleme(key, W, H){
+  try {
+    var ex = (typeof veMountCore !== 'undefined' && veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
+    var Ak = (typeof veMntAkso !== 'undefined' && veMntAkso && veMntAkso.ciz) ? veMntAkso : null;
+    var m = (ex && ex.model && typeof veMntAksoOrnekModel === 'function') ? veMntAksoOrnekModel(ex.model) : null;
+    if(!Ak || !m || !(m.govde.length || m.takoz.length)) return '';
+    var fs = function(ad, y){ var v = (typeof veThemeFs === 'function') ? veThemeFs(ad) : y; return (v > 0) ? v : y; };
+    return Ak.ciz(m, { W: Math.max(200, Math.round(W)), H: Math.max(160, Math.round(H)), etiket: 'ad', ucluyok: true,
+      isaret: 1.5, fs: { k: fs('micro', 10), b: fs('tiny', 11) }, aria: ex.vehicle || ex.name || key }).svg || '';
+  } catch(e){ return ''; }
+}
+
 // ── KİMLİK VE VERİ — sayfanın üst şeridi (kullanıcı isteği 2026-10-19) ─────
 // Analizlerin adı PROGRAMDAKİ adıdır: raporun adımı (Statik sehim · Modal
 // analiz · Frekans yerleşimi ve iletilebilirlik), Sonuçlar'ın kanalı (Şok
@@ -176,26 +195,25 @@ function veMntBaslangicKapilar(){
   ];
 }
 
-// ── HTML — SAF: yalnız sabitlerden ve örnek kaydından ─────────────────────
+// ── SAYFA — SAF: yalnız sabitlerden ve örnek kaydından ────────────────────
 // Kapıların adı ve örneklerin künyesi. İki grup: gerçek araçlar ve KURGU
 // doğrulama modelleri (kayıtta `kurgu`) — kurgu model gerçek bir aracı temsil
-// etmez; bölüm başlığı ve karonun "kurgu" işareti bunu söyler, gerçek
-// örneklerle aynı listede karışmaz.
-function veMntBaslangicHTML(){
+// etmez; bölüm başlığı ve önizlemenin "kurgu" işareti bunu söyler, gerçek
+// örneklerle aynı listede karışmaz. Karo araç ve kütle taşır; künyenin geri
+// kalanı (takoz sayısı, gövdelerin adları) seçilince önizlemenin föyünde.
+function veMntBaslangicSayfa(){
   var ornekler = veMntBaslangicOrnekler();
-  var K = _mntBasKit();
-  if(!K) return '';
-  var kg = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
-  // Alt satır SIĞAN künye: gövde adlarının listesi karoda üç noktayla
-  // kesiliyordu (yerleşim kapısı, 3 karonun 3'ü) — adlar ipucunda (VERİ).
+  var n = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(Math.round(x)); };
   var karo = function(o){
     return { ey: 'ornek', v: o.key, baslik: o.ad + ' — ' + o.govdeAdlari.join(' · '),
-             resim: veMntBaslangicResim(o.key), kod: o.arac, yil: kg(o.kutle) + ' kg',
-             sag: o.kurgu ? 'kurgu' : '', alt: o.govde + ' gövde · ' + o.takoz + ' takoz' };
+             resim: veMntBaslangicResim(o.key), kod: o.arac, yil: n(o.kutle) + ' kg',
+             onizleme: { ad: o.arac, etiket: o.kurgu ? 'kurgu' : '',
+               foy: [{ ad: 'Kütle', deger: n(o.kutle) + ' kg' }, { ad: 'Takoz', deger: n(o.takoz) }],
+               liste: { baslik: 'Gövdeler', adlar: o.govdeAdlari } } };
   };
   var gercek = ornekler.filter(function(o){ return !o.kurgu; });
   var kurgu = ornekler.filter(function(o){ return o.kurgu; });
-  return K.sayfa({
+  return {
     kimlik: veMntBaslangicKimlik(),
     veriler: veMntBaslangicVeri(),
     kapilar: veMntBaslangicKapilar(),
@@ -203,7 +221,13 @@ function veMntBaslangicHTML(){
       { baslik: 'Örnek modellerden başla', karolar: gercek.map(karo) },
       { baslik: 'Doğrulama örnekleri — kurgu', karolar: kurgu.map(karo) }
     ]
-  });
+  };
+}
+
+function veMntBaslangicHTML(){
+  var K = _mntBasKit();
+  if(!K) return '';
+  return K.sayfa(veMntBaslangicSayfa(), K.secili ? K.secili(VE_MNT_BAS_ID) : null);
 }
 
 // ── EYLEMLER — hepsi modülün var olan çağrılarına gider ────────────────────
@@ -229,7 +253,7 @@ function veMntBaslangicEylem(ad, v){
 // ── DOM — kurma ve görünürlük (kit) ────────────────────────────────────────
 function _mntBasSecenek(){
   return { id: VE_MNT_BAS_ID, aria: 'Takoz başlangıç sayfası',
-           html: veMntBaslangicHTML, eylem: veMntBaslangicEylem };
+           sayfa: veMntBaslangicSayfa, eylem: veMntBaslangicEylem, onizCiz: veMntBaslangicOnizleme };
 }
 
 // Kapsam: yalnız Takoz alt topolojisinde. Kapsamın tek noktası
@@ -255,6 +279,7 @@ if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     veMntBaslangicGerekli: veMntBaslangicGerekli, veMntBaslangicOrnekler: veMntBaslangicOrnekler,
     veMntBaslangicResim: veMntBaslangicResim, veMntBaslangicHTML: veMntBaslangicHTML,
+    veMntBaslangicSayfa: veMntBaslangicSayfa, veMntBaslangicOnizleme: veMntBaslangicOnizleme,
     veMntBaslangicEylem: veMntBaslangicEylem, veMntBaslangicKapsam: veMntBaslangicKapsam,
     veMntBaslangicTazele: veMntBaslangicTazele, veMntBaslangicAcik: veMntBaslangicAcik,
     veMntBaslangicKimlik: veMntBaslangicKimlik, veMntBaslangicVeri: veMntBaslangicVeri,

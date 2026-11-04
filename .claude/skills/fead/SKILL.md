@@ -100,6 +100,11 @@ olurdu.
      1. adımın dosya seçicisi (AYNI tıklamada) · `veFeadKanvasEkle({bos:true})`
      · `veFeadLoadExample`. Küçük resim çiziciden (`veFeadLayoutSVG`), liste
      sihirbazınki (`veFeadExampleKeys`).
+   • **Düzen Çalışma masası** (ortak kit, 2026-11-04): karo raporu SEÇER, önizlemenin
+     Yükle'si ya da çift tık `veFeadLoadExample`; önizleme adlı kayış yolu, kutunun
+     ölçüsünde ve kartın yazı katsayısıyla (kural 21). Karonun alt satırı KAYIŞ —
+     aynı kodlu raporları (AG0868'in üç kayışı) o ayırır. Kapı: `fead-baslangic.test.js`
+     → *ÇALIŞMA MASASI*.
    • **Sayfa açıkken FEAD araçları penceresi gizli** (`_feadAracBaslangic`:
      kapsam ve tazeleme tek soru yeri); dönüş düğmesi (z 60) sayfanın üstünde.
    • Kurulum kanvasta boş kart bulursa (Boş çizim masası) onu geometri kartı

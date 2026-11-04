@@ -164,6 +164,16 @@ test('Sonuçlar sayfasında da aynı çerçeve — çizgi ve köşe hücresi yer
 test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yanından başlar', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await modulAc(page);
+  // Boş FEAD'i başlangıç sayfası karşılar ve o açıkken sayfa rayı GİZLİ
+  // (kullanıcı 2026-11-04) — tuval ekranın sol kenarından başlar. Rayın
+  // yanındaki kabuğu ölçmek için önce bir yol seçilir (boş çizim masası).
+  const bas = await page.evaluate(() => ({
+    ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width,
+    tuvalX: Math.round(document.getElementById('ve-canvas-wrapper').getBoundingClientRect().left) }));
+  expect(bas).toEqual({ ray: 0, tuvalX: 0 });
+  await page.locator('#ve-fead-baslangic .ve-bas-kapi[data-ey="bos"]').click();
+  await page.waitForFunction(() => window.nodes.some((n) => n.type === 'fead-layout'), null, { timeout: 20000 });
+  await page.waitForTimeout(300);
   const olcP = () => page.evaluate(() => {
     const ray = document.querySelector('#ve-nav-rail').getBoundingClientRect();
     const kose = getComputedStyle(document.querySelector('#ve-nav-rail'), '::before');

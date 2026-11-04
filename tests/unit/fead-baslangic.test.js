@@ -146,7 +146,8 @@ describe('SAYFANIN HTML\'İ', () => {
     expect(d.querySelector('.ve-bas-kapi.birincil').getAttribute('data-ey')).toBe('sihirbaz');
     const karo = [...d.querySelectorAll('.ve-bas-karo')];
     expect(karo.map((b) => b.getAttribute('data-v')).sort()).toEqual(M.veFeadExampleKeys().slice().sort());
-    karo.forEach((b) => expect(b.getAttribute('data-ey')).toBe('rapor'));
+    // Karo SEÇER (Çalışma masası, 2026-11-04); yükleme eylemi önizlemenin Yükle'sinde.
+    karo.forEach((b) => expect([b.getAttribute('data-ey'), b.getAttribute('data-yukle')]).toEqual(['sec', 'rapor']));
   });
 
   // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): sayfada üst
@@ -326,6 +327,81 @@ describe('KAPILAR MODÜLÜN VAR OLAN ÇAĞRILARINA GİDER', () => {
       AR.veFeadAraclarKapsam('fead-analysis');
       document.querySelector('#ve-fead-baslangic .ve-bas-kapi[data-ey="sihirbaz"]').click();
       expect(c.c).toHaveBeenCalledTimes(1);
+    } finally { c.geri(); }
+  });
+});
+
+// ÇALIŞMA MASASI (kullanıcı 2026-11-04: *"Çalışma masasını uygula. FEAD'da
+// aynı olsun."*): Takoz'la aynı kit. Önizleme seçili raporun künyesi (sistem ·
+// kayış · kasnak · yıl, kasnakların adları — örneğin KENDİ kaydından) ve kayış
+// yolu, aynı çizicinin adlı kipiyle, kutunun ölçüsünde ve kartın yazı
+// katsayısıyla (kural 21).
+describe('ÇALIŞMA MASASI — rapor önizlemesi', () => {
+  const K = require('../../js/baslangic-sayfa.js');
+  beforeEach(() => { K._veBasSifirla(); BS._feadBasSifirla(); });
+  test('önizleme ilk raporun künyesi; Yükle onun eylemi', () => {
+    const r = BS.veFeadBaslangicRaporlar()[0];
+    const ex = M.veFeadExampleOf(r.key);
+    const d = document.createElement('div');
+    d.innerHTML = BS.veFeadBaslangicHTML();
+    const p = d.querySelector('.ve-bas-oniz');
+    expect(p.getAttribute('data-v')).toBe(r.key);
+    expect(p.querySelector('h2').textContent).toBe(r.kod);
+    expect([...p.querySelectorAll('dt')].map((x) => x.textContent)).toEqual(['Sistem', 'Kayış', 'Kasnak', 'Yıl']);
+    expect([...p.querySelectorAll('dd')].map((x) => x.textContent))
+      .toEqual([r.sistem, ex.belt.beltType, veSayi(ex.pulleys.length, 0), r.yil]);
+    expect([...p.querySelectorAll('.ve-bas-oniz-liste li')].map((x) => x.textContent))
+      .toEqual(ex.pulleys.map((q) => q.name));
+    const y = p.querySelector('.ve-bas-yukle');
+    expect([y.getAttribute('data-ey'), y.getAttribute('data-v')]).toEqual(['rapor', r.key]);
+  });
+  // Aynı rapor kodlu kayıtlar var (AG0868'in üç kayışı): karonun alt satırı
+  // kayış — karolar birbirinden AYIRT edilir.
+  test('karo künyesi rapor kodu + kayış; ikisi birlikte her karoda tekil', () => {
+    const d = document.createElement('div');
+    d.innerHTML = BS.veFeadBaslangicHTML();
+    const kunye = [...d.querySelectorAll('.ve-bas-karo .ve-bas-kunye')].map((k) => k.textContent);
+    const rap = BS.veFeadBaslangicRaporlar();
+    expect(kunye).toEqual(rap.map((r) => r.kod + r.kayis));
+    expect(new Set(kunye).size).toBe(kunye.length);
+    expect(new Set(rap.map((r) => r.kod)).size).toBeLessThan(rap.length);    // kod tek başına yetmiyor
+  });
+  test('çizim: veFeadLayoutSVG, adlar ve gergi kolu açık; kutunun ölçüsü ÷ yazı katsayısı', () => {
+    const c = casus('veFeadLayoutSVG', (b, W, H, o) => '<svg data-casus="' + W + 'x' + H + '"></svg>');
+    try {
+      const key = M.veFeadExampleKeys()[0];
+      const k = fead.veFeadYaziK();
+      expect(BS.veFeadBaslangicOnizleme(key, 600, 360)).toBe('<svg data-casus="' + (600 / k) + 'x' + (360 / k) + '"></svg>');
+      expect(c.c.mock.calls[0][3]).toMatchObject({ inline: true, nameLabels: true, pivot: true, compass: false,
+        wrapLabels: false, spanLabels: false, kunye: false });
+    } finally { c.geri(); }
+    // gerçek çizim: kasnakların adı çizimde
+    const key = M.veFeadExampleKeys()[0];
+    const svg = BS.veFeadBaslangicOnizleme(key, 640, 380);
+    expect(svg).toContain('data-ve="belt"');
+    const d = document.createElement('div'); d.innerHTML = svg;
+    const metin = d.textContent;
+    expect(M.veFeadExampleOf(key).pulleys.filter((q) => metin.includes(q.name)).length).toBeGreaterThan(0);
+  });
+  test('karo SEÇER, veFeadLoadExample\'ı çağırmaz; Yükle ve çift tık seçileni kurar', () => {
+    global.nodes = araclar();
+    const c = casus('veFeadLoadExample', () => [{ id: 'x' }]);
+    try {
+      AR.veFeadAraclarKapsam('fead-analysis');
+      const el = document.getElementById('ve-fead-baslangic');
+      const key = M.veFeadExampleKeys()[3];
+      const karo = el.querySelector('.ve-bas-karo[data-v="' + key + '"]');
+      karo.click();
+      expect(c.c).not.toHaveBeenCalled();
+      expect(el.querySelector('.ve-bas-oniz').getAttribute('data-v')).toBe(key);
+      expect(karo.getAttribute('aria-pressed')).toBe('true');
+      el.querySelector('.ve-bas-yukle').click();
+      expect(c.c).toHaveBeenCalledWith(key);
+      const k2 = M.veFeadExampleKeys()[1];
+      el.querySelector('.ve-bas-karo[data-v="' + k2 + '"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(c.c).toHaveBeenLastCalledWith(k2);
+      // önizlemenin çizimi yerleşti (jsdom: nominal ölçü)
+      expect(el.querySelector('.ve-bas-oniz-resim [data-ve="belt"]')).not.toBeNull();
     } finally { c.geri(); }
   });
 });

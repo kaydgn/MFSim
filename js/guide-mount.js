@@ -186,17 +186,20 @@ function _gmSec2(){
 function _gmSec3(){
   var h = _gmH2(2);
   h += '<h3>3.1 Başlangıç sayfası</h3>';
-  h += '<p>Boş bir Takoz modülünde <strong>başlangıç sayfası</strong> açılır: üç seçenek '
-    + '(<em>Sihirbazla kur</em> · <em>STEP’ten başla</em> · <em>Boş kanvas</em>) ve altında örnek '
-    + 'modellerin karoları. Birine basınca model kurulur ve sayfa kapanır; kurulum Ctrl+Z ile '
-    + 'geri alınınca sayfa yeniden açılır. <em>STEP’ten başla</em> sihirbazın ilk adımındaki '
-    + 'dosya seçiciyi açar.</p>';
+  h += '<p>Boş bir Takoz modülünde <strong>başlangıç sayfası</strong> açılır. Solda üç seçenek '
+    + '(<em>Sihirbazla kur</em> · <em>STEP’ten başla</em> · <em>Boş kanvas</em>), kataloğun sayıları ve '
+    + '<strong>Kılavuz</strong>; sağda seçili örneğin büyük çizimi ve künyesi (kütle, takoz sayısı, '
+    + 'gövdeler), altında örnek modellerin karoları. Karoya tıklamak örneği <strong>seçer</strong>; '
+    + '<strong>Yükle</strong> ya da karoya çift tık modeli kurar ve sayfa kapanır; kurulum Ctrl+Z ile '
+    + 'geri alınınca sayfa yeniden açılır. Sayfa açıkken soldaki <em>Topoloji · Sonuçlar</em> rayı '
+    + 'görünmez. <em>STEP’ten başla</em> dosyayı doğrudan 3B’de açar (bkz. 16.1).</p>';
   h += '<h3>3.2 Yol A — hazır bir örnekten başlamak</h3>';
   h += _gmAdimlar([
     'Karşılama ekranından <strong>Takoz Çökme-Titreşim</strong> kartını seçin; ana tuvale '
       + 'tek bir alt-sistem kutusu düşer.',
     'Kutuya <strong>çift tıklayın</strong>: başlangıç sayfası açılır.',
-    'Bir örnek karosuna tıklayın — bütün kütleler, takozlar ve künyeler bir anda kurulur.',
+    'Bir örnek karosunu seçin ve <strong>Yükle</strong>’ye basın (ya da karoya çift tıklayın) — '
+      + 'bütün kütleler, takozlar ve künyeler bir anda kurulur.',
     '<strong>Başlangıç ve Örnekler</strong> penceresinin <strong>Tutarlılık uyarıları</strong> '
       + 'bölümüne bakın: model çözülebilir durumda mı, eksik bir alan var mı?'
   ]);
@@ -828,7 +831,7 @@ function _gmSec14(){
   h += '<h3>14.5 Örneği programda kurmak</h3>';
   h += _gmAdimlar([
     'Boş bir Takoz modülünde başlangıç sayfasından <strong>' + _gmE(ex.name) + '</strong> '
-      + 'karosuna tıklayın.',
+      + 'karosunu seçip <strong>Yükle</strong>’ye basın.',
     '<strong>Başlangıç ve Örnekler</strong> penceresinde tutarlılık uyarılarının boş olduğunu '
       + 'doğrulayın.',
     'Çözücüde <strong>Hesapla</strong>’ya basın; bir kütle gövdesinin penceresinde toplam '

@@ -51,7 +51,7 @@ async function bootApp(page) {
 }
 async function modulVeOrnek(page) {
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"]');
+  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"]');   // tık seçer, çift tık kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
 }
 async function pencereAc(page) {
@@ -202,7 +202,7 @@ test('MODEL: Tulga tuvalde, dosya ötelenmiş → öteleme ve föy; Modele uygul
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"][data-v="tulga"]');
+  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"][data-v="tulga"]');   // tık seçer, çift tık kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   await pencereAc(page);
   await pencereden(page, TULGA);
@@ -262,7 +262,7 @@ test('MODEL · SİHİRBAZ: tuvaldeki Tulga\'dan açılan sihirbazda aynı föy; 
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"][data-v="tulga"]');
+  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"][data-v="tulga"]');   // tık seçer, çift tık kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   await page.evaluate(() => veMntWizAc());
   await page.setInputFiles('#ve-mw-body .ve-mw-stp-file', TULGA);

@@ -51,8 +51,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
   söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi); sayı
-  kaynağından ölçülür, analiz adı programdaki adıdır. Kapı: `mount-baslangic.test.js`
-  → *ORTAK KİT* · *KİMLİK VE VERİ*.
+  kaynağından ölçülür, analiz adı programdaki adıdır. Düzen **ÇALIŞMA MASASI**
+  (kullanıcı seçimi 2026-11-04): solda panel, sağda seçili karonun önizlemesi (modülün
+  çizicisi, kutunun ölçüsünde) ve karolar; karo SEÇER, Yükle ya da çift tık kurar;
+  sayfa açıkken sayfa rayı (Topoloji · Sonuçlar) gizli. Kapı: `mount-baslangic.test.js`
+  → *ORTAK KİT* · *KİMLİK VE VERİ* · *ÇALIŞMA MASASI* · *RAY*.
 - `js/pencere-kabuk.js` — **bileşen penceresinin kabuğu, ortak kit** (`vePencereKabuk`):
   FEAD ile Takoz pencereleri AYNI üreticiden basar (kullanıcı: *"tüm programda tek
   tip bir kozmetik yapı"*). Kural aşağıda (ortak yüzeyler); kapı `pencere-kabuk.test.js`.

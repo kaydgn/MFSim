@@ -1684,6 +1684,12 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
    aynı yer yönetir: js/components.js › veObserveModuleOverlay(). Ray .ve-main'in
    DIŞINDA olduğu için sınıf kabına da yazılır. */
 #sayfa2-content.ve-no-module .ve-nav-rail{ display:none; }
+/* Başlangıç sayfası açıkken de ray gizli (kullanıcı 2026-11-04: *"pencere ilk
+   açıldığında sol tarafta 'topoloji ve sonuçlar' sütunu görünmesin. Gerek
+   yok"*). Sınıfı başlangıç kiti yazar (js/baslangic-sayfa.js →
+   `_veBasRayEsitle`); yalnız topoloji sayfasında — öteki sayfada ray dönüş
+   yolu. Kapı: mount-baslangic.spec.js → *RAY*. */
+html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-nav-rail{ display:none; }
 
 /* ═══ KARŞILAMA EKRANINDA ŞERİT DE GİZLİ ═══
    Modül seçilmeden çalışma alanı yok: Kaydet / Doğrula / Çözücü / PNG hiçbir
@@ -11540,6 +11546,12 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
    minimap'in (--z-canvas-ui) üstünde, FEAD araçları penceresinin (55, sayfa
    açıkken zaten gizli) ve ana topolojiye dönüş düğmesinin (60) altında:
    alt topolojiden çıkmanın tek yolu örtülmez. Renk ve ölçü jetondan.
+
+   DÜZEN ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-04, tasarım tuvali "Takoz
+   başlangıç sayfası" · 1): solda PANEL (kimlik · kapılar · veri · Kılavuz),
+   sağda MASA (seçili karonun önizlemesi · karoların grupları). Eski düzen
+   ortalanmış 1120 px'lik bir sütundu; dar tuvalde panel ile masa alt alta
+   (flex-wrap). Sayfa açıkken sayfa rayı gizli (`.ve-bas-acik`, aşağıda).
    ════════════════════════════════════════════════════════════════════════════ */
 .ve-bas{
   position:absolute; inset:0; z-index:calc(var(--z-canvas-ui) + 10);
@@ -11549,22 +11561,33 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 }
 .ve-bas[hidden]{ display:none; }
 .ve-bas-ic{
-  box-sizing:border-box; max-width:1120px; margin:0 auto;
-  padding:28px 48px 28px; display:flex; flex-direction:column;
+  box-sizing:border-box; min-height:100%;
+  display:flex; flex-wrap:wrap; align-items:stretch;
 }
-/* KİMLİK — modülün ikonu, adı ve analizlerinin adları; sağda Kılavuz.
-   VERİ BANDI — kataloğun ölçülen sayıları (sayı üstte, ölçünün adı altta).
-   İkisi de AD ya da VERİ (ARAYÜZ ANLATMAZ; kullanıcı isteği 2026-10-19:
-   *"çok sade olmuş … profesyonel dursun"*). Bant hücreleri 1 px aralıkla
-   çizgi zemininin üstünde: satır sararsa da çift çizgi çıkmaz, son satır
-   genişliği doldurur. */
-.ve-bas-kimlik{ display:flex; align-items:center; gap:14px; margin:0 0 16px; }
+/* PANEL — tuvalin sol kenarına yaslı beyaz sütun. Üst dolgu dönüş düğmesinin
+   köşesini boş bırakır: düğme kabın sol üstünde (VE_CHIP_INSET 10 px, 26 px
+   kare — js/canvas-space.js), altında 12 px pay. */
+.ve-bas-panel{
+  flex:1 1 340px; max-width:360px; min-width:0; box-sizing:border-box;
+  display:flex; flex-direction:column; gap:18px;
+  padding:48px 20px 18px;
+  background:var(--bg-secondary); border-right:1px solid var(--border-color);
+}
+/* Palet daraltılmışken açma sekmesi (z 150) kabın sol kenarında, üstten
+   14–72 px arasında; dönüş düğmesi onun sağına kayar (js/canvas-space.js →
+   veChipSolOrtu). Panelin içeriği ikisinin ALTINDAN başlar. FEAD'de palet yok:
+   sekme gizli kalsa da sınıfı kalabilir, kural paletsiz kapsamda uygulanmaz. */
+.ve-main:not(.ve-paletsiz):has(> .ve-sidebar-reveal.visible) .ve-bas-panel{ padding-top:84px; }
+/* KİMLİK — modülün ikonu, adı ve analizlerinin adları (AD ya da VERİ —
+   ARAYÜZ ANLATMAZ; kullanıcı isteği 2026-10-19: *"çok sade olmuş …
+   profesyonel dursun"*). */
+.ve-bas-kimlik{ display:flex; align-items:flex-start; gap:12px; margin:0; }
 .ve-bas-kimlik-ik{
-  flex:none; width:52px; height:52px; display:flex; align-items:center; justify-content:center;
-  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  flex:none; width:46px; height:46px; display:flex; align-items:center; justify-content:center;
+  background:var(--bg-secondary); border:1px solid var(--border-light); border-radius:var(--radius-lg);
 }
-.ve-bas-kimlik-ik svg{ display:block; width:40px; height:40px; }
-.ve-bas-kimlik-t{ display:flex; flex-direction:column; gap:5px; min-width:0; flex:1 1 auto; }
+.ve-bas-kimlik-ik svg{ display:block; width:34px; height:34px; }
+.ve-bas-kimlik-t{ display:flex; flex-direction:column; gap:4px; min-width:0; flex:1 1 auto; }
 .ve-bas-kimlik h1{
   margin:0; font-size:var(--fs-h2); font-weight:700; line-height:var(--leading-tight);
   letter-spacing:-0.01em; color:var(--text-heading);
@@ -11574,49 +11597,23 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
    sararsa yeni satırın ilk adının ayracı kabın dışında kalır: satır "·" ile
    başlamaz. */
 .ve-bas-yetenek{
-  list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; column-gap:17px; row-gap:2px;
-  overflow:hidden; font-size:var(--fs-md); color:var(--text-secondary);
+  list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; column-gap:13px; row-gap:1px;
+  overflow:hidden; font-size:var(--fs-body); line-height:1.5; color:var(--text-secondary);
 }
 .ve-bas-yetenek li{ position:relative; white-space:nowrap; }
-.ve-bas-yetenek li + li::before{ content:"·"; position:absolute; right:100%; margin-right:6px; color:var(--text-muted); }
-.ve-bas-kilavuz{
-  flex:none; align-self:flex-start; display:inline-flex; align-items:center; gap:6px;
-  height:30px; padding:0 12px; box-sizing:border-box; cursor:pointer;
-  font-family:inherit; font-size:var(--fs-body); font-weight:600; color:var(--text-primary);
-  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
-  transition:border-color var(--dur-base) var(--ease-out);
+.ve-bas-yetenek li + li::before{ content:"·"; position:absolute; right:100%; margin-right:5px; color:var(--text-muted); }
+/* KAPILAR — panelde alt alta; birincil kapı aksan zeminli. Kapı ikon + ad +
+   KÜNYE taşır (VERİ: adımların adı, dosya biçimi). Not satırı ve "önerilen"
+   rozeti YOK (ARAYÜZ ANLATMAZ, 2026-10-16). Taban kuralı (ızgara) "Başlangıç
+   ve Örnekler" penceresinin sıkı satırı içindir (aşağıda). */
+.ve-bas-kapilar{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;
 }
-.ve-bas-kilavuz:hover{ border-color:var(--border-hover); }
-.ve-bas-kilavuz:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
-.ve-bas-kilavuz .mf-ico{ width:15px; height:15px; }
-.ve-bas-veri{
-  display:flex; flex-wrap:wrap; gap:1px; margin:0 0 18px; overflow:hidden;
-  background:var(--border-color); border:1px solid var(--border-color); border-radius:var(--radius-lg);
-}
-.ve-bas-veri > div{
-  flex:1 1 120px; min-width:0; display:flex; flex-direction:column-reverse; justify-content:flex-end; gap:2px;
-  padding:10px 14px 11px; background:var(--bg-secondary);
-}
-.ve-bas-veri dd{
-  margin:0; font-size:var(--fs-h2); font-weight:700; line-height:var(--leading-tight);
-  color:var(--text-heading); font-variant-numeric:tabular-nums;
-}
-.ve-bas-veri dt{ font-size:var(--fs-tiny); color:var(--text-muted); }
-/* KAPILAR — üç eşit sütun; dar tuvalde alt alta. Birincil kapı aksan zeminli.
-   Kapı ikon + ad + KÜNYE taşır (VERİ: adımların adı, dosya biçimi). Not
-   satırı ve "önerilen" rozeti YOK (ARAYÜZ ANLATMAZ, 2026-10-16).
-   KAROLAR AYNI IZGARADA (sütun kuralı ve aralık ortak): az karolu bölüm
-   (Takoz'un üçlü grupları) kapıların sütunlarına oturur, boş sütun
-   bırakmaz; çok karolu bölüm (FEAD'in 17 raporu) aynı kuralla dörde böler. */
-.ve-bas-kapilar,
-.ve-bas-raporlar{
-  display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
-  gap:16px;
-}
+.ve-bas-panel .ve-bas-kapilar{ display:flex; flex-direction:column; gap:8px; }
 .ve-bas-kapi{
-  display:flex; align-items:center; gap:12px; min-height:64px; box-sizing:border-box;
-  padding:14px; font-family:inherit; color:inherit; text-align:left; cursor:pointer;
-  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  display:flex; align-items:center; gap:12px; min-height:62px; box-sizing:border-box;
+  padding:12px 14px; font-family:inherit; color:inherit; text-align:left; cursor:pointer;
+  background:var(--bg-secondary); border:1px solid var(--border-light); border-radius:var(--radius-lg);
   transition:border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
 .ve-bas-kapi:hover{ border-color:var(--border-hover); box-shadow:var(--shadow-md); }
@@ -11635,61 +11632,139 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
    birlikte sarar, cümle gibi okunmaz. */
 .ve-bas-kapi-k{
   display:flex; flex-wrap:wrap; column-gap:13px; row-gap:1px; overflow:hidden;
-  font-size:var(--fs-tiny); line-height:1.4; color:var(--text-secondary);
+  font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary);
 }
 .ve-bas-kapi-k > span{ position:relative; white-space:nowrap; }
 .ve-bas-kapi-k > span + span::before{ content:"·"; position:absolute; right:100%; margin-right:5px; color:var(--text-muted); }
+/* VERİ — kataloğun ölçülen sayıları, panelin dibinde satır satır (ad solda,
+   sayı sağda); Kılavuz en altta. */
+.ve-bas-veri{ margin:auto 0 0; border-top:1px solid var(--border-color); }
+.ve-bas-veri > div{
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:6px 2px; border-bottom:1px solid var(--border-light);
+}
+.ve-bas-veri dt{ min-width:0; color:var(--text-secondary); }
+.ve-bas-veri dd{ margin:0; font-weight:600; color:var(--text-heading); font-variant-numeric:tabular-nums; }
+.ve-bas-kilavuz{
+  flex:none; display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  height:32px; padding:0 12px; box-sizing:border-box; cursor:pointer;
+  font-family:inherit; font-size:var(--fs-body); font-weight:600; color:var(--text-primary);
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  transition:border-color var(--dur-base) var(--ease-out);
+}
+.ve-bas-kilavuz:hover{ border-color:var(--border-hover); }
+.ve-bas-kilavuz:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-bas-kilavuz .mf-ico{ width:15px; height:15px; }
 
-/* KAROLAR — FEAD'de Gates arşivinin kayış yolları, Takoz'da örnek modellerin
+/* MASA — önizleme kalan yüksekliği alır, gruplar altında. */
+.ve-bas-masa{
+  flex:999 1 540px; min-width:0; box-sizing:border-box;
+  display:flex; flex-direction:column; gap:16px; padding:20px 24px 22px;
+}
+/* ÖNİZLEME — seçili karonun büyük çizimi (modülün çizicisi, kutunun
+   ölçüsünde) ve künye föyü (föy grameri: kalın üst çizgi, ince satırlar). */
+.ve-bas-oniz{
+  flex:1 1 auto; min-height:300px; display:flex; flex-wrap:wrap;
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+/* Çizim kutunun içinde MUTLAK: kutunun ölçüsü yerleşimden gelir, çizimden
+   değil (çizim kutunun ölçüsünde kurulur — ölçü çizimden gelseydi kutu bir
+   daha küçülemezdi). */
+.ve-bas-oniz-resim{ position:relative; flex:999 1 420px; min-width:0; min-height:260px; }
+.ve-bas-oniz-resim > svg{ position:absolute; inset:0; display:block; width:100%; height:100%; }
+.ve-bas-oniz-resim > .ve-bas-resim-yok{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.ve-bas-oniz-foy{
+  flex:1 1 240px; max-width:320px; min-width:0; box-sizing:border-box;
+  display:flex; flex-direction:column; gap:12px; padding:18px 20px 18px;
+  border-left:1px solid var(--border-light);
+}
+.ve-bas-oniz-ad{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.ve-bas-oniz-ad h2{
+  margin:0; font-size:var(--fs-title); font-weight:700; line-height:var(--leading-tight); color:var(--text-heading);
+}
+.ve-bas-oniz-ad i{
+  font-style:normal; font-size:var(--fs-micro); line-height:1.5; color:var(--text-secondary);
+  padding:0 7px; border:1px solid var(--border-color); border-radius:var(--radius-xs);
+}
+.ve-bas-oniz-dl{ margin:0; border-top:2px solid var(--text-primary); }
+.ve-bas-oniz-dl > div{
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:6px 0; border-bottom:1px solid var(--border-light);
+}
+.ve-bas-oniz-dl dt{ flex:none; color:var(--text-secondary); }
+.ve-bas-oniz-dl dd{
+  margin:0; min-width:0; text-align:right; font-size:var(--fs-md); font-weight:600;
+  color:var(--text-heading); font-variant-numeric:tabular-nums;
+}
+.ve-bas-oniz-liste{ display:flex; flex-direction:column; gap:4px; min-height:0; }
+.ve-bas-oniz-liste h3{
+  margin:0; font-size:var(--fs-micro); font-weight:600; letter-spacing:var(--tracking-wide);
+  text-transform:uppercase; color:var(--text-muted);
+}
+.ve-bas-oniz-liste ul{ list-style:none; margin:0; padding:0; }
+.ve-bas-oniz-liste li{ padding:3px 0; border-bottom:1px solid var(--bg-tertiary); color:var(--text-primary); }
+.ve-bas-yukle{
+  margin-top:auto; flex:none; display:flex; align-items:center; justify-content:center; gap:8px;
+  height:36px; padding:0 14px; box-sizing:border-box; cursor:pointer;
+  font-family:inherit; font-size:var(--fs-md); font-weight:600;
+  color:var(--on-accent); background:var(--accent-primary);
+  border:1px solid var(--accent-primary); border-radius:var(--radius-sm);
+  transition:background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+.ve-bas-yukle:hover{ background:var(--ink-accent); border-color:var(--ink-accent); }
+.ve-bas-yukle:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-bas-yukle .mf-ico{ width:15px; height:15px; }
+
+/* GRUPLAR — FEAD'de Gates arşivinin kayış yolları, Takoz'da örnek modellerin
    aksonometrisi (Görünümler'in çizicisi); ikisi de modülün KENDİ
-   çizicisinden, gerçek oranda. */
-.ve-bas-baslik{ display:flex; align-items:baseline; margin-top:26px; }
-.ve-bas-baslik h2{ margin:0; font-size:var(--fs-md); font-weight:700; color:var(--text-heading); }
-.ve-bas-raporlar{ margin-top:12px; font-variant-numeric:tabular-nums; }
+   çizicisinden, gerçek oranda. Karo SEÇER (`aria-pressed`); yükleme
+   önizlemenin Yükle'si ya da çift tık. Gruplar yer varsa yan yana. İz
+   genişliği sabit (auto-fill): az karolu grup alt alta düşünce karo kabın
+   genişliğine yayılıp sayfayı taşırmasın. */
+.ve-bas-gruplar{ flex:none; display:flex; flex-wrap:wrap; gap:14px 20px; }
+.ve-bas-grup{ flex:1 1 380px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+.ve-bas-baslik{ display:flex; align-items:baseline; }
+.ve-bas-baslik h2{ margin:0; font-size:var(--fs-body); font-weight:700; color:var(--text-heading); }
+.ve-bas-raporlar{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(124px, 1fr)); gap:10px;
+  font-variant-numeric:tabular-nums;
+}
 .ve-bas-karo{
-  display:flex; flex-direction:column; min-width:0; padding:0; font-family:inherit; color:inherit;
-  text-align:left; cursor:pointer; overflow:hidden;
-  background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md);
+  display:flex; flex-direction:column; gap:6px; min-width:0; padding:6px 6px 8px; box-sizing:border-box;
+  font-family:inherit; color:inherit; text-align:left; cursor:pointer;
+  background:var(--bg-secondary); border:1px solid var(--border-light); border-radius:var(--radius-md);
   transition:border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
-.ve-bas-karo:hover{ border-color:var(--accent-primary); box-shadow:var(--shadow-md); }
-.ve-bas-karo:focus-visible{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
+.ve-bas-karo:hover{ border-color:var(--border-hover); }
+.ve-bas-karo[aria-pressed="true"]{ border-color:var(--accent-primary); box-shadow:0 0 0 1px var(--accent-primary); }
+.ve-bas-karo:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-bas-resim{
-  position:relative; display:flex; align-items:center; justify-content:center;
-  aspect-ratio:5 / 2; box-sizing:border-box; padding:8px;
-  background:var(--bg-secondary); border-bottom:1px solid var(--border-color);
+  display:flex; align-items:center; justify-content:center; aspect-ratio:9 / 5; min-width:0;
 }
 .ve-bas-resim svg{ display:block; width:100%; height:100%; }
 /* KARENİN SORUSU "BU KAYIŞ YOLU NEYE BENZİYOR": çizicinin künyesi (kol konumu ·
-   gerginlik), dişli kenar ve onun açıklaması 240 px'lik karede okunmuyor ve
+   gerginlik), dişli kenar ve onun açıklaması küçük karede okunmuyor ve
    karo altındaki künyeyle yarışıyor. Çizici aynı kalır (tek kaynak); karo
    yalnız kendi bağlamında gizler — seçenek eklemek her çağırana bir bayrak
-   daha dağıtmaktı. */
+   daha dağıtmaktı. Önizlemede dişli kenar kalır, açıklaması değil. */
 #ve-fead-baslangic .ve-bas-resim [data-ve="pos-label"],
 #ve-fead-baslangic .ve-bas-resim [data-ve="rib-legend"],
-#ve-fead-baslangic .ve-bas-resim [data-ve="rib"]{ display:none; }
-/* Aksonometrinin zemin dikdörtgeni pencerede kabın rengidir; karoda çizim
-   karonun kendi resim zeminine oturur (eski üstten görünüş gibi). */
-#ve-mnt-baslangic .ve-bas-resim .ve-ak-zem{ display:none; }
-.ve-bas-resim em{
-  position:absolute; right:7px; top:7px; font-style:normal; font-size:var(--fs-micro); font-weight:700;
-  color:var(--on-accent); background:var(--accent-primary); border-radius:var(--radius-xs); padding:2px 7px;
-  opacity:0; transition:opacity var(--dur-base) var(--ease-out);
-}
-.ve-bas-karo:hover .ve-bas-resim em,
-.ve-bas-karo:focus-visible .ve-bas-resim em{ opacity:1; }
+#ve-fead-baslangic .ve-bas-resim [data-ve="rib"],
+#ve-fead-baslangic .ve-bas-oniz-resim [data-ve="rib-legend"]{ display:none; }
+/* Aksonometrinin zemin dikdörtgeni pencerede kabın rengidir; karoda ve
+   önizlemede çizim kendi zeminine oturur (eski üstten görünüş gibi). */
+#ve-mnt-baslangic .ve-bas-resim .ve-ak-zem,
+#ve-mnt-baslangic .ve-bas-oniz-resim .ve-ak-zem{ display:none; }
 .ve-bas-resim-yok{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); }
-.ve-bas-kunye{ display:flex; flex-direction:column; gap:3px; min-width:0; padding:8px 10px 9px; }
-.ve-bas-kunye-1{ display:flex; align-items:baseline; gap:6px; }
-.ve-bas-kunye-1 b{ font-size:var(--fs-body); font-weight:700; color:var(--text-heading); }
-.ve-bas-kunye-1 span{ font-size:var(--fs-tiny); color:var(--text-muted); }
-.ve-bas-kunye-1 i{ margin-left:auto; font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); }
-.ve-bas-kunye-2{
-  font-size:var(--fs-tiny); color:var(--text-secondary);
+.ve-bas-kunye{ display:flex; flex-direction:column; gap:1px; min-width:0; padding:0 4px; }
+.ve-bas-kunye b{
+  font-size:var(--fs-body); font-weight:600; color:var(--text-heading);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+.ve-bas-kunye span{ font-size:var(--fs-tiny); color:var(--text-muted); white-space:nowrap; }
 @media (prefers-reduced-motion: reduce){
-  .ve-bas-kapi, .ve-bas-karo, .ve-bas-resim em{ transition:none; }
+  .ve-bas-kapi, .ve-bas-karo, .ve-bas-yukle, .ve-bas-kilavuz{ transition:none; }
 }
 /* "Başlangıç ve Örnekler" penceresinde aynı kapılar, sıkı: sayfa çekildikten
    sonra sihirbaz ve STEP buradan açılır (js/cp-mount.js → _mntExampleKapilarHTML). */

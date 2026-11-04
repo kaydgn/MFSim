@@ -45,7 +45,7 @@ async function bootApp(page) {
   await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
   await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; }, null, { timeout: 90000 });
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"][data-v="tulga"]');
+  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"][data-v="tulga"]');   // tık seçer, çift tık kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
 }
 
