@@ -35,9 +35,11 @@ describe('12·B kaydırma çubuğu', () => {
     expect(yazilan.filter((v) => v !== 'none')).toEqual([]);
   });
 
-  test('::-webkit-scrollbar 8 px ve başparmak yuvarlak', () => {
+  // Başparmak denetimdir: köşesi ölçeğin denetim basamağından (keskin köşe
+  // kararı 2026-11-04 — 12·B'deki "yuvarlak" hap biçimiydi).
+  test('::-webkit-scrollbar 8 px ve başparmak köşesi denetim basamağında', () => {
     expect(css).toMatch(/::-webkit-scrollbar\s*\{\s*width:\s*8px;\s*height:\s*8px;/);
-    expect(css).toMatch(/::-webkit-scrollbar-thumb\s*\{[^}]*border-radius:\s*var\(--radius-pill\)/);
+    expect(css).toMatch(/::-webkit-scrollbar-thumb\s*\{[^}]*border-radius:\s*var\(--radius-sm\)/);
   });
 });
 

@@ -753,6 +753,15 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   (harita karosu), oyunlar. Artı imleci tek yardımcıdan (`pcArtiImlec`):
   farenin altında, çizim alanında. Kapı: `theme-contrast.test.js` → *"gölge
   ve tül"* + `panel-chart.test.js` → *"artı imleci"*.
+- **KÖŞE KESKİN, GÖLGE YALNIZ YÜZENDE** (kullanıcı kararı 2026-11-04:
+  *"köşeler keskin değil, program hiç profesyonel durmuyor"*). Çerçeve 0
+  (pencere, panel, kart, bileşen kutusu, menü, bildirim — `--radius-md|lg|xl`),
+  el değen denetim 2 px (düğme, alan, liste, çip, sayaç, çubuk —
+  `--radius-xs|sm`); tam yuvarlak yalnız anlamı daire olana (`--radius-pill`
+  ya da `50%`: durum noktası, port, radyo, numara balonu, profil resmi) —
+  sayaç ve çip hap jetonuna yazılmaz. Yerinde duran yüzey gölge almaz
+  (`--shadow-sm` saydam), yüzenin gölgesi ≤ 14 px. Kapı: `kose-keskin.test.js`
+  + `source-hygiene.test.js`.
 - **MİNİMAP İÇERİĞİ ÖRTMEZ** (`js/minimap.js` → `_mmOtoDenetle`). Açık kutu
   bir karta, adına ya da nota değiyorsa köşedeki düğmesine iner, köşe
   boşalınca açılır; soluk durmak yetmiyordu (soluk kutu tıklamayı yutuyor).

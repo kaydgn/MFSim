@@ -248,7 +248,7 @@ function _mf2048InjectCSS() {
     '.mf2048-hint kbd{font-family:inherit;font-size:var(--fs-body);padding:1px 6px;border-radius:var(--radius-sm);',
       'background:var(--bg-tertiary);border:1px solid var(--border-light);color:var(--text-primary);}',
     // Düğmeler
-    '.mf2048-btn{cursor:pointer;padding:9px 16px;border-radius:var(--radius-lg);font-size:var(--fs-lg);font-weight:600;',
+    '.mf2048-btn{cursor:pointer;padding:9px 16px;border-radius:var(--radius-sm);font-size:var(--fs-lg);font-weight:600;',
       'font-family:inherit;border:1px solid var(--border-light);',
       'background:var(--bg-tertiary);color:var(--text-primary);',
       'transition:background .15s,border-color .15s,transform .1s;}',
@@ -258,7 +258,7 @@ function _mf2048InjectCSS() {
     '.mf2048-btn.primary:hover{background:#9c8676;border-color:#9c8676;}',
     '.mf2048-new{margin-left:auto;}',
     // Kapat düğmesi
-    '.mf2048-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:var(--radius-md);cursor:pointer;',
+    '.mf2048-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:var(--radius-sm);cursor:pointer;',
       'display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;',
       'color:var(--text-secondary);transition:background .15s,border-color .15s,color .15s;z-index:2;}',
     '.mf2048-close:hover{background:var(--bg-tertiary);border-color:var(--border-light);color:var(--text-primary);}',

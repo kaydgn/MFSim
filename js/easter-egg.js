@@ -102,7 +102,7 @@ function _mfDhoInjectCSS() {
     '.mf-dho-sub{font-size:var(--fs-body);letter-spacing:2.5px;text-transform:uppercase;color:var(--text-secondary);margin:6px 0 0;}',
     // Yıl rozeti
     '.mf-dho-year{display:inline-flex;align-items:baseline;gap:8px;margin:16px 0 4px;padding:6px 16px;',
-      'border:1px solid var(--border-light);border-radius:var(--radius-pill);background:var(--bg-tertiary);}',
+      'border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg-tertiary);}',
     '.mf-dho-year b{font-size:var(--fs-h2);font-weight:700;color:#d9b968;letter-spacing:1px;}',
     '.mf-dho-year span{font-size:var(--fs-tiny);letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);}',
     // Halat ayıracı
@@ -121,14 +121,14 @@ function _mfDhoInjectCSS() {
     '.mf-dho-dedication{font-size:var(--fs-md);color:var(--text-secondary);}',
     '.mf-dho-brand{font-size:var(--fs-tiny);letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);}',
     // Temaya geç düğmesi — altın hayalet düğme
-    '.mf-dho-cta{align-self:center;margin:2px 0 6px;padding:9px 18px;border-radius:var(--radius-lg);cursor:pointer;',
+    '.mf-dho-cta{align-self:center;margin:2px 0 6px;padding:9px 18px;border-radius:var(--radius-sm);cursor:pointer;',
       'font-size:var(--fs-lg);font-weight:600;letter-spacing:.3px;color:#f2e2b3;',
       'background:linear-gradient(180deg,rgba(217,178,90,.16),rgba(217,178,90,.05));',
       'border:1px solid rgba(217,178,90,.55);transition:background .15s,border-color .15s,transform .1s;}',
     '.mf-dho-cta:hover{background:linear-gradient(180deg,rgba(217,178,90,.30),rgba(217,178,90,.12));border-color:rgba(217,178,90,.9);}',
     '.mf-dho-cta:active{transform:translateY(1px);}',
     // Kapat düğmesi
-    '.mf-dho-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:var(--radius-md);cursor:pointer;',
+    '.mf-dho-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:var(--radius-sm);cursor:pointer;',
       'display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;',
       'color:var(--text-secondary);transition:background .15s,border-color .15s,color .15s;}',
     '.mf-dho-close:hover{background:var(--bg-tertiary);border-color:var(--border-light);color:var(--text-primary);}'
