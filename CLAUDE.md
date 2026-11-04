@@ -121,14 +121,18 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (→ *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ* · *TOPLAYICI*) + `mount-step-okuma.spec.js` +
   `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
 - Takoz 3B'nin düzeni **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-03, tasarım tuvali):
-  başlık → komut çubuğu (Bakış · Görünüş listeleri, süzgeç, Ölçü, Kesit; sağda eylem —
-  SIRADAKİ adım dolu vurgu) → [Ürün ağacı | tuval | Özellikler] → durum çubuğu (imlecin
-  koordinatı). Paneller tuvalin YANINDA, üstünde yüzmez; FEAD'in 3B'si yüzen kartta kalır —
-  ortak `.ve-fw-3b*` kuralları DEĞİŞMEZ, yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız
-  görünüm küpü (kamerayla döner, yüzü bakışı seçer) + yakınlık, eksen, kurulumun kutusu.
+  komut çubuğu (dosyanın adı · Bakış · Görünüş listeleri, süzgeç, Ölçü, Kesit; sağda eylem —
+  SIRADAKİ adım dolu vurgu — ve sağ uçta Kapat) → [Ürün ağacı | tuval | Özellikler] → durum
+  çubuğu (imlecin koordinatı). **TAM EKRAN, başlık bandı YOK** (kullanıcı kararı 2026-11-04:
+  *"popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka yere taşınsın"*;
+  `.ve-mw-3b-tam` — pencerenin perdesinde de sihirbazın içinde de). Paneller tuvalin YANINDA,
+  üstünde yüzmez; FEAD'in 3B'si yüzen kartta kalır — ortak `.ve-fw-3b*` kuralları DEĞİŞMEZ,
+  yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız görünüm küpü (kamerayla döner, yüzü bakışı
+  seçer) + yakınlık, eksen ve SAĞ ALTTA iş kartı (STEP okuması · 3B kurulumu; 2026-11-04,
+  kullanıcı: *"yazılar büyük, tam ortada … sağ alta çekelim"*).
   Birimler tablosunda kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız her
-  gövdenin kütlesi biliniyorsa. Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* +
-  `mount-3b.spec.js` → *ÇALIŞMA MASASI*.
+  gövdenin kütlesi biliniyorsa. Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
+  ve İŞ KARTI* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM*.
 - `js/cp-mount-3b-agac.js` — Takoz 3B'nin **ürün ağacı** (solda, 3DEXPERIENCE gibi) ve
   **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol
   seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`); **arama** bütün ağaçta (açık dallarla
@@ -753,6 +757,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   (tam ekran sabit katman) ve onu kuran her dosya başlığı taşır — elle yazılmış
   liste sekiz pencereyi, kimlik adı (`…-overlay`) Takoz'un tam ekranını
   dışarıda bırakmıştı. Kapı: `pencere-ailesi.test.js` + `pencere-ailesi.spec.js`.
+  **Tek istisna ÇALIŞMA ALANIDIR, pencere değil:** Takoz'un 3D Görüntüleyici'si
+  tam ekran, başlık bandı yok; adı ve Kapat komut çubuğunda (kullanıcı kararı
+  2026-11-04). Kapı: `mount-3b.test.js` → *TAM EKRAN ve İŞ KARTI*.
 - **GÖLGE VE TÜL TEMADAN** (`--shadow-*` · `var(--shadow-color)`): tema
   yüzeyinde sabit siyah gölge ve sabit beyaz yarı saydam zemin YAZILMAZ —
   açık temada leke ya da görünmez çizgi (grafiklerin artı imleci varsayılan

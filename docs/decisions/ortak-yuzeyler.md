@@ -1693,6 +1693,21 @@ aynı bant*) bandı 26 px'e indirmişti; aile o karara göre kuruldu.
 düşüyor) + `pencere-ailesi.spec.js` (düzeltme öncesi yapıda sapmaları pencere
 adıyla sayarak düşüyor).
 
+### İstisna: Takoz 3D Görüntüleyici bir ÇALIŞMA ALANI (2026-11-04)
+
+**Hüküm.** Takoz'un 3D Görüntüleyici'si pencere değil çalışma alanıdır: tam
+ekran (`.ve-mw-3b-tam` — perdenin kenar payı, kabuğun köşesi ve gölgesi yok),
+ailenin başlık bandını taşımaz; dosyanın adı komut çubuğunun solunda, **Kapat**
+sağ ucunda, Esc de kapatır. STEP okuması ve 3B kurulumu tuvalin sağ altındaki
+iş kartında. FEAD'in 3B'si sihirbazın içindeki pencerede kalır.
+
+**Gerekçe.** Kullanıcı: *"3D görüntüleyici popup şeklinde açılır pencere halinde
+geliyor … Tam ekran olsun. Kapatma olayı başka yere taşınsın"* ve *"STEP yükleme
+ekranı … yazılar büyük, tam ortada … sağ alta çekelim"*.
+
+**Kapı.** `mount-3b.test.js` → *TAM EKRAN ve İŞ KARTI* + `mount-3b.spec.js` →
+*DURDUR · DEVAM* (kartın yeri, ekranın tamamı).
+
 ## Etiketler cümle düzeninde (2026-09-26, kullanıcı kararı 9·B)
 
 **Hüküm.** Çok kelimeli bir arayüz etiketinde yalnız ilk kelime (ve "—",

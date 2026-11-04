@@ -679,10 +679,11 @@ describe('STEP\'TEN BAŞLA — dosya 3B\'nin perdesinde, sihirbazsız', () => {
     } finally { ad.forEach((k, i) => { if (eski[i] === undefined) delete global[k]; else global[k] = eski[i]; }); }
   });
 
-  test('okuma kartı: dosyanın adı ve okumanın eylem satırı (Vazgeç); hata durumunda sebebi', () => {
+  test('okuma kartı: işin adı ve okumanın eylem satırı (Vazgeç) — dosyanın adı komut çubuğunda; hata durumunda sebebi', () => {
     const d = document.createElement('div');
     d.innerHTML = _mw3bOkumaHTML({ dosya: 'guc.stp', durum: 'okunuyor', bayt: 100, ilerleme: { evre: 'dosya', oran: 0, bayt: 0, toplam: 100 } });
-    expect(d.querySelector('.ve-mw-3b-okuma-ad b').textContent).toBe('guc.stp');
+    expect(d.querySelector('.ve-mw-3b-is-bas').textContent.trim()).toBe('STEP okuma');
+    expect(_mw3bKimlikHTML({ dosya: 'guc.stp' })).toMatch(/<b title="guc\.stp">guc\.stp<\/b>/);
     const v = d.querySelector('button[data-mw-stp-vazgec]');
     expect(v.id).toBe('ve-mw-3b-okuma-vazgec');
     expect(v.getAttribute('onclick')).toBe('veMntWizStpVazgec()');
@@ -915,6 +916,67 @@ describe('YÜZEY SEÇİMİ — tıklanan üçgenin yüzü, tanımı ve köşeler
     d.innerHTML = veMntWiz3bAracHTML({ kesit: null, suzgec: 'yuz', olcu: true });
     expect(bas()).toEqual(['false', 'true', 'true']);
     expect(d.querySelector('[role="group"][aria-label="Seçim"]').querySelectorAll('button').length).toBe(2);
+  });
+});
+
+// ── TAM EKRAN ve İŞ KARTI (2026-11-04) ───────────────────────────────────────
+// Kullanıcı: "3D görüntüleyici popup şeklinde açılır pencere halinde geliyor …
+// Tam ekran olsun. Kapatma olayı başka yere taşınsın" ve "STEP yükleme ekranı …
+// yazılar büyük, tam ortada … sağ alta çekelim". Önce: perde 12 px payla modal,
+// başlık bandı + ✕; okuma tuvalin ortasında 460 px'lik kart, başlığı 16 px;
+// kurulum kutusu sol üstte. Gerçek tarayıcı: tests/e2e/mount-3b.spec.js →
+// *DURDUR · DEVAM* (kartın yeri, tam ekran) · tests/e2e/mount-cad.spec.js (Kapat).
+describe('TAM EKRAN ve İŞ KARTI — başlık bandı yok, Kapat komut çubuğunda, iş sağ altta', () => {
+  const fs = require('fs'), path = require('path');
+  const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
+  const kaynak = fs.readFileSync(path.join(__dirname, '../../js/cp-mount-3b.js'), 'utf8');
+  const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? null : css.slice(i + 1, css.indexOf('}', i)).replace(/\s+/g, ' '); };
+  const kur = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
+
+  test('tam ekran: perde payı, kabuğun köşesi ve gölgesi yok; pencerenin perdesi sınıfı taşır, sihirbazınkine 3B açıkken yazılır', () => {
+    expect(kural('.ve-settings-overlay.ve-mw-3b-tam')).toMatch(/padding:0/);
+    const m = kural('.ve-mw-3b-tam .ve-fw-modal');
+    expect(m).toMatch(/width:100vw; max-width:none; height:100vh; max-height:none/);
+    expect(m).toMatch(/border:0; border-radius:0; box-shadow:none/);
+    const i = html.indexOf('id="ve-mnt-3b-overlay"'), etiket = html.slice(i, html.indexOf('>', i));
+    expect(etiket).toMatch(/class="ve-settings-overlay ve-mw-3b-tam"/);
+    expect(etiket).not.toMatch(/ve-fw-3b-genis/);                       // FEAD'in sınıfı FEAD'de kalır
+    const o = document.createElement('div'); o.id = 've-mntwiz-overlay'; document.body.appendChild(o);
+    _mw3bTam(true);
+    expect([o.classList.contains('ve-mw-3b-tam'), o.classList.contains('ve-fw-3b-genis')]).toEqual([true, false]);
+    _mw3bTam(false);
+    expect(o.classList.contains('ve-mw-3b-tam')).toBe(false);
+    o.remove();
+  });
+
+  test('başlık bandı yok: pencere ailesinin başlığı ve ✕\'i kurulmaz; dosyanın adı ve Kapat komut çubuğunun iki ucunda', () => {
+    expect(kaynak).not.toMatch(/ve-settings-header|ve-settings-close/);
+    const k = kur(_mw3bKimlikHTML({ dosya: 'tulga_guc_grubu_cok_uzun_bir_ad.stp', sonuc: { parcalar: [1, 2, 3] } }));
+    const b = k.querySelector('#ve-mw-3b-dosya b');
+    expect(b.textContent).toBe('tulga_guc_grubu_cok_uzun_bir_ad.stp');
+    expect(b.getAttribute('title')).toBe(b.textContent);                // kısalan ad tam hâliyle ipucunda
+    expect(k.textContent).not.toMatch(/parça/);                         // parça sayısı ağacın başlığında, tekrar yok
+    const c = kur(_mw3bKapatHTML()).querySelector('button');
+    expect([c.id, c.getAttribute('onclick'), c.textContent.trim()]).toEqual(['ve-mw-3b-kapat', 'veMntWiz3bKapat()', 'Kapat']);
+    // Sıra: kimlik · araçlar · eylem · Kapat; okunurken kimlik · Kapat (Kapat sağa itilir)
+    expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"><\/div>'\s*\+ '<div class="ve-mw-3b-eylem" id="ve-mw-3b-eylem"><\/div>' \+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
+    expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
+    expect(kural('.ve-mw-3b-kimlik + .ve-mw-3b-kapat')).toMatch(/margin-left:auto/);
+  });
+
+  test('iş kartı tuvalin SAĞ ALTINDA, ortada değil; adı gövde puntosunda; okuma ve kurulum AYNI kart', () => {
+    const k = kural('.ve-mw-3b-is');
+    expect(k).toMatch(/position:absolute; right:16px; bottom:16px/);
+    expect(k).not.toMatch(/left:|top:|transform/);
+    expect(kural('.ve-mw-3b-is-bas')).toMatch(/font-size:var\(--fs-body\)/);
+    expect(css).not.toMatch(/\.ve-mw-3b-okuma\{|\.ve-mw-3b-kur\{/);          // ortadaki kart ve sol üstteki kutu emekli
+    expect(kaynak).toMatch(/class="ve-mw-3b-okuma ve-mw-3b-is" id="ve-mw-3b-okuma"/);
+    expect(kaynak).toMatch(/class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden/);
+    // Kartın adı ilerlemenin adı (çubuğun erişilebilir adıyla aynı): 'STEP okuma' · '3B kurulumu'
+    const d = kur(_mw3bOkumaHTML({ dosya: 'guc.stp', durum: 'okunuyor', bayt: 100, ilerleme: { evre: 'dosya', oran: 0.5, bayt: 50, toplam: 100 } }));
+    expect(d.querySelector('.ve-mw-3b-is-bas').textContent.trim()).toBe(d.querySelector('.ve-fp-ilerleme').getAttribute('aria-label'));
+    expect(_mw3bKurVeri({ islenen: 0, toplam: 0, yuz: 0, yuzToplam: 0 }).ad).toBe('3B kurulumu');
   });
 });
 
