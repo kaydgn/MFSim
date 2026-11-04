@@ -193,3 +193,20 @@ bölümün kendi başlığına geçti: her kategori başlıklı bir bölüm taş
 durduğunu söylemezdi). Gergide sekmelerin gerekçesi (kol yönü ile yay
 katsayısı tek sürgüde 600 px arayla) yeniden geçerli; sıra üç sorunun sırası.
 Kapı: `pencere-kabuk.test.js` → *AİLE* · `fead-sekme-durum.spec.js`.
+
+## BAŞLANGIÇ SAYFASINDA ÇALIŞMA MASASI (2026-11-04 → 2026-11-04)
+
+**Hüküm:** FEAD başlangıç sayfası ortak kitin Çalışma masası düzenindeydi
+(kaydgn/MFSim#1234): solda panel (kimlik · kapılar · katalog sayıları ·
+Kılavuz), sağda seçili raporun önizlemesi — kayış yolunun adlı kipi ve gergi
+kolu, kutunun ölçüsünde ve kartın yazı katsayısıyla
+(`veFeadBaslangicOnizleme`) — künye föyü (sistem · kayış · kasnak · yıl ·
+kasnak adları) ve Yükle; karo raporu SEÇİYOR, Yükle ya da çift tık kuruyordu;
+karonun alt satırı kayış koduydu.
+
+**Neden emekli:** kullanıcı kararı (aynı gün, birleştikten sonra: *"Yok, FEAD
+modülü önceki hali gibi kalsın. O daha güzelmiş."*). Takoz'da kaldı (kitin
+`duzen: 'masa'`ı). Ölçüldü (1920×1080): içerik genişliği %55 → %100, en büyük
+kayış yolu çizimi 23.214 → 1.026.236 px², karo resmi 242×120 → 116×64 px,
+örnek yüklemek 1 tık → 2 tık. Sayfa açıkken sayfa rayının gizlenmesi (aynı
+turun ayrı isteği) FEAD'de SÜRÜYOR — kitin iki düzende ortak kuralı.

@@ -100,11 +100,11 @@ olurdu.
      1. adımın dosya seçicisi (AYNI tıklamada) · `veFeadKanvasEkle({bos:true})`
      · `veFeadLoadExample`. Küçük resim çiziciden (`veFeadLayoutSVG`), liste
      sihirbazınki (`veFeadExampleKeys`).
-   • **Düzen Çalışma masası** (ortak kit, 2026-11-04): karo raporu SEÇER, önizlemenin
-     Yükle'si ya da çift tık `veFeadLoadExample`; önizleme adlı kayış yolu, kutunun
-     ölçüsünde ve kartın yazı katsayısıyla (kural 21). Karonun alt satırı KAYIŞ —
-     aynı kodlu raporları (AG0868'in üç kayışı) o ayırır. Kapı: `fead-baslangic.test.js`
-     → *ÇALIŞMA MASASI*.
+   • **Düzen SÜTUN** (kitin `duzen: 'sutun'`; kullanıcı 2026-11-04: *"FEAD modülü
+     önceki hali gibi kalsın. O daha güzelmiş."* — kitin Çalışma masası bir tur
+     denendi ve Takoz'da kaldı: `references/emekli-yonler.md`): ortalanmış sütun,
+     rapor karosu TEK TIKLA `veFeadLoadExample`. Sayfa açıkken sayfa rayı gizli
+     (kitin iki düzende ortak kuralı). Kapı: `fead-baslangic.test.js` → *SÜTUN DÜZENİ*.
    • **Sayfa açıkken FEAD araçları penceresi gizli** (`_feadAracBaslangic`:
      kapsam ve tazeleme tek soru yeri); dönüş düğmesi (z 60) sayfanın üstünde.
    • Kurulum kanvasta boş kart bulursa (Boş çizim masası) onu geometri kartı

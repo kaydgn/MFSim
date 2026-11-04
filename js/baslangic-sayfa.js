@@ -9,12 +9,17 @@
 // css/styles.css). Takoz'a sayfanın bir kopyası kurulsaydı iki görünüm ilk
 // rötuşta sessizce ayrışırdı.
 //
-// DÜZEN ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-04, tasarım tuvali "Takoz
-// başlangıç sayfası" · 1 — *"Çalışma masasını uygula. FEAD'da aynı olsun."*):
-// solda PANEL (kimlik · kapılar · veri · Kılavuz), sağda MASA: seçili karonun
-// ÖNİZLEMESİ (büyük çizim + künye föyü + Yükle) ve karoların grupları.
-// Eski düzen ortalanmış dar bir sütundu: 1920 px ekranda içerik genişliğin
-// %55'inde, yüksekliğin %75'inde kalıyordu.
+// İKİ DÜZEN, TEK ÜRETİCİ — modül sayfanın tanımında beyan eder (`s.duzen`):
+//  • 'masa' (varsayılan) — ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-04, tasarım
+//    tuvali "Takoz başlangıç sayfası" · 1): solda PANEL (kimlik · kapılar · veri ·
+//    Kılavuz), sağda MASA: seçili karonun ÖNİZLEMESİ (büyük çizim + künye föyü +
+//    Yükle) ve karoların grupları. Takoz.
+//  • 'sutun' — ortalanmış sütun: kimlik (Kılavuz sağda) · veri bandı · kapılar ·
+//    karolar; karo TEK TIKLA kurar. FEAD (kullanıcı 2026-11-04: *"FEAD modülü
+//    önceki hali gibi kalsın. O daha güzelmiş."* — Çalışma masası bir tur
+//    denendi).
+// İki düzen aynı yuvaları (kimlik · veri · kapı · karo) aynı sınıflarla basar;
+// ölçü farkı düzenin kapsamında (`.ve-bas-ic--masa` · `.ve-bas-ic--sutun`).
 //
 // KİT YALNIZ SUNUMU KURAR. Hangi modülün sayfası olduğunu, sayfanın NE ZAMAN
 // gerektiğini (görünürlük modelden türer, bayrak tutulmaz), kapıların NE
@@ -29,8 +34,9 @@
 //    çekilir — dördüncü kapı.
 //  • HER AÇILIŞTA YENİDEN BASILIR (tema, adım ve örnek listesi o an neyse);
 //    açıkken yeniden basmak odağı ve kaydırmayı düşürürdü.
-//  • KARO TIKI SEÇER, YÜKLEMEZ: önizleme değişir; model önizlemenin Yükle'siyle
-//    ya da karoya çift tıkla kurulur (modülün eylemi). Seçim GÖRÜNÜM durumudur:
+//  • MASADA KARO TIKI SEÇER, YÜKLEMEZ: önizleme değişir; model önizlemenin
+//    Yükle'siyle ya da karoya çift tıkla kurulur (modülün eylemi). Sütunda karo
+//    doğrudan modülün eylemidir. Seçim GÖRÜNÜM durumudur:
 //    modelde değil, sayfa başına bellekte (`_veBasSecim`) — kaydedilmez, geri-al
 //    yığınına girmez. Seçimde karolar yeniden kurulmaz (odak ve çift tık yerinde
 //    kalır), yalnız önizleme.
@@ -63,8 +69,9 @@ function _veBasIkon(ad){ return (typeof veIkon === 'function') ? veIkon(ad) : ''
 // Kapı: mount-baslangic.test.js → KİMLİK VE VERİ.
 
 // i: { ad, ikon (SVG — modülün componentDefs ikonu), yetenekler:[ad…],
-//      kilavuz (kılavuz kimliği; verilmezse düğme yok) }
-function veBasKimlikHTML(i){
+//      kilavuz (kılavuz kimliği; verilmezse düğme yok) }. `kilavuzIcinde`:
+// Kılavuz başlığın sağında (sütun); masada panelin dibinde (veBasKilavuzHTML).
+function veBasKimlikHTML(i, kilavuzIcinde){
   if(!i || !i.ad) return '';
   var y = (i.yetenekler || []).filter(Boolean);
   return '<header class="ve-bas-kimlik">'
@@ -72,10 +79,12 @@ function veBasKimlikHTML(i){
     + '<div class="ve-bas-kimlik-t"><h1>' + veBasEsc(i.ad) + '</h1>'
     + (y.length ? '<ul class="ve-bas-yetenek" aria-label="Analizler">'
         + y.map(function(a){ return '<li>' + veBasEsc(a) + '</li>'; }).join('') + '</ul>' : '')
-    + '</div></header>';
+    + '</div>'
+    + (kilavuzIcinde ? veBasKilavuzHTML(i) : '')
+    + '</header>';
 }
 
-// Kılavuz panelin dibinde (Çalışma masası); kimliğin ikinci okuması.
+// Kılavuz düğmesi: masada panelin dibinde, sütunda kimliğin sağında.
 function veBasKilavuzHTML(i){
   if(!i || !i.kilavuz) return '';
   return '<button type="button" class="ve-bas-kilavuz" data-ey="kilavuz" data-v="' + veBasEsc(i.kilavuz) + '">'
@@ -83,7 +92,8 @@ function veBasKilavuzHTML(i){
 }
 
 // v: [{ deger, ad, title }] — sayı yazıcısından geçmiş değer, ölçünün adı.
-// Değeri boş satır basılmaz. Panelde satır satır: ad solda, sayı sağda.
+// Değeri boş satır basılmaz. Masada satır satır (ad solda, sayı sağda), sütunda
+// bant (sayı üstte, ad altta) — işaretleme aynı, görünüm düzenin CSS'inde.
 function veBasVeriHTML(v){
   v = (v || []).filter(function(x){ return x && x.ad && x.deger != null && x.deger !== ''; });
   if(!v.length) return '';
@@ -116,13 +126,14 @@ function veBasKapiHTML(k){
     + '</span></button>';
 }
 
-// ── KARO — örnek / rapor seçicisi ──────────────────────────────────────────
+// ── KARO — örnek / rapor ───────────────────────────────────────────────────
 // k: { ey (YÜKLEME eylemi), v, baslik (title, isteğe bağlı), resim (SVG), kod,
-//      yil, onizleme }. Resim yoksa karo yine basılır, künyesiyle
-// ("çizilemedi") — yükleme de yine çalışır. Resim modülün KENDİ çizicisinden
-// gelir; kit çizim yapmaz. `baslik` karoda yazmayan VERİ içindir (gövde
-// adları); komut eki yok. Karonun tıkı SEÇER (`data-ey="sec"`); yükleme
-// eylemi `data-yukle`de durur ve önizlemenin Yükle'si ile çift tık onu çağırır.
+//      yil, onizleme (masa) · sag, alt (sütun) }. Resim yoksa karo yine
+// basılır, künyesiyle ("çizilemedi") — yükleme de yine çalışır. Resim modülün
+// KENDİ çizicisinden gelir; kit çizim yapmaz. `baslik` karoda yazmayan VERİ
+// içindir (gövde adları); komut eki yok.
+// MASA: karonun tıkı SEÇER (`data-ey="sec"`); yükleme eylemi `data-yukle`de
+// durur ve önizlemenin Yükle'si ile çift tık onu çağırır.
 function veBasKaroHTML(k, secili){
   k = k || {};
   return '<button type="button" class="ve-bas-karo" data-ey="sec" data-v="' + veBasEsc(k.v) + '"'
@@ -132,6 +143,22 @@ function veBasKaroHTML(k, secili){
     + '<span class="ve-bas-kunye"><b>' + veBasEsc(k.kod) + '</b>'
     + (k.yil ? '<span>' + veBasEsc(k.yil) + '</span>' : '') + '</span>'
     + '</button>';
+}
+
+// SÜTUN: karo modülün eylemidir (`data-ey` = yükleme eylemi) — tek tık kurar;
+// resmin köşesinde fare altında "Yükle", künye iki satır (kod · yıl · sağ;
+// alt satır).
+function veBasKaroSutunHTML(k){
+  k = k || {};
+  return '<button type="button" class="ve-bas-karo" data-ey="' + veBasEsc(k.ey) + '" data-v="' + veBasEsc(k.v) + '"'
+    + (k.baslik ? ' title="' + veBasEsc(k.baslik) + '"' : '') + '>'
+    + '<span class="ve-bas-resim">' + (k.resim || '<i class="ve-bas-resim-yok">çizilemedi</i>')
+    + '<em>Yükle</em></span>'
+    + '<span class="ve-bas-kunye"><span class="ve-bas-kunye-1"><b>' + veBasEsc(k.kod) + '</b>'
+    + (k.yil ? '<span>' + veBasEsc(k.yil) + '</span>' : '')
+    + (k.sag ? '<i>' + veBasEsc(k.sag) + '</i>' : '') + '</span>'
+    + '<span class="ve-bas-kunye-2">' + veBasEsc(k.alt) + '</span>'
+    + '</span></button>';
 }
 
 // ── ÖNİZLEME — seçili karonun büyük çizimi ve künye föyü ───────────────────
@@ -159,10 +186,13 @@ function veBasOnizlemeHTML(k){
     + '</div></section>';
 }
 
-// ── SAYFA — panel (kimlik · kapılar · veri · Kılavuz) · masa (önizleme · gruplar)
-// s: { kimlik, veriler:[…], kapilar:[kapı…], bolumler:[{ baslik, karolar:[karo…] }] }
+// ── SAYFA ──────────────────────────────────────────────────────────────────
+// s: { duzen ('masa' | 'sutun'), kimlik, veriler:[…], kapilar:[kapı…],
+//      bolumler:[{ baslik, karolar:[karo…] }] }
 // Tek bölüm `bolum` olarak da verilebilir (FEAD). Karosuz bölüm basılmaz.
-// `secV` seçili karonun anahtarı; yoksa ya da listede değilse ilk karo.
+// Masa: panel (kimlik · kapılar · veri · Kılavuz) · masa (önizleme · gruplar);
+// `secV` seçili karonun anahtarı, yoksa ya da listede değilse ilk karo.
+// Sütun: kimlik · veri · kapılar · bölümler; seçim yok.
 // Sayfanın üst satırı, serbest başlığı (`baslik`), alt metni, bölüm notu ve
 // dipnotu YOK (2026-10-16, kullanıcı kararı — metin temizliği aşama 1): beş
 // yuva iki modülde on beş açıklama üretmişti ("Nereden başlayalım?" ·
@@ -182,11 +212,24 @@ function _veBasKaroBul(s, v){
   });
   return bul || ilk;
 }
+function _veBasSutun(s){ return !!(s && s.duzen === 'sutun'); }
+function _veBasSutunHTML(s){
+  var h = '<div class="ve-bas-ic ve-bas-ic--sutun">'
+    + veBasKimlikHTML(s.kimlik, true)
+    + veBasVeriHTML(s.veriler)
+    + '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>';
+  _veBasBolumler(s).forEach(function(b){
+    h += '<div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2></div>'
+      + '<div class="ve-bas-raporlar">' + b.karolar.map(veBasKaroSutunHTML).join('') + '</div>';
+  });
+  return h + '</div>';
+}
 function veBasSayfaHTML(s, secV){
   s = s || {};
+  if(_veBasSutun(s)) return _veBasSutunHTML(s);
   var bolumler = _veBasBolumler(s);
   var sec = _veBasKaroBul(s, secV);
-  var h = '<div class="ve-bas-ic">'
+  var h = '<div class="ve-bas-ic ve-bas-ic--masa">'
     + '<aside class="ve-bas-panel">'
     +   veBasKimlikHTML(s.kimlik)
     +   '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>'
@@ -224,6 +267,7 @@ function _veBasEl(id){
 function _veBasBas(el, o){
   if(typeof o.sayfa === 'function'){
     el._veBasSpec = o.sayfa() || {};
+    if(_veBasSutun(el._veBasSpec)) return veBasSayfaHTML(el._veBasSpec);
     var sec = _veBasKaroBul(el._veBasSpec, _veBasSecim[o.id]);
     if(sec) _veBasSecim[o.id] = sec.v;
     return veBasSayfaHTML(el._veBasSpec, _veBasSecim[o.id]);
@@ -310,9 +354,10 @@ function veBasKur(o){
     var oo = el._veBasO;
     if(oo && typeof oo.eylem === 'function') oo.eylem(ey, v);
   });
-  // Çift tık karonun YÜKLEME eylemini çağırır (ilk tık seçmişti).
+  // Çift tık masadaki karonun YÜKLEME eylemini çağırır (ilk tık seçmişti);
+  // sütunun karosu ilk tıkta kurmuştur (`data-yukle` yok).
   el.addEventListener('dblclick', function(e){
-    var b = e.target && e.target.closest && e.target.closest('.ve-bas-karo');
+    var b = e.target && e.target.closest && e.target.closest('.ve-bas-karo[data-yukle]');
     var oo = el._veBasO;
     if(!b || !oo || typeof oo.eylem !== 'function') return;
     oo.eylem(b.getAttribute('data-yukle'), b.getAttribute('data-v'));
@@ -375,6 +420,7 @@ function veBasSecili(id){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     veBasEsc: veBasEsc, veBasKapiHTML: veBasKapiHTML, veBasKaroHTML: veBasKaroHTML,
+    veBasKaroSutunHTML: veBasKaroSutunHTML,
     veBasKimlikHTML: veBasKimlikHTML, veBasKilavuzHTML: veBasKilavuzHTML, veBasVeriHTML: veBasVeriHTML,
     veBasOnizlemeHTML: veBasOnizlemeHTML, veBasSayfaHTML: veBasSayfaHTML,
     veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik, veBasSecili: veBasSecili,

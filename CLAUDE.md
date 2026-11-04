@@ -51,11 +51,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
   söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi); sayı
-  kaynağından ölçülür, analiz adı programdaki adıdır. Düzen **ÇALIŞMA MASASI**
-  (kullanıcı seçimi 2026-11-04): solda panel, sağda seçili karonun önizlemesi (modülün
-  çizicisi, kutunun ölçüsünde) ve karolar; karo SEÇER, Yükle ya da çift tık kurar;
-  sayfa açıkken sayfa rayı (Topoloji · Sonuçlar) gizli. Kapı: `mount-baslangic.test.js`
-  → *ORTAK KİT* · *KİMLİK VE VERİ* · *ÇALIŞMA MASASI* · *RAY*.
+  kaynağından ölçülür, analiz adı programdaki adıdır. Düzeni modül beyan eder
+  (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-04: solda panel, sağda
+  seçili karonun önizlemesi — modülün çizicisi, kutunun ölçüsünde; karo SEÇER, Yükle ya
+  da çift tık kurar), FEAD **SÜTUN** (kullanıcı 2026-11-04: *"FEAD modülü önceki hali
+  gibi kalsın"* — ortalanmış sütun, karo tek tıkla kurar). İki düzen aynı yuvaları aynı
+  sınıflarla basar; ölçü farkı düzenin CSS kapsamında (`.ve-bas-ic--masa|--sutun`).
+  Sayfa açıkken sayfa rayı (Topoloji · Sonuçlar) gizli — iki düzende. Kapı:
+  `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE VERİ* · *ÇALIŞMA MASASI* · *RAY*
+  + `fead-baslangic.test.js` → *SÜTUN DÜZENİ*.
 - `js/pencere-kabuk.js` — **bileşen penceresinin kabuğu, ortak kit** (`vePencereKabuk`):
   FEAD ile Takoz pencereleri AYNI üreticiden basar (kullanıcı: *"tüm programda tek
   tip bir kozmetik yapı"*). Kural aşağıda (ortak yüzeyler); kapı `pencere-kabuk.test.js`.
