@@ -80,12 +80,21 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
         VE_FEAD_TENSIONER_DB.length, VE_FEAD_ENGINE_DB.length, VE_FEAD_ACC_DB.length,
         VE_FEAD_DUTY_DB.length].map((x) => veSayi(x, 0)),
       kunye: [...document.querySelectorAll('#ve-fead-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
-      kilavuz: document.querySelector('#ve-fead-baslangic .ve-bas-kilavuz')?.getAttribute('data-v') };
+      kilavuz: document.querySelector('#ve-fead-baslangic .ve-bas-kilavuz')?.getAttribute('data-v'),
+      // ÇALIŞMA MASASI (2026-11-04): ray yok; önizleme seçili raporun kayış yolu, adlı
+      ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width,
+      oniz: (() => { const k = document.querySelector('#ve-fead-baslangic .ve-bas-oniz-resim');
+        return { kayis: !!k.querySelector('[data-ve="belt"]'), ad: k.textContent,
+          v: k.getAttribute('data-v'), imza: k.getAttribute('data-imza'), w: k.clientWidth, h: k.clientHeight }; })() };
   });
   expect(o.baslik).toBe('FEAD');
   expect(o.veri).toEqual(o.canli);
   expect(o.kunye).toEqual([5, 5, 2]);
   expect(o.kilavuz).toBe('fead');
+  expect(o.ray).toBe(0);
+  expect(o.oniz.kayis).toBe(true);
+  expect(o.oniz.imza).toBe(o.oniz.v + '|' + o.oniz.w + 'x' + o.oniz.h);   // kutunun ölçüsünde
+  expect(o.oniz.ad).toMatch(/Gergi/);                                        // kasnak adları çizimde
   // Sayfa tuvalin TAMAMINI örter (ölçü kabınki).
   expect(Math.round(o.sayfa.w)).toBe(Math.round(o.kap.w));
   expect(Math.round(o.sayfa.h)).toBe(Math.round(o.kap.h));
@@ -108,7 +117,9 @@ test('TEKERLEK sayfayı kaydırır, kadrajı oynatmaz', async ({ page }) => {
     tasma: document.getElementById('ve-fead-baslangic').scrollHeight
          - document.getElementById('ve-fead-baslangic').clientHeight }));
   expect(once.tasma).toBeGreaterThan(0);     // 600'de sayfa kaydırılabilir
-  const k = await page.locator('#ve-fead-baslangic .ve-bas-karo').first().boundingBox();
+  // Fare önizlemenin üstünde: Çalışma masasında karolar sayfanın dibinde,
+  // 600 px'lik pencerede ilk karonun ortası durum çubuğunun altına düşüyor.
+  const k = await page.locator('#ve-fead-baslangic .ve-bas-oniz-resim').boundingBox();
   await page.mouse.move(k.x + k.width / 2, k.y + k.height / 2);
   await page.mouse.wheel(0, 400);
   await page.waitForTimeout(300);
@@ -124,12 +135,25 @@ test('RAPOR KAROSU modeli kurar → sayfa çekilir, pencere gelir; Ctrl+Z → sa
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);
   await feadGir(page);
+  // Karo SEÇER (model kurulmaz), Yükle kurar (Çalışma masası, 2026-11-04).
+  await page.locator('#ve-fead-baslangic .ve-bas-karo[data-v="AG00879_GATES_2023"]').click();
+  await expect(page.locator('#ve-fead-baslangic .ve-bas-oniz h2')).toHaveText('AG00879');
+  expect(await say(page)).toEqual({ kasnak: 0, kart: 0 });
   await page.locator('#ve-fead-baslangic .ve-bas-karo[data-v="AG00976_GATES_2025"]').click();
+  await page.locator('#ve-fead-baslangic .ve-bas-yukle').click();
   await page.waitForFunction(() =>
     window.nodes.filter((n) => (componentDefs[n.type] || {}).isFeadPulley).length === 6, null, { timeout: 20000 });
   await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
   await expect(page.locator('#ve-fead-araclar')).toBeVisible();
   expect(await say(page)).toEqual({ kasnak: 6, kart: 2 });
+  // Ray geri geldi; kadraj raylı tuvalde: iki kart da tuvalin içinde
+  const k = await page.evaluate(() => {
+    const w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
+    const dis = [...document.querySelectorAll('#ve-canvas .ve-node')].filter((e) => e.offsetWidth > 0).map((e) => e.getBoundingClientRect())
+      .filter((b) => b.left < w.left - 1 || b.right > w.right + 1 || b.top < w.top - 1 || b.bottom > w.bottom + 1).length;
+    return { ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width, dis };
+  });
+  expect(k).toEqual({ ray: 64, dis: 0 });
   // Kurulum TEK geri-al adımı: bir Ctrl+Z açılışa döner ve sayfa geri gelir.
   await page.locator('#ve-canvas-wrapper').click({ position: { x: 900, y: 700 } });
   await page.keyboard.press('Control+z');

@@ -114,25 +114,33 @@ describe('İÇERİK — kapılar ve örnekler', () => {
   });
   test('örnek karoları kayıt defterinin KENDİSİ; hiçbiri "çizilemedi" değil', () => {
     const liste = core.getMountExampleList();
-    const karo = html.match(/class="ve-bas-karo" data-ey="ornek" data-v="[^"]+"/g) || [];
+    const karo = html.match(/class="ve-bas-karo" data-ey="sec" data-v="[^"]+" data-yukle="ornek"/g) || [];
     const sira = liste.filter((e) => !e.kurgu).concat(liste.filter((e) => e.kurgu)).map((e) => e.id);
     expect(karo.map((k) => k.match(/data-v="([^"]+)"/)[1])).toEqual(sira);
     expect(html).not.toContain('ve-bas-resim-yok');
   });
   // Kurgu doğrulama modelleri gerçek araçlarla karışmaz: ayrı bölüm, başlığı ve
   // her karonun künyesi "kurgu" der (kullanıcı isteği 2026-10-16).
-  test('iki bölüm: gerçek araçlar · "Doğrulama örnekleri — kurgu"; kurgu karosu işaretli', () => {
+  // Önizleme seçili karonundur; kurgu örneğin önizlemesi "kurgu" der, gerçek
+  // aracınki demez (karo grubunun başlığından ayrıca).
+  test('iki bölüm: gerçek araçlar · "Doğrulama örnekleri — kurgu"; kurgunun önizlemesi işaretli', () => {
     const liste = core.getMountExampleList();
     const bas = html.match(/<div class="ve-bas-baslik"><h2>[^<]+<\/h2>/g).map((b) => b.replace(/.*<h2>|<\/h2>/g, ''));
     expect(bas).toEqual(['Örnek modellerden başla', 'Doğrulama örnekleri — kurgu']);
-    const [gercek, kurgu] = html.split('Doğrulama örnekleri — kurgu');
+    const gruplar = html.slice(html.indexOf('class="ve-bas-gruplar"'));
+    const [gercek, kurgu] = gruplar.split('Doğrulama örnekleri — kurgu');
     liste.forEach((e) => {
       const yer = e.kurgu ? kurgu : gercek, oteki = e.kurgu ? gercek : kurgu;
       expect(yer).toContain('data-v="' + e.id + '"');
       expect(oteki).not.toContain('data-v="' + e.id + '"');
     });
-    expect((kurgu.match(/<i>kurgu<\/i>/g) || []).length).toBe(liste.filter((e) => e.kurgu).length);
-    expect(gercek).not.toContain('<i>kurgu</i>');
+    const K = require('../../js/baslangic-sayfa.js');
+    const s = BS.veMntBaslangicSayfa();
+    liste.forEach((e) => {
+      const oniz = K.veBasOnizlemeHTML(s.bolumler[e.kurgu ? 1 : 0].karolar.find((k) => k.v === e.id));
+      expect([e.id, oniz.includes('<i>kurgu</i>')]).toEqual([e.id, !!e.kurgu]);
+    });
+    expect(gruplar).not.toContain('<i>kurgu</i>');
   });
 });
 
@@ -325,6 +333,115 @@ describe('DOM — kapsam, tazeleme, olaylar', () => {
       expect(f).toHaveBeenCalledTimes(1);
     });
     expect(kapDinler).not.toHaveBeenCalled();
+  });
+});
+
+// ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-04, tasarım tuvali "Takoz
+// başlangıç sayfası" · 1): solda panel, sağda seçili karonun önizlemesi ve
+// karolar. Karo SEÇER (görünüm durumu, modelde değil), Yükle ve çift tık
+// KURAR; önizlemenin çizimi kutunun ölçüsünde, Görünümler'in yazılı kipi.
+describe('ÇALIŞMA MASASI — panel · önizleme · karolar', () => {
+  const el = () => document.getElementById(BS.VE_MNT_BAS_ID);
+  const K = require('../../js/baslangic-sayfa.js');
+  beforeEach(() => K._veBasSifirla());
+  test('panel: kimlik · kapılar · veri · Kılavuz; masa: önizleme · iki grup', () => {
+    const d = document.createElement('div');
+    d.innerHTML = BS.veMntBaslangicHTML();
+    const panel = d.querySelector('.ve-bas-ic > aside.ve-bas-panel');
+    const masa = d.querySelector('.ve-bas-ic > .ve-bas-masa');
+    expect([...panel.children].map((c) => c.className))
+      .toEqual(['ve-bas-kimlik', 've-bas-kapilar', 've-bas-veri']);       // Kılavuz yüklü değil
+    expect([...masa.children].map((c) => c.className)).toEqual(['ve-bas-oniz', 've-bas-gruplar']);
+    expect(masa.querySelectorAll('.ve-bas-grup').length).toBe(2);
+  });
+  test('önizleme ilk karonun künyesi: araç · kütle · takoz · gövdeler; Yükle onun eylemi', () => {
+    const o = BS.veMntBaslangicOrnekler().find((x) => !x.kurgu);
+    const d = document.createElement('div');
+    d.innerHTML = BS.veMntBaslangicHTML();
+    const p = d.querySelector('.ve-bas-oniz');
+    expect(p.getAttribute('data-v')).toBe(o.key);
+    expect(p.querySelector('h2').textContent).toBe(o.arac);
+    expect([...p.querySelectorAll('dt')].map((x) => x.textContent)).toEqual(['Kütle', 'Takoz']);
+    expect([...p.querySelectorAll('dd')].map((x) => x.textContent)).toEqual([veSayi(o.kutle, 0) + ' kg', veSayi(o.takoz, 0)]);
+    expect([...p.querySelectorAll('.ve-bas-oniz-liste li')].map((x) => x.textContent)).toEqual(o.govdeAdlari);
+    const y = p.querySelector('.ve-bas-yukle');
+    expect([y.getAttribute('data-ey'), y.getAttribute('data-v')]).toEqual(['ornek', o.key]);
+    // karolar araç ve kütle taşır; ilk karo basılı, ötekiler değil
+    const karo = [...d.querySelectorAll('.ve-bas-karo')];
+    expect(karo.map((b) => b.getAttribute('aria-pressed'))).toEqual(karo.map((b, i) => (i === 0 ? 'true' : 'false')));
+    expect(karo[0].querySelector('.ve-bas-kunye b').textContent).toBe(o.arac);
+  });
+  test('karo tıkı SEÇER: önizleme değişir, eylem ÇAĞRILMAZ; Yükle ve çift tık seçileni kurar', () => {
+    BS.veMntBaslangicKapsam('mount-analysis');
+    casus('veMntOrnekYukle', () => true, (f) => {
+      const karo = el().querySelector('.ve-bas-karo[data-v="tulga"]');
+      karo.click();
+      expect(f).not.toHaveBeenCalled();
+      expect(el().querySelector('.ve-bas-oniz').getAttribute('data-v')).toBe('tulga');
+      expect(el().querySelector('.ve-bas-oniz h2').textContent).toBe('TULGA');
+      expect(karo.getAttribute('aria-pressed')).toBe('true');
+      expect(el().querySelectorAll('.ve-bas-karo[aria-pressed="true"]').length).toBe(1);
+      // karolar yeniden KURULMADI (odak ve çift tık yerinde kalsın)
+      expect(el().querySelector('.ve-bas-karo[data-v="tulga"]')).toBe(karo);
+      el().querySelector('.ve-bas-yukle').click();
+      expect(f).toHaveBeenCalledWith('tulga');
+      el().querySelector('.ve-bas-karo[data-v="kutu"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(f).toHaveBeenLastCalledWith('kutu');
+    });
+  });
+  test('seçim GÖRÜNÜM durumu: modele yazılmaz, sayfa yeniden açılınca yerinde', () => {
+    BS.veMntBaslangicKapsam('mount-analysis');
+    el().querySelector('.ve-bas-karo[data-v="asfat"]').click();
+    expect(global.nodes).toEqual([]);
+    expect(stubs.saveState).not.toHaveBeenCalled();
+    global.nodes = [dugum('mnt-motor')];
+    BS.veMntBaslangicTazele();
+    global.nodes = [];
+    BS.veMntBaslangicTazele();
+    expect(el().querySelector('.ve-bas-oniz').getAttribute('data-v')).toBe('asfat');
+    expect(el().querySelector('.ve-bas-karo[aria-pressed="true"]').getAttribute('data-v')).toBe('asfat');
+  });
+  test('önizlemenin çizimi Görünümler\'in yazılı kipi, kutunun ölçüsünde (ölçülemezse nominal)', () => {
+    BS.veMntBaslangicKapsam('mount-analysis');
+    const kutu = el().querySelector('.ve-bas-oniz-resim');
+    const { w, h } = K.VE_BAS_ONIZ_NOMINAL;
+    expect(kutu.getAttribute('data-imza')).toBe('siper|' + w + 'x' + h);
+    const ayr = document.createElement('div');
+    ayr.innerHTML = BS.veMntBaslangicOnizleme('siper', w, h);
+    expect(kutu.innerHTML).toBe(ayr.innerHTML);
+    const svg = kutu.querySelector('svg.ve-mnt2d-akso');
+    expect(svg.getAttribute('viewBox')).toBe('0 0 ' + w + ' ' + h);
+    // yazılı: gövde adları çizimde; karonun sade çiziminde yazı yok
+    const ex = core.getMountExample('siper');
+    expect(svg.textContent).toContain(ex.model.components[0].name);
+    expect(BS.veMntBaslangicResim('siper')).not.toContain('<text');
+    expect(BS.veMntBaslangicOnizleme('siper', w, h))
+      .toBe(AK.ciz(cp.veMntAksoOrnekModel(ex.model), { W: w, H: h, etiket: 'ad', ucluyok: true, isaret: 1.5,
+        fs: { k: 10, b: 11 }, aria: ex.vehicle }).svg);
+  });
+});
+
+// RAY (kullanıcı 2026-11-04: "pencere ilk açıldığında sol tarafta 'topoloji
+// ve sonuçlar' sütunu görünmesin. Gerek yok"): sayfa açıkken kabın sınıfı,
+// kapanınca kalkar; CSS rayı yalnız topoloji sayfasında gizler.
+describe('RAY — sayfa açıkken Topoloji · Sonuçlar rayı gizli', () => {
+  test('sınıf sayfanın görünürlüğünü izler', () => {
+    document.body.innerHTML = '<div id="sayfa2-content"><nav class="ve-nav-rail"></nav>'
+      + '<div id="ve-canvas-wrapper"><div id="ve-canvas"></div></div></div>';
+    const kab = document.getElementById('sayfa2-content');
+    BS.veMntBaslangicKapsam('mount-analysis');
+    expect(kab.classList.contains('ve-bas-acik')).toBe(true);
+    global.nodes = [dugum('mnt-solver')];
+    BS.veMntBaslangicTazele();
+    expect(kab.classList.contains('ve-bas-acik')).toBe(false);
+    global.nodes = [];
+    BS.veMntBaslangicTazele();
+    expect(kab.classList.contains('ve-bas-acik')).toBe(true);
+    BS.veMntBaslangicKapsam('top');                       // ana topolojiye dönüş
+    expect(kab.classList.contains('ve-bas-acik')).toBe(false);
+  });
+  test('CSS: ray yalnız topoloji sayfasında gizli (öteki sayfada dönüş yolu)', () => {
+    expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-nav-rail\{ display:none; \}/);
   });
 });
 

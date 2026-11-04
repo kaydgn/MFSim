@@ -128,7 +128,7 @@ test('KAYIT: kaynak → kaydet → sayfa yeniden → föyde kaynak → aynı dos
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"]');
+  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"]');   // tık seçer, çift tık kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   const pencereAc = async (p) => {
     await p.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
@@ -199,7 +199,7 @@ test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağa�
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-ey="ornek"]');
+  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"]');   // tık seçer, çift tık kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   const pencereAc = async (p) => {
     await p.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });

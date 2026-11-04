@@ -394,6 +394,35 @@ describe('veBoundaryBox — ad çerçeveye girer (ölçüm işlevi geçilince)',
   });
 });
 
+// PALETİN AÇMA SEKMESİ (palet daraltılmışken tuvalin sol kenarında, z 150)
+// çıkış düğmesinin (z 60) üstüne biniyordu: boş alt topolojide düğme (10, 10)'da,
+// sekme 0–31 px'te — düğmenin 26 px'inin 21'i örtülü, alt topolojiden çıkmanın
+// tek yolu. `view.sol` sekmenin taştığı genişlik; verilmezse davranış eski.
+describe('veBoundaryChipPos — paletin açma sekmesi düğmeyi ÖRTMEZ (view.sol)', () => {
+  const CHIP = { w: 26, h: 26 };
+  test('boş topoloji: düğme sekmenin sağında; sol verilmezse eski yer', () => {
+    expect(cs.veBoundaryChipPos(null, 1, { x: 0, y: 0 }, CHIP, { w: 1200, h: 800 })).toEqual({ left: 10, top: 10 });
+    expect(cs.veBoundaryChipPos(null, 1, { x: 0, y: 0 }, CHIP, { w: 1200, h: 800, sol: 31 })).toEqual({ left: 41, top: 10 });
+    expect(cs.veBoundaryChipPos(null, 1, { x: 0, y: 0 }, CHIP, { w: 1200, h: 800, sol: 0 })).toEqual({ left: 10, top: 10 });
+  });
+  test('çerçeve sola kaçınca kıskaç sekmenin sağında; içerideyken çerçeveye tutunur', () => {
+    const BOX = { x: 2900, y: 2900, w: 400, h: 200 };
+    const sol = cs.veBoundaryChipPos(BOX, 1, { x: -500, y: 400 }, CHIP, { w: 1200, h: 800, sol: 31 });
+    expect(sol.left).toBe(41);
+    const ic = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: 400 }, CHIP, { w: 1200, h: 800, sol: 31 });
+    expect(ic.left).toBeCloseTo((2900 - cs.VE_CANVAS_CENTER) + 600 + cs.VE_CHIP_INSET_IN, 9);
+  });
+  test('ölçü sekmenin yerleşiminden: gizliyken 0, görünürken sol kenardan genişliği', () => {
+    document.body.innerHTML = '<div id="m" style="position:relative"><button id="ve-sidebar-reveal"></button>'
+      + '<div id="ve-canvas-wrapper"></div></div>';
+    const w = document.getElementById('ve-canvas-wrapper'), rv = document.getElementById('ve-sidebar-reveal');
+    expect(cs.veChipSolOrtu(w)).toBe(0);                      // jsdom: offsetWidth 0 = gizli
+    Object.defineProperty(rv, 'offsetWidth', { configurable: true, value: 31 });
+    Object.defineProperty(rv, 'offsetLeft', { configurable: true, value: 0 });
+    expect(cs.veChipSolOrtu(w)).toBe(31);
+  });
+});
+
 describe('veBoundaryChipPos — çıkış düğmesi çerçevenin İÇİNE, SOL ÜST köşeye tutunur', () => {
   const BOX = { x: 2900, y: 2900, w: 400, h: 200 };   // yerel: sol üst (2900, 2900)
   const CHIP = { w: 26, h: 26 };                      // 26×26 kare düğme

@@ -6119,6 +6119,9 @@ function veToggleSidebar(forceState) {
   if(reveal) {
     if(collapsed) {
       reveal.style.display = 'flex';
+      // Sekme kabın sol kenarını örter: alt topolojinin dönüş düğmesi onun
+      // sağına oturur (js/canvas-space.js → veChipSolOrtu).
+      if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
       // iki frame bekle → transform/opacity geçişi tetiklensin
       requestAnimationFrame(function() {
         requestAnimationFrame(function() { reveal.classList.add('visible'); });
@@ -6127,6 +6130,7 @@ function veToggleSidebar(forceState) {
       reveal.classList.remove('visible');
       setTimeout(function() {
         if(!sidebar.classList.contains('ve-sb-collapsed')) reveal.style.display = 'none';
+        if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
       }, 260);
     }
   }

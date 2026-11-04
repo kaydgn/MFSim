@@ -336,6 +336,10 @@ function veBoundaryChipPos(box, zoom, offset, chip, view) {
   var ch = (chip && isFinite(chip.h)) ? chip.h : 0;
   var vw = (view && isFinite(view.w)) ? view.w : 0;
   var vh = (view && isFinite(view.h)) ? view.h : 0;
+  // Görünümün sol kenarını örten yüzey (paletin açma sekmesi, `view.sol` px):
+  // düğme onun sağında durur — sekme z 150, düğme z 60; örtülen düğme alt
+  // topolojiden çıkmanın tek yoluydu. Verilmezse davranış birebir eski.
+  var minL = VE_CHIP_INSET + ((view && isFinite(view.sol) && view.sol > 0) ? view.sol : 0);
 
   var left, top;
   if(box) {
@@ -343,13 +347,13 @@ function veBoundaryChipPos(box, zoom, offset, chip, view) {
     top = (box.y - VE_CANVAS_CENTER) * z + oy + VE_CHIP_INSET_IN;
   } else {
     // Çerçeve yok (boş alt-topoloji) → görünümün sol üstü.
-    left = VE_CHIP_INSET;
+    left = minL;
     top = VE_CHIP_INSET;
   }
 
   if(vw > 0 && vh > 0) {
     var hiL = vw - cw - VE_CHIP_INSET;
-    left = (hiL < VE_CHIP_INSET) ? VE_CHIP_INSET : Math.min(hiL, Math.max(VE_CHIP_INSET, left));
+    left = (hiL < minL) ? minL : Math.min(hiL, Math.max(minL, left));
     var hiT = vh - ch - VE_CHIP_INSET;
     top = (hiT < VE_CHIP_INSET) ? VE_CHIP_INSET : Math.min(hiT, Math.max(VE_CHIP_INSET, top));
   }
@@ -358,12 +362,25 @@ function veBoundaryChipPos(box, zoom, offset, chip, view) {
 
 // Çipi çerçeveye tuttur. Kamera değişince (updateCanvasTransform) ve çerçeve
 // yeniden hesaplanınca (veUpdateBoundary) çağrılır. Çip yoksa no-op.
+// Paletin açma sekmesinin (#ve-sidebar-reveal, palet daraltılmışken tuvalin
+// sol kenarında) görünümün içine taştığı genişlik, px. Sekme yalnız palet
+// KAPALIYKEN görünür ve o hâlde kap sekmenin kabının (.ve-main) sol kenarından
+// başlar: ölçü sekmenin kendi yerleşiminden (offset* — geçiş dönüşümü ve
+// paletin kapanma geçişi sayılmaz; anlık kap konumuyla ölçmek geçişin
+// ortasında 0 veriyordu).
+function veChipSolOrtu(wrap) {
+  if(typeof document === 'undefined' || !wrap) return 0;
+  var rv = document.getElementById('ve-sidebar-reveal');
+  if(!rv || !(rv.offsetWidth > 0)) return 0;
+  return Math.max(0, Math.round((rv.offsetLeft || 0) + rv.offsetWidth));
+}
+
 function veAnchorBoundaryChip() {
   if(typeof document === 'undefined') return;
   var chips = document.querySelectorAll('.ve-arac-breadcrumb');
   if(!chips || !chips.length) return;
   var wrap = document.getElementById('ve-canvas-wrapper');
-  var view = wrap ? { w: wrap.clientWidth, h: wrap.clientHeight } : { w: 0, h: 0 };
+  var view = wrap ? { w: wrap.clientWidth, h: wrap.clientHeight, sol: veChipSolOrtu(wrap) } : { w: 0, h: 0 };
   var pad = (typeof veBoundaryPadding === 'number') ? veBoundaryPadding : VE_BOUNDARY_PAD;
   var box = (typeof nodes !== 'undefined') ? veBoundaryBox(nodes, pad, veMeasureNodeLabel) : null;
   var zoom = (typeof canvasZoom !== 'undefined') ? canvasZoom : 1;
@@ -438,7 +455,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veForgetLabelSizes: veForgetLabelSizes,
     veBoundaryBox: veBoundaryBox,
     veBoundaryChipPos: veBoundaryChipPos,
-    veAnchorBoundaryChip: veAnchorBoundaryChip,
+    veAnchorBoundaryChip: veAnchorBoundaryChip, veChipSolOrtu: veChipSolOrtu,
     veCenterTopoState: veCenterTopoState
   };
 }
