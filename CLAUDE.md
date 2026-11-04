@@ -304,6 +304,11 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `tools/kullanim.js` + `tools/kullanim-tahta.{js,html}` — **kullanım masası**: programı kullanıcının
   koşulunda (tek dosya, çevrimdışı, insan açılışı) gerçek girdiyle kullanan kalıcı tarayıcı ve
   bulguların **karar tahtası** (Artifact `db`). Çıktı `.kullanim/` (git'e dâhil değil). Protokol: skill `kullanim`.
+- `tools/canli-not.{js,html}` + `tools/canli-not-kopru.js` + `tools/canli-not-cekirdek.js` — **Canlı
+  Not**: program claude.ai'da açılır (Artifact; iframe'de karesiz tek dosya, 11,4 MB), kullanıcı
+  üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular. Protokol:
+  skill `canli-not`. Çıktı `.canli-not/` (git'e dâhil değil); `build.js`'in iki ortam değişkeni
+  (`MFSIM_BUILD_OUT` · `MFSIM_KARSILAMA=yok`) bu yayın için. Kapı: `canli-not.test.js`.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
   süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
@@ -407,6 +412,7 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
 | Kullanım masası / geri bildirim | `kullanim` | Kullanıcı programı "kullan, geri bildirim ver" dediğinde, ya da `tools/kullanim*`, `tests/unit/kullanim-masa.test.js`'e dokunmadan **ÖNCE** |
+| Canlı Not (çizerek değişiklik isteği) | `canli-not` | Canlı Not sayfasından gelen "Not N · …" yorumuyla uyanınca, kullanıcı "notları uygula" deyince ya da `tools/canli-not*`, `tests/unit/canli-not.test.js`'e dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan

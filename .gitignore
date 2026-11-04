@@ -34,3 +34,7 @@ metin-envanteri.json
 # Kullanım masası (tools/kullanim.js): tarayıcı profili, adım görüntüleri,
 # indirilenler, günlük ve bulgular — üretilir, commit edilmez.
 .kullanim/
+
+# Canlı Not (tools/canli-not.js): yayın klasörü (karesiz tek dosya + sayfa),
+# not dökümleri ve yeniden çizilen ekranlar — üretilir, commit edilmez.
+.canli-not/

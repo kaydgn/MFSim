@@ -15,7 +15,15 @@ var SHIELD = require('./build-shield.js');
 
 var ROOT = __dirname;
 var INDEX = path.join(ROOT, 'index.html');
-var OUTPUT = path.join(ROOT, 'MFSim_Code.html');
+// MFSIM_BUILD_OUT: çıktının yolu. Türev yayınlar (Canlı Not, tools/canli-not.js)
+// depodaki MFSim_Code.html'i EZMESİN — kullanıcıya giden dosya o.
+var OUTPUT = process.env.MFSIM_BUILD_OUT
+  ? path.resolve(process.env.MFSIM_BUILD_OUT)
+  : path.join(ROOT, 'MFSim_Code.html');
+// MFSIM_KARSILAMA=yok: karşılama kareleri gömülmez (17,7 MB). Canlı Not yayını
+// claude.ai'ın 16 MB dosya sınırına ancak böyle sığıyor; kare yoksa açılış
+// kâğıt zeminde açılır (loader-splash.test.js → kare yoksa).
+var KARSILAMA_GOM = process.env.MFSIM_KARSILAMA !== 'yok';
 
 // ── 0) Syntax kontrolü: tüm JS dosyalarını derle, hata varsa dur
 var jsDir = path.join(ROOT, 'js');
@@ -201,7 +209,7 @@ if (fs.existsSync(programlarPath)) {
 // Boyut karşılığı kabul edildi — dosya gzip'lenerek gönderiliyor (CLAUDE.md).
 var karsilamaDir = path.join(ROOT, 'assets', 'karsilama');
 var karsilama = {};
-if (fs.existsSync(karsilamaDir)) {
+if (KARSILAMA_GOM && fs.existsSync(karsilamaDir)) {
   fs.readdirSync(karsilamaDir).filter(function(f) { return f.endsWith('.webp'); })
     .sort().forEach(function(f) {
       karsilama[f] = 'data:image/webp;base64,' +
@@ -290,4 +298,6 @@ fs.writeFileSync(OUTPUT, html, 'utf8');
 
 var stats = fs.statSync(OUTPUT);
 var lines = html.split('\n').length;
-console.log('\n✓ MFSim_Code.html oluşturuldu (' + lines + ' satır, ' + (stats.size / 1024).toFixed(0) + ' KB)');
+var CIKTI_AD = path.relative(ROOT, OUTPUT);
+if (CIKTI_AD.indexOf('..') === 0) CIKTI_AD = OUTPUT;
+console.log('\n✓ ' + CIKTI_AD + ' oluşturuldu (' + lines + ' satır, ' + (stats.size / 1024).toFixed(0) + ' KB)');
