@@ -122,6 +122,18 @@ test('DURDUR · DEVAM: durunca üretim durur ve çizilen kalır; Devam bitirir',
   const d1 = await durum(page);
   expect(d1.durum).toBe('durdu');
   await expect(page.locator('#ve-mw-3b-kur')).toContainText('Durduruldu');
+  // TAM EKRAN ve İŞ KARTI (2026-11-04): kart tuvalin sağ altında, adı işin adı;
+  // görüntüleyici ekranın tamamı, başlık bandı yok
+  const yer = await page.evaluate(() => {
+    const k = document.getElementById('ve-mw-3b-kur').getBoundingClientRect();
+    const t = document.getElementById('ve-mw-3b-tuval').getBoundingClientRect();
+    const m = document.querySelector('#ve-mnt-3b-overlay .ve-fw-modal').getBoundingClientRect();
+    return { sag: Math.round(t.right - k.right), alt: Math.round(t.bottom - k.bottom),
+      ad: document.querySelector('#ve-mw-3b-kur .ve-mw-3b-is-bas').textContent.trim(),
+      tam: [m.left, m.top, m.width, m.height].map(Math.round).join(' '), ekran: '0 0 ' + innerWidth + ' ' + innerHeight,
+      baslik: !!document.querySelector('#ve-mnt-3b .ve-settings-header'), kapat: !!document.querySelector('#ve-mnt-3b .ve-mw-3b-komut #ve-mw-3b-kapat') };
+  });
+  expect(yer).toEqual({ sag: 16, alt: 16, ad: '3B kurulumu', tam: yer.ekran, ekran: '0 0 1440 900', baslik: false, kapat: true });
   await page.waitForTimeout(800);
   const d2 = await durum(page);
   expect(d2.islenen).toBeLessThanOrEqual(d1.islenen + 1);   // yarım kalan parça biter, yenisine başlanmaz
