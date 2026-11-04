@@ -44,3 +44,4 @@ tarih,sha,ham_bayt,gzip_bayt,assets_vendor_bayt,not
 2026-11-04,0113f86,30470554,17770862,22880125,+859 bayt: Calisma masasi temasi (#1230: stiller +952 B · simge -37 B · JS -23 B; renkler ve yorumlar); kareler ayni; 30 MiB sinirina 0.941 MiB kaldi
 2026-11-04,427f484,30471200,17770892,22880125,+646 bayt: keskin kose ve sade golge (#1232: stiller +905 B · minimap -307 B · DHO -2 B; kunye ve degisiklik listesi +50 B); kareler ayni; 30 MiB sinirina 0.940 MiB kaldi
 2026-11-04,4afff4f,30491583,17777075,22880125,+19.9 KB kod: baslangic sayfasi calisma masasi duzeni (#1234: baslangic kiti +8.7 · stiller +4.4 · FEAD baslangic +2.5 · Takoz baslangic +1.7 · tuval +1.0 · kilavuzlar +0.6 KB; 427f484 yeniden derlemede 30471173); kareler ayni; 30 MiB sinirina 0.921 MiB kaldi
+2026-11-04,ca86556,30491559,17777087,22880125,-24 bayt: program ayni (#1235 yalniz boyut defteri); fark yalniz kunye (4afff4f derlemesiyle tek satir farki); 30 MiB sinirina 0.921 MiB kaldi
