@@ -95,7 +95,8 @@ test('PENCERE: seçici → çubuk + Vazgeç; dosya → kendi perdesinde 3B; rol;
   await ucHazir(page);
   const uc = await page.evaluate(() => ({
     yer: veMntWiz3bYer(), perde: getComputedStyle(document.getElementById('ve-mnt-3b-overlay')).display,
-    kapat: !!document.querySelector('#ve-mnt-3b .ve-settings-header .ve-settings-close .mf-ico-x'),
+    // Tam ekran çalışma alanı (2026-11-04): başlık bandı yok, Kapat komut çubuğunda
+    kapat: !!document.querySelector('#ve-mnt-3b .ve-mw-3b-komut #ve-mw-3b-kapat') && !document.querySelector('#ve-mnt-3b .ve-settings-header'),
     aktar: !!document.getElementById('ve-mw-3b-aktar'), sihirbaz: veMntWizAcik() }));
   expect(uc).toEqual({ yer: 'pencere', perde: 'flex', kapat: true, aktar: false, sihirbaz: false });
   // 3B'den rol: gerçek tıklama ile motoru seç, çipten rol ver
@@ -122,7 +123,7 @@ test('PENCERE: seçici → çubuk + Vazgeç; dosya → kendi perdesinde 3B; rol;
   await page.click('#ve-properties #ve-mnt-cad-3b');
   await ucHazir(page);
   expect(await page.evaluate(() => veMntWiz3bYer())).toBe('pencere');
-  await page.click('#ve-mnt-3b .ve-settings-close');
+  await page.click('#ve-mnt-3b #ve-mw-3b-kapat');
   expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(false);
   expect(hatalar).toEqual([]);
 });

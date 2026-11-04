@@ -1026,14 +1026,16 @@ function _gmSec16(){
     + 'açılır, rol birinde verilince ötekinde görünür.</p>';
   h += '<h3>16.1 Dosyayı açmak</h3>';
   h += '<p>Boş bir modelde başlangıç sayfasındaki <strong>STEP’ten başla</strong> dosyayı doğrudan 3B’de '
-    + 'okur: tuvale araçlar (3D Görüntüleyici dâhil) kurulur, 3B tam ekran açılır, okuma çubuğu 3B’nin ortasındadır. '
+    + 'okur: tuvale araçlar (3D Görüntüleyici dâhil) kurulur, 3B tam ekran açılır; okumanın çubuğu ve '
+    + '<strong>Vazgeç</strong> tuvalin sağ altındaki iş kartındadır. '
     + 'Roller ve hesap 3B’de verilir; <strong>Sihirbaza aktar</strong> sihirbazı takoz tipleri ve yükler için açar.</p>';
   h += _gmAdimlar([
     'Tuvaldeki <strong>3D Görüntüleyici</strong>’ye tıklayın; penceresinde <strong>STEP dosyası seç…</strong>’e '
       + 'basın ya da dosyayı <strong>STEP dosyası</strong> bölümüne bırakın.',
     'Okunurken eylem satırında çubuk ve <strong>Vazgeç</strong> durur; okuma ekranı dondurmaz.',
-    'Dosya okununca 3B kendi perdesinde açılır; parça ağacı <strong>Parçalar</strong> bölümündedir. '
-      + 'Esc yalnız 3B’yi kapatır, <strong>3B’de aç</strong> yeniden açar.'
+    'Dosya okununca 3B tam ekran açılır; parça ağacı <strong>Parçalar</strong> bölümündedir. '
+      + 'Komut çubuğunun sağ ucundaki <strong>Kapat</strong> ya da Esc yalnız 3B’yi kapatır, '
+      + '<strong>3B’de aç</strong> yeniden açar.'
   ]);
   h += _gmAlanTablo('3D Görüntüleyici penceresi — bölümler', [
     ['<strong>STEP dosyası</strong>', 'Dosyanın künyesi: yazan sistem, parça sayısı, okuma süresi; kayıtlı '
@@ -1045,14 +1047,17 @@ function _gmSec16(){
       + '<strong>Modele uygula</strong> · <strong>Dosyanın sistemine taşı</strong>', 'Hesaptan sonra']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAlanTablo('3B görüntüleyici — düzen', [
-    ['Komut çubuğu', '<strong>Bakış</strong> · <strong>Görünüş</strong> listeleri, <strong>Parça</strong> · '
-      + '<strong>Yüzey</strong> süzgeci, <strong>Ölçü</strong>, <strong>Kesit</strong>; sağda '
-      + '<strong>Konumları hesapla</strong> ve <strong>Sihirbaza aktar</strong>', 'Sıradaki adımın düğmesi dolu renkte'],
+    ['Komut çubuğu', 'Solda dosyanın adı; <strong>Bakış</strong> · <strong>Görünüş</strong> listeleri, '
+      + '<strong>Parça</strong> · <strong>Yüzey</strong> süzgeci, <strong>Ölçü</strong>, <strong>Kesit</strong>; sağda '
+      + '<strong>Konumları hesapla</strong> ve <strong>Sihirbaza aktar</strong>, sağ uçta <strong>Kapat</strong>',
+      'Sıradaki adımın düğmesi dolu renkte; 3B tam ekran, ayrı başlık bandı yok'],
     ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
     ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, <strong>Rol</strong>, <strong>Malzeme</strong>, '
       + 'takozun noktası, veri sayfası, birimin kütlesi ve CG’si, <strong>Ölçülen birimler</strong>, rol verilenler',
       'Bölümler seçime göre'],
     ['Görünüm küpü', 'Tuvalin sağ üstünde, kamerayla döner; yüzüne tık o bakışa geçer', 'Altında Sığdır, yakınlaştır, uzaklaştır'],
+    ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '
+      + '<strong>Vazgeç</strong> · <strong>Durdur</strong> · <strong>Devam</strong>', 'İş bitince kalkar'],
     ['Durum çubuğu', 'İmlecin altındaki noktanın koordinatı; çizim yazılımsalsa durumu; birimler', 'mm · kg']
   ], ['Yer', 'Ne', 'Not']);
   h += _gmAlanTablo('3B görüntüleyici — işaretler', [

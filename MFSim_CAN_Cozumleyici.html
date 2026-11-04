@@ -9002,13 +9002,25 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-fw-3b-ilerleme{ position:absolute; left:10px; bottom:8px; font-size:var(--fs-tiny);
   color:var(--text-secondary); pointer-events:none; font-variant-numeric:tabular-nums; }
 .ve-fw-3b-ilerleme:empty{ display:none; }
-/* Takoz: KURULUMUN KUTUSU (js/cp-mount-3b.js → _mw3bKurYaz) — tuvalin sol
-   üstünde yüzen eylem satırı: çubuk + Durdur, durunca durum + Devam. Satırın
-   pencere içindeki ayracı (üst çizgi, boşluk) burada yok: kutunun kendisi. */
-.ve-mw-3b-kur{ position:absolute; top:12px; left:12px; z-index:2; width:300px; max-width:calc(100% - 24px); box-sizing:border-box;
-  padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
-  box-shadow:0 1px 2px var(--shadow-color), 0 6px 18px var(--shadow-color); }
-.ve-mw-3b-kur[hidden]{ display:none; }
+/* Takoz: İŞ KARTI — STEP'in okuması (_mw3bOkumaHTML) ve 3B'nin kurulumu
+   (_mw3bKurYaz), js/cp-mount-3b.js. Tuvalin SAĞ ALTINDA: işin adı, altında
+   eylem satırı (çubuk + Vazgeç · Durdur, durunca durum + Devam). Kullanıcı
+   (2026-11-04): "yazılar büyük, tam ortada … sağ alta çekelim" — okuma
+   tuvalin ortasında 460 px'lik kart ve 16 px başlıktı, kurulum sol üstte.
+   Satırın pencere içindeki ayracı (üst çizgi, boşluk) burada yok: kart kendisi. */
+.ve-mw-3b-is{ position:absolute; right:16px; bottom:16px; z-index:3; width:320px; max-width:calc(100% - 32px);
+  box-sizing:border-box; padding:10px 12px; display:flex; flex-direction:column; gap:6px; font-size:var(--fs-body);
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg); }
+.ve-mw-3b-is[hidden]{ display:none; }
+.ve-mw-3b-is-bas{ margin:0; display:flex; align-items:center; gap:6px; min-width:0;
+  font-size:var(--fs-body); font-weight:600; line-height:1.3; color:var(--text-primary); }
+.ve-mw-3b-is-bas > .mf-ico{ flex:none; width:14px; height:14px; color:var(--text-secondary); }
+.ve-mw-3b-is .ve-fp-yurut{ margin:0; padding:0; border-top:0; }
+.ve-mw-3b-is .ve-fw-issues{ margin:0; }
+/* Okunurken tuvalin zemini 3B'nin stüdyo geçişi (_mw3bZemin ile aynı duraklar) */
+.ve-mw-3b .ve-fw-3b-tuval[data-durum="okunuyor"]{ cursor:default;
+  background:linear-gradient(180deg, var(--bg-secondary) 50%, var(--bg-tertiary)); }
 /* TAKOZ 3B — KOMUT ÇUBUĞU (js/cp-mount-3b-arac.js · çalışma masası 2026-11-03):
    başlığın altında, tuvalin üstünde yüzmez. Solda araçlar (Bakış · Görünüş
    listeleri · Parça|Yüzey · Ölçü · Kesit; kesit açıkken altında kesitin satırı),
@@ -9037,6 +9049,16 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-sec > .mf-ico{ flex:none; width:15px; height:15px; color:var(--text-secondary); }
 .ve-mw-3b-sec select{ height:28px; padding-left:0; border:0; outline:none; background-color:transparent;
   font:inherit; font-size:var(--fs-body); color:var(--text-primary); cursor:pointer; }
+/* KİMLİK ve KAPAT — tam ekran çalışma alanında başlık bandı yok (2026-11-04):
+   solda dosyanın adı (kısalan ad tam hâliyle ipucunda), sağ uçta Kapat.
+   Okunurken çubukta yalnız ikisi var: Kapat sağa itilir. */
+.ve-mw-3b-kimlik{ flex:0 1 auto; min-width:0; max-width:300px; display:flex; align-items:center; gap:7px; height:30px;
+  padding-right:12px; border-right:1px solid var(--border-color); font-size:var(--fs-body); color:var(--text-primary); }
+.ve-mw-3b-kimlik > .mf-ico{ flex:none; width:15px; height:15px; color:var(--ink-accent); }
+.ve-mw-3b-kimlik b{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.ve-mw-3b-kapat{ flex:none; }
+.ve-mw-3b-kimlik + .ve-mw-3b-kapat{ margin-left:auto; }
+.ve-mw-3b-kimlik:has(+ .ve-mw-3b-kapat){ border-right:0; }
 /* Eylem: SIRADAKİ adım dolu vurgu (.ve-mw-3b-hap-ana), öteki çerçeveli */
 .ve-mw-3b-eylem{ flex:none; margin-left:auto; display:flex; }
 .ve-mw-3b-eylem:empty{ display:none; }
@@ -9068,15 +9090,6 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-olcu-y rect{ fill:var(--bg-primary); stroke:var(--accent-primary); stroke-width:1; }
 .ve-mw-3b-olcu-y text{ fill:var(--text-heading); font-size:var(--fs-tiny); font-weight:600; font-variant-numeric:tabular-nums; }
 .ve-mw-3b-olcu-d td{ font-weight:600; color:var(--text-heading); }
-/* OKUMA KARTI — STEP'ten başla: dosya 3B'nin perdesinde okunurken tuvalin
-   ortasında dosyanın adı ve okumanın eylem satırı (çubuk + Vazgeç) */
-.ve-mw-3b-okuma{ position:absolute; left:50%; top:42%; transform:translate(-50%, -50%); width:min(460px, calc(100% - 32px));
-  box-sizing:border-box; padding:14px 16px; display:flex; flex-direction:column; gap:10px; background:var(--bg-primary);
-  border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 1px 2px var(--shadow-color), 0 10px 30px var(--shadow-color); }
-.ve-mw-3b-okuma-ad{ margin:0; display:flex; align-items:center; gap:6px; color:var(--text-secondary); min-width:0; }
-.ve-mw-3b-okuma-ad b{ color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ve-mw-3b-okuma .ve-fp-yurut{ margin:0; padding:0; border-top:0; }
-.ve-mw-3b-kur .ve-fp-yurut{ margin:0; padding:0; border-top:0; }
 .ve-fw-3b-ipucu{ position:absolute; pointer-events:none; padding:3px 8px; white-space:nowrap;
   font-size:var(--fs-tiny); color:var(--text-primary); background:var(--bg-primary);
   border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 2px 8px var(--shadow-color); }
@@ -9192,6 +9205,16 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    (js/cp-fead-3b.js → _fw3bGenis). */
 .ve-settings-overlay.ve-fw-3b-genis{ padding:12px; }
 .ve-fw-3b-genis .ve-fw-modal{ max-width:1840px; height:calc(100vh - 24px); }
+/* TAKOZ 3D GÖRÜNTÜLEYİCİ TAM EKRAN (kullanıcı kararı 2026-11-04: "popup
+   şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka yere
+   taşınsın"): pencere değil ÇALIŞMA ALANI — perdenin kenar payı, kabuğun
+   köşesi, çerçevesi ve gölgesi yok; başlık bandı kurulmaz (adı ve Kapat komut
+   çubuğunda). Pencereden açılınca perdenin kendi sınıfı (index.html), sihirbazın
+   içinde sihirbazın perdesine yazılır (js/cp-mount-3b.js → _mw3bTam). FEAD'in
+   3B'si yukarıdaki `.ve-fw-3b-genis`te kalır. */
+.ve-settings-overlay.ve-mw-3b-tam{ padding:0; }
+.ve-mw-3b-tam .ve-fw-modal{ width:100vw; max-width:none; height:100vh; max-height:none;
+  border:0; border-radius:0; box-shadow:none; }
 /* Dar pencerede kart daralır ve üst yarıda kalır, dizi tam genişlik */
 @container vefw3b (max-width: 900px){
   .ve-fw-3b-govde{ --fw3b-kart:min(360px, calc(100% - 24px)); }
