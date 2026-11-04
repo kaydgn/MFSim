@@ -248,8 +248,7 @@ function _mmRender() {
     var isAux = def.isSensor || def.isTerminator;
     ctx.fillStyle = isAux ? muted : accent;
     ctx.globalAlpha = isAux ? 0.7 : 0.92;
-    _mmRoundRect(ctx, nx, ny, nw, nh, Math.min(2, nw / 3));
-    ctx.fill();
+    ctx.fillRect(nx, ny, nw, nh);   // bileşen kutusunun küçüğü: köşesiz (keskin köşe kararı)
   }
   ctx.globalAlpha = 1;
 
@@ -263,17 +262,6 @@ function _mmRender() {
   vpEl.style.top = y0 + 'px';
   vpEl.style.width = Math.max(0, x1 - x0) + 'px';
   vpEl.style.height = Math.max(0, y1 - y0) + 'px';
-}
-
-function _mmRoundRect(ctx, x, y, w, h, r) {
-  if(r < 0.5 || w < 2 || h < 2) { ctx.beginPath(); ctx.rect(x, y, w, h); return; }
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 // ── Etkileşim: minimap'te bir noktaya tıkla/sürükle → ana görünümü oraya ortala ──

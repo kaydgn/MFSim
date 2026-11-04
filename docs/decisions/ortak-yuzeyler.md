@@ -401,10 +401,39 @@ Daha koyu bir değer eşiği rahat geçerdi ama kademe ayrışmasını
 **Kapı.** `theme-contrast.test.js` — her jeton DÖRT yüzeye ayrı ayrı vurulur,
 yani yüzeylerden biri yanlış yöne giderse en kötü yüzey değişir ve eşik düşer.
 
+## Keskin köşe, sade gölge (2026-11-04, kullanıcı kararı)
+
+**Hüküm.** Çerçeve köşesiz: pencere, panel, kart, bileşen kutusu, menü,
+bildirim (`--radius-md|lg|xl` = 0). El değen denetim 2 px: düğme, alan, liste,
+çip, sayaç, rozet, ilerleme ve kaydırma çubuğu (`--radius-xs|sm`). Tam yuvarlak
+(`--radius-pill`, `50%`) yalnız anlamı daire olana: durum noktası, port, radyo
+düğmesi, numara balonu (çizimdeki kasnak numarasıyla aynı), adım durumu, profil
+resmi. Yerinde duran yüzey gölge almaz (`--shadow-sm` saydam); yüzen katmanın
+gölgesi ince, pencereninki 14 px. Leaflet'in çubuğu ve kutusu aynı dilde; mini
+harita kutuları köşesiz, grafik rozetleri 2 px.
+
+**Gerekçe.** Kullanıcı: *"köşeler keskin değil, program hiç profesyonel
+durmuyor"*. Programın gerçek ekranları Edge koşulunda (1920×952, %100) bugün ·
+keskin · keskin + sade olarak karşılaştırıldı; seçilen keskin + sade, düğmede
+2 px. Köşe teknolojinin değil tasarımın değeridir: aynı CSS her Windows
+paketleyicisinde (WebView2 = Edge'in motoru) aynı çizilir.
+
+**Emekli.** Atölye ölçeği 3 · 5 · 7 · 10 · 14 (aşağıda, "yüzey bir nesne olur")
+ve derinlik gölgesi (pencere `0 12px 32px`, kutu `0 1px 2px`). Ondan önceki
+0 · 2 · 2 · 3 · 3 de keskindi; ölçek iki kez el değiştirdiği için değeri yorum
+değil kapı tutar.
+
+**Kapı.** `kose-keskin.test.js` (basamak değerleri, hap jetonunu taşıyan
+kuralların TAM listesi, gölge bulanıklığı) + `source-hygiene.test.js` bölüm 4 · 5
+(ölçek dışı sabit yarıçap yok).
+
 ## Atölye şekil ölçeği — yarıçap ROL'e göre bağlanır (2026-09-22)
 
+> **Değerler 2026-11-04'te emekli** — bkz. *"Keskin köşe, sade gölge"*. Role
+> bağlama kuralı, sınıflandırma ve kapı aynen geçerli.
+
 **Hüküm.** Köşe yarıçapı tek bir ölçekten gelir — `--radius-xs|sm|md|lg|xl|pill`
-= 3 · 5 · 7 · 10 · 14 · 999 px — ve arayüzdeki her KAP o ölçekten bir basamak
+(o gün 3 · 5 · 7 · 10 · 14 · 999 px) — ve arayüzdeki her KAP o ölçekten bir basamak
 seçer. Sabit yazılmış yarıçap yalnız üç hâlde meşrudur: daire (`50%`), bilinçli
 keskin köşe (`0`), ve **çizgi örneği**.
 
@@ -1543,7 +1572,8 @@ arka plan SVG'si tema değişkenini okuyamaz. `!important` bilerek: satır içi
 
 ## Kaydırma çubuğu CSS'in niyeti (2026-09-26, kullanıcı kararı 12·B)
 
-**Hüküm.** Çubuk `::-webkit-scrollbar` ile çizilir (8 px, yuvarlak, oksuz).
+**Hüküm.** Çubuk `::-webkit-scrollbar` ile çizilir (8 px, oksuz; başparmağın
+köşesi denetim basamağında, 2 px — 2026-11-04 keskin köşe kararına kadar haptı).
 Standart `scrollbar-width` / `scrollbar-color` yalnız
 `@supports not selector(::-webkit-scrollbar)` bloğunda — yani Firefox'ta.
 `scrollbar-width: none` (gizlemek) serbest.

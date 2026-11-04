@@ -1581,7 +1581,7 @@ function veTrDrawOverlay() {
       ctx.strokeStyle = bd.color;
       ctx.lineWidth = 1;
       if(ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(bx, bd.by, bd.tw + 8, VE_TR.BADGE_H, 3); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(bx, bd.by, bd.tw + 8, VE_TR.BADGE_H, 2); ctx.fill(); ctx.stroke();
       } else {
         ctx.fillRect(bx, bd.by, bd.tw + 8, VE_TR.BADGE_H);
         ctx.strokeRect(bx + 0.5, bd.by + 0.5, bd.tw + 7, VE_TR.BADGE_H - 1);
@@ -1602,7 +1602,7 @@ function veTrDrawOverlay() {
       ctx.strokeStyle = veThemeRgba('--text-muted', 0.7, 'rgba(140,148,160,0.7)');
       ctx.lineWidth = 1;
       if(ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(ox, fit.overflowY, ow + 8, VE_TR.BADGE_H, 3);
+        ctx.beginPath(); ctx.roundRect(ox, fit.overflowY, ow + 8, VE_TR.BADGE_H, 2);
         ctx.fill(); ctx.stroke();
       } else {
         ctx.fillRect(ox, fit.overflowY, ow + 8, VE_TR.BADGE_H);
