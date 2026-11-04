@@ -1,0 +1,258 @@
+#!/usr/bin/env node
+'use strict';
+/**
+ * canli-not.js — CANLI NOT: programın üstüne çizilen değişiklik notları (2026-11-04)
+ * ───────────────────────────────────────────────────────────────────────────
+ * Kullanıcı isteği: *"programı bir arayüze alalım, açalım. Oraya buraya
+ * girelim ve ben çizerek, yuvarlak içine alarak istediğim değişiklikleri canlı
+ * olarak yazayım. Sen de bunları sırası ile uygula."*
+ *
+ *   node tools/canli-not.js hazirla [--cikti .canli-not/yayin]
+ *       Karesiz tek dosya (MFSIM_KARSILAMA=yok) + köprü <head>'in başında →
+ *       mfsim.html; sayfa (canli-not.html) çekirdek ve künyeyle kurulur.
+ *       Artifact'in dosya sınırı 16 MB: aşılırsa DURUR.
+ *
+ *   node tools/canli-not.js liste <döküm> [--hepsi]
+ *       ArtifactData `list notlar` (out_dir) dökümündeki notlar sırayla;
+ *       varsayılan yalnız işi kalanlar (bekliyor · uygulaniyor).
+ *
+ *   node tools/canli-not.js goruntu <not.json> [--foto <foto.json>]
+ *                           [--cikti <png>] [--olcek 1] [--kirp] [--ogeler]
+ *       Notun ekranı (DOM fotoğrafı) notun ekran ölçüsünde yeniden çizilir,
+ *       kullanıcının çizimi kırmızı olarak üstüne konur. --kirp çizimin
+ *       çevresini, --ogeler seçilen öğelerin kutularını (mavi kesikli) verir.
+ *
+ * Protokol (yayın, sıra, durum, yanıt): skill `canli-not`.
+ */
+const fs = require('fs');
+const path = require('path');
+const zlib = require('zlib');
+const { spawnSync } = require('child_process');
+const CN = require('./canli-not-cekirdek.js');
+
+const KOK = path.join(__dirname, '..');
+const SABLON = path.join(__dirname, 'canli-not.html');
+const CEKIRDEK = path.join(__dirname, 'canli-not-cekirdek.js');
+const KOPRU = path.join(__dirname, 'canli-not-kopru.js');
+const CEKIRDEK_CAPA = '/*__CEKIRDEK__*/';
+const AYAR_CAPA = '/*__AYAR__*/null';
+const SINIR = 16 * 1024 * 1024;   // Artifact: sayfa ve her metin dosyası
+const VARSAYILAN_CIKTI = path.join(KOK, '.canli-not', 'yayin');
+
+function ayristir(argv) {
+  const ilk = argv[0] && !argv[0].startsWith('-') ? argv[0] : undefined;
+  const o = { komut: ilk, konum: [] };
+  for (let i = ilk ? 1 : 0; i < argv.length; i++) {
+    const a = argv[i];
+    const deger = () => { if (i + 1 >= argv.length) throw new Error(a + ' bir değer ister'); return argv[++i]; };
+    if (a === '--cikti') o.cikti = path.resolve(deger());
+    else if (a === '--foto') o.foto = path.resolve(deger());
+    else if (a === '--olcek') o.olcek = Number(deger());
+    else if (a === '--kirp') o.kirp = true;
+    else if (a === '--ogeler') o.ogeler = true;
+    else if (a === '--hepsi') o.hepsi = true;
+    else if (a === '--help' || a === '-h') o.yardim = true;
+    else if (a.startsWith('--')) throw new Error('bilinmeyen bayrak: ' + a);
+    else o.konum.push(a);
+  }
+  if (o.olcek !== undefined && !(o.olcek >= 1 && o.olcek <= 3)) throw new Error('--olcek 1–3 olmalı');
+  return o;
+}
+
+// ── yayın ──────────────────────────────────────────────────────────────────
+// Köprü <meta charset>'ın ARKASINA girer: tarayıcı kodlamayı belgenin ilk
+// 1024 baytında arar; önüne giren 15 KB'lık betik onu kör ediyordu (ölçüldü:
+// "MFSim aÃ§Ä±lÄ±yor"). confirm/prompt çağrı anında arandığı için köprünün
+// programın betiklerinden sonra kurulması bir şey kaybettirmez.
+function kopruGom(html, kopru) {
+  const bas = /<head(?:\s[^>]*)?>/i.exec(html);
+  if (!bas) throw new Error('mfsim.html: <head> yok');
+  const kapanis = html.indexOf('</head>', bas.index);
+  const govdeHead = html.slice(bas.index, kapanis < 0 ? undefined : kapanis);
+  const cs = /<meta\s+charset=["']?[\w-]+["']?\s*\/?>/i.exec(govdeHead);
+  if (!cs) throw new Error('mfsim.html: <head> içinde <meta charset> yok');
+  const yer = bas.index + cs.index + cs[0].length;
+  if (yer > 1024) throw new Error('mfsim.html: <meta charset> ilk 1024 baytın dışında (' + yer + ')');
+  const etiket = '<script>/* canli-not köprüsü */\n' + kopru.replace(/<\/script/gi, '<\\/script') + '\n</script>';
+  return html.slice(0, yer) + etiket + html.slice(yer);
+}
+
+function sayfaKur(sablon, cekirdek, ayar) {
+  if (sablon.indexOf(CEKIRDEK_CAPA) < 0) throw new Error('şablonda çekirdek çapası yok: ' + CEKIRDEK_CAPA);
+  if (sablon.indexOf(AYAR_CAPA) < 0) throw new Error('şablonda ayar çapası yok: ' + AYAR_CAPA);
+  const json = JSON.stringify(ayar).replace(/</g, '\\u003c');
+  // Fonksiyon replacer: dizgedeki '$&' gibi diziler genişletilmesin (build.js ile aynı tuzak).
+  return sablon
+    .replace(CEKIRDEK_CAPA, () => cekirdek.replace(/<\/script/gi, '<\\/script'))
+    .replace(AYAR_CAPA, () => json);
+}
+
+function hazirla(o) {
+  const cikti = o.cikti || VARSAYILAN_CIKTI;
+  fs.mkdirSync(cikti, { recursive: true });
+  const mfsim = path.join(cikti, 'mfsim.html');
+  const r = spawnSync(process.execPath, [path.join(KOK, 'build.js')], {
+    cwd: KOK, encoding: 'utf8',
+    env: Object.assign({}, process.env, { MFSIM_BUILD_OUT: mfsim, MFSIM_KARSILAMA: 'yok' })
+  });
+  if (r.status !== 0) throw new Error('build.js durdu:\n' + ((r.stdout || '') + (r.stderr || '')).slice(-3000));
+  const html = kopruGom(fs.readFileSync(mfsim, 'utf8'), fs.readFileSync(KOPRU, 'utf8'));
+  fs.writeFileSync(mfsim, html);
+  const boyut = Buffer.byteLength(html);
+  if (boyut > SINIR) {
+    throw new Error('mfsim.html ' + (boyut / 1048576).toFixed(2) + ' MB — Artifact sınırı 16 MB. ' +
+      'Büyüyen parçayı bulun (build çıktısı gömülenleri sayıyor).');
+  }
+  const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded' });
+  const ayar = { surum: kunye.shortSha || '', pr: kunye.prNumber || '', zaman: new Date().toISOString(), boyut: boyut };
+  const sayfa = sayfaKur(fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'), ayar);
+  const sayfaYol = path.join(cikti, 'canli-not.html');
+  fs.writeFileSync(sayfaYol, sayfa);
+  const goreli = (p) => path.relative(KOK, p) || p;
+  console.log('Canlı Not yayını hazır · ' + (ayar.surum || '(git yok)') + (ayar.pr ? ' · PR #' + ayar.pr : ''));
+  console.log('  sayfa   ' + goreli(sayfaYol) + ' (' + (Buffer.byteLength(sayfa) / 1024).toFixed(1) + ' KB)');
+  console.log('  program ' + goreli(mfsim) + ' (' + (boyut / 1048576).toFixed(2) + ' MB / sınır 16 MB)');
+  console.log('\nArtifact: file_path=' + goreli(sayfaYol) + '  files={"mfsim.html": "' + goreli(mfsim) + '"}');
+  return { sayfa: sayfaYol, mfsim: mfsim, boyut: boyut, ayar: ayar };
+}
+
+// ── notlar ─────────────────────────────────────────────────────────────────
+// ArtifactData'nın out_dir dökümü belgeyi {id, version, data} sarmalıyla ya da
+// çıplak yazabilir; ikisi de okunur.
+function govde(j) {
+  if (j && j.data && typeof j.data === 'object' && !Array.isArray(j.data) && ('metin' in j.data || 'no' in j.data)) {
+    const d = Object.assign({}, j.data);
+    if (j.id && !d.id) d.id = j.id;
+    if (j.version !== undefined) d.__surum = j.version;
+    return d;
+  }
+  return j;
+}
+
+function notlariOku(dizin) {
+  const yer = fs.existsSync(path.join(dizin, 'notlar')) ? path.join(dizin, 'notlar') : dizin;
+  return fs.readdirSync(yer).filter((f) => f.endsWith('.json')).map((f) => {
+    const d = govde(JSON.parse(fs.readFileSync(path.join(yer, f), 'utf8')));
+    if (!d.id) d.id = path.basename(f, '.json');
+    d.__dosya = path.join(yer, f);
+    return d;
+  });
+}
+
+function listeSatiri(n) {
+  const ilk = String(n.metin || '').split('\n')[0];
+  const foto = n.foto && n.foto.id ? 'foto ' + n.foto.id : 'foto ' + (n.fotoDurum || 'yok');
+  return '#' + n.no + '  ' + (CN.DURUMLAR[n.durum] || n.durum) + '  ' + (n.yer || '—') + '\n' +
+    '    ' + (ilk.length > 100 ? ilk.slice(0, 99) + '…' : ilk) + (n.yanit ? '\n    yanıt: ' + n.yanit : '') + '\n' +
+    '    ' + n.id + ' · ' + foto + (n.konu ? ' · konu ' + n.konu : '') + (n.__surum !== undefined ? ' · v' + n.__surum : '');
+}
+
+function liste(o) {
+  if (!o.konum[0]) throw new Error('döküm dizini gerekli');
+  const hepsi = CN.siraliNotlar(notlariOku(path.resolve(o.konum[0])));
+  const secili = o.hepsi ? hepsi : hepsi.filter((n) => n.durum === 'bekliyor' || n.durum === 'uygulaniyor');
+  if (!secili.length) { console.log(o.hepsi ? 'Not yok.' : 'Bekleyen not yok.'); return secili; }
+  secili.forEach((n) => console.log(listeSatiri(n)));
+  return secili;
+}
+
+// ── görüntü ────────────────────────────────────────────────────────────────
+// tools/kullanim.js ile aynı sözleşme: MFSIM_CHROMIUM, yoksa konteynerin kurulu
+// tarayıcısı (projenin playwright sürümü kendi indirmesini arıyor).
+function tarayiciYolu() {
+  if (process.env.MFSIM_CHROMIUM) return process.env.MFSIM_CHROMIUM;
+  const kurulu = '/opt/pw-browsers/chromium';
+  return fs.existsSync(kurulu) ? kurulu : undefined;
+}
+
+function fotoAc(dosya) {
+  const p = JSON.parse(fs.readFileSync(dosya, 'utf8'));
+  if (!p || typeof p.veri !== 'string') throw new Error('fotoğraf paketi bozuk: veri yok');
+  if (p.sikistirma === 'gzip') return zlib.gunzipSync(Buffer.from(p.veri, 'base64')).toString('utf8');
+  if (p.sikistirma === 'yok') return p.veri;
+  throw new Error('bilinmeyen sıkıştırma: ' + p.sikistirma);
+}
+
+async function goruntu(o) {
+  if (!o.konum[0]) throw new Error('not.json gerekli');
+  const not = govde(JSON.parse(fs.readFileSync(path.resolve(o.konum[0]), 'utf8')));
+  const hatalar = CN.notDogrula(not);
+  if (hatalar.length) throw new Error('not bozuk:\n  ' + hatalar.join('\n  '));
+  const html = o.foto ? fotoAc(o.foto) : '<!doctype html><html><body style="margin:0;background:#fff"></body></html>';
+  const cikti = o.cikti || path.join(KOK, '.canli-not', 'goruntu', 'not-' + not.no + (o.kirp ? '-yakin' : '') + '.png');
+  fs.mkdirSync(path.dirname(cikti), { recursive: true });
+  const { chromium } = require('playwright');
+  const tarayici = await chromium.launch(tarayiciYolu() ? { executablePath: tarayiciYolu() } : {});
+  try {
+    const sayfa = await tarayici.newPage({
+      viewport: { width: not.cizim.g, height: not.cizim.y },
+      deviceScaleFactor: o.olcek || (o.kirp ? 2 : 1)
+    });
+    // Fotoğraf kendi içinde tamam; dışarıya hiçbir istek gitmez.
+    await sayfa.route('**/*', (r) => (r.request().url().startsWith('data:') ? r.continue() : r.abort()));
+    await sayfa.setContent(html, { waitUntil: 'load' });
+    const kutular = [];
+    if (o.ogeler && not.secim) {
+      (not.secim.ic || []).forEach((k) => { if (k.kutu) kutular.push({ k: k.kutu, r: '#2a568a' }); });   // sabit renk: araç çıktısı
+      (not.secim.ok || []).forEach((k) => { if (k.kutu) kutular.push({ k: k.kutu, r: '#276a45' }); });   // sabit renk: araç çıktısı
+      if (not.secim.kap && not.secim.kap.kutu) kutular.push({ k: not.secim.kap.kutu, r: '#9f9b91' });    // sabit renk: araç çıktısı
+    }
+    await sayfa.evaluate(({ sekiller, kutular }) => {
+      document.querySelectorAll('[data-cn-kaydir]').forEach((el) => {
+        const [x, y] = el.getAttribute('data-cn-kaydir').split(',').map(Number);
+        el.scrollLeft = x; el.scrollTop = y;
+      });
+      const p = document.documentElement.getAttribute('data-cn-pencere');
+      if (p) { const [x, y] = p.split(',').map(Number); window.scrollTo(x, y); }
+      const st = document.createElement('style');
+      st.textContent = '*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition:none!important;caret-color:transparent!important}';
+      document.head.appendChild(st);
+      const ns = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('style', 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483647');
+      kutular.forEach(({ k, r }) => {
+        const e = document.createElementNS(ns, 'rect');
+        e.setAttribute('x', k[0]); e.setAttribute('y', k[1]); e.setAttribute('width', k[2]); e.setAttribute('height', k[3]);
+        e.setAttribute('fill', 'none'); e.setAttribute('stroke', r); e.setAttribute('stroke-width', '1.5'); e.setAttribute('stroke-dasharray', '5 4');
+        svg.appendChild(e);
+      });
+      sekiller.forEach((s) => {
+        const e = document.createElementNS(ns, 'path');
+        e.setAttribute('d', s.d);
+        e.setAttribute('fill', 'none'); e.setAttribute('stroke', '#c22b22'); e.setAttribute('stroke-width', '3');
+        e.setAttribute('stroke-linecap', 'round'); e.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(e);
+      });
+      document.documentElement.appendChild(svg);
+    }, { sekiller: not.cizim.sekiller, kutular });
+    const secenek = { path: cikti };
+    if (o.kirp) {
+      const k = not.cizim.kutu || CN.kutuBirlesim(not.cizim.sekiller);
+      const pay = 160;
+      const x = Math.max(0, k[0] - pay), y = Math.max(0, k[1] - pay);
+      secenek.clip = { x, y, width: Math.min(not.cizim.g - x, k[2] + 2 * pay), height: Math.min(not.cizim.y - y, k[3] + 2 * pay) };
+    }
+    await sayfa.screenshot(secenek);
+  } finally {
+    await tarayici.close();
+  }
+  console.log('Not ' + not.no + ' → ' + (path.relative(KOK, cikti) || cikti) + (o.foto ? '' : ' (fotoğrafsız: yalnız çizim)'));
+  return cikti;
+}
+
+const YARDIM = fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 27).map((s) => s.replace(/^ \* ?/, '')).join('\n');
+
+async function ana(argv) {
+  const o = ayristir(argv);
+  if (o.yardim || !o.komut) { console.log(YARDIM); return; }
+  if (o.komut === 'hazirla') return hazirla(o);
+  if (o.komut === 'liste') return liste(o);
+  if (o.komut === 'goruntu') return goruntu(o);
+  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · liste · goruntu)');
+}
+
+if (require.main === module) {
+  ana(process.argv.slice(2)).catch((e) => { console.error('✗ ' + (e && e.message ? e.message : e)); process.exit(1); });
+}
+
+module.exports = { ayristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };
