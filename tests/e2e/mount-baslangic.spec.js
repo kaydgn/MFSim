@@ -63,8 +63,9 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
     return { kap: r(document.getElementById('ve-canvas-wrapper')), sayfa: r(document.getElementById('ve-mnt-baslangic')),
       donus: !!(ust && btn.contains(ust)),
       kapi: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi')].map((b) => b.getAttribute('data-ey')),
-      karo: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-karo').length,
-      cizim: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-resim svg.ve-mnt2d-akso').length,
+      satir: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir').length,
+      cizim: document.querySelectorAll('#ve-mnt-baslangic svg.ve-mnt2d-akso').length,
+      acik: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir.acik')].map((r) => r.getAttribute('data-v')),
       ornek: veMountCore.getMountExampleList().length,
       // KİMLİK VE VERİ tarayıcıda: sabitler `window`dan okunur — Node'un
       // `require` yolu bunu göremez; bir satır düşerse ancak burada görünür.
@@ -74,26 +75,22 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
         veMountCore.getMountExampleList().length].map((x) => veSayi(x, 0)),
       kunye: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
       kilavuz: document.querySelector('#ve-mnt-baslangic .ve-bas-kilavuz')?.getAttribute('data-v'),
-      // ÇALIŞMA MASASI: sayfa açıkken ray yok; önizleme kutunun ÖLÇÜSÜNDE çizili
-      ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width,
-      oniz: (() => { const k = document.querySelector('#ve-mnt-baslangic .ve-bas-oniz-resim');
-        const s = k.querySelector('svg.ve-mnt2d-akso');
-        return { w: k.clientWidth, h: k.clientHeight, vb: s && s.getAttribute('viewBox'), yazi: s ? s.querySelectorAll('text').length : 0 }; })() };
+      // ÇALIŞMA MASASI: sayfa açıkken ray yok; masada örneklerin dizini, resim yok
+      ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width };
   });
   expect(Math.round(o.sayfa.w)).toBe(Math.round(o.kap.w));
   expect(Math.round(o.sayfa.h)).toBe(Math.round(o.kap.h));
   expect(o.donus).toBe(true);
   expect(o.kapi).toEqual(['sihirbaz', 'step', 'bos']);
-  expect(o.karo).toBe(o.ornek);
-  expect(o.cizim).toBe(o.ornek);
+  expect(o.satir).toBe(o.ornek);
+  expect(o.cizim).toBe(0);
+  expect(o.acik).toEqual(['siper']);                     // ilk açılışta ilk satır açık
   expect(o.baslik).toBe('Takoz Çökme-Titreşim');
   expect(o.veri).toHaveLength(5);
   expect([o.veri[0], o.veri[2], o.veri[3]]).toEqual(o.canli);
   expect(o.kunye).toEqual([4, 5, 1]);
   expect(o.kilavuz).toBe('mount');
   expect(o.ray).toBe(0);
-  expect(o.oniz.vb).toBe('0 0 ' + o.oniz.w + ' ' + o.oniz.h);
-  expect(o.oniz.yazi).toBeGreaterThan(3);              // yazılı kip: gövde adları ve kütleleri
   // Kılavuz düğmesi modülün kılavuzunu açar (pencere açmak yerine çağrı yakalanır).
   await page.evaluate(() => { window.veGuideOpen = (id) => { window.__kilavuz = id; }; });
   await page.click('#ve-mnt-baslangic .ve-bas-kilavuz');
@@ -132,16 +129,16 @@ test('BOŞ KANVAS: araçlar kurulur, sayfa çekilir; Ctrl+Z sayfayı geri getiri
   expect((await say(page)).hepsi).toBe(0);
 });
 
-test('ÖRNEK KARO: model birebir yüklenir, sayfa çekilir; Ctrl+Z TEK adımda geri alır', async ({ page }) => {
+test('ÖRNEK SATIRI: Yükle TEK TIKLA kurar, sayfa çekilir; Ctrl+Z TEK adımda geri alır', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);
   await takozGir(page);
   await page.evaluate(() => { window.confirm = () => true; });
-  // ÇALIŞMA MASASI: karo SEÇER (model kurulmaz, önizleme değişir), Yükle kurar
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-v="tulga"]');
-  await expect(page.locator('#ve-mnt-baslangic .ve-bas-oniz h2')).toHaveText('TULGA');
+  // DİZİN: satırın adı yalnız ayrıntıyı açar (model kurulmaz); Yükle tek tıkla kurar
+  await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-ac');
+  await expect(page.locator('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-detay')).toBeVisible();
   expect((await say(page)).hepsi).toBe(0);
-  await page.click('#ve-mnt-baslangic .ve-bas-yukle');
+  await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-yukle');
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'mnt-mount'), null, { timeout: 15000 });
   // Ray geri geldi ve kadraj RAYLI tuvalde kuruldu: hiçbir kutu tuvalin dışında değil
@@ -243,48 +240,76 @@ test('RAY: sayfa açıkken ray yok; Sonuçlar\'da var; sayfa çekilince geri gel
   expect(await ray()).toBe(64);
 });
 
-test('ÇALIŞMA MASASI: çift tık kurar; seçim yeniden açılışta yerinde; önizleme pencereyle yeniden çizilir', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+// DİZİN (kullanıcı seçimi 2026-11-04, tasarım tuvali "sade seçenekler" · D).
+// Node'da koşmayan halkalar: ayrıntının gerçekten görünüp gizlenmesi, açık
+// satırın vurgusu ve Yükle'sinin dolu olması (CSS), satırların kutuya sığması.
+test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yerinde; satırlar kutuya sığar', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
   await bootApp(page);
   await takozGir(page);
-  await page.click('#ve-mnt-baslangic .ve-bas-karo[data-v="kamyon"]');
-  await expect(page.locator('#ve-mnt-baslangic .ve-bas-oniz h2')).toHaveText('Orta kamyon');
-  await expect(page.locator('#ve-mnt-baslangic .ve-bas-oniz-ad i')).toHaveText('kurgu');
-  const once = await page.evaluate(() => document.querySelector('#ve-mnt-baslangic .ve-bas-oniz-resim').getAttribute('data-imza'));
-  await page.setViewportSize({ width: 1700, height: 960 });
-  await page.waitForFunction((o) => document.querySelector('#ve-mnt-baslangic .ve-bas-oniz-resim').getAttribute('data-imza') !== o, once, { timeout: 5000 });
-  const sonra = await page.evaluate(() => { const k = document.querySelector('#ve-mnt-baslangic .ve-bas-oniz-resim');
-    return { imza: k.getAttribute('data-imza'), olcu: 'kamyon|' + k.clientWidth + 'x' + k.clientHeight }; });
-  expect(sonra.imza).toBe(sonra.olcu);
+  const acik = () => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir')]
+    .filter((r) => r.querySelector('.ve-bas-satir-detay').offsetHeight > 0).map((r) => r.getAttribute('data-v')));
+  expect(await acik()).toEqual(['siper']);
+  await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="kamyon"] .ve-bas-satir-ac');
+  expect(await acik()).toEqual(['kamyon']);
+  const o = await page.evaluate(() => {
+    const sayfa = document.getElementById('ve-mnt-baslangic');
+    const y = (v) => getComputedStyle(document.querySelector('#ve-mnt-baslangic .ve-bas-satir[data-v="' + v + '"] .ve-bas-satir-yukle')).backgroundColor;
+    const kisa = [...sayfa.querySelectorAll('.ve-bas-satir-ac b, .ve-bas-satir-sayi, .ve-bas-satir-kutle, .ve-bas-satir-blok li > *')]
+      .filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent);
+    const kaynak = [...sayfa.querySelectorAll('.ve-bas-satir-kaynak')].filter((e) => e.scrollWidth > e.clientWidth + 1)
+      .filter((e) => e.getAttribute('title') !== e.textContent).length;
+    return { yatay: sayfa.scrollWidth - sayfa.clientWidth, kisa, kaynak, dolu: y('kamyon'), bos: y('siper'),
+      ana: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() };
+  });
+  expect(o.yatay).toBeLessThanOrEqual(0);
+  expect(o.kisa).toEqual([]);                            // ad, sayı, kütle, ayrıntı kesilmiyor
+  expect(o.kaynak).toBe(0);                              // kısalan kaynak tam metnini title'da taşır
+  expect(o.dolu).not.toBe(o.bos);                        // açık satırın Yükle'si dolu
   await page.evaluate(() => { window.confirm = () => true; });
-  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-v="hafif"]');
+  await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="hafif"] .ve-bas-satir-yukle');
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'mnt-mount'), null, { timeout: 15000 });
   await page.locator('#ve-canvas-wrapper').click({ position: { x: 20, y: 600 } });
   await page.keyboard.press('Control+z');
   await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
-  await expect(page.locator('#ve-mnt-baslangic .ve-bas-karo[aria-pressed="true"]')).toHaveAttribute('data-v', 'hafif');
+  expect(await acik()).toEqual(['kamyon']);              // görünüm durumu yerinde
 });
 
-// PALET DARALTILMIŞKEN (kullanıcının ekranı): açma sekmesi (z 150) tuvalin sol
-// kenarında, dönüş düğmesi (z 60) eskiden onun ALTINDA kalıyordu — 26 px'in
-// 23'ü örtülü, alt topolojiden çıkmanın tek yolu. Düğme sekmenin sağına
-// oturur; Çalışma masasının paneli ikisinin altından başlar.
-test('DAR PALET: dönüş düğmesi açma sekmesinin sağında ve açıkta; panel sekmenin altında', async ({ page }) => {
+// PALET DARALTILMIŞKEN (kullanıcının ekranı). Kullanıcı 2026-11-04: *"sol
+// 'Takoz Çökme ve Titreşim' sütununun üstünde iki sembol var. Onları
+// kaldıralım. Sadece geriye gelme kalsın … Arada çirkin bir boşluk var."*
+// Sayfa açıkken paletin açma sekmesi gizli; dönüş düğmesi kabın köşesinde ve
+// açıkta, panel onun hemen altından başlar (10 + 26 + 12 = 48 px). Model
+// kurulunca sekme geri gelir ve düğme onun sağına oturur (eskiden 26 px'in
+// 23'ü sekmenin altında kalıyordu).
+test('DAR PALET: sayfada açma sekmesi yok, dönüş düğmesi köşede; model kurulunca sekme geri gelir', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await bootApp(page);
   await page.evaluate(() => veToggleSidebar(true));
   await page.waitForTimeout(500);
   await takozGir(page);
   await page.waitForTimeout(500);
-  const o = await page.evaluate(() => {
+  const olc = () => page.evaluate(() => {
     const r = (e) => e.getBoundingClientRect();
     const btn = document.querySelector('#ve-mnt-breadcrumb button'), sekme = document.getElementById('ve-sidebar-reveal');
-    const b = r(btn), s = r(sekme), ik = r(document.querySelector('#ve-mnt-baslangic .ve-bas-kimlik'));
+    const w = r(document.getElementById('ve-canvas-wrapper')), b = r(btn), s = r(sekme);
+    const kim = document.querySelector('#ve-mnt-baslangic:not([hidden]) .ve-bas-kimlik');
     const ust = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-    return { acik: !!(ust && btn.contains(ust)), dugmeSekmeninSaginda: b.left >= s.right,
-             kimlikSekmeninAltinda: ik.top >= s.bottom, kimlikDugmeninAltinda: ik.top >= b.bottom };
+    return { acik: !!(ust && btn.contains(ust)), sekme: sekme.offsetWidth, sekmeSag: Math.round(s.right),
+      dugme: [Math.round(b.left - w.left), Math.round(b.top - w.top)], dugmeSol: Math.round(b.left),
+      kimlik: kim ? Math.round(r(kim).top - w.top) : null, dugmeAlt: Math.round(b.bottom - w.top) };
   });
-  expect(o).toEqual({ acik: true, dugmeSekmeninSaginda: true, kimlikSekmeninAltinda: true, kimlikDugmeninAltinda: true });
+  const o = await olc();
+  expect({ acik: o.acik, sekme: o.sekme, dugme: o.dugme, kimlik: o.kimlik })
+    .toEqual({ acik: true, sekme: 0, dugme: [10, 10], kimlik: 48 });
+  expect(o.kimlik - o.dugmeAlt).toBe(12);
+  await page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="bos"]');
+  await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
+  await page.waitForTimeout(500);
+  const k = await olc();
+  expect(k.sekme).toBeGreaterThan(0);                    // tuvalde sekme geri geldi
+  expect(k.acik).toBe(true);
+  expect(k.dugmeSol).toBeGreaterThanOrEqual(k.sekmeSag); // düğme sekmenin sağında
   await page.evaluate(() => veToggleSidebar(false));
 });

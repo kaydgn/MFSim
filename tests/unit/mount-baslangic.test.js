@@ -12,8 +12,8 @@
  *   · görünürlük MODELDEN (bayrak yok): yalnız "Başlangıç ve Örnekler"
  *     taşıyan eski kayıt boş sayılır, araç düğümü bile bir yol seçildi demektir;
  *   · kapılar modülün KENDİ çağrılarına gidiyor (sayfa düğüm kurmaz);
- *   · örnek listesi kayıt defterinin KENDİSİ; küçük resimlerin hiçbiri
- *     "çizilemedi" değil;
+ *   · örnek listesi kayıt defterinin KENDİSİ; dizinin her yazısı örneğin kendi
+ *     kaydından, resim yok;
  *   · kapsam dışında sayfa kurulmuyor; sayfanın faresi tuvale sızmıyor.
  * Gerçek tarayıcı (sayfanın görünmesi, kapılar, Ctrl+Z ile geri gelme)
  * tests/e2e/mount-baslangic.spec.js.
@@ -28,10 +28,7 @@ eval(loadSource('components.js'));
 global.componentDefs = componentDefs;
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
-const AK = require('../../js/mount-akso.js');
-global.veMntAkso = AK;
 const cp = require('../../js/cp-mount.js');
-global.veMntAksoOrnekModel = cp.veMntAksoOrnekModel;
 const BS = require('../../js/cp-mount-baslangic.js');
 
 const CSS = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
@@ -80,7 +77,7 @@ describe('İÇERİK — kapılar ve örnekler', () => {
   });
   // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): üst satır,
   // serbest başlık, alt metin, kapı notu, rozet, bölüm notları ve dipnot YOK;
-  // karonun ipucu gövde adlarını (VERİ) taşır, "— yükle" komutunu değil.
+  // satırda ipucu yalnız kaynakta — tek satırda kısalan metnin TAMAMI.
   // 2026-10-19 (*"çok sade olmuş … profesyonel dursun"*): eklenenler AD ve
   // VERİ — tek h1 modülün adı, kapının künyesi kısa adlar.
   test('ARAYÜZ ANLATMAZ — ad, veri ve künye; açıklama yuvası yok', () => {
@@ -96,10 +93,9 @@ describe('İÇERİK — kapılar ve örnekler', () => {
     const kisa = (t) => { expect(t).toMatch(/^(\.[a-z0-9]+|[^.!?:;…]+)$/); expect(t.split(/\s+/).length).toBeLessThanOrEqual(4); };
     d.querySelectorAll('.ve-bas-kapi-k > span').forEach((k) => kisa(k.textContent));
     d.querySelectorAll('.ve-bas-veri dt, .ve-bas-yetenek li').forEach((x) => kisa(x.textContent));
-    const liste = BS.veMntBaslangicOrnekler();
-    d.querySelectorAll('.ve-bas-karo').forEach((b) => {
-      const o = liste.find((x) => x.key === b.getAttribute('data-v'));
-      expect(b.getAttribute('title')).toBe(o.ad + ' — ' + o.govdeAdlari.join(' · '));
+    d.querySelectorAll('.ve-bas-dizin [title]').forEach((x) => {
+      expect(x.classList.contains('ve-bas-satir-kaynak')).toBe(true);
+      expect(x.getAttribute('title')).toBe(x.textContent);
     });
     const MD = require('../../tools/metin-dili.js');
     const tw = document.createTreeWalker(d, NodeFilter.SHOW_TEXT);
@@ -112,73 +108,71 @@ describe('İÇERİK — kapılar ve örnekler', () => {
     }
     expect(aday).toEqual([]);
   });
-  test('örnek karoları kayıt defterinin KENDİSİ; hiçbiri "çizilemedi" değil', () => {
+  test('örnek satırları kayıt defterinin KENDİSİ (gerçek, sonra kurgu); her satırın Yükle\'si örneğin eylemi', () => {
     const liste = core.getMountExampleList();
-    const karo = html.match(/class="ve-bas-karo" data-ey="sec" data-v="[^"]+" data-yukle="ornek"/g) || [];
     const sira = liste.filter((e) => !e.kurgu).concat(liste.filter((e) => e.kurgu)).map((e) => e.id);
-    expect(karo.map((k) => k.match(/data-v="([^"]+)"/)[1])).toEqual(sira);
-    expect(html).not.toContain('ve-bas-resim-yok');
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    expect([...d.querySelectorAll('.ve-bas-satir')].map((r) => r.getAttribute('data-v'))).toEqual(sira);
+    expect([...d.querySelectorAll('.ve-bas-satir-yukle')].map((b) => [b.getAttribute('data-ey'), b.getAttribute('data-v')]))
+      .toEqual(sira.map((k) => ['ornek', k]));
   });
-  // Kurgu doğrulama modelleri gerçek araçlarla karışmaz: ayrı bölüm, başlığı ve
-  // her karonun künyesi "kurgu" der (kullanıcı isteği 2026-10-16).
-  // Önizleme seçili karonundur; kurgu örneğin önizlemesi "kurgu" der, gerçek
-  // aracınki demez (karo grubunun başlığından ayrıca).
-  test('iki bölüm: gerçek araçlar · "Doğrulama örnekleri — kurgu"; kurgunun önizlemesi işaretli', () => {
+  // Kurgu doğrulama modelleri gerçek araçlarla karışmaz: ayrı bölüm, başlığı
+  // "kurgu" der (kullanıcı isteği 2026-10-16).
+  test('iki bölüm: gerçek araçlar · "Doğrulama örnekleri — kurgu"', () => {
     const liste = core.getMountExampleList();
     const bas = html.match(/<div class="ve-bas-baslik"><h2>[^<]+<\/h2>/g).map((b) => b.replace(/.*<h2>|<\/h2>/g, ''));
     expect(bas).toEqual(['Örnek modellerden başla', 'Doğrulama örnekleri — kurgu']);
-    const gruplar = html.slice(html.indexOf('class="ve-bas-gruplar"'));
-    const [gercek, kurgu] = gruplar.split('Doğrulama örnekleri — kurgu');
+    const dizin = html.slice(html.indexOf('class="ve-bas-dizin"'));
+    const [gercek, kurgu] = dizin.split('Doğrulama örnekleri — kurgu');
     liste.forEach((e) => {
       const yer = e.kurgu ? kurgu : gercek, oteki = e.kurgu ? gercek : kurgu;
       expect(yer).toContain('data-v="' + e.id + '"');
       expect(oteki).not.toContain('data-v="' + e.id + '"');
     });
-    const K = require('../../js/baslangic-sayfa.js');
-    const s = BS.veMntBaslangicSayfa();
-    liste.forEach((e) => {
-      const oniz = K.veBasOnizlemeHTML(s.bolumler[e.kurgu ? 1 : 0].karolar.find((k) => k.v === e.id));
-      expect([e.id, oniz.includes('<i>kurgu</i>')]).toEqual([e.id, !!e.kurgu]);
-    });
-    expect(gruplar).not.toContain('<i>kurgu</i>');
   });
 });
 
-// Kullanıcı seçimi (2026-10-15): Görünümler'in (eski 2D Görünüm) çizimi aksonometri;
-// karo aynı resmi gösterir. "Aynı" = TEK çizici ve TEK kurucu — karo kendi
-// modelini kurarsa (eski kip kendi kütle-ağırlıklı CG'sini hesaplıyordu)
-// pencere ile karo sessizce ayrışır.
-describe('KÜÇÜK RESİM — Görünümler\'in aksonometrisi, örneğin kendi modelinden', () => {
-  const W = BS.VE_MNT_BAS_RESIM.w, H = BS.VE_MNT_BAS_RESIM.h;
-  test('her örnek: pencerenin çizicisi ve kurucusu; takoz sayısı örneğinki; karoda yazı yok', () => {
-    core.getMountExampleList().forEach((ex) => {
-      const svg = BS.veMntBaslangicResim(ex.id);
-      expect(svg).toBe(AK.ciz(cp.veMntAksoOrnekModel(ex.model), { W, H, sade: true }).svg);
-      expect(svg).toMatch(/^<svg class="ve-mnt2d-akso"/);
-      expect((svg.match(/class="ve-ak-t"/g) || []).length).toBe(ex.model.mounts.length);
-      expect(svg).toContain('class="ve-ak-gam"');           // G
-      expect(svg).toContain('class="ve-ak-gol"');           // Z = 0 gölgesi hep açık
-      expect(svg).not.toContain('<text');                    // künye karonun altında
+// DİZİN (kullanıcı seçimi 2026-11-04, tasarım tuvali "sade seçenekler" · D):
+// resim yok. Satırın her yazısı örneğin KENDİ kaydından — ikinci bir künye
+// listesi tutulsaydı örnek değişince sessizce bayatlardı.
+describe('DİZİN — satırın künyesi örneğin kendi kaydından', () => {
+  const n = (x, b) => veSayi(x, b || 0);
+  const satirlar = () => { const s = BS.veMntBaslangicSayfa(); return s.bolumler[0].satirlar.concat(s.bolumler[1].satirlar); };
+  test('araç · gövde ve takoz sayısı · toplam kütle', () => {
+    satirlar().forEach((r) => {
+      const ex = core.getMountExample(r.v);
+      const top = ex.model.components.reduce((t, c) => t + c.mass, 0);
+      expect([r.v, r.ad, r.sayi, r.kutle]).toEqual([ex.id, ex.vehicle,
+        n(ex.model.components.length) + ' gövde · ' + n(ex.model.mounts.length) + ' takoz', n(top) + ' kg']);
     });
   });
-  test('kurucu pencereninki: G çözücünün birleştirmesi, kutu çekirdeğin eşdeğer kutusu, çözüm yok', () => {
-    core.getMountExampleList().forEach((ex) => {
-      const m = cp.veMntAksoOrnekModel(ex.model);
-      const si = ex.model.components.map((c) => ({ mass: c.mass, cg: c.cg.map((v) => v / 1000), pointMass: !!c.pointMass,
-        I: [[c.Ixx, c.Ixy || 0, c.Ixz || 0], [c.Ixy || 0, c.Iyy, c.Iyz || 0], [c.Ixz || 0, c.Iyz || 0, c.Izz]] }));
-      const mp = core.combineMassProps(si);
-      expect(m.G.x).toBeCloseTo(mp.cg[0] * 1000, 6);
-      expect(m.G.y).toBeCloseTo(mp.cg[1] * 1000, 6);
-      expect(m.G.z).toBeCloseTo(mp.cg[2] * 1000, 6);
-      ex.model.components.forEach((c, i) => {
-        const kutu = core.equivalentBox(c.mass, [[c.Ixx, 0, 0], [0, c.Iyy, 0], [0, 0, c.Izz]], !!c.pointMass);
-        expect(m.govde[i].kutu).toEqual(kutu ? kutu.map((v) => v * 1000) : null);
-      });
-      expect(m.takoz.map((t) => [t.x, t.y, t.z])).toEqual(ex.model.mounts.map((t) => t.pos));
-      expect(m.cozum).toBe('yok');
-      expect(m.modlar).toBeNull();
-      expect(m.takoz.every((t) => t.f === null)).toBe(true);
+  test('ayrıntı: gövdeler kütleleriyle (tek ondalık), takozların adı', () => {
+    satirlar().forEach((r) => {
+      const ex = core.getMountExample(r.v);
+      expect(r.detay.map((d) => d.baslik)).toEqual(['Gövdeler', 'Takozlar']);
+      expect(r.detay[0].ogeler).toEqual(ex.model.components.map((c) => ({ ad: c.name, deger: n(c.mass, 1) + ' kg' })));
+      expect(r.detay[1].ogeler).toEqual(ex.model.mounts.map((m) => ({ ad: m.name.trim() })));
     });
+  });
+  // KAYNAK: gerçek örnekte kaydın "Kaynak" satırı, yoksa açıklaması ("Kaynak: "
+  // öneki düşer); kurgu örnekte açıklaması — kurgunun "Kaynak" satırı bölüm
+  // başlığının söylediğini tekrar ederdi.
+  test('kaynak: kaydın Kaynak satırı ya da açıklaması; kurgunun uyarısı tekrar edilmez', () => {
+    const k = Object.fromEntries(satirlar().map((r) => [r.v, r.kaynak]));
+    expect(k.siper).toBe('CATIA atalet ölçümü · ADAMS doğrulaması');
+    expect(k.tulga).toBe('TULGA proje kaydı');
+    expect(k.asfat).toBe('BMC ASR-SR-116 · 04.08.2021');
+    core.getMountExampleList().forEach((ex) => {
+      const sat = (ex.specs || []).find((x) => x[0] === 'Kaynak');
+      const bek = (sat && !ex.kurgu) ? sat[1] : String(ex.description || '').replace(/^Kaynak:\s*/, '');
+      expect([ex.id, k[ex.id]]).toEqual([ex.id, bek]);
+      expect(k[ex.id]).not.toMatch(/^Kaynak:|Kurgu —/);
+    });
+  });
+  test('resim YOK: sayfada çizim, resim kutusu ve karo yok', () => {
+    const h = BS.veMntBaslangicHTML();
+    expect(h).not.toMatch(/ve-mnt2d-akso|ve-bas-resim|ve-bas-karo|ve-bas-oniz|<svg class="ve-ak/);
   });
 });
 
@@ -337,87 +331,68 @@ describe('DOM — kapsam, tazeleme, olaylar', () => {
 });
 
 // ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-04, tasarım tuvali "Takoz
-// başlangıç sayfası" · 1): solda panel, sağda seçili karonun önizlemesi ve
-// karolar. Karo SEÇER (görünüm durumu, modelde değil), Yükle ve çift tık
-// KURAR; önizlemenin çizimi kutunun ölçüsünde, Görünümler'in yazılı kipi.
-describe('ÇALIŞMA MASASI — panel · önizleme · karolar', () => {
+// başlangıç sayfası" · 1): solda panel, sağda masa — masanın içeriği örneklerin
+// DİZİNİ (aynı gün, tasarım tuvali "sade seçenekler" · D). Satırın Yükle'si TEK
+// TIKLA kurar; adı ayrıntıyı açar. Açık satır TEK ve görünüm durumu (modelde
+// değil); açıp kapamak sayfayı yeniden basmaz.
+describe('ÇALIŞMA MASASI — panel · dizin', () => {
   const el = () => document.getElementById(BS.VE_MNT_BAS_ID);
   const K = require('../../js/baslangic-sayfa.js');
+  const satir = (v) => el().querySelector('.ve-bas-satir[data-v="' + v + '"]');
+  const acik = () => [...el().querySelectorAll('.ve-bas-satir')].filter((r) => r.classList.contains('acik')).map((r) => r.getAttribute('data-v'));
   beforeEach(() => K._veBasSifirla());
-  test('panel: kimlik · kapılar · veri · Kılavuz; masa: önizleme · iki grup', () => {
+  test('panel: kimlik · kapılar · veri; masa: dizin — başlık satırı, iki grup', () => {
     const d = document.createElement('div');
     d.innerHTML = BS.veMntBaslangicHTML();
-    const panel = d.querySelector('.ve-bas-ic > aside.ve-bas-panel');
+    const panel = d.querySelector('.ve-bas-ic.ve-bas-ic--masa > aside.ve-bas-panel');
     const masa = d.querySelector('.ve-bas-ic > .ve-bas-masa');
     expect([...panel.children].map((c) => c.className))
       .toEqual(['ve-bas-kimlik', 've-bas-kapilar', 've-bas-veri']);       // Kılavuz yüklü değil
-    expect([...masa.children].map((c) => c.className)).toEqual(['ve-bas-oniz', 've-bas-gruplar']);
-    expect(masa.querySelectorAll('.ve-bas-grup').length).toBe(2);
+    expect([...masa.children].map((c) => c.className)).toEqual(['ve-bas-dizin']);
+    expect([...masa.querySelectorAll('.ve-bas-dizin-bas > span')].map((x) => x.textContent))
+      .toEqual(['', 'Araç', 'Gövde · takoz', 'Kütle', 'Kaynak', '']);
+    expect(masa.querySelectorAll('.ve-bas-dizin > .ve-bas-baslik').length).toBe(2);
   });
-  test('önizleme ilk karonun künyesi: araç · kütle · takoz · gövdeler; Yükle onun eylemi', () => {
-    const o = BS.veMntBaslangicOrnekler().find((x) => !x.kurgu);
-    const d = document.createElement('div');
-    d.innerHTML = BS.veMntBaslangicHTML();
-    const p = d.querySelector('.ve-bas-oniz');
-    expect(p.getAttribute('data-v')).toBe(o.key);
-    expect(p.querySelector('h2').textContent).toBe(o.arac);
-    expect([...p.querySelectorAll('dt')].map((x) => x.textContent)).toEqual(['Kütle', 'Takoz']);
-    expect([...p.querySelectorAll('dd')].map((x) => x.textContent)).toEqual([veSayi(o.kutle, 0) + ' kg', veSayi(o.takoz, 0)]);
-    expect([...p.querySelectorAll('.ve-bas-oniz-liste li')].map((x) => x.textContent)).toEqual(o.govdeAdlari);
-    const y = p.querySelector('.ve-bas-yukle');
-    expect([y.getAttribute('data-ey'), y.getAttribute('data-v')]).toEqual(['ornek', o.key]);
-    // karolar araç ve kütle taşır; ilk karo basılı, ötekiler değil
-    const karo = [...d.querySelectorAll('.ve-bas-karo')];
-    expect(karo.map((b) => b.getAttribute('aria-pressed'))).toEqual(karo.map((b, i) => (i === 0 ? 'true' : 'false')));
-    expect(karo[0].querySelector('.ve-bas-kunye b').textContent).toBe(o.arac);
+  test('ilk açılışta ilk satır açık: ayrıntısı görünür, Yükle\'si dolu; ötekiler kapalı', () => {
+    BS.veMntBaslangicKapsam('mount-analysis');
+    expect(acik()).toEqual(['siper']);
+    expect(satir('siper').querySelector('.ve-bas-satir-ac').getAttribute('aria-expanded')).toBe('true');
+    expect(satir('siper').querySelector('.ve-bas-satir-detay').hidden).toBe(false);
+    expect(satir('tulga').querySelector('.ve-bas-satir-ac').getAttribute('aria-expanded')).toBe('false');
+    expect(satir('tulga').querySelector('.ve-bas-satir-detay').hidden).toBe(true);
+    expect([...satir('siper').querySelectorAll('.ve-bas-satir-blok h3')].map((h) => h.textContent)).toEqual(['Gövdeler', 'Takozlar']);
   });
-  test('karo tıkı SEÇER: önizleme değişir, eylem ÇAĞRILMAZ; Yükle ve çift tık seçileni kurar', () => {
+  test('Yükle TEK TIKLA kurar; satırın adı yalnız açar/kapar, eylem ÇAĞRILMAZ', () => {
     BS.veMntBaslangicKapsam('mount-analysis');
     casus('veMntOrnekYukle', () => true, (f) => {
-      const karo = el().querySelector('.ve-bas-karo[data-v="tulga"]');
-      karo.click();
+      const r = satir('tulga');
+      r.querySelector('.ve-bas-satir-ac').click();
       expect(f).not.toHaveBeenCalled();
-      expect(el().querySelector('.ve-bas-oniz').getAttribute('data-v')).toBe('tulga');
-      expect(el().querySelector('.ve-bas-oniz h2').textContent).toBe('TULGA');
-      expect(karo.getAttribute('aria-pressed')).toBe('true');
-      expect(el().querySelectorAll('.ve-bas-karo[aria-pressed="true"]').length).toBe(1);
-      // karolar yeniden KURULMADI (odak ve çift tık yerinde kalsın)
-      expect(el().querySelector('.ve-bas-karo[data-v="tulga"]')).toBe(karo);
-      el().querySelector('.ve-bas-yukle').click();
-      expect(f).toHaveBeenCalledWith('tulga');
-      el().querySelector('.ve-bas-karo[data-v="kutu"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-      expect(f).toHaveBeenLastCalledWith('kutu');
+      expect(acik()).toEqual(['tulga']);                              // açık satır TEK
+      expect(satir('tulga')).toBe(r);                                 // sayfa yeniden BASILMADI
+      satir('kamyon').querySelector('.ve-bas-satir-yukle').click();   // kapalı satırın Yükle'si de kurar
+      expect(f).toHaveBeenCalledTimes(1);
+      expect(f).toHaveBeenCalledWith('kamyon');
+      r.querySelector('.ve-bas-satir-ac').click();                    // aynı ad kapatır
+      expect(acik()).toEqual([]);
     });
   });
-  test('seçim GÖRÜNÜM durumu: modele yazılmaz, sayfa yeniden açılınca yerinde', () => {
+  test('açık satır GÖRÜNÜM durumu: modele yazılmaz, sayfa yeniden açılınca yerinde', () => {
     BS.veMntBaslangicKapsam('mount-analysis');
-    el().querySelector('.ve-bas-karo[data-v="asfat"]').click();
+    satir('asfat').querySelector('.ve-bas-satir-ac').click();
     expect(global.nodes).toEqual([]);
     expect(stubs.saveState).not.toHaveBeenCalled();
     global.nodes = [dugum('mnt-motor')];
     BS.veMntBaslangicTazele();
     global.nodes = [];
     BS.veMntBaslangicTazele();
-    expect(el().querySelector('.ve-bas-oniz').getAttribute('data-v')).toBe('asfat');
-    expect(el().querySelector('.ve-bas-karo[aria-pressed="true"]').getAttribute('data-v')).toBe('asfat');
-  });
-  test('önizlemenin çizimi Görünümler\'in yazılı kipi, kutunun ölçüsünde (ölçülemezse nominal)', () => {
-    BS.veMntBaslangicKapsam('mount-analysis');
-    const kutu = el().querySelector('.ve-bas-oniz-resim');
-    const { w, h } = K.VE_BAS_ONIZ_NOMINAL;
-    expect(kutu.getAttribute('data-imza')).toBe('siper|' + w + 'x' + h);
-    const ayr = document.createElement('div');
-    ayr.innerHTML = BS.veMntBaslangicOnizleme('siper', w, h);
-    expect(kutu.innerHTML).toBe(ayr.innerHTML);
-    const svg = kutu.querySelector('svg.ve-mnt2d-akso');
-    expect(svg.getAttribute('viewBox')).toBe('0 0 ' + w + ' ' + h);
-    // yazılı: gövde adları çizimde; karonun sade çiziminde yazı yok
-    const ex = core.getMountExample('siper');
-    expect(svg.textContent).toContain(ex.model.components[0].name);
-    expect(BS.veMntBaslangicResim('siper')).not.toContain('<text');
-    expect(BS.veMntBaslangicOnizleme('siper', w, h))
-      .toBe(AK.ciz(cp.veMntAksoOrnekModel(ex.model), { W: w, H: h, etiket: 'ad', ucluyok: true, isaret: 1.5,
-        fs: { k: 10, b: 11 }, aria: ex.vehicle }).svg);
+    expect(acik()).toEqual(['asfat']);
+    satir('asfat').querySelector('.ve-bas-satir-ac').click();         // hepsi kapalı da korunur
+    global.nodes = [dugum('mnt-motor')];
+    BS.veMntBaslangicTazele();
+    global.nodes = [];
+    BS.veMntBaslangicTazele();
+    expect(acik()).toEqual([]);
   });
 });
 
@@ -443,6 +418,16 @@ describe('RAY — sayfa açıkken Topoloji · Sonuçlar rayı gizli', () => {
   test('CSS: ray yalnız topoloji sayfasında gizli (öteki sayfada dönüş yolu)', () => {
     expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-nav-rail\{ display:none; \}/);
   });
+  // Kullanıcı 2026-11-04: "iki sembol var. Onları kaldıralım. Sadece geriye
+  // gelme kalsın … Arada çirkin bir boşluk var." Paletin açma sekmesi sayfa
+  // açıkken gizli (satır içi display'i JS yazar — kural !important) ve panelin
+  // üst dolgusu yalnız dönüş düğmesinin köşesi: 10 + 26 + 12 = 48 px.
+  test('CSS: paletin açma sekmesi sayfa açıkken gizli; panel yalnız dönüş düğmesine yer bırakır', () => {
+    expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-sidebar-reveal\{ display:none !important; \}/);
+    expect(CSS).toMatch(/\.ve-bas-panel\{[^}]*padding:48px 20px 18px;/);
+    expect(CSS).not.toMatch(/\.ve-bas-panel\{[^}]*padding-top:84px/);
+    expect(CSS).not.toMatch(/ve-sidebar-reveal\.visible\) \.ve-bas-panel/);
+  });
 });
 
 describe('ORTAK KİT — "aynı" ekran TEK üreticiden', () => {
@@ -461,8 +446,9 @@ describe('ORTAK KİT — "aynı" ekran TEK üreticiden', () => {
     const K = require('../../js/baslangic-sayfa.js');
     const h = K.veBasSayfaHTML({ ust: 'ÜSTSATIR', baslik: 'SAYFABAŞLIĞI', alt: 'ALTMETİN', not: 'DİPNOT',
       kapilar: [{ ey: 'a', ikon: 'wand', ad: 'Kapı', not: 'KAPINOTU', rozet: 'ROZET' }],
-      bolumler: [{ baslik: 'Bölüm', not: 'BÖLÜMNOTU', karolar: [{ ey: 'k', v: '1', kod: 'K1' }] }] });
-    ['ÜSTSATIR', 'SAYFABAŞLIĞI', 'ALTMETİN', 'DİPNOT', 'KAPINOTU', 'ROZET', 'BÖLÜMNOTU']
+      bolumler: [{ baslik: 'Bölüm', not: 'BÖLÜMNOTU', satirlar: [{ ey: 'k', v: '1', ad: 'K1',
+        not: 'SATIRNOTU', alt: 'SATIRALT', aciklama: 'SATIRAÇIKLAMA' }] }] });
+    ['ÜSTSATIR', 'SAYFABAŞLIĞI', 'ALTMETİN', 'DİPNOT', 'KAPINOTU', 'ROZET', 'BÖLÜMNOTU', 'SATIRNOTU', 'SATIRALT', 'SATIRAÇIKLAMA']
       .forEach((m) => expect(h).not.toContain(m));
     expect(h).toContain('<b>Kapı</b>');
     expect(h).toContain('<h2>Bölüm</h2>');
@@ -473,6 +459,13 @@ describe('ORTAK KİT — "aynı" ekran TEK üreticiden', () => {
     ['KİMLİKALT', 'KİMLİKAÇIKLAMA', 'KİMLİKNOTU', 'VERİNOTU', 'VERİALT', 'Boş'].forEach((m) => expect(h2).not.toContain(m));
     expect(h2).toContain('<h1>Modül</h1>');
     expect(h2).toContain('<dt>Tip</dt><dd>3</dd>');
+    // Satırın ayrıntısı yalnız ad ve değer; boş öğe ve boş liste basılmaz.
+    const r = K.veBasSatirHTML({ ey: 'k', v: '1', ad: 'A', detay: [
+      { baslik: 'Liste', ogeler: [{ ad: 'x', deger: '1 kg', not: 'ÖĞENOTU' }, { ad: '' }] },
+      { baslik: 'BOŞLİSTE', ogeler: [] }] }, true);
+    expect(r).toContain('<li><span>x</span><b>1 kg</b></li>');
+    expect(r.match(/<li>/g).length).toBe(1);
+    ['ÖĞENOTU', 'BOŞLİSTE'].forEach((m) => expect(r).not.toContain(m));
     // Karo ipucu yalnız verilirse ve komut eki olmadan.
     expect(h).not.toContain('title=');
     const karo = K.veBasKaroHTML({ ey: 'k', v: '1', baslik: 'Motor · Şanzıman' });

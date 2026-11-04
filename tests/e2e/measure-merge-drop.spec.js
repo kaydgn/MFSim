@@ -128,7 +128,7 @@ test.describe('MFSim — Birleştir: seçerek, çok eksenli', () => {
       veStartModule('mount-analysis');
     });
     await page.waitForSelector('#ve-mnt-baslangic:not([hidden])', { timeout: 30000 });
-    await page.dblclick('#ve-mnt-baslangic .ve-bas-karo >> nth=0');   // tık seçer, çift tık kurar
+    await page.click('#ve-mnt-baslangic .ve-bas-satir-yukle >> nth=0');   // satırın Yükle'si tek tıkla kurar
     await page.waitForFunction(
       () => (nodes || []).some((n) => n.type === 'mnt-solver'),
       null, { timeout: 30000 });

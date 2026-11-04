@@ -65,7 +65,7 @@ test('DAİREDEN NOKTA: öneri sunudaki sayı; kip takoza sığar; kenara gel →
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"]');   // tık seçer, çift tık kurar
+  await page.click('#ve-mnt-baslangic .ve-bas-satir-yukle >> nth=0');   // satırın Yükle'si tek tıkla kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   await pencereAc(page);
   await dosyaAc(page);
@@ -195,7 +195,7 @@ test('KAYIT: seçilen daire → kaydet → sayfa yeniden → aç → föyde çap
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"]');   // tık seçer, çift tık kurar
+  await page.click('#ve-mnt-baslangic .ve-bas-satir-yukle >> nth=0');   // satırın Yükle'si tek tıkla kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   await pencereAc(page);
   await dosyaAc(page);

@@ -46,7 +46,7 @@ test('VERİ SAYFASI: 3B\'de model, ön yüz ve krank ekseni gerçek fareyle; ağ
   await bootApp(page);
   // Tulga örneği tuvalde; 3D Görüntüleyici penceresinden dosya
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
-  await page.dblclick('#ve-mnt-baslangic .ve-bas-karo[data-yukle="ornek"][data-v="tulga"]');   // tık seçer, çift tık kurar
+  await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-yukle');   // satırın Yükle'si tek tıkla kurar
   await page.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   await page.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
   await page.waitForFunction(() => typeof veMntCadPencereAcik === 'function' && veMntCadPencereAcik());
