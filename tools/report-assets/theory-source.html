@@ -12,9 +12,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#26241f; --paper:#fdfdfb; --line:#c6c0b4; --line-soft:#e6e1d8;
-  --vurgu:#96441f; --vurgu-soft:#f2e9e3; --check:#2a6140; --check-soft:#e8f0ea;
-  --warn:#6d5310; --warn-soft:#f5efe2; --yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:var(--yuz);
+  --ink:#1f2328; --paper:#fdfdfb; --line:#c5cbd3; --line-soft:#e4e8ed;
+  --vurgu:#1747b0; --vurgu-soft:#e8effc; --check:#166a2e; --check-soft:#e6f2ea;
+  --warn:#7c5400; --warn-soft:#f5efe2; --yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:var(--yuz);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -159,33 +159,33 @@ pre code{background:none;padding:0}
 <figure>
 <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#96441f"/></marker>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#1747b0"/></marker>
     <pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="#8a92a0" stroke-width="1.5"/></pattern>
   </defs>
   <!-- govde: yazi solda, agirlik merkezi ve eksenler sagda (eksen yaziyi kesmesin) -->
   <g>
-    <rect x="200" y="60" width="420" height="110" fill="#f2e9e3" stroke="#96441f" stroke-width="2"/>
-    <text x="216" y="88" font-size="14" fill="#96441f" font-weight="600">RİJİT GÖVDE</text>
+    <rect x="200" y="60" width="420" height="110" fill="#e8effc" stroke="#1747b0" stroke-width="2"/>
+    <text x="216" y="88" font-size="14" fill="#1747b0" font-weight="600">RİJİT GÖVDE</text>
     <text x="216" y="108" font-size="11.5" fill="#3c4350">m, I<tspan font-size="8.5" baseline-shift="sub">G</tspan>  (motor + şanzıman + şaft payı + cradle)</text>
   </g>
   <!-- CG sembolu -->
   <g transform="translate(548,140)">
-    <circle r="13" fill="none" stroke="#26241f" stroke-width="1.6"/>
-    <path d="M0,0 L13,0 A13,13 0 0 1 0,13 Z M0,0 L-13,0 A13,13 0 0 1 0,-13 Z" fill="#26241f"/>
-    <text x="-16" y="-14" text-anchor="end" font-size="12" fill="#26241f">G</text>
+    <circle r="13" fill="none" stroke="#1f2328" stroke-width="1.6"/>
+    <path d="M0,0 L13,0 A13,13 0 0 1 0,13 Z M0,0 L-13,0 A13,13 0 0 1 0,-13 Z" fill="#1f2328"/>
+    <text x="-16" y="-14" text-anchor="end" font-size="12" fill="#1f2328">G</text>
   </g>
   <!-- eksenler -->
-  <g stroke="#96441f" stroke-width="1.6" fill="none">
+  <g stroke="#1747b0" stroke-width="1.6" fill="none">
     <line x1="548" y1="140" x2="668" y2="140" marker-end="url(#arr)"/>
     <line x1="548" y1="140" x2="548" y2="38" marker-end="url(#arr)"/>
   </g>
-  <text x="674" y="144" font-size="12" fill="#96441f">x, u<tspan font-size="9" baseline-shift="sub">x</tspan></text>
-  <text x="554" y="36" font-size="12" fill="#96441f">z, u<tspan font-size="9" baseline-shift="sub">z</tspan></text>
+  <text x="674" y="144" font-size="12" fill="#1747b0">x, u<tspan font-size="9" baseline-shift="sub">x</tspan></text>
+  <text x="554" y="36" font-size="12" fill="#1747b0">z, u<tspan font-size="9" baseline-shift="sub">z</tspan></text>
   <!-- donme oku -->
-  <path d="M 593 123 A 30 30 0 1 1 594 157" fill="none" stroke="#96441f" stroke-width="1.4" marker-end="url(#arr)"/>
-  <text x="630" y="186" font-size="12" fill="#96441f">θ<tspan font-size="9" baseline-shift="sub">y</tspan></text>
+  <path d="M 593 123 A 30 30 0 1 1 594 157" fill="none" stroke="#1747b0" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="630" y="186" font-size="12" fill="#1747b0">θ<tspan font-size="9" baseline-shift="sub">y</tspan></text>
   <!-- yaylar -->
-  <g stroke="#26241f" stroke-width="1.8" fill="none">
+  <g stroke="#1f2328" stroke-width="1.8" fill="none">
     <path d="M250,170 l0,10 l12,6 l-24,12 l24,12 l-24,12 l12,6 l0,10"/>
     <path d="M560,170 l0,10 l12,6 l-24,12 l24,12 l-24,12 l12,6 l0,10"/>
   </g>
@@ -194,19 +194,19 @@ pre code{background:none;padding:0}
   <text x="578" y="212" font-size="11.5" fill="#3c4350">k<tspan font-size="8.5" baseline-shift="sub">x</tspan>, k<tspan font-size="8.5" baseline-shift="sub">y</tspan>, k<tspan font-size="8.5" baseline-shift="sub">z</tspan></text>
   <!-- zemin -->
   <rect x="210" y="238" width="80" height="10" fill="url(#hatch)"/>
-  <line x1="210" y1="238" x2="290" y2="238" stroke="#26241f" stroke-width="2"/>
+  <line x1="210" y1="238" x2="290" y2="238" stroke="#1f2328" stroke-width="2"/>
   <rect x="520" y="238" width="80" height="10" fill="url(#hatch)"/>
-  <line x1="520" y1="238" x2="600" y2="238" stroke="#26241f" stroke-width="2"/>
+  <line x1="520" y1="238" x2="600" y2="238" stroke="#1f2328" stroke-width="2"/>
   <text x="405" y="262" text-anchor="middle" font-size="11.5" fill="#3c4350">şasi (rijit)</text>
   <!-- konum vektoru -->
-  <line x1="548" y1="140" x2="252" y2="172" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arr)"/>
-  <text x="300" y="150" font-size="12" fill="#6d5310">d<tspan font-size="9" baseline-shift="sub">i</tspan></text>
+  <line x1="548" y1="140" x2="252" y2="172" stroke="#7c5400" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+  <text x="300" y="150" font-size="12" fill="#7c5400">d<tspan font-size="9" baseline-shift="sub">i</tspan></text>
   <!-- sehim -->
-  <line x1="238" y1="176" x2="238" y2="232" stroke="#2a6140" stroke-width="1.4" marker-end="url(#arr)"/>
-  <text x="196" y="208" font-size="12" fill="#2a6140">δ<tspan font-size="9" baseline-shift="sub">i</tspan></text>
+  <line x1="238" y1="176" x2="238" y2="232" stroke="#166a2e" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="196" y="208" font-size="12" fill="#166a2e">δ<tspan font-size="9" baseline-shift="sub">i</tspan></text>
   <text x="730" y="112" font-size="12.5" fill="#3c4350">Her takozda:</text>
-  <text x="730" y="134" font-size="12.5" fill="#26241f">δ<tspan font-size="9.5" baseline-shift="sub">i</tspan> = u + θ × d<tspan font-size="9.5" baseline-shift="sub">i</tspan></text>
-  <text x="730" y="156" font-size="12.5" fill="#26241f">f<tspan font-size="9.5" baseline-shift="sub">i</tspan> = −k<tspan font-size="9.5" baseline-shift="sub">i</tspan> δ<tspan font-size="9.5" baseline-shift="sub">i</tspan></text>
+  <text x="730" y="134" font-size="12.5" fill="#1f2328">δ<tspan font-size="9.5" baseline-shift="sub">i</tspan> = u + θ × d<tspan font-size="9.5" baseline-shift="sub">i</tspan></text>
+  <text x="730" y="156" font-size="12.5" fill="#1f2328">f<tspan font-size="9.5" baseline-shift="sub">i</tspan> = −k<tspan font-size="9.5" baseline-shift="sub">i</tspan> δ<tspan font-size="9.5" baseline-shift="sub">i</tspan></text>
 </svg>
 <figcaption><b>Şekil 1 —</b> Kavramsal model: 6 serbestlik dereceli rijit gövde, üç eksenli lineer yaylarla (takozlar) rijit şasiye bağlıdır. \( \mathbf{d}_i \), takozun ağırlık merkezine göre konumu; \( \boldsymbol{\delta}_i \), takoz sehim vektörüdür.</figcaption>
 </figure>
@@ -339,16 +339,16 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
 
 <figure>
 <svg viewBox="-1220 -560 4640 1120" xmlns="http://www.w3.org/2000/svg">
-  <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#96441f"/></marker></defs>
+  <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#1747b0"/></marker></defs>
   <!-- eksen ve merkez cizgisi -->
-  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c6c0b4" stroke-width="3" stroke-dasharray="26 16"/>
-  <line x1="-1150" y1="-500" x2="-800" y2="-500" stroke="#96441f" stroke-width="6" marker-end="url(#arr2)"/>
-  <text x="-770" y="-478" font-size="60" fill="#96441f">+X</text>
-  <line x1="-1150" y1="-500" x2="-1150" y2="-250" stroke="#96441f" stroke-width="6" marker-end="url(#arr2)"/>
-  <text x="-1130" y="-190" font-size="60" fill="#96441f">−Y</text>
+  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c5cbd3" stroke-width="3" stroke-dasharray="26 16"/>
+  <line x1="-1150" y1="-500" x2="-800" y2="-500" stroke="#1747b0" stroke-width="6" marker-end="url(#arr2)"/>
+  <text x="-770" y="-478" font-size="60" fill="#1747b0">+X</text>
+  <line x1="-1150" y1="-500" x2="-1150" y2="-250" stroke="#1747b0" stroke-width="6" marker-end="url(#arr2)"/>
+  <text x="-1130" y="-190" font-size="60" fill="#1747b0">−Y</text>
   <text x="-1150" y="440" font-size="54" fill="#5a6270">+Y (sağ) ↑ şekilde üsttedir</text>
   <!-- takozlar (kare) : y_cizim = -Y -->
-  <g fill="#fff" stroke="#26241f" stroke-width="7">
+  <g fill="#fff" stroke="#1f2328" stroke-width="7">
     <rect x="-988" y="-90" width="80" height="80"/>   <!-- sag on  (+50.8) -->
     <rect x="-988" y="10"  width="80" height="80"/>   <!-- sol on  (-50.8) -->
     <rect x="495"  y="-397" width="80" height="80"/>  <!-- sag orta -->
@@ -356,9 +356,9 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
     <rect x="597"  y="-397" width="80" height="80"/>  <!-- sag arka -->
     <rect x="597"  y="317"  width="80" height="80"/>  <!-- sol arka -->
   </g>
-  <text x="-948" y="-140" text-anchor="middle" font-size="52" fill="#26241f">ön takozlar</text>
-  <text x="586" y="-450" text-anchor="middle" font-size="52" fill="#26241f">sağ orta · sağ arka</text>
-  <text x="586" y="480" text-anchor="middle" font-size="52" fill="#26241f">sol orta · sol arka</text>
+  <text x="-948" y="-140" text-anchor="middle" font-size="52" fill="#1f2328">ön takozlar</text>
+  <text x="586" y="-450" text-anchor="middle" font-size="52" fill="#1f2328">sağ orta · sağ arka</text>
+  <text x="586" y="480" text-anchor="middle" font-size="52" fill="#1f2328">sol orta · sol arka</text>
   <!-- bilesen CG'leri -->
   <g>
     <circle cx="-321" cy="-5" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
@@ -374,9 +374,9 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
   </g>
   <!-- birlesik CG sembolu -->
   <g transform="translate(255,-8)">
-    <circle r="52" fill="#fff" stroke="#26241f" stroke-width="7"/>
-    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#26241f"/>
-    <text x="0" y="130" text-anchor="middle" font-size="54" fill="#26241f" font-weight="600">G (254,7 · 7,5)</text>
+    <circle r="52" fill="#fff" stroke="#1f2328" stroke-width="7"/>
+    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#1f2328"/>
+    <text x="0" y="130" text-anchor="middle" font-size="54" fill="#1f2328" font-weight="600">G (254,7 · 7,5)</text>
   </g>
 </svg>
 <figcaption><b>Şekil 2 —</b> Üstten görünüş (X–Y düzlemi, ölçekli): altı takoz, bileşen ağırlık merkezleri ve birleşik ağırlık merkezi. Cradle braketleri ile şaft noktasının geride oluşu, birleşik ağırlık merkezini takoz grubunun arkasına çeker.</figcaption>
@@ -385,17 +385,17 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
 <figure>
 <svg viewBox="-1220 -1030 4640 1330" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#96441f"/></marker>
+    <marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#1747b0"/></marker>
     <pattern id="hatch2" width="26" height="26" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="26" stroke="#8a92a0" stroke-width="5"/></pattern>
   </defs>
-  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c6c0b4" stroke-width="3" stroke-dasharray="26 16"/>
+  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c5cbd3" stroke-width="3" stroke-dasharray="26 16"/>
   <text x="3160" y="-24" font-size="46" fill="#5a6270">Z = 0</text>
-  <line x1="-1150" y1="-960" x2="-800" y2="-960" stroke="#96441f" stroke-width="6" marker-end="url(#arr3)"/>
-  <text x="-770" y="-938" font-size="60" fill="#96441f">+X</text>
-  <line x1="-1150" y1="-960" x2="-1150" y2="-710" stroke="#96441f" stroke-width="6" marker-end="url(#arr3)"/>
-  <text x="-1130" y="-650" font-size="60" fill="#96441f">+Z</text>
+  <line x1="-1150" y1="-960" x2="-800" y2="-960" stroke="#1747b0" stroke-width="6" marker-end="url(#arr3)"/>
+  <text x="-770" y="-938" font-size="60" fill="#1747b0">+X</text>
+  <line x1="-1150" y1="-960" x2="-1150" y2="-710" stroke="#1747b0" stroke-width="6" marker-end="url(#arr3)"/>
+  <text x="-1130" y="-650" font-size="60" fill="#1747b0">+Z</text>
   <!-- takozlar yan gorunus: on z=371, orta/arka z=635 -->
-  <g fill="#fff" stroke="#26241f" stroke-width="7">
+  <g fill="#fff" stroke="#1f2328" stroke-width="7">
     <rect x="-988" y="-411" width="80" height="80"/>
     <rect x="495" y="-675" width="80" height="80"/>
     <rect x="597" y="-675" width="80" height="80"/>
@@ -405,8 +405,8 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
     <rect x="485" y="-595" width="100" height="34"/>
     <rect x="587" y="-595" width="100" height="34"/>
   </g>
-  <text x="-948" y="-460" text-anchor="middle" font-size="50" fill="#26241f">ön (z=371)</text>
-  <text x="586" y="-724" text-anchor="middle" font-size="50" fill="#26241f">orta+arka (z=635)</text>
+  <text x="-948" y="-460" text-anchor="middle" font-size="50" fill="#1f2328">ön (z=371)</text>
+  <text x="586" y="-724" text-anchor="middle" font-size="50" fill="#1f2328">orta+arka (z=635)</text>
   <!-- CG'ler -->
   <circle cx="-321" cy="-859" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
   <text x="-321" y="-910" text-anchor="middle" font-size="50" fill="#5a6270">motor G (z=859)</text>
@@ -417,9 +417,9 @@ $$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\m
   <circle cx="3042" cy="168" r="30" fill="none" stroke="#5a6270" stroke-width="6"/>
   <text x="3042" y="260" text-anchor="middle" font-size="50" fill="#5a6270">şaft (z=−168)</text>
   <g transform="translate(255,-746)">
-    <circle r="52" fill="#fff" stroke="#26241f" stroke-width="7"/>
-    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#26241f"/>
-    <text x="0" y="-90" text-anchor="middle" font-size="54" fill="#26241f" font-weight="600">G (z=746)</text>
+    <circle r="52" fill="#fff" stroke="#1f2328" stroke-width="7"/>
+    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#1f2328"/>
+    <text x="0" y="-90" text-anchor="middle" font-size="54" fill="#1f2328" font-weight="600">G (z=746)</text>
   </g>
 </svg>
 <figcaption><b>Şekil 3 —</b> Yandan görünüş (X–Z düzlemi, ölçekli). Ağırlık merkezi (z≈746) takoz düzlemlerinin (371 / 635) üzerindedir; bu düşey ofset \( \mathbf K_{t\theta} \) kuplaj bloğunun ana kaynağıdır ve boyuna/enine ötelemeleri kafa vurma/yalpa dönmeleriyle birleştirir.</figcaption>

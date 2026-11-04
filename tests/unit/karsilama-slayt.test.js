@@ -379,7 +379,7 @@ describe('CSS — okunurluk ve kırpma', () => {
     expect(blok).toMatch(/overflow:\s*hidden/);
   });
 
-  // Kesik (2026-10-23, "6d · İnce") ve bakır çizgisi slaytın ÜSTÜNDE, akışın
+  // Kesik (2026-10-23, "6d · İnce") ve vurgu çizgisi slaytın ÜSTÜNDE, akışın
   // DIŞINDA: karşılamanın in-flow çocuğu yok, fotoğraf ikisinin de altından
   // geçiyor. Çizgi tıklamayı yutmaz (ekranın tamamını kaplayan bir katman).
   test('kesik ve çizgi slaytın ÜSTÜNDE ve akıştan ÇIKMIŞ', () => {

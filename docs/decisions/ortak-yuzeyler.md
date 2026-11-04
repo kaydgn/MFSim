@@ -352,6 +352,34 @@ kapattığı sıçrama. Üçüncüsü kaydı kalıcı olarak yeni sözlüğe yaz
 Korunan şey "kopya yok" değil **üçünün aynı kararı vermesi**. Kayıtlar yeni
 sözlüğe döndükçe üç liste birlikte silinebilir.
 
+## Çalışma masası paleti — programın teması (2026-11-04)
+
+**Hüküm.** Programın iki zemini (açık · koyu) Takoz 3B'nin tasarım
+tuvalindeki "Çalışma masası"nın renkleriyle kurulur: soğuk gri tuval, beyaz
+panel, mavi aksan (açıkta `#1f5fd6`, koyuda açık mavi `#5b9cf5` + koyu yazı).
+Kabuk bandı düz tondur (`--bant-zemin`: panel %60 + tuval), degrade değil.
+Motorun ve FEAD krankının 3B rol rengi aksandan ayrı (`--rol-motor`).
+
+**Gerekçe.** Kullanıcı: *"tasarımın teması da çok güzelmiş … Onu programın
+temel teması yapalım … baştan sona tüm temayı değiştireceğiz."*
+
+**Değişmeyen kurallar.** Yüzey yönü (aşağıda), dört yüzeyde AA, kenarın
+tuvale karşı ağırlığı (1,56:1 — 2026-09-25 kararı; tasarımın `#dadee4`'ü 1,13
+idi), tek yazı tipi, belgede kâğıt beyaz ve mürekkep ekranın `--ink-*`
+jetonları. Koyu temada dolu düğmenin hover'ı `--ink-accent`e (daha açık)
+gittiği için aksan açık, üstündeki yazı koyu kalır.
+
+**Emekli Atölye değerleri** (geri dönülürse başlangıç noktası): açık
+`#f0ede7 · #faf8f4 · #e6e1d8`, metin `#26241f · #544e44 · #676055`, aksan
+`#a8502b` (ink `#96441f`); koyu `#1a1815 · #221f1b · #2a2621`, metin
+`#e6e0d5 · #b7ae9f · #968d7e`, aksan `#d9763f` (ink `#e08a56`); sinema bandı
+`#0a0908`, vurgu `#d9763f`.
+
+**Kapılar.** `theme-contrast.test.js` (metin · on · ink · kademe · kenar) ·
+`mount-3b.test.js` → *ROL RENKLERİ* (ΔE ≥ 6,5, en yakın 8,5 · 7,9) ·
+`belge-paleti.test.js` · `theme-consistency.test.js` (kip pulu) ·
+`loader-splash.test.js` → *SİNEMA* · `kontrast.spec.js` (iki temada ekran).
+
 ## Atölye paleti — yüzey yönü bir KURAL (2026-09-22)
 
 **Hüküm.** `--bg-secondary` her zaman `--bg-primary`'den AÇIK (yükselen panel);

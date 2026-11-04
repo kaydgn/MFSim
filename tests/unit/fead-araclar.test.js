@@ -791,8 +791,11 @@ describe('görünüm CSS’te — ölçü sabitleri birebir', () => {
   test('satır içi RENK yazılmıyor — durum kuralları jetondan', () => {
     const src = oku('js/cp-fead-araclar.js');
     expect(src).not.toMatch(/style="[^"]*(color|background)/);
-    // Birincil eylem çözücü penceresindeki Hesapla ile AYNI aile.
-    expect(kural('.ve-fead-arac-btn.birincil')).toMatch(/--accent-warning/);
+    // Birincil eylem çözücü penceresindeki Hesapla ile AYNI aile — çalıştırma
+    // eylemi vurgunun ailesi (2026-11-04, Çalışma masası paleti).
+    const zemin = (k) => (k.match(/background:var\(--(accent-[\w]+)\)/) || [])[1];
+    expect(zemin(kural('.ve-fead-arac-btn.birincil'))).toBe('accent-primary');
+    expect(zemin(kural('.ve-fead-arac-btn.birincil'))).toBe(zemin(kural('.ve-fp-solve')));
     expect(kural('.ve-fead-arac-kpi.bayat > div')).toMatch(/opacity/);
     expect(kural('.ve-fead-arac-yuva.yakin')).toMatch(/opacity:1/);
   });

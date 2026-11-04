@@ -247,14 +247,14 @@ var VE_GUIDE_SCENE_SEL = [
 // kez yazmak, aynı bileşenin iki belgede farklı renkte çizilmesi demekti —
 // `veGuideSceneCSS` bu yüzden çakışanı atıyor, listeye bakıp varsaymıyor.
 //
-// Değerler BASKI paletinden türer (rapor: --ink #26241f, --line #c6c0b4,
-// --vurgu #96441f) — ekran paletinden DEĞİL. Şekiller kâğıda basılıyor: zemin
-// beyaz kalır, griler Atölye'nin sıcak eksenindedir. Belge DURGUN: geçiş
+// Değerler BASKI paletinden türer (rapor: --ink #1f2328, --line #c5cbd3,
+// --vurgu #1747b0) — ekran paletinden DEĞİL. Şekiller kâğıda basılıyor: zemin
+// beyaz kalır, griler Çalışma masası paletinin soğuk eksenindedir. Belge DURGUN: geçiş
 // süresi 0, gölge ve odak halkası yok — kâğıtta karşılığı olmayan şeyler.
 var VE_GUIDE_APPFIG_TOKENS = {
-  '--bg-primary': '#fff', '--bg-secondary': '#fbfaf7', '--bg-tertiary': '#f2efe8',
-  '--text-primary': '#26241f', '--text-heading': '#14120f',
-  '--border-light': '#ddd7cb', '--border-hover': '#c6c0b4',
+  '--bg-primary': '#fff', '--bg-secondary': '#fbfcfd', '--bg-tertiary': '#eef1f4',
+  '--text-primary': '#1f2328', '--text-heading': '#101418',
+  '--border-light': '#d5dae1', '--border-hover': '#c5cbd3',
   '--font-mono': "'Inter',system-ui,sans-serif",   // tek yüz — belgede de (2026-09-23)
   '--fs-body': '11px', '--fs-md': '12px', '--fs-lg': '13px', '--fs-h2': '15px',
   // Sonuçlar sekmesinin özet kartı bu ikisini istiyor (`.ve-fr-kpi`):
@@ -283,9 +283,9 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--dur-fast': '0s', '--shadow-lg': 'none', '--shadow-xl': 'none', '--focus-ring': 'transparent',
   // FEAD araçları penceresi (2026-09-28): pencere köşesi ve pencere ailesinin
   // başlık bandı — baskı ölçeğinde (köşe --radius-md'nin bir üstü; bant
-  // ekrandaki ölçü, zemin baskı paletinin iki tonu).
+  // ekrandaki ölçü, zemin baskı paletinin düz tonu).
   '--radius-lg': '4px', '--bant-h': '26px',
-  '--bant-zemin': 'linear-gradient(180deg,#f2efe8,#fbfaf7)',
+  '--bant-zemin': '#f6f8fa',
   '--shadow-color': 'transparent',
   '--ribbon-strip-h': 'auto', '--ribbon-expanded-h': 'auto'
 };

@@ -94,7 +94,7 @@ var _mw3b = null;
 // rengi ayrı (kullanım notu T03: üç aksesuar şanzıman, transfer ve braketle
 // aynı renkteydi) — `--rol-*` jetonları, ayrışma iki temada ölçülü.
 var VE_MW_3B_ROL_RENK = {
-  'mnt-motor': '--accent-primary', 'mnt-gearbox': '--seri-1', 'mnt-transfer': '--seri-2',
+  'mnt-motor': '--rol-motor', 'mnt-gearbox': '--seri-1', 'mnt-transfer': '--seri-2',
   'mnt-bracket': '--seri-3', 'mnt-mount': '--accent-success', 'mnt-shaft': '--rol-mil',
   'mnt-pto': '--accent-warning', 'mnt-pump': '--rol-pompa', 'mnt-pto-group': '--rol-pto-grup',
   'mnt-alternator': '--rol-alternator', 'mnt-alt-bracket': '--rol-alt-braket', 'mnt-ac': '--rol-klima',
@@ -331,13 +331,13 @@ function _mw3bZemin(){
   try {
     var c = document.createElement('canvas'), g = c.getContext('2d');
     c.width = 2; c.height = 256;
-    var L = g.createLinearGradient(0, 0, 0, 256), ust = _mw3bJeton('--bg-secondary', '#faf8f4');
-    L.addColorStop(0, ust); L.addColorStop(0.5, ust); L.addColorStop(1, _mw3bJeton('--bg-tertiary', '#e6e1d8'));
+    var L = g.createLinearGradient(0, 0, 0, 256), ust = _mw3bJeton('--bg-secondary', '#ffffff');
+    L.addColorStop(0, ust); L.addColorStop(0.5, ust); L.addColorStop(1, _mw3bJeton('--bg-tertiary', '#e4e8ed'));
     g.fillStyle = L; g.fillRect(0, 0, 2, 256);
     var t = new THREE.CanvasTexture(c);
     t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false;
     return t;
-  } catch(e){ return _mw3bRenk('--bg-secondary', '#faf8f4'); }
+  } catch(e){ return _mw3bRenk('--bg-secondary', '#ffffff'); }
 }
 // DURUM ÇUBUĞU: solda imlecin altındaki noktanın koordinatı (_mw3bImlecYaz), sağda
 // çizim yazılımsalsa (ekran kartı yok) durumu ve birimler
@@ -548,8 +548,8 @@ function _mw3bMalzeme(tur){
   var m = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.05, roughness: 0.6, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
   if(soluk){ m.transparent = true; m.opacity = VE_MW_3B_TUL.a; m.depthWrite = false; }
-  var vurgu = _mw3bRenk('--accent-primary', '#a8502b'), isik = _mw3bRenk('--isik', '#f7f2e9');
-  var tul = _mw3bRenk('--text-muted', '#676055').lerp(_mw3bRenk('--bg-secondary', '#faf8f4'), 0.2);
+  var vurgu = _mw3bRenk('--accent-primary', '#1f5fd6'), isik = _mw3bRenk('--isik', '#ffffff');
+  var tul = _mw3bRenk('--text-muted', '#5f6873').lerp(_mw3bRenk('--bg-secondary', '#ffffff'), 0.2);
   // Silüet: yüzün bakışa dik kaldığı yer (normal · bakış → 0) — yalnız seçili
   // ve fare altındaki yüzde hesaplanır. Durum üçgen içinde aradeğerlenir
   // (2 → 1,9999): yuvarlanmadan okunursa yüz kumlanıyordu
@@ -706,11 +706,11 @@ function _mw3bBoyaBaglam(){
   if(V.fareDugum >= 0){ fareSet = {}; veMntWiz3bParcalar(s, V.fareDugum).forEach(function(p){ fareSet[p] = 1; }); }
   var rol = {};
   Object.keys(VE_MW_3B_ROL_RENK).forEach(function(t){ rol[t] = _mw3bBayt(_mw3bRenk(veMntWiz3bRolJeton(t), '#888888')); });
-  var bos = _mw3bRenk('--text-muted', '#676055').lerp(_mw3bRenk('--bg-secondary', '#faf8f4'), 0.4);
+  var bos = _mw3bRenk('--text-muted', '#5f6873').lerp(_mw3bRenk('--bg-secondary', '#ffffff'), 0.4);
   V.baglam = { surum: V.boyaSurum, sec: sec, rol: rol, bos: _mw3bBayt(bos), xray: V.gorunus === 'xray',
-    bosSec: _mw3bBayt(bos.clone().lerp(_mw3bRenk('--accent-primary', '#a8502b'), VE_MW_3B_SECIM_TON)),
-    cizgi: _mw3bBayt(_mw3bRenk('--text-primary', '#26241f')), cizgiSec: _mw3bBayt(_mw3bRenk('--text-heading', '#14120f')),
-    cizgiFare: _mw3bBayt(_mw3bRenk('--accent-primary', '#a8502b')),
+    bosSec: _mw3bBayt(bos.clone().lerp(_mw3bRenk('--accent-primary', '#1f5fd6'), VE_MW_3B_SECIM_TON)),
+    cizgi: _mw3bBayt(_mw3bRenk('--text-primary', '#1f2328')), cizgiSec: _mw3bBayt(_mw3bRenk('--text-heading', '#101418')),
+    cizgiFare: _mw3bBayt(_mw3bRenk('--accent-primary', '#1f5fd6')),
     fareBirim: V.fare >= 0 ? veMntWiz3bBirim(s, V.fare) : -1, fareSet: fareSet };
   return V.baglam;
 }
@@ -1183,7 +1183,7 @@ function _mw3bSonucKur(){
   V.isaret = [];
   V.isaretSay = { nokta: 0, model: 0, referans: 0 };
   var takozRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-mount'), '#2f7d4f');
-  var veriRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-motor'), '#a8502b');
+  var veriRenk = _mw3bRenk(veMntWiz3bRolJeton('mnt-motor'), '#c2410c');
   if(coz && coz.ok){
     coz.birimler.forEach(function(b){
       if(!b.konum) return;
@@ -1214,7 +1214,7 @@ function _mw3bSonucKur(){
     });
     Object.keys(V.s.referans || {}).forEach(function(d){
       var e = V.s.referans[d].eksen;
-      if(e && e.n){ G.add(_mw3bHalka(e, _mw3bRenk(veMntWiz3bRolJeton('mnt-motor'), '#a8502b'))); G.userData.halka++; }
+      if(e && e.n){ G.add(_mw3bHalka(e, _mw3bRenk(veMntWiz3bRolJeton('mnt-motor'), '#c2410c'))); G.userData.halka++; }
     });
   }
   if(!G.children.length) return;
@@ -1297,7 +1297,7 @@ function _mw3bAdayHalka(daire){
     V.halka.geometry.dispose(); V.halka.material.dispose();
     V.halka = null;
   }
-  if(daire){ V.halka = _mw3bHalka(daire, _mw3bRenk('--accent-primary', '#a8502b')); V.scene.add(V.halka); }
+  if(daire){ V.halka = _mw3bHalka(daire, _mw3bRenk('--accent-primary', '#1f5fd6')); V.scene.add(V.halka); }
 }
 // Dünya noktası → ekran (kabın pikseli); kameranın arkasındaysa null
 function _mw3bEkran(e, x, y, z, w, h){

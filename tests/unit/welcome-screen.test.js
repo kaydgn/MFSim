@@ -37,7 +37,7 @@
  *
  * ─── KESİK (2026-10-23, kullanıcı kararı "6d · İnce") ───────────────────────
  * Asılı cam kart yerine ekranı boydan boya kesen siyah bir sütun; eğik
- * kenarına paralel bakır çizgi. Kesik açılış sinemasının jetonlarıyla çizilir
+ * kenarına paralel vurgu çizgisi. Kesik açılış sinemasının jetonlarıyla çizilir
  * (temadan bağımsız) — tema rengi sızarsa açık temada koyu yazı siyah kesikte
  * kaybolur ve hiçbir şey kırılmaz. Kapılar aşağıda (→ KESİK).
  */
@@ -303,7 +303,7 @@ describe('KESİK — geometri (kullanıcının onayladığı ölçüler)', () =>
 
   // Çizgi kenara PARALEL: dört köşesi kesiğin iki jetonundan aynı paylarla
   // türer. Biri elle yazılsa çizgi, pencere boyu değişince kenardan ayrışır.
-  test('bakır çizgi eğik kenara paralel — tepede ve dipte aynı pay, aynı kalınlık', () => {
+  test('vurgu çizgisi eğik kenara paralel — tepede ve dipte aynı pay, aynı kalınlık', () => {
     const k = koseler(kural(CSS_WELCOME, '.ve-kesik-cizgi'));
     expect(k.map((p) => p.y)).toEqual(['0', '0', '100%', '100%']);
     const [a, b, c, d] = k.map((p) => hesap(p.x));
@@ -394,7 +394,7 @@ describe('KESİK — renk temadan bağımsız', () => {
 describe('KESİK — yapı', () => {
   beforeEach(setupDOM);
 
-  test('içerik kesiğin İÇİNDE, bakır çizgi DIŞINDA (clip-path kutusundakini kırpar)', () => {
+  test('içerik kesiğin İÇİNDE, vurgu çizgisi DIŞINDA (clip-path kutusundakini kırpar)', () => {
     // Yazının zemini atadan okunur (kontrast ölçeri de öyle okuyor): içerik
     // kesiğin çocuğu olmasaydı yazının zemini sayfanın kâğıdı sayılırdı.
     expect(document.querySelector('.ve-welcome > .ve-kesik > .ve-welcome-id.ve-kesik-ic')).toBeTruthy();
@@ -794,7 +794,7 @@ describe('Açılış koreografisi', () => {
   // Kesik açılış bantlarının ALTINDA hazır durur: kımıldasaydı devir
   // teslimde siyah sütun yerinden oynardı. Çizgi tepeden dibe çizilir —
   // başlangıç karesinin dört köşesi de çizginin tepesinde.
-  test('bakır çizgi yukarıdan aşağı çizilir; kesik KIMILDAMAZ', () => {
+  test('vurgu çizgisi yukarıdan aşağı çizilir; kesik KIMILDAMAZ', () => {
     expect(kural(CSS_WELCOME, '.ve-welcome-enter .ve-kesik-cizgi')).toMatch(/animation:ve-kesik-cizgi\s/);
     expect(kural(CSS_WELCOME, '.ve-welcome-enter .ve-kesik')).toBeNull();
     const kf = CSS_WELCOME.match(/@keyframes ve-kesik-cizgi\{\s*from\{([\s\S]*?)\}\s*\}/);

@@ -45,7 +45,9 @@ const OLC = ({ kok, kab, perde }) => {
   const ikon = kap && kap.querySelector('.mf-ico-x');
   return {
     bant: Math.round(bas.getBoundingClientRect().height),
-    zemin: cs(bas).backgroundImage.startsWith('linear-gradient'),
+    // Zemin bandın jetonu (`--bant-zemin`, 2026-11-04'ten beri düz ton):
+    // çözülmüş renk JETON()'un ölçtüğüyle aynı, üstünde resim/degrade yok.
+    zemin: cs(bas).backgroundImage === 'none' ? cs(bas).backgroundColor : cs(bas).backgroundImage,
     cizgi: cs(bas).borderBottomWidth,
     yazi: cs(bsl).fontSize + ' ' + cs(bsl).fontWeight,
     kapat: kap ? Math.round(kap.getBoundingClientRect().width) + '×' + Math.round(kap.getBoundingClientRect().height) : 'yok',
@@ -62,12 +64,15 @@ const OLC = ({ kok, kab, perde }) => {
 const JETON = () => {
   const p = document.createElement('div');
   p.style.cssText = 'position:fixed;left:-99px;width:9px;height:9px;border-radius:var(--radius-lg);box-shadow:var(--shadow-xl);background:var(--scrim)';
-  document.body.appendChild(p);
-  const c = getComputedStyle(p);
+  const z = document.createElement('div');
+  z.style.cssText = 'position:fixed;left:-99px;width:9px;height:9px;background:var(--bant-zemin)';
+  document.body.appendChild(p); document.body.appendChild(z);
+  const c = getComputedStyle(p), cz = getComputedStyle(z);
   const sb = getComputedStyle(document.querySelector('.ve-sidebar-header'));
   const j = { bant: Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h'))),
-    kose: c.borderTopLeftRadius, golge: c.boxShadow, yazi: sb.fontSize + ' ' + sb.fontWeight, perde: c.backgroundColor };
-  p.remove();
+    kose: c.borderTopLeftRadius, golge: c.boxShadow, yazi: sb.fontSize + ' ' + sb.fontWeight, perde: c.backgroundColor,
+    zemin: cz.backgroundImage === 'none' ? cz.backgroundColor : cz.backgroundImage };
+  p.remove(); z.remove();
   return j;
 };
 
@@ -145,7 +150,7 @@ test('on dokuz pencere tek aile: bant, başlık yazısı, kapat, başlık ikonu,
   for (const [ad, v] of Object.entries(S)) {
     if (v.yok) { sapma.push(ad + ': başlık yok'); continue; }
     if (v.bant !== J.bant) sapma.push(`${ad}: bant ${v.bant} px (jeton ${J.bant})`);
-    if (!v.zemin) sapma.push(`${ad}: zemin bandın değil`);
+    if (v.zemin !== J.zemin) sapma.push(`${ad}: zemin bandın değil (${v.zemin} ≠ ${J.zemin})`);
     if (v.cizgi !== '1px') sapma.push(`${ad}: çizgi ${v.cizgi}`);
     if (v.yazi !== J.yazi) sapma.push(`${ad}: başlık ${v.yazi} (bant ${J.yazi})`);
     if (v.kapat !== '22×22') sapma.push(`${ad}: kapat ${v.kapat}`);

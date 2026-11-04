@@ -8,9 +8,9 @@
 <style>
 
 :root{
-  --ink:#26241f; --paper:#fdfdfb; --line:#c6c0b4; --line-soft:#e6e1d8;
-  --vurgu:#96441f; --vurgu-soft:#f2e9e3; --check:#2a6140; --check-soft:#e8f0ea;
-  --warn:#6d5310; --warn-soft:#f5efe2; --yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:var(--yuz);
+  --ink:#1f2328; --paper:#fdfdfb; --line:#c5cbd3; --line-soft:#e4e8ed;
+  --vurgu:#1747b0; --vurgu-soft:#e8effc; --check:#166a2e; --check-soft:#e6f2ea;
+  --warn:#7c5400; --warn-soft:#f5efe2; --yuz:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:var(--yuz);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -90,16 +90,16 @@ svg{width:100%;height:auto;display:block}
    onlar `fill` kullanıyor. Şeklin künyesi ise olmayan bir çizimi anlatıyordu.
    Uygulamanın jetonları burada raporun baskı paletine bağlanıyor. */
 .appfig{
-  --accent-primary:#96441f; --accent-success:#2a6140; --accent-warning:#c8781e;
+  --accent-primary:#1747b0; --accent-success:#166a2e; --accent-warning:#c8781e;
   --accent-danger:#a8321f;  --text-secondary:#3c4350; --text-muted:#5a6270;
-  --bg-input:#fff; --border-color:#c6c0b4; --radius-sm:2px;
+  --bg-input:#fff; --border-color:#c5cbd3; --radius-sm:2px;
   --fs-tiny:11px; --fs-micro:10px;
   /* --ink-*: METİN rolü. Uygulamada `--accent-*` DOLGU (çerçeve, zemin),
      `--ink-*` ise zemine karşı okunacak yazı; çizici sarım açısını ikincisiyle
      yazıyor. Baskı paletinde kâğıt beyaz olduğu için amber koyulaştırılır —
-     `--warn` (#6d5310) zaten bu belgenin kendi okunur amberi. */
-  --ink-accent:#96441f;  --ink-success:#2a6140;
-  --ink-warning:#6d5310; --ink-danger:#a8321f;
+     `--warn` (#7c5400) zaten bu belgenin kendi okunur amberi. */
+  --ink-accent:#1747b0;  --ink-success:#166a2e;
+  --ink-warning:#7c5400; --ink-danger:#a8321f;
 }
 svg text{font-family:var(--yuz)}
 

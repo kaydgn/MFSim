@@ -2529,10 +2529,10 @@ function _veEngRenk(jeton, alfa, yedek) {
 var VE_ENG_C = {
   get seri1()    { return _veEngRenk('--seri-1', 1, '#2f6a9e'); },         // tork
   get seri2()    { return _veEngRenk('--seri-2', 1, '#9a3b3b'); },         // güç
-  get eksen()    { return _veEngRenk('--border-hover', 1, '#aca598'); },   // eksen çizgisi (nötr)
-  get etiket()   { return _veEngRenk('--text-muted', 1, '#676055'); },     // eksen sayıları (nötr)
-  get brut()     { return _veEngRenk('--text-muted', 0.55, 'rgba(103,96,85,0.55)'); },  // brüt eğri (kesik)
-  get governed() { return _veEngRenk('--ink-warning', 1, '#6d5310'); }     // governed devri kılavuzu
+  get eksen()    { return _veEngRenk('--border-hover', 1, '#a3abb6'); },   // eksen çizgisi (nötr)
+  get etiket()   { return _veEngRenk('--text-muted', 1, '#5f6873'); },     // eksen sayıları (nötr)
+  get brut()     { return _veEngRenk('--text-muted', 0.55, 'rgba(95,104,115,0.55)'); },  // brüt eğri (kesik)
+  get governed() { return _veEngRenk('--ink-warning', 1, '#7c5400'); }     // governed devri kılavuzu
 };
 
 // Net tepe gücün okunduğu devirdeki brüt/kayıp/net üçlüsü. Özet şeridinin

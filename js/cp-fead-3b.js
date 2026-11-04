@@ -25,7 +25,7 @@ var _fw3b = null;
 
 // Rol → tema jetonu. TEK KAYNAK: 3B malzeme de paneldeki renk noktası da buradan.
 var VE_FW_3B_ROL_RENK = {
-  'fead-crank': '--accent-primary', 'fead-tensioner': '--accent-warning', 'fead-idler': '--seri-1',
+  'fead-crank': '--rol-motor', 'fead-tensioner': '--accent-warning', 'fead-idler': '--seri-1',
   'fead-alternator': '--seri-2', 'fead-ac': '--seri-3', 'fead-waterpump': '--seri-4',
   'fead-ps': '--accent-success', 'fead-aircomp': '--accent-danger', 'fead-fan': '--ink-accent',
   // Kayış koyu: gerçekteki rengi, ve kasnak rollerinin hiçbiriyle karışmıyor
@@ -139,7 +139,7 @@ function veFeadWiz3bAc(){
   V.renderer.setSize(w, h, false);
   kap.insertBefore(V.renderer.domElement, kap.firstChild);
   V.scene = new THREE.Scene();
-  V.scene.background = _fw3bRenk('--bg-secondary', '#faf8f4');
+  V.scene.background = _fw3bRenk('--bg-secondary', '#ffffff');
   V.camera = new THREE.PerspectiveCamera(35, w / h, 0.5, 100000);
   V.camera.up.set(0, 0, 1);
   V.scene.add(new THREE.HemisphereLight(0xffffff, 0x807868, 0.75));
@@ -293,9 +293,9 @@ function _fw3bRenkle(tek){
   if(V.secili >= 0){ secSet = {}; veFeadWiz3bParcalar(s, V.secili).forEach(function(p){ secSet[p] = 1; }); }
   // Rolsüz parça: soluk metin tonunun zeminle karışımı — rol renkleri onun
   // üstünde öne çıksın; iki temada da zeminden ayrışır
-  var bos = _fw3bRenk('--text-muted', '#676055').lerp(_fw3bRenk('--bg-secondary', '#faf8f4'), 0.4);
-  var kenar = _fw3bRenk('--text-primary', '#26241f');
-  var vurgu = _fw3bRenk('--accent-primary', '#a8502b');
+  var bos = _fw3bRenk('--text-muted', '#5f6873').lerp(_fw3bRenk('--bg-secondary', '#ffffff'), 0.4);
+  var kenar = _fw3bRenk('--text-primary', '#1f2328');
+  var vurgu = _fw3bRenk('--accent-primary', '#1f5fd6');
   var fareBirimi = V.fare >= 0 ? veFeadWiz3bBirim(s, V.fare) : -1;
   V.meshler.forEach(function(mesh, i){
     if(!mesh || (tek !== undefined && tek !== i)) return;
