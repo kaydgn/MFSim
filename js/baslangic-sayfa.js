@@ -12,19 +12,21 @@
 // İKİ DÜZEN, TEK ÜRETİCİ — modül sayfanın tanımında beyan eder (`s.duzen`):
 //  • 'masa' (varsayılan) — ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-04, tasarım
 //    tuvali "Takoz başlangıç sayfası" · 1): solda PANEL (kimlik · kapılar · veri ·
-//    Kılavuz), sağda MASA: seçili karonun ÖNİZLEMESİ (büyük çizim + künye föyü +
-//    Yükle) ve karoların grupları. Takoz.
+//    Kılavuz), sağda MASA. Masanın içeriği örneklerin DİZİNİ (kullanıcı seçimi
+//    2026-11-04, tasarım tuvali "sade seçenekler" · D — *"D güzel. Onu
+//    uygulayalım."*): satır ad · sayı · kütle · kaynak · Yükle, RESİM YOK. Bir
+//    önceki masa (seçili karonun büyük çizimi + resimli karolar) aynı gün emekli:
+//    *"Ortada falan kocaman şekil olmuş, çirkin duruyor … 3D görsellerin
+//    görünmesine gerek yok."* Takoz.
 //  • 'sutun' — ortalanmış sütun: kimlik (Kılavuz sağda) · veri bandı · kapılar ·
 //    karolar; karo TEK TIKLA kurar. FEAD (kullanıcı 2026-11-04: *"FEAD modülü
-//    önceki hali gibi kalsın. O daha güzelmiş."* — Çalışma masası bir tur
-//    denendi).
-// İki düzen aynı yuvaları (kimlik · veri · kapı · karo) aynı sınıflarla basar;
-// ölçü farkı düzenin kapsamında (`.ve-bas-ic--masa` · `.ve-bas-ic--sutun`).
+//    önceki hali gibi kalsın. O daha güzelmiş."*).
+// İki düzen aynı yuvaları (kimlik · veri · kapı) aynı sınıflarla basar; ölçü
+// farkı düzenin kapsamında (`.ve-bas-ic--masa` · `.ve-bas-ic--sutun`).
 //
 // KİT YALNIZ SUNUMU KURAR. Hangi modülün sayfası olduğunu, sayfanın NE ZAMAN
-// gerektiğini (görünürlük modelden türer, bayrak tutulmaz), kapıların NE
-// YAPTIĞINI ve önizlemenin ÇİZİMİNİ modül söyler — kit bunları sormaz, yalnız
-// çağırır.
+// gerektiğini (görünürlük modelden türer, bayrak tutulmaz) ve kapıların NE
+// YAPTIĞINI modül söyler — kit bunları sormaz, yalnız çağırır.
 //
 // KURALLAR (FEAD kural 5'ten devralındı):
 //  • SAYFA TUVALİ ÖRTER, FARE SAYFADA KALIR: tuvalin pan/seçim/yakınlaştırma
@@ -34,23 +36,20 @@
 //    çekilir — dördüncü kapı.
 //  • HER AÇILIŞTA YENİDEN BASILIR (tema, adım ve örnek listesi o an neyse);
 //    açıkken yeniden basmak odağı ve kaydırmayı düşürürdü.
-//  • MASADA KARO TIKI SEÇER, YÜKLEMEZ: önizleme değişir; model önizlemenin
-//    Yükle'siyle ya da karoya çift tıkla kurulur (modülün eylemi). Sütunda karo
-//    doğrudan modülün eylemidir. Seçim GÖRÜNÜM durumudur:
-//    modelde değil, sayfa başına bellekte (`_veBasSecim`) — kaydedilmez, geri-al
-//    yığınına girmez. Seçimde karolar yeniden kurulmaz (odak ve çift tık yerinde
-//    kalır), yalnız önizleme.
-//  • ÖNİZLEMENİN ÇİZİMİ KUTUNUN ÖLÇÜSÜNDE (`o.onizCiz(v, W, H)`): çizim 1:1
-//    kurulur, yazısı arayüz ölçeğinde kalır — sabit ölçüde çizilip büyütülen ya
-//    da küçültülen resim dar tuvalde yazıyı ölçek tabanının altına düşürürdü.
-//    Kutu değişince (pencere, palet, ray) yeniden çizilir.
-//  • SAYFA AÇIKKEN SAYFA RAYI (Topoloji · Sonuçlar) GİZLİ (kullanıcı
-//    2026-11-04: *"pencere ilk açıldığında sol tarafta 'topoloji ve sonuçlar'
-//    sütunu görünmesin. Gerek yok"*): kit kabına `ve-bas-acik` yazar
-//    (`_veBasRayEsitle`), CSS rayı yalnız topoloji sayfasında gizler — öteki
-//    sayfada ray dönüş yoludur. Sayfa SIĞDIRMADAN önce çekilir (Takoz ilk
-//    düğümde, FEAD sonuçları unuturken), ray geri geldiğinde kadraj doğru
-//    genişlikle kurulur.
+//  • DİZİNDE YÜKLE TEK TIKLA KURAR (satırın düğmesi → modülün eylemi); satırın
+//    adı AYRINTIYI açar (modülün listeleri: gövdeler, takozlar). Açık satır TEK
+//    ve GÖRÜNÜM durumudur: modelde değil, sayfa başına bellekte
+//    (`_veBasAcikSatir`) — kaydedilmez, geri-al yığınına girmez; ilk açılışta
+//    ilk satır açık. Açıp kapamak sayfayı yeniden basmaz (odak yerinde kalır).
+//    Sütunun karosu da tek tıkla kurar.
+//  • SAYFA AÇIKKEN SAYFA RAYI (Topoloji · Sonuçlar) VE PALETİN AÇMA SEKMESİ
+//    GİZLİ (kullanıcı 2026-11-04 — ray: *"Gerek yok"*; sekme: *"iki sembol var.
+//    Onları kaldıralım. Sadece geriye gelme kalsın"*): kit kabına `ve-bas-acik`
+//    yazar (`_veBasRayEsitle`), CSS ikisini yalnız topoloji sayfasında gizler —
+//    öteki sayfada ray dönüş yoludur. Ana topolojiye dönüş düğmesi (z 60)
+//    kalır; panelin üst dolgusu yalnız onun köşesini boşaltır. Sayfa
+//    SIĞDIRMADAN önce çekilir (Takoz ilk düğümde, FEAD sonuçları unuturken):
+//    ray geri geldiğinde kadraj doğru genişlikle kurulur.
 //  • İkon ailesi tek (karar 10·B): kapının ikonu `veIkon`dan.
 
 function veBasEsc(s){
@@ -126,29 +125,14 @@ function veBasKapiHTML(k){
     + '</span></button>';
 }
 
-// ── KARO — örnek / rapor ───────────────────────────────────────────────────
+// ── KARO — sütunun örnek / rapor kartı ─────────────────────────────────────
 // k: { ey (YÜKLEME eylemi), v, baslik (title, isteğe bağlı), resim (SVG), kod,
-//      yil, onizleme (masa) · sag, alt (sütun) }. Resim yoksa karo yine
-// basılır, künyesiyle ("çizilemedi") — yükleme de yine çalışır. Resim modülün
-// KENDİ çizicisinden gelir; kit çizim yapmaz. `baslik` karoda yazmayan VERİ
-// içindir (gövde adları); komut eki yok.
-// MASA: karonun tıkı SEÇER (`data-ey="sec"`); yükleme eylemi `data-yukle`de
-// durur ve önizlemenin Yükle'si ile çift tık onu çağırır.
-function veBasKaroHTML(k, secili){
-  k = k || {};
-  return '<button type="button" class="ve-bas-karo" data-ey="sec" data-v="' + veBasEsc(k.v) + '"'
-    + ' data-yukle="' + veBasEsc(k.ey) + '" aria-pressed="' + (secili ? 'true' : 'false') + '"'
-    + (k.baslik ? ' title="' + veBasEsc(k.baslik) + '"' : '') + '>'
-    + '<span class="ve-bas-resim">' + (k.resim || '<i class="ve-bas-resim-yok">çizilemedi</i>') + '</span>'
-    + '<span class="ve-bas-kunye"><b>' + veBasEsc(k.kod) + '</b>'
-    + (k.yil ? '<span>' + veBasEsc(k.yil) + '</span>' : '') + '</span>'
-    + '</button>';
-}
-
-// SÜTUN: karo modülün eylemidir (`data-ey` = yükleme eylemi) — tek tık kurar;
-// resmin köşesinde fare altında "Yükle", künye iki satır (kod · yıl · sağ;
-// alt satır).
-function veBasKaroSutunHTML(k){
+//      yil, sag, alt }. Karo modülün eylemidir — tek tık kurar; resmin
+// köşesinde fare altında "Yükle", künye iki satır (kod · yıl · sağ; alt satır).
+// Resim yoksa karo yine basılır, künyesiyle ("çizilemedi") — yükleme de yine
+// çalışır. Resim modülün KENDİ çizicisinden gelir; kit çizim yapmaz. `baslik`
+// karoda yazmayan VERİ içindir; komut eki yok.
+function veBasKaroHTML(k){
   k = k || {};
   return '<button type="button" class="ve-bas-karo" data-ey="' + veBasEsc(k.ey) + '" data-v="' + veBasEsc(k.v) + '"'
     + (k.baslik ? ' title="' + veBasEsc(k.baslik) + '"' : '') + '>'
@@ -161,58 +145,64 @@ function veBasKaroSutunHTML(k){
     + '</span></button>';
 }
 
-// ── ÖNİZLEME — seçili karonun büyük çizimi ve künye föyü ───────────────────
-// k.onizleme: { ad, etiket, foy:[{ ad, deger }], liste:{ baslik, adlar:[…] } }.
-// Yuvaların hepsi AD ya da VERİ (ARAYÜZ ANLATMAZ); değeri boş satır ve boş
-// liste basılmaz. Çizim kutusu BOŞ basılır: kutu yerleşince modülün çizicisi
-// onu kendi ölçüsünde doldurur (`_veBasOnizCiz`).
-function veBasOnizlemeHTML(k){
-  if(!k) return '';
-  var o = k.onizleme || {};
-  var foy = (o.foy || []).filter(function(x){ return x && x.ad && x.deger != null && x.deger !== ''; });
-  var adlar = (o.liste && o.liste.adlar || []).filter(Boolean);
-  return '<section class="ve-bas-oniz" data-v="' + veBasEsc(k.v) + '">'
-    + '<div class="ve-bas-oniz-resim" data-v="' + veBasEsc(k.v) + '"></div>'
-    + '<div class="ve-bas-oniz-foy">'
-    +   '<div class="ve-bas-oniz-ad"><h2>' + veBasEsc(o.ad || k.kod) + '</h2>'
-    +     (o.etiket ? '<i>' + veBasEsc(o.etiket) + '</i>' : '') + '</div>'
-    +   (foy.length ? '<dl class="ve-bas-oniz-dl">' + foy.map(function(x){
-          return '<div><dt>' + veBasEsc(x.ad) + '</dt><dd>' + veBasEsc(x.deger) + '</dd></div>';
-        }).join('') + '</dl>' : '')
-    +   (adlar.length ? '<div class="ve-bas-oniz-liste"><h3>' + veBasEsc(o.liste.baslik) + '</h3><ul>'
-          + adlar.map(function(a){ return '<li>' + veBasEsc(a) + '</li>'; }).join('') + '</ul></div>' : '')
-    +   '<button type="button" class="ve-bas-yukle" data-ey="' + veBasEsc(k.ey) + '" data-v="' + veBasEsc(k.v) + '">'
+// ── SATIR — masanın dizinindeki örnek ──────────────────────────────────────
+// r: { ey (YÜKLEME eylemi), v, ad, sayi, kutle, kaynak,
+//      detay:[{ baslik, ogeler:[{ ad, deger }] }] }. Yuvaların hepsi AD ya da
+// VERİ (ARAYÜZ ANLATMAZ): `sayi` ve `kutle` sayı yazıcısından geçmiş değer,
+// `kaynak` örneğin künyesi, ayrıntı modülün listeleri. Boş öğe ve boş liste
+// basılmaz. Satırın adı açar/kapar (`data-ey="ac"`), Yükle modülün eylemi.
+// Kaynak tek satırda kısalır ve tam metni `title`da.
+function veBasSatirHTML(r, acik){
+  r = r || {};
+  var det = (r.detay || []).map(function(d){
+    var og = ((d && d.ogeler) || []).filter(function(x){ return x && x.ad; });
+    if(!og.length) return '';
+    return '<div class="ve-bas-satir-blok"><h3>' + veBasEsc(d.baslik) + '</h3><ul>'
+      + og.map(function(x){
+          return '<li><span>' + veBasEsc(x.ad) + '</span>'
+            + (x.deger != null && x.deger !== '' ? '<b>' + veBasEsc(x.deger) + '</b>' : '') + '</li>';
+        }).join('')
+      + '</ul></div>';
+  }).join('');
+  return '<div class="ve-bas-satir' + (acik ? ' acik' : '') + '" data-v="' + veBasEsc(r.v) + '">'
+    + '<div class="ve-bas-satir-ust">'
+    +   '<button type="button" class="ve-bas-satir-ac" data-ey="ac" data-v="' + veBasEsc(r.v) + '"'
+    +     ' aria-expanded="' + (acik ? 'true' : 'false') + '">' + _veBasIkon('chevron-right')
+    +     '<b>' + veBasEsc(r.ad) + '</b></button>'
+    +   '<span class="ve-bas-satir-sayi">' + veBasEsc(r.sayi) + '</span>'
+    +   '<span class="ve-bas-satir-kutle">' + veBasEsc(r.kutle) + '</span>'
+    +   '<span class="ve-bas-satir-kaynak"' + (r.kaynak ? ' title="' + veBasEsc(r.kaynak) + '"' : '') + '>'
+    +     veBasEsc(r.kaynak) + '</span>'
+    +   '<button type="button" class="ve-bas-satir-yukle" data-ey="' + veBasEsc(r.ey) + '" data-v="' + veBasEsc(r.v) + '">'
     +     _veBasIkon('download') + '<span>Yükle</span></button>'
-    + '</div></section>';
+    + '</div>'
+    + (det ? '<div class="ve-bas-satir-detay"' + (acik ? '' : ' hidden') + '>' + det + '</div>' : '')
+    + '</div>';
 }
 
 // ── SAYFA ──────────────────────────────────────────────────────────────────
 // s: { duzen ('masa' | 'sutun'), kimlik, veriler:[…], kapilar:[kapı…],
-//      bolumler:[{ baslik, karolar:[karo…] }] }
-// Tek bölüm `bolum` olarak da verilebilir (FEAD). Karosuz bölüm basılmaz.
-// Masa: panel (kimlik · kapılar · veri · Kılavuz) · masa (önizleme · gruplar);
-// `secV` seçili karonun anahtarı, yoksa ya da listede değilse ilk karo.
-// Sütun: kimlik · veri · kapılar · bölümler; seçim yok.
+//      basliklar:{ ad, sayi, kutle, kaynak } (masa — dizinin sütun adları),
+//      bolumler:[{ baslik, satirlar:[satır…] (masa) | karolar:[karo…] (sütun) }] }
+// Tek bölüm `bolum` olarak da verilebilir (FEAD). Boş bölüm basılmaz.
+// Masa: panel (kimlik · kapılar · veri · Kılavuz) · masa (dizin); `acikV`
+// açık satırın anahtarı — verilmezse ilk satır, '' hiçbiri.
+// Sütun: kimlik · veri · kapılar · bölümler.
 // Sayfanın üst satırı, serbest başlığı (`baslik`), alt metni, bölüm notu ve
 // dipnotu YOK (2026-10-16, kullanıcı kararı — metin temizliği aşama 1): beş
 // yuva iki modülde on beş açıklama üretmişti ("Nereden başlayalım?" ·
 // "Seçtiğin kapı modeli kurar ve bu sayfa çekilir …"). Başlık artık modülün
 // ADI (`kimlik.ad`), cümle değil.
-function _veBasBolumler(s){
-  return ((s && (s.bolumler || (s.bolum ? [s.bolum] : []))) || [])
-    .filter(function(b){ return b && b.karolar && b.karolar.length; });
-}
-function _veBasKaroBul(s, v){
-  var bul = null, ilk = null;
-  _veBasBolumler(s).forEach(function(b){
-    b.karolar.forEach(function(k){
-      if(!ilk) ilk = k;
-      if(!bul && v != null && String(k.v) === String(v)) bul = k;
-    });
-  });
-  return bul || ilk;
-}
 function _veBasSutun(s){ return !!(s && s.duzen === 'sutun'); }
+function _veBasBolumler(s){
+  var alan = _veBasSutun(s) ? 'karolar' : 'satirlar';
+  return ((s && (s.bolumler || (s.bolum ? [s.bolum] : []))) || [])
+    .filter(function(b){ return b && b[alan] && b[alan].length; });
+}
+function _veBasIlkSatir(s){
+  var b = _veBasBolumler(s)[0];
+  return b ? b.satirlar[0] : null;
+}
 function _veBasSutunHTML(s){
   var h = '<div class="ve-bas-ic ve-bas-ic--sutun">'
     + veBasKimlikHTML(s.kimlik, true)
@@ -220,15 +210,17 @@ function _veBasSutunHTML(s){
     + '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>';
   _veBasBolumler(s).forEach(function(b){
     h += '<div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2></div>'
-      + '<div class="ve-bas-raporlar">' + b.karolar.map(veBasKaroSutunHTML).join('') + '</div>';
+      + '<div class="ve-bas-raporlar">' + b.karolar.map(veBasKaroHTML).join('') + '</div>';
   });
   return h + '</div>';
 }
-function veBasSayfaHTML(s, secV){
+function veBasSayfaHTML(s, acikV){
   s = s || {};
   if(_veBasSutun(s)) return _veBasSutunHTML(s);
   var bolumler = _veBasBolumler(s);
-  var sec = _veBasKaroBul(s, secV);
+  var ilk = _veBasIlkSatir(s);
+  var ac = (acikV === undefined || acikV === null) ? (ilk ? String(ilk.v) : '') : String(acikV);
+  var B = s.basliklar || {};
   var h = '<div class="ve-bas-ic ve-bas-ic--masa">'
     + '<aside class="ve-bas-panel">'
     +   veBasKimlikHTML(s.kimlik)
@@ -236,27 +228,24 @@ function veBasSayfaHTML(s, secV){
     +   veBasVeriHTML(s.veriler)
     +   veBasKilavuzHTML(s.kimlik)
     + '</aside>'
-    + '<div class="ve-bas-masa">' + veBasOnizlemeHTML(sec);
+    + '<div class="ve-bas-masa">';
   if(bolumler.length){
-    h += '<div class="ve-bas-gruplar">';
+    h += '<div class="ve-bas-dizin">'
+      + '<div class="ve-bas-dizin-bas"><span></span><span>' + veBasEsc(B.ad) + '</span><span>' + veBasEsc(B.sayi)
+      + '</span><span>' + veBasEsc(B.kutle) + '</span><span>' + veBasEsc(B.kaynak) + '</span><span></span></div>';
     bolumler.forEach(function(b){
-      h += '<section class="ve-bas-grup"><div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2></div>'
-        + '<div class="ve-bas-raporlar">' + b.karolar.map(function(k){
-            return veBasKaroHTML(k, !!(sec && String(k.v) === String(sec.v)));
-          }).join('') + '</div></section>';
+      h += '<div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2></div>'
+        + b.satirlar.map(function(r){ return veBasSatirHTML(r, String(r.v) === ac); }).join('');
     });
     h += '</div>';
   }
   return h + '</div></div>';
 }
 
-// ── DOM — kurma, seçim, önizleme ve görünürlük ─────────────────────────────
-// o: { id, aria, sayfa: function(): s (sayfanın tanımı), eylem: function(ad, v),
-//      onizCiz: function(v, W, H): svg }  —  `html: function(): string` eski yol
-//      (tanımsız sayfa: önizleme çizilmez).
-var _veBasSecim = {};          // sayfa kimliği → seçili karonun anahtarı (görünüm durumu)
-// Ölçülemeyen kutu (gizli kap, jsdom): önizleme bu ölçüde çizilir.
-var VE_BAS_ONIZ_NOMINAL = { w: 720, h: 400 };
+// ── DOM — kurma, açık satır ve görünürlük ──────────────────────────────────
+// o: { id, aria, sayfa: function(): s (sayfanın tanımı), eylem: function(ad, v) }
+//    —  `html: function(): string` eski yol (sayfanın HTML'i hazır).
+var _veBasAcikSatir = {};      // sayfa kimliği → açık satırın anahtarı (görünüm durumu)
 
 function _veBasKap(){
   return (typeof document !== 'undefined') ? document.getElementById('ve-canvas-wrapper') : null;
@@ -266,55 +255,32 @@ function _veBasEl(id){
 }
 function _veBasBas(el, o){
   if(typeof o.sayfa === 'function'){
-    el._veBasSpec = o.sayfa() || {};
-    if(_veBasSutun(el._veBasSpec)) return veBasSayfaHTML(el._veBasSpec);
-    var sec = _veBasKaroBul(el._veBasSpec, _veBasSecim[o.id]);
-    if(sec) _veBasSecim[o.id] = sec.v;
-    return veBasSayfaHTML(el._veBasSpec, _veBasSecim[o.id]);
+    var s = o.sayfa() || {};
+    return _veBasSutun(s) ? veBasSayfaHTML(s) : veBasSayfaHTML(s, _veBasAcikSatir[o.id]);
   }
-  el._veBasSpec = null;
   return (typeof o.html === 'function') ? o.html() : '';
 }
 
-// Önizlemenin çizimi kutunun ölçüsünde; aynı karo ve ölçüde yeniden çizilmez.
-function _veBasOnizCiz(el){
-  var o = el && el._veBasO;
-  var kutu = el && el.querySelector('.ve-bas-oniz-resim');
-  if(!kutu || !o || typeof o.onizCiz !== 'function') return false;
-  var v = kutu.getAttribute('data-v');
-  var W = Math.floor(kutu.clientWidth || 0), H = Math.floor(kutu.clientHeight || 0);
-  if(!(W > 40 && H > 40)){ W = VE_BAS_ONIZ_NOMINAL.w; H = VE_BAS_ONIZ_NOMINAL.h; }
-  var imza = v + '|' + W + 'x' + H;
-  if(kutu.getAttribute('data-imza') === imza) return true;
-  var svg = '';
-  try { svg = o.onizCiz(v, W, H) || ''; } catch(e){ svg = ''; }
-  kutu.innerHTML = svg || '<i class="ve-bas-resim-yok">çizilemedi</i>';
-  kutu.setAttribute('data-imza', imza);
-  return !!svg;
-}
-
-// Karo seçimi: karoların basılılığı eşitlenir, önizleme yerinde değişir.
-function _veBasSec(el, v){
+// Satırı aç/kapa: açık satır tek. Yalnız sınıf ve nitelik değişir — sayfa
+// yeniden basılmaz (odak ve kaydırma yerinde).
+function _veBasAc(el, v){
   if(!el || v == null) return false;
-  var s = el._veBasSpec;
-  var k = s ? _veBasKaroBul(s, v) : null;
-  if(!k || String(k.v) !== String(v)) return false;
-  var eski = el.querySelector('.ve-bas-oniz');
-  if(eski && eski.getAttribute('data-v') === String(v)) return true;
-  _veBasSecim[el.id] = k.v;
-  Array.prototype.forEach.call(el.querySelectorAll('.ve-bas-karo'), function(b){
-    b.setAttribute('aria-pressed', b.getAttribute('data-v') === String(v) ? 'true' : 'false');
+  var simdi = el.querySelector('.ve-bas-satir.acik');
+  var yeni = (simdi && simdi.getAttribute('data-v') === String(v)) ? '' : String(v);
+  _veBasAcikSatir[el.id] = yeni;
+  Array.prototype.forEach.call(el.querySelectorAll('.ve-bas-satir'), function(r){
+    var on = r.getAttribute('data-v') === yeni;
+    r.classList.toggle('acik', on);
+    var b = r.querySelector('.ve-bas-satir-ac');
+    if(b) b.setAttribute('aria-expanded', on ? 'true' : 'false');
+    var d = r.querySelector('.ve-bas-satir-detay');
+    if(d) d.hidden = !on;
   });
-  if(eski){
-    var tmp = document.createElement('div');
-    tmp.innerHTML = veBasOnizlemeHTML(k);
-    if(tmp.firstChild) eski.parentNode.replaceChild(tmp.firstChild, eski);
-  }
-  _veBasOnizCiz(el);
   return true;
 }
 
-// Sayfa rayının görünürlüğü: herhangi bir başlangıç sayfası açık mı.
+// Sayfa rayının ve paletin açma sekmesinin görünürlüğü: herhangi bir
+// başlangıç sayfası açık mı.
 function _veBasRayEsitle(){
   if(typeof document === 'undefined') return false;
   var acik = false;
@@ -322,8 +288,8 @@ function _veBasRayEsitle(){
   for(var i = 0; i < hepsi.length; i++){ if(!hepsi[i].hidden){ acik = true; break; } }
   var kab = document.getElementById('sayfa2-content');
   if(kab) kab.classList.toggle('ve-bas-acik', acik);
-  // Ray gelip gidince kap kayar: dönüş düğmesi paletin açma sekmesinin sağına
-  // yeniden oturur (js/canvas-space.js → veChipSolOrtu).
+  // Ray ve açma sekmesi gelip gidince kap kayar: dönüş düğmesi yeniden oturur
+  // (sekme görünürken onun sağına — js/canvas-space.js → veChipSolOrtu).
   if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
   return acik;
 }
@@ -350,35 +316,10 @@ function veBasKur(o){
     var b = e.target && e.target.closest && e.target.closest('[data-ey]');
     if(!b) return;
     var ey = b.getAttribute('data-ey'), v = b.getAttribute('data-v');
-    if(ey === 'sec'){ _veBasSec(el, v); return; }
+    if(ey === 'ac'){ _veBasAc(el, v); return; }
     var oo = el._veBasO;
     if(oo && typeof oo.eylem === 'function') oo.eylem(ey, v);
   });
-  // Çift tık masadaki karonun YÜKLEME eylemini çağırır (ilk tık seçmişti);
-  // sütunun karosu ilk tıkta kurmuştur (`data-yukle` yok).
-  el.addEventListener('dblclick', function(e){
-    var b = e.target && e.target.closest && e.target.closest('.ve-bas-karo[data-yukle]');
-    var oo = el._veBasO;
-    if(!b || !oo || typeof oo.eylem !== 'function') return;
-    oo.eylem(b.getAttribute('data-yukle'), b.getAttribute('data-v'));
-  });
-  // Kutu değişince (pencere, palet, ray) önizleme kendi ölçüsünde yeniden
-  // çizilir ve dönüş düğmesi yeniden oturur: sayfa kabın tamamı, kap kayınca
-  // (ray, palet) düğmenin paletin açma sekmesine göre yeri değişir.
-  if(typeof ResizeObserver === 'function'){
-    var bekle = 0;
-    var sonraki = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : function(f){ return setTimeout(f, 16); };
-    el._veBasRO = new ResizeObserver(function(){
-      if(el.hidden || bekle) return;
-      bekle = sonraki(function(){
-        bekle = 0;
-        if(el.hidden) return;
-        _veBasOnizCiz(el);
-        if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
-      });
-    });
-    el._veBasRO.observe(el);
-  }
   kap.appendChild(el);
   return el;
 }
@@ -399,9 +340,6 @@ function veBasTazele(o, acik){
     el.innerHTML = _veBasBas(el, o);
     el.scrollTop = 0;
     el.hidden = false;
-    _veBasRayEsitle();
-    _veBasOnizCiz(el);
-    return true;
   }
   _veBasRayEsitle();
   return true;
@@ -412,20 +350,14 @@ function veBasAcik(id){
   return !!(el && !el.hidden);
 }
 
-// Sayfa başına seçili karo (görünüm durumu) — modülün HTML üreticisi okur.
-function veBasSecili(id){
-  return Object.prototype.hasOwnProperty.call(_veBasSecim, id) ? _veBasSecim[id] : null;
-}
-
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     veBasEsc: veBasEsc, veBasKapiHTML: veBasKapiHTML, veBasKaroHTML: veBasKaroHTML,
-    veBasKaroSutunHTML: veBasKaroSutunHTML,
+    veBasSatirHTML: veBasSatirHTML,
     veBasKimlikHTML: veBasKimlikHTML, veBasKilavuzHTML: veBasKilavuzHTML, veBasVeriHTML: veBasVeriHTML,
-    veBasOnizlemeHTML: veBasOnizlemeHTML, veBasSayfaHTML: veBasSayfaHTML,
-    veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik, veBasSecili: veBasSecili,
-    VE_BAS_ONIZ_NOMINAL: VE_BAS_ONIZ_NOMINAL,
-    _veBasSec: _veBasSec, _veBasRayEsitle: _veBasRayEsitle,
-    _veBasSifirla: function(){ _veBasSecim = {}; }
+    veBasSayfaHTML: veBasSayfaHTML,
+    veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik,
+    _veBasAc: _veBasAc, _veBasRayEsitle: _veBasRayEsitle,
+    _veBasSifirla: function(){ _veBasAcikSatir = {}; }
   };
 }

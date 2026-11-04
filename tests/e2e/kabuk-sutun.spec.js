@@ -164,6 +164,11 @@ test('Sonuçlar sayfasında da aynı çerçeve — çizgi ve köşe hücresi yer
 test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yanından başlar', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await modulAc(page);
+  // Modüle giriş yükleme ekranının adımlarıyla sürer; sabit bekleme yük altında
+  // yetmedi (paralel turda kapının tıkı kuruluma ulaşmadı, tek başına 3/3
+  // geçiyordu). Tıktan önce giriş BİTMİŞ olmalı: ekran kapandı, sayfa açık.
+  await page.waitForFunction(() => typeof veModuleLoaderMesgul === 'function' && !veModuleLoaderMesgul()
+    && typeof veFeadBaslangicAcik === 'function' && veFeadBaslangicAcik(), null, { timeout: 30000 });
   // Boş FEAD'i başlangıç sayfası karşılar ve o açıkken sayfa rayı GİZLİ
   // (kullanıcı 2026-11-04) — tuval ekranın sol kenarından başlar. Rayın
   // yanındaki kabuğu ölçmek için önce bir yol seçilir (boş çizim masası).
