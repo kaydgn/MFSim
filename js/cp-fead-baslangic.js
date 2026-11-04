@@ -22,10 +22,11 @@
 //    sihirbazın 1. adımının dosya seçicisi, boş çizim masası `veFeadKanvasEkle`,
 //    rapor `veFeadLoadExample`. Sayfa hiçbir düğüm kendisi KURMAZ — ikinci bir
 //    kurucu, iki yolun sessizce ayrışması demekti (modülün tekrar eden kuralı).
-//  • KÜÇÜK RESİM VE ÖNİZLEME ÇİZİCİDEN (`veFeadLayoutSVG`), rapor örneğinin
-//    KENDİ modelinden: sunum kendi geometrisini hesaplamaz (üç katman kuralı).
-//    Düzen ÇALIŞMA MASASI (kit, 2026-11-04): karo seçer, önizlemenin Yükle'si
-//    ya da çift tık `veFeadLoadExample`.
+//  • KÜÇÜK RESİM ÇİZİCİDEN (`veFeadLayoutSVG`), rapor örneğinin KENDİ
+//    modelinden: sunum kendi geometrisini hesaplamaz (üç katman kuralı).
+//  • DÜZEN SÜTUN (kitin `duzen: 'sutun'`; kullanıcı 2026-11-04: *"FEAD modülü
+//    önceki hali gibi kalsın. O daha güzelmiş."* — kitin Çalışma masası bir
+//    tur denendi, Takoz'da kaldı): rapor karosu TEK TIKLA kurar.
 //  • SAYFA TUVALİ ÖRTER: FEAD araçları penceresi o süre GİZLİ
 //    (js/cp-fead-araclar.js → `_feadAracBaslangic`) — iki yüzey aynı kapıları
 //    aynı anda göstermesin. Ana topolojiye dönüş düğmesi (breadcrumb, z 60)
@@ -38,23 +39,19 @@
 // kapıların eylemleri, raporların künyesi ve küçük resmi.
 
 var VE_FEAD_BAS_ID = 've-fead-baslangic';
-// Küçük resmin tuvali (kullanıcı birimi) — Çalışma masasının karo kutusu 9:5
-// (2026-11-04). Ad, açı ve gül ÇİZİLMEZ: küçük karede hiçbiri okunmuyor;
-// karenin sorusu "bu kayış yolu neye benziyor". Adlar önizlemede.
-var VE_FEAD_BAS_RESIM = { w: 360, h: 200 };
+// Küçük resmin tuvali (kullanıcı birimi). Ad, açı ve gül ÇİZİLMEZ: 240 px'lik
+// bir karede hiçbiri okunmuyor; karenin sorusu "bu kayış yolu neye benziyor".
+var VE_FEAD_BAS_RESIM = { w: 330, h: 150 };
 var _feadBasResimler = {};        // anahtar → SVG (örnekler durağan: oturumluk önbellek)
-var _feadBasKurulum = {};         // anahtar → çözülmüş kurulum (önizleme her ölçüde yeniden çizer)
 
 // Kit global'de (index.html onu bu dosyadan ÖNCE yükler); Node'da modül.
 function _feadBasKit(){
   if(typeof veBasSayfaHTML === 'function')
-    return { sayfa: veBasSayfaHTML, kur: veBasKur, tazele: veBasTazele, acik: veBasAcik,
-             secili: (typeof veBasSecili === 'function') ? veBasSecili : null };
+    return { sayfa: veBasSayfaHTML, kur: veBasKur, tazele: veBasTazele, acik: veBasAcik };
   if(typeof require === 'function'){
     try {
       var K = require('./baslangic-sayfa.js');
-      return { sayfa: K.veBasSayfaHTML, kur: K.veBasKur, tazele: K.veBasTazele, acik: K.veBasAcik,
-               secili: K.veBasSecili };
+      return { sayfa: K.veBasSayfaHTML, kur: K.veBasKur, tazele: K.veBasTazele, acik: K.veBasAcik };
     } catch(e){ return null; }
   }
   return null;
@@ -105,7 +102,6 @@ function veFeadBaslangicRaporlar(){
     var b = ex.belt || {};
     out.push({
       key: k, sira: sira,
-      kasnaklar: (ex.pulleys || []).map(function(p){ return p && p.name; }).filter(Boolean),
       kod: kodM ? kodM[1] : k,
       yil: yilM ? yilM[1] : '',
       kasnak: (ex.pulleys || []).length,
@@ -142,33 +138,6 @@ function veFeadBaslangicResim(key){
   } catch(e){ svg = ''; }
   _feadBasResimler[key] = svg;
   return svg;
-}
-
-// ÖNİZLEMENİN ÇİZİMİ — aynı çizici, rapor örneğinin aynı kurulumu; kasnak
-// adları ve gergi kolu AÇIK, sarım açısı, açıklık yazısı, gül ve kol konumu
-// künyesi kapalı. Kutunun ölçüsünde, kanvas kartının yazı katsayısıyla
-// (`veFeadYaziK`: çizim 1/k ölçüde kurulur, kutu büyütür — kural 21).
-function _feadBasKur(key){
-  if(Object.prototype.hasOwnProperty.call(_feadBasKurulum, key)) return _feadBasKurulum[key];
-  var b = null;
-  try {
-    if(typeof veFeadExampleNodes === 'function' && typeof veFeadBuildSystem === 'function'){
-      var pack = veFeadExampleNodes(key);
-      b = pack ? veFeadBuildSystem(pack.nodes) : null;
-    }
-  } catch(e){ b = null; }
-  _feadBasKurulum[key] = (b && b.ok) ? b : null;
-  return _feadBasKurulum[key];
-}
-function veFeadBaslangicOnizleme(key, W, H){
-  try {
-    var b = _feadBasKur(key);
-    if(!b || typeof veFeadLayoutSVG !== 'function') return '';
-    var k = (typeof veFeadYaziK === 'function') ? veFeadYaziK() : 1;
-    return veFeadLayoutSVG(b, Math.max(200, W) / k, Math.max(160, H) / k, {
-      inline: true, posMode: 'mean', compass: false, pivot: true, arrows: false,
-      nameLabels: true, wrapLabels: false, spanLabels: false, ghostLabels: false, kunye: false }) || '';
-  } catch(e){ return ''; }
 }
 
 // ── KİMLİK VE VERİ — sayfanın üst şeridi (kullanıcı isteği 2026-10-19) ─────
@@ -226,37 +195,28 @@ function veFeadBaslangicKapilar(){
   ];
 }
 
-// ── SAYFA — SAF: yalnız sabitlerden ve örnek kaydından ────────────────────
+// ── HTML — SAF: yalnız sabitlerden ve örnek kaydından ─────────────────────
 // Sayfanın İSKELETİ kitin (veBasSayfaHTML); buradaki iş içeriği söylemek:
-// kimlik, kataloğun sayıları, kapılar ve raporların künyesi. Karo rapor kodu
-// ve kayışı taşır; künyenin geri kalanı (sistem, kasnaklar, yıl) seçilince
-// önizlemenin föyünde. Karo ipucu taşımaz — künye karoda ve föyde.
-function veFeadBaslangicSayfa(){
+// kimlik, kataloğun sayıları, kapılar ve raporların künyesi. Karo ipucu
+// taşımaz — künye karoda.
+function veFeadBaslangicHTML(){
   var raporlar = veFeadBaslangicRaporlar();
-  var n = function(x){ return (typeof veSayi === 'function') ? veSayi(x, 0) : String(x); };
-  return {
+  var K = _feadBasKit();
+  if(!K) return '';
+  return K.sayfa({
+    duzen: 'sutun',
     kimlik: veFeadBaslangicKimlik(),
     veriler: veFeadBaslangicVeri(),
     kapilar: veFeadBaslangicKapilar(),
     bolum: {
       baslik: 'Gates raporlarından başla',
       karolar: raporlar.map(function(r){
-        // Alt satır KAYIŞ: aynı rapor kodlu kayıtları (AG0868'in üç kayışı) o
-        // ayırır; yıl föyde.
-        return { ey: 'rapor', v: r.key, resim: veFeadBaslangicResim(r.key), kod: r.kod, yil: r.kayis,
-                 onizleme: { ad: r.kod,
-                   foy: [{ ad: 'Sistem', deger: r.sistem }, { ad: 'Kayış', deger: r.kayis },
-                         { ad: 'Kasnak', deger: n(r.kasnak) }, { ad: 'Yıl', deger: r.yil }],
-                   liste: { baslik: 'Kasnaklar', adlar: r.kasnaklar } } };
+        return { ey: 'rapor', v: r.key, resim: veFeadBaslangicResim(r.key),
+                 kod: r.kod, yil: r.yil, sag: r.kasnak + ' kasnak',
+                 alt: [r.kayis, r.sistem].filter(Boolean).join(' · ') };
       })
     }
-  };
-}
-
-function veFeadBaslangicHTML(){
-  var K = _feadBasKit();
-  if(!K) return '';
-  return K.sayfa(veFeadBaslangicSayfa(), K.secili ? K.secili(VE_FEAD_BAS_ID) : null);
+  });
 }
 
 // ── EYLEMLER — hepsi modülün var olan çağrılarına gider ────────────────────
@@ -291,7 +251,7 @@ function veFeadBaslangicEylem(ad, v){
 // ── DOM — kurma ve görünürlük (kit) ────────────────────────────────────────
 function _feadBasSecenek(){
   return { id: VE_FEAD_BAS_ID, aria: 'FEAD başlangıç sayfası',
-           sayfa: veFeadBaslangicSayfa, eylem: veFeadBaslangicEylem, onizCiz: veFeadBaslangicOnizleme };
+           html: veFeadBaslangicHTML, eylem: veFeadBaslangicEylem };
 }
 
 function veFeadBaslangicKur(){
@@ -316,13 +276,12 @@ if(typeof module !== 'undefined' && module.exports){
   module.exports = {
     veFeadBaslangicGerekli: veFeadBaslangicGerekli, veFeadBaslangicRaporlar: veFeadBaslangicRaporlar,
     veFeadBaslangicResim: veFeadBaslangicResim, veFeadBaslangicHTML: veFeadBaslangicHTML,
-    veFeadBaslangicSayfa: veFeadBaslangicSayfa, veFeadBaslangicOnizleme: veFeadBaslangicOnizleme,
     veFeadBaslangicEylem: veFeadBaslangicEylem, veFeadBaslangicKur: veFeadBaslangicKur,
     veFeadBaslangicTazele: veFeadBaslangicTazele, veFeadBaslangicAcik: veFeadBaslangicAcik,
     veFeadBaslangicKimlik: veFeadBaslangicKimlik, veFeadBaslangicVeri: veFeadBaslangicVeri,
     veFeadBaslangicKapilar: veFeadBaslangicKapilar,
     VE_FEAD_BAS_ID: VE_FEAD_BAS_ID, VE_FEAD_BAS_RESIM: VE_FEAD_BAS_RESIM,
     VE_FEAD_BAS_YETENEK: VE_FEAD_BAS_YETENEK, VE_FEAD_BAS_STEP: VE_FEAD_BAS_STEP,
-    _feadBasSifirla: function(){ _feadBasResimler = {}; _feadBasKurulum = {}; }
+    _feadBasSifirla: function(){ _feadBasResimler = {}; }
   };
 }

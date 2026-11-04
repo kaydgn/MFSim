@@ -146,8 +146,7 @@ describe('SAYFANIN HTML\'İ', () => {
     expect(d.querySelector('.ve-bas-kapi.birincil').getAttribute('data-ey')).toBe('sihirbaz');
     const karo = [...d.querySelectorAll('.ve-bas-karo')];
     expect(karo.map((b) => b.getAttribute('data-v')).sort()).toEqual(M.veFeadExampleKeys().slice().sort());
-    // Karo SEÇER (Çalışma masası, 2026-11-04); yükleme eylemi önizlemenin Yükle'sinde.
-    karo.forEach((b) => expect([b.getAttribute('data-ey'), b.getAttribute('data-yukle')]).toEqual(['sec', 'rapor']));
+    karo.forEach((b) => expect(b.getAttribute('data-ey')).toBe('rapor'));
   });
 
   // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): sayfada üst
@@ -331,78 +330,65 @@ describe('KAPILAR MODÜLÜN VAR OLAN ÇAĞRILARINA GİDER', () => {
   });
 });
 
-// ÇALIŞMA MASASI (kullanıcı 2026-11-04: *"Çalışma masasını uygula. FEAD'da
-// aynı olsun."*): Takoz'la aynı kit. Önizleme seçili raporun künyesi (sistem ·
-// kayış · kasnak · yıl, kasnakların adları — örneğin KENDİ kaydından) ve kayış
-// yolu, aynı çizicinin adlı kipiyle, kutunun ölçüsünde ve kartın yazı
-// katsayısıyla (kural 21).
-describe('ÇALIŞMA MASASI — rapor önizlemesi', () => {
+// SÜTUN DÜZENİ (kullanıcı 2026-11-04: *"Yok, FEAD modülü önceki hali gibi
+// kalsın. O daha güzelmiş."*): kitin Çalışma masası bir tur denendi, Takoz'da
+// kaldı. FEAD sayfası sütunu BEYAN eder — kimlik (Kılavuz sağında) · veri
+// bandı · kapılar · rapor karoları; karo TEK TIKLA kurar: seçim, önizleme ve
+// Yükle düğmesi yok. Sayfa rayının gizlenmesi kitin iki düzende ortak kuralı
+// (mount-baslangic.test.js → RAY).
+describe('SÜTUN DÜZENİ — FEAD önceki hâlinde, Takoz Çalışma masasında', () => {
   const K = require('../../js/baslangic-sayfa.js');
-  beforeEach(() => { K._veBasSifirla(); BS._feadBasSifirla(); });
-  test('önizleme ilk raporun künyesi; Yükle onun eylemi', () => {
-    const r = BS.veFeadBaslangicRaporlar()[0];
-    const ex = M.veFeadExampleOf(r.key);
-    const d = document.createElement('div');
-    d.innerHTML = BS.veFeadBaslangicHTML();
-    const p = d.querySelector('.ve-bas-oniz');
-    expect(p.getAttribute('data-v')).toBe(r.key);
-    expect(p.querySelector('h2').textContent).toBe(r.kod);
-    expect([...p.querySelectorAll('dt')].map((x) => x.textContent)).toEqual(['Sistem', 'Kayış', 'Kasnak', 'Yıl']);
-    expect([...p.querySelectorAll('dd')].map((x) => x.textContent))
-      .toEqual([r.sistem, ex.belt.beltType, veSayi(ex.pulleys.length, 0), r.yil]);
-    expect([...p.querySelectorAll('.ve-bas-oniz-liste li')].map((x) => x.textContent))
-      .toEqual(ex.pulleys.map((q) => q.name));
-    const y = p.querySelector('.ve-bas-yukle');
-    expect([y.getAttribute('data-ey'), y.getAttribute('data-v')]).toEqual(['rapor', r.key]);
-  });
-  // Aynı rapor kodlu kayıtlar var (AG0868'in üç kayışı): karonun alt satırı
-  // kayış — karolar birbirinden AYIRT edilir.
-  test('karo künyesi rapor kodu + kayış; ikisi birlikte her karoda tekil', () => {
-    const d = document.createElement('div');
-    d.innerHTML = BS.veFeadBaslangicHTML();
-    const kunye = [...d.querySelectorAll('.ve-bas-karo .ve-bas-kunye')].map((k) => k.textContent);
-    const rap = BS.veFeadBaslangicRaporlar();
-    expect(kunye).toEqual(rap.map((r) => r.kod + r.kayis));
-    expect(new Set(kunye).size).toBe(kunye.length);
-    expect(new Set(rap.map((r) => r.kod)).size).toBeLessThan(rap.length);    // kod tek başına yetmiyor
-  });
-  test('çizim: veFeadLayoutSVG, adlar ve gergi kolu açık; kutunun ölçüsü ÷ yazı katsayısı', () => {
-    const c = casus('veFeadLayoutSVG', (b, W, H, o) => '<svg data-casus="' + W + 'x' + H + '"></svg>');
+  const kur = () => { const d = document.createElement('div'); d.innerHTML = BS.veFeadBaslangicHTML(); return d; };
+
+  test('sayfa sütunu beyan ediyor: panel, önizleme, seçim ve Yükle yok', () => {
+    const GK = require('../../js/guide-kit.js');
+    const uret = GK.veGuideKitOf('fead').uret;
+    global[uret] = () => '';
     try {
-      const key = M.veFeadExampleKeys()[0];
-      const k = fead.veFeadYaziK();
-      expect(BS.veFeadBaslangicOnizleme(key, 600, 360)).toBe('<svg data-casus="' + (600 / k) + 'x' + (360 / k) + '"></svg>');
-      expect(c.c.mock.calls[0][3]).toMatchObject({ inline: true, nameLabels: true, pivot: true, compass: false,
-        wrapLabels: false, spanLabels: false, kunye: false });
-    } finally { c.geri(); }
-    // gerçek çizim: kasnakların adı çizimde
-    const key = M.veFeadExampleKeys()[0];
-    const svg = BS.veFeadBaslangicOnizleme(key, 640, 380);
-    expect(svg).toContain('data-ve="belt"');
-    const d = document.createElement('div'); d.innerHTML = svg;
-    const metin = d.textContent;
-    expect(M.veFeadExampleOf(key).pulleys.filter((q) => metin.includes(q.name)).length).toBeGreaterThan(0);
+      const ic = kur().querySelector('.ve-bas-ic');
+      expect(ic.classList.contains('ve-bas-ic--sutun')).toBe(true);
+      expect(ic.querySelector('.ve-bas-panel, .ve-bas-masa, .ve-bas-oniz, .ve-bas-yukle, [aria-pressed], [data-yukle]')).toBeNull();
+      expect([...ic.children].map((c) => c.className))
+        .toEqual(['ve-bas-kimlik', 've-bas-veri', 've-bas-kapilar', 've-bas-baslik', 've-bas-raporlar']);
+      expect(ic.querySelector('.ve-bas-kimlik > .ve-bas-kilavuz')).not.toBeNull();   // Kılavuz kimliğin sağında
+    } finally { delete global[uret]; }
   });
-  test('karo SEÇER, veFeadLoadExample\'ı çağırmaz; Yükle ve çift tık seçileni kurar', () => {
+
+  test('karo künyesi örneğin kaydından: kod · yıl · kasnak sayısı, kayış · sistem; fare altında Yükle', () => {
+    const rap = BS.veFeadBaslangicRaporlar();
+    const karo = [...kur().querySelectorAll('.ve-bas-karo')];
+    expect(karo.map((b) => b.getAttribute('data-v'))).toEqual(rap.map((r) => r.key));
+    karo.forEach((b, i) => {
+      const r = rap[i];
+      expect(b.querySelector('.ve-bas-kunye-1 b').textContent).toBe(r.kod);
+      expect(b.querySelector('.ve-bas-kunye-1 span').textContent).toBe(r.yil);
+      expect(b.querySelector('.ve-bas-kunye-1 i').textContent).toBe(r.kasnak + ' kasnak');
+      expect(b.querySelector('.ve-bas-kunye-2').textContent).toBe([r.kayis, r.sistem].filter(Boolean).join(' · '));
+      expect(b.querySelector('.ve-bas-resim em').textContent).toBe('Yükle');
+    });
+  });
+
+  test('karoya TEK TIK modeli kurar; çift tık ikinci kez kurmaz', () => {
     global.nodes = araclar();
     const c = casus('veFeadLoadExample', () => [{ id: 'x' }]);
     try {
       AR.veFeadAraclarKapsam('fead-analysis');
-      const el = document.getElementById('ve-fead-baslangic');
       const key = M.veFeadExampleKeys()[3];
-      const karo = el.querySelector('.ve-bas-karo[data-v="' + key + '"]');
+      const karo = document.querySelector('#ve-fead-baslangic .ve-bas-karo[data-v="' + key + '"]');
       karo.click();
-      expect(c.c).not.toHaveBeenCalled();
-      expect(el.querySelector('.ve-bas-oniz').getAttribute('data-v')).toBe(key);
-      expect(karo.getAttribute('aria-pressed')).toBe('true');
-      el.querySelector('.ve-bas-yukle').click();
+      expect(c.c).toHaveBeenCalledTimes(1);
       expect(c.c).toHaveBeenCalledWith(key);
-      const k2 = M.veFeadExampleKeys()[1];
-      el.querySelector('.ve-bas-karo[data-v="' + k2 + '"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-      expect(c.c).toHaveBeenLastCalledWith(k2);
-      // önizlemenin çizimi yerleşti (jsdom: nominal ölçü)
-      expect(el.querySelector('.ve-bas-oniz-resim [data-ve="belt"]')).not.toBeNull();
+      karo.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      expect(c.c).toHaveBeenCalledTimes(1);
     } finally { c.geri(); }
+  });
+
+  test('düzen modülün beyanı: aynı kit Takoz\'a Çalışma masasını basıyor', () => {
+    expect(loadSource('cp-fead-baslangic.js')).toMatch(/duzen:\s*'sutun'/);
+    expect(loadSource('cp-mount-baslangic.js')).not.toMatch(/duzen:\s*'sutun'/);
+    const s = { kimlik: { ad: 'X' }, kapilar: [], bolum: { baslik: 'B', karolar: [{ ey: 'e', v: 'a', kod: 'A' }] } };
+    expect(K.veBasSayfaHTML(s)).toMatch(/class="ve-bas-ic ve-bas-ic--masa"/);
+    expect(K.veBasSayfaHTML(Object.assign({ duzen: 'sutun' }, s))).toMatch(/class="ve-bas-ic ve-bas-ic--sutun"/);
   });
 });
 
