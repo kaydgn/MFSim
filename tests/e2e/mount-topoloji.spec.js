@@ -97,17 +97,29 @@ for (const dpr of [1, 1.5]) {
         await page.evaluate((k) => veMntOrnekYukle(k), k);
         await page.waitForFunction(() => document.querySelector('g.ve-mnt-chassis text'), null, { timeout: 20000 });
         await page.waitForTimeout(600);
-        const kutu = await page.evaluate(() => {
-          const b = document.querySelector('g.ve-mnt-chassis text').getBoundingClientRect();
-          return { x: b.left, y: b.top, width: b.width, height: b.height };
+        const { kutu, fill } = await page.evaluate(() => {
+          const t = document.querySelector('g.ve-mnt-chassis text'), b = t.getBoundingClientRect();
+          return { kutu: { x: b.left, y: b.top, width: b.width, height: b.height }, fill: getComputedStyle(t).fill };
         });
         const png = await page.screenshot({ clip: kutu });
         const { PNG } = require('playwright-core/lib/utilsBundle');
         const p = PNG.sync.read(png);
+        // YAZI PİKSELİ = yazının KENDİ rengine (fill) zeminden yakın piksel;
+        // zemin kutunun en sık rengi. Temadan bağımsız: süzgeç bakır vurguya
+        // sabitken (r − b > 40) aksan maviye dönünce boyanmış etiket 0 sayıyordu.
+        const F = (fill.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+        const sik = new Map();
+        for (let j = 0; j < p.data.length; j += 4) {
+          const a = (p.data[j] << 16) | (p.data[j + 1] << 8) | p.data[j + 2];
+          sik.set(a, (sik.get(a) || 0) + 1);
+        }
+        const za = [...sik.entries()].sort((x, y) => y[1] - x[1])[0][0];
+        const Z = [za >> 16, (za >> 8) & 255, za & 255];
+        const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
         let n = 0;
         for (let j = 0; j < p.data.length; j += 4) {
-          const r = p.data[j], g = p.data[j + 1], b = p.data[j + 2];
-          if (r - b > 40 && r > 100 && g < 150) n++;   // --ink-accent (açık tema)
+          const c = [p.data[j], p.data[j + 1], p.data[j + 2]];
+          if (d(c, Z) > 40 && d(c, F) < d(c, Z)) n++;
         }
         if (n < 15 * dpr * dpr) bos.push(k + ': ' + n + ' piksel');
       }
