@@ -2548,16 +2548,16 @@ function veBuildReportHTML(content, title) {
     ':root{--rp-w:794px;--rp-pad:45px;--rp-fs-max:11px;' +
     '--rp-ch:' + veTxtCharRatio().toFixed(4) + ';--rp-cols:' + veTxtCols(content) + ';' +   // makine: CSS değişkeni
     "--rp-mono:'Consolas','Monaco','SF Mono','DejaVu Sans Mono','Courier New',monospace;}" +
-    'html,body{margin:0;background:#f0ede7;}' +
+    'html,body{margin:0;background:#eef0f3;}' +
     '.mf-wrap{padding:28px 24px 48px;}' +
     '.mf-card{width:var(--rp-w);min-height:1123px;margin:0 auto;background:#fff;' +
-    'border:1px solid #dcd8d0;box-shadow:0 2px 16px rgba(38,36,31,.10);' +
+    'border:1px solid #dadee4;box-shadow:0 2px 16px rgba(31,35,40,.10);' +
     'padding:var(--rp-pad);box-sizing:border-box;}' +
-    '.mf-card pre{margin:0;padding:0;white-space:pre;line-height:1.5;color:#26241f;' +
+    '.mf-card pre{margin:0;padding:0;white-space:pre;line-height:1.5;color:#1f2328;' +
     'font-family:var(--rp-mono);' +
     'font-size:min(var(--rp-fs-max),calc((var(--rp-w) - 2 * var(--rp-pad))/var(--rp-cols)/var(--rp-ch)));}' +
-    '@media(prefers-color-scheme:dark){html,body{background:#1a1815;}' +
-    '.mf-card{background:#221f1b;border-color:#37312a;}.mf-card pre{color:#e6e0d5;}}' +
+    '@media(prefers-color-scheme:dark){html,body{background:#181b20;}' +
+    '.mf-card{background:#1f2329;border-color:#3a4048;}.mf-card pre{color:#e4e8ee;}}' +
     '@media print{@page{size:A4;margin:12mm;}html,body{background:#fff;}' +
     '.mf-wrap{padding:0;}.mf-card{width:auto;min-height:0;border:none;box-shadow:none;padding:0;}}' +
     '</style></head><body><div class="mf-wrap"><div class="mf-card">' +
@@ -3953,9 +3953,9 @@ function _veReportAssemble(R, sim, charts) {
 // Kapı: tests/unit/report-cosmetics.test.js — kullanılan her var() tanımlı mı.
 var _VE_REPORT_CSS = `
 :root{
-  --ink:#26241f; --paper:#fdfdfb; --line:#c6c0b4; --line-soft:#e6e1d8;
-  --vurgu:#96441f; --vurgu-soft:#f2e9e3; --check:#2a6140; --check-soft:#e8f0ea;
-  --warn:#6d5310; --warn-soft:#f5efe2; --bad:#b23b3b;
+  --ink:#1f2328; --paper:#fdfdfb; --line:#c5cbd3; --line-soft:#e4e8ed;
+  --vurgu:#1747b0; --vurgu-soft:#e8effc; --check:#166a2e; --check-soft:#e6f2ea;
+  --warn:#7c5400; --warn-soft:#f5efe2; --bad:#b23b3b;
   --yuz:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:var(--yuz);  /* rakam hizası tabular-nums ile — ayrı bir yüz yok */
   /* Belge tipografi ölçeği — Takoz raporu şablonuyla aynı basamaklar. */
@@ -4114,7 +4114,7 @@ function veDownloadReportHTML() {
 
   // 2) Grafikleri SABİT AÇIK renklerle yeniden çiz (tema bağımsızlığı)
   var _savedTC = _drTC;
-  _drTC = { bg:'#ffffff', bgAlt:'#f0f1f3', text:'#26241f', textSec:'#4e535e',
+  _drTC = { bg:'#ffffff', bgAlt:'#f0f1f3', text:'#1f2328', textSec:'#4e535e',
             textMuted:'#9098a6', border:'#e8eaed', accent:'#2d6fe6', axisLine:'#c2c8d4' };
   function _drawReportCharts() {
     try {

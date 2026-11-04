@@ -824,7 +824,7 @@ describe('grafik yardımcısı — x ekseni yazı sıklığı', () => {
     // adımı yeniden kurar), AYRINTILI RAPORUN hemen ardından gelen doğrudan
     // çağrısında görünür: şekil seyreltilmiş basılırdı (mutasyonla ölçüldü).
     expect(yazi(RP._frFreqFigure(R))).toBe(yazi(esk));
-    const izgara = (s) => (s.match(/stroke="#e6e1d8"/g) || []).length;
+    const izgara = (s) => (s.match(/stroke="#e4e8ed"/g) || []).length;
     expect(izgara(sey)).toBe(izgara(esk));
     expect(yazi(esk)).toBe(9);                                   // 750 … 2.750, 250'lik adım
     expect(yazi(sey)).toBe(5);                                   // 750 · 1.250 · … · 2.750

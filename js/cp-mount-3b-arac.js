@@ -191,7 +191,7 @@ function _mw3bKesitGorsel(){
   if(!V.kesit || !V.kutu) return;
   var e = V.kesit.eksen, b = V.kutu, boy = b.getSize(new THREE.Vector3()), m = b.getCenter(new THREE.Vector3());
   var u = [boy.y, boy.x, boy.x][e] * 1.08 || 100, v = [boy.z, boy.z, boy.y][e] * 1.08 || 100;
-  var renk = _mw3bRenk('--accent-primary', '#a8502b'), G = new THREE.Group();
+  var renk = _mw3bRenk('--accent-primary', '#1f5fd6'), G = new THREE.Group();
   var yuz = new THREE.Mesh(new THREE.PlaneGeometry(u, v), new THREE.MeshBasicMaterial({ color: renk, transparent: true, opacity: 0.1,
     depthWrite: false, side: THREE.DoubleSide }));
   var kenar = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(u, v)),
@@ -513,7 +513,7 @@ function _mw3bYuzCiz(eski, b, opak, sira){
   }
   var g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(poz, 3));
-  var m = new THREE.MeshBasicMaterial({ color: _mw3bRenk('--accent-primary', '#a8502b'), transparent: true, opacity: opak,
+  var m = new THREE.MeshBasicMaterial({ color: _mw3bRenk('--accent-primary', '#1f5fd6'), transparent: true, opacity: opak,
     side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
   if(V.kesitK && V.kesitDizi) m.clippingPlanes = V.kesitDizi;
   var o = new THREE.Mesh(g, m);

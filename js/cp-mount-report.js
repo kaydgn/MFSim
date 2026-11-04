@@ -570,7 +570,7 @@ function _mntRepDeflectionDetail(R){
       if(!rc.res){ h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td><td colspan="4" class="c">— (çözülemedi)</td></tr>'; return; }
       var pm=rc.res.perMount[mi]; if(!pm) return;
       var dx=pm.delta[0]*1000, dy=pm.delta[1]*1000, dz=pm.delta[2]*1000;
-      var flag = pm.tension ? '<span style="color:var(--warn,#6d5310)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#6d5310)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
+      var flag = pm.tension ? '<span style="color:var(--warn,#7c5400)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#7c5400)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
       h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td>'
         +'<td>'+_rFs(dx,2)+'</td><td>'+_rFs(dy,2)+'</td><td>'+_rFs(dz,2)+'</td>'
         +'<td class="c">'+flag+'</td></tr>';
@@ -739,22 +739,22 @@ function _mntRepFigure(geom, plane, no, caption){
   function sx(hh){ return offH+(hh-minH)*sc; }
   function sy(vv){ return offV+(maxV-vv)*sc; } // vert yukarı
   var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
-  svg+='<defs><marker id="ra'+no+'" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#96441f"/></marker></defs>';
+  svg+='<defs><marker id="ra'+no+'" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#1747b0"/></marker></defs>';
   // referans eksen köşesi
   var ax=22, ay=28;
-  svg+='<line x1="'+ax+'" y1="'+ay+'" x2="'+(ax+46)+'" y2="'+ay+'" stroke="#96441f" stroke-width="1.6" marker-end="url(#ra'+no+')"/>';
-  svg+='<text x="'+(ax+52)+'" y="'+(ay+4)+'" font-size="12" fill="#96441f">+X</text>';
-  svg+='<line x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+(ay+40)+'" stroke="#96441f" stroke-width="1.6" marker-end="url(#ra'+no+')"/>';
-  svg+='<text x="'+(ax-6)+'" y="'+(ay+54)+'" font-size="12" fill="#96441f">'+(plane==='xy'?'−Y':'−Z')+'</text>';
+  svg+='<line x1="'+ax+'" y1="'+ay+'" x2="'+(ax+46)+'" y2="'+ay+'" stroke="#1747b0" stroke-width="1.6" marker-end="url(#ra'+no+')"/>';
+  svg+='<text x="'+(ax+52)+'" y="'+(ay+4)+'" font-size="12" fill="#1747b0">+X</text>';
+  svg+='<line x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+(ay+40)+'" stroke="#1747b0" stroke-width="1.6" marker-end="url(#ra'+no+')"/>';
+  svg+='<text x="'+(ax-6)+'" y="'+(ay+54)+'" font-size="12" fill="#1747b0">'+(plane==='xy'?'−Y':'−Z')+'</text>';
   svg+='<text x="'+(ax)+'" y="'+(ay-10)+'" font-size="10.5" fill="#5a6270">'+(plane==='xy'?'+Y yukarı':'+Z yukarı')+'</text>';
   // orta çizgi (v=0)
   var y0=(minV<=0 && maxV>=0) ? sy(0) : (padT+plotH/2);
-  if(minV<=0 && maxV>=0){ svg+='<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="#c6c0b4" stroke-width="1.4" stroke-dasharray="7 5"/>'; }   // makine: SVG koordinatı
+  if(minV<=0 && maxV>=0){ svg+='<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="#c5cbd3" stroke-width="1.4" stroke-dasharray="7 5"/>'; }   // makine: SVG koordinatı
   // kümele
   var mClust=_repCluster(geom.mounts.map(function(m){ return {x:sx(m[horiz]), y:sy(m[vert]), name:m.name}; }), 26);
   var cClust=_repCluster(geom.comps.map(function(c){ return {x:sx(c[horiz]), y:sy(c[vert]), name:c.name}; }), 18);
   // takoz kareleri (küme başına bir kare)
-  mClust.forEach(function(k){ svg+='<rect x="'+(k.x-7).toFixed(1)+'" y="'+(k.y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#26241f" stroke-width="1.8"/>'; });   // makine: SVG koordinatı
+  mClust.forEach(function(k){ svg+='<rect x="'+(k.x-7).toFixed(1)+'" y="'+(k.y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#1f2328" stroke-width="1.8"/>'; });   // makine: SVG koordinatı
   // bileşen CG daireleri
   cClust.forEach(function(k){ svg+='<circle cx="'+k.x.toFixed(1)+'" cy="'+k.y.toFixed(1)+'" r="6" fill="none" stroke="#5a6270" stroke-width="1.6"/>'; });   // makine: SVG koordinatı
   // birleşik CG (pinwheel G)
@@ -762,9 +762,9 @@ function _mntRepFigure(geom, plane, no, caption){
   if(geom.cg){
     GX=sx(geom.cg[horiz]); GY=sy(geom.cg[vert]); var r=11;
     svg+='<g transform="translate('+GX.toFixed(1)+','+GY.toFixed(1)+')">'   // makine: SVG koordinatı
-       +'<circle r="'+r+'" fill="#fff" stroke="#26241f" stroke-width="1.6"/>'
-       +'<path d="M0,0 L'+r+',0 A'+r+','+r+' 0 0 1 0,'+r+' Z M0,0 L-'+r+',0 A'+r+','+r+' 0 0 1 0,-'+r+' Z" fill="#26241f"/>'
-       +'<text x="0" y="'+(-r-5)+'" text-anchor="middle" font-size="11.5" fill="#26241f" font-weight="600">G</text></g>';
+       +'<circle r="'+r+'" fill="#fff" stroke="#1f2328" stroke-width="1.6"/>'
+       +'<path d="M0,0 L'+r+',0 A'+r+','+r+' 0 0 1 0,'+r+' Z M0,0 L-'+r+',0 A'+r+','+r+' 0 0 1 0,-'+r+' Z" fill="#1f2328"/>'
+       +'<text x="0" y="'+(-r-5)+'" text-anchor="middle" font-size="11.5" fill="#1f2328" font-weight="600">G</text></g>';
   }
   // etiketler → çakışma-önlemeyle yerleştir; işaretler ENGEL
   var engel=[{ x0:0, y0:0, x1:ax+80, y1:ay+60 }];
@@ -773,7 +773,7 @@ function _mntRepFigure(geom, plane, no, caption){
   if(geom.cg) engel.push({ x0:GX-12, y0:GY-12-18, x1:GX+12, y1:GY+12 });
   var labels=[];
   // Boy 10,5: viewBox (820) sayfada ~%96'ya iner — 9,5 ölçek tabanının altına düşmesin
-  mClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'takoz'), dir:(k.y<=y0?-1:1), fs:10.5, col:'#26241f', marker:'sq' }); });
+  mClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'takoz'), dir:(k.y<=y0?-1:1), fs:10.5, col:'#1f2328', marker:'sq' }); });
   cClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,19,17,'bileşen'), dir:(k.y<y0?-1:1), fs:10.5, col:'#5a6270', marker:'ci' }); });
   _repPlaceLabels(labels, H-2, engel);
   labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'"'+_R_HALE+'>'+_rEsc(L.text)+'</text>'; });   // makine: SVG koordinatı
@@ -797,7 +797,7 @@ var _MNT_REP_AKSO_CSS =
  +'.rp-akso .ve-ak-zem{fill:#fff}'
  +'.rp-akso .ve-ak-izg{fill:none;stroke:var(--line-soft);stroke-width:.8}'
  +'.rp-akso .ve-ak-sim{stroke:var(--line);stroke-width:.8;stroke-dasharray:10 3 2 3}'
- +'.rp-akso .ve-ak-gol{fill:rgba(38,36,31,.08)}'
+ +'.rp-akso .ve-ak-gol{fill:rgba(31,35,40,.08)}'
  +'.rp-akso .ve-ak-g path{stroke:#5a6270;stroke-width:.8;stroke-linejoin:round}'
  +'.rp-akso .ve-ak-g.ana path{stroke:var(--ink)}'
  +'.rp-akso .ve-ak-g .f-cam{fill:rgba(36,66,95,.05);stroke:#5a6270;stroke-width:.9}'
@@ -926,14 +926,14 @@ function _mntRepStep3Static(R, geom){
     +(anyCap?'<th>Kapasite [kN]</th><th>Yük [%]</th>':'')+'<th>Durum</th></tr>';
   res.perMount.forEach(function(pm,i){
     var dz=pm.delta[2]*1000, fz=pm.f[2]/1000;
-    var flag = pm.tension ? '<span style="color:var(--warn,#6d5310)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#6d5310)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
+    var flag = pm.tension ? '<span style="color:var(--warn,#7c5400)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#7c5400)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
     var cap='';
     if(anyCap){
       var fc=(mounts[i] && mounts[i].fCap>0) ? mounts[i].fCap : NaN;
       if(Number.isFinite(fc)){
         var use=Math.abs(pm.f[2])/fc*100;
         // %100 aşımı sessizce geçmez: kapasite AŞILDIYSA satır işaretlenir.
-        cap='<td>'+_rF(fc/1000,2)+'</td><td'+(use>100?' style="color:var(--warn,#6d5310); font-weight:700;"':'')+'>'
+        cap='<td>'+_rF(fc/1000,2)+'</td><td'+(use>100?' style="color:var(--warn,#7c5400); font-weight:700;"':'')+'>'
            +_rF(use,1)+(use>100?' ⚠':'')+'</td>';
       } else {
         cap='<td class="c">—</td><td class="c">—</td>';
@@ -970,8 +970,8 @@ function _mntRepLoadBar(R){
   var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
   rows.forEach(function(r,i){
     var y=top+i*rowH, bw=Math.max(2, r.v/max*barMax), cy=y+rowH/2;
-    svg+='<text x="'+(padL-8)+'" y="'+(cy+4)+'" text-anchor="end" font-size="11" fill="#26241f">'+_rEsc(_mntRepShort(r.name,16))+'</text>';
-    svg+='<rect x="'+padL+'" y="'+(y+4)+'" width="'+bw.toFixed(1)+'" height="'+(rowH-10)+'" fill="#96441f"/>';   // makine: SVG koordinatı
+    svg+='<text x="'+(padL-8)+'" y="'+(cy+4)+'" text-anchor="end" font-size="11" fill="#1f2328">'+_rEsc(_mntRepShort(r.name,16))+'</text>';
+    svg+='<rect x="'+padL+'" y="'+(y+4)+'" width="'+bw.toFixed(1)+'" height="'+(rowH-10)+'" fill="#1747b0"/>';   // makine: SVG koordinatı
     svg+='<text x="'+(padL+bw+6)+'" y="'+(cy+4)+'" font-size="11" fill="#3c4350" font-family="Inter,system-ui,sans-serif">'+_rF(r.v,2)+' kN</text>';
   });
   svg+='</svg>';
@@ -1003,7 +1003,7 @@ function _mntRepStep4Torque(R){
     var tot=pm.delta[2]*1000;
     var s=stat.res.perMount[i]?stat.res.perMount[i].delta[2]*1000:NaN;
     var tq=tot-s;
-    var flag = pm.tension ? '<span style="color:var(--warn,#6d5310)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#6d5310)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
+    var flag = pm.tension ? '<span style="color:var(--warn,#7c5400)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#7c5400)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
     h+='<tr><td class="l">'+_rEsc(pm.name||('takoz '+(i+1)))+'</td>'
       +'<td>'+_rFs(s,2)+'</td><td>'+_rFs(tq,2)+'</td><td>'+_rFs(tot,2)+'</td><td class="c">'+flag+'</td></tr>';
   });
@@ -1017,7 +1017,7 @@ function _mntRepStep4Torque(R){
     h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
     rev.res.perMount.forEach(function(pm,i){
       var tot=pm.delta[2]*1000, s=stat.res.perMount[i]?stat.res.perMount[i].delta[2]*1000:NaN, tq=tot-s;
-      var flag = pm.tension ? '<span style="color:var(--warn,#6d5310)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#6d5310)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
+      var flag = pm.tension ? '<span style="color:var(--warn,#7c5400)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#7c5400)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
       h+='<tr><td class="l">'+_rEsc(pm.name||('takoz '+(i+1)))+'</td>'
         +'<td>'+_rFs(s,2)+'</td><td>'+_rFs(tq,2)+'</td><td>'+_rFs(tot,2)+'</td><td class="c">'+flag+'</td></tr>';
     });
@@ -1279,8 +1279,8 @@ function _mntRepIso3Table(R, opts, sdof){
     var st = !Number.isFinite(d.T) ? '—'
       : (d.T<0.2 ? '<span class="ok">✓ iyi</span>'
       : (d.T<0.5 ? '<span class="ok">✓</span>'
-      : (d.T<1 ? '<span style="color:var(--warn,#6d5310)">zayıf</span>'
-               : '<span style="color:var(--warn,#6d5310)">büyütme ⚠</span>')));
+      : (d.T<1 ? '<span style="color:var(--warn,#7c5400)">zayıf</span>'
+               : '<span style="color:var(--warn,#7c5400)">büyütme ⚠</span>')));
     h+='<tr><td class="l">'+_rEsc(d.name)+'</td>'
       +'<td>'+(Number.isFinite(d.T)?_rF(d.T,4):'—')+'</td>'
       +'<td>'+(Number.isFinite(d.iso)?_rFs(d.iso,2):'—')+'</td>'
@@ -1308,8 +1308,8 @@ function _mntRepMaxForce(res){
 // Yük durumu notu (durdurucu / çekme / normal).
 function _mntRepCaseNote(res){
   if(!res) return '—';
-  if(res.checks.clampCount>0) return '<span style="color:var(--warn,#6d5310)">durdurucu ×'+res.checks.clampCount+'</span>';
-  if(res.checks.tensionCount>0) return '<span style="color:var(--warn,#6d5310)">çekme ×'+res.checks.tensionCount+'</span>';
+  if(res.checks.clampCount>0) return '<span style="color:var(--warn,#7c5400)">durdurucu ×'+res.checks.clampCount+'</span>';
+  if(res.checks.tensionCount>0) return '<span style="color:var(--warn,#7c5400)">çekme ×'+res.checks.tensionCount+'</span>';
   return '<span class="ok">✓</span>';
 }
 
@@ -1320,7 +1320,7 @@ function _mntRepGearForces(R){
   var h='<h3>8.9 Kriter 3 — Vites bazında takoz kuvvetleri</h3>';
   h+='<p>Tasarım kriteri her vites için takoz kuvvetlerinin kontrolünü ister. Kütle ve rijitlik sabit, yalnız şaft torku \\(T_{\\text{shaft}}\\) vites oranıyla ölçeklenir; en yüksek redüksiyonlu <b>1. vites en yüksek tork</b> ürettiğinden ileri vitesler için <b>bağlayıcı</b> durumdur. Değerler ±15 mm durdurucu modeliyle (§9) çözülür.</p>';
   h+='<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body); margin:8px 0;">';
-  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c6c0b4);">'
+  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c5cbd3);">'
     +'<th style="text-align:left; padding:4px 6px;">Vites</th>'
     +'<th style="text-align:right; padding:4px 6px;">Oran</th>'
     +'<th style="text-align:right; padding:4px 6px;">T<sub>shaft</sub> [N·m]</th>'
@@ -1329,7 +1329,7 @@ function _mntRepGearForces(R){
     +'<th style="text-align:center; padding:4px 6px;">Durum</th></tr></thead><tbody>';
   rows.forEach(function(rc){
     var lc=rc.loadCase||{}, res=rc.res, mf=_mntRepMaxForce(res);
-    h+='<tr style="border-bottom:1px solid var(--line-soft,#e6e1d8);">'
+    h+='<tr style="border-bottom:1px solid var(--line-soft,#e4e8ed);">'
       +'<td style="padding:3px 6px;">'+_rEsc(lc.gearLabel||rc.name)+'</td>'
       +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+_rF(lc.ratio,2)+'</td>'
       +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(lc.Tshaft,0):'—')+'</td>'
@@ -1350,14 +1350,14 @@ function _mntRepDesignLoads(R){
   var h='<h3>8.10 Kriter 4 — Tasarım yük koşulları</h3>';
   h+='<p>Tasarım kriterinin dört zorunlu yük koşulunda maksimum takoz kuvveti (dayanım tasarımı için). 1g yanal koşul, kalibreli 0,6g viraj manevrasından ayrı bir dayanım zarfıdır.</p>';
   h+='<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body); margin:8px 0;">';
-  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c6c0b4);">'
+  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c5cbd3);">'
     +'<th style="text-align:left; padding:4px 6px;">Koşul</th>'
     +'<th style="text-align:right; padding:4px 6px;">Maks |F| [kN]</th>'
     +'<th style="text-align:left; padding:4px 6px;">Takoz</th>'
     +'<th style="text-align:center; padding:4px 6px;">Durum</th></tr></thead><tbody>';
   function line(label, res){
     var mf=_mntRepMaxForce(res);
-    h+='<tr style="border-bottom:1px solid var(--line-soft,#e6e1d8);">'
+    h+='<tr style="border-bottom:1px solid var(--line-soft,#e4e8ed);">'
       +'<td style="padding:3px 6px;">'+label+'</td>'
       +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(mf.v,2):'—')+'</td>'
       +'<td style="padding:3px 6px;">'+(res?_rEsc(mf.name):'—')+'</td>'
@@ -1436,14 +1436,14 @@ function _mntRepFRFChart(pts, fFire){
     for(k=1;k<10;k++){
       var fv=k*Math.pow(10,d); if(fv<_FRF_FMIN||fv>_FRF_FMAX) continue;
       var X=px(fv);
-      s+='<line x1="'+X.toFixed(1)+'" y1="'+Tp+'" x2="'+X.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#c6c0b4" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
+      s+='<line x1="'+X.toFixed(1)+'" y1="'+Tp+'" x2="'+X.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#c5cbd3" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
     }
   }
   for(d=lt0; d<=lt1; d++){
     for(k=1;k<10;k++){
       var tv=k*Math.pow(10,d); if(tv<tMin||tv>tMax) continue;
       var Y=py(tv);
-      s+='<line x1="'+L+'" y1="'+Y.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+Y.toFixed(1)+'" stroke="#c6c0b4" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
+      s+='<line x1="'+L+'" y1="'+Y.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+Y.toFixed(1)+'" stroke="#c5cbd3" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';   // makine: SVG koordinatı
     }
   }
   // ── eksen etiketleri ──
@@ -1455,12 +1455,12 @@ function _mntRepFRFChart(pts, fFire){
     var tl=Math.pow(10,d);
     s+='<text x="'+(L-7)+'" y="'+(py(tl)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#3c4350">'+_rEsc(tl<1?_rF(tl,-d):_rF(tl,0))+'</text>';   // makine: SVG koordinatı
   }
-  s+='<text x="'+(L+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="#26241f">Frekans [Hz]</text>';
-  s+='<text x="14" y="'+(Tp+ph/2)+'" text-anchor="middle" font-size="12" fill="#26241f" transform="rotate(-90 14 '+(Tp+ph/2)+')">İletilebilirlik T</text>';
+  s+='<text x="'+(L+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="#1f2328">Frekans [Hz]</text>';
+  s+='<text x="14" y="'+(Tp+ph/2)+'" text-anchor="middle" font-size="12" fill="#1f2328" transform="rotate(-90 14 '+(Tp+ph/2)+')">İletilebilirlik T</text>';
   // ── T = 1 referansı (izolasyon sınırı) ──
   var y1=py(1);
-  s+='<line x1="'+L+'" y1="'+y1.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+y1.toFixed(1)+'" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="5 4"/>';   // makine: SVG koordinatı
-  s+='<text x="'+(L+6)+'" y="'+(y1-5).toFixed(1)+'" font-size="10.5" fill="#6d5310"'+_R_HALE+'>T = 1 (izolasyon yok)</text>';   // makine: SVG koordinatı
+  s+='<line x1="'+L+'" y1="'+y1.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+y1.toFixed(1)+'" stroke="#7c5400" stroke-width="1.4" stroke-dasharray="5 4"/>';   // makine: SVG koordinatı
+  s+='<text x="'+(L+6)+'" y="'+(y1-5).toFixed(1)+'" font-size="10.5" fill="#7c5400"'+_R_HALE+'>T = 1 (izolasyon yok)</text>';   // makine: SVG koordinatı
   // ── eğriler (çizim alanına kırpılır) ──
   var noktalar=[];
   var path=function(arr){
@@ -1477,7 +1477,7 @@ function _mntRepFRFChart(pts, fFire){
     return p;
   };
   s+='<g clip-path="url(#'+kirp+')">';
-  s+='<path d="'+path(pts.T0)+'" fill="none" stroke="#96441f" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/>';
+  s+='<path d="'+path(pts.T0)+'" fill="none" stroke="#1747b0" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/>';
   s+='<path d="'+path(pts.T)+'" fill="none" stroke="#b02a2a" stroke-width="2.1"/>';
   s+='</g>';
   // ── f_ateş imleci ──
@@ -1500,9 +1500,9 @@ function _mntRepFRFChart(pts, fFire){
   var en=adaylar[0], enN=Infinity;
   for(var ai=0; ai<adaylar.length; ai++){ var nn=say(adaylar[ai]); if(nn<enN){ enN=nn; en=adaylar[ai]; } if(nn===0) break; }
   s+='<g transform="translate('+(en[0]+8)+','+(en[1]+13)+')">';
-  s+='<rect x="-8" y="-13" width="'+LW+'" height="'+LH+'" fill="#ffffff" stroke="#c6c0b4" stroke-width="0.6"/>';
-  s+='<line x1="0" y1="0" x2="26" y2="0" stroke="#b02a2a" stroke-width="2.1"/><text x="32" y="4" font-size="10.5" fill="#26241f">sönümlü</text>';
-  s+='<line x1="0" y1="18" x2="26" y2="18" stroke="#96441f" stroke-width="1.4" stroke-dasharray="6 4"/><text x="32" y="22" font-size="10.5" fill="#26241f">sönümsüz</text>';
+  s+='<rect x="-8" y="-13" width="'+LW+'" height="'+LH+'" fill="#ffffff" stroke="#c5cbd3" stroke-width="0.6"/>';
+  s+='<line x1="0" y1="0" x2="26" y2="0" stroke="#b02a2a" stroke-width="2.1"/><text x="32" y="4" font-size="10.5" fill="#1f2328">sönümlü</text>';
+  s+='<line x1="0" y1="18" x2="26" y2="18" stroke="#1747b0" stroke-width="1.4" stroke-dasharray="6 4"/><text x="32" y="22" font-size="10.5" fill="#1f2328">sönümsüz</text>';
   s+='</g>';
   s+='</svg>';
   return s;
@@ -1704,7 +1704,7 @@ var _MNT_MOD_LEJANT =
  +'<span><i style="display:inline-block; width:8px; height:8px; background:#8a3ca0;'
  +' vertical-align:-1px"></i> takoz</span>'
  +'<span><i style="display:inline-block; width:12px; height:8px; border-radius:2px;'
- +' background:rgba(36,66,95,0.13); border:1px solid #96441f; vertical-align:-1px"></i>'
+ +' background:rgba(36,66,95,0.13); border:1px solid #1747b0; vertical-align:-1px"></i>'
  +' ana gövde</span></div>';
 
 function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
@@ -1839,7 +1839,7 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
     var dd=disp(it.p);
     var x0=sx(it.p[horiz]), y0=sy(it.p[vert]);
     var x1=sx(it.p[horiz]+dd[hIdx]*scale), y1=sy(it.p[vert]+dd[vIdx]*scale);
-    var renk=(it.tip==='t')?'#8a3ca0':(it.ana?'#96441f':'#96a0ac');
+    var renk=(it.tip==='t')?'#8a3ca0':(it.ana?'#1747b0':'#96a0ac');
     if(Math.abs(x1-x0)>0.8 || Math.abs(y1-y0)>0.8)
       s+='<line class="disp" x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)   // makine: SVG koordinatı
         +'" stroke="'+renk+'" stroke-width="1" opacity="'+(it.ana||it.tip==='t'?0.4:0.3)+'"/>';
@@ -1860,10 +1860,10 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   });
   // birleşik ağırlık merkezi (deforme konumda)
   var gx=sx(cgM[horiz]+phi[hIdx]*1000*scale), gy=sy(cgM[vert]+phi[vIdx]*1000*scale);
-  s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#26241f" stroke-width="1.5"/>';   // makine: SVG koordinatı
-  s+='<line x1="'+(gx-7).toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+(gx+7).toFixed(1)+'" y2="'+gy.toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';   // makine: SVG koordinatı
-  s+='<line x1="'+gx.toFixed(1)+'" y1="'+(gy-7).toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy+7).toFixed(1)+'" stroke="#26241f" stroke-width="1"/>';   // makine: SVG koordinatı
-  s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#26241f"'+_R_HALE+'>G</text>';   // makine: SVG koordinatı
+  s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#1f2328" stroke-width="1.5"/>';   // makine: SVG koordinatı
+  s+='<line x1="'+(gx-7).toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+(gx+7).toFixed(1)+'" y2="'+gy.toFixed(1)+'" stroke="#1f2328" stroke-width="1"/>';   // makine: SVG koordinatı
+  s+='<line x1="'+gx.toFixed(1)+'" y1="'+(gy-7).toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy+7).toFixed(1)+'" stroke="#1f2328" stroke-width="1"/>';   // makine: SVG koordinatı
+  s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#1f2328"'+_R_HALE+'>G</text>';   // makine: SVG koordinatı
   s+='</svg>';
   // flex-grow = viewBox genişliği → ekrandaki genişlik de W ile orantılı olur,
   // yani K = kap/ΣW üçünde ortaktır (px/mm eşitliğinin dayanağı budur).

@@ -182,18 +182,20 @@
        chroma kuralı, halation eşiği, kehribar rampası) ve kaldırma kararı:
        docs/decisions/ortak-yuzeyler.md.
 
-       ATÖLYE PALETİ. Sıcak kâğıt zemin + terrakota aksan; koyu zemin de aynı
-       sıcak ailede (mavi-siyah değil kahve-siyah). Kimlik geçişi bir ÖNCEKİ
-       turda ayrı yapıldı: ikisi aynı commit'te olsaydı 'koyu mod açık çiziyor'
-       ile 'koyu palet açık göründü' birbirinden ayrılamazdı.
+       ÇALIŞMA MASASI PALETİ (kullanıcı kararı 2026-11-04: Takoz 3B'nin tasarım
+       tuvalindeki "Çalışma masası"nın renkleri programın teması). Soğuk gri
+       zemin + beyaz panel + mavi aksan; koyu zemin de aynı soğuk ailede.
+       Emekli Atölye paleti (sıcak kâğıt + terrakota) ve değerleri:
+       docs/decisions/ortak-yuzeyler.md.
 
        YÜZEY YÖNÜ BİR KURAL, TERCİH DEĞİL: --bg-secondary her zaman primary'den
        AÇIK (yükselen panel), --bg-tertiary ise METİNDEN UZAĞA gider — açık
        zeminde primary'den KOYU, koyu zeminde AÇIK. Ölçülerek çıkarıldı;
        tertiary'yi ters yöne koymak bütün oyuk yüzeyleri sessizce düzleştirir.
 
-       --text-muted açık zeminde #676055: eşiği tutan EN AÇIK değer (4,77).
-       Bir basamak açığı (#6b6458) tertiary üstünde 4,49'a düşüyordu.
+       --text-muted açık zeminde #5f6873: oyuk zeminde (--bg-tertiary) 4,59 —
+       tasarımın #636c76'sı orada 4,27'ye düşüyordu. Kademe: secondary/muted
+       1,20, primary/secondary 2,33 (theme-contrast.test.js).
 
        KİMLİKLER TEK KELİME VE TİRESİZ olmak zorunda: js/loader.js'in ilk-kare
        süzgeci /^[a-z]+$/ ve tireli bir kimlik oradan geçmez — geçmezse
@@ -218,33 +220,34 @@
     /* ── AÇIK — belgenin varsayılanı ─────────────────────────────────────── */
     :root, [data-theme="acik"] {
       color-scheme: light;
-      --bg-primary: #f0ede7;
-      --bg-secondary: #faf8f4;
-      --bg-tertiary: #e6e1d8;
+      --bg-primary: #eef0f3;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #e4e8ed;
       --bg-input: #ffffff;
       /* Kenar tonları bir tık koyu (2026-09-25): kullanıcı iki tonu kendi
-         ekranında karşılaştırdı. Tuvale karşı 1,22 → 1,56:1; açık ve hover
-         aynı oranla (×1,28) kendi tonlarında. */
-      --border-color: #c6bfb3;
-      --border-light: #cbc5bd;
-      --border-hover: #aca598;
-      --text-primary: #26241f;
-      --text-secondary: #544e44;
-      --text-muted: #676055;
-      --text-heading: #14120f;
-      --accent-primary: #a8502b;
-      --accent-success: #2f6b45;
-      --accent-warning: #8a6a12;
-      --accent-danger: #9a3b3b;
-      --shadow-color: rgba(38, 36, 31, 0.10);
+         ekranında karşılaştırdı ve tuvale karşı 1,56:1'i seçti. Çalışma
+         masası paletinde aynı ağırlık: tuvale 1,56, panele 1,78 (tasarımın
+         #dadee4'ü tuvale 1,13 — o seçimin altında). */
+      --border-color: #bcc3cc;
+      --border-light: #c8cdd5;
+      --border-hover: #a3abb6;
+      --text-primary: #1f2328;
+      --text-secondary: #535c67;
+      --text-muted: #5f6873;
+      --text-heading: #101418;
+      --accent-primary: #1f5fd6;
+      --accent-success: #1a7f37;
+      --accent-warning: #9a6700;
+      --accent-danger: #cf222e;
+      --shadow-color: rgba(31, 35, 40, 0.10);
       --on-accent: #ffffff;
       --on-success: #ffffff;
       --on-warning: #ffffff;
       --on-danger: #ffffff;
-      --ink-accent: #96441f;
-      --ink-success: #2a6140;
-      --ink-warning: #6d5310;
-      --ink-danger: #8f3636;
+      --ink-accent: #1747b0;
+      --ink-success: #166a2e;
+      --ink-warning: #7c5400;
+      --ink-danger: #b11d27;
       /* DİYAGRAM SERİ PALETİ — Canvas `var()` çözemez, `veThemeRgba` köprüsü
          okur. Seriler HUE ile ayrışır, parlaklıkla değil; her biri KENDİ
          kimliğinin zeminlerinde ≥3:1. Ölçüldü (2026-09-22): eski sabit palet
@@ -257,8 +260,11 @@
       /* STEP 3B'NİN ROL RENKLERİ (js/cp-mount-3b.js → VE_MW_3B_ROL_RENK) —
          dizi paletinin dördü ve aksanlar on üç role yetmiyordu: aksesuarlar
          şanzıman, transfer, braket ve PTO'nun rengini, mil takozun, pompa
-         transferin rengini taşıyordu (kullanım notu T03). Her biri öteki
-         rollerden OKLab ΔE ≥ 9,7, zeminde ≥ 3:1; ton iki temada aynı. */
+         transferin rengini taşıyordu (kullanım notu T03). Motor (ve FEAD'in
+         krankı) AKSANDAN AYRI: aksan maviye dönünce motor şanzımanın
+         mavisine karışırdı. En yakın çift OKLab ΔE 8,5 (açık) · 7,9 (koyu),
+         zeminde ≥ 3:1; ton iki temada aynı. */
+      --rol-motor: #c2410c;
       --rol-alternator: #0c8d8c;
       --rol-klima: #71264e;
       --rol-alt-braket: #5f9049;
@@ -283,47 +289,51 @@
          Tema metni (--text-heading) açık temada koyudur ve siyah bantta
          görünmez olurdu. Hepsi banda karşı ≥ 4,5:1.
          Kapı: loader-splash.test.js → SİNEMA. */
-      --sinema-bant: #0a0908;
-      --sinema-yazi: #f7f2e9;
-      --sinema-yazi-2: #b7ae9f;
-      --sinema-vurgu: #d9763f;
-      --sinema-vurgu-yazi: #e08a56;
+      --sinema-bant: #0b0d10;
+      --sinema-yazi: #f3f5f8;
+      --sinema-yazi-2: #a8b0bb;
+      --sinema-vurgu: #4d8ef7;
+      --sinema-vurgu-yazi: #7eaefa;
       --sinema-uyari: #d9ae52;
-      --sinema-iyi: #7cbf8e;
+      --sinema-iyi: #6cc38a;
     }
 
     /* ── KOYU ────────────────────────────────────────────────────────────── */
     [data-theme="koyu"] {
       color-scheme: dark;
-      --bg-primary: #1a1815;
-      --bg-secondary: #221f1b;
-      --bg-tertiary: #2a2621;
-      --bg-input: #141210;
-      /* Açık temadaki adımın aynısı: her kenar tonunun zemine karşıtlığı ×1,28. */
-      --border-color: #494137;
-      --border-light: #524a3f;
-      --border-hover: #655c4f;
-      --text-primary: #e6e0d5;
-      --text-secondary: #b7ae9f;
-      --text-muted: #968d7e;
-      --text-heading: #f7f2e9;
-      --accent-primary: #d9763f;
-      --accent-success: #5fae7a;
-      --accent-warning: #d2a545;
-      --accent-danger: #d97676;
+      --bg-primary: #181b20;
+      --bg-secondary: #1f2329;
+      --bg-tertiary: #272c33;
+      --bg-input: #131619;
+      /* Kenar: tuvale 1,78, panele 1,63 — emekli koyu paletin ağırlığı. */
+      --border-color: #3f454d;
+      --border-light: #454c55;
+      --border-hover: #5a626c;
+      --text-primary: #e4e8ee;
+      --text-secondary: #aab2bd;
+      --text-muted: #8d96a1;
+      --text-heading: #f4f6f9;
+      /* Aksan AÇIK mavi, üstündeki yazı KOYU: dolu düğmenin hover'ı
+         --ink-accent'e (daha açık) gider ve kontrast artar; beyaz yazılı
+         orta mavi hover'da düşerdi. */
+      --accent-primary: #5b9cf5;
+      --accent-success: #4fb070;
+      --accent-warning: #d4a43c;
+      --accent-danger: #ec6f6c;
       --shadow-color: rgba(0, 0, 0, 0.55);
-      --on-accent: #20130a;
-      --on-success: #052312;
+      --on-accent: #0a1a33;
+      --on-success: #04210f;
       --on-warning: #2a1f05;
       --on-danger: #2a0d0d;
-      --ink-accent: #e08a56;
-      --ink-success: #6cbb87;
-      --ink-warning: #d9ae52;
-      --ink-danger: #e08585;
+      --ink-accent: #7fb2fa;
+      --ink-success: #62be82;
+      --ink-warning: #dcb14f;
+      --ink-danger: #f08482;
       --seri-1: #7ab3e0;
       --seri-2: #e08585;
       --seri-3: #b39ddb;
       --seri-4: #6cbb87;
+      --rol-motor: #f0883e;
       --rol-alternator: #65dad8;
       --rol-klima: #fdb7d7;
       --rol-alt-braket: #a0d48a;
@@ -334,7 +344,7 @@
       --eksen-x: #ef4444;
       --eksen-y: #22c55e;
       --eksen-z: #3b82f6;
-      --isik: #f7f2e9;
+      --isik: #f3f5f8;
     }
 
     /* ── ORTA KALINLIK WINDOWS'TA YARI KALIN (2026-09-26, kullanıcı kararı 5·B) ──
@@ -450,9 +460,12 @@
          düğmeler 22 px (sekme 4 px payla, araç çubuğu segmenti de artık tek
          başına duran düğmeyle aynı boyda), üstünde ve altında 2 px kalıyor.
          Segoe UI'ın satırı Inter'inkinden uzun (12 px'te 16 ↔ 15): ölçü onunla
-         alındı, en yüksek içerik 25 px. */
+         alındı, en yüksek içerik 25 px.
+         ZEMİN DÜZ (2026-11-04, Çalışma masası paleti): panel ile tuvalin
+         arasında tek ton — tasarımın komut çubuğu (#f8f9fb); emekli degrade
+         tertiary → secondary idi. */
       --bant-h: 26px;
-      --bant-zemin: linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
+      --bant-zemin: color-mix(in srgb, var(--bg-secondary) 60%, var(--bg-primary));
 
       /* ── TXT RAPOR SAYFASI ──
          Sonuçlar penceresindeki TXT rapor önizlemesi A4 sayfadır (210×297 mm
@@ -3510,7 +3523,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .ve-cmdk-foot span{ display:inline-flex; align-items:center; gap:5px; }
 .ve-cmdk-foot-grow{ flex:1; }
-.ve-cmdk-brand{ font-weight:700; letter-spacing:.06em; color:var(--text-secondary); opacity:.8; }
+.ve-cmdk-brand{ font-weight:700; letter-spacing:.06em; color:var(--text-muted); }
 /* Toolbar tetikleyici — arama ikonu + ⌘K ipucu (keşfedilebilirlik) */
 @media (prefers-reduced-motion: reduce){
   .ve-cmdk-overlay, .ve-cmdk-panel{ transition:none; }
@@ -8800,8 +8813,8 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-yan .ve-fw-btn-primary:hover:not(:disabled){ color:var(--on-accent); background:var(--ink-accent); }
 .ve-fw-btn-primary{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
 .ve-fw-btn-primary:hover:not(:disabled){ background:var(--ink-accent); border-color:var(--ink-accent); }
-.ve-fw-btn-go{ background:var(--accent-warning); border-color:var(--accent-warning); color:var(--on-warning); font-weight:700; }
-.ve-fw-btn-go:hover:not(:disabled){ background:var(--ink-warning); border-color:var(--ink-warning); }
+.ve-fw-btn-go{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); font-weight:700; }
+.ve-fw-btn-go:hover:not(:disabled){ background:var(--ink-accent); border-color:var(--ink-accent); }
 .ve-fw-btn-wide{
   display:flex; flex-direction:column; align-items:flex-start; gap:2px;
   width:100%; margin-bottom:6px; text-align:left; padding:8px 11px;
@@ -9758,16 +9771,18 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
      de fareye AYNI tepkiyi veriyordu (kural 14). */
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
   flex:none; min-height:28px; padding:5px 14px; cursor:pointer;
-  border:1px solid var(--accent-warning); border-radius:var(--radius-md);
+  border:1px solid var(--accent-primary); border-radius:var(--radius-md);
   font-family:inherit; font-size:var(--fs-body); font-weight:600; line-height:1.2; white-space:nowrap;
-  background:var(--accent-warning); color:var(--on-warning);
+  background:var(--accent-primary); color:var(--on-accent);
   transition:background-color .12s ease, border-color .12s ease;
 }
 .ve-fp-solve .mf-ico{ flex:none; }
-/* Hover AYNI AİLEDEN: zemin `--accent-warning`, hover `--ink-warning`. K
-   turunda buraya `--ink-accent` yazılmıştı — fareyle kehribar düğme toprak
-   rengine SIÇRIYORDU (başka bir aile). */
-.ve-fp-solve:hover:not(:disabled){ background:var(--ink-warning); border-color:var(--ink-warning); }
+/* Hover AYNI AİLEDEN: zemin `--accent-primary`, hover `--ink-accent` (K
+   turunda zemin kehribar, hover toprak rengiydi — iki aile). ÇALIŞTIRMA
+   EYLEMİ VURGUNUN AİLESİ (2026-11-04, Çalışma masası paleti): Hesapla ·
+   Modeli kur · FEAD araçlarının birincili · ilerleme çubuğu; kehribar emekli —
+   üst bandın Çözücü'sü zaten vurguydu, soğuk temada tek sıcak düğme kalıyordu. */
+.ve-fp-solve:hover:not(:disabled){ background:var(--ink-accent); border-color:var(--ink-accent); }
 .ve-fp-solve:focus-visible{ outline:2px solid var(--focus-ring); outline-offset:2px; }
 .ve-fp-solve:disabled{
   background:var(--bg-tertiary); color:var(--text-muted);
@@ -9796,7 +9811,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 }
 .ve-fp-ilerleme-c::before{
   content:''; position:absolute; left:0; top:0; bottom:0; width:var(--ilerleme, 0%);
-  background:var(--accent-warning); border-radius:inherit; transition:width .2s linear;
+  background:var(--accent-primary); border-radius:inherit; transition:width .2s linear;
 }
 @media (prefers-reduced-motion: reduce){ .ve-fp-ilerleme-c::before{ transition:none; } }
 
@@ -11418,8 +11433,8 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   background:var(--bg-input); color:var(--text-primary); font:inherit; font-weight:600; white-space:nowrap;
 }
 .ve-fead-arac-btn:hover{ border-color:var(--accent-primary); color:var(--ink-accent); }
-.ve-fead-arac-btn.birincil{ border-color:var(--accent-warning); background:var(--accent-warning); color:var(--on-warning); }
-.ve-fead-arac-btn.birincil:hover{ background:var(--ink-warning); border-color:var(--ink-warning); color:var(--on-warning); }
+.ve-fead-arac-btn.birincil{ border-color:var(--accent-primary); background:var(--accent-primary); color:var(--on-accent); }
+.ve-fead-arac-btn.birincil:hover{ background:var(--ink-accent); border-color:var(--ink-accent); color:var(--on-accent); }
 .ve-fead-arac-btn[aria-disabled="true"]{
   background:var(--bg-tertiary); border-color:var(--border-color); color:var(--text-muted); cursor:not-allowed;
 }
@@ -11484,8 +11499,8 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   background:transparent; color:var(--text-secondary); font-size:var(--fs-md);
 }
 .ve-fead-arac-ray-btn:hover{ background:var(--accent-tint-8); color:var(--ink-accent); }
-.ve-fead-arac-ray-btn.birincil{ background:var(--accent-warning); color:var(--on-warning); }
-.ve-fead-arac-ray-btn.birincil:hover{ background:var(--ink-warning); }
+.ve-fead-arac-ray-btn.birincil{ background:var(--accent-primary); color:var(--on-accent); }
+.ve-fead-arac-ray-btn.birincil:hover{ background:var(--ink-accent); }
 .ve-fead-arac-ray-btn[aria-disabled="true"]{ opacity:.45; cursor:not-allowed; }
 .ve-fead-arac-nokta{ width:8px; height:8px; margin:2px 0 4px; border-radius:50%; background:var(--text-muted); }
 .ve-fead-arac-nokta[data-d="ok"]{ background:var(--accent-success); }

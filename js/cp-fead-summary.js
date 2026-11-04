@@ -1169,9 +1169,9 @@ function veFeadSummaryHTML(R, node){
 function _fsrCss(){
   return [
     ':root{',
-    '  --ink:#26241f;--paper:#fff;--line:#c6c0b4;--rule:#9c9486;--soft:#e6e1d8;',
-    '  --vurgu:#96441f;--band:#8f3636;--head:#f2e9e3;--zebra:#f7f4ef;',
-    '  --warn:#6d5310;--bad:#a8321f;--ok:#2a6140;--hl:#fff3cd;--dim:#4a525e;',
+    '  --ink:#1f2328;--paper:#fff;--line:#c5cbd3;--rule:#8e96a2;--soft:#e4e8ed;',
+    '  --vurgu:#1747b0;--band:#b11d27;--head:#e8effc;--zebra:#f6f8fa;',
+    '  --warn:#7c5400;--bad:#a8321f;--ok:#166a2e;--hl:#fff3cd;--dim:#4a525e;',
     // beş basamaklı ölçek — 1,15 oranlı, tabanı 9 px (A4 baskıda ≈ 6,8 pt)
     '  --f-xl:16px;--f-lg:11.5px;--f-md:10px;--f-sm:9.4px;--f-xs:8.8px;',
     '  --lh:1.4;',
@@ -1179,9 +1179,9 @@ function _fsrCss(){
     '}',
     // Kanvastan gelen şekil uygulamanın palet jetonlarını kullanıyor; tanımsız
     // var() kalıtılan `stroke` için `none` demek → çizim GÖRÜNMEZ olur.
-    '.appfig{--accent-primary:#96441f;--accent-success:#2a6140;--accent-warning:#c8781e;',
+    '.appfig{--accent-primary:#1747b0;--accent-success:#166a2e;--accent-warning:#c8781e;',
     '  --accent-danger:#a8321f;--text-secondary:#3c4350;--text-muted:#5a6270;',
-    '  --bg-input:#fff;--border-color:#c6c0b4;--radius-sm:2px;--fs-tiny:11px;--fs-micro:10px;}',
+    '  --bg-input:#fff;--border-color:#c5cbd3;--radius-sm:2px;--fs-tiny:11px;--fs-micro:10px;}',
     '*{box-sizing:border-box}',
     // ── TEK YÜZ, GÖMÜLÜ AĞIRLIKLAR (2026-09-23) ────────────────────────────
     // Belge arayüzün yüzünü (Inter) gömüyor — `veThemeFontFaceCss`, arayüzün

@@ -296,11 +296,11 @@ function _mntPrmSekil(E, ad){
   var g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Pareto cephesi">';
   var ax=_mntPrmAdim(0, x1, 8), ay=_mntPrmAdim(0, y1, 6), v;
   for(v=0; v<=x1+1e-9; v+=ax){
-    g+='<line x1="'+f(X(v))+'" y1="'+T+'" x2="'+f(X(v))+'" y2="'+(H-B)+'" stroke="#e6e1d8" stroke-width="1"/>'
+    g+='<line x1="'+f(X(v))+'" y1="'+T+'" x2="'+f(X(v))+'" y2="'+(H-B)+'" stroke="#e4e8ed" stroke-width="1"/>'
      + '<text x="'+f(X(v))+'" y="'+(H-B+18)+'" text-anchor="middle" font-size="12" fill="#3c4350">'+_rF(v, 2)+'</text>';
   }
   for(v=0; v<=y1+1e-9; v+=ay){
-    g+='<line x1="'+L+'" y1="'+f(Y(v))+'" x2="'+(W-R)+'" y2="'+f(Y(v))+'" stroke="#e6e1d8" stroke-width="1"/>'
+    g+='<line x1="'+L+'" y1="'+f(Y(v))+'" x2="'+(W-R)+'" y2="'+f(Y(v))+'" stroke="#e4e8ed" stroke-width="1"/>'
      + '<text x="'+(L-8)+'" y="'+f(Y(v)+4)+'" text-anchor="end" font-size="12" fill="#3c4350">'+_rF(v, 2)+'</text>';
   }
   g+='<g fill="#9aa3ad" fill-opacity="0.35">';
@@ -310,29 +310,29 @@ function _mntPrmSekil(E, ad){
   g+='</g>';
   // Sınır çizgileri: Kriter 2 (T) ve statik sehim (açıksa).
   var yk=Y(veMntKatalog.K2_T*100);
-  if(veMntKatalog.K2_T*100<=y1) g+='<line x1="'+L+'" y1="'+f(yk)+'" x2="'+(W-R)+'" y2="'+f(yk)+'" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="6 4"/>'
-    + '<text x="'+(W-R-4)+'" y="'+f(yk-6)+'" text-anchor="end" font-size="12" fill="#6d5310"'+_R_HALE+'>Kriter 2 · T = %'+_rF(veMntKatalog.K2_T*100, 0)+'</text>';
+  if(veMntKatalog.K2_T*100<=y1) g+='<line x1="'+L+'" y1="'+f(yk)+'" x2="'+(W-R)+'" y2="'+f(yk)+'" stroke="#7c5400" stroke-width="1.4" stroke-dasharray="6 4"/>'
+    + '<text x="'+(W-R-4)+'" y="'+f(yk-6)+'" text-anchor="end" font-size="12" fill="#7c5400"'+_R_HALE+'>Kriter 2 · T = %'+_rF(veMntKatalog.K2_T*100, 0)+'</text>';
   if(c.acik.sehim && c.s.sehimUst<=x1){
     var xs=X(c.s.sehimUst);
-    g+='<line x1="'+f(xs)+'" y1="'+T+'" x2="'+f(xs)+'" y2="'+(H-B)+'" stroke="#6d5310" stroke-width="1.4" stroke-dasharray="6 4"/>'
-     + '<text x="'+f(xs-6)+'" y="'+(T+14)+'" text-anchor="end" font-size="12" fill="#6d5310"'+_R_HALE+'>E1 · δ<tspan baseline-shift="sub" font-size="9.5">s</tspan> = '+_rF(c.s.sehimUst, 1)+' mm</text>';
+    g+='<line x1="'+f(xs)+'" y1="'+T+'" x2="'+f(xs)+'" y2="'+(H-B)+'" stroke="#7c5400" stroke-width="1.4" stroke-dasharray="6 4"/>'
+     + '<text x="'+f(xs-6)+'" y="'+(T+14)+'" text-anchor="end" font-size="12" fill="#7c5400"'+_R_HALE+'>E1 · δ<tspan baseline-shift="sub" font-size="9.5">s</tspan> = '+_rF(c.s.sehimUst, 1)+' mm</text>';
   }
   var cep=P.filter(function(p){ return p.pareto && ic(p.d, p.T); }).sort(function(a, b){ return a.d-b.d; });
-  if(cep.length>1) g+='<polyline points="'+cep.map(function(p){ return f(X(p.d))+','+f(Y(p.T*100)); }).join(' ')+'" fill="none" stroke="#96441f" stroke-width="1.6"/>';
-  cep.forEach(function(p){ g+='<circle cx="'+f(X(p.d))+'" cy="'+f(Y(p.T*100))+'" r="3.8" fill="#96441f"/>'; });
-  g+='<line x1="'+L+'" y1="'+(H-B)+'" x2="'+(W-R)+'" y2="'+(H-B)+'" stroke="#26241f" stroke-width="1.2"/>'
-   + '<line x1="'+L+'" y1="'+T+'" x2="'+L+'" y2="'+(H-B)+'" stroke="#26241f" stroke-width="1.2"/>';
+  if(cep.length>1) g+='<polyline points="'+cep.map(function(p){ return f(X(p.d))+','+f(Y(p.T*100)); }).join(' ')+'" fill="none" stroke="#1747b0" stroke-width="1.6"/>';
+  cep.forEach(function(p){ g+='<circle cx="'+f(X(p.d))+'" cy="'+f(Y(p.T*100))+'" r="3.8" fill="#1747b0"/>'; });
+  g+='<line x1="'+L+'" y1="'+(H-B)+'" x2="'+(W-R)+'" y2="'+(H-B)+'" stroke="#1f2328" stroke-width="1.2"/>'
+   + '<line x1="'+L+'" y1="'+T+'" x2="'+L+'" y2="'+(H-B)+'" stroke="#1f2328" stroke-width="1.2"/>';
   // İşaretler: yazı noktanın uzak yanına (çizimin sağ yarısında sola).
   var isaret=function(q, yazi, renk, sekil){
     if(!Number.isFinite(q.d) || !Number.isFinite(q.T) || !ic(q.d, q.T)) return;
     var x=X(q.d), y=Y(q.T*100), sag=x>(L+W-R)/2;
     g+=sekil(x, y)+'<text x="'+f(sag ? x-14 : x+14)+'" y="'+f(y-12)+'" text-anchor="'+(sag ? 'end' : 'start')+'" font-size="12.5" font-weight="600" fill="'+renk+'"'+_R_HALE+'>'+yazi+'</text>';
   };
-  isaret(U, ad, '#2a6140', function(x, y){ return '<circle cx="'+f(x)+'" cy="'+f(y)+'" r="8" fill="none" stroke="#2a6140" stroke-width="2.5"/>'; });
-  isaret(Mv, 'Mevcut', '#6d5310', function(x, y){
-    return '<path d="M'+f(x)+' '+f(y-7)+' L'+f(x+7)+' '+f(y)+' L'+f(x)+' '+f(y+7)+' L'+f(x-7)+' '+f(y)+' Z" fill="none" stroke="#6d5310" stroke-width="2.2"/>'; });
-  g+='<text x="'+((L+W-R)/2)+'" y="'+(H-14)+'" text-anchor="middle" font-size="12.5" fill="#26241f">En büyük statik sehim δ<tspan baseline-shift="sub" font-size="9.5">s</tspan> [mm]</text>'
-   + '<text x="18" y="'+((T+H-B)/2)+'" text-anchor="middle" font-size="12.5" fill="#26241f" transform="rotate(-90 18 '+((T+H-B)/2)+')">İletilebilirlik T [%]</text>';
+  isaret(U, ad, '#166a2e', function(x, y){ return '<circle cx="'+f(x)+'" cy="'+f(y)+'" r="8" fill="none" stroke="#166a2e" stroke-width="2.5"/>'; });
+  isaret(Mv, 'Mevcut', '#7c5400', function(x, y){
+    return '<path d="M'+f(x)+' '+f(y-7)+' L'+f(x+7)+' '+f(y)+' L'+f(x)+' '+f(y+7)+' L'+f(x-7)+' '+f(y)+' Z" fill="none" stroke="#7c5400" stroke-width="2.2"/>'; });
+  g+='<text x="'+((L+W-R)/2)+'" y="'+(H-14)+'" text-anchor="middle" font-size="12.5" fill="#1f2328">En büyük statik sehim δ<tspan baseline-shift="sub" font-size="9.5">s</tspan> [mm]</text>'
+   + '<text x="18" y="'+((T+H-B)/2)+'" text-anchor="middle" font-size="12.5" fill="#1f2328" transform="rotate(-90 18 '+((T+H-B)/2)+')">İletilebilirlik T [%]</text>';
   g+='</svg>';
   var sey=(S.seyrek>1 || S.seyrekU>1) ? '; her '+S.seyrek+' kombinasyondan biri' : '';
   return '<figure>'+g+'<figcaption><b>Şekil '+(++_prmFig)+'</b> — Çözülen kombinasyonlar (açık gri'+sey+'), bütün kısıtları sağlayanlar (mavi, '

@@ -126,6 +126,6 @@ for (const [w, h] of [[1600, 900], [998, 946], [1366, 650]]) {
     expect(r.disarida).toEqual([]);                       // dikeyde de kesiğin içinde
     expect(r.kayarX).toBe(false);
     expect(r.kayarY).toBe(false);                         // sütun bu boylarda kaymadan sığıyor
-    expect(r.cizgi).toMatch(/^polygon\(/);                // bakır çizgi çiziliyor
+    expect(r.cizgi).toMatch(/^polygon\(/);                // vurgu çizgisi çiziliyor
   });
 }

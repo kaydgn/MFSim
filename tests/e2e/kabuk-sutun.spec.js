@@ -109,7 +109,9 @@ const rayCerceve = () => {
     rayCizgiKalinlik: parseFloat(getComputedStyle(ray).borderRightWidth),
     komsuSolKalinlik: parseFloat(getComputedStyle(bant.parentElement).borderLeftWidth) || 0,
     bitisik: Math.round(komsu.x) === Math.round(rb.x + rb.width),
-    koseH: parseFloat(kose.height), koseZemin: kose.backgroundImage,
+    koseH: parseFloat(kose.height),
+    koseZemin: kose.backgroundImage === 'none' ? kose.backgroundColor : kose.backgroundImage,
+    bantZemin: getComputedStyle(bant).backgroundImage === 'none' ? getComputedStyle(bant).backgroundColor : getComputedStyle(bant).backgroundImage,
     koseAlt: Math.round(rb.y + parseFloat(kose.height)),
     bantAlt: alt(bant),
     dockAlt: document.querySelector('#ve-doc-dock') && document.querySelector('#ve-doc-dock').offsetWidth
@@ -130,7 +132,8 @@ test('RAY ÇERÇEVELİ — palet ile arasında TEK çizgi, bant satırı rayda d
   // köşe hücresi bandın kendisi: aynı ölçü, aynı zemin, alt çizgisi paletin
   // ve sekme bandının alt çizgisiyle AYNI y'de
   expect(r.koseH).toBe(r.jeton);
-  expect(r.koseZemin).toMatch(/gradient/);
+  expect(r.koseZemin).toBe(r.bantZemin);
+  expect(saydam(r.koseZemin)).toBe(false);
   expect(r.koseAlt).toBe(r.bantAlt);
   expect(r.koseAlt).toBe(r.dockAlt);
   // rayın aktif öğesi bant satırına binmiyor
