@@ -113,7 +113,12 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
   await page.mouse.up();
   await page.waitForTimeout(300);
   expect(await page.evaluate(() => document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso').innerHTML.length + ':' + VE_MNT_AKSO3B.az)).not.toBe(once);
-  const tk = await page.evaluate(() => { const e = document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso g.ve-ak-t[data-ak]'); const r = e.getBoundingClientRect(); return { ak: e.getAttribute('data-ak'), x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  // görünen bir takoz (gövdenin ardındaki takozun ortasında gövde var: tık gövdeyi seçer)
+  const tk = await page.evaluate(() => [...document.querySelectorAll('#ve-mw-akso svg.ve-mnt2d-akso g.ve-ak-t[data-ak]')].map((e) => {
+    const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, u = document.elementFromPoint(x, y);
+    return { ak: e.getAttribute('data-ak'), x, y, gorunur: !!(u && e.contains(u)) };
+  }).find((t) => t.gorunur));
+  expect(tk).toBeTruthy();
   await page.mouse.click(tk.x, tk.y);
   await page.waitForTimeout(400);
   expect(await page.evaluate(() => VE_MW_STEPS[_mwStep].key)).toBe('takoz');
