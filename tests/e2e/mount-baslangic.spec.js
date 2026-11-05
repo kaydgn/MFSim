@@ -10,7 +10,8 @@
  * görünüyordu.
  *
  * Node'da HİÇ koşmayan halkalar: sayfanın tuvali gerçekten örtmesi ve
- * ana topolojiye dönüş düğmesinin onun ÜSTÜNDE kalması, tekerleğin kadrajı
+ * ana topolojiye dönüşün panelin ALTINDA olması (köşedeki düğme gizli — Canlı
+ * Not 19), örneklerin sekmesi, tekerleğin kadrajı
  * oynatmaması, gerçek tıkla kurulum → çekilme → Ctrl+Z → geri gelme, STEP
  * kapısının dosya seçiciyi AYNI tıklamada açması. Birim tarafı:
  * tests/unit/mount-baslangic.test.js · mount-wizard.test.js.
@@ -48,7 +49,7 @@ const say = (page) => page.evaluate(() => ({
   ornek: window.nodes.filter((n) => n.type === 'mnt-example').length,
 }));
 
-test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMAZ', async ({ page }) => {
+test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMAZ', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -57,16 +58,21 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
   expect(await say(page)).toEqual({ hepsi: 0, govde: 0, takoz: 0, ornek: 0 });
   const o = await page.evaluate(() => {
     const r = (el) => { const b = el.getBoundingClientRect(); return { w: b.width, h: b.height }; };
-    const btn = document.querySelector('#ve-mnt-breadcrumb button');
-    const bb = btn.getBoundingClientRect();
+    // Dönüş panelin altında (Canlı Not 19); köşedeki düğme sayfa açıkken gizli.
+    const btn = document.querySelector('#ve-mnt-baslangic .ve-bas-dip .ve-bas-donus');
+    const bb = btn.getBoundingClientRect(), pb = document.querySelector('#ve-mnt-baslangic .ve-bas-panel').getBoundingClientRect();
     const ust = document.elementFromPoint(bb.left + bb.width / 2, bb.top + bb.height / 2);
     return { kap: r(document.getElementById('ve-canvas-wrapper')), sayfa: r(document.getElementById('ve-mnt-baslangic')),
-      donus: !!(ust && btn.contains(ust)),
+      donus: !!(ust && btn.contains(ust)), donusAlt: Math.round(pb.bottom - bb.bottom),
+      kose: document.querySelector('#ve-mnt-breadcrumb button').offsetWidth,
+      yetenek: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-yetenek').length,
+      sekme: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-sekme')].map((b) => b.textContent),
       kapi: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi')].map((b) => b.getAttribute('data-ey')),
       satir: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir').length,
       cizim: document.querySelectorAll('#ve-mnt-baslangic svg.ve-mnt2d-akso').length,
       acik: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir.acik')].map((r) => r.getAttribute('data-v')),
-      ornek: veMountCore.getMountExampleList().length,
+      ornek: veMountCore.getMountExampleList().filter((e) => !e.kurgu).length,
+      kurgu: veMountCore.getMountExampleList().filter((e) => e.kurgu).length,
       // KİMLİK VE VERİ tarayıcıda: künyenin sabitleri `window`dan okunur —
       // Node'un `require` yolu bunu göremez; bir ad düşerse ancak burada
       // görünür. Sayı bandı YOK (kullanıcı 2026-11-05, Canlı Not 5).
@@ -80,8 +86,12 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
   expect(Math.round(o.sayfa.w)).toBe(Math.round(o.kap.w));
   expect(Math.round(o.sayfa.h)).toBe(Math.round(o.kap.h));
   expect(o.donus).toBe(true);
+  expect(o.donusAlt).toBe(16);                           // panelin dibinde (alt dolgu)
+  expect(o.kose).toBe(0);                                // köşedeki dönüş gizli
+  expect(o.yetenek).toBe(0);                             // analizlerin adı yok (Canlı Not 19)
   expect(o.kapi).toEqual(['sihirbaz', 'step', 'bos']);
-  expect(o.satir).toBe(o.ornek);
+  expect(o.satir).toBe(o.ornek);                         // açık sekme: araçlar
+  expect(o.sekme).toEqual(['Araçlar' + o.ornek, 'Kurgu' + o.kurgu]);
   expect(o.cizim).toBe(0);
   expect(o.acik).toEqual(['siper']);                     // ilk açılışta ilk satır açık
   expect(o.baslik).toBe('Takoz Çökme-Titreşim');
@@ -94,6 +104,11 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
   await page.click('#ve-mnt-baslangic .ve-bas-kilavuz');
   expect(await page.evaluate(() => window.__kilavuz)).toBe('mount');
   expect(await page.evaluate(() => veMntBaslangicAcik())).toBe(true);   // sayfa yerinde
+  // Dönüş ana topolojiye götürür; köşedeki düğmenin işi.
+  await page.click('#ve-mnt-baslangic .ve-bas-donus');
+  await page.waitForFunction(() => veMntStack.length === 0, null, { timeout: 5000 });
+  await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
+  expect(await page.evaluate(() => document.getElementById('sayfa2-content').classList.contains('ve-bas-donus-acik'))).toBe(false);
   expect(hatalar).toEqual([]);
 });
 
@@ -248,6 +263,9 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
   const acik = () => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir')]
     .filter((r) => r.querySelector('.ve-bas-satir-detay').offsetHeight > 0).map((r) => r.getAttribute('data-v')));
   expect(await acik()).toEqual(['siper']);
+  // Kurgu örnekleri kendi sekmesinde (Canlı Not 6); sekme yalnız örnekleri yeniden basar.
+  await page.click('#ve-mnt-baslangic .ve-bas-sekme[data-v="1"]');
+  expect(await acik()).toEqual([]);
   await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="kamyon"] .ve-bas-satir-ac');
   expect(await acik()).toEqual(['kamyon']);
   const o = await page.evaluate(() => {
@@ -257,7 +275,7 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
       .filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent);
     const kaynak = [...sayfa.querySelectorAll('.ve-bas-satir-kaynak')].filter((e) => e.scrollWidth > e.clientWidth + 1)
       .filter((e) => e.getAttribute('title') !== e.textContent).length;
-    return { yatay: sayfa.scrollWidth - sayfa.clientWidth, kisa, kaynak, dolu: y('kamyon'), bos: y('siper'),
+    return { yatay: sayfa.scrollWidth - sayfa.clientWidth, kisa, kaynak, dolu: y('kamyon'), bos: y('hafif'),
       ana: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() };
   });
   expect(o.yatay).toBeLessThanOrEqual(0);
@@ -271,19 +289,19 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
   await page.locator('#ve-canvas-wrapper').click({ position: { x: 20, y: 600 } });
   await page.keyboard.press('Control+z');
   await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
-  expect(await acik()).toEqual(['kamyon']);              // görünüm durumu yerinde
+  expect(await acik()).toEqual(['kamyon']);              // görünüm durumu yerinde: sekme ve satır
+  expect(await page.locator('#ve-mnt-baslangic .ve-bas-sekme[aria-selected="true"]').getAttribute('data-v')).toBe('1');
 });
 
 // PALET DARALTILMIŞKEN (kullanıcının ekranı). Kullanıcı 2026-11-04: *"sol
 // 'Takoz Çökme ve Titreşim' sütununun üstünde iki sembol var. Onları
 // kaldıralım. Sadece geriye gelme kalsın … Arada çirkin bir boşluk var."*
-// Sayfa açıkken paletin açma sekmesi gizli; dönüş düğmesi kabın köşesinde ve
-// açıkta. Kullanıcı 2026-11-05 (Canlı Not 4): *"Yazılar sütunun en tepesine
-// kadar çıkmalı"* — kimlik düğmenin SATIRINDA başlar (eskiden altından, 48 px),
-// başlık düğmenin sağında 10 px payla ve ortası düğmenin ortasında. Model
-// kurulunca sekme geri gelir ve düğme onun sağına oturur (eskiden 26 px'in
-// 23'ü sekmenin altında kalıyordu).
-test('DAR PALET: sayfada açma sekmesi yok, dönüş düğmesi köşede; model kurulunca sekme geri gelir', async ({ page }) => {
+// Sayfa açıkken paletin açma sekmesi gizli. Kullanıcı 2026-11-05 (Canlı Not 4):
+// *"Yazılar sütunun en tepesine kadar çıkmalı"*; (Canlı Not 19) *"Geri butonunu
+// alt taraflara uygun bir yere taşıyalım"* — köşedeki düğme sayfa açıkken
+// gizli, kimlik panelin tepesinde ve girintisiz. Model kurulunca sekme ve köşe
+// düğmesi geri gelir, düğme sekmenin sağına oturur.
+test('DAR PALET: sayfada açma sekmesi ve köşe düğmesi yok; model kurulunca ikisi geri gelir', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await bootApp(page);
   await page.evaluate(() => veToggleSidebar(true));
@@ -296,21 +314,18 @@ test('DAR PALET: sayfada açma sekmesi yok, dönüş düğmesi köşede; model k
     const w = r(document.getElementById('ve-canvas-wrapper')), b = r(btn), s = r(sekme);
     const kim = document.querySelector('#ve-mnt-baslangic:not([hidden]) .ve-bas-kimlik');
     const h1 = kim && kim.querySelector('h1');
-    const ust = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-    // Başlığın METNİNİN kutusu (h1'in sol dolgusu düğmenin altında kalır).
+    const ust = btn.offsetWidth ? document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2) : null;
+    // Başlığın METNİNİN kutusu.
     const yazi = h1 && (() => { const g = document.createRange(); g.selectNodeContents(h1); return g.getBoundingClientRect(); })();
-    return { acik: !!(ust && btn.contains(ust)), sekme: sekme.offsetWidth, sekmeSag: Math.round(s.right),
-      dugme: [Math.round(b.left - w.left), Math.round(b.top - w.top)], dugmeSol: Math.round(b.left),
+    return { acik: !!(ust && btn.contains(ust)), kose: btn.offsetWidth, sekme: sekme.offsetWidth, sekmeSag: Math.round(s.right),
+      dugmeSol: Math.round(b.left),
       kimlik: kim ? Math.round(r(kim).top - w.top) : null,
       ikon: kim ? kim.querySelectorAll('.ve-bas-kimlik-ik').length : null,
-      basSol: yazi ? Math.round(yazi.left - b.right) : null,
-      basOrta: yazi ? Math.round((yazi.top + yazi.bottom) / 2 - (b.top + b.bottom) / 2) : null };
+      basSol: yazi ? Math.round(yazi.left - w.left) : null };
   });
   const o = await olc();
-  expect({ acik: o.acik, sekme: o.sekme, dugme: o.dugme, kimlik: o.kimlik, ikon: o.ikon })
-    .toEqual({ acik: true, sekme: 0, dugme: [10, 10], kimlik: 10, ikon: 0 });
-  expect(o.basSol).toBe(10);                              // düğmenin sağında 10 px
-  expect(Math.abs(o.basOrta)).toBeLessThanOrEqual(1);     // aynı satırda
+  expect({ kose: o.kose, sekme: o.sekme, kimlik: o.kimlik, ikon: o.ikon, basSol: o.basSol })
+    .toEqual({ kose: 0, sekme: 0, kimlik: 18, ikon: 0, basSol: 20 });    // panelin tepesinde, girintisiz
   await page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="bos"]');
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   await page.waitForTimeout(500);

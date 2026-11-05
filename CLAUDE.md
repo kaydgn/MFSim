@@ -51,27 +51,32 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
   söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi; Takoz'da sayı
-  bandı YOK — kullanıcı 2026-11-05); sayı
+  bandı ve analiz adları YOK — kullanıcı 2026-11-05, Canlı Not 5 · 19); sayı
   kaynağından ölçülür, analiz adı programdaki adıdır. Düzeni modül beyan eder
-  (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-04: solda panel, sağda
-  örneklerin DİZİNİ — tasarım tuvali "sade seçenekler" · D; RESİM YOK, satırın Yükle'si
-  tek tıkla kurar, adı gövdeleri ve takozları açar; açık satır görünüm durumu), FEAD
+  (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-05, Canlı Not 6: solda
+  panel — kimlik · kapılar · örneklerin SEKMELİ dizini (Araçlar · Kurgu) · altta dönüş
+  ve Kılavuz; sağda modülün SON DEĞİŞİKLİKLERİ, derlemenin künyesinden: Takoz
+  dosyalarının çoğunu değiştiren birleşmeler, `tools/version-info.js` →
+  `moduller.takoz`; RESİM YOK, satırın Yükle'si tek tıkla kurar, adı kaynağı, gövdeleri
+  ve takozları açar; açık satır ve sekme görünüm durumu), FEAD
   **SÜTUN** (kullanıcı 2026-11-04: *"FEAD modülü önceki hali gibi kalsın"* — ortalanmış
   sütun, karo tek tıkla kurar). İki düzen aynı yuvaları aynı sınıflarla basar; ölçü farkı
   düzenin CSS kapsamında (`.ve-bas-ic--masa|--sutun`). Sayfa açıkken sayfa rayı
-  (Topoloji · Sonuçlar) ve paletin açma sekmesi gizli, yalnız ana topolojiye dönüş
-  düğmesi kalır — iki düzende. Kapı: `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE
-  VERİ* · *DİZİN* · *ÇALIŞMA MASASI* · *RAY* + `fead-baslangic.test.js` → *SÜTUN DÜZENİ*.
+  (Topoloji · Sonuçlar) ve paletin açma sekmesi gizli, iki düzende; dönüşü panelde
+  taşıyan sayfa (`donus`) açıkken köşedeki dönüş düğmesi de gizli. Kapı:
+  `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE VERİ* · *DİZİN* · *ÇALIŞMA
+  MASASI* · *RAY* + `version-embed.test.js` → *modülün listesi* + `fead-baslangic.test.js`
+  → *SÜTUN DÜZENİ*.
 - `js/pencere-kabuk.js` — **bileşen penceresinin kabuğu, ortak kit** (`vePencereKabuk`):
   FEAD ile Takoz pencereleri AYNI üreticiden basar (kullanıcı: *"tüm programda tek
   tip bir kozmetik yapı"*). Kural aşağıda (ortak yüzeyler); kapı `pencere-kabuk.test.js`.
 - `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
-  başla · Boş kanvas + örnek dizini). **STEP'ten başla sihirbazı AÇMAZ** (kullanıcı
+  başla · Boş kanvas + örnek dizini + son değişiklikler). **STEP'ten başla sihirbazı AÇMAZ** (kullanıcı
   kararı 2026-11-02): araç şeridi kurulur, dosya 3B'nin perdesinde okunur
   (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız "Başlangıç ve
   Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
   (`moduleEnter`). **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
-  AYRI grupta ("Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
+  AYRI sekmede ("Kurgu" — "Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
   iddiası taşımaz (kurgunun tasarım özellikleri testte sayıyla kilitli). Kapı: `mount-baslangic.test.js` + `mount-ornek-kurgu.test.js` +
   `tests/e2e/mount-baslangic.spec.js`.
 - `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz

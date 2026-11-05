@@ -10,14 +10,14 @@
 // rötuşta sessizce ayrışırdı.
 //
 // İKİ DÜZEN, TEK ÜRETİCİ — modül sayfanın tanımında beyan eder (`s.duzen`):
-//  • 'masa' (varsayılan) — ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-04, tasarım
-//    tuvali "Takoz başlangıç sayfası" · 1): solda PANEL (kimlik · kapılar · veri ·
-//    Kılavuz), sağda MASA. Masanın içeriği örneklerin DİZİNİ (kullanıcı seçimi
-//    2026-11-04, tasarım tuvali "sade seçenekler" · D — *"D güzel. Onu
-//    uygulayalım."*): satır ad · sayı · kütle · kaynak · Yükle, RESİM YOK. Bir
-//    önceki masa (seçili karonun büyük çizimi + resimli karolar) aynı gün emekli:
-//    *"Ortada falan kocaman şekil olmuş, çirkin duruyor … 3D görsellerin
-//    görünmesine gerek yok."* Takoz.
+//  • 'masa' (varsayılan) — SOL PANEL (kullanıcı seçimi 2026-11-05, tasarım tuvali
+//    "Takoz başlangıç ekranı seçenekleri" · 2 — *"Sol panel güzel ama yine panel
+//    boş kalmış … takoz çökme ve titreşim modülü için yapılan güncellemeleri mi
+//    yazsak?"*): solda PANEL (kimlik · kapılar · ÖRNEKLER sekmeli dizin · altta
+//    dönüş ve Kılavuz), sağda MASA — modülün SON DEĞİŞİKLİKLERİ (`degisiklik`,
+//    derlemenin künyesinden). Örneklerin satırı ad · sayı · kütle · Yükle, RESİM
+//    YOK; ortadaki geniş dizin (2026-11-04, "sade seçenekler" · D) kalktı —
+//    *"Örneklerin olması güzel ama ekranı tamamen doldurmuş"*. Takoz.
 //  • 'sutun' — ortalanmış sütun: kimlik (Kılavuz sağda) · veri bandı · kapılar ·
 //    karolar; karo TEK TIKLA kurar. FEAD (kullanıcı 2026-11-04: *"FEAD modülü
 //    önceki hali gibi kalsın. O daha güzelmiş."*).
@@ -149,13 +149,14 @@ function veBasKaroHTML(k){
     + '</span></button>';
 }
 
-// ── SATIR — masanın dizinindeki örnek ──────────────────────────────────────
+// ── SATIR — panelin örnek dizinindeki örnek ────────────────────────────────
 // r: { ey (YÜKLEME eylemi), v, ad, sayi, kutle, kaynak,
 //      detay:[{ baslik, ogeler:[{ ad, deger }] }] }. Yuvaların hepsi AD ya da
 // VERİ (ARAYÜZ ANLATMAZ): `sayi` ve `kutle` sayı yazıcısından geçmiş değer,
 // `kaynak` örneğin künyesi, ayrıntı modülün listeleri. Boş öğe ve boş liste
 // basılmaz. Satırın adı açar/kapar (`data-ey="ac"`), Yükle modülün eylemi.
-// Kaynak tek satırda kısalır ve tam metni `title`da.
+// Panelde dar (Canlı Not 6): ad satırı · altında sayı ve kütle; kaynak ayrıntının
+// ilk satırında, tek satırda kısalır ve tam metni `title`da.
 function veBasSatirHTML(r, acik){
   r = r || {};
   var det = (r.detay || []).map(function(d){
@@ -173,24 +174,25 @@ function veBasSatirHTML(r, acik){
     +   '<button type="button" class="ve-bas-satir-ac" data-ey="ac" data-v="' + veBasEsc(r.v) + '"'
     +     ' aria-expanded="' + (acik ? 'true' : 'false') + '">' + _veBasIkon('chevron-right')
     +     '<b>' + veBasEsc(r.ad) + '</b></button>'
+    +   '<button type="button" class="ve-bas-satir-yukle" data-ey="' + veBasEsc(r.ey) + '" data-v="' + veBasEsc(r.v) + '"'
+    +     ' aria-label="Yükle — ' + veBasEsc(r.ad) + '">' + _veBasIkon('download') + '<span>Yükle</span></button>'
     +   '<span class="ve-bas-satir-sayi">' + veBasEsc(r.sayi) + '</span>'
     +   '<span class="ve-bas-satir-kutle">' + veBasEsc(r.kutle) + '</span>'
-    +   '<span class="ve-bas-satir-kaynak"' + (r.kaynak ? ' title="' + veBasEsc(r.kaynak) + '"' : '') + '>'
-    +     veBasEsc(r.kaynak) + '</span>'
-    +   '<button type="button" class="ve-bas-satir-yukle" data-ey="' + veBasEsc(r.ey) + '" data-v="' + veBasEsc(r.v) + '">'
-    +     _veBasIkon('download') + '<span>Yükle</span></button>'
     + '</div>'
-    + (det ? '<div class="ve-bas-satir-detay"' + (acik ? '' : ' hidden') + '>' + det + '</div>' : '')
+    + '<div class="ve-bas-satir-detay"' + (acik ? '' : ' hidden') + '>'
+    +   (r.kaynak ? '<div class="ve-bas-satir-kaynak" title="' + veBasEsc(r.kaynak) + '">' + veBasEsc(r.kaynak) + '</div>' : '')
+    +   det + '</div>'
     + '</div>';
 }
 
 // ── SAYFA ──────────────────────────────────────────────────────────────────
 // s: { duzen ('masa' | 'sutun'), kimlik, veriler:[…], kapilar:[kapı…],
-//      basliklar:{ ad, sayi, kutle, kaynak } (masa — dizinin sütun adları),
-//      bolumler:[{ baslik, satirlar:[satır…] (masa) | karolar:[karo…] (sütun) }] }
+//      donus:{ ad } (masa — panelin altındaki dönüş), degisiklik:{ baslik, kayitlar } (masa),
+//      bolumler:[{ baslik, sekme (masa — sekmenin adı), satirlar:[satır…] (masa) | karolar:[karo…] (sütun) }] }
 // Tek bölüm `bolum` olarak da verilebilir (FEAD). Boş bölüm basılmaz.
-// Masa: panel (kimlik · kapılar · veri · Kılavuz) · masa (dizin); `acikV`
-// açık satırın anahtarı — verilmezse ilk satır, '' hiçbiri.
+// Masa: panel (kimlik · kapılar · veri · örnekler · dönüş ve Kılavuz) · masa (son
+// değişiklikler); `acikV` açık satırın anahtarı — verilmezse ilk satır, '' hiçbiri;
+// `sekmeV` örneklerin açık sekmesi.
 // Sütun: kimlik · veri · kapılar · bölümler.
 // Sayfanın üst satırı, serbest başlığı (`baslik`), alt metni, bölüm notu ve
 // dipnotu YOK (2026-10-16, kullanıcı kararı — metin temizliği aşama 1): beş
@@ -218,38 +220,77 @@ function _veBasSutunHTML(s){
   });
   return h + '</div>';
 }
-function veBasSayfaHTML(s, acikV){
+function veBasSayfaHTML(s, acikV, sekmeV){
   s = s || {};
   if(_veBasSutun(s)) return _veBasSutunHTML(s);
   var bolumler = _veBasBolumler(s);
   var ilk = _veBasIlkSatir(s);
   var ac = (acikV === undefined || acikV === null) ? (ilk ? String(ilk.v) : '') : String(acikV);
-  var B = s.basliklar || {};
   var h = '<div class="ve-bas-ic ve-bas-ic--masa">'
     + '<aside class="ve-bas-panel">'
     +   veBasKimlikHTML(s.kimlik, false, true)
     +   '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>'
     +   veBasVeriHTML(s.veriler)
-    +   veBasKilavuzHTML(s.kimlik)
+    +   (bolumler.length ? veBasOrnekHTML(bolumler, ac, sekmeV) : '')
+    +   veBasAltHTML(s)
     + '</aside>'
-    + '<div class="ve-bas-masa">';
-  if(bolumler.length){
-    h += '<div class="ve-bas-dizin">'
-      + '<div class="ve-bas-dizin-bas"><span></span><span>' + veBasEsc(B.ad) + '</span><span>' + veBasEsc(B.sayi)
-      + '</span><span>' + veBasEsc(B.kutle) + '</span><span>' + veBasEsc(B.kaynak) + '</span><span></span></div>';
-    bolumler.forEach(function(b){
-      h += '<div class="ve-bas-baslik"><h2>' + veBasEsc(b.baslik) + '</h2></div>'
-        + b.satirlar.map(function(r){ return veBasSatirHTML(r, String(r.v) === ac); }).join('');
-    });
-    h += '</div>';
+    + '<div class="ve-bas-masa">' + veBasDegisiklikHTML(s.degisiklik) + '</div>';
+  return h + '</div>';
+}
+// ÖRNEKLER (masa — kullanıcı 2026-11-05, Canlı Not 6): panelde, SEKMELİ (bölüm
+// başına bir sekme: `sekme` adı ve satır sayısı); tek bölümde sekme yok, başlık
+// bölümün adı. Açık sekme görünüm durumu (_veBasSekme) — verilmezse açık satırın
+// sekmesi, o da yoksa ilki.
+function veBasOrnekHTML(bolumler, ac, sekmeV){
+  var sk = Number(sekmeV);
+  if(!(sk >= 0 && sk < bolumler.length)){
+    sk = 0;
+    bolumler.forEach(function(b, i){ if(b.satirlar.some(function(r){ return String(r.v) === ac; })) sk = i; });
   }
-  return h + '</div></div>';
+  var h = '<section class="ve-bas-ornek" aria-label="Örnekler"><div class="ve-bas-ornek-bas"><h2>'
+    + veBasEsc(bolumler.length > 1 ? 'Örnekler' : bolumler[0].baslik) + '</h2>';
+  if(bolumler.length > 1){
+    h += '<div class="ve-bas-sekmeler" role="tablist" aria-label="Örnekler">' + bolumler.map(function(b, i){
+      return '<button type="button" class="ve-bas-sekme" role="tab" data-ey="sekme" data-v="' + i + '" aria-selected="' + (i === sk ? 'true' : 'false') + '">'
+        + veBasEsc(b.sekme || b.baslik) + '<span>' + b.satirlar.length + '</span></button>';
+    }).join('') + '</div>';
+  }
+  // Bölümün tam adı ("Doğrulama örnekleri — kurgu") sekme panelinin adıdır.
+  return h + '</div><div class="ve-bas-dizin" role="tabpanel" aria-label="' + veBasEsc(bolumler[sk].baslik || '') + '">'
+    + bolumler[sk].satirlar.map(function(r){ return veBasSatirHTML(r, String(r.v) === ac); }).join('') + '</div></section>';
+}
+// PANELİN ALTI (Canlı Not 19, kullanıcı 2026-11-05: *"Geri butonunu alt taraflara
+// uygun bir yere taşıyalım"*): ana topolojiye DÖNÜŞ (`donus`: { ad }) ve
+// Kılavuz. Dönüşü taşıyan sayfa açıkken köşedeki dönüş düğmesi gizli
+// (kabın `.ve-bas-donus-acik` sınıfı — _veBasRayEsitle).
+function veBasAltHTML(s){
+  var d = s && s.donus, k = veBasKilavuzHTML(s && s.kimlik);
+  if(!d && !k) return '';
+  return '<div class="ve-bas-dip">'
+    + (d ? '<button type="button" class="ve-bas-donus" data-ey="donus" aria-label="Ana topolojiye dön">'
+        + _veBasIkon('chevrons-left') + '<span>' + veBasEsc(d.ad || 'Ana topoloji') + '</span></button>' : '')
+    + k + '</div>';
+}
+// SON DEĞİŞİKLİKLER (masa, Canlı Not 6): d = { baslik, kayitlar:[{ tarih, baslik, pr }] }
+// — modülün dosyalarına dokunan son birleşmeler (derlemenin künyesi). Kayıt yoksa
+// masa boş: bilinmeyen liste yazılmaz. Başlık PR'ın başlığı, programın metni
+// DEĞİL (`data-ve-dis-metin` — sayı ve metin taramaları atlar).
+function veBasDegisiklikHTML(d){
+  var L = ((d && d.kayitlar) || []).filter(function(k){ return k && k.baslik; });
+  if(!L.length) return '';
+  return '<section class="ve-bas-degisiklik" aria-label="' + veBasEsc(d.baslik || 'Son değişiklikler') + '"><h2>'
+    + veBasEsc(d.baslik || 'Son değişiklikler') + '</h2><ol>' + L.map(function(k){
+      return '<li><span class="ve-bas-degisiklik-t">' + veBasEsc(k.tarih || '') + '</span>'
+        + '<span class="ve-bas-degisiklik-ad" data-ve-dis-metin>' + veBasEsc(k.baslik) + '</span>'
+        + (k.pr ? '<span class="ve-bas-degisiklik-pr">#' + veBasEsc(k.pr) + '</span>' : '') + '</li>';
+    }).join('') + '</ol></section>';
 }
 
 // ── DOM — kurma, açık satır ve görünürlük ──────────────────────────────────
 // o: { id, aria, sayfa: function(): s (sayfanın tanımı), eylem: function(ad, v) }
 //    —  `html: function(): string` eski yol (sayfanın HTML'i hazır).
 var _veBasAcikSatir = {};      // sayfa kimliği → açık satırın anahtarı (görünüm durumu)
+var _veBasSekme = {};          // sayfa kimliği → örneklerin açık sekmesi (görünüm durumu)
 
 function _veBasKap(){
   return (typeof document !== 'undefined') ? document.getElementById('ve-canvas-wrapper') : null;
@@ -260,7 +301,8 @@ function _veBasEl(id){
 function _veBasBas(el, o){
   if(typeof o.sayfa === 'function'){
     var s = o.sayfa() || {};
-    return _veBasSutun(s) ? veBasSayfaHTML(s) : veBasSayfaHTML(s, _veBasAcikSatir[o.id]);
+    el.setAttribute('data-donus', s.donus ? '1' : '');
+    return _veBasSutun(s) ? veBasSayfaHTML(s) : veBasSayfaHTML(s, _veBasAcikSatir[o.id], _veBasSekme[o.id]);
   }
   return (typeof o.html === 'function') ? o.html() : '';
 }
@@ -283,15 +325,33 @@ function _veBasAc(el, v){
   return true;
 }
 
+// Örneklerin sekmesi: yalnız örnek bölümü yeniden basılır (kimlik, kapılar ve
+// kaydırma yerinde); açık satır sekmeler arasında korunur.
+function _veBasSekmeSec(el, v){
+  var o = el && el._veBasO, bolum = el && el.querySelector('.ve-bas-ornek');
+  if(!o || typeof o.sayfa !== 'function' || !bolum) return false;
+  _veBasSekme[el.id] = Number(v) || 0;
+  var s = o.sayfa() || {}, B = _veBasBolumler(s), ilk = _veBasIlkSatir(s);
+  var acikV = _veBasAcikSatir[el.id], ac = (acikV === undefined || acikV === null) ? (ilk ? String(ilk.v) : '') : String(acikV);
+  var t = document.createElement('div');
+  t.innerHTML = veBasOrnekHTML(B, ac, _veBasSekme[el.id]);
+  bolum.parentNode.replaceChild(t.firstChild, bolum);
+  var sec = el.querySelector('.ve-bas-sekme[aria-selected="true"]');
+  if(sec && sec.focus) sec.focus();
+  return true;
+}
+
 // Sayfa rayının ve paletin açma sekmesinin görünürlüğü: herhangi bir
 // başlangıç sayfası açık mı.
 function _veBasRayEsitle(){
   if(typeof document === 'undefined') return false;
-  var acik = false;
+  var acik = false, donus = false;
   var hepsi = document.querySelectorAll('.ve-bas');
-  for(var i = 0; i < hepsi.length; i++){ if(!hepsi[i].hidden){ acik = true; break; } }
+  for(var i = 0; i < hepsi.length; i++){
+    if(!hepsi[i].hidden){ acik = true; if(hepsi[i].getAttribute('data-donus') === '1') donus = true; }
+  }
   var kab = document.getElementById('sayfa2-content');
-  if(kab) kab.classList.toggle('ve-bas-acik', acik);
+  if(kab){ kab.classList.toggle('ve-bas-acik', acik); kab.classList.toggle('ve-bas-donus-acik', donus); }
   // Ray ve açma sekmesi gelip gidince kap kayar: dönüş düğmesi yeniden oturur
   // (sekme görünürken onun sağına — js/canvas-space.js → veChipSolOrtu).
   if(typeof veAnchorBoundaryChip === 'function') veAnchorBoundaryChip();
@@ -321,6 +381,7 @@ function veBasKur(o){
     if(!b) return;
     var ey = b.getAttribute('data-ey'), v = b.getAttribute('data-v');
     if(ey === 'ac'){ _veBasAc(el, v); return; }
+    if(ey === 'sekme'){ _veBasSekmeSec(el, v); return; }
     var oo = el._veBasO;
     if(oo && typeof oo.eylem === 'function') oo.eylem(ey, v);
   });
@@ -359,9 +420,10 @@ if(typeof module !== 'undefined' && module.exports){
     veBasEsc: veBasEsc, veBasKapiHTML: veBasKapiHTML, veBasKaroHTML: veBasKaroHTML,
     veBasSatirHTML: veBasSatirHTML,
     veBasKimlikHTML: veBasKimlikHTML, veBasKilavuzHTML: veBasKilavuzHTML, veBasVeriHTML: veBasVeriHTML,
-    veBasSayfaHTML: veBasSayfaHTML,
+    veBasSayfaHTML: veBasSayfaHTML, veBasOrnekHTML: veBasOrnekHTML, veBasAltHTML: veBasAltHTML,
+    veBasDegisiklikHTML: veBasDegisiklikHTML, _veBasSekmeSec: _veBasSekmeSec,
     veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik,
     _veBasAc: _veBasAc, _veBasRayEsitle: _veBasRayEsitle,
-    _veBasSifirla: function(){ _veBasAcikSatir = {}; }
+    _veBasSifirla: function(){ _veBasAcikSatir = {}; _veBasSekme = {}; }
   };
 }

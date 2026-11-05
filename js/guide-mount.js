@@ -187,13 +187,15 @@ function _gmSec3(){
   var h = _gmH2(2);
   h += '<h3>3.1 Başlangıç sayfası</h3>';
   h += '<p>Boş bir Takoz modülünde <strong>başlangıç sayfası</strong> açılır. Solda üç seçenek '
-    + '(<em>Sihirbazla kur</em> · <em>STEP’ten başla</em> · <em>Boş kanvas</em>), kataloğun sayıları ve '
-    + '<strong>Kılavuz</strong>; sağda örnek modellerin listesi: her satırda araç, gövde ve takoz '
-    + 'sayısı, kütle ve kaynak. Satırın <strong>Yükle</strong> düğmesi modeli kurar ve sayfa kapanır; '
-    + 'kurulum Ctrl+Z ile geri alınınca sayfa yeniden açılır. Satırın adına tıklamak gövdeleri '
-    + '(kütleleriyle) ve takozları açar. Sayfa açıkken soldaki <em>Topoloji · Sonuçlar</em> rayı ve '
-    + 'Bileşenler panelini açan düğme görünmez. <em>STEP’ten başla</em> dosyayı doğrudan 3B’de açar '
-    + '(bkz. 16.1).</p>';
+    + '(<em>Sihirbazla kur</em> · <em>STEP’ten başla</em> · <em>Boş kanvas</em>), örnek modellerin '
+    + 'listesi ve altta <strong>Ana topoloji</strong> ile <strong>Kılavuz</strong>; sağda modülün son '
+    + 'değişiklikleri (tarih, başlık, PR numarası). Örnekler iki grupta: <em>Araçlar</em> gerçek '
+    + 'araçlar, <em>Kurgu</em> doğrulama modelleri. Her satırda araç, gövde ve takoz sayısı ve kütle; '
+    + 'satırın adına tıklamak kaynağı, gövdeleri (kütleleriyle) ve takozları açar. Satırın '
+    + '<strong>Yükle</strong> düğmesi modeli kurar ve sayfa kapanır; kurulum Ctrl+Z ile geri alınınca '
+    + 'sayfa yeniden açılır. <strong>Ana topoloji</strong> modülden çıkar. Sayfa açıkken soldaki '
+    + '<em>Topoloji · Sonuçlar</em> rayı ve Bileşenler panelini açan düğme görünmez. '
+    + '<em>STEP’ten başla</em> dosyayı doğrudan 3B’de açar (bkz. 16.1).</p>';
   h += '<h3>3.2 Yol A — hazır bir örnekten başlamak</h3>';
   h += _gmAdimlar([
     'Karşılama ekranından <strong>Takoz Çökme-Titreşim</strong> kartını seçin; ana tuvale '
@@ -1249,7 +1251,7 @@ function _gmEkA(){
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Şok darbesi', 'Çözücü', '<strong>Şok darbesi</strong>'],
       ['Aracın ileri yönü, tork yönü, kaldırım darbesi', 'Çözücü', '<strong>Araç ekseni</strong> · <strong>Kaldırım darbesi</strong>'],
-      ['Örnek modeller', 'Başlangıç sayfası · Başlangıç ve Örnekler', 'Karolar · <strong>Örnek model</strong> · <strong>Modeli kur</strong>'],
+      ['Örnek modeller', 'Başlangıç sayfası · Başlangıç ve Örnekler', '<em>Araçlar</em> · <em>Kurgu</em> · <strong>Yükle</strong> · <strong>Örnek model</strong> · <strong>Modeli kur</strong>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
       ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],

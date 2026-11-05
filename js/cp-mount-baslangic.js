@@ -111,23 +111,18 @@ function veMntBaslangicOrnekler(){
   return out;
 }
 
-// ── KİMLİK — sayfanın üst şeridi (kullanıcı isteği 2026-10-19) ───────────
-// Analizlerin adı PROGRAMDAKİ adıdır: raporun adımı (Statik sehim · Modal
-// analiz · Frekans yerleşimi ve iletilebilirlik), Sonuçlar'ın kanalı (Şok
-// yanıtı), Parametrik Analiz'in analizi (Katalogdan seçim). Kapı:
-// mount-baslangic.test.js → KİMLİK.
-// SAYI BANDI YOK (kullanıcı 2026-11-05, Canlı Not 5: *"Bu açıklamalara gerek
-// yok. Kaldıralım."*): Takoz tipi · Kuvvet–sehim yasası · Gövde tipi · Örnek
-// model · Serbestlik derecesi satırları kalktı. FEAD'in sütunu bandını taşır.
-var VE_MNT_BAS_YETENEK = ['Statik sehim', 'Modal analiz', 'İletilebilirlik', 'Şok yanıtı', 'Katalogdan seçim'];
+// ── KİMLİK — sayfanın başı (kullanıcı isteği 2026-10-19) ─────────────────
+// Modülün ADI (componentDefs) ve Kılavuz. SAYI BANDI YOK (Canlı Not 5:
+// *"Bu açıklamalara gerek yok. Kaldıralım."*); analizlerin adı YOK (Canlı Not 19).
+// Kapı: mount-baslangic.test.js → KİMLİK.
 
-// İkon YOK: masada ikonun yerinde ana topolojiye dönüş düğmesi durur (Canlı
-// Not 4, 2026-11-05 — başlık sütunun tepesinde, düğmenin satırında).
+// İkon ve analizlerin adı YOK (Canlı Not 4 · 19, 2026-11-05: başlık sütunun
+// tepesinde; *"alttaki açıklamalara da gerek yok"*); dönüş panelin altında.
 function veMntBaslangicKimlik(){
   var def = (typeof componentDefs !== 'undefined' && componentDefs['mount-analysis']) || {};
   var kitOf = _mntBasG('veGuideKitOf', './guide-kit.js'), hazir = _mntBasG('veGuideKitReady', './guide-kit.js');
   var kilavuz = (typeof kitOf === 'function' && typeof hazir === 'function' && hazir(kitOf('mount'))) ? 'mount' : '';
-  return { ad: def.name || 'Takoz Çökme-Titreşim', yetenekler: VE_MNT_BAS_YETENEK, kilavuz: kilavuz };
+  return { ad: def.name || 'Takoz Çökme-Titreşim', kilavuz: kilavuz };
 }
 
 // Kapıların künyesi — sihirbazın adımları RAYIN KENDİ ADLARIYLA (ilk adım
@@ -146,6 +141,23 @@ function veMntBaslangicKapilar(){
     { ey: 'bos', ikon: 'grid', ad: 'Boş kanvas', kunye: arac.length ? [arac.length + ' araç'] : [],
       title: arac.join(' · ') }
   ];
+}
+
+// SON DEĞİŞİKLİKLER (Canlı Not 6, kullanıcı 2026-11-05: modülün güncellemeleri,
+// yalnız Takoz'a özgü olanlar):
+// derlemenin künyesinden (window.__MFSIM_BUILD.moduller.takoz — Takoz'un
+// dosyalarına dokunan son birleşmeler, tools/version-info.js). Künye yoksa
+// (modüler kopya, test) liste yok.
+function veMntBaslangicDegisiklik(K){
+  var b = K || ((typeof window !== 'undefined') ? window.__MFSIM_BUILD : null);
+  var L = (b && b.moduller && b.moduller.takoz) || [];
+  var tarih = function(d){
+    var t = new Date(d);
+    if(isNaN(t.getTime())) return '';
+    var p = function(n){ return (n < 10 ? '0' : '') + n; };
+    return p(t.getDate()) + '.' + p(t.getMonth() + 1) + '.' + t.getFullYear();
+  };
+  return { baslik: 'Son değişiklikler', kayitlar: L.map(function(c){ return { tarih: tarih(c.date), baslik: c.title || '', pr: c.prNumber || '' }; }) };
 }
 
 // ── SAYFA — SAF: yalnız sabitlerden ve örnek kaydından ────────────────────
@@ -171,11 +183,12 @@ function veMntBaslangicSayfa(){
   return {
     kimlik: veMntBaslangicKimlik(),
     kapilar: veMntBaslangicKapilar(),
-    basliklar: { ad: 'Araç', sayi: 'Gövde · takoz', kutle: 'Kütle', kaynak: 'Kaynak' },
+    donus: { ad: 'Ana topoloji' },
     bolumler: [
-      { baslik: 'Örnek modellerden başla', satirlar: gercek.map(satir) },
-      { baslik: 'Doğrulama örnekleri — kurgu', satirlar: kurgu.map(satir) }
-    ]
+      { baslik: 'Araç örnekleri', sekme: 'Araçlar', satirlar: gercek.map(satir) },
+      { baslik: 'Doğrulama örnekleri — kurgu', sekme: 'Kurgu', satirlar: kurgu.map(satir) }
+    ],
+    degisiklik: veMntBaslangicDegisiklik()
   };
 }
 
@@ -197,6 +210,8 @@ function veMntBaslangicEylem(ad, v){
     if(!v || typeof veMntOrnekYukle !== 'function') return false;
     return !!veMntOrnekYukle(v);
   }
+  if(ad === 'donus')
+    return !!(typeof veMntCloseEditor === 'function' && (veMntCloseEditor(), true));
   if(ad === 'kilavuz'){
     if(!v || typeof veGuideOpen !== 'function') return false;
     veGuideOpen(v);
@@ -239,7 +254,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntBaslangicKimlik: veMntBaslangicKimlik,
     veMntBaslangicKapilar: veMntBaslangicKapilar,
     VE_MNT_BAS_ID: VE_MNT_BAS_ID,
-    VE_MNT_BAS_YETENEK: VE_MNT_BAS_YETENEK, VE_MNT_BAS_STEP: VE_MNT_BAS_STEP,
+    VE_MNT_BAS_STEP: VE_MNT_BAS_STEP, veMntBaslangicDegisiklik: veMntBaslangicDegisiklik,
     _mntBasSifirla: function(){ _mntBasKapsam = false; }
   };
 }
