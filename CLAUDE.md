@@ -1252,7 +1252,10 @@ npm test          # tüm birim testleri
 3. Commit → `git push -u origin <dal>` → PR aç → **MERGE ET.**
 4. Merge'den sonra koşuya bir kez bak. Kırmızıysa ileri doğru düzelt.
 5. **ARTIFACT HAZIRLA** — aşağıdaki kural.
-6. **CANLI NOT'U GÜNCELLE** (kullanıcı 2026-11-05: *"güncelliğinden emin olalım"* ·
+6. **CANLI NOT'U GÜNCELLE — HER NOTTAN SONRA, HEMEN** (kullanıcı 2026-11-05: *"neden
+   şimdiye kadar adım adım yaptıklarını 'Canlı Not' kısmında yayınlamadın?"*): Canlı
+   Not notunda 2. adımın `test:urun`u yayını bekletmez, arkada koşar (kırmızıysa ileri
+   doğru düzeltilir); parti biriktirilmez. Ayrıca (kullanıcı 2026-11-05: *"güncelliğinden emin olalım"* ·
    *"artifaktı otomatik olarak yenileme … güncelleme geldiğinde uyarı popup çıkar"*):
    ana dala geç, kaydın `yayin/son`unu `denetle`; "programı güncelle" derse
    `node tools/canli-not.js hazirla` (yalnız ana daldan kurar), program VARLIK
