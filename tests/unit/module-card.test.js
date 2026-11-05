@@ -252,7 +252,7 @@ describe('veSyncSidebarModuleIcons — palet sembolü tuvalle TEK KAYNAK', () =>
       '<div class="ve-component ve-submodule" data-type="' + t + '">' +
       '<span class="ve-submodule-ico"></span>' +
       '<span class="ve-submodule-text"><span class="ve-comp-label">x</span>' +
-      '<span class="ve-submodule-sub">Alt topoloji</span></span></div>').join('');
+      '</span></div>').join('');
     document.body.appendChild(kap);
     return kap;
   };
@@ -327,6 +327,15 @@ describe('index.html modül satırı sembolü kendi çizmez', () => {
     modulTipleri.forEach((t) => {
       expect(satirlar.filter((s) => s.includes('data-type="' + t + '"'))).toHaveLength(1);
     });
+  });
+  // Canlı Not 39 (kullanıcı 2026-11-05): *"Buralarda 'alt topoloji' yazıyor.
+  // Yazmasına gerek yok."* Satır adı taşır; kısaltmanın altında açılımı.
+  test('satırda "Alt topoloji" yazmaz; alt satır yalnız kısaltmanın açılımı', () => {
+    const satirlar = html.match(/<div class="ve-component ve-submodule"[\s\S]*?<\/div>/g) || [];
+    satirlar.forEach((s) => expect(s).not.toMatch(/alt topoloji/i));
+    const alt = Object.fromEntries(satirlar.map((s) => [s.match(/data-type="([a-z-]+)"/)[1],
+      (s.match(/ve-submodule-sub">([^<]*)</) || [])[1] || null]));
+    expect(alt).toEqual({ 'arac-performans': null, 'mount-analysis': null, 'fead-analysis': 'Kayış-kasnak' });
   });
 });
 
