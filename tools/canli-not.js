@@ -41,13 +41,14 @@
  *       çevresini, --ogeler seçilen öğelerin kutularını (mavi kesikli) verir.
  *
  *   node tools/canli-not.js sonuc <N> [--modul takoz|fead|arac] [--ornek <anahtar>]
- *                           [--hazirlik <betik.js>] [--secici <css>] [--pay 12]
+ *                           [--hazirlik <betik.js>] [--secici <css> | --alan x,y,g,y] [--pay 12]
  *                           [--ekran 1440x900] [--dosya MFSim_Code.html] [--cikti <png>]
  *       Uygulanan notun SONUÇ görüntüsü (2×): tek dosya (npm run build), file://,
  *       ağsız. Giriş, karşılama ve modüle giriş kendiliğinden; --ornek Takoz
  *       örneğini kurar; --hazirlik sayfada koşan async gövde (yüzeyi açar,
- *       `bekle(ms)` hazır); --secici o öğenin kutusu (+pay), yoksa ekranın
- *       tamamı. Çıktı .canli-not/sonuc/not-N.png; CSS px ölçüsü `sonuc {g, y}` için.
+ *       `bekle(ms)` hazır); --secici o öğenin kutusu (+pay), --alan ekranın
+ *       bir bölgesi (CSS px), ikisi de yoksa ekranın tamamı. Çıktı
+ *       .canli-not/sonuc/not-N.png; CSS px ölçüsü `sonuc {g, y}` için.
  *
  * Protokol (açılış, yayın, sıra, durum, yanıt): skill `canli-not`.
  */
@@ -89,6 +90,7 @@ function ayristir(argv) {
     else if (a === '--secici') o.secici = deger();
     else if (a === '--pay') o.pay = Number(deger());
     else if (a === '--ekran') o.ekran = ekranAyristir(deger());
+    else if (a === '--alan') o.alan = alanAyristir(deger());
     else if (a === '--help' || a === '-h') o.yardim = true;
     else if (a.startsWith('--')) throw new Error('bilinmeyen bayrak: ' + a);
     else o.konum.push(a);
@@ -97,7 +99,16 @@ function ayristir(argv) {
   if (o.modul !== undefined && !MODUL_GIRIS[o.modul]) throw new Error('--modul: ' + Object.keys(MODUL_GIRIS).join(' · '));
   if (o.ornek !== undefined && o.modul !== 'takoz') throw new Error('--ornek yalnız --modul takoz ile (Takoz örneği)');
   if (o.pay !== undefined && !(o.pay >= 0 && o.pay <= 200)) throw new Error('--pay 0–200 px olmalı');
+  if (o.alan && o.secici) throw new Error('--alan ile --secici birlikte olmaz');
   return o;
+}
+
+function alanAyristir(s) {
+  const p = String(s).split(',').map((x) => Number(x.trim()));
+  if (p.length !== 4 || p.some((v) => !Number.isFinite(v)) || p[0] < 0 || p[1] < 0 || !(p[2] > 0 && p[3] > 0)) {
+    throw new Error('--alan x,y,g,y olmalı (CSS px; örnek 0,0,520,220)');
+  }
+  return { x: p[0], y: p[1], width: p[2], height: p[3] };
 }
 
 function ekranAyristir(s) {
@@ -493,6 +504,7 @@ async function sonuc(o) {
     if (hazirlik) await sayfa.evaluate('(async () => { const bekle = (ms) => new Promise((r) => setTimeout(r, ms));\n' + hazirlik + '\n})()');
     await sayfa.waitForTimeout(600);
     const secenek = { path: cikti };
+    if (o.alan) secenek.clip = o.alan;
     if (o.secici) {
       const k = await sayfa.evaluate((sc) => { const e = document.querySelector(sc); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, o.secici);
       if (!k || !(k[2] > 0 && k[3] > 0)) throw new Error('--secici görünür öğe bulmadı: ' + o.secici);
@@ -535,4 +547,4 @@ if (require.main === module) {
 }
 
 module.exports = { ayristir, notlarAyristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
-  yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };
+  yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };

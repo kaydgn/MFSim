@@ -169,7 +169,8 @@ Her not için, **sırayla ve tek tek**:
    Komut girişi, karşılamayı ve modüle girişi kendi yapar (ağsız, `file://`);
    `--hazirlik` yüzeyi açan küçük betik (sayfada koşan async gövde, `bekle(ms)`
    hazır; örnek: pencereyi seçip `veTogglePropertiesPanel(true)`), `--secici`
-   kırpılacak öğe. Yazdığı ölçü `sonuc {g, y}`'nin kendisi. Kalıp elle yazılmaz.
+   kırpılacak öğe (ya da `--alan x,y,g,y`: ekranın bir bölgesi). Yazdığı ölçü
+   `sonuc {g, y}`'nin kendisi. Kalıp elle yazılmaz.
    Bütün notların görüntüleri TEK çağrıda yüklenir:
    `Artifact` publish `url:<adres>` `asset: true` `file_paths: [...]` (en çok 25) → id'ler.
    Görüntü kullanıcının değişikliğe baktığı yerdir (Notlar'da küçük, tıklanınca büyük):

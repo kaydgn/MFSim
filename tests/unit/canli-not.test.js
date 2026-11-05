@@ -627,6 +627,9 @@ describe('SONUÇ — sonucun görüntüsü tek komutla', () => {
     expect(() => T.ayristir(['sonuc', '1', '--modul', 'fead', '--ornek', 'tulga'])).toThrow(/yalnız --modul takoz/);
     expect(() => T.ayristir(['sonuc', '1', '--pay', '-3'])).toThrow(/--pay/);
     expect(() => T.ayristir(['sonuc', '1', '--seçici', 'x'])).toThrow(/bilinmeyen bayrak/);
+    expect(T.ayristir(['sonuc', '33', '--alan', '0, 0, 520, 220']).alan).toEqual({ x: 0, y: 0, width: 520, height: 220 });
+    ['0,0,520', '0,0,0,220', '-1,0,10,10', 'a,b,c,d'].forEach((v) => expect(() => T.ayristir(['sonuc', '1', '--alan', v])).toThrow(/--alan x,y,g,y/));
+    expect(() => T.ayristir(['sonuc', '1', '--alan', '0,0,10,10', '--secici', '#x'])).toThrow(/birlikte olmaz/);
   });
   test('giriş programın kendi özetinden (sabit yazılmaz); modülün kartı ve açıcısı programda var', () => {
     const auth = fs.readFileSync(path.join(KOK, 'js', 'auth.js'), 'utf8');
