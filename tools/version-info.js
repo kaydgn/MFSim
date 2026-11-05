@@ -47,6 +47,28 @@ function yalnizBelge(csha, cwd) {
   return dosyalar.length > 0 && dosyalar.every((d) => /^docs\//.test(d));
 }
 
+// MODÜLÜN SON DEĞİŞİKLİKLERİ (kullanıcı 2026-11-05, Canlı Not 6: *"takoz çökme ve
+// titreşim modülü için yapılan güncellemeleri mi yazsak? … sadece takoz çökme ve
+// titreşim özelinde gelişmeler olacak"*): birleşme, değiştirdiği modül dosyalarının
+// en az yarısı o modülünse modülün listesine girer — Takoz başlangıç sayfasının
+// sağı. Ortak dosyalar (kabuk, tema, kit) sayılmaz; program geneli bir değişiklik
+// (tema: Takoz 5 · FEAD 5 · Araç 1 dosya) modülün kaydı DEĞİLDİR. Dosya listesi
+// alınamayan kayıt (sığ klon) modüle yazılmaz: bilinmeyeni modülün kaydı saymak
+// listeyi yanıltırdı.
+const MODUL_DESEN = {
+  takoz: /^js\/(cp-mount|mount-|guide-mount)/,
+  fead: /^js\/(cp-fead|fead-|guide-fead)/,
+  arac: /^js\/(cp-arac|ft-|cp-engine|cp-gearbox|cp-torque-converter|cp-matching|simulation-engine|guide-arac)/
+};
+const MODUL_LISTE = ['takoz'];   // listesi tutulan modüller
+function modulleri(csha, cwd) {
+  const dosyalar = gitOut('git diff --name-only ' + csha + '^1 ' + csha, cwd).split('\n').filter(Boolean);
+  const say = {};
+  Object.keys(MODUL_DESEN).forEach((m) => { say[m] = dosyalar.filter((d) => MODUL_DESEN[m].test(d)).length; });
+  const hepsi = Object.keys(say).reduce((t, m) => t + say[m], 0);
+  return MODUL_LISTE.filter((m) => say[m] > 0 && 2 * say[m] >= hepsi);
+}
+
 // "Merge pull request #851 from …" → 851 ; değilse 0
 function prNumarasi(konu) {
   const m = /Merge pull request #(\d+)/.exec(konu || '');
@@ -78,6 +100,7 @@ function collect(opt) {
   const cwd = opt.cwd || process.cwd();
   const repo = opt.repo || (opt.env || process.env).GITHUB_REPOSITORY || 'kaydgn/MFSim';
   const maxChanges = opt.maxChanges || 10;
+  const maxModul = opt.maxModul || 12;
 
   // ORTAM AÇIKÇA GEÇİLEBİLİR. Varsayılan process.env: CI'da GITHUB_SHA zaten
   // checkout edilmiş commit'tir, yani `cwd` ile aynı şeyi söyler. Ama `cwd`
@@ -99,10 +122,14 @@ function collect(opt) {
   const prTitle = prNumber ? govdedenBaslik(body) : '';
   const prUrl = prNumber ? 'https://github.com/' + repo + '/pull/' + prNumber : '';
 
-  // Changelog: son merge-PR commit'leri (en yeniden eskiye).
+  // Changelog: son merge-PR commit'leri (en yeniden eskiye). Modüllerin listesi
+  // aynı taramadan, daha geriye (modülün kaydı her birleşmede olmaz).
   const ham = gitOut(
-    'git log -80 --format=%H' + ALAN + '%s' + ALAN + '%an' + ALAN + '%cI' + ALAN + '%b' + KAYIT, cwd);
+    'git log -400 --format=%H' + ALAN + '%s' + ALAN + '%an' + ALAN + '%cI' + ALAN + '%b' + KAYIT, cwd);
   const changes = [];
+  const moduller = {};
+  MODUL_LISTE.forEach((m) => { moduller[m] = []; });
+  const modulDolu = () => Object.keys(moduller).every((m) => moduller[m].length >= maxModul);
   for (const kayit of ham.split(KAYIT)) {
     const satir = kayit.replace(/^\n+/, '');
     if (!satir.trim()) continue;
@@ -112,7 +139,7 @@ function collect(opt) {
     const no = prNumarasi(cmsg);
     if (!no) continue;
     if (yalnizBelge(csha, cwd)) continue;
-    changes.push({
+    const kayitO = {
       sha: csha.slice(0, 7),
       prNumber: no,
       message: cmsg,
@@ -120,8 +147,12 @@ function collect(opt) {
       date: cdate,
       title: govdedenBaslik(cbody),
       url: 'https://github.com/' + repo + '/pull/' + no
+    };
+    if (changes.length < maxChanges) changes.push(kayitO);
+    if (!modulDolu()) modulleri(csha, cwd).forEach((m) => {
+      if (moduller[m].length < maxModul) moduller[m].push({ sha: kayitO.sha, prNumber: no, date: cdate, title: kayitO.title });
     });
-    if (changes.length >= maxChanges) break;
+    if (changes.length >= maxChanges && modulDolu()) break;
   }
 
   return {
@@ -138,10 +169,11 @@ function collect(opt) {
     prBody: '',
     prUrl,
     changes,
+    moduller,
     status: 'completed',
     conclusion: 'success',
     source: opt.source || 'embedded'
   };
 }
 
-module.exports = { collect, gitOut, prNumarasi, govdedenBaslik, yalnizBelge };
+module.exports = { collect, gitOut, prNumarasi, govdedenBaslik, yalnizBelge, modulleri, MODUL_DESEN, MODUL_LISTE };

@@ -18,6 +18,8 @@
  *   YAYIN      köprü <meta charset>'ın arkasında; şablonun çapaları
  *   GÜNCELLİK  yayındaki künye ↔ ana dal; paketin girdileri build.js'in okuduğu
  *              her yolu kapsar (kapsamasaydı denetim değişen programa "aynı" derdi)
+ *   GÜNCELLEME program kayıttaki yayından (yayin/son); açık sayfa kendiliğinden
+ *              YENİLENMEZ, pencere sorar, Güncelle yükler; notta sonucun görüntüsü
  */
 const fs = require('fs');
 const path = require('path');
@@ -378,5 +380,169 @@ describe('GÜNCELLİK — yayındaki program ana dalın kendisi mi', () => {
     expect(T.ayristir(['hazirla', '--dal']).dal).toBe(true);
     expect(T.ayristir(['denetle', 'x.html']).konum).toEqual(['x.html']);
     expect(() => T.ayristir(['hazirla', '--zorla'])).toThrow(/bilinmeyen bayrak/);
+  });
+});
+
+// ═══ GÜNCELLEME ════════════════════════════════════════════════════════════
+// Kullanıcı 2026-11-05: "artifaktı otomatik olarak yenileme, güncellemeleri
+// 'Notlar' kısmından göster, oraya ufak bir ekran görüntüsü alıp resim koy …
+// güncelleme geldiğinde uyarı popup çıkar, oradan güncelle dediğimde HTML'i
+// yenilersin." Eskiden her yayın açık görünümü kendiliğinden tazeliyordu.
+describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => {
+  const ID = (c) => c.repeat(32);
+  const yayinB = (surum, id, notlar) => ({ surum, sha: surum + '0'.repeat(33), pr: 1300, program: { id, boyut: 9 }, notlar });
+
+  test('yayın kaydı: kısa sha + varlık kimliği; bozuk kayıt güncelleme sayılmaz', () => {
+    expect(CN.yayinDogrula(yayinB('abcdef1', ID('a'), [6, 8]))).toEqual([]);
+    expect(CN.yayinDogrula({ surum: 'xyz', program: { id: 'kisa' } }).join(' · ')).toMatch(/surum.*program\.id/);
+    expect(CN.yayinDogrula(yayinB('abcdef1', ID('a'), [0])).join()).toMatch(/notlar/);
+    expect(CN.guncellemeVar({ surum: 'abcdef1', program: { id: 'x' } }, 'bbbbbbb', '')).toBe(false);
+  });
+
+  test('açılışın kaynağı: kayıttaki yayın gömülü programdan başkaysa varlık, değilse dosya', () => {
+    expect(CN.programKaynagi(yayinB('abcdef1', ID('a')), 'abcdef1')).toEqual({ tur: 'dosya' });
+    expect(CN.programKaynagi(yayinB('abcdef2', ID('b')), 'abcdef1')).toEqual({ tur: 'varlik', id: ID('b'), surum: 'abcdef2', pr: 1300 });
+    expect(CN.programKaynagi(null, 'abcdef1')).toEqual({ tur: 'dosya' });
+    expect(CN.programKaynagi({ surum: 'abcdef2' }, 'abcdef1')).toEqual({ tur: 'dosya' });
+  });
+
+  test('güncelleme sorusu: yüklü sürüm sorulmaz, "Sonra" denen sürüm yeniden sorulmaz', () => {
+    const y = yayinB('abcdef2', ID('b'));
+    expect(CN.guncellemeVar(y, 'abcdef1', '')).toBe(true);
+    expect(CN.guncellemeVar(y, 'abcdef2', '')).toBe(false);
+    expect(CN.guncellemeVar(y, 'abcdef1', 'abcdef2')).toBe(false);
+    expect(CN.guncellemeVar(yayinB('abcdef3', ID('c')), 'abcdef1', 'abcdef2')).toBe(true);
+  });
+
+  test('not numaraları kısa; sonucun görüntüsü yalnız varlık kimliğiyle', () => {
+    expect(CN.noAraligi([21, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])).toBe('6 · 8–21');
+    expect(CN.noAraligi([1, 2, 4, 4, 7])).toBe('1 · 2 · 4 · 7');
+    expect(CN.noAraligi([])).toBe('');
+    expect(CN.sonucYolu({ sonuc: { foto: ID('d'), g: 640, y: 400 } })).toBe('/_blob/' + ID('d'));
+    expect(CN.sonucYolu({ sonuc: { foto: '../x' } })).toBe('');
+    expect(CN.sonucYolu({})).toBe('');
+  });
+
+  test('araç: --notlar aralığı; kayıt künyeden; döküm iki biçimde okunur', () => {
+    expect(T.notlarAyristir('6, 8-10,12')).toEqual([6, 8, 9, 10, 12]);
+    expect(() => T.notlarAyristir('6,x')).toThrow(/okunamadı/);
+    expect(() => T.notlarAyristir('9-3')).toThrow(/bozuk/);
+    const o = T.ayristir(['yayin', '--program', ID('e'), '--notlar', '6,8-9']);
+    expect([o.komut, o.program, o.notlar]).toEqual(['yayin', ID('e'), [6, 8, 9]]);
+    const k = { sha: 'f'.repeat(40), shortSha: 'fffffff', prNumber: 1301 };
+    const y = T.yayinKaydi(k, { id: ID('e'), boyut: 11 }, [6], '2026-11-05T12:00:00Z');
+    expect(y).toEqual({ surum: 'fffffff', sha: 'f'.repeat(40), pr: 1301, zaman: '2026-11-05T12:00:00Z', program: { id: ID('e'), boyut: 11 }, notlar: [6] });
+    expect(() => T.yayinKaydi(k, { id: 'kisa' }, [])).toThrow(/program\.id/);
+    expect(T.yayinOku({ id: 'son', version: 2, data: y })).toEqual({ sha: 'f'.repeat(40), shortSha: 'fffffff', prNumber: 1301 });
+    expect(T.yayinOku(y).shortSha).toBe('fffffff');
+    expect(() => T.yayinOku({ no: 1 })).toThrow(/yayın belgesi/);
+  });
+
+  // Sayfanın KENDİSİ (şablon + çekirdek, sayfaKur) bu pencerede: işaretleme
+  // gövdeye, betikler genel kapsamda; sahte kayıt ve varlık deposu. Çerçeve
+  // kaynaksız başlar, kaynağı kayıt seçer.
+  const bekle = (ms) => new Promise((r) => setTimeout(r, ms || 15));
+  function sayfa() {
+    const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
+    const cekirdek = fs.readFileSync(path.join(KOK, 'tools', 'canli-not-cekirdek.js'), 'utf8');
+    const tam = T.sayfaKur(sablon, cekirdek, { surum: 'aaaaaaa', pr: 1290 });
+    const dinle = {}, getirilen = [];
+    const db = {
+      collection: (p) => ({ orderBy: () => ({ onSnapshot: (f) => { dinle[p] = f; f({ docs: [] }); return () => {}; } }) }),
+      doc: (p) => ({ onSnapshot: (f) => { dinle[p] = f; return () => {}; }, update: () => Promise.resolve(), set: () => Promise.resolve() })
+    };
+    document.body.innerHTML = tam.replace(/<script>[\s\S]*?<\/script>/g, '');
+    window.claude = { use: (ad) => Promise.resolve(ad === 'db' ? db : null) };
+    window.fetch = (u) => { getirilen.push(u); return Promise.resolve({ ok: true, text: () => Promise.resolve('<!doctype html><html><body>' + u + '</body></html>') }); };
+    [...tam.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach((m) => (0, eval)(m[1]));
+    const d = document;
+    const yayinGonder = (y) => dinle['yayin/son']({ exists: !!y, data: () => y, metadata: { fromCache: false } });
+    const notGonder = (liste) => dinle.notlar({ docs: liste.map((n) => ({ id: n.id, data: () => n })) });
+    return { d, getirilen, yayinGonder, notGonder, cerceve: d.getElementById('cn-program'), gizli: (id) => d.getElementById(id).hidden };
+  }
+  afterAll(() => { delete window.claude; delete window.fetch; delete window.CanliNot; document.body.innerHTML = ''; });
+
+  test('şablon: çerçeve KAYNAKSIZ başlar; sayfa yeniden yüklenmez; gizli kural ezilmez', () => {
+    const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
+    expect(sablon).toMatch(/<iframe class="cn-program" id="cn-program" title="MFSim"><\/iframe>/);
+    expect(sablon).not.toMatch(/location\.reload|location\.href\s*=/);
+    expect(sablon).toMatch(/\[hidden\] \{ display: none !important; \}/);
+    expect(sablon).toContain("yetki.db.doc('yayin/son').onSnapshot(");
+  });
+
+  test('açılış: kayıttaki yeni yayın varlıktan yüklenir; yayın yoksa dosya', async () => {
+    const a = sayfa();
+    await bekle();
+    a.yayinGonder(yayinB('bbbbbbb', ID('b'), [6]));
+    await bekle();
+    expect(a.getirilen).toEqual(['/_blob/' + ID('b')]);
+    expect(a.cerceve.getAttribute('srcdoc')).toContain(ID('b'));
+    expect(a.cerceve.hasAttribute('src')).toBe(false);
+    expect(a.d.getElementById('cn-surum').textContent).toBe('bbbbbbb · #1300');
+    expect(a.gizli('cn-guncel')).toBe(true);                    // açılışta sormaz: yüklenen zaten en yenisi
+    const b = sayfa();
+    await bekle();
+    b.yayinGonder(null);
+    await bekle();
+    expect(b.getirilen).toEqual([]);
+    expect(b.cerceve.getAttribute('src')).toBe('mfsim.html');
+    expect(b.d.getElementById('cn-surum').textContent).toBe('aaaaaaa · #1290');
+  });
+
+  test('açıkken gelen yayın programı DEĞİŞTİRMEZ: pencere sorar; Güncelle yükler, Sonra erteler', async () => {
+    const a = sayfa();
+    await bekle();
+    a.yayinGonder(null);
+    await bekle();
+    const once = a.cerceve.getAttribute('src');
+    a.yayinGonder(yayinB('ccccccc', ID('c'), [6, 8, 9, 10]));
+    await bekle();
+    expect(a.getirilen).toEqual([]);                             // kendiliğinden yüklenmedi
+    expect(a.cerceve.getAttribute('src')).toBe(once);
+    expect(a.gizli('cn-guncel')).toBe(false);
+    expect(a.gizli('cn-guncel-ac')).toBe(false);
+    expect(a.d.getElementById('cn-guncel-surum').textContent).toBe('ccccccc · #1300');
+    expect(a.d.getElementById('cn-guncel-not').textContent).toBe('Not 6 · 8–10 uygulandı');
+    // Sonra: pencere kapanır, şeritteki düğme kalır; aynı sürüm yeniden sorulmaz
+    a.d.getElementById('cn-guncel-sonra').click();
+    expect(a.gizli('cn-guncel')).toBe(true);
+    expect(a.gizli('cn-guncel-ac')).toBe(false);
+    a.yayinGonder(yayinB('ccccccc', ID('c'), [6, 8, 9, 10]));
+    await bekle();
+    expect(a.gizli('cn-guncel')).toBe(true);
+    // daha yeni yayın yeniden sorar; Güncelle yükler, pencere ve düğme kapanır
+    a.yayinGonder(yayinB('ddddddd', ID('d'), [11]));
+    await bekle();
+    expect(a.gizli('cn-guncel')).toBe(false);
+    a.d.getElementById('cn-guncel-evet').click();
+    await bekle();
+    expect(a.getirilen).toEqual(['/_blob/' + ID('d')]);
+    expect(a.cerceve.getAttribute('srcdoc')).toContain(ID('d'));
+    expect(a.cerceve.hasAttribute('src')).toBe(false);
+    expect(a.gizli('cn-guncel')).toBe(true);
+    expect(a.gizli('cn-guncel-ac')).toBe(true);
+    expect(a.d.getElementById('cn-surum').textContent).toBe('ddddddd · #1300');
+  });
+
+  test('notun satırında sonucun görüntüsü; tıklanınca büyük, Esc kapatır', async () => {
+    const a = sayfa();
+    await bekle();
+    a.notGonder([
+      { id: 'n1', no: 9, sira: 1, metin: 'x', durum: 'uygulandi', cevap: 'Yapıldı.', yer: 'Takoz › 3B', zaman: '2026-11-05T10:00:00Z',
+        cizim: { g: 800, y: 600, sekiller: [] }, sonuc: { foto: ID('f'), g: 640, y: 360 } },
+      { id: 'n2', no: 10, sira: 2, metin: 'y', durum: 'bekliyor', zaman: '2026-11-05T10:01:00Z', cizim: { g: 800, y: 600, sekiller: [] } }
+    ]);
+    const s1 = a.d.querySelector('#not-n1 .cn-sonuc'), s2 = a.d.querySelector('#not-n2 .cn-sonuc');
+    expect(s1.hidden).toBe(false);
+    expect(s1.querySelector('img').getAttribute('src')).toBe('/_blob/' + ID('f'));
+    expect([s1.querySelector('img').width, s1.querySelector('img').height]).toEqual([640, 360]);
+    expect(s1.getAttribute('aria-label')).toBe('Not 9 sonucu');
+    expect(s2.hidden).toBe(true);                                // sonucu olmayan notta görüntü yok
+    s1.click();
+    expect(a.gizli('cn-buyuk')).toBe(false);
+    expect(a.d.getElementById('cn-buyuk-resim').getAttribute('src')).toBe('/_blob/' + ID('f'));
+    expect(a.d.getElementById('cn-buyuk-no').textContent).toBe('Not 9');
+    a.d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(a.gizli('cn-buyuk')).toBe(true);
   });
 });

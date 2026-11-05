@@ -51,27 +51,32 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
   söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi; Takoz'da sayı
-  bandı YOK — kullanıcı 2026-11-05); sayı
+  bandı ve analiz adları YOK — kullanıcı 2026-11-05, Canlı Not 5 · 19); sayı
   kaynağından ölçülür, analiz adı programdaki adıdır. Düzeni modül beyan eder
-  (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-04: solda panel, sağda
-  örneklerin DİZİNİ — tasarım tuvali "sade seçenekler" · D; RESİM YOK, satırın Yükle'si
-  tek tıkla kurar, adı gövdeleri ve takozları açar; açık satır görünüm durumu), FEAD
+  (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-05, Canlı Not 6: solda
+  panel — kimlik · kapılar · örneklerin SEKMELİ dizini (Araçlar · Kurgu) · altta dönüş
+  ve Kılavuz; sağda modülün SON DEĞİŞİKLİKLERİ, derlemenin künyesinden: Takoz
+  dosyalarının çoğunu değiştiren birleşmeler, `tools/version-info.js` →
+  `moduller.takoz`; RESİM YOK, satırın Yükle'si tek tıkla kurar, adı kaynağı, gövdeleri
+  ve takozları açar; açık satır ve sekme görünüm durumu), FEAD
   **SÜTUN** (kullanıcı 2026-11-04: *"FEAD modülü önceki hali gibi kalsın"* — ortalanmış
   sütun, karo tek tıkla kurar). İki düzen aynı yuvaları aynı sınıflarla basar; ölçü farkı
   düzenin CSS kapsamında (`.ve-bas-ic--masa|--sutun`). Sayfa açıkken sayfa rayı
-  (Topoloji · Sonuçlar) ve paletin açma sekmesi gizli, yalnız ana topolojiye dönüş
-  düğmesi kalır — iki düzende. Kapı: `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE
-  VERİ* · *DİZİN* · *ÇALIŞMA MASASI* · *RAY* + `fead-baslangic.test.js` → *SÜTUN DÜZENİ*.
+  (Topoloji · Sonuçlar) ve paletin açma sekmesi gizli, iki düzende; dönüşü panelde
+  taşıyan sayfa (`donus`) açıkken köşedeki dönüş düğmesi de gizli. Kapı:
+  `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE VERİ* · *DİZİN* · *ÇALIŞMA
+  MASASI* · *RAY* + `version-embed.test.js` → *modülün listesi* + `fead-baslangic.test.js`
+  → *SÜTUN DÜZENİ*.
 - `js/pencere-kabuk.js` — **bileşen penceresinin kabuğu, ortak kit** (`vePencereKabuk`):
   FEAD ile Takoz pencereleri AYNI üreticiden basar (kullanıcı: *"tüm programda tek
   tip bir kozmetik yapı"*). Kural aşağıda (ortak yüzeyler); kapı `pencere-kabuk.test.js`.
 - `js/cp-mount-baslangic.js` — Takoz **başlangıç sayfası** (Sihirbazla kur · STEP'ten
-  başla · Boş kanvas + örnek dizini). **STEP'ten başla sihirbazı AÇMAZ** (kullanıcı
+  başla · Boş kanvas + örnek dizini + son değişiklikler). **STEP'ten başla sihirbazı AÇMAZ** (kullanıcı
   kararı 2026-11-02): araç şeridi kurulur, dosya 3B'nin perdesinde okunur
   (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız "Başlangıç ve
   Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
   (`moduleEnter`). **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
-  AYRI grupta ("Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
+  AYRI sekmede ("Kurgu" — "Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
   iddiası taşımaz (kurgunun tasarım özellikleri testte sayıyla kilitli). Kapı: `mount-baslangic.test.js` + `mount-ornek-kurgu.test.js` +
   `tests/e2e/mount-baslangic.spec.js`.
 - `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz
@@ -129,11 +134,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   *"popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka yere taşınsın"*;
   `.ve-mw-3b-tam` — pencerenin perdesinde de sihirbazın içinde de). Paneller tuvalin YANINDA,
   üstünde yüzmez; FEAD'in 3B'si yüzen kartta kalır — ortak `.ve-fw-3b*` kuralları DEĞİŞMEZ,
-  yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız görünüm küpü (kamerayla döner, yüzü bakışı
-  seçer) + yakınlık, eksen ve SAĞ ALTTA iş kartı (STEP okuması · 3B kurulumu; 2026-11-04,
-  kullanıcı: *"yazılar büyük, tam ortada … sağ alta çekelim"*).
-  Birimler tablosunda kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız her
-  gövdenin kütlesi biliniyorsa. Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
+  yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız eksen ve SAĞ ALTTA iş kartı (STEP okuması ·
+  3B kurulumu; 2026-11-04, kullanıcı: *"yazılar büyük, tam ortada … sağ alta çekelim"*);
+  görünüm küpü ve yakınlık düğmeleri YOK (kullanıcı 2026-11-05: *"Şunları kaldıralım"*).
+  Birimler TEK listede, role göre gruplu ve açılır kapanır, motorun aksesuarları motorun
+  altında (kullanıcı 2026-11-05); kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız
+  her gövdenin kütlesi biliniyorsa. Özellikler bir özellik ızgarası: Rol tek liste, Malzeme
+  yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok). Hesap tuvalin
+  sağ altındaki eylem kartında, rol verilince. Sağ tık menüsü `js/cp-mount-3b-menu.js`
+  (gizle · ağaçta göster · rol · malzeme; gizli parça görünüm durumu, kaydedilmez). Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
   ve İŞ KARTI* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM*.
 - `js/cp-mount-3b-agac.js` — Takoz 3B'nin **ürün ağacı** (solda, 3DEXPERIENCE gibi) ve
   **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol
@@ -307,7 +316,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   bulguların **karar tahtası** (Artifact `db`). Çıktı `.kullanim/` (git'e dâhil değil). Protokol: skill `kullanim`.
 - `tools/canli-not.{js,html}` + `tools/canli-not-kopru.js` + `tools/canli-not-cekirdek.js` — **Canlı
   Not**: program claude.ai'da açılır (Artifact; iframe'de karesiz tek dosya, 11,4 MB), kullanıcı
-  üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular. Protokol:
+  üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular, notun
+  satırına sonucun görüntüsünü koyar. Yeni program varlık deposuna ve `yayin/son`a gider: sayfa
+  KENDİLİĞİNDEN YENİLENMEZ, pencere sorar, Güncelle yükler (kullanıcı 2026-11-05). Protokol:
   skill `canli-not`. Çıktı `.canli-not/` (git'e dâhil değil); `build.js`'in iki ortam değişkeni
   (`MFSIM_BUILD_OUT` · `MFSIM_KARSILAMA=yok`) bu yayın için. Kapı: `canli-not.test.js`.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
@@ -1214,10 +1225,12 @@ npm test          # tüm birim testleri
 3. Commit → `git push -u origin <dal>` → PR aç → **MERGE ET.**
 4. Merge'den sonra koşuya bir kez bak. Kırmızıysa ileri doğru düzelt.
 5. **ARTIFACT HAZIRLA** — aşağıdaki kural.
-6. **CANLI NOT'U TAZELE** (kullanıcı 2026-11-05: *"güncelliğinden emin olalım"*):
-   ana dala geç, yayındaki `mfsim.html`'i `denetle`; "yeniden yayınla" derse
-   `node tools/canli-not.js hazirla` (yalnız ana daldan kurar) ve aynı adrese
-   yayınla. Adres ve adımlar: skill `canli-not` → *Yayın*.
+6. **CANLI NOT'U GÜNCELLE** (kullanıcı 2026-11-05: *"güncelliğinden emin olalım"* ·
+   *"artifaktı otomatik olarak yenileme … güncelleme geldiğinde uyarı popup çıkar"*):
+   ana dala geç, kaydın `yayin/son`unu `denetle`; "programı güncelle" derse
+   `node tools/canli-not.js hazirla` (yalnız ana daldan kurar), program VARLIK
+   deposuna, `yayin/son` kayda — sayfa yeniden yayınlanmaz, açık görünüm sorar.
+   Adres ve adımlar: skill `canli-not` → *Yayın*.
 
 ### HER DEĞİŞİKLİKTEN SONRA ARTIFACT
 

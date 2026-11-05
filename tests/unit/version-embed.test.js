@@ -95,6 +95,38 @@ describe('tools/version-info.js — gerçek depo üzerinde', () => {
     expect(info.changes[0].prNumber).toBe(102);
   });
 
+  // Canlı Not 6 (kullanıcı 2026-11-05): Takoz başlangıç sayfasının sağında yalnız
+  // Takoz'u değiştiren birleşmeler. Desen dosya yolundan; birleşmenin konusundan değil.
+  // Program geneli değişiklik (modül dosyalarının çoğu başka modülün) listeye girmez.
+  test('modülün listesi: modülün dosyalarının çoğunu değiştiren birleşmeler, en yeniden eskiye', () => {
+    const d = depoKur();
+    try {
+      const yaz = (dosyalar, mesaj) => {
+        [].concat(dosyalar).forEach((dosya) => {
+          fs.mkdirSync(path.join(d.dir, path.dirname(dosya)), { recursive: true });
+          fs.writeFileSync(path.join(d.dir, dosya), String(Math.random()));
+        });
+        d.g('git add -A');
+        execSync('git commit -q -F -', { cwd: d.dir, input: mesaj, stdio: ['pipe', 'pipe', 'ignore'] });
+      };
+      yaz('f.txt', 'ilk');
+      yaz(['js/cp-mount-3b.js', 'js/components.js'], 'Merge pull request #201 from kaydgn/a\n\nTakoz: 3B');
+      yaz('js/cp-fead.js', 'Merge pull request #202 from kaydgn/b\n\nFEAD: kayış');
+      yaz('js/mount-step.js', 'Merge pull request #203 from kaydgn/c\n\nSTEP okuyucu');
+      yaz('js/guide-mount.js', 'düz commit, birleşme değil');
+      yaz(['js/cp-mount-report.js', 'js/cp-fead-report.js', 'js/cp-engine.js'], 'Merge pull request #204 from kaydgn/d\n\nProgram teması');
+      yaz(['js/cp-mount-baslangic.js', 'js/cp-fead-baslangic.js', 'js/baslangic-sayfa.js'], 'Merge pull request #205 from kaydgn/e\n\nBaşlangıç sayfası (Takoz + FEAD)');
+      const info = versionInfo.collect({ cwd: d.dir, env: {} });
+      expect(info.moduller.takoz.map((c) => [c.prNumber, c.title]))
+        .toEqual([[205, 'Başlangıç sayfası (Takoz + FEAD)'], [203, 'STEP okuyucu'], [201, 'Takoz: 3B']]);
+      expect(Object.keys(info.moduller)).toEqual(['takoz']);
+      expect(Object.keys(info.moduller.takoz[0]).sort()).toEqual(['date', 'prNumber', 'sha', 'title']);
+      expect(versionInfo.collect({ cwd: d.dir, env: {}, maxModul: 1 }).moduller.takoz).toHaveLength(1);
+    } finally {
+      fs.rmSync(d.dir, { recursive: true, force: true });
+    }
+  });
+
   test('git OLMAYAN dizinde patlamaz — alanlar boş döner', () => {
     const bos = fs.mkdtempSync(path.join(os.tmpdir(), 'mfsim-nogit-'));
     try {

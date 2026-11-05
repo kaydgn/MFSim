@@ -144,7 +144,7 @@ describe('STEP KARTI — rol → hesap → kütle → aktar', () => {
   test('hesap → kütle → aktar: sihirbaz STEP\'in durumuyla dolar, "S" işaretleri taşınır', () => {
     W.veMntWizAc();
     const s = stepYukle();
-    expect(W.veMntWizStpDenetim(s).engel).toEqual(['Konumlar henüz hesaplanmadı.']);
+    expect(W.veMntWizStpDenetim(s).engel).toEqual(['Henüz hesaplanmadı.']);
     const coz = W.veMntWizStpHesapla();
     expect(coz.ok).toBe(true);
     expect(W._mwStpOnizleme()).toBe(true);                       // masa STEP'i çiziyor

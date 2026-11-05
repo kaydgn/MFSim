@@ -88,7 +88,7 @@ test('PALET VE PENCERE: "Motor aksesuarları" grubu; Klima Kompresörü kütlesi
   expect(hatalar).toEqual([]);
 });
 
-test('3B ROLÜ: "Diğer…" listesinde dört aksesuar; alternatör rolü → ağırlık merkezi orta nokta', async ({ page }) => {
+test('3B ROLÜ: Rol listesinin "Motor aksesuarları" grubunda dört aksesuar; alternatör rolü → ağırlık merkezi orta nokta', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
@@ -104,11 +104,11 @@ test('3B ROLÜ: "Diğer…" listesinde dört aksesuar; alternatör rolü → ağ
     veMntWiz3bSec(bul('Alternatör'));
     return bul('Alternatör');
   });
-  const diger = page.locator('[data-ve-3b-diger]');
-  await expect(diger).toBeVisible();
-  const ops = await diger.locator('option').allTextContents();
-  ['Alternatör', 'Alternatör Braketi', 'Klima Kompresörü', 'Isı Sacı'].forEach((a) => expect(ops).toContain(a));
-  await diger.selectOption('mnt-alternator');
+  const rol = page.locator('#ve-mnt-3b #ve-mw-3b-rol');
+  await expect(rol).toBeVisible();
+  const ops = await rol.locator('optgroup[label="Motor aksesuarları"] option').allTextContents();
+  expect(ops).toEqual(['Alternatör', 'Alternatör Braketi', 'Klima Kompresörü', 'Isı Sacı']);
+  await rol.selectOption('mnt-alternator');
   await page.waitForFunction((d) => veMntWizStp().roller[d] === 'mnt-alternator', i);
   await page.evaluate(() => { const s = veMntWizStp(); veMntWizStpRol(s.sonuc.agac.findIndex((d) => d.ad === 'Klima kompresörü'), 'mnt-ac'); });
   await page.click('#ve-mnt-3b #ve-mw-3b-hesapla');
