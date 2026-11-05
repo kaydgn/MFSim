@@ -125,3 +125,73 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
   expect(await page.evaluate((ak) => !!document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso g.ve-ak-t[data-sec][data-ak="' + ak + '"]'), tk.ak)).toBe(true);
   expect(hatalar).toEqual([]);
 });
+
+// 3B DÜZENİ (kullanıcı 2026-11-05, Canlı Not 40: *"Yazılar falan kayıyor,
+// kutular birbirinin içine giriyor"*). Node'da koşmayan halkalar: GERÇEK yazı
+// kutuları (tarayıcının ölçtüğü genişlik), masanın şeridi ve düğmeleri (DOM'dan
+// ölçülen örtü), tarayıcının boyadığı gövde (elementFromPoint) — ışın kâhini
+// her noktada özgün kutuların en yakınını söyler. Birim tarafı:
+// tests/unit/mount-akso.test.js → İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI.
+test('3B DÜZENİ: Asfat, üç bakış — yazı gövdeye, yazıya, örtüye binmez; kılavuz kesişmez; boyanan gövde ışının en yakını', async ({ page }) => {
+  await bootApp(page);
+  await page.setViewportSize({ width: 1500, height: 856 });
+  await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); veMntWizAc(); });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => veMntWizOrnek('asfat'));
+  await page.waitForTimeout(800);
+  for (const kam of [null, { az: 135, el: 30 }, { az: 270, el: 25 }]) {
+    const s = await page.evaluate((kam) => {
+      if (kam) { VE_MNT_AKSO3B.az = kam.az; VE_MNT_AKSO3B.el = kam.el; veMntWizRender(); }
+      const sv = document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso'), sb = sv.getBoundingClientRect();
+      const C = _mntAksoCizim['ve-mw-akso'];
+      const kutu = (r) => ({ l: r.left - sb.left, t: r.top - sb.top, r: r.right - sb.left, b: r.bottom - sb.top });
+      const kes = (a, b) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5;
+      const icte = (q, P) => { let a = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if (((yi > q[1]) !== (yj > q[1])) && (q[0] < (xj - xi) * (q[1] - yi) / (yj - yi) + xi)) a = !a; } return a; };
+      const segKes = (s, q) => { const d = (p0, p1, p2) => (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]); const a = [s[0], s[1]], b = [s[2], s[3]], c = [q[0], q[1]], e = [q[2], q[3]]; return d(c, e, a) * d(c, e, b) < -1e-6 && d(a, b, c) * d(a, b, e) < -1e-6; };
+      const icinden = (s, k) => { for (let i = 1; i < 30; i++) { const x = s[0] + (s[2] - s[0]) * i / 30, y = s[1] + (s[3] - s[1]) * i / 30; if (x > k.l + 1 && x < k.r - 1 && y > k.t + 1 && y < k.b - 1) return true; } return false; };
+      // gövdelerin çokgenleri (SVG koordinatı = sayfa px, çizim 1:1)
+      const pol = {};
+      sv.querySelectorAll('.ve-ak-hareket g.ve-ak-g').forEach((g) => { g.querySelectorAll('path').forEach((pa) => { const v = pa.getAttribute('d').replace(/[MLZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); (pol[g.getAttribute('data-ak')] = pol[g.getAttribute('data-ak')] || []).push(o); }); });
+      // yazılar: gövde ve takoz yazısı (G ve eksen üçlüsü hariç), gerçek kutusuyla
+      const yazi = [...sv.querySelectorAll(':scope > g[data-ak]')].filter((g) => g.querySelector('text') && g.getAttribute('data-ak') !== 'G')
+        .map((g) => ({ k: g.getAttribute('data-ak'), b: kutu(g.getBoundingClientRect()) }));
+      const kil = [...sv.querySelectorAll('line.ve-ak-kilavuz')].map((l) => ({ k: l.getAttribute('data-ak'), s: ['x1', 'y1', 'x2', 'y2'].map((a) => +l.getAttribute(a)) }));
+      const masa = document.getElementById('ve-mw-masa');
+      const ortu = [...masa.querySelectorAll('.ve-fw-masa-ust > *, .ve-fw-masa-arac, .ve-fw-masa-gezin')].map((e) => kutu(e.getBoundingClientRect()));
+      const t = { yazi: yazi.length, govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0, piksel: 0, yanlis: 0 };
+      yazi.forEach((e, i) => {
+        let ic = 0, n = 0;
+        for (let x = e.b.l + 1; x < e.b.r; x += 3) for (let y = e.b.t + 1; y < e.b.b; y += 3) { n++; if (Object.keys(pol).some((k) => k !== e.k && pol[k].some((P) => icte([x, y], P)))) ic++; }
+        if (ic / n > 0.05) t.govde++;
+        if (ortu.some((o) => kes(e.b, o))) t.ortu++;
+        yazi.forEach((f, j) => { if (j > i && kes(e.b, f.b)) t.yaziYazi++; });
+      });
+      kil.forEach((a, i) => {
+        kil.forEach((b, j) => { if (j > i && segKes(a.s, b.s)) t.kesisen++; });
+        yazi.forEach((f) => { if (f.k !== a.k && icinden(a.s, f.b)) t.icinden++; });
+      });
+      // boyanan gövde: yalnız gövde grupları görünür kalır
+      sv.querySelectorAll('text, line, circle, rect, .ve-ak-t, .ve-ak-gam, .ve-ak-izg, .ve-ak-gol, .ve-ak-gdus, .ve-ak-giz, .ve-ak-sim').forEach((e) => { e.style.visibility = 'hidden'; });
+      const yon = veMntAkso.kamYon(C.o.kam), d = [-yon[0], -yon[1], -yon[2]], l = Math.hypot(d[0], d[1]);
+      const rr = [d[1] / l, -d[0] / l, 0], uu = [rr[1] * d[2] - rr[2] * d[1], rr[2] * d[0] - rr[0] * d[2], rr[0] * d[1] - rr[1] * d[0]], F = C.F;
+      const K0 = C.m.govde.filter((g) => g.kutu).map((g) => ({ k: g.k, lo: [g.x - g.kutu[0] / 2, g.y - g.kutu[1] / 2, g.z - g.kutu[2] / 2], hi: [g.x + g.kutu[0] / 2, g.y + g.kutu[1] / 2, g.z + g.kutu[2] / 2] }));
+      const kahin = (X, Y) => { const a = (X - F.ox) / F.sc, b = -(Y - F.oy) / F.sc, p0 = [0, 1, 2].map((i) => rr[i] * a + uu[i] * b); let en = null, et = Infinity;
+        K0.forEach((q) => { let t0 = -Infinity, t1 = Infinity; for (let i = 0; i < 3; i++) { if (Math.abs(d[i]) < 1e-12) { if (p0[i] < q.lo[i] || p0[i] > q.hi[i]) t0 = Infinity; continue; } let x = (q.lo[i] - p0[i]) / d[i], y = (q.hi[i] - p0[i]) / d[i]; if (x > y) [x, y] = [y, x]; t0 = Math.max(t0, x); t1 = Math.min(t1, y); } if (t1 > t0 && t0 < et) { et = t0; en = q.k; } });
+        return en; };
+      for (let Y = 4; Y < sb.height - 4; Y += 5) for (let X = 4; X < sb.width - 4; X += 5) {
+        const k = kahin(X, Y); if (!k) continue;
+        if ([[-3, 0], [3, 0], [0, -3], [0, 3]].some(([dx, dy]) => kahin(X + dx, Y + dy) !== k)) continue;
+        t.piksel++;
+        const u = document.elementFromPoint(sb.left + X, sb.top + Y), g = u && u.closest ? u.closest('g.ve-ak-g') : null;
+        if (!g || g.getAttribute('data-ak') !== k) t.yanlis++;
+      }
+      veMntWizRender();
+      return t;
+    }, kam);
+    expect({ kam, govde: s.govde, yaziYazi: s.yaziYazi, ortu: s.ortu, kesisen: s.kesisen, icinden: s.icinden })
+      .toEqual({ kam, govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0 });
+    expect(s.yazi).toBeGreaterThanOrEqual(7);
+    expect(s.piksel).toBeGreaterThan(800);
+    expect(s.yanlis / s.piksel).toBeLessThan(0.0015);                 // atılan 8 mm'lik dilim payı
+  }
+});

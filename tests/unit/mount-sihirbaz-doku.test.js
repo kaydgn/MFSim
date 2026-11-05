@@ -234,6 +234,20 @@ describe('3B — masada Görünümler\'in aksonometrisi', () => {
     expect(document.getElementById('ve-mw-masa').hasAttribute('data-gezin')).toBe(true);
     W.veMntWizGorunus('3b');
   });
+  // Canlı Not 40: masanın 3B'si yazıları modelin DIŞINA koyar (mount-akso.test.js →
+  // DIŞ YAZI) ve çizimin üstünde yüzen şerit ile düğmeleri yazıya engel bildirir.
+  test('dış yazı ve masanın örtüleri çizime gider', () => {
+    tulga();
+    W.veMntWizGoto(OZET);
+    const kap = document.getElementById(W.VE_MW_AKSO);
+    expect(kap.getAttribute('data-disari')).toBe('1');
+    expect(cp._mntAksoCizim[W.VE_MW_AKSO].o.disari).toBe(true);
+    expect(cp._mntAksoCizim[W.VE_MW_AKSO].o.ortu).toBeUndefined();               // jsdom'da örtü ölçülmez
+    kap.setAttribute('data-ortu', '8,8,240,40;748,320,782,408;x,1,2,3');
+    cp._mntAksoKur(W.VE_MW_AKSO, 790, cp._mntAksoKaynak[W.VE_MW_AKSO]());
+    expect(cp._mntAksoCizim[W.VE_MW_AKSO].o.ortu).toEqual([{ l: 8, t: 8, r: 240, b: 40 }, { l: 748, t: 320, r: 782, b: 408 }]);
+    expect(document.querySelector('#' + W.VE_MW_AKSO + ' circle.ve-ak-kilavuz-uc')).toBeTruthy();
+  });
   test('işarete tık satırı seçer; seçili perdesiz vurgulu', () => {
     tulga();
     W.veMntWizGoto(OZET);

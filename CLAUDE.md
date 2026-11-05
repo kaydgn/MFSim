@@ -186,7 +186,13 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   parçadan açık, iki temada. Katı çizimde takoz ve nokta kütle kutularla AYNI
   ressam sırasında (CAD gibi): kutunun arkasında kalan örtülü ve yazısız,
   kutunun içindeki en yakın yüzünde sayılır; bütünüyle örtülü gövde yazısız;
-  seçili (perde) yine önde, G işaret olarak üstte, X-ışını (rapor) cam. Bileşen pencerelerinin **"Güç grubundaki yeri"** Görünümler'in
+  seçili (perde) yine önde, G işaret olarak üstte, X-ışını (rapor) cam. **Kesişen eşdeğer
+  kutular katı çizimde PARÇALANIR** (küçükten büyüğün içi çıkar, 12 mm'den ince dilim
+  atılır) ve kutuların sırası AYIRAN EKSENDEN (kullanıcı 2026-11-05, Canlı Not 40:
+  *"kutular birbirinin içine giriyor"* — Asfat'ta Top PTO şanzımanın içindeydi).
+  Sihirbazın masası yazıları **modelin DIŞINA** koyar (`o.disari`: zarfın ötesinde,
+  kılavuz görünen yere iner, kesişmez) ve üstünde yüzen şerit ile düğmeleri
+  bildirir (`o.ortu`); Görünümler ve rapor eski yerleştiricide. Bileşen pencerelerinin **"Güç grubundaki yeri"** Görünümler'in
   AYNI bileşeni (açı ortak, sabit genişlik `data-w` — yerinde tazelemede değişmesin),
   bileşen perdenin üstünde. Tam ekran kabın yüksekliğini doldurur. Sade kip
   (`veMntAksoOrnekModel`, yazısız — başlangıç sayfasının karoları 2026-11-04'ten beri
@@ -195,7 +201,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   3D Görüntüleyici CAD'in evi (aşağıda); `js/cp-mount-viewer.js` yalnız Koordinat
   Düzlemi'nin sahnesi. Kapı:
   `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *YAPIŞKAN
-  YER* · *PERDE* · *AYDINLIK* · *GİZLİ YÜZEY* · *RAPOR* · *KLASİK 3B*) + `mount-pencere.test.js` → *KROKİ* +
+  YER* · *PERDE* · *AYDINLIK* · *GİZLİ YÜZEY* · *RAPOR* · *KLASİK 3B* · *İÇ İÇE KUTU · RESSAM
+  SIRASI · DIŞ YAZI*) + `mount-pencere.test.js` → *KROKİ* + `mount-sihirbaz.spec.js` → *3B DÜZENİ* +
   `mount-pencere.spec.js` → *Görünümler* · *Güç grubundaki yeri* · *kutunun arkasındaki* · *tam ekran* ·
   *3D Görüntüleyici* · `mount-rapor.spec.js`.
 - `js/cp-mount-cad.js` — Takoz **3D Görüntüleyici: CAD'in evi** (2026-10-20, adım 4; yer
