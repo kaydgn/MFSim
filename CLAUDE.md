@@ -316,7 +316,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   bulguların **karar tahtası** (Artifact `db`). Çıktı `.kullanim/` (git'e dâhil değil). Protokol: skill `kullanim`.
 - `tools/canli-not.{js,html}` + `tools/canli-not-kopru.js` + `tools/canli-not-cekirdek.js` — **Canlı
   Not**: program claude.ai'da açılır (Artifact; iframe'de karesiz tek dosya, 11,4 MB), kullanıcı
-  üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular. Protokol:
+  üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular, notun
+  satırına sonucun görüntüsünü koyar. Yeni program varlık deposuna ve `yayin/son`a gider: sayfa
+  KENDİLİĞİNDEN YENİLENMEZ, pencere sorar, Güncelle yükler (kullanıcı 2026-11-05). Protokol:
   skill `canli-not`. Çıktı `.canli-not/` (git'e dâhil değil); `build.js`'in iki ortam değişkeni
   (`MFSIM_BUILD_OUT` · `MFSIM_KARSILAMA=yok`) bu yayın için. Kapı: `canli-not.test.js`.
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
@@ -1223,10 +1225,12 @@ npm test          # tüm birim testleri
 3. Commit → `git push -u origin <dal>` → PR aç → **MERGE ET.**
 4. Merge'den sonra koşuya bir kez bak. Kırmızıysa ileri doğru düzelt.
 5. **ARTIFACT HAZIRLA** — aşağıdaki kural.
-6. **CANLI NOT'U TAZELE** (kullanıcı 2026-11-05: *"güncelliğinden emin olalım"*):
-   ana dala geç, yayındaki `mfsim.html`'i `denetle`; "yeniden yayınla" derse
-   `node tools/canli-not.js hazirla` (yalnız ana daldan kurar) ve aynı adrese
-   yayınla. Adres ve adımlar: skill `canli-not` → *Yayın*.
+6. **CANLI NOT'U GÜNCELLE** (kullanıcı 2026-11-05: *"güncelliğinden emin olalım"* ·
+   *"artifaktı otomatik olarak yenileme … güncelleme geldiğinde uyarı popup çıkar"*):
+   ana dala geç, kaydın `yayin/son`unu `denetle`; "programı güncelle" derse
+   `node tools/canli-not.js hazirla` (yalnız ana daldan kurar), program VARLIK
+   deposuna, `yayin/son` kayda — sayfa yeniden yayınlanmaz, açık görünüm sorar.
+   Adres ve adımlar: skill `canli-not` → *Yayın*.
 
 ### HER DEĞİŞİKLİKTEN SONRA ARTIFACT
 

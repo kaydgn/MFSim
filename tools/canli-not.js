@@ -14,10 +14,19 @@
  *       değişiklik varsa DURUR (--dal: yerel deneme, YAYINLANMAZ).
  *       Artifact'in dosya sınırı 16 MB: aşılırsa DURUR.
  *
- *   node tools/canli-not.js denetle <yayındaki mfsim.html>
+ *   node tools/canli-not.js yayin --program <varlık kimliği> [--notlar 6,8-21]
+ *                           [--kaynak <mfsim.html>] [--cikti <json>]
+ *       PROGRAMIN GÜNCELLEMESİ — sayfa yeniden YAYINLANMAZ (kullanıcı
+ *       2026-11-05: "artifaktı otomatik olarak yenileme … güncelleme
+ *       geldiğinde uyarı popup çıkar"). `hazirla`nın mfsim-<sha>.txt'si varlık
+ *       deposuna yüklenir; bu komut kaydın `yayin/son` belgesini yazar (künye ·
+ *       varlık · uygulanan notlar). Açık sayfa sorar, Güncelle yükler.
+ *
+ *   node tools/canli-not.js denetle <yayin-son.json | yayındaki mfsim.html>
  *       Yayındaki programın künyesi ↔ origin/main: güncel · geride (kaç
- *       birleşme, programın girdileri değişti mi). Dosya Artifact'ten:
- *       `Artifact read url:<adres> path:mfsim.html`.
+ *       birleşme, programın girdileri değişti mi). Belge ArtifactData'dan
+ *       (`get yayin son`, out_dir); belge yoksa sayfanın dosyası
+ *       (`Artifact read url:<adres> path:mfsim.html`).
  *
  *   node tools/canli-not.js liste <döküm> [--hepsi]
  *       ArtifactData `list notlar` (out_dir) dökümündeki notlar sırayla;
@@ -53,6 +62,9 @@ function ayristir(argv) {
     const a = argv[i];
     const deger = () => { if (i + 1 >= argv.length) throw new Error(a + ' bir değer ister'); return argv[++i]; };
     if (a === '--cikti') o.cikti = path.resolve(deger());
+    else if (a === '--program') o.program = deger();
+    else if (a === '--notlar') o.notlar = notlarAyristir(deger());
+    else if (a === '--kaynak') o.kaynak = path.resolve(deger());
     else if (a === '--foto') o.foto = path.resolve(deger());
     else if (a === '--olcek') o.olcek = Number(deger());
     else if (a === '--kirp') o.kirp = true;
@@ -65,6 +77,19 @@ function ayristir(argv) {
   }
   if (o.olcek !== undefined && !(o.olcek >= 1 && o.olcek <= 3)) throw new Error('--olcek 1–3 olmalı');
   return o;
+}
+
+// "6,8-21" → [6, 8, 9, …, 21]; bozuk parça SESSİZCE düşmez.
+function notlarAyristir(s) {
+  const out = [];
+  String(s).split(',').map((x) => x.trim()).filter(Boolean).forEach((p) => {
+    const m = /^(\d+)(?:\s*[-–]\s*(\d+))?$/.exec(p);
+    if (!m) throw new Error('--notlar: "' + p + '" okunamadı (örnek 6,8-21)');
+    const a = Number(m[1]), b = m[2] ? Number(m[2]) : a;
+    if (!(a > 0 && b >= a)) throw new Error('--notlar: "' + p + '" aralığı bozuk');
+    for (let i = a; i <= b; i++) if (out.indexOf(i) < 0) out.push(i);
+  });
+  return out.sort((x, y) => x - y);
 }
 
 // ── yayın ──────────────────────────────────────────────────────────────────
@@ -125,6 +150,42 @@ function kunyeOku(html) {
   return JSON.parse(m[1]);
 }
 
+// ── yayın kaydı (yayin/son) ────────────────────────────────────────────────
+// Sayfa ile araç aynı doğrulamayı okur (CN.yayinDogrula): bozuk kayıt sayfada
+// güncelleme sayılmaz, burada yazılmaz.
+function yayinKaydi(kunye, program, notlar, zaman) {
+  const y = {
+    surum: kunye.shortSha || '', sha: kunye.sha || '', pr: kunye.prNumber || '',
+    zaman: zaman || new Date().toISOString(),
+    program: { id: String(program && program.id || ''), boyut: (program && program.boyut) || 0 },
+    notlar: notlar || []
+  };
+  const h = CN.yayinDogrula(y);
+  if (h.length) throw new Error('yayın kaydı bozuk: ' + h.join(' · '));
+  return y;
+}
+
+// ArtifactData dökümü ({id, version, data}) ya da çıplak belge.
+function yayinOku(j) {
+  const d = j && j.data && typeof j.data === 'object' && 'surum' in j.data ? j.data : j;
+  if (!d || typeof d.surum !== 'string') throw new Error('yayın belgesi değil (surum yok)');
+  return { sha: d.sha || d.surum, shortSha: d.surum, prNumber: d.pr || '' };
+}
+
+function yayin(o) {
+  if (!o.program) throw new Error('--program <varlık kimliği> gerekli (Artifact asset yüklemesinin id\'si)');
+  const kaynak = o.kaynak || path.join(VARSAYILAN_CIKTI, 'mfsim.html');
+  const kunye = kunyeOku(fs.readFileSync(kaynak, 'utf8'));
+  const y = yayinKaydi(kunye, { id: o.program, boyut: fs.statSync(kaynak).size }, o.notlar || []);
+  const cikti = o.cikti || path.join(path.dirname(kaynak), 'yayin-son.json');
+  fs.writeFileSync(cikti, JSON.stringify(y, null, 2) + '\n');
+  console.log('yayin/son · ' + y.surum + (y.pr ? ' · PR #' + y.pr : '') + ' · program ' + y.program.id +
+    (y.notlar.length ? ' · Not ' + CN.noAraligi(y.notlar) : ''));
+  console.log('  ' + (path.relative(KOK, cikti) || cikti));
+  console.log('\nArtifactData set: collection=yayin doc_id=son data=<dosyanın içeriği>');
+  return y;
+}
+
 // Saf hüküm: yayındaki sha ↔ ana dal, aradaki birleşmeler, değişen girdiler.
 // degisen null = yayındaki commit yerel geçmişte yok (sığ klon) → yeniden yayınla.
 function guncellikHukmu(yayin, anaSha, birlesmeler, degisen) {
@@ -134,8 +195,9 @@ function guncellikHukmu(yayin, anaSha, birlesmeler, degisen) {
 }
 
 function denetle(o) {
-  if (!o.konum[0]) throw new Error('yayındaki mfsim.html gerekli (Artifact read path:mfsim.html)');
-  const k = kunyeOku(fs.readFileSync(path.resolve(o.konum[0]), 'utf8'));
+  if (!o.konum[0]) throw new Error('yayin/son belgesi ya da yayındaki mfsim.html gerekli');
+  const dosya = path.resolve(o.konum[0]), metin = fs.readFileSync(dosya, 'utf8');
+  const k = /\.json$/i.test(dosya) ? yayinOku(JSON.parse(metin)) : kunyeOku(metin);
   const ana = anaDal();
   let birlesmeler = [], degisen = null;
   try {
@@ -149,8 +211,8 @@ function denetle(o) {
   else {
     console.log('ESKİ · yayında ' + yayinda + ', origin/main ' + ana.sha.slice(0, 7) + ' · ' + h.birlesmeler.length + ' commit geride');
     h.birlesmeler.slice(0, 12).forEach((b) => console.log('    ' + b));
-    if (h.durum === 'bilinmiyor') console.log('Yayındaki commit yerel geçmişte yok → yeniden yayınla.');
-    else if (h.durum === 'program') console.log('Programın girdileri değişti (' + h.degisen.length + ' dosya) → yeniden yayınla.');
+    if (h.durum === 'bilinmiyor') console.log('Yayındaki commit yerel geçmişte yok → programı güncelle.');
+    else if (h.durum === 'program') console.log('Programın girdileri değişti (' + h.degisen.length + ' dosya) → programı güncelle.');
     else console.log('Programın girdileri aynı; yalnız künye eski.');
   }
   return h;
@@ -185,6 +247,11 @@ function hazirla(o) {
   }
   const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded', env: env });
   const ayar = { surum: kunye.shortSha || '', pr: kunye.prNumber || '', zaman: new Date().toISOString(), boyut: boyut };
+  // Varlık deposunun kopyası: metin (text/plain) — depo HTML belgesi almaz,
+  // sayfa metni okuyup çerçeveye koyar. Eski kopyalar silinir.
+  fs.readdirSync(cikti).filter((f) => /^mfsim-[0-9a-f]+\.txt$/.test(f)).forEach((f) => fs.unlinkSync(path.join(cikti, f)));
+  const varlik = path.join(cikti, 'mfsim-' + (ayar.surum || 'yerel') + '.txt');
+  fs.writeFileSync(varlik, html);
   const sayfa = sayfaKur(fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'), ayar);
   const sayfaYol = path.join(cikti, 'canli-not.html');
   fs.writeFileSync(sayfaYol, sayfa);
@@ -193,8 +260,11 @@ function hazirla(o) {
     (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ' · ana dal'));
   console.log('  sayfa   ' + goreli(sayfaYol) + ' (' + (Buffer.byteLength(sayfa) / 1024).toFixed(1) + ' KB)');
   console.log('  program ' + goreli(mfsim) + ' (' + (boyut / 1048576).toFixed(2) + ' MB / sınır 16 MB)');
-  console.log('\nArtifact: file_path=' + goreli(sayfaYol) + '  files={"mfsim.html": "' + goreli(mfsim) + '"}');
-  return { sayfa: sayfaYol, mfsim: mfsim, boyut: boyut, ayar: ayar };
+  console.log('  varlık  ' + goreli(varlik));
+  console.log('\nProgramın güncellemesi (sayfa yenilenmez): Artifact publish url:<adres> asset:true file_path=' + goreli(varlik) +
+    '\n  → node tools/canli-not.js yayin --program <id> --notlar <…>  → ArtifactData set yayin/son');
+  console.log('Sayfanın yayını (yalnız sayfa değiştiyse): file_path=' + goreli(sayfaYol) + '  files={"mfsim.html": "' + goreli(mfsim) + '"}');
+  return { sayfa: sayfaYol, mfsim: mfsim, varlik: varlik, boyut: boyut, ayar: ayar };
 }
 
 // ── notlar ─────────────────────────────────────────────────────────────────
@@ -225,7 +295,8 @@ function listeSatiri(n) {
   const foto = n.foto && n.foto.id ? 'foto ' + n.foto.id : 'foto ' + (n.fotoDurum || 'yok');
   return '#' + n.no + '  ' + (CN.DURUMLAR[n.durum] || n.durum) + '  ' + (n.yer || '—') + '\n' +
     '    ' + (ilk.length > 100 ? ilk.slice(0, 99) + '…' : ilk) + (n.yanit ? '\n    yanıt: ' + n.yanit : '') + '\n' +
-    '    ' + n.id + ' · ' + foto + (n.konu ? ' · konu ' + n.konu : '') + (n.__surum !== undefined ? ' · v' + n.__surum : '');
+    '    ' + n.id + ' · ' + foto + (n.sonuc && n.sonuc.foto ? ' · sonuç ' + n.sonuc.foto : '') +
+    (n.konu ? ' · konu ' + n.konu : '') + (n.__surum !== undefined ? ' · v' + n.__surum : '');
 }
 
 function liste(o) {
@@ -332,13 +403,15 @@ async function ana(argv) {
   if (o.yardim || !o.komut) { console.log(YARDIM); return; }
   if (o.komut === 'hazirla') return hazirla(o);
   if (o.komut === 'denetle') return denetle(o);
+  if (o.komut === 'yayin') return yayin(o);
   if (o.komut === 'liste') return liste(o);
   if (o.komut === 'goruntu') return goruntu(o);
-  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · denetle · liste · goruntu)');
+  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · yayin · denetle · liste · goruntu)');
 }
 
 if (require.main === module) {
   ana(process.argv.slice(2)).catch((e) => { console.error('✗ ' + (e && e.message ? e.message : e)); process.exit(1); });
 }
 
-module.exports = { ayristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, kunyeOku, guncellikHukmu, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };
+module.exports = { ayristir, notlarAyristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
+  yayinKaydi, yayinOku, guncellikHukmu, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };

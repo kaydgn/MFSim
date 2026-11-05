@@ -33,6 +33,7 @@
 }
 html, body { height: 100%; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }   /* görünür kural (display:grid/flex) gizliyi ezmesin */
 body {
   background: var(--kagit);
   color: var(--murekkep);
@@ -90,6 +91,9 @@ button, textarea, input { font: inherit; color: inherit; }
 .cn-dugme:disabled { opacity: 1; color: var(--soluk); background: var(--kagit); border-color: var(--cizgi); cursor: default; }
 .cn-sayac { font-family: var(--veri); font-size: var(--fs-0); min-width: 20px; padding: 1px 5px; border-radius: 2px; background: var(--kagit); text-align: center; }
 .cn-sayac[data-bekleyen]:not([data-bekleyen="0"]) { background: var(--amber-zemin); color: var(--amber); }
+.cn-dugme.cn-guncel-ac { border-color: var(--amber); background: var(--amber-zemin); color: var(--amber); font-weight: 600; }
+.cn-dugme.cn-guncel-ac::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
+.cn-dugme.cn-guncel-ac:hover { border-color: var(--murekkep); }
 
 /* ── sahne: program + kalem katmanı ───────────────────────────────────── */
 .cn-sahne { position: relative; flex: 1 1 auto; min-height: 0; background: var(--pafta); }
@@ -132,6 +136,19 @@ button, textarea, input { font: inherit; color: inherit; }
 .cn-sor p { margin: 0; }
 .cn-sor-dugme { display: flex; justify-content: flex-end; gap: 8px; }
 
+/* ── güncelleme penceresi: yeni program kayıtta; Güncelle yükler ─────── */
+.cn-guncel {
+  position: absolute; z-index: 4; top: 14px; right: 14px; width: min(380px, calc(100% - 28px));
+  display: grid; gap: 8px; padding: 11px 14px 12px;
+  background: var(--pafta); border: 1px solid var(--murekkep); border-top: 3px solid var(--amber); box-shadow: var(--golge);
+}
+.cn-liste:not([hidden]) ~ .cn-guncel { right: calc(min(380px, 100%) + 14px); }
+.cn-guncel-bas { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.cn-guncel-bas b { font-family: var(--dar); font-weight: 600; font-size: var(--fs-3); }
+.cn-guncel-surum { font-family: var(--veri); font-size: var(--fs-0); color: var(--soluk); white-space: nowrap; }
+.cn-guncel p { margin: 0; font-size: var(--fs-1); color: var(--soluk); }
+.cn-guncel p:empty { display: none; }
+
 /* ── kuyruk çekmecesi ────────────────────────────────────────────────── */
 .cn-liste {
   position: absolute; z-index: 2; top: 0; right: 0; bottom: 0; width: min(380px, 100%);
@@ -173,6 +190,22 @@ button, textarea, input { font: inherit; color: inherit; }
 .cn-not-alt .cn-iz { margin-left: auto; font-family: var(--veri); font-size: var(--fs-0); color: var(--soluk); }
 .cn-yanit { display: grid; gap: 6px; }
 .cn-yanit textarea { min-height: 54px; }
+/* Sonucun görüntüsü (Claude çeker): satırda küçük, tıklanınca büyük */
+.cn-sonuc { display: block; width: 100%; padding: 0; border: 1px solid var(--cizgi); border-radius: 2px; background: var(--kagit); cursor: zoom-in; overflow: hidden; }
+.cn-sonuc:hover { border-color: var(--cizgi-koyu); }
+.cn-sonuc img { display: block; width: 100%; height: auto; }
+.cn-buyuk {
+  position: absolute; z-index: 6; inset: 0; display: grid; place-items: center; padding: 20px;
+  background: rgba(27, 29, 32, .55);  /* sabit renk: mürekkebin tülü, tek tema */
+}
+.cn-buyuk figure {
+  margin: 0; max-width: 100%; max-height: 100%; display: grid; gap: 8px; padding: 10px 10px 8px;
+  background: var(--pafta); box-shadow: var(--golge);
+}
+.cn-buyuk img { display: block; max-width: min(1600px, calc(100vw - 60px)); max-height: calc(100vh - 150px); width: auto; height: auto; object-fit: contain; }
+.cn-buyuk figcaption { display: flex; align-items: center; gap: 10px; font-size: var(--fs-1); color: var(--soluk); }
+.cn-buyuk figcaption b { font-family: var(--dar); font-weight: 600; font-size: var(--fs-2); color: var(--kalem); }
+.cn-buyuk figcaption span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .cn-bildirim {
   position: absolute; z-index: 5; left: 50%; bottom: 18px; transform: translateX(-50%);
@@ -211,11 +244,12 @@ button, textarea, input { font: inherit; color: inherit; }
       <span class="cn-baglanti" id="cn-kayit" data-d="bekle">Kayıt</span>
       <span class="cn-baglanti" id="cn-claude" data-d="bekle">Claude</span>
     </div>
+    <button class="cn-dugme cn-guncel-ac" type="button" id="cn-guncel-ac" aria-controls="cn-guncel" hidden>Güncelleme</button>
     <button class="cn-dugme" type="button" id="cn-liste-ac" aria-expanded="false" aria-controls="cn-liste">Notlar <span class="cn-sayac" id="cn-sayac" data-bekleyen="0">0</span></button>
   </header>
 
   <main class="cn-sahne" id="cn-sahne">
-    <iframe class="cn-program" id="cn-program" src="mfsim.html" title="MFSim"></iframe>
+    <iframe class="cn-program" id="cn-program" title="MFSim"></iframe>
     <div class="cn-acilis" id="cn-acilis">MFSim açılıyor…</div>
     <svg class="cn-cizim" id="cn-cizim" aria-hidden="true"><g class="cn-onizleme" id="cn-onizleme"></g><g id="cn-taslak"></g></svg>
 
@@ -250,6 +284,25 @@ button, textarea, input { font: inherit; color: inherit; }
       <p class="cn-bos" id="cn-bos"><span>Not yok.</span><span>Kalemle ekranda bir yeri işaretleyin.</span></p>
     </aside>
 
+    <div class="cn-guncel" id="cn-guncel" role="dialog" aria-modal="false" aria-labelledby="cn-guncel-bas" hidden>
+      <div class="cn-guncel-bas"><b id="cn-guncel-bas">Güncelleme</b><span class="cn-guncel-surum" id="cn-guncel-surum"></span></div>
+      <p id="cn-guncel-not"></p>
+      <div class="cn-sor-dugme">
+        <button class="cn-dugme" type="button" id="cn-guncel-notlar">Notlar</button>
+        <button class="cn-dugme" type="button" id="cn-guncel-sonra">Sonra</button>
+        <button class="cn-dugme birincil" type="button" id="cn-guncel-evet">Güncelle</button>
+      </div>
+    </div>
+
+    <div class="cn-buyuk" id="cn-buyuk" role="dialog" aria-modal="true" aria-labelledby="cn-buyuk-no" hidden>
+      <figure>
+        <img id="cn-buyuk-resim" alt="">
+        <figcaption><b id="cn-buyuk-no"></b><span id="cn-buyuk-yer"></span>
+          <button class="cn-arac" type="button" id="cn-buyuk-kapat" aria-label="Kapat" title="Kapat (Esc)">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></figcaption>
+      </figure>
+    </div>
+
     <div class="cn-bildirim" id="cn-bildirim" role="status" hidden></div>
   </main>
 </div>
@@ -275,13 +328,17 @@ button, textarea, input { font: inherit; color: inherit; }
 
   var yetki = { db: null, comments: null, assets: null, downloads: null };
   var kayitDurum = 'bekle', claudeDurum = 'bekle';
-  var program = { basladi: false, hazir: false, yedek: false, ortam: null };
+  var program = { basladi: false, hazir: false, yedek: false, ortam: null, kaynak: '', surum: AYAR.surum || '', pr: AYAR.pr || '' };
   var notlar = [], oncekiDurum = {}, ilkListe = true;
   var arac = 'imlec', cizilen = null;
   var taslak = { sekiller: [], secim: null, baglam: null, surum: 0 };
   var onceki = {};
 
-  $('cn-surum').textContent = [AYAR.surum, AYAR.pr ? '#' + AYAR.pr : ''].filter(Boolean).join(' · ');
+  // Şeritteki sürüm AÇIK programınki (gömülü dosya ya da kayıttaki yayın).
+  function surumYaz() {
+    $('cn-surum').textContent = [program.surum, program.pr ? '#' + program.pr : ''].filter(Boolean).join(' · ');
+  }
+  surumYaz();
 
   // ── bildirim ────────────────────────────────────────────────────────────
   var bildirimZaman = 0;
@@ -321,13 +378,13 @@ button, textarea, input { font: inherit; color: inherit; }
 
   function yetkileriAl() {
     if (!window.claude || typeof window.claude.use !== 'function') {
-      kayitDurum = 'yok'; claudeDurum = 'off'; durumYaz(); return;
+      kayitDurum = 'yok'; claudeDurum = 'off'; durumYaz(); programBaslat(); return;
     }
     window.claude.use('db').then(function (db) {
       yetki.db = db;
-      if (!db) { kayitDurum = 'yok'; durumYaz(); return; }
+      if (!db) { kayitDurum = 'yok'; durumYaz(); programBaslat(); return; }
       dbBagla();
-    }, function () { kayitDurum = 'yok'; durumYaz(); });
+    }, function () { kayitDurum = 'yok'; durumYaz(); programBaslat(); });
     window.claude.use('comments').then(function (c) { yetki.comments = c; claudeYokla(); },
       function () { claudeDurum = 'off'; durumYaz(); });
     window.claude.use('assets').then(function (a) { yetki.assets = a; }, function () {});
@@ -343,7 +400,81 @@ button, textarea, input { font: inherit; color: inherit; }
       listeCiz();
       durumYaz();
     }, function () { clearTimeout(zaman); kayitDurum = 'hata'; durumYaz(); });
+    // Programın yayını: açılışta en yeniyi seçer, sonra gelen yayını sorar.
+    var yzaman = setTimeout(programBaslat, 4000);
+    yetki.db.doc('yayin/son').onSnapshot(function (snap) {
+      clearTimeout(yzaman);
+      yayin = snap.exists ? (snap.data() || null) : null;
+      if (!program.kaynak) programBaslat(); else guncellemeDenetle();
+    }, function () { clearTimeout(yzaman); programBaslat(); });
   }
+
+  // ── program: kaynağı ve güncellemesi ────────────────────────────────────
+  // Açılışta kayıttaki yayın (yayin/son) gömülü programdan başkaysa o varlık
+  // yüklenir, yoksa dosya (mfsim.html). Açıkken gelen yayın programı
+  // KENDİLİĞİNDEN değiştirmez: pencere sorar, Güncelle yükler; proje taşınır.
+  var yayin = null, ertelenen = '';
+  function programBaslat() {
+    if (program.kaynak) return;
+    var k = CN.programKaynagi(yayin, AYAR.surum);
+    if (k.tur === 'varlik') {
+      program.kaynak = 'varlik';
+      programYukle(k, null).then(guncellemeDenetle, function () { program.kaynak = ''; dosyaAc(); });
+    } else dosyaAc();
+  }
+  function dosyaAc() {
+    program.kaynak = 'dosya'; program.surum = AYAR.surum || ''; program.pr = AYAR.pr || '';
+    surumYaz();
+    cerceve.removeAttribute('srcdoc');
+    cerceve.src = 'mfsim.html';
+    guncellemeDenetle();
+  }
+  // Varlık: program metin olarak saklı (text/plain) → srcdoc.
+  function programYukle(k, proje) {
+    return fetch('/_blob/' + k.id).then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (html) {
+        if (!/^\s*<!doctype html/i.test(html)) throw new Error('program değil');
+        program.basladi = false; program.hazir = false; program.yedek = true;
+        program.kaynak = 'varlik'; program.surum = k.surum; program.pr = k.pr || '';
+        if (proje) onceki.proje = proje;
+        $('cn-acilis').textContent = 'MFSim açılıyor…'; $('cn-acilis').hidden = false;
+        surumYaz(); durumYaz();
+        cerceve.removeAttribute('src');
+        cerceve.srcdoc = html;
+      });
+  }
+  function guncellemeDenetle() {
+    $('cn-guncel-ac').hidden = !CN.guncellemeVar(yayin, program.surum, '');
+    if (CN.guncellemeVar(yayin, program.surum, ertelenen)) guncelAc();
+    else if (!CN.guncellemeVar(yayin, program.surum, '')) guncelKapat();
+  }
+  function guncelAc() {
+    if (!yayin) return;
+    $('cn-guncel-surum').textContent = [yayin.surum, yayin.pr ? '#' + yayin.pr : ''].filter(Boolean).join(' · ');
+    var nolar = CN.noAraligi(yayin.notlar || []);
+    $('cn-guncel-not').textContent = nolar ? 'Not ' + nolar + ' uygulandı' : '';
+    $('cn-guncel-evet').disabled = false;
+    $('cn-guncel').hidden = false;
+  }
+  function guncelKapat() { $('cn-guncel').hidden = true; }
+  function guncelle() {
+    if (!yayin || CN.yayinDogrula(yayin).length) return;
+    var y = yayin, btn = $('cn-guncel-evet');
+    btn.disabled = true;
+    var proje = null;
+    try {
+      var w = cerceve.contentWindow, f = w && w._veSettingsBuildProjectData;
+      if (program.hazir && typeof f === 'function') proje = f();
+    } catch (e) { /* çerçeveye erişim yok */ }
+    programYukle({ id: y.program.id, surum: y.surum, pr: y.pr || '' }, proje).then(function () {
+      ertelenen = ''; guncelKapat(); $('cn-guncel-ac').hidden = true;
+      bildir('Program güncellendi · ' + y.surum);
+    }, function () { btn.disabled = false; bildir('Güncelleme indirilemedi.'); });
+  }
+  $('cn-guncel-evet').addEventListener('click', guncelle);
+  $('cn-guncel-sonra').addEventListener('click', function () { ertelenen = yayin ? yayin.surum : ''; guncelKapat(); });
+  $('cn-guncel-notlar').addEventListener('click', function () { listeAcKapa(true); });
+  $('cn-guncel-ac').addEventListener('click', function () { if ($('cn-guncel').hidden) guncelAc(); else guncelKapat(); });
 
   // ── programla konuşma (tools/canli-not-kopru.js) ─────────────────────────
   var istekNo = 0, bekleyenIstek = new Map();
@@ -390,9 +521,9 @@ button, textarea, input { font: inherit; color: inherit; }
     }
   }
 
-  // Bridge yoksa (çerçeve engellendi) program bir kez de srcdoc'la açılır.
+  // Bridge yoksa (çerçeve engellendi) dosya bir kez de srcdoc'la açılır.
   cerceve.addEventListener('load', function () {
-    if (program.basladi) return;
+    if (program.basladi || !program.kaynak) return;
     if (program.yedek) { $('cn-acilis').textContent = 'Program açılmadı.'; return; }
     program.yedek = true;
     fetch('mfsim.html').then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
@@ -577,7 +708,7 @@ button, textarea, input { font: inherit; color: inherit; }
       baglam: taslak.baglam || {},
       secim: taslak.secim || {},
       ortam: program.ortam || {},
-      sayfaSurum: AYAR.surum || '',
+      sayfaSurum: program.surum || AYAR.surum || '',
       fotoDurum: yetki.assets ? 'aliniyor' : 'yok',
       gonderim: 'kayit'
     };
@@ -658,6 +789,7 @@ button, textarea, input { font: inherit; color: inherit; }
     li.innerHTML = '<div class="cn-not-bas"><span class="cn-no"></span><span class="cn-cip"></span><time></time></div>' +
       '<p class="cn-not-yer"></p><p class="cn-not-metin"></p>' +
       '<div class="cn-cevap" hidden><b>Claude</b><p></p></div>' +
+      '<button class="cn-sonuc" type="button" data-is="buyut" hidden><img alt="" loading="lazy" decoding="async"></button>' +
       '<form class="cn-yanit" hidden><label class="cn-gizli">Yanıt</label><textarea rows="2" maxlength="2000"></textarea>' +
       '<div class="cn-not-alt"><button class="cn-dugme birincil" type="submit">Yanıtla</button></div></form>' +
       '<div class="cn-not-alt"></div>';
@@ -669,6 +801,7 @@ button, textarea, input { font: inherit; color: inherit; }
     li.querySelector('.cn-yanit textarea').id = yanitId;
     li.querySelector('.cn-yanit label').setAttribute('for', yanitId);
     li.querySelector('.cn-yanit').addEventListener('submit', function (e) { e.preventDefault(); yanitla(li); });
+    li.querySelector('.cn-sonuc').addEventListener('click', function () { var not = notBul(li.id.slice(4)); if (not) buyukAc(not); });
     alt.addEventListener('click', function (e) {
       var b = e.target.closest('[data-is]');
       if (!b) return;
@@ -694,6 +827,13 @@ button, textarea, input { font: inherit; color: inherit; }
     var cev = li.querySelector('.cn-cevap');
     cev.hidden = !n.cevap;
     cev.querySelector('p').textContent = n.cevap || '';
+    var yol = CN.sonucYolu(n), sb = li.querySelector('.cn-sonuc'), img = sb.querySelector('img');
+    sb.hidden = !yol;
+    sb.setAttribute('aria-label', 'Not ' + n.no + ' sonucu');
+    if (yol && img.getAttribute('src') !== yol) {
+      if (n.sonuc.g > 0 && n.sonuc.y > 0) { img.width = n.sonuc.g; img.height = n.sonuc.y; }
+      img.src = yol;
+    }
     var yanit = li.querySelector('.cn-yanit');
     yanit.hidden = n.durum !== 'soru';
     var iptal = li.querySelector('[data-is="iptal"]');
@@ -729,6 +869,21 @@ button, textarea, input { font: inherit; color: inherit; }
       .map(function (d) { return say[d] + ' ' + CN.DURUMLAR[d].toLocaleLowerCase('tr'); }).join(' · ');
     if (!kart.hidden) $('cn-kart-no').textContent = 'Not ' + sonrakiNo();
   }
+
+  // Sonucun büyük görüntüsü
+  function buyukAc(n) {
+    var yol = CN.sonucYolu(n);
+    if (!yol) return;
+    var img = $('cn-buyuk-resim');
+    img.src = yol; img.alt = 'Not ' + n.no + ' sonucu';
+    $('cn-buyuk-no').textContent = 'Not ' + n.no;
+    $('cn-buyuk-yer').textContent = n.yer || '';
+    $('cn-buyuk').hidden = false;
+    setTimeout(function () { $('cn-buyuk-kapat').focus(); }, 0);
+  }
+  function buyukKapat() { $('cn-buyuk').hidden = true; }
+  $('cn-buyuk-kapat').addEventListener('click', buyukKapat);
+  $('cn-buyuk').addEventListener('click', function (e) { if (e.target === $('cn-buyuk')) buyukKapat(); });
 
   var onizZaman = 0;
   function cizimGoster(n) {
@@ -819,6 +974,7 @@ button, textarea, input { font: inherit; color: inherit; }
     if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === 'KeyN') { e.preventDefault(); aracSec(arac === 'kalem' ? 'imlec' : 'kalem'); return; }
     var yazi = e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName);
     if (e.key === 'Escape') {
+      if (!$('cn-buyuk').hidden) { buyukKapat(); return; }
       if (!$('cn-sor').hidden) { soruKapat(false); return; }
       if (yazi && e.target === metinEl && metinEl.value.trim()) return;
       if (!kart.hidden && !metinEl.value.trim()) { kartKapat(); }
@@ -851,6 +1007,7 @@ button, textarea, input { font: inherit; color: inherit; }
     }
     yetkileriAl();
     durumYaz();
+    setTimeout(programBaslat, 6000);   // kayıt hiç cevap vermezse program yine açılır
   }
   var hot = window.claude && window.claude.hot;
   if (hot && typeof hot.snapshot === 'function') { try { hot.snapshot(anlikGoruntu); } catch (e) { /* yok */ } }

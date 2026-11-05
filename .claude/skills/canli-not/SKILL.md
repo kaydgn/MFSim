@@ -12,10 +12,11 @@ canlı olarak yazayım. Sen de bunları sırası ile uygula."*
 ```
 claude.ai · Canlı Not sayfası                       Claude Code oturumu
 ┌───────────────────────────────┐   Send to Claude   ┌──────────────────────────┐
-│ program (iframe: mfsim.html)  │ ── "Not N · yer" ─▶│ uyanır → kayıttan okur    │
+│ program (iframe)              │ ── "Not N · yer" ─▶│ uyanır → kayıttan okur    │
 │ + kırmızı kalem katmanı       │                    │ → ekranı yeniden çizer    │
-│ + not kartı + kuyruk          │◀── durum · cevap ──│ → uygular → yeniden yayın │
-└───────────────────────────────┘   (Artifact db)    └──────────────────────────┘
+│ + not kartı + kuyruk          │◀── durum · cevap ──│ → uygular → sonucu çeker  │
+│ + "Güncelleme" penceresi      │◀── yayin/son ──────│ → programı varlığa koyar  │
+└───────────────────────────────┘ (db + varlık deposu)└──────────────────────────┘
 ```
 
 **Neden claude.ai:** kullanıcının ağı GitHub'a da Pages'e de çıkamıyor; çalışan
@@ -24,46 +25,63 @@ iskeleti sahte `</body>`'ye ve `data-theme`'e takılırdı (Artifact önizlemesi
 emekli tuzakları, `docs/decisions/ortak-yuzeyler.md`); `files` ile yayınlanan
 ikinci HTML iskeletsiz sunulur.
 
-## 1 · Yayın — program ANA DALIN KENDİSİDİR
+## 1 · Yayın — program ANA DALIN KENDİSİDİR; sayfa KENDİLİĞİNDEN YENİLENMEZ
 
-Kullanıcı 2026-11-05: *"güncelliğinden emin olalım, öyle devam edelim."* Eski
-kopyanın üstüne yazılan not boşa gider (başka oturumun düzelttiği şeye not).
+Kullanıcı 2026-11-05: *"güncelliğinden emin olalım, öyle devam edelim"* ve
+*"artifaktı otomatik olarak yenileme, güncellemeleri 'Notlar' kısmından göster,
+oraya ufak bir ekran görüntüsü alıp resim koy … güncelleme geldiğinde uyarı popup
+çıkar, oradan güncelle dediğimde HTML'i yenilersin."* Sayfanın her yayını açık
+görünümü tazeliyordu (çizilen not, açık pencere gidiyordu).
+
+| Yayın | Ne zaman | Nasıl | Açık görünüm |
+|-------|----------|-------|--------------|
+| **Programın güncellemesi** | her birleşmeden sonra | program VARLIK deposuna (metin) + kaydın `yayin/son` belgesi | DEĞİŞMEZ: "Güncelleme" penceresi sorar, Güncelle yükler (proje taşınır); "Sonra" o sürümü bir daha sormaz, şeritte "Güncelleme" düğmesi kalır |
+| **Sayfanın yayını** | yalnız sayfa (`tools/canli-not*`) değiştiyse | `Artifact` publish | tazelenir; `claude.hot` projeyi ve yarım notu taşır |
 
 ```bash
 git fetch origin main && git checkout -B main origin/main
-node tools/canli-not.js hazirla        # → .canli-not/yayin/{canli-not.html, mfsim.html}
+node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim.html, mfsim-<sha>.txt}
 ```
 
 - **Kapı:** `hazirla` HEAD `origin/main` değilse ya da commit edilmemiş değişiklik
   varsa DURUR; künyenin dalı `main` yazılır (yerel dalın adı değil). `--dal` yalnız
   yerel deneme içindir, çıktısı YAYINLANMAZ.
-- **Denetim:** `Artifact read url:<adres> path:mfsim.html` (diske iner, bağlama
-  girmez) → `node tools/canli-not.js denetle <dosya>`: *Güncel* · *ESKİ … yeniden
-  yayınla* (programın girdileri değişti) · *yalnız künye eski* (belge birleşmesi;
-  yayın gerekmez — her yayın kullanıcının açık görünümünü tazeler).
+- **Programın güncellemesi**, sırayla:
+  1. `Artifact` publish `url:<adres>` `asset: true` `file_path: .canli-not/yayin/mfsim-<sha>.txt`
+     → `id` (metin, text/plain: depo HTML belgesi almaz; sayfa metni okuyup çerçeveye koyar).
+  2. `node tools/canli-not.js yayin --program <id> --notlar 6,8-21` → `.canli-not/yayin/yayin-son.json`.
+  3. Notların sonucu ve cevabı ÖNCE yazılır (§2 · 6–7), `yayin/son` EN SON:
+     `ArtifactData set` `collection: yayin` `doc_id: son` `data: <dosyanın içeriği>` —
+     pencere çıktığında Notlar hazır olsun.
+  4. Önceki programın varlığı silinir (`Artifact delete url:<adres> path:<eski id>`):
+     her program 11,4 MB; açık görünüm eskisini zaten yüklemiş.
+- **Denetim:** `ArtifactData get collection:yayin doc_id:son out_dir:.canli-not/dokum`
+  → `node tools/canli-not.js denetle <döküm>`: *Güncel* · *ESKİ … programı güncelle*
+  (programın girdileri değişti) · *yalnız künye eski* (belge birleşmesi; güncelleme
+  gerekmez). Belge yoksa sayfanın dosyası: `Artifact read url:<adres> path:mfsim.html`.
 - **Ne zaman:** her birleşmeden sonra (CLAUDE.md → Teslim Akışı, 6) ve her
-  uyanışın başında (§2). Ölçülen: 43b40ef'ten yeniden kurulan paket yayındakiyle
-  bayt bayt aynı (11.982.428 bayt).
+  uyanışın başında (§2).
+- **Açılış:** sayfa kayıttaki yayını gömülü programla (`mfsim.html`) karşılaştırır;
+  başkaysa varlığı yükler (açılışta kaybolacak iş yok), değilse dosyayı.
 
 - `mfsim.html` = karşılama karesiz tek dosya (`MFSIM_KARSILAMA=yok`, 29,8 → 11,4 MB;
   Artifact'in dosya sınırı 16 MB — aşılırsa betik DURUR) + köprü `<meta charset>`'ın
   arkasında (önüne girince kodlama kayboluyordu: "MFSim aÃ§Ä±lÄ±yor").
-- **İlk yayın:** `Artifact` publish, `file_path: .canli-not/yayin/canli-not.html`,
+- **Sayfanın ilk yayını:** `Artifact` publish, `file_path: .canli-not/yayin/canli-not.html`,
   `files: {"mfsim.html": ".canli-not/yayin/mfsim.html"}`,
   `capabilities: {db: {}, user: {}, comments: {}, assets: {}, downloads: true}`, `icon: "pen"`.
-- **Yeniden yayın** (her uygulanan nottan sonra): aynı `file_path` + `files`,
-  `capabilities` YAZILMAZ (saklı beyan korunur). Başka konuşmadan: önce
-  `Artifact read url:<adres>`, sonra `url` ile publish.
-- Yayın açık görünümü tazeler; sayfa programın projesini ve yarım notu taşır
-  (`claude.hot` anlık görüntüsü), modülün içindeki gezinme taşınmaz (kök topoloji).
+- **Sayfanın yeniden yayını:** aynı `file_path` + `files`, `capabilities` YAZILMAZ
+  (saklı beyan korunur). Başka konuşmadan: önce `Artifact read url:<adres>`, sonra
+  `url` ile publish. Gömülü program da ana dalınki olur; `yayin/son` aynı sürümdeyse
+  açılış dosyayı yükler.
 - Adres: **https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91** (gizli; yalnız kullanıcı).
 
 ## 2 · Uyanış ve sıra
 
 Uyandıran yorum yalnız işarettir; iş KAYITTAN okunur ve bütün bekleyenler sırayla
 işlenir (aynı anda gelen iki yorum iki uyanış demek; ikincisi boş kuyruk bulur).
-Önce **güncellik** (§1 · Denetim): yayın eskiyse notlardan ÖNCE yeniden yayınla —
-notun `baglam.surum`u hangi kopyaya yazıldığını söyler.
+Önce **güncellik** (§1 · Denetim): yayın eskiyse notlardan ÖNCE programı güncelle —
+notun `sayfaSurum`u (açık programın künyesi) hangi kopyaya yazıldığını söyler.
 
 ```
 ArtifactData list   url:<adres> collection:notlar out_dir:.canli-not/dokum
@@ -94,15 +112,22 @@ Her not için, **sırayla ve tek tek**:
    `bekliyor`); yanıtlı not yanıtıyla birlikte okunur.
 5. **Uygula.** Modül skill'i (fead · arac-performans · kullanim) → değişiklik →
    modül testi → `npm run hazir`. Not başına TEK commit:
-   `Canlı not N: <programdaki adıyla özet>`. Push.
-6. **Yeniden yayınla** (§1) — kullanıcı değişikliği aynı sayfada görür.
-7. `durum: "uygulandi"`, `cevap`, `surum` (commit'in kısa sha'sı). `cevap` en çok üç
-   cümle, programda görünen adlarla; ölçüldüyse önce → sonra sayısı. Dosya adı,
-   işlev, test adı YAZILMAZ (kullanıcı kararı 2026-10-19).
+   `Canlı not N: <programdaki adıyla özet>`.
+6. **Sonucu çek.** Değişikliğin ekranı gerçek programda (Playwright, `npm run
+   build`'in tek dosyası; deviceScaleFactor 2), notun yerine kırpılmış küçük PNG →
+   `.canli-not/sonuc/not-N.png`. Bütün notların görüntüleri TEK çağrıda yüklenir:
+   `Artifact` publish `url:<adres>` `asset: true` `file_paths: [...]` (en çok 25) → id'ler.
+   Görüntü kullanıcının değişikliğe baktığı yerdir (Notlar'da küçük, tıklanınca büyük):
+   değişen yüzeyi göster, çizilen yerin aynısını.
+7. `durum: "uygulandi"`, `cevap`, `surum` (commit'in kısa sha'sı), `sonuc: {foto: id,
+   g, y}` (görüntünün CSS px ölçüsü). `cevap` en çok üç cümle, programda görünen
+   adlarla; ölçüldüyse önce → sonra sayısı. Dosya adı, işlev, test adı YAZILMAZ
+   (kullanıcı kararı 2026-10-19). Birden çok not: `ArtifactData batch`.
 8. Notun konusu (`konu`) varsa `ArtifactComments reply` (aynı `cevap`) ve `resolve`.
 
 **Kuyruk boşalınca:** PR + merge (CLAUDE.md → Teslim Akışı), birleşen notlara
-`pr` yazılır. Notların `cevap`ı o turun ölçüm kaydıdır — ayrıca rapor sayfası
+`pr` yazılır, sonra programın güncellemesi (§1) — `yayin/son`'un `notlar`ı o turun
+notları. Notların `cevap`ı o turun ölçüm kaydıdır — ayrıca rapor sayfası
 gerekmez; birden çok notluk bir tur bittiğinde kısa bir özet sohbette verilir.
 
 ## 3 · Kurallar
@@ -119,7 +144,8 @@ gerekmez; birden çok notluk bir tur bittiğinde kısa bir özet sohbette verili
 - **Yazı tipi:** fotoğraf konteynerde Inter'le çizilir, kullanıcı Windows'ta
   Segoe UI görür — satır kırılımı bulgusu iki yerde ayrışabilir.
 - Kayıt sınırı: belge 256 KiB (sayfa seçimi kırpar), depo 25.000 belge; fotoğraf
-  varlık deposunda (gzip + base64, bir not ~0,7 MB).
+  varlık deposunda (gzip + base64, bir not ~0,7 MB); program varlığı 11,4 MB (metin
+  varlığının sınırı 20 MiB) — yalnız sonuncusu tutulur.
 
 ## 4 · Notun belgesi (`notlar/<id>`)
 
@@ -135,3 +161,8 @@ gerekmez; birden çok notluk bir tur bittiğinde kısa bir özet sohbette verili
 | `yanit` · `yanitZaman` | sayfa | soruya kullanıcının yanıtı |
 | `durum` | ikisi | `bekliyor` → `uygulaniyor` → `uygulandi` · `soru` · `iptal` |
 | `cevap` · `surum` · `pr` | Claude | yapılan · commit · birleşen PR |
+| `sonuc` | Claude | `{foto, g, y}` — uygulanan değişikliğin görüntüsü (varlık) ve CSS px ölçüsü |
+
+**Yayın belgesi (`yayin/son`, Claude yazar):** `{surum, sha, pr, zaman, program: {id,
+boyut}, notlar: [no…]}` — sayfa ile araç aynı doğrulamayı okur; bozuk belge sayfada
+güncelleme sayılmaz, araçta yazılmaz.

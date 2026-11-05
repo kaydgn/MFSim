@@ -182,10 +182,66 @@
     });
   }
 
+  // ── yayın: programın güncellemesi ────────────────────────────────────────
+  // Kullanıcı 2026-11-05: *"artifaktı otomatik olarak yenileme … güncelleme
+  // geldiğinde uyarı popup çıkar, oradan güncelle dediğimde HTML'i yenilersin."*
+  // Sayfa yeniden yayınlanınca açık görünüm kendiliğinden tazeleniyordu; yeni
+  // program artık varlık deposuna (metin, text/plain) konur ve kaydın
+  // `yayin/son` belgesi onu gösterir: { surum, sha, pr, zaman, boyut,
+  // program: { id, boyut }, notlar: [no…] }. Sayfa açılışta en yeniyi yükler,
+  // açıkken gelen yayını SORAR.
+  var VARLIK = /^[0-9a-f]{32}$/;
+  function yayinDogrula(y) {
+    if (!y || typeof y !== 'object') return ['yayın bir nesne olmalı'];
+    var h = [];
+    if (typeof y.surum !== 'string' || !/^[0-9a-f]{7,40}$/.test(y.surum)) h.push('surum kısa sha olmalı');
+    if (!y.program || !VARLIK.test(String(y.program.id || ''))) h.push('program.id varlık kimliği olmalı');
+    if (y.notlar !== undefined && !(Array.isArray(y.notlar) && y.notlar.every(function (n) { return Number.isInteger(n) && n > 0; }))) {
+      h.push('notlar pozitif tam sayılar olmalı');
+    }
+    return h;
+  }
+  // Açılışta yüklenecek program: kayıttaki geçerli yayın sayfanın gömülü
+  // programından (mfsim.html) başkaysa varlık, değilse dosya.
+  function programKaynagi(yayin, gomulu) {
+    if (yayin && !yayinDogrula(yayin).length && yayin.surum !== (gomulu || '')) {
+      return { tur: 'varlik', id: yayin.program.id, surum: yayin.surum, pr: yayin.pr || '' };
+    }
+    return { tur: 'dosya' };
+  }
+  // Açık programın yerine gelecek yayın: "Sonra" denen sürüm yeniden SORULMAZ
+  // (`ertelenen`), şeritteki düğme yine görünür.
+  function guncellemeVar(yayin, yuklu, ertelenen) {
+    if (!yayin || yayinDogrula(yayin).length) return false;
+    return yayin.surum !== (yuklu || '') && yayin.surum !== (ertelenen || '');
+  }
+  // Not numaraları kısa: [6, 8, 9, 10, 12] → "6 · 8–10 · 12"
+  function noAraligi(nolar) {
+    var s = (nolar || []).filter(function (n) { return Number.isInteger(n) && n > 0; })
+      .sort(function (a, b) { return a - b; })
+      .filter(function (n, i, a) { return i === 0 || n !== a[i - 1]; });
+    var parca = [];
+    for (var i = 0; i < s.length;) {
+      var j = i;
+      while (j + 1 < s.length && s[j + 1] === s[j] + 1) j++;
+      parca.push(j - i >= 2 ? s[i] + '–' + s[j] : (j > i ? s[i] + ' · ' + s[j] : String(s[i])));
+      i = j + 1;
+    }
+    return parca.join(' · ');
+  }
+  // Notun sonuç görüntüsü (Claude'un çektiği, uygulanan değişiklik):
+  // `sonuc: { foto: varlık kimliği, g, y }` → varlığın kökten yolu; yoksa ''.
+  function sonucYolu(n) {
+    var s = n && n.sonuc;
+    return s && VARLIK.test(String(s.foto || '')) ? '/_blob/' + s.foto : '';
+  }
+
   var api = {
     DURUMLAR: DURUMLAR, ARACLAR: ARACLAR, MODULLER: MODULLER, SAYFALAR: SAYFALAR, YORUM_SINIR: YORUM_SINIR,
     sadelestir: sadelestir, sekilKur: sekilKur, kutuBirlesim: kutuBirlesim, bolgeler: bolgeler, uclar: uclar, yerOzeti: yerOzeti,
-    yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar
+    yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar,
+    yayinDogrula: yayinDogrula, programKaynagi: programKaynagi, guncellemeVar: guncellemeVar,
+    noAraligi: noAraligi, sonucYolu: sonucYolu
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else kok.CanliNot = api;
