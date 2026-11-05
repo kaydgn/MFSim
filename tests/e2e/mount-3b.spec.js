@@ -599,19 +599,36 @@ test('SAĞ TIK: menü imleçte; Gizle parçayı çizmez ve seçtirmez; Ağaçta 
   await page.keyboard.press('Escape');
   await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
   expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
-  // Gizle: parça isabet almaz (gölgelendirici de atar), seçim yerinde
+  // Ağaçta göster: kapalı dal açılır, satır görünür ve kısa vurgu alır
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await page.click('#ve-mw-3b-menu [data-k="agac"]');
+  const satir = page.locator('#ve-mw-3b-agac-l [data-ve-3b-agac="' + q.dugum + '"]');
+  await expect(satir).toBeVisible();
+  await expect(satir).toHaveClass(/isik/);
+  // Gizle: parça isabet almaz (gölgelendirici de atar), ağaçta satırı soluk
   await page.mouse.click(p.x, p.y, { button: 'right' });
   await page.click('#ve-mw-3b-menu [data-k="gizle"]');
   await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
   expect((await durum(page)).gizli).toBeGreaterThan(0);
   expect(await page.evaluate((a) => _mw3bIsabet(a.x, a.y) !== a.i, { ...p, i: q.i })).toBe(true);
-  // Boşlukta sağ tık: seçimin komutları; Ağaçta göster kapalı dalı açar, satır soluk ve vurgulu
-  await page.mouse.click(300, 820, { button: 'right' });
-  await page.click('#ve-mw-3b-menu [data-k="agac"]');
-  const satir = page.locator('#ve-mw-3b-agac-l [data-ve-3b-agac="' + q.dugum + '"]');
-  await expect(satir).toBeVisible();
   await expect(satir).toHaveClass(/gizli/);
-  await expect(satir).toHaveClass(/isik/);
+  // Boşlukta sağ tık (Canlı Not 20): görünümün menüsü — Arka plan → Düz beyaz (tercih kalır)
+  const bos = await page.evaluate(() => {
+    const V = window._mw3b, cv = V.renderer.domElement, r = cv.getBoundingClientRect();
+    for (let y = r.top + 40; y < r.bottom - 40; y += 23)
+      for (let x = r.left + 40; x < r.right - 40; x += 29)
+        if (document.elementFromPoint(x, y) === cv && _mw3bIsabet(x, y) < 0) return { x, y };
+    return null;
+  });
+  await page.mouse.click(bos.x, bos.y, { button: 'right' });
+  await expect(page.locator('#ve-mw-3b-menu [data-k="gizle"]')).toHaveCount(0);
+  expect(await page.locator('#ve-mw-3b-menu > [data-k], #ve-mw-3b-menu > .ve-mw-3b-menu-kap > [data-k]').evaluateAll((b) => b.map((x) => x.getAttribute('data-k'))))
+    .toEqual(['tumu', 'sigdir', 'bakis', 'gorunus', 'zemin', 'temizle']);
+  await page.hover('#ve-mw-3b-menu [data-k="zemin"]');
+  await page.click('#ve-mw-3b-menu [data-k="zemin:beyaz"]');
+  expect(await page.evaluate(() => [veMntWiz3bDurum().zeminK, _mw3b.scene.background.isColor && _mw3b.scene.background.getHexString(),
+    window.localStorage.getItem(VE_MW_3B_ZEMIN_ANAHTAR)])).toEqual(['beyaz', 'ffffff', 'beyaz']);
+  await page.evaluate(() => { veMntWiz3bZeminSec('studyo'); });
   // Ağacın satırında sağ tık da aynı menü; Tümünü göster her parçayı geri getirir
   await satir.locator('.ve-mw-3b-agac-ad').click({ button: 'right' });
   await expect(page.locator('#ve-mw-3b-menu [data-k="goster"]')).toBeVisible();

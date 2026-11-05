@@ -243,7 +243,8 @@ function veMntWiz3bAc(yer){
   V.renderer.setSize(w, h, false);
   kap.insertBefore(V.renderer.domElement, kap.firstChild);
   V.scene = new THREE.Scene();
-  V.scene.background = _mw3bZemin();
+  V.zemin = veMntWiz3bZeminTercih();
+  V.scene.background = _mw3bZemin(V.zemin);
   V.camera = new THREE.PerspectiveCamera(35, w / h, 0.5, 100000);
   V.camera.up.set(0, 0, 1);
   V.scene.add(new THREE.HemisphereLight(0xffffff, 0x807868, 0.75));
@@ -326,18 +327,54 @@ function _mw3bCizici(V){
   return new THREE.WebGLRenderer({ antialias: false });
 }
 // ZEMİN: tuvalin dikey geçişi (stüdyo) — tema jetonlarından, üst yarı açık ton.
+// ARKA PLAN (kullanıcı 2026-11-05, Canlı Not 20: *"Arkadaki tema değişebilir olsun …
+// Düz beyaz olsun kesinlikle, beyazın farklı geçişli tonları falan olsun … parça
+// dışında boş bir yere kullanıcı sağ klik yaptığında, tema seçme özelliği orada
+// olsun"*). Seçim boşluğa sağ tık menüsünün Arka plan listesinden; tercih
+// tarayıcıda (görünüm tercihi — modele ve kayda girmez). Stüdyo temanın
+// jetonlarından (iki temada), ötekiler sabit açık tonlar. `ust`/`alt`: dikey
+// geçişin uçları, `orta`: üst rengin bittiği yer (0–1); `duz`: tek renk.
+var VE_MW_3B_ZEMIN = [
+  { k: 'studyo', ad: 'Stüdyo', ust: '--bg-secondary', alt: '--bg-tertiary', orta: 0.5 },
+  { k: 'beyaz', ad: 'Düz beyaz', duz: '#ffffff' },                     // sabit renk: kullanıcının seçtiği zemin
+  { k: 'gok', ad: 'Beyaz–mavi geçiş', ust: '#ffffff', alt: '#d6e3f3', orta: 0.15 },   // sabit renk: zemin geçişi
+  { k: 'kagit', ad: 'Beyaz–sıcak geçiş', ust: '#fdfcf9', alt: '#e9e4da', orta: 0.2 }, // sabit renk: zemin geçişi
+  { k: 'gri', ad: 'Açık gri geçiş', ust: '#f6f7f9', alt: '#cfd4db', orta: 0 }       // sabit renk: zemin geçişi
+];
+var VE_MW_3B_ZEMIN_ANAHTAR = 'mfsim.takoz3b.zemin';
+function veMntWiz3bZeminTercih(){
+  var k = null;
+  try { k = window.localStorage.getItem(VE_MW_3B_ZEMIN_ANAHTAR); } catch(e){}
+  return VE_MW_3B_ZEMIN.some(function(z){ return z.k === k; }) ? k : 'studyo';
+}
 // Jeton okunamazsa (tuval yok) düz zemin.
-function _mw3bZemin(){
+function _mw3bZemin(k){
+  var Z = VE_MW_3B_ZEMIN.filter(function(z){ return z.k === k; })[0] || VE_MW_3B_ZEMIN[0];
+  var renk = function(v){ return v.charAt(0) === '-' ? _mw3bJeton(v, '#ffffff') : v; };
+  if(Z.duz) return new THREE.Color(Z.duz);
   try {
     var c = document.createElement('canvas'), g = c.getContext('2d');
     c.width = 2; c.height = 256;
-    var L = g.createLinearGradient(0, 0, 0, 256), ust = _mw3bJeton('--bg-secondary', '#ffffff');
-    L.addColorStop(0, ust); L.addColorStop(0.5, ust); L.addColorStop(1, _mw3bJeton('--bg-tertiary', '#e4e8ed'));
+    var L = g.createLinearGradient(0, 0, 0, 256), ust = renk(Z.ust);
+    L.addColorStop(0, ust); L.addColorStop(Z.orta || 0, ust); L.addColorStop(1, renk(Z.alt));
     g.fillStyle = L; g.fillRect(0, 0, 2, 256);
     var t = new THREE.CanvasTexture(c);
     t.minFilter = t.magFilter = THREE.LinearFilter; t.generateMipmaps = false;
     return t;
   } catch(e){ return _mw3bRenk('--bg-secondary', '#ffffff'); }
+}
+// Arka planı seç (sağ tık menüsü): sahneye uygulanır ve tercihe yazılır
+function veMntWiz3bZeminSec(k){
+  var V = _mw3b;
+  if(!VE_MW_3B_ZEMIN.some(function(z){ return z.k === k; })) return false;
+  try { window.localStorage.setItem(VE_MW_3B_ZEMIN_ANAHTAR, k); } catch(e){}
+  if(V && V.scene){
+    if(V.scene.background && V.scene.background.dispose) V.scene.background.dispose();
+    V.scene.background = _mw3bZemin(k);
+    V.zemin = k;
+    _mw3bCiz(true);
+  }
+  return true;
 }
 // DURUM ÇUBUĞU: solda imlecin altındaki noktanın koordinatı (_mw3bImlecYaz), sağda
 // çizim yazılımsalsa (ekran kartı yok) durumu ve birimler
@@ -2342,7 +2379,7 @@ function veMntWiz3bDurum(){
     referans: V.isaretSay ? V.isaretSay.referans : 0,
     eksen: document.querySelectorAll('#ve-mw-3b-eksen text').length,
     secili: V.secili, secim: V.secim.slice(), fareDugum: V.fareDugum, fare: V.fare, kip: V.nokta, ref: V.ref ? V.ref.tur : '',
-    gizli: Object.keys(V.gizli || {}).length, menu: !!V.menu, yuzOdak: V.yuzOdak,
+    gizli: Object.keys(V.gizli || {}).length, menu: !!V.menu, yuzOdak: V.yuzOdak, zeminK: V.zemin || '',
     soluk: !!(V.kume && V.kume.length && V.kume.every(function(K){ return K.soluk.visible; })),
     aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire ? V.aday.daire.r : (V.aday.halka ? V.aday.halka.r : 0), tur: V.aday.tur || 'nokta' } : null,
     adayHalka: !!V.halka, suzgec: V.suzgec, gorunus: V.gorunus, ara: V.ara,
@@ -2368,7 +2405,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veMntWiz3bEksenSVG: veMntWiz3bEksenSVG, VE_MW_3B_EKSEN: VE_MW_3B_EKSEN, VE_MW_3B_EKSEN_AD: VE_MW_3B_EKSEN_AD,
     veMntWiz3bYakinHedef: veMntWiz3bYakinHedef, veMntWiz3bKutuCizgi: veMntWiz3bKutuCizgi, VE_MW_3B_VEKIL: VE_MW_3B_VEKIL, veMntWiz3bOdakIsaret: veMntWiz3bOdakIsaret, _mw3bSecimOdak: _mw3bSecimOdak,
     veMntWiz3bEtiketGoster: veMntWiz3bEtiketGoster, veMntWiz3bIsaretBul: veMntWiz3bIsaretBul,
-    VE_MW_3B_GORUNUS: VE_MW_3B_GORUNUS,
+    VE_MW_3B_GORUNUS: VE_MW_3B_GORUNUS, VE_MW_3B_ZEMIN: VE_MW_3B_ZEMIN, veMntWiz3bZeminTercih: veMntWiz3bZeminTercih, veMntWiz3bZeminSec: veMntWiz3bZeminSec,
     veMntWiz3bDurumBiti: veMntWiz3bDurumBiti, veMntWiz3bKimlikHTML: veMntWiz3bKimlikHTML, veMntWiz3bBirimKutleHTML: veMntWiz3bBirimKutleHTML,
     veMntWiz3bEylemHTML: veMntWiz3bEylemHTML, veMntWiz3bEylemGorunur: veMntWiz3bEylemGorunur, VE_MW_3B_BIRIM_GRUP: VE_MW_3B_BIRIM_GRUP, veMntWiz3bGrupAc: veMntWiz3bGrupAc, veMntWiz3bToplam: veMntWiz3bToplam, veMntWiz3bKutleTazele: veMntWiz3bKutleTazele,
     veMntWiz3bGorunusSec: veMntWiz3bGorunusSec

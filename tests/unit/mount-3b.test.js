@@ -675,6 +675,30 @@ describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu',
     expect(rol.find((o) => o.k === 'rol:').kapali).toBe(true);
     expect(veMntWiz3bRolGruplari().map((g) => g.ad)).toEqual(['Gövdeler', 'Takoz', 'Aktarma', 'Motor aksesuarları']);
   });
+  // Kullanıcı 2026-11-05 (Canlı Not 20): "Arkadaki tema değişebilir olsun … Düz beyaz
+  // olsun kesinlikle, beyazın farklı geçişli tonları … boş bir yere … sağ klik
+  // yaptığında, tema seçme özelliği orada olsun. Farklı şeyler de olsun".
+  test('BOŞLUĞUN MENÜSÜ: Tümünü göster · Tümünü sığdır · Bakış · Görünüş · Arka plan; geçerliler işaretli; arka plan tercihi tarayıcıda', () => {
+    const s = oturum(), brk = ad2i(s, 'Arka braket');
+    const L = veMntWiz3bMenuOgeleri(s, [brk], {}, { bos: true, gorunus: 'golge', zemin: 'beyaz' });
+    expect(kok(L)).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'temizle']);
+    expect(kok(veMntWiz3bMenuOgeleri(s, [], {}, { bos: true }))).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin']);
+    expect(L.find((o) => o.k === 'bakis').alt.map((o) => o.ad)).toEqual(VE_MW_3B_BAKIS.map((b) => b.ad));
+    expect(L.find((o) => o.k === 'gorunus').alt.filter((o) => o.secili).map((o) => o.k)).toEqual(['gorunus:golge']);
+    const z = L.find((o) => o.k === 'zemin').alt;
+    expect(z.map((o) => o.ad)).toEqual(['Stüdyo', 'Düz beyaz', 'Beyaz–mavi geçiş', 'Beyaz–sıcak geçiş', 'Açık gri geçiş']);
+    expect(z.filter((o) => o.secili).map((o) => o.k)).toEqual(['zemin:beyaz']);
+    expect(VE_MW_3B_ZEMIN.find((x) => x.k === 'beyaz').duz).toBe('#ffffff');            // düz beyaz: geçişsiz
+    // Tercih: varsayılan stüdyo; seçilen yazılır ve geri okunur; tanınmayan değer varsayılana düşer
+    window.localStorage.removeItem(VE_MW_3B_ZEMIN_ANAHTAR);
+    expect(veMntWiz3bZeminTercih()).toBe('studyo');
+    expect(veMntWiz3bZeminSec('gok')).toBe(true);
+    expect(veMntWiz3bZeminTercih()).toBe('gok');
+    expect(veMntWiz3bZeminSec('yok')).toBe(false);
+    window.localStorage.setItem(VE_MW_3B_ZEMIN_ANAHTAR, 'bozuk');
+    expect(veMntWiz3bZeminTercih()).toBe('studyo');
+    window.localStorage.removeItem(VE_MW_3B_ZEMIN_ANAHTAR);
+  });
   test('malzeme yalnız kütlesi malzemeden gelebilen düğümde — takoz, motor, şanzıman ve içleri hariç', () => {
     const s = oturum(), motor = ad2i(s, 'Motor bloğu'), brk = ad2i(s, 'Arka braket'), tk = takozlar(s)[0];
     s.roller[motor] = 'mnt-motor'; s.roller[tk] = 'mnt-mount'; s.roller[brk] = 'mnt-bracket';

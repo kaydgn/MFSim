@@ -30,12 +30,32 @@ function _mw3bMenuParcalar(s, secim){
   (secim || []).forEach(function(d){ veMntWiz3bParcalar(s, d).forEach(function(i){ p[i] = 1; }); });
   return Object.keys(p).map(Number);
 }
-// MENÜNÜN SATIRLARI (saf, testli). `secim`: düğümler · `gizli`: { parça: 1 }.
+// BOŞLUĞUN MENÜSÜ (Canlı Not 20: "parça dışında boş bir yere … sağ klik yaptığında,
+// tema seçme özelliği orada olsun. Farklı şeyler de olsun"): görünümün komutları —
+// Tümünü göster · Tümünü sığdır · Bakış · Görünüş · Arka plan; seçim varsa
+// Seçimi temizle. `opt`: { gorunus, zemin } (geçerli seçimler işaretli).
+function _mw3bBosMenu(sec, gizliVar, opt){
+  opt = opt || {};
+  var L = [{ k: 'tumu', ad: 'Tümünü göster', ikon: 'eye', kapali: !gizliVar }, { k: 'sigdir', ad: 'Tümünü sığdır', ikon: 'maximize' }, '-'];
+  if(typeof VE_MW_3B_BAKIS !== 'undefined')
+    L.push({ k: 'bakis', ad: 'Bakış', ikon: 'box', alt: VE_MW_3B_BAKIS.map(function(b){ return { k: 'bakis:' + b.k, ad: b.ad }; }) });
+  if(typeof VE_MW_3B_GORUNUS !== 'undefined')
+    L.push({ k: 'gorunus', ad: 'Görünüş', ikon: 'contrast', alt: VE_MW_3B_GORUNUS.map(function(g){
+      return { k: 'gorunus:' + g.k, ad: g.ad, secili: (opt.gorunus || 'kenar') === g.k }; }) });
+  if(typeof VE_MW_3B_ZEMIN !== 'undefined')
+    L.push({ k: 'zemin', ad: 'Arka plan', ikon: 'image', alt: VE_MW_3B_ZEMIN.map(function(z){
+      return { k: 'zemin:' + z.k, ad: z.ad, secili: (opt.zemin || 'studyo') === z.k }; }) });
+  if(sec.length){ L.push('-'); L.push({ k: 'temizle', ad: 'Seçimi temizle', ikon: 'x' }); }
+  return L;
+}
+// MENÜNÜN SATIRLARI (saf, testli). `secim`: düğümler · `gizli`: { parça: 1 } ·
+// `opt.bos`: boşluğa sağ tık (görünümün menüsü, _mw3bBosMenu).
 // Döner: [{ k, ad, ikon, kapali?, alt?: [...] } | '-'] — '-' ayraç.
-function veMntWiz3bMenuOgeleri(s, secim, gizli){
+function veMntWiz3bMenuOgeleri(s, secim, gizli, opt){
   gizli = gizli || {};
   var L = [], sec = (secim || []).filter(function(d){ return d >= 0; }), cok = sec.length > 1;
   var P = _mw3bMenuParcalar(s, sec), gizliVar = Object.keys(gizli).some(function(k){ return gizli[k]; });
+  if(opt && opt.bos) return _mw3bBosMenu(sec, gizliVar, opt);
   if(sec.length){
     var hepsiGizli = P.length > 0 && P.every(function(i){ return gizli[i]; });
     L.push(hepsiGizli ? { k: 'goster', ad: 'Göster', ikon: 'eye' } : { k: 'gizle', ad: 'Gizle', ikon: 'eye-off' });
@@ -99,7 +119,8 @@ function veMntWiz3bMenuAc(x, y, dugum, kaynak){
   if(dugum >= 0 && V.secim.indexOf(dugum) < 0) veMntWiz3bSec(dugum, false, kaynak === 'agac' ? 'agac' : undefined);
   var el = document.createElement('div');
   el.className = 've-mw-3b-menu-katman';
-  el.innerHTML = veMntWiz3bMenuHTML(veMntWiz3bMenuOgeleri(V.s, V.secim, V.gizli));
+  var bos = dugum < 0 && kaynak !== 'agac';
+  el.innerHTML = veMntWiz3bMenuHTML(veMntWiz3bMenuOgeleri(V.s, V.secim, V.gizli, { bos: bos, gorunus: V.gorunus, zemin: V.zemin }));
   // Katman görüntüleyicinin içinde (kapanınca onunla gider); konum kabın köşesine
   // göre — kap kapsayıcı sorgusunun kabı, sabit konum onun içinde göreli olurdu
   var kap = V.ov || document.body, r = kap.getBoundingClientRect ? kap.getBoundingClientRect() : { left: 0, top: 0, width: 1280, height: 800 };
@@ -185,6 +206,13 @@ function veMntWiz3bMenuUygula(k){
   veMntWiz3bMenuKapat();
   k = String(k || '');
   if(k.indexOf('rol:') === 0) return veMntWiz3bRol(k.slice(4));
+  if(k.indexOf('bakis:') === 0) return typeof veMntWiz3bBakis === 'function' ? veMntWiz3bBakis(k.slice(6)) : false;
+  if(k.indexOf('gorunus:') === 0){
+    var g = veMntWiz3bGorunusSec(k.slice(8));
+    if(typeof _mw3bAracYaz === 'function') _mw3bAracYaz();                   // çubuğun Görünüş listesi
+    return g;
+  }
+  if(k.indexOf('zemin:') === 0) return veMntWiz3bZeminSec(k.slice(6));
   if(k.indexOf('malzeme:') === 0) return veMntWiz3bMalzeme(k.slice(8));
   if(k === 'gizle' || k === 'goster' || k === 'yalniz' || k === 'tumu') return veMntWiz3bGizle(k);
   if(k === 'agac') return veMntWiz3bAgactaGoster(V.secili);

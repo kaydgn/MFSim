@@ -1084,7 +1084,10 @@ function _gmSec16(){
     ['Sağ tık', 'Parçada ya da ağacın satırında: <strong>Gizle</strong> · <strong>Göster</strong>, <strong>Yalnız bunu '
       + 'göster</strong>, <strong>Tümünü göster</strong>, <strong>Ağaçta göster</strong>, <strong>Seçime yakınlaştır</strong>, '
       + '<strong>Tümünü sığdır</strong>, <strong>Rol</strong>, <strong>Malzeme</strong>, <strong>Seçimi temizle</strong>',
-      'Komut seçimin hepsine; gizli parça çizilmez, seçilmez, ağaçta soluk; sağ tuşla sürüklemek kaydırır']
+      'Komut seçimin hepsine; gizli parça çizilmez, seçilmez, ağaçta soluk; sağ tuşla sürüklemek kaydırır'],
+    ['Boşluğa sağ tık', '<strong>Tümünü göster</strong>, <strong>Tümünü sığdır</strong>, <strong>Bakış</strong>, '
+      + '<strong>Görünüş</strong>, <strong>Arka plan</strong> (Stüdyo · Düz beyaz · Beyaz–mavi · Beyaz–sıcak · Açık gri '
+      + 'geçiş)', 'Arka plan tercihi bu tarayıcıda kalır']
   ], ['Araç', 'Ne', 'Not']);
   h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini, sonra ağaçtaki aramayı kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
     + '<strong>Ürün ağacı</strong>ndan seçilir.</p>';
