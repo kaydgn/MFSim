@@ -8,8 +8,8 @@
 //     Görünüş listeleri, süzgeç, Ölçü, Kesit; sağında eylem (js/cp-mount-3b.js).
 //   · BAKIŞLAR araç ekseninde (+X arka, +Y sağ, +Z yukarı): Ön (önden,
 //     −X'ten) · Arka · Sol (−Y'den) · Sağ · Üst · Alt · İzometrik (eşit
-//     kısalma: yükseliş atan(1/√2)); seçilen bakışta model sığar. Listeden ya
-//     da görünüm küpünün yüzünden.
+//     kısalma: yükseliş atan(1/√2)); seçilen bakışta model sığar. Listeden
+//     (görünüm küpü 2026-11-05'ten beri yok — Canlı Not 15).
 //   · SEÇİM SÜZGECİ: Parça (rol, ağaç — olağan) · Yüzey (aşağıda, 4b).
 //   · ÖLÇÜ: iki nokta arası (aşağıda, 4b).
 //   · KESİT: X · Y · Z düzlemi, kaydırıcıyla konumu (mm), Ters. Kesilen yan
@@ -57,7 +57,7 @@ function veMntWiz3bKesitAralik(kutu, eksen){
 // suzgec: 'parca' | 'yuz', olcu: ölçü açık mı, gorunus: VE_MW_3B_GORUNUS'un anahtarı }.
 // ÇALIŞMA MASASI (2026-11-03): çubuk başlığın altında, tuvalin üstünde yüzmez.
 // Bakış bir LİSTE: seçilen bakış uygulanır, liste adına ("Bakış") döner — aynı
-// bakış yeniden seçilebilsin; bakış küpün yüzünden de seçilir. Görünüş listesi
+// bakış yeniden seçilebilsin. Görünüş listesi
 // geçerli kipi gösterir.
 function veMntWiz3bAracHTML(D){
   var k = D && D.kesit, yuz = !!(D && D.suzgec === 'yuz'), bas = function(b){ return ' aria-pressed="' + (b ? 'true' : 'false') + '"'; };

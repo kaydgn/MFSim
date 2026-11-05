@@ -993,7 +993,7 @@ describe('TAM EKRAN ve İŞ KARTI — başlık bandı yok, Kapat komut çubuğun
 // düğme sırası, ağaçta arama yok; birimin kütlesi kaynağıyla yalnız pencerede,
 // toplam yok. Ölçümler PR gövdesinde; gerçek tarayıcı: tests/e2e/mount-3b.spec.js
 // → *ÇALIŞMA MASASI*.
-describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle, küp, görünüş, arama', () => {
+describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle, görünüş, arama', () => {
   const fs = require('fs'), path = require('path');
   const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
   const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? null : css.slice(i + 1, css.indexOf('}', i)); };
@@ -1104,35 +1104,12 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(kb(i('Motor bloğu')).slice(0, 2)).toEqual(['Rol', 'Malzeme']);
   });
 
-  // Kameranın dünya matrisi (sütun sütun): sağ · yukarı · geri — yörünge kamerasının tabanı
-  const me = (g) => {
-    const b = [Math.cos(g.phi) * Math.cos(g.theta), Math.cos(g.phi) * Math.sin(g.theta), Math.sin(g.phi)];
-    let r = [-b[1], b[0], 0]; const l = Math.hypot(r[0], r[1]); r = r.map((v) => v / l);
-    const u = [b[1] * r[2] - b[2] * r[1], b[2] * r[0] - b[0] * r[2], b[0] * r[1] - b[1] * r[0]];
-    return [r[0], r[1], r[2], 0, u[0], u[1], u[2], 0, b[0], b[1], b[2], 0, 0, 0, 0, 1];
-  };
-  const kup = (g) => kur('<svg>' + veMntWiz3bKupSVG(me(g)) + '</svg>');
-  const yuzler = (d) => Array.from(d.querySelectorAll('[data-ve-3b-kup]')).map((p) => p.getAttribute('data-ve-3b-kup')).sort();
-  test('görünüm küpü: açılışta Ön · Sağ · Üst, üstten yalnız Üst; her yüz bir bakış ve o bakışta en dönük; yan duranın adı ipucunda', () => {
-    let d = kup(VE_MW_3B_ACILIS);
-    expect(yuzler(d)).toEqual(['on', 'sag', 'ust']);
-    expect(Array.from(d.querySelectorAll('text.yz-ad')).map((t) => t.textContent).sort()).toEqual(['Ön', 'Sağ', 'Üst'].sort());
-    d = kup(veMntWiz3bBakisBul('ust'));
-    expect(yuzler(d)).toEqual(['ust']);
-    VE_MW_3B_KUP_YUZ.forEach((Y) => {
-      const g = veMntWiz3bBakisBul(Y.k);
-      expect(g).not.toBe(null);
-      expect(kup(g).querySelector('.yz-1').getAttribute('data-ve-3b-kup')).toBe(Y.k);
-    });
-    // Önden, az yukarıdan: Üst yan duruyor — yazısı yok, adı ipucunda; Ön yazılı
-    d = kup({ theta: Math.PI, phi: 0.3 });
-    expect(yuzler(d)).toEqual(['on', 'ust']);
-    expect(d.querySelector('[data-ve-3b-kup="ust"] title').textContent).toBe('Üst');
-    expect(Array.from(d.querySelectorAll('text.yz-ad')).map((t) => t.textContent)).toEqual(['Ön']);
-    expect(d.querySelector('[data-ve-3b-kup="on"] title')).toBe(null);
-    // Küpün yazısı tıklamayı geçirir; yüz tıklanır
-    expect(kural('.ve-mw-3b-kup .yz-ad')).toMatch(/pointer-events:none/);
-    expect(kural('.ve-mw-3b-kup .yz')).toMatch(/cursor:pointer/);
+  // Kullanıcı 2026-11-05 (Canlı Not 15): görünüm küpü ve yakınlık düğmeleri
+  // "Şunları kaldıralım." Bakış komut çubuğunun listesinde, yakınlık tekerlekte.
+  test('görünüm küpü ve yakınlık düğmeleri YOK — ne üretici ne kural', () => {
+    const src = loadSource('cp-mount-3b.js');
+    expect(src).not.toMatch(/ve-mw-3b-kup|ve-mw-3b-yakin|ve-mw-3b-gez|veMntWiz3bKupSVG|veMntWiz3bYakinlas/);
+    expect(css).not.toMatch(/\.ve-mw-3b-kup|\.ve-mw-3b-yakin|\.ve-mw-3b-gez/);
   });
 
   test('görünüş: x-ışınında seçimsiz her parça tül, seçimde dışı; kenar x-ışınında belirgin; listeler', () => {

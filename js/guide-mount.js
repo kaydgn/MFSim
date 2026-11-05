@@ -1055,7 +1055,6 @@ function _gmSec16(){
     ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, <strong>Rol</strong>, <strong>Malzeme</strong>, '
       + 'takozun noktası, veri sayfası, birimin kütlesi ve CG’si, <strong>Ölçülen birimler</strong>, rol verilenler',
       'Bölümler seçime göre'],
-    ['Görünüm küpü', 'Tuvalin sağ üstünde, kamerayla döner; yüzüne tık o bakışa geçer', 'Altında Sığdır, yakınlaştır, uzaklaştır'],
     ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '
       + '<strong>Vazgeç</strong> · <strong>Durdur</strong> · <strong>Devam</strong>', 'İş bitince kalkar'],
     ['Durum çubuğu', 'İmlecin altındaki noktanın koordinatı; çizim yazılımsalsa durumu; birimler', 'mm · kg']
@@ -1069,7 +1068,7 @@ function _gmSec16(){
   ], ['İşaret', 'Görünüş', 'Ne']);
   h += '<p><strong>Bakış</strong> listesinde hazır bakışlar: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
     + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '
-    + 'sığar. Görünüm küpünün yüzü de o yüzün bakışına geçer. <strong>Görünüş</strong>: <em>Gölgeli ve kenar</em>, '
+    + 'sığar; yakınlık tekerlekle. <strong>Görünüş</strong>: <em>Gölgeli ve kenar</em>, '
     + '<em>Gölgeli</em> (kenar çizgisi yok), <em>X-ışını</em> (seçimin dışındaki parçalar saydam; içteki parçalar '
     + 'dıştakilerin arkasından görünür). <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: kaydırıcı düzlemi '
     + 'taşır, <strong>Ters</strong> öteki yanı bırakır; kesilen yan çizilmez ve seçilmez.</p>';

@@ -465,11 +465,11 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
 });
 
 // ÇALIŞMA MASASI (2026-11-03, kullanıcı tasarım tuvalinden seçti). Node'da koşmayan
-// halkalar: panellerin tuvalin YANINDA durması (gerçek yerleşim), küpün kamerayla
-// dönüp yüzün bakışı seçmesi, görünüş kiplerinin çizim nesnelerine geçmesi,
+// halkalar: panellerin tuvalin YANINDA durması (gerçek yerleşim), bakış listesinin
+// kamerayı çevirmesi (küp yok — Canlı Not 15), görünüş kiplerinin çizim nesnelerine geçmesi,
 // aramanın bütün ağaçta süzmesi ve Esc'in aramayı temizleyip 3B'yi kapatmaması,
 // imlecin koordinatı, dar pencerede panellerin daralması.
-test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp bakışı seçer; görünüş; arama; imleç; yakınlık', async ({ page }) => {
+test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp yok, bakış listeden; görünüş; arama; imleç', async ({ page }) => {
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -489,16 +489,14 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp bakışı seçer; görü
   expect(yer.tuvalAlt).toBeLessThanOrEqual(yer.durumUst + 0.5);
   expect(yer.komutH).toBeLessThan(50);                       // araçlar ve eylem tek satırda
   expect(Math.abs(yer.durumH - yer.bant)).toBeLessThan(1);
-  // Küp: açılışta üç yüz; Üst yüzüne tık → tam tepeden
-  expect((await durum(page)).kup).toBe(3);
-  const ust = await page.locator('#ve-mw-3b-kup [data-ve-3b-kup="ust"]').boundingBox();
-  await page.mouse.click(ust.x + ust.width / 2, ust.y + ust.height / 2);
-  await expect.poll(async () => (await durum(page)).kup).toBe(1);
-  expect((await durum(page)).phi).toBeGreaterThan(1.5);
-  // Bakış listesi: seçilen bakış uygulanır, liste adına döner
-  await page.selectOption('#ve-mw-3b-bakis', 'izo');
-  await expect.poll(async () => (await durum(page)).kup).toBe(3);
+  // Görünüm küpü ve yakınlık düğmeleri YOK (Canlı Not 15)
+  expect(await page.locator('#ve-mw-3b-kup, .ve-mw-3b-yakin, .ve-mw-3b-gez').count()).toBe(0);
+  // Bakış listesi: seçilen bakış uygulanır, liste adına döner (Üst → tam tepeden)
+  await page.selectOption('#ve-mw-3b-bakis', 'ust');
+  await expect.poll(async () => (await durum(page)).phi).toBeGreaterThan(1.5);
   expect(await page.locator('#ve-mw-3b-bakis').evaluate((s) => s.selectedIndex)).toBe(0);
+  await page.selectOption('#ve-mw-3b-bakis', 'izo');
+  await expect.poll(async () => (await durum(page)).phi).toBeLessThan(1.5);
   // Görünüş: x-ışınında tül çok katlı (ön geçiş kapalı), gölgelide kenar yok
   await page.selectOption('#ve-mw-3b-gorunus', 'xray');
   expect(await page.evaluate(() => _mw3b.kume.every((K) => K.soluk.visible && !K.derin.visible))).toBe(true);
@@ -506,10 +504,6 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp bakışı seçer; görü
   expect(await page.evaluate(() => _mw3b.ckume.every((C) => !C.cizgi.visible) && _mw3b.kume.every((K) => !K.soluk.visible))).toBe(true);
   await page.selectOption('#ve-mw-3b-gorunus', 'kenar');
   expect(await page.evaluate(() => _mw3b.ckume.every((C) => C.cizgi.visible))).toBe(true);
-  // Yakınlık düğmesi: uzaklık 1 / 1,25 katına
-  const r0 = (await durum(page)).r;
-  await page.click('.ve-mw-3b-yakin button[aria-label="Yakınlaştır"]');
-  expect((await durum(page)).r).toBeCloseTo(r0 / 1.25, 6);
   // Arama: bütün ağaçta, büyük-küçük harf ayırmadan; satırın tıkı seçer; Esc aramayı temizler, 3B açık kalır
   await page.fill('#ve-mw-3b-ara', 'KASNAK');
   const ara = await page.evaluate(() => ({ say: document.getElementById('ve-mw-3b-agac-say').textContent,

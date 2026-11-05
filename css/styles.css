@@ -11889,25 +11889,8 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-durum-sag{ margin-left:auto; display:flex; align-items:center; gap:16px; white-space:nowrap; }
 .ve-mw-3b-durum-not{ display:inline-flex; align-items:center; gap:5px; }
 .ve-mw-3b-durum-not .mf-ico{ width:12px; height:12px; }
-/* TUVALİN ARAÇLARI (sağ üst): görünüm küpü kamerayla döner, yüzü bakışı seçer;
-   altında yakınlık düğmeleri. Küpün tonu yüzün dönüklük sırasıyla (yz-1 en açık). */
-.ve-mw-3b-gez{ position:absolute; top:10px; right:10px; z-index:2; display:flex; flex-direction:column; align-items:center; gap:8px; }
-.ve-mw-3b-kup{ display:block; overflow:visible; }
-.ve-mw-3b-kup .yz{ stroke:var(--border-hover); stroke-width:1; stroke-linejoin:round; cursor:pointer; }
-.ve-mw-3b-kup .yz-1{ fill:var(--bg-input); }
-.ve-mw-3b-kup .yz-2{ fill:var(--bg-secondary); }
-.ve-mw-3b-kup .yz-3{ fill:var(--bg-tertiary); }
-.ve-mw-3b-kup .yz:hover{ fill:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input)); stroke:var(--accent-primary); }
-.ve-mw-3b-kup .yz-ad{ font-size:var(--fs-micro); font-weight:700; letter-spacing:.03em; text-transform:uppercase;
-  fill:var(--text-secondary); pointer-events:none; }
-.ve-mw-3b-yakin{ display:flex; flex-direction:column; background:var(--bg-input); border:1px solid var(--border-color);
-  border-radius:var(--radius-sm); box-shadow:var(--shadow-sm); overflow:hidden; }
-.ve-mw-3b-yakin button{ width:32px; height:30px; display:grid; place-items:center; padding:0; border:0; background:none;
-  color:var(--text-primary); cursor:pointer; }
-.ve-mw-3b-yakin button + button{ border-top:1px solid var(--border-light); }
-.ve-mw-3b-yakin button:hover{ background:var(--bg-tertiary); }
-.ve-mw-3b-yakin button:focus-visible{ outline:none; box-shadow:inset var(--focus-ring); }
-.ve-mw-3b-yakin .mf-ico{ width:15px; height:15px; }
+/* Görünüm küpü ve yakınlık düğmeleri YOK (kullanıcı 2026-11-05, Canlı Not 15):
+   bakış komut çubuğunun listesinde, yakınlık tekerlekte. */
 /* TAKOZ 3B — ÜRÜN AĞACI (js/cp-mount-3b-agac.js, 2026-11-02): tuvalin solundaki
    panel, başında arama. Satır 24 px, girinti 14 px; girintinin her düzeyinde
    dal çizgisi. Rol çipi rol renginde nokta + ad; rollü birimin içindeki düğüm

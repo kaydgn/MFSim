@@ -129,9 +129,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   *"popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka yere taşınsın"*;
   `.ve-mw-3b-tam` — pencerenin perdesinde de sihirbazın içinde de). Paneller tuvalin YANINDA,
   üstünde yüzmez; FEAD'in 3B'si yüzen kartta kalır — ortak `.ve-fw-3b*` kuralları DEĞİŞMEZ,
-  yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız görünüm küpü (kamerayla döner, yüzü bakışı
-  seçer) + yakınlık, eksen ve SAĞ ALTTA iş kartı (STEP okuması · 3B kurulumu; 2026-11-04,
-  kullanıcı: *"yazılar büyük, tam ortada … sağ alta çekelim"*).
+  yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız eksen ve SAĞ ALTTA iş kartı (STEP okuması ·
+  3B kurulumu; 2026-11-04, kullanıcı: *"yazılar büyük, tam ortada … sağ alta çekelim"*);
+  görünüm küpü ve yakınlık düğmeleri YOK (kullanıcı 2026-11-05: *"Şunları kaldıralım"*).
   Birimler tablosunda kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız her
   gövdenin kütlesi biliniyorsa. Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
   ve İŞ KARTI* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM*.
