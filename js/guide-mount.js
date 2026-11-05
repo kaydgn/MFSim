@@ -1251,7 +1251,7 @@ function _gmEkA(){
       ['Çözüm modu, sönüm oranı', 'Çözücü', '<strong>Yöntem</strong>'],
       ['Şok darbesi', 'Çözücü', '<strong>Şok darbesi</strong>'],
       ['Aracın ileri yönü, tork yönü, kaldırım darbesi', 'Çözücü', '<strong>Araç ekseni</strong> · <strong>Kaldırım darbesi</strong>'],
-      ['Örnek modeller', 'Başlangıç sayfası · Başlangıç ve Örnekler', '<em>Araçlar</em> · <em>Kurgu</em> · <strong>Yükle</strong> · <strong>Örnek model</strong> · <strong>Modeli kur</strong>'],
+      ['Örnek modeller', 'Başlangıç sayfası · Başlangıç ve Örnekler', '<em>Araçlar</em> · <em>Kurgu</em> · <em>Yükle</em> · <strong>Örnek model</strong> · <strong>Modeli kur</strong>'],
       ['STEP dosyası, parça rolleri', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>STEP dosyası</strong> · <strong>Parçalar</strong>'],
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
       ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],
