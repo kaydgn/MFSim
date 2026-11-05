@@ -1513,11 +1513,15 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
    `_veBasRayEsitle`); yalnız topoloji sayfasında — öteki sayfada ray dönüş
    yolu. Kapı: mount-baslangic.spec.js → *RAY*. */
 html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-nav-rail{ display:none; }
-/* Paletin açma sekmesi de (kullanıcı 2026-11-04: *"iki sembol var. Onları
-   kaldıralım. Sadece geriye gelme kalsın"*): sayfanın üstünde yalnız ana
-   topolojiye dönüş düğmesi kalır. Sekmenin satır içi `display`ını JS yazar
-   (veToggleSidebar) — kural onu ezer. Model kurulunca sekme geri gelir. Kapı:
-   mount-baslangic.spec.js → *DAR PALET*. */
+/* Paletin kendisi ve açma sekmesi de (kullanıcı 2026-11-04: *"iki sembol var.
+   Onları kaldıralım"*; 2026-11-05, Canlı Not 22: *"yanda bileşenler falan
+   geliyor. Bunun gelmemesi lazım … Seçeneklerden kararımızı verdikten sonra
+   ilerlememiz gerekiyor"*): sayfa açıkken "Bileşenler" sütunu yok, tuval o
+   genişliği alır; bir seçenek modeli kurunca sütun geri gelir. Sekmenin satır içi
+   `display`ını JS yazar (veToggleSidebar) — kural onu ezer; kullanıcının daralt
+   tercihi yazılmaz. Karşılamadaki emsal: `.ve-no-module`. Kapı:
+   mount-baslangic.spec.js → *AÇILIŞ* · *DAR PALET*. */
+html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-sidebar,
 html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-sidebar-reveal{ display:none !important; }
 
 /* ═══ KARŞILAMA EKRANINDA ŞERİT DE GİZLİ ═══

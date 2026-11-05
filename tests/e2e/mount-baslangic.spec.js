@@ -65,6 +65,8 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
     return { kap: r(document.getElementById('ve-canvas-wrapper')), sayfa: r(document.getElementById('ve-mnt-baslangic')),
       donus: !!(ust && btn.contains(ust)), donusAlt: Math.round(pb.bottom - bb.bottom),
       kose: document.querySelector('#ve-mnt-breadcrumb button').offsetWidth,
+      // Canlı Not 22: sayfa açıkken "Bileşenler" sütunu yok
+      palet: document.getElementById('ve-sidebar').offsetWidth,
       yetenek: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-yetenek').length,
       sekme: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-sekme')].map((b) => b.textContent),
       kapi: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi')].map((b) => b.getAttribute('data-ey')),
@@ -88,6 +90,7 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
   expect(o.donus).toBe(true);
   expect(o.donusAlt).toBe(16);                           // panelin dibinde (alt dolgu)
   expect(o.kose).toBe(0);                                // köşedeki dönüş gizli
+  expect(o.palet).toBe(0);                               // Bileşenler sütunu yok (Canlı Not 22)
   expect(o.yetenek).toBe(0);                             // analizlerin adı yok (Canlı Not 19)
   expect(o.kapi).toEqual(['sihirbaz', 'step', 'bos']);
   expect(o.satir).toBe(o.ornek);                         // açık sekme: araçlar
@@ -132,10 +135,13 @@ test('BOŞ KANVAS: araçlar kurulur, sayfa çekilir; Ctrl+Z sayfayı geri getiri
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);
   await takozGir(page);
+  expect(await page.evaluate(() => document.getElementById('ve-sidebar').offsetWidth)).toBe(0);
   await page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="bos"]');
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   const s = await page.evaluate(() => ({ tip: nodes.map((n) => n.type).sort(), beklenen: VE_MNT_ARAC_TIPLERI.slice().sort() }));
   expect(s.tip).toEqual(s.beklenen);
+  // seçenek seçildi → "Bileşenler" sütunu geri geldi (Canlı Not 22)
+  expect(await page.evaluate(() => document.getElementById('ve-sidebar').offsetWidth)).toBeGreaterThan(150);
   await page.locator('#ve-canvas-wrapper').click({ position: { x: 40, y: 300 } });
   await page.keyboard.press('Control+z');
   await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
@@ -160,9 +166,10 @@ test('ÖRNEK SATIRI: Yükle TEK TIKLA kurar, sayfa çekilir; Ctrl+Z TEK adımda 
     const w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
     const dis = [...document.querySelectorAll('#ve-canvas .ve-node')].filter((e) => e.offsetWidth > 0).map((e) => e.getBoundingClientRect())
       .filter((b) => b.left < w.left - 1 || b.right > w.right + 1 || b.top < w.top - 1 || b.bottom > w.bottom + 1).length;
-    return { ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width, dis };
+    return { ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width, dis,
+      palet: document.getElementById('ve-sidebar').offsetWidth > 150 };
   });
-  expect(k).toEqual({ ray: 64, dis: 0 });
+  expect(k).toEqual({ ray: 64, dis: 0, palet: true });   // palet geri geldi, kadraj paletli tuvalde
   const s = await say(page);
   expect(s.govde).toBeGreaterThan(0);
   expect(s.takoz).toBeGreaterThanOrEqual(3);

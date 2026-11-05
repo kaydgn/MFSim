@@ -62,7 +62,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   **SÜTUN** (kullanıcı 2026-11-04: *"FEAD modülü önceki hali gibi kalsın"* — ortalanmış
   sütun, karo tek tıkla kurar). İki düzen aynı yuvaları aynı sınıflarla basar; ölçü farkı
   düzenin CSS kapsamında (`.ve-bas-ic--masa|--sutun`). Sayfa açıkken sayfa rayı
-  (Topoloji · Sonuçlar) ve paletin açma sekmesi gizli, iki düzende; dönüşü panelde
+  (Topoloji · Sonuçlar), "Bileşenler" sütunu ve açma sekmesi gizli, iki düzende
+  (kullanıcı 2026-11-05, Canlı Not 22: seçenek seçilmeden palet yok); dönüşü panelde
   taşıyan sayfa (`donus`) açıkken köşedeki dönüş düğmesi de gizli. Kapı:
   `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE VERİ* · *DİZİN* · *ÇALIŞMA
   MASASI* · *RAY* + `version-embed.test.js` → *modülün listesi* + `fead-baslangic.test.js`

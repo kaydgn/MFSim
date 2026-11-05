@@ -194,7 +194,7 @@ function _gmSec3(){
     + 'satırın adına tıklamak kaynağı, gövdeleri (kütleleriyle) ve takozları açar. Satırın '
     + '<strong>Yükle</strong> düğmesi modeli kurar ve sayfa kapanır; kurulum Ctrl+Z ile geri alınınca '
     + 'sayfa yeniden açılır. <strong>Ana topoloji</strong> modülden çıkar. Sayfa açıkken soldaki '
-    + '<em>Topoloji · Sonuçlar</em> rayı ve Bileşenler panelini açan düğme görünmez. '
+    + '<em>Topoloji · Sonuçlar</em> rayı ve Bileşenler paneli görünmez; bir seçenek modeli kurunca gelir. '
     + '<em>STEP’ten başla</em> dosyayı doğrudan 3B’de açar (bkz. 16.1).</p>';
   h += '<h3>3.2 Yol A — hazır bir örnekten başlamak</h3>';
   h += _gmAdimlar([

@@ -517,6 +517,8 @@ describe('RAY — sayfa açıkken Topoloji · Sonuçlar rayı gizli', () => {
   // Dönüş panelin altında (Canlı Not 19): başlık sütunun tepesinde, girintisiz.
   test('CSS: paletin açma sekmesi sayfa açıkken gizli; başlık sütunun tepesinde, girintisiz', () => {
     expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-sidebar-reveal\{ display:none !important; \}/);
+    // Paletin kendisi de (Canlı Not 22: "Seçeneklerden kararımızı verdikten sonra ilerlememiz gerekiyor")
+    expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-sidebar,\n/);
     expect(CSS).toMatch(/\.ve-bas-panel\{[^}]*padding:18px 20px 16px;/);
     expect(CSS).not.toMatch(/\.ve-bas-kimlik h1\{ padding-left/);
     expect(CSS).not.toMatch(/\.ve-bas-panel\{[^}]*padding:48px/);
