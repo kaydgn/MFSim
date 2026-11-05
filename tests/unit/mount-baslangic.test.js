@@ -492,6 +492,16 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
     expect(k).toMatch(/max-width:100%; height:auto/);
     expect(k).not.toMatch(/border-radius|box-shadow/);
   });
+  // Canlı Not 34 ("pencerenin soluna yaslanmış gibi. Ortalayalım mı?") · 35 ("yazı mı,
+  // başlık mı belli olmuyor"): bölüm masada ortada; satırın başlığı bir boy büyük, kalın,
+  // başlık renginde — ayrıntının paragrafı soluk.
+  test('son değişiklikler masada ortada; satırın başlığı başlık gibi', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)); };
+    expect(kural('.ve-bas-degisiklik')).toMatch(/max-width:760px; margin:0 auto/);
+    expect(kural('.ve-bas-degisiklik-ad')).toMatch(/font-size:var\(--fs-md\); font-weight:600;.*color:var\(--text-heading\)/);
+    expect(kural('.ve-bas-degisiklik-p')).toMatch(/color:var\(--text-secondary\)/);
+  });
   test('derlemenin listesi: birleşme Takoz\'un dosyasına dokunuyorsa girer', () => {
     const V = require('../../tools/version-info.js');
     const D = V.MODUL_DESEN.takoz;

@@ -11549,7 +11549,9 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
 .ve-bas-satir-kutle{ grid-column:2; grid-row:2; font-size:var(--fs-tiny); }
 .ve-bas-satir-kutle::before{ content:"·"; margin-right:6px; font-weight:400; color:var(--text-muted); }
 /* SON DEĞİŞİKLİKLER (masa, Canlı Not 6): modülün son birleşmeleri — tarih · başlık · PR */
-.ve-bas-degisiklik{ max-width:760px; }
+/* Masada ortada (Canlı Not 34, kullanıcı 2026-11-05: *"pencerenin soluna yaslanmış gibi.
+   Ortalayalım"*) */
+.ve-bas-degisiklik{ width:100%; max-width:760px; margin:0 auto; }
 .ve-bas-degisiklik h2{ margin:0 0 12px; font-size:var(--fs-md); font-weight:600; color:var(--text-heading); }
 .ve-bas-degisiklik ol{ list-style:none; margin:0; padding:0; }
 .ve-bas-degisiklik > ol{ border-top:1px solid var(--border-color); }
@@ -11571,7 +11573,9 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-bas-degisiklik-s.acik .ve-bas-degisiklik-bas{ background:var(--bg-secondary); }
 .ve-bas-degisiklik-t, .ve-bas-degisiklik-pr{ font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-bas-degisiklik-t{ color:var(--text-secondary); }
-.ve-bas-degisiklik-ad{ min-width:0; color:var(--text-primary); }
+/* Satırın başlığı BAŞLIK gibi (Canlı Not 35: *"yazı mı, başlık mı belli olmuyor"*): bir
+   boy büyük, kalın, başlık renginde; ayrıntının konusu gövde boyunda, paragraf soluk */
+.ve-bas-degisiklik-ad{ min-width:0; font-size:var(--fs-md); font-weight:600; line-height:1.4; color:var(--text-heading); }
 .ve-bas-degisiklik-pr{ color:var(--text-muted); }
 /* Ayrıntı: birleşmenin commit'leri — konu kalın, gövdenin paragrafları altında;
    başlığın sütununda başlar (28 + 88 + 14 px) */
