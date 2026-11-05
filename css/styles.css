@@ -11742,6 +11742,12 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 /* Not, tekli satırların kutusuyla aynı sütunda başlar (78 px etiket + 8 ara). */
 .ve-mw-not{ font-size:var(--fs-micro); line-height:1.45; color:var(--ink-warning); padding-left:86px; }
 .ve-mw-lj{ flex:none; display:inline-block; width:11px; height:11px; box-sizing:border-box; background:var(--bg-primary); }
+/* 3B (Canlı Not 37): Görünümler'in çizimi masada yalın — kenarsız; masanın
+   ızgarası düz görünüşlerin (3B'nin kendi zemini ve tabanı var) */
+.ve-fw-masa[data-gorunus="3b"]{ background-image:none; }
+.ve-mw-akso{ position:absolute; left:0; top:0; }
+.ve-mw-akso .ve-mnt-2d{ margin:0; border:none; border-radius:0; background:transparent; }
+.ve-mw-lj-ak{ flex:none; width:10px; height:10px; }
 .ve-mw-lj-takoz{ border:1.6px solid var(--accent-success); border-radius:var(--radius-xs); }
 .ve-mw-lj-govde{ border:1.6px solid var(--accent-warning); border-radius:50%; }
 .ve-mw-lj-cg{ border:1.6px solid var(--accent-danger); border-radius:50%;

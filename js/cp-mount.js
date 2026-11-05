@@ -2874,6 +2874,15 @@ function veMntAksoCozumModel(R){
   if(!R || !R.gather || !R.gather.components || !R.mp) return null;
   return _mntAksoModelKur(R.gather, R.mp, R, 'guncel');
 }
+// Düğüm LİSTESİNDEN (sihirbazın durumu — veMntWizNodes; Canlı Not 37): çizimin
+// P'si, pencereyle AYNI kurucuya. Birleşik CG combineMassProps'tan.
+function veMntAksoListeVeri(liste){
+  var g=_mntGatherForSolver(null, liste||[]), C=(typeof veMountCore!=='undefined') ? veMountCore : null, mp=null;
+  if(C && C.combineMassProps && C.mmToM && g.components.length){
+    try{ mp=C.combineMassProps(_mntToSI(g, 9.81).components); }catch(e){ mp=null; }
+  }
+  return { M:{ g:g, mp:mp } };
+}
 // Kurucu — saf: g (_mntGatherForSolver'ın biçimi: mm, kg, N/mm), mp
 // (combineMassProps, SI), R (raporun çözümü ya da null), durum (yok · guncel ·
 // bayat). Her öğe düğüm kimliğini (`id`) taşır: "Güç grubundaki yeri"
@@ -3019,6 +3028,9 @@ function _mntAksoLejant(m, b, sec){
 // (işaretler adlarıyla; başlıkta tam ekran düğmesi yok). `ek.sec`: bu bileşenin
 // düğüm kimliği — perdenin üstünde, adıyla; `ek.H`: tam ekranın ölçülen
 // yüksekliği (_mntAksoTamH).
+// YALIN KAP (Canlı Not 37 · sihirbazın masası): `ek.yalin` yalnız çizimi
+// döndürür (başlık ve gösterge kabın sahibinde), `ek.H` yüksekliği, `ek.perdesiz`
+// seçiliyi perdesiz vurgular, `ek.etiket` yazı kipini verir.
 function _mntAksoHTML(P, W, tam, kapId, ek){
   if(!_mntAk()) return _mntNot('Aksonometrik çizici yüklenmedi.', 'warn');
   ek=ek||{};
@@ -3032,17 +3044,18 @@ function _mntAksoHTML(P, W, tam, kapId, ek){
   W=Math.max(200, Math.round(W));
   // Serbest kamera: sığdırma dönmeden bağımsız (küre), yükseklik sabit. Yazı
   // yerleri bir önceki çizimden (yapışkan yer, mount-akso.js → yerlestir).
-  var o={ W:W, stil:'golge', kat:{ golge:true }, etiket:(tam && W>=560) ? 'genis' : 'ad',
+  var o={ W:W, stil:'golge', kat:{ golge:true }, etiket:ek.etiket || ((tam && W>=560) ? 'genis' : 'ad'),
     fs:{ k:_mnt2DFs('micro'), b:_mnt2DFs('tiny') },
     kam:{ az:A.az, el:A.el }, kure:true, yakin:G.yakin, kay:G.kay, isaret:_mntAksoIsaret(W),
     H:tam ? (ek.H>0 ? Math.round(ek.H) : Math.max(380, Math.min(760, Math.round(ekranH*0.7))))
-          : Math.round(Math.max(280, Math.min(460, W*0.92))),
+          : (ek.H>0 ? Math.round(ek.H) : Math.round(Math.max(280, Math.min(460, W*0.92)))),
     yer:(_mntAksoCizim[kapId] && _mntAksoCizim[kapId].yer) || null };
-  if(sec){ o.secili=sec.k; o.perde=true; o.aria='Güç grubundaki yeri: '+sec.ad; }
+  if(sec){ o.secili=sec.k; o.perde=!ek.perdesiz; if(!ek.perdesiz) o.aria='Güç grubundaki yeri: '+sec.ad; }
   var r=veMntAkso.ciz(m, o), svg=_mntAksoSvg(r.svg);
   // Sürüklerken hızlı kare ve föyün vurgusu aynı model ve seçeneklerle
   // çizilir (_mntAkso3bHizli · _mntAksoOdak); `svg` son çizimin kendisi.
   _mntAksoCizim[kapId]={ m:m, o:o, F:r.F, yer:r.yer, svg:svg };
+  if(ek.yalin) return '<div class="ve-mnt-2d ve-mnt-akso ve-mnt-akso3b ve-mnt-akso-yalin" data-mnt2d="akso">'+svg+'</div>';
   var ay=function(k, v){ return 'veMntAksoAyar(\''+kapId+'\',\''+k+'\''+(v==null ? '' : ',\''+v+'\'')+')'; };
   var dg=function(js, ik, ad){ return '<button type="button" title="'+ad+'" aria-label="'+ad+'" onclick="'+js+'">'+veIkon(ik)+'</button>'; };
   // Başlık: bakışın adı (ipucu çizimin etkileşimi), sağda görünüm düğmeleri —
@@ -3086,6 +3099,10 @@ function _mntAksoTamH(kap){
 }
 // Kabın aksonometrisini GERÇEK genişliğinde kur ve dinleyicileri bağla. W
 // verilmezse kabın kendi genişliği.
+// KABIN MODELİ (Canlı Not 37): kap kendi modelini beyan ederse (sihirbazın
+// masası — `_mntAksoKaynak[kapId]`, P döndürür) kurulum, sürüklemenin bitişi ve
+// görünüm düğmeleri onu okur; beyan yoksa canlı model.
+var _mntAksoKaynak = {};
 function _mntAksoKur(kapId, W, P){
   if(typeof document==='undefined') return false;
   var kap=document.getElementById(kapId); if(!kap) return false;
@@ -3094,7 +3111,11 @@ function _mntAksoKur(kapId, W, P){
   else if(!(W>200)) W=Math.floor(kap.clientWidth)-2;
   if(!(W>200)) return false;
   var tam=kap.getAttribute('data-tam')==='1', ek={ sec:kap.getAttribute('data-sec') };
-  P=P||_mnt2DPencereVeri();
+  if(kap.getAttribute('data-yalin')==='1') ek.yalin=true;
+  if(kap.getAttribute('data-perde')==='0') ek.perdesiz=true;
+  if(kap.getAttribute('data-etiket')) ek.etiket=kap.getAttribute('data-etiket');
+  if(!tam && Number(kap.getAttribute('data-h'))>120) ek.H=Number(kap.getAttribute('data-h'));
+  P=P||(typeof _mntAksoKaynak[kapId]==='function' ? _mntAksoKaynak[kapId]() : null)||_mnt2DPencereVeri();
   if(tam) ek.H=_mntAksoTamH(kap);
   kap.innerHTML=_mntAksoHTML(P, W, tam, kapId, ek);
   // Tam ekran kabı doldurur: başlık ve gösterge ölçülür, ikinci kurulum farkı kapatır.
@@ -5327,7 +5348,8 @@ if(typeof module!=='undefined' && module.exports){
     getMntReportPropertiesHTML: getMntReportPropertiesHTML,
     _mnt2DPencereVeri: _mnt2DPencereVeri,
     _mntAksoModel: _mntAksoModel,
-    veMntAksoOrnekModel: veMntAksoOrnekModel, _mntAksoLejant: _mntAksoLejant,
+    veMntAksoOrnekModel: veMntAksoOrnekModel, _mntAksoLejant: _mntAksoLejant, veMntAksoListeVeri: veMntAksoListeVeri,
+    _mntAksoKaynak: _mntAksoKaynak,
     veMntAksoCozumModel: veMntAksoCozumModel,
     _mntAksoHTML: _mntAksoHTML,
     _mntAksoKur: _mntAksoKur, _mntAkso3bHizli: _mntAkso3bHizli, _mntAksoOdak: _mntAksoOdak, _mntFoyOdak: _mntFoyOdak,

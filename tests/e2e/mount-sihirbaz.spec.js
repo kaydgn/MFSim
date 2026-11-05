@@ -85,7 +85,8 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
         const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
         return !(e === b || b.contains(e));
       }).map((b) => (b.textContent || b.getAttribute('aria-label')).trim());
-    const isaret = [...document.querySelectorAll('#ve-mw-masa-cizim [data-mnt-sec]')];
+    // işaretler: 3B'de (varsayılan, Canlı Not 37) çizimin parçaları, düz görünüşte seçilebilir işaretler
+    const isaret = [...document.querySelectorAll('#ve-mw-masa-cizim [data-mnt-sec], #ve-mw-masa-cizim svg.ve-mnt2d-akso .ve-ak-hareket > g[data-ak]')];
     const altinda = isaret.filter((e) => {
       const r = e.getBoundingClientRect();
       return r.right > panel.left && r.left < panel.right && r.bottom > panel.top && r.top < panel.bottom;
@@ -101,5 +102,21 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
   // Görünüş düğmesi gerçekten çalışıyor (örtülmüş düğmenin tıklaması panele gidiyordu)
   await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: 'Yandan' }).click();
   await expect(page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: 'Yandan' })).toHaveAttribute('aria-pressed', 'true');
+  // 3B'ye dönüş: sürükleme döndürür (çizim değişir), kımıldamadan tık takozun satırını seçer
+  await page.locator('#ve-mntwiz-overlay .ve-fw-masa-arac button', { hasText: '3B' }).click();
+  await expect(page.locator('#ve-mw-akso svg.ve-mnt2d-akso')).toBeVisible();
+  const once = await page.evaluate(() => document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso').innerHTML.length + ':' + VE_MNT_AKSO3B.az);
+  const sv = await page.locator('#ve-mw-akso svg.ve-mnt2d-akso').boundingBox();
+  await page.mouse.move(sv.x + sv.width * 0.3, sv.y + sv.height * 0.5);
+  await page.mouse.down();
+  await page.mouse.move(sv.x + sv.width * 0.3 + 120, sv.y + sv.height * 0.5 + 30, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso').innerHTML.length + ':' + VE_MNT_AKSO3B.az)).not.toBe(once);
+  const tk = await page.evaluate(() => { const e = document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso g.ve-ak-t[data-ak]'); const r = e.getBoundingClientRect(); return { ak: e.getAttribute('data-ak'), x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.mouse.click(tk.x, tk.y);
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => VE_MW_STEPS[_mwStep].key)).toBe('takoz');
+  expect(await page.evaluate((ak) => !!document.querySelector('#ve-mw-akso svg.ve-mnt2d-akso g.ve-ak-t[data-sec][data-ak="' + ak + '"]'), tk.ak)).toBe(true);
   expect(hatalar).toEqual([]);
 });

@@ -198,3 +198,56 @@ describe('SONUÇ YOK — sihirbaz sehim, yük ve frekans göstermez', () => {
     expect(yazi).not.toMatch(/Takoz · [\d,]+ mm/);
   });
 });
+
+// 3B (Canlı Not 37, kullanıcı 2026-11-05: *"'Sihirbaz ile kur' dediğimiz zaman …
+// 2B görünüm görünüyor. Buraya tıpkı 3B önizleme gibi sistem kuralım … kutu
+// şeklinde, hatta yeni braket görselleştirmesini değiştirdik"*): masanın
+// varsayılan görünüşü Görünümler'in aksonometrisi — aynı çizici, aynı kurucu,
+// model sihirbazın durumundan. Çizici yoksa düz görünüşe düşer (yukarıdaki
+// testler çizicisiz koşar).
+describe('3B — masada Görünümler\'in aksonometrisi', () => {
+  beforeAll(() => { global.veMntAkso = require('../../js/mount-akso.js'); });
+  afterAll(() => { delete global.veMntAkso; });
+  test('varsayılan 3B: kutular, köşebent braketler, takozlar adıyla; düz görünüşler yanında', () => {
+    tulga();
+    W.veMntWizGoto(OZET);
+    expect(W._mw3B()).toBe(true);
+    const masa = document.getElementById('ve-mw-masa');
+    expect(masa.getAttribute('data-gorunus')).toBe('3b');
+    expect(masa.hasAttribute('data-gezin')).toBe(false);          // düz görünüşün kaydırması değil, çizimin eli
+    const svg = masa.querySelector('#' + W.VE_MW_AKSO + ' svg.ve-mnt2d-akso');
+    expect(svg).toBeTruthy();
+    expect(svg.querySelectorAll('g.ve-ak-g:not(.ve-ak-br)').length).toBe(3);            // motor · şanzıman · transfer
+    expect(svg.querySelectorAll('g.ve-ak-g.ve-ak-br').length).toBe(5);                 // dört köşebent, bir kaide
+    expect(svg.querySelectorAll('circle.ve-ak-nokta').length).toBe(0);
+    expect(svg.querySelectorAll('g.ve-ak-t').length).toBe(5);
+    // geniş kip: takoz numarası ve adıyla (gövdenin ardındaki takozun yazısı yok — GİZLİ YÜZEY)
+    expect(svg.textContent).toContain('T1 Ön Takoz');
+    expect(svg.textContent).toContain('Motor');
+    expect(masa.querySelector('.ve-mnt-kroki-bas')).toBeNull();                         // başlık masada
+    const lej = [...masa.querySelectorAll('#ve-mw-masa-lej .ve-fw-lj')].map((e) => e.textContent);
+    expect(lej).toEqual(['Gövde', 'Takoz', 'Birleşik CG', 'Braket']);
+    const dug = [...masa.querySelectorAll('.ve-fw-masa-arac button')].map((b) => [b.textContent, b.getAttribute('aria-pressed')]);
+    expect(dug).toEqual([['3B', 'true'], ['Üstten', 'false'], ['Yandan', 'false'], ['Önden', 'false']]);
+    W.veMntWizGorunus('ust');
+    expect(document.querySelector('#ve-mw-masa-cizim > svg.ve-mnt2d-gorunus')).toBeTruthy();
+    expect(document.getElementById('ve-mw-masa').hasAttribute('data-gezin')).toBe(true);
+    W.veMntWizGorunus('3b');
+  });
+  test('işarete tık satırı seçer; seçili perdesiz vurgulu', () => {
+    tulga();
+    W.veMntWizGoto(OZET);
+    const st = W.veMntWizState();
+    const t = st.takozlar.find((x) => /Sağ Ön/.test(x.ad));
+    const c3 = cp._mntAksoCizim[W.VE_MW_AKSO];
+    const tk = c3.m.takoz.find((x) => x.id === 'mw:' + t.key).k;
+    expect(W._mwMasa3BSec(tk)).toBe(true);                                              // takoz adımına geçer
+    const svg = document.querySelector('#' + W.VE_MW_AKSO + ' svg.ve-mnt2d-akso');
+    expect(svg.querySelector('g.ve-ak-t[data-sec]').getAttribute('data-ak')).toBe(tk);
+    expect(svg.querySelector('.ve-ak-perde')).toBeNull();
+    // konumu eksik takoz çizilmez (düz görünüşün kuralı)
+    t.x = '';
+    expect(W._mwAksoDugumler(st).some((n) => n.key === t.key)).toBe(false);
+  });
+});
+
