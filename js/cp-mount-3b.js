@@ -206,7 +206,7 @@ function veMntWiz3bAc(yer){
   // araçlar (js/cp-mount-3b-arac.js → _mw3bAracYaz) · eylem (_mw3bPanel) · Kapat
   ov.innerHTML = '<div class="ve-mw-3b-komut">' + _mw3bKimlikHTML(s) + '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"></div>'
       + _mw3bKapatHTML() + '</div>'
-    + '<div class="ve-fw-3b-govde ve-mw-3b-masa">'
+    + '<div class="ve-fw-3b-govde ve-mw-3b-masa" data-yan="' + (veMntWiz3bYanAcik() ? 'acik' : 'kapali') + '">'
     + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-dock-bas"><h3>Ürün ağacı</h3>'
       + '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"></span></div>'
       + '<label class="ve-mw-3b-ara">' + _mwIkon('search')
@@ -346,6 +346,52 @@ function veMntWiz3bZeminTercih(){
   var k = null;
   try { k = window.localStorage.getItem(VE_MW_3B_ZEMIN_ANAHTAR); } catch(e){}
   return VE_MW_3B_ZEMIN.some(function(z){ return z.k === k; }) ? k : 'studyo';
+}
+// ÖZELLİKLER AÇILIR KAPANIR (kullanıcı 2026-11-05, Canlı Not 26: *"açılır kapanır
+// şeklinde yapalım. Kullanıcı istemediği zaman kapalı kalsın"*): panel KAPALI
+// başlar ve seçim onu açmaz; açıklık tarayıcının tercihi (projeye yazılmaz),
+// depo yoksa sayfanın belleğinde. Kapalıyken sütun şerittir (adı dikey, tek
+// düğme), tuval genişliği alır; içerik yine kurulur ve tazelenir, gösterilmez.
+var VE_MW_3B_YAN_ANAHTAR = 'mfsim.takoz3b.ozellikler';
+var _mw3bYanBellek = null;
+function veMntWiz3bYanAcik(){
+  if(_mw3bYanBellek !== null) return _mw3bYanBellek;
+  var k = null;
+  try { k = window.localStorage.getItem(VE_MW_3B_YAN_ANAHTAR); } catch(e){}
+  return k === 'acik';
+}
+// Aç · kapat (ac verilmezse çevirir): tercihe yazar, ızgarayı ve paneli kurar,
+// odağı karşı düğmeye verir (klavyeyle açılan panel klavyeyle kapanır)
+function veMntWiz3bYanAc(ac){
+  ac = ac === undefined ? !veMntWiz3bYanAcik() : !!ac;
+  _mw3bYanBellek = ac;
+  try { window.localStorage.setItem(VE_MW_3B_YAN_ANAHTAR, ac ? 'acik' : 'kapali'); } catch(e){}
+  if(typeof document === 'undefined') return ac;
+  var masa = _mw3b && _mw3b.ov && _mw3b.ov.querySelector ? _mw3b.ov.querySelector('.ve-mw-3b-masa') : document.querySelector('.ve-mw-3b-masa');
+  if(masa) masa.setAttribute('data-yan', ac ? 'acik' : 'kapali');
+  var V = _mw3b;
+  if(V) _mw3bPanel();
+  // Kamerasına dokunulmamış görünüm yeni genişliğe yeniden sığar (açılıştaki gibi);
+  // dokunulmuşsa bakış yerinde, yalnız çizicinin boyu değişir
+  if(V && V.renderer && V.kutu && !V.eldegdi){
+    _mw3bBoyut();
+    var gk = V.gizli && Object.keys(V.gizli).length && typeof _mw3bParcaKutusu === 'function' ? _mw3bParcaKutusu(null) : null;
+    _mw3bSigdir(gk || V.kutu, gk ? null : _mw3bOrnekNoktalar(), !!V.kuruluyor);
+  }
+  var d = document.getElementById('ve-mw-3b-yan-dugme');
+  if(d && d.focus) d.focus();
+  return ac;
+}
+// Panelin başı (saf, testli): açıkken ad + daraltma düğmesi, kapalıyken şeridin
+// TEK düğmesi (ikon + dikey ad)
+function veMntWiz3bYanBasHTML(acik){
+  if(!acik) return '<button type="button" class="ve-mw-3b-yan-serit" id="ve-mw-3b-yan-dugme" aria-expanded="false"'
+    + ' title="Paneli aç" onclick="veMntWiz3bYanAc(true)">' + _mwIkon('chevrons-left')
+    + '<span class="ve-mw-3b-yan-dikey">Özellikler</span></button>';
+  return '<div class="ve-mw-3b-dock-bas"><h3>Özellikler</h3>'
+    + '<button type="button" class="ve-mw-3b-yan-daralt" id="ve-mw-3b-yan-dugme" aria-expanded="true"'
+    + ' title="Paneli daralt" aria-label="Özellikler panelini daralt" onclick="veMntWiz3bYanAc(false)">'
+    + _mwIkon('chevrons-right') + '</button></div>';
 }
 // Jeton okunamazsa (tuval yok) düz zemin.
 function _mw3bZemin(k){
@@ -945,7 +991,7 @@ function _mw3bPanel(goster){
   var aktif = document.activeElement, odak = aktif && aktif.getAttribute && aktif.getAttribute('data-mw-stp-kutle');
   var imlec = (odak !== null && odak !== undefined && aktif.selectionStart !== undefined) ? aktif.selectionStart : null;
   var opt = { nokta: V.nokta >= 0, ref: V.ref ? V.ref.tur : '', secim: V.secim, agactan: !!V.olcu || V.suzgec === 'yuz' };
-  yan.innerHTML = '<div class="ve-mw-3b-dock-bas"><h3>Özellikler</h3></div>'
+  yan.innerHTML = veMntWiz3bYanBasHTML(veMntWiz3bYanAcik())
     + (typeof veMntWiz3bAracKartHTML === 'function' ? veMntWiz3bAracKartHTML(_mw3bAracKartVeri()) : '')
     + veMntWiz3bKimlikHTML(V.s, V.secili, V.secim)
     + '<div class="ve-mw-3b-alt" id="ve-mw-3b-alt">' + veMntWiz3bAltHTML(V.s, V.secili, opt) + '</div>'

@@ -1691,11 +1691,15 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
    `_veBasRayEsitle`); yalnız topoloji sayfasında — öteki sayfada ray dönüş
    yolu. Kapı: mount-baslangic.spec.js → *RAY*. */
 html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-nav-rail{ display:none; }
-/* Paletin açma sekmesi de (kullanıcı 2026-11-04: *"iki sembol var. Onları
-   kaldıralım. Sadece geriye gelme kalsın"*): sayfanın üstünde yalnız ana
-   topolojiye dönüş düğmesi kalır. Sekmenin satır içi `display`ını JS yazar
-   (veToggleSidebar) — kural onu ezer. Model kurulunca sekme geri gelir. Kapı:
-   mount-baslangic.spec.js → *DAR PALET*. */
+/* Paletin kendisi ve açma sekmesi de (kullanıcı 2026-11-04: *"iki sembol var.
+   Onları kaldıralım"*; 2026-11-05, Canlı Not 22: *"yanda bileşenler falan
+   geliyor. Bunun gelmemesi lazım … Seçeneklerden kararımızı verdikten sonra
+   ilerlememiz gerekiyor"*): sayfa açıkken "Bileşenler" sütunu yok, tuval o
+   genişliği alır; bir seçenek modeli kurunca sütun geri gelir. Sekmenin satır içi
+   `display`ını JS yazar (veToggleSidebar) — kural onu ezer; kullanıcının daralt
+   tercihi yazılmaz. Karşılamadaki emsal: `.ve-no-module`. Kapı:
+   mount-baslangic.spec.js → *AÇILIŞ* · *DAR PALET*. */
+html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-sidebar,
 html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-sidebar-reveal{ display:none !important; }
 
 /* ═══ KARŞILAMA EKRANINDA ŞERİT DE GİZLİ ═══
@@ -7445,15 +7449,10 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-strip > .ve-qat,
 .ve-rb-strip > .ve-qat-sep,
 .ve-rb-strip > .ve-bant-modul,
-.ve-rb-strip > .ve-bant-ara,
-.ve-rb-strip > .ve-bant-ana,
 .ve-rb-strip > .theme-selector{ display:flex; align-items:center; flex-shrink:0; }
 /* Bandın 32 px'inde 24 px'lik öğeler DİKEYDE ORTALANIR. Sekmeler tam boy
    kalmak zorunda olduğu için kap `stretch`; ortalama öğe başına yapılır. */
-.ve-rb-strip > .ve-bant-modul,
-.ve-rb-strip > .ve-bant-ara,
-.ve-rb-strip > .ve-bant-ana{ align-self:center; }
-.ve-rb-strip > .ve-bant-ara{ flex-shrink:1; }
+.ve-rb-strip > .ve-bant-modul{ align-self:center; }
 .ve-rb-strip > .theme-selector{ gap:4px; margin-left:6px; }
 /* SEKMELER BANDIN İÇİNDE, MARKANIN YANINDA — ama yalnız gövde AÇIKKEN.
    İki uç da ölçüldü ve ikisi de yanlıştı: hep bantta durunca üst satır eski
@@ -7491,45 +7490,8 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 /* Kökte ayraç da gitmeli: boş bir çizgi "bir şey eksik" der. */
 .ve-bant-modul:empty{ border-left:none; margin-left:0; padding-left:0; }
 
-/* KOMUT ARAMA — ALAN GİBİ GÖRÜNÜR, DÜĞMEDİR. Kural 14'ün iki yönlü
-   afordansı burada bilerek esnetildi ve sebebi yazılı: kutu bir metin alanı
-   olsaydı kullanıcı içine yazmayı bekler, oysa yazmak paleti açar. Bu yüzden
-   dinlenmede DOLU değil ama çerçeveli — "buraya bir şey yazacaksın" diyor,
-   "burası şu an yazılıyor" demiyor. */
-.ve-bant-ara{
-  display:flex; align-items:center; gap:7px; flex:0 1 240px; min-width:120px;
-  margin-left:auto; height:24px; padding:0 8px 0 9px;
-  font:inherit; font-size:var(--fs-tiny); color:var(--text-muted);
-  background:var(--bg-input); cursor:pointer;
-  border:1px solid var(--border-color); border-radius:var(--radius-sm);
-}
-.ve-bant-ara .mf-ico{ width:13px; height:13px; flex:none; color:var(--text-muted); }
-.ve-bant-ara-t{ flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ve-bant-ara:hover{ border-color:var(--border-hover); color:var(--text-secondary); }
-.ve-bant-ara:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
-.ve-bant-kbd{
-  flex:none; font-size:var(--fs-micro);
-  padding:1px 5px; border-radius:var(--radius-xs);
-  background:var(--bg-tertiary); color:var(--text-muted);
-  border:1px solid var(--border-light);
-}
-@media (max-width:860px){ .ve-bant-ara-t, .ve-bant-kbd{ display:none; }
-  .ve-bant-ara{ flex:0 0 auto; padding:0 9px; } }
-
-/* BİRİNCİL EYLEM — bandın TEK dolu düğmesi. İkinci bir dolu düğme, "asıl iş
-   hangisi" sorusunu geri getirirdi. */
-.ve-bant-ana{
-  display:inline-flex; align-items:center; gap:6px; flex:none;
-  margin-left:8px; height:24px; padding:0 13px;
-  font:inherit; font-size:var(--fs-tiny); font-weight:600;
-  color:var(--on-accent); background:var(--accent-primary);
-  border:1px solid var(--accent-primary); border-radius:var(--radius-sm);
-  cursor:pointer; white-space:nowrap;
-}
-.ve-bant-ana .mf-ico{ width:12px; height:12px; color:currentColor; }
-.ve-bant-ana:hover{ background:var(--ink-accent); border-color:var(--ink-accent); }
-.ve-bant-ana:active{ transform:translateY(1px); }
-.ve-bant-ana:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+/* Komut ara ve Çözücü bantta YOK (kullanıcı 2026-11-05, Canlı Not 24): komut
+   paleti Ctrl+K'de, Çözücü şeritte. Kapı: ust-bant.spec.js → *KOMUT ARA YOK*. */
 
 /* AVATAR — bandın sağ ucu. Ad yokken SAHTE BAŞ HARF BASILMAZ: nötr bir
    daire durur ve menüsü adı yazmaya çağırır. "Bilinmiyor"u "biliniyormuş
@@ -9063,6 +9025,10 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-hap[disabled], .ve-mw-3b-hap[disabled]:hover{ cursor:not-allowed; color:var(--text-muted); background:var(--bg-tertiary);
   border-color:var(--border-color); }
 .ve-mw-3b-hap > .mf-ico{ width:14px; height:14px; }
+/* Açık kesitin ayarı — çubuğun orta kısmında YALNIZ kesit açıkken (Canlı Not 25:
+   araçlar boşluğa sağ tık menüsünde); adı ve kapat düğmesi satırın uçlarında. */
+.ve-mw-3b-kesit-ad{ display:inline-flex; align-items:center; gap:5px; margin-right:4px; font-size:var(--fs-tiny); font-weight:600; color:var(--text-secondary); }
+.ve-mw-3b-kesit-ad .mf-ico{ width:13px; height:13px; }
 .ve-mw-3b-kesit-d{ width:220px; max-width:40vw; accent-color:var(--accent-primary); }
 .ve-mw-3b-kesit-deger{ display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-mw-3b-kesit-gir{ width:72px; height:22px; padding:0 6px; font:inherit; font-size:var(--fs-tiny); text-align:right; font-variant-numeric:tabular-nums;
@@ -11760,13 +11726,35 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
 /* SON DEĞİŞİKLİKLER (masa, Canlı Not 6): modülün son birleşmeleri — tarih · başlık · PR */
 .ve-bas-degisiklik{ max-width:760px; }
 .ve-bas-degisiklik h2{ margin:0 0 12px; font-size:var(--fs-md); font-weight:600; color:var(--text-heading); }
-.ve-bas-degisiklik ol{ list-style:none; margin:0; padding:0; border-top:1px solid var(--border-color); }
-.ve-bas-degisiklik li{ display:grid; grid-template-columns:88px minmax(0, 1fr) auto; column-gap:14px; align-items:baseline;
-  padding:9px 2px; border-bottom:1px solid var(--border-light); }
+.ve-bas-degisiklik ol{ list-style:none; margin:0; padding:0; }
+.ve-bas-degisiklik > ol{ border-top:1px solid var(--border-color); }
+.ve-bas-degisiklik > ol > li{ border-bottom:1px solid var(--border-light); }
+/* Satırın başı: (ok) · tarih · başlık · PR; ayrıntısı olan satır düğme (Canlı Not 23) */
+.ve-bas-degisiklik-bas{
+  width:100%; box-sizing:border-box; display:grid; grid-template-columns:88px minmax(0, 1fr) auto;
+  column-gap:14px; align-items:baseline; padding:9px 2px 9px 28px;
+  border:0; background:none; font:inherit; text-align:left; color:inherit;
+}
+button.ve-bas-degisiklik-bas{ position:relative; cursor:pointer; }
+button.ve-bas-degisiklik-bas:hover{ background:color-mix(in srgb, var(--bg-secondary) 55%, var(--bg-primary)); }
+button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-bas-degisiklik-bas .mf-ico{
+  position:absolute; left:6px; top:11px; width:13px; height:13px; color:var(--text-muted);
+  transition:transform var(--dur-base) var(--ease-out);
+}
+.ve-bas-degisiklik-s.acik .ve-bas-degisiklik-bas .mf-ico{ transform:rotate(90deg); }
+.ve-bas-degisiklik-s.acik .ve-bas-degisiklik-bas{ background:var(--bg-secondary); }
 .ve-bas-degisiklik-t, .ve-bas-degisiklik-pr{ font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-bas-degisiklik-t{ color:var(--text-secondary); }
 .ve-bas-degisiklik-ad{ min-width:0; color:var(--text-primary); }
 .ve-bas-degisiklik-pr{ color:var(--text-muted); }
+/* Ayrıntı: birleşmenin commit'leri — konu kalın, gövdenin paragrafları altında;
+   başlığın sütununda başlar (28 + 88 + 14 px) */
+.ve-bas-degisiklik-ayrinti{ padding:4px 14px 14px 130px; background:var(--bg-secondary); }
+.ve-bas-degisiklik-ayrinti > ol{ display:flex; flex-direction:column; gap:12px; }
+.ve-bas-degisiklik-ayrinti li{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.ve-bas-degisiklik-ayrinti b{ font-weight:600; color:var(--text-heading); }
+.ve-bas-degisiklik-p{ color:var(--text-secondary); line-height:1.5; overflow-wrap:anywhere; }
 .ve-bas-satir{ border-bottom:1px solid var(--bg-tertiary); }
 .ve-bas-satir:hover{ background:color-mix(in srgb, var(--bg-primary) 45%, var(--bg-secondary)); }
 .ve-bas-satir.acik{ background:var(--accent-tint-6); }
@@ -11866,7 +11854,7 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
 }
 @media (prefers-reduced-motion: reduce){
   .ve-bas-kapi, .ve-bas-karo, .ve-bas-kilavuz, .ve-bas-resim em,
-  .ve-bas-satir-yukle, .ve-bas-satir-ac .mf-ico, .ve-bas-donus{ transition:none; }
+  .ve-bas-satir-yukle, .ve-bas-satir-ac .mf-ico, .ve-bas-donus, .ve-bas-degisiklik-bas .mf-ico{ transition:none; }
 }
 /* "Başlangıç ve Örnekler" penceresinde aynı kapılar, sıkı: sayfa çekildikten
    sonra sihirbaz ve STEP buradan açılır (js/cp-mount.js → _mntExampleKapilarHTML). */
@@ -12137,7 +12125,7 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
    bu yüzden `.ve-mw-3b` kapsamında. Panel başlığı ve durum çubuğu kabuk
    bandının ölçüsünde (--bant-h · --bant-zemin). Dar pencerede paneller tuvalin
    altına iner (aşağıdaki kap sorgusu). */
-.ve-mw-3b{ --mw3b-agac:272px; --mw3b-yan:352px; }
+.ve-mw-3b{ --mw3b-agac:272px; --mw3b-yan:352px; --mw3b-serit:30px; }
 .ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa{ display:grid; grid-template-columns:var(--mw3b-agac) minmax(0, 1fr) var(--mw3b-yan);
   grid-template-rows:minmax(0, 1fr); }
 .ve-mw-3b-masa > .ve-fw-3b-tuval{ position:relative; inset:auto; min-width:0; min-height:0; }
@@ -12146,6 +12134,22 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
   background:var(--bant-zemin); border-bottom:1px solid var(--border-color); }
 .ve-mw-3b-dock-bas h3{ margin:0; font-size:var(--fs-body); font-weight:600; color:var(--text-heading); }
 .ve-mw-3b-dock-bas .ve-fw-dim{ font-size:var(--fs-tiny); font-variant-numeric:tabular-nums; }
+/* ÖZELLİKLER AÇILIR KAPANIR (kullanıcı 2026-11-05, Canlı Not 26; js/cp-mount-3b.js →
+   veMntWiz3bYanAc): kapalı panel bir ŞERİT — tek düğme, ikon ve dikey ad; tuval
+   genişliği alır. İçerik kurulur ama gösterilmez. Düğmeler Bileşenler sütununun
+   daraltma dilinde (chevrons, "Paneli daralt"). */
+.ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa[data-yan="kapali"]{ --mw3b-yan:var(--mw3b-serit); }
+.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan{ overflow:hidden; }
+.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > :not(.ve-mw-3b-yan-serit){ display:none; }
+.ve-mw-3b-yan-daralt{ flex:none; width:20px; height:20px; display:flex; align-items:center; justify-content:center; padding:0;
+  border:1px solid transparent; border-radius:var(--radius-sm); background:transparent; color:var(--text-muted);
+  font-size:var(--fs-body); cursor:pointer; }
+.ve-mw-3b-yan-daralt:hover{ border-color:var(--border-hover); background:var(--bg-input); color:var(--ink-accent); }
+.ve-mw-3b-yan-serit{ flex:1; min-height:0; width:100%; display:flex; flex-direction:column; align-items:center; gap:10px;
+  padding:7px 0; border:0; background:transparent; color:var(--text-muted); font:inherit; cursor:pointer; }
+.ve-mw-3b-yan-serit:hover{ background:var(--bg-tertiary); color:var(--ink-accent); }
+.ve-mw-3b-yan-serit > .mf-ico{ flex:none; font-size:var(--fs-body); }
+.ve-mw-3b-yan-dikey{ writing-mode:vertical-rl; font-size:var(--fs-body); font-weight:600; color:var(--text-heading); white-space:nowrap; }
 /* Durum çubuğu: solda imlecin altındaki nokta, sağda çizimin durumu ve birimler */
 .ve-mw-3b-durum{ flex:none; height:var(--bant-h); box-sizing:border-box; display:flex; align-items:center; gap:16px; padding:0 12px;
   background:var(--bg-secondary); border-top:1px solid var(--border-color); font-size:var(--fs-tiny); color:var(--text-secondary);
@@ -12218,6 +12222,7 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
   .ve-mw-3b-masa > .ve-fw-3b-tuval{ grid-column:1 / -1; grid-row:1; }
   .ve-mw-3b-masa > .ve-mw-3b-agac{ grid-column:1; grid-row:2; border-top:1px solid var(--border-color); }
   .ve-mw-3b-masa > .ve-mw-3b-yan{ grid-column:2; grid-row:2; border-left:0; border-top:1px solid var(--border-color); }
+  .ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa[data-yan="kapali"]{ grid-template-columns:minmax(0, 1fr) var(--mw3b-serit); }
 }
 .ve-mw-3b-agac-r{ display:flex; align-items:center; gap:4px; height:24px; box-sizing:border-box;
   padding-left:calc(var(--d, 0) * 14px + 2px); padding-right:6px; border-radius:var(--radius-sm);

@@ -57,12 +57,14 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   panel — kimlik · kapılar · örneklerin SEKMELİ dizini (Araçlar · Kurgu) · altta dönüş
   ve Kılavuz; sağda modülün SON DEĞİŞİKLİKLERİ, derlemenin künyesinden: Takoz
   dosyalarının çoğunu değiştiren birleşmeler, `tools/version-info.js` →
-  `moduller.takoz`; RESİM YOK, satırın Yükle'si tek tıkla kurar, adı kaynağı, gövdeleri
+  `moduller.takoz`; satırı tıklanınca birleşmenin commit'leri açılır (`ayrinti`,
+  Canlı Not 23); RESİM YOK, satırın Yükle'si tek tıkla kurar, adı kaynağı, gövdeleri
   ve takozları açar; açık satır ve sekme görünüm durumu), FEAD
   **SÜTUN** (kullanıcı 2026-11-04: *"FEAD modülü önceki hali gibi kalsın"* — ortalanmış
   sütun, karo tek tıkla kurar). İki düzen aynı yuvaları aynı sınıflarla basar; ölçü farkı
   düzenin CSS kapsamında (`.ve-bas-ic--masa|--sutun`). Sayfa açıkken sayfa rayı
-  (Topoloji · Sonuçlar) ve paletin açma sekmesi gizli, iki düzende; dönüşü panelde
+  (Topoloji · Sonuçlar), "Bileşenler" sütunu ve açma sekmesi gizli, iki düzende
+  (kullanıcı 2026-11-05, Canlı Not 22: seçenek seçilmeden palet yok); dönüşü panelde
   taşıyan sayfa (`donus`) açıkken köşedeki dönüş düğmesi de gizli. Kapı:
   `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE VERİ* · *DİZİN* · *ÇALIŞMA
   MASASI* · *RAY* + `version-embed.test.js` → *modülün listesi* + `fead-baslangic.test.js`
@@ -128,8 +130,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (→ *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ* · *TOPLAYICI*) + `mount-step-okuma.spec.js` +
   `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
 - Takoz 3B'nin düzeni **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-03, tasarım tuvali):
-  komut çubuğu (dosyanın adı · Bakış · Görünüş listeleri, süzgeç, Ölçü, Kesit; sağda eylem —
-  SIRADAKİ adım dolu vurgu — ve sağ uçta Kapat) → [Ürün ağacı | tuval | Özellikler] → durum
+  komut çubuğu (dosyanın adı · açık kesitin ayarı; sağda eylem — SIRADAKİ adım dolu vurgu — ve
+  sağ uçta Kapat; Bakış · Görünüş · Seçim süzgeci · Ölçü · Kesit BOŞLUĞA SAĞ TIK menüsünde,
+  kullanıcı 2026-11-05, Canlı Not 25) → [Ürün ağacı | tuval | Özellikler] → durum
   çubuğu (imlecin koordinatı). **TAM EKRAN, başlık bandı YOK** (kullanıcı kararı 2026-11-04:
   *"popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka yere taşınsın"*;
   `.ve-mw-3b-tam` — pencerenin perdesinde de sihirbazın içinde de). Paneller tuvalin YANINDA,
@@ -139,18 +142,22 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   görünüm küpü ve yakınlık düğmeleri YOK (kullanıcı 2026-11-05: *"Şunları kaldıralım"*).
   Birimler TEK listede, role göre gruplu ve açılır kapanır, motorun aksesuarları motorun
   altında (kullanıcı 2026-11-05); kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız
-  her gövdenin kütlesi biliniyorsa. Özellikler bir özellik ızgarası: Rol tek liste, Malzeme
+  her gövdenin kütlesi biliniyorsa. **Özellikler açılır kapanır, KAPALI başlar** (kullanıcı
+  2026-11-05, Canlı Not 26): seçim açmaz, kapalı sütun şerit (tuval genişliği alır), açıklık
+  tarayıcının tercihi (`VE_MW_3B_YAN_ANAHTAR`). Özellikler bir özellik ızgarası: Rol tek liste, Malzeme
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok). Hesap tuvalin
   sağ altındaki eylem kartında, rol verilince. Sağ tık menüsü `js/cp-mount-3b-menu.js`
   (gizle · ağaçta göster · rol · malzeme; gizli parça görünüm durumu, kaydedilmez). Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
-  ve İŞ KARTI* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM*.
+  ve İŞ KARTI* · *ÖZELLİKLER AÇILIR KAPANIR* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM* ·
+  *ÖZELLİKLER AÇILIR KAPANIR*.
 - `js/cp-mount-3b-agac.js` — Takoz 3B'nin **ürün ağacı** (solda, 3DEXPERIENCE gibi) ve
   **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol
   seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`); **arama** bütün ağaçta (açık dallarla
   sınırlı değil), Türkçe büyük-küçük harf eşdeğer, Esc temizler. Kapı: `mount-3b.test.js` →
   *ÜRÜN AĞACI* · *ÇOKLU SEÇİM* · *ÇALIŞMA MASASI* + `mount-3b.spec.js` → *AĞAÇ · CTRL*.
-- `js/cp-mount-3b-arac.js` — Takoz 3B'nin **CAD araç çubuğu** (kullanıcı 2026-11-02): hazır
-  bakışlar (liste) · seçim süzgeci (Parça · **Yüzey**) · **Ölçü** · **Kesit**. Yüz tıklanan üçgenin
+- `js/cp-mount-3b-arac.js` — Takoz 3B'nin **CAD araçları** (kullanıcı 2026-11-02; 2026-11-05'ten
+  beri boşluğa sağ tık menüsünde, çubukta yalnız açık kesitin ayarı): hazır
+  bakışlar · seçim süzgeci (Parça · **Yüzey**) · **Ölçü** · **Kesit**. Yüz tıklanan üçgenin
   ağdaki yüz aralığından (`yuzUcgen`, dosyanın yüz sırası), tanımı ve köşeleri DOSYADAN, alanı
   ağdan (≈); parçanın seçimi değişmez. Ölçü dairesel kenarda dairenin MERKEZİNE, yüzün köşesine
   (VERTEX_POINT) yapışır; fare hareketi yalnız SVG katını yeniler. Kesilen yan çizilmez ve

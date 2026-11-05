@@ -69,6 +69,46 @@ function modulleri(csha, cwd) {
   return MODUL_LISTE.filter((m) => say[m] > 0 && 2 * say[m] >= hepsi);
 }
 
+// BİRLEŞMENİN AYRINTISI (kullanıcı 2026-11-05, Canlı Not 23: *"Son değişikliklere
+// tıkladığım zaman detaylarını okuyabilmem lazım"*): birleşen dalın commit'leri,
+// eskiden yeniye — konu ve gövdenin paragrafları. İmza satırları atılır, sert
+// satır kırılımı paragrafa birleşir, madde ("- ") kendi paragrafını açar. İkinci
+// ebeveyni olmayan kayıt (squash, sığ klon) boş döner: bilinmeyen ayrıntı uydurulmaz.
+const IMZA = /^(Co-Authored-By|Claude-Session|Signed-off-by):/i;
+const AYRINTI_SINIR = { commit: 20, paragraf: 8, harf: 1600 };
+function paragraflar(govde) {
+  const out = [];
+  let par = [];
+  const bitir = () => { if (par.length) { out.push(par.join(' ')); par = []; } };
+  String(govde || '').replace(/\r/g, '').split('\n').forEach((l) => {
+    const t = l.trim();
+    if (IMZA.test(t)) return;
+    if (!t) { bitir(); return; }
+    if (/^[-*•] /.test(t)) bitir();
+    par.push(t);
+  });
+  bitir();
+  let kalan = AYRINTI_SINIR.harf;
+  const kisa = [];
+  for (const p of out.slice(0, AYRINTI_SINIR.paragraf)) {
+    if (kalan <= 0) break;
+    kisa.push(p.length > kalan ? p.slice(0, kalan).replace(/\s+\S*$/, '') + ' …' : p);
+    kalan -= p.length;
+  }
+  return kisa;
+}
+function birlesmeAyrintisi(csha, cwd) {
+  const ham = gitOut('git log --no-merges --reverse --format=%s' + ALAN + '%b' + KAYIT + ' ' + csha + '^1..' + csha + '^2', cwd);
+  const out = [];
+  for (const kayit of ham.split(KAYIT)) {
+    const satir = kayit.replace(/^\n+/, '');
+    if (!satir.trim()) continue;
+    const [konu, govde] = satir.split(ALAN);
+    if (konu && konu.trim()) out.push({ konu: konu.trim(), govde: paragraflar(govde) });
+  }
+  return out.slice(-AYRINTI_SINIR.commit);
+}
+
 // "Merge pull request #851 from …" → 851 ; değilse 0
 function prNumarasi(konu) {
   const m = /Merge pull request #(\d+)/.exec(konu || '');
@@ -150,7 +190,9 @@ function collect(opt) {
     };
     if (changes.length < maxChanges) changes.push(kayitO);
     if (!modulDolu()) modulleri(csha, cwd).forEach((m) => {
-      if (moduller[m].length < maxModul) moduller[m].push({ sha: kayitO.sha, prNumber: no, date: cdate, title: kayitO.title });
+      if (moduller[m].length < maxModul) {
+        moduller[m].push({ sha: kayitO.sha, prNumber: no, date: cdate, title: kayitO.title, ayrinti: birlesmeAyrintisi(csha, cwd) });
+      }
     });
     if (changes.length >= maxChanges && modulDolu()) break;
   }
@@ -176,4 +218,5 @@ function collect(opt) {
   };
 }
 
-module.exports = { collect, gitOut, prNumarasi, govdedenBaslik, yalnizBelge, modulleri, MODUL_DESEN, MODUL_LISTE };
+module.exports = { collect, gitOut, prNumarasi, govdedenBaslik, yalnizBelge, modulleri, MODUL_DESEN, MODUL_LISTE,
+  paragraflar, birlesmeAyrintisi };

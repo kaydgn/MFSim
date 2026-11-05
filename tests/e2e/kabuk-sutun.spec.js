@@ -546,6 +546,13 @@ test('palet: hiçbir bileşen adı kesilmiyor — paletli iki modülde; FEAD\'de
       if (n && m === 'mount-analysis') veMntOpenEditor(n.id);
     }, mod);
     await page.waitForTimeout(1200);
+    // Takoz'un başlangıç sayfası açıkken palet YOK (Canlı Not 22): seçenek seçilmeden
+    // sütun gelmez — Boş kanvas araçları kurar, sayfa çekilir, palet gelir
+    if (mod === 'mount-analysis') {
+      await page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="bos"]');
+      await page.waitForFunction(() => !veMntBaslangicAcik(), null, { timeout: 10000 });
+      await page.waitForTimeout(600);
+    }
     const r = await kesikler();
     sonuc[mod] = { ad: r.length, kesik: r.filter((x) => x.yatay || x.dikey).map((x) => x.t) };
   }

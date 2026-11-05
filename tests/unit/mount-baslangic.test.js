@@ -366,12 +366,13 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
   // özelinde"*): derlemenin künyesinden — Takoz'un dosyalarına dokunan birleşmeler.
   test('son değişiklikler: künyenin Takoz listesi — tarih · PR başlığı (dış metin) · numara', () => {
     const K = { moduller: { takoz: [
-      { sha: 'aaaaaaa', prNumber: 1242, date: '2026-11-05T11:05:45+03:00', title: 'Canlı notlar 1–5 · 7: karşılama' },
+      { sha: 'aaaaaaa', prNumber: 1242, date: '2026-11-05T11:05:45+03:00', title: 'Canlı notlar 1–5 · 7: karşılama',
+        ayrinti: [{ konu: 'Canlı not 1: cetvel kalktı', govde: ['Vurgu sol başta.', '- ikinci paragraf'] }, { konu: 'Canlı not 2', govde: [] }] },
       { sha: 'bbbbbbb', prNumber: 1239, date: '2026-11-04T18:00:15+03:00', title: 'Takoz başlangıç sayfası: örnek dizini' }] } };
     const g = BS.veMntBaslangicDegisiklik(K);
     expect(g.baslik).toBe('Son değişiklikler');
-    expect(g.kayitlar.map((k) => [k.tarih, k.baslik, k.pr])).toEqual([
-      ['05.11.2026', 'Canlı notlar 1–5 · 7: karşılama', 1242], ['04.11.2026', 'Takoz başlangıç sayfası: örnek dizini', 1239]]);
+    expect(g.kayitlar.map((k) => [k.tarih, k.baslik, k.pr, k.ayrinti.length])).toEqual([
+      ['05.11.2026', 'Canlı notlar 1–5 · 7: karşılama', 1242, 2], ['04.11.2026', 'Takoz başlangıç sayfası: örnek dizini', 1239, 0]]);
     expect(BS.veMntBaslangicDegisiklik({}).kayitlar).toEqual([]);
     const eski = global.window.__MFSIM_BUILD;
     global.window.__MFSIM_BUILD = K;
@@ -380,10 +381,52 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
       d.innerHTML = BS.veMntBaslangicHTML();
       const ol = d.querySelector('.ve-bas-masa > section.ve-bas-degisiklik > ol');
       expect(d.querySelector('.ve-bas-degisiklik h2').textContent).toBe('Son değişiklikler');
-      expect([...ol.children].map((li) => [...li.children].map((c) => c.className + '=' + c.textContent))).toEqual([
+      const bas = (li) => [...li.querySelector('.ve-bas-degisiklik-bas').querySelectorAll('span:not(.mf-ico)')].map((c) => c.className + '=' + c.textContent);
+      expect([...ol.children].map(bas)).toEqual([
         ['ve-bas-degisiklik-t=05.11.2026', 've-bas-degisiklik-ad=Canlı notlar 1–5 · 7: karşılama', 've-bas-degisiklik-pr=#1242'],
         ['ve-bas-degisiklik-t=04.11.2026', 've-bas-degisiklik-ad=Takoz başlangıç sayfası: örnek dizini', 've-bas-degisiklik-pr=#1239']]);
       ol.querySelectorAll('.ve-bas-degisiklik-ad').forEach((x) => expect(x.hasAttribute('data-ve-dis-metin')).toBe(true));
+      // Canlı Not 23: ayrıntısı olan satır DÜĞME, kapalı; ayrıntısız satır düz
+      const [ilk, ikinci] = ol.children;
+      const b = ilk.querySelector('button.ve-bas-degisiklik-bas');
+      expect([b.getAttribute('data-ey'), b.getAttribute('aria-expanded')]).toEqual(['degisiklik', 'false']);
+      expect(ikinci.querySelector('button')).toBeNull();
+      const ay = ilk.querySelector('.ve-bas-degisiklik-ayrinti');
+      expect(ay.hidden).toBe(true);
+      expect(ay.hasAttribute('data-ve-dis-metin')).toBe(true);
+      expect([...ay.querySelectorAll(':scope > ol > li')].map((li) => [li.querySelector('b').textContent,
+        [...li.querySelectorAll('.ve-bas-degisiklik-p')].map((x) => x.textContent)]))
+        .toEqual([['Canlı not 1: cetvel kalktı', ['Vurgu sol başta.', '- ikinci paragraf']], ['Canlı not 2', []]]);
+    } finally { if (eski === undefined) delete global.window.__MFSIM_BUILD; else global.window.__MFSIM_BUILD = eski; }
+  });
+  // Canlı Not 23 (kullanıcı 2026-11-05: "Son değişikliklere tıkladığım zaman detaylarını
+  // okuyabilmem lazım … Tıklamıyor zaten."): tık satırı açar, ikinci tık kapatır;
+  // sayfa yeniden basılmaz, eylem çağrılmaz, öteki satır etkilenmez.
+  test('son değişikliğin satırı tıkla açılır, yeniden tıkla kapanır; sayfa yeniden basılmaz', () => {
+    const K = { moduller: { takoz: [
+      { prNumber: 2, date: '2026-11-05T10:00:00Z', title: 'İki', ayrinti: [{ konu: 'a', govde: ['x'] }] },
+      { prNumber: 1, date: '2026-11-04T10:00:00Z', title: 'Bir', ayrinti: [{ konu: 'b', govde: [] }] }] } };
+    const eski = global.window.__MFSIM_BUILD;
+    global.window.__MFSIM_BUILD = K;
+    try {
+      BS.veMntBaslangicKapsam('mount-analysis');
+      const sayfa = document.getElementById(BS.VE_MNT_BAS_ID);
+      const li = () => [...sayfa.querySelectorAll('.ve-bas-degisiklik-s')];
+      const [l0, l1] = li();
+      casus('veMntOrnekYukle', () => true, (f) => {
+        l0.querySelector('.ve-bas-degisiklik-bas').click();
+        expect(l0.classList.contains('acik')).toBe(true);
+        expect(l0.querySelector('.ve-bas-degisiklik-bas').getAttribute('aria-expanded')).toBe('true');
+        expect(l0.querySelector('.ve-bas-degisiklik-ayrinti').hidden).toBe(false);
+        expect(l1.querySelector('.ve-bas-degisiklik-ayrinti').hidden).toBe(true);
+        expect(li()[0]).toBe(l0);                                   // yeniden basılmadı
+        l1.querySelector('.ve-bas-degisiklik-bas').click();          // ikisi birden açık kalabilir
+        expect(li().filter((x) => x.classList.contains('acik')).length).toBe(2);
+        l0.querySelector('.ve-bas-degisiklik-bas').click();
+        expect(l0.querySelector('.ve-bas-degisiklik-ayrinti').hidden).toBe(true);
+        expect(f).not.toHaveBeenCalled();
+      });
+      expect(global.nodes).toEqual([]);
     } finally { if (eski === undefined) delete global.window.__MFSIM_BUILD; else global.window.__MFSIM_BUILD = eski; }
   });
   test('derlemenin listesi: birleşme Takoz\'un dosyasına dokunuyorsa girer', () => {
@@ -517,6 +560,8 @@ describe('RAY — sayfa açıkken Topoloji · Sonuçlar rayı gizli', () => {
   // Dönüş panelin altında (Canlı Not 19): başlık sütunun tepesinde, girintisiz.
   test('CSS: paletin açma sekmesi sayfa açıkken gizli; başlık sütunun tepesinde, girintisiz', () => {
     expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-sidebar-reveal\{ display:none !important; \}/);
+    // Paletin kendisi de (Canlı Not 22: "Seçeneklerden kararımızı verdikten sonra ilerlememiz gerekiyor")
+    expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-sidebar,\n/);
     expect(CSS).toMatch(/\.ve-bas-panel\{[^}]*padding:18px 20px 16px;/);
     expect(CSS).not.toMatch(/\.ve-bas-kimlik h1\{ padding-left/);
     expect(CSS).not.toMatch(/\.ve-bas-panel\{[^}]*padding:48px/);

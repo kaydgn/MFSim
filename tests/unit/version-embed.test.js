@@ -120,11 +120,49 @@ describe('tools/version-info.js — gerçek depo üzerinde', () => {
       expect(info.moduller.takoz.map((c) => [c.prNumber, c.title]))
         .toEqual([[205, 'Başlangıç sayfası (Takoz + FEAD)'], [203, 'STEP okuyucu'], [201, 'Takoz: 3B']]);
       expect(Object.keys(info.moduller)).toEqual(['takoz']);
-      expect(Object.keys(info.moduller.takoz[0]).sort()).toEqual(['date', 'prNumber', 'sha', 'title']);
+      expect(Object.keys(info.moduller.takoz[0]).sort()).toEqual(['ayrinti', 'date', 'prNumber', 'sha', 'title']);
       expect(versionInfo.collect({ cwd: d.dir, env: {}, maxModul: 1 }).moduller.takoz).toHaveLength(1);
     } finally {
       fs.rmSync(d.dir, { recursive: true, force: true });
     }
+  });
+
+  // Canlı Not 23 (kullanıcı 2026-11-05: "Son değişikliklere tıkladığım zaman detaylarını
+  // okuyabilmem lazım"): kaydın ayrıntısı birleşen dalın commit'leri, eskiden yeniye;
+  // imza satırları atılır, sert kırılım paragrafa birleşir, madde kendi paragrafında.
+  test('modülün kaydının ayrıntısı: birleşen dalın commit\'leri — konu ve paragraflar', () => {
+    const d = depoKur();
+    try {
+      const yaz = (dosya, mesaj) => {
+        fs.mkdirSync(path.join(d.dir, path.dirname(dosya)), { recursive: true });
+        fs.writeFileSync(path.join(d.dir, dosya), String(Math.random()));
+        d.g('git add -A');
+        execSync('git commit -q -F -', { cwd: d.dir, input: mesaj, stdio: ['pipe', 'pipe', 'ignore'] });
+      };
+      yaz('f.txt', 'ilk');
+      const ana = String(execSync('git rev-parse --abbrev-ref HEAD', { cwd: d.dir })).trim();
+      d.g('git checkout -q -b dal');
+      yaz('js/cp-mount-3b.js', 'Canlı not 13: komut çubuğu inceldi\n\nDenetimler 30 → 26 px,\ndolgu 6 → 3 px.\n\n- tuval büyüdü\n  ve kaydı\n\nCo-Authored-By: Biri <x@y>\nClaude-Session: https://ornek');
+      yaz('js/cp-mount-3b-agac.js', 'Canlı not 7: ağaç kapalı');
+      d.g('git checkout -q ' + ana);
+      d.g('git merge -q --no-ff dal -m "Merge pull request #301 from kaydgn/dal" -m "Canlı notlar 7 · 13"');
+      const info = versionInfo.collect({ cwd: d.dir, env: {} });
+      expect(info.moduller.takoz.map((c) => c.prNumber)).toEqual([301]);
+      expect(info.moduller.takoz[0].ayrinti).toEqual([
+        { konu: 'Canlı not 13: komut çubuğu inceldi', govde: ['Denetimler 30 → 26 px, dolgu 6 → 3 px.', '- tuval büyüdü ve kaydı'] },
+        { konu: 'Canlı not 7: ağaç kapalı', govde: [] }]);
+      // ikinci ebeveyni olmayan birleşme kaydı: ayrıntı uydurulmaz
+      yaz('js/mount-step.js', 'Merge pull request #302 from kaydgn/b\n\nSTEP');
+      expect(versionInfo.collect({ cwd: d.dir, env: {} }).moduller.takoz[0]).toMatchObject({ prNumber: 302, ayrinti: [] });
+    } finally {
+      fs.rmSync(d.dir, { recursive: true, force: true });
+    }
+  });
+  test('paragraf: uzun gövde sınırda sözcükten kesilir', () => {
+    const p = versionInfo.paragraflar(('kelime ').repeat(400));
+    expect(p.length).toBe(1);
+    expect(p[0].length).toBeLessThanOrEqual(1602);
+    expect(p[0].endsWith(' …')).toBe(true);
   });
 
   test('git OLMAYAN dizinde patlamaz — alanlar boş döner', () => {

@@ -176,12 +176,13 @@ describe('ŞERİT BANDI İNCE — 32 px, gövde aynı boyda', () => {
     const serit = jeton('ribbon-strip-h');
     expect(serit).toBeLessThanOrEqual(32);
     expect(serit).toBeGreaterThanOrEqual(30);
-    // ▼ düğmesi arama kutusundan uzun olamaz: tek başına bandın kalınlığını
-    // belirleyen öğe oydu.
+    // ▼ düğmesi avatardan uzun olamaz: tek başına bandın kalınlığını belirleyen
+    // öğe oydu. (Komut ara bantta yok — Canlı Not 24; ölçü bandın kalan denetimi.)
     const boy = (s) => Number((kural(s).match(/(?:^|;)\s*height:\s*(\d+)px/) || [])[1]);
-    expect(boy('.ve-rb-expand')).toBeLessThanOrEqual(boy('.ve-bant-ara'));
+    expect(boy('.ve-bant-avatar')).toBeGreaterThan(0);
+    expect(boy('.ve-rb-expand')).toBeLessThanOrEqual(boy('.ve-bant-avatar'));
     // Denetimlerin altında ve üstünde en az 3 px: bant ince ama sıkışık değil.
-    expect(serit - boy('.ve-bant-ara')).toBeGreaterThanOrEqual(6);
+    expect(serit - boy('.ve-bant-avatar')).toBeGreaterThanOrEqual(6);
   });
 
   test('şerit AÇIKKEN gövde aynı boyda — bant kısalınca açık hâl de kısalır', () => {

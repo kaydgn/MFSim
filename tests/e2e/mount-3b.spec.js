@@ -38,6 +38,8 @@ async function bootApp(page) {
     typeof window.createNode === 'function' && typeof window.veMntOpenEditor === 'function' &&
     typeof window.veMntWiz3bAc === 'function' && typeof window.THREE !== 'undefined' && Array.isArray(window.nodes),
     null, { timeout: 90000 });
+  // Özellikler paneli KAPALI başlar (Canlı Not 26); içeriğini okuyan testler tercihi açık yazar
+  await page.evaluate(() => { try { localStorage.setItem(VE_MW_3B_YAN_ANAHTAR, 'acik'); } catch (e) {} });
   await page.evaluate(() => {
     if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans');
   });
@@ -60,6 +62,23 @@ const hazir = (page) => page.waitForFunction(() => {
   const k = document.getElementById('ve-mw-3b-tuval');
   return k && k.getAttribute('data-durum') === 'hazir';
 }, null, { timeout: 120000 });
+// BOŞLUĞA SAĞ TIK (Canlı Not 25: Bakış · Görünüş · Seçim · Ölçü · Kesit komut
+// çubuğunda değil): tuvalin boş bir noktası → menü → (alt menü) → satır.
+async function bosMenu(page, k, alt) {
+  const bos = await page.evaluate(() => {
+    const V = window._mw3b, cv = V.renderer.domElement, r = cv.getBoundingClientRect();
+    for (let y = r.top + 40; y < r.bottom - 40; y += 23)
+      for (let x = r.left + 40; x < r.right - 40; x += 29)
+        if (document.elementFromPoint(x, y) === cv && _mw3bIsabet(x, y) < 0) return { x, y };
+    return null;
+  });
+  if (!bos) throw new Error('tuvalde boş nokta yok');
+  await page.mouse.click(bos.x, bos.y, { button: 'right' });
+  await expect(page.locator('#ve-mw-3b-menu')).toBeVisible();
+  if (alt) await page.hover('#ve-mw-3b-menu [data-k="' + k + '"]');
+  await page.click('#ve-mw-3b-menu [data-k="' + (alt || k) + '"]');
+  await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
+}
 
 test('PARÇA PARÇA: kurulurken montaj görünür, çizim kümelerde, ortak işin dilimi kısa', async ({ page }) => {
   const hatalar = [];
@@ -322,15 +341,15 @@ test('BAKIŞ · KESİT: hazır bakışlar kamerayı çevirir; kesit dört malzem
   await dosyaSec(page, GUC);
   await hazir(page);
   const yon = () => page.evaluate(() => { const d = new THREE.Vector3(); window._mw3b.camera.getWorldDirection(d); return [d.x, d.y, d.z]; });
-  await page.selectOption('#ve-mw-3b-bakis', 'ust');
+  await bosMenu(page, 'bakis', 'bakis:ust');
   expect((await yon())[2]).toBeLessThan(-0.999);
-  await page.selectOption('#ve-mw-3b-bakis', 'on');
+  await bosMenu(page, 'bakis', 'bakis:on');
   expect((await yon())[0]).toBeGreaterThan(0.999);
-  await page.selectOption('#ve-mw-3b-bakis', 'izo');
+  await bosMenu(page, 'bakis', 'bakis:izo');
   const motor = await page.evaluate(() => veMntWizStp().sonuc.parcalar.filter((p) => p.ad === 'Motor bloğu')[0]);
   const q = await page.evaluate((i) => veMntWiz3bIsabetNoktasi(i), motor.i);
   expect(q).not.toBeNull();
-  await page.click('#ve-mw-3b-kesit');
+  await bosMenu(page, 'kesit');
   const kesik = () => page.evaluate(() => {
     const V = window._mw3b, M = V.malzeme;
     return { lc: V.renderer.localClippingEnabled, n: [M.opak, M.soluk, M.derinlik, M.cizgi].map((x) => (x.clippingPlanes || []).length), gorsel: !!V.kesitG };
@@ -355,8 +374,8 @@ test('BAKIŞ · KESİT: hazır bakışlar kamerayı çevirir; kesit dört malzem
   await page.click('#ve-mw-3b-kesit-ters');
   await page.mouse.click(q.x, q.y);
   await expect.poll(async () => (await durum(page)).secim).toEqual([motor.dugum]);
-  // Kesit kapanınca kırpma ve düzlemin görseli kalkar
-  await page.click('#ve-mw-3b-kesit');
+  // Kesit kapanınca (çubuktaki kapat) kırpma ve düzlemin görseli kalkar
+  await page.click('#ve-mw-3b-kesit-kapat');
   expect(await kesik()).toEqual({ lc: true, n: [0, 0, 0, 0], gorsel: false });
   await expect(page.locator('#ve-mw-3b-kesit-d')).toHaveCount(0);
 });
@@ -376,12 +395,12 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
     const q = new THREE.Vector3(p[0], p[1], p[2]).project(V.camera);
     return { x: r.left + (q.x + 1) / 2 * r.width, y: r.top + (1 - q.y) / 2 * r.height };
   }, p);
-  await page.selectOption('#ve-mw-3b-bakis', 'ust');
+  await page.evaluate(() => veMntWiz3bBakis('ust'));
   const motor = await page.evaluate(() => veMntWizStp().sonuc.parcalar.filter((p) => p.ad === 'Motor bloğu')[0]);
 
-  // — YÜZEY: fare altı önden seçilir, tık yüzü seçer —
-  await page.click('#ve-mw-3b-arac [data-ve-3b-suzgec="yuz"]');
-  await expect(page.locator('#ve-mw-3b-arac [data-ve-3b-suzgec="yuz"]')).toHaveAttribute('aria-pressed', 'true');
+  // — YÜZEY: fare altı önden seçilir, tık yüzü seçer (süzgeç boşluğun menüsünden) —
+  await bosMenu(page, 'suzgec', 'suzgec:yuz');
+  await expect.poll(async () => (await durum(page)).suzgec).toBe('yuz');
   await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-yuz]')).toContainText('Modelde bir yüz seçin.');
   const m = await ekran([-300, 5, 1250]);                        // motorun üst yüzünün ortası
   // Boş nokta tuvalin kendisine sorulur: ışın hiçbir parçaya çarpmıyor, üstünde kart, ağaç, alt dizi yok
@@ -424,9 +443,9 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
   // Vurgu sahnede ve kesitle kırpılır
   const vurgu = () => page.evaluate(() => { const V = window._mw3b; return V.yuzG ? (V.yuzG.material.clippingPlanes || []).length : -1; });
   expect(await vurgu()).toBe(0);
-  await page.click('#ve-mw-3b-kesit');
+  await page.evaluate(() => veMntWiz3bKesit());
   expect(await vurgu()).toBe(1);
-  await page.click('#ve-mw-3b-kesit');
+  await page.click('#ve-mw-3b-kesit-kapat');
   // Boşluğa tık yüzü bırakır
   await page.mouse.click(bos.x, bos.y);
   await expect.poll(async () => (await durum(page)).yuz).toBe(null);
@@ -442,9 +461,9 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
 
   // — ÖLÇÜ (alttan: takozların alt kapağı ve motorun alt yüzü en yakında) —
   // dairesel kenar → merkez; iki takozun alt merkezi 760 mm
-  await page.selectOption('#ve-mw-3b-bakis', 'alt');
-  await page.click('#ve-mw-3b-olcu');
-  await expect(page.locator('#ve-mw-3b-olcu')).toHaveAttribute('aria-pressed', 'true');
+  await page.evaluate(() => veMntWiz3bBakis('alt'));
+  await bosMenu(page, 'olcu');
+  await expect.poll(() => page.evaluate(() => !!window._mw3b.olcu)).toBe(true);
   await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-olcu]')).toContainText('Modelde iki nokta seçin.');
   const a = await ekran([-650, 425, 390]);                        // sağ ön takozun alt çemberi
   await page.mouse.move(a.x, a.y);
@@ -476,11 +495,11 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
   await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-olcu]')).toContainText('Δy700,000 mm');
   // Kamera dönünce çizim izdüşümden yeniden kurulur
   const x1 = await page.locator('#ve-mw-3b-etiket-cizgi line.ve-mw-3b-olcu-c').getAttribute('x1');
-  await page.selectOption('#ve-mw-3b-bakis', 'izo');
+  await page.evaluate(() => veMntWiz3bBakis('izo'));
   await expect.poll(() => page.locator('#ve-mw-3b-etiket-cizgi line.ve-mw-3b-olcu-c').getAttribute('x1')).not.toBe(x1);
   // Esc ölçüyü kapatır, görüntüleyici açık kalır
   await page.keyboard.press('Escape');
-  await expect(page.locator('#ve-mw-3b-olcu')).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => page.evaluate(() => !!window._mw3b.olcu)).toBe(false);
   await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-olcu]')).toHaveCount(0);
   await expect(page.locator('#ve-mw-3b-etiket-cizgi [data-ve-3b-olcu-n]')).toHaveCount(0);
   expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
@@ -514,18 +533,19 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp yok, bakış listeden; g
   expect(Math.abs(yer.durumH - yer.bant)).toBeLessThan(1);
   // Görünüm küpü ve yakınlık düğmeleri YOK (Canlı Not 15)
   expect(await page.locator('#ve-mw-3b-kup, .ve-mw-3b-yakin, .ve-mw-3b-gez').count()).toBe(0);
-  // Bakış listesi: seçilen bakış uygulanır, liste adına döner (Üst → tam tepeden)
-  await page.selectOption('#ve-mw-3b-bakis', 'ust');
+  // Araçlar komut çubuğunda YOK (Canlı Not 25): Bakış · Görünüş · Seçim · Ölçü · Kesit boşluğun menüsünde
+  expect(await page.locator('#ve-mw-3b-bakis, #ve-mw-3b-gorunus, [data-ve-3b-suzgec], #ve-mw-3b-olcu, #ve-mw-3b-kesit').count()).toBe(0);
+  // Bakış: seçilen bakış uygulanır (Üst → tam tepeden)
+  await bosMenu(page, 'bakis', 'bakis:ust');
   await expect.poll(async () => (await durum(page)).phi).toBeGreaterThan(1.5);
-  expect(await page.locator('#ve-mw-3b-bakis').evaluate((s) => s.selectedIndex)).toBe(0);
-  await page.selectOption('#ve-mw-3b-bakis', 'izo');
+  await bosMenu(page, 'bakis', 'bakis:izo');
   await expect.poll(async () => (await durum(page)).phi).toBeLessThan(1.5);
   // Görünüş: x-ışınında tül çok katlı (ön geçiş kapalı), gölgelide kenar yok
-  await page.selectOption('#ve-mw-3b-gorunus', 'xray');
+  await bosMenu(page, 'gorunus', 'gorunus:xray');
   expect(await page.evaluate(() => _mw3b.kume.every((K) => K.soluk.visible && !K.derin.visible))).toBe(true);
-  await page.selectOption('#ve-mw-3b-gorunus', 'golge');
+  await bosMenu(page, 'gorunus', 'gorunus:golge');
   expect(await page.evaluate(() => _mw3b.ckume.every((C) => !C.cizgi.visible) && _mw3b.kume.every((K) => !K.soluk.visible))).toBe(true);
-  await page.selectOption('#ve-mw-3b-gorunus', 'kenar');
+  await bosMenu(page, 'gorunus', 'gorunus:kenar');
   expect(await page.evaluate(() => _mw3b.ckume.every((C) => C.cizgi.visible))).toBe(true);
   // Arama: bütün ağaçta, büyük-küçük harf ayırmadan; satırın tıkı seçer; Esc aramayı temizler, 3B açık kalır
   await page.fill('#ve-mw-3b-ara', 'KASNAK');
@@ -556,6 +576,78 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp yok, bakış listeden; g
   await page.setViewportSize({ width: 1024, height: 700 });
   await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('ve-mw-3b-agac').getBoundingClientRect().width))).toBe(232);
   expect(await page.evaluate(() => { const y = document.getElementById('ve-mw-3b-yan'); return y.scrollWidth <= y.clientWidth + 1; })).toBe(true);
+  expect(hatalar).toEqual([]);
+});
+
+// ÖZELLİKLER AÇILIR KAPANIR (Canlı Not 26, 2026-11-05 — kullanıcı: "Şu kısımı açılır
+// kapanır şeklinde yapalım. Kullanıcı istemediği zaman kapalı kalsın."). Önce: panel
+// hep açıktı (352 px) ve kapatılamıyordu. Node'da koşmayan halkalar: ızgaranın şeride
+// inmesi, tuvalin ve çizicinin genişlemesi, seçimin paneli açmaması, klavye odağı,
+// tercihin yeniden açılan 3B'de korunması.
+test('ÖZELLİKLER AÇILIR KAPANIR: kapalı başlar, seçim açmaz; şerit açar, düğme daraltır; tercih kalır', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await page.evaluate(() => { try { localStorage.removeItem(VE_MW_3B_YAN_ANAHTAR); } catch (e) {} });
+  await dosyaSec(page, DENEME);
+  await hazir(page);
+  const olc = () => page.evaluate(() => {
+    const yan = document.getElementById('ve-mw-3b-yan'), d = document.getElementById('ve-mw-3b-yan-dugme');
+    const v = new THREE.Vector2();
+    _mw3b.renderer.getSize(v);
+    return { yan: Math.round(yan.getBoundingClientRect().width), tuval: document.getElementById('ve-mw-3b-tuval').clientWidth,
+      cizici: v.x, ac: d.getAttribute('aria-expanded'), masa: document.querySelector('.ve-mw-3b-masa').getAttribute('data-yan'),
+      gorunen: [...yan.children].filter((c) => c.offsetWidth > 0).map((c) => c.className),
+      tercih: localStorage.getItem(VE_MW_3B_YAN_ANAHTAR), odak: document.activeElement && document.activeElement.id,
+      r: veMntWiz3bDurum().r };
+  });
+  // Kapalı başlar: şerit, içinde yalnız düğme; adı dikey ve şeridin içinde
+  const k0 = await olc();
+  expect(k0).toMatchObject({ yan: 30, ac: 'false', masa: 'kapali', gorunen: ['ve-mw-3b-yan-serit'], tercih: null });
+  await expect(page.locator('#ve-mw-3b-yan-dugme')).toHaveText('Özellikler');
+  const ad = await page.evaluate(() => {
+    const s = document.querySelector('.ve-mw-3b-yan-dikey').getBoundingClientRect(), y = document.getElementById('ve-mw-3b-yan').getBoundingClientRect();
+    return { dikey: s.height > 2 * s.width, icinde: s.left >= y.left && s.right <= y.right && s.bottom <= y.bottom };
+  });
+  expect(ad).toEqual({ dikey: true, icinde: true });
+  // Seçim paneli açmaz: içerik kurulur, gösterilmez
+  await page.evaluate(() => veMntWiz3bSec(veMntWizStp().sonuc.agac.findIndex((d) => d.ebeveyn >= 0)));
+  await expect.poll(async () => (await durum(page)).secim.length).toBe(1);
+  expect((await olc()).masa).toBe('kapali');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-secili]')).toHaveCount(1);
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-secili]')).toBeHidden();
+  // Şeridin tıkı açar: panel 352 px, tuval o kadar daralır, çizici izler; odak daraltma düğmesinde;
+  // kamerasına dokunulmamış görünüm dar tuvale yeniden sığar (uzaklık artar)
+  await page.click('#ve-mw-3b-yan-dugme');
+  const a = await olc();
+  expect(a).toMatchObject({ yan: 352, ac: 'true', masa: 'acik', tercih: 'acik', odak: 've-mw-3b-yan-dugme' });
+  expect(k0.tuval - a.tuval).toBe(322);
+  expect(a.r).toBeGreaterThan(k0.r * 1.05);
+  await expect.poll(async () => (await olc()).cizici).toBe(a.tuval);
+  await expect(page.locator('#ve-mw-3b-yan-dugme')).toHaveAttribute('aria-label', 'Özellikler panelini daralt');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-secili]')).toBeVisible();
+  // Tercih kalır: 3B kapanıp yeniden açılınca panel açık
+  await page.click('#ve-mw-3b-kapat');
+  expect(await page.evaluate(() => veMntWiz3bAc('pencere'))).toBe(true);
+  await hazir(page);
+  expect(await olc()).toMatchObject({ yan: 352, ac: 'true', masa: 'acik' });
+  // Klavyeyle daraltılır: tuval geri genişler, tercih kapalı
+  await page.focus('#ve-mw-3b-yan-dugme');
+  await page.keyboard.press('Enter');
+  const k1 = await olc();
+  expect(k1).toMatchObject({ yan: 30, ac: 'false', masa: 'kapali', tercih: 'kapali', odak: 've-mw-3b-yan-dugme' });
+  expect(k1.tuval).toBe(k0.tuval);
+  expect(Math.abs(k1.r - k0.r) / k0.r).toBeLessThan(1e-6);          // açılıştaki sığdırmanın aynısı
+  await expect.poll(async () => (await olc()).cizici).toBe(k0.tuval);
+  // Kameraya dokunulmuşsa (tekerlek) bakış yerinde kalır
+  const t = await page.locator('#ve-mw-3b-tuval').boundingBox();
+  await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
+  await page.mouse.wheel(0, -120);
+  await expect.poll(async () => (await olc()).r).toBeLessThan(k1.r);
+  const r0 = (await olc()).r;
+  await page.click('#ve-mw-3b-yan-dugme');
+  expect(await olc()).toMatchObject({ yan: 352, masa: 'acik', r: r0 });
   expect(hatalar).toEqual([]);
 });
 
@@ -623,7 +715,7 @@ test('SAĞ TIK: menü imleçte; Gizle parçayı çizmez ve seçtirmez; Ağaçta 
   await page.mouse.click(bos.x, bos.y, { button: 'right' });
   await expect(page.locator('#ve-mw-3b-menu [data-k="gizle"]')).toHaveCount(0);
   expect(await page.locator('#ve-mw-3b-menu > [data-k], #ve-mw-3b-menu > .ve-mw-3b-menu-kap > [data-k]').evaluateAll((b) => b.map((x) => x.getAttribute('data-k'))))
-    .toEqual(['tumu', 'sigdir', 'bakis', 'gorunus', 'zemin', 'temizle']);
+    .toEqual(['tumu', 'sigdir', 'bakis', 'gorunus', 'zemin', 'suzgec', 'olcu', 'kesit', 'temizle']);
   await page.hover('#ve-mw-3b-menu [data-k="zemin"]');
   await page.click('#ve-mw-3b-menu [data-k="zemin:beyaz"]');
   expect(await page.evaluate(() => [veMntWiz3bDurum().zeminK, _mw3b.scene.background.isColor && _mw3b.scene.background.getHexString(),

@@ -194,7 +194,7 @@ function _gmSec3(){
     + 'satırın adına tıklamak kaynağı, gövdeleri (kütleleriyle) ve takozları açar. Satırın '
     + '<strong>Yükle</strong> düğmesi modeli kurar ve sayfa kapanır; kurulum Ctrl+Z ile geri alınınca '
     + 'sayfa yeniden açılır. <strong>Ana topoloji</strong> modülden çıkar. Sayfa açıkken soldaki '
-    + '<em>Topoloji · Sonuçlar</em> rayı ve Bileşenler panelini açan düğme görünmez. '
+    + '<em>Topoloji · Sonuçlar</em> rayı ve Bileşenler paneli görünmez; bir seçenek modeli kurunca gelir. '
     + '<em>STEP’ten başla</em> dosyayı doğrudan 3B’de açar (bkz. 16.1).</p>';
   h += '<h3>3.2 Yol A — hazır bir örnekten başlamak</h3>';
   h += _gmAdimlar([
@@ -1049,13 +1049,13 @@ function _gmSec16(){
       + '<strong>Modele uygula</strong> · <strong>Dosyanın sistemine taşı</strong>', 'Hesaptan sonra']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAlanTablo('3B görüntüleyici — düzen', [
-    ['Komut çubuğu', 'Solda dosyanın adı; <strong>Bakış</strong> · <strong>Görünüş</strong> listeleri, '
-      + '<strong>Parça</strong> · <strong>Yüzey</strong> süzgeci, <strong>Ölçü</strong>, <strong>Kesit</strong>; sağ uçta '
-      + '<strong>Kapat</strong>', '3B tam ekran, ayrı başlık bandı yok'],
+    ['Komut çubuğu', 'Solda dosyanın adı; kesit açıkken kesitin ayarı; sağ uçta <strong>Kapat</strong>',
+      '3B tam ekran, ayrı başlık bandı yok; araçlar boşluğa sağ tıkta'],
     ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
     ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, özellik satırları (<strong>Rol</strong>, atanmışsa '
       + '<strong>Malzeme</strong>, takozun noktası, veri sayfası ve referansı, katalog), birimin kütlesi ve CG’si, '
-      + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Satırlar seçime göre'],
+      + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Kapalı başlar: şerit açar, başlığındaki düğme '
+      + 'daraltır; açıklık tarayıcıda saklanır. Satırlar seçime göre'],
     ['Eylem kartı', 'Tuvalin sağ altında, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
       + 'üstünde hesabın engeli ve rolün eksiği', 'Sıradaki adımın düğmesi dolu renkte'],
     ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '
@@ -1069,12 +1069,13 @@ function _gmSec16(){
     ['Referans noktası', 'Eşkenar dörtgen', 'Veri sayfasının referansı (16.5)'],
     ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner; yazılar fare üstündeyken']
   ], ['İşaret', 'Görünüş', 'Ne']);
-  h += '<p><strong>Bakış</strong> listesinde hazır bakışlar: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
+  h += '<p>Boşluğa sağ tıkla açılan menüde <strong>Bakış</strong>: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
     + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '
     + 'sığar; yakınlık tekerlekle. <strong>Görünüş</strong>: <em>Gölgeli ve kenar</em>, '
     + '<em>Gölgeli</em> (kenar çizgisi yok), <em>X-ışını</em> (seçimin dışındaki parçalar saydam; içteki parçalar '
-    + 'dıştakilerin arkasından görünür). <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: kaydırıcı düzlemi '
-    + 'taşır, <strong>Ters</strong> öteki yanı bırakır; kesilen yan çizilmez ve seçilmez.</p>';
+    + 'dıştakilerin arkasından görünür). <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: ayarı komut '
+    + 'çubuğunda — kaydırıcı düzlemi taşır, <strong>Ters</strong> öteki yanı bırakır, çarpı kesiti kapatır; kesilen yan '
+    + 'çizilmez ve seçilmez.</p>';
   h += _gmAlanTablo('3B görüntüleyici — seçim ve ölçü', [
     ['<strong>Parça</strong>', 'Tık parçayı seçer; rol ve ağaç bu seçimle', 'Olağan süzgeç'],
     ['<strong>Yüzey</strong>', 'Fare altındaki yüz açık vurgulanır, tık yüzü seçer; yüz önündeki parçaların '
@@ -1089,7 +1090,8 @@ function _gmSec16(){
       'Komut seçimin hepsine; gizli parça çizilmez, seçilmez, ağaçta soluk; sağ tuşla sürüklemek kaydırır'],
     ['Boşluğa sağ tık', '<strong>Tümünü göster</strong>, <strong>Tümünü sığdır</strong>, <strong>Bakış</strong>, '
       + '<strong>Görünüş</strong>, <strong>Arka plan</strong> (Stüdyo · Düz beyaz · Beyaz–mavi · Beyaz–sıcak · Açık gri '
-      + 'geçiş)', 'Arka plan tercihi bu tarayıcıda kalır']
+      + 'geçiş), <strong>Seçim</strong> (Parça · Yüzey), <strong>Ölçü</strong>, <strong>Kesit</strong>',
+      'Açık kip işaretli; arka plan tercihi bu tarayıcıda kalır']
   ], ['Araç', 'Ne', 'Not']);
   h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini, sonra ağaçtaki aramayı kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
     + '<strong>Ürün ağacı</strong>ndan seçilir.</p>';

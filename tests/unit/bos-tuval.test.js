@@ -70,7 +70,7 @@ describe('metin: durum + tek yönlendirme', () => {
     expect(m.map((x) => x.metin).sort()).toEqual(Object.values(B.VE_BOS_TUVAL).map((k) => k.yon).sort());
     m.forEach((x) => expect(x.isaret).toEqual([]));
   });
-  test('kısayol satırı kısayol penceresinin listesinden; komut paleti YOK (üst bant gösteriyor)', () => {
+  test('kısayol satırı kısayol penceresinin listesinden; komut paleti YOK (kullanılmıyor — Canlı Not 24)', () => {
     const html = B.veBosTuvalHTML('top');
     const kayit = _veHelpGroups().flatMap((g) => g.items).find((it) => it.label === 'Klavye kısayolları');
     expect(html).toContain('<kbd>' + kayit.keys[0] + '</kbd> Klavye kısayolları');

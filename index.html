@@ -230,23 +230,9 @@
            ortası: katlıyken yok, açıkken markanın yanında. -->
       <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
       <span class="ve-rb-strip-fill"></span>
-      <!-- KOMUT ARAMA — şerit gövdesi varsayılan KATLI açıldığı için
-           komutların GÖRÜNÜR girişi bu. Paletin şeridi kapsadığı
-           `tests/unit/komut-kapsami.test.js` ile kapılı: kapsamıyorsa bu
-           düğme bir yalan olurdu. Alan gibi görünür ama DÜĞMEDİR —
-           yazmak paleti açar, kutu bir metin alanı değil. -->
-      <button type="button" class="ve-bant-ara" data-qat="veCmdkOpen"
-              aria-label="Komut ara">
-        <span class="mf-ico mf-ico-search" aria-hidden="true"></span>
-        <span class="ve-bant-ara-t">Komut ara</span>
-        <kbd class="ve-bant-kbd">Ctrl K</kbd>
-      </button>
-      <!-- BİRİNCİL EYLEM — bandın tek dolu düğmesi. Şeritte "Çözücü" adıyla
-           ve `accent:true` ile zaten vardı; bant onu gövdeden ÖNE aldı. Ad
-           şeritteki ile aynı: düğme hesabı başlatmıyor, Çözücü'yü açıyor. -->
-      <button type="button" class="ve-bant-ana" data-qat="veSolverRun">
-        <span class="mf-ico mf-ico-play" aria-hidden="true"></span>Çözücü
-      </button>
+      <!-- Komut ara ve Çözücü bantta YOK (kullanıcı 2026-11-05, Canlı Not 24:
+           "komut ara ve çözücü kısmına gerek yok. Kullanılmıyor zaten"). Komut
+           paleti Ctrl+K'de, Çözücü şeridin Giriş sekmesinde. -->
       <!-- AVATAR — arkasındaki ad UYDURULMUYOR, AÇILIYOR: kullanıcı bir kez
            yazar (Ayarlar → Görünüm → Kimlik ya da bu menü), tarayıcıda
            saklanır, projeye YAZILMAZ. Ad yokken sahte baş harf basılmaz. -->

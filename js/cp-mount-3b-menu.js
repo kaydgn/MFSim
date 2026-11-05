@@ -45,6 +45,15 @@ function _mw3bBosMenu(sec, gizliVar, opt){
   if(typeof VE_MW_3B_ZEMIN !== 'undefined')
     L.push({ k: 'zemin', ad: 'Arka plan', ikon: 'image', alt: VE_MW_3B_ZEMIN.map(function(z){
       return { k: 'zemin:' + z.k, ad: z.ad, secili: (opt.zemin || 'studyo') === z.k }; }) });
+  // ARAÇLAR (kullanıcı 2026-11-05, Canlı Not 25: *"Şu kısımları boşa sağ klik
+  // yaptığımızda ortaya çıkacak şekilde ayarlayalım. Burada kalmalarına gerek yok"*):
+  // seçim süzgeci, Ölçü ve Kesit komut çubuğundan buraya; açık kip işaretli.
+  L.push('-');
+  L.push({ k: 'suzgec', ad: 'Seçim', ikon: 'mouse-pointer', alt: [
+    { k: 'suzgec:parca', ad: 'Parça', secili: opt.suzgec !== 'yuz' },
+    { k: 'suzgec:yuz', ad: 'Yüzey', secili: opt.suzgec === 'yuz' }] });
+  L.push({ k: 'olcu', ad: 'Ölçü', ikon: 'ruler', isaretli: !!opt.olcu });
+  L.push({ k: 'kesit', ad: 'Kesit', ikon: 'scissors', isaretli: !!opt.kesit });
   if(sec.length){ L.push('-'); L.push({ k: 'temizle', ad: 'Seçimi temizle', ikon: 'x' }); }
   return L;
 }
@@ -97,11 +106,13 @@ function _mw3bMenuSatirHTML(o){
   if(o === '-') return '<div class="ve-mw-3b-menu-ayrac" role="separator"></div>';
   var nokta = o.rol ? '<span class="ve-mw-3b-menu-renk" style="--renk:var(' + veMntWiz3bRolJeton(o.rol) + ')" aria-hidden="true"></span>'
     : (o.ikon ? _mwIkon(o.ikon) : '<span class="ve-mw-3b-menu-bos" aria-hidden="true"></span>');
-  var b = '<button type="button" class="ve-mw-3b-menu-o" role="menuitem' + (o.secili !== undefined ? 'radio' : '') + '" data-k="' + _mwEsc(o.k) + '"'
-    + (o.secili !== undefined ? ' aria-checked="' + (o.secili ? 'true' : 'false') + '"' : '')
+  // `secili`: seçeneklerden biri (radio) · `isaretli`: açılıp kapanan kip (checkbox)
+  var tur = o.secili !== undefined ? 'radio' : (o.isaretli !== undefined ? 'checkbox' : ''), isaret = o.secili || o.isaretli;
+  var b = '<button type="button" class="ve-mw-3b-menu-o" role="menuitem' + tur + '" data-k="' + _mwEsc(o.k) + '"'
+    + (tur ? ' aria-checked="' + (isaret ? 'true' : 'false') + '"' : '')
     + (o.kapali ? ' disabled' : '') + (o.alt ? ' aria-haspopup="menu" aria-expanded="false"' : '') + ' tabindex="-1">'
     + nokta + '<span class="ve-mw-3b-menu-ad">' + _mwEsc(o.ad) + '</span>'
-    + (o.alt ? _mwIkon('chevron-right') : (o.secili ? _mwIkon('check') : '')) + '</button>';
+    + (o.alt ? _mwIkon('chevron-right') : (isaret ? _mwIkon('check') : '')) + '</button>';
   if(!o.alt) return b;
   return '<div class="ve-mw-3b-menu-kap">' + b + '<div class="ve-mw-3b-menu ve-mw-3b-menu-alt" role="menu" aria-label="' + _mwEsc(o.ad) + '">'
     + o.alt.map(_mw3bMenuSatirHTML).join('') + '</div></div>';
@@ -120,7 +131,8 @@ function veMntWiz3bMenuAc(x, y, dugum, kaynak){
   var el = document.createElement('div');
   el.className = 've-mw-3b-menu-katman';
   var bos = dugum < 0 && kaynak !== 'agac';
-  el.innerHTML = veMntWiz3bMenuHTML(veMntWiz3bMenuOgeleri(V.s, V.secim, V.gizli, { bos: bos, gorunus: V.gorunus, zemin: V.zemin }));
+  el.innerHTML = veMntWiz3bMenuHTML(veMntWiz3bMenuOgeleri(V.s, V.secim, V.gizli,
+    { bos: bos, gorunus: V.gorunus, zemin: V.zemin, suzgec: V.suzgec, olcu: !!V.olcu, kesit: !!V.kesit }));
   // Katman görüntüleyicinin içinde (kapanınca onunla gider); konum kabın köşesine
   // göre — kap kapsayıcı sorgusunun kabı, sabit konum onun içinde göreli olurdu
   var kap = V.ov || document.body, r = kap.getBoundingClientRect ? kap.getBoundingClientRect() : { left: 0, top: 0, width: 1280, height: 800 };
@@ -213,6 +225,9 @@ function veMntWiz3bMenuUygula(k){
     return g;
   }
   if(k.indexOf('zemin:') === 0) return veMntWiz3bZeminSec(k.slice(6));
+  if(k.indexOf('suzgec:') === 0) return typeof veMntWiz3bSuzgec === 'function' ? veMntWiz3bSuzgec(k.slice(7)) : false;
+  if(k === 'olcu') return typeof veMntWiz3bOlcu === 'function' ? veMntWiz3bOlcu() : false;
+  if(k === 'kesit') return typeof veMntWiz3bKesit === 'function' ? veMntWiz3bKesit() : false;
   if(k.indexOf('malzeme:') === 0) return veMntWiz3bMalzeme(k.slice(8));
   if(k === 'gizle' || k === 'goster' || k === 'yalniz' || k === 'tumu') return veMntWiz3bGizle(k);
   if(k === 'agac') return veMntWiz3bAgactaGoster(V.secili);
