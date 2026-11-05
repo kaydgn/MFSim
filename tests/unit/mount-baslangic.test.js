@@ -429,6 +429,36 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
       expect(global.nodes).toEqual([]);
     } finally { if (eski === undefined) delete global.window.__MFSIM_BUILD; else global.window.__MFSIM_BUILD = eski; }
   });
+  // Canlı Not 27 (kullanıcı 2026-11-05: "Her son değişikliği görselli olarak görmek
+  // istiyorum" → "Olur uygula. Elinde olan görüntüleri eklersin."): commit'in notunun
+  // sonuç görüntüsü ayrıntıda konunun altında; not birleşmede bir kez (ilk commit'inde),
+  // boyu en çok 360 px; görseli olmayan not görselsiz.
+  test('son değişikliğin görseli: notun sonuç görüntüsü konunun altında, bir kez, boyu sınırlı', () => {
+    const K = { moduller: { takoz: [
+      { prNumber: 3, date: '2026-11-05T10:00:00Z', title: 'Üç', ayrinti: [
+        { konu: 'Canlı not 22: palet', govde: ['p'], notlar: [22] },
+        { konu: 'Canlı not 9 · 19: iki', govde: [], notlar: [9, 19] },
+        { konu: 'Canlı not 22: test', govde: [], notlar: [22] },
+        { konu: 'Ölçüm Görüntüleyici yeniden üretildi', govde: [], notlar: [] }] }] } };
+    const R = { 22: { src: 'data:image/webp;base64,AAAA', g: 560, y: 350 }, 19: { src: 'data:image/webp;base64,BBBB', g: 341, y: 818 } };
+    const a = BS.veMntBaslangicDegisiklik(K, R).kayitlar[0].ayrinti;
+    expect(a.map((x) => x.resimler.map((r) => [r.no, r.g, r.y]))).toEqual([
+      [[22, 560, 350]], [[19, 150, 360]], [], []]);                    // 22 bir kez; 9'un görseli yok; 19 boyu 360'a
+    expect(BS.veMntBaslangicDegisiklik(K, {}).kayitlar[0].ayrinti.every((x) => x.resimler.length === 0)).toBe(true);
+    const d = document.createElement('div');
+    d.innerHTML = require('../../js/baslangic-sayfa.js').veBasDegisiklikHTML(BS.veMntBaslangicDegisiklik(K, R));
+    const li = [...d.querySelectorAll('.ve-bas-degisiklik-ayrinti > ol > li')];
+    const img = li[0].querySelector('img.ve-bas-degisiklik-resim');
+    expect([img.getAttribute('src'), img.getAttribute('width'), img.getAttribute('height'), img.alt, img.getAttribute('loading')])
+      .toEqual(['data:image/webp;base64,AAAA', '560', '350', 'Not 22 sonucu', 'lazy']);
+    expect(img.previousElementSibling.className).toBe('ve-bas-degisiklik-p');      // paragrafların altında
+    expect(li.map((x) => x.querySelectorAll('img').length)).toEqual([1, 1, 0, 0]);
+    // görsel sütundan taşmaz, köşe keskin, gölge yok
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    const k = css.slice(css.indexOf('\n.ve-bas-degisiklik-resim{') + 1).split('}')[0];
+    expect(k).toMatch(/max-width:100%; height:auto/);
+    expect(k).not.toMatch(/border-radius|box-shadow/);
+  });
   test('derlemenin listesi: birleşme Takoz\'un dosyasına dokunuyorsa girer', () => {
     const V = require('../../tools/version-info.js');
     const D = V.MODUL_DESEN.takoz;

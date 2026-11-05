@@ -295,6 +295,9 @@ function veBasDegisiklikHTML(d){
         + '<div class="ve-bas-degisiklik-ayrinti" data-ve-dis-metin hidden><ol>' + ay.map(function(a){
             return '<li><b>' + veBasEsc(a.konu) + '</b>' + (a.govde || []).map(function(p){
               return '<div class="ve-bas-degisiklik-p">' + veBasEsc(p) + '</div>';
+            }).join('') + (a.resimler || []).map(function(r){
+              return '<img class="ve-bas-degisiklik-resim" src="' + veBasEsc(r.src) + '" width="' + (r.g | 0) + '" height="' + (r.y | 0)
+                + '" alt="Not ' + veBasEsc(r.no) + ' sonucu" loading="lazy" decoding="async">';
             }).join('') + '</li>';
           }).join('') + '</ol></div></li>';
     }).join('') + '</ol></section>';

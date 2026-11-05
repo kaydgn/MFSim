@@ -122,6 +122,10 @@ Her not için, **sırayla ve tek tek**:
    `Artifact` publish `url:<adres>` `asset: true` `file_paths: [...]` (en çok 25) → id'ler.
    Görüntü kullanıcının değişikliğe baktığı yerdir (Notlar'da küçük, tıklanınca büyük):
    değişen yüzeyi göster, çizilen yerin aynısını.
+   **Aynı görüntü programa da girer** (kullanıcı 2026-11-05, Canlı Not 27: Takoz başlangıç
+   sayfasının Son değişikliklerinde commit'in altında): BİRLEŞMEDEN ÖNCE dalın programından
+   çek, `node tools/degisiklik-resim.js .canli-not/sonuc/not-N.png …` →
+   `assets/degisiklik/not-N.webp`, aynı PR'a girer (`MFSIM_CHROMIUM=/opt/pw-browsers/chromium`).
 7. `durum: "uygulandi"`, `cevap`, `surum` (commit'in kısa sha'sı), `sonuc: {foto: id,
    g, y}` (görüntünün CSS px ölçüsü). `cevap` en çok üç cümle, programda görünen
    adlarla; ölçüldüyse önce → sonra sayısı. Dosya adı, işlev, test adı YAZILMAZ

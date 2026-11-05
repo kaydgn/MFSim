@@ -11577,6 +11577,10 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-bas-degisiklik-ayrinti li{ display:flex; flex-direction:column; gap:4px; min-width:0; }
 .ve-bas-degisiklik-ayrinti b{ font-weight:600; color:var(--text-heading); }
 .ve-bas-degisiklik-p{ color:var(--text-secondary); line-height:1.5; overflow-wrap:anywhere; }
+/* Notun sonuç görüntüsü (Canlı Not 27): gösterim ölçüsü kurucudan (width · height,
+   boyu en çok 360 px), sütundan geniş olan sütuna iner; köşe keskin, gölge yok */
+.ve-bas-degisiklik-resim{ display:block; max-width:100%; height:auto; margin:8px 0 2px; box-sizing:border-box;
+  border:1px solid var(--border-color); background:var(--bg-primary); }
 .ve-bas-satir{ border-bottom:1px solid var(--bg-tertiary); }
 .ve-bas-satir:hover{ background:color-mix(in srgb, var(--bg-primary) 45%, var(--bg-secondary)); }
 .ve-bas-satir.acik{ background:var(--accent-tint-6); }

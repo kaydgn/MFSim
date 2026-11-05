@@ -231,6 +231,13 @@ console.log('  Sürüm künyesi göm: ' + (VERSION_INFO.shortSha || '(git yok)')
   (VERSION_INFO.prNumber ? ' · PR #' + VERSION_INFO.prNumber : '') +
   ' · ' + VERSION_INFO.changes.length + ' changelog girdisi');
 
+// ── 2c-4) SON DEĞİŞİKLİKLERİN GÖRSELİ (Canlı Not 27) — künyenin modül listesindeki
+// commit'lerin notlarının görseli (assets/degisiklik/not-N.webp); listede olmayan
+// görsel gömülmez, boyut listeyle sınırlı (tools/degisiklik-resim.js).
+var DEGISIKLIK = require('./tools/degisiklik-resim.js').gomulecekler(VERSION_INFO);
+console.log('  Son değişikliklerin görseli göm: ' + Object.keys(DEGISIKLIK).length + ' görsel · ' +
+  (Object.keys(DEGISIKLIK).reduce(function(t, k) { return t + DEGISIKLIK[k].src.length; }, 0) / 1024).toFixed(0) + ' KB base64');
+
 // '<' → <: JSON içindeki olası "</script>" script tag'ini kırmasın.
 // TEK <script> bloğu: aşağıdaki yapısal doğrulama "index.html'in script'leri + 1"
 // sayıyor; ikinci bir blok o aritmetiği kaydırırdı.
@@ -238,6 +245,7 @@ var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
   JSON.stringify(embedded).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_BUILD = ' + JSON.stringify(VERSION_INFO).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_DEGISIKLIK = ' + JSON.stringify(DEGISIKLIK).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_PROGRAMLAR = ' + JSON.stringify(programlarKayit).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
 // içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
