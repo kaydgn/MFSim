@@ -100,8 +100,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   inceliği TEK sabitten (`VE_MNT_STP_UCGEN`, 0,5 mm — bütün güç grubu; FEAD 0,1).
   **Okuma dilimli** (`veMntStpOkuDilimli`, yüz tanımı çıkarmaz): kart okunurken
   çubuk + Vazgeç; Vazgeç, başka dosya ve sihirbazın kapanması okumayı bırakır.
-  **Parça tablosu dal dal** (`VE_MW_STP_SATIR` · `VE_MW_STP_SAYFA`; rollü düğüm dal
-  kapalıyken de görünür): kart her rol değişiminde yeniden kuruluyor ve 11.694
+  **Parça tablosu dal dal** (`VE_MW_STP_SAYFA`; açılışta KAPALI — yalnız kökün
+  çocukları, kullanıcı 2026-11-05; rollü düğüm dal kapalıyken de görünür): kart her rol değişiminde yeniden kuruluyor ve 11.694
   satır onu 6,6 sn donduruyordu. **Ağları TEK İŞ üretir** (`veMntStpAgIs`: 3B
   bütün montajı, hesap rollü birimlerin parçalarını ister; bağlam parça başına
   bırakılır, aynı temsil bir kez üçgenlenir — tek bağlam yığını 3,2 GB'a

@@ -103,10 +103,14 @@ test('OKUMA DONMAZ: 30 MB okunurken 150 ms\'yi aşan görev yok, çubuk yerinde 
   expect(o.kutu.cubukEn).toBeGreaterThan(100);
   expect(o.cubuk.every((v, i) => i === 0 || v >= o.cubuk[i - 1])).toBe(true);
   expect(new Set(o.cubuk).size).toBeGreaterThanOrEqual(5);
-  // ağaç: üst düzeyler; sayfası sığmayan dal kapalı, açılınca ilk sayfa + "daha"
+  // ağaç: açılışta yalnız kökün çocukları, dallar kapalı (Canlı Not 7);
+  // açılan dal ilk sayfa + "daha"
   const satir = () => page.locator('#ve-mw-body table.ve-mw-tbl-stp tbody tr');
   const n0 = await satir().count();
-  expect(n0).toBeLessThanOrEqual(await page.evaluate(() => VE_MW_STP_SATIR));
+  expect(n0).toBe(await page.evaluate(() => {
+    const k = veMntWizStp().sonuc.agac.find((d) => d.ebeveyn < 0), n = k.cocuklar.length;
+    return Math.min(n, VE_MW_STP_SAYFA) + (n > VE_MW_STP_SAYFA ? 1 : 0);
+  }));
   const motor = page.locator('#ve-mw-body tr.ve-fw-stp-r td:first-child', { hasText: /^Motor$/ }).locator('.ve-mw-stp-ac');
   await expect(motor).toHaveAttribute('aria-expanded', 'false');
   await motor.click();
@@ -172,7 +176,9 @@ test('SIKIŞTIRILMIŞ: gzip · başlık alanlı gzip · zip tarayıcının akı�
     await page.waitForFunction((a) => { const s = veMntWizStp(); return s && s.dosya === a && s.durum !== 'okunuyor'; }, ad, { timeout: 30000 });
     const s = await page.evaluate(() => { const s = veMntWizStp(); return { durum: s.durum, kap: s.kap, hata: s.hata || null }; });
     expect([ad, s]).toEqual([ad, { durum: 'hazir', kap: kap, hata: null }]);
-    expect(await page.locator('#ve-mw-body table.ve-mw-tbl-stp tbody tr').count()).toBe(9);
+    // ağaç açılışta kapalı (Canlı Not 7): yalnız kökün çocukları
+    expect(await page.locator('#ve-mw-body table.ve-mw-tbl-stp tbody tr').count())
+      .toBe(await page.evaluate(() => veMntWizStp().sonuc.agac.find((d) => d.ebeveyn < 0).cocuklar.length));
   }
   expect(await page.evaluate(() => window.__inflate)).toBe(0);         // saf JS açıcı çağrılmadı
 });
