@@ -2374,12 +2374,29 @@ function _mwMasa3B(el, k, o){
   // çizim göstergenin ÜSTÜNDE biter (eksen üçlüsü çizimin sol altında, gösterge masanın)
   var W = Math.max(240, Math.round(o.w - ((k === 'ozet' && o.w > 760) ? VE_MW_OZET_PANEL + 24 : 0))), H = Math.max(200, Math.round(o.h - VE_MW_AKSO_ALT));
   var sec = (k === 'govde' && _mwSec.govde) ? 'mw:' + _mwSec.govde : ((k === 'takoz' && _mwSec.takoz) ? 'mw:' + _mwSec.takoz : '');
-  el.innerHTML = '<div id="' + VE_MW_AKSO + '" class="ve-mw-akso" data-yalin="1" data-perde="0" data-etiket="genis"'
+  var ortu = _mwAksoOrtu(el);
+  el.innerHTML = '<div id="' + VE_MW_AKSO + '" class="ve-mw-akso" data-yalin="1" data-perde="0" data-etiket="genis" data-disari="1"'
     + ' data-w="' + W + '" data-h="' + H + '"' + (sec ? ' data-sec="' + _mwEsc(sec) + '"' : '')
+    + (ortu ? ' data-ortu="' + ortu + '"' : '')
     + ' style="width:' + W + 'px;height:' + H + 'px"></div>';
   _mntAksoKur(VE_MW_AKSO, W, P);
   var c3 = (typeof _mntAksoCizim !== 'undefined') ? _mntAksoCizim[VE_MW_AKSO] : null;
   if(lej) lej.innerHTML = _mwAksoLejantHTML(c3 && c3.m);
+}
+// MASANIN ÖRTÜLERİ (Canlı Not 40): çizimin üstünde yüzen durum çipi, görünüş
+// düğmeleri ve yakınlaştırma düğmeleri — çizimin koordinatında "l,t,r,b;…"
+// (yazılar altlarına düşmez; mount-akso.js → o.ortu). Ölçülemeyen (gizli,
+// sıfır boy) yüzey yazılmaz.
+function _mwAksoOrtu(el){
+  var masa = el && el.closest ? el.closest('.ve-fw-masa') : null;
+  if(!masa || !el.getBoundingClientRect) return '';
+  var k = el.getBoundingClientRect(), pay = 4, out = [];
+  Array.prototype.forEach.call(masa.querySelectorAll('.ve-fw-masa-ust > *, .ve-fw-masa-arac, .ve-fw-masa-gezin'), function(e){
+    var r = e.getBoundingClientRect();
+    if(!(r.width > 0 && r.height > 0)) return;
+    out.push([r.left - k.left - pay, r.top - k.top - pay, r.right - k.left + pay, r.bottom - k.top + pay].map(Math.round).join(','));
+  });
+  return out.join(';');
 }
 // 3B'de işarete tık → satır (çizimin anahtarı → modelin kimliği → satırın anahtarı).
 function _mwMasa3BSec(ak){

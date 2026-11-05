@@ -1309,3 +1309,157 @@ describe('KLASİK 3B — 3D Görüntüleyici açılışta sahne kurmaz', () => {
     }
   });
 });
+
+// ── İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI (kullanıcı 2026-11-05, Canlı Not 40:
+// *"Bu görselleştirme ne yazık ki iyi durmuyor ya. Yazılar falan kayıyor,
+// kutular birbirinin içine giriyor"* — sihirbazın 3B'si) ────────────────────
+// Kâhin çizimden bağımsız: her ekran noktasında IŞIN, özgün kutuların en
+// yakınına çarpar; çizimin o noktada gösterdiği gövde onunla aynı olmalı.
+// Ressam ölçülen sırayla boyar (sonra çizilen üstte). Kesişen çifti hiçbir
+// sıra doğru çizemez: Asfat'ta Top PTO şanzımanın 120 mm içinde, Hafif ve
+// Kamyon'da şanzıman motorun 20–45 mm içinde.
+describe('İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI — sihirbazın 3B\'si', () => {
+  const EKLER = { hafif: 'hafif_topoloji.json', kamyon: 'kamyon_topoloji.json', kutu: 'kutu_topoloji.json' };
+  Object.keys(EKLER).forEach((k) => { JSONLAR[k] = JSON.parse(fs.readFileSync(path.join(KOK, 'assets/examples', EKLER[k]), 'utf8')); });
+  const HEPSI = ['tulga', 'siper', 'asfat', 'hafif', 'kamyon', 'kutu'];
+  const KAM = [{ az: 249.3, el: 19.5 }].concat([0, 45, 90, 135, 180, 225, 270, 315].map((az) => ({ az, el: 25 })));
+  const kutular = (m) => m.govde.filter((g) => g.kutu).map((g) => ({ g, c: [g.x, g.y, g.z], h: g.kutu.map((v) => v / 2) }));
+  const lohi = (q) => ({ lo: q.c.map((v, i) => v - q.h[i]), hi: q.c.map((v, i) => v + q.h[i]) });
+  const ortHacim = (a, b) => { const A = lohi(a), B = lohi(b); return [0, 1, 2].reduce((t, i) => t * Math.max(0, Math.min(A.hi[i], B.hi[i]) - Math.max(A.lo[i], B.lo[i])), 1); };
+  const icte = (q, P) => { let a = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j]; if (((yi > q[1]) !== (yj > q[1])) && (q[0] < (xj - xi) * (q[1] - yi) / (yj - yi) + xi)) a = !a; } return a; };
+  const sihirbaz = (kam, ek) => Object.assign({ W: 790, H: 682, kam, kure: true, stil: 'golge', kat: { golge: true }, fs: FS, etiket: 'genis', isaret: 1.5 }, ek || {});
+
+  test('kesişen kutu parçalanır: küçüğün büyüğün içindeki kısmı yok, kesişmeyen kutu aynen; Top PTO şanzımanın ÜSTÜNDE', () => {
+    const kesisen = {};
+    HEPSI.forEach((ad) => {
+      yukle(ad);
+      const K = kutular(cp._mntAksoModel()), P = AK.kutuParcala(K);
+      kesisen[ad] = [];
+      K.forEach((a, i) => K.forEach((b, j) => { if (i < j && ortHacim(a, b) > 1) kesisen[ad].push(a.g.ad + ' × ' + b.g.ad); }));
+      // parçalar ayrık: farklı gövdelerin hiçbir parçası birbirinin içinde değil
+      P.forEach((a, i) => P.forEach((b, j) => { if (i < j && a.g !== b.g) expect({ ad, a: a.g.ad, b: b.g.ad, v: ortHacim(a, b) > 1 }).toEqual({ ad, a: a.g.ad, b: b.g.ad, v: false }); }));
+      // kesişmeyen kutu nesnesiyle döner (çizim birebir eski)
+      K.forEach((q) => { if (!K.some((r) => r !== q && ortHacim(q, r) > 1)) expect(P.filter((x) => x === q).length).toBe(1); });
+    });
+    expect(kesisen).toEqual({ tulga: [], siper: [], kutu: [],
+      asfat: ['Şanzıman + Retarder — Allison 4700 × Top PTO Grubu'], hafif: ['Motor × Şanzıman'], kamyon: ['Motor × Şanzıman'] });
+    yukle('asfat');
+    const K = kutular(cp._mntAksoModel()), sz = K.find((q) => /Şanzıman/.test(q.g.ad)), pto = K.find((q) => /Top PTO/.test(q.g.ad));
+    const par = AK.kutuParcala(K).filter((q) => q.g === pto.g).map(lohi);
+    expect(par.length).toBe(1);                                                   // 8 mm'lik arka dilim ICICE_ENAZ'ın altında
+    expect(par[0].lo[2]).toBeCloseTo(lohi(sz).hi[2], 6);                          // şanzımanın üst yüzünde başlar
+    expect(par[0].hi[2]).toBeCloseTo(lohi(pto).hi[2], 6);                         // PTO'nun kendi üstünde biter
+    expect(lohi(pto).hi[0] - lohi(sz).hi[0]).toBeLessThan(AK.ICICE_ENAZ);
+  });
+
+  test('ışın kâhini: altı örnek × dokuz bakış, ÇİZİMİN boyadığı gövde her noktada ışının çarptığı en yakın kutu (atılan dilim payı ‰1,5)', () => {
+    const oran = {};
+    let say = 0;
+    HEPSI.forEach((ad) => {
+      yukle(ad);
+      const m = cp._mntAksoModel(), K0 = kutular(m);
+      let yanlis = 0, n = 0;
+      KAM.forEach((kam) => {
+        const K = AK.kamera('dim', null, AK.kamYon(kam)), r = AK.ciz(m, sihirbaz(kam, { disari: true }));
+        // ressam: hareket katmanındaki gövde grupları belge sırasıyla boyar (sonraki üstte)
+        document.body.innerHTML = r.svg;
+        const gruplar = [...document.querySelectorAll('.ve-ak-hareket > g.ve-ak-g')].filter((e) => K0.some((q) => q.g.k === e.getAttribute('data-ak')))
+          .map((e) => ({ k: e.getAttribute('data-ak'), P: [...e.querySelectorAll('path')].map((pa) => { const v = pa.getAttribute('d').replace(/[MLZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); return o; }) }));
+        const d = K.d, l = Math.hypot(d[0], d[1]), rr = [-d[1] / l, d[0] / l, 0].map((v) => -v);
+        const uu = [rr[1] * d[2] - rr[2] * d[1], rr[2] * d[0] - rr[0] * d[2], rr[0] * d[1] - rr[1] * d[0]];
+        const kahin = (X, Y) => {
+          const a = (X - r.F.ox) / r.F.sc, b = -(Y - r.F.oy) / r.F.sc, p0 = [0, 1, 2].map((i) => rr[i] * a + uu[i] * b);
+          let en = null, et = Infinity;
+          K0.forEach((q) => { const B = lohi(q); let t0 = -Infinity, t1 = Infinity; for (let i = 0; i < 3; i++) { if (Math.abs(d[i]) < 1e-12) { if (p0[i] < B.lo[i] || p0[i] > B.hi[i]) t0 = Infinity; continue; } let x = (B.lo[i] - p0[i]) / d[i], y = (B.hi[i] - p0[i]) / d[i]; if (x > y) [x, y] = [y, x]; t0 = Math.max(t0, x); t1 = Math.min(t1, y); } if (t1 > t0 && t0 < et) { et = t0; en = q.g.k; } });
+          return en;
+        };
+        // yalnız modelin ekran kutusunda (zemin boş)
+        const tum = gruplar.flatMap((g) => g.P.flat()), x0 = Math.min(...tum.map((v) => v[0])), x1 = Math.max(...tum.map((v) => v[0]));
+        const y0 = Math.min(...tum.map((v) => v[1])), y1 = Math.max(...tum.map((v) => v[1]));
+        for (let Y = Math.ceil(y0); Y < y1; Y += 7) for (let X = Math.ceil(x0); X < x1; X += 7) {
+          const t = kahin(X, Y); if (!t) continue;
+          if ([[-3, 0], [3, 0], [0, -3], [0, 3]].some(([dx, dy]) => kahin(X + dx, Y + dy) !== t)) continue;   // kenar payı
+          n++;
+          let ust = null; gruplar.forEach((g) => { if (g.P.some((pol) => icte([X, Y], pol))) ust = g.k; });
+          if (ust !== t) yanlis++;
+        }
+      });
+      say += n;
+      oran[ad] = yanlis / n < 0.0015;
+    });
+    expect(oran).toEqual({ tulga: true, siper: true, asfat: true, hafif: true, kamyon: true, kutu: true });
+    expect(say).toBeGreaterThan(50000);                                            // kapı boşa ölçmüyor
+  });
+
+  test('dış yazı: altı örnek × dokuz bakış — yazı gövdeye, yazıya, örtüye binmez; kılavuz kesişmez, yazının içinden geçmez', () => {
+    const ortu = [{ l: 8, t: 8, r: 240, b: 40 }, { l: 558, t: 8, r: 782, b: 40 }, { l: 748, t: 320, r: 782, b: 408 }];
+    const kesAlan = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+    const segKes = (s, q) => { const d = (p0, p1, p2) => (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]); const a = [s[0], s[1]], b = [s[2], s[3]], c = [q[0], q[1]], e = [q[2], q[3]]; return d(c, e, a) * d(c, e, b) < -1e-6 && d(a, b, c) * d(a, b, e) < -1e-6; };
+    const icinden = (s, k) => { for (let i = 1; i < 30; i++) { const x = s[0] + (s[2] - s[0]) * i / 30, y = s[1] + (s[3] - s[1]) * i / 30; if (x > k.l + 1 && x < k.r - 1 && y > k.t + 1 && y < k.b - 1) return true; } return false; };
+    const olc = (disari) => {
+      const t = { yazi: 0, govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0, disari: 0 };
+      HEPSI.forEach((ad) => {
+        yukle(ad);
+        const m = cp._mntAksoModel();
+        KAM.forEach((kam) => {
+          const r = AK.ciz(m, sihirbaz(kam, { disari, ortu }));
+          document.body.innerHTML = r.svg;
+          const pol = {};
+          document.querySelectorAll('.ve-ak-hareket g.ve-ak-g').forEach((g) => {
+            const k = g.getAttribute('data-ak');
+            g.querySelectorAll('path').forEach((pa) => { const v = pa.getAttribute('d').replace(/[MLZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); (pol[k] = pol[k] || []).push(o); });
+          });
+          const L = r.etiket;
+          t.yazi += L.length; t.disari += L.filter((e) => e.dis).length;
+          L.forEach((e, i) => {
+            const b = e.kutu;
+            if (e.k !== 'G') {
+              let ic = 0, n = 0;
+              for (let x = b.l + 1; x < b.r; x += 3) for (let y = b.t + 1; y < b.b; y += 3) { n++; if (Object.keys(pol).some((k) => k !== e.k && pol[k].some((P) => icte([x, y], P)))) ic++; }
+              if (ic / n > 0.05) t.govde++;
+            }
+            if (ortu.some((o) => kesAlan(b, o) > 0)) t.ortu++;
+            L.forEach((f, j) => {
+              if (j <= i) return;
+              if (kesAlan(b, f.kutu) > 0.5) t.yaziYazi++;
+              if (e.cizgi && f.cizgi && segKes(e.cizgi, f.cizgi)) t.kesisen++;
+            });
+            if (e.cizgi) L.forEach((f) => { if (f !== e && icinden(e.cizgi, f.kutu)) t.icinden++; });
+          });
+        });
+      });
+      return t;
+    };
+    const t = olc(true);
+    expect({ govde: t.govde, yaziYazi: t.yaziYazi, ortu: t.ortu, kesisen: t.kesisen, icinden: t.icinden })
+      .toEqual({ govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0 });
+    expect(t.yazi).toBeGreaterThan(380);
+    expect(t.disari).toBeGreaterThan(320);                                         // G dışındakiler dış yerleştiriciden
+    // kapı düşebilir: aynı çizimler dış yazısız (eski yerleştirici) gövdenin üstüne yazı ve içinden geçen kılavuz verir
+    const eski = olc(false);
+    expect(eski.govde).toBeGreaterThan(20);
+    expect(eski.icinden).toBeGreaterThan(5);
+  });
+
+  test('kılavuz gövdenin GÖRÜNEN yerine iner, ucunda nokta; Görünümler (dış yazısız) birebir eski', () => {
+    yukle('asfat');
+    const m = cp._mntAksoModel(), kam = { az: 135, el: 30 };
+    const r = AK.ciz(m, sihirbaz(kam, { disari: true }));
+    document.body.innerHTML = r.svg;
+    const sol = m.govde.find((g) => /Sol Motor/.test(g.ad));
+    const e = r.etiket.find((x) => x.k === sol.k);
+    // işaret noktası motorun ardındaki braketin görünen yerinde: tıklanan öğe braketin kendisi
+    const K = AK.kamera('dim', null, AK.kamYon(kam)), B = kutular(m);
+    const a = (e.x - r.F.ox) / r.F.sc, b = -(e.y - r.F.oy) / r.F.sc;
+    const d = K.d, l = Math.hypot(d[1], d[0]), rr = [d[1] / l, -d[0] / l, 0], uu = [rr[1] * d[2] - rr[2] * d[1], rr[2] * d[0] - rr[0] * d[2], rr[0] * d[1] - rr[1] * d[0]];
+    const p0 = [0, 1, 2].map((i) => rr[i] * a + uu[i] * b);
+    let en = null, et = Infinity;
+    B.forEach((q) => { const L = lohi(q); let t0 = -Infinity, t1 = Infinity; for (let i = 0; i < 3; i++) { if (Math.abs(d[i]) < 1e-12) continue; let x = (L.lo[i] - p0[i]) / d[i], y = (L.hi[i] - p0[i]) / d[i]; if (x > y) [x, y] = [y, x]; t0 = Math.max(t0, x); t1 = Math.min(t1, y); } if (t1 > t0 - 1e-6 && t0 < et) { et = t0; en = q.g.k; } });
+    expect(en).toBe(sol.k);
+    expect(document.querySelector('circle.ve-ak-kilavuz-uc[data-ak="' + sol.k + '"]')).toBeTruthy();
+    // dış yazı yalnız beyan edenin: seçeneksiz çizimde yazıların yeri ve SVG değişmez
+    const o = sihirbaz(kam), eski = AK.ciz(m, o), yine = AK.ciz(m, Object.assign({}, o, { disari: false }));
+    expect(yine.svg).toBe(eski.svg);
+    expect(eski.svg).not.toContain('ve-ak-kilavuz-uc');
+  });
+});
