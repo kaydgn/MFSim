@@ -80,14 +80,16 @@ function veMntBaslangicGerekli(liste){
 // ── ÖRNEKLER — "Başlangıç ve Örnekler" panelinin listesinin KENDİSİ ────────
 // Kayıt defteri `veMountCore.getMountExampleList`; ikinci bir liste tutulmaz.
 // Künye örneğin kaydından okunur: araç · toplam kütle · gövde ve takoz sayısı ·
-// gövdeler (ad, kütle) · takozların adı · kaynak.
-// KAYNAK: gerçek örnekte kaydın "Kaynak" satırı, yoksa açıklaması ("Kaynak: "
-// öneki düşer); kurgu örnekte açıklaması — kurgu kaydın "Kaynak" satırı
-// ("Kurgu — …") bölüm başlığının söylediğini tekrar ederdi.
-function _mntBasKaynak(ex){
-  var sat = ((ex && ex.specs) || []).filter(function(x){ return x && x[0] === 'Kaynak'; })[0];
-  if(sat && !ex.kurgu && sat[1]) return String(sat[1]);
-  return String((ex && ex.description) || '').replace(/^Kaynak:\s*/, '');
+// gövdeler (ad, kütle) · takozların adı · güç grubunun künyesi.
+// KÜNYE (kullanıcı 2026-11-05, Canlı Not 28 · 29: *"'Catia Atalet Ölçümü' gibi gereksiz
+// şeyler yazmayalım"* · *"'BMC-ASR-SR' falan yazıyor. Kaldır bunları."*): satırın
+// açıklaması örneğin GÜÇ GRUBU künyesi (kaydın açıklaması; kurgu örneklerin biçimi:
+// motor · aktarma · askı). Kaynak, rapor kodu ve parça numarası satırda yazılmaz —
+// gövdenin ve takozun adındaki parça numarası da düşer (`VE_MNT_BAS_KOD`).
+var VE_MNT_BAS_KOD = /\s*[·—–-]?\s*\b\d{2}[A-Z]{2}\d{6}\b/g;
+function _mntBasKodsuz(ad){ return String(ad || '').replace(VE_MNT_BAS_KOD, '').trim(); }
+function _mntBasKunye(ex){
+  return _mntBasKodsuz(String((ex && ex.description) || '').replace(/^Kaynak:\s*/, ''));
 }
 function veMntBaslangicOrnekler(){
   var C = (typeof veMountCore !== 'undefined') ? veMountCore : null;
@@ -101,10 +103,10 @@ function veMntBaslangicOrnekler(){
     out.push({
       key: ex.id, ad: ex.name || ex.id, arac: ex.vehicle || ex.name || ex.id,
       govde: M.components.length, takoz: (M.mounts || []).length, kutle: kutle,
-      govdeAdlari: M.components.map(function(c){ return c.name; }),
-      govdeler: M.components.map(function(c){ return { ad: c.name, kg: Number(c.mass) || 0 }; }),
-      takozAdlari: (M.mounts || []).map(function(m){ return String((m && m.name) || '').trim(); }).filter(Boolean),
-      kaynak: _mntBasKaynak(ex),
+      govdeAdlari: M.components.map(function(c){ return _mntBasKodsuz(c.name); }),
+      govdeler: M.components.map(function(c){ return { ad: _mntBasKodsuz(c.name), kg: Number(c.mass) || 0 }; }),
+      takozAdlari: (M.mounts || []).map(function(m){ return _mntBasKodsuz(m && m.name); }).filter(Boolean),
+      kunye: _mntBasKunye(ex),
       kurgu: !!ex.kurgu
     });
   });
@@ -148,8 +150,24 @@ function veMntBaslangicKapilar(){
 // derlemenin künyesinden (window.__MFSIM_BUILD.moduller.takoz — Takoz'un
 // dosyalarına dokunan son birleşmeler, tools/version-info.js). Künye yoksa
 // (modüler kopya, test) liste yok.
-function veMntBaslangicDegisiklik(K){
+// GÖRSEL (kullanıcı 2026-11-05, Canlı Not 27: *"Her son değişikliği görselli olarak
+// görmek istiyorum"*): commit'in notlarının sonuç görüntüsü, derlemenin gömdüğü
+// haritadan (__MFSIM_DEGISIKLIK; tools/degisiklik-resim.js). Not birleşmede İLK
+// commit'inin altında bir kez; gösterim ölçüsü boyu en çok VE_BAS_DEG_RESIM_Y.
+var VE_BAS_DEG_RESIM_Y = 360;
+function _mntBasDegResimler(a, resim, goruldu){
+  return (a.notlar || []).filter(function(n){
+    if(!resim[n] || goruldu[n]) return false;
+    goruldu[n] = 1;
+    return true;
+  }).map(function(n){
+    var r = resim[n], k = Math.min(1, VE_BAS_DEG_RESIM_Y / (r.y || 1));
+    return { no: n, src: r.src, g: Math.round(r.g * k), y: Math.round(r.y * k) };
+  });
+}
+function veMntBaslangicDegisiklik(K, R){
   var b = K || ((typeof window !== 'undefined') ? window.__MFSIM_BUILD : null);
+  var resim = R || ((typeof window !== 'undefined' && window.__MFSIM_DEGISIKLIK) || {});
   var L = (b && b.moduller && b.moduller.takoz) || [];
   var tarih = function(d){
     var t = new Date(d);
@@ -158,7 +176,10 @@ function veMntBaslangicDegisiklik(K){
     return p(t.getDate()) + '.' + p(t.getMonth() + 1) + '.' + t.getFullYear();
   };
   return { baslik: 'Son değişiklikler', kayitlar: L.map(function(c){
-    return { tarih: tarih(c.date), baslik: c.title || '', pr: c.prNumber || '', ayrinti: c.ayrinti || [] };
+    var goruldu = {};
+    return { tarih: tarih(c.date), baslik: c.title || '', pr: c.prNumber || '', ayrinti: (c.ayrinti || []).map(function(a){
+      return { konu: a.konu, govde: a.govde || [], resimler: _mntBasDegResimler(a, resim, goruldu) };
+    }) };
   }) };
 }
 
@@ -166,7 +187,7 @@ function veMntBaslangicDegisiklik(K){
 // Kapıların adı ve örneklerin dizini. İki grup: gerçek araçlar ve KURGU
 // doğrulama modelleri (kayıtta `kurgu`) — kurgu model gerçek bir aracı temsil
 // etmez; bölüm başlığı bunu söyler, gerçek örneklerle aynı grupta karışmaz.
-// Satır araç · gövde ve takoz sayısı · kütle · kaynak; ayrıntısı gövdeler
+// Satır araç · gövde ve takoz sayısı · kütle · künye; ayrıntısı gövdeler
 // (kütleleriyle, tek ondalık) ve takozların adı.
 function veMntBaslangicSayfa(){
   var ornekler = veMntBaslangicOrnekler();
@@ -174,7 +195,7 @@ function veMntBaslangicSayfa(){
   var satir = function(o){
     return { ey: 'ornek', v: o.key, ad: o.arac,
              sayi: n(o.govde) + ' gövde · ' + n(o.takoz) + ' takoz',
-             kutle: n(o.kutle) + ' kg', kaynak: o.kaynak,
+             kutle: n(o.kutle) + ' kg', kunye: o.kunye,
              detay: [
                { baslik: 'Gövdeler', ogeler: o.govdeler.map(function(g){ return { ad: g.ad, deger: n(g.kg, 1) + ' kg' }; }) },
                { baslik: 'Takozlar', ogeler: o.takozAdlari.map(function(a){ return { ad: a }; }) }

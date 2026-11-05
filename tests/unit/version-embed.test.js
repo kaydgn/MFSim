@@ -149,14 +149,24 @@ describe('tools/version-info.js — gerçek depo üzerinde', () => {
       const info = versionInfo.collect({ cwd: d.dir, env: {} });
       expect(info.moduller.takoz.map((c) => c.prNumber)).toEqual([301]);
       expect(info.moduller.takoz[0].ayrinti).toEqual([
-        { konu: 'Canlı not 13: komut çubuğu inceldi', govde: ['Denetimler 30 → 26 px, dolgu 6 → 3 px.', '- tuval büyüdü ve kaydı'] },
-        { konu: 'Canlı not 7: ağaç kapalı', govde: [] }]);
+        { konu: 'Canlı not 13: komut çubuğu inceldi', govde: ['Denetimler 30 → 26 px, dolgu 6 → 3 px.', '- tuval büyüdü ve kaydı'], notlar: [13] },
+        { konu: 'Canlı not 7: ağaç kapalı', govde: [], notlar: [7] }]);
       // ikinci ebeveyni olmayan birleşme kaydı: ayrıntı uydurulmaz
       yaz('js/mount-step.js', 'Merge pull request #302 from kaydgn/b\n\nSTEP');
       expect(versionInfo.collect({ cwd: d.dir, env: {} }).moduller.takoz[0]).toMatchObject({ prNumber: 302, ayrinti: [] });
     } finally {
       fs.rmSync(d.dir, { recursive: true, force: true });
     }
+  });
+  // Canlı Not 27: görsel NOTA bağlı — commit'in konusu notun numarasını söyler
+  test('commit\'in notları konusundan: tek · çoklu · aralık; numarasız ve başka konu boş', () => {
+    const N = versionInfo.konudanNotlar;
+    expect(N('Canlı not 22: palet')).toEqual([22]);
+    expect(N('Canlı not 9 · 10 · 16: ızgara')).toEqual([9, 10, 16]);
+    expect(N('Canlı notlar 6 · 8–10: sayfa')).toEqual([6, 8, 9, 10]);
+    expect(N('Canlı not 27: görsel: ayrıntı')).toEqual([27]);
+    expect(N('Canlı not 6 · 6: iki kez')).toEqual([6]);
+    expect([N('Canlı Not: sayfa yenilenmez'), N('Takoz STEP: malzeme'), N(''), N(undefined)]).toEqual([[], [], [], []]);
   });
   test('paragraf: uzun gövde sınırda sözcükten kesilir', () => {
     const p = versionInfo.paragraflar(('kelime ').repeat(400));

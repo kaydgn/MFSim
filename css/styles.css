@@ -11522,6 +11522,9 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
   transition:border-color var(--dur-base) var(--ease-out);
 }
 .ve-bas-ic--sutun .ve-bas-kilavuz{ align-self:flex-start; justify-content:normal; gap:6px; height:30px; }
+/* Sütunda dönüş Kılavuz'un yanında (Canlı Not 30 · 31): ikisi kimliğin sağında, aynı boyda */
+.ve-bas-kimlik-eylem{ flex:none; align-self:flex-start; display:flex; gap:8px; }
+.ve-bas-ic--sutun .ve-bas-donus{ height:30px; gap:6px; }
 .ve-bas-kilavuz:hover{ border-color:var(--border-hover); }
 .ve-bas-kilavuz:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-bas-kilavuz .mf-ico{ width:15px; height:15px; }
@@ -11577,6 +11580,10 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-bas-degisiklik-ayrinti li{ display:flex; flex-direction:column; gap:4px; min-width:0; }
 .ve-bas-degisiklik-ayrinti b{ font-weight:600; color:var(--text-heading); }
 .ve-bas-degisiklik-p{ color:var(--text-secondary); line-height:1.5; overflow-wrap:anywhere; }
+/* Notun sonuç görüntüsü (Canlı Not 27): gösterim ölçüsü kurucudan (width · height,
+   boyu en çok 360 px), sütundan geniş olan sütuna iner; köşe keskin, gölge yok */
+.ve-bas-degisiklik-resim{ display:block; max-width:100%; height:auto; margin:8px 0 2px; box-sizing:border-box;
+  border:1px solid var(--border-color); background:var(--bg-primary); }
 .ve-bas-satir{ border-bottom:1px solid var(--bg-tertiary); }
 .ve-bas-satir:hover{ background:color-mix(in srgb, var(--bg-primary) 45%, var(--bg-secondary)); }
 .ve-bas-satir.acik{ background:var(--accent-tint-6); }
@@ -11594,9 +11601,11 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-bas-satir-ac:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-bas-satir-sayi{ white-space:nowrap; color:var(--text-primary); }
 .ve-bas-satir-kutle{ white-space:nowrap; font-weight:600; color:var(--text-heading); }
-.ve-bas-satir-kaynak{
-  flex-basis:100%; min-width:0; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  font-size:var(--fs-tiny); color:var(--text-secondary);
+/* Güç grubunun künyesi (Canlı Not 28): iki satıra sarar, sığmayan tam metnini title'da taşır */
+.ve-bas-satir-kunye{
+  flex-basis:100%; min-width:0; margin:0; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+  font-size:var(--fs-tiny); line-height:1.4; color:var(--text-secondary);
 }
 .ve-bas-satir-yukle{
   height:26px; display:inline-flex; align-items:center; justify-content:center; gap:6px;

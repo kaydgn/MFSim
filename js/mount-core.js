@@ -2307,7 +2307,8 @@ var veMountCore = (function() {
       name: 'BMC SİPER Takoz Analizi',
       vehicle: 'BMC Siper',
       subtitle: '5 kütle · 6 takoz güç grubu',
-      description: 'Kaynak: CATIA atalet ölçümü · ADAMS doğrulaması',
+      // Açıklama güç grubunun künyesi (Canlı Not 28: kaynak yazılmaz; kurgu örneklerin biçimi)
+      description: _sayi(SIPER_EXAMPLE.torque.cylinders) + ' silindir · ' + _sayi(SIPER_EXAMPLE.torque.Te) + ' N·m · cradle askı',
       specs: [
         ['Kütle gövdesi', String(SIPER_EXAMPLE.components.length)],
         ['Takoz', String(SIPER_EXAMPLE.mounts.length)],
@@ -2337,7 +2338,7 @@ var veMountCore = (function() {
       name: 'TULGA Takoz Analizi',
       vehicle: 'TULGA',
       subtitle: '8 kütle · 5 takoz güç grubu',
-      description: 'Kaynak: TULGA proje kaydı',
+      description: _sayi(TULGA_EXAMPLE.torque.cylinders) + ' silindir · ' + _sayi(TULGA_EXAMPLE.torque.Te) + ' N·m · transfer kutusu',
       specs: [
         ['Kütle gövdesi', String(TULGA_EXAMPLE.components.length)],
         ['Takoz', String(TULGA_EXAMPLE.mounts.length)],
@@ -2370,7 +2371,7 @@ var veMountCore = (function() {
       name: 'ASFAT 8x8 Obüs Takoz Analizi',
       vehicle: 'ASFAT 8x8 Obüs',
       subtitle: '7 kütle · 6 takoz güç grubu',
-      description: 'Takozlar 57RS313774 (ön) · 57RS313773 (yan)',
+      description: 'Cummins 6 silindir · Allison 4700 + retarder · 2 PTO',
       specs: [
         ['Kütle gövdesi', String(ASFAT_EXAMPLE.components.length)],
         ['Takoz', String(ASFAT_EXAMPLE.mounts.length)],
@@ -2381,8 +2382,7 @@ var veMountCore = (function() {
         ['Takoz dinamik (Z)', (function(){
           var z = ASFAT_EXAMPLE.mounts.map(function(m){ return m.kdyn[2]; });
           return _aralik(z) + ' N/mm';
-        })()],
-        ['Kaynak', 'BMC ASR-SR-116 · 04.08.2021']
+        })()]
       ],
       // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ).
       // Konumlar JSON topolojisindeki yardımcı araç düğümleriyle aynı.

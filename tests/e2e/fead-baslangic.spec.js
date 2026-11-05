@@ -63,10 +63,13 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
     const r = (el) => { const b = el.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; };
     const kap = r(document.getElementById('ve-canvas-wrapper'));
     const sayfa = r(document.getElementById('ve-fead-baslangic'));
-    const btn = document.querySelector('#ve-fead-breadcrumb button');
+    // Dönüş sayfanın başlığında (Canlı Not 30 · 31): örtülmüyor; köşedeki « gizli
+    const btn = document.querySelector('#ve-fead-baslangic .ve-bas-kimlik-eylem .ve-bas-donus');
     const bb = btn.getBoundingClientRect();
     const ust = document.elementFromPoint(bb.left + bb.width / 2, bb.top + bb.height / 2);
-    return { kap, sayfa, donus: !!(ust && btn.contains(ust)),
+    const kose = document.querySelector('#ve-fead-breadcrumb');
+    return { kap, sayfa, donus: !!(ust && btn.contains(ust)), donusAd: btn.textContent,
+      kose: kose ? kose.getBoundingClientRect().width : 0,
       kapi: document.querySelectorAll('#ve-fead-baslangic .ve-bas-kapi').length,
       karo: document.querySelectorAll('#ve-fead-baslangic .ve-bas-karo').length,
       cizim: document.querySelectorAll('#ve-fead-baslangic .ve-bas-resim [data-ve="belt"]').length,
@@ -74,11 +77,8 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
       // KİMLİK VE VERİ tarayıcıda: kataloglar `window`dan okunur — Node'un
       // `require` yolu bunu göremez; bir satır düşerse ancak burada görünür.
       baslik: (document.querySelector('#ve-fead-baslangic .ve-bas-kimlik h1') || {}).textContent,
-      veri: [...document.querySelectorAll('#ve-fead-baslangic .ve-bas-veri dd')].map((e) => e.textContent),
-      canli: [VE_FEAD_BELT_PROFILES.length,
-        Object.keys(VE_FEAD_BELT_STOCK).reduce((t, k) => t + VE_FEAD_BELT_STOCK[k].length, 0),
-        VE_FEAD_TENSIONER_DB.length, VE_FEAD_ENGINE_DB.length, VE_FEAD_ACC_DB.length,
-        VE_FEAD_DUTY_DB.length].map((x) => veSayi(x, 0)),
+      // Analiz adları ve sayı bandı YOK (Canlı Not 32)
+      bant: document.querySelectorAll('#ve-fead-baslangic .ve-bas-veri, #ve-fead-baslangic .ve-bas-yetenek').length,
       kunye: [...document.querySelectorAll('#ve-fead-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
       kilavuz: document.querySelector('#ve-fead-baslangic .ve-bas-kilavuz')?.getAttribute('data-v'),
       // SÜTUN DÜZENİ (kullanıcı 2026-11-04: "FEAD modülü önceki hali gibi
@@ -88,7 +88,8 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
       ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width };
   });
   expect(o.baslik).toBe('FEAD');
-  expect(o.veri).toEqual(o.canli);
+  expect(o.bant).toBe(0);
+  expect([o.donusAd, o.kose]).toEqual(['Ana topoloji', 0]);
   expect(o.kunye).toEqual([5, 5, 2]);
   expect(o.kilavuz).toBe('fead');
   expect(o.duzen).toBe('ve-bas-ic ve-bas-ic--sutun');
@@ -97,8 +98,12 @@ test('AÇILIŞ: sihirbaz YOK, hata YOK — sayfa tuvali örter, dönüş düğme
   // Sayfa tuvalin TAMAMINI örter (ölçü kabınki).
   expect(Math.round(o.sayfa.w)).toBe(Math.round(o.kap.w));
   expect(Math.round(o.sayfa.h)).toBe(Math.round(o.kap.h));
-  // Alt topolojiden çıkmanın tek yolu örtülmüyor: noktadaki öğe düğmenin kendisi.
+  // Alt topolojiden çıkmanın yolu örtülmüyor: noktadaki öğe başlıktaki düğmenin kendisi;
+  // tık modülden çıkar
   expect(o.donus).toBe(true);
+  await page.click('#ve-fead-baslangic .ve-bas-kimlik-eylem .ve-bas-donus');
+  await page.waitForFunction(() => veFeadStack.length === 0, null, { timeout: 10000 });
+  await expect(page.locator('#ve-fead-baslangic')).toBeHidden();
   expect(o.kapi).toBe(3);
   expect(o.karo).toBe(o.ornek);
   expect(o.cizim).toBe(o.ornek);             // her rapor kayış yolunu çiziyor

@@ -97,6 +97,20 @@ function paragraflar(govde) {
   }
   return kisa;
 }
+// Commit'in notları (Canlı Not 27 — görseli nota bağlı, tools/degisiklik-resim.js):
+// "Canlı not 22: …" → [22] · "Canlı not 9 · 10 · 16: …" → [9, 10, 16] · "Canlı not 8–10: …"
+// → [8, 9, 10]; numarasız ("Canlı Not: …") ya da başka konu → [].
+function konudanNotlar(konu) {
+  const m = /^Canlı not(?:lar)?\s+(\d[\d\s·,–-]*?)\s*:/i.exec(String(konu || ''));
+  if (!m) return [];
+  const out = [];
+  m[1].split(/\s*[·,]\s*/).forEach((p) => {
+    const r = /^(\d+)\s*[–-]\s*(\d+)$/.exec(p.trim());
+    if (r) { for (let i = +r[1]; i <= +r[2] && i - +r[1] < 50; i++) out.push(i); }
+    else if (/^\d+$/.test(p.trim())) out.push(+p.trim());
+  });
+  return out.filter((n, i) => out.indexOf(n) === i);
+}
 function birlesmeAyrintisi(csha, cwd) {
   const ham = gitOut('git log --no-merges --reverse --format=%s' + ALAN + '%b' + KAYIT + ' ' + csha + '^1..' + csha + '^2', cwd);
   const out = [];
@@ -104,7 +118,7 @@ function birlesmeAyrintisi(csha, cwd) {
     const satir = kayit.replace(/^\n+/, '');
     if (!satir.trim()) continue;
     const [konu, govde] = satir.split(ALAN);
-    if (konu && konu.trim()) out.push({ konu: konu.trim(), govde: paragraflar(govde) });
+    if (konu && konu.trim()) out.push({ konu: konu.trim(), govde: paragraflar(govde), notlar: konudanNotlar(konu) });
   }
   return out.slice(-AYRINTI_SINIR.commit);
 }
@@ -219,4 +233,4 @@ function collect(opt) {
 }
 
 module.exports = { collect, gitOut, prNumarasi, govdedenBaslik, yalnizBelge, modulleri, MODUL_DESEN, MODUL_LISTE,
-  paragraflar, birlesmeAyrintisi };
+  paragraflar, birlesmeAyrintisi, konudanNotlar };

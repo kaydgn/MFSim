@@ -77,7 +77,7 @@ describe('İÇERİK — kapılar ve örnekler', () => {
   });
   // ARAYÜZ ANLATMAZ (kök CLAUDE.md, aşama 1 kararı 2026-10-16): üst satır,
   // serbest başlık, alt metin, kapı notu, rozet, bölüm notları ve dipnot YOK;
-  // satırda ipucu yalnız kaynakta — tek satırda kısalan metnin TAMAMI.
+  // satırda ipucu yalnız künyede — iki satırda kısalan metnin TAMAMI.
   // 2026-10-19 (*"çok sade olmuş … profesyonel dursun"*): eklenenler AD ve
   // VERİ — tek h1 modülün adı, kapının künyesi kısa adlar.
   test('ARAYÜZ ANLATMAZ — ad, veri ve künye; açıklama yuvası yok', () => {
@@ -94,7 +94,7 @@ describe('İÇERİK — kapılar ve örnekler', () => {
     d.querySelectorAll('.ve-bas-kapi-k > span').forEach((k) => kisa(k.textContent));
     d.querySelectorAll('.ve-bas-veri dt, .ve-bas-yetenek li').forEach((x) => kisa(x.textContent));
     d.querySelectorAll('.ve-bas-dizin [title]').forEach((x) => {
-      expect(x.classList.contains('ve-bas-satir-kaynak')).toBe(true);
+      expect(x.classList.contains('ve-bas-satir-kunye')).toBe(true);
       expect(x.getAttribute('title')).toBe(x.textContent);
     });
     const MD = require('../../tools/metin-dili.js');
@@ -167,28 +167,61 @@ describe('DİZİN — satırın künyesi örneğin kendi kaydından', () => {
     satirlar().forEach((r) => {
       const ex = core.getMountExample(r.v);
       expect(r.detay.map((d) => d.baslik)).toEqual(['Gövdeler', 'Takozlar']);
-      expect(r.detay[0].ogeler).toEqual(ex.model.components.map((c) => ({ ad: c.name, deger: n(c.mass, 1) + ' kg' })));
-      expect(r.detay[1].ogeler).toEqual(ex.model.mounts.map((m) => ({ ad: m.name.trim() })));
+      const kodsuz = (x) => x.replace(/\s*[·—–-]?\s*\b\d{2}[A-Z]{2}\d{6}\b/g, '').trim();   // Canlı Not 29: parça numarası düşer
+      expect(r.detay[0].ogeler).toEqual(ex.model.components.map((c) => ({ ad: kodsuz(c.name), deger: n(c.mass, 1) + ' kg' })));
+      expect(r.detay[1].ogeler).toEqual(ex.model.mounts.map((m) => ({ ad: kodsuz(m.name) })));
     });
   });
-  // KAYNAK: gerçek örnekte kaydın "Kaynak" satırı, yoksa açıklaması ("Kaynak: "
-  // öneki düşer); kurgu örnekte açıklaması — kurgunun "Kaynak" satırı bölüm
-  // başlığının söylediğini tekrar ederdi.
-  test('kaynak: kaydın Kaynak satırı ya da açıklaması; kurgunun uyarısı tekrar edilmez', () => {
-    const k = Object.fromEntries(satirlar().map((r) => [r.v, r.kaynak]));
-    expect(k.siper).toBe('CATIA atalet ölçümü · ADAMS doğrulaması');
-    expect(k.tulga).toBe('TULGA proje kaydı');
-    expect(k.asfat).toBe('BMC ASR-SR-116 · 04.08.2021');
-    core.getMountExampleList().forEach((ex) => {
-      const sat = (ex.specs || []).find((x) => x[0] === 'Kaynak');
-      const bek = (sat && !ex.kurgu) ? sat[1] : String(ex.description || '').replace(/^Kaynak:\s*/, '');
-      expect([ex.id, k[ex.id]]).toEqual([ex.id, bek]);
-      expect(k[ex.id]).not.toMatch(/^Kaynak:|Kurgu —/);
+  // KÜNYE (kullanıcı 2026-11-05, Canlı Not 28: "'Catia Atalet Ölçümü' gibi gereksiz
+  // şeyler yazmayalım" · Canlı Not 29: "'BMC-ASR-SR' falan yazıyor. Kaldır bunları.").
+  // Önce: satır kaynağı yazıyordu (CATIA atalet ölçümü · ADAMS doğrulaması · TULGA
+  // proje kaydı · BMC ASR-SR-116 · 04.08.2021). Şimdi güç grubunun künyesi, kurgu
+  // örneklerin biçiminde (motor · aktarma · askı); sayılar modelden; parça numarası düşer.
+  test('künye: güç grubu (motor · aktarma · askı), modelden; kaynak, rapor kodu ve parça numarası yok', () => {
+    const S = satirlar(), k = Object.fromEntries(S.map((r) => [r.v, r.kunye]));
+    expect(k.siper).toBe('6 silindir · 3.000 N·m · cradle askı');
+    expect(k.tulga).toBe('4 silindir · 760 N·m · transfer kutusu');
+    expect(k.asfat).toBe('Cummins 6 silindir · Allison 4700 + retarder · 2 PTO');
+    const ex = Object.fromEntries(core.getMountExampleList().map((e) => [e.id, e]));
+    // iddialar modelle tutarlı
+    ['siper', 'tulga'].forEach((id) => {
+      const T = ex[id].model.torque;
+      expect(k[id].startsWith(T.cylinders + ' silindir · ' + veSayi(T.Te) + ' N·m')).toBe(true);
     });
+    const ad = ex.asfat.model.components.map((c) => c.name);
+    expect(ad.some((a) => /Cummins/.test(a)) && ad.some((a) => /Allison 4700/.test(a) && /Retarder/.test(a))).toBe(true);
+    expect(ad.filter((a) => /PTO/.test(a)).length).toBe(2);
+    expect((ex.asfat.specs.find((x) => /^Rölanti/.test(x[0])) || [])[1]).toMatch(/· 6 →/);
+    // kaynak, rapor kodu, parça numarası satırın hiçbir yerinde yok; ASFAT'ın Kaynak satırı kalktı
+    const kod = /Kaynak|CATIA|ADAMS|ASR-SR|proje kaydı|\b\d{2}[A-Z]{2}\d{6}\b/;
+    S.forEach((r) => {
+      expect([r.v, r.kunye]).toEqual([r.v, expect.not.stringMatching(kod)]);
+      r.detay.forEach((b) => b.ogeler.forEach((o) => expect(o.ad).not.toMatch(kod)));
+    });
+    expect(ex.asfat.specs.some((x) => x[0] === 'Kaynak' || /ASR-SR/.test(x[1]))).toBe(false);
+    expect(ex.asfat.model.mounts.map((m) => m.name)[0]).toMatch(/57RS313774/);          // model adı yerinde
+    expect(S.find((r) => r.v === 'asfat').detay[1].ogeler.map((o) => o.ad).slice(0, 2)).toEqual(['Ön Sol', 'Ön Sağ']);
+    expect(S.find((r) => r.v === 'asfat').detay[0].ogeler[0].ad).toBe('Motor — Cummins');
+    // kurgu örneklerin künyesi aynı kalır
+    expect([k.kutu, k.hafif, k.kamyon]).toEqual(['Kapalı form kıyas modeli', '2,2 L dizel · 6 ileri manuel · 3 noktalı askı',
+      '7,7 L dizel · 6 ileri manuel · nonlineer takoz']);
   });
-  test('resim YOK: sayfada çizim, resim kutusu ve karo yok', () => {
+  test('resim YOK: kapılarda ve örneklerin dizininde çizim, resim kutusu ve karo yok; görsel yalnız son değişikliğin ayrıntısında', () => {
     const h = BS.veMntBaslangicHTML();
     expect(h).not.toMatch(/ve-mnt2d-akso|ve-bas-resim|ve-bas-karo|ve-bas-oniz|<svg class="ve-ak/);
+    const eski = [global.window.__MFSIM_BUILD, global.window.__MFSIM_DEGISIKLIK];
+    global.window.__MFSIM_BUILD = { moduller: { takoz: [{ prNumber: 1, date: '2026-11-05T10:00:00Z', title: 'Bir',
+      ayrinti: [{ konu: 'Canlı not 22: palet', govde: [], notlar: [22] }] }] } };
+    global.window.__MFSIM_DEGISIKLIK = { 22: { src: 'data:image/webp;base64,AAAA', g: 560, y: 350 } };
+    try {
+      const d = document.createElement('div');
+      d.innerHTML = BS.veMntBaslangicHTML();
+      const img = [...d.querySelectorAll('img')];
+      expect(img.length).toBe(1);
+      expect(img.every((x) => !!x.closest('.ve-bas-degisiklik-ayrinti'))).toBe(true);
+    } finally {
+      ['__MFSIM_BUILD', '__MFSIM_DEGISIKLIK'].forEach((k, i) => { if (eski[i] === undefined) delete global.window[k]; else global.window[k] = eski[i]; });
+    }
   });
 });
 
@@ -428,6 +461,36 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
       });
       expect(global.nodes).toEqual([]);
     } finally { if (eski === undefined) delete global.window.__MFSIM_BUILD; else global.window.__MFSIM_BUILD = eski; }
+  });
+  // Canlı Not 27 (kullanıcı 2026-11-05: "Her son değişikliği görselli olarak görmek
+  // istiyorum" → "Olur uygula. Elinde olan görüntüleri eklersin."): commit'in notunun
+  // sonuç görüntüsü ayrıntıda konunun altında; not birleşmede bir kez (ilk commit'inde),
+  // boyu en çok 360 px; görseli olmayan not görselsiz.
+  test('son değişikliğin görseli: notun sonuç görüntüsü konunun altında, bir kez, boyu sınırlı', () => {
+    const K = { moduller: { takoz: [
+      { prNumber: 3, date: '2026-11-05T10:00:00Z', title: 'Üç', ayrinti: [
+        { konu: 'Canlı not 22: palet', govde: ['p'], notlar: [22] },
+        { konu: 'Canlı not 9 · 19: iki', govde: [], notlar: [9, 19] },
+        { konu: 'Canlı not 22: test', govde: [], notlar: [22] },
+        { konu: 'Ölçüm Görüntüleyici yeniden üretildi', govde: [], notlar: [] }] }] } };
+    const R = { 22: { src: 'data:image/webp;base64,AAAA', g: 560, y: 350 }, 19: { src: 'data:image/webp;base64,BBBB', g: 341, y: 818 } };
+    const a = BS.veMntBaslangicDegisiklik(K, R).kayitlar[0].ayrinti;
+    expect(a.map((x) => x.resimler.map((r) => [r.no, r.g, r.y]))).toEqual([
+      [[22, 560, 350]], [[19, 150, 360]], [], []]);                    // 22 bir kez; 9'un görseli yok; 19 boyu 360'a
+    expect(BS.veMntBaslangicDegisiklik(K, {}).kayitlar[0].ayrinti.every((x) => x.resimler.length === 0)).toBe(true);
+    const d = document.createElement('div');
+    d.innerHTML = require('../../js/baslangic-sayfa.js').veBasDegisiklikHTML(BS.veMntBaslangicDegisiklik(K, R));
+    const li = [...d.querySelectorAll('.ve-bas-degisiklik-ayrinti > ol > li')];
+    const img = li[0].querySelector('img.ve-bas-degisiklik-resim');
+    expect([img.getAttribute('src'), img.getAttribute('width'), img.getAttribute('height'), img.alt, img.getAttribute('loading')])
+      .toEqual(['data:image/webp;base64,AAAA', '560', '350', 'Not 22 sonucu', 'lazy']);
+    expect(img.previousElementSibling.className).toBe('ve-bas-degisiklik-p');      // paragrafların altında
+    expect(li.map((x) => x.querySelectorAll('img').length)).toEqual([1, 1, 0, 0]);
+    // görsel sütundan taşmaz, köşe keskin, gölge yok
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    const k = css.slice(css.indexOf('\n.ve-bas-degisiklik-resim{') + 1).split('}')[0];
+    expect(k).toMatch(/max-width:100%; height:auto/);
+    expect(k).not.toMatch(/border-radius|box-shadow/);
   });
   test('derlemenin listesi: birleşme Takoz\'un dosyasına dokunuyorsa girer', () => {
     const V = require('../../tools/version-info.js');

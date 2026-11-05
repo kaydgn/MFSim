@@ -845,7 +845,7 @@ button, textarea, input { font: inherit; color: inherit; }
   }
   function listeCiz() {
     var ol = $('cn-notlar');
-    var sirali = CN.siraliNotlar(notlar);
+    var sirali = CN.yenidenEskiye(notlar);           // en yeni not en üstte
     var varolan = {};
     Array.prototype.forEach.call(ol.children, function (li) { varolan[li.id] = li; });
     sirali.forEach(function (n, i) {

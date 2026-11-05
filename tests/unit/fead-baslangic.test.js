@@ -189,62 +189,56 @@ describe('SAYFANIN HTML\'İ', () => {
   });
 });
 
-// KİMLİK VE VERİ (kullanıcı isteği 2026-10-19: *"çok sade olmuş … Bir şeyler
-// ekleyelim … profesyonel dursun."*). Eklenen her şey AD ya da VERİ ve bir
-// kaynağı var: analizin adı kartın ve Sonuçlar'ın hazır diyagramlarının adı,
-// sayı kataloğun KENDİSİNDEN, kapının künyesi sihirbazın rayı ve dosya
-// seçicinin kabul listesi. Elle yazılmış sayı katalog büyüyünce sessizce
-// bayatlardı (CLAUDE.md'deki "244 stok boy" gibi).
-describe('KİMLİK VE VERİ — adlar programdan, sayılar kataloğun kendisinden', () => {
+// KİMLİK (kullanıcı isteği 2026-10-19: *"çok sade olmuş … profesyonel dursun."*
+// → 2026-11-05, Canlı Not 32: *"Gereksiz açıklamaları kaldır. Özellikle ortadaki
+// kutu açıklamalarını. O kutucukları tamamen kaldır."*). Önce: başlığın altında altı
+// analiz adı, altında katalogun altı sayı kutusu (5 kayış profili · 244 stok boy …).
+// Şimdi Takoz'unki gibi: modülün adı, Kılavuz ve dönüş; kapının künyesi programdan.
+// Dönüş (Canlı Not 30 · 31: *"Beni böyle garip bir şekilde geri atıyor … geri gelme
+// butonunun yerini değiştirelim"*): köşedeki « yerine başlıkta, Kılavuz'un yanında.
+describe('KİMLİK VE VERİ — ad ve dönüş başlıkta; analiz adı ve sayı bandı yok', () => {
   const W = require('../../js/cp-fead-wizard.js');
-  const n = (x) => veSayi(x, 0);
-  test('kimlik: modülün componentDefs adı ve ikonu', () => {
+  test('kimlik: modülün componentDefs adı ve ikonu; analiz adı yok', () => {
     const k = BS.veFeadBaslangicKimlik();
     expect(k.ad).toBe(componentDefs['fead-analysis'].name);
     expect(k.ikon).toBe(componentDefs['fead-analysis'].svg);
-    expect(k.yetenekler).toBe(BS.VE_FEAD_BAS_YETENEK);
-  });
-  test('her analiz adı programın kendi adı: Kayış Yolu kartı ve Sonuçlar\'ın hazır diyagramları', () => {
-    const kume = (k, ch) => ({ sensorId: '~fead-' + k, channels: ch.map((id) => ({ id })) });
-    const hazir = global.veFeadSignals.presets([
-      kume('cevrim', ['a.T', 'sfmin', 'a.hub', 'a.dir', 'pkw', 'a.nm', 'a.rpm']),
-      kume('campbell', ['f1']),
-      kume('kol', ['T', 'hub', 'tk', 'phi']),
-      kume('senaryo', ['rpm', 'a.T', 'fire'])
-    ]).map((p) => p.ad);
-    expect(hazir.length).toBeGreaterThanOrEqual(5);
-    const adlar = [componentDefs['fead-layout'].name].concat(hazir);
-    expect(BS.VE_FEAD_BAS_YETENEK.filter((y) => adlar.indexOf(y) < 0)).toEqual([]);
-  });
-  test('bandın her sayısı kataloğun kendisinden; hiçbir satır düşmez', () => {
-    const B = require('../../js/fead-belts.js');
-    const aks = require('../../js/fead-accessories.js').VE_FEAD_ACC_DB;
-    const bek = {
-      'Kayış profili': B.VE_FEAD_BELT_PROFILES.length,
-      'Stok kayış boyu': Object.keys(B.VE_FEAD_BELT_STOCK).reduce((s, p) => s + B.VE_FEAD_BELT_STOCK[p].length, 0),
-      'Otomatik gergi': require('../../js/fead-tensioners.js').VE_FEAD_TENSIONER_DB.length,
-      'Motor': require('../../js/fead-engines.js').VE_FEAD_ENGINE_DB.length,
-      'Aksesuar': aks.length,
-      'Çalışma çevrimi': require('../../js/fead-duty.js').VE_FEAD_DUTY_DB.length
-    };
-    const v = BS.veFeadBaslangicVeri();
-    expect(v.map((x) => x.ad)).toEqual(Object.keys(bek));
-    v.forEach((x) => expect(x.deger).toBe(n(bek[x.ad])));
-    expect(v[0].title).toBe(B.VE_FEAD_BELT_PROFILES.join(' · '));
-    // Aksesuarın türleri kayıtların `tip` alanından; her kayıt bir türe girer.
-    const tur = v[4].title.split(' · ').map((s) => Number(s.split(' ')[0]));
-    expect(tur.reduce((a, b) => a + b, 0)).toBe(aks.length);
+    expect(k.yetenekler).toBeUndefined();
+    expect(BS.veFeadBaslangicSayfa().veriler).toBeUndefined();
     const d = document.createElement('div');
     d.innerHTML = BS.veFeadBaslangicHTML();
-    expect([...d.querySelectorAll('.ve-bas-veri dd')].map((x) => x.textContent))
-      .toEqual(Object.keys(bek).map((k) => n(bek[k])));
+    expect(d.querySelector('.ve-bas-yetenek, .ve-bas-veri')).toBeNull();
+  });
+  test('dönüş başlıkta, Kılavuz\'un yanında: "Ana topoloji"; eylemi modülden çıkar; köşedeki düğme gizlenir', () => {
+    const GK = require('../../js/guide-kit.js');
+    const uret = GK.veGuideKitOf('fead').uret;
+    global[uret] = () => '';
+    try {
+      const d = document.createElement('div');
+      d.innerHTML = BS.veFeadBaslangicHTML();
+      const ey = d.querySelector('.ve-bas-kimlik > .ve-bas-kimlik-eylem');
+      expect([...ey.children].map((c) => [c.className, c.textContent])).toEqual([
+        ['ve-bas-donus', 'Ana topoloji'], ['ve-bas-kilavuz', 'Kılavuz']]);
+      expect(ey.querySelector('.ve-bas-donus').getAttribute('data-ey')).toBe('donus');
+      expect(ey.querySelector('.ve-bas-donus .mf-ico-chevrons-left')).not.toBeNull();
+    } finally { delete global[uret]; }
+    const once = global.veFeadCloseEditor;
+    global.veFeadCloseEditor = jest.fn();
+    try {
+      expect(BS.veFeadBaslangicEylem('donus')).toBe(true);
+      expect(global.veFeadCloseEditor).toHaveBeenCalledTimes(1);
+    } finally { if (once === undefined) delete global.veFeadCloseEditor; else global.veFeadCloseEditor = once; }
+    // Kit sayfanın MODELİNİ alır: dönüşü taşıdığını söyler (köşedeki düğme kabın
+    // `.ve-bas-donus-acik` sınıfıyla gizli — styles.css)
+    expect(loadSource('cp-fead-baslangic.js')).toMatch(/sayfa: veFeadBaslangicSayfa, eylem: veFeadBaslangicEylem/);
+    expect(require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8'))
+      .toMatch(/#sayfa2-content\.ve-bas-donus-acik \.ve-arac-breadcrumb\{ display:none; \}/);
   });
   // Tarayıcıda sabit `window[ad]`dan okunur: `const`/`let` ile bildirilmiş
   // üst seviye ad pencereye yazılmaz; Node'da `require` yolu çalıştığı için
   // birim testi bunu görmezdi ve bant o satırı SESSİZCE düşürürdü.
   test('okunan her sabit tarayıcıda da var: üst seviye `var` ya da `function`', () => {
     const okunan = [...loadSource('cp-fead-baslangic.js').matchAll(/_feadBasG\('([A-Za-z_]+)', '\.\/([a-z0-9-]+\.js)'\)/g)];
-    expect(okunan.length).toBeGreaterThanOrEqual(8);
+    expect(okunan.length).toBeGreaterThanOrEqual(3);
     okunan.forEach(([, ad, dosya]) => {
       expect(loadSource(dosya)).toMatch(new RegExp('^(var|function) ' + ad + '\\b', 'm'));
     });
@@ -332,8 +326,8 @@ describe('KAPILAR MODÜLÜN VAR OLAN ÇAĞRILARINA GİDER', () => {
 
 // SÜTUN DÜZENİ (kullanıcı 2026-11-04: *"Yok, FEAD modülü önceki hali gibi
 // kalsın. O daha güzelmiş."*): kitin Çalışma masası bir tur denendi, Takoz'da
-// kaldı. FEAD sayfası sütunu BEYAN eder — kimlik (Kılavuz sağında) · veri
-// bandı · kapılar · rapor karoları; karo TEK TIKLA kurar: seçim, önizleme ve
+// kaldı. FEAD sayfası sütunu BEYAN eder — kimlik (dönüş ve Kılavuz sağında) ·
+// kapılar · rapor karoları; karo TEK TIKLA kurar: seçim, önizleme ve
 // Yükle düğmesi yok. Sayfa rayının gizlenmesi kitin iki düzende ortak kuralı
 // (mount-baslangic.test.js → RAY).
 describe('SÜTUN DÜZENİ — FEAD önceki hâlinde, Takoz Çalışma masasında', () => {
@@ -349,8 +343,8 @@ describe('SÜTUN DÜZENİ — FEAD önceki hâlinde, Takoz Çalışma masasında
       expect(ic.classList.contains('ve-bas-ic--sutun')).toBe(true);
       expect(ic.querySelector('.ve-bas-panel, .ve-bas-masa, .ve-bas-oniz, .ve-bas-yukle, [aria-pressed], [data-yukle]')).toBeNull();
       expect([...ic.children].map((c) => c.className))
-        .toEqual(['ve-bas-kimlik', 've-bas-veri', 've-bas-kapilar', 've-bas-baslik', 've-bas-raporlar']);
-      expect(ic.querySelector('.ve-bas-kimlik > .ve-bas-kilavuz')).not.toBeNull();   // Kılavuz kimliğin sağında
+        .toEqual(['ve-bas-kimlik', 've-bas-kapilar', 've-bas-baslik', 've-bas-raporlar']);
+      expect(ic.querySelector('.ve-bas-kimlik > .ve-bas-kimlik-eylem > .ve-bas-kilavuz')).not.toBeNull();   // Kılavuz kimliğin sağında
     } finally { delete global[uret]; }
   });
 

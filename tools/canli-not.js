@@ -127,8 +127,8 @@ function sayfaKur(sablon, cekirdek, ayar) {
 // okuduğu her yol + Canlı Not'un kendi dosyaları; karşılama kareleri bu yayında
 // yok. Liste build.js'e karşı testte bağlı (canli-not.test.js → GÜNCELLİK).
 const GIRDILER = [
-  'index.html', 'js', 'css', 'vendor', 'pwa/icon.svg', 'assets/examples', 'programlar/kayit.json',
-  'build.js', 'build-shield.js', 'tools/version-info.js',
+  'index.html', 'js', 'css', 'vendor', 'pwa/icon.svg', 'assets/examples', 'assets/degisiklik', 'programlar/kayit.json',
+  'build.js', 'build-shield.js', 'tools/version-info.js', 'tools/degisiklik-resim.js', 'tools/karsilama-webp.js',
   'tools/canli-not.js', 'tools/canli-not.html', 'tools/canli-not-kopru.js', 'tools/canli-not-cekirdek.js'
 ];
 
