@@ -53,36 +53,17 @@ function veMntWiz3bKesitAralik(kutu, eksen){
   return [lo - p, hi + p];
 }
 
-// Komut çubuğu (saf, testli). D: { kesit: { eksen, d, ters } | null, aralik: [lo, hi],
-// suzgec: 'parca' | 'yuz', olcu: ölçü açık mı, gorunus: VE_MW_3B_GORUNUS'un anahtarı }.
+// Komut çubuğunun orta kısmı (saf, testli). D: { kesit: { eksen, d, ters } | null, aralik: [lo, hi] }.
 // ÇALIŞMA MASASI (2026-11-03): çubuk başlığın altında, tuvalin üstünde yüzmez.
-// Bakış bir LİSTE: seçilen bakış uygulanır, liste adına ("Bakış") döner — aynı
-// bakış yeniden seçilebilsin. Görünüş listesi
-// geçerli kipi gösterir.
+// Bakış · Görünüş · seçim süzgeci · Ölçü · Kesit çubukta DEĞİL, boşluğa sağ tık
+// menüsünde (kullanıcı 2026-11-05, Canlı Not 25: *"Burada kalmalarına gerek yok"*);
+// çubuk yalnız AÇIK kesitin ayarını taşır (eksen · konum · Ters) — kip kapanınca boş.
 function veMntWiz3bAracHTML(D){
-  var k = D && D.kesit, yuz = !!(D && D.suzgec === 'yuz'), bas = function(b){ return ' aria-pressed="' + (b ? 'true' : 'false') + '"'; };
-  var ayrac = '<span class="ve-mw-3b-arac-ayrac" aria-hidden="true"></span>', gr = (D && D.gorunus) || 'kenar';
-  var h = '<div class="ve-mw-3b-arac-sira" role="toolbar" aria-label="3B araçları">'
-    + '<label class="ve-mw-3b-sec">' + _mwIkon('box') + '<select id="ve-mw-3b-bakis" aria-label="Bakış" onchange="veMntWiz3bBakisSec(this)">'
-    + '<option value="" selected disabled>Bakış</option>';
-  VE_MW_3B_BAKIS.forEach(function(g){ h += '<option value="' + g.k + '" data-ve-3b-bakis="' + g.k + '">' + g.ad + '</option>'; });
-  h += '</select></label>';
-  if(typeof VE_MW_3B_GORUNUS !== 'undefined')
-    h += '<label class="ve-mw-3b-sec">' + _mwIkon('contrast') + '<select id="ve-mw-3b-gorunus" aria-label="Görünüş" onchange="veMntWiz3bGorunusSec(this.value)">'
-      + VE_MW_3B_GORUNUS.map(function(g){ return '<option value="' + g.k + '"' + (g.k === gr ? ' selected' : '') + '>' + g.ad + '</option>'; }).join('')
-      + '</select></label>';
-  h += ayrac + '<div class="ve-mw-3b-arac-grup ve-mw-3b-bolme" role="group" aria-label="Seçim">'
-    + '<button type="button" class="ve-mw-3b-arac-b" data-ve-3b-suzgec="parca"' + bas(!yuz) + ' onclick="veMntWiz3bSuzgec(\'parca\')">'
-      + _mwIkon('box') + ' Parça</button>'
-    + '<button type="button" class="ve-mw-3b-arac-b" data-ve-3b-suzgec="yuz"' + bas(yuz) + ' onclick="veMntWiz3bSuzgec(\'yuz\')">'
-      + _mwIkon('square') + ' Yüzey</button></div>' + ayrac
-    + '<button type="button" class="ve-mw-3b-arac-b" id="ve-mw-3b-olcu"' + bas(D && D.olcu) + ' onclick="veMntWiz3bOlcu()">'
-      + _mwIkon('ruler') + ' Ölçü</button>'
-    + '<button type="button" class="ve-mw-3b-arac-b" id="ve-mw-3b-kesit"' + bas(k) + ' onclick="veMntWiz3bKesit()">'
-      + _mwIkon('scissors') + ' Kesit</button></div>';
-  if(!k) return h;
+  var k = D && D.kesit;
+  if(!k) return '';
   var A = (D && D.aralik) || [0, 1], adim = (A[1] - A[0]) / VE_MW_3B_KESIT_ADIM;
-  h += '<div class="ve-mw-3b-arac-sira ve-mw-3b-kesit" role="group" aria-label="Kesit">'
+  var h = '<div class="ve-mw-3b-arac-sira ve-mw-3b-kesit" role="group" aria-label="Kesit">'
+    + '<span class="ve-mw-3b-kesit-ad">' + _mwIkon('scissors') + 'Kesit</span>'
     + '<div class="ve-mw-3b-arac-grup" role="group" aria-label="Kesit ekseni">';
   VE_MW_3B_EKSEN_HARF.forEach(function(x, i){
     h += '<button type="button" class="ve-mw-3b-arac-b" data-ve-3b-kesit-eksen="' + i + '" aria-pressed="' + (k.eksen === i ? 'true' : 'false') + '"'
@@ -99,7 +80,9 @@ function veMntWiz3bAracHTML(D){
     + ' onkeydown="if(event.key === \'Enter\'){ event.preventDefault(); veMntWiz3bKesitD(this.value, true); }">'
     + '<span>mm</span></label>'
     + '<button type="button" class="ve-mw-3b-arac-b" id="ve-mw-3b-kesit-ters" aria-pressed="' + (k.ters ? 'true' : 'false') + '"'
-    + ' onclick="veMntWiz3bKesitTers()">Ters</button></div>';
+    + ' onclick="veMntWiz3bKesitTers()">Ters</button>'
+    + '<button type="button" class="ve-mw-3b-arac-b" id="ve-mw-3b-kesit-kapat" onclick="veMntWiz3bKesit()" aria-label="Kesiti kapat" title="Kesiti kapat">'
+    + _mwIkon('x') + '</button></div>';
   return h;
 }
 // Kesit alanının değeri: 0,1 mm'ye, makine biçiminde (alan Türkçe gösterir — js/sayi-alan.js)

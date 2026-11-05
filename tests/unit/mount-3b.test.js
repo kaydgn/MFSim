@@ -681,8 +681,8 @@ describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu',
   test('BOŞLUĞUN MENÜSÜ: Tümünü göster · Tümünü sığdır · Bakış · Görünüş · Arka plan; geçerliler işaretli; arka plan tercihi tarayıcıda', () => {
     const s = oturum(), brk = ad2i(s, 'Arka braket');
     const L = veMntWiz3bMenuOgeleri(s, [brk], {}, { bos: true, gorunus: 'golge', zemin: 'beyaz' });
-    expect(kok(L)).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'temizle']);
-    expect(kok(veMntWiz3bMenuOgeleri(s, [], {}, { bos: true }))).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin']);
+    expect(kok(L)).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'suzgec', 'olcu', 'kesit', '-', 'temizle']);
+    expect(kok(veMntWiz3bMenuOgeleri(s, [], {}, { bos: true }))).toEqual(['tumu', 'sigdir', '-', 'bakis', 'gorunus', 'zemin', '-', 'suzgec', 'olcu', 'kesit']);
     expect(L.find((o) => o.k === 'bakis').alt.map((o) => o.ad)).toEqual(VE_MW_3B_BAKIS.map((b) => b.ad));
     expect(L.find((o) => o.k === 'gorunus').alt.filter((o) => o.secili).map((o) => o.k)).toEqual(['gorunus:golge']);
     const z = L.find((o) => o.k === 'zemin').alt;
@@ -898,14 +898,17 @@ describe('KESİT — düzlem, aralık, çubuk, kesilen yanda seçilmez', () => {
     expect(veMntWiz3bKesitAralik(kutu, 2)).toEqual([9, 11]);       // sıfır boyda 1 mm pay
   });
 
-  test('çubuk: yedi bakış ve Kesit; kesit açıkken eksen, kaydırıcı ve Ters', () => {
+  // Canlı Not 25 (kullanıcı 2026-11-05: "Şu kısımları boşa sağ klik yaptığımızda ortaya
+  // çıkacak şekilde ayarlayalım. Burada kalmalarına gerek yok."): çubukta araç yok;
+  // açık kesitin ayarı çubukta kalır (eksen · konum · Ters · kapat).
+  test('çubuk: araç YOK; kesit açıkken eksen, kaydırıcı, Ters ve kapat', () => {
     const d = document.createElement('div');
     d.innerHTML = veMntWiz3bAracHTML({ kesit: null });
-    expect(d.querySelectorAll('[data-ve-3b-bakis]').length).toBe(7);
-    expect(d.querySelector('#ve-mw-3b-kesit').getAttribute('aria-pressed')).toBe('false');
-    expect(d.querySelector('.ve-mw-3b-kesit')).toBe(null);
+    expect(d.innerHTML).toBe('');
+    expect(d.querySelector('#ve-mw-3b-bakis, #ve-mw-3b-gorunus, [data-ve-3b-suzgec], #ve-mw-3b-olcu, #ve-mw-3b-kesit')).toBe(null);
     d.innerHTML = veMntWiz3bAracHTML({ kesit: { eksen: 1, d: 12.34, ters: true }, aralik: [-51, 51] });
-    expect(d.querySelector('#ve-mw-3b-kesit').getAttribute('aria-pressed')).toBe('true');
+    expect(d.querySelector('.ve-mw-3b-kesit .ve-mw-3b-kesit-ad').textContent).toBe('Kesit');
+    expect(d.querySelector('#ve-mw-3b-kesit-kapat').getAttribute('onclick')).toBe('veMntWiz3bKesit()');
     expect(Array.from(d.querySelectorAll('[data-ve-3b-kesit-eksen]')).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
     const r = d.querySelector('#ve-mw-3b-kesit-d');
     expect([r.type, r.min, r.max, r.value]).toEqual(['range', '-51', '51', '12.34']);
@@ -1063,14 +1066,22 @@ describe('YÜZEY SEÇİMİ — tıklanan üçgenin yüzü, tanımı ve köşeler
     expect(d.querySelector('.ve-fw-3b-dizi-ad').textContent).toBe('Seçili parça yok. Ürün ağacından bir parça seçin.');
   });
 
-  test('çubuk: Parça · Yüzey süzgeci ve Ölçü; basılılık durumdan', () => {
-    const d = document.createElement('div'), bas = () => ['[data-ve-3b-suzgec="parca"]', '[data-ve-3b-suzgec="yuz"]', '#ve-mw-3b-olcu']
-      .map((q) => d.querySelector(q).getAttribute('aria-pressed'));
-    d.innerHTML = veMntWiz3bAracHTML({ kesit: null });
-    expect(bas()).toEqual(['true', 'false', 'false']);
-    d.innerHTML = veMntWiz3bAracHTML({ kesit: null, suzgec: 'yuz', olcu: true });
-    expect(bas()).toEqual(['false', 'true', 'true']);
-    expect(d.querySelector('[role="group"][aria-label="Seçim"]').querySelectorAll('button').length).toBe(2);
+  test('boşluğun menüsü: Seçim (Parça · Yüzey) · Ölçü · Kesit — açık kip işaretli', () => {
+    const M = { veMntWiz3bMenuOgeleri, veMntWiz3bMenuHTML };
+    const st = { roller: {}, sonuc: { agac: [], parcalar: [] } };
+    const bul = (L, k) => L.filter((o) => o !== '-' && o.k === k)[0];
+    let L = M.veMntWiz3bMenuOgeleri(st, [], {}, { bos: true });
+    expect(bul(L, 'suzgec').alt.map((o) => [o.k, o.secili])).toEqual([['suzgec:parca', true], ['suzgec:yuz', false]]);
+    expect([bul(L, 'olcu').isaretli, bul(L, 'kesit').isaretli]).toEqual([false, false]);
+    L = M.veMntWiz3bMenuOgeleri(st, [], {}, { bos: true, suzgec: 'yuz', olcu: true, kesit: true });
+    expect(bul(L, 'suzgec').alt.map((o) => o.secili)).toEqual([false, true]);
+    expect([bul(L, 'olcu').isaretli, bul(L, 'kesit').isaretli]).toEqual([true, true]);
+    // HTML: kip satırı onay kutusu rolünde, açıksa işaretli
+    const d = document.createElement('div');
+    d.innerHTML = M.veMntWiz3bMenuHTML(L);
+    const o = d.querySelector('[data-k="olcu"]');
+    expect([o.getAttribute('role'), o.getAttribute('aria-checked'), !!o.querySelector('.mf-ico-check')]).toEqual(['menuitemcheckbox', 'true', true]);
+    expect(d.querySelector('[data-k="suzgec:yuz"]').getAttribute('role')).toBe('menuitemradio');
   });
 });
 
@@ -1379,15 +1390,12 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(veMntWiz3bGorunus(VE_MW_3B_SOLUK, [5, 5, 5], Object.assign({ xray: true }, R)).a).toBe(VE_MW_3B_CIZGI_A.xray);
     expect(VE_MW_3B_CIZGI_A.xray).toBeGreaterThan(VE_MW_3B_CIZGI_A.soluk);
     expect(VE_MW_3B_CIZGI_A.xray).toBeLessThan(VE_MW_3B_CIZGI_A.olagan);
-    const d = kur(veMntWiz3bAracHTML({ kesit: null, gorunus: 'xray' }));
-    expect(d.querySelector('#ve-mw-3b-gorunus').value).toBe('xray');
-    const bk = d.querySelector('#ve-mw-3b-bakis');
-    expect([bk.options[0].disabled, bk.options[0].textContent]).toEqual([true, 'Bakış']);
-    expect(Array.from(bk.options).slice(1).map((o) => o.value)).toEqual(VE_MW_3B_BAKIS.map((g) => g.k));
-    // Seçilen bakış uygulanır (görüntüleyici kapalı: uygulanmaz), liste adına döner
-    bk.value = 'ust';
-    expect(veMntWiz3bBakisSec(bk)).toBe(false);
-    expect(bk.selectedIndex).toBe(0);
+    // Bakış ve Görünüş çubukta değil, boşluğun menüsünde (Canlı Not 25)
+    const L = veMntWiz3bMenuOgeleri({ roller: {}, sonuc: { agac: [], parcalar: [] } }, [], {}, { bos: true, gorunus: 'xray' });
+    const bul = (k) => L.filter((o) => o !== '-' && o.k === k)[0];
+    expect(bul('gorunus').alt.filter((o) => o.secili).map((o) => o.k)).toEqual(['gorunus:xray']);
+    expect(bul('bakis').alt.map((o) => o.k)).toEqual(VE_MW_3B_BAKIS.map((g) => 'bakis:' + g.k));
+    expect(veMntWiz3bAracHTML({ kesit: null, gorunus: 'xray' })).toBe('');
   });
 
   test('ağaçta ara: ad ya da örnek adı, Türkçe büyük-küçük harf; atanın adı, rol çipi; en çok VE_MW_3B_ARA_EN satır; sonuçsuz durum', () => {

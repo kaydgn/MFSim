@@ -130,8 +130,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (→ *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ* · *TOPLAYICI*) + `mount-step-okuma.spec.js` +
   `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
 - Takoz 3B'nin düzeni **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-03, tasarım tuvali):
-  komut çubuğu (dosyanın adı · Bakış · Görünüş listeleri, süzgeç, Ölçü, Kesit; sağda eylem —
-  SIRADAKİ adım dolu vurgu — ve sağ uçta Kapat) → [Ürün ağacı | tuval | Özellikler] → durum
+  komut çubuğu (dosyanın adı · açık kesitin ayarı; sağda eylem — SIRADAKİ adım dolu vurgu — ve
+  sağ uçta Kapat; Bakış · Görünüş · Seçim süzgeci · Ölçü · Kesit BOŞLUĞA SAĞ TIK menüsünde,
+  kullanıcı 2026-11-05, Canlı Not 25) → [Ürün ağacı | tuval | Özellikler] → durum
   çubuğu (imlecin koordinatı). **TAM EKRAN, başlık bandı YOK** (kullanıcı kararı 2026-11-04:
   *"popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka yere taşınsın"*;
   `.ve-mw-3b-tam` — pencerenin perdesinde de sihirbazın içinde de). Paneller tuvalin YANINDA,
@@ -151,8 +152,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`); **arama** bütün ağaçta (açık dallarla
   sınırlı değil), Türkçe büyük-küçük harf eşdeğer, Esc temizler. Kapı: `mount-3b.test.js` →
   *ÜRÜN AĞACI* · *ÇOKLU SEÇİM* · *ÇALIŞMA MASASI* + `mount-3b.spec.js` → *AĞAÇ · CTRL*.
-- `js/cp-mount-3b-arac.js` — Takoz 3B'nin **CAD araç çubuğu** (kullanıcı 2026-11-02): hazır
-  bakışlar (liste) · seçim süzgeci (Parça · **Yüzey**) · **Ölçü** · **Kesit**. Yüz tıklanan üçgenin
+- `js/cp-mount-3b-arac.js` — Takoz 3B'nin **CAD araçları** (kullanıcı 2026-11-02; 2026-11-05'ten
+  beri boşluğa sağ tık menüsünde, çubukta yalnız açık kesitin ayarı): hazır
+  bakışlar · seçim süzgeci (Parça · **Yüzey**) · **Ölçü** · **Kesit**. Yüz tıklanan üçgenin
   ağdaki yüz aralığından (`yuzUcgen`, dosyanın yüz sırası), tanımı ve köşeleri DOSYADAN, alanı
   ağdan (≈); parçanın seçimi değişmez. Ölçü dairesel kenarda dairenin MERKEZİNE, yüzün köşesine
   (VERTEX_POINT) yapışır; fare hareketi yalnız SVG katını yeniler. Kesilen yan çizilmez ve

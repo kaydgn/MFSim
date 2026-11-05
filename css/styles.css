@@ -8847,6 +8847,10 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-hap[disabled], .ve-mw-3b-hap[disabled]:hover{ cursor:not-allowed; color:var(--text-muted); background:var(--bg-tertiary);
   border-color:var(--border-color); }
 .ve-mw-3b-hap > .mf-ico{ width:14px; height:14px; }
+/* Açık kesitin ayarı — çubuğun orta kısmında YALNIZ kesit açıkken (Canlı Not 25:
+   araçlar boşluğa sağ tık menüsünde); adı ve kapat düğmesi satırın uçlarında. */
+.ve-mw-3b-kesit-ad{ display:inline-flex; align-items:center; gap:5px; margin-right:4px; font-size:var(--fs-tiny); font-weight:600; color:var(--text-secondary); }
+.ve-mw-3b-kesit-ad .mf-ico{ width:13px; height:13px; }
 .ve-mw-3b-kesit-d{ width:220px; max-width:40vw; accent-color:var(--accent-primary); }
 .ve-mw-3b-kesit-deger{ display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-mw-3b-kesit-gir{ width:72px; height:22px; padding:0 6px; font:inherit; font-size:var(--fs-tiny); text-align:right; font-variant-numeric:tabular-nums;
