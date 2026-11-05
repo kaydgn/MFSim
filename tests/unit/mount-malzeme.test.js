@@ -296,29 +296,33 @@ describe('3B — alttaki dizinin seçicisi ve ağacın etiketi', () => {
   const dizi = (s, secim) => { const d = document.createElement('div'); d.innerHTML = _mw3bMalzemeHTML(s, secim, secim.length > 1, secim[secim.length - 1]); return d; };
   const sec = (d) => d.querySelector('#ve-mw-3b-malzeme');
 
-  test('boş seçenek devralınanı söyler: "—" · "Birimden" · "Üstten" · "Karışık"; kendi ataması seçili; kaldır yalnız atama varken', () => {
+  // Kullanıcı 2026-11-05 (Canlı Not 9): "Her seçilen komponent için 'malzeme' tanımı
+  // isteniyor … Sadece istediğimiz parçalara malzeme tanımlayacağız." Önce: her
+  // seçimde Malzeme seçicisi ("—"); sonra satır yalnız atanmış (ya da devralınan)
+  // malzemeyi okur, atama sağ tık menüsünden. Not 16: motorda hiç yok.
+  test('malzeme satırı yalnız atanmışsa: devralınan "birimden" · "üstten", ayrışan "Karışık"; kaldır yalnız kendi ataması varken; takozda yok', () => {
     const s = ac(), ust = dugum(s.sonuc, 'Braket üst'), alt = dugum(s.sonuc, 'Braket alt'), brk = dugum(s.sonuc, 'Arka braket');
+    const mzS = (d) => d.querySelector('.ve-mw-3b-malzeme');
     let d = dizi(s, [ust]);
-    expect(d.querySelector('.ve-fw-3b-dizi-ad').textContent).toBe('Malzeme');
-    expect(sec(d).options[0].textContent).toBe('—');
-    expect(sec(d).value).toBe('');
-    expect(sec(d).querySelector('option[value="-"]').disabled).toBe(true);
-    expect(sec(d).options.length).toBe(STP.VE_MNT_STP_MALZEME.length + 2);
+    expect(mzS(d)).toBe(null);                                                  // atama yok: satır yok
     s.yogunluk[brk] = 'celik';
     d = dizi(s, [ust]);
-    expect(sec(d).options[0].textContent).toBe('Birimden · Çelik');
-    expect(sec(d).getAttribute('title')).toBe('Çelik · S235–S355 · 7.850 kg/m³');
+    expect(mzS(d).querySelector('.ve-mw-3b-kb').textContent).toBe('Malzeme');
+    expect(mzS(d).querySelector('.ve-mw-3b-oz-mz').textContent).toBe('Çelikbirimden');
+    expect(mzS(d).querySelector('.ve-mw-3b-oz-mz').getAttribute('title')).toBe('Çelik · S235–S355 · 7.850 kg/m³');
+    expect(d.querySelector('#ve-mw-3b-malzeme-kaldir')).toBe(null);             // devralınan kaldırılmaz
     s.malzeme[ust] = 'aluminyum';
     d = dizi(s, [ust]);
-    expect([sec(d).value, sec(d).querySelector('option[value="-"]').disabled]).toEqual(['aluminyum', false]);
+    expect(mzS(d).querySelector('.ve-mw-3b-oz-mz b').textContent).toBe('Alüminyum');
+    expect(d.querySelector('#ve-mw-3b-malzeme-kaldir').getAttribute('onclick')).toBe("veMntWiz3bMalzeme('')");
     d = dizi(s, [ust, alt]);
-    expect([sec(d).value, sec(d).options[0].textContent]).toEqual(['', 'Karışık']);
+    expect(mzS(d).querySelector('.ve-mw-3b-oz-mz b').textContent).toBe('Karışık');
     // birim seçiliyse kendi malzemesi kütle kaynağı
     d = dizi(s, [brk]);
-    expect(sec(d).value).toBe('celik');
-    // takozun kütlesi yok: seçici çizilmez
+    expect(mzS(d).querySelector('.ve-mw-3b-oz-mz b').textContent).toBe('Çelik');
+    // takozun kütlesi yok: satır çizilmez
     const s2 = Object.assign({}, s, { roller: s.roller.map((r, i) => (i === brk ? 'mnt-mount' : r)) });
-    expect(dizi(s2, [brk]).querySelector('#ve-mw-3b-malzeme')).toBe(null);
+    expect(dizi(s2, [brk]).querySelector('.ve-mw-3b-malzeme')).toBe(null);
   });
 
   test('ağaç: rolsüz düğümün kendi malzemesi satırda, tam adı ve yoğunluğu ipucunda', () => {

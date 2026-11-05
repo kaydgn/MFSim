@@ -21,38 +21,9 @@
 //     gezer, sağ ok alt menüyü açar, Enter uygular.
 // ============================================================================
 
-// Rol menüsünün GRUPLARI (sunum): liste TEK kaynaktan (VE_MNT_STP_ROLLER) süzülür,
-// grupta olmayan rol "Diğer"e düşer — yeni rol menüden sessizce kaybolmaz.
-var VE_MW_3B_ROL_GRUP = [
-  { ad: 'Gövdeler', roller: ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-bracket'] },
-  { ad: 'Takoz', roller: ['mnt-mount'] },
-  { ad: 'Aktarma', roller: ['mnt-shaft', 'mnt-pto', 'mnt-pump', 'mnt-pto-group'] },
-  { ad: 'Motor aksesuarları', roller: ['mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield'] }
-];
-// Malzeme verilmeyen roller (kütlesi başka yoldan: takoz kütlesizdir, motor ve
-// şanzımanınki veri sayfasından)
-var VE_MW_3B_MALZEMESIZ = ['mnt-mount', 'mnt-motor', 'mnt-gearbox'];
+// Rol grupları ve malzemenin uygunluğu Özellikler'le ORTAK: js/cp-mount-3b.js
+// (VE_MW_3B_ROL_GRUP · veMntWiz3bRolGruplari · veMntWiz3bMalzemeAlir).
 
-// Rol grupları (saf, testli): [{ ad, roller:[tip…] }] — yalnız rol listesinde
-// olanlar, boş grup yok; listedeki gruplanmamış rol "Diğer"de.
-function veMntWiz3bRolGruplari(){
-  var hepsi = (typeof VE_MNT_STP_ROLLER !== 'undefined') ? VE_MNT_STP_ROLLER : [], gorulen = {};
-  var out = VE_MW_3B_ROL_GRUP.map(function(g){
-    var r = g.roller.filter(function(t){ return hepsi.indexOf(t) >= 0; });
-    r.forEach(function(t){ gorulen[t] = 1; });
-    return { ad: g.ad, roller: r };
-  }).filter(function(g){ return g.roller.length; });
-  var diger = hepsi.filter(function(t){ return !gorulen[t]; });
-  if(diger.length) out.push({ ad: 'Diğer', roller: diger });
-  return out;
-}
-// Düğüm malzeme alır mı (saf, testli): kendi rolü ya da birimi malzemesiz rolse hayır
-function veMntWiz3bMalzemeAlir(s, d){
-  if(!(d >= 0) || !s || !s.sonuc || !s.sonuc.agac[d]) return false;
-  var b = typeof _mw3bSeciliBirim === 'function' ? _mw3bSeciliBirim(s, d) : -1;
-  var rol = s.roller[d] || (b >= 0 ? s.roller[b] : '');
-  return VE_MW_3B_MALZEMESIZ.indexOf(rol) < 0;
-}
 // Seçimin parçaları (saf): düğümlerin parça indisleri, tekrarsız
 function _mw3bMenuParcalar(s, secim){
   var p = {};
@@ -89,7 +60,7 @@ function veMntWiz3bMenuOgeleri(s, secim, gizli){
   alt.push({ k: 'rol:', ad: 'Rolü kaldır', ikon: 'x', kapali: !rs.some(function(r){ return !!r; }) });
   L.push({ k: 'rol', ad: 'Rol', ikon: 'box', alt: alt });
   if(typeof VE_MNT_STP_MALZEME !== 'undefined' && sec.every(function(d){ return veMntWiz3bMalzemeAlir(s, d); })){
-    var mz = (s.malzeme || {}), ms = sec.map(function(d){ return mz[d] || ''; });
+    var ms = sec.map(function(d){ return typeof veMntWizStpMalzemeDurum === 'function' ? veMntWizStpMalzemeDurum(s, d).k : ((s.malzeme || {})[d] || ''); });
     var mk = ms.every(function(m){ return m === ms[0]; }) ? ms[0] : null;
     var malt = VE_MNT_STP_MALZEME.map(function(m){ return { k: 'malzeme:' + m.k, ad: m.ad, secili: mk === m.k }; });
     malt.push('-');
@@ -299,8 +270,6 @@ function veMntWiz3bAgacMenu(d, e){
 
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
-    VE_MW_3B_ROL_GRUP: VE_MW_3B_ROL_GRUP, VE_MW_3B_MALZEMESIZ: VE_MW_3B_MALZEMESIZ,
-    veMntWiz3bRolGruplari: veMntWiz3bRolGruplari, veMntWiz3bMalzemeAlir: veMntWiz3bMalzemeAlir,
     veMntWiz3bMenuOgeleri: veMntWiz3bMenuOgeleri, veMntWiz3bMenuHTML: veMntWiz3bMenuHTML,
     veMntWiz3bGizliKume: veMntWiz3bGizliKume, veMntWiz3bDugumGizli: veMntWiz3bDugumGizli
   };

@@ -159,7 +159,7 @@ test('SEÇ · ROL · HESAP: tıklanan parça seçilir ve öteki parçalar solar;
   // Seçim dışı TEK KAT tül: ön geçiş (derinlik) ve tül birlikte açık
   const soluk = await page.evaluate(() => { const V = window._mw3b; return V.kume.every((K) => K.soluk.visible && K.derin.visible); });
   expect(soluk).toBe(true);
-  await page.click('#ve-mw-3b-alt [data-ve-3b-rol="mnt-motor"]');
+  await page.selectOption('#ve-mw-3b-alt #ve-mw-3b-rol', 'mnt-motor');
   await expect.poll(() => page.evaluate((d) => veMntWizStp().roller[d], motor.dugum)).toBe('mnt-motor');
   await page.click('#ve-mw-3b-hesapla');
   await expect.poll(async () => (await durum(page)).nokta).toBe(1);
@@ -267,7 +267,7 @@ test('AĞAÇ · CTRL: Ctrl+tık seçime ekler, rol hepsine; 3B\'de seçilen sat�
   await page.mouse.click(700, 120);
   await page.keyboard.up('Control');
   expect((await durum(page)).secim.length).toBe(3);
-  await page.click('#ve-mw-3b-alt [data-ve-3b-rol="mnt-bracket"]');
+  await page.selectOption('#ve-mw-3b-alt #ve-mw-3b-rol', 'mnt-bracket');
   await expect.poll(() => page.evaluate((L) => L.map((i) => veMntWizStp().roller[i]), ilk.sec.map((t) => t.i)))
     .toEqual(['mnt-bracket', 'mnt-bracket', 'mnt-bracket']);
   // Ctrl'süz tık seçimi o parçaya indirir; derindeki satır ağaçta görünür olur

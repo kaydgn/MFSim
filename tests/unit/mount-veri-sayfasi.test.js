@@ -466,6 +466,9 @@ describe('3B DİZİSİ — model ve iki seçim düğmesi', () => {
     let el = dizi();
     expect(el.querySelector('#ve-mw-3b-veri')).not.toBe(null);
     expect(el.querySelectorAll('[data-ve-3b-ref]')).toHaveLength(0);
+    // Motorda malzeme satırı yok (Canlı Not 16: "motor için bir malzeme girdimiz olmayacak")
+    expect(el.querySelector('.ve-mw-3b-malzeme')).toBe(null);
+    expect(Array.from(el.querySelectorAll('.ve-mw-3b-kb')).map((x) => x.textContent)).toEqual(['Rol', 'Veri sayfası']);
     W.veMntWizStpYogunluk(motor, ISB);
     W.veMntWizStpReferans(motor, 'eksen', referans(s.sonuc).eksen);
     el = dizi({ ref: 'yuz' });

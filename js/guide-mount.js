@@ -1051,9 +1051,9 @@ function _gmSec16(){
       + '<strong>Parça</strong> · <strong>Yüzey</strong> süzgeci, <strong>Ölçü</strong>, <strong>Kesit</strong>; sağ uçta '
       + '<strong>Kapat</strong>', '3B tam ekran, ayrı başlık bandı yok'],
     ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
-    ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, <strong>Rol</strong>, <strong>Malzeme</strong>, '
-      + 'takozun noktası, veri sayfası, birimin kütlesi ve CG’si, <strong>Ölçülen birimler</strong>, rol verilenler',
-      'Bölümler seçime göre'],
+    ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, özellik satırları (<strong>Rol</strong>, atanmışsa '
+      + '<strong>Malzeme</strong>, takozun noktası, veri sayfası ve referansı, katalog), birimin kütlesi ve CG’si, '
+      + '<strong>Ölçülen birimler</strong>, rol verilenler', 'Satırlar seçime göre'],
     ['Eylem kartı', 'Tuvalin sağ altında, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
       + 'üstünde hesabın engeli ve rolün eksiği', 'Sıradaki adımın düğmesi dolu renkte'],
     ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '
@@ -1093,9 +1093,10 @@ function _gmSec16(){
     + 'seçili birimin etiketi vurgu renginde dolu.</p>';
   h += '<h3>16.2 Roller</h3>';
   h += '<p>Rol bir düğüme verilir: 3B’de parçaya ya da soldaki <strong>Ürün ağacı</strong>nda satıra tıklayıp '
-    + '<strong>Özellikler</strong>’in <strong>Rol</strong> bölümündeki çipten, ya da pencerenin ağacındaki satırın '
+    + '<strong>Özellikler</strong>’in <strong>Rol</strong> listesinden (gruplu: Gövdeler · Takoz · Aktarma · Motor '
+    + 'aksesuarları), sağ tık menüsünün <strong>Rol</strong> satırından ya da pencerenin ağacındaki satırın '
     + '<strong>Rol</strong> listesinden. Ctrl (Mac’te ⌘) ile tıklanan '
-    + 'düğüm seçime eklenir ya da seçimden çıkar; çip rolü seçimin hepsine verir. Alt montaja verilen rol bütün '
+    + 'düğüm seçime eklenir ya da seçimden çıkar; liste rolü seçimin hepsine verir. Alt montaja verilen rol bütün '
     + 'parçalarına geçer. Roller iç içe verilebilir: motor alt montajının içindeki takoz kendi biriminde sayılır, '
     + 'parça en yakın rollü atasının birimine girer; aynı rol iç içe verilmez. <strong>Hesapla</strong> '
     + 'yalnız rol verilen birimleri ölçer; rol değişince hesap yenilenir.</p>';
@@ -1133,10 +1134,12 @@ function _gmSec16(){
     + 'kaynağı, kütleyi (<em>Elle</em> ise yazılır) ve CG’yi gösterir; takoz seçiliyken noktasını ve kaynağını. '
     + '<strong>Ölçülen birimler</strong> tablosu gövdelerin kütlesini ve CG’sini, bütün gövdelerin kütlesi '
     + 'biliniyorsa toplam kütleyi ve ortak CG’yi taşır; kütlesi eksik gövde varken toplam yazılmaz.</p>';
-  h += '<p><strong>Malzeme ataması.</strong> 3B’de parça ya da alt montaj seçiliyken <strong>Özellikler</strong>’in '
-    + '<strong>Malzeme</strong> listesi malzemeyi seçimin hepsine verir; parça birimin içindeki en yakın atamayı '
-    + 'alır, ataması yoksa birimin malzemesini. Listenin ilk satırı devralınanı yazar: <em>Üstten</em> (atanmış '
-    + 'alt montaj), <em>Birimden</em> (birimin kaynağı). Birim seçiliyken liste birimin kütle kaynağını yazar. '
+  h += '<p><strong>Malzeme ataması.</strong> Malzeme yalnız istenen parçaya verilir: 3B’de ya da ürün ağacında '
+    + 'parçaya veya alt montaja sağ tık, <strong>Malzeme</strong> satırından malzeme — seçimin hepsine. Takoz, motor ve '
+    + 'şanzıman malzeme almaz (kütleleri başka yoldan). Parça birimin içindeki en yakın atamayı alır, ataması yoksa '
+    + 'birimin malzemesini. <strong>Özellikler</strong>’in <strong>Malzeme</strong> satırı yalnız atanmış ya da '
+    + 'devralınan malzemede görünür: <em>üstten</em> (atanmış alt montaj), <em>birimden</em> (birimin kaynağı); '
+    + 'kendi ataması varsa yanında kaldırma düğmesi. Birim seçiliyken satır birimin kütle kaynağını yazar. '
     + 'Atanan malzeme ürün ağacında satırın yanında görünür ve rollerle birlikte projeye kaydedilir; rol '
     + 'değişince düğümün malzemesi kalır.</p>';
   h += _gmAlanTablo('Malzemeler', (typeof VE_MNT_STP_MALZEME !== 'undefined' ? VE_MNT_STP_MALZEME : []).map(function(m){
@@ -1181,7 +1184,7 @@ function _gmSec16(){
       _gmE(v.kaynak)];
   }), ['Model', 'Değerler', 'Kaynak']);
   h += '<h3>16.6 Motorun aksesuarları</h3>';
-  h += '<p>Aksesuar parçasına 3B’de kendi rolü verilir (<strong>Diğer…</strong> listesi: Alternatör, Alternatör '
+  h += '<p>Aksesuar parçasına 3B’de kendi rolü verilir (<strong>Rol</strong> listesinin <em>Motor aksesuarları</em> grubu: Alternatör, Alternatör '
     + 'Braketi, Klima Kompresörü, Isı Sacı). Motor montajının '
     + 'içindeki parça kendi rolünü alınca motorun biriminden çıkar. Ağırlık merkezi parçanın <strong>orta '
     + 'noktasıdır</strong>: dosyadaki dış ölçülerinin merkezi. Kütle <strong>Kütle</strong> bölümünde '

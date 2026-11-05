@@ -231,9 +231,14 @@ test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağa�
   expect(ust.q).not.toBeNull();
   await page.mouse.click(ust.q.x, ust.q.y);
   await expect.poll(async () => (await page.evaluate(() => veMntWiz3bDurum())).secim).toEqual([ust.dugum]);
-  const mz = page.locator('#ve-mw-3b-alt #ve-mw-3b-malzeme');
-  await expect(mz.locator('option').first()).toHaveText('Birimden · Çelik');
-  await page.selectOption('#ve-mw-3b-alt #ve-mw-3b-malzeme', 'aluminyum');
+  // Malzeme satırı yalnız atanmışsa (Canlı Not 9): birimden devralınan okunur;
+  // atama sağ tık menüsünden (Canlı Not 8)
+  const mz = page.locator('#ve-mw-3b-alt .ve-mw-3b-malzeme .ve-mw-3b-oz-mz');
+  await expect(mz).toContainText('Çelik');
+  await expect(mz).toContainText('birimden');
+  await page.mouse.click(ust.q.x, ust.q.y, { button: 'right' });
+  await page.hover('#ve-mw-3b-menu [data-k="malzeme"]');
+  await page.click('#ve-mw-3b-menu [data-k="malzeme:aluminyum"]');
   // Birimin kütlesi parça parça: (2.700 + 7.850) · 120 · 600 · 20 mm³ = 15,2 kg
   await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-govdeler] tbody tr')]
     .map((tr) => tr.cells[1].textContent.trim()))).toEqual(['—', '654,8S', '15,2S']);   // şanzıman: varsayılan "Dosyadan"
@@ -242,7 +247,8 @@ test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağa�
     return Math.round(_mwStpKutleK(s, b).m * 1000) / 1000;
   });
   expect(kg).toBeCloseTo((2700 + 7850) * 120 * 600 * 20 * 1e-9, 3);
-  await expect(page.locator('#ve-mw-3b-alt #ve-mw-3b-malzeme')).toHaveValue('aluminyum');
+  await expect(page.locator('#ve-mw-3b-alt .ve-mw-3b-malzeme .ve-mw-3b-oz-mz b')).toHaveText('Alüminyum');
+  await expect(page.locator('#ve-mw-3b-alt #ve-mw-3b-malzeme-kaldir')).toBeVisible();
   await expect(page.locator('#ve-mw-3b-agac-l [data-ve-3b-agac="' + ust.dugum + '"] .ve-mw-3b-agac-mz')).toHaveText('Alüminyum');
   await page.keyboard.press('Escape');
   expect(await kutleHucre(page, KOK, 'Arka braket')).toBe('15,2');

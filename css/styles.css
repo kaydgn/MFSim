@@ -8853,14 +8853,17 @@ span.ve-fw-ro{ display:inline-block; }
   font:inherit; font-size:var(--fs-body); color:var(--text-primary); cursor:pointer; }
 /* KİMLİK ve KAPAT — tam ekran çalışma alanında başlık bandı yok (2026-11-04):
    solda dosyanın adı (kısalan ad tam hâliyle ipucunda), sağ uçta Kapat.
-   Okunurken çubukta yalnız ikisi var: Kapat sağa itilir. */
-.ve-mw-3b-kimlik{ flex:0 1 auto; min-width:0; max-width:300px; display:flex; align-items:center; gap:7px; height:26px;
+   Okunurken çubukta yalnız ikisi var: Kapat sağa itilir. Sınıf `.ve-mw-3b-dosya`
+   (2026-11-05): `.ve-mw-3b-kimlik` Özellikler'in seçim kimliğiyle ortaktı ve
+   çubuğun 300 px · 26 px kutusu oradaki adı ve yolu ezip Rol satırının üstüne
+   bindiriyordu (Canlı Not 10 · 16'nın ekranı). */
+.ve-mw-3b-dosya{ flex:0 1 auto; min-width:0; max-width:300px; display:flex; align-items:center; gap:7px; height:26px;
   padding-right:12px; border-right:1px solid var(--border-color); font-size:var(--fs-body); color:var(--text-primary); }
-.ve-mw-3b-kimlik > .mf-ico{ flex:none; width:15px; height:15px; color:var(--ink-accent); }
-.ve-mw-3b-kimlik b{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.ve-mw-3b-dosya > .mf-ico{ flex:none; width:15px; height:15px; color:var(--ink-accent); }
+.ve-mw-3b-dosya b{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
 .ve-mw-3b-kapat{ flex:none; }
-.ve-mw-3b-kimlik + .ve-mw-3b-kapat{ margin-left:auto; }
-.ve-mw-3b-kimlik:has(+ .ve-mw-3b-kapat){ border-right:0; }
+.ve-mw-3b-dosya + .ve-mw-3b-kapat{ margin-left:auto; }
+.ve-mw-3b-dosya:has(+ .ve-mw-3b-kapat){ border-right:0; }
 /* EYLEM KARTI (kullanıcı 2026-11-05, Canlı Not 11): tuvalin SAĞ ALTINDA, rol
    verilince belirir; iş kartıyla aynı köşede, onun altında (.ve-mw-3b-sagalt
    ikisini dizer). SIRADAKİ adım dolu vurgu (.ve-mw-3b-hap-ana), öteki
@@ -11779,6 +11782,21 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-kb{ flex-basis:100%; margin:0 0 2px; font-size:var(--fs-tiny); font-weight:600; letter-spacing:.04em;
   text-transform:uppercase; color:var(--text-secondary); white-space:nowrap; }
 .ve-mw-3b-yan .ve-fw-3b-rol{ height:28px; padding:0 9px; }
+/* ÖZELLİK IZGARASI (kullanıcı 2026-11-05, Canlı Not 10 · 9 · 16): satır başına ad
+   (sabit 96 px sütun, cümle düzeni) · değer; rol tek listede, rengi solundaki
+   noktada; malzeme yalnız atanmışsa okunur değer + kaldır. Satırlar tek kutuda,
+   araları çizgisiz. */
+.ve-mw-3b-yan .ve-mw-3b-oz{ padding:6px 0; border-bottom:1px solid var(--border-light); }
+.ve-mw-3b-yan .ve-fw-3b-roller.ve-mw-3b-oz-s{ display:grid; grid-template-columns:96px minmax(0, 1fr); align-items:center;
+  gap:4px 10px; padding:5px 14px; border-bottom:0; }
+.ve-mw-3b-oz-s > .ve-mw-3b-kb{ flex-basis:auto; margin:0; font-size:var(--fs-body); font-weight:400; letter-spacing:0;
+  text-transform:none; color:var(--text-secondary); }
+.ve-mw-3b-oz-d{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; }
+.ve-mw-3b-oz-d > select.ve-fw-inp{ flex:1 1 auto; min-width:0; width:auto; height:28px; }
+.ve-mw-3b-oz-d > .ve-fw-3b-dizi-ad{ flex-basis:100%; padding:0; border:0; }
+.ve-mw-3b-oz-renk{ flex:none; width:10px; height:10px; border-radius:50%; background:var(--renk, var(--border-color)); }
+.ve-mw-3b-oz-mz{ flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:6px; overflow:hidden; white-space:nowrap; }
+.ve-mw-3b-oz-mz b{ min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:600; color:var(--text-primary); }
 .ve-mw-3b-yan .ve-fw-issues{ margin-top:8px; }
 /* Kimlik: rozetli simge, ad, tür ve yol */
 .ve-mw-3b-kimlik-bas{ display:flex; align-items:center; gap:10px; min-width:0; }
@@ -11789,6 +11807,8 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-kimlik-ad b{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-lg); font-weight:600; color:var(--text-heading); }
 .ve-mw-3b-kimlik-ad .ve-fw-dim{ font-size:var(--fs-tiny); }
 .ve-mw-3b-kimlik .ve-fw-3b-yol{ margin-top:8px; font-size:var(--fs-tiny); }
+.ve-mw-3b-kimlik .ve-fw-3b-yol > b, .ve-mw-3b-kimlik .ve-fw-3b-yol > .ve-fw-3b-yolb,
+.ve-mw-3b-kimlik .ve-fw-3b-yol > span:not(.mf-ico){ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ve-mw-3b-kimlik .ve-fw-3b-atanan{ margin-top:8px; }
 /* Birimin kütlesi: ad · değer ızgarası; koordinat üç hücrede */
 .ve-mw-3b-alanlar{ display:grid; grid-template-columns:minmax(84px, auto) minmax(0, 1fr); align-items:center; gap:8px 10px; font-size:var(--fs-tiny); }

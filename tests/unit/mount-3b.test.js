@@ -749,19 +749,20 @@ describe('ÇOKLU SEÇİM — rol seçimin hepsine, tek hesap', () => {
     expect(veMntWizStpRolCok(tk, 'fead-crank')).toBe(false);
   });
 
-  test('alttaki dizi: "Rol — N düğüm", çip yalnız hepsi o roldeyse basılı; takoz noktası ve veri sayfası yok', () => {
+  test('alttaki dizi: "Rol — N düğüm", liste yalnız hepsi o roldeyse o rolde, ayrışınca "Karışık"; takoz noktası ve veri sayfası yok', () => {
     const s = oturum(), tk = takozlar(s);
     veMntWizStpRol(tk[0], 'mnt-mount');
     const kur = (secim) => { const d = document.createElement('div'); d.innerHTML = veMntWiz3bAltHTML(s, secim[secim.length - 1], { secim }); return d; };
+    const secili = (d) => d.querySelector('#ve-mw-3b-rol').selectedOptions[0];
     let d = kur([tk[0], tk[1]]);
     expect(d.querySelector('.ve-fw-3b-roller').getAttribute('aria-label')).toBe('Rol — 2 düğüm');
-    expect(d.querySelector('[data-ve-3b-rol="mnt-mount"]').getAttribute('aria-pressed')).toBe('false');
-    expect(d.querySelector('option[value="-"]').disabled).toBe(false);          // birinin rolü var
-    // karışık seçimde son eklenen rollü olsa da çip basılı değil
-    expect(kur([tk[1], tk[0]]).querySelector('[data-ve-3b-rol="mnt-mount"]').getAttribute('aria-pressed')).toBe('false');
+    expect([secili(d).textContent, secili(d).disabled]).toEqual(['Karışık', true]);
+    expect(d.querySelector('#ve-mw-3b-rol option[value=""][data-ve-3b-rol=""]').disabled).toBe(false);   // "—" rolleri kaldırır
+    // karışık seçimde son eklenen rollü olsa da liste o rolde değil
+    expect(secili(kur([tk[1], tk[0]])).textContent).toBe('Karışık');
     veMntWizStpRol(tk[1], 'mnt-mount');
     d = kur([tk[0], tk[1]]);
-    expect(d.querySelector('[data-ve-3b-rol="mnt-mount"]').getAttribute('aria-pressed')).toBe('true');
+    expect(d.querySelector('#ve-mw-3b-rol').value).toBe('mnt-mount');
     expect(d.querySelector('#ve-mw-3b-nokta')).toBe(null);
     expect(kur([tk[1]]).querySelector('#ve-mw-3b-nokta')).not.toBe(null);      // tek takozda var
   });
@@ -1093,7 +1094,11 @@ describe('TAM EKRAN ve İŞ KARTI — başlık bandı yok, Kapat komut çubuğun
     // Sıra: kimlik · araçlar · Kapat (eylem çubukta DEĞİL — Canlı Not 11); okunurken kimlik · Kapat
     expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"><\/div>'\s*\+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
     expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
-    expect(kural('.ve-mw-3b-kimlik + .ve-mw-3b-kapat')).toMatch(/margin-left:auto/);
+    expect(kural('.ve-mw-3b-dosya + .ve-mw-3b-kapat')).toMatch(/margin-left:auto/);
+    // Çubuğun dosya kimliği Özellikler'in seçim kimliğiyle sınıf PAYLAŞMAZ (2026-11-05:
+    // çubuğun 26 px'lik kutusu seçimin adını ve yolunu Rol satırının üstüne bindiriyordu)
+    expect(css).not.toMatch(/\n\.ve-mw-3b-kimlik\{/);
+    expect(k.querySelector('#ve-mw-3b-dosya').className).toBe('ve-mw-3b-dosya');
   });
 
   test('iş kartı tuvalin SAĞ ALTINDA, ortada değil; adı gövde puntosunda; okuma ve kurulum AYNI kart', () => {
@@ -1244,13 +1249,30 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(d.querySelector('[data-ve-3b-govdeler] tr[data-eksik]').getAttribute('data-ve-3b-birim')).toBe(String(j('Motor')));
   });
 
-  test('bölümler başlıklı: takozda Rol · Takoz noktası, gövdede Rol · Malzeme', () => {
+  // Kullanıcı 2026-11-05 — Canlı Not 10: "rol kısmı … çok amatör"; Not 9: "her
+  // parçanın malzeme tanımı olmayacak"; Not 16: "motor için bir malzeme girdimiz
+  // olmayacak". Satır başına ad · değer; Malzeme yalnız atanmışsa, motorda hiç.
+  test('özellik ızgarası: takozda Rol · Takoz noktası; motorda malzeme yok; gövdede Malzeme yalnız atanmışsa', () => {
     const son = veMntStpOku(STK.tulgaKalibi({})), i = (ad) => son.agac.findIndex((x) => x.ad === ad);
-    const t = { sonuc: son, roller: son.agac.map(() => null), coz: null, kutle: {}, nokta: {} };
+    const t = { durum: 'hazir', sonuc: son, roller: son.agac.map(() => null), coz: null, kutle: {}, nokta: {}, malzeme: {}, yogunluk: {} };
     t.roller[i('Sol ön takoz')] = 'mnt-mount'; t.roller[i('Motor bloğu')] = 'mnt-motor';
     const kb = (sec) => Array.from(kur(veMntWiz3bAltHTML(t, sec, {})).querySelectorAll('.ve-mw-3b-kb')).map((x) => x.textContent);
     expect(kb(i('Sol ön takoz'))).toEqual(['Rol', 'Takoz noktası']);
-    expect(kb(i('Motor bloğu')).slice(0, 2)).toEqual(['Rol', 'Malzeme']);
+    t.yogunluk[i('Motor bloğu')] = 'celik';                                   // eski kayıtta malzeme olsa da
+    expect(kb(i('Motor bloğu'))).not.toContain('Malzeme');                     // motorda malzeme satırı yok (Not 16)
+    const brk = son.agac.findIndex((x) => x.cocuklar.length && x.ebeveyn >= 0 && !t.roller[x.i]);
+    t.roller[brk] = 'mnt-bracket';
+    expect(kb(brk)).toEqual(['Rol']);
+    t.yogunluk[brk] = 'celik';
+    expect(kb(brk)).toEqual(['Rol', 'Malzeme']);
+    // Rol tek liste, gruplu; rengi solundaki noktada; çip ve "Diğer…" yok
+    const d = kur(veMntWiz3bAltHTML(t, brk, {}));
+    expect(d.querySelector('#ve-mw-3b-rol').value).toBe('mnt-bracket');
+    expect(Array.from(d.querySelectorAll('#ve-mw-3b-rol optgroup')).map((g) => g.label)).toEqual(veMntWiz3bRolGruplari().map((g) => g.ad));
+    expect(d.querySelectorAll('#ve-mw-3b-rol option[data-ve-3b-rol]:not([value=""])').length).toBe(VE_MNT_STP_ROLLER.length);
+    expect(d.querySelector('.ve-mw-3b-oz-renk').getAttribute('style')).toBe('--renk:var(' + VE_MW_3B_ROL_RENK['mnt-bracket'] + ')');
+    expect(d.querySelector('button[data-ve-3b-rol], [data-ve-3b-diger]')).toBe(null);
+    expect(kural('.ve-mw-3b-yan .ve-fw-3b-roller.ve-mw-3b-oz-s')).toMatch(/grid-template-columns:96px minmax\(0, 1fr\)/);
   });
 
   // Kullanıcı 2026-11-05 (Canlı Not 15): görünüm küpü ve yakınlık düğmeleri
@@ -1259,7 +1281,7 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
   // daraltalım ve alan kazanalım." Denetimler 26 px, dolgu 3 px (çubuk 45 → 33 px).
   test('komut çubuğu ince: dolgu 3 px, her denetim 26 px', () => {
     expect(kural('.ve-mw-3b-komut')).toMatch(/padding:3px 10px;/);
-    ['.ve-mw-3b-arac-b', '.ve-mw-3b-sec', '.ve-mw-3b-kimlik', '.ve-mw-3b-hap'].forEach((k) => expect(kural(k)).toMatch(/height:26px;/));
+    ['.ve-mw-3b-arac-b', '.ve-mw-3b-sec', '.ve-mw-3b-dosya', '.ve-mw-3b-hap'].forEach((k) => expect(kural(k)).toMatch(/height:26px;/));
     expect(kural('.ve-mw-3b-bolme .ve-mw-3b-arac-b')).toMatch(/height:22px;/);
   });
   test('görünüm küpü ve yakınlık düğmeleri YOK — ne üretici ne kural', () => {
