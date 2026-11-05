@@ -1328,6 +1328,22 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(css).not.toMatch(/\.ve-mw-3b-kup|\.ve-mw-3b-yakin|\.ve-mw-3b-gez/);
   });
 
+  // Kullanıcı 2026-11-05 (Canlı Not 21): "Yüzeyi seçtiğimde önündeki ve arkasındaki
+  // CAD parçalardan dolayı, yüzeyin tam olarak ne olduğunu göremiyorum. Hem
+  // seçtiğimde, hem de seçmeden önce yüzeyin görünür olmasını, diğer parçaların da
+  // bulanıklaşmasını istiyorum." Önce: yüzün vurgusu derinlik sınamalı (önündeki
+  // parçanın ardında kayboluyordu), öteki parçalar olağan.
+  test('YÜZEY ODAĞI: fare altındaki ya da seçili yüzün parçası odakta, ötekiler tül; yüzün vurgusu derinlik sınamasız', () => {
+    expect(veMntWiz3bDurumBiti({ odak: { 4: 1 }, sec: null }, 4)).toBe(0);
+    expect(veMntWiz3bDurumBiti({ odak: { 4: 1 }, sec: null }, 5)).toBe(VE_MW_3B_SOLUK);
+    expect(veMntWiz3bDurumBiti({ odak: { 4: 1 }, sec: { 5: 1 } }, 5)).toBe(VE_MW_3B_SOLUK);   // odak seçimden önce
+    expect(veMntWiz3bDurumBiti({ odak: null, sec: { 5: 1 } }, 5)).toBe(VE_MW_3B_SECIK);
+    const arac = loadSource('cp-mount-3b-arac.js');
+    expect(arac).toMatch(/side: THREE\.DoubleSide, depthWrite: false, depthTest: false \}\);/);
+    expect(arac).toMatch(/var f = V\.suzgec === 'yuz' \? \(V\.yuzOn \|\| V\.yuzSec\) : null/);
+    expect(loadSource('cp-mount-3b.js')).toMatch(/V\.solukVar = !!R\.sec \|\| !!R\.odak \|\| R\.xray;/);
+  });
+
   test('görünüş: x-ışınında seçimsiz her parça tül, seçimde dışı; kenar x-ışınında belirgin; listeler', () => {
     expect(VE_MW_3B_GORUNUS.map((g) => g.k)).toEqual(['kenar', 'golge', 'xray']);
     expect(veMntWiz3bDurumBiti({ sec: null }, 3)).toBe(0);

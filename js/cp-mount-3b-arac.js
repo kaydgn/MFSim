@@ -227,7 +227,7 @@ var VE_MW_3B_YUZ_AD = { PLANE: 'Düzlem', CYLINDRICAL_SURFACE: 'Silindir', CONIC
                         SPHERICAL_SURFACE: 'Küre', TOROIDAL_SURFACE: 'Tor' };
 // Köşeye yapışma payı (px) · seçili ve fare altındaki yüzün örtücülüğü
 var VE_MW_3B_OLCU = { kose: 8 };
-var VE_MW_3B_YUZ_VURGU = { secili: 0.5, fare: 0.22 };
+var VE_MW_3B_YUZ_VURGU = { secili: 0.6, fare: 0.35 };
 
 // Üçgenin yüzü (saf, testli): yuzUcgen'de Y[f] ≤ t < Y[f + 1] olan f (ikili arama)
 function veMntWiz3bYuzSira(Y, t){
@@ -493,14 +493,28 @@ function _mw3bYuzSec(b){
   var V = _mw3b;
   V.yuzSec = b || null;
   V.yuzG = _mw3bYuzCiz(V.yuzG, V.yuzSec, VE_MW_3B_YUZ_VURGU.secili, 5);
+  _mw3bYuzOdak();
 }
 function _mw3bYuzOn(b){
   var V = _mw3b;
   V.yuzOn = b && !(V.yuzSec && V.yuzSec.parca === b.parca && V.yuzSec.f === b.f) ? b : null;
   V.yuzOnG = _mw3bYuzCiz(V.yuzOnG, V.yuzOn, VE_MW_3B_YUZ_VURGU.fare, 4);
+  _mw3bYuzOdak();
 }
-// Yüzün vurgusu: yüzün üçgenleri vurgu tonunda, yüzeyin önünde; kesitle kırpılır.
-// Eski nesne bırakılır, yenisi döner (yüz yoksa null)
+// YÜZEY ODAĞI (Canlı Not 21): fare altındaki yüz, yoksa seçili yüz — parçası odakta,
+// öteki parçalar tül; odak değişince boyama yenilenir (kare çağıranın)
+function _mw3bYuzOdak(){
+  var V = _mw3b;
+  if(!V) return;
+  var f = V.suzgec === 'yuz' ? (V.yuzOn || V.yuzSec) : null, p = f ? f.parca : -1;
+  if(p === V.yuzOdak) return;
+  V.yuzOdak = p;
+  if(V.scene) _mw3bBoya();
+}
+// Yüzün vurgusu: yüzün üçgenleri vurgu tonunda, DERİNLİK SINAMASI YOK — önündeki
+// parçaların ardında kalmaz (Canlı Not 21: "Hem seçtiğimde, hem de seçmeden önce
+// yüzeyin görünür olmasını"); kesitle kırpılır. Eski nesne bırakılır, yenisi döner
+// (yüz yoksa null)
 function _mw3bYuzCiz(eski, b, opak, sira){
   var V = _mw3b;
   if(eski){ V.scene.remove(eski); eski.geometry.dispose(); eski.material.dispose(); }
@@ -514,7 +528,7 @@ function _mw3bYuzCiz(eski, b, opak, sira){
   var g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(poz, 3));
   var m = new THREE.MeshBasicMaterial({ color: _mw3bRenk('--accent-primary', '#1f5fd6'), transparent: true, opacity: opak,
-    side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
+    side: THREE.DoubleSide, depthWrite: false, depthTest: false });
   if(V.kesitK && V.kesitDizi) m.clippingPlanes = V.kesitDizi;
   var o = new THREE.Mesh(g, m);
   o.renderOrder = sira; o.frustumCulled = false;

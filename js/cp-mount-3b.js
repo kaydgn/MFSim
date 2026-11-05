@@ -225,7 +225,7 @@ function veMntWiz3bAc(yer){
       + '<span class="ve-mw-3b-durum-sag" id="ve-mw-3b-durum-sag"></span></div>';
   var kap = document.getElementById('ve-mw-3b-tuval');
   var V = { kap: kap, s: s, yer: yer, ov: ov, perde: perde, kume: [], ckume: [], parca: [], ekli: [], kutular: [], islenen: 0, yuz: 0, toplam: 0, yuzToplam: 0,
-            sokucu: [], secili: -1, secim: [], fare: -1, fareDugum: -1, fareParca: -1, fareIsaret: -1, isaretEkran: [], gizli: {}, menu: null, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
+            sokucu: [], secili: -1, secim: [], fare: -1, fareDugum: -1, fareParca: -1, fareIsaret: -1, isaretEkran: [], gizli: {}, menu: null, yuzOdak: -1, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
             suzgec: 'parca', olcu: null, yuzSec: null, yuzOn: null, yuzG: null, yuzOnG: null, yuzFare: null, gorunus: 'kenar', ara: '',
             kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0 };
   var w = Math.max(1, kap.clientWidth), h = Math.max(1, kap.clientHeight);
@@ -711,7 +711,11 @@ function _mw3bBoyaBaglam(){
   var rol = {};
   Object.keys(VE_MW_3B_ROL_RENK).forEach(function(t){ rol[t] = _mw3bBayt(_mw3bRenk(veMntWiz3bRolJeton(t), '#888888')); });
   var bos = _mw3bRenk('--text-muted', '#5f6873').lerp(_mw3bRenk('--bg-secondary', '#ffffff'), 0.4);
-  V.baglam = { surum: V.boyaSurum, sec: sec, rol: rol, bos: _mw3bBayt(bos), xray: V.gorunus === 'xray',
+  // YÜZEY ODAĞI (Canlı Not 21): yüzey süzgecinde fare altındaki ya da seçili yüzün
+  // parçası odakta, öteki parçalar tül — yüz önlerindeki parçaların ardında kalmaz
+  var odak = null;
+  if(V.yuzOdak >= 0){ odak = {}; odak[V.yuzOdak] = 1; }
+  V.baglam = { surum: V.boyaSurum, sec: sec, odak: odak, rol: rol, bos: _mw3bBayt(bos), xray: V.gorunus === 'xray',
     bosSec: _mw3bBayt(bos.clone().lerp(_mw3bRenk('--accent-primary', '#1f5fd6'), VE_MW_3B_SECIM_TON)),
     cizgi: _mw3bBayt(_mw3bRenk('--text-primary', '#1f2328')), cizgiSec: _mw3bBayt(_mw3bRenk('--text-heading', '#101418')),
     cizgiFare: _mw3bBayt(_mw3bRenk('--accent-primary', '#1f5fd6')),
@@ -729,9 +733,12 @@ function veMntWiz3bGorunus(d, c, R){
   else if(d & VE_MW_3B_FARE){ cz = R.cizgiFare; a = A.fare; }
   return { yuz: yuz, cizgi: cz, a: a };
 }
-// Parçanın seçim durumu (saf, testli): seçim varken içindeki seçili, dışındaki
-// soluk; seçim yokken x-ışınında her parça soluk, olağanda hiçbiri
+// Parçanın seçim durumu (saf, testli): yüzey odağı varken (Canlı Not 21: "yüzeyin
+// görünür olmasını, diğer parçaların da bulanıklaşmasını istiyorum") odaktaki
+// parça olağan, ötekiler soluk — seçimden önce gelir; seçim varken içindeki seçili,
+// dışındaki soluk; ikisi de yokken x-ışınında her parça soluk, olağanda hiçbiri
 function veMntWiz3bDurumBiti(R, i){
+  if(R.odak) return R.odak[i] ? 0 : VE_MW_3B_SOLUK;
   if(R.sec) return R.sec[i] ? VE_MW_3B_SECIK : VE_MW_3B_SOLUK;
   return R.xray ? VE_MW_3B_SOLUK : 0;
 }
@@ -771,7 +778,7 @@ function _mw3bBoya(){
   V.boyaSurum = (V.boyaSurum || 0) + 1;
   var R = _mw3bBoyaBaglam();
   for(var k = 0; k < V.ekli.length; k++) _mw3bParcaBoya(V.ekli[k], R);
-  V.solukVar = !!R.sec || R.xray;
+  V.solukVar = !!R.sec || !!R.odak || R.xray;
   V.kume.forEach(function(K){ K.soluk.visible = V.solukVar; K.derin.visible = V.solukVar && !R.xray; });
   V.ckume.forEach(function(C){ C.cizgi.visible = V.gorunus !== 'golge'; });
 }
@@ -2335,7 +2342,8 @@ function veMntWiz3bDurum(){
     referans: V.isaretSay ? V.isaretSay.referans : 0,
     eksen: document.querySelectorAll('#ve-mw-3b-eksen text').length,
     secili: V.secili, secim: V.secim.slice(), fareDugum: V.fareDugum, fare: V.fare, kip: V.nokta, ref: V.ref ? V.ref.tur : '',
-    gizli: Object.keys(V.gizli || {}).length, menu: !!V.menu,
+    gizli: Object.keys(V.gizli || {}).length, menu: !!V.menu, yuzOdak: V.yuzOdak,
+    soluk: !!(V.kume && V.kume.length && V.kume.every(function(K){ return K.soluk.visible; })),
     aday: V.aday ? { parca: V.aday.parca, r: V.aday.daire ? V.aday.daire.r : (V.aday.halka ? V.aday.halka.r : 0), tur: V.aday.tur || 'nokta' } : null,
     adayHalka: !!V.halka, suzgec: V.suzgec, gorunus: V.gorunus, ara: V.ara,
     theta: V.ctrl ? V.ctrl.theta : null, phi: V.ctrl ? V.ctrl.phi : null, r: V.ctrl ? V.ctrl.r : null,

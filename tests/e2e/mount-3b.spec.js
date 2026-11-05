@@ -393,10 +393,15 @@ test('YÜZEY · ÖLÇÜ: süzgeç yüzü seçer, parçanın seçimi değişmez; 
     return null;
   });
   expect(bos).not.toBeNull();
+  expect((await durum(page)).soluk).toBe(false);
   await page.mouse.move(m.x, m.y);
   await expect.poll(async () => ((await durum(page)).yuzOn || {}).parca).toBe(motor.i);
   await expect(page.locator('#ve-mw-3b-ipucu')).toHaveText('Düzlem · z = 1.250,0 mm');
   expect((await durum(page)).fare).toBe(-1);                      // parçanın fare vurgusu yok
+  // Yüzey odağı (Canlı Not 21): fare altındaki yüzün parçası odakta, öteki parçalar tül;
+  // yüzün vurgusu derinlik sınamasız — önündeki parçanın ardında kalmaz
+  expect(await durum(page)).toMatchObject({ yuzOdak: motor.i, soluk: true });
+  expect(await page.evaluate(() => _mw3b.yuzOnG.material.depthTest)).toBe(false);
   await page.mouse.click(m.x, m.y);
   await expect.poll(async () => (await durum(page)).yuz).toMatchObject({ parca: motor.i, tip: 'PLANE' });
   expect((await durum(page)).secim).toEqual([]);

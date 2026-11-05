@@ -1075,7 +1075,8 @@ function _gmSec16(){
     + 'taşır, <strong>Ters</strong> öteki yanı bırakır; kesilen yan çizilmez ve seçilmez.</p>';
   h += _gmAlanTablo('3B görüntüleyici — seçim ve ölçü', [
     ['<strong>Parça</strong>', 'Tık parçayı seçer; rol ve ağaç bu seçimle', 'Olağan süzgeç'],
-    ['<strong>Yüzey</strong>', 'Fare altındaki yüz açık vurgulanır, tık yüzü seçer; kartta yüzün tipi '
+    ['<strong>Yüzey</strong>', 'Fare altındaki yüz açık vurgulanır, tık yüzü seçer; yüz önündeki parçaların '
+      + 'ardında kalmaz, öteki parçalar soluklaşır; kartta yüzün tipi '
       + '(düzlem, silindir, koni, küre, tor), ölçüsü, normali ya da ekseni ve alanı', 'Tanım dosyadan, alan '
       + 'üçgen ağından (≈); parçanın seçimi değişmez'],
     ['<strong>Ölçü</strong>', 'İki tık arası uzaklık ve Δx · Δy · Δz; üçüncü tık yeni ölçü', 'Dairesel kenarda '
