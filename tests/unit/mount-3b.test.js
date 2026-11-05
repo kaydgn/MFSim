@@ -1106,6 +1106,13 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
 
   // Kullanıcı 2026-11-05 (Canlı Not 15): görünüm küpü ve yakınlık düğmeleri
   // "Şunları kaldıralım." Bakış komut çubuğunun listesinde, yakınlık tekerlekte.
+  // Kullanıcı 2026-11-05 (Canlı Not 13): "boyuna çok geniş olmuş. Biraz
+  // daraltalım ve alan kazanalım." Denetimler 26 px, dolgu 3 px (çubuk 45 → 33 px).
+  test('komut çubuğu ince: dolgu 3 px, her denetim 26 px', () => {
+    expect(kural('.ve-mw-3b-komut')).toMatch(/padding:3px 10px;/);
+    ['.ve-mw-3b-arac-b', '.ve-mw-3b-sec', '.ve-mw-3b-kimlik', '.ve-mw-3b-hap'].forEach((k) => expect(kural(k)).toMatch(/height:26px;/));
+    expect(kural('.ve-mw-3b-bolme .ve-mw-3b-arac-b')).toMatch(/height:22px;/);
+  });
   test('görünüm küpü ve yakınlık düğmeleri YOK — ne üretici ne kural', () => {
     const src = loadSource('cp-mount-3b.js');
     expect(src).not.toMatch(/ve-mw-3b-kup|ve-mw-3b-yakin|ve-mw-3b-gez|veMntWiz3bKupSVG|veMntWiz3bYakinlas/);

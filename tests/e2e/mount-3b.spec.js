@@ -487,7 +487,7 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp yok, bakış listeden; g
   expect(yer.tuvalSag).toBeLessThanOrEqual(yer.yanSol + 0.5);
   expect(yer.komutAlt).toBeLessThanOrEqual(yer.tuvalUst + 0.5);
   expect(yer.tuvalAlt).toBeLessThanOrEqual(yer.durumUst + 0.5);
-  expect(yer.komutH).toBeLessThan(50);                       // araçlar ve eylem tek satırda
+  expect(yer.komutH).toBeLessThanOrEqual(34);                // ince çubuk, tek satır (Canlı Not 13: 45 → 33 px)
   expect(Math.abs(yer.durumH - yer.bant)).toBeLessThan(1);
   // Görünüm küpü ve yakınlık düğmeleri YOK (Canlı Not 15)
   expect(await page.locator('#ve-mw-3b-kup, .ve-mw-3b-yakin, .ve-mw-3b-gez').count()).toBe(0);
