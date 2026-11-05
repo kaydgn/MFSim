@@ -1040,21 +1040,22 @@ function _gmSec16(){
   h += _gmAlanTablo('3D Görüntüleyici penceresi — bölümler', [
     ['<strong>STEP dosyası</strong>', 'Dosyanın künyesi: yazan sistem, parça sayısı, okuma süresi; kayıtlı '
       + 'rollerin durumu', 'Dosya açık değilken <strong>Kayıtlı roller</strong> föyü'],
-    ['<strong>Parçalar</strong>', 'Parça ağacı ve rolleri; <strong>Konumları hesapla</strong>; uyarılar',
-      'Ağaç dal dal açılır; rollü düğüm dal kapalıyken de görünür'],
+    ['<strong>Parçalar</strong>', 'Parça ağacı ve rolleri; <strong>Hesapla</strong>; uyarılar',
+      'Ağaç kapalı açılır, dal dal açılır; rollü düğüm dal kapalıyken de görünür'],
     ['<strong>Kütle</strong>', 'Gövde başına hacim, kütlenin kaynağı, kütle ve atalet', 'Hesaptan sonra'],
     ['<strong>Model</strong>', 'Birimlerin modeldeki karşılığı, fark, kütle; öteleme; '
       + '<strong>Modele uygula</strong> · <strong>Dosyanın sistemine taşı</strong>', 'Hesaptan sonra']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAlanTablo('3B görüntüleyici — düzen', [
     ['Komut çubuğu', 'Solda dosyanın adı; <strong>Bakış</strong> · <strong>Görünüş</strong> listeleri, '
-      + '<strong>Parça</strong> · <strong>Yüzey</strong> süzgeci, <strong>Ölçü</strong>, <strong>Kesit</strong>; sağda '
-      + '<strong>Konumları hesapla</strong> ve <strong>Sihirbaza aktar</strong>, sağ uçta <strong>Kapat</strong>',
-      'Sıradaki adımın düğmesi dolu renkte; 3B tam ekran, ayrı başlık bandı yok'],
+      + '<strong>Parça</strong> · <strong>Yüzey</strong> süzgeci, <strong>Ölçü</strong>, <strong>Kesit</strong>; sağ uçta '
+      + '<strong>Kapat</strong>', '3B tam ekran, ayrı başlık bandı yok'],
     ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
     ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, <strong>Rol</strong>, <strong>Malzeme</strong>, '
       + 'takozun noktası, veri sayfası, birimin kütlesi ve CG’si, <strong>Ölçülen birimler</strong>, rol verilenler',
       'Bölümler seçime göre'],
+    ['Eylem kartı', 'Tuvalin sağ altında, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
+      + 'üstünde hesabın engeli ve rolün eksiği', 'Sıradaki adımın düğmesi dolu renkte'],
     ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '
       + '<strong>Vazgeç</strong> · <strong>Durdur</strong> · <strong>Devam</strong>', 'İş bitince kalkar'],
     ['Durum çubuğu', 'İmlecin altındaki noktanın koordinatı; çizim yazılımsalsa durumu; birimler', 'mm · kg']
@@ -1092,7 +1093,7 @@ function _gmSec16(){
     + '<strong>Rol</strong> listesinden. Ctrl (Mac’te ⌘) ile tıklanan '
     + 'düğüm seçime eklenir ya da seçimden çıkar; çip rolü seçimin hepsine verir. Alt montaja verilen rol bütün '
     + 'parçalarına geçer. Roller iç içe verilebilir: motor alt montajının içindeki takoz kendi biriminde sayılır, '
-    + 'parça en yakın rollü atasının birimine girer; aynı rol iç içe verilmez. <strong>Konumları hesapla</strong> '
+    + 'parça en yakın rollü atasının birimine girer; aynı rol iç içe verilmez. <strong>Hesapla</strong> '
     + 'yalnız rol verilen birimleri ölçer; rol değişince hesap yenilenir.</p>';
   h += '<p>Ürün ağacı pencerenin ağacıyla aynı dalları açık tutar. 3B’de seçilen parçanın dalı açılır ve satırı '
     + 'görünür olur; satırın üstüne gelince düğümün parçaları 3B’de vurgulanır, çift tık kamerayı düğüme sığdırır. '
@@ -1159,7 +1160,7 @@ function _gmSec16(){
       + 'parçalarındadır; kamera birime sığar.',
     '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli dairesel bir kenarı (krank kasnağı, volan '
       + 'muhafazası) tıklayın. Bu seçim bütün parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
-    '<strong>Konumları hesapla</strong>: ağırlık merkezi, atalet ve kütle (ıslak) veri sayfasından. '
+    '<strong>Hesapla</strong>: ağırlık merkezi, atalet ve kütle (ıslak) veri sayfasından. '
       + 'Motorun aksesuarları ayrı bileşen olarak girilir (16.6).'
   ]);
   h += '<p>İki referanstan biri eksikse ağırlık merkezi hacimden bulunur ve uyarı satırı eksik referansın adını '

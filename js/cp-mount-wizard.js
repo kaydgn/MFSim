@@ -805,7 +805,7 @@ function _mwStepKaynak(c){
 
 // ── STEP'TEN BAŞLA (1. adımın kartı) ─────────────────────────────────────
 // FEAD kural 34'ün kalıbı (js/mount-step.js'in başı): dosya okunur → rol 3B'de
-// ya da kartın tablosunda verilir → "Konumları hesapla" YALNIZ rollü birimleri
+// ya da kartın tablosunda verilir → "Hesapla" YALNIZ rollü birimleri
 // ölçer → gövdelerin kütlesi yazılır (STEP'te kütle yok) → "Sihirbaza aktar"
 // kaydı örnek tohumunun yolundan yükler (veMntWizFromNodes).
 // OTURUM MODÜLÜNDÜR (2026-10-20, Takoz adım 4): `_mwStp` okumanın çıktısını
@@ -1589,19 +1589,22 @@ function _mwStpSayim(coz){
 // uyarıların çoğu tanıyıcının KENDİ listesi.
 function veMntWizStpDenetim(s){
   s = s || _mwStp;
-  var out = { engel:[], uyari:[], hesapsiz:false, refEksik:[] };
+  // `rol`: rolün eksiği (uyarının alt kümesi) — 3B'nin eylem kartı yalnız bunu ve
+  // hesabın engelini yazar (Canlı Not 17)
+  var out = { engel:[], uyari:[], rol:[], hesapsiz:false, refEksik:[] };
   if(!s || s.durum !== 'hazir'){ out.engel.push('Okunmuş bir STEP dosyası yok.'); return out; }
   out.engel = _mwStpRolDenetim(s);
   (s.sonuc.uyarilar || []).forEach(function(m){ out.uyari.push(m); });
   if(out.engel.length) return out;
-  if(!s.coz){ out.hesapsiz = true; out.engel.push('Konumlar henüz hesaplanmadı.'); return out; }
+  if(!s.coz){ out.hesapsiz = true; out.engel.push('Henüz hesaplanmadı.'); return out; }
   (s.coz.hatalar || []).forEach(function(m){ out.engel.push(m); });
   (s.coz.uyarilar || []).forEach(function(m){ out.uyari.push(m); });
   out.refEksik = (s.coz.refEksik || []).slice();
   if(s.coz.ok){
     var nt = _mwStpTakozlar(s).length;
-    if(!_mwStpGovdeler(s).length) out.uyari.push('Gövde rolü verilmedi.');
-    if(nt < 3) out.uyari.push(nt + ' takoz rolü (en az 3).');
+    if(!_mwStpGovdeler(s).length) out.rol.push('Gövde rolü verilmedi.');
+    if(nt < 3) out.rol.push(nt + ' takoz rolü (en az 3).');
+    out.rol.forEach(function(m){ out.uyari.push(m); });
   }
   return out;
 }
@@ -1888,7 +1891,7 @@ function _mwStpHesapHTML(s, pencere){
   return '<div class="ve-fw-rowbtns">'
     + '<button type="button" id="' + (pencere ? 've-mnt-cad-hesapla' : 've-mw-stp-hesapla') + '" class="ve-fw-btn"'
     + (rolEngel.length ? ' disabled title="' + _mwEsc(rolEngel[0]) + '"' : '') + ' onclick="veMntWizStpHesapla()">'
-    + (coz ? 'Yeniden hesapla' : 'Konumları hesapla') + '</button>'
+    + (coz ? 'Yeniden hesapla' : 'Hesapla') + '</button>'
     + '<span class="ve-fw-dim">' + (coz
         ? (coz.ok ? _mwIkon('check') + ' ' + _mwStpSayim(coz) : _mwIkon('x') + ' ölçülemedi')
         : 'hesaplanmadı') + '</span></div>';
@@ -1897,7 +1900,7 @@ function _mwStpHesapHTML(s, pencere){
 // Veri sayfasının eksik referansı: çaresi 3B'de (kullanım notu T08) — durum +
 // TEK yönlendirme, ilk satırda.
 function _mwStpSorunHTML(d){
-  var liste = d.engel.filter(function(m){ return !(d.hesapsiz && m === 'Konumlar henüz hesaplanmadı.'); })
+  var liste = d.engel.filter(function(m){ return !(d.hesapsiz && m === 'Henüz hesaplanmadı.'); })
     .map(function(m){ return { tur:'err', m:m }; })
     .concat(d.uyari.map(function(m){ return { tur:'warn', m:m }; }));
   if(!liste.length) return '';

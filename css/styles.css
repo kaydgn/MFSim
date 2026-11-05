@@ -8861,10 +8861,17 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-kapat{ flex:none; }
 .ve-mw-3b-kimlik + .ve-mw-3b-kapat{ margin-left:auto; }
 .ve-mw-3b-kimlik:has(+ .ve-mw-3b-kapat){ border-right:0; }
-/* Eylem: SIRADAKİ adım dolu vurgu (.ve-mw-3b-hap-ana), öteki çerçeveli */
-.ve-mw-3b-eylem{ flex:none; margin-left:auto; display:flex; }
-.ve-mw-3b-eylem:empty{ display:none; }
-.ve-mw-3b-eylem .ve-fw-3b-eylem{ flex-wrap:nowrap; gap:8px; }
+/* EYLEM KARTI (kullanıcı 2026-11-05, Canlı Not 11): tuvalin SAĞ ALTINDA, rol
+   verilince belirir; iş kartıyla aynı köşede, onun altında (.ve-mw-3b-sagalt
+   ikisini dizer). SIRADAKİ adım dolu vurgu (.ve-mw-3b-hap-ana), öteki
+   çerçeveli; durum satırı (hesabın engeli, rolün eksiği) düğmelerin üstünde. */
+.ve-mw-3b-sagalt{ position:absolute; right:16px; bottom:16px; z-index:3; display:flex; flex-direction:column;
+  align-items:flex-end; gap:8px; max-width:calc(100% - 32px); pointer-events:none; }
+.ve-mw-3b-sagalt > *{ pointer-events:auto; }
+.ve-mw-3b-sagalt > .ve-mw-3b-is{ position:static; }
+.ve-mw-3b-eylem{ width:auto; min-width:240px; }
+.ve-mw-3b-eylem .ve-fw-3b-eylem{ display:flex; flex-direction:column; gap:8px; }
+.ve-mw-3b-eylem-d{ display:flex; justify-content:flex-end; gap:8px; }
 .ve-mw-3b-hap{ display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 12px; white-space:nowrap; cursor:pointer;
   font:inherit; font-size:var(--fs-body); font-weight:600; color:var(--text-primary); background:var(--bg-input);
   border:1px solid var(--border-color); border-radius:var(--radius-sm); }

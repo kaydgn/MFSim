@@ -1016,8 +1016,8 @@ describe('TAM EKRAN ve İŞ KARTI — başlık bandı yok, Kapat komut çubuğun
     expect(k.textContent).not.toMatch(/parça/);                         // parça sayısı ağacın başlığında, tekrar yok
     const c = kur(_mw3bKapatHTML()).querySelector('button');
     expect([c.id, c.getAttribute('onclick'), c.textContent.trim()]).toEqual(['ve-mw-3b-kapat', 'veMntWiz3bKapat()', 'Kapat']);
-    // Sıra: kimlik · araçlar · eylem · Kapat; okunurken kimlik · Kapat (Kapat sağa itilir)
-    expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"><\/div>'\s*\+ '<div class="ve-mw-3b-eylem" id="ve-mw-3b-eylem"><\/div>' \+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
+    // Sıra: kimlik · araçlar · Kapat (eylem çubukta DEĞİL — Canlı Not 11); okunurken kimlik · Kapat
+    expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"><\/div>'\s*\+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
     expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
     expect(kural('.ve-mw-3b-kimlik + .ve-mw-3b-kapat')).toMatch(/margin-left:auto/);
   });
@@ -1070,6 +1070,30 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(css).toMatch(/@container vefw3b \(max-width: 1120px\)\{\n  \.ve-mw-3b > \.ve-fw-3b-govde\.ve-mw-3b-masa\{ --mw3b-agac/);
     expect(kural('.ve-fw-3b-tuval')).toMatch(/position:absolute; inset:0/);
     expect(kural('.ve-fw-3b-yan')).toMatch(/position:absolute/);
+  });
+
+  // Kullanıcı 2026-11-05 (Canlı Not 11): "'konumları hesapla' butonu var. Bu
+  // butonun burada olmasına gerek yok … tanımları yaptıktan sonra programın sağ
+  // alt köşesinde ortaya falan çıksın." Eylem tuvalin sağ altındaki kartta, iş
+  // kartıyla aynı köşede; rol verilmeden kart yok; düğmenin adı "Hesapla".
+  test('EYLEM KARTI: tuvalin sağ altında, iş kartıyla aynı dizide; rolsüz gizli; "Hesapla"; durum satırı yalnız engel ve rol eksiği', () => {
+    expect(loadSource('cp-mount-3b.js')).toMatch(/'<div class="ve-mw-3b-sagalt"><div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden><\/div>'\s*\+ '<div class="ve-mw-3b-eylem ve-mw-3b-is" id="ve-mw-3b-eylem" hidden><\/div><\/div>'/);
+    expect(kural('.ve-mw-3b-sagalt')).toMatch(/position:absolute; right:16px; bottom:16px;/);
+    expect(kural('.ve-mw-3b-sagalt > .ve-mw-3b-is')).toMatch(/position:static/);
+    const S = veMntStpOku(STK.gucGrubu());
+    const st = { sonuc: S, roller: S.agac.map(() => null), coz: null };
+    expect(veMntWiz3bEylemGorunur(st)).toBe(false);
+    st.roller[1] = 'mnt-motor';
+    expect(veMntWiz3bEylemGorunur(st)).toBe(true);
+    let d = kur(veMntWiz3bEylemHTML(st));
+    expect(d.querySelector('#ve-mw-3b-hesapla').textContent.trim()).toBe('Hesapla');
+    expect(d.querySelector('.ve-fw-issue')).toBe(null);                      // hesaptan önce durum satırı yok
+    // Hesaptan sonra: rolün eksiği (takoz sayısı) kartta; ağın kapatma payı (dosya ayrıntısı) yazılmaz
+    st.durum = 'hazir';
+    st.coz = { ok: true, birimler: [{ tip: 'mnt-motor', dugum: 1 }], hatalar: [], uyarilar: ['"Motor": 3 gövdenin açıklığı kapatıldı; birim yüzeyindeki payı %0,1.'] };
+    expect(veMntWizStpDenetim(st).uyari).toHaveLength(2);                    // pencerenin kartı ikisini de yazar
+    d = kur(veMntWiz3bEylemHTML(st));
+    expect(Array.from(d.querySelectorAll('.ve-fw-issue')).map((x) => x.textContent.trim())).toEqual(['0 takoz rolü (en az 3).']);
   });
 
   test('eylem: SIRADAKİ adım vurgulu — hesaptan önce hesapla, sonra aktar; ölçülemeyince yine hesap; rolsüzken kapalı ve sebebi ipucunda', () => {

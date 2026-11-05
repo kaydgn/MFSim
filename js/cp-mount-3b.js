@@ -9,8 +9,8 @@
 //   · tıklanan parça seçilir; kartta yolu (kök › alt montaj › parça). Rol bir
 //     ALT MONTAJA da verilir: yolda üst düğüme tıklanır (motor çoğu zaman blok
 //     · kafa · karter diye ayrı parçalarla gelir)
-//   · "Konumları hesapla" kartın AYNI işlevidir (veMntWizStpHesapla); sonuç
-//     3B'de işaret + etiket, kartta ağırlık merkezi ve konum tablosu olarak
+//   · "Hesapla" kartın AYNI işlevidir (veMntWizStpHesapla); sonuç 3B'de
+//     işaret + etiket, kartta ağırlık merkezi ve konum tablosu olarak
 //
 // BÜYÜK MONTAJ (2026-10-20, Takoz adım 3 — 420 MB'lık deneme montajı ölçüldü):
 //   · Ağları sihirbazın ORTAK İŞİ üretir (veMntWizStpAgTum · js/mount-step.js →
@@ -47,8 +47,11 @@
 // düğmeleri YOK (kullanıcı 2026-11-05, Canlı Not 15: "Şunları kaldıralım"):
 // bakış komut çubuğunun listesinde, yakınlık tekerlekte. Özellikler seçimin
 // sırasıyla: kimlik → rol · malzeme · nokta · veri sayfası → birimin kütlesi →
-// ölçülen birimler → rol verilenler. Eylem çubuğun sağında; SIRADAKİ adım
-// vurgulu (hesaptan önce "Konumları hesapla", sonra "Sihirbaza aktar").
+// ölçülen birimler → rol verilenler. Eylem tuvalin SAĞ ALTINDA, rol verilince
+// beliren kartta (kullanıcı 2026-11-05, Canlı Not 11: *"'konumları hesapla'
+// butonu … buradan kaldıralım, tanımları yaptıktan sonra programın sağ alt
+// köşesinde ortaya … çıksın"*); SIRADAKİ adım vurgulu (hesaptan önce
+// "Hesapla", sonra "Sihirbaza aktar").
 // Takoz'a özgü olan ayrıca roller, renkleri ve sonucun biçimi (halka değil
 // nokta). İKİ YERİ VAR (VE_MW_3B_YER):
 // sihirbazın İÇİNDE bir kaplama (#ve-mw-3b; sihirbaz kapanınca o da gider) ve
@@ -199,7 +202,7 @@ function veMntWiz3bAc(yer){
   // Başlık bandı YOK (tam ekran çalışma alanı): komut çubuğu dosyanın kimliği ·
   // araçlar (js/cp-mount-3b-arac.js → _mw3bAracYaz) · eylem (_mw3bPanel) · Kapat
   ov.innerHTML = '<div class="ve-mw-3b-komut">' + _mw3bKimlikHTML(s) + '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"></div>'
-      + '<div class="ve-mw-3b-eylem" id="ve-mw-3b-eylem"></div>' + _mw3bKapatHTML() + '</div>'
+      + _mw3bKapatHTML() + '</div>'
     + '<div class="ve-fw-3b-govde ve-mw-3b-masa">'
     + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-dock-bas"><h3>Ürün ağacı</h3>'
       + '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"></span></div>'
@@ -211,7 +214,8 @@ function veMntWiz3bAc(yer){
       + '<svg class="ve-fw-3b-etiket-cizgi" id="ve-mw-3b-etiket-cizgi" aria-hidden="true"></svg>'
       + '<div class="ve-fw-3b-etiketler" id="ve-mw-3b-etiket"></div>'
       + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
-      + '<div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden></div>'
+      + '<div class="ve-mw-3b-sagalt"><div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden></div>'
+        + '<div class="ve-mw-3b-eylem ve-mw-3b-is" id="ve-mw-3b-eylem" hidden></div></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-mw-3b-ipucu" hidden></div></div>'
     + '<aside class="ve-mw-3b-yan" id="ve-mw-3b-yan" aria-label="Özellikler"></aside></div>'
     + '<div class="ve-mw-3b-durum" id="ve-mw-3b-durum"><span class="ve-mw-3b-imlec" id="ve-mw-3b-imlec"></span>'
@@ -859,7 +863,7 @@ function _mw3bPanel(goster){
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
   }
   var ey = document.getElementById('ve-mw-3b-eylem');
-  if(ey) ey.innerHTML = veMntWiz3bEylemHTML(V.s);
+  if(ey){ ey.innerHTML = veMntWiz3bEylemHTML(V.s); ey.hidden = !veMntWiz3bEylemGorunur(V.s); }
 }
 // Kütle yazılırken (js/cp-mount-wizard.js → veMntWizStpKutle): yalnız ölçülen
 // birimlerin tablosu ve toplamı — alanın bölümü yerinde kalır (odak ve imleç)
@@ -956,22 +960,33 @@ function veMntWiz3bToplam(s, gs){
   }
   return m > 0 ? { m: m, p: p.map(function(v){ return v / m; }) } : null;
 }
-// EYLEM (saf, testli): komut çubuğunun sağı — TEK hesap düğmesi ve aktarım.
-// SIRADAKİ adım vurgulu: hesaptan önce "Konumları hesapla", sonra "Sihirbaza
-// aktar". Bekleyen hesap (parçaların ağı hazırlanıyor): düğme kapalı, sebebi
-// ipucunda. `opt.aktar === false`: aktarım düğmesi yok.
+// EYLEM (saf, testli): tuvalin SAĞ ALTINDAKİ kart (Canlı Not 11) — TEK hesap
+// düğmesi ve aktarım; kart ROL VERİLİNCE belirir (veMntWiz3bEylemGorunur).
+// SIRADAKİ adım vurgulu: hesaptan önce "Hesapla", sonra "Sihirbaza aktar".
+// Bekleyen hesap (parçaların ağı hazırlanıyor): düğme kapalı, sebebi ipucunda.
+// Hesaptan sonra hesabın engeli ve rolün eksiği (takoz sayısı, gövde yok)
+// kartın durum satırında — ağın kapatma payları gibi dosya ayrıntısı yazılmaz
+// (Canlı Not 17: "uyarıların ne anlama geldiğini anlamadım"). `opt.aktar ===
+// false`: aktarım düğmesi yok.
+function veMntWiz3bEylemGorunur(s){ return !!(s && s.roller && s.roller.some(function(r){ return !!r; })); }
 function veMntWiz3bEylemHTML(s, opt){
   var coz = s.coz, rolEngel = typeof _mwStpRolDenetim === 'function' ? _mwStpRolDenetim(s) : [];
   var bekle = !!s.hesapBekliyor, kapali = bekle ? 'Parçaların ağı hazırlanıyor.' : rolEngel[0];
   var aktar = !!(coz && coz.ok && !(opt && opt.aktar === false));
-  var h = '<div class="ve-fw-3b-eylem" data-ve-3b-hesapbar="1">'
+  var D = (coz && typeof veMntWizStpDenetim === 'function') ? veMntWizStpDenetim(s) : null;
+  var not = D ? D.engel.concat(D.rol || []) : [];
+  var h = '<div class="ve-fw-3b-eylem" data-ve-3b-hesapbar="1">';
+  if(not.length) h += '<div class="ve-fw-issues">' + not.map(function(m){
+    return '<div class="ve-fw-issue ve-fw-issue-warn">' + _mwIkon('alert-triangle') + ' ' + _mwEsc(m) + '</div>';
+  }).join('') + '</div>';
+  h += '<div class="ve-mw-3b-eylem-d">'
     + '<button type="button" class="ve-mw-3b-hap' + (aktar ? '' : ' ve-mw-3b-hap-ana') + '" id="ve-mw-3b-hesapla"'
     + (kapali ? ' disabled title="' + _mwEsc(kapali) + '"' : '') + (bekle ? ' aria-busy="true"' : '') + ' onclick="veMntWiz3bHesapla()">'
-    + _mwIkon(coz ? 'rotate-ccw' : 'play') + ' ' + (bekle ? 'Hesaplanıyor…' : coz ? 'Yeniden hesapla' : 'Konumları hesapla') + '</button>';
+    + _mwIkon(coz ? 'rotate-ccw' : 'play') + ' ' + (bekle ? 'Hesaplanıyor…' : coz ? 'Yeniden hesapla' : 'Hesapla') + '</button>';
   if(aktar)
     h += '<button type="button" class="ve-mw-3b-hap ve-mw-3b-hap-ana" id="ve-mw-3b-aktar" onclick="veMntWiz3bAktar()">'
       + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + ' ' + _mwIkon('arrow-right') + '</button>';
-  return h + '</div>';
+  return h + '</div></div>';
 }
 // Saf: durum + seçili düğüm → ÖLÇÜLEN BİRİMLER ve ROL VERİLENLER (testli).
 // Gövdeler: birim · kütle · x · y · z (kütle türetilmişse "S", dayanağı ipucunda)
@@ -1057,7 +1072,7 @@ function veMntWiz3bPanelHTML(s, secili){
 // ÇİPLERİ (sık olanlar) + "Diğer" listesi; malzeme; takozun noktası; gövdenin
 // veri sayfası; aksesuarın kataloğu. Her bölüm başlığıyla (`.ve-mw-3b-kb`).
 // Liste TEK kaynaktan (VE_MNT_STP_ROLLER); bölme yalnız sunum. Seçim yoksa durum
-// ve TEK yönlendirme. Hesap ve aktarım komut çubuğunda (veMntWiz3bEylemHTML).
+// ve TEK yönlendirme. Hesap ve aktarım tuvalin sağ altındaki kartta (veMntWiz3bEylemHTML).
 // `opt.secim`: çoklu seçimde rol HEPSİNE verilir; çip yalnız hepsi o roldeyse
 // basılı. Takoz noktası ve veri sayfası tek düğümün işi — çoklu seçimde yok.
 // `opt.agactan`: modeldeki tık parça seçmiyor (ölçü · yüzey süzgeci) — parça ağaçtan.
@@ -2276,7 +2291,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veMntWiz3bEtiketGoster: veMntWiz3bEtiketGoster, veMntWiz3bIsaretBul: veMntWiz3bIsaretBul,
     VE_MW_3B_GORUNUS: VE_MW_3B_GORUNUS,
     veMntWiz3bDurumBiti: veMntWiz3bDurumBiti, veMntWiz3bKimlikHTML: veMntWiz3bKimlikHTML, veMntWiz3bBirimKutleHTML: veMntWiz3bBirimKutleHTML,
-    veMntWiz3bEylemHTML: veMntWiz3bEylemHTML, veMntWiz3bToplam: veMntWiz3bToplam, veMntWiz3bKutleTazele: veMntWiz3bKutleTazele,
+    veMntWiz3bEylemHTML: veMntWiz3bEylemHTML, veMntWiz3bEylemGorunur: veMntWiz3bEylemGorunur, veMntWiz3bToplam: veMntWiz3bToplam, veMntWiz3bKutleTazele: veMntWiz3bKutleTazele,
     veMntWiz3bGorunusSec: veMntWiz3bGorunusSec
   };
 }
