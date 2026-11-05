@@ -132,8 +132,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız eksen ve SAĞ ALTTA iş kartı (STEP okuması ·
   3B kurulumu; 2026-11-04, kullanıcı: *"yazılar büyük, tam ortada … sağ alta çekelim"*);
   görünüm küpü ve yakınlık düğmeleri YOK (kullanıcı 2026-11-05: *"Şunları kaldıralım"*).
-  Birimler tablosunda kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız her
-  gövdenin kütlesi biliniyorsa. Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
+  Birimler TEK listede, role göre gruplu ve açılır kapanır, motorun aksesuarları motorun
+  altında (kullanıcı 2026-11-05); kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız
+  her gövdenin kütlesi biliniyorsa. Özellikler bir özellik ızgarası: Rol tek liste, Malzeme
+  yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok). Hesap tuvalin
+  sağ altındaki eylem kartında, rol verilince. Sağ tık menüsü `js/cp-mount-3b-menu.js`
+  (gizle · ağaçta göster · rol · malzeme; gizli parça görünüm durumu, kaydedilmez). Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
   ve İŞ KARTI* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM*.
 - `js/cp-mount-3b-agac.js` — Takoz 3B'nin **ürün ağacı** (solda, 3DEXPERIENCE gibi) ve
   **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol

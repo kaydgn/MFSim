@@ -157,7 +157,7 @@ test('KAYIT: kaynak → kaydet → sayfa yeniden → föyde kaynak → aynı dos
   await page.click('#ve-properties #ve-mnt-cad-3b');
   await page.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; });
   // Tablonun kütlesi okunur (çalışma masası): kütlesi yazılmamış gövde "—"
-  const uc = await page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-govdeler] tbody tr')].map((tr) => tr.cells[1].textContent.trim()));
+  const uc = await page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-birimler] [data-ve-3b-kg]')].map((x) => x.textContent.replace(/ kg$/, '').trim()));
   expect(uc).toEqual(['—', '654,8S', '20,4S']);
   await page.keyboard.press('Escape');
   // Programın kendi kaydı → yeni sayfa → açış
@@ -240,8 +240,8 @@ test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağa�
   await page.hover('#ve-mw-3b-menu [data-k="malzeme"]');
   await page.click('#ve-mw-3b-menu [data-k="malzeme:aluminyum"]');
   // Birimin kütlesi parça parça: (2.700 + 7.850) · 120 · 600 · 20 mm³ = 15,2 kg
-  await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-govdeler] tbody tr')]
-    .map((tr) => tr.cells[1].textContent.trim()))).toEqual(['—', '654,8S', '15,2S']);   // şanzıman: varsayılan "Dosyadan"
+  await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('#ve-mnt-3b [data-ve-3b-birimler] [data-ve-3b-kg]')]
+    .map((x) => x.textContent.replace(/ kg$/, '').trim()))).toEqual(['—', '654,8S', '15,2S']);   // şanzıman: varsayılan "Dosyadan"
   const kg = await page.evaluate(() => {
     const s = veMntWizStp(), b = s.coz.birimler.find((x) => x.ad === 'Arka braket');
     return Math.round(_mwStpKutleK(s, b).m * 1000) / 1000;

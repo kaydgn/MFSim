@@ -150,19 +150,19 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     expect(d2.querySelector('#ve-mw-3b-nokta-oneri').getAttribute('onclick')).toBe('veMntWizStpNokta(' + i('Sol ön takoz') + ', null)');
   });
 
-  test('takoz tablosu: x · y · z 0,001 mm, noktanın kaynağı satırın ipucunda; gövde 0,1 mm', () => {
+  test('birim satırı: takozda nokta 0,001 mm, kaynağı satırın ipucunda; gövdede CG 0,1 mm', () => {
     const s = st();
     s.coz = veMntStpCoz(son, s.roller);
     const d = document.createElement('div');
     d.innerHTML = veMntWiz3bPanelHTML(s, -1);
-    const tr = d.querySelector('[data-ve-3b-takozlar] tbody tr');
-    expect(Array.from(d.querySelectorAll('[data-ve-3b-takozlar] th')).map((x) => x.firstChild.textContent)).toEqual(['Takoz', 'Konum', 'x', 'y', 'z']);
-    expect(Array.from(tr.cells).map((c) => c.textContent.trim())).toEqual(['Sol ön takoz', '439,957', '−355,957', '499,855']);
-    expect(tr.getAttribute('title')).toBe('Üst yüz Ø 70,0');
-    expect(tr.getAttribute('data-ve-3b-nokta')).toBe('eksen');
-    expect(tr.hasAttribute('data-uyari')).toBe(false);
-    expect(Array.from(d.querySelectorAll('[data-ve-3b-govdeler] thead th')).map((x) => x.firstChild.textContent)).toEqual(['Gövde', 'Kütle', 'CG', 'x', 'y', 'z']);
-    expect(Array.from(d.querySelector('[data-ve-3b-govdeler] tbody tr').cells).slice(2).map((c) => c.textContent)).toEqual(['125,0', '0,1', '750,0']);
+    const tk = d.querySelector('[data-ve-3b-grup="takoz"] [data-ve-3b-birim]');
+    expect(tk.querySelector('.ve-mw-3b-birim-ad').textContent).toBe('Sol ön takoz');
+    expect(tk.querySelector('.ve-mw-3b-birim-xyz').textContent).toBe('Nokta 439,957; −355,957; 499,855');
+    expect(tk.getAttribute('title')).toBe('Üst yüz Ø 70,0');
+    expect(tk.getAttribute('data-ve-3b-nokta')).toBe('eksen');
+    expect(tk.hasAttribute('data-uyari')).toBe(false);
+    const gv = d.querySelector('[data-ve-3b-grup="govde"] [data-ve-3b-birim]');
+    expect(gv.querySelector('.ve-mw-3b-birim-xyz').textContent).toBe('CG 125,0; 0,1; 750,0');
   });
 
   test('gövde tablosunda kütle OKUNUR: elle → değer, türetilmiş → değer + "S" (dayanağı ipucunda); alan seçili birimin bölümünde', () => {
@@ -175,11 +175,11 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     s.coz = veMntStpCoz(k, s.roller, { yogunluk: s.yogunluk });
     const d = document.createElement('div');
     d.innerHTML = veMntWiz3bPanelHTML(s, -1);
-    const hucre = (ad) => d.querySelector('[data-ve-3b-govdeler] tr[data-ve-3b-birim="' + j(ad) + '"] td:nth-child(2)');
-    expect(hucre('Motor').textContent).toBe('418,0');
-    expect(d.querySelector('[data-ve-3b-govdeler] input')).toBe(null);
-    expect(hucre('Şanzıman').textContent).toBe('654,8S');
-    expect(hucre('Arka braket').textContent).toBe('22,6S');
+    const hucre = (ad) => d.querySelector('[data-ve-3b-birimler] [data-ve-3b-kg="' + j(ad) + '"]');
+    expect(hucre('Motor').textContent).toBe('418,0 kg');
+    expect(d.querySelector('[data-ve-3b-birimler] input')).toBe(null);
+    expect(hucre('Şanzıman').textContent).toBe('654,8S kg');
+    expect(hucre('Arka braket').textContent).toBe('22,6S kg');
     expect(hucre('Arka braket').querySelector('sup.ve-fw-kun').getAttribute('title')).toBe('STEP geometrisinden · Çelik · 7.850 kg/m³');
     // Kütlenin alanı seçili birimin bölümünde (kartın ve pencerenin alanıyla aynı nitelik)
     const b = document.createElement('div');
@@ -189,8 +189,7 @@ describe('DAİREDEN NOKTA — alttaki dizi, tablo, izdüşüm', () => {
     expect(b.querySelector('input')).toBe(null);
     expect(b.querySelector('[data-mw-stp-kutle-deger]').textContent).toBe('22,6');
     // açık parçalı motorun satırı uyarılı; başlıkta yoğunluğun durumu yok (dosyada var)
-    expect(d.querySelector('[data-ve-3b-govdeler] tr[data-ve-3b-birim="' + j('Motor') + '"]').hasAttribute('data-uyari')).toBe(true);
-    expect(d.querySelectorAll('[data-ve-3b-govdeler] th')[1].getAttribute('title')).toBe(null);
+    expect(d.querySelector('[data-ve-3b-birimler] [data-ve-3b-birim="' + j('Motor') + '"]').hasAttribute('data-uyari')).toBe(true);
   });
 
   test('ekran izdüşümü: kameranın önündeki nokta piksele, arkasındaki null', () => {
@@ -1240,13 +1239,52 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     [0, 1, 2].forEach((a) => expect(T.p[a]).toBeCloseTo(gs.reduce((t, b, k) => t + K[k].m * b.konum[a], 0) / m, 9));
     let d = kur(veMntWiz3bPanelHTML(s, -1));
     const top = d.querySelector('[data-ve-3b-toplam]');
-    expect(Array.from(top.cells).map((c) => c.textContent)).toEqual(['Toplam', veSayi(Math.round(m * 10) / 10, 1)]
-      .concat(T.p.map((v) => veSayi(Math.round(v * 10) / 10, 1))));
+    expect(top.textContent).toBe('Toplam' + veSayi(Math.round(m * 10) / 10, 1) + ' kgCG' + T.p.map((v) => veSayi(Math.round(v * 10) / 10, 1)).join('; '));
     delete s.kutle[j('Motor')];
     expect(veMntWiz3bToplam(s, gs)).toBe(null);
     d = kur(veMntWiz3bPanelHTML(s, -1));
     expect(d.querySelector('[data-ve-3b-toplam]')).toBe(null);
-    expect(d.querySelector('[data-ve-3b-govdeler] tr[data-eksik]').getAttribute('data-ve-3b-birim')).toBe(String(j('Motor')));
+    expect(d.querySelector('[data-ve-3b-birimler] [data-eksik]').getAttribute('data-ve-3b-birim')).toBe(String(j('Motor')));
+  });
+
+  // Kullanıcı 2026-11-05 — Canlı Not 17: "motor aksesuarları için değerler, motor
+  // komplesinin altında görünsün … en aşağıdaki uyarıların ne anlama geldiğini
+  // anlamadım … Kaldıralım"; Not 18: "uzun uzun görünmesine gerek yok … kategorize,
+  // açılır kapanır". Önce: iki tablo + uyarılar + ayrı "Rol verilenler" listesi.
+  test('BİRİMLER: tek liste, role göre gruplar kapalı açılır; seçilenin grubu açık; aksesuarlar motorun altında; uyarı yok', () => {
+    const son = veMntStpOku(STK.tulgaKalibi({})), i = (ad) => son.agac.findIndex((x) => x.ad === ad);
+    const t = { durum: 'hazir', sonuc: son, roller: son.agac.map(() => null), coz: null, kutle: {}, nokta: {}, yogunluk: {}, malzeme: {} };
+    t.roller[i('Motor bloğu')] = 'mnt-motor'; t.roller[i('Sol ön takoz')] = 'mnt-mount'; t.roller[i('Sağ ön takoz')] = 'mnt-mount';
+    const aks = son.agac.findIndex((x) => !x.cocuklar.length && !t.roller[x.i] && x.i !== i('Motor bloğu') && x.ebeveyn >= 0);
+    t.roller[aks] = 'mnt-alternator';
+    t.coz = veMntStpCoz(son, t.roller);
+    let d = kur(veMntWiz3bPanelHTML(t, -1));
+    expect(d.querySelector('[data-ve-3b-birimler] h4').textContent).toBe('Birimler');
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-grup]')).map((g) => g.getAttribute('data-ve-3b-grup'))).toEqual(['govde', 'takoz']);
+    expect(Array.from(d.querySelectorAll('.ve-mw-3b-grup-bas')).map((b) => [b.textContent, b.getAttribute('aria-expanded')]))
+      .toEqual([['Gövdeler2', 'false'], ['Takozlar2', 'false']]);            // aksesuar motorun grubunda sayılır
+    d.querySelectorAll('.ve-mw-3b-birim-l').forEach((u) => expect(u.hidden).toBe(true));
+    // aksesuar motorun satırının altında, kendi grubu yok
+    const motorS = d.querySelector('[data-ve-3b-birim="' + i('Motor bloğu') + '"]');
+    expect(motorS.querySelector('.ve-mw-3b-birim-alt [data-ve-3b-birim="' + aks + '"]')).not.toBe(null);
+    expect(d.querySelector('[data-ve-3b-grup="aksesuar"]')).toBe(null);
+    // uyarı yok (ağın kapatma payı vb.); "Rol verilenler" ayrı listesi yok
+    expect(d.querySelector('.ve-fw-issue, .ve-fw-3b-atanan')).toBe(null);
+    expect(d.textContent).not.toMatch(/Rol verilenler|Ölçülen birimler/);
+    // seçili birimin grubu açık; elle açılan grup açık, elle kapatılan kapalı kalır
+    d = kur(veMntWiz3bPanelHTML(t, i('Sol ön takoz')));
+    expect(d.querySelector('[data-ve-3b-grup="takoz"] .ve-mw-3b-grup-bas').getAttribute('aria-expanded')).toBe('true');
+    expect(d.querySelector('[data-ve-3b-grup="takoz"] [data-ve-3b-birim="' + i('Sol ön takoz') + '"]').classList.contains('on')).toBe(true);
+    d = kur(veMntWiz3bPanelHTML(t, i('Sol ön takoz'), { takoz: false, govde: true }));
+    expect(Array.from(d.querySelectorAll('.ve-mw-3b-grup-bas')).map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'false']);
+    // her satırda rolü kaldır; satırın üstü 3B'de vurgular
+    const r = d.querySelector('[data-ve-3b-birim="' + i('Motor bloğu') + '"]');
+    expect(r.querySelector('.ve-fw-mini').getAttribute('onclick')).toBe("veMntWizStpRol(" + i('Motor bloğu') + ", '')");
+    expect(r.getAttribute('onpointerenter')).toBe('veMntWiz3bAgacFare(' + i('Motor bloğu') + ')');
+    // motor yokken aksesuar kendi grubunda
+    t.roller[i('Motor bloğu')] = null; t.coz = veMntStpCoz(son, t.roller);
+    d = kur(veMntWiz3bPanelHTML(t, -1));
+    expect(Array.from(d.querySelectorAll('[data-ve-3b-grup]')).map((g) => g.getAttribute('data-ve-3b-grup'))).toEqual(['takoz', 'aksesuar']);
   });
 
   // Kullanıcı 2026-11-05 — Canlı Not 10: "rol kısmı … çok amatör"; Not 9: "her

@@ -1053,7 +1053,7 @@ function _gmSec16(){
     ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
     ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, özellik satırları (<strong>Rol</strong>, atanmışsa '
       + '<strong>Malzeme</strong>, takozun noktası, veri sayfası ve referansı, katalog), birimin kütlesi ve CG’si, '
-      + '<strong>Ölçülen birimler</strong>, rol verilenler', 'Satırlar seçime göre'],
+      + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Satırlar seçime göre'],
     ['Eylem kartı', 'Tuvalin sağ altında, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
       + 'üstünde hesabın engeli ve rolün eksiği', 'Sıradaki adımın düğmesi dolu renkte'],
     ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '
@@ -1132,8 +1132,11 @@ function _gmSec16(){
   ], ['Kaynak', 'Kütle', 'Not']);
   h += '<p>3B’de gövde seçiliyken <strong>Özellikler</strong>’in <strong>Kütle ve ağırlık merkezi</strong> bölümü '
     + 'kaynağı, kütleyi (<em>Elle</em> ise yazılır) ve CG’yi gösterir; takoz seçiliyken noktasını ve kaynağını. '
-    + '<strong>Ölçülen birimler</strong> tablosu gövdelerin kütlesini ve CG’sini, bütün gövdelerin kütlesi '
-    + 'biliniyorsa toplam kütleyi ve ortak CG’yi taşır; kütlesi eksik gövde varken toplam yazılmaz.</p>';
+    + '<strong>Birimler</strong> listesi rol verilen birimleri gruplarıyla (Gövdeler · Braketler · Takozlar · '
+    + 'Aktarma) taşır: grup başlığı sayıyı yazar ve tıkla açılır; seçili birimin grubu açıktır. Motorun aksesuarları '
+    + 'motorun satırının altındadır. Satır kütleyi ve CG’yi (takozda noktayı) yazar, satırdaki çarpı rolü kaldırır. '
+    + 'Bütün gövdelerin kütlesi biliniyorsa listenin başında toplam kütle ve ortak CG; kütlesi eksik gövde varken '
+    + 'toplam yazılmaz.</p>';
   h += '<p><strong>Malzeme ataması.</strong> Malzeme yalnız istenen parçaya verilir: 3B’de ya da ürün ağacında '
     + 'parçaya veya alt montaja sağ tık, <strong>Malzeme</strong> satırından malzeme — seçimin hepsine. Takoz, motor ve '
     + 'şanzıman malzeme almaz (kütleleri başka yoldan). Parça birimin içindeki en yakın atamayı alır, ataması yoksa '

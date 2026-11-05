@@ -11810,6 +11810,35 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-kimlik .ve-fw-3b-yol > b, .ve-mw-3b-kimlik .ve-fw-3b-yol > .ve-fw-3b-yolb,
 .ve-mw-3b-kimlik .ve-fw-3b-yol > span:not(.mf-ico){ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ve-mw-3b-kimlik .ve-fw-3b-atanan{ margin-top:8px; }
+/* BİRİMLER (kullanıcı 2026-11-05, Canlı Not 17 · 18): ölçülen birimler ve rol
+   verilenler TEK listede; role göre gruplar, başlıkta sayı, açılır kapanır (kapalı
+   açılır, seçili birimin grubu açık); motorun aksesuarları motorun altında,
+   girintili. Satır: rol noktası · ad · kütle; altında CG (takozda nokta); rolü
+   kaldır fareyle ya da odakla görünür. */
+.ve-mw-3b-toplam{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 6px; margin:0 0 8px; font-variant-numeric:tabular-nums; }
+.ve-mw-3b-toplam b{ font-weight:600; color:var(--text-heading); }
+.ve-mw-3b-grup + .ve-mw-3b-grup{ border-top:1px solid var(--border-light); }
+.ve-mw-3b-grup-bas{ display:flex; align-items:center; gap:6px; width:100%; height:28px; padding:0; border:0; background:none;
+  font:inherit; font-weight:600; color:var(--text-primary); text-align:left; cursor:pointer; }
+.ve-mw-3b-grup-bas:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-mw-3b-grup-bas > .mf-ico{ flex:none; width:13px; height:13px; color:var(--text-muted); transition:transform var(--dur-base) var(--ease-out); }
+.ve-mw-3b-grup-bas[aria-expanded="true"] > .mf-ico{ transform:rotate(90deg); }
+.ve-mw-3b-grup-bas > .ve-fw-dim{ margin-left:auto; font-weight:400; font-variant-numeric:tabular-nums; }
+.ve-mw-3b-birim-l, .ve-mw-3b-birim-alt{ list-style:none; margin:0; padding:0; }
+.ve-mw-3b-birim-l{ margin-bottom:6px; }
+.ve-mw-3b-birim{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; column-gap:6px; row-gap:1px;
+  padding:4px 4px 4px 6px; }
+.ve-mw-3b-birim:hover{ background:var(--bg-tertiary); }
+.ve-mw-3b-birim.on{ background:var(--accent-tint-10); }
+.ve-mw-3b-birim-ad{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; }
+.ve-mw-3b-birim-kg, .ve-mw-3b-birim-rol{ white-space:nowrap; font-variant-numeric:tabular-nums; }
+.ve-mw-3b-birim-xyz{ grid-column:2 / -1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+.ve-mw-3b-birim > .ve-fw-mini{ opacity:0; }
+.ve-mw-3b-birim:hover > .ve-fw-mini, .ve-mw-3b-birim > .ve-fw-mini:focus-visible{ opacity:1; }
+.ve-mw-3b-birim[data-uyari] .ve-mw-3b-birim-xyz{ color:var(--ink-warning); }
+.ve-mw-3b-birim-alt{ grid-column:2 / -1; margin-top:2px; padding-left:10px; border-left:1px solid var(--border-light); }
+.ve-mw-3b-birim-alt .ve-mw-3b-birim{ padding-left:4px; }
 /* Birimin kütlesi: ad · değer ızgarası; koordinat üç hücrede */
 .ve-mw-3b-alanlar{ display:grid; grid-template-columns:minmax(84px, auto) minmax(0, 1fr); align-items:center; gap:8px 10px; font-size:var(--fs-tiny); }
 .ve-mw-3b-alan-ad{ color:var(--text-secondary); }

@@ -215,11 +215,12 @@ test('İŞARET · ETİKET · EKSEN: etiketler üst üste binmez, takoz noktası 
     const yan = document.getElementById('ve-mw-3b-yan').getBoundingClientRect();
     const say = (t) => document.querySelectorAll('#ve-mw-3b-etiket-cizgi [data-ve-3b-isaret="' + t + '"]').length;
     const tk = veMntWizStp().coz.birimler.filter((b) => b.ad === 'Takozlar civata 22')[0];
-    const satir = document.querySelector('[data-ve-3b-takozlar] tr[data-ve-3b-birim="' + tk.dugum + '"]');
-    const ad = satir.querySelector('td:first-child button');
+    veMntWiz3bGrupAc('takoz');                                              // Birimler grubu kapalı açılır (Canlı Not 18)
+    const satir = document.querySelector('[data-ve-3b-grup="takoz"] [data-ve-3b-birim="' + tk.dugum + '"]');
+    const ad = satir.querySelector('.ve-mw-3b-birim-ad');
     return { cakisan, kartAltinda: R.filter((r) => r.right > yan.left && r.top < yan.bottom).length,
              govde: say('govde'), takoz: say('takoz'), kaynak: tk.kaynak, nokta: satir.getAttribute('title'),
-             adTitle: ad.getAttribute('title'), adSigar: ad.getBoundingClientRect().right <= satir.cells[0].getBoundingClientRect().right + 0.5,
+             adTitle: ad.getAttribute('title'), adSigar: ad.getBoundingClientRect().width > 0 && ad.getBoundingClientRect().right <= satir.getBoundingClientRect().right + 0.5,
              cagri: window._mw3b.renderer.info.render.calls, kume: window._mw3b.kume.length + window._mw3b.ckume.length,
              zemin: veMntWiz3bDurum().zemin };
   });

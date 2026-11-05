@@ -906,7 +906,7 @@ function _mw3bPanel(goster){
     + veMntWiz3bKimlikHTML(V.s, V.secili, V.secim)
     + '<div class="ve-mw-3b-alt" id="ve-mw-3b-alt">' + veMntWiz3bAltHTML(V.s, V.secili, opt) + '</div>'
     + veMntWiz3bBirimKutleHTML(V.s, V.secili, V.secim)
-    + '<div id="ve-mw-3b-birimler">' + veMntWiz3bPanelHTML(V.s, V.secili) + '</div>';
+    + '<div id="ve-mw-3b-birimler">' + veMntWiz3bPanelHTML(V.s, V.secili, V.grupAcik) + '</div>';
   if(odak !== null && odak !== undefined && yan.contains && !yan.contains(aktif)){
     var yeni = yan.querySelector('input[data-mw-stp-kutle="' + odak + '"]');
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
@@ -919,7 +919,7 @@ function _mw3bPanel(goster){
 function veMntWiz3bKutleTazele(){
   var V = _mw3b, el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-birimler');
   if(!V || V.okuma || !el) return false;
-  el.innerHTML = veMntWiz3bPanelHTML(V.s, V.secili);
+  el.innerHTML = veMntWiz3bPanelHTML(V.s, V.secili, V.grupAcik);
   return true;
 }
 // SEÇİMİN KİMLİĞİ (saf, testli): tekte simge (alt montaj · parça), ad, tür ve parça
@@ -1037,85 +1037,101 @@ function veMntWiz3bEylemHTML(s, opt){
       + (s.aktarim ? 'Yeniden aktar' : 'Sihirbaza aktar') + ' ' + _mwIkon('arrow-right') + '</button>';
   return h + '</div></div>';
 }
-// Saf: durum + seçili düğüm → ÖLÇÜLEN BİRİMLER ve ROL VERİLENLER (testli).
-// Gövdeler: birim · kütle · x · y · z (kütle türetilmişse "S", dayanağı ipucunda)
-// ve kütlesi bilinen gövdelerin toplamı; takozlar: birim · x · y · z, noktanın
-// kaynağı satırın ipucunda. Satırın adı birimi seçer.
-function veMntWiz3bPanelHTML(s, secili){
-  var so = s.sonuc, h = '', coz = s.coz;
+// BİRİMLER (saf, testli) — kullanıcı 2026-11-05, Canlı Not 17: *"Şu kısmı daha
+// profesyonel bir hale getirelim … motor aksesuarları için değerler, motor
+// komplesinin altında görünsün … en aşağıdaki uyarıların ne anlama geldiğini
+// anlamadım … Kaldıralım"* · Not 18: *"uzun uzun görünmesine gerek yok …
+// kategorize, açılır kapanır"*. Eskiden iki tablo (Ölçülen birimler: gövde ·
+// kütle · CG; takoz · konum) + ağın kapatma payı uyarıları + ayrı "Rol
+// verilenler" listesi; şimdi TEK liste: role göre gruplar (VE_MW_3B_BIRIM_GRUP),
+// başlıkta sayı, açılır kapanır — KAPALI açılır, seçili birimin grubu açık;
+// motorun aksesuarları motorun satırının altında. Satır: rol noktası · ad ·
+// kütle (türetilmişse "S", dayanağı ipucunda); altında CG (takozda nokta, kaynağı
+// satırın ipucunda); rolü kaldır fareyle. Bütün gövdelerin kütlesi biliniyorsa
+// başlığın altında toplam ve ortak CG. Hesabın engeli ve rolün eksiği eylem
+// kartında (veMntWiz3bEylemHTML). `acik`: { grup: true|false } (görünüm durumu,
+// V.grupAcik). Satırın adı birimi seçer.
+var VE_MW_3B_BIRIM_GRUP = [
+  { k: 'govde', ad: 'Gövdeler', roller: ['mnt-motor', 'mnt-gearbox', 'mnt-transfer'] },
+  { k: 'braket', ad: 'Braketler', roller: ['mnt-bracket'] },
+  { k: 'takoz', ad: 'Takozlar', roller: ['mnt-mount'] },
+  { k: 'aktarma', ad: 'Aktarma', roller: ['mnt-shaft', 'mnt-pto', 'mnt-pump', 'mnt-pto-group'] },
+  { k: 'aksesuar', ad: 'Motor aksesuarları', roller: ['mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield'] }
+];
+function veMntWiz3bPanelHTML(s, secili, acik){
+  var so = s.sonuc, coz = s.coz, ok = !!(coz && coz.ok), acikG = acik || {};
   var birimSec = _mw3bSeciliBirim(s, secili);
-  h += '<section class="ve-fw-3b-bolum" data-ve-3b-sonuc="1"><div class="ve-fw-3b-kbas"><h4>Ölçülen birimler</h4>'
+  var h = '<section class="ve-fw-3b-bolum ve-mw-3b-birimler" data-ve-3b-sonuc="1" data-ve-3b-birimler="1"><div class="ve-fw-3b-kbas"><h4>Birimler</h4>'
     + '<span class="ve-fw-3b-hdurum" data-ve-3b-hesap-durum="1" data-ok="' + (coz ? (coz.ok ? '1' : '0') : '') + '">'
     + (coz ? (coz.ok ? _mwIkon('check') + ' ' + _mwStpSayim(coz) : _mwIkon('x') + ' ölçülemedi') : 'hesaplanmadı') + '</span></div>';
-  if(coz && coz.ok){
-    var gs = _mwStpGovdeler(s), ts = _mwStpTakozlar(s);
-    // Ad hücrede kısalır; tam adı ipucunda (rolü ve gövdede kaynağın durumu)
-    // Nokta ve ad esnek kapta: ad kalan yere sığar (hücre sabit düzende taşmaz)
-    var ad = function(b){
-      return '<span class="ve-mw-3b-tbl-ad">' + _mw3bRenkNokta(b.tip) + '<button type="button" class="ve-fw-3b-yolb" onclick="veMntWiz3bSec(' + b.dugum + ')"'
-        + ' title="' + _mwEsc(b.ad + ' · ' + _mwAd(b.tip)) + (b.kaynak === 'kutu' && b.tip !== 'mnt-mount' ? ' — ağ kapalı değil, kutunun merkezi' : '') + '">'
-        + _mwEsc(b.ad) + '</button></span>';
-    };
-    var hucre = function(v, hane){ return '<td class="ve-fw-num">' + _mwSayi(Math.round(v * Math.pow(10, hane)) / Math.pow(10, hane), hane) + '</td>'; };
-    // Kütle okunur (alanı seçili birimin bölümünde): türetilmişse "S", dayanağı ipucunda
-    var kg = function(b, K){
-      if(!(K.m > 0)) return '<td class="ve-fw-num ve-fw-dim">—</td>';
-      return '<td class="ve-fw-num" data-ve-3b-kg="' + b.dugum + '">' + _mwSayi(K.m, K.m < 10 ? 2 : 1)
-        + (K.kaynak !== 'elle' ? '<sup class="ve-fw-kun" title="' + _mwEsc(VE_MW_STEP_NOT + ' · ' + K.not) + '">S</sup>' : '') + '</td>';
-    };
-    if(gs.length){
-      var yd = _mwStpYogDurum(s), T = veMntWiz3bToplam(s, gs);
-      h += '<table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-3b-tbl ve-mw-3b-tbl" data-ve-3b-govdeler="1"><thead><tr>'
-        + '<th rowspan="2">Gövde</th><th rowspan="2"' + (yd ? ' title="' + _mwEsc(yd) + '"' : '') + '>Kütle<em>kg</em></th><th colspan="3">CG<em>mm</em></th>'
-        + '</tr><tr><th>x</th><th>y</th><th>z</th></tr></thead><tbody>';
-      gs.forEach(function(b){
-        var K = _mwStpKutleK(s, b);
-        h += '<tr data-ve-3b-birim="' + b.dugum + '"' + (b.dugum === birimSec ? ' class="on"' : '')
-          + (veMntWizStpKonumUyari(b) ? ' data-uyari="1"' : '') + (K.m > 0 ? '' : ' data-eksik="1"') + '><td>' + ad(b) + '</td>'
-          + kg(b, K) + hucre(b.konum[0], 1) + hucre(b.konum[1], 1) + hucre(b.konum[2], 1) + '</tr>';
-      });
-      h += '</tbody>';
-      if(T) h += '<tfoot><tr data-ve-3b-toplam="1"><td>Toplam</td>' + hucre(T.m, 1) + hucre(T.p[0], 1) + hucre(T.p[1], 1) + hucre(T.p[2], 1) + '</tr></tfoot>';
-      h += '</table>';
-    }
-    if(ts.length){
-      h += '<table class="ve-fw-tbl ve-fw-tbl-fixed ve-fw-3b-tbl ve-mw-3b-tbl ve-mw-3b-tbl-takoz" data-ve-3b-takozlar="1"><thead><tr>'
-        + '<th rowspan="2">Takoz</th><th colspan="3">Konum<em>mm</em></th></tr><tr><th>x</th><th>y</th><th>z</th></tr></thead><tbody>';
-      ts.forEach(function(b){
-        h += '<tr data-ve-3b-birim="' + b.dugum + '" data-ve-3b-nokta="' + _mwEsc(b.kaynak) + '" title="' + _mwEsc(veMntWizStpNoktaKaynak(b)) + '"'
-          + (b.dugum === birimSec ? ' class="on"' : '') + (veMntWizStpKonumUyari(b) ? ' data-uyari="1"' : '') + '><td>' + ad(b) + '</td>'
-          + hucre(b.konum[0], 3) + hucre(b.konum[1], 3) + hucre(b.konum[2], 3) + '</tr>';
-      });
-      h += '</tbody></table>';
-    }
-  } else {
-    var rollu = s.roller.filter(function(r){ return !!r; }).length;
-    h += '<p class="ve-fw-dim">' + (rollu ? veSayi(rollu, 0) + ' rollü birim' : 'Rol verilmedi') + '</p>';
+  // Rol verilen düğümler; hesaptan sonra birimin sonucu (kütle, CG) satıra eklenir
+  var B = {};
+  if(ok) coz.birimler.forEach(function(b){ B[b.dugum] = b; });
+  var atanan = so.agac.filter(function(dg){ return !!s.roller[dg.i]; }).map(function(dg){
+    return { dugum: dg.i, ad: dg.ad, tip: s.roller[dg.i], ornek: dg.ornek || dg.id || '', b: B[dg.i] || null };
+  });
+  if(!atanan.length) return h + '<p class="ve-fw-dim">Rol verilmedi</p></section>';
+  if(ok){
+    var gs = _mwStpGovdeler(s), T = gs.length ? veMntWiz3bToplam(s, gs) : null;
+    if(T) h += '<div class="ve-mw-3b-toplam" data-ve-3b-toplam="1"><span>Toplam</span><b>' + _mwSayi(Math.round(T.m * 10) / 10, 1) + ' kg</b>'
+      + '<span class="ve-fw-dim">CG</span><span class="ve-mw-3b-toplam-xyz">' + _mwStpKonum(T.p, 1) + '</span></div>';
   }
-  var d = typeof veMntWizStpDenetim === 'function' ? veMntWizStpDenetim(s) : { engel: [], uyari: [] };
-  var sorun = (coz ? d.engel : []).concat(d.uyari);
-  if(sorun.length){
-    h += '<div class="ve-fw-issues">';
-    sorun.forEach(function(m){ h += '<div class="ve-fw-issue ve-fw-issue-warn">' + _mwIkon('alert-triangle') + ' ' + _mwEsc(m) + '</div>'; });
-    h += '</div>';
-  }
-  h += '</section>';
-  // ── ROL VERİLENLER ──
-  var atanan = so.agac.filter(function(dg){ return !!s.roller[dg.i]; });
-  h += '<section class="ve-fw-3b-bolum"><h4>Rol verilenler <span class="ve-fw-dim">' + atanan.length + '</span></h4>';
-  if(!atanan.length) h += '<p class="ve-fw-dim">Henüz yok.</p>';
-  else {
-    h += '<ul class="ve-fw-3b-atanan">';
-    atanan.forEach(function(dg){
-      h += '<li' + (dg.i === secili ? ' class="on"' : '') + '>' + _mw3bRenkNokta(s.roller[dg.i])
-        + '<button type="button" class="ve-fw-3b-yolb" onclick="veMntWiz3bSec(' + dg.i + ')" title="' + _mwEsc(dg.ornek || dg.id || '') + '">'
-        + _mwEsc(dg.ad) + '</button><span class="ve-fw-dim">' + _mwEsc(_mwAd(s.roller[dg.i])) + '</span>'
-        + '<button type="button" class="ve-fw-mini" title="Rolü kaldır" aria-label="Rolü kaldır" onclick="veMntWizStpRol(' + dg.i + ', \'\')">'
-        + _mwIkon('x') + '</button></li>';
+  var satir = function(u, ic){
+    var b = u.b, takoz = u.tip === 'mnt-mount', K = (b && !takoz) ? _mwStpKutleK(s, b) : null;
+    var kg = !b || takoz ? (b ? '' : '<span class="ve-mw-3b-birim-rol ve-fw-dim">' + _mwEsc(_mwAd(u.tip)) + '</span>')
+      : (K.m > 0 ? '<span class="ve-mw-3b-birim-kg" data-ve-3b-kg="' + u.dugum + '">' + _mwSayi(K.m, K.m < 10 ? 2 : 1)
+          + (K.kaynak !== 'elle' ? '<sup class="ve-fw-kun" title="' + _mwEsc(VE_MW_STEP_NOT + ' · ' + K.not) + '">S</sup>' : '') + ' kg</span>'
+        : '<span class="ve-mw-3b-birim-kg ve-fw-dim" data-ve-3b-kg="' + u.dugum + '">— kg</span>');
+    var at = ' data-ve-3b-birim="' + u.dugum + '"' + (u.dugum === birimSec ? ' class="ve-mw-3b-birim on"' : ' class="ve-mw-3b-birim"')
+      + (b && veMntWizStpKonumUyari(b) ? ' data-uyari="1"' : '') + (K && !(K.m > 0) ? ' data-eksik="1"' : '')
+      + (b && takoz ? ' data-ve-3b-nokta="' + _mwEsc(b.kaynak) + '" title="' + _mwEsc(veMntWizStpNoktaKaynak(b)) + '"' : '');
+    return '<li' + at + ' onpointerenter="veMntWiz3bAgacFare(' + u.dugum + ')" onpointerleave="veMntWiz3bAgacFare(-1)">' + _mw3bRenkNokta(u.tip)
+      + '<button type="button" class="ve-fw-3b-yolb ve-mw-3b-birim-ad" onclick="veMntWiz3bSec(' + u.dugum + ')"'
+      + ' title="' + _mwEsc(u.ad + ' · ' + _mwAd(u.tip)) + (b && b.kaynak === 'kutu' && !takoz ? ' — ağ kapalı değil, kutunun merkezi' : '') + '">'
+      + _mwEsc(u.ad) + '</button>' + kg
+      + '<button type="button" class="ve-fw-mini" title="Rolü kaldır" aria-label="Rolü kaldır — ' + _mwEsc(u.ad) + '" onclick="veMntWizStpRol(' + u.dugum + ', \'\')">'
+      + _mwIkon('x') + '</button>'
+      + (b && b.konum ? '<span class="ve-mw-3b-birim-xyz"><span class="ve-fw-dim">' + (takoz ? 'Nokta' : 'CG') + '</span> '
+          + _mwStpKonum(b.konum, takoz ? 3 : 1) + '</span>' : '')
+      + (ic || '') + '</li>';
+  };
+  // Aksesuarlar motorun altında (motor yoksa kendi grubunda)
+  var motor = atanan.filter(function(u){ return u.tip === 'mnt-motor'; })[0] || null;
+  var aks = VE_MW_3B_BIRIM_GRUP[4].roller, grubun = {};
+  VE_MW_3B_BIRIM_GRUP.forEach(function(g){ g.roller.forEach(function(t){ grubun[t] = g.k; }); });
+  VE_MW_3B_BIRIM_GRUP.forEach(function(g){
+    var L = atanan.filter(function(u){ return (grubun[u.tip] || 'aktarma') === g.k && !(motor && aks.indexOf(u.tip) >= 0); });
+    if(!L.length) return;
+    var say = L.length + (g.k === 'govde' && motor ? atanan.filter(function(u){ return aks.indexOf(u.tip) >= 0; }).length : 0);
+    var icinde = birimSec >= 0 && atanan.some(function(u){
+      return u.dugum === birimSec && ((grubun[u.tip] || 'aktarma') === g.k || (g.k === 'govde' && motor && aks.indexOf(u.tip) >= 0));
     });
-    h += '</ul>';
-  }
+    var ac = acikG[g.k] === true || (acikG[g.k] !== false && icinde);
+    h += '<div class="ve-mw-3b-grup" data-ve-3b-grup="' + g.k + '">'
+      + '<button type="button" class="ve-mw-3b-grup-bas" aria-expanded="' + (ac ? 'true' : 'false') + '" onclick="veMntWiz3bGrupAc(\'' + g.k + '\')">'
+      + _mwIkon('chevron-right') + '<span>' + _mwEsc(g.ad) + '</span><span class="ve-fw-dim">' + veSayi(say, 0) + '</span></button>'
+      + '<ul class="ve-mw-3b-birim-l"' + (ac ? '' : ' hidden') + '>';
+    L.forEach(function(u){
+      var ic = '';
+      if(motor && u === motor){
+        var A = atanan.filter(function(x){ return aks.indexOf(x.tip) >= 0; });
+        if(A.length) ic = '<ul class="ve-mw-3b-birim-alt" aria-label="Motorun aksesuarları">' + A.map(function(x){ return satir(x); }).join('') + '</ul>';
+      }
+      h += satir(u, ic);
+    });
+    h += '</ul></div>';
+  });
   return h + '</section>';
+}
+// Grubu aç / kapat (görünüm durumu, kaydedilmez)
+function veMntWiz3bGrupAc(k){
+  var V = _mw3b;
+  if(!V) return false;
+  if(!V.grupAcik) V.grupAcik = {};
+  var el = typeof document !== 'undefined' && document.querySelector('#ve-mw-3b-birimler [data-ve-3b-grup="' + k + '"] .ve-mw-3b-grup-bas');
+  var simdi = el ? el.getAttribute('aria-expanded') === 'true' : !!V.grupAcik[k];
+  V.grupAcik[k] = !simdi;
+  return veMntWiz3bKutleTazele();
 }
 // Saf: seçimin ÖZELLİKLERİ (testli) — Özellikler'de kimliğin altında, CAD'in
 // özellik ızgarası gibi (kullanıcı 2026-11-05, Canlı Not 10: *"Şu rol kısmı hiç
@@ -2346,7 +2362,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veMntWiz3bEtiketGoster: veMntWiz3bEtiketGoster, veMntWiz3bIsaretBul: veMntWiz3bIsaretBul,
     VE_MW_3B_GORUNUS: VE_MW_3B_GORUNUS,
     veMntWiz3bDurumBiti: veMntWiz3bDurumBiti, veMntWiz3bKimlikHTML: veMntWiz3bKimlikHTML, veMntWiz3bBirimKutleHTML: veMntWiz3bBirimKutleHTML,
-    veMntWiz3bEylemHTML: veMntWiz3bEylemHTML, veMntWiz3bEylemGorunur: veMntWiz3bEylemGorunur, veMntWiz3bToplam: veMntWiz3bToplam, veMntWiz3bKutleTazele: veMntWiz3bKutleTazele,
+    veMntWiz3bEylemHTML: veMntWiz3bEylemHTML, veMntWiz3bEylemGorunur: veMntWiz3bEylemGorunur, VE_MW_3B_BIRIM_GRUP: VE_MW_3B_BIRIM_GRUP, veMntWiz3bGrupAc: veMntWiz3bGrupAc, veMntWiz3bToplam: veMntWiz3bToplam, veMntWiz3bKutleTazele: veMntWiz3bKutleTazele,
     veMntWiz3bGorunusSec: veMntWiz3bGorunusSec
   };
 }
