@@ -342,7 +342,7 @@ describe('KESİK — renk temadan bağımsız', () => {
   // koyudur ve siyah kesikte görünmez olurdu.
   const RENKLI = [
     '.ve-kesik', '.ve-kesik-cizgi', '.ve-welcome-logo', '.ve-welcome-logo-ico', '.ve-welcome-tagline',
-    '.ve-welcome-cetvel > span', '.ve-welcome-eyebrow', '.ve-module-overlay-grid', '.ve-module-card',
+    '.ve-welcome-eyebrow', '.ve-module-overlay-grid', '.ve-module-card',
     '.ve-module-card:hover', '.ve-module-card-icon', '.ve-module-card-name', '.ve-module-card-arrow',
     '.ve-module-card:hover .ve-module-card-arrow', '.ve-welcome-change-k', '.ve-welcome-change-v',
     '.ve-welcome-kunye', '.ve-welcome-fresh', '.ve-welcome-fresh-dot', '.ve-welcome-stamp',
@@ -402,20 +402,20 @@ describe('KESİK — yapı', () => {
     expect(document.querySelector('.ve-kesik .ve-kesik-cizgi')).toBeNull();
   });
 
-  test('cetvel on iki bölme; her modül sırasıyla kendi dört bölmesini vurgular', () => {
-    expect(document.querySelectorAll('.ve-welcome-cetvel > span').length).toBe(12);
-    expect(kural(CSS_WELCOME, '.ve-welcome-cetvel')).toContain('grid-template-columns:repeat(12,');
-    const tipler = [...document.querySelectorAll('.ve-module-card')].map((k) => k.getAttribute('data-module'));
-    const araliklar = [':nth-child(-n+4)', ':nth-child(n+5):nth-child(-n+8)', ':nth-child(n+9)'];
-    expect(tipler.length).toBe(araliklar.length);
-    tipler.forEach((t, i) => {
-      expect(CSS_WELCOME).toContain('.ve-welcome-id:has(.ve-module-card[data-module="' + t
-        + '"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span' + araliklar[i]);
-    });
+  // Kullanıcı 2026-11-05 (Canlı Not 1): "modüller arasında gezerken yukarıdaki
+  // progress bar renkleniyor, farklı çizgiler çıkıyor. Bunu istemiyorum." On iki
+  // bölmeli cetvel bir ilerleme çubuğu gibi okunuyordu; geri gelirse aynı şikâyet.
+  test('cetvel YOK: ne öğe ne kural ne giriş hareketi', () => {
+    expect(document.querySelector('.ve-welcome-cetvel')).toBeNull();
+    expect(CSS).not.toContain('ve-welcome-cetvel');
+    expect(CSS).not.toContain('ve-welcome-draw');
   });
 
-  test('satırın vurgusu zemin + ok + cetvel; sözde eleman ve imleç ışığı YOK', () => {
+  test('satırın vurgusu zemin + sol bakır çizgi + ok; satır kaymaz, sözde eleman ve imleç ışığı YOK', () => {
     expect(kural(CSS_WELCOME, '.ve-module-card:hover')).toContain('background-color:var(--kesik-kabar)');
+    expect(kural(CSS_WELCOME, '.ve-module-card:hover')).toContain('border-left-color:var(--sinema-vurgu)');
+    // Çizginin yeri hep ayrılmış: vurguda yalnız rengi gelir, içerik kaymaz.
+    expect(kural(CSS_WELCOME, '.ve-module-card')).toContain('border-left:2px solid transparent');
     expect(kural(CSS_WELCOME, '.ve-module-card:hover .ve-module-card-arrow')).toContain('color:var(--sinema-vurgu)');
     expect(CSS_WELCOME).not.toMatch(/\.ve-module-card::(before|after)/);
     expect(loadSource('components.js')).not.toContain('_veWelcomeInstallCardSheen');
@@ -452,12 +452,11 @@ describe('Kesik — dikey ritim', () => {
   });
 
   test('künye ADINA yakın, gövdeye uzak (yakınlık kuralı)', () => {
-    expect(px('.ve-welcome-tagline', 'margin-top')).toBeLessThan(px('.ve-welcome-cetvel', 'margin'));
+    expect(px('.ve-welcome-tagline', 'margin-top')).toBeLessThan(px('.ve-welcome-id > .ve-welcome-eyebrow', 'margin-top'));
   });
 
-  test('başlık kilidini cetvel kapatıyor; logonun alt çizgisi yok', () => {
+  test('logonun alt çizgisi yok', () => {
     expect(kural(CSS_WELCOME, '.ve-welcome-logo')).not.toMatch(/border-bottom/);
-    expect(kural(CSS_WELCOME, '.ve-welcome-cetvel')).not.toMatch(/display:\s*none/);
   });
 });
 

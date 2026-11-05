@@ -397,8 +397,8 @@ tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
 `js/cp-core.js` (panel dağıtımı + panel genişlik listeleri), `js/ui-core.js`
 (çift tık), `js/topology.js` (busy bayrağı, köke çökme, gezinme yakala/geri yükle,
 `veResetSubtopoNav`), `index.html` (script etiketi, Modüller satırı, palet
-kategorileri, karşılamanın modül satırı), `css/styles.css` (karşılama cetvelinin
-modül başına bölmeleri — `.ve-welcome-cetvel`).
+kategorileri, karşılamanın modül satırı ve simgesi — simge `componentDefs.svg`'nin
+çizimiyle aynı, `welcome-screen.test.js` → *SİMGE*).
 
 
 ### Modül karar kayıtları — koşullu yüklenir
