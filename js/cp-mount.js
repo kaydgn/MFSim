@@ -662,6 +662,25 @@ function veMntOrnekYukle(key){
   return true;
 }
 
+// YÜKLENEN ÖRNEKTE BİLEŞENLER SÜTUNU KAPALI (kullanıcı 2026-11-05, Canlı Not
+// 38: *"Örnek yüklediğim zaman hala 'bileşenler' sütunu açık geliyor. Kapalı
+// gelsin"*): sütun daraltılır, açma düğmesi köşe hücresinde. Daraltma
+// kullanıcının « düğmesinin aynısı (tercih yazılır); vazgeçilen yükleme
+// daraltmaz. GEÇİŞSİZ ve SIĞDIRMADAN ÖNCE: tuval 220 px genişliyor — geçişle
+// ya da sığdırmadan sonra daralsaydı kadraj dar tuvalde kurulur, model sola
+// kayık kalırdı.
+function _mntOrnekPaletKapat(){
+  if(typeof document==='undefined' || typeof veToggleSidebar!=='function') return false;
+  var sb = document.getElementById('ve-sidebar');
+  if(!sb) return false;
+  if(sb.classList.contains('ve-sb-collapsed')) return true;
+  sb.classList.add('ve-sb-no-anim');
+  veToggleSidebar(true);
+  void sb.offsetWidth;                 // genişlik geçişsiz otursun
+  sb.classList.remove('ve-sb-no-anim');
+  return true;
+}
+
 // Sidebar kapsamını güncelle (takoz iç topolojisi ⇄ ana ekran). Kapsam açık
 // alt-sistem stack'lerinden merkezi olarak hesaplanır (bkz. veSyncSidebarScope).
 function _veMntSetSidebar(mode){
@@ -2245,6 +2264,7 @@ function _mntLoadExampleFromJSON(ref, ex){
     if(typeof saveState==='function') saveState();
     if(typeof updateAllConnections==='function') updateAllConnections();
     if(typeof veMntUpdateBreadcrumb==='function') veMntUpdateBreadcrumb();
+    _mntOrnekPaletKapat();
     // Kamerayı yüklenen içeriğe otur. Kayıttaki kamera örneği ÜRETEN pencerenin
     // ölçüsüne göreydi; başka boyutta bir ekranda topolojinin bir kısmı görüş
     // dışında (kenara yapışmış) kalıyordu.
@@ -2611,6 +2631,7 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
   }
   if(typeof saveState==='function') saveState();
   if(typeof updateAllConnections==='function') updateAllConnections();
+  _mntOrnekPaletKapat();
 
   // createNode +20ms otomatik seçimi paneli son eklenen düğüme çevirir → Örnek
   // düğümünü yeniden seçip raporu bas ki kullanıcı uyarıları (fazla takoz vs)
@@ -5488,6 +5509,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntAracGaranti: _mntAracGaranti,
     veMntKanvasBos: veMntKanvasBos,
     veMntOrnekYukle: veMntOrnekYukle,
+    _mntOrnekPaletKapat: _mntOrnekPaletKapat,
     _mntExampleKapilarHTML: _mntExampleKapilarHTML
   };
   // Son çözüm bu modülün değişkeninde; tarayıcıda tek global, Node'da modül

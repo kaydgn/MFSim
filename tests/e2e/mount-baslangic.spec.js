@@ -160,16 +160,22 @@ test('ÖRNEK SATIRI: Yükle TEK TIKLA kurar, sayfa çekilir; Ctrl+Z TEK adımda 
   await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="tulga"] .ve-bas-satir-yukle');
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   await page.waitForFunction(() => window.nodes.some((n) => n.type === 'mnt-mount'), null, { timeout: 15000 });
-  // Ray geri geldi ve kadraj RAYLI tuvalde kuruldu: hiçbir kutu tuvalin dışında değil
-  await page.waitForTimeout(400);
+  // Ray geri geldi ve kadraj RAYLI tuvalde kuruldu: hiçbir kutu tuvalin dışında değil.
+  // Bileşenler sütunu KAPALI gelir, açma düğmesi köşe hücresinde (Canlı Not 38);
+  // kadraj daralmış tuvalde: sütun sığdırmadan sonra daralsaydı model 220 px
+  // sola kayık kalırdı (sol boşluk ≈ 90, sağ ≈ 280).
+  await page.waitForTimeout(700);
   const k = await page.evaluate(() => {
     const w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
-    const dis = [...document.querySelectorAll('#ve-canvas .ve-node')].filter((e) => e.offsetWidth > 0).map((e) => e.getBoundingClientRect())
-      .filter((b) => b.left < w.left - 1 || b.right > w.right + 1 || b.top < w.top - 1 || b.bottom > w.bottom + 1).length;
+    const kut = [...document.querySelectorAll('#ve-canvas .ve-node')].filter((e) => e.offsetWidth > 0).map((e) => e.getBoundingClientRect());
+    const dis = kut.filter((b) => b.left < w.left - 1 || b.right > w.right + 1 || b.top < w.top - 1 || b.bottom > w.bottom + 1).length;
+    const sol = Math.min(...kut.map((b) => b.left)) - w.left, sag = w.right - Math.max(...kut.map((b) => b.right));
     return { ray: document.getElementById('ve-nav-rail').getBoundingClientRect().width, dis,
-      palet: document.getElementById('ve-sidebar').offsetWidth > 150 };
+      palet: document.getElementById('ve-sidebar').offsetWidth,
+      sekme: document.getElementById('ve-sidebar-reveal').offsetWidth > 0, fark: Math.abs(sol - sag) };
   });
-  expect(k).toEqual({ ray: 64, dis: 0, palet: true });   // palet geri geldi, kadraj paletli tuvalde
+  expect({ ray: k.ray, dis: k.dis, palet: k.palet, sekme: k.sekme }).toEqual({ ray: 64, dis: 0, palet: 0, sekme: true });
+  expect(k.fark).toBeLessThan(80);
   const s = await say(page);
   expect(s.govde).toBeGreaterThan(0);
   expect(s.takoz).toBeGreaterThanOrEqual(3);
