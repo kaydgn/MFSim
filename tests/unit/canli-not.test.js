@@ -111,6 +111,15 @@ describe('DOĞRULAMA — bozuk not çizilmez, sıra korunur', () => {
     const l = [{ no: 3, sira: 20 }, { no: 2, sira: 10 }, { no: 1, sira: 10 }];
     expect(CN.siraliNotlar(l).map((n) => n.no)).toEqual([1, 2, 3]);
   });
+  // Kullanıcı 2026-11-05: "Yeni güncellemeler en alta geliyor. Onu düzeltelim, en son
+  // güncellemeler en tepeden başlasın." Sayfanın listesi yeniden eskiye; iş kuyruğu
+  // (`liste`) eskiden yeniye kalır — notlar sırayla uygulanır.
+  test('sayfanın listesi yeniden eskiye; iş sırası eskiden yeniye', () => {
+    const l = [{ no: 3, sira: 20 }, { no: 2, sira: 10 }, { no: 1, sira: 10 }, { no: 4, sira: 30 }];
+    expect(CN.yenidenEskiye(l).map((n) => n.no)).toEqual([4, 3, 2, 1]);
+    expect(CN.siraliNotlar(l).map((n) => n.no)).toEqual([1, 2, 3, 4]);
+    expect(l.map((n) => n.no)).toEqual([3, 2, 1, 4]);              // girdi değişmez
+  });
 });
 
 // ═══ SEÇİM ═════════════════════════════════════════════════════════════════
@@ -522,6 +531,17 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.gizli('cn-guncel')).toBe(true);
     expect(a.gizli('cn-guncel-ac')).toBe(true);
     expect(a.d.getElementById('cn-surum').textContent).toBe('ddddddd · #1300');
+  });
+
+  test('Notlar listesi yeniden eskiye: en yeni not en üstte, yeni gelen tepeye oturur', async () => {
+    const a = sayfa();
+    await bekle();
+    const not = (id, no) => ({ id, no, sira: no, metin: 'x', durum: 'uygulandi', zaman: '2026-11-05T10:00:00Z', cizim: { g: 800, y: 600, sekiller: [] } });
+    const sira = () => [...a.d.querySelectorAll('#cn-notlar > li')].map((li) => li.id);
+    a.notGonder([not('a', 1), not('b', 2), not('c', 3)]);
+    expect(sira()).toEqual(['not-c', 'not-b', 'not-a']);
+    a.notGonder([not('a', 1), not('b', 2), not('c', 3), not('d', 4)]);
+    expect(sira()).toEqual(['not-d', 'not-c', 'not-b', 'not-a']);
   });
 
   test('notun satırında sonucun görüntüsü; tıklanınca büyük, Esc kapatır', async () => {

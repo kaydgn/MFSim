@@ -78,6 +78,9 @@ node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim
 
 ## 2 · Uyanış ve sıra
 
+Sayfanın **Notlar** listesi YENİDEN ESKİYE (kullanıcı 2026-11-05: *"en son güncellemeler en
+tepeden başlasın"*); iş kuyruğu eskiden yeniye kalır — notlar sırayla uygulanır.
+
 Uyandıran yorum yalnız işarettir; iş KAYITTAN okunur ve bütün bekleyenler sırayla
 işlenir (aynı anda gelen iki yorum iki uyanış demek; ikincisi boş kuyruk bulur).
 Önce **güncellik** (§1 · Denetim): yayın eskiyse notlardan ÖNCE programı güncelle —
@@ -85,7 +88,7 @@ notun `sayfaSurum`u (açık programın künyesi) hangi kopyaya yazıldığını 
 
 ```
 ArtifactData list   url:<adres> collection:notlar out_dir:.canli-not/dokum
-node tools/canli-not.js liste .canli-not/dokum      # işi kalanlar, sırayla
+node tools/canli-not.js liste .canli-not/dokum      # işi kalanlar, sırayla (eskiden yeniye)
 ```
 
 Her not için, **sırayla ve tek tek**:

@@ -176,10 +176,16 @@
     return h;
   }
 
+  // İŞ SIRASI eskiden yeniye (notlar sırayla uygulanır — `canli-not.js liste`)
   function siraliNotlar(liste) {
     return liste.slice().sort(function (a, b) {
       return (a.sira - b.sira) || (a.no - b.no);
     });
+  }
+  // SAYFANIN LİSTESİ yeniden eskiye (kullanıcı 2026-11-05: *"Yeni güncellemeler en
+  // alta geliyor. Onu düzeltelim, en son güncellemeler en tepeden başlasın."*)
+  function yenidenEskiye(liste) {
+    return siraliNotlar(liste).reverse();
   }
 
   // ── yayın: programın güncellemesi ────────────────────────────────────────
@@ -239,7 +245,7 @@
   var api = {
     DURUMLAR: DURUMLAR, ARACLAR: ARACLAR, MODULLER: MODULLER, SAYFALAR: SAYFALAR, YORUM_SINIR: YORUM_SINIR,
     sadelestir: sadelestir, sekilKur: sekilKur, kutuBirlesim: kutuBirlesim, bolgeler: bolgeler, uclar: uclar, yerOzeti: yerOzeti,
-    yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar,
+    yorumMetni: yorumMetni, baytBoyu: baytBoyu, notDogrula: notDogrula, siraliNotlar: siraliNotlar, yenidenEskiye: yenidenEskiye,
     yayinDogrula: yayinDogrula, programKaynagi: programKaynagi, guncellemeVar: guncellemeVar,
     noAraligi: noAraligi, sonucYolu: sonucYolu
   };
