@@ -1,6 +1,6 @@
 ---
 name: canli-not
-description: MFSim CANLI NOT protokolü — kullanıcının claude.ai'da programın üstüne çizerek (daire, ok, kutu, kalem) bıraktığı değişiklik notlarını okuma ve SIRAYLA uygulama. Canlı Not sayfasından "Not N · …" yorumu Claude'a gönderildiğinde (oturum bu yorumla uyanır), kullanıcı "notları uygula / canlı notlar" dediğinde, ya da tools/canli-not.js, tools/canli-not.html, tools/canli-not-kopru.js, tools/canli-not-cekirdek.js, tests/unit/canli-not.test.js dosyalarına dokunmadan ÖNCE çağır. Yayın, notun okunması (kayıt + ekran fotoğrafı + yeniden çizim), durum geçişleri, soru-yanıt ve teslim buradadır.
+description: MFSim CANLI NOT protokolü — kullanıcının claude.ai'da programın üstüne çizerek (daire, ok, kutu, kalem) bıraktığı değişiklik notlarını okuma ve SIRAYLA uygulama. Kullanıcı (çoğu zaman YENİ bir oturumda) "Canlı Not'u getir / Canlı Not'u aç / Canlı Not, düzenlemeler yapacağız" dediğinde İLK iş olarak çağır ve §0 Açılış'ı uygula (aynı sayfa, yeni Artifact açılmaz); Canlı Not sayfasından "Not N · …" yorumu Claude'a gönderildiğinde (oturum bu yorumla uyanır), kullanıcı "notları uygula / canlı notlar" dediğinde, ya da tools/canli-not.js, tools/canli-not.html, tools/canli-not-kopru.js, tools/canli-not-cekirdek.js, tests/unit/canli-not.test.js dosyalarına dokunmadan ÖNCE çağır. Açılış, yayın, notun okunması (kayıt + ekran fotoğrafı + yeniden çizim), durum geçişleri, soru-yanıt, sonucun görüntüsü ve teslim buradadır.
 ---
 
 # Canlı Not
@@ -24,6 +24,42 @@ tek kanal claude.ai. **Neden iframe:** program sayfanın kendisi olsaydı yayın
 iskeleti sahte `</body>`'ye ve `data-theme`'e takılırdı (Artifact önizlemesinin
 emekli tuzakları, `docs/decisions/ortak-yuzeyler.md`); `files` ile yayınlanan
 ikinci HTML iskeletsiz sunulur.
+
+## 0 · Yeni oturumda açılış — "Canlı Not'u getir"
+
+Kullanıcı 2026-11-05: *"Ben yeni session açıp, 'bana Canlı Not'u getir,
+düzenlemeler yapacağız' dediğim zaman, aynı bu yapıda, aynı bu şekilde,
+değişmeden canlı not özelliğinin o sessiona gelmesini istiyorum."*
+
+**Sayfa YENİDEN KURULMAZ, yeni Artifact açılmaz:** adres sabit
+(**https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91**), notlar, cevaplar ve
+sonuç görüntüleri kayıtta. `url`'siz bir publish YENİ sayfa açar — Canlı Not'ta
+her yayın `url` ile. Yeni oturum aynı sayfayı devralır, sırayla:
+
+1. **Bağımlılık ve dal.** `[ -d node_modules/jest-environment-jsdom ] || npm install`.
+   Geliştirme oturumun kendi dalında (sistem isteminin "Develop on branch"i);
+   yayın için ana dala geçilir, sonra dala dönülür (§1).
+2. **Sayfayı oku.** `Artifact read url:<adres>` — başka konuşmanın Artifact'ine
+   yayın ancak okunduktan sonra kabul edilir.
+3. **Sahiplen.** `ArtifactData get collection:oturum doc_id:aktif` → `set`
+   `{oturum: <bu oturumun adresi>, zaman: <ISO>}` (belge varsa okunan `version`
+   ile `if_version`). Oturumun adresi commit künyesindeki `Claude-Session:`
+   satırı. Bu kayıt iki oturumun aynı notu işlemesini önler (§2'nin başı).
+4. **İzle.** `ArtifactComments watch url:<adres>` — sayfanın "Send to Claude"
+   yorumu ancak izleyen oturumu uyandırır.
+5. **Güncellik.** `git fetch origin main && git checkout -B main origin/main`,
+   `node tools/canli-not.js hazirla`, sonra iki denetim:
+   - program: `ArtifactData get collection:yayin doc_id:son out_dir:.canli-not/dokum`
+     → `node tools/canli-not.js denetle .canli-not/dokum/yayin/son.json`;
+   - sayfa: `Artifact read url:<adres> path:index.html out_dir:.canli-not/dokum/sayfa`
+     → `node tools/canli-not.js denetle .canli-not/dokum/sayfa/index.html`.
+   Eskiyse §1'in sırasıyla güncellenir (önce program ve `yayin/son`, sonra sayfa).
+6. **Aç.** `Artifact open url:<adres>` — kullanıcı sayfayı görür.
+7. **Kuyruk.** §2: `ArtifactData list notlar` → `node tools/canli-not.js liste
+   .canli-not/dokum`; bekleyenler sırayla, yanıtlanmış sorular (`yanit` dolu,
+   durum yeniden `bekliyor`) yanıtıyla. `ArtifactComments read url:<adres>`:
+   Claude'a gönderilmiş ama cevapsız konu varsa yanıtlanır.
+8. Sohbette TEK satır: sayfa açık, yayındaki sürüm, bekleyen not sayısı.
 
 ## 1 · Yayın — program ANA DALIN KENDİSİDİR; sayfa KENDİLİĞİNDEN YENİLENMEZ
 
@@ -60,6 +96,8 @@ node tools/canli-not.js hazirla    # → .canli-not/yayin/{canli-not.html, mfsim
   → `node tools/canli-not.js denetle <döküm>`: *Güncel* · *ESKİ … programı güncelle*
   (programın girdileri değişti) · *yalnız künye eski* (belge birleşmesi; güncelleme
   gerekmez). Belge yoksa sayfanın dosyası: `Artifact read url:<adres> path:mfsim.html`.
+  Sayfanın kendisi: `Artifact read url:<adres> path:index.html` → `denetle <dosya>` —
+  bugünkü şablon ve çekirdekle aynı mı (ayar satırı hariç); *Sayfa ESKİ* → sayfanın yayını.
 - **Ne zaman:** her birleşmeden sonra (CLAUDE.md → Teslim Akışı, 6) ve her
   uyanışın başında (§2).
 - **Açılış:** sayfa kayıttaki yayını gömülü programla (`mfsim.html`) karşılaştırır;
@@ -84,6 +122,10 @@ tepeden başlasın"*); iş kuyruğu eskiden yeniye kalır — notlar sırayla uy
 
 Uyandıran yorum yalnız işarettir; iş KAYITTAN okunur ve bütün bekleyenler sırayla
 işlenir (aynı anda gelen iki yorum iki uyanış demek; ikincisi boş kuyruk bulur).
+**Önce sahiplik:** `oturum/aktif` başka oturumu gösteriyorsa not İŞLENMEZ — izleme
+bırakılır (`ArtifactComments watch url:<adres> on:false`), sohbette tek satır
+("Canlı Not şu oturumda: …"). Kullanıcı bu oturumda sürdürmek isterse §0 · 3 yeniden.
+Yazılar `if_version`'lı: sürüm çakışırsa not başkasının elindedir, dokunulmaz.
 Önce **güncellik** (§1 · Denetim): yayın eskiyse notlardan ÖNCE programı güncelle —
 notun `sayfaSurum`u (açık programın künyesi) hangi kopyaya yazıldığını söyler.
 
@@ -117,9 +159,18 @@ Her not için, **sırayla ve tek tek**:
 5. **Uygula.** Modül skill'i (fead · arac-performans · kullanim) → değişiklik →
    modül testi → `npm run hazir`. Not başına TEK commit:
    `Canlı not N: <programdaki adıyla özet>`.
-6. **Sonucu çek.** Değişikliğin ekranı gerçek programda (Playwright, `npm run
-   build`'in tek dosyası; deviceScaleFactor 2), notun yerine kırpılmış küçük PNG →
-   `.canli-not/sonuc/not-N.png`. Bütün notların görüntüleri TEK çağrıda yüklenir:
+6. **Sonucu çek.** Değişikliğin ekranı gerçek programda, notun yerine kırpılmış
+   küçük PNG (2×) → `.canli-not/sonuc/not-N.png`:
+   ```bash
+   npm run build
+   node tools/canli-not.js sonuc N --modul takoz --ornek tulga \
+     --hazirlik .canli-not/hazirlik/not-N.js --secici '#ve-properties .ve-mnt-akso-kap'
+   ```
+   Komut girişi, karşılamayı ve modüle girişi kendi yapar (ağsız, `file://`);
+   `--hazirlik` yüzeyi açan küçük betik (sayfada koşan async gövde, `bekle(ms)`
+   hazır; örnek: pencereyi seçip `veTogglePropertiesPanel(true)`), `--secici`
+   kırpılacak öğe. Yazdığı ölçü `sonuc {g, y}`'nin kendisi. Kalıp elle yazılmaz.
+   Bütün notların görüntüleri TEK çağrıda yüklenir:
    `Artifact` publish `url:<adres>` `asset: true` `file_paths: [...]` (en çok 25) → id'ler.
    Görüntü kullanıcının değişikliğe baktığı yerdir (Notlar'da küçük, tıklanınca büyük):
    değişen yüzeyi göster, çizilen yerin aynısını.
@@ -174,3 +225,6 @@ gerekmez; birden çok notluk bir tur bittiğinde kısa bir özet sohbette verili
 **Yayın belgesi (`yayin/son`, Claude yazar):** `{surum, sha, pr, zaman, program: {id,
 boyut}, notlar: [no…]}` — sayfa ile araç aynı doğrulamayı okur; bozuk belge sayfada
 güncelleme sayılmaz, araçta yazılmaz.
+
+**Sahiplik belgesi (`oturum/aktif`, Claude yazar):** `{oturum, zaman}` — notları
+işleyen oturumun adresi (§0 · 3); sayfa okumaz.

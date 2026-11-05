@@ -20,6 +20,8 @@
  *              her yolu kapsar (kapsamasaydı denetim değişen programa "aynı" derdi)
  *   GÜNCELLEME program kayıttaki yayından (yayin/son); açık sayfa kendiliğinden
  *              YENİLENMEZ, pencere sorar, Güncelle yükler; notta sonucun görüntüsü
+ *   SONUÇ      `sonuc` komutu (her oturumun aynı kalıbı): bayraklar sessizce
+ *              yutulmaz; giriş js/auth.js'in özetinden, modülün açıcısı programda var
  */
 const fs = require('fs');
 const path = require('path');
@@ -604,5 +606,61 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.d.getElementById('cn-buyuk-no').textContent).toBe('Not 9');
     a.d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(a.gizli('cn-buyuk')).toBe(true);
+  });
+});
+
+// ═══ SONUÇ ═════════════════════════════════════════════════════════════════
+// Kullanıcı 2026-11-05: "yeni session açıp, 'bana Canlı Not'u getir' dediğim
+// zaman, aynı bu yapıda, aynı bu şekilde, değişmeden canlı not özelliğinin o
+// sessiona gelmesini istiyorum." Sonucun görüntüsü her oturumda elle yazılan
+// bir Playwright kalıbıydı; komut onun yerine — kalıbın parçaları burada tutulur.
+describe('SONUÇ — sonucun görüntüsü tek komutla', () => {
+  test('bayraklar: modül, örnek, hazırlık, seçici, pay, ekran; bozuk değer SESSİZCE yutulmaz', () => {
+    const o = T.ayristir(['sonuc', '36', '--modul', 'takoz', '--ornek', 'tulga', '--hazirlik', 'h.js', '--secici', '#x .y', '--pay', '6', '--ekran', '1366x768']);
+    expect(o.komut).toBe('sonuc');
+    expect(o.konum).toEqual(['36']);
+    expect([o.modul, o.ornek, path.basename(o.hazirlik), o.secici, o.pay]).toEqual(['takoz', 'tulga', 'h.js', '#x .y', 6]);
+    expect(o.ekran).toEqual({ width: 1366, height: 768 });
+    expect(() => T.ayristir(['sonuc', '1', '--ekran', '1366*768'])).toThrow(/--ekran/);
+    expect(() => T.ayristir(['sonuc', '1', '--modul', 'takozlar'])).toThrow(/--modul: takoz · fead · arac/);
+    expect(() => T.ayristir(['sonuc', '1', '--ornek', 'tulga'])).toThrow(/yalnız --modul takoz/);
+    expect(() => T.ayristir(['sonuc', '1', '--modul', 'fead', '--ornek', 'tulga'])).toThrow(/yalnız --modul takoz/);
+    expect(() => T.ayristir(['sonuc', '1', '--pay', '-3'])).toThrow(/--pay/);
+    expect(() => T.ayristir(['sonuc', '1', '--seçici', 'x'])).toThrow(/bilinmeyen bayrak/);
+  });
+  test('giriş programın kendi özetinden (sabit yazılmaz); modülün kartı ve açıcısı programda var', () => {
+    const auth = fs.readFileSync(path.join(KOK, 'js', 'auth.js'), 'utf8');
+    expect(T.girisAnahtari()).toMatch(/^[0-9a-f]{64}$/);
+    expect(auth).toContain("var MFSIM_AUTH_HASH = '" + T.girisAnahtari() + "'");
+    expect(auth).toMatch(/MFSIM_AUTH_KEY = 'mfsim_auth_token'/);   // komutun yazdığı anahtar
+    const comp = fs.readFileSync(path.join(KOK, 'js', 'components.js'), 'utf8');
+    const js = fs.readdirSync(path.join(KOK, 'js')).filter((f) => f.endsWith('.js')).map((f) => fs.readFileSync(path.join(KOK, 'js', f), 'utf8')).join('\n');
+    Object.entries(T.MODUL_GIRIS).forEach(([ad, g]) => {
+      expect({ ad, tip: comp.includes("'" + g.tip + "': {") }).toEqual({ ad, tip: true });
+      expect({ ad, acici: new RegExp('^function ' + g.ac + '\\(', 'm').test(js) }).toEqual({ ad, acici: true });
+    });
+    // örneği kuran ve karşılamayı kapatan çağrılar da programda
+    expect(js).toMatch(/^function veMntOrnekYukle\(/m);
+    expect(js).toMatch(/^function veSelectModuleFromOverlay\(/m);
+  });
+  test('yayındaki sayfa bugünkü kaynaktan mı: ayar satırı hariç aynı; şablon değişince ESKİ, künyesi okunur', () => {
+    const sablon = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.html'), 'utf8');
+    const cekirdek = fs.readFileSync(path.join(KOK, 'tools', 'canli-not-cekirdek.js'), 'utf8');
+    const ayar = { surum: 'abc1234', pr: '1246', zaman: '2026-11-05T12:00:00.000Z', boyut: 11980000 };
+    const yayinda = T.sayfaKur(sablon, cekirdek, ayar);
+    expect(T.sayfaHukmu(yayinda, sablon, cekirdek)).toEqual({ guncel: true, ayar });
+    // platformun iskeleti sarsa da (sayfa <title> ile başlıyor) aynı
+    expect(T.sayfaHukmu('<!doctype html><html><head>' + yayinda + '</body></html>', sablon, cekirdek).guncel).toBe(true);
+    // başka zaman, başka boyut: yine güncel (ayar satırı karşılaştırılmaz)
+    expect(T.sayfaHukmu(T.sayfaKur(sablon, cekirdek, Object.assign({}, ayar, { zaman: 'x', boyut: 1 })), sablon, cekirdek).guncel).toBe(true);
+    // şablon ya da çekirdek değişti: ESKİ, künye yine okunur
+    const eski = T.sayfaKur(sablon.replace('</title>', ' </title>'), cekirdek, ayar);
+    expect(T.sayfaHukmu(eski, sablon, cekirdek)).toEqual({ guncel: false, ayar });
+    expect(T.sayfaHukmu(T.sayfaKur(sablon, cekirdek + '\n', ayar), sablon, cekirdek).guncel).toBe(false);
+  });
+  test('yardım komutu anlatır; sonucun yeri notun numarasıyla', () => {
+    const yardim = fs.readFileSync(path.join(KOK, 'tools', 'canli-not.js'), 'utf8');
+    expect(yardim).toMatch(/node tools\/canli-not\.js sonuc <N>/);
+    expect(yardim).toMatch(/'\.canli-not', 'sonuc', 'not-' \+ no \+ '\.png'/);
   });
 });
