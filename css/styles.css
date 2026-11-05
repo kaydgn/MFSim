@@ -11947,7 +11947,7 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
    bu yüzden `.ve-mw-3b` kapsamında. Panel başlığı ve durum çubuğu kabuk
    bandının ölçüsünde (--bant-h · --bant-zemin). Dar pencerede paneller tuvalin
    altına iner (aşağıdaki kap sorgusu). */
-.ve-mw-3b{ --mw3b-agac:272px; --mw3b-yan:352px; }
+.ve-mw-3b{ --mw3b-agac:272px; --mw3b-yan:352px; --mw3b-serit:30px; }
 .ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa{ display:grid; grid-template-columns:var(--mw3b-agac) minmax(0, 1fr) var(--mw3b-yan);
   grid-template-rows:minmax(0, 1fr); }
 .ve-mw-3b-masa > .ve-fw-3b-tuval{ position:relative; inset:auto; min-width:0; min-height:0; }
@@ -11956,6 +11956,22 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
   background:var(--bant-zemin); border-bottom:1px solid var(--border-color); }
 .ve-mw-3b-dock-bas h3{ margin:0; font-size:var(--fs-body); font-weight:600; color:var(--text-heading); }
 .ve-mw-3b-dock-bas .ve-fw-dim{ font-size:var(--fs-tiny); font-variant-numeric:tabular-nums; }
+/* ÖZELLİKLER AÇILIR KAPANIR (kullanıcı 2026-11-05, Canlı Not 26; js/cp-mount-3b.js →
+   veMntWiz3bYanAc): kapalı panel bir ŞERİT — tek düğme, ikon ve dikey ad; tuval
+   genişliği alır. İçerik kurulur ama gösterilmez. Düğmeler Bileşenler sütununun
+   daraltma dilinde (chevrons, "Paneli daralt"). */
+.ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa[data-yan="kapali"]{ --mw3b-yan:var(--mw3b-serit); }
+.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan{ overflow:hidden; }
+.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > :not(.ve-mw-3b-yan-serit){ display:none; }
+.ve-mw-3b-yan-daralt{ flex:none; width:20px; height:20px; display:flex; align-items:center; justify-content:center; padding:0;
+  border:1px solid transparent; border-radius:var(--radius-sm); background:transparent; color:var(--text-muted);
+  font-size:var(--fs-body); cursor:pointer; }
+.ve-mw-3b-yan-daralt:hover{ border-color:var(--border-hover); background:var(--bg-input); color:var(--ink-accent); }
+.ve-mw-3b-yan-serit{ flex:1; min-height:0; width:100%; display:flex; flex-direction:column; align-items:center; gap:10px;
+  padding:7px 0; border:0; background:transparent; color:var(--text-muted); font:inherit; cursor:pointer; }
+.ve-mw-3b-yan-serit:hover{ background:var(--bg-tertiary); color:var(--ink-accent); }
+.ve-mw-3b-yan-serit > .mf-ico{ flex:none; font-size:var(--fs-body); }
+.ve-mw-3b-yan-dikey{ writing-mode:vertical-rl; font-size:var(--fs-body); font-weight:600; color:var(--text-heading); white-space:nowrap; }
 /* Durum çubuğu: solda imlecin altındaki nokta, sağda çizimin durumu ve birimler */
 .ve-mw-3b-durum{ flex:none; height:var(--bant-h); box-sizing:border-box; display:flex; align-items:center; gap:16px; padding:0 12px;
   background:var(--bg-secondary); border-top:1px solid var(--border-color); font-size:var(--fs-tiny); color:var(--text-secondary);
@@ -12028,6 +12044,7 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
   .ve-mw-3b-masa > .ve-fw-3b-tuval{ grid-column:1 / -1; grid-row:1; }
   .ve-mw-3b-masa > .ve-mw-3b-agac{ grid-column:1; grid-row:2; border-top:1px solid var(--border-color); }
   .ve-mw-3b-masa > .ve-mw-3b-yan{ grid-column:2; grid-row:2; border-left:0; border-top:1px solid var(--border-color); }
+  .ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa[data-yan="kapali"]{ grid-template-columns:minmax(0, 1fr) var(--mw3b-serit); }
 }
 .ve-mw-3b-agac-r{ display:flex; align-items:center; gap:4px; height:24px; box-sizing:border-box;
   padding-left:calc(var(--d, 0) * 14px + 2px); padding-right:6px; border-radius:var(--radius-sm);

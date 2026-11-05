@@ -1054,7 +1054,8 @@ function _gmSec16(){
     ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
     ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, özellik satırları (<strong>Rol</strong>, atanmışsa '
       + '<strong>Malzeme</strong>, takozun noktası, veri sayfası ve referansı, katalog), birimin kütlesi ve CG’si, '
-      + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Satırlar seçime göre'],
+      + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Kapalı başlar: şerit açar, başlığındaki düğme '
+      + 'daraltır; açıklık tarayıcıda saklanır. Satırlar seçime göre'],
     ['Eylem kartı', 'Tuvalin sağ altında, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
       + 'üstünde hesabın engeli ve rolün eksiği', 'Sıradaki adımın düğmesi dolu renkte'],
     ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '

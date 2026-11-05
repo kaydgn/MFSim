@@ -1185,6 +1185,55 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(kural('.ve-fw-3b-yan')).toMatch(/position:absolute/);
   });
 
+  // Kullanıcı 2026-11-05 (Canlı Not 26): "Şu kısımı açılır kapanır şeklinde yapalım.
+  // Kullanıcı istemediği zaman kapalı kalsın." Önce: Özellikler hep açıktı (352 px).
+  // Panel kapalı başlar, açıklık tarayıcının tercihi; kapalı sütun şerit. Gerçek
+  // tarayıcı: tests/e2e/mount-3b.spec.js → *ÖZELLİKLER AÇILIR KAPANIR*.
+  test('ÖZELLİKLER AÇILIR KAPANIR: varsayılan kapalı, tercih yazılır; baş iki biçimde; kapalı sütun şerit', () => {
+    const depo = window.localStorage;
+    _mw3bYanBellek = null;
+    depo.removeItem(VE_MW_3B_YAN_ANAHTAR);
+    expect(veMntWiz3bYanAcik()).toBe(false);                     // varsayılan KAPALI
+    depo.setItem(VE_MW_3B_YAN_ANAHTAR, 'acik');
+    expect(veMntWiz3bYanAcik()).toBe(true);
+    depo.setItem(VE_MW_3B_YAN_ANAHTAR, 'bozuk');
+    expect(veMntWiz3bYanAcik()).toBe(false);                     // tanınmayan değer kapalı
+    // Çevirme tercihe yazar ve izler; ızgara durumunu taşır
+    document.body.innerHTML = '<div class="ve-mw-3b-masa" data-yan="kapali"></div>';
+    expect(veMntWiz3bYanAc()).toBe(true);
+    expect(depo.getItem(VE_MW_3B_YAN_ANAHTAR)).toBe('acik');
+    expect(document.querySelector('.ve-mw-3b-masa').getAttribute('data-yan')).toBe('acik');
+    expect(veMntWiz3bYanAc(false)).toBe(false);
+    expect([depo.getItem(VE_MW_3B_YAN_ANAHTAR), veMntWiz3bYanAcik()]).toEqual(['kapali', false]);
+    // Depo yoksa (gizli pencere) sayfanın belleği tutar: düğme yine çalışır
+    const al = Storage.prototype.getItem, yaz = Storage.prototype.setItem;
+    Storage.prototype.getItem = Storage.prototype.setItem = () => { throw new Error('depo yok'); };
+    try {
+      expect(veMntWiz3bYanAc(true)).toBe(true);
+      expect(veMntWiz3bYanAcik()).toBe(true);
+    } finally { Storage.prototype.getItem = al; Storage.prototype.setItem = yaz; }
+    // Baş: açıkta ad + daraltma düğmesi (adı ve ipucu Bileşenler sütununun dili); kapalıda şeridin TEK düğmesi
+    const ac = document.createElement('div'); ac.innerHTML = veMntWiz3bYanBasHTML(true);
+    const d = ac.querySelector('#ve-mw-3b-yan-dugme');
+    expect([ac.querySelector('h3').textContent, d.getAttribute('aria-expanded'), d.getAttribute('aria-label'), d.title])
+      .toEqual(['Özellikler', 'true', 'Özellikler panelini daralt', 'Paneli daralt']);
+    expect(d.querySelector('.mf-ico-chevrons-right')).not.toBeNull();
+    const kp = document.createElement('div'); kp.innerHTML = veMntWiz3bYanBasHTML(false);
+    const s = kp.querySelector('#ve-mw-3b-yan-dugme');
+    expect([kp.children.length, s.className, s.getAttribute('aria-expanded'), s.textContent, s.title])
+      .toEqual([1, 've-mw-3b-yan-serit', 'false', 'Özellikler', 'Paneli aç']);
+    expect(s.querySelector('.mf-ico-chevrons-left')).not.toBeNull();
+    // Kapalı sütun şerit: ızgaranın değişkeni, içerik gizli, dar pencerede de
+    expect(kural('.ve-mw-3b')).toMatch(/--mw3b-serit:30px/);
+    expect(kural('.ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa[data-yan="kapali"]')).toMatch(/--mw3b-yan:var\(--mw3b-serit\)/);
+    expect(kural('.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > :not(.ve-mw-3b-yan-serit)')).toMatch(/display:none/);
+    expect(css).toMatch(/@container vefw3b \(max-width: 820px\)\{[^@]*\.ve-mw-3b-masa\[data-yan="kapali"\]\{ grid-template-columns:minmax\(0, 1fr\) var\(--mw3b-serit\)/);
+    expect(kural('.ve-mw-3b-yan-dikey')).toMatch(/writing-mode:vertical-rl/);
+    _mw3bYanBellek = null;
+    depo.removeItem(VE_MW_3B_YAN_ANAHTAR);
+    document.body.innerHTML = '';
+  });
+
   // Kullanıcı 2026-11-05 (Canlı Not 11): "'konumları hesapla' butonu var. Bu
   // butonun burada olmasına gerek yok … tanımları yaptıktan sonra programın sağ
   // alt köşesinde ortaya falan çıksın." Eylem tuvalin sağ altındaki kartta, iş

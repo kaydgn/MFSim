@@ -38,6 +38,8 @@ async function bootApp(page) {
     typeof window.createNode === 'function' && typeof window.veMntOpenEditor === 'function' &&
     typeof window.veMntWiz3bAc === 'function' && typeof window.THREE !== 'undefined' && Array.isArray(window.nodes),
     null, { timeout: 90000 });
+  // Özellikler paneli KAPALI başlar (Canlı Not 26); içeriğini okuyan testler tercihi açık yazar
+  await page.evaluate(() => { try { localStorage.setItem(VE_MW_3B_YAN_ANAHTAR, 'acik'); } catch (e) {} });
   await page.evaluate(() => {
     if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans');
   });
@@ -574,6 +576,78 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp yok, bakış listeden; g
   await page.setViewportSize({ width: 1024, height: 700 });
   await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('ve-mw-3b-agac').getBoundingClientRect().width))).toBe(232);
   expect(await page.evaluate(() => { const y = document.getElementById('ve-mw-3b-yan'); return y.scrollWidth <= y.clientWidth + 1; })).toBe(true);
+  expect(hatalar).toEqual([]);
+});
+
+// ÖZELLİKLER AÇILIR KAPANIR (Canlı Not 26, 2026-11-05 — kullanıcı: "Şu kısımı açılır
+// kapanır şeklinde yapalım. Kullanıcı istemediği zaman kapalı kalsın."). Önce: panel
+// hep açıktı (352 px) ve kapatılamıyordu. Node'da koşmayan halkalar: ızgaranın şeride
+// inmesi, tuvalin ve çizicinin genişlemesi, seçimin paneli açmaması, klavye odağı,
+// tercihin yeniden açılan 3B'de korunması.
+test('ÖZELLİKLER AÇILIR KAPANIR: kapalı başlar, seçim açmaz; şerit açar, düğme daraltır; tercih kalır', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await page.evaluate(() => { try { localStorage.removeItem(VE_MW_3B_YAN_ANAHTAR); } catch (e) {} });
+  await dosyaSec(page, DENEME);
+  await hazir(page);
+  const olc = () => page.evaluate(() => {
+    const yan = document.getElementById('ve-mw-3b-yan'), d = document.getElementById('ve-mw-3b-yan-dugme');
+    const v = new THREE.Vector2();
+    _mw3b.renderer.getSize(v);
+    return { yan: Math.round(yan.getBoundingClientRect().width), tuval: document.getElementById('ve-mw-3b-tuval').clientWidth,
+      cizici: v.x, ac: d.getAttribute('aria-expanded'), masa: document.querySelector('.ve-mw-3b-masa').getAttribute('data-yan'),
+      gorunen: [...yan.children].filter((c) => c.offsetWidth > 0).map((c) => c.className),
+      tercih: localStorage.getItem(VE_MW_3B_YAN_ANAHTAR), odak: document.activeElement && document.activeElement.id,
+      r: veMntWiz3bDurum().r };
+  });
+  // Kapalı başlar: şerit, içinde yalnız düğme; adı dikey ve şeridin içinde
+  const k0 = await olc();
+  expect(k0).toMatchObject({ yan: 30, ac: 'false', masa: 'kapali', gorunen: ['ve-mw-3b-yan-serit'], tercih: null });
+  await expect(page.locator('#ve-mw-3b-yan-dugme')).toHaveText('Özellikler');
+  const ad = await page.evaluate(() => {
+    const s = document.querySelector('.ve-mw-3b-yan-dikey').getBoundingClientRect(), y = document.getElementById('ve-mw-3b-yan').getBoundingClientRect();
+    return { dikey: s.height > 2 * s.width, icinde: s.left >= y.left && s.right <= y.right && s.bottom <= y.bottom };
+  });
+  expect(ad).toEqual({ dikey: true, icinde: true });
+  // Seçim paneli açmaz: içerik kurulur, gösterilmez
+  await page.evaluate(() => veMntWiz3bSec(veMntWizStp().sonuc.agac.findIndex((d) => d.ebeveyn >= 0)));
+  await expect.poll(async () => (await durum(page)).secim.length).toBe(1);
+  expect((await olc()).masa).toBe('kapali');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-secili]')).toHaveCount(1);
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-secili]')).toBeHidden();
+  // Şeridin tıkı açar: panel 352 px, tuval o kadar daralır, çizici izler; odak daraltma düğmesinde;
+  // kamerasına dokunulmamış görünüm dar tuvale yeniden sığar (uzaklık artar)
+  await page.click('#ve-mw-3b-yan-dugme');
+  const a = await olc();
+  expect(a).toMatchObject({ yan: 352, ac: 'true', masa: 'acik', tercih: 'acik', odak: 've-mw-3b-yan-dugme' });
+  expect(k0.tuval - a.tuval).toBe(322);
+  expect(a.r).toBeGreaterThan(k0.r * 1.05);
+  await expect.poll(async () => (await olc()).cizici).toBe(a.tuval);
+  await expect(page.locator('#ve-mw-3b-yan-dugme')).toHaveAttribute('aria-label', 'Özellikler panelini daralt');
+  await expect(page.locator('#ve-mw-3b-yan [data-ve-3b-secili]')).toBeVisible();
+  // Tercih kalır: 3B kapanıp yeniden açılınca panel açık
+  await page.click('#ve-mw-3b-kapat');
+  expect(await page.evaluate(() => veMntWiz3bAc('pencere'))).toBe(true);
+  await hazir(page);
+  expect(await olc()).toMatchObject({ yan: 352, ac: 'true', masa: 'acik' });
+  // Klavyeyle daraltılır: tuval geri genişler, tercih kapalı
+  await page.focus('#ve-mw-3b-yan-dugme');
+  await page.keyboard.press('Enter');
+  const k1 = await olc();
+  expect(k1).toMatchObject({ yan: 30, ac: 'false', masa: 'kapali', tercih: 'kapali', odak: 've-mw-3b-yan-dugme' });
+  expect(k1.tuval).toBe(k0.tuval);
+  expect(Math.abs(k1.r - k0.r) / k0.r).toBeLessThan(1e-6);          // açılıştaki sığdırmanın aynısı
+  await expect.poll(async () => (await olc()).cizici).toBe(k0.tuval);
+  // Kameraya dokunulmuşsa (tekerlek) bakış yerinde kalır
+  const t = await page.locator('#ve-mw-3b-tuval').boundingBox();
+  await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
+  await page.mouse.wheel(0, -120);
+  await expect.poll(async () => (await olc()).r).toBeLessThan(k1.r);
+  const r0 = (await olc()).r;
+  await page.click('#ve-mw-3b-yan-dugme');
+  expect(await olc()).toMatchObject({ yan: 352, masa: 'acik', r: r0 });
   expect(hatalar).toEqual([]);
 });
 
