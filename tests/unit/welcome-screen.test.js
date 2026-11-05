@@ -421,6 +421,35 @@ describe('KESİK — yapı', () => {
     expect(loadSource('components.js')).not.toContain('_veWelcomeInstallCardSheen');
   });
 
+  // SİMGE (kullanıcı 2026-11-05, Canlı Not 3: "Modüllerin sembolleri çok hoşuma
+  // gitmiyor"): karşılama sembolü modülün TANIMINDAN alır. index.html'de ayrı
+  // çizilen kopya ayrışırdı — paletin sembolü bir kez tam böyle ayrışmıştı
+  // (module-card.test.js). Kesik iki temada siyah: temanın renkleri orada
+  // kaybolur, sembol tek renk (currentColor) çizilir.
+  test('SİMGE: satırın sembolü componentDefs çiziminin kendisi, tek renk; index.html\'de kopya yok', () => {
+    const geo = (svg) => [...svg.querySelectorAll('*')].map((e) => e.tagName + ':' +
+      ['d', 'cx', 'cy', 'r', 'x', 'y', 'width', 'height', 'x1', 'y1', 'x2', 'y2', 'opacity', 'stroke-width']
+        .map((a) => e.getAttribute(a)).join('|')).join(' ; ');
+    const satirlar = [...document.querySelectorAll('.ve-module-card[data-module]')];
+    expect(satirlar.length).toBe(3);
+    satirlar.forEach((k) => expect(k.querySelector('.ve-module-card-icon').innerHTML).toBe(''));   // markup boş gelir
+    expect(veSyncWelcomeModuleIcons()).toBe(3);
+    satirlar.forEach((k) => {
+      const tip = k.getAttribute('data-module');
+      const ref = document.createElement('div');
+      ref.innerHTML = componentDefs[tip].svg;
+      const svg = k.querySelector('.ve-module-card-icon svg');
+      expect(geo(svg)).toBe(geo(ref.querySelector('svg')));
+      expect(svg.getAttribute('viewBox')).toBe('0 0 100 100');
+      expect(svg.outerHTML).not.toMatch(/var\(--/);                       // tema rengi yok
+      expect(svg.outerHTML).toMatch(/currentColor/);
+      expect(componentDefs[tip].svg).not.toMatch(/stroke-dasharray|M64 22 h18 v18/);   // eski kap ve köşe oku
+    });
+    // İkinci çağrı aynısını kurar (yükleyicinin tekrar denemesi bozmaz).
+    expect(veSyncWelcomeModuleIcons()).toBe(3);
+    expect(document.querySelectorAll('.ve-module-card-icon svg').length).toBe(3);
+  });
+
   test('oklar ve klasör ikon ailesinden (çizgi ikon)', () => {
     expect(document.querySelectorAll('.ve-module-card-arrow .mf-ico-arrow-right').length).toBe(3);
     expect(document.querySelector('.ve-welcome-open .mf-ico-folder-open')).toBeTruthy();
