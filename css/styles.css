@@ -11397,31 +11397,35 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-bas-ic{ box-sizing:border-box; display:flex; }
 .ve-bas-ic--masa{ min-height:100%; flex-wrap:wrap; align-items:stretch; }
 .ve-bas-ic--sutun{ max-width:1120px; margin:0 auto; padding:28px 48px 28px; flex-direction:column; }
-/* PANEL — tuvalin sol kenarına yaslı beyaz sütun. Üst dolgu YALNIZ dönüş
-   düğmesinin köşesini boş bırakır: düğme kabın sol üstünde (VE_CHIP_INSET
-   10 px, 26 px kare — js/canvas-space.js), altında 12 px pay. Paletin açma
-   sekmesi sayfa açıkken gizli; onun için ayrılan 84 px'lik dolgu (2026-11-04,
-   bir tur) kalktı — kullanıcı: *"Arada çirkin bir boşluk var."* */
+/* PANEL — tuvalin sol kenarına yaslı beyaz sütun. Kimlik sütunun TEPESİNDE,
+   dönüş düğmesinin SATIRINDA (kullanıcı 2026-11-05, Canlı Not 4: *"Yazılar
+   sütunun en tepesine kadar çıkmalı. Dolmalı yani orası."*): düğme kabın sol
+   üstünde (VE_CHIP_INSET 10 px, 26 px kare — js/canvas-space.js), üst dolgu
+   onun üst payı, başlık onun sağında (aşağıda). Düğmeye ayrılan 48 px'lik
+   dolgu başlığı aşağı itiyordu; paletin açma sekmesine ayrılan 84 px'lik dolgu
+   (2026-11-04) da kalktı — *"Arada çirkin bir boşluk var."* */
 .ve-bas-panel{
   flex:1 1 340px; max-width:360px; min-width:0; box-sizing:border-box;
   display:flex; flex-direction:column; gap:18px;
-  padding:48px 20px 18px;
+  padding:10px 20px 18px;
   background:var(--bg-secondary); border-right:1px solid var(--border-color);
 }
 /* KİMLİK — modülün ikonu, adı ve analizlerinin adları (AD ya da VERİ —
    ARAYÜZ ANLATMAZ; kullanıcı isteği 2026-10-19: *"çok sade olmuş …
-   profesyonel dursun"*). Sütunda Kılavuz başlığın sağında. */
+   profesyonel dursun"*). Sütunda Kılavuz başlığın sağında. Masada ikon YOK —
+   yerinde dönüş düğmesi: başlık düğmenin satırında (satır boyu = düğmenin
+   26 px'i, ortaları aynı) ve sağında 10 px payla (10 + 26 + 10 − 20 dolgu =
+   26 px); analizlerin adları altında, panelin kenarından. */
 .ve-bas-kimlik{ display:flex; }
-.ve-bas-ic--masa .ve-bas-kimlik{ align-items:flex-start; gap:12px; margin:0; }
+.ve-bas-ic--masa .ve-bas-kimlik{ margin:0; }
+.ve-bas-ic--masa .ve-bas-kimlik h1{ padding-left:26px; line-height:26px; }
 .ve-bas-ic--sutun .ve-bas-kimlik{ align-items:center; gap:14px; margin:0 0 16px; }
 .ve-bas-kimlik-ik{
   flex:none; display:flex; align-items:center; justify-content:center;
   background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
 }
-.ve-bas-ic--masa .ve-bas-kimlik-ik{ width:46px; height:46px; border-color:var(--border-light); }
 .ve-bas-ic--sutun .ve-bas-kimlik-ik{ width:52px; height:52px; }
 .ve-bas-kimlik-ik svg{ display:block; }
-.ve-bas-ic--masa .ve-bas-kimlik-ik svg{ width:34px; height:34px; }
 .ve-bas-ic--sutun .ve-bas-kimlik-ik svg{ width:40px; height:40px; }
 .ve-bas-kimlik-t{ display:flex; flex-direction:column; min-width:0; flex:1 1 auto; }
 .ve-bas-ic--masa .ve-bas-kimlik-t{ gap:4px; }

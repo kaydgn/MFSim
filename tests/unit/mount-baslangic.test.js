@@ -185,11 +185,18 @@ describe('DİZİN — satırın künyesi örneğin kendi kaydından', () => {
 describe('KİMLİK VE VERİ — adlar programdan, sayılar kaynağından', () => {
   const W = require('../../js/cp-mount-wizard.js');
   const n = (x) => veSayi(x, 0);
-  test('kimlik: modülün componentDefs adı ve ikonu', () => {
+  // Kullanıcı 2026-11-05 (Canlı Not 4): "Yazılar sütunun en tepesine kadar
+  // çıkmalı." Masada ikonun yerinde dönüş düğmesi durur: kimlik ikonsuz, kit
+  // masada ikon verilse de basmaz (sütun basar).
+  test('kimlik: modülün componentDefs adı; masada ikon yok (yerinde dönüş düğmesi)', () => {
     const k = BS.veMntBaslangicKimlik();
     expect(k.ad).toBe(componentDefs['mount-analysis'].name);
-    expect(k.ikon).toBe(componentDefs['mount-analysis'].svg);
+    expect(k.ikon).toBeUndefined();
     expect(k.yetenekler).toBe(BS.VE_MNT_BAS_YETENEK);
+    const K = require('../../js/baslangic-sayfa.js');
+    const kim = { ad: 'Modül', ikon: '<svg id="IKON"></svg>', yetenekler: ['Analiz'] };
+    expect(K.veBasSayfaHTML({ kimlik: kim })).not.toContain('ve-bas-kimlik-ik');
+    expect(K.veBasSayfaHTML({ duzen: 'sutun', kimlik: kim })).toContain('<span class="ve-bas-kimlik-ik" aria-hidden="true"><svg id="IKON"></svg></span>');
   });
   test('her analiz adı programın kendi adı: raporun adımı, Sonuçlar\'ın kümesi, Parametrik Analiz\'in bölümü', () => {
     const tr = (s) => s.toLocaleLowerCase('tr');
@@ -420,13 +427,19 @@ describe('RAY — sayfa açıkken Topoloji · Sonuçlar rayı gizli', () => {
   });
   // Kullanıcı 2026-11-04: "iki sembol var. Onları kaldıralım. Sadece geriye
   // gelme kalsın … Arada çirkin bir boşluk var." Paletin açma sekmesi sayfa
-  // açıkken gizli (satır içi display'i JS yazar — kural !important) ve panelin
-  // üst dolgusu yalnız dönüş düğmesinin köşesi: 10 + 26 + 12 = 48 px.
-  test('CSS: paletin açma sekmesi sayfa açıkken gizli; panel yalnız dönüş düğmesine yer bırakır', () => {
+  // açıkken gizli (satır içi display'i JS yazar — kural !important). Kullanıcı
+  // 2026-11-05 (Canlı Not 4): "o butonun olması alttaki yazıları aşağıya
+  // çekmiş … Yazılar sütunun en tepesine kadar çıkmalı." Üst dolgu düğmenin üst
+  // payı (10 px, eskiden 10 + 26 + 12 = 48), başlık düğmenin satırında: satır
+  // boyu düğmenin 26 px'i, solunda 10 + 26 + 10 − 20 = 26 px.
+  test('CSS: paletin açma sekmesi sayfa açıkken gizli; başlık dönüş düğmesinin satırında', () => {
     expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-sidebar-reveal\{ display:none !important; \}/);
-    expect(CSS).toMatch(/\.ve-bas-panel\{[^}]*padding:48px 20px 18px;/);
+    expect(CSS).toMatch(/\.ve-bas-panel\{[^}]*padding:10px 20px 18px;/);
+    expect(CSS).toMatch(/\.ve-bas-ic--masa \.ve-bas-kimlik h1\{ padding-left:26px; line-height:26px; \}/);
+    expect(CSS).not.toMatch(/\.ve-bas-panel\{[^}]*padding:48px/);
     expect(CSS).not.toMatch(/\.ve-bas-panel\{[^}]*padding-top:84px/);
     expect(CSS).not.toMatch(/ve-sidebar-reveal\.visible\) \.ve-bas-panel/);
+    expect(CSS).not.toMatch(/\.ve-bas-ic--masa \.ve-bas-kimlik-ik/);
   });
 });
 

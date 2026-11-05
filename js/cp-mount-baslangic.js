@@ -122,11 +122,13 @@ var VE_MNT_BAS_YETENEK = ['Statik sehim', 'Modal analiz', 'İletilebilirlik', '�
 // matrisinin boyutu (6 × 6 — kapı onu çekirdekten ölçer).
 var VE_MNT_BAS_SD = 6;
 
+// İkon YOK: masada ikonun yerinde ana topolojiye dönüş düğmesi durur (Canlı
+// Not 4, 2026-11-05 — başlık sütunun tepesinde, düğmenin satırında).
 function veMntBaslangicKimlik(){
   var def = (typeof componentDefs !== 'undefined' && componentDefs['mount-analysis']) || {};
   var kitOf = _mntBasG('veGuideKitOf', './guide-kit.js'), hazir = _mntBasG('veGuideKitReady', './guide-kit.js');
   var kilavuz = (typeof kitOf === 'function' && typeof hazir === 'function' && hazir(kitOf('mount'))) ? 'mount' : '';
-  return { ad: def.name || 'Takoz Çökme-Titreşim', ikon: def.svg || '', yetenekler: VE_MNT_BAS_YETENEK, kilavuz: kilavuz };
+  return { ad: def.name || 'Takoz Çökme-Titreşim', yetenekler: VE_MNT_BAS_YETENEK, kilavuz: kilavuz };
 }
 
 function veMntBaslangicVeri(){
