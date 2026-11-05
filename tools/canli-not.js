@@ -7,10 +7,17 @@
  * girelim ve ben çizerek, yuvarlak içine alarak istediğim değişiklikleri canlı
  * olarak yazayım. Sen de bunları sırası ile uygula."*
  *
- *   node tools/canli-not.js hazirla [--cikti .canli-not/yayin]
- *       Karesiz tek dosya (MFSIM_KARSILAMA=yok) + köprü <head>'in başında →
- *       mfsim.html; sayfa (canli-not.html) çekirdek ve künyeyle kurulur.
+ *   node tools/canli-not.js hazirla [--cikti .canli-not/yayin] [--dal]
+ *       Karesiz tek dosya (MFSIM_KARSILAMA=yok) + köprü <meta charset>'ın
+ *       arkasında → mfsim.html; sayfa (canli-not.html) çekirdek ve künyeyle.
+ *       YALNIZ ANA DALDAN: HEAD origin/main değilse ya da commit edilmemiş
+ *       değişiklik varsa DURUR (--dal: yerel deneme, YAYINLANMAZ).
  *       Artifact'in dosya sınırı 16 MB: aşılırsa DURUR.
+ *
+ *   node tools/canli-not.js denetle <yayındaki mfsim.html>
+ *       Yayındaki programın künyesi ↔ origin/main: güncel · geride (kaç
+ *       birleşme, programın girdileri değişti mi). Dosya Artifact'ten:
+ *       `Artifact read url:<adres> path:mfsim.html`.
  *
  *   node tools/canli-not.js liste <döküm> [--hepsi]
  *       ArtifactData `list notlar` (out_dir) dökümündeki notlar sırayla;
@@ -51,6 +58,7 @@ function ayristir(argv) {
     else if (a === '--kirp') o.kirp = true;
     else if (a === '--ogeler') o.ogeler = true;
     else if (a === '--hepsi') o.hepsi = true;
+    else if (a === '--dal') o.dal = true;
     else if (a === '--help' || a === '-h') o.yardim = true;
     else if (a.startsWith('--')) throw new Error('bilinmeyen bayrak: ' + a);
     else o.konum.push(a);
@@ -87,14 +95,86 @@ function sayfaKur(sablon, cekirdek, ayar) {
     .replace(AYAR_CAPA, () => json);
 }
 
+// ── güncellik ──────────────────────────────────────────────────────────────
+// Yayınlanan program ANA DALIN kendisidir (kullanıcı 2026-11-05: "güncelliğinden
+// emin olalım, öyle devam edelim"): kullanıcı programı Canlı Not'ta kullanıyor,
+// eski kopyanın üstüne yazılan not boşa gider. Paketin girdileri build.js'in
+// okuduğu her yol + Canlı Not'un kendi dosyaları; karşılama kareleri bu yayında
+// yok. Liste build.js'e karşı testte bağlı (canli-not.test.js → GÜNCELLİK).
+const GIRDILER = [
+  'index.html', 'js', 'css', 'vendor', 'pwa/icon.svg', 'assets/examples', 'programlar/kayit.json',
+  'build.js', 'build-shield.js', 'tools/version-info.js',
+  'tools/canli-not.js', 'tools/canli-not.html', 'tools/canli-not-kopru.js', 'tools/canli-not-cekirdek.js'
+];
+
+function git(args) {
+  const r = spawnSync('git', args, { cwd: KOK, encoding: 'utf8' });
+  if (r.status !== 0) throw new Error('git ' + args.join(' ') + ': ' + String(r.stderr || '').trim());
+  return String(r.stdout || '').trim();
+}
+
+// Ağ yoksa yereldeki origin/main'le sürer ve bunu söyler.
+function anaDal() {
+  const f = spawnSync('git', ['fetch', '-q', 'origin', 'main'], { cwd: KOK, encoding: 'utf8' });
+  return { sha: git(['rev-parse', 'origin/main']), uyari: f.status === 0 ? '' : 'origin/main çekilemedi; yerel kopyayla karşılaştırıldı' };
+}
+
+function kunyeOku(html) {
+  const m = /window\.__MFSIM_BUILD = (\{.*?\});\n/.exec(html);
+  if (!m) throw new Error('dosyada sürüm künyesi yok (window.__MFSIM_BUILD)');
+  return JSON.parse(m[1]);
+}
+
+// Saf hüküm: yayındaki sha ↔ ana dal, aradaki birleşmeler, değişen girdiler.
+// degisen null = yayındaki commit yerel geçmişte yok (sığ klon) → yeniden yayınla.
+function guncellikHukmu(yayin, anaSha, birlesmeler, degisen) {
+  if (yayin === anaSha) return { durum: 'guncel', yayinla: false };
+  if (degisen === null) return { durum: 'bilinmiyor', yayinla: true, birlesmeler: birlesmeler || [] };
+  return { durum: degisen.length ? 'program' : 'kunye', yayinla: degisen.length > 0, birlesmeler: birlesmeler, degisen: degisen };
+}
+
+function denetle(o) {
+  if (!o.konum[0]) throw new Error('yayındaki mfsim.html gerekli (Artifact read path:mfsim.html)');
+  const k = kunyeOku(fs.readFileSync(path.resolve(o.konum[0]), 'utf8'));
+  const ana = anaDal();
+  let birlesmeler = [], degisen = null;
+  try {
+    birlesmeler = git(['log', '--first-parent', '--format=%h %s', k.sha + '..' + ana.sha]).split('\n').filter(Boolean);
+    degisen = git(['diff', '--name-only', k.sha, ana.sha, '--'].concat(GIRDILER)).split('\n').filter(Boolean);
+  } catch (e) { degisen = null; }
+  const h = guncellikHukmu(k.sha, ana.sha, birlesmeler, degisen);
+  const yayinda = k.shortSha + (k.prNumber ? ' · PR #' + k.prNumber : '');
+  if (ana.uyari) console.log('! ' + ana.uyari);
+  if (h.durum === 'guncel') console.log('Güncel · yayında ' + yayinda + ' = origin/main');
+  else {
+    console.log('ESKİ · yayında ' + yayinda + ', origin/main ' + ana.sha.slice(0, 7) + ' · ' + h.birlesmeler.length + ' commit geride');
+    h.birlesmeler.slice(0, 12).forEach((b) => console.log('    ' + b));
+    if (h.durum === 'bilinmiyor') console.log('Yayındaki commit yerel geçmişte yok → yeniden yayınla.');
+    else if (h.durum === 'program') console.log('Programın girdileri değişti (' + h.degisen.length + ' dosya) → yeniden yayınla.');
+    else console.log('Programın girdileri aynı; yalnız künye eski.');
+  }
+  return h;
+}
+
 function hazirla(o) {
   const cikti = o.cikti || VARSAYILAN_CIKTI;
+  const env = Object.assign({}, process.env, { MFSIM_BUILD_OUT: path.join(cikti, 'mfsim.html'), MFSIM_KARSILAMA: 'yok' });
+  if (!o.dal) {
+    const ana = anaDal();
+    const head = git(['rev-parse', 'HEAD']);
+    if (head !== ana.sha) {
+      throw new Error('HEAD ' + head.slice(0, 7) + ' ana dal değil (origin/main ' + ana.sha.slice(0, 7) + '). ' +
+        'Yayın ana dalın kendisidir:\n  git fetch origin main && git checkout -B main origin/main');
+    }
+    if (git(['status', '--porcelain', '--untracked-files=no'])) {
+      throw new Error('commit edilmemiş değişiklik var; yayın commit edilmiş ana daldan kurulur');
+    }
+    if (ana.uyari) console.log('! ' + ana.uyari);
+    env.GITHUB_REF_NAME = 'main';   // künyenin dalı: HEAD origin/main'in kendisi
+  }
   fs.mkdirSync(cikti, { recursive: true });
-  const mfsim = path.join(cikti, 'mfsim.html');
-  const r = spawnSync(process.execPath, [path.join(KOK, 'build.js')], {
-    cwd: KOK, encoding: 'utf8',
-    env: Object.assign({}, process.env, { MFSIM_BUILD_OUT: mfsim, MFSIM_KARSILAMA: 'yok' })
-  });
+  const mfsim = env.MFSIM_BUILD_OUT;
+  const r = spawnSync(process.execPath, [path.join(KOK, 'build.js')], { cwd: KOK, encoding: 'utf8', env: env });
   if (r.status !== 0) throw new Error('build.js durdu:\n' + ((r.stdout || '') + (r.stderr || '')).slice(-3000));
   const html = kopruGom(fs.readFileSync(mfsim, 'utf8'), fs.readFileSync(KOPRU, 'utf8'));
   fs.writeFileSync(mfsim, html);
@@ -103,13 +183,14 @@ function hazirla(o) {
     throw new Error('mfsim.html ' + (boyut / 1048576).toFixed(2) + ' MB — Artifact sınırı 16 MB. ' +
       'Büyüyen parçayı bulun (build çıktısı gömülenleri sayıyor).');
   }
-  const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded' });
+  const kunye = require('./version-info.js').collect({ cwd: KOK, source: 'embedded', env: env });
   const ayar = { surum: kunye.shortSha || '', pr: kunye.prNumber || '', zaman: new Date().toISOString(), boyut: boyut };
   const sayfa = sayfaKur(fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'), ayar);
   const sayfaYol = path.join(cikti, 'canli-not.html');
   fs.writeFileSync(sayfaYol, sayfa);
   const goreli = (p) => path.relative(KOK, p) || p;
-  console.log('Canlı Not yayını hazır · ' + (ayar.surum || '(git yok)') + (ayar.pr ? ' · PR #' + ayar.pr : ''));
+  console.log('Canlı Not yayını hazır · ' + (ayar.surum || '(git yok)') + (ayar.pr ? ' · PR #' + ayar.pr : '') +
+    (o.dal ? ' · DAL KURULUMU — YAYINLANMAZ' : ' · ana dal'));
   console.log('  sayfa   ' + goreli(sayfaYol) + ' (' + (Buffer.byteLength(sayfa) / 1024).toFixed(1) + ' KB)');
   console.log('  program ' + goreli(mfsim) + ' (' + (boyut / 1048576).toFixed(2) + ' MB / sınır 16 MB)');
   console.log('\nArtifact: file_path=' + goreli(sayfaYol) + '  files={"mfsim.html": "' + goreli(mfsim) + '"}');
@@ -240,19 +321,24 @@ async function goruntu(o) {
   return cikti;
 }
 
-const YARDIM = fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 27).map((s) => s.replace(/^ \* ?/, '')).join('\n');
+// Yardım, dosyanın baş yorumunun kendisi (yorum büyüyünce kesilmesin).
+const YARDIM = (() => {
+  const s = fs.readFileSync(__filename, 'utf8'), a = s.indexOf('/**'), b = s.indexOf('*/', a);
+  return s.slice(a + 3, b).split('\n').map((x) => x.replace(/^ \* ?/, '')).join('\n').trim();
+})();
 
 async function ana(argv) {
   const o = ayristir(argv);
   if (o.yardim || !o.komut) { console.log(YARDIM); return; }
   if (o.komut === 'hazirla') return hazirla(o);
+  if (o.komut === 'denetle') return denetle(o);
   if (o.komut === 'liste') return liste(o);
   if (o.komut === 'goruntu') return goruntu(o);
-  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · liste · goruntu)');
+  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · denetle · liste · goruntu)');
 }
 
 if (require.main === module) {
   ana(process.argv.slice(2)).catch((e) => { console.error('✗ ' + (e && e.message ? e.message : e)); process.exit(1); });
 }
 
-module.exports = { ayristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };
+module.exports = { ayristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, kunyeOku, guncellikHukmu, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };

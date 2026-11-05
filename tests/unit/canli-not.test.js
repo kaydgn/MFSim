@@ -16,6 +16,8 @@
  *   BAĞLAM     programın global durumu
  *   ONAY       confirm/prompt sayfada sorulur; kabul tek kullanımlık
  *   YAYIN      köprü <meta charset>'ın arkasında; şablonun çapaları
+ *   GÜNCELLİK  yayındaki künye ↔ ana dal; paketin girdileri build.js'in okuduğu
+ *              her yolu kapsar (kapsamasaydı denetim değişen programa "aynı" derdi)
  */
 const fs = require('fs');
 const path = require('path');
@@ -328,5 +330,53 @@ describe('YAYIN — köprü ve sayfa', () => {
   test('döküm iki biçimde de okunur (sarmalı ve çıplak)', () => {
     expect(T.govde({ id: 'n1', version: 3, data: { no: 1, metin: 'a' } })).toEqual({ no: 1, metin: 'a', id: 'n1', __surum: 3 });
     expect(T.govde({ no: 2, metin: 'b' })).toEqual({ no: 2, metin: 'b' });
+  });
+});
+
+// ═══ GÜNCELLİK ═════════════════════════════════════════════════════════════
+// Kullanıcı 2026-11-05: "güncelliğinden emin olalım, öyle devam edelim".
+describe('GÜNCELLİK — yayındaki program ana dalın kendisi mi', () => {
+  test('künye build.js\'in yazdığı biçimden geri okunur (</script> kaçışı dâhil)', () => {
+    const kunye = { sha: 'a'.repeat(40), shortSha: 'aaaaaaa', branch: 'main', prNumber: 1240, prTitle: 'x </script> y' };
+    // build.js'in gömme satırının aynısı
+    const html = '<script>window.__MNT_TOPOLOGIES = {};\n' +
+      'window.__MFSIM_BUILD = ' + JSON.stringify(kunye).replace(/</g, '\\u003c') + ';\n' +
+      'window.__MFSIM_KARSILAMA = {};</script>';
+    expect(T.kunyeOku(html)).toEqual(kunye);
+    expect(() => T.kunyeOku('<html></html>')).toThrow(/künye/);
+  });
+
+  test('hüküm: aynı sha güncel; girdi değiştiyse yayınla; yalnız künye eskiyse yayınlama', () => {
+    const a = 'a'.repeat(40), b = 'b'.repeat(40);
+    expect(T.guncellikHukmu(a, a, [], [])).toEqual({ durum: 'guncel', yayinla: false });
+    expect(T.guncellikHukmu(a, b, ['b1 Merge #2'], ['js/cp-fead.js'])).toMatchObject({ durum: 'program', yayinla: true });
+    expect(T.guncellikHukmu(a, b, ['b1 Merge #2'], [])).toMatchObject({ durum: 'kunye', yayinla: false });
+    // yayındaki commit sığ klonda yok: bilinmeyen eski sayılır, yayınlanır
+    expect(T.guncellikHukmu(a, b, [], null)).toMatchObject({ durum: 'bilinmiyor', yayinla: true });
+  });
+
+  test('paketin girdileri build.js\'in okuduğu HER yolu kapsar', () => {
+    const build = fs.readFileSync(path.join(KOK, 'build.js'), 'utf8');
+    const yollar = new Set();
+    for (const m of build.matchAll(/path\.join\(ROOT,\s*((?:'[^']+'\s*,?\s*)+)\)/g)) {
+      yollar.add([...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]).join('/'));
+    }
+    for (const m of build.matchAll(/require\('\.\/([^']+)'\)/g)) yollar.add(m[1]);
+    const index = fs.readFileSync(path.join(KOK, 'index.html'), 'utf8');
+    for (const m of index.matchAll(/(?:src|href)="((?:js|css|vendor)\/[^"]+)"/g)) yollar.add(m[1]);
+    const disarida = ['MFSim_Code.html', 'assets/karsilama'];   // çıktı · bu yayında gömülmeyen kareler
+    const kapsanmayan = [...yollar].filter((y) => !disarida.includes(y) &&
+      !T.GIRDILER.some((g) => y === g || y.startsWith(g + '/')));
+    expect(kapsanmayan).toEqual([]);
+    expect(yollar.size).toBeGreaterThan(20);   // tarama gerçekten bir şey buldu
+    // Canlı Not'un kendi dosyaları da girdi
+    ['tools/canli-not.html', 'tools/canli-not-kopru.js', 'tools/canli-not-cekirdek.js', 'tools/canli-not.js']
+      .forEach((f) => expect(T.GIRDILER).toContain(f));
+  });
+
+  test('--dal bayrağı tanınır, bilinmeyen bayrak SESSİZCE yutulmaz', () => {
+    expect(T.ayristir(['hazirla', '--dal']).dal).toBe(true);
+    expect(T.ayristir(['denetle', 'x.html']).konum).toEqual(['x.html']);
+    expect(() => T.ayristir(['hazirla', '--zorla'])).toThrow(/bilinmeyen bayrak/);
   });
 });

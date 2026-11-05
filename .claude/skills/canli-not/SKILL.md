@@ -24,11 +24,26 @@ iskeleti sahte `</body>`'ye ve `data-theme`'e takılırdı (Artifact önizlemesi
 emekli tuzakları, `docs/decisions/ortak-yuzeyler.md`); `files` ile yayınlanan
 ikinci HTML iskeletsiz sunulur.
 
-## 1 · Yayın
+## 1 · Yayın — program ANA DALIN KENDİSİDİR
+
+Kullanıcı 2026-11-05: *"güncelliğinden emin olalım, öyle devam edelim."* Eski
+kopyanın üstüne yazılan not boşa gider (başka oturumun düzelttiği şeye not).
 
 ```bash
+git fetch origin main && git checkout -B main origin/main
 node tools/canli-not.js hazirla        # → .canli-not/yayin/{canli-not.html, mfsim.html}
 ```
+
+- **Kapı:** `hazirla` HEAD `origin/main` değilse ya da commit edilmemiş değişiklik
+  varsa DURUR; künyenin dalı `main` yazılır (yerel dalın adı değil). `--dal` yalnız
+  yerel deneme içindir, çıktısı YAYINLANMAZ.
+- **Denetim:** `Artifact read url:<adres> path:mfsim.html` (diske iner, bağlama
+  girmez) → `node tools/canli-not.js denetle <dosya>`: *Güncel* · *ESKİ … yeniden
+  yayınla* (programın girdileri değişti) · *yalnız künye eski* (belge birleşmesi;
+  yayın gerekmez — her yayın kullanıcının açık görünümünü tazeler).
+- **Ne zaman:** her birleşmeden sonra (CLAUDE.md → Teslim Akışı, 6) ve her
+  uyanışın başında (§2). Ölçülen: 43b40ef'ten yeniden kurulan paket yayındakiyle
+  bayt bayt aynı (11.982.428 bayt).
 
 - `mfsim.html` = karşılama karesiz tek dosya (`MFSIM_KARSILAMA=yok`, 29,8 → 11,4 MB;
   Artifact'in dosya sınırı 16 MB — aşılırsa betik DURUR) + köprü `<meta charset>`'ın
@@ -47,6 +62,8 @@ node tools/canli-not.js hazirla        # → .canli-not/yayin/{canli-not.html, m
 
 Uyandıran yorum yalnız işarettir; iş KAYITTAN okunur ve bütün bekleyenler sırayla
 işlenir (aynı anda gelen iki yorum iki uyanış demek; ikincisi boş kuyruk bulur).
+Önce **güncellik** (§1 · Denetim): yayın eskiyse notlardan ÖNCE yeniden yayınla —
+notun `baglam.surum`u hangi kopyaya yazıldığını söyler.
 
 ```
 ArtifactData list   url:<adres> collection:notlar out_dir:.canli-not/dokum
