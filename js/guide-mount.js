@@ -1082,9 +1082,10 @@ function _gmSec16(){
   ], ['Araç', 'Ne', 'Not']);
   h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini, sonra ağaçtaki aramayı kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
     + '<strong>Ürün ağacı</strong>ndan seçilir.</p>';
-  h += '<p>Seçilen parça kendi renginde, kenarları koyu çizilir; öteki parçalar tek kat soluk kalır. Etiket '
-    + 'birimin adını ve konumunu taşır; adın önündeki nokta birimin rol rengindedir, seçili birimin etiketi vurgu '
-    + 'renginde dolu.</p>';
+  h += '<p>Seçilen parça kendi renginde, kenarları koyu çizilir; öteki parçalar tek kat soluk kalır. Hesaptan sonra '
+    + 'her birimin işareti çizilir; etiketi yalnız fare birimin işaretinin, parçasının ya da satırının üstündeyken ve '
+    + 'birim seçiliyken görünür. Etiket birimin adını ve konumunu taşır; adın önündeki nokta birimin rol rengindedir, '
+    + 'seçili birimin etiketi vurgu renginde dolu.</p>';
   h += '<h3>16.2 Roller</h3>';
   h += '<p>Rol bir düğüme verilir: 3B’de parçaya ya da soldaki <strong>Ürün ağacı</strong>nda satıra tıklayıp '
     + '<strong>Özellikler</strong>’in <strong>Rol</strong> bölümündeki çipten, ya da pencerenin ağacındaki satırın '

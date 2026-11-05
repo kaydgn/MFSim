@@ -189,6 +189,23 @@ test('İŞARET · ETİKET · EKSEN: etiketler üst üste binmez, takoz noktası 
   await page.click('#ve-mw-3b-hesapla');
   await expect.poll(async () => (await durum(page)).nokta).toBe(7);
   await page.evaluate(() => veMntWiz3bSigdir());
+  // ETİKET YALNIZ FARE ÜSTÜNDE (Canlı Not 12): hesaptan sonra işaret var, etiket yok;
+  // fare bir işaretin üstüne gelince yalnız onun etiketi, uzaklaşınca hiçbiri
+  await expect.poll(async () => (await durum(page)).nokta).toBe(7);
+  expect((await durum(page)).etiket).toBe(0);
+  const is = await page.evaluate(() => {
+    const r = document.getElementById('ve-mw-3b-tuval').getBoundingClientRect(), q = _mw3b.isaretEkran[0];
+    return { x: r.left + q.x, y: r.top + q.y, u: q.u, ad: veMntWizStp().sonuc.agac[q.u].ad };
+  });
+  await page.mouse.move(is.x, is.y);
+  await expect.poll(async () => (await durum(page)).etiket).toBe(1);
+  expect(await page.locator('#ve-mw-3b-etiket .ve-fw-3b-etk b').innerText()).toBe(is.ad);
+  expect(await page.locator('#ve-mw-3b-etiket .ve-fw-3b-etk').evaluate((e) => getComputedStyle(e).boxShadow)).not.toBe('none');
+  await page.mouse.move(is.x + 400, is.y + 300);
+  await page.mouse.move(5, 5);
+  await expect.poll(async () => (await durum(page)).etiket).toBe(0);
+  // Bütün birimler seçiliyken bütün etiketler — üst üste binmez, kartın altına girmez
+  await page.evaluate(() => { _mw3b.secim = veMntWizStp().coz.birimler.map((b) => b.dugum); _mw3bEtiketle(); });
   await expect.poll(async () => (await durum(page)).etiket).toBe(7);
   const o = await page.evaluate(() => {
     const R = [...document.querySelectorAll('#ve-mw-3b-etiket .ve-fw-3b-etk')].map((e) => e.getBoundingClientRect());

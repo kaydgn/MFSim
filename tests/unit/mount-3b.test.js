@@ -335,6 +335,42 @@ describe('SEÇİM KİPİNDE ODAK — yalnız kipteki birimin işaretleri', () =>
   });
 });
 
+// ── ETİKET YALNIZ FARE ÜSTÜNDE (Canlı Not 12, 2026-11-05) ──────────────────
+// Kullanıcı: "Konumları hesapla dediğimde program üzerine etiketler geliyor.
+// Bunlar görünüyor sürekli. Bunların gölgeli olmasını ve sadece fare ile
+// üzerine geldiğimde görünür olmasını istiyorum." Önce: hesaptan sonra her
+// birimin etiketi (sınama montajında 7) sürekli; sonra 0 — yalnız farenin ve
+// seçimin birimi.
+describe('ETİKET YALNIZ FARE ÜSTÜNDE — işaret hep, etiket farenin ve seçimin birimine', () => {
+  // kök(0) → Motor(1, rol) → blok(2) · kafa(3); Takoz(4, rol); başıboş parça(5)
+  const agac = [
+    { i: 0, ebeveyn: -1, cocuklar: [1, 4, 5] }, { i: 1, ebeveyn: 0, cocuklar: [2, 3] },
+    { i: 2, ebeveyn: 1, cocuklar: [] }, { i: 3, ebeveyn: 1, cocuklar: [] }, { i: 4, ebeveyn: 0, cocuklar: [] }, { i: 5, ebeveyn: 0, cocuklar: [] }];
+  const s = { sonuc: { agac, parcalar: [{ dugum: 2 }, { dugum: 3 }, { dugum: 4 }, { dugum: 5 }] },
+              roller: [null, 'mnt-motor', null, null, 'mnt-mount', null] };
+  test('kimse yokken boş; seçim, farenin parçası, ağacın satırı ve işaret birimini getirir', () => {
+    expect(veMntWiz3bEtiketGoster(s, [], -1, -1, -1)).toEqual({});
+    expect(veMntWiz3bEtiketGoster(s, [3], -1, -1, -1)).toEqual({ 1: 1 });       // seçili parçanın birimi
+    expect(veMntWiz3bEtiketGoster(s, [], 0, -1, -1)).toEqual({ 1: 1 });         // fare motorun bloğunda
+    expect(veMntWiz3bEtiketGoster(s, [], 3, -1, -1)).toEqual({});               // rolsüz parça: birimi yok
+    expect(veMntWiz3bEtiketGoster(s, [], -1, 4, -1)).toEqual({ 4: 1 });         // ağaçta takozun satırı
+    expect(veMntWiz3bEtiketGoster(s, [2, 4], -1, -1, 1)).toEqual({ 1: 1, 4: 1 });
+  });
+  test('farenin altındaki işaret: yarıçap içinde en yakını, dışında -1', () => {
+    const L = [{ u: 1, x: 100, y: 100 }, { u: 4, x: 110, y: 100 }];
+    expect(veMntWiz3bIsaretBul(L, 103, 100, 12)).toBe(1);
+    expect(veMntWiz3bIsaretBul(L, 108, 101, 12)).toBe(4);
+    expect(veMntWiz3bIsaretBul(L, 140, 100, 12)).toBe(-1);
+    expect(veMntWiz3bIsaretBul(undefined, 0, 0, 12)).toBe(-1);
+  });
+  test('etiket yüzen kart: gölge boş değil; katı etiketi süzen tek çağrıdan', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mw-3b \.ve-fw-3b-etk\{[^}]*box-shadow:var\(--shadow-lg\);/);
+    const src = loadSource('cp-mount-3b.js');
+    expect(src).toMatch(/var B = Q\.filter\(function\(q\)\{ return q\.m\.b && G\[q\.m\.b\.dugum\]; \}\)/);
+  });
+});
+
 // ── HAREKET VEKİLİ (kullanım notu T15) ────────────────────────────────────
 describe('HAREKET VEKİLİ — yavaş karede sürüklerken parçaların kutuları', () => {
   test('kutu başına 12 kenar, köşeler kutunun köşeleri; sonlu olmayan kutu atlanır', () => {

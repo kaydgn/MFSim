@@ -218,7 +218,7 @@ function veMntWiz3bAc(yer){
       + '<span class="ve-mw-3b-durum-sag" id="ve-mw-3b-durum-sag"></span></div>';
   var kap = document.getElementById('ve-mw-3b-tuval');
   var V = { kap: kap, s: s, yer: yer, ov: ov, perde: perde, kume: [], ckume: [], parca: [], ekli: [], kutular: [], islenen: 0, yuz: 0, toplam: 0, yuzToplam: 0,
-            sokucu: [], secili: -1, secim: [], fare: -1, fareDugum: -1, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
+            sokucu: [], secili: -1, secim: [], fare: -1, fareDugum: -1, fareParca: -1, fareIsaret: -1, isaretEkran: [], nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
             suzgec: 'parca', olcu: null, yuzSec: null, yuzOn: null, yuzG: null, yuzOnG: null, yuzFare: null, gorunus: 'kenar', ara: '',
             kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0 };
   var w = Math.max(1, kap.clientWidth), h = Math.max(1, kap.clientHeight);
@@ -1702,6 +1702,7 @@ function _mw3bDinle(V){
     _mw3bImlecYaz(null);
     if(V.aday){ V.aday = null; _mw3bAdayHalka(null); _mw3bIpucu(null); _mw3bCiz(true); }
     if(V.fare >= 0){ V.fare = -1; _mw3bIpucu(null); _mw3bBoya(); _mw3bCiz(true); }
+    if(V.fareParca >= 0 || V.fareIsaret >= 0){ V.fareParca = -1; V.fareIsaret = -1; _mw3bEtiketle(); }
     if(typeof _mw3bAracCikis === 'function') _mw3bAracCikis();
   });
   dinle(cv, 'wheel', function(e){
@@ -1799,9 +1800,14 @@ function _mw3bFare(e){
     if(_mw3b !== V) return;
     var ev = V.fareSon, H = _mw3bIsabetT(ev.clientX, ev.clientY), i = H.i;
     // Yavaş karede (vekilin eşiği) fare vurgusu çizilmez: her parça değişimi bir tam
-    // kareydi; ipucu yine parçanın adını söyler
-    var f = V.tamMs > VE_MW_3B_VEKIL.ms ? -1 : i;
+    // kareydi; ipucu yine parçanın adını söyler. Etiket (Canlı Not 12) farenin
+    // birimini ve işaretini izler — kare çizilmeden, yalnız etiket katı yenilenir.
+    var f = V.tamMs > VE_MW_3B_VEKIL.ms ? -1 : i, kr = V.kap.getBoundingClientRect();
+    var fi = veMntWiz3bIsaretBul(V.isaretEkran, ev.clientX - kr.left, ev.clientY - kr.top, VE_MW_3B_ISARET.govde + 6);
+    var etk = i !== V.fareParca || fi !== V.fareIsaret;
+    V.fareParca = i; V.fareIsaret = fi;
     if(f !== V.fare){ V.fare = f; _mw3bBoya(); _mw3bCiz(true); }
+    else if(etk) _mw3bEtiketle();
     _mw3bIpucu(i >= 0 ? ev : null, i);
     _mw3bImlecYaz(H.p);
   });
@@ -1983,6 +1989,26 @@ function _mw3bSecimOdak(V){
 function veMntWiz3bOdakIsaret(isaret, odak){
   return (odak === null || odak === undefined) ? isaret : isaret.filter(function(m){ return m.u === odak; });
 }
+// ETİKET YALNIZ FARE ÜSTÜNDE (kullanıcı 2026-11-05, Canlı Not 12: *"etiketler …
+// görünüyor sürekli. Bunların gölgeli olmasını ve sadece fare ile üzerine
+// geldiğimde görünür olmasını istiyorum"*). İşaret hep çizilir; etiketi yalnız
+// fare üstündeki birimin (3B'de parçası, ağaçta ya da listede satırı, tuvalde
+// işareti) ve seçili birimlerin. Saf, testli — döner: { birimin düğümü: 1 }.
+function veMntWiz3bEtiketGoster(s, secim, fareParca, fareDugum, fareIsaret){
+  var G = {}, ekle = function(b){ if(b >= 0) G[b] = 1; };
+  (secim || []).forEach(function(d){ ekle(_mw3bSeciliBirim(s, d)); });
+  if(fareParca >= 0) ekle(veMntWiz3bBirim(s, fareParca));
+  if(fareDugum >= 0) ekle(_mw3bSeciliBirim(s, fareDugum));
+  if(fareIsaret >= 0) G[fareIsaret] = 1;
+  return G;
+}
+// Farenin altındaki işaret (saf, testli): L [{ u, x, y }] (işaretin kaptaki yeri) ·
+// x, y (kapta) · r (px). Döner: en yakın işaretin birimi ya da -1.
+function veMntWiz3bIsaretBul(L, x, y, r){
+  var en = -1, d0 = r * r;
+  (L || []).forEach(function(q){ var d = (q.x - x) * (q.x - x) + (q.y - y) * (q.y - y); if(d <= d0){ d0 = d; en = q.u; } });
+  return en;
+}
 function _mw3bEtiketle(){
   var V = _mw3b, kat = document.getElementById('ve-mw-3b-etiket'), cz = document.getElementById('ve-mw-3b-etiket-cizgi');
   if(!V || !kat || !cz) return;
@@ -2001,7 +2027,9 @@ function _mw3bEtiketle(){
   // Altta modelin halkası, üstte birimin işareti
   var sira = { model: 0, ref: 1, govde: 2, takoz: 3 }, is = '';
   Q.slice().sort(function(a, b){ return sira[a.m.t] - sira[b.m.t]; }).forEach(function(q){ is += veMntWiz3bIsaretSVG(q.m.t, q.x, q.y); });
-  var B = Q.filter(function(q){ return q.m.b; }).map(function(q){
+  V.isaretEkran = Q.filter(function(q){ return q.m.b; }).map(function(q){ return { u: q.m.b.dugum, x: q.x, y: q.y }; });
+  var G = veMntWiz3bEtiketGoster(V.s, V.secim, V.fareParca, V.fareDugum, V.fareIsaret);
+  var B = Q.filter(function(q){ return q.m.b && G[q.m.b.dugum]; }).map(function(q){
     var b = q.m.b, k = b.tip === 'mnt-mount' ? _mwStpKonum(b.konum, 3) : 'CG ' + _mwStpKonum(b.konum);
     // Kartın eni: adın önündeki nokta (8 + 6 px) · iç boşluk ve çerçeve (20 px) · pay
     return { b: b, x: q.x, y: q.y, k: k, gen: Math.max(b.ad.length * E.harf + 14, k.length * E.harf) + 26 };
@@ -2245,6 +2273,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veMntWiz3bEtiketYerlesim: veMntWiz3bEtiketYerlesim, VE_MW_3B_ETK: VE_MW_3B_ETK,
     veMntWiz3bEksenSVG: veMntWiz3bEksenSVG, VE_MW_3B_EKSEN: VE_MW_3B_EKSEN, VE_MW_3B_EKSEN_AD: VE_MW_3B_EKSEN_AD,
     veMntWiz3bYakinHedef: veMntWiz3bYakinHedef, veMntWiz3bKutuCizgi: veMntWiz3bKutuCizgi, VE_MW_3B_VEKIL: VE_MW_3B_VEKIL, veMntWiz3bOdakIsaret: veMntWiz3bOdakIsaret, _mw3bSecimOdak: _mw3bSecimOdak,
+    veMntWiz3bEtiketGoster: veMntWiz3bEtiketGoster, veMntWiz3bIsaretBul: veMntWiz3bIsaretBul,
     VE_MW_3B_GORUNUS: VE_MW_3B_GORUNUS,
     veMntWiz3bDurumBiti: veMntWiz3bDurumBiti, veMntWiz3bKimlikHTML: veMntWiz3bKimlikHTML, veMntWiz3bBirimKutleHTML: veMntWiz3bBirimKutleHTML,
     veMntWiz3bEylemHTML: veMntWiz3bEylemHTML, veMntWiz3bToplam: veMntWiz3bToplam, veMntWiz3bKutleTazele: veMntWiz3bKutleTazele,

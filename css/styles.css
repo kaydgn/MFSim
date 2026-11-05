@@ -11836,9 +11836,11 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-is-model .h{ fill:none; stroke:var(--accent-primary); stroke-width:1.5; stroke-dasharray:4 3; }
 .ve-mw-3b-is-ref .r{ fill:var(--accent-primary); stroke:var(--bg-primary); stroke-width:1.5; }
 /* Etiket KART (çalışma masası): zemin, ince çerçeve, adın önünde birimin rol
-   renginde nokta; seçili birimin etiketi vurgu dolgulu (.on) */
+   renginde nokta; seçili birimin etiketi vurgu dolgulu (.on). Yalnız fare
+   üstündeki ve seçili birimde, YÜZEN kart gölgesiyle (kullanıcı 2026-11-05,
+   Canlı Not 12: *"gölgeli olmasını ve sadece fare ile üzerine geldiğimde"*). */
 .ve-mw-3b .ve-fw-3b-etk{ padding:4px 9px; background:var(--bg-input); border:1px solid var(--border-color);
-  border-radius:var(--radius-sm); box-shadow:var(--shadow-sm); }
+  border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); }
 .ve-mw-3b .ve-fw-3b-etk b{ display:flex; align-items:center; gap:6px; }
 .ve-mw-3b .ve-fw-3b-etk.sol b{ justify-content:flex-end; }
 .ve-mw-3b .ve-fw-3b-etk b::before{ content:""; flex:none; width:8px; height:8px; border-radius:50%;
