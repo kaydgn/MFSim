@@ -552,3 +552,77 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp yok, bakış listeden; g
   expect(await page.evaluate(() => { const y = document.getElementById('ve-mw-3b-yan'); return y.scrollWidth <= y.clientWidth + 1; })).toBe(true);
   expect(hatalar).toEqual([]);
 });
+
+// SAĞ TIK MENÜSÜ (Canlı Not 8, 2026-11-05 — kullanıcı: "Sağ klik yaptığımızda
+// 3D Experience programının CAD modülündeki özellikler gelsin. İşte parçayı hide
+// yapma, seçilen parçayı ürün ağacında gösterme vs."). Önce: sağ tık hiçbir şey
+// açmıyordu, gizleme yoktu. Node'da koşmayan halkalar: gerçek sağ tık (sürükleme
+// kaydırır, tık menü açar), gölgelendiricinin gizli parçayı atması (isabet yok),
+// Esc'in yalnız menüyü kapatması, Ağaçta göster'in kapalı dalı açıp satırı bulması.
+test('SAĞ TIK: menü imleçte; Gizle parçayı çizmez ve seçtirmez; Ağaçta göster; Tümünü göster; sağ sürükleme kaydırır; Esc yalnız menüyü kapatır', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await dosyaSec(page, DENEME);
+  await hazir(page);
+  const q = await page.evaluate(() => {
+    for (const p of veMntWizStp().sonuc.parcalar) { const n = veMntWiz3bIsabetNoktasi(p.i); if (n) return { ...n, i: p.i, dugum: p.dugum }; }
+    return null;
+  });
+  expect(q).not.toBe(null);
+  // Sağ sürükleme kaydırır, menü açmaz
+  const h0 = await page.evaluate(() => [_mw3b.ctrl.hedef.x, _mw3b.ctrl.hedef.y, _mw3b.ctrl.hedef.z]);
+  await page.mouse.move(q.x, q.y);
+  await page.mouse.down({ button: 'right' });
+  await page.mouse.move(q.x + 60, q.y + 20, { steps: 4 });
+  await page.mouse.up({ button: 'right' });
+  expect((await durum(page)).menu).toBe(false);
+  expect(await page.evaluate(() => [_mw3b.ctrl.hedef.x, _mw3b.ctrl.hedef.y, _mw3b.ctrl.hedef.z])).not.toEqual(h0);
+  // Kaydırma parçayı başka yere taşıdı: noktayı yeniden ölç
+  const p = await page.evaluate((i) => veMntWiz3bIsabetNoktasi(i), q.i);
+  expect(p).not.toBe(null);
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await expect(page.locator('#ve-mw-3b-menu')).toBeVisible();
+  const m = await page.locator('#ve-mw-3b-menu').boundingBox();
+  expect(Math.abs(m.x - p.x)).toBeLessThan(260);
+  expect((await durum(page)).secim).toEqual([q.dugum]);              // tıklanan düğüm seçildi
+  expect(await page.locator('#ve-mw-3b-menu > [data-k], #ve-mw-3b-menu > .ve-mw-3b-menu-kap > [data-k]').evaluateAll((b) => b.map((x) => x.getAttribute('data-k'))))
+    .toEqual(expect.arrayContaining(['gizle', 'yalniz', 'tumu', 'agac', 'odak', 'sigdir', 'rol', 'temizle']));
+  // Esc yalnız menüyü kapatır
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
+  expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
+  // Gizle: parça isabet almaz (gölgelendirici de atar), seçim yerinde
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  await page.click('#ve-mw-3b-menu [data-k="gizle"]');
+  await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
+  expect((await durum(page)).gizli).toBeGreaterThan(0);
+  expect(await page.evaluate((a) => _mw3bIsabet(a.x, a.y) !== a.i, { ...p, i: q.i })).toBe(true);
+  // Boşlukta sağ tık: seçimin komutları; Ağaçta göster kapalı dalı açar, satır soluk ve vurgulu
+  await page.mouse.click(300, 820, { button: 'right' });
+  await page.click('#ve-mw-3b-menu [data-k="agac"]');
+  const satir = page.locator('#ve-mw-3b-agac-l [data-ve-3b-agac="' + q.dugum + '"]');
+  await expect(satir).toBeVisible();
+  await expect(satir).toHaveClass(/gizli/);
+  await expect(satir).toHaveClass(/isik/);
+  // Ağacın satırında sağ tık da aynı menü; Tümünü göster her parçayı geri getirir
+  await satir.locator('.ve-mw-3b-agac-ad').click({ button: 'right' });
+  await expect(page.locator('#ve-mw-3b-menu [data-k="goster"]')).toBeVisible();
+  await page.click('#ve-mw-3b-menu [data-k="tumu"]');
+  expect((await durum(page)).gizli).toBe(0);
+  await expect(satir).not.toHaveClass(/gizli/);
+  expect(await page.evaluate((i) => veMntWiz3bIsabetNoktasi(i) !== null, q.i)).toBe(true);
+  // Klavye: ↓ ile gezilir, → alt menüyü açar, Enter uygular (Rol → Braket)
+  await page.mouse.click(p.x, p.y, { button: 'right' });
+  const rolAc = page.locator('#ve-mw-3b-menu [data-k="rol"]');
+  await rolAc.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#ve-mw-3b-menu [data-k="rol:mnt-motor"]')).toBeFocused();
+  await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#ve-mw-3b-menu [data-k="rol:mnt-bracket"]')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
+  expect(await page.evaluate((d) => veMntWizStp().roller[d], q.dugum)).toBe('mnt-bracket');
+  expect(hatalar).toEqual([]);
+});

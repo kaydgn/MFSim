@@ -11903,6 +11903,36 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-durum-not .mf-ico{ width:12px; height:12px; }
 /* Görünüm küpü ve yakınlık düğmeleri YOK (kullanıcı 2026-11-05, Canlı Not 15):
    bakış komut çubuğunun listesinde, yakınlık tekerlekte. */
+/* SAĞ TIK MENÜSÜ (js/cp-mount-3b-menu.js, kullanıcı 2026-11-05, Canlı Not 8 —
+   3DEXPERIENCE'in bağlam menüsü gibi): imlecin yanında yüzen liste, katman
+   görüntüleyicinin içinde; alt menü (Rol · Malzeme) satırın yanında, kabın sağ
+   kenarına yakınsa solda. Satır 28 px, simge 14 px; kapalı satır soluk. */
+.ve-mw-3b-menu-katman{ position:absolute; inset:0; z-index:20; pointer-events:none; }
+.ve-mw-3b-menu{ position:absolute; min-width:200px; padding:4px 0; box-sizing:border-box; pointer-events:auto;
+  font-size:var(--fs-body); color:var(--text-primary); background:var(--bg-secondary);
+  border:1px solid var(--border-color); box-shadow:var(--shadow-lg); }
+.ve-mw-3b-menu-kap{ position:relative; }
+.ve-mw-3b-menu-alt{ left:100%; top:-5px; display:none; max-height:70vh; overflow:auto; }
+.ve-mw-3b-menu.sola .ve-mw-3b-menu-alt{ left:auto; right:100%; }
+.ve-mw-3b-menu-kap:hover > .ve-mw-3b-menu-alt, .ve-mw-3b-menu-kap:focus-within > .ve-mw-3b-menu-alt,
+.ve-mw-3b-menu-kap > .ve-mw-3b-menu-o[aria-expanded="true"] + .ve-mw-3b-menu-alt{ display:block; }
+.ve-mw-3b-menu-o{ display:flex; align-items:center; gap:8px; width:100%; height:28px; padding:0 12px 0 10px; box-sizing:border-box;
+  border:0; background:none; font:inherit; color:inherit; text-align:left; cursor:pointer; white-space:nowrap; }
+.ve-mw-3b-menu-o:hover:not([disabled]), .ve-mw-3b-menu-o:focus:not([disabled]){ outline:none; background:var(--accent-tint-10); color:var(--ink-accent); }
+.ve-mw-3b-menu-o[disabled]{ cursor:default; color:var(--text-muted); }
+.ve-mw-3b-menu-o > .mf-ico{ flex:none; width:14px; height:14px; }
+.ve-mw-3b-menu-ad{ flex:1 1 auto; }
+.ve-mw-3b-menu-o > .mf-ico:last-child:not(:first-child){ width:12px; height:12px; color:var(--text-muted); }
+.ve-mw-3b-menu-renk{ flex:none; width:10px; height:10px; margin:0 2px; border-radius:50%; background:var(--renk, var(--text-muted)); }
+.ve-mw-3b-menu-bos{ flex:none; width:14px; }
+.ve-mw-3b-menu-ayrac{ height:1px; margin:4px 0; background:var(--border-light); }
+/* Gizli düğüm ağaçta soluk, sonunda gizli simgesi; "Ağaçta göster" satırı kısa vurguyla bulur */
+.ve-mw-3b-agac-r.gizli .ve-mw-3b-agac-ad{ color:var(--text-muted); }
+.ve-mw-3b-agac-gz{ flex:none; display:inline-flex; color:var(--text-muted); }
+.ve-mw-3b-agac-gz .mf-ico{ width:13px; height:13px; }
+.ve-mw-3b-agac-r.isik{ animation:ve-mw-3b-isik 1.4s var(--ease-out); }
+@keyframes ve-mw-3b-isik{ 0%, 45%{ background:var(--accent-tint-10); box-shadow:inset 2px 0 0 var(--accent-primary); } 100%{ background:transparent; box-shadow:none; } }
+@media (prefers-reduced-motion: reduce){ .ve-mw-3b-agac-r.isik{ animation:none; } }
 /* TAKOZ 3B — ÜRÜN AĞACI (js/cp-mount-3b-agac.js, 2026-11-02): tuvalin solundaki
    panel, başında arama. Satır 24 px, girinti 14 px; girintinin her düzeyinde
    dal çizgisi. Rol çipi rol renginde nokta + ad; rollü birimin içindeki düğüm

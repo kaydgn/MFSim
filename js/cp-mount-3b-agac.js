@@ -18,12 +18,15 @@
 //     (veMntWizStpRolCok).
 //   · 3B'de tıklanan parçanın dalı açılır, satırı görünür olur.
 //   · Satırın üstüne gelmek 3B'de düğümün parçalarını vurgular.
+//   · Satıra SAĞ TIK bağlam menüsünü açar (js/cp-mount-3b-menu.js, Canlı Not 8);
+//     gizli düğümün satırı soluk ve sonunda gizli simgesi.
 // Durumu js/cp-mount-3b.js tutar (_mw3b.secim); bu dosya yalnız ağacın
 // HTML'ini kurar ve satırın olaylarını oraya iletir.
 // ============================================================================
 
-// Ağacın satırları (saf, testli). `secim`: seçili düğümler. Döner: HTML.
-function veMntWiz3bAgacHTML(s, secim){
+// Ağacın satırları (saf, testli). `secim`: seçili düğümler · `gizli`: { parça: 1 }
+// (sağ tık menüsünün gizledikleri). Döner: HTML.
+function veMntWiz3bAgacHTML(s, secim, gizli){
   var so = s.sonuc, satirlar = _mwStpSatirlar(s), taban = satirlar.length ? satirlar[0].derinlik : 0, sec = {};
   (secim || []).forEach(function(i){ sec[i] = 1; });
   var h = '';
@@ -39,7 +42,8 @@ function veMntWiz3bAgacHTML(s, secim){
     var mz = !rol && s.malzeme && typeof veMntStpMalzeme === 'function' ? veMntStpMalzeme(s.malzeme[d.i]) : null;
     if(!rol) for(var e = d.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
     var acik = !!(s.acik ? s.acik[d.i] : d.cocuklar.length), dal = d.cocuklar.length && s.acik;
-    h += '<div class="ve-mw-3b-agac-r' + (sec[d.i] ? ' on' : '') + (ata >= 0 ? ' ic' : '') + '" role="treeitem"'
+    var gz = !!(gizli && typeof veMntWiz3bDugumGizli === 'function' && veMntWiz3bDugumGizli(s, d.i, gizli));
+    h += '<div class="ve-mw-3b-agac-r' + (sec[d.i] ? ' on' : '') + (ata >= 0 ? ' ic' : '') + (gz ? ' gizli' : '') + '" role="treeitem"'
       + ' aria-level="' + (d.derinlik - taban + 1) + '" aria-selected="' + (sec[d.i] ? 'true' : 'false') + '"'
       + (d.cocuklar.length ? ' aria-expanded="' + acik + '"' : '') + ' data-ve-3b-agac="' + d.i + '"'
       + ' style="--d:' + Math.max(0, d.derinlik - taban) + '">'
@@ -49,7 +53,9 @@ function veMntWiz3bAgacHTML(s, secim){
       + _mwIkon(d.cocuklar.length ? 'package' : 'box')
       + '<button type="button" class="ve-mw-3b-agac-ad" title="' + _mwEsc(d.ad + (d.ornek && d.ornek !== d.ad ? ' · ' + d.ornek : '')) + '"'
       + ' onclick="veMntWiz3bAgacTik(' + d.i + ', event)" ondblclick="veMntWiz3bAgacOdak(' + d.i + ')"'
+      + ' oncontextmenu="veMntWiz3bAgacMenu(' + d.i + ', event)"'
       + ' onpointerenter="veMntWiz3bAgacFare(' + d.i + ')" onpointerleave="veMntWiz3bAgacFare(-1)">' + _mwEsc(d.ad) + '</button>'
+      + (gz ? '<span class="ve-mw-3b-agac-gz" title="Gizli">' + _mwIkon('eye-off') + '</span>' : '')
       + (mz ? '<span class="ve-mw-3b-agac-mz" title="' + _mwEsc(mz.ad + ' · ' + mz.sinif + ' · ' + veSayi(mz.rho, 0) + ' kg/m³') + '">'
              + _mwEsc(mz.ad) + '</span>' : '')
       + (rol ? '<span class="ve-mw-3b-agac-rol" style="--renk:var(' + veMntWiz3bRolJeton(rol) + ')">' + _mwEsc(_mwAd(rol)) + '</span>'
@@ -87,6 +93,7 @@ function veMntWiz3bAraHTML(s, q, secim){
       + _mwIkon(d.cocuklar.length ? 'package' : 'box')
       + '<button type="button" class="ve-mw-3b-agac-ad" title="' + _mwEsc(d.ad + (d.ornek && d.ornek !== d.ad ? ' · ' + d.ornek : '')) + '"'
       + ' onclick="veMntWiz3bAgacTik(' + i + ', event)" ondblclick="veMntWiz3bAgacOdak(' + i + ')"'
+      + ' oncontextmenu="veMntWiz3bAgacMenu(' + i + ', event)"'
       + ' onpointerenter="veMntWiz3bAgacFare(' + i + ')" onpointerleave="veMntWiz3bAgacFare(-1)"><span>' + _mwEsc(d.ad) + '</span>'
       + (e >= 0 ? '<span class="ve-mw-3b-ara-yol">' + _mwEsc(so.agac[e].ad) + '</span>' : '') + '</button>'
       + (rol ? '<span class="ve-mw-3b-agac-rol" style="--renk:var(' + veMntWiz3bRolJeton(rol) + ')">' + _mwEsc(_mwAd(rol)) + '</span>' : '')
@@ -160,7 +167,7 @@ function _mw3bAgac(goster){
     Object.keys(ac).forEach(function(k){ s.acik[k] = ac[k]; });
   }
   var ust = el.scrollTop;
-  el.innerHTML = veMntWiz3bAgacHTML(s, V.secim);
+  el.innerHTML = veMntWiz3bAgacHTML(s, V.secim, V.gizli);
   el.scrollTop = ust;
   if(say) say.textContent = veSayi(s.sonuc.parcalar.length, 0) + ' parça';
   if(goster >= 0){

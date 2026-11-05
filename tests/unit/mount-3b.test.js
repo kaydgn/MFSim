@@ -23,6 +23,7 @@ eval(loadSource('cp-mount-wizard.js'));
 eval(loadSource('cp-mount-3b.js'));
 eval(loadSource('cp-mount-3b-agac.js'));
 eval(loadSource('cp-mount-3b-arac.js'));
+eval(loadSource('cp-mount-3b-menu.js'));
 const CAD = require('../../js/cp-mount-cad.js');
 beforeEach(() => resetStubs(stubs));
 
@@ -651,6 +652,79 @@ describe('ÜRÜN AĞACI — kartla ortak açıklık, rol çipi, seçili satırla
       .concat(Array.from({ length: 200 }, (_, k) => ({ i: k + 1, ebeveyn: 0, cocuklar: [] }))) } };
     expect(veMntWiz3bAgacAcilacak(sahte, 121)).toEqual({ 0: 150 });
     expect(veMntWiz3bAgacAcilacak(sahte, 30)).toEqual({});
+  });
+});
+
+// ── SAĞ TIK MENÜSÜ (Canlı Not 8, 2026-11-05) ──────────────────────────────
+// Kullanıcı: "3D görüntüleyicinin içine 'sağ klik' özelliğini getirelim … İşte
+// parçayı hide yapma, seçilen parçayı ürün ağacında gösterme vs." Önce: tuvalde
+// sağ tık hiçbir şey açmıyordu (yalnız tarayıcının menüsü engelliydi), gizleme yoktu.
+describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu', () => {
+  const kok = (L) => L.map((o) => (o === '-' ? '-' : o.k));
+  test('boşlukta yalnız görünüm; seçimde gizle · yalıt · ağaç · yakınlaştır · rol · temizle', () => {
+    const s = oturum();
+    expect(kok(veMntWiz3bMenuOgeleri(s, [], {}))).toEqual(['tumu', '-', 'sigdir']);
+    expect(veMntWiz3bMenuOgeleri(s, [], {})[0].kapali).toBe(true);           // gizli yokken "Tümünü göster" kapalı
+    const brk = ad2i(s, 'Arka braket');
+    const L = veMntWiz3bMenuOgeleri(s, [brk], {});
+    expect(kok(L)).toEqual(['gizle', 'yalniz', 'tumu', '-', 'agac', 'odak', 'sigdir', '-', 'rol', 'malzeme', '-', 'temizle']);
+    expect(L.find((o) => o.k === 'yalniz').ad).toBe('Yalnız bunu göster');
+    expect(veMntWiz3bMenuOgeleri(s, [brk, ad2i(s, 'Motor bloğu')], {}).find((o) => o.k === 'yalniz').ad).toBe('Yalnız seçimi göster');
+    // Rol alt menüsü: rol listesinin HER rolü bir kez, gruplu; Rolü kaldır rolsüzken kapalı
+    const rol = L.find((o) => o.k === 'rol').alt.filter((o) => o !== '-');
+    expect(rol.filter((o) => o.rol).map((o) => o.rol).sort()).toEqual(VE_MNT_STP_ROLLER.slice().sort());
+    expect(rol.find((o) => o.k === 'rol:').kapali).toBe(true);
+    expect(veMntWiz3bRolGruplari().map((g) => g.ad)).toEqual(['Gövdeler', 'Takoz', 'Aktarma', 'Motor aksesuarları']);
+  });
+  test('malzeme yalnız kütlesi malzemeden gelebilen düğümde — takoz, motor, şanzıman ve içleri hariç', () => {
+    const s = oturum(), motor = ad2i(s, 'Motor bloğu'), brk = ad2i(s, 'Arka braket'), tk = takozlar(s)[0];
+    s.roller[motor] = 'mnt-motor'; s.roller[tk] = 'mnt-mount'; s.roller[brk] = 'mnt-bracket';
+    expect([motor, tk, brk, ad2i(s, 'Braket üst')].map((d) => veMntWiz3bMalzemeAlir(s, d))).toEqual([false, false, true, true]);
+    expect(kok(veMntWiz3bMenuOgeleri(s, [motor], {}))).not.toContain('malzeme');
+    expect(kok(veMntWiz3bMenuOgeleri(s, [motor, brk], {}))).not.toContain('malzeme');   // biri almıyorsa yok
+    const mz = veMntWiz3bMenuOgeleri(s, [brk], {}).find((o) => o.k === 'malzeme').alt.filter((o) => o !== '-');
+    expect(mz.map((o) => o.k)).toEqual(VE_MNT_STP_MALZEME.map((m) => 'malzeme:' + m.k).concat(['malzeme:']));
+  });
+  test('gizle · göster · yalnız bunu · tümünü: seçimin parçaları üstünde; gizli düğüm ağaçta soluk', () => {
+    const s = oturum(), brk = ad2i(s, 'Arka braket'), P = veMntWiz3bParcalar(s, brk);
+    let G = veMntWiz3bGizliKume(s, [brk], {}, 'gizle');
+    expect(Object.keys(G).map(Number).sort()).toEqual(P.slice().sort());
+    expect(kok(veMntWiz3bMenuOgeleri(s, [brk], G))[0]).toBe('goster');
+    expect(veMntWiz3bMenuOgeleri(s, [brk], G).find((o) => o.k === 'tumu').kapali).toBe(false);
+    expect(veMntWiz3bDugumGizli(s, brk, G)).toBe(true);
+    expect(veMntWiz3bDugumGizli(s, ad2i(s, 'Motor bloğu'), G)).toBe(false);
+    expect(veMntWiz3bGizliKume(s, [brk], G, 'goster')).toEqual({});
+    G = veMntWiz3bGizliKume(s, [brk], {}, 'yalniz');
+    expect(Object.keys(G).length).toBe(s.sonuc.parcalar.length - P.length);
+    expect(P.every((i) => !G[i])).toBe(true);
+    expect(veMntWiz3bGizliKume(s, [], G, 'tumu')).toEqual({});
+    // Ağaçta: gizli düğümün satırı soluk ve gizli simgeli; her satır sağ tıkla menüyü açar
+    s.acik[brk] = s.sonuc.agac[brk].cocuklar.length;
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bAgacHTML(s, [], veMntWiz3bGizliKume(s, [brk], {}, 'gizle'));
+    expect(d.querySelector('[data-ve-3b-agac="' + brk + '"]').classList.contains('gizli')).toBe(true);
+    expect(d.querySelector('[data-ve-3b-agac="' + brk + '"] .ve-mw-3b-agac-gz .mf-ico-eye-off')).not.toBe(null);
+    expect(d.querySelector('[data-ve-3b-agac="' + ad2i(s, 'Motor bloğu') + '"]').classList.contains('gizli')).toBe(false);
+    d.querySelectorAll('.ve-mw-3b-agac-ad').forEach((b) => expect(b.getAttribute('oncontextmenu')).toMatch(/^veMntWiz3bAgacMenu\(\d+, event\)$/));
+  });
+  test('gizli parça her geçişte atılır, kenarı çizilmez, isabet almaz; menünün HTML\'i rol renkli, seçili işaretli', () => {
+    const sh = { vertexShader: 'x\n#include <project_vertex>\ny' };
+    _mw3bKoseAyikla(sh, false, false);
+    expect(sh.vertexShader).toMatch(/if\(mwD > 7\.5\) gl_Position/);
+    expect(VE_MW_3B_GIZLI).toBe(8);
+    const src = loadSource('cp-mount-3b.js');
+    expect(src).toMatch(/if\(V\.gizli && V\.gizli\[V\.ekli\[e\]\]\) continue;/);
+    expect(src).toMatch(/if\(gizli\) G\.a = 0;/);
+    const s = oturum(), tk = takozlar(s)[0];
+    s.roller[tk] = 'mnt-mount';
+    const d = document.createElement('div');
+    d.innerHTML = veMntWiz3bMenuHTML(veMntWiz3bMenuOgeleri(s, [tk], {}));
+    const m = d.querySelector('#ve-mw-3b-menu[role="menu"]');
+    expect(m).not.toBe(null);
+    expect(d.querySelector('[data-k="rol:mnt-mount"]').getAttribute('aria-checked')).toBe('true');
+    expect(d.querySelector('[data-k="rol:mnt-mount"] .ve-mw-3b-menu-renk').getAttribute('style')).toBe('--renk:var(' + VE_MW_3B_ROL_RENK['mnt-mount'] + ')');
+    expect(d.querySelector('[data-k="rol"]').getAttribute('aria-haspopup')).toBe('menu');
+    expect(d.querySelector('[data-k="gizle"] .mf-ico-eye-off')).not.toBe(null);
   });
 });
 

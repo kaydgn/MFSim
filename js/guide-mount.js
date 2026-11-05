@@ -1079,7 +1079,11 @@ function _gmSec16(){
       + '(düzlem, silindir, koni, küre, tor), ölçüsü, normali ya da ekseni ve alanı', 'Tanım dosyadan, alan '
       + 'üçgen ağından (≈); parçanın seçimi değişmez'],
     ['<strong>Ölçü</strong>', 'İki tık arası uzaklık ve Δx · Δy · Δz; üçüncü tık yeni ölçü', 'Dairesel kenarda '
-      + 'dairenin merkezi, yüzün köşesinde köşe, başka yerde yüzeydeki nokta']
+      + 'dairenin merkezi, yüzün köşesinde köşe, başka yerde yüzeydeki nokta'],
+    ['Sağ tık', 'Parçada ya da ağacın satırında: <strong>Gizle</strong> · <strong>Göster</strong>, <strong>Yalnız bunu '
+      + 'göster</strong>, <strong>Tümünü göster</strong>, <strong>Ağaçta göster</strong>, <strong>Seçime yakınlaştır</strong>, '
+      + '<strong>Tümünü sığdır</strong>, <strong>Rol</strong>, <strong>Malzeme</strong>, <strong>Seçimi temizle</strong>',
+      'Komut seçimin hepsine; gizli parça çizilmez, seçilmez, ağaçta soluk; sağ tuşla sürüklemek kaydırır']
   ], ['Araç', 'Ne', 'Not']);
   h += '<p>Esc önce ölçüyü, sonra yüzey süzgecini, sonra ağaçtaki aramayı kapatır. Ölçü ya da yüzey süzgeci açıkken parça '
     + '<strong>Ürün ağacı</strong>ndan seçilir.</p>';
