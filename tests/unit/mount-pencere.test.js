@@ -331,18 +331,18 @@ describe('KROKİ — güç grubundaki yeri: Görünümler\'in bileşeni, bileşe
     expect(svg.getAttribute('aria-label')).toBe('Güç grubundaki yeri: Motor');
   });
 
-  test('takoz ve nokta kütle: halka perdenin üstünde, işaretten sonra — önündeki bir küpün altında kalmaz', () => {
+  test('takoz ve braket: halka ve köşebent perdenin üstünde — önündeki bir küpün altında kalmaz', () => {
     tulga();
     const M = cp._mntCanliModel();
     const t = kroki(onTakoz(), M).querySelector('svg.ve-mnt2d-akso .ve-ak-odak');
     expect(t.querySelector('.ve-ak-t[data-sec]')).not.toBeNull();
     expect(t.querySelector('.ve-ak-cip.sec-cip').textContent).toBe('T1 Ön Takoz');
-    // Tulga'nın arka braketi (nokta kütle) T3 küpünün arkasında
+    // Tulga'nın arka braketi T3 küpünün arkasında — nokta değil köşebent
+    // (Canlı Not 36), perdenin üstünde aydınlık
     const braket = bul((n) => n.type === 'mnt-bracket' && n.data.pointMass && Number(n.data.cgx) > 1300 && Number(n.data.cgy) > 0);
     const b = kroki(braket, M).querySelector('svg.ve-mnt2d-akso .ve-ak-odak');
-    const sira = [...b.children].map((e) => e.getAttribute('class'));
-    expect(sira.indexOf('ve-ak-sec-hale')).toBeGreaterThan(sira.indexOf('ve-ak-nokta'));
-    expect(b.querySelector('.ve-ak-nokta[data-sec]')).not.toBeNull();
+    expect(b.querySelector('g.ve-ak-g.ve-ak-br[data-sec]')).not.toBeNull();
+    expect(b.querySelector('.ve-ak-nokta')).toBeNull();
   });
 
   test('çözüm krokiye girmez: çözümden sonra ve model bayatken kroki birebir aynı', () => {

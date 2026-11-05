@@ -264,7 +264,7 @@ test('Görünümler · Aksonometrik: sürükle-döndür, tekerlek, kaydır; her 
 
 // GÜÇ GRUBUNDAKİ YERİ — Görünümler'in bileşeni (kullanıcı 2026-10-16: "o 3B
 // olmamış. Aynı 'Görünümler' bileşenindeki gibi olacak. Bileşene göre parçayı
-// belirgin gösterecek"). Gövde, takoz ve nokta kütle: bileşen perdenin
+// belirgin gösterecek"). Gövde, takoz ve braket: bileşen perdenin
 // üstünde ve EKRANDA görünür (halkası öndeki bir küpün altında değil), yazılar
 // okunur ve çakışmaz; gerçek sürükleme döndürür ve her açıda yerleşim temiz;
 // fare üstünde bilgi kutusu açılır; tam ekran bileşenle açılır.
@@ -277,7 +277,7 @@ test('Güç grubundaki yeri: Görünümler\'in bileşeni, bileşen perdenin üst
   const secimler = [
     ['Motor', "n.type === 'mnt-motor'"],
     ['Ön Takoz', "n.customName === 'Ön Takoz'"],
-    ['arka braket (nokta kütle)', "n.type === 'mnt-bracket' && n.data.pointMass && Number(n.data.cgx) > 1300 && Number(n.data.cgy) > 0"]];
+    ['arka braket (köşebent)', "n.type === 'mnt-bracket' && n.data.pointMass && Number(n.data.cgx) > 1300 && Number(n.data.cgy) > 0"]];
   const olc = () => page.evaluate(() => {
     const kok = document.querySelector('#ve-properties .ve-mnt-yer'), svg = kok && kok.querySelector('svg.ve-mnt2d-akso');
     if (!svg) return null;

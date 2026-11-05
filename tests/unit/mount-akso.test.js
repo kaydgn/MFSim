@@ -33,6 +33,10 @@
  *     ölçü olan (kuvvet okunun boyu) büyümez; rapor ve karolar birebir eski
  *   · KLASİK 3B — 3D Görüntüleyici yer tutucu: tek kategori, tipin beyan ettiği
  *     not; tuval, düğme ve çizim yok, tazeleyicisi yok (2026-10-16)
+ *   · BRAKET — ataletsiz braket nokta değil köşebent ya da kaide (kullanıcı
+ *     2026-11-05, Canlı Not 36): takozdan gövdenin yüzüne, kesit kütleden
+ *     (kütle korunur); takozuyla birlikte çizilir, nokta yok; atalet girilmiş
+ *     braket eşdeğer kutusuyla; erimde takoz yoksa nokta kalır
  */
 const fs = require('fs');
 const path = require('path');
@@ -63,6 +67,11 @@ const coz = () => cp._mntComputeResults(global.nodes.find((n) => n.type === 'mnt
 const FS = { k: 10, b: 11 };
 const BAKIS = [];
 [-1, 1].forEach((x) => [-1, 1].forEach((y) => [1, -1].forEach((z) => BAKIS.push({ x, y, z }))));
+
+// NOKTA KÜTLE: Tulga'nın nokta kütleleri ataletsiz braketlerdi (2026-11-05'ten
+// beri köşebent ya da kaide, BRAKET). İşaretin kendisini ölçen kapılar onları
+// levhasız — taşınan bir gövde (pompa, PTO) gibi — çizer.
+const noktali = (m) => { m.govde.forEach((g) => { delete g.levha; }); return m; };
 
 beforeEach(() => { resetStubs(stubs); });
 
@@ -283,7 +292,10 @@ describe('YAZI — okunur, çakışmaz, çizgi altında', () => {
     const m = cp._mntAksoModel();
     const ciz = (z) => AK.ciz(m, { W: 354, iz: 'dim', b: { x: -1, y: -1, z }, kat: { golge: true }, fs: FS }).svg;
     const ust = ciz(1), alt = ciz(-1);
-    expect((ust.match(/class="ve-ak-gol"/g) || []).length).toBe(3);         // üç kutulu gövdenin izi
+    // üç kutulu gövdenin izi + braketlerin parçaları (dört köşebent × 2, bir kaide)
+    const izler = (ust.match(/class="ve-ak-gol" data-ak="[^"]+"/g) || []).map((x) => x.split('"')[3]);
+    expect(izler.filter((k) => ['g1', 'g2', 'g3'].includes(k)).length).toBe(3);
+    expect(izler.length).toBe(3 + m.govde.filter((g) => g.levha).reduce((t, g) => t + (g.levha.i === 2 ? 1 : 2), 0));
     expect(ust).not.toMatch(/ve-ak-izg cam/);
     expect(ust.indexOf('class="ve-ak-izg"')).toBeLessThan(ust.indexOf('ve-ak-hareket'));
     expect(alt).not.toMatch(/class="ve-ak-gol"/);
@@ -661,7 +673,7 @@ describe('İŞARET BOYU — takoz, G, gövde CG\'si ve nokta kütle büyür; öl
 
   test('dört işaret katla birlikte büyür (Tulga, x-ışını): G, nokta kütle, gövde CG\'si, takoz küpü', () => {
     yukle('tulga');
-    const m = cp._mntAksoModel();
+    const m = noktali(cp._mntAksoModel());
     const o = { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, stil: 'xray', kat: { golge: true, direk: true }, fs: FS };
     const a = olc(AK.ciz(m, o).svg);
     expect([a.G, a.nokta, a.amk]).toEqual([6.5, 2.4, 2.6]);            // katsız: eski boy
@@ -812,7 +824,8 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
         if (!p.odak.endsWith('</g></svg>')) sorun.push(yer + ': odak en üstte değil');
         const odakAk = new Set([...p.odak.matchAll(/data-ak="([^"]+)"/g)].map((x) => x[1]));
         if (odakAk.size !== 1 || !odakAk.has(sec)) sorun.push(yer + ': odakta ' + [...odakAk].join(','));
-        if (!/ve-ak-sec-hale/.test(p.odak) && (sec[0] === 'T' || sec === 'G' || !m.govde.find((g) => g.k === sec).kutu)) sorun.push(yer + ': halka yok');
+        const gv = m.govde.find((g) => g.k === sec);
+        if (!/ve-ak-sec-hale/.test(p.odak) && (sec[0] === 'T' || sec === 'G' || (!gv.kutu && !gv.levha))) sorun.push(yer + ': halka yok');
         if (sec !== 'G' && !/sec-cip/.test(p.odak)) sorun.push(yer + ': adı çipte değil');
         if (/ve-ak-kilavuz/.test(p.odak)) sorun.push(yer + ': kılavuz perdenin üstünde');
         if (/ve-ak-gol"/.test(p.odak)) sorun.push(yer + ': zemindeki iz perdenin üstünde');
@@ -943,7 +956,9 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
     ['tulga', 'siper', 'asfat'].forEach((ad) => {
       yukle(ad);
       const m = cp._mntAksoModel(), B = kutular(m);
-      const isaret = [...m.takoz.map((t) => ({ k: t.k, p: [t.x, t.y, t.z], takoz: true })), ...m.govde.filter((g) => !g.kutu).map((g) => ({ k: g.k, p: [g.x, g.y, g.z] }))];
+      const isaret = [...m.takoz.map((t) => ({ k: t.k, p: [t.x, t.y, t.z], takoz: true })), ...m.govde.filter((g) => !g.kutu && !g.levha).map((g) => ({ k: g.k, p: [g.x, g.y, g.z] }))];
+      // takozun kendi braketi (ayağı küpün üstünde) onu örtmez: işaretin yeri
+      const kendi = {}; m.govde.forEach((g) => { if (g.levha) kendi[g.k] = g.levha.takoz; });
       BAK.forEach((kam) => {
         const K = AK.kamera('dim', null, AK.kamYon(kam)), r = ciz(m, kam);
         document.body.innerHTML = r.svg;
@@ -954,7 +969,10 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
           const ix = sira.findIndex((e) => e.getAttribute('data-ak') === s.k && !e.matches('g.ve-ak-g'));
           const pp = K.P(s.p), q = [r.F.ox + pp[0] * r.F.sc, r.F.oy + pp[1] * r.F.sc];
           let ustte = true, belirsiz = false;
-          for (let j = ix + 1; j < sira.length; j++) (yuz[j] || []).forEach((P) => { if (icte(q, P)) { if (kenarda(q, P, 0.6)) belirsiz = true; else ustte = false; } });
+          for (let j = ix + 1; j < sira.length; j++) {
+            if (kendi[sira[j].getAttribute('data-ak')] === s.k) continue;
+            (yuz[j] || []).forEach((P) => { if (icte(q, P)) { if (kenarda(q, P, 0.6)) belirsiz = true; else ustte = false; } });
+          }
           if (ustte && belirsiz) return;
           const gizli = sakli(s.p, B, K);
           say.durum++; if (gizli) say.sakli++;
@@ -970,8 +988,9 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
       });
     });
     expect(hata.slice(0, 8)).toEqual([]);
-    // kapı boşa ölçmüyor: binlerce karar, yüzlercesi arkada
-    expect(say.durum).toBeGreaterThan(2500);
+    // kapı boşa ölçmüyor: binlerce karar, yüzlercesi arkada (Tulga'nın beş
+    // braketi 2026-11-05'ten beri nokta değil, köşebent: 630 karar eksik)
+    expect(say.durum).toBeGreaterThan(2000);
     expect(say.sakli).toBeGreaterThan(400);
     // kutunun İÇİNDEKİ işaret (Asfat'ın dört takozu) her açıda gizli DEĞİL: en yakın yüzü dönükse görünür
     expect(Object.keys(icerideki).filter((k) => /^asfat T/.test(k)).length).toBe(4);
@@ -1018,7 +1037,10 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
     expect(document.querySelector(`.ve-ak-odak .ve-ak-cip[data-ak="${t5}"]`)).toBeTruthy();
     // X-ışını: eski sıra — bütün takozlar bütün gövdelerden sonra
     document.body.innerHTML = ciz(m, kam, { stil: 'xray' }).svg;
-    const sira = [...document.querySelectorAll('.ve-ak-hareket g.ve-ak-g, .ve-ak-hareket g.ve-ak-t')].map((e) => (e.matches('.ve-ak-t') ? 't' : 'g')).join('');
+    // (braket takozuyla birlikte çizilir — gövde değil)
+    const lv = new Set(m.govde.filter((g) => g.levha).map((g) => g.k));
+    const sira = [...document.querySelectorAll('.ve-ak-hareket g.ve-ak-g, .ve-ak-hareket g.ve-ak-t')].filter((e) => !lv.has(e.getAttribute('data-ak')))
+      .map((e) => (e.matches('.ve-ak-t') ? 't' : 'g')).join('');
     expect(sira).toMatch(/^g+t+$/);
     document.body.innerHTML = '';
   });
@@ -1056,30 +1078,32 @@ describe('AYDINLIK — seçili parça gölgedeki zeminden ve aynı tür parçada
   const scrim = /--scrim:\s*rgba\(0,\s*0,\s*0,\s*([\d.]+)\)/.exec(css);
   const pay = /\.ve-ak-perde\{\s*fill:color-mix\(in srgb, var\(--scrim\) (\d+)%, transparent\)/.exec(css);
   const alfa = Number(scrim[1]) * Number(pay[1]) / 100, kar = (c) => c.map((v) => v * (1 - alfa));
+  // [seçilinin kökü, yüzler, gölgedekinin kökü (yoksa aynı)] — braket seçiliyken gövdenin ışığında
   const TUR = {
     'gövde': ['.ve-ak-g', ['.f-ust', '.f-y', '.f-x', '.f-alt']],
     'takoz': ['.ve-ak-t', ['.t-z', '.t-y', '.t-x']],
     'nokta kütle': ['.ve-ak-nokta', ['']],
+    'braket': ['.ve-ak-g', ['.f-ust', '.f-y', '.f-x', '.f-alt'], '.ve-ak-g.ve-ak-br'],
   };
   test('iki temada her tür: seçilinin en koyu yüzü > gölgedeki zemin ve aynı türün en açık yüzü', () => {
     const sorun = [], olcu = [];
     [['acik', /:root, \[data-theme="acik"\]\s*\{([^}]*)\}/], ['koyu', /\[data-theme="koyu"\]\s*\{([^}]*)\}/]].forEach(([ad, re]) => {
       const blok = re.exec(css)[1];
       const zemin = lum(kar(renk(blok, kural('.ve-mnt-2d', 'background'))));
-      Object.entries(TUR).forEach(([tur, [kok, yuzler]]) => {
+      Object.entries(TUR).forEach(([tur, [kok, yuzler, gkok]]) => {
         const isik = yuzler.map((y) => lum(renk(blok, kural(y ? kok + '[data-sec] ' + y : kok + '[data-sec]', 'fill'))));
-        const golge = yuzler.map((y) => lum(kar(renk(blok, kural(y ? kok + ' ' + y : kok, 'fill')))));
+        const golge = yuzler.map((y) => lum(kar(renk(blok, kural(y ? (gkok || kok) + ' ' + y : (gkok || kok), 'fill')))));
         const esik = Math.max(zemin, ...golge), en = Math.min(...isik);
         olcu.push(`${ad}/${tur}: ${en.toFixed(3)} > ${esik.toFixed(3)}`);
         if (!(en > esik)) sorun.push(`${ad}/${tur}: en koyu yüz L ${en.toFixed(3)} ≤ gölgede ${esik.toFixed(3)}`);
       });
     });
-    expect(olcu.length).toBe(6);
+    expect(olcu.length).toBe(8);
     expect(sorun).toEqual([]);
   });
   test('CSS\'in seçicisi çizimin işaretlemesine oturuyor: odakta seçili gövde, takoz ve nokta kütle data-sec ve yüz sınıflarıyla', () => {
     yukle('tulga');
-    const m = cp._mntAksoModel(), br = m.govde.find((g) => !g.ana && !g.kutu), ana = m.govde.find((g) => g.ana);
+    const m = cp._mntAksoModel(), br = m.govde.find((g) => g.levha), ana = m.govde.find((g) => g.ana);
     const odak = (k) => {
       const r = AK.ciz(m, { W: 354, H: 326, kam: { az: 249.3, el: 19.5 }, kure: true, kat: { golge: true }, fs: FS, etiket: 'ad', secili: k, perde: true });
       document.body.innerHTML = r.svg;
@@ -1089,12 +1113,105 @@ describe('AYDINLIK — seçili parça gölgedeki zeminden ve aynı tür parçada
     expect(g && [...g.querySelectorAll('path')].every((p) => /^f-(ust|alt|x|y)$/.test(p.getAttribute('class')))).toBe(true);
     const t = odak('T1').querySelector('g.ve-ak-t[data-sec]');
     expect(t && [...t.querySelectorAll('path')].map((p) => p.getAttribute('class')).sort()).toEqual(['t-x', 't-y', 't-z']);
+    const b = odak(br.k).querySelector('g.ve-ak-g.ve-ak-br[data-sec]');
+    expect(b && [...b.querySelectorAll('path')].every((p) => /^f-(ust|alt|x|y)$/.test(p.getAttribute('class')))).toBe(true);
+    // nokta kütle (levhasız): seçili büyük — aydınlık dolgusu vurgu kenarının içinde görünür
+    noktali(m);
     const n = odak(br.k).querySelector('circle.ve-ak-nokta[data-sec]');
     expect(n).toBeTruthy();
-    // seçili nokta kütle büyük: aydınlık dolgusu vurgu kenarının içinde görünür
     const oteki = document.querySelector('circle.ve-ak-nokta:not([data-sec])');
     expect(Number(n.getAttribute('r'))).toBeGreaterThan(1.4 * Number(oteki.getAttribute('r')));
     document.body.innerHTML = '';
+  });
+});
+
+// BRAKET (kullanıcı 2026-11-05, Canlı Not 36: "braketlerin görselleştirmesi
+// güzel değil"): Tulga'nın beş ataletsiz braketi takozun yanında kahverengi
+// noktaydı. Şimdi topolojideki simgesi gibi köşebent — ayağı takozun
+// üstünde, kanadı gövdenin yüzünde — ya da gövdenin altında kaide.
+describe('BRAKET — ataletsiz braket köşebent ya da kaide', () => {
+  const RO = 7.85e-6;   // kg/mm³ — çelik
+  test('Tulga: dört köşebent, bir kaide; takozdan gövdenin yüzüne, kütle korunur, sağ ↔ sol simetrik', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), br = {};
+    m.govde.filter((g) => g.braket).forEach((g) => { br[g.k] = g; });
+    expect(Object.keys(br).sort()).toEqual(['g4', 'g5', 'g6', 'g7', 'g8']);
+    const ozet = Object.values(br).map((g) => [g.k, g.levha.takoz, g.levha.govde, g.levha.i, g.levha.s]);
+    expect(ozet).toEqual([
+      ['g4', 'T3', 'g3', 1, -1],   // sağ arka: CG takozun 29 mm üstünde ama üstünde gövde yok → yana, transfer kutusuna
+      ['g5', 'T5', 'g3', 1, 1],    // sol arka
+      ['g6', 'T2', 'g1', 1, -1],   // sağ ön → motorun sağ yüzü
+      ['g7', 'T4', 'g1', 1, 1],    // sol ön → motorun sol yüzü
+      ['g8', 'T1', 'g1', 2, 1],    // ön: CG takozun 98 mm üstünde, motorun altı → kaide
+    ]);
+    Object.values(br).forEach((g) => {
+      const v = g.levha, kutle = v.i === 2 ? RO * v.w * v.w * v.d : RO * v.w * v.t * (2 * v.d + 0.5 * v.t);
+      expect({ k: g.k, kutle: +kutle.toFixed(6) }).toEqual({ k: g.k, kutle: g.m });
+      // ayak takozdan gövdenin yüzüne: d = takozdan o yöndeki ilk yüz
+      const h = m.govde.find((x) => x.k === v.govde), yuz = h[['x', 'y', 'z'][v.i]] - v.s * h.kutu[v.i] / 2;
+      expect({ k: g.k, d: +v.d.toFixed(6) }).toEqual({ k: g.k, d: +(v.s * (yuz - v.T[v.i])).toFixed(6) });
+    });
+    // veri 0,02 mm içinde simetrik (motorun CG'si y 0,05; T2 356,042 · T4 −355,957)
+    ['d', 't', 'w', 'h'].forEach((a) => expect(Math.abs(br.g6.levha[a] - br.g7.levha[a])).toBeLessThan(0.02));
+    expect(br.g8.bilgi[3]).toMatch(/^Eşdeğer kaide \d+ × \d+ × \d+ mm · çelik$/);
+    expect(br.g6.bilgi[3]).toMatch(/^Eşdeğer köşebent \d+ × \d+ × \d+ mm · çelik$/);
+  });
+  test('çizim: nokta yok, braket takozuyla — üstten bakışta küpün ardında, alttan önünde; gösterge "braket"', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), lv = m.govde.filter((g) => g.levha);
+    [[35, 28, 1], [249.3, 19.5, 1], [120, -40, -1]].forEach(([az, el, ust]) => {
+      document.body.innerHTML = AK.ciz(m, { W: 354, H: 326, kam: { az, el }, kure: true, kat: { golge: true }, fs: FS }).svg;
+      expect(document.querySelectorAll('circle.ve-ak-nokta').length).toBe(0);
+      const sira = [...document.querySelectorAll('.ve-ak-hareket > g[data-ak]')].map((e) => e.getAttribute('data-ak'));
+      lv.forEach((g) => {
+        const i = sira.indexOf(g.k), t = sira.indexOf(g.levha.takoz);
+        expect({ az, k: g.k, yan: i - t }).toEqual({ az, k: g.k, yan: ust });
+        expect(document.querySelector(`g.ve-ak-g.ve-ak-br[data-ak="${g.k}"]`).querySelectorAll('path').length).toBeGreaterThan(1);
+      });
+    });
+    const lej = cp._mntAksoLejant(m, { z: 1 }, null);
+    expect(lej).toMatch(/braket<\/span>/);
+    expect(lej).not.toMatch(/nokta kütle/);
+    document.body.innerHTML = '';
+  });
+  test('atalet girilmiş braket eşdeğer kutusuyla, çelik tonunda (Siper, Asfat); erimde takoz yoksa nokta kalır', () => {
+    ['siper', 'asfat'].forEach((k) => {
+      yukle(k);
+      const m = cp._mntAksoModel(), br = m.govde.filter((g) => g.braket);
+      expect(br.length).toBe(2);
+      br.forEach((g) => { expect(g.kutu).toBeTruthy(); expect(g.levha).toBeUndefined(); });
+      document.body.innerHTML = AK.ciz(m, { W: 354, iz: 'dim', b: { x: -1, y: -1, z: 1 }, kat: { golge: true }, fs: FS }).svg;
+      br.forEach((g) => expect(document.querySelector(`g.ve-ak-g.ve-ak-br[data-ak="${g.k}"]`)).toBeTruthy());
+      expect(cp._mntAksoLejant(m, { z: 1 }, null)).toMatch(/braket<\/span>/);
+    });
+    // Tulga'nın ön braketi takozlardan uzakta (erim 400 mm): nokta
+    yukle('tulga');
+    const n = global.nodes.find((x) => x.type === 'mnt-bracket' && /Ön Takoz/.test(x.customName || ''));
+    n.data.cgz = String(+n.data.cgz + 1000);
+    const m = cp._mntAksoModel(), g = m.govde.find((x) => x.id === n.id);
+    expect(g.braket).toBe(true);
+    expect(g.levha).toBeUndefined();
+    document.body.innerHTML = AK.ciz(m, { W: 354, iz: 'dim', b: { x: -1, y: -1, z: 1 }, kat: { golge: true }, fs: FS }).svg;
+    expect(document.querySelector(`circle.ve-ak-nokta[data-ak="${g.k}"]`)).toBeTruthy();
+    expect(cp._mntAksoLejant(m, { z: 1 }, null)).toMatch(/nokta kütle/);
+    document.body.innerHTML = '';
+  });
+  test('gövdenin arkasındaki braketin adı yazılmaz (geniş kip): ön kaide önden yazılı, arkadan yazısız', () => {
+    yukle('tulga');
+    const m = cp._mntAksoModel(), on = m.govde.find((g) => g.levha && g.levha.i === 2);
+    const yazili = (az, el) => {
+      document.body.innerHTML = AK.ciz(m, { W: 1200, H: 640, kam: { az, el }, kure: true, kat: { golge: true }, fs: FS, etiket: 'genis' }).svg;
+      return [...document.querySelectorAll(`[data-ak="${on.k}"]`)].some((e) => !e.closest('.ve-ak-hareket') && e.querySelector('text'));
+    };
+    expect(yazili(249.3, 19.5)).toBe(true);    // önden-soldan-yukarıdan
+    expect(yazili(35, 28)).toBe(false);        // arkadan-sağdan-yukarıdan: motorun ardında
+    document.body.innerHTML = '';
+  });
+  test('rapor: braket camda CG işaretiyle, şeklin açıklaması yöntemini söyler', () => {
+    yukle('tulga');
+    const r = rep._mntRepAkso(coz());
+    expect(r).toMatch(/class="ve-ak-g ve-ak-br xray"/);
+    expect(r).toMatch(/Ataletsiz braketler eşdeğer çelik köşebent ya da kaide: ayağı takozda, kanadı gövdenin yüzünde; kesiti kütleden \(ρ = 7\.850 kg\/m³\)\./);
   });
 });
 

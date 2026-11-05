@@ -803,6 +803,7 @@ var _MNT_REP_AKSO_CSS =
  +'.rp-akso .ve-ak-g .f-cam{fill:rgba(36,66,95,.05);stroke:#5a6270;stroke-width:.9}'
  +'.rp-akso .ve-ak-g.ana .f-cam{fill:rgba(36,66,95,.10);stroke:var(--ink)}'
  +'.rp-akso .ve-ak-g .k-gizli{fill:none;stroke:#8b8f99;stroke-width:.8;stroke-dasharray:3 2}'
+ +'.rp-akso .ve-ak-g.ve-ak-br .f-cam{fill:rgba(36,66,95,.24);stroke:#3d4450;stroke-width:.8}'
  +'.rp-akso .ve-ak-amk circle{fill:#fff;stroke:var(--vurgu);stroke-width:1}'
  +'.rp-akso .ve-ak-amk path{fill:none;stroke:var(--vurgu);stroke-width:.9}'
  +'.rp-akso .ve-ak-nokta{fill:var(--vurgu)}'
@@ -833,8 +834,15 @@ function _mntRepAkso(R){
     +'<figure class="rp-akso">'+r.svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Güç grubunun aksonometrisi: '
     +'dimetrik izdüşüm (ISO 5456-3; eksen oranı X : Y : Z = '+r.oran+'), önden-soldan-yukarıdan. '
     +'Gövdeler eşdeğer atalet kutularıyla çizilir — gizli kenar kesik çizgi, artı işaretli daire gövdenin '
-    +'ağırlık merkezi. Takozlar mor küp, G birleşik ağırlık merkezi; kesik düşeyler takozların ve G\'nin '
+    +'ağırlık merkezi. '+_mntRepAksoBraket(m)+'Takozlar mor küp, G birleşik ağırlık merkezi; kesik düşeyler takozların ve G\'nin '
     +'Z = 0 düzlemine izdüşümü, tabandaki gri alanlar gövdelerin gölgesi.</figcaption></figure>';
+}
+// Ataletsiz braketin çizimi (cp-mount.js → _mntAksoBraketLevha): şeklin yöntemi
+function _mntRepAksoBraket(m){
+  var lv=null; (m.govde||[]).forEach(function(g){ if(!lv && g.levha) lv=g.levha; });
+  if(!lv) return '';
+  return 'Ataletsiz braketler eşdeğer çelik köşebent ya da kaide: ayağı takozda, kanadı gövdenin yüzünde; '
+    +'kesiti kütleden (ρ = '+_rF(lv.ro*1e9, 0)+' kg/m³). ';
 }
 
 // §8.1 — kütle birleştirme (m, c_G, I_G)
