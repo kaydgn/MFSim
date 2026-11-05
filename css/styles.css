@@ -11486,10 +11486,13 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-bas-kapi-k > span{ position:relative; white-space:nowrap; }
 .ve-bas-kapi-k > span + span::before{ content:"·"; position:absolute; right:100%; margin-right:5px; color:var(--text-muted); }
 /* VERİ — kataloğun ölçülen sayıları. Masada panelin dibinde satır satır (ad
-   solda, sayı sağda), Kılavuz en altta. Sütunda bant (sayı üstte, ad altta):
-   hücreler 1 px aralıkla çizgi zemininin üstünde — satır sararsa da çift
-   çizgi çıkmaz, son satır genişliği doldurur. */
+   solda, sayı sağda), Kılavuz en altta; verisiz masada (Takoz — kullanıcı
+   2026-11-05, Canlı Not 5: *"Bu açıklamalara gerek yok"*) Kılavuz panelin
+   dibine kendisi iner. Sütunda bant (sayı üstte, ad altta): hücreler 1 px
+   aralıkla çizgi zemininin üstünde — satır sararsa da çift çizgi çıkmaz, son
+   satır genişliği doldurur. */
 .ve-bas-ic--masa .ve-bas-veri{ margin:auto 0 0; border-top:1px solid var(--border-color); }
+.ve-bas-ic--masa .ve-bas-kapilar + .ve-bas-kilavuz{ margin-top:auto; }
 .ve-bas-ic--masa .ve-bas-veri > div{
   display:flex; justify-content:space-between; align-items:baseline; gap:12px;
   padding:6px 2px; border-bottom:1px solid var(--border-light);

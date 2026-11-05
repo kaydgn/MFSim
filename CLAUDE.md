@@ -50,7 +50,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/baslangic-sayfa.js` — **ortak başlangıç sayfası kiti** (`.ve-bas*`): FEAD ile
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
-  söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi); sayı
+  söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi; Takoz'da sayı
+  bandı YOK — kullanıcı 2026-11-05); sayı
   kaynağından ölçülür, analiz adı programdaki adıdır. Düzeni modül beyan eder
   (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-04: solda panel, sağda
   örneklerin DİZİNİ — tasarım tuvali "sade seçenekler" · D; RESİM YOK, satırın Yükle'si

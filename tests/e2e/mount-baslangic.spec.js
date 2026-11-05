@@ -67,12 +67,11 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
       cizim: document.querySelectorAll('#ve-mnt-baslangic svg.ve-mnt2d-akso').length,
       acik: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir.acik')].map((r) => r.getAttribute('data-v')),
       ornek: veMountCore.getMountExampleList().length,
-      // KİMLİK VE VERİ tarayıcıda: sabitler `window`dan okunur — Node'un
-      // `require` yolu bunu göremez; bir satır düşerse ancak burada görünür.
+      // KİMLİK VE VERİ tarayıcıda: künyenin sabitleri `window`dan okunur —
+      // Node'un `require` yolu bunu göremez; bir ad düşerse ancak burada
+      // görünür. Sayı bandı YOK (kullanıcı 2026-11-05, Canlı Not 5).
       baslik: (document.querySelector('#ve-mnt-baslangic .ve-bas-kimlik h1') || {}).textContent,
-      veri: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-veri dd')].map((e) => e.textContent),
-      canli: [Object.keys(VE_MOUNT_LIBRARY).length, VE_MW_GOVDE_TIPLERI.length,
-        veMountCore.getMountExampleList().length].map((x) => veSayi(x, 0)),
+      veri: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-veri').length,
       kunye: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
       kilavuz: document.querySelector('#ve-mnt-baslangic .ve-bas-kilavuz')?.getAttribute('data-v'),
       // ÇALIŞMA MASASI: sayfa açıkken ray yok; masada örneklerin dizini, resim yok
@@ -86,8 +85,7 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
   expect(o.cizim).toBe(0);
   expect(o.acik).toEqual(['siper']);                     // ilk açılışta ilk satır açık
   expect(o.baslik).toBe('Takoz Çökme-Titreşim');
-  expect(o.veri).toHaveLength(5);
-  expect([o.veri[0], o.veri[2], o.veri[3]]).toEqual(o.canli);
+  expect(o.veri).toBe(0);
   expect(o.kunye).toEqual([4, 5, 1]);
   expect(o.kilavuz).toBe('mount');
   expect(o.ray).toBe(0);
