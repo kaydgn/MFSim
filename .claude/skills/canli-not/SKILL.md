@@ -37,6 +37,7 @@ görünümü tazeliyordu (çizilen not, açık pencere gidiyordu).
 |-------|----------|-------|--------------|
 | **Programın güncellemesi** | her birleşmeden sonra | program VARLIK deposuna (metin) + kaydın `yayin/son` belgesi | DEĞİŞMEZ: "Güncelleme" penceresi sorar, Güncelle yükler (proje taşınır); "Sonra" o sürümü bir daha sormaz, şeritte "Güncelleme" düğmesi kalır |
 | **Sayfanın yayını** | yalnız sayfa (`tools/canli-not*`) değiştiyse | `Artifact` publish | tazelenir; `claude.hot` projeyi ve yarım notu taşır |
+| **Yenile** (şeritte, kullanıcının düğmesi) | kullanıcı isteyince — F5 yerine | yalnız program (çerçeve) yeniden yüklenir; yeni yayın varsa o | sayfa, notlar ve kart yerinde; proje taşınır |
 
 ```bash
 git fetch origin main && git checkout -B main origin/main

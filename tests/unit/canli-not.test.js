@@ -533,6 +533,46 @@ describe('GÜNCELLEME — yayın kaydı, pencere, sonucun görüntüsü', () => 
     expect(a.d.getElementById('cn-surum').textContent).toBe('ddddddd · #1300');
   });
 
+  // Kullanıcı 2026-11-05: "canlı not içine yenileme butonu ekler misin … F5 yapıp sayfayı
+  // tamamen yenilemek istemiyorum." Yenile yalnız programı yeniden yükler: sayfa (notlar,
+  // kart) yerinde; yeni yayın varsa onu yükler.
+  test('Yenile: yalnız program yeniden yüklenir — varlık yeniden, dosya yeniden; yeni yayın varsa o', async () => {
+    const a = sayfa();
+    await bekle();
+    const yenile = a.d.getElementById('cn-yenile');
+    expect([yenile.textContent, yenile.title]).toEqual(['Yenile', 'Programı yeniden yükle']);
+    // varlıktan açılmış program: aynı varlık yeniden getirilir
+    a.yayinGonder(yayinB('bbbbbbb', ID('b'), [6]));
+    await bekle();
+    a.notGonder([{ id: 'n1', no: 1, sira: 1, metin: 'x', durum: 'bekliyor', zaman: '2026-11-05T10:00:00Z', cizim: { g: 800, y: 600, sekiller: [] } }]);
+    const li = a.d.querySelector('#not-n1');
+    yenile.click();
+    await bekle();
+    expect(a.getirilen).toEqual(['/_blob/' + ID('b'), '/_blob/' + ID('b')]);
+    expect(a.cerceve.getAttribute('srcdoc')).toContain(ID('b'));
+    expect(a.d.querySelector('#not-n1')).toBe(li);                // sayfa yeniden kurulmadı
+    // yeni yayın gelmişse Yenile onu yükler (Güncelle'nin yolu)
+    a.yayinGonder(yayinB('ccccccc', ID('c'), [7]));
+    await bekle();
+    yenile.click();
+    await bekle();
+    expect(a.getirilen[a.getirilen.length - 1]).toBe('/_blob/' + ID('c'));
+    expect(a.d.getElementById('cn-surum').textContent).toBe('ccccccc · #1300');
+    expect(a.gizli('cn-guncel')).toBe(true);
+    // dosyadan açılmış program: çerçeve dosyayı yeniden açar, varlık getirilmez
+    const b = sayfa();
+    await bekle();
+    b.yayinGonder(null);
+    await bekle();
+    const kayit = [];
+    new MutationObserver((m) => m.forEach((x) => kayit.push(x.attributeName))).observe(b.cerceve, { attributes: true });
+    b.d.getElementById('cn-yenile').click();
+    await bekle();
+    expect(kayit).toContain('src');
+    expect(b.cerceve.getAttribute('src')).toBe('mfsim.html');
+    expect(b.getirilen).toEqual([]);
+  });
+
   test('Notlar listesi yeniden eskiye: en yeni not en üstte, yeni gelen tepeye oturur', async () => {
     const a = sayfa();
     await bekle();

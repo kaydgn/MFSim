@@ -245,6 +245,7 @@ button, textarea, input { font: inherit; color: inherit; }
       <span class="cn-baglanti" id="cn-claude" data-d="bekle">Claude</span>
     </div>
     <button class="cn-dugme cn-guncel-ac" type="button" id="cn-guncel-ac" aria-controls="cn-guncel" hidden>Güncelleme</button>
+    <button class="cn-dugme" type="button" id="cn-yenile" title="Programı yeniden yükle">Yenile</button>
     <button class="cn-dugme" type="button" id="cn-liste-ac" aria-expanded="false" aria-controls="cn-liste">Notlar <span class="cn-sayac" id="cn-sayac" data-bekleyen="0">0</span></button>
   </header>
 
@@ -435,7 +436,7 @@ button, textarea, input { font: inherit; color: inherit; }
       .then(function (html) {
         if (!/^\s*<!doctype html/i.test(html)) throw new Error('program değil');
         program.basladi = false; program.hazir = false; program.yedek = true;
-        program.kaynak = 'varlik'; program.surum = k.surum; program.pr = k.pr || '';
+        program.kaynak = 'varlik'; program.id = k.id; program.surum = k.surum; program.pr = k.pr || '';
         if (proje) onceki.proje = proje;
         $('cn-acilis').textContent = 'MFSim açılıyor…'; $('cn-acilis').hidden = false;
         surumYaz(); durumYaz();
@@ -461,16 +462,37 @@ button, textarea, input { font: inherit; color: inherit; }
     if (!yayin || CN.yayinDogrula(yayin).length) return;
     var y = yayin, btn = $('cn-guncel-evet');
     btn.disabled = true;
-    var proje = null;
-    try {
-      var w = cerceve.contentWindow, f = w && w._veSettingsBuildProjectData;
-      if (program.hazir && typeof f === 'function') proje = f();
-    } catch (e) { /* çerçeveye erişim yok */ }
-    programYukle({ id: y.program.id, surum: y.surum, pr: y.pr || '' }, proje).then(function () {
+    programYukle({ id: y.program.id, surum: y.surum, pr: y.pr || '' }, programProjesi()).then(function () {
       ertelenen = ''; guncelKapat(); $('cn-guncel-ac').hidden = true;
       bildir('Program güncellendi · ' + y.surum);
     }, function () { btn.disabled = false; bildir('Güncelleme indirilemedi.'); });
   }
+  // YENİLE (kullanıcı 2026-11-05: *"canlı not içine yenileme butonu ekler misin … F5
+  // yapıp sayfayı tamamen yenilemek istemiyorum"*): yalnız program yeniden yüklenir,
+  // sayfa (notlar, çizim, kart) yerinde; açık proje taşınır. Yeni yayın varsa o yüklenir.
+  function programProjesi() {
+    try {
+      var w = cerceve.contentWindow, f = w && w._veSettingsBuildProjectData;
+      if (program.hazir && typeof f === 'function') return f();
+    } catch (e) { /* çerçeveye erişim yok */ }
+    return null;
+  }
+  function yenile() {
+    if (CN.guncellemeVar(yayin, program.surum, '')) { guncelle(); return; }
+    var proje = programProjesi();
+    if (program.kaynak === 'varlik' && program.id) {
+      programYukle({ id: program.id, surum: program.surum, pr: program.pr }, proje)
+        .then(function () { bildir('Program yenilendi.'); }, function () { bildir('Program indirilemedi.'); });
+      return;
+    }
+    program.basladi = false; program.hazir = false; program.yedek = false;
+    if (proje) onceki.proje = proje;
+    $('cn-acilis').textContent = 'MFSim açılıyor…'; $('cn-acilis').hidden = false;
+    durumYaz();
+    dosyaAc();
+    bildir('Program yenilendi.');
+  }
+  $('cn-yenile').addEventListener('click', yenile);
   $('cn-guncel-evet').addEventListener('click', guncelle);
   $('cn-guncel-sonra').addEventListener('click', function () { ertelenen = yayin ? yayin.surum : ''; guncelKapat(); });
   $('cn-guncel-notlar').addEventListener('click', function () { listeAcKapa(true); });
