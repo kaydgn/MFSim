@@ -245,7 +245,7 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
   // (`mf-sidebar-collapsed`) YAZILMAZ — kapsamın kuralı bir tercih değil.
   test('PALETSİZ KAPSAM: yalnız beyan eden modülde .ve-main ve-paletsiz alır; tercih yazılmaz', () => {
     setupSidebar();
-    document.body.insertAdjacentHTML('beforeend', '<div class="ve-main"></div>');
+    document.body.insertAdjacentHTML('beforeend', '<div id="sayfa2-content"><div class="ve-main"></div></div>');
     const main = document.querySelector('.ve-main');
     // Kullanıcı sütunu DARALTMIŞ: kapsam bu tercihi ne açar ne kapar.
     try { localStorage.setItem('mf-sidebar-collapsed', '1'); } catch (e) { /* jsdom */ }
@@ -254,17 +254,20 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
     global.veFeadStack = [{ nodeId: 'comp-9', parentState: {} }];
     veSyncSidebarScope();
     expect(main.classList.contains('ve-paletsiz')).toBe(true);
+    expect(document.getElementById('sayfa2-content').classList.contains('ve-paletsiz')).toBe(true);
     global.veFeadStack.length = 0;
     veSyncSidebarScope();                                   // köke dönüş
     expect(main.classList.contains('ve-paletsiz')).toBe(false);
+    expect(document.getElementById('sayfa2-content').classList.contains('ve-paletsiz')).toBe(false);
     veAracStack.push({ nodeId: 'comp-1', parentState: {} });
     veSyncSidebarScope();                                   // paletli modül
     expect(main.classList.contains('ve-paletsiz')).toBe(false);
     veAracStack.length = 0;
     expect(localStorage.getItem('mf-sidebar-collapsed')).toBe('1');
-    // Sınıfı CSS iki öğeye birden uygular: sütun + açma rayı.
+    // Sınıfı CSS iki öğeye birden uygular: sütun + açma düğmesi. Düğme köşe
+    // hücresinde, .ve-main'in dışında (Canlı Not 33 · C): sınıf kabına da yazılır.
     const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
-    expect(css).toMatch(/\.ve-main\.ve-paletsiz \.ve-sidebar,\s*\.ve-main\.ve-paletsiz \.ve-sidebar-reveal\{\s*display:none !important;/);
+    expect(css).toMatch(/\.ve-main\.ve-paletsiz \.ve-sidebar,\s*#sayfa2-content\.ve-paletsiz \.ve-sidebar-reveal\{\s*display:none !important;/);
   });
 
   test('veSyncSidebarScope: boş stack → top, Araç Performans stack dolu → arac-performans', () => {

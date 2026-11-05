@@ -690,6 +690,19 @@ yalnız bu kural içindi ve onunla kalktı.
 **Kapı:** `kabuk-bant.test.js` → *"RAY KENDİ SÜTUNU"* + `kabuk-sutun.spec.js` →
 *"RAY ÇERÇEVELİ"* ve *"Sonuçlar sayfasında da aynı çerçeve"*.
 
+**2026-11-05 — çizgi bant satırını kesmez, açma düğmesi köşe hücresinde.**
+Kullanıcı (sol üst köşenin ekran görüntüsüyle, Canlı Not 33): *"dikdörtgen
+çerçeve kesitleri kesişiyor, böyle garip bir sürü çizgi var"*. Köşede üç
+dikdörtgen kesişiyordu: rayın kenarlığı bant satırından geçen köşe hücresi,
+kenarları bandın çizgisini kesen kutulu aktif sekme ve tuvalin üstünde yüzen
+kenarlıklı, gölgeli açma kartı. Üç seçenekten (görsel) kullanıcı C'yi seçti:
+rayın çizgisi bandın alt çizgisinden aşağı iner (`.ve-nav-rail::after`, kenarlık
+yok), aktif sekme düz (kutusuz, altı aksan — aşağıdaki hükmün "örter ve tuvale
+bağlanır" yarısı emekli), palet kapalıyken açma düğmesi köşe hücresinde
+(`#sayfa2-content`'in çocuğu, `.ve-main`'in dışında; gizleme sınıfları kaptan:
+`ve-no-module` · `ve-paletsiz` · `ve-bas-acik`, öteki sayfada yok). Kapı:
+`kabuk-sutun.spec.js` → *"AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE"*.
+
 ## Kabuk TEK ÇİZGİ — üst bant tek jeton, tuval kenara yapışık (2026-09-23)
 
 **Hüküm.** Yan yana duran üst başlıklar ölçüyü ve zemini tek jetondan alır
@@ -697,7 +710,8 @@ yalnız bu kural içindi ve onunla kalktı.
 müfettiş başlığı, Sonuçlar'da Veri Gezgini · araç çubuğu · rapor bandı. Bandın
 başlığı altındaki sütunun sol kenarından başlar. Tuvalin kendi çerçevesi yok;
 sınırı komşusunun çizgisidir. Aktif sekme bandın çizgisini örter (çizgi
-zeminin iç gölgesi, kenarlık değil) ve tuvale bağlanır.
+zeminin iç gölgesi, kenarlık değil) ve tuvale bağlanır — 2026-11-05'ten beri
+EMEKLİ: aktif sekme düz, bandın çizgisi kesintisiz (yukarıda, Canlı Not 33 · C).
 
 **Gerekçe — ölçülen.** Kullanıcı: *"pencere sınırları bir hizasız, tatsız,
 güzel değil."* Topoloji'de üç başlık 37 · 29 · 33 px, alt çizgileri y=75 · 67 ·

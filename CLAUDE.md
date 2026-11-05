@@ -592,9 +592,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   jetondan alır: `--bant-h` + `--bant-zemin`. Bandın başlığı altındaki
   sütunun sol kenarından başlar. Tuvalin kendi çerçevesi yok (çukur emekli):
   sınırı komşusunun çizgisidir. Ray kendi sütunu: palet ile arasında TEK
-  çizgi, bant satırı rayın başında köşe hücresiyle sürer. Kapı:
+  çizgi, bant satırı rayın başında köşe hücresiyle sürer. Bandın çizgisi
+  KESİNTİSİZ (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C): rayın çizgisi
+  bandın altından iner, aktif sekme düz (altı aksan), palet kapalıyken açma
+  düğmesi köşe hücresinde — tuvalin üstünde yüzen kart yok. Kapı:
   `kabuk-bant.test.js` + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* ·
-  *"RAY ÇERÇEVELİ"*.
+  *"RAY ÇERÇEVELİ"* · *"AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE"*.
 - **BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI.** `createNode` her düğümde
   `saveState()` çağırıyor; ONİKİ düğüm kuran bir kurucu (modül örneği,
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile

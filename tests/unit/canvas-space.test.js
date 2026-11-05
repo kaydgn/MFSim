@@ -412,14 +412,24 @@ describe('veBoundaryChipPos — paletin açma sekmesi düğmeyi ÖRTMEZ (view.so
     const ic = cs.veBoundaryChipPos(BOX, 1, { x: 600, y: 400 }, CHIP, { w: 1200, h: 800, sol: 31 });
     expect(ic.left).toBeCloseTo((2900 - cs.VE_CANVAS_CENTER) + 600 + cs.VE_CHIP_INSET_IN, 9);
   });
-  test('ölçü sekmenin yerleşiminden: gizliyken 0, görünürken sol kenardan genişliği', () => {
-    document.body.innerHTML = '<div id="m" style="position:relative"><button id="ve-sidebar-reveal"></button>'
+  test('ölçü sekmenin yerleşiminden: gizliyken 0, kabın içindeyken sol kenardan genişliği', () => {
+    document.body.innerHTML = '<div class="ve-main" style="position:relative"><button id="ve-sidebar-reveal"></button>'
       + '<div id="ve-canvas-wrapper"></div></div>';
     const w = document.getElementById('ve-canvas-wrapper'), rv = document.getElementById('ve-sidebar-reveal');
     expect(cs.veChipSolOrtu(w)).toBe(0);                      // jsdom: offsetWidth 0 = gizli
     Object.defineProperty(rv, 'offsetWidth', { configurable: true, value: 31 });
     Object.defineProperty(rv, 'offsetLeft', { configurable: true, value: 0 });
     expect(cs.veChipSolOrtu(w)).toBe(31);
+  });
+  // Kullanıcı seçimi 2026-11-05 (Canlı Not 33 · C): düğme rayın köşe hücresinde,
+  // tuvalin kabının DIŞINDA — görünürken de düğmeyi örtmez.
+  test('köşe hücresindeki düğme tuvali örtmez: görünürken de 0', () => {
+    document.body.innerHTML = '<div id="sayfa2-content"><nav class="ve-nav-rail"></nav><button id="ve-sidebar-reveal"></button>'
+      + '<div class="ve-main"><div id="ve-canvas-wrapper"></div></div></div>';
+    const w = document.getElementById('ve-canvas-wrapper'), rv = document.getElementById('ve-sidebar-reveal');
+    Object.defineProperty(rv, 'offsetWidth', { configurable: true, value: 64 });
+    Object.defineProperty(rv, 'offsetLeft', { configurable: true, value: 0 });
+    expect(cs.veChipSolOrtu(w)).toBe(0);
   });
 });
 
