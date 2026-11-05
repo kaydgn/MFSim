@@ -88,17 +88,26 @@ test('MODÜL ADI canlı — modülün içinde yazılı, kökte BOŞ', async ({ p
   expect((await page.evaluate(olc)).modul).toBe('FEAD');
 });
 
-test('komut arama düğmesi paleti AÇIYOR', async ({ page }) => {
+// KOMUT ARA YOK (kullanıcı 2026-11-05, Canlı Not 24: "komut ara ve çözücü
+// kısmına gerek yok. Kullanılmıyor zaten"): bantta arama kutusu ve Çözücü yok;
+// komut paleti klavyeden (Ctrl+K) açılıyor, Çözücü şeritte.
+test('KOMUT ARA YOK — bantta arama ve Çözücü yok; palet Ctrl+K ile açılıyor', async ({ page }) => {
   await ac(page, 'fead-analysis');
+  const r = await page.evaluate(() => ({
+    ara: document.querySelectorAll('#ve-rb-strip .ve-bant-ara, #ve-rb-strip [data-qat="veCmdkOpen"]').length,
+    coz: document.querySelectorAll('#ve-rb-strip .ve-bant-ana, #ve-rb-strip [data-qat="veSolverRun"]').length,
+    metin: document.getElementById('ve-rb-strip').innerText }));
+  expect(r).toMatchObject({ ara: 0, coz: 0 });
+  expect(r.metin).not.toMatch(/Komut ara|Çözücü/);
   await expect(page.locator('#ve-cmdk-input')).toBeHidden();
-  await page.click('.ve-bant-ara');
+  await page.locator('#ve-canvas-wrapper').click({ position: { x: 40, y: 300 } });
+  await page.keyboard.press('Control+k');
   await expect(page.locator('#ve-cmdk-input')).toBeVisible();
 });
 
-// BANDIN TEK DOLU DÜĞMESİ: ikinci bir dolu düğme "asıl iş hangisi" sorusunu
-// geri getirirdi. Ölçüt renk adı değil ZEMİN — aksan jetonuyla boyanmış kaç
-// düğme var.
-test('bantta TEK dolu düğme var', async ({ page }) => {
+// DOLU DÜĞME YOK: bandın tek dolu düğmesi Çözücü'ydü ve kalktı (Canlı Not 24);
+// aksan zeminli bir düğme "asıl iş" diye okunur. Ölçüt renk adı değil ZEMİN.
+test('bantta dolu düğme yok', async ({ page }) => {
   await ac(page, 'fead-analysis');
   const n = await page.evaluate(() => {
     const aksan = getComputedStyle(document.documentElement)
@@ -111,7 +120,7 @@ test('bantta TEK dolu düğme var', async ({ page }) => {
     });
     return say;
   });
-  expect(n).toBe(1);
+  expect(n).toBe(0);
 });
 
 test('gövde kapalı olunca tuval KAZANIYOR', async ({ page }) => {
@@ -317,7 +326,7 @@ test('kayıtlı ad AÇILIŞTA avatara geliyor', async ({ page }) => {
 // oturuyordu — ikinci tık şerit yerine hesap menüsünü açıyordu (ölçüldü).
 test('şerit düğmesine basınca sağ küme KAYMIYOR ve düğme hâlâ altında', async ({ page }) => {
   await ac(page, 'fead-analysis');
-  const x = () => page.evaluate(() => ['.ve-bant-ara', '.ve-bant-ana', '#ve-bant-avatar', '#ve-rb-expand']
+  const x = () => page.evaluate(() => ['#ve-bant-avatar', '#ve-rb-expand']
     .map((s) => Math.round(document.querySelector(s).getBoundingClientRect().left)));
   const nokta = await page.evaluate(() => { const r = document.getElementById('ve-rb-expand').getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });

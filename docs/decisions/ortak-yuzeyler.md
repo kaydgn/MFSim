@@ -808,6 +808,13 @@ flex-start"*).
 arıyorum** (komut arama), **tek ana eylem** (Çöz). Şerit gövdesi varsayılan
 olarak **katlı** açılır.
 
+**2026-11-05 — komut arama ve Çözücü bantta YOK** (kullanıcı, Canlı Not 24:
+*"komut ara ve çözücü kısmına gerek yok. Kullanılmıyor zaten. Hele komutlar hiç
+kullanılmıyor."*). Bant artık yalnız **neredeyim** der. Komutların yolu kalır:
+palet Ctrl+K'de (kısayol penceresinde yazılı), Çözücü şeridin Giriş sekmesinde;
+şeridin palette kapsanması (aşağıdaki ön koşul) Ctrl+K için geçerliliğini korur.
+Kapı: `ust-bant.spec.js` → *KOMUT ARA YOK* · *dolu düğme yok*.
+
 **Ön koşul — ve meşruiyetin tamamı bu.** Gövdeyi kapatmak, ancak şeritteki her
 komut palette de bulunabiliyorsa meşru. Ölçüldü: şerit **42** komut, palet
 **30** — **on biri palette YOKTU** (sınır çerçevesi, kılavuzlar, Komuta

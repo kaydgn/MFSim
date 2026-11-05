@@ -2,8 +2,8 @@
 // BOŞ TUVAL — topolojinin boş durumu (ARAYÜZ ANLATMAZ → yönlendirme yuvası,
 // kullanıcı kararı 2026-10-19). Durum + tek yönlendirme cümlesi; kökte ayrıca
 // kısayol satırı — kısayol penceresinin listesinden (`_veHelpGroups`), elle
-// yazılmaz. Komut paleti satırda YOK: üst bant onu "Komut ara · Ctrl K" ile
-// zaten gösteriyor (tekrar).
+// yazılmaz. Komut paleti satırda YOK: kullanılmıyor (kullanıcı 2026-11-05, Canlı
+// Not 24 — bantta da yok; Ctrl+K kısayol penceresinde).
 //
 // Görünürlük kapsamdan ve modelden türer, bayrak tutulmaz:
 //   top              hiç düğüm yok
