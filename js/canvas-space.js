@@ -368,10 +368,14 @@ function veBoundaryChipPos(box, zoom, offset, chip, view) {
 // başlar: ölçü sekmenin kendi yerleşiminden (offset* — geçiş dönüşümü ve
 // paletin kapanma geçişi sayılmaz; anlık kap konumuyla ölçmek geçişin
 // ortasında 0 veriyordu).
+// Köşe hücresindeki düğme (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C)
+// tuvalin kabının DIŞINDA: örtmez, 0. Ölçü yalnız sekme kabın içindeyse.
 function veChipSolOrtu(wrap) {
   if(typeof document === 'undefined' || !wrap) return 0;
   var rv = document.getElementById('ve-sidebar-reveal');
   if(!rv || !(rv.offsetWidth > 0)) return 0;
+  var kab = wrap.closest ? wrap.closest('.ve-main') : null;
+  if(!kab || !kab.contains(rv)) return 0;
   return Math.max(0, Math.round((rv.offsetLeft || 0) + rv.offsetWidth));
 }
 

@@ -335,9 +335,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   Not**: program claude.ai'da açılır (Artifact; iframe'de karesiz tek dosya, 11,4 MB), kullanıcı
   üstüne çizip not yazar, not kayda (`db`) ve Claude'a gider; Claude sırayla uygular, notun
   satırına sonucun görüntüsünü koyar. Yeni program varlık deposuna ve `yayin/son`a gider: sayfa
-  KENDİLİĞİNDEN YENİLENMEZ, pencere sorar, Güncelle yükler (kullanıcı 2026-11-05). Protokol:
+  KENDİLİĞİNDEN YENİLENMEZ, pencere sorar, Güncelle yükler (kullanıcı 2026-11-05); şeridin
+  **Yenile**'si yalnız programı yeniden yükler, sayfa ve notlar yerinde, proje taşınır. Protokol:
   skill `canli-not`. Çıktı `.canli-not/` (git'e dâhil değil); `build.js`'in iki ortam değişkeni
   (`MFSIM_BUILD_OUT` · `MFSIM_KARSILAMA=yok`) bu yayın için. Kapı: `canli-not.test.js`.
+  **"Canlı Not'u getir"** (kullanıcı 2026-11-05: yeni oturumda *"aynı bu yapıda, aynı bu
+  şekilde, değişmeden"*): İLK iş skill `canli-not` → §0 *Açılış* — AYNI sayfa
+  (https://claude.ai/artifact/QGgtFrx2mV2ePnd7Lpjh91; yeni Artifact AÇILMAZ, her yayın
+  `url` ile), sahiplik kaydı (`oturum/aktif`: iki oturum aynı notu işlemez), yorum izleme,
+  program ve sayfanın güncelliği (`denetle`), kuyruk. Sonucun görüntüsü
+  `node tools/canli-not.js sonuc N` (kalıp elle yazılmaz).
 - `tools/step-deneme.js` + `tools/step-olcum.js` — **büyük deneme STEP'i** (CATIA kalıbında
   güç grubu, `npm run step:deneme -- --mb 420`) ve gerçek programda **STEP ölçümü** (okuma
   süresi ve evreleri · arayüzün donması · sekme belleği · 3B ağı örneklemi, `npm run
@@ -441,7 +448,7 @@ kuralıdır: FEAD'e dokunmayan bir oturum FEAD kayıtlarını ödemez.
 | FEAD (kayış-kasnak) | `fead` | `js/fead-*.js`, `js/cp-fead*.js`, `js/guide-fead.js` ya da FEAD testlerine dokunmadan **ÖNCE** |
 | Araç Performans (tam gaz) | `arac-performans` | `js/ft-performance.js`, `js/simulation-engine.js`, `js/numerics.js`, `js/cp-arac-*.js`, `js/cp-engine.js`, `js/cp-gearbox.js`, `js/cp-torque-converter.js`, `js/cp-matching.js`, `js/ft-obstacle.js`, `js/ft-segment-drive.js`, `assets/examples/ap_*.json` ya da Araç Performans testlerine dokunmadan **ÖNCE** |
 | Kullanım masası / geri bildirim | `kullanim` | Kullanıcı programı "kullan, geri bildirim ver" dediğinde, ya da `tools/kullanim*`, `tests/unit/kullanim-masa.test.js`'e dokunmadan **ÖNCE** |
-| Canlı Not (çizerek değişiklik isteği) | `canli-not` | Canlı Not sayfasından gelen "Not N · …" yorumuyla uyanınca, kullanıcı "notları uygula" deyince ya da `tools/canli-not*`, `tests/unit/canli-not.test.js`'e dokunmadan **ÖNCE** |
+| Canlı Not (çizerek değişiklik isteği) | `canli-not` | Kullanıcı "Canlı Not'u getir" deyince (yeni oturum: §0 *Açılış*), Canlı Not sayfasından gelen "Not N · …" yorumuyla uyanınca, kullanıcı "notları uygula" deyince ya da `tools/canli-not*`, `tests/unit/canli-not.test.js`'e dokunmadan **ÖNCE** |
 
 **Bu bir nezaket değil kapıdır.** Bu modüllerin hata sınıfı sessizdir — sayı
 yanlış çıkar, program çalışmaya devam eder, uyarı verilmez. Skill'i okumadan
@@ -585,9 +592,12 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   jetondan alır: `--bant-h` + `--bant-zemin`. Bandın başlığı altındaki
   sütunun sol kenarından başlar. Tuvalin kendi çerçevesi yok (çukur emekli):
   sınırı komşusunun çizgisidir. Ray kendi sütunu: palet ile arasında TEK
-  çizgi, bant satırı rayın başında köşe hücresiyle sürer. Kapı:
+  çizgi, bant satırı rayın başında köşe hücresiyle sürer. Bandın çizgisi
+  KESİNTİSİZ (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C): rayın çizgisi
+  bandın altından iner, aktif sekme düz (altı aksan), palet kapalıyken açma
+  düğmesi köşe hücresinde — tuvalin üstünde yüzen kart yok. Kapı:
   `kabuk-bant.test.js` + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* ·
-  *"RAY ÇERÇEVELİ"*.
+  *"RAY ÇERÇEVELİ"* · *"AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE"*.
 - **BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI.** `createNode` her düğümde
   `saveState()` çağırıyor; ONİKİ düğüm kuran bir kurucu (modül örneği,
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile

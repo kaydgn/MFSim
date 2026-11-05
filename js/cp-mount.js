@@ -2887,7 +2887,9 @@ function _mntAksoModelKur(g, mp, R, durum){
     var kutu=(C && C.equivalentBox) ? C.equivalentBox(mass, [[_mntNum(c.Ixx),0,0],[0,_mntNum(c.Iyy),0],[0,0,_mntNum(c.Izz)]], !!c.pointMass) : null;
     if(kutu) kutu=kutu.map(function(v){ return v*1000; });
     var pay=mTop>0 ? Math.max(0, mass)/mTop : 0, ad=String(c.name||'Gövde');
-    return { k:'g'+(i+1), id:c.id, no:String(i+1), ad:ad, m:mass, x:x, y:y, z:z, pay:pay, kutu:kutu, ana:false,
+    // braket: düğümün tipi; tipsiz girdide (örnek kaydı) adı
+    var braket=(c.tip!=null) ? c.tip==='mnt-bracket' : /braket|bracket|cradle/i.test(ad);
+    return { k:'g'+(i+1), id:c.id, no:String(i+1), ad:ad, m:mass, x:x, y:y, z:z, pay:pay, kutu:kutu, ana:false, braket:braket,
       bilgi:[(i+1)+' · '+ad, 'Kütle '+_mntS(mass, 1)+' kg (%'+_mntS(pay*100, 1)+')', 'CG '+_mntAksoKoord(x, y, z)+' mm',
         kutu ? 'Eşdeğer kutu '+kutu.map(function(v){ return _mntS(v, 0); }).join(' × ')+' mm'
              : (c.pointMass ? 'Nokta kütle' : 'Eşdeğer kutu yok')] };
@@ -2912,6 +2914,13 @@ function _mntAksoModelKur(g, mp, R, durum){
     if(pm && yuk!=null) bilgi.push('Statik yük '+_mntS(yuk, 1)+' kg · sehim '+_mntS(Math.abs(pm.delta[2]*1000), 2)+' mm');
     return { k:'T'+(i+1), id:t.id, no:'T'+(i+1), ad:ad, x:x, y:y, z:z, ks:ks, f:pm ? pm.f.slice() : null, yukKg:yuk, bilgi:bilgi };
   });
+  govde.forEach(function(b){
+    if(!b.braket || b.kutu) return;
+    var lv=_mntAksoBraketLevha(b, govde, takoz);
+    if(!lv) return;
+    b.levha=lv;
+    b.bilgi[3]=(lv.i===2 ? 'Eşdeğer kaide '+_mntS(lv.w, 0)+' × '+_mntS(lv.w, 0)+' × '+_mntS(lv.d, 0) : 'Eşdeğer köşebent '+_mntS(lv.d, 0)+' × '+_mntS(lv.w, 0)+' × '+_mntS(lv.t, 0))+' mm · çelik';
+  });
   var cg=(mp && mp.cg && mp.cg.every(Number.isFinite)) ? { x:mp.cg[0]*1000, y:mp.cg[1]*1000, z:mp.cg[2]*1000 } : null;
   var G=cg ? { x:cg.x, y:cg.y, z:cg.z, m:mHam,
     bilgi:['Birleşik CG', _mntAksoKoord(cg.x, cg.y, cg.z, 1)+' mm', 'Toplam kütle '+_mntS(mHam, 1)+' kg'] } : null;
@@ -2928,6 +2937,62 @@ function _mntAksoModelKur(g, mp, R, durum){
     modlar:(R && R.modes && R.modes.length) ? R.modes.map(function(md){ return { f:md.f_Hz, phi:md.phi, ad:kisa(md.label) }; }) : null,
     asal:asal, cozum:durum };
 }
+// BRAKET — KÖŞEBENT (kullanıcı 2026-11-05, Canlı Not 36: "braketlerin
+// görselleştirmesi güzel değil"): ataletsiz braket nokta değil, topolojideki
+// simgesi gibi bir L — AYAĞI en yakın takozun üstünde, KANADI gövdenin
+// yüzünde. Yön braketin CG'sinin takoza göre baskın ekseni; o yönde gövde
+// yoksa gövdeye varan sıradaki eksen (yön düşeyse gövdenin altına KAİDE);
+// ayağın boyu takozdan o yönde ilk gövde kutusunun yüzüne (hiçbir yönde
+// gövde yoksa CG uzaklığının iki katı), kanat ayakla eşit. Kesit kütleden (çelik ρ; köşebentte genişlik =
+// `oran` × kalınlık, kaidede kare). Atalet girilmiş braket eşdeğer
+// kutusuyla çizilir (Siper, Asfat); erimde takoz yoksa nokta kalır.
+// Kapı: mount-akso.test.js → BRAKET.
+var VE_MNT_AK_BRAKET = { erim:400, ro:7.85e-6, oran:3, enAz:20 };   // mm · kg/mm³ · w/t · mm
+function _mntAksoBraketLevha(b, govde, takoz){
+  var E=VE_MNT_AK_BRAKET, B=[b.x, b.y, b.z];
+  var uz=function(p, q){ return Math.sqrt(Math.pow(p[0]-q[0], 2)+Math.pow(p[1]-q[1], 2)+Math.pow(p[2]-q[2], 2)); };
+  var T=null, dT=E.erim;
+  takoz.forEach(function(t){ var p=[t.x, t.y, t.z], d=uz(p, B); if(d<=dT){ dT=d; T={ p:p, k:t.k }; } });
+  if(!T || !(b.m>0)) return null;
+  var kutular=govde.filter(function(g){ return g!==b && !g.braket && g.kutu; }).map(function(g){
+    var c=[g.x, g.y, g.z]; return { k:g.k, lo:c.map(function(v, i){ return v-g.kutu[i]/2; }), hi:c.map(function(v, i){ return v+g.kutu[i]/2; }) }; });
+  // Yön: CG'nin takoza göre baskın ekseni; CG takozun üstündeyse en yakın kutuya
+  var D=[B[0]-T.p[0], B[1]-T.p[1], B[2]-T.p[2]];
+  if(Math.sqrt(D[0]*D[0]+D[1]*D[1]+D[2]*D[2])<10){
+    var en=null, ed=Infinity;
+    kutular.forEach(function(q){ var p=T.p.map(function(v, i){ return Math.max(q.lo[i], Math.min(q.hi[i], v)); }), d=uz(p, T.p); if(d<ed){ ed=d; en=p; } });
+    D=en ? [en[0]-T.p[0], en[1]-T.p[1], en[2]-T.p[2]] : [0, 0, 1];
+  }
+  // Takozdan (eksen ii, yön ss) ilk kutunun yüzü — kesiti takozu içeren kutu
+  var isin=function(ii, ss){
+    var en=null;
+    kutular.forEach(function(q){
+      for(var k=0;k<3;k++) if(k!==ii && (T.p[k]<q.lo[k] || T.p[k]>q.hi[k])) return;
+      var y=(ss>0 ? q.lo[ii]-T.p[ii] : T.p[ii]-q.hi[ii]);
+      if(y>0 && y<=E.erim && (!en || y<en.d)) en={ d:y, k:q.k };
+    });
+    return en;
+  };
+  // Yön sırası: CG'nin baskın ekseni önce (kendi işaretiyle); o yönde gövde
+  // yoksa sıradaki eksen, hiçbirinde yoksa en yakın yüz (altı yön) — Tulga'nın
+  // sağ arka braketi takozun 29 mm üstünde, gövdesi yanında
+  var sira=[0, 1, 2].sort(function(a, c){ return Math.abs(D[c])-Math.abs(D[a]); });
+  var i=sira[0], s=D[i]<0 ? -1 : 1, d=null, hedef=null, vur=null;
+  sira.forEach(function(ii){ if(vur || !(Math.abs(D[ii])>1)) return; var ss=D[ii]<0 ? -1 : 1, h=isin(ii, ss); if(h){ vur=h; i=ii; s=ss; } });
+  if(!vur) [0, 1, 2].forEach(function(ii){ [-1, 1].forEach(function(ss){ var h=isin(ii, ss); if(h && (!vur || h.d<vur.d)){ vur=h; i=ii; s=ss; } }); });
+  if(vur){ d=vur.d; hedef=vur.k; }
+  else d=Math.max(60, Math.min(E.erim, 2*Math.abs(D[i])));
+  if(d<E.enAz) return null;
+  var V=b.m/E.ro, lv={ takoz:T.k, govde:hedef, T:T.p.slice(), i:i, s:s, d:d, ro:E.ro };
+  if(i===2){ lv.w=lv.t=Math.sqrt(V/d); lv.h=0; lv.vz=s; }
+  else {
+    lv.h=d; lv.vz=(B[2]-T.p[2]<-5) ? -1 : 1;
+    var t=Math.sqrt(V/(E.oran*2*d));
+    for(var n=0;n<30;n++){ var t2=Math.sqrt(V/(E.oran*(2*d+0.5*t))); if(Math.abs(t2-t)<1e-12){ t=t2; break; } t=t2; }
+    lv.t=t; lv.w=E.oran*t;
+  }
+  return lv;
+}
 // İŞARET BOYU (kullanıcı 2026-10-16: "takoz ve bileşenlerin ağırlık
 // merkezlerinin görünümü biraz ufak olmuş"): pencerede ×1,5; daha geniş
 // çizimde (geniş sütun, tam ekran) genişliğin kareköküyle en çok √2 kat daha.
@@ -2943,7 +3008,8 @@ function _mntAksoLejant(m, b, sec){
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-g" d="M5 1 L9 3 L5 5 L1 3 Z"/><path class="ve-ak-lj-gy" d="M1 3 L5 5 L5 9 L1 7 Z"/><path class="ve-ak-lj-gx" d="M5 5 L9 3 L9 7 L5 9 Z"/></svg>gövde · eşdeğer kutu</span>'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-ak-lj-t" x="2" y="2" width="6" height="6" rx="1"/></svg>takoz · T</span>'
     + '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-G" cx="5" cy="5" r="3.6"/></svg>G · birleşik CG</span>'
-    + (m.govde.some(function(g){ return !g.kutu; }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-n" cx="5" cy="5" r="2"/></svg>nokta kütle</span>' : '')
+    + (m.govde.some(function(g){ return g.braket && (g.levha || g.kutu); }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-br" d="M2 1.5 H4.6 V6.6 H8.8 V9 H2 Z"/></svg>braket</span>' : '')
+    + (m.govde.some(function(g){ return !g.kutu && !g.levha; }) ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><circle class="ve-ak-lj-n" cx="5" cy="5" r="2"/></svg>nokta kütle</span>' : '')
     + (b.z>0 ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><path class="ve-ak-lj-gol" d="M1 6 L5 4 L9 6 L5 8 Z"/></svg>Z = 0\'a düşen iz</span>' : '')
     + (sec ? '<span><svg viewBox="0 0 10 10" aria-hidden="true"><rect class="ve-ak-lj-sec" x="1.5" y="1.5" width="7" height="7" rx="1.5"/></svg>bu bileşen</span>' : '')
     + '</div>';
@@ -4453,7 +4519,8 @@ function _mntGatherForSolver(solver, liste){
     var def=_mntDef(n)||{};
     if(def.isMountBody){
       var d=n.data||{};
-      masses.push({ id:n.id, name:_mntNodeName(n), mass:d.mass, cgx:d.cgx, cgy:d.cgy, cgz:d.cgz, Ixx:d.Ixx, Iyy:d.Iyy, Izz:d.Izz, Ixy:d.Ixy, Ixz:d.Ixz, Iyz:d.Iyz, pointMass:!!d.pointMass });
+      // tip: aksonometrinin braketi (eşdeğer levha, _mntAksoBraketLevha) — çözüme girmez
+      masses.push({ id:n.id, name:_mntNodeName(n), tip:n.type, mass:d.mass, cgx:d.cgx, cgy:d.cgy, cgz:d.cgz, Ixx:d.Ixx, Iyy:d.Iyy, Izz:d.Izz, Ixy:d.Ixy, Ixz:d.Ixz, Iyz:d.Iyz, pointMass:!!d.pointMass });
     } else if(def.isMount){
       var m=n.data||{};
       mounts.push({ id:n.id, name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
@@ -5260,7 +5327,7 @@ if(typeof module!=='undefined' && module.exports){
     getMntReportPropertiesHTML: getMntReportPropertiesHTML,
     _mnt2DPencereVeri: _mnt2DPencereVeri,
     _mntAksoModel: _mntAksoModel,
-    veMntAksoOrnekModel: veMntAksoOrnekModel,
+    veMntAksoOrnekModel: veMntAksoOrnekModel, _mntAksoLejant: _mntAksoLejant,
     veMntAksoCozumModel: veMntAksoCozumModel,
     _mntAksoHTML: _mntAksoHTML,
     _mntAksoKur: _mntAksoKur, _mntAkso3bHizli: _mntAkso3bHizli, _mntAksoOdak: _mntAksoOdak, _mntFoyOdak: _mntFoyOdak,

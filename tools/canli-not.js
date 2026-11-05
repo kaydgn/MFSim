@@ -22,11 +22,13 @@
  *       deposuna yüklenir; bu komut kaydın `yayin/son` belgesini yazar (künye ·
  *       varlık · uygulanan notlar). Açık sayfa sorar, Güncelle yükler.
  *
- *   node tools/canli-not.js denetle <yayin-son.json | yayındaki mfsim.html>
+ *   node tools/canli-not.js denetle <yayin-son.json | yayındaki mfsim.html | yayındaki sayfa>
  *       Yayındaki programın künyesi ↔ origin/main: güncel · geride (kaç
  *       birleşme, programın girdileri değişti mi). Belge ArtifactData'dan
  *       (`get yayin son`, out_dir); belge yoksa sayfanın dosyası
- *       (`Artifact read url:<adres> path:mfsim.html`).
+ *       (`Artifact read url:<adres> path:mfsim.html`). SAYFANIN kendisi
+ *       (`Artifact read url:<adres>`'in kaydettiği dosya) verilirse: bugünkü
+ *       şablon ve çekirdekle aynı mı (ayar satırı hariç) — değilse sayfayı yayınla.
  *
  *   node tools/canli-not.js liste <döküm> [--hepsi]
  *       ArtifactData `list notlar` (out_dir) dökümündeki notlar sırayla;
@@ -38,7 +40,17 @@
  *       kullanıcının çizimi kırmızı olarak üstüne konur. --kirp çizimin
  *       çevresini, --ogeler seçilen öğelerin kutularını (mavi kesikli) verir.
  *
- * Protokol (yayın, sıra, durum, yanıt): skill `canli-not`.
+ *   node tools/canli-not.js sonuc <N> [--modul takoz|fead|arac] [--ornek <anahtar>]
+ *                           [--hazirlik <betik.js>] [--secici <css> | --alan x,y,g,y] [--pay 12]
+ *                           [--ekran 1440x900] [--dosya MFSim_Code.html] [--cikti <png>]
+ *       Uygulanan notun SONUÇ görüntüsü (2×): tek dosya (npm run build), file://,
+ *       ağsız. Giriş, karşılama ve modüle giriş kendiliğinden; --ornek Takoz
+ *       örneğini kurar; --hazirlik sayfada koşan async gövde (yüzeyi açar,
+ *       `bekle(ms)` hazır); --secici o öğenin kutusu (+pay), --alan ekranın
+ *       bir bölgesi (CSS px), ikisi de yoksa ekranın tamamı. Çıktı
+ *       .canli-not/sonuc/not-N.png; CSS px ölçüsü `sonuc {g, y}` için.
+ *
+ * Protokol (açılış, yayın, sıra, durum, yanıt): skill `canli-not`.
  */
 const fs = require('fs');
 const path = require('path');
@@ -71,13 +83,47 @@ function ayristir(argv) {
     else if (a === '--ogeler') o.ogeler = true;
     else if (a === '--hepsi') o.hepsi = true;
     else if (a === '--dal') o.dal = true;
+    else if (a === '--dosya') o.dosya = path.resolve(deger());
+    else if (a === '--modul') o.modul = deger();
+    else if (a === '--ornek') o.ornek = deger();
+    else if (a === '--hazirlik') o.hazirlik = path.resolve(deger());
+    else if (a === '--secici') o.secici = deger();
+    else if (a === '--pay') o.pay = Number(deger());
+    else if (a === '--ekran') o.ekran = ekranAyristir(deger());
+    else if (a === '--alan') o.alan = alanAyristir(deger());
     else if (a === '--help' || a === '-h') o.yardim = true;
     else if (a.startsWith('--')) throw new Error('bilinmeyen bayrak: ' + a);
     else o.konum.push(a);
   }
   if (o.olcek !== undefined && !(o.olcek >= 1 && o.olcek <= 3)) throw new Error('--olcek 1–3 olmalı');
+  if (o.modul !== undefined && !MODUL_GIRIS[o.modul]) throw new Error('--modul: ' + Object.keys(MODUL_GIRIS).join(' · '));
+  if (o.ornek !== undefined && o.modul !== 'takoz') throw new Error('--ornek yalnız --modul takoz ile (Takoz örneği)');
+  if (o.pay !== undefined && !(o.pay >= 0 && o.pay <= 200)) throw new Error('--pay 0–200 px olmalı');
+  if (o.alan && o.secici) throw new Error('--alan ile --secici birlikte olmaz');
   return o;
 }
+
+function alanAyristir(s) {
+  const p = String(s).split(',').map((x) => Number(x.trim()));
+  if (p.length !== 4 || p.some((v) => !Number.isFinite(v)) || p[0] < 0 || p[1] < 0 || !(p[2] > 0 && p[3] > 0)) {
+    throw new Error('--alan x,y,g,y olmalı (CSS px; örnek 0,0,520,220)');
+  }
+  return { x: p[0], y: p[1], width: p[2], height: p[3] };
+}
+
+function ekranAyristir(s) {
+  const m = /^(\d{3,4})x(\d{3,4})$/.exec(String(s));
+  if (!m) throw new Error('--ekran GxY olmalı (örnek 1440x900)');
+  return { width: Number(m[1]), height: Number(m[2]) };
+}
+
+// Modüle giriş: kart tipi + açıcı (programın kendi işlevleri — adları
+// canli-not.test.js → SONUÇ kaynağa karşı tutar).
+const MODUL_GIRIS = {
+  takoz: { tip: 'mount-analysis', ac: 'veMntOpenEditor' },
+  fead: { tip: 'fead-analysis', ac: 'veFeadOpenEditor' },
+  arac: { tip: 'arac-performans', ac: 'veAracOpenEditor' }
+};
 
 // "6,8-21" → [6, 8, 9, …, 21]; bozuk parça SESSİZCE düşmez.
 function notlarAyristir(s) {
@@ -194,9 +240,31 @@ function guncellikHukmu(yayin, anaSha, birlesmeler, degisen) {
   return { durum: degisen.length ? 'program' : 'kunye', yayinla: degisen.length > 0, birlesmeler: birlesmeler, degisen: degisen };
 }
 
+// Yayındaki SAYFA bugünkü kaynaktan mı: şablon + çekirdek, ayar satırı (sürüm ·
+// zaman · boyut) hariç bayt bayt. Sayfanın kendi künyesi ayardan okunur.
+const SAYFA_AYAR_YERI = '__CANLI_NOT_AYAR__';
+function sayfaHukmu(metin, sablon, cekirdek) {
+  const m = /var AYAR = (\{[^\n]*?\}) \|\| \{\};/.exec(metin);
+  let ayar = null;
+  try { ayar = m ? JSON.parse(m[1]) : null; } catch (e) { ayar = null; }
+  const kur = sayfaKur(sablon, cekirdek, SAYFA_AYAR_YERI), j = kur.indexOf('"' + SAYFA_AYAR_YERI + '"');
+  const on = kur.slice(0, j), arka = kur.slice(j + SAYFA_AYAR_YERI.length + 2);
+  const a = metin.indexOf(on), b = a < 0 ? -1 : metin.indexOf(arka, a + on.length);
+  let guncel = a >= 0 && b >= 0;
+  if (guncel) { try { JSON.parse(metin.slice(a + on.length, b)); } catch (e) { guncel = false; } }
+  return { guncel: guncel, ayar: ayar };
+}
+
 function denetle(o) {
-  if (!o.konum[0]) throw new Error('yayin/son belgesi ya da yayındaki mfsim.html gerekli');
+  if (!o.konum[0]) throw new Error('yayin/son belgesi, yayındaki mfsim.html ya da yayındaki sayfa gerekli');
   const dosya = path.resolve(o.konum[0]), metin = fs.readFileSync(dosya, 'utf8');
+  if (/<title>MFSim Canlı Not<\/title>/.test(metin) && metin.indexOf('window.__MFSIM_BUILD') < 0) {
+    const h = sayfaHukmu(metin, fs.readFileSync(SABLON, 'utf8'), fs.readFileSync(CEKIRDEK, 'utf8'));
+    const kunye = h.ayar && h.ayar.surum ? h.ayar.surum + (h.ayar.pr ? ' · PR #' + h.ayar.pr : '') : '?';
+    console.log(h.guncel ? 'Sayfa güncel · yayındaki sayfa bugünkü kaynakla aynı (yayın ' + kunye + ')'
+      : 'Sayfa ESKİ · yayındaki sayfa (' + kunye + ') bugünkü kaynaktan farklı → sayfayı yeniden yayınla (skill §1)');
+    return h;
+  }
   const k = /\.json$/i.test(dosya) ? yayinOku(JSON.parse(metin)) : kunyeOku(metin);
   const ana = anaDal();
   let birlesmeler = [], degisen = null;
@@ -392,6 +460,70 @@ async function goruntu(o) {
   return cikti;
 }
 
+// ── sonuç ──────────────────────────────────────────────────────────────────
+// Uygulanan notun görüntüsü (skill §2 · 6) — her oturumun elle yazdığı
+// Playwright kalıbının yerine (kullanıcı 2026-11-05: "aynı bu yapıda, aynı bu
+// şekilde, değişmeden canlı not özelliğinin o sessiona gelmesini istiyorum").
+// Giriş js/auth.js'in özetiyle (sabit yazılmaz), yükleyici otomasyonda beklemez.
+function girisAnahtari() {
+  const m = /MFSIM_AUTH_HASH\s*=\s*'([0-9a-f]{64})'/.exec(fs.readFileSync(path.join(KOK, 'js', 'auth.js'), 'utf8'));
+  if (!m) throw new Error('js/auth.js: MFSIM_AUTH_HASH okunamadı');
+  return m[1];
+}
+
+async function sonuc(o) {
+  const no = Number(o.konum[0]);
+  if (!(Number.isInteger(no) && no > 0)) throw new Error('not numarası gerekli (örnek: sonuc 36)');
+  const dosya = o.dosya || path.join(KOK, 'MFSim_Code.html');
+  if (!fs.existsSync(dosya)) throw new Error((path.relative(KOK, dosya) || dosya) + ' yok — önce npm run build');
+  const hazirlik = o.hazirlik ? fs.readFileSync(o.hazirlik, 'utf8') : '';
+  const cikti = o.cikti || path.join(KOK, '.canli-not', 'sonuc', 'not-' + no + '.png');
+  fs.mkdirSync(path.dirname(cikti), { recursive: true });
+  const { chromium } = require('playwright');
+  const tarayici = await chromium.launch(tarayiciYolu() ? { executablePath: tarayiciYolu() } : {});
+  const hatalar = [];
+  let olcu = null;
+  try {
+    const sayfa = await tarayici.newPage({ viewport: o.ekran || { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+    sayfa.on('pageerror', (e) => hatalar.push(String(e && e.message ? e.message : e)));
+    sayfa.on('dialog', (d) => d.accept());
+    await sayfa.route(/^https?:/, (r) => r.abort());
+    await sayfa.addInitScript((a) => { try { localStorage.setItem('mfsim_auth_token', a); } catch (e) { /* özel pencere */ } }, girisAnahtari());
+    await sayfa.goto('file://' + dosya);
+    await sayfa.waitForFunction(() => typeof window.createNode === 'function', null, { timeout: 120000 });
+    await sayfa.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
+    await sayfa.waitForFunction(() => { const e = document.getElementById('mfsim-loading-screen'); return !e || e.style.display === 'none'; }, null, { timeout: 120000 });
+    if (o.modul) {
+      await sayfa.evaluate((g) => { const n = createNode(g.tip, 400, 300); window[g.ac](n.id); }, MODUL_GIRIS[o.modul]);
+      await sayfa.waitForTimeout(700);
+    }
+    if (o.ornek) {
+      await sayfa.evaluate((k) => veMntOrnekYukle(k), o.ornek);
+      await sayfa.waitForTimeout(900);
+    }
+    if (hazirlik) await sayfa.evaluate('(async () => { const bekle = (ms) => new Promise((r) => setTimeout(r, ms));\n' + hazirlik + '\n})()');
+    await sayfa.waitForTimeout(600);
+    const secenek = { path: cikti };
+    if (o.alan) secenek.clip = o.alan;
+    if (o.secici) {
+      const k = await sayfa.evaluate((sc) => { const e = document.querySelector(sc); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }, o.secici);
+      if (!k || !(k[2] > 0 && k[3] > 0)) throw new Error('--secici görünür öğe bulmadı: ' + o.secici);
+      const pay = o.pay !== undefined ? o.pay : 12, vp = sayfa.viewportSize();
+      const x = Math.max(0, k[0] - pay), y = Math.max(0, k[1] - pay);
+      secenek.clip = { x: x, y: y, width: Math.min(vp.width - x, k[2] + 2 * pay), height: Math.min(vp.height - y, k[3] + 2 * pay) };
+    }
+    await sayfa.screenshot(secenek);
+    const c = secenek.clip || sayfa.viewportSize();
+    olcu = { g: Math.round(c.width), y: Math.round(c.height) };
+  } finally {
+    await tarayici.close();
+  }
+  console.log('Not ' + no + ' sonucu → ' + (path.relative(KOK, cikti) || cikti) + ' · ' + olcu.g + ' × ' + olcu.y +
+    ' CSS px (sonuc: { g: ' + olcu.g + ', y: ' + olcu.y + ' })');
+  if (hatalar.length) console.log('! sayfa hatası: ' + hatalar.slice(0, 3).join(' | '));
+  return { cikti: cikti, olcu: olcu, hatalar: hatalar };
+}
+
 // Yardım, dosyanın baş yorumunun kendisi (yorum büyüyünce kesilmesin).
 const YARDIM = (() => {
   const s = fs.readFileSync(__filename, 'utf8'), a = s.indexOf('/**'), b = s.indexOf('*/', a);
@@ -406,7 +538,8 @@ async function ana(argv) {
   if (o.komut === 'yayin') return yayin(o);
   if (o.komut === 'liste') return liste(o);
   if (o.komut === 'goruntu') return goruntu(o);
-  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · yayin · denetle · liste · goruntu)');
+  if (o.komut === 'sonuc') return sonuc(o);
+  throw new Error('bilinmeyen komut: ' + o.komut + ' (hazirla · yayin · denetle · liste · goruntu · sonuc)');
 }
 
 if (require.main === module) {
@@ -414,4 +547,4 @@ if (require.main === module) {
 }
 
 module.exports = { ayristir, notlarAyristir, kopruGom, sayfaKur, govde, notlariOku, listeSatiri, fotoAc, kunyeOku,
-  yayinKaydi, yayinOku, guncellikHukmu, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };
+  yayinKaydi, yayinOku, guncellikHukmu, sayfaHukmu, girisAnahtari, ekranAyristir, alanAyristir, MODUL_GIRIS, GIRDILER, CEKIRDEK_CAPA, AYAR_CAPA, SINIR };

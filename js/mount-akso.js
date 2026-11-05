@@ -43,7 +43,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // MODEL (m):
-//   govde : [{ k, no, ad, m [kg], x, y, z [mm], kutu:[a,b,c] mm | null, pay, ana, bilgi:[satır] }]
+//   govde : [{ k, no, ad, m [kg], x, y, z [mm], kutu:[a,b,c] mm | null, pay, ana, bilgi:[satır],
+//            braket, levha:{ takoz:k, govde:k|null, T:[x,y,z], i, s, d, h, t, w [mm], vz } | null }
 //   takoz : [{ k, no, ad, x, y, z, ks:[N/mm ×3], f:[N ×3] | null, yukKg | null, bilgi:[satır] }]
 //   G     : { x, y, z, m, bilgi:[satır] }
 //   cgR   : [x, y, z] mm — mod şekli ve statik dengenin dönme merkezi (çözümün G'si)
@@ -159,6 +160,35 @@ var veMntAkso = (function(){
     return out;
   }
   function yuzSinif(f){ return f.eks===2 ? (f.s>0 ? 'f-ust' : 'f-alt') : (f.eks===0 ? 'f-x' : 'f-y'); }
+  // ── BRAKET: köşebent ya da kaide (kullanıcı 2026-11-05, Canlı Not 36) ───
+  // Model `g.levha` (cp-mount.js → _mntAksoBraketLevha): takozun noktası T,
+  // yön ekseni i ve işareti s, ayağın boyu d (takozdan gövdenin yüzüne),
+  // kanat h, kalınlık t, genişlik w, düşey yön vz. Parçalar EKSEN HİZALI
+  // kutular: köşebentte AYAK (takozun üstünde, T'nin w/2 gerisinden kanada) ve
+  // KANAT (gövdenin yüzünde), kaidede tek kutu. Takozun küpü bir işaret (px
+  // boylu): braket onun ÜSTÜNE oturur (hm: küpün yarı boyu, mm).
+  function levhaParca(lv, hm){
+    var T=lv.T, i=lv.i, s=lv.s, vz=lv.vz, out=[];
+    var kutu=function(lo, hi, ad){ var c=[0, 1, 2].map(function(k){ return (lo[k]+hi[k])/2; }), h=[0, 1, 2].map(function(k){ return Math.abs(hi[k]-lo[k])/2; }); out.push({ c:c, h:h, ad:ad }); };
+    var ara=function(a, b){ return [Math.min(a, b), Math.max(a, b)]; };
+    if(i===2){
+      var z0=T[2]+s*Math.min(hm, 0.5*lv.d), z1=T[2]+s*lv.d, zz=ara(z0, z1);
+      kutu([T[0]-lv.w/2, T[1]-lv.w/2, zz[0]], [T[0]+lv.w/2, T[1]+lv.w/2, zz[1]], 'kaide');
+      return out;
+    }
+    var j=1-i, z=T[2]+vz*Math.min(hm, 0.4*lv.h);
+    var ayak=ara(T[i]-s*lv.w/2, T[i]+s*(lv.d-lv.t)), kanat=ara(T[i]+s*(lv.d-lv.t), T[i]+s*lv.d);
+    var za=ara(z, z+vz*lv.t), zk=ara(z, z+vz*lv.h);
+    var p=function(ui, zr, lo){ var q=[0, 0, 0]; q[i]=ui[lo ? 0 : 1]; q[j]=T[j]+(lo ? -1 : 1)*lv.w/2; q[2]=zr[lo ? 0 : 1]; return q; };
+    kutu(p(ayak, za, true), p(ayak, za, false), 'ayak');
+    kutu(p(kanat, zk, true), p(kanat, zk, false), 'kanat');
+    return out;
+  }
+  // Köşebendin iki parçası: ayıran düzlemin izleyici tarafındaki SONRA (d
+  // izdüşüm yönü, izleyiciden sahneye; ayak −s, kanat +s tarafta).
+  function levhaSira(lv, parca, d){
+    return (lv.i!==2 && lv.s*d[lv.i]>0) ? parca.slice().reverse() : parca;
+  }
   // ── GİZLİ YÜZEY: nokta (takoz, nokta kütle) ↔ eksen hizalı kutu {c, h} ──
   // Önde: noktanın dışında kaldığı yüzlerden biri izleyiciye dönük. Kutunun
   // İÇİNDEKİ nokta en yakın yüzünde sayılır (yuzey); gövde yüzeyi için katı.
@@ -498,13 +528,27 @@ var veMntAkso = (function(){
     var kutu2B=function(c, h){ var sp=[]; yuzler(c, h).forEach(function(f){ f.pts.forEach(function(p){ sp.push(P(p)); }); }); return sar(sp); };
     var ortusur=function(a, c){ return a.l<c.r && c.l<a.r && a.t<c.b && c.t<a.b; };
     var kutSira=kut.slice().sort(function(a, c){ return K.derin(a.c)-K.derin(c.c); });
-    var isaret=nok.map(function(g){ return { g:g, k:g.k, p:[g.x, g.y, g.z] }; })
-      .concat(m.takoz.map(function(t){ return { t:t, k:t.k, p:[t.x, t.y, t.z] }; }));
+    // BRAKET takozuyla birlikte sıralanır ve çizilir: kapladığı yer takozun
+    // yerine katılır, ayrı işaret değildir.
+    // levhaK: parçaların sarıcı kutusu — yazının yeri ve örtülme sınaması (CG
+    // gövdenin yüzünde olabilir: Tulga'nın ön kaidesi motorun alt yüzünde)
+    var levhaP={}, levhaK={}, takozBr={};
+    nok.forEach(function(g){
+      if(!(g.levha && m.takoz.some(function(t){ return t.k===g.levha.takoz; }))) return;
+      var pp=levhaP[g.k]=levhaParca(g.levha, hm), lo=[Infinity, Infinity, Infinity], hi=[-Infinity, -Infinity, -Infinity];
+      pp.forEach(function(q){ for(var i=0;i<3;i++){ lo[i]=Math.min(lo[i], q.c[i]-q.h[i]); hi[i]=Math.max(hi[i], q.c[i]+q.h[i]); } });
+      levhaK[g.k]={ c:[0, 1, 2].map(function(i){ return (lo[i]+hi[i])/2; }), h:[0, 1, 2].map(function(i){ return (hi[i]-lo[i])/2; }) };
+      (takozBr[g.levha.takoz]=takozBr[g.levha.takoz]||[]).push(g);
+    });
+    var levha2B=function(g){ var sp=[]; levhaP[g.k].forEach(function(q){ yuzler(q.c, q.h).forEach(function(f){ f.pts.forEach(function(p){ sp.push(Ph(p)); }); }); }); return sar(sp); };
+    var isaret=nok.filter(function(g){ return !levhaP[g.k]; }).map(function(g){ return { g:g, k:g.k, p:[g.x, g.y, g.z] }; })
+      .concat(m.takoz.map(function(t){ return { t:t, k:t.k, p:[t.x, t.y, t.z], br:takozBr[t.k] || [] }; }));
     var liste;
     if(kati){
       var kb=kutSira.map(function(q){ return kutu2B(q.c, q.h); });
       isaret.forEach(function(s){
         var r=3.6*ik, q2=P(s.p), iz=s.g ? { l:q2[0]-r, t:q2[1]-r, r:q2[0]+r, b:q2[1]+r } : kutu2B(s.p, [hm, hm, hm]);
+        (s.br || []).forEach(function(g){ var k2=levha2B(g); iz={ l:Math.min(iz.l, k2.l), t:Math.min(iz.t, k2.t), r:Math.max(iz.r, k2.r), b:Math.max(iz.b, k2.b) }; });
         var lo=-1, hi=kutSira.length, taban=0, d=K.derin(s.p);
         s.gizli=kutSira.some(function(q){ return kutuOrter(K, s.p, q, true); });
         kutSira.forEach(function(q, j){
@@ -518,6 +562,8 @@ var veMntAkso = (function(){
         s.yer=lo<hi ? Math.max(lo+1, Math.min(hi, taban)) : (s.gizli ? hi : lo+1);
         if(s.gizli) gizliK[s.k]=true;
       });
+      // takozuyla çizilen braketin yazısı ortası örtülüyse yok (gövdenin ardındaki braket)
+      nok.forEach(function(g){ if(levhaK[g.k] && kutSira.some(function(q){ return kutuOrter(K, levhaK[g.k].c, q, true); })) gizliK[g.k]=true; });
       // bütünüyle örtülü gövde: görünen yüzlerinin 5×5 ızgarası başka kutuların ardında
       // (kenardaki ince şerit de görünür sayılır: Tulga'da Şanzıman önden %11)
       var IZG=[0.02, 0.26, 0.5, 0.74, 0.98];
@@ -542,7 +588,26 @@ var veMntAkso = (function(){
         .sort(function(a, c){ return a.d-c.d; })
         .concat(isaret.filter(function(s){ return s.t; }).sort(function(a, c){ return K.derin(a.p)-K.derin(c.p); }));
     }
+    // Braket: parçaları eksen hizalı kutu, gövdelerin ışığında ve çelik tonunda
+    // (`ve-ak-br`); X-ışınında cam, CG işaretiyle. Yazı braketin üstüne binmez
+    // (gövdenin hafif engeli değil: küçük parça).
+    var gizliT={};
+    var braketCiz=function(g){
+      var xr=(stil==='xray'), h='<g class="ve-ak-g ve-ak-br '+(xr ? 'xray' : 'golge')+'"'+ak(g.k, g.bilgi)+'>';
+      levhaSira(g.levha, levhaP[g.k], K.d).forEach(function(q){
+        yuzler(q.c, q.h).filter(function(f){ return K.gorunur(f.n); }).forEach(function(f){ h+='<path class="'+(xr ? 'f-cam' : yuzSinif(f))+'" d="M'+yol(f.pts, Ph)+' Z"/>'; });
+      });
+      koy(g.k, h+'</g>');
+      var kb2=levha2B(g); kb2.a=sec(g.k) ? 1 : 0.3;
+      if(!gizliT[g.levha.takoz] || sec(g.k)) engel.push(kb2);
+      if(xr){
+        var am=Ph([g.x, g.y, g.z]), ar=2.2*ik, ac=3.8*ik;
+        koy(g.k, '<g class="ve-ak-amk"'+ak(g.k)+'><circle cx="'+R(am[0])+'" cy="'+R(am[1])+'" r="'+R(ar)+'"/><path d="M'+R(am[0]-ac)+' '+R(am[1])+' H'+R(am[0]+ac)+' M'+R(am[0])+' '+R(am[1]-ac)+' V'+R(am[1]+ac)+'"/></g>');
+        engel.push({ l:am[0]-4*ik, t:am[1]-4*ik, r:am[0]+4*ik, b:am[1]+4*ik });
+      }
+    };
     liste.forEach(function(it){
+      if(it.t) gizliT[it.t.k]=!!it.gizli;
       if(it.g){
         var gq=Ph([it.g.x, it.g.y, it.g.z]);
         // Seçili nokta kütle büyür: aydınlık dolgusu (CSS) 2,4·ik'lik noktada
@@ -554,17 +619,20 @@ var veMntAkso = (function(){
         return;
       }
       if(it.t){
-        // Takoz: küçük küp (izdüşümün kendi ekseniyle).
+        // Takoz: küçük küp (izdüşümün kendi ekseniyle). Üstündeki braket küpten
+        // sonra çizilir (izleyici braketin tarafındaysa), değilse önce.
         var t=it.t, tc=hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z];
         var TY=yuzler(tc, [hm, hm, hm]).filter(function(f){ return K.gorunur(f.n); });
+        it.br.filter(function(g){ return g.levha.vz*K.d[2]>0; }).forEach(braketCiz);
         koy(t.k, '<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+TY.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>');
+        it.br.filter(function(g){ return g.levha.vz*K.d[2]<=0; }).forEach(braketCiz);
         var tq=P(tc), te=sec(t.k) ? 12*ik : 7*ik;
         if(!it.gizli || sec(t.k)) engel.push({ l:tq[0]-te, t:tq[1]-te, r:tq[0]+te, b:tq[1]+te });
         if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(tq[0])+'" cy="'+R(tq[1])+'" r="'+R(10*ik)+'"/>';
         return;
       }
       var q=it.q, g=q.g, Y=yuzler(q.c, q.h);
-      var h='<g class="ve-ak-g '+(stil==='xray' ? 'xray' : 'golge')+(g.ana ? ' ana' : '')+'"'+ak(g.k, g.bilgi)+'>';
+      var h='<g class="ve-ak-g '+(stil==='xray' ? 'xray' : 'golge')+(g.ana ? ' ana' : '')+(g.braket ? ' ve-ak-br' : '')+'"'+ak(g.k, g.bilgi)+'>';
       var gor=Y.filter(function(f){ return K.gorunur(f.n); });
       if(stil==='xray'){
         gor.forEach(function(f){ h+='<path class="f-cam" d="M'+yol(f.pts, Ph)+' Z"/>'; });
@@ -706,6 +774,8 @@ var veMntAkso = (function(){
     if(kat.golge && !kat.duvar && b.z>0){
       var gl='';
       kut.forEach(function(q){ var c=q.c, h=q.h; gl+='<path class="ve-ak-gol"'+ak(q.g.k)+' d="M'+yol([[c[0]-h[0], c[1]-h[1], 0], [c[0]+h[0], c[1]-h[1], 0], [c[0]+h[0], c[1]+h[1], 0], [c[0]-h[0], c[1]+h[1], 0]])+' Z"/>'; });
+      nok.forEach(function(g){ (levhaP[g.k] || []).forEach(function(q){ var c=q.c, h=q.h;
+        gl+='<path class="ve-ak-gol"'+ak(g.k)+' d="M'+yol([[c[0]-h[0], c[1]-h[1], 0], [c[0]+h[0], c[1]-h[1], 0], [c[0]+h[0], c[1]+h[1], 0], [c[0]-h[0], c[1]+h[1], 0]])+' Z"/>'; }); });
       s.push(gl);
     }
     // ── DİREKLER: takozun Z = 0'a düşeyi, tabanda izi ──────────────────────
@@ -789,7 +859,7 @@ var veMntAkso = (function(){
       // dar çizimde uzun ad kısalır (tam adı ipucunda): "Motor — Cummins …" → "Motor"
       var kisalt=function(ad){ return (dar && ad.indexOf(' — ')>0) ? ad.split(' — ')[0] : ((dar && ad.length>24) ? ad.slice(0, 22)+'…' : ad); };
       var yukari=b.z>0 ? [2, 4, 5, 0, 1, 3, 6, 7] : [3, 6, 7, 0, 1, 2, 4, 5];
-      kut.concat(nok.map(function(g){ return { g:g, c:[g.x, g.y, g.z], h:[0, 0, 0] }; })).forEach(function(q){
+      kut.concat(nok.map(function(g){ return levhaK[g.k] ? { g:g, c:levhaK[g.k].c, h:levhaK[g.k].h } : { g:g, c:[g.x, g.y, g.z], h:[0, 0, 0] }; })).forEach(function(q){
         var g=q.g, sec=(_secili!=null && g.k===_secili);
         if(yalniz ? !sec : !(sec || g.ana || etk==='genis')) return;
         if(!sec && gizliK[g.k]) return;

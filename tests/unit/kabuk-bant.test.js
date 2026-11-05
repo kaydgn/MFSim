@@ -197,11 +197,21 @@ describe('ŞERİT BANDI İNCE — 32 px, gövde aynı boyda', () => {
 // sayfasında saydam yapılmıştı (`html.ve-sayfa-tuval .ve-nav-rail`) ve paletin
 // bandı rayın kenarında havada başlıyordu. Çizimin kendisi:
 // kabuk-sutun.spec.js → "RAY ÇERÇEVELİ".
+// 2026-11-05 (kullanıcı seçimi, Canlı Not 33 · C): çizgi bandın ALTINDAN başlar
+// — rayın kenarlığı değil, bandın alt çizgisinden aşağı inen `::after`.
 describe('RAY KENDİ SÜTUNU — palet ile arasında TEK çizgi', () => {
-  test('rayın sağ kenarında çizgi var ve hiçbir kural onu kaldırmıyor', () => {
-    expect(kural('.ve-nav-rail')).toMatch(/border-right:\s*1px solid var\(--border-color\)/);
-    // Seçici hangi önekle yazılırsa yazılsın (sayfa bayrağı, medya sorgusu).
-    expect(CSS).not.toMatch(/\.ve-nav-rail\s*\{[^}]*border-right(?:-color|-width)?:\s*(?:transparent|none|0)\b/);
+  test('rayın sağında çizgi var, bant satırını kesmiyor; hiçbir kural onu kaldırmıyor', () => {
+    const c = kural('.ve-nav-rail::after');
+    expect(c).toMatch(/content:\s*""/);
+    expect(c).toMatch(/right:\s*0/);
+    expect(c).toMatch(/top:\s*calc\(var\(--bant-h\) - 1px\)/);
+    expect(c).toMatch(/bottom:\s*0/);
+    expect(c).toMatch(/width:\s*1px/);
+    expect(c).toMatch(/background:\s*var\(--border-color\)/);
+    expect(kural('.ve-nav-rail')).toMatch(/position:\s*relative/);
+    // Kenarlık çizgisi yok (bant satırını keserdi); çizgiyi kaldıran kural da yok.
+    expect(kural('.ve-nav-rail')).not.toMatch(/border-right:/);
+    expect(CSS).not.toMatch(/\.ve-nav-rail::after\s*\{[^}]*(?:display:\s*none|background:\s*(?:transparent|none))/);
     // Çizgi TEK: paletin sol kenarı yok.
     expect(kural('.ve-sidebar')).not.toMatch(/border-left:/);
   });

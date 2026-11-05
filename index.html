@@ -327,6 +327,14 @@
       </button>
     </nav>
 
+    <!-- Bileşenler paneli kapalıyken rayın KÖŞE HÜCRESİNDE beliren açma düğmesi
+         (kullanıcı 2026-11-05, Canlı Not 33 · C: tuvalin üstünde yüzen kart yok).
+         Rayın tablist'inde değil, onun üstünde: sekme değil, bir düğme. -->
+    <button id="ve-sidebar-reveal" class="ve-sidebar-reveal" type="button" onclick="veToggleSidebar()" title="Bileşenler panelini aç" aria-label="Bileşenler panelini aç">
+      <span class="mf-ico mf-ico-package"></span>
+      <span class="mf-ico mf-ico-chevrons-right ve-sidebar-reveal-arrow"></span>
+    </button>
+
     <!-- Ana İçerik -->
     <div class="ve-main" id="ve-page-topoloji" role="tabpanel" aria-label="Topoloji">
 
@@ -791,12 +799,6 @@
 
         </div>
       </div>
-
-      <!-- Bileşenler paneli kapalıyken sol kenarda beliren açma rayı -->
-      <button id="ve-sidebar-reveal" class="ve-sidebar-reveal" onclick="veToggleSidebar()" title="Bileşenler panelini aç" aria-label="Bileşenler panelini aç">
-        <span class="mf-ico mf-ico-package"></span>
-        <span class="mf-ico mf-ico-chevrons-right ve-sidebar-reveal-arrow"></span>
-      </button>
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
