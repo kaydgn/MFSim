@@ -74,17 +74,26 @@ function _veBasIkon(ad){ return (typeof veIkon === 'function') ? veIkon(ad) : ''
 //      kilavuz (kılavuz kimliği; verilmezse düğme yok) }. `kilavuzIcinde`:
 // Kılavuz başlığın sağında (sütun); masada panelin dibinde (veBasKilavuzHTML).
 // `ikonsuz`: masada ikonun yerinde dönüş düğmesi durur — verilse de basılmaz.
-function veBasKimlikHTML(i, kilavuzIcinde, ikonsuz){
+// `donus` (sütun — Canlı Not 30 · 31, kullanıcı 2026-11-05: *"geri gelme butonunun
+// yerini değiştirelim. Ana ekranın uygun bir yerine taşıyalım"*): dönüş Kılavuz'un
+// yanında, adıyla; köşedeki dönüş düğmesi gizli (kabın `.ve-bas-donus-acik` sınıfı).
+function veBasKimlikHTML(i, kilavuzIcinde, ikonsuz, donus){
   if(!i || !i.ad) return '';
   var y = (i.yetenekler || []).filter(Boolean);
+  var eylem = kilavuzIcinde ? (donus ? _veBasDonusHTML(donus) : '') + veBasKilavuzHTML(i) : '';
   return '<header class="ve-bas-kimlik">'
     + (i.ikon && !ikonsuz ? '<span class="ve-bas-kimlik-ik" aria-hidden="true">' + i.ikon + '</span>' : '')
     + '<div class="ve-bas-kimlik-t"><h1>' + veBasEsc(i.ad) + '</h1>'
     + (y.length ? '<ul class="ve-bas-yetenek" aria-label="Analizler">'
         + y.map(function(a){ return '<li>' + veBasEsc(a) + '</li>'; }).join('') + '</ul>' : '')
     + '</div>'
-    + (kilavuzIcinde ? veBasKilavuzHTML(i) : '')
+    + (eylem ? '<div class="ve-bas-kimlik-eylem">' + eylem + '</div>' : '')
     + '</header>';
+}
+// Ana topolojiye dönüş düğmesi — masada panelin dibinde, sütunda kimliğin sağında
+function _veBasDonusHTML(d){
+  return '<button type="button" class="ve-bas-donus" data-ey="donus" aria-label="Ana topolojiye dön">'
+    + _veBasIkon('chevrons-left') + '<span>' + veBasEsc((d && d.ad) || 'Ana topoloji') + '</span></button>';
 }
 
 // Kılavuz düğmesi: masada panelin dibinde, sütunda kimliğin sağında.
@@ -187,7 +196,7 @@ function veBasSatirHTML(r, acik){
 
 // ── SAYFA ──────────────────────────────────────────────────────────────────
 // s: { duzen ('masa' | 'sutun'), kimlik, veriler:[…], kapilar:[kapı…],
-//      donus:{ ad } (masa — panelin altındaki dönüş), degisiklik:{ baslik, kayitlar } (masa),
+//      donus:{ ad } (masa: panelin altında · sütun: kimliğin sağında), degisiklik:{ baslik, kayitlar } (masa),
 //      bolumler:[{ baslik, sekme (masa — sekmenin adı), satirlar:[satır…] (masa) | karolar:[karo…] (sütun) }] }
 // Tek bölüm `bolum` olarak da verilebilir (FEAD). Boş bölüm basılmaz.
 // Masa: panel (kimlik · kapılar · veri · örnekler · dönüş ve Kılavuz) · masa (son
@@ -211,7 +220,7 @@ function _veBasIlkSatir(s){
 }
 function _veBasSutunHTML(s){
   var h = '<div class="ve-bas-ic ve-bas-ic--sutun">'
-    + veBasKimlikHTML(s.kimlik, true)
+    + veBasKimlikHTML(s.kimlik, true, false, s.donus)
     + veBasVeriHTML(s.veriler)
     + '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>';
   _veBasBolumler(s).forEach(function(b){
@@ -266,10 +275,7 @@ function veBasOrnekHTML(bolumler, ac, sekmeV){
 function veBasAltHTML(s){
   var d = s && s.donus, k = veBasKilavuzHTML(s && s.kimlik);
   if(!d && !k) return '';
-  return '<div class="ve-bas-dip">'
-    + (d ? '<button type="button" class="ve-bas-donus" data-ey="donus" aria-label="Ana topolojiye dön">'
-        + _veBasIkon('chevrons-left') + '<span>' + veBasEsc(d.ad || 'Ana topoloji') + '</span></button>' : '')
-    + k + '</div>';
+  return '<div class="ve-bas-dip">' + (d ? _veBasDonusHTML(d) : '') + k + '</div>';
 }
 // SON DEĞİŞİKLİKLER (masa, Canlı Not 6): d = { baslik, kayitlar:[{ tarih, baslik, pr, ayrinti }] }
 // — modülün dosyalarına dokunan son birleşmeler (derlemenin künyesi). Kayıt yoksa

@@ -79,12 +79,14 @@ olurdu.
    açılıyordu; ölçüldü: ekranın %77'si, ilk karede "7 eksik/çelişkili girdi".
    Sayfa (`js/cp-fead-baslangic.js`) tuvali örter: üç kapı (Sihirbazla kur ·
    STEP'ten başla · Boş çizim masası) + Gates raporlarının kayış yolları.
-   • **Üstü AD ve VERİ** (2026-10-19, kullanıcı: *"çok sade olmuş …
-     profesyonel dursun"*): modülün adı, analizlerin programdaki adları
-     (Kayış Yolu + Sonuçlar'ın hazır diyagramları), kataloğun SAYILARI
-     (profil · stok boy · gergi · motor · aksesuar · çevrim — kataloğun
-     kendisinden; elle yazılan sayı katalogla bayatlar) ve kapının künyesi
-     (sihirbazın rayı, dosya seçicinin kabul listesi). Okunan sabit üst
+   • **Üstü AD**: modülün adı, Kılavuz ve **Ana topoloji** (kimliğin sağında) ve
+     kapının künyesi (sihirbazın rayı, dosya seçicinin kabul listesi).
+     **Analiz adları ve kataloğun sayı bandı YOK** (kullanıcı 2026-11-05, Canlı
+     Not 32: *"Gereksiz açıklamaları kaldır … O kutucukları tamamen kaldır"* —
+     2026-10-19'da eklenmişlerdi; Takoz'un Not 5 · 19'unun aynısı). **Dönüş
+     başlıkta** (Canlı Not 30 · 31: köşedeki « modülden habersiz çıkarıyordu):
+     kite sayfanın MODELİ verilir (`sayfa: veFeadBaslangicSayfa`), dönüşü
+     taşıdığını oradan okur ve köşedeki düğmeyi gizler. Okunan sabit üst
      seviye `var` olmak zorunda — tarayıcı `window`dan okur, `const` satırı
      SESSİZCE düşürür. Kapı: `fead-baslangic.test.js` → *KİMLİK VE VERİ*.
    • **Görünüm ve DOM ORTAK KİTTEN** (`js/baslangic-sayfa.js` · `.ve-bas*`,
@@ -106,7 +108,8 @@ olurdu.
      rapor karosu TEK TIKLA `veFeadLoadExample`. Sayfa açıkken sayfa rayı gizli
      (kitin iki düzende ortak kuralı). Kapı: `fead-baslangic.test.js` → *SÜTUN DÜZENİ*.
    • **Sayfa açıkken FEAD araçları penceresi gizli** (`_feadAracBaslangic`:
-     kapsam ve tazeleme tek soru yeri); dönüş düğmesi (z 60) sayfanın üstünde.
+     kapsam ve tazeleme tek soru yeri); köşedeki dönüş düğmesi gizli, dönüş
+     sayfanın başlığında.
    • Kurulum kanvasta boş kart bulursa (Boş çizim masası) onu geometri kartı
      olarak DEVRALIR ve yuvasını alır — devralmasa üç çizim olurdu (ölçüldü).
    • Kasnağı olmayan kartta durum rozeti ÇİZİLMEZ: arıza değil başlangıç.

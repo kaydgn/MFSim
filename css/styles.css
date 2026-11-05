@@ -11522,6 +11522,9 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
   transition:border-color var(--dur-base) var(--ease-out);
 }
 .ve-bas-ic--sutun .ve-bas-kilavuz{ align-self:flex-start; justify-content:normal; gap:6px; height:30px; }
+/* Sütunda dönüş Kılavuz'un yanında (Canlı Not 30 · 31): ikisi kimliğin sağında, aynı boyda */
+.ve-bas-kimlik-eylem{ flex:none; align-self:flex-start; display:flex; gap:8px; }
+.ve-bas-ic--sutun .ve-bas-donus{ height:30px; gap:6px; }
 .ve-bas-kilavuz:hover{ border-color:var(--border-hover); }
 .ve-bas-kilavuz:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-bas-kilavuz .mf-ico{ width:15px; height:15px; }

@@ -50,9 +50,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/baslangic-sayfa.js` — **ortak başlangıç sayfası kiti** (`.ve-bas*`): FEAD ile
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
-  söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi; Takoz'da sayı
-  bandı ve analiz adları YOK — kullanıcı 2026-11-05, Canlı Not 5 · 19); sayı
-  kaynağından ölçülür, analiz adı programdaki adıdır. Düzeni modül beyan eder
+  söyler. Yuvaları AD ve VERİ (kimlik · kapı künyesi; sayı bandı ve analiz adları
+  İKİ MODÜLDE DE YOK — kullanıcı 2026-11-05, Canlı Not 5 · 19 · 32; kitin yuvası
+  duruyor, kullanan yok). Düzeni modül beyan eder
   (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-05, Canlı Not 6: solda
   panel — kimlik · kapılar · örneklerin SEKMELİ dizini (Araçlar · Kurgu) · altta dönüş
   ve Kılavuz; sağda modülün SON DEĞİŞİKLİKLERİ, derlemenin künyesinden: Takoz
@@ -67,8 +67,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   sütun, karo tek tıkla kurar). İki düzen aynı yuvaları aynı sınıflarla basar; ölçü farkı
   düzenin CSS kapsamında (`.ve-bas-ic--masa|--sutun`). Sayfa açıkken sayfa rayı
   (Topoloji · Sonuçlar), "Bileşenler" sütunu ve açma sekmesi gizli, iki düzende
-  (kullanıcı 2026-11-05, Canlı Not 22: seçenek seçilmeden palet yok); dönüşü panelde
-  taşıyan sayfa (`donus`) açıkken köşedeki dönüş düğmesi de gizli. Kapı:
+  (kullanıcı 2026-11-05, Canlı Not 22: seçenek seçilmeden palet yok); dönüşü taşıyan
+  sayfa (`donus` — masada panelin altında, sütunda kimliğin sağında, Canlı Not 30 · 31)
+  açıkken köşedeki dönüş düğmesi de gizli. Kapı:
   `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE VERİ* · *DİZİN* · *ÇALIŞMA
   MASASI* · *RAY* + `version-embed.test.js` → *modülün listesi* + `fead-baslangic.test.js`
   → *SÜTUN DÜZENİ*.
