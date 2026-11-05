@@ -415,7 +415,7 @@
       --fs-h1:      1.5rem;     /* 24px — karşılama başlığı */
       --fs-display: 2rem;       /* 32px — açılış/marka */
       --fs-hero:    2.5rem;     /* 40px — açılış logosu */
-      --fs-sinema:  3.25rem;    /* 52px — açılış markası (sinema bandı); logoya --fs-h2'ye küçülerek iner */
+      --fs-sinema:  3.25rem;    /* 52px — açılış markası (sinema bandı); karşılamaya --fs-display'e küçülerek iner */
       --leading-tight: 1.25;
       --leading-normal: 1.5;
       --tracking-wide: 0.04em;
@@ -2600,15 +2600,16 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-kesik-ic::-webkit-scrollbar-thumb{
   background:color-mix(in srgb, var(--sinema-yazi) 24%, transparent);
 }
-/* Marka: açılış markasıyla AYNI boy, aile, ağırlık ve em-iz (başlık
-   bağlaması) — devir teslimde marka küçülmeden iner, yalnız yer değiştirir.
-   Çarkın boyu da açılıştakinin oranı. */
+/* Marka: açılış markasıyla AYNI aile, ağırlık ve em-iz (başlık bağlaması);
+   boyu KÜÇÜK (kullanıcı 2026-11-05, Canlı Not 2: "çok büyük duruyor") —
+   devir teslimde marka ölçeklenerek iner (js/components.js → uçuşun
+   ölçeği hedefin boyundan). Çarkın boyu açılıştakinin oranı. */
 .ve-welcome-logo{
   flex:none;
   display:flex;
   align-items:center;
-  gap:14px;
-  font-size:var(--fs-sinema);
+  gap:10px;
+  font-size:var(--fs-display);
   font-weight:700;
   line-height:1;
   /* tracking başlık bağlamasından (-0.01em) */
@@ -2621,11 +2622,11 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-tagline{
   flex:none;
-  margin-top:12px;
-  font-size:var(--fs-md);
-  font-weight:500;
+  margin-top:8px;
+  font-size:var(--fs-body);
+  font-weight:400;
   line-height:1.25;
-  letter-spacing:0.03em;
+  letter-spacing:0.02em;
   color:var(--sinema-yazi-2);
 }
 /* Cetvel YOK (kullanıcı 2026-11-05, Canlı Not 1: "modüller arasında gezerken
