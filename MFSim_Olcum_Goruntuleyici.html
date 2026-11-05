@@ -1645,6 +1645,8 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   display:flex;
   flex-direction:row;
   overflow:hidden;
+  position:relative;   /* köşe hücresindeki açma düğmesinin kabı */
+  --ray-w:64px;        /* rayın ve köşe hücresinin genişliği */
 }
 
 /* ===== SAYFA RAYI (activity bar) ===== */
@@ -1656,7 +1658,7 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
    → ~%20 pay. Inter yüklü değilse yedek sistem fontuna (Segoe UI / genel sans)
    düşülür ve o metrikler daha geniştir; 58px'te etiket tam sınıra oturuyordu. */
 .ve-nav-rail{
-  width:64px;
+  width:var(--ray-w);
   flex-shrink:0;
   display:flex;
   flex-direction:column;
@@ -1664,9 +1666,20 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   gap:2px;
   padding:0 4px 6px;
   background:var(--bg-secondary);
-  border-right:1px solid var(--border-color);
+  position:relative;
 }
-/* KÖŞE HÜCRESİ — bant satırı rayın başında da sürer. Kabuğun üst bandı
+/* RAYIN ÇİZGİSİ BANDIN ALTINDAN BAŞLAR (kullanıcı seçimi 2026-11-05, Canlı Not
+   33 · C: *"dikdörtgen çerçeve kesitleri kesişiyor, böyle garip bir sürü çizgi
+   var"*): palet ile arasındaki TEK çizgi (2026-09-28) duruyor, ama bant
+   satırını kesmiyor — köşe hücresi ile bandın alt çizgisi ekranın sol
+   kenarından tuvale kadar kesintisiz, dikey çizgi o çizgiden aşağı iner.
+   Kapı: kabuk-sutun.spec.js → "RAY ÇERÇEVELİ". */
+.ve-nav-rail::after{
+  content:""; position:absolute; right:0; top:calc(var(--bant-h) - 1px); bottom:0;
+  width:1px; background:var(--border-color); pointer-events:none;
+}
+/* KÖŞE HÜCRESİ — bant satırı rayın başında da sürer; panel kapalıyken
+   Bileşenler'in açma düğmesi burada (Canlı Not 33 · C). Kabuğun üst bandı
    (--bant-h) paletin, sekmelerin ve müfettişin başında duruyor; rayın başı
    boştu ve "Bileşenler" bandı rayın kenarında havada başlıyordu (kullanıcı,
    2026-09-28: "arası garip duruyor, bir çerçevesi yok"). Köşe hücresiyle
@@ -1818,19 +1831,22 @@ body.ve-no-module #ve-ribbon{ display:none; }
   position:relative;
 }
 
-/* Modül seçim overlay'i görünürken sidebar + açma rayı tamamen gizlenir.
-   Sınıf veObserveModuleOverlay() tarafından otomatik yönetilir. */
+/* Modül seçim overlay'i görünürken sidebar + açma düğmesi tamamen gizlenir.
+   Sınıf veObserveModuleOverlay() tarafından otomatik yönetilir (düğme köşe
+   hücresinde, .ve-main'in dışında: sınıf kabından okunur). */
 .ve-main.ve-no-module .ve-sidebar,
-.ve-main.ve-no-module .ve-sidebar-reveal{
+#sayfa2-content.ve-no-module .ve-sidebar-reveal{
   display:none !important;
 }
+/* Öteki sayfada (Sonuçlar) paletin açma düğmesi yok: palet Topoloji'nin. */
+html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
 /* PALETSİZ KAPSAM — modül `componentDefs.noPalette` beyan ediyorsa İÇ
    topolojisinde "Bileşenler" sütunu da açma rayı da yok; tuval o genişliği
    alır. Sınıfı kapsamın tek noktası yazar (js/components.js ›
    veSyncPaletsizKapsam). İlk kullanıcısı FEAD (2026-09-28): ekleme kartın
    içinden. Kapı: kabuk-sutun.spec.js → "PALETSİZ KAPSAM". */
 .ve-main.ve-paletsiz .ve-sidebar,
-.ve-main.ve-paletsiz .ve-sidebar-reveal{
+#sayfa2-content.ve-paletsiz .ve-sidebar-reveal{
   display:none !important;
 }
 
@@ -1888,36 +1904,33 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-sidebar.compact .ve-sidebar-collapse-btn,
 .ve-sidebar.compact .ve-sidebar-title{ display:none; }
 
-/* Sol kenardaki açma rayı (panel kapalıyken belirir) */
+/* AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C):
+   panel kapalıyken rayın başındaki bant hücresinde belirir — tuvalin sol
+   kenarında yüzen, kenarlıklı ve gölgeli kart emekli. Hücrenin alt çizgisi
+   örtülmez (boy bant − 1 px). Görünürlüğü veToggleSidebar yazar (.visible). */
 .ve-sidebar-reveal{
   position:absolute;
-  left:0; top:40px;        /* canvas üstündeki sekme çubuğunun (~26px) altında durur */
-  z-index:150;            /* modül seçim overlay'inin (100) üstünde kalsın */
+  left:0; top:0;
+  z-index:150;
+  width:var(--ray-w); height:calc(var(--bant-h) - 1px);
+  box-sizing:border-box;
   display:none;            /* yalnızca daraltılmışken flex */
-  flex-direction:column;
+  flex-direction:row;
   align-items:center;
-  gap:7px;
-  padding:9px 7px;
-  background:var(--bg-secondary);
-  border:1px solid var(--border-color);
-  border-left:none;
+  justify-content:center;
+  gap:6px;
+  padding:0;
+  background:transparent;
+  border:none;
   color:var(--text-secondary);
   cursor:pointer;
-  box-shadow:2px 2px 10px var(--shadow-color);
-  transform:translateX(-100%);
   opacity:0;
-  transition:transform 0.18s cubic-bezier(0.4,0,0.2,1),
-             opacity 0.2s ease,
-             background 0.15s, color 0.15s, border-color 0.15s;
+  transition:opacity 0.18s ease, background 0.15s, color 0.15s;
 }
-.ve-sidebar-reveal.visible{
-  transform:translateX(0);
-  opacity:1;
-}
+.ve-sidebar-reveal.visible{ opacity:1; }
 .ve-sidebar-reveal:hover{
   background:var(--bg-tertiary);
   color:var(--accent-primary);
-  border-color:var(--accent-primary);
 }
 .ve-sidebar-reveal .mf-ico{ font-size:var(--fs-title); }
 .ve-sidebar-reveal .ve-sidebar-reveal-arrow{ font-size:var(--fs-md); opacity:0.55; }
@@ -2493,23 +2506,27 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-tab:hover{
   color:var(--text-primary);
   background:var(--bg-tertiary);
+  box-shadow:inset 0 -1px 0 var(--border-color);   /* bandın çizgisi kesilmez */
 }
+/* AKTİF SEKME DÜZ (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C): kutusuz,
+   bandın zemininde; altını aksan çizer, bandın alt çizgisi kesintisiz. Eski
+   "kutulu sekme bandın çizgisini örter, tuvale bağlanır" (2026-09-23) emekli.
+   Kapı: kabuk-sutun.spec.js → "KABUK TEK ÇİZGİ". */
 .ve-tab.active{
   color:var(--text-heading);
-  background:var(--bg-primary);
-  border-color:var(--border-color);
+  background:transparent;
+  border-color:transparent;
+  box-shadow:none;
   font-weight:600;
 }
-/* Aktif sekmenin üstünde aksan bar — canvas'a bağlanma sinyali */
 .ve-tab.active::before{
   content:"";
   position:absolute;
-  left:-1px;
-  right:-1px;
-  top:-1px;
+  left:10px;
+  right:10px;
+  bottom:0;
   height:2px;
   background:var(--accent-primary);
-  border-radius:var(--radius-xs) var(--radius-xs) 0 0;
 }
 .ve-tab .ve-tab-close{
   width:15px;
@@ -10318,6 +10335,12 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-amk circle{ fill:var(--bg-input); stroke:var(--accent-warning); stroke-width:1; }
 .ve-ak-amk path{ fill:none; stroke:var(--accent-warning); stroke-width:.9; }
 .ve-ak-nokta{ fill:var(--accent-warning); }
+/* Braket — eşdeğer levha (Canlı Not 36): gövdeden koyu çelik tonu, aynı ışık */
+.ve-ak-g.ve-ak-br path{ stroke:color-mix(in srgb, var(--text-primary) 62%, var(--bg-input)); stroke-width:.7; }
+.ve-ak-g.ve-ak-br .f-ust{ fill:color-mix(in srgb, var(--text-muted) 30%, var(--bg-input)); }
+.ve-ak-g.ve-ak-br .f-y{ fill:color-mix(in srgb, var(--text-muted) 50%, var(--bg-input)); }
+.ve-ak-g.ve-ak-br .f-x{ fill:color-mix(in srgb, var(--text-muted) 64%, var(--bg-input)); }
+.ve-ak-g.ve-ak-br .f-alt{ fill:color-mix(in srgb, var(--text-muted) 74%, var(--bg-input)); }
 .ve-ak-t path{ stroke:var(--bg-input); stroke-width:.6; stroke-linejoin:round; }
 .ve-ak-t .t-z{ fill:color-mix(in srgb, var(--accent-success) 50%, var(--bg-input)); }
 .ve-ak-t .t-y{ fill:var(--accent-success); }
@@ -10384,6 +10407,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-ak-lj-t{ fill:var(--accent-success); }
 .ve-ak-lj-G{ fill:var(--bg-input); stroke:var(--accent-danger); stroke-width:1.4; }
 .ve-ak-lj-n{ fill:var(--accent-warning); }
+.ve-ak-lj-br{ fill:color-mix(in srgb, var(--text-muted) 50%, var(--bg-input)); stroke:var(--text-secondary); stroke-width:.6; stroke-linejoin:round; }
 .ve-ak-lj-gol{ fill:color-mix(in srgb, var(--text-muted) 30%, transparent); }
 .ve-ak-lj-kv{ stroke:var(--accent-success); stroke-width:1.9; }
 /* GÖRÜNÜMLER TEK GÖRÜNÜM (kullanıcı kararı 2026-10-16): Görünüş, Katmanlar,
@@ -11727,7 +11751,9 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-donus-acik .ve-arac-breadcrumb{
 .ve-bas-satir-kutle{ grid-column:2; grid-row:2; font-size:var(--fs-tiny); }
 .ve-bas-satir-kutle::before{ content:"·"; margin-right:6px; font-weight:400; color:var(--text-muted); }
 /* SON DEĞİŞİKLİKLER (masa, Canlı Not 6): modülün son birleşmeleri — tarih · başlık · PR */
-.ve-bas-degisiklik{ max-width:760px; }
+/* Masada ortada (Canlı Not 34, kullanıcı 2026-11-05: *"pencerenin soluna yaslanmış gibi.
+   Ortalayalım"*) */
+.ve-bas-degisiklik{ width:100%; max-width:760px; margin:0 auto; }
 .ve-bas-degisiklik h2{ margin:0 0 12px; font-size:var(--fs-md); font-weight:600; color:var(--text-heading); }
 .ve-bas-degisiklik ol{ list-style:none; margin:0; padding:0; }
 .ve-bas-degisiklik > ol{ border-top:1px solid var(--border-color); }
@@ -11749,7 +11775,9 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-bas-degisiklik-s.acik .ve-bas-degisiklik-bas{ background:var(--bg-secondary); }
 .ve-bas-degisiklik-t, .ve-bas-degisiklik-pr{ font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-bas-degisiklik-t{ color:var(--text-secondary); }
-.ve-bas-degisiklik-ad{ min-width:0; color:var(--text-primary); }
+/* Satırın başlığı BAŞLIK gibi (Canlı Not 35: *"yazı mı, başlık mı belli olmuyor"*): bir
+   boy büyük, kalın, başlık renginde; ayrıntının konusu gövde boyunda, paragraf soluk */
+.ve-bas-degisiklik-ad{ min-width:0; font-size:var(--fs-md); font-weight:600; line-height:1.4; color:var(--text-heading); }
 .ve-bas-degisiklik-pr{ color:var(--text-muted); }
 /* Ayrıntı: birleşmenin commit'leri — konu kalın, gövdenin paragrafları altında;
    başlığın sütununda başlar (28 + 88 + 14 px) */
