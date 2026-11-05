@@ -271,19 +271,43 @@ function veBasAltHTML(s){
         + _veBasIkon('chevrons-left') + '<span>' + veBasEsc(d.ad || 'Ana topoloji') + '</span></button>' : '')
     + k + '</div>';
 }
-// SON DEĞİŞİKLİKLER (masa, Canlı Not 6): d = { baslik, kayitlar:[{ tarih, baslik, pr }] }
+// SON DEĞİŞİKLİKLER (masa, Canlı Not 6): d = { baslik, kayitlar:[{ tarih, baslik, pr, ayrinti }] }
 // — modülün dosyalarına dokunan son birleşmeler (derlemenin künyesi). Kayıt yoksa
 // masa boş: bilinmeyen liste yazılmaz. Başlık PR'ın başlığı, programın metni
 // DEĞİL (`data-ve-dis-metin` — sayı ve metin taramaları atlar).
+// Satırın ayrıntısı (Canlı Not 23, kullanıcı 2026-11-05: *"Son değişikliklere
+// tıkladığım zaman detaylarını okuyabilmem lazım"*): `ayrinti` = [{ konu, govde:[paragraf…] }]
+// — birleşmenin commit'leri. Ayrıntısı olan satır açılıp kapanır (`data-ey="degisiklik"`),
+// olmayan düz satır; birden çok satır açık kalabilir, açıklık görünüm durumu.
 function veBasDegisiklikHTML(d){
   var L = ((d && d.kayitlar) || []).filter(function(k){ return k && k.baslik; });
   if(!L.length) return '';
   return '<section class="ve-bas-degisiklik" aria-label="' + veBasEsc(d.baslik || 'Son değişiklikler') + '"><h2>'
-    + veBasEsc(d.baslik || 'Son değişiklikler') + '</h2><ol>' + L.map(function(k){
-      return '<li><span class="ve-bas-degisiklik-t">' + veBasEsc(k.tarih || '') + '</span>'
+    + veBasEsc(d.baslik || 'Son değişiklikler') + '</h2><ol>' + L.map(function(k, i){
+      var bas = '<span class="ve-bas-degisiklik-t">' + veBasEsc(k.tarih || '') + '</span>'
         + '<span class="ve-bas-degisiklik-ad" data-ve-dis-metin>' + veBasEsc(k.baslik) + '</span>'
-        + (k.pr ? '<span class="ve-bas-degisiklik-pr">#' + veBasEsc(k.pr) + '</span>' : '') + '</li>';
+        + (k.pr ? '<span class="ve-bas-degisiklik-pr">#' + veBasEsc(k.pr) + '</span>' : '');
+      var ay = (k.ayrinti || []).filter(function(a){ return a && a.konu; });
+      if(!ay.length) return '<li><div class="ve-bas-degisiklik-bas">' + bas + '</div></li>';
+      return '<li class="ve-bas-degisiklik-s" data-v="' + i + '">'
+        + '<button type="button" class="ve-bas-degisiklik-bas" data-ey="degisiklik" data-v="' + i + '" aria-expanded="false">'
+        + _veBasIkon('chevron-right') + bas + '</button>'
+        + '<div class="ve-bas-degisiklik-ayrinti" data-ve-dis-metin hidden><ol>' + ay.map(function(a){
+            return '<li><b>' + veBasEsc(a.konu) + '</b>' + (a.govde || []).map(function(p){
+              return '<div class="ve-bas-degisiklik-p">' + veBasEsc(p) + '</div>';
+            }).join('') + '</li>';
+          }).join('') + '</ol></div></li>';
     }).join('') + '</ol></section>';
+}
+function _veBasDegAc(el, v){
+  var li = el && el.querySelector('.ve-bas-degisiklik-s[data-v="' + v + '"]');
+  if(!li) return false;
+  var ac = !li.classList.contains('acik');
+  li.classList.toggle('acik', ac);
+  var b = li.querySelector('.ve-bas-degisiklik-bas'), a = li.querySelector('.ve-bas-degisiklik-ayrinti');
+  if(b) b.setAttribute('aria-expanded', ac ? 'true' : 'false');
+  if(a) a.hidden = !ac;
+  return true;
 }
 
 // ── DOM — kurma, açık satır ve görünürlük ──────────────────────────────────
@@ -382,6 +406,7 @@ function veBasKur(o){
     var ey = b.getAttribute('data-ey'), v = b.getAttribute('data-v');
     if(ey === 'ac'){ _veBasAc(el, v); return; }
     if(ey === 'sekme'){ _veBasSekmeSec(el, v); return; }
+    if(ey === 'degisiklik'){ _veBasDegAc(el, v); return; }
     var oo = el._veBasO;
     if(oo && typeof oo.eylem === 'function') oo.eylem(ey, v);
   });
@@ -421,7 +446,7 @@ if(typeof module !== 'undefined' && module.exports){
     veBasSatirHTML: veBasSatirHTML,
     veBasKimlikHTML: veBasKimlikHTML, veBasKilavuzHTML: veBasKilavuzHTML, veBasVeriHTML: veBasVeriHTML,
     veBasSayfaHTML: veBasSayfaHTML, veBasOrnekHTML: veBasOrnekHTML, veBasAltHTML: veBasAltHTML,
-    veBasDegisiklikHTML: veBasDegisiklikHTML, _veBasSekmeSec: _veBasSekmeSec,
+    veBasDegisiklikHTML: veBasDegisiklikHTML, _veBasSekmeSec: _veBasSekmeSec, _veBasDegAc: _veBasDegAc,
     veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik,
     _veBasAc: _veBasAc, _veBasRayEsitle: _veBasRayEsitle,
     _veBasSifirla: function(){ _veBasAcikSatir = {}; _veBasSekme = {}; }

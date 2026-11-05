@@ -57,7 +57,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   panel — kimlik · kapılar · örneklerin SEKMELİ dizini (Araçlar · Kurgu) · altta dönüş
   ve Kılavuz; sağda modülün SON DEĞİŞİKLİKLERİ, derlemenin künyesinden: Takoz
   dosyalarının çoğunu değiştiren birleşmeler, `tools/version-info.js` →
-  `moduller.takoz`; RESİM YOK, satırın Yükle'si tek tıkla kurar, adı kaynağı, gövdeleri
+  `moduller.takoz`; satırı tıklanınca birleşmenin commit'leri açılır (`ayrinti`,
+  Canlı Not 23); RESİM YOK, satırın Yükle'si tek tıkla kurar, adı kaynağı, gövdeleri
   ve takozları açar; açık satır ve sekme görünüm durumu), FEAD
   **SÜTUN** (kullanıcı 2026-11-04: *"FEAD modülü önceki hali gibi kalsın"* — ortalanmış
   sütun, karo tek tıkla kurar). İki düzen aynı yuvaları aynı sınıflarla basar; ölçü farkı

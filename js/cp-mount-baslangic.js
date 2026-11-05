@@ -157,7 +157,9 @@ function veMntBaslangicDegisiklik(K){
     var p = function(n){ return (n < 10 ? '0' : '') + n; };
     return p(t.getDate()) + '.' + p(t.getMonth() + 1) + '.' + t.getFullYear();
   };
-  return { baslik: 'Son değişiklikler', kayitlar: L.map(function(c){ return { tarih: tarih(c.date), baslik: c.title || '', pr: c.prNumber || '' }; }) };
+  return { baslik: 'Son değişiklikler', kayitlar: L.map(function(c){
+    return { tarih: tarih(c.date), baslik: c.title || '', pr: c.prNumber || '', ayrinti: c.ayrinti || [] };
+  }) };
 }
 
 // ── SAYFA — SAF: yalnız sabitlerden ve örnek kaydından ────────────────────
