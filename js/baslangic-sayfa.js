@@ -180,7 +180,7 @@ function veBasSatirHTML(r, acik){
     +   '<span class="ve-bas-satir-kutle">' + veBasEsc(r.kutle) + '</span>'
     + '</div>'
     + '<div class="ve-bas-satir-detay"' + (acik ? '' : ' hidden') + '>'
-    +   (r.kaynak ? '<div class="ve-bas-satir-kaynak" title="' + veBasEsc(r.kaynak) + '">' + veBasEsc(r.kaynak) + '</div>' : '')
+    +   (r.kunye ? '<div class="ve-bas-satir-kunye" title="' + veBasEsc(r.kunye) + '">' + veBasEsc(r.kunye) + '</div>' : '')
     +   det + '</div>'
     + '</div>';
 }

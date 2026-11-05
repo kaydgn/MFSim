@@ -280,14 +280,16 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
     const y = (v) => getComputedStyle(document.querySelector('#ve-mnt-baslangic .ve-bas-satir[data-v="' + v + '"] .ve-bas-satir-yukle')).backgroundColor;
     const kisa = [...sayfa.querySelectorAll('.ve-bas-satir-ac b, .ve-bas-satir-sayi, .ve-bas-satir-kutle, .ve-bas-satir-blok li > *')]
       .filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent);
-    const kaynak = [...sayfa.querySelectorAll('.ve-bas-satir-kaynak')].filter((e) => e.scrollWidth > e.clientWidth + 1)
+    // Güç grubunun künyesi iki satıra sarar (Canlı Not 28); sığmayan tam metnini title'da taşır
+    const kunye = [...sayfa.querySelectorAll('.ve-bas-satir-kunye')]
+      .filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)
       .filter((e) => e.getAttribute('title') !== e.textContent).length;
-    return { yatay: sayfa.scrollWidth - sayfa.clientWidth, kisa, kaynak, dolu: y('kamyon'), bos: y('hafif'),
+    return { yatay: sayfa.scrollWidth - sayfa.clientWidth, kisa, kunye, dolu: y('kamyon'), bos: y('hafif'),
       ana: getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim() };
   });
   expect(o.yatay).toBeLessThanOrEqual(0);
   expect(o.kisa).toEqual([]);                            // ad, sayı, kütle, ayrıntı kesilmiyor
-  expect(o.kaynak).toBe(0);                              // kısalan kaynak tam metnini title'da taşır
+  expect(o.kunye).toBe(0);                               // kısalan künye tam metnini title'da taşır
   expect(o.dolu).not.toBe(o.bos);                        // açık satırın Yükle'si dolu
   await page.evaluate(() => { window.confirm = () => true; });
   await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="hafif"] .ve-bas-satir-yukle');

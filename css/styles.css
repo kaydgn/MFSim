@@ -11598,9 +11598,11 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-bas-satir-ac:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 .ve-bas-satir-sayi{ white-space:nowrap; color:var(--text-primary); }
 .ve-bas-satir-kutle{ white-space:nowrap; font-weight:600; color:var(--text-heading); }
-.ve-bas-satir-kaynak{
-  flex-basis:100%; min-width:0; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  font-size:var(--fs-tiny); color:var(--text-secondary);
+/* Güç grubunun künyesi (Canlı Not 28): iki satıra sarar, sığmayan tam metnini title'da taşır */
+.ve-bas-satir-kunye{
+  flex-basis:100%; min-width:0; margin:0; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+  font-size:var(--fs-tiny); line-height:1.4; color:var(--text-secondary);
 }
 .ve-bas-satir-yukle{
   height:26px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
