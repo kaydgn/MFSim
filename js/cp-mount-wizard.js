@@ -1072,34 +1072,22 @@ function veMntWizStpSurukle(el, giris){
   el.classList.toggle('ve-fw-stp-on', n > 0);
 }
 // TABLONUN SATIRLARI — kök (bütün montaj) çocuğu varsa rol almaz. Ağaç DAL
-// DAL açılır (`s.acik`: düğüm → gösterilen çocuk sayısı): küçük montaj tam
-// açık gelir; büyüğünde üst düzeyler — dal, BÜTÜN çocukları satırlar
-// VE_MW_STP_SATIR'a sığdıkça açık gelir. Açılan dal çocuklarını
-// VE_MW_STP_SAYFA'lık sayfalarla verir ("… daha" satırı). Rol verilen düğüm
-// ve ataları dal kapalıyken de görünür. Gerekçe ölçüldü (11.694 parçalık
-// montaj): her satırı rol listesiyle çizmek kartı 6,6 sn donduruyordu ve
-// kart her rol değişiminde yeniden kuruluyor; satır başına ~0,5 ms.
-var VE_MW_STP_SATIR = 120, VE_MW_STP_SAYFA = 50;
+// DAL açılır (`s.acik`: düğüm → gösterilen çocuk sayısı) ve AÇILIŞTA KAPALI
+// gelir (kullanıcı 2026-11-05, Canlı Not 7: *"dosyayı yüklediğimizde ürün
+// ağacı açık olarak geliyor. Kapalı olarak gelsin."*): yalnız kökün çocukları
+// görünür (ilk sayfası), her dal kapalı — eskiden küçük montaj tam açık,
+// büyüğünde 120 satıra sığan üst düzeyler açık geliyordu. Açılan dal
+// çocuklarını VE_MW_STP_SAYFA'lık sayfalarla verir ("… daha" satırı). Rol
+// verilen düğüm ve ataları dal kapalıyken de görünür. Sayfanın gerekçesi
+// ölçüldü (11.694 parçalık montaj): her satırı rol listesiyle çizmek kartı
+// 6,6 sn donduruyordu ve kart her rol değişiminde yeniden kuruluyor; satır
+// başına ~0,5 ms.
+var VE_MW_STP_SAYFA = 50;
 function _mwStpAcilis(sonuc){
-  var a = sonuc.agac || [], acik = {}, gorunen = 0, kuyruk = [];
-  if(a.length <= VE_MW_STP_SATIR + 1){
-    a.forEach(function(d){ if(d.cocuklar.length) acik[d.i] = d.cocuklar.length; });
-    return acik;
-  }
-  var ac = function(d, n){
-    acik[d.i] = n;
-    gorunen += n + (n < d.cocuklar.length ? 1 : 0);
-    for(var k = 0; k < n; k++) kuyruk.push(a[d.cocuklar[k]]);
-  };
-  // Kökün çocukları her zaman (ilk sayfa); sonra genişlik öncelikli
-  a.forEach(function(d){
-    if(d.ebeveyn >= 0) return;
-    if(d.cocuklar.length) ac(d, Math.min(d.cocuklar.length, VE_MW_STP_SAYFA)); else gorunen++;
+  var acik = {};
+  (sonuc.agac || []).forEach(function(d){
+    if(d.ebeveyn < 0 && d.cocuklar.length) acik[d.i] = Math.min(d.cocuklar.length, VE_MW_STP_SAYFA);
   });
-  for(var q = 0; q < kuyruk.length; q++){
-    var d = kuyruk[q], n = d.cocuklar.length;
-    if(n && n <= VE_MW_STP_SAYFA && gorunen + n <= VE_MW_STP_SATIR) ac(d, n);
-  }
   return acik;
 }
 // Rol verilen düğümler ve ataları
@@ -1841,7 +1829,7 @@ function _mwStpKunyeHTML(s){
     + _mwIkon(k.tur === 'ok' ? 'check' : 'alert-triangle') + ' ' + _mwEsc(k.metin) + '</div>';
   return h;
 }
-// PARÇA AĞACI — rol tablosu (dal dal, VE_MW_STP_SATIR)
+// PARÇA AĞACI — rol tablosu (dal dal, VE_MW_STP_SAYFA; açılışta kapalı)
 function _mwStpAgacHTML(s){
   var so = s.sonuc, coz = s.coz;
   var sec = [['', '—']].concat(VE_MNT_STP_ROLLER.map(function(t){ return [t, _mwAd(t)]; }));
@@ -2592,7 +2580,7 @@ if(typeof module !== 'undefined' && module.exports){
     VE_MW_STP_AG: VE_MW_STP_AG, veMntWizStpHesapVazgec: veMntWizStpHesapVazgec, _mwStpHesapVeri: _mwStpHesapVeri,
     veMntWizStpAgTum: veMntWizStpAgTum,
     veMntWizStpAc: veMntWizStpAc, veMntWizStpDaha: veMntWizStpDaha, _mwStpSatirlar: _mwStpSatirlar, _mwStpAcilis: _mwStpAcilis,
-    VE_MW_STP_SATIR: VE_MW_STP_SATIR, VE_MW_STP_SAYFA: VE_MW_STP_SAYFA,
+    VE_MW_STP_SAYFA: VE_MW_STP_SAYFA,
     veMntWizStpRol: veMntWizStpRol, veMntWizStpRolCok: veMntWizStpRolCok, veMntWizStpHesapla: veMntWizStpHesapla, veMntWizStpKutle: veMntWizStpKutle,
     veMntWizStpDenetim: veMntWizStpDenetim, veMntWizStpAktar: veMntWizStpAktar, veMntWizStpKapat: veMntWizStpKapat,
     veMntWizStpDrop: veMntWizStpDrop, _mwStpKartHTML: _mwStpKartHTML, _mwStpOnizleme: _mwStpOnizleme,

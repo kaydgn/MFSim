@@ -8,8 +8,9 @@
 // birden fazla takoz olduğu için tek tek seçmek yerine CTRL tuşunu aktif edelim."
 //   · AÇIKLIK KARTLA ORTAK: ağaç sihirbaz kartının açıklık durumunu okur
 //     (s.acik · js/cp-mount-wizard.js → _mwStpSatirlar): dal birinde açılınca
-//     ötekinde de açık; satır sayısı kartın sınırıyla (VE_MW_STP_SATIR ·
-//     VE_MW_STP_SAYFA) — 11.694 satır kartı 6,6 sn donduruyordu.
+//     ötekinde de açık; açılışta yalnız kökün çocukları, dallar kapalı
+//     (Canlı Not 7), dal sayfa sayfa (VE_MW_STP_SAYFA) — 11.694 satır kartı
+//     6,6 sn donduruyordu.
 //   · Satır: dal düğmesi · simge (alt montaj · parça) · ad · atanan malzeme ·
 //     rol çipi. Rollü birimin içindeki düğüm birimin rengini soluk noktayla taşır.
 //   · Tık seçer; Ctrl (Mac'te ⌘) + tık seçime ekler ya da çıkarır — 3B'de de.

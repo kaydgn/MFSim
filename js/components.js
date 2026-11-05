@@ -619,7 +619,7 @@ var componentDefs = {
   // ve iç-topoloji mantığı js/cp-arac-performans.js içindedir.
   'arac-performans': {
     name: 'Araç Performans',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="18" y="46" width="16" height="16" rx="2" fill="var(--text-secondary, #535c67)"/><line x1="34" y1="54" x2="47" y2="54" stroke="var(--text-secondary, #535c67)" stroke-width="4"/><circle cx="58" cy="54" r="10" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="4"/><circle cx="58" cy="54" r="3" fill="var(--text-secondary, #535c67)"/><line x1="68" y1="54" x2="77" y2="54" stroke="var(--text-secondary, #535c67)" stroke-width="4"/><circle cx="84" cy="54" r="6" fill="none" stroke="var(--text-muted, #5f6873)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.56 73 A34 34 0 1 1 79.44 73" stroke="var(--text-secondary, #535c67)" stroke-width="6"/><path d="M23.15 40.5 L27.48 43 M50 25 V30 M76.85 40.5 L72.52 43" stroke="var(--text-secondary, #535c67)" stroke-width="5"/><path d="M50 56 L66.97 39.03" stroke="var(--accent-primary, #1f5fd6)" stroke-width="6"/><circle cx="50" cy="56" r="6" fill="var(--accent-primary, #1f5fd6)"/></svg>',
     inputs: 0,
     outputs: 0,
     isSubsystem: true
@@ -632,7 +632,7 @@ var componentDefs = {
   // Takoz/Çözücü) açılır (cp-mount.js veMntOpenEditor). isMountModule: dblclick.
   'mount-analysis': {
     name: 'Takoz Çökme-Titreşim',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="30" y="34" width="30" height="10" rx="2" fill="var(--text-secondary, #535c67)"/><path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="var(--accent-success, #1a7f37)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="26" y1="72" x2="64" y2="72" stroke="var(--text-secondary, #535c67)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 22 H84 M16 78 H84" stroke="var(--text-secondary, #535c67)" stroke-width="6"/><path d="M36 22 V30 L26 35 L46 43 L26 51 L46 59 L36 64 V78" stroke="var(--accent-success, #1a7f37)" stroke-width="5"/><path d="M64 22 V44 M57 44 H71 M64 64 V78" stroke="var(--text-secondary, #535c67)" stroke-width="5"/><path d="M54 38 V64 H74 V38" stroke="var(--text-secondary, #535c67)" stroke-width="5"/></svg>',
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
@@ -649,12 +649,15 @@ var componentDefs = {
   // kalıbı: ana canvas'ta tek kart, çift tıkla iç topolojisi (Krank Kasnağı /
   // aksesuar kasnakları / Gergi / Avara / Kayış / Çözücü) açılır
   // (cp-fead.js veFeadOpenEditor). isFeadModule: dblclick anahtarı.
-  // Sembol: kesikli kap + İKİ kasnağı saran GERÇEK kayış çevresi (dış teğetler
-  // + sarım yayları analitik hesaplandı: R1=16 @ (38,58), R2=9 @ (68,58)) —
-  // modülün kimliği tek bakışta "kayış-kasnak".
+  // Sembol: İKİ kasnağı saran GERÇEK kayış çevresi (dış teğetler + sarım
+  // yayları analitik hesaplandı: R1=22 @ (36,62), R2=12 @ (72,32)) — modülün
+  // kimliği tek bakışta "kayış-kasnak". Modül sembolleri 2026-11-05'te
+  // yenilendi (kullanıcı, Canlı Not 3: "Modüllerin sembolleri çok hoşuma
+  // gitmiyor"): kesikli kap ve köşe oku kalktı; hız göstergesi · yay-sönümleyici
+  // · kayış-kasnak. Karşılama aynı çizimi tek renge çevirip kullanır.
   'fead-analysis': {
     name: 'FEAD',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="4" stroke-dasharray="7 5"/><circle cx="38" cy="58" r="16" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="3"/><circle cx="38" cy="58" r="5" fill="var(--text-secondary, #535c67)"/><circle cx="68" cy="58" r="9" fill="none" stroke="var(--text-secondary, #535c67)" stroke-width="3"/><circle cx="68" cy="58" r="3.2" fill="var(--text-secondary, #535c67)"/><path d="M41.7 42.4 L70.1 49.3 A9 9 0 0 1 70.1 66.8 L41.7 73.6 A16 16 0 1 1 41.7 42.4 Z" fill="none" stroke="var(--accent-warning, #9a6700)" stroke-width="4" stroke-linejoin="round"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #1f5fd6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="36" cy="62" r="13" stroke="var(--text-secondary, #535c67)" stroke-width="4" opacity="0.6"/><circle cx="72" cy="32" r="5" stroke="var(--text-secondary, #535c67)" stroke-width="4" opacity="0.6"/><circle cx="36" cy="62" r="4" fill="var(--text-secondary, #535c67)"/><circle cx="72" cy="32" r="2.6" fill="var(--text-secondary, #535c67)"/><path d="M25.85 42.48 L66.46 21.35 A12 12 0 0 1 81.47 39.37 L53.37 75.51 A22 22 0 1 1 25.85 42.48 Z" stroke="var(--accent-warning, #9a6700)" stroke-width="6"/></svg>',
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
@@ -1217,6 +1220,31 @@ function veSyncSidebarModuleIcons() {
       svg.setAttribute('width', VE_SIDEBAR_MODULE_ICON);
       svg.setAttribute('height', VE_SIDEBAR_MODULE_ICON);
     }
+    kurulan++;
+  }
+  return kurulan;
+}
+
+// Karşılamanın modül satırları da sembolü componentDefs'ten alır (kullanıcı
+// 2026-11-05, Canlı Not 3): index.html'de ikinci kopya ayrışırdı — palet de
+// bir kez böyle ayrışmıştı (aşağıdaki test). Kesik iki temada siyah:
+// temanın renkleri (açık temanın koyu tonları) orada kaybolur, sembol TEK
+// RENGE çevrilir ve rengi satırdan (currentColor) alır. Modül giriş ekranı
+// simgeyi tıklanan satırdan kopyaladığı için o da tek renkli kalır.
+function veModuleIconMono(svg) {
+  return String(svg || '').replace(/(stroke|fill)="var\([^"]*\)"/g, '$1="currentColor"');
+}
+function veSyncWelcomeModuleIcons() {
+  if(typeof document === 'undefined' || typeof componentDefs === 'undefined') return 0;
+  var kurulan = 0;
+  var satirlar = document.querySelectorAll('.ve-module-card[data-module]');
+  for(var i = 0; i < satirlar.length; i++) {
+    var def = componentDefs[satirlar[i].getAttribute('data-module')];
+    var slot = satirlar[i].querySelector('.ve-module-card-icon');
+    if(!def || !def.svg || !slot) continue;
+    slot.innerHTML = veModuleIconMono(def.svg);
+    var svg = slot.querySelector('svg');
+    if(svg) svg.setAttribute('aria-hidden', 'true');
     kurulan++;
   }
   return kurulan;
@@ -2012,8 +2040,10 @@ if(typeof window !== 'undefined') window.veWelcomeAdoptSplashLogo = veWelcomeAdo
 // denenir (veObserveModuleOverlay ile aynı kalıp).
 (function veInstallSidebarModuleIcons() {
   var kalanDeneme = 100;                       // ~5 sn; sonra sessizce vazgeç
+  var karsilama = false;
   function dene() {
-    if(veSyncSidebarModuleIcons() > 0) return;
+    if(!karsilama) karsilama = veSyncWelcomeModuleIcons() > 0;
+    if(veSyncSidebarModuleIcons() > 0 && karsilama) return;
     if(--kalanDeneme > 0) setTimeout(dene, 50);
   }
   dene();

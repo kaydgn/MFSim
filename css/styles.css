@@ -415,7 +415,7 @@
       --fs-h1:      1.5rem;     /* 24px — karşılama başlığı */
       --fs-display: 2rem;       /* 32px — açılış/marka */
       --fs-hero:    2.5rem;     /* 40px — açılış logosu */
-      --fs-sinema:  3.25rem;    /* 52px — açılış markası (sinema bandı); logoya --fs-h2'ye küçülerek iner */
+      --fs-sinema:  3.25rem;    /* 52px — açılış markası (sinema bandı); karşılamaya --fs-display'e küçülerek iner */
       --leading-tight: 1.25;
       --leading-normal: 1.5;
       --tracking-wide: 0.04em;
@@ -2600,15 +2600,16 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-kesik-ic::-webkit-scrollbar-thumb{
   background:color-mix(in srgb, var(--sinema-yazi) 24%, transparent);
 }
-/* Marka: açılış markasıyla AYNI boy, aile, ağırlık ve em-iz (başlık
-   bağlaması) — devir teslimde marka küçülmeden iner, yalnız yer değiştirir.
-   Çarkın boyu da açılıştakinin oranı. */
+/* Marka: açılış markasıyla AYNI aile, ağırlık ve em-iz (başlık bağlaması);
+   boyu KÜÇÜK (kullanıcı 2026-11-05, Canlı Not 2: "çok büyük duruyor") —
+   devir teslimde marka ölçeklenerek iner (js/components.js → uçuşun
+   ölçeği hedefin boyundan). Çarkın boyu açılıştakinin oranı. */
 .ve-welcome-logo{
   flex:none;
   display:flex;
   align-items:center;
-  gap:14px;
-  font-size:var(--fs-sinema);
+  gap:10px;
+  font-size:var(--fs-display);
   font-weight:700;
   line-height:1;
   /* tracking başlık bağlamasından (-0.01em) */
@@ -2621,35 +2622,18 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-tagline{
   flex:none;
-  margin-top:12px;
-  font-size:var(--fs-md);
-  font-weight:500;
+  margin-top:8px;
+  font-size:var(--fs-body);
+  font-weight:400;
   line-height:1.25;
-  letter-spacing:0.03em;
+  letter-spacing:0.02em;
   color:var(--sinema-yazi-2);
 }
-/* Cetvel: açılış ekranının kademe cetvelinin dili — on iki bölme, dar ve
-   durgun. Bir modülün üstüne gelince o modülün dört bölmesi vurguya döner
-   (üç modül × dört bölme; sıra satırların sırası). */
-.ve-welcome-cetvel{
-  flex:none;
-  width:300px;
-  max-width:100%;
-  margin:26px 0 28px;
-  display:grid;
-  grid-template-columns:repeat(12, minmax(0, 1fr));
-  gap:3px;
-}
-.ve-welcome-cetvel > span{
-  height:4px;
-  background-color:var(--sinema-yazi);
-  transition:background-color var(--dur-base) var(--ease-out);
-}
-.ve-welcome-id:has(.ve-module-card[data-module="arac-performans"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span:nth-child(-n+4),
-.ve-welcome-id:has(.ve-module-card[data-module="mount-analysis"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span:nth-child(n+5):nth-child(-n+8),
-.ve-welcome-id:has(.ve-module-card[data-module="fead-analysis"]:is(:hover, :focus-visible)) .ve-welcome-cetvel > span:nth-child(n+9){
-  background-color:var(--sinema-vurgu);
-}
+/* Cetvel YOK (kullanıcı 2026-11-05, Canlı Not 1: "modüller arasında gezerken
+   yukarıdaki progress bar renkleniyor, farklı çizgiler çıkıyor. Bunu
+   istemiyorum"): on iki bölmeli şerit bir ilerleme çubuğu gibi okunuyordu.
+   Kimlikle modüller arasında yalnız boşluk var. */
+.ve-welcome-id > .ve-welcome-eyebrow{ margin-top:40px; }
 /* Bölüm etiketleri açılış öbek etiketinin dilinde: büyük harf, geniş iz. */
 .ve-welcome-eyebrow,
 .ve-welcome-panel-title{
@@ -2917,18 +2901,21 @@ body.ve-no-module #ve-ribbon{ display:none; }
   border-top:1px solid var(--kesik-ayrac);
 }
 /* Modül SATIRI: simge · ad · ok; satırları ince bir çizgi ayırır. Vurgu
-   satırın zemini, okun rengi ve cetveldeki bölmeler — satır kaymıyor. */
+   satırın zemini, sol kenarın bakır çizgisi ve okun rengi — satır kaymıyor
+   (çizginin yeri hep ayrılmış, yalnız rengi gelir). */
 .ve-module-card{
   display:flex;
   flex-direction:row;
   align-items:center;
   gap:14px;
   height:58px;
-  padding:0 12px 0 8px;
+  padding:0 12px 0 6px;
+  border-left:2px solid transparent;
   border-bottom:1px solid var(--kesik-ayrac);
   cursor:pointer;
   text-align:left;
-  transition:background-color var(--dur-base) var(--ease-out);
+  transition:background-color var(--dur-base) var(--ease-out),
+             border-left-color var(--dur-base) var(--ease-out);
   /* fill-mode BACKWARDS, `both` DEĞİL: `both` bitiş karesini (transform:none)
      kalıcı kılıyor ve CSS animasyonu normal bildirimleri yendiği için hover'ın
      kaydırması hiç görünmüyordu. `backwards` yalnız gecikme boyunca giriş
@@ -2942,7 +2929,7 @@ body.ve-no-module #ve-ribbon{ display:none; }
 .ve-module-card:nth-child(3){ animation-delay:calc(var(--dur-step) * 2); }
 .ve-module-card:nth-child(4){ animation-delay:calc(var(--dur-step) * 3); }
 .ve-module-card:hover,
-.ve-module-card:focus-visible{ background-color:var(--kesik-kabar); }
+.ve-module-card:focus-visible{ background-color:var(--kesik-kabar); border-left-color:var(--sinema-vurgu); }
 /* Simge kiremidi yok: kesik zaten bir yüzey, kalan tek şey vurgu renkli
    çizim. */
 .ve-module-card-icon{
@@ -3011,10 +2998,6 @@ body.ve-no-module #ve-ribbon{ display:none; }
   from{ transform:rotate(-75deg); }
   to{ transform:rotate(0deg); }
 }
-@keyframes ve-welcome-draw{
-  from{ opacity:0; transform:scaleX(0); }
-  to{ opacity:1; transform:scaleX(1); }
-}
 /* Çizginin alt köşeleri üst köşelerinden başlar ve çizgi boyunca iner:
    clip-path köşe köşe ara değerlenir, yani çizgi her karede eğik kenara
    paralel. Bitiş karesi kuralın kendi clip-path'i. */
@@ -3043,10 +3026,6 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 .ve-welcome-enter .ve-welcome-tagline{
   animation:ve-welcome-rise 460ms var(--ease-out) 180ms both;
-}
-.ve-welcome-enter .ve-welcome-cetvel{
-  transform-origin:left center;
-  animation:ve-welcome-draw 320ms var(--ease-out) 260ms both;
 }
 .ve-welcome-enter .ve-welcome-eyebrow{
   animation:ve-welcome-rise 380ms var(--ease-out) 360ms both;
@@ -3129,7 +3108,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
    Yine sığmayan sütun kendi içinde kayar. */
 @media (max-height:800px){
   .ve-kesik-ic{ top:32px; bottom:24px; }
-  .ve-welcome-cetvel{ margin:18px 0 20px; }
+  .ve-welcome-id > .ve-welcome-eyebrow{ margin-top:28px; }
   .ve-module-card{ height:48px; }
   .ve-welcome-panel{ margin-top:24px; }
 }
@@ -3153,7 +3132,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   .ve-welcome-enter .ve-welcome-logo,
   .ve-welcome-enter .ve-welcome-logo-ico,
   .ve-welcome-enter .ve-welcome-tagline,
-  .ve-welcome-enter .ve-welcome-cetvel,
   .ve-welcome-enter .ve-welcome-eyebrow,
   .ve-welcome-enter .ve-module-card,
   .ve-welcome-enter .ve-welcome-panel,
@@ -3165,7 +3143,6 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   /* Uçuş JS'te hiç başlatılmıyor (js/components.js matchMedia kapısı); bu
      satır klon yine de doğarsa asılı kalmasın diye emniyet. */
   .ve-welcome-flyer{ transition:none; }
-  .ve-welcome-cetvel > span,
   .ve-module-card,
   .ve-module-card-arrow,
   .ve-welcome-stamp,
@@ -11420,31 +11397,35 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-bas-ic{ box-sizing:border-box; display:flex; }
 .ve-bas-ic--masa{ min-height:100%; flex-wrap:wrap; align-items:stretch; }
 .ve-bas-ic--sutun{ max-width:1120px; margin:0 auto; padding:28px 48px 28px; flex-direction:column; }
-/* PANEL — tuvalin sol kenarına yaslı beyaz sütun. Üst dolgu YALNIZ dönüş
-   düğmesinin köşesini boş bırakır: düğme kabın sol üstünde (VE_CHIP_INSET
-   10 px, 26 px kare — js/canvas-space.js), altında 12 px pay. Paletin açma
-   sekmesi sayfa açıkken gizli; onun için ayrılan 84 px'lik dolgu (2026-11-04,
-   bir tur) kalktı — kullanıcı: *"Arada çirkin bir boşluk var."* */
+/* PANEL — tuvalin sol kenarına yaslı beyaz sütun. Kimlik sütunun TEPESİNDE,
+   dönüş düğmesinin SATIRINDA (kullanıcı 2026-11-05, Canlı Not 4: *"Yazılar
+   sütunun en tepesine kadar çıkmalı. Dolmalı yani orası."*): düğme kabın sol
+   üstünde (VE_CHIP_INSET 10 px, 26 px kare — js/canvas-space.js), üst dolgu
+   onun üst payı, başlık onun sağında (aşağıda). Düğmeye ayrılan 48 px'lik
+   dolgu başlığı aşağı itiyordu; paletin açma sekmesine ayrılan 84 px'lik dolgu
+   (2026-11-04) da kalktı — *"Arada çirkin bir boşluk var."* */
 .ve-bas-panel{
   flex:1 1 340px; max-width:360px; min-width:0; box-sizing:border-box;
   display:flex; flex-direction:column; gap:18px;
-  padding:48px 20px 18px;
+  padding:10px 20px 18px;
   background:var(--bg-secondary); border-right:1px solid var(--border-color);
 }
 /* KİMLİK — modülün ikonu, adı ve analizlerinin adları (AD ya da VERİ —
    ARAYÜZ ANLATMAZ; kullanıcı isteği 2026-10-19: *"çok sade olmuş …
-   profesyonel dursun"*). Sütunda Kılavuz başlığın sağında. */
+   profesyonel dursun"*). Sütunda Kılavuz başlığın sağında. Masada ikon YOK —
+   yerinde dönüş düğmesi: başlık düğmenin satırında (satır boyu = düğmenin
+   26 px'i, ortaları aynı) ve sağında 10 px payla (10 + 26 + 10 − 20 dolgu =
+   26 px); analizlerin adları altında, panelin kenarından. */
 .ve-bas-kimlik{ display:flex; }
-.ve-bas-ic--masa .ve-bas-kimlik{ align-items:flex-start; gap:12px; margin:0; }
+.ve-bas-ic--masa .ve-bas-kimlik{ margin:0; }
+.ve-bas-ic--masa .ve-bas-kimlik h1{ padding-left:26px; line-height:26px; }
 .ve-bas-ic--sutun .ve-bas-kimlik{ align-items:center; gap:14px; margin:0 0 16px; }
 .ve-bas-kimlik-ik{
   flex:none; display:flex; align-items:center; justify-content:center;
   background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg);
 }
-.ve-bas-ic--masa .ve-bas-kimlik-ik{ width:46px; height:46px; border-color:var(--border-light); }
 .ve-bas-ic--sutun .ve-bas-kimlik-ik{ width:52px; height:52px; }
 .ve-bas-kimlik-ik svg{ display:block; }
-.ve-bas-ic--masa .ve-bas-kimlik-ik svg{ width:34px; height:34px; }
 .ve-bas-ic--sutun .ve-bas-kimlik-ik svg{ width:40px; height:40px; }
 .ve-bas-kimlik-t{ display:flex; flex-direction:column; min-width:0; flex:1 1 auto; }
 .ve-bas-ic--masa .ve-bas-kimlik-t{ gap:4px; }
@@ -11505,10 +11486,13 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-bas-kapi-k > span{ position:relative; white-space:nowrap; }
 .ve-bas-kapi-k > span + span::before{ content:"·"; position:absolute; right:100%; margin-right:5px; color:var(--text-muted); }
 /* VERİ — kataloğun ölçülen sayıları. Masada panelin dibinde satır satır (ad
-   solda, sayı sağda), Kılavuz en altta. Sütunda bant (sayı üstte, ad altta):
-   hücreler 1 px aralıkla çizgi zemininin üstünde — satır sararsa da çift
-   çizgi çıkmaz, son satır genişliği doldurur. */
+   solda, sayı sağda), Kılavuz en altta; verisiz masada (Takoz — kullanıcı
+   2026-11-05, Canlı Not 5: *"Bu açıklamalara gerek yok"*) Kılavuz panelin
+   dibine kendisi iner. Sütunda bant (sayı üstte, ad altta): hücreler 1 px
+   aralıkla çizgi zemininin üstünde — satır sararsa da çift çizgi çıkmaz, son
+   satır genişliği doldurur. */
 .ve-bas-ic--masa .ve-bas-veri{ margin:auto 0 0; border-top:1px solid var(--border-color); }
+.ve-bas-ic--masa .ve-bas-kapilar + .ve-bas-kilavuz{ margin-top:auto; }
 .ve-bas-ic--masa .ve-bas-veri > div{
   display:flex; justify-content:space-between; align-items:baseline; gap:12px;
   padding:6px 2px; border-bottom:1px solid var(--border-light);

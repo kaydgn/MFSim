@@ -175,7 +175,8 @@ describe('STEP KARTI — rol → hesap → kütle → aktar', () => {
     W.veMntWizStpHesapla();
     const kap = document.createElement('div');
     kap.innerHTML = W._mwStpKartHTML();
-    expect(kap.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(s.sonuc.agac.length - 1);
+    // açılışta yalnız kökün çocukları, dallar kapalı (Canlı Not 7)
+    expect(kap.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(s.sonuc.agac.find((d) => d.ebeveyn < 0).cocuklar.length);
     expect(kap.querySelector('#ve-mw-stp-hesapla')).not.toBeNull();
     expect(kap.querySelector('#ve-mw-stp-aktar').disabled).toBe(false);
     expect(kap.querySelector('input[data-mw-stp-kutle]')).not.toBeNull();
@@ -235,7 +236,7 @@ describe('STEP OKUMASI — çubuk, Vazgeç, bırakma', () => {
     expect(s.sonuc.sureMs.toplam).toBeGreaterThanOrEqual(0);
     k = kart();
     expect(k.querySelector('#ve-mw-stp-vazgec')).toBeNull();
-    expect(k.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(s.sonuc.agac.length - 1);
+    expect(k.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(s.sonuc.agac.find((d) => d.ebeveyn < 0).cocuklar.length);
   });
 
   test('çubuğun verisi evreden: dosya · açma · kayıtlar (MB) · montaj ağacı · parçalar', () => {
@@ -326,8 +327,11 @@ describe('STEP OKUMASI — çubuk, Vazgeç, bırakma', () => {
 
 // AĞAÇ DAL DAL (kullanıcının montajı ~11.700 parça): her satırı rol listesiyle
 // çizmek kartı 6,6 sn donduruyordu ve kart her rol değişiminde yeniden
-// kuruluyor (ölçüldü). Küçük montaj eskisi gibi tam açık gelir.
-describe('AĞAÇ DAL DAL — büyük montajda üst düzeyler, sayfa sayfa', () => {
+// kuruluyor (ölçüldü). AÇILIŞTA KAPALI (kullanıcı 2026-11-05, Canlı Not 7:
+// "dosyayı yüklediğimizde ürün ağacı açık olarak geliyor. Kapalı olarak
+// gelsin."): yalnız kökün çocukları görünür, her dal kapalı — küçük montaj
+// da (eskiden tam açık, büyüğünde 120 satıra sığan üst düzeyler açıktı).
+describe('AĞAÇ DAL DAL — açılışta kapalı, dal sayfa sayfa', () => {
   // kök → A (300 parça) · B (10 parça) · iki kök parçası: 315 satır > sınır
   function buyuk() {
     const alt = [{ id: 'ALT_A', ad: 'Alt montaj A', konum: [0, 0, 0] }, { id: 'ALT_B', ad: 'Alt montaj B', konum: [2000, 0, 0] }];
@@ -345,19 +349,18 @@ describe('AĞAÇ DAL DAL — büyük montajda üst düzeyler, sayfa sayfa', () =
   const adlar = () => satir().map((d) => (d.daha ? '+' + d.kalan : d.ad));
   const dug = (ad) => s.sonuc.agac.filter((d) => d.ad === ad)[0].i;
 
-  test('varsayılan: kökün çocukları; bütün çocukları sığan dal açık, sığmayan kapalı', () => {
-    expect(s.sonuc.agac.length - 1).toBeGreaterThan(W.VE_MW_STP_SATIR);
+  test('varsayılan: yalnız kökün çocukları, her dal KAPALI', () => {
     const a = adlar();
-    expect(a).toContain('Alt montaj A');
-    expect(a.filter((x) => /^A parça/.test(x))).toHaveLength(0);
-    expect(a.filter((x) => /^B parça/.test(x))).toHaveLength(10);
-    expect(a.length).toBe(2 + 10 + 2);
+    expect([...a].sort()).toEqual(['Alt montaj A', 'Alt montaj B', 'Kök parçası 1', 'Kök parçası 2']);
     const k = document.createElement('div'); k.innerHTML = W._mwStpKartHTML();
-    expect(k.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(14);
-    const ac = k.querySelector('tr[data-ve-stp="' + dug('Alt montaj A') + '"] .ve-mw-stp-ac');
-    expect(ac.getAttribute('aria-expanded')).toBe('false');
-    expect(ac.getAttribute('aria-label')).toBe('Aç — Alt montaj A');
-    expect(k.querySelectorAll('.ve-mw-stp-yaprak').length).toBe(12);
+    expect(k.querySelectorAll('table.ve-mw-tbl-stp tbody tr')).toHaveLength(4);
+    ['Alt montaj A', 'Alt montaj B'].forEach((ad) => {
+      const ac = k.querySelector('tr[data-ve-stp="' + dug(ad) + '"] .ve-mw-stp-ac');
+      expect(ac.getAttribute('aria-expanded')).toBe('false');
+      expect(ac.getAttribute('aria-label')).toBe('Aç — ' + ad);
+    });
+    expect(k.querySelectorAll('.ve-mw-stp-yaprak').length).toBe(2);
+    expect(W.VE_MW_STP_SATIR).toBeUndefined();               // satır sınırıyla açılan üst düzeyler emekli
   });
 
   test('dal açılır: ilk sayfa + "… düğüm daha"; daha → bir sayfa daha; kapat', () => {
@@ -386,10 +389,14 @@ describe('AĞAÇ DAL DAL — büyük montajda üst düzeyler, sayfa sayfa', () =
     expect(a.filter((x) => /^A parça/.test(x))).toHaveLength(1);
   });
 
-  test('küçük montaj tam açık gelir (eski davranış)', () => {
+  test('küçük montaj da kapalı gelir: kökün çocukları, alt montaj kapalı', () => {
     const k = W.veMntWizStpOku(S.gucGrubu(), 'guc.stp', 'duz');
-    expect(W._mwStpSatirlar(k).filter((d) => !d.daha)).toHaveLength(k.sonuc.agac.length - 1);
-    expect(W._mwStpSatirlar(k).some((d) => d.daha)).toBe(false);
+    const kok = k.sonuc.agac.find((d) => d.ebeveyn < 0);
+    const sat = W._mwStpSatirlar(k);
+    expect(sat.map((d) => d.i)).toEqual(kok.cocuklar);
+    expect(sat.some((d) => d.daha)).toBe(false);
+    expect(sat.filter((d) => d.cocuklar.length).length).toBeGreaterThan(0);
+    sat.filter((d) => d.cocuklar.length).forEach((d) => expect(k.acik[d.i]).toBeUndefined());
   });
 });
 

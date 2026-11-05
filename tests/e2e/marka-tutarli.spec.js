@@ -25,9 +25,9 @@
  * iner, kalkınca logo bir karede koyuya sıçrardı.
  *
  * 2026-10-23'ten beri karşılamada kart yok, KESİK var: markası açılışınkiyle
- * AYNI boy (--fs-sinema) ve AYNI renk (ikisi de siyah zeminde, temadan
- * bağımsız). Uçuş yalnız yer değiştiriyor; kapılar aynı kaldı, beklenen
- * değerler döndü (boy eşit, renk eşit).
+ * AYNI renk (ikisi de siyah zeminde, temadan bağımsız). Boyu 2026-11-05'ten
+ * beri KÜÇÜK (kullanıcı, Canlı Not 2: "çok büyük duruyor" — --fs-display,
+ * 32 px): uçuş yine ölçekleyerek iniyor, kapılar aynı (aile, ağırlık, em-iz).
  *
  * Üçüncü halka bunu ÇİZİMDE ölçüyor ve ölçülmüş ikinci bir kusuru da
  * kapatıyor: eski uçuş hedefi karşılamanın giriş koreografisi BAŞLADIKTAN
@@ -79,7 +79,7 @@ test('marka açılışta ve karşılamada AYNI aile, ağırlık ve em-iz ile çi
   expect(a.yuz).toBe(govde);
   expect(a.izEm).toBe(-0.01);                        // bağlamadan, iki ekranda da
   // Boy AYNI (2026-10-23): kesiğin markası açılışınki — marka küçülmeden iner.
-  expect([aBoy, kBoy]).toEqual(['52px', '52px']);
+  expect([aBoy, kBoy]).toEqual(['52px', '32px']);
 });
 
 test('markanın GENİŞLİĞİ tracking farkını gösterecek kadar duyarlı', async ({ page }) => {

@@ -50,7 +50,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `js/baslangic-sayfa.js` — **ortak başlangıç sayfası kiti** (`.ve-bas*`): FEAD ile
   Takoz AYNI üreticiden basar ("aynısı" isteğinin karşılığı); modüle özgü kopya
   sınıf ailesi kurulmaz. Kit yalnız sunum: görünürlüğü ve kapıların eylemini modül
-  söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi); sayı
+  söyler. Yuvaları AD ve VERİ (kimlik · sayı bandı · kapı künyesi; Takoz'da sayı
+  bandı YOK — kullanıcı 2026-11-05); sayı
   kaynağından ölçülür, analiz adı programdaki adıdır. Düzeni modül beyan eder
   (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-04: solda panel, sağda
   örneklerin DİZİNİ — tasarım tuvali "sade seçenekler" · D; RESİM YOK, satırın Yükle'si
@@ -99,8 +100,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   inceliği TEK sabitten (`VE_MNT_STP_UCGEN`, 0,5 mm — bütün güç grubu; FEAD 0,1).
   **Okuma dilimli** (`veMntStpOkuDilimli`, yüz tanımı çıkarmaz): kart okunurken
   çubuk + Vazgeç; Vazgeç, başka dosya ve sihirbazın kapanması okumayı bırakır.
-  **Parça tablosu dal dal** (`VE_MW_STP_SATIR` · `VE_MW_STP_SAYFA`; rollü düğüm dal
-  kapalıyken de görünür): kart her rol değişiminde yeniden kuruluyor ve 11.694
+  **Parça tablosu dal dal** (`VE_MW_STP_SAYFA`; açılışta KAPALI — yalnız kökün
+  çocukları, kullanıcı 2026-11-05; rollü düğüm dal kapalıyken de görünür): kart her rol değişiminde yeniden kuruluyor ve 11.694
   satır onu 6,6 sn donduruyordu. **Ağları TEK İŞ üretir** (`veMntStpAgIs`: 3B
   bütün montajı, hesap rollü birimlerin parçalarını ister; bağlam parça başına
   bırakılır, aynı temsil bir kez üçgenlenir — tek bağlam yığını 3,2 GB'a
@@ -397,8 +398,8 @@ tanımı + `isSubsystem` + `VE_MODULES.components` + `veSyncSidebarScope`),
 `js/cp-core.js` (panel dağıtımı + panel genişlik listeleri), `js/ui-core.js`
 (çift tık), `js/topology.js` (busy bayrağı, köke çökme, gezinme yakala/geri yükle,
 `veResetSubtopoNav`), `index.html` (script etiketi, Modüller satırı, palet
-kategorileri, karşılamanın modül satırı), `css/styles.css` (karşılama cetvelinin
-modül başına bölmeleri — `.ve-welcome-cetvel`).
+kategorileri, karşılamanın modül satırı ve simgesi — simge `componentDefs.svg`'nin
+çizimiyle aynı, `welcome-screen.test.js` → *SİMGE*).
 
 
 ### Modül karar kayıtları — koşullu yüklenir

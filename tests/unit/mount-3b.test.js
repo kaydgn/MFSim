@@ -552,7 +552,13 @@ describe('ÜRÜN AĞACI — kartla ortak açıklık, rol çipi, seçili satırla
   test('satırlar kartın satırları; seçim işaretli, rol çipi rol renginde, rollü birimin içi soluk noktayla', () => {
     const s = oturum(), asm = ad2i(s, 'Arka braket'), ust = ad2i(s, 'Braket üst'), tk = takozlar(s);
     veMntWizStpRol(asm, 'mnt-bracket');
-    const d = document.createElement('div');
+    // açılışta dal kapalı (Canlı Not 7): içi görünmez, düğme "Aç"
+    let d = document.createElement('div');
+    d.innerHTML = veMntWiz3bAgacHTML(s, []);
+    expect(d.querySelector('[data-ve-3b-agac="' + ust + '"]')).toBeNull();
+    expect(d.querySelector('[data-ve-3b-agac="' + asm + '"]').getAttribute('aria-expanded')).toBe('false');
+    veMntWizStpAc(asm);
+    d = document.createElement('div');
     d.innerHTML = veMntWiz3bAgacHTML(s, [tk[0], tk[1]]);
     const satir = Array.from(d.querySelectorAll('[data-ve-3b-agac]')).map((r) => +r.getAttribute('data-ve-3b-agac'));
     expect(satir).toEqual(_mwStpSatirlar(s).filter((x) => !x.daha).map((x) => x.i));

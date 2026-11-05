@@ -47,7 +47,10 @@
 //    Onları kaldıralım. Sadece geriye gelme kalsın"*): kit kabına `ve-bas-acik`
 //    yazar (`_veBasRayEsitle`), CSS ikisini yalnız topoloji sayfasında gizler —
 //    öteki sayfada ray dönüş yoludur. Ana topolojiye dönüş düğmesi (z 60)
-//    kalır; panelin üst dolgusu yalnız onun köşesini boşaltır. Sayfa
+//    kalır ve masada kimliğin YERİNDEDİR: başlık onun satırında, sağında
+//    başlar, ikon kutusu yok (kullanıcı 2026-11-05, Canlı Not 4: *"Yazılar
+//    sütunun en tepesine kadar çıkmalı"* — düğmeye ayrılan 48 px'lik üst
+//    dolgu başlığı aşağı itiyordu). Sayfa
 //    SIĞDIRMADAN önce çekilir (Takoz ilk düğümde, FEAD sonuçları unuturken):
 //    ray geri geldiğinde kadraj doğru genişlikle kurulur.
 //  • İkon ailesi tek (karar 10·B): kapının ikonu `veIkon`dan.
@@ -70,11 +73,12 @@ function _veBasIkon(ad){ return (typeof veIkon === 'function') ? veIkon(ad) : ''
 // i: { ad, ikon (SVG — modülün componentDefs ikonu), yetenekler:[ad…],
 //      kilavuz (kılavuz kimliği; verilmezse düğme yok) }. `kilavuzIcinde`:
 // Kılavuz başlığın sağında (sütun); masada panelin dibinde (veBasKilavuzHTML).
-function veBasKimlikHTML(i, kilavuzIcinde){
+// `ikonsuz`: masada ikonun yerinde dönüş düğmesi durur — verilse de basılmaz.
+function veBasKimlikHTML(i, kilavuzIcinde, ikonsuz){
   if(!i || !i.ad) return '';
   var y = (i.yetenekler || []).filter(Boolean);
   return '<header class="ve-bas-kimlik">'
-    + (i.ikon ? '<span class="ve-bas-kimlik-ik" aria-hidden="true">' + i.ikon + '</span>' : '')
+    + (i.ikon && !ikonsuz ? '<span class="ve-bas-kimlik-ik" aria-hidden="true">' + i.ikon + '</span>' : '')
     + '<div class="ve-bas-kimlik-t"><h1>' + veBasEsc(i.ad) + '</h1>'
     + (y.length ? '<ul class="ve-bas-yetenek" aria-label="Analizler">'
         + y.map(function(a){ return '<li>' + veBasEsc(a) + '</li>'; }).join('') + '</ul>' : '')
@@ -223,7 +227,7 @@ function veBasSayfaHTML(s, acikV){
   var B = s.basliklar || {};
   var h = '<div class="ve-bas-ic ve-bas-ic--masa">'
     + '<aside class="ve-bas-panel">'
-    +   veBasKimlikHTML(s.kimlik)
+    +   veBasKimlikHTML(s.kimlik, false, true)
     +   '<div class="ve-bas-kapilar">' + (s.kapilar || []).map(veBasKapiHTML).join('') + '</div>'
     +   veBasVeriHTML(s.veriler)
     +   veBasKilavuzHTML(s.kimlik)

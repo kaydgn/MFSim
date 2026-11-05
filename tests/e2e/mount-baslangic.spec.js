@@ -67,12 +67,11 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
       cizim: document.querySelectorAll('#ve-mnt-baslangic svg.ve-mnt2d-akso').length,
       acik: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-satir.acik')].map((r) => r.getAttribute('data-v')),
       ornek: veMountCore.getMountExampleList().length,
-      // KİMLİK VE VERİ tarayıcıda: sabitler `window`dan okunur — Node'un
-      // `require` yolu bunu göremez; bir satır düşerse ancak burada görünür.
+      // KİMLİK VE VERİ tarayıcıda: künyenin sabitleri `window`dan okunur —
+      // Node'un `require` yolu bunu göremez; bir ad düşerse ancak burada
+      // görünür. Sayı bandı YOK (kullanıcı 2026-11-05, Canlı Not 5).
       baslik: (document.querySelector('#ve-mnt-baslangic .ve-bas-kimlik h1') || {}).textContent,
-      veri: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-veri dd')].map((e) => e.textContent),
-      canli: [Object.keys(VE_MOUNT_LIBRARY).length, VE_MW_GOVDE_TIPLERI.length,
-        veMountCore.getMountExampleList().length].map((x) => veSayi(x, 0)),
+      veri: document.querySelectorAll('#ve-mnt-baslangic .ve-bas-veri').length,
       kunye: [...document.querySelectorAll('#ve-mnt-baslangic .ve-bas-kapi-k')].map((k) => k.children.length),
       kilavuz: document.querySelector('#ve-mnt-baslangic .ve-bas-kilavuz')?.getAttribute('data-v'),
       // ÇALIŞMA MASASI: sayfa açıkken ray yok; masada örneklerin dizini, resim yok
@@ -86,8 +85,7 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş düğmesi üstte, düğüm KURULMA
   expect(o.cizim).toBe(0);
   expect(o.acik).toEqual(['siper']);                     // ilk açılışta ilk satır açık
   expect(o.baslik).toBe('Takoz Çökme-Titreşim');
-  expect(o.veri).toHaveLength(5);
-  expect([o.veri[0], o.veri[2], o.veri[3]]).toEqual(o.canli);
+  expect(o.veri).toBe(0);
   expect(o.kunye).toEqual([4, 5, 1]);
   expect(o.kilavuz).toBe('mount');
   expect(o.ray).toBe(0);
@@ -280,7 +278,9 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
 // 'Takoz Çökme ve Titreşim' sütununun üstünde iki sembol var. Onları
 // kaldıralım. Sadece geriye gelme kalsın … Arada çirkin bir boşluk var."*
 // Sayfa açıkken paletin açma sekmesi gizli; dönüş düğmesi kabın köşesinde ve
-// açıkta, panel onun hemen altından başlar (10 + 26 + 12 = 48 px). Model
+// açıkta. Kullanıcı 2026-11-05 (Canlı Not 4): *"Yazılar sütunun en tepesine
+// kadar çıkmalı"* — kimlik düğmenin SATIRINDA başlar (eskiden altından, 48 px),
+// başlık düğmenin sağında 10 px payla ve ortası düğmenin ortasında. Model
 // kurulunca sekme geri gelir ve düğme onun sağına oturur (eskiden 26 px'in
 // 23'ü sekmenin altında kalıyordu).
 test('DAR PALET: sayfada açma sekmesi yok, dönüş düğmesi köşede; model kurulunca sekme geri gelir', async ({ page }) => {
@@ -295,15 +295,22 @@ test('DAR PALET: sayfada açma sekmesi yok, dönüş düğmesi köşede; model k
     const btn = document.querySelector('#ve-mnt-breadcrumb button'), sekme = document.getElementById('ve-sidebar-reveal');
     const w = r(document.getElementById('ve-canvas-wrapper')), b = r(btn), s = r(sekme);
     const kim = document.querySelector('#ve-mnt-baslangic:not([hidden]) .ve-bas-kimlik');
+    const h1 = kim && kim.querySelector('h1');
     const ust = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    // Başlığın METNİNİN kutusu (h1'in sol dolgusu düğmenin altında kalır).
+    const yazi = h1 && (() => { const g = document.createRange(); g.selectNodeContents(h1); return g.getBoundingClientRect(); })();
     return { acik: !!(ust && btn.contains(ust)), sekme: sekme.offsetWidth, sekmeSag: Math.round(s.right),
       dugme: [Math.round(b.left - w.left), Math.round(b.top - w.top)], dugmeSol: Math.round(b.left),
-      kimlik: kim ? Math.round(r(kim).top - w.top) : null, dugmeAlt: Math.round(b.bottom - w.top) };
+      kimlik: kim ? Math.round(r(kim).top - w.top) : null,
+      ikon: kim ? kim.querySelectorAll('.ve-bas-kimlik-ik').length : null,
+      basSol: yazi ? Math.round(yazi.left - b.right) : null,
+      basOrta: yazi ? Math.round((yazi.top + yazi.bottom) / 2 - (b.top + b.bottom) / 2) : null };
   });
   const o = await olc();
-  expect({ acik: o.acik, sekme: o.sekme, dugme: o.dugme, kimlik: o.kimlik })
-    .toEqual({ acik: true, sekme: 0, dugme: [10, 10], kimlik: 48 });
-  expect(o.kimlik - o.dugmeAlt).toBe(12);
+  expect({ acik: o.acik, sekme: o.sekme, dugme: o.dugme, kimlik: o.kimlik, ikon: o.ikon })
+    .toEqual({ acik: true, sekme: 0, dugme: [10, 10], kimlik: 10, ikon: 0 });
+  expect(o.basSol).toBe(10);                              // düğmenin sağında 10 px
+  expect(Math.abs(o.basOrta)).toBeLessThanOrEqual(1);     // aynı satırda
   await page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="bos"]');
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   await page.waitForTimeout(500);

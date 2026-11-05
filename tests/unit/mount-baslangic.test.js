@@ -178,18 +178,26 @@ describe('DİZİN — satırın künyesi örneğin kendi kaydından', () => {
 
 // KİMLİK VE VERİ (kullanıcı isteği 2026-10-19: *"çok sade olmuş … Bir şeyler
 // ekleyelim … profesyonel dursun."*). Sayfaya eklenen her şey AD ya da VERİ ve
-// hepsinin bir kaynağı var: analizin adı programın kendi adı, sayı kaynağından
-// ölçülür, kapının künyesi sihirbazın adımları ve dosya seçicinin kabul
-// listesi. Elle yazılmış bir sayı kütüphane büyüyünce sessizce bayatlardı;
-// uydurulmuş bir analiz adı programda karşılığı olmayan bir vaat olurdu.
-describe('KİMLİK VE VERİ — adlar programdan, sayılar kaynağından', () => {
+// hepsinin bir kaynağı var: analizin adı programın kendi adı, kapının künyesi
+// sihirbazın adımları ve dosya seçicinin kabul listesi. Uydurulmuş bir analiz
+// adı programda karşılığı olmayan bir vaat olurdu. Sayı bandı (Takoz tipi ·
+// Kuvvet–sehim yasası · Gövde tipi · Örnek model · Serbestlik derecesi) YOK:
+// kullanıcı 2026-11-05 (Canlı Not 5) *"Bu açıklamalara gerek yok. Kaldıralım."*
+describe('KİMLİK VE VERİ — adlar programdan, künye kaynağından; sayı bandı yok', () => {
   const W = require('../../js/cp-mount-wizard.js');
   const n = (x) => veSayi(x, 0);
-  test('kimlik: modülün componentDefs adı ve ikonu', () => {
+  // Kullanıcı 2026-11-05 (Canlı Not 4): "Yazılar sütunun en tepesine kadar
+  // çıkmalı." Masada ikonun yerinde dönüş düğmesi durur: kimlik ikonsuz, kit
+  // masada ikon verilse de basmaz (sütun basar).
+  test('kimlik: modülün componentDefs adı; masada ikon yok (yerinde dönüş düğmesi)', () => {
     const k = BS.veMntBaslangicKimlik();
     expect(k.ad).toBe(componentDefs['mount-analysis'].name);
-    expect(k.ikon).toBe(componentDefs['mount-analysis'].svg);
+    expect(k.ikon).toBeUndefined();
     expect(k.yetenekler).toBe(BS.VE_MNT_BAS_YETENEK);
+    const K = require('../../js/baslangic-sayfa.js');
+    const kim = { ad: 'Modül', ikon: '<svg id="IKON"></svg>', yetenekler: ['Analiz'] };
+    expect(K.veBasSayfaHTML({ kimlik: kim })).not.toContain('ve-bas-kimlik-ik');
+    expect(K.veBasSayfaHTML({ duzen: 'sutun', kimlik: kim })).toContain('<span class="ve-bas-kimlik-ik" aria-hidden="true"><svg id="IKON"></svg></span>');
   });
   test('her analiz adı programın kendi adı: raporun adımı, Sonuçlar\'ın kümesi, Parametrik Analiz\'in bölümü', () => {
     const tr = (s) => s.toLocaleLowerCase('tr');
@@ -200,34 +208,21 @@ describe('KİMLİK VE VERİ — adlar programdan, sayılar kaynağından', () =>
     expect(adlar.length).toBeGreaterThan(10);
     expect(BS.VE_MNT_BAS_YETENEK.filter((y) => !adlar.some((a) => tr(a).includes(tr(y))))).toEqual([]);
   });
-  test('bandın her sayısı kaynağından; hiçbir satır düşmez', () => {
-    const lib = cp.VE_MOUNT_LIBRARY;
-    const yasa = Object.keys(lib).filter((k) => lib[k].fits || lib[k].curves);
-    const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-    const bek = {
-      'Takoz tipi': Object.keys(lib).length,
-      'Kuvvet–sehim yasası': yasa.length,
-      'Gövde tipi': W.VE_MW_GOVDE_TIPLERI.length,
-      'Örnek model': core.getMountExampleList().length,
-      'Serbestlik derecesi': core.buildM6(1, I3).length       // kütle matrisinin boyutu
-    };
-    const v = BS.veMntBaslangicVeri();
-    expect(v.map((x) => x.ad)).toEqual(Object.keys(bek));
-    v.forEach((x) => expect(x.deger).toBe(n(bek[x.ad])));
-    expect(v[1].title).toBe(yasa.map((k) => lib[k].name).join(' · '));
-    expect(v[2].title).toBe(W.VE_MW_GOVDE_TIPLERI.map((t) => componentDefs[t].name).join(' · '));
-    // HTML'de de: <dl> satırı başına bir değer
+  test('SAYI BANDI YOK — sayfada veri satırı yok, Kılavuz panelin dibinde', () => {
+    expect(BS.veMntBaslangicSayfa().veriler).toBeUndefined();
+    expect(BS.veMntBaslangicVeri).toBeUndefined();
+    expect(BS.VE_MNT_BAS_SD).toBeUndefined();
     const d = document.createElement('div');
     d.innerHTML = BS.veMntBaslangicHTML();
-    expect([...d.querySelectorAll('.ve-bas-veri dd')].map((x) => x.textContent))
-      .toEqual(Object.keys(bek).map((k) => n(bek[k])));
+    expect(d.querySelector('.ve-bas-veri')).toBeNull();
+    expect(CSS).toMatch(/\.ve-bas-ic--masa \.ve-bas-kapilar \+ \.ve-bas-kilavuz\{ margin-top:auto; \}/);
   });
   // Tarayıcıda sabit `window[ad]`dan okunur. `const`/`let` ile bildirilmiş
   // üst seviye ad pencereye yazılmaz; Node'da `require` yolu çalıştığı için
   // birim testi bunu görmezdi ve bant o satırı SESSİZCE düşürürdü.
   test('okunan her sabit tarayıcıda da var: üst seviye `var` ya da `function`', () => {
     const okunan = [...loadSource('cp-mount-baslangic.js').matchAll(/_mntBasG\('([A-Za-z_]+)', '\.\/([a-z0-9-]+\.js)'\)/g)];
-    expect(okunan.length).toBeGreaterThanOrEqual(6);
+    expect(okunan.length).toBeGreaterThanOrEqual(4);
     okunan.forEach(([, ad, dosya]) => {
       expect(loadSource(dosya)).toMatch(new RegExp('^(var|function) ' + ad + '\\b', 'm'));
     });
@@ -341,13 +336,13 @@ describe('ÇALIŞMA MASASI — panel · dizin', () => {
   const satir = (v) => el().querySelector('.ve-bas-satir[data-v="' + v + '"]');
   const acik = () => [...el().querySelectorAll('.ve-bas-satir')].filter((r) => r.classList.contains('acik')).map((r) => r.getAttribute('data-v'));
   beforeEach(() => K._veBasSifirla());
-  test('panel: kimlik · kapılar · veri; masa: dizin — başlık satırı, iki grup', () => {
+  test('panel: kimlik · kapılar; masa: dizin — başlık satırı, iki grup', () => {
     const d = document.createElement('div');
     d.innerHTML = BS.veMntBaslangicHTML();
     const panel = d.querySelector('.ve-bas-ic.ve-bas-ic--masa > aside.ve-bas-panel');
     const masa = d.querySelector('.ve-bas-ic > .ve-bas-masa');
     expect([...panel.children].map((c) => c.className))
-      .toEqual(['ve-bas-kimlik', 've-bas-kapilar', 've-bas-veri']);       // Kılavuz yüklü değil
+      .toEqual(['ve-bas-kimlik', 've-bas-kapilar']);       // Kılavuz yüklü değil; sayı bandı yok
     expect([...masa.children].map((c) => c.className)).toEqual(['ve-bas-dizin']);
     expect([...masa.querySelectorAll('.ve-bas-dizin-bas > span')].map((x) => x.textContent))
       .toEqual(['', 'Araç', 'Gövde · takoz', 'Kütle', 'Kaynak', '']);
@@ -420,13 +415,19 @@ describe('RAY — sayfa açıkken Topoloji · Sonuçlar rayı gizli', () => {
   });
   // Kullanıcı 2026-11-04: "iki sembol var. Onları kaldıralım. Sadece geriye
   // gelme kalsın … Arada çirkin bir boşluk var." Paletin açma sekmesi sayfa
-  // açıkken gizli (satır içi display'i JS yazar — kural !important) ve panelin
-  // üst dolgusu yalnız dönüş düğmesinin köşesi: 10 + 26 + 12 = 48 px.
-  test('CSS: paletin açma sekmesi sayfa açıkken gizli; panel yalnız dönüş düğmesine yer bırakır', () => {
+  // açıkken gizli (satır içi display'i JS yazar — kural !important). Kullanıcı
+  // 2026-11-05 (Canlı Not 4): "o butonun olması alttaki yazıları aşağıya
+  // çekmiş … Yazılar sütunun en tepesine kadar çıkmalı." Üst dolgu düğmenin üst
+  // payı (10 px, eskiden 10 + 26 + 12 = 48), başlık düğmenin satırında: satır
+  // boyu düğmenin 26 px'i, solunda 10 + 26 + 10 − 20 = 26 px.
+  test('CSS: paletin açma sekmesi sayfa açıkken gizli; başlık dönüş düğmesinin satırında', () => {
     expect(CSS).toMatch(/html:not\(\.ve-sayfa-diger\) #sayfa2-content\.ve-bas-acik \.ve-sidebar-reveal\{ display:none !important; \}/);
-    expect(CSS).toMatch(/\.ve-bas-panel\{[^}]*padding:48px 20px 18px;/);
+    expect(CSS).toMatch(/\.ve-bas-panel\{[^}]*padding:10px 20px 18px;/);
+    expect(CSS).toMatch(/\.ve-bas-ic--masa \.ve-bas-kimlik h1\{ padding-left:26px; line-height:26px; \}/);
+    expect(CSS).not.toMatch(/\.ve-bas-panel\{[^}]*padding:48px/);
     expect(CSS).not.toMatch(/\.ve-bas-panel\{[^}]*padding-top:84px/);
     expect(CSS).not.toMatch(/ve-sidebar-reveal\.visible\) \.ve-bas-panel/);
+    expect(CSS).not.toMatch(/\.ve-bas-ic--masa \.ve-bas-kimlik-ik/);
   });
 });
 
