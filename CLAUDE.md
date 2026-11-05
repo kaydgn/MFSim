@@ -1213,6 +1213,10 @@ npm test          # tüm birim testleri
 3. Commit → `git push -u origin <dal>` → PR aç → **MERGE ET.**
 4. Merge'den sonra koşuya bir kez bak. Kırmızıysa ileri doğru düzelt.
 5. **ARTIFACT HAZIRLA** — aşağıdaki kural.
+6. **CANLI NOT'U TAZELE** (kullanıcı 2026-11-05: *"güncelliğinden emin olalım"*):
+   ana dala geç, yayındaki `mfsim.html`'i `denetle`; "yeniden yayınla" derse
+   `node tools/canli-not.js hazirla` (yalnız ana daldan kurar) ve aynı adrese
+   yayınla. Adres ve adımlar: skill `canli-not` → *Yayın*.
 
 ### HER DEĞİŞİKLİKTEN SONRA ARTIFACT
 
