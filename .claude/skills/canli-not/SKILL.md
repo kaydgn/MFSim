@@ -185,10 +185,15 @@ Her not için, **sırayla ve tek tek**:
    (kullanıcı kararı 2026-10-19). Birden çok not: `ArtifactData batch`.
 8. Notun konusu (`konu`) varsa `ArtifactComments reply` (aynı `cevap`) ve `resolve`.
 
-**Kuyruk boşalınca:** PR + merge (CLAUDE.md → Teslim Akışı), birleşen notlara
-`pr` yazılır, sonra programın güncellemesi (§1) — `yayin/son`'un `notlar`ı o turun
-notları. Notların `cevap`ı o turun ölçüm kaydıdır — ayrıca rapor sayfası
-gerekmez; birden çok notluk bir tur bittiğinde kısa bir özet sohbette verilir.
+**HER NOT BİTİNCE HEMEN YAYIN — parti beklenmez** (kullanıcı 2026-11-05: *"Bu
+sefer neden yapıp güncellemedin sistemi? Yaptıkların hala uygulanıyor olarak
+görünüyor?"* · *"neden şimdiye kadar adım adım yaptıklarını 'Canlı Not' kısmında
+yayınlamadın?"*): notun commit'i → `npm run hazir` → PR + merge → programın
+güncellemesi (§1) → notun `uygulandi`sı (sonuç, `pr`) ve konusunun cevabı. Ürün
+testleri (`test:urun`) yayını BEKLETMEZ: arkada koşar, kırmızıysa ileri doğru
+düzeltilir. Birkaç not birlikte bitmişse tek yayın; bitmiş notu bekletip başka
+nota geçmek YOK. `yayin/son`'un `notlar`ı o yayının notları; notların `cevap`ı o
+turun ölçüm kaydıdır — ayrıca rapor sayfası gerekmez.
 
 ## 3 · Kurallar
 
