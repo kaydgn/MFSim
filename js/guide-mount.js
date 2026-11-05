@@ -1064,7 +1064,7 @@ function _gmSec16(){
     ['Takoz noktası', 'Takozun renginde artılı halka', 'Üst bağlantı yüzeyinin merkezi (16.3)'],
     ['Modelin noktası', 'Kesikli halka', 'Tuvaldeki modelde aynı birim (16.6)'],
     ['Referans noktası', 'Eşkenar dörtgen', 'Veri sayfasının referansı (16.5)'],
-    ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner']
+    ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner; yazılar fare üstündeyken']
   ], ['İşaret', 'Görünüş', 'Ne']);
   h += '<p><strong>Bakış</strong> listesinde hazır bakışlar: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
     + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '

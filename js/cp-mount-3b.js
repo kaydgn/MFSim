@@ -139,10 +139,10 @@ var VE_MW_3B_ISARET = { takoz: 6, govde: 8, ref: 5 }, VE_MW_3B_MODEL = 1.6;
 // (çalışma masasının kartı: ölçüldü 37 px — iç boşluk ve çerçeveyle; eskiden 32),
 // iki etiket arası, harf başına genişlik, kabın kenarına en az uzaklık
 var VE_MW_3B_ETK = { dx: 24, dy: 12, h: 38, ara: 4, harf: 6.4, pay: 10 };
-// Koordinat ekseni: kutunun eni · boyu · okun boyu (px) · eksi yarının ve
-// düzlemin payı · ok başı · zemin dairesinin yarıçapı (px). Kutu yazıların
+// Koordinat ekseni: kutunun eni · boyu · okun boyu (px) · eksi yarının payı ·
+// ok başı · fareyi alan isabet dairesinin yarıçapı (px). Kutu yazıların
 // sığacağı kadar geniş: ok sola bakınca "+X · Arka" okun ucundan sola uzanır.
-var VE_MW_3B_EKSEN = { w: 196, h: 140, L: 38, eksi: 0.55, duzlem: 0.55, uc: 8, zemin: 54 };
+var VE_MW_3B_EKSEN = { w: 196, h: 140, L: 38, eksi: 0.55, uc: 6, zemin: 46 };
 var VE_MW_3B_EKSEN_AD = [['x', '+X · Arka', 'Ön'], ['y', '+Y · Sağ', 'Sol'], ['z', '+Z · Yukarı', 'Aşağı']];
 // GÖRÜNÜŞ (komut çubuğu): gölgeli ve kenar (olağan) · gölgeli (kenar çizgisi yok) ·
 // x-ışını (seçimin dışı — seçim yoksa her parça — tül; tülün ön geçişi kapalı,
@@ -2020,22 +2020,19 @@ function _mw3bEtiketle(){
   cz.innerHTML = cs + is + ek; kat.innerHTML = hs;
 }
 // KOORDİNAT EKSENİ (saf, testli) — Koordinat Düzlemi'nin dili: oklar --eksen-*
-// renginde, eksi yarılar soluk, üç soluk düzlem, orijin. `me`: kameranın dünya
-// matrisi (sütun sütun): eksen i'nin ekrandaki yönü sağ (me[i]) ve yukarı
+// renginde, eksi yarılar soluk, orijin. SADE (kullanıcı 2026-11-05, Canlı Not 14:
+// *"çok çirkin … arka tema ile daha uygun, daha estetik ve üzerindeki yazıların
+// sadece fare ile üstüne geldiğimde görünür"*): zemin dairesi ve üç düzlem YOK,
+// çizgiler ince; yazılar yalnız fare eksenin üstündeyken (görünmez isabet
+// dairesi, `.hit` — kap tıklamayı geçirir, daire fareyi alır). `me`: kameranın
+// dünya matrisi (sütun sütun): eksen i'nin ekrandaki yönü sağ (me[i]) ve yukarı
 // (me[4 + i]) sütunlarının, derinliği geri sütununun (me[8 + i]) bileşeni. Önce
-// düzlemler, sonra arkadan öne oklar, en son yazılar — yazının zemin hâlesi
-// altındaki çizgiyi örter. Döner: SVG içeriği.
+// arkadan öne oklar, en son yazılar — yazının zemin hâlesi altındaki çizgiyi
+// örter. Döner: SVG içeriği.
 function veMntWiz3bEksenSVG(me){
   var E = VE_MW_3B_EKSEN, cx = E.w / 2, c = E.h / 2, L = E.L, f = _mw3bYuvarla;
   var ax = [0, 1, 2].map(function(i){ return { i: i, ad: VE_MW_3B_EKSEN_AD[i], sx: me[i], sy: me[4 + i], d: me[8 + i] }; });
-  var out = '<circle class="zm" cx="' + cx + '" cy="' + c + '" r="' + E.zemin + '"/>';
-  [[0, 1, 2], [0, 2, 1], [1, 2, 0]].forEach(function(t){
-    var a = ax[t[0]], b = ax[t[1]], k = E.duzlem * L, p = [];
-    [[1, 1], [-1, 1], [-1, -1], [1, -1]].forEach(function(s){
-      p.push(f(cx + (a.sx * s[0] + b.sx * s[1]) * k) + ',' + f(c - (a.sy * s[0] + b.sy * s[1]) * k));
-    });
-    out += '<polygon class="dz dz-' + VE_MW_3B_EKSEN_AD[t[2]][0] + '" points="' + p.join(' ') + '"/>';
-  });
+  var out = '<circle class="hit" cx="' + cx + '" cy="' + c + '" r="' + E.zemin + '"/>';
   var parca = [], etk = [], cizgi = [];
   ax.forEach(function(a){
     var boy = Math.sqrt(a.sx * a.sx + a.sy * a.sy), ux = boy > 1e-6 ? a.sx / boy : 0, uy = boy > 1e-6 ? -a.sy / boy : 0;

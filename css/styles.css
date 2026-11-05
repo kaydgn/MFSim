@@ -11846,15 +11846,14 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b .ve-fw-3b-etk.on{ background:var(--accent-primary); border-color:var(--accent-primary); }
 .ve-mw-3b .ve-fw-3b-etk.on b, .ve-mw-3b .ve-fw-3b-etk.on span{ color:var(--on-accent); }
 .ve-mw-3b .ve-fw-3b-etk.on b::before{ box-shadow:0 0 0 1.5px var(--on-accent); }
-/* Koordinat ekseni: tuvalin sol altında, tıklamayı geçirir */
+/* Koordinat ekseni: tuvalin sol altında, tıklamayı geçirir. SADE (kullanıcı
+   2026-11-05, Canlı Not 14): zemin dairesi ve düzlemler yok, çizgiler ince,
+   yazılar yalnız fare eksenin isabet dairesindeyken (`.hit` fareyi alır,
+   `:hover` kaba geçer). */
 .ve-mw-3b-eksen{ position:absolute; left:12px; bottom:12px; overflow:visible; pointer-events:none; }
-.ve-mw-3b-eksen .zm{ fill:var(--bg-secondary); fill-opacity:.72; }
-.ve-mw-3b-eksen .dz{ fill-opacity:.09; stroke-opacity:.35; stroke-width:1; }
-.ve-mw-3b-eksen .dz-x{ fill:var(--eksen-x); stroke:var(--eksen-x); }
-.ve-mw-3b-eksen .dz-y{ fill:var(--eksen-y); stroke:var(--eksen-y); }
-.ve-mw-3b-eksen .dz-z{ fill:var(--eksen-z); stroke:var(--eksen-z); }
-.ve-mw-3b-eksen .ek{ stroke-width:2.25; stroke-linecap:round; }
-.ve-mw-3b-eksen .ek.eksi{ stroke-width:1.5; stroke-opacity:.45; }
+.ve-mw-3b-eksen .hit{ fill:transparent; pointer-events:all; }
+.ve-mw-3b-eksen .ek{ stroke-width:1.75; stroke-linecap:round; stroke-opacity:.9; }
+.ve-mw-3b-eksen .ek.eksi{ stroke-width:1.25; stroke-opacity:.3; }
 .ve-mw-3b-eksen .ek-x{ stroke:var(--eksen-x); }
 .ve-mw-3b-eksen .ek-y{ stroke:var(--eksen-y); }
 .ve-mw-3b-eksen .ek-z{ stroke:var(--eksen-z); }
@@ -11863,7 +11862,9 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
 .ve-mw-3b-eksen .uc-z{ fill:var(--eksen-z); }
 .ve-mw-3b-eksen .o{ fill:var(--text-heading); }
 .ve-mw-3b-eksen text{ font-size:var(--fs-tiny); font-weight:600; fill:var(--text-primary); font-variant-numeric:tabular-nums;
-  paint-order:stroke; stroke:var(--bg-secondary); stroke-width:3px; stroke-linejoin:round; }
+  paint-order:stroke; stroke:var(--bg-secondary); stroke-width:3px; stroke-linejoin:round;
+  opacity:0; transition:opacity var(--dur-base) var(--ease-out); }
+.ve-mw-3b-eksen:hover text{ opacity:1; }
 .ve-mw-3b-eksen text.eksi{ font-weight:400; fill:var(--text-secondary); }
 .ve-mw-3b-eksen text[data-arka]{ fill:var(--text-muted); }
 /* TAKOZ 3B — ÇALIŞMA MASASI (kullanıcı seçimi 2026-11-03, tasarım tuvali

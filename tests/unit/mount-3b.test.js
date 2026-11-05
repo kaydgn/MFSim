@@ -446,11 +446,11 @@ describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner'
   };
   const kur = (me) => { const d = document.createElement('div'); d.innerHTML = '<svg>' + veMntWiz3bEksenSVG(me) + '</svg>'; return d.querySelector('svg'); };
 
-  test('açılış bakışında +Z yukarı; üç ok, üç eksi yarı, üç düzlem, altı yazı', () => {
+  test('açılış bakışında +Z yukarı; üç ok, üç eksi yarı, düzlem yok, altı yazı', () => {
     const s = kur(kamera(VE_MW_3B_ACILIS.theta, VE_MW_3B_ACILIS.phi)), E = VE_MW_3B_EKSEN;
     expect(Array.from(s.querySelectorAll('text.ad')).map((t) => t.textContent).sort())
       .toEqual(['+X · Arka', '+Y · Sağ', '+Z · Yukarı', 'Aşağı', 'Ön', 'Sol'].sort());
-    expect(s.querySelectorAll('polygon.dz').length).toBe(3);
+    expect(s.querySelectorAll('polygon.dz').length).toBe(0);
     expect(s.querySelectorAll('line.ek:not(.eksi)').length).toBe(3);
     expect(s.querySelectorAll('line.ek.eksi').length).toBe(3);
     expect(s.querySelectorAll('polygon.uc').length).toBe(3);
@@ -460,7 +460,22 @@ describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner'
     expect(s.querySelector('text.ad-z').getAttribute('dominant-baseline')).toBe('auto');
   });
 
-  test('düzlemler ve oklar önce, yazılar en son (zemin hâlesi altındaki çizgiyi örter); oklar arkadan öne', () => {
+  // Kullanıcı 2026-11-05 (Canlı Not 14): "Şu koordinat görünümü çok çirkin
+  // olmuş … üzerindeki yazıların sadece fare ile üstüne geldiğimde görünür".
+  test('SADE: zemin dairesi ve düzlem yok; isabet dairesi ilk; yazılar yalnız fare üstünde', () => {
+    const s = kur(kamera(0.3, 0.5));
+    expect(s.querySelectorAll('.zm, polygon.dz').length).toBe(0);
+    expect(s.firstElementChild.getAttribute('class')).toBe('hit');
+    expect(+s.firstElementChild.getAttribute('r')).toBe(VE_MW_3B_EKSEN.zemin);
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mw-3b-eksen text\{[^}]*opacity:0;/);
+    expect(css).toMatch(/\.ve-mw-3b-eksen:hover text\{ opacity:1; \}/);
+    expect(css).toMatch(/\.ve-mw-3b-eksen\{[^}]*pointer-events:none;/);
+    expect(css).toMatch(/\.ve-mw-3b-eksen \.hit\{ fill:transparent; pointer-events:all; \}/);
+    expect(css).not.toMatch(/\.ve-mw-3b-eksen \.(zm|dz)/);
+  });
+
+  test('oklar önce, yazılar en son (zemin hâlesi altındaki çizgiyi örter); oklar arkadan öne', () => {
     const s = kur(kamera(0.3, 0.5)), cocuk = Array.from(s.children);
     const ilkYazi = cocuk.findIndex((c) => c.tagName === 'text');
     expect(cocuk.slice(ilkYazi).every((c) => c.tagName === 'text')).toBe(true);
