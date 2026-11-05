@@ -330,6 +330,56 @@ describe('KAPILAR — modülün kendi çağrıları', () => {
   });
 });
 
+// Canlı Not 38 (kullanıcı 2026-11-05): *"Örnek yüklediğim zaman hala
+// 'bileşenler' sütunu açık geliyor. Kapalı gelsin"*. SIRA kapıdır: sütun
+// GEÇİŞSİZ ve SIĞDIRMADAN ÖNCE daralır — sonra daralsaydı kadraj 220 px dar
+// tuvalde kurulur, model sola kayık kalırdı. Gerçek kadraj
+// tests/e2e/mount-baslangic.spec.js → ÖRNEK SATIRI.
+describe('ÖRNEK — Bileşenler sütunu kapalı gelir', () => {
+  const ornek = core.getMountExample('tulga');
+  const json = JSON.parse(fs.readFileSync(path.join(__dirname, '../..', ornek.topology), 'utf8'));
+  let iz;
+  const sb = () => document.getElementById('ve-sidebar');
+  beforeEach(() => {
+    document.body.innerHTML = '<aside id="ve-sidebar" class="ve-sidebar"></aside>'
+      + '<div id="ve-canvas-wrapper"><div id="ve-canvas"></div></div>';
+    window.__MNT_TOPOLOGIES = { [ornek.topology]: json };
+    iz = [];
+  });
+  afterEach(() => { delete window.__MNT_TOPOLOGIES; });
+  // Başlangıç sayfasının Yükle'si → modülün kurucusu; daraltma ve sığdırma izlenir.
+  const yukle = (anahtar) => casus('veMntOrnekYukle', cp.veMntOrnekYukle, () =>
+    casus('veToggleSidebar', (f) => {
+      iz.push(['daralt', f, sb().classList.contains('ve-sb-no-anim')]);
+      sb().classList.toggle('ve-sb-collapsed', f);
+    }, () => casus('veFitViewToContent', () => {
+      iz.push(['sigdir', sb().classList.contains('ve-sb-collapsed')]);
+    }, () => casus('veLoadTabState', (o) => { global.nodes = o.state.nodes; },
+      () => BS.veMntBaslangicEylem('ornek', anahtar)))));
+
+  test('Yükle → sütun geçişsiz daralır, kadraj daralmış tuvalde kurulur', () => {
+    expect(yukle('tulga')).toBe(true);
+    expect(global.nodes.some((n) => n.type === 'mnt-mount')).toBe(true);
+    expect(iz).toEqual([['daralt', true, true], ['sigdir', true]]);
+    expect(sb().className).toBe('ve-sidebar ve-sb-collapsed');   // geçiş sınıfı geri alındı
+  });
+  test('sütun zaten kapalıysa yeniden daraltılmaz', () => {
+    sb().classList.add('ve-sb-collapsed');
+    yukle('tulga');
+    expect(iz).toEqual([['sigdir', true]]);
+  });
+  test('vazgeçilen ya da yüklenemeyen örnek sütunu daraltmaz', () => {
+    global.nodes = [dugum('mnt-motor')];
+    casus('confirm', () => false, () => yukle('tulga'));
+    expect(iz).toEqual([]);
+    global.nodes = [];
+    window.__MNT_TOPOLOGIES = { [ornek.topology]: { nodes: [] } };
+    yukle('tulga');
+    expect(iz).toEqual([]);
+    expect(sb().classList.contains('ve-sb-collapsed')).toBe(false);
+  });
+});
+
 describe('DOM — kapsam, tazeleme, olaylar', () => {
   const el = () => document.getElementById(BS.VE_MNT_BAS_ID);
   test('Takoz kapsamında boş topoloji → sayfa kurulur ve görünür', () => {
