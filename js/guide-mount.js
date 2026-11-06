@@ -297,7 +297,7 @@ function _gmSec5(){
   h += _gmAlanTablo('Tipe özel bölümler', [
     ['Motor', '<strong>Katalog</strong>, <strong>Motor noktaları</strong> (tepe tork, maks. güç, '
       + 'rölanti, silindir sayısı), <strong>Tork zinciri</strong>, <strong>Ateşleme</strong>', 'Motor künyesi'],
-    ['Şanzıman', '<strong>Katalog</strong> (dişli düzeni · konvertör), <strong>Vites oranları</strong> (yedi ileri '
+    ['Şanzıman', '<strong>Katalog</strong> (vites konfigürasyonu · konvertör), <strong>Vites oranları</strong> (yedi ileri '
       + 'vites ve geri; vites başına mil torku), <strong>Konvertör</strong> (stall oranı), <strong>Bağlantı yüzü</strong> · '
       + '<strong>Statik eğilme momenti</strong>', 'Şanzımanın veri sayfası ve konvertör'],
     ['Transfer Kutusu', '<strong>Oran ve aks payı</strong> (transfer oranı, aks payı φ), '
@@ -315,9 +315,10 @@ function _gmSec5(){
     + 've klima kompresörünün kütlesi programda kayıtlı modellerden de seçilir '
     + '(<strong>Kayıtlı aksesuar</strong>). Motorun kütlesi veri sayfasından geliyorsa aksesuarlar '
     + 'onun içinde değildir.</p>';
-  h += '<p>Şanzımanın <strong>Katalog</strong> bölümü veri sayfasının dişli düzenlerini ve konvertörlerini '
-    + 'listeler (Allison 4000: yakın oranlı CR, geniş oranlı WR, yedi vitesli; TC-521 … TC-571). Dişli düzeni '
-    + 'ileri vitesleri ve geriyi doldurur; yedi vitesli düzende 1. vites LO’dur (7,63). Altı vitesli düzen '
+  h += '<p>Şanzımanın <strong>Katalog</strong> bölümü veri sayfasının vites konfigürasyonlarını ve konvertörlerini '
+    + 'listeler (Allison 4000: <em lang="en">Close Ratio (CR)</em>, <em lang="en">Wide Ratio (WR)</em>, <em lang="en">7-Speed</em>; '
+    + 'TC-521 … TC-571). Vites konfigürasyonu ileri vitesleri ve geriyi doldurur; <em lang="en">7-Speed</em>’de 1. vites '
+    + 'LO’dur (7,63). Altı vitesli konfigürasyon '
     + 'seçilince 7. vites alanı boşalır. Konvertör stall oranını doldurur. Bağ kaldırılınca girilen '
     + 'değerler kalır; elle değişen alan bölümün notunda <strong>Katalogdan sapıldı</strong> olarak '
     + 'adıyla yazar.</p>';
@@ -1217,14 +1218,14 @@ function _gmSec16(){
   var A4 = typeof VE_MNT_A4K !== 'undefined' ? VE_MNT_A4K : null;
   if(A4) h += _gmAlanTablo(A4.ad + ' seçenekleri', A4.secenek.map(function(o){
     var etki = { dizi:'Temel kuru kütle ' + _gmF(A4.kutle.temel.cr, 0) + ' / ' + _gmF(A4.kutle.temel.wr, 0) + ' / '
-                   + _gmF(A4.kutle.temel['7'], 0) + ' kg; ağırlık merkezi ve atalet tablosu; dişli oranları',
+                   + _gmF(A4.kutle.temel['7'], 0) + ' kg; ağırlık merkezi ve atalet tablosu; vites oranları (listenin altında)',
                  bag:'Uzak bağlama ' + _gmF(A4.kutle.uzak, 0) + ' kg (6 vitesliye arka braket ' + _gmF(A4.kutle.uzakArka6, 0)
                    + ' kg); ağırlık merkezi tablosu; bağlantı yüzü yalnız doğrudan bağlamada',
                  pto:_gmF(A4.kutle.pto, 0) + ' kg; ağırlık merkezi, atalet, yağ (+3 L)',
                  ret:_gmF(A4.kutle.ret, 0) + ' kg; ağırlık merkezi ve atalet',
                  sog:'Standart ' + _gmF(A4.kutle.sog.s, 0) + ' kg · yüksek kapasite ' + _gmF(A4.kutle.sog.y, 0)
                    + ' kg · retarder/karter ' + _gmF(A4.kutle.sog.r, 0) + ' kg; ek yağ',
-                 kar:'Yağın hacmi (yedi vitesliye yalnız derin)',
+                 kar:'Yağın hacmi (7-Speed’e yalnız derin)',
                  aku:'Akümülatör ' + _gmF(A4.kutle.aku, 1) + ' kg + solenoid ' + _gmF(A4.kutle.akuSol, 1) + ' kg; ek yağ '
                    + _gmF(A4.yag.aku, 1) + ' L',
                  flans:'Kuru kütleye eklenir; belge 5–12 kg verir',
@@ -1309,7 +1310,7 @@ function _gmEkA(){
       ['Motor modeli, veri sayfasının referansı', '3D Görüntüleyici (3B)', '<em>Bloğun ön yüzü</em> (X12: <em>Bloğun arka yüzü</em>) · <em>Krank ekseni</em>'],
       ['Şanzıman modeli ve seçenekleri', '3D Görüntüleyici (3B) · sihirbazın STEP kartı',
         '<em>Şanzıman modeli</em> · <em>Konvertör muhafazasının ön yüzü</em> · <em>Şanzıman ekseni</em>'],
-      ['Dişli düzeni, konvertör', 'Şanzıman · sihirbazın Tork adımı', '<strong>Katalog</strong>'],
+      ['Vites konfigürasyonu, konvertör', 'Şanzıman · sihirbazın Tork adımı', '<strong>Katalog</strong>'],
       ['Bağlantı yüzü, eğilme momenti sınırı', 'Şanzıman', '<strong>Bağlantı yüzü</strong> · <strong>Statik eğilme momenti</strong>'],
       ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],
       ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü',

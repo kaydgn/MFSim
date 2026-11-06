@@ -1545,8 +1545,18 @@ function _mwStpSecenekler(b, vs){
       return '<option value="' + _mwEsc(e[0]) + '"' + (e[0] === s[o.k] ? ' selected' : '') + (ok ? '' : ' disabled title="' + _mwEsc(neden) + '"') + '>'
         + _mwEsc(e[1]) + '</option>';
     }).join('');
-    return { k: o.k, ad: o.ad, denetim: '<select class="ve-fw-inp" aria-label="' + aria(o) + '"' + on + '>' + ops + '</select>' };
+    return { k: o.k, ad: o.ad, denetim: '<select class="ve-fw-inp" aria-label="' + aria(o) + '"' + on + '>' + ops + '</select>'
+      + (o.oran ? _mwStpOranHTML(A, s[o.k]) : '') };
   });
+}
+// Vites konfigürasyonunun oranları (Canlı Not 50): listenin altında, vites başına
+// ad (belgenin: LO · 1 … · R) ve oran
+function _mwStpOranHTML(A, deger){
+  var L = typeof veMntVsOranlar === 'function' ? veMntVsOranlar(A, deger) : [];
+  if(!L.length) return '';
+  return '<span class="ve-mw-vs-oran" role="list" aria-label="Vites oranları">' + L.map(function(x){
+    return '<span role="listitem"><i>' + _mwEsc(x.ad) + '</i><b>' + _mwSayi(x.v, 2) + '</b></span>';
+  }).join('') + '</span>';
 }
 // KÜTLE KAYNAĞI — gövde başına: '' (elle) · 'dosya' · malzeme anahtarı
 // (js/mount-step.js → VE_MNT_STP_MALZEME) · rolün veri sayfası
@@ -2228,7 +2238,7 @@ function _mwSanzimanKatalogHTML(){
       + '</select></label>';
   };
   return '<div class="ve-fw-grid" style="--fw-cols:2;">'
-    + sec(K.disli, tq.gearPreset || '', 'veMntWizDisliKatalog', 'Dişli düzeni', function(x){ return x.etiket; })
+    + sec(K.disli, tq.gearPreset || '', 'veMntWizDisliKatalog', 'Vites konfigürasyonu', function(x){ return x.etiket; })
     + sec(K.tc, tq.tcPreset || '', 'veMntWizKonvertorKatalog', 'Konvertör', function(x){ return x.ad + ' · ' + _mwSayi(x.stall, 2); })
     + '</div>';
 }

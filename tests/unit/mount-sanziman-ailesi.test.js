@@ -127,10 +127,16 @@ describe('AİLE — belgenin tabloları birebir', () => {
 
   test('§12 dişli oranları ve §6 konvertörler; pencerenin listeleri onlardan', () => {
     expect(VS.veMntVsDisliDuzenleri().map((d) => [d.k, d.etiket, d.ileri, d.geri])).toEqual([
-      ['allison-4000:cr', 'Yakın oranlı (CR)', [3.51, 1.91, 1.43, 1.00, 0.74, 0.64], -4.80],
-      ['allison-4000:wr', 'Geniş oranlı (WR)', [4.70, 2.21, 1.53, 1.00, 0.76, 0.67], -5.55],
-      ['allison-4000:7', 'Yedi vitesli', [7.63, 3.51, 1.91, 1.43, 1.00, 0.74, 0.64], -4.80],
+      ['allison-4000:cr', 'Close Ratio (CR)', [3.51, 1.91, 1.43, 1.00, 0.74, 0.64], -4.80],
+      ['allison-4000:wr', 'Wide Ratio (WR)', [4.70, 2.21, 1.53, 1.00, 0.76, 0.67], -5.55],
+      ['allison-4000:7', '7-Speed', [7.63, 3.51, 1.91, 1.43, 1.00, 0.74, 0.64], -4.80],
     ]);
+    // Seçilen konfigürasyonun oranları belgenin vites adlarıyla (Canlı Not 50): 7-Speed'in ilki LO
+    const ad = (d) => VS.veMntVsOranlar(VS.VE_MNT_A4K, d).map((x) => x.ad);
+    expect(ad('cr')).toEqual(['1', '2', '3', '4', '5', '6', 'R']);
+    expect(ad('7')).toEqual(['LO', '1', '2', '3', '4', '5', '6', 'R']);
+    expect(VS.veMntVsOranlar(VS.VE_MNT_A4K, 'wr').map((x) => x.v)).toEqual([4.70, 2.21, 1.53, 1.00, 0.76, 0.67, -5.55]);
+    expect(VS.veMntVsOranlar(VS.VE_MNT_A4K, 'yok')).toEqual([]);
     expect(VS.veMntVsKonvertorler().map((c) => [c.k, c.stall, c.K])).toEqual([
       ['allison-4000:TC-521', 2.42, 50.7], ['allison-4000:TC-531', 2.34, 44.8], ['allison-4000:TC-541', 1.90, 39.7],
       ['allison-4000:TC-551', 1.79, 38.2], ['allison-4000:TC-561', 1.58, 35.4], ['allison-4000:TC-571', 1.62, 32.5],
@@ -389,7 +395,7 @@ describe('OTURUM — liste, seçenekler, kapalı seçeneğin sebebi', () => {
     expect([kg.textContent, kg.getAttribute('title')]).toEqual(['423,3', 'Islak 423 kg · kuru 385 kg · yağ 45,0 L']);
     W.veMntWizStpVsSecenek(sanz, 'dizi', '7');
     const k7 = kur(_mwStpKutleHTML(s)).querySelector('select[data-mw-vs-secenek="kar"] option[value="sig"]');
-    expect([k7.disabled, k7.getAttribute('title')]).toEqual([true, 'Dişli düzeni: Yedi vitesli.']);
+    expect([k7.disabled, k7.getAttribute('title')]).toEqual([true, 'Vites konfigürasyonu: 7-Speed.']);
   });
 
   test('3B: "Şanzıman modeli" listesinde aile; seçenek satırları; referans düğmeleri; kuru kütle ve yağ', () => {
@@ -401,6 +407,16 @@ describe('OTURUM — liste, seçenekler, kapalı seçeneğin sebebi', () => {
     el = kur(M3.veMntWiz3bAltHTML(s, sanz, {}));
     expect(el.querySelector('#ve-mw-3b-veri').value).toBe(A4K);
     expect(Array.from(el.querySelectorAll('.ve-mw-3b-secenek .ve-mw-3b-kb')).map((x) => x.textContent)).toEqual(VS.VE_MNT_A4K.secenek.map((o) => o.ad));
+    // Vites konfigürasyonu (Canlı Not 50): seçilenin oranları listenin altında, belgenin vites adlarıyla
+    const oran = (e) => Array.from(e.querySelectorAll('.ve-mw-3b-secenek .ve-mw-vs-oran [role="listitem"]'))
+      .map((x) => x.querySelector('i').textContent + ' ' + x.querySelector('b').textContent);
+    expect(el.querySelector('.ve-mw-3b-secenek .ve-mw-3b-kb').textContent).toBe('Vites konfigürasyonu');
+    expect(Array.from(el.querySelectorAll('select[data-mw-vs-secenek="dizi"] option')).map((o) => o.textContent)).toEqual(['Close Ratio (CR)', 'Wide Ratio (WR)', '7-Speed']);
+    expect(oran(el)).toEqual(['1 3,51', '2 1,91', '3 1,43', '4 1,00', '5 0,74', '6 0,64', 'R −4,80']);
+    expect(el.querySelectorAll('.ve-mw-vs-oran')).toHaveLength(1);                     // yalnız konfigürasyonun satırında
+    W.veMntWizStpVsSecenek(sanz, 'dizi', '7');
+    expect(oran(kur(M3.veMntWiz3bAltHTML(s, sanz, {})))).toEqual(['LO 7,63', '1 3,51', '2 1,91', '3 1,43', '4 1,00', '5 0,74', '6 0,64', 'R −4,80']);
+    W.veMntWizStpVsSecenek(sanz, 'dizi', 'cr');
     expect(Array.from(el.querySelectorAll('[data-ve-3b-ref]')).map((b) => b.textContent.trim())).toEqual(['Konvertör muhafazasının ön yüzü', 'Şanzıman ekseni']);
     W.veMntWizStpReferans(sanz, 'yuz', sanzRef(s.sonuc).yuz);
     W.veMntWizStpReferans(sanz, 'eksen', sanzRef(s.sonuc).eksen);
@@ -456,7 +472,7 @@ describe('PENCERE — dişli düzeni ve konvertör doldurur; 7. vites; sapma', (
   test('sapma alan alan: birebir (7/7) · elle değişen vites adıyla · altı vitesli düzende dolu 7. vites sapmadır', () => {
     const n = sanzDugum();
     cp.veMntApplyGearPreset(n.id, 'allison-4000:cr');
-    expect(cp._mntDisliSapma(n)).toEqual({ ad: 'Allison 4000 · Yakın oranlı (CR)', ayni: ['1. vites', '2. vites', '3. vites', '4. vites', '5. vites', '6. vites', 'Geri'], farkli: [] });
+    expect(cp._mntDisliSapma(n)).toEqual({ ad: 'Allison 4000 · Close Ratio (CR)', ayni: ['1. vites', '2. vites', '3. vites', '4. vites', '5. vites', '6. vites', 'Geri'], farkli: [] });
     n.data.g3 = 1.5; n.data.g7 = 0.6;
     expect(cp._mntDisliSapma(n).farkli).toEqual(['3. vites', '7. vites']);
     cp.veMntApplyTcPreset(n.id, 'allison-4000:TC-571');
@@ -480,11 +496,12 @@ describe('PENCERE — dişli düzeni ve konvertör doldurur; 7. vites; sapma', (
     const el = kur(cp.getMntMassPropertiesHTML(n));
     const dis = el.querySelector('#ve-mnt-gearPreset-' + n.id), tc = el.querySelector('#ve-mnt-tcPreset-' + n.id);
     expect(Array.from(dis.querySelectorAll('optgroup[label="Allison 4000"] option')).map((o) => o.textContent))
-      .toEqual(['Yakın oranlı (CR)', 'Geniş oranlı (WR)', 'Yedi vitesli']);
+      .toEqual(['Close Ratio (CR)', 'Wide Ratio (WR)', '7-Speed']);
     expect(dis.value).toBe('allison-4000:7');
     expect(Array.from(tc.querySelectorAll('option')).map((o) => o.textContent)[3]).toBe('TC-541 · 1,90');
     expect(el.querySelector('#ve-mnt-g7-' + n.id).value).toBe('0.64');
-    expect(el.querySelector('#ve-mnt-sanzkat-' + n.id).textContent).toContain('Allison 4000 · Yedi vitesli');
+    expect(el.querySelector('#ve-mnt-sanzkat-' + n.id).textContent).toContain('Allison 4000 · 7-Speed');
+    expect(Array.from(el.querySelectorAll('.ve-fp-l')).map((x) => x.textContent)).toContain('Vites konfigürasyonu');
     expect(el.querySelector('#ve-mnt-bagX-' + n.id)).not.toBe(null);
     expect(el.querySelector('#ve-mnt-egSinir-' + n.id)).not.toBe(null);
     expect(cp._mntBaglantiDurumu(n)).toMatchObject({ d: 'bos', yazi: 'tanımsız' });
@@ -505,7 +522,7 @@ describe('PENCERE — dişli düzeni ve konvertör doldurur; 7. vites; sapma', (
     const st = W.veMntWizState();
     expect([st.tork.g1, st.tork.g7, st.tork.gR, st.tork.Rstall, st.tork.gearPreset]).toEqual([7.63, 0.64, -4.80, 2.34, 'allison-4000:7']);
     const el = kur(W._mwStepTork({ ok: false }));
-    expect(Array.from(el.querySelectorAll('select[aria-label="Dişli düzeni"] option')).filter((o) => o.selected).map((o) => o.value)).toEqual(['allison-4000:7']);
+    expect(Array.from(el.querySelectorAll('select[aria-label="Vites konfigürasyonu"] option')).filter((o) => o.selected).map((o) => o.value)).toEqual(['allison-4000:7']);
     expect(el.querySelector('select[aria-label="Konvertör"]').value).toBe('allison-4000:TC-531');
     expect(el.innerHTML).toContain('7. vites');
     W.veMntWizDisliKatalog('allison-4000:cr');

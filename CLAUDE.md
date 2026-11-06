@@ -265,7 +265,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   −yan. Doğrudan bağlamada **bağlantı yüzü** (R ve eksen, `bagX…` · `egSinir`)
   aktarımla şanzımana yazılır; rapor §8.18 momenti o düzlemde keser (çekirdek
   `sectionMoment`, torksuz durumlar; hüküm Statik'te, uygunluğun 5. satırı).
-  Şanzıman penceresinin Katalog'u dişli düzenini (7. vites dâhil; altı vitesliye
+  Şanzıman penceresinin Katalog'u vites konfigürasyonunu (Canlı Not 50: adları belgenin İngilizcesi — Close Ratio (CR) ·
+  Wide Ratio (WR) · 7-Speed; seçilince oranları listenin altında, 7-Speed'in ilki LO; 7. vites dâhil; altı vitesliye
   dönünce 7. vites SİLİNİR) ve konvertörü doldurur. Kapı: `mount-sanziman-ailesi.test.js`
   (→ *AİLE* · *SEÇENEK* · *KÜTLE* · *YÖN* · *STEP* · *OTURUM* · *PENCERE*) +
   `mount-baglanti-momenti.test.js` (→ *ELLE HESAP* · *BİLEŞENLER* · *SONUÇ* · *RAPOR*).

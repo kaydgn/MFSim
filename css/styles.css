@@ -11881,8 +11881,10 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
    (Referans'ın iki düğmesi) ad ortada yüzüyordu */
 .ve-mw-3b-yan .ve-fw-3b-roller.ve-mw-3b-oz-s{ display:grid; grid-template-columns:96px minmax(0, 1fr); align-items:start;
   gap:4px 10px; padding:5px 14px; border-bottom:0; }
+/* Ad sütuna sığmazsa sarılır (Vites konfigürasyonu, Canlı Not 50): ilk satırı denetimin
+   ortasında (6 + 16/2 = 28/2), tek satırlık adın kutusu yine 28 px */
 .ve-mw-3b-oz-s > .ve-mw-3b-kb{ flex-basis:auto; margin:0; font-size:var(--fs-body); font-weight:400; letter-spacing:0;
-  text-transform:none; color:var(--text-secondary); line-height:28px; }
+  text-transform:none; color:var(--text-secondary); white-space:normal; line-height:16px; padding:6px 0; }
 .ve-mw-3b-oz-d{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; min-height:28px; }
 .ve-mw-3b-oz-d > select.ve-fw-inp{ flex:1 1 auto; min-width:0; width:auto; height:28px; }
 .ve-mw-3b-oz-d > .ve-fw-3b-dizi-ad{ flex-basis:100%; padding:0; border:0; }
@@ -11908,6 +11910,15 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-oz-d .ve-mw-vs-sayi > .ve-fw-inp{ height:28px; }
 .ve-mw-vs-sayi > u{ flex:none; min-width:3.2em; text-decoration:none; text-transform:none; color:var(--text-muted);
   font-size:var(--fs-tiny); white-space:nowrap; }
+/* VİTES ORANLARI (Canlı Not 50: *"seçtiğimizde vites oranları görünsün"*): listenin
+   altında ızgara — hücrede vitesin belgedeki adı (LO · 1 … · R) dar sütunda, oranı hemen
+   yanında (ad kendi oranına yakın); sütun sayısı genişlikten (3B'de dört sütun, iki satır) */
+.ve-mw-vs-oran{ flex-basis:100%; display:grid; grid-template-columns:repeat(auto-fill, minmax(46px, 1fr)); gap:1px 4px;
+  margin:2px 0 0; padding:0 1px; }
+.ve-mw-vs-oran > span{ display:grid; grid-template-columns:14px auto; column-gap:3px; justify-content:start; align-items:baseline;
+  min-width:0; line-height:16px; }
+.ve-mw-vs-oran i{ justify-self:end; font-style:normal; font-size:var(--fs-micro); color:var(--text-secondary); }
+.ve-mw-vs-oran b{ font-weight:400; font-size:var(--fs-tiny); color:var(--text-primary); font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ve-mw-3b-oz-mz{ flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:6px; overflow:hidden; white-space:nowrap; }
 .ve-mw-3b-oz-mz b{ min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:600; color:var(--text-primary); }
 .ve-mw-3b-yan .ve-fw-issues{ margin-top:8px; }
