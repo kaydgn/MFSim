@@ -1441,17 +1441,16 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(kb(brk)).toEqual(['Rol']);
     t.yogunluk[brk] = 'celik';
     expect(kb(brk)).toEqual(['Rol', 'Malzeme']);
-    // Rol tek liste, gruplu; rengi solundaki noktada; çip ve "Diğer…" yok
+    // Rol tek liste, gruplu; çip ve "Diğer…" yok
     const d = kur(veMntWiz3bAltHTML(t, brk, {}));
     expect(d.querySelector('#ve-mw-3b-rol').value).toBe('mnt-bracket');
     expect(Array.from(d.querySelectorAll('#ve-mw-3b-rol optgroup')).map((g) => g.label)).toEqual(veMntWiz3bRolGruplari().map((g) => g.ad));
     expect(d.querySelectorAll('#ve-mw-3b-rol option[data-ve-3b-rol]:not([value=""])').length).toBe(VE_MNT_STP_ROLLER.length);
-    expect(d.querySelector('.ve-mw-3b-oz-renk').getAttribute('style')).toBe('--renk:var(' + VE_MW_3B_ROL_RENK['mnt-bracket'] + ')');
-    // nokta listenin İÇİNDE (Canlı Not 42): değer sütunu bütün satırlarda aynı yerde başlar
-    expect(d.querySelector('.ve-mw-3b-oz-d > .ve-mw-3b-oz-sec > .ve-mw-3b-oz-renk + #ve-mw-3b-rol')).not.toBe(null);
-    expect(d.querySelector('.ve-mw-3b-oz-d > .ve-mw-3b-oz-renk')).toBe(null);
-    expect(kural('.ve-mw-3b-oz-sec > .ve-mw-3b-oz-renk')).toMatch(/position:absolute/);
-    expect(kural('.ve-mw-3b-oz-sec > select.ve-fw-inp')).toMatch(/padding-left:24px/);
+    // Rol listesi YALNIZ ADIYLA, renk noktası yok (Canlı Not 46: "Sadece rol ismi görünse
+    // yeter"); liste öteki satırlar gibi doğrudan değer sütununda (Canlı Not 42)
+    expect(d.querySelector('.ve-mw-3b-oz-d > #ve-mw-3b-rol')).not.toBe(null);
+    expect(d.querySelector('.ve-mw-3b-oz-renk, .ve-mw-3b-oz-sec')).toBe(null);
+    expect(css).not.toMatch(/\.ve-mw-3b-oz-renk|\.ve-mw-3b-oz-sec/);
     expect(d.querySelector('button[data-ve-3b-rol], [data-ve-3b-diger]')).toBe(null);
     expect(kural('.ve-mw-3b-yan .ve-fw-3b-roller.ve-mw-3b-oz-s')).toMatch(/grid-template-columns:96px minmax\(0, 1fr\)/);
   });

@@ -1219,8 +1219,10 @@ function veMntWiz3bGrupAc(k){
 // Saf: seçimin ÖZELLİKLERİ (testli) — Özellikler'de kimliğin altında, CAD'in
 // özellik ızgarası gibi (kullanıcı 2026-11-05, Canlı Not 10: *"Şu rol kısmı hiç
 // güzel olmamış. Çok amatör duruyor"*): satır başına ad · değer. Rol TEK listeden
-// (gruplu, VE_MW_3B_ROL_GRUP; rengi listenin içinde, metnin solundaki noktada —
-// değerler bütün satırlarda aynı sütunda başlar, Canlı Not 42) — eskiden beş çip
+// (gruplu, VE_MW_3B_ROL_GRUP), yalnız ADIYLA — renk noktası yok (kullanıcı
+// 2026-11-06, Canlı Not 46: *"Sadece rol ismi görünse yeter. Tanımladıktan sonra
+// renk ataması yapılıyor zaten"*; renk modelde, ağaçta ve Birimler'de); değerler
+// bütün satırlarda aynı sütunda başlar (Canlı Not 42) — eskiden beş çip
 // + "Diğer…" listesiydi. Malzeme yalnız atanmışsa (_mw3bMalzemeHTML); takozun
 // noktası; gövdenin modeli ("Motor modeli" — veri sayfası) ve referansı; aksesuarın kataloğu. Seçim yoksa
 // durum ve TEK yönlendirme. Hesap ve aktarım panelin dibindeki eylemde
@@ -1242,8 +1244,7 @@ function veMntWiz3bAltHTML(s, secili, opt){
           }).join('') + '</optgroup>';
         }).join('');
     h += _mw3bOzSatir('ve-mw-3b-rol', 'Rol',
-      '<span class="ve-mw-3b-oz-sec"><span class="ve-mw-3b-oz-renk" style="--renk:var(' + (rol ? veMntWiz3bRolJeton(rol) : '--border-color') + ')" aria-hidden="true"></span>'
-      + '<select class="ve-fw-inp" id="ve-mw-3b-rol" aria-label="Rol" onchange="veMntWiz3bRol(this.value)">' + liste + '</select></span>',
+      '<select class="ve-fw-inp" id="ve-mw-3b-rol" aria-label="Rol" onchange="veMntWiz3bRol(this.value)">' + liste + '</select>',
       'Rol — ' + (cok ? veSayi(secim.length, 0) + ' düğüm' : _mwEsc(so.agac[secili].ad)));
     h += _mw3bMalzemeHTML(s, secim, cok, secili);
     // Takozun noktası: seçili düğümün birimi takozsa — daireden seçim kipi ve öneriye dönüş
