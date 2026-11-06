@@ -138,7 +138,7 @@ function _gmSec2(){
       + 'Isı Sacı', 'Motora civatalı kütleler; her biri kendi bileşeni, nokta kütle'],
     ['<strong>Takoz</strong>', 'Konum ve üç eksenli rijitlik', 'En az 3, tipik olarak 3–4'],
     ['<strong>Takoz Özellikleri</strong>', 'Takoz tiplerinin kataloğu: rijitlik, kuvvet–sehim '
-      + 'yasası, kapasite', 'Katalogdan seçip takoza uygulamak için'],
+      + 'yasası', 'Katalogdan seçip takoza uygulamak için'],
     ['<strong>Çözücü</strong>', 'Çözüm modu, sönüm, şok', 'Tuvalde bir tane'],
     ['<strong>Başlangıç ve Örnekler</strong>', 'Kayıtlı gerçek modeller', 'Bölüm 3'],
     ['<strong>Görünümler</strong>',
@@ -394,19 +394,18 @@ function _gmSec7(){
   var h = _gmH2(6);
   h += '<h3>7.1 Takoz Özellikleri</h3>';
   h += '<p><strong>Takoz Özellikleri</strong> bileşeni takoz tiplerinin kataloğunu taşır: '
-    + 'gömülü künyeler ve eklenen özel takozlar. Seçilen tip takoza uygulanınca rijitlikler '
-    + 've kapasite dolar; <strong>konum dolmaz</strong> — o motorun verisidir, parçanın '
+    + 'katalogdaki künyeler ve eklenen özel takozlar. Seçilen tip takoza uygulanınca '
+    + 'rijitlikler dolar; <strong>konum dolmaz</strong> — o motorun verisidir, parçanın '
     + 'değil.</p>';
   h += _gmAlanTablo('Takoz Özellikleri penceresi', [
-    ['Takoz tipi · Taşıma kapasitesi', 'Takoz tipi seçici, seçili tipin adı ve türü (gömülü · '
-      + 'özel · değiştirilmiş), taşıma kapasitesi', 'Alttaki bölümler seçili tipin adını '
-      + 'başlıklarında taşır'],
+    ['Takoz tipi', 'Takoz tipi seçici (Katalog · Özel takozlar) ve seçili tipin adı; özel '
+      + 'tipte <strong>Sil</strong>', 'Alttaki bölümler seçili tipin adını başlıklarında taşır'],
     ['Rijitlik', 'Üç eksenin statik ve dinamik rijitliği, dinamik/statik oranı',
       'Boş ya da ≤ 0 değer varsa bant bunu yazar: çözücü bu tipi taşıyan takozu reddeder. '
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '
       + 'girilmiş olabilir'],
     ['Yasa', 'Seçilen eksenin kuvvet–sehim grafiği (X · Y · Z) ve üç eksenin yasası',
-      'Gömülü takoz lineerdir; z-eğrisinin noktaları yalnız özel takozda girilir'],
+      'Katalogdaki takoz lineerdir; z-eğrisinin noktaları yalnız özel takozda girilir'],
     ['Kullanım (yan sütun)', 'Bu tipi taşıyan takozlar: tipi seçilmiş ya da altı rijitliği tiple aynı',
       'Tipinden sapan takozu <strong>n değer farklı</strong> diye gösterir (aşağıdaki not)']
   ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
@@ -415,9 +414,8 @@ function _gmSec7(){
     + 'katalog güncellense de kaydedilmiş proje <strong>değişmez</strong>; hangi künyeden '
     + 'geldiğinin izi kalır. Tip sonradan değişirse takoz eski değerinde kalır; pencerenin '
     + '<strong>Kullanım</strong> bölümü onu gösterir. Taşıma kapasitesi de kopyalanır; tipte '
-    + 'tanımsızsa takozdaki eski değer silinir. Gömülü bir takozda yapılan değişiklik bu '
-    + 'Takoz Özellikleri düğümüne yazılır, fabrika değeri bozulmaz — <strong>Fabrika</strong> '
-    + 'düğmesi geri döndürür.');
+    + 'tanımsızsa takozdaki eski değer silinir. Katalogdaki bir takozda yapılan değişiklik bu '
+    + 'Takoz Özellikleri düğümüne yazılır, katalogun kendi değeri bozulmaz.');
   h += '<h3>7.2 Nonlineer z-eğrisi</h3>';
   h += '<p>Elastomer takozlar büyük sehimde <strong>sertleşir</strong>: kuvvet–sehim ilişkisi '
     + 'doğru değil, yukarı bükülen bir eğridir. Takoza <strong>kuvvet–sehim eğrisi</strong> '

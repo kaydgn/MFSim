@@ -3,7 +3,7 @@
  * ───────────────────────────────────────────────────────────────────────
  * Biçimi metin-dili.test.js ölçüyor (yön profili). Burada:
  *   · KAPALI DENETİM SEBEBİNİ SÖYLER: Parametrik Analiz'in Tara'sı ve Rapor'un
- *     düğmesi görünür sebebe bağlı (aria-describedby); Kütüphane'nin Fabrika'sı
+ *     düğmesi görünür sebebe bağlı (aria-describedby); Kütüphane'nin Fabrika'sı (Canlı Not 65'te kalktı)
  *     sebebi ipucunda. Araştırma turunda üçü de sebepsizdi.
  *   · ÇARE YALNIZ YOLU PENCERENİN DIŞINDA OLAN EKSİKTE: Tara'nın rölanti ve
  *     silindir eksiği Motor penceresine gönderir; aday, sabit grup ve
@@ -89,15 +89,35 @@ describe('Rapor: kapalı düğme durum yazısına bağlı', () => {
   });
 });
 
-describe('Kütüphane: Fabrika kapalıyken sebebi ipucunda', () => {
-  test('değiştirilmemiş gömülü tip', () => {
+// SADE TİP (kullanıcı 2026-11-06, Canlı Not 65: *"'Fabrika' falan yazıyor. 'Gömülü' falan
+// yazıyor. Kaldıralım … Taşıma kapasitesi kısmını da kaldır"*): Takoz Özellikleri'nin Tip
+// bölümünde tür rozeti, Fabrika düğmesi, tipin sayacı ve Taşıma kapasitesi yok; özel tipte Sil
+// durur. Takoz penceresinin tip listesi aynı adlarla, sayaçsız.
+describe('SADE TİP — Takoz Özellikleri ve Takoz penceresinin tip seçimi', () => {
+  test('katalog tipinde ne rozet ne Fabrika ne sayaç ne Taşıma kapasitesi; özel tipte Sil', () => {
     modelKur('kamyon');
     const lib = global.nodes.find((n) => n.type === 'mnt-library') || { id: 'lb', type: 'mnt-library', data: {} };
     const d = dom(cp.getMntLibraryPropertiesHTML(lib));
-    const f = [...d.querySelectorAll('button')].find((x) => /Fabrika/.test(x.textContent));
-    expect(f).toBeTruthy();
-    expect(f.getAttribute('aria-disabled')).toBe('true');
-    expect(f.getAttribute('title')).toBe('Fabrika değerlerinde.');
+    const metin = d.querySelector('.ve-fp-kat[data-k="tip"]').textContent;      // Tip bölümü (Kullanım · Katalog Not 66'nın)
+    expect([...d.querySelectorAll('button')].some((x) => /Fabrika/.test(x.textContent))).toBe(false);
+    expect(d.querySelector('.ve-mnt-rozet')).toBeNull();
+    expect(metin).not.toMatch(/gömülü|Gömülü/);
+    expect(metin).not.toMatch(/Taşıma kapasitesi|Maks\. eksenel yük/i);
+    expect(d.querySelector('[id^="ve-mnt-lib-maxLoad-"]')).toBeNull();
+    expect(metin).not.toMatch(/\d+\s*özel/);
+    lib.data = lib.data || {}; lib.data.mounts = [{ key: 'k1', name: 'Deneme', sx: 1, sy: 1, sz: 1, dx: 1, dy: 1, dz: 1 }]; lib.data._selKey = 'k1';
+    const o = dom(cp.getMntLibraryPropertiesHTML(lib));
+    expect([...o.querySelectorAll('button')].some((x) => /Sil/.test(x.textContent))).toBe(true);
+  });
+  test('Takoz penceresinin tip listesi: Katalog · Özel takozlar, sayaç yok', () => {
+    modelKur('kamyon');
+    const t = global.nodes.find((n) => n.type === 'mnt-mount');
+    const d = dom(cp.getMntMountPropertiesHTML(t));
+    const gr = [...d.querySelectorAll('optgroup')].map((g) => g.getAttribute('label'));
+    expect(gr).toContain('Katalog');
+    expect(gr).not.toContain('Gömülü');
+    const bas = [...d.querySelectorAll('.ve-fp-sect')].find((x) => /Takoz tipi/i.test(x.textContent));
+    expect(bas.textContent).not.toMatch(/gömülü|\d+\s*özel/);
   });
 });
 

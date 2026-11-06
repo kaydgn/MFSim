@@ -138,11 +138,11 @@ describe('arama filtresi', () => {
     expect(vis.every((o) => /Cone 39/i.test(o.textContent))).toBe(true);
     const groups = Array.from(el.list.querySelectorAll('.mntlib-group'));
     expect(groups[0].hidden).toBe(true);                 // "Özel Takozlar" boşaldı → gizli
-    expect(groups[1].hidden).toBe(false);                // "Gömülü Katalog" eşleşme taşıyor
+    expect(groups[1].hidden).toBe(false);                // "Katalog" eşleşme taşıyor
     expect(el.none.hidden).toBe(true);
   });
 
-  test('yalnız özel eşleşince SON grup başlığı ("Gömülü Katalog") da gizlenir', () => {
+  test('yalnız özel eşleşince SON grup başlığı ("Katalog") da gizlenir', () => {
     const el = mountPanel(libNode([{ key: 'k1', name: 'Özel A', sz: 640 }]));
     el.trigger.click();
     el.search.value = 'özel a';

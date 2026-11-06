@@ -1821,10 +1821,11 @@ function _mntTakozTipGovde(node){
   var opt=function(e){ return '<option value="'+_mntEsc(e.key)+'"'+(secili===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; };
   var sel='<select class="ve-fp-sel" id="ve-mnt-libKey-'+node.id+'" onchange="veMntApplyLib(\''+node.id+'\',this.value)">'
     + '<option value="">— elle gir —</option>';
-  if(B.length) sel+='<optgroup label="Gömülü">'+B.map(opt).join('')+'</optgroup>';
-  if(Cu.length) sel+='<optgroup label="Özel (Takoz Özellikleri)">'+Cu.map(opt).join('')+'</optgroup>';
+  // Takoz Özellikleri'nin listesiyle aynı adlar; sayaç yok (Canlı Not 65)
+  if(B.length) sel+='<optgroup label="Katalog">'+B.map(opt).join('')+'</optgroup>';
+  if(Cu.length) sel+='<optgroup label="Özel takozlar">'+Cu.map(opt).join('')+'</optgroup>';
   sel+='</select>';
-  var h=_mntBolum('Takoz tipi', B.length+' gömülü · '+Cu.length+' özel',
+  var h=_mntBolum('Takoz tipi', '',
       _mntIzgara(1, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Kütüphane</span>'+sel+'</label>')
     + '<div id="ve-mnt-libnot-'+node.id+'" data-tazele>'+_mntKutuphaneNotu(node)+'</div>');
   // Rijitlik — statik ve dinamik aynı satırda; oran türetilir.
@@ -4011,10 +4012,6 @@ function _mntLinInterp(pts, x){
 function _mntLibTur(e){
   return _mntEntryHasLaw(e) ? 'egri' : (e.overridden ? 'degisti' : (e.builtin ? 'gomulu' : 'ozel'));
 }
-function _mntLibRozet(e){
-  var t=(!e.builtin) ? 'ozel' : (e.overridden ? 'degisti' : 'gomulu');
-  return '<span class="ve-mnt-rozet" data-t="'+t+'">'+({ ozel:'Özel', degisti:'Değiştirildi', gomulu:'Gömülü' })[t]+'</span>';
-}
 // Bir girdi herhangi bir eksende nonlineer yasa (analitik fit VEYA nokta eğrisi) taşıyor mu?
 function _mntEntryHasLaw(e){
   return ['fitX','fitY','fitZ'].some(function(f){ return !!e[f]; })
@@ -4062,10 +4059,9 @@ function _mntLibTrigger(node, sel){
   h+=veIkon('chevron-down', 'mntlib-caret')+'</button>';
   return h;
 }
-// Açılır liste gövdesi: arama kutusu + iki grup (Özel / Gömülü) + satırlar.
+// Açılır liste gövdesi: arama kutusu + iki grup (Özel takozlar / Katalog) + satırlar.
 // Gizli olarak basılır; veMntLibDropdownToggle yalnız hidden'ı kaldırır.
 function _mntLibDropdown(node, custom, builtins, sel){
-  var nOv=builtins.filter(function(e){ return e.overridden; }).length;
   var h='<div class="mntlib-dd" id="mntlib-dd-'+node.id+'" role="listbox" hidden>';
   h+='<input type="text" class="mntlib-search" id="mntlib-q-'+node.id+'" placeholder="Takoz ara… (ad ya da kod)"'
     +' autocomplete="off" oninput="veMntLibFilter(\''+node.id+'\')"'
@@ -4075,13 +4071,13 @@ function _mntLibDropdown(node, custom, builtins, sel){
   // listenin süzüldüğünü yalanlar). data-total ile aramasız hâline geri döner.
   var cnt=function(n){ return '<span class="mntlib-count" data-total="'+n+'">'+n+'</span>'; };
   h+='<div class="mntlib-list" id="mntlib-list-'+node.id+'">';
-  h+='<div class="mntlib-group">Özel Takozlar · '+cnt(custom.length)+'</div>';
+  h+='<div class="mntlib-group">Özel takozlar · '+cnt(custom.length)+'</div>';
   if(!custom.length){
     h+='<div class="mntlib-note">Özel takoz yok.</div>';
   } else {
     custom.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
   }
-  h+='<div class="mntlib-group">Gömülü Katalog · '+cnt(builtins.length)+(nOv?' · '+nOv+' değiştirildi':'')+'</div>';
+  h+='<div class="mntlib-group">Katalog · '+cnt(builtins.length)+'</div>';
   builtins.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
   h+='<div class="mntlib-empty" id="mntlib-none-'+node.id+'" hidden>Eşleşen takoz yok.</div>';
   h+='</div></div>';
@@ -4117,15 +4113,6 @@ function _mntLibRijitlikHTML(node, e, setter){
 }
 // TAŞIMA KAPASİTESİ — tipin özelliği, Tip kategorisinde. Takoza uygulanınca
 // kopyalandığı (tanımsızsa takozdaki eski değerin silindiği) kılavuzda.
-function _mntLibKapasiteHTML(node, e, setter){
-  var mlv=(e.maxLoad===undefined||e.maxLoad===null)?'':e.maxLoad;
-  var kap=_mntIzgara(2,
-      '<label class="ve-fp-f"><span class="ve-fp-l">Maks. eksenel yük <u>[kg]</u></span>'
-    + '<input class="ve-fp-inp" type="text" inputmode="decimal" id="ve-mnt-lib-maxLoad-'+node.id+'" value="'+_mntEsc(mlv)+'"'
-    + ' placeholder="tanımsız" onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\'maxLoad\',this.value)"></label>'
-    + _mntOku('Kuvvet karşılığı <u>(1 g)</u>', (_mntNum(mlv,0)>0) ? _mntS(_mntNum(mlv)*9.81/1000,2)+' kN' : '—', { id:'ve-mnt-lib-kapN-'+node.id }));
-  return _mntBolum('Taşıma kapasitesi', 'tipin özelliği · hesaba girmez', kap);
-}
 // Grafiğin göstergesi — statik (lineer ya da eğri), dinamik, ölçüm noktaları.
 // Örnek çizgiler SVG özniteliğiyle, yazı rengi CSS'ten.
 function _mntLibLejant(hasCurve, hasMarkers){
@@ -4330,15 +4317,19 @@ function _mntLibKatalogHTML(custom, builtins, nCurve){
   // döndürür) kılavuzda — pencere açıklama taşımaz (FEAD kural 45).
   return _mntBolum('Katalog', '', f);
 }
+// SADE KİMLİK (kullanıcı 2026-11-06, Canlı Not 65: *"Çok karışık duruyor. 'Fabrika'
+// falan yazıyor. 'Gömülü' falan yazıyor. Kaldıralım … Taşıma kapasitesi kısmını da
+// kaldır"*): ad + (özel tipte) Sil; tür rozeti, Fabrika düğmesi, tipin sayacı ve
+// Taşıma kapasitesi bölümü YOK. Tipin kapasite alanı kayıtta durur (uygulanınca
+// takoza geçer), pencerede yazılmaz. Kapı: mount-yon.test.js → *SADE TİP*.
 function _mntLibKimlikHTML(node, e, setter){
   var eylem=(!e.builtin)
     ? '<button type="button" class="ve-fp-dugme" onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">'+veIkon('trash')+' Sil</button>'
-    : '<button type="button" class="ve-fp-dugme" onclick="veMntLibResetBuiltin(\''+node.id+'\',\''+_mntEsc(e.key)+'\')"'
-      + (e.overridden ? '' : ' aria-disabled="true" title="Fabrika değerlerinde."')+'>'+veIkon('rotate-ccw')+' Fabrika</button>';
+    : '';
   return '<div class="ve-mnt-lib-kim">'
     + '<input class="ve-fp-inp ve-fp-inp--text" type="text" id="ve-mnt-lib-name-'+node.id+'" value="'+_mntEsc(e.name)+'"'
     + ' aria-label="Takoz tipinin adı" onchange="'+setter+'(\''+node.id+'\',\''+_mntEsc(e.key)+'\',\'name\',this.value)">'
-    + _mntLibRozet(e)+eylem+'</div>';
+    + eylem+'</div>';
 }
 // TAKOZ ÖZELLİKLERİ PENCERESİ — sütunda (2026-10-15'e dek 1040 px'lik modal
 // bir görüntüleyiciydi: seçici + üç eksen grafiği yan yana). Üç kategori,
@@ -4361,19 +4352,17 @@ function getMntLibraryPropertiesHTML(node){
     + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
     + '</div>';
   var katalog=_mntLibKatalogHTML(custom, builtins, nCurve);
-  var tipEm=custom.length+' özel · '+builtins.length+' gömülü';
   if(!sel){
     return _mntPencereKabuk(node, [
-      { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', tipEm, secici+_mntNot('Takoz seçilmedi.', '')) },
+      { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntNot('Takoz seçilmedi.', '')) },
       { k:'rij', ad:'Rijitlik', govde:_mntBolum('Rijitlik', '[N/mm]', _mntNot('Takoz seçilmedi.', '')) }],
       katalog);
   }
   var setter=sel.builtin ? 'veMntLibSetBuiltin' : 'veMntLibSet';
   var D=_mntLibDurumlari(node, sel);
   var kategoriler=[
-    { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', tipEm, secici+_mntLibKimlikHTML(node, sel, setter))
-        + _mntLibKapasiteHTML(node, sel, setter),
-      durum:_mntDurum('ok', sel.builtin ? (sel.overridden ? 'değiştirildi' : 'gömülü') : 'özel') },
+    { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntLibKimlikHTML(node, sel, setter)),
+      durum:_mntDurum('ok') },
     { k:'rij', ad:'Rijitlik', govde:_mntLibRijitlikHTML(node, sel, setter), durum:D.rij },
     { k:'egri', ad:'Kuvvet–sehim', govde:_mntLibEgriHTML(node, sel), durum:D.egri }
   ];
