@@ -4,7 +4,7 @@
 
 | Önek | Modül | Kayıt defteri |
 |---|---|---|
-| `siper` / `tulga` / `asfat` | Takoz Çökme–Titreşim | `js/mount-core.js` → `MOUNT_EXAMPLES` |
+| `siper` / `tulga` / `asfat` / `tta10` · kurgu `kutu` / `hafif` / `kamyon` | Takoz Çökme–Titreşim | `js/mount-core.js` → `MOUNT_EXAMPLES` |
 | `ap_*` | **Araç Performans** | `js/cp-arac-example.js` → `AP_EXAMPLES` |
 
 

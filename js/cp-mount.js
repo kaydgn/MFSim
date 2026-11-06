@@ -2740,6 +2740,9 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
     if(nodes.length>before){
       var n=nodes[nodes.length-1];
       n.data=Object.assign(n.data||{}, { mass:c.mass, cgx:c.cg[0], cgy:c.cg[1], cgz:c.cg[2], Ixx:c.Ixx, Iyy:c.Iyy, Izz:c.Izz, Ixy:c.Ixy, Ixz:c.Ixz, Iyz:c.Iyz, pointMass:!!c.pointMass });
+      // Bağlantı yüzü (JSON'daki bagX · bagY · bagZ · egSinir'in kayıttaki karşılığı)
+      if(Array.isArray(c.bag) && c.bag.length===3){ n.data.bagX=c.bag[0]; n.data.bagY=c.bag[1]; n.data.bagZ=c.bag[2]; }
+      if(c.egSinir>0) n.data.egSinir=c.egSinir;
       // Tork zinciri: Motor→Te; Şanzıman→vites/stall + transfer/aks payı
       // (örnekte ayrı Transfer gövdesi yok → değerler Şanzıman'da tutulur).
       if(kind==='mnt-motor'){
