@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-alternator','mnt-alt-bracket','mnt-ac','mnt-heat-shield','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','mnt-parametric','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','ap-example','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-alternator','mnt-alt-bracket','mnt-ac','mnt-heat-shield','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-2dview','mnt-report','mnt-parametric','fead-crank','fead-alternator','fead-ac','fead-waterpump','fead-ps','fead-aircomp','fead-fan','fead-idler','fead-tensioner','fead-belt','fead-solver','fead-layout','fead-report','fead-wizard','arac-performans','mount-analysis','fead-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -583,14 +583,9 @@ var componentDefs = {
     // maxInstances 1. Pencere: js/cp-mount-cad.js.
     inputs: 0, outputs: 0, isMountViewer: true, maxInstances: 1, tekTik: true, defaultWidth: 60, defaultHeight: 56
   },
-  // Koordinat Düzlemi — koordinat sistemini (X/Y/Z eksenleri + düzlemler) 3B
-  // gösterir; kullanıcı konum/CG değerlerini hangi eksene göre girdiğini görür.
-  // Fiziksel topolojiye bağlanmaz. Panel/3B: cp-mount.js + cp-mount-viewer.js.
-  'mnt-coordframe': {
-    name: 'Koordinat Düzlemi',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #5f6873)" opacity="0.18" stroke="var(--text-muted, #5f6873)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #cf222e)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #cf222e)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #1a7f37)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #1a7f37)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #1f5fd6)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #1f5fd6)"/></svg>',
-    inputs: 0, outputs: 0, isMountCoordFrame: true, tekTik: true, defaultWidth: 60, defaultHeight: 56
-  },
+  // Koordinat Düzlemi (mnt-coordframe) YOK (kullanıcı 2026-11-06, Canlı Not 63:
+  // *"Koordinat Düzlemi bileşenini kaldıralım. Gerek yok."*): eksenin dili 3B'nin ve
+  // Görünümler'in eksen işaretinde; kayıtlı projedeki düğümü açılışta düşer (tanımsız tip).
   // Görünümler (eski adıyla 2D Görünüm, 2026-10-16) — güç grubunun döndürülebilir
   // aksonometrisi: gövdeler eşdeğer kutularıyla, takozlar, gövde ağırlık
   // merkezleri ve birleşik G; altında işaretlerin föyü. Fiziksel topolojiye

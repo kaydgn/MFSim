@@ -671,7 +671,7 @@ describe('ETİKET YERLEŞİMİ — üst üste binmez, kartın altına girmez', (
   });
 });
 
-describe('KOORDİNAT EKSENİ — Koordinat Düzlemi\'nin dili, kamerayla döner', () => {
+describe('KOORDİNAT EKSENİ — aracın ekseni, kamerayla döner', () => {
   // Görüntüleyicinin yörünge kamerası (z yukarı): dünya matrisinin sütunları sağ · yukarı · geri
   const kamera = (theta, phi) => {
     const b = [Math.cos(phi) * Math.cos(theta), Math.cos(phi) * Math.sin(theta), Math.sin(phi)];

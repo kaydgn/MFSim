@@ -101,7 +101,7 @@ describe('Örnek penceresi her zaman şema (S3·B)', () => {
 
 describe('Takoz arayüz dosyalarında düz çift tırnakla sözcük yok', () => {
   // Öznitelik değeri (`="…"`) değil, METİN içinde tırnaklanmış sözcük.
-  const DOSYA = ['js/cp-mount.js', 'js/cp-mount-wizard.js', 'js/cp-mount-baslangic.js', 'js/cp-mount-viewer.js', 'js/cp-mount-3b.js', 'js/cp-mount-report.js'];
+  const DOSYA = ['js/cp-mount.js', 'js/cp-mount-wizard.js', 'js/cp-mount-baslangic.js', 'js/cp-mount-3b.js', 'js/cp-mount-report.js'];
   test('tipografik tırnak (“…”)', () => {
     const bul = [];
     DOSYA.forEach((f) => fs.readFileSync(path.join(KOK, f), 'utf8').split('\n').forEach((l, i) => {

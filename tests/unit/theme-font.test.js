@@ -9,9 +9,8 @@
  * `veThemeFont('tiny')` → CSS'teki `--fs-tiny`.
  *
  * Üç kapı:
- *   1) Tuvale boy SAYIYLA verilmez — basamak adıyla verilir. Tek istisna
- *      Takoz 3B görüntüleyicisinin etiket DOKUSU (boy bir arayüz yazısı değil,
- *      sahnede ölçeklenen bir resmin çözünürlüğü).
+ *   1) Tuvale boy SAYIYLA verilmez — basamak adıyla verilir. İstisna yok
+ *      (Koordinat Düzlemi'nin 3B etiket dokusu Canlı Not 63'te sahnesiyle kalktı).
  *   2) Köprünün yedek boyları CSS'le aynı (jsdom CSS yüklemez; yedek ayrışırsa
  *      testler bir ölçeği, program başkasını çizer).
  *   3) Kök yazı boyu 16 değilse (tarayıcı ayarı) tuval de arayüzle birlikte
@@ -36,13 +35,9 @@ fs.readdirSync(JS_DIR).filter((f) => f.endsWith('.js') && f !== 'theme.js').forE
     for (const m of sat.matchAll(/veThemeFont\(\s*([^,)]+)/g)) CAGRILAR.push({ yer: f + ':' + (i + 1), arg: m[1].trim() });
   });
 });
-// 3B etiket DOKUSU — sahnede ölçeklenen resim, arayüz yazısı değil.
-const DOKU = /^js\/cp-mount-viewer\.js$/;
-
 describe('tuvale boy basamak ADIYLA verilir', () => {
-  test('sayıyla boy yok (istisna yalnız 3B etiket dokusu)', () => {
-    const sayili = CAGRILAR.filter((c) => !/^'[a-z]+'$/.test(c.arg))
-      .filter((c) => !DOKU.test('js/' + c.yer.split(':')[0]));
+  test('sayıyla boy yok', () => {
+    const sayili = CAGRILAR.filter((c) => !/^'[a-z]+'$/.test(c.arg));
     expect(sayili.map((c) => c.yer + ' → ' + c.arg)).toEqual([]);
   });
 

@@ -90,8 +90,8 @@
 //   · Ağırlık merkezi CAD simgesi (dörde bölünmüş daire), takoz noktası artılı
 //     halka, modelin noktası kesikli halka — ekranda sabit boyda SVG; etiketler
 //     birbirinin üstüne binmez.
-//   · KOORDİNAT EKSENİ tuvalin sol altında, Koordinat Düzlemi'nin dili
-//     (js/cp-mount-viewer.js): +X Arka · +Y Sağ · +Z Yukarı, eksi yönler soluk,
+//   · KOORDİNAT EKSENİ tuvalin sol altında, aracın ekseni:
+//     +X Arka · +Y Sağ · +Z Yukarı, eksi yönler soluk,
 //     üç soluk düzlem; kamerayla döner.
 // ============================================================================
 
@@ -2470,7 +2470,7 @@ function _mw3bEtiketle(){
   });
   cz.innerHTML = cs + is + ek; kat.innerHTML = hs;
 }
-// KOORDİNAT EKSENİ (saf, testli) — Koordinat Düzlemi'nin dili: oklar --eksen-*
+// KOORDİNAT EKSENİ (saf, testli) — aracın ekseni: oklar --eksen-*
 // renginde, eksi yarılar soluk, orijin. SADE (kullanıcı 2026-11-05, Canlı Not 14:
 // *"çok çirkin … arka tema ile daha uygun, daha estetik ve üzerindeki yazıların
 // sadece fare ile üstüne geldiğimde görünür"*): zemin dairesi ve üç düzlem YOK,

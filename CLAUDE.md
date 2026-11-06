@@ -234,8 +234,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (`veMntAksoOrnekModel`, yazısız — başlangıç sayfasının karoları 2026-11-04'ten beri
   YOK, sayfa resimsiz), raporun §8'indeki teknik illüstrasyon (x-ışını, SABİT
   görünüş, çözümün girdisinden — `veMntAksoCozumModel`); ikisi de katsız.
-  3D Görüntüleyici CAD'in evi (aşağıda); `js/cp-mount-viewer.js` yalnız Koordinat
-  Düzlemi'nin sahnesi. Kapı:
+  3D Görüntüleyici CAD'in evi (aşağıda); **Koordinat Düzlemi bileşeni YOK** (kullanıcı
+  2026-11-06, Canlı Not 63: *"Gerek yok"*) — kayıtlı projedeki düğümü açılışta düşer
+  (tanımsız tip), eksenin dili 3B'nin ve Görünümler'in eksen işaretinde. Kapı:
   `mount-akso.test.js` (→ *PENCERE* · *SERBEST KAMERA* · *İŞARET BOYU* · *YAPIŞKAN
   YER* · *PERDE* · *AYDINLIK* · *GİZLİ YÜZEY* · *RAPOR* · *KLASİK 3B* · *İÇ İÇE KUTU · RESSAM
   SIRASI · ÇİP*) + `mount-pencere.test.js` → *KROKİ* + `mount-sihirbaz.spec.js` → *3B DÜZENİ* +

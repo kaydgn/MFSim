@@ -63,7 +63,6 @@ function pencere(n) {
   if (n.type === 'mnt-library') return cp.getMntLibraryPropertiesHTML(n);
   if (n.type === 'mnt-example') return cp.getMntExamplePropertiesHTML(n);
   if (n.type === 'mnt-viewer') return cad.getMntViewerPropertiesHTML(n);
-  if (n.type === 'mnt-coordframe') return cp.getMntCoordFramePropertiesHTML(n);
   if (n.type === 'mnt-2dview') return cp.getMnt2DViewPropertiesHTML(n);
   if (n.type === 'mnt-report') return cp.getMntReportPropertiesHTML(n);
   return cp.getMntMassPropertiesHTML(n);
@@ -78,8 +77,8 @@ describe('LİSTE — Takoz\'un hiçbir penceresi modal değil', () => {
     return (new Function('return ' + m[1]))();
   };
 
-  test('tarama gerçekten tarıyor: yirmi bir Takoz tipi (dördü motorun aksesuarı)', () => {
-    expect(TAKOZ_TIPLERI.length).toBe(21);
+  test('tarama gerçekten tarıyor: yirmi Takoz tipi (dördü motorun aksesuarı; Koordinat Düzlemi yok — Canlı Not 63)', () => {
+    expect(TAKOZ_TIPLERI.length).toBe(20);
     expect(TAKOZ_TIPLERI.filter((t) => componentDefs[t].isMountAksesuar))
       .toEqual(['mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield']);
   });
@@ -123,15 +122,15 @@ describe('DİL — aynı kabuk, satır içi stil renk yazmıyor', () => {
     expect(bulgu).toEqual([]);
   });
 
-  test('3B eksen jetonları sahnedeki okların renkleri — iki temada da', () => {
-    const viewer = oku('js/cp-mount-viewer.js');
-    const ok = (v) => '#' + viewer.match(new RegExp('arrow\\(\\[' + v + '\\],\\s*0x([0-9a-f]{6})\\)'))[1];
-    // three.js Y-yukarı: model X → [1,0,0], model Y → [0,0,1], model Z → [0,1,0]
-    const sahne = { x: ok('1,0,0'), y: ok('0,0,1'), z: ok('0,1,0') };
+  // Eksenin dili TEK (Koordinat Düzlemi'nin three.js sahnesi Canlı Not 63'te kalktı):
+  // jeton iki temada aynı ve 3B'nin eksen işareti ile Görünümler'in rijitlik okları onu okur.
+  test('eksen jetonları iki temada aynı; 3B ve Görünümler onları okur', () => {
     const css = oku('css/styles.css');
     ['x', 'y', 'z'].forEach((a) => {
       const tanim = [...css.matchAll(new RegExp('--eksen-' + a + ':\\s*(#[0-9a-fA-F]{6})', 'g'))].map((m) => m[1].toLowerCase());
-      expect({ a, tanim }).toEqual({ a, tanim: [sahne[a], sahne[a]] });    // açık + koyu blok
+      expect({ a, n: tanim.length, ayni: tanim[0] === tanim[1] }).toEqual({ a, n: 2, ayni: true });   // açık + koyu blok
+      expect(css).toContain('.ve-mw-3b-eksen .ek-' + a + '{ stroke:var(--eksen-' + a + '); }');
+      expect(css).toContain('.ve-ak-rj-' + a + '{ stroke:var(--eksen-' + a + '); }');
     });
   });
 });
