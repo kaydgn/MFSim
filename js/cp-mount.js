@@ -4259,12 +4259,9 @@ function _mntLibEgriHTML(node, e){
     f+='<tr><td>'+a[1]+' <span class="sf">'+a[2]+'</span></td><td class="sol">'+y.ad+'</td><td class="sol sf">'+y.ayr+'</td></tr>';
   });
   h+=_mntBolum('Yasa', _mntEsc(e.name)+' · δ [mm] · f [N]', f+_MNT_FOY_KAPA);
-  if(e.builtin){
-    h+=_mntNot(_mntEntryHasLaw(e) ? '<b>Gömülü takoz</b> — eğriler fabrika değeri, salt okunur.'
-      : '<b>Gömülü takoz</b> — lineer.', '');
-  } else {
-    h+=_mntLibCurveEditor(node, _mntLibCustomEntry(node, e.key) || e);
-  }
+  // Katalog tipinde yasanın altında not YOK (kullanıcı 2026-11-06, Canlı Not 66):
+  // yasa föyü zaten "lineer" yazıyor; salt okunurluk kılavuzda (7.1).
+  if(!e.builtin) h+=_mntLibCurveEditor(node, _mntLibCustomEntry(node, e.key) || e);
   return h;
 }
 function _mntLibDurumlari(node, e){
@@ -4278,47 +4275,6 @@ function _mntLibDurumlari(node, e){
       : _mntDurum('ok', 'tamam');
   var egri=_mntDurum('ok', _mntEntryHasLaw(e) ? 'nonlineer' : 'lineer');
   return { rij:rij, egri:egri };
-}
-// KULLANIM — bu tip modelde hangi takozlarda. Takoz uygulandığı anın
-// değerlerini KOPYALAR (veMntApplyLib → _mntLibUygula); tip sonradan
-// değişince takoz eskisinde kalır ve bunu yalnız bu karşılaştırma gösterir.
-// Takozun tipi Takoz penceresinin eşleşmesinden (bağ ya da altı değeri aynı tek tip).
-function _mntLibKullanimHTML(node, e){
-  var list=(typeof nodes!=='undefined' && Array.isArray(nodes)) ? nodes : [];
-  var tk=list.filter(function(n){
-    if(!n || n.type!=='mnt-mount' || !n.data) return false;
-    var E=_mntKutuphaneEslesme(n);
-    return !!E && E.e.key===e.key;
-  });
-  var h, em='bu modelde';
-  if(!tk.length){
-    h=_mntNot('Bu tip modeldeki hiçbir takoza uygulanmamış.', '');
-  } else {
-    em=tk.length+' takoz';
-    var farkVar=false;
-    h=_mntFoyAc([{ b:'Takoz', gen:'56%' }, { b:'Değerler', gen:'44%', sinif:'sol' }], 'Bu tipi kullanan takozlar');
-    tk.forEach(function(n){
-      var d=n.data, fark=_MNT_RIJ_KUT.filter(function(p){ return _mntNum(d[p[0]],NaN)!==_mntNum(e[p[1]],NaN); });
-      if(fark.length) farkVar=true;
-      h+='<tr><td>'+_mntEsc(_mntNodeName(n))+'</td>'
-        + '<td class="sol'+(fark.length?' kr':'')+'"'+(fark.length ? ' title="'+_mntEsc(fark.map(function(p){ return p[2]; }).join(' · '))+'"' : '')+'>'
-        + (fark.length ? fark.length+' değer farklı' : 'tiple aynı')+'</td></tr>';
-    });
-    h+=_MNT_FOY_KAPA;
-    if(farkVar) h+=_mntNot('Takozlarda tipin eski değerleri var.', 'warn');
-  }
-  return _mntBolum('Kullanım', em, h, { id:'ve-mnt-lib-kul-'+node.id, tazele:true });
-}
-function _mntLibKatalogHTML(custom, builtins, nCurve){
-  var nOv=builtins.filter(function(e){ return e.overridden; }).length;
-  var f=_mntFoyAc([{ b:'Katalog', gen:'64%' }, { b:'Adet', gen:'36%' }], 'Katalog')
-    + '<tr><td>Özel takoz</td><td>'+custom.length+'</td></tr>'
-    + '<tr><td>Gömülü takoz</td><td>'+builtins.length+'</td></tr>'
-    + '<tr><td>Değiştirilmiş gömülü</td><td>'+nOv+'</td></tr>'
-    + '<tr><td>Nonlineer yasalı</td><td>'+nCurve+'</td></tr>'+_MNT_FOY_KAPA;
-  // Gömülü takozdaki değişikliğin nereye yazıldığı (düğüme; "Fabrika" geri
-  // döndürür) kılavuzda — pencere açıklama taşımaz (FEAD kural 45).
-  return _mntBolum('Katalog', '', f);
 }
 // SADE KİMLİK (kullanıcı 2026-11-06, Canlı Not 65: *"Çok karışık duruyor. 'Fabrika'
 // falan yazıyor. 'Gömülü' falan yazıyor. Kaldıralım … Taşıma kapasitesi kısmını da
@@ -4336,17 +4292,18 @@ function _mntLibKimlikHTML(node, e, setter){
 }
 // TAKOZ ÖZELLİKLERİ PENCERESİ — sütunda (2026-10-15'e dek 1040 px'lik modal
 // bir görüntüleyiciydi: seçici + üç eksen grafiği yan yana). Üç kategori,
-// gövdede alt alta: TİP (açılır liste, seçili tipin kimliği ve taşıma
-// kapasitesi — FEAD'in Kayış penceresinin Profil'i gibi seçim en üstte) ·
-// RİJİTLİK · KUVVET–SEHİM; sağ sütunda Kullanım (bu tip hangi takozlarda,
-// değerleri tiple aynı mı) ve Katalog. Gövdenin üstünde yalnız eksik bandı
-// durur (aile kuralı); alttaki iki kategori seçili tipin adını bölüm
-// künyesinde taşır. Açılır listenin davranışı (arama, klavye) değişmedi.
+// gövdede alt alta: TİP (açılır liste ve seçili tipin kimliği — FEAD'in Kayış
+// penceresinin Profil'i gibi seçim en üstte) · RİJİTLİK · KUVVET–SEHİM. Sağ
+// sütun YOK (kullanıcı 2026-11-06, Canlı Not 66: *"Burayı komple kaldır …
+// gereksiz bilgiler var"*): Kullanım (tipi taşıyan takozlar) ve Katalog
+// (sayaçlar) kalktı; takozun tipten sapmasını Takoz penceresinin tip notu
+// söyler. Gövdenin üstünde yalnız eksik bandı durur (aile kuralı); alttaki iki
+// kategori seçili tipin adını bölüm künyesinde taşır. Kapı: mount-yon.test.js →
+// *SADE PENCERE*.
 function getMntLibraryPropertiesHTML(node){
   var d=_mntLibEnsure(node);
   var custom=d.mounts;                                        // bu düğümün özel takozları (ham girdiler; builtin yok → özel)
   var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
-  var nCurve=custom.concat(builtins).filter(_mntEntryHasLaw).length;
   var sel=null;
   if(d._selKey) sel=custom.concat(builtins).find(function(e){ return e.key===d._selKey; });
   if(!sel) sel=custom[0]||builtins[0]||null;
@@ -4354,12 +4311,10 @@ function getMntLibraryPropertiesHTML(node){
     + '<div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, custom, builtins, sel)+'</div>'
     + '<button type="button" class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')">'+veIkon('plus')+' Yeni takoz</button>'
     + '</div>';
-  var katalog=_mntLibKatalogHTML(custom, builtins, nCurve);
   if(!sel){
     return _mntPencereKabuk(node, [
       { k:'tip', ad:'Tip', govde:_mntBolum('Takoz tipi', '', secici+_mntNot('Takoz seçilmedi.', '')) },
-      { k:'rij', ad:'Rijitlik', govde:_mntBolum('Rijitlik', '[N/mm]', _mntNot('Takoz seçilmedi.', '')) }],
-      katalog);
+      { k:'rij', ad:'Rijitlik', govde:_mntBolum('Rijitlik', '[N/mm]', _mntNot('Takoz seçilmedi.', '')) }], '');
   }
   var setter=sel.builtin ? 'veMntLibSetBuiltin' : 'veMntLibSet';
   var D=_mntLibDurumlari(node, sel);
@@ -4369,7 +4324,7 @@ function getMntLibraryPropertiesHTML(node){
     { k:'rij', ad:'Rijitlik', govde:_mntLibRijitlikHTML(node, sel, setter), durum:D.rij },
     { k:'egri', ad:'Kuvvet–sehim', govde:_mntLibEgriHTML(node, sel), durum:D.egri }
   ];
-  return _mntPencereKabuk(node, kategoriler, _mntLibKullanimHTML(node, sel)+katalog);
+  return _mntPencereKabuk(node, kategoriler, '');
 }
 
 // ─── Açılır liste denetimi (aç/kapa · ara · klavye) ──────────────────────────
@@ -5520,7 +5475,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntAtalet: _mntAtalet,
     _mntOranYayilim: _mntOranYayilim,
     _MNT_ORAN_YAYILIM_SINIR: _MNT_ORAN_YAYILIM_SINIR,
-    _mntKutuphaneEslesme: _mntKutuphaneEslesme, _mntTakozTipGovde: _mntTakozTipGovde, _mntLibKullanimHTML: _mntLibKullanimHTML,
+    _mntKutuphaneEslesme: _mntKutuphaneEslesme, _mntTakozTipGovde: _mntTakozTipGovde,
     _mntGatherTorqueKaynakli: _mntGatherTorqueKaynakli,
     _mntGolgelenen: _mntGolgelenen,
     _mntMotorSapma: _mntMotorSapma,

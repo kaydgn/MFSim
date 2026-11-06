@@ -98,7 +98,7 @@ describe('SADE TİP — Takoz Özellikleri ve Takoz penceresinin tip seçimi', (
     modelKur('kamyon');
     const lib = global.nodes.find((n) => n.type === 'mnt-library') || { id: 'lb', type: 'mnt-library', data: {} };
     const d = dom(cp.getMntLibraryPropertiesHTML(lib));
-    const metin = d.querySelector('.ve-fp-kat[data-k="tip"]').textContent;      // Tip bölümü (Kullanım · Katalog Not 66'nın)
+    const metin = d.querySelector('.ve-fp-kat[data-k="tip"]').textContent;      // Tip bölümü
     expect([...d.querySelectorAll('button')].some((x) => /Fabrika/.test(x.textContent))).toBe(false);
     expect(d.querySelector('.ve-mnt-rozet')).toBeNull();
     expect(metin).not.toMatch(/gömülü|Gömülü/);
@@ -118,6 +118,35 @@ describe('SADE TİP — Takoz Özellikleri ve Takoz penceresinin tip seçimi', (
     expect(gr).not.toContain('Gömülü');
     const bas = [...d.querySelectorAll('.ve-fp-sect')].find((x) => /Takoz tipi/i.test(x.textContent));
     expect(bas.textContent).not.toMatch(/gömülü|\d+\s*özel/);
+  });
+});
+
+// SADE PENCERE (kullanıcı 2026-11-06, Canlı Not 66: *"Burayı komple kaldır … gereksiz
+// bilgiler var"*): Takoz Özellikleri'nde Kullanım ve Katalog bölümleri, sağ sütun ve katalog
+// tipinin yasasının altındaki not YOK; pencere tek sütun. Bölümler: Takoz tipi · Rijitlik ·
+// Kuvvet–sehim (Yasa). Özel tipte eğri föyü durur.
+describe('SADE PENCERE — Takoz Özellikleri tek sütun, Kullanım · Katalog · not yok', () => {
+  const bolumler = (d) => [...d.querySelectorAll('.ve-fp-sect > b')].map((b) => b.textContent.trim());
+  test('katalog tipi: sağ sütun yok, bölüm başlıklarında Kullanım ve Katalog yok, "gömülü" hiç yok', () => {
+    modelKur('kamyon');
+    const lib = global.nodes.find((n) => n.type === 'mnt-library') || { id: 'lb', type: 'mnt-library', data: {} };
+    const d = dom(cp.getMntLibraryPropertiesHTML(lib));
+    expect(d.querySelector('.ve-fp-side')).toBeNull();
+    expect(d.querySelector('.ve-fp-split--tek')).not.toBeNull();
+    expect(bolumler(d)).not.toEqual(expect.arrayContaining(['Kullanım']));
+    expect(bolumler(d)).not.toEqual(expect.arrayContaining(['Katalog']));
+    expect(d.textContent).not.toMatch(/gömülü|Gömülü|GÖMÜLÜ/);
+    expect(d.textContent).not.toMatch(/fabrika değeri|salt okunur|hiçbir takoza uygulanmamış|Nonlineer yasalı/i);
+    expect(d.querySelectorAll('.ve-fp-kat[data-k="egri"] .ve-fp-not').length).toBe(0);
+  });
+  test('özel tip: tek sütun, eğri föyü durur; seçim bulunamayınca da sağ sütun yok', () => {
+    modelKur('kamyon');
+    const lib = { id: 'lb', type: 'mnt-library', data: { mounts: [{ key: 'k1', name: 'Deneme', sx: 1, sy: 1, sz: 1, dx: 1, dy: 1, dz: 1 }], _selKey: 'k1' } };
+    const d = dom(cp.getMntLibraryPropertiesHTML(lib));
+    expect(d.querySelector('.ve-fp-side')).toBeNull();
+    expect(bolumler(d)).toEqual(expect.arrayContaining(['Takoz tipi', 'Rijitlik', 'Yasa', 'Düşey (z) eğrisi']));
+    const bos = dom(cp.getMntLibraryPropertiesHTML({ id: 'lb2', type: 'mnt-library', data: { mounts: [], _selKey: 'yok' } }));
+    expect(bos.querySelector('.ve-fp-side')).toBeNull();
   });
 });
 

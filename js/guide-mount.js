@@ -405,15 +405,13 @@ function _gmSec7(){
       + 'Oran eksenler arasında 1,5 kattan fazla yayılıyorsa da yazar: eksenler takaslı '
       + 'girilmiş olabilir'],
     ['Yasa', 'Seçilen eksenin kuvvet–sehim grafiği (X · Y · Z) ve üç eksenin yasası',
-      'Katalogdaki takoz lineerdir; z-eğrisinin noktaları yalnız özel takozda girilir'],
-    ['Kullanım (yan sütun)', 'Bu tipi taşıyan takozlar: tipi seçilmiş ya da altı rijitliği tiple aynı',
-      'Tipinden sapan takozu <strong>n değer farklı</strong> diye gösterir (aşağıdaki not)']
+      'Katalogdaki takozun yasası salt okunurdur; z-eğrisinin noktaları yalnız özel takozda girilir']
   ], ['Bölüm', 'Ne taşır', 'Ne söyler']);
   h += _gmNot('Künye kopya olarak gider',
       'Takoz Özellikleri’nden uygulanan değerler takoz düğümüne <strong>kopyalanır</strong>: '
     + 'katalog güncellense de kaydedilmiş proje <strong>değişmez</strong>; hangi künyeden '
-    + 'geldiğinin izi kalır. Tip sonradan değişirse takoz eski değerinde kalır; pencerenin '
-    + '<strong>Kullanım</strong> bölümü onu gösterir. Taşıma kapasitesi de kopyalanır; tipte '
+    + 'geldiğinin izi kalır. Tip sonradan değişirse takoz eski değerinde kalır; Takoz '
+    + 'penceresinin tip notu kaç değerin tiple aynı olduğunu yazar. Taşıma kapasitesi de kopyalanır; tipte '
     + 'tanımsızsa takozdaki eski değer silinir. Katalogdaki bir takozda yapılan değişiklik bu '
     + 'Takoz Özellikleri düğümüne yazılır, katalogun kendi değeri bozulmaz.');
   h += '<h3>7.2 Nonlineer z-eğrisi</h3>';
