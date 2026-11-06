@@ -1484,6 +1484,12 @@
          görünür (kullanım notu T16). Belgelerdeki karşılığı
          js/theme.js → veThemeFontFaceCss. */
       font-variant-ligatures: no-contextual;
+      /* Boyu hiçbir kuralın vermediği yazı ARAYÜZ VARSAYILANINA düşer, tarayıcının
+         16 px'ine (pencere başlığı boyu) değil (kullanıcı 2026-11-06, Canlı Not 43:
+         "Yazılar neden büyük altta? Çok amatör duruyor" — 3B'nin Birimler listesinde
+         16 yazı, içe aktarmanın boş durumunda 1). rem jetonları köke bağlı:
+         değişmez. */
+      font-size: var(--fs-body);
       min-height: 100vh;
       margin: 0;
       overflow: hidden;
@@ -7938,7 +7944,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-imp-state{
   flex:1; display:flex; flex-direction:column; align-items:center;
   justify-content:center; gap:8px; padding:48px 16px; text-align:center;
-  color:var(--text-secondary);
+  font-size:var(--fs-title); color:var(--text-secondary);
 }
 .ve-imp-dim{ font-size:var(--fs-tiny); color:var(--text-muted); max-width:420px; }
 .ve-imp-drop-ico{ font-size:var(--fs-hero); color:var(--accent-primary); opacity:.8; }
@@ -12051,29 +12057,46 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-kimlik-ad{ min-width:0; display:flex; flex-direction:column; gap:1px; }
 .ve-mw-3b-kimlik-ad b{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-lg); font-weight:600; color:var(--text-heading); }
 .ve-mw-3b-kimlik-ad .ve-fw-dim{ font-size:var(--fs-tiny); }
-.ve-mw-3b-kimlik .ve-fw-3b-atanan{ margin-top:8px; }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan{ margin-top:8px; gap:0; }
+/* Çoklu seçimin düğümleri Birimler'in satır dilinde (Canlı Not 43): 12 px düz metin,
+   seçili kalın; seçimden çıkar fareyle ya da odakla */
+.ve-mw-3b-kimlik .ve-fw-3b-atanan li{ min-height:24px; box-sizing:border-box; padding:3px 4px 3px 6px; font-size:var(--fs-body); }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan li:hover{ background:var(--bg-tertiary); }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan li.on{ background:var(--accent-tint-10); }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan .ve-fw-3b-yolb{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-body); color:var(--text-primary); }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan .ve-fw-3b-yolb:hover{ text-decoration:none; }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan li.on .ve-fw-3b-yolb{ font-weight:600; color:var(--text-heading); }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan li > .ve-fw-dim{ font-size:var(--fs-tiny); }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan li > .ve-fw-mini{ opacity:0; }
+.ve-mw-3b-kimlik .ve-fw-3b-atanan li:hover > .ve-fw-mini, .ve-mw-3b-kimlik .ve-fw-3b-atanan li > .ve-fw-mini:focus-visible{ opacity:1; }
 /* BİRİMLER (kullanıcı 2026-11-05, Canlı Not 17 · 18): ölçülen birimler ve rol
    verilenler TEK listede; role göre gruplar, başlıkta sayı, açılır kapanır (kapalı
    açılır, seçili birimin grubu açık); motorun aksesuarları motorun altında,
    girintili. Satır: rol noktası · ad · kütle; altında CG (takozda nokta); rolü
    kaldır fareyle ya da odakla görünür. */
-.ve-mw-3b-toplam{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 6px; margin:0 0 8px; font-variant-numeric:tabular-nums; }
+.ve-mw-3b-toplam{ display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 6px; margin:0 0 8px; font-size:var(--fs-body); font-variant-numeric:tabular-nums; }
 .ve-mw-3b-toplam b{ font-weight:600; color:var(--text-heading); }
 .ve-mw-3b-grup + .ve-mw-3b-grup{ border-top:1px solid var(--border-light); }
+/* Yazı ölçeği panelin (Canlı Not 43): başlık 12 px · 600, birimin adı 12 px düz
+   metin (bağlantı mavisi değil — seçili satır zeminiyle ve kalınlıkla), kütle ve
+   CG 11 px; satır ağacınki gibi 24 px */
 .ve-mw-3b-grup-bas{ display:flex; align-items:center; gap:6px; width:100%; height:28px; padding:0; border:0; background:none;
-  font:inherit; font-weight:600; color:var(--text-primary); text-align:left; cursor:pointer; }
+  font:inherit; font-size:var(--fs-body); font-weight:600; color:var(--text-heading); text-align:left; cursor:pointer; }
 .ve-mw-3b-grup-bas:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
-.ve-mw-3b-grup-bas > .mf-ico{ flex:none; width:13px; height:13px; color:var(--text-muted); transition:transform var(--dur-base) var(--ease-out); }
+.ve-mw-3b-grup-bas > .mf-ico{ flex:none; width:12px; height:12px; color:var(--text-muted); transition:transform var(--dur-base) var(--ease-out); }
 .ve-mw-3b-grup-bas[aria-expanded="true"] > .mf-ico{ transform:rotate(90deg); }
-.ve-mw-3b-grup-bas > .ve-fw-dim{ margin-left:auto; font-weight:400; font-variant-numeric:tabular-nums; }
+.ve-mw-3b-grup-bas > .ve-fw-dim{ margin-left:auto; font-size:var(--fs-tiny); font-weight:400; font-variant-numeric:tabular-nums; }
 .ve-mw-3b-birim-l, .ve-mw-3b-birim-alt{ list-style:none; margin:0; padding:0; }
 .ve-mw-3b-birim-l{ margin-bottom:6px; }
 .ve-mw-3b-birim{ display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; column-gap:6px; row-gap:1px;
-  padding:4px 4px 4px 6px; }
+  min-height:24px; box-sizing:border-box; padding:3px 4px 3px 6px; font-size:var(--fs-body); }
 .ve-mw-3b-birim:hover{ background:var(--bg-tertiary); }
 .ve-mw-3b-birim.on{ background:var(--accent-tint-10); }
-.ve-mw-3b-birim-ad{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; }
-.ve-mw-3b-birim-kg, .ve-mw-3b-birim-rol{ white-space:nowrap; font-variant-numeric:tabular-nums; }
+.ve-mw-3b-birim-ad{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left;
+  font-size:var(--fs-body); color:var(--text-primary); }
+.ve-mw-3b-birim-ad:hover{ text-decoration:none; }
+.ve-mw-3b-birim.on .ve-mw-3b-birim-ad{ font-weight:600; color:var(--text-heading); }
+.ve-mw-3b-birim-kg, .ve-mw-3b-birim-rol{ white-space:nowrap; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; }
 .ve-mw-3b-birim-xyz{ grid-column:2 / -1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; }
 .ve-mw-3b-birim > .ve-fw-mini{ opacity:0; }
@@ -12081,14 +12104,16 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-birim[data-uyari] .ve-mw-3b-birim-xyz{ color:var(--ink-warning); }
 .ve-mw-3b-birim-alt{ grid-column:2 / -1; margin-top:2px; padding-left:10px; border-left:1px solid var(--border-light); }
 .ve-mw-3b-birim-alt .ve-mw-3b-birim{ padding-left:4px; }
-/* Birimin kütlesi: ad · değer ızgarası; koordinat üç hücrede */
-.ve-mw-3b-alanlar{ display:grid; grid-template-columns:minmax(84px, auto) minmax(0, 1fr); align-items:center; gap:8px 10px; font-size:var(--fs-tiny); }
+/* Birimin kütlesi: ad · değer ızgarası, özellik satırlarının ölçüsüyle (96 px ad
+   sütunu, 12 px ad, 28 px denetim — Canlı Not 43: bölümün adları 11 px ve değer
+   sütunu Rol'ünkünden kayıktı); koordinat üç hücrede */
+.ve-mw-3b-alanlar{ display:grid; grid-template-columns:96px minmax(0, 1fr); align-items:center; gap:10px 10px; font-size:var(--fs-body); }
 .ve-mw-3b-alan-ad{ color:var(--text-secondary); }
 .ve-mw-3b-kaynak{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ve-mw-3b-kg{ display:inline-flex; align-items:center; gap:6px; font-variant-numeric:tabular-nums; }
-.ve-mw-3b-kg input{ width:96px; text-align:right; }
+.ve-mw-3b-kg input{ width:96px; height:28px; text-align:right; }
 .ve-mw-3b-xyz{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; }
-.ve-mw-3b-xyz-h{ display:flex; align-items:center; justify-content:space-between; gap:4px; height:24px; padding:0 6px; box-sizing:border-box;
+.ve-mw-3b-xyz-h{ display:flex; align-items:center; justify-content:space-between; gap:4px; height:28px; padding:0 6px; box-sizing:border-box; font-size:var(--fs-tiny);
   border-radius:var(--radius-sm); background:var(--bg-tertiary); font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--text-primary); }
 .ve-mw-3b-xyz-e{ font-size:var(--fs-micro); font-weight:700; color:var(--text-secondary); }
 /* 3B'NİN BİRİM TABLOLARI (js/cp-mount-3b.js) — sabit düzen: gövdede ad · kütle ·

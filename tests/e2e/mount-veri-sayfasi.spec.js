@@ -137,6 +137,27 @@ test('VERİ SAYFASI: 3B\'de model, ön yüz ve krank ekseni gerçek fareyle; ağ
   expect(sonuc.kayit.yog).toBe('cummins-isb67-360');
   expect(Object.keys(sonuc.kayit.ref).sort()).toEqual(['eksen', 'yuz']);
 
+  // YAZI ÖLÇEĞİ (Canlı Not 43): Özellikler'de hiçbir yazı 14 px'i aşmaz — grup
+  // başlığı, birim adı ve kütle tarayıcının 16 px'ini alıyordu; Kütle bölümünün
+  // değerleri Rol'ün sütununda başlar
+  await page.evaluate(() => { const s = veMntWizStp(); veMntWiz3bSec(s.sonuc.agac.findIndex((x) => x.ad === 'Motor bloğu')); });
+  const yazi = await page.evaluate(() => {
+    const yan = document.getElementById('ve-mw-3b-yan'), boy = {}, w = document.createTreeWalker(yan, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = w.nextNode())) {
+      if (!n.textContent.trim() || !n.parentElement.getBoundingClientRect().width) continue;
+      const px = getComputedStyle(n.parentElement).fontSize; (boy[px] = boy[px] || []).push(n.textContent.trim().slice(0, 20));
+    }
+    const px = (q) => { const e = yan.querySelector(q); return e && getComputedStyle(e).fontSize; };
+    const sol = (q) => { const e = yan.querySelector(q); return e && Math.round(e.getBoundingClientRect().left); };
+    return { buyuk: Object.keys(boy).filter((p) => parseFloat(p) > 14).map((p) => p + ' ' + boy[p].join(', ')),
+      grup: px('.ve-mw-3b-grup-bas > span'), ad: px('.ve-mw-3b-birim-ad'), kg: px('.ve-mw-3b-birim-kg'),
+      kutleSol: sol('.ve-mw-3b-kaynak'), rolSol: sol('#ve-mw-3b-rol') };
+  });
+  expect(yazi.buyuk).toEqual([]);
+  expect([yazi.grup, yazi.ad, yazi.kg]).toEqual(['12px', '12px', '11px']);
+  expect(yazi.kutleSol).toBe(yazi.rolSol);
+
   // Pencerenin föyü: motor satırı seçili, fark 0,0; kütle tablosunda model ve
   // sayfanın ıslak kütlesi (yazılmaz — aksesuarlar ayrı bileşen)
   await page.evaluate(() => veMntWiz3bKapat());
