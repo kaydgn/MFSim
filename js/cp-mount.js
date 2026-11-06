@@ -3071,7 +3071,7 @@ function _mntAksoHTML(P, W, tam, kapId, ek){
     H:tam ? (ek.H>0 ? Math.round(ek.H) : Math.max(380, Math.min(760, Math.round(ekranH*0.7))))
           : (ek.H>0 ? Math.round(ek.H) : Math.round(Math.max(280, Math.min(460, W*0.92)))),
     yer:(_mntAksoCizim[kapId] && _mntAksoCizim[kapId].yer) || null };
-  if(ek.disari) o.disari=true;   // yazılar modelin dışında (sihirbazın masası, Canlı Not 40)
+  if(ek.balon) o.balon=true;   // yazılar çerçeveli çip, kısa kırık kılavuz (sihirbazın masası, Canlı Not 41)
   if(ek.ortu && ek.ortu.length) o.ortu=ek.ortu;   // çizimin üstünde yüzen yüzeyler
   if(sec){ o.secili=sec.k; o.perde=!ek.perdesiz; if(!ek.perdesiz) o.aria='Güç grubundaki yeri: '+sec.ad; }
   var r=veMntAkso.ciz(m, o), svg=_mntAksoSvg(r.svg);
@@ -3137,7 +3137,7 @@ function _mntAksoKur(kapId, W, P){
   if(kap.getAttribute('data-yalin')==='1') ek.yalin=true;
   if(kap.getAttribute('data-perde')==='0') ek.perdesiz=true;
   if(kap.getAttribute('data-etiket')) ek.etiket=kap.getAttribute('data-etiket');
-  if(kap.getAttribute('data-disari')==='1') ek.disari=true;
+  if(kap.getAttribute('data-balon')==='1') ek.balon=true;
   if(kap.getAttribute('data-ortu')) ek.ortu=kap.getAttribute('data-ortu').split(';').map(function(t){
     var v=t.split(',').map(Number); return { l:v[0], t:v[1], r:v[2], b:v[3] }; }).filter(function(r){ return [r.l, r.t, r.r, r.b].every(isFinite); });
   if(!tam && Number(kap.getAttribute('data-h'))>120) ek.H=Number(kap.getAttribute('data-h'));
@@ -3170,7 +3170,8 @@ function _mntAkso3bHizli(kapId){
   var c=_mntAksoCizim[kapId], kap=(typeof document!=='undefined') ? document.getElementById(kapId) : null;
   if(!c || !kap) return false;
   var A=_mntAkso3bOku(), G=_mntAksoGorus(kapId);
-  var o=Object.assign({}, c.o, { kam:{ az:A.az, el:A.el }, yakin:G.yakin, kay:G.kay, yer:c.yer });
+  // sürüklemenin karesi: çipler (sihirbazın masası) yerinde yürür, bırakınca _mntAksoKur yerleştirir
+  var o=Object.assign({}, c.o, { kam:{ az:A.az, el:A.el }, yakin:G.yakin, kay:G.kay, yer:c.yer, surukle:true });
   var r=veMntAkso.ciz(c.m, o), svg=_mntAksoSvg(r.svg);
   if(!_mntAksoSvgDegis(kap, svg)) return false;
   c.F=r.F; c.yer=r.yer; c.svg=svg; c.odak=null;

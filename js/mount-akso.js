@@ -110,7 +110,7 @@ var veMntAkso = (function(){
     var a=(IZ[iz]||IZ.dim).yon;
     var d=mul(norm(yon || [b.x*a[0], b.y*a[1], b.z*a[2]]), -1);
     var r=norm(cross(d, [0, 0, 1])), u=cross(r, d);
-    var K={ d:d, P:function(p){ return [dot(r, p), -dot(u, p)]; } };
+    var K={ d:d, r:r, u:u, P:function(p){ return [dot(r, p), -dot(u, p)]; } };
     K.derin=function(p){ return -dot(d, p); };            // büyük = izleyiciye yakın
     K.gorunur=function(n){ return dot(n, d) < -1e-9; };
     K.oran=[0, 1, 2].map(function(i){ var e=[0, 0, 0]; e[i]=1; var q=K.P(e); return Math.sqrt(q[0]*q[0]+q[1]*q[1]); });
@@ -292,13 +292,18 @@ var veMntAkso = (function(){
     }
     return out;
   }
-  // ── DIŞ YAZI (o.disari — sihirbazın 3B'si; kullanıcı 2026-11-05, Canlı Not
-  // 40: "Yazılar falan kayıyor"): gövde ve takoz yazıları modelin DIŞINDA —
-  // izdüşümün dışbükey zarfının (S) ötesinde, işaretin zarfın ortasına göre
-  // yönünde (±72°); kılavuz gövdenin GÖRÜNEN yerine iner. Yazı başka yazıya,
-  // tam engele ve zarfa binmez; kılavuzu başka kılavuzu kesmez, yazının
-  // içinden geçmez. Yer bulamayan yazı eski yerleştiriciye kalır (`kalan`).
-  // Ölçü: mount-akso.test.js → DIŞ YAZI.
+  // ── ÇİP (o.balon — sihirbazın 3B'si; kullanıcı 2026-11-06, Canlı Not 41:
+  // "uzayan çubuklar ve üzerindeki yazılar güzel değil. Döndürürken falan
+  // garip şeyler yapıyor. Ayrıca tüm yazılar çerçeveli değil"): her yazı
+  // çerçeveli ÇİP; parçanın görünen yüzünde, çipin tarafına yakın bir
+  // noktadan KISA kırık kılavuz (45° eğik + yatay omuz) çipin kenarına iner.
+  // Yer dört çeyrekte (sağ üst · sol üst · sağ alt · sol alt) ve on boyda
+  // aranır: çip çipe, tam engele ve örtüye binmez; kılavuz kılavuzu kesmez,
+  // çipin içinden geçmez. Başka gövdenin üstü pahalı, kendi gövdesinin üstü
+  // daha ucuz, boy uzadıkça pahalı. YAPIŞKAN: bir önceki karenin yeri (o.yer)
+  // en ucuzu — döndürürken çip parçasıyla yürür, yalnız yeri kapanınca
+  // taşınır. Yer bulamayan eski yerleştiriciye kalır (`kalan`). Ölçü:
+  // mount-akso.test.js → ÇİP.
   function disbukey(pts){
     var ek=pts.slice().sort(function(a, b){ return a[0]-b[0] || a[1]-b[1]; });
     var cr=function(o, a, b){ return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); };
@@ -306,30 +311,6 @@ var veMntAkso = (function(){
     ek.forEach(function(q){ while(alt.length>=2 && cr(alt[alt.length-2], alt[alt.length-1], q)<=0) alt.pop(); alt.push(q); });
     for(var i=ek.length-1;i>=0;i--){ var q=ek[i]; while(ust.length>=2 && cr(ust[ust.length-2], ust[ust.length-1], q)<=0) ust.pop(); ust.push(q); }
     return alt.slice(0, -1).concat(ust.slice(0, -1));
-  }
-  // Zarf: noktaların dışbükey zarfı, `pay` px genişletilmiş (köşeler sekizgenle);
-  // kenar normallerinin izdüşüm aralığı bir kez hesaplanır — sınama yalnız
-  // dikdörtgenin dört köşesini izdüşürür (yazı başına yüzlerce sınama).
-  function zarf(pts, pay){
-    var ek=[];
-    disbukey(pts).forEach(function(p){ for(var a=0;a<8;a++){ var t=a*Math.PI/4; ek.push([p[0]+Math.cos(t)*pay, p[1]+Math.sin(t)*pay]); } });
-    var S=disbukey(ek), Z={ S:S, n:[], l:Infinity, r:-Infinity, t:Infinity, b:-Infinity, c:[0, 0] };
-    S.forEach(function(p, i){
-      Z.l=Math.min(Z.l, p[0]); Z.r=Math.max(Z.r, p[0]); Z.t=Math.min(Z.t, p[1]); Z.b=Math.max(Z.b, p[1]);
-      Z.c[0]+=p[0]/S.length; Z.c[1]+=p[1]/S.length;
-      var q=S[(i+1)%S.length], nx=q[1]-p[1], ny=p[0]-q[0], mn=Infinity, mx=-Infinity;
-      S.forEach(function(w){ var v=w[0]*nx+w[1]*ny; if(v<mn) mn=v; if(v>mx) mx=v; });
-      Z.n.push([nx, ny, mn, mx]);
-    });
-    return Z;
-  }
-  function zarfKesisir(k, Z){             // dikdörtgen ↔ dışbükey zarf (ayıran eksen)
-    if(Z.r<=k.l || Z.l>=k.r || Z.b<=k.t || Z.t>=k.b) return false;
-    for(var i=0;i<Z.n.length;i++){
-      var n=Z.n[i], a=k.l*n[0]+k.t*n[1], b=k.r*n[0]+k.t*n[1], c=k.r*n[0]+k.b*n[1], d=k.l*n[0]+k.b*n[1];
-      if(Math.max(a, b, c, d)<=n[2] || Math.min(a, b, c, d)>=n[3]) return false;
-    }
-    return true;
   }
   function segKes(s, q){                  // iki doğru parçası (uçta değme sayılmaz)
     var d=function(p0, p1, p2){ return (p1[0]-p0[0])*(p2[1]-p0[1])-(p1[1]-p0[1])*(p2[0]-p0[0]); };
@@ -343,90 +324,98 @@ var veMntAkso = (function(){
     var kir=function(p, q){ if(Math.abs(p)<1e-12) return q>=0; var u=q/p; if(p<0){ if(u>u1) return false; if(u>u0) u0=u; } else { if(u<u0) return false; if(u<u1) u1=u; } return true; };
     return kir(-dx, x0-l) && kir(dx, r-x0) && kir(-dy, y0-t) && kir(dy, b-y0) && u1>u0+1e-6;
   }
-  // yön sapması (°): önce ±72, yer yoksa bütün çevre
-  var DIS_DONUS = [0], DIS_GENIS = [0];
-  for(var _dd=6; _dd<=180; _dd+=6){ if(_dd<=72) DIS_DONUS.push(_dd, -_dd); DIS_GENIS.push(_dd, -_dd); }
-  function disYerlestir(liste, S, sinir, dolu0, yazilar){
-    var cx=S.c[0], cy=S.c[1];
-    var R0=Math.max(sinir.r-sinir.l, sinir.b-sinir.t)*1.5, yer=[], kalan=[];
-    var kilavuz=function(e, k){ return [e.x, e.y, Math.max(k.l, Math.min(k.r, e.x)), Math.max(k.t, Math.min(k.b, e.y))]; };
-    // yazılar arasında ARA px boşluk (üst üste binmeden yapışık iki yazı tek blok okunuyordu)
-    var ARA=3, gen=function(k){ return { l:k.l-ARA, t:k.t-ARA, r:k.r+ARA, b:k.b+ARA }; };
-    var serbest=function(k, haric){
-      if(k.l<sinir.l || k.r>sinir.r || k.t<sinir.t || k.b>sinir.b || zarfKesisir(k, S)) return false;
-      var kg=gen(k);
+  // yönler: dört çeyrek (45° eğik + yatay omuz), sonra dört eksen (düz kol, çip
+  // kolun ucunda ortalı) — kalabalık yerde çeyrekler dolunca
+  var BALON_CEYREK = [[1, -1], [-1, -1], [1, 1], [-1, 1], [0, -1], [0, 1], [1, 0], [-1, 0]];
+  var BALON_BOY = [10, 16, 24, 34, 46, 60, 78, 100, 126, 156];   // eğik kolun boyu, px
+  var BALON = { omuz:8, ara:3, ic:14, baska:90, kendi:40, yapis:4, kalBoy:80, kay:24, adim:12 };
+  var BALON_SUZ = [0.35, 0.2, 0.1, 0];   // işaret noktasının kare başına adımı (hedefe oranı)
+  function balonYerlestir(liste, sinir, dolu0, yazilar, pol, onceki, surukle){
+    var yer=[], kalan=[];
+    var ici=function(x, y, P){ var a=false; for(var i=0, j=P.length-1;i<P.length;j=i++){ var xi=P[i][0], yi=P[i][1], xj=P[j][0], yj=P[j][1]; if(((yi>y)!==(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi)) a=!a; } return a; };
+    // çipin [başka gövde, kendi gövdesi] altında kalan payı (4 × 3 örnek)
+    var kapla=function(k, own){
+      var bs=0, ks=0;
+      for(var ix=0; ix<4; ix++) for(var iy=0; iy<3; iy++){
+        var x=k.l+(k.r-k.l)*(ix+0.5)/4, y=k.t+(k.b-k.t)*(iy+0.5)/3, bb=false, ss=false;
+        for(var q=0;q<pol.length && !bb;q++){ var p=pol[q]; if(p.l>x || p.r<x || p.t>y || p.b<y || !ici(x, y, p.P)) continue; if(p.k===own) ss=true; else bb=true; }
+        if(bb) bs++; else if(ss) ks++;
+      }
+      return [bs/12, ks/12];
+    };
+    var serbest=function(k){
+      if(k.l<sinir.l || k.r>sinir.r || k.t<sinir.t || k.b>sinir.b) return false;
+      var kg={ l:k.l-BALON.ara, t:k.t-BALON.ara, r:k.r+BALON.ara, b:k.b+BALON.ara };
       if(dolu0.some(function(d){ return kesAlan(kg, d)>0; })) return false;
-      return !yer.some(function(y){ return haric.indexOf(y)<0 && kesAlan(kg, y.b)>0; });
+      return !yer.some(function(y){ return kesAlan(kg, y.b)>0; });
     };
-    // kılavuz başka yazının içinden geçmez; yazı başka kılavuzun üstüne binmez
-    var temiz=function(seg, k, haric){
-      if(yazilar.some(function(q){ return segKutu(seg, q); })) return false;
-      return !yer.some(function(y){ return haric.indexOf(y)<0 && (segKutu(seg, y.b) || segKutu(y.seg, k)); });
+    var temiz=function(sg, k){
+      for(var i=0;i<sg.length;i++){
+        if(yazilar.some(function(q){ return segKutu(sg[i], q); })) return false;
+        for(var j=0;j<yer.length;j++){ if(segKutu(sg[i], yer[j].b)) return false; for(var m=0;m<yer[j].s.length;m++) if(segKes(sg[i], yer[j].s[m])) return false; }
+      }
+      for(var j2=0;j2<yer.length;j2++) for(var m2=0;m2<yer[j2].s.length;m2++) if(segKutu(yer[j2].s[m2], k)) return false;
+      return true;
     };
-    var kesSay=function(seg, haric){ return yer.filter(function(y){ return haric.indexOf(y)<0 && segKes(seg, y.seg); }).length; };
-    var yerle=function(e, kesYok, genis){
-      var th0=(Math.abs(e.y-cy)<1 && Math.abs(e.x-cx)<1) ? -Math.PI/2 : Math.atan2(e.y-cy, e.x-cx), en=null;
-      (genis ? DIS_GENIS : DIS_DONUS).forEach(function(dg){
-        var th=th0+dg*Math.PI/180, ux=Math.cos(th), uy=Math.sin(th);
-        var at=function(t){ var x=cx+ux*t, y=cy+uy*t; return { l:x-e.w/2, t:y-e.h/2, r:x+e.w/2, b:y+e.h/2 }; };
-        if(zarfKesisir(at(R0), S)) return;
-        var a=0, c=R0;
-        for(var it=0; it<13; it++){ var md=(a+c)/2; if(zarfKesisir(at(md), S)) a=md; else c=md; }
-        for(var ek=0; ek<=(genis ? 150 : 60); ek+=6){
-          var k=at(c+2+ek);
-          if(k.l<sinir.l || k.r>sinir.r || k.t<sinir.t || k.b>sinir.b) return;
-          if(!serbest(k, [])) continue;
-          var seg=kilavuz(e, k);
-          if(!temiz(seg, k, [])) continue;
-          var kes=kesSay(seg, []);
-          if(kesYok && kes) continue;
-          var skor=kes*1000+Math.abs(dg)*1.5+ek*2+Math.sqrt(Math.pow(seg[2]-e.x, 2)+Math.pow(seg[3]-e.y, 2))*0.25;
-          if(!en || skor<en.skor) en={ b:k, skor:skor, seg:seg };
-          return;
+    // aday: çeyrek qi, eğik kolun boyu L px — işaret noktası, kırık kılavuz, çipin kutusu
+    var aday=function(e, qi, L, ok){
+      var q=BALON_CEYREK[qi], n=(q[0] && q[1]) ? Math.SQRT2 : 1, r0=(e.r||0)/n, A=e.ank ? e.ank(q, qi, ok) : [e.x, e.y];
+      var d=L/n+r0, A0=[A[0]+q[0]*r0, A[1]+q[1]*r0], E=[A[0]+q[0]*d, A[1]+q[1]*d], k;
+      if(q[0] && q[1]){
+        var S=[E[0]+q[0]*BALON.omuz, E[1]];
+        k=q[0]>0 ? { l:S[0], r:S[0]+e.w, t:E[1]-e.h/2, b:E[1]+e.h/2 } : { l:S[0]-e.w, r:S[0], t:E[1]-e.h/2, b:E[1]+e.h/2 };
+        return { b:k, s:[[A0[0], A0[1], E[0], E[1]], [E[0], E[1], S[0], S[1]]], kirik:[A0, E, S], A:A, qi:qi, L:L };
+      }
+      if(q[0]) k=q[0]>0 ? { l:E[0], r:E[0]+e.w, t:E[1]-e.h/2, b:E[1]+e.h/2 } : { l:E[0]-e.w, r:E[0], t:E[1]-e.h/2, b:E[1]+e.h/2 };
+      else k=q[1]<0 ? { l:E[0]-e.w/2, r:E[0]+e.w/2, t:E[1]-e.h, b:E[1] } : { l:E[0]-e.w/2, r:E[0]+e.w/2, t:E[1], b:E[1]+e.h };
+      return { b:k, s:[[A0[0], A0[1], E[0], E[1]]], kirik:[A0, E], A:A, qi:qi, L:L };
+    };
+    var sirali=liste.slice().sort(function(a, b){ return (b.pri||0)-(a.pri||0); }), ara=[];
+    // 1 · YERİNDE KALAN: çip bir önceki karenin çeyreğinde, kılavuzu boyunca
+    // KAYARAK önceki boyuna en yakın serbest yere oturur (±BALON.kay px) —
+    // dönen modelde işaret ya da başka çip yaklaşınca zıplamaz, kayar;
+    // başka bir çipin yer değiştirmesi onu itmez. Uzun kılavuzlu yer
+    // (> BALON.kalBoy) yeniden aranır.
+    sirali.forEach(function(e){
+      var ok=onceki && onceki[yerAnahtar(e)];
+      // SÜRÜKLERKEN (o.surukle): çip önceki çeyreğinde ve boyunda parçasıyla
+      // yürür, çakışma denetlenmez; bırakınca tam yerleşim (tek oturma)
+      if(surukle && ok && ok[2]!=null){
+        for(var Ls=ok[3]; Ls>=BALON_BOY[0]; Ls-=6){            // sınırdan taşan kol kısalır
+          var cs=aday(e, ok[2], Ls, ok);
+          if(cs.b.l>=sinir.l && cs.b.r<=sinir.r && cs.b.t>=sinir.t && cs.b.b<=sinir.b){ yer.push({ e:e, b:cs.b, s:cs.s, kirik:cs.kirik, A:cs.A, qi:cs.qi, L:cs.L }); return; }
+        }
+      }
+      if(ok && ok[2]!=null && ok[3]<=BALON.kalBoy){
+        for(var dl=0; dl<=BALON.kay; dl+=3){
+          var adim=dl ? [dl, -dl] : [0];
+          for(var j=0;j<adim.length;j++){
+            var L=ok[3]+adim[j]; if(L<BALON_BOY[0] || L>BALON_BOY[BALON_BOY.length-1]) continue;
+            var c=aday(e, ok[2], L, ok);
+            if(serbest(c.b) && temiz(c.s, c.b)){ yer.push({ e:e, b:c.b, s:c.s, kirik:c.kirik, A:c.A, qi:c.qi, L:c.L }); return; }
+          }
+        }
+      }
+      ara.push(e);
+    });
+    // 2 · ARANAN: dört çeyrek × on boy
+    ara.forEach(function(e){
+      var ok=onceki && onceki[yerAnahtar(e)], en=null;
+      BALON_CEYREK.forEach(function(q, qi){
+        for(var bi=0; bi<BALON_BOY.length; bi++){
+          var c=aday(e, qi, BALON_BOY[bi], ok), k=c.b;
+          if(!serbest(k) || !temiz(c.s, k)) continue;
+          var kp=kapla(k, e.k), cx=(k.l+k.r)/2-e.x, cy=(k.t+k.b)/2-e.y;
+          c.skor=BALON_BOY[bi]+kp[0]*BALON.baska+kp[1]*BALON.kendi
+            +(ok ? Math.hypot(cx-ok[0], cy-ok[1])*BALON.yapis : qi*3);
+          if(!en || c.skor<en.skor) en=c;
+          if(!kp[0] && !kp[1] && !ok) break;      // boşta: daha uzunu yalnız pahalı
         }
       });
-      return en;
-    };
-    liste.slice().sort(function(a, b){ return (b.pri||0)-(a.pri||0); }).forEach(function(e){
-      var en=yerle(e, true) || yerle(e, false) || yerle(e, true, true) || yerle(e, false, true);
       if(!en){ kalan.push(e); return; }
-      yer.push({ e:e, b:en.b, seg:en.seg });
+      yer.push({ e:e, b:en.b, s:en.s, kirik:en.kirik, A:en.A, qi:en.qi, L:en.L });
     });
-    // KESİŞEN KILAVUZLAR: iki yazı yer değiştirir (düz kılavuzda takas kesişimi
-    // kaldırır); yalnız toplam kesişim azalıyorsa ve iki yer de serbestse.
-    var denendi={};
-    for(var tur=0; tur<4*yer.length+4; tur++){
-      var A=null, B=null;
-      for(var i=0;i<yer.length && !A;i++) for(var j=i+1;j<yer.length && !A;j++){
-        if(!denendi[i+':'+j] && segKes(yer[i].seg, yer[j].seg)){ A=yer[i]; B=yer[j]; denendi[i+':'+j]=true; }
-      }
-      if(!A) break;
-      var oA=[(B.b.l+B.b.r)/2, (B.b.t+B.b.b)/2], oB=[(A.b.l+A.b.r)/2, (A.b.t+A.b.b)/2];
-      var ka={ l:oA[0]-A.e.w/2, t:oA[1]-A.e.h/2, r:oA[0]+A.e.w/2, b:oA[1]+A.e.h/2 };
-      var kb={ l:oB[0]-B.e.w/2, t:oB[1]-B.e.h/2, r:oB[0]+B.e.w/2, b:oB[1]+B.e.h/2 };
-      var ikisi=[A, B], sa=kilavuz(A.e, ka), sb=kilavuz(B.e, kb);
-      var takas=serbest(ka, ikisi) && serbest(kb, ikisi) && !(kesAlan(ka, kb)>0)
-        && temiz(sa, ka, ikisi) && temiz(sb, kb, ikisi) && !segKutu(sa, kb) && !segKutu(sb, ka)
-        && kesSay(sa, ikisi)+kesSay(sb, ikisi)+(segKes(sa, sb) ? 1 : 0) < kesSay(A.seg, ikisi)+kesSay(B.seg, ikisi)+1;
-      if(takas){ A.b=ka; A.seg=sa; B.b=kb; B.seg=sb; denendi={}; continue; }
-      // Takas sığmıyorsa (yazıların boyu farklı) ikisi ters sırayla yeniden
-      // yerleşir, ikisi de kesişimsiz olmak koşuluyla.
-      var yedek=yer;
-      yer=yer.filter(function(y){ return y!==A && y!==B; });
-      var oldu=[[B, A], [A, B]].some(function(sira){
-        var y1=yerle(sira[0].e, true); if(!y1) return false;
-        yer.push({ e:sira[0].e, b:y1.b, seg:y1.seg });
-        var y2=yerle(sira[1].e, true); if(!y2){ yer.pop(); return false; }
-        yer.push({ e:sira[1].e, b:y2.b, seg:y2.seg });
-        return true;
-      });
-      if(oldu) denendi={}; else yer=yedek;
-    }
-    var out=yer.map(function(y){
-      var e=y.e, dx=y.seg[2]-e.x, dy=y.seg[3]-e.y, L=Math.sqrt(dx*dx+dy*dy), r0=e.r||0;
-      return Object.assign({}, e, { kutu:y.b, cizgi:L>r0+2 ? [e.x+dx/L*r0, e.y+dy/L*r0, y.seg[2], y.seg[3]] : null });
-    });
-    return { out:out, kalan:kalan };
+    return { out:yer.map(function(y){ return Object.assign({}, y.e, { kutu:y.b, cizgi:null, kirik:y.kirik, ax:y.A[0], ay:y.A[1], ceyrek:y.qi, boy:y.L }); }), kalan:kalan };
   }
 
   // ── Çizim parçaları ─────────────────────────────────────────────────────
@@ -552,8 +541,9 @@ var veMntAkso = (function(){
   function etiketCiz(liste){
     var k='', y='';
     liste.forEach(function(e){
-      if(e.cizgi) k+='<line class="ve-ak-kilavuz"'+ak(e.k)+' x1="'+R(e.cizgi[0])+'" y1="'+R(e.cizgi[1])+'" x2="'+R(e.cizgi[2])+'" y2="'+R(e.cizgi[3])+'"/>'
-        + (e.uc ? '<circle class="ve-ak-kilavuz-uc"'+ak(e.k)+' cx="'+R(e.x)+'" cy="'+R(e.y)+'" r="1.8"/>' : '');
+      if(e.kirik) k+='<path class="ve-ak-kilavuz"'+ak(e.k)+' d="M'+e.kirik.map(function(p){ return R(p[0])+' '+R(p[1]); }).join(' L')+'"/>'
+        + (e.uc ? '<circle class="ve-ak-kilavuz-uc"'+ak(e.k)+' cx="'+R(e.kirik[0][0])+'" cy="'+R(e.kirik[0][1])+'" r="1.8"/>' : '');
+      else if(e.cizgi) k+='<line class="ve-ak-kilavuz"'+ak(e.k)+' x1="'+R(e.cizgi[0])+'" y1="'+R(e.cizgi[1])+'" x2="'+R(e.cizgi[2])+'" y2="'+R(e.cizgi[3])+'"/>';
       var b=e.kutu, ort=(b.l+b.r)/2, fs2=e.fs2||e.fs;
       if(e.cip){
         y+='<g class="ve-ak-cip '+(e.sinif||'')+'"'+ak(e.k, e.bilgi)+'><rect x="'+R(b.l)+'" y="'+R(b.t)+'" width="'+R(b.r-b.l)+'" height="'+R(b.b-b.t)+'" rx="3"/>'
@@ -737,7 +727,7 @@ var veMntAkso = (function(){
     // kalanın (merkezi örtülü) ve bütünüyle örtülü gövdenin yazısı yok;
     // seçili (perde) yine önde, G bir işaret olarak üstte. X-ışını (rapor)
     // camdır: sıra eskisi gibi.
-    var kati=(stil!=='xray'), gizliK={}, gorA={}, zarfN=[], disari=!!(o.disari && kati);
+    var kati=(stil!=='xray'), gizliK={}, balon=!!(o.balon && kati), polG=[];
     var sar=function(sp){ return { l:Math.min.apply(null, sp.map(function(v){ return v[0]; })), t:Math.min.apply(null, sp.map(function(v){ return v[1]; })),
       r:Math.max.apply(null, sp.map(function(v){ return v[0]; })), b:Math.max.apply(null, sp.map(function(v){ return v[1]; })) }; };
     var kutu2B=function(c, h){ var sp=[]; yuzler(c, h).forEach(function(f){ f.pts.forEach(function(p){ sp.push(P(p)); }); }); return sar(sp); };
@@ -784,10 +774,10 @@ var veMntAkso = (function(){
       nok.forEach(function(g){ if(levhaK[g.k] && kutSira.some(function(q){ return kutuOrter(K, levhaK[g.k].c, q, true); })) gizliK[g.k]=true; });
       // bütünüyle örtülü gövde: görünen yüzlerinin 5×5 ızgarası başka kutuların ardında
       // (kenardaki ince şerit de görünür sayılır: Tulga'da Şanzıman önden %11)
-      // Parçalanan gövde bütün parçaları örtülüyse örtülü. Dış yazıda (disari)
-      // kılavuz gövdenin GÖRÜNEN yerine iner: görünen örneklerin ortasına en
-      // yakın örnek (Asfat'ın Sol Motor Braketi motorun ardında — kılavuz
-      // motorun yüzünü gösteriyordu).
+      // Parçalanan gövde bütün parçaları örtülüyse örtülü. Çipte (balon)
+      // kılavuz gövdenin GÖRÜNEN yerine iner: görünen örnekler tutulur
+      // (Asfat'ın Sol Motor Braketi motorun ardında — kılavuz motorun yüzünü
+      // gösteriyordu).
       var IZG=[0.02, 0.26, 0.5, 0.74, 0.98], gorN={};
       var ortulu=function(p, q){ return kutSira.some(function(r){ return r!==q && kutuOrter(K, p, r, false); }); };
       kutSira.forEach(function(q){
@@ -798,17 +788,10 @@ var veMntAkso = (function(){
           }); });
         });
         if(!gorN[k]) gorN[k]=[];
-        if(disari) orn.forEach(function(p){ if(!ortulu(p, q)) gorN[k].push(p); });
+        if(balon) orn.forEach(function(p){ if(!ortulu(p, q)) gorN[k].push(p); });
         else if(!orn.every(function(p){ return ortulu(p, q); })) gorN[k].push(null);
       });
-      Object.keys(gorN).forEach(function(k){
-        var N=gorN[k];
-        if(!N.length){ gizliK[k]=true; return; }
-        if(!disari) return;
-        var o3=[0, 1, 2].map(function(i){ var t=0; N.forEach(function(p){ t+=p[i]; }); return t/N.length; }), en=N[0], ed=Infinity;
-        N.forEach(function(p){ var d=Math.pow(p[0]-o3[0], 2)+Math.pow(p[1]-o3[1], 2)+Math.pow(p[2]-o3[2], 2); if(d<ed){ ed=d; en=p; } });
-        gorA[k]=en;
-      });
+      Object.keys(gorN).forEach(function(k){ if(!gorN[k].length) gizliK[k]=true; });
       liste=[];
       for(var j=0;j<=kutSira.length;j++){
         isaret.filter(function(s){ return s.yer===j; }).sort(function(a, c){ return K.derin(a.p)-K.derin(c.p); })
@@ -832,7 +815,7 @@ var veMntAkso = (function(){
       });
       koy(g.k, h+'</g>');
       var kb2=levha2B(g); kb2.a=sec(g.k) ? 1 : 0.3;
-      if(disari) zarfN.push([kb2.l, kb2.t], [kb2.r, kb2.t], [kb2.r, kb2.b], [kb2.l, kb2.b]);
+      if(balon) polG.push({ k:g.k, P:[[kb2.l, kb2.t], [kb2.r, kb2.t], [kb2.r, kb2.b], [kb2.l, kb2.b]], l:kb2.l, t:kb2.t, r:kb2.r, b:kb2.b });
       if(!gizliT[g.levha.takoz] || sec(g.k)) engel.push(kb2);
       if(xr){
         var am=Ph([g.x, g.y, g.z]), ar=2.2*ik, ac=3.8*ik;
@@ -849,7 +832,6 @@ var veMntAkso = (function(){
         koy(it.g.k, '<circle class="ve-ak-nokta"'+ak(it.g.k, it.g.bilgi)+' cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R((it.g.k===_secili ? 3.6 : 2.4)*ik)+'"/>');
         if(it.g.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(6.5*ik)+'"/>';
         var ne=sec(it.g.k) ? 8*ik : 3*ik;
-        if(disari) zarfN.push([gq[0]-ne, gq[1]-ne], [gq[0]+ne, gq[1]+ne]);
         if(!it.gizli || sec(it.g.k)) engel.push({ l:gq[0]-ne, t:gq[1]-ne, r:gq[0]+ne, b:gq[1]+ne });
         return;
       }
@@ -862,7 +844,6 @@ var veMntAkso = (function(){
         koy(t.k, '<g class="ve-ak-t"'+ak(t.k, t.bilgi)+'>'+TY.map(function(f){ return '<path class="t-'+'xyz'[f.eks]+'" d="M'+yol(f.pts)+' Z"/>'; }).join('')+'</g>');
         it.br.filter(function(g){ return g.levha.vz*K.d[2]<=0; }).forEach(braketCiz);
         var tq=P(tc), te=sec(t.k) ? 12*ik : 7*ik;
-        if(disari) TY.forEach(function(f){ f.pts.forEach(function(p){ zarfN.push(P(p)); }); });
         if(!it.gizli || sec(t.k)) engel.push({ l:tq[0]-te, t:tq[1]-te, r:tq[0]+te, b:tq[1]+te });
         if(t.k===_secili) secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(tq[0])+'" cy="'+R(tq[1])+'" r="'+R(10*ik)+'"/>';
         return;
@@ -880,7 +861,9 @@ var veMntAkso = (function(){
       koy(g.k, h+'</g>');
       var sp=[]; Y.forEach(function(f){ f.pts.forEach(function(p){ sp.push(P(p)); }); });
       var kk=sar(sp); kk.a=sec(g.k) ? 1 : 0.012;
-      if(disari) gor.forEach(function(f){ f.pts.forEach(function(p){ zarfN.push(Ph(p)); }); });
+      if(balon){ var pz=[]; gor.forEach(function(f){ f.pts.forEach(function(p){ pz.push(Ph(p)); }); });
+        var pd=disbukey(pz); if(pd.length>2) polG.push({ k:g.k, P:pd, l:Math.min.apply(null, pd.map(function(v){ return v[0]; })), r:Math.max.apply(null, pd.map(function(v){ return v[0]; })),
+          t:Math.min.apply(null, pd.map(function(v){ return v[1]; })), b:Math.max.apply(null, pd.map(function(v){ return v[1]; })) }); }
       engel.push(kk);
       if(stil==='xray'){
         var am=Ph(q.c);
@@ -905,7 +888,6 @@ var veMntAkso = (function(){
       if(sec('G')){ gSvg='<g'+ak('G', m.G.bilgi)+'>'+gIz+'</g>'; odakSvg+='<g'+ak('G', m.G.bilgi)+'>'+gAm+'</g>'; }
       else gSvg='<g'+ak('G', m.G.bilgi)+'>'+gIz+gAm+'</g>';
       var ge=sec('G') ? 12.5*ik : 8*ik;
-      if(disari){ zarfN.push([gq[0]-ge, gq[1]-ge], [gq[0]+ge, gq[1]+ge]); if(gIz) zarfN.push([gz[0]-5*ik, gz[1]-3*ik], [gz[0]+5*ik, gz[1]+3*ik]); }
       engel.push({ l:gq[0]-ge, t:gq[1]-ge, r:gq[0]+ge, b:gq[1]+ge });
       if(_secili==='G') secSvg+='<circle class="ve-ak-sec-hale" cx="'+R(gq[0])+'" cy="'+R(gq[1])+'" r="'+R(10.5*ik)+'"/>';
     }
@@ -1089,6 +1071,48 @@ var veMntAkso = (function(){
       });
     }
     // ── ETİKETLER ───────────────────────────────────────────────────────────
+    // Çipin gövde yazısı (balon): dayanak kutunun merkezi (dönerken sürekli;
+    // yapışkan yerin ölçüldüğü nokta); çeyreğin işaret noktası o merkezden
+    // çeyreğin yönünde görünen en uç örneğin BALON.ic px içi, ışınla
+    // doğrulanır — başka gövdeye düşerse en yakın görünen örnek.
+    var ustte=function(X, Y){
+      var a=(X-F.ox)/sc, bb=-(Y-F.oy)/sc, p0=[0, 1, 2].map(function(i){ return K.r[i]*a+K.u[i]*bb; }), en=null, et=Infinity;
+      kutSira.forEach(function(q){
+        var t0=-Infinity, t1=Infinity;
+        for(var i=0;i<3;i++){
+          var lo=q.c[i]-q.h[i], hi=q.c[i]+q.h[i];
+          if(Math.abs(K.d[i])<1e-12){ if(p0[i]<lo || p0[i]>hi){ t0=Infinity; break; } continue; }
+          var x=(lo-p0[i])/K.d[i], y=(hi-p0[i])/K.d[i]; if(x>y){ var w=x; x=y; y=w; }
+          if(x>t0) t0=x; if(y<t1) t1=y;
+        }
+        if(t1>t0 && t0<et){ et=t0; en=q.g.k; }
+      });
+      return en;
+    };
+    var balonGovde=function(q, sec){
+      var g=q.g, N=(gorN && gorN[g.k] && gorN[g.k].length) ? gorN[g.k].map(function(p){ return P(p); }) : null;
+      var C2=P([q.c[0], q.c[1], q.c[2]]);
+      var ank=N ? function(qd, qi, ok){
+        var nq=Math.hypot(qd[0], qd[1]), ux=qd[0]/nq, uy=qd[1]/nq, en=-Infinity;
+        N.forEach(function(p){ var v=ux*(p[0]-C2[0])+uy*(p[1]-C2[1]); if(v>en) en=v; });
+        var t=Math.max(0, en-BALON.ic), A=[C2[0]+ux*t, C2[1]+uy*t];
+        // aynı çeyrekte bir önceki karenin noktasından hedefe süzülerek yürür
+        // (zıplamaz): adım kısalır, gerekirse yerinde kalır — nokta gövdede kaldıkça
+        if(ok && ok[2]===qi && ok[4]!=null){
+          var Ap=[C2[0]+ok[4], C2[1]+ok[5]], ara=Math.hypot(A[0]-Ap[0], A[1]-Ap[1]) || 1;
+          for(var si=0; si<BALON_SUZ.length; si++){
+            var f=Math.min(BALON_SUZ[si], BALON.adim/ara), As=[Ap[0]+(A[0]-Ap[0])*f, Ap[1]+(A[1]-Ap[1])*f];
+            if(o.surukle || ustte(As[0], As[1])===g.k) return As;   // sürüklerken denetimsiz; bırakınca doğrulanır
+          }
+        }
+        if(ustte(A[0], A[1])===g.k) return A;
+        var yk=N[0], yd=Infinity;
+        N.forEach(function(p){ var dd=Math.pow(p[0]-A[0], 2)+Math.pow(p[1]-A[1], 2); if(dd<yd){ yd=dd; yk=p; } });
+        return yk;
+      } : null;
+      return etiketOlc({ k:g.k, bilgi:g.bilgi, x:C2[0], y:C2[1], r:(N || levhaK[g.k]) ? 0 : 3*ik, m1:kisalt(g.ad), m2:sayi(g.m, 0)+' kg', fs:FB, fs2:FK, kalin:true,
+        cip:true, sinif:sec ? 'sec-cip' : 'g-cip', pri:sec ? 10 : (g.ana ? 7 : 5), balon:true, uc:!!(N || levhaK[g.k]), ank:ank }, olc);
+    };
     if(etk!=='yok'){
       // Seçili bileşen (o.secili — "Güç grubundaki yeri" ve föy satırının
       // vurgusu) her kipte ADIYLA, vurgu kenarlı çipte; 'secili' kipinde
@@ -1101,12 +1125,12 @@ var veMntAkso = (function(){
         var g=q.g, sec=(_secili!=null && g.k===_secili);
         if(yalniz ? !sec : !(sec || g.ana || etk==='genis')) return;
         if(!sec && gizliK[g.k]) return;
-        var ust=(disari && gorA[g.k]) ? P(gorA[g.k]) : P([q.c[0], q.c[1], q.c[2]+(b.z>0 ? q.h[2] : -q.h[2])]);
-        var uc=disari && !!gorA[g.k];   // kılavuz görünen yere iner, ucunda nokta
-        if(sec) ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:uc ? 0 : (g.kutu ? 3 : 6.5*ik), m1:kisalt(g.ad), fs:FB, kalin:true,
-          cip:true, sinif:'sec-cip', pri:10, yon:yukari, dis:disari, uc:uc }, olc));
-        else ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:uc ? 0 : (g.kutu ? 3 : 3*ik), m1:kisalt(g.ad), m2:sayi(g.m, 0)+' kg', fs:FB, fs2:FK, kalin:true,
-          pri:g.ana ? 7 : 5, yon:yukari, dis:disari, uc:uc }, olc));
+        if(balon){ ets.push(balonGovde(q, sec)); return; }
+        var ust=P([q.c[0], q.c[1], q.c[2]+(b.z>0 ? q.h[2] : -q.h[2])]);
+        if(sec) ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:g.kutu ? 3 : 6.5*ik, m1:kisalt(g.ad), fs:FB, kalin:true,
+          cip:true, sinif:'sec-cip', pri:10, yon:yukari }, olc));
+        else ets.push(etiketOlc({ k:g.k, bilgi:g.bilgi, x:ust[0], y:ust[1], r:g.kutu ? 3 : 3*ik, m1:kisalt(g.ad), m2:sayi(g.m, 0)+' kg', fs:FB, fs2:FK, kalin:true,
+          pri:g.ana ? 7 : 5, yon:yukari }, olc));
       });
       if(!kat.kuvvet) m.takoz.forEach(function(t){
         var sec=(_secili!=null && t.k===_secili);
@@ -1115,9 +1139,10 @@ var veMntAkso = (function(){
         var q=P(hareket ? hareket([t.x, t.y, t.z]) : [t.x, t.y, t.z]);
         var m1=etk==='genis' ? t.no+' '+t.ad : (sec ? t.no+' '+kisalt(t.ad) : (kat.direk ? t.no+' · z '+sayi(t.z, 0) : t.no));
         ets.push(etiketOlc({ k:t.k, bilgi:t.bilgi, x:q[0], y:q[1], r:(sec ? 10 : 6)*ik, m1:m1, fs:FK, kalin:true, cip:true,
-          sinif:sec ? 't-cip sec-cip' : 't-cip', pri:sec ? 10 : 5, dis:disari }, olc));
+          sinif:sec ? 't-cip sec-cip' : 't-cip', pri:sec ? 10 : 5, balon:balon }, olc));
       });
-      if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7*ik, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true }, olc));
+      if(m.G && !kat.kuvvet) ets.push(etiketOlc({ k:'G', bilgi:m.G.bilgi, x:gq[0], y:gq[1], r:7*ik, m1:kat.direk ? 'G · z '+sayi(m.G.z, 0) : 'G', fs:FB, kalin:true, pri:9, hafifYok:true,
+        cip:balon, sinif:balon ? 'g-cip' : '' }, olc));
     }
     var katYazi='';
     if(kat.cokme && cokmeN && !sade){ katYazi=yazi(W-8, 14, 'sehim ×'+sayi(cokmeN, 0), 've-ak-yz ve-ak-kat', FK, 'end', true); engel.push({ l:W-80, t:2, r:W-4, b:18 }); }
@@ -1167,23 +1192,23 @@ var veMntAkso = (function(){
     // onun yazısı kenara kelepçelenip boşluğu gösteren bir kılavuz olurdu.
     if(o.kure) ets=ets.filter(function(e){ return e.x>=0 && e.x<=W && e.y>=0 && e.y<=H; });
     var sinir={ l:3, t:3, r:W-3, b:H-3 }, L;
-    if(disari && zarfN.length>2){
-      // Önce içtekiler (G), sonra dıştakiler — G'nin yazısı ve tam engeller
-      // dış yazıya da kılavuza da engel; yer bulamayan eski yerleştiriciye.
-      var Li=yerlestir(ets.filter(function(e){ return !e.dis; }), engel, sinir, o.yer || null);
+    if(balon){
+      // Önce içtekiler (G), sonra çipler — G'nin yazısı ve tam engeller çipe de
+      // kılavuza da engel; yer bulamayan eski yerleştiriciye (kılavuzlar engel).
+      var Li=yerlestir(ets.filter(function(e){ return !e.balon; }), engel, sinir, o.yer || null);
       var tamE=engel.filter(function(e){ return (e.a==null ? 1 : e.a)>=0.5; }).map(function(e){ return { l:e.l, t:e.t, r:e.r, b:e.b }; })
         .concat(Li.map(function(e){ return e.kutu; }));
-      var Ld=disYerlestir(ets.filter(function(e){ return e.dis; }), zarf(zarfN, 5), sinir, tamE, Li.map(function(e){ return e.kutu; }));
-      L=Li.concat(Ld.out);
-      if(Ld.kalan.length){
+      var Lb=balonYerlestir(ets.filter(function(e){ return e.balon; }), sinir, tamE, Li.map(function(e){ return e.kutu; }), polG, o.yer || null, !!o.surukle);
+      L=Li.concat(Lb.out);
+      if(Lb.kalan.length){
         var kilE=[];
-        Ld.out.forEach(function(e){ if(!e.cizgi) return; var c=e.cizgi, n=Math.max(1, Math.ceil(Math.hypot(c[2]-c[0], c[3]-c[1])/4));
-          for(var i=0;i<=n;i++){ var x=c[0]+(c[2]-c[0])*i/n, y=c[1]+(c[3]-c[1])*i/n; kilE.push({ l:x-2, t:y-2, r:x+2, b:y+2, a:1 }); } });
-        L=L.concat(yerlestir(Ld.kalan, engel.concat(kilE, L.map(function(e){ return { l:e.kutu.l, t:e.kutu.t, r:e.kutu.r, b:e.kutu.b, a:1 }; })), sinir, null));
+        Lb.out.forEach(function(e){ for(var j=0;j+1<e.kirik.length;j++){ var c=[e.kirik[j][0], e.kirik[j][1], e.kirik[j+1][0], e.kirik[j+1][1]], n=Math.max(1, Math.ceil(Math.hypot(c[2]-c[0], c[3]-c[1])/4));
+          for(var i=0;i<=n;i++){ var x=c[0]+(c[2]-c[0])*i/n, y=c[1]+(c[3]-c[1])*i/n; kilE.push({ l:x-2, t:y-2, r:x+2, b:y+2, a:1 }); } } });
+        L=L.concat(yerlestir(Lb.kalan, engel.concat(kilE, L.map(function(e){ return { l:e.kutu.l, t:e.kutu.t, r:e.kutu.r, b:e.kutu.b, a:1 }; })), sinir, o.yer || null));
       }
     } else L=yerlestir(ets, engel, sinir, o.yer || null);
     var yer={};
-    L.forEach(function(e){ yer[yerAnahtar(e)]=[(e.kutu.l+e.kutu.r)/2-e.x, (e.kutu.t+e.kutu.b)/2-e.y]; });
+    L.forEach(function(e){ yer[yerAnahtar(e)]=[(e.kutu.l+e.kutu.r)/2-e.x, (e.kutu.t+e.kutu.b)/2-e.y].concat(e.ceyrek!=null ? [e.ceyrek, e.boy, e.ax-e.x, e.ay-e.y] : []); });
     var et=etiketCiz(L);
     if(odak) et.yazi=etiketCiz(L.filter(function(e){ return e.k!==_secili; })).yazi;
     var etS=odak ? etiketCiz(L.filter(function(e){ return e.k===_secili; })) : null;

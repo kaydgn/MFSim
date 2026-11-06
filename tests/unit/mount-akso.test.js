@@ -1318,7 +1318,7 @@ describe('KLASİK 3B — 3D Görüntüleyici açılışta sahne kurmaz', () => {
 // Ressam ölçülen sırayla boyar (sonra çizilen üstte). Kesişen çifti hiçbir
 // sıra doğru çizemez: Asfat'ta Top PTO şanzımanın 120 mm içinde, Hafif ve
 // Kamyon'da şanzıman motorun 20–45 mm içinde.
-describe('İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI — sihirbazın 3B\'si', () => {
+describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () => {
   const EKLER = { hafif: 'hafif_topoloji.json', kamyon: 'kamyon_topoloji.json', kutu: 'kutu_topoloji.json' };
   Object.keys(EKLER).forEach((k) => { JSONLAR[k] = JSON.parse(fs.readFileSync(path.join(KOK, 'assets/examples', EKLER[k]), 'utf8')); });
   const HEPSI = ['tulga', 'siper', 'asfat', 'hafif', 'kamyon', 'kutu'];
@@ -1360,7 +1360,7 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI — sihirbazın 3B\'si',
       const m = cp._mntAksoModel(), K0 = kutular(m);
       let yanlis = 0, n = 0;
       KAM.forEach((kam) => {
-        const K = AK.kamera('dim', null, AK.kamYon(kam)), r = AK.ciz(m, sihirbaz(kam, { disari: true }));
+        const K = AK.kamera('dim', null, AK.kamYon(kam)), r = AK.ciz(m, sihirbaz(kam, { balon: true }));
         // ressam: hareket katmanındaki gövde grupları belge sırasıyla boyar (sonraki üstte)
         document.body.innerHTML = r.svg;
         const gruplar = [...document.querySelectorAll('.ve-ak-hareket > g.ve-ak-g')].filter((e) => K0.some((q) => q.g.k === e.getAttribute('data-ak')))
@@ -1391,74 +1391,105 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI — sihirbazın 3B\'si',
     expect(say).toBeGreaterThan(50000);                                            // kapı boşa ölçmüyor
   });
 
-  test('dış yazı: altı örnek × dokuz bakış — yazı gövdeye, yazıya, örtüye binmez; kılavuz kesişmez, yazının içinden geçmez', () => {
-    const ortu = [{ l: 8, t: 8, r: 240, b: 40 }, { l: 558, t: 8, r: 782, b: 40 }, { l: 748, t: 320, r: 782, b: 408 }];
-    const kesAlan = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
-    const segKes = (s, q) => { const d = (p0, p1, p2) => (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]); const a = [s[0], s[1]], b = [s[2], s[3]], c = [q[0], q[1]], e = [q[2], q[3]]; return d(c, e, a) * d(c, e, b) < -1e-6 && d(a, b, c) * d(a, b, e) < -1e-6; };
-    const icinden = (s, k) => { for (let i = 1; i < 30; i++) { const x = s[0] + (s[2] - s[0]) * i / 30, y = s[1] + (s[3] - s[1]) * i / 30; if (x > k.l + 1 && x < k.r - 1 && y > k.t + 1 && y < k.b - 1) return true; } return false; };
-    const olc = (disari) => {
-      const t = { yazi: 0, govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0, disari: 0 };
+  // ÇİP (kullanıcı 2026-11-06, Canlı Not 41: *"uzayan çubuklar ve üzerindeki
+  // yazılar güzel değil. Döndürürken falan garip şeyler yapıyor. Ayrıca tüm
+  // yazılar çerçeveli değil"*): her yazı çerçeveli çip, kılavuz kısa kırık çizgi.
+  const parcalar = (e) => { const k = e.kirik || (e.cizgi ? [[e.cizgi[0], e.cizgi[1]], [e.cizgi[2], e.cizgi[3]]] : []), o = []; for (let i = 0; i + 1 < k.length; i++) o.push([k[i][0], k[i][1], k[i + 1][0], k[i + 1][1]]); return o; };
+  const boyu = (e) => parcalar(e).reduce((t, q) => t + Math.hypot(q[2] - q[0], q[3] - q[1]), 0);
+  const kesAlan = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+  const segKes = (s, q) => { const d = (p0, p1, p2) => (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]); const a = [s[0], s[1]], b = [s[2], s[3]], c = [q[0], q[1]], e = [q[2], q[3]]; return d(c, e, a) * d(c, e, b) < -1e-6 && d(a, b, c) * d(a, b, e) < -1e-6; };
+  const icinden = (s, k) => { for (let i = 1; i < 30; i++) { const x = s[0] + (s[2] - s[0]) * i / 30, y = s[1] + (s[3] - s[1]) * i / 30; if (x > k.l + 1 && x < k.r - 1 && y > k.t + 1 && y < k.b - 1) return true; } return false; };
+  const ORTU = [{ l: 8, t: 8, r: 240, b: 40 }, { l: 558, t: 8, r: 782, b: 40 }, { l: 748, t: 320, r: 782, b: 408 }];
+
+  test('çip: altı örnek × dokuz bakış — her yazı çerçeveli, kılavuz kısa; çip çipe ve örtüye binmez, kılavuz kesişmez ve çipin içinden geçmez', () => {
+    const olc = (balon) => {
+      const t = { yazi: 0, cercevesiz: 0, kilSay: 0, kilTop: 0, kilEn: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0, eski: 0 };
       HEPSI.forEach((ad) => {
         yukle(ad);
         const m = cp._mntAksoModel();
         KAM.forEach((kam) => {
-          const r = AK.ciz(m, sihirbaz(kam, { disari, ortu }));
-          document.body.innerHTML = r.svg;
-          const pol = {};
-          document.querySelectorAll('.ve-ak-hareket g.ve-ak-g').forEach((g) => {
-            const k = g.getAttribute('data-ak');
-            g.querySelectorAll('path').forEach((pa) => { const v = pa.getAttribute('d').replace(/[MLZ]/g, ' ').trim().split(/\s+/).map(Number), o = []; for (let i = 0; i + 1 < v.length; i += 2) o.push([v[i], v[i + 1]]); (pol[k] = pol[k] || []).push(o); });
-          });
-          const L = r.etiket;
-          t.yazi += L.length; t.disari += L.filter((e) => e.dis).length;
+          const L = AK.ciz(m, sihirbaz(kam, { balon, ortu: ORTU })).etiket;
           L.forEach((e, i) => {
-            const b = e.kutu;
             if (e.k !== 'G') {
-              let ic = 0, n = 0;
-              for (let x = b.l + 1; x < b.r; x += 3) for (let y = b.t + 1; y < b.b; y += 3) { n++; if (Object.keys(pol).some((k) => k !== e.k && pol[k].some((P) => icte([x, y], P)))) ic++; }
-              if (ic / n > 0.05) t.govde++;
+              t.yazi++; if (!e.cip) t.cercevesiz++;
+              if (balon && !e.kirik) t.eski++;
+              const b0 = boyu(e); if (b0 > 0) { t.kilSay++; t.kilTop += b0; t.kilEn = Math.max(t.kilEn, b0); }
             }
-            if (ortu.some((o) => kesAlan(b, o) > 0)) t.ortu++;
+            if (ORTU.some((o) => kesAlan(e.kutu, o) > 0)) t.ortu++;
             L.forEach((f, j) => {
               if (j <= i) return;
-              if (kesAlan(b, f.kutu) > 0.5) t.yaziYazi++;
-              if (e.cizgi && f.cizgi && segKes(e.cizgi, f.cizgi)) t.kesisen++;
+              if (kesAlan(e.kutu, f.kutu) > 0.5) t.yaziYazi++;
+              parcalar(e).forEach((a) => parcalar(f).forEach((b) => { if (segKes(a, b)) t.kesisen++; }));
             });
-            if (e.cizgi) L.forEach((f) => { if (f !== e && icinden(e.cizgi, f.kutu)) t.icinden++; });
+            parcalar(e).forEach((a) => L.forEach((f) => { if (f !== e && icinden(a, f.kutu)) t.icinden++; }));
           });
         });
       });
+      t.kilOrt = t.kilTop / Math.max(1, t.kilSay);
       return t;
     };
     const t = olc(true);
-    expect({ govde: t.govde, yaziYazi: t.yaziYazi, ortu: t.ortu, kesisen: t.kesisen, icinden: t.icinden })
-      .toEqual({ govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0 });
-    expect(t.yazi).toBeGreaterThan(380);
-    expect(t.disari).toBeGreaterThan(320);                                         // G dışındakiler dış yerleştiriciden
-    // kapı düşebilir: aynı çizimler dış yazısız (eski yerleştirici) gövdenin üstüne yazı ve içinden geçen kılavuz verir
+    expect({ cercevesiz: t.cercevesiz, eski: t.eski, yaziYazi: t.yaziYazi, ortu: t.ortu, kesisen: t.kesisen, icinden: t.icinden })
+      .toEqual({ cercevesiz: 0, eski: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0 });
+    expect(t.yazi).toBeGreaterThan(330);
+    expect(t.kilOrt).toBeLessThan(35);                                             // eski: dış yazıda 79 px
+    expect(t.kilEn).toBeLessThan(170);                                             // en uzun kol + omuz
+    // kapı düşebilir: aynı çizimler çipsiz çerçevesiz yazı taşır
     const eski = olc(false);
-    expect(eski.govde).toBeGreaterThan(20);
-    expect(eski.icinden).toBeGreaterThan(5);
+    expect(eski.cercevesiz).toBeGreaterThan(100);
   });
 
-  test('kılavuz gövdenin GÖRÜNEN yerine iner, ucunda nokta; Görünümler (dış yazısız) birebir eski', () => {
+  test('döndürürken çip parçasıyla yürür: üç örnek × tam tur (3°), sürüklemenin karesi — 20 px\'ten büyük sıçrama ‰10\'un altında', () => {
+    const olc = (surukle) => {
+      let kare = 0, sicrama = 0;
+      ['siper', 'tulga', 'asfat'].forEach((ad) => {
+        yukle(ad);
+        const m = cp._mntAksoModel(), isaret = {};
+        m.govde.forEach((g) => { isaret[g.k] = [g.x, g.y, g.z]; }); m.takoz.forEach((q) => { isaret[q.k] = [q.x, q.y, q.z]; });
+        let yer = null, onceki = null;
+        for (let az = 0; az < 360; az += 3) {
+          const kam = { az, el: 25 }, r = AK.ciz(m, sihirbaz(kam, { balon: true, ortu: ORTU, yer, surukle: surukle && az > 0 })), K = AK.kamera('dim', null, AK.kamYon(kam));
+          yer = r.yer;
+          const bu = {};
+          r.etiket.forEach((e) => { if (!isaret[e.k]) return; const q = K.P(isaret[e.k]); bu[e.k] = [(e.kutu.l + e.kutu.r) / 2 - (r.F.ox + q[0] * r.F.sc), (e.kutu.t + e.kutu.b) / 2 - (r.F.oy + q[1] * r.F.sc)]; });
+          if (onceki) Object.keys(bu).forEach((k) => { if (!onceki[k]) return; kare++; if (Math.hypot(bu[k][0] - onceki[k][0], bu[k][1] - onceki[k][1]) > 20) sicrama++; });
+          onceki = bu;
+        }
+      });
+      return { kare, oran: sicrama / Math.max(1, kare) };
+    };
+    const s = olc(true);
+    expect(s.kare).toBeGreaterThan(1500);
+    expect(s.oran).toBeLessThan(0.01);
+    // kapı düşebilir: sürükleme karesi olmadan (her kare tam yerleşim) sıçrama çok daha sık
+    expect(olc(false).oran).toBeGreaterThan(s.oran * 2);
+  });
+
+  test('gövdenin kılavuzu GÖRÜNEN yerine iner (ışın orada o gövdeye çarpar), ucunda nokta; çipsiz çizim birebir eski', () => {
+    let say = 0;
+    const hata = [];
+    ['siper', 'tulga', 'asfat'].forEach((ad) => {
+      yukle(ad);
+      const m = cp._mntAksoModel(), B = kutular(m), kutulu = {}; B.forEach((q) => { kutulu[q.g.k] = true; });
+      KAM.forEach((kam) => {
+        const r = AK.ciz(m, sihirbaz(kam, { balon: true })), K = AK.kamera('dim', null, AK.kamYon(kam));
+        document.body.innerHTML = r.svg;
+        r.etiket.filter((e) => kutulu[e.k] && e.kirik).forEach((e) => {
+          say++;
+          const [X, Y] = e.kirik[0], a = (X - r.F.ox) / r.F.sc, b = -(Y - r.F.oy) / r.F.sc, d = K.d;
+          const p0 = [0, 1, 2].map((i) => K.r[i] * a + K.u[i] * b);
+          let en = null, et = Infinity;
+          AK.kutuParcala(B).forEach((q) => { const L = lohi(q); let t0 = -Infinity, t1 = Infinity; for (let i = 0; i < 3; i++) { if (Math.abs(d[i]) < 1e-12) { if (p0[i] < L.lo[i] || p0[i] > L.hi[i]) t0 = Infinity; continue; } let x = (L.lo[i] - p0[i]) / d[i], y = (L.hi[i] - p0[i]) / d[i]; if (x > y) [x, y] = [y, x]; t0 = Math.max(t0, x); t1 = Math.min(t1, y); } if (t1 > t0 - 1e-6 && t0 < et) { et = t0; en = q.g.k; } });
+          if (en !== e.k) hata.push(ad + ' ' + kam.az + ' ' + e.k + ' → ' + en);
+          if (!document.querySelector('circle.ve-ak-kilavuz-uc[data-ak="' + e.k + '"]')) hata.push(ad + ' ' + e.k + ' noktasız');
+        });
+      });
+    });
+    expect(hata).toEqual([]);
+    expect(say).toBeGreaterThan(100);
+    // çip yalnız beyan edenin: seçeneksiz çizimde yazıların yeri ve SVG değişmez
     yukle('asfat');
-    const m = cp._mntAksoModel(), kam = { az: 135, el: 30 };
-    const r = AK.ciz(m, sihirbaz(kam, { disari: true }));
-    document.body.innerHTML = r.svg;
-    const sol = m.govde.find((g) => /Sol Motor/.test(g.ad));
-    const e = r.etiket.find((x) => x.k === sol.k);
-    // işaret noktası motorun ardındaki braketin görünen yerinde: tıklanan öğe braketin kendisi
-    const K = AK.kamera('dim', null, AK.kamYon(kam)), B = kutular(m);
-    const a = (e.x - r.F.ox) / r.F.sc, b = -(e.y - r.F.oy) / r.F.sc;
-    const d = K.d, l = Math.hypot(d[1], d[0]), rr = [d[1] / l, -d[0] / l, 0], uu = [rr[1] * d[2] - rr[2] * d[1], rr[2] * d[0] - rr[0] * d[2], rr[0] * d[1] - rr[1] * d[0]];
-    const p0 = [0, 1, 2].map((i) => rr[i] * a + uu[i] * b);
-    let en = null, et = Infinity;
-    B.forEach((q) => { const L = lohi(q); let t0 = -Infinity, t1 = Infinity; for (let i = 0; i < 3; i++) { if (Math.abs(d[i]) < 1e-12) continue; let x = (L.lo[i] - p0[i]) / d[i], y = (L.hi[i] - p0[i]) / d[i]; if (x > y) [x, y] = [y, x]; t0 = Math.max(t0, x); t1 = Math.min(t1, y); } if (t1 > t0 - 1e-6 && t0 < et) { et = t0; en = q.g.k; } });
-    expect(en).toBe(sol.k);
-    expect(document.querySelector('circle.ve-ak-kilavuz-uc[data-ak="' + sol.k + '"]')).toBeTruthy();
-    // dış yazı yalnız beyan edenin: seçeneksiz çizimde yazıların yeri ve SVG değişmez
-    const o = sihirbaz(kam), eski = AK.ciz(m, o), yine = AK.ciz(m, Object.assign({}, o, { disari: false }));
+    const m = cp._mntAksoModel(), o = sihirbaz({ az: 135, el: 30 }), eski = AK.ciz(m, o), yine = AK.ciz(m, Object.assign({}, o, { balon: false }));
     expect(yine.svg).toBe(eski.svg);
     expect(eski.svg).not.toContain('ve-ak-kilavuz-uc');
   });
