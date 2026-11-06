@@ -112,9 +112,19 @@ test('3B ROLÜ: Rol listesinin "Motor aksesuarları" grubunda dört aksesuar; al
   });
   const rol = page.locator('#ve-mnt-3b #ve-mw-3b-rol');
   await expect(rol).toBeVisible();
-  const ops = await rol.locator('optgroup[label="Motor aksesuarları"] option').allTextContents();
+  // Rol alanının listesi (Canlı Not 49): grup başlığının altındaki satırlar
+  await rol.click();
+  const ops = await page.evaluate(() => {
+    const G = {}; let g = null;
+    document.querySelectorAll('#ve-mw-3b-menu > .ve-mw-3b-menu-bas, #ve-mw-3b-menu > .ve-mw-3b-menu-o, #ve-mw-3b-menu > .ve-mw-3b-menu-ayrac').forEach((e) => {
+      if (e.classList.contains('ve-mw-3b-menu-bas')) { g = e.textContent; G[g] = []; }
+      else if (e.classList.contains('ve-mw-3b-menu-ayrac')) g = null;          // ayraçtan sonra Rolü kaldır
+      else if (g) G[g].push(e.textContent);
+    });
+    return G['Motor aksesuarları'];
+  });
   expect(ops).toEqual(['Alternatör', 'Alternatör Braketi', 'Klima Kompresörü', 'Isı Sacı']);
-  await rol.selectOption('mnt-alternator');
+  await page.click('#ve-mw-3b-menu [data-k="rol:mnt-alternator"]');
   await page.waitForFunction((d) => veMntWizStp().roller[d] === 'mnt-alternator', i);
   await page.evaluate(() => { const s = veMntWizStp(); veMntWizStpRol(s.sonuc.agac.findIndex((d) => d.ad === 'Klima kompresörü'), 'mnt-ac'); });
   await page.click('#ve-mnt-3b #ve-mw-3b-hesapla');

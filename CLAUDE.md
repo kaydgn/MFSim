@@ -154,7 +154,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   her gövdenin kütlesi biliniyorsa. **Özellikler açılır kapanır, KAPALI başlar** (kullanıcı
   2026-11-05, Canlı Not 26): seçim açmaz, kapalı sütun şerit (tuval genişliği alır), açıklık
   tarayıcının tercihi (`VE_MW_3B_YAN_ANAHTAR`). Özellikler bir özellik ızgarası: değerler TEK sütunda,
-  Rol tek liste ve yalnız adıyla (renk noktası yok — Canlı Not 46), motorun listesi **Motor modeli** (şanzımanda Şanzıman
+  Rol tek liste ve yalnız adıyla (renk noktası yok — Canlı Not 46) — tarayıcının listesi DEĞİL, sağ tık
+  menüsünün dilinde açılan gruplu liste, satırları menünün Rol'üyle aynı (Canlı Not 49), motorun listesi **Motor modeli** (şanzımanda Şanzıman
   modeli; "Veri sayfası" adı yok — kullanıcı 2026-11-06, Canlı Not 42), Malzeme
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok); kimlikte atalarının
   yolu YOK (ata ağaçtan seçilir, Canlı Not 42). Hesap Özellikler'in DİBİNDEKİ eylem
@@ -162,7 +163,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   simgesi (kullanıcı 2026-11-06, Canlı Not 45). Sağ tık menüsü `js/cp-mount-3b-menu.js`
   (gizle · ağaçta göster · rol · malzeme; gizli parça görünüm durumu, kaydedilmez). Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
   ve İŞ KARTI* · *ÖZELLİKLER AÇILIR KAPANIR* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM* ·
-  *ÖZELLİKLER AÇILIR KAPANIR* + `mount-veri-sayfasi.spec.js` (değer sütunu ve satır hizası).
+  *ÖZELLİKLER AÇILIR KAPANIR* · *ROL ALANI* + `mount-veri-sayfasi.spec.js` (değer sütunu ve satır hizası).
 - `js/cp-mount-3b-agac.js` — Takoz 3B'nin **ürün ağacı** (solda, 3DEXPERIENCE gibi) ve
   **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol
   seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`); **arama** bütün ağaçta (açık dallarla
@@ -915,7 +916,8 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   silmiyordu). Kapı: `fead-sonuclar-sekme.test.js` + `mount-results-tab.test.js` +
   `mount-sonuclar-sekme.test.js` (Takoz satırları `js/cp-mount-results.js`'te).
 - **DENETİM DİLİ TEK** (kullanıcı kararları 11–14, 2026-09-26). Liste okunu
-  TEK kural çizer (`select:not([multiple])`, çizgi ok, `--text-muted`); sayı
+  TEK kural çizer (`select:not([multiple])`, çizgi ok, `--text-muted`; Takoz 3B'nin
+  liste alanı `.ve-mw-3b-alan` da o kuralda); sayı
   alanı oksuz; kaydırma çubuğu `::-webkit-scrollbar` (standart `scrollbar-*`
   yalnız Firefox bloğunda — Chromium 121+ onu kapatıyor); veri ızgarası
   (`table.ve-izgara`) kutuyu yalnız fare/odakta gösterir, girdisi satır içi

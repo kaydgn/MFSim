@@ -81,11 +81,13 @@ test('KART (1366×768): kaynak seçicisi sığar; dosyadan kütle merkezi, malze
   const KOK = '#ve-mw-body';
   // Gerçek seçim: şanzıman dosyadan (iki malzeme), braket çelik
   const sec = (ad) => KOK + ' select[aria-label="Kütle kaynağı — ' + ad + '"]';
-  // motorun listesinde veri sayfası grubu da var (js/mount-veri-sayfasi.js); şanzımanda yok
+  // motorun listesinde veri sayfası grubu da var (js/mount-veri-sayfasi.js); şanzımanınkinde
+  // ailesi (Allison 4000, 2026-11-06)
   expect(await page.locator(sec('Motor') + ' option').allTextContents())
     .toEqual(['Elle'].concat(await page.evaluate(() => VE_MNT_STP_MALZEME.map((m) => m.ad)))
       .concat(await page.evaluate(() => veMntVeriSayfalari('mnt-motor').map((v) => v.ad))));
-  expect(await page.locator(sec('Şanzıman') + ' optgroup').count()).toBe(0);
+  expect(await page.locator(sec('Şanzıman') + ' optgroup option').allTextContents())
+    .toEqual(await page.evaluate(() => veMntVeriSayfalari('mnt-gearbox').map((v) => v.ad)));
   // şanzımanın yoğunlukları dosyada: kaynak "Dosyadan" seçili gelir (kullanım notu T06)
   expect(await page.locator(sec('Şanzıman')).inputValue()).toBe('dosya');
   await page.selectOption(sec('Arka braket'), 'celik');

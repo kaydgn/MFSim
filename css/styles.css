@@ -1365,8 +1365,11 @@
        denetim-dili.test.js. Yeri kamanınkiyle aynı (sağdan 6–12 px, dolgu
        15 px): hiçbir listenin genişliği değişmez. `!important` BİLEREK:
        33 listede satır içi `background:` kısaltması var ve kısaltma oku
-       siler. Sayı alanında ↑/↓ tuşları sayıyı yine artırıp azaltır. */
-    select:not([multiple]):not([size]) {
+       siler. Sayı alanında ↑/↓ tuşları sayıyı yine artırıp azaltır.
+       Takoz 3B'nin LİSTE ALANI (`.ve-mw-3b-alan`, Canlı Not 49: tarayıcının
+       açılır listesi yerine menünün dilinde liste açan düğme) okunu da BU
+       kuraldan alır — kapalı hâli yerel listelerle birebir. */
+    select:not([multiple]):not([size]), .ve-mw-3b-alan {
       -webkit-appearance: none; appearance: none;
       padding-right: 15px !important;
       text-overflow: ellipsis;
@@ -11883,6 +11886,18 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-oz-d{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; min-height:28px; }
 .ve-mw-3b-oz-d > select.ve-fw-inp{ flex:1 1 auto; min-width:0; width:auto; height:28px; }
 .ve-mw-3b-oz-d > .ve-fw-3b-dizi-ad{ flex-basis:100%; padding:0; border:0; }
+/* LİSTE ALANI (Canlı Not 49: *"Şu rol açılır penceresini de düzenleyelim … çok amatör
+   duruyor"*): kapalıyken komşu listelerin (Motor modeli) aynısı — kutu, ölçü, ok tek
+   kuraldan; tık menünün dilinde listeyi alanın altında açar (js/cp-mount-3b-menu.js →
+   veMntWiz3bRolMenuAc), açıkken kenarı vurgu */
+.ve-mw-3b-alan{ flex:1 1 auto; min-width:0; height:28px; box-sizing:border-box; display:flex; align-items:center; padding:0 7px;
+  background-color:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  font-family:var(--font-sans); font-size:var(--fs-body); color:var(--text-primary); text-align:left; cursor:pointer; }
+.ve-mw-3b-alan:hover{ border-color:var(--border-hover); }
+.ve-mw-3b-alan:focus-visible{ outline:none; border-color:var(--accent-primary); box-shadow:var(--focus-ring); }
+.ve-mw-3b-alan[aria-expanded="true"]{ border-color:var(--accent-primary); }
+.ve-mw-3b-alan[data-karisik] .ve-mw-3b-alan-ad{ color:var(--text-secondary); }
+.ve-mw-3b-alan-ad{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* ŞANZIMAN AİLESİNİN SEÇENEKLERİ (js/cp-mount-wizard.js → _mwStpSecenekler, 2026-11-06):
    kartın Kütle tablosunda şanzımanın satırının altında iki sütun; sayı alanının
    birimi alanın sağında (3B'nin özellik ızgarasında da) */
@@ -12102,9 +12117,14 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-menu-o > .mf-ico{ flex:none; width:14px; height:14px; }
 .ve-mw-3b-menu-ad{ flex:1 1 auto; }
 .ve-mw-3b-menu-o > .mf-ico:last-child:not(:first-child){ width:12px; height:12px; color:var(--text-muted); }
-.ve-mw-3b-menu-renk{ flex:none; width:10px; height:10px; margin:0 2px; border-radius:50%; background:var(--renk, var(--text-muted)); }
 .ve-mw-3b-menu-bos{ flex:none; width:14px; }
 .ve-mw-3b-menu-ayrac{ height:1px; margin:4px 0; background:var(--border-light); }
+/* Grup başlığı (Rol listesi, Canlı Not 49): bölüm başlığının dilinde, satırın adıyla hizalı */
+.ve-mw-3b-menu-bas{ padding:8px 12px 3px 32px; font-size:var(--fs-tiny); font-weight:600; letter-spacing:.04em;
+  text-transform:uppercase; color:var(--text-secondary); white-space:nowrap; }
+.ve-mw-3b-menu-bas:first-child{ padding-top:4px; }
+/* Alanın listesi: en az alan genişliğinde, sığmazsa kendi içinde kayar */
+.ve-mw-3b-menu.alanli{ overflow-y:auto; }
 /* Gizli düğüm ağaçta soluk, sonunda gizli simgesi; "Ağaçta göster" satırı kısa vurguyla bulur */
 .ve-mw-3b-agac-r.gizli .ve-mw-3b-agac-ad{ color:var(--text-muted); }
 .ve-mw-3b-agac-gz{ flex:none; display:inline-flex; color:var(--text-muted); }

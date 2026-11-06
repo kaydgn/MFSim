@@ -673,6 +673,8 @@ describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu',
     const rol = L.find((o) => o.k === 'rol').alt.filter((o) => o !== '-');
     expect(rol.filter((o) => o.rol).map((o) => o.rol).sort()).toEqual(VE_MNT_STP_ROLLER.slice().sort());
     expect(rol.find((o) => o.k === 'rol:').kapali).toBe(true);
+    // Özellikler'in Rol alanının listesiyle AYNI satırlar (Canlı Not 49)
+    expect(L.find((o) => o.k === 'rol').alt).toEqual(veMntWiz3bRolMenuOgeleri(s, [brk]));
     expect(veMntWiz3bRolGruplari().map((g) => g.ad)).toEqual(['Gövdeler', 'Takoz', 'Aktarma', 'Motor aksesuarları']);
   });
   // Kullanıcı 2026-11-05 (Canlı Not 20): "Arkadaki tema değişebilir olsun … Düz beyaz
@@ -730,7 +732,7 @@ describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu',
     expect(d.querySelector('[data-ve-3b-agac="' + ad2i(s, 'Motor bloğu') + '"]').classList.contains('gizli')).toBe(false);
     d.querySelectorAll('.ve-mw-3b-agac-ad').forEach((b) => expect(b.getAttribute('oncontextmenu')).toMatch(/^veMntWiz3bAgacMenu\(\d+, event\)$/));
   });
-  test('gizli parça her geçişte atılır, kenarı çizilmez, isabet almaz; menünün HTML\'i rol renkli, seçili işaretli', () => {
+  test('gizli parça her geçişte atılır, kenarı çizilmez, isabet almaz; menünün HTML\'i grup başlıklı, renk noktasız, seçili işaretli', () => {
     const sh = { vertexShader: 'x\n#include <project_vertex>\ny' };
     _mw3bKoseAyikla(sh, false, false);
     expect(sh.vertexShader).toMatch(/if\(mwD > 7\.5\) gl_Position/);
@@ -745,7 +747,12 @@ describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu',
     const m = d.querySelector('#ve-mw-3b-menu[role="menu"]');
     expect(m).not.toBe(null);
     expect(d.querySelector('[data-k="rol:mnt-mount"]').getAttribute('aria-checked')).toBe('true');
-    expect(d.querySelector('[data-k="rol:mnt-mount"] .ve-mw-3b-menu-renk').getAttribute('style')).toBe('--renk:var(' + VE_MW_3B_ROL_RENK['mnt-mount'] + ')');
+    // Rolün satırı YALNIZ ADIYLA (Canlı Not 46 · 49): renk noktası yok, adı başlıkla hizalı
+    expect(d.querySelector('.ve-mw-3b-menu-renk')).toBe(null);
+    expect(require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8')).not.toMatch(/\.ve-mw-3b-menu-renk/);
+    expect(d.querySelector('[data-k="rol:mnt-mount"] > .ve-mw-3b-menu-bos')).not.toBe(null);
+    expect(Array.from(d.querySelectorAll('[data-k="rol"] + .ve-mw-3b-menu-alt > .ve-mw-3b-menu-bas[role="presentation"]')).map((b) => b.textContent))
+      .toEqual(veMntWiz3bRolGruplari().map((g) => g.ad));
     expect(d.querySelector('[data-k="rol"]').getAttribute('aria-haspopup')).toBe('menu');
     expect(d.querySelector('[data-k="gizle"] .mf-ico-eye-off')).not.toBe(null);
   });
@@ -776,16 +783,19 @@ describe('ÇOKLU SEÇİM — rol seçimin hepsine, tek hesap', () => {
     const s = oturum(), tk = takozlar(s);
     veMntWizStpRol(tk[0], 'mnt-mount');
     const kur = (secim) => { const d = document.createElement('div'); d.innerHTML = veMntWiz3bAltHTML(s, secim[secim.length - 1], { secim }); return d; };
-    const secili = (d) => d.querySelector('#ve-mw-3b-rol').selectedOptions[0];
+    const alan = (d) => d.querySelector('#ve-mw-3b-rol');
+    const isaretli = (sec) => veMntWiz3bRolMenuOgeleri(s, sec).filter((o) => o.secili).map((o) => o.rol);
     let d = kur([tk[0], tk[1]]);
     expect(d.querySelector('.ve-fw-3b-roller').getAttribute('aria-label')).toBe('Rol — 2 düğüm');
-    expect([secili(d).textContent, secili(d).disabled]).toEqual(['Karışık', true]);
-    expect(d.querySelector('#ve-mw-3b-rol option[value=""][data-ve-3b-rol=""]').disabled).toBe(false);   // "—" rolleri kaldırır
-    // karışık seçimde son eklenen rollü olsa da liste o rolde değil
-    expect(secili(kur([tk[1], tk[0]])).textContent).toBe('Karışık');
+    expect([alan(d).textContent, alan(d).hasAttribute('data-karisik'), alan(d).getAttribute('data-deger')]).toEqual(['Karışık', true, '']);
+    expect(isaretli([tk[0], tk[1]])).toEqual([]);
+    expect(veMntWiz3bRolMenuOgeleri(s, [tk[0], tk[1]]).find((o) => o.k === 'rol:').kapali).toBe(false);   // Rolü kaldır açık
+    // karışık seçimde son eklenen rollü olsa da alan o rolde değil
+    expect(alan(kur([tk[1], tk[0]])).textContent).toBe('Karışık');
     veMntWizStpRol(tk[1], 'mnt-mount');
     d = kur([tk[0], tk[1]]);
-    expect(d.querySelector('#ve-mw-3b-rol').value).toBe('mnt-mount');
+    expect([alan(d).getAttribute('data-deger'), alan(d).textContent, alan(d).hasAttribute('data-karisik')]).toEqual(['mnt-mount', _mwAd('mnt-mount'), false]);
+    expect(isaretli([tk[0], tk[1]])).toEqual(['mnt-mount']);
     expect(d.querySelector('#ve-mw-3b-nokta')).toBe(null);
     expect(kur([tk[1]]).querySelector('#ve-mw-3b-nokta')).not.toBe(null);      // tek takozda var
   });
@@ -1441,11 +1451,13 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(kb(brk)).toEqual(['Rol']);
     t.yogunluk[brk] = 'celik';
     expect(kb(brk)).toEqual(['Rol', 'Malzeme']);
-    // Rol tek liste, gruplu; çip ve "Diğer…" yok
+    // Rol tek ALAN (Canlı Not 49): tarayıcının listesi değil, menünün dilinde açılan
+    // gruplu liste; çip ve "Diğer…" yok
     const d = kur(veMntWiz3bAltHTML(t, brk, {}));
-    expect(d.querySelector('#ve-mw-3b-rol').value).toBe('mnt-bracket');
-    expect(Array.from(d.querySelectorAll('#ve-mw-3b-rol optgroup')).map((g) => g.label)).toEqual(veMntWiz3bRolGruplari().map((g) => g.ad));
-    expect(d.querySelectorAll('#ve-mw-3b-rol option[data-ve-3b-rol]:not([value=""])').length).toBe(VE_MNT_STP_ROLLER.length);
+    const alan = d.querySelector('#ve-mw-3b-rol');
+    expect([alan.tagName, alan.className, alan.getAttribute('data-deger'), alan.textContent]).toEqual(['BUTTON', 've-mw-3b-alan', 'mnt-bracket', _mwAd('mnt-bracket')]);
+    expect(d.querySelector('select#ve-mw-3b-rol, #ve-mw-3b-rol optgroup')).toBe(null);
+    expect(veMntWiz3bRolMenuOgeleri(t, [brk]).filter((o) => o.rol).length).toBe(VE_MNT_STP_ROLLER.length);
     // Rol listesi YALNIZ ADIYLA, renk noktası yok (Canlı Not 46: "Sadece rol ismi görünse
     // yeter"); liste öteki satırlar gibi doğrudan değer sütununda (Canlı Not 42)
     expect(d.querySelector('.ve-mw-3b-oz-d > #ve-mw-3b-rol')).not.toBe(null);

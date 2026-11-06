@@ -79,15 +79,7 @@ function veMntWiz3bMenuOgeleri(s, secim, gizli, opt){
   L.push({ k: 'sigdir', ad: 'Tümünü sığdır', ikon: 'maximize' });
   if(!sec.length) return L;
   L.push('-');
-  var rs = sec.map(function(d){ return s.roller[d] || ''; }), rol = rs.every(function(r){ return r === rs[0]; }) ? rs[0] : null;
-  var alt = [];
-  veMntWiz3bRolGruplari().forEach(function(g, gi){
-    if(gi) alt.push('-');
-    g.roller.forEach(function(t){ alt.push({ k: 'rol:' + t, ad: _mwAd(t), rol: t, secili: rol === t }); });
-  });
-  alt.push('-');
-  alt.push({ k: 'rol:', ad: 'Rolü kaldır', ikon: 'x', kapali: !rs.some(function(r){ return !!r; }) });
-  L.push({ k: 'rol', ad: 'Rol', ikon: 'box', alt: alt });
+  L.push({ k: 'rol', ad: 'Rol', ikon: 'box', alt: veMntWiz3bRolMenuOgeleri(s, sec) });
   if(typeof VE_MNT_STP_MALZEME !== 'undefined' && sec.every(function(d){ return veMntWiz3bMalzemeAlir(s, d); })){
     var ms = sec.map(function(d){ return typeof veMntWizStpMalzemeDurum === 'function' ? veMntWizStpMalzemeDurum(s, d).k : ((s.malzeme || {})[d] || ''); });
     var mk = ms.every(function(m){ return m === ms[0]; }) ? ms[0] : null;
@@ -101,11 +93,30 @@ function veMntWiz3bMenuOgeleri(s, secim, gizli, opt){
   return L;
 }
 
+// ROL LİSTESİ (saf, testli) — Özellikler'in Rol seçicisi ve sağ tık menüsünün Rol
+// alt menüsü AYNI satırlar (kullanıcı 2026-11-06, Canlı Not 49: *"Şu rol açılır
+// penceresini de düzenleyelim … çok amatör duruyor"* — tarayıcının kendi gruplu
+// listesiydi): grup başlığı, rolün ADI (renk noktası yok — Canlı Not 46), seçilide
+// onay; dipte Rolü kaldır (rolsüzken kapalı). Çoklu seçimde ayrışan rolde hiçbiri
+// işaretli değil.
+function veMntWiz3bRolMenuOgeleri(s, secim){
+  var sec = (secim || []).filter(function(d){ return d >= 0; });
+  var rs = sec.map(function(d){ return s.roller[d] || ''; }), rol = rs.length && rs.every(function(r){ return r === rs[0]; }) ? rs[0] : null;
+  var L = [];
+  veMntWiz3bRolGruplari().forEach(function(g){
+    L.push({ baslik: g.ad });
+    g.roller.forEach(function(t){ L.push({ k: 'rol:' + t, ad: _mwAd(t), rol: t, secili: rol === t }); });
+  });
+  L.push('-');
+  L.push({ k: 'rol:', ad: 'Rolü kaldır', ikon: 'x', kapali: !rs.some(function(r){ return !!r; }) });
+  return L;
+}
+
 // ── HTML ──────────────────────────────────────────────────────────────────
 function _mw3bMenuSatirHTML(o){
   if(o === '-') return '<div class="ve-mw-3b-menu-ayrac" role="separator"></div>';
-  var nokta = o.rol ? '<span class="ve-mw-3b-menu-renk" style="--renk:var(' + veMntWiz3bRolJeton(o.rol) + ')" aria-hidden="true"></span>'
-    : (o.ikon ? _mwIkon(o.ikon) : '<span class="ve-mw-3b-menu-bos" aria-hidden="true"></span>');
+  if(o && o.baslik) return '<div class="ve-mw-3b-menu-bas" role="presentation">' + _mwEsc(o.baslik) + '</div>';
+  var nokta = o.ikon ? _mwIkon(o.ikon) : '<span class="ve-mw-3b-menu-bos" aria-hidden="true"></span>';
   // `secili`: seçeneklerden biri (radio) · `isaretli`: açılıp kapanan kip (checkbox)
   var tur = o.secili !== undefined ? 'radio' : (o.isaretli !== undefined ? 'checkbox' : ''), isaret = o.secili || o.isaretli;
   var b = '<button type="button" class="ve-mw-3b-menu-o" role="menuitem' + tur + '" data-k="' + _mwEsc(o.k) + '"'
@@ -117,8 +128,8 @@ function _mw3bMenuSatirHTML(o){
   return '<div class="ve-mw-3b-menu-kap">' + b + '<div class="ve-mw-3b-menu ve-mw-3b-menu-alt" role="menu" aria-label="' + _mwEsc(o.ad) + '">'
     + o.alt.map(_mw3bMenuSatirHTML).join('') + '</div></div>';
 }
-function veMntWiz3bMenuHTML(L){
-  return '<div class="ve-mw-3b-menu" id="ve-mw-3b-menu" role="menu" aria-label="Bağlam menüsü">' + L.map(_mw3bMenuSatirHTML).join('') + '</div>';
+function veMntWiz3bMenuHTML(L, ad){
+  return '<div class="ve-mw-3b-menu" id="ve-mw-3b-menu" role="menu" aria-label="' + _mwEsc(ad || 'Bağlam menüsü') + '">' + L.map(_mw3bMenuSatirHTML).join('') + '</div>';
 }
 
 // ── AÇ / KAPAT ────────────────────────────────────────────────────────────
@@ -128,28 +139,61 @@ function veMntWiz3bMenuAc(x, y, dugum, kaynak){
   if(!V || V.okuma || typeof document === 'undefined') return false;
   veMntWiz3bMenuKapat();
   if(dugum >= 0 && V.secim.indexOf(dugum) < 0) veMntWiz3bSec(dugum, false, kaynak === 'agac' ? 'agac' : undefined);
+  var bos = dugum < 0 && kaynak !== 'agac';
+  return _mw3bMenuKur(V, veMntWiz3bMenuOgeleri(V.s, V.secim, V.gizli,
+    { bos: bos, gorunus: V.gorunus, zemin: V.zemin, suzgec: V.suzgec, olcu: !!V.olcu, kesit: !!V.kesit }), { x: x, y: y, dugum: dugum });
+}
+// ALANIN LİSTESİ (Canlı Not 49): Özellikler'in Rol alanı tarayıcının listesi değil,
+// sağ tık menüsünün dilinde açılan liste — alanın altında, en az alan genişliğinde;
+// altta yer yoksa üstünde. Aynı alana ikinci tık kapatır; Esc kapatır, odak alana döner.
+function veMntWiz3bRolMenuAc(alan){
+  var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
+  if(!V || V.okuma || !alan || typeof document === 'undefined') return false;
+  var acikti = !!(V.menu && V.menu.alan === alan);
+  veMntWiz3bMenuKapat();
+  if(acikti) return false;
+  return _mw3bMenuKur(V, veMntWiz3bRolMenuOgeleri(V.s, V.secim), { alan: alan, ad: 'Rol' });
+}
+// Menünün katmanı (ortak): görüntüleyicinin içinde (kapanınca onunla gider); konum
+// kabın köşesine göre — kap kapsayıcı sorgusunun kabı, sabit konum onun içinde
+// göreli olurdu. `yer`: { x, y, dugum } (imleç) · { alan, ad } (alanın altında)
+function _mw3bMenuKur(V, L, yer){
   var el = document.createElement('div');
   el.className = 've-mw-3b-menu-katman';
-  var bos = dugum < 0 && kaynak !== 'agac';
-  el.innerHTML = veMntWiz3bMenuHTML(veMntWiz3bMenuOgeleri(V.s, V.secim, V.gizli,
-    { bos: bos, gorunus: V.gorunus, zemin: V.zemin, suzgec: V.suzgec, olcu: !!V.olcu, kesit: !!V.kesit }));
-  // Katman görüntüleyicinin içinde (kapanınca onunla gider); konum kabın köşesine
-  // göre — kap kapsayıcı sorgusunun kabı, sabit konum onun içinde göreli olurdu
+  el.innerHTML = veMntWiz3bMenuHTML(L, yer.ad);
   var kap = V.ov || document.body, r = kap.getBoundingClientRect ? kap.getBoundingClientRect() : { left: 0, top: 0, width: 1280, height: 800 };
   kap.appendChild(el);
-  var m = el.firstChild, w = m.offsetWidth || 220, h = m.offsetHeight || 300;
-  var W = r.width || window.innerWidth || 1280, H = r.height || window.innerHeight || 800, lx = x - r.left, ly = y - r.top;
-  m.style.left = Math.max(4, Math.min(lx, W - w - 4)) + 'px';
-  m.style.top = Math.max(4, Math.min(ly, H - h - 4)) + 'px';
-  if(lx + w + 200 > W) m.classList.add('sola');              // alt menü sola açılır
-  V.menu = { el: el, dugum: dugum };
+  var m = el.firstChild, W = r.width || window.innerWidth || 1280, H = r.height || window.innerHeight || 800, lx, ly;
+  if(yer.alan){
+    var a = yer.alan.getBoundingClientRect();
+    m.classList.add('alanli');
+    m.style.minWidth = Math.round(a.width) + 'px';
+    m.style.maxHeight = Math.max(160, H - 8) + 'px';
+    var w0 = m.offsetWidth || a.width, h0 = m.offsetHeight || 300;
+    lx = a.left - r.left;
+    ly = (a.bottom - r.top + 2 + h0 <= H - 4) ? a.bottom - r.top + 2 : Math.max(4, a.top - r.top - 2 - h0);
+    m.style.left = Math.max(4, Math.min(lx, W - w0 - 4)) + 'px';
+    m.style.top = Math.max(4, Math.min(ly, H - h0 - 4)) + 'px';
+    yer.alan.setAttribute('aria-expanded', 'true');
+  } else {
+    var w = m.offsetWidth || 220, h = m.offsetHeight || 300;
+    lx = yer.x - r.left; ly = yer.y - r.top;
+    m.style.left = Math.max(4, Math.min(lx, W - w - 4)) + 'px';
+    m.style.top = Math.max(4, Math.min(ly, H - h - 4)) + 'px';
+    if(lx + w + 200 > W) m.classList.add('sola');              // alt menü sola açılır
+  }
+  V.menu = { el: el, dugum: yer.alan ? -1 : yer.dugum, alan: yer.alan || null };
   var tik = function(e){
     var o = e.target && e.target.closest ? e.target.closest('.ve-mw-3b-menu-o') : null;
     if(!o || o.disabled) return;
     if(o.getAttribute('aria-haspopup')){ _mw3bMenuAltAc(o, true); return; }
     veMntWiz3bMenuUygula(o.getAttribute('data-k'));
   };
-  var disari = function(e){ if(V.menu && !V.menu.el.contains(e.target)) veMntWiz3bMenuKapat(); };
+  // Alanın kendisine basmak dışarısı sayılmaz: tık listeyi kapatır (iki kez açılmasın)
+  var disari = function(e){
+    if(!V.menu || V.menu.el.contains(e.target) || (V.menu.alan && V.menu.alan.contains(e.target))) return;
+    veMntWiz3bMenuKapat();
+  };
   var tus = function(e){ _mw3bMenuTus(e); };
   m.addEventListener('click', tik);
   m.addEventListener('pointerover', function(e){
@@ -166,16 +210,27 @@ function veMntWiz3bMenuAc(x, y, dugum, kaynak){
     window.removeEventListener('keydown', tus, true);
     window.removeEventListener('blur', veMntWiz3bMenuKapat);
   };
-  var ilk = m.querySelector('.ve-mw-3b-menu-o:not([disabled])');
+  // Panel kayınca alanın listesi yerinden kopar: kapanır
+  if(yer.alan){
+    var kay = function(e){ if(V.menu && !V.menu.el.contains(e.target)) veMntWiz3bMenuKapat(); };
+    kap.addEventListener('scroll', kay, true);
+    var sok0 = V.menu.sok;
+    V.menu.sok = function(){ sok0(); kap.removeEventListener('scroll', kay, true); };
+  }
+  // Alanın listesinde odak seçili satırda (tarayıcının listesi gibi)
+  var ilk = (yer.alan && m.querySelector('.ve-mw-3b-menu-o[aria-checked="true"]:not([disabled])')) || m.querySelector('.ve-mw-3b-menu-o:not([disabled])');
   if(ilk) ilk.focus();
   return true;
 }
-function veMntWiz3bMenuKapat(){
+// `odakAlan`: Esc ile kapanınca odak alana döner
+function veMntWiz3bMenuKapat(odakAlan){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
   if(!V || !V.menu) return false;
   if(V.menu.sok) V.menu.sok();
   if(V.menu.el && V.menu.el.parentNode) V.menu.el.parentNode.removeChild(V.menu.el);
+  var alan = V.menu.alan;
   V.menu = null;
+  if(alan){ alan.setAttribute('aria-expanded', 'false'); if(odakAlan && alan.isConnected !== false && alan.focus) alan.focus(); }
   return true;
 }
 function veMntWiz3bMenuAcik(){ var V = typeof _mw3b !== 'undefined' ? _mw3b : null; return !!(V && V.menu); }
@@ -189,7 +244,7 @@ function _mw3bMenuTus(e){
   var V = _mw3b;
   if(!V || !V.menu) return;
   var o = document.activeElement && document.activeElement.closest ? document.activeElement.closest('.ve-mw-3b-menu-o') : null;
-  if(e.key === 'Escape'){ e.preventDefault(); e.stopImmediatePropagation(); veMntWiz3bMenuKapat(); return; }
+  if(e.key === 'Escape'){ e.preventDefault(); e.stopImmediatePropagation(); veMntWiz3bMenuKapat(true); return; }
   if(!o || !V.menu.el.contains(o)) return;
   var liste = o.parentNode.classList.contains('ve-mw-3b-menu-kap') ? o.parentNode.parentNode : o.parentNode;
   var oge = Array.prototype.filter.call(liste.querySelectorAll(':scope > .ve-mw-3b-menu-o, :scope > .ve-mw-3b-menu-kap > .ve-mw-3b-menu-o'),
@@ -215,9 +270,16 @@ function _mw3bMenuTus(e){
 function veMntWiz3bMenuUygula(k){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
   if(!V) return false;
+  var alanli = !!(V.menu && V.menu.alan);
   veMntWiz3bMenuKapat();
   k = String(k || '');
-  if(k.indexOf('rol:') === 0) return veMntWiz3bRol(k.slice(4));
+  if(k.indexOf('rol:') === 0){
+    var r = veMntWiz3bRol(k.slice(4));
+    // Alanın listesinden seçilince odak yeniden kurulan alana döner (klavye yolu kopmasın)
+    var yeni = alanli && typeof document !== 'undefined' ? document.getElementById('ve-mw-3b-rol') : null;
+    if(yeni && yeni.focus) yeni.focus();
+    return r;
+  }
   if(k.indexOf('bakis:') === 0) return typeof veMntWiz3bBakis === 'function' ? veMntWiz3bBakis(k.slice(6)) : false;
   if(k.indexOf('gorunus:') === 0){
     var g = veMntWiz3bGorunusSec(k.slice(8));
@@ -313,7 +375,7 @@ function veMntWiz3bAgacMenu(d, e){
 
 if(typeof module !== 'undefined' && module.exports){
   module.exports = {
-    veMntWiz3bMenuOgeleri: veMntWiz3bMenuOgeleri, veMntWiz3bMenuHTML: veMntWiz3bMenuHTML,
+    veMntWiz3bMenuOgeleri: veMntWiz3bMenuOgeleri, veMntWiz3bMenuHTML: veMntWiz3bMenuHTML, veMntWiz3bRolMenuOgeleri: veMntWiz3bRolMenuOgeleri,
     veMntWiz3bGizliKume: veMntWiz3bGizliKume, veMntWiz3bDugumGizli: veMntWiz3bDugumGizli
   };
 }
