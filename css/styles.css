@@ -8848,17 +8848,28 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-is .ve-mw-3b-dosya{ font-weight:400; color:var(--text-secondary); }
 .ve-mw-3b-is .ve-mw-3b-dosya b{ font-weight:400; }
 .ve-mw-3b-kapat{ position:absolute; top:12px; right:12px; z-index:3; box-shadow:var(--shadow-lg); }
-/* EYLEM KARTI (kullanıcı 2026-11-05, Canlı Not 11): tuvalin SAĞ ALTINDA, rol
-   verilince belirir; iş kartıyla aynı köşede, onun altında (.ve-mw-3b-sagalt
-   ikisini dizer). SIRADAKİ adım dolu vurgu (.ve-mw-3b-hap-ana), öteki
-   çerçeveli; durum satırı (hesabın engeli, rolün eksiği) düğmelerin üstünde. */
+/* İŞ KARTININ KÖŞESİ: tuvalin sağ altı (okuma · kurulum). */
 .ve-mw-3b-sagalt{ position:absolute; right:16px; bottom:16px; z-index:3; display:flex; flex-direction:column;
   align-items:flex-end; gap:8px; max-width:calc(100% - 32px); pointer-events:none; }
 .ve-mw-3b-sagalt > *{ pointer-events:auto; }
 .ve-mw-3b-sagalt > .ve-mw-3b-is{ position:static; }
-.ve-mw-3b-eylem{ width:auto; min-width:240px; }
-.ve-mw-3b-eylem .ve-fw-3b-eylem{ display:flex; flex-direction:column; gap:8px; }
+/* EYLEM ŞERİDİ (kullanıcı 2026-11-06, Canlı Not 45: *"Hesapla butonu neden böyle
+   duruyor? … Sağ taraftaki sütunun altına"* — tuvalin sağ altında tek düğmeli,
+   solu boş bir karttı): Özellikler'in DİBİNE yapışık (panel kaydırılınca görünür
+   kalır), rol verilince belirir. SIRADAKİ adım dolu vurgu (.ve-mw-3b-hap-ana),
+   öteki çerçeveli, sağa yaslı; durum satırı (hesabın engeli, rolün eksiği)
+   düğmelerin üstünde. Panel kapalıyken şeridin dibinde yalnız sıradaki adım,
+   simge (adı ipucunda). */
+.ve-mw-3b-yan-eylem{ position:sticky; bottom:0; z-index:1; margin-top:auto; box-sizing:border-box; padding:10px 14px;
+  background:var(--bant-zemin); border-top:1px solid var(--border-color); }
+.ve-mw-3b-yan-eylem[hidden]{ display:none; }
+.ve-mw-3b-yan-eylem .ve-fw-3b-eylem{ display:flex; flex-direction:column; gap:8px; }
 .ve-mw-3b-eylem-d{ display:flex; justify-content:flex-end; gap:8px; }
+.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > .ve-mw-3b-yan-eylem:not([hidden]){ display:flex; justify-content:center; padding:6px 0; }
+.ve-mw-3b-masa[data-yan="kapali"] .ve-mw-3b-yan-eylem .ve-fw-issues,
+.ve-mw-3b-masa[data-yan="kapali"] .ve-mw-3b-yan-eylem .ve-mw-3b-hap:not(.ve-mw-3b-hap-ana),
+.ve-mw-3b-masa[data-yan="kapali"] .ve-mw-3b-yan-eylem .ve-mw-3b-hap-ad{ display:none; }
+.ve-mw-3b-masa[data-yan="kapali"] .ve-mw-3b-yan-eylem .ve-mw-3b-hap{ width:24px; height:24px; padding:0; justify-content:center; }
 .ve-mw-3b-hap{ display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 12px; white-space:nowrap; cursor:pointer;
   font:inherit; font-size:var(--fs-body); font-weight:600; color:var(--text-primary); background:var(--bg-input);
   border:1px solid var(--border-color); border-radius:var(--radius-sm); }
@@ -12035,7 +12046,7 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
    daraltma dilinde (chevrons, "Paneli daralt"). */
 .ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa[data-yan="kapali"]{ --mw3b-yan:var(--mw3b-serit); }
 .ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan{ overflow:hidden; }
-.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > :not(.ve-mw-3b-yan-serit){ display:none; }
+.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > :not(.ve-mw-3b-yan-serit):not(.ve-mw-3b-yan-eylem){ display:none; }
 .ve-mw-3b-yan-daralt{ flex:none; width:20px; height:20px; display:flex; align-items:center; justify-content:center; padding:0;
   border:1px solid transparent; border-radius:var(--radius-sm); background:transparent; color:var(--text-muted);
   font-size:var(--fs-body); cursor:pointer; }

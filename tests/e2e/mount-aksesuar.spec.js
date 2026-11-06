@@ -55,6 +55,10 @@ test('PALET VE PENCERE: "Motor aksesuarları" grubu; Klima Kompresörü kütlesi
   const hatalar = [];
   page.on('pageerror', (e) => hatalar.push(String(e)));
   await bootApp(page);
+  // Örnek yüklenince Bileşenler sütunu KAPALI gelir (kullanıcı 2026-11-05, Canlı Not 38);
+  // köşe hücresindeki açma düğmesi açar
+  await expect(page.locator('#ve-sidebar')).toHaveClass(/ve-sb-collapsed/);
+  await page.click('#ve-sidebar-reveal');
   // Palet: Takoz kapsamında dört satır
   const grup = page.locator('.ve-category:has(> .ve-category-title:text-is("Motor aksesuarları"))');
   await expect(grup).toBeVisible();

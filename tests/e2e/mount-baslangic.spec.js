@@ -281,6 +281,9 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
   expect(await acik()).toEqual([]);
   await page.click('#ve-mnt-baslangic .ve-bas-satir[data-v="kamyon"] .ve-bas-satir-ac');
   expect(await acik()).toEqual(['kamyon']);
+  // Satır YERİNDE açılır, Yükle'nin zemini geçişle dolar (--dur-base): geçiş bitmeden
+  // okunan renk başlangıç rengidir
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
   const o = await page.evaluate(() => {
     const sayfa = document.getElementById('ve-mnt-baslangic');
     const y = (v) => getComputedStyle(document.querySelector('#ve-mnt-baslangic .ve-bas-satir[data-v="' + v + '"] .ve-bas-satir-yukle')).backgroundColor;
