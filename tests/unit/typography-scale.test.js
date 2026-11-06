@@ -83,6 +83,19 @@ describe('tipografi ölçeği tanımı', () => {
   test('ölü --text-* ölçeği kaldırıldı (iki rakip sistem olmasın)', () => {
     expect(cssSrc).not.toMatch(/^\s*--text-(xs|sm|base|md|lg|xl|2xl):/m);
   });
+
+  // Kullanıcı 2026-11-06 (Canlı Not 43): "Yazılar neden büyük altta? Çok amatör
+  // duruyor." Boyu hiçbir kuralın vermediği yazı tarayıcının 16 px'ine düşüyordu:
+  // 3B'nin Birimler listesinde 16 yazı (grup başlıkları, birim adları, kütleler,
+  // toplam), içe aktarmanın boş durumunda 1. Taban arayüz varsayılanı; 16 px
+  // isteyen yüzey onu ADIYLA ister.
+  test('body arayüz varsayılanını taşır: boyu verilmemiş yazı tarayıcının 16 px\'ine düşmez', () => {
+    const body = cssSrc.match(/\n\s*body\s*\{([^}]*)\}/);
+    expect(body).not.toBe(null);
+    expect(body[1]).toMatch(/font-size:\s*var\(--fs-body\)/);
+    // içe aktarmanın boş durumu 16 px'ini adıyla ister (eskiden tarayıcıdan alıyordu)
+    expect(cssSrc).toMatch(/\.ve-imp-state\{[^}]*font-size:var\(--fs-title\)/);
+  });
 });
 
 describe('ölçek erimesin — serbest font-size bildirimi yok', () => {

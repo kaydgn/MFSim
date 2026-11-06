@@ -1372,6 +1372,26 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(Array.from(d.querySelectorAll('[data-ve-3b-grup]')).map((g) => g.getAttribute('data-ve-3b-grup'))).toEqual(['takoz', 'aksesuar']);
   });
 
+  // Kullanıcı 2026-11-06 (Canlı Not 43): "Yazılar neden büyük altta? Çok amatör
+  // duruyor." Grup başlığı ve birim adı boyunu tarayıcıdan (16 px) alıyordu; ad
+  // bağlantı mavisindeydi. Kütle bölümünün adları 11 px, değer sütunu kayık.
+  test('YAZI ÖLÇEĞİ: Birimler panelin ölçeğinde (başlık 12 · 600, ad 12 düz metin, kütle 11); Kütle bölümü özellik ızgarasının sütununda', () => {
+    expect(kural('.ve-mw-3b-grup-bas')).toMatch(/font-size:var\(--fs-body\); font-weight:600/);
+    expect(kural('.ve-mw-3b-birim')).toMatch(/font-size:var\(--fs-body\)/);
+    const ad = kural('.ve-mw-3b-birim-ad');
+    expect(ad).toMatch(/font-size:var\(--fs-body\)/);
+    expect(ad).toMatch(/color:var\(--text-primary\)/);                  // bağlantı mavisi değil
+    expect(kural('.ve-mw-3b-birim-ad:hover')).toMatch(/text-decoration:none/);
+    expect(kural('.ve-mw-3b-birim-kg, .ve-mw-3b-birim-rol')).toMatch(/font-size:var\(--fs-tiny\)/);
+    expect(kural('.ve-mw-3b-toplam')).toMatch(/font-size:var\(--fs-body\)/);
+    // Kütle bölümü: ad sütunu özellik satırlarınınkiyle aynı, adlar 12 px
+    const oz = kural('.ve-mw-3b-yan .ve-fw-3b-roller.ve-mw-3b-oz-s').match(/grid-template-columns:([^;]+);/)[1];
+    expect(kural('.ve-mw-3b-alanlar')).toContain('grid-template-columns:' + oz + ';');
+    expect(kural('.ve-mw-3b-alanlar')).toMatch(/font-size:var\(--fs-body\)/);
+    // çoklu seçimin düğümleri de aynı satır dilinde
+    expect(kural('.ve-mw-3b-kimlik .ve-fw-3b-atanan .ve-fw-3b-yolb')).toMatch(/font-size:var\(--fs-body\); color:var\(--text-primary\)/);
+  });
+
   // Kullanıcı 2026-11-05 — Canlı Not 10: "rol kısmı … çok amatör"; Not 9: "her
   // parçanın malzeme tanımı olmayacak"; Not 16: "motor için bir malzeme girdimiz
   // olmayacak". Satır başına ad · değer; Malzeme yalnız atanmışsa, motorda hiç.

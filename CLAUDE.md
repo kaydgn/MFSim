@@ -855,7 +855,10 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   sayılır. Kapı: `theme-font.test.js`. Çıplak aile adı yazılmaz.
   İstisnalar: hizası BOŞLUKLA kurulmuş düz metin (TXT rapor `<pre>`) ve KaTeX.
   Ölçek tabanı 10 px, gövde 12 px; kenar tonu zemine ≥ 1,5:1 (kullanıcı
-  kararları). Kapı: `tek-yazi-tipi.test.js` + `.spec.js` · `typography-scale` ·
+  kararları). **Boyu verilmemiş yazı tarayıcının 16 px'ine düşmez**: `body`
+  `--fs-body` taşır, 16 px isteyen yüzey onu adıyla ister (kullanıcı 2026-11-06,
+  Canlı Not 43: 3B'nin Birimler listesinde 16 yazı 16 px'ti; kapı
+  `typography-scale.test.js` → *body*). Kapı: `tek-yazi-tipi.test.js` + `.spec.js` · `typography-scale` ·
   `theme-contrast`.
 - **SÜTUNDA YATAY KAYDIRMA YOK — sığmayan tablo AÇILIR PENCEREDE**
   (`js/tablo-pencere.js`). Panel tabloyu + kendi düğmelerini bir BİRİM
