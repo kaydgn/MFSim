@@ -3459,17 +3459,20 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 /* ── Boş tuval (yönlendirme yuvası, js/bos-tuval.js) ────────────────────────
    Durum + tek yönlendirme cümlesi; kökte kısayol satırı. Tuvale bırakmayı
    engellemez (pointer-events yok); düğüm varken (örnek kartı, analiz
-   araçları) alta iner. */
+   araçları) alta iner. ARAYÜZÜN ÖLÇEĞİNDE (kullanıcı 2026-11-06, Canlı Not 64:
+   *"Model boş yazısı da tema ile uyumlu değil. Daha büyük, daha cafcaflı"*):
+   durum ve yönlendirme gövde boyunda (12 px; 16 px başlık + 14 px cümleydi),
+   durum yalnız ağırlığıyla ayrılır. Kapı: bos-tuval.test.js → *ÖLÇEK*. */
 .ve-bos-tuval{
   position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
   z-index:6; pointer-events:none; user-select:none;
-  display:flex; flex-direction:column; align-items:center; gap:6px;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
   padding:0 16px; text-align:center;
 }
 .ve-bos-tuval[hidden], body.ve-no-module .ve-bos-tuval{ display:none; }
 .ve-bos-tuval--alt{ top:auto; bottom:56px; transform:none; }
-.ve-bos-tuval-durum{ font-size:var(--fs-title); font-weight:600; color:var(--text-secondary); }
-.ve-bos-tuval-yon{ font-size:var(--fs-lg); color:var(--text-muted); }
+.ve-bos-tuval-durum{ font-size:var(--fs-body); font-weight:600; color:var(--text-secondary); }
+.ve-bos-tuval-yon{ font-size:var(--fs-body); color:var(--text-muted); }
 .ve-bos-tuval-kisayol{ display:flex; gap:16px; margin-top:6px; font-size:var(--fs-body); color:var(--text-muted); }
 .ve-bos-tuval-tus{ display:inline-flex; align-items:center; gap:6px; }
 

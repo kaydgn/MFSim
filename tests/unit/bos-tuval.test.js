@@ -111,3 +111,19 @@ describe('DOM: tuval kabında, tazelemede', () => {
     expect(fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8')).toMatch(/<script[^>]+src="js\/bos-tuval\.js"/);
   });
 });
+
+// ÖLÇEK (kullanıcı 2026-11-06, Canlı Not 64: *"Model boş yazısı da tema ile uyumlu
+// değil. Daha büyük, daha cafcaflı, garip bir şey."*): durum 16 px başlık, cümle
+// 14 px'ti — tuvalin düğüm adları ve pencereler 12 px. Boş tuval arayüzün gövde
+// boyunda; durum yalnız ağırlığıyla ayrılır.
+describe('ÖLÇEK — boş tuvalin yazısı arayüzün gövde boyunda', () => {
+  const fs = require('fs');
+  const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const kural = (sec) => { const m = css.match(new RegExp('(?:^|\\n)' + sec.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')); return m ? m[1] : ''; };
+  test('durum ve yönlendirme --fs-body; başlık ya da büyük boy yok', () => {
+    expect(kural('.ve-bos-tuval-durum')).toMatch(/font-size:var\(--fs-body\)/);
+    expect(kural('.ve-bos-tuval-yon')).toMatch(/font-size:var\(--fs-body\)/);
+    ['.ve-bos-tuval-durum', '.ve-bos-tuval-yon'].forEach((s) => expect(kural(s)).not.toMatch(/--fs-(title|lg|h1|h2|md)/));
+    expect(kural('.ve-bos-tuval-durum')).toMatch(/font-weight:600/);
+  });
+});
