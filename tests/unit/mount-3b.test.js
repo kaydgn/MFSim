@@ -320,6 +320,51 @@ describe('İMLECİN ALTINDA YAKINLAŞMA — kamera P\'ye giden ışında kalır'
   });
 });
 
+// ── DÖNÜŞ MERKEZİ (kullanıcı 2026-11-06, Canlı Not 55) ─────────────────────
+// "Dönüş ekseni bazen sapıtabiliyor. MMB tuşuna bastığımda dönüş eksenini tayin
+// edelim. Bir nokta olarak çıksın ekranda … Catia'daki gibi." Önce: orta tık bir şey
+// yapmıyordu; döndürmenin merkezi tekerleğin bıraktığı hedefti (modelin dışında
+// kalabiliyordu). Gerçek tarayıcı: tests/e2e/mount-3b.spec.js → *DÖNÜŞ MERKEZİ*.
+describe('DÖNÜŞ MERKEZİ — orta tık tıklanan noktayı merkez yapar, görünüm yalnız bakışa dik kayar', () => {
+  const ekle = (a, b, k = 1) => a.map((x, i) => x + k * b[i]);
+  const fark = (a, b) => a.map((x, i) => x - b[i]);
+  const ic = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  test('yeni hedef tıklanan nokta, uzaklık noktanın derinliği: kamera bakışa dik kayar, bakış ve noktadaki ölçek aynı', () => {
+    const durumlar = [
+      { kamera: [0, 0, 1000], hedef: [0, 0, 0], P: [100, 50, 200] },
+      { kamera: [1000, 0, 0], hedef: [0, 0, 0], P: [0, 30, -40] },
+      { kamera: [2100, -900, 1500], hedef: [120, 40, 300], P: [380, 120, 410] },
+    ];
+    durumlar.forEach(({ kamera, hedef, P }) => {
+      const g = veMntWiz3bMerkezHedef(kamera, hedef, P);
+      expect(g.hedef).toEqual(P);
+      const geri = fark(kamera, hedef), L = Math.hypot(...geri), u = geri.map((x) => x / L);
+      const yeni = ekle(g.hedef, u, g.r);                  // kamera = hedef + geri · r
+      const kayma = fark(yeni, kamera);
+      expect(Math.abs(ic(kayma, u))).toBeLessThan(1e-9);  // yalnız bakışa dik
+      expect(g.r).toBeCloseTo(ic(fark(P, kamera), u.map((x) => -x)), 9);   // derinlik
+    });
+    // kameranın arkasındaki ya da kameradaki nokta merkez olmaz
+    expect(veMntWiz3bMerkezHedef([0, 0, 1000], [0, 0, 0], [0, 0, 1200])).toBe(null);
+    expect(veMntWiz3bMerkezHedef([0, 0, 0], [0, 0, 0], [1, 2, 3])).toBe(null);
+  });
+
+  test('bağlantı: orta tuşla tık merkezi kurar, orta tuşla sürüklemek kaydırır; tarayıcının otomatik kaydırması yok; işaret tuvalde', () => {
+    const fs = require('fs'), path = require('path');
+    const kaynak = fs.readFileSync(path.join(__dirname, '../../js/cp-mount-3b.js'), 'utf8');
+    expect(kaynak).toMatch(/if\(b && !b\.oynadi && b\.tus === 1\)\{ veMntWiz3bMerkez\(e\.clientX, e\.clientY\); return; \}/);
+    expect(kaynak).toMatch(/kay: e\.button !== 0 \|\| e\.shiftKey/);                           // orta tuşla sürükleme kaydırır
+    expect(kaynak).toMatch(/dinle\(cv, 'mousedown', function\(e\)\{ if\(e\.button === 1\) e\.preventDefault\(\); \}\);/);
+    expect(kaynak).toMatch(/if\(!bas\.kay\) _mw3bMerkezYaz\(V, true\);/);                        // döndürürken görünür
+    expect(kaynak).toMatch(/'<span class="ve-mw-3b-merkez" id="ve-mw-3b-merkez" aria-hidden="true"><\/span>'/);
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)).replace(/\s+/g, ' '); };
+    expect(kural('.ve-mw-3b-merkez')).toMatch(/border-radius:50%; background:var\(--accent-primary\);.*pointer-events:none; opacity:0/);
+    expect(kural('.ve-mw-3b-merkez.acik')).toMatch(/opacity:1/);
+    expect(VE_MW_3B_MERKEZ).toEqual({ sure: 420, sonme: 900 });
+  });
+});
+
 // ── SEÇİM KİPİNDE ODAK (kullanım notu T05) ────────────────────────────────
 describe('SEÇİM KİPİNDE ODAK — yalnız kipteki birimin işaretleri', () => {
   const I = [{ t: 'govde', u: 3 }, { t: 'ref', u: 3 }, { t: 'govde', u: 7 }, { t: 'takoz', u: 9 }, { t: 'model' }];

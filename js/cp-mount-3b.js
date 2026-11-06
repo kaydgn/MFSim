@@ -213,6 +213,7 @@ function veMntWiz3bAc(yer){
       + '<svg class="ve-fw-3b-etiket-cizgi" id="ve-mw-3b-etiket-cizgi" aria-hidden="true"></svg>'
       + '<div class="ve-fw-3b-etiketler" id="ve-mw-3b-etiket"></div>'
       + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
+      + '<span class="ve-mw-3b-merkez" id="ve-mw-3b-merkez" aria-hidden="true"></span>'
       + '<div class="ve-mw-3b-arac ve-mw-3b-kart" id="ve-mw-3b-arac"></div>'
       + _mw3bKapatHTML()
       + '<div class="ve-mw-3b-sagalt"><div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden></div></div>'
@@ -1803,6 +1804,84 @@ function _mw3bSerbest(){
 function veMntWiz3bYakinHedef(hedef, P, k){
   return [P[0] + (hedef[0] - P[0]) * k, P[1] + (hedef[1] - P[1]) * k, P[2] + (hedef[2] - P[2]) * k];
 }
+// DÖNÜŞ MERKEZİ (kullanıcı 2026-11-06, Canlı Not 55: *"Dönüş ekseni bazen sapıtabiliyor.
+// MMB tuşuna bastığımda dönüş eksenini tayin edelim. Bir nokta olarak çıksın ekranda, dönüş
+// ekseni sıfır noktamız burası olsun … Catia'daki gibi."*). Döndürme kameranın hedefi
+// çevresinde; tekerlek imlecin altına yakınlaşırken hedefi o noktaya doğru kaydırır ve hedef
+// modelin dışında, boşlukta kalabiliyordu. ORTA TIK (sürüklemeden) tıklanan noktayı merkez
+// yapar: parçanın üstünde yüzeyin noktası, boşlukta merkezin bakışa dik düzleminde imlecin
+// altı (tekerleğin noktasıyla aynı). Görünüm noktayı tuvalin ortasına KAYDIRIR (CATIA gibi):
+// bakış yönü ve noktadaki ölçek aynı — kamera yalnız bakışa dik kayar. Merkez ekranda nokta:
+// kurulurken ve döndürürken görünür, sonra söner. Orta tuşla sürüklemek kaydırmaya devam eder.
+// Saf hesap: yeni hedef P, yeni uzaklık P'nin bakış yönündeki derinliği (≤ 0 → null).
+function veMntWiz3bMerkezHedef(kamera, hedef, P){
+  var n = [hedef[0] - kamera[0], hedef[1] - kamera[1], hedef[2] - kamera[2]], L = Math.hypot(n[0], n[1], n[2]);
+  if(!(L > 0)) return null;
+  var r = ((P[0] - kamera[0]) * n[0] + (P[1] - kamera[1]) * n[1] + (P[2] - kamera[2]) * n[2]) / L;
+  return r > 0 ? { hedef: [P[0], P[1], P[2]], r: r } : null;
+}
+var VE_MW_3B_MERKEZ = { sure: 420, sonme: 900 };      // ms: görünümün kayması · işaretin sönmesi
+function veMntWiz3bMerkez(cx, cy){
+  var V = _mw3b;
+  if(!V || !V.camera || !V.ctrl) return false;
+  var P = _mw3bImlecNoktasi(cx, cy);
+  if(!P) return false;
+  var c = V.camera.position, H = V.ctrl.hedef;
+  var g = veMntWiz3bMerkezHedef([c.x, c.y, c.z], [H.x, H.y, H.z], P);
+  if(!g) return false;
+  V.eldegdi = true;
+  _mw3bIpucuKapat(V);                   // görünüm imlecin altından kayar: eski ipucu geçersiz
+  _mw3bMerkezGit(V, g);
+  return true;
+}
+// Görünümün kayması: hedef ve uzaklık birlikte (kamera doğru boyunca, bakışa dik); işaret
+// kayarken tıklanan noktada, sonra tuvalin ortasında. Hareket azaltılınca doğrudan.
+function _mw3bMerkezGit(V, g){
+  _mw3bMerkezDur(V);
+  var H0 = V.ctrl.hedef.clone(), r0 = V.ctrl.r, H1 = new THREE.Vector3(g.hedef[0], g.hedef[1], g.hedef[2]), r1 = g.r;
+  var sure = (_mw3bAzHareket() || typeof requestAnimationFrame !== 'function') ? 0 : VE_MW_3B_MERKEZ.sure, t0 = _mwSimdi();
+  V.merkez = H1;
+  var adim = function(){
+    V.merkezIstek = 0;
+    if(_mw3b !== V) return;
+    var u = sure > 0 ? Math.min(1, (_mwSimdi() - t0) / sure) : 1, e = 1 - Math.pow(1 - u, 3);
+    V.ctrl.hedef.lerpVectors(H0, H1, e);
+    V.ctrl.r = r0 + (r1 - r0) * e;
+    _mw3bKamera(); _mw3bCiz(true);
+    _mw3bMerkezYaz(V, true);
+    if(u < 1){ V.merkezIstek = requestAnimationFrame(adim); return; }
+    V.merkez = null;
+    _mw3bVekil(V, false);
+    _mw3bMerkezSondur(V);
+  };
+  _mw3bVekil(V, true);
+  adim();
+}
+// Süren kaymayı bırakır (sürükleme ya da tekerlek başlayınca): hedef olduğu yerde kalır
+function _mw3bMerkezDur(V){
+  if(!V || !V.merkezIstek) return;
+  if(typeof cancelAnimationFrame === 'function') cancelAnimationFrame(V.merkezIstek);
+  V.merkezIstek = 0; V.merkez = null;
+  _mw3bVekil(V, false);
+}
+// İşaretin yeri: kayarken tıklanan nokta, sonra kameranın hedefi (tuvalin ortası)
+function _mw3bMerkezYaz(V, acik){
+  var el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-merkez');
+  if(!el || !V.camera) return;
+  if(V.merkezSon){ clearTimeout(V.merkezSon); V.merkezSon = 0; }
+  V.camera.updateMatrixWorld();
+  var Q = (V.merkez || V.ctrl.hedef).clone().project(V.camera), w = V.kap.clientWidth, h = V.kap.clientHeight;
+  el.style.transform = 'translate(' + Math.round((Q.x + 1) / 2 * w) + 'px, ' + Math.round((1 - Q.y) / 2 * h) + 'px)';
+  el.classList.toggle('acik', !!acik);
+}
+function _mw3bMerkezSondur(V){
+  if(V.merkezSon) clearTimeout(V.merkezSon);
+  V.merkezSon = setTimeout(function(){
+    V.merkezSon = 0;
+    var el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-merkez');
+    if(el && _mw3b === V) el.classList.remove('acik');
+  }, VE_MW_3B_MERKEZ.sonme);
+}
 // İmlecin altındaki nokta: modelde ilk isabet (kesitte kesilen yan sayılmaz),
 // boşlukta hedefin bakışa dik düzlemi. Döner: [x, y, z] ya da null.
 function _mw3bImlecNoktasi(cx, cy){
@@ -1888,8 +1967,16 @@ function _mw3bDinle(V){
   var cv = V.renderer.domElement, bas = null;
   function dinle(el, ad, f, o){ el.addEventListener(ad, f, o); V.sokucu.push(function(){ el.removeEventListener(ad, f, o); }); }
   dinle(cv, 'contextmenu', function(e){ e.preventDefault(); });
+  // Orta tuş tarayıcının otomatik kaydırmasını (Linux'ta yapıştırmayı) başlatmaz: tık dönüş merkezidir
+  dinle(cv, 'mousedown', function(e){ if(e.button === 1) e.preventDefault(); });
+  dinle(cv, 'auxclick', function(e){ if(e.button === 1) e.preventDefault(); });
+  V.sokucu.push(function(){
+    if(V.merkezSon) clearTimeout(V.merkezSon);
+    if(V.merkezIstek && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(V.merkezIstek);
+  });
   dinle(cv, 'pointerdown', function(e){
     if(typeof veMntWiz3bMenuKapat === 'function') veMntWiz3bMenuKapat();
+    _mw3bMerkezDur(V);
     bas = { x: e.clientX, y: e.clientY, tus: e.button, kay: e.button !== 0 || e.shiftKey, oynadi: false };
     try { cv.setPointerCapture(e.pointerId); } catch(x){}
   });
@@ -1905,6 +1992,7 @@ function _mw3bDinle(V){
       bas.x = e.clientX; bas.y = e.clientY;
       _mw3bVekil(V, true);
       _mw3bKamera(); _mw3bCiz(true);
+      if(!bas.kay) _mw3bMerkezYaz(V, true);       // döndürürken merkez ekranda
       return;
     }
     if(V.nokta >= 0) _mw3bDaireFare(e); else if(V.ref) _mw3bRefFare(e);
@@ -1915,6 +2003,9 @@ function _mw3bDinle(V){
     bas = null;
     V.kap.classList.remove('surukle');
     _mw3bVekil(V, false);
+    if(b && b.oynadi && !b.kay) _mw3bMerkezSondur(V);
+    // ORTA TIK (oynamadan): tıklanan nokta dönüş merkezi (Canlı Not 55)
+    if(b && !b.oynadi && b.tus === 1){ veMntWiz3bMerkez(e.clientX, e.clientY); return; }
     if(b && !b.oynadi && b.tus === 0){
       if(V.nokta >= 0){ _mw3bDaireTik(e); return; }
       if(V.ref){ _mw3bRefTik(e); return; }
@@ -1931,6 +2022,7 @@ function _mw3bDinle(V){
   });
   dinle(cv, 'pointerleave', function(){
     _mw3bImlecYaz(null);
+    _mw3bIpucuKapat(V);
     if(V.aday){ V.aday = null; _mw3bAdayHalka(null); _mw3bIpucu(null); _mw3bCiz(true); }
     if(V.fare >= 0){ V.fare = -1; _mw3bIpucu(null); _mw3bBoya(); _mw3bCiz(true); }
     if(V.fareParca >= 0 || V.fareIsaret >= 0){ V.fareParca = -1; V.fareIsaret = -1; _mw3bEtiketle(); }
@@ -1939,6 +2031,7 @@ function _mw3bDinle(V){
   dinle(cv, 'wheel', function(e){
     e.preventDefault();
     if(typeof veMntWiz3bMenuKapat === 'function') veMntWiz3bMenuKapat();
+    _mw3bMerkezDur(V);
     V.eldegdi = true;
     var r = Math.max(1, Math.min(1e6, V.ctrl.r * Math.exp(e.deltaY * 0.0012)));
     var P = _mw3bImlecNoktasi(e.clientX, e.clientY);
@@ -2044,6 +2137,13 @@ function _mw3bFare(e){
     _mw3bIpucu(i >= 0 ? ev : null, i);
     _mw3bImlecYaz(H.p);
   });
+}
+// İpucu her durumda kapanır, bekleyen fare karesi de bırakılır (yoksa onu yeniden açar):
+// yavaş karede fare vurgusu yok (V.fare −1) ama ipucu gösteriliyor — tuvalden çıkınca
+// asılı kalıyordu
+function _mw3bIpucuKapat(V){
+  if(V.fareIstek && typeof cancelAnimationFrame === 'function'){ cancelAnimationFrame(V.fareIstek); V.fareIstek = 0; }
+  _mw3bIpucu(null);
 }
 function _mw3bIpucu(e, i){
   var V = _mw3b, el = document.getElementById('ve-mw-3b-ipucu');
