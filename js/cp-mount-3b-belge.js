@@ -8,14 +8,16 @@
 //
 // Aile listeden İLK kez seçilince açılır (veMntWiz3bVeriSec); Özellikler'in Belge
 // satırı yeniden açar. Sayfa belgenin kendisi (görsel, js/mount-belge-veri.js);
-// bölgeler üstünde: tık seçeneği yazar, seçimin bölgesi vurgulu, bağdaşmayan bölge
-// kapalı (sebebi title'da). Özellikler yanda canlı; belgenin kaydırması korunur.
+// bölgeler üstünde: tık seçeneği yazar, işaretli bölgenin tıkı seçimini kaldırır; her
+// bölgenin solunda onay kutusu (Canlı Not 56), bağdaşmayan bölge kapalı (sebebi
+// title'da). Özellikler yanda canlı; belgenin kaydırması korunur.
 // Başka birimin seçimi, Esc ve Kapat tuvale döner. Durum (yakınlık) görünümün,
 // kaydedilmez. Kapı: tests/unit/mount-belge.test.js + tests/e2e/mount-belge.spec.js.
 // ============================================================================
 
 var VE_MW_3B_BELGE_YAKIN = [0.6, 0.75, 1, 1.25, 1.5, 2];   // sığdırmanın katı
 var VE_MW_3B_BELGE_BOSLUK = 24;                            // sayfanın yanları, px
+var VE_MW_3B_BELGE_SATIR = 30;                             // pt: bundan yüksek bölge alan (çizim) — kutu üst hizada
 
 function _mw3bBelgeVs(V, birim){
   var s = V && V.s;
@@ -118,7 +120,11 @@ function veMntWiz3bBelgeHTML(B){
           var st = 'left:' + _mw3bBelgeYuz(b.k[0], olcu[0]) + '%;top:' + _mw3bBelgeYuz(b.k[1], olcu[1]) + '%;width:'
             + _mw3bBelgeYuz(b.k[2], olcu[0]) + '%;height:' + _mw3bBelgeYuz(b.k[3], olcu[1]) + '%';
           if(!b.s) return '<span class="ve-mw-3b-belge-b ve-mw-3b-belge-yalniz" data-belge-y="' + si + '-' + bi + '" style="' + st + '" aria-hidden="true"></span>';
-          return '<button type="button" class="ve-mw-3b-belge-b" data-belge-b="' + si + '-' + bi + '" style="' + st + '" aria-pressed="false"></button>';
+          // Onay kutusu (Canlı Not 56): satırın solunda; sütunda tanımın yerinde (`t`, pt — kutunun içi)
+          var t = b.t ? ' style="left:' + _mw3bBelgeYuz(b.t[0] - b.k[0], b.k[2]) + '%;top:' + _mw3bBelgeYuz(b.t[1] - b.k[1], b.k[3]) + '%"' : '';
+          var tur = b.t ? ' ve-mw-3b-belge-b--ic' : (b.k[3] > VE_MW_3B_BELGE_SATIR ? ' ve-mw-3b-belge-b--alan' : '');
+          return '<button type="button" class="ve-mw-3b-belge-b' + tur + '" data-belge-b="' + si + '-' + bi + '" style="' + st + '" aria-pressed="false">'
+            + '<span class="ve-mw-3b-belge-t"' + t + ' aria-hidden="true">' + _mwIkon('check') + '</span></button>';
         }).join('')
       + '</div>';
   }).join('');
@@ -158,11 +164,13 @@ function _mw3bBelgeTazele(){
       }
       var n = el.querySelector('[data-belge-b="' + id + '"]');
       if(!n) return;
-      var ad = veMntBelgeEtiket(A, b);
+      // işaretli bölgenin seçimi kaldırılır; varsayılanın kendisi kaldırılmaz (kilitli)
+      var ad = veMntBelgeEtiket(A, b), kilit = d.secili && !d.kaldir;
       n.setAttribute('aria-pressed', d.secili ? 'true' : 'false');
       n.setAttribute('aria-label', ad);
       n.disabled = !d.secili && !d.tik;
-      n.title = n.disabled ? d.neden : ad;
+      if(kilit) n.setAttribute('aria-disabled', 'true'); else n.removeAttribute('aria-disabled');
+      n.title = n.disabled ? d.neden : (kilit ? 'Varsayılan.' : ad);
     });
   });
   Array.prototype.forEach.call(el.querySelectorAll('[data-belge-git]'), function(d){
@@ -171,15 +179,16 @@ function _mw3bBelgeTazele(){
   var ac = document.getElementById('ve-mw-3b-belge-ac');
   if(ac) ac.setAttribute('aria-pressed', 'true');
 }
-// Bölgenin tıkı: seçenekleri yazar (kütle kaynağının anahtarı — Özellikler'in listeleri gibi)
+// Bölgenin tıkı: seçenekleri yazar (kütle kaynağının anahtarı — Özellikler'in listeleri gibi);
+// işaretli bölgenin tıkı seçimini kaldırır (Canlı Not 56 — js/mount-belge.js → veMntBelgeKaldir)
 function veMntWiz3bBelgeSec(si, bi){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
   if(!V || !V.belge) return false;
   var K = V.belge, s = K.B.sayfalar[si], b = s && s.bolge[bi], vs = _mw3bBelgeVs(V, K.birim);
   if(!b || !vs) return false;
-  var d = veMntBelgeDurum(veMntVsAile(vs.k), vs, b);
-  if(!d.anahtar || d.anahtar === vs.k) return false;
-  return veMntWizStpYogunluk(K.birim, d.anahtar);
+  var d = veMntBelgeDurum(veMntVsAile(vs.k), vs, b), k = d.secili ? d.kaldir : d.anahtar;
+  if(!k || k === vs.k) return false;
+  return veMntWizStpYogunluk(K.birim, k);
 }
 
 // ── YAKINLIK · GEZİNME ────────────────────────────────────────────────────
@@ -225,5 +234,6 @@ function _mw3bBelgeGit(no){
 if(typeof module !== 'undefined' && module.exports){
   module.exports = { veMntWiz3bBelgeHTML: veMntWiz3bBelgeHTML, veMntWiz3bBelgeSatirHTML: veMntWiz3bBelgeSatirHTML, veMntWiz3bVeriSec: veMntWiz3bVeriSec,
     veMntWiz3bBelgeAc: veMntWiz3bBelgeAc, veMntWiz3bBelgeKapat: veMntWiz3bBelgeKapat, veMntWiz3bBelgeSec: veMntWiz3bBelgeSec,
-    veMntWiz3bBelgeYakin: veMntWiz3bBelgeYakin, veMntWiz3bBelgeAcik: veMntWiz3bBelgeAcik, VE_MW_3B_BELGE_YAKIN: VE_MW_3B_BELGE_YAKIN };
+    veMntWiz3bBelgeYakin: veMntWiz3bBelgeYakin, veMntWiz3bBelgeAcik: veMntWiz3bBelgeAcik, VE_MW_3B_BELGE_YAKIN: VE_MW_3B_BELGE_YAKIN,
+    VE_MW_3B_BELGE_SATIR: VE_MW_3B_BELGE_SATIR };
 }

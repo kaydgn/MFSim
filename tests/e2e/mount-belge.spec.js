@@ -86,6 +86,39 @@ test('BELGE: aile seçilince açılır; bölge tıkı seçeneği yazar, kaydırm
   expect((await secenek(page)).dizi).toBe('wr');
   await expect(page.locator('#ve-mw-3b-alt select[data-mw-vs-secenek="dizi"]')).toHaveValue('wr');
   expect(Math.abs((await kay.evaluate((k) => k.scrollTop)) - once)).toBeLessThanOrEqual(1);
+  // Canlı Not 56: işaretli bölgenin tıkı seçimini kaldırır (WR → CR); varsayılanın kendisi kilitli
+  await wr.click();
+  await expect(wr).toHaveAttribute('aria-pressed', 'false');
+  await expect(cr).toHaveAttribute('aria-pressed', 'true');
+  expect((await secenek(page)).dizi).toBe('cr');
+  await expect(cr).toHaveAttribute('aria-disabled', 'true');
+  await expect(cr).toHaveAttribute('title', 'Varsayılan.');
+  await cr.click({ force: true });                                        // kilitli: tık bir şey yazmaz
+  expect((await secenek(page)).dizi).toBe('cr');
+  await wr.click();
+  expect((await secenek(page)).dizi).toBe('wr');
+  // onay kutusu: sütunda başlığın altında ortada, satırda satırın solunda (6 px), dikeyde ortada
+  const kutu = await page.evaluate(() => {
+    const r = (q) => document.querySelector(q).getBoundingClientRect();
+    const b = r('#ve-mw-3b-belge [data-belge-b="4-1"]'), t = r('#ve-mw-3b-belge [data-belge-b="4-1"] .ve-mw-3b-belge-t');
+    const s5 = r('#ve-mw-3b-belge [data-belge-b="0-2"]'), t5 = r('#ve-mw-3b-belge [data-belge-b="0-2"] .ve-mw-3b-belge-t');
+    const sec = getComputedStyle(document.querySelector('#ve-mw-3b-belge [data-belge-b="4-1"] .ve-mw-3b-belge-t'));
+    const bb = (VE_MNT_BELGE['allison-4000'].sayfalar.find((x) => x.no === 9) || {}).bolge[1];
+    return { sutun: [Math.abs(Math.round((t.left + t.right) / 2 - (b.left + b.right) / 2)),
+      Math.abs(Math.round((t.top + t.bottom) / 2 - b.top - (bb.t[1] - bb.k[1]) / bb.k[3] * b.height)), Math.round(t.width)],
+      satir: [Math.round(s5.left - t5.right), Math.round((t5.top + t5.bottom) / 2 - (s5.top + s5.bottom) / 2)], dolu: sec.backgroundColor };
+  });
+  expect(kutu.sutun).toEqual([0, 0, 14]);
+  expect(kutu.satir).toEqual([6, 0]);
+  // kutunun kendisine tık da seçer ve kaldırır (Dry Weights · PTO)
+  await belge.locator('[data-belge-git="5"]').click();
+  const pto = belge.locator('[data-belge-b="0-2"]');
+  await pto.locator('.ve-mw-3b-belge-t').click();
+  expect((await secenek(page)).pto).toBe('1');
+  await expect(pto).toHaveAttribute('aria-pressed', 'true');
+  await pto.locator('.ve-mw-3b-belge-t').click();
+  expect((await secenek(page)).pto).toBe('0');
+  await expect(pto).toHaveAttribute('aria-pressed', 'false');
   // Soğutucu sayfası (17.4): tık retarderi de açar
   await belge.locator('[data-belge-git="27"]').click();
   await belge.locator('[data-belge-sayfa="27"] [data-belge-b]').click();

@@ -158,7 +158,7 @@ describe('DURUM — seçili · geçerli · sebep · yazılan anahtar', () => {
   test('7-Speed: altı vitesin satırları kapalı, sebebi "Vites konfigürasyonu: 7-Speed."; yedi vitesin satırı seçilir', () => {
     const v7 = uye({ dizi: '7' });
     const d6 = BL.veMntBelgeDurum(A, v7, sayfa(6).bolge[2]);
-    expect(d6).toEqual({ secili: false, tik: false, anahtar: null, neden: 'Vites konfigürasyonu: 7-Speed.' });
+    expect(d6).toEqual({ secili: false, tik: false, anahtar: null, neden: 'Vites konfigürasyonu: 7-Speed.', kaldir: null });
     const sig = sayfa(10).bolge.find((b) => b.alan === 'yag.6.sig.0');
     expect(BL.veMntBelgeDurum(A, v7, sig).neden).toBe('Vites konfigürasyonu: 7-Speed.');
     expect(seciliSatirlar(v7).find((x) => x[0] === 7)[1]).toEqual([0, 1]);   // DIRECT-MOUNT · No Retarder, No PTO
@@ -173,7 +173,46 @@ describe('DURUM — seçili · geçerli · sebep · yazılan anahtar', () => {
     expect(VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, varsayilan(), satir).anahtar).secenek).toMatchObject({ dizi: 'cr', bag: 'u', ret: '1', pto: '1', sog: 'r' });
     const w = BL.veMntBelgeDurum(A, varsayilan(), sayfa(9).bolge[1]);
     expect(VS.veMntVeriSayfasi(w.anahtar).secenek.dizi).toBe('wr');
-    expect(BL.veMntBelgeDurum(A, varsayilan(), sayfa(5).bolge[0])).toEqual({ secili: true, tik: false, anahtar: null, neden: '' });
+    expect(BL.veMntBelgeDurum(A, varsayilan(), sayfa(5).bolge[0])).toEqual({ secili: true, tik: false, anahtar: null, neden: '', kaldir: null });
+  });
+  // Canlı Not 56 (kullanıcı 2026-11-06): "Seçtiklerimizi geri kaldıramıyoruz. Yani seçim oluyor
+  // ama iptal edemiyoruz." Önce: işaretli bölgenin tıkı hiçbir şey yazmıyordu (anahtar = seçim).
+  // Şimdi kaldırır — en özel seçenekten başlayarak, bölge düşene dek varsayılana.
+  test('KALDIR: işaretli bölgenin tıkı seçimini kaldırır — en özel seçenek önce; varsayılanın kendisi kilitli', () => {
+    const k = (vs, b) => { const d = BL.veMntBelgeDurum(A, vs, b); return d.kaldir ? VS.veMntVeriSayfasi(d.kaldir).secenek : null; };
+    const p5 = (alan) => sayfa(5).bolge.find((b) => b.alan === alan);
+    const tam = uye({ dizi: '7', pto: '1', ret: '1', sog: 'r', aku: '1', bag: 'u' });
+    // PTO · retarder · akümülatör · bağlama · 7-Speed: yalnız kendi seçeneği
+    expect(k(tam, p5('kutle.pto'))).toMatchObject({ pto: '0', ret: '1', sog: 'r', aku: '1', dizi: '7', bag: 'u' });
+    expect(k(tam, p5('kutle.aku'))).toMatchObject({ aku: '0', ret: '1', sog: 'r' });              // retarder kalır
+    expect(k(tam, p5('kutle.uzak'))).toMatchObject({ bag: 'd', dizi: '7' });
+    expect(k(tam, p5('kutle.temel.7'))).toMatchObject({ dizi: 'cr', pto: '1', ret: '1' });
+    // retarderli soğutucu: soğutucu Remote'a, retarder kalır; retarderin kendisi: soğutucu ve akümülatör de düşer
+    expect(k(tam, p5('kutle.sog.r'))).toMatchObject({ ret: '1', sog: 'u', aku: '1' });
+    expect(k(tam, p5('kutle.ret'))).toMatchObject({ ret: '0', sog: 'u', aku: '0', pto: '1' });
+    // Remote retarder soğutucusu: retarder kalkar (soğutucu zaten Remote)
+    expect(k(uye({ ret: '1' }), sayfa(5).bolge.find((b) => b.s && b.s.ret === '1' && b.s.sog === 'u'))).toMatchObject({ ret: '0', sog: 'u' });
+    // tablonun satırı: en özel seçeneği (soğutucu) varsayılana — kardeş satır işaretlenir
+    const satir = sayfa(6).bolge.find((b) => b.alan === 'cg.6.u.11.r'), kardes = sayfa(6).bolge.find((b) => b.alan === 'cg.6.u.11.u');
+    const v = uye({ bag: 'u', ret: '1', pto: '1', sog: 'r' }), sonra = VS.veMntVeriSayfasi(BL.veMntBelgeDurum(A, v, satir).kaldir);
+    expect(sonra.secenek).toMatchObject({ bag: 'u', ret: '1', pto: '1', sog: 'u' });
+    expect([BL.veMntBelgeDurum(A, sonra, satir).secili, BL.veMntBelgeDurum(A, sonra, kardes).secili]).toEqual([false, true]);
+    // sütun (12.0): WR → CR; varsayılanın kendisi (CR · Direct mount · No Retarder, No PTO) kilitli
+    expect(k(uye({ dizi: 'wr' }), sayfa(9).bolge[1])).toMatchObject({ dizi: 'cr' });
+    const kilitli = B.sayfalar.reduce((L, s0) => L.concat(s0.bolge.filter((b) => b.s && BL.veMntBelgeDurum(A, varsayilan(), b).secili
+      && !BL.veMntBelgeDurum(A, varsayilan(), b).kaldir).map((b) => s0.no + ':' + JSON.stringify(b.s))), []);
+    expect(kilitli).toEqual(['6:{"bag":"d"}', '6:{"bag":"d","ret":"0","pto":"0"}', '6:{"bag":"d","ret":"0","pto":"0","sog":"u"}',
+      '8:{"ret":"0","pto":"0"}', '9:{"dizi":"cr"}', '10:{"kar":"derin","pto":"0"}', '41:{"sog":"u"}', '45:{"sog":"u"}']);
+    // işaretli her bölge ya kaldırılır ya kilitli; kaldırılan bölge seçimden düşer, kayıt geçerli
+    [varsayilan(), tam, uye({ ret: '1', sog: 'u', pto: '1' }), uye({ bag: 'u', kar: 'sig' })].forEach((vs) => {
+      B.sayfalar.forEach((s0) => s0.bolge.forEach((b) => {
+        const d = BL.veMntBelgeDurum(A, vs, b);
+        if (!d.secili || !d.kaldir) return;
+        const P = VS.veMntVeriSayfasi(d.kaldir);
+        expect(P).not.toBeNull();
+        expect(BL.veMntBelgeDurum(A, P, b).secili).toBe(false);
+      }));
+    });
   });
   test('bölgenin adı yazdığı değerlerle, ailenin sırasıyla', () => {
     expect(BL.veMntBelgeEtiket(A, sayfa(5).bolge.find((b) => b.alan === 'kutle.sog.r'))).toBe('Retarder: Var · Soğutucu: Direct · retarder/sump');
@@ -199,6 +238,32 @@ describe('GÖRÜNÜM — belgenin HTML\'i, Özellikler\'in Belge satırı', () =
     window.__MFSIM_BELGE = { 'belge/allison-4000/s09.webp': 'data:image/webp;base64,AA' };
     expect(kur(MB.veMntWiz3bBelgeHTML(B)).querySelector('[data-belge-sayfa="9"] img').getAttribute('src')).toBe('data:image/webp;base64,AA');
     delete window.__MFSIM_BELGE;
+  });
+
+  // Canlı Not 56: "Maddelerin yanında tik atabileceğimiz kutucuk olsun." Önce: her bölge kesikli
+  // çerçeveydi, seçim dolu çerçeve; kutu yoktu.
+  test('ONAY KUTUSU: her tıklanan bölgede bir kutu — satırda solunda, çizimde üst hizada, sütunda başlığın altında', () => {
+    const el = kur(MB.veMntWiz3bBelgeHTML(B));
+    const btn = [...el.querySelectorAll('button[data-belge-b]')];
+    expect(btn.every((b) => b.querySelectorAll(':scope > .ve-mw-3b-belge-t .mf-ico-check').length === 1)).toBe(true);
+    expect(el.querySelectorAll('[data-belge-y] .ve-mw-3b-belge-t')).toHaveLength(0);              // tıksız satırda kutu yok
+    // sütun: tanımın yeri, kutunun yüzdesi (başlığın altı ile ilk değerin arası)
+    sayfa(9).bolge.forEach((b, i) => {
+      const t = el.querySelector('[data-belge-b="4-' + i + '"] .ve-mw-3b-belge-t');
+      expect(el.querySelector('[data-belge-b="4-' + i + '"]').classList.contains('ve-mw-3b-belge-b--ic')).toBe(true);
+      expect(parseFloat(t.style.left)).toBeCloseTo((b.t[0] - b.k[0]) / b.k[2] * 100, 2);
+      expect(parseFloat(t.style.top)).toBeCloseTo((b.t[1] - b.k[1]) / b.k[3] * 100, 2);
+      expect(b.t[1]).toBeGreaterThan(b.k[1]); expect(b.t[1]).toBeLessThan(b.k[1] + 60);          // başlığın altında
+    });
+    // çizim (17.x) üst hizada; satırlar ortada
+    expect(el.querySelector('[data-belge-sayfa="21"] [data-belge-b]').classList.contains('ve-mw-3b-belge-b--alan')).toBe(true);
+    expect(el.querySelector('[data-belge-sayfa="5"] [data-belge-b]').className).toBe('ve-mw-3b-belge-b');
+    const css = fs.readFileSync(path.join(KOK, 'css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)).replace(/\s+/g, ' '); };
+    expect(kural('.ve-mw-3b-belge-b')).toMatch(/border:0;/);                                     // kesikli çerçeve yok
+    expect(kural('.ve-mw-3b-belge-t')).toMatch(/position:absolute; right:100%; top:50%; width:14px; height:14px; margin:-7px 6px 0 0/);
+    expect(kural('.ve-mw-3b-belge-b[aria-pressed="true"] > .ve-mw-3b-belge-t')).toMatch(/background:var\(--accent-primary\); color:var\(--on-accent\)/);
+    expect(css).not.toMatch(/\.ve-mw-3b-belge-b[^{]*\{[^}]*dashed/);
   });
 
   test('derleme belgenin bütün sayfalarını gömer (assets/belge)', () => {

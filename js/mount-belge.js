@@ -32,15 +32,41 @@ function veMntBelgeEtiket(A, b){
     return o.ad + ': ' + _veBelgeDegerAd(A, o.k, b.s[o.k]).ad;
   }).join(' · ');
 }
-// Durum: { secili, tik, anahtar, neden }
+function _veBelgeSecili(s, b){
+  var ek = b.ek || {}, sec = b.s || {};
+  return Object.keys(ek).every(function(k){ return ek[k].indexOf(s[k]) >= 0; })
+    && Object.keys(sec).every(function(k){ return s[k] === sec[k]; });
+}
+// SEÇİMİN KALDIRILMASI (kullanıcı 2026-11-06, Canlı Not 56: *"Seçtiklerimizi geri
+// kaldıramıyoruz. Yani seçim oluyor ama iptal edemiyoruz."*): işaretli bölgenin tıkı
+// seçimini kaldırır — bölgenin yazdığı seçenekler EN ÖZELİNDEN (ailenin sırasının
+// sonundan) başlayarak, bölge seçimden düşene dek birer birer varsayılana döner:
+// akümülatörü kaldırmak retarderi kaldırmaz, retarderli soğutucuyu kaldırmak soğutucuyu
+// Remote'a döndürür (retarder kalır). Bağdaşmayan öteki seçenek ilk izinli değerine
+// (veMntVsSecenekYaz). Bölgenin seçimi varsayılanın kendisiyse null (kaldırılacak bir şey yok).
+function veMntBelgeKaldir(A, vs, b){
+  if(!A || !vs || !vs.k || !b || !b.s || typeof veMntVsSecenekYaz !== 'function' || typeof veMntVeriSayfasi !== 'function') return null;
+  var k = vs.k, sira = A.secenek.filter(function(o){ return o.d && (o.k in b.s); }).reverse();
+  for(var i = 0; i < sira.length; i++){
+    var o = sira[i], v0 = o.d[0][0], P = veMntVeriSayfasi(k);
+    if(!P || P.secenek[o.k] === v0) continue;
+    var y = veMntVsSecenekYaz(k, o.k, v0), Y = y ? veMntVeriSayfasi(y) : null;
+    if(!Y) continue;
+    k = y;
+    if(!_veBelgeSecili(Y.secenek, b)) return k;
+  }
+  return null;
+}
+// Durum: { secili, tik, anahtar, neden, kaldir }
 //   secili   seçim bölgenin değerlerini (s) ve koşulunu (ek) taşıyor
 //   tik      bölge tıklanır (değer yazar); anahtar tıkın yazacağı kayıt
 //   neden    tık geçersizse bağdaşmayan seçeneğin adı ve değeri
+//   kaldir   işaretli bölgenin tıkının yazacağı kayıt (seçimin kaldırılması) | null
 function veMntBelgeDurum(A, vs, b){
   var s = (vs && vs.secenek) || {}, ek = b.ek || {}, sec = b.s || {};
   var ekUyar = function(S){ return Object.keys(ek).every(function(k){ return ek[k].indexOf(S[k]) >= 0; }); };
-  var secili = ekUyar(s) && Object.keys(sec).every(function(k){ return s[k] === sec[k]; });
-  if(!b.s || !A || typeof veMntVsSecenekYaz !== 'function') return { secili: secili, tik: false, anahtar: null, neden: '' };
+  var secili = _veBelgeSecili(s, b);
+  if(!b.s || !A || typeof veMntVsSecenekYaz !== 'function') return { secili: secili, tik: false, anahtar: null, neden: '', kaldir: null };
   var k = vs.k, neden = '', cur = s;
   A.secenek.forEach(function(o){
     if(!k || !(o.k in sec)) return;
@@ -66,7 +92,7 @@ function veMntBelgeDurum(A, vs, b){
       k = null;
     }
   }
-  return { secili: secili, tik: !!k, anahtar: k || null, neden: k ? '' : neden };
+  return { secili: secili, tik: !!k, anahtar: k || null, neden: k ? '' : neden, kaldir: secili ? veMntBelgeKaldir(A, vs, b) : null };
 }
 // Sayfanın görseli: derleme gömer (build.js → __MFSIM_BELGE), modüler kopyada dosya
 function veMntBelgeResim(rel){
@@ -75,5 +101,6 @@ function veMntBelgeResim(rel){
 }
 
 if(typeof module !== 'undefined' && module.exports){
-  module.exports = { veMntBelge: veMntBelge, veMntBelgeDurum: veMntBelgeDurum, veMntBelgeEtiket: veMntBelgeEtiket, veMntBelgeResim: veMntBelgeResim };
+  module.exports = { veMntBelge: veMntBelge, veMntBelgeDurum: veMntBelgeDurum, veMntBelgeEtiket: veMntBelgeEtiket, veMntBelgeResim: veMntBelgeResim,
+    veMntBelgeKaldir: veMntBelgeKaldir };
 }

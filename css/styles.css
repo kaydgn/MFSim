@@ -12236,12 +12236,29 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-belge-sayfalar{ display:flex; flex-direction:column; gap:16px; margin:0 auto; padding:16px 0 24px; }
 .ve-mw-3b-belge-s{ position:relative; width:100%; background:var(--bg-secondary); outline:1px solid var(--border-color); }
 .ve-mw-3b-belge-s > img{ display:block; width:100%; height:100%; -webkit-user-select:none; user-select:none; }
-.ve-mw-3b-belge-b{ position:absolute; box-sizing:border-box; margin:0; padding:0; border:1px dashed var(--accent-tint-60);
+/* Bölge (Canlı Not 56, kullanıcı 2026-11-06: *"Bir de böyle olması güzel olmamış. Maddelerin
+   yanında tik atabileceğimiz kutucuk olsun."*): çerçevesiz; işaretli satır hafif vurgulu, solunda
+   ONAY KUTUSU — satırın solunda kenar boşluğunda, satırdan yüksek bölgede (çizim) üst hizada,
+   sütunda tanımın yerinde (inline). Varsayılanın kendisi kilitli (aria-disabled), bağdaşmayan
+   kapalı (disabled). */
+.ve-mw-3b-belge-b{ position:absolute; box-sizing:border-box; margin:0; padding:0; border:0;
   border-radius:0; background:transparent; cursor:pointer; }
-.ve-mw-3b-belge-b:hover:not([disabled]), .ve-mw-3b-belge-b:focus-visible{ outline:none; border:1px solid var(--accent-primary); background:var(--accent-tint-10); }
-.ve-mw-3b-belge-b[aria-pressed="true"], .ve-mw-3b-belge-yalniz.secili{ border:2px solid var(--accent-primary); background:var(--accent-tint-15); }
-.ve-mw-3b-belge-b[disabled]{ border-color:transparent; background:transparent; cursor:not-allowed; }
-.ve-mw-3b-belge-yalniz{ border-color:transparent; pointer-events:none; }
+.ve-mw-3b-belge-b:hover:not([disabled]):not([aria-disabled="true"]), .ve-mw-3b-belge-b:focus-visible{ outline:none; background:var(--accent-tint-6); }
+.ve-mw-3b-belge-b[aria-pressed="true"], .ve-mw-3b-belge-yalniz.secili{ background:var(--accent-tint-10); }
+.ve-mw-3b-belge-b[aria-pressed="true"]:hover:not([aria-disabled="true"]){ background:var(--accent-tint-15); }
+.ve-mw-3b-belge-b[disabled]{ cursor:not-allowed; }
+.ve-mw-3b-belge-b[aria-disabled="true"]{ cursor:default; }
+.ve-mw-3b-belge-yalniz{ pointer-events:none; }
+.ve-mw-3b-belge-t{ position:absolute; right:100%; top:50%; width:14px; height:14px; margin:-7px 6px 0 0; box-sizing:border-box;
+  display:flex; align-items:center; justify-content:center; border:1px solid var(--border-hover); border-radius:var(--radius-xs);
+  background:var(--bg-input); color:transparent; }
+.ve-mw-3b-belge-t > .mf-ico{ width:12px; height:12px; }
+.ve-mw-3b-belge-b--alan > .ve-mw-3b-belge-t{ top:0; margin-top:3px; }
+.ve-mw-3b-belge-b--ic > .ve-mw-3b-belge-t{ right:auto; margin:-7px 0 0 -7px; }
+.ve-mw-3b-belge-b:hover:not([disabled]) > .ve-mw-3b-belge-t, .ve-mw-3b-belge-b:focus-visible > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); }
+.ve-mw-3b-belge-b[aria-pressed="true"] > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); background:var(--accent-primary); color:var(--on-accent); }
+.ve-mw-3b-belge-b[aria-pressed="true"][aria-disabled="true"] > .ve-mw-3b-belge-t{ border-color:transparent; background:var(--accent-tint-60); }
+.ve-mw-3b-belge-b[disabled] > .ve-mw-3b-belge-t{ border-color:var(--border-light); background:transparent; }
 /* Gizli düğüm ağaçta soluk, sonunda gizli simgesi; "Ağaçta göster" satırı kısa vurguyla bulur */
 .ve-mw-3b-agac-r.gizli .ve-mw-3b-agac-ad{ color:var(--text-muted); }
 .ve-mw-3b-agac-gz{ flex:none; display:inline-flex; color:var(--text-muted); }
