@@ -91,7 +91,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `tests/e2e/mount-baslangic.spec.js`.
 - `js/cp-mount-wizard.js` (+ `js/mount-step.js`, `js/cp-mount-3b.js`) — Takoz
   **Başlangıç Sihirbazı**, STEP okuyucusu ve 3B görüntüleyici: FEAD sihirbazının
-  kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir). **İlk hâl** —
+  kabuğu (`.ve-fw-*`) ve STEP kalıbı (rolü kullanıcı verir); alt çubuk YOK — Geri · İleri (son adımda Modeli
+  kur) girdilerin sütununun dibinde yapışık eylem şeridinde, 32 px (kullanıcı 2026-11-06, Canlı Not 58; FEAD'in
+  alt çubuğu değişmez; kapı `mount-wizard.test.js` · `mount-sihirbaz.spec.js` → *EYLEM ŞERİDİ*). **İlk hâl** —
   ayrıntıları kullanıcı sonraki oturumlarda belirleyecek (2026-10-14). **Kütlenin
   kaynağı gövde başına** (`veMntStpKutle`): elle · malzeme (ρ·V) · dosyadan (parçaların
   yoğunlukları, ağırlık merkezi kütleyle) · parçalardan — kütle yoksa atalet de yok.

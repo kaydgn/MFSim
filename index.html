@@ -1315,7 +1315,8 @@
 </div>
 
 <!-- TAKOZ BAŞLANGIÇ SİHİRBAZI (js/cp-mount-wizard.js) — FEAD sihirbazının
-     KABUĞU (ve-fw-*): aynı ray, çizim masası, denetim sütunu ve alt çubuk.
+     KABUĞU (ve-fw-*): aynı ray, çizim masası ve denetim sütunu; alt çubuk yerine
+     sütunun dibinde eylem şeridi (Canlı Not 58).
      Kimlikler ayrı (ve-mw-*) — iki sihirbaz aynı belgede durur. -->
 <div id="ve-mntwiz-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veMntWizKapat(true)">
   <div class="ve-settings-modal ve-fw-modal" role="dialog" aria-labelledby="ve-mw-title">
@@ -1327,7 +1328,7 @@
       <nav class="ve-fw-nav" id="ve-mw-nav"></nav>
       <div class="ve-fw-body" id="ve-mw-body"></div>
     </div>
-    <div class="ve-fw-foot" id="ve-mw-foot"></div>
+    <!-- Alt çubuk YOK (Canlı Not 58): Geri · İleri adımın girdi sütununun dibinde -->
     <!-- STEP'İN 3B GÖRÜNTÜLEYİCİSİ (js/cp-mount-3b.js) — sihirbazın içinde bir
          kaplama; sihirbaz kapanınca WebGL bağlamı da bırakılır. -->
     <div id="ve-mw-3b" class="ve-fw-3b ve-mw-3b" style="display:none;"></div>

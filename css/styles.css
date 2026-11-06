@@ -8621,6 +8621,22 @@ select.ve-fw-inp{ font-family:var(--font-sans); }
 .ve-fw-yan .ve-fw-btn:hover:not(:disabled){ background:var(--bg-input); border-color:var(--border-hover); color:var(--text-primary); }
 .ve-fw-yan .ve-fw-btn-primary{ color:var(--on-accent); }
 .ve-fw-yan .ve-fw-btn-primary:hover:not(:disabled){ color:var(--on-accent); background:var(--ink-accent); }
+/* TAKOZ SİHİRBAZININ EYLEMİ (kullanıcı 2026-11-06, Canlı Not 58: *"ileri geri butonları çok
+   gizli kalmış. Ayrıca çirkin duruyor. Onları güzel bir yere taşıyalım mı? Boyutlarını da ona
+   göre ayarlayalım."*): alt çubuk yok — 22 px'lik Kapat · Geri · İleri durum çubuğunun
+   köşesindeydi. Geri · İleri (son adımda Modeli kur) girdilerin sütununun DİBİNDE yapışık
+   şeritte (3B'nin Özellikler eylem şeridinin dili), 32 px; İleri satırın kalanını doldurur,
+   modelin durumu üstünde. Kısa sütunda şerit dibe iner (margin-top:auto), uzun sütunda
+   kaydırılırken görünür kalır (sticky). FEAD sihirbazının alt çubuğu değişmez. */
+.ve-fw-yan > .ve-mw-eylem{ position:sticky; bottom:0; z-index:2; margin-top:auto; display:flex; flex-direction:column; gap:8px;
+  padding:10px 0 2px; background:var(--bg-primary); border-top:1px solid var(--border-color); }
+.ve-fw-masa-duzen[data-adim="ozet"] > .ve-fw-yan > .ve-mw-eylem{ background:var(--bg-secondary); padding:10px 0 8px; }
+.ve-mw-eylem-durum{ font-size:var(--fs-tiny); }
+.ve-mw-eylem-d{ display:flex; gap:8px; }
+.ve-fw-yan .ve-mw-eylem .ve-fw-btn{ height:32px; padding:0 14px; font-size:var(--fs-md); gap:6px; color:var(--text-primary); }
+.ve-fw-yan .ve-mw-eylem .ve-mw-eylem-ileri{ flex:1 1 auto; color:var(--on-accent); }
+.ve-fw-yan .ve-mw-eylem .ve-mw-eylem-ileri:hover:not(:disabled){ color:var(--on-accent); background:var(--ink-accent); border-color:var(--ink-accent); }
+.ve-fw-yan .ve-mw-eylem .ve-fw-btn > .mf-ico{ width:15px; height:15px; }
 .ve-fw-btn-primary{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); }
 .ve-fw-btn-primary:hover:not(:disabled){ background:var(--ink-accent); border-color:var(--ink-accent); }
 .ve-fw-btn-go{ background:var(--accent-primary); border-color:var(--accent-primary); color:var(--on-accent); font-weight:700; }
