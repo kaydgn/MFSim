@@ -664,20 +664,48 @@ function veMntOrnekYukle(key){
 
 // YÜKLENEN ÖRNEKTE BİLEŞENLER SÜTUNU KAPALI (kullanıcı 2026-11-05, Canlı Not
 // 38: *"Örnek yüklediğim zaman hala 'bileşenler' sütunu açık geliyor. Kapalı
-// gelsin"*): sütun daraltılır, açma düğmesi köşe hücresinde. Daraltma
-// kullanıcının « düğmesinin aynısı (tercih yazılır); vazgeçilen yükleme
-// daraltmaz. GEÇİŞSİZ ve SIĞDIRMADAN ÖNCE: tuval 220 px genişliyor — geçişle
+// gelsin"*): sütun daraltılır, açma düğmesi köşe hücresinde. Tercih yazılmaz
+// (Canlı Not 62 — aşağıda); vazgeçilen yükleme daraltmaz. GEÇİŞSİZ ve SIĞDIRMADAN ÖNCE: tuval 220 px genişliyor — geçişle
 // ya da sığdırmadan sonra daralsaydı kadraj dar tuvalde kurulur, model sola
 // kayık kalırdı.
-function _mntOrnekPaletKapat(){
+function _mntOrnekPaletKapat(){ return veMntPaletKapat(); }
+
+// TAKOZ'DA BİLEŞENLER SÜTUNU KAPALI AÇILIR (kullanıcı 2026-11-06, Canlı Not 62:
+// *"…modülünü açtığımda, solda bileşenler penceresi otomatik açık olarak geliyor.
+// Gelmesin"*; önce yalnız örnek yüklenince kapanıyordu): modüle
+// girince sütun GEÇİŞSİZ daralır, kadraj daralmış tuvalde kurulur. Tercih YAZILMAZ —
+// öteki modüllerin sütunu kullanıcının tercihinde kalır, Takoz'dan çıkınca tercih geri
+// gelir (veMntPaletGeriAc). Kullanıcının açma düğmesi tercihi yine yazar.
+var VE_MNT_PALET_ANAHTAR = 'mf-sidebar-collapsed';
+var _mntPaletBizim = false;
+function veMntPaletKapat(){
   if(typeof document==='undefined' || typeof veToggleSidebar!=='function') return false;
   var sb = document.getElementById('ve-sidebar');
   if(!sb) return false;
   if(sb.classList.contains('ve-sb-collapsed')) return true;
+  var tercih = null;
+  try { tercih = localStorage.getItem(VE_MNT_PALET_ANAHTAR); } catch(e){}
   sb.classList.add('ve-sb-no-anim');
   veToggleSidebar(true);
   void sb.offsetWidth;                 // genişlik geçişsiz otursun
   sb.classList.remove('ve-sb-no-anim');
+  try {
+    if(tercih === null) localStorage.removeItem(VE_MNT_PALET_ANAHTAR);
+    else localStorage.setItem(VE_MNT_PALET_ANAHTAR, tercih);
+  } catch(e){}
+  _mntPaletBizim = true;
+  return true;
+}
+// Takoz'dan çıkış: sütunu Takoz daralttıysa ve kullanıcının tercihi açıksa geri açar
+function veMntPaletGeriAc(){
+  if(!_mntPaletBizim) return false;
+  _mntPaletBizim = false;
+  if(typeof document==='undefined' || typeof veToggleSidebar!=='function') return false;
+  var sb = document.getElementById('ve-sidebar'), tercih = null;
+  try { tercih = localStorage.getItem(VE_MNT_PALET_ANAHTAR); } catch(e){}
+  if(!sb || !sb.classList.contains('ve-sb-collapsed') || tercih === '1') return false;
+  veToggleSidebar(false);
+  try { if(tercih === null) localStorage.removeItem(VE_MNT_PALET_ANAHTAR); } catch(e){}   // tercih olduğu gibi
   return true;
 }
 
@@ -703,6 +731,7 @@ function veMntOpenEditor(nodeId, _silent){
     var parentState = veSerializeCurrentState();
     veMntStack.push({ nodeId:nodeId, parentState:parentState });
     veClearCanvasDOM();
+    veMntPaletKapat();                 // Canlı Not 62: kadraj kurulmadan önce (geçişsiz)
     var sub = node.data && node.data.subTopology;
     if(sub && sub.nodes && sub.nodes.length){
       veLoadTabState({ state: sub });
@@ -5684,7 +5713,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntAracGaranti: _mntAracGaranti,
     veMntKanvasBos: veMntKanvasBos,
     veMntOrnekYukle: veMntOrnekYukle,
-    _mntOrnekPaletKapat: _mntOrnekPaletKapat,
+    _mntOrnekPaletKapat: _mntOrnekPaletKapat, veMntPaletKapat: veMntPaletKapat, veMntPaletGeriAc: veMntPaletGeriAc,
+    _mntPaletSifirla: function(){ _mntPaletBizim = false; },
     _mntExampleKapilarHTML: _mntExampleKapilarHTML
   };
   // Son çözüm bu modülün değişkeninde; tarayıcıda tek global, Node'da modül

@@ -177,12 +177,22 @@ test('BOŞ KANVAS: araçlar kurulur, sayfa çekilir; Ctrl+Z sayfayı geri getiri
   await expect(page.locator('#ve-mnt-baslangic')).toBeHidden();
   const s = await page.evaluate(() => ({ tip: nodes.map((n) => n.type).sort(), beklenen: VE_MNT_ARAC_TIPLERI.slice().sort() }));
   expect(s.tip).toEqual(s.beklenen);
-  // seçenek seçildi → "Bileşenler" sütunu geri geldi (Canlı Not 22)
-  expect(await page.evaluate(() => document.getElementById('ve-sidebar').offsetWidth)).toBeGreaterThan(150);
+  // seçenek seçildi → "Bileşenler" sütunu KAPALI gelir, açma sekmesi köşede (kullanıcı
+  // 2026-11-06, Canlı Not 62: *"bileşenler penceresi otomatik açık olarak geliyor.
+  // Gelmesin"*; önce tercihe göre açık geliyordu); tercih yazılmaz
+  const sutun = () => page.evaluate(() => ({ palet: document.getElementById('ve-sidebar').offsetWidth,
+    sekme: document.getElementById('ve-sidebar-reveal').offsetWidth > 0, tercih: localStorage.getItem('mf-sidebar-collapsed') }));
+  expect(await sutun()).toEqual({ palet: 0, sekme: true, tercih: null });
   await page.locator('#ve-canvas-wrapper').click({ position: { x: 40, y: 300 } });
   await page.keyboard.press('Control+z');
   await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
   expect((await say(page)).hepsi).toBe(0);
+  // Takoz'dan çıkınca kullanıcının tercihi (açık) geri gelir
+  await page.evaluate(() => veMntCloseEditor());
+  await page.waitForTimeout(500);
+  const k = await sutun();
+  expect(k.palet).toBeGreaterThan(150);
+  expect(k.tercih).toBe(null);
 });
 
 test('ÖRNEK SATIRI: Yükle TEK TIKLA kurar, sayfa çekilir; Ctrl+Z TEK adımda geri alır', async ({ page }) => {

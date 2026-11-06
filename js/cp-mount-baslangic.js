@@ -251,8 +251,13 @@ function _mntBasSecenek(){
 
 // Kapsam: yalnız Takoz alt topolojisinde. Kapsamın tek noktası
 // veSyncSidebarScope (components.js) — modül aç/kapa, sekme, proje yükleme.
+// Kapsamın geçişi Bileşenler sütununu da yönetir (Canlı Not 62): Takoz'a girişte kapalı,
+// çıkışta kullanıcının tercihi (js/cp-mount.js → veMntPaletKapat · veMntPaletGeriAc).
 function veMntBaslangicKapsam(scope){
+  var once = _mntBasKapsam;
   _mntBasKapsam = (scope === 'mount-analysis');
+  if(_mntBasKapsam && !once && typeof veMntPaletKapat === 'function') veMntPaletKapat();
+  else if(!_mntBasKapsam && once && typeof veMntPaletGeriAc === 'function') veMntPaletGeriAc();
   return veMntBaslangicTazele();
 }
 
