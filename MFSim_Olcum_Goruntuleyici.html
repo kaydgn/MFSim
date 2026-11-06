@@ -9034,6 +9034,34 @@ span.ve-fw-ro{ display:inline-block; }
   align-items:flex-end; gap:8px; max-width:calc(100% - 32px); pointer-events:none; }
 .ve-mw-3b-sagalt > *{ pointer-events:auto; }
 .ve-mw-3b-sagalt > .ve-mw-3b-is{ position:static; }
+/* GEÇİŞ (kullanıcı 2026-11-06, Canlı Not 54: *"direk yükleme progres barı ile açılıyor …
+   Araya tatlı bir geçiş yapalım"*). Açılış: perde saydamlıktan belirir, çalışma alanı hafif
+   ölçekten oturur, okumanın kartı perdenin ardından aşağıdan yükselir. Okuma bitince
+   (perde açık kalır) Ürün ağacı soldan, Özellikler sağdan, çizim ve durum çubuğu
+   saydamlıktan gelir; tuvalin zemini okumanınki (çizim üstüne belirir); iş kartının
+   kayması js/cp-mount-3b.js → _mw3bKartKaydir. Süre ve eğri karşılamanın jetonları. */
+#ve-mnt-3b-overlay.ve-mw-3b-acilis{ animation:ve-mw-3b-belir var(--dur-enter) var(--ease-out) both; }
+#ve-mnt-3b-overlay.ve-mw-3b-acilis > .ve-fw-modal{ animation:ve-mw-3b-otur var(--dur-enter) var(--ease-out) both; }
+.ve-fw-3b-tuval[data-durum="okunuyor"] > .ve-mw-3b-is{
+  animation:ve-mw-3b-yuksel var(--dur-enter) var(--ease-out) calc(var(--dur-enter) * .4) both; }
+.ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-mw-3b-agac{ animation:ve-mw-3b-soldan var(--dur-enter) var(--ease-out) both; }
+.ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-mw-3b-yan{ animation:ve-mw-3b-sagdan var(--dur-enter) var(--ease-out) both; }
+.ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-fw-3b-tuval > canvas,
+.ve-mw-3b-masa.ve-mw-3b-okumadan + .ve-mw-3b-durum{ animation:ve-mw-3b-belir var(--dur-enter) var(--ease-out) both; }
+.ve-mw-3b .ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-fw-3b-tuval{
+  background:linear-gradient(180deg, var(--bg-secondary) 50%, var(--bg-tertiary)); }
+@keyframes ve-mw-3b-belir{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes ve-mw-3b-otur{ from{ transform:scale(.985); } to{ transform:none; } }
+@keyframes ve-mw-3b-yuksel{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+@keyframes ve-mw-3b-soldan{ from{ opacity:0; transform:translateX(-16px); } to{ opacity:1; transform:none; } }
+@keyframes ve-mw-3b-sagdan{ from{ opacity:0; transform:translateX(16px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){
+  #ve-mnt-3b-overlay.ve-mw-3b-acilis, #ve-mnt-3b-overlay.ve-mw-3b-acilis > .ve-fw-modal,
+  .ve-fw-3b-tuval[data-durum="okunuyor"] > .ve-mw-3b-is,
+  .ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-mw-3b-agac, .ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-mw-3b-yan,
+  .ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-fw-3b-tuval > canvas,
+  .ve-mw-3b-masa.ve-mw-3b-okumadan + .ve-mw-3b-durum{ animation:none; }
+}
 /* EYLEM ŞERİDİ (kullanıcı 2026-11-06, Canlı Not 45: *"Hesapla butonu neden böyle
    duruyor? … Sağ taraftaki sütunun altına"* — tuvalin sağ altında tek düğmeli,
    solu boş bir karttı): Özellikler'in DİBİNE yapışık (panel kaydırılınca görünür

@@ -193,14 +193,16 @@ function veMntWiz3bAc(yer){
   var Y = VE_MW_3B_YER[yer], ov = document.getElementById(Y.kap), perde = Y.perde ? document.getElementById(Y.perde) : null;
   if(!ov || (Y.perde && !perde)) return false;
   if(_mw3b) veMntWiz3bKapat();
-  if(perde) perde.style.display = 'flex';
+  // Okumadan gelince perde açık kalır (geçiş yeniden başlamaz); kapalıyken açılış geçişi
+  if(perde){ if(_mw3bOkumadan) perde.style.display = 'flex'; else _mw3bPerdeAc(perde); }
   ov.style.display = 'flex';
   if(yer === 'sihirbaz') _mw3bTam(true);
   // Başlık bandı ve komut çubuğu YOK (tam ekran çalışma alanı; kullanıcı 2026-11-06,
   // Canlı Not 44: *"Bu ribbonu da kaldıralım, yer kazanalım"*): dosyanın adı Ürün
   // ağacının başlığında, Kapat tuvalin sağ üstünde, açık kesitin ayarı sol üstünde
   // (js/cp-mount-3b-arac.js → _mw3bAracYaz)
-  ov.innerHTML = '<div class="ve-fw-3b-govde ve-mw-3b-masa" data-yan="' + (veMntWiz3bYanAcik() ? 'acik' : 'kapali') + '">'
+  ov.innerHTML = '<div class="ve-fw-3b-govde ve-mw-3b-masa' + (_mw3bOkumadan ? ' ve-mw-3b-okumadan' : '')
+    + '" data-yan="' + (veMntWiz3bYanAcik() ? 'acik' : 'kapali') + '">'
     + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-dock-bas">' + _mw3bKimlikHTML(s)
       + '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"></span></div>'
       + '<label class="ve-mw-3b-ara">' + _mwIkon('search')
@@ -222,7 +224,8 @@ function veMntWiz3bAc(yer){
   var V = { kap: kap, s: s, yer: yer, ov: ov, perde: perde, kume: [], ckume: [], parca: [], ekli: [], kutular: [], islenen: 0, yuz: 0, toplam: 0, yuzToplam: 0,
             sokucu: [], secili: -1, secim: [], fare: -1, fareDugum: -1, fareParca: -1, fareIsaret: -1, isaretEkran: [], gizli: {}, menu: null, yuzOdak: -1, nokta: -1, ref: null, aday: null, halka: null, cizIstek: 0, cizZaman: 0, sonCiz: 0, sonIl: 0, sonSig: 0, sigKutu: null,
             suzgec: 'parca', olcu: null, yuzSec: null, yuzOn: null, yuzG: null, yuzOnG: null, yuzFare: null, gorunus: 'kenar', ara: '',
-            kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0 };
+            kutu: null, sonucGrubu: null, kuruluyor: true, durdu: false, eldegdi: false, solukVar: false, kareMs: 0,
+            okumaKutu: (_mw3bOkumadan && _mw3bOkumadan.kutu) || null };
   var w = Math.max(1, kap.clientWidth), h = Math.max(1, kap.clientHeight);
   try {
     V.renderer = _mw3bCizici(V);
@@ -272,7 +275,7 @@ function _mw3bOkumaAc(s){
   var Y = VE_MW_3B_YER.pencere, ov = document.getElementById(Y.kap), perde = document.getElementById(Y.perde);
   if(!ov || !perde) return false;
   if(_mw3b) veMntWiz3bKapat();
-  perde.style.display = 'flex';
+  _mw3bPerdeAc(perde);
   ov.style.display = 'flex';
   ov.innerHTML = '<div class="ve-fw-3b-govde"><div class="ve-fw-3b-tuval" id="ve-mw-3b-tuval" data-durum="okunuyor">' + _mw3bKapatHTML()
     + '<div class="ve-mw-3b-okuma ve-mw-3b-is" id="ve-mw-3b-okuma">' + _mw3bOkumaHTML(s) + '</div></div></div>';
@@ -281,6 +284,37 @@ function _mw3bOkumaAc(s){
   _mw3b = V;
   _mw3bEsc(V);
   return true;
+}
+// GEÇİŞ (kullanıcı 2026-11-06, Canlı Not 54: *"direk yükleme progres barı ile
+// açılıyor. Bunun direkt gelmesi biraz garip. Araya tatlı bir geçiş yapalım."*):
+// kapalı perde açılırken 3B ekranı saydamlıktan belirir ve çalışma alanı hafif
+// ölçekten oturur, okumanın kartı ardından aşağıdan yükselir (css: .ve-mw-3b-acilis).
+// Okuma bitince perde AÇIK kalır: Ürün ağacı soldan, Özellikler sağdan gelir
+// (.ve-mw-3b-okumadan), iş kartı eski yerinden yeni yerine kayar (_mw3bKartKaydir).
+var _mw3bOkumadan = null;      // okuma → görüntüleyici geçişi sürerken { kutu: okumanın kartı }
+function _mw3bPerdeAc(perde){
+  if(!perde) return;
+  var kapali = perde.style.display !== 'flex';
+  perde.style.display = 'flex';
+  if(!kapali) return;
+  perde.classList.remove('ve-mw-3b-acilis');
+  void perde.offsetWidth;                     // sınıf yeniden takılınca geçiş baştan
+  perde.classList.add('ve-mw-3b-acilis');
+}
+function _mw3bAzHareket(){
+  try { return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){ return false; }
+}
+// İş kartı sıçramaz: okumanın kartı ekranın sağ altındaydı, kurulumun kartı
+// tuvalin sağ altında (paneller geldi) — kart eski yerinden kayar (sağ alt köşe
+// hizasında). Hareket istenmiyorsa (işletim sisteminin tercihi) kayma yok.
+function _mw3bKartKaydir(el, once){
+  if(!el || !once || typeof el.animate !== 'function' || _mw3bAzHareket()) return null;
+  var b = el.getBoundingClientRect(), dx = once.right - b.right, dy = once.bottom - b.bottom;
+  if(Math.abs(dx) < 1 && Math.abs(dy) < 1) return null;
+  try {
+    return el.animate([{ transform: 'translate(' + Math.round(dx) + 'px, ' + Math.round(dy) + 'px)' }, { transform: 'none' }],
+      { duration: parseFloat(_mw3bJeton('--dur-enter', '420')) || 420, easing: _mw3bJeton('--ease-out', 'ease-out') });
+  } catch(e){ return null; }
 }
 function _mw3bOkumaHTML(s){
   var bas = _mw3bIsBasHTML('clock', typeof _mwStpIlerlemeVeri === 'function' ? _mwStpIlerlemeVeri(s).ad : 'STEP okuma')
@@ -442,7 +476,7 @@ function veMntWiz3bKapat(){
   if(typeof document !== 'undefined'){
     var ov = V ? V.ov : document.getElementById('ve-mw-3b');
     if(ov){ ov.style.display = 'none'; ov.innerHTML = ''; }
-    if(V && V.perde) V.perde.style.display = 'none';
+    if(V && V.perde){ V.perde.style.display = 'none'; V.perde.classList.remove('ve-mw-3b-acilis'); }
     if(!V || V.yer === 'sihirbaz') _mw3bTam(false);
   }
   if(!V) return;
@@ -485,7 +519,12 @@ function veMntWiz3bTazele(){
   var s = typeof veMntWizStp === 'function' ? veMntWizStp() : null;
   // Okuma kartı: okuma bitince görüntüleyici kurulur; Vazgeç ya da başka modül → kapanır; hata kartta
   if(V.okuma){
-    if(s && s.durum === 'hazir'){ veMntWiz3bKapat(); veMntWiz3bAc('pencere'); return; }
+    if(s && s.durum === 'hazir'){
+      var ok0 = document.getElementById('ve-mw-3b-okuma');
+      _mw3bOkumadan = { kutu: ok0 ? ok0.getBoundingClientRect() : null };
+      try { veMntWiz3bKapat(); veMntWiz3bAc('pencere'); } finally { _mw3bOkumadan = null; }
+      return;
+    }
     if(!s || s.durum === 'yok'){ veMntWiz3bKapat(); return; }
     V.s = s;
     var ok = document.getElementById('ve-mw-3b-okuma');
@@ -596,6 +635,8 @@ function _mw3bKurYaz(){
   if(document.getElementById('ve-mw-3b-durdur')){ vePencereIlerleme('ve-mw-3b-durdur', _mw3bKurVeri(V)); return; }
   el.innerHTML = bas + vePencereEylem('<button type="button" class="ve-fp-solve" data-durdur id="ve-mw-3b-durdur" onclick="veMntWiz3bDurdur()">'
     + _mwIkon('square') + ' Durdur</button>', '', _mw3bKurVeri(V));
+  // okumadan gelindiyse kart okumanın kartının yerinden kayar (Canlı Not 54)
+  if(V.okumaKutu){ _mw3bKartKaydir(el, V.okumaKutu); V.okumaKutu = null; }
 }
 
 // ── 4 · ÇİZİM KÜMELERİ, RENK VE SEÇİM ─────────────────────────────────────

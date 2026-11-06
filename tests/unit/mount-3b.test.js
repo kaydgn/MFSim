@@ -857,6 +857,70 @@ describe('STEP\'TEN BAŞLA — dosya 3B\'nin perdesinde, sihirbazsız', () => {
     expect(d.querySelector('.ve-fw-issue-err').textContent).toBe(' bozuk.stp — ISO-10303-21 başlığı yok');
     expect(d.querySelector('[data-mw-stp-vazgec]')).toBe(null);
   });
+
+  // GEÇİŞ (kullanıcı 2026-11-06, Canlı Not 54: "direk yükleme progres barı ile açılıyor. Bunun
+  // direkt gelmesi biraz garip. Araya tatlı bir geçiş yapalım."). Önce: perde, kart ve çubuk aynı
+  // karede beliriyordu; okuma bitince paneller birden geliyor, iş kartı Özellikler'in genişliği
+  // kadar sola sıçrıyordu. Gerçek tarayıcı: tests/e2e/mount-3b.spec.js → *GEÇİŞ*.
+  test('GEÇİŞ: kapalı perde geçişle açılır; okuma bitince perde açık kalır, masa okumadan gelir; iş kartı eski yerinden kayar', () => {
+    document.body.innerHTML = '<div id="ve-mnt-3b-overlay" style="display:none;"><div class="ve-fw-modal"><div id="ve-mnt-3b"></div></div></div>';
+    const perde = document.getElementById('ve-mnt-3b-overlay');
+    const s = { dosya: 'guc.stp', durum: 'okunuyor', bayt: 100, ilerleme: { evre: 'dosya', oran: 0, bayt: 0, toplam: 100 } };
+    expect(_mw3bOkumaAc(s)).toBe(true);
+    expect([perde.style.display, perde.classList.contains('ve-mw-3b-acilis')]).toEqual(['flex', true]);
+    // açık perde yeniden açılınca geçiş baştan başlamaz; kapanış sınıfı söker
+    perde.classList.remove('ve-mw-3b-acilis');
+    _mw3bPerdeAc(perde);
+    expect(perde.classList.contains('ve-mw-3b-acilis')).toBe(false);
+    perde.classList.add('ve-mw-3b-acilis');
+    // okuma biter: görüntüleyici kurulur (WebGL'siz ortamda hata kartıyla), perde AÇIK kalır ve
+    // yeniden belirmez, masa okumadan gelir ve okumanın kartının yerini taşır
+    const k = veMntStpOku(STK.kutleKalibi());
+    const s2 = { dosya: 'guc.stp', durum: 'hazir', sonuc: k, roller: k.agac.map(() => null), kutle: {}, nokta: {}, yogunluk: {}, ag: {} };
+    const eskiStp = veMntWizStp, eskiT = global.THREE;
+    const ok = document.getElementById('ve-mw-3b-okuma');
+    ok.getBoundingClientRect = () => ({ left: 1100, top: 790, right: 1424, bottom: 884, width: 324, height: 94 });
+    veMntWizStp = () => s2;
+    global.THREE = {};                                                // WebGLRenderer yok → hata yolu
+    try {
+      veMntWiz3bTazele();
+      expect(perde.style.display).toBe('flex');
+      expect(perde.classList.contains('ve-mw-3b-acilis')).toBe(false);
+      const masa = document.querySelector('#ve-mnt-3b .ve-mw-3b-masa');
+      expect(masa.classList.contains('ve-mw-3b-okumadan')).toBe(true);
+      expect(_mw3b.okumaKutu).toEqual({ left: 1100, top: 790, right: 1424, bottom: 884, width: 324, height: 94 });
+      expect(_mw3bOkumadan).toBe(null);                              // geçiş bayrağı yalnız kurulum süresince
+      veMntWiz3bKapat();
+      expect([perde.style.display, perde.classList.contains('ve-mw-3b-acilis')]).toEqual(['none', false]);
+    } finally { veMntWizStp = eskiStp; if (eskiT === undefined) delete global.THREE; else global.THREE = eskiT; }
+    // kayma: kartın sağ alt köşesi eski yerinden, karşılamanın süresi ve eğrisiyle; hareket azaltılınca yok
+    const kayit = [];
+    const el = { getBoundingClientRect: () => ({ right: 1072, bottom: 858 }), animate: (kf, o) => { kayit.push([kf, o]); return {}; } };
+    _mw3bKartKaydir(el, { right: 1424, bottom: 884 });
+    expect(kayit[0][0]).toEqual([{ transform: 'translate(352px, 26px)' }, { transform: 'none' }]);
+    expect(typeof kayit[0][1].duration).toBe('number');
+    expect(_mw3bKartKaydir(el, { right: 1072.4, bottom: 858.3 })).toBe(null);       // yer aynıysa kayma yok
+    const mm = window.matchMedia;
+    window.matchMedia = () => ({ matches: true });
+    try { expect(_mw3bKartKaydir(el, { right: 1424, bottom: 884 })).toBe(null); } finally { window.matchMedia = mm; }
+    expect(kayit.length).toBe(1);
+  });
+
+  test('GEÇİŞ — kurallar: perde belirir, çalışma alanı oturur, okumanın kartı gecikmeyle yükselir; okumadan paneller kenarlardan; hareket azaltılınca hiçbiri', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)).replace(/\s+/g, ' '); };
+    expect(kural('#ve-mnt-3b-overlay.ve-mw-3b-acilis')).toMatch(/animation:ve-mw-3b-belir var\(--dur-enter\) var\(--ease-out\) both/);
+    expect(kural('#ve-mnt-3b-overlay.ve-mw-3b-acilis > .ve-fw-modal')).toMatch(/animation:ve-mw-3b-otur var\(--dur-enter\)/);
+    expect(kural('.ve-fw-3b-tuval[data-durum="okunuyor"] > .ve-mw-3b-is')).toMatch(/animation:ve-mw-3b-yuksel var\(--dur-enter\) var\(--ease-out\) calc\(var\(--dur-enter\) \* \.4\) both/);
+    expect(kural('.ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-mw-3b-agac')).toMatch(/ve-mw-3b-soldan/);
+    expect(kural('.ve-mw-3b-masa.ve-mw-3b-okumadan > .ve-mw-3b-yan')).toMatch(/ve-mw-3b-sagdan/);
+    expect(css).toMatch(/@keyframes ve-mw-3b-otur\{ from\{ transform:scale\(\.985\); \}/);
+    expect(css).toMatch(/@keyframes ve-mw-3b-soldan\{ from\{ opacity:0; transform:translateX\(-16px\); \}/);
+    const az = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce){\n  #ve-mnt-3b-overlay.ve-mw-3b-acilis'));
+    expect(az.slice(0, az.indexOf('}'))).toMatch(/\.ve-mw-3b-masa\.ve-mw-3b-okumadan \+ \.ve-mw-3b-durum\{ animation:none; $/);
+    // iş kartının kendi kuralı konumdan başka şey taşımaz (eski ortadaki kart emekli)
+    expect(kural('.ve-mw-3b-is')).not.toMatch(/transform|animation/);
+  });
 });
 
 // ── CAD ARAÇLARI: GÖRÜNÜŞLER VE KESİT (2026-11-02) ──────────────────────────

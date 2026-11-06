@@ -162,10 +162,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok); kimlikte atalarının
   yolu YOK (ata ağaçtan seçilir, Canlı Not 42). Hesap Özellikler'in DİBİNDEKİ eylem
   şeridinde (yapışık), rol verilince; panel kapalıyken şeridin dibinde yalnız sıradaki adımın
-  simgesi (kullanıcı 2026-11-06, Canlı Not 45). Sağ tık menüsü `js/cp-mount-3b-menu.js`
+  simgesi (kullanıcı 2026-11-06, Canlı Not 45). **Açılış geçişli** (kullanıcı 2026-11-06, Canlı Not 54): kapalı
+  perde saydamlıktan belirir, okumanın kartı ardından yükselir; okuma bitince perde AÇIK kalır, Ürün ağacı
+  soldan, Özellikler sağdan gelir, iş kartı eski yerinden kayar; hareket azaltılınca geçiş yok. Sağ tık menüsü `js/cp-mount-3b-menu.js`
   (gizle · ağaçta göster · rol · malzeme; gizli parça görünüm durumu, kaydedilmez). Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
-  ve İŞ KARTI* · *ÖZELLİKLER AÇILIR KAPANIR* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM* ·
-  *ÖZELLİKLER AÇILIR KAPANIR* · *ROL ALANI* + `mount-veri-sayfasi.spec.js` (değer sütunu ve satır hizası).
+  ve İŞ KARTI* · *ÖZELLİKLER AÇILIR KAPANIR* · *GEÇİŞ* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM* ·
+  *ÖZELLİKLER AÇILIR KAPANIR* · *ROL ALANI* · *GEÇİŞ* + `mount-veri-sayfasi.spec.js` (değer sütunu ve satır hizası).
 - `js/cp-mount-3b-agac.js` — Takoz 3B'nin **ürün ağacı** (solda, 3DEXPERIENCE gibi) ve
   **Ctrl ile çoklu seçim** (kullanıcı 2026-11-02): açıklık kartla ORTAK (`s.acik`), rol
   seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`); **arama** bütün ağaçta (açık dallarla
