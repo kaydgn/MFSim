@@ -83,7 +83,10 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   kararı 2026-11-02): araç şeridi kurulur, dosya 3B'nin perdesinde okunur
   (`veMntCadAcStep`); sihirbaz "Sihirbaza aktar"la. Görünürlük modelden: yalnız "Başlangıç ve
   Örnekler" taşıyan topoloji boştur; Takoz doğrudan girişi beyan eder
-  (`moduleEnter`). **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
+  (`moduleEnter`). **Takoz'a girişte Bileşenler sütunu KAPALI** (kullanıcı 2026-11-06, Canlı
+  Not 62: *"otomatik açık olarak geliyor. Gelmesin"*): `veMntPaletKapat` geçişsiz ve kadrajdan
+  önce daraltır, tercih YAZILMAZ; çıkışta tercih geri gelir (`veMntPaletGeriAc`). Kapı:
+  `mount-baslangic.test.js` → *TAKOZ'A GİRİŞ* + `mount-baslangic.spec.js` → *BOŞ KANVAS*. **Sentetik örnek kayıtta `kurgu: true` taşır** ve gerçek araçlardan
   AYRI sekmede ("Kurgu" — "Doğrulama örnekleri — kurgu") durur; satır metni künyedir, sonuç
   iddiası taşımaz (kurgunun tasarım özellikleri testte sayıyla kilitli). Gerçek aracın satırı da
   GÜÇ GRUBU künyesi (motor · aktarma · askı, sayılar modelden); kaynak, rapor kodu ve parça

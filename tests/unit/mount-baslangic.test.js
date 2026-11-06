@@ -380,6 +380,70 @@ describe('ÖRNEK — Bileşenler sütunu kapalı gelir', () => {
   });
 });
 
+// Canlı Not 62 (kullanıcı 2026-11-06): *"Hala takoz çökme ve titreşim modülünü
+// açtığımda, solda bileşenler penceresi otomatik açık olarak geliyor. Gelmesin dedik
+// ya"*. Önce yalnız örnek yüklenince kapanıyordu (Canlı Not 38): Boş kanvas, STEP ve
+// sihirbaz sütunu tercihe göre açık bırakıyordu. Gerçek tarayıcı:
+// tests/e2e/mount-baslangic.spec.js → BOŞ KANVAS.
+describe('TAKOZ\'A GİRİŞ — Bileşenler sütunu kapalı açılır, tercih yazılmaz', () => {
+  const sb = () => document.getElementById('ve-sidebar');
+  const ANAHTAR = 'mf-sidebar-collapsed';
+  let iz;
+  beforeEach(() => {
+    document.body.innerHTML = '<aside id="ve-sidebar" class="ve-sidebar"></aside>';
+    BS._mntBasSifirla(); cp._mntPaletSifirla();
+    global.veMntPaletKapat = cp.veMntPaletKapat; global.veMntPaletGeriAc = cp.veMntPaletGeriAc;
+    iz = [];
+    // gerçeğinin aynısı (js/results.js): sınıfı çevirir, tercihi yazar
+    global.veToggleSidebar = (f) => {
+      const c = typeof f === 'boolean' ? f : !sb().classList.contains('ve-sb-collapsed');
+      iz.push([c, sb().classList.contains('ve-sb-no-anim')]);
+      sb().classList.toggle('ve-sb-collapsed', c);
+      localStorage.setItem(ANAHTAR, c ? '1' : '0');
+    };
+  });
+  afterEach(() => { delete global.veToggleSidebar; delete global.veMntPaletKapat; delete global.veMntPaletGeriAc; localStorage.removeItem(ANAHTAR); });
+  test('girişte geçişsiz daralır, tercih yazılmaz; çıkışta tercih geri gelir', () => {
+    localStorage.setItem(ANAHTAR, '0');
+    BS.veMntBaslangicKapsam('mount-analysis');
+    expect(sb().className).toBe('ve-sidebar ve-sb-collapsed');
+    expect(iz).toEqual([[true, true]]);
+    expect(localStorage.getItem(ANAHTAR)).toBe('0');                 // Araç Performans'ın tercihi
+    BS.veMntBaslangicKapsam('mount-analysis');                        // kapsam tazelemesi: yeniden değil
+    expect(iz.length).toBe(1);
+    BS.veMntBaslangicKapsam('top');
+    expect(sb().classList.contains('ve-sb-collapsed')).toBe(false);
+    expect(localStorage.getItem(ANAHTAR)).toBe('0');
+  });
+  test('tercih yoksa da yazılmaz; tercih kapalıysa çıkışta kapalı kalır', () => {
+    BS.veMntBaslangicKapsam('mount-analysis');
+    expect(localStorage.getItem(ANAHTAR)).toBe(null);
+    BS.veMntBaslangicKapsam('top');
+    expect(sb().classList.contains('ve-sb-collapsed')).toBe(false);
+    localStorage.setItem(ANAHTAR, '1'); sb().classList.add('ve-sb-collapsed'); iz = [];
+    BS.veMntBaslangicKapsam('mount-analysis');
+    BS.veMntBaslangicKapsam('top');
+    expect(iz).toEqual([]);
+    expect(sb().classList.contains('ve-sb-collapsed')).toBe(true);
+  });
+  test('kullanıcı Takoz\'da açarsa açık kalır ve tercih yazılır; çıkış dokunmaz', () => {
+    localStorage.setItem(ANAHTAR, '0');
+    BS.veMntBaslangicKapsam('mount-analysis');
+    global.veToggleSidebar(false);                                     // açma düğmesi
+    expect(localStorage.getItem(ANAHTAR)).toBe('0');
+    iz = [];
+    BS.veMntBaslangicKapsam('top');
+    expect(iz).toEqual([]);
+    expect(sb().classList.contains('ve-sb-collapsed')).toBe(false);
+  });
+  test('bağlantı: modülün açılışı kadrajı kurmadan önce daraltır', () => {
+    const k = fs.readFileSync(path.join(__dirname, '../../js/cp-mount.js'), 'utf8');
+    const ac = k.slice(k.indexOf('function veMntOpenEditor('), k.indexOf('function veMntCloseEditor('));
+    expect(ac.indexOf('veMntPaletKapat();')).toBeGreaterThan(0);
+    expect(ac.indexOf('veMntPaletKapat();')).toBeLessThan(ac.indexOf('veLoadTabState('));
+  });
+});
+
 describe('DOM — kapsam, tazeleme, olaylar', () => {
   const el = () => document.getElementById(BS.VE_MNT_BAS_ID);
   test('Takoz kapsamında boş topoloji → sayfa kurulur ve görünür', () => {
