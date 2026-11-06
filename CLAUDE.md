@@ -181,6 +181,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (VERTEX_POINT) yapışır; fare hareketi yalnız SVG katını yeniler. Kesilen yan çizilmez ve
   seçilmez. Kapı: `mount-3b.test.js` → *BAKIŞLAR* · *KESİT* · *YÜZEY SEÇİMİ* + `mount-3b.spec.js`
   → *BAKIŞ · KESİT* · *YÜZEY · ÖLÇÜ*.
+- Takoz 3B'nin **DÖNÜŞ MERKEZİ** (kullanıcı 2026-11-06, Canlı Not 55: *"MMB tuşuna bastığımda dönüş
+  eksenini tayin edelim … Catia'daki gibi"*): ORTA TIK (sürüklemeden) tıklanan noktayı merkez yapar
+  (parçada yüzeyin noktası, boşlukta merkezin bakışa dik düzlemi) ve görünüm onu tuvalin ortasına
+  KAYDIRIR — bakış ve noktadaki ölçek aynı (`veMntWiz3bMerkezHedef`); merkez ekranda nokta, kurulunca
+  ve döndürürken görünür. Orta tuşla sürüklemek kaydırır, tarayıcının otomatik kaydırması yok. Kapı:
+  `mount-3b.test.js` → *DÖNÜŞ MERKEZİ* + `mount-3b.spec.js` → *DÖNÜŞ MERKEZİ*.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle

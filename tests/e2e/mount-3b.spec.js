@@ -224,6 +224,86 @@ test('GEÇİŞ · AZ HAREKET: işletim sistemi hareketi azaltınca perde, kart v
   expect(G.kaydir).toEqual([]);
 });
 
+// DÖNÜŞ MERKEZİ (kullanıcı 2026-11-06, Canlı Not 55: *"MMB tuşuna bastığımda dönüş eksenini
+// tayin edelim. Bir nokta olarak çıksın ekranda … Catia'daki gibi."*). Node'da koşmayan halkalar:
+// gerçek orta tuş (tarayıcının otomatik kaydırması yok), ışının modele çarptığı nokta, kaymanın
+// sonunda noktanın tuvalin ortasına oturması, işaretin yeri ve sönmesi, döndürmenin merkezi.
+test('DÖNÜŞ MERKEZİ: orta tık tıklanan noktayı merkez yapar ve ortaya kaydırır; nokta ekranda; döndürünce merkez yerinde', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await dosyaSec(page, GUC);
+  await hazir(page);
+  // modelin üstünde, ortadan uzak bir nokta
+  const t = await page.evaluate(() => {
+    const k = document.getElementById('ve-mw-3b-tuval').getBoundingClientRect(), cx = k.left + k.width / 2, cy = k.top + k.height / 2;
+    for (let d = 240; d >= 80; d -= 20) {
+      for (let a = 0; a < 16; a++) {
+        const x = cx + d * Math.cos(a * Math.PI / 8), y = cy + d * Math.sin(a * Math.PI / 8), H = _mw3bIsabetT(x, y);
+        if (H.i >= 0) {
+          const V = _mw3b, c = V.camera.position;
+          return { x, y, p: H.p, orta: [cx, cy], theta: V.ctrl.theta, phi: V.ctrl.phi, kamera: [c.x, c.y, c.z], hedef: V.ctrl.hedef.toArray() };
+        }
+      }
+    }
+    return null;
+  });
+  expect(t).not.toBeNull();
+  await page.mouse.click(t.x, t.y, { button: 'middle' });
+  const isaret = page.locator('#ve-mw-3b-merkez');
+  await expect(isaret).toHaveClass(/acik/);
+  await page.waitForFunction(() => !window._mw3b.merkezIstek);
+  const olc = () => page.evaluate((p) => {
+    const V = _mw3b, q = new THREE.Vector3(p[0], p[1], p[2]), c = V.camera.position;
+    V.camera.updateMatrixWorld(); q.project(V.camera);
+    const k = document.getElementById('ve-mw-3b-tuval').getBoundingClientRect(), m = document.getElementById('ve-mw-3b-merkez').getBoundingClientRect();
+    return { hedef: V.ctrl.hedef.toArray(), theta: V.ctrl.theta, phi: V.ctrl.phi, kamera: [c.x, c.y, c.z],
+      ekran: [k.left + (q.x + 1) / 2 * k.width, k.top + (1 - q.y) / 2 * k.height], nokta: [m.left + m.width / 2, m.top + m.height / 2],
+      secim: V.secim.length, menu: !!document.getElementById('ve-mw-3b-menu') };
+  }, t.p);
+  const a = await olc();
+  a.hedef.forEach((v, i) => expect(v).toBeCloseTo(t.p[i], 6));            // merkez tıklanan nokta
+  expect([a.theta, a.phi]).toEqual([t.theta, t.phi]);                       // bakış aynı
+  expect(Math.abs(a.ekran[0] - t.orta[0])).toBeLessThanOrEqual(1);          // nokta tuvalin ortasında
+  expect(Math.abs(a.ekran[1] - t.orta[1])).toBeLessThanOrEqual(1);
+  expect(Math.abs(a.nokta[0] - t.orta[0])).toBeLessThanOrEqual(1);          // işaret de
+  expect(Math.abs(a.nokta[1] - t.orta[1])).toBeLessThanOrEqual(1);
+  // kamera yalnız bakışa dik kaydı (noktadaki ölçek aynı)
+  const geri = t.kamera.map((v, i) => v - t.hedef[i]), L = Math.hypot(...geri);
+  const kay = a.kamera.map((v, i) => v - t.kamera[i]);
+  expect(Math.abs(kay.reduce((s0, v, i) => s0 + v * geri[i] / L, 0))).toBeLessThan(1e-3 * L);
+  expect([a.secim, a.menu]).toEqual([0, false]);                           // orta tık seçmez, menü açmaz
+  await expect(page.locator('#ve-mw-3b-ipucu')).toBeHidden();              // görünüm kaydı: eski ipucu kapalı
+  await expect(isaret).not.toHaveClass(/acik/, { timeout: 3000 });         // sonra söner
+  // ipucu: parçanın üstünde açılır, fare tuvalden çıkınca kapanır (yavaş karede de — asılı kalıyordu)
+  await page.mouse.move(t.orta[0], t.orta[1]);
+  await expect(page.locator('#ve-mw-3b-ipucu')).toBeVisible();
+  await page.mouse.move(5, 5);
+  await expect(page.locator('#ve-mw-3b-ipucu')).toBeHidden();
+  // döndürme: sol tuşla sürüklerken nokta ortada görünür, merkez yerinde
+  await page.mouse.move(t.orta[0] + 60, t.orta[1] + 40);
+  await page.mouse.down();
+  await page.mouse.move(t.orta[0] + 140, t.orta[1] + 70, { steps: 6 });
+  await expect(isaret).toHaveClass(/acik/);
+  const b = await olc();
+  b.hedef.forEach((v, i) => expect(v).toBeCloseTo(t.p[i], 6));
+  expect(b.theta).not.toBe(t.theta);
+  expect(Math.abs(b.ekran[0] - t.orta[0]) + Math.abs(b.ekran[1] - t.orta[1])).toBeLessThanOrEqual(2);
+  expect(Math.abs(b.nokta[0] - t.orta[0]) + Math.abs(b.nokta[1] - t.orta[1])).toBeLessThanOrEqual(2);
+  await page.mouse.up();
+  await expect(isaret).not.toHaveClass(/acik/, { timeout: 3000 });
+  // orta tuşla SÜRÜKLEMEK kaydırır: merkez kurulmaz, hedef bakışa dik kayar
+  await page.mouse.move(t.orta[0], t.orta[1]);
+  await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(t.orta[0] + 80, t.orta[1], { steps: 5 });
+  await page.mouse.up({ button: 'middle' });
+  const c2 = await olc();
+  expect(Math.hypot(...c2.hedef.map((v, i) => v - t.p[i]))).toBeGreaterThan(1);
+  expect(c2.theta).toBe(b.theta);
+  expect(hatalar).toEqual([]);
+});
+
 test('DURDUR · DEVAM: durunca üretim durur ve çizilen kalır; Devam bitirir', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);

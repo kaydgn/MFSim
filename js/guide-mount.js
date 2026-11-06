@@ -1089,7 +1089,8 @@ function _gmSec16(){
     ['Takoz noktası', 'Takozun renginde artılı halka', 'Üst bağlantı yüzeyinin merkezi (16.3)'],
     ['Modelin noktası', 'Kesikli halka', 'Tuvaldeki modelde aynı birim (16.6)'],
     ['Referans noktası', 'Eşkenar dörtgen', 'Veri sayfasının referansı (16.5)'],
-    ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner; yazılar fare üstündeyken']
+    ['Koordinat ekseni', 'Sol alt köşe', '+X arka · +Y sağ · +Z yukarı; eksi yönler soluk, kamerayla döner; yazılar fare üstündeyken'],
+    ['Dönüş merkezi', 'Vurgu renginde nokta', 'Görünüm bu noktanın çevresinde döner; orta tıkla kurulunca ve döndürürken görünür']
   ], ['İşaret', 'Görünüş', 'Ne']);
   h += '<p>Boşluğa sağ tıkla açılan menüde <strong>Bakış</strong>: <strong>Ön</strong> · <strong>Arka</strong> · <strong>Sol</strong> · '
     + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '
@@ -1106,6 +1107,8 @@ function _gmSec16(){
       + 'üçgen ağından (≈); parçanın seçimi değişmez'],
     ['<strong>Ölçü</strong>', 'İki tık arası uzaklık ve Δx · Δy · Δz; üçüncü tık yeni ölçü', 'Dairesel kenarda '
       + 'dairenin merkezi, yüzün köşesinde köşe, başka yerde yüzeydeki nokta'],
+    ['Orta tık', 'Tıklanan nokta dönüş merkezi olur; görünüm noktayı tuvalin ortasına kaydırır, bakış ve ölçek aynı kalır',
+      'Parçanın üstünde yüzeyin noktası; orta tuşla sürüklemek kaydırır'],
     ['Sağ tık', 'Parçada ya da ağacın satırında: <strong>Gizle</strong> · <strong>Göster</strong>, <strong>Yalnız bunu '
       + 'göster</strong>, <strong>Tümünü göster</strong>, <strong>Ağaçta göster</strong>, <strong>Seçime yakınlaştır</strong>, '
       + '<strong>Tümünü sığdır</strong>, <strong>Rol</strong>, <strong>Malzeme</strong>, <strong>Seçimi temizle</strong>',

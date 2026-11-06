@@ -12101,6 +12101,14 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
    2026-11-05, Canlı Not 14): zemin dairesi ve düzlemler yok, çizgiler ince,
    yazılar yalnız fare eksenin isabet dairesindeyken (`.hit` fareyi alır,
    `:hover` kaba geçer). */
+/* DÖNÜŞ MERKEZİ (Canlı Not 55): orta tıkla kurulan merkezin noktası — kurulurken ve
+   döndürürken görünür, sonra söner; yeri JS'ten (translate), tıklamayı geçirir. */
+.ve-mw-3b-merkez{ position:absolute; left:0; top:0; z-index:2; width:10px; height:10px; margin:-5px 0 0 -5px;
+  box-sizing:border-box; border-radius:50%; background:var(--accent-primary);
+  box-shadow:0 0 0 2px var(--bg-secondary), 0 0 0 3px var(--accent-primary);
+  pointer-events:none; opacity:0; transition:opacity var(--dur-base) var(--ease-out); }
+.ve-mw-3b-merkez.acik{ opacity:1; }
+@media (prefers-reduced-motion: reduce){ .ve-mw-3b-merkez{ transition:none; } }
 .ve-mw-3b-eksen{ position:absolute; left:12px; bottom:12px; overflow:visible; pointer-events:none; }
 .ve-mw-3b-eksen .hit{ fill:transparent; pointer-events:all; }
 .ve-mw-3b-eksen .ek{ stroke-width:1.75; stroke-linecap:round; stroke-opacity:.9; }
