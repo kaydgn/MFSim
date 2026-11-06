@@ -188,7 +188,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   çözümsüz); görünüm tercihi modelde değil, yalnız açı. Sürüklerken kare YAZILI ve
   yazı bir önceki karenin yerini korur (yapışkan yer, `o.yer`); föyün satırı
   parçasını **perdenin** üstüne alır (`o.secili` + `o.perde`: parça aydınlık, kalan
-  model gölgede). Seçili parça — gövde, takoz, nokta kütle — "bu bileşen"
+  model gölgede); tersi de: çizimde parçanın üstündeyken föyün satırı vurgulu
+  (kullanıcı 2026-11-06, Canlı Not 48). Seçili parça — gövde, takoz, nokta kütle — "bu bileşen"
   tonlarında (vurgu + `--isik`): her yüzü gölgedeki zeminden ve aynı tür
   parçadan açık, iki temada. Katı çizimde takoz ve nokta kütle kutularla AYNI
   ressam sırasında (CAD gibi): kutunun arkasında kalan örtülü ve yazısız,
