@@ -410,7 +410,7 @@ function veMntWizKapat(kaydet){
   if(_mwMasaRO){ try { _mwMasaRO.disconnect(); } catch(e){} _mwMasaRO = null; }
   // Gövde boşaltılır: kapalı pencerede `.ve-fw-*` öğeleri FEAD sihirbazınınkilerle
   // aynı belgede durmasın.
-  ['ve-mw-nav', 've-mw-body', 've-mw-foot'].forEach(function(id){
+  ['ve-mw-nav', 've-mw-body'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.innerHTML = '';
   });
   _mwState = null; _mwCoz = null;
@@ -643,8 +643,6 @@ function veMntWizRender(){
     _mwMasaBagla();
     _mwMasaCiz(c);
   }
-  var foot = document.getElementById('ve-mw-foot');
-  if(foot) foot.innerHTML = veMntWizFootHTML(c);
   if(typeof veMntWiz3bTazele === 'function') veMntWiz3bTazele();
 }
 
@@ -667,7 +665,7 @@ function veMntWizLive(){
   if(k === 'govde') yama('ve-mw-liste', _mwGovdeListeHTML(c));
   if(k === 'takoz') yama('ve-mw-liste', _mwTakozListeHTML(c));
   if(k === 'tork') yama('ve-mw-tork-oku', _mwTorkOkuHTML(c));
-  if(k === 'ozet') yama('ve-mw-yan', _mwStepOzet(c));
+  if(k === 'ozet') yama('ve-mw-yan', _mwStepOzet(c) + veMntWizEylemHTML(c));
   var kur = document.getElementById('ve-mw-create');
   if(kur) kur.disabled = !veMntWizCanCreate().ok;
   _mwMasaCiz(c);
@@ -710,17 +708,22 @@ function veMntWizFootStateHTML(c){
   if(c.ok) return '<span class="ve-fw-ok">' + _mwIkon('check') + ' model çözülüyor</span>';
   return '<span class="ve-fw-err">' + err + ' eksik/çelişkili girdi</span>';
 }
-function veMntWizFootHTML(c){
+// EYLEM ŞERİDİ (kullanıcı 2026-11-06, Canlı Not 58: *"ileri geri butonları çok gizli
+// kalmış. Ayrıca çirkin duruyor. Onları güzel bir yere taşıyalım mı? Boyutlarını da ona
+// göre ayarlayalım."*): pencerenin alt çubuğu yok (22 px'lik düğmeler durum çubuğunun
+// köşesindeydi); Geri · İleri — son adımda Modeli kur — girdilerin sütununun DİBİNDE,
+// yapışık (3B'nin Özellikler eylem şeridinin dili), 32 px; modelin durumu üstünde. İlk
+// adımda Geri yok; kapatmak başlıktaki ✕ ve Esc.
+function veMntWizEylemHTML(c){
   var son = (_mwStep === VE_MW_STEPS.length - 1);
   var kur = veMntWizCanCreate();
-  var h = '<span id="ve-mw-foot-state" class="ve-fw-foot-state">' + veMntWizFootStateHTML(c) + '</span>';
-  h += '<button type="button" class="ve-fw-btn" onclick="veMntWizKapat(true)">Kapat</button>';
-  h += '<button type="button" class="ve-fw-btn"' + (_mwStep === 0 ? ' disabled' : '') + ' onclick="veMntWizGo(-1)">'
-     + _mwIkon('arrow-left') + ' Geri</button>';
-  if(!son) h += '<button type="button" class="ve-fw-btn ve-fw-btn-primary" onclick="veMntWizGo(1)">İleri ' + _mwIkon('arrow-right') + '</button>';
-  else h += '<button type="button" id="ve-mw-create" class="ve-fw-btn ve-fw-btn-go"' + (kur.ok ? '' : ' disabled title="' + _mwEsc(kur.sebep) + '"')
+  var h = '<div class="ve-mw-eylem" id="ve-mw-eylem">'
+    + '<span id="ve-mw-foot-state" class="ve-mw-eylem-durum">' + veMntWizFootStateHTML(c) + '</span><div class="ve-mw-eylem-d">';
+  if(_mwStep > 0) h += '<button type="button" class="ve-fw-btn ve-mw-eylem-geri" onclick="veMntWizGo(-1)">' + _mwIkon('arrow-left') + ' Geri</button>';
+  if(!son) h += '<button type="button" class="ve-fw-btn ve-fw-btn-primary ve-mw-eylem-ileri" onclick="veMntWizGo(1)">İleri ' + _mwIkon('arrow-right') + '</button>';
+  else h += '<button type="button" id="ve-mw-create" class="ve-fw-btn ve-fw-btn-go ve-mw-eylem-ileri"' + (kur.ok ? '' : ' disabled title="' + _mwEsc(kur.sebep) + '"')
      + ' onclick="veMntWizKur()">' + _mwIkon('settings') + ' Modeli kur</button>';
-  return h;
+  return h + '</div></div>';
 }
 
 // ── ADIM GÖVDELERİ ─────────────────────────────────────────────────────────
@@ -735,7 +738,7 @@ function veMntWizStepHTML(step, c){
   if(s.key !== 'ozet' && s.key !== 'kaynak') yan += '<div id="ve-mw-issue">' + veMntWizIssueHTML(c, step) + '</div>';
   return '<div class="ve-fw-masa-duzen" data-adim="' + s.key + '">'
     + _mwMasaHTML(s.key, c)
-    + '<aside class="ve-fw-yan" id="ve-mw-yan" aria-label="' + _mwEsc(s.ad) + ' — girdiler">' + yan + '</aside>'
+    + '<aside class="ve-fw-yan" id="ve-mw-yan" aria-label="' + _mwEsc(s.ad) + ' — girdiler">' + yan + veMntWizEylemHTML(c) + '</aside>'
     + '</div>';
 }
 
@@ -2800,7 +2803,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizSifirla: veMntWizSifirla, veMntWizCanCreate: veMntWizCanCreate, veMntWizKur: veMntWizKur,
     veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim, _mwAynaAd: _mwAynaAd,
     _mwMasaPay: _mwMasaPay, VE_MW_OZET_PANEL: VE_MW_OZET_PANEL, _mwStepOzet: _mwStepOzet,
-    _mwStepTork: _mwStepTork, _mwTakozListeHTML: _mwTakozListeHTML, veMntWizNavHTML: veMntWizNavHTML,
+    _mwStepTork: _mwStepTork, _mwTakozListeHTML: _mwTakozListeHTML, veMntWizNavHTML: veMntWizNavHTML, veMntWizEylemHTML: veMntWizEylemHTML,
     _mwOrnekModelden: _mwOrnekModelden, _mwKurulumPlani: _mwKurulumPlani, _mwTorkZincirSVG: _mwTorkZincirSVG,
     _mwKatalogSecHTML: _mwKatalogSecHTML,
     veMntWizStp: veMntWizStp, veMntWizStpOku: veMntWizStpOku, veMntWizStpBayt: veMntWizStpBayt,

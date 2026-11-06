@@ -100,6 +100,34 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     expect(W.veMntWizAcik()).toBe(false);
     expect(document.getElementById('ve-mw-body').innerHTML).toBe('');
   });
+  // Canlı Not 58 (kullanıcı 2026-11-06): "ileri geri butonları çok gizli kalmış. Ayrıca çirkin
+  // duruyor. Onları güzel bir yere taşıyalım mı?" Önce: 22 px'lik Kapat · Geri · İleri alt çubuğun
+  // köşesindeydi. Şimdi girdilerin sütununun dibinde, yapışık eylem şeridinde, 32 px.
+  test('EYLEM ŞERİDİ: Geri · İleri (son adımda Modeli kur) sütunun son öğesi; ilk adımda Geri yok; Kapat yok; alt çubuk yok', () => {
+    W.veMntWizAc();
+    const dugmeler = () => [...document.querySelectorAll('#ve-mw-yan > #ve-mw-eylem button')].map((b) => b.textContent.trim());
+    const yan = () => document.getElementById('ve-mw-yan');
+    expect(yan().lastElementChild.id).toBe('ve-mw-eylem');
+    expect(dugmeler()).toEqual(['İleri']);
+    expect(document.querySelector('#ve-mw-eylem #ve-mw-foot-state').textContent).toBe('model boş');
+    W.veMntWizGoto(1);
+    expect(dugmeler()).toEqual(['Geri', 'İleri']);
+    expect(document.querySelector('#ve-mw-eylem .ve-mw-eylem-ileri').classList.contains('ve-fw-btn-primary')).toBe(true);
+    W.veMntWizGoto(W.VE_MW_STEPS.length - 1);
+    expect(dugmeler()).toEqual(['Geri', 'Modeli kur']);
+    expect(document.querySelector('#ve-mw-eylem #ve-mw-create').disabled).toBe(true);        // boş modelde kurulmaz
+    expect(document.querySelector('#ve-mw-eylem #ve-mw-create').title).not.toBe('');           // sebebi ipucunda
+    expect(document.getElementById('ve-mw-foot').innerHTML).toBe('');                         // alt çubuğa yazılmaz
+    const fs = require('fs'), path = require('path');
+    const html = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
+    expect(html).not.toMatch(/id="ve-mw-foot"/);
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)).replace(/\s+/g, ' '); };
+    expect(kural('.ve-fw-yan > .ve-mw-eylem')).toMatch(/position:sticky; bottom:0; z-index:2; margin-top:auto;/);
+    expect(kural('.ve-fw-yan .ve-mw-eylem .ve-fw-btn')).toMatch(/height:32px;/);
+    expect(kural('.ve-fw-yan .ve-mw-eylem .ve-mw-eylem-ileri')).toMatch(/flex:1 1 auto;/);
+    expect(kural('.ve-fw-foot .ve-fw-btn')).toMatch(/height:22px/);                              // FEAD'in alt çubuğu değişmez
+  });
   test('boş durumun eksikleri gövde ve takoz adımında', () => {
     const l = W.veMntWizSorunlar(W.veMntWizDefault());
     expect(l.filter((s) => s.tur === 'err').map((s) => s.adim).sort()).toEqual(['govde', 'takoz']);

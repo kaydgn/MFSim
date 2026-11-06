@@ -133,6 +133,58 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
 // ölçülen örtü), tarayıcının boyadığı gövde (elementFromPoint) — ışın kâhini
 // her noktada özgün kutuların en yakınını söyler. Birim tarafı:
 // tests/unit/mount-akso.test.js → İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI.
+// EYLEM ŞERİDİ (kullanıcı 2026-11-06, Canlı Not 58: *"ileri geri butonları çok gizli kalmış. Ayrıca
+// çirkin duruyor. Onları güzel bir yere taşıyalım mı? Boyutlarını da ona göre ayarlayalım."*). Önce:
+// 22 px'lik Kapat · Geri · İleri pencerenin dibindeki durum çubuğunun sağ köşesindeydi. Node'da
+// koşmayan halkalar: şeridin sütunun dibine oturması (kısa sütunda) ve kaydırılırken görünür
+// kalması (uzun sütunda), düğmelerin boyu, gerçek tıkla gezinme, özetin yüzen panelinde kurulum.
+test('EYLEM ŞERİDİ: Geri · İleri girdilerin sütununun dibinde, 32 px; kısa sütunda dipte, uzun sütunda yapışık; özette Modeli kur', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await bootApp(page);
+  await page.evaluate(() => { veMntWizAc(); veMntWizOrnek('tulga'); });
+  await page.waitForFunction(() => document.querySelector('#ve-mw-yan #ve-mw-eylem'), null, { timeout: 20000 });
+  const olc = () => page.evaluate(() => {
+    const y = document.getElementById('ve-mw-yan'), e = document.getElementById('ve-mw-eylem'), Y = y.getBoundingClientRect(), E = e.getBoundingClientRect();
+    return { son: y.lastElementChild === e, alt: Math.round(Y.bottom - E.bottom), ust: E.top >= Y.top - 1,
+      dugme: [...e.querySelectorAll('button')].map((b) => [b.textContent.trim(), Math.round(b.getBoundingClientRect().height)]),
+      foot: !!document.getElementById('ve-mw-foot'), adim: document.querySelector('#ve-mw-nav .ve-fw-step.on .ve-fw-step-no').textContent };
+  });
+  // Başlangıç: Geri yok, İleri satırın tamamı; şerit sütunun dibinde; alt çubuk yok
+  let o = await olc();
+  expect(o).toMatchObject({ son: true, ust: true, foot: false, adim: '1' });
+  expect(Math.abs(o.alt)).toBeLessThanOrEqual(1);
+  expect(o.dugme).toEqual([['İleri', 32]]);
+  await page.click('#ve-mw-eylem .ve-mw-eylem-ileri');
+  o = await olc();
+  expect(o.adim).toBe('2');
+  expect(o.dugme).toEqual([['Geri', 32], ['İleri', 32]]);
+  // uzun sütun: kaydırılınca şerit görünür kalır (dipte, yapışık)
+  await page.evaluate(() => veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'takoz')));
+  const uzun = await page.evaluate(() => {
+    const y = document.getElementById('ve-mw-yan');
+    y.scrollTop = 0;
+    const once = [y.scrollHeight - y.clientHeight];
+    const e = document.getElementById('ve-mw-eylem');
+    const a = [Math.round(y.getBoundingClientRect().bottom - e.getBoundingClientRect().bottom)];
+    y.scrollTop = 99999;
+    a.push(Math.round(y.getBoundingClientRect().bottom - e.getBoundingClientRect().bottom));
+    return { kay: once[0], alt: a };
+  });
+  expect(uzun.alt.every((v) => Math.abs(v) <= 1)).toBe(true);
+  await page.click('#ve-mw-eylem .ve-mw-eylem-geri');
+  expect((await olc()).adim).toBe('2');
+  // Özet: yüzen panelin dibinde Geri · Modeli kur
+  await page.evaluate(() => veMntWizGoto(VE_MW_STEPS.findIndex((s) => s.key === 'ozet')));
+  o = await olc();
+  expect(o.dugme).toEqual([['Geri', 32], ['Modeli kur', 32]]);
+  expect(o.alt).toBe(5);                                              // yüzen panelin iç boşluğu (4 px) + çerçeve
+  // Alt+→ ve Esc eskisi gibi
+  await page.keyboard.press('Alt+ArrowLeft');
+  expect((await olc()).adim).toBe('4');
+  expect(hatalar).toEqual([]);
+});
+
 test('3B DÜZENİ: Asfat, üç bakış — her yazı çip; çip çipe ve örtüye binmez; kılavuz kısa, kesişmez; boyanan gövde ışının en yakını', async ({ page }) => {
   await bootApp(page);
   await page.setViewportSize({ width: 1500, height: 856 });
@@ -176,8 +228,9 @@ test('3B DÜZENİ: Asfat, üç bakış — her yazı çip; çip çipe ve örtüy
         kil.forEach((b, j) => { if (j > i && segKes(a.s, b.s)) t.kesisen++; });
         yazi.forEach((f) => { if (f.k !== a.k && icinden(a.s, f.b)) t.icinden++; });
       });
-      // boyanan gövde: yalnız gövde grupları görünür kalır
-      sv.querySelectorAll('text, line, circle, rect, .ve-ak-t, .ve-ak-gam, .ve-ak-izg, .ve-ak-gol, .ve-ak-gdus, .ve-ak-giz, .ve-ak-sim').forEach((e) => { e.style.visibility = 'hidden'; });
+      // boyanan gövde: yalnız gövde grupları görünür kalır — yazının kırık kılavuzu (path, Canlı Not 41)
+      // da gizlenir: gövdenin üstünden geçen kılavuz "yanlış boyama" sayılıyordu
+      sv.querySelectorAll('text, line, circle, rect, .ve-ak-kilavuz, .ve-ak-t, .ve-ak-gam, .ve-ak-izg, .ve-ak-gol, .ve-ak-gdus, .ve-ak-giz, .ve-ak-sim').forEach((e) => { e.style.visibility = 'hidden'; });
       const yon = veMntAkso.kamYon(C.o.kam), d = [-yon[0], -yon[1], -yon[2]], l = Math.hypot(d[0], d[1]);
       const rr = [d[1] / l, -d[0] / l, 0], uu = [rr[1] * d[2] - rr[2] * d[1], rr[2] * d[0] - rr[0] * d[2], rr[0] * d[1] - rr[1] * d[0]], F = C.F;
       const K0 = C.m.govde.filter((g) => g.kutu).map((g) => ({ k: g.k, lo: [g.x - g.kutu[0] / 2, g.y - g.kutu[1] / 2, g.z - g.kutu[2] / 2], hi: [g.x + g.kutu[0] / 2, g.y + g.kutu[1] / 2, g.z + g.kutu[2] / 2] }));
