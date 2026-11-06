@@ -127,12 +127,13 @@ test('Takoz sihirbazı: etiket tek satır, özet düğmeleri ve çizimi panelin 
 });
 
 // 3B DÜZENİ (kullanıcı 2026-11-05, Canlı Not 40: *"Yazılar falan kayıyor,
-// kutular birbirinin içine giriyor"*). Node'da koşmayan halkalar: GERÇEK yazı
+// kutular birbirinin içine giriyor"*; 2026-11-06, Canlı Not 41: *"uzayan
+// çubuklar … tüm yazılar çerçeveli değil"*). Node'da koşmayan halkalar: GERÇEK yazı
 // kutuları (tarayıcının ölçtüğü genişlik), masanın şeridi ve düğmeleri (DOM'dan
 // ölçülen örtü), tarayıcının boyadığı gövde (elementFromPoint) — ışın kâhini
 // her noktada özgün kutuların en yakınını söyler. Birim tarafı:
 // tests/unit/mount-akso.test.js → İÇ İÇE KUTU · RESSAM SIRASI · DIŞ YAZI.
-test('3B DÜZENİ: Asfat, üç bakış — yazı gövdeye, yazıya, örtüye binmez; kılavuz kesişmez; boyanan gövde ışının en yakını', async ({ page }) => {
+test('3B DÜZENİ: Asfat, üç bakış — her yazı çip; çip çipe ve örtüye binmez; kılavuz kısa, kesişmez; boyanan gövde ışının en yakını', async ({ page }) => {
   await bootApp(page);
   await page.setViewportSize({ width: 1500, height: 856 });
   await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); veMntWizAc(); });
@@ -155,14 +156,19 @@ test('3B DÜZENİ: Asfat, üç bakış — yazı gövdeye, yazıya, örtüye bin
       // yazılar: gövde ve takoz yazısı (G ve eksen üçlüsü hariç), gerçek kutusuyla
       const yazi = [...sv.querySelectorAll(':scope > g[data-ak]')].filter((g) => g.querySelector('text') && g.getAttribute('data-ak') !== 'G')
         .map((g) => ({ k: g.getAttribute('data-ak'), b: kutu(g.getBoundingClientRect()) }));
-      const kil = [...sv.querySelectorAll('line.ve-ak-kilavuz')].map((l) => ({ k: l.getAttribute('data-ak'), s: ['x1', 'y1', 'x2', 'y2'].map((a) => +l.getAttribute(a)) }));
+      // kılavuz kırık çizgi (path) — parçalarına ayrılır
+      const kil = [];
+      sv.querySelectorAll('path.ve-ak-kilavuz, line.ve-ak-kilavuz').forEach((l) => {
+        const k = l.getAttribute('data-ak'), v = l.tagName === 'line' ? ['x1', 'y1', 'x2', 'y2'].map((a) => +l.getAttribute(a)) : l.getAttribute('d').replace(/[ML]/g, ' ').trim().split(/\s+/).map(Number);
+        for (let i = 0; i + 3 < v.length; i += 2) kil.push({ k, s: [v[i], v[i + 1], v[i + 2], v[i + 3]] });
+      });
       const masa = document.getElementById('ve-mw-masa');
       const ortu = [...masa.querySelectorAll('.ve-fw-masa-ust > *, .ve-fw-masa-arac, .ve-fw-masa-gezin')].map((e) => kutu(e.getBoundingClientRect()));
-      const t = { yazi: yazi.length, govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0, piksel: 0, yanlis: 0 };
+      const t = { yazi: yazi.length, cercevesiz: 0, kilEn: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0, piksel: 0, yanlis: 0 };
+      sv.querySelectorAll(':scope > g[data-ak]').forEach((g) => { if (g.querySelector('text') && !g.classList.contains('ve-ak-cip')) t.cercevesiz++; });
+      const boy = {}; kil.forEach((a) => { boy[a.k] = (boy[a.k] || 0) + Math.hypot(a.s[2] - a.s[0], a.s[3] - a.s[1]); });
+      t.kilEn = Math.max(0, ...Object.values(boy));
       yazi.forEach((e, i) => {
-        let ic = 0, n = 0;
-        for (let x = e.b.l + 1; x < e.b.r; x += 3) for (let y = e.b.t + 1; y < e.b.b; y += 3) { n++; if (Object.keys(pol).some((k) => k !== e.k && pol[k].some((P) => icte([x, y], P)))) ic++; }
-        if (ic / n > 0.05) t.govde++;
         if (ortu.some((o) => kes(e.b, o))) t.ortu++;
         yazi.forEach((f, j) => { if (j > i && kes(e.b, f.b)) t.yaziYazi++; });
       });
@@ -188,8 +194,9 @@ test('3B DÜZENİ: Asfat, üç bakış — yazı gövdeye, yazıya, örtüye bin
       veMntWizRender();
       return t;
     }, kam);
-    expect({ kam, govde: s.govde, yaziYazi: s.yaziYazi, ortu: s.ortu, kesisen: s.kesisen, icinden: s.icinden })
-      .toEqual({ kam, govde: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0 });
+    expect({ kam, cercevesiz: s.cercevesiz, yaziYazi: s.yaziYazi, ortu: s.ortu, kesisen: s.kesisen, icinden: s.icinden })
+      .toEqual({ kam, cercevesiz: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0 });
+    expect(s.kilEn).toBeLessThan(170);                                // kısa kırık kılavuz (eski: 238 px)
     expect(s.yazi).toBeGreaterThanOrEqual(7);
     expect(s.piksel).toBeGreaterThan(800);
     expect(s.yanlis / s.piksel).toBeLessThan(0.0015);                 // atılan 8 mm'lik dilim payı
