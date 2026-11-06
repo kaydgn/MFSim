@@ -136,15 +136,17 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (→ *DELİK KÖPRÜSÜ* · *EŞDOĞRUSAL GÜRÜLTÜ* · *TOPLAYICI*) + `mount-step-okuma.spec.js` +
   `mount-3b.spec.js` + `mount-nokta.spec.js` + `mount-kutle.spec.js`.
 - Takoz 3B'nin düzeni **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-03, tasarım tuvali):
-  komut çubuğu (dosyanın adı · açık kesitin ayarı; sağda eylem — SIRADAKİ adım dolu vurgu — ve
-  sağ uçta Kapat; Bakış · Görünüş · Seçim süzgeci · Ölçü · Kesit BOŞLUĞA SAĞ TIK menüsünde,
-  kullanıcı 2026-11-05, Canlı Not 25) → [Ürün ağacı | tuval | Özellikler] → durum
-  çubuğu (imlecin koordinatı). **TAM EKRAN, başlık bandı YOK** (kullanıcı kararı 2026-11-04:
-  *"popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka yere taşınsın"*;
-  `.ve-mw-3b-tam` — pencerenin perdesinde de sihirbazın içinde de). Paneller tuvalin YANINDA,
-  üstünde yüzmez; FEAD'in 3B'si yüzen kartta kalır — ortak `.ve-fw-3b*` kuralları DEĞİŞMEZ,
-  yerleşim `.ve-mw-3b` kapsamında. Tuvalde yalnız eksen ve SAĞ ALTTA iş kartı (STEP okuması ·
-  3B kurulumu; 2026-11-04, kullanıcı: *"yazılar büyük, tam ortada … sağ alta çekelim"*);
+  [Ürün ağacı | tuval | Özellikler] → durum çubuğu (imlecin koordinatı). **KOMUT ÇUBUĞU YOK**
+  (kullanıcı 2026-11-06, Canlı Not 44: *"Bu ribbonu da kaldıralım, yer kazanalım"*): dosyanın
+  adı Ürün ağacının BAŞLIĞINDA (okunurken iş kartında), Kapat tuvalin SAĞ ÜSTÜNDE, açık kesitin
+  ayarı tuvalin SOL ÜSTÜNDEKİ kartta (yalnız kesit açıkken); Bakış · Görünüş · Seçim süzgeci ·
+  Ölçü · Kesit BOŞLUĞA SAĞ TIK menüsünde (Canlı Not 25). **TAM EKRAN, başlık bandı YOK**
+  (kullanıcı kararı 2026-11-04: *"popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı
+  başka yere taşınsın"*; `.ve-mw-3b-tam` — pencerenin perdesinde de sihirbazın içinde de).
+  Paneller tuvalin YANINDA, üstünde yüzmez; FEAD'in 3B'si yüzen kartta kalır — ortak
+  `.ve-fw-3b*` kuralları DEĞİŞMEZ, yerleşim `.ve-mw-3b` kapsamında. Tuvalde eksen, Kapat, kesitin
+  kartı ve SAĞ ALTTA iş kartı (STEP okuması · 3B kurulumu; 2026-11-04, kullanıcı: *"yazılar
+  büyük, tam ortada … sağ alta çekelim"*);
   görünüm küpü ve yakınlık düğmeleri YOK (kullanıcı 2026-11-05: *"Şunları kaldıralım"*).
   Birimler TEK listede, role göre gruplu ve açılır kapanır, motorun aksesuarları motorun
   altında (kullanıcı 2026-11-05); kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız
@@ -816,8 +818,9 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   liste sekiz pencereyi, kimlik adı (`…-overlay`) Takoz'un tam ekranını
   dışarıda bırakmıştı. Kapı: `pencere-ailesi.test.js` + `pencere-ailesi.spec.js`.
   **Tek istisna ÇALIŞMA ALANIDIR, pencere değil:** Takoz'un 3D Görüntüleyici'si
-  tam ekran, başlık bandı yok; adı ve Kapat komut çubuğunda (kullanıcı kararı
-  2026-11-04). Kapı: `mount-3b.test.js` → *TAM EKRAN ve İŞ KARTI*.
+  tam ekran, başlık bandı ve komut çubuğu yok; adı Ürün ağacının başlığında, Kapat
+  tuvalin sağ üstünde (kullanıcı kararları 2026-11-04 · Canlı Not 44). Kapı:
+  `mount-3b.test.js` → *TAM EKRAN ve İŞ KARTI*.
 - **GÖLGE VE TÜL TEMADAN** (`--shadow-*` · `var(--shadow-color)`): tema
   yüzeyinde sabit siyah gölge ve sabit beyaz yarı saydam zemin YAZILMAZ —
   açık temada leke ya da görünmez çizgi (grafiklerin artı imleci varsayılan

@@ -150,7 +150,7 @@ test('DURDUR · DEVAM: durunca üretim durur ve çizilen kalır; Devam bitirir',
     return { sag: Math.round(t.right - k.right), alt: Math.round(t.bottom - k.bottom),
       ad: document.querySelector('#ve-mw-3b-kur .ve-mw-3b-is-bas').textContent.trim(),
       tam: [m.left, m.top, m.width, m.height].map(Math.round).join(' '), ekran: '0 0 ' + innerWidth + ' ' + innerHeight,
-      baslik: !!document.querySelector('#ve-mnt-3b .ve-settings-header'), kapat: !!document.querySelector('#ve-mnt-3b .ve-mw-3b-komut #ve-mw-3b-kapat') };
+      baslik: !!document.querySelector('#ve-mnt-3b .ve-settings-header'), kapat: !!document.querySelector('#ve-mnt-3b #ve-mw-3b-tuval > #ve-mw-3b-kapat') };
   });
   expect(yer).toEqual({ sag: 16, alt: 16, ad: '3B kurulumu', tam: yer.ekran, ekran: '0 0 1440 900', baslik: false, kapat: true });
   await page.waitForTimeout(800);
@@ -520,17 +520,25 @@ test('ÇALIŞMA MASASI: paneller tuvalin yanında; küp yok, bakış listeden; g
   await hazir(page);
   const yer = await page.evaluate(() => {
     const r = (id) => document.getElementById(id).getBoundingClientRect();
-    const t = r('ve-mw-3b-tuval'), a = r('ve-mw-3b-agac'), y = r('ve-mw-3b-yan'), d = r('ve-mw-3b-durum');
-    const k = document.querySelector('.ve-mw-3b-komut').getBoundingClientRect();
-    return { agacSag: a.right, tuvalSol: t.left, tuvalSag: t.right, yanSol: y.left, tuvalUst: t.top, komutAlt: k.bottom, komutH: k.height,
+    const t = r('ve-mw-3b-tuval'), a = r('ve-mw-3b-agac'), y = r('ve-mw-3b-yan'), d = r('ve-mw-3b-durum'), c = r('ve-mw-3b-kapat');
+    const ad = document.querySelector('#ve-mw-3b-agac .ve-mw-3b-dock-bas #ve-mw-3b-dosya'), say = document.getElementById('ve-mw-3b-agac-say');
+    return { agacSag: a.right, tuvalSol: t.left, tuvalSag: t.right, yanSol: y.left, tuvalUst: t.top, agacUst: a.top, yanUst: y.top,
+      kapatSag: Math.round(t.right - c.right), kapatUst: Math.round(c.top - t.top), komut: !!document.querySelector('.ve-mw-3b-komut'),
+      ad: ad && ad.textContent, sayH: say.getBoundingClientRect().height, sayYazi: say.textContent,
       tuvalAlt: t.bottom, durumUst: d.top, durumH: d.height, bant: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')) };
   });
   expect(yer.agacSag).toBeLessThanOrEqual(yer.tuvalSol + 0.5);
   expect(yer.tuvalSag).toBeLessThanOrEqual(yer.yanSol + 0.5);
-  expect(yer.komutAlt).toBeLessThanOrEqual(yer.tuvalUst + 0.5);
   expect(yer.tuvalAlt).toBeLessThanOrEqual(yer.durumUst + 0.5);
-  expect(yer.komutH).toBeLessThanOrEqual(34);                // ince çubuk, tek satır (Canlı Not 13: 45 → 33 px)
   expect(Math.abs(yer.durumH - yer.bant)).toBeLessThan(1);
+  // Komut çubuğu YOK (Canlı Not 44): paneller ve tuval çalışma alanının tepesinden başlar;
+  // dosyanın adı Ürün ağacının başlığında, parça sayısı tek satırda; Kapat tuvalin sağ üstünde
+  expect(yer.komut).toBe(false);
+  expect([yer.tuvalUst, yer.agacUst, yer.yanUst]).toEqual([0, 0, 0]);
+  expect(yer.ad).toBe(path.basename(DENEME));
+  expect(yer.sayYazi).toMatch(/^[\d.]+ parça$/);
+  expect(yer.sayH).toBeLessThan(18);
+  expect([yer.kapatSag, yer.kapatUst]).toEqual([12, 12]);
   // Görünüm küpü ve yakınlık düğmeleri YOK (Canlı Not 15)
   expect(await page.locator('#ve-mw-3b-kup, .ve-mw-3b-yakin, .ve-mw-3b-gez').count()).toBe(0);
   // Araçlar komut çubuğunda YOK (Canlı Not 25): Bakış · Görünüş · Seçim · Ölçü · Kesit boşluğun menüsünde

@@ -65,7 +65,7 @@ describe('KURULUMUN KUTUSU ve BEKLEYEN HESAP', () => {
       .toEqual({ ad: '3B kurulumu', metin: 'Parça 4.512 / 11.694', oran: 0.25 });
     expect(_mw3bKurVeri({ islenen: 0, toplam: 0, yuz: 0, yuzToplam: 0 }).oran).toBe(0);
   });
-  test('hesap beklerken komut çubuğunun düğmesi kapalı, meşgul ve sebebi ipucunda', () => {
+  test('hesap beklerken eylemin düğmesi kapalı, meşgul ve sebebi ipucunda', () => {
     const s = veMntStpOku(require('../helpers/step-takoz.js').gucGrubu());
     const st = { sonuc: s, roller: s.agac.map(() => null), coz: null, hesapBekliyor: { liste: [0], toplam: 1 } };
     st.roller[1] = 'mnt-motor';
@@ -79,7 +79,7 @@ describe('KURULUMUN KUTUSU ve BEKLEYEN HESAP', () => {
     delete st.hesapBekliyor;
     d.innerHTML = veMntWiz3bEylemHTML(st);
     expect(d.querySelector('#ve-mw-3b-hesapla').disabled).toBe(false);
-    // Seçimin bölümleri hesabı ve aktarımı taşımaz (komut çubuğunda)
+    // Seçimin bölümleri hesabı ve aktarımı taşımaz (eylemin kartında)
     expect(veMntWiz3bAltHTML(st, -1)).not.toMatch(/ve-mw-3b-hesapla|ve-mw-3b-aktar/);
   });
 });
@@ -834,11 +834,12 @@ describe('STEP\'TEN BAŞLA — dosya 3B\'nin perdesinde, sihirbazsız', () => {
     } finally { ad.forEach((k, i) => { if (eski[i] === undefined) delete global[k]; else global[k] = eski[i]; }); }
   });
 
-  test('okuma kartı: işin adı ve okumanın eylem satırı (Vazgeç) — dosyanın adı komut çubuğunda; hata durumunda sebebi', () => {
+  test('okuma kartı: işin adı, dosyanın adı ve okumanın eylem satırı (Vazgeç); hata durumunda sebebi', () => {
     const d = document.createElement('div');
     d.innerHTML = _mw3bOkumaHTML({ dosya: 'guc.stp', durum: 'okunuyor', bayt: 100, ilerleme: { evre: 'dosya', oran: 0, bayt: 0, toplam: 100 } });
     expect(d.querySelector('.ve-mw-3b-is-bas').textContent.trim()).toBe('STEP okuma');
-    expect(_mw3bKimlikHTML({ dosya: 'guc.stp' })).toMatch(/<b title="guc\.stp">guc\.stp<\/b>/);
+    // komut çubuğu yok (Canlı Not 44): okunurken dosyanın adı kartta
+    expect(d.querySelector('p#ve-mw-3b-dosya.ve-mw-3b-dosya b').getAttribute('title')).toBe('guc.stp');
     const v = d.querySelector('button[data-mw-stp-vazgec]');
     expect(v.id).toBe('ve-mw-3b-okuma-vazgec');
     expect(v.getAttribute('onclick')).toBe('veMntWizStpVazgec()');
@@ -1092,7 +1093,7 @@ describe('YÜZEY SEÇİMİ — tıklanan üçgenin yüzü, tanımı ve köşeler
 // başlık bandı + ✕; okuma tuvalin ortasında 460 px'lik kart, başlığı 16 px;
 // kurulum kutusu sol üstte. Gerçek tarayıcı: tests/e2e/mount-3b.spec.js →
 // *DURDUR · DEVAM* (kartın yeri, tam ekran) · tests/e2e/mount-cad.spec.js (Kapat).
-describe('TAM EKRAN ve İŞ KARTI — başlık bandı yok, Kapat komut çubuğunda, iş sağ altta', () => {
+describe('TAM EKRAN ve İŞ KARTI — başlık bandı ve komut çubuğu yok, Kapat tuvalin sağ üstünde, iş sağ altta', () => {
   const fs = require('fs'), path = require('path');
   const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
   const html = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
@@ -1116,21 +1117,30 @@ describe('TAM EKRAN ve İŞ KARTI — başlık bandı yok, Kapat komut çubuğun
     o.remove();
   });
 
-  test('başlık bandı yok: pencere ailesinin başlığı ve ✕\'i kurulmaz; dosyanın adı ve Kapat komut çubuğunun iki ucunda', () => {
+  // Kullanıcı 2026-11-06 (Canlı Not 44): "Şu dosya ismini ve 'kapat' butonunu güzel bir
+  // yere taşıyalım … Bu ribbonu da kaldıralım, yer kazanalım." Önce: 33 px'lik komut
+  // çubuğu (dosyanın adı · açık kesitin ayarı · Kapat).
+  test('başlık bandı ve komut çubuğu yok: dosyanın adı Ürün ağacının başlığında, Kapat tuvalin sağ üstünde, kesitin ayarı sol üstte', () => {
     expect(kaynak).not.toMatch(/ve-settings-header|ve-settings-close/);
+    expect(kaynak).not.toMatch(/ve-mw-3b-komut/);
+    expect(css).not.toMatch(/\.ve-mw-3b-komut/);
     const k = kur(_mw3bKimlikHTML({ dosya: 'tulga_guc_grubu_cok_uzun_bir_ad.stp', sonuc: { parcalar: [1, 2, 3] } }));
-    const b = k.querySelector('#ve-mw-3b-dosya b');
+    const b = k.querySelector('h3#ve-mw-3b-dosya b');
     expect(b.textContent).toBe('tulga_guc_grubu_cok_uzun_bir_ad.stp');
     expect(b.getAttribute('title')).toBe(b.textContent);                // kısalan ad tam hâliyle ipucunda
-    expect(k.textContent).not.toMatch(/parça/);                         // parça sayısı ağacın başlığında, tekrar yok
+    expect(k.textContent).not.toMatch(/parça/);                         // parça sayısı başlığın kendi hücresinde
     const c = kur(_mw3bKapatHTML()).querySelector('button');
     expect([c.id, c.getAttribute('onclick'), c.textContent.trim()]).toEqual(['ve-mw-3b-kapat', 'veMntWiz3bKapat()', 'Kapat']);
-    // Sıra: kimlik · araçlar · Kapat (eylem çubukta DEĞİL — Canlı Not 11); okunurken kimlik · Kapat
-    expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"><\/div>'\s*\+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
-    expect(kaynak).toMatch(/'<div class="ve-mw-3b-komut">' \+ _mw3bKimlikHTML\(s\) \+ _mw3bKapatHTML\(\) \+ '<\/div>'/);
-    expect(kural('.ve-mw-3b-dosya + .ve-mw-3b-kapat')).toMatch(/margin-left:auto/);
-    // Çubuğun dosya kimliği Özellikler'in seçim kimliğiyle sınıf PAYLAŞMAZ (2026-11-05:
-    // çubuğun 26 px'lik kutusu seçimin adını ve yolunu Rol satırının üstüne bindiriyordu)
+    // Ağacın başlığı: ad · parça sayısı; Kapat ve kesitin kartı tuvalin içinde (görüntüleyici ve okuma)
+    expect(kaynak).toMatch(/<div class="ve-mw-3b-dock-bas">' \+ _mw3bKimlikHTML\(s\)\s*\+ '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"><\/span><\/div>'/);
+    expect(kaynak).toMatch(/'<div class="ve-mw-3b-arac ve-mw-3b-kart" id="ve-mw-3b-arac"><\/div>'\s*\+ _mw3bKapatHTML\(\)/);
+    expect(kaynak).toMatch(/id="ve-mw-3b-tuval" data-durum="okunuyor">' \+ _mw3bKapatHTML\(\)/);
+    expect(kural('.ve-mw-3b-kapat')).toMatch(/position:absolute; top:12px; right:12px/);
+    expect(kural('.ve-mw-3b-arac')).toMatch(/position:absolute; left:12px; top:12px/);
+    expect(kural('.ve-mw-3b-arac:empty')).toMatch(/display:none/);      // kesit kapalıyken kart yok
+    expect(kural('.ve-mw-3b-dock-bas .ve-fw-dim')).toMatch(/flex:none; white-space:nowrap/);
+    // Dosyanın kimliği Özellikler'in seçim kimliğiyle sınıf PAYLAŞMAZ (2026-11-05:
+    // çubuğun kutusu seçimin adını Rol satırının üstüne bindiriyordu)
     expect(css).not.toMatch(/\n\.ve-mw-3b-kimlik\{/);
     expect(k.querySelector('#ve-mw-3b-dosya').className).toBe('ve-mw-3b-dosya');
   });
@@ -1178,7 +1188,7 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(kural('.ve-mw-3b-masa > .ve-fw-3b-tuval')).toMatch(/position:relative; inset:auto/);
     expect(kural('.ve-mw-3b-yan')).not.toMatch(/position:\s*absolute/);
     expect(kural('.ve-mw-3b-agac')).not.toMatch(/position:\s*absolute/);
-    expect(kural('.ve-mw-3b-komut')).not.toMatch(/position:\s*absolute/);
+    expect(kural('.ve-mw-3b-komut')).toBe(null);                          // komut çubuğu yok (Canlı Not 44)
     // Dar pencere kararı pencereye sorulur; değişkenler kabın kendisine değil ızgaraya yazılır
     expect(css).toMatch(/@container vefw3b \(max-width: 1120px\)\{\n  \.ve-mw-3b > \.ve-fw-3b-govde\.ve-mw-3b-masa\{ --mw3b-agac/);
     expect(kural('.ve-fw-3b-tuval')).toMatch(/position:absolute; inset:0/);
@@ -1427,9 +1437,9 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
   // "Şunları kaldıralım." Bakış komut çubuğunun listesinde, yakınlık tekerlekte.
   // Kullanıcı 2026-11-05 (Canlı Not 13): "boyuna çok geniş olmuş. Biraz
   // daraltalım ve alan kazanalım." Denetimler 26 px, dolgu 3 px (çubuk 45 → 33 px).
-  test('komut çubuğu ince: dolgu 3 px, her denetim 26 px', () => {
-    expect(kural('.ve-mw-3b-komut')).toMatch(/padding:3px 10px;/);
-    ['.ve-mw-3b-arac-b', '.ve-mw-3b-sec', '.ve-mw-3b-dosya', '.ve-mw-3b-hap'].forEach((k) => expect(kural(k)).toMatch(/height:26px;/));
+  test('denetimler ince: her denetim 26 px (Canlı Not 13); komut çubuğu yok (Canlı Not 44)', () => {
+    expect(kural('.ve-mw-3b-komut')).toBe(null);
+    ['.ve-mw-3b-arac-b', '.ve-mw-3b-sec', '.ve-mw-3b-hap'].forEach((k) => expect(kural(k)).toMatch(/height:26px;/));
     expect(kural('.ve-mw-3b-bolme .ve-mw-3b-arac-b')).toMatch(/height:22px;/);
   });
   test('görünüm küpü ve yakınlık düğmeleri YOK — ne üretici ne kural', () => {

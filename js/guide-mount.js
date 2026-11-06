@@ -1037,7 +1037,7 @@ function _gmSec16(){
       + 'basın ya da dosyayı <strong>STEP dosyası</strong> bölümüne bırakın.',
     'Okunurken eylem satırında çubuk ve <strong>Vazgeç</strong> durur; okuma ekranı dondurmaz.',
     'Dosya okununca 3B tam ekran açılır; parça ağacı <strong>Parçalar</strong> bölümündedir. '
-      + 'Komut çubuğunun sağ ucundaki <strong>Kapat</strong> ya da Esc yalnız 3B’yi kapatır, '
+      + 'Tuvalin sağ üstündeki <strong>Kapat</strong> ya da Esc yalnız 3B’yi kapatır, '
       + '<strong>3B’de aç</strong> yeniden açar.'
   ]);
   h += _gmAlanTablo('3D Görüntüleyici penceresi — bölümler', [
@@ -1050,9 +1050,10 @@ function _gmSec16(){
       + '<strong>Modele uygula</strong> · <strong>Dosyanın sistemine taşı</strong>', 'Hesaptan sonra']
   ], ['Bölüm', 'Ne', 'Not']);
   h += _gmAlanTablo('3B görüntüleyici — düzen', [
-    ['Komut çubuğu', 'Solda dosyanın adı; kesit açıkken kesitin ayarı; sağ uçta <strong>Kapat</strong>',
-      '3B tam ekran, ayrı başlık bandı yok; araçlar boşluğa sağ tıkta'],
-    ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
+    ['<strong>Ürün ağacı</strong>', 'Solda; başlığında dosyanın adı ve parça sayısı, altında arama alanı',
+      'Seçim ağaçla 3B arasında ortak. 3B tam ekran; başlık bandı ve komut çubuğu yok, araçlar boşluğa sağ tıkta'],
+    ['<strong>Kapat</strong>', 'Tuvalin sağ üst köşesinde', 'Esc de kapatır'],
+    ['Kesit kartı', 'Tuvalin sol üstünde, kesit açıkken: eksen, konum, <strong>Ters</strong>', 'Kesit kapanınca kalkar'],
     ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve türü, özellik satırları (<strong>Rol</strong>, atanmışsa '
       + '<strong>Malzeme</strong>, takozun noktası, <strong>Motor modeli</strong> ve referansı, katalog), birimin kütlesi ve CG’si, '
       + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Kapalı başlar: şerit açar, başlığındaki düğme '
@@ -1074,9 +1075,9 @@ function _gmSec16(){
     + '<strong>Sağ</strong> · <strong>Üst</strong> · <strong>Alt</strong> · <strong>İzometrik</strong>; model seçilen bakışta '
     + 'sığar; yakınlık tekerlekle. <strong>Görünüş</strong>: <em>Gölgeli ve kenar</em>, '
     + '<em>Gölgeli</em> (kenar çizgisi yok), <em>X-ışını</em> (seçimin dışındaki parçalar saydam; içteki parçalar '
-    + 'dıştakilerin arkasından görünür). <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: ayarı komut '
-    + 'çubuğunda — kaydırıcı düzlemi taşır, <strong>Ters</strong> öteki yanı bırakır, çarpı kesiti kapatır; kesilen yan '
-    + 'çizilmez ve seçilmez.</p>';
+    + 'dıştakilerin arkasından görünür). <strong>Kesit</strong> montajı X, Y ya da Z düzlemiyle keser: ayarı tuvalin '
+    + 'sol üstündeki kartta — kaydırıcı düzlemi taşır, <strong>Ters</strong> öteki yanı bırakır, çarpı kesiti kapatır; '
+    + 'kesilen yan çizilmez ve seçilmez.</p>';
   h += _gmAlanTablo('3B görüntüleyici — seçim ve ölçü', [
     ['<strong>Parça</strong>', 'Tık parçayı seçer; rol ve ağaç bu seçimle', 'Olağan süzgeç'],
     ['<strong>Yüzey</strong>', 'Fare altındaki yüz açık vurgulanır, tık yüzü seçer; yüz önündeki parçaların '

@@ -8984,15 +8984,15 @@ span.ve-fw-ro{ display:inline-block; }
 /* Okunurken tuvalin zemini 3B'nin stüdyo geçişi (_mw3bZemin ile aynı duraklar) */
 .ve-mw-3b .ve-fw-3b-tuval[data-durum="okunuyor"]{ cursor:default;
   background:linear-gradient(180deg, var(--bg-secondary) 50%, var(--bg-tertiary)); }
-/* TAKOZ 3B — KOMUT ÇUBUĞU (js/cp-mount-3b-arac.js · çalışma masası 2026-11-03):
-   başlığın altında, tuvalin üstünde yüzmez. Solda araçlar (Bakış · Görünüş
-   listeleri · Parça|Yüzey · Ölçü · Kesit; kesit açıkken altında kesitin satırı),
-   sağda eylem. Dar pencerede araçlar satırlara kırılır, eylem sağda kalır.
-   BOYU İNCE (kullanıcı 2026-11-05, Canlı Not 13: *"boyuna çok geniş olmuş. Biraz
-   daraltalım ve alan kazanalım"*): denetimler 26 px, dolgu 3 px — çubuk 45 → 33 px. */
-.ve-mw-3b-komut{ flex:none; display:flex; flex-wrap:wrap; align-items:flex-start; gap:4px 12px; padding:3px 10px;
-  background:var(--bg-secondary); border-bottom:1px solid var(--border-color); }
-.ve-mw-3b-arac{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:4px; }
+/* TAKOZ 3B — KOMUT ÇUBUĞU YOK (kullanıcı 2026-11-06, Canlı Not 44: *"Bu ribbonu da
+   kaldıralım, yer kazanalım"*; 33 px'lik şerit dosyanın adını, açık kesitin ayarını
+   ve Kapat'ı taşıyordu): ad Ürün ağacının başlığında, Kapat tuvalin sağ üstünde,
+   açık kesitin ayarı tuvalin SOL ÜSTÜNDEKİ kartta — yalnız kesit açıkken. Araçlar
+   (Bakış · Görünüş · Parça|Yüzey · Ölçü · Kesit) boşluğa sağ tık menüsünde.
+   Denetimler 26 px (Canlı Not 13). */
+.ve-mw-3b-arac{ position:absolute; left:12px; top:12px; z-index:3; max-width:calc(100% - 140px); box-sizing:border-box;
+  display:flex; flex-direction:column; gap:4px; padding:4px 6px; background:var(--bg-secondary);
+  border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); }
 .ve-mw-3b-arac:empty{ display:none; }
 .ve-mw-3b-arac-sira{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; min-width:0; }
 .ve-mw-3b-arac-grup{ display:flex; flex-wrap:wrap; gap:2px; }
@@ -9014,19 +9014,18 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-sec > .mf-ico{ flex:none; width:15px; height:15px; color:var(--text-secondary); }
 .ve-mw-3b-sec select{ height:24px; padding-left:0; border:0; outline:none; background-color:transparent;
   font:inherit; font-size:var(--fs-body); color:var(--text-primary); cursor:pointer; }
-/* KİMLİK ve KAPAT — tam ekran çalışma alanında başlık bandı yok (2026-11-04):
-   solda dosyanın adı (kısalan ad tam hâliyle ipucunda), sağ uçta Kapat.
-   Okunurken çubukta yalnız ikisi var: Kapat sağa itilir. Sınıf `.ve-mw-3b-dosya`
-   (2026-11-05): `.ve-mw-3b-kimlik` Özellikler'in seçim kimliğiyle ortaktı ve
-   çubuğun 300 px · 26 px kutusu oradaki adı ve yolu ezip Rol satırının üstüne
-   bindiriyordu (Canlı Not 10 · 16'nın ekranı). */
-.ve-mw-3b-dosya{ flex:0 1 auto; min-width:0; max-width:300px; display:flex; align-items:center; gap:7px; height:26px;
-  padding-right:12px; border-right:1px solid var(--border-color); font-size:var(--fs-body); color:var(--text-primary); }
-.ve-mw-3b-dosya > .mf-ico{ flex:none; width:15px; height:15px; color:var(--ink-accent); }
+/* DOSYANIN ADI ve KAPAT — başlık bandı ve komut çubuğu yok (2026-11-04 · Canlı
+   Not 44): ad Ürün ağacının BAŞLIĞI (kısalan ad tam hâliyle ipucunda, parça sayısı
+   yanında), okunurken iş kartında; Kapat tuvalin sağ üst köşesinde yüzer. Sınıf
+   `.ve-mw-3b-dosya` (2026-11-05): `.ve-mw-3b-kimlik` Özellikler'in seçim kimliğiyle
+   ortaktı ve çubuğun kutusu oradaki adı Rol satırının üstüne bindiriyordu. */
+.ve-mw-3b-dosya{ flex:1 1 auto; min-width:0; margin:0; display:flex; align-items:center; gap:6px;
+  font-size:var(--fs-body); font-weight:600; color:var(--text-heading); }
+.ve-mw-3b-dosya > .mf-ico{ flex:none; width:14px; height:14px; color:var(--ink-accent); }
 .ve-mw-3b-dosya b{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
-.ve-mw-3b-kapat{ flex:none; }
-.ve-mw-3b-dosya + .ve-mw-3b-kapat{ margin-left:auto; }
-.ve-mw-3b-dosya:has(+ .ve-mw-3b-kapat){ border-right:0; }
+.ve-mw-3b-is .ve-mw-3b-dosya{ font-weight:400; color:var(--text-secondary); }
+.ve-mw-3b-is .ve-mw-3b-dosya b{ font-weight:400; }
+.ve-mw-3b-kapat{ position:absolute; top:12px; right:12px; z-index:3; box-shadow:var(--shadow-lg); }
 /* EYLEM KARTI (kullanıcı 2026-11-05, Canlı Not 11): tuvalin SAĞ ALTINDA, rol
    verilince belirir; iş kartıyla aynı köşede, onun altında (.ve-mw-3b-sagalt
    ikisini dizer). SIRADAKİ adım dolu vurgu (.ve-mw-3b-hap-ana), öteki
@@ -9048,8 +9047,8 @@ span.ve-fw-ro{ display:inline-block; }
 .ve-mw-3b-hap[disabled], .ve-mw-3b-hap[disabled]:hover{ cursor:not-allowed; color:var(--text-muted); background:var(--bg-tertiary);
   border-color:var(--border-color); }
 .ve-mw-3b-hap > .mf-ico{ width:14px; height:14px; }
-/* Açık kesitin ayarı — çubuğun orta kısmında YALNIZ kesit açıkken (Canlı Not 25:
-   araçlar boşluğa sağ tık menüsünde); adı ve kapat düğmesi satırın uçlarında. */
+/* Açık kesitin ayarı — tuvalin sol üstündeki kartta YALNIZ kesit açıkken (Canlı
+   Not 25 · 44); adı ve kapat düğmesi satırın uçlarında. */
 .ve-mw-3b-kesit-ad{ display:inline-flex; align-items:center; gap:5px; margin-right:4px; font-size:var(--fs-tiny); font-weight:600; color:var(--text-secondary); }
 .ve-mw-3b-kesit-ad .mf-ico{ width:13px; height:13px; }
 .ve-mw-3b-kesit-d{ width:220px; max-width:40vw; accent-color:var(--accent-primary); }
@@ -12207,7 +12206,7 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
   display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 12px;
   background:var(--bant-zemin); border-bottom:1px solid var(--border-color); }
 .ve-mw-3b-dock-bas h3{ margin:0; font-size:var(--fs-body); font-weight:600; color:var(--text-heading); }
-.ve-mw-3b-dock-bas .ve-fw-dim{ font-size:var(--fs-tiny); font-variant-numeric:tabular-nums; }
+.ve-mw-3b-dock-bas .ve-fw-dim{ flex:none; white-space:nowrap; font-size:var(--fs-tiny); font-variant-numeric:tabular-nums; }
 /* ÖZELLİKLER AÇILIR KAPANIR (kullanıcı 2026-11-05, Canlı Not 26; js/cp-mount-3b.js →
    veMntWiz3bYanAc): kapalı panel bir ŞERİT — tek düğme, ikon ve dikey ad; tuval
    genişliği alır. İçerik kurulur ama gösterilmez. Düğmeler Bileşenler sütununun

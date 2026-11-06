@@ -53,11 +53,11 @@ function veMntWiz3bKesitAralik(kutu, eksen){
   return [lo - p, hi + p];
 }
 
-// Komut çubuğunun orta kısmı (saf, testli). D: { kesit: { eksen, d, ters } | null, aralik: [lo, hi] }.
-// ÇALIŞMA MASASI (2026-11-03): çubuk başlığın altında, tuvalin üstünde yüzmez.
-// Bakış · Görünüş · seçim süzgeci · Ölçü · Kesit çubukta DEĞİL, boşluğa sağ tık
-// menüsünde (kullanıcı 2026-11-05, Canlı Not 25: *"Burada kalmalarına gerek yok"*);
-// çubuk yalnız AÇIK kesitin ayarını taşır (eksen · konum · Ters) — kip kapanınca boş.
+// AÇIK KESİTİN AYARI (saf, testli). D: { kesit: { eksen, d, ters } | null, aralik: [lo, hi] }.
+// Bakış · Görünüş · seçim süzgeci · Ölçü · Kesit boşluğa sağ tık menüsünde
+// (kullanıcı 2026-11-05, Canlı Not 25: *"Burada kalmalarına gerek yok"*); komut
+// çubuğu yok (Canlı Not 44) — ayar tuvalin SOL ÜSTÜNDEKİ kartta (eksen · konum ·
+// Ters), yalnız kesit açıkken; kip kapanınca kart boş ve gizli.
 function veMntWiz3bAracHTML(D){
   var k = D && D.kesit;
   if(!k) return '';
