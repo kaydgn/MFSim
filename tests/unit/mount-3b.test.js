@@ -365,6 +365,87 @@ describe('DÖNÜŞ MERKEZİ — orta tık tıklanan noktayı merkez yapar, gör�
   });
 });
 
+// ── MERKEZ GEOMETRİDE SABİT (kullanıcı 2026-11-06, Canlı Not 60) ─────────────
+// "Dönme ekseni ekranı kaydırınca beraber kayıyor. Böyle olmayacak. Noktayı nereye
+// atadıysam … 3D geometrinin üzerinde sabit kalacak." Önce: merkez kameranın hedefiydi,
+// kaydırma hedefi taşıdığı için merkez ekranla birlikte kayıyordu. Gerçek tarayıcı:
+// tests/e2e/mount-3b.spec.js → *DÖNÜŞ MERKEZİ* (kaydırma ve ardından döndürme).
+describe('MERKEZ GEOMETRİDE SABİT — döndürme dünyadaki merkezin çevresinde, kaydırma onu oynatmaz', () => {
+  const ic = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const fark = (a, b) => a.map((x, i) => x - b[i]);
+  const kamera = (h, t, p, r) => { const Z = _mw3bCerceve(t, p)[2]; return h.map((x, i) => x + r * Z[i]); };
+  // merkezin kameradaki koordinatları (sağ · yukarı · geri)
+  const kameradaki = (M, h, t, p, r) => { const F = _mw3bCerceve(t, p), d = fark(M, kamera(h, t, p, r)); return F.map((e) => ic(d, e)); };
+  test('çerçeve three.js lookAt\'ınki: dik birim üçlü, X yatay, Y yukarı bakar', () => {
+    [[0, 0], [0.7, 0.4], [-2.1, -1.2], [3, 1.5]].forEach(([t, p]) => {
+      const [X, Y, Z] = _mw3bCerceve(t, p);
+      [X, Y, Z].forEach((e) => expect(Math.hypot(...e)).toBeCloseTo(1, 12));
+      expect(ic(X, Y)).toBeCloseTo(0, 12); expect(ic(Y, Z)).toBeCloseTo(0, 12); expect(ic(X, Z)).toBeCloseTo(0, 12);
+      expect(X[2]).toBe(0);
+      expect(Y[2]).toBeGreaterThan(0);
+    });
+  });
+  test('döndürmede merkezin kameradaki yeri DEĞİŞMEZ — ekranda yerinde durur', () => {
+    const durumlar = [
+      { h: [0, 0, 0], M: [120, -40, 30], t0: 0.3, p0: 0.2, t1: 0.9, p1: -0.4, r: 1500 },
+      { h: [500, 200, -100], M: [380, 120, 410], t0: -1.2, p0: 0.8, t1: 2.4, p1: 0.1, r: 2400 },
+      { h: [10, 20, 30], M: [-300, 900, 50], t0: 2.0, p0: -0.6, t1: 2.05, p1: -0.55, r: 800 },
+    ];
+    durumlar.forEach(({ h, M, t0, p0, t1, p1, r }) => {
+      const h1 = veMntWiz3bMerkezDonus(h, M, t0, p0, t1, p1);
+      const a = kameradaki(M, h, t0, p0, r), b = kameradaki(M, h1, t1, p1, r);
+      a.forEach((x, i) => expect(b[i]).toBeCloseTo(x, 8));
+      // hedef ile merkezin uzaklığı da korunur (katı dönüş)
+      expect(Math.hypot(...fark(h1, M))).toBeCloseTo(Math.hypot(...fark(h, M)), 8);
+    });
+    // merkez hedefin kendisiyse hedef yerinde (Canlı Not 55'in ortalanmış hâli)
+    expect(veMntWiz3bMerkezDonus([5, 6, 7], [5, 6, 7], 0.1, 0.2, 1.1, -0.3)).toEqual([5, 6, 7]);
+    // bakış değişmezse hedef yerinde
+    veMntWiz3bMerkezDonus([5, 6, 7], [50, -60, 70], 0.4, 0.2, 0.4, 0.2).forEach((x, i) => expect(x).toBeCloseTo([5, 6, 7][i], 9));
+  });
+  const sahte = (h, pivot, kam) => {
+    const vek = (a) => ({ x: a[0], y: a[1], z: a[2], set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; } });
+    return { ctrl: { theta: 0.3, phi: 0.2, r: 1000, hedef: vek(h) }, pivot: pivot ? vek(pivot) : null,
+      camera: { position: vek(kam || kamera(h, 0.3, 0.2, 1000)), near: 2 } };
+  };
+  test('merkez yokken eski davranış: yalnız bakış açıları değişir, hedef yerinde', () => {
+    const V = sahte([1, 2, 3], null);
+    _mw3bDondur(V, 0.25, -0.1);
+    expect([V.ctrl.theta, V.ctrl.phi]).toEqual([0.55, 0.2 - 0.1]);
+    expect([V.ctrl.hedef.x, V.ctrl.hedef.y, V.ctrl.hedef.z]).toEqual([1, 2, 3]);
+  });
+  test('merkez varken hedef merkez çevresinde döner; kutup sınırında açı kelepçelenir', () => {
+    const V = sahte([0, 0, 0], [200, 50, -30]);
+    _mw3bDondur(V, 0.5, 0.3);
+    const bek = veMntWiz3bMerkezDonus([0, 0, 0], [200, 50, -30], 0.3, 0.2, 0.8, 0.5);
+    [V.ctrl.hedef.x, V.ctrl.hedef.y, V.ctrl.hedef.z].forEach((x, i) => expect(x).toBeCloseTo(bek[i], 9));
+    expect(V.pivot.x).toBe(200);                                        // merkez dünyada yerinde
+    const U = sahte([0, 0, 0], [10, 0, 0]);
+    _mw3bDondur(U, 0, 5);
+    expect(U.ctrl.phi).toBe(VE_MW_3B_PHI);
+  });
+  test('kameranın arkasında kalan merkez bırakılır (tekerlekle içinden geçilince)', () => {
+    const h = [0, 0, 0], kam = kamera(h, 0.3, 0.2, 1000);
+    const arkada = kam.map((x, i) => x + 50 * _mw3bCerceve(0.3, 0.2)[2][i]);   // kameranın da gerisinde
+    const V = sahte(h, arkada, kam);
+    _mw3bDondur(V, 0.4, 0);
+    expect(V.pivot).toBe(null);
+    expect([V.ctrl.hedef.x, V.ctrl.hedef.y, V.ctrl.hedef.z]).toEqual(h);
+  });
+  test('bağlantı: sürükleme merkez çevresinde döndürür, kaydırma merkeze dokunmaz, sığdırma bırakır, işaret merkezi gösterir', () => {
+    const fs = require('fs'), path = require('path');
+    const k = fs.readFileSync(path.join(__dirname, '../../js/cp-mount-3b.js'), 'utf8');
+    expect(k).toMatch(/else _mw3bDondur\(V, -dx \* 0\.008, dy \* 0\.008\);/);
+    const kaydir = k.slice(k.indexOf('function _mw3bKaydir('), k.indexOf('\n}', k.indexOf('function _mw3bKaydir(')));
+    expect(kaydir).not.toMatch(/pivot/);
+    const sig = k.slice(k.indexOf('function _mw3bSigdir('), k.indexOf('function _mw3bOtoSigdir('));
+    expect(sig).toMatch(/V\.pivot = null;/);
+    expect(k).toMatch(/var Q = \(V\.pivot \|\| V\.ctrl\.hedef\)\.clone\(\)\.project\(V\.camera\)/);
+    expect(k).toMatch(/else if\(V\.pivot\) _mw3bMerkezYaz\(V, true\);/);   // kaydırırken işaret geometriyle
+    expect(k).not.toMatch(/V\.merkez\b/);
+  });
+});
+
 // ── SEÇİM KİPİNDE ODAK (kullanım notu T05) ────────────────────────────────
 describe('SEÇİM KİPİNDE ODAK — yalnız kipteki birimin işaretleri', () => {
   const I = [{ t: 'govde', u: 3 }, { t: 'ref', u: 3 }, { t: 'govde', u: 7 }, { t: 'takoz', u: 9 }, { t: 'model' }];
