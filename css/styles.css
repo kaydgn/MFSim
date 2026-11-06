@@ -11411,6 +11411,7 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   overflow:auto; overscroll-behavior:contain;
   background:var(--bg-primary); color:var(--text-primary);
   font-size:var(--fs-body); line-height:1.4;
+  container:vebas / size;
 }
 .ve-bas[hidden]{ display:none; }
 .ve-bas-ic{ box-sizing:border-box; display:flex; }
@@ -11427,6 +11428,15 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
   display:flex; flex-direction:column; gap:18px;
   padding:18px 20px 16px;
   background:var(--bg-secondary); border-right:1px solid var(--border-color);
+}
+/* PANEL YERİNDE KALIR (kullanıcı 2026-11-06, Canlı Not 47: *"Değişikliklerde aşağıya
+   inerken, sol taraftaki sütundaki yazılar … tepede kalıyor. Aşağıya indikçe solda
+   sabit olarak gelsin"*): yan yana düzende panel sayfanın GÖRÜNEN yüksekliği kadar
+   (100cqh, kap `.ve-bas`) ve tepeye yapışık; sağdaki masa kayarken kimlik, kapılar ve
+   dizin yerinde, dönüş dipte. Panelin içeriği sığmazsa kendi içinde kayar. Dar
+   tuvalde (alt alta) yapışmaz. */
+@container vebas (min-width: 900px){
+  .ve-bas-ic--masa > .ve-bas-panel{ position:sticky; top:0; height:100cqh; overflow-y:auto; }
 }
 /* Dönüşü panelin altında taşıyan sayfa açıkken köşedeki dönüş düğmesi gizli
    (Canlı Not 19: *"Geri butonunu alt taraflara uygun bir yere taşıyalım"*) */

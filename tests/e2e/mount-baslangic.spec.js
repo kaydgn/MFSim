@@ -116,19 +116,55 @@ test('AÇILIŞ: sayfa tuvali örter, dönüş panelin altında, düğüm KURULMA
 });
 
 test('TEKERLEK sayfayı kaydırır, kadrajı oynatmaz', async ({ page }) => {
-  // Kısa pencere: sayfanın içeriği sığmasın (1366×600'de sığıyor — ölçüldü)
+  // Kısa pencere: panelin içeriği sığmasın (1366×600'de sığıyor — ölçüldü). Panel yan
+  // yana düzende sayfanın görünen yüksekliği kadar (Canlı Not 47): sığmayan panel kendi
+  // içinde kayar; imlecin altındaki içerik kayar, tuvalin kadrajı oynamaz.
   await page.setViewportSize({ width: 1200, height: 460 });
   await bootApp(page);
   await takozGir(page);
-  expect(await page.evaluate(() => { const e = document.getElementById('ve-mnt-baslangic'); return e.scrollHeight > e.clientHeight; })).toBe(true);
+  expect(await page.evaluate(() => { const e = document.querySelector('#ve-mnt-baslangic .ve-bas-panel'); return e.scrollHeight > e.clientHeight; })).toBe(true);
   const once = await page.evaluate(() => ({ z: canvasZoom, x: canvasOffset.x, y: canvasOffset.y }));
-  await page.mouse.move(700, 300);
+  const p = await page.locator('#ve-mnt-baslangic .ve-bas-panel').boundingBox();
+  await page.mouse.move(p.x + p.width / 2, p.y + p.height / 2);
   await page.mouse.wheel(0, 400);
   await page.waitForTimeout(200);
   const sonra = await page.evaluate(() => ({ z: canvasZoom, x: canvasOffset.x, y: canvasOffset.y,
-    kay: document.getElementById('ve-mnt-baslangic').scrollTop }));
+    kay: document.getElementById('ve-mnt-baslangic').scrollTop + document.querySelector('#ve-mnt-baslangic .ve-bas-panel').scrollTop }));
   expect({ z: sonra.z, x: sonra.x, y: sonra.y }).toEqual(once);
   expect(sonra.kay).toBeGreaterThan(0);
+});
+
+// PANEL YERİNDE (kullanıcı 2026-11-06, Canlı Not 47): sağdaki değişiklikler kayarken
+// soldaki panel (kimlik · kapılar · dizin) yerinde kalır. Önce: 600 px kaydırınca panelin
+// tepesi −600 px'teydi, kimlik görünmüyordu.
+test('PANEL YERİNDE: değişiklikler kayarken panel tepede, görünen yükseklik kadar; panel üstünde tekerlek sayfayı kaydırır', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 800 });
+  await bootApp(page);
+  await takozGir(page);
+  // sayfanın giriş animasyonu bitsin (ölçek ve saydamlık geçişi kutuları küçük ölçtürür)
+  await page.waitForFunction(() => document.getAnimations().every((x) => x.playState !== 'running'));
+  // masayı uzat (modüler kopyada derlemenin değişiklik listesi boş): sayfa kaysın
+  await page.evaluate(() => { document.querySelector('#ve-mnt-baslangic .ve-bas-masa').insertAdjacentHTML('beforeend', '<div style="height:2000px" aria-hidden="true"></div>'); });
+  await expect.poll(() => page.evaluate(() => { const e = document.getElementById('ve-mnt-baslangic'); return e.scrollHeight - e.clientHeight; })).toBeGreaterThan(600);
+  const olc = () => page.evaluate(() => {
+    const bas = document.getElementById('ve-mnt-baslangic'), B = bas.getBoundingClientRect();
+    const P = bas.querySelector('.ve-bas-panel').getBoundingClientRect(), K = bas.querySelector('.ve-bas-kimlik').getBoundingClientRect();
+    const D = bas.querySelector('.ve-bas-donus').getBoundingClientRect();
+    return { kay: bas.scrollTop, panelUst: Math.round(P.top - B.top), panelH: Math.round(P.height), gorunen: bas.clientHeight,
+      kimlik: K.top >= B.top && K.bottom <= B.bottom, donus: D.top >= B.top && D.bottom <= B.bottom };
+  });
+  await page.evaluate(() => { document.getElementById('ve-mnt-baslangic').scrollTop = 600; });
+  const a = await olc();
+  expect(a.kay).toBe(600);
+  expect(a.panelUst).toBe(0);
+  expect(a.panelH).toBe(a.gorunen);
+  expect([a.kimlik, a.donus]).toEqual([true, true]);
+  // panelin üstündeki tekerlek de sayfayı kaydırır (panel sığıyorsa kendisi kaymaz)
+  const p = await page.locator('#ve-mnt-baslangic .ve-bas-panel').boundingBox();
+  await page.mouse.move(p.x + p.width / 2, p.y + 200);
+  await page.mouse.wheel(0, -300);
+  await expect.poll(async () => (await olc()).kay).toBeLessThan(600);
+  expect((await olc()).panelUst).toBe(0);
 });
 
 test('BOŞ KANVAS: araçlar kurulur, sayfa çekilir; Ctrl+Z sayfayı geri getirir', async ({ page }) => {

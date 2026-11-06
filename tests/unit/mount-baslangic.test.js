@@ -552,6 +552,19 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
     expect(kural('.ve-bas-degisiklik-ad')).toMatch(/font-size:var\(--fs-md\); font-weight:600;.*color:var\(--text-heading\)/);
     expect(kural('.ve-bas-degisiklik-p')).toMatch(/color:var\(--text-secondary\)/);
   });
+  // Kullanıcı 2026-11-06 (Canlı Not 47): "Değişikliklerde aşağıya inerken, sol taraftaki
+  // sütundaki yazılar … tepede kalıyor. Aşağıya indikçe solda sabit olarak gelsin." Önce:
+  // panel masayla birlikte uzuyordu, 600 px kaydırınca kimlik −582 px'teydi (ekran dışı).
+  test('PANEL YERİNDE: yan yana düzende panel görünen yükseklik kadar ve tepeye yapışık; dar tuvalde değil', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)); };
+    expect(kural('.ve-bas')).toMatch(/container:vebas \/ size;/);
+    const i = css.indexOf('@container vebas (min-width: 900px){');
+    expect(i).toBeGreaterThan(0);
+    expect(css.slice(i, css.indexOf('}', i))).toMatch(/\.ve-bas-ic--masa > \.ve-bas-panel\{ position:sticky; top:0; height:100cqh; overflow-y:auto;/);
+    // kabın adı tek: adsız kap sorgusu yok (yeni kap onları yakalamasın)
+    expect(css).not.toMatch(/@container \(/);
+  });
   test('derlemenin listesi: birleşme Takoz\'un dosyasına dokunuyorsa girer', () => {
     const V = require('../../tools/version-info.js');
     const D = V.MODUL_DESEN.takoz;
