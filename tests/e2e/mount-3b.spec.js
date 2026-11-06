@@ -139,6 +139,91 @@ test('PARÇA PARÇA: kurulurken montaj görünür, çizim kümelerde, ortak işi
   expect(hatalar).toEqual([]);
 });
 
+// GEÇİŞ (kullanıcı 2026-11-06, Canlı Not 54: *"direk yükleme progres barı ile açılıyor.
+// Bunun direkt gelmesi biraz garip. Araya tatlı bir geçiş yapalım."*). Önce: perde, kart ve
+// çubuk aynı karede beliriyordu; okuma bitince paneller birden geliyor, iş kartı Özellikler'in
+// genişliği kadar sola sıçrıyordu. Node'da koşmayan halkalar: CSS geçişlerinin gerçekten
+// başlaması, perdenin okuma bitince yeniden belirmemesi, kartın kaymasının ölçüsü.
+async function gecisKaydi(page) {
+  await page.evaluate(() => {
+    const G = window.__gecis = { okuma: null, masa: null, kaydir: [], once: null };
+    const asil = Element.prototype.animate;
+    Element.prototype.animate = function (k, o) {
+      if (this.id === 've-mw-3b-kur') {
+        G.kaydir.push({ k: JSON.parse(JSON.stringify(k)), sure: o && o.duration, egri: o && o.easing, son: this.getBoundingClientRect().toJSON(),
+          tuval: document.getElementById('ve-mw-3b-tuval').getBoundingClientRect().toJSON() });
+      }
+      return asil.call(this, k, o);
+    };
+    // okumanın kartının son yeri: görüntüleyici kurulmadan hemen önce
+    const kapat = window.veMntWiz3bKapat;
+    window.veMntWiz3bKapat = function () {
+      const ok = document.getElementById('ve-mw-3b-okuma');
+      if (ok && !G.once) G.once = ok.getBoundingClientRect().toJSON();
+      return kapat.apply(this, arguments);
+    };
+    const ad = (el) => (el ? el.getAnimations().map((a) => a.animationName || 'waapi') : null);
+    new MutationObserver(() => {
+      const ok = document.getElementById('ve-mw-3b-okuma'), masa = document.querySelector('#ve-mnt-3b .ve-mw-3b-masa');
+      const perde = document.getElementById('ve-mnt-3b-overlay');
+      if (ok && !G.okuma) {
+        G.okuma = { sinif: perde.className, perde: ad(perde), modal: ad(perde.querySelector('.ve-fw-modal')), kart: ad(ok),
+          kutu: ok.getBoundingClientRect().toJSON() };
+      }
+      if (masa && !G.masa) {
+        G.masa = { sinif: masa.className, perdeSinif: perde.className, perde: ad(perde), agac: ad(masa.querySelector('.ve-mw-3b-agac')),
+          yan: ad(masa.querySelector('.ve-mw-3b-yan')), durum: ad(masa.nextElementSibling) };
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+}
+test('GEÇİŞ: perde belirir, okumanın kartı yükselir; okuma bitince paneller kenarlardan gelir, iş kartı eski yerinden kayar', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await gecisKaydi(page);
+  await dosyaSec(page, DENEME);
+  await page.waitForFunction(() => window.__gecis.masa && window.__gecis.kaydir.length, null, { timeout: 60000 });
+  const G = await page.evaluate(() => window.__gecis);
+  // açılış: perde saydamlıktan, çalışma alanı ölçekten, kart aşağıdan
+  expect(G.okuma.sinif).toMatch(/ve-mw-3b-acilis/);
+  expect([G.okuma.perde, G.okuma.modal, G.okuma.kart]).toEqual([['ve-mw-3b-belir'], ['ve-mw-3b-otur'], ['ve-mw-3b-yuksel']]);
+  // okumadan: perde AÇIK kalır ve yeniden belirmez; ağaç soldan, Özellikler sağdan, durum çubuğu saydamlıktan
+  expect(G.masa.sinif).toMatch(/ve-mw-3b-okumadan/);
+  expect(G.masa.perdeSinif).not.toMatch(/ve-mw-3b-acilis/);
+  expect(G.masa.perde).toEqual([]);
+  expect([G.masa.agac, G.masa.yan, G.masa.durum]).toEqual([['ve-mw-3b-soldan'], ['ve-mw-3b-sagdan'], ['ve-mw-3b-belir']]);
+  // iş kartı sıçramaz: okumanın kartının sağ alt köşesinden (ekranın sağ altı) tuvalin sağ
+  // altına kayar — yaklaşık Özellikler'in genişliği kadar sola
+  const yan = await page.evaluate(() => document.getElementById('ve-mw-3b-yan').getBoundingClientRect().width);
+  const k = G.kaydir[0], t = k.k[0].transform.match(/^translate\((-?\d+)px, (-?\d+)px\)$/).slice(1).map(Number);
+  expect(Math.abs(t[0] - (G.once.right - k.son.right))).toBeLessThanOrEqual(1);
+  expect(Math.abs(t[1] - (G.once.bottom - k.son.bottom))).toBeLessThanOrEqual(1);
+  expect(t[0]).toBeGreaterThan(yan - 20);
+  expect([Math.round(k.tuval.right - k.son.right), Math.round(k.tuval.bottom - k.son.bottom)]).toEqual([16, 16]);
+  expect([k.k[1].transform, k.sure, k.egri]).toEqual(['none', 420, 'cubic-bezier(0.16, 1, 0.3, 1)']);
+  await hazir(page);
+  // geçiş bitince çalışma alanı ekranın tamamı, kartlar yerinde (dönüşüm kalmaz)
+  const m = await page.evaluate(() => { const r = document.querySelector('#ve-mnt-3b-overlay .ve-fw-modal').getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(Math.round); });
+  expect(m).toEqual([0, 0, 1440, 900]);
+  expect(hatalar).toEqual([]);
+});
+
+test('GEÇİŞ · AZ HAREKET: işletim sistemi hareketi azaltınca perde, kart ve paneller doğrudan gelir, kart kaymaz', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await gecisKaydi(page);
+  await dosyaSec(page, DENEME);
+  await page.waitForFunction(() => window.__gecis.masa, null, { timeout: 60000 });
+  await hazir(page);
+  const G = await page.evaluate(() => window.__gecis);
+  expect([G.okuma.perde, G.okuma.modal, G.okuma.kart]).toEqual([[], [], []]);
+  expect([G.masa.agac, G.masa.yan, G.masa.durum]).toEqual([[], [], []]);
+  expect(G.kaydir).toEqual([]);
+});
+
 test('DURDUR · DEVAM: durunca üretim durur ve çizilen kalır; Devam bitirir', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await bootApp(page);
