@@ -141,7 +141,7 @@ function _gmSec2(){
       + 'yasası, kapasite', 'Katalogdan seçip takoza uygulamak için'],
     ['<strong>Çözücü</strong>', 'Çözüm modu, sönüm, şok', 'Tuvalde bir tane'],
     ['<strong>Başlangıç ve Örnekler</strong>', 'Kayıtlı gerçek modeller', 'Bölüm 3'],
-    ['<strong>Görünümler · Koordinat Düzlemi</strong>',
+    ['<strong>Görünümler</strong>',
       'Modeli gözle denetleme yüzeyleri; Görünümler modeli aksonometrik çizer ve serbestçe '
       + 'döndürür (sol tık + sürükle: döndür, tekerlek: yakınlaştır, sağ tık: kaydır; '
       + 'başlıktaki düğmeler yakınlaştırır, dimetrik bakışa sıfırlar ve tam ekran açar), '
@@ -178,8 +178,8 @@ function _gmSec2(){
     + '<strong>mm</strong> cinsinden girilir. Çerçevenin nerede olduğu önemli değildir — '
     + 'çözüm merkez farklarından kurulur — ama çerçeveler <strong>karışmamalıdır</strong>: '
     + 'bir kütlenin CG’si parça çerçevesinde, bir takozun konumu araç çerçevesindeyse model '
-    + 'hata vermeden yanlış çözülür. <strong>Koordinat Düzlemi</strong> bileşeni çerçeveyi '
-    + 'gözle gösterir.');
+    + 'hata vermeden yanlış çözülür. Eksenlerin yönü <strong>Görünümler</strong>’in ve 3B '
+    + 'görüntüleyicinin eksen işaretinde: +X arkaya, +Y sağa, +Z yukarı.');
   return h;
 }
 

@@ -25,7 +25,7 @@ eval(loadSource('ui-core.js'));
 eval(loadSource('components.js'));
 global.componentDefs = componentDefs;
 
-const ARACLAR = ['mnt-library', 'mnt-solver', 'mnt-example', 'mnt-viewer', 'mnt-coordframe', 'mnt-2dview', 'mnt-report', 'mnt-parametric'];
+const ARACLAR = ['mnt-library', 'mnt-solver', 'mnt-example', 'mnt-viewer', 'mnt-2dview', 'mnt-report', 'mnt-parametric'];
 const kur = (type) => {
   const el = document.createElement('div');
   el.id = 'n-' + type + Math.random();

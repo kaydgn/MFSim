@@ -350,19 +350,6 @@
     {
       "id": "n13",
       "type": "mnt-viewer",
-      "x": 1263,
-      "y": 323,
-      "width": 60,
-      "height": 56,
-      "customName": "",
-      "data": {},
-      "mirrored": false,
-      "isMasterWheel": false,
-      "isMasterDiff": false
-    },
-    {
-      "id": "n14",
-      "type": "mnt-coordframe",
       "x": 1158,
       "y": 323,
       "width": 60,
@@ -387,7 +374,7 @@
       "type": "frame",
       "x": 1023,
       "y": 293,
-      "width": 330,
+      "width": 225,
       "height": 130,
       "text": "Görselleştirici",
       "color": "var(--text-muted)",

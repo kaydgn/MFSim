@@ -352,19 +352,6 @@
       "data": {}
     },
     {
-      "id": "comp-18",
-      "type": "mnt-coordframe",
-      "x": 3191,
-      "y": 3247,
-      "width": 60,
-      "height": 56,
-      "customName": "",
-      "mirrored": false,
-      "isMasterWheel": false,
-      "isMasterDiff": false,
-      "data": {}
-    },
-    {
       "id": "comp-19",
       "type": "mnt-2dview",
       "x": 3086,
@@ -380,7 +367,7 @@
     {
       "id": "comp-20",
       "type": "mnt-viewer",
-      "x": 3296,
+      "x": 3191,
       "y": 3247,
       "width": 60,
       "height": 56,
@@ -434,7 +421,7 @@
       "type": "frame",
       "x": 3056,
       "y": 3217,
-      "width": 330,
+      "width": 225,
       "height": 130,
       "text": "Görselleştirici",
       "color": "var(--text-muted)",

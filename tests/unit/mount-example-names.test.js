@@ -20,7 +20,7 @@
  * kullanıcı ekranda JSON'daki adı görür — bu yüzden İKİSİ de denetleniyor ve
  * ayrıca birbirleriyle karşılaştırılıyor.
  *
- * İŞARET SÖZLEŞMESİ (js/cp-mount.js ve js/cp-mount-viewer.js'te üç yerde yazılı):
+ * İŞARET SÖZLEŞMESİ (js/cp-mount.js ve 3B'nin eksen işaretinde yazılı):
  *   +X araç ARKASI · +Y SAĞ · +Z YUKARI
  */
 const fs = require('fs');

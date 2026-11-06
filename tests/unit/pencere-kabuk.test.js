@@ -214,7 +214,7 @@ function coz() {
 describe('TEK ÜRETİCİ — iki modülün kabuğu ortak kitten', () => {
   test('dağıtım iki modülün her tipini bir kurucuya bağlıyor (tarama gerçekten tarıyor)', () => {
     expect(FEAD_TIP.length).toBeGreaterThanOrEqual(15);
-    expect(TAKOZ_TIP.length).toBe(22);                                     // dördü motorun aksesuarı
+    expect(TAKOZ_TIP.length).toBe(21);                                     // dördü motorun aksesuarı; Koordinat Düzlemi yok (Canlı Not 63)
     expect(FEAD_TIP.concat(TAKOZ_TIP).filter((t) => typeof global[KURUCU[t]] !== 'function')).toEqual([]);
   });
 
@@ -464,7 +464,7 @@ describe('KİT — kabuğun davranışı', () => {
   });
 
   // Takoz pencereleri sonuç taşımıyor: bağlamı ya da eylemi olmayan pencere
-  // (Görünümler, 3D Görüntüleyici, Koordinat Düzlemi) iki sütunlu modalda
+  // (Görünümler, 3D Görüntüleyici) iki sütunlu modalda
   // 296 px'lik boş bir sütun bırakıyordu.
   test('boş sağ sütun çizilmez: kabuk tek sütuna iner', () => {
     const d = dom(PK.vePencereKabuk({ id: 'n3' }, kategoriler(), '', {}));

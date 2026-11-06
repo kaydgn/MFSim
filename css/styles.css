@@ -95,10 +95,9 @@
       --rol-mil: #2c3a43;
       --rol-pompa: #1c3381;
       --rol-pto-grup: #6e4403;
-      /* 3B SAHNENİN EKSEN OKLARI — cp-mount-viewer.js'te three.js sabit
-         renkleri (0xef4444 · 0x22c55e · 0x3b82f6); Koordinat penceresinin
-         föyündeki örnek işaret onları izler. İki temada aynı: sahnedeki ok
-         temayla değişmiyor. Aynılık kapısı: mount-sutun.test.js. */
+      /* EKSENİN RENKLERİ — 3B'nin eksen işareti ve Görünümler'in rijitlik
+         okları (+X kırmızı · +Y yeşil · +Z mavi). İki temada aynı: eksenin
+         dili temayla değişmez. Aynılık kapısı: mount-sutun.test.js. */
       --eksen-x: #ef4444;
       --eksen-y: #22c55e;
       --eksen-z: #3b82f6;
@@ -5085,46 +5084,6 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
   border:1px solid color-mix(in srgb, var(--accent-warning) 18%, transparent);
 }
 
-/* ══ TAKOZ 3D GÖRÜNTÜLEYİCİ / KOORDİNAT DÜZLEMİ — SOL RAY DENETİMLERİ ══
-   Önceki hâl: tek bir flex-wrap satırında beş farklı genişlikte buton →
-   dar sol rayda "4 + 1" diye kırılıyor, kapalı katman butonu opacity:0.45
-   ile soldurulduğu için AÇIK/KAPALI yerine ETKİN/DEVRE-DIŞI okunuyordu.
-   Yeni hâl: sabit sütunlu ızgaralar (asla ragged wrap yok) + kapalı/açık
-   ayrımı renkle ve öndeki nokta göstergesiyle (opacity ile değil). */
-.mnt-vwr-toggles{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:5px;margin-bottom:12px;
-}
-.mnt-vwr-toggle,.mnt-vwr-action{
-  display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  width:100%;min-height:27px;padding:5px 7px;
-  font-family:inherit;font-size:var(--fs-micro);font-weight:600;line-height:1;
-  color:var(--text-secondary);background:var(--bg-tertiary);
-  border:1px solid var(--border-color);border-radius:var(--radius-sm);
-  cursor:pointer;white-space:nowrap;min-width:0;
-  transition:background var(--dur-fast) var(--ease-out),
-             border-color var(--dur-fast) var(--ease-out),
-             color var(--dur-fast) var(--ease-out);
-}
-.mnt-vwr-toggle:hover,.mnt-vwr-action:hover{
-  border-color:var(--text-muted);color:var(--text-primary);
-}
-/* Kapalı katman: nötr gri nokta. Açık katman: vurgu dolgusu + vurgu noktası. */
-.mnt-vwr-toggle::before{
-  content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;
-  background:var(--text-muted);
-  transition:background var(--dur-fast) var(--ease-out);
-}
-.mnt-vwr-toggle.is-on{
-  /* Basılı düğmenin ETİKETİ metindir (şeridin basılı düğmesiyle aynı dil):
-     ham vurgu %12'lik vurgu zemininde 3,61:1 kalıyordu. Zemin %8, yazı
-     vurgunun okunur sürümü (--ink-accent). */
-  color:var(--ink-accent);
-  background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary));
-  border-color:color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
-}
-.mnt-vwr-toggle.is-on::before{ background:var(--accent-primary); }
-.mnt-vwr-action .mf-ico{ font-size:var(--fs-body); }
 
 /* ── Bileşen kimlik bloğu (simge + ad + TİP + sil düğmesi) ──
    Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
@@ -10099,30 +10058,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-fp-solve-not[data-d="warn"], .ve-fp-durum-not[data-d="warn"]{ color:var(--ink-warning); }
 .ve-fp-solve-not[data-d="no"], .ve-fp-durum-not[data-d="no"]{ color:var(--ink-danger); }
 
-/* SAHNE (Koordinat Düzlemi) — sütun genişliğinde KARE. Eskiden 58vh boyunda
-   dikine bir şeritti: 380 px'lik sütunda 354 × 540. */
-.ve-mnt-sahne{
-  position:relative; width:100%; aspect-ratio:1 / 1; max-height:60vh; margin:0 0 8px;
-  overflow:hidden; background:var(--bg-primary);
-  border:1px solid var(--border-color); border-radius:var(--radius-md);
-}
-.ve-mnt-sahne > canvas{ display:block; width:100%; height:100%; }
-/* Görüntüleyicinin eylemleri pencerenin eylem satırında, eşit genişlikte. */
-.ve-mnt-pencere .ve-fp-eylem > .mnt-vwr-action{ flex:1 1 0; width:auto; }
-
-/* İŞARET ÖRNEĞİ — föy satırının başında, sahnedeki işaretin rengi. Metin değil
-   işaret: renk yazıya taşınmaz (kontrast kuralı). */
-.ve-mnt-is{
-  display:inline-block; width:9px; height:9px; margin-right:6px; vertical-align:-1px;
-  border-radius:50%; background:var(--text-muted);
-}
-.ve-mnt-is[data-i="x"], .ve-mnt-is[data-i="y"], .ve-mnt-is[data-i="z"]{
-  width:12px; height:3px; border-radius:0; vertical-align:2px;
-}
-.ve-mnt-is[data-i="x"]{ background:var(--eksen-x); }
-.ve-mnt-is[data-i="y"]{ background:var(--eksen-y); }
-.ve-mnt-is[data-i="z"]{ background:var(--eksen-z); }
-
 /* FARE İPUCU — 2D çizimlerin ve aksonometrinin kutusu. Satır içinde yalnız
    konum (left/top/display) ve katman: tam ekran perdesi (satır içi 100045)
    jeton sisteminin dışında, ipucu onun üstünde durmalı. Renk, zemin ve kenar
@@ -10135,11 +10070,6 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
   font-variant-numeric:tabular-nums;
 }
 .ve-mnt-hover-ip--metin{ max-width:280px; padding:7px 10px; font-size:var(--fs-body); white-space:pre-line; }
-
-/* ETKİLEŞİM — kısayol penceresinin dilinde birer satır. */
-.ve-mnt-ipucu{ margin:0; padding:0; list-style:none; font-size:var(--fs-tiny); color:var(--text-secondary); }
-.ve-mnt-ipucu li{ padding:3px 0; border-bottom:1px solid var(--border-light); }
-.ve-mnt-ipucu li:last-child{ border-bottom:none; }
 
 /* ÖRNEK — künyenin başı (araç adı, kısa etiket, açıklama) ve topoloji resmi. */
 .ve-mnt-ex-bas{ margin:2px 0 10px; }

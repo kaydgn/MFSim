@@ -2410,7 +2410,6 @@ var veMountCore = (function() {
       // Araç adı YAZILMAZ: şema bileşenin kendi adını componentDefs'ten okur.
       tools: [
         {type:'mnt-library',    at:[ 85, 70]},
-        {type:'mnt-coordframe', at:[200, 80]},
         {type:'mnt-solver',     at:[740,265]},
         {type:'mnt-2dview',     at:[ 85,450]},
         {type:'mnt-viewer',     at:[200,450]},
@@ -2448,7 +2447,6 @@ var veMountCore = (function() {
         {type:'mnt-solver',     at:[913, 40]},
         {type:'mnt-report',     at:[997, 41]},
         {type:'mnt-2dview',     at:[790,232]},
-        {type:'mnt-coordframe', at:[884,234]},
         {type:'mnt-viewer',     at:[983,235]},
         {type:'mnt-example',    at:[995,401]}
       ],
@@ -2480,7 +2478,6 @@ var veMountCore = (function() {
         {type:'mnt-solver',     at:[893,328]},
         {type:'mnt-report',     at:[987,330]},
         {type:'mnt-2dview',     at:[812,490]},
-        {type:'mnt-coordframe', at:[925,490]},
         {type:'mnt-viewer',     at:[1036,490]}
       ],
       topology: 'assets/examples/asfat_topoloji.json',
@@ -2539,7 +2536,6 @@ var veMountCore = (function() {
         {type:'mnt-example',    at:[1050, 90]},
         {type:'mnt-report',     at:[1155, 90]},
         {type:'mnt-2dview',     at:[840,250]},
-        {type:'mnt-coordframe', at:[945,250]},
         {type:'mnt-viewer',     at:[1050,250]}
       ],
       topology: 'assets/examples/kutu_topoloji.json',
@@ -2566,7 +2562,6 @@ var veMountCore = (function() {
         {type:'mnt-example',    at:[1050, 90]},
         {type:'mnt-report',     at:[1155, 90]},
         {type:'mnt-2dview',     at:[840,250]},
-        {type:'mnt-coordframe', at:[945,250]},
         {type:'mnt-viewer',     at:[1050,250]}
       ],
       topology: 'assets/examples/hafif_topoloji.json',
@@ -2593,7 +2588,6 @@ var veMountCore = (function() {
         {type:'mnt-example',    at:[1058, 90]},
         {type:'mnt-report',     at:[1163, 90]},
         {type:'mnt-2dview',     at:[848,250]},
-        {type:'mnt-coordframe', at:[953,250]},
         {type:'mnt-viewer',     at:[1058,250]}
       ],
       topology: 'assets/examples/kamyon_topoloji.json',
