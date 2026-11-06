@@ -12375,6 +12375,12 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-menu-bas:first-child{ padding-top:4px; }
 /* Alanın listesi: en az alan genişliğinde, sığmazsa kendi içinde kayar */
 .ve-mw-3b-menu.alanli{ overflow-y:auto; }
+/* Alanın listesinde adlar alanın yazısıyla AYNI hizada (kullanıcı 2026-11-06, Canlı Not 57:
+   *"roller böyle ortalı olmuş birazcık. Neden sola yatık değil tamamen?"*): boş simge payı
+   yok — adlar alanın yazısından 24 px içeride başlıyordu; grup başlığı da o hizada. */
+.ve-mw-3b-menu.alanli .ve-mw-3b-menu-o{ padding-left:7px; }
+.ve-mw-3b-menu.alanli .ve-mw-3b-menu-bos{ display:none; }
+.ve-mw-3b-menu.alanli .ve-mw-3b-menu-bas{ padding-left:7px; }
 /* ŞANZIMAN AİLESİNİN BELGESİ (js/cp-mount-3b-belge.js; kullanıcı 2026-11-06, Canlı Not 52:
    *"o PDF üzerinden işaretlemeli şekilde şanzımanın özelliklerini seçeriz. Ama PDF ile aynı
    kalırız"*): tuvalin üstünde, Özellikler yanda. Bant (ad · tarih · yakınlık · Kapat) kabuğun

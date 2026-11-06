@@ -796,6 +796,15 @@ describe('SAĞ TIK MENÜSÜ — satırlar seçimden, gizleme görünüm durumu',
     expect(d.querySelector('.ve-mw-3b-menu-renk')).toBe(null);
     expect(require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8')).not.toMatch(/\.ve-mw-3b-menu-renk/);
     expect(d.querySelector('[data-k="rol:mnt-mount"] > .ve-mw-3b-menu-bos')).not.toBe(null);
+    // Alanın listesinde (Canlı Not 57: "roller böyle ortalı olmuş … Neden sola yatık değil tamamen?")
+    // boş simge payı yok, adlar ve grup başlığı alanın yazısının hizasında (1 + 7 px); bağlam menüsü değişmez
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)); };
+    expect(kural('.ve-mw-3b-menu.alanli .ve-mw-3b-menu-o')).toMatch(/padding-left:7px/);
+    expect(kural('.ve-mw-3b-menu.alanli .ve-mw-3b-menu-bos')).toMatch(/display:none/);
+    expect(kural('.ve-mw-3b-menu.alanli .ve-mw-3b-menu-bas')).toMatch(/padding-left:7px/);
+    expect(kural('.ve-mw-3b-alan')).toMatch(/padding:0 7px;/);
+    expect(kural('.ve-mw-3b-menu-o')).toMatch(/padding:0 12px 0 10px/);
     expect(Array.from(d.querySelectorAll('[data-k="rol"] + .ve-mw-3b-menu-alt > .ve-mw-3b-menu-bas[role="presentation"]')).map((b) => b.textContent))
       .toEqual(veMntWiz3bRolGruplari().map((g) => g.ad));
     expect(d.querySelector('[data-k="rol"]').getAttribute('aria-haspopup')).toBe('menu');

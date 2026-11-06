@@ -156,7 +156,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   2026-11-05, Canlı Not 26): seçim açmaz, kapalı sütun şerit (tuval genişliği alır), açıklık
   tarayıcının tercihi (`VE_MW_3B_YAN_ANAHTAR`). Özellikler bir özellik ızgarası: değerler TEK sütunda,
   Rol tek liste ve yalnız adıyla (renk noktası yok — Canlı Not 46) — tarayıcının listesi DEĞİL, sağ tık
-  menüsünün dilinde açılan gruplu liste, satırları menünün Rol'üyle aynı (Canlı Not 49), motorun listesi **Motor modeli** (şanzımanda **Şanzıman
+  menüsünün dilinde açılan gruplu liste, satırları menünün Rol'üyle aynı (Canlı Not 49), adları ve grup başlıkları alanın yazısıyla AYNI hizada (boş
+  simge payı yok — Canlı Not 57), motorun listesi **Motor modeli** (şanzımanda **Şanzıman
   ailesi** — Canlı Not 51; "Veri sayfası" adı yok — kullanıcı 2026-11-06, Canlı Not 42), satır adımı 32 px
   (Canlı Not 51), Malzeme
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok); kimlikte atalarının

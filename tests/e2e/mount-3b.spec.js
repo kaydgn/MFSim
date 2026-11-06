@@ -1014,6 +1014,14 @@ test('ROL ALANI: kapalıyken liste gibi; tık alanın altında gruplu listeyi a�
   expect(m.width).toBeGreaterThanOrEqual(a.width - 1);
   expect(m.y + m.height).toBeLessThanOrEqual(900);
   await expect(menu.locator('.ve-mw-3b-menu-bas')).toHaveText(['Gövdeler', 'Takoz', 'Aktarma', 'Motor aksesuarları']);
+  // Canlı Not 57: adlar ve grup başlıkları alanın yazısıyla aynı hizada (önce 24 px içerideydi)
+  const hiza = await page.evaluate(() => {
+    const x = (el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().left; };
+    const a = x(document.querySelector('#ve-mw-3b-rol .ve-mw-3b-alan-ad'));
+    return [...document.querySelectorAll('#ve-mw-3b-menu .ve-mw-3b-menu-o[data-k^="rol:mnt"] .ve-mw-3b-menu-ad, #ve-mw-3b-menu .ve-mw-3b-menu-bas')]
+      .map((el) => Math.round(x(el) - a)).filter((d) => d !== 0);
+  });
+  expect(hiza).toEqual([]);
   expect(await menu.locator('.ve-mw-3b-menu-renk').count()).toBe(0);
   await expect(menu.locator('[data-k="rol:"]')).toBeDisabled();                 // rolsüzken Rolü kaldır kapalı
   await expect(menu.locator('[data-k="rol:mnt-motor"]')).toBeFocused();         // seçili yokken ilk satır
