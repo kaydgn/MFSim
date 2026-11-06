@@ -1289,6 +1289,31 @@ describe('PENCERE — sürüklerken yazılı kare; föyün satırı çizimdeki p
     expect(sv().outerHTML).toBe(once);
     expect(stubs.saveState).not.toHaveBeenCalled();
   });
+
+  // Kullanıcı 2026-11-06 (Canlı Not 48): "İşaretler üzerinde gezerken, görünüm üzerinde
+  // parçalar renkleniyor … görünüm üzerinden gezerken, işaretler tablosunun da
+  // renklenmesini istiyorum." Önce: çizimde gezinmek yalnız çizimin izlerini vurguluyordu.
+  test('ÇİZİM → FÖY: çizimde parçanın üstündeyken aynı anahtarlı satır vurgulu; başka parça başka satır; çizimden çıkınca hiçbiri', () => {
+    yukle('tulga');
+    const kap = kur('h4');
+    expect(cp._mntAksoKur(kap.id, 354)).toBe(true);                        // çizim kurulur, dinleyiciler bağlanır
+    const foy = document.querySelector('.ve-mnt-foy-odak');
+    expect(foy.getAttribute('data-ak-kap')).toBe(kap.id);
+    const gez = (k) => kap.querySelector('svg.ve-mnt2d-akso [data-ak="' + k + '"]').dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    const vurgulu = () => [...foy.querySelectorAll('tr.ve-ak-satir')].map((tr) => tr.getAttribute('data-ak'));
+    gez('T3');
+    expect(vurgulu()).toEqual(['T3']);
+    expect(kap.querySelectorAll('svg [data-ak="T3"].ve-ak-vurgu').length).toBeGreaterThan(0);   // çizimin izi de
+    gez('g1');
+    expect(vurgulu()).toEqual(['g1']);
+    gez('G');
+    expect(vurgulu()).toEqual(['G']);
+    kap.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(vurgulu()).toEqual([]);
+    expect(kap.querySelectorAll('.ve-ak-vurgu').length).toBe(0);
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).toMatch(/\.ve-mnt-foy-odak \.ve-mnt-foy tr\[data-ak\]:hover td,\n\.ve-properties-content \.ve-mnt-foy-odak \.ve-mnt-foy tr\.ve-ak-satir td\{/);
+  });
 });
 
 // 3D Görüntüleyici'nin penceresi CAD'in evi (2026-10-20; kapıları

@@ -424,6 +424,37 @@ test('Görünümler: sürüklerken yazılar yerinde ve bilgi kutusu kapalı; fö
   await page.mouse.move(4, 4);
   await page.waitForTimeout(200);
   expect(await page.evaluate((q) => document.querySelector(q).outerHTML, sel)).toBe(once);
+  // ÇİZİM → FÖY (kullanıcı 2026-11-06, Canlı Not 48: "görünüm üzerinden gezerken, işaretler
+  // tablosunun da renklenmesini istiyorum") — gerçek fare, işaretin GÖRÜNEN bir noktasında
+  // (arkada kalan takoz örtülü: kural mount-akso.test.js → GİZLİ YÜZEY)
+  await page.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'start' }), sel);
+  const noktalar = await page.evaluate((q) => {
+    const out = [];
+    for (const tr of document.querySelectorAll('#ve-properties .ve-mnt-foy-odak tr[data-ak]')) {
+      const k = tr.getAttribute('data-ak');
+      bul: for (const el of document.querySelectorAll(q + ' [data-ak="' + k + '"]')) {
+        const r = el.getBoundingClientRect();
+        for (let i = 1; i < 8; i++) for (let j = 1; j < 8; j++) {
+          const x = r.left + r.width * i / 8, y = r.top + r.height * j / 8, ust = document.elementFromPoint(x, y);
+          const a = ust && ust.closest && ust.closest('svg.ve-mnt2d-akso [data-ak]');
+          if (a && a.getAttribute('data-ak') === k) { out.push({ k, x, y }); break bul; }
+        }
+      }
+    }
+    return out;
+  }, sel);
+  expect(noktalar.length).toBeGreaterThanOrEqual(3);
+  for (const n of noktalar.slice(0, 3)) {
+    await page.mouse.move(n.x, n.y);
+    await page.waitForTimeout(120);
+    const r = await page.evaluate(() => [...document.querySelectorAll('#ve-properties .ve-mnt-foy-odak tr.ve-ak-satir')]
+      .map((tr) => [tr.getAttribute('data-ak'), getComputedStyle(tr.querySelector('td')).backgroundColor]));
+    expect(r.map((x) => x[0])).toEqual([n.k]);
+    expect(r[0][1]).not.toBe('rgba(0, 0, 0, 0)');
+  }
+  await page.mouse.move(4, 4);
+  await page.waitForTimeout(150);
+  expect(await page.locator('#ve-properties .ve-mnt-foy-odak tr.ve-ak-satir').count()).toBe(0);
   await page.evaluate(AKSO3B_SIFIR);
 });
 

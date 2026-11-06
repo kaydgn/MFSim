@@ -10638,8 +10638,10 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
    (iki temada hesaplı: mount-akso.test.js → PERDE). Fare olayları perdeden
    geçer: öteki işaretlerin bilgisi fare üstünde. */
 .ve-ak-perde{ fill:color-mix(in srgb, var(--scrim) 45%, transparent); pointer-events:none; }
-/* Föyün satırı çizimdeki parçasını aydınlatır (cp-mount.js → _mntAksoOdak). */
-.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr[data-ak]:hover td{ background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-input)); }
+/* Föyün satırı çizimdeki parçasını aydınlatır (cp-mount.js → _mntAksoOdak); çizimde
+   parçanın üstündeyken satırı da aynı tonda (.ve-ak-satir, Canlı Not 48). */
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr[data-ak]:hover td,
+.ve-properties-content .ve-mnt-foy-odak .ve-mnt-foy tr.ve-ak-satir td{ background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-input)); }
 .ve-ak-lj-sec{ fill:color-mix(in srgb, var(--accent-primary) 28%, var(--isik)); stroke:var(--accent-primary); stroke-width:1.2; }
 
 /* "KAYIŞ YOLUNDAKİ YERİ" KÜÇÜK RESMİ KALKTI (2026-09-28, kullanıcı isteği);

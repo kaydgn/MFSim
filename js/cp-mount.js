@@ -3261,12 +3261,23 @@ function _mntAkso3bBagla(kap, kapId){
 }
 // Bağlantılı vurgu: işaretin üstüne gelince aynı işaretin her izi (gövde,
 // gölgesi, etiketi) birlikte vurgulanır. Yazı opaklıkla soldurulmaz —
-// vurgulanan işaretin kenarı vurgu rengini alır.
+// vurgulanan işaretin kenarı vurgu rengini alır. ÇİZİM → FÖY (kullanıcı
+// 2026-11-06, Canlı Not 48: *"görünüm üzerinden gezerken, işaretler tablosunun da
+// renklenmesini istiyorum"*): pencerenin İşaretler föyü varsa (kabı çizimin
+// kimliğini taşır, `data-ak-kap`) aynı anahtarlı satır da vurgulanır — föyün
+// satırı → çizim yönünün (_mntAksoOdak) tersi.
 function _mntAksoVurguBagla(kap){
   if(!kap || kap.__mntAksoVurgu) return;
   kap.__mntAksoVurgu=true;
   var son=null;
-  var bitir=function(){ if(son){ Array.prototype.forEach.call(kap.querySelectorAll('.ve-ak-vurgu'), function(e){ e.classList.remove('ve-ak-vurgu'); }); son=null; } };
+  var foy=function(){ return (kap.id && typeof document!=='undefined') ? document.querySelector('.ve-mnt-foy-odak[data-ak-kap="'+kap.id+'"]') : null; };
+  var bitir=function(){
+    if(!son) return;
+    Array.prototype.forEach.call(kap.querySelectorAll('.ve-ak-vurgu'), function(e){ e.classList.remove('ve-ak-vurgu'); });
+    var f=foy();
+    if(f) Array.prototype.forEach.call(f.querySelectorAll('tr.ve-ak-satir'), function(t){ t.classList.remove('ve-ak-satir'); });
+    son=null;
+  };
   kap.addEventListener('mousemove', function(e){
     var el=e.target && e.target.closest ? e.target.closest('svg.ve-mnt2d-akso [data-ak]') : null;
     var k=el ? el.getAttribute('data-ak') : null;
@@ -3276,6 +3287,8 @@ function _mntAksoVurguBagla(kap){
     if(!k) return;
     son=k;
     Array.prototype.forEach.call(kap.querySelectorAll('svg.ve-mnt2d-akso [data-ak="'+k+'"]'), function(x){ x.classList.add('ve-ak-vurgu'); });
+    var f=foy(), tr=f ? f.querySelector('tr[data-ak="'+k+'"]') : null;
+    if(tr) tr.classList.add('ve-ak-satir');
   });
   kap.addEventListener('mouseleave', bitir);
 }
@@ -3359,7 +3372,7 @@ function getMnt2DViewPropertiesHTML(node){
   var em=M.g.components.length+' gövde · '+M.g.mounts.length+' takoz'+(M.mTop>0 ? ' · '+_mntS(M.mTop,1)+' kg' : '');
   var govde=bos ? '<div class="ve-mnt-kroki-bos">Görüntülenecek bileşen yok.</div>'+_mntBolum('İşaretler', em, _mntNot('Kanvasta model yok.', ''))
     : '<div class="ve-mnt-akso-kap" id="'+kapId+'">'+_mntAksoHTML(P, _MNT_KROKI_W, false, kapId)+'</div>'
-      + _mntBolum('İşaretler', em, '<div class="ve-mnt-foy-odak" onmouseover="_mntFoyOdak(event,\''+kapId+'\')"'
+      + _mntBolum('İşaretler', em, '<div class="ve-mnt-foy-odak" data-ak-kap="'+kapId+'" onmouseover="_mntFoyOdak(event,\''+kapId+'\')"'
         + ' onmouseleave="_mntAksoOdak(\''+kapId+'\',null)">'+_mnt2DIsaretFoy(P)+'</div>');
   return _mntPencereKabuk(node, [{ k:'akso', ad:'Aksonometrik', govde:govde }], '');
 }
@@ -5379,7 +5392,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntAksoKaynak: _mntAksoKaynak,
     veMntAksoCozumModel: veMntAksoCozumModel,
     _mntAksoHTML: _mntAksoHTML,
-    _mntAksoKur: _mntAksoKur, _mntAkso3bHizli: _mntAkso3bHizli, _mntAksoOdak: _mntAksoOdak, _mntFoyOdak: _mntFoyOdak,
+    _mntAksoKur: _mntAksoKur, _mntAkso3bHizli: _mntAkso3bHizli, _mntAksoOdak: _mntAksoOdak, _mntFoyOdak: _mntFoyOdak, _mntAksoVurguBagla: _mntAksoVurguBagla,
     _mntAksoTamH: _mntAksoTamH, veMntAksoTazele: veMntAksoTazele, veMntAkso3BTamEkran: veMntAkso3BTamEkran,
     _mnt2DFs: _mnt2DFs, _mntFsOverlay: _mntFsOverlay,
     _mntAksoCizim: _mntAksoCizim, _mntAksoGorus: _mntAksoGorus,
