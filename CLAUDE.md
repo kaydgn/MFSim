@@ -155,8 +155,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   2026-11-05, Canlı Not 26): seçim açmaz, kapalı sütun şerit (tuval genişliği alır), açıklık
   tarayıcının tercihi (`VE_MW_3B_YAN_ANAHTAR`). Özellikler bir özellik ızgarası: değerler TEK sütunda,
   Rol tek liste ve yalnız adıyla (renk noktası yok — Canlı Not 46) — tarayıcının listesi DEĞİL, sağ tık
-  menüsünün dilinde açılan gruplu liste, satırları menünün Rol'üyle aynı (Canlı Not 49), motorun listesi **Motor modeli** (şanzımanda Şanzıman
-  modeli; "Veri sayfası" adı yok — kullanıcı 2026-11-06, Canlı Not 42), Malzeme
+  menüsünün dilinde açılan gruplu liste, satırları menünün Rol'üyle aynı (Canlı Not 49), motorun listesi **Motor modeli** (şanzımanda **Şanzıman
+  ailesi** — Canlı Not 51; "Veri sayfası" adı yok — kullanıcı 2026-11-06, Canlı Not 42), satır adımı 32 px
+  (Canlı Not 51), Malzeme
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok); kimlikte atalarının
   yolu YOK (ata ağaçtan seçilir, Canlı Not 42). Hesap Özellikler'in DİBİNDEKİ eylem
   şeridinde (yapışık), rol verilince; panel kapalıyken şeridin dibinde yalnız sıradaki adımın
@@ -258,7 +259,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   *KAYIT* · *OTURUM* · *3B DİZİSİ*) + `mount-veri-sayfasi.spec.js`.
   **Şanzımanda veri sayfası bir AİLE** (kullanıcı 2026-11-06): listede TEK satır,
   seçenekler anahtarda (`allison-4000?dizi=…&bag=…`; seçeneklerin adı, değeri, sırası
-  ve varsayılanı DEĞİŞMEZ — projeye yazılır), bağdaşmayan değer listede kapalı.
+  ve varsayılanı DEĞİŞMEZ — projeye yazılır), bağdaşmayan değer listede kapalı. Değerlerin
+  GÖRÜNEN terimi belgenin İngilizcesi (Direct/Remote mount · Remote cooler · Deep/Shallow sump;
+  Canlı Not 50 · 51), Yok/Var Türkçe.
   Kütle TOPLANIR (belgenin kuru kütleleri + çıkış flanşı; + yağ = ilk dolum ×
   yoğunluk; uzak soğutucu gövdeye girmez); ağırlık merkezi ve atalet seçeneğin
   SATIRINDAN, toplanmaz. Allison'un X·Y·Z'si (arkaya · aşağı · sağa) → boy · −yukarı ·

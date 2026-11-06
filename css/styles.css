@@ -11879,8 +11879,10 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-yan .ve-mw-3b-oz{ padding:6px 0; border-bottom:1px solid var(--border-light); }
 /* Ad, değerin İLK satırının hizasında (Canlı Not 42): iki satıra sarılan değerde
    (Referans'ın iki düğmesi) ad ortada yüzüyordu */
+/* Satırlar sık (Canlı Not 51: *"maddeler çok ayrı olmuş … Yakınlaştıralım"*): adım 38 → 32 px,
+   denetimler arası 4 px */
 .ve-mw-3b-yan .ve-fw-3b-roller.ve-mw-3b-oz-s{ display:grid; grid-template-columns:96px minmax(0, 1fr); align-items:start;
-  gap:4px 10px; padding:5px 14px; border-bottom:0; }
+  gap:4px 10px; padding:2px 14px; border-bottom:0; }
 /* Ad sütuna sığmazsa sarılır (Vites konfigürasyonu, Canlı Not 50): ilk satırı denetimin
    ortasında (6 + 16/2 = 28/2), tek satırlık adın kutusu yine 28 px */
 .ve-mw-3b-oz-s > .ve-mw-3b-kb{ flex-basis:auto; margin:0; font-size:var(--fs-body); font-weight:400; letter-spacing:0;
