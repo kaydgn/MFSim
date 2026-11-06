@@ -55,7 +55,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   duruyor, kullanan yok). Düzeni modül beyan eder
   (`duzen`): Takoz **ÇALIŞMA MASASI** (kullanıcı seçimi 2026-11-05, Canlı Not 6: solda
   panel — kimlik · kapılar · örneklerin SEKMELİ dizini (Araçlar · Kurgu) · altta dönüş
-  ve Kılavuz; sağda modülün SON DEĞİŞİKLİKLERİ, derlemenin künyesinden: Takoz
+  ve Kılavuz; panel YERİNDE kalır, sağ kayarken sayfanın görünen yüksekliği kadar ve
+  tepeye yapışık — kap `.ve-bas` (kullanıcı 2026-11-06, Canlı Not 47); sağda modülün SON DEĞİŞİKLİKLERİ, derlemenin künyesinden: Takoz
   dosyalarının çoğunu değiştiren birleşmeler, `tools/version-info.js` →
   `moduller.takoz`; satırı tıklanınca birleşmenin commit'leri açılır (`ayrinti`,
   Canlı Not 23), commit'in notunun SONUÇ GÖRÜNTÜSÜ konusunun altında (kullanıcı
