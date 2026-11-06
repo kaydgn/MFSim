@@ -98,14 +98,16 @@ var VE_MNT_A4K = {
   // İngilizceleri olsun"*): adlar belgenin adları; `oran`: seçilince oranları altında
   secenek: [
     { k: 'dizi', ad: 'Vites konfigürasyonu', oran: true, d: [['cr', 'Close Ratio (CR)'], ['wr', 'Wide Ratio (WR)'], ['7', '7-Speed']] },
-    { k: 'bag', ad: 'Bağlama', d: [['d', 'Doğrudan'], ['u', 'Uzak']] },
+    // Terimler İngilizce (kullanıcı 2026-11-06, Canlı Not 51: *"'uzak' soğutucu ne demek?
+    // Bunların ingilizcesini kullanalım. Uzak yerine genelde remote derler"*); değerler değişmez
+    { k: 'bag', ad: 'Bağlama', d: [['d', 'Direct mount'], ['u', 'Remote mount']] },
     { k: 'pto', ad: 'PTO provizyonu', d: [['0', 'Yok'], ['1', 'Var']] },
     { k: 'ret', ad: 'Retarder', d: [['0', 'Yok'], ['1', 'Var']] },
     // üçüncü öğe: kütle kaleminin ve künyenin adı
-    { k: 'sog', ad: 'Soğutucu', d: [['u', 'Uzak', 'Uzak soğutucu'], ['s', 'Doğrudan · standart kapasite', 'Doğrudan soğutucu · standart kapasite'],
-      ['y', 'Doğrudan · yüksek kapasite', 'Doğrudan soğutucu · yüksek kapasite'], ['r', 'Doğrudan · retarder/karter', 'Retarder/karter soğutucusu']],
+    { k: 'sog', ad: 'Soğutucu', d: [['u', 'Remote', 'Remote cooler'], ['s', 'Direct · standard capacity', 'Direct cooler · standard capacity'],
+      ['y', 'Direct · high capacity', 'Direct cooler · high capacity'], ['r', 'Direct · retarder/sump', 'Retarder/sump cooler']],
       kosul: { ret: { '0': ['u', 's', 'y'], '1': ['u', 'r'] } } },
-    { k: 'kar', ad: 'Karter', d: [['derin', 'Derin'], ['sig', 'Sığ']], kosul: { dizi: { '7': ['derin'] } } },
+    { k: 'kar', ad: 'Karter', d: [['derin', 'Deep'], ['sig', 'Shallow']], kosul: { dizi: { '7': ['derin'] } } },
     { k: 'aku', ad: 'Akümülatör', d: [['0', 'Yok'], ['1', 'Var']], kosul: { ret: { '0': ['0'] } } },
     { k: 'flans', ad: 'Çıkış flanşı', birim: 'kg', min: 0, max: 30, vars: 8 },
     { k: 'yag', ad: 'Yağ yoğunluğu', birim: 'kg/L', min: 0.6, max: 1.2, vars: 0.85 }
@@ -221,8 +223,8 @@ function _veA4kKayit(A, s){
   var cg = A.cg[dz][s.bag][rp]; if(alti) cg = cg[s.sog];
   var I = A.atalet[dz][rp]; if(!Array.isArray(I)) I = I[s.sog];
   var dizi = A.secenek[0].d.filter(function(e){ return e[0] === s.dizi; })[0][1];
-  var konfig = [dizi, s.bag === 'd' ? 'doğrudan bağlama' : 'uzak bağlama', s.pto === '1' ? 'PTO' : '', s.ret === '1' ? 'retarder' : '',
-    sogAd.charAt(0).toLocaleLowerCase('tr-TR') + sogAd.slice(1), s.kar === 'derin' ? 'derin karter' : 'sığ karter', s.aku === '1' ? 'akümülatör' : '']
+  var konfig = [dizi, s.bag === 'd' ? 'direct mount' : 'remote mount', s.pto === '1' ? 'PTO' : '', s.ret === '1' ? 'retarder' : '',
+    sogAd.charAt(0).toLowerCase() + sogAd.slice(1), s.kar === 'derin' ? 'deep sump' : 'shallow sump', s.aku === '1' ? 'accumulator' : '']
     .filter(Boolean).join(', ');
   var v = { k: veMntVsAnahtar(A, s), aile: A.k, tip: A.tip, ad: A.ad, uretici: A.uretici, konfig: konfig, kaynak: A.kaynak,
     secenek: s, kalem: kal, yag: { L: L, rho: +s.yag, kg: yagKg },
@@ -283,7 +285,9 @@ function veMntVsKonvertorler(){
 // Listenin adı rolün modeli (kullanıcı 2026-11-06, Canlı Not 42: *"'Veri sayfası' ne
 // demek? 'Motor modeli' falan yazsak çok daha doğru olmaz mı?"*): seçilen şey motorun
 // (şanzımanın) modeli; veri sayfası onun kaynağı
-var VE_MNT_MODEL_AD = { 'mnt-motor': 'Motor modeli', 'mnt-gearbox': 'Şanzıman modeli' };
+// Şanzımanda AİLE (kullanıcı 2026-11-06, Canlı Not 51: *"'şanzıman modeli' değil, 'şanzıman
+// ailesi' olacak. Bir sürü model var 4000 serisinde"*)
+var VE_MNT_MODEL_AD = { 'mnt-motor': 'Motor modeli', 'mnt-gearbox': 'Şanzıman ailesi' };
 function veMntModelAd(tip){ return VE_MNT_MODEL_AD[tip] || 'Model'; }
 
 if(typeof module !== 'undefined' && module.exports){

@@ -222,7 +222,7 @@ describe('KÜTLE — kuru = donanım + flanş, ıslak = kuru + yağ', () => {
   test('7 vitesli · PTO · retarder · retarder/karter soğutucusu · akümülatör: 493+28+34+33+4,5+0,6 = 593,1 + flanş; yağ 51 + 2,5 + 0,6', () => {
     const v = VS.veMntVeriSayfasi(anahtar({ dizi: '7', pto: '1', ret: '1', sog: 'r', aku: '1' }));
     expect(v.kalem.map((x) => [x.ad, x.kg])).toEqual([['Şanzıman', 493], ['PTO provizyonu', 28], ['Retarder', 34],
-      ['Retarder/karter soğutucusu', 33], ['Retarder akümülatörü', 4.5], ['Akümülatör solenoidi', 0.6], ['Çıkış flanşı', 8]]);
+      ['Retarder/sump cooler', 33], ['Retarder akümülatörü', 4.5], ['Akümülatör solenoidi', 0.6], ['Çıkış flanşı', 8]]);
     expect(v.kutle.kuru).toBe(601.1);
     expect(v.yag).toEqual({ L: 54.1, rho: 0.85, kg: 45.985 });
     expect(v.kutle.islak).toBe(647.085);
@@ -398,7 +398,7 @@ describe('OTURUM — liste, seçenekler, kapalı seçeneğin sebebi', () => {
     expect([k7.disabled, k7.getAttribute('title')]).toEqual([true, 'Vites konfigürasyonu: 7-Speed.']);
   });
 
-  test('3B: "Şanzıman modeli" listesinde aile; seçenek satırları; referans düğmeleri; kuru kütle ve yağ', () => {
+  test('3B: "Şanzıman ailesi" listesinde aile; seçenek satırları; referans düğmeleri; kuru kütle ve yağ', () => {
     const s = oturum(), sanz = s.sonuc.agac.findIndex((d) => d.ad === 'Şanzıman gövdesi');
     let el = kur(M3.veMntWiz3bAltHTML(s, sanz, {}));
     expect(Array.from(el.querySelectorAll('#ve-mw-3b-veri option')).map((o) => o.textContent)).toEqual(['—', 'Allison 4000']);
@@ -412,6 +412,12 @@ describe('OTURUM — liste, seçenekler, kapalı seçeneğin sebebi', () => {
       .map((x) => x.querySelector('i').textContent + ' ' + x.querySelector('b').textContent);
     expect(el.querySelector('.ve-mw-3b-secenek .ve-mw-3b-kb').textContent).toBe('Vites konfigürasyonu');
     expect(Array.from(el.querySelectorAll('select[data-mw-vs-secenek="dizi"] option')).map((o) => o.textContent)).toEqual(['Close Ratio (CR)', 'Wide Ratio (WR)', '7-Speed']);
+    // Terimler belgenin İngilizcesiyle (Canlı Not 51: "Uzak yerine genelde remote derler"); Yok/Var Türkçe;
+    // listenin adı "Şanzıman ailesi"
+    const ops = (k) => Array.from(el.querySelectorAll('select[data-mw-vs-secenek="' + k + '"] option')).map((o) => o.textContent);
+    expect([ops('bag'), ops('sog'), ops('kar'), ops('pto')]).toEqual([['Direct mount', 'Remote mount'],
+      ['Remote', 'Direct · standard capacity', 'Direct · high capacity', 'Direct · retarder/sump'], ['Deep', 'Shallow'], ['Yok', 'Var']]);
+    expect(el.querySelector('.ve-mw-3b-veri .ve-mw-3b-kb').textContent).toBe('Şanzıman ailesi');
     expect(oran(el)).toEqual(['1 3,51', '2 1,91', '3 1,43', '4 1,00', '5 0,74', '6 0,64', 'R −4,80']);
     expect(el.querySelectorAll('.ve-mw-vs-oran')).toHaveLength(1);                     // yalnız konfigürasyonun satırında
     W.veMntWizStpVsSecenek(sanz, 'dizi', '7');

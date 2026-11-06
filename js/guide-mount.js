@@ -323,7 +323,7 @@ function _gmSec5(){
     + 'değerler kalır; elle değişen alan bölümün notunda <strong>Katalogdan sapıldı</strong> olarak '
     + 'adıyla yazar.</p>';
   h += '<p><strong>Bağlantı yüzü</strong> şanzımanın motora bağlandığı düzlemdir: merkezi ve eksenin yönü. '
-    + 'STEP’ten veri sayfasıyla kurulan şanzımanda (Allison 4000, doğrudan bağlama) iki değer aktarımla '
+    + 'STEP’ten veri sayfasıyla kurulan şanzımanda (Allison 4000, <em lang="en">Direct mount</em>) iki değer aktarımla '
     + 'gelir: merkez, şanzıman ekseninin konvertör muhafazasının ön yüzünü kestiği nokta; yön, eksen boyunca '
     + 'şanzımanın içine. <strong>Statik eğilme momenti</strong> sınırı veri sayfasındandır (3.500 N·m). '
     + 'Merkez elle de yazılır; yön verilmemişse boyuna eksendir (+X). Momentin kendisi raporda (Bölüm 12).</p>';
@@ -1219,8 +1219,8 @@ function _gmSec16(){
   if(A4) h += _gmAlanTablo(A4.ad + ' seçenekleri', A4.secenek.map(function(o){
     var etki = { dizi:'Temel kuru kütle ' + _gmF(A4.kutle.temel.cr, 0) + ' / ' + _gmF(A4.kutle.temel.wr, 0) + ' / '
                    + _gmF(A4.kutle.temel['7'], 0) + ' kg; ağırlık merkezi ve atalet tablosu; vites oranları (listenin altında)',
-                 bag:'Uzak bağlama ' + _gmF(A4.kutle.uzak, 0) + ' kg (6 vitesliye arka braket ' + _gmF(A4.kutle.uzakArka6, 0)
-                   + ' kg); ağırlık merkezi tablosu; bağlantı yüzü yalnız doğrudan bağlamada',
+                 bag:'<span lang="en">Remote mount</span> ' + _gmF(A4.kutle.uzak, 0) + ' kg (6 vitesliye arka braket ' + _gmF(A4.kutle.uzakArka6, 0)
+                   + ' kg); ağırlık merkezi tablosu; bağlantı yüzü yalnız <span lang="en">Direct mount</span>’ta',
                  pto:_gmF(A4.kutle.pto, 0) + ' kg; ağırlık merkezi, atalet, yağ (+3 L)',
                  ret:_gmF(A4.kutle.ret, 0) + ' kg; ağırlık merkezi ve atalet',
                  sog:'Standart ' + _gmF(A4.kutle.sog.s, 0) + ' kg · yüksek kapasite ' + _gmF(A4.kutle.sog.y, 0)
@@ -1308,8 +1308,8 @@ function _gmEkA(){
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
       ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],
       ['Motor modeli, veri sayfasının referansı', '3D Görüntüleyici (3B)', '<em>Bloğun ön yüzü</em> (X12: <em>Bloğun arka yüzü</em>) · <em>Krank ekseni</em>'],
-      ['Şanzıman modeli ve seçenekleri', '3D Görüntüleyici (3B) · sihirbazın STEP kartı',
-        '<em>Şanzıman modeli</em> · <em>Konvertör muhafazasının ön yüzü</em> · <em>Şanzıman ekseni</em>'],
+      ['Şanzıman ailesi ve seçenekleri', '3D Görüntüleyici (3B) · sihirbazın STEP kartı',
+        '<em>Şanzıman ailesi</em> · <em>Konvertör muhafazasının ön yüzü</em> · <em>Şanzıman ekseni</em>'],
       ['Vites konfigürasyonu, konvertör', 'Şanzıman · sihirbazın Tork adımı', '<strong>Katalog</strong>'],
       ['Bağlantı yüzü, eğilme momenti sınırı', 'Şanzıman', '<strong>Bağlantı yüzü</strong> · <strong>Statik eğilme momenti</strong>'],
       ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],

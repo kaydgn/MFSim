@@ -99,10 +99,11 @@ describe('KATALOG — veri sayfasının sayıları', () => {
     expect(VS.veMntVeriSayfalari('mnt-motor').map((v) => v.k)).toEqual(SAYFALAR.map((r) => r[0]));
   });
 
-  // Canlı Not 42: listenin adı seçilen şeyin adı — "Veri sayfası" değil
-  test('listenin adı rolün modeli: motorda "Motor modeli", şanzımanda "Şanzıman modeli"; kataloğun her rolünün adı var', () => {
+  // Canlı Not 42: listenin adı seçilen şeyin adı — "Veri sayfası" değil; Canlı Not 51: şanzımanda
+  // seçilen şey bir AİLE ("Bir sürü model var 4000 serisinde")
+  test('listenin adı rolün modeli: motorda "Motor modeli", şanzımanda "Şanzıman ailesi"; kataloğun her rolünün adı var', () => {
     expect([VS.veMntModelAd('mnt-motor'), VS.veMntModelAd('mnt-gearbox'), VS.veMntModelAd('mnt-transfer')])
-      .toEqual(['Motor modeli', 'Şanzıman modeli', 'Model']);
+      .toEqual(['Motor modeli', 'Şanzıman ailesi', 'Model']);
     VS.VE_MNT_VERI_SAYFASI.forEach((v) => expect(VS.VE_MNT_MODEL_AD[v.tip]).toBeTruthy());
   });
 
@@ -432,9 +433,9 @@ describe('OTURUM — hesaptan önce seçim, föy, modele uygula', () => {
     el.innerHTML = _mwStpKutleHTML(s);
     const x12 = el.querySelector('[data-mw-stp-kutle-deger="' + motor + '"]');
     expect([x12.textContent, x12.getAttribute('title')]).toEqual(['860,0', 'Islak 860 kg']);
-    // Şanzımanın listesi: "Şanzıman modeli" grubunda Allison 4000 ailesi
+    // Şanzımanın listesi: "Şanzıman ailesi" grubunda Allison 4000 ailesi
     const sanz = s.sonuc.agac.findIndex((d) => d.ad === 'Şanzıman gövdesi');
-    expect(Array.from(el.querySelectorAll('select[data-mw-stp-yog="' + sanz + '"] optgroup[label="Şanzıman modeli"] option'))
+    expect(Array.from(el.querySelectorAll('select[data-mw-stp-yog="' + sanz + '"] optgroup[label="Şanzıman ailesi"] option'))
       .map((o) => [o.value, o.textContent])).toEqual([['allison-4000', 'Allison 4000']]);
   });
 });
