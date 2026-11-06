@@ -98,6 +98,13 @@ describe('KATALOG — veri sayfasının sayıları', () => {
     expect(VS.veMntVeriSayfalari('mnt-gearbox')).toEqual([]);
   });
 
+  // Canlı Not 42: listenin adı seçilen şeyin adı — "Veri sayfası" değil
+  test('listenin adı rolün modeli: motorda "Motor modeli", şanzımanda "Şanzıman modeli"; kataloğun her rolünün adı var', () => {
+    expect([VS.veMntModelAd('mnt-motor'), VS.veMntModelAd('mnt-gearbox'), VS.veMntModelAd('mnt-transfer')])
+      .toEqual(['Motor modeli', 'Şanzıman modeli', 'Model']);
+    VS.VE_MNT_VERI_SAYFASI.forEach((v) => expect(VS.VE_MNT_MODEL_AD[v.tip]).toBeTruthy());
+  });
+
   test('her kayıt: tekil anahtar, rol, kütle, uzaklık, atalet fiziksel (asal momentlerin üçgen eşitsizliği)', () => {
     const k = VS.VE_MNT_VERI_SAYFASI.map((v) => v.k);
     expect(new Set(k).size).toBe(k.length);
@@ -405,18 +412,19 @@ describe('OTURUM — hesaptan önce seçim, föy, modele uygula', () => {
     expect([+m.Ixx, +m.Iyy, +m.Izz]).toEqual([19.2, 49.6, 42.9]);
   });
 
-  test('kütle tablosu: veri sayfası listede (motor), kütle sayfanın ıslak kütlesi ve yazılmaz; şanzımanda veri sayfası yok', () => {
+  test('kütle tablosu: motor modeli listede ("Motor modeli" grubu), kütle sayfanın ıslak kütlesi ve yazılmaz; şanzımanda model yok', () => {
     const s = oturum(), motor = s.sonuc.agac.findIndex((d) => d.ad === 'Motor bloğu');
     W.veMntWizStpHesapla();
     W.veMntWizStpYogunluk(motor, ISB);
     const el = document.createElement('div');
     el.innerHTML = W._mwStpKutleHTML ? W._mwStpKutleHTML(s) : _mwStpKutleHTML(s);
     const sec = el.querySelector('select[data-mw-stp-yog="' + motor + '"]');
-    expect(sec.querySelector('optgroup[label="Veri sayfası"] option[value="' + ISB + '"]').selected).toBe(true);
+    expect(sec.querySelector('optgroup[label="Motor modeli"] option[value="' + ISB + '"]').selected).toBe(true);
+    expect(sec.querySelector('optgroup[label="Veri sayfası"]')).toBe(null);
     expect(el.querySelector('input[data-mw-stp-kutle="' + motor + '"]')).toBe(null);   // alan yok
     const alan = el.querySelector('[data-mw-stp-kutle-deger="' + motor + '"]');
     expect([alan.textContent, alan.getAttribute('title')]).toEqual(['512,0', 'Islak 512 kg · kuru 485 kg']);
-    expect(Array.from(sec.querySelectorAll('optgroup[label="Veri sayfası"] option')).map((o) => o.textContent))
+    expect(Array.from(sec.querySelectorAll('optgroup[label="Motor modeli"] option')).map((o) => o.textContent))
       .toEqual(VS.veMntVeriSayfalari('mnt-motor').map((v) => v.ad));
     // X12: veri sayfası kuru kütleyi vermiyor
     W.veMntWizStpYogunluk(motor, 'cummins-x12');
@@ -468,7 +476,10 @@ describe('3B DİZİSİ — model ve iki seçim düğmesi', () => {
     expect(el.querySelectorAll('[data-ve-3b-ref]')).toHaveLength(0);
     // Motorda malzeme satırı yok (Canlı Not 16: "motor için bir malzeme girdimiz olmayacak")
     expect(el.querySelector('.ve-mw-3b-malzeme')).toBe(null);
-    expect(Array.from(el.querySelectorAll('.ve-mw-3b-kb')).map((x) => x.textContent)).toEqual(['Rol', 'Veri sayfası']);
+    // Listenin adı rolün modeli (Canlı Not 42: "'Veri sayfası' ne demek? 'Motor modeli' …")
+    expect(Array.from(el.querySelectorAll('.ve-mw-3b-kb')).map((x) => x.textContent)).toEqual(['Rol', 'Motor modeli']);
+    expect(el.querySelector('#ve-mw-3b-veri').getAttribute('aria-label')).toBe('Motor modeli');
+    expect(el.textContent).not.toContain('Veri sayfası');
     W.veMntWizStpYogunluk(motor, ISB);
     W.veMntWizStpReferans(motor, 'eksen', referans(s.sonuc).eksen);
     el = dizi({ ref: 'yuz' });

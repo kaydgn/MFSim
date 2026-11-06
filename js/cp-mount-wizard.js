@@ -1402,8 +1402,9 @@ function _mwStpKaynak(s, b, K){
   return K.kaynak === 'dosya' ? 'dosya'
     : ((K.kaynak === 'malzeme' || K.kaynak === 'veri' || K.kaynak === 'katalog') ? s.yogunluk[b.dugum] : '');
 }
-// Rolün veri sayfaları (katalog yüklü değilse boş)
+// Rolün veri sayfaları (katalog yüklü değilse boş) ve listelerinin adı ("Motor modeli")
 function _mwStpVeriSayfalari(tip){ return typeof veMntVeriSayfalari === 'function' ? veMntVeriSayfalari(tip) : []; }
+function _mwStpModelAd(tip){ return typeof veMntModelAd === 'function' ? veMntModelAd(tip) : 'Model'; }
 // Dosyada hiçbir parçanın yoğunluğu yoksa durum (başlığın ipucu)
 function _mwStpYogDurum(s){
   return _mwStpGovdeler(s).some(function(b){ return b.yogSay > 0; }) ? '' : 'STEP dosyasında yoğunluk yok.';
@@ -1423,7 +1424,7 @@ function _mwStpKaynakSecHTML(s, b, y){
     + (neden ? ' title="' + _mwEsc(neden) + '"' : '') + (tek ? ' disabled' : '')
     + ' onchange="veMntWizStpYogunluk(' + b.dugum + ', this.value)">'
     + sec.map(se).join('')
-    + (vs.length ? '<optgroup label="Veri sayfası">' + vs.map(function(v){ return se([v.k, v.ad]); }).join('') + '</optgroup>' : '')
+    + (vs.length ? '<optgroup label="' + _mwEsc(_mwStpModelAd(b.tip)) + '">' + vs.map(function(v){ return se([v.k, v.ad]); }).join('') + '</optgroup>' : '')
     + (ak.length ? '<optgroup label="Katalog">' + ak.map(function(a){ return se([a.key, a.ad + ' · ' + a.key]); }).join('') + '</optgroup>' : '')
     + '</select>';
 }

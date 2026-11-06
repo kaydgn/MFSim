@@ -66,8 +66,23 @@ test('VERİ SAYFASI: 3B\'de model, ön yüz ve krank ekseni gerçek fareyle; ağ
   // Dizi: model listesi, model seçilince iki düğme (veri sayfasının adlarıyla)
   await expect(page.locator('#ve-mw-3b-veri')).toBeVisible();
   expect(await page.locator('[data-ve-3b-ref]').count()).toBe(0);
+  // Canlı Not 42: liste "Motor modeli", Rol'le aynı sütunda ve aynı genişlikte (eskiden
+  // Rol'ün noktası listeyi 16 px içeri itiyordu); atalarının yolu yok
+  await expect(page.locator('#ve-mw-3b-alt .ve-mw-3b-kb')).toHaveText(['Rol', 'Motor modeli']);
+  const kutu = await page.evaluate(() => ['ve-mw-3b-rol', 've-mw-3b-veri'].map((id) => {
+    const r = document.getElementById(id).getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width)];
+  }));
+  expect(kutu[0]).toEqual(kutu[1]);
+  expect(await page.locator('#ve-mw-3b-yan .ve-fw-3b-yol, #ve-mw-3b-yan [data-ve-3b-yol]').count()).toBe(0);
   await page.selectOption('#ve-mw-3b-veri', 'cummins-isb67-360');
   await expect(page.locator('[data-ve-3b-ref]')).toHaveText(['Bloğun ön yüzü', 'Krank ekseni']);
+  // satırın adı değerin ilk satırının hizasında (iki satıra sarılan Referans'ta da)
+  const hiza = await page.evaluate(() => Array.from(document.querySelectorAll('#ve-mw-3b-alt .ve-mw-3b-oz-s')).map((r) => {
+    const a = r.querySelector('.ve-mw-3b-kb').getBoundingClientRect(), d = r.querySelector('.ve-mw-3b-oz-d > *').getBoundingClientRect();
+    return Math.round(Math.abs((a.top + a.bottom) / 2 - (d.top + d.bottom) / 2));
+  }));
+  expect(hiza.length).toBe(3);
+  expect(hiza.every((x) => x <= 1)).toBe(true);
 
   // ÖN YÜZ: kip kamerayı motora sığdırır; düzlem yüzün üstüne gel → halka + ipucu; tıkla
   await page.click('[data-ve-3b-ref="yuz"]');

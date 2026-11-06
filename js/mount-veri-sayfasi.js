@@ -72,7 +72,13 @@ function veMntVeriSayfasi(k){
 function veMntVeriSayfalari(tip){
   return VE_MNT_VERI_SAYFASI.filter(function(v){ return v.tip === tip; });
 }
+// Listenin adı rolün modeli (kullanıcı 2026-11-06, Canlı Not 42: *"'Veri sayfası' ne
+// demek? 'Motor modeli' falan yazsak çok daha doğru olmaz mı?"*): seçilen şey motorun
+// (şanzımanın) modeli; veri sayfası onun kaynağı
+var VE_MNT_MODEL_AD = { 'mnt-motor': 'Motor modeli', 'mnt-gearbox': 'Şanzıman modeli' };
+function veMntModelAd(tip){ return VE_MNT_MODEL_AD[tip] || 'Model'; }
 
 if(typeof module !== 'undefined' && module.exports){
-  module.exports = { VE_MNT_VERI_SAYFASI: VE_MNT_VERI_SAYFASI, veMntVeriSayfasi: veMntVeriSayfasi, veMntVeriSayfalari: veMntVeriSayfalari };
+  module.exports = { VE_MNT_VERI_SAYFASI: VE_MNT_VERI_SAYFASI, veMntVeriSayfasi: veMntVeriSayfasi, veMntVeriSayfalari: veMntVeriSayfalari,
+    VE_MNT_MODEL_AD: VE_MNT_MODEL_AD, veMntModelAd: veMntModelAd };
 }
