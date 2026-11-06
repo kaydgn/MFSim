@@ -173,7 +173,7 @@ describe('GÖRÜNÜMLER — çizim çözücünün modeli, numaraların açılım
   });
 });
 
-describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve kullanım', () => {
+describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve tipten sapma', () => {
   function kutuphane(e) {
     tulga();
     const lib = dugum('mnt-library');
@@ -206,15 +206,15 @@ describe('TAKOZ ÖZELLİKLERİ — kategori durumu ve kullanım', () => {
     expect(h).toMatch(/id="ve-mnt-lib-orz-[^"]+" data-tazele>1,69</);    // 490 / 290
   });
 
-  test('kullanım: tipi taşıyan takoz tipten saparsa söylenir (takoz uygulandığı anı KOPYALAR)', () => {
-    const lib = kutuphane({ sx: 665, sy: 335, sz: 290, dx: 1165, dy: 590, dz: 490 });
+  // Kullanım ve Katalog kalktı (Canlı Not 66): tipten sapan takozu Takoz
+  // penceresinin tip notu söyler — sapma bilgisi pencereyle birlikte gitmedi.
+  test('tipten sapan takoz: Takoz penceresinin notu söyler (takoz uygulandığı anı KOPYALAR)', () => {
+    kutuphane({ sx: 665, sy: 335, sz: 290, dx: 1165, dy: 590, dz: 490 });
     const tk = bul((n) => n.customName === 'Ön Takoz');
     Object.assign(tk.data, { libKey: 'k1', kxs: 665, kys: 335, kzs: 290, kxd: 1165, kyd: 590, kzd: 490 });
-    expect(cp.getMntLibraryPropertiesHTML(lib)).toMatch(/Ön Takoz<\/td><td class="sol">tiple aynı/);
+    expect(cp._mntTakozTipGovde(tk)).toContain('<b>Deneme</b> ile 6/6 değer aynı.');
     tk.data.kzs = 300;
-    const h = cp.getMntLibraryPropertiesHTML(lib);
-    expect(h).toMatch(/Ön Takoz<\/td><td class="sol kr" title="kz stat\.">1 değer farklı/);
-    expect(h).toContain('Takozlarda tipin eski değerleri var.');
+    expect(cp._mntTakozTipGovde(tk)).toContain('<b>Deneme</b> ile 5/6 değer aynı; kz stat. elle değiştirildi.');
   });
 
   test('eksen seçimi görünüm durumu: grafik o ekseni çizer, model değişmez', () => {
