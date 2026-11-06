@@ -61,7 +61,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `moduller.takoz`; satırı tıklanınca birleşmenin commit'leri açılır (`ayrinti`,
   Canlı Not 23), commit'in notunun SONUÇ GÖRÜNTÜSÜ konusunun altında (kullanıcı
   2026-11-05, Canlı Not 27: `assets/degisiklik/not-N.webp`, `tools/degisiklik-resim.js`;
-  derleme yalnız listedeki notlarınkini gömer); örneklerin dizininde RESİM YOK, satırın
+  derleme yalnız listedeki notlarınkini gömer; görsele tık pencerede dosyanın ölçüsünde açar — Canlı
+  Not 53); örneklerin dizininde RESİM YOK, satırın
   Yükle'si tek tıkla kurar, adı künyesini, gövdeleri ve takozları açar; açık satır ve
   sekme görünüm durumu), FEAD
   **SÜTUN** (kullanıcı 2026-11-04: *"FEAD modülü önceki hali gibi kalsın"* — ortalanmış
@@ -72,7 +73,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   sayfa (`donus` — masada panelin altında, sütunda kimliğin sağında, Canlı Not 30 · 31)
   açıkken köşedeki dönüş düğmesi de gizli. Kapı:
   `mount-baslangic.test.js` → *ORTAK KİT* · *KİMLİK VE VERİ* · *DİZİN* · *ÇALIŞMA
-  MASASI* · *RAY* + `version-embed.test.js` → *modülün listesi* + `fead-baslangic.test.js`
+  MASASI* · *RAY* · *GÖRSELİN BÜYÜĞÜ* + `version-embed.test.js` → *modülün listesi* + `fead-baslangic.test.js`
   → *SÜTUN DÜZENİ*.
 - `js/pencere-kabuk.js` — **bileşen penceresinin kabuğu, ortak kit** (`vePencereKabuk`):
   FEAD ile Takoz pencereleri AYNI üreticiden basar (kullanıcı: *"tüm programda tek

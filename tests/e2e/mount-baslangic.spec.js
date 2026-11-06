@@ -18,6 +18,7 @@
  */
 const { test, expect } = require('@playwright/test');
 const STEP = require('../helpers/step-takoz.js');
+const Y = require('../helpers/yerlesim-olcu.js');
 test.setTimeout(180000);
 
 async function bootApp(page) {
@@ -345,6 +346,68 @@ test('DİZİN: satır açılıp kapanır, açık satır yeniden açılışta yer
   await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
   expect(await acik()).toEqual(['kamyon']);              // görünüm durumu yerinde: sekme ve satır
   expect(await page.locator('#ve-mnt-baslangic .ve-bas-sekme[aria-selected="true"]').getAttribute('data-v')).toBe('1');
+});
+
+// GÖRSELİN BÜYÜĞÜ (Canlı Not 53, kullanıcı 2026-11-06: *"Resimlere tıklanınca
+// büyütülebilmesini istiyorum."*). Node'da koşmayan halkalar: gerçek tık, görselin
+// dosyasının ölçüsünde açılması (küçük görsel 560 px, pencerede 1120 px), ekrandan
+// büyükse oranı korunarak sığması, yerleşim, Esc'in yalnız pencereyi kapatması.
+test('GÖRSELİN BÜYÜĞÜ: küçük görsele tık pencerede dosyanın ölçüsünde açar; dar ekranda sığar; Esc kapatır, odak geri döner', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await bootApp(page);
+  // modüler kopyada derlemenin listesi boş: bir birleşme ve notunun görseli (1120 × 700 PNG)
+  await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 1120; c.height = 700;
+    const x = c.getContext('2d'); x.fillStyle = '#dde3ea'; x.fillRect(0, 0, 1120, 700); x.fillStyle = '#3b6ea5'; x.fillRect(80, 80, 400, 240);
+    window.__MFSIM_BUILD = { moduller: { takoz: [{ prNumber: 9, date: '2026-11-06T10:00:00Z', title: 'Dokuz',
+      ayrinti: [{ konu: 'Canlı not 22: palet', govde: ['p'], notlar: [22] }] }] } };
+    window.__MFSIM_DEGISIKLIK = { 22: { src: c.toDataURL('image/png'), g: 560, y: 350 } };
+  });
+  await takozGir(page);
+  await page.click('#ve-mnt-baslangic .ve-bas-degisiklik-bas[data-ey="degisiklik"]');
+  const kucuk = page.locator('#ve-mnt-baslangic .ve-bas-degisiklik-resim-b');
+  await expect(kucuk).toBeVisible();
+  expect(await kucuk.evaluate((b) => getComputedStyle(b).cursor)).toBe('zoom-in');
+  const k = await kucuk.locator('img').boundingBox();
+  await kucuk.click();
+  const perde = page.locator('#ve-bas-buyuk-perde');
+  await expect(perde).toBeVisible();
+  await expect(perde.locator('#ve-bas-buyuk-baslik')).toHaveText('Not 22 sonucu');
+  const olc = () => page.evaluate(() => {
+    const im = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-govde img'), r = im.getBoundingClientRect();
+    const p = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-pencere').getBoundingClientRect();
+    return { g: Math.round(r.width), y: Math.round(r.height), tam: im.complete && im.naturalWidth === 1120,
+      icinde: p.left >= 0 && p.top >= 0 && p.right <= innerWidth && p.bottom <= innerHeight,
+      kay: (() => { const g = document.querySelector('#ve-bas-buyuk-perde .ve-bas-buyuk-govde'); return [g.scrollWidth - g.clientWidth, g.scrollHeight - g.clientHeight]; })() };
+  });
+  await expect.poll(async () => (await olc()).tam).toBe(true);
+  const a = await olc();
+  expect(Math.round(k.width)).toBe(560);
+  expect([a.g, a.y]).toEqual([1122, 702]);            // dosyanın ölçüsü + 1 px çerçeve
+  expect(a.icinde).toBe(true);
+  expect(a.kay).toEqual([0, 0]);
+  await page.evaluate(Y.KAYNAK);
+  expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-bas-buyuk-perde')), 'Görsel')).toEqual([]);
+  // dar ekran: oranı korunarak sığar, pencerede kaydırma yok
+  await page.setViewportSize({ width: 900, height: 600 });
+  const b = await olc();
+  expect(b.icinde).toBe(true);
+  expect(b.kay).toEqual([0, 0]);
+  expect(b.g).toBeLessThan(a.g);
+  expect(Math.abs((b.g - 2) / (b.y - 2) - 1120 / 700)).toBeLessThan(0.02);
+  // Esc yalnız pencereyi kapatır: başlangıç sayfası ve modül yerinde, odak küçük görselde
+  await page.keyboard.press('Escape');
+  await expect(perde).toHaveCount(0);
+  await expect(page.locator('#ve-mnt-baslangic')).toBeVisible();
+  expect(await kucuk.evaluate((b) => b === document.activeElement)).toBe(true);
+  // klavye: Enter açar, ✕ kapatır; perdeye basmak da kapatır
+  await page.keyboard.press('Enter');
+  await expect(perde).toBeVisible();
+  await perde.locator('.ve-settings-close').click();
+  await expect(perde).toHaveCount(0);
+  await kucuk.click();
+  await page.mouse.click(5, 5);
+  await expect(perde).toHaveCount(0);
 });
 
 // PALET DARALTILMIŞKEN (kullanıcının ekranı). Kullanıcı 2026-11-04: *"sol
