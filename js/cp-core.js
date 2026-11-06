@@ -114,7 +114,7 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // tırnak eşleştirerek okuyor.)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
   'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield',
-  'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
+  'mnt-mount', 'mnt-example', 'mnt-viewer', 'mnt-library', 'mnt-2dview',
   // Parametrik Analiz — grup, aday ve kısıt föyleri.
   'mnt-parametric',
   // Çözücü çok bölümlü bir pencere (yük kitabı · yöntem · şok darbesi) — FEAD
@@ -273,8 +273,6 @@ function showNodeProperties(node, opt) {
     html += getMntExamplePropertiesHTML(node);
   } else if(node.type === 'mnt-viewer') {
     html += getMntViewerPropertiesHTML(node);
-  } else if(node.type === 'mnt-coordframe') {
-    html += getMntCoordFramePropertiesHTML(node);
   } else if(node.type === 'mnt-2dview') {
     html += getMnt2DViewPropertiesHTML(node);
   } else if(node.type === 'mnt-report') {
@@ -434,13 +432,6 @@ function showNodeProperties(node, opt) {
 
   // Takoz Çözücü: hesap YALNIZ "▶ Hesapla" düğmesiyle koşar (otomatik tetik YOK).
   // Panel açılışında model çözülmez; ayrıntılı sonuçlara Rapor bileşeninden bakılır.
-
-  // Takoz Koordinat Düzlemi: panel açılınca koordinat sistemini 3B çiz
-  if(node.type === 'mnt-coordframe') {
-    setTimeout(function() {
-      if(typeof veMntCoordFrameRefresh === 'function') veMntCoordFrameRefresh();
-    }, 140);
-  }
 
   // Takoz Görünümler: panel açılınca aksonometriyi kabın gerçek genişliğinde kur
   if(node.type === 'mnt-2dview') {

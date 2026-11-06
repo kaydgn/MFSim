@@ -381,7 +381,10 @@ describe('Referans yerleşim (koordinat çerçevesi) + açılış', () => {
     expect(L.filter(i => i.type === 'mnt-solver')).toHaveLength(1);
     expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft']));
     // referans görseldeki analiz araçları da yerleşimde (image 1)
-    expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-coordframe', 'mnt-library', 'mnt-viewer', 'mnt-2dview', 'mnt-example']));
+    expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-library', 'mnt-viewer', 'mnt-2dview', 'mnt-example']));
+    // Koordinat Düzlemi YOK (Canlı Not 63): yerleşimde, tiplerde ve dışa aktarımda
+    expect(L.map(i => i.type)).not.toContain('mnt-coordframe');
+    expect(cp.getMntCoordFramePropertiesHTML).toBeUndefined();
   });
   test('takoz adları referans görsel ile aynı (5 adet)', () => {
     const names = cp.VE_MNT_STARTER_LAYOUT.filter(i => i.type === 'mnt-mount').map(i => i.name).sort();
@@ -816,19 +819,6 @@ describe('Görünümler bileşeni (eski 2D Görünüm)', () => {
   });
   test('üç düz görünüşün paneli ve yakınlaştırıcısı emekli (dışa açılmıyor)', () => {
     expect([cp._mnt2DViewSVG, cp._mnt2DAttachZoom, cp._mnt2DPencereSVG, cp.veMntViewerRefresh]).toEqual([undefined, undefined, undefined, undefined]);
-  });
-});
-
-describe('Koordinat Düzlemi bileşeni', () => {
-  test('panel: 3B canvas + eksen açıklamaları + düzlem toggle', () => {
-    const node = { id: 'cf1', type: 'mnt-coordframe', def: { name: 'Koordinat Düzlemi' }, data: {} };
-    const html = cp.getMntCoordFramePropertiesHTML(node);
-    expect(html).toContain('ve-mnt-coord-canvas');
-    expect(html).toContain("veMountViewerToggle('planes')");
-    // Eksen föyü: yön + işaret (sahnedeki okun rengi CSS'te, --eksen-x/y/z)
-    expect(html).toMatch(/data-i="x"[\s\S]*araç arkası[\s\S]*>ön</);
-    expect(html).toMatch(/data-i="y"[\s\S]*>sağ<[\s\S]*>sol</);
-    expect(html).toMatch(/data-i="z"[\s\S]*>yukarı<[\s\S]*>aşağı</);
   });
 });
 

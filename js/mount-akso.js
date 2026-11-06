@@ -28,7 +28,7 @@
 // yakına — katı çizimde takoz ve nokta kütle kutularla AYNI sırada (GİZLİ
 // YÜZEY: arkada kalan örtülü ve yazısız; X-ışını cam). Bakış işareti izleyicinin yeri: x −1 önden · +1 arkadan, y −1
 // soldan · +1 sağdan, z +1 yukarıdan · −1 alttan. Modelin ekseni: +X arka,
-// +Y sağ, +Z yukarı (Koordinat Düzlemi'yle aynı).
+// +Y sağ, +Z yukarı (3B'nin eksen işaretiyle aynı).
 //
 // RENKLER ürünün işaret dilinden (2D, 3B ve krokiyle aynı anlam): takoz
 // yeşil (--accent-success), gövde CG'si kehribar (--accent-warning), G ve

@@ -36,7 +36,7 @@ function dizgeler(dosya) {
 }
 
 const DOSYALAR = ['js/cp-mount.js', 'js/cp-mount-wizard.js', 'js/cp-mount-3b.js', 'js/mount-step.js',
-  'js/mount-core.js', 'js/mount-akso.js', 'js/cp-mount-baslangic.js', 'js/cp-mount-viewer.js',
+  'js/mount-core.js', 'js/mount-akso.js', 'js/cp-mount-baslangic.js',
   'js/cp-mount-param.js', 'js/mount-katalog.js'];
 
 // Ekranda görünmeyen sonuç: kurulan örneğin adı ve denetimin sayısı (pencere

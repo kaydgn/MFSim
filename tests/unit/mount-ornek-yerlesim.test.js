@@ -68,11 +68,12 @@ describe('araç kartları: tipin ölçüsü, sıra ve sütun', () => {
 
 // Kullanıcı kararı S5·B (2026-10-15): çerçeveler YALNIZ ASFAT'taydı. Üç örnek
 // AYNI düzeni taşır: Araçlar (Takoz Özellikleri · Çözücü · Örnek · Rapor) ve
-// Görselleştirici (2D · Koordinat · 3D), ikisi de tek sıra. Tek sıra bir seçim
+// Görselleştirici (Görünümler · 3D; Koordinat Düzlemi Canlı Not 63'te kalktı), ikisi
+// de tek sıra. Tek sıra bir seçim
 // değil ölçü: "Başlangıç ve Örnekler" adı 123 px, "Takoz Özellikleri" 92 px —
 // 105 px adımda yan yana gelirlerse adlar 2,5 px üst üste biner.
 describe('üç örnekte iki çerçeve: Araçlar ve Görselleştirici (S5·B)', () => {
-  const GORSEL = ['mnt-2dview', 'mnt-coordframe', 'mnt-viewer'];
+  const GORSEL = ['mnt-2dview', 'mnt-viewer'];
   const icinde = (n, f) => n.x >= f.x && n.x + n.width <= f.x + f.width && n.y >= f.y && n.y + n.height <= f.y + f.height;
   const kesisir = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
   test.each(ORNEKLER)('%s: adlar, renkler ve üyeler', (ad) => {
@@ -103,6 +104,6 @@ describe('üç örnekte iki çerçeve: Araçlar ve Görselleştirici (S5·B)', (
       const g = cer.find((f) => f.text === 'Görselleştirici'), a = cer.find((f) => f.text === 'Araçlar');
       return [g.width, g.height, a.height, a.x - g.x, (a.width - 120) % 105];
     });
-    olc.forEach((o) => expect(o).toEqual([330, 130, 134, 0, 0]));
+    olc.forEach((o) => expect(o).toEqual([225, 130, 134, 0, 0]));
   });
 });

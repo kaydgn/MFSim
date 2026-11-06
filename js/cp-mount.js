@@ -522,13 +522,12 @@ function getMntModulePropertiesHTML(node){
 // koordinat çerçevesi olarak kullanılır.
 var VE_MNT_STARTER_LAYOUT = [
   // ── Üst şerit: analiz araçları (tek sıra, eşit aralık) ──
-  { type:'mnt-coordframe',                     lx:40,  ly:20 },
-  { type:'mnt-library',                        lx:190, ly:20 },
-  { type:'mnt-viewer',                         lx:340, ly:20 },
-  { type:'mnt-2dview',                         lx:490, ly:20 },
-  { type:'mnt-solver',   name:'Çözücü',         lx:640, ly:20 },
-  { type:'mnt-example',                        lx:790, ly:20 },
-  { type:'mnt-report',                         lx:940, ly:20 },
+  { type:'mnt-library',                        lx:40,  ly:20 },
+  { type:'mnt-viewer',                         lx:190, ly:20 },
+  { type:'mnt-2dview',                         lx:340, ly:20 },
+  { type:'mnt-solver',   name:'Çözücü',         lx:490, ly:20 },
+  { type:'mnt-example',                        lx:640, ly:20 },
+  { type:'mnt-report',                         lx:790, ly:20 },
   // ── Sağ takozlar (şasi sağ tarafı → şemada üstte) ──
   { type:'mnt-mount',    name:'Sağ Yan Takoz',  lx:300, ly:190 },
   { type:'mnt-mount',    name:'Sağ Arka Takoz', lx:480, ly:190 },
@@ -2721,7 +2720,7 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
   }
 
   // Örnek düğümlerini STARTER ile aynı tabana göre yerleştir ki yardımcı araçlarla
-  // (Koordinat Düzlemi / 3D / 2D / Örnek / Çözücü — sağ ve üst kenarda) çakışmasın.
+  // (3D / Görünümler / Örnek / Çözücü — sağ ve üst kenarda) çakışmasın.
   // Yerleşim panel önizlemesiyle AYNI (_mntExampleLayout) → görsel ile kurulan
   // topoloji birebir örtüşür; bileşen/takoz kendi at:[lx,ly]'sini taşıyabilir.
   var LAY=_mntExampleLayout(EX);
@@ -2807,33 +2806,6 @@ function _mntLoadExampleFromModel(nodeId, anahtar){
 // ════════════════════════════════════════════════════════════════════════════
 //  3D GÖRÜNTÜLEYİCİ — iç topolojinin 3B yerleşimi (tema uyumlu)
 // ════════════════════════════════════════════════════════════════════════════
-// ─── Görüntüleyici denetimleri ───────────────────────────────────────────────
-// İki ayrı buton dili: KATMAN ÇİPİ (aç/kapa, durumu renkle taşır) ve EYLEM
-// düğmesi (tek seferlik iş). Eskiden ikisi de aynı gri butondu ve kapalı katman
-// opacity:0.45 ile soldurulduğu için "devre dışı/bozuk" görünüyordu. Katmanlar
-// üçlü ızgarada (.mnt-vwr-toggles), eylemler pencerenin eylem satırında
-// (.ve-fp-eylem).
-function _mntVwrToggle(what, label, title, on){
-  var isOn = (on !== false);
-  return '<button type="button" class="mnt-vwr-toggle'+(isOn?' is-on':'')+'" aria-pressed="'+(isOn?'true':'false')+'"'
-    + ' title="'+_mntEsc(title||label)+'"'
-    + ' onclick="var v=veMountViewerToggle(\''+what+'\'); this.classList.toggle(\'is-on\', v); this.setAttribute(\'aria-pressed\', v?\'true\':\'false\');">'
-    + _mntEsc(label) + '</button>';
-}
-function _mntVwrAction(onclick, icon, label, title){
-  return '<button type="button" class="mnt-vwr-action" onclick="'+onclick+'" title="'+_mntEsc(title||label)+'">'
-    + (icon ? '<span class="mf-ico mf-ico-'+icon+'"></span>' : '')
-    + '<span>'+_mntEsc(label)+'</span></button>';
-}
-// ETKİLEŞİM — kısayol penceresinin dilinde (tipografi kuralı).
-function _mntVwrIpucu(satirlar){
-  return '<ul class="ve-mnt-ipucu">'+satirlar.map(function(s){ return '<li>'+s+'</li>'; }).join('')+'</ul>';
-}
-// SAHNE KABI — çizim sütunun genişliğinde KARE: dar sütunda 380 px'lik bir
-// pencere 58vh boyunda dikine bir şerit çiziyordu (354 × 540).
-function _mntSahneHTML(wrapId, canvasId){
-  return '<div class="ve-mnt-sahne" id="'+wrapId+'"><canvas id="'+canvasId+'"></canvas></div>';
-}
 // 3D GÖRÜNTÜLEYİCİ — CAD'in evi: penceresi js/cp-mount-cad.js'te
 // (getMntViewerPropertiesHTML; 2026-10-20'ye dek yer tutucuydu).
 // Görünümler'in aksonometrisi tam ekranda (düğmesi çizimin başlığında):
@@ -2871,44 +2843,6 @@ function veMntAksoTazele(){
     if(_mntAksoKur(k.id)) n++;
   });
   return n;
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-//  KOORDİNAT DÜZLEMİ — koordinat sistemini 3B göster (eksen + düzlem + yön)
-// ════════════════════════════════════════════════════════════════════════════
-// Eksenlerin YÖNÜ föyde: konum ve CG değerleri bu eksenlere göre girilir.
-// Örnek işaretin rengi 3B eksenin rengi (CSS `.ve-mnt-is[data-i="x|y|z"]`).
-function getMntCoordFramePropertiesHTML(node){
-  if(!node.data) node.data={};
-  var eksen=function(A, art, eks, ad){
-    return '<tr><td><span class="ve-mnt-is" data-i="'+A.toLowerCase()+'" aria-hidden="true"></span><b>'+A+'</b> '+ad+'</td>'
-      + '<td class="sol">'+art+'</td><td class="sol">'+eks+'</td></tr>';
-  };
-  var foy=_mntFoyAc([{ b:'Eksen', gen:'40%' }, { b:'+ yön', gen:'30%', sinif:'sol' }, { b:'− yön', gen:'30%', sinif:'sol' }], 'Eksenlerin yönü')
-    + eksen('X', 'araç arkası', 'ön', 'boyuna')
-    + eksen('Y', 'sağ', 'sol', 'yanal')
-    + eksen('Z', 'yukarı', 'aşağı', 'düşey')
-    + _MNT_FOY_KAPA;
-  var govde=_mntBolum('Sahne', 'eksen · düzlem',
-      _mntSahneHTML('ve-mnt-coord-wrap', 've-mnt-coord-canvas')
-    + '<div class="ve-fp-eylem">'
-    +   _mntVwrAction("veMountViewerReset();", 'crosshair', 'Sıfırla', 'Sıfırla')
-    + '</div>')
-    + _mntBolum('Katmanlar', '', '<div class="mnt-vwr-toggles">'
-    +   _mntVwrToggle('planes', 'Düzlem', 'Koordinat düzlemleri')
-    +   _mntVwrToggle('grid', 'Zemin', 'Zemin ızgarası', false)
-    + '</div>');
-  // İki kategori: SAHNE · EKSENLER (yönlerin föyü ve etkileşim); sağ sütun
-  // yok (Uygunluk 2026-10-16'dan beri yalnız raporda) — kabuk tek sütun.
-  var eksenler=_mntBolum('Eksenler', '', foy)
-    + _mntBolum('Etkileşim', '', _mntVwrIpucu(['Sol tık + sürükle: döndür', 'Tekerlek: yakınlaştır']));
-  return _mntPencereKabuk(node, [{ k:'sahne', ad:'Sahne', govde:govde },
-                                 { k:'eks', ad:'Eksenler', govde:eksenler }], '');
-}
-function veMntCoordFrameRefresh(){
-  if(typeof veMountViewerInit==='function'){
-    try{ veMountViewerInit('ve-mnt-coord-canvas','coordframe'); veMountViewerUpdate(); }catch(e){}
-  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -5637,7 +5571,6 @@ if(typeof module!=='undefined' && module.exports){
     veMntSolverCompute: veMntSolverCompute,
     _mntForgetResults: _mntForgetResults,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
-    getMntCoordFramePropertiesHTML: getMntCoordFramePropertiesHTML,
     getMnt2DViewPropertiesHTML: getMnt2DViewPropertiesHTML,
     _mnt2DGather: _mnt2DGather,
     _mnt2DYaziKutu: _mnt2DYaziKutu,
