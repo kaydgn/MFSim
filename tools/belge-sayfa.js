@@ -77,8 +77,12 @@ function bolgeKur(sayfa, b, L) {
     const x0 = Math.min.apply(null, bl.map((l) => l.x0)) - 12, x1 = Math.max.apply(null, bl.map((l) => l.x1)) + 12;
     kutu = [x0, bas.y0 - 1, x1, son.y1 - 1];
     d = [];
-    L.filter((l) => l.y0 > bas.y1 && l.y0 <= son.y0 + 2 && (l.x0 + l.x1) / 2 > x0 && (l.x0 + l.x1) / 2 < x1)
-      .forEach((l) => { d = d.concat(sayilar(l.t)); });
+    const deger = L.filter((l) => l.y0 > bas.y1 && l.y0 <= son.y0 + 2 && (l.x0 + l.x1) / 2 > x0 && (l.x0 + l.x1) / 2 < x1);
+    deger.forEach((l) => { d = d.concat(sayilar(l.t)); });
+    // Onay kutusunun yeri (Canlı Not 56): sütunun ortasında, başlığın altı ile ilk
+    // değerin üstü arasındaki boş bantta — satırda kutu satırın solunda (program)
+    const basAlt = Math.max.apply(null, bl.map((l) => l.y1)), ilkDeger = Math.min.apply(null, deger.map((l) => l.y0));
+    o.t = [r1(orta), r1((basAlt + ilkDeger) / 2)];
   } else {
     let y = -1;
     (b.sonra || []).forEach((a) => { y = bul(L, a, false, y).y0; });

@@ -286,12 +286,14 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   2026-11-06, Canlı Not 52: *"o PDF üzerinden işaretlemeli şekilde … seçeriz. Ama PDF ile aynı
   kalırız"*): aile listeden İLK kez seçilince 3B'nin tuvalinin üstünde açılır, Özellikler yanda
   canlı (Belge satırı yeniden açar; Esc · Kapat · başka birimin seçimi kapatır). Sayfa belgenin
-  GÖRSELİ, bölge üstünde: tık seçeneği ailenin sırasıyla yazar, seçimin bölgesi dolu çerçeve,
-  bağdaşmayan kapalı (sebebi `title`'da). Sayfalar ve bölgeler ÜRETİLİR — `js/mount-belge-veri.js`
+  GÖRSELİ, bölge üstünde: tık seçeneği ailenin sırasıyla yazar; maddenin solunda ONAY KUTUSU, çerçeve
+  yok (sütunda kutu tanımın yerinde, `t`); işaretli maddenin tıkı seçimi KALDIRIR — en özel seçenek
+  önce varsayılana, madde düşene dek (`veMntBelgeKaldir`); varsayılanın kendisi kilitli
+  (`aria-disabled`); bağdaşmayan kapalı (sebebi `title`'da) — kullanıcı 2026-11-06, Canlı Not 56. Sayfalar ve bölgeler ÜRETİLİR — `js/mount-belge-veri.js`
   ve `assets/belge/` elle düzenlenmez: `tools/belge-sayfa.js` (tanım `tools/belge-tanim.js`; kaynak
   PDF `docs/belge/`, build/Pages'e girmez), derleme sayfaları gömer (`__MFSIM_BELGE`). Bölgenin
   satırındaki sayılar programın tablosuyla birebir. Kapı: `mount-belge.test.js` (→ *VERİ* · *PDF
-  İLE AYNI* · *DURUM* · *GÖRÜNÜM* · *ARAÇ*) + `mount-belge.spec.js`.
+  İLE AYNI* · *DURUM* (→ *KALDIR*) · *GÖRÜNÜM* (→ *ONAY KUTUSU*) · *ARAÇ*) + `mount-belge.spec.js`.
   **Motorun aksesuarları** (kullanıcı 2026-11-02; liste kullanıcının Ağırlık Merkezi
   Hesaplama Programı'nın motor parçaları): Alternatör · Alternatör Braketi · Klima
   Kompresörü · Isı Sacı — her biri AYRI tip (`isMountAksesuar`; tek "Aksesuar"
