@@ -55,7 +55,8 @@ const ESIK = 8;
 const ISTISNA = {
   'js/fead-core.js': 'dışarıdan geldi, birebir durur (FEAD skill, kural 1)',
   'js/structural-occt-wasm.js': 'üretilen dosya: gömülü WASM ikilisi',
-  'js/mount-report-assets.js': 'üretilen dosya: gömülü KaTeX yazı tipleri'
+  'js/mount-report-assets.js': 'üretilen dosya: gömülü KaTeX yazı tipleri',
+  'js/mount-belge-veri.js': 'üretilen dosya: şanzıman ailesinin belgesi (tools/belge-sayfa.js) — bölüm adları belgenin kendi başlıkları'
 };
 const GORUNTULEYICI_OZ = ['viewer/js/app.js', 'viewer/js/board.js', 'viewer/js/theme.js'];
 function kapsam() {

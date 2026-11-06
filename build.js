@@ -238,6 +238,21 @@ var DEGISIKLIK = require('./tools/degisiklik-resim.js').gomulecekler(VERSION_INF
 console.log('  Son değişikliklerin görseli göm: ' + Object.keys(DEGISIKLIK).length + ' görsel · ' +
   (Object.keys(DEGISIKLIK).reduce(function(t, k) { return t + DEGISIKLIK[k].src.length; }, 0) / 1024).toFixed(0) + ' KB base64');
 
+// ── 2c-5) ŞANZIMAN AİLESİNİN BELGESİ (Canlı Not 52) — assets/belge/<aile>/sNN.webp
+// (tools/belge-sayfa.js üretir); program sayfayı yoldan (modüler) ya da buradan açar
+var belgeDir = path.join(ROOT, 'assets', 'belge'), BELGE = {};
+if (fs.existsSync(belgeDir)) {
+  fs.readdirSync(belgeDir).forEach(function(aile) {
+    var d = path.join(belgeDir, aile);
+    if (!fs.statSync(d).isDirectory()) return;
+    fs.readdirSync(d).filter(function(f) { return f.endsWith('.webp'); }).sort().forEach(function(f) {
+      BELGE['belge/' + aile + '/' + f] = 'data:image/webp;base64,' + fs.readFileSync(path.join(d, f)).toString('base64');
+    });
+  });
+}
+console.log('  Belge sayfası göm: ' + Object.keys(BELGE).length + ' sayfa · ' +
+  (Object.keys(BELGE).reduce(function(t, k) { return t + BELGE[k].length; }, 0) / 1024).toFixed(0) + ' KB base64');
+
 // '<' → <: JSON içindeki olası "</script>" script tag'ini kırmasın.
 // TEK <script> bloğu: aşağıdaki yapısal doğrulama "index.html'in script'leri + 1"
 // sayıyor; ikinci bir blok o aritmetiği kaydırırdı.
@@ -246,6 +261,7 @@ var embedScript = '<script>window.__MNT_TOPOLOGIES = ' +
   'window.__MFSIM_BUILD = ' + JSON.stringify(VERSION_INFO).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_KARSILAMA = ' + JSON.stringify(karsilama).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_DEGISIKLIK = ' + JSON.stringify(DEGISIKLIK).replace(/</g, '\\u003c') + ';\n' +
+  'window.__MFSIM_BELGE = ' + JSON.stringify(BELGE).replace(/</g, '\\u003c') + ';\n' +
   'window.__MFSIM_PROGRAMLAR = ' + JSON.stringify(programlarKayit).replace(/</g, '\\u003c') + ';</script>';
 // FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
 // içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
