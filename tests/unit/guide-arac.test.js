@@ -367,7 +367,8 @@ describe('kılavuzun sesi ve yapısı (aşama 14)', () => {
 
   test('andığı bileşen ve şerit adları programda var', () => {
     const bil = [...SRC.matchAll(/<strong>([^<]+)<\/strong>\s+bileşen(?:i|ine|inde|inden|inin)(?=[\s.,;:)])/g)].map((m) => m[1]);
-    const ser = [...SRC.matchAll(/[şŞ]erit(?:teki|ten)\s+<strong>([^<]+)<\/strong>/g)].map((m) => m[1]);
+    // Komutlar: bandın sağ ucundaki düğmenin penceresi — şeridin gövdesi yok (Canlı Not 59)
+    const ser = [...SRC.matchAll(/Komutlar’(?:daki|dan)\s+<strong>([^<]+)<\/strong>/g)].map((m) => m[1]);
     expect(bil.length).toBeGreaterThan(3);
     expect(ser.length).toBeGreaterThan(3);
     expect(bil.filter((x) => !BILESEN.has(x))).toEqual([]);

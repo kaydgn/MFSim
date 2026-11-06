@@ -370,24 +370,18 @@
        Renkler temaya göre değişir; aşağıdaki ölçekler tüm temalarda ortaktır.
        Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */
     :root {
-      /* Üst krom yüksekliği — başlık satırı + şerit (bkz. js/ribbon.js).
-         Şerit daraltılınca --ribbon-h JS tarafından bandın yüksekliğine
-         (--ribbon-strip-h) iner; sayfa alanı --chrome-h üzerinden
-         kendiliğinden yeniden konumlanır. */
-      /* TEK BANT: başlık satırı şerit şeridiyle birleşti; --chrome-h
-         doğrudan şeridin yüksekliği. ÖLÇÜ İÇERİKTEN (2026-09-26): 38 px'lik
-         bantta en yüksek öğe 28 px'lik ▼ düğmesiydi, kalanı 24 px — kullanıcı
-         "hâlâ boyuna geniş, çok yer kaplıyor" dedi. Bant 32 px: 24 px'lik
-         denetimlerin üstünde ve altında 4 px. GÖVDE AYNI BOYDA kalır (94 px):
-         açık hâl de şerit kadar kısalır. Kapı: kabuk-bant.test.js +
+      /* Üst krom yüksekliği — TEK BANT (bkz. js/ribbon.js). Başlık satırı
+         şeridin şeridiyle birleşti; ölçü İÇERİKTEN (2026-09-26): 24 px'lik
+         denetimlerin üstünde ve altında 4 px. ŞERİDİN GÖVDESİ YOK (Canlı Not
+         59): komutlar bandın sağ ucundaki küçük pencerede, --ribbon-h hep
+         bandın boyu — sayfa aşağı itilmez. Kapı: kabuk-bant.test.js +
          ust-bant.spec.js. */
       --ribbon-strip-h: 32px;
-      --ribbon-expanded-h: 126px;
       /* Müfettiş sütununun genişliği — tuvalin daralma miktarıyla AYNI
          kaynaktan gelmek zorunda; iki yerde yazılsaydı sütun tuvali örterdi
          ya da arada ölü şerit kalırdı. */
       --inspector-w: 380px;
-      --ribbon-h: var(--ribbon-expanded-h);
+      --ribbon-h: var(--ribbon-strip-h);
       --chrome-h: var(--ribbon-h);
 
       /* ── KATMAN DÜZENİ ───────────────────────────────────────────────────
@@ -7480,21 +7474,8 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    kalmak zorunda olduğu için kap `stretch`; ortalama öğe başına yapılır. */
 .ve-rb-strip > .ve-bant-modul{ align-self:center; }
 .ve-rb-strip > .theme-selector{ gap:4px; margin-left:6px; }
-/* SEKMELER BANDIN İÇİNDE, MARKANIN YANINDA — ama yalnız gövde AÇIKKEN.
-   İki uç da ölçüldü ve ikisi de yanlıştı: hep bantta durunca üst satır eski
-   şeridin aynısı okunuyordu (kural 14'ün "envanter" dersi); gövdeye alınca da
-   açılışta bandın çizgisinin ALTINDA ikinci bir başlık satırı doğuyordu.
-   Doğrusu ortası — sekme bir SAYFA BAŞLIĞI değil, gövdenin hangi yüzünü
-   gördüğünü söyleyen bir seçici; yeri de o gövdeyi açan bandın kendisi.
-   Kendi zemini YOK: bandın zeminini paylaşır, yoksa banda ikinci bir şerit
-   çizerdi. */
-.ve-rb-tabs{
-  display:flex; align-items:center; gap:2px; min-width:0;
-  margin-left:14px; padding-left:14px; flex-shrink:1;
-  border-left:1px solid var(--border-color);
-  overflow:hidden;
-}
-#ve-ribbon.is-collapsed .ve-rb-tabs{ display:none; }
+/* Şeridin sekmeleri bantta DEĞİL: komutların penceresinin başında (aşağıda,
+   Canlı Not 59). Bant yalnız marka · modül · hesap · komutların düğmesi. */
 
 /* ═══ ÜST BANT — ATÖLYE ═══════════════════════════════════════════════════
    Maketin satırı: marka · modül adı ┊ komut arama · birincil eylem.
@@ -7643,80 +7624,69 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 }
 .ve-rb-tab:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
-/* ── Gövde ── */
-/* Gövde ve daralt tutamağı ortak bir kapta (.ve-rb-dock) durur. Kapsam
-   konumlandırma içindir: tutamak mutlak konumlanıp GÖVDENİN sağ alt köşesine
-   yapışır. "Peek" durumunda gövde overlay'e dönüşüp #ve-ribbon'ın kutusunun
-   dışına taştığı için, tutamağın referansı şerit değil bu kap olmalı — yoksa
-   şerit daralttığında tutamak yukarıda, gövdeden kopuk kalırdı.
-   Daralt/peek kuralları bu yüzden gövdeye değil kaba uygulanır: gövde
-   gizlenip tutamak ekranda kalmasın. */
-.ve-rb-dock{ position:relative; flex:1; min-height:0; display:flex; }
-.ve-rb-body{
-  flex:1; min-height:0;
-  display:flex; align-items:stretch; gap:0;
-  /* Sağ boşluk tutamağa ayrılmıştır: gövde yatay kayarken son grup
-     tutamağın altına girmesin. */
-  padding:5px 24px 3px 4px;
-  overflow-x:auto; overflow-y:hidden;
-}
-#ve-ribbon.is-collapsed .ve-rb-dock{ display:none; }
-/* "Peek": daraltılmışken sekmeye tıklanınca gövde overlay olarak açılır —
-   sayfa kaymaz, şerit geçici olarak üste biner. */
-#ve-ribbon.is-peek .ve-rb-dock{
-  display:flex;
-  position:absolute; top:var(--ribbon-strip-h,26px); left:0; right:0;
-  height:calc(var(--ribbon-expanded-h) - var(--ribbon-strip-h));
+/* ── KOMUTLARIN PENCERESİ (kullanıcı 2026-11-06, Canlı Not 59) ──
+   *"Şu kısmın programdan tamamen kalkmasını istiyorum. Buradaki özelliklerin
+   ise, böyle kenarda açılır bir ufak pencere şeklinde belirmesini istiyorum.
+   Programı daraltıyor"*: şeridin gövdesi (94 px) ve sabitlemesi kalktı. Bandın
+   sağ ucundaki düğme kenarda küçük bir pencere açar: başında sekmeler, altında
+   seçili sekmenin grupları — başlıklı, iki sütunlu liste. Pencere YÜZER: sayfayı
+   itmez, köşesi keskin, gölgesi yüzenin. Kapı: ust-bant.spec.js → *KOMUTLARIN
+   PENCERESİ*. */
+.ve-rb-dock{
+  position:absolute; top:calc(100% + 4px); right:12px;
+  width:352px; max-width:calc(100vw - 16px);
+  max-height:calc(100vh - var(--ribbon-strip-h) - 16px);
+  display:none; flex-direction:column;
   background:var(--bg-secondary);
-  border-bottom:1px solid var(--border-color);
+  border:1px solid var(--border-hover);
   box-shadow:var(--shadow-lg);
   z-index:2;
 }
-
-/* ── Daralt tutamağı ──
-   Yeri: gövdenin sağ alt köşesi (Office'teki yeriyle aynı). Eskiden krom
-   bandının sağ ucunda, radyo düğmesinin YANINDAYDI; şeridi denetleyen düğme
-   müzik çalarla aynı köşede duruyor, hangi yüzeyi kapattığı okunmuyordu.
-   Artık denetlediği yüzeyin kenarında: gövde gizlenince tutamak da gider,
-   şerit yeniden sabitlenir (peek'te "Şeridi sabitle" olur, bkz. js/ribbon.js).
-   Gövdenin kaydırma kutusunun DIŞINDA (kapta) durur — yoksa yatay kaydırmada
-   içerikle birlikte kayardı. */
-.ve-rb-collapse{
-  position:absolute; right:3px; bottom:2px; z-index:1;
-  display:flex; align-items:center; justify-content:center;
-  width:20px; height:18px; padding:0;
-  background:none; border:none; cursor:pointer; font:inherit;
-  color:var(--text-muted); font-size:var(--fs-tiny);
-  line-height:1; border-radius:var(--radius-sm);
-  transition:color var(--dur-fast,0.12s), background var(--dur-fast,0.12s);
+#ve-ribbon.is-peek .ve-rb-dock{
+  display:flex;
+  animation:ve-rb-dock-in var(--dur-fast,0.14s) var(--ease-out,ease);
 }
-.ve-rb-collapse:hover{ color:var(--accent-primary); background:var(--bg-input); }
-.ve-rb-collapse:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
+@keyframes ve-rb-dock-in{
+  from{ opacity:0; transform:translateY(-4px); }
+  to  { opacity:1; transform:none; }
+}
+@media (prefers-reduced-motion: reduce){
+  #ve-ribbon.is-peek .ve-rb-dock{ animation:none; }
+}
+/* Sekmeler: pencerenin başlığı — altı çizgili düz sekme (bandın diliyle). */
+.ve-rb-tabs{
+  display:flex; align-items:stretch; gap:2px; flex:none;
+  height:var(--bant-h, 32px); padding:0 6px;
+  border-bottom:1px solid var(--border-color);
+  overflow:hidden;
+}
+.ve-rb-dock .ve-rb-tab{ height:auto; border-radius:0; background:none; padding:0 9px; }
+.ve-rb-dock .ve-rb-tab:hover{ background:var(--bg-tertiary); }
+.ve-rb-dock .ve-rb-tab.active{ background:none; box-shadow:inset 0 -2px 0 var(--accent-primary); }
+.ve-rb-dock .ve-rb-tab.contextual{ background:none; }
+.ve-rb-dock .ve-rb-tab.contextual.active{ box-shadow:inset 0 -2px 0 var(--accent-warning); }
+.ve-rb-body{
+  flex:1 1 auto; min-height:0;
+  display:flex; flex-direction:column;
+  padding:0 0 4px;
+  overflow-x:hidden; overflow-y:auto;
+}
 
-/* ── Geri aç düğmesi (bandın sağ ucu) ──
-   Daralt tutamağı gövdeye ait olduğu için gövdeyle birlikte gizlenir; şerit
-   daraltılmışken geri açmanın görünür bir yolu kalmaz. Bu düğme tam o boşluğu
-   kapatır ve YALNIZ o durumda görünür — sabit şeritte bandın sağ ucu boş kalır,
-   ki tutamağı oradan almanın nedeni buydu. Peek'te de görünür: şerit hâlâ
-   daraltılmış durumdadır, düğme "geri aç" anlamını korur. */
-/* ŞERİDİ AÇ / DARALT — İKİ DURUMDA DA AYNI YERDE.
-   Ölçülen kusur: düğme yalnız katlıyken görünüyordu; basınca KAYBOLUYOR ve
-   bandın sağ kümesi (arama · Çöz · avatar) 26 px sağa KAYIYORDU. Tıklanan
-   noktaya avatar oturuyordu: ikinci tık — geri kapatmak ya da çift tık —
-   şeride değil hesap menüsüne gidiyordu. Düğme artık hep yerinde, yalnız
-   ok döner. */
+/* ── Komutların düğmesi (bandın sağ ucu) ──
+   Hep yerinde, yalnız ok döner: düğme yalnız bir durumda görünseydi bandın sağ
+   kümesi kayar ve ikinci tık avatara giderdi (ölçülmüş eski kusur). */
 .ve-rb-expand{
   display:flex; align-items:center; justify-content:center;
-  /* 24 px: arama · Çöz · avatar ile AYNI boy. 28 px'ken bandın en yüksek
-     öğesiydi ve bandı tek başına kalın tutuyordu. */
+  /* 24 px: avatarla AYNI boy — bandın en yüksek öğesi olmasın. */
   width:24px; height:24px; padding:0; align-self:center; margin-left:6px;
   background:none; border:1px solid transparent; cursor:pointer; font:inherit;
   color:var(--text-muted); border-radius:var(--radius-sm);
   transition:color var(--dur-fast,0.12s), background-color var(--dur-fast,0.12s);
 }
 .ve-rb-expand .mf-ico{ transition:transform var(--dur-fast,0.12s) var(--ease-out,ease); }
-#ve-ribbon:not(.is-collapsed) .ve-rb-expand .mf-ico{ transform:rotate(180deg); }
+#ve-ribbon.is-peek .ve-rb-expand .mf-ico{ transform:rotate(180deg); }
 .ve-rb-expand:hover{ color:var(--text-primary); background-color:var(--bg-tertiary); }
+#ve-ribbon.is-peek .ve-rb-expand{ color:var(--text-primary); background-color:var(--bg-tertiary); border-color:var(--border-color); }
 .ve-rb-expand:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
 /* ── Grup ── */
@@ -7825,9 +7795,10 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 
 /* Bildirim rozeti (güncelleme mevcut) — hem komutun kendisinde hem sekmesinde.
    Sekmedeki nokta olmasaydı haber, o sekme açılana dek görünmezdi. */
-.ve-rb-btn.has-badge, .ve-rb-tab.has-badge{ position:relative; }
+.ve-rb-btn.has-badge, .ve-rb-tab.has-badge, .ve-rb-expand.has-badge{ position:relative; }
 .ve-rb-btn.has-badge::after,
-.ve-rb-tab.has-badge::after{
+.ve-rb-tab.has-badge::after,
+.ve-rb-expand.has-badge::after{
   content:""; position:absolute; width:7px; height:7px; border-radius:50%;
   background:var(--accent-danger); box-shadow:0 0 6px var(--accent-danger);
   animation:ve-rb-badge-pulse 2s ease-in-out infinite; pointer-events:none;
@@ -7835,10 +7806,42 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-btn--lg.has-badge::after{ top:4px; right:4px; }
 .ve-rb-btn--sm.has-badge::after{ top:2px; right:2px; }
 .ve-rb-tab.has-badge::after{ top:6px; right:5px; }
+.ve-rb-expand.has-badge::after{ top:1px; right:1px; }
 @keyframes ve-rb-badge-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.65; transform: scale(0.85); }
 }
+
+/* ── Pencerenin içi: grup başlıklı, iki sütunlu liste ──
+   Taban kurallar (büyük/küçük düğme, üç satırlı ızgara) kılavuzun sahnesinde
+   duruyor; pencerede her komut aynı satır: ikon + ad, 28 px. */
+.ve-rb-dock .ve-rb-group{
+  display:block; padding:6px 6px 4px; flex:none;
+}
+.ve-rb-dock .ve-rb-group + .ve-rb-group{ border-top:1px solid var(--border-color); }
+.ve-rb-dock .ve-rb-group + .ve-rb-group::before{ content:none; }
+.ve-rb-dock .ve-rb-group-label{
+  text-align:left; padding:2px 8px 4px; letter-spacing:var(--tracking-wider, 0.06em);
+}
+.ve-rb-dock .ve-rb-group-items,
+.ve-rb-dock .ve-rb-group-items:has(.ve-rb-btn--sm){
+  display:grid; grid-template-columns:repeat(2, minmax(0, 1fr));
+  grid-template-rows:none; grid-auto-flow:row; align-content:start;
+  gap:2px 4px;
+}
+.ve-rb-dock .ve-rb-btn,
+.ve-rb-dock .ve-rb-group-items:has(.ve-rb-btn--sm) .ve-rb-btn--lg{
+  grid-row:auto; flex-direction:row; justify-content:flex-start; align-self:stretch;
+  width:auto; min-width:0; height:28px; min-height:28px; padding:0 8px; gap:8px;
+}
+.ve-rb-dock .ve-rb-btn .ve-rb-ico{ width:14px; height:14px; }
+.ve-rb-dock .ve-rb-btn .ve-rb-lbl{
+  font-size:var(--fs-body); line-height:1.2; text-align:left;
+  color:var(--text-primary); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.ve-rb-dock .ve-rb-lbl br{ display:none; }
+.ve-rb-dock .ve-rb-btn.has-badge::after{ top:50%; right:8px; margin-top:-3.5px; }
 
 /* ── Hızlı erişim araç çubuğu (başlık satırında) ── */
 .ve-qat{ display:inline-flex; align-items:center; gap:1px; margin-left:2px; }
@@ -7862,6 +7865,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 @media (max-width:900px){
   .ve-rb-btn--lg{ min-height:54px; }
   .ve-rb-group-label{ display:none; }
+  .ve-rb-dock .ve-rb-group-label{ display:block; }
   .ve-qat{ display:none; }
 }
 

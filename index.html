@@ -195,9 +195,9 @@
      şeridin sekme şeridi (26px). İkisi de tek satıra bol bol sığacak kadar
      seyrekti; 60px'lik krom 30px'e indi, kazanılan 30px tuvale gitti.
 
-     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· radyo │ [geri aç].
-     Daralt tutamağı bantta DEĞİL: gövdenin sağ alt köşesinde (aşağıda).
-     Bandın sağ ucundaki "geri aç" yalnız daraltılmışken görünür.
+     Yerleşim: marka │ modül ····· hesap │ [komutlar]. Şeridin gövdesi YOK (Canlı
+     Not 59): komutlar bandın sağ ucundaki düğmenin açtığı küçük pencerede
+     (#ve-rb-dock, aşağıda) — sayfa hiç aşağı itilmez.
 
      Bant YALNIZ komut yüzeyidir. Sayfa anahtarı (Topoloji / Sonuçlar) bir
      zamanlar buranın sağ ucundaydı; artık çalışma alanının solundaki dikey
@@ -222,13 +222,8 @@
            karşılama ekranında gidilecek bir modül yok. -->
       <span class="ve-bant-modul" id="ve-bant-modul" aria-live="polite"></span>
       
-    <!-- ŞERİT SEKMELERİ BANDIN İÇİNDE, MARKANIN YANINDA — ama YALNIZ gövde
-           açıkken (css: `#ve-ribbon.is-collapsed .ve-rb-tabs`). İki uç da
-           ölçüldü ve ikisi de yanlıştı: hep bantta durunca üst satır eski
-           şeridin aynısı okunuyordu; gövdeye alınca da açılışta çizginin
-           ALTINDA ikinci bir satır doğuyordu (kullanıcı bildirimi). Doğrusu
-           ortası: katlıyken yok, açıkken markanın yanında. -->
-      <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
+    <!-- ŞERİT SEKMELERİ BANTTA DEĞİL: komutların penceresinin başında (aşağıda,
+           Canlı Not 59). Bant yalnız marka · modül · hesap · komutların düğmesi. -->
       <span class="ve-rb-strip-fill"></span>
       <!-- Komut ara ve Çözücü bantta YOK (kullanıcı 2026-11-05, Canlı Not 24:
            "komut ara ve çözücü kısmına gerek yok. Kullanılmıyor zaten"). Komut
@@ -253,30 +248,23 @@
       <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
     </span>
 
-    <!-- ŞERİDİ AÇ / DARALT — İKİ DURUMDA DA BURADA, yalnız ok döner.
-         Eskiden yalnız katlıyken görünüyordu: basınca kayboluyor ve bandın
-         sağ kümesi 26 px sağa kayıyordu — tıklanan noktaya AVATAR oturuyor,
-         ikinci tık şerit yerine hesap menüsüne gidiyordu (ölçüldü). Başlık
-         ve `aria-expanded` her çizimde js/ribbon.js'ten yazılır. -->
-    <button type="button" class="ve-rb-expand" id="ve-rb-expand" title="Şeridi aç" aria-label="Şeridi aç"
-            aria-expanded="false" aria-controls="ve-rb-dock"><span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span></button>
+    <!-- KOMUTLAR — bandın sağ ucunda, hep yerinde (yalnız ok döner): kenarda
+         açılan küçük pencereyi açar ve kapatır (Canlı Not 59). Eskiden şeridin
+         gövdesini açıp sabitliyordu; gövde kalktı. `aria-expanded` her çizimde
+         js/ribbon.js'ten yazılır. -->
+    <button type="button" class="ve-rb-expand" id="ve-rb-expand" title="Komutlar" aria-label="Komutlar"
+            aria-haspopup="dialog" aria-expanded="false" aria-controls="ve-rb-dock"><span class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span></button>
   </div>
 
-  <!-- Gövde + daralt tutamağı AYNI kapta.
-       Tutamak eskiden yukarıdaki krom bandında, radyo düğmesinin yanındaydı:
-       şeridi denetleyen düğme, denetlemediği bir yüzeyin (müzik çalar) komşusu
-       olarak duruyordu. Artık denetlediği şeyin kenarında — gövdenin SAĞ ALT
-       köşesinde, Office'teki yeriyle aynı.
-
-       Kap gerekli, çünkü tutamak MUTLAK konumlanır ve konumlandığı kutu
-       gövdenin kutusu olmalı: "peek" durumunda gövde overlay'e dönüşüp
-       #ve-ribbon'ın kendi kutusunun DIŞINA taşar (bkz. css .ve-rb-dock).
-       Tutamak doğrudan #ve-ribbon'ın çocuğu olsaydı o durumda geride kalırdı.
-       Tutamak #ve-rb-body'nin İÇİNE de konulamaz: js/ribbon.js her çizimde
-       o kabın innerHTML'ini yeniden yazar, statik markup orada duramaz. -->
-            <div class="ve-rb-dock" id="ve-rb-dock">
+  <!-- KOMUTLARIN PENCERESİ (kullanıcı 2026-11-06, Canlı Not 59: *"Şu kısmın programdan
+       tamamen kalkmasını istiyorum. Buradaki özelliklerin ise, böyle kenarda açılır bir
+       ufak pencere şeklinde belirmesini istiyorum. Programı daraltıyor"*): şeridin
+       gövdesi ve sabitlemesi YOK — açılınca sayfayı 94 px aşağı itiyordu. Bandın sağ
+       ucundaki düğme bu küçük pencereyi açar: başında sekmeler, altında seçili sekmenin
+       grupları liste olarak; komut, dışarı tık ve Esc kapatır. İçini js/ribbon.js yazar. -->
+  <div class="ve-rb-dock" id="ve-rb-dock" role="dialog" aria-label="Komutlar">
+    <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
     <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
-    <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt"><span class="mf-ico mf-ico-chevron-up" aria-hidden="true"></span></button>
   </div>
 </div>
 

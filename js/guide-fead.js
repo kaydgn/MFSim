@@ -202,7 +202,7 @@ function _gfSahneSerit(){
   var btn = _gfSeritEtkin('veTidyLayout', function(){ return _gfSeritOgesi('veTidyLayout'); });
   if(!btn || btn.indexOf('is-disabled') >= 0) return '';
   return veGuideScene('<div class="ve-rb-group-items">' + btn + '</div>',
-    'Şeritteki <b>Otomatik düzenle</b> düğmesi.');
+    'Komutlar’daki <b>Otomatik düzenle</b> düğmesi.');
 }
 
 function _gfSahneTablo(){
@@ -586,7 +586,7 @@ function _gfSec1(){
   h += _gfNot('Bölüm 14’ün sayıları',
       'Belge üretilirken hesap zinciri <strong>bellekte</strong> kurulan örnekle koşturulur; '
     + 'Bölüm 14’teki bütün değerler bu hesabın çıktısıdır. Açık proje değişmez.');
-  h += '<p>Şeritteki ' + _gfBtn('veGuideKitOpen')
+  h += '<p>Komutlar’daki ' + _gfBtn('veGuideKitOpen')
     + ' düğmesi bütün modül kılavuzlarını listeler, açar ve indirir.</p>';
   h += '<h3>1.1 Kim için</h3>';
   h += '<p>Kayış tahrik yerleşimi yapan, tedarikçiye gönderilecek bilgi sayfasını hazırlayan '
@@ -817,7 +817,7 @@ function _gfSec3(){
     + 'pencereleri <strong>FEAD araçları</strong> penceresinden açılır.</p>';
   h += _gfNot('Kartları dizmek',
       'Tuvalde yalnız Kayış Yolu kartları durduğu için yerleşim bir <em>okunurluk</em> '
-    + 'meselesidir, model değil. Şeritteki <strong>Otomatik düzenle</strong> düğmesi onları '
+    + 'meselesidir, model değil. Komutlar’daki <strong>Otomatik düzenle</strong> düğmesi onları '
     + 'yan yana dizer ve kadrajı <strong>FEAD araçları</strong> penceresinin sağından başlatır. '
     + 'Kasnaklar ve araçlar dizilmez — dizilecek bir kutuları yok.');
   h += '<h3>3.5 Yol D — bir CAD montajından (STEP)</h3>';
@@ -1993,7 +1993,7 @@ function _gfSec11(){
       'Çözümden sonra model değişince (bir çapı büyütmek yeter) sekme <strong>“Model '
     + 'değişti”</strong> damgası taşır; çözücü penceresi ve rapor aynı hükmü verir. '
     + 'Tabloların tamamı <strong>Sonuç Özeti</strong> penceresinde '
-    + '(sekmenin başındaki bağlantı); şeritteki <strong>Sonuçları temizle</strong> '
+    + '(sekmenin başındaki bağlantı); Komutlar’daki <strong>Sonuçları temizle</strong> '
     + 'FEAD kümelerini de siler.');
   h += _gfNot('Kayış verisi kapalıysa küme de yoktur',
       'Kayış Özellikleri’ndeki <em>kayış verisi</em> kapatıldığında açıklık frekansları, '

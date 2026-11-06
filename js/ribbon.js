@@ -13,15 +13,14 @@
 //                     sayfa anahtarı + radyo); STATİK markup, JS ezmez
 //   #ve-ribbon      → sekme şeridi + gövde
 //
-// Sekme şeridi daima görünür; gövde daraltılabilir (aktif sekmeye çift tık ya
-// da gövdenin SAĞ ALT köşesindeki ok). Daraltılmışken bir sekmeye tıklamak
-// gövdeyi geçici olarak açar (Office'teki "peek" davranışı) — dışarı tıklayınca
-// yeniden kapanır. Daralt tutamağı gövdeye ait olduğu için daraltılmışken o da
-// gizlenir; geri açmak için bandın sağ ucunda yalnız o durumda beliren
-// #ve-rb-expand vardır (çift tık ve peek'teki "sabitle" oku da çalışır).
-//
-// Yükseklik CSS değişkeniyle yönetilir: --ribbon-h değişince #sayfa2 üstten
-// kendiliğinden kayar (bkz. --chrome-h). JS piksel hesabı yapmaz.
+// GÖVDE YOK — KOMUTLARIN PENCERESİ (kullanıcı 2026-11-06, Canlı Not 59: *"Şu
+// kısmın programdan tamamen kalkmasını istiyorum. Buradaki özelliklerin ise,
+// böyle kenarda açılır bir ufak pencere şeklinde belirmesini istiyorum.
+// Programı daraltıyor"*): şerit hep katlı; sabitleme, daralt tutamağı ve çift
+// tık kalktı. Bandın sağ ucundaki #ve-rb-expand kenarda küçük bir pencere
+// (#ve-rb-dock) açar: başında sekmeler, altında seçili sekmenin grupları liste
+// olarak. Komut, dışarı tık ve Esc pencereyi kapatır; sayfa hiç kaymaz
+// (--ribbon-h hep bandın boyu).
 
 // ── Komut tanımları ──────────────────────────────────────────────────────
 // run    : global fonksiyon adı (yoksa buton sessizce devre dışı görünür)
@@ -189,25 +188,15 @@ var VE_RIBBON_TABS = [
 ];
 
 var veRibbonActiveTab = 'giris';
-var veRibbonCollapsed = false;
-var _veRibbonPeek = false;
+var veRibbonCollapsed = true;     // hep katlı (Canlı Not 59) — gövde yok
+var _veRibbonPeek = false;        // komutların penceresi açık mı
 
 var VE_RIBBON_COLLAPSE_KEY = 'mf-ribbon-collapsed';
 
-// ŞERİT GÖVDESİ VARSAYILAN KATLI (2026-09-22, Atölye üst bandı).
+// ŞERİT HEP KATLI (Canlı Not 59; önce 2026-09-22'den beri varsayılan katlıydı).
 // Meşruiyeti TEK bir koşula bağlı: şeritteki her komut palette de bulunabilsin
-// — `tests/unit/komut-kapsami.test.js`. Koşul sağlanmazsa hata SESSİZ olurdu:
-// komut kaybolmaz, sadece BULUNAMAZ.
-// Yazılmış bir tercih EZİLMEZ: gövdeyi açık bırakmış kullanıcı açık bulur.
-// Anahtar iki değeri de saklıyor ('1' katlı, '0' açık); eskiden yalnız '1'
-// yazılıyordu, yani "açık" bir tercih değil varsayılanın yokluğuydu ve bu
-// değişiklik onu sessizce geri alırdı.
-(function veRibbonLoadPref() {
-  try {
-    var v = localStorage.getItem(VE_RIBBON_COLLAPSE_KEY);
-    veRibbonCollapsed = (v === null) ? true : (v === '1');
-  } catch(e) { veRibbonCollapsed = true; }
-})();
+// — `tests/unit/komut-kapsami.test.js`. Kaydedilmiş "açık" tercihi
+// (VE_RIBBON_COLLAPSE_KEY = '0') artık okunmaz: gövde yok.
 
 // ── Yardımcılar ──────────────────────────────────────────────────────────
 
@@ -285,7 +274,9 @@ function veRibbonItemHTML(item, tabId, gi, ii) {
   if(veRibbonItemBadge(item)) cls += ' has-badge';
   if(!ok) cls += ' is-disabled';
 
-  var label = veRibbonEsc(item.label).replace(/\n/g, '<br>');
+  // `\n` iki satırlı büyük düğmenin kırılması; önündeki boşluk pencerede
+  // (kırılma yok) iki sözcüğü ayırır
+  var label = veRibbonEsc(item.label).replace(/\n/g, ' <br>');
   var tip = veRibbonEsc(item.tip || item.label.replace(/\n/g, ' '));
   if(!ok && veRibbonRunnable(item)) tip = 'Modül seçili değil';
 
@@ -324,15 +315,13 @@ function veRibbonRender() {
   // denetimi patlasaydı değişken dönmüş, sınıf dönmemiş olurdu — düğme
   // sessizce "çalışmıyor" gibi görünürdü. Bugün hiçbir `when()` patlamıyor
   // (ölçüldü); sıra yine de aç/kapa'yı içeriğin başarısına bağlamamalı.
-  host.classList.toggle('is-collapsed', veRibbonCollapsed);
-  host.classList.toggle('is-peek', veRibbonCollapsed && _veRibbonPeek);
+  host.classList.toggle('is-collapsed', true);
+  host.classList.toggle('is-peek', _veRibbonPeek);
   veRibbonApplyHeight();
   var tog = document.getElementById('ve-rb-expand');
   if(tog) {
-    var togEtiket = veRibbonCollapsed ? 'Şeridi aç' : 'Şeridi daralt';
-    tog.setAttribute('title', togEtiket);
-    tog.setAttribute('aria-label', togEtiket);
-    tog.setAttribute('aria-expanded', veRibbonCollapsed ? 'false' : 'true');
+    tog.setAttribute('aria-expanded', _veRibbonPeek ? 'true' : 'false');
+    tog.classList.toggle('has-badge', tabs.some(veRibbonTabBadge));
   }
 
   // ── Sekmeler ──
@@ -348,15 +337,6 @@ function veRibbonRender() {
   });
   tabsHost.innerHTML = h;
 
-  // ── Daralt tutamağı (gövdenin sağ alt köşesi): statik, yerinde güncellenir ──
-  var col = document.getElementById('ve-rb-collapse');
-  if(col) {
-    var etiket = veRibbonCollapsed ? 'Şeridi sabitle' : 'Şeridi daralt';
-    col.innerHTML = veIkon(veRibbonCollapsed ? 'chevron-down' : 'chevron-up');
-    col.setAttribute('title', etiket);
-    col.setAttribute('aria-label', etiket);
-  }
-
   // ── Gövde ──
   var tab = tabs.filter(function(t) { return t.id === veRibbonActiveTab; })[0];
   var b = '';
@@ -366,9 +346,10 @@ function veRibbonRender() {
         return veRibbonItemHTML(it, tab.id, gi, ii);
       }).join('');
       if(!itemsHTML) return;
-      b += '<div class="ve-rb-group">';
-      b += '<div class="ve-rb-group-items">' + itemsHTML + '</div>';
+      // pencerede grubun adı başlıktır: öğelerin üstünde
+      b += '<div class="ve-rb-group" role="group" aria-label="' + veRibbonEsc(g.label) + '">';
       b += '<div class="ve-rb-group-label">' + veRibbonEsc(g.label) + '</div>';
+      b += '<div class="ve-rb-group-items">' + itemsHTML + '</div>';
       b += '</div>';
     });
   }
@@ -394,15 +375,10 @@ function veRibbonSyncQat() {
   });
 }
 
-// Ölçüler CSS'te tanımlı (--ribbon-expanded-h / --ribbon-strip-h); JS yalnızca
-// hangisinin geçerli olduğunu söyler. Böylece şerit yeniden boyutlandığında
-// JS'i güncellemek gerekmez. #sayfa2 üstten --chrome-h ile kendiliğinden kayar.
-// Daraltılmış + "peek" durumunda gövde overlay olarak açılır, sayfa kaymaz.
+// Ölçü CSS'te (--ribbon-strip-h): krom hep bandın boyu — gövde yok, komutların
+// penceresi bandın üstünde yüzer (Canlı Not 59). #sayfa2 --chrome-h ile kayar.
 function veRibbonApplyHeight() {
-  document.documentElement.style.setProperty(
-    '--ribbon-h',
-    veRibbonCollapsed ? 'var(--ribbon-strip-h)' : 'var(--ribbon-expanded-h)'
-  );
+  document.documentElement.style.setProperty('--ribbon-h', 'var(--ribbon-strip-h)');
 }
 
 // Aç/kapa butonlarının basılı durumunu tazeler (yeniden çizmeden).
@@ -438,6 +414,8 @@ function veRibbonRefreshBadges() {
       if(tb) tb.classList.toggle('has-badge', veRibbonTabBadge(t));
     });
   }
+  var tog = document.getElementById('ve-rb-expand');
+  if(tog) tog.classList.toggle('has-badge', veRibbonVisibleTabs().some(veRibbonTabBadge));
 
   host.querySelectorAll('.ve-rb-btn[data-rb]').forEach(function(btn) {
     var p = btn.getAttribute('data-rb').split(':');
@@ -451,23 +429,28 @@ function veRibbonRefreshBadges() {
 
 // ── Etkileşim ────────────────────────────────────────────────────────────
 
+// Sekme pencerenin içinde: seçmek pencereyi açık tutar, yalnız listeyi değiştirir
 function veRibbonSelectTab(id) {
   var tabs = veRibbonVisibleTabs();
   if(!tabs.some(function(t) { return t.id === id; })) return;
-  if(veRibbonCollapsed) {
-    // Daraltılmışken sekmeye tıklamak gövdeyi geçici açar
-    _veRibbonPeek = (id === veRibbonActiveTab) ? !_veRibbonPeek : true;
-  }
   veRibbonActiveTab = id;
+  _veRibbonPeek = true;
   veRibbonRender();
 }
 
-function veRibbonToggleCollapse() {
-  veRibbonCollapsed = !veRibbonCollapsed;
-  _veRibbonPeek = false;
-  try { localStorage.setItem(VE_RIBBON_COLLAPSE_KEY, veRibbonCollapsed ? '1' : '0'); } catch(e) {}
+// Komutların penceresi: aç / kapat (`acik` verilmezse çevirir). Açılınca odak
+// seçili sekmeye, kapanınca bandın düğmesine (klavyeyle gelen kaybolmasın).
+function veRibbonAc(acik) {
+  var yeni = (acik === undefined) ? !_veRibbonPeek : !!acik;
+  if(yeni === _veRibbonPeek) return _veRibbonPeek;
+  _veRibbonPeek = yeni;
   veRibbonRender();
+  var hedef = yeni ? document.querySelector('#ve-rb-tabs .ve-rb-tab.active') : null;
+  if(hedef && hedef.focus) try { hedef.focus({ preventScroll: true }); } catch(e) { hedef.focus(); }
+  return _veRibbonPeek;
 }
+// Eski ad (bandın düğmesi, testler): artık pencereyi çevirir — gövde yok
+function veRibbonToggleCollapse() { return veRibbonAc(); }
 
 function veRibbonRunItem(tabId, gi, ii) {
   var tab = VE_RIBBON_TABS.filter(function(t) { return t.id === tabId; })[0];
@@ -479,8 +462,8 @@ function veRibbonRunItem(tabId, gi, ii) {
   } catch(e) {
     console.warn('[MFSim Ribbon] Komut hatası:', item.run, e);
   }
-  // Peek modunda komut çalışınca gövde kapansın (Office davranışı)
-  if(veRibbonCollapsed && _veRibbonPeek) { _veRibbonPeek = false; veRibbonRender(); }
+  // Komut çalışınca pencere kapanır (menü davranışı)
+  if(_veRibbonPeek) { _veRibbonPeek = false; veRibbonRender(); }
   else veRibbonRefreshStates();
 }
 
@@ -490,10 +473,8 @@ function veRibbonInit() {
   host._rbInit = true;
 
   host.addEventListener('click', function(e) {
-    // Aynı komutun iki yüzeyi: gövdenin köşesindeki tutamak (daralt / sabitle)
-    // ve bandın sağ ucundaki geri aç düğmesi (yalnız daraltılmışken görünür).
-    var collapseBtn = e.target.closest('#ve-rb-collapse, #ve-rb-expand');
-    if(collapseBtn) { veRibbonToggleCollapse(); return; }
+    // Bandın sağ ucundaki düğme komutların penceresini açar / kapatır
+    if(e.target.closest('#ve-rb-expand')) { veRibbonAc(); return; }
 
     var tabBtn = e.target.closest('.ve-rb-tab');
     if(tabBtn) { veRibbonSelectTab(tabBtn.getAttribute('data-rb-tab')); return; }
@@ -503,12 +484,6 @@ function veRibbonInit() {
       var p = btn.getAttribute('data-rb').split(':');
       veRibbonRunItem(p[0], parseInt(p[1], 10), parseInt(p[2], 10));
     }
-  });
-
-  // Aktif sekmeye çift tık: daralt / genişlet (klasik ribbon davranışı)
-  host.addEventListener('dblclick', function(e) {
-    var tabBtn = e.target.closest('.ve-rb-tab');
-    if(tabBtn && tabBtn.classList.contains('active')) veRibbonToggleCollapse();
   });
 
   // Sekme şeridinde ok tuşlarıyla gezinme
@@ -526,13 +501,25 @@ function veRibbonInit() {
     e.preventDefault();
   });
 
-  // Peek açıkken dışarı tıklanınca kapan
-  document.addEventListener('mousedown', function(e) {
-    if(!veRibbonCollapsed || !_veRibbonPeek) return;
+  // Pencere açıkken dışarı tıklanınca ya da Esc'le kapanır. İkisi de YAKALAMA
+  // evresinde: Kayış Tablosu gibi yüzeyler mousedown'ı yutuyor (ölçüldü — tablonun
+  // satırına basmak pencereyi açık bırakıyordu), alttaki katmanın Esc'i bu tuşu
+  // görmez. pointerdown da dinlenir: varsayılanı engellenen işaretçi mousedown üretmez.
+  var disari = function(e) {
+    if(!_veRibbonPeek) return;
     if(host.contains(e.target)) return;
     _veRibbonPeek = false;
     veRibbonRender();
-  });
+  };
+  document.addEventListener('pointerdown', disari, true);
+  document.addEventListener('mousedown', disari, true);
+  document.addEventListener('keydown', function(e) {
+    if(e.key !== 'Escape' || !_veRibbonPeek) return;
+    e.stopPropagation(); e.preventDefault();
+    veRibbonAc(false);
+    var tog = document.getElementById('ve-rb-expand');
+    if(tog && tog.focus) tog.focus();
+  }, true);
 
   // Hızlı Erişim Araç Çubuğu (krom bandı içinde) — inline onclick yerine
   // delegasyon: aynı komut menüde de bulunduğundan `[onclick*="..."]`
@@ -585,6 +572,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veRibbonEsc: veRibbonEsc,
     veRibbonRunnable: veRibbonRunnable,
     veRibbonItemBadge: veRibbonItemBadge,
+    veRibbonAc: veRibbonAc,
     VE_RIBBON_ALWAYS_ON: VE_RIBBON_ALWAYS_ON
   };
 }

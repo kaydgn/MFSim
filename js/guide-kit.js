@@ -287,7 +287,7 @@ var VE_GUIDE_APPFIG_TOKENS = {
   '--radius-lg': '4px', '--bant-h': '26px',
   '--bant-zemin': '#f6f8fa',
   '--shadow-color': 'transparent',
-  '--ribbon-strip-h': 'auto', '--ribbon-expanded-h': 'auto'
+  '--ribbon-strip-h': 'auto'
 };
 
 // Tema bloğu ÇAPASI — bugün yalnız denetim için okunuyor (baskı paleti

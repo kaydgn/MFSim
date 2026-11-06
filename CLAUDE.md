@@ -657,6 +657,14 @@ Gerekçeleri ve ölçümleri `docs/decisions/ortak-yuzeyler.md` içinde.
   düğmesi köşe hücresinde — tuvalin üstünde yüzen kart yok. Kapı:
   `kabuk-bant.test.js` + `kabuk-sutun.spec.js` → *"KABUK TEK ÇİZGİ"* ·
   *"RAY ÇERÇEVELİ"* · *"AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE"*.
+- **ŞERİDİN GÖVDESİ YOK — komutlar kenardaki küçük pencerede** (kullanıcı
+  2026-11-06, Canlı Not 59: *"Programı daraltıyor"*): bandın sağ ucundaki
+  **Komutlar** düğmesi (`#ve-rb-expand`) bandın altında YÜZEN pencereyi
+  (`#ve-rb-dock`: sekmeler + başlıklı iki sütunlu liste) açar; komut, dışarı tık
+  (yakalama evresinde — Kayış Tablosu mousedown'ı yutuyor) ve Esc kapatır;
+  `--ribbon-h` hep bandın boyu, sayfa itilmez. Kılavuzda komutun yeri
+  "Komutlar’daki …". Kapı: `kabuk-bant.test.js` → *ŞERİT BANDI İNCE* +
+  `ust-bant.spec.js` → *KOMUTLARIN PENCERESİ*.
 - **BİR KULLANICI EYLEMİ = BİR GERİ-AL ADIMI.** `createNode` her düğümde
   `saveState()` çağırıyor; ONİKİ düğüm kuran bir kurucu (modül örneği,
   sihirbaz, açılış yüzeyi) bu yüzden `js/state.js` → **`veStateBatch(fn)`** ile

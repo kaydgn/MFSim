@@ -250,29 +250,20 @@ test('sekme bandı artık bandın TAMAMI — durum onu yemiyor', async ({ page }
   expect(r.dock.w).toBe(r.tuval.w);
 });
 
-// ŞERİT KATLAMASI ZATEN VARDI (aktif sekmeye ikinci tık). Alt şerit onu
-// bozmamalı: kazanç ölçülüyor ki bir sonraki tur farkında olmadan yutmasın.
-//
-// KAPI DURUMA DUYARLI, VARSAYILANA DEĞİL. İlk yazımı "açık başlar, katlayınca
-// kazanır" diye kuruluyordu; üst bant turu gövdeyi VARSAYILAN KATLI yapınca
-// aynı çağrı gövdeyi AÇIYOR ve kazanç eksiye dönüyordu. Hüküm hiç değişmedi —
-// mekanizma tuvali ölçülebilir biçimde oynatıyor — ölçüm o hükme çevrildi.
-test('şerit katlaması tuvali ölçülebilir biçimde oynatıyor', async ({ page }) => {
+// ŞERİDİN GÖVDESİ YOK (kullanıcı 2026-11-06, Canlı Not 59: *"Programı
+// daraltıyor"*): açık gövde tuvali 94 px kısaltıyordu. Komutların penceresi
+// bandın üstünde yüzer — açıkken de tuval ve durum şeridi yerinde.
+test('komutların penceresi tuvali OYNATMIYOR', async ({ page }) => {
   await modulAc(page);
   const a = await page.evaluate(olc);
-  await page.evaluate(() => veRibbonToggleCollapse());
-  await page.waitForTimeout(500);
+  await page.evaluate(() => veRibbonAc(true));
+  await page.waitForTimeout(300);
   const b = await page.evaluate(olc);
-
-  // Hangisi katlıysa tuval O DURUMDA daha yüksek olmalı
-  const katliOlan = a.katli ? a : b;
-  const acikOlan = a.katli ? b : a;
-  expect(katliOlan.katli).toBe(true);
-  expect(acikOlan.katli).toBe(false);
-  expect(katliOlan.tuval.h - acikOlan.tuval.h).toBeGreaterThan(60);
-
-  // ve her iki durumda da durum şeridi ALTTA kalır
+  expect(await page.evaluate(() => document.getElementById('ve-ribbon').classList.contains('is-peek'))).toBe(true);
+  expect(b.tuval).toEqual(a.tuval);
+  expect(b.durum).toEqual(a.durum);
   [a, b].forEach((s) => {
+    expect(s.katli).toBe(true);
     expect(s.durum.y).toBeGreaterThanOrEqual(s.tuval.y + s.tuval.h - 1);
   });
 });
