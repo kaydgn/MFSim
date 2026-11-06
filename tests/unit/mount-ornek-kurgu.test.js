@@ -33,9 +33,9 @@ const vites = (Rx, ad) => (Rx.gearCases || []).find((c) => c.name === ad).res;
 const st = (U, no) => U.satirlar.find((s) => s.no === no).st;
 
 describe('kayıt: üç kurgu örnek, gerçeklerden sonra ve ayrı işaretli', () => {
-  test('kutu · hafif · kamyon kurgu; gerçek örnekler (siper · tulga · asfat) kurgu DEĞİL', () => {
+  test('kutu · hafif · kamyon kurgu; gerçek örnekler (siper · tulga · asfat · tta10) kurgu DEĞİL', () => {
     expect(KURGU.map((e) => e.id)).toEqual(['kutu', 'hafif', 'kamyon']);
-    ['siper', 'tulga', 'asfat'].forEach((id) => expect(core.getMountExample(id).kurgu).toBeFalsy());
+    ['siper', 'tulga', 'asfat', 'tta10'].forEach((id) => expect(core.getMountExample(id).kurgu).toBeFalsy());
     KURGU.forEach((e) => expect(e.specs).toContainEqual(['Kaynak', 'Kurgu — gerçek bir aracı temsil etmez']));
   });
   test('her kurgu örnek hatasız çözülüyor (modal + bütün yük durumları)', () => {

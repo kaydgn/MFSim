@@ -166,6 +166,18 @@ test('PANEL YERİNDE: değişiklikler kayarken panel tepede, görünen yüksekli
   await page.mouse.wheel(0, -300);
   await expect.poll(async () => (await olc()).kay).toBeLessThan(600);
   expect((await olc()).panelUst).toBe(0);
+  // DİZİN KENDİ İÇİNDE KAYAR: örnekler uzayınca panel taşmaz, dönüş dipte görünür
+  // kalır (dört gerçek örnekle 800 px'te panel 56 px taşıyordu)
+  await page.evaluate(() => {
+    const d = document.querySelector('#ve-mnt-baslangic .ve-bas-dizin'), r = d.querySelector('.ve-bas-satir');
+    for (let i = 0; i < 8; i++) d.appendChild(r.cloneNode(true));
+  });
+  const b = await page.evaluate(() => {
+    const P = document.querySelector('#ve-mnt-baslangic .ve-bas-panel'), d = P.querySelector('.ve-bas-dizin');
+    return { panelTasma: P.scrollHeight - P.clientHeight, dizinKayar: d.scrollHeight > d.clientHeight };
+  });
+  expect(b).toEqual({ panelTasma: 0, dizinKayar: true });
+  expect([(await olc()).kimlik, (await olc()).donus]).toEqual([true, true]);
 });
 
 test('BOŞ KANVAS: araçlar kurulur, sayfa çekilir; Ctrl+Z sayfayı geri getirir', async ({ page }) => {

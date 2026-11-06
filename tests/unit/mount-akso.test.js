@@ -19,7 +19,7 @@
  *     (veMntAksoCozumModel; kullanıcı kararı 2026-10-16: sonuç yalnız raporda)
  *   · FİZİK — tepkilerin düşey toplamı ağırlık; mod şekli raporun §8.16
  *     formülü (Δ = 1000·u + θ × r); ölçek sınırları %10 açıklık / 6°
- *   · YAZI — üç örnek × iki izdüşüm × sekiz bakış × altı katman, sütun ve tam
+ *   · YAZI — dört örnek × iki izdüşüm × sekiz bakış × altı katman, sütun ve tam
  *     ekran genişliğinde: yazı ≥ 10 px, iki yazı üst üste değil (çizicinin
  *     kendi kutu tahmini — gerçek kutular yerlesim.spec'te), BÜTÜN çizgiler
  *     yazılardan önce (hâle çizgiyi örter, çipin yazısını çipin dolgusu)
@@ -55,7 +55,7 @@ const rep = require('../../js/cp-mount-report.js');
   .forEach((k) => { global[k] = rep[k]; });
 
 const KOK = path.join(__dirname, '../..');
-const ORNEK = { tulga: 'tulga_topoloji.json', siper: 'siper_topoloji.json', asfat: 'asfat_topoloji.json' };
+const ORNEK = { tulga: 'tulga_topoloji.json', siper: 'siper_topoloji.json', asfat: 'asfat_topoloji.json', tta10: 'tta10_topoloji.json' };
 const JSONLAR = {};
 Object.keys(ORNEK).forEach((k) => { JSONLAR[k] = JSON.parse(fs.readFileSync(path.join(KOK, 'assets/examples', ORNEK[k]), 'utf8')); });
 function yukle(k) {
@@ -125,7 +125,7 @@ describe('MODEL ÇEKİRDEKTEN — pencere hesaplamaz, okur', () => {
     expect(t.govde.filter((g) => !g.kutu).length).toBe(5);
   });
 
-  // Üç örnekte %5–10 arasında gövde yok: eşik başka bir sayıya kaysa örnekler
+  // Dört örnekte %5–10 arasında gövde yok: eşik başka bir sayıya kaysa örnekler
   // bunu göremezdi. Bir braketin payı eşiğin iki yanına taşınır.
   test('ana gövde eşiği tam %10: payı %7 olan gövde ana DEĞİL, %11 olan ana', () => {
     yukle('tulga');
@@ -172,7 +172,7 @@ describe('MODEL ÇEKİRDEKTEN — pencere hesaplamaz, okur', () => {
 });
 
 describe('FİZİK — serbest cisim ve mod şekli', () => {
-  test('takoz tepkilerinin düşey toplamı ağırlık (statik denge, üç örnek)', () => {
+  test('takoz tepkilerinin düşey toplamı ağırlık (statik denge, dört örnek)', () => {
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
       const m = cp.veMntAksoCozumModel(coz());
@@ -239,7 +239,7 @@ describe('YAZI — okunur, çakışmaz, çizgi altında', () => {
     ['mod', {}, 'golge', true],
   ];
 
-  test('üç örnek × iki izdüşüm × sekiz bakış × katmanlar (sütun 338/354, tam ekran 1200 + üç duvar)', () => {
+  test('dört örnek × iki izdüşüm × sekiz bakış × katmanlar (sütun 338/354, tam ekran 1200 + üç duvar)', () => {
     const kucuk = [], binen = [], sira = [], bozuk = [];
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -477,7 +477,7 @@ describe('RAPOR — §8\'in teknik illüstrasyonu', () => {
 // (raporun çizimi, ASFAT): "G · z 798" motorun CG işaretinin üstüne düşüyordu
 // — işaret yerleştiricinin engel listesinde yoktu.
 describe('YAZI — x-ışınında gövdenin CG işaretini yazı örtmez', () => {
-  test('üç örnek × iki izdüşüm × sekiz bakış × iki genişlik', () => {
+  test('dört örnek × iki izdüşüm × sekiz bakış × iki genişlik', () => {
     const ihlal = [];
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -583,7 +583,7 @@ describe('SERBEST KAMERA — Görünümler', () => {
     expect(r.etiket.length).toBeLessThan(tumu.etiket.length);
   });
 
-  test('her açıda yazı kuralları: üç örnek × sekiz azimut × dört yükseliş × dört katman (pencerenin işaret boyuyla)', () => {
+  test('her açıda yazı kuralları: dört örnek × sekiz azimut × dört yükseliş × dört katman (pencerenin işaret boyuyla)', () => {
     const yazilar = (svg) => [...svg.matchAll(/<text([^>]*)>([^<]*)<\/text>/g)].map((mt) => {
       const a = (n) => { const q = new RegExp(' ' + n + '="([^"]*)"').exec(mt[1]); return q ? q[1] : null; };
       const px = Number(a('font-size')), x = Number(a('x')), y = Number(a('y')), an = a('text-anchor') || 'start';
@@ -717,7 +717,7 @@ describe('İŞARET BOYU — takoz, G, gövde CG\'si ve nokta kütle büyür; öl
     expect(olc(AK.ciz(cp.veMntAksoOrnekModel(ex.model), { W: 300, H: 200, sade: true }).svg).G).toBe(6.5);
   });
 
-  test('büyüyen işaretle de yazı onları örtmez: takoz, G ve gövde CG\'si (üç örnek × dört açı × iki genişlik)', () => {
+  test('büyüyen işaretle de yazı onları örtmez: takoz, G ve gövde CG\'si (dört örnek × dört açı × iki genişlik)', () => {
     const ihlal = [];
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -772,7 +772,7 @@ describe('YAPIŞKAN YER — döndürürken yazılar işaretiyle yürür', () => 
     }
     return { oran: sicra / n, binen, disari };
   };
-  test('üç örnek, pencere ve tam ekran genişliği: sıçrama en az yarıya iner (yapışkansızı %2\'yi aşıyorsa) ve %4\'ün altında; yazı yazıya binmez', () => {
+  test('dört örnek, pencere ve tam ekran genişliği: sıçrama en az yarıya iner (yapışkansızı %2\'yi aşıyorsa) ve %4\'ün altında; yazı yazıya binmez', () => {
     const sorun = [];
     Object.keys(ORNEK).forEach((k) => {
       yukle(k);
@@ -840,7 +840,7 @@ describe('PERDE — parça aydınlık, kalan model gölgede', () => {
     expect(svg).not.toMatch(/ve-ak-perde|ve-ak-odak/);
     expect(svg).toMatch(/<circle class="ve-ak-sec-hale"[^>]*\/><!--hs--><\/g>/);
   });
-  test('üstte çizilen kenar ve halka hiçbir yazının içinden geçmez: üç örnek × her işaret × altı açı × iki genişlik', () => {
+  test('üstte çizilen kenar ve halka hiçbir yazının içinden geçmez: dört örnek × her işaret × altı açı × iki genişlik', () => {
     const yazilar = (svg) => [...svg.matchAll(/<text([^>]*)>([^<]*)<\/text>/g)].map((mt) => {
       const a = (n) => { const q = new RegExp(' ' + n + '="([^"]*)"').exec(mt[1]); return q ? q[1] : null; };
       const px = Number(a('font-size')), x = Number(a('x')), y = Number(a('y')), an = a('text-anchor') || 'start';
@@ -951,9 +951,9 @@ describe('GİZLİ YÜZEY — kutunun arkasındaki takoz ve nokta kütle örtül�
   const sakli = (p, B, K) => { const w = K.d.map((v) => -v), dn = (n) => n[0] * K.d[0] + n[1] * K.d[1] + n[2] * K.d[2] < 0;
     return B.some((b) => (icinde(p, b, 0.01) ? !dn(yakin(p, b)) : orter(p, b, w, 0.5))); };
 
-  test('üç örnek × 126 bakış: çizimdeki görünürlük ışınla aynı; arkada kalanın yazısı yok, öndekinin var', () => {
+  test('dört örnek × 126 bakış: çizimdeki görünürlük ışınla aynı; arkada kalanın yazısı yok, öndekinin var', () => {
     const hata = [], say = { durum: 0, sakli: 0 }, icerideki = {};
-    ['tulga', 'siper', 'asfat'].forEach((ad) => {
+    ['tulga', 'siper', 'asfat', 'tta10'].forEach((ad) => {
       yukle(ad);
       const m = cp._mntAksoModel(), B = kutular(m);
       const isaret = [...m.takoz.map((t) => ({ k: t.k, p: [t.x, t.y, t.z], takoz: true })), ...m.govde.filter((g) => !g.kutu && !g.levha).map((g) => ({ k: g.k, p: [g.x, g.y, g.z] }))];
@@ -1346,7 +1346,7 @@ describe('KLASİK 3B — 3D Görüntüleyici açılışta sahne kurmaz', () => {
 describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () => {
   const EKLER = { hafif: 'hafif_topoloji.json', kamyon: 'kamyon_topoloji.json', kutu: 'kutu_topoloji.json' };
   Object.keys(EKLER).forEach((k) => { JSONLAR[k] = JSON.parse(fs.readFileSync(path.join(KOK, 'assets/examples', EKLER[k]), 'utf8')); });
-  const HEPSI = ['tulga', 'siper', 'asfat', 'hafif', 'kamyon', 'kutu'];
+  const HEPSI = ['tulga', 'siper', 'asfat', 'tta10', 'hafif', 'kamyon', 'kutu'];
   const KAM = [{ az: 249.3, el: 19.5 }].concat([0, 45, 90, 135, 180, 225, 270, 315].map((az) => ({ az, el: 25 })));
   const kutular = (m) => m.govde.filter((g) => g.kutu).map((g) => ({ g, c: [g.x, g.y, g.z], h: g.kutu.map((v) => v / 2) }));
   const lohi = (q) => ({ lo: q.c.map((v, i) => v - q.h[i]), hi: q.c.map((v, i) => v + q.h[i]) });
@@ -1366,7 +1366,7 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
       // kesişmeyen kutu nesnesiyle döner (çizim birebir eski)
       K.forEach((q) => { if (!K.some((r) => r !== q && ortHacim(q, r) > 1)) expect(P.filter((x) => x === q).length).toBe(1); });
     });
-    expect(kesisen).toEqual({ tulga: [], siper: [], kutu: [],
+    expect(kesisen).toEqual({ tulga: [], siper: [], kutu: [], tta10: [],
       asfat: ['Şanzıman + Retarder — Allison 4700 × Top PTO Grubu'], hafif: ['Motor × Şanzıman'], kamyon: ['Motor × Şanzıman'] });
     yukle('asfat');
     const K = kutular(cp._mntAksoModel()), sz = K.find((q) => /Şanzıman/.test(q.g.ad)), pto = K.find((q) => /Top PTO/.test(q.g.ad));
@@ -1377,7 +1377,7 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
     expect(lohi(pto).hi[0] - lohi(sz).hi[0]).toBeLessThan(AK.ICICE_ENAZ);
   });
 
-  test('ışın kâhini: altı örnek × dokuz bakış, ÇİZİMİN boyadığı gövde her noktada ışının çarptığı en yakın kutu (atılan dilim payı ‰1,5)', () => {
+  test('ışın kâhini: yedi örnek × dokuz bakış, ÇİZİMİN boyadığı gövde her noktada ışının çarptığı en yakın kutu (atılan dilim payı ‰1,5)', () => {
     const oran = {};
     let say = 0;
     HEPSI.forEach((ad) => {
@@ -1412,7 +1412,7 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
       say += n;
       oran[ad] = yanlis / n < 0.0015;
     });
-    expect(oran).toEqual({ tulga: true, siper: true, asfat: true, hafif: true, kamyon: true, kutu: true });
+    expect(oran).toEqual({ tulga: true, siper: true, asfat: true, tta10: true, hafif: true, kamyon: true, kutu: true });
     expect(say).toBeGreaterThan(50000);                                            // kapı boşa ölçmüyor
   });
 
@@ -1426,7 +1426,7 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
   const icinden = (s, k) => { for (let i = 1; i < 30; i++) { const x = s[0] + (s[2] - s[0]) * i / 30, y = s[1] + (s[3] - s[1]) * i / 30; if (x > k.l + 1 && x < k.r - 1 && y > k.t + 1 && y < k.b - 1) return true; } return false; };
   const ORTU = [{ l: 8, t: 8, r: 240, b: 40 }, { l: 558, t: 8, r: 782, b: 40 }, { l: 748, t: 320, r: 782, b: 408 }];
 
-  test('çip: altı örnek × dokuz bakış — her yazı çerçeveli, kılavuz kısa; çip çipe ve örtüye binmez, kılavuz kesişmez ve çipin içinden geçmez', () => {
+  test('çip: yedi örnek × dokuz bakış — her yazı çerçeveli, kılavuz kısa; çip çipe ve örtüye binmez, kılavuz kesişmez ve çipin içinden geçmez', () => {
     const olc = (balon) => {
       const t = { yazi: 0, cercevesiz: 0, kilSay: 0, kilTop: 0, kilEn: 0, yaziYazi: 0, ortu: 0, kesisen: 0, icinden: 0, eski: 0 };
       HEPSI.forEach((ad) => {
@@ -1464,10 +1464,10 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
     expect(eski.cercevesiz).toBeGreaterThan(100);
   });
 
-  test('döndürürken çip parçasıyla yürür: üç örnek × tam tur (3°), sürüklemenin karesi — 20 px\'ten büyük sıçrama ‰10\'un altında', () => {
+  test('döndürürken çip parçasıyla yürür: dört örnek × tam tur (3°), sürüklemenin karesi — 20 px\'ten büyük sıçrama ‰10\'un altında', () => {
     const olc = (surukle) => {
       let kare = 0, sicrama = 0;
-      ['siper', 'tulga', 'asfat'].forEach((ad) => {
+      ['siper', 'tulga', 'asfat', 'tta10'].forEach((ad) => {
         yukle(ad);
         const m = cp._mntAksoModel(), isaret = {};
         m.govde.forEach((g) => { isaret[g.k] = [g.x, g.y, g.z]; }); m.takoz.forEach((q) => { isaret[q.k] = [q.x, q.y, q.z]; });
@@ -1493,7 +1493,7 @@ describe('İÇ İÇE KUTU · RESSAM SIRASI · ÇİP — sihirbazın 3B\'si', () 
   test('gövdenin kılavuzu GÖRÜNEN yerine iner (ışın orada o gövdeye çarpar), ucunda nokta; çipsiz çizim birebir eski', () => {
     let say = 0;
     const hata = [];
-    ['siper', 'tulga', 'asfat'].forEach((ad) => {
+    ['siper', 'tulga', 'asfat', 'tta10'].forEach((ad) => {
       yukle(ad);
       const m = cp._mntAksoModel(), B = kutular(m), kutulu = {}; B.forEach((q) => { kutulu[q.g.k] = true; });
       KAM.forEach((kam) => {

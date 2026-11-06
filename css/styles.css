@@ -11423,6 +11423,14 @@ text[data-ve="name"].is-hov, text[data-ve="name"].is-sel{ font-weight:700; fill:
    tuvalde (alt alta) yapışmaz. */
 @container vebas (min-width: 900px){
   .ve-bas-ic--masa > .ve-bas-panel{ position:sticky; top:0; height:100cqh; overflow-y:auto; }
+  /* Panelin esneyen parçası örneklerin DİZİNİ: sığmazsa dizin kendi içinde kayar,
+     kimlik, kapılar ve dipteki dönüş görünür kalır (dört gerçek örnekle 1600×800'de
+     panel 56 px taşıyor, dönüş görünen alanın dışında kalıyordu). Bölüm başlığıyla
+     üç kapalı satırdan (190 px) kısalmaz: daha kısa pencerede panel bütün olarak kayar
+     (1200×460'ta dizin 0 px'e iniyordu). Kapı: mount-baslangic.spec.js → PANEL YERİNDE ·
+     TEKERLEK. */
+  .ve-bas-ic--masa > .ve-bas-panel > .ve-bas-ornek{ min-height:190px; }
+  .ve-bas-ic--masa > .ve-bas-panel .ve-bas-dizin{ min-height:0; overflow-y:auto; }
 }
 /* Dönüşü panelin altında taşıyan sayfa açıkken köşedeki dönüş düğmesi gizli
    (Canlı Not 19: *"Geri butonunu alt taraflara uygun bir yere taşıyalım"*) */

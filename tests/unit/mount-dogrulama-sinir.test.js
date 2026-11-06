@@ -204,7 +204,7 @@ describe('Kriter 2 — §8.8 ile uygunluk tablosu aynı sayıyı ve aynı hükm�
 // iki yüzeyde iki sayıydı. Hakem bağımsız karmaşık FRF (H.frfHakem) ve ızgara
 // komşuları arasında altın oran araması — çekirdeğin hiçbir fonksiyonu değil.
 describe('FRF tepesi: Sonuçlar ve rapor tepenin KENDİSİNİ okur', () => {
-  const MOD = ['siper', 'tulga', 'asfat'].map((ad) => [ad, H.coz(H.ornek(ad), { sinyal: true })]);
+  const MOD = ['siper', 'tulga', 'asfat', 'tta10'].map((ad) => [ad, H.coz(H.ornek(ad), { sinyal: true })]);
 
   test.each(MOD)('%s: üç yönde her yerel tepe hakemin yerel en büyüğüne ≤ 10⁻⁶', (ad, R) => {
     const mk = H.birlesikKutle(R.components), Mm = H.M6of(mk.m, mk.I);

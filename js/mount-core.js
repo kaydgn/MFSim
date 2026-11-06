@@ -2188,6 +2188,55 @@ var veMountCore = (function() {
     loadCases: defaultLoadCases()
   };
 
+  // ── 10 Ton TTA — şanzıman askısız (Cummins ISM · Allison 4500 SP) ──────────
+  // Kaynak: kullanıcının çalışma kitabı (22.10.2026) — "Front Support" (motorun
+  // ön destek + volan muhafazası askısında reaksiyon ve bloğun arka yüzünde
+  // eğilme momenti) ve "AĞIRLIK_KIRILIMI" (parça başına kütle ve ağırlık merkezi).
+  //   gövdeler → AĞIRLIK_KIRILIMI'nın O · P · Q · R sütunları, birebir. Tipi
+  //     olmayan motor parçaları (yağ, krank kasnağı, pervane, hava girişi, turbo
+  //     dirseği, yakıt filtresi braketi, intercooler boruları: 63 kg) MOTORDA;
+  //     motorun ataleti ISM11 veri sayfası (veri sayfası kataloğu, cummins-ism11)
+  //     + o parçaların nokta kütle payı. 4500 SP'nin ataleti Allison 4000 §11
+  //     (6 vites · PTO · retardersiz).
+  //   takoz X'i → Front Support: ön L2 (RFOB − 1.066), arka L4 + L7 (RFOB + 160);
+  //     Y ve Z KULAKLARDAN (kullanıcı kararı 2026-11-06): ön takoz ön kulağın
+  //     Y/Z'si, arka takoz arka kulağın Y'si + L8 (79 mm dışa) ve Z'si.
+  //   rijitlik → Excel'de YOK; ASFAT'ın takozları (kullanıcı kararı 2026-11-06):
+  //     ön 57RS313774, arka 57RS313773, ASR-SR-116 değerleri; ζ = 0,02 aynı belgeden.
+  //   bağlantı yüzü → bloğun arka yüzü (Excel'in Mr düzlemi; kullanıcı kararı
+  //     2026-11-06), krank ekseninde: X 428,5 (L1 ve L3'ün ikisi de verir), Y/Z
+  //     Allison satırından (CG 47,0 mm eksenin altında). Sınır YOK: ISM'in
+  //     bloğun arka yüzü sınırı programda değil — rapor momenti yazar, hüküm vermez.
+  //   TORK YOK: Excel tork, vites ve rölanti vermez (ASFAT'la aynı gerekçe).
+  // EXCEL'İN Mr'I 992,7 N·m, BU MODELİN 1.152,6: Excel L3'ü (563) yalnız 4500 SP
+  // gövdesinin CG'sinden alıyor ama Wt'ye (530 kg) PTO, pompa ve kardan payını
+  // da katıyor — grubun CG'si RFOB + 596,3. Kapı: tests/unit/mount-ornek-tta.test.js.
+  const TTA10_RFOB = 428.5;
+  const TTA10_EXAMPLE = {
+    g: 9.81,
+    components: [
+      {name:'Motor — Cummins ISM',        mass:1136, cg:[ -82.548,  -0.711, 675.091], Ixx:90.46, Iyy:184.32, Izz:135.33, Ixy:0.19, Ixz:-4.88, Iyz:-0.39, pointMass:false, kind:'mnt-motor',      at:[335,331]},
+      {name:'Alternatör grubu',           mass:36.1, cg:[-626.54,  273.58,  791.24], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-alternator', at:[265,229]},
+      {name:'Klima kompresörü',           mass:10,   cg:[-543.89, -323.46,  973.4 ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-ac',         at:[225,433]},
+      {name:'Direksiyon pompası',         mass:10,   cg:[-406.62, -276.32,  398.27], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump',       at:[365,433]},
+      {name:'Ön kulak',                   mass:6,    cg:[-606.76,   30.92,  356.29], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket',    at:[185,331]},
+      {name:'Sağ arka kulak',             mass:5.5,  cg:[ 513.06,  319.6,   584   ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket',    at:[505,229]},
+      {name:'Sol arka kulak',             mass:5.5,  cg:[ 511.82, -320.4,   584   ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-bracket',    at:[505,433]},
+      {name:'Şanzıman — Allison 4500 SP', mass:474,  cg:[ 991.5,    -1.18,  446.96], Ixx:12.08, Iyy:33.65, Izz:31.5, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox', at:[657.5,331],
+       bag:[TTA10_RFOB, -0.58, 493.96]},
+      {name:'PTO',                        mass:18,   cg:[ 825.58, -257.03,  395.3 ], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pto',        at:[625,433]},
+      {name:'Pompa',                      mass:18,   cg:[1063.66, -288.7,   396.78], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-pump',       at:[735,433]},
+      {name:'Kardan mili payı',           mass:20,   cg:[1957.13,   -3.25,  510.02], Ixx:0, Iyy:0, Izz:0, Ixy:0, Ixz:0, Iyz:0, pointMass:true, kind:'mnt-shaft',      at:[855.5,331]}
+    ],
+    mounts: [
+      {name:'Ön takoz · 57RS313774',       pos:[TTA10_RFOB - 1066,   30.92, 356.29], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 25,331]},
+      {name:'Sağ arka takoz · 57RS313773', pos:[TTA10_RFOB + 160,   398.6,  584   ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[505,137]},
+      {name:'Sol arka takoz · 57RS313773', pos:[TTA10_RFOB + 160,  -399.4,  584   ], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[505,533]}
+    ],
+    cozucu: { zeta:0.02 },
+    loadCases: defaultLoadCases()
+  };
+
   // ═══════════════════ Çoklu örnek kayıt defteri ═══════════════════
   // Her giriş kendi kendine yeterli bir doğrulama örneğidir: sayısal model
   // (TTAR_EXAMPLE biçimi) + sunum meta verisi (araç adı, açıklama, teknik özet)
@@ -2217,6 +2266,8 @@ var veMountCore = (function() {
   // model.components[i].kind  (ops.) → kanvas tipini açıkça belirt
   //   ('mnt-motor'/'mnt-gearbox'/'mnt-shaft'/'mnt-bracket'/'mnt-transfer');
   //   verilmezse bileşen adından çıkarılır.
+  // model.components[i].bag = [x,y,z] mm (ops.) → bağlantı yüzünün merkezi
+  //   (şanzımanın bagX · bagY · bagZ'si; eksen +X); egSinir (ops.) N·m.
   // model.components[i].at / model.mounts[i].at = [lx,ly]  (ops.) → görseldeki
   //   yerleşimi birebir eşlemek için elle yerel-piksel konum; verilmezse
   //   otomatik yerleşim (orta sıra kütleler, alt/üst sıra takozlar) uygulanır.
@@ -2431,6 +2482,35 @@ var veMountCore = (function() {
       ],
       topology: 'assets/examples/asfat_topoloji.json',
       model: ASFAT_EXAMPLE
+    },
+    tta10: {
+      id: 'tta10',
+      name: '10 Ton TTA Takoz Analizi',
+      vehicle: '10 Ton TTA',
+      subtitle: '11 kütle · 3 takoz güç grubu',
+      description: 'Cummins ISM · Allison 4500 SP + PTO · şanzıman askısız',
+      specs: [
+        ['Kütle gövdesi', String(TTA10_EXAMPLE.components.length)],
+        ['Takoz', String(TTA10_EXAMPLE.mounts.length) + ' · ön 1 · arka 2'],
+        ['Toplam kütle', _toplamKg(TTA10_EXAMPLE)],
+        ['Bağlantı yüzü', 'bloğun arka yüzü · X ' + _sayi(TTA10_RFOB, 1) + ' mm'],
+        ['Sönüm oranı ζ', _sayi(TTA10_EXAMPLE.cozucu.zeta, 2)],
+        ['Takoz statik (Z)', (function(){
+          var z = TTA10_EXAMPLE.mounts.map(function(m){ return m.kstat[2]; });
+          return _aralik(z) + ' N/mm';
+        })()]
+      ],
+      // Panel önizleme sahnesi — JSON'daki araç kartlarıyla aynı yerleşim.
+      tools: [
+        {type:'mnt-library',    at:[1005, 90]},
+        {type:'mnt-solver',     at:[1110, 90]},
+        {type:'mnt-example',    at:[1215, 90]},
+        {type:'mnt-report',     at:[1320, 90]},
+        {type:'mnt-2dview',     at:[1005,250]},
+        {type:'mnt-viewer',     at:[1110,250]}
+      ],
+      topology: 'assets/examples/tta10_topoloji.json',
+      model: TTA10_EXAMPLE
     },
     kutu: {
       id: 'kutu', kurgu: true,

@@ -229,7 +229,7 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
   // kaydedilmişti: liste "— elle gir —" derken not tipi adlandırıyor, Takoz
   // Özellikleri'nin Kullanım'ı hiçbirini saymıyordu. Kural, liste değil: her
   // örneğin her takozu.
-  test('TİP LİSTESİ: her örnekte her takozun listesi ve Kullanım\'ı notun eşleşmesinden (17 tipli, 11 tipsiz takoz)', () => {
+  test('TİP LİSTESİ: her örnekte her takozun listesi ve Kullanım\'ı notun eşleşmesinden (20 tipli, 11 tipsiz takoz)', () => {
     const dir = path.join(__dirname, '../../assets/examples');
     let tipli = 0, tipsiz = 0, bagli = 0;
     fs.readdirSync(dir).filter((f) => /_topoloji\.json$/.test(f) && !/^ap_/.test(f)).forEach((f) => {
@@ -251,7 +251,7 @@ describe('KATEGORİ DURUMU — boş alan çözücüde 0 ya da ret demek', () => 
         expect([f, e.key, n]).toEqual([f, e.key, say[e.key] || 0]);
       });
     });
-    expect([tipli, tipsiz, bagli]).toEqual([17, 11, 0]);
+    expect([tipli, tipsiz, bagli]).toEqual([20, 11, 0]);                // 10 Ton TTA'nın üçü ASFAT'ın tipleri
   });
 
   test('TİP LİSTESİ: bağ seçilen tipi gösterir; bağsız takozda bir değer değişince "— elle gir —"', () => {
