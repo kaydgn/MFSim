@@ -165,7 +165,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok); kimlikte atalarının
   yolu YOK (ata ağaçtan seçilir, Canlı Not 42). Hesap Özellikler'in DİBİNDEKİ eylem
   şeridinde (yapışık), rol verilince; panel kapalıyken şeridin dibinde yalnız sıradaki adımın
-  simgesi (kullanıcı 2026-11-06, Canlı Not 45). **Açılış geçişli** (kullanıcı 2026-11-06, Canlı Not 54): kapalı
+  simgesi (kullanıcı 2026-11-06, Canlı Not 45). **Koyu görünüş** (Canlı Not 61: *"renkler hep
+  aydınlık temaya göre … garip duruyor"*): koyu temada sahnenin rol renkleri derin tona iner
+  (`veMntWiz3bSahneTonu` — koyunun rol jetonları yazı için açılmış pasteldir), kenar koyu, tülün
+  (x-ışını) kenarı açık, rolsüz parça açık çelik grisi; Arka plan listesi temanın
+  (`veMntWiz3bZeminListe`: dört açık zeminin koyu eşi, anahtar ortak). Kapı: `mount-3b.test.js` →
+  *KOYU GÖRÜNÜŞ*. **Açılış geçişli** (kullanıcı 2026-11-06, Canlı Not 54): kapalı
   perde saydamlıktan belirir, okumanın kartı ardından yükselir; okuma bitince perde AÇIK kalır, Ürün ağacı
   soldan, Özellikler sağdan gelir, iş kartı eski yerinden kayar; hareket azaltılınca geçiş yok. Sağ tık menüsü `js/cp-mount-3b-menu.js`
   (gizle · ağaçta göster · rol · malzeme; gizli parça görünüm durumu, kaydedilmez). Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
