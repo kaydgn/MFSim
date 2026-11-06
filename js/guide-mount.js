@@ -1058,8 +1058,9 @@ function _gmSec16(){
       + '<strong>Malzeme</strong>, takozun noktası, <strong>Motor modeli</strong> ve referansı, katalog), birimin kütlesi ve CG’si, '
       + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Kapalı başlar: şerit açar, başlığındaki düğme '
       + 'daraltır; açıklık tarayıcıda saklanır. Satırlar seçime göre'],
-    ['Eylem kartı', 'Tuvalin sağ altında, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
-      + 'üstünde hesabın engeli ve rolün eksiği', 'Sıradaki adımın düğmesi dolu renkte'],
+    ['Eylem', '<strong>Özellikler</strong>’in dibinde, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
+      + 'üstünde hesabın engeli ve rolün eksiği', 'Sıradaki adımın düğmesi dolu renkte; panel kapalıyken şeridin dibinde '
+      + 'yalnız onun simgesi'],
     ['İş kartı', 'Tuvalin sağ altında; <strong>STEP okuma</strong> ve <strong>3B kurulumu</strong>: çubuk, '
       + '<strong>Vazgeç</strong> · <strong>Durdur</strong> · <strong>Devam</strong>', 'İş bitince kalkar'],
     ['Durum çubuğu', 'İmlecin altındaki noktanın koordinatı; çizim yazılımsalsa durumu; birimler', 'mm · kg']

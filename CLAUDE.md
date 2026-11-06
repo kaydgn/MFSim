@@ -156,8 +156,9 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   (Rol'ün rengi listenin içinde), Rol tek liste, motorun listesi **Motor modeli** (şanzımanda Şanzıman
   modeli; "Veri sayfası" adı yok — kullanıcı 2026-11-06, Canlı Not 42), Malzeme
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok); kimlikte atalarının
-  yolu YOK (ata ağaçtan seçilir, Canlı Not 42). Hesap tuvalin
-  sağ altındaki eylem kartında, rol verilince. Sağ tık menüsü `js/cp-mount-3b-menu.js`
+  yolu YOK (ata ağaçtan seçilir, Canlı Not 42). Hesap Özellikler'in DİBİNDEKİ eylem
+  şeridinde (yapışık), rol verilince; panel kapalıyken şeridin dibinde yalnız sıradaki adımın
+  simgesi (kullanıcı 2026-11-06, Canlı Not 45). Sağ tık menüsü `js/cp-mount-3b-menu.js`
   (gizle · ağaçta göster · rol · malzeme; gizli parça görünüm durumu, kaydedilmez). Kapı: `mount-3b.test.js` → *ÇALIŞMA MASASI* · *TAM EKRAN
   ve İŞ KARTI* · *ÖZELLİKLER AÇILIR KAPANIR* + `mount-3b.spec.js` → *ÇALIŞMA MASASI* · *DURDUR · DEVAM* ·
   *ÖZELLİKLER AÇILIR KAPANIR* + `mount-veri-sayfasi.spec.js` (değer sütunu ve satır hizası).

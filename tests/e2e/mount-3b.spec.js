@@ -659,6 +659,61 @@ test('ÖZELLİKLER AÇILIR KAPANIR: kapalı başlar, seçim açmaz; şerit açar
   expect(hatalar).toEqual([]);
 });
 
+// EYLEM ŞERİDİ (kullanıcı 2026-11-06, Canlı Not 45: "Hesapla butonu neden böyle
+// duruyor? Neden burada duruyor? Sağ taraftaki sütunun altına …"). Önce: tuvalin sağ
+// altında tek düğmeli, solu boş bir kart. Node'da koşmayan halkalar: yapışık şeridin
+// panelin dibine oturması, kapalı panelde yalnız sıradaki adımın simgesinin şeritte
+// görünmesi, gerçek tıklamanın hesabı başlatması.
+test('EYLEM ŞERİDİ: Özellikler\'in dibinde, sağa yaslı; kapalı panelde şeridin dibinde sıradaki adımın simgesi; tuvalde eylem yok', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await page.evaluate(() => { try { localStorage.removeItem(VE_MW_3B_YAN_ANAHTAR); } catch (e) {} });
+  await dosyaSec(page, GUC);
+  await hazir(page);
+  // rolsüzken şerit yok
+  await expect(page.locator('#ve-mw-3b-eylem')).toBeHidden();
+  await page.evaluate(() => {
+    const s = veMntWizStp();
+    s.sonuc.agac.forEach((d) => { if (d.ad === 'Motor bloğu') veMntWizStpRol(d.i, 'mnt-motor'); if (/takoz$/i.test(d.ad)) veMntWizStpRol(d.i, 'mnt-mount'); });
+  });
+  const yer = () => page.evaluate(() => {
+    const r = (e) => e && e.getBoundingClientRect(), yan = r(document.getElementById('ve-mw-3b-yan'));
+    const ey = r(document.getElementById('ve-mw-3b-eylem')), h = document.getElementById('ve-mw-3b-hesapla'), a = document.getElementById('ve-mw-3b-aktar');
+    const gor = (e) => !!(e && e.offsetWidth > 0);
+    return { yanSag: yan.right, yanAlt: yan.bottom, yanSol: yan.left, eyAlt: ey && ey.bottom,
+      hesapla: gor(h) ? { sag: r(h).right, sol: r(h).left, g: Math.round(r(h).width), ad: h.textContent.trim(), ipucu: h.getAttribute('title') } : null,
+      aktar: gor(a) ? { g: Math.round(r(a).width), ipucu: a.getAttribute('title') } : null,
+      tuvalde: !!document.querySelector('#ve-mw-3b-tuval #ve-mw-3b-hesapla, #ve-mw-3b-tuval .ve-mw-3b-eylem') };
+  });
+  // KAPALI panel: şeridin dibinde yalnız Hesapla'nın simgesi (adı ipucunda); tuvalde eylem yok
+  let y = await yer();
+  expect(y.tuvalde).toBe(false);
+  expect(y.hesapla.g).toBeLessThanOrEqual(26);
+  expect(y.hesapla.sol).toBeGreaterThanOrEqual(y.yanSol);
+  expect(y.hesapla.ipucu).toBe('Hesapla');
+  expect(Math.abs(y.eyAlt - y.yanAlt)).toBeLessThan(1.5);
+  // AÇIK panel: şerit panelin dibinde, düğme sağa yaslı ve adıyla; ipucu adı tekrarlamaz
+  await page.click('#ve-mw-3b-yan-dugme');
+  y = await yer();
+  expect(Math.abs(y.eyAlt - y.yanAlt)).toBeLessThan(1.5);
+  expect(Math.round(y.yanSag - y.hesapla.sag)).toBe(14);
+  expect([y.hesapla.ad, y.hesapla.ipucu]).toEqual(['Hesapla', null]);
+  // gerçek tık hesabı başlatır; sonra sıradaki adım Sihirbaza aktar
+  await page.click('#ve-mw-3b-hesapla');
+  await page.waitForFunction(() => { const s = veMntWizStp(); return s.coz && s.coz.ok; }, null, { timeout: 60000 });
+  y = await yer();
+  expect(y.hesapla.ad).toBe('Yeniden hesapla');
+  expect(y.aktar).not.toBe(null);
+  // kapalı panelde yalnız sıradaki adım (Sihirbaza aktar) görünür
+  await page.click('#ve-mw-3b-yan-dugme');
+  y = await yer();
+  expect(y.hesapla).toBe(null);
+  expect(y.aktar).toEqual({ g: 24, ipucu: 'Sihirbaza aktar' });
+  expect(hatalar).toEqual([]);
+});
+
 // SAĞ TIK MENÜSÜ (Canlı Not 8, 2026-11-05 — kullanıcı: "Sağ klik yaptığımızda
 // 3D Experience programının CAD modülündeki özellikler gelsin. İşte parçayı hide
 // yapma, seçilen parçayı ürün ağacında gösterme vs."). Önce: sağ tık hiçbir şey

@@ -1236,7 +1236,7 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     // Kapalı sütun şerit: ızgaranın değişkeni, içerik gizli, dar pencerede de
     expect(kural('.ve-mw-3b')).toMatch(/--mw3b-serit:30px/);
     expect(kural('.ve-mw-3b > .ve-fw-3b-govde.ve-mw-3b-masa[data-yan="kapali"]')).toMatch(/--mw3b-yan:var\(--mw3b-serit\)/);
-    expect(kural('.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > :not(.ve-mw-3b-yan-serit)')).toMatch(/display:none/);
+    expect(kural('.ve-mw-3b-masa[data-yan="kapali"] > .ve-mw-3b-yan > :not(.ve-mw-3b-yan-serit):not(.ve-mw-3b-yan-eylem)')).toMatch(/display:none/);
     expect(css).toMatch(/@container vefw3b \(max-width: 820px\)\{[^@]*\.ve-mw-3b-masa\[data-yan="kapali"\]\{ grid-template-columns:minmax\(0, 1fr\) var\(--mw3b-serit\)/);
     expect(kural('.ve-mw-3b-yan-dikey')).toMatch(/writing-mode:vertical-rl/);
     _mw3bYanBellek = null;
@@ -1248,10 +1248,23 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
   // butonun burada olmasına gerek yok … tanımları yaptıktan sonra programın sağ
   // alt köşesinde ortaya falan çıksın." Eylem tuvalin sağ altındaki kartta, iş
   // kartıyla aynı köşede; rol verilmeden kart yok; düğmenin adı "Hesapla".
-  test('EYLEM KARTI: tuvalin sağ altında, iş kartıyla aynı dizide; rolsüz gizli; "Hesapla"; durum satırı yalnız engel ve rol eksiği', () => {
-    expect(loadSource('cp-mount-3b.js')).toMatch(/'<div class="ve-mw-3b-sagalt"><div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden><\/div>'\s*\+ '<div class="ve-mw-3b-eylem ve-mw-3b-is" id="ve-mw-3b-eylem" hidden><\/div><\/div>'/);
+  // Kullanıcı 2026-11-06 (Canlı Not 45): "Hesapla butonu neden böyle duruyor? Neden
+  // burada duruyor? Sağ taraftaki sütunun altına …" Önce: tuvalin sağ altında tek
+  // düğmeli, solu boş bir kart.
+  test('EYLEM ŞERİDİ: Özellikler\'in dibine yapışık; rolsüz gizli; "Hesapla"; durum satırı yalnız engel ve rol eksiği; kapalı panelde yalnız sıradaki adımın simgesi', () => {
+    const src = loadSource('cp-mount-3b.js');
+    // tuvalin sağ altında yalnız iş kartı; eylem panelin son öğesi
+    expect(src).toMatch(/'<div class="ve-mw-3b-sagalt"><div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden><\/div><\/div>'/);
+    expect(src).not.toMatch(/ve-mw-3b-eylem ve-mw-3b-is/);
+    expect(src).toMatch(/'<div id="ve-mw-3b-birimler">' \+ veMntWiz3bPanelHTML\(V\.s, V\.secili, V\.grupAcik\) \+ '<\/div>'\s*\/\/[^\n]*\n\s*\+ '<div class="ve-mw-3b-yan-eylem" id="ve-mw-3b-eylem"'/);
+    expect(src).toMatch(/veMntWiz3bEylemHTML\(V\.s, \{ serit: !acik \}\)/);
     expect(kural('.ve-mw-3b-sagalt')).toMatch(/position:absolute; right:16px; bottom:16px;/);
-    expect(kural('.ve-mw-3b-sagalt > .ve-mw-3b-is')).toMatch(/position:static/);
+    const ey = kural('.ve-mw-3b-yan-eylem');
+    expect(ey).toMatch(/position:sticky; bottom:0;/);
+    expect(ey).toMatch(/margin-top:auto/);
+    // kapalı panelde şerit görünür kalır: gizleme kuralı onu dışarıda bırakır, simge kuralı yalnız sıradaki adımı gösterir
+    expect(css).toMatch(/\.ve-mw-3b-masa\[data-yan="kapali"\] > \.ve-mw-3b-yan > :not\(\.ve-mw-3b-yan-serit\):not\(\.ve-mw-3b-yan-eylem\)\{ display:none; \}/);
+    expect(css).toMatch(/\.ve-mw-3b-masa\[data-yan="kapali"\] \.ve-mw-3b-yan-eylem \.ve-mw-3b-hap:not\(\.ve-mw-3b-hap-ana\),\n\.ve-mw-3b-masa\[data-yan="kapali"\] \.ve-mw-3b-yan-eylem \.ve-mw-3b-hap-ad\{ display:none; \}/);
     const S = veMntStpOku(STK.gucGrubu());
     const st = { sonuc: S, roller: S.agac.map(() => null), coz: null };
     expect(veMntWiz3bEylemGorunur(st)).toBe(false);
@@ -1266,6 +1279,16 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(veMntWizStpDenetim(st).uyari).toHaveLength(2);                    // pencerenin kartı ikisini de yazar
     d = kur(veMntWiz3bEylemHTML(st));
     expect(Array.from(d.querySelectorAll('.ve-fw-issue')).map((x) => x.textContent.trim())).toEqual(['0 takoz rolü (en az 3).']);
+    // adı düğmenin kendisinde (simge kipinde de); ipucu yalnız kapalı panelde ve yalnız sıradaki adımda —
+    // açık panelde görünen adı tekrarlamaz
+    st.coz = { ok: true, birimler: [], hatalar: [], uyarilar: [] }; st.roller = st.roller.map((r, i) => (i === 1 ? 'mnt-motor' : r));
+    d = kur(veMntWiz3bEylemHTML(st));
+    const b = (q) => d.querySelector(q);
+    expect([b('#ve-mw-3b-hesapla').getAttribute('aria-label'), b('#ve-mw-3b-aktar').getAttribute('aria-label')]).toEqual(['Yeniden hesapla', 'Sihirbaza aktar']);
+    expect(d.querySelectorAll('[title]').length).toBe(d.querySelectorAll('[disabled][title]').length);
+    d = kur(veMntWiz3bEylemHTML(st, { serit: true }));
+    expect(b('#ve-mw-3b-aktar').getAttribute('title')).toBe('Sihirbaza aktar');     // sıradaki adım
+    expect(b('#ve-mw-3b-hesapla').hasAttribute('title')).toBe(false);
   });
 
   test('eylem: SIRADAKİ adım vurgulu — hesaptan önce hesapla, sonra aktar; ölçülemeyince yine hesap; rolsüzken kapalı ve sebebi ipucunda', () => {
