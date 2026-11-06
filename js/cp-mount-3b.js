@@ -1243,15 +1243,14 @@ function veMntWiz3bAltHTML(s, secili, opt){
   if(secili >= 0 && secim.length){
     var rs = secim.map(function(d){ return s.roller[d] || ''; });
     var rol = rs.every(function(r){ return r === rs[0]; }) ? rs[0] : null;
-    var liste = (rol === null ? '<option value="" disabled selected>Karışık</option>' : '')
-      + '<option value="" data-ve-3b-rol=""' + (rol === '' ? ' selected' : '') + '>—</option>'
-      + veMntWiz3bRolGruplari().map(function(g){
-          return '<optgroup label="' + _mwEsc(g.ad) + '">' + g.roller.map(function(t){
-            return '<option value="' + t + '" data-ve-3b-rol="' + t + '"' + (rol === t ? ' selected' : '') + '>' + _mwEsc(_mwAd(t)) + '</option>';
-          }).join('') + '</optgroup>';
-        }).join('');
+    // Rol ALANI: tarayıcının listesi değil, menünün dilinde açılan liste (Canlı Not 49;
+    // satırlar js/cp-mount-3b-menu.js → veMntWiz3bRolMenuOgeleri). Ayrışan rolde "Karışık".
+    var rolAd = rol === null ? 'Karışık' : (rol ? _mwAd(rol) : '—');
     h += _mw3bOzSatir('ve-mw-3b-rol', 'Rol',
-      '<select class="ve-fw-inp" id="ve-mw-3b-rol" aria-label="Rol" onchange="veMntWiz3bRol(this.value)">' + liste + '</select>',
+      '<button type="button" class="ve-mw-3b-alan" id="ve-mw-3b-rol" data-deger="' + (rol === null ? '' : rol) + '"' + (rol === null ? ' data-karisik=""' : '')
+      + ' aria-haspopup="menu" aria-expanded="false" aria-label="Rol: ' + _mwEsc(rolAd) + '"'
+      + ' onclick="veMntWiz3bRolMenuAc(this)" onkeydown="if(event.key===\'ArrowDown\'||event.key===\'ArrowUp\'){event.preventDefault();veMntWiz3bRolMenuAc(this);}">'
+      + '<span class="ve-mw-3b-alan-ad">' + _mwEsc(rolAd) + '</span></button>',
       'Rol — ' + (cok ? veSayi(secim.length, 0) + ' düğüm' : _mwEsc(so.agac[secili].ad)));
     h += _mw3bMalzemeHTML(s, secim, cok, secili);
     // Takozun noktası: seçili düğümün birimi takozsa — daireden seçim kipi ve öneriye dönüş

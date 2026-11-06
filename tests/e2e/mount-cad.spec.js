@@ -103,7 +103,8 @@ test('PENCERE: seçici → çubuk + Vazgeç; dosya → kendi perdesinde 3B; rol;
   expect(uc).toEqual({ yer: 'pencere', perde: 'flex', kapat: true, aktar: false, sihirbaz: false });
   // 3B'den rol: gerçek tıklama ile motoru seç, çipten rol ver
   await page.evaluate(() => veMntWiz3bSec(veMntWizStp().sonuc.agac.find((d) => d.ad === 'Motor bloğu').i));
-  await page.selectOption('#ve-mnt-3b #ve-mw-3b-rol', 'mnt-motor');
+  await page.click('#ve-mnt-3b #ve-mw-3b-rol');                              // Rol alanı (Canlı Not 49)
+  await page.click('#ve-mw-3b-menu [data-k="rol:mnt-motor"]');
   expect(await page.evaluate(() => nodes.find((x) => x.type === 'mnt-viewer').data.cad.roller.map((r) => r.rol))).toEqual(['mnt-motor']);
   // Esc: 3B kapanır, pencere açık ve rolü ağacında gösteriyor
   await page.keyboard.press('Escape');

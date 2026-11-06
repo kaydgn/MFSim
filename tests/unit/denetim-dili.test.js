@@ -45,7 +45,7 @@ describe('12·B kaydırma çubuğu', () => {
 
 describe('11·B açılır liste ve sayı alanı', () => {
   const yorumsuz = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const kural = (yorumsuz.match(/\n\s*select:not\(\[multiple\]\):not\(\[size\]\)\s*\{([^}]*)\}/) || [])[1] || '';
+  const kural = (yorumsuz.match(/\n\s*select:not\(\[multiple\]\):not\(\[size\]\)(?:,\s*\.ve-mw-3b-alan)?\s*\{([^}]*)\}/) || [])[1] || '';
 
   test('her liste programın okuyla — satır içi `background:` kısaltmasına rağmen', () => {
     expect(kural).toMatch(/appearance:\s*none/);
@@ -77,7 +77,8 @@ describe('11·B açılır liste ve sayı alanı', () => {
     const okCizen = kurallar
       .filter((k) => /(^|[\s,>+~(])select\b/.test(k.sec) && /background-image\s*:|background\s*:[^;]*(gradient|url\()/.test(k.govde))
       .map((k) => k.sec);
-    expect(okCizen).toEqual(['select:not([multiple]):not([size])']);
+    // Takoz 3B'nin liste alanı (Canlı Not 49) okunu AYNI kuraldan alır
+    expect(okCizen).toEqual(['select:not([multiple]):not([size]), .ve-mw-3b-alan']);
   });
 
   test('sayı alanı tarayıcının oklarını açmıyor', () => {

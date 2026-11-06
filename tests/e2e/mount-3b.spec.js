@@ -18,6 +18,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const STEP = require('../helpers/step-takoz.js');
+const Y = require('../helpers/yerlesim-olcu.js');
 test.setTimeout(180000);
 
 const DIZIN = fs.mkdtempSync(path.join(os.tmpdir(), 'mfsim-3b-'));
@@ -58,6 +59,12 @@ async function dosyaSec(page, dosya) {
   await fc.setFiles(dosya);
 }
 const durum = (page) => page.evaluate(() => veMntWiz3bDurum());
+// ROL ALANI (Canlı Not 49): alan menünün dilinde listeyi açar, satır rolü verir
+async function rolVer(page, kap, tip) {
+  await page.click(kap + ' #ve-mw-3b-rol');
+  await page.click('#ve-mw-3b-menu [data-k="rol:' + tip + '"]');
+  await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
+}
 const hazir = (page) => page.waitForFunction(() => {
   const k = document.getElementById('ve-mw-3b-tuval');
   return k && k.getAttribute('data-durum') === 'hazir';
@@ -178,7 +185,7 @@ test('SEÇ · ROL · HESAP: tıklanan parça seçilir ve öteki parçalar solar;
   // Seçim dışı TEK KAT tül: ön geçiş (derinlik) ve tül birlikte açık
   const soluk = await page.evaluate(() => { const V = window._mw3b; return V.kume.every((K) => K.soluk.visible && K.derin.visible); });
   expect(soluk).toBe(true);
-  await page.selectOption('#ve-mw-3b-alt #ve-mw-3b-rol', 'mnt-motor');
+  await rolVer(page, '#ve-mw-3b-alt', 'mnt-motor');
   await expect.poll(() => page.evaluate((d) => veMntWizStp().roller[d], motor.dugum)).toBe('mnt-motor');
   await page.click('#ve-mw-3b-hesapla');
   await expect.poll(async () => (await durum(page)).nokta).toBe(1);
@@ -287,7 +294,7 @@ test('AĞAÇ · CTRL: Ctrl+tık seçime ekler, rol hepsine; 3B\'de seçilen sat�
   await page.mouse.click(700, 120);
   await page.keyboard.up('Control');
   expect((await durum(page)).secim.length).toBe(3);
-  await page.selectOption('#ve-mw-3b-alt #ve-mw-3b-rol', 'mnt-bracket');
+  await rolVer(page, '#ve-mw-3b-alt', 'mnt-bracket');
   await expect.poll(() => page.evaluate((L) => L.map((i) => veMntWizStp().roller[i]), ilk.sec.map((t) => t.i)))
     .toEqual(['mnt-bracket', 'mnt-bracket', 'mnt-bracket']);
   // Ctrl'süz tık seçimi o parçaya indirir; derindeki satır ağaçta görünür olur
@@ -802,5 +809,82 @@ test('SAĞ TIK: menü imleçte; Gizle parçayı çizmez ve seçtirmez; Ağaçta 
   await page.keyboard.press('Enter');
   await expect(page.locator('#ve-mw-3b-menu')).toHaveCount(0);
   expect(await page.evaluate((d) => veMntWizStp().roller[d], q.dugum)).toBe('mnt-bracket');
+  expect(hatalar).toEqual([]);
+});
+
+// ROL ALANI (kullanıcı 2026-11-06, Canlı Not 49: *"Şu rol açılır penceresini de
+// düzenleyelim … çok amatör duruyor"*): tarayıcının gruplu listesi yerine menünün
+// dilinde liste. Kapalıyken komşu liste (Motor modeli) gibi; tık alanın altında açar.
+test('ROL ALANI: kapalıyken liste gibi; tık alanın altında gruplu listeyi açar; klavye, Esc, ikinci tık, dışarı tık', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await dosyaSec(page, GUC);
+  await hazir(page);
+  const motor = await page.evaluate(() => { const i = veMntWizStp().sonuc.agac.findIndex((d) => d.ad === 'Motor bloğu'); veMntWiz3bSec(i); return i; });
+  const alan = page.locator('#ve-mw-3b-alt #ve-mw-3b-rol');
+  await expect(alan).toBeVisible();
+  await expect(alan).toHaveText('—');
+  // Kapalıyken: okun ve kutunun ölçüsü yerel listeyle AYNI kuraldan
+  const kapali = await page.evaluate(() => {
+    const a = document.getElementById('ve-mw-3b-rol'), s = document.createElement('select');
+    s.className = 've-fw-inp'; a.parentNode.appendChild(s);
+    const A = getComputedStyle(a), S = getComputedStyle(s), r = a.getBoundingClientRect();
+    const o = { ok: A.backgroundImage === S.backgroundImage && A.backgroundPosition === S.backgroundPosition, h: Math.round(r.height),
+      kenar: A.borderTopColor === S.borderTopColor, zemin: A.backgroundColor === S.backgroundColor, yazi: A.fontSize === S.fontSize };
+    s.remove();
+    return o;
+  });
+  expect(kapali).toEqual({ ok: true, h: 28, kenar: true, zemin: true, yazi: true });
+  // Tık: liste alanın altında, en az alan genişliğinde, ekranın içinde; dört grup başlığı
+  await alan.click();
+  const menu = page.locator('#ve-mw-3b-menu.alanli');
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute('aria-label', 'Rol');
+  await expect(alan).toHaveAttribute('aria-expanded', 'true');
+  const [a, m] = [await alan.boundingBox(), await menu.boundingBox()];
+  expect(Math.abs(m.x - a.x)).toBeLessThanOrEqual(1);
+  expect(m.y).toBeGreaterThanOrEqual(a.y + a.height);
+  expect(m.width).toBeGreaterThanOrEqual(a.width - 1);
+  expect(m.y + m.height).toBeLessThanOrEqual(900);
+  await expect(menu.locator('.ve-mw-3b-menu-bas')).toHaveText(['Gövdeler', 'Takoz', 'Aktarma', 'Motor aksesuarları']);
+  expect(await menu.locator('.ve-mw-3b-menu-renk').count()).toBe(0);
+  await expect(menu.locator('[data-k="rol:"]')).toBeDisabled();                 // rolsüzken Rolü kaldır kapalı
+  await expect(menu.locator('[data-k="rol:mnt-motor"]')).toBeFocused();         // seçili yokken ilk satır
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.locator('[data-k="rol:mnt-gearbox"]')).toBeFocused();
+  // Esc: liste kapanır, odak alana döner, görüntüleyici açık kalır
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(alan).toBeFocused();
+  await expect(alan).toHaveAttribute('aria-expanded', 'false');
+  expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
+  // Klavyeyle açılır (↓); ikinci tık kapatır (yeniden açmaz)
+  await page.keyboard.press('ArrowDown');
+  await expect(menu).toBeVisible();
+  await alan.click();
+  await expect(menu).toHaveCount(0);
+  // Dışarı tık kapatır (ağacın başlığı: seçimi değiştirmeyen bir yer)
+  await alan.click();
+  await expect(menu).toBeVisible();
+  await page.click('.ve-mw-3b-dock-bas h3');
+  await expect(menu).toHaveCount(0);
+  await expect(alan).toHaveAttribute('aria-expanded', 'false');
+  // Satır rolü verir; alan yeni rolü adıyla gösterir, odak alanda
+  await alan.click();
+  await page.click('#ve-mw-3b-menu [data-k="rol:mnt-motor"]');
+  await expect(menu).toHaveCount(0);
+  expect(await page.evaluate((d) => veMntWizStp().roller[d], motor)).toBe('mnt-motor');
+  await expect(alan).toHaveAttribute('data-deger', 'mnt-motor');
+  await expect(alan).toBeFocused();
+  // Yeniden açınca seçili satır işaretli ve odakta; Rolü kaldır açık
+  await alan.click();
+  await expect(menu.locator('[data-k="rol:mnt-motor"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(menu.locator('[data-k="rol:mnt-motor"]')).toBeFocused();
+  await expect(menu.locator('[data-k="rol:"]')).toBeEnabled();
+  await page.evaluate(Y.KAYNAK);
+  expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-mw-3b-menu')), 'Rol listesi')).toEqual([]);
+  await page.keyboard.press('Escape');
   expect(hatalar).toEqual([]);
 });
