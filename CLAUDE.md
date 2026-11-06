@@ -188,8 +188,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   eksenini tayin edelim … Catia'daki gibi"*): ORTA TIK (sürüklemeden) tıklanan noktayı merkez yapar
   (parçada yüzeyin noktası, boşlukta merkezin bakışa dik düzlemi) ve görünüm onu tuvalin ortasına
   KAYDIRIR — bakış ve noktadaki ölçek aynı (`veMntWiz3bMerkezHedef`); merkez ekranda nokta, kurulunca
-  ve döndürürken görünür. Orta tuşla sürüklemek kaydırır, tarayıcının otomatik kaydırması yok. Kapı:
-  `mount-3b.test.js` → *DÖNÜŞ MERKEZİ* + `mount-3b.spec.js` → *DÖNÜŞ MERKEZİ*.
+  ve döndürürken görünür. Orta tuşla sürüklemek kaydırır, tarayıcının otomatik kaydırması yok.
+  **Merkez GEOMETRİDE SABİT** (Canlı Not 60: *"ekranı kaydırınca beraber kayıyor. Böyle olmayacak"*):
+  merkez dünyada bir nokta (`V.pivot`), kameranın hedefi değil — kaydırma ve tekerlek onu oynatmaz,
+  döndürme kamerayı ve hedefi onun çevresinde döndürür (`veMntWiz3bMerkezDonus`; nokta ekranda
+  yerinde); sığdırma ve hazır bakış merkezi bırakır, kameranın arkasında kalan bırakılır. Kapı:
+  `mount-3b.test.js` → *DÖNÜŞ MERKEZİ* · *MERKEZ GEOMETRİDE SABİT* + `mount-3b.spec.js` → *DÖNÜŞ MERKEZİ*.
 - `js/mount-akso.js` — Takoz **Görünümler'in aksonometrik çizicisi** (eski adıyla 2D
   Görünüm; kullanıcı kararları 2026-10-15/16). Pencere TEK görünüm: SERBEST kamerada
   çizim (`o.kam` azimut · yükseliş, `o.kure`: sığdırma dönmeden bağımsız; sürükle

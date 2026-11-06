@@ -301,6 +301,27 @@ test('DÖNÜŞ MERKEZİ: orta tık tıklanan noktayı merkez yapar ve ortaya kay
   const c2 = await olc();
   expect(Math.hypot(...c2.hedef.map((v, i) => v - t.p[i]))).toBeGreaterThan(1);
   expect(c2.theta).toBe(b.theta);
+  // MERKEZ GEOMETRİDE SABİT (Canlı Not 60: *"Dönme ekseni ekranı kaydırınca beraber kayıyor.
+  // Böyle olmayacak."*): kaydırma merkezi oynatmaz — nokta sahneyle birlikte yürür, işaret
+  // onun üstünde; ardından döndürme o noktanın çevresinde: nokta ekranda yerinde kalır.
+  // Önce merkez kameranın hedefiydi: kaydırmadan sonra döndürme ekranın ortasının çevresindeydi.
+  const merkez = await page.evaluate(() => window._mw3b.pivot && window._mw3b.pivot.toArray());
+  merkez.forEach((v, i) => expect(v).toBeCloseTo(t.p[i], 6));
+  expect(c2.ekran[0] - t.orta[0]).toBeGreaterThan(60);                       // nokta kaydırmayla sağa yürüdü
+  expect(Math.abs(c2.nokta[0] - c2.ekran[0]) + Math.abs(c2.nokta[1] - c2.ekran[1])).toBeLessThanOrEqual(2);
+  await page.mouse.move(t.orta[0] - 120, t.orta[1] + 60);
+  await page.mouse.down();
+  await page.mouse.move(t.orta[0] - 30, t.orta[1] + 110, { steps: 6 });
+  await expect(isaret).toHaveClass(/acik/);
+  const d = await olc();
+  expect(d.theta).not.toBe(c2.theta);
+  expect(Math.abs(d.ekran[0] - c2.ekran[0]) + Math.abs(d.ekran[1] - c2.ekran[1])).toBeLessThanOrEqual(2);   // nokta yerinde
+  expect(Math.abs(d.nokta[0] - d.ekran[0]) + Math.abs(d.nokta[1] - d.ekran[1])).toBeLessThanOrEqual(2);     // işaret noktada
+  expect(Math.abs(d.ekran[0] - t.orta[0])).toBeGreaterThan(60);              // ekranın ortası değil
+  await page.mouse.up();
+  // Sığdır merkezi bırakır: döndürme yeniden kadrajın ortasında
+  await page.evaluate(() => veMntWiz3bSigdir());
+  expect(await page.evaluate(() => window._mw3b.pivot)).toBe(null);
   expect(hatalar).toEqual([]);
 });
 

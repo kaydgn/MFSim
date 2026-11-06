@@ -1821,6 +1821,40 @@ function veMntWiz3bMerkezHedef(kamera, hedef, P){
   return r > 0 ? { hedef: [P[0], P[1], P[2]], r: r } : null;
 }
 var VE_MW_3B_MERKEZ = { sure: 420, sonme: 900 };      // ms: görünümün kayması · işaretin sönmesi
+// MERKEZ GEOMETRİDE SABİT (kullanıcı 2026-11-06, Canlı Not 60: *"Dönme ekseni ekranı kaydırınca
+// beraber kayıyor. Böyle olmayacak. Noktayı nereye atadıysam … 3D geometrinin üzerinde sabit
+// kalacak."*): merkez kameranın hedefi değil, dünyada bir nokta (`V.pivot`). Kaydırma ve tekerlek
+// hedefi oynatır, merkezi oynatmaz; döndürme kamerayı VE hedefi merkez çevresinde aynı dönüşle
+// döndürür — merkezin kameradaki koordinatları değişmez, ekranda yerinde durur. Sığdırma ve
+// hazır bakış merkezi bırakır (hedef yeniden merkez). Kameranın arkasında kalan merkez bırakılır.
+// Kamera çerçevesi (three.js lookAt, yukarı z): X sağ, Y yukarı, Z hedeften kameraya.
+function _mw3bCerceve(t, p){
+  var ct = Math.cos(t), st = Math.sin(t), cp = Math.cos(p), sp = Math.sin(p);
+  var Z = [cp * ct, cp * st, sp], X = [-st, ct, 0];
+  return [X, [Z[1] * X[2] - Z[2] * X[1], Z[2] * X[0] - Z[0] * X[2], Z[0] * X[1] - Z[1] * X[0]], Z];
+}
+// Bakış (t0, p0) → (t1, p1) iken hedefin yeni yeri: hedef − merkez eski çerçevede ölçülür,
+// yeni çerçevede kurulur (aynı dönüş). Saf: [x, y, z].
+function veMntWiz3bMerkezDonus(hedef, merkez, t0, p0, t1, p1){
+  var A = _mw3bCerceve(t0, p0), B = _mw3bCerceve(t1, p1);
+  var v = [hedef[0] - merkez[0], hedef[1] - merkez[1], hedef[2] - merkez[2]];
+  var k = A.map(function(e){ return v[0] * e[0] + v[1] * e[1] + v[2] * e[2]; });
+  return [0, 1, 2].map(function(i){ return merkez[i] + k[0] * B[0][i] + k[1] * B[1][i] + k[2] * B[2][i]; });
+}
+// Döndürme: bakış açıları + (merkez varsa) hedef merkez çevresinde
+function _mw3bDondur(V, dTheta, dPhi){
+  var c = V.ctrl, t0 = c.theta, p0 = c.phi;
+  if(V.pivot){
+    var C = V.camera.position, Z = _mw3bCerceve(t0, p0)[2];
+    var derin = -((V.pivot.x - C.x) * Z[0] + (V.pivot.y - C.y) * Z[1] + (V.pivot.z - C.z) * Z[2]);
+    if(!(derin > V.camera.near)) V.pivot = null;          // kameranın arkasında: hedef merkez
+  }
+  c.theta = t0 + dTheta;
+  c.phi = Math.max(-VE_MW_3B_PHI, Math.min(VE_MW_3B_PHI, p0 + dPhi));
+  if(!V.pivot) return;
+  var h = veMntWiz3bMerkezDonus([c.hedef.x, c.hedef.y, c.hedef.z], [V.pivot.x, V.pivot.y, V.pivot.z], t0, p0, c.theta, c.phi);
+  c.hedef.set(h[0], h[1], h[2]);
+}
 function veMntWiz3bMerkez(cx, cy){
   var V = _mw3b;
   if(!V || !V.camera || !V.ctrl) return false;
@@ -1840,7 +1874,7 @@ function _mw3bMerkezGit(V, g){
   _mw3bMerkezDur(V);
   var H0 = V.ctrl.hedef.clone(), r0 = V.ctrl.r, H1 = new THREE.Vector3(g.hedef[0], g.hedef[1], g.hedef[2]), r1 = g.r;
   var sure = (_mw3bAzHareket() || typeof requestAnimationFrame !== 'function') ? 0 : VE_MW_3B_MERKEZ.sure, t0 = _mwSimdi();
-  V.merkez = H1;
+  V.pivot = H1.clone();
   var adim = function(){
     V.merkezIstek = 0;
     if(_mw3b !== V) return;
@@ -1850,7 +1884,6 @@ function _mw3bMerkezGit(V, g){
     _mw3bKamera(); _mw3bCiz(true);
     _mw3bMerkezYaz(V, true);
     if(u < 1){ V.merkezIstek = requestAnimationFrame(adim); return; }
-    V.merkez = null;
     _mw3bVekil(V, false);
     _mw3bMerkezSondur(V);
   };
@@ -1861,18 +1894,19 @@ function _mw3bMerkezGit(V, g){
 function _mw3bMerkezDur(V){
   if(!V || !V.merkezIstek) return;
   if(typeof cancelAnimationFrame === 'function') cancelAnimationFrame(V.merkezIstek);
-  V.merkezIstek = 0; V.merkez = null;
+  V.merkezIstek = 0;
   _mw3bVekil(V, false);
 }
-// İşaretin yeri: kayarken tıklanan nokta, sonra kameranın hedefi (tuvalin ortası)
+// İşaretin yeri: merkez (dünyadaki nokta) — yoksa kameranın hedefi (tuvalin ortası).
+// `acik` verilmezse görünürlük olduğu gibi kalır (yalnız yeri tazelenir).
 function _mw3bMerkezYaz(V, acik){
   var el = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-merkez');
   if(!el || !V.camera) return;
   if(V.merkezSon){ clearTimeout(V.merkezSon); V.merkezSon = 0; }
   V.camera.updateMatrixWorld();
-  var Q = (V.merkez || V.ctrl.hedef).clone().project(V.camera), w = V.kap.clientWidth, h = V.kap.clientHeight;
+  var Q = (V.pivot || V.ctrl.hedef).clone().project(V.camera), w = V.kap.clientWidth, h = V.kap.clientHeight;
   el.style.transform = 'translate(' + Math.round((Q.x + 1) / 2 * w) + 'px, ' + Math.round((1 - Q.y) / 2 * h) + 'px)';
-  el.classList.toggle('acik', !!acik);
+  if(acik !== undefined) el.classList.toggle('acik', !!acik);
 }
 function _mw3bMerkezSondur(V){
   if(V.merkezSon) clearTimeout(V.merkezSon);
@@ -1919,6 +1953,7 @@ function _mw3bSigdir(kutu, noktalar, bekle){
     for(var c = 0; c < 8; c++) pts.push(new THREE.Vector3(c & 1 ? kutu.max.x : kutu.min.x, c & 2 ? kutu.max.y : kutu.min.y, c & 4 ? kutu.max.z : kutu.min.z));
   }
   V.ctrl.hedef.copy(m);
+  V.pivot = null;                                        // yeni kadraj: merkez yeniden hedef
   V.ctrl.r = R / Math.sin(V.camera.fov * Math.PI / 360);
   V.sigKutu = { c: m.clone(), d: 2 * R };
   V.sonSig = _mwSimdi();
@@ -1988,11 +2023,12 @@ function _mw3bDinle(V){
       V.eldegdi = true;
       V.kap.classList.add('surukle');
       if(bas.kay) _mw3bKaydir(dx, dy);
-      else { V.ctrl.theta -= dx * 0.008; V.ctrl.phi = Math.max(-VE_MW_3B_PHI, Math.min(VE_MW_3B_PHI, V.ctrl.phi + dy * 0.008)); }
+      else _mw3bDondur(V, -dx * 0.008, dy * 0.008);
       bas.x = e.clientX; bas.y = e.clientY;
       _mw3bVekil(V, true);
       _mw3bKamera(); _mw3bCiz(true);
       if(!bas.kay) _mw3bMerkezYaz(V, true);       // döndürürken merkez ekranda
+      else if(V.pivot) _mw3bMerkezYaz(V, true);   // kaydırırken merkez geometriyle yürür
       return;
     }
     if(V.nokta >= 0) _mw3bDaireFare(e); else if(V.ref) _mw3bRefFare(e);
@@ -2003,7 +2039,7 @@ function _mw3bDinle(V){
     bas = null;
     V.kap.classList.remove('surukle');
     _mw3bVekil(V, false);
-    if(b && b.oynadi && !b.kay) _mw3bMerkezSondur(V);
+    if(b && b.oynadi && (!b.kay || V.pivot)) _mw3bMerkezSondur(V);
     // ORTA TIK (oynamadan): tıklanan nokta dönüş merkezi (Canlı Not 55)
     if(b && !b.oynadi && b.tus === 1){ veMntWiz3bMerkez(e.clientX, e.clientY); return; }
     if(b && !b.oynadi && b.tus === 0){
@@ -2044,6 +2080,7 @@ function _mw3bDinle(V){
     if(V.vekilZaman) clearTimeout(V.vekilZaman);
     V.vekilZaman = setTimeout(function(){ V.vekilZaman = 0; if(_mw3b === V) _mw3bVekil(V, false); }, VE_MW_3B_VEKIL.bekle);
     _mw3bKamera(); _mw3bCiz(true);
+    _mw3bMerkezYaz(V);                          // görünür işaret noktasında kalır
   }, { passive: false });
   V.sokucu.push(function(){ if(V.vekilZaman) clearTimeout(V.vekilZaman); });
 }
