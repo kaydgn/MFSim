@@ -33,19 +33,19 @@
 //
 // ÇALIŞMA MASASI (2026-11-03, kullanıcı: "3B görüntüleyicinin arayüzü, kullanımı,
 // görünümü çok çok amatör seviyede" → tasarım tuvalinden "Çalışma masası" seçildi):
-// komut çubuğu (dosya · bakış · görünüş · süzgeç · ölçü · kesit · eylemler ·
-// Kapat) → [Ürün ağacı | tuval | Özellikler] → durum çubuğu. TAM EKRAN
-// (2026-11-04, kullanıcı: "popup şeklinde açılır pencere … Tam ekran olsun.
-// Kapatma olayı başka yere taşınsın"): pencere değil ÇALIŞMA ALANI — başlık
-// bandı yok, dosyanın adı ve Kapat komut çubuğunda, perde kenar payı ve köşesi
-// yok (`.ve-mw-3b-tam`). Paneller tuvalin YANINDA,
+// [Ürün ağacı | tuval | Özellikler] → durum çubuğu. TAM EKRAN (2026-11-04,
+// kullanıcı: "popup şeklinde açılır pencere … Tam ekran olsun. Kapatma olayı başka
+// yere taşınsın"): pencere değil ÇALIŞMA ALANI — başlık bandı ve komut çubuğu yok
+// (Canlı Not 44: *"Bu ribbonu da kaldıralım, yer kazanalım"*): dosyanın adı Ürün
+// ağacının başlığında, Kapat tuvalin sağ üstünde; perde kenar payı ve köşesi yok
+// (`.ve-mw-3b-tam`). Paneller tuvalin YANINDA,
 // üstünde yüzmez (FEAD'in 3B'si yüzen kartta kalır — `.ve-fw-3b*` ortak sınıfları
 // değişmez, yerleşim `.ve-mw-3b` kapsamında): sığdırma bütün tuvali kullanır,
 // etiket panelin altına girmez. Tuvalde yalnız görüntünün araçları — sol altta
 // koordinat ekseni, sağ altta İŞ KARTI (okuma · kurulum; 2026-11-04, kullanıcı:
 // "yazılar büyük, tam ortada … sağ alta çekelim"). Görünüm küpü ve yakınlık
 // düğmeleri YOK (kullanıcı 2026-11-05, Canlı Not 15: "Şunları kaldıralım"):
-// bakış komut çubuğunun listesinde, yakınlık tekerlekte. Özellikler seçimin
+// bakış boşluğa sağ tık menüsünde, yakınlık tekerlekte. Özellikler seçimin
 // sırasıyla: kimlik → rol · malzeme · nokta · veri sayfası → birimin kütlesi →
 // ölçülen birimler → rol verilenler. Eylem tuvalin SAĞ ALTINDA, rol verilince
 // beliren kartta (kullanıcı 2026-11-05, Canlı Not 11: *"'konumları hesapla'
@@ -150,7 +150,7 @@ var VE_MW_3B_ETK = { dx: 24, dy: 12, h: 38, ara: 4, harf: 6.4, pay: 10 };
 // sığacağı kadar geniş: ok sola bakınca "+X · Arka" okun ucundan sola uzanır.
 var VE_MW_3B_EKSEN = { w: 196, h: 140, L: 38, eksi: 0.55, uc: 6, zemin: 46 };
 var VE_MW_3B_EKSEN_AD = [['x', '+X · Arka', 'Ön'], ['y', '+Y · Sağ', 'Sol'], ['z', '+Z · Yukarı', 'Aşağı']];
-// GÖRÜNÜŞ (komut çubuğu): gölgeli ve kenar (olağan) · gölgeli (kenar çizgisi yok) ·
+// GÖRÜNÜŞ (boşluğa sağ tık menüsü): gölgeli ve kenar (olağan) · gölgeli (kenar çizgisi yok) ·
 // x-ışını (seçimin dışı — seçim yoksa her parça — tül; tülün ön geçişi kapalı,
 // içteki parça dıştakinin arkasından görünür; kenar VE_MW_3B_CIZGI_A.xray)
 var VE_MW_3B_GORUNUS = [{ k: 'kenar', ad: 'Gölgeli ve kenar' }, { k: 'golge', ad: 'Gölgeli' }, { k: 'xray', ad: 'X-ışını' }];
@@ -197,12 +197,12 @@ function veMntWiz3bAc(yer){
   if(perde) perde.style.display = 'flex';
   ov.style.display = 'flex';
   if(yer === 'sihirbaz') _mw3bTam(true);
-  // Başlık bandı YOK (tam ekran çalışma alanı): komut çubuğu dosyanın kimliği ·
-  // araçlar (js/cp-mount-3b-arac.js → _mw3bAracYaz) · eylem (_mw3bPanel) · Kapat
-  ov.innerHTML = '<div class="ve-mw-3b-komut">' + _mw3bKimlikHTML(s) + '<div class="ve-mw-3b-arac" id="ve-mw-3b-arac"></div>'
-      + _mw3bKapatHTML() + '</div>'
-    + '<div class="ve-fw-3b-govde ve-mw-3b-masa" data-yan="' + (veMntWiz3bYanAcik() ? 'acik' : 'kapali') + '">'
-    + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-dock-bas"><h3>Ürün ağacı</h3>'
+  // Başlık bandı ve komut çubuğu YOK (tam ekran çalışma alanı; kullanıcı 2026-11-06,
+  // Canlı Not 44: *"Bu ribbonu da kaldıralım, yer kazanalım"*): dosyanın adı Ürün
+  // ağacının başlığında, Kapat tuvalin sağ üstünde, açık kesitin ayarı sol üstünde
+  // (js/cp-mount-3b-arac.js → _mw3bAracYaz)
+  ov.innerHTML = '<div class="ve-fw-3b-govde ve-mw-3b-masa" data-yan="' + (veMntWiz3bYanAcik() ? 'acik' : 'kapali') + '">'
+    + '<aside class="ve-mw-3b-agac" id="ve-mw-3b-agac" aria-label="Ürün ağacı"><div class="ve-mw-3b-dock-bas">' + _mw3bKimlikHTML(s)
       + '<span class="ve-fw-dim" id="ve-mw-3b-agac-say"></span></div>'
       + '<label class="ve-mw-3b-ara">' + _mwIkon('search')
         + '<input type="search" id="ve-mw-3b-ara" placeholder="Ağaçta ara" aria-label="Ağaçta ara" autocomplete="off"'
@@ -212,6 +212,8 @@ function veMntWiz3bAc(yer){
       + '<svg class="ve-fw-3b-etiket-cizgi" id="ve-mw-3b-etiket-cizgi" aria-hidden="true"></svg>'
       + '<div class="ve-fw-3b-etiketler" id="ve-mw-3b-etiket"></div>'
       + '<svg class="ve-mw-3b-eksen" id="ve-mw-3b-eksen" width="' + VE_MW_3B_EKSEN.w + '" height="' + VE_MW_3B_EKSEN.h + '" aria-hidden="true"></svg>'
+      + '<div class="ve-mw-3b-arac ve-mw-3b-kart" id="ve-mw-3b-arac"></div>'
+      + _mw3bKapatHTML()
       + '<div class="ve-mw-3b-sagalt"><div class="ve-mw-3b-kur ve-mw-3b-is" id="ve-mw-3b-kur" hidden></div>'
         + '<div class="ve-mw-3b-eylem ve-mw-3b-is" id="ve-mw-3b-eylem" hidden></div></div>'
       + '<div class="ve-fw-3b-ipucu" id="ve-mw-3b-ipucu" hidden></div></div>'
@@ -264,8 +266,8 @@ function veMntWiz3bAc(yer){
   _mw3bAgKur();
   return true;
 }
-// OKUMA: görüntüleyicinin ÇERÇEVESİ (komut çubuğunda dosyanın adı ve Kapat),
-// tuvalin zemini 3B'ninki; sağ altta İŞ KARTI — işin adı ve okumanın çubuğu
+// OKUMA: görüntüleyicinin ÇERÇEVESİ (tuvalin sağ üstünde Kapat), tuvalin zemini
+// 3B'ninki; sağ altta İŞ KARTI — işin adı, dosyanın adı ve okumanın çubuğu
 // (sihirbazın kartıyla AYNI üretici — çubuk düğmenin niteliğiyle bulunur, her
 // yüzeyde birlikte ilerler)
 function _mw3bOkumaAc(s){
@@ -274,8 +276,7 @@ function _mw3bOkumaAc(s){
   if(_mw3b) veMntWiz3bKapat();
   perde.style.display = 'flex';
   ov.style.display = 'flex';
-  ov.innerHTML = '<div class="ve-mw-3b-komut">' + _mw3bKimlikHTML(s) + _mw3bKapatHTML() + '</div>'
-    + '<div class="ve-fw-3b-govde"><div class="ve-fw-3b-tuval" id="ve-mw-3b-tuval" data-durum="okunuyor">'
+  ov.innerHTML = '<div class="ve-fw-3b-govde"><div class="ve-fw-3b-tuval" id="ve-mw-3b-tuval" data-durum="okunuyor">' + _mw3bKapatHTML()
     + '<div class="ve-mw-3b-okuma ve-mw-3b-is" id="ve-mw-3b-okuma">' + _mw3bOkumaHTML(s) + '</div></div></div>';
   var V = { okuma: true, s: s, yer: 'pencere', ov: ov, perde: perde, kap: document.getElementById('ve-mw-3b-tuval'),
             sokucu: [], secim: [], secili: -1, nokta: -1, ref: null };
@@ -284,7 +285,8 @@ function _mw3bOkumaAc(s){
   return true;
 }
 function _mw3bOkumaHTML(s){
-  var bas = _mw3bIsBasHTML('clock', typeof _mwStpIlerlemeVeri === 'function' ? _mwStpIlerlemeVeri(s).ad : 'STEP okuma');
+  var bas = _mw3bIsBasHTML('clock', typeof _mwStpIlerlemeVeri === 'function' ? _mwStpIlerlemeVeri(s).ad : 'STEP okuma')
+    + _mw3bKimlikHTML(s, 'p');
   if(s.durum === 'hata')
     return bas + '<div class="ve-fw-issues"><div class="ve-fw-issue ve-fw-issue-err">' + _mwIkon('x') + ' <b>' + _mwEsc(s.dosya)
       + '</b> — ' + _mwEsc(s.hata) + '</div></div>';
@@ -292,12 +294,13 @@ function _mw3bOkumaHTML(s){
 }
 // İŞ KARTININ ADI: işin adı (ilerlemenin `ad`ı — çubuğun erişilebilir adıyla aynı)
 function _mw3bIsBasHTML(ikon, ad){ return '<p class="ve-mw-3b-is-bas">' + _mwIkon(ikon) + ' ' + _mwEsc(ad) + '</p>'; }
-// KOMUT ÇUBUĞUNUN UÇLARI (tam ekran, 2026-11-04): solda dosyanın adı (kısalan
-// ad tam hâliyle ipucunda; parça sayısı ağacın başlığında, burada tekrarlanmaz),
-// sağ uçta Kapat — Esc de kapatır.
-function _mw3bKimlikHTML(s){
-  var ad = _mwEsc((s && s.dosya) || '');
-  return '<div class="ve-mw-3b-dosya" id="ve-mw-3b-dosya">' + _mwIkon('box') + '<b title="' + ad + '">' + ad + '</b></div>';
+// DOSYANIN ADI ve KAPAT (tam ekran; komut çubuğu yok — Canlı Not 44): ad Ürün
+// ağacının BAŞLIĞI (ağaç dosyanın yapısı; kısalan ad tam hâliyle ipucunda, parça
+// sayısı yanında), okunurken iş kartında (`etiket` 'p'); Kapat tuvalin sağ üst
+// köşesinde, her durumda — Esc de kapatır.
+function _mw3bKimlikHTML(s, etiket){
+  var ad = _mwEsc((s && s.dosya) || ''), e = etiket || 'h3';
+  return '<' + e + ' class="ve-mw-3b-dosya" id="ve-mw-3b-dosya">' + _mwIkon('box') + '<b title="' + ad + '">' + ad + '</b></' + e + '>';
 }
 function _mw3bKapatHTML(){
   return '<button type="button" class="ve-mw-3b-hap ve-mw-3b-kapat" id="ve-mw-3b-kapat" onclick="veMntWiz3bKapat()">'
@@ -860,7 +863,7 @@ function _mw3bBoya(){
   V.kume.forEach(function(K){ K.soluk.visible = V.solukVar; K.derin.visible = V.solukVar && !R.xray; });
   V.ckume.forEach(function(C){ C.cizgi.visible = V.gorunus !== 'golge'; });
 }
-// GÖRÜNÜŞ (komut çubuğunun listesi): 'kenar' · 'golge' · 'xray' (VE_MW_3B_GORUNUS)
+// GÖRÜNÜŞ (boşluğa sağ tık menüsü): 'kenar' · 'golge' · 'xray' (VE_MW_3B_GORUNUS)
 function veMntWiz3bGorunusSec(k){
   var V = _mw3b;
   if(!V || !V.scene || !VE_MW_3B_GORUNUS.some(function(g){ return g.k === k; })) return false;
@@ -975,7 +978,7 @@ function veMntWiz3bRol(tip){
 // Panel seçimin sırasıyla: araçların kartı (ölçü · yüzey) → kimlik → rol ·
 // malzeme · nokta · motor modeli (#ve-mw-3b-alt) → birimin kütlesi → ölçülen
 // birimler → rol verilenler. Panelin kendisi kaydırılır; içeriği yeniden
-// basılınca kaydırma yerinde kalır (kap aynı öğe). Eylem komut çubuğunda.
+// basılınca kaydırma yerinde kalır (kap aynı öğe). Eylem tuvalin sağ altındaki kartta.
 function _mw3bPanel(goster){
   var V = _mw3b;
   var yan = typeof document !== 'undefined' && document.getElementById('ve-mw-3b-yan');
