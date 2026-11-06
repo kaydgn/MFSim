@@ -10088,21 +10088,14 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-mnt-ex-sema > img, .ve-mnt-ex-sema > svg, .ve-mnt-ex-sema > div > svg{ display:block; width:100%; height:auto; }
 .ve-mnt-ex-sema figcaption{ margin-top:6px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; }
 
-/* TAKOZ ÖZELLİKLERİ — üstte seçici, altında seçili tipin kimliği (ad · tür
-   rozeti · eylem). Seçici sütunda tek satır: liste esner, "Yeni" sabit. */
+/* TAKOZ ÖZELLİKLERİ — üstte seçici, altında seçili tipin kimliği (ad · özel
+   tipte Sil; Canlı Not 65). Seçici sütunda tek satır: liste esner, "Yeni" sabit. */
 .ve-mnt-pencere .mntlib-bar{ margin-bottom:8px; flex-wrap:nowrap; }
 .ve-mnt-pencere .mntlib-picker{ flex:1 1 auto; min-width:0; }
 .ve-mnt-pencere .mntlib-add{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
 .ve-mnt-lib-kim{ display:flex; align-items:center; gap:6px; margin:0 0 10px; }
 .ve-mnt-lib-kim > .ve-fp-inp{ flex:1 1 auto; min-width:0; }
 .ve-mnt-lib-kim > .ve-fp-dugme{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
-.ve-mnt-rozet{
-  flex:none; padding:2px 7px; border:1px solid currentColor; border-radius:var(--radius-sm);
-  font-size:var(--fs-micro); font-weight:700; letter-spacing:var(--tracking-wide); text-transform:uppercase;
-  color:var(--ink-success); white-space:nowrap;
-}
-.ve-mnt-rozet[data-t="gomulu"]{ color:var(--ink-accent); }
-.ve-mnt-rozet[data-t="degisti"]{ color:var(--ink-warning); }
 .ve-fp-dugme[aria-disabled="true"], .ve-fp-dugme[aria-disabled="true"]:hover{
   color:var(--text-muted); background:var(--bg-tertiary); border-color:var(--border-color); cursor:default;
 }

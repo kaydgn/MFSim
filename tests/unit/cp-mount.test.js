@@ -165,7 +165,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(lib.data.mounts.find(e => e.key === key)).toBeUndefined();
   });
 
-  test('getMntLibraryPropertiesHTML: ekle butonu + özel satır + gömülü katalog', () => {
+  test('getMntLibraryPropertiesHTML: ekle butonu + özel satır + katalog', () => {
     const lib = {
       id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true },
       data: { mounts: [{ key: 'k1', name: 'Deneme', sx: 100, sy: 100, sz: 200, dx: 150, dy: 150, dz: 300 }] }
@@ -173,7 +173,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     global.nodes = [lib];
     const html = cp.getMntLibraryPropertiesHTML(lib);
     expect(html).toContain("veMntLibAdd('lib1')");
-    expect(html).toContain('Gömülü Katalog');
+    expect(html).toContain('>Katalog · ');
     expect(html).toContain('LMT-1433-37 55 ShA');               // gömülü satır (salt-okunur)
     expect(html).toContain('value="Deneme"');           // özel satır ad girdisi
     expect(html).toContain("veMntLibRemove('lib1','k1')");
@@ -188,7 +188,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     const mount = { id: 'm9', type: 'mnt-mount', def: { name: 'Takoz', isMount: true }, data: {} };
     global.nodes = [lib, mount];
     const dd = cp.getMntMountPropertiesHTML(mount);
-    expect(dd).toContain('Özel (Takoz Özellikleri)');
+    expect(dd).toContain('label="Özel takozlar"');
     expect(dd).toContain('Kullanıcı Takoz');
     cp.veMntApplyLib('m9', 'kX');
     expect(mount.data.kzs).toBe(333);
@@ -238,12 +238,12 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(m.overridden).toBe(false);
   });
 
-  test('getMntLibraryPropertiesHTML: gömülü satırlar düzenlenebilir + ↺ butonu', () => {
+  test('getMntLibraryPropertiesHTML: katalog satırları düzenlenebilir; Fabrika düğmesi yok (Canlı Not 65)', () => {
     const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
     global.nodes = [lib];
     const html = cp.getMntLibraryPropertiesHTML(lib);
     expect(html).toContain("veMntLibSetBuiltin('lib1','amc55sha','sz'");
-    expect(html).toContain("veMntLibResetBuiltin('lib1','amc55sha')");
+    expect(html).not.toContain('veMntLibResetBuiltin(');
     expect(html).toContain('value="LMT-1433-37 55 ShA"');   // gömülü ad artık input değeri
   });
 
