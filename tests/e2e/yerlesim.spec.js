@@ -115,7 +115,8 @@ const MUAF = [
 const YON_BEKLEYEN = [];
 const YON_MUAF = [
   { tur: 'FEAD', re: /^sihirbaz\/1 · sebepsiz kapalı "Geri"/, neden: 'ilk adımda Geri' },
-  { tur: 'Takoz', re: /^sihirbaz(?: \(boş\))?\/1 · sebepsiz kapalı "Geri"/, neden: 'ilk adımda Geri' },
+  // Takoz sihirbazının ilk adımında Geri ÇİZİLMEZ (Canlı Not 58: eylem şeridi) —
+  // kapalı düğmesi kalmadı, muafiyeti de.
 ];
 
 const TURLAR = [
