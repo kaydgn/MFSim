@@ -93,9 +93,10 @@ describe('KATALOG — veri sayfasının sayıları', () => {
       expect(!!v.ref.arka).toBe(yuz === 'Bloğun arka yüzü');
     });
 
-  test('katalog yedi motor, sıra hacme göre; şanzıman sayfası yok', () => {
+  test('katalog yedi motor, sıra hacme göre; şanzımanda tek satır: Allison 4000 ailesi', () => {
     expect(VS.VE_MNT_VERI_SAYFASI.map((v) => v.k)).toEqual(SAYFALAR.map((r) => r[0]));
-    expect(VS.veMntVeriSayfalari('mnt-gearbox')).toEqual([]);
+    expect(VS.veMntVeriSayfalari('mnt-gearbox').map((v) => [v.k, v.ad])).toEqual([['allison-4000', 'Allison 4000']]);
+    expect(VS.veMntVeriSayfalari('mnt-motor').map((v) => v.k)).toEqual(SAYFALAR.map((r) => r[0]));
   });
 
   // Canlı Not 42: listenin adı seçilen şeyin adı — "Veri sayfası" değil
@@ -431,8 +432,10 @@ describe('OTURUM — hesaptan önce seçim, föy, modele uygula', () => {
     el.innerHTML = _mwStpKutleHTML(s);
     const x12 = el.querySelector('[data-mw-stp-kutle-deger="' + motor + '"]');
     expect([x12.textContent, x12.getAttribute('title')]).toEqual(['860,0', 'Islak 860 kg']);
+    // Şanzımanın listesi: "Şanzıman modeli" grubunda Allison 4000 ailesi
     const sanz = s.sonuc.agac.findIndex((d) => d.ad === 'Şanzıman gövdesi');
-    expect(el.querySelector('select[data-mw-stp-yog="' + sanz + '"] optgroup')).toBe(null);
+    expect(Array.from(el.querySelectorAll('select[data-mw-stp-yog="' + sanz + '"] optgroup[label="Şanzıman modeli"] option'))
+      .map((o) => [o.value, o.textContent])).toEqual([['allison-4000', 'Allison 4000']]);
   });
 });
 
@@ -499,10 +502,10 @@ describe('3B DİZİSİ — model ve iki seçim düğmesi', () => {
     W.veMntWizStpYogunluk(motor, 'cummins-x12');
     expect(Array.from(dizi().querySelectorAll('[data-ve-3b-ref]')).map((b) => b.textContent.trim()))
       .toEqual(['Bloğun arka yüzü', 'Krank ekseni']);
-    // şanzımanda (kataloğunda model yok) liste yok
-    const sanz = s.sonuc.agac.findIndex((x) => x.ad === 'Şanzıman gövdesi');
+    // transfer kutusunun kataloğunda model yok: liste yok
+    const tc = s.sonuc.agac.findIndex((x) => x.ad === 'Transfer gövdesi');
     const e2 = document.createElement('div');
-    e2.innerHTML = M3.veMntWiz3bAltHTML(s, sanz, {});
+    e2.innerHTML = M3.veMntWiz3bAltHTML(s, tc, {});
     expect(e2.querySelector('#ve-mw-3b-veri')).toBe(null);
   });
 });

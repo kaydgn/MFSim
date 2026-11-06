@@ -1424,7 +1424,7 @@ function veMntStpKutle(b, kg, yog){
 // kutle: { dugum: kg } (kullanıcının yazdığı) · yogunluk: { dugum: kaynak }
 // (veMntStpKutle). Kayıt µm'ye, gramına ve 0,0001 kg·m²'ye yuvarlanır —
 // dönüşüm gürültüsü alanlara yazılmasın (FEAD'in kuralı).
-// Döner: { liste:[{type, customName, data, dugum}], kaynak:[{ cg, I, mass, konum, not }] } —
+// Döner: { liste:[{type, customName, data, dugum}], kaynak:[{ cg, I, mass, konum, bag, not }] } —
 // kaynak dizisi listeyle aynı sırada (sihirbaz "S" işaretini buradan alır;
 // `mass` yalnız kütle geometriden türediyse — malzeme ya da dosya). `T`:
 // öteleme (dosya − model, veMntStpKarsilastir) — konumlar modelin sistemine.
@@ -1458,6 +1458,17 @@ function veMntStpKayit(coz, kutle, yogunluk, T){
         d.pointMass = false;
         if(!veri) iz.I = true;
       }
+    }
+    // BAĞLANTI YÜZÜ (2026-11-06): veri sayfası statik eğilme momenti sınırı
+    // veriyorsa (Allison 4000, doğrudan bağlama) referans noktası R — ekseninin
+    // ön yüzle kesişimi, motorla şanzımanın bağlandığı düzlem — ve eksenin
+    // yönü (birimin içine) gövdeye yazılır; rapor momenti o düzlemde keser
+    if(veri && b.veri && K.vs && K.vs.sinir && K.vs.sinir.egilme > 0){
+      var R = b.veri.R.map(function(v, i){ return _mstYuv(v - T[i], 1000); });
+      d.bagX = R[0]; d.bagY = R[1]; d.bagZ = R[2];
+      d.bagNx = _mstYuv(b.veri.a[0], 1e6); d.bagNy = _mstYuv(b.veri.a[1], 1e6); d.bagNz = _mstYuv(b.veri.a[2], 1e6);
+      d.egSinir = K.vs.sinir.egilme;
+      iz.bag = true;
     }
     liste.push({ type: b.tip, customName: b.ad, data: d, dugum: b.dugum });
     kaynak.push(iz);
