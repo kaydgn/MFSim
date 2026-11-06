@@ -2507,8 +2507,7 @@ var veMountCore = (function() {
         {type:'mnt-example',    at:[1215, 90]},
         {type:'mnt-report',     at:[1320, 90]},
         {type:'mnt-2dview',     at:[1005,250]},
-        {type:'mnt-coordframe', at:[1110,250]},
-        {type:'mnt-viewer',     at:[1215,250]}
+        {type:'mnt-viewer',     at:[1110,250]}
       ],
       topology: 'assets/examples/tta10_topoloji.json',
       model: TTA10_EXAMPLE
