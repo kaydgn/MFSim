@@ -273,6 +273,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   dönünce 7. vites SİLİNİR) ve konvertörü doldurur. Kapı: `mount-sanziman-ailesi.test.js`
   (→ *AİLE* · *SEÇENEK* · *KÜTLE* · *YÖN* · *STEP* · *OTURUM* · *PENCERE*) +
   `mount-baglanti-momenti.test.js` (→ *ELLE HESAP* · *BİLEŞENLER* · *SONUÇ* · *RAPOR*).
+  **Şanzıman ailesinin BELGESİ** (`js/cp-mount-3b-belge.js` + `js/mount-belge.js`; kullanıcı
+  2026-11-06, Canlı Not 52: *"o PDF üzerinden işaretlemeli şekilde … seçeriz. Ama PDF ile aynı
+  kalırız"*): aile listeden İLK kez seçilince 3B'nin tuvalinin üstünde açılır, Özellikler yanda
+  canlı (Belge satırı yeniden açar; Esc · Kapat · başka birimin seçimi kapatır). Sayfa belgenin
+  GÖRSELİ, bölge üstünde: tık seçeneği ailenin sırasıyla yazar, seçimin bölgesi dolu çerçeve,
+  bağdaşmayan kapalı (sebebi `title`'da). Sayfalar ve bölgeler ÜRETİLİR — `js/mount-belge-veri.js`
+  ve `assets/belge/` elle düzenlenmez: `tools/belge-sayfa.js` (tanım `tools/belge-tanim.js`; kaynak
+  PDF `docs/belge/`, build/Pages'e girmez), derleme sayfaları gömer (`__MFSIM_BELGE`). Bölgenin
+  satırındaki sayılar programın tablosuyla birebir. Kapı: `mount-belge.test.js` (→ *VERİ* · *PDF
+  İLE AYNI* · *DURUM* · *GÖRÜNÜM* · *ARAÇ*) + `mount-belge.spec.js`.
   **Motorun aksesuarları** (kullanıcı 2026-11-02; liste kullanıcının Ağırlık Merkezi
   Hesaplama Programı'nın motor parçaları): Alternatör · Alternatör Braketi · Klima
   Kompresörü · Isı Sacı — her biri AYRI tip (`isMountAksesuar`; tek "Aksesuar"

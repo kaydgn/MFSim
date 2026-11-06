@@ -1001,6 +1001,8 @@ function _mw3bPanel(goster){
     var yeni = yan.querySelector('input[data-mw-stp-kutle="' + odak + '"]');
     if(yeni){ yeni.focus(); if(imlec !== null) try { yeni.setSelectionRange(imlec, imlec); } catch(e){} }
   }
+  // Açık belgenin bölgeleri seçimden (başka birim seçildiyse kapanır)
+  if(typeof _mw3bBelgeTazele === 'function') _mw3bBelgeTazele();
 }
 // Kütle yazılırken (js/cp-mount-wizard.js → veMntWizStpKutle): yalnız ölçülen
 // birimlerin tablosu ve toplamı — alanın bölümü yerinde kalır (odak ve imleç)
@@ -1273,10 +1275,14 @@ function veMntWiz3bAltHTML(s, secili, opt){
       // ailenin üyesi (seçenekli anahtar) listede ailenin satırında
       var satir = vs && typeof veMntVsSatir === 'function' ? veMntVsSatir(vs) : (vs ? vs.k : '');
       h += _mw3bOzSatir('ve-mw-3b-veri', _mwStpModelAd(s.roller[birim]),
-        '<select class="ve-fw-inp" id="ve-mw-3b-veri" aria-label="' + mad + '" onchange="veMntWizStpYogunluk(' + birim + ', this.value)">'
+        '<select class="ve-fw-inp" id="ve-mw-3b-veri" aria-label="' + mad + '" onchange="'
+          + (typeof veMntWiz3bVeriSec === 'function' ? 'veMntWiz3bVeriSec' : 'veMntWizStpYogunluk') + '(' + birim + ', this.value)">'
         + '<option value=""' + (vs ? '' : ' selected') + '>—</option>'
         + vsl.map(function(v){ return '<option value="' + _mwEsc(v.k) + '"' + (satir === v.k ? ' selected' : '') + '>' + _mwEsc(v.ad) + '</option>'; }).join('')
         + '</select>', mad + ' — ' + _mwEsc(so.agac[birim].ad));
+      // ailenin belgesi (Canlı Not 52: seçenekler belgenin üstünde de seçilir —
+      // js/cp-mount-3b-belge.js)
+      if(vs && typeof vs.aile === 'string' && typeof veMntWiz3bBelgeSatirHTML === 'function') h += veMntWiz3bBelgeSatirHTML(birim, vs);
       // ailenin seçenekleri: satır başına bir denetim (sihirbazın kartıyla aynı üretici)
       if(vs && typeof vs.aile === 'string' && typeof _mwStpSecenekler === 'function'){
         var bb = typeof _mwStpBirim === 'function' ? _mwStpBirim(s, birim) : null;

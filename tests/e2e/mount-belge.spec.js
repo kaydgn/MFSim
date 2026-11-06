@@ -1,0 +1,145 @@
+/**
+ * mount-belge.spec.js — ŞANZIMAN AİLESİNİN BELGESİ (gerçek tarayıcı, Canlı Not 52)
+ *
+ * Kullanıcı 2026-11-06: *"Önce şanzıman ailesi seçeriz, ardından o seçtiğimiz
+ * şanzıman ailesine ait PDF açılır ve o PDF üzerinden işaretlemeli şekilde
+ * şanzımanın özelliklerini seçeriz."*
+ *
+ * Node'da HİÇ koşmayan halkalar: listenin gerçek seçimiyle açılış, sayfanın görseli,
+ * bölgenin gerçek tıkı ve Özellikler'in yerinde tazelenmesi (belgenin kaydırması
+ * korunur), dizinle gezinme, Esc'in yalnız belgeyi kapatması, yakınlık, başka birimin
+ * seçimiyle kapanma, dar tuvalde dizinin gizlenmesi ve yazının kutusuna sığması.
+ * Birim tarafı: tests/unit/mount-belge.test.js.
+ */
+const { test, expect } = require('@playwright/test');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const STEP = require('../helpers/step-takoz.js');
+const Y = require('../helpers/yerlesim-olcu.js');
+test.setTimeout(180000);
+
+const DIZIN = fs.mkdtempSync(path.join(os.tmpdir(), 'mfsim-belge-'));
+const TULGA = path.join(DIZIN, 'tulga.stp');
+test.beforeAll(() => { fs.writeFileSync(TULGA, STEP.tulgaKalibi({ oteleme: STEP.TULGA_OTELEME, onFark: [0, 0, -2], krank: true })); });
+test.afterAll(() => { fs.rmSync(DIZIN, { recursive: true, force: true }); });
+
+async function ac(page, g, h) {
+  await page.setViewportSize({ width: g, height: h });
+  await page.goto('/index.html');
+  await page.evaluate(() => { if (window.MFSimLoader && MFSimLoader.start) MFSimLoader.start(); });
+  await page.waitForFunction(() => typeof window.createNode === 'function' && typeof window.veMntOpenEditor === 'function'
+    && typeof window.veMntWiz3bBelgeAc === 'function' && typeof window.THREE !== 'undefined' && Array.isArray(window.nodes), null, { timeout: 90000 });
+  await page.evaluate(() => { try { localStorage.setItem(VE_MW_3B_YAN_ANAHTAR, 'acik'); } catch (e) {} });
+  await page.evaluate(() => { if (typeof veSelectModuleFromOverlay === 'function') veSelectModuleFromOverlay('arac-performans'); });
+  await page.waitForFunction(() => { const s = document.getElementById('mfsim-loading-screen'); return !s || s.style.display === 'none'; }, null, { timeout: 90000 });
+  await page.evaluate(() => { const n = createNode('mount-analysis', 400, 300); veMntOpenEditor(n.id); });
+  const [fc] = await Promise.all([page.waitForEvent('filechooser', { timeout: 5000 }), page.click('#ve-mnt-baslangic .ve-bas-kapi[data-ey="step"]')]);
+  await fc.setFiles(TULGA);
+  await page.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; }, null, { timeout: 120000 });
+  return page.evaluate(() => {
+    const s = veMntWizStp(), i = (a) => s.sonuc.agac.findIndex((d) => d.ad === a);
+    veMntWizStpRol(i('Şanzıman gövdesi'), 'mnt-gearbox');
+    veMntWizStpRol(i('Motor bloğu'), 'mnt-motor');
+    veMntWiz3bSec(i('Şanzıman gövdesi'));
+    return { sanz: i('Şanzıman gövdesi'), motor: i('Motor bloğu') };
+  });
+}
+const secenek = (page) => page.evaluate(() => {
+  const s = veMntWizStp(), i = s.sonuc.agac.findIndex((d) => d.ad === 'Şanzıman gövdesi');
+  return veMntStpVs(s.yogunluk[i], 'mnt-gearbox').secenek;
+});
+
+test('BELGE: aile seçilince açılır; bölge tıkı seçeneği yazar, kaydırma yerinde; 7-Speed altı vitesin satırlarını kapatır; Esc · yeniden aç · yakınlık · başka birim', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await ac(page, 1912, 900);
+  await expect(page.locator('#ve-mw-3b-belge')).toHaveCount(0);
+  // Listenin gerçek seçimi: belge tuvalin üstünde, Özellikler yanda
+  await page.selectOption('#ve-mw-3b-veri', 'allison-4000');
+  const belge = page.locator('#ve-mw-3b-tuval > #ve-mw-3b-belge');
+  await expect(belge).toBeVisible();
+  await expect(page.locator('#ve-mw-3b-yan')).toBeVisible();
+  await expect(page.locator('#ve-mw-3b-belge-ac')).toHaveAttribute('aria-pressed', 'true');
+  await expect(belge.locator('.ve-mw-3b-belge-s')).toHaveCount(12);
+  await expect(belge.locator('.ve-mw-3b-belge-ad b')).toHaveText('4000 Product Family Transmission Data');
+  // Bant Ürün ağacının bandıyla aynı çizgide; sayfa görseli yüklendi
+  const bant = await page.evaluate(() => {
+    const a = document.querySelector('#ve-mw-3b-belge .ve-mw-3b-belge-bas').getBoundingClientRect(), b = document.querySelector('#ve-mw-3b-agac .ve-mw-3b-dock-bas').getBoundingClientRect();
+    return [Math.round(a.top), Math.round(a.height), Math.round(b.top), Math.round(b.height)];
+  });
+  expect(bant[0]).toBe(bant[2]); expect(bant[1]).toBe(bant[3]);
+  await page.waitForFunction(() => { const im = document.querySelector('#ve-mw-3b-belge [data-belge-sayfa="5"] img'); return im && im.complete && im.naturalWidth === 1275; });
+  // Dizin: 12.0 Gear Ratios → sayfa 9 görünür
+  await belge.locator('[data-belge-git="9"]').click();
+  const kay = belge.locator('.ve-mw-3b-belge-kay');
+  const s9 = await page.evaluate(() => { const k = document.querySelector('#ve-mw-3b-belge .ve-mw-3b-belge-kay'), s = k.querySelector('[data-belge-sayfa="9"]'); return [k.scrollTop, s.offsetTop]; });
+  expect(Math.abs(s9[0] - (s9[1] - 12))).toBeLessThanOrEqual(2);
+  // WIDE-RATIO sütunu: seçenek yazılır, Özellikler'in listesi yerinde, kaydırma korunur
+  const cr = belge.locator('[data-belge-b="4-0"]'), wr = belge.locator('[data-belge-b="4-1"]');
+  await expect(cr).toHaveAttribute('aria-pressed', 'true');
+  await expect(wr).toHaveAttribute('aria-label', 'Vites konfigürasyonu: Wide Ratio (WR)');
+  const once = await kay.evaluate((k) => k.scrollTop);
+  await wr.click();
+  await expect(wr).toHaveAttribute('aria-pressed', 'true');
+  await expect(cr).toHaveAttribute('aria-pressed', 'false');
+  expect((await secenek(page)).dizi).toBe('wr');
+  await expect(page.locator('#ve-mw-3b-alt select[data-mw-vs-secenek="dizi"]')).toHaveValue('wr');
+  expect(Math.abs((await kay.evaluate((k) => k.scrollTop)) - once)).toBeLessThanOrEqual(1);
+  // Soğutucu sayfası (17.4): tık retarderi de açar
+  await belge.locator('[data-belge-git="27"]').click();
+  await belge.locator('[data-belge-sayfa="27"] [data-belge-b]').click();
+  expect(await secenek(page)).toMatchObject({ dizi: 'wr', ret: '1', sog: 'r' });
+  await expect(belge.locator('[data-belge-git="27"]')).toHaveClass(/secili/);
+  // 7-Speed: §9.1'in satırları kapalı, sebebi title'da; §9.2'nin satırı seçilir
+  await belge.locator('[data-belge-git="9"]').click();
+  await belge.locator('[data-belge-b="4-2"]').click();
+  expect((await secenek(page)).dizi).toBe('7');
+  const p6 = belge.locator('[data-belge-sayfa="6"] [data-belge-b]').nth(2);
+  await expect(p6).toBeDisabled();
+  await expect(p6).toHaveAttribute('title', 'Vites konfigürasyonu: 7-Speed.');
+  await belge.locator('[data-belge-git="7"]').click();
+  await belge.locator('[data-belge-sayfa="7"] [data-belge-b]').nth(6).click();     // REMOTE-MOUNT · No Retarder, No PTO
+  expect(await secenek(page)).toMatchObject({ dizi: '7', bag: 'u', ret: '0', pto: '0' });
+  // Yakınlık: %100'den büyür, Sığdır döner
+  const yuzde = () => belge.locator('#ve-mw-3b-belge-yuzde').textContent();
+  const y0 = await yuzde();
+  await belge.locator('[data-belge-yakin="1"]').click();
+  expect(parseInt((await yuzde()).slice(1), 10)).toBeGreaterThan(parseInt(y0.slice(1), 10));
+  await belge.locator('[data-belge-yakin="0"]').click();
+  expect(await yuzde()).toBe(y0);
+  // Yerleşim: bant, dizin, sayfalar
+  await page.evaluate(Y.KAYNAK);
+  expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-mw-3b-belge')), 'Belge')).toEqual([]);
+  // Esc yalnız belgeyi kapatır; Belge satırı yeniden açar
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#ve-mw-3b-belge')).toHaveCount(0);
+  expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
+  await expect(page.locator('#ve-mw-3b-belge-ac')).toHaveAttribute('aria-pressed', 'false');
+  await page.click('#ve-mw-3b-belge-ac');
+  await expect(page.locator('#ve-mw-3b-belge')).toBeVisible();
+  // Liste aynı aileyi yeniden seçse de belge ikinci kez kurulmaz; başka birim seçilince kapanır
+  await page.evaluate(() => { const s = veMntWizStp(); veMntWiz3bSec(s.sonuc.agac.findIndex((d) => d.ad === 'Motor bloğu')); });
+  await expect(page.locator('#ve-mw-3b-belge')).toHaveCount(0);
+  expect(hatalar).toEqual([]);
+});
+
+test('DAR TUVAL (1366×768): dizin gizli, sayfa genişliği alır; bant ve sayfalar sığar', async ({ page }) => {
+  const hatalar = [];
+  page.on('pageerror', (e) => hatalar.push(String(e)));
+  await ac(page, 1366, 768);
+  await page.selectOption('#ve-mw-3b-veri', 'allison-4000');
+  const belge = page.locator('#ve-mw-3b-belge');
+  await expect(belge).toBeVisible();
+  const o = await page.evaluate(() => {
+    const b = document.getElementById('ve-mw-3b-belge'), d = b.querySelector('.ve-mw-3b-belge-dizin'), s = b.querySelector('.ve-mw-3b-belge-s');
+    return { g: Math.round(b.getBoundingClientRect().width), dizin: getComputedStyle(d).display, sayfa: Math.round(s.getBoundingClientRect().width),
+      kay: Math.round(b.querySelector('.ve-mw-3b-belge-kay').clientWidth) };
+  });
+  expect(o.g).toBeLessThanOrEqual(820);
+  expect(o.dizin).toBe('none');
+  expect(o.sayfa).toBe(o.kay - 48);
+  await page.evaluate(Y.KAYNAK);
+  expect(Y.yerlesimOzet(await page.evaluate(() => window.__yerlesim('#ve-mw-3b-belge')), 'Belge (dar)')).toEqual([]);
+  expect(hatalar).toEqual([]);
+});

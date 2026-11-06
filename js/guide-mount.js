@@ -1215,6 +1215,18 @@ function _gmSec16(){
     + 'Bağdaşmayan seçenek listede kapalıdır, sebebi ipucundadır; bir seçenek ötekini geçersiz kılarsa '
     + 'öteki ilk geçerli değerine döner. Birimin <strong>Kütle ve ağırlık merkezi</strong> bölümü kuru '
     + 'kütleyi ve yağı ayrıca yazar.</p>';
+  h += '<p>Aile listeden seçilince ailenin belgesi tuvalin üstünde açılır (<em lang="en">4000 Product Family '
+    + 'Transmission Data</em>, 15.10.2020): kuru kütleler (8.0), ağırlık merkezi (9.0), atalet (11.0), vites '
+    + 'oranları (12.0), yağ (13.0) ve soğutucuların sayfaları (17.3–17.8, resimleriyle). Sayfa belgenin '
+    + 'kendisidir; tablonun satırı ya da sütunu kesikli çerçeveyle işaretlidir ve tıklanınca o seçenekleri yazar: '
+    + 'ağırlık merkezi tablosunun satırı bağlamayı, retarderi, PTO’yu ve soğutucuyu birlikte, vites oranları '
+    + 'tablosunun sütunu vites konfigürasyonunu, soğutucunun sayfası soğutucuyu. Seçimin satırları dolu '
+    + 'çerçevelidir; bağdaşmayan satır kapalıdır, sebebi ipucundadır '
+    + '(<em lang="en">7-Speed</em>’de altı vitesin tabloları). Soldaki bölüm listesi sayfaya götürür, seçimin '
+    + 'satırı bulunan bölüm kenarında işaretlidir. Özellikler yanda açık kalır ve seçimle birlikte değişir. '
+    + '<strong>Özellikler</strong>’in <strong>Belge</strong> satırı belgeyi yeniden açar; başka bir birim '
+    + 'seçilince, Esc’le ya da <strong>Kapat</strong>’la tuvale dönülür. Ctrl + tekerlek ve bandın düğmeleri '
+    + 'yakınlaştırır.</p>';
   var A4 = typeof VE_MNT_A4K !== 'undefined' ? VE_MNT_A4K : null;
   if(A4) h += _gmAlanTablo(A4.ad + ' seçenekleri', A4.secenek.map(function(o){
     var etki = { dizi:'Temel kuru kütle ' + _gmF(A4.kutle.temel.cr, 0) + ' / ' + _gmF(A4.kutle.temel.wr, 0) + ' / '
@@ -1310,6 +1322,7 @@ function _gmEkA(){
       ['Motor modeli, veri sayfasının referansı', '3D Görüntüleyici (3B)', '<em>Bloğun ön yüzü</em> (X12: <em>Bloğun arka yüzü</em>) · <em>Krank ekseni</em>'],
       ['Şanzıman ailesi ve seçenekleri', '3D Görüntüleyici (3B) · sihirbazın STEP kartı',
         '<em>Şanzıman ailesi</em> · <em>Konvertör muhafazasının ön yüzü</em> · <em>Şanzıman ekseni</em>'],
+      ['Şanzıman ailesinin belgesi', '3D Görüntüleyici (3B)', '<em>Belge</em>'],
       ['Vites konfigürasyonu, konvertör', 'Şanzıman · sihirbazın Tork adımı', '<strong>Katalog</strong>'],
       ['Bağlantı yüzü, eğilme momenti sınırı', 'Şanzıman', '<strong>Bağlantı yüzü</strong> · <strong>Statik eğilme momenti</strong>'],
       ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],
