@@ -1379,8 +1379,8 @@ function _mntSanzimanKatalogHTML(node){
   if(!K.disli.length && !K.tc.length) return '';
   var dis=_mntSanzimanSecHTML(node, K.disli, 'gearPreset', 'veMntApplyGearPreset', function(x){ return x.etiket; });
   var tc=_mntSanzimanSecHTML(node, K.tc, 'tcPreset', 'veMntApplyTcPreset', function(x){ return x.ad+' · '+_mntS(x.stall, 2); });
-  return _mntBolum('Katalog', K.disli.length+' dişli düzeni · '+K.tc.length+' konvertör',
-      _mntIzgara(2, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Dişli düzeni</span>'+dis+'</label>'
+  return _mntBolum('Katalog', K.disli.length+' vites konfigürasyonu · '+K.tc.length+' konvertör',
+      _mntIzgara(2, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Vites konfigürasyonu</span>'+dis+'</label>'
                   + '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Konvertör</span>'+tc+'</label>')
     + '<div id="ve-mnt-sanzkat-'+node.id+'" data-tazele>'+_mntSapmaNot(_mntDisliSapma(node))+_mntSapmaNot(_mntKonvertorSapma(node))+'</div>');
 }

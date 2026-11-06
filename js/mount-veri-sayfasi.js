@@ -93,8 +93,11 @@ var VE_MNT_A4K = {
   egilme: 3500,                          // §10 statik eğilme momenti sınırı, N·m — bütün modeller
   // Seçenekler: sayısız seçeneğin varsayılanı ilk değeri; `kosul`: başka
   // seçeneğin değerine göre izinli değerler
+  // Vites konfigürasyonu (kullanıcı 2026-11-06, Canlı Not 50: *"'dişli düzeni' yerine
+  // 'vites konfigürasyonu' … seçtiğimizde vites oranları görünsün … Türkçeleri değil
+  // İngilizceleri olsun"*): adlar belgenin adları; `oran`: seçilince oranları altında
   secenek: [
-    { k: 'dizi', ad: 'Dişli düzeni', d: [['cr', 'Yakın oranlı (CR)'], ['wr', 'Geniş oranlı (WR)'], ['7', 'Yedi vitesli']] },
+    { k: 'dizi', ad: 'Vites konfigürasyonu', oran: true, d: [['cr', 'Close Ratio (CR)'], ['wr', 'Wide Ratio (WR)'], ['7', '7-Speed']] },
     { k: 'bag', ad: 'Bağlama', d: [['d', 'Doğrudan'], ['u', 'Uzak']] },
     { k: 'pto', ad: 'PTO provizyonu', d: [['0', 'Yok'], ['1', 'Var']] },
     { k: 'ret', ad: 'Retarder', d: [['0', 'Yok'], ['1', 'Var']] },
@@ -137,6 +140,8 @@ var VE_MNT_A4K = {
   oran: { cr: [3.51, 1.91, 1.43, 1.00, 0.74, 0.64], wr: [4.70, 2.21, 1.53, 1.00, 0.76, 0.67],
           '7': [7.63, 3.51, 1.91, 1.43, 1.00, 0.74, 0.64] },
   geri: { cr: -4.80, wr: -5.55, '7': -4.80 },
+  // vitesin belgedeki adı (yoksa sırası): yedi vitesli düzenin ilki LO
+  vitesAd: { '7': ['LO', '1', '2', '3', '4', '5', '6'] },
   konvertor: [{ k: 'TC-521', stall: 2.42, K: 50.7 }, { k: 'TC-531', stall: 2.34, K: 44.8 }, { k: 'TC-541', stall: 1.90, K: 39.7 },
               { k: 'TC-551', stall: 1.79, K: 38.2 }, { k: 'TC-561', stall: 1.58, K: 35.4 }, { k: 'TC-571', stall: 1.62, K: 32.5 }]
 };
@@ -247,7 +252,7 @@ function veMntVeriSayfalari(tip){
 // Kaydın listedeki satırı: ailenin üyesi ailenin satırında
 function veMntVsSatir(v){ return v ? (v.aile && v.aile !== true ? v.aile : v.k) : ''; }
 function veMntVsAile(k){ var P = _veVsAyristir(k); return P ? P.A : null; }
-// Şanzıman penceresinin doldurucuları: dişli düzenleri ve konvertörler
+// Şanzıman penceresinin doldurucuları: vites konfigürasyonları ve konvertörler
 // (anahtar `aile:değer`, düğümün alanına yazılır)
 function veMntVsDisliDuzenleri(){
   var out = [];
@@ -258,6 +263,15 @@ function veMntVsDisliDuzenleri(){
     });
   });
   return out;
+}
+// Seçilen vites konfigürasyonunun oranları, belgenin vites adlarıyla: [{ ad, v }] —
+// ileri vitesler, sonda geri (R)
+function veMntVsOranlar(A, deger){
+  var ileri = A && A.oran && A.oran[deger];
+  if(!ileri) return [];
+  var adlar = (A.vitesAd && A.vitesAd[deger]) || null;
+  return ileri.map(function(v, i){ return { ad: adlar ? adlar[i] : String(i + 1), v: v }; })
+    .concat(A.geri && A.geri[deger] != null ? [{ ad: 'R', v: A.geri[deger] }] : []);
 }
 function veMntVsKonvertorler(){
   var out = [];
@@ -276,5 +290,6 @@ if(typeof module !== 'undefined' && module.exports){
   module.exports = { VE_MNT_VERI_SAYFASI: VE_MNT_VERI_SAYFASI, veMntVeriSayfasi: veMntVeriSayfasi, veMntVeriSayfalari: veMntVeriSayfalari,
     VE_MNT_MODEL_AD: VE_MNT_MODEL_AD, veMntModelAd: veMntModelAd, VE_MNT_A4K: VE_MNT_A4K, VE_MNT_VS_AILE: VE_MNT_VS_AILE,
     veMntVsGecerli: veMntVsGecerli, veMntVsAnahtar: veMntVsAnahtar, veMntVsSecenekYaz: veMntVsSecenekYaz, veMntVsSatir: veMntVsSatir,
-    veMntVsAile: veMntVsAile, veMntVsDisliDuzenleri: veMntVsDisliDuzenleri, veMntVsKonvertorler: veMntVsKonvertorler };
+    veMntVsAile: veMntVsAile, veMntVsDisliDuzenleri: veMntVsDisliDuzenleri, veMntVsKonvertorler: veMntVsKonvertorler,
+    veMntVsOranlar: veMntVsOranlar };
 }
