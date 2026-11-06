@@ -302,8 +302,9 @@ function veBasDegisiklikHTML(d){
             return '<li><b>' + veBasEsc(a.konu) + '</b>' + (a.govde || []).map(function(p){
               return '<div class="ve-bas-degisiklik-p">' + veBasEsc(p) + '</div>';
             }).join('') + (a.resimler || []).map(function(r){
-              return '<img class="ve-bas-degisiklik-resim" src="' + veBasEsc(r.src) + '" width="' + (r.g | 0) + '" height="' + (r.y | 0)
-                + '" alt="Not ' + veBasEsc(r.no) + ' sonucu" loading="lazy" decoding="async">';
+              return '<button type="button" class="ve-bas-degisiklik-resim-b" data-ey="resim" title="Büyüt">'
+                + '<img class="ve-bas-degisiklik-resim" src="' + veBasEsc(r.src) + '" width="' + (r.g | 0) + '" height="' + (r.y | 0)
+                + '" alt="Not ' + veBasEsc(r.no) + ' sonucu" loading="lazy" decoding="async"></button>';
             }).join('') + '</li>';
           }).join('') + '</ol></div></li>';
     }).join('') + '</ol></section>';
@@ -317,6 +318,54 @@ function _veBasDegAc(el, v){
   if(b) b.setAttribute('aria-expanded', ac ? 'true' : 'false');
   if(a) a.hidden = !ac;
   return true;
+}
+
+// GÖRSELİN BÜYÜĞÜ (Canlı Not 53, kullanıcı 2026-11-06: *"Resimlere tıklanınca
+// büyütülebilmesini istiyorum."*): ayrıntıdaki küçük görsel bir düğme; tık pencere
+// ailesinin penceresinde görseli dosyasının ölçüsünde açar (ekrandan büyükse
+// sığdırılır). Kapatan ✕ · Esc · perdeye tık; odak küçük görsele döner.
+var _veBasResim = null;        // { perde, dugme }
+function veBasResimAc(dugme){
+  if(typeof document === 'undefined' || !dugme) return false;
+  var kucuk = dugme.querySelector('img');
+  if(!kucuk) return false;
+  veBasResimKapat();
+  var ad = kucuk.getAttribute('alt') || '';
+  var g = kucuk.naturalWidth || (kucuk.getAttribute('width') | 0) * 2, y = kucuk.naturalHeight || (kucuk.getAttribute('height') | 0) * 2;
+  var perde = document.createElement('div');
+  perde.id = 've-bas-buyuk-perde';
+  perde.className = 've-bas-buyuk-perde';
+  perde.innerHTML = '<div class="ve-bas-buyuk-pencere" role="dialog" aria-modal="true" aria-labelledby="ve-bas-buyuk-baslik">'
+    + '<div class="ve-settings-header"><span><span class="mf-ico mf-ico-image"></span>'
+    + '<b id="ve-bas-buyuk-baslik">' + veBasEsc(ad) + '</b></span>'
+    + '<button type="button" class="ve-settings-close" aria-label="Kapat" title="Kapat (Esc)"><span class="mf-ico mf-ico-x"></span></button></div>'
+    + '<div class="ve-bas-buyuk-govde"><img src="' + veBasEsc(kucuk.getAttribute('src') || '') + '" width="' + g + '" height="' + y
+    + '" alt="' + veBasEsc(ad) + '" decoding="async"></div></div>';
+  // Perdenin kendisine basmak kapatır; pencerenin içi değil.
+  perde.addEventListener('mousedown', function(e){ if(e.target === perde) veBasResimKapat(); });
+  perde.querySelector('.ve-settings-close').onclick = function(){ veBasResimKapat(); };
+  document.body.appendChild(perde);
+  _veBasResim = { perde: perde, dugme: dugme };
+  // YAKALAMA evresinde: alttaki katmanların Esc'i (müfettiş, tuval) bu tuşu görmesin.
+  window.addEventListener('keydown', _veBasResimTus, true);
+  var k = perde.querySelector('.ve-settings-close');
+  if(k && k.focus) k.focus();
+  return true;
+}
+function veBasResimKapat(){
+  if(!_veBasResim) return false;
+  var r = _veBasResim;
+  _veBasResim = null;
+  window.removeEventListener('keydown', _veBasResimTus, true);
+  if(r.perde.parentNode) r.perde.parentNode.removeChild(r.perde);
+  if(r.dugme && r.dugme.isConnected && r.dugme.focus) r.dugme.focus();
+  return true;
+}
+function _veBasResimTus(e){
+  if(e.key !== 'Escape' || !_veBasResim) return;
+  e.stopPropagation();
+  e.preventDefault();
+  veBasResimKapat();
 }
 
 // ── DOM — kurma, açık satır ve görünürlük ──────────────────────────────────
@@ -416,6 +465,7 @@ function veBasKur(o){
     if(ey === 'ac'){ _veBasAc(el, v); return; }
     if(ey === 'sekme'){ _veBasSekmeSec(el, v); return; }
     if(ey === 'degisiklik'){ _veBasDegAc(el, v); return; }
+    if(ey === 'resim'){ veBasResimAc(b); return; }
     var oo = el._veBasO;
     if(oo && typeof oo.eylem === 'function') oo.eylem(ey, v);
   });
@@ -456,6 +506,7 @@ if(typeof module !== 'undefined' && module.exports){
     veBasKimlikHTML: veBasKimlikHTML, veBasKilavuzHTML: veBasKilavuzHTML, veBasVeriHTML: veBasVeriHTML,
     veBasSayfaHTML: veBasSayfaHTML, veBasOrnekHTML: veBasOrnekHTML, veBasAltHTML: veBasAltHTML,
     veBasDegisiklikHTML: veBasDegisiklikHTML, _veBasSekmeSec: _veBasSekmeSec, _veBasDegAc: _veBasDegAc,
+    veBasResimAc: veBasResimAc, veBasResimKapat: veBasResimKapat,
     veBasKur: veBasKur, veBasTazele: veBasTazele, veBasAcik: veBasAcik,
     _veBasAc: _veBasAc, _veBasRayEsitle: _veBasRayEsitle,
     _veBasSifirla: function(){ _veBasAcikSatir = {}; _veBasSekme = {}; }

@@ -11644,6 +11644,29 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
    boyu en çok 360 px), sütundan geniş olan sütuna iner; köşe keskin, gölge yok */
 .ve-bas-degisiklik-resim{ display:block; max-width:100%; height:auto; margin:8px 0 2px; box-sizing:border-box;
   border:1px solid var(--border-color); background:var(--bg-primary); }
+/* Görselin büyüğü (Canlı Not 53): küçük görsel düğme — tık pencerede açar */
+.ve-bas-degisiklik-resim-b{ display:block; max-width:100%; padding:0; border:0; background:none; cursor:zoom-in; font:inherit; }
+.ve-bas-degisiklik-resim-b:hover .ve-bas-degisiklik-resim{ border-color:var(--accent-primary); }
+.ve-bas-degisiklik-resim-b:focus-visible{ outline:none; }
+.ve-bas-degisiklik-resim-b:focus-visible .ve-bas-degisiklik-resim{ box-shadow:var(--focus-ring); }
+.ve-bas-buyuk-perde{
+  position:fixed; inset:0; z-index:calc(var(--z-modal) + 1);
+  background:var(--scrim);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+}
+.ve-bas-buyuk-pencere{
+  max-width:100%; max-height:100%; min-width:0; display:flex; flex-direction:column;
+  background:var(--bg-secondary); border:1px solid var(--border-color);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-xl);
+}
+.ve-bas-buyuk-pencere .ve-settings-header b{ font-weight:inherit; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-bas-buyuk-govde{ padding:12px; min-height:0; overflow:auto; }
+/* dosyanın ölçüsünde; ekrandan büyükse oranı korunarak sığar (perde 2×24 · bant · gövde 2×12 · çerçeve) */
+.ve-bas-buyuk-govde img{
+  display:block; width:auto; height:auto; margin:0 auto;
+  max-width:calc(100vw - 74px); max-height:calc(100vh - 74px - var(--bant-h));
+  box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary);
+}
 .ve-bas-satir{ border-bottom:1px solid var(--bg-tertiary); }
 .ve-bas-satir:hover{ background:color-mix(in srgb, var(--bg-primary) 45%, var(--bg-secondary)); }
 .ve-bas-satir.acik{ background:var(--accent-tint-6); }

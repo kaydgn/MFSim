@@ -534,13 +534,68 @@ describe('ÇALIŞMA MASASI — panel · masa', () => {
     const img = li[0].querySelector('img.ve-bas-degisiklik-resim');
     expect([img.getAttribute('src'), img.getAttribute('width'), img.getAttribute('height'), img.alt, img.getAttribute('loading')])
       .toEqual(['data:image/webp;base64,AAAA', '560', '350', 'Not 22 sonucu', 'lazy']);
-    expect(img.previousElementSibling.className).toBe('ve-bas-degisiklik-p');      // paragrafların altında
+    expect(img.parentElement.matches('button.ve-bas-degisiklik-resim-b[data-ey="resim"]')).toBe(true);   // Canlı Not 53
+    expect(img.parentElement.previousElementSibling.className).toBe('ve-bas-degisiklik-p');      // paragrafların altında
     expect(li.map((x) => x.querySelectorAll('img').length)).toEqual([1, 1, 0, 0]);
     // görsel sütundan taşmaz, köşe keskin, gölge yok
     const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
     const k = css.slice(css.indexOf('\n.ve-bas-degisiklik-resim{') + 1).split('}')[0];
     expect(k).toMatch(/max-width:100%; height:auto/);
     expect(k).not.toMatch(/border-radius|box-shadow/);
+  });
+  // Canlı Not 53 (kullanıcı 2026-11-06: "Resimlere tıklanınca büyütülebilmesini istiyorum."):
+  // küçük görsel düğme; tık pencere ailesinin penceresinde dosyanın ölçüsünde açar (küçük
+  // görsel 560 × 350, pencerede 1120 × 700). Kapatan Esc · ✕ · perde; odak küçük görsele döner.
+  test('GÖRSELİN BÜYÜĞÜ: tık pencerede açar, dosyanın ölçüsünde; Esc · ✕ · perde kapatır, odak geri döner', () => {
+    const BSK = require('../../js/baslangic-sayfa.js');
+    const K = { moduller: { takoz: [{ prNumber: 3, date: '2026-11-05T10:00:00Z', title: 'Üç', ayrinti: [
+      { konu: 'Canlı not 22: palet', govde: ['p'], notlar: [22] }] }] } };
+    const R = { 22: { src: 'data:image/webp;base64,AAAA', g: 560, y: 350 } };
+    const kap = document.createElement('div');
+    kap.innerHTML = BSK.veBasDegisiklikHTML(BS.veMntBaslangicDegisiklik(K, R));
+    document.body.appendChild(kap);
+    try {
+      const b = kap.querySelector('.ve-bas-degisiklik-resim-b');
+      expect(b.tagName).toBe('BUTTON');
+      expect(BSK.veBasResimAc(b)).toBe(true);
+      const perde = document.getElementById('ve-bas-buyuk-perde');
+      expect(perde).not.toBeNull();
+      const pen = perde.querySelector('.ve-bas-buyuk-pencere[role="dialog"][aria-modal="true"]');
+      expect(pen.querySelector('.ve-settings-header .mf-ico-image')).not.toBeNull();
+      expect(pen.querySelector('#ve-bas-buyuk-baslik').textContent).toBe('Not 22 sonucu');
+      const kapat = pen.querySelector('.ve-settings-close');
+      expect([kapat.getAttribute('aria-label'), kapat.querySelector('.mf-ico-x') !== null]).toEqual(['Kapat', true]);
+      const im = pen.querySelector('.ve-bas-buyuk-govde img');
+      expect([im.getAttribute('src'), im.getAttribute('width'), im.getAttribute('height')]).toEqual(['data:image/webp;base64,AAAA', '1120', '700']);
+      expect(document.activeElement).toBe(kapat);
+      // Esc yalnız pencereyi kapatır (yakalama evresinde, alttaki katman görmez)
+      const alt = jest.fn();
+      document.addEventListener('keydown', alt);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.removeEventListener('keydown', alt);
+      expect(document.getElementById('ve-bas-buyuk-perde')).toBeNull();
+      expect(document.activeElement).toBe(b);
+      // ✕ ve perdeye basmak da kapatır; pencerenin içine basmak kapatmaz
+      BSK.veBasResimAc(b);
+      document.querySelector('#ve-bas-buyuk-perde .ve-settings-close').click();
+      expect(document.getElementById('ve-bas-buyuk-perde')).toBeNull();
+      BSK.veBasResimAc(b);
+      const p2 = document.getElementById('ve-bas-buyuk-perde');
+      p2.querySelector('img').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      expect(document.getElementById('ve-bas-buyuk-perde')).not.toBeNull();
+      p2.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      expect(document.getElementById('ve-bas-buyuk-perde')).toBeNull();
+      // ikinci açılış birincisinin yerine geçer: tek pencere
+      BSK.veBasResimAc(b); BSK.veBasResimAc(b);
+      expect(document.querySelectorAll('#ve-bas-buyuk-perde').length).toBe(1);
+      BSK.veBasResimKapat();
+    } finally { kap.remove(); }
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    const kural = (sec) => { const i = css.indexOf('\n' + sec + '{'); return i < 0 ? '' : css.slice(i + 1, css.indexOf('}', i)).replace(/\s+/g, ' '); };
+    expect(kural('.ve-bas-degisiklik-resim-b')).toMatch(/cursor:zoom-in/);
+    expect(kural('.ve-bas-buyuk-perde')).toMatch(/position:fixed; inset:0; .*background:var\(--scrim\)/);
+    expect(kural('.ve-bas-buyuk-pencere')).toMatch(/border-radius:var\(--radius-lg\); box-shadow:var\(--shadow-xl\)/);
+    expect(kural('.ve-bas-buyuk-govde img')).toMatch(/width:auto; height:auto;.*max-width:calc\(100vw - 74px\); max-height:calc\(100vh - 74px - var\(--bant-h\)\)/);
   });
   // Canlı Not 34 ("pencerenin soluna yaslanmış gibi. Ortalayalım mı?") · 35 ("yazı mı,
   // başlık mı belli olmuyor"): bölüm masada ortada; satırın başlığı bir boy büyük, kalın,
