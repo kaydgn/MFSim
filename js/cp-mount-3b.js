@@ -162,11 +162,6 @@ function veMntWiz3bBirim(s, parca){
   for(var a = s.sonuc.parcalar[parca].dugum; a >= 0; a = s.sonuc.agac[a].ebeveyn) if(s.roller[a]) return a;
   return -1;
 }
-function veMntWiz3bYol(s, dugum){
-  var yol = [];
-  for(var a = dugum; a >= 0; a = s.sonuc.agac[a].ebeveyn) yol.unshift(a);
-  return yol;
-}
 function veMntWiz3bParcalar(s, dugum){
   var d = s && s.sonuc && s.sonuc.agac[dugum];
   return d ? d.parcalar.slice() : [];
@@ -978,7 +973,7 @@ function veMntWiz3bRol(tip){
 
 // ── 5 · ÖZELLİKLER (sağdaki panel) VE EYLEM ──────────────────────────────
 // Panel seçimin sırasıyla: araçların kartı (ölçü · yüzey) → kimlik → rol ·
-// malzeme · nokta · veri sayfası (#ve-mw-3b-alt) → birimin kütlesi → ölçülen
+// malzeme · nokta · motor modeli (#ve-mw-3b-alt) → birimin kütlesi → ölçülen
 // birimler → rol verilenler. Panelin kendisi kaydırılır; içeriği yeniden
 // basılınca kaydırma yerinde kalır (kap aynı öğe). Eylem komut çubuğunda.
 function _mw3bPanel(goster){
@@ -1013,9 +1008,11 @@ function veMntWiz3bKutleTazele(){
   return true;
 }
 // SEÇİMİN KİMLİĞİ (saf, testli): tekte simge (alt montaj · parça), ad, tür ve parça
-// sayısı, rollü atanın birimi ve yol (alt montaja rol yoldan verilir); çoklu
-// seçimde düğümler ve birleşik parça sayısı, satırdan seçimden çıkarılır. Seçim
-// yoksa boş — durum ve yönlendirme alttaki bölümün (veMntWiz3bAltHTML).
+// sayısı, rollü atanın birimi; çoklu seçimde düğümler ve birleşik parça sayısı,
+// satırdan seçimden çıkarılır. Seçim yoksa boş — durum ve yönlendirme alttaki
+// bölümün (veMntWiz3bAltHTML). Atalarının yolu YOK (kullanıcı 2026-11-06, Canlı Not
+// 42: *"üstteki alt kompleleri göstermeye gerek yok … Kalabalık duruyor"*): ata
+// ürün ağacından seçilir.
 function veMntWiz3bKimlikHTML(s, secili, secim){
   var so = s.sonuc, h = '';
   if(secim && secim.length > 1){
@@ -1035,8 +1032,7 @@ function veMntWiz3bKimlikHTML(s, secili, secim){
     return h + '</ul></section>';
   }
   if(!(secili >= 0) || !so.agac[secili]) return '';
-  var dg = so.agac[secili], yol = veMntWiz3bYol(s, secili), kok = so.agac[yol[0]];
-  var kokGizli = kok.ebeveyn < 0 && kok.cocuklar.length && yol.length > 1, n = dg.parcalar.length;
+  var dg = so.agac[secili], n = dg.parcalar.length;
   var tur = dg.cocuklar.length ? (dg.ebeveyn < 0 ? 'Montaj' : 'Alt montaj') + ' · ' + veSayi(n, 0) + ' parça' : 'Parça';
   var ata = -1;
   if(!s.roller[secili]) for(var e = dg.ebeveyn; e >= 0; e = so.agac[e].ebeveyn) if(s.roller[e]){ ata = e; break; }
@@ -1045,17 +1041,6 @@ function veMntWiz3bKimlikHTML(s, secili, secim){
     + ' title="' + _mwEsc(dg.ad + (dg.ornek && dg.ornek !== dg.ad ? ' · ' + dg.ornek : '')) + '">' + _mwEsc(dg.ad) + '</b>'
     + '<span class="ve-fw-dim">' + tur + (ata >= 0 ? ' · ' + _mwEsc(so.agac[ata].ad) + ' biriminin içinde ('
       + _mwEsc(_mwAd(s.roller[ata])) + ')' : '') + '</span></span></div>';
-  if(yol.length > 1){
-    h += '<div class="ve-fw-3b-yol">';
-    yol.forEach(function(d, k){
-      if(k === 0 && kokGizli) h += '<span class="ve-fw-dim" title="Bütün montaja rol verilmez">' + _mwEsc(so.agac[d].ad) + '</span>';
-      else if(d === secili) h += '<b data-ve-3b-yol="' + d + '">' + _mwEsc(so.agac[d].ad) + '</b>';
-      else h += '<button type="button" class="ve-fw-3b-yolb" data-ve-3b-yol="' + d + '" onclick="veMntWiz3bSec(' + d + ')">'
-        + _mwEsc(so.agac[d].ad) + '</button>';
-      if(k < yol.length - 1) h += veIkon('chevron-right', 've-fw-dim ve-fw-3b-ayrac');
-    });
-    h += '</div>';
-  }
   return h + '</section>';
 }
 // KOORDİNATIN ÜÇ HÜCRESİ: x · y · z (koordinat üçlüsünün sütunları; hane _mwStpKonum'unki)
@@ -1226,9 +1211,10 @@ function veMntWiz3bGrupAc(k){
 // Saf: seçimin ÖZELLİKLERİ (testli) — Özellikler'de kimliğin altında, CAD'in
 // özellik ızgarası gibi (kullanıcı 2026-11-05, Canlı Not 10: *"Şu rol kısmı hiç
 // güzel olmamış. Çok amatör duruyor"*): satır başına ad · değer. Rol TEK listeden
-// (gruplu, VE_MW_3B_ROL_GRUP; rengi listenin solundaki noktada) — eskiden beş çip
+// (gruplu, VE_MW_3B_ROL_GRUP; rengi listenin içinde, metnin solundaki noktada —
+// değerler bütün satırlarda aynı sütunda başlar, Canlı Not 42) — eskiden beş çip
 // + "Diğer…" listesiydi. Malzeme yalnız atanmışsa (_mw3bMalzemeHTML); takozun
-// noktası; gövdenin veri sayfası ve referansı; aksesuarın kataloğu. Seçim yoksa
+// noktası; gövdenin modeli ("Motor modeli" — veri sayfası) ve referansı; aksesuarın kataloğu. Seçim yoksa
 // durum ve TEK yönlendirme. Hesap ve aktarım tuvalin sağ altındaki kartta
 // (veMntWiz3bEylemHTML). `opt.secim`: çoklu seçimde rol HEPSİNE verilir; liste
 // ayrışan rolde "Karışık". Takoz noktası ve veri sayfası tek düğümün işi — çoklu
@@ -1248,8 +1234,8 @@ function veMntWiz3bAltHTML(s, secili, opt){
           }).join('') + '</optgroup>';
         }).join('');
     h += _mw3bOzSatir('ve-mw-3b-rol', 'Rol',
-      '<span class="ve-mw-3b-oz-renk" style="--renk:var(' + (rol ? veMntWiz3bRolJeton(rol) : '--border-color') + ')" aria-hidden="true"></span>'
-      + '<select class="ve-fw-inp" id="ve-mw-3b-rol" aria-label="Rol" onchange="veMntWiz3bRol(this.value)">' + liste + '</select>',
+      '<span class="ve-mw-3b-oz-sec"><span class="ve-mw-3b-oz-renk" style="--renk:var(' + (rol ? veMntWiz3bRolJeton(rol) : '--border-color') + ')" aria-hidden="true"></span>'
+      + '<select class="ve-fw-inp" id="ve-mw-3b-rol" aria-label="Rol" onchange="veMntWiz3bRol(this.value)">' + liste + '</select></span>',
       'Rol — ' + (cok ? veSayi(secim.length, 0) + ' düğüm' : _mwEsc(so.agac[secili].ad)));
     h += _mw3bMalzemeHTML(s, secim, cok, secili);
     // Takozun noktası: seçili düğümün birimi takozsa — daireden seçim kipi ve öneriye dönüş
@@ -1263,16 +1249,17 @@ function veMntWiz3bAltHTML(s, secili, opt){
       if(kip) nb += '<span class="ve-fw-3b-dizi-ad ve-fw-dim">' + veYon('Takozun dairesel kenarını seçin.') + '</span>';
       h += _mw3bOzSatir('ve-mw-3b-nokta', 'Takoz noktası', nb, 'Takoz noktası — ' + _mwEsc(so.agac[birim].ad));
     }
-    // Gövdenin veri sayfası: model ve referansın iki seçim kipi (rolün modeli varsa)
+    // Gövdenin modeli (veri sayfası) ve referansın iki seçim kipi (rolün modeli varsa)
     var vsl = (birim >= 0 && s.roller[birim] !== 'mnt-mount' && typeof _mwStpVeriSayfalari === 'function')
       ? _mwStpVeriSayfalari(s.roller[birim]) : [];
     if(vsl.length){
       var vs = veMntStpVs((s.yogunluk || {})[birim], s.roller[birim]), rf = (s.referans || {})[birim] || {}, rk = (opt && opt.ref) || '';
-      h += _mw3bOzSatir('ve-mw-3b-veri', 'Veri sayfası',
-        '<select class="ve-fw-inp" id="ve-mw-3b-veri" aria-label="Veri sayfası" onchange="veMntWizStpYogunluk(' + birim + ', this.value)">'
+      var mad = _mwEsc(_mwStpModelAd(s.roller[birim]));
+      h += _mw3bOzSatir('ve-mw-3b-veri', _mwStpModelAd(s.roller[birim]),
+        '<select class="ve-fw-inp" id="ve-mw-3b-veri" aria-label="' + mad + '" onchange="veMntWizStpYogunluk(' + birim + ', this.value)">'
         + '<option value=""' + (vs ? '' : ' selected') + '>—</option>'
         + vsl.map(function(v){ return '<option value="' + _mwEsc(v.k) + '"' + (vs && vs.k === v.k ? ' selected' : '') + '>' + _mwEsc(v.ad) + '</option>'; }).join('')
-        + '</select>', 'Veri sayfası — ' + _mwEsc(so.agac[birim].ad));
+        + '</select>', mad + ' — ' + _mwEsc(so.agac[birim].ad));
       if(vs){
         var rb = ['yuz', 'eksen'].map(function(t){
           return '<button type="button" class="ve-fw-3b-rol" data-ve-3b-ref="' + t + '" aria-pressed="' + (rk === t ? 'true' : 'false') + '"'
@@ -2438,7 +2425,7 @@ function veMntWiz3bDurum(){
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_MW_3B_ROL_RENK: VE_MW_3B_ROL_RENK, VE_MW_3B_ACILIS: VE_MW_3B_ACILIS,
-    veMntWiz3bBirim: veMntWiz3bBirim, veMntWiz3bYol: veMntWiz3bYol, veMntWiz3bParcalar: veMntWiz3bParcalar,
+    veMntWiz3bBirim: veMntWiz3bBirim, veMntWiz3bParcalar: veMntWiz3bParcalar,
     veMntWiz3bRolJeton: veMntWiz3bRolJeton, veMntWiz3bPanelHTML: veMntWiz3bPanelHTML,
     veMntWiz3bAltHTML: veMntWiz3bAltHTML, _mw3bSeciliBirim: _mw3bSeciliBirim, veMntWiz3bTazele: veMntWiz3bTazele,
     _mw3bKutuKes: _mw3bKutuKes, _mw3bUcgenKes: _mw3bUcgenKes, _mw3bKurVeri: _mw3bKurVeri,

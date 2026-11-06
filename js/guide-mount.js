@@ -1053,8 +1053,8 @@ function _gmSec16(){
     ['Komut çubuğu', 'Solda dosyanın adı; kesit açıkken kesitin ayarı; sağ uçta <strong>Kapat</strong>',
       '3B tam ekran, ayrı başlık bandı yok; araçlar boşluğa sağ tıkta'],
     ['<strong>Ürün ağacı</strong>', 'Solda; başında arama alanı', 'Seçim ağaçla 3B arasında ortak'],
-    ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve yolu, özellik satırları (<strong>Rol</strong>, atanmışsa '
-      + '<strong>Malzeme</strong>, takozun noktası, veri sayfası ve referansı, katalog), birimin kütlesi ve CG’si, '
+    ['<strong>Özellikler</strong>', 'Sağda; seçimin adı ve türü, özellik satırları (<strong>Rol</strong>, atanmışsa '
+      + '<strong>Malzeme</strong>, takozun noktası, <strong>Motor modeli</strong> ve referansı, katalog), birimin kütlesi ve CG’si, '
       + '<strong>Birimler</strong> (role göre gruplu, açılır kapanır)', 'Kapalı başlar: şerit açar, başlığındaki düğme '
       + 'daraltır; açıklık tarayıcıda saklanır. Satırlar seçime göre'],
     ['Eylem kartı', 'Tuvalin sağ altında, rol verilince; <strong>Hesapla</strong> ve <strong>Sihirbaza aktar</strong>, '
@@ -1136,7 +1136,7 @@ function _gmSec16(){
       'Parçaların yoğunluğu dosyadaysa seçili gelir; yoğunluğu olmayan parçayı atanan malzeme tamamlar, atanan malzeme dosyanınkinin yerine geçer'],
     ['<em>Parçalardan</em>', 'Parçalara atanan malzemeler; ağırlık merkezi kütleyle ağırlıklı',
       'Bütün parçalara malzeme atanmışsa seçilir'],
-    ['Veri sayfası', 'Modelin ıslak kütlesi',
+    ['Motor modeli', 'Modelin veri sayfasındaki ıslak kütle',
       'Ağırlık merkezi ve atalet veri sayfasından (16.5)']
   ], ['Kaynak', 'Kütle', 'Not']);
   h += '<p>3B’de gövde seçiliyken <strong>Özellikler</strong>’in <strong>Kütle ve ağırlık merkezi</strong> bölümü '
@@ -1172,7 +1172,7 @@ function _gmSec16(){
     + 'Uzaklıklar ve atalet (roll, pitch, yaw) motorun kendi eksenlerindedir; motor eğik takılıysa ağırlık '
     + 'merkezi ve atalet tensörü o açıyla döner.</p>';
   h += _gmAdimlar([
-    '3B’de motor birimini seçin; <strong>Özellikler</strong>’in <strong>Veri sayfası</strong> listesinden modeli seçin. Aynı '
+    '3B’de motor birimini seçin; <strong>Özellikler</strong>’in <strong>Motor modeli</strong> listesinden modeli seçin. Aynı '
       + 'liste <strong>Kütle</strong> bölümünün <strong>Kaynak</strong> sütunundadır.',
     'Referans yüzünün düğmesine (<em>Bloğun ön yüzü</em> ya da <em>Bloğun arka yüzü</em>) basın ve düzlem '
       + 'yüzü tıklayın: fare düzlem bir yüze gelince halka ve yüzün konumu belirir. Seçim yalnız birimin '

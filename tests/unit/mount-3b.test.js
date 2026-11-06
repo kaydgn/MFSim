@@ -802,10 +802,10 @@ describe('ÇOKLU SEÇİM — rol seçimin hepsine, tek hesap', () => {
     expect(b.querySelector('.ve-mw-3b-kimlik-ad b').textContent).toBe('2 düğüm');
     expect(b.querySelector('.ve-mw-3b-kimlik-ad .ve-fw-dim').textContent).toBe(veSayi(ps.size, 0) + ' parça');
     expect(b.querySelector('li .ve-fw-mini').getAttribute('onclick')).toBe('veMntWiz3bSec(' + tk[0] + ', true)');
-    // tek seçimde ad, tür ve yol
+    // tek seçimde ad ve tür; atalarının yolu YOK (Canlı Not 42: "üstteki alt kompleleri göstermeye gerek yok")
     d.innerHTML = veMntWiz3bKimlikHTML(s, tk[2], [tk[2]]);
     expect(d.querySelector('[data-ve-3b-secili]').getAttribute('data-ve-3b-secili')).toBe('1');
-    expect(d.querySelector('.ve-fw-3b-yol')).not.toBe(null);
+    expect(d.querySelector('.ve-fw-3b-yol, [data-ve-3b-yol]')).toBe(null);
   });
 
   test('etiket soldaki ağacın şeridine girmez: sola taşan etiket sağa geçer', () => {
@@ -1277,7 +1277,7 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect([ana(d, '#ve-mw-3b-hesapla'), d.querySelector('#ve-mw-3b-aktar')]).toEqual([true, null]);
   });
 
-  test('kimlik: alt montajda tür ve parça sayısı, parçada "Parça", yol atayı seçer; seçimsiz boş', () => {
+  test('kimlik: alt montajda tür ve parça sayısı, parçada "Parça", atalarının yolu yok; seçimsiz boş', () => {
     const s = oturum(), asm = ad2i(s, 'Arka braket'), ust = ad2i(s, 'Braket üst');
     let d = kur(veMntWiz3bKimlikHTML(s, asm, [asm]));
     expect(d.querySelector('.ve-mw-3b-kimlik-ad b').textContent).toBe('Arka braket');
@@ -1287,7 +1287,8 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     d = kur(veMntWiz3bKimlikHTML(s, ust, [ust]));
     expect(d.querySelector('.ve-mw-3b-kimlik-ad .ve-fw-dim').textContent).toBe('Parça');
     expect(d.querySelector('.ve-mw-3b-kimlik-ik .mf-ico-box')).not.toBe(null);
-    expect(d.querySelector('[data-ve-3b-yol="' + asm + '"]').getAttribute('onclick')).toBe('veMntWiz3bSec(' + asm + ')');
+    expect(d.querySelector('.ve-fw-3b-yol, [data-ve-3b-yol]')).toBe(null);
+    expect(d.textContent).not.toContain(s.sonuc.agac[asm].ad);                // ata adıyla da yazılmaz
     expect(veMntWiz3bKimlikHTML(s, -1, [])).toBe('');
   });
 
@@ -1393,6 +1394,11 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(Array.from(d.querySelectorAll('#ve-mw-3b-rol optgroup')).map((g) => g.label)).toEqual(veMntWiz3bRolGruplari().map((g) => g.ad));
     expect(d.querySelectorAll('#ve-mw-3b-rol option[data-ve-3b-rol]:not([value=""])').length).toBe(VE_MNT_STP_ROLLER.length);
     expect(d.querySelector('.ve-mw-3b-oz-renk').getAttribute('style')).toBe('--renk:var(' + VE_MW_3B_ROL_RENK['mnt-bracket'] + ')');
+    // nokta listenin İÇİNDE (Canlı Not 42): değer sütunu bütün satırlarda aynı yerde başlar
+    expect(d.querySelector('.ve-mw-3b-oz-d > .ve-mw-3b-oz-sec > .ve-mw-3b-oz-renk + #ve-mw-3b-rol')).not.toBe(null);
+    expect(d.querySelector('.ve-mw-3b-oz-d > .ve-mw-3b-oz-renk')).toBe(null);
+    expect(kural('.ve-mw-3b-oz-sec > .ve-mw-3b-oz-renk')).toMatch(/position:absolute/);
+    expect(kural('.ve-mw-3b-oz-sec > select.ve-fw-inp')).toMatch(/padding-left:24px/);
     expect(d.querySelector('button[data-ve-3b-rol], [data-ve-3b-diger]')).toBe(null);
     expect(kural('.ve-mw-3b-yan .ve-fw-3b-roller.ve-mw-3b-oz-s')).toMatch(/grid-template-columns:96px minmax\(0, 1fr\)/);
   });
