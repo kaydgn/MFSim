@@ -1069,9 +1069,14 @@ function veMntWiz3bBirimKutleHTML(s, secili, secim){
       + '<span>' + _mwEsc(veMntWizStpNoktaKaynak(b)) + '</span>'
       + '<span class="ve-mw-3b-alan-ad">Konum</span><span class="ve-mw-3b-xyz">' + _mw3bXyzHTML(b.konum, 3) + '</span></div></section>';
   var K = _mwStpKutleK(s, b), kay = K.kaynak === 'elle' ? 'Elle' : K.kaynak === 'dosya' ? 'Dosyadan' : K.not;
+  // Ailenin veri sayfası: kuru kütle ve yağ (ıslak = kuru + yağ)
+  var vs = K.kaynak === 'veri' && K.vs && K.vs.yag ? K.vs : null;
   return h + '<h4>Kütle ve ağırlık merkezi</h4><div class="ve-mw-3b-alanlar">'
     + '<span class="ve-mw-3b-alan-ad">Kaynak</span><span class="ve-mw-3b-kaynak" title="' + _mwEsc(K.not) + '">' + _mwEsc(kay) + '</span>'
     + '<span class="ve-mw-3b-alan-ad">Kütle</span><span class="ve-mw-3b-kg">' + _mwStpKutleHucre(s, b, K) + '<span class="ve-fw-dim">kg</span></span>'
+    + (vs ? '<span class="ve-mw-3b-alan-ad">Kuru</span><span class="ve-mw-3b-kg" data-ve-3b-kuru>' + veSayi(vs.kutle.kuru, 1) + '<span class="ve-fw-dim">kg</span></span>'
+      + '<span class="ve-mw-3b-alan-ad">Yağ</span><span class="ve-mw-3b-kg" data-ve-3b-yag>' + veSayi(vs.yag.L, 1) + '<span class="ve-fw-dim">L</span> · '
+      + veSayi(vs.yag.kg, 1) + '<span class="ve-fw-dim">kg</span></span>' : '')
     + '<span class="ve-mw-3b-alan-ad">Ağırlık merkezi</span><span class="ve-mw-3b-xyz">' + _mw3bXyzHTML(b.konum, 1) + '</span>'
     + '</div></section>';
 }
@@ -1163,7 +1168,9 @@ function veMntWiz3bPanelHTML(s, secili, acik){
     var b = u.b, takoz = u.tip === 'mnt-mount', K = (b && !takoz) ? _mwStpKutleK(s, b) : null;
     var kg = !b || takoz ? (b ? '' : '<span class="ve-mw-3b-birim-rol ve-fw-dim">' + _mwEsc(_mwAd(u.tip)) + '</span>')
       : (K.m > 0 ? '<span class="ve-mw-3b-birim-kg" data-ve-3b-kg="' + u.dugum + '">' + _mwSayi(K.m, K.m < 10 ? 2 : 1)
-          + (K.kaynak !== 'elle' ? '<sup class="ve-fw-kun" title="' + _mwEsc(VE_MW_STEP_NOT + ' · ' + K.not) + '">S</sup>' : '') + ' kg</span>'
+          // "S" yalnız geometriden türeyen kütlede (malzeme · dosya) — aktarımın kuralı
+          // (js/mount-step.js → veMntStpKayit): veri sayfasının ve kataloğun kütlesi yazılır
+          + ((K.kaynak === 'malzeme' || K.kaynak === 'dosya') ? '<sup class="ve-fw-kun" title="' + _mwEsc(VE_MW_STEP_NOT + ' · ' + K.not) + '">S</sup>' : '') + ' kg</span>'
         : '<span class="ve-mw-3b-birim-kg ve-fw-dim" data-ve-3b-kg="' + u.dugum + '">— kg</span>');
     var at = ' data-ve-3b-birim="' + u.dugum + '"' + (u.dugum === birimSec ? ' class="ve-mw-3b-birim on"' : ' class="ve-mw-3b-birim"')
       + (b && veMntWizStpKonumUyari(b) ? ' data-uyari="1"' : '') + (K && !(K.m > 0) ? ' data-eksik="1"' : '')
@@ -1264,11 +1271,20 @@ function veMntWiz3bAltHTML(s, secili, opt){
     if(vsl.length){
       var vs = veMntStpVs((s.yogunluk || {})[birim], s.roller[birim]), rf = (s.referans || {})[birim] || {}, rk = (opt && opt.ref) || '';
       var mad = _mwEsc(_mwStpModelAd(s.roller[birim]));
+      // ailenin üyesi (seçenekli anahtar) listede ailenin satırında
+      var satir = vs && typeof veMntVsSatir === 'function' ? veMntVsSatir(vs) : (vs ? vs.k : '');
       h += _mw3bOzSatir('ve-mw-3b-veri', _mwStpModelAd(s.roller[birim]),
         '<select class="ve-fw-inp" id="ve-mw-3b-veri" aria-label="' + mad + '" onchange="veMntWizStpYogunluk(' + birim + ', this.value)">'
         + '<option value=""' + (vs ? '' : ' selected') + '>—</option>'
-        + vsl.map(function(v){ return '<option value="' + _mwEsc(v.k) + '"' + (vs && vs.k === v.k ? ' selected' : '') + '>' + _mwEsc(v.ad) + '</option>'; }).join('')
+        + vsl.map(function(v){ return '<option value="' + _mwEsc(v.k) + '"' + (satir === v.k ? ' selected' : '') + '>' + _mwEsc(v.ad) + '</option>'; }).join('')
         + '</select>', mad + ' — ' + _mwEsc(so.agac[birim].ad));
+      // ailenin seçenekleri: satır başına bir denetim (sihirbazın kartıyla aynı üretici)
+      if(vs && typeof vs.aile === 'string' && typeof _mwStpSecenekler === 'function'){
+        var bb = typeof _mwStpBirim === 'function' ? _mwStpBirim(s, birim) : null;
+        _mwStpSecenekler(bb || { dugum: birim, ad: so.agac[birim].ad }, vs).forEach(function(x){
+          h += _mw3bOzSatir('ve-mw-3b-secenek', x.ad, x.denetim, _mwEsc(x.ad) + ' — ' + _mwEsc(so.agac[birim].ad));
+        });
+      }
       if(vs){
         var rb = ['yuz', 'eksen'].map(function(t){
           return '<button type="button" class="ve-fw-3b-rol" data-ve-3b-ref="' + t + '" aria-pressed="' + (rk === t ? 'true' : 'false') + '"'

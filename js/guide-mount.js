@@ -297,8 +297,9 @@ function _gmSec5(){
   h += _gmAlanTablo('Tipe özel bölümler', [
     ['Motor', '<strong>Katalog</strong>, <strong>Motor noktaları</strong> (tepe tork, maks. güç, '
       + 'rölanti, silindir sayısı), <strong>Tork zinciri</strong>, <strong>Ateşleme</strong>', 'Motor künyesi'],
-    ['Şanzıman', '<strong>Vites oranları</strong> (vites başına oran ve mil torku), '
-      + '<strong>Konvertör</strong> (stall oranı)', 'Şanzıman künyesi ve konvertör'],
+    ['Şanzıman', '<strong>Katalog</strong> (dişli düzeni · konvertör), <strong>Vites oranları</strong> (yedi ileri '
+      + 'vites ve geri; vites başına mil torku), <strong>Konvertör</strong> (stall oranı), <strong>Bağlantı yüzü</strong> · '
+      + '<strong>Statik eğilme momenti</strong>', 'Şanzımanın veri sayfası ve konvertör'],
     ['Transfer Kutusu', '<strong>Oran ve aks payı</strong> (transfer oranı, aks payı φ), '
       + '<strong>Mil torku</strong>', 'Transfer künyesi'],
     ['PTO · Pompa · PTO grubu', '<strong>Giriş yolu</strong> ve <strong>ASR-SR-116 referansı</strong>',
@@ -314,6 +315,17 @@ function _gmSec5(){
     + 've klima kompresörünün kütlesi programda kayıtlı modellerden de seçilir '
     + '(<strong>Kayıtlı aksesuar</strong>). Motorun kütlesi veri sayfasından geliyorsa aksesuarlar '
     + 'onun içinde değildir.</p>';
+  h += '<p>Şanzımanın <strong>Katalog</strong> bölümü veri sayfasının dişli düzenlerini ve konvertörlerini '
+    + 'listeler (Allison 4000: yakın oranlı CR, geniş oranlı WR, yedi vitesli; TC-521 … TC-571). Dişli düzeni '
+    + 'ileri vitesleri ve geriyi doldurur; yedi vitesli düzende 1. vites LO’dur (7,63). Altı vitesli düzen '
+    + 'seçilince 7. vites alanı boşalır. Konvertör stall oranını doldurur. Bağ kaldırılınca girilen '
+    + 'değerler kalır; elle değişen alan bölümün notunda <strong>Katalogdan sapıldı</strong> olarak '
+    + 'adıyla yazar.</p>';
+  h += '<p><strong>Bağlantı yüzü</strong> şanzımanın motora bağlandığı düzlemdir: merkezi ve eksenin yönü. '
+    + 'STEP’ten veri sayfasıyla kurulan şanzımanda (Allison 4000, doğrudan bağlama) iki değer aktarımla '
+    + 'gelir: merkez, şanzıman ekseninin konvertör muhafazasının ön yüzünü kestiği nokta; yön, eksen boyunca '
+    + 'şanzımanın içine. <strong>Statik eğilme momenti</strong> sınırı veri sayfasındandır (3.500 N·m). '
+    + 'Merkez elle de yazılır; yön verilmemişse boyuna eksendir (+X). Momentin kendisi raporda (Bölüm 12).</p>';
   h += '<p>Motorun <strong>Tork zinciri</strong> föyü, mil torkunu oluşturan her çarpanın '
     + 'hangi gövdeden okunduğunu yazar. Aynı alan iki gövdede birden doluysa çözücü ilkini '
     + 'okur; pencerenin üstündeki bant bunu <strong>çakışma</strong> olarak, hangi gövdenin '
@@ -626,6 +638,12 @@ function _gmSec12(){
       + 'sütunda, düğmenin üstündedir. Uygunluk hükmü raporun kendisinde.',
     'Raporu üretip indirin. Dosya tek başına açılır; internet gerekmez.'
   ]);
+  h += '<p>Şanzımanın <strong>Bağlantı yüzü</strong> tanımlıysa raporun <strong>§8.18</strong> bölümü güç grubunu '
+    + 'o düzlemde keser: düzlemin şanzıman tarafındaki kütlelerin yükü ve takoz kuvvetlerinin bağlantı '
+    + 'yüzünün merkezine göre momenti, eksene dik bileşeni <strong>eğilme momenti</strong>, eksen boyunca '
+    + 'bileşeni burulmadır. Tablo torksuz bütün yük durumlarını verir; tork durumları tabloda yoktur. '
+    + 'Sınır statik duruma uygulanır ve uygunluk tablosunun 5. satırıdır. Şanzıman tarafında takoz yoksa '
+    + 'moment konsolunkidir: şanzımanın ağırlığı × ağırlık merkezinin bağlantı yüzüne uzaklığı.</p>';
   h += _gmUyari('Rapor çözümün fotoğrafıdır',
       'Rapor üretildikten sonra değişen alan rapora <strong>girmez</strong>. Değişiklik için '
     + 'yeniden çözün ve raporu yeniden üretin.');
@@ -1187,6 +1205,34 @@ function _gmSec16(){
   h += '<p>İki referanstan biri eksikse ağırlık merkezi hacimden bulunur ve uyarı satırı eksik referansın adını '
     + 'yazar. Hesaptan sonra 3B’de eksenin dairesi halka, referans noktası işaret olarak çizilir. Ağırlık '
     + 'merkezi veri sayfasından gelen gövde <strong>Model</strong> bölümünde işaretli gelir.</p>';
+  h += '<p>Şanzımanda veri sayfası bir <strong>ailedir</strong>: listede tek satır (<em>Allison 4000</em>), modeli '
+    + 'seçenekler belirler. Seçenekler 3B’nin <strong>Özellikler</strong>’inde modelin altında ve kartın '
+    + '<strong>Kütle</strong> tablosunda şanzımanın satırının altında durur. Kütle toplanır: belgenin kuru '
+    + 'kütleleri ve çıkış flanşı kuru kütleyi, yağ (ilk dolum hacmi × yoğunluk) ıslak kütleyi verir; uzak '
+    + 'soğutucu şasidedir, gövdeye girmez. Ağırlık merkezi ve atalet seçeneklerin satırından okunur: '
+    + 'konvertör muhafazasının ön yüzünden eksen boyunca arkaya (X), eksenin altına (Y) ve sağa (Z). '
+    + 'Bağdaşmayan seçenek listede kapalıdır, sebebi ipucundadır; bir seçenek ötekini geçersiz kılarsa '
+    + 'öteki ilk geçerli değerine döner. Birimin <strong>Kütle ve ağırlık merkezi</strong> bölümü kuru '
+    + 'kütleyi ve yağı ayrıca yazar.</p>';
+  var A4 = typeof VE_MNT_A4K !== 'undefined' ? VE_MNT_A4K : null;
+  if(A4) h += _gmAlanTablo(A4.ad + ' seçenekleri', A4.secenek.map(function(o){
+    var etki = { dizi:'Temel kuru kütle ' + _gmF(A4.kutle.temel.cr, 0) + ' / ' + _gmF(A4.kutle.temel.wr, 0) + ' / '
+                   + _gmF(A4.kutle.temel['7'], 0) + ' kg; ağırlık merkezi ve atalet tablosu; dişli oranları',
+                 bag:'Uzak bağlama ' + _gmF(A4.kutle.uzak, 0) + ' kg (6 vitesliye arka braket ' + _gmF(A4.kutle.uzakArka6, 0)
+                   + ' kg); ağırlık merkezi tablosu; bağlantı yüzü yalnız doğrudan bağlamada',
+                 pto:_gmF(A4.kutle.pto, 0) + ' kg; ağırlık merkezi, atalet, yağ (+3 L)',
+                 ret:_gmF(A4.kutle.ret, 0) + ' kg; ağırlık merkezi ve atalet',
+                 sog:'Standart ' + _gmF(A4.kutle.sog.s, 0) + ' kg · yüksek kapasite ' + _gmF(A4.kutle.sog.y, 0)
+                   + ' kg · retarder/karter ' + _gmF(A4.kutle.sog.r, 0) + ' kg; ek yağ',
+                 kar:'Yağın hacmi (yedi vitesliye yalnız derin)',
+                 aku:'Akümülatör ' + _gmF(A4.kutle.aku, 1) + ' kg + solenoid ' + _gmF(A4.kutle.akuSol, 1) + ' kg; ek yağ '
+                   + _gmF(A4.yag.aku, 1) + ' L',
+                 flans:'Kuru kütleye eklenir; belge 5–12 kg verir',
+                 yag:'Yağın kütlesi' }[o.k] || '';
+    var deg = o.d ? o.d.map(function(e){ return _gmE(e[1]); }).join(' · ')
+      : _gmF(o.min, 2) + '–' + _gmF(o.max, 2) + ' ' + _gmE(o.birim) + ' (varsayılan ' + _gmF(o.vars, 2) + ')';
+    return ['<strong>' + _gmE(o.ad) + '</strong>', deg, etki];
+  }), ['Seçenek', 'Değerler', 'Etkisi']);
   var kat = typeof VE_MNT_VERI_SAYFASI !== 'undefined' ? VE_MNT_VERI_SAYFASI : [];
   if(kat.length) h += _gmAlanTablo('Veri sayfaları', kat.map(function(v){
     return [v.uretici + ' ' + v.ad + ' <em>' + _gmE(v.konfig) + '</em>',
@@ -1261,6 +1307,10 @@ function _gmEkA(){
       ['Takoz noktası (daire)', '3D Görüntüleyici (3B)', '<em>Daireden nokta</em>'],
       ['Kütlenin kaynağı', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Kütle</strong>'],
       ['Motor modeli, veri sayfasının referansı', '3D Görüntüleyici (3B)', '<em>Bloğun ön yüzü</em> (X12: <em>Bloğun arka yüzü</em>) · <em>Krank ekseni</em>'],
+      ['Şanzıman modeli ve seçenekleri', '3D Görüntüleyici (3B) · sihirbazın STEP kartı',
+        '<em>Şanzıman modeli</em> · <em>Konvertör muhafazasının ön yüzü</em> · <em>Şanzıman ekseni</em>'],
+      ['Dişli düzeni, konvertör', 'Şanzıman · sihirbazın Tork adımı', '<strong>Katalog</strong>'],
+      ['Bağlantı yüzü, eğilme momenti sınırı', 'Şanzıman', '<strong>Bağlantı yüzü</strong> · <strong>Statik eğilme momenti</strong>'],
       ['Model ile karşılaştırma, öteleme', '3D Görüntüleyici · sihirbazın STEP kartı', '<strong>Model</strong>'],
       ['Raporun frekans girdileri (rölanti, silindir, ζ)', 'Motor · Çözücü',
         'Rapor penceresinin <strong>Frekans yerleşimi ve izolasyon</strong> bölümü kaynağını gösterir'],

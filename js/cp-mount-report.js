@@ -551,6 +551,47 @@ function _mntRepSection8(R, opts){
   h+=_mntRepSoftening(R, opts);
   h+=_mntRepModeShapes(R);
   h+=_mntRepSensitivity(R, opts);
+  h+=_mntRepBaglanti(R);
+  return h;
+}
+
+// §8.18 — Bağlantı yüzünde statik eğilme momenti (2026-11-06). Güç grubu motor ↔
+// şanzıman bağlantı yüzünde kesilir (yüzün merkezi S ve şanzımanın ekseni a —
+// veri sayfasının referansı); şanzıman tarafındaki kütlelerin yükü ve takoz
+// kuvvetlerinin S'ye göre momentinin eksene dik bileşeni eğilme momentidir
+// (çekirdek sectionMoment). Hüküm Statik durumda, veri sayfasının sınırına göre;
+// öteki durumlar değer. Tork durumları tabloda yok (cp-mount.js →
+// _mntBaglantiMomenti).
+function _mntRepBaglantiStatik(B){
+  for(var i=0;i<((B && B.satirlar)||[]).length;i++) if(B.satirlar[i].name==='Static') return B.satirlar[i];
+  return null;
+}
+function _mntRepBaglanti(R){
+  var B=R.baglanti;
+  if(!B || !B.satirlar || !B.satirlar.length) return '';
+  var xyz=function(v, d){ return v.map(function(x){ return _rF(x, d); }).join('; '); };
+  var h='<h3>8.18 Bağlantı yüzünde statik eğilme momenti</h3>';
+  h+='<p>Güç grubu <b>'+_rEsc(B.ad)+'</b> gövdesinin motora bağlandığı düzlemde kesilir: düzlemin merkezi '
+    +'S = ('+xyz(B.S, 1)+') mm, normali şanzımanın ekseni a = ('+xyz(B.a, 3)+'). Düzlemin şanzıman tarafındaki kütlelerin yükü ve takoz kuvvetleri S\'ye göre moment üretir; eksene dik bileşeni eğilme momentidir:</p>';
+  h+='$$ \\mathbf{M}_S=\\sum_{(\\mathbf{r}_i-\\mathbf{S})\\cdot\\mathbf{a}>0}(\\mathbf{r}_i-\\mathbf{S})\\times m_i g\\,\\mathbf{n}'
+    +'-\\sum_{(\\mathbf{p}_j-\\mathbf{S})\\cdot\\mathbf{a}>0}(\\mathbf{p}_j-\\mathbf{S})\\times\\mathbf{f}_j,'
+    +'\\qquad M_b=\\left|\\mathbf{M}_S-(\\mathbf{M}_S\\cdot\\mathbf{a})\\,\\mathbf{a}\\right| $$';
+  var lim=B.sinir, st=_mntRepBaglantiStatik(B);
+  h+='<table><caption>Tablo '+_rTbl()+' — Bağlantı yüzünde kesit momenti, şanzıman tarafı'+(lim ? ' · sınır '+_rF(lim, 0)+' N·m (veri sayfası, statik)' : '')+'</caption>';
+  h+='<tr><th>Yük durumu</th><th>Kütle [kg]</th><th>Takoz</th><th>M<sub>b</sub> [N·m]</th><th>Burulma [N·m]</th>'
+    +(lim ? '<th>M<sub>b</sub> / sınır</th><th>Sonuç</th>' : '')+'</tr>';
+  B.satirlar.forEach(function(r){
+    var ok=Number.isFinite(r.egilme), stat=r===st;
+    var sonuc=!lim ? '' : (!stat ? '—' : (!ok ? '<span style="color:#5a6270;">— çözülemedi</span>'
+      : (r.egilme<=lim ? '<span class="ok">✓ Uygun</span>' : '<span style="color:var(--warn);font-weight:600;">✗ sınırın üstünde</span>')));
+    h+='<tr'+(stat?' style="font-weight:600;"':'')+'><td class="l">'+_rEsc(_mntRepCaseTr(r.name))+'</td>'
+      +'<td>'+(ok ? _rF(r.m, 1) : '—')+'</td><td>'+(ok ? r.takoz : '—')+'</td>'
+      +'<td>'+(ok ? _rF(r.egilme, 0) : '—')+'</td><td>'+(ok ? _rF(r.burulma, 0) : '—')+'</td>'
+      +(lim ? '<td>'+(ok ? '%'+_rF(r.egilme/lim*100, 1) : '—')+'</td><td class="c">'+sonuc+'</td>' : '')+'</tr>';
+  });
+  h+='</table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Tork yük durumları tabloya girmez: tahrik torkunun bağlantı yüzündeki payı bu modelde tanımlı değil.'
+    +(lim ? ' Sınır yalnız statik duruma uygulanır.' : '')+'</p>';
   return h;
 }
 
@@ -2396,6 +2437,14 @@ function veMntUygunluk(R, opts){
    ['3', 'Vites başına takoz kuvvetleri','Vites kuvvetleri','kontrol',c3],
    ['4', 'Maks tork · 3,5g düşey · 1g yanal · 1g boyuna','Tasarım yükleri','kontrol',c4]
   ].map(function(r){ return { no:r[0], ad:r[1], kisa:r[2], hedef:r[3], st:r[4].st, bulgu:r[4].bulgu }; });
+  // Bağlantı yüzü (§8.18) — veri sayfası sınır veriyorsa: Statik durumda M_b ≤ sınır
+  var B=R.baglanti, bs=(B && B.sinir) ? _mntRepBaglantiStatik(B) : null;
+  if(B && B.sinir){
+    var c5=(bs && Number.isFinite(bs.egilme))
+      ? { st:(bs.egilme<=B.sinir ? 'ok' : 'no'), bulgu:'Statik durumda M<sub>b</sub> = <b>'+_rF(bs.egilme,0)+'</b> N·m · '+_rEsc(B.ad)+' bağlantı yüzü (§8.18)' }
+      : { st:'wait', bulgu:'Statik durum çözülemedi' };
+    satirlar.push({ no:'5', ad:'Bağlantı yüzünde statik eğilme momenti', kisa:'Bağlantı yüzü', hedef:'≤ '+_rF(B.sinir,0)+' N·m (veri sayfası)', st:c5.st, bulgu:c5.bulgu });
+  }
   var sts=satirlar.map(function(s){ return s.st; });
   return { modalYok:false, satirlar:satirlar, concern:concern,
            anyNo:sts.indexOf('no')>=0, anyWait:sts.indexOf('wait')>=0 };

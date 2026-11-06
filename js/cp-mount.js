@@ -1293,7 +1293,97 @@ function _mntMotorDurumu(node){
 // ŞANZIMAN BÖLÜMLERİ — vites oranları; her satırın mil torku çözücünün vites
 // başına durumlarından (_mntGearTorqueCases, Kriter 3).
 var _MNT_VITESLER = [['g1','1. vites'],['g2','2. vites'],['g3','3. vites'],['g4','4. vites'],
-                     ['g5','5. vites'],['g6','6. vites'],['gR','Geri']];
+                     ['g5','5. vites'],['g6','6. vites'],['g7','7. vites'],['gR','Geri']];
+var _MNT_VITES_ALAN = ['g1','g2','g3','g4','g5','g6','g7'];
+// ŞANZIMANIN KATALOĞU (2026-11-06) — veri sayfasındaki dişli düzenleri ve
+// konvertörler (js/mount-veri-sayfasi.js; Allison 4000: CR · WR · yedi vitesli,
+// TC-521…571). Motorun kataloğuyla aynı kalıp: seçim alanları DOLDURUR, bağ
+// kaldırılınca girilen değerler silinmez; sapma alan alan söylenir.
+function _mntVsKatalog(){
+  var V=null;
+  if(typeof veMntVsDisliDuzenleri==='function') V={ veMntVsDisliDuzenleri:veMntVsDisliDuzenleri, veMntVsKonvertorler:veMntVsKonvertorler };
+  else if(typeof require==='function'){ try { V=require('./mount-veri-sayfasi.js'); } catch(e){} }
+  return V ? { disli:V.veMntVsDisliDuzenleri(), tc:V.veMntVsKonvertorler() } : { disli:[], tc:[] };
+}
+// Dişli düzeninin alanları: ileri vitesler (düzende olmayan vites null —
+// uygulanınca SİLİNİR: yedi vitesliden altı vitesliye dönen bir 7. vites
+// Kriter 3'e hayalet bir vites koyardı) ve geri
+function _mntDisliPresetValues(key){
+  var d=_mntVsKatalog().disli.filter(function(x){ return x.k===key; })[0];
+  if(!d) return null;
+  var out={};
+  _MNT_VITES_ALAN.forEach(function(k, i){ out[k]=i<d.ileri.length ? d.ileri[i] : null; });
+  out.gR=d.geri;
+  return out;
+}
+function _mntKonvertorPresetValues(key){
+  var c=_mntVsKatalog().tc.filter(function(x){ return x.k===key; })[0];
+  return c ? { Rstall:c.stall } : null;
+}
+function _mntSanzimanPresetUygula(nodeId, key, alan, degerler){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  if(!key) delete node.data[alan];
+  else {
+    var v=degerler(key); if(!v) return;
+    Object.keys(v).forEach(function(k){ if(v[k]===null) delete node.data[k]; else node.data[k]=v[k]; });
+    node.data[alan]=key;
+  }
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntApplyGearPreset(nodeId, key){ _mntSanzimanPresetUygula(nodeId, key, 'gearPreset', _mntDisliPresetValues); }
+function veMntApplyTcPreset(nodeId, key){ _mntSanzimanPresetUygula(nodeId, key, 'tcPreset', _mntKonvertorPresetValues); }
+// Sapma: { ad, ayni:[], farkli:[] } | null — kaydın söz söylemediği alan sayılmaz
+function _mntPresetSapma(node, alan, degerler, adlar, kayitAd){
+  var key=node.data && node.data[alan]; if(!key) return null;
+  var v=degerler(key); if(!v) return null;
+  var ayni=[], farkli=[];
+  adlar.forEach(function(a){
+    if(v[a[0]]===undefined) return;
+    var x=node.data[a[0]];
+    if(v[a[0]]===null){ if(!_mntBos(x)) farkli.push(a[1]); return; }
+    var n=_mntNum(x, NaN);
+    if(Number.isFinite(n) && Math.abs(n-v[a[0]])<=1e-9*Math.max(1, Math.abs(v[a[0]]))) ayni.push(a[1]);
+    else farkli.push(a[1]);
+  });
+  return { ad:kayitAd(key), ayni:ayni, farkli:farkli };
+}
+function _mntDisliSapma(node){
+  return _mntPresetSapma(node, 'gearPreset', _mntDisliPresetValues, _MNT_VITESLER, function(k){
+    var d=_mntVsKatalog().disli.filter(function(x){ return x.k===k; })[0]; return d ? d.ad : k; });
+}
+function _mntKonvertorSapma(node){
+  return _mntPresetSapma(node, 'tcPreset', _mntKonvertorPresetValues, [['Rstall','stall oranı']], function(k){
+    var c=_mntVsKatalog().tc.filter(function(x){ return x.k===k; })[0]; return c ? c.aile+' '+c.ad : k; });
+}
+function _mntSapmaNot(sap){
+  if(!sap) return '';
+  if(sap.farkli.length) return _mntNot('<b>Katalogdan sapıldı:</b> '+sap.farkli.join(', ')+' ('+_mntEsc(sap.ad)+')', 'warn');
+  return _mntNot('Alanlar <b>'+_mntEsc(sap.ad)+'</b> kaydıyla birebir ('+sap.ayni.length+'/'+sap.ayni.length+')', 'ok');
+}
+// Seçici: aile başına grup; seçeneğin adı ailesiz (grubun adı aile)
+function _mntSanzimanSecHTML(node, liste, alan, fn, etiket){
+  var cur=(node.data||{})[alan]||'', aileler=[];
+  liste.forEach(function(x){ if(aileler.indexOf(x.aile)<0) aileler.push(x.aile); });
+  return '<select class="ve-fp-sel" id="ve-mnt-'+alan+'-'+node.id+'" onchange="'+fn+'(\''+node.id+'\',this.value)">'
+    + '<option value="">— elle gir —</option>'
+    + aileler.map(function(a){
+        return '<optgroup label="'+_mntEsc(a)+'">'+liste.filter(function(x){ return x.aile===a; }).map(function(x){
+          return '<option value="'+_mntEsc(x.k)+'"'+(x.k===cur?' selected':'')+'>'+_mntEsc(etiket(x))+'</option>'; }).join('')+'</optgroup>';
+      }).join('')
+    + '</select>';
+}
+function _mntSanzimanKatalogHTML(node){
+  var K=_mntVsKatalog();
+  if(!K.disli.length && !K.tc.length) return '';
+  var dis=_mntSanzimanSecHTML(node, K.disli, 'gearPreset', 'veMntApplyGearPreset', function(x){ return x.etiket; });
+  var tc=_mntSanzimanSecHTML(node, K.tc, 'tcPreset', 'veMntApplyTcPreset', function(x){ return x.ad+' · '+_mntS(x.stall, 2); });
+  return _mntBolum('Katalog', K.disli.length+' dişli düzeni · '+K.tc.length+' konvertör',
+      _mntIzgara(2, '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Dişli düzeni</span>'+dis+'</label>'
+                  + '<label class="ve-fp-f ve-fp-f--sel"><span class="ve-fp-l">Konvertör</span>'+tc+'</label>')
+    + '<div id="ve-mnt-sanzkat-'+node.id+'" data-tazele>'+_mntSapmaNot(_mntDisliSapma(node))+_mntSapmaNot(_mntKonvertorSapma(node))+'</div>');
+}
 function _mntGearboxSection(node){
   var Z=_mntTorkZinciri(), tmil={};
   _mntGearTorqueCases(Z.t).forEach(function(c){
@@ -1305,11 +1395,43 @@ function _mntGearboxSection(node){
     f+='<tr><td>'+v[1]+'</td>'+_mntFoyGir(node, v[0], v[1]+' oranı', v[0]==='g1' ? { zorunlu:true } : null)
       + _mntFoyCoz(tmil[v[0]]!=null ? _mntS(tmil[v[0]],0) : '—', { ay:true, id:'ve-mnt-tmil-'+v[0]+'-'+node.id })+'</tr>';
   });
-  var h=_mntBolum('Vites oranları', 'ileri tork: 1. vites · geri tork: geri', f+_MNT_FOY_KAPA);
+  var h=_mntSanzimanKatalogHTML(node);
+  h+=_mntBolum('Vites oranları', 'ileri tork: 1. vites · geri tork: geri', f+_MNT_FOY_KAPA);
   h+=_mntBolum('Konvertör', '',
       _mntIzgara(2, _mntAlan(node, 'Rstall', 'Stall oranı', { zorunlu:true })
                   + _mntOku('İleri mil torku <u>[N·m]</u>', Z.ileri!=null ? _mntS(Z.ileri,0) : '—', { id:'ve-mnt-tileri-'+node.id })));
   return h;
+}
+// BAĞLANTI YÜZÜ (2026-11-06) — motorla şanzımanın bağlandığı düzlem: merkezi
+// (eksenin ön yüzle kesişimi) ve eksenin yönü STEP'ten (veri sayfasının
+// referansı — js/mount-step.js → veMntStpKayit), statik eğilme momenti sınırı
+// veri sayfasından (Allison 4000: 3.500 N·m). Rapor momenti bu düzlemde keser;
+// pencere sonuç göstermez. Yön yoksa boyuna eksen (+X).
+var _MNT_BAG = [['bagX','bagNx'], ['bagY','bagNy'], ['bagZ','bagNz']];
+function _mntBagYon(d){
+  var n=_MNT_BAG.map(function(a){ return _mntNum(d[a[1]], NaN); });
+  var l=Math.sqrt(n.reduce(function(t, v){ return t+(Number.isFinite(v) ? v*v : NaN); }, 0));
+  return (l>0) ? n.map(function(v){ return v/l; }) : [1, 0, 0];
+}
+function _mntBaglantiSection(node){
+  var d=node.data||{}, a=_mntBagYon(d), yaz=_MNT_BAG.some(function(x){ return !_mntBos(d[x[1]]); });
+  var f=_mntFoyAc([{ b:'Eksen', gen:'34%' }, { b:'Merkez', gen:'33%' }, { b:'Eksenin yönü', gen:'33%', sinif:'cz ay' }], 'Bağlantı yüzü');
+  _MNT_BAG.forEach(function(x, i){
+    f+='<tr><td>'+_MNT_EKSEN[i][1]+'</td>'+_mntFoyGir(node, x[0], 'Bağlantı yüzünün merkezi '+_MNT_EKSEN[i][0])
+      + _mntFoyCoz(_mntS(a[i], 3), { ay:true, ipucu:yaz ? '' : 'Boyuna eksen' })+'</tr>';
+  });
+  var h=_mntBolum('Bağlantı yüzü', '[mm] · global eksen', f+_MNT_FOY_KAPA);
+  h+=_mntBolum('Statik eğilme momenti', '', _mntIzgara(2, _mntAlan(node, 'egSinir', 'Sınır <u>[N·m]</u>')));
+  return h;
+}
+function _mntBaglantiDurumu(node){
+  var d=node.data||{}, dolu=_MNT_BAG.filter(function(x){ return !_mntBos(d[x[0]]); }).length;
+  if(!dolu) return _mntDurum('bos', 'tanımsız');
+  if(dolu<3){
+    var bos=_MNT_BAG.filter(function(x){ return _mntBos(d[x[0]]); })[0][0];
+    return _mntDurum('eksik', 'eksik', 'Bağlantı yüzünün merkezi eksik: eğilme momenti hesaplanmaz.', 've-mnt-'+bos+'-'+node.id);
+  }
+  return _mntDurum('ok', _mntNum(d.egSinir,0)>0 ? 'sınır '+_mntS(_mntNum(d.egSinir),0)+' N·m' : 'sınır yok');
 }
 function _mntVitesDurumu(node){
   var d=node.data||{};
@@ -1591,7 +1713,10 @@ function getMntMassPropertiesHTML(node){
     { k:'atalet', ad:'Atalet', govde:_mntAtaletGovde(node), durum:_mntAtaletDurumu(node) }
   ];
   if(node.type==='mnt-motor') kategoriler.push({ k:'motor', ad:'Motor ve tork', govde:_mntEngineSection(node), durum:_mntMotorDurumu(node) });
-  else if(node.type==='mnt-gearbox') kategoriler.push({ k:'vites', ad:'Vitesler', govde:_mntGearboxSection(node), durum:_mntVitesDurumu(node) });
+  else if(node.type==='mnt-gearbox'){
+    kategoriler.push({ k:'vites', ad:'Vitesler', govde:_mntGearboxSection(node), durum:_mntVitesDurumu(node) });
+    kategoriler.push({ k:'baglanti', ad:'Bağlantı yüzü', govde:_mntBaglantiSection(node), durum:_mntBaglantiDurumu(node) });
+  }
   else if(node.type==='mnt-transfer') kategoriler.push({ k:'tahrik', ad:'Tahrik', govde:_mntTransferSection(node), durum:_mntTahrikDurumu(node) });
   else if(_MNT_PTO_REF[node.type]) kategoriler.push({ k:'pto', ad:'PTO grubu', govde:_mntPtoSection(node), durum:_mntPtoDurumu(node) });
   else if(_mntAksKatalog(node.type).length) kategoriler.push({ k:'katalog', ad:'Katalog', govde:_mntAksSection(node), durum:_mntAksDurumu(node) });
@@ -4546,7 +4671,7 @@ function _mntLibCurveEditor(node, e){
 // diyagramının ÇALIŞMA BANDI üst sınırı bunlardan gelir (js/mount-signals.js
 // _engineSpec). Motorun en yüksek devri bilinmezse band rölantinin katından
 // tahmin edilir ve kesişimlerin bant içinde mi dışında mı olduğu yanlış söylenir.
-var _MNT_TORK_ALANLARI=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate',
+var _MNT_TORK_ALANLARI=['Te','Rstall','g1','g2','g3','g4','g5','g6','g7','gR','iTransfer','phiFwd','phiRev','derate',
                         'idleRpm','cylinders','TeRpm','PmaxRpm'];
 // Değerle birlikte KAYNAĞI da döner: pencerenin tork zinciri "bu çarpan hangi
 // bileşenden geldi" sorusunu çözücünün okuduğu AYNI taramadan cevaplar.
@@ -4575,6 +4700,7 @@ function _mntGatherForSolver(solver, liste){
   var masses=[], mounts=[];
   var L=liste || (typeof nodes!=='undefined' && Array.isArray(nodes)?nodes:[]);
   if(!solver) solver=L.filter(function(n){ return n && (_mntDef(n)||{}).isMountSolver; })[0] || null;
+  var baglanti=null;
   L.forEach(function(n){
     if(!n) return;
     var def=_mntDef(n)||{};
@@ -4582,6 +4708,10 @@ function _mntGatherForSolver(solver, liste){
       var d=n.data||{};
       // tip: aksonometrinin braketi (eşdeğer levha, _mntAksoBraketLevha) — çözüme girmez
       masses.push({ id:n.id, name:_mntNodeName(n), tip:n.type, mass:d.mass, cgx:d.cgx, cgy:d.cgy, cgz:d.cgz, Ixx:d.Ixx, Iyy:d.Iyy, Izz:d.Izz, Ixy:d.Ixy, Ixz:d.Ixz, Iyz:d.Iyz, pointMass:!!d.pointMass });
+      // Bağlantı yüzü: merkezi tam olan İLK gövde (şanzıman penceresi — _mntBaglantiSection)
+      if(!baglanti && _MNT_BAG.every(function(x){ return !_mntBos(d[x[0]]); }))
+        baglanti={ id:n.id, name:_mntNodeName(n), S:_MNT_BAG.map(function(x){ return _mntNum(d[x[0]]); }),
+                   a:_mntBagYon(d), sinir:_mntNum(d.egSinir,0)>0 ? _mntNum(d.egSinir) : null };
     } else if(def.isMount){
       var m=n.data||{};
       mounts.push({ id:n.id, name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
@@ -4592,7 +4722,7 @@ function _mntGatherForSolver(solver, liste){
                     curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
     }
   });
-  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(solver && solver.data) };
+  return { components:masses, mounts:mounts, torque:_mntGatherTorque(liste), yon:_mntYonAyari(solver && solver.data), baglanti:baglanti };
 }
 // Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
 // İleri = 1. vites (en yüksek redüksiyon), geri = Geri vites. T_shaft çekirdeğin
@@ -4619,7 +4749,7 @@ function _mntTorqueCases(torque, yon){
 }
 
 // Kriter 3 — HER tanımlı vites için ayrı tork durumu (mount kuvvetleri kontrolü).
-// _mntTorqueCases yalnız 1. vitesi (maks tork) ana matrise koyar; bu ise g1..g6 +
+// _mntTorqueCases yalnız 1. vitesi (maks tork) ana matrise koyar; bu ise g1..g7 +
 // geri için ayrı durumlar döndürür. Kütle/rijitlik sabit, yalnız T_shaft vites
 // oranıyla ölçeklenir → yüksek vites daha düşük kuvvet (1. vites bağlayıcıdır).
 // Dönüş öğeleri gearLabel/ratio/Tshaft meta verisini taşır (rapor §8.9 tablosu).
@@ -4634,7 +4764,7 @@ function _mntGearTorqueCases(torque, yon){
   var der=_mntNum(tq.derate,1); if(der===0) der=1;
   if(!(Te>0 && Rstall>0)) return [];
   var out=[];
-  ['g1','g2','g3','g4','g5','g6'].forEach(function(k,i){
+  _MNT_VITES_ALAN.forEach(function(k,i){
     var gr=_mntNum(tq[k],0); if(gr===0) return;
     var Ts=C.torqueChain({Te:Te, Rstall:Rstall, iGear:gr, iTransfer:iTr, phiAxle:phiF, derate:der});
     out.push({name:(i+1)+'. Vites', gearLabel:(i+1)+'. Vites', ratio:gr, Tshaft:Ts, n:[0,0,-1], T:[s*Ts,0,0]});
@@ -4722,9 +4852,10 @@ function _mntForgetResults(){
 // (fiziğe girmez). Nokta kütlenin tensörü imzaya girmez (çözücü onu sıfırlar).
 // Tork alanlarının HEPSİ girer: vites oranları vites başına durumları,
 // silindir sayısı uygunluğu değiştirir — ikisi de hesaplanan sonucun parçası.
-function _mntImza(si, torque, sd){
+function _mntImza(si, torque, sd, bag){
   var t=torque||{}, d=sd||{};
   var v={
+    b:bag ? [bag.id||'', bag.S, bag.a, bag.sinir] : 0,
     c:(si.components||[]).map(function(c){ return [c.id||'', c.mass, c.cg, c.pointMass?0:c.I, c.pointMass?1:0]; }),
     m:(si.mounts||[]).map(function(m){ return [m.id||'', m.pos, m.kstat, m.kdyn, m.fCap||0, m.fits||0, m.curves||0]; }),
     t:Object.keys(t).sort().map(function(k){ return [k, _mntNum(t[k], null)]; }),
@@ -4750,7 +4881,7 @@ function veMntSonucDurumu(liste, R){
   for(var i=0;i<list.length;i++){ if(list[i] && list[i].id===R.solverId){ solver=list[i]; break; } }
   if(!solver || typeof veMountCore==='undefined') return { durum:'bayat', R:R };
   var g=_mntGatherForSolver(solver, liste);
-  var imza=_mntImza(_mntToSI(g, R.g||9.81), g.torque, solver.data);
+  var imza=_mntImza(_mntToSI(g, R.g||9.81), g.torque, solver.data, g.baglanti);
   return { durum:(imza===R.imza ? 'guncel' : 'bayat'), R:R };
 }
 
@@ -5194,7 +5325,10 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
           yon:prep.gather.yon || _mntYonAyari(),
           // Çözümün HANGİ modele ait olduğu (veMntSonucDurumu). Hazırlık
           // anının girdisi: hesap sürerken yapılan düzenleme sonucu bayatlatır.
-          imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data) };
+          imza:_mntImza(prep.si, prep.gather.torque, prep.solver.data, prep.gather.baglanti) };
+  // ── Bağlantı yüzünde statik eğilme momenti (2026-11-06) — torksuz her durumda
+  // (çekirdek sectionMoment); hüküm raporda, Statik durumda sınıra göre
+  R.baglanti=_mntBaglantiMomenti(prep, allCases, designCases);
   // ── Takoz sönüm katsayıları — TEK ζ'den türetilir (çekirdek mountDamping).
   // Yük payı STATİK durumdan alınır; Static çözülemediyse damping null kalır
   // (yük payı bilinmeden c türetilemez — uydurma değer üretilmez).
@@ -5239,6 +5373,23 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   _veMntLast=R;
   if(typeof window!=='undefined') window.veMountResults=R;
   return R;
+}
+
+// BAĞLANTI YÜZÜ MOMENTİ — gövdenin bağlantı yüzü (toplayıcının `baglanti`ı)
+// varsa torksuz yük durumlarında kesit momenti. Döner: { ad, S (mm), a, sinir
+// (N·m | null), satirlar:[{ name, egilme, burulma, m, takoz }] } | null.
+// Tork durumu (lc.T ≠ 0) tabloya girmez: torkun kesitteki payı modelde yok.
+function _mntBaglantiMomenti(prep, allCases, designCases){
+  var B=prep.gather && prep.gather.baglanti, C=prep.C;
+  if(!B || !C || !C.sectionMoment) return null;
+  var S=B.S.map(function(v){ return C.mmToM(v); }), satirlar=[];
+  (allCases||[]).concat(designCases||[]).forEach(function(rc){
+    var lc=(rc && rc.loadCase)||{}, T=lc.T||[0,0,0];
+    if(Math.abs(T[0])+Math.abs(T[1])+Math.abs(T[2])>0) return;
+    var r=rc.res ? C.sectionMoment(prep.si.components, prep.mounts, rc.res, prep.si.g, lc.n, S, B.a) : null;
+    satirlar.push({ name:rc.name, egilme:r ? r.egilme : NaN, burulma:r ? r.burulma : NaN, m:r ? r.m : NaN, takoz:r ? r.takoz : 0 });
+  });
+  return { id:B.id, ad:B.name, S:B.S.slice(), a:B.a.slice(), sinir:B.sinir, satirlar:satirlar };
 }
 
 // Hesap çekirdeği — DOM'DAN BAĞIMSIZ, SYNC. _veMntLast'i üretir, döner.
@@ -5430,6 +5581,11 @@ if(typeof module!=='undefined' && module.exports){
     _mntKutleDurumu: _mntKutleDurumu,
     _mntMotorDurumu: _mntMotorDurumu,
     _mntVitesDurumu: _mntVitesDurumu,
+    // Şanzımanın kataloğu ve bağlantı yüzü (2026-11-06)
+    _MNT_VITESLER: _MNT_VITESLER, _mntVsKatalog: _mntVsKatalog, _mntDisliPresetValues: _mntDisliPresetValues, _mntKonvertorPresetValues: _mntKonvertorPresetValues,
+    veMntApplyGearPreset: veMntApplyGearPreset, veMntApplyTcPreset: veMntApplyTcPreset,
+    _mntDisliSapma: _mntDisliSapma, _mntKonvertorSapma: _mntKonvertorSapma, _mntGearboxSection: _mntGearboxSection,
+    _mntBaglantiSection: _mntBaglantiSection, _mntBaglantiDurumu: _mntBaglantiDurumu, _mntBagYon: _mntBagYon,
     _mntTahrikDurumu: _mntTahrikDurumu,
     _mntPtoDurumu: _mntPtoDurumu,
     _mntTakozTipDurumu: _mntTakozTipDurumu,

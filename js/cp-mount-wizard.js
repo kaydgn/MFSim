@@ -43,7 +43,10 @@ var VE_MW_STEPS = [
 var VE_MW_GOVDE_TIPLERI = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft', 'mnt-bracket',
                            'mnt-pto', 'mnt-pump', 'mnt-pto-group',
                            'mnt-alternator', 'mnt-alt-bracket', 'mnt-ac', 'mnt-heat-shield'];
-var VE_MW_GOVDE_ALAN = ['mass', 'cgx', 'cgy', 'cgz', 'Ixx', 'Iyy', 'Izz', 'Ixy', 'Ixz', 'Iyz', 'pointMass'];
+// bag*: motor–şanzıman bağlantı yüzünün merkezi ve ekseni, egSinir: statik eğilme
+// momenti sınırı (veri sayfasından — js/mount-step.js → veMntStpKayit)
+var VE_MW_GOVDE_ALAN = ['mass', 'cgx', 'cgy', 'cgz', 'Ixx', 'Iyy', 'Izz', 'Ixy', 'Ixz', 'Iyz', 'pointMass',
+                        'bagX', 'bagY', 'bagZ', 'bagNx', 'bagNy', 'bagNz', 'egSinir'];
 var VE_MW_TAKOZ_ALAN = ['x', 'y', 'z', 'kxs', 'kys', 'kzs', 'kxd', 'kyd', 'kzd', 'maxLoad', 'libKey',
                         'fitX', 'fitY', 'fitZ', 'curveX', 'curveY', 'curveZ'];
 // Tork zinciri alanları ve onları TAŞIYAN gövde (Motor / Şanzıman / Transfer
@@ -52,7 +55,7 @@ var VE_MW_TAKOZ_ALAN = ['x', 'y', 'z', 'kxs', 'kys', 'kzs', 'kxd', 'kyd', 'kzd',
 // Örnekte ayrı Transfer gövdesi yoksa transfer alanları Şanzıman'da durur.
 var VE_MW_TORK = [
   { grup:'motor',    alan:['Te', 'TeRpm', 'Pmax', 'PmaxRpm', 'idleRpm', 'cylinders', 'enginePreset'], tip:['mnt-motor'] },
-  { grup:'sanziman', alan:['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'gR', 'Rstall'], tip:['mnt-gearbox', 'mnt-transfer', 'mnt-motor'] },
+  { grup:'sanziman', alan:['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'gR', 'Rstall', 'gearPreset', 'tcPreset'], tip:['mnt-gearbox', 'mnt-transfer', 'mnt-motor'] },
   { grup:'transfer', alan:['iTransfer', 'phiFwd', 'phiRev', 'derate'], tip:['mnt-transfer', 'mnt-gearbox', 'mnt-motor'] }
 ];
 
@@ -211,7 +214,7 @@ function _mwVeriYaz(hedef, kaynak, alanlar){
     var v = kaynak[k];
     if(v === undefined || v === null || v === '') return;
     if(typeof v === 'object' || typeof v === 'boolean') hedef[k] = _mwKopya(v);
-    else if(k === 'libKey' || k === 'enginePreset') hedef[k] = String(v);
+    else if(k === 'libKey' || k === 'enginePreset' || k === 'gearPreset' || k === 'tcPreset') hedef[k] = String(v);
     else { var n = _mwNum(v); if(Number.isFinite(n)) hedef[k] = n; }
   });
   return hedef;
@@ -1411,6 +1414,9 @@ function _mwStpYogDurum(s){
 }
 function _mwStpKaynakSecHTML(s, b, y){
   var sec = [['', 'Elle']], neden = '';
+  // Ailenin üyesi (seçenekli anahtar) listede ailenin satırında
+  var yvs = veMntStpVs(y, b.tip);
+  if(yvs && typeof veMntVsSatir === 'function') y = veMntVsSatir(yvs);
   if(b.dosya) sec.push(['dosya', 'Dosyadan']);
   else if(b.yogSay > 0) neden = veSayi(b.say.ag + b.say.dosya + b.say.nokta - b.yogSay - (b.ataYogsuz || 0), 0) + ' parçada yoğunluk yok.';
   // Bütün parçalarına malzeme atanmış birim (3B'de, parça ya da alt montaja)
@@ -1442,6 +1448,7 @@ function _mwStpKutleHucre(s, b, K, isaret){
   }
   var vs = K.kaynak === 'veri' ? K.vs : null;
   var t = vs ? 'Islak ' + _mwSayi(vs.kutle.islak, 0) + ' kg' + (vs.kutle.kuru != null ? ' · kuru ' + _mwSayi(vs.kutle.kuru, 0) + ' kg' : '')
+      + (vs.yag ? ' · yağ ' + _mwSayi(vs.yag.L, 1) + ' L' : '')
     : K.not;
   return '<span class="ve-fw-num ve-mw-stp-kg" data-mw-stp-kutle-deger="' + b.dugum + '" title="' + _mwEsc(t) + '">'
     + _mwSayi(K.m, K.m < 10 ? 2 : 1) + '</span>'
@@ -1502,8 +1509,44 @@ function _mwStpKutleHTML(s){
       + '<td>' + _mwStpKaynakSecHTML(s, b, _mwStpKaynak(s, b, K)) + '</td>'
       + '<td>' + _mwStpKutleHucre(s, b, K) + '</td>'
       + '<td data-mw-stp-atalet="' + b.dugum + '">' + _mwStpAtaletHTML(s, b) + '</td></tr>';
+    if(K.kaynak === 'veri' && K.vs && typeof K.vs.aile === 'string')
+      t += '<tr class="ve-mw-stp-secenek-r" data-mw-stp-secenek="' + b.dugum + '"><td colspan="5">'
+        + '<div class="ve-mw-vs-izgara">' + _mwStpSecenekler(b, K.vs).map(function(x){
+            return '<label class="ve-fw-field"><span class="ve-fw-lbl">' + _mwEsc(x.ad) + '</span>' + x.denetim + '</label>';
+          }).join('') + '</div></td></tr>';
   });
   return t + '</tbody></table></div>';
+}
+// SEÇENEKLER — ailenin veri sayfası (js/mount-veri-sayfasi.js → VE_MNT_VS_AILE):
+// seçenek başına denetim. Bağdaşmayan değer listede kapalı, sebebi `title`da
+// (koşulun seçeneği ve değeri); sayı alanı makine biçiminde yazılır (Türkçe
+// gösterimi js/sayi-alan.js). Kart ve 3B AYNI denetimleri basar.
+// Döner: [{ k, ad, denetim }]
+function _mwStpSecenekler(b, vs){
+  var A = typeof veMntVsAile === 'function' ? veMntVsAile(vs.k) : null;
+  if(!A) return [];
+  var s = vs.secenek, aria = function(o){ return _mwEsc(o.ad) + ' — ' + _mwEsc(b.ad); };
+  return A.secenek.map(function(o){
+    var on = ' data-mw-vs-secenek="' + o.k + '" data-mw-vs-dugum="' + b.dugum + '"'
+      + ' onchange="veMntWizStpVsSecenek(' + b.dugum + ', \'' + o.k + '\', this.value)"';
+    if(!o.d)
+      return { k: o.k, ad: o.ad, denetim: '<span class="ve-mw-vs-sayi"><input type="text" inputmode="decimal" class="ve-fw-inp"'
+        + ' value="' + _mwEsc(String(s[o.k])) + '" aria-label="' + aria(o) + ' [' + o.birim + ']"' + on + '>'
+        + '<u>' + _mwEsc(o.birim) + '</u></span>' };
+    var ops = o.d.map(function(e){
+      var ok = veMntVsGecerli(A, s, o.k, e[0]), neden = '';
+      if(!ok) Object.keys(o.kosul || {}).forEach(function(bk){
+        var izin = o.kosul[bk][s[bk]];
+        if(izin && izin.indexOf(e[0]) < 0 && !neden){
+          var bo = A.secenek.filter(function(x){ return x.k === bk; })[0];
+          neden = bo.ad + ': ' + bo.d.filter(function(x){ return x[0] === s[bk]; })[0][1] + '.';
+        }
+      });
+      return '<option value="' + _mwEsc(e[0]) + '"' + (e[0] === s[o.k] ? ' selected' : '') + (ok ? '' : ' disabled title="' + _mwEsc(neden) + '"') + '>'
+        + _mwEsc(e[1]) + '</option>';
+    }).join('');
+    return { k: o.k, ad: o.ad, denetim: '<select class="ve-fw-inp" aria-label="' + aria(o) + '"' + on + '>' + ops + '</select>' };
+  });
 }
 // KÜTLE KAYNAĞI — gövde başına: '' (elle) · 'dosya' · malzeme anahtarı
 // (js/mount-step.js → VE_MNT_STP_MALZEME) · rolün veri sayfası
@@ -1517,7 +1560,13 @@ function veMntWizStpYogunluk(dugum, k){
   if(!tip || tip === 'mnt-mount') return false;
   k = k || '';
   var b = _mwStpBirim(s, dugum);
-  if(k && !veMntStpVs(k, tip) && !veMntStpAks(k, tip)){
+  var vsYeni = k ? veMntStpVs(k, tip) : null;
+  if(vsYeni){
+    // ailenin satırı (seçeneksiz anahtar) seçenekleri SIFIRLAMAZ; anahtar kanonik
+    var vsEski = veMntStpVs((s.yogunluk || {})[dugum], tip);
+    k = (vsEski && typeof veMntVsSatir === 'function' && veMntVsSatir(vsEski) === k) ? vsEski.k : vsYeni.k;
+  }
+  if(k && !vsYeni && !veMntStpAks(k, tip)){
     if(!b || (k === 'dosya' ? !b.dosya : k === 'atanan' ? !b.atanan : !(veMntStpMalzeme(k) && b.kapali && b.V > 0))) return false;
   }
   if(!s.yogunluk) s.yogunluk = {};
@@ -1532,6 +1581,24 @@ function veMntWizStpYogunluk(dugum, k){
   if(s.coz && !s.hesapBekliyor) s.coz = _mwStpCoz(s);
   _mwStpTazele();
   return true;
+}
+// SEÇENEK — ailenin veri sayfasında bir seçeneği değiştirir (kaynağın anahtarı
+// yeniden yazılır: js/mount-veri-sayfasi.js → veMntVsSecenekYaz). Bağdaşmayan
+// öteki seçenek ilk izinli değerine döner; aralık dışı sayı yazılmaz.
+function veMntWizStpVsSecenek(dugum, ad, v){
+  var s = _mwStp, tip = s && s.durum === 'hazir' ? s.roller[dugum] : null;
+  var vs = tip ? veMntStpVs((s.yogunluk || {})[dugum], tip) : null;
+  if(!vs || typeof vs.aile !== 'string' || typeof veMntVsSecenekYaz !== 'function') return false;
+  var A = veMntVsAile(vs.k), o = A && A.secenek.filter(function(x){ return x.k === ad; })[0];
+  if(!o) return false;
+  var k = veMntVsSecenekYaz(vs.k, ad, o.d ? v : _mwNum(v));
+  if(!k){
+    if(!o.d && typeof showToast === 'function')
+      showToast(o.ad + ' ' + veSayi(o.min) + '–' + veSayi(o.max) + ' ' + o.birim + ' arasında olmalı.', 'warning');
+    _mwStpTazele();
+    return false;
+  }
+  return veMntWizStpYogunluk(dugum, k);
 }
 // MALZEME ATAMASI (kullanıcı 2026-11-02: "tıpkı CAD programlarında olduğu gibi
 // basit bir malzeme veritabanı"): listenin düğümlerine `k` (boş: kaldır).
@@ -1737,6 +1804,10 @@ function veMntWizStpSistemeTasi(){
     var d = node.data || {}, al = _mwDef(node).isMount ? ['x', 'y', 'z'] : ['cgx', 'cgy', 'cgz'];
     if(!al.every(function(a){ return _mwVar(d[a]); })) return;
     al.forEach(function(a, i){ d[a] = Math.round((_mwNum(d[a]) + K.T[i]) * 1000) / 1000 + 0; });
+    // bağlantı yüzünün merkezi de bir konum
+    var bg = ['bagX', 'bagY', 'bagZ'];
+    if(bg.every(function(a){ return _mwVar(d[a]); }))
+      bg.forEach(function(a, i){ d[a] = Math.round((_mwNum(d[a]) + K.T[i]) * 1000) / 1000 + 0; });
     n++;
   });
   if(!n) return 0;
@@ -2136,6 +2207,48 @@ function _mwMotorKatalogHTML(){
   });
   return h + '</select>';
 }
+// Şanzımanın kataloğu (veri sayfasının dişli düzenleri ve konvertörleri) —
+// pencereyle AYNI değer okuyucusu (cp-mount.js → _mntDisliPresetValues ·
+// _mntKonvertorPresetValues); aile başına grup
+function _mwSanzimanKatalogHTML(){
+  var K = (typeof _mntVsKatalog === 'function') ? _mntVsKatalog() : { disli:[], tc:[] };
+  if(!K.disli.length && !K.tc.length) return '';
+  var tq = _mwState.tork || {};
+  var sec = function(liste, cur, fn, ad, etiket){
+    var aileler = [];
+    liste.forEach(function(x){ if(aileler.indexOf(x.aile) < 0) aileler.push(x.aile); });
+    return '<label class="ve-fw-field"><span class="ve-fw-lbl">' + ad + '</span>'
+      + '<select class="ve-fw-inp" onchange="' + fn + '(this.value)" aria-label="' + ad + '">'
+      + '<option value="">— elle gir —</option>'
+      + aileler.map(function(a){
+          return '<optgroup label="' + _mwEsc(a) + '">' + liste.filter(function(x){ return x.aile === a; }).map(function(x){
+            return '<option value="' + _mwEsc(x.k) + '"' + (x.k === cur ? ' selected' : '') + '>' + _mwEsc(etiket(x)) + '</option>';
+          }).join('') + '</optgroup>';
+        }).join('')
+      + '</select></label>';
+  };
+  return '<div class="ve-fw-grid" style="--fw-cols:2;">'
+    + sec(K.disli, tq.gearPreset || '', 'veMntWizDisliKatalog', 'Dişli düzeni', function(x){ return x.etiket; })
+    + sec(K.tc, tq.tcPreset || '', 'veMntWizKonvertorKatalog', 'Konvertör', function(x){ return x.ad + ' · ' + _mwSayi(x.stall, 2); })
+    + '</div>';
+}
+function _mwSanzimanKatalog(key, alan, degerler){
+  if(!_mwState) return false;
+  var t = _mwState.tork || (_mwState.tork = {});
+  if(!key){ delete t[alan]; veMntWizRender(); return true; }
+  var v = (typeof degerler === 'function') ? degerler(key) : null;
+  if(!v) return false;
+  Object.keys(v).forEach(function(k){ if(v[k] === null) delete t[k]; else t[k] = v[k]; });
+  t[alan] = key;
+  veMntWizRender();
+  return true;
+}
+function veMntWizDisliKatalog(key){
+  return _mwSanzimanKatalog(key, 'gearPreset', typeof _mntDisliPresetValues === 'function' ? _mntDisliPresetValues : null);
+}
+function veMntWizKonvertorKatalog(key){
+  return _mwSanzimanKatalog(key, 'tcPreset', typeof _mntKonvertorPresetValues === 'function' ? _mntKonvertorPresetValues : null);
+}
 function _mwTorkOkuHTML(c){
   var r = function(et, deg){ return '<div class="ve-fw-read"><span>' + et + '</span><b>' + deg + '</b></div>'; };
   return '<div class="ve-fw-reads">'
@@ -2155,10 +2268,10 @@ function _mwStepTork(c){
     + g('Te', '', 'Tepe tork [N·m]') + g('TeRpm', '', 'Tepe tork devri [d/dk]')
     + g('PmaxRpm', '', 'Maks güç devri [d/dk]') + g('idleRpm', '', 'Rölanti [d/dk]')
     + g('cylinders', '', 'Silindir sayısı') + '</div>');
-  h += _mwCard('Şanzıman', '<div class="ve-fw-grid" style="--fw-cols:3;">'
+  h += _mwCard('Şanzıman', _mwSanzimanKatalogHTML() + '<div class="ve-fw-grid" style="--fw-cols:3;">'
     + g('g1', '', '1. vites') + g('g2', '', '2. vites') + g('g3', '', '3. vites')
     + g('g4', '', '4. vites') + g('g5', '', '5. vites') + g('g6', '', '6. vites')
-    + g('gR', '', 'Geri') + g('Rstall', '', 'Stall oranı') + '</div>');
+    + g('g7', '', '7. vites') + g('gR', '', 'Geri') + g('Rstall', '', 'Stall oranı') + '</div>');
   h += _mwCard('Transfer ve aks', '<div class="ve-fw-grid" style="--fw-cols:3;">'
     + g('iTransfer', '1', 'Transfer oranı') + g('phiFwd', '1', 'Aks payı φ ileri') + g('phiRev', '1', 'Aks payı φ geri') + '</div>');
   h += _mwCard('Zincirin sonucu', '<div id="ve-mw-tork-oku">' + _mwTorkOkuHTML(c) + '</div>');
@@ -2672,6 +2785,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizNokta: veMntWizNokta, veMntWizTakozEkle: veMntWizTakozEkle, veMntWizTakozSil: veMntWizTakozSil,
     veMntWizTakozAyna: veMntWizTakozAyna, veMntWizTakozKatalog: veMntWizTakozKatalog, veMntWizTakozElle: veMntWizTakozElle,
     veMntWizMotorKatalog: veMntWizMotorKatalog, veMntWizSec: veMntWizSec, veMntWizGorunus: veMntWizGorunus,
+    veMntWizDisliKatalog: veMntWizDisliKatalog, veMntWizKonvertorKatalog: veMntWizKonvertorKatalog, _mwSanzimanKatalogHTML: _mwSanzimanKatalogHTML,
     veMntWizOrnek: veMntWizOrnek, veMntWizOrnekSec: veMntWizOrnekSec, veMntWizOrnekAdim: veMntWizOrnekAdim,
     veMntWizSifirla: veMntWizSifirla, veMntWizCanCreate: veMntWizCanCreate, veMntWizKur: veMntWizKur,
     veMntWizZoom: veMntWizZoom, _mwSet: _mwSet, _mwYerlesim: _mwYerlesim, _mwAynaAd: _mwAynaAd,
@@ -2696,6 +2810,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWizStpReferans: veMntWizStpReferans, _mwStpVeriSayfalari: _mwStpVeriSayfalari,
     veMntWizStpKonumUyari: veMntWizStpKonumUyari, _mwStpKonum: _mwStpKonum, _mwStpImza: _mwStpImza,
     veMntWizStpYogunluk: veMntWizStpYogunluk, _mwStpKutleK: _mwStpKutleK, _mwStpKaynak: _mwStpKaynak,
+    veMntWizStpVsSecenek: veMntWizStpVsSecenek, _mwStpSecenekler: _mwStpSecenekler,
     veMntWizStpMalzeme: veMntWizStpMalzeme, veMntWizStpMalzemeDurum: veMntWizStpMalzemeDurum,
     _mwStpYogDurum: _mwStpYogDurum, _mwStpKutleHucre: _mwStpKutleHucre, _mwKaynakIsaret: _mwKaynakIsaret,
     veMntWizStpKarsilastirma: veMntWizStpKarsilastirma, veMntWizStpSec: veMntWizStpSec, _mwStpModelHTML: _mwStpModelHTML,

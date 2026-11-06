@@ -239,7 +239,7 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   `mount-karsilastir.test.js` (→ *ÖTELEME* · *PENCERE* · *SİHİRBAZ* · *ADAMS
   ÖLÇÜTÜ*) + `mount-3b.test.js` → *ALT DİZİ* + `mount-cad.spec.js` (→ *MODEL*).
 - `js/mount-veri-sayfasi.js` — Takoz **veri sayfası kataloğu** (motor · şanzıman; yedi
-  Cummins motoru, şanzıman sayfası henüz yok). DOM'suz saf veri: kütle (kuru · ıslak;
+  Cummins motoru ve **Allison 4000 ailesi**). DOM'suz saf veri: kütle (kuru · ıslak;
   sayfa vermiyorsa kuru `null`), ağırlık merkezinin REFERANSTAN uzaklığı (motor:
   bloğun ön yüzünden — X12'de arka yüzünden, `ref.arka` — krank ekseninin üstüne;
   yanal alan yalnız sayfa verirse, + motorun sağı önden bakınca), atalet (roll ·
@@ -255,6 +255,19 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   hacimden ve uyarıyla.
   Kapı: `mount-veri-sayfasi.test.js` (→ *KATALOG* · *REFERANS* · *DÜZLEM* · *HESAP* ·
   *KAYIT* · *OTURUM* · *3B DİZİSİ*) + `mount-veri-sayfasi.spec.js`.
+  **Şanzımanda veri sayfası bir AİLE** (kullanıcı 2026-11-06): listede TEK satır,
+  seçenekler anahtarda (`allison-4000?dizi=…&bag=…`; seçeneklerin adı, değeri, sırası
+  ve varsayılanı DEĞİŞMEZ — projeye yazılır), bağdaşmayan değer listede kapalı.
+  Kütle TOPLANIR (belgenin kuru kütleleri + çıkış flanşı; + yağ = ilk dolum ×
+  yoğunluk; uzak soğutucu gövdeye girmez); ağırlık merkezi ve atalet seçeneğin
+  SATIRINDAN, toplanmaz. Allison'un X·Y·Z'si (arkaya · aşağı · sağa) → boy · −yukarı ·
+  −yan. Doğrudan bağlamada **bağlantı yüzü** (R ve eksen, `bagX…` · `egSinir`)
+  aktarımla şanzımana yazılır; rapor §8.18 momenti o düzlemde keser (çekirdek
+  `sectionMoment`, torksuz durumlar; hüküm Statik'te, uygunluğun 5. satırı).
+  Şanzıman penceresinin Katalog'u dişli düzenini (7. vites dâhil; altı vitesliye
+  dönünce 7. vites SİLİNİR) ve konvertörü doldurur. Kapı: `mount-sanziman-ailesi.test.js`
+  (→ *AİLE* · *SEÇENEK* · *KÜTLE* · *YÖN* · *STEP* · *OTURUM* · *PENCERE*) +
+  `mount-baglanti-momenti.test.js` (→ *ELLE HESAP* · *BİLEŞENLER* · *SONUÇ* · *RAPOR*).
   **Motorun aksesuarları** (kullanıcı 2026-11-02; liste kullanıcının Ağırlık Merkezi
   Hesaplama Programı'nın motor parçaları): Alternatör · Alternatör Braketi · Klima
   Kompresörü · Isı Sacı — her biri AYRI tip (`isMountAksesuar`; tek "Aksesuar"

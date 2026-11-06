@@ -1121,6 +1121,44 @@ var veMountCore = (function() {
     return res.perMount.map(pm => Math.abs(pm.f[2]) / gg);
   }
 
+  // ═══════════════════ Kesitteki iç moment — bağlantı yüzü (2026-11-06) ═══════════════════
+  // Güç grubunu S'den geçen ve a'ya dik düzlemde keser (motor ↔ şanzıman bağlantı
+  // yüzü; a şanzımanın içine). Düzlemin a tarafındaki serbest cisim: kütlelerin
+  // yükü m·g·n (ağırlık merkezinde) ve takozların gövdeye uyguladığı −f (takoz
+  // noktasında; f = solveCase*'in perMount.f'i, Σf = dış yük). Kesitin taşıdığı
+  // moment o yüklerin S'ye göre momentinin tersidir; büyüklüğü işaretsiz okunur:
+  // eğilme a'ya dik bileşen, burulma a boyunca. Uygulanan tork (lc.T) GİRMEZ —
+  // tahrik torkunun kesitteki payı bu modelde yok; çağıran torksuz durumları verir.
+  // components · mounts: SI (cg · pos [m], mass [kg]); n: ivme yönü [g].
+  // Döner: { M:[3] N·m, egilme, burulma, m (taraftaki kütle), takoz (taraftaki
+  // takoz sayısı) } | null
+  function sectionMoment(components, mounts, res, g, n, S, a){
+    if(!res || !res.perMount || !Array.isArray(S) || !Array.isArray(a) || !Array.isArray(n)) return null;
+    const la=Math.hypot(a[0], a[1], a[2]);
+    if(!(la > 0)) return null;
+    const u=[a[0]/la, a[1]/la, a[2]/la], gg=(g > 0) ? g : 9.81;
+    const arkada=p => (p[0]-S[0])*u[0] + (p[1]-S[1])*u[1] + (p[2]-S[2])*u[2] > 0;
+    const capraz=(x, y) => [x[1]*y[2]-x[2]*y[1], x[2]*y[0]-x[0]*y[2], x[0]*y[1]-x[1]*y[0]];
+    const M=[0, 0, 0];
+    let m=0, takoz=0;
+    (components || []).forEach(c => {
+      if(!(c.mass > 0) || !c.cg || !arkada(c.cg)) return;
+      m+=c.mass;
+      const t=capraz([c.cg[0]-S[0], c.cg[1]-S[1], c.cg[2]-S[2]], [c.mass*gg*n[0], c.mass*gg*n[1], c.mass*gg*n[2]]);
+      for(let i=0;i<3;i++) M[i]+=t[i];
+    });
+    (mounts || []).forEach((mt, j) => {
+      const pm=res.perMount[j];
+      if(!pm || !mt.pos || !arkada(mt.pos)) return;
+      takoz++;
+      const t=capraz([mt.pos[0]-S[0], mt.pos[1]-S[1], mt.pos[2]-S[2]], pm.f);
+      for(let i=0;i<3;i++) M[i]-=t[i];
+    });
+    const tor=M[0]*u[0] + M[1]*u[1] + M[2]*u[2];
+    const Mb=[M[0]-tor*u[0], M[1]-tor*u[1], M[2]-tor*u[2]];
+    return { M, egilme:Math.hypot(Mb[0], Mb[1], Mb[2]), burulma:Math.abs(tor), m, takoz };
+  }
+
   // Takoz başına viskoz sönüm katsayıları. shares (kg) mountLoadShares'ten;
   // verilmezse/0 ise o takozun c'si 0 çıkar (yük payı bilinmeden sönüm türetilemez).
   // Dönüş: [{ name, mShare (kg), zeta, c:[cx,cy,cz] (N·s/m) }]
@@ -2713,7 +2751,7 @@ var veMountCore = (function() {
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency, frfGrid,
-    mountLoadShares, mountDamping,
+    mountLoadShares, mountDamping, sectionMoment,
     buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
