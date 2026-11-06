@@ -42,8 +42,8 @@ function _mw3bBosMenu(sec, gizliVar, opt){
   if(typeof VE_MW_3B_GORUNUS !== 'undefined')
     L.push({ k: 'gorunus', ad: 'Görünüş', ikon: 'contrast', alt: VE_MW_3B_GORUNUS.map(function(g){
       return { k: 'gorunus:' + g.k, ad: g.ad, secili: (opt.gorunus || 'kenar') === g.k }; }) });
-  if(typeof VE_MW_3B_ZEMIN !== 'undefined')
-    L.push({ k: 'zemin', ad: 'Arka plan', ikon: 'image', alt: VE_MW_3B_ZEMIN.map(function(z){
+  if(typeof veMntWiz3bZeminListe === 'function')
+    L.push({ k: 'zemin', ad: 'Arka plan', ikon: 'image', alt: veMntWiz3bZeminListe(typeof _mw3bKoyu === 'function' && _mw3bKoyu()).map(function(z){
       return { k: 'zemin:' + z.k, ad: z.ad, secili: (opt.zemin || 'studyo') === z.k }; }) });
   // ARAÇLAR (kullanıcı 2026-11-05, Canlı Not 25: *"Şu kısımları boşa sağ klik
   // yaptığımızda ortaya çıkacak şekilde ayarlayalım. Burada kalmalarına gerek yok"*):

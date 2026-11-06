@@ -446,6 +446,79 @@ describe('MERKEZ GEOMETRİDE SABİT — döndürme dünyadaki merkezin çevresin
   });
 });
 
+// ── KOYU GÖRÜNÜŞ (kullanıcı 2026-11-06, Canlı Not 61) ──────────────────────
+// "Koyu tema için de bir görünüm geliştirelim. Görünümler, yani renkler, hep aydınlık
+// temaya göre olduğu için, garip duruyor." Önce: koyu temada parçalar yazı için açılmış
+// pastel rol jetonlarıyla (şeker rengi), kenarlar açık yazı tonuyla çiziliyordu; arka plan
+// listesinin dördü beyaz tonlarıydı.
+describe('KOYU GÖRÜNÜŞ — koyu temada derin parça tonu, koyu kenar, koyu zemin listesi', () => {
+  const fs = require('fs'), path = require('path');
+  const CSS = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+  const blok = CSS.slice(CSS.indexOf('[data-theme="koyu"] {'), CSS.indexOf('}', CSS.indexOf('[data-theme="koyu"] {')));
+  const koyuJeton = (ad) => (blok.match(new RegExp(ad.replace(/[-]/g, '\\-') + ':\\s*(#[0-9a-fA-F]{6})')) || [])[1];
+  const bayt = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const lum = (b) => 0.2126 * lin(b[0]) + 0.7152 * lin(b[1]) + 0.0722 * lin(b[2]);
+  const oran = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const hsl = (b) => { const r = b[0] / 255, g = b[1] / 255, c = b[2] / 255, mx = Math.max(r, g, c), mn = Math.min(r, g, c), d = mx - mn, l = (mx + mn) / 2;
+    let h = 0; if (d) { if (mx === r) h = ((g - c) / d) % 6; else if (mx === g) h = (c - r) / d + 2; else h = (r - g) / d + 4; h = (h * 60 + 360) % 360; }
+    return { h, s: d ? d / (1 - Math.abs(2 * l - 1)) : 0, l }; };
+  test('açık temada sahne jetonun kendisi; koyuda ton korunur, açıklık aralığa iner, koyu zeminde seçilir', () => {
+    expect(veMntWiz3bSahneTonu([194, 65, 12], false)).toEqual([194, 65, 12]);
+    const zemin = bayt(koyuJeton('--bg-secondary'));
+    const roller = [...new Set(Object.values(VE_MW_3B_ROL_RENK))];
+    const olculen = roller.map((j) => [j, koyuJeton(j)]).filter(([, h]) => h);
+    expect(olculen.length).toBeGreaterThanOrEqual(8);
+    olculen.forEach(([j, h]) => {
+      const a = hsl(bayt(h)), t = veMntWiz3bSahneTonu(bayt(h), true), b = hsl(t);
+      if (a.s > 0.05) expect(Math.abs(((b.h - a.h + 540) % 360) - 180)).toBeLessThan(2);          // ton aynı
+      expect(b.l).toBeGreaterThanOrEqual(VE_MW_3B_KOYU.l[0] - 0.01);
+      expect(b.l).toBeLessThanOrEqual(VE_MW_3B_KOYU.lUst + 0.01);
+      expect(b.l).toBeLessThan(a.l + 0.01);                                                      // pastel değil
+      expect(b.s).toBeLessThanOrEqual(VE_MW_3B_KOYU.sUst + 0.02);                                // şeker pembesi değil
+      expect([j, oran(t, zemin) >= 2.5]).toEqual([j, true]);                                     // koyu zeminde seçilir
+    });
+  });
+  test('zemin listesi temanın: koyuda dört koyu eş, anahtarlar ortak; açık liste değişmedi', () => {
+    const A = veMntWiz3bZeminListe(false), K = veMntWiz3bZeminListe(true);
+    expect(A.map((z) => z.ad)).toEqual(['Stüdyo', 'Düz beyaz', 'Beyaz–mavi geçiş', 'Beyaz–sıcak geçiş', 'Açık gri geçiş']);
+    expect(K.map((z) => z.ad)).toEqual(['Stüdyo', 'Düz koyu', 'Koyu–mavi geçiş', 'Koyu–sıcak geçiş', 'Grafit geçiş']);
+    expect(K.map((z) => z.k)).toEqual(A.map((z) => z.k));
+    expect(A.find((z) => z.k === 'beyaz').duz).toBe('#ffffff');
+    expect(K.find((z) => z.k === 'studyo').ust).toBe('--bg-secondary');                          // stüdyo jetondan, iki temada
+    K.slice(1).forEach((z) => [z.duz, z.ust, z.alt].filter(Boolean).forEach((h) => expect([z.ad, h, lum(bayt(h)) < 0.05]).toEqual([z.ad, h, true])));
+    A.slice(1).forEach((z) => [z.duz, z.ust, z.alt].filter(Boolean).forEach((h) => expect(lum(bayt(h))).toBeGreaterThan(0.6)));
+  });
+  test('boşluğun menüsü koyu temada koyu listeyi sunar', () => {
+    const s0 = { sonuc: { agac: [], parcalar: [] }, roller: {} };
+    document.documentElement.setAttribute('data-theme', 'koyu');
+    try {
+      const L = veMntWiz3bMenuOgeleri(s0, [], {}, { bos: true, zemin: 'gok' });
+      const z = L.find((o) => o.k === 'zemin').alt;
+      expect(z.map((o) => o.ad)).toEqual(['Stüdyo', 'Düz koyu', 'Koyu–mavi geçiş', 'Koyu–sıcak geçiş', 'Grafit geçiş']);
+      expect(z.filter((o) => o.secili).map((o) => o.k)).toEqual(['zemin:gok']);
+    } finally { document.documentElement.removeAttribute('data-theme'); }
+  });
+  test('bağlantı: boyamanın bağlamı rol rengini tonlar, kenar koyuda zeminden, rolsüz parça açık gri', () => {
+    const k = fs.readFileSync(path.join(__dirname, '../../js/cp-mount-3b.js'), 'utf8');
+    const b = k.slice(k.indexOf('function _mw3bBoyaBaglam('), k.indexOf('function veMntWiz3bGorunus('));
+    expect(b).toMatch(/veMntWiz3bSahneTonu\(_mw3bBayt\(_mw3bRenk\(veMntWiz3bRolJeton\(t\)/);
+    expect(b).toMatch(/koyu \? _mw3bRenk\('--bg-primary'/);
+    expect(b).toMatch(/cizgi: _mw3bBayt\(kenar\)/);
+    expect(b).toMatch(/lerp\(_mw3bRenk\('--text-primary', '#e4e8ee'\), VE_MW_3B_KOYU\.bos\)/);
+    expect(b).toMatch(/cizgiSoluk: _mw3bBayt\(koyu \? _mw3bRenk\('--text-secondary'/);
+    expect(k).toMatch(/var L = veMntWiz3bZeminListe\(_mw3bKoyu\(\)\)/);
+  });
+  test('tülün (x-ışını) kenarı kendi renginde — koyu kenar koyu zeminde kayboluyordu; yoksa olağan kenar', () => {
+    const R = { cizgi: [10, 12, 14], cizgiSec: [240, 242, 245], cizgiFare: [60, 130, 240], cizgiSoluk: [180, 186, 192], bos: [1, 1, 1], bosSec: [2, 2, 2], xray: true };
+    expect(veMntWiz3bGorunus(VE_MW_3B_SOLUK, [9, 9, 9], R).cizgi).toEqual([180, 186, 192]);
+    expect(veMntWiz3bGorunus(0, [9, 9, 9], R).cizgi).toEqual([10, 12, 14]);
+    expect(veMntWiz3bGorunus(VE_MW_3B_SECIK, [9, 9, 9], R).cizgi).toEqual([240, 242, 245]);
+    const eski = Object.assign({}, R); delete eski.cizgiSoluk;
+    expect(veMntWiz3bGorunus(VE_MW_3B_SOLUK, [9, 9, 9], eski).cizgi).toEqual([10, 12, 14]);
+  });
+});
+
 // ── SEÇİM KİPİNDE ODAK (kullanım notu T05) ────────────────────────────────
 describe('SEÇİM KİPİNDE ODAK — yalnız kipteki birimin işaretleri', () => {
   const I = [{ t: 'govde', u: 3 }, { t: 'ref', u: 3 }, { t: 'govde', u: 7 }, { t: 'takoz', u: 9 }, { t: 'model' }];

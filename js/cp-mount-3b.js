@@ -365,13 +365,31 @@ function _mw3bCizici(V){
 // tarayıcıda (görünüm tercihi — modele ve kayda girmez). Stüdyo temanın
 // jetonlarından (iki temada), ötekiler sabit açık tonlar. `ust`/`alt`: dikey
 // geçişin uçları, `orta`: üst rengin bittiği yer (0–1); `duz`: tek renk.
+// KOYU TEMADA KOYU KARŞILIĞI (kullanıcı 2026-11-06, Canlı Not 61: *"Görünümler, yani renkler,
+// hep aydınlık temaya göre olduğu için, garip duruyor"*): her açık zeminin `koyu` eşi var — liste
+// temanın listesi (veMntWiz3bZeminListe), anahtar ortak (tercih iki temada aynı yeri tutar).
 var VE_MW_3B_ZEMIN = [
   { k: 'studyo', ad: 'Stüdyo', ust: '--bg-secondary', alt: '--bg-tertiary', orta: 0.5 },
-  { k: 'beyaz', ad: 'Düz beyaz', duz: '#ffffff' },                     // sabit renk: kullanıcının seçtiği zemin
-  { k: 'gok', ad: 'Beyaz–mavi geçiş', ust: '#ffffff', alt: '#d6e3f3', orta: 0.15 },   // sabit renk: zemin geçişi
-  { k: 'kagit', ad: 'Beyaz–sıcak geçiş', ust: '#fdfcf9', alt: '#e9e4da', orta: 0.2 }, // sabit renk: zemin geçişi
-  { k: 'gri', ad: 'Açık gri geçiş', ust: '#f6f7f9', alt: '#cfd4db', orta: 0 }       // sabit renk: zemin geçişi
+  { k: 'beyaz', ad: 'Düz beyaz', duz: '#ffffff',                       // sabit renk: kullanıcının seçtiği zemin
+    koyu: { ad: 'Düz koyu', duz: '#15181c' } },                         // sabit renk: kullanıcının seçtiği zemin
+  { k: 'gok', ad: 'Beyaz–mavi geçiş', ust: '#ffffff', alt: '#d6e3f3', orta: 0.15,     // sabit renk: zemin geçişi
+    koyu: { ad: 'Koyu–mavi geçiş', ust: '#0f141b', alt: '#2b3b52', orta: 0.15 } },    // sabit renk: zemin geçişi
+  { k: 'kagit', ad: 'Beyaz–sıcak geçiş', ust: '#fdfcf9', alt: '#e9e4da', orta: 0.2,   // sabit renk: zemin geçişi
+    koyu: { ad: 'Koyu–sıcak geçiş', ust: '#141210', alt: '#302a24', orta: 0.2 } },   // sabit renk: zemin geçişi
+  { k: 'gri', ad: 'Açık gri geçiş', ust: '#f6f7f9', alt: '#cfd4db', orta: 0,         // sabit renk: zemin geçişi
+    koyu: { ad: 'Grafit geçiş', ust: '#1b1e22', alt: '#3a3f46', orta: 0 } }           // sabit renk: zemin geçişi
 ];
+// Temanın zemin listesi (saf): [{ k, ad, duz | ust · alt · orta }] — koyuda eşi, yoksa kendisi
+function veMntWiz3bZeminListe(koyu){
+  return VE_MW_3B_ZEMIN.map(function(z){
+    var e = koyu && z.koyu ? z.koyu : z, o = { k: z.k, ad: e.ad };
+    ['duz', 'ust', 'alt', 'orta'].forEach(function(a){ if(e[a] !== undefined) o[a] = e[a]; });
+    return o;
+  });
+}
+function _mw3bKoyu(){
+  try { return document.documentElement.getAttribute('data-theme') === 'koyu'; } catch(e){ return false; }
+}
 var VE_MW_3B_ZEMIN_ANAHTAR = 'mfsim.takoz3b.zemin';
 function veMntWiz3bZeminTercih(){
   var k = null;
@@ -426,7 +444,7 @@ function veMntWiz3bYanBasHTML(acik){
 }
 // Jeton okunamazsa (tuval yok) düz zemin.
 function _mw3bZemin(k){
-  var Z = VE_MW_3B_ZEMIN.filter(function(z){ return z.k === k; })[0] || VE_MW_3B_ZEMIN[0];
+  var L = veMntWiz3bZeminListe(_mw3bKoyu()), Z = L.filter(function(z){ return z.k === k; })[0] || L[0];
   var renk = function(v){ return v.charAt(0) === '-' ? _mw3bJeton(v, '#ffffff') : v; };
   if(Z.duz) return new THREE.Color(Z.duz);
   try {
@@ -816,6 +834,37 @@ function _mw3bRenk(ad, yedek){
   try { return new THREE.Color(_mw3bJeton(ad, yedek)); } catch(e){ return new THREE.Color(yedek); }
 }
 function _mw3bBayt(c){ return [Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)]; }
+// KOYU GÖRÜNÜŞ (Canlı Not 61): koyu temanın rol jetonları yazı ve çizgi için açılmış pastel
+// tonlar — gölgeli yüzeyde şeker rengi okunuyordu. Sahnede rengin tonu korunur, açıklığı
+// [l] aralığına iner (×lk), doygunluğu ×s (en çok sUst): açık temanın derin tonlarına yakın;
+// parlaklığı ay'ın altındaysa (mavi aynı açıklıkta koyu okunur) açıklık lUst'e dek artar —
+// koyu zeminde seçilir. Kenar koyu (zeminin ×kenar'ı), seçilinin kenarı açık; rolsüz parça
+// açık çelik grisi (soluk yazı → yazı, bos payı). Açık temada sahne jetonların kendisi.
+var VE_MW_3B_KOYU = { l: [0.36, 0.50], lk: 0.68, s: 1, sUst: 0.7, ay: 0.12, lUst: 0.58, bos: 0.2, kenar: 0.5 };
+// Rengin sahnedeki tonu (saf): bayt [r, g, b] → bayt; açık temada aynısı
+function veMntWiz3bSahneTonu(rgb, koyu){
+  if(!koyu) return rgb.slice();
+  var K = VE_MW_3B_KOYU, r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
+  var mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn, h = 0, sat = 0;
+  if(d > 0){
+    sat = d / (1 - Math.abs(2 * l - 1));
+    if(mx === r) h = ((g - b) / d) % 6; else if(mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+    h = (h * 60 + 360) % 360;
+  }
+  var S = Math.min(K.sUst, sat * K.s);
+  var kur = function(L){
+    var C = (1 - Math.abs(2 * L - 1)) * S, X = C * (1 - Math.abs((h / 60) % 2 - 1)), m = L - C / 2;
+    var t = h < 60 ? [C, X, 0] : h < 120 ? [X, C, 0] : h < 180 ? [0, C, X] : h < 240 ? [0, X, C] : h < 300 ? [X, 0, C] : [C, 0, X];
+    return t.map(function(v){ return Math.round((v + m) * 255); });
+  };
+  var ay = function(c){
+    var y = c.map(function(v){ v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * y[0] + 0.7152 * y[1] + 0.0722 * y[2];
+  };
+  var L = Math.max(K.l[0], Math.min(K.l[1], l * K.lk)), out = kur(L);
+  while(ay(out) < K.ay && L < K.lUst){ L = Math.min(K.lUst, L + 0.01); out = kur(L); }
+  return out;
+}
 // Boyamanın bağlamı: rol renkleri (bayt), seçimin parçaları, farenin birimi.
 // Seçili düğüm varken dışındaki parçalar SOLAR: seçimin hangi parçaları
 // kapsadığı (bir alt montajın bütün parçaları) böyle okunur. Bağlam her
@@ -829,16 +878,20 @@ function _mw3bBoyaBaglam(){
     V.secim.forEach(function(d){ veMntWiz3bParcalar(s, d).forEach(function(p){ sec[p] = 1; }); });
   }
   if(V.fareDugum >= 0){ fareSet = {}; veMntWiz3bParcalar(s, V.fareDugum).forEach(function(p){ fareSet[p] = 1; }); }
-  var rol = {};
-  Object.keys(VE_MW_3B_ROL_RENK).forEach(function(t){ rol[t] = _mw3bBayt(_mw3bRenk(veMntWiz3bRolJeton(t), '#888888')); });
-  var bos = _mw3bRenk('--text-muted', '#5f6873').lerp(_mw3bRenk('--bg-secondary', '#ffffff'), 0.4);
+  var rol = {}, koyu = _mw3bKoyu();
+  Object.keys(VE_MW_3B_ROL_RENK).forEach(function(t){ rol[t] = veMntWiz3bSahneTonu(_mw3bBayt(_mw3bRenk(veMntWiz3bRolJeton(t), '#888888')), koyu); });
+  var bos = koyu ? _mw3bRenk('--text-muted', '#8d96a1').lerp(_mw3bRenk('--text-primary', '#e4e8ee'), VE_MW_3B_KOYU.bos)
+    : _mw3bRenk('--text-muted', '#5f6873').lerp(_mw3bRenk('--bg-secondary', '#ffffff'), 0.4);
+  var kenar = koyu ? _mw3bRenk('--bg-primary', '#181b20').multiplyScalar(VE_MW_3B_KOYU.kenar) : _mw3bRenk('--text-primary', '#1f2328');
   // YÜZEY ODAĞI (Canlı Not 21): yüzey süzgecinde fare altındaki ya da seçili yüzün
   // parçası odakta, öteki parçalar tül — yüz önlerindeki parçaların ardında kalmaz
   var odak = null;
   if(V.yuzOdak >= 0){ odak = {}; odak[V.yuzOdak] = 1; }
   V.baglam = { surum: V.boyaSurum, sec: sec, odak: odak, rol: rol, bos: _mw3bBayt(bos), xray: V.gorunus === 'xray',
     bosSec: _mw3bBayt(bos.clone().lerp(_mw3bRenk('--accent-primary', '#1f5fd6'), VE_MW_3B_SECIM_TON)),
-    cizgi: _mw3bBayt(_mw3bRenk('--text-primary', '#1f2328')), cizgiSec: _mw3bBayt(_mw3bRenk('--text-heading', '#101418')),
+    cizgi: _mw3bBayt(kenar), cizgiSec: _mw3bBayt(_mw3bRenk('--text-heading', '#101418')),
+    // tülün (x-ışını) kenarı: koyuda açık ton — koyu kenar koyu zeminde kayboluyordu
+    cizgiSoluk: _mw3bBayt(koyu ? _mw3bRenk('--text-secondary', '#b8c0c8') : kenar),
     cizgiFare: _mw3bBayt(_mw3bRenk('--accent-primary', '#1f5fd6')),
     fareBirim: V.fare >= 0 ? veMntWiz3bBirim(s, V.fare) : -1, fareSet: fareSet };
   return V.baglam;
@@ -850,7 +903,7 @@ function _mw3bBoyaBaglam(){
 function veMntWiz3bGorunus(d, c, R){
   var A = VE_MW_3B_CIZGI_A, yuz = c, cz = R.cizgi, a = A.olagan;
   if(d & VE_MW_3B_SECIK){ cz = R.cizgiSec; a = A.secili; if(c === R.bos) yuz = R.bosSec; }
-  else if(d & VE_MW_3B_SOLUK) a = (d & VE_MW_3B_FARE) ? A.olagan : (R.xray ? A.xray : A.soluk);
+  else if(d & VE_MW_3B_SOLUK){ a = (d & VE_MW_3B_FARE) ? A.olagan : (R.xray ? A.xray : A.soluk); if(R.cizgiSoluk) cz = R.cizgiSoluk; }
   else if(d & VE_MW_3B_FARE){ cz = R.cizgiFare; a = A.fare; }
   return { yuz: yuz, cizgi: cz, a: a };
 }
@@ -2647,6 +2700,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veMntWiz3bYakinHedef: veMntWiz3bYakinHedef, veMntWiz3bKutuCizgi: veMntWiz3bKutuCizgi, VE_MW_3B_VEKIL: VE_MW_3B_VEKIL, veMntWiz3bOdakIsaret: veMntWiz3bOdakIsaret, _mw3bSecimOdak: _mw3bSecimOdak,
     veMntWiz3bEtiketGoster: veMntWiz3bEtiketGoster, veMntWiz3bIsaretBul: veMntWiz3bIsaretBul,
     VE_MW_3B_GORUNUS: VE_MW_3B_GORUNUS, VE_MW_3B_ZEMIN: VE_MW_3B_ZEMIN, veMntWiz3bZeminTercih: veMntWiz3bZeminTercih, veMntWiz3bZeminSec: veMntWiz3bZeminSec,
+    veMntWiz3bZeminListe: veMntWiz3bZeminListe, veMntWiz3bSahneTonu: veMntWiz3bSahneTonu, VE_MW_3B_KOYU: VE_MW_3B_KOYU,
     veMntWiz3bDurumBiti: veMntWiz3bDurumBiti, veMntWiz3bKimlikHTML: veMntWiz3bKimlikHTML, veMntWiz3bBirimKutleHTML: veMntWiz3bBirimKutleHTML,
     veMntWiz3bEylemHTML: veMntWiz3bEylemHTML, veMntWiz3bEylemGorunur: veMntWiz3bEylemGorunur, VE_MW_3B_BIRIM_GRUP: VE_MW_3B_BIRIM_GRUP, veMntWiz3bGrupAc: veMntWiz3bGrupAc, veMntWiz3bToplam: veMntWiz3bToplam, veMntWiz3bKutleTazele: veMntWiz3bKutleTazele,
     veMntWiz3bGorunusSec: veMntWiz3bGorunusSec
