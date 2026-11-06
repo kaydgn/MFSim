@@ -223,11 +223,11 @@ function _gaSec3(){
       + 'diferansiyele iki <strong>Tekerlek</strong> bağlayın.'
   ]);
   h += _gaNot('Otomatik düzenle',
-      'Şeritteki <strong>Otomatik düzenle</strong> bileşenleri referans ızgarasına oturtur: '
+      'Komutlar’daki <strong>Otomatik düzenle</strong> bileşenleri referans ızgarasına oturtur: '
     + 'güç akışı soldan sağa, zincirin dört bağlantısı yatay, dallar eşit ve zıt sapar. '
     + 'Yerleşim <strong>hesabı etkilemez</strong>.');
   h += '<h3>3.3 Yol C — kayıtlı bir projeden</h3>';
-  h += '<p>Kaydedilmiş proje dosyası (<code>.json</code>) şeritteki <strong>Proje aç</strong> '
+  h += '<p>Kaydedilmiş proje dosyası (<code>.json</code>) Komutlar’daki <strong>Proje aç</strong> '
     + 'ile açılır. <strong>Başlangıç ve Örnekler</strong> penceresindeki '
     + '<strong>İç topolojiyi JSON dışa aktar</strong> düğmesi kurulan zinciri örnek biçiminde '
     + 'diske yazar.</p>';
@@ -455,7 +455,7 @@ function _gaSec9(){
 function _gaSec10(){
   var h = _gaH2(9);
   h += '<p><strong>Çözücü</strong> bileşeni zincire bağlanmaz; çözüm kümesini ve sayısal '
-    + 'yöntemi taşır. Penceresi bileşene çift tıklanınca ya da şeritteki '
+    + 'yöntemi taşır. Penceresi bileşene çift tıklanınca ya da Komutlar’daki '
     + '<strong>Çözücü</strong> düğmesiyle açılır.</p>';
   h += _gaAdimlar([
     'Sağ sütundaki <strong>Güç aktarma zinciri</strong> satırını okuyun: bulunan zincirin '
@@ -466,7 +466,7 @@ function _gaSec10(){
       + '<strong>Hızlanma-yavaşlama</strong>, tuvalde Engel Geçme bileşeni varsa '
       + '<strong>Engel atlama analizi</strong> seçilebilir.',
     '<strong>Çözüm yöntemi</strong>ni ve <strong>Adım büyüklüğü Δt</strong>’yi seçin.',
-    'Şeritteki <strong>Doğrula</strong> ile modeli sınayın; pencerenin '
+    'Komutlar’daki <strong>Doğrula</strong> ile modeli sınayın; pencerenin '
       + '<strong>Hesapla</strong> düğmesi simülasyonu başlatır.'
   ]);
   h += _gaAlanTablo('Çözücü penceresi — alanlar', [
@@ -529,7 +529,7 @@ function _gaSec11(){
 function _gaSec12(){
   var h = _gaH2(11);
   h += '<p>Raporlar <strong>Sonuçlar</strong> sayfasında, Veri Gezgini’nin altında, çözüm '
-    + 'sekmesine göre listelenir; simülasyon koşmadan liste boştur. Şeritteki '
+    + 'sekmesine göre listelenir; simülasyon koşmadan liste boştur. Komutlar’daki '
     + '<strong>Rapor</strong> düğmesi tam raporu TXT, kanal verisini CSV olarak indirir.</p>';
   h += _gaAlanTablo('Rapor türleri', [
     ['Detaylı rapor', 'Girdi özeti ve Araç Performans özeti: eğim kabiliyeti, hızlanma, '
@@ -545,7 +545,7 @@ function _gaSec12(){
     ['Engel atlama raporu (TXT)', 'Basamak/rampa geçişi sonuçları', 'Engel atlama sekmesi'],
     ['Topoloji raporu (TXT)', 'Kurulan zincirin bütün girdileri',
       'Hızlanma-yavaşlama ve Engel atlama sekmeleri'],
-    ['CSV', 'Ham kanal verisi', 'Şeritteki <strong>Rapor</strong> düğmesi']
+    ['CSV', 'Ham kanal verisi', 'Komutlar’daki <strong>Rapor</strong> düğmesi']
   ], ['Rapor', 'İçerik', 'Nerede']);
   h += _gaNot('TXT raporu A4 sayfasıdır',
       'TXT raporları ekranda A4 sayfa olarak açılır; geniş tablo sayfaya sığacak puntoya '

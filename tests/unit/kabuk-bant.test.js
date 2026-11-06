@@ -169,7 +169,7 @@ describe('TUVAL KENARA YAPIŞIK — her sınır TEK çizgi', () => {
 // öğesi 28 px'lik ▼ düğmesiydi, kalanı 24 px (arama · Çöz · avatar).
 // Kullanıcı (2026-09-26, bu satırın ekran görüntüsüyle): "hâlâ boyuna geniş,
 // çok yer kaplıyor." Çizim: tests/e2e/ust-bant.spec.js.
-describe('ŞERİT BANDI İNCE — 32 px, gövde aynı boyda', () => {
+describe('ŞERİT BANDI İNCE — 32 px, gövde yok', () => {
   const jeton = (ad) => Number(CSS.match(new RegExp('--' + ad + ':\\s*(\\d+)px;'))[1]);
 
   test('bant 32 px; en yüksek denetimi komşularıyla aynı boyda', () => {
@@ -185,10 +185,25 @@ describe('ŞERİT BANDI İNCE — 32 px, gövde aynı boyda', () => {
     expect(serit - boy('.ve-bant-avatar')).toBeGreaterThanOrEqual(6);
   });
 
-  test('şerit AÇIKKEN gövde aynı boyda — bant kısalınca açık hâl de kısalır', () => {
-    // Gövde = açık yükseklik − bant. Yalnız bant küçülseydi gövde sessizce
-    // büyürdü (gruplar 94 px'e göre dizili).
-    expect(jeton('ribbon-expanded-h') - jeton('ribbon-strip-h')).toBe(94);
+  // GÖVDE YOK (kullanıcı 2026-11-06, Canlı Not 59: *"Şu kısmın programdan tamamen
+  // kalkmasını istiyorum … kenarda açılır bir ufak pencere … Programı daraltıyor"*):
+  // açık şeridin gövdesi sayfayı 94 px aşağı itiyordu. Krom hep bandın boyu;
+  // komutların penceresi bandın üstünde YÜZER. Çizim: ust-bant.spec.js →
+  // *KOMUTLARIN PENCERESİ*.
+  test('krom hep bandın boyu — açık gövde jetonu yok, pencere yüzer', () => {
+    expect(CSS).toMatch(/--ribbon-h:\s*var\(--ribbon-strip-h\)/);
+    expect(CSS).not.toMatch(/--ribbon-expanded-h/);
+    const RB = fs.readFileSync(path.join(KOK, 'js/ribbon.js'), 'utf8');
+    expect(RB).not.toMatch(/ribbon-expanded-h/);
+    const dock = kural('.ve-rb-dock');
+    expect(dock).toMatch(/position:\s*absolute/);
+    const HTML = fs.readFileSync(path.join(KOK, 'index.html'), 'utf8');
+    expect(HTML).not.toMatch(/id="ve-rb-collapse"/);
+    // sekmeler pencerenin içinde, bantta değil
+    const serit = HTML.slice(HTML.indexOf('id="ve-rb-strip"'), HTML.indexOf('id="ve-rb-dock"'));
+    expect(serit).not.toMatch(/id="ve-rb-tabs"/);
+    const pencere = HTML.slice(HTML.indexOf('id="ve-rb-dock"'));
+    expect(pencere.slice(0, 400)).toMatch(/id="ve-rb-tabs"/);
   });
 });
 

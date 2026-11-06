@@ -2,14 +2,17 @@
  * ust-bant.spec.js — ATÖLYE ÜST BANDI
  * ────────────────────────────────────
  *
- * Bant artık komut dizmiyor: NEREDEYİM (marka · modül adı) + NE ARIYORUM
- * (komut arama) + TEK ANA EYLEM (Çöz). Şerit gövdesi varsayılan katlı.
+ * Bant artık komut dizmiyor: NEREDEYİM (marka · modül adı) + hesap + komutların
+ * düğmesi. Şeridin GÖVDESİ YOK (kullanıcı 2026-11-06, Canlı Not 59): komutlar
+ * bandın sağ ucundaki düğmenin açtığı küçük pencerede, sayfa aşağı itilmez.
  *
- * O varsayılanın meşruiyeti TEK bir koşula bağlı ve o koşul Node'da kapılı
+ * Gövdesizliğin meşruiyeti TEK bir koşula bağlı ve o koşul Node'da kapılı
  * (`tests/unit/komut-kapsami.test.js`): şeritteki her komut palette de var.
  * Burada ölçülen şey YERLEŞİM ve CANLI BAĞ — ikisi de jsdom'da ölçülemez.
  */
 const { test, expect } = require('@playwright/test');
+const { kontrastKur, kontrastOzet } = require('../helpers/kontrast-olcu.js');
+const { yerlesimKur, yerlesimOzet } = require('../helpers/yerlesim-olcu.js');
 const path = require('path');
 const fs = require('fs');
 
@@ -58,7 +61,7 @@ const olc = () => {
   };
 };
 
-test('şerit gövdesi VARSAYILAN katlı — bant tek satır', async ({ page }) => {
+test('şeridin gövdesi YOK — bant tek satır', async ({ page }) => {
   await ac(page, 'fead-analysis');
   const r = await page.evaluate(olc);
   expect(r.katli).toBe(true);
@@ -123,14 +126,108 @@ test('bantta dolu düğme yok', async ({ page }) => {
   expect(n).toBe(0);
 });
 
-test('gövde kapalı olunca tuval KAZANIYOR', async ({ page }) => {
+// KOMUTLARIN PENCERESİ (kullanıcı 2026-11-06, Canlı Not 59: *"Şu kısmın programdan
+// tamamen kalkmasını istiyorum. Buradaki özelliklerin ise, böyle kenarda açılır bir
+// ufak pencere şeklinde belirmesini istiyorum. Programı daraltıyor"*): açık gövde
+// sayfayı 94 px aşağı itiyordu. Pencere bandın sağ ucunda YÜZER: tuval oynamaz.
+const pencereOlc = () => {
+  const k = (s) => { const e = document.querySelector(s); if (!e) return null;
+    const b = e.getBoundingClientRect();
+    return { x: Math.round(b.x), y: Math.round(b.y), r: Math.round(b.right), b: Math.round(b.bottom),
+             w: Math.round(b.width), h: Math.round(b.height), gorunur: b.width > 0 && b.height > 0 }; };
+  const sat = [...document.querySelectorAll('#ve-rb-body .ve-rb-btn')];
+  return {
+    pencere: k('#ve-rb-dock'), dugme: k('#ve-rb-expand'), bant: k('#ve-rb-strip'),
+    tuval: k('#ve-split-container'), sayfa: k('#sayfa2'),
+    acik: document.getElementById('ve-ribbon').classList.contains('is-peek'),
+    aria: document.getElementById('ve-rb-expand').getAttribute('aria-expanded'),
+    sekme: [...document.querySelectorAll('#ve-rb-dock .ve-rb-tab')].map((t) => t.textContent.trim()),
+    aktif: (document.querySelector('#ve-rb-tabs .ve-rb-tab.active') || {}).textContent,
+    odak: document.activeElement ? (document.activeElement.id || document.activeElement.textContent.trim()) : null,
+    satir: sat.length,
+    // her komut TEK SATIR (ikon + ad) ve adı kesilmiyor
+    yuksek: Math.max(0, ...sat.map((b) => b.getBoundingClientRect().height)),
+    kesik: sat.filter((b) => { const l = b.querySelector('.ve-rb-lbl'); return l.scrollWidth > l.clientWidth + 0.5; })
+      .map((b) => b.textContent.trim()),
+    grup: [...document.querySelectorAll('#ve-rb-body .ve-rb-group-label')].map((g) => g.textContent.trim()),
+  };
+};
+
+test('KOMUTLARIN PENCERESİ — bandın sağ ucunda yüzer, sayfa ve tuval OYNAMAZ', async ({ page }) => {
   await ac(page, 'fead-analysis');
-  const katli = await page.evaluate(olc);
-  await page.evaluate(() => veRibbonToggleCollapse());   // gövdeyi AÇ
-  await page.waitForTimeout(500);
-  const acik = await page.evaluate(olc);
-  expect(acik.katli).toBe(false);
-  expect(katli.tuval.h - acik.tuval.h).toBeGreaterThan(60);
+  const once = await page.evaluate(pencereOlc);
+  expect(once.acik).toBe(false);
+  expect(once.pencere.gorunur).toBe(false);
+  expect(once.aria).toBe('false');
+  await page.click('#ve-rb-expand');
+  await page.waitForTimeout(250);
+  const r = await page.evaluate(pencereOlc);
+  expect(r.acik).toBe(true);
+  expect(r.aria).toBe('true');
+  expect(r.pencere.gorunur).toBe(true);
+  // sayfa ve tuval yerinde: pencere yüzüyor, itmiyor
+  expect(r.sayfa.y).toBe(once.sayfa.y);
+  expect(r.tuval).toEqual(once.tuval);
+  // KENARDA, KÜÇÜK: bandın altında, sağ kenarı düğmenin sağ kenarında
+  expect(r.pencere.y).toBeGreaterThanOrEqual(r.bant.b);
+  expect(r.pencere.y - r.bant.b).toBeLessThanOrEqual(6);
+  expect(Math.abs(r.pencere.r - r.dugme.r)).toBeLessThanOrEqual(1);
+  expect(r.pencere.w).toBeLessThanOrEqual(400);
+  // sekmeler pencerenin başında; açılınca odak seçili sekmede
+  expect(r.sekme).toEqual(expect.arrayContaining(['Giriş', 'Görünüm', 'Araçlar']));
+  expect(r.aktif).toBe('Giriş');
+  expect(r.odak).toBe('Giriş');
+  expect(r.grup.length).toBeGreaterThan(2);
+  expect(r.satir).toBeGreaterThan(8);
+  expect(r.yuksek).toBeLessThanOrEqual(30);
+  expect(r.kesik).toEqual([]);
+  // İKİ TEMADA okunur ve yazı kutusuna sığar (ortak ölçüler)
+  await kontrastKur(page);
+  await yerlesimKur(page);
+  const kotu = [];
+  for (const tema of ['acik', 'koyu']) {
+    await page.evaluate((t) => changeTheme(t), tema);
+    for (const sekme of ['giris', 'gorunum', 'araclar']) {
+      await page.click(`#ve-rb-tabs [data-rb-tab="${sekme}"]`);
+      await page.waitForTimeout(120);
+      const k = await page.evaluate(() => window.__kontrast('#ve-rb-dock'));
+      expect(k.olculen).toBeGreaterThan(8);
+      kontrastOzet(k.kotu).forEach((x) => kotu.push(`${tema}/${sekme} · ${x}`));
+      const y = await page.evaluate(() => window.__yerlesim('#ve-rb-dock'));
+      yerlesimOzet(y, `${tema}/${sekme}`).forEach((x) => kotu.push(x));
+    }
+  }
+  expect(kotu).toEqual([]);
+});
+
+test('KOMUTLARIN PENCERESİ — sekme değişir; komut, Esc ve dışarı tık kapatır', async ({ page }) => {
+  await ac(page, 'fead-analysis');
+  await page.click('#ve-rb-expand');
+  await page.click('#ve-rb-tabs [data-rb-tab="gorunum"]');
+  let r = await page.evaluate(pencereOlc);
+  expect(r.acik).toBe(true);                 // sekme değişti, pencere açık
+  expect(r.aktif).toBe('Görünüm');
+  expect(r.grup).toContain('Izgara');
+  // Esc kapatır, odak düğmeye döner
+  await page.keyboard.press('Escape');
+  r = await page.evaluate(pencereOlc);
+  expect(r.acik).toBe(false);
+  expect(r.odak).toBe('ve-rb-expand');
+  // dışarı tık kapatır
+  await page.click('#ve-rb-expand');
+  expect((await page.evaluate(pencereOlc)).acik).toBe(true);
+  await page.mouse.click(600, 500);
+  expect((await page.evaluate(pencereOlc)).acik).toBe(false);
+  // komut çalışır ve pencere kapanır
+  await page.click('#ve-rb-expand');
+  const izgara = await page.evaluate(() => typeof veGridVisible !== 'undefined' && veGridVisible);
+  await page.click('#ve-rb-body .ve-rb-btn[title="Izgara"]');
+  r = await page.evaluate(pencereOlc);
+  expect(r.acik).toBe(false);
+  expect(await page.evaluate(() => typeof veGridVisible !== 'undefined' && veGridVisible)).toBe(!izgara);
+  // yeniden açılınca son sekme yerinde
+  await page.click('#ve-rb-expand');
+  expect((await page.evaluate(pencereOlc)).aktif).toBe('Görünüm');
 });
 
 // ── BANT ESKİ ŞERİT DEĞİL (kullanıcı bildirimi: "eskisiyle aynı olmuş") ────
@@ -145,7 +242,8 @@ test('bantta şerit sekmesi ve QAT ikonu YOK', async ({ page }) => {
     return {
       qatKabi: !!document.querySelector('#ve-qat'),
       bantSekmesi: !!(sekme && bant.contains(sekme)),
-      // sekmeler gövdeye ait: gövde katlıyken görünmezler
+      pencereSekmesi: !!(sekme && document.getElementById('ve-rb-dock').contains(sekme)),
+      // sekmeler pencereye ait: pencere kapalıyken görünmezler
       sekmeGorunur: !!(sekme && sekme.getBoundingClientRect().height > 0),
       markaIkonu: (() => {
         const m = document.querySelector('.ve-rb-strip .ve-brand-mark');
@@ -155,43 +253,13 @@ test('bantta şerit sekmesi ve QAT ikonu YOK', async ({ page }) => {
     };
   });
   expect(r.qatKabi).toBe(false);        // kaydet/geri/ileri ikonları banttan kalktı
-  // SEKMELER BANDIN İÇİNDE (markanın yanında) ama KATLIYKEN GÖRÜNMEZ.
-  // İki uç da ölçüldü ve ikisi de yanlıştı: hep görünürken üst satır eski
-  // şeridin aynısı okunuyordu; gövdeye taşınınca da açılışta bandın
-  // çizgisinin ALTINDA ikinci bir başlık satırı doğuyordu.
-  expect(r.bantSekmesi).toBe(true);     // kabı BANT
-  expect(r.sekmeGorunur).toBe(false);   // ama katlıyken çizilmiyor
+  // SEKMELER KOMUTLARIN PENCERESİNDE (Canlı Not 59): bantta hep görünürken üst
+  // satır eski şeridin aynısı okunuyordu; pencere kapalıyken çizilmezler.
+  expect(r.bantSekmesi).toBe(false);
+  expect(r.pencereSekmesi).toBe(true);
+  expect(r.sekmeGorunur).toBe(false);
   expect(r.markaIkonu).toBe(false);     // maket yalnız SÖZCÜK markasını gösteriyor
   expect(r.bantY).toBeLessThanOrEqual(32);   // "çok kalın olmuş" — 44 → 38 → 32
-});
-
-// Gövde açılınca sekmeler MARKANIN YANINDA belirir — ALTINDA değil.
-// Kullanıcı bildirimi: "başlıklar üstteki çizginin altına geliyor; yanına
-// gelsin, MFSim yazan kısmın yanında olsun."
-test('gövde açılınca sekmeler MARKANIN YANINDA, bandın İÇİNDE', async ({ page }) => {
-  await ac(page, 'fead-analysis');
-  await page.evaluate(() => veRibbonToggleCollapse());
-  await page.waitForTimeout(500);
-  const r = await page.evaluate(() => {
-    const t = document.querySelector('#ve-rb-tabs');
-    const bant = document.querySelector('#ve-rb-strip');
-    const marka = document.querySelector('#ve-project-name-btn');
-    const tb = t.getBoundingClientRect(); const bb = bant.getBoundingClientRect();
-    const mb = marka.getBoundingClientRect();
-    return {
-      gorunur: tb.height > 0, sekmeSayi: t.children.length,
-      // AYNI SATIR: sekmelerin dikey orta noktası bandın içinde
-      ayniSatir: (tb.y + tb.height / 2) > bb.y && (tb.y + tb.height / 2) < (bb.y + bb.height),
-      markaninSaginda: tb.x > mb.x,
-      // ve bandın ALTINA taşmıyor — ikinci bir başlık satırı yok
-      cizginiAsmiyor: (tb.y + tb.height) <= (bb.y + bb.height) + 1,
-    };
-  });
-  expect(r.gorunur).toBe(true);
-  expect(r.sekmeSayi).toBeGreaterThan(1);
-  expect(r.ayniSatir).toBe(true);
-  expect(r.markaninSaginda).toBe(true);
-  expect(r.cizginiAsmiyor).toBe(true);
 });
 
 // ── AVATAR ────────────────────────────────────────────────────────────────
@@ -321,9 +389,9 @@ test('kayıtlı ad AÇILIŞTA avatara geliyor', async ({ page }) => {
   expect(r).toEqual({ metin: 'KA', bos: false });
 });
 
-// ŞERİDİ AÇ/DARALT DÜĞMESİ YERİNDE DURUR. Eskiden yalnız katlıyken vardı:
-// basınca kayboluyor, sağ küme 26 px kayıyor ve tıklanan noktaya AVATAR
-// oturuyordu — ikinci tık şerit yerine hesap menüsünü açıyordu (ölçüldü).
+// KOMUTLARIN DÜĞMESİ YERİNDE DURUR. Eskiden yalnız katlıyken vardı: basınca
+// kayboluyor, sağ küme 26 px kayıyor ve tıklanan noktaya AVATAR oturuyordu —
+// ikinci tık şerit yerine hesap menüsünü açıyordu (ölçüldü).
 test('şerit düğmesine basınca sağ küme KAYMIYOR ve düğme hâlâ altında', async ({ page }) => {
   await ac(page, 'fead-analysis');
   const x = () => page.evaluate(() => ['#ve-bant-avatar', '#ve-rb-expand']
@@ -336,16 +404,16 @@ test('şerit düğmesine basınca sağ küme KAYMIYOR ve düğme hâlâ altında
   const sonra = await x();
   expect(sonra).toEqual(once);
   const r = await page.evaluate(({ x, y }) => ({
-    katli: document.getElementById('ve-ribbon').classList.contains('is-collapsed'),
+    acik: document.getElementById('ve-ribbon').classList.contains('is-peek'),
     aria: document.getElementById('ve-rb-expand').getAttribute('aria-expanded'),
     altindaki: (document.elementFromPoint(x, y) || {}).closest ? document.elementFromPoint(x, y).closest('button').id : null,
   }), nokta);
-  expect(r.katli).toBe(false);
+  expect(r.acik).toBe(true);
   expect(r.aria).toBe('true');
-  expect(r.altindaki).toBe('ve-rb-expand');   // ikinci tık yine şeride gider
+  expect(r.altindaki).toBe('ve-rb-expand');   // ikinci tık yine düğmeye gider
   await page.mouse.click(nokta.x, nokta.y);
   await page.waitForTimeout(300);
-  expect(await page.evaluate(() => document.getElementById('ve-ribbon').classList.contains('is-collapsed'))).toBe(true);
+  expect(await page.evaluate(() => document.getElementById('ve-ribbon').classList.contains('is-peek'))).toBe(false);
 });
 
 // KALDIRILAN DÜĞMENİN YOLU AÇIK KALIR. Kaydet ikonu banttan kalktı ve

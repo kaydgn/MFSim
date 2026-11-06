@@ -942,6 +942,13 @@ yanında durur — ve **yalnız gövde açıkken** çizilir.
 
 Doğrusu ortası. Sekme bir **sayfa başlığı** değil, gövdenin hangi yüzünü
 gördüğünü söyleyen bir **seçici**; yeri de o gövdeyi açan bandın kendisi.
+
+**Gövde kalktı (kullanıcı 2026-11-06, Canlı Not 59):** *"Şu kısmın programdan
+tamamen kalkmasını istiyorum … kenarda açılır bir ufak pencere … Programı
+daraltıyor."* Açık gövde sayfayı 94 px itiyordu. Komutlar bandın sağ ucundaki
+düğmenin açtığı yüzen pencerede; sekmeler o pencerenin başında (gövde yok,
+seçici yine gördüğü listenin üstünde). Kapı: `ust-bant.spec.js` → *KOMUTLARIN
+PENCERESİ*.
 Kendi zemini **yok** — bandın zeminini paylaşır, yoksa banda ikinci bir şerit
 çizerdi. Üst kenarlık + negatif `margin-bottom` hilesi (klasör kulağı) kalktı:
 bandın altındaki çizgiye yapışacak bir kenarı yok.

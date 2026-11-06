@@ -55,9 +55,9 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
 
   test('komut şeritte de var — Giriş sekmesinde ve Sonuç Araçları\'nda', async ({ page }) => {
     // Keşfedilebilirlik: elinde dosya olan kullanıcı Sonuçlar sayfasına
-    // gitmeden komutu bulabilmeli. Şerit gövdesi VARSAYILAN KATLI (Atölye
-    // bandı, 2026-09-22): komut gövdede durur ve gövde açılınca görünür;
-    // katlıyken yolu bandın komut araması (kapsamı komut-kapsami.test.js).
+    // gitmeden komutu bulabilmeli. Şeridin gövdesi YOK (Canlı Not 59): komut
+    // bandın sağ ucundaki düğmenin açtığı pencerede; öteki yolu komut paleti
+    // (kapsamı komut-kapsami.test.js).
     await page.goto('/index.html');
     await page.fill('#mfsim-login-password', 'mfsim2024');
     await page.press('#mfsim-login-password', 'Enter');
@@ -67,7 +67,7 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
 
     const ribbonImport = page.locator('#ve-ribbon button', { hasText: 'içe aktar' });
     await expect(ribbonImport).toHaveCount(1);              // Giriş sekmesi
-    await page.click('#ve-rb-expand');                       // gövdeyi aç
+    await page.click('#ve-rb-expand');                       // komutların penceresi
     await expect(ribbonImport.first()).toBeVisible();
 
     await page.click('.ve-nav-item[data-subtab="sonuclar"]');
@@ -76,7 +76,7 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
 
   test('şerit düğmesi de sihirbazı açar', async ({ page }) => {
     await openApp(page);
-    await page.click('#ve-rb-expand');                       // gövde varsayılan katlı
+    await page.click('#ve-rb-expand');                       // komutların penceresi
     const [chooser] = await Promise.all([
       page.waitForEvent('filechooser'),
       page.locator('#ve-ribbon button', { hasText: 'içe aktar' }).first().click(),
