@@ -152,8 +152,8 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   altında (kullanıcı 2026-11-05); kütle OKUNUR (alan seçili birimin bölümünde), toplam yalnız
   her gövdenin kütlesi biliniyorsa. **Özellikler açılır kapanır, KAPALI başlar** (kullanıcı
   2026-11-05, Canlı Not 26): seçim açmaz, kapalı sütun şerit (tuval genişliği alır), açıklık
-  tarayıcının tercihi (`VE_MW_3B_YAN_ANAHTAR`). Özellikler bir özellik ızgarası: değerler TEK sütunda
-  (Rol'ün rengi listenin içinde), Rol tek liste, motorun listesi **Motor modeli** (şanzımanda Şanzıman
+  tarayıcının tercihi (`VE_MW_3B_YAN_ANAHTAR`). Özellikler bir özellik ızgarası: değerler TEK sütunda,
+  Rol tek liste ve yalnız adıyla (renk noktası yok — Canlı Not 46), motorun listesi **Motor modeli** (şanzımanda Şanzıman
   modeli; "Veri sayfası" adı yok — kullanıcı 2026-11-06, Canlı Not 42), Malzeme
   yalnız atanmışsa (atama sağ tık menüsünden; takoz, motor, şanzımanda yok); kimlikte atalarının
   yolu YOK (ata ağaçtan seçilir, Canlı Not 42). Hesap Özellikler'in DİBİNDEKİ eylem
