@@ -9,9 +9,11 @@
 // Aile listeden İLK kez seçilince açılır (veMntWiz3bVeriSec); Özellikler'in Belge
 // satırı yeniden açar. Sayfa belgenin kendisi (görsel, js/mount-belge-veri.js);
 // bölgeler üstünde: tık seçeneği yazar, işaretli bölgenin tıkı seçimini kaldırır; her
-// bölgenin solunda onay kutusu (Canlı Not 56), bağdaşmayan bölge kapalı (sebebi
-// title'da). Özellikler yanda canlı; belgenin kaydırması korunur.
-// Başka birimin seçimi, Esc ve Kapat tuvale döner. Durum (yakınlık) görünümün,
+// bölgenin solunda onay kutusu (Canlı Not 56) — birbirini dışlayan satırlarda yuvarlak
+// işaret, zorunlu seçimde üst satıra çizgi, fare üstündeyken tıkın değiştireceği öteki
+// satırlar (Canlı Not 73 · 74); bağdaşmayan bölge kapalı (sebebi title'da). Özellikler
+// yanda canlı; belgenin kaydırması korunur.
+// Bölüm dizini yok (Canlı Not 75). Başka birimin seçimi, Esc ve Kapat tuvale döner. Durum (yakınlık) görünümün,
 // kaydedilmez. Kapı: tests/unit/mount-belge.test.js + tests/e2e/mount-belge.spec.js.
 // ============================================================================
 
@@ -25,12 +27,14 @@ function _mw3bBelgeVs(V, birim){
   var vs = veMntStpVs((s.yogunluk || {})[birim], s.roller[birim]);
   return vs && typeof vs.aile === 'string' ? vs : null;
 }
-// Özellikler'in Belge satırı: ailenin belgesi varsa (js/cp-mount-3b.js → veMntWiz3bAltHTML)
+// Özellikler'in Belge satırı: ailenin belgesi varsa (js/cp-mount-3b.js → veMntWiz3bAltHTML). Satırın
+// sınıfı belgenin sayfasınınkinden (.ve-mw-3b-belge-s) AYRI (Canlı Not 76: sayfanın zemini ve çerçevesi
+// satıra geçiyor, düğmeyi komşu satırlara yapışık gösteriyordu)
 function veMntWiz3bBelgeSatirHTML(birim, vs){
   var B = vs && typeof veMntBelge === 'function' ? veMntBelge(vs.aile) : null;
   if(!B) return '';
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null, acik = !!(V && V.belge && V.belge.birim === birim);
-  return _mw3bOzSatir('ve-mw-3b-belge-s', 'Belge',
+  return _mw3bOzSatir('ve-mw-3b-belge-satir', 'Belge',
     '<button type="button" class="ve-fw-3b-rol" id="ve-mw-3b-belge-ac" aria-pressed="' + (acik ? 'true' : 'false') + '"'
       + ' title="' + _mwEsc(B.ad + ' · ' + B.tarih) + '" onclick="veMntWiz3bBelgeAc(' + birim + ')">'
       + _mwIkon('file-text') + ' Transmission Data</button>',
@@ -67,10 +71,17 @@ function veMntWiz3bBelgeAc(birim){
   var kay = el.querySelector('.ve-mw-3b-belge-kay');
   el.addEventListener('click', function(e){
     var b = e.target && e.target.closest ? e.target.closest('[data-belge-b]') : null;
-    if(b && !b.disabled){ var p = b.getAttribute('data-belge-b').split('-'); veMntWiz3bBelgeSec(+p[0], +p[1]); return; }
-    var d = e.target && e.target.closest ? e.target.closest('[data-belge-git]') : null;
-    if(d) _mw3bBelgeGit(+d.getAttribute('data-belge-git'));
+    if(b && !b.disabled){ var p = b.getAttribute('data-belge-b').split('-'); veMntWiz3bBelgeSec(+p[0], +p[1]); }
   });
+  // Ön izleme (Canlı Not 73): fare ya da odak bölgedeyken tıkının değiştireceği öteki satırlar
+  var onIz = function(e){
+    var b = e.target && e.target.closest ? e.target.closest('[data-belge-b]') : null;
+    var id = b && !b.disabled ? b.getAttribute('data-belge-b') : null;
+    if(!V.belge || V.belge.onIz !== id) veMntWiz3bBelgeOnizle(id);
+  };
+  el.addEventListener('mouseover', onIz);
+  el.addEventListener('focusin', onIz);
+  el.addEventListener('mouseleave', function(){ veMntWiz3bBelgeOnizle(null); });
   // Ctrl + tekerlek yakınlaştırır (kaydırma tekerleğin kendi işi)
   kay.addEventListener('wheel', function(e){
     if(!e.ctrlKey) return;
@@ -110,9 +121,6 @@ function veMntWiz3bBelgeAcik(){ var V = typeof _mw3b !== 'undefined' ? _mw3b : n
 // ── HTML (saf, testli) ────────────────────────────────────────────────────
 function veMntWiz3bBelgeHTML(B){
   var olcu = B.olcu || [612, 792];
-  var dizin = B.sayfalar.map(function(s){
-    return '<button type="button" class="ve-mw-3b-belge-d" data-belge-git="' + s.no + '"><span>' + _mwEsc(s.bas) + '</span><em>' + s.no + '</em></button>';
-  }).join('');
   var sayfalar = B.sayfalar.map(function(s, si){
     return '<div class="ve-mw-3b-belge-s" data-belge-sayfa="' + s.no + '" style="aspect-ratio:' + s.g + ' / ' + s.y + ';">'
       + '<img src="' + _mwEsc(veMntBelgeResim(s.resim)) + '" alt="Page ' + s.no + '" width="' + s.g + '" height="' + s.y + '" loading="lazy" decoding="async" draggable="false">'
@@ -123,9 +131,13 @@ function veMntWiz3bBelgeHTML(B){
           // Onay kutusu (Canlı Not 56): satırın solunda; sütunda tanımın yerinde (`t`, pt — kutunun içi)
           var t = b.t ? ' style="left:' + _mw3bBelgeYuz(b.t[0] - b.k[0], b.k[2]) + '%;top:' + _mw3bBelgeYuz(b.t[1] - b.k[1], b.k[3]) + '%"' : '';
           var tur = b.t ? ' ve-mw-3b-belge-b--ic' : (b.k[3] > VE_MW_3B_BELGE_SATIR ? ' ve-mw-3b-belge-b--alan' : '');
-          return '<button type="button" class="ve-mw-3b-belge-b' + tur + '" data-belge-b="' + si + '-' + bi + '" style="' + st + '" aria-pressed="false">'
-            + '<span class="ve-mw-3b-belge-t"' + t + ' aria-hidden="true">' + _mwIkon('check') + '</span></button>';
+          // Birbirini dışlayan satırlar (grup — Canlı Not 73 · 74): yuvarlak işaret
+          var isaret = b.grup ? '<span class="ve-mw-3b-belge-t ve-mw-3b-belge-t--radyo"' + t + ' aria-hidden="true"><i></i></span>'
+            : '<span class="ve-mw-3b-belge-t"' + t + ' aria-hidden="true">' + _mwIkon('check') + '</span>';
+          return '<button type="button" class="ve-mw-3b-belge-b' + tur + '" data-belge-b="' + si + '-' + bi + '"'
+            + (b.grup ? ' data-belge-grup="' + _mwEsc(b.grup) + '"' : '') + ' style="' + st + '" aria-pressed="false">' + isaret + '</button>';
         }).join('')
+      + _mw3bBelgeGrupHTML(s, si, olcu)
       + '</div>';
   }).join('');
   return '<div class="ve-mw-3b-belge-bas">'
@@ -137,10 +149,34 @@ function veMntWiz3bBelgeHTML(B){
         + '<button type="button" class="ve-mw-3b-hap" data-belge-yakin="0" aria-label="Sığdır" title="Sığdır" onclick="veMntWiz3bBelgeYakin(0)">' + _mwIkon('maximize') + '</button>'
         + '<button type="button" class="ve-mw-3b-hap ve-mw-3b-belge-kapat" onclick="veMntWiz3bBelgeKapat()">' + _mwIkon('x') + ' Kapat</button>'
       + '</div></div>'
+    // BÖLÜMLER YOK (kullanıcı 2026-11-09, Canlı Not 75: *"Bu kısımlara gerek yok. Kullanıcıya
+    // sunmayalım"*): sayfalar kaydırılır. Kapı: mount-belge.test.js → *BÖLÜMLER YOK*.
     + '<div class="ve-mw-3b-belge-govde">'
-      + '<nav class="ve-mw-3b-belge-dizin" aria-label="Bölümler">' + dizin + '</nav>'
       + '<div class="ve-mw-3b-belge-kay" tabindex="-1"><div class="ve-mw-3b-belge-sayfalar">' + sayfalar + '</div></div>'
     + '</div>';
+}
+// ZORUNLU SEÇİM (kullanıcı 2026-11-09, Canlı Not 73: *"'Retarder Option' seçeneğine tıkladığım
+// zaman, altındaki iki seçenekten birini seçiyor. Ama … aşağıdakilerden birinin zorunlu olduğunu
+// belirgin etmemiz gerekiyor"*): grubun üst satırından (ust) son satırına işaretlerin solunda
+// dikey çizgi, her satırın işaretine kısa kol; üst satır seçiliyken vurgulu (_mw3bBelgeTazele).
+// Kapı: mount-belge.test.js → *ZORUNLU SEÇİM*.
+function _mw3bBelgeGrupHTML(s, si, olcu){
+  var G = {};
+  s.bolge.forEach(function(b, bi){
+    if(!b.grup || !(b.ust >= 0) || !s.bolge[b.ust]) return;
+    var key = b.grup + ':' + b.ust;
+    (G[key] = G[key] || { ust: b.ust, uye: [] }).uye.push(bi);
+  });
+  var orta = function(bi){ var k = s.bolge[bi].k; return k[1] + k[3] / 2; };
+  return Object.keys(G).map(function(key){
+    var g = G[key], y0 = orta(g.ust), y1 = orta(g.uye[g.uye.length - 1]), h = y1 - y0;
+    var kol = [g.ust].concat(g.uye).map(function(bi){
+      return '<i style="top:' + (h > 0 ? _mw3bBelgeYuz(orta(bi) - y0, h) : 0) + '%"></i>';
+    }).join('');
+    return '<span class="ve-mw-3b-belge-grup" data-belge-grup-ust="' + si + '-' + g.ust + '" aria-hidden="true" style="left:'
+      + _mw3bBelgeYuz(s.bolge[g.ust].k[0], olcu[0]) + '%;top:' + _mw3bBelgeYuz(y0, olcu[1]) + '%;height:' + _mw3bBelgeYuz(h, olcu[1]) + '%">'
+      + kol + '</span>';
+  }).join('');
 }
 function _mw3bBelgeYuz(v, t){ return Math.round(v / t * 100000) / 1000; }  // makine: CSS yüzde
 
@@ -152,11 +188,10 @@ function _mw3bBelgeTazele(){
   var birim = typeof _mw3bSeciliBirim === 'function' ? _mw3bSeciliBirim(V.s, V.secili) : K.birim;
   // Başka bir birim seçildi ya da aile kalktı: belge o birimindi
   if(birim !== K.birim || !vs || vs.aile !== K.aile){ veMntWiz3bBelgeKapat(); return; }
-  var A = typeof veMntVsAile === 'function' ? veMntVsAile(vs.k) : null, el = K.el, secili = {};
+  var A = typeof veMntVsAile === 'function' ? veMntVsAile(vs.k) : null, el = K.el;
   K.B.sayfalar.forEach(function(s, si){
     s.bolge.forEach(function(b, bi){
       var d = veMntBelgeDurum(A, vs, b), id = si + '-' + bi;
-      if(d.secili) secili[s.no] = 1;
       if(!b.s){
         var y = el.querySelector('[data-belge-y="' + id + '"]');
         if(y) y.classList.toggle('secili', d.secili);
@@ -164,8 +199,9 @@ function _mw3bBelgeTazele(){
       }
       var n = el.querySelector('[data-belge-b="' + id + '"]');
       if(!n) return;
-      // işaretli bölgenin seçimi kaldırılır; varsayılanın kendisi kaldırılmaz (kilitli)
-      var ad = veMntBelgeEtiket(A, b), kilit = d.secili && !d.kaldir;
+      // işaretli bölgenin seçimi kaldırılır; varsayılanın kendisi kaldırılmaz (kilitli);
+      // birbirini dışlayan satırda seçili satır seçili kalır — öteki satır seçilir (kilit değil)
+      var ad = veMntBelgeEtiket(A, b), kilit = d.secili && !d.kaldir && !d.radyo;
       n.setAttribute('aria-pressed', d.secili ? 'true' : 'false');
       n.setAttribute('aria-label', ad);
       n.disabled = !d.secili && !d.tik;
@@ -173,11 +209,32 @@ function _mw3bBelgeTazele(){
       n.title = n.disabled ? d.neden : (kilit ? 'Varsayılan.' : ad);
     });
   });
-  Array.prototype.forEach.call(el.querySelectorAll('[data-belge-git]'), function(d){
-    d.classList.toggle('secili', !!secili[d.getAttribute('data-belge-git')]);
+  veMntWiz3bBelgeOnizle(null);
+  // Zorunlu seçimin çizgisi: üst satır seçiliyken vurgulu
+  Array.prototype.forEach.call(el.querySelectorAll('[data-belge-grup-ust]'), function(g){
+    var u = el.querySelector('[data-belge-b="' + g.getAttribute('data-belge-grup-ust') + '"]');
+    g.classList.toggle('etkin', !!(u && u.getAttribute('aria-pressed') === 'true'));
   });
   var ac = document.getElementById('ve-mw-3b-belge-ac');
   if(ac) ac.setAttribute('aria-pressed', 'true');
+}
+// Ön izleme: bölgenin tıkıyla seçime girecek satırlar `ekle`, düşecekler `cikar` (js/mount-belge.js →
+// veMntBelgeOnizleme); id null temizler
+function veMntWiz3bBelgeOnizle(id){
+  var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
+  if(!V || !V.belge) return null;
+  var K = V.belge, el = K.el;
+  Array.prototype.forEach.call(el.querySelectorAll('.ve-mw-3b-belge-b.ekle, .ve-mw-3b-belge-b.cikar'), function(n){
+    n.classList.remove('ekle'); n.classList.remove('cikar');
+  });
+  K.onIz = id || null;
+  var vs = id ? _mw3bBelgeVs(V, K.birim) : null, p = id ? String(id).split('-') : null;
+  var r = vs && typeof veMntBelgeOnizleme === 'function' ? veMntBelgeOnizleme(veMntVsAile(vs.k), vs, K.B, +p[0], +p[1]) : null;
+  if(!r) return null;
+  var bul = function(i){ return el.querySelector('[data-belge-b="' + i + '"], [data-belge-y="' + i + '"]'); };
+  r.ekle.forEach(function(i){ var n = bul(i); if(n) n.classList.add('ekle'); });
+  r.cikar.forEach(function(i){ var n = bul(i); if(n) n.classList.add('cikar'); });
+  return r;
 }
 // Bölgenin tıkı: seçenekleri yazar (kütle kaynağının anahtarı — Özellikler'in listeleri gibi);
 // işaretli bölgenin tıkı seçimini kaldırır (Canlı Not 56 — js/mount-belge.js → veMntBelgeKaldir)
@@ -191,7 +248,7 @@ function veMntWiz3bBelgeSec(si, bi){
   return veMntWizStpYogunluk(K.birim, k);
 }
 
-// ── YAKINLIK · GEZİNME ────────────────────────────────────────────────────
+// ── YAKINLIK ────────────────────────────────────────────────────
 // Sayfanın genişliği: kaydırma alanına sığan genişliğin katı (sığdırma en çok %100)
 function _mw3bBelgeOlc(){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
@@ -222,18 +279,9 @@ function veMntWiz3bBelgeYakin(yon){
   if(kay) kay.scrollTop = oran * kay.scrollHeight;
   return true;
 }
-function _mw3bBelgeGit(no){
-  var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
-  if(!V || !V.belge) return false;
-  var kay = V.belge.el.querySelector('.ve-mw-3b-belge-kay'), s = V.belge.el.querySelector('[data-belge-sayfa="' + no + '"]');
-  if(!kay || !s) return false;
-  kay.scrollTop = s.offsetTop - 12;
-  return true;
-}
-
 if(typeof module !== 'undefined' && module.exports){
   module.exports = { veMntWiz3bBelgeHTML: veMntWiz3bBelgeHTML, veMntWiz3bBelgeSatirHTML: veMntWiz3bBelgeSatirHTML, veMntWiz3bVeriSec: veMntWiz3bVeriSec,
     veMntWiz3bBelgeAc: veMntWiz3bBelgeAc, veMntWiz3bBelgeKapat: veMntWiz3bBelgeKapat, veMntWiz3bBelgeSec: veMntWiz3bBelgeSec,
     veMntWiz3bBelgeYakin: veMntWiz3bBelgeYakin, veMntWiz3bBelgeAcik: veMntWiz3bBelgeAcik, VE_MW_3B_BELGE_YAKIN: VE_MW_3B_BELGE_YAKIN,
-    VE_MW_3B_BELGE_SATIR: VE_MW_3B_BELGE_SATIR };
+    VE_MW_3B_BELGE_SATIR: VE_MW_3B_BELGE_SATIR, veMntWiz3bBelgeOnizle: veMntWiz3bBelgeOnizle };
 }

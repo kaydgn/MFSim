@@ -1693,6 +1693,53 @@ describe('ÇALIŞMA MASASI — paneller tuvalin yanında, eylem, kimlik, kütle,
     expect(Array.from(d.querySelectorAll('.ve-mw-3b-xyz-h')).map((x) => x.lastChild.textContent)).toEqual(['439,957', '−355,957', '499,855']);
   });
 
+  // KAYNAK SEÇİLİR (Canlı Not 72, 2026-11-09): "alternatör braketi için malzeme tanımlayıp,
+  // ona göre kütle hesabı yapması gerekiyor ama yapmıyor sanırım. Neden?" Önce: Kaynak salt
+  // yazıydı ("Elle"), malzeme yalnız sağ tık menüsünden. Şimdi malzeme alan birimde Kaynak
+  // pencerenin seçicisi; malzeme seçilince kütle ρ·V.
+  test('KAYNAK SEÇİLİR: braket biriminde Kaynak pencerenin seçicisi (malzemeler dâhil); motor ve şanzımanda yazı', () => {
+    const { s, j } = kutleDurumu();
+    const d = kur(veMntWiz3bBirimKutleHTML(s, j('Arka braket')));
+    const sec = d.querySelector('select[data-mw-stp-yog="' + j('Arka braket') + '"]');
+    expect(sec).not.toBe(null);
+    const sec0 = Array.from(sec.options).map((o) => o.textContent);
+    expect(sec0[0]).toBe('Elle');
+    expect(sec0).toEqual(expect.arrayContaining(VE_MNT_STP_MALZEME.map((m) => m.ad)));
+    expect(sec.value).toBe('celik');
+    expect(d.querySelector('.ve-mw-3b-kaynak')).toBe(null);
+    // seçicinin değeri kütleyi değiştirir: aynı yazıcı (pencerenin) — alüminyumda ρ oranında
+    const b = _mwStpBirim(s, j('Arka braket')), celik = _mwStpKutleK(s, b).m;
+    s.yogunluk[j('Arka braket')] = 'aluminyum';
+    expect(_mwStpKutleK(s, b).m / celik).toBeCloseTo(2700 / 7850, 9);
+    // motor ve şanzıman: kaynak yazı (veri sayfası ve dosya kendi yerlerinde)
+    expect(kur(veMntWiz3bBirimKutleHTML(s, j('Motor'))).querySelector('select[data-mw-stp-yog]')).toBe(null);
+    expect(kur(veMntWiz3bBirimKutleHTML(s, j('Şanzıman'))).querySelector('select[data-mw-stp-yog]')).toBe(null);
+    // birimin kendisi seçiliyken Malzeme satırı yok (Kaynak'ta); hesapsız birimde satır yine var
+    s.yogunluk[j('Arka braket')] = 'celik';
+    expect(kur(veMntWiz3bAltHTML(s, j('Arka braket'))).querySelector('.ve-mw-3b-malzeme')).toBe(null);
+    const hesapsiz = Object.assign({}, s, { coz: null });
+    expect(kur(veMntWiz3bAltHTML(hesapsiz, j('Arka braket'))).querySelector('.ve-mw-3b-malzeme')).not.toBe(null);
+  });
+
+  // KÜTLE ELLE (Canlı Not 77): veri sayfalı birimde Kaynak "Veri sayfası · Elle"; Elle'de kütle alanı
+  test('KÜTLE ELLE: veri sayfalı birimde Kaynak Veri sayfası · Elle; Elle\'de kütle alanı, kuru · yağ yok', () => {
+    const son = veMntStpOku(STK.tulgaKalibi({ krank: true })), i = (ad) => son.agac.findIndex((x) => x.ad === ad);
+    const s = { sonuc: son, roller: son.agac.map(() => null), coz: null, kutle: {}, nokta: {}, yogunluk: {}, kgElle: {} };
+    const m = i('Motor bloğu');
+    s.roller[m] = 'mnt-motor'; s.yogunluk[m] = 'cummins-isb67-360';
+    s.coz = veMntStpCoz(son, s.roller, { yogunluk: s.yogunluk });
+    let d = kur(veMntWiz3bBirimKutleHTML(s, m));
+    const sec = d.querySelector('select[data-ve-3b-kg-kaynak="' + m + '"]');
+    expect(Array.from(sec.options).map((o) => [o.value, o.textContent])).toEqual([['veri', 'Veri sayfası'], ['elle', 'Elle']]);
+    expect(sec.value).toBe('veri');
+    expect(d.querySelector('input[data-mw-stp-kutle]')).toBe(null);
+    s.kgElle[m] = true; s.kutle[m] = 600;
+    d = kur(veMntWiz3bBirimKutleHTML(s, m));
+    expect(d.querySelector('select[data-ve-3b-kg-kaynak]').value).toBe('elle');
+    expect(d.querySelector('input[data-mw-stp-kutle="' + m + '"]').value).toBe('600');
+    expect(d.querySelector('[data-ve-3b-kuru], [data-ve-3b-yag]')).toBe(null);
+  });
+
   test('toplam: bütün gövdelerin kütlesi biliniyorsa kütle ve ortak ağırlık merkezi; biri eksikse yok, satırı işaretli', () => {
     const { s, j } = kutleDurumu(), gs = _mwStpGovdeler(s);
     const K = gs.map((b) => _mwStpKutleK(s, b)), m = K.reduce((a, k) => a + k.m, 0);

@@ -302,6 +302,45 @@ describe('HESAP — veri sayfası ve referans: sununun motor ağırlık merkezi'
   });
 });
 
+// ── KÜTLE ELLE (Canlı Not 77, 2026-11-09) ──────────────────────────────────
+// Kullanıcı: "iki seçenek sunacağız, birincisi kütleyi kendisi manuel olarak girecek,
+// ikincisi ise datasheet üzerinden seçecek … kullanıcının elinde bazen ağırlık değerleri
+// oluyor." Önce: veri sayfalı birimde yazılan kütle hiç sayılmıyordu. Şimdi `elle`
+// seçilince kütle kullanıcının; ağırlık merkezi sayfanın referansından, atalet sayfanınki
+// kütleyle ölçekli (dönme yarıçapı aynı).
+describe('KÜTLE ELLE — veri sayfalı birimde kullanıcının kütlesi', () => {
+  const son = STP.veMntStpOku(S.tulgaKalibi({ oteleme: KAY, krank: true }));
+  const roller = son.agac.map((d) => (TAKOZ_AD.indexOf(d.ad) >= 0 ? 'mnt-mount' : GOVDE[d.ad] || null));
+  const motor = son.agac.findIndex((d) => d.ad === 'Motor bloğu');
+  const c = STP.veMntStpCoz(son, roller, { yogunluk: { [motor]: ISB }, referans: { [motor]: referans(son) } });
+  const b = c.birimler.filter((x) => x.dugum === motor)[0];
+
+  test('elle + değer: kütle kullanıcının, kaynak yine "veri" (ağırlık merkezi sayfanın), atalet ölçekli; değersiz: bilinmiyor', () => {
+    const K = STP.veMntStpKutle(b, '600', ISB, true);
+    expect(K).toMatchObject({ kaynak: 'veri', elle: true, m: 600 });
+    const k = 600 / 512;
+    [[19.2, 0, 0], [0, 49.6, 0], [0, 0, 42.9]].forEach((r, i) => r.forEach((v, j) => expect(K.I[i][j]).toBeCloseTo(v * k, 9)));
+    const bos = STP.veMntStpKutle(b, undefined, ISB, true);
+    expect(bos.elle).toBe(true);
+    expect(Number.isNaN(bos.m)).toBe(true);
+    expect(STP.veMntStpKutle(b, '600', ISB).m).toBe(512);                     // seçilmezse sayfanın
+  });
+
+  test('kayıt ve aktarım: kgElle projeye yazılır ve geri okunur; aktarımda kütle kullanıcının, ağırlık merkezi aynı', () => {
+    const k = STP.veMntStpRolKaydi(son, roller, { [motor]: 600 }, {}, {}, { [motor]: ISB }, {}, {}, { [motor]: true });
+    const km = k.roller.filter((x) => x.rol === 'mnt-motor')[0];
+    expect([km.kg, km.yog, km.kgElle]).toEqual([600, ISB, true]);
+    const u = STP.veMntStpRolKaydiUygula(son, JSON.parse(JSON.stringify(k)));
+    expect(u.kgElle).toEqual({ [motor]: true });
+    const ak = STP.veMntStpKayit(c, { [motor]: 600 }, { [motor]: ISB }, KAY, { [motor]: true });
+    const sayfa = STP.veMntStpKayit(c, { [motor]: 600 }, { [motor]: ISB }, KAY);
+    const i = ak.liste.findIndex((n) => n.dugum === motor);
+    expect(ak.liste[i].data.mass).toBe(600);
+    expect(sayfa.liste[i].data.mass).toBe(512);
+    ['cgx', 'cgy', 'cgz'].forEach((a) => expect(ak.liste[i].data[a]).toBe(sayfa.liste[i].data[a]));
+  });
+});
+
 // ── KAYIT ──────────────────────────────────────────────────────────────────
 describe('KAYIT — kaynak ve referans projeyle', () => {
   const son = STP.veMntStpOku(S.tulgaKalibi({ oteleme: KAY, krank: true }));

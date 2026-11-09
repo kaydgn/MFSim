@@ -1168,14 +1168,40 @@ function veMntWiz3bBirimKutleHTML(s, secili, secim){
   var K = _mwStpKutleK(s, b), kay = K.kaynak === 'elle' ? 'Elle' : K.kaynak === 'dosya' ? 'Dosyadan' : K.not;
   // Ailenin veri sayfası: kuru kütle ve yağ (ıslak = kuru + yağ)
   var vs = K.kaynak === 'veri' && K.vs && K.vs.yag ? K.vs : null;
+  // KAYNAK SEÇİLİR (kullanıcı 2026-11-09, Canlı Not 72: *"alternatör braketi için malzeme
+  // tanımlayıp, ona göre kütle hesabı yapması gerekiyor ama yapmıyor sanırım. Neden?"* —
+  // malzeme yalnız sağ tık menüsündeydi, Kaynak salt yazıydı): malzeme alan birimde Kaynak
+  // pencerenin Kütle bölümünün AYNI seçicisi (Elle · Dosyadan · Parçalardan · malzemeler ·
+  // katalog); malzeme seçilince kütle ρ·V. Motor, şanzıman ve takozda yazı (Not 16).
+  // Kapı: mount-3b.test.js → *KAYNAK SEÇİLİR*.
+  // VERİ SAYFALI BİRİMDE (motor, şanzıman) KÜTLE: Veri sayfası ya da Elle (kullanıcı
+  // 2026-11-09, Canlı Not 77: *"kullanıcının elinde bazen ağırlık değerleri oluyor"*) —
+  // ağırlık merkezi ve atalet sayfadan kalır. Kapı: mount-3b.test.js → *KÜTLE ELLE*.
+  var kaynak = _mw3bKutleSecici(s, b.dugum)
+    ? _mwStpKaynakSecHTML(s, b, _mwStpKaynak(s, b, K))
+    : K.kaynak === 'veri' && typeof veMntWizStpKgElle === 'function'
+      ? '<select class="ve-fw-inp" data-ve-3b-kg-kaynak="' + b.dugum + '" aria-label="Kütle kaynağı — ' + _mwEsc(b.ad) + '"'
+        + ' onchange="veMntWizStpKgElle(' + b.dugum + ', this.value === \'elle\')">'
+        + '<option value="veri"' + (K.elle ? '' : ' selected') + '>Veri sayfası</option>'
+        + '<option value="elle"' + (K.elle ? ' selected' : '') + '>Elle</option></select>'
+      : '<span class="ve-mw-3b-kaynak" title="' + _mwEsc(K.not) + '">' + _mwEsc(kay) + '</span>';
+  if(K.elle) vs = null;                                   // kuru · yağ sayfanın kütlesini açıklar
   return h + '<h4>Kütle ve ağırlık merkezi</h4><div class="ve-mw-3b-alanlar">'
-    + '<span class="ve-mw-3b-alan-ad">Kaynak</span><span class="ve-mw-3b-kaynak" title="' + _mwEsc(K.not) + '">' + _mwEsc(kay) + '</span>'
+    + '<span class="ve-mw-3b-alan-ad">Kaynak</span>' + kaynak
     + '<span class="ve-mw-3b-alan-ad">Kütle</span><span class="ve-mw-3b-kg">' + _mwStpKutleHucre(s, b, K) + '<span class="ve-fw-dim">kg</span></span>'
     + (vs ? '<span class="ve-mw-3b-alan-ad">Kuru</span><span class="ve-mw-3b-kg" data-ve-3b-kuru>' + veSayi(vs.kutle.kuru, 1) + '<span class="ve-fw-dim">kg</span></span>'
       + '<span class="ve-mw-3b-alan-ad">Yağ</span><span class="ve-mw-3b-kg" data-ve-3b-yag>' + veSayi(vs.yag.L, 1) + '<span class="ve-fw-dim">L</span> · '
       + veSayi(vs.yag.kg, 1) + '<span class="ve-fw-dim">kg</span></span>' : '')
     + '<span class="ve-mw-3b-alan-ad">Ağırlık merkezi</span><span class="ve-mw-3b-xyz">' + _mw3bXyzHTML(b.konum, 1) + '</span>'
     + '</div></section>';
+}
+// Kütle bölümünde Kaynak seçicisi var mı (Canlı Not 72): birim malzeme alıyor (motor,
+// şanzıman, takoz değil) ve ölçülmüş (bölüm hesaptan sonra)
+function _mw3bKutleSecici(s, d){
+  if(!(d >= 0) || !s || !s.roller || !s.roller[d] || typeof _mwStpKaynakSecHTML !== 'function' || typeof _mwStpBirim !== 'function') return false;
+  if(VE_MW_3B_MALZEMESIZ.indexOf(s.roller[d]) >= 0) return false;
+  var b = _mwStpBirim(s, d);
+  return !!(b && b.konum);
 }
 // TOPLAM (saf, testli): gövdelerin kütlesi ve ortak ağırlık merkezi — her gövdenin
 // kütlesi biliniyorsa; değilse null (eksik kütleli toplam yanıltır)
@@ -1349,9 +1375,10 @@ function veMntWiz3bAltHTML(s, secili, opt){
       + ' onclick="veMntWiz3bRolMenuAc(this)" onkeydown="if(event.key===\'ArrowDown\'||event.key===\'ArrowUp\'){event.preventDefault();veMntWiz3bRolMenuAc(this);}">'
       + '<span class="ve-mw-3b-alan-ad">' + _mwEsc(rolAd) + '</span></button>',
       'Rol — ' + (cok ? veSayi(secim.length, 0) + ' düğüm' : _mwEsc(so.agac[secili].ad)));
-    h += _mw3bMalzemeHTML(s, secim, cok, secili);
     // Takozun noktası: seçili düğümün birimi takozsa — daireden seçim kipi ve öneriye dönüş
     var birim = cok ? -1 : _mw3bSeciliBirim(s, secili);
+    // Birimin kendisi seçiliyken malzemesi Kütle bölümünün Kaynak'ında (Canlı Not 72)
+    if(!(birim === secili && _mw3bKutleSecici(s, birim))) h += _mw3bMalzemeHTML(s, secim, cok, secili);
     if(birim >= 0 && s.roller[birim] === 'mnt-mount'){
       var kip = !!(opt && opt.nokta), nb = '<button type="button" class="ve-fw-3b-rol" id="ve-mw-3b-nokta" aria-pressed="' + (kip ? 'true' : 'false') + '"'
         + ' onclick="veMntWiz3bNoktaSec()">' + _mwIkon('crosshair') + ' Daireden nokta</button>';
@@ -1396,8 +1423,9 @@ function veMntWiz3bAltHTML(s, secili, opt){
       }
     }
     // Aksesuarın kayıtlı kütlesi (Alternatör · Klima Kompresörü): pencerenin Kütle
-    // bölümündeki "Katalog" seçenekleri burada da (kullanım notu T19)
-    var akl = (birim >= 0 && typeof veMntStpAksKatalog === 'function') ? veMntStpAksKatalog(s.roller[birim]) : [];
+    // bölümündeki "Katalog" seçenekleri burada da (kullanım notu T19); hesaptan sonra
+    // Kütle bölümünün Kaynak'ında (Canlı Not 72)
+    var akl = (birim >= 0 && typeof veMntStpAksKatalog === 'function' && !_mw3bKutleSecici(s, birim)) ? veMntStpAksKatalog(s.roller[birim]) : [];
     if(akl.length){
       var ak = veMntStpAks((s.yogunluk || {})[birim], s.roller[birim]);
       h += _mw3bOzSatir('ve-mw-3b-katalog', 'Katalog',

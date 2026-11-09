@@ -69,6 +69,7 @@ const r1 = (v) => Math.round(v * 10) / 10;
 function bolgeKur(sayfa, b, L) {
   const o = { k: null, s: b.s || null, ek: b.ek || null };
   if (b.alan) o.alan = b.alan;
+  if (b.grup) o.grup = b.grup;
   let kutu, d = null;
   if (b.sutun) {
     // Sütun: iki satırlık başlık ("CLOSE-RATIO" · "(CR) MODELS") → bitis satırının altı
@@ -172,7 +173,15 @@ async function main() {
     const R = (secili.includes(aile) && !resimsiz) ? await resimler(aile, T, pdf) : null;
     const sayfalar = T.sayfalar.map((s) => {
       const L = satirlar(pdf, s.no), r = R ? R[s.no] : mevcutResim(aile, s.no);
-      return { no: s.no, bas: s.bas, resim: 'belge/' + aile + '/' + r.ad, g: r.g, y: r.y, bolge: ayir(s.bolge.map((b) => bolgeKur(s, b, L))) };
+      const bolge = ayir(s.bolge.map((b) => bolgeKur(s, b, L)));
+      // grubun zorunlu olduğu satır: tanımdaki metninden bölgenin sırasına (Canlı Not 73)
+      s.bolge.forEach((b, i) => {
+        if (!b.ust) return;
+        const j = s.bolge.findIndex((x) => x.m === b.ust);
+        if (j < 0) throw new Error('üst satır yok: ' + b.ust);
+        bolge[i].ust = j;
+      });
+      return { no: s.no, bas: s.bas, resim: 'belge/' + aile + '/' + r.ad, g: r.g, y: r.y, bolge };
     });
     // Sayfanın ölçüsü (pt): görselin pikseli / (dpi / 72)
     veri[aile] = { ad: T.ad, kod: T.kod, tarih: T.tarih, olcu: [r1(sayfalar[0].g * 72 / T.dpi), r1(sayfalar[0].y * 72 / T.dpi)], sayfalar };
@@ -184,7 +193,8 @@ async function main() {
     + '// (tanım tools/belge-tanim.js). Şanzıman ailesinin belgesi: sayfalar (görsel\n'
     + '// assets/belge/…) ve işaretli bölgeler — k: [x, y, g, y] pt, sayfanın sol üstünden;\n'
     + '// s: tıkın yazdığı seçenekler; ek: seçili sayılma koşulu; d: satırın belgedeki\n'
-    + '// sayıları (metrik), alan: programdaki karşılığı. Kapı: tests/unit/mount-belge.test.js.\n'
+    + '// sayıları (metrik), alan: programdaki karşılığı; grup: birbirini dışlayan satırlar,\n'
+    + '// ust: grubun zorunlu olduğu satırın sırası. Kapı: tests/unit/mount-belge.test.js.\n'
     + '// ============================================================================\n'
     + 'var VE_MNT_BELGE = ' + JSON.stringify(veri, null, 1).replace(/\n\s*/g, ' ').replace(/\{ "no"/g, '\n  { "no"').replace(/\{ "k"/g, '\n    { "k"') + ';\n'
     + "if(typeof module !== 'undefined' && module.exports) module.exports = { VE_MNT_BELGE: VE_MNT_BELGE };\n";

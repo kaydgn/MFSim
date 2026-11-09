@@ -305,11 +305,19 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   GÖRSELİ, bölge üstünde: tık seçeneği ailenin sırasıyla yazar; maddenin solunda ONAY KUTUSU, çerçeve
   yok (sütunda kutu tanımın yerinde, `t`); işaretli maddenin tıkı seçimi KALDIRIR — en özel seçenek
   önce varsayılana, madde düşene dek (`veMntBelgeKaldir`); varsayılanın kendisi kilitli
-  (`aria-disabled`); bağdaşmayan kapalı (sebebi `title`'da) — kullanıcı 2026-11-06, Canlı Not 56. Sayfalar ve bölgeler ÜRETİLİR — `js/mount-belge-veri.js`
+  (`aria-disabled`); bağdaşmayan kapalı (sebebi `title`'da) — kullanıcı 2026-11-06, Canlı Not 56.
+  **Birbirini dışlayan maddeler bir GRUP** (`grup`; kullanıcı 2026-11-09, Canlı Not 73 · 74: *"aşağıdakilerden
+  birinin zorunlu olduğunu belirgin etmemiz gerekiyor"*): yuvarlak işaret, seçili maddenin tıkı kaldırmaz
+  (öteki seçilir), her seçimde gruptan en çok biri seçili; zorunlu grubun üst satırına çizgi (`ust`:
+  Retarder Option → retarderli iki soğutucu); tabloların başlığı yalnız İŞARET (tıklanmaz — alt
+  satırını kendiliğinden seçiyordu); "yok" satırı sayfada olmayan seçenek (retardersiz soğutucu) grup
+  DEĞİL, tuzak olurdu. Fare maddenin üstündeyken tıkın seçime katacağı ve düşüreceği öteki maddeler
+  vurgulu (`veMntBelgeOnizleme`). Sayfalar ve bölgeler ÜRETİLİR — `js/mount-belge-veri.js`
   ve `assets/belge/` elle düzenlenmez: `tools/belge-sayfa.js` (tanım `tools/belge-tanim.js`; kaynak
   PDF `docs/belge/`, build/Pages'e girmez), derleme sayfaları gömer (`__MFSIM_BELGE`). Bölgenin
   satırındaki sayılar programın tablosuyla birebir. Kapı: `mount-belge.test.js` (→ *VERİ* · *PDF
-  İLE AYNI* · *DURUM* (→ *KALDIR*) · *GÖRÜNÜM* (→ *ONAY KUTUSU*) · *ARAÇ*) + `mount-belge.spec.js`.
+  İLE AYNI* · *DURUM* (→ *KALDIR* · *ZORUNLU SEÇİM* · *ÖN İZLEME*) · *GÖRÜNÜM* (→ *ONAY KUTUSU* ·
+  *ZORUNLU SEÇİM*) · *ARAÇ*) + `mount-belge.spec.js`.
   **Motorun aksesuarları** (kullanıcı 2026-11-02; liste kullanıcının Ağırlık Merkezi
   Hesaplama Programı'nın motor parçaları): Alternatör · Alternatör Braketi · Klima
   Kompresörü · Isı Sacı — her biri AYRI tip (`isMountAksesuar`; tek "Aksesuar"

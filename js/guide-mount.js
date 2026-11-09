@@ -1175,7 +1175,9 @@ function _gmSec16(){
     + 'şanzıman malzeme almaz (kütleleri başka yoldan). Parça birimin içindeki en yakın atamayı alır, ataması yoksa '
     + 'birimin malzemesini. <strong>Özellikler</strong>’in <strong>Malzeme</strong> satırı yalnız atanmış ya da '
     + 'devralınan malzemede görünür: <em>üstten</em> (atanmış alt montaj), <em>birimden</em> (birimin kaynağı); '
-    + 'kendi ataması varsa yanında kaldırma düğmesi. Birim seçiliyken satır birimin kütle kaynağını yazar. '
+    + 'kendi ataması varsa yanında kaldırma düğmesi. Hesaptan sonra birimin kendisi seçiliyken malzeme '
+    + '<strong>Kütle ve ağırlık merkezi</strong> bölümünün <strong>Kaynak</strong> listesinden de seçilir '
+    + '(Elle · Dosyadan · Parçalardan · malzemeler · katalog); malzemede kütle hacim × yoğunluk. '
     + 'Atanan malzeme ürün ağacında satırın yanında görünür ve rollerle birlikte projeye kaydedilir; rol '
     + 'değişince düğümün malzemesi kalır.</p>';
   h += _gmAlanTablo('Malzemeler', (typeof VE_MNT_STP_MALZEME !== 'undefined' ? VE_MNT_STP_MALZEME : []).map(function(m){
@@ -1199,12 +1201,16 @@ function _gmSec16(){
     '3B’de motor birimini seçin; <strong>Özellikler</strong>’in <strong>Motor modeli</strong> listesinden modeli seçin. Aynı '
       + 'liste <strong>Kütle</strong> bölümünün <strong>Kaynak</strong> sütunundadır.',
     'Referans yüzünün düğmesine (<em>Bloğun ön yüzü</em> ya da <em>Bloğun arka yüzü</em>) basın ve düzlem '
-      + 'yüzü tıklayın: fare düzlem bir yüze gelince halka ve yüzün konumu belirir. Seçim yalnız birimin '
-      + 'parçalarındadır; kamera birime sığar.',
-    '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli dairesel bir kenarı (krank kasnağı, volan '
-      + 'muhafazası) tıklayın. Bu seçim bütün parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
+      + 'yüzü tıklayın: fare düzlem bir yüze gelince yüz Yüzey süzgecindeki gibi vurgulanır, parçası odakta '
+      + 'kalır ve yüzün konumu belirir. Seçim yalnız birimin parçalarındadır; kamera birime sığar.',
+    '<em>Krank ekseni</em>’ne basın ve krankla eş eksenli silindir bir yüzü ya da dairesel bir kenarı (krank '
+      + 'kasnağı, volan muhafazası) tıklayın; silindirde eksen yüzün sınır çemberinden alınır. Bu seçim bütün '
+      + 'parçalarda yapılır: kasnak motor biriminin dışında olabilir.',
     '<strong>Hesapla</strong>: ağırlık merkezi, atalet ve kütle (ıslak) veri sayfasından. '
-      + 'Motorun aksesuarları ayrı bileşen olarak girilir (16.6).'
+      + 'Motorun aksesuarları ayrı bileşen olarak girilir (16.6).',
+    'Gerçek kütle biliniyorsa <strong>Kütle ve ağırlık merkezi</strong> bölümünün <strong>Kaynak</strong> '
+      + 'listesinden <em>Elle</em> seçilir ve kütle yazılır: ağırlık merkezi veri sayfasının referansından kalır, '
+      + 'atalet kütleyle ölçeklenir.'
   ]);
   h += '<p>İki referanstan biri eksikse ağırlık merkezi hacimden bulunur ve uyarı satırı eksik referansın adını '
     + 'yazar. Hesaptan sonra 3B’de eksenin dairesi halka, referans noktası işaret olarak çizilir. Ağırlık '
@@ -1221,16 +1227,19 @@ function _gmSec16(){
   h += '<p>Aile listeden seçilince ailenin belgesi tuvalin üstünde açılır (<em lang="en">4000 Product Family '
     + 'Transmission Data</em>, 15.10.2020): kuru kütleler (8.0), ağırlık merkezi (9.0), atalet (11.0), vites '
     + 'oranları (12.0), yağ (13.0) ve soğutucuların sayfaları (17.3–17.8, resimleriyle). Sayfa belgenin '
-    + 'kendisidir; seçilen her maddenin solunda onay kutusu vardır (vites oranları tablosunda sütunun başlığının '
-    + 'altında). Kutuya ya da satıra tık o seçenekleri yazar: ağırlık merkezi tablosunun satırı bağlamayı, '
-    + 'retarderi, PTO’yu ve soğutucuyu birlikte, vites oranları tablosunun sütunu vites konfigürasyonunu, '
-    + 'soğutucunun sayfası soğutucuyu. Seçimin maddeleri işaretli ve hafif vurguludur; işaretli maddeye tık '
-    + 'seçimi kaldırır — en özel seçenek varsayılanına döner (akümülatörü kaldırmak retarderi bırakır, retarderli '
-    + 'soğutucuyu kaldırmak soğutucuyu <em lang="en">Remote</em>’a döndürür). Varsayılan yapılandırmanın '
-    + 'maddeleri (<em lang="en">Close Ratio</em>, <em lang="en">Direct mount</em>, retardersiz ve PTO’suz) '
-    + 'kaldırılmaz; başka bir madde seçilince düşerler. Bağdaşmayan madde kapalıdır, sebebi ipucundadır '
-    + '(<em lang="en">7-Speed</em>’de altı vitesin tabloları). Soldaki bölüm listesi sayfaya götürür, seçimin '
-    + 'satırı bulunan bölüm kenarında işaretlidir. Özellikler yanda açık kalır ve seçimle birlikte değişir. '
+    + 'kendisidir; seçilebilen her maddenin solunda bir işaret vardır (vites oranları tablosunda sütunun '
+    + 'başlığının altında): birbirini dışlayan maddelerde yuvarlak, ötekilerde onay kutusu. İşarete ya da '
+    + 'satıra tık o seçenekleri yazar: ağırlık merkezi tablosunun satırı bağlamayı, retarderi, PTO’yu ve '
+    + 'soğutucuyu birlikte, vites oranları tablosunun sütunu vites konfigürasyonunu, soğutucunun sayfası '
+    + 'soğutucuyu. Tabloların başlık satırları (bağlama; retarder ve PTO) yalnız seçimi gösterir. Seçimin '
+    + 'maddeleri işaretli ve hafif vurguludur. Yuvarlak işaretli maddelerden biri hep seçilidir; başka biri '
+    + 'seçilince öteki düşer. <em lang="en">Retarder Option</em> seçiliyken retarderin iki soğutucusundan biri '
+    + 'zorunludur: ikisi <em lang="en">Retarder Option</em>’a çizgiyle bağlıdır, çizgi o seçiliyken vurguludur. '
+    + 'İşaretli onay kutusuna tık seçimi kaldırır — en özel seçenek varsayılanına döner (akümülatörü kaldırmak '
+    + 'retarderi bırakır, retarderi kaldırmak soğutucuyu <em lang="en">Remote</em>’a döndürür); uzak soğutucunun '
+    + 'sayfaları varsayılandır, kaldırılmaz. Fare bir maddenin üstündeyken o tıkla seçime girecek öteki maddeler '
+    + 'vurgulanır, seçimden düşeceklerin işareti boşalır. Bağdaşmayan madde kapalıdır, sebebi ipucundadır '
+    + '(<em lang="en">7-Speed</em>’de altı vitesin tabloları). Özellikler yanda açık kalır ve seçimle birlikte değişir. '
     + '<strong>Özellikler</strong>’in <strong>Belge</strong> satırı belgeyi yeniden açar; başka bir birim '
     + 'seçilince, Esc’le ya da <strong>Kapat</strong>’la tuvale dönülür. Ctrl + tekerlek ve bandın düğmeleri '
     + 'yakınlaştırır.</p>';

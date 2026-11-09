@@ -12340,12 +12340,10 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 /* ŞANZIMAN AİLESİNİN BELGESİ (js/cp-mount-3b-belge.js; kullanıcı 2026-11-06, Canlı Not 52:
    *"o PDF üzerinden işaretlemeli şekilde şanzımanın özelliklerini seçeriz. Ama PDF ile aynı
    kalırız"*): tuvalin üstünde, Özellikler yanda. Bant (ad · tarih · yakınlık · Kapat) kabuğun
-   bandının ölçüsünde; solda bölümler, sayfalar zeminin ortasında. Bölge sayfanın üstünde:
+   bandının ölçüsünde; sayfalar zeminin ortasında (bölüm dizini yok — Canlı Not 75). Bölge sayfanın üstünde:
    kesikli çerçeve tıklanır, seçimin bölgesi dolu çerçeve; kapalı bölge çerçevesiz. */
 .ve-mw-3b-belge{ position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; min-width:0; min-height:0;
   background:var(--bg-tertiary); container-type:inline-size; container-name:vebelge; }
-/* Dar tuvalde bölümler gizli: sayfa genişliği alır */
-@container vebelge (max-width: 820px){ .ve-mw-3b-belge-dizin{ display:none; } }
 /* Bant Ürün ağacının ve Özellikler'in bandıyla TEK çizgide (aynı jeton) */
 .ve-mw-3b-belge-bas{ flex:none; display:flex; align-items:center; gap:12px; height:var(--bant-h); box-sizing:border-box; padding:0 4px 0 12px;
   background:var(--bant-zemin); border-bottom:1px solid var(--border-color); }
@@ -12362,16 +12360,6 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-belge-yuzde{ min-width:42px; text-align:center; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; }
 .ve-mw-3b-belge-kapat{ margin-left:8px; }
 .ve-mw-3b-belge-govde{ flex:1 1 auto; min-height:0; display:flex; }
-.ve-mw-3b-belge-dizin{ flex:none; width:208px; overflow:auto; padding:6px 0; box-sizing:border-box;
-  background:var(--bg-secondary); border-right:1px solid var(--border-color); }
-.ve-mw-3b-belge-d{ display:flex; align-items:baseline; gap:8px; width:100%; box-sizing:border-box; padding:5px 10px 5px 12px; margin:0;
-  border:0; border-left:2px solid transparent; background:none; font:inherit; font-size:var(--fs-tiny); line-height:1.35;
-  color:var(--text-secondary); text-align:left; cursor:pointer; }
-.ve-mw-3b-belge-d > span{ flex:1 1 auto; min-width:0; }
-.ve-mw-3b-belge-d > em{ flex:none; font-style:normal; color:var(--text-muted); font-variant-numeric:tabular-nums; }
-.ve-mw-3b-belge-d:hover, .ve-mw-3b-belge-d:focus-visible{ outline:none; background:var(--accent-tint-8); color:var(--text-primary); }
-/* Bölümde seçimin bölgesi var: kenarda vurgu */
-.ve-mw-3b-belge-d.secili{ border-left-color:var(--accent-primary); color:var(--text-primary); }
 .ve-mw-3b-belge-kay{ flex:1 1 auto; min-width:0; position:relative; overflow:auto; outline:none; }
 .ve-mw-3b-belge-sayfalar{ display:flex; flex-direction:column; gap:16px; margin:0 auto; padding:16px 0 24px; }
 .ve-mw-3b-belge-s{ position:relative; width:100%; background:var(--bg-secondary); outline:1px solid var(--border-color); }
@@ -12397,6 +12385,23 @@ button.ve-bas-degisiklik-bas:focus-visible{ outline:none; box-shadow:var(--focus
 .ve-mw-3b-belge-b--ic > .ve-mw-3b-belge-t{ right:auto; margin:-7px 0 0 -7px; }
 .ve-mw-3b-belge-b:hover:not([disabled]) > .ve-mw-3b-belge-t, .ve-mw-3b-belge-b:focus-visible > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); }
 .ve-mw-3b-belge-b[aria-pressed="true"] > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); background:var(--accent-primary); color:var(--on-accent); }
+/* Birbirini dışlayan satırlar (Canlı Not 73 · 74): yuvarlak işaret, seçilende iç nokta */
+.ve-mw-3b-belge-t--radyo{ border-radius:50%; }
+.ve-mw-3b-belge-t--radyo > i{ width:6px; height:6px; border-radius:50%; background:transparent; }
+.ve-mw-3b-belge-b[aria-pressed="true"] > .ve-mw-3b-belge-t--radyo > i{ background:var(--on-accent); }
+/* Zorunlu seçim (Canlı Not 73): üst satırdan grubun son satırına işaretlerin solunda çizgi,
+   her satırın işaretine kol; üst satır seçiliyken vurgulu */
+.ve-mw-3b-belge-grup{ position:absolute; width:0; margin-left:-27px; pointer-events:none; color:var(--border-hover);
+  border-left:1.5px solid currentColor; }
+.ve-mw-3b-belge-grup > i{ position:absolute; left:-1.5px; width:8.5px; height:0; margin-top:-0.75px; border-top:1.5px solid currentColor; }
+.ve-mw-3b-belge-grup.etkin{ color:var(--accent-primary); }
+/* Ön izleme (Canlı Not 73): fare üstündeki satırın tıkıyla seçime girecek satır işaretli gibi
+   çerçeveli, düşecek satırın işareti boş */
+.ve-mw-3b-belge-b.ekle{ background:var(--accent-tint-6); }
+.ve-mw-3b-belge-b.ekle > .ve-mw-3b-belge-t{ border-color:var(--accent-primary); }
+.ve-mw-3b-belge-b.cikar{ background:var(--accent-tint-6); }
+.ve-mw-3b-belge-b.cikar[aria-pressed="true"] > .ve-mw-3b-belge-t{ background:transparent; color:transparent; }
+.ve-mw-3b-belge-b.cikar[aria-pressed="true"] > .ve-mw-3b-belge-t--radyo > i{ background:transparent; }
 .ve-mw-3b-belge-b[aria-pressed="true"][aria-disabled="true"] > .ve-mw-3b-belge-t{ border-color:transparent; background:var(--accent-tint-60); }
 .ve-mw-3b-belge-b[disabled] > .ve-mw-3b-belge-t{ border-color:var(--border-light); background:transparent; }
 /* Gizli düğüm ağaçta soluk, sonunda gizli simgesi; "Ağaçta göster" satırı kısa vurguyla bulur */
