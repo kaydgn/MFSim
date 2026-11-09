@@ -54,6 +54,8 @@ function _mw3bBosMenu(sec, gizliVar, opt){
     { k: 'suzgec:yuz', ad: 'Yüzey', secili: opt.suzgec === 'yuz' }] });
   L.push({ k: 'olcu', ad: 'Ölçü', ikon: 'ruler', isaretli: !!opt.olcu });
   L.push({ k: 'kesit', ad: 'Kesit', ikon: 'scissors', isaretli: !!opt.kesit });
+  // HIZLI ATAMA (Canlı Not 94): sıradaki rolü soran kartı açar
+  L.push({ k: 'hizli', ad: 'Hızlı atama', ikon: 'wand', isaretli: !!opt.hizli });
   if(sec.length){ L.push('-'); L.push({ k: 'temizle', ad: 'Seçimi temizle', ikon: 'x' }); }
   return L;
 }
@@ -141,7 +143,7 @@ function veMntWiz3bMenuAc(x, y, dugum, kaynak){
   if(dugum >= 0 && V.secim.indexOf(dugum) < 0) veMntWiz3bSec(dugum, false, kaynak === 'agac' ? 'agac' : undefined);
   var bos = dugum < 0 && kaynak !== 'agac';
   return _mw3bMenuKur(V, veMntWiz3bMenuOgeleri(V.s, V.secim, V.gizli,
-    { bos: bos, gorunus: V.gorunus, zemin: V.zemin, suzgec: V.suzgec, olcu: !!V.olcu, kesit: !!V.kesit }), { x: x, y: y, dugum: dugum });
+    { bos: bos, gorunus: V.gorunus, zemin: V.zemin, suzgec: V.suzgec, olcu: !!V.olcu, kesit: !!V.kesit, hizli: !!V.hizli }), { x: x, y: y, dugum: dugum });
 }
 // ALANIN LİSTESİ (Canlı Not 49): Özellikler'in Rol alanı tarayıcının listesi değil,
 // sağ tık menüsünün dilinde açılan liste — alanın altında, en az alan genişliğinde;
@@ -290,6 +292,7 @@ function veMntWiz3bMenuUygula(k){
   if(k.indexOf('suzgec:') === 0) return typeof veMntWiz3bSuzgec === 'function' ? veMntWiz3bSuzgec(k.slice(7)) : false;
   if(k === 'olcu') return typeof veMntWiz3bOlcu === 'function' ? veMntWiz3bOlcu() : false;
   if(k === 'kesit') return typeof veMntWiz3bKesit === 'function' ? veMntWiz3bKesit() : false;
+  if(k === 'hizli') return typeof veMntWiz3bHizliAcik === 'function' && veMntWiz3bHizliAcik() ? veMntWiz3bHizliBitir() : veMntWiz3bHizliBasla();
   if(k.indexOf('malzeme:') === 0) return veMntWiz3bMalzeme(k.slice(8));
   if(k === 'gizle' || k === 'goster' || k === 'yalniz' || k === 'tumu') return veMntWiz3bGizle(k);
   if(k === 'agac') return veMntWiz3bAgactaGoster(V.secili);

@@ -184,6 +184,15 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
   seçimin HEPSİNE tek hesapla (`veMntWizStpRolCok`); **arama** bütün ağaçta (açık dallarla
   sınırlı değil), Türkçe büyük-küçük harf eşdeğer, Esc temizler. Kapı: `mount-3b.test.js` →
   *ÜRÜN AĞACI* · *ÇOKLU SEÇİM* · *ÇALIŞMA MASASI* + `mount-3b.spec.js` → *AĞAÇ · CTRL*.
+- `js/cp-mount-3b-hizli.js` — Takoz 3B'nin **HIZLI ATAMASI** (kullanıcı 2026-11-09, Canlı Not 94:
+  *"program kullanıcıya hızlı hızlı sorsun, kullanıcı da tık tık hemen seçsin"*): ana rollerin
+  hiçbiri verilmemişse görüntüleyici açılınca tuvalin SOL ÜSTÜNDEKİ kart sırayla sorar (Motor →
+  Şanzıman → Transfer Kutusu → Takoz → Braket; kesit açıksa kesitin kartının ALTINDA — iki kart tek
+  sütunda, biri ötekine binmez); tek tık (3B ya da ağaç) rolü verir — tek rolde
+  başka düğümdeki aynı rol düşer ve kart ilerler, çoklu rolde aynı birime ikinci tık kaldırır;
+  Ctrl'li tık seçimdir; düzeltme Özellikler'in Rol listesinden; Esc önce kartı, sonra 3B'yi
+  kapatır; Bitir kapatır, boşluğun menüsündeki Hızlı atama yeniden açar. Kapı: `mount-3b.test.js` →
+  *HIZLI ATAMA* · *TAM EKRAN ve İŞ KARTI* + `mount-3b.spec.js` → *HIZLI ATAMA*.
 - `js/cp-mount-3b-arac.js` — Takoz 3B'nin **CAD araçları** (kullanıcı 2026-11-02; 2026-11-05'ten
   beri boşluğa sağ tık menüsünde, çubukta yalnız açık kesitin ayarı): hazır
   bakışlar · seçim süzgeci (Parça · **Yüzey**) · **Ölçü** · **Kesit**. Yüz tıklanan üçgenin

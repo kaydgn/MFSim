@@ -512,6 +512,7 @@ function veMntWizKapat(kaydet){
 function veMntWizKey(e){
   if(!e) return;
   if(e.key === 'Escape' && typeof veMntWiz3bNoktaBitir === 'function' && veMntWiz3bNoktaBitir()) return;
+  if(e.key === 'Escape' && typeof veMntWiz3bHizliBitir === 'function' && veMntWiz3bHizliBitir()) return;
   if(e.key === 'Escape' && typeof veMntWiz3bAcik === 'function' && veMntWiz3bAcik()){ veMntWiz3bKapat(); return; }
   if(e.key === 'Escape'){ veMntWizKapat(true); return; }
   if(e.altKey && e.key === 'ArrowRight'){ e.preventDefault(); veMntWizGo(1); }

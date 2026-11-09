@@ -138,15 +138,19 @@ test('KAYIT: kaynak → kaydet → sayfa yeniden → föyde kaynak → aynı dos
     await p.evaluate(() => { const n = nodes.find((x) => x.type === 'mnt-viewer'); clearSelection(); addToSelection(n); veTogglePropertiesPanel(true); });
     await p.waitForFunction(() => typeof veMntCadPencereAcik === 'function' && veMntCadPencereAcik());
   };
-  const dosyaAc = async (p) => {
+  // Rolsüz dosyada hızlı atamanın kartı açık gelir (Canlı Not 94): ilk Esc onu kapatır;
+  // rolleri kayıttan dönen dosyada kart yok
+  const dosyaAc = async (p, kart) => {
     const [fc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 5000 }), p.click('#ve-properties #ve-mnt-cad-sec')]);
     await fc.setFiles(KALIP);
     await p.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; },
       null, { timeout: 120000 });
+    await expect(p.locator('#ve-mw-3b-hizli')).toBeVisible({ visible: kart });
+    if (kart) await p.keyboard.press('Escape');
     await p.keyboard.press('Escape');                                    // 3B kapanır, pencere kalır
   };
   await pencereAc(page);
-  await dosyaAc(page);
+  await dosyaAc(page, true);
   await rolVer(page);
   await page.click('#ve-properties #ve-mnt-cad-hesapla');
   await page.waitForSelector('#ve-properties .ve-fp-kat[data-k="kutle"] select[data-mw-stp-yog]');
@@ -185,7 +189,7 @@ test('KAYIT: kaynak → kaydet → sayfa yeniden → föyde kaynak → aynı dos
   const foy = await yeni.evaluate(() => [...document.querySelectorAll('#ve-properties .ve-fp-kat[data-k="kayit"] tbody tr')]
     .map((tr) => [tr.cells[0].textContent.trim(), tr.cells[2].textContent.trim()]));
   expect(foy).toEqual([['Motor', '—'], ['Şanzıman', 'Dosyadan'], ['Arka braket', 'Sfero döküm']]);
-  await dosyaAc(yeni);
+  await dosyaAc(yeni, false);
   await yeni.click('#ve-properties #ve-mnt-cad-hesapla');
   await yeni.waitForFunction(() => { const s = veMntWizStp(); return s.coz && s.coz.ok; });
   const geri = await yeni.evaluate(() => {
@@ -211,14 +215,16 @@ test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağa�
   };
   const hazir3b = (p) => p.waitForFunction(() => { const k = document.getElementById('ve-mw-3b-tuval'); return k && k.getAttribute('data-durum') === 'hazir'; },
     null, { timeout: 120000 });
-  const dosyaAc = async (p) => {
+  const dosyaAc = async (p, kart) => {
     const [fc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 5000 }), p.click('#ve-properties #ve-mnt-cad-sec')]);
     await fc.setFiles(KALIP);
     await hazir3b(p);
+    await expect(p.locator('#ve-mw-3b-hizli')).toBeVisible({ visible: kart });   // hızlı atama (Canlı Not 94)
+    if (kart) await p.keyboard.press('Escape');
     await p.keyboard.press('Escape');
   };
   await pencereAc(page);
-  await dosyaAc(page);
+  await dosyaAc(page, true);
   await rolVer(page);
   await page.click('#ve-properties #ve-mnt-cad-hesapla');
   await page.waitForSelector('#ve-properties .ve-fp-kat[data-k="kutle"] select[data-mw-stp-yog]');
@@ -279,7 +285,7 @@ test('MALZEME: 3B\'de parçaya malzeme → birimin kütlesi parça parça; ağa�
   await yeni.waitForFunction(() => nodes.some((n) => n.type === 'mnt-viewer'));
   await pencereAc(yeni);
   await expect(yeni.locator('#ve-properties [data-ve-mnt-cad-malzeme]')).toHaveText('Atanan malzeme · 2 düğüm');
-  await dosyaAc(yeni);
+  await dosyaAc(yeni, false);
   await yeni.click('#ve-properties #ve-mnt-cad-hesapla');
   await yeni.waitForFunction(() => { const s = veMntWizStp(); return s.coz && s.coz.ok; });
   expect(await yeni.evaluate(() => Object.values(veMntWizStp().malzeme))).toEqual(['aluminyum', 'celik']);

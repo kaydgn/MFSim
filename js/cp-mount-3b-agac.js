@@ -130,6 +130,8 @@ function veMntWiz3bAgacAcilacak(s, dugum){
 // Tık: seçer; Ctrl/⌘ ile seçime ekler ya da çıkarır
 function veMntWiz3bAgacTik(i, e){
   var ek = !!(e && (e.ctrlKey || e.metaKey));
+  // HIZLI ATAMA (Canlı Not 94): kart açıkken satırın tıkı sıradaki rolü verir
+  if(!ek && typeof veMntWiz3bHizliAcik === 'function' && veMntWiz3bHizliAcik()) return veMntWiz3bHizliTik(i);
   return typeof veMntWiz3bSec === 'function' ? veMntWiz3bSec(i, ek, 'agac') : false;
 }
 // Çift tık: kamera düğümün parçalarına sığar (bakış yönü kalır)

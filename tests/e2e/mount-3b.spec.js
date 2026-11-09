@@ -379,6 +379,55 @@ test('SEÇ · ROL · HESAP: tıklanan parça seçilir ve öteki parçalar solar;
   expect(coz).toEqual([['Motor bloğu', 'hacim']]);
 });
 
+// HIZLI ATAMA (kullanıcı 2026-11-09, Canlı Not 94: *"STEP dosyası yüklendiği anda, program
+// kullanıcıya hızlı hızlı sorsun, kullanıcı da tık tık hemen seçsin"*): rol yokken görüntüleyici
+// açılınca tuvalin sol üstündeki kart sorar; tuvaldeki gerçek tık rolü verir ve kart ilerler
+// (önce: parçayı seç → Özellikler'in Rol listesini aç → rolü seç); Esc yalnız kartı kapatır.
+test('HIZLI ATAMA: kart kendiliğinden açılır, tuvaldeki tık rolü verir ve kart ilerler; Esc yalnız kartı kapatır', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await bootApp(page);
+  await dosyaSec(page, GUC);
+  await hazir(page);
+  const kart = page.locator('#ve-mw-3b-hizli');
+  await expect(kart).toBeVisible();
+  await expect(kart.locator('.ve-mw-3b-hizli-rol')).toHaveText('Motor');
+  // kart tuvalin sol üstünde; kesit açılınca kesitin kartının altına iner — kartlar ve Kapat
+  // çakışmaz (üst ortadaki kart kesitin Ters düğmesini örtüyordu)
+  const yer = () => page.evaluate(() => {
+    const r = (id) => document.getElementById(id).getBoundingClientRect();
+    const k = r('ve-mw-3b-hizli'), t = r('ve-mw-3b-tuval'), c = r('ve-mw-3b-kapat'), a = r('ve-mw-3b-arac');
+    return { sol: Math.round(k.left - t.left), ust: Math.round(k.top - t.top), kapat: k.right <= c.left,
+      kesit: a.height ? Math.round(k.top - a.bottom) : null };
+  });
+  expect(await yer()).toEqual({ sol: 12, ust: 12, kapat: true, kesit: null });
+  await bosMenu(page, 'kesit');
+  const kesitte = await yer();
+  expect([kesitte.sol, kesitte.kapat, kesitte.kesit]).toEqual([12, true, 8]);
+  await bosMenu(page, 'kesit');
+  expect(await yer()).toEqual({ sol: 12, ust: 12, kapat: true, kesit: null });
+  const parca = (ad) => page.evaluate((a) => veMntWizStp().sonuc.parcalar.filter((p) => p.ad === a)[0], ad);
+  const motor = await parca('Motor bloğu'), sanz = await parca('Şanzıman gövdesi');
+  for (const [p, tip, sonraki] of [[motor, 'mnt-motor', 'Şanzıman'], [sanz, 'mnt-gearbox', 'Transfer Kutusu']]) {
+    const q = await page.evaluate((i) => veMntWiz3bIsabetNoktasi(i), p.i);
+    expect(q).not.toBeNull();
+    await page.mouse.click(q.x, q.y);
+    await expect.poll(() => page.evaluate((d) => veMntWizStp().roller[d], p.dugum)).toBe(tip);
+    await expect(kart.locator('.ve-mw-3b-hizli-rol')).toHaveText(sonraki);
+  }
+  expect((await durum(page)).secili).toBe(sanz.dugum);                  // tıklanan seçili: Özellikler'de düzeltilir
+  await page.keyboard.press('Escape');
+  await expect(kart).toBeHidden();
+  expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);        // görüntüleyici açık kalır
+  // kapalı kartta tık yalnız seçer
+  const q = await page.evaluate((i) => veMntWiz3bIsabetNoktasi(i), motor.i);
+  await page.mouse.click(q.x, q.y);
+  await expect.poll(async () => (await durum(page)).secili).toBe(motor.dugum);
+  expect(await page.evaluate(() => veMntWizStp().roller.filter((r) => r).length)).toBe(2);
+  // boşluğun menüsünden yeniden açılır: ilk eksik rolden
+  await bosMenu(page, 'hizli');
+  await expect(kart.locator('.ve-mw-3b-hizli-rol')).toHaveText('Transfer Kutusu');
+});
+
 // GÖRÜNÜM (2026-11-02, kullanıcı: "Ağırlık merkezi ve orta nokta görselleştirmesi
 // güzel değil" · "Takozların orta noktasını alıyoruz. Ağırlık merkezini değil").
 // Ölçülen önce (main 7c94ad5, bu montaj ve bu roller): yedi etiketten iki çift üst
@@ -832,6 +881,9 @@ test('ÖZELLİKLER AÇILIR KAPANIR: kapalı başlar, seçim açmaz; şerit açar
   await page.click('#ve-mw-3b-kapat');
   expect(await page.evaluate(() => veMntWiz3bAc('pencere'))).toBe(true);
   await hazir(page);
+  // açılışın ölçekten oturma geçişi (Canlı Not 54, %98,5 → %100) bitince ölçülür: hızlı
+  // kurulan görünümde hazır olmak geçişten önce gelebiliyor (352 × 0,994 ≈ 350)
+  await expect.poll(async () => (await olc()).yan).toBe(352);
   expect(await olc()).toMatchObject({ yan: 352, ac: 'true', masa: 'acik' });
   // Klavyeyle daraltılır: tuval geri genişler, tercih kapalı
   await page.focus('#ve-mw-3b-yan-dugme');
@@ -971,7 +1023,7 @@ test('SAĞ TIK: menü imleçte; Gizle parçayı çizmez ve seçtirmez; Ağaçta 
   await page.mouse.click(bos.x, bos.y, { button: 'right' });
   await expect(page.locator('#ve-mw-3b-menu [data-k="gizle"]')).toHaveCount(0);
   expect(await page.locator('#ve-mw-3b-menu > [data-k], #ve-mw-3b-menu > .ve-mw-3b-menu-kap > [data-k]').evaluateAll((b) => b.map((x) => x.getAttribute('data-k'))))
-    .toEqual(['tumu', 'sigdir', 'bakis', 'gorunus', 'zemin', 'suzgec', 'olcu', 'kesit', 'temizle']);
+    .toEqual(['tumu', 'sigdir', 'bakis', 'gorunus', 'zemin', 'suzgec', 'olcu', 'kesit', 'hizli', 'temizle']);
   await page.hover('#ve-mw-3b-menu [data-k="zemin"]');
   await page.click('#ve-mw-3b-menu [data-k="zemin:beyaz"]');
   expect(await page.evaluate(() => [veMntWiz3bDurum().zeminK, _mw3b.scene.background.isColor && _mw3b.scene.background.getHexString(),

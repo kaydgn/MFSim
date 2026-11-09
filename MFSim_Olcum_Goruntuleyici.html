@@ -8785,10 +8785,28 @@ span.ve-fw-ro{ display:inline-block; }
    açık kesitin ayarı tuvalin SOL ÜSTÜNDEKİ kartta — yalnız kesit açıkken. Araçlar
    (Bakış · Görünüş · Parça|Yüzey · Ölçü · Kesit) boşluğa sağ tık menüsünde.
    Denetimler 26 px (Canlı Not 13). */
-.ve-mw-3b-arac{ position:absolute; left:12px; top:12px; z-index:3; max-width:calc(100% - 140px); box-sizing:border-box;
+/* Tuvalin SOL ÜSTÜ bir sütun: açık kesitin kartı, altında hızlı atamanın kartı (Canlı Not 94)
+   — kartlar alt alta, biri ötekine binmez; sağda Kapat'a yer kalır. */
+.ve-mw-3b-solust{ position:absolute; left:12px; top:12px; z-index:3; display:flex; flex-direction:column; align-items:flex-start;
+  gap:8px; max-width:calc(100% - 140px); pointer-events:none; }
+.ve-mw-3b-solust > *{ pointer-events:auto; }
+.ve-mw-3b-arac{ max-width:100%; box-sizing:border-box;
   display:flex; flex-direction:column; gap:4px; padding:4px 6px; background:var(--bg-secondary);
   border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); }
 .ve-mw-3b-arac:empty{ display:none; }
+/* HIZLI ATAMA (kullanıcı 2026-11-09, Canlı Not 94): sıradaki rolü soran kart, tuvalin SOL
+   ÜSTÜNDEKİ sütunda (kesit açıksa onun altında); dili kesit kartınınki (keskin köşe, yüzen
+   gölge, 26 px düğmeler). Rol tek tıkla verilir (js/cp-mount-3b-hizli.js). */
+.ve-mw-3b-hizli{ box-sizing:border-box;
+  display:flex; flex-direction:column; gap:6px; padding:8px 10px; width:max-content; min-width:280px; max-width:100%;
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); }
+.ve-mw-3b-hizli[hidden]{ display:none; }
+.ve-mw-3b-hizli-bas{ display:flex; align-items:baseline; gap:8px; }
+.ve-mw-3b-hizli-sira{ font-size:var(--fs-tiny); color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.ve-mw-3b-hizli-rol{ font-size:var(--fs-md); font-weight:700; color:var(--text-heading); }
+.ve-mw-3b-hizli-say{ margin-left:auto; font-size:var(--fs-tiny); color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+.ve-mw-3b-hizli-yon{ margin:0; font-size:var(--fs-body); color:var(--text-secondary); }
+.ve-mw-3b-hizli-d{ display:flex; gap:6px; justify-content:flex-end; }
 .ve-mw-3b-arac-sira{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; min-width:0; }
 .ve-mw-3b-arac-grup{ display:flex; flex-wrap:wrap; gap:2px; }
 .ve-mw-3b-arac-b{ display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border:0; border-radius:var(--radius-sm);

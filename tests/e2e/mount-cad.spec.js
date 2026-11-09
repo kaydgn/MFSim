@@ -70,6 +70,15 @@ const ucHazir = (page) => page.waitForFunction(() => {
   return k && k.getAttribute('data-durum') === 'hazir';
 }, null, { timeout: 120000 });
 const ROL = { 'Motor bloğu': 'mnt-motor', 'Şanzıman gövdesi': 'mnt-gearbox', 'Arka braket': 'mnt-bracket' };
+// Rolsüz dosyada hızlı atamanın kartı açık gelir (Canlı Not 94): ilk Esc kartı, ikincisi 3B'yi kapatır
+async function ucKapatEsc(page) {
+  await expect(page.locator('#ve-mw-3b-hizli')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#ve-mw-3b-hizli')).toBeHidden();
+  expect(await page.evaluate(() => veMntWiz3bAcik())).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => veMntWiz3bAcik())).toBe(false);
+}
 
 test('PENCERE: seçici → çubuk + Vazgeç; dosya → kendi perdesinde 3B; rol; Esc yalnız 3B\'yi kapatır', async ({ page }) => {
   const hatalar = [];
@@ -99,8 +108,11 @@ test('PENCERE: seçici → çubuk + Vazgeç; dosya → kendi perdesinde 3B; rol;
     yer: veMntWiz3bYer(), perde: getComputedStyle(document.getElementById('ve-mnt-3b-overlay')).display,
     // Tam ekran çalışma alanı (2026-11-04): başlık bandı ve komut çubuğu yok (Canlı Not 44), Kapat tuvalin sağ üstünde
     kapat: !!document.querySelector('#ve-mnt-3b #ve-mw-3b-tuval > #ve-mw-3b-kapat') && !document.querySelector('#ve-mnt-3b .ve-settings-header, #ve-mnt-3b .ve-mw-3b-komut'),
-    aktar: !!document.getElementById('ve-mw-3b-aktar'), sihirbaz: veMntWizAcik() }));
-  expect(uc).toEqual({ yer: 'pencere', perde: 'flex', kapat: true, aktar: false, sihirbaz: false });
+    aktar: !!document.getElementById('ve-mw-3b-aktar'), sihirbaz: veMntWizAcik(), hizli: veMntWiz3bHizliAcik() }));
+  expect(uc).toEqual({ yer: 'pencere', perde: 'flex', kapat: true, aktar: false, sihirbaz: false, hizli: true });
+  // Hızlı atamanın kartı (Canlı Not 94) Bitir'le kapanır; rol Özellikler'den
+  await page.click('#ve-mw-3b-hizli [data-hizli="bitir"]');
+  await expect(page.locator('#ve-mw-3b-hizli')).toBeHidden();
   // 3B'den rol: gerçek tıklama ile motoru seç, çipten rol ver
   await page.evaluate(() => veMntWiz3bSec(veMntWizStp().sonuc.agac.find((d) => d.ad === 'Motor bloğu').i));
   await page.click('#ve-mnt-3b #ve-mw-3b-rol');                              // Rol alanı (Canlı Not 49)
@@ -211,7 +223,7 @@ test('MODEL: Tulga tuvalde, dosya ötelenmiş → öteleme ve föy; Modele uygul
   await pencereAc(page);
   await pencereden(page, TULGA);
   await ucHazir(page);
-  await page.keyboard.press('Escape');
+  await ucKapatEsc(page);
   await page.evaluate(() => {
     const s = veMntWizStp(), T = ['Ön takoz', 'Sağ ön takoz', 'Sol ön takoz', 'Sağ arka takoz', 'Sol arka takoz'];
     const G = { 'Motor bloğu': 'mnt-motor', 'Şanzıman gövdesi': 'mnt-gearbox', 'Transfer gövdesi': 'mnt-transfer' };
@@ -271,7 +283,7 @@ test('MODEL · SİHİRBAZ: tuvaldeki Tulga\'dan açılan sihirbazda aynı föy; 
   await page.evaluate(() => veMntWizAc());
   await page.setInputFiles('#ve-mw-body .ve-mw-stp-file', TULGA);
   await ucHazir(page);
-  await page.keyboard.press('Escape');
+  await ucKapatEsc(page);
   await page.evaluate(() => {
     const s = veMntWizStp(), T = ['Ön takoz', 'Sağ ön takoz', 'Sol ön takoz', 'Sağ arka takoz', 'Sol arka takoz'];
     s.sonuc.agac.forEach((d) => { if (T.includes(d.ad)) veMntWizStpRol(d.i, 'mnt-mount'); });
