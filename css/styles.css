@@ -3434,6 +3434,28 @@ body > .mfsim-loading-logo-ico{ transition:none; }
 }
 .ve-help-foot span{ display:inline-flex; align-items:center; gap:6px; }
 .ve-help-brand{ font-weight:700; letter-spacing:.05em; color:var(--text-muted); }
+/* KULLANIM KILAVUZLARI — liste (Canlı Not 91): kılavuz başına tek satır, ad solda,
+   Aç · İndir sağda ve 24 px; durum yalnız hazır değilken. */
+.ve-help-panel--kilavuz{ width:min(520px,94vw); }
+.ve-gk-liste{ padding:6px 0; overflow-y:auto; }
+.ve-gk-satir{
+  display:flex; align-items:center; gap:12px; min-height:40px; padding:6px 16px;
+  border-bottom:1px solid var(--border-light);
+}
+.ve-gk-satir:last-child{ border-bottom:0; }
+.ve-gk-ad{ flex:1 1 auto; min-width:0; font-size:var(--fs-body); font-weight:600; color:var(--text-primary); }
+.ve-gk-eylem{ flex:none; display:flex; gap:6px; }
+.ve-gk-btn{
+  height:24px; padding:0 12px; box-sizing:border-box; cursor:pointer;
+  font-family:inherit; font-size:var(--fs-tiny); font-weight:600; color:var(--text-primary);
+  background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
+  transition:border-color var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
+}
+.ve-gk-btn:hover{ border-color:var(--accent-primary); }
+.ve-gk-btn:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
+.ve-gk-btn--ac{ color:var(--on-accent); background:var(--accent-primary); border-color:var(--accent-primary); }
+.ve-gk-btn--ac:hover{ background:var(--ink-accent); border-color:var(--ink-accent); }
+.ve-gk-durum{ flex:none; font-size:var(--fs-tiny); color:var(--text-muted); }
 @media (prefers-reduced-motion: reduce){ .ve-help-overlay, .ve-help-panel{ transition:none; } }
 
 /* ── Hizalama & dağıtma araçları (çoklu-seçim paneli) ───────────────────── */
@@ -7420,7 +7442,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
    PENCERESİ*. */
 .ve-rb-dock{
   position:absolute; top:calc(100% + 4px); right:12px;
-  width:352px; max-width:calc(100vw - 16px);
+  width:312px; max-width:calc(100vw - 16px);
   max-height:calc(100vh - var(--ribbon-strip-h) - 16px);
   display:none; flex-direction:column;
   background:var(--bg-secondary);
@@ -7600,25 +7622,28 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 
 /* ── Pencerenin içi: grup başlıklı, iki sütunlu liste ──
    Taban kurallar (büyük/küçük düğme, üç satırlı ızgara) kılavuzun sahnesinde
-   duruyor; pencerede her komut aynı satır: ikon + ad, 28 px. */
+   duruyor; pencerede her komut aynı satır: ikon + ad, 24 px, satırlar bitişik.
+   SIK (kullanıcı 2026-11-09, Canlı Not 88: *"butonlar arası çok açık olmuş …
+   daha estetik yapabiliriz"*): pencere 352 → 312 px (iki sütun en uzun adı —
+   "Otomatik düzenle", 99 px — kesmeden taşır), satır 28 + 2 → 24 px. */
 .ve-rb-dock .ve-rb-group{
-  display:block; padding:6px 6px 4px; flex:none;
+  display:block; padding:4px 6px; flex:none;
 }
 .ve-rb-dock .ve-rb-group + .ve-rb-group{ border-top:1px solid var(--border-color); }
 .ve-rb-dock .ve-rb-group + .ve-rb-group::before{ content:none; }
 .ve-rb-dock .ve-rb-group-label{
-  text-align:left; padding:2px 8px 4px; letter-spacing:var(--tracking-wider, 0.06em);
+  text-align:left; padding:2px 8px; letter-spacing:var(--tracking-wider, 0.06em);
 }
 .ve-rb-dock .ve-rb-group-items,
 .ve-rb-dock .ve-rb-group-items:has(.ve-rb-btn--sm){
   display:grid; grid-template-columns:repeat(2, minmax(0, 1fr));
   grid-template-rows:none; grid-auto-flow:row; align-content:start;
-  gap:2px 4px;
+  gap:0 4px;
 }
 .ve-rb-dock .ve-rb-btn,
 .ve-rb-dock .ve-rb-group-items:has(.ve-rb-btn--sm) .ve-rb-btn--lg{
   grid-row:auto; flex-direction:row; justify-content:flex-start; align-self:stretch;
-  width:auto; min-width:0; height:28px; min-height:28px; padding:0 8px; gap:8px;
+  width:auto; min-width:0; height:24px; min-height:24px; padding:0 8px; gap:8px;
 }
 .ve-rb-dock .ve-rb-btn .ve-rb-ico{ width:14px; height:14px; }
 .ve-rb-dock .ve-rb-btn .ve-rb-lbl{
