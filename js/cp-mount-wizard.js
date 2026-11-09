@@ -159,11 +159,22 @@ function veMntWizFromNodes(liste, opt){
 
 // ── DURUMDAN DÜĞÜM LİSTESİ ─────────────────────────────────────────────────
 // Kanvas yerleşimi güç grubunun ÜSTTEN görünüşünü izler (VE_MNT_STARTER_LAYOUT'un
-// düzeni): sağ takozlar (y > 0) üst sırada, gövdeler ve ortadaki takozlar orta
-// sırada, sol takozlar alt sırada; sıra içinde fiziksel x'e göre. Araç şeridi
-// en üstte (ly = 20) — referans yerleşimle aynı satırlar.
-var VE_MW_SIRA = { sag:190, orta:320, sol:450 };
+// düzeni, örneklerin şeması — assets/examples/tulga_topoloji.json): AKTARMA HATTI
+// (motor · şanzıman · transfer · şaft) orta sırada; braket ve taşınan kütleler hattın
+// hemen üstünde (sağ, y > 0) ya da altında (sol); sağ takozlar en üstte, sol takozlar
+// en altta; ekseni üstündeki takoz (|y| küçük) hattın UCUNDA — önde solda, arkada
+// sağda. Sıra içinde fiziksel x'e göre. Araç şeridi en üstte (ly = 20).
+// Kullanıcı 2026-11-09 (Canlı Not 80: *"Bu 10TON TTA'nın topolojisi. Çok çirkin
+// duruyor … Temel metodolojiye de uygun olsun"*): önce her gövde hattın sırasındaydı
+// (10 Ton TTA'da 11 kutu tek sırada, hat çizgisi kulakların ve PTO'nun içinden
+// geçiyordu) ve 31 mm yandaki ön takoz sağ takozların sırasına çıkıyordu. Kapı:
+// mount-wizard.test.js → *TEMEL YERLEŞİM*.
+var VE_MW_SIRA = { sag:190, orta:320, sol:450 };     // iç sıra yoksa (yalnız hat ve takozlar)
+var VE_MW_IC = { ic:100, dis:190 };                   // iç sıranın · dış (takoz) sıranın hatta uzaklığı, iç sıra varken
 var VE_MW_ARALIK = 118;
+var VE_MW_HAT = { 'mnt-motor':1, 'mnt-gearbox':1, 'mnt-transfer':1, 'mnt-shaft':1 };
+// Ekseni üstündeki takoz: |y| ≤ en çok bu pay (mm) ya da takozların en büyük |y|'sinin bu kesri
+var VE_MW_EKSEN = { mm:100, oran:0.25 };
 // ADLAR BİRBİRİNE GİRMEZ (kullanım notu T02: STEP'in uzun adlarıyla üç
 // aksesuarın adı tek satırda iç içe okunuyordu): sıradaki iki düğümün arası
 // adlarının yarı genişliklerinin toplamı + VE_MW_AD.ara (ortak kural ≥ 4 px).
@@ -175,18 +186,41 @@ function _mwAdKapsam(o){
   var g = o.gen;
   return o.ad === 'left' ? [-7 - g, 60] : o.ad === 'right' ? [0, 67 + g] : [Math.min(0, 30 - g / 2), Math.max(60, 30 + g / 2)];
 }
+// Tipin kutusu (px): components.js → veNodeDefaultSize; yoksa aynı kural componentDefs'ten
+function _mwKutuOlcu(tip){
+  if(typeof veNodeDefaultSize === 'function') return veNodeDefaultSize(tip);
+  var d = (typeof componentDefs !== 'undefined' && componentDefs[tip]) || {}, k = !!(d.isSensor || d.isTerminator);
+  return { w:d.defaultWidth || (k ? 33 : 65), h:d.defaultHeight || (k ? 33 : 60) };
+}
 function _mwYerlesim(st){
   var ogeler = [];
-  st.govdeler.forEach(function(g){ ogeler.push({ key:g.key, x:_mwNum(g.cgx), y:_mwNum(g.cgy), sira:'orta', gen:_mwAdGen(g.ad || _mwAd(g.type)) }); });
+  st.govdeler.forEach(function(g){
+    var y = _mwNum(g.cgy);
+    ogeler.push({ key:g.key, x:_mwNum(g.cgx), y:y, gen:_mwAdGen(g.ad || _mwAd(g.type)), tip:g.type,
+                  sira: VE_MW_HAT[g.type] ? 'orta' : (y > 0 ? 'ust' : 'alt') });
+  });
+  var tY = st.takozlar.map(function(t){ return Math.abs(_mwNum(t.y)); }).filter(Number.isFinite);
+  var eksen = Math.min(VE_MW_EKSEN.mm, VE_MW_EKSEN.oran * (tY.length ? Math.max.apply(null, tY) : 0));
   st.takozlar.forEach(function(t){
     var y = _mwNum(t.y);
-    ogeler.push({ key:t.key, x:_mwNum(t.x), y:y, gen:_mwAdGen(t.ad || 'Takoz'),
-                  sira: !Number.isFinite(y) || Math.abs(y) < 1 ? 'orta' : (y > 0 ? 'sag' : 'sol') });
+    ogeler.push({ key:t.key, x:_mwNum(t.x), y:y, gen:_mwAdGen(t.ad || 'Takoz'), takoz:true, tip:'mnt-mount',
+                  sira: !Number.isFinite(y) || Math.abs(y) <= Math.max(1, eksen) ? 'uc' : (y > 0 ? 'sag' : 'sol') });
   });
   var xs = ogeler.map(function(o){ return o.x; }).filter(Number.isFinite);
   var x0 = xs.length ? Math.min.apply(null, xs) : 0, x1 = xs.length ? Math.max.apply(null, xs) : 0;
+  var var_ = function(s){ return ogeler.some(function(o){ return o.sira === s; }); };
+  var ust = var_('ust'), alt = var_('alt'), O = VE_MW_SIRA.orta;
+  var SIRA = { orta:O, ust:O - VE_MW_IC.ic, alt:O + VE_MW_IC.ic,
+               sag: ust ? O - VE_MW_IC.dis : VE_MW_SIRA.sag, sol: alt ? O + VE_MW_IC.dis : VE_MW_SIRA.sol };
+  // Sırada kutular ORTALARINDAN hizalı (motorun kutusu şanzımanınkinden uzun: üst kenarlar
+  // hizalıyken hat çizgisi eğiliyordu); tipin ölçüsü yoksa üst kenar
+  var boy = function(o){ return o.tip ? (_mwKutuOlcu(o.tip).h || 0) : 0; };
+  var sBoy = {};
+  ogeler.forEach(function(o){ sBoy[o.sira] = Math.max(sBoy[o.sira] || 0, boy(o)); });
+  sBoy.uc = Math.max(sBoy.orta || 0, sBoy.uc || 0);
+  var ortala = function(o, y){ return y + Math.round(((sBoy[o.sira === 'uc' ? 'uc' : o.sira] || 0) - boy(o)) / 2); };
   var yer = {};
-  ['sag', 'orta', 'sol'].forEach(function(s){
+  ['sag', 'ust', 'orta', 'alt', 'sol'].forEach(function(s){
     var sira = ogeler.filter(function(o){ return o.sira === s; });
     sira.forEach(function(o, i){
       o.lx = (Number.isFinite(o.x) && x1 > x0) ? 60 + (o.x - x0) / (x1 - x0) * 840 : 60 + i * VE_MW_ARALIK;
@@ -195,15 +229,50 @@ function _mwYerlesim(st){
     // Yan sıradaki takozun adı YANDA, dışa doğru (başvuru örneğinin düzeni —
     // assets/examples/tulga_topoloji.json): altta kalsa şasiye inen bağlantı
     // çizgisi adın içinden geçiyordu (kullanım notu T02)
-    var yan = s !== 'orta';
+    var yan = (s === 'sag' || s === 'sol');
     sira.forEach(function(o, i){ o.ad = yan ? (i < Math.floor(sira.length / 2) ? 'left' : 'right') : 'bottom'; });
     var son = -Infinity, onceki = null;
     sira.forEach(function(o){
       var ara = onceki ? Math.max(VE_MW_ARALIK, _mwAdKapsam(onceki)[1] - _mwAdKapsam(o)[0] + VE_MW_AD.ara) : 0;
       if(onceki && o.lx < son + ara) o.lx = son + ara;
       son = o.lx; onceki = o;
-      yer[o.key] = { lx:Math.round(o.lx), ly:VE_MW_SIRA[s], ad:o.ad };
+      yer[o.key] = { lx:Math.round(o.lx), ly:ortala(o, SIRA[s]), ad:o.ad };
     });
+  });
+  // Ekseni üstündeki takoz hattın ucunda, gövdelerin dışında: hattın ortasının önündeyse
+  // solda, arkasındaysa sağda (şasiye kısa yatay yay)
+  var govde = ogeler.filter(function(o){ return !o.takoz && yer[o.key]; });
+  var gx = govde.map(function(o){ return yer[o.key].lx; });
+  var hat = govde.filter(function(o){ return o.sira === 'orta' && Number.isFinite(o.x); }).map(function(o){ return o.x; });
+  var orta = hat.length ? (Math.min.apply(null, hat) + Math.max.apply(null, hat)) / 2 : (x0 + x1) / 2;
+  var uc = ogeler.filter(function(o){ return o.sira === 'uc'; }).sort(function(a, b){ return a.x - b.x; });
+  var sol = uc.filter(function(o){ return !(o.x > orta); }), sag = uc.filter(function(o){ return o.x > orta; });
+  // Şasinin çerçevesi gövdeleri ADLARIYLA sarar ve 26 px pay bırakır (cp-mount.js →
+  // veMntDecorateConnections): uç takozu çerçevenin dışında, arada yay payı
+  var gen_ = function(o){ return o.tip ? (_mwKutuOlcu(o.tip).w || 60) : 60; };
+  var cL = Infinity, cR = -Infinity;
+  govde.forEach(function(o){ var lx = yer[o.key].lx, w = gen_(o);
+    cL = Math.min(cL, lx + Math.min(0, w / 2 - o.gen / 2)); cR = Math.max(cR, lx + Math.max(w, w / 2 + o.gen / 2)); });
+  var SASI = 26, YAY = 24, PAY = 8;
+  var cerL = gx.length ? cL - SASI : 120, cerR = gx.length ? cR + SASI : 0;
+  // Adı ALTTA (dış yanında zeminin taraması durur): kutu çerçeveden en az yay payı kadar,
+  // ad çerçevenin kenarına değmeyecek kadar uzakta; birden çok uç takozu yan yana, adları
+  // birbirine girmeden
+  var onceki = null;
+  sol.reverse().forEach(function(o){
+    o.ad = 'bottom';
+    var w = gen_(o), lx = Math.min(cerL - YAY - w, cerL - PAY - o.gen / 2 - w / 2);
+    if(onceki) lx = Math.min(lx, onceki.lx + _mwAdKapsam(onceki)[0] - _mwAdKapsam(o)[1] - VE_MW_AD.ara);
+    yer[o.key] = { lx:Math.round(lx), ly:ortala(o, O), ad:'bottom' };
+    o.lx = lx; onceki = o;
+  });
+  onceki = null;
+  sag.forEach(function(o){
+    o.ad = 'bottom';
+    var w = gen_(o), lx = Math.max(cerR + YAY, cerR + PAY + o.gen / 2 - w / 2);
+    if(onceki) lx = Math.max(lx, onceki.lx + _mwAdKapsam(onceki)[1] - _mwAdKapsam(o)[0] + VE_MW_AD.ara);
+    yer[o.key] = { lx:Math.round(lx), ly:ortala(o, O), ad:'bottom' };
+    o.lx = lx; onceki = o;
   });
   return yer;
 }

@@ -501,11 +501,66 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
       if (A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3]) ciftler.push(a.type + ' ↔ ' + b.type);
     }));
     expect(ciftler).toEqual([]);
-    // sıralar şeridin tabanından: takozlar ly 190/450, gövdeler 320
-    yeni.forEach((n) => expect([190, 320, 450]).toContain(n.y - taban.y));
+    // sıralar şeridin tabanından (TEMEL YERLEŞİM, Canlı Not 80): aktarma hattı 320; braket ve
+    // taşınan kütle hattın üstünde (sağ) ya da altında (sol) 100 px; yan takozlar dış sırada
+    // (kutular sırada ORTALARINDAN hizalı)
+    const HAT = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft'];
+    const mrk = (n) => n.y - taban.y + veNodeDefaultSize(n.type).h / 2;
+    const hat = yeni.filter((n) => HAT.includes(n.type)), hm = mrk(hat[0]);
+    hat.forEach((n) => expect([n.type, mrk(n)]).toEqual([n.type, hm]));
+    yeni.forEach((n) => {
+      const d = n.data || {};
+      if (n.type === 'mnt-mount') expect([n.data.y > 0 ? 'üst' : 'alt', mrk(n) < hm - 100 ? 'üst' : mrk(n) > hm + 100 ? 'alt' : 'hat'])
+        .toEqual([n.data.y > 0 ? 'üst' : 'alt', n.data.y > 0 ? 'üst' : 'alt']);
+      else if (!HAT.includes(n.type)) expect([n.type, n.y - taban.y]).toEqual([n.type, d.cgy > 0 ? 220 : 420]);
+    });
     // yan sıradaki takozun adı yanda, dışa doğru (bağlantı çizgisi adın içinden geçmesin)
     const yan = yeni.filter((n) => n.type === 'mnt-mount' && n.y - taban.y !== 320).sort((a, b) => a.y - b.y || a.x - b.x);
     expect(yan.map((n) => n.data.labelPos)).toEqual(['left', 'right', 'left', 'right'].slice(0, yan.length));
+  });
+
+  // TEMEL YERLEŞİM (kullanıcı 2026-11-09, Canlı Not 80: "Bu 10TON TTA'nın topolojisi. Çok çirkin
+  // duruyor … Temel metodolojiye de uygun olsun.") Önce: 11 gövde hattın sırasında (kulaklar, PTO
+  // ve aksesuarlar motorla şanzımanın arasında, hat çizgisi içlerinden geçiyordu) ve 31 mm yandaki
+  // ön takoz sağ takozların sırasındaydı (şasiye çapraz yay).
+  test('TEMEL YERLEŞİM: 10 Ton TTA — hat ortada, braket ve aksesuar üstte/altta, ön takoz hattın solunda, yan takozlar dışta', () => {
+    W.veMntWizAc();
+    const cozucu = global._mntResolveTopology;
+    delete global._mntResolveTopology;                                     // çekirdeğin kaydından (eşzamanlı)
+    try { expect(W.veMntWizOrnek('tta10')).toBe(true); } finally { if (cozucu) global._mntResolveTopology = cozucu; }
+    const L = W.veMntWizNodes();
+    const HAT = ['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft'];
+    const mrk = (n) => n.ly + veNodeDefaultSize(n.type).h / 2;               // kutular sırada ortalarından hizalı
+    const govde = L.filter((n) => n.rol === 'govde'), hat = govde.filter((n) => HAT.includes(n.type)), hm = mrk(hat[0]);
+    expect(hat.map((n) => mrk(n))).toEqual(hat.map(() => hm));                                // hat çizgisi yatay
+    expect(govde.filter((n) => mrk(n) === hm)).toHaveLength(3);                                // motor · şanzıman · kardan payı (11 → 3)
+    govde.filter((n) => !HAT.includes(n.type)).forEach((n) => expect([n.customName, n.ly]).toEqual([n.customName, n.data.cgy > 0 ? 220 : 420]));
+    // ön takoz (y = 31 mm) hattın sırasında ve ortasında, şasinin çerçevesinin dışında (çerçeve
+    // gövdeleri adlarıyla sarar + 26 px); adı altta ve çerçeveye değmez (dış yanında zeminin
+    // taraması); yan takozlar dış sıralarda
+    const on = L.find((n) => n.rol === 'takoz' && /Ön/.test(n.customName));
+    expect([mrk(on), on.adYer]).toEqual([hm, 'bottom']);
+    const cerceveSol = Math.min(...govde.map((n) => { const w = veNodeDefaultSize(n.type).w, g = Math.max(60, n.customName.length * 7.8);
+      return n.lx + Math.min(0, w / 2 - g / 2); })) - 26;
+    const tw = veNodeDefaultSize('mnt-mount').w, tg = Math.max(60, on.customName.length * 7.8);
+    expect(on.lx + tw).toBeLessThanOrEqual(cerceveSol - 20);                                        // yay payı
+    expect(on.lx + tw / 2 + tg / 2).toBeLessThanOrEqual(cerceveSol - 4);                             // ad çerçeveye değmez
+    L.filter((n) => n.rol === 'takoz' && n !== on).forEach((n) => expect([n.customName, n.ly]).toEqual([n.customName, n.data.y > 0 ? 130 : 510]));
+    // hiçbir kutu (adıyla) ötekine binmez
+    // kutu ve adı: yan ad yanda (7 px payla), alttaki ad kutunun ortasında; ad 12 px · harf başına ≤ 7,2 px
+    const kutu = (n) => {
+      const g = Math.max(60, n.customName.length * 7.2), h = veNodeDefaultSize(n.type).h + 20;
+      const yatay = n.adYer === 'left' ? [n.lx - 7 - g, n.lx + 60] : n.adYer === 'right' ? [n.lx, n.lx + 67 + g]
+        : [Math.min(n.lx, n.lx + 30 - g / 2), Math.max(n.lx + 60, n.lx + 30 + g / 2)];
+      return [yatay[0], n.ly, yatay[1], n.ly + h];
+    };
+    const ciftler = [];
+    L.forEach((a, i) => L.slice(i + 1).forEach((b) => {
+      const A = kutu(a), B = kutu(b);
+      if (A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3]) ciftler.push(a.customName + ' ↔ ' + b.customName);
+    }));
+    expect(ciftler).toEqual([]);
+    W.veMntWizKapat(false);
   });
 
   test('ADLAR BİRBİRİNE GİRMEZ: uzun STEP adlarıyla aynı sıradaki iki adın arası ≥ 4 px', () => {
@@ -518,7 +573,10 @@ describe('BİR KURULUM = BİR GERİ-AL ADIMI', () => {
       { key: 'e', type: 'mnt-gearbox', ad: 'SANZIMAN', cgx: 1200, cgy: 0, cgz: 450 }
     ];
     st.takozlar = [];
-    const L = W.veMntWizNodes(st).filter((n) => n.ly === 320).sort((p, q) => p.lx - q.lx);
+    // aksesuarlar (y = 0) hattın altındaki sırada, motor ve şanzıman hatta: iki sırada da kural aynı
+    const N = W.veMntWizNodes(st);
+    expect(N.filter((n) => n.ly === 420).map((n) => n.customName)).toEqual(['ALTERNATOR 24V 150A', 'ALTERNATOR BRAKETI', 'KLIMA KOMPRESORU']);
+    const L = N.filter((n) => n.ly === 420).sort((p, q) => p.lx - q.lx);
     const gen = (ad) => ad.length * 7.2;                                    // 12 px Inter büyük harf ortalaması (ölçüldü ≤ 7,2)
     for (let i = 1; i < L.length; i++) {
       const a = L[i - 1], b = L[i];
