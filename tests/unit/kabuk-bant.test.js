@@ -35,10 +35,10 @@ function kural(secici) {
   return m ? m[1].replace(/\s+/g, ' ') : null;
 }
 
-// Kabuğun ÜST BANTLARI — soldan sağa: rayın köşe hücresi, Topoloji (kenar
-// çubuğu başlığı · sekme bandı · müfettiş başlığı) ve Sonuçlar (Veri Gezgini ·
-// araç çubuğu · rapor bandı).
-const BANTLAR = ['.ve-nav-rail::before', '.ve-sidebar-header', '.ve-doc-dock',
+// Kabuğun ÜST BANTLARI — soldan sağa: Topoloji (kenar çubuğu başlığı · müfettiş
+// başlığı) ve Sonuçlar (Veri Gezgini · araç çubuğu · rapor bandı). Rayın köşe hücresi
+// (Canlı Not 89) ve sekme bandı (Canlı Not 87) yok.
+const BANTLAR = ['.ve-sidebar-header',
   '.ve-properties-header', '.ve-results-head', '.ve-trace-toolbar', '.ve-rep-head'];
 
 describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
@@ -136,15 +136,16 @@ describe('KABUĞUN ÜST BANDI — tek ölçü, tek zemin', () => {
     });
   });
 
-  // Aktif sekme bandın çizgisini ÖRTMELİ ki tuvale bağlansın. Çizgi kenarlık
-  // olarak dururken sekme şeridinin `overflow-y:hidden`ı sekmenin 1 px'lik
-  // kaymasını kesiyordu ve çizgi aktif sekmenin altından da geçiyordu.
-  test('sekme bandının çizgisi ZEMİNİN içinde — aktif sekme onu örtebiliyor', () => {
-    const dock = kural('.ve-doc-dock');
-    expect(dock).toMatch(/box-shadow:\s*inset 0 -1px 0 var\(--border-color\)/);
-    expect(dock).not.toMatch(/border-bottom:/);
-    expect(kural('.ve-tab-bar--top')).toMatch(/align-items:\s*stretch/);
-    expect(kural('.ve-tab-bar--top .ve-tab')).toMatch(/top:\s*0/);
+  // TEK TOPOLOJİ (Canlı Not 87): sekme bandı ve onun kuralları yok; RAY TAM BOY (Canlı
+  // Not 89): köşe hücresinin zemini ve alt çizgisi yok, rayın çizgisi tepeden iner.
+  test('sekme bandı yok; ray tam boy — köşe hücresi bant değil', () => {
+    const HTML = fs.readFileSync(path.join(KOK, 'index.html'), 'utf8');
+    expect(HTML).not.toMatch(/id="ve-tab-bar"|id="ve-doc-dock"/);
+    expect(CSS).not.toMatch(/\.ve-tab-bar|\.ve-doc-dock|\.ve-split-resizer|\.ve-snapshot-pane/);
+    const once = kural('.ve-nav-rail::before');
+    expect(once).not.toMatch(/background|border-bottom|min-height/);
+    expect(once).toMatch(/(^|;)\s*height:\s*var\(--bant-h\)/);
+    expect(kural('.ve-nav-rail::after')).toMatch(/top:\s*0;/);
   });
 });
 
@@ -212,14 +213,14 @@ describe('ŞERİT BANDI İNCE — 32 px, gövde yok', () => {
 // sayfasında saydam yapılmıştı (`html.ve-sayfa-tuval .ve-nav-rail`) ve paletin
 // bandı rayın kenarında havada başlıyordu. Çizimin kendisi:
 // kabuk-sutun.spec.js → "RAY ÇERÇEVELİ".
-// 2026-11-05 (kullanıcı seçimi, Canlı Not 33 · C): çizgi bandın ALTINDAN başlar
-// — rayın kenarlığı değil, bandın alt çizgisinden aşağı inen `::after`.
+// 2026-11-09 (Canlı Not 89): RAY TAM BOY — köşe hücresi kalktı, çizgi (rayın
+// kenarlığı değil, `::after`) tepeden iner.
 describe('RAY KENDİ SÜTUNU — palet ile arasında TEK çizgi', () => {
-  test('rayın sağında çizgi var, bant satırını kesmiyor; hiçbir kural onu kaldırmıyor', () => {
+  test('rayın sağında çizgi var, tepeden dibe; hiçbir kural onu kaldırmıyor', () => {
     const c = kural('.ve-nav-rail::after');
     expect(c).toMatch(/content:\s*""/);
     expect(c).toMatch(/right:\s*0/);
-    expect(c).toMatch(/top:\s*calc\(var\(--bant-h\) - 1px\)/);
+    expect(c).toMatch(/top:\s*0;/);
     expect(c).toMatch(/bottom:\s*0/);
     expect(c).toMatch(/width:\s*1px/);
     expect(c).toMatch(/background:\s*var\(--border-color\)/);
@@ -231,12 +232,12 @@ describe('RAY KENDİ SÜTUNU — palet ile arasında TEK çizgi', () => {
     expect(kural('.ve-sidebar')).not.toMatch(/border-left:/);
   });
 
-  test('köşe hücresi bandın kendisi ve rayın başına yapışık', () => {
+  test('rayın başındaki aralık bandın boyunda ama bant DEĞİL (zemin ve çizgi yok)', () => {
     const k = kural('.ve-nav-rail::before');
     expect(k).toMatch(/content:\s*""/);
-    expect(k).toMatch(/border-bottom:\s*1px solid var\(--border-color\)/);
-    // Rayın ÜST dolgusu yok (hücre şeridin çizgisine yapışır); yan dolguyu
-    // hücre geri alır ki dikey çizgiye kadar uzansın.
+    expect(k).not.toMatch(/border-bottom|background/);
+    // Rayın ÜST dolgusu yok (aralık şeridin altına yapışır); yan dolguyu
+    // aralık geri alır ki dikey çizgiye kadar uzansın.
     const pay = kural('.ve-nav-rail').match(/padding:\s*0 (\d+)px \d+px;/);
     expect(pay).not.toBeNull();
     expect(k).toMatch(new RegExp('margin:\\s*0 -' + pay[1] + 'px'));

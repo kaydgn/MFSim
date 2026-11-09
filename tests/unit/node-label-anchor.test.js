@@ -67,10 +67,10 @@ describe('çiziciler bu çıpadan okuyor', () => {
     expect(s).toContain("text-anchor=\"' + _la.anchor + '\"");
   });
 
-  test('topology.js şerit paneli .lbl-* sınıfını basıyor', () => {
-    const s = src('topology.js');
-    expect(s).toContain("' lbl-' + _lp");
-    expect(s).toContain('ve-node-label');
+  // topology.js'in şerit paneli (yan yana görünümün öteki sekmesi) 2026-11-09'da
+  // kalktı (Canlı Not 87, tek topoloji) — adı çizen yalnız DOM ve dışa aktarım.
+  test('topology.js düğüm adı ÇİZMİYOR — şerit paneli yok', () => {
+    expect(src('topology.js')).not.toContain('ve-node-label');
   });
 
   test('DOM yolu (context-menus.js) ile aynı üç değer geçerli', () => {

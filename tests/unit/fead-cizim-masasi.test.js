@@ -758,7 +758,7 @@ describe('açıklığa ekle — TEK geri-al adımı', () => {
 // Tablo artık kartın katmanı: kanvas alanına satır eklenmez, tuval kısalmaz,
 // kamera oynamaz. Gerçek tarayıcı halkaları tests/e2e/fead-tablo.spec.js'te.
 describe('Kayış Tablosu kartın içinde — çekmece emekli', () => {
-  const KABUK = '<div class="ve-canvas-area"><div class="ve-doc-dock" id="ve-doc-dock"></div>'
+  const KABUK = '<div class="ve-canvas-area">'
     + '<div class="ve-split-container" id="ve-split-container"><div class="ve-split-pane focused">'
     + '<div class="ve-canvas-wrapper" id="ve-canvas-wrapper"></div></div></div>'
     + '<div id="ve-status-bar" class="ve-status-bar"></div></div>';

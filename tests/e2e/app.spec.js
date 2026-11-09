@@ -97,27 +97,16 @@ test.describe('Statik kabuk (giriş öncesi)', () => {
 
 // ── Giriş sonrası: modüllerin çizdiği yüzey ──────────────────────────────
 
-test.describe('Sekme yönetimi', () => {
+// TEK TOPOLOJİ (kullanıcı 2026-11-09, Canlı Not 87: *"Yan yana ek topolojiler açıp
+// sistem kurmuyoruz … bu topoloji pencere mantığını tamamen kaldıralım"*): sekme
+// ekleme · kapatma · bölünmüş görünüm yok; program bir topolojiyle açılır.
+test.describe('Tek topoloji', () => {
   test.setTimeout(90000);
 
-  test('"+" düğmesi yeni topoloji sekmesi açar', async ({ page }) => {
+  test('sekme şeridi yok; program tek topolojiyle açılır', async ({ page }) => {
     await bootApp(page);
-    const before = await page.locator('.ve-tab').count();
-    expect(before).toBeGreaterThan(0);          // açılışta en az bir sekme olmalı
-
-    await page.locator('.ve-tab-add').click();
-    await expect(page.locator('.ve-tab')).toHaveCount(before + 1);
-    // Sekme yalnız görsel değil: durum katmanında da açılmalı
-    expect(await page.evaluate(() => veTabs.length)).toBe(before + 1);
-  });
-
-  test('sekme kapatılabilir', async ({ page }) => {
-    await bootApp(page);
-    await page.locator('.ve-tab-add').click();
-    const n = await page.locator('.ve-tab').count();
-
-    await page.locator('.ve-tab').last().locator('.ve-tab-close').click();
-    await expect(page.locator('.ve-tab')).toHaveCount(n - 1);
+    await expect(page.locator('#ve-tab-bar, .ve-tab, .ve-tab-add, .ve-tab-close')).toHaveCount(0);
+    expect(await page.evaluate(() => veTabs.length)).toBe(1);
   });
 });
 

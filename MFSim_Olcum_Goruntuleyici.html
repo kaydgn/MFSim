@@ -1575,7 +1575,6 @@
     a:focus-visible,
     [tabindex]:focus-visible,
     .ve-component:focus-visible,
-    .ve-tab:focus-visible,
     .sw-btn:focus-visible {
       outline: 2px solid var(--accent-primary);
       outline-offset: 1px;
@@ -1647,8 +1646,8 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   display:flex;
   flex-direction:row;
   overflow:hidden;
-  position:relative;   /* köşe hücresindeki açma düğmesinin kabı */
-  --ray-w:64px;        /* rayın ve köşe hücresinin genişliği */
+  position:relative;   /* rayın başındaki açma düğmesinin kabı */
+  --ray-w:64px;        /* rayın genişliği */
 }
 
 /* ===== SAYFA RAYI (activity bar) ===== */
@@ -1670,31 +1669,23 @@ textarea::placeholder{ color:var(--text-muted); opacity:1; }
   background:var(--bg-secondary);
   position:relative;
 }
-/* RAYIN ÇİZGİSİ BANDIN ALTINDAN BAŞLAR (kullanıcı seçimi 2026-11-05, Canlı Not
-   33 · C: *"dikdörtgen çerçeve kesitleri kesişiyor, böyle garip bir sürü çizgi
-   var"*): palet ile arasındaki TEK çizgi (2026-09-28) duruyor, ama bant
-   satırını kesmiyor — köşe hücresi ile bandın alt çizgisi ekranın sol
-   kenarından tuvale kadar kesintisiz, dikey çizgi o çizgiden aşağı iner.
-   Kapı: kabuk-sutun.spec.js → "RAY ÇERÇEVELİ". */
+/* Palet ile arasındaki TEK çizgi (2026-09-28) — ray tam boy olduğundan tepeden
+   iner (Canlı Not 89; önce bandın altından başlıyordu, Canlı Not 33 · C). */
 .ve-nav-rail::after{
-  content:""; position:absolute; right:0; top:calc(var(--bant-h) - 1px); bottom:0;
+  content:""; position:absolute; right:0; top:0; bottom:0;
   width:1px; background:var(--border-color); pointer-events:none;
 }
-/* KÖŞE HÜCRESİ — bant satırı rayın başında da sürer; panel kapalıyken
-   Bileşenler'in açma düğmesi burada (Canlı Not 33 · C). Kabuğun üst bandı
-   (--bant-h) paletin, sekmelerin ve müfettişin başında duruyor; rayın başı
-   boştu ve "Bileşenler" bandı rayın kenarında havada başlıyordu (kullanıcı,
-   2026-09-28: "arası garip duruyor, bir çerçevesi yok"). Köşe hücresiyle
-   bandın alt çizgisi ekranın sol kenarından tuvale kadar TEK çizgi; rayın
-   öğeleri o çizginin ALTINDA başlar (aktif öğe artık bant satırına binmiyor).
-   Rayın kendi dolgusunu (4 px) iki yandan geri alır: hücre dikey çizgiye
-   kadar uzanır. Kapı: kabuk-sutun.spec.js → "RAY ÇERÇEVELİ". */
+/* RAY TAM BOY (kullanıcı 2026-11-09, Canlı Not 89: *"Sence burası güzel mi görünüyor?
+   Baksana, çok çirkin. Düzelt."*): rayın başındaki KÖŞE HÜCRESİ (bandın zemini ve alt
+   çizgisi, Canlı Not 33 · C) kalktı — ray üst banttan dibe tek sütun, palet ile
+   arasındaki TEK çizgi de tepeden iner; bant yalnız "Bileşenler"in ve müfettişin
+   başı. Rayın başında bandın boyunda bir ARALIK kalır: öğeler paletin içeriğiyle aynı
+   yükseklikte başlar ve palet kapalıyken açma düğmesi orada durur (yerleri palet
+   açılıp kapanınca oynamaz). Kapı: kabuk-sutun.spec.js → "RAY TAM BOY". */
 .ve-nav-rail::before{
   content:""; flex:none;
-  min-height:var(--bant-h); box-sizing:border-box;
+  height:var(--bant-h); box-sizing:border-box;
   margin:0 -4px 4px;
-  background:var(--bant-zemin);
-  border-bottom:1px solid var(--border-color);
 }
 /* Karşılama ekranındayken (modül seçilmemiş) ray gizlenir — sınıfı sidebar ile
    aynı yer yönetir: js/components.js › veObserveModuleOverlay(). Ray .ve-main'in
@@ -1729,15 +1720,13 @@ html:not(.ve-sayfa-diger) #sayfa2-content.ve-bas-acik .ve-sidebar-reveal{ displa
      (buraya gövde etiketini AÇIK YAZMA: build.js gömülü topoloji betiğini
       belgedeki İLK eşleşmenin ardına koyuyor, stil satır içine alındığı
       için bu yorum o eşleşme olurdu — betik <style>'ın içine düşerdi)
-   • .ve-doc-dock → .ve-main'in İÇİNDE → sınıf oradan okunur
    --chrome-h sıfırlanmazsa sayfa şerit yokken de 116px aşağıda dururdu
    (#sayfa2.active { top:var(--chrome-h) }); geçişi o kuralın kendi
    transition'ı yumuşatıyor. */
 body.ve-no-module{ --chrome-h:0px; }
 body.ve-no-module #ve-ribbon{ display:none; }
-.ve-main.ve-no-module .ve-doc-dock{ display:none; }
 /* DURUM ŞERİDİ DE KARŞILAMADA GİZLİ. Bu kural eskiden GEREKMİYORDU: şerit
-   `.ve-doc-dock`in İÇİNDEYDİ ve onunla birlikte gizleniyordu. Atölye turunda
+   belge bandının İÇİNDEYDİ ve onunla birlikte gizleniyordu. Atölye turunda
    şerit tuvalin altına taşındı ve kapsamdan sessizce çıktı — karşılama
    ekranının dibinde "0 bileşen, 0 bağlantı · %100 · Hazır" beliriyordu,
    yani arkada açık bir topoloji varmış gibi (kullanıcı bildirimi).
@@ -1834,8 +1823,8 @@ body.ve-no-module #ve-ribbon{ display:none; }
 }
 
 /* Modül seçim overlay'i görünürken sidebar + açma düğmesi tamamen gizlenir.
-   Sınıf veObserveModuleOverlay() tarafından otomatik yönetilir (düğme köşe
-   hücresinde, .ve-main'in dışında: sınıf kabından okunur). */
+   Sınıf veObserveModuleOverlay() tarafından otomatik yönetilir (düğme
+   rayın başında, .ve-main'in dışında: sınıf kabından okunur). */
 .ve-main.ve-no-module .ve-sidebar,
 #sayfa2-content.ve-no-module .ve-sidebar-reveal{
   display:none !important;
@@ -1906,15 +1895,15 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
 .ve-sidebar.compact .ve-sidebar-collapse-btn,
 .ve-sidebar.compact .ve-sidebar-title{ display:none; }
 
-/* AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C):
-   panel kapalıyken rayın başındaki bant hücresinde belirir — tuvalin sol
-   kenarında yüzen, kenarlıklı ve gölgeli kart emekli. Hücrenin alt çizgisi
-   örtülmez (boy bant − 1 px). Görünürlüğü veToggleSidebar yazar (.visible). */
+/* AÇMA DÜĞMESİ RAYIN BAŞINDA (Canlı Not 33 · C; köşe hücresi Canlı Not 89'la
+   kalktı): panel kapalıyken rayın başındaki bant boyu aralıkta belirir — tuvalin
+   sol kenarında yüzen, kenarlıklı ve gölgeli kart emekli. Rayın dikey çizgisini
+   örtmez (en − 1 px). Görünürlüğü veToggleSidebar yazar (.visible). */
 .ve-sidebar-reveal{
   position:absolute;
   left:0; top:0;
   z-index:150;
-  width:var(--ray-w); height:calc(var(--bant-h) - 1px);
+  width:calc(var(--ray-w) - 1px); height:var(--bant-h);
   box-sizing:border-box;
   display:none;            /* yalnızca daraltılmışken flex */
   flex-direction:row;
@@ -2003,8 +1992,8 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   text-align:center;
 }
 
-/* KABUK BANDININ SOL UCU — ölçü ve zemin --bant-h / --bant-zemin'den: yanındaki
-   sekme bandı ve müfettiş başlığıyla TEK yatay çizgi. Dikey iç pay YOK; bant
+/* KABUK BANDININ SOL UCU — ölçü ve zemin --bant-h / --bant-zemin'den: müfettiş
+   başlığıyla aynı ölçü ve aynı alt çizgi. Dikey iç pay YOK; bant
    yüksekliğini min-height verir (8 px'lik payla 37 px'e çıkıyordu).
    SOL PAY 17 px = içerik payı (8) + öğe kenarlığı (1) + öğe iç payı (8):
    başlığın simgesi listenin simgeleri ve kategori başlıklarıyla AYNI sol
@@ -2339,35 +2328,6 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   flex-shrink:0;
 }
 
-/* ===== ALT BANT (SEKMELER + DURUM) — TEK ŞERİT =====
-   Eskiden alt krom üç bantlıydı: sekme şeridi + uyarı başlığı + durum çubuğu,
-   toplam ~85 px. Boş bir topolojide bile bu yükseklik tuvalden kalıcı olarak
-   düşüyordu; oysa sekme şeridinin sağı geniş ekranda tamamen boştu. Üçü tek
-   ~28 px'lik banda indi. Bant konumlandırma bağlamıdır: uyarı paneli buna göre
-   AŞAĞI açılır, yani panel açmak tuvali yeniden boyutlandırmaz.
-   Bant TUVALİN ÜSTÜNDE (kullanıcı isteği, 2026-08-13) — kenarlık bu yüzden
-   altta. */
-.ve-doc-dock{
-  position:relative;
-  display:flex;
-  align-items:stretch;
-  flex-shrink:0;
-  min-width:0;
-  /* Kabuk bandının orta parçası: solundaki "Bileşenler" başlığı ve sağındaki
-     müfettiş başlığıyla aynı ölçü, aynı zemin (--bant-h). 28 px'lik kendi
-     ölçüsüyle alt çizgisi komşularından 8 px yukarıda kalıyordu. */
-  min-height:var(--bant-h);
-  box-sizing:border-box;
-  background:var(--bant-zemin);
-  /* ALT ÇİZGİ ZEMİNİN İÇİNDE (iç gölge), kenarlık DEĞİL: aktif sekme onu
-     ÖRTEBİLSİN diye. Kenarlıkken sekme şeridinin `overflow-y:hidden`ı
-     sekmenin 1 px'lik kaymasını kesiyordu ve çizgi aktif sekmenin de
-     altından geçiyordu — "sekme tuvale bağlanır" çizimde hiç olmamıştı.
-     Çizgi yine bandın SON piksel satırında: komşu bantların kenarlığıyla
-     aynı y. */
-  box-shadow:inset 0 -1px 0 var(--border-color);
-}
-
 /* ===== ALT DURUM KÜMESİ (STATUS BAR) ===== */
 /* DURUM ŞERİDİ — tuvalin ALTINDA, kanvas alanının son satırı.
    Eskiden sekme bandının SAĞ yarısındaydı (327 px) ve bant tuvalin üstündeydi;
@@ -2447,135 +2407,6 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   #ve-status-counts{display:none;}
 }
 
-/* ===== TOPOLOJI SEKME ÇUBUĞU ===== */
-.ve-tab-bar{
-  display:flex;
-  align-items:flex-end;
-  background:var(--bg-secondary);
-  border-bottom:1px solid var(--border-color);
-  padding:0 8px;
-  gap:3px;
-  flex-shrink:0;
-  min-height:32px;
-  overflow:hidden;
-}
-/* Üst konum: sekmeler AŞAĞIYA, tuvale bağlanır — .ve-tab'ın taban biçimi
-   zaten bu yön (üstü yuvarlak, altı açık, aksan çubuğu üstte), o yüzden
-   burada yalnız YERLEŞİM ayarlanır, biçim aynalanmaz.
-   Arka plan ve alt kenarlık banttadır (.ve-doc-dock) — sekmeler o bandın sol
-   yarısıdır, sağ yarısını durum kümesi doldurur. */
-.ve-tab-bar--top{
-  /* SEKME BANDIN BOYU (stretch): yazısı komşu başlıklarla ("Bileşenler",
-     müfettiş) aynı ortada durur ve sekme bandın dibindeki çizgiyi örter —
-     tuvale gerçekten bağlanır. Dibe yaslı kısa sekmenin yazısı komşu
-     başlıklardan aşağıda kalıyordu. */
-  align-items:stretch;
-  flex:1 1 auto;
-  min-width:0;
-  background:transparent;
-  border-bottom:none;
-  border-top:none;
-  min-height:0;
-  overflow-x:auto;
-  overflow-y:hidden;
-  scrollbar-width:none;
-}
-/* Kayma yok: sekme bandın içinde biter ve bandın çizgisi zeminin içinde
-   (iç gölge) — örtmek için dışarı taşması gerekmiyor, taşsaydı şerit kesecekti. */
-.ve-tab-bar--top .ve-tab{ top:0; }
-.ve-tab-bar--top .ve-tab-add{ align-self:center; margin-bottom:0; width:22px; height:22px; }
-.ve-tab-bar::-webkit-scrollbar{display:none;}
-.ve-tab{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  /* Dikey pay 4 px: sekme bandın boyuna (--bant-h) uzar, yazı ortada. */
-  padding:4px 11px;
-  font-size:var(--fs-body);
-  font-weight:500;
-  color:var(--text-secondary);
-  cursor:pointer;
-  border:1px solid transparent;
-  border-bottom:none;
-  border-radius:var(--radius-sm) var(--radius-sm) 0 0;
-  white-space:nowrap;
-  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
-  position:relative;
-  top:1px;
-  background:transparent;
-  user-select:none;
-}
-.ve-tab:hover{
-  color:var(--text-primary);
-  background:var(--bg-tertiary);
-  box-shadow:inset 0 -1px 0 var(--border-color);   /* bandın çizgisi kesilmez */
-}
-/* AKTİF SEKME DÜZ (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C): kutusuz,
-   bandın zemininde; altını aksan çizer, bandın alt çizgisi kesintisiz. Eski
-   "kutulu sekme bandın çizgisini örter, tuvale bağlanır" (2026-09-23) emekli.
-   Kapı: kabuk-sutun.spec.js → "KABUK TEK ÇİZGİ". */
-.ve-tab.active{
-  color:var(--text-heading);
-  background:transparent;
-  border-color:transparent;
-  box-shadow:none;
-  font-weight:600;
-}
-.ve-tab.active::before{
-  content:"";
-  position:absolute;
-  left:10px;
-  right:10px;
-  bottom:0;
-  height:2px;
-  background:var(--accent-primary);
-}
-.ve-tab .ve-tab-close{
-  width:15px;
-  height:15px;
-  border-radius:var(--radius-xs);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:var(--fs-micro);
-  color:var(--text-muted);
-  opacity:0;
-  transition:opacity var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
-  flex-shrink:0;
-}
-.ve-tab:hover .ve-tab-close{opacity:0.65;}
-.ve-tab .ve-tab-close:hover{opacity:1; background:var(--accent-danger); color:var(--on-danger);}
-.ve-tab-add{
-  width:24px;
-  height:24px;
-  margin-bottom:3px;
-  border-radius:var(--radius-sm);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:var(--fs-title);
-  line-height:1;
-  color:var(--text-muted);
-  cursor:pointer;
-  border:none;
-  background:transparent;
-  margin-left:4px;
-  flex-shrink:0;
-  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
-}
-.ve-tab-add .mf-ico{width:14px;height:14px;}
-.ve-tab-add:hover{
-  color:var(--accent-primary);
-  background:var(--bg-tertiary);
-}
-.ve-tab-count{
-  font-size:var(--fs-micro);
-  color:var(--text-muted);
-  opacity:0.7;
-  margin-left:1px;
-  font-variant-numeric:tabular-nums;
-}
-
 /* ===== SPLIT VIEW ===== */
 /* TUVAL KENARLARA YAPIŞIK — her sınır TEK çizgi (2026-09-23).
    Emekli hüküm: "tuval bir ÇUKURA oturur" (8 px pay + 1 px kenarlık + 10 px
@@ -2585,7 +2416,8 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
    bağlanacağı tuvale değil aradaki 8 px'lik kâğıda açılıyordu. Kullanıcı:
    "pencere sınırları hizasız, tatsız". "Bant kabuğun, tuval çalışmanın"
    ayrımını artık ZEMİN söylüyor (bantlar yüzey, tuval kâğıt), pay değil.
-   Bölünmüş görünümde bölmeleri ayırıcı (.ve-split-resizer) ayırır. */
+   TEK BÖLME (Canlı Not 87): yan yana topoloji yok — kap ve bölme tuvalin
+   kabı olarak kalır, ayırıcı · bölme başlığı · bırakma alanları kalktı. */
 .ve-split-container{
   display:flex;
   flex:1;
@@ -2598,78 +2430,7 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   flex-direction:column;
   min-width:0;
   position:relative;
-  transition:border-color 0.15s;
 }
-.ve-split-pane.split-active{border:2px solid transparent;}
-.ve-split-pane.split-active.focused{border-color:var(--accent-primary);}
-.ve-pane-header{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  padding:3px 10px;
-  background:var(--bg-tertiary);
-  border-bottom:1px solid var(--border-color);
-  font-size:var(--fs-tiny);
-  font-weight:600;
-  color:var(--text-secondary);
-  flex-shrink:0;
-  min-height:22px;
-  user-select:none;
-}
-.ve-pane-header .ve-pane-label{flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.ve-pane-header .ve-pane-focus-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-primary);flex-shrink:0;display:none;}
-.ve-split-pane.focused .ve-pane-focus-dot{display:block;}
-.ve-pane-header .ve-pane-mode{color:var(--text-muted);}
-.ve-pane-header .ve-pane-close{
-  display:inline-flex;cursor:pointer;font-size:var(--fs-tiny);padding:1px 4px;border-radius:var(--radius-xs);color:var(--text-muted);opacity:0.5;transition:all 0.1s;
-}
-.ve-pane-header .ve-pane-close:hover{opacity:1;background:var(--accent-danger);color:var(--on-danger);}
-.ve-split-resizer{
-  width:4px;
-  background:var(--border-color);
-  cursor:col-resize;
-  flex-shrink:0;
-  transition:background 0.15s;
-  position:relative;
-  z-index:5;
-}
-.ve-split-resizer:hover,.ve-split-resizer.active{background:var(--accent-primary);}
-.ve-split-dropzone{
-  position:absolute;
-  top:0;bottom:0;
-  z-index:100;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:var(--fs-lg);
-  font-weight:700;
-  color:var(--ink-accent);
-  pointer-events:all;
-  opacity:0;
-  transition:opacity 0.15s;
-}
-.ve-split-dropzone.visible{opacity:1;}
-.ve-split-dropzone.left{left:0;width:50%;background:color-mix(in srgb, var(--accent-primary) 6%, transparent);border-right:2px dashed var(--accent-primary);}
-.ve-split-dropzone.right{right:0;width:50%;background:color-mix(in srgb, var(--accent-primary) 6%, transparent);border-left:2px dashed var(--accent-primary);}
-.ve-split-dropzone.hover{background:color-mix(in srgb, var(--accent-primary) 15%, transparent);}
-.ve-snapshot-pane{
-  flex:1;
-  overflow:hidden;
-  background:
-    linear-gradient(var(--border-light) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
-  background-size:20px 20px;
-  background-color:var(--bg-primary);
-  position:relative;
-  cursor:grab;
-}
-.ve-snapshot-pane:active{cursor:grabbing;}
-/* Snapshot içindeki node'lar: etkileşim yok, görünüm aynı */
-.ve-snapshot-pane .ve-node{pointer-events:none;user-select:none;}
-.ve-snapshot-pane .ve-selection-border,
-.ve-snapshot-pane .ve-resize-handle,
-.ve-snapshot-pane .ve-node-port{display:none;}
-.ve-snapshot-pane .ve-node-label{pointer-events:none;}
 
 /* ═══ Modül Seçim / Karşılama Ekranı — ATÖLYE DÜZENİ ═══
    Solda kimlik + proje yolları (opak panel), sağda tuval ızgarasının üstünde
@@ -3268,8 +3029,7 @@ html.ve-sayfa-diger .ve-sidebar-reveal{ display:none !important; }
   from{ transform:translateY(-100%); }
   to{ transform:translateY(0); }
 }
-body.ve-chrome-enter #ve-ribbon,
-body.ve-chrome-enter .ve-doc-dock{
+body.ve-chrome-enter #ve-ribbon{
   animation:ve-chrome-drop var(--dur-enter) var(--ease-out) both;
 }
 
@@ -3341,8 +3101,7 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   .ve-welcome-enter .ve-welcome-open,
   .ve-welcome-enter .ve-welcome-kunye,
   .ve-welcome-enter .ve-welcome-links,
-  body.ve-chrome-enter #ve-ribbon,
-  body.ve-chrome-enter .ve-doc-dock{ animation:none; }
+  body.ve-chrome-enter #ve-ribbon{ animation:none; }
   /* Uçuş JS'te hiç başlatılmıyor (js/components.js matchMedia kapısı); bu
      satır klon yine de doğarsa asılı kalmasın diye emniyet. */
   .ve-welcome-flyer{ transition:none; }
@@ -4669,25 +4428,29 @@ body > .mfsim-loading-logo-ico{ transition:none; }
   opacity:0.85;
 }
 
-/* Uyarı paneli — belge bandının ALTINA açılan yüzen katman.
-   Önceden bandın yanında akışta duruyordu: başlığı kapalıyken bile 32 px,
-   açıkken 160 px tuval yüksekliği yiyordu. Artık .ve-doc-dock'a göre
-   absolute; açmak tuvali küçültmez, yalnızca geçici olarak üzerini örter —
-   yani panele bakmak topolojiyi yeniden ölçeklendirmez.
-   Bant tuvalin ÜSTÜNE taşındığı için panel de aşağı açılır. */
+/* UYARILAR — durum çubuğundaki düğmesinin ÜSTÜNDE açılan küçük pencere (kullanıcı
+   2026-11-09, Canlı Not 90: *"Uyarılar kısmı da temaya, yazı tipine uygun değil"*).
+   Başlık pencere ailesinin (.ve-settings-header + .ve-settings-close), gövde programın
+   gövde yazısında (12 px); köşe keskin, gölge yüzenin. Önce sekme bandının altında
+   tuvalin tamamı eninde, kendi başlık rengi ve 13 px yazısıyla açılıyordu (Canlı Not 87
+   o bandı kaldırdı). Açmak tuvali küçültmez, yalnız geçici olarak üzerini örter. */
+.ve-status-bar{ position:relative; }
 .ve-warnings-panel{
   position:absolute;
-  left:0;
-  right:0;
-  top:100%;
+  left:6px;
+  bottom:calc(100% + 4px);
   z-index:var(--z-canvas-ui);
-  max-height:min(240px, 40vh);
+  width:min(420px, calc(100% - 12px));
+  max-height:min(320px, 50vh);
   background:var(--bg-secondary);
-  border-top:1px solid var(--border-color);
-  border-bottom:1px solid var(--border-color);
+  border:1px solid var(--border-hover);
   box-shadow:var(--shadow-lg);
   display:flex;
   flex-direction:column;
+  overflow:hidden;
+  font-size:var(--fs-body);
+  color:var(--text-primary);
+  user-select:text;
   animation:veWarningsIn var(--dur-fast) var(--ease-out);
 }
 /* Açık/kapalı gerçeğini tek yazıcı kurar: veSetWarningsOpen(). Gövdedeki
@@ -4695,47 +4458,23 @@ body > .mfsim-loading-logo-ico{ transition:none; }
    basılı durumu oradan okur; panelin .open sınıfı onunla birlikte yazılır. */
 .ve-warnings-panel:not(.open){display:none;}
 @keyframes veWarningsIn{
-  from{opacity:0; transform:translateY(-6px);}   /* aşağı açılıyor → yukarıdan iner */
+  from{opacity:0; transform:translateY(6px);}    /* yukarı açılıyor → aşağıdan çıkar */
   to{opacity:1; transform:translateY(0);}
 }
-.ve-warnings-header{
-  padding:5px 8px 5px 12px;
-  font-size:var(--fs-body);
-  font-weight:600;
-  color:var(--text-heading);
-  display:flex;
-  align-items:center;
-  gap:8px;
-  background:var(--bg-tertiary);
-  border-bottom:1px solid var(--border-color);
-  user-select:none;
-  flex-shrink:0;
-}
-.ve-warnings-close{
-  margin-left:auto;
-  width:20px;
-  height:20px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border:none;
-  border-radius:var(--radius-xs);
-  background:transparent;
-  color:var(--text-muted);
-  cursor:pointer;
-  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
-}
-.ve-warnings-close:hover{background:var(--accent-danger);color:var(--on-danger);}
+@media (prefers-reduced-motion: reduce){ .ve-warnings-panel{ animation:none; } }
+.ve-warnings-panel > .ve-settings-header{ flex:none; }
 .ve-warnings-body{
   overflow-y:auto;
   flex:1;
   min-height:0;
-  font-size:var(--fs-md);
+  font-size:var(--fs-body);
 }
+.ve-warnings-bos{ padding:10px 12px; color:var(--text-muted); }
+.ve-warnings-bos.ok{ color:var(--ink-success); }
 .ve-warnings-body.collapsed{display:none;}
 .ve-warning-item{
-  padding:7px 12px;
-  border-bottom:1px solid var(--border-color);
+  padding:6px 12px;
+  border-bottom:1px solid var(--border-light);
   display:flex;
   align-items:center;
   gap:8px;
@@ -5420,8 +5159,8 @@ html.ve-sayfa-diger #ve-properties-overlay{ display:none !important; }
 .ve-properties-close:focus-visible{ outline:none; box-shadow:var(--focus-ring); }
 
 
-/* Pencere başlığı KABUK BANDININ sağ ucu (sütun kipinde): "Bileşenler" ve
-   sekme bandıyla aynı ölçü, aynı zemin (--bant-h / --bant-zemin). 5 px'lik
+/* Pencere başlığı KABUK BANDININ sağ ucu (sütun kipinde): "Bileşenler"le
+   aynı ölçü, aynı zemin (--bant-h / --bant-zemin). 5 px'lik
    dikey payla 33 px'ti ve alt çizgisi komşularının arasında üçüncü bir y'de
    kalıyordu. Modal kipte de aynı başlık — tek pencere, tek başlık ölçüsü.
    Yatay pay İÇERİĞİNKİYLE aynı (10 px, `.ve-properties-content`): başlığın

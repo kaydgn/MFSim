@@ -56,7 +56,6 @@ const TOPLAM_TAVAN = 14 * 1024 * 1024;  // klasör toplamı (ölçülen: 12,41 M
 function setupDOM() {
   document.body.innerHTML =
     '<div id="sayfa2-content"><div class="ve-main">' +
-    '  <div class="ve-doc-dock"></div>' +
     '  <div class="ve-module-overlay" id="ve-module-overlay">' +
     '    <div class="ve-welcome">' +
     '      <div class="ve-welcome-slayt" id="ve-welcome-slayt"></div>' +

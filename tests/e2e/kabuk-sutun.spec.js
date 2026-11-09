@@ -18,14 +18,15 @@
  *
  * 2) DURUM ŞERİDİ TUVALİN ALTINDA. Eskiden sekme bandının sağ yarısındaydı
  *    (327 px) ve bant tuvalin üstündeydi. O yerleşimin gerekçesi
- *    ("sekme açtığı belgeye bağlanır") yalnız SEKMELERE ait. Şerit inince
- *    sekmeler bandın tamamını aldı: 662 → 996 px.
+ *    ("sekme açtığı belgeye bağlanır") yalnız SEKMELERE ait. 2026-11-09
+ *    (Canlı Not 87): program TEK topolojiyle çalışır — sekme şeridi de
+ *    kalktı, tuval üst bandın hemen altından başlar.
  *
- * 3) KABUK TEK ÇİZGİ (2026-09-23). Üst kenardaki üç başlık ("Bileşenler",
- *    sekmeler, müfettiş) tek bant: aynı ölçü, aynı zemin, aynı alt çizgi.
- *    Tuval kenara yapışık; "tuval bir ÇUKURA oturur" hükmü emekli. 2026-11-05
- *    (Canlı Not 33 · C): bandın çizgisi KESİNTİSİZ — aktif sekme düz (altı
- *    aksan), rayın çizgisi bandın altından, paletin açma düğmesi köşe hücresinde.
+ * 3) KABUK TEK ÇİZGİ (2026-09-23). Üst kenardaki başlıklar ("Bileşenler",
+ *    müfettiş) tek bant: aynı ölçü, aynı zemin, aynı alt çizgi. Tuval kenara
+ *    yapışık; "tuval bir ÇUKURA oturur" hükmü emekli. 2026-11-09 (Canlı Not
+ *    89): ray TAM BOY — başındaki köşe hücresi kalktı, palet ile arasındaki
+ *    çizgi tepeden iner, paletin açma düğmesi rayın başındaki aralıkta.
  *
  * ÖDENEN BEDEL BURADA ÇİVİLİ: tuval 24 px kaybetti. Bunu gizlemek yerine
  * ölçüyoruz — ve şeridin katlanmasının 86 px geri getirdiğini de.
@@ -81,7 +82,7 @@ const olc = () => {
     };
   };
   return {
-    ray: g('#ve-nav-rail'), palet: g('#ve-sidebar'), dock: g('#ve-doc-dock'),
+    ray: g('#ve-nav-rail'), palet: g('#ve-sidebar'), ana: g('.ve-main'),
     durum: g('#ve-status-bar'), tuval: g('#ve-split-container'),
     katli: !!document.querySelector('#ve-ribbon.is-collapsed'),
   };
@@ -92,46 +93,43 @@ const saydam = (renk) => /,\s*0\s*\)$/.test(renk);
 
 // RAY ÇERÇEVELİ (2026-09-28). Kullanıcı ("Topoloji / Sonuçlar" sütunu ile
 // "Bileşenler" sütununun ekran görüntüsüyle): "arası garip duruyor, bir
-// çerçevesi yok." Atölye turunda (2026-09-22) ray ile palet tek sütun okunsun
-// diye aradaki çizgi tuval sayfasında kaldırılmıştı: "Bileşenler" bandı rayın
-// kenarında havada başlıyor, rayın aktif öğesi (y 38–87) bant satırına
-// (32–58) biniyordu. Şimdi: aralarında TEK çizgi (rayın), bant satırı rayın
-// başında bir köşe hücresiyle sürüyor, rayın öğeleri o çizginin ALTINDA.
-// 2026-11-05 (kullanıcı seçimi, Canlı Not 33 · C: *"dikdörtgen çerçeve
-// kesitleri kesişiyor"*): çizgi TEK ama bant satırını kesmiyor — rayın
-// kenarlığı değil, bandın alt çizgisinden aşağı inen `::after`.
+// çerçevesi yok." Aralarında TEK çizgi (rayın), paletin sol kenarı yok.
+// RAY TAM BOY (kullanıcı 2026-11-09, Canlı Not 89: *"Sence burası güzel mi
+// görünüyor? Baksana, çok çirkin. Düzelt."*): rayın başındaki KÖŞE HÜCRESİ
+// (bandın zemini ve alt çizgisi, Canlı Not 33 · C) kalktı — ray üst banttan
+// dibe tek sütun, çizgi tepeden iner. Rayın başında bandın boyunda bir aralık
+// kalır (zeminsiz, çizgisiz): öğeler paletin içeriğiyle aynı yükseklikte başlar.
 const rayCerceve = () => {
   const ray = document.querySelector('#ve-nav-rail');
   const rb = ray.getBoundingClientRect();
-  const kose = getComputedStyle(ray, '::before');
+  const bas = getComputedStyle(ray, '::before');
   const cizgi = getComputedStyle(ray, '::after');
   const aktif = document.querySelector('.ve-nav-item.active').getBoundingClientRect();
   const bant = [...document.querySelectorAll('.ve-sidebar-header, .ve-results-head')]
     .find((e) => e.offsetWidth > 0);
   const komsu = bant.parentElement.getBoundingClientRect();
-  const alt = (e) => Math.round(e.getBoundingClientRect().bottom);
+  const bb = bant.getBoundingClientRect();
   return {
     rayCizgi: cizgi.backgroundColor,
     rayCizgiKalinlik: parseFloat(cizgi.width),
     rayCizgiUst: Math.round(rb.y + parseFloat(cizgi.top)),
+    rayCizgiAlt: Math.round(rb.bottom - parseFloat(cizgi.bottom)),
     rayCizgiSag: Math.round(rb.x + rb.width - parseFloat(cizgi.right) - parseFloat(cizgi.width)),
+    rayUst: Math.round(rb.y), rayAlt: Math.round(rb.bottom),
     rayKenar: parseFloat(getComputedStyle(ray).borderRightWidth) || 0,
     raySag: Math.round(rb.x + rb.width),
     komsuSolKalinlik: parseFloat(getComputedStyle(bant.parentElement).borderLeftWidth) || 0,
     bitisik: Math.round(komsu.x) === Math.round(rb.x + rb.width),
-    koseH: parseFloat(kose.height),
-    koseZemin: kose.backgroundImage === 'none' ? kose.backgroundColor : kose.backgroundImage,
-    bantZemin: getComputedStyle(bant).backgroundImage === 'none' ? getComputedStyle(bant).backgroundColor : getComputedStyle(bant).backgroundImage,
-    koseAlt: Math.round(rb.y + parseFloat(kose.height)),
-    bantAlt: alt(bant),
-    dockAlt: document.querySelector('#ve-doc-dock') && document.querySelector('#ve-doc-dock').offsetWidth
-      ? alt(document.querySelector('#ve-doc-dock')) : null,
+    basH: parseFloat(bas.height),
+    basZemin: bas.backgroundColor, basResim: bas.backgroundImage,
+    basCizgi: parseFloat(bas.borderBottomWidth) || 0,
+    bantUst: Math.round(bb.top), bantAlt: Math.round(bb.bottom),
     aktifUst: Math.round(aktif.y),
     jeton: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')),
   };
 };
 
-test('RAY ÇERÇEVELİ — palet ile arasında TEK çizgi, bant satırı rayda da sürüyor ve kesilmiyor', async ({ page }) => {
+test('RAY TAM BOY — palet ile arasında TEK çizgi tepeden dibe; rayın başında bant hücresi yok', async ({ page }) => {
   await paletliAc(page);
   const r = await page.evaluate(rayCerceve);
   expect(r.bitisik).toBe(true);
@@ -140,21 +138,20 @@ test('RAY ÇERÇEVELİ — palet ile arasında TEK çizgi, bant satırı rayda d
   expect(r.rayCizgiKalinlik).toBe(1);
   expect(r.komsuSolKalinlik).toBe(0);
   expect(r.rayCizgiSag).toBe(r.raySag - 1);         // rayın son piksel sütunu
-  // bant satırını KESMİYOR: kenarlık yok, çizgi bandın alt çizgisinden iner
   expect(r.rayKenar).toBe(0);
-  expect(r.rayCizgiUst).toBe(r.koseAlt - 1);
-  // köşe hücresi bandın kendisi: aynı ölçü, aynı zemin, alt çizgisi paletin
-  // ve sekme bandının alt çizgisiyle AYNI y'de
-  expect(r.koseH).toBe(r.jeton);
-  expect(r.koseZemin).toBe(r.bantZemin);
-  expect(saydam(r.koseZemin)).toBe(false);
-  expect(r.koseAlt).toBe(r.bantAlt);
-  expect(r.koseAlt).toBe(r.dockAlt);
-  // rayın aktif öğesi bant satırına binmiyor
-  expect(r.aktifUst).toBeGreaterThanOrEqual(r.koseAlt);
+  // ray bandın hizasından başlıyor ve çizgi rayın TAMAMI boyunca
+  expect(r.rayUst).toBe(r.bantUst);
+  expect([r.rayCizgiUst, r.rayCizgiAlt]).toEqual([r.rayUst, r.rayAlt]);
+  // köşe hücresi YOK: rayın başı bandın boyunda bir aralık — zemini ve çizgisi yok
+  expect(r.basH).toBe(r.jeton);
+  expect(saydam(r.basZemin)).toBe(true);
+  expect(r.basResim).toBe('none');
+  expect(r.basCizgi).toBe(0);
+  // rayın aktif öğesi bant satırına binmiyor: paletin içeriğiyle aynı yükseklikten başlar
+  expect(r.aktifUst).toBeGreaterThanOrEqual(r.bantAlt);
 });
 
-test('Sonuçlar sayfasında da aynı çerçeve — çizgi ve köşe hücresi yerinde', async ({ page }) => {
+test('Sonuçlar sayfasında da aynı çerçeve — çizgi tepeden, köşe hücresi yok', async ({ page }) => {
   await modulAc(page);
   await page.evaluate(() => veSubTabDegistir('sonuclar'));
   await page.waitForTimeout(500);
@@ -163,9 +160,11 @@ test('Sonuçlar sayfasında da aynı çerçeve — çizgi ve köşe hücresi yer
   expect(saydam(r.rayCizgi)).toBe(false);
   expect(r.komsuSolKalinlik).toBe(0);
   expect(r.rayKenar).toBe(0);
-  expect(r.rayCizgiUst).toBe(r.koseAlt - 1);
-  expect(r.koseAlt).toBe(r.bantAlt);          // "Veri Gezgini" bandıyla tek çizgi
-  expect(r.aktifUst).toBeGreaterThanOrEqual(r.koseAlt);
+  expect(r.rayUst).toBe(r.bantUst);           // "Veri Gezgini" bandıyla aynı tepe
+  expect(r.rayCizgiUst).toBe(r.rayUst);
+  expect(saydam(r.basZemin)).toBe(true);
+  expect(r.basCizgi).toBe(0);
+  expect(r.aktifUst).toBeGreaterThanOrEqual(r.bantAlt);
 });
 
 // ── PALETSİZ KAPSAM (2026-09-28) ───────────────────────────────────────────
@@ -197,27 +196,25 @@ test('PALETSİZ KAPSAM — FEAD\'de sütun ve açma rayı yok; tuval rayın yan�
   await page.waitForTimeout(300);
   const olcP = () => page.evaluate(() => {
     const ray = document.querySelector('#ve-nav-rail').getBoundingClientRect();
-    const kose = getComputedStyle(document.querySelector('#ve-nav-rail'), '::before');
-    const dock = document.getElementById('ve-doc-dock').getBoundingClientRect();
     const w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
     const alan = document.querySelector('.ve-canvas-area');
     return {
       paletsiz: document.querySelector('.ve-main').classList.contains('ve-paletsiz'),
       sutun: document.getElementById('ve-sidebar').offsetWidth,
       acmaRayi: document.getElementById('ve-sidebar-reveal').offsetWidth,
-      rayR: Math.round(ray.right), dockX: Math.round(dock.left), tuvalX: Math.round(w.left),
+      rayR: Math.round(ray.right), rayY: Math.round(ray.top), tuvalX: Math.round(w.left),
+      tuvalY: Math.round(w.top),
       tuvalW: Math.round(w.width), alanSol: parseFloat(getComputedStyle(alan).borderLeftWidth) || 0,
-      koseAlt: Math.round(ray.top + parseFloat(kose.height)), dockAlt: Math.round(dock.bottom),
     };
   });
   const f = await olcP();
   expect(f.paletsiz).toBe(true);
   expect([f.sutun, f.acmaRayi]).toEqual([0, 0]);
-  // Tuval ve sekme bandı rayın HEMEN yanında; aralarında tek çizgi (rayın).
-  expect(f.dockX).toBe(f.rayR);
+  // Tuval rayın HEMEN yanında; aralarında tek çizgi (rayın).
   expect(f.tuvalX).toBe(f.rayR);
   expect(f.alanSol).toBe(0);
-  expect(f.koseAlt).toBe(f.dockAlt);            // bant satırı rayda da sürüyor
+  // Tuvalin üstünde bant yok (Canlı Not 87): tuval de ray da aynı tepeden başlar.
+  expect(f.tuvalY).toBe(f.rayY);
   // Sütun DARALTILMIŞ olsa bile (kullanıcının tercihi) açma rayı FEAD'de çıkmaz.
   await page.evaluate(() => veToggleSidebar(true));
   await page.waitForTimeout(450);
@@ -240,14 +237,23 @@ test('durum şeridi TUVALİN ALTINDA ve tuval genişliğinde', async ({ page }) 
   expect(r.durum.y).toBeGreaterThanOrEqual(r.tuval.y + r.tuval.h - 1);
   expect(r.durum.x).toBe(r.tuval.x);
   expect(r.durum.w).toBe(r.tuval.w);
-  // ve sekme bandının İÇİNDE değil
-  expect(r.durum.y).toBeGreaterThan(r.dock.y + r.dock.h);
 });
 
-test('sekme bandı artık bandın TAMAMI — durum onu yemiyor', async ({ page }) => {
+// TEK TOPOLOJİ (kullanıcı 2026-11-09, Canlı Not 87: *"Programda genel olarak tek
+// bir topoloji üzerinden ilerliyoruz … bu topoloji pencere mantığını tamamen
+// kaldıralım programdan. Bu görüntüyü de kaldıralım."*): tuvalin üstündeki sekme
+// şeridi ("Topoloji 1 (1) +") ve yan yana görünüm yok; tuval üst bandın HEMEN
+// altından başlar — eski şerit tuvalden bandın boyu kadar yiyordu.
+test('TEK TOPOLOJİ — sekme şeridi yok; tuval üst bandın hemen altından başlar', async ({ page }) => {
   await modulAc(page);
-  const r = await page.evaluate(olc);
-  expect(r.dock.w).toBe(r.tuval.w);
+  const r = await page.evaluate(() => ({
+    sekme: document.querySelectorAll('#ve-tab-bar, #ve-doc-dock, .ve-tab, .ve-tab-add, .ve-split-resizer').length,
+    topoloji: veTabs.length,
+    tuvalUst: Math.round(document.getElementById('ve-split-container').getBoundingClientRect().top),
+    anaUst: Math.round(document.querySelector('.ve-main').getBoundingClientRect().top),
+  }));
+  expect([r.sekme, r.topoloji]).toEqual([0, 1]);
+  expect(r.tuvalUst).toBe(r.anaUst);
 });
 
 // ŞERİDİN GÖVDESİ YOK (kullanıcı 2026-11-06, Canlı Not 59: *"Programı
@@ -273,13 +279,13 @@ test('komutların penceresi tuvali OYNATMIYOR', async ({ page }) => {
 // üst kenarda yan yana üç başlık üç ayrı ölçü — "Bileşenler" 37, sekme bandı
 // 29, müfettiş başlığı 33 px; alt çizgileri y=75 · 67 · 71'de. Tuval de 8 px
 // içeride, 10 px köşeli ayrı çerçevedeydi (EMEKLİ "tuval bir ÇUKURA oturur"
-// hükmü): her sınır iki çizgiydi ve aktif sekme tuvale değil aradaki 8 px'lik
-// kâğıda açılıyordu.
+// hükmü): her sınır iki çizgiydi. Sekme bandı 2026-11-09'da kalktı (Canlı Not
+// 87): bantta iki başlık kalır, tuval aralarında üst bandın hemen altından.
 //
 // Node'da ölçülemez: jsdom yerleşim hesaplamaz, bir metnin çizildiği satırı
 // (`Range.getBoundingClientRect`) hiç bilmez. CSS metninin kapısı
 // tests/unit/kabuk-bant.test.js.
-test('KABUK TEK ÇİZGİ — üç başlık aynı bantta, tuval komşularına yapışık', async ({ page }) => {
+test('KABUK TEK ÇİZGİ — iki başlık aynı bantta, tuval komşularına yapışık', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await paletliAc(page);
   // Açılış yüzeyinin kartının penceresini açıyoruz (müfettiş başlığı ancak
@@ -295,63 +301,53 @@ test('KABUK TEK ÇİZGİ — üç başlık aynı bantta, tuval komşularına yap
       const rg = document.createRange(); rg.selectNodeContents(document.querySelector(s));
       const b = rg.getBoundingClientRect(); return b.top + b.height / 2;
     };
-    const sb = k('.ve-sidebar-header'), dk = k('#ve-doc-dock'), mh = k('.ve-properties-header');
+    const sb = k('.ve-sidebar-header'), mh = k('.ve-properties-header');
     const sp = k('#ve-sidebar'), w = k('#ve-canvas-wrapper'), st = k('#ve-status-bar');
-    const mu = k('#ve-properties'), tab = k('#ve-tab-bar .ve-tab.active'), tb = k('#ve-tab-bar');
+    const mu = k('#ve-properties');
     const wcs = getComputedStyle(document.querySelector('#ve-canvas-wrapper'));
-    const tcs = getComputedStyle(document.querySelector('#ve-tab-bar .ve-tab.active'));
     return {
-      alt: [sb.bottom, dk.bottom, mh.bottom], boy: [sb.height, dk.height, mh.height],
-      yazi: [orta('.ve-sidebar-title'), orta('#ve-tab-bar .ve-tab.active'), orta('#ve-properties-title')],
-      tuval: { sol: w.left - sp.right, ust: w.top - dk.bottom, sag: mu.left - w.right, alt: st.top - w.bottom },
+      alt: [sb.bottom, mh.bottom], boy: [sb.height, mh.height], ust: [sb.top, mh.top],
+      yazi: [orta('.ve-sidebar-title'), orta('#ve-properties-title')],
+      tuval: { sol: w.left - sp.right, ust: w.top - sb.top, sag: mu.left - w.right, alt: st.top - w.bottom },
       kose: wcs.borderTopLeftRadius, golge: wcs.boxShadow, kenar: wcs.borderTopWidth,
-      sekme: { alt: tab.bottom - dk.bottom, kesik: tab.bottom - tb.bottom, zemin: tcs.backgroundColor, kenar: tcs.borderLeftColor },
-      aksan: (() => { const a = getComputedStyle(document.querySelector('#ve-tab-bar .ve-tab.active'), '::before');
-        return { alt: a.bottom, boy: a.height, renk: a.backgroundColor, ust: a.top }; })(),
     };
   });
-  // Üç başlığın alt çizgisi AYNI y'de ve ölçüleri aynı (eski: 75 · 67 · 71).
-  expect(Math.max(...r.alt) - Math.min(...r.alt)).toBeLessThanOrEqual(0.5);
-  expect(Math.max(...r.boy) - Math.min(...r.boy)).toBeLessThanOrEqual(0.5);
-  // Yazıları da aynı ortada: sekme bandın dibine yaslı kısa bir kutu olsaydı
-  // "Topoloji 1" komşularından aşağıda kalırdı.
-  expect(Math.max(...r.yazi) - Math.min(...r.yazi)).toBeLessThanOrEqual(1.5);
-  // Tuval dört kenarda da komşusunun çizgisine yapışık (eski: 8 px pay her yanda).
+  // İki başlığın alt çizgisi AYNI y'de, ölçüleri ve yazılarının ortası aynı.
+  expect(Math.abs(r.alt[0] - r.alt[1])).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(r.boy[0] - r.boy[1])).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(r.ust[0] - r.ust[1])).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(r.yazi[0] - r.yazi[1])).toBeLessThanOrEqual(1.5);
+  // Tuval dört kenarda da komşusuna yapışık (eski: 8 px pay her yanda); üstte
+  // bant yok — tuval başlıklarla aynı tepeden başlar.
   Object.values(r.tuval).forEach((p) => expect(Math.abs(p)).toBeLessThanOrEqual(0.5));
   expect(r.kose).toBe('0px');
   expect(r.kenar).toBe('0px');
   expect(r.golge).toBe('none');
-  // AKTİF SEKME DÜZ (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C): kutusuz,
-  // bandın zemininde (saydam, kenarsız) ve altını aksan çiziyor; bandın alt
-  // çizgisi kesintisiz. Sekme yine bandın boyunda (yazı komşularla aynı
-  // ortada) ve şerit onu KESMİYOR. Eski "kutulu sekme tuvale bağlanır" emekli.
-  expect(Math.abs(r.sekme.alt)).toBeLessThanOrEqual(0.5);
-  expect(r.sekme.kesik).toBeLessThanOrEqual(0.5);
-  expect(saydam(r.sekme.zemin)).toBe(true);
-  expect(saydam(r.sekme.kenar)).toBe(true);
-  expect(r.aksan).toMatchObject({ alt: '0px', boy: '2px' });
-  expect(saydam(r.aksan.renk)).toBe(false);
 });
 
-// AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C):
-// palet kapalıyken Bileşenler'in açma düğmesi rayın başındaki bant hücresinde —
-// tuvalin sol kenarında yüzen, kenarlıklı ve gölgeli kart emekli. Hücrenin alt
-// çizgisini örtmez; Sonuçlar'da yok; tık paleti açar.
-test('AÇMA DÜĞMESİ KÖŞE HÜCRESİNDE — tuvalde yüzen kart yok, hücrenin çizgisi örtülmez', async ({ page }) => {
+// AÇMA DÜĞMESİ RAYIN BAŞINDA (kullanıcı seçimi 2026-11-05, Canlı Not 33 · C;
+// köşe hücresi Canlı Not 89'la kalktı): palet kapalıyken Bileşenler'in açma
+// düğmesi rayın başındaki bant boyu aralıkta — tuvalin sol kenarında yüzen,
+// kenarlıklı ve gölgeli kart emekli. Rayın dikey çizgisini örtmez; Sonuçlar'da
+// yok; tık paleti açar.
+test('AÇMA DÜĞMESİ RAYIN BAŞINDA — tuvalde yüzen kart yok, rayın çizgisi örtülmez', async ({ page }) => {
   await paletliAc(page);
   await page.evaluate(() => veToggleSidebar(true));
   await page.waitForTimeout(500);
   const o = await page.evaluate(() => {
     const rv = document.getElementById('ve-sidebar-reveal'), ray = document.getElementById('ve-nav-rail');
     const b = rv.getBoundingClientRect(), rb = ray.getBoundingClientRect(), w = document.getElementById('ve-canvas-wrapper').getBoundingClientRect();
-    const cs = getComputedStyle(rv), kose = getComputedStyle(ray, '::before');
+    const cs = getComputedStyle(rv), bas = getComputedStyle(ray, '::before');
+    const ilk = ray.querySelector('.ve-nav-item').getBoundingClientRect();
     return { x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height),
-      rayX: Math.round(rb.left), rayY: Math.round(rb.top), rayW: Math.round(rb.width), koseH: parseFloat(kose.height),
+      rayX: Math.round(rb.left), rayY: Math.round(rb.top), rayW: Math.round(rb.width), basH: parseFloat(bas.height),
+      ilkUst: Math.round(ilk.top),
       tuvalSol: Math.round(w.left), opak: cs.opacity, golge: cs.boxShadow, kenar: parseFloat(cs.borderRightWidth) || 0,
       ustteki: (() => { const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !!(e && rv.contains(e)); })() };
   });
-  expect({ x: o.x, y: o.y, w: o.w }).toEqual({ x: o.rayX, y: o.rayY, w: o.rayW });
-  expect(o.h).toBe(o.koseH - 1);                    // hücrenin alt çizgisi görünür
+  expect({ x: o.x, y: o.y, h: o.h }).toEqual({ x: o.rayX, y: o.rayY, h: o.basH });
+  expect(o.w).toBe(o.rayW - 1);                     // rayın çizgisi görünür
+  expect(o.ilkUst).toBeGreaterThanOrEqual(o.y + o.h);   // rayın öğelerine binmiyor
   expect(o.tuvalSol).toBeGreaterThanOrEqual(o.x + o.w);   // tuvalin üstünde değil
   expect([o.opak, o.golge, o.kenar]).toEqual(['1', 'none', 0]);
   expect(o.ustteki).toBe(true);
@@ -420,7 +416,7 @@ test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async
   }), sel);
   const jeton = await page.evaluate(() =>
     parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bant-h')));
-  const topoloji = await boy(['.ve-sidebar-header', '#ve-doc-dock', '.ve-properties-header']);
+  const topoloji = await boy(['.ve-sidebar-header', '.ve-properties-header']);
   // Kayış Tablosu çekmecesinin başlığı da bir banttı; çekmece 2026-09-26'da
   // emekli (tablo Kayış Yolu kartının içinde, kanvasla ölçekleniyor — kabuk
   // bandı değil).
@@ -432,10 +428,10 @@ test('BANT İNCE — her bant jetonun kendisi, içerik onu büyütmüyor', async
   const rapor = await boy(['.ve-rep-head']);
   // Jeton ince (önce 36, sonra 30 px) ama en yüksek içeriği (25) sığdırıyor.
   expect(jeton).toBeLessThanOrEqual(26);
-  // Altı bandın altısı da ölçüldü (bulunamayan bant sessizce geçmesin) ve
-  // altısı da tam jeton: içerik hiçbirini büyütmüyor.
+  // Beş bandın beşi de ölçüldü (bulunamayan bant sessizce geçmesin) ve
+  // beşi de tam jeton: içerik hiçbirini büyütmüyor.
   const hepsi = [...topoloji, ...sonuclar, ...rapor];
-  expect(hepsi).toHaveLength(6);
+  expect(hepsi).toHaveLength(5);
   expect(hepsi.filter((x) => / YOK$/.test(x))).toEqual([]);
   expect(hepsi.filter((x) => Math.abs(parseFloat(x.split(' ').pop()) - jeton) > 0.5)).toEqual([]);
 });
@@ -486,7 +482,7 @@ test('müfettiş başlığı içeriğin kenarında; kimlik satırı iç kimliği
 });
 
 // KARŞILAMA EKRANINDA DURUM ŞERİDİ YOK.
-// Kural eskiden GEREKMİYORDU: şerit `.ve-doc-dock`in içindeydi ve onun
+// Kural eskiden GEREKMİYORDU: şerit belge bandının içindeydi ve onun
 // `.ve-no-module` kuralıyla birlikte gizleniyordu. Şerit tuvalin altına
 // taşınınca kapsamdan SESSİZCE çıktı ve karşılamanın dibinde
 // "0 bileşen, 0 bağlantı · %100 · Hazır" belirdi — arkada açık bir topoloji
@@ -505,12 +501,12 @@ test('karşılama ekranında durum şeridi GÖRÜNMÜYOR', async ({ page }) => {
       const b = e.getBoundingClientRect();
       return { gorunur: b.width > 0 && b.height > 0 };
     };
-    return { durum: g('#ve-status-bar'), dock: g('#ve-doc-dock'),
+    return { durum: g('#ve-status-bar'), uyari: g('#ve-warnings-panel'),
              modulYok: !!document.querySelector('.ve-main.ve-no-module') };
   });
   expect(karsilama.modulYok).toBe(true);
   expect(karsilama.durum.gorunur).toBe(false);
-  expect(karsilama.dock.gorunur).toBe(false);
+  expect(karsilama.uyari.gorunur).toBe(false);
 
   // ve modüle girince GERİ GELİR — gizleme kalıcı olmamalı
   await page.click('.ve-module-card[data-module="fead-analysis"]');

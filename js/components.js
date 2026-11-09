@@ -272,7 +272,7 @@ function veSyncPaletsizKapsam(scope) {
   var paletsiz = !!(def && def.noPalette);
   var main = document.querySelector('.ve-main');
   if(main) main.classList.toggle('ve-paletsiz', paletsiz);
-  // Açma düğmesi köşe hücresinde, .ve-main'in dışında (Canlı Not 33 · C):
+  // Açma düğmesi rayın başında, .ve-main'in dışında (Canlı Not 33 · C):
   // sınıf kabına da yazılır (.ve-no-module gibi).
   var kab = document.getElementById('sayfa2-content');
   if(kab) kab.classList.toggle('ve-paletsiz', paletsiz);
@@ -1576,8 +1576,8 @@ function veSyncModuleShell() {
   if(shell) shell.classList.toggle('ve-no-module', visible);
   // ŞERİT: #ve-ribbon .ve-main'in de #sayfa2-content'in de DIŞINDA (position:fixed,
   // belgenin tepesinde) — sınıfın gövdeye de yazılması bu yüzden. CSS orada hem
-  // şeridi gizler hem --chrome-h'ı sıfırlar; belge bandı (.ve-doc-dock) .ve-main
-  // içinde olduğu için yukarıdaki sınıftan besleniyor.
+  // şeridi gizler hem --chrome-h'ı sıfırlar; durum şeridi .ve-main içinde olduğu
+  // için yukarıdaki sınıftan besleniyor.
   if(document.body) document.body.classList.toggle('ve-no-module', visible);
   // Slayt yalnız karşılama ekrandayken döner: modül seçilince zamanlayıcı
   // boşuna çalışmasın (kap görünmüyor, kare değiştirmenin karşılığı yok).

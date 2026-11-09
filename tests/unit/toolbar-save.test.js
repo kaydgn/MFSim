@@ -42,8 +42,6 @@ global.addPortListeners = jest.fn();
 global.restoreState = jest.fn();
 global.saveState = jest.fn();
 global.componentDefs = {};
-global.veRenderTabs = jest.fn();
-global.veSwitchTab = jest.fn();
 global.veAddTab = jest.fn();
 
 const fs = require('fs');

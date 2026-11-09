@@ -315,7 +315,7 @@
       </button>
     </nav>
 
-    <!-- Bileşenler paneli kapalıyken rayın KÖŞE HÜCRESİNDE beliren açma düğmesi
+    <!-- Bileşenler paneli kapalıyken rayın BAŞINDA beliren açma düğmesi
          (kullanıcı 2026-11-05, Canlı Not 33 · C: tuvalin üstünde yüzen kart yok).
          Rayın tablist'inde değil, onun üstünde: sekme değil, bir düğme. -->
     <button id="ve-sidebar-reveal" class="ve-sidebar-reveal" type="button" onclick="veToggleSidebar()" title="Bileşenler panelini aç" aria-label="Bileşenler panelini aç">
@@ -782,39 +782,6 @@
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
-        <!-- ===== BELGE BANDI: sekmeler + durum, TEK şeritte =====
-             Burada eskiden ÜÇ ayrı bant üst üste dururdu: belge sekmeleri (30 px),
-             uyarı paneli başlığı (32 px) ve durum çubuğu (23 px) — boş bir
-             topolojide bile ~85 px tuval yüksekliği kalıcı olarak gidiyordu; oysa
-             sekme şeridinin sağı 1920 px ekranda tamamen boştu. Üçü tek 28 px'lik
-             banda indi: sekmeler solda ("hangi belgedeyim" yüzeyi), durum bilgisi
-             sağda.
-             Bant TUVALİN ÜSTÜNDE durur (kullanıcı isteği, 2026-08-13): şeridin
-             hemen altında, kanvas alanının ilk satırı. Sekmeler bu yüzden klasik
-             yönde — aşağıya, tuvale bağlanır.
-
-             O kararın DURUM YARISI 2026-09-22'de emekli oldu: gerekçe
-             ("sekme açtığı belgeye bağlanır") yalnız SEKMELERE ait, duruma
-             değil. Durum bir gezinme yüzeyi değil bir OKUMA — mühendislik
-             yazılımlarının tamamında altta durur. Bant artık yalnız sekme
-             taşıyor ve sekmeler bandın tamamını kullanıyor (eskiden sağdaki
-             327 px'i durum yiyordu). Ödenen bedel ölçüldü: tuval 24 px
-             kaybediyor, ama şerit katlanınca 86 px geri geliyor.
-             Uyarılar bandın ALTINA açılan yüzen panelde — açmak tuvali
-             küçültmüyor, yalnızca geçici olarak üzerini örtüyor. -->
-        <div class="ve-doc-dock" id="ve-doc-dock">
-          <!-- Uyarı paneli — banda göre absolute, AŞAĞI doğru açılır -->
-          <div class="ve-warnings-panel" id="ve-warnings-panel">
-            <div class="ve-warnings-header">
-              <span><span class="mf-ico mf-ico-alert-triangle"></span> Uyarılar</span>
-              <button type="button" class="ve-warnings-close" onclick="veToggleWarnings()" title="Paneli kapat (Esc)" aria-label="Uyarı panelini kapat"><span class="mf-ico mf-ico-x"></span></button>
-            </div>
-            <div class="ve-warnings-body collapsed" id="ve-warnings-body">
-              <div style="padding:10px 14px;font-size:var(--fs-md);color:var(--text-muted);">Henüz doğrulanmadı.</div>
-            </div>
-          </div>
-          <div class="ve-tab-bar ve-tab-bar--top" id="ve-tab-bar"></div>
-        </div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
             <div class="ve-canvas-wrapper grid-hidden" id="ve-canvas-wrapper">
@@ -939,11 +906,24 @@
              yok. Orada `.ve-main` gizleniyor ve şerit onunla birlikte
              gidiyor — bugünkü davranışın birebir aynısı. -->
         <div id="ve-status-bar" class="ve-status-bar">
+          <!-- UYARILAR (kullanıcı 2026-11-09, Canlı Not 90: *"temaya, yazı tipine uygun
+               değil"*): düğmesinin ÜSTÜNDE açılan küçük pencere, pencere ailesinin başlığıyla
+               (.ve-settings-header); önce sekme bandının altında tuvalin tamamı eninde
+               açılıyordu (Canlı Not 87 bandı kaldırdı). -->
+          <div class="ve-warnings-panel" id="ve-warnings-panel" role="dialog" aria-label="Uyarılar">
+            <div class="ve-settings-header">
+              <span><span class="mf-ico mf-ico-alert-triangle"></span> Uyarılar</span>
+              <button type="button" class="ve-settings-close" onclick="veToggleWarnings()" title="Kapat (Esc)" aria-label="Uyarı panelini kapat"><span class="mf-ico mf-ico-x"></span></button>
+            </div>
+            <div class="ve-warnings-body collapsed" id="ve-warnings-body">
+              <div class="ve-warnings-bos">Doğrulama çalıştırılmadı.</div>
+            </div>
+          </div>
           <button type="button" class="ve-status-warnings" id="ve-warnings-chip" data-severity="none" onclick="veToggleWarnings()" aria-expanded="false" aria-controls="ve-warnings-panel" title="Uyarılar">
             <span class="mf-ico mf-ico-alert-triangle"></span>
             <span class="ve-status-warnings-label">Uyarılar</span>
             <span id="ve-warnings-count">0</span>
-            <span id="ve-warnings-toggle" class="mf-ico mf-ico-chevron-down" aria-hidden="true"></span>
+            <span id="ve-warnings-toggle" class="mf-ico mf-ico-chevron-up" aria-hidden="true"></span>
           </button>
           <span class="ve-status-sep"></span>
           <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>
