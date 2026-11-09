@@ -31,34 +31,35 @@
 //    yoksa yarım taslak modül düğümü başına OTURUMLUK tutulur.
 //  • AÇIKLAMA YÜZEYİ YOK (FEAD kural 45 · 47): yönerge `title`da, kutuda durum.
 
-// ADIMIN SATIRI YALNIZ ADI TAŞIR (kullanıcı 2026-11-09, Canlı Not 83: *"Açıklamaları
-// düzeltelim, gereksiz açıklamaları kaldıralım."*): adın altındaki iki satırlık içerik
-// listesi ("Konum · katalog · statik ve dinamik rijitlik") bir açıklama yuvasıydı —
-// kalıp yuva taşımaz. Kapı: mount-wizard.test.js → *ADIMDA YALNIZ AD*.
+// ADIMIN SATIRI: AD VE GİRİLENLER (kullanıcı 2026-11-09, Canlı Not 96: *"Buralara da alt
+// açıklama olarak, bu başlıklarda neler girildiği yazılsın. Böylesi de çok sade olmuş."*):
+// adın altında adımda girilenlerin ADLARI (`girdi`) — cümle değil, ekrandaki alanların ad
+// listesi. Canlı Not 83'te kalkan satır (adım 61 → 36 px) kullanıcı isteğiyle geri geldi.
+// Kapı: mount-wizard.test.js → *ADIMDA AD VE GİRİLENLER*.
 // TALİMAT (kullanıcı 2026-11-09, Canlı Not 93): adımın yapılacakları, adım listesinin
 // altında — ARAYÜZ ANLATMAZ'ın kullanıcı istisnası (CLAUDE.md); denetimler ekrandaki adıyla.
 var VE_MW_STEPS = [
-  { key:'kaynak', ad:'Başlangıç', talimat:[
+  { key:'kaynak', ad:'Başlangıç', girdi:'STEP dosyası · örnek', talimat:[
     'Modeli bir STEP dosyasından ya da bir örnekten başlatın.',
     'STEP okununca 3B’de seç ile parçalara rol verin.',
     'Hesapla ile rollü birimlerin kütle ve konumlarını ölçün.',
     'Sihirbaza aktar ile birimleri gövde ve takoz olarak alın.'] },
-  { key:'govde',  ad:'Kütle gövdeleri', talimat:[
+  { key:'govde',  ad:'Kütle gövdeleri', girdi:'Gövdeler · kütle · ağırlık merkezi · atalet', talimat:[
     'Gövde ekle listesinden motor, şanzıman ve öteki gövdeleri ekleyin.',
     'Her gövdeye kütle ve CG [mm] girin.',
     'Atalet tensörü seçiliyse I [kg·m²] değerlerini girin.',
     'Ataleti bilinmeyen gövdeyi Nokta kütle yapın.'] },
-  { key:'takoz',  ad:'Takozlar', talimat:[
+  { key:'takoz',  ad:'Takozlar', girdi:'Konum · katalog · statik ve dinamik rijitlik', talimat:[
     'Takoz ekle ile her takozu ekleyin.',
     'Konumu üst bağlantı yüzeyinin merkezinden girin.',
     'Katalog’dan tip seçin ya da Statik ve Dinamik rijitliği girin.',
     'Simetrik takozu Aynalı eşini ekle ile çoğaltın.'] },
-  { key:'tork',   ad:'Tork ve çalışma', talimat:[
+  { key:'tork',   ad:'Tork ve çalışma', girdi:'Motor torku · vites oranları · transfer · aks payı', talimat:[
     'Motor’u katalogdan seçin ya da tepe tork ve devirleri girin.',
     'Şanzıman’ın vites oranlarını ve stall oranını girin.',
     'Transfer oranı ve aks paylarını girin; boş alan 1 sayılır.',
     'Zincirin sonucu’nda tork değerlerini kontrol edin.'] },
-  { key:'ozet',   ad:'Özet ve kurulum', talimat:[
+  { key:'ozet',   ad:'Özet ve kurulum', girdi:'Kurulacaklar · kurulum', talimat:[
     'Kurulacaklar’da gövde ve takoz sayılarını kontrol edin.',
     'Eksik varsa ilgili adıma dönüp tamamlayın.',
     'Modeli kur ile modeli tuvale kurun.'] }
@@ -765,6 +766,11 @@ function veMntWizLive(){
   _mwMasaCiz(c);
 }
 
+// Adımın girilenleri satırı MADDEDEN kırar ("ağırlık merkezi" satır sonunda ikiye
+// bölünmez); ayraç önceki maddeye yapışık — satır başında yalnız kalmaz (Canlı Not 96)
+function _mwGirdiHTML(t){
+  return String(t || '').split(' · ').map(function(x){ return '<span class="ve-mw-nw">' + _mwEsc(x) + '</span>'; }).join('&nbsp;· ');
+}
 function veMntWizNavHTML(c){
   var h = '<ol class="ve-fw-steps">';
   VE_MW_STEPS.forEach(function(s, i){
@@ -778,7 +784,7 @@ function veMntWizNavHTML(c){
     h += '<li class="ve-fw-step ve-fw-st-' + d.durum + (i === _mwStep ? ' on' : '') + '" onclick="veMntWizGoto(' + i + ')" tabindex="0"'
       + ' onkeydown="if(event.key===\'Enter\'){veMntWizGoto(' + i + ');}">'
       + '<span class="ve-fw-step-no">' + (i + 1) + '</span>'
-      + '<span class="ve-fw-step-t"><b>' + _mwEsc(s.ad) + '</b></span>'
+      + '<span class="ve-fw-step-t"><b>' + _mwEsc(s.ad) + '</b><em>' + _mwGirdiHTML(s.girdi) + '</em></span>'
       + rozet + '</li>';
   });
   return h + '</ol>' + veMntWizTalimatHTML(c, _mwStep);
@@ -789,6 +795,8 @@ function veMntWizNavHTML(c){
 // ayrı bir yapı olsun."*): adım listesinin altında açık adımın talimatı (VE_MW_STEPS[].talimat)
 // ve eksikleri (adımın sorun listesi — girdilerin sütununda ikinci kez yazılmaz; önce
 // oradaydı). Canlı yamada rayla birlikte tazelenir. Kapı: mount-wizard.test.js → *TALİMAT*.
+// Talimatın BAŞLIĞI YOK, Eksikler başlığı kalın (Canlı Not 95: *"Talimat diye başlık atma …
+// Eksikler başlığı kalın olsun biraz. Başlık olduğu belli olsun."*).
 // Sayı aralığı tek parça ("Kriter 1–2" satır sonunda bölünmez — yerleşim turu, Canlı Not 93).
 function _mwBolunmez(t){
   return _mwEsc(t).replace(/\d[\d.,]*\s?[–-]\s?\d[\d.,]*/g, function(m){ return '<span class="ve-mw-nw">' + m + '</span>'; });
@@ -797,7 +805,7 @@ function veMntWizTalimatHTML(c, step){
   var s = VE_MW_STEPS[step] || VE_MW_STEPS[0];
   var l = veMntWizIssues(c, step);
   var h = '<section class="ve-mw-talimat" aria-label="' + _mwEsc(s.ad) + ' — talimat">'
-    + '<h3 class="ve-mw-talimat-bas">Talimat</h3><ol class="ve-mw-talimat-liste">'
+    + '<ol class="ve-mw-talimat-liste">'
     + (s.talimat || []).map(function(t){ return '<li>' + _mwBolunmez(t) + '</li>'; }).join('') + '</ol>'
     + '<h3 class="ve-mw-talimat-bas">Eksikler' + (l.length ? ' <span class="ve-mw-talimat-n">' + l.length + '</span>' : '') + '</h3>';
   if(!l.length) return h + '<div class="ve-mw-eksik ve-mw-eksik-ok">' + _mwIkon('check') + '<span>Eksik yok.</span></div></section>';

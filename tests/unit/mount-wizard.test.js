@@ -166,12 +166,21 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
   // Önce: adımın satırında adın altında iki satırlık içerik listesi; STEP kartının yönlendirmesi
   // düğmelerin altında ayrı paragraf; Seçilen örnek'te künyenin ve tablonun alt payı kartın
   // aralığını ikiye katlıyordu (yerleşimi mount-sihirbaz.spec.js → BAŞLANGIÇ SÜTUNU ölçer).
-  test('ADIMDA YALNIZ AD · YÖNLENDİRME DÜĞMENİN YANINDA · künye ile tablonun arası kartın aralığı', () => {
+  // ADIMIN SATIRI: AD VE GİRİLENLER (kullanıcı 2026-11-09, Canlı Not 96: *"bu başlıklarda neler
+  // girildiği yazılsın. Böylesi de çok sade olmuş."*): adın altında adımda girilenlerin ADLARI —
+  // cümle değil (nokta yok, ' · ' ayraçlı ad listesi). Canlı Not 83'te kalkmıştı (adım yalnız ad).
+  test('ADIMDA AD VE GİRİLENLER · YÖNLENDİRME DÜĞMENİN YANINDA · künye ile tablonun arası kartın aralığı', () => {
     W.veMntWizAc();
-    // adımın satırında yalnız ad; talimat (Canlı Not 93) satırda değil, listenin altındaki bölümde
-    expect(W.VE_MW_STEPS.every((s) => Object.keys(s).join() === 'key,ad,talimat')).toBe(true);
-    expect(document.querySelectorAll('#ve-mw-nav .ve-fw-step-t em')).toHaveLength(0);
-    expect([...document.querySelectorAll('#ve-mw-nav .ve-fw-step-t')].map((t) => t.textContent)).toEqual(W.VE_MW_STEPS.map((s) => s.ad));
+    // talimat (Canlı Not 93) satırda değil, listenin altındaki bölümde
+    expect(W.VE_MW_STEPS.every((s) => Object.keys(s).join() === 'key,ad,girdi,talimat')).toBe(true);
+    W.VE_MW_STEPS.forEach((s) => expect([s.key, /[.!?]$/.test(s.girdi), s.girdi.split(' · ').length >= 2,
+      s.girdi.replace(/ · /g, ' ').split(/\s+/).length < 8]).toEqual([s.key, false, true, true]));
+    expect([...document.querySelectorAll('#ve-mw-nav .ve-fw-step-t')].map((t) => [t.querySelector('b').textContent, t.querySelector('em').textContent.replace(/\u00a0/g, ' ')]))
+      .toEqual(W.VE_MW_STEPS.map((s) => [s.ad, s.girdi]));
+    // satır maddeden kırılır: her madde bölünmez, ayraç önceki maddeye yapışık
+    const em = document.querySelector('#ve-mw-nav .ve-fw-step-t em');
+    expect([...em.querySelectorAll('span.ve-mw-nw')].map((x) => x.textContent)).toEqual(W.VE_MW_STEPS[0].girdi.split(' · '));
+    expect(em.innerHTML).toMatch(/<\/span>&nbsp;· <span/);
     const satir = document.querySelector('#ve-mw-yan .ve-fw-stp[data-ve-dropzone="step"] > .ve-fw-rowbtns');
     expect([...satir.children].map((e) => e.className)).toEqual(['ve-fw-btn ve-fw-stp-sec', 've-fw-dim ve-fw-stp-yon']);
     expect(satir.querySelector('.ve-fw-stp-yon').textContent).toBe('STEP dosyasını seçin ya da buraya bırakın.');
@@ -179,7 +188,7 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
     expect(css).toMatch(/\n\.ve-fw-rowbtns > \.ve-fw-stp-yon\{ flex:1 1 0; min-width:0; margin:0; text-wrap:balance; \}/);
     expect(css).toMatch(/\n#ve-mw-yan \.ve-fw-exnote, #ve-mw-yan \.ve-fw-exspec\{ margin-bottom:0; \}/);
-    expect(css).toMatch(/\n#ve-mw-nav \.ve-fw-step\{ align-items:center; \}/);
+    expect(css).not.toMatch(/#ve-mw-nav \.ve-fw-step\{/);               // satır FEAD'in kabuğunun düzeninde (ad + girilenler)
   });
   // TALİMAT VE EKSİKLER (kullanıcı 2026-11-09, Canlı Not 93: *"hangi adımdaysak neler yapılması
   // gerektiğini talimat gibi yazsak … Adım eksikliklerini de ekleyelim. Yani güzel ayrı bir yapı
@@ -196,7 +205,9 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
       const b = document.querySelector('#ve-mw-nav > .ve-mw-talimat');
       expect(b).not.toBeNull();
       expect(b.previousElementSibling.matches('ol.ve-fw-steps')).toBe(true);   // listenin hemen altında
-      expect([...b.querySelectorAll('.ve-mw-talimat-bas')].map((h) => h.firstChild.textContent.trim())).toEqual(['Talimat', 'Eksikler']);
+      // talimatın başlığı yok, liste bölümün ilk öğesi; tek başlık Eksikler (Canlı Not 95)
+      expect(b.firstElementChild.matches('ol.ve-mw-talimat-liste')).toBe(true);
+      expect([...b.querySelectorAll('.ve-mw-talimat-bas')].map((h) => h.firstChild.textContent.trim())).toEqual(['Eksikler']);
       expect([...b.querySelectorAll('.ve-mw-talimat-liste li')].map((l) => l.textContent)).toEqual(s.talimat);
       const sorun = W.veMntWizIssues(W.veMntWizCoz(W.veMntWizDefault()), i);
       const eksik = [...b.querySelectorAll('.ve-mw-eksik-liste .ve-mw-eksik')];
@@ -213,6 +224,12 @@ describe('PENCERE — FEAD sihirbazının kabuğu', () => {
     W.veMntWizGoto(1);
     expect(document.querySelectorAll('#ve-mw-nav .ve-mw-eksik-err')).toHaveLength(0);
     W.veMntWizKapat(true);
+    // Eksikler'in başlığı KALIN ve başlık renginde (Canlı Not 95: *"Başlık olduğu belli olsun."* —
+    // önce 10 px, 600, soluk)
+    const css = require('fs').readFileSync(require('path').join(__dirname, '../../css/styles.css'), 'utf8');
+    const i = css.indexOf('\n.ve-mw-talimat-bas{'), kural = css.slice(i, css.indexOf('}', i)).replace(/\s+/g, ' ');
+    expect(kural).toMatch(/font-size:var\(--fs-tiny\); font-weight:700;/);
+    expect(kural).toMatch(/color:var\(--text-heading\);/);
   });
   test('boş durumun eksikleri gövde ve takoz adımında', () => {
     const l = W.veMntWizSorunlar(W.veMntWizDefault());
