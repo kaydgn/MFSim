@@ -728,7 +728,9 @@ function _mntParamOneriHTML(node, ent, Z){
       + _mntOku('Statik sehim <u>[mm]</u>', (m1 ? _mntS(_mntPrmSehim(m1), 2) : '—')+' → '+_mntS(D.d[bir.idx], 2)))
     + '<div class="ve-fp-eylem ve-prm-eylem">'+_mntPrmUygulaDugme(node.id, ent, bir.idx, ad, 'Modele uygula')
     + '<button type="button" class="ve-fp-dugme" onclick="veMntParamRapor(\''+node.id+'\')">'
-    + veIkon('download')+' Raporu indir</button></div>';
+    + veIkon('download')+' Raporu indir</button>'
+    + '<button type="button" class="ve-fp-dugme" data-excel onclick="veMntParamExcelIndir(\''+node.id+'\')">'
+    + veIkon('download')+' Excel’i indir</button></div>';
   return _mntBolum(ad, '', h);
 }
 // Kombinasyon modelde mi: taranan her grubun bugünkü tipi kombinasyonunki.
@@ -1076,6 +1078,152 @@ function veMntParamRapor(nodeId){
   });
 }
 
+// ── EXCEL ÇIKTISI ───────────────────────────────────────────────────────────
+// Kullanıcı kararı (2026-11-09): "Kullanıcı bu Excel formatında çıktı alacak."
+// Düzen js/mount-param-excel.js'te (Özet · Tarama · konfigürasyon sayfaları),
+// dosya js/xlsx-yaz.js'te. Konfigürasyonlar: mevcut tasarım (K0) ve en çok
+// dokuz kombinasyon — önce bütün açık kısıtları sağlayanlar (pencerenin uzlaşı
+// sırası), sonra dört kesin kriteri sağlayıp ek kısıtı bozanlar (toplam ihlal
+// küçükten büyüğe); kesin kriteri bozan listeye girmez (hiçbiri sağlamıyorsa
+// pencerenin sırası, en az ihlalli). Uygunluk pencerenin hükmünden: listenin
+// ilki En uygun, bütün açık kısıtlar sağlanıyorsa Uygun, yalnız kesin
+// kriterler sağlanıyorsa Kısmen uygun, kesin kriterden biri sağlanmıyorsa
+// Uygun değil. Tarama sayfası çözülen kombinasyonlar —
+// sağlanan kesin kriter sayısına, sonra TR'ye göre sıralı, en çok
+// VE_MNT_PRM_XLS_TAVAN satır. Hesap DİLİM DİLİM (konfigürasyonun tam çözümü,
+// tarama satırının anma ölçümü); ilerleme eylem satırında (_mntParamIlerleme).
+var VE_MNT_PRM_XLS_TAVAN = 20000;
+var VE_MNT_PRM_XLS_KONFIG = 9;
+var _MNT_PRM_KESIN = ['k1', 'k1a', 'k1b', 'k2'];
+
+function _mntPrmBit(k){
+  var b=0;
+  veMntKatalog.KISITLAR.forEach(function(Q, i){ if(Q.k===k) b=(1<<i)>>>0; });
+  return b;
+}
+// Kombinasyonun uygunluğu: bits (açık kısıtların ihlal biti), iki (ikinci aşama ölçüldü mü).
+function _mntPrmUygunluk(bits, iki, kesin){
+  if(bits & kesin) return 'Uygun değil';
+  if(bits || !iki) return 'Kısmen uygun';
+  return 'Uygun';
+}
+// Dışa aktarımın planı: adımlar (her biri tek konfigürasyon ya da tek tarama
+// satırı) ve adımlar bitince Excel'in girdisi (E).
+function _mntParamExcelPlan(ent, H){
+  var c=veMntKatalog.baglam(H.ctx), Z=_mntParamOzet(ent, c), S=Z.S, Hk=Z.Hk, D=ent.D, M=ent.M, O=ent.O;
+  var kesin=_mntPrmKesinBit(), bitK=_MNT_PRM_KESIN.map(_mntPrmBit);
+  var libAd=function(key){ return key ? ((M.lib[key] || {}).name || key) : null; };
+  var mevAd=M.G.map(function(g){ return libAd(g.tip) || '—'; });
+  var grupOf=[];
+  M.G.forEach(function(g, gi){ g.uyeler.forEach(function(i){ grupOf[i]=gi; }); });
+  var tipAd=function(t){ return M.G.map(function(g, gi){ return (t && t[gi]) ? libAd(t[gi]) : mevAd[gi]; }); };
+  var eng=M.eng || {}, sv=M.solver || { data:{} };
+  var E={ baslik:'Takoz konfigürasyonları', fAtes:M.fAtes, rolanti:eng.idleRpm, silindir:eng.cylinders,
+          zeta:_mntZetaOf(sv), kutle:NaN, gruplar:M.G.map(function(g){ return g.ad; }),
+          takozlar:M.gather.mounts.map(function(m, i){ return { ad:m.name, grup:grupOf[i] }; }),
+          konfig:[], tarama:{ N:0, gruplar:D.taranan.slice(), satirlar:[] } };
+  var adim=[];
+  // konfigürasyonlar
+  var secilen=S.uygunN>0 ? S.sira.map(function(s){ return s.idx; }) : [], kismen=[];
+  for(var y=0;y<D.N;y++){
+    var by=Hk.m[y];
+    if(D.d1[y]!==1 || (by & kesin) || (!by && D.d2[y]===1)) continue;
+    kismen.push({ x:y, v:Hk.v1[y]+(Number.isFinite(Hk.v2[y]) ? Hk.v2[y] : 1e6) });
+  }
+  kismen.sort(function(a, b){ return a.v-b.v || a.x-b.x; });
+  secilen=secilen.concat(kismen.map(function(k){ return k.x; })).slice(0, VE_MNT_PRM_XLS_KONFIG);
+  if(!secilen.length) secilen=S.sira.slice(0, VE_MNT_PRM_XLS_KONFIG).map(function(s){ return s.idx; });
+  var liste=[{ K:0, mevcut:true, tipler:M.G.map(function(){ return null; }) }];
+  secilen.forEach(function(x, i){ liste.push({ K:i+1, idx:x, tipler:D.tipler(x) }); });
+  liste.forEach(function(k, n){
+    adim.push(function(){
+      var t=O.tam(k.mevcut ? null : k.tipler), o=t ? t.o : null, uy, kr;
+      if(k.mevcut){
+        var R=veMntKatalog.hepsi(ent.mevcut.o1, ent.mevcut.o2, H.ctx).sonuc;
+        kr=_MNT_PRM_KESIN.map(function(q){ return !!(R[q] && R[q].ok); });
+        var ek=Object.keys(R).some(function(q){ return _MNT_PRM_KESIN.indexOf(q)<0 && !R[q].ok; });
+        uy=(!ent.mevcut.o1 || kr.indexOf(false)>=0) ? 'Uygun değil' : (ek || !ent.mevcut.o2) ? 'Kısmen uygun' : 'Uygun';
+      } else {
+        var b=Hk.m[k.idx];
+        kr=bitK.map(function(x){ return !(b & x); });
+        uy=_mntPrmUygunluk(b, D.d2[k.idx]===1, kesin);
+        if(uy!=='Uygun değil' && n===1) uy='En uygun';
+      }
+      if(o && !(E.kutle>0)) E.kutle=o.m;
+      var ad=tipAd(k.tipler);
+      E.konfig[n]={ K:k.K, mevcut:!!k.mevcut, tipler:ad, uygunluk:uy, kriter:kr,
+                    f:o ? o.f : [], T:o ? o.T : NaN, takozTip:grupOf.map(function(gi){ return ad[gi]; }),
+                    vakalar:t ? t.vakalar : [], modlar:t ? t.modlar : [] };
+    });
+  });
+  // tarama satırları
+  var sec=[];
+  for(var x=0;x<D.N;x++){
+    if(D.d1[x]!==1) continue;
+    var gec=0; bitK.forEach(function(b){ if(!(Hk.m[x] & b)) gec++; });
+    sec.push({ x:x, gec:gec });
+  }
+  sec.sort(function(a, b){ return b.gec-a.gec || D.T[a.x]-D.T[b.x] || a.x-b.x; });
+  E.tarama.N=sec.length;
+  sec.slice(0, VE_MNT_PRM_XLS_TAVAN).forEach(function(s){
+    adim.push(function(){
+      var t=D.tipler(s.x), o=O.anma(t);
+      if(!o) return;
+      E.tarama.satirlar.push({
+        tipler:D.taranan.map(function(g){ return libAd(t[g]); }),
+        f:o.f, fB:o.fB, T:o.T, d:D.d[s.x], k:bitK.map(function(b){ return !(Hk.m[s.x] & b); }),
+        yuk:D.taranan.map(function(g){ return Math.max.apply(null, M.G[g].uyeler.map(function(i){ return o.pay[i]; })); }),
+        azami:D.taranan.map(function(g){ var v=o.kap[M.G[g].uyeler[0]]; return v>0 ? v : null; })
+      });
+    });
+  });
+  return { adim:adim, E:function(){ return E; } };
+}
+function _mntParamDosyaIndir(b, ad){
+  if(typeof document==='undefined' || typeof Blob!=='function' || typeof URL==='undefined' || typeof URL.createObjectURL!=='function') return;
+  var url=URL.createObjectURL(new Blob([b], { type:veXlsxYaz.MIME }));
+  var a=document.createElement('a'); a.href=url; a.download=ad;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+}
+// Excel'i bugünkü sınırlarla kurar ve indirir (tarama yinelenmez). Dönüş:
+// Promise<Uint8Array | null> (indirilen dosya; test ve ölçüm için).
+function veMntParamExcelIndir(nodeId){
+  if(_MNT_PARAM_XLS.is) return Promise.resolve(null);
+  var node=_mntParamDugum(nodeId), ent=_MNT_PARAM_SONUC[nodeId];
+  if(!node || !ent) return Promise.resolve(null);
+  var H=_mntParamHazirlik(node);
+  if(!_mntParamSonucDurum(nodeId, H).taze){ _mntParamYaz(nodeId, 'Taramadan sonra girdi değişti', 'warn'); return Promise.resolve(null); }
+  var P;
+  try { P=_mntParamExcelPlan(ent, H); } catch(e){ _mntParamYaz(nodeId, 'Hata: '+e.message, 'no'); return Promise.resolve(null); }
+  var is=_MNT_PARAM_XLS.is={ nodeId:nodeId, i:0, n:P.adim.length }, yazildi=-Infinity;
+  var cubuk=function(){ if(typeof _mntParamIlerlemeYaz==='function') _mntParamIlerlemeYaz(nodeId); };
+  return new Promise(function(coz){
+    var bitir=function(metin, d, b){
+      if(_MNT_PARAM_XLS.is===is) _MNT_PARAM_XLS.is=null;
+      cubuk(); _mntParamYaz(nodeId, metin, d); coz(b || null);
+    };
+    _mntParamYaz(nodeId, '');
+    cubuk();
+    var dilim=function(){
+      var bas=_mntParamSimdi();
+      try { while(is.i<is.n){ P.adim[is.i++](); if(_mntParamSimdi()-bas>=_MNT_PARAM_DILIM) break; } }
+      catch(e){ bitir('Hata: '+e.message, 'no'); return; }
+      var t=_mntParamSimdi();
+      if(is.i>=is.n || t-yazildi>=100){ yazildi=t; cubuk(); }
+      if(is.i<is.n){ _mntParamSonraki(dilim); return; }
+      var kitap;
+      try { kitap=veMntParamExcel.kitap(P.E()); } catch(e){ bitir('Hata: '+e.message, 'no'); return; }
+      veXlsxYaz.yazSikistir(kitap).then(function(b){
+        try { _mntParamDosyaIndir(b, 'takoz_konfigurasyonlari.xlsx'); }
+        catch(e){ bitir('Hata: '+e.message, 'no'); return; }
+        bitir('İndirildi ('+_mntS(b.length/1024, 0)+' KB)', 'ok', b);
+      }, function(e){ bitir('Hata: '+e.message, 'no'); });
+    };
+    _mntParamSonraki(dilim);
+  });
+}
+
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
     _MNT_PARAM_SONUC: _MNT_PARAM_SONUC, _MNT_PARAM_GEN: _MNT_PARAM_GEN,
@@ -1091,6 +1239,8 @@ if(typeof module!=='undefined' && module.exports){
     veMntParamUygula: veMntParamUygula, _mntPrmModelde: _mntPrmModelde, _mntParamMevcutTazele: _mntParamMevcutTazele,
     _mntParamSonucBaglam: _mntParamSonucBaglam, _mntParamSonucIsitici: _mntParamSonucIsitici,
     _mntPrmKriterler: _mntPrmKriterler, _mntPrmModV: _mntPrmModV, _mntPrmDagV: _mntPrmDagV, _mntPrmYakinL: _mntPrmYakinL,
-    _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz
+    _mntPrmGaleri: _mntPrmGaleri, _mntPrmOlc: _mntPrmOlc, _mntPrmYaz: _mntPrmYaz,
+    _mntParamExcelPlan: _mntParamExcelPlan, veMntParamExcelIndir: veMntParamExcelIndir, _mntPrmUygunluk: _mntPrmUygunluk,
+    VE_MNT_PRM_XLS_TAVAN: VE_MNT_PRM_XLS_TAVAN
   };
 }

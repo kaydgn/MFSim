@@ -10379,7 +10379,7 @@ select.ve-fw-3b-rol.ve-fw-3b-diger{ padding-right:26px; }
 .ve-prm-og-t b .mf-ico{ flex:none; align-self:center; width:11px; height:11px; color:var(--text-secondary); }
 .ve-prm-og-t .ayni{ color:var(--text-primary); }
 .ve-prm-og-t em{ font-style:normal; font-size:var(--fs-micro); color:var(--text-muted); }
-.ve-fp-eylem.ve-prm-eylem{ justify-content:flex-end; margin-bottom:0; }
+.ve-fp-eylem.ve-prm-eylem{ justify-content:flex-end; flex-wrap:wrap; margin-bottom:0; }
 .ve-prm-eylem .ve-fp-dugme{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; }
 .ve-prm-eylem .ve-fp-dugme .mf-ico{ width:13px; height:13px; }
 /* Kriterler: adın ve sınırın sütunu sarar; ihlal hücresi kırmızı zeminde. */
