@@ -61,6 +61,8 @@ const TEK = new Set(['Esc', 'Ctrl', 'Shift', 'Enter', 'Tab', 'Del', 'Space', 'Cm
   'Euler', 'Newton', 'Raphson', 'Newmark', 'Heun', 'Ralston', 'Runge', 'Kutta', 'Dormand', 'Prince', 'Campbell',
   'Rayleigh', 'Hermite', 'Fritsch', 'Carlson', 'Coulomb', 'Fourier', 'Bode', 'Nyquist', 'Kelvin', 'Voigt',
   'Info', 'Log', 'K-Factor', 'Drawbar', 'Pull', 'Ratio', 'Cr', 'Retarder', 'No',
+  // şanzıman belgesinin satır adı ("Retarder Option" — Takoz kılavuzu, Canlı Not 73)
+  'Option',
   // CATIA'nın STEP ayarlarındaki seçenek adları (Takoz kılavuzu, Bölüm 16)
   'Validation', 'Properties', 'Geometric',
   // araç model adları (örneklerin `vehicle` alanı: "BMC Siper")
