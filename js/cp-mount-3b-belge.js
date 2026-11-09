@@ -11,7 +11,7 @@
 // bölgeler üstünde: tık seçeneği yazar, işaretli bölgenin tıkı seçimini kaldırır; her
 // bölgenin solunda onay kutusu (Canlı Not 56), bağdaşmayan bölge kapalı (sebebi
 // title'da). Özellikler yanda canlı; belgenin kaydırması korunur.
-// Başka birimin seçimi, Esc ve Kapat tuvale döner. Durum (yakınlık) görünümün,
+// Bölüm dizini yok (Canlı Not 75). Başka birimin seçimi, Esc ve Kapat tuvale döner. Durum (yakınlık) görünümün,
 // kaydedilmez. Kapı: tests/unit/mount-belge.test.js + tests/e2e/mount-belge.spec.js.
 // ============================================================================
 
@@ -67,9 +67,7 @@ function veMntWiz3bBelgeAc(birim){
   var kay = el.querySelector('.ve-mw-3b-belge-kay');
   el.addEventListener('click', function(e){
     var b = e.target && e.target.closest ? e.target.closest('[data-belge-b]') : null;
-    if(b && !b.disabled){ var p = b.getAttribute('data-belge-b').split('-'); veMntWiz3bBelgeSec(+p[0], +p[1]); return; }
-    var d = e.target && e.target.closest ? e.target.closest('[data-belge-git]') : null;
-    if(d) _mw3bBelgeGit(+d.getAttribute('data-belge-git'));
+    if(b && !b.disabled){ var p = b.getAttribute('data-belge-b').split('-'); veMntWiz3bBelgeSec(+p[0], +p[1]); }
   });
   // Ctrl + tekerlek yakınlaştırır (kaydırma tekerleğin kendi işi)
   kay.addEventListener('wheel', function(e){
@@ -110,9 +108,6 @@ function veMntWiz3bBelgeAcik(){ var V = typeof _mw3b !== 'undefined' ? _mw3b : n
 // ── HTML (saf, testli) ────────────────────────────────────────────────────
 function veMntWiz3bBelgeHTML(B){
   var olcu = B.olcu || [612, 792];
-  var dizin = B.sayfalar.map(function(s){
-    return '<button type="button" class="ve-mw-3b-belge-d" data-belge-git="' + s.no + '"><span>' + _mwEsc(s.bas) + '</span><em>' + s.no + '</em></button>';
-  }).join('');
   var sayfalar = B.sayfalar.map(function(s, si){
     return '<div class="ve-mw-3b-belge-s" data-belge-sayfa="' + s.no + '" style="aspect-ratio:' + s.g + ' / ' + s.y + ';">'
       + '<img src="' + _mwEsc(veMntBelgeResim(s.resim)) + '" alt="Page ' + s.no + '" width="' + s.g + '" height="' + s.y + '" loading="lazy" decoding="async" draggable="false">'
@@ -137,8 +132,9 @@ function veMntWiz3bBelgeHTML(B){
         + '<button type="button" class="ve-mw-3b-hap" data-belge-yakin="0" aria-label="Sığdır" title="Sığdır" onclick="veMntWiz3bBelgeYakin(0)">' + _mwIkon('maximize') + '</button>'
         + '<button type="button" class="ve-mw-3b-hap ve-mw-3b-belge-kapat" onclick="veMntWiz3bBelgeKapat()">' + _mwIkon('x') + ' Kapat</button>'
       + '</div></div>'
+    // BÖLÜMLER YOK (kullanıcı 2026-11-09, Canlı Not 75: *"Bu kısımlara gerek yok. Kullanıcıya
+    // sunmayalım"*): sayfalar kaydırılır. Kapı: mount-belge.test.js → *BÖLÜMLER YOK*.
     + '<div class="ve-mw-3b-belge-govde">'
-      + '<nav class="ve-mw-3b-belge-dizin" aria-label="Bölümler">' + dizin + '</nav>'
       + '<div class="ve-mw-3b-belge-kay" tabindex="-1"><div class="ve-mw-3b-belge-sayfalar">' + sayfalar + '</div></div>'
     + '</div>';
 }
@@ -152,11 +148,10 @@ function _mw3bBelgeTazele(){
   var birim = typeof _mw3bSeciliBirim === 'function' ? _mw3bSeciliBirim(V.s, V.secili) : K.birim;
   // Başka bir birim seçildi ya da aile kalktı: belge o birimindi
   if(birim !== K.birim || !vs || vs.aile !== K.aile){ veMntWiz3bBelgeKapat(); return; }
-  var A = typeof veMntVsAile === 'function' ? veMntVsAile(vs.k) : null, el = K.el, secili = {};
+  var A = typeof veMntVsAile === 'function' ? veMntVsAile(vs.k) : null, el = K.el;
   K.B.sayfalar.forEach(function(s, si){
     s.bolge.forEach(function(b, bi){
       var d = veMntBelgeDurum(A, vs, b), id = si + '-' + bi;
-      if(d.secili) secili[s.no] = 1;
       if(!b.s){
         var y = el.querySelector('[data-belge-y="' + id + '"]');
         if(y) y.classList.toggle('secili', d.secili);
@@ -173,9 +168,6 @@ function _mw3bBelgeTazele(){
       n.title = n.disabled ? d.neden : (kilit ? 'Varsayılan.' : ad);
     });
   });
-  Array.prototype.forEach.call(el.querySelectorAll('[data-belge-git]'), function(d){
-    d.classList.toggle('secili', !!secili[d.getAttribute('data-belge-git')]);
-  });
   var ac = document.getElementById('ve-mw-3b-belge-ac');
   if(ac) ac.setAttribute('aria-pressed', 'true');
 }
@@ -191,7 +183,7 @@ function veMntWiz3bBelgeSec(si, bi){
   return veMntWizStpYogunluk(K.birim, k);
 }
 
-// ── YAKINLIK · GEZİNME ────────────────────────────────────────────────────
+// ── YAKINLIK ────────────────────────────────────────────────────
 // Sayfanın genişliği: kaydırma alanına sığan genişliğin katı (sığdırma en çok %100)
 function _mw3bBelgeOlc(){
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
@@ -222,15 +214,6 @@ function veMntWiz3bBelgeYakin(yon){
   if(kay) kay.scrollTop = oran * kay.scrollHeight;
   return true;
 }
-function _mw3bBelgeGit(no){
-  var V = typeof _mw3b !== 'undefined' ? _mw3b : null;
-  if(!V || !V.belge) return false;
-  var kay = V.belge.el.querySelector('.ve-mw-3b-belge-kay'), s = V.belge.el.querySelector('[data-belge-sayfa="' + no + '"]');
-  if(!kay || !s) return false;
-  kay.scrollTop = s.offsetTop - 12;
-  return true;
-}
-
 if(typeof module !== 'undefined' && module.exports){
   module.exports = { veMntWiz3bBelgeHTML: veMntWiz3bBelgeHTML, veMntWiz3bBelgeSatirHTML: veMntWiz3bBelgeSatirHTML, veMntWiz3bVeriSec: veMntWiz3bVeriSec,
     veMntWiz3bBelgeAc: veMntWiz3bBelgeAc, veMntWiz3bBelgeKapat: veMntWiz3bBelgeKapat, veMntWiz3bBelgeSec: veMntWiz3bBelgeSec,

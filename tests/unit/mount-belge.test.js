@@ -222,13 +222,12 @@ describe('DURUM — seçili · geçerli · sebep · yazılan anahtar', () => {
 });
 
 describe('GÖRÜNÜM — belgenin HTML\'i, Özellikler\'in Belge satırı', () => {
-  test('12 sayfa, 85 bölge (tıklanan düğme, tıksız işaret), dizinde bölümler; konum sayfanın yüzdesi', () => {
+  test('12 sayfa, 85 bölge (tıklanan düğme, tıksız işaret); konum sayfanın yüzdesi', () => {
     const el = kur(MB.veMntWiz3bBelgeHTML(B));
     expect(el.querySelectorAll('.ve-mw-3b-belge-s')).toHaveLength(12);
     const tik = B.sayfalar.reduce((t, s) => t + s.bolge.filter((b) => b.s).length, 0);
     expect(el.querySelectorAll('button[data-belge-b]')).toHaveLength(tik);
     expect(el.querySelectorAll('[data-belge-y]')).toHaveLength(85 - tik);
-    expect(Array.from(el.querySelectorAll('[data-belge-git] span')).map((x) => x.textContent)).toEqual(B.sayfalar.map((s) => s.bas));
     const img = el.querySelector('[data-belge-sayfa="9"] img');
     expect([img.getAttribute('src'), img.getAttribute('alt')]).toEqual(['assets/belge/allison-4000/s09.webp', 'Page 9']);
     const b = el.querySelector('[data-belge-b="4-0"]'), k = sayfa(9).bolge[0].k;
@@ -238,6 +237,16 @@ describe('GÖRÜNÜM — belgenin HTML\'i, Özellikler\'in Belge satırı', () =
     window.__MFSIM_BELGE = { 'belge/allison-4000/s09.webp': 'data:image/webp;base64,AA' };
     expect(kur(MB.veMntWiz3bBelgeHTML(B)).querySelector('[data-belge-sayfa="9"] img').getAttribute('src')).toBe('data:image/webp;base64,AA');
     delete window.__MFSIM_BELGE;
+  });
+
+  // BÖLÜMLER YOK (Canlı Not 75, 2026-11-09): "Bu kısımlara gerek yok. Kullanıcıya sunmayalım.
+  // Kaldıralım." Önce: solda 12 satırlık bölüm dizini (208 px); şimdi sayfalar kaydırılır.
+  test('BÖLÜMLER YOK: belgede bölüm dizini ve dizinin düğmeleri yok; CSS kuralı da yok', () => {
+    const el = kur(MB.veMntWiz3bBelgeHTML(B));
+    expect(el.querySelector('.ve-mw-3b-belge-dizin, [data-belge-git], nav')).toBe(null);
+    expect(el.querySelector('.ve-mw-3b-belge-govde > .ve-mw-3b-belge-kay')).not.toBe(null);
+    const css = fs.readFileSync(path.join(__dirname, '../../css/styles.css'), 'utf8');
+    expect(css).not.toMatch(/\.ve-mw-3b-belge-dizin|\.ve-mw-3b-belge-d\b/);
   });
 
   // Canlı Not 56: "Maddelerin yanında tik atabileceğimiz kutucuk olsun." Önce: her bölge kesikli
