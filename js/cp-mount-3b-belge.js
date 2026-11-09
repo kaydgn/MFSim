@@ -27,12 +27,14 @@ function _mw3bBelgeVs(V, birim){
   var vs = veMntStpVs((s.yogunluk || {})[birim], s.roller[birim]);
   return vs && typeof vs.aile === 'string' ? vs : null;
 }
-// Özellikler'in Belge satırı: ailenin belgesi varsa (js/cp-mount-3b.js → veMntWiz3bAltHTML)
+// Özellikler'in Belge satırı: ailenin belgesi varsa (js/cp-mount-3b.js → veMntWiz3bAltHTML). Satırın
+// sınıfı belgenin sayfasınınkinden (.ve-mw-3b-belge-s) AYRI (Canlı Not 76: sayfanın zemini ve çerçevesi
+// satıra geçiyor, düğmeyi komşu satırlara yapışık gösteriyordu)
 function veMntWiz3bBelgeSatirHTML(birim, vs){
   var B = vs && typeof veMntBelge === 'function' ? veMntBelge(vs.aile) : null;
   if(!B) return '';
   var V = typeof _mw3b !== 'undefined' ? _mw3b : null, acik = !!(V && V.belge && V.belge.birim === birim);
-  return _mw3bOzSatir('ve-mw-3b-belge-s', 'Belge',
+  return _mw3bOzSatir('ve-mw-3b-belge-satir', 'Belge',
     '<button type="button" class="ve-fw-3b-rol" id="ve-mw-3b-belge-ac" aria-pressed="' + (acik ? 'true' : 'false') + '"'
       + ' title="' + _mwEsc(B.ad + ' · ' + B.tarih) + '" onclick="veMntWiz3bBelgeAc(' + birim + ')">'
       + _mwIkon('file-text') + ' Transmission Data</button>',

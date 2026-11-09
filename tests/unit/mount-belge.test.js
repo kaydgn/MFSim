@@ -410,6 +410,9 @@ describe('GÖRÜNÜM — belgenin HTML\'i, Özellikler\'in Belge satırı', () =
     expect([b.textContent.trim(), b.getAttribute('title'), b.getAttribute('aria-pressed')])
       .toEqual(['Transmission Data', '4000 Product Family Transmission Data · 15.10.2020', 'false']);
     expect(b.getAttribute('onclick')).toBe('veMntWiz3bBelgeAc(' + sanz + ')');
+    // Canlı Not 76: satır belgenin sayfasının sınıfını taşımaz (sayfanın zemini ve çerçevesi satıra geçiyordu)
+    const satir = b.closest('.ve-mw-3b-oz-s');
+    expect([satir.classList.contains('ve-mw-3b-belge-satir'), satir.classList.contains('ve-mw-3b-belge-s')]).toEqual([true, false]);
     expect(kur(M3.veMntWiz3bAltHTML(s, i('Motor bloğu'), {})).querySelector('#ve-mw-3b-belge-ac')).toBe(null);
   });
 });

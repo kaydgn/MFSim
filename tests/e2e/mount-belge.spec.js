@@ -69,6 +69,16 @@ test('BELGE: aile seçilince açılır; bölge tıkı seçeneği yazar, kaydırm
   await expect(page.locator('#ve-mw-3b-yan')).toBeVisible();
   await expect(page.locator('#ve-mw-3b-belge-ac')).toHaveAttribute('aria-pressed', 'true');
   await expect(belge.locator('.ve-mw-3b-belge-s')).toHaveCount(12);
+  // Canlı Not 76: Belge satırı komşularıyla aynı adımda, çerçevesiz ve zeminsiz (önce: sayfanın çerçevesi
+  // düğmenin 2 px üstünde ve altında)
+  const satir = await page.evaluate(() => {
+    const r = (q) => document.querySelector(q).getBoundingClientRect();
+    const st = getComputedStyle(document.querySelector('#ve-mw-3b-belge-ac').closest('.ve-mw-3b-oz-s'));
+    const rol = r('#ve-mw-3b-rol'), veri = r('#ve-mw-3b-veri'), ac = r('#ve-mw-3b-belge-ac'), dizi = r('#ve-mw-3b-alt select[data-mw-vs-secenek="dizi"]');
+    return { cerceve: st.outlineStyle, zemin: st.backgroundColor, ust: Math.round(ac.top - veri.bottom), alt: Math.round(dizi.top - ac.bottom),
+      adim: Math.round(veri.top - rol.bottom), boy: Math.round(ac.height) };
+  });
+  expect(satir).toEqual({ cerceve: 'none', zemin: 'rgba(0, 0, 0, 0)', ust: satir.adim, alt: satir.adim, adim: 4, boy: 28 });
   await expect(belge.locator('.ve-mw-3b-belge-ad b')).toHaveText('4000 Product Family Transmission Data');
   // Bant Ürün ağacının bandıyla aynı çizgide; sayfa görseli yüklendi
   const bant = await page.evaluate(() => {
