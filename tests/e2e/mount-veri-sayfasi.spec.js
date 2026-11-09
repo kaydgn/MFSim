@@ -98,8 +98,10 @@ test('VERİ SAYFASI: 3B\'de model, ön yüz ve krank ekseni gerçek fareyle; ağ
   expect(yuz).not.toBe(null);
   await page.mouse.move(yuz.x, yuz.y);
   await page.waitForFunction(() => { const a = veMntWiz3bDurum().aday; return a && a.tur === 'yuz'; });
-  expect(await page.evaluate(() => [veMntWiz3bDurum().adayHalka, document.getElementById('ve-mw-3b-ipucu').textContent]))
-    .toEqual([true, 'Düzlem · x = −277,040 mm']);
+  // Canlı Not 71: aday YÜZ Yüzey süzgecinin vurgusuyla (halka yok), parçası odakta, ipucu süzgecin yazısı
+  expect(await page.evaluate(() => { const d = veMntWiz3bDurum(); return [d.adayHalka, !!d.yuzOn, d.yuzOn && d.yuzOdak === d.yuzOn.parca,
+    document.getElementById('ve-mw-3b-ipucu').textContent]; }))
+    .toEqual([false, true, true, 'Düzlem · x = −277,0 mm']);
   await page.mouse.click(yuz.x, yuz.y);
   await page.waitForFunction(() => veMntWiz3bDurum().ref === '');
   await expect(page.locator('[data-ve-3b-ref="yuz"]')).toHaveAttribute('data-secildi', '1');
@@ -109,18 +111,21 @@ test('VERİ SAYFASI: 3B\'de model, ön yüz ve krank ekseni gerçek fareyle; ağ
   await page.keyboard.press('Escape');
   expect(await page.evaluate(() => [veMntWiz3bDurum().ref, veMntWiz3bAcik()])).toEqual(['', true]);
 
-  // KRANK EKSENİ: kasnağın dairesi (Ø157) — motor biriminin dışında
+  // KRANK EKSENİ: kasnağın silindir yüzü (Ø157) — motor biriminin dışında; Canlı Not 71:
+  // yüz süzgecin vurgusuyla, eksen yüzün sınır çemberinden
   await page.click('[data-ve-3b-ref="eksen"]');
   const daire = await page.evaluate(() => {
     const pi = veMntWizStp().sonuc.parcalar.findIndex((p) => p.ad === 'Krank kasnağı');
-    return veMntWiz3bDaireNoktasi(pi, 78.5);
+    return veMntWiz3bAdayYuzNoktasi(pi, 'CYLINDRICAL_SURFACE');
   });
   expect(daire).not.toBe(null);
   await page.mouse.move(daire.x, daire.y);
   await page.waitForFunction(() => { const a = veMntWiz3bDurum().aday; return a && a.tur === 'eksen' && a.r === 78.5; });
-  expect(await page.evaluate(() => document.getElementById('ve-mw-3b-ipucu').textContent)).toMatch(/^Ø 157,0 mm · −(317|277),040; 40,026; 434,626$/);
+  expect(await page.evaluate(() => { const d = veMntWiz3bDurum(); return [d.adayHalka, !!d.yuzOn, document.getElementById('ve-mw-3b-ipucu').textContent]; }))
+    .toEqual([false, true, 'Silindir · Ø 157,0 mm']);
   await page.mouse.click(daire.x, daire.y);
   await page.waitForFunction(() => veMntWiz3bDurum().ref === '');
+  expect(await page.evaluate(() => !!veMntWiz3bDurum().yuzOn)).toBe(false);          // kip kapanınca vurgu kalkar
 
   // Hesap: ağırlık merkezi sununun motor ağırlık merkezi (+ öteleme); referans işareti ve eksenin halkası
   await page.click('#ve-mnt-3b #ve-mw-3b-hesapla');

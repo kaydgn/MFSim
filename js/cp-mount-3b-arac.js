@@ -278,7 +278,29 @@ function veMntWiz3bYuzBilgi(s, pi, k){
     else out.eksen = y.z.slice();
   }
   ['r', 'yariAci', 'R', 'rk'].forEach(function(x){ if(y && isFinite(y[x])) out[x] = y[x]; });
+  if(y && y.cemberler && y.cemberler.length)
+    out.cemberler = y.cemberler.map(function(c){ return { c: c.c.slice(), n: c.n.slice(), r: c.r, kenar: c.kenar }; });
   return out;
+}
+// Ekseni olan yüzün (silindir · koni) EKSENİNDEKİ sınır çemberi, p'ye en yakını (saf,
+// testli): referansın "Krank ekseni" kaydı kenarınkiyle aynı biçimde kalsın (dosyada
+// yeniden bulunur). Döner: { c, n, r, kenar } | null
+var VE_MW_3B_EKSEN_CEMBER = { aci: 1, uzak: 0.05 };      // derece · mm
+function veMntWiz3bEksenCemberi(b, p){
+  if(!b || !b.eksen || !b.o || !b.cemberler || !b.cemberler.length) return null;
+  var e = b.eksen, el = Math.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]);
+  if(!(el > 0)) return null;
+  var u = [e[0] / el, e[1] / el, e[2] / el], cosT = Math.cos(VE_MW_3B_EKSEN_CEMBER.aci * Math.PI / 180), en = null;
+  b.cemberler.forEach(function(c){
+    var nl = Math.sqrt(c.n[0] * c.n[0] + c.n[1] * c.n[1] + c.n[2] * c.n[2]);
+    if(!(nl > 0) || Math.abs((c.n[0] * u[0] + c.n[1] * u[1] + c.n[2] * u[2]) / nl) < cosT) return;
+    var w = [c.c[0] - b.o[0], c.c[1] - b.o[1], c.c[2] - b.o[2]], t = w[0] * u[0] + w[1] * u[1] + w[2] * u[2];
+    var dx = w[0] - t * u[0], dy = w[1] - t * u[1], dz = w[2] - t * u[2];
+    if(Math.sqrt(dx * dx + dy * dy + dz * dz) > VE_MW_3B_EKSEN_CEMBER.uzak) return;      // eksenin üstünde değil
+    var d = p ? Math.abs((p[0] - c.c[0]) * u[0] + (p[1] - c.c[1]) * u[1] + (p[2] - c.c[2]) * u[2]) : 0;
+    if(!en || d < en.d) en = { d: d, c: c };
+  });
+  return en ? en.c : null;
 }
 function _mw3bSay(x, d){ var k = Math.pow(10, d); return _mwSayi(Math.round(x * k) / k, d); }
 // Düzlemin eksene dik olduğu eksen (0 · 1 · 2) ya da -1
@@ -427,14 +449,19 @@ function _mw3bAracCikis(){
 }
 // Ekrandan ışın: ilk çarpılan parça, üçgeni ve noktası (kesitin kalan yanında)
 // { i, k, t, p } | null
-function _mw3bIsinK(cx, cy){
+// birim (ops.): { parça dizini: 1 } — ışın yalnız o parçaları sorar (referansın yüz kipi)
+function _mw3bIsinK(cx, cy, birim){
   var V = _mw3b;
   if(!V || !V.camera || !V.ekli.length) return null;
   var R = V.renderer.domElement.getBoundingClientRect();
   V.camera.updateMatrixWorld();
   V.ray.setFromCamera(new THREE.Vector2((cx - R.left) / (R.width || 1) * 2 - 1, -((cy - R.top) / (R.height || 1)) * 2 + 1), V.camera);
   var o = V.ray.ray.origin, d = V.ray.ray.direction, K = V.kutular, aday = [];
-  for(var e = 0; e < V.ekli.length; e++){ var t = _mw3bKutuKes(o, d, K, e * 6); if(t >= 0) aday.push([t, V.ekli[e]]); }
+  for(var e = 0; e < V.ekli.length; e++){
+    if(birim && !birim[V.ekli[e]]) continue;
+    var t = _mw3bKutuKes(o, d, K, e * 6);
+    if(t >= 0) aday.push([t, V.ekli[e]]);
+  }
   aday.sort(function(a, b){ return a[0] - b[0]; });
   var en = { t: Infinity, k: -1, i: -1 };
   for(var c = 0; c < aday.length && aday[c][0] <= en.t; c++){
@@ -489,7 +516,8 @@ function _mw3bYuzOn(b){
 function _mw3bYuzOdak(){
   var V = _mw3b;
   if(!V) return;
-  var f = V.suzgec === 'yuz' ? (V.yuzOn || V.yuzSec) : null, p = f ? f.parca : -1;
+  // referans kipinde (Canlı Not 71) odak fare altındaki aday yüzün parçası
+  var f = V.ref ? V.yuzOn : (V.suzgec === 'yuz' ? (V.yuzOn || V.yuzSec) : null), p = f ? f.parca : -1;
   if(p === V.yuzOdak) return;
   V.yuzOdak = p;
   if(V.scene) _mw3bBoya();
@@ -622,6 +650,7 @@ if(typeof module !== 'undefined' && module.exports){
     veMntWiz3bKesitKalir: veMntWiz3bKesitKalir, veMntWiz3bKesitAralik: veMntWiz3bKesitAralik, veMntWiz3bAracHTML: veMntWiz3bAracHTML,
     veMntWiz3bKesitMakine: veMntWiz3bKesitMakine, veMntWiz3bYuzSira: veMntWiz3bYuzSira, veMntWiz3bYuzAlan: veMntWiz3bYuzAlan,
     veMntWiz3bYuzKoseler: veMntWiz3bYuzKoseler, veMntWiz3bYuzBilgi: veMntWiz3bYuzBilgi, veMntWiz3bYuzYazi: veMntWiz3bYuzYazi,
+    veMntWiz3bEksenCemberi: veMntWiz3bEksenCemberi, VE_MW_3B_EKSEN_CEMBER: VE_MW_3B_EKSEN_CEMBER,
     veMntWiz3bYuzSatirlar: veMntWiz3bYuzSatirlar, veMntWiz3bOlcuDeger: veMntWiz3bOlcuDeger, veMntWiz3bAracKartHTML: veMntWiz3bAracKartHTML,
     veMntWiz3bBakisSec: veMntWiz3bBakisSec
   };
